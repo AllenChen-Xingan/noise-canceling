@@ -27,6 +27,7 @@ from pystoi import stoi
 
 import requests
 
+from _common import tokens, vad_mask
 from _paths import RES, ROOT  # resources/ 只在主目录
 
 HERE = Path(__file__).resolve().parent
@@ -47,17 +48,6 @@ def si_sdr(est, ref):
     est, ref = est[:n] - est[:n].mean(), ref[:n] - ref[:n].mean()
     target = (np.dot(est, ref) / np.dot(ref, ref)) * ref
     return float(10 * np.log10(np.sum(target ** 2) / np.sum((est - target) ** 2)))
-
-
-def vad_mask(ref, frame=320, thr_db=-35.0, dilate=5):
-    nf = len(ref) // frame
-    e = 10 * np.log10(np.mean(ref[: nf * frame].reshape(nf, frame) ** 2, axis=1) + 1e-12)
-    m = e > e.max() + thr_db
-    d = m.copy()
-    for k in range(1, dilate + 1):
-        d[k:] |= m[:-k]
-        d[:-k] |= m[k:]
-    return np.repeat(d, frame), nf * frame
 
 
 def frame_power(x, mask, n):
@@ -88,12 +78,6 @@ def asr_text(path, lang, model):
     """转写两次；返回 (第一次文本, 两次是否逐字相同, 第二次文本)。"""
     a, b = asr_once(path, lang, model, 1), asr_once(path, lang, model, 2)
     return a, a == b, b
-
-
-def tokens(text, lang):
-    if lang == "zh":  # 汉字逐字；夹在中文里的英文 / 数字按词（否则一句英文会按字母算成几十个插入）
-        return re.findall(r"[一-鿿]|[a-z0-9']+", text.lower())
-    return re.findall(r"[a-z0-9']+", text.lower())
 
 
 def edit_ops(ref, hyp):

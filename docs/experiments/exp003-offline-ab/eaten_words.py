@@ -9,16 +9,12 @@
 用法：python3 docs/experiments/exp003-offline-ab/eaten_words.py
 """
 import json
-import re
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-
-
-def tokens(text, lang):
-    if lang == "zh":
-        return re.findall(r"[一-鿿]|[a-z0-9']+", text.lower())
-    return re.findall(r"[a-z0-9']+", text.lower())
+sys.path.insert(0, str(HERE))
+from _common import tokens  # noqa: E402
 
 
 def deleted_positions(ref, hyp):
