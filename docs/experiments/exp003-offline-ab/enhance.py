@@ -15,6 +15,7 @@
 """
 import json
 import secrets
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -30,6 +31,9 @@ GTCRN = RES / "gtcrn/stream/onnx_models/gtcrn_simple.onnx"
 SR = 16000
 TARGET_LUFS = -26.0
 PEAK_MAX_DB = -1.0
+VOXLOCK_DIR = Path.home() / "vdn-data/models/voxlock"  # HF arbazsiddiqui/voxlock onnx/v2，sha256 见 README
+VOXLOCK_PRECISION = "int8"   # 官方默认；fp32 只用于计时对照
+VOXLOCK_CHUNK = 160          # 每次推 10 ms；int8 输出随块长略变（resources/voxlock/README.md:96），听测固定这一种
 DPDF_DELAY_FRAMES = 4  # mask 缓冲 2 帧 + DF 2 帧，见 docs/research/002_model-baseline/decision.md「反对它的最强依据」
 
 
@@ -92,6 +96,35 @@ class Gtcrn:
         return y[:, 0] + 1j * y[:, 1]
 
 
+class Voxlock:
+    """VoxLock（只留注册说话人）：直接调用 resources/voxlock 的 VoxLock / Stream / LiveStream（只调用，不复制）。
+    given：用 make_clips 写的 <id>_enroll.wav（3 s）注册，从第一块起就隔离
+    live ：不给样本，先直通，听满 3 s「有声」后自动锁定（core.py LiveStream）——看咖啡馆里会不会锁错人
+    Stream 的输出按样本下标与输入对齐（开头补的 PAD 已丢掉），所以不用平移；互相关再核一遍。"""
+    _vl = None
+
+    def __init__(self, mode, enroll_path=None):
+        if Voxlock._vl is None:
+            sys.path.insert(0, str(RES / "voxlock"))
+            from voxlock.core import VoxLock
+            Voxlock._vl = VoxLock(model_dir=VOXLOCK_DIR, precision=VOXLOCK_PRECISION, threads=1)
+        self.name = f"voxlock_{mode}"
+        if mode == "given":
+            e, sr = sf.read(enroll_path, dtype="float32")
+            assert sr == SR and len(e) == 3 * SR
+            self.s = Voxlock._vl.stream(e)
+        else:
+            self.s = Voxlock._vl.live()
+
+    def run(self, x):
+        out = [self.s.push(x[i: i + VOXLOCK_CHUNK]) for i in range(0, len(x), VOXLOCK_CHUNK)]
+        y = np.concatenate(out + [self.s.flush()]).astype(np.float32)
+        if not np.all(np.isfinite(y)):
+            raise RuntimeError(f"{self.name}: 输出非有限值")
+        self.locked = getattr(self.s, "locked", True)
+        return np.pad(y, (0, max(0, len(x) - len(y))))[: len(x)]
+
+
 def stream(model, x):
     """逐帧处理；返回与 x 等长、已按模型内部延迟平移好的输出。"""
     n_fft, hop, win = model.n_fft, model.hop, model.win
@@ -138,6 +171,10 @@ def main():
         for M in (Dpdfnet, Gtcrn):
             m = M()  # 每段重新建状态，互不串
             versions[m.name] = stream(m, x)
+        if "--no-voxlock" not in sys.argv:
+            for mode in ("given", "live"):
+                m = Voxlock(mode, OUT / "src" / f"{cid}_enroll.wav")
+                versions[m.name] = m.run(x)
         # 对齐核对：与干净参考（有则用）或带噪输入做互相关，期望滞后 0
         probe = ref if ref is not None else x
         align[cid] = {k: xcorr_lag(probe, v) for k, v in versions.items() if k != "noisy"}
