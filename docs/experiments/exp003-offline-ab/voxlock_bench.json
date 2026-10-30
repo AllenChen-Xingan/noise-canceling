@@ -1,0 +1,163 @@
+{
+ "onnxruntime": "1.31.1",
+ "machine": "arm64",
+ "platform": "macOS-27.0.1-arm64-arm-64bit",
+ "input": "resources/gtcrn/test_wavs/mix.wav",
+ "threads": 1,
+ "warm": 200,
+ "timed": 6000,
+ "runs": [
+  {
+   "precision": "int8",
+   "block_ms": 8,
+   "push_ms": {
+    "p50": 8.355,
+    "p99": 11.564,
+    "p999": 17.769,
+    "max": 23.659
+   },
+   "per_10ms_audio_ms": {
+    "p50": 10.444,
+    "p99": 14.455,
+    "p999": 22.211,
+    "max": 29.574
+   },
+   "max_held_samples": 384,
+   "max_held_ms": 24.0,
+   "nonfinite_blocks": 0
+  },
+  {
+   "precision": "int8",
+   "block_ms": 10,
+   "push_ms": {
+    "p50": 8.326,
+    "p99": 15.482,
+    "p999": 16.558,
+    "max": 18.464
+   },
+   "per_10ms_audio_ms": {
+    "p50": 8.326,
+    "p99": 15.482,
+    "p999": 16.558,
+    "max": 18.464
+   },
+   "max_held_samples": 480,
+   "max_held_ms": 30.0,
+   "nonfinite_blocks": 0
+  },
+  {
+   "precision": "int8",
+   "block_ms": 20,
+   "push_ms": {
+    "p50": 20.243,
+    "p99": 23.994,
+    "p999": 36.064,
+    "max": 119.164
+   },
+   "per_10ms_audio_ms": {
+    "p50": 10.121,
+    "p99": 11.997,
+    "p999": 18.032,
+    "max": 59.582
+   },
+   "max_held_samples": 448,
+   "max_held_ms": 28.0,
+   "nonfinite_blocks": 0
+  },
+  {
+   "precision": "int8",
+   "block_ms": 40,
+   "push_ms": {
+    "p50": 26.205,
+    "p99": 27.86,
+    "p999": 30.961,
+    "max": 40.928
+   },
+   "per_10ms_audio_ms": {
+    "p50": 6.551,
+    "p99": 6.965,
+    "p999": 7.74,
+    "max": 10.232
+   },
+   "max_held_samples": 384,
+   "max_held_ms": 24.0,
+   "nonfinite_blocks": 0
+  },
+  {
+   "precision": "fp32",
+   "block_ms": 8,
+   "push_ms": {
+    "p50": 6.81,
+    "p99": 9.126,
+    "p999": 12.785,
+    "max": 29.726
+   },
+   "per_10ms_audio_ms": {
+    "p50": 8.512,
+    "p99": 11.407,
+    "p999": 15.981,
+    "max": 37.157
+   },
+   "max_held_samples": 384,
+   "max_held_ms": 24.0,
+   "nonfinite_blocks": 0
+  },
+  {
+   "precision": "fp32",
+   "block_ms": 10,
+   "push_ms": {
+    "p50": 6.857,
+    "p99": 19.455,
+    "p999": 22.141,
+    "max": 28.675
+   },
+   "per_10ms_audio_ms": {
+    "p50": 6.857,
+    "p99": 19.455,
+    "p999": 22.141,
+    "max": 28.675
+   },
+   "max_held_samples": 480,
+   "max_held_ms": 30.0,
+   "nonfinite_blocks": 0
+  },
+  {
+   "precision": "fp32",
+   "block_ms": 20,
+   "push_ms": {
+    "p50": 20.208,
+    "p99": 21.375,
+    "p999": 24.161,
+    "max": 26.479
+   },
+   "per_10ms_audio_ms": {
+    "p50": 10.104,
+    "p99": 10.688,
+    "p999": 12.081,
+    "max": 13.239
+   },
+   "max_held_samples": 448,
+   "max_held_ms": 28.0,
+   "nonfinite_blocks": 0
+  },
+  {
+   "precision": "fp32",
+   "block_ms": 40,
+   "push_ms": {
+    "p50": 23.395,
+    "p99": 30.039,
+    "p999": 117.178,
+    "max": 501.617
+   },
+   "per_10ms_audio_ms": {
+    "p50": 5.849,
+    "p99": 7.51,
+    "p999": 29.294,
+    "max": 125.404
+   },
+   "max_held_samples": 384,
+   "max_held_ms": 24.0,
+   "nonfinite_blocks": 0
+  }
+ ]
+}
