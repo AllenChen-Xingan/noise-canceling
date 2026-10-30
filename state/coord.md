@@ -9,7 +9,7 @@
 |---|---|---|---|---|
 | model | 002 起步模型与代码 | `_tmp/20261029-b1/model.md` | `state/handoff/model.md` | 完成，已收尾（窗口已关）；剩 3 题 + 三命门待人拍板 |
 | pipeline | 003 Mac 音频管线 | `_tmp/20261029-b1/pipeline.md` | `state/handoff/pipeline.md` | 完成，已收尾（窗口已关）；剩 10 条待人拍板 |
-| pse | 005 个性化降噪（PSE）调研 · issue #1 · 分支 `research/005-pse`（主目录） | `_tmp/20261030-b2/pse.md` | `state/handoff/pse.md` | 六份初稿已填，自审中；发现 VoxLock（唯一现成个性化模型，算力未在 M5 测）（noise-canceling-45） |
+| pse | 005 个性化降噪（PSE）调研 · issue #1 · 分支 `research/005-pse`（主目录） | `_tmp/20261030-b2/pse.md` | `state/handoff/pse.md` | 完成，已收尾（窗口已关）；7 条待人拍板 |
 | abtest | exp003 DPDFNet-2 vs GTCRN 离线 AB 听测 · issue #2 · 分支 `exp/003-offline-ab`（worktree `../noise_canceling-exp003`） | `_tmp/20261030-b2/abtest.md` | `state/handoff/abtest.md` | 已搬进 worktree、新会话已报到（noise-canceling-exp003-2d）；范围加 VoxLock |
 | sota | 006 降噪前沿全景 · issue #3 · 分支 `research/006-sota-landscape`（worktree `../noise_canceling-sota`） | `_tmp/20261030-b2/sota.md` | `state/handoff/sota.md`（在其 worktree） | 已报到（noise-canceling-sota-4f） |
 | rubric | 007 降噪评分标准 rubric · issue #4 · 分支 `research/007-denoise-rubric`（worktree `../noise_canceling-rubric`） | `_tmp/20261030-b2/rubric.md` | `state/handoff/rubric.md`（在其 worktree） | 已报到（noise-canceling-rubric-e1） |
@@ -60,4 +60,5 @@
 - [x] 第一批 24 题 + 个性化 + P.808 —— 2026-10-30 已拍板，见 `docs/plan/001_decisions-20261029-b1.md`
 - [x] 远程仓库 —— 2026-10-30 建私有仓库 AllenChen-Xingan/noise-canceling
 - [ ] 放权边界 —— 来源 board
+- [ ] 005 PSE 待人拍板 7 条（训练与否 · VoxCeleb 声纹模型 · 耗电上限 · 零设置口径 · 隐私存什么 · 状态提示 · 对外开 issue）—— 见 `docs/research/005_pse/decision.md` 末节；#3 耗电与 VoxLock 等 exp003 实测后再问
 - [x] 开下一批 005 PSE + exp003 AB 听测 —— 人 2026-10-30 同意，已派
