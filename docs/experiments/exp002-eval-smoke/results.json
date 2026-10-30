@@ -1,0 +1,86 @@
+{
+  "machine": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "processor": "arm",
+    "python": "3.12.14",
+    "onnxruntime": "1.31.1",
+    "providers_available": [
+      "CoreMLExecutionProvider",
+      "AzureExecutionProvider",
+      "CPUExecutionProvider"
+    ],
+    "librosa": "1.0.0",
+    "numpy": "2.5.4"
+  },
+  "clips": {
+    "gtcrn_mix": {
+      "path": "resources/gtcrn/test_wavs/mix.wav",
+      "duration_s": 9.769,
+      "SIG": 3.606,
+      "BAK": 2.644,
+      "OVRL": 2.569,
+      "P808_MOS": 2.961,
+      "dnsmos_time_s": 0.229,
+      "dnsmos_rtf": 0.0235,
+      "LUFS": -23.28
+    },
+    "gtcrn_enh": {
+      "path": "resources/gtcrn/test_wavs/enh.wav",
+      "duration_s": 9.76,
+      "SIG": 3.395,
+      "BAK": 3.995,
+      "OVRL": 3.09,
+      "P808_MOS": 3.89,
+      "dnsmos_time_s": 0.051,
+      "dnsmos_rtf": 0.0052,
+      "LUFS": -23.98
+    },
+    "dfn_clean": {
+      "path": "resources/DeepFilterNet/assets/clean_freesound_33711.wav",
+      "duration_s": 10.596,
+      "SIG": 3.554,
+      "BAK": 4.174,
+      "OVRL": 3.291,
+      "P808_MOS": 3.901,
+      "dnsmos_time_s": 0.048,
+      "dnsmos_rtf": 0.0045,
+      "LUFS": -29.65
+    },
+    "dfn_noisy_snr0": {
+      "path": "resources/DeepFilterNet/assets/noisy_snr0.wav",
+      "duration_s": 10.596,
+      "SIG": 3.604,
+      "BAK": 2.68,
+      "OVRL": 2.583,
+      "P808_MOS": 2.981,
+      "dnsmos_time_s": 0.048,
+      "dnsmos_rtf": 0.0045,
+      "LUFS": -23.97
+    }
+  },
+  "ref_pairs": [
+    {
+      "est": "dfn_noisy_snr0",
+      "ref": "dfn_clean",
+      "PESQ_wb": 1.362,
+      "STOI": 0.9484,
+      "ESTOI": 0.8571,
+      "SI_SDR_dB": 6.21,
+      "pesq_time_s": 0.046,
+      "stoi_estoi_time_s": 0.051
+    },
+    {
+      "est": "dfn_clean",
+      "ref": "dfn_clean",
+      "PESQ_wb": 4.644,
+      "STOI": 1.0,
+      "ESTOI": 1.0,
+      "SI_SDR_dB": "inf(自比)",
+      "pesq_time_s": 0.057,
+      "stoi_estoi_time_s": 0.101
+    }
+  ],
+  "dnsmos_load_s": 0.007,
+  "total_s": 0.662
+}
