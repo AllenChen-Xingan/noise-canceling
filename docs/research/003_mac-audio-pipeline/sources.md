@@ -25,10 +25,10 @@
 | 是什么 | 在哪 | 协议 | 读多深 | 还活着吗 | 一句话判断 |
 |---|---|---|---|---|---|
 | **BlackHole** v0.7.1（纯 C 的 HAL 插件，回环虚拟设备） | `resources/BlackHole` · github.com/ExistentialAudio/BlackHole | 源码 GPL-3.0；**官方二进制和名字保留所有权利**（`LICENSE:1-9`） | 逐条 | 活跃，最近提交 2026-10-28 | **M0–M2 直接用；最终产品只借鉴架构** |
-| **libASPL**（C++17 的 AudioServerPlugIn 库） | `resources/libASPL` · github.com/gavv/libASPL | MIT（另含 Apple 示例代码许可） | 逐条 | 最近提交 2025-04-14；CI 覆盖 macOS 13–15 | **在它基础上改造**（自制插件的骨架首选） |
+| **libASPL**（C++17 的 AudioServerPlugIn 库） | `resources/libASPL` · github.com/gavv/libASPL | MIT（另含 Apple 示例代码许可） | 逐条 | 最近提交 2025-04-14；CI 覆盖 macOS 13–15 | **在它基础上改造**（备选骨架，首选卡住时才启用） |
 | **roc-vad**（基于 libASPL 的网络虚拟设备） | `resources/roc-vad` · github.com/roc-streaming/roc-vad | MPL-2.0 | 逐条 | 最近提交 2025-04-13 | **只借鉴架构**：重活全放在插件里，是我们的反例 |
 | **MetalVoice**（Swift，DFN3 + BlackHole，跟我们同一件事） | `resources/MetalVoice` · github.com/Ghostkwebb/MetalVoice | MIT | 逐条 | 最近提交 2026-08-31，20 个提交，单人 | **只借鉴架构，主要当负例** |
-| **Apple 官方示例** NullAudio / SimpleAudio / AudioDriverKit | developer.apple.com/documentation/coreaudio/creating-an-audio-server-driver-plug-in · …/building-an-audio-server-plug-in-and-driver-extension · developer.apple.com/documentation/audiodriverkit/creating-an-audio-device-driver | Apple 示例代码许可（NullAudio 许可证本次没核实） | 读官方说明，没下载 zip | 官方在维护 | **NullAudio：在它基础上改造；AudioDriverKit：不适合**（虚拟设备拿不到 entitlement） |
+| **Apple 官方示例** NullAudio / SimpleAudio / AudioDriverKit | developer.apple.com/documentation/coreaudio/creating-an-audio-server-driver-plug-in · …/building-an-audio-server-plug-in-and-driver-extension · developer.apple.com/documentation/audiodriverkit/creating-an-audio-device-driver | Apple 示例代码许可：可用、可改、可再分发，保留声明（原文见 `resources/BackgroundMusic/LICENSE-Apple-Sample-Code`）。示例原件已下架，libASPL（`README.md:643`）与 Background Music（`BGM_Device.cpp:26-27`）自述基于它 | 读官方说明，没下载 zip | 官方在维护 | **NullAudio：在它基础上改造；AudioDriverKit：不适合**（虚拟设备拿不到 entitlement） |
 | **AudioServerPlugIn.h**（SDK 头文件） | 本机 `…/CoreAudio.framework/Headers/AudioServerPlugIn.h` | — | 逐段 | 随 SDK 27.0 | 官方对沙箱、IPC、实时线程的唯一成文说法 |
 
 ### 要学的（只读架构）
@@ -42,7 +42,7 @@
 
 | 零件 | 在哪 | 协议 | 版本 / 最近提交 | 能接在哪 · 关键事实 |
 |---|---|---|---|---|
-| `cpal` | `resources/cpal` | Apache-2.0 | 0.19.0 / 2026-10-28 | 采集麦克风、写 BlackHole 或自制设备。底层是 AUHAL；支持 `BufferSize::Fixed`（`src/host/coreaudio/macos/device.rs:904-930`）；采样率一变就报 `StreamInvalidated`，要上层重建（`macos.rs:262-268`）；loopback 已经用上 process tap 加漂移补偿（`macos/loopback.rs:93-123`）；**没有** workgroup |
+| `cpal` | `resources/cpal` | Apache-2.0 | 0.19.0（master；最新正式版 0.18.2，方案用到的 `CallbackInfo` 在 [Unreleased]，`CHANGELOG.md:8-29,87`）/ 2026-10-28 | 采集麦克风、写 BlackHole 或自制设备。底层是 AUHAL；支持 `BufferSize::Fixed`（`src/host/coreaudio/macos/device.rs:904-930`）；采样率一变就报 `StreamInvalidated`，要上层重建（`macos.rs:262-268`）；`DeviceChanged` 只对按默认设备建的流触发（`src/error.rs:14-22`），换默认麦克风要自己监听；loopback 已经用上 process tap 加漂移补偿（`macos/loopback.rs:93-123`）；**没有** workgroup |
 | `coreaudio-rs` | `resources/coreaudio-rs` | MIT/Apache | 0.14.2 / 2026-06-18 | 只封装了采样率监听（`src/audio_unit/macos_helpers.rs:707-787`）；设备列表监听、聚合设备要直接调 `objc2-core-audio` |
 | `rtrb` | `resources/rtrb` | MIT/Apache | 0.4.1 / 2026-10-25 | 进程内无锁 SPSC 环形缓冲，实时安全；**不能放进跨进程共享内存**（数据区是堆指针，`src/lib.rs:114,159`） |
 | `rubato` | `resources/rubato` | MIT/Apache | 5.0.1 / 2026-10-01 | 漂移补偿：`Async` 重采样器运行中可调比率（`src/asynchro.rs:806-830`）；sinc 128 点约 1.3 ms @48k；实时路径只用 `process_into_buffer` |
@@ -55,7 +55,7 @@
 | 是什么 | 在哪 | 协议 | 还活着吗 | 判断 |
 |---|---|---|---|---|
 | **tympan-aspl**（纯 Rust 的 AudioServerPlugIn 框架） | github.com/penta2himajin/tympan-aspl · docs.rs/tympan-aspl | MIT 或 Apache-2.0（两处说法不一，都不传染） | 0.1.0，2026-05 建仓，只发过一版，CI 只验证到「尝试加载」 | 观察项；它关于 macOS 15 签名的说法是线索，要交叉核实 |
-| **eqMac** | github.com/bitgapp/eqMac | Apache-2.0 | 公开代码停在 v1.3.2 | 不适合：本质也是设备内部回环，和 BlackHole 一类 |
+| **eqMac** | github.com/bitgapp/eqMac | Apache-2.0 | 公开代码停在 v1.3.2 | 不适合：据网页阅读本质也是设备内部回环，和 BlackHole 一类【传】 |
 | Soundflower | github.com/mattingalls/Soundflower | MIT | 已废弃，不支持 Apple Silicon | 不适合 |
 | NoiseTorch-ng / werman noise-suppression-for-voice | GitHub | GPL-3.0 | 一个只支持 Linux；一个只做 AU/VST、不注册设备 | 不适合 |
 | Krisp / Loopback / NVIDIA Broadcast | 商业 | — | — | 没找到官方技术文档，不登记做法 |
