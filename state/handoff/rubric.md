@@ -1,6 +1,6 @@
 # 现状页 · rubric（批次 20261030-b2）
 
-状态：**验收通过（待重算）**——窗口不关。① 终版 scores.json 已收（sha e84730fa…），dryrun 与 decision 已重算；② 还等人的 AB 导出 JSON（大总管转来），填人耳列后报收尾
+状态：**验收通过（待重算）**——窗口不关。① 最新 scores.json 已收（sha 97020a1a…，加 FastEnhancer-M、响度改按主讲人区间对齐），dryrun 与 decision 已重算；② 还等人的 AB 导出 JSON（大总管转来），填人耳列后报收尾
 
 ## 手上
 007 降噪 rubric：评分标准 + 用它筛候选。交代 `_tmp/20261030-b2/rubric.md`（主目录）
@@ -36,3 +36,4 @@
 - 2026-10-30 用 exp003 临时 scores.json 预演 rubric → `dryrun-exp003.md`（单独成文，防先入为主）；问 abtest 数是否终版；给 abtest 可选减负建议
 - 2026-10-30 收尾
 - 2026-10-30 abtest 交终版 scores.json（sha256 e84730fa…，含 voxlock_given / voxlock_live）+ voxlock_bench.json；重算 dryrun：VoxLock 两种都因 M5 单线程最坏一块超块长（最好 102%）被 V3 否决；DPDFNet-2 风险不变；GTCRN G3 降到 +0.91，只剩 c04 疑似。decision 的 VoxLock 行、时长（一屏 4 候选，约 25 分钟）同步改
+- 2026-10-30 abtest 再更新 scores.json（sha256 97020a1a…）：第三候选换 FastEnhancer-M（人定），页面 build 20261030110755-f8c3 三候选一屏、导出加 listen_s / head_to_head、「差不多」改名「分不出」、劣化陷阱改为「不选劣化版即过」。已同步：decision 加 FastEnhancer-M（两档都入围，轻快 15.0，权重许可待核）；rubric 4.1–4.3 与 8.2 对齐新页面（劣化陷阱答「分不出」记打折、屏有效性改用 listen_s）；dryrun 重算——FastEnhancer-M 与 DPDFNet-2 风险都集中在中文 c11/c12，GTCRN 最保守
