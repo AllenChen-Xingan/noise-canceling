@@ -173,6 +173,8 @@ Apple M5，macOS 27.0.1，onnxruntime 单线程，输入同 exp001（`resources/
 | `~/vdn-data/models/fastenhancer-dns-v1.0.0/fastenhancer_m.onnx` | github.com/aask1357/fastenhancer release `onnx-dns-v1.0.0`（MIT） | 2033752 | `29da81b46ad42758d9f586fb1706902862ec3f0337d6bd49670c5565e42382fb` |
 | `…/fastenhancer_s.onnx` | 同上 | 832813 | `d7c937d6b475dbe89a6e6a69853b685fe62d629f4c96077559c556ac6f8aaa2d` |
 | `…/fastenhancer_b.onnx` | 同上 | 413220 | `e2d8758a91a5c7d59334fdd4b871900cbd311d6694d99d9e0a77662063e60434` |
+
+> FastEnhancer **权重许可待核**：仓库是 MIT，但 release `onnx-dns-v1.0.0` / `ckpt-dns-v1.0.0` 的说明没有单独的权重许可，只写了训练数据（DNS-Challenge 3 wideband 去掉 emotional_speech 与 singing_voice，加 VCTK-0.92 除 p232、p257）。本实验只评测；要进产品前需核。
 | `~/vdn-data/models/voxlock/enroll.onnx` | HF `arbazsiddiqui/voxlock` rev `2413b292…`，`onnx/v2/`（Apache-2.0） | 21023799 | `81f305c9b7a32f13d1401f53bb4c6301826a607c9e807e60912f36ef1b9fae29` |
 | `…/voxlock/chunk_int8.onnx` | 同上 | 56560589 | `c50ffdc8d723fd4f91cb08889f3d0143491f95967b705f35c444a0b4afe88172` |
 | `…/voxlock/chunk.onnx`（fp32） | 同上 | 77788950 | `11093eda6001794ffa03cd018dc343b12848fc739a2f151e26530e0a66f9659a` |
@@ -183,3 +185,7 @@ whisper ggml large-v3-turbo（1624555275 B，sha1 `4af2b29d7ec73d781377bfd1758ca
 ## 待人拍板
 1. **延迟档（D01）**：听完后在 ≤ 45 ms（GTCRN 或 FastEnhancer-M）与 ≤ 75 ms（DPDFNet-2）之间选。页面完成页的「DPDFNet-2 对 GTCRN 逐段」一行和导出里的 `head_to_head` 是主要证据。默认：听完再定
 2. **45 ms 档里选谁**：FastEnhancer-M（DNSMOS 高、背景干净、ASR 吃字多）还是 GTCRN（吃字少、背景压得浅）。默认：按你耳朵里「吃字」与「背景」哪个更难忍
+3. **FastEnhancer 权重许可**（只在选它时才要定）：
+   - 选项 A：向作者发 issue，问 release 权重的许可与训练数据限制（代价：要用你的 GitHub 账号对外发言，回复时间不定）
+   - 选项 B：只看仓库 MIT 就当可用（代价：训练数据如有限制，风险留到发布时）
+   - 建议 A；默认：没选 FastEnhancer 就不处理
