@@ -1,6 +1,6 @@
 # 现状页 · abtest（批次 20261030-b2）
 
-状态：**进行中（接替会话，worktree `noise_canceling-exp003`，分支 exp/003-offline-ab）**
+状态：**已收尾（2026-10-30）**——人正在听 build 20261030110755-f8c3；答卷由大总管放进 results/ 后再揭盲汇总
 
 人新定 D28：吃字率改用本机 Qwen3-ASR-Plus 1.7B（42model 服务），不用 whisper。范围追加：VoxLock 作第三候选（M5 单线程逐帧计时 + 加进 AB 页），接入说明在主目录 `docs/research/005_pse/gap.md` 末节。
 
@@ -13,10 +13,17 @@ exp003：DPDFNet-2 对 GTCRN 的离线 AB 听测（交代 `_tmp/20261030-b2/abte
 - FastEnhancer：官方 DNS wav2wav ONNX，B/S/M 计时都在半周期内，选 M（`fastenhancer_bench.json`）
 - 自审三视角已做；页面问题已修进 f8c3；响度改为说话区间对齐；README 待按新分数重写
 
-## 下一步
-1. score --asr 正在跑（全部重转写，加 FastEnhancer 列）→ eaten_words.py
-2. 归还名额；README 按新分数与自审意见重写（中位数、说过头处、VoxLock 计时只对 int8 成立、DNSMOS 非个性化、自动锁定的算力尖峰与 c03 等于原声、注册样本偏乐观、48 个滞后）
-3. 报大总管「abtest 可以收尾」
+## 交付
+- 页面：`_tmp/20261030-exp003/builds/20261030110755-f8c3/index.html`（DPDFNet-2 · GTCRN · FastEnhancer-M）
+- `docs/experiments/exp003-offline-ab/README.md`（素材 · 方法 · 分数 · 吃字 · 计时 · 事故 · 局限 · 待人拍板）
+- 结果：`scores.json`（sha256 97020a1a…）· `eaten_words.md` · `align.json` · `fastenhancer_bench.json` · `voxlock_bench.json` · `builds/<build>/` 对照表，均已提交
+
+## 改了哪些文件
+`docs/experiments/exp003-offline-ab/` 下全部脚本与结果（新增 `_paths.py`、`_common.py`、`bench_fastenhancer.py`、`bench_voxlock.py`、`eaten_words.py`）；`_tmp/20261030-exp003/`；`~/vdn-data/demand/{SCAFE,DKITCHEN}/`（解压）、`~/vdn-data/models/{voxlock,fastenhancer-dns-v1.0.0}/`；本现状页
+
+## 待人拍板
+1. 延迟档 D01：≤ 45 ms（GTCRN / FastEnhancer-M）还是 ≤ 75 ms（DPDFNet-2）——听完再定
+2. 45 ms 档选 FastEnhancer-M（背景干净、ASR 吃字多）还是 GTCRN（吃字少、背景浅）
 
 ## 规矩（本线新增，人定 / 大总管定）
 - 重建页面一律写到新的 `builds/<build-id>/`，不覆盖人可能正在用的页面；**不删任何旧 build 的音频**
@@ -60,3 +67,4 @@ exp003：DPDFNet-2 对 GTCRN 的离线 AB 听测（交代 `_tmp/20261030-b2/abte
 - 2026-10-30 自审三视角回收（产品 P0×2、实现 P0×1、怀疑 P1×4），页面与 build_page 全部修进新 build；enhance 响度改说话区间；抽 `_common.py`
 - 2026-10-30 FastEnhancer B/S/M 计时 → 选 M；enhance 加 FastEnhancer-M（滞后 0）；新 build 20261030110755-f8c3 冒烟通过（虚拟时钟 + 静音），已报大总管
 - 2026-10-30 gitleaks 把 manifest 的 "key": base64 当密钥拦下提交 → 字段改名 slotmap
+- 2026-10-30 分数补 FastEnhancer 列（84/84 转写一致）；README 按自审重写；全部提交；名额已归还；收尾
