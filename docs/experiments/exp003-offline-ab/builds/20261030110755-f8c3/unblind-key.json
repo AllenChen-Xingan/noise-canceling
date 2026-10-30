@@ -1,0 +1,118 @@
+{
+ "build": "20261030110755-f8c3",
+ "models": [
+  "dpdfnet2",
+  "gtcrn",
+  "fastenhancer_m"
+ ],
+ "key": {
+  "c01": [
+   "fastenhancer_m",
+   "dpdfnet2",
+   "gtcrn"
+  ],
+  "c02": [
+   "fastenhancer_m",
+   "dpdfnet2",
+   "gtcrn"
+  ],
+  "c03": [
+   "gtcrn",
+   "dpdfnet2",
+   "fastenhancer_m"
+  ],
+  "c04": [
+   "gtcrn",
+   "fastenhancer_m",
+   "dpdfnet2"
+  ],
+  "c05": [
+   "dpdfnet2",
+   "fastenhancer_m",
+   "gtcrn"
+  ],
+  "c06": [
+   "dpdfnet2",
+   "gtcrn",
+   "fastenhancer_m"
+  ],
+  "c07": [
+   "gtcrn",
+   "dpdfnet2",
+   "fastenhancer_m"
+  ],
+  "c08": [
+   "dpdfnet2",
+   "fastenhancer_m",
+   "gtcrn"
+  ],
+  "c09": [
+   "dpdfnet2",
+   "fastenhancer_m",
+   "gtcrn"
+  ],
+  "c10": [
+   "fastenhancer_m",
+   "dpdfnet2",
+   "gtcrn"
+  ],
+  "c11": [
+   "gtcrn",
+   "fastenhancer_m",
+   "dpdfnet2"
+  ],
+  "c12": [
+   "fastenhancer_m",
+   "dpdfnet2",
+   "gtcrn"
+  ]
+ },
+ "traps": [
+  {
+   "id": "trap-identical",
+   "clip": "c11",
+   "desc": "中文 · 邻桌 3 人（英文）说话 + 食堂底噪，SNR 0 dB",
+   "label": "所有候选其实是同一个文件（应答「分不出」）",
+   "ref": "../../audio/c11_abecea.wav",
+   "cands": [
+    "../../audio/c11_ff8a4d.wav",
+    "../../audio/c11_ff8a4d.wav",
+    "../../audio/c11_ff8a4d.wav"
+   ],
+   "names": [
+    "same",
+    "same",
+    "same"
+   ],
+   "expect": {
+    "best": [
+     "same"
+    ]
+   },
+   "source_model": "gtcrn"
+  },
+  {
+   "id": "trap-degraded",
+   "clip": "c04",
+   "desc": "邻座一人说话 + 咖啡馆露台底噪，SNR 5 dB",
+   "label": "其中一份是明显劣化版（最清楚、最自然都不该选它）",
+   "ref": "../../audio/c04_310dee.wav",
+   "cands": [
+    "../../audio/c04_568560.wav",
+    "../../audio/c04_d5c5ac.wav",
+    "../../audio/c04_ae78a6.wav"
+   ],
+   "names": [
+    "degraded",
+    "dpdfnet2",
+    "fastenhancer_m"
+   ],
+   "expect": {
+    "not": [
+     "degraded"
+    ]
+   },
+   "source_model": "fastenhancer_m"
+  }
+ ]
+}

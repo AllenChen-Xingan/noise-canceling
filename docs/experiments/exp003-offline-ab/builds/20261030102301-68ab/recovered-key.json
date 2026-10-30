@@ -1,0 +1,9 @@
+{
+  "build": "20261030102301-68ab",
+  "note": "旧 build 的揭盲表在重建时被覆盖、未进仓。abtest 依据 git 38e9a6c 版 align.json（文件名→模型）与当时打印的 manifest.js 片段，只恢复出 3 段；c04–c12 无法恢复。槽位 0 = x，1 = y。",
+  "clips": {
+    "c01": ["dpdfnet2", "gtcrn"],
+    "c02": ["gtcrn", "dpdfnet2"],
+    "c03": ["gtcrn", "dpdfnet2"]
+  }
+}

@@ -5,8 +5,9 @@
 - 逐帧：每次只喂一帧（DPDFNet 320/160 vorbis 窗；GTCRN 512/256 周期 sqrt-Hann），状态回灌，和实时一致
 - 开头补 n_fft 个零，让第一个真实样本也有完整的重叠相加；结尾补零把模型内部延迟冲出来
 - 对齐：DPDFNet 输出比输入晚 4 帧（4×160=640 样本），GTCRN 0 帧；按此平移，再用互相关核对（结果写进 JSON）
-- 响度：三个版本都用 BS.1770（pyloudnorm）归一到同一目标 LUFS；若某版本峰值超 -1 dBFS，
-  同一段的三个版本一起再降同样的分贝，保持三者响度相同
+- 响度：各版本只在主讲人说话区间（按干净参考 VAD）测 BS.1770 响度（pyloudnorm），对齐到同一目标；
+  若某版本峰值超 -1 dBFS，同一段所有版本一起再降同样的分贝，保持说话声响度相同
+- 候选：DPDFNet-2 · GTCRN · FastEnhancer-M（官方 wav2wav）· VoxLock 两种（--no-voxlock 可跳过；页面里放哪几个由 build_page.py 定）
 输入：_tmp/20261030-exp003/src/<id>_noisy.wav（make_clips.py 产出）
 输出：_tmp/20261030-exp003/raw/<id>_{noisy,dpdfnet2,gtcrn}.wav（对齐后、未归一，给打分用）
       _tmp/20261030-exp003/audio/<id>_<随机名>.wav（归一后，给对比页用）
@@ -15,6 +16,7 @@
 """
 import json
 import secrets
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -22,14 +24,20 @@ import onnxruntime as ort
 import pyloudnorm
 import soundfile as sf
 
-ROOT = Path(__file__).resolve().parents[3]
+from _common import vad_mask
+from _paths import RES, ROOT  # resources/ 只在主目录
 HERE = Path(__file__).resolve().parent
 OUT = ROOT / "_tmp/20261030-exp003"
-DPDF = ROOT / "resources/weights/dpdfnet/dpdfnet2.onnx"
-GTCRN = ROOT / "resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx"
+DPDF = RES / "weights/dpdfnet/dpdfnet2.onnx"
+GTCRN = RES / "gtcrn/stream/onnx_models/gtcrn_simple.onnx"
 SR = 16000
 TARGET_LUFS = -26.0
 PEAK_MAX_DB = -1.0
+FE_DIR = Path.home() / "vdn-data/models/fastenhancer-dns-v1.0.0"  # 官方 release onnx-dns-v1.0.0 的 wav2wav 版
+FE_SIZE = "m"  # bench_fastenhancer.py 按「最坏一帧 ≤ 周期一半」选出的最大档
+VOXLOCK_DIR = Path.home() / "vdn-data/models/voxlock"  # HF arbazsiddiqui/voxlock onnx/v2，sha256 见 README
+VOXLOCK_PRECISION = "int8"   # 官方默认；fp32 只用于计时对照
+VOXLOCK_CHUNK = 160          # 每次推 10 ms；int8 输出随块长略变（resources/voxlock/README.md:96），听测固定这一种
 DPDF_DELAY_FRAMES = 4  # mask 缓冲 2 帧 + DF 2 帧，见 docs/research/002_model-baseline/decision.md「反对它的最强依据」
 
 
@@ -92,6 +100,67 @@ class Gtcrn:
         return y[:, 0] + 1j * y[:, 1]
 
 
+class FastEnhancer:
+    """FastEnhancer（官方 wav2wav ONNX，STFT/iSTFT/OLA 都在图里）：每次喂一个 hop，缓存原样回灌，
+    同官方 resources/fastenhancer/scripts/test_onnx.py。输出比输入晚 n_fft − hop 个样本（官方 docs/docs/onnx.md），
+    这里 n_fft = 512：M 档 hop 160 → 晚 352 样本。按此平移，再用互相关核对。"""
+
+    def __init__(self, size=FE_SIZE):
+        self.sess = session(FE_DIR / f"fastenhancer_{size}.onnx")
+        self.name = f"fastenhancer_{size}"
+        self.hop = self.sess.get_inputs()[0].shape[-1]
+        self.delay = 512 - self.hop
+        self.feed = {i.name: np.zeros(i.shape, np.float32) for i in self.sess.get_inputs() if i.name.startswith("cache_in_")}
+
+    def run(self, x):
+        h = self.hop
+        xp = np.concatenate([x, np.zeros(self.delay + h, np.float32)])
+        xp = np.pad(xp, (0, (-len(xp)) % h))
+        out = []
+        for i in range(0, len(xp), h):
+            self.feed["wav_in"] = xp[None, i: i + h]
+            o = self.sess.run(None, self.feed)
+            out.append(o[0][0])
+            for j in range(len(o) - 1):
+                self.feed[f"cache_in_{j}"] = o[j + 1]
+        y = np.concatenate(out).astype(np.float32)
+        if not np.all(np.isfinite(y)):
+            raise RuntimeError(f"{self.name}: 输出非有限值")
+        return y[self.delay: self.delay + len(x)]
+
+
+class Voxlock:
+    """VoxLock（只留注册说话人）：直接调用 resources/voxlock 的 VoxLock / Stream / LiveStream（只调用，不复制）。
+    given：用 make_clips 写的 <id>_enroll.wav（3 s）注册，从第一块起就隔离
+    live ：不给样本，先直通，听满 3 s「有声」后自动锁定（core.py LiveStream）——看咖啡馆里会不会锁错人
+    Stream 的输出按样本下标与输入对齐（开头补的 PAD 已丢掉），所以不用平移；互相关再核一遍。"""
+    _vl = None
+
+    def __init__(self, mode, enroll_path=None):
+        if Voxlock._vl is None:
+            sys.path.insert(0, str(RES / "voxlock"))
+            from voxlock.core import VoxLock
+            Voxlock._vl = VoxLock(model_dir=VOXLOCK_DIR, precision=VOXLOCK_PRECISION, threads=1)
+        self.name = f"voxlock_{mode}"
+        if mode == "given":
+            e, sr = sf.read(enroll_path, dtype="float32")
+            assert sr == SR and len(e) == 3 * SR
+            self.s = Voxlock._vl.stream(e)
+        else:
+            self.s = Voxlock._vl.live()
+
+    def run(self, x):
+        out, self.lock_at_s = [], 0.0 if self.name == "voxlock_given" else None
+        for i in range(0, len(x), VOXLOCK_CHUNK):
+            out.append(self.s.push(x[i: i + VOXLOCK_CHUNK]))
+            if self.lock_at_s is None and self.s.locked:
+                self.lock_at_s = round((i + VOXLOCK_CHUNK) / SR, 2)  # live 模式锁定的时刻
+        y = np.concatenate(out + [self.s.flush()]).astype(np.float32)
+        if not np.all(np.isfinite(y)):
+            raise RuntimeError(f"{self.name}: 输出非有限值")
+        return np.pad(y, (0, max(0, len(x) - len(y))))[: len(x)]
+
+
 def stream(model, x):
     """逐帧处理；返回与 x 等长、已按模型内部延迟平移好的输出。"""
     n_fft, hop, win = model.n_fft, model.hop, model.win
@@ -126,7 +195,7 @@ def main():
     (OUT / "raw").mkdir(parents=True, exist_ok=True)
     (OUT / "audio").mkdir(parents=True, exist_ok=True)
     meter = pyloudnorm.Meter(SR)
-    align, files = {}, {}
+    align, files, lock = {}, {}, {}
     for clip in manifest["clips"]:
         cid = clip["id"]
         x, sr = sf.read(OUT / "src" / f"{cid}_noisy.wav", dtype="float32")
@@ -134,18 +203,28 @@ def main():
         ref = None
         if clip.get("has_ref"):
             ref, _ = sf.read(OUT / "src" / f"{cid}_clean.wav", dtype="float32")
-        versions = {"noisy": x}
+        versions, lock[cid] = {"noisy": x}, {}
         for M in (Dpdfnet, Gtcrn):
             m = M()  # 每段重新建状态，互不串
             versions[m.name] = stream(m, x)
+        fe = FastEnhancer()
+        versions[fe.name] = fe.run(x)
+        if "--no-voxlock" not in sys.argv:
+            for mode in ("given", "live"):
+                m = Voxlock(mode, OUT / "src" / f"{cid}_enroll.wav")
+                versions[m.name] = m.run(x)
+                lock[cid][m.name] = m.lock_at_s
         # 对齐核对：与干净参考（有则用）或带噪输入做互相关，期望滞后 0
         probe = ref if ref is not None else x
         align[cid] = {k: xcorr_lag(probe, v) for k, v in versions.items() if k != "noisy"}
         align[cid]["probe"] = "clean" if ref is not None else "noisy"
         for k, v in versions.items():
             sf.write(OUT / "raw" / f"{cid}_{k}.wav", v, SR, subtype="FLOAT")
-        # 响度统一
-        gains = {k: TARGET_LUFS - meter.integrated_loudness(v) for k, v in versions.items()}
+        # 响度统一：只在主讲人说话的区间（按干净参考 VAD）测 BS.1770 响度再对齐。
+        # 不用整段响度，因为停顿里压得越狠的模型整段越安静、被抬得越多，说话声就更响，听起来「更清楚」（自审怀疑派 P1）
+        mask, nm = vad_mask(ref)
+        sl = lambda v: meter.integrated_loudness(v[:nm][mask])
+        gains = {k: TARGET_LUFS - sl(v) for k, v in versions.items()}
         peaks = {k: 20 * np.log10(np.max(np.abs(v)) + 1e-12) + gains[k] for k, v in versions.items()}
         extra = min(0.0, PEAK_MAX_DB - max(peaks.values()))
         files[cid] = {"lufs_target": TARGET_LUFS + extra, "versions": {}}
@@ -155,12 +234,13 @@ def main():
             sf.write(OUT / "audio" / fname, y, SR, subtype="PCM_16")
             files[cid]["versions"][k] = {
                 "file": f"audio/{fname}",
+                "speech_lufs_after": round(float(sl(y)), 2),
                 "lufs_after": round(float(meter.integrated_loudness(y)), 2),
                 "peak_dbfs": round(float(20 * np.log10(np.max(np.abs(y)) + 1e-12)), 2),
                 "gain_db": round(float(gains[k] + extra), 2),
             }
-        print(cid, align[cid], {k: v["lufs_after"] for k, v in files[cid]["versions"].items()}, flush=True)
-    (HERE / "align.json").write_text(json.dumps({"lag_samples": align, "files": files}, ensure_ascii=False, indent=1))
+        print(cid, align[cid], {k: v["speech_lufs_after"] for k, v in files[cid]["versions"].items()}, flush=True)
+    (HERE / "align.json").write_text(json.dumps({"lag_samples": align, "voxlock_lock_at_s": lock, "files": files}, ensure_ascii=False, indent=1))
     (OUT / "files.json").write_text(json.dumps(files, ensure_ascii=False, indent=1))
 
 

@@ -1,0 +1,475 @@
+{
+ "seed": 20261030,
+ "sr": 16000,
+ "clips": [
+  {
+   "id": "c01",
+   "desc": "赌场环境（人声 + 机器声），SNR 5 dB",
+   "category": "babble-多人",
+   "lang": "en",
+   "snr_db": 5,
+   "has_ref": true,
+   "kind": "ready-made",
+   "dur_s": 12.0,
+   "noisy_src": "resources/urgent2026_challenge_track2/assets/sp03_casino_sn5.wav",
+   "clean_src": "resources/urgent2026_challenge_track2/assets/sp03.wav",
+   "noisy_sha256": "1d1b54c3be3a591b2706bbbf5914ec0d0efc927be90222fd58f043e74f9d9e9c",
+   "clean_sha256": "784ca6d67e7cfb62d75502f60741f2fc7860a0a9d2b74f8e9c365aba6cfbdbf1",
+   "enroll": {
+    "from": "resources/urgent2026_challenge_track2/assets/sp03.wav",
+    "overlap_with_clip": true
+   }
+  },
+  {
+   "id": "c02",
+   "desc": "赌场环境（人声 + 机器声），SNR 0 dB",
+   "category": "babble-多人",
+   "lang": "en",
+   "snr_db": 0,
+   "has_ref": true,
+   "kind": "ready-made",
+   "dur_s": 12.0,
+   "noisy_src": "resources/urgent2026_challenge_track2/assets/sp04_casino_sn0.wav",
+   "clean_src": "resources/urgent2026_challenge_track2/assets/sp04.wav",
+   "noisy_sha256": "bf0a708abc18147bd1b48d081a108f1b20f33bf645b188254fe599c638b97c26",
+   "clean_sha256": "6ae8a771cf3d11aea55e7fa1216c6f76e317984c693d3d062d581e3847a90266",
+   "enroll": {
+    "from": "resources/urgent2026_challenge_track2/assets/sp04.wav",
+    "overlap_with_clip": true
+   }
+  },
+  {
+   "id": "c03",
+   "desc": "赌场环境（人声 + 机器声），SNR −5 dB",
+   "category": "babble-多人",
+   "lang": "en",
+   "snr_db": -5,
+   "has_ref": true,
+   "kind": "ready-made",
+   "dur_s": 12.0,
+   "noisy_src": "resources/urgent2026_challenge_track2/assets/sp05_casino_sn-5.wav",
+   "clean_src": "resources/urgent2026_challenge_track2/assets/sp05.wav",
+   "noisy_sha256": "e5701301da335be05d2e62254770bb73947efb3ca6da211d52a0c2f1e035f534",
+   "clean_sha256": "77dd239d902311f5ddfde1e78252331fa95940134726849bcc532c01c58bb6a5",
+   "enroll": {
+    "from": "resources/urgent2026_challenge_track2/assets/sp05.wav",
+    "overlap_with_clip": true
+   }
+  },
+  {
+   "id": "c04",
+   "desc": "邻座一人说话 + 咖啡馆露台底噪，SNR 5 dB",
+   "category": "babble-单个干扰者",
+   "lang": "en",
+   "snr_db": 5,
+   "has_ref": true,
+   "kind": "synthetic",
+   "dur_s": 10.72,
+   "speech_start_s": 1.0,
+   "speech_end_s": 10.22,
+   "target": {
+    "file": "~/vdn-data/librispeech/LibriSpeech/test-clean/5683/32866/5683-32866-0004.flac",
+    "spk": "5683",
+    "sex": "F",
+    "text": "BY THIS TIME LORD CHELFORD AND WYLDER RETURNED AND DISGUSTED RATHER WITH MYSELF I RUMINATED ON MY WANT OF GENERAL SHIP"
+   },
+   "interferers": [
+    {
+     "spk": "4446",
+     "utts": [
+      "4446-2275-0033",
+      "4446-2273-0016"
+     ]
+    }
+   ],
+   "bed": "SCAFE",
+   "bed_db": -10,
+   "bed_src": {
+    "file": "~/vdn-data/demand/SCAFE/ch01.wav",
+    "start_s": 176.14
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/5683/32865/5683-32865-0012.flac",
+    "overlap_with_clip": false
+   }
+  },
+  {
+   "id": "c05",
+   "desc": "邻座一人说话 + 咖啡馆露台底噪，SNR 0 dB",
+   "category": "babble-单个干扰者",
+   "lang": "en",
+   "snr_db": 0,
+   "has_ref": true,
+   "kind": "synthetic",
+   "dur_s": 10.08,
+   "speech_start_s": 1.0,
+   "speech_end_s": 9.58,
+   "target": {
+    "file": "~/vdn-data/librispeech/LibriSpeech/test-clean/7127/75946/7127-75946-0013.flac",
+    "spk": "7127",
+    "sex": "M",
+    "text": "THE KING HAD COMPLETED HIS TOILETTE BY NINE O'CLOCK HE APPEARED IN AN OPEN CARRIAGE DECORATED WITH BRANCHES OF TREES AND FLOWERS"
+   },
+   "interferers": [
+    {
+     "spk": "121",
+     "utts": [
+      "121-127105-0017",
+      "121-123852-0003"
+     ]
+    }
+   ],
+   "bed": "SCAFE",
+   "bed_db": -10,
+   "bed_src": {
+    "file": "~/vdn-data/demand/SCAFE/ch01.wav",
+    "start_s": 214.8
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/7127/75947/7127-75947-0009.flac",
+    "overlap_with_clip": false
+   }
+  },
+  {
+   "id": "c06",
+   "desc": "邻桌 3 人说话 + 食堂底噪，SNR 0 dB",
+   "category": "babble-多人",
+   "lang": "en",
+   "snr_db": 0,
+   "has_ref": true,
+   "kind": "synthetic",
+   "dur_s": 9.57,
+   "speech_start_s": 1.0,
+   "speech_end_s": 9.07,
+   "target": {
+    "file": "~/vdn-data/librispeech/LibriSpeech/test-clean/1580/141084/1580-141084-0029.flac",
+    "spk": "1580",
+    "sex": "F",
+    "text": "HIS TROUBLED BLUE EYES GLANCED AT EACH OF US AND FINALLY RESTED WITH AN EXPRESSION OF BLANK DISMAY UPON BANNISTER IN THE FARTHER CORNER"
+   },
+   "interferers": [
+    {
+     "spk": "3575",
+     "utts": [
+      "3575-170457-0032",
+      "3575-170457-0006"
+     ]
+    },
+    {
+     "spk": "2094",
+     "utts": [
+      "2094-142345-0018",
+      "2094-142345-0033"
+     ]
+    },
+    {
+     "spk": "2300",
+     "utts": [
+      "2300-131720-0018"
+     ]
+    }
+   ],
+   "bed": "PCAFETER",
+   "bed_db": -6,
+   "bed_src": {
+    "file": "~/vdn-data/demand/PCAFETER/ch01.wav",
+    "start_s": 254.3
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/1580/141083/1580-141083-0006.flac",
+    "overlap_with_clip": false
+   }
+  },
+  {
+   "id": "c07",
+   "desc": "邻桌 6 人说话 + 咖啡馆露台底噪，SNR −5 dB",
+   "category": "babble-多人",
+   "lang": "en",
+   "snr_db": -5,
+   "has_ref": true,
+   "kind": "synthetic",
+   "dur_s": 10.24,
+   "speech_start_s": 1.0,
+   "speech_end_s": 9.74,
+   "target": {
+    "file": "~/vdn-data/librispeech/LibriSpeech/test-clean/4077/13751/4077-13751-0001.flac",
+    "spk": "4077",
+    "sex": "M",
+    "text": "ITS ORIGIN WAS SMALL A GERM AN INSIGNIFICANT SEED HARDLY TO BE THOUGHT OF AS LIKELY TO AROUSE OPPOSITION"
+   },
+   "interferers": [
+    {
+     "spk": "4992",
+     "utts": [
+      "4992-23283-0009",
+      "4992-23283-0019"
+     ]
+    },
+    {
+     "spk": "2830",
+     "utts": [
+      "2830-3979-0004",
+      "2830-3980-0035",
+      "2830-3980-0051"
+     ]
+    },
+    {
+     "spk": "4507",
+     "utts": [
+      "4507-16021-0057",
+      "4507-16021-0039"
+     ]
+    },
+    {
+     "spk": "8555",
+     "utts": [
+      "8555-284449-0000"
+     ]
+    },
+    {
+     "spk": "1221",
+     "utts": [
+      "1221-135767-0003"
+     ]
+    },
+    {
+     "spk": "2300",
+     "utts": [
+      "2300-131720-0015",
+      "2300-131720-0000"
+     ]
+    }
+   ],
+   "bed": "SCAFE",
+   "bed_db": -6,
+   "bed_src": {
+    "file": "~/vdn-data/demand/SCAFE/ch01.wav",
+    "start_s": 275.84
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/4077/13751/4077-13751-0018.flac",
+    "overlap_with_clip": false
+   }
+  },
+  {
+   "id": "c08",
+   "desc": "邻桌 4 人说话 + 食堂底噪，SNR 10 dB",
+   "category": "babble-多人",
+   "lang": "en",
+   "snr_db": 10,
+   "has_ref": true,
+   "kind": "synthetic",
+   "dur_s": 10.45,
+   "speech_start_s": 1.0,
+   "speech_end_s": 9.95,
+   "target": {
+    "file": "~/vdn-data/librispeech/LibriSpeech/test-clean/6829/68771/6829-68771-0029.flac",
+    "spk": "6829",
+    "sex": "F",
+    "text": "BETH WAS A BEAUTIFUL GIRL THE HANDSOMEST OF THE THREE COUSINS BY FAR YET ELIZA SURPASSED HER IN NATURAL CHARM AND SEEMED WELL AWARE OF THE FACT"
+   },
+   "interferers": [
+    {
+     "spk": "2094",
+     "utts": [
+      "2094-142345-0060",
+      "2094-142345-0029",
+      "2094-142345-0013"
+     ]
+    },
+    {
+     "spk": "7729",
+     "utts": [
+      "7729-102255-0037",
+      "7729-102255-0003"
+     ]
+    },
+    {
+     "spk": "3575",
+     "utts": [
+      "3575-170457-0046"
+     ]
+    },
+    {
+     "spk": "3570",
+     "utts": [
+      "3570-5696-0004",
+      "3570-5694-0008"
+     ]
+    }
+   ],
+   "bed": "PCAFETER",
+   "bed_db": -6,
+   "bed_src": {
+    "file": "~/vdn-data/demand/PCAFETER/ch01.wav",
+    "start_s": 188.85
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/6829/68771/6829-68771-0007.flac",
+    "overlap_with_clip": false
+   }
+  },
+  {
+   "id": "c09",
+   "desc": "厨房杯碟水声（非人声），SNR 0 dB",
+   "category": "非人声-杯碟",
+   "lang": "en",
+   "snr_db": 0,
+   "has_ref": true,
+   "kind": "synthetic",
+   "dur_s": 9.61,
+   "speech_start_s": 1.0,
+   "speech_end_s": 9.11,
+   "target": {
+    "file": "~/vdn-data/librispeech/LibriSpeech/test-clean/8455/210777/8455-210777-0019.flac",
+    "spk": "8455",
+    "sex": "M",
+    "text": "THEN THERE WERE THREE OR FOUR LEADING MEN OF THE COMMUNITY WITH THEIR WIVES WHO WERE FOR THE MOST PART THE FATHERS AND MOTHERS OF THE YOUNG LADIES"
+   },
+   "interferers": [],
+   "bed": "DKITCHEN",
+   "bed_db": 0,
+   "bed_src": {
+    "file": "~/vdn-data/demand/DKITCHEN/ch01.wav",
+    "start_s": 233.37
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/8455/210777/8455-210777-0001.flac",
+    "overlap_with_clip": false
+   }
+  },
+  {
+   "id": "c10",
+   "desc": "背景钢琴曲（拉格泰姆），SNR 5 dB",
+   "category": "非人声-背景音乐",
+   "lang": "en",
+   "snr_db": 5,
+   "has_ref": true,
+   "kind": "synthetic",
+   "dur_s": 10.36,
+   "speech_start_s": 1.0,
+   "speech_end_s": 9.86,
+   "target": {
+    "file": "~/vdn-data/librispeech/LibriSpeech/test-clean/3570/5696/3570-5696-0009.flac",
+    "spk": "3570",
+    "sex": "F",
+    "text": "IN STRICT ACCURACY NOTHING SHOULD BE INCLUDED UNDER THE HEAD OF CONSPICUOUS WASTE BUT SUCH EXPENDITURE AS IS INCURRED ON THE GROUND OF AN INVIDIOUS PECUNIARY COMPARISON"
+   },
+   "interferers": [],
+   "bed": "MUSIC",
+   "bed_db": 0,
+   "bed_src": {
+    "file": "~/vdn-data/music/Scott_Joplin_-_Maple_Leaf_Rag.ogg",
+    "start_s": 128.3
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/3570/5696/3570-5696-0003.flac",
+    "overlap_with_clip": false
+   }
+  },
+  {
+   "id": "c11",
+   "desc": "中文 · 邻桌 3 人（英文）说话 + 食堂底噪，SNR 0 dB",
+   "category": "babble-多人",
+   "lang": "zh",
+   "snr_db": 0,
+   "has_ref": true,
+   "kind": "synthetic",
+   "dur_s": 11.0,
+   "speech_start_s": 1.0,
+   "speech_end_s": 10.5,
+   "target": {
+    "file": "~/vdn-data/zh/zh_popobing_landxia.ogg",
+    "start_s": 120.0,
+    "dur_s": 9.5
+   },
+   "interferers": [
+    {
+     "spk": "4970",
+     "utts": [
+      "4970-29093-0004",
+      "4970-29093-0017",
+      "4970-29095-0022",
+      "4970-29095-0030"
+     ]
+    },
+    {
+     "spk": "121",
+     "utts": [
+      "121-127105-0034",
+      "121-127105-0001"
+     ]
+    },
+    {
+     "spk": "8463",
+     "utts": [
+      "8463-294828-0023",
+      "8463-294825-0014",
+      "8463-294828-0004",
+      "8463-287645-0013"
+     ]
+    }
+   ],
+   "bed": "PCAFETER",
+   "bed_db": -6,
+   "bed_src": {
+    "file": "~/vdn-data/demand/PCAFETER/ch01.wav",
+    "start_s": 257.2
+   },
+   "enroll": {
+    "from": "~/vdn-data/zh/zh_popobing_landxia.ogg",
+    "start_s": 300.0,
+    "dur_s": 10.0,
+    "overlap_with_clip": false
+   }
+  },
+  {
+   "id": "c12",
+   "desc": "中文 · 邻座一人（英文）说话 + 咖啡馆露台底噪，SNR 5 dB",
+   "category": "babble-单个干扰者",
+   "lang": "zh",
+   "snr_db": 5,
+   "has_ref": true,
+   "kind": "synthetic",
+   "dur_s": 11.0,
+   "speech_start_s": 1.0,
+   "speech_end_s": 10.5,
+   "target": {
+    "file": "~/vdn-data/zh/zh_braille_commusic.ogg",
+    "start_s": 120.0,
+    "dur_s": 9.5
+   },
+   "interferers": [
+    {
+     "spk": "260",
+     "utts": [
+      "260-123440-0017",
+      "260-123288-0002",
+      "260-123288-0016"
+     ]
+    }
+   ],
+   "bed": "SCAFE",
+   "bed_db": -10,
+   "bed_src": {
+    "file": "~/vdn-data/demand/SCAFE/ch01.wav",
+    "start_s": 162.32
+   },
+   "enroll": {
+    "from": "~/vdn-data/zh/zh_braille_commusic.ogg",
+    "start_s": 300.0,
+    "dur_s": 10.0,
+    "overlap_with_clip": false
+   }
+  }
+ ],
+ "source_sha256": {
+  "~/vdn-data/demand/PCAFETER/ch01.wav": "854dd0e5ef334a66abdd02d6d2b3e9d01b685df033d0acd1cd06e471c062550b",
+  "~/vdn-data/demand/SCAFE/ch01.wav": "b48a9bb1df36911454fc8b1e08716275ada694612491ce7357aabe30c3b2ab28",
+  "~/vdn-data/demand/DKITCHEN/ch01.wav": "94eda18f9461348d1d070ca69d001e7fa9e51604731509026b4905d2e321561d",
+  "~/vdn-data/music/Scott_Joplin_-_Maple_Leaf_Rag.ogg": "9348ee28307391f8d64dcdcc85663214e8f605c061b7974820ca8a736ced8a39",
+  "~/vdn-data/zh/zh_popobing_landxia.ogg": "ba5d93c372955325884b00dbf26da7ff7fd89bd4adf09d600e0338a6874ac7ba",
+  "~/vdn-data/zh/zh_braille_commusic.ogg": "e8e992057860907e0d1d0b35f00b3737439843cd7f86f21714cf34532c6f4f66",
+  "~/vdn-data/librispeech/test-clean.tar.gz": "39fde525e59672dc6d1551919b1478f724438a95aa55f874b576be21967e6c23"
+ }
+}

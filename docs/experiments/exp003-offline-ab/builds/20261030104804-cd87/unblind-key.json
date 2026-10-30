@@ -1,0 +1,130 @@
+{
+ "build": "20261030104804-cd87",
+ "key": {
+  "c01": [
+   "voxlock_live",
+   "voxlock_given",
+   "dpdfnet2",
+   "gtcrn"
+  ],
+  "c02": [
+   "voxlock_given",
+   "dpdfnet2",
+   "voxlock_live",
+   "gtcrn"
+  ],
+  "c03": [
+   "voxlock_given",
+   "gtcrn",
+   "dpdfnet2",
+   "voxlock_live"
+  ],
+  "c04": [
+   "voxlock_given",
+   "voxlock_live",
+   "gtcrn",
+   "dpdfnet2"
+  ],
+  "c05": [
+   "voxlock_live",
+   "gtcrn",
+   "voxlock_given",
+   "dpdfnet2"
+  ],
+  "c06": [
+   "voxlock_live",
+   "voxlock_given",
+   "gtcrn",
+   "dpdfnet2"
+  ],
+  "c07": [
+   "voxlock_live",
+   "dpdfnet2",
+   "voxlock_given",
+   "gtcrn"
+  ],
+  "c08": [
+   "gtcrn",
+   "voxlock_given",
+   "dpdfnet2",
+   "voxlock_live"
+  ],
+  "c09": [
+   "voxlock_given",
+   "voxlock_live",
+   "dpdfnet2",
+   "gtcrn"
+  ],
+  "c10": [
+   "gtcrn",
+   "voxlock_live",
+   "voxlock_given",
+   "dpdfnet2"
+  ],
+  "c11": [
+   "gtcrn",
+   "voxlock_live",
+   "voxlock_given",
+   "dpdfnet2"
+  ],
+  "c12": [
+   "dpdfnet2",
+   "gtcrn",
+   "voxlock_live",
+   "voxlock_given"
+  ]
+ },
+ "traps": [
+  {
+   "id": "trap-identical",
+   "clip": "c06",
+   "desc": "邻桌 3 人说话 + 食堂底噪，SNR 0 dB",
+   "label": "所有候选其实是同一个文件（应答「差不多」）",
+   "ref": "audio/c06_c98eaa.wav",
+   "cands": [
+    "audio/c06_2c4227.wav",
+    "audio/c06_2c4227.wav",
+    "audio/c06_2c4227.wav",
+    "audio/c06_2c4227.wav"
+   ],
+   "names": [
+    "same",
+    "same",
+    "same",
+    "same"
+   ],
+   "expect": {
+    "best": [
+     "same"
+    ]
+   },
+   "source_model": "gtcrn"
+  },
+  {
+   "id": "trap-degraded",
+   "clip": "c12",
+   "desc": "中文 · 邻座一人（英文）说话 + 咖啡馆露台底噪，SNR 5 dB",
+   "label": "其中一份是明显劣化版（最清楚、最自然都不该选它，也不该答「差不多」）",
+   "ref": "audio/c12_4a19af.wav",
+   "cands": [
+    "audio/c12_bf1551.wav",
+    "audio/c12_7fe82e.wav",
+    "audio/c12_119e78.wav",
+    "audio/c12_1508b9.wav"
+   ],
+   "names": [
+    "voxlock_live",
+    "voxlock_given",
+    "degraded",
+    "gtcrn"
+   ],
+   "expect": {
+    "not": [
+     "degraded",
+     "same"
+    ]
+   },
+   "source_model": "gtcrn"
+  }
+ ]
+}

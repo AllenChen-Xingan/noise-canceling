@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>降噪盲听对比</title>
+<style>
+:root {
+  --bg: #f7f6f3; --card: #ffffff; --fg: #1f1f1d; --muted: #6b6a66; --line: #e2e0da;
+  --accent: #2f5fd0; --accent-fg: #ffffff; --sel: #dfe8fb; --warn: #b4441f; --ok: #2d7a46;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171716; --card: #222220; --fg: #ecebe7; --muted: #a09e98; --line: #3a3936;
+    --accent: #7ea2f2; --accent-fg: #10131a; --sel: #2b3550; --warn: #f08a63; --ok: #6cc28a;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #171716; --card: #222220; --fg: #ecebe7; --muted: #a09e98; --line: #3a3936;
+  --accent: #7ea2f2; --accent-fg: #10131a; --sel: #2b3550; --warn: #f08a63; --ok: #6cc28a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.6 -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 80px; }
+h1 { font-size: 1.5rem; margin: 0 0 4px; }
+h2 { font-size: 1.15rem; margin: 0 0 8px; }
+.muted { color: var(--muted); font-size: .92rem; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin: 16px 0; }
+button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--fg);
+  border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.src { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.src button { min-width: 72px; font-weight: 600; }
+.src button.on { background: var(--sel); border-color: var(--accent); }
+.bar { display: flex; align-items: center; gap: 10px; margin: 8px 0 4px; }
+.bar input[type=range] { flex: 1; min-width: 0; }
+.q { margin: 16px 0 0; }
+.q .label { font-weight: 600; }
+.opts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+.opts button.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.opts button.small { padding: 4px 10px; font-size: .88rem; }
+.cand { border-top: 1px solid var(--line); padding: 8px 0; }
+.cand .who { font-weight: 700; min-width: 1.6em; display: inline-block; }
+textarea { width: 100%; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px; min-height: 2.6em; }
+input[type=text] { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+.progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin: 10px 0; }
+.progress > div { height: 100%; background: var(--accent); }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tablewrap { overflow-x: auto; }
+.warn { color: var(--warn); }
+.ok { color: var(--ok); }
+kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: .85em; }
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>降噪盲听对比</h1>
+  <p class="muted" id="lede"></p>
+
+  <section class="card" id="intro">
+    <h2>开始前</h2>
+    <ol>
+      <li>戴耳机。先在第一段把系统音量调到舒适，之后别再动。</li>
+      <li id="keysTip"></li>
+      <li>「原声」是没处理过的带噪录音。主讲人是声音最近、最清楚的那位（多数段开头约 1 秒后才开口，前 3 段一开头就说）；其他人声都算噪音。</li>
+      <li>每个候选都至少听 3 秒才能作答。「最清楚」「最自然」分不出最好的那一个，就选「分不出」，别猜。</li>
+      <li>每段答三问：最清楚 · 最自然 · 每个候选「拿去开会行不行」（假如你是会议对方，听到的是这一路，能接受吗）并勾出吃字的（都没吃字就点「都没有吃字」）。听到的毛病可以点「＋毛病」补充（可不填）。听不出哪个字被吞，可以点「显示原文」对照。</li>
+      <li>大约 25–30 分钟。进度自动存在浏览器里，中途关掉再打开能接着做，累了就歇一下。</li>
+      <li>其中有一两段是检验题，照实听照实答即可。</li>
+    </ol>
+    <p class="muted" id="resumeNote"></p>
+    <div class="nav"><button class="primary" id="startBtn">开始</button></div>
+  </section>
+
+  <section id="trial" class="hidden">
+    <div class="muted" id="trialHead"></div>
+    <div class="progress"><div id="progFill" style="width:0"></div></div>
+    <div class="card">
+      <h2 id="trialTitle"></h2>
+      <div class="muted" id="trialDesc"></div>
+      <div class="muted"><button class="small" id="textBtn">显示原文</button> <span id="textLbl" class="hidden"></span></div>
+      <div class="src" id="srcBtns"></div>
+      <div class="bar">
+        <button id="playBtn">▶ 播放</button>
+        <input type="range" id="seek" min="0" max="1000" value="0" aria-label="播放位置">
+        <span class="muted" id="timeLbl">0.0 s</span>
+      </div>
+      <label class="muted"><input type="checkbox" id="loopChk" checked> 循环播放</label>
+      <p class="muted" id="heardLbl"></p>
+
+      <div id="qPair">
+      <div class="q" id="q-clearer"><div class="label"><span class="qn"></span>. 哪个<b>最清楚</b>？（主讲人的字听得清）</div>
+        <div class="opts" data-q="clearer"></div></div>
+      <div class="q" id="q-natural"><div class="label"><span class="qn"></span>. 哪个<b>最自然</b>？（没有怪声、背景不忽大忽小、不发闷）</div>
+        <div class="opts" data-q="natural"></div></div>
+      </div>
+      <div class="q"><div class="label">3. 每个候选：拿它去<b>开会</b>行吗？有没有<b>吃字</b>（主讲人的字被压掉、断掉）？</div>
+        <div id="candRows"></div>
+        <div class="opts" id="eatenOpts"></div></div>
+      <div class="q"><div class="label">备注（可选，一句话）</div><textarea id="note" maxlength="300"></textarea></div>
+
+      <p class="muted warn" id="missLbl"></p>
+      <div class="nav">
+        <button id="prevBtn">← 上一段</button>
+        <button class="primary" id="nextBtn">下一段 →</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="done" class="hidden">
+    <div class="card">
+      <h2>听完了，揭盲结果</h2>
+      <div class="tablewrap" id="summary"></div>
+      <div class="nav">
+        <button class="primary" id="exportBtn">导出结果 JSON</button>
+        <button id="reviewBtn">回去改答案</button>
+        <button id="resetBtn">清空重来</button>
+      </div>
+      <p class="muted">导出的文件会下载到本机「下载」文件夹，交给大总管放进 <code>docs/experiments/exp003-offline-ab/</code>。</p>
+    </div>
+    <div class="card"><h2>逐段明细</h2><div class="tablewrap" id="detail"></div></div>
+  </section>
+
+  <section class="card" id="selfrec">
+    <h2>加自录片段（以后用）</h2>
+    <p class="muted">有了自己的咖啡馆录音后，选一份原声和两到三份同长度的处理版。它们会作为额外的盲听题加在最后，结果一起导出。文件只在本页内存里读，不会上传。</p>
+    <div class="opts"><label>原声 <input type="file" accept="audio/*" id="selfRef"></label></div>
+    <div id="selfCands"></div>
+    <div class="opts"><button id="selfAdd">加进题目</button></div>
+    <p class="muted" id="selfMsg"></p>
+  </section>
+</main>
+
+<script src="manifest.js"></script>
+<script>
+(() => {
+  "use strict";
+  const M = window.EXP003;
+  const KEY = JSON.parse(atob(M.slotmap || M.key));            // 揭盲表：{clips: {段: [槽位 s0.. 的模型]}, traps: {题: [...]}}
+  const N = M.n_cands;
+  const LETTERS = "ABCD".slice(0, N).split("");
+  const MODELS = Object.keys(M.models);
+  const NAME = (m) => (M.models[m] && M.models[m].name) || ({ same: "分不出", none: "都没有", degraded: "劣化版" }[m] || m);
+  const HEARD_S = 3;  // 每个候选累计至少播放这么多秒才算听过
+  // 每个 build 各存一份，互不覆盖（换了页面版本，旧版本的进度还留在浏览器里）
+  const STORE = "exp003-ab-" + M.build;
+  const USABLE = [["ok", "能用"], ["marginal", "勉强"], ["no", "不能用"]];
+  const TAGS = [["metallic", "金属声/水声"], ["pumping_bg", "背景忽大忽小"], ["muffled", "发闷"],
+                ["vacuum", "真空感（背景被抽空）"], ["clipped_onsets", "字头字尾被削"], ["pumping_voice", "人声忽大忽小"]];
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+  const now = () => new Date().toISOString();
+
+  $("lede").textContent = `${N} 个降噪候选各处理同一段录音，随机标成 ${LETTERS.join(" / ")}。听完每段作答，最后导出结果。全程本机，不联网、不上传。`;
+  $("keysTip").innerHTML = `候选和「原声」可以随时切换，播放位置不变。快捷键：${LETTERS.map((L, i) => `<kbd>${i + 1}</kbd> ${L}`).join(" · ")} · <kbd>0</kbd> 原声 · <kbd>空格</kbd> 播放 / 暂停。`;
+
+  // ---- 本机进度（存不了也能用，只是刷新会丢） ----
+  const save = () => { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} };
+  const load = () => { try { return JSON.parse(localStorage.getItem(STORE) || "null"); } catch (e) { return null; } };
+
+  // ---- 浏览器密码学随机数，Fisher–Yates 洗牌 ----
+  const rnd = (n) => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; };
+  const shuffle = (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = rnd(i + 1); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+
+  function newSession() {
+    // 正式题：拉丁方轮换——第 i 段的字母 j 放模型 base[(i + j) % N]，每个模型在每个字母位置出现次数平衡
+    const base = shuffle(MODELS.slice());
+    const order = shuffle(M.clips.map((c) => c.id));
+    const trials = order.map((id, i) => {
+      const slots = {};
+      LETTERS.forEach((L, j) => { slots[L] = KEY.clips[id].indexOf(base[(i + j) % N]); });
+      return { kind: "real", clip: id, slots };
+    });
+    // 检验题：插在第 3 段之后的随机位置
+    for (const t of M.traps) {
+      const perm = shuffle([...Array(N).keys()]);
+      const slots = {}; LETTERS.forEach((L, j) => { slots[L] = perm[j]; });
+      trials.splice(3 + rnd(trials.length - 2), 0, { kind: "trap", trap: t.id, clip: t.clip, slots });
+    }
+    // 两问先后：一半屏「最清楚」在上、一半「最自然」在上，再洗牌
+    const qo = shuffle(trials.map((_, i) => i < Math.ceil(trials.length / 2)));
+    trials.forEach((t, i) => { t.qorder = qo[i] ? ["clearer", "natural"] : ["natural", "clearer"]; });
+    return { started: now(), trials, answers: {}, i: 0, ua: navigator.userAgent };
+  }
+
+  let S = load();
+  if (!S || S.manifest !== M.build) { S = newSession(); S.manifest = M.build; save(); }
+  else if (!S.trials.length) { /* 空 */ }
+  else { $("resumeNote").textContent = `上次做到第 ${Math.min(S.i + 1, S.trials.length)} 段，点「开始」接着做。`; }
+
+  const clipById = Object.fromEntries(M.clips.map((c) => [c.id, c]));
+  const trapById = Object.fromEntries(M.traps.map((t) => [t.id, t]));
+  const selfTrials = {};  // 自录题的文件只存在内存
+
+  function itemOf(t) { return t.kind === "self" ? selfTrials[t.id] : (t.kind === "trap" ? trapById[t.trap] : clipById[t.clip]); }
+  function fileOf(t, slot) { const it = itemOf(t); return slot === "ref" ? it.ref : it.cands[t.slots[slot]]; }
+  function modelOf(t, L) {
+    if (t.kind === "self") return selfTrials[t.id] ? selfTrials[t.id].names[t.slots[L]] : null;
+    if (t.kind === "trap") return KEY.traps[t.trap][t.slots[L]];
+    return KEY.clips[t.clip][t.slots[L]];
+  }
+
+  // ---- 每题作答记录 ----
+  const key = (t) => t.kind === "self" ? t.id : (t.kind === "trap" ? "trap:" + t.trap : t.clip);
+  function ans() {
+    const k = key(S.trials[S.i]);
+    const a = (S.answers[k] ||= { heard: {}, plays: { ref: 0 }, switches: 0, usable: {}, tags: {}, eaten: [], started_at: null });
+    a.listen_s ||= {};
+    return a;
+  }
+  const letters = () => Object.keys(S.trials[S.i].slots).sort();
+
+  // ---- 播放：每个槽位一个 <audio>，切换时同步位置 ----
+  const players = {}; let cur = "A"; let playing = false;
+  function buildPlayers(t) {
+    gen += 1; cancelRamps();
+    for (const k of Object.keys(players)) { players[k].pause(); delete players[k]; }
+    const box = $("srcBtns"); box.innerHTML = "";
+    for (const slot of [...letters(), "ref"]) {
+      const a = new Audio(fileOf(t, slot)); a.preload = "auto"; a.loop = $("loopChk").checked;
+      a.addEventListener("timeupdate", () => { if (slot === cur) { tick(); countListen(slot); } });
+      a.addEventListener("ended", () => { if (slot === cur) { playing = false; paintPlay(); } });
+      players[slot] = a;
+      const b = document.createElement("button"); b.dataset.src = slot; b.textContent = slot === "ref" ? "原声" : slot;
+      b.addEventListener("click", () => switchTo(slot)); box.appendChild(b);
+    }
+    cur = "A"; playing = false; paintSrc(); paintPlay(); tick();
+  }
+  // 累计每个槽位实际播放的秒数（只数正在播的那一路，跳进度不算）
+  let lastT = null;
+  function countListen(slot) {
+    const t = performance.now();
+    if (playing && lastT !== null && slot === cur) {
+      const dt = Math.min(0.5, (t - lastT) / 1000);
+      const a = ans(); a.listen_s[slot] = (a.listen_s[slot] || 0) + dt;
+      if (slot !== "ref" && !a.heard[slot] && a.listen_s[slot] >= HEARD_S) { a.heard[slot] = true; save(); paintHeard(); }
+    }
+    lastT = t;
+  }
+  // 切换：旧的约 5 ms 淡出 → 暂停 → 新的同位置约 5 ms 淡入（不交叉淡变；ITU-R BS.1534-3 §5.3 的做法，
+  // 免得切换咔嗒被听成伪影）。用 1 ms 定时器调 volume，时间是近似的，不是采样精确。
+  const FADE_MS = 5;
+  const ramps = new Set();
+  function ramp(a, from, to, done) {
+    let k = 0; a.volume = from;
+    const id = setInterval(() => {
+      k += 1; a.volume = Math.max(0, Math.min(1, from + (to - from) * k / FADE_MS));
+      if (k >= FADE_MS) { clearInterval(id); ramps.delete(id); if (done) done(); }
+    }, 1);
+    ramps.add(id);
+  }
+  function cancelRamps() { ramps.forEach((id) => clearInterval(id)); ramps.clear(); Object.values(players).forEach((a) => { a.volume = 1; }); switching = false; }
+  let switching = false; let gen = 0;  // gen：换题时加一，作废还没跑完的切换
+  function switchTo(slot) {
+    if (!players[slot] || slot === cur || switching) return;
+    const old = players[cur]; const myGen = gen;
+    ans().switches += 1;
+    const go = () => {
+      if (myGen !== gen || !players[slot]) { switching = false; return; }
+      const t = old.currentTime; old.pause(); old.volume = 1;
+      cur = slot; players[cur].currentTime = t; lastT = null;
+      if (playing) { players[cur].volume = 0; players[cur].play(); ramp(players[cur], 0, 1); markPlay(); }
+      switching = false; save(); paintSrc();
+    };
+    if (playing) { switching = true; ramp(old, 1, 0, go); } else go();
+  }
+  function togglePlay() {
+    if (playing) { players[cur].pause(); playing = false; }
+    else { players[cur].play(); playing = true; lastT = null; markPlay(); }
+    paintPlay();
+  }
+  function markPlay() {
+    const a = ans(); a.plays[cur] = (a.plays[cur] || 0) + 1;
+    save(); paintHeard();
+  }
+  function tick() {
+    const a = players[cur]; if (!a) return;
+    const d = a.duration || 0; $("timeLbl").textContent = `${a.currentTime.toFixed(1)} s`;
+    if (d) $("seek").value = String(Math.round(1000 * a.currentTime / d));
+  }
+  const paintSrc = () => document.querySelectorAll("#srcBtns button").forEach((b) => b.classList.toggle("on", b.dataset.src === cur));
+  const paintPlay = () => { $("playBtn").textContent = playing ? "⏸ 暂停" : "▶ 播放"; };
+  function paintHeard() {
+    const a = ans();
+    $("heardLbl").textContent = "已听（每个至少 3 秒）：" + letters().map((L) => `${L} ${a.heard[L] ? "✓" : "—"}`).join(" · ");
+    paintAnswers();
+  }
+
+  // ---- 作答界面（每段按槽位数重建） ----
+  function btn(label, onClick, cls) { const b = document.createElement("button"); b.textContent = label; if (cls) b.className = cls; b.addEventListener("click", onClick); return b; }
+  function buildQuestions() {
+    const Ls = letters();
+    document.querySelectorAll(".opts[data-q]").forEach((g) => {
+      g.innerHTML = "";
+      for (const v of [...Ls, "same"]) {
+        const b = btn(v === "same" ? "分不出" : v, () => { const a = ans(); a[g.dataset.q] = v; touch(a); });
+        b.dataset.v = v; g.appendChild(b);
+      }
+    });
+    const toggleEaten = (v) => {
+      const a = ans();
+      if (v === "none") a.eaten = a.eaten.includes("none") ? [] : ["none"];
+      else { a.eaten = a.eaten.filter((x) => x !== "none"); a.eaten = a.eaten.includes(v) ? a.eaten.filter((x) => x !== v) : [...a.eaten, v].sort(); }
+      touch(a);
+    };
+    const eo = $("eatenOpts"); eo.innerHTML = "";
+    const nb = btn("都没有吃字", () => toggleEaten("none"), "small"); nb.dataset.v = "none"; eo.appendChild(nb);
+    const rows = $("candRows"); rows.innerHTML = "";
+    for (const L of Ls) {
+      const row = document.createElement("div"); row.className = "cand";
+      const u = document.createElement("div"); u.className = "opts";
+      const who = document.createElement("span"); who.className = "who"; who.textContent = L; u.appendChild(who);
+      for (const [v, lab] of USABLE) { const b = btn(lab, () => { const a = ans(); a.usable[L] = v; touch(a); }, "small"); b.dataset.u = v; b.dataset.l = L; u.appendChild(b); }
+      const eb = btn("☐ 吃字", () => toggleEaten(L), "small"); eb.dataset.e = L; u.appendChild(eb);
+      const tb = btn("＋毛病", () => { const r = row.querySelector(".tagrow"); r.classList.toggle("hidden"); }, "small"); tb.dataset.tt = L; u.appendChild(tb);
+      const tg = document.createElement("div"); tg.className = "opts tagrow hidden"; tg.dataset.l = L;
+      const tl = document.createElement("span"); tl.className = "muted"; tl.textContent = "听到的毛病（可选）："; tg.appendChild(tl);
+      for (const [v, lab] of TAGS) {
+        const b = btn(lab, () => { const a = ans(); const cur = a.tags[L] || []; a.tags[L] = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]; touch(a); }, "small");
+        b.dataset.t = v; b.dataset.l = L; tg.appendChild(b);
+      }
+      row.appendChild(u); row.appendChild(tg); rows.appendChild(row);
+    }
+  }
+  function touch(a) { a.answered_at = now(); save(); paintAnswers(); }
+  const allDone = (a) => !!(a.clearer && a.natural && a.eaten.length) && letters().every((L) => a.usable[L]);
+  function paintAnswers() {
+    const a = ans(); const can = letters().every((L) => a.heard[L]);
+    document.querySelectorAll(".opts[data-q] button").forEach((b) => { b.disabled = !can; b.classList.toggle("on", a[b.parentElement.dataset.q] === b.dataset.v); });
+    document.querySelectorAll("#eatenOpts button").forEach((b) => { b.disabled = !can; b.classList.toggle("on", a.eaten.includes(b.dataset.v)); });
+    document.querySelectorAll("#candRows button[data-e]").forEach((b) => { const on = a.eaten.includes(b.dataset.e); b.disabled = !can; b.classList.toggle("on", on); b.textContent = (on ? "☑" : "☐") + " 吃字"; });
+    document.querySelectorAll("#candRows button[data-tt]").forEach((b) => { const n = (a.tags[b.dataset.tt] || []).length; b.disabled = !can; b.textContent = n ? `＋毛病（${n}）` : "＋毛病"; });
+    document.querySelectorAll("#candRows button[data-u]").forEach((b) => { b.disabled = !can; b.classList.toggle("on", a.usable[b.dataset.l] === b.dataset.u); });
+    document.querySelectorAll("#candRows button[data-t]").forEach((b) => { b.classList.toggle("on", (a.tags[b.dataset.l] || []).includes(b.dataset.t)); });
+    $("note").value = a.note || "";
+    $("nextBtn").disabled = !allDone(a);
+    const miss = [];
+    const unheard = letters().filter((L) => !a.heard[L]);
+    if (unheard.length) miss.push(`先把 ${unheard.join("、")} 各听 3 秒`);
+    else {
+      if (!a.clearer) miss.push("最清楚"); if (!a.natural) miss.push("最自然");
+      const nu = letters().filter((L) => !a.usable[L]); if (nu.length) miss.push(`${nu.join("、")} 的开会`);
+      if (!a.eaten.length) miss.push("吃字（勾候选或点「都没有吃字」）");
+    }
+    $("missLbl").textContent = miss.length ? "还差：" + miss.join(" · ") : "";
+    $("nextBtn").textContent = S.i === S.trials.length - 1 ? "完成 →" : "下一段 →";
+    $("prevBtn").disabled = S.i === 0;
+  }
+  $("note").addEventListener("input", (e) => { ans().note = e.target.value; save(); });
+
+  function showTrial() {
+    const t = S.trials[S.i];
+    $("intro").classList.add("hidden"); $("done").classList.add("hidden"); $("trial").classList.remove("hidden"); $("selfrec").classList.add("hidden");
+    $("trialHead").textContent = `第 ${S.i + 1} / ${S.trials.length} 段`;
+    $("progFill").style.width = `${100 * S.i / S.trials.length}%`;
+    $("trialTitle").textContent = `第 ${S.i + 1} 段`;
+    $("trialDesc").textContent = t.kind === "self" ? "自录片段" : itemOf(t).desc;
+    const txt = t.kind === "self" ? null : (t.kind === "trap" ? (clipById[t.clip] || {}).text : itemOf(t).text);
+    $("textBtn").classList.toggle("hidden", !txt); $("textLbl").classList.add("hidden"); $("textBtn").textContent = "显示原文";
+    $("textLbl").textContent = txt || "";
+    const a = ans(); if (!a.started_at) { a.started_at = now(); save(); }
+    // 「最清楚」「最自然」上下顺序每屏随机（仿 P.835 的 SIG/BAK 先后随机），存在题里，回看时不变
+    const qo = t.qorder || ["clearer", "natural"];
+    qo.forEach((q, j) => { const el = $("q-" + q); $("qPair").appendChild(el); el.querySelector(".qn").textContent = String(j + 1); });
+    buildQuestions(); buildPlayers(t); paintHeard();
+    window.scrollTo(0, 0);
+  }
+
+  $("startBtn").addEventListener("click", () => { if (S.i >= S.trials.length) showDone(); else showTrial(); });
+  $("nextBtn").addEventListener("click", () => { stopAll(); S.i += 1; save(); if (S.i >= S.trials.length) showDone(); else showTrial(); });
+  $("prevBtn").addEventListener("click", () => { stopAll(); S.i = Math.max(0, S.i - 1); save(); showTrial(); });
+  $("playBtn").addEventListener("click", togglePlay);
+  $("textBtn").addEventListener("click", () => { const h = $("textLbl").classList.toggle("hidden"); $("textBtn").textContent = h ? "显示原文" : "隐藏原文"; });
+  $("seek").addEventListener("input", (e) => { const a = players[cur]; if (a && a.duration) a.currentTime = a.duration * e.target.value / 1000; });
+  $("loopChk").addEventListener("change", (e) => Object.values(players).forEach((a) => { a.loop = e.target.checked; }));
+  document.addEventListener("keydown", (e) => {
+    if ($("trial").classList.contains("hidden") || e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+    const n = parseInt(e.key, 10);
+    if (e.key === "0") switchTo("ref");
+    else if (n >= 1 && n <= letters().length) switchTo(LETTERS[n - 1]);
+    else if (e.key === " ") { e.preventDefault(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); togglePlay(); }
+  });
+  function stopAll() { gen += 1; cancelRamps(); Object.values(players).forEach((a) => a.pause()); playing = false; }
+
+  // ---- 揭盲与汇总 ----
+  function results() {
+    const rows = S.trials.map((t, idx) => {
+      const a = S.answers[key(t)] || { heard: {}, plays: {}, usable: {}, tags: {}, eaten: [] };
+      const Ls = Object.keys(t.slots);
+      const map = Object.fromEntries(Ls.map((L) => [L, modelOf(t, L)]));
+      const um = (v) => (v == null ? null : (map[v] !== undefined ? map[v] : v));
+      return {
+        order: idx + 1, kind: t.kind, clip: t.clip || null, trap: t.trap || null, self: t.kind === "self" ? t.id : null,
+        slots: map, qorder: t.qorder || ["clearer", "natural"],
+        answer: { clearer: a.clearer || null, natural: a.natural || null, eaten: a.eaten || [], usable: a.usable || {}, tags: a.tags || {} },
+        by_model: {
+          clearer: um(a.clearer), natural: um(a.natural), eaten: (a.eaten || []).map(um),
+          usable: Object.fromEntries(Object.entries(a.usable || {}).map(([L, v]) => [map[L], v])),
+          tags: Object.fromEntries(Object.entries(a.tags || {}).map(([L, v]) => [map[L], v])),
+        },
+        note: a.note || "", heard: a.heard || {}, plays: a.plays || {}, listen_s: a.listen_s || {}, switches: a.switches || 0,
+        started_at: a.started_at || null, answered_at: a.answered_at || null,
+      };
+    });
+    // 检验题按原始作答判：全同题应答「分不出」；劣化题最清楚、最自然都不该选到劣化版（答「分不出」不扣）
+    const traps = rows.filter((r) => r.kind === "trap").map((r) => {
+      const ex = trapById[r.trap].expect;
+      const ok = (q) => ex.best ? ex.best.includes(r.answer[q]) : (r.answer[q] != null && !ex.not.includes(r.by_model[q]));
+      return { trap: r.trap, desc: trapById[r.trap].label, answer: { clearer: r.answer.clearer, natural: r.answer.natural },
+               by_model: { clearer: r.by_model.clearer, natural: r.by_model.natural }, pass: ok("clearer") && ok("natural") };
+    });
+    const real = rows.filter((r) => r.kind === "real");
+    const per = {};
+    for (const m of MODELS) per[m] = { clearer_best: 0, natural_best: 0, eaten: 0, usable: { ok: 0, marginal: 0, no: 0 }, tags: {} };
+    const same = { clearer: 0, natural: 0 }; let noneEaten = 0;
+    for (const r of real) {
+      for (const q of ["clearer", "natural"]) { const v = r.by_model[q]; if (v === "same") same[q]++; else if (per[v]) per[v][q + "_best"]++; }
+      if (r.by_model.eaten.includes("none")) noneEaten++;
+      r.by_model.eaten.forEach((m) => { if (per[m]) per[m].eaten++; });
+      for (const [m, v] of Object.entries(r.by_model.usable)) if (per[m]) per[m].usable[v]++;
+      for (const [m, v] of Object.entries(r.by_model.tags)) if (per[m]) v.forEach((x) => { per[m].tags[x] = (per[m].tags[x] || 0) + 1; });
+    }
+    // 两两对比（主要看 DPDFNet-2 对 GTCRN）：按「开会」评级比（能用 > 勉强 > 不能用），平级再看谁被选为最清楚
+    const RANK = { ok: 2, marginal: 1, no: 0 };
+    const h2h = {};
+    for (let i = 0; i < MODELS.length; i++) for (let j = i + 1; j < MODELS.length; j++) {
+      const x = MODELS[i], y = MODELS[j]; const o = { [x]: 0, [y]: 0, tie: 0 };
+      for (const r of real) {
+        const ux = RANK[r.by_model.usable[x]], uy = RANK[r.by_model.usable[y]];
+        if (ux > uy || (ux === uy && r.by_model.clearer === x)) o[x]++;
+        else if (uy > ux || (ux === uy && r.by_model.clearer === y)) o[y]++;
+        else o.tie++;
+      }
+      h2h[`${x}_vs_${y}`] = o;
+    }
+    return { exp: "exp003-offline-ab", build: M.build, models: M.models, started: S.started, finished: now(), user_agent: S.ua,
+             summary: { n_real: real.length, per_model: per, same, eaten_none: noneEaten, head_to_head: h2h, traps }, trials: rows };
+  }
+  function showDone() {
+    stopAll();
+    $("trial").classList.add("hidden"); $("intro").classList.add("hidden"); $("done").classList.remove("hidden"); $("selfrec").classList.remove("hidden");
+    const R = results(); const s = R.summary;
+    const head = `<tr><th></th>${MODELS.map((m) => `<th>${esc(NAME(m))}</th>`).join("")}<th>分不出 / 都没有</th></tr>`;
+    const row = (lab, f, tail) => `<tr><td>${lab}</td>${MODELS.map((m) => `<td>${f(s.per_model[m])}</td>`).join("")}<td>${tail}</td></tr>`;
+    const tagTxt = (p) => Object.entries(p.tags).map(([k, v]) => `${esc((TAGS.find((x) => x[0] === k) || [k, k])[1])} ${v}`).join("<br>") || "—";
+    $("summary").innerHTML = `<table>${head}
+      ${row("最清楚（段数）", (p) => p.clearer_best, s.same.clearer)}
+      ${row("最自然（段数）", (p) => p.natural_best, s.same.natural)}
+      ${row("吃字（段数）", (p) => p.eaten, s.eaten_none)}
+      ${row("能用 / 勉强 / 不能用", (p) => `${p.usable.ok} / ${p.usable.marginal} / ${p.usable.no}`, "")}
+      ${row("听到的毛病", tagTxt, "")}
+      </table>
+      ${s.head_to_head.dpdfnet2_vs_gtcrn ? `<p><b>DPDFNet-2 对 GTCRN 逐段</b>（先比「开会」评级，平级再看谁被选为最清楚）：DPDFNet-2 好 ${s.head_to_head.dpdfnet2_vs_gtcrn.dpdfnet2} 段 · GTCRN 好 ${s.head_to_head.dpdfnet2_vs_gtcrn.gtcrn} 段 · 分不出 ${s.head_to_head.dpdfnet2_vs_gtcrn.tie} 段。这就是「多 30 ms 延迟换来的效果」的主要证据。</p>` : ""}
+      <p class="muted">共 ${s.n_real} 段正式题。检验题：</p>
+      <ul>${s.traps.map((t) => `<li class="${t.pass ? "ok" : "warn"}">${t.pass ? "✓ 通过" : "✗ 没通过"}：${esc(t.desc)}</li>`).join("")}</ul>
+      <p class="muted">延迟：${MODELS.map((m) => `${esc(NAME(m))} ${esc(M.models[m].latency)}`).join(" · ")}。这里只比效果，延迟上限由你结合这张表来定。</p>`;
+    const lab = (v) => v == null ? "—" : NAME(v);
+    $("detail").innerHTML = `<table><tr><th>#</th><th>片段</th><th>槽位</th><th>最清楚</th><th>最自然</th><th>吃字</th><th>开会</th><th>备注</th></tr>` +
+      R.trials.map((r) => `<tr><td>${r.order}</td><td>${r.kind === "real" ? esc(clipById[r.clip].desc) : (r.kind === "trap" ? "（检验题）" : "（自录）")}</td>
+        <td>${Object.entries(r.slots).map(([L, m]) => `${L}=${esc(lab(m))}`).join("<br>")}</td>
+        <td>${esc(lab(r.by_model.clearer))}</td><td>${esc(lab(r.by_model.natural))}</td>
+        <td>${r.by_model.eaten.map((m) => esc(lab(m))).join("、") || "—"}</td>
+        <td>${Object.entries(r.by_model.usable).map(([m, v]) => `${esc(lab(m))}：${(USABLE.find((x) => x[0] === v) || [v, v])[1]}`).join("<br>")}</td>
+        <td>${esc(r.note || "")}</td></tr>`).join("") + `</table>`;
+  }
+  $("exportBtn").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(results(), null, 1)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = `exp003-ab-result-${new Date().toISOString().slice(0, 16).replace(/[:T-]/g, "")}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+  $("reviewBtn").addEventListener("click", () => { S.i = 0; save(); showTrial(); });
+  $("resetBtn").addEventListener("click", () => {
+    if (!$("resetBtn").dataset.armed) { $("resetBtn").dataset.armed = "1"; $("resetBtn").textContent = "再点一次确认清空"; return; }
+    S = newSession(); S.manifest = M.build; save(); location.reload();
+  });
+
+  // ---- 自录片段：一份原声 + 2–4 份处理版 ----
+  const selfBox = $("selfCands");
+  for (let i = 0; i < Math.max(3, N); i++) {
+    const d = document.createElement("div"); d.className = "opts";
+    d.innerHTML = `<label>处理版 ${i + 1}${i >= 2 ? "（可选）" : ""} <input type="file" accept="audio/*" class="selfFile"></label>
+      <input type="text" class="selfName" placeholder="处理版 ${i + 1} 的名字（揭盲用）" maxlength="40">`;
+    selfBox.appendChild(d);
+  }
+  $("selfAdd").addEventListener("click", () => {
+    const ref = $("selfRef").files[0];
+    const picked = [...document.querySelectorAll(".selfFile")].map((el, i) => ({ f: el.files[0], name: document.querySelectorAll(".selfName")[i].value || `处理版 ${i + 1}` })).filter((x) => x.f);
+    if (!ref || picked.length < 2) { $("selfMsg").textContent = "要选一份原声和至少两份处理版。"; return; }
+    const id = "self-" + Date.now().toString(36) + rnd(1e6).toString(36);  // 不复用旧编号，免得继承刷新前的答案
+    selfTrials[id] = { ref: URL.createObjectURL(ref), cands: picked.map((x) => URL.createObjectURL(x.f)), names: picked.map((x) => x.name), desc: "自录片段" };
+    const perm = shuffle([...picked.keys()]);
+    const slots = {}; "ABCD".slice(0, picked.length).split("").forEach((L, j) => { slots[L] = perm[j]; });
+    S.trials.push({ kind: "self", id, slots, qorder: rnd(2) ? ["clearer", "natural"] : ["natural", "clearer"] });
+    save();
+    $("selfMsg").textContent = `已加在最后（第 ${S.trials.length} 段）。注意：刷新页面后自录文件要重新选。`;
+  });
+  // 刷新后自录题的文件已丢，去掉它们
+  S.trials.filter((t) => t.kind === "self").forEach((t) => { delete S.answers[t.id]; });
+  S.trials = S.trials.filter((t) => t.kind !== "self" || selfTrials[t.id]);
+  if (S.i > S.trials.length) S.i = S.trials.length;
+})();
+</script>
+</body>
+</html>
