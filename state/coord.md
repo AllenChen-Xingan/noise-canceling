@@ -8,7 +8,7 @@
 | 窗口 | 任务 | 交代文件 | 现状页 | 状态 |
 |---|---|---|---|---|
 | model | 002 起步模型与代码 | `_tmp/20261029-b1/model.md` | `state/handoff/model.md` | 已报到（noise-canceling-f0） |
-| pipeline | 003 Mac 音频管线 | `_tmp/20261029-b1/pipeline.md` | `state/handoff/pipeline.md` | 已报到（noise-canceling-21） |
+| pipeline | 003 Mac 音频管线 | `_tmp/20261029-b1/pipeline.md` | `state/handoff/pipeline.md` | 六份已填，交付前自审中（noise-canceling-21） |
 | evaltool | 004 评测工具链 | `_tmp/20261029-b1/evaltool.md` | `state/handoff/evaltool.md` | 已报到（noise-canceling-0b） |
 
 ## 规矩
@@ -38,6 +38,7 @@
 
 - 17:35 首派失败：spawn-worker.sh 不识别新版信任提示 → 超时退出，后两窗未开；已修脚本 BLOCK_RE（人定 2026-10-29）
 - exp001（M5 · ORT CPU 单线程）每帧 p99：DPDFNet baseline 0.32 · dpdfnet2 0.78 · dpdfnet4 1.26 · dpdfnet8 2.21 · 2_48k 1.12 · 8_48k 3.24 · GTCRN 0.43 ms；dpdfnet8 两版超 2 ms 预算 → docs/experiments/exp001-model-frame-time/（README + raw-output，大总管已抽查数字一致，验收通过）
+- pipeline 核实：第三方 HAL 插件由独立 helper 进程加载、不在 coreaudiod 里（开机日志实测）→ 设计稿「崩了整机没声音」前提过时；开源先例断供都送静音，违背「从不吃字」；异步推理线程应自建 work interval；本机缺 meson
 - exp002（M5 CPU）：DNSMOS 每段约 10 s 音频打分约 0.05 s，PESQ/STOI 各约 0.05 s——评测几乎零成本；坑：DNS 仓 dnsmos_local.py:53 与 librosa≥0.10 不兼容，非 16 kHz 输入报错，需先自行重采样（smoke.py:80-86）→ docs/experiments/exp002-eval-smoke/（大总管已抽查：clean 自检 PESQ 4.64 / STOI 1.000，验收通过）
 - 交代里大总管名 5-app-89 失效，现为 noise-canceling-69，批次文件已改
 
@@ -46,3 +47,6 @@
 - [ ] 个性化（只保留主人声音）：推后 / 核心 / 不做（默认推后）—— 来源 board
 - [ ] 远程仓库地址 —— 来源 board
 - [ ] 放权边界 —— 来源 board
+- [ ] 【急】本机现在装 BlackHole 吗（M0 前提）：A 现在 brew 装并重启（建议）/ B 推后 M0 —— 来源 pipeline
+- [ ] 【急】批准插件加载与崩溃实验（写 /Library/Audio/Plug-Ins/HAL + killall coreaudiod，越过本批红线）：A 批准、放 M3 开头（建议）/ B 等开发者账号 / C 不做 —— 来源 pipeline
+- [ ] pipeline 其余 6 条（何时办开发者账号 · 出事送原声还是静音 · 回声消除用不用 process tap · BlackHole 阶段给不给外部用户 · 装完 killall 还是重启 · must-know 命门照核实改写）—— 见 docs/research/003_mac-audio-pipeline/decision.md 末节
