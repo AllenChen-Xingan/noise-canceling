@@ -29,3 +29,4 @@
 - 20:45 起草 must-know.md，核对设计稿行号并修正 4 处差一行 → 完成
 - 20:45 人新要求（经大总管）：用 Workflow 做深调研 → 回报计划，获批；起 Workflow 补 4 条空白（签名 / IPC / 崩溃 / 先例）→ 进行中
 - 20:45 大总管追加：带上 macOS 26/27 的变化 → 排进第二个 Workflow
+- 20:46 BackgroundMusic 核查回来 → 只借鉴架构（scratchpad/out-backgroundmusic.md）
