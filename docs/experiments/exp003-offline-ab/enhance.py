@@ -117,11 +117,14 @@ class Voxlock:
             self.s = Voxlock._vl.live()
 
     def run(self, x):
-        out = [self.s.push(x[i: i + VOXLOCK_CHUNK]) for i in range(0, len(x), VOXLOCK_CHUNK)]
+        out, self.lock_at_s = [], 0.0 if self.name == "voxlock_given" else None
+        for i in range(0, len(x), VOXLOCK_CHUNK):
+            out.append(self.s.push(x[i: i + VOXLOCK_CHUNK]))
+            if self.lock_at_s is None and self.s.locked:
+                self.lock_at_s = round((i + VOXLOCK_CHUNK) / SR, 2)  # live 模式锁定的时刻
         y = np.concatenate(out + [self.s.flush()]).astype(np.float32)
         if not np.all(np.isfinite(y)):
             raise RuntimeError(f"{self.name}: 输出非有限值")
-        self.locked = getattr(self.s, "locked", True)
         return np.pad(y, (0, max(0, len(x) - len(y))))[: len(x)]
 
 
@@ -159,7 +162,7 @@ def main():
     (OUT / "raw").mkdir(parents=True, exist_ok=True)
     (OUT / "audio").mkdir(parents=True, exist_ok=True)
     meter = pyloudnorm.Meter(SR)
-    align, files = {}, {}
+    align, files, lock = {}, {}, {}
     for clip in manifest["clips"]:
         cid = clip["id"]
         x, sr = sf.read(OUT / "src" / f"{cid}_noisy.wav", dtype="float32")
@@ -167,7 +170,7 @@ def main():
         ref = None
         if clip.get("has_ref"):
             ref, _ = sf.read(OUT / "src" / f"{cid}_clean.wav", dtype="float32")
-        versions = {"noisy": x}
+        versions, lock[cid] = {"noisy": x}, {}
         for M in (Dpdfnet, Gtcrn):
             m = M()  # 每段重新建状态，互不串
             versions[m.name] = stream(m, x)
@@ -175,6 +178,7 @@ def main():
             for mode in ("given", "live"):
                 m = Voxlock(mode, OUT / "src" / f"{cid}_enroll.wav")
                 versions[m.name] = m.run(x)
+                lock[cid][m.name] = m.lock_at_s
         # 对齐核对：与干净参考（有则用）或带噪输入做互相关，期望滞后 0
         probe = ref if ref is not None else x
         align[cid] = {k: xcorr_lag(probe, v) for k, v in versions.items() if k != "noisy"}
@@ -197,7 +201,7 @@ def main():
                 "gain_db": round(float(gains[k] + extra), 2),
             }
         print(cid, align[cid], {k: v["lufs_after"] for k, v in files[cid]["versions"].items()}, flush=True)
-    (HERE / "align.json").write_text(json.dumps({"lag_samples": align, "files": files}, ensure_ascii=False, indent=1))
+    (HERE / "align.json").write_text(json.dumps({"lag_samples": align, "voxlock_lock_at_s": lock, "files": files}, ensure_ascii=False, indent=1))
     (OUT / "files.json").write_text(json.dumps(files, ensure_ascii=False, indent=1))
 
 
