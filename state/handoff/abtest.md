@@ -7,16 +7,20 @@
 ## 手上
 exp003：DPDFNet-2 对 GTCRN 的离线 AB 听测（交代 `_tmp/20261030-b2/abtest.md`）
 
-## 做到哪（2026-10-30 更新）
-- **两模型轮已完成**：12 段素材 · 逐帧增强（对齐滞后 12/12 为 0、三版 −26 LUFS）· 页面 `_tmp/20261030-exp003/index.html`（静音无头冒烟通过）· 客观分数 `docs/experiments/exp003-offline-ab/scores.json`。DNSMOS OVRL DPDFNet-2 2.75 对 GTCRN 2.44（9/12 段赢）；删除率 4.6% 对 4.3%（原声 3.2%）；Qwen3-ASR 两次转写 48/48 逐字一致。吃字逐词明细 `eaten_words.md`：两者各 7 个「原声没删、降噪后删了」的词
-- **VoxLock 轮进行中**（名额已批）：正在跑 `bench_voxlock.py`（int8/fp32 × 块长 8/10/20/40 ms 单线程计时）
-- 页面已按 rubric 加：开会能用/勉强/不能用、缺陷标签、播放/切换计数、切换 5 ms 淡出淡入、两问顺序随机
+## 做到哪（2026-10-30 11:10 更新）
+- **当前给人听的页面**：`_tmp/20261030-exp003/builds/20261030110755-f8c3/index.html`，候选 DPDFNet-2 · GTCRN · FastEnhancer-M（VoxLock 因单线程跟不上实时出局，人/大总管定）。对照表已提交 `docs/experiments/exp003-offline-ab/builds/20261030110755-f8c3/`
+- 旧 build：`20261030102301-68ab`（两候选，人答过 6 题；揭盲表丢失，只从 git 旧 align.json + 打印过的 manifest 片段恢复出 c01–c03，大总管已揭盲 2 题）· `20261030104804-cd87`（四候选含 VoxLock）。教训见流水
+- FastEnhancer：官方 DNS wav2wav ONNX，B/S/M 计时都在半周期内，选 M（`fastenhancer_bench.json`）
+- 自审三视角已做；页面问题已修进 f8c3；响度改为说话区间对齐；README 待按新分数重写
 
 ## 下一步
-1. 计时跑完 → make_clips（加注册样本，核各段音频哈希不变）→ enhance（加 voxlock_given / voxlock_live）→ build_page → score --asr（新两列）→ eaten_words.py。预计计时后约 10 分钟
-2. 归还名额，报大总管：页面路径 + VoxLock 每块 p99.9/max 占周期 + 端到端延迟推算
-3. 写 README（素材许可哈希 · 方法 · 分数表 · 纯噪音段 c09/c10 上 VoxLock 对比 · 吃字一节 · 局限）
-4. 三视角自审，修完报「abtest 可以收尾」
+1. score --asr 正在跑（全部重转写，加 FastEnhancer 列）→ eaten_words.py
+2. 归还名额；README 按新分数与自审意见重写（中位数、说过头处、VoxLock 计时只对 int8 成立、DNSMOS 非个性化、自动锁定的算力尖峰与 c03 等于原声、注册样本偏乐观、48 个滞后）
+3. 报大总管「abtest 可以收尾」
+
+## 规矩（本线新增，人定 / 大总管定）
+- 重建页面一律写到新的 `builds/<build-id>/`，不覆盖人可能正在用的页面；**不删任何旧 build 的音频**
+- 每个 build 的 unblind-key / manifest / files.json 复制进 `docs/experiments/exp003-offline-ab/builds/<build-id>/` 并提交；人的答卷进 `results/`
 
 ## 已写文件（都在 `docs/experiments/exp003-offline-ab/`，已被 hook 自动提交）
 - `make_clips.py`：12 段素材（c01–c03 urgent 赌场 5/0/−5 dB 截 12 s；c04–c10 LibriSpeech 合成：单干扰者 5/0 dB + SCAFE、babble 3 人 0 dB/6 人 −5 dB/4 人 10 dB、DKITCHEN 杯碟 0 dB、钢琴 5 dB；c11–c12 中文）。目标语音前留 1 s、后留 0.5 s 纯噪音。种子 20261030。产出 `_tmp/20261030-exp003/src/` + `clips.json`
@@ -52,3 +56,7 @@ exp003：DPDFNet-2 对 GTCRN 的离线 AB 听测（交代 `_tmp/20261030-b2/abte
 - 2026-10-30 VoxLock 权重下到 `~/vdn-data/models/voxlock/`（int8+fp32，sha256 记在 README）；enhance 加 given/live 两模式，make_clips 加注册样本，写 bench_voxlock.py；已申请下一轮名额
 - 2026-10-30 VoxLock 轮：计时（M5 单线程 int8 每 8 ms 帧 p50 8.4 ms，跟不上实时；40 ms 块 p99.9 31 ms）· 注册样本 · enhance 四候选（滞后 60/60 为 0）· 页面 4 候选 · 打分（72/72 转写一致）；名额已归还，已报大总管与 rubric（scores.json sha256 e84730fa…）
 - 2026-10-30 页面按 rubric：切换 5 ms 淡出淡入、两问顺序平衡随机、吃字并进每行、标签折叠；写 README、eaten_words.py/.md；派三视角自审（怀疑派 · 实现派 · 产品派）进行中
+- 2026-10-30 【事故】重建 VoxLock 版页面时同路径覆盖了旧 build 68ab 的 manifest.js / unblind-key.json（人已在上面答了 6 题），又在清理「孤儿音频」时删了旧 build 的 37 个音频。只恢复出 c01–c03 对照。已改：build 写独立子目录、存储键带 build、对照表进 git、不删旧文件
+- 2026-10-30 自审三视角回收（产品 P0×2、实现 P0×1、怀疑 P1×4），页面与 build_page 全部修进新 build；enhance 响度改说话区间；抽 `_common.py`
+- 2026-10-30 FastEnhancer B/S/M 计时 → 选 M；enhance 加 FastEnhancer-M（滞后 0）；新 build 20261030110755-f8c3 冒烟通过（虚拟时钟 + 静音），已报大总管
+- 2026-10-30 gitleaks 把 manifest 的 "key": base64 当密钥拦下提交 → 字段改名 slotmap
