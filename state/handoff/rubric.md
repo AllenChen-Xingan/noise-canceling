@@ -1,26 +1,36 @@
 # 现状页 · rubric（批次 20261030-b2）
 
-状态：进行中
+状态：**已收尾**（等大总管验收）
 
 ## 手上
-007 降噪 rubric：评分标准（`specs/rubric/denoise.md`）+ 用它筛候选（`docs/research/007_denoise-rubric/decision.md`）。交代 `_tmp/20261030-b2/rubric.md`（主目录）
+007 降噪 rubric：评分标准 + 用它筛候选。交代 `_tmp/20261030-b2/rubric.md`（主目录）
 
-## 做到哪
-读完前置；与 abtest 对齐 AB 页字段；Workflow 调研 4 路开跑
+## 交付
+- `specs/rubric/denoise.md`：rubric 正文（否决 V1–V8 · 12 个机器维度四档锚点 · 6 条防讨好硬规则 · 人耳 5 项与单人听评流程 · 合成与裁决 · 正负例 · 脚本规格 · 缺陷词汇表 17 项）
+- `docs/research/007_denoise-rubric/`：README · must-know（17 条）· sources（40 条外部 + 自家）· gap · **decision**（筛选表 + 待人拍板 4 题）· dryrun-exp003（临时机器分预演，**作者听完 AB 再看**）
 
-## 下一步
-等调研 → 写 rubric 正文 → 筛选表 → 三视角自审 → 收尾
+## 结论一句
+现在只能比「轻快」：GTCRN 22/25 领先，DPDFNet-2 16/25；清楚、自然要等作者听完 AB。D01 选 45 ms 只剩 GTCRN；选 75 ms 两者都入围，排名几乎全由耳朵决定。exp003 临时分预演：DPDFNet-2 在中文两段（c11、c12）疑似吃字 / 伤人声、停顿处可能真空，列为必听段。
 
-## 待人拍板
-（写 rubric 时列出：权重、否决线、人耳流程、绝对可用性题与设计稿「不打绝对分」的张力）
+## 待人拍板（详见 decision.md 末节）
+1. 三把尺子权重（建议 清楚 40 · 自然 35 · 轻快 25）
+2. 耳朵与机器怎么合（建议 0.6 × 耳朵 + 0.4 × 机器）
+3. 淘汰线 + 「能用 / 勉强 / 不能用」一问留不留（与设计稿 §13「不打绝对分」有张力；建议留，≥ 1/3 段「不能用」淘汰）
+4. 听评时长（三候选约 20 分钟；建议分两天各约 12–15 分钟，需 abtest 拆页）
+另：D01 延迟上限仍是人的决定，decision.md 开头写了怎么用这份表定它
+
+## 未了
+- exp003 `scores.json`（sha256 2cf753a7…）是临时数，已问 abtest 是否终版；VoxLock 加入后预演要重算
+- 给 abtest 的可选减负建议（吃字并进每个候选一行、标签默认折叠）：由它定
 
 ## 流水
 - 2026-10-30 读交代 + common；报到大总管（会话名：abtest=noise-canceling-exp003-2d · pse=noise-canceling-45 · sota=noise-canceling-sota-4f）
 - 2026-10-30 读 intent · 001 决策 · 002 路线图 · 004 decision/must-know · exp001/002 · 002 decision · 005 decision · 设计稿 §3/§9/§13 · abtest 分支的 ab_page.html / build_page.py
-- 2026-10-30 与 abtest 对齐：现有三问（clearer/natural/eaten）+ 两道陷阱题原样采用；abtest 同意加 usable_A/B（能用/勉强/不能用）、tags_A/B（metallic/pumping_bg/muffled/vacuum/clipped_onsets/pumping_voice）、started_at/answered_at/plays/switches；VoxLock 本批进（终版三候选）；score.py 已用 Qwen3-ASR 1.7B，scores.json 含 noisy 列（del/sub/ins_rate）。已抄送大总管
-- 2026-10-30 报 Workflow 计划给大总管，开跑（wf_158ffb40-3f9；大总管批准）
-- 2026-10-30 abtest 定：每段一屏 A/B/C + 原声，「最清楚/最自然」选一个，吃字多选，usable/tags 每候选各答，拉丁方轮换
-- 2026-10-30 写 README · rubric 正文初稿（`specs/rubric/denoise.md`，权重合计 100）· gap.md；算了单侧符号检验门槛（12 段需 ≥10 胜）
-- 2026-10-30 调研完成（9 代理，怀疑派逐路复核）；据此改 rubric：V3 有出处（DNS 2023 单线程 RTF ≤ 0.5）、加硬规则 4–6（好输入不许修坏 / 疑似重合成 / DNSMOS 只取 BAK）、三候选 Bonferroni 门槛、重测、附录缺陷词汇表
-- 2026-10-30 写 must-know（17 条）· sources（40 条外部 + 自家）· decision（筛选表：GTCRN 现领先，轻快 22/25；DPDFNet-4 轻快 48% 不过入围线）；给 abtest 两条可选页面建议（5 ms 淡入淡出、两问顺序随机）
-- 2026-10-30 派三视角自审（怀疑派 · 实现派 · 产品派）
+- 2026-10-30 与 abtest 对齐：现有三问 + 两道陷阱原样采用；abtest 加 usable（ok/marginal/no）、tags（6 个键）、started_at/answered_at/plays/switches；VoxLock 本批进；score.py 已用 Qwen3-ASR 1.7B 且有 noisy 列。抄送大总管
+- 2026-10-30 报 Workflow 计划，大总管批准，开跑（wf_158ffb40-3f9）
+- 2026-10-30 abtest 定：每屏 A/B/C + 原声，「最清楚 / 最自然」选一，吃字多选，usable/tags 每候选各答，拉丁方轮换
+- 2026-10-30 写 README · rubric 初稿 · gap；算单侧符号检验门槛
+- 2026-10-30 调研完成（9 代理，怀疑派逐路复核）；据此改 rubric，写 must-know · sources · decision；给 abtest 两条页面建议（5 ms 淡入淡出、两问顺序随机）——abtest 已做，导出加 `qorder`
+- 2026-10-30 三视角自审：怀疑派 3 P0（小样本放过吃字 / 几乎不处理也能入围 / 响度没对齐）+ 11 P1；实现派 5 P0（显著线表一格算错 / C2、C4 在 exp003 算不了 / 矛盾判不了 / V7 永不触发 / 骨架顺序与 `if H`）+ 约 15 P1；产品派 4 P0（时长低估 / 「GTCRN 领先」误导 / 默认值暗中生效 / D01 不在表里）。全部按条修改：rubric 整篇重写，decision 重写
+- 2026-10-30 用 exp003 临时 scores.json 预演 rubric → `dryrun-exp003.md`（单独成文，防先入为主）；问 abtest 数是否终版；给 abtest 可选减负建议
+- 2026-10-30 收尾
