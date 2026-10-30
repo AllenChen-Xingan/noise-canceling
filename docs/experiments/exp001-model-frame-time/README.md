@@ -34,7 +34,9 @@ uv run --no-project --with onnxruntime --with numpy python docs/experiments/exp0
 
 GTCRN 用官方仓库自带的 `resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx`（MIT，github.com/Xiaobin-Rong/gtcrn）。
 
-## 结果（毫秒；「合计」= 模型 + STFT/iSTFT，两者的 p99.9 / max 直接相加，偏保守）
+## 结果（毫秒）
+
+「合计 max」= 模型的 max 与 STFT/iSTFT 的 max 各自取最大后相加，两者不一定出现在同一帧，所以是**保守上限**；「合计 p99.9」同理。
 
 | 模型 | 周期 | 模型 p50 | 模型 p99 | 合计 p99.9 | 合计 max | max 占周期 | ≤ 2 ms 线 | ≤ 周期一半（5 ms / 8 ms） | NaN 帧 |
 |---|---|---|---|---|---|---|---|---|---|

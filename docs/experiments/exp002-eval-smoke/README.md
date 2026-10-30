@@ -47,7 +47,8 @@
 
 ## 改变了哪一个取舍
 
-- 确认 DNSMOS + PESQ/STOI/SI-SDR + LUFS 这一组可以作为「每次改动都跑」的 CI 层，**不需要 GPU，也不需要 PyTorch**（只要 onnxruntime）
+- 确认 DNSMOS + STOI/SI-SDR + LUFS 这一组可以作为「每次改动都跑」的 CI 层，**不需要 GPU，也不需要 PyTorch**（只要 onnxruntime）
+- **更正（2026-10-29 自审后）**：PESQ 不进 CI，也不进今后的评测。python-pesq 内嵌的 ITU C 代码禁止修改和分发，而且许可只覆盖「理解和评估 PESQ 算法本身」（`resources/PESQ/pesq/dsp.c:34-75`），给自家降噪器打分可能也不在许可范围内。本实验里的 PESQ 数字只证明工具能装能跑，不作结论，以后不再用。口径见 `docs/research/004_eval-toolchain/decision.md` 第 3 题
 - 加了一条实现约束：评测代码自己负责重采样，不依赖 `dnsmos_local.py` 的重采样路径
 
 ## 没做的（待实测）
