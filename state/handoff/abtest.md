@@ -68,3 +68,4 @@ exp003：DPDFNet-2 对 GTCRN 的离线 AB 听测（交代 `_tmp/20261030-b2/abte
 - 2026-10-30 FastEnhancer B/S/M 计时 → 选 M；enhance 加 FastEnhancer-M（滞后 0）；新 build 20261030110755-f8c3 冒烟通过（虚拟时钟 + 静音），已报大总管
 - 2026-10-30 gitleaks 把 manifest 的 "key": base64 当密钥拦下提交 → 字段改名 slotmap
 - 2026-10-30 分数补 FastEnhancer 列（84/84 转写一致）；README 按自审重写；全部提交；名额已归还；收尾
+- 2026-10-30 揭盲汇总写进 `docs/experiments/exp003-offline-ab/results/README.md`（hook 提交 c1134f3）：会话打折（全同题没过、劣化题最自然答分不出），n=12；三对全是倾向、无显著；「最清楚」选 C 8/11（位置偏好）；人耳分三家都 21.7，V8 三家都触发；DPDFNet-2 机器领先但人耳 8/12 不能用；建议补听 c01/c02/c05/c08 + 重测 c09/c12。**正式收尾**（推送由大总管做）
