@@ -9,7 +9,14 @@ DPDFNet-4 的 ONNX 在 M 系列单核上每 10 ms 帧能在 2 ms 内跑完（命
 - 机器：Apple M5（`sysctl machdep.cpu.brand_string`），macOS Darwin 27.0.0
 - 运行时：onnxruntime 1.31.1（Python，`uv run --no-project --with onnxruntime --with numpy` 临时环境），CPUExecutionProvider，intra/inter op 线程都设 1，顺序执行，图优化全开
 - 脚本：[bench.py](bench.py)。每个模型先空跑 200 帧，再计时 6000 帧；只计 `session.run` 一次的时间（**不含 STFT/iSTFT 与特征计算**）；输入是固定随机数，状态输出每帧回灌到状态输入
-- 原始输出：`_tmp/exp001-run.txt`（一次性，不入库）
+- 命令（项目根下）：
+  ```bash
+  W=resources/weights/dpdfnet; G=resources/gtcrn/stream/onnx_models
+  uv run --no-project --with onnxruntime --with numpy python docs/experiments/exp001-model-frame-time/bench.py \
+    $W/baseline.onnx $W/dpdfnet2.onnx $W/dpdfnet4.onnx $W/dpdfnet8.onnx \
+    $W/dpdfnet2_48khz_hr.onnx $W/dpdfnet8_48khz_hr.onnx $G/gtcrn.onnx $G/gtcrn_simple.onnx
+  ```
+- 原始输出：[raw-output.txt](raw-output.txt)（去掉了 uv 的安装日志）
 
 ## 权重（不入库，在 `resources/weights/dpdfnet/`）
 来源：`https://huggingface.co/Ceva-IP/DPDFNet/resolve/main/onnx/<名>.onnx`（Apache-2.0，模型卡）。sha256 与 HF 的 LFS oid 一致：
