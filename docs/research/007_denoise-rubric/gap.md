@@ -13,8 +13,8 @@
 | V4 / L4 许可 | LICENSE · 模型卡 | — | 002 / 005 gap | DFN3 权重「未写明」、UL-UNAS「部分」、VoxLock「私下确认」——都记「挂起」 |
 | V5 Rust 逐帧 | — | — | 002 gap | 无 |
 | V6 数值失效 | NaN / 静音 / 掉帧 | 部分（能量比） | exp001 0 NaN 帧 | exp003 跑完核 `align.json` |
-| **C1 / V7 吃字** | del / sub / ins，按句 | ✅ 有，含 `noisy` 列（Qwen3-ASR 1.7B，abtest 确认） | — | **按段不按句**：12 段每段一句级长度，V7 要的「每组 ≥ 30 句」够不着 → exp003 只能出「疑似」，正式否决等 004 评测集（D10 每格 N=30） |
-| C2 压噪 | `noise_att_db` · `resid_rel_db` | ✅ | — | 无 |
+| **C1 / V7 吃字** | del / sub / ins | ✅ 有，含 `noisy` 列（Qwen3-ASR 1.7B，abtest 确认；两次转写全部一致） | — | 每段一句、每组 2–7 段，V7 要的「每组 ≥ 30 段」够不着 → exp003 只能出「疑似」（rubric 已改为按点估计落档 + 必听段），正式否决等 004 评测集（D10 每格 N = 30） |
+| C2 压噪 | G1 的 `noise_att_db` | ✅（G1 两段） | — | **G2 / G3 算不了**：非语音段里有干扰人声，`make_clips.py` 只存了 noisy 与 clean 两轨（c01–c03 现成素材连干扰轨都没有）→ 等三轨分存的合成集 |
 | C3 人声损伤 | 语音帧能量损失 · 词首 50 ms 损失 · ESTOI | 只有 ESTOI | — | 在 score.py 同一 VAD 上加两行（能量损失、词首），**归 abtest 或 004 eval 实现**，本线不改 exp003 |
 | C4 干扰者残留 | IRL | ❌ | 005 定了口径 | 要「主讲人 / 干扰者 / 噪音」三轨分存（005 评测节）；exp003 的 make_clips 没分存干扰轨 → **exp003 算不了**，等 004 合成生成器 |
 | N1 MOS | SCOREQ · UTMOS | ❌（只有 DNSMOS） | — | SCOREQ ONNX 378 MB（004 选定）没下；本线不下。先用 DNSMOS OVRL 代、按 rubric 最高给 B |
