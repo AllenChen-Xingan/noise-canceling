@@ -10,24 +10,25 @@
 
 | 技术 | 证据（摘要，出处见 sources） | 三条命门 | 阶段 | 判定 |
 |---|---|---|---|---|
-| **FastEnhancer-B / S（16 kHz DNS 版）** | MIT；算法延迟约 32 ms（本线读 `docs/docs/onnx.md:48-50`）；状态显式；VB PESQ B 3.13 vs GTCRN 2.87；M5 网络部分 RTF 0.011；**无 babble / 低 SNR 证据** | ✅ / ✅（权重随仓 MIT，推定）/ ✅ | **A**（进 exp003 当第三候选） | **改造**：跳长 16 ms 与设备 10 ms 回调对不齐，要中间缓冲；STFT 要在 Rust 里自写 |
+| **FastEnhancer-B / S / M（16 kHz DNS 版）** | MIT；算法延迟约 32 ms（窗 512 / 跳 256，`configs/fastenhancer_dns/b.yaml:17-19`；n−h + 一跳，`docs/docs/onnx.md:48-50`）；M 档跳 160（10 ms，与回调对齐）同为 32 ms；状态显式；VB PESQ B 3.13 vs GTCRN 2.87；M5 网络部分 RTF 0.011；**无 babble / 低 SNR 证据**；DNS 版训练数据为 DNS3（子集许可同 002 的 FSD50K 问题，要登记） | ✅（端到端待 M0 实测）/ ✅（权重随仓 MIT，推定）/ ✅ | **A**（进 exp003 当第三候选） | **改造**：B / S 跳长 16 ms 与设备 10 ms 回调对不齐，要中间缓冲；STFT 可用 wav2wav 版图内实现，自写时**必须按 Σw² 归一化**（普通 hann 窗，`functional/audio_modules.py:226-235`），否则每 16 ms 起伏 0 到 −6 dB |
+| FastEnhancer 48 kHz 版（n_fft 1024 / 跳 512，算法延迟约 21 ms，全频带） | 训练数据含 AI-Hub 韩语语料，README 脚注原文「Exporting these datasets outside of South Korea is prohibited」（`README.md:558`） | ✅ / ❌ / ✅ | — | **不适合**（许可） |
 | FastEnhancer 基线动物园（GTCRN / LiSenNet / FSPEN / BSRNN 同训练设置 ONNX） | 只训练于 VoiceBank | — | B | 只看看（评测里当同口径对照） |
 | DPDFNet-2 / 4 | 60 ms 算法延迟被论文 + 源码 + 第三方产品三方印证；训练数据含 FSD50K（有 NC 片段） | ⚠️ / 部分 / ✅ | A | 002 结论不变；NOTICE 补「训练数据含 FSD50K」 |
 | GTCRN | 002 已比 | ✅ / ✅ / ✅ | A | 002 结论不变 |
 | RNNoise 0.2 | 只用公开数据训练；有 NEON | ✅ / ✅ / ✅ | B | 只看看（垫底基线） |
 | FastEnhancer 去混响检查点 | 有 T–L 五档，训练数据与效果未核 | ✅? / 部分 / ✅ | M4 | 只看看（M4 去混响候选，先核数据许可） |
-| CoFi-Lite · LaCo-SENet · HALO · voice-isolator · EvoTSE · CARTSE | 代码或权重**无许可**、或权重不公开 | — / ❌ / — | — | 不适合；CoFi-Lite 与 voice-isolator 可去 issue 问许可（对外发言，见拍板） |
+| CoFi-Lite · LaCo-SENet · HALO · voice-isolator · EvoTSE · CARTSE | 代码或权重**无许可**、或权重不公开（LaCo-SENet：HF 权重 MIT，但代码无许可、逐帧太慢） | — / ❌ / — | — | 不适合；CoFi-Lite 与 voice-isolator 可去 issue 问许可（对外发言，见拍板） |
 | VoxLock | 005 已定 | 见 005 | M2 | 见 005 |
 
 ### 2. 工程手段（不训练，纯代码）
 
 | 技术 | 最好的公开做法 · 证据 | 阶段 | 判定 |
 |---|---|---|---|
-| **衰减下限，做成用户可调** | libDF / DPDFNet 的 α 混合（输出 = α·对齐后的带噪 + (1−α)·增强；`resources/DeepFilterNet/libDF/src/tract.rs:387-396`、`resources/DPDFNet/tflite_model/infer_dpdfnet_tflite.py:166-193`）；听众「怕噪」「怕失真」两派人数相当（NEC IWAENC 2022）；RX Dialogue Isolate 也是「人声 / 噪声分轨 + 各自增益」的交互 | **C** | **直接用**（思路）：默认偏保守（宁留残噪，不吃字） |
+| **衰减下限，做成用户可调** | libDF / DPDFNet 的 α 混合（输出 = α·对齐后的带噪 + (1−α)·增强；libDF 设阈值 `resources/DeepFilterNet/libDF/src/tract.rs:387-397`；混合公式与 4 帧对齐 `resources/DPDFNet/tflite_model/infer_dpdfnet_tflite.py:166-193`）；听众「怕噪」「怕失真」两派人数相当（NEC IWAENC 2022）；RX Dialogue Isolate 也是「人声 / 噪声分轨 + 各自增益」的交互 | **C** | **直接用**（思路）：默认偏保守（宁留残噪，不吃字） |
 | 快开慢关（hangover） | WebRTC AGC2 的 VAD 滞回、Silero `min_silence_duration_ms`；**没找到**专门针对降噪增益门的公开评测 | C | 改造：参数靠 004 吃字率标定 |
-| **静音 / 无噪时少算** | 省电的主杠杆是唤醒次数与计算量；模型逐帧，VAD / 能量门控是通用工程【推】；**怀疑派提醒**：在回调里把模型两帧一批跑，不减少音频栈唤醒次数（TN2321 讲的是 HAL 缓冲） | M1 | 改造：要 exp 实测省多少（拍板 #3） |
+| **静音 / 无噪时少算** | 省电的主杠杆是唤醒次数与计算量【推】；**怀疑派提醒**：在回调里把模型两帧一批跑，不减少音频栈唤醒次数（TN2321 讲的是 HAL 缓冲）；真旋钮是我们用 cpal 开的缓冲大小（代价是延迟）；**静音跳算有吃字风险**：模型带 GRU 状态，跳过后恢复的第一个字可能被剪，要继续喂状态或预热 | M1 | 改造：要 exp 实测省多少（decision 第 4 件事） |
 | **按负载下 p99.9 选推理后端** | DAFx 2026：ort 不走 AMX、判非实时安全；BNNSGraph 实时安全但要 macOS 15+ 与 `.mlmodelc`；单测 RTF 0.21 的模型在回调里 p99 158%；altvane 自写 Accelerate GEMM 每帧 1.03→0.74 ms | M1 | 改造：ort 先用（已有 exp001），并行测 BNNSGraph / 自写 Accelerate |
-| ANE / Core ML 逐帧 | DPDFNet4 Core ML p50 3.69 ms（比 ort CPU 慢）；派发下限 M5 0.11 ms；ort CoreML EP 不收 GRU | M4 | 只看看：**不走 ANE**（与设计稿 §11「ANE 主要用来省电」相反，见 sources 自有积累） |
+| ANE / Core ML 逐帧 | DPDFNet4 Core ML p50 3.69 ms（比 ort CPU 慢）；派发下限 M5 0.11 ms；ort CoreML EP 不收 GRU | M4 | 只看看：**目前没有证据支持上 ANE**（3.69 ms 与 0.89–1.40 ms 机型不同、不可直比；GRU 展开后可整图上 ANE；功耗未测）；作为 decision 第 4 件事的一档实测 |
 | int8 量化 | ort 不量化 GRU（`onnxruntime/…/quantization/registry.py:32-38`）；无 Apple 实测 | M4 | 只看看 |
 | 响度链：AGC + 限幅 + LUFS 计量 | `sonora-agc2` 0.2.0（BSD-3，纯 Rust WebRTC AGC2）；`ebur128` | M4 | 直接用（数值与 C++ 对拍后） |
 | LTASS 慢速自适应均衡（最小相位 biquad） | Byrne 1994 / ITU-T P.50 参考谱；思路同 RX EQ Match；**没找到**降噪后 LTASS 偏差的公开阈值 | M4 | 值得自己实现（不训练，2–3 人日【推】） |
@@ -55,7 +56,7 @@
 | 做法 | 证据 | 阶段 | 判定 |
 |---|---|---|---|
 | **说话人不监听处理后的声音**（监听如要做，走零延迟直通） | 助听器自听 3–10 ms 就能察觉（Agnew & Thornton 2000、Stone & Moore 2008，二手）；设计稿 §7 已定「不实时监听」 | M1 | 直接用（守住现有设计） |
-| **测会议软件原有的音画偏差**，判断 75 ms 档会不会越过嘴型阈 | BT.1359：声音晚 125 ms 可察觉（电视观看条件）；我们加在采集前的延迟会原样变成「音频晚于视频」（怀疑派：WebRTC 按采集时间戳对齐） | **A** | 值得自己实现（实验，不训练，见 decision #3） |
+| **测会议软件原有的音画偏差**，判断 75 ms 档会不会越过嘴型阈 | BT.1359：声音晚 125 ms 可察觉（电视观看条件）；我们加在采集前的延迟会原样变成「音频晚于视频」（怀疑派：WebRTC 按采集时间戳对齐） | **A** | 值得自己实现（实验，不训练，见 decision 第 2 件事） |
 | **在快速互动任务上做盲测 A/B（直通 vs 降噪）** | 受训者快速轮读往返 90 ms 就察觉（Kitawaki & Itoh 1991，经 Egger 2010）；**没有实验测过在基线上再加 45 / 75 ms 能否察觉**；延迟会被误归因为「对方不积极」（Schoenenberg 2014） | A | 值得自己实现（人判，验证红线） |
 | 两模型切换（安静用 32 ms 模型、吵时用 60 ms 模型），只在停顿处切并补齐时长 | WebRTC NetEQ 通话中改延迟用时间伸缩，人听不出【源】；同一模型运行时改延迟**没找到** | M4 | 值得自己实现（不训练，但工程风险：切换处伪影） |
 | 把附加延迟写成可测指标、向系统如实上报设备延迟 | 会议软件是否据此补偿嘴型**没找到证据** | M0 / M3 | 改造 |
@@ -80,7 +81,7 @@
 | CoFi-Lite / HALO 自训 | DNS3 PESQ 2.16 / GTCRN+HALO 2.198，算力 ≤ GTCRN | CoFi-Lite 有码无 LICENSE；HALO 有码无权重无 LICENSE | 按论文重写 2–5 人日 + 训练约 1 周 | M4 之后 |
 | PSE 小模型（VoxLock 当教师）+ 真实录音伪标签配方 | REAL-TSE 前三都用真实录音伪标签多轮微调 | 见 005 | 见 005 第 3 步 | M2 之后 |
 | 无注册前景 / 主说话人 VAD（FVAD、EEND-SAA） | FVAD 0.6M、BG-FAR babble 0.12 vs Silero 0.27 | 都没代码；FVAD 训练数据是自有日语客服录音 | 复现 + 训练 1–2 周 | M2（给 005 第 1 步门控） |
-| ULCNet / Fast-ULCNet、FSPEN | 省电方向；FSPEN 论文参数自相矛盾 | 无训练脚本 / 无权重 | 5–8 人日 + 训练 | 只看看 |
+| ULCNet / Fast-ULCNet、FSPEN | 省电方向；FSPEN 论文参数自相矛盾 | Fast-ULCNet 无训练脚本无权重；FSPEN 只有 FastEnhancer release 里的第三方复现权重（MIT，仅 VB） | 5–8 人日 + 训练 | 只看看 |
 | 超低延迟双窗（MERL） | 2 ms 算法延迟仍强 | 无代码；每 2 ms 一跳，调用次数 ×5，费电 | 2 周+ | 只看看（与「能耗低」冲突） |
 | PercepNet 梳状滤波后处理 | 48 kHz、回声版占移动核 4.6% | 第三方复现未完成 | 抽出梳状滤波当后处理 3–4 人日（不训练部分） | 只看看 |
 
