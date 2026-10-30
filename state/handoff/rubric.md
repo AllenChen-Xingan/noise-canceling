@@ -1,6 +1,6 @@
 # 现状页 · rubric（批次 20261030-b2）
 
-状态：**验收通过（待重算）**——窗口不关。① 最新 scores.json 已收（sha 97020a1a…，加 FastEnhancer-M、响度改按主讲人区间对齐），dryrun 与 decision 已重算；② 还等人的 AB 导出 JSON（大总管转来），填人耳列后报收尾
+状态：**已收尾**（人耳列已填，等大总管开 PR）
 
 ## 手上
 007 降噪 rubric：评分标准 + 用它筛候选。交代 `_tmp/20261030-b2/rubric.md`（主目录）
@@ -10,7 +10,9 @@
 - `docs/research/007_denoise-rubric/`：README · must-know（17 条）· sources（40 条外部 + 自家）· gap · **decision**（筛选表 + 待人拍板 4 题）· dryrun-exp003（临时机器分预演，**作者听完 AB 再看**）
 
 ## 结论一句
-现在只能比「轻快」：GTCRN 22/25 领先，DPDFNet-2 16/25；清楚、自然要等作者听完 AB。D01 选 45 ms 只剩 GTCRN；选 75 ms 两者都入围，排名几乎全由耳朵决定。exp003 临时分预演：DPDFNet-2 在中文两段（c11、c12）疑似吃字 / 伤人声、停顿处可能真空，列为必听段。
+**最终（人耳已填）**：按冻结的 rubric 排 GTCRN > FastEnhancer-M > DPDFNet-2，人耳分三家打平（会话打折，偏好都只是倾向），靠同分规则分出；三个都在 ≥ 1/3 段被判「不能用」，按 V8 都不入围（可复核）。D01 两档前两名相同，DPDFNet-2 在 75 ms 档也最后。机器风险排序与人耳一致，DNSMOS 相反。
+
+（旧）现在只能比「轻快」：GTCRN 22/25 领先，DPDFNet-2 16/25；清楚、自然要等作者听完 AB。D01 选 45 ms 只剩 GTCRN；选 75 ms 两者都入围，排名几乎全由耳朵决定。exp003 临时分预演：DPDFNet-2 在中文两段（c11、c12）疑似吃字 / 伤人声、停顿处可能真空，列为必听段。
 
 ## 待人拍板（详见 decision.md 末节）
 1. 三把尺子权重（建议 清楚 40 · 自然 35 · 轻快 25）
@@ -37,3 +39,4 @@
 - 2026-10-30 收尾
 - 2026-10-30 abtest 交终版 scores.json（sha256 e84730fa…，含 voxlock_given / voxlock_live）+ voxlock_bench.json；重算 dryrun：VoxLock 两种都因 M5 单线程最坏一块超块长（最好 102%）被 V3 否决；DPDFNet-2 风险不变；GTCRN G3 降到 +0.91，只剩 c04 疑似。decision 的 VoxLock 行、时长（一屏 4 候选，约 25 分钟）同步改
 - 2026-10-30 abtest 再更新 scores.json（sha256 97020a1a…）：第三候选换 FastEnhancer-M（人定），页面 build 20261030110755-f8c3 三候选一屏、导出加 listen_s / head_to_head、「差不多」改名「分不出」、劣化陷阱改为「不选劣化版即过」。已同步：decision 加 FastEnhancer-M（两档都入围，轻快 15.0，权重许可待核）；rubric 4.1–4.3 与 8.2 对齐新页面（劣化陷阱答「分不出」记打折、屏有效性改用 listen_s）；dryrun 重算——FastEnhancer-M 与 DPDFNet-2 风险都集中在中文 c11/c12，GTCRN 最保守
+- 2026-10-30 收到人的 AB 答卷（sha256 f357e3fc…，18.8 分钟，全同陷阱没过 → 打折）。按 rubric 4.2–4.3 算：H 三家都 21.7；V8 三家都触发；同分规则 → GTCRN > FE > DPDFNet-2。decision 重写（D01 两档排名 + 待人拍板改为：权重 · 合成 · V8 口径 · 下一轮怎么听）；dryrun 填人耳列；rubric N3 加校准记录 #1（真空线下一轮起要人耳印证）。收尾
