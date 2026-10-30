@@ -3,7 +3,7 @@
 - **状态**：进行中
 - **手上**：起步用哪个降噪模型与代码作为基线（002）
 - **交代**：`_tmp/20261029-b1/model.md`
-- **做到哪**（2026-10-29）：must-know 起草完；workflow 核查中；exp001 等名额
+- **做到哪**（2026-10-29）：must-know 起草完；workflow 核查中；exp001 已完成；等 workflow 结果
 - **下一步**：查官方仓库 → 克隆 → 每仓一个子代理按同一核查表核查
 
 ## 改了哪些文件
@@ -19,3 +19,4 @@
 - 2026-10-29 按人新要求跑 workflow wf_a4112186-a18（5 核查 + 5 怀疑派，只读）
 - 2026-10-29 下载 DPDFNet 6 个 ONNX 到 resources/weights/dpdfnet/（共约 70 MB，sha256 与 HF LFS oid 一致）
 - 2026-10-29 写 exp001 bench.py，已申请名额，等批
+- 2026-10-29 exp001 跑完并归还名额；结果 docs/experiments/exp001-model-frame-time/README.md + raw-output.txt
