@@ -14,7 +14,11 @@
    "noisy_src": "resources/urgent2026_challenge_track2/assets/sp03_casino_sn5.wav",
    "clean_src": "resources/urgent2026_challenge_track2/assets/sp03.wav",
    "noisy_sha256": "1d1b54c3be3a591b2706bbbf5914ec0d0efc927be90222fd58f043e74f9d9e9c",
-   "clean_sha256": "784ca6d67e7cfb62d75502f60741f2fc7860a0a9d2b74f8e9c365aba6cfbdbf1"
+   "clean_sha256": "784ca6d67e7cfb62d75502f60741f2fc7860a0a9d2b74f8e9c365aba6cfbdbf1",
+   "enroll": {
+    "from": "resources/urgent2026_challenge_track2/assets/sp03.wav",
+    "overlap_with_clip": true
+   }
   },
   {
    "id": "c02",
@@ -28,7 +32,11 @@
    "noisy_src": "resources/urgent2026_challenge_track2/assets/sp04_casino_sn0.wav",
    "clean_src": "resources/urgent2026_challenge_track2/assets/sp04.wav",
    "noisy_sha256": "bf0a708abc18147bd1b48d081a108f1b20f33bf645b188254fe599c638b97c26",
-   "clean_sha256": "6ae8a771cf3d11aea55e7fa1216c6f76e317984c693d3d062d581e3847a90266"
+   "clean_sha256": "6ae8a771cf3d11aea55e7fa1216c6f76e317984c693d3d062d581e3847a90266",
+   "enroll": {
+    "from": "resources/urgent2026_challenge_track2/assets/sp04.wav",
+    "overlap_with_clip": true
+   }
   },
   {
    "id": "c03",
@@ -42,7 +50,11 @@
    "noisy_src": "resources/urgent2026_challenge_track2/assets/sp05_casino_sn-5.wav",
    "clean_src": "resources/urgent2026_challenge_track2/assets/sp05.wav",
    "noisy_sha256": "e5701301da335be05d2e62254770bb73947efb3ca6da211d52a0c2f1e035f534",
-   "clean_sha256": "77dd239d902311f5ddfde1e78252331fa95940134726849bcc532c01c58bb6a5"
+   "clean_sha256": "77dd239d902311f5ddfde1e78252331fa95940134726849bcc532c01c58bb6a5",
+   "enroll": {
+    "from": "resources/urgent2026_challenge_track2/assets/sp05.wav",
+    "overlap_with_clip": true
+   }
   },
   {
    "id": "c04",
@@ -75,6 +87,10 @@
    "bed_src": {
     "file": "~/vdn-data/demand/SCAFE/ch01.wav",
     "start_s": 176.14
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/5683/32865/5683-32865-0012.flac",
+    "overlap_with_clip": false
    }
   },
   {
@@ -108,6 +124,10 @@
    "bed_src": {
     "file": "~/vdn-data/demand/SCAFE/ch01.wav",
     "start_s": 214.8
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/7127/75947/7127-75947-0009.flac",
+    "overlap_with_clip": false
    }
   },
   {
@@ -154,6 +174,10 @@
    "bed_src": {
     "file": "~/vdn-data/demand/PCAFETER/ch01.wav",
     "start_s": 254.3
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/1580/141083/1580-141083-0006.flac",
+    "overlap_with_clip": false
    }
   },
   {
@@ -221,6 +245,10 @@
    "bed_src": {
     "file": "~/vdn-data/demand/SCAFE/ch01.wav",
     "start_s": 275.84
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/4077/13751/4077-13751-0018.flac",
+    "overlap_with_clip": false
    }
   },
   {
@@ -275,6 +303,10 @@
    "bed_src": {
     "file": "~/vdn-data/demand/PCAFETER/ch01.wav",
     "start_s": 188.85
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/6829/68771/6829-68771-0007.flac",
+    "overlap_with_clip": false
    }
   },
   {
@@ -300,6 +332,10 @@
    "bed_src": {
     "file": "~/vdn-data/demand/DKITCHEN/ch01.wav",
     "start_s": 233.37
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/8455/210777/8455-210777-0001.flac",
+    "overlap_with_clip": false
    }
   },
   {
@@ -325,6 +361,10 @@
    "bed_src": {
     "file": "~/vdn-data/music/Scott_Joplin_-_Maple_Leaf_Rag.ogg",
     "start_s": 128.3
+   },
+   "enroll": {
+    "from": "~/vdn-data/librispeech/LibriSpeech/test-clean/3570/5696/3570-5696-0003.flac",
+    "overlap_with_clip": false
    }
   },
   {
@@ -375,6 +415,12 @@
    "bed_src": {
     "file": "~/vdn-data/demand/PCAFETER/ch01.wav",
     "start_s": 257.2
+   },
+   "enroll": {
+    "from": "~/vdn-data/zh/zh_popobing_landxia.ogg",
+    "start_s": 300.0,
+    "dur_s": 10.0,
+    "overlap_with_clip": false
    }
   },
   {
@@ -408,6 +454,12 @@
    "bed_src": {
     "file": "~/vdn-data/demand/SCAFE/ch01.wav",
     "start_s": 162.32
+   },
+   "enroll": {
+    "from": "~/vdn-data/zh/zh_braille_commusic.ogg",
+    "start_s": 300.0,
+    "dur_s": 10.0,
+    "overlap_with_clip": false
    }
   }
  ],
