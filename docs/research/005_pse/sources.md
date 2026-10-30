@@ -53,11 +53,11 @@
 
 #### VoxLock（唯一同时有因果、开源权重、自动注册、真实录音证据的）
 - **延迟**：16 kHz，NFFT 512（32 ms）、HOP 128（8 ms）（`voxlock/core.py:11`【本机】）。官方「24 ms 算法延迟 + 块长」（`README.md:147`）是「窗 − 步长 + 前瞻」口径；按本项目 ① 窗 + 前瞻 = **32 ms**，③ 约 **38–42 ms + 块长**【推断】
-- **算力**：27M 参数；Xeon 2.2 GHz 单线程 int8：20 ms 块 RTF 1.10（跟不上）、40 ms 0.77、80 ms 0.61（`README.md:137-145`【官方】）。折成每 10 ms 音频约 6–11 ms，**是 002 预算 2 ms 的 3–5 倍**；Apple Silicon 没有实测【推断】
-- 单线程只有块 ≥ 40 ms 才跟得上（`README.md:96`），块长计入延迟 → 单线程下 ③ 约 **78–82 ms，超过 75 ms 入围线**【推断】
+- **算力**：27M 参数；Xeon 2.2 GHz 单线程 int8：20 ms 块 RTF 1.10（跟不上）、40 ms 0.77、80 ms 0.61（`README.md:137-145`【官方】）。折成每 10 ms 音频约 6–11 ms，**是 002 预算 2 ms 的 3–5 倍**（平均占用对最坏一帧，口径不同，偏乐观）；Apple Silicon 没有实测【推断】
+- 单线程只有块 ≥ 40 ms 才跟得上（`README.md:96`），③ ≈ 管线 6–10 + 24 + 块长 + 每块计算时间（`README.md:145`）→ Xeon 单线程 40 ms 块约 **101–105 ms，超过 75 ms 入围线**；双线程 20 ms 块约 67–71 ms【推断】。官方「输出落后 24 ms」（`core.py:156`）供延迟对齐用
 - **ONNX**：enroll 跑一次、chunk 每块跑、LSTM 状态显式（`README.md:162`）
-- **自动注册**：`live()` 先**原样直通**，听满 3 s 语音后取作样本，中位 3.6 s 切换（`README.md:86`）；**不判断是谁在说**——默认谁先说话 3 s 就锁谁【本机】；文件模式取「前 15 s 最响的 3 s」（`core.py:16-26`）。注册条件是 3 s 语音算出的 k/v 序列，不是单个向量
-- **效果**：Krisp 基准 265 条真实录音 WER 4.95%（未处理 23.21%），背景人声泄漏 0.11 词/分钟；AMI 真实会议 WER 10.12%（33.03%），泄漏 2.12 词/分钟（`bench/results/TABLE_krisp.md:6`、`TABLE_ami.md:6-7`【本机】，作者自测）。⚠️ AMI 部分会议也在训练里（同领域测试，偏乐观，`README.md:42,171`）；Krisp 基准是 CC BY-NC，只能测不能训
+- **自动注册**：`live()` 先**原样直通**，累计满 3 s「比近 2 s 最安静帧高 10 dB」的 10 ms 帧后取作样本，中位 3.6 s 切换（`README.md:86`、`core.py:216-224`）；**不分是谁、可不连续**——开头几个人的声音可能混成一个样本【本机】；文件模式取「前 15 s 最响的 3 s」（`core.py:16-26`）。注册条件是 3 s 语音算出的 k/v 序列，不是单个向量
+- **效果**：Krisp 基准 265 条真实录音 WER 4.95%（未处理 23.21%），背景人声泄漏 0.11 词/分钟；AMI 真实会议 WER 10.12%（33.03%），泄漏 2.12 词/分钟（`bench/results/TABLE_krisp.md:6`、`TABLE_ami.md:6-7`【本机】，作者自测）。⚠️ AMI 测试会议未进训练（`README.md:42`），但另 40 场同语料会议用于训练（`:171`），是同领域测试，偏乐观；Krisp 基准是 CC BY-NC，只能测不能训
 - **误杀**：主人漏词率 Krisp 4.22%（未处理 4.28%）；1.2.1 修过一个冷启动 bug——切换时只拿 250 ms 冷启动，63 通电话里 3 通把主人整通静音（`CHANGELOG.md:3-5`）。这是流式预热问题，**不是**「别人先说话」的实例（怀疑派更正）
 
 #### 端到端 PSE 论文（全部没有代码或权重）
@@ -73,7 +73,7 @@
 - d-vector 一次用约 0.8 s 窗算（maum README:133-134【第三方】）；EER 随片段变短明显上升（ERes2NetV2 数字未读原文，不引）
 
 #### 声纹零件
-- WeSpeaker 单线程 Xeon 8160：ECAPA512 6.19M、RTF 0.018；CAM++ 7.18M、0.023；ResNet34 6.63M、0.061（`runtime/onnxruntime/README.md:77-89`【本机】，按 5 s 段测，换成 2 s 是线性外推）；**无 Apple Silicon 数字**
+- WeSpeaker 单线程 Xeon 8160：ECAPA512 6.19M、RTF 0.018；CAM++ 7.18M、0.023；ResNet34 6.63M、0.061（`runtime/onnxruntime/README.md:77-89`【本机】；单次 2 s 段耗时是由 RTF 线性外推【推断】）；**无 Apple Silicon 数字**
 - fbank 在 ONNX 图外，80 维；CAM++ / ERes2Net 用 povey 窗、其余 hamming，都要逐句减均值（`wespeaker/cli/speaker.py:50,97-99,342-348`【本机】）；3D-Speaker 默认不做 CMN（`speakerlab/process/processor.py:137,156`）——**两家前端不能混**
 - Rust fbank：`knf-rs`、`kaldi-native-fbank`（MIT）【官方】crates.io
 - **VoxCeleb 许可原文**：三个代理各连 2 次 kaist / ox 官网都失败，按规矩停；GPL 软件 Praat 随附 WeSpeaker VoxCeleb 权重并抄录了 CC BY 4.0 许可文本（fon.hum.uva.nl/praat/manual/VoxCeleb_CC-BY-4_0_license.html【官方·转引】），文中有「原视频版权归原作者」字样。FSF 列 CC BY 4.0 与 GPLv3 兼容【官方】gnu.org/licenses/license-list.html。**原文未亲见，标「未证实」**
@@ -82,6 +82,6 @@
 - 家用说话人识别（2205.00288）：被动注册用 AHC 聚类；在线更新 c = αx + (1−α)c，**只在得分 > τ 时更新**，τ 太低会更新错人（§4 式 1、§7.1）；不像任何已知说话人的标「未知」不更新（§6.4）【官方】
 - Apple Personalized Hey Siri：隐式注册设上限（最多 40 个向量、滚动替换），并警告「早期混进错误句子会污染档案」（machinelearning.apple.com/research/personalized-hey-siri【官方】，未二次核）
 - Teams：用户 opt-in 后从会议发言生成档案，「typically takes a couple of meetings」；Express 方式持续更新、不留录音；**主档案存云端**（Office 365 compliance store），本机只有 14 天缓存（learn.microsoft.com/microsoftteams/rooms/voice-and-face-recognition【官方】）。检测到旁边有人说话时提示用户自己关
-- diart：中心点在分段概率均值 ≥ rho（默认 0.3）时更新、距离 > delta_new 新建说话人（`clustering.py:138-140`）；中心点累加不遗忘，越早的样本惯性越大（`:99`）【本机】
+- diart：中心点在分段概率均值 ≥ rho（默认 0.3）时更新、距离 > delta_new 新建说话人（`clustering.py:138-140` 是活跃度门槛；不能合并的分配约束在 `:168` 起）；中心点累加不遗忘，越早的样本惯性越大（`:99`）【本机】
 - 物理线索（近场 / DRR / 回声参考判断主人）：**没找到**能实时用的开源实现；NS-Extractor（2306.16241，按距离自注册）无代码【官方】
 - AFW（2609.20463，MIT，无权重）：注册后用快速权重跟踪漂移，**仍需一次静态注册锚点**【官方】
