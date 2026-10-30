@@ -18,6 +18,8 @@
 | 2 | **许可证干净**：代码和权重都允许开源发布与商用 | 本项目要开源（intent 收敛方向）；权重许可证常和代码不同、训练数据可能禁商用（设计稿 §12「公开数据来源」） | 原生：代码与权重都是 MIT / Apache-2.0 / BSD 一类，模型卡明载。部分：代码宽松但权重许可证未写或有附加条件。没有：GPL 链接、非商用、或无许可证 |
 | 3 | **能在 Rust 里逐帧跑**：Rust 原生实现，或 ONNX 且 RNN/卷积缓存状态是显式输入输出（能每 10 ms 喂一帧、状态由我们保管） | 作品是 Rust workspace（intent「作品区」）；离线评测与实时用同一份处理代码；状态不显式就只能整段推理，无法逐帧 | 原生：有可用的 Rust 实现或带显式状态的流式 ONNX。部分：有 ONNX 但状态隐式 / STFT 在模型外需自写且有参考代码。没有：只有 PyTorch 整段推理 |
 
+> ⚠️ **第 1 条的 40 ms 是 AI 起草的门槛，人还没定。** 而且口径要注意：「怎么算满足」写的是「窗长 + lookahead」，而 40 ms 出自 DNS Challenge，DNS 原文是「窗长 T + 步长 Ts + lookahead ≤ 40 ms」（`resources/DNS-Challenge/docs/ICASSP_2021_DNS_challenge.pdf` 第 2 节）。按现在的写法，三条全过的只有 GTCRN。上限定几档、对应能用哪些候选，见 `decision.md` 拍板 #1。
+
 > 三条都过之后，才比第四件事：**低信噪比与人声噪音（babble）下的效果证据**（intent「真难题」第 1 条）。它不是门槛，是排序依据。
 
 ## 二、知道了它们，我要作的是哪一个决定
@@ -35,13 +37,13 @@
 
 ## 四、我的预判
 
-| 我怀疑 | 请核实 |
-|---|---|
-| DPDFNet-4 ONNX + `ort` CPU 是效果与算力最平衡的起点（设计稿 §5） | 回 `resources/DPDFNet` 核实 ONNX 的输入输出、状态是否显式、STFT 是否在模型内，带文件:行号；对照命门 1 的算力 |
-| libDF 的 STFT / ERB / 深度滤波可以复用到 DPDFNet 上 | 回 `resources/DeepFilterNet/libDF` 与 `resources/DPDFNet` 对比特征参数（窗长、hop、ERB 带数、DF 阶数、归一化）是否一致 |
-| 很多开源 ONNX 没把 RNN 状态做成显式输入输出 | 逐个看 DFN3 ONNX、DPDFNet ONNX、GTCRN 流式 ONNX 的 graph 输入输出名 |
-| GTCRN 太弱，只适合当轻基线 | 找它在 DNS 真实录音 / 低 SNR 上的证据；它的 Rust 实现（biglinux）到什么程度 |
-| DeepFilterNet 维护停了（最近提交 2024-10-17，`resources/DeepFilterNet` git log） | 看 issue 活跃度与是否有活的分叉 |
+| 我怀疑 | 请核实 | 核实结果（2026-10-29，详见 sources.md） |
+|---|---|---|
+| DPDFNet-4 ONNX + `ort` CPU 是效果与算力最平衡的起点（设计稿 §5） | 回 `resources/DPDFNet` 核实 ONNX 的输入输出、状态是否显式、STFT 是否在模型内，带文件:行号；对照命门 1 的算力 | **一半成立**：算力过（本机 M5 最坏一帧 dpdfnet4 1.40 ms、dpdfnet2 0.89 ms）；状态显式、STFT 在图外；但**延迟推翻**——内部落后 4 帧，算法延迟 60 ms |
+| libDF 的 STFT / ERB / 深度滤波可以复用到 DPDFNet 上 | 回 `resources/DeepFilterNet/libDF` 与 `resources/DPDFNet` 对比特征参数（窗长、hop、ERB 带数、DF 阶数、归一化）是否一致 | **部分成立**：只有 STFT/iSTFT 值得借；ERB 和归一化都在 DPDFNet 图内，alpha 也不同（0.98 vs 0.99） |
+| 很多开源 ONNX 没把 RNN 状态做成显式输入输出 | 逐个看 DFN3 ONNX、DPDFNet ONNX、GTCRN 流式 ONNX 的 graph 输入输出名 | **对 DFN3 成立**（三子图、状态藏在 tract 里）；**对 DPDFNet、GTCRN、UL-UNAS 不成立**（都显式） |
+| GTCRN 太弱，只适合当轻基线 | 找它在 DNS 真实录音 / 低 SNR 上的证据；它的 Rust 实现（biglinux）到什么程度 | **部分成立**：同算力档最强，但低 SNR 集 PESQ 2.21，远低于 DPDFNet；biglinux 是 Rust + ort 的完整逐帧实现 |
+| DeepFilterNet 维护停了（最近提交 2024-10-17，`resources/DeepFilterNet` git log） | 看 issue 活跃度与是否有活的分叉 | **成立**：最后 release 2023-08，67 个 open issue 无维护者回复；活分叉只有 VST3 插件一类 |
 
 ---
 
