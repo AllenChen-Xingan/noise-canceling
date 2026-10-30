@@ -1,15 +1,15 @@
 # 大总管看板
 
 > 只有大总管跟人说话。手下做完、卡住、要名额，只报给大总管。
-> 大总管会话名：`5-app-89`（换班后在这里改）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
+> 大总管会话名：`noise-canceling-69`（换班后在这里改）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
 
 ## 手下
 
 | 窗口 | 任务 | 交代文件 | 现状页 | 状态 |
 |---|---|---|---|---|
-| model | 002 起步模型与代码 | `_tmp/20261029-b1/model.md` | `state/handoff/model.md` | 已派 |
-| pipeline | 003 Mac 音频管线 | `_tmp/20261029-b1/pipeline.md` | `state/handoff/pipeline.md` | 已派 |
-| evaltool | 004 评测工具链 | `_tmp/20261029-b1/evaltool.md` | `state/handoff/evaltool.md` | 已派 |
+| model | 002 起步模型与代码 | `_tmp/20261029-b1/model.md` | `state/handoff/model.md` | 已派，干活中未报到（noise-canceling-f0） |
+| pipeline | 003 Mac 音频管线 | `_tmp/20261029-b1/pipeline.md` | `state/handoff/pipeline.md` | 已报到（noise-canceling-21） |
+| evaltool | 004 评测工具链 | `_tmp/20261029-b1/evaltool.md` | `state/handoff/evaltool.md` | 已报到（noise-canceling-0b） |
 
 ## 规矩
 
@@ -29,11 +29,12 @@
 ## 进度板
 
 进度（HH:MM）
-- （还没有手下）
+- 20:5x 重派：model 干活中待报到 · pipeline 起草 must-know + 克隆候选仓库 · evaltool 起草 must-know
 
 ## 发现
 
-- （还没有）
+- 17:35 首派失败：spawn-worker.sh 不识别新版信任提示 → 超时退出，后两窗未开；已修脚本 BLOCK_RE（人定 2026-10-29）
+- 交代里大总管名 5-app-89 失效，现为 noise-canceling-69，批次文件已改
 
 ## 待定清单（攒着等人一次看完）
 
