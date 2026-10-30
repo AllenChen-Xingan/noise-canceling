@@ -1,0 +1,1099 @@
+{
+ "exp": "exp003-offline-ab",
+ "build": "20261030110755-f8c3",
+ "models": {
+  "dpdfnet2": {
+   "name": "DPDFNet-2",
+   "latency": "端到端约 66–70 ms（≤ 75 ms 档）"
+  },
+  "gtcrn": {
+   "name": "GTCRN",
+   "latency": "端到端约 38–42 ms（≤ 45 ms 档）"
+  },
+  "fastenhancer_m": {
+   "name": "FastEnhancer-M",
+   "latency": "端到端约 38–42 ms（≤ 45 ms 档）"
+  }
+ },
+ "started": "2026-10-30T18:09:58.450Z",
+ "finished": "2026-10-30T18:28:46.487Z",
+ "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+ "summary": {
+  "n_real": 12,
+  "per_model": {
+   "dpdfnet2": {
+    "clearer_best": 1,
+    "natural_best": 1,
+    "eaten": 9,
+    "usable": {
+     "ok": 2,
+     "marginal": 2,
+     "no": 8
+    },
+    "tags": {
+     "metallic": 1,
+     "pumping_bg": 1,
+     "muffled": 1,
+     "vacuum": 1,
+     "clipped_onsets": 1
+    }
+   },
+   "gtcrn": {
+    "clearer_best": 5,
+    "natural_best": 4,
+    "eaten": 9,
+    "usable": {
+     "ok": 2,
+     "marginal": 5,
+     "no": 5
+    },
+    "tags": {
+     "pumping_bg": 1
+    }
+   },
+   "fastenhancer_m": {
+    "clearer_best": 3,
+    "natural_best": 3,
+    "eaten": 8,
+    "usable": {
+     "ok": 4,
+     "marginal": 1,
+     "no": 7
+    },
+    "tags": {
+     "metallic": 1,
+     "muffled": 1,
+     "clipped_onsets": 1,
+     "pumping_voice": 1,
+     "pumping_bg": 1
+    }
+   }
+  },
+  "same": {
+   "clearer": 3,
+   "natural": 4
+  },
+  "eaten_none": 2,
+  "head_to_head": {
+   "dpdfnet2_vs_gtcrn": {
+    "dpdfnet2": 2,
+    "gtcrn": 5,
+    "tie": 5
+   },
+   "dpdfnet2_vs_fastenhancer_m": {
+    "dpdfnet2": 1,
+    "fastenhancer_m": 4,
+    "tie": 7
+   },
+   "gtcrn_vs_fastenhancer_m": {
+    "gtcrn": 5,
+    "fastenhancer_m": 3,
+    "tie": 4
+   }
+  },
+  "traps": [
+   {
+    "trap": "trap-degraded",
+    "desc": "其中一份是明显劣化版（最清楚、最自然都不该选它）",
+    "answer": {
+     "clearer": "C",
+     "natural": "same"
+    },
+    "by_model": {
+     "clearer": "dpdfnet2",
+     "natural": "same"
+    },
+    "pass": true
+   },
+   {
+    "trap": "trap-identical",
+    "desc": "所有候选其实是同一个文件（应答「分不出」）",
+    "answer": {
+     "clearer": "C",
+     "natural": "C"
+    },
+    "by_model": {
+     "clearer": "same",
+     "natural": "same"
+    },
+    "pass": false
+   }
+  ]
+ },
+ "trials": [
+  {
+   "order": 1,
+   "kind": "real",
+   "clip": "c03",
+   "trap": null,
+   "self": null,
+   "slots": {
+    "A": "gtcrn",
+    "B": "fastenhancer_m",
+    "C": "dpdfnet2"
+   },
+   "qorder": [
+    "natural",
+    "clearer"
+   ],
+   "answer": {
+    "clearer": "same",
+    "natural": "same",
+    "eaten": [
+     "A",
+     "B",
+     "C"
+    ],
+    "usable": {
+     "A": "no",
+     "B": "no",
+     "C": "no"
+    },
+    "tags": {}
+   },
+   "by_model": {
+    "clearer": "same",
+    "natural": "same",
+    "eaten": [
+     "gtcrn",
+     "fastenhancer_m",
+     "dpdfnet2"
+    ],
+    "usable": {
+     "gtcrn": "no",
+     "fastenhancer_m": "no",
+     "dpdfnet2": "no"
+    },
+    "tags": {}
+   },
+   "note": "",
+   "heard": {
+    "C": true,
+    "B": true,
+    "A": true
+   },
+   "plays": {
+    "ref": 1,
+    "C": 2,
+    "B": 2,
+    "A": 1
+   },
+   "listen_s": {
+    "C": 20.44439999999479,
+    "B": 16.06810000000149,
+    "A": 9.872700000002979,
+    "ref": 9.090699999999256
+   },
+   "switches": 6,
+   "started_at": "2026-10-30T18:10:03.403Z",
+   "answered_at": "2026-10-30T18:11:27.585Z"
+  },
+  {
+   "order": 2,
+   "kind": "real",
+   "clip": "c08",
+   "trap": null,
+   "self": null,
+   "slots": {
+    "A": "fastenhancer_m",
+    "B": "dpdfnet2",
+    "C": "gtcrn"
+   },
+   "qorder": [
+    "clearer",
+    "natural"
+   ],
+   "answer": {
+    "clearer": "C",
+    "natural": "C",
+    "eaten": [
+     "none"
+    ],
+    "usable": {
+     "A": "ok",
+     "B": "marginal",
+     "C": "ok"
+    },
+    "tags": {
+     "A": [
+      "metallic",
+      "muffled",
+      "clipped_onsets",
+      "pumping_voice"
+     ],
+     "B": [
+      "metallic",
+      "pumping_bg",
+      "muffled",
+      "vacuum",
+      "clipped_onsets"
+     ]
+    }
+   },
+   "by_model": {
+    "clearer": "gtcrn",
+    "natural": "gtcrn",
+    "eaten": [
+     "none"
+    ],
+    "usable": {
+     "fastenhancer_m": "ok",
+     "dpdfnet2": "marginal",
+     "gtcrn": "ok"
+    },
+    "tags": {
+     "fastenhancer_m": [
+      "metallic",
+      "muffled",
+      "clipped_onsets",
+      "pumping_voice"
+     ],
+     "dpdfnet2": [
+      "metallic",
+      "pumping_bg",
+      "muffled",
+      "vacuum",
+      "clipped_onsets"
+     ]
+    }
+   },
+   "note": "",
+   "heard": {
+    "A": true,
+    "B": true,
+    "C": true
+   },
+   "plays": {
+    "ref": 1,
+    "A": 1,
+    "B": 1,
+    "C": 1
+   },
+   "listen_s": {
+    "ref": 13.405199999999253,
+    "A": 10.15660000000149,
+    "B": 11.379300000000745,
+    "C": 10.956100000001491
+   },
+   "switches": 4,
+   "started_at": "2026-10-30T18:11:29.759Z",
+   "answered_at": "2026-10-30T18:13:17.766Z"
+  },
+  {
+   "order": 3,
+   "kind": "real",
+   "clip": "c10",
+   "trap": null,
+   "self": null,
+   "slots": {
+    "A": "dpdfnet2",
+    "B": "gtcrn",
+    "C": "fastenhancer_m"
+   },
+   "qorder": [
+    "clearer",
+    "natural"
+   ],
+   "answer": {
+    "clearer": "C",
+    "natural": "C",
+    "eaten": [
+     "B"
+    ],
+    "usable": {
+     "A": "ok",
+     "B": "marginal",
+     "C": "ok"
+    },
+    "tags": {
+     "B": [
+      "pumping_bg"
+     ]
+    }
+   },
+   "by_model": {
+    "clearer": "fastenhancer_m",
+    "natural": "fastenhancer_m",
+    "eaten": [
+     "gtcrn"
+    ],
+    "usable": {
+     "dpdfnet2": "ok",
+     "gtcrn": "marginal",
+     "fastenhancer_m": "ok"
+    },
+    "tags": {
+     "gtcrn": [
+      "pumping_bg"
+     ]
+    }
+   },
+   "note": "",
+   "heard": {
+    "A": true,
+    "B": true,
+    "C": true
+   },
+   "plays": {
+    "ref": 1,
+    "A": 2,
+    "B": 1,
+    "C": 1
+   },
+   "listen_s": {
+    "ref": 9.032700000002981,
+    "A": 15.30860000000149,
+    "B": 4.51,
+    "C": 13.881199999999248
+   },
+   "switches": 5,
+   "started_at": "2026-10-30T18:13:19.086Z",
+   "answered_at": "2026-10-30T18:14:56.215Z"
+  },
+  {
+   "order": 4,
+   "kind": "real",
+   "clip": "c05",
+   "trap": null,
+   "self": null,
+   "slots": {
+    "A": "gtcrn",
+    "B": "fastenhancer_m",
+    "C": "dpdfnet2"
+   },
+   "qorder": [
+    "natural",
+    "clearer"
+   ],
+   "answer": {
+    "clearer": "A",
+    "natural": "A",
+    "eaten": [
+     "B",
+     "C"
+    ],
+    "usable": {
+     "A": "marginal",
+     "B": "no",
+     "C": "no"
+    },
+    "tags": {}
+   },
+   "by_model": {
+    "clearer": "gtcrn",
+    "natural": "gtcrn",
+    "eaten": [
+     "fastenhancer_m",
+     "dpdfnet2"
+    ],
+    "usable": {
+     "gtcrn": "marginal",
+     "fastenhancer_m": "no",
+     "dpdfnet2": "no"
+    },
+    "tags": {}
+   },
+   "note": "",
+   "heard": {
+    "A": true,
+    "B": true,
+    "C": true
+   },
+   "plays": {
+    "ref": 2,
+    "A": 2,
+    "B": 1,
+    "C": 1
+   },
+   "listen_s": {
+    "ref": 13.468599999997764,
+    "A": 7.9525,
+    "B": 3.311199999999255,
+    "C": 9.97420000000298
+   },
+   "switches": 5,
+   "started_at": "2026-10-30T18:14:59.859Z",
+   "answered_at": "2026-10-30T18:16:03.353Z"
+  },
+  {
+   "order": 5,
+   "kind": "real",
+   "clip": "c07",
+   "trap": null,
+   "self": null,
+   "slots": {
+    "A": "fastenhancer_m",
+    "B": "dpdfnet2",
+    "C": "gtcrn"
+   },
+   "qorder": [
+    "clearer",
+    "natural"
+   ],
+   "answer": {
+    "clearer": "same",
+    "natural": "same",
+    "eaten": [
+     "A",
+     "B",
+     "C"
+    ],
+    "usable": {
+     "A": "no",
+     "B": "no",
+     "C": "no"
+    },
+    "tags": {}
+   },
+   "by_model": {
+    "clearer": "same",
+    "natural": "same",
+    "eaten": [
+     "fastenhancer_m",
+     "dpdfnet2",
+     "gtcrn"
+    ],
+    "usable": {
+     "fastenhancer_m": "no",
+     "dpdfnet2": "no",
+     "gtcrn": "no"
+    },
+    "tags": {}
+   },
+   "note": "",
+   "heard": {
+    "A": true,
+    "B": true,
+    "C": true
+   },
+   "plays": {
+    "ref": 1,
+    "A": 1,
+    "B": 1,
+    "C": 1
+   },
+   "listen_s": {
+    "ref": 3.45210000000149,
+    "A": 5.046399999998509,
+    "B": 6.5053999999985095,
+    "C": 4.51610000000149
+   },
+   "switches": 4,
+   "started_at": "2026-10-30T18:16:05.242Z",
+   "answered_at": "2026-10-30T18:17:02.231Z"
+  },
+  {
+   "order": 6,
+   "kind": "real",
+   "clip": "c04",
+   "trap": null,
+   "self": null,
+   "slots": {
+    "A": "dpdfnet2",
+    "B": "gtcrn",
+    "C": "fastenhancer_m"
+   },
+   "qorder": [
+    "clearer",
+    "natural"
+   ],
+   "answer": {
+    "clearer": "B",
+    "natural": "same",
+    "eaten": [
+     "A",
+     "B",
+     "C"
+    ],
+    "usable": {
+     "A": "no",
+     "B": "marginal",
+     "C": "no"
+    },
+    "tags": {}
+   },
+   "by_model": {
+    "clearer": "gtcrn",
+    "natural": "same",
+    "eaten": [
+     "dpdfnet2",
+     "gtcrn",
+     "fastenhancer_m"
+    ],
+    "usable": {
+     "dpdfnet2": "no",
+     "gtcrn": "marginal",
+     "fastenhancer_m": "no"
+    },
+    "tags": {}
+   },
+   "note": "",
+   "heard": {
+    "A": true,
+    "B": true,
+    "C": true
+   },
+   "plays": {
+    "ref": 1,
+    "A": 1,
+    "B": 1,
+    "C": 1
+   },
+   "listen_s": {
+    "ref": 12.093199999999255,
+    "A": 4.2495,
+    "B": 8.09289999999851,
+    "C": 5.837300000000744
+   },
+   "switches": 4,
+   "started_at": "2026-10-30T18:17:04.572Z",
+   "answered_at": "2026-10-30T18:18:03.917Z"
+  },
+  {
+   "order": 7,
+   "kind": "trap",
+   "clip": "c04",
+   "trap": "trap-degraded",
+   "self": null,
+   "slots": {
+    "A": "fastenhancer_m",
+    "B": "degraded",
+    "C": "dpdfnet2"
+   },
+   "qorder": [
+    "clearer",
+    "natural"
+   ],
+   "answer": {
+    "clearer": "C",
+    "natural": "same",
+    "eaten": [
+     "A",
+     "B",
+     "C"
+    ],
+    "usable": {
+     "A": "no",
+     "B": "no",
+     "C": "marginal"
+    },
+    "tags": {
+     "B": [
+      "metallic",
+      "clipped_onsets"
+     ]
+    }
+   },
+   "by_model": {
+    "clearer": "dpdfnet2",
+    "natural": "same",
+    "eaten": [
+     "fastenhancer_m",
+     "degraded",
+     "dpdfnet2"
+    ],
+    "usable": {
+     "fastenhancer_m": "no",
+     "degraded": "no",
+     "dpdfnet2": "marginal"
+    },
+    "tags": {
+     "degraded": [
+      "metallic",
+      "clipped_onsets"
+     ]
+    }
+   },
+   "note": "",
+   "heard": {
+    "A": true,
+    "B": true,
+    "C": true
+   },
+   "plays": {
+    "ref": 2,
+    "A": 1,
+    "B": 1,
+    "C": 1
+   },
+   "listen_s": {
+    "ref": 4.5175,
+    "A": 3.973199999999255,
+    "B": 3.8926999999992553,
+    "C": 11.982500000000002
+   },
+   "switches": 4,
+   "started_at": "2026-10-30T18:18:05.402Z",
+   "answered_at": "2026-10-30T18:19:06.020Z"
+  },
+  {
+   "order": 8,
+   "kind": "real",
+   "clip": "c06",
+   "trap": null,
+   "self": null,
+   "slots": {
+    "A": "gtcrn",
+    "B": "fastenhancer_m",
+    "C": "dpdfnet2"
+   },
+   "qorder": [
+    "clearer",
+    "natural"
+   ],
+   "answer": {
+    "clearer": "A",
+    "natural": "A",
+    "eaten": [
+     "A",
+     "B",
+     "C"
+    ],
+    "usable": {
+     "A": "marginal",
+     "B": "no",
+     "C": "no"
+    },
+    "tags": {}
+   },
+   "by_model": {
+    "clearer": "gtcrn",
+    "natural": "gtcrn",
+    "eaten": [
+     "gtcrn",
+     "fastenhancer_m",
+     "dpdfnet2"
+    ],
+    "usable": {
+     "gtcrn": "marginal",
+     "fastenhancer_m": "no",
+     "dpdfnet2": "no"
+    },
+    "tags": {}
+   },
+   "note": "",
+   "heard": {
+    "A": true,
+    "B": true,
+    "C": true
+   },
+   "plays": {
+    "ref": 1,
+    "A": 2,
+    "B": 1,
+    "C": 1
+   },
+   "listen_s": {
+    "ref": 3.18860000000149,
+    "A": 13.751599999997765,
+    "B": 5.97679999999702,
+    "C": 9.251799999997017
+   },
+   "switches": 5,
+   "started_at": "2026-10-30T18:19:07.816Z",
+   "answered_at": "2026-10-30T18:20:05.923Z"
+  },
+  {
+   "order": 9,
+   "kind": "real",
+   "clip": "c12",
+   "trap": null,
+   "self": null,
+   "slots": {
+    "A": "fastenhancer_m",
+    "B": "dpdfnet2",
+    "C": "gtcrn"
+   },
+   "qorder": [
+    "natural",
+    "clearer"
+   ],
+   "answer": {
+    "clearer": "C",
+    "natural": "C",
+    "eaten": [
+     "A",
+     "B",
+     "C"
+    ],
+    "usable": {
+     "A": "no",
+     "B": "no",
+     "C": "no"
+    },
+    "tags": {}
+   },
+   "by_model": {
+    "clearer": "gtcrn",
+    "natural": "gtcrn",
+    "eaten": [
+     "fastenhancer_m",
+     "dpdfnet2",
+     "gtcrn"
+    ],
+    "usable": {
+     "fastenhancer_m": "no",
+     "dpdfnet2": "no",
+     "gtcrn": "no"
+    },
+    "tags": {}
+   },
+   "note": "",
+   "heard": {
+    "A": true,
+    "B": true,
+    "C": true
+   },
+   "plays": {
+    "ref": 1,
+    "A": 1,
+    "B": 1,
+    "C": 1
+   },
+   "listen_s": {
+    "ref": 9.298300000000744,
+    "A": 6.771300000000744,
+    "B": 9.459099999997767,
+    "C": 22.21530000000075
+   },
+   "switches": 4,
+   "started_at": "2026-10-30T18:20:07.854Z",
+   "answered_at": "2026-10-30T18:21:06.284Z"
+  },
+  {
+   "order": 10,
+   "kind": "real",
+   "clip": "c01",
+   "trap": null,
+   "self": null,
+   "slots": {
+    "A": "dpdfnet2",
+    "B": "gtcrn",
+    "C": "fastenhancer_m"
+   },
+   "qorder": [
+    "natural",
+    "clearer"
+   ],
+   "answer": {
+    "clearer": "C",
+    "natural": "C",
+    "eaten": [
+     "A",
+     "B"
+    ],
+    "usable": {
+     "A": "marginal",
+     "B": "marginal",
+     "C": "ok"
+    },
+    "tags": {}
+   },
+   "by_model": {
+    "clearer": "fastenhancer_m",
+    "natural": "fastenhancer_m",
+    "eaten": [
+     "dpdfnet2",
+     "gtcrn"
+    ],
+    "usable": {
+     "dpdfnet2": "marginal",
+     "gtcrn": "marginal",
+     "fastenhancer_m": "ok"
+    },
+    "tags": {}
+   },
+   "note": "",
+   "heard": {
+    "C": true,
+    "B": true,
+    "A": true
+   },
+   "plays": {
+    "ref": 1,
+    "C": 2,
+    "B": 1,
+    "A": 1
+   },
+   "listen_s": {
+    "ref": 5.046000000000001,
+    "C": 15.33670000000298,
+    "B": 3.2797999999970195,
+    "A": 12.56369999999925
+   },
+   "switches": 5,
+   "started_at": "2026-10-30T18:21:08.454Z",
+   "answered_at": "2026-10-30T18:22:08.782Z"
+  },
+  {
+   "order": 11,
+   "kind": "real",
+   "clip": "c09",
+   "trap": null,
+   "self": null,
+   "slots": {
+    "A": "gtcrn",
+    "B": "fastenhancer_m",
+    "C": "dpdfnet2"
+   },
+   "qorder": [
+    "natural",
+    "clearer"
+   ],
+   "answer": {
+    "clearer": "C",
+    "natural": "C",
+    "eaten": [
+     "none"
+    ],
+    "usable": {
+     "A": "ok",
+     "B": "ok",
+     "C": "ok"
+    },
+    "tags": {
+     "B": [
+      "pumping_bg"
+     ]
+    }
+   },
+   "by_model": {
+    "clearer": "dpdfnet2",
+    "natural": "dpdfnet2",
+    "eaten": [
+     "none"
+    ],
+    "usable": {
+     "gtcrn": "ok",
+     "fastenhancer_m": "ok",
+     "dpdfnet2": "ok"
+    },
+    "tags": {
+     "fastenhancer_m": [
+      "pumping_bg"
+     ]
+    }
+   },
+   "note": "c最好，非常干净，而且背景细节也处理的很好",
+   "heard": {
+    "A": true,
+    "B": true,
+    "C": true
+   },
+   "plays": {
+    "ref": 2,
+    "A": 1,
+    "B": 1,
+    "C": 2
+   },
+   "listen_s": {
+    "ref": 5.042,
+    "A": 3.981800000000745,
+    "B": 5.967300000000745,
+    "C": 62.72459999999779
+   },
+   "switches": 6,
+   "started_at": "2026-10-30T18:22:12.891Z",
+   "answered_at": "2026-10-30T18:23:35.659Z"
+  },
+  {
+   "order": 12,
+   "kind": "real",
+   "clip": "c11",
+   "trap": null,
+   "self": null,
+   "slots": {
+    "A": "fastenhancer_m",
+    "B": "dpdfnet2",
+    "C": "gtcrn"
+   },
+   "qorder": [
+    "clearer",
+    "natural"
+   ],
+   "answer": {
+    "clearer": "same",
+    "natural": "same",
+    "eaten": [
+     "A",
+     "B",
+     "C"
+    ],
+    "usable": {
+     "A": "no",
+     "C": "no",
+     "B": "no"
+    },
+    "tags": {}
+   },
+   "by_model": {
+    "clearer": "same",
+    "natural": "same",
+    "eaten": [
+     "fastenhancer_m",
+     "dpdfnet2",
+     "gtcrn"
+    ],
+    "usable": {
+     "fastenhancer_m": "no",
+     "gtcrn": "no",
+     "dpdfnet2": "no"
+    },
+    "tags": {}
+   },
+   "note": "都不太清楚，声音都差不多大",
+   "heard": {
+    "C": true,
+    "A": true,
+    "B": true
+   },
+   "plays": {
+    "ref": 1,
+    "C": 2,
+    "B": 2,
+    "A": 2
+   },
+   "listen_s": {
+    "ref": 2.92260000000149,
+    "C": 10.076200000002979,
+    "B": 11.85139999999851,
+    "A": 11.033800000000745
+   },
+   "switches": 6,
+   "started_at": "2026-10-30T18:23:37.419Z",
+   "answered_at": "2026-10-30T18:24:52.717Z"
+  },
+  {
+   "order": 13,
+   "kind": "real",
+   "clip": "c02",
+   "trap": null,
+   "self": null,
+   "slots": {
+    "A": "dpdfnet2",
+    "B": "gtcrn",
+    "C": "fastenhancer_m"
+   },
+   "qorder": [
+    "natural",
+    "clearer"
+   ],
+   "answer": {
+    "clearer": "C",
+    "natural": "C",
+    "eaten": [
+     "A",
+     "B",
+     "C"
+    ],
+    "usable": {
+     "A": "no",
+     "B": "no",
+     "C": "marginal"
+    },
+    "tags": {}
+   },
+   "by_model": {
+    "clearer": "fastenhancer_m",
+    "natural": "fastenhancer_m",
+    "eaten": [
+     "dpdfnet2",
+     "gtcrn",
+     "fastenhancer_m"
+    ],
+    "usable": {
+     "dpdfnet2": "no",
+     "gtcrn": "no",
+     "fastenhancer_m": "marginal"
+    },
+    "tags": {}
+   },
+   "note": "",
+   "heard": {
+    "C": true,
+    "B": true,
+    "A": true
+   },
+   "plays": {
+    "ref": 1,
+    "C": 3,
+    "B": 2,
+    "A": 2
+   },
+   "listen_s": {
+    "ref": 1.3288000000007452,
+    "C": 15.733199999999256,
+    "B": 9.811100000001488,
+    "A": 12.967099999997767
+   },
+   "switches": 9,
+   "started_at": "2026-10-30T18:25:05.271Z",
+   "answered_at": "2026-10-30T18:26:17.925Z"
+  },
+  {
+   "order": 14,
+   "kind": "trap",
+   "clip": "c11",
+   "trap": "trap-identical",
+   "self": null,
+   "slots": {
+    "A": "same",
+    "B": "same",
+    "C": "same"
+   },
+   "qorder": [
+    "natural",
+    "clearer"
+   ],
+   "answer": {
+    "clearer": "C",
+    "natural": "C",
+    "eaten": [
+     "A",
+     "B",
+     "C"
+    ],
+    "usable": {
+     "A": "marginal",
+     "B": "marginal",
+     "C": "ok"
+    },
+    "tags": {}
+   },
+   "by_model": {
+    "clearer": "same",
+    "natural": "same",
+    "eaten": [
+     "same",
+     "same",
+     "same"
+    ],
+    "usable": {
+     "same": "ok"
+    },
+    "tags": {}
+   },
+   "note": "c听上去最自然，也能听清",
+   "heard": {
+    "B": true,
+    "C": true,
+    "A": true
+   },
+   "plays": {
+    "ref": 2,
+    "A": 2,
+    "B": 2,
+    "C": 5
+   },
+   "listen_s": {
+    "ref": 5.566300000000745,
+    "A": 13.395100000001488,
+    "B": 14.420399999998512,
+    "C": 26.674400000002233
+   },
+   "switches": 9,
+   "started_at": "2026-10-30T18:26:20.021Z",
+   "answered_at": "2026-10-30T18:28:08.910Z"
+  }
+ ]
+}
