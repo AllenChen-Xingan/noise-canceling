@@ -1,6 +1,6 @@
 # 取舍卡 · 评测工具链用哪些现成的
 
-> 2026-10-29 · evaltool 起草。逐格证据见 `gap.md`，来源登记见 `sources.md`，命门原文见 `must-know.md`（AI 起草，待人改）。
+> 2026-10-29 · evaltool 起草，已按三视角自审（怀疑派 / 实现派 / 产品派）改过一轮。逐格证据见 `gap.md`，来源登记见 `sources.md`，命门原文见 `must-know.md`（AI 起草，待人改）。
 > ⚠️ 最后一栏「需要你拍板的地方」只列题，**拍了吗一律 ☐**。
 
 ## 这次不可妥协的几条
@@ -11,34 +11,85 @@
 
 ## 我选择什么
 
-> 每把尺子都用「一个主指标 + 一个交叉指标」，分两层跑：**CI 层**只放许可干净、跑得快的；**本机层**再加需要 PyTorch 的模型。任何一个无参考 MOS 都只用来筛选，不当裁判。
+> 每把尺子用「一个主指标 + 一个交叉指标」，分两层跑：**CI 层**只放许可干净、确定性、几分钟内跑完的；**本机层**加大模型。每次改动都要过**回归门禁**（见下节）。无参考 MOS 只报警、不拦合并。
 
-| 尺子 | 主指标（实现） | 交叉 / 诊断 | 跑在哪 | 出处 |
+| 尺子 | 主指标（实现） | 交叉 / 诊断 | 层 | 出处 |
 |---|---|---|---|---|
-| **清楚 · 吃字** | 删除率：whisper.cpp large-v3-turbo + Metal，贪心、`-tp 0 -nf -mc 0`；jiwer `.deletions`，插入另记为「脑补率」 | 中文加 SenseVoiceSmall 做第二意见：两家**都**看到删除增加，才判定为吃字 | 本机层 | `gap.md`「吃字率配方」；`whisper.cpp/src/whisper.cpp:3823-3826,7082-7087,7296`；`jiwer/process.py:126` |
-| **清楚 · 压噪与人声** | 语音帧能量损失 + 非语音段残留噪音电平（Rust，`ebur128` crate + 参考信号上的 VAD） | ESTOI（pystoi，SRCC .80）· SI-SDR（手写） | CI 层 | crates.io `ebur128`（MIT）；`urgent2024_analysis/mos/mos_correlations.png` |
-| **自然 · 整体** | SCOREQ natural NR（代码 MIT，权重 CC BY 4.0） | UTMOS22 strong（经 SpeechMOS，MIT） | 本机层 | URGENT 2024 SRCC 都是 .91；CHiME-7 系统级 SRCC SCOREQ .90、UTMOS .20（`urgent2026_challenge_track2/BENCHMARK.md`） |
-| **自然 · 分项与音色** | NISQA 分项 NOI/COL/DIS/LOUD（权重 NC-SA，用户自行下载，不进仓）+ 有参考 LTASS 差 + LUFS | DNSMOS P.835 SIG/BAK（CC BY 4.0，CI 冒烟与业界对照） | NISQA 本机层；LTASS、LUFS、DNSMOS 进 CI 层 | `NISQA/README.md:166`；exp002 实测 DNSMOS 10 秒音频 0.05 秒 |
-| **自然 · 人耳** | 本机静态 AB 页（借 P.808 的 CCR 与陷阱题设计，不上传，不用 MTurk） | URGENT-PK 的「成对比较」思路，用于新旧版本回归 | 本机，人听 | `P.808/src/master_script.py:868-873`（本地预览会关掉提交，要自己写收分） |
-| **轻快** | 附加延迟 ①：离线脉冲过同一套处理代码，算互相关峰值 | ② cpal 两端回调时间戳（pipeline 线 M0）；每帧耗时 p99.9 / 最大值，Rust 打点 | ① 进 CI 层；② 只在本机 | 现成工具全部不覆盖（`gap.md`「轻快尺子」） |
+| **清楚 · 吃字** | whisper.cpp large-v3-turbo（锁 sha1 `4af2b29d…`，Metal，贪心，`-tp 0 -nf -mc 0`，不开 `--vad`）+ jiwer，删除、替换、插入分开记；吃字率 = 删除 ÷ 参考词数 | 中文加 SenseVoiceSmall。门禁上**任一家**报警就拦、交人 AB 复核；下结论时要两家一致 | 本机层（CI 能不能跑待实测，见门禁） | `gap.md`「吃字率配方」；`whisper.cpp/src/whisper.cpp:3823-3826,7082-7087,7296`；`jiwer/process.py:126` |
+| **清楚 · 压噪与人声** | 语音帧能量损失 + 非语音段残留噪音电平（Rust，`ebur128` crate；VAD 用参考信号上的能量门限，确定性） | ESTOI（pystoi，URGENT 2024 SRCC .80）· SI-SDR（手写） | CI 层 | crates.io `ebur128`（MIT）；`urgent2024_analysis/mos/mos_correlations.png` |
+| **清楚 · babble** | 单设「单个干扰说话人」与「多人 babble」格子（干扰语音取 LibriSpeech 其他说话人），量干扰者残留电平 | 声纹相似度（设计稿 §13；模型许可没核） | 能量指标 CI；声纹本机 | `gap.md` §二 |
+| **自然 · 整体** | SCOREQ natural NR（onnxruntime，权重 378 MB，CC BY 4.0） | UTMOS22 strong（SpeechMOS，MIT） | 本机层 | 逐句 SRCC：URGENT 2024 SCOREQ .79 / UTMOS .74；CHiME-7 .75 / .33（`urgent2026_challenge_track2/BENCHMARK.md:2-21`） |
+| **自然 · 分项与音色** | 有参考 LTASS 差（48 kHz，补 16 kHz 以上的盲区）+ LUFS + **背景波动**（非语音段短时响度的方差与跳变次数） | NISQA 分项（权重 NC-SA，用户自装，本机）· DNSMOS SIG/BAK（CC BY 4.0，属解读；CI 冒烟与业界对照） | LTASS、LUFS、波动、DNSMOS 进 CI；NISQA 本机 | `NISQA/README.md:166`；exp002 实测 DNSMOS |
+| **自然 · 人耳** | 本机静态 AB 页（借 P.808 CCR 与陷阱题设计，自己写收分，不上传） | URGENT-PK 的「成对比较」思路 | 本机，人听 | `P.808/src/master_script.py:868-873` |
+| **轻快** | 附加延迟 ①：干净语音过同一套处理代码，算互相关峰值，再和「帧长 + lookahead」理论值对一次 | ② cpal 两端回调时间戳（pipeline 线 M0）；每帧耗时 p99.9 / 最大值，Rust 打点；旁路切换点的时间跳变（`gap.md`） | ① 与切换点跳变进 CI；② 与耗时只在本机 | 现成工具全不覆盖（`gap.md`「轻快尺子」） |
 
-**代码放哪**：信号处理类指标（能量损失、残留噪音、LUFS、SI-SDR、ESTOI、LTASS、C50、延迟、每帧耗时）放 **Rust 侧**，和实时运行用同一套处理代码；Python 版（pystoi、pyloudnorm、torchmetrics）只用来对拍。模型类打分器（SCOREQ、UTMOS、NISQA、DNSMOS）放 **Python 侧**，读 Rust 写出的 wav，输出 JSON。whisper.cpp 走命令行，两边都能调。汇总按场景格子出分，学 URGENT 的 `get_breakdown.py`（按采样率、SNR 每 5 dB 一档、失真类型分格，`urgent2026_challenge_track1/evaluation_metrics/get_breakdown.py:10-117`）。
+### 统一前处理（每个指标都先过这一步）
 
-**合成考题**：自己写生成器，学 URGENT 2025「先出参数表，再按表生成」两段式。参数范围见 `urgent2025_challenge/conf/simulation_train.yaml:58-110`：SNR −5~20 dB，丢包每包 20 ms，丢包率 5–25%。削波照 URGENT 做，因为 DNS 合成脚本其实不做削波（`noisyspeech_synthesizer_singleprocess.py:20` 只 import 不调用）。不引入 ESPnet。
+1. **对齐**：用 ① 量出的延迟值把输出和参考裁齐，并断言延迟固定不变（漂一个采样点就报错）。能量损失、VAD、ESTOI、SI-SDR、LTASS 都依赖这一步
+2. **重采样**：评测代码自己做，Rust 和 Python 用同一个重采样器，不走 `dnsmos_local.py:53`（exp002 发现它不兼容新版 librosa）
+3. **切段与汇总**：
 
-**一次完整评测多久**：只有 DNSMOS 有实测，实时倍率约 0.005（exp002），1 小时音频约 20 秒，这是推算。SCOREQ、UTMOS、NISQA、whisper.cpp 在 Mac 上都**待实测**；官方也没给「一次完整评测要多久」（URGENT 三届 README 与论文都没写，`gap.md` §二）。CI 层的指标全是 DSP 加 3 MB 的 ONNX，量级是分钟；本机层要等实测。
+| 指标 | 采样率 | 时长要求 | 切段 → 汇总 |
+|---|---|---|---|
+| whisper.cpp | 16 kHz | 不限，但不开 VAD | 按数据集的句子切 → 删除 / 替换 / 插入数相加，再除以总参考词数 |
+| SCOREQ | 16 kHz（自动重采样） | 建议 10–15 s（README:128） | 按句，长于 15 s 的切成 10 s → 每句取均值，再取全集均值 |
+| NISQA | 48 kHz 可 | **≤ 52 s，超了报错**（`NISQA_lib.py:2277`） | 同 SCOREQ |
+| DNSMOS | 16 kHz | 9.01 s 窗、1 s 步长（`dnsmos_local.py:20,61-62`） | 脚本内取窗均值 |
+| ESTOI | 内部转 10 kHz（`pystoi/stoi.py:6`） | 不限 | 按句 → 均值 |
+| 能量损失 · 残留 · 波动 · LTASS | 48 kHz | 不限 | 全段 |
 
-**最小评测集**（许可都已核，没下载）：LibriSpeech test-clean 346 MB（CC BY 4.0，带转写）· 中文二选一，待拍板 · FSD50K eval 6.2 GB（评测时 NC 片段也能用）· SLR26 178 MB + SLR28 1.3 GB（Apache）· 真实录音：DNS5 dev testset 2.9 GB（无参考）、AliMeeting Eval 3.42 GB（CC BY-SA，中文会议）、AMI（CC BY 4.0，英文会议，大小没核）· 加上作者自己录的咖啡馆真实测试集。
+### 真实录音怎么评
+
+| 测试集 | 有参考指标 | 吃字率 | 能用的 |
+|---|---|---|---|
+| DNS5 dev testset | 无干净参考 | 无转写 | 只用无参考 MOS + AB |
+| AliMeeting Eval | 近场耳麦录音作近似参考（不干净） | 有转写；按 TextGrid 切段，**只取不重叠段** | 近似有参考指标 + 吃字率 + AB |
+| AMI | 同 AliMeeting（耳麦） | 有转写 | 同上 |
+| 作者自录（咖啡馆） | 无 | 无，除非人工转写一小段（第 7 题） | 无参考 MOS + AB；标出笑声 / 附和声片段量能量损失 |
+
+### 回归门禁（应产品派 P0 与大总管要求给出形状，数值留给人拍板）
+
+**基线有两个，比的东西不同：**
+
+- **原声直通**（不降噪，只过同样的延迟和重采样）：底线。降噪后不许比不降噪更吃字，残留噪音必须低于原声。用**绝对判据**
+- **上一版**（main 上最近一次通过门禁的构建）：防退步。用**相对容差 + 配对统计**。每次评测的结果（只有分数，按格子存成 JSON）进仓，音频不进
+
+**先量抖动**：同一构建跑两次。DSP 指标与 whisper.cpp（贪心、关回退）应逐位相同；ESTOI 的 Python 版有 EPS 随机噪声（`pystoi/utils.py:178,185`），以 Rust 版为准。抖动不为零的指标，容差至少取抖动的 3 倍（倍数待拍板）。
+
+| 尺子 · 指标 | 对原声直通（绝对） | 对上一版（相对） | 统计 | 后果 |
+|---|---|---|---|---|
+| **吃字率（优先）** | 每个格子的删除率 ≤ 原声直通的删除率 | 任一格子删除率增幅 > Y 个百分点（待拍板），**而且**配对检验显著：同一批句子的删除数差，做 paired bootstrap，95% CI 不含 0 | 每格至少 N 句（建议 30，待拍板）；任一家 ASR 触发即算 | 本机层先跑，**合并前必须附结果**；能进 CI 后改为阻断合并 |
+| 替换率、脑补率 | — | 同上，容差另设 | 同上 | 只报警 |
+| 语音帧能量损失 | — | 增幅 > X dB（待拍板） | 确定性，不需检验 | **CI 阻断** |
+| 残留噪音电平 | 必须低于原声直通 | 增幅 > X dB | 确定性 | **CI 阻断** |
+| ESTOI · SI-SDR | — | 降幅 > 容差 | 确定性（Rust 版） | **CI 阻断** |
+| 背景波动 · LTASS 差 · LUFS | — | 超容差 | 确定性 | CI 报警，不阻断（相关性证据为零，先攒数据再定） |
+| SCOREQ · UTMOS · NISQA · DNSMOS | — | 降幅超容差 | 配对 bootstrap | **只报警**（真相源第 4 位：只作筛选） |
+| 算法延迟 ① | ≤ 设计值 | 任何增加都要在提交里声明 | 确定性 | **CI 阻断** |
+| 旁路切换点时间跳变 | = 0 个采样点 | — | 确定性 | **CI 阻断** |
+| 每帧耗时 p99.9 · 最大值 · 掉帧 | ≤ 预算 | 增幅超容差 | 本机多次运行取分位 | 本机报警（CI runner 的计时噪声太大） |
+| 人耳 AB | — | 机器报警或指标互相矛盾时，挑 10 段给作者听 | — | 作者判定为准，可推翻任何报警 |
+
+**「至少一把变好、另两把不变差」的判法**：「变差」= 任一阻断项失败。「变好」= 至少一把尺子在至少一个格子上，相对上一版显著改善（同样用配对检验）。两条都满足，才算合格的产出。
+
+**CI 用的固定小样本集**：GitHub macOS runner 资源有限，据自审代理查的 GitHub 文档，macos-15 是 3 核、7 GB 内存、14 GB SSD，Metal 可不可用没写。所以 CI 不下 FSD50K 一类的大包，另定一套几 MB 的固定样本：LibriSpeech 若干句（CC BY 4.0）加 FSD50K 的 CC0 片段加 SLR26 RIR，带署名、带哈希进仓。DNSMOS 的两个 ONNX（1.4 MB，CC BY 4.0）也要进仓才能在 CI 里用，因为 `resources/` 被 `.gitignore:12` 忽略了（见第 8 题）。
+
+### 代码、考题、耗时、数据
+
+- **代码放哪**：DSP 类指标（能量损失、残留噪音、波动、LUFS、SI-SDR、ESTOI、LTASS、C50、延迟、切换点跳变、每帧耗时）放 **Rust 侧**，和实时运行用同一套处理代码；Python 版只用来对拍。模型类打分器（SCOREQ、UTMOS、NISQA、DNSMOS）放 **Python 侧**，读 Rust 写出的 wav，输出 JSON。whisper.cpp 走命令行。汇总按格子出分，学 URGENT 的 `get_breakdown.py:10-117`
+- **合成考题**：自己写生成器，学 URGENT 2025「先出参数表，再按表生成」两段式，参数范围见 `urgent2025_challenge/conf/simulation_train.yaml:58-110`；削波照 URGENT 做（DNS 合成脚本 `:20` 只 import 不调用）；加 babble 格子；输出端可选加一道 Opus 编解码（第 6 题）。不引入 ESPnet
+- **一次完整评测多久**：只有 DNSMOS 有实测，实时倍率约 0.005（exp002）。其余全部**待实测**，官方也没给（`gap.md` §二）
+- **最小评测集**（许可已核，没下载）：LibriSpeech test-clean 346 MB · 中文待拍板（第 4 题）· FSD50K eval 6.2 GB · SLR26 178 MB + SLR28 1.3 GB · DNS5 dev 2.9 GB · AliMeeting Eval 3.42 GB · AMI（CC BY 4.0，大小没核）· 作者自录
 
 ## 我放弃什么
 
-> 放弃把 DNSMOS 当总分（第三方增强语音上 SRCC .57，真实录音上 −0.10），放弃 PESQ 进仓，放弃整包搬 URGENT/VERSA 评测脚本（ESPnet、默认 cuda、权重许可不明），也放弃所有「用 NC 权重或 NC 数据的输出当训练目标」的做法。
+> 放弃把 DNSMOS 当总分（第三方增强语音上逐句 SRCC .64，真实录音上 .28），放弃 PESQ（ITU C 代码禁止分发，许可只覆盖评估算法本身），放弃整包搬 URGENT/VERSA 的评测脚本（ESPnet、默认 cuda、权重许可不明），也放弃一切「用 NC 权重或 NC 数据的输出当训练目标」的做法。
 
 ## 依据来自哪一类
 
-- [x] 自有积累：设计稿 §13 的五层评测框架仍算数，作骨架；exp002 实测确认 CI 层能跑
-- [x] 他人积累：19 个仓库浅克隆，逐条核查到文件行号；URGENT 2024 相关图、Track2 BENCHMARK、各 HF / Zenodo / OpenSLR 许可页。Workflow 里每路都配了怀疑派，推翻了 12 条原结论，包括漏掉的 SCOREQ、DTW 必须加 `-nfa`、jiwer 计数方法、MUSAN 逐文件许可、MLS 不是 CC0、DNSMOS「唯一干净」不成立
-- [x] 自己跑的：exp002 确认 DNSMOS 不需要 GPU 或 PyTorch，10 秒音频 0.05 秒；顺带发现 `dnsmos_local.py:53` 不兼容新版 librosa，并改了一条实现约束：评测代码自己负责重采样
+- [x] 自有积累：设计稿 §13 的五层评测框架仍算数，作骨架；exp002 实测确认 CI 层的 DSP 加 ONNX 能跑
+- [x] 他人积累：19 个仓库浅克隆，逐条核查到文件行号；URGENT 2024 相关图、Track2 BENCHMARK、各 HF / Zenodo / OpenSLR 许可页。Workflow 里每路配了怀疑派，推翻了 12 条原结论；交付前三视角自审又改了一轮，主要改了三处：逐句级数字其实已有、SCOREQ 走 ONNX、补上回归门禁
+- [x] 自己跑的：exp002 确认 DNSMOS 不需要 GPU 或 PyTorch，10 秒音频 0.05 秒；顺带改了一条实现约束：评测代码自己负责重采样
 
 ---
 
@@ -48,44 +99,49 @@
 
 | 来源 | 权限 | 这次实际用到哪一步 |
 |---|---|---|
-| **自家的** | 可照搬 | 设计稿 §13 作骨架；exp002 的 `smoke.py` 可直接长成 CI 冒烟脚本 |
-| **外部的** | 只读借鉴 | 当依赖调用：DNSMOS ONNX、SCOREQ、SpeechMOS、NISQA（用户自装）、whisper.cpp、jiwer、pystoi、`ebur128`。只学思路、自己写：URGENT 生成器、`get_breakdown`、P.808 CCR 页面。只当参照：VERSA、URGENT-PK、Uni-VERSA-Ext。不碰：PESQ 的 C 代码、GPL 的 Levenshtein |
+| **自家的** | 可照搬 | 设计稿 §13 作骨架；exp002 的 `smoke.py` 去掉 PESQ 后，可长成 CI 冒烟脚本 |
+| **外部的** | 只读借鉴 | 当依赖调用：DNSMOS ONNX、SCOREQ、SpeechMOS、NISQA（用户自装）、whisper.cpp、jiwer、OpenCC、pystoi、`ebur128`。只学思路、自己写：URGENT 生成器、`get_breakdown`、P.808 CCR 页。只当参照：VERSA、URGENT-PK、Uni-VERSA-Ext。不碰：PESQ、GPL 的 Levenshtein |
 
 ⚠️ 交付前已回 `resources/` 比对：本目录五份文件里没有代码片段，只有行号引用；`smoke.py` 只调用 `ComputeScore`，没有复制。
 
 ### 二、满意与最优：什么时候够
 
-**这次的停止线**：每把尺子都有主指标和交叉指标，每个指标三条命门都有「有 / 部分 / 没有」加出处，剩下的空缺都能归到「待实测」或「待人拍板」。达到了。没有继续去核的：ViSQOL、WV-MOS、DNSMOS Pro、Distill-MOS 的相关性和 Mac 路径，因为它们在 URGENT 2024 上都不比 SCOREQ/UTMOS 强（SRCC .65–.74），也不改变首选。
+**这次的停止线**：每把尺子都有主指标、交叉指标、门禁形状；每个指标三条命门都有「有 / 部分 / 没有」加出处；剩下的空缺都能归到「待实测」或「待人拍板」。达到了。没有继续核的：ViSQOL、WV-MOS、DNSMOS Pro、Distill-MOS（URGENT 2024 上都不比 SCOREQ 强，不改变首选）。
 
 ## 支持它的最强依据
 
-> URGENT 2024 盲测（300 条 × 23 个版本，P.808，每条 8 人）上，SCOREQ 和 UTMOS 与人耳 MOS 的 SRCC 都是 .91，高于所有有参考指标（POLQA .82、ESTOI .80、PESQ .77）和 DNSMOS（.57）（`resources/urgent2024_analysis/mos/mos_correlations.png`，两位代理逐柱核对）；换到真实录音的 CHiME-7 UDASE，SCOREQ 系统级仍有 .90，而且它没有训练或验证集泄漏（`urgent2026_challenge_track2/BENCHMARK.md`；Uni-VERSA-Ext 的 .90 有泄漏）。另外，WAcc 对 MOS 的 LCC 只有 .30，说明「清楚」和「自然」确实要分两把尺子量，吃字率不能拿 MOS 代替。
+> 同一套 URGENT 2024 增强语音测试集上，SCOREQ 的逐句 SRCC .79、系统级 .93，都是可再分发打分器里最高的（`BENCHMARK.md:6`）；换到真实录音的 CHiME-7，SCOREQ 逐句仍有 .75，而 UTMOS 掉到 .33、DNSMOS 掉到 .28（`BENCHMARK.md:13-21`）。也就是说，只有 SCOREQ 跨两个分布都站得住，而且它没有训练或验证集泄漏。WAcc 对 MOS 的 SRCC .71、LCC .30，线性关系弱，说明吃字率不能用 MOS 代替，「清楚」和「自然」要分开量。
 
 ## 反对它的最强依据
 
-> 全部相关性证据都来自 **23 个离线增强系统**，粒度没写明，也没有显著性检验；.91 和 .80 的差距在 n=23 下可能不显著（arXiv 2506.01611 没给检验）。同一个 UTMOS 换到 CHiME-7 就掉到 .20，说明换个分布排序就会翻车，而我们的实时小模型正是另一个分布。CCF AATC 2025 还报告 DNSMOS 在 hybrid 系统上与 MOS 负相关 ρ=−0.8（arXiv 2509.12974）。吃字率这条更弱：Whisper 删除率和人耳可懂度之间**没有任何**相关性证据，它可能量的是 ASR 对伪影有多敏感，而不是人听不听得清。
+> 所有相关性证据都来自**离线增强系统**，没有一个是实时低延迟小模型，而我们的模型正好是另一个分布。同一个 UTMOS 从 .74 掉到 .33，说明换个分布排序就会翻车。CCF AATC 2025 还报告 DNSMOS 在 hybrid 系统上与 MOS 负相关 ρ=−0.8（arXiv 2509.12974）。吃字率这条更弱：Whisper 删除率和人耳可懂度之间**没有任何**相关性证据，它可能量的是 ASR 对伪影有多敏感，而不是人听不听得清。
 
-**这条反对意见不改变选择，但改变用法**：所有自动指标只用来排序和挑片段，结论由作者 AB 来下（与意向书真相源权重第 2–4 位一致）。
+**这条反对意见不改变选择，但改变用法**：所有自动指标只用来排序、挑片段、触发报警，结论由作者 AB 来下（意向书真相源权重第 2–4 位）。
 
 ## 仍未补齐的缺口
 
-> **这些指标在我们自己的实时降噪输出上，和作者的耳朵是否一致。** 补法：下一批原型每做一次 AB，同时记下各指标打分，攒到 20–30 对后算一致率；不一致的指标降权。顺带用 `urgent2024_mos` 在本机算一次逐句相关作对照，下载前先报大总管。
+> **这些指标在我们自己的实时降噪输出上，和作者的耳朵是否一致。** 补法：下一批原型每做一次 AB，同时记下各指标打分，攒到 20–30 对后算一致率；不一致的指标降权。门禁阈值同理：先量抖动，再由人定数值。
 
 ## ⚠️ 需要你拍板的地方
 
 | # | 需要拍板的 | 选项 | 代价 | 我的建议 | 默认（不拍时） | 拍了吗 |
 |---|---|---|---|---|---|---|
-| 1 | 真实测试集用哪些麦克风录（设计稿 §13 场景矩阵：内置 / AirPods / USB 耳机 / 专业麦克风） | A 只用手头已有的 · B 再买或借 1–2 个 · C 四类凑齐 | B 和 C 要花钱、花时间；A 覆盖不全 | 先 A：内置麦克风加 AirPods 录咖啡馆，跑通飞轮后再按评测矩阵暴露的弱项补 | A | ☐ |
-| 2 | 真实录音里会有旁人的声音，怎么存 | A 只存本机、不进仓、不外发 · B 只把剪过、没有旁人声音的片段放进开源测试集 | A 别人复现不了；B 要人工剪 | A，开源测试集只用公开数据合成（铁律 13：个人隐私数据不入库） | A | ☐ |
-| 3 | 许可不干净的打分器怎么处理：NISQA 权重 NC-SA；PESQ 的 C 代码禁止分发，评估结果也不许对外商用（`dsp.c` PERMITTED USE 1.iii） | A 不用 · B 作「用户自装的可选项」，只出内部数字，不进 CI、不进发布报告 · C 照常用 | A 少了分项诊断；C 有法律风险 | NISQA 选 B；PESQ 选 A，需要同类指标时下一批核 ViSQOL（Apache） | NISQA B · PESQ A | ☐ |
-| 4 | 中文评测集用哪个 | A CommonVoice zh-CN（CC0，大小没核）· B THCHS-30（标 Apache，页面又写「对学术用户免费」，6.4 GB + 1.9 GB）· C 两个都要 | B 许可有矛盾，不能进要发布的东西 | A 进开源测试集，B 只在本机做对照（它自带 0 dB 含噪测试集） | A | ☐ |
-| 5 | 评测数据下载与存放：最小评测集约 15–20 GB，超过本批 500 MB 的线；铁律 8 要求大文件放仓外 | A 放本机 `~/` 下的仓外目录 · B 放 NAS / 云盘，仓里只留路径和哈希 | A 没有远端副本；B 要先有 NAS | 先 A，仓里记路径、哈希、来源 URL 和许可，换机时照清单重下（都是公开数据，可重建） | A | ☐ |
-| 6 | 以后的模型微调能不能用带 SA（相同方式共享）条款的数据：AliMeeting CC BY-SA、DEMAND CC BY-SA 3.0 | A 只用于评测 · B 也进训练 | B：SA 会不会传染到权重，目前没有定论 | A | A | ☐ |
+| 1 | 真实测试集用哪些麦克风录（设计稿 §13：内置 / AirPods / USB 耳机 / 专业麦克风） | A 只用手头已有的 · B 再买或借 1–2 个 · C 四类凑齐 | A：USB 耳机和专业麦克风上的退步在评测里看不到；B、C 要花钱和时间 | 先 A（内置 + AirPods 录咖啡馆），跑通飞轮后再按评测矩阵暴露的弱项补 | A | ☐ |
+| 2 | 真实录音里会有旁人的声音，怎么存 | A 只存本机、不进仓、不外发 · B 剪掉旁人声音后放进开源测试集 | A：别人复现不了；B：要人工剪 | A，开源测试集只用公开数据合成（铁律 13） | A | ☐ |
+| 3 | 许可不干净的打分器：NISQA 权重 NC-SA；PESQ 的 ITU C 代码禁止分发，许可只覆盖评估算法本身 | A 不用 · B 作「用户自装的可选项」，只出内部数字，不进 CI、不进发布报告 · C 照常用 | A 少了分项诊断；C 有法律风险 | NISQA 选 B；PESQ 选 A，需要同类指标时下一批核 ViSQOL（Apache） | NISQA B · PESQ A | ☐ |
+| 4 | 中文评测集用哪个 | A CommonVoice zh-CN（CC0，大小没核）· B THCHS-30（许可矛盾，6.4 + 1.9 GB）· C 两个都要 | A、B 都是朗读语音，会议是对话体，可能高估效果 | A 进开源测试集；对话体由 AliMeeting Eval 补；B 只在本机做对照 | A | ☐ |
+| 5 | 评测数据（约 15–20 GB）下载与存放；铁律 8 要求放仓外 | A 本机仓外目录 · B NAS / 云盘 | A 没有远端副本；B 要先有 NAS | 先 A，仓里记路径、哈希、来源 URL、许可（都是公开数据，可重建） | A | ☐ |
+| 6 | 评测要不要加一道「会议软件编码」（输出端 Opus 编解码后再打分） | A 加 · B 不加 | A 评测时间约翻倍，libopus 许可待核；B 量不到对方实际听到的声音 | A，先只在本机层做 | B | ☐ |
+| 7 | 作者自录集要不要人工转写一小段（否则这份集算不了吃字率） | A 转写约 5 分钟 · B 只做 AB | A 要花人力；B 真实场景下的吃字只能靠耳朵 | A | B | ☐ |
+| 8 | 进仓的第三方文件：DNSMOS 两个 ONNX（1.4 MB，CC BY 4.0）+ CI 用的几 MB 固定样本（CC BY / CC0） | A 进仓，带署名和哈希 · B 不进，CI 运行时下载 | A 仓里有第三方文件；B CI 依赖外网 | A | B | ☐ |
+| 9 | 回归门禁的数值：吃字率容差 Y、每格句数 N、能量损失和残留容差 X dB、抖动倍数 | 由人定数；或先用 AI 建议值跑两周再调 | 定严了：好改动被误拦；定松了：吃字漏过 | 先量抖动，再按「删除率 +1 个百分点、N=30、3 倍抖动」试跑（这是建议值，没有出处） | 不拦，只报警 | ☐ |
+| 10 | 以后微调能不能用带 SA 条款的数据（AliMeeting CC BY-SA、DEMAND CC BY-SA 3.0） | A 只用于评测 · B 也进训练 | B：SA 会不会传染到权重，目前没有定论 | A | A | ☐ |
+| 11 | 真相源第 1 位包括「对方的反馈」，评测里要不要设一个收集通道（如会后一句问卷） | A 要 · B 暂不 | A 要打扰会议对方；B 只有作者一个人的耳朵 | 下一批原型试用时再定 | B | ☐ |
 
 ---
 
 ## 收尾三件
 
-1. **判断落回真相源**：这张卡由人拍板后，再整理进 `vault/truth/`。本批手下只写 004，不自己去建 `vault/truth/`
-2. **交付前回一趟参考区**：已查，没有照抄，见上文「复用分级」
-3. **放行**：选了什么 → 上面那张表；舍了什么 → DNSMOS 当总分、PESQ 进仓、整包搬 URGENT；哪里要拍板 → 上面 6 题
+1. **判断落回真相源**：人拍板后再整理进 `vault/truth/`。本批手下只写 004
+2. **交付前回一趟参考区**：已查，没有照抄
+3. **放行**：选了什么 → 上面那张表加回归门禁；舍了什么 → DNSMOS 当总分、PESQ、整包搬 URGENT；哪里要拍板 → 上面 11 题
