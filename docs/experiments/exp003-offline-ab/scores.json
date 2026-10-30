@@ -5,9 +5,9 @@
    "asr_ref": "He wrote down a long list of items. The drip of the rain made a pleasant sound. Smoke poured out of every crack. Hats are worn to tea and not to dinner. The clothes.",
    "asr_ref_stable": true,
    "noisy": {
-    "SIG": 2.972,
-    "BAK": 1.844,
-    "OVRL": 1.896,
+    "SIG": 2.975,
+    "BAK": 1.852,
+    "OVRL": 1.901,
     "ESTOI": 0.6543,
     "SI_SDR_dB": 5.77,
     "noise_att_db": 0.0,
@@ -23,9 +23,9 @@
     "ins_rate": 0.0
    },
    "dpdfnet2": {
-    "SIG": 3.544,
-    "BAK": 4.147,
-    "OVRL": 3.314,
+    "SIG": 3.546,
+    "BAK": 4.149,
+    "OVRL": 3.316,
     "ESTOI": 0.8542,
     "SI_SDR_dB": 14.53,
     "noise_att_db": -40.5,
@@ -41,8 +41,8 @@
     "ins_rate": 0.0
    },
    "gtcrn": {
-    "SIG": 3.078,
-    "BAK": 3.868,
+    "SIG": 3.077,
+    "BAK": 3.869,
     "OVRL": 2.763,
     "ESTOI": 0.7758,
     "SI_SDR_dB": 11.55,
@@ -58,10 +58,28 @@
     "sub_rate": 0.0294,
     "ins_rate": 0.0
    },
+   "fastenhancer_m": {
+    "SIG": 3.5,
+    "BAK": 4.131,
+    "OVRL": 3.259,
+    "ESTOI": 0.8322,
+    "SI_SDR_dB": 14.11,
+    "noise_att_db": -18.32,
+    "resid_rel_db": -23.94,
+    "asr": "He wrote down a long list of items. The drip of the rain made a pleasant sound. Smoke poured out of every crack. Hats are worn to tea and not to dinner. The clothes.",
+    "asr_stable": true,
+    "ref_len": 34,
+    "del": 0,
+    "sub": 0,
+    "ins": 0,
+    "del_rate": 0.0,
+    "sub_rate": 0.0,
+    "ins_rate": 0.0
+   },
    "voxlock_given": {
     "SIG": 3.454,
-    "BAK": 3.761,
-    "OVRL": 3.074,
+    "BAK": 3.765,
+    "OVRL": 3.076,
     "ESTOI": 0.8036,
     "SI_SDR_dB": 12.81,
     "noise_att_db": -21.78,
@@ -77,9 +95,9 @@
     "ins_rate": 0.0
    },
    "voxlock_live": {
-    "SIG": 3.49,
-    "BAK": 2.656,
-    "OVRL": 2.526,
+    "SIG": 3.484,
+    "BAK": 2.663,
+    "OVRL": 2.527,
     "ESTOI": 0.7487,
     "SI_SDR_dB": 9.6,
     "noise_att_db": -7.15,
@@ -100,7 +118,7 @@
    "asr_ref": "The stray cat gave birth to kittens. The lazy cow lay in the cool grass. The friendly gang left the drug store. We talked of the sideshow in the circus. The set of china hit the floor with a crash.",
    "asr_ref_stable": true,
    "noisy": {
-    "SIG": 1.273,
+    "SIG": 1.275,
     "BAK": 1.08,
     "OVRL": 1.125,
     "ESTOI": 0.4824,
@@ -118,9 +136,9 @@
     "ins_rate": 0.0
    },
    "dpdfnet2": {
-    "SIG": 2.941,
-    "BAK": 3.923,
-    "OVRL": 2.676,
+    "SIG": 2.94,
+    "BAK": 3.919,
+    "OVRL": 2.673,
     "ESTOI": 0.702,
     "SI_SDR_dB": 10.83,
     "noise_att_db": -57.58,
@@ -137,8 +155,8 @@
    },
    "gtcrn": {
     "SIG": 2.363,
-    "BAK": 3.265,
-    "OVRL": 2.006,
+    "BAK": 3.264,
+    "OVRL": 2.007,
     "ESTOI": 0.5665,
     "SI_SDR_dB": 6.17,
     "noise_att_db": -13.02,
@@ -153,10 +171,28 @@
     "sub_rate": 0.025,
     "ins_rate": 0.0
    },
+   "fastenhancer_m": {
+    "SIG": 2.811,
+    "BAK": 3.957,
+    "OVRL": 2.565,
+    "ESTOI": 0.6707,
+    "SI_SDR_dB": 9.32,
+    "noise_att_db": -20.2,
+    "resid_rel_db": -21.5,
+    "asr": "The stray cat gave birth to kittens. The lazy cow lay in the cool grass. The friendly gang left the drugs. We talked of the sideshow and the circus. The set of china hit the floor with.",
+    "asr_stable": true,
+    "ref_len": 40,
+    "del": 3,
+    "sub": 2,
+    "ins": 0,
+    "del_rate": 0.075,
+    "sub_rate": 0.05,
+    "ins_rate": 0.0
+   },
    "voxlock_given": {
-    "SIG": 3.149,
-    "BAK": 2.62,
-    "OVRL": 2.273,
+    "SIG": 3.15,
+    "BAK": 2.624,
+    "OVRL": 2.275,
     "ESTOI": 0.6572,
     "SI_SDR_dB": 7.84,
     "noise_att_db": -20.02,
@@ -172,9 +208,9 @@
     "ins_rate": 0.0
    },
    "voxlock_live": {
-    "SIG": 2.691,
-    "BAK": 1.769,
-    "OVRL": 1.796,
+    "SIG": 2.712,
+    "BAK": 1.79,
+    "OVRL": 1.812,
     "ESTOI": 0.576,
     "SI_SDR_dB": 3.73,
     "noise_att_db": -2.38,
@@ -213,9 +249,9 @@
     "ins_rate": 0.0
    },
    "dpdfnet2": {
-    "SIG": 2.706,
-    "BAK": 3.694,
-    "OVRL": 2.357,
+    "SIG": 2.696,
+    "BAK": 3.699,
+    "OVRL": 2.351,
     "ESTOI": 0.4154,
     "SI_SDR_dB": 4.83,
     "noise_att_db": -63.94,
@@ -231,21 +267,39 @@
     "ins_rate": 0.0
    },
    "gtcrn": {
-    "SIG": 2.329,
-    "BAK": 3.28,
-    "OVRL": 1.938,
+    "SIG": 2.328,
+    "BAK": 3.281,
+    "OVRL": 1.937,
     "ESTOI": 0.3424,
     "SI_SDR_dB": 1.82,
     "noise_att_db": -6.73,
     "resid_rel_db": 1.18,
-    "asr": "Clams are small, then soft and tasty. That's mostly what's to be learned. Clams in warm waters in the Great Yards.",
+    "asr": "Clams are small, then soft and tasty. That's mostly what's to be learned. I played in one boys' and schoolyard.",
     "asr_stable": true,
     "ref_len": 33,
-    "del": 12,
-    "sub": 11,
+    "del": 13,
+    "sub": 13,
     "ins": 0,
-    "del_rate": 0.3636,
-    "sub_rate": 0.3333,
+    "del_rate": 0.3939,
+    "sub_rate": 0.3939,
+    "ins_rate": 0.0
+   },
+   "fastenhancer_m": {
+    "SIG": 2.687,
+    "BAK": 3.827,
+    "OVRL": 2.392,
+    "ESTOI": 0.3967,
+    "SI_SDR_dB": 3.73,
+    "noise_att_db": -13.13,
+    "resid_rel_db": -10.98,
+    "asr": "Clams are small, brown, soft, and tasty. The edges from stop whistling and watch the boys work. A friend in warm waters and a sleepy young.",
+    "asr_stable": true,
+    "ref_len": 33,
+    "del": 7,
+    "sub": 7,
+    "ins": 0,
+    "del_rate": 0.2121,
+    "sub_rate": 0.2121,
     "ins_rate": 0.0
    },
    "voxlock_given": {
@@ -291,9 +345,9 @@
    "asr_ref_stable": true,
    "truth": "BY THIS TIME LORD CHELFORD AND WYLDER RETURNED AND DISGUSTED RATHER WITH MYSELF I RUMINATED ON MY WANT OF GENERAL SHIP",
    "noisy": {
-    "SIG": 3.227,
-    "BAK": 2.53,
-    "OVRL": 2.302,
+    "SIG": 3.15,
+    "BAK": 2.432,
+    "OVRL": 2.244,
     "ESTOI": 0.6806,
     "SI_SDR_dB": 4.38,
     "noise_att_db": 0.0,
@@ -309,9 +363,9 @@
     "ins_rate": 0.0
    },
    "dpdfnet2": {
-    "SIG": 3.365,
-    "BAK": 3.346,
-    "OVRL": 2.811,
+    "SIG": 3.373,
+    "BAK": 3.342,
+    "OVRL": 2.815,
     "ESTOI": 0.6764,
     "SI_SDR_dB": 2.46,
     "noise_att_db": -0.99,
@@ -327,9 +381,9 @@
     "ins_rate": 0.4
    },
    "gtcrn": {
-    "SIG": 3.012,
-    "BAK": 3.364,
-    "OVRL": 2.483,
+    "SIG": 3.017,
+    "BAK": 3.397,
+    "OVRL": 2.506,
     "ESTOI": 0.6892,
     "SI_SDR_dB": 4.79,
     "noise_att_db": -0.94,
@@ -344,10 +398,28 @@
     "sub_rate": 0.0,
     "ins_rate": 0.3
    },
+   "fastenhancer_m": {
+    "SIG": 3.245,
+    "BAK": 3.67,
+    "OVRL": 2.831,
+    "ESTOI": 0.5714,
+    "SI_SDR_dB": 2.25,
+    "noise_att_db": -1.23,
+    "resid_rel_db": -3.58,
+    "asr": "What I mean is that I won't promise never to see you again, no matter how often I must bid rather myself. I ruminated on my want, general.",
+    "asr_stable": true,
+    "ref_len": 20,
+    "del": 1,
+    "sub": 13,
+    "ins": 9,
+    "del_rate": 0.05,
+    "sub_rate": 0.65,
+    "ins_rate": 0.45
+   },
    "voxlock_given": {
-    "SIG": 3.179,
-    "BAK": 2.291,
-    "OVRL": 2.184,
+    "SIG": 3.165,
+    "BAK": 2.269,
+    "OVRL": 2.164,
     "ESTOI": 0.6049,
     "SI_SDR_dB": -1.29,
     "noise_att_db": -10.91,
@@ -363,9 +435,9 @@
     "ins_rate": 0.05
    },
    "voxlock_live": {
-    "SIG": 3.278,
-    "BAK": 2.666,
-    "OVRL": 2.359,
+    "SIG": 3.287,
+    "BAK": 2.676,
+    "OVRL": 2.368,
     "ESTOI": 0.752,
     "SI_SDR_dB": 3.72,
     "noise_att_db": -0.93,
@@ -387,9 +459,9 @@
    "asr_ref_stable": true,
    "truth": "THE KING HAD COMPLETED HIS TOILETTE BY NINE O'CLOCK HE APPEARED IN AN OPEN CARRIAGE DECORATED WITH BRANCHES OF TREES AND FLOWERS",
    "noisy": {
-    "SIG": 3.4,
-    "BAK": 2.285,
-    "OVRL": 2.265,
+    "SIG": 3.449,
+    "BAK": 2.354,
+    "OVRL": 2.311,
     "ESTOI": 0.4281,
     "SI_SDR_dB": -0.74,
     "noise_att_db": 0.0,
@@ -405,9 +477,9 @@
     "ins_rate": 0.1818
    },
    "dpdfnet2": {
-    "SIG": 3.479,
-    "BAK": 3.916,
-    "OVRL": 3.153,
+    "SIG": 3.484,
+    "BAK": 3.929,
+    "OVRL": 3.164,
     "ESTOI": 0.45,
     "SI_SDR_dB": -3.1,
     "noise_att_db": -2.42,
@@ -423,9 +495,9 @@
     "ins_rate": 0.1364
    },
    "gtcrn": {
-    "SIG": 3.259,
-    "BAK": 3.55,
-    "OVRL": 2.779,
+    "SIG": 3.262,
+    "BAK": 3.568,
+    "OVRL": 2.79,
     "ESTOI": 0.4214,
     "SI_SDR_dB": -1.4,
     "noise_att_db": -0.92,
@@ -438,6 +510,24 @@
     "ins": 4,
     "del_rate": 0.0,
     "sub_rate": 0.0,
+    "ins_rate": 0.1818
+   },
+   "fastenhancer_m": {
+    "SIG": 3.255,
+    "BAK": 3.652,
+    "OVRL": 2.859,
+    "ESTOI": 0.3918,
+    "SI_SDR_dB": -3.74,
+    "noise_att_db": -0.62,
+    "resid_rel_db": -0.82,
+    "asr": "Thought killed. I am pleased to leave large land. He appeared in an open carriage decorated with branches of trees and clouds of earth and water.",
+    "asr_stable": true,
+    "ref_len": 22,
+    "del": 0,
+    "sub": 10,
+    "ins": 4,
+    "del_rate": 0.0,
+    "sub_rate": 0.4545,
     "ins_rate": 0.1818
    },
    "voxlock_given": {
@@ -459,9 +549,9 @@
     "ins_rate": 0.0
    },
    "voxlock_live": {
-    "SIG": 3.471,
-    "BAK": 2.64,
-    "OVRL": 2.471,
+    "SIG": 3.469,
+    "BAK": 2.649,
+    "OVRL": 2.473,
     "ESTOI": 0.1751,
     "SI_SDR_dB": -8.69,
     "noise_att_db": -0.04,
@@ -483,9 +573,9 @@
    "asr_ref_stable": true,
    "truth": "HIS TROUBLED BLUE EYES GLANCED AT EACH OF US AND FINALLY RESTED WITH AN EXPRESSION OF BLANK DISMAY UPON BANNISTER IN THE FARTHER CORNER",
    "noisy": {
-    "SIG": 1.663,
-    "BAK": 1.251,
-    "OVRL": 1.284,
+    "SIG": 1.8,
+    "BAK": 1.294,
+    "OVRL": 1.333,
     "ESTOI": 0.3968,
     "SI_SDR_dB": -0.73,
     "noise_att_db": 0.0,
@@ -501,9 +591,9 @@
     "ins_rate": 0.0833
    },
    "dpdfnet2": {
-    "SIG": 3.083,
-    "BAK": 3.052,
-    "OVRL": 2.394,
+    "SIG": 3.096,
+    "BAK": 2.992,
+    "OVRL": 2.372,
     "ESTOI": 0.5851,
     "SI_SDR_dB": 4.73,
     "noise_att_db": -6.16,
@@ -519,9 +609,9 @@
     "ins_rate": 0.0
    },
    "gtcrn": {
-    "SIG": 3.148,
-    "BAK": 2.886,
-    "OVRL": 2.448,
+    "SIG": 3.159,
+    "BAK": 2.969,
+    "OVRL": 2.498,
     "ESTOI": 0.4823,
     "SI_SDR_dB": 2.47,
     "noise_att_db": -4.82,
@@ -536,10 +626,28 @@
     "sub_rate": 0.0417,
     "ins_rate": 0.0
    },
+   "fastenhancer_m": {
+    "SIG": 2.961,
+    "BAK": 3.622,
+    "OVRL": 2.587,
+    "ESTOI": 0.5457,
+    "SI_SDR_dB": 2.66,
+    "noise_att_db": -3.91,
+    "resid_rel_db": -2.89,
+    "asr": "His troubled blue eyes glanced at each of us, and finally rested with an expression of blank dismay upon Banting.",
+    "asr_stable": true,
+    "ref_len": 24,
+    "del": 4,
+    "sub": 1,
+    "ins": 0,
+    "del_rate": 0.1667,
+    "sub_rate": 0.0417,
+    "ins_rate": 0.0
+   },
    "voxlock_given": {
-    "SIG": 3.316,
-    "BAK": 3.051,
-    "OVRL": 2.624,
+    "SIG": 3.276,
+    "BAK": 3.033,
+    "OVRL": 2.6,
     "ESTOI": 0.4684,
     "SI_SDR_dB": 3.19,
     "noise_att_db": -7.19,
@@ -555,22 +663,22 @@
     "ins_rate": 0.0
    },
    "voxlock_live": {
-    "SIG": 1.465,
-    "BAK": 1.13,
-    "OVRL": 1.235,
+    "SIG": 1.559,
+    "BAK": 1.161,
+    "OVRL": 1.267,
     "ESTOI": 0.3983,
     "SI_SDR_dB": 0.18,
     "noise_att_db": -0.96,
     "resid_rel_db": -3.43,
-    "asr": "His troubled blue eyes glanced at each of us, and finally rested, with an expression of blank dismay, upon Bams's farther corner, Rachel.",
+    "asr": "His troubled blue eyes glanced at each of us, and finally rested, with an expression of blank dismay, upon Vance's farthest corner, Rachel.",
     "asr_stable": true,
     "ref_len": 24,
-    "del": 2,
-    "sub": 1,
-    "ins": 1,
-    "del_rate": 0.0833,
-    "sub_rate": 0.0417,
-    "ins_rate": 0.0417
+    "del": 1,
+    "sub": 4,
+    "ins": 0,
+    "del_rate": 0.0417,
+    "sub_rate": 0.1667,
+    "ins_rate": 0.0
    }
   },
   "c07": {
@@ -597,27 +705,27 @@
     "ins_rate": 0.1053
    },
    "dpdfnet2": {
-    "SIG": 2.825,
-    "BAK": 2.733,
-    "OVRL": 2.062,
+    "SIG": 2.824,
+    "BAK": 2.739,
+    "OVRL": 2.066,
     "ESTOI": 0.2861,
     "SI_SDR_dB": -0.8,
     "noise_att_db": -9.28,
     "resid_rel_db": -0.41,
-    "asr": "It was hardly in the realm of ancient history, such as most of the incidents in it seem, important to be thought of as likely to arouse opposition.",
+    "asr": "It was hardly in the realm of ancient history that your suspicions and fancied ideas seemed important to be thought of as likely to arouse opposition.",
     "asr_stable": true,
     "ref_len": 19,
     "del": 0,
     "sub": 10,
-    "ins": 9,
+    "ins": 7,
     "del_rate": 0.0,
     "sub_rate": 0.5263,
-    "ins_rate": 0.4737
+    "ins_rate": 0.3684
    },
    "gtcrn": {
-    "SIG": 2.467,
-    "BAK": 1.804,
-    "OVRL": 1.623,
+    "SIG": 2.406,
+    "BAK": 1.7,
+    "OVRL": 1.55,
     "ESTOI": 0.1768,
     "SI_SDR_dB": -6.19,
     "noise_att_db": -8.2,
@@ -632,23 +740,41 @@
     "sub_rate": 0.8421,
     "ins_rate": 0.4737
    },
+   "fastenhancer_m": {
+    "SIG": 2.634,
+    "BAK": 3.296,
+    "OVRL": 2.22,
+    "ESTOI": 0.2387,
+    "SI_SDR_dB": -3.15,
+    "noise_att_db": -8.61,
+    "resid_rel_db": -0.54,
+    "asr": "It was hardly at all convenient. It seemed exceedingly hard-hearted and likely to arouse opposition.",
+    "asr_stable": true,
+    "ref_len": 19,
+    "del": 3,
+    "sub": 11,
+    "ins": 0,
+    "del_rate": 0.1579,
+    "sub_rate": 0.5789,
+    "ins_rate": 0.0
+   },
    "voxlock_given": {
-    "SIG": 3.376,
-    "BAK": 2.354,
-    "OVRL": 2.285,
+    "SIG": 3.374,
+    "BAK": 2.352,
+    "OVRL": 2.283,
     "ESTOI": 0.2964,
     "SI_SDR_dB": -0.18,
     "noise_att_db": -13.79,
     "resid_rel_db": -8.37,
-    "asr": "It was most of the pleasures, and it was a most singular scene to be thought of as likely to arouse opposition.",
+    "asr": "It was most of the pleasures, and it seemed to be thought of as likely to arouse opposition.",
     "asr_stable": true,
     "ref_len": 19,
-    "del": 0,
-    "sub": 10,
-    "ins": 3,
-    "del_rate": 0.0,
-    "sub_rate": 0.5263,
-    "ins_rate": 0.1579
+    "del": 1,
+    "sub": 8,
+    "ins": 0,
+    "del_rate": 0.0526,
+    "sub_rate": 0.4211,
+    "ins_rate": 0.0
    },
    "voxlock_live": {
     "SIG": 1.226,
@@ -675,8 +801,8 @@
    "asr_ref_stable": true,
    "truth": "BETH WAS A BEAUTIFUL GIRL THE HANDSOMEST OF THE THREE COUSINS BY FAR YET ELIZA SURPASSED HER IN NATURAL CHARM AND SEEMED WELL AWARE OF THE FACT",
    "noisy": {
-    "SIG": 3.618,
-    "BAK": 2.953,
+    "SIG": 3.619,
+    "BAK": 2.954,
     "OVRL": 2.743,
     "ESTOI": 0.7511,
     "SI_SDR_dB": 9.32,
@@ -693,9 +819,9 @@
     "ins_rate": 0.0
    },
    "dpdfnet2": {
-    "SIG": 3.41,
-    "BAK": 3.901,
-    "OVRL": 3.074,
+    "SIG": 3.409,
+    "BAK": 3.9,
+    "OVRL": 3.073,
     "ESTOI": 0.8841,
     "SI_SDR_dB": 12.49,
     "noise_att_db": -7.01,
@@ -711,9 +837,9 @@
     "ins_rate": 0.0
    },
    "gtcrn": {
-    "SIG": 3.286,
-    "BAK": 3.432,
-    "OVRL": 2.745,
+    "SIG": 3.289,
+    "BAK": 3.44,
+    "OVRL": 2.75,
     "ESTOI": 0.7809,
     "SI_SDR_dB": 7.85,
     "noise_att_db": -3.61,
@@ -728,9 +854,27 @@
     "sub_rate": 0.0,
     "ins_rate": 0.0
    },
+   "fastenhancer_m": {
+    "SIG": 3.397,
+    "BAK": 4.008,
+    "OVRL": 3.112,
+    "ESTOI": 0.8691,
+    "SI_SDR_dB": 13.67,
+    "noise_att_db": -8.85,
+    "resid_rel_db": -18.8,
+    "asr": "Beth was a beautiful girl, the handsomest of the three cousins by far. Yet Eliza surpassed her in natural charm, and seemed well aware of the fact.",
+    "asr_stable": true,
+    "ref_len": 27,
+    "del": 0,
+    "sub": 0,
+    "ins": 0,
+    "del_rate": 0.0,
+    "sub_rate": 0.0,
+    "ins_rate": 0.0
+   },
    "voxlock_given": {
-    "SIG": 3.337,
-    "BAK": 3.521,
+    "SIG": 3.338,
+    "BAK": 3.52,
     "OVRL": 2.859,
     "ESTOI": 0.8862,
     "SI_SDR_dB": 15.23,
@@ -747,9 +891,9 @@
     "ins_rate": 0.0
    },
    "voxlock_live": {
-    "SIG": 3.4,
-    "BAK": 3.375,
-    "OVRL": 2.849,
+    "SIG": 3.399,
+    "BAK": 3.374,
+    "OVRL": 2.848,
     "ESTOI": 0.8155,
     "SI_SDR_dB": 11.14,
     "noise_att_db": -0.87,
@@ -790,8 +934,8 @@
    },
    "dpdfnet2": {
     "SIG": 3.604,
-    "BAK": 4.184,
-    "OVRL": 3.372,
+    "BAK": 4.185,
+    "OVRL": 3.371,
     "ESTOI": 0.9679,
     "SI_SDR_dB": 23.35,
     "noise_att_db": -72.36,
@@ -807,9 +951,9 @@
     "ins_rate": 0.0
    },
    "gtcrn": {
-    "SIG": 3.565,
-    "BAK": 3.808,
-    "OVRL": 3.09,
+    "SIG": 3.574,
+    "BAK": 3.81,
+    "OVRL": 3.099,
     "ESTOI": 0.9344,
     "SI_SDR_dB": 1.99,
     "noise_att_db": -6.59,
@@ -824,10 +968,28 @@
     "sub_rate": 0.0,
     "ins_rate": 0.0
    },
+   "fastenhancer_m": {
+    "SIG": 3.567,
+    "BAK": 4.141,
+    "OVRL": 3.309,
+    "ESTOI": 0.9517,
+    "SI_SDR_dB": 7.3,
+    "noise_att_db": -6.72,
+    "resid_rel_db": -4.31,
+    "asr": "Then there were three or four leading men of the community with their wives, who were for the most part the fathers and mothers of the young ladies.",
+    "asr_stable": true,
+    "ref_len": 28,
+    "del": 0,
+    "sub": 0,
+    "ins": 0,
+    "del_rate": 0.0,
+    "sub_rate": 0.0,
+    "ins_rate": 0.0
+   },
    "voxlock_given": {
-    "SIG": 3.482,
-    "BAK": 3.762,
-    "OVRL": 3.045,
+    "SIG": 3.484,
+    "BAK": 3.746,
+    "OVRL": 3.039,
     "ESTOI": 0.9581,
     "SI_SDR_dB": 3.51,
     "noise_att_db": -1.13,
@@ -844,8 +1006,8 @@
    },
    "voxlock_live": {
     "SIG": 3.455,
-    "BAK": 3.385,
-    "OVRL": 2.846,
+    "BAK": 3.386,
+    "OVRL": 2.847,
     "ESTOI": 0.9468,
     "SI_SDR_dB": 0.97,
     "noise_att_db": -0.47,
@@ -867,9 +1029,9 @@
    "asr_ref_stable": true,
    "truth": "IN STRICT ACCURACY NOTHING SHOULD BE INCLUDED UNDER THE HEAD OF CONSPICUOUS WASTE BUT SUCH EXPENDITURE AS IS INCURRED ON THE GROUND OF AN INVIDIOUS PECUNIARY COMPARISON",
    "noisy": {
-    "SIG": 1.176,
-    "BAK": 1.18,
-    "OVRL": 1.081,
+    "SIG": 1.184,
+    "BAK": 1.183,
+    "OVRL": 1.083,
     "ESTOI": 0.5733,
     "SI_SDR_dB": 4.37,
     "noise_att_db": 0.0,
@@ -886,8 +1048,8 @@
    },
    "dpdfnet2": {
     "SIG": 3.097,
-    "BAK": 4.175,
-    "OVRL": 2.919,
+    "BAK": 4.177,
+    "OVRL": 2.921,
     "ESTOI": 0.8742,
     "SI_SDR_dB": 15.24,
     "noise_att_db": -61.8,
@@ -903,9 +1065,9 @@
     "ins_rate": 0.0
    },
    "gtcrn": {
-    "SIG": 2.427,
-    "BAK": 3.786,
-    "OVRL": 2.183,
+    "SIG": 2.425,
+    "BAK": 3.785,
+    "OVRL": 2.181,
     "ESTOI": 0.7415,
     "SI_SDR_dB": 11.09,
     "noise_att_db": -28.84,
@@ -920,10 +1082,28 @@
     "sub_rate": 0.037,
     "ins_rate": 0.0
    },
+   "fastenhancer_m": {
+    "SIG": 3.083,
+    "BAK": 4.18,
+    "OVRL": 2.921,
+    "ESTOI": 0.8688,
+    "SI_SDR_dB": 14.96,
+    "noise_att_db": -63.35,
+    "resid_rel_db": -68.55,
+    "asr": "In strict accuracy, nothing should be included under the head of conspicuous waste, but such expenditure as is incurred on the ground of an obvious pecuniary comparison.",
+    "asr_stable": true,
+    "ref_len": 27,
+    "del": 0,
+    "sub": 1,
+    "ins": 0,
+    "del_rate": 0.0,
+    "sub_rate": 0.037,
+    "ins_rate": 0.0
+   },
    "voxlock_given": {
-    "SIG": 2.891,
-    "BAK": 3.343,
-    "OVRL": 2.429,
+    "SIG": 2.897,
+    "BAK": 3.339,
+    "OVRL": 2.43,
     "ESTOI": 0.8076,
     "SI_SDR_dB": 13.79,
     "noise_att_db": -26.54,
@@ -939,9 +1119,9 @@
     "ins_rate": 0.0
    },
    "voxlock_live": {
-    "SIG": 1.25,
-    "BAK": 1.221,
-    "OVRL": 1.101,
+    "SIG": 1.255,
+    "BAK": 1.223,
+    "OVRL": 1.102,
     "ESTOI": 0.5902,
     "SI_SDR_dB": 5.27,
     "noise_att_db": -2.13,
@@ -964,7 +1144,7 @@
    "noisy": {
     "SIG": 1.202,
     "BAK": 1.077,
-    "OVRL": 1.114,
+    "OVRL": 1.115,
     "ESTOI": 0.5284,
     "SI_SDR_dB": -0.61,
     "noise_att_db": 0.0,
@@ -980,9 +1160,9 @@
     "ins_rate": 0.0
    },
    "dpdfnet2": {
-    "SIG": 3.048,
-    "BAK": 2.409,
-    "OVRL": 2.004,
+    "SIG": 3.051,
+    "BAK": 2.398,
+    "OVRL": 2.0,
     "ESTOI": 0.4513,
     "SI_SDR_dB": -2.87,
     "noise_att_db": -3.35,
@@ -998,9 +1178,9 @@
     "ins_rate": 0.0
    },
    "gtcrn": {
-    "SIG": 3.157,
-    "BAK": 2.415,
-    "OVRL": 2.146,
+    "SIG": 3.156,
+    "BAK": 2.407,
+    "OVRL": 2.143,
     "ESTOI": 0.5088,
     "SI_SDR_dB": -0.91,
     "noise_att_db": -4.85,
@@ -1015,10 +1195,28 @@
     "sub_rate": 0.0952,
     "ins_rate": 0.0
    },
+   "fastenhancer_m": {
+    "SIG": 2.888,
+    "BAK": 3.547,
+    "OVRL": 2.477,
+    "ESTOI": 0.4625,
+    "SI_SDR_dB": 0.04,
+    "noise_att_db": -6.35,
+    "resid_rel_db": -3.8,
+    "asr": "在一场美口味与黄皮肤的混味，试图抹去黑楚的肤色。后来，张秀元将一场盛装从一次玫瑰花红。",
+    "asr_stable": true,
+    "ref_len": 42,
+    "del": 3,
+    "sub": 27,
+    "ins": 0,
+    "del_rate": 0.0714,
+    "sub_rate": 0.6429,
+    "ins_rate": 0.0
+   },
    "voxlock_given": {
-    "SIG": 3.505,
-    "BAK": 2.711,
-    "OVRL": 2.523,
+    "SIG": 3.502,
+    "BAK": 2.722,
+    "OVRL": 2.527,
     "ESTOI": 0.6241,
     "SI_SDR_dB": 2.77,
     "noise_att_db": -5.02,
@@ -1034,9 +1232,9 @@
     "ins_rate": 0.0
    },
    "voxlock_live": {
-    "SIG": 1.224,
+    "SIG": 1.225,
     "BAK": 1.019,
-    "OVRL": 1.149,
+    "OVRL": 1.15,
     "ESTOI": 0.4434,
     "SI_SDR_dB": -3.38,
     "noise_att_db": -2.29,
@@ -1058,8 +1256,8 @@
    "asr_ref_stable": true,
    "noisy": {
     "SIG": 3.545,
-    "BAK": 3.068,
-    "OVRL": 2.706,
+    "BAK": 3.083,
+    "OVRL": 2.712,
     "ESTOI": 0.6371,
     "SI_SDR_dB": 4.44,
     "noise_att_db": 0.0,
@@ -1075,9 +1273,9 @@
     "ins_rate": 0.35
    },
    "dpdfnet2": {
-    "SIG": 3.425,
-    "BAK": 3.577,
-    "OVRL": 2.922,
+    "SIG": 3.429,
+    "BAK": 3.585,
+    "OVRL": 2.928,
     "ESTOI": 0.4256,
     "SI_SDR_dB": -1.97,
     "noise_att_db": -0.78,
@@ -1093,9 +1291,9 @@
     "ins_rate": 0.35
    },
    "gtcrn": {
-    "SIG": 3.438,
-    "BAK": 3.911,
-    "OVRL": 3.1,
+    "SIG": 3.459,
+    "BAK": 3.98,
+    "OVRL": 3.143,
     "ESTOI": 0.6226,
     "SI_SDR_dB": 4.91,
     "noise_att_db": -0.64,
@@ -1110,10 +1308,28 @@
     "sub_rate": 0.95,
     "ins_rate": 0.35
    },
+   "fastenhancer_m": {
+    "SIG": 3.398,
+    "BAK": 4.057,
+    "OVRL": 3.133,
+    "ESTOI": 0.306,
+    "SI_SDR_dB": -2.32,
+    "noise_att_db": -0.51,
+    "resid_rel_db": -4.61,
+    "asr": "To be sure, the atmosphere is charged with vapors, invaded with the electricity generated by the evaporation of saline water. I refer to the thermometer; it indicates.",
+    "asr_stable": true,
+    "ref_len": 20,
+    "del": 0,
+    "sub": 19,
+    "ins": 7,
+    "del_rate": 0.0,
+    "sub_rate": 0.95,
+    "ins_rate": 0.35
+   },
    "voxlock_given": {
-    "SIG": 3.332,
+    "SIG": 3.337,
     "BAK": 3.576,
-    "OVRL": 2.822,
+    "OVRL": 2.824,
     "ESTOI": 0.7927,
     "SI_SDR_dB": 14.99,
     "noise_att_db": -14.34,
@@ -1129,9 +1345,9 @@
     "ins_rate": 0.0
    },
    "voxlock_live": {
-    "SIG": 3.33,
-    "BAK": 3.786,
-    "OVRL": 2.948,
+    "SIG": 3.325,
+    "BAK": 3.763,
+    "OVRL": 2.933,
     "ESTOI": 0.2188,
     "SI_SDR_dB": -7.8,
     "noise_att_db": 0.23,
@@ -1150,9 +1366,9 @@
  },
  "mean": {
   "noisy": {
-   "SIG": 2.337,
-   "BAK": 1.874,
-   "OVRL": 1.784,
+   "SIG": 2.348,
+   "BAK": 1.877,
+   "OVRL": 1.789,
    "ESTOI": 0.545,
    "SI_SDR_dB": 1.262,
    "noise_att_db": 0.0,
@@ -1162,59 +1378,71 @@
    "ins_rate": 0.06
   },
   "dpdfnet2": {
-   "SIG": 3.211,
-   "BAK": 3.588,
-   "OVRL": 2.755,
+   "SIG": 3.212,
+   "BAK": 3.585,
+   "OVRL": 2.754,
    "ESTOI": 0.631,
    "SI_SDR_dB": 6.643,
    "noise_att_db": -27.181,
    "resid_rel_db": -27.557,
    "del_rate": 0.046,
    "sub_rate": 0.227,
-   "ins_rate": 0.113
+   "ins_rate": 0.105
   },
   "gtcrn": {
-   "SIG": 2.961,
-   "BAK": 3.281,
-   "OVRL": 2.442,
+   "SIG": 2.96,
+   "BAK": 3.289,
+   "OVRL": 2.447,
    "ESTOI": 0.587,
    "SI_SDR_dB": 3.678,
    "noise_att_db": -7.736,
    "resid_rel_db": -7.637,
-   "del_rate": 0.041,
-   "sub_rate": 0.196,
+   "del_rate": 0.043,
+   "sub_rate": 0.201,
    "ins_rate": 0.109
   },
+  "fastenhancer_m": {
+   "SIG": 3.119,
+   "BAK": 3.841,
+   "OVRL": 2.805,
+   "ESTOI": 0.592,
+   "SI_SDR_dB": 4.902,
+   "noise_att_db": -12.65,
+   "resid_rel_db": -13.693,
+   "del_rate": 0.061,
+   "sub_rate": 0.301,
+   "ins_rate": 0.082
+  },
   "voxlock_given": {
-   "SIG": 3.139,
-   "BAK": 2.927,
-   "OVRL": 2.492,
+   "SIG": 3.136,
+   "BAK": 2.924,
+   "OVRL": 2.488,
    "ESTOI": 0.642,
    "SI_SDR_dB": 6.145,
    "noise_att_db": -13.871,
    "resid_rel_db": -14.789,
-   "del_rate": 0.087,
-   "sub_rate": 0.124,
-   "ins_rate": 0.017
+   "del_rate": 0.091,
+   "sub_rate": 0.115,
+   "ins_rate": 0.004
   },
   "voxlock_live": {
-   "SIG": 2.455,
-   "BAK": 2.162,
-   "OVRL": 1.957,
+   "SIG": 2.464,
+   "BAK": 2.167,
+   "OVRL": 1.961,
    "ESTOI": 0.512,
    "SI_SDR_dB": 0.322,
    "noise_att_db": -1.45,
    "resid_rel_db": -4.8,
-   "del_rate": 0.051,
-   "sub_rate": 0.219,
-   "ins_rate": 0.057
+   "del_rate": 0.047,
+   "sub_rate": 0.23,
+   "ins_rate": 0.054
   }
  },
  "median": {
   "noisy": {
-   "SIG": 2.317,
-   "BAK": 1.547,
-   "OVRL": 1.59,
+   "SIG": 2.388,
+   "BAK": 1.573,
+   "OVRL": 1.617,
    "ESTOI": 0.551,
    "SI_SDR_dB": -0.205,
    "noise_att_db": 0.0,
@@ -1224,9 +1452,9 @@
    "ins_rate": 0.0
   },
   "dpdfnet2": {
-   "SIG": 3.231,
-   "BAK": 3.797,
-   "OVRL": 2.865,
+   "SIG": 3.235,
+   "BAK": 3.8,
+   "OVRL": 2.868,
    "ESTOI": 0.631,
    "SI_SDR_dB": 4.78,
    "noise_att_db": -8.145,
@@ -1236,9 +1464,9 @@
    "ins_rate": 0.0
   },
   "gtcrn": {
-   "SIG": 3.113,
-   "BAK": 3.398,
-   "OVRL": 2.466,
+   "SIG": 3.117,
+   "BAK": 3.418,
+   "OVRL": 2.502,
    "ESTOI": 0.595,
    "SI_SDR_dB": 3.63,
    "noise_att_db": -5.72,
@@ -1247,28 +1475,40 @@
    "sub_rate": 0.033,
    "ins_rate": 0.0
   },
+  "fastenhancer_m": {
+   "SIG": 3.164,
+   "BAK": 3.892,
+   "OVRL": 2.845,
+   "ESTOI": 0.559,
+   "SI_SDR_dB": 3.195,
+   "noise_att_db": -7.665,
+   "resid_rel_db": -4.46,
+   "del_rate": 0.025,
+   "sub_rate": 0.131,
+   "ins_rate": 0.0
+  },
   "voxlock_given": {
-   "SIG": 3.335,
-   "BAK": 3.029,
-   "OVRL": 2.574,
+   "SIG": 3.338,
+   "BAK": 3.02,
+   "OVRL": 2.564,
    "ESTOI": 0.641,
    "SI_SDR_dB": 5.65,
    "noise_att_db": -14.065,
    "resid_rel_db": -14.98,
-   "del_rate": 0.0,
+   "del_rate": 0.024,
    "sub_rate": 0.062,
    "ins_rate": 0.0
   },
   "voxlock_live": {
-   "SIG": 2.984,
-   "BAK": 2.204,
-   "OVRL": 2.078,
+   "SIG": 3.0,
+   "BAK": 2.22,
+   "OVRL": 2.09,
    "ESTOI": 0.51,
    "SI_SDR_dB": 0.575,
    "noise_att_db": -0.9,
    "resid_rel_db": -3.69,
    "del_rate": 0.0,
-   "sub_rate": 0.045,
+   "sub_rate": 0.061,
    "ins_rate": 0.0
   }
  },
@@ -1320,9 +1560,61 @@
     "tie": 4
    },
    "ins_rate": {
-    "dpdfnet2": 1,
+    "dpdfnet2": 2,
     "gtcrn": 1,
-    "tie": 10
+    "tie": 9
+   }
+  },
+  "dpdfnet2_vs_fastenhancer_m": {
+   "SIG": {
+    "dpdfnet2": 12,
+    "fastenhancer_m": 0,
+    "tie": 0
+   },
+   "BAK": {
+    "dpdfnet2": 3,
+    "fastenhancer_m": 9,
+    "tie": 0
+   },
+   "OVRL": {
+    "dpdfnet2": 4,
+    "fastenhancer_m": 7,
+    "tie": 1
+   },
+   "ESTOI": {
+    "dpdfnet2": 11,
+    "fastenhancer_m": 1,
+    "tie": 0
+   },
+   "SI_SDR_dB": {
+    "dpdfnet2": 10,
+    "fastenhancer_m": 2,
+    "tie": 0
+   },
+   "noise_att_db": {
+    "dpdfnet2": 8,
+    "fastenhancer_m": 4,
+    "tie": 0
+   },
+   "resid_rel_db": {
+    "dpdfnet2": 6,
+    "fastenhancer_m": 6,
+    "tie": 0
+   },
+   "del_rate": {
+    "dpdfnet2": 4,
+    "fastenhancer_m": 2,
+    "tie": 6
+   },
+   "sub_rate": {
+    "dpdfnet2": 4,
+    "fastenhancer_m": 2,
+    "tie": 6
+   },
+   "ins_rate": {
+    "dpdfnet2": 2,
+    "fastenhancer_m": 1,
+    "tie": 9
    }
   },
   "dpdfnet2_vs_voxlock_given": {
@@ -1332,8 +1624,8 @@
     "tie": 0
    },
    "BAK": {
-    "dpdfnet2": 11,
-    "voxlock_given": 1,
+    "dpdfnet2": 10,
+    "voxlock_given": 2,
     "tie": 0
    },
    "OVRL": {
@@ -1362,14 +1654,14 @@
     "tie": 0
    },
    "del_rate": {
-    "dpdfnet2": 3,
+    "dpdfnet2": 4,
     "voxlock_given": 2,
-    "tie": 7
+    "tie": 6
    },
    "sub_rate": {
     "dpdfnet2": 3,
-    "voxlock_given": 5,
-    "tie": 4
+    "voxlock_given": 6,
+    "tie": 3
    },
    "ins_rate": {
     "dpdfnet2": 0,
@@ -1419,14 +1711,66 @@
     "tie": 8
    },
    "sub_rate": {
-    "dpdfnet2": 3,
-    "voxlock_live": 5,
+    "dpdfnet2": 4,
+    "voxlock_live": 4,
     "tie": 4
    },
    "ins_rate": {
-    "dpdfnet2": 1,
+    "dpdfnet2": 0,
     "voxlock_live": 2,
-    "tie": 9
+    "tie": 10
+   }
+  },
+  "gtcrn_vs_fastenhancer_m": {
+   "SIG": {
+    "gtcrn": 5,
+    "fastenhancer_m": 7,
+    "tie": 0
+   },
+   "BAK": {
+    "gtcrn": 0,
+    "fastenhancer_m": 12,
+    "tie": 0
+   },
+   "OVRL": {
+    "gtcrn": 1,
+    "fastenhancer_m": 11,
+    "tie": 0
+   },
+   "ESTOI": {
+    "gtcrn": 4,
+    "fastenhancer_m": 8,
+    "tie": 0
+   },
+   "SI_SDR_dB": {
+    "gtcrn": 3,
+    "fastenhancer_m": 9,
+    "tie": 0
+   },
+   "noise_att_db": {
+    "gtcrn": 3,
+    "fastenhancer_m": 9,
+    "tie": 0
+   },
+   "resid_rel_db": {
+    "gtcrn": 4,
+    "fastenhancer_m": 8,
+    "tie": 0
+   },
+   "del_rate": {
+    "gtcrn": 4,
+    "fastenhancer_m": 1,
+    "tie": 7
+   },
+   "sub_rate": {
+    "gtcrn": 4,
+    "fastenhancer_m": 3,
+    "tie": 5
+   },
+   "ins_rate": {
+    "gtcrn": 1,
+    "fastenhancer_m": 1,
+    "tie": 10
    }
   },
   "gtcrn_vs_voxlock_given": {
@@ -1466,9 +1810,9 @@
     "tie": 0
    },
    "del_rate": {
-    "gtcrn": 4,
+    "gtcrn": 5,
     "voxlock_given": 0,
-    "tie": 8
+    "tie": 7
    },
    "sub_rate": {
     "gtcrn": 5,
@@ -1523,14 +1867,118 @@
     "tie": 8
    },
    "sub_rate": {
-    "gtcrn": 2,
+    "gtcrn": 3,
     "voxlock_live": 3,
-    "tie": 7
+    "tie": 6
    },
    "ins_rate": {
-    "gtcrn": 1,
+    "gtcrn": 0,
     "voxlock_live": 3,
+    "tie": 9
+   }
+  },
+  "fastenhancer_m_vs_voxlock_given": {
+   "SIG": {
+    "fastenhancer_m": 7,
+    "voxlock_given": 5,
+    "tie": 0
+   },
+   "BAK": {
+    "fastenhancer_m": 12,
+    "voxlock_given": 0,
+    "tie": 0
+   },
+   "OVRL": {
+    "fastenhancer_m": 9,
+    "voxlock_given": 3,
+    "tie": 0
+   },
+   "ESTOI": {
+    "fastenhancer_m": 5,
+    "voxlock_given": 7,
+    "tie": 0
+   },
+   "SI_SDR_dB": {
+    "fastenhancer_m": 6,
+    "voxlock_given": 6,
+    "tie": 0
+   },
+   "noise_att_db": {
+    "fastenhancer_m": 4,
+    "voxlock_given": 8,
+    "tie": 0
+   },
+   "resid_rel_db": {
+    "fastenhancer_m": 4,
+    "voxlock_given": 8,
+    "tie": 0
+   },
+   "del_rate": {
+    "fastenhancer_m": 1,
+    "voxlock_given": 3,
     "tie": 8
+   },
+   "sub_rate": {
+    "fastenhancer_m": 3,
+    "voxlock_given": 6,
+    "tie": 3
+   },
+   "ins_rate": {
+    "fastenhancer_m": 0,
+    "voxlock_given": 3,
+    "tie": 9
+   }
+  },
+  "fastenhancer_m_vs_voxlock_live": {
+   "SIG": {
+    "fastenhancer_m": 9,
+    "voxlock_live": 3,
+    "tie": 0
+   },
+   "BAK": {
+    "fastenhancer_m": 12,
+    "voxlock_live": 0,
+    "tie": 0
+   },
+   "OVRL": {
+    "fastenhancer_m": 12,
+    "voxlock_live": 0,
+    "tie": 0
+   },
+   "ESTOI": {
+    "fastenhancer_m": 11,
+    "voxlock_live": 1,
+    "tie": 0
+   },
+   "SI_SDR_dB": {
+    "fastenhancer_m": 11,
+    "voxlock_live": 1,
+    "tie": 0
+   },
+   "noise_att_db": {
+    "fastenhancer_m": 12,
+    "voxlock_live": 0,
+    "tie": 0
+   },
+   "resid_rel_db": {
+    "fastenhancer_m": 9,
+    "voxlock_live": 3,
+    "tie": 0
+   },
+   "del_rate": {
+    "fastenhancer_m": 2,
+    "voxlock_live": 4,
+    "tie": 6
+   },
+   "sub_rate": {
+    "fastenhancer_m": 4,
+    "voxlock_live": 4,
+    "tie": 4
+   },
+   "ins_rate": {
+    "fastenhancer_m": 1,
+    "voxlock_live": 2,
+    "tie": 9
    }
   },
   "voxlock_given_vs_voxlock_live": {
@@ -1571,13 +2019,13 @@
    },
    "del_rate": {
     "voxlock_given": 1,
-    "voxlock_live": 3,
-    "tie": 8
+    "voxlock_live": 5,
+    "tie": 6
    },
    "sub_rate": {
     "voxlock_given": 3,
-    "voxlock_live": 6,
-    "tie": 3
+    "voxlock_live": 5,
+    "tie": 4
    },
    "ins_rate": {
     "voxlock_given": 3,
@@ -1592,6 +2040,6 @@
   "model": "qwen3-asr-plus:1.7b",
   "params": "temperature=0, language=<en|zh>",
   "repeat": 2,
-  "stable_files": "72/72"
+  "stable_files": "84/84"
  }
 }
