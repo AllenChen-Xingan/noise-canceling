@@ -7,7 +7,7 @@
 
 | 窗口 | 任务 | 交代文件 | 现状页 | 状态 |
 |---|---|---|---|---|
-| model | 002 起步模型与代码 | `_tmp/20261029-b1/model.md` | `state/handoff/model.md` | 四份初稿已写，自审中（noise-canceling-f0） |
+| model | 002 起步模型与代码 | `_tmp/20261029-b1/model.md` | `state/handoff/model.md` | 完成，已收尾（窗口已关）；剩 3 题 + 三命门待人拍板 |
 | pipeline | 003 Mac 音频管线 | `_tmp/20261029-b1/pipeline.md` | `state/handoff/pipeline.md` | 完成，已收尾（窗口已关）；剩 10 条待人拍板 |
 | evaltool | 004 评测工具链 | `_tmp/20261029-b1/evaltool.md` | `state/handoff/evaltool.md` | 完成，已收尾（窗口已关）；剩 11 题待人拍板 |
 
@@ -30,7 +30,7 @@
 ## 进度板
 
 进度（HH:MM）
-- 21:xx model：must-know 已起草；workflow 10 代理（5 核查 + 5 怀疑派）已批准，exp001 之后申请名额
+- 21:20 model：完成，大总管验收通过，窗口已关
 - 21:05 pipeline：完成，大总管验收通过，窗口已关
 - 21:12 evaltool：完成，大总管验收通过，窗口已关
 
