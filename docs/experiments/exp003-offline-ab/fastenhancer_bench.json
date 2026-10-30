@@ -1,0 +1,62 @@
+{
+ "onnxruntime": "1.31.1",
+ "platform": "macOS-27.0.1-arm64-arm-64bit",
+ "input": "resources/gtcrn/test_wavs/mix.wav",
+ "threads": 1,
+ "warm": 200,
+ "timed": 6000,
+ "runs": [
+  {
+   "size": "b",
+   "hop": 256,
+   "period_ms": 16.0,
+   "step_ms": {
+    "p50": 0.342,
+    "p99": 0.411,
+    "p999": 0.556,
+    "max": 0.782,
+    "mean": 0.344
+   },
+   "max_over_period": 0.049,
+   "p999_over_period": 0.035,
+   "max_le_half_period": true,
+   "nonfinite_steps": 0,
+   "out_in_energy_db": -2.4
+  },
+  {
+   "size": "s",
+   "hop": 256,
+   "period_ms": 16.0,
+   "step_ms": {
+    "p50": 0.55,
+    "p99": 0.609,
+    "p999": 0.896,
+    "max": 1.04,
+    "mean": 0.553
+   },
+   "max_over_period": 0.065,
+   "p999_over_period": 0.056,
+   "max_le_half_period": true,
+   "nonfinite_steps": 0,
+   "out_in_energy_db": -2.29
+  },
+  {
+   "size": "m",
+   "hop": 160,
+   "period_ms": 10.0,
+   "step_ms": {
+    "p50": 0.685,
+    "p99": 0.768,
+    "p999": 1.056,
+    "max": 1.154,
+    "mean": 0.688
+   },
+   "max_over_period": 0.115,
+   "p999_over_period": 0.106,
+   "max_le_half_period": true,
+   "nonfinite_steps": 0,
+   "out_in_energy_db": -2.25
+  }
+ ],
+ "chosen": "m"
+}
