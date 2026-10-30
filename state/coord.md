@@ -10,9 +10,9 @@
 | model | 002 起步模型与代码 | `_tmp/20261029-b1/model.md` | `state/handoff/model.md` | 完成，已收尾（窗口已关）；剩 3 题 + 三命门待人拍板 |
 | pipeline | 003 Mac 音频管线 | `_tmp/20261029-b1/pipeline.md` | `state/handoff/pipeline.md` | 完成，已收尾（窗口已关）；剩 10 条待人拍板 |
 | pse | 005 个性化降噪（PSE）调研 · issue #1 · 分支 `research/005-pse`（主目录） | `_tmp/20261030-b2/pse.md` | `state/handoff/pse.md` | 完成，已收尾（窗口已关）；7 条待人拍板 |
-| abtest | exp003 DPDFNet-2 vs GTCRN 离线 AB 听测 · issue #2 · 分支 `exp/003-offline-ab`（worktree `../noise_canceling-exp003`） | `_tmp/20261030-b2/abtest.md` | `state/handoff/abtest.md` | 已搬进 worktree、新会话已报到（noise-canceling-exp003-2d）；范围加 VoxLock |
-| sota | 006 降噪前沿全景 · issue #3 · 分支 `research/006-sota-landscape`（worktree `../noise_canceling-sota`） | `_tmp/20261030-b2/sota.md` | `state/handoff/sota.md`（在其 worktree） | 已报到（noise-canceling-sota-4f） |
-| rubric | 007 降噪评分标准 rubric · issue #4 · 分支 `research/007-denoise-rubric`（worktree `../noise_canceling-rubric`） | `_tmp/20261030-b2/rubric.md` | `state/handoff/rubric.md`（在其 worktree） | 已报到（noise-canceling-rubric-e1） |
+| abtest | exp003 DPDFNet-2 vs GTCRN 离线 AB 听测 · issue #2 · 分支 `exp/003-offline-ab`（worktree `../noise_canceling-exp003`） | `_tmp/20261030-b2/abtest.md` | `state/handoff/abtest.md` | 完成，PR #7 已合并（issue #2 关），窗口已关 |
+| sota | 006 降噪前沿全景 · issue #3 · 分支 `research/006-sota-landscape`（worktree `../noise_canceling-sota`） | `_tmp/20261030-b2/sota.md` | `state/handoff/sota.md`（在其 worktree） | 完成，PR #6 已合并（issue #3 关），窗口已关；4 题待人拍板 |
+| rubric | 007 降噪评分标准 rubric · issue #4 · 分支 `research/007-denoise-rubric`（worktree `../noise_canceling-rubric`） | `_tmp/20261030-b2/rubric.md` | `state/handoff/rubric.md`（在其 worktree） | 完成，PR #8 已合并（issue #4 关），窗口已关；4 题待人拍板 |
 | evaltool | 004 评测工具链 | `_tmp/20261029-b1/evaltool.md` | `state/handoff/evaltool.md` | 完成，已收尾（窗口已关）；剩 11 题待人拍板 |
 
 ## 规矩
@@ -26,7 +26,7 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | abtest（exp003：生成素材 → 两模型逐帧处理 → 建页 → DNSMOS + Qwen3-ASR 打分） |
+| 重编译 / 全量测试（1 个） | 空 |
 
 排队：（空）
 
@@ -35,6 +35,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 第二批 20261030-b2 **全部收尾**：PR #5 #6 #7 #8 已合并；人定 D32 延迟 ≤ 45 ms · D33 主模型 GTCRN、FastEnhancer-M 备选 · D34 个性化前移
 - 第二批追加 sota（006）、rubric（007）：人原话见 `_tmp/20261030-b2/sota.md`、`rubric.md`「人的原话」
 - 第二批 20261030-b2（人原话「好可以的」）：pse must-know 已起草，workflow 批准约 12 代理（原计划 18，怀疑派合并）· abtest 素材定 12 段（casino 3 + LibriSpeech 合成 7 + 中文 2）；批准下载 whisper large-v3-turbo 1.6 GB 到 ~/vdn-data/models/（超 500 MB 线，大总管批：吃字率是 D01 关键旁证）
 - 21:20 model：完成，大总管验收通过，窗口已关
@@ -48,6 +49,11 @@
 - evaltool 收尾补充：回归门禁两基线（对原声直通用绝对判据；对上一版用相对容差 + 配对 bootstrap）；吃字率任一家 ASR 报警即拦；SCOREQ 在 URGENT 2024 逐句相关 .79、真实录音 .75（已核原表），走 ONNX 不需 PyTorch
 - evaltool 取舍：每把尺子「主指标 + 交叉指标」、分 CI 层 / 本机层；吃字 = whisper.cpp 删除率（中文加 SenseVoice 第二意见）；自然整体 = SCOREQ + UTMOS（DNSMOS 降为冒烟）；NISQA 权重 NC-SA 只作用户自装；PESQ 不进仓；附加延迟现成工具全不覆盖，要自写
 - model 发现：DPDFNet 流式输出落后输入 4 帧（mask 2 + DF 2），前瞻 40 ms；分三列：窗长+前瞻 60 ms · DNS 口径（窗长+步长+前瞻）70 ms · 端到端推算约 65–70+ ms（DNS 定义已对 PDF 原文核实）
+- exp003 新 build 20261030110755-f8c3（DPDFNet-2 · GTCRN · FastEnhancer-M；FastEnhancer-M 最坏一帧 1.15 ms、端到端约 38–42 ms）：对照表已提交（8d71693、f2cff86），已复制到人桌面 `~/Desktop/20261030-vdn-ab-listen/`
+- exp003 build f8c3 客观分（人听完前**不转述**）：OVRL FastEnhancer-M 2.81 ≈ DPDFNet-2 2.75 > GTCRN 2.45；ESTOI DPDFNet-2 0.63 > 两者 0.59；删除率 GTCRN 4.3 · DPDFNet-2 4.6 · FastEnhancer 6.1（原声 3.2），去掉 c01–c03 后 0.9 / 3.1 / 4.8；替换率 FastEnhancer 30.1 最高；Qwen 84/84 两次一致
+- 006 sota 待转 pse 线（已收尾，留给 005 后续）：arXiv 2610.35272 开源因果主讲人隔离器（Krisp 基准 WER 5.74% 对 Krisp 5.63%，权重许可 other）；FVAD / EEND-SAA 无注册前景说话人检测，可补门控「开头别人先说」
+- 007 rubric：`specs/rubric/denoise.md`（406 行）+ 筛选表；现只能比「轻快」（GTCRN 22/25 > DPDFNet-2 16/25），清楚、自然等人耳；⚠️ dryrun 里对具体模型的判断**人听完 AB 前不转述**
+- exp003 两模型轮（abtest 报，待抽查）：DNSMOS OVRL DPDFNet-2 2.75 vs GTCRN 2.44（9/12 段赢）· ESTOI 0.63/0.59 · SI-SDR 6.6/3.7 dB；⚠️ 删除率 4.6% / 4.3% 都高于原声 3.2%（踩「从不吃字」），已要求逐段列被删词；Qwen3-ASR 两次转写 48/48 逐字一致；页面 ../noise_canceling-exp003/_tmp/20261030-exp003/index.html
 - 005 pse：VoxLock（Apache-2.0、因果、ONNX、自动注册）是唯一现成个性化开源模型，Xeon 单线程算力是预算 3–5 倍 → 并进 exp003 实测 + 进 AB 页（大总管定，issue #2 已注）
 - pipeline 结论：开发期 cpal 双流写 BlackHole + rubato 按水位补漂移；最终自写极简 C 回环插件，推理永不进插件；不用共享内存 / DriverKit
 - pipeline 转交：结论进 vault/truth/（等人拍板后由大总管做）；推理预算 → 已转 model；旁路交叉淡化时长怎么评 → 已转 evaltool
@@ -60,5 +66,8 @@
 - [x] 第一批 24 题 + 个性化 + P.808 —— 2026-10-30 已拍板，见 `docs/plan/001_decisions-20261029-b1.md`
 - [x] 远程仓库 —— 2026-10-30 建私有仓库 AllenChen-Xingan/noise-canceling
 - [ ] 放权边界 —— 来源 board
+- [ ] 006 待人拍板 4 题（延迟察觉实验 · RX 当天花板参照 · 开 issue 问许可等）—— `docs/research/006_sota-landscape/decision.md` 末节
+- [ ] 007 待人拍板 4 题（权重 · 耳朵与机器怎么合 · V8 口径 · 下一轮怎么听）—— `docs/research/007_denoise-rubric/decision.md`
+- [ ] 要不要去 FastEnhancer 仓库开 issue 问权重许可（对外发言）：仓库 MIT，权重无单独声明（训练数据 DNS3 宽带 + VCTK 0.92）；建议等听测后它排前面再问 —— 来源 rubric / abtest
 - [ ] 005 PSE 待人拍板 7 条（训练与否 · VoxCeleb 声纹模型 · 耗电上限 · 零设置口径 · 隐私存什么 · 状态提示 · 对外开 issue）—— 见 `docs/research/005_pse/decision.md` 末节；#3 耗电与 VoxLock 等 exp003 实测后再问
 - [x] 开下一批 005 PSE + exp003 AB 听测 —— 人 2026-10-30 同意，已派
