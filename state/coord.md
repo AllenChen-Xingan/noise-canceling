@@ -7,7 +7,7 @@
 
 | 窗口 | 任务 | 交代文件 | 现状页 | 状态 |
 |---|---|---|---|---|
-| model | 002 起步模型与代码 | `_tmp/20261029-b1/model.md` | `state/handoff/model.md` | 已派，干活中未报到（noise-canceling-f0） |
+| model | 002 起步模型与代码 | `_tmp/20261029-b1/model.md` | `state/handoff/model.md` | 已报到（noise-canceling-f0） |
 | pipeline | 003 Mac 音频管线 | `_tmp/20261029-b1/pipeline.md` | `state/handoff/pipeline.md` | 已报到（noise-canceling-21） |
 | evaltool | 004 评测工具链 | `_tmp/20261029-b1/evaltool.md` | `state/handoff/evaltool.md` | 已报到（noise-canceling-0b） |
 
@@ -29,7 +29,7 @@
 ## 进度板
 
 进度（HH:MM）
-- 20:5x 重派：model 干活中待报到 · pipeline 起草 must-know + 克隆候选仓库 · evaltool 起草 must-know
+- 20:5x 重派：model 起草 must-know · pipeline 起草 must-know + 克隆候选仓库 · evaltool 起草 must-know
 
 ## 发现
 
