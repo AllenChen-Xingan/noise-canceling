@@ -71,7 +71,7 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
       <li id="keysTip"></li>
       <li>「原声」是没处理过的带噪录音。主讲人是录音开始约 1 秒后才开口、声音最近最清楚的那位；其他人声算噪音。</li>
       <li>每个候选都至少听一遍才能作答。拿不准就选「差不多」，别猜。</li>
-      <li>每段先答三问（最清楚 · 最自然 · 吃字），再给每个候选打「拿去开会行不行」；答完后可以勾听到的毛病（可不勾）。</li>
+      <li>每段答三问：最清楚 · 最自然 · 每个候选「拿去开会行不行」并勾出吃字的（都没吃字就点「都没有吃字」）。听到的毛病可以点「＋毛病」补充（可不填）。</li>
       <li>其中有一两段是检验题，照实听照实答即可。</li>
     </ol>
     <p class="muted" id="resumeNote"></p>
@@ -99,10 +99,9 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
       <div class="q" id="q-natural"><div class="label"><span class="qn"></span>. 哪个<b>最自然</b>？（没有怪声、背景不忽大忽小、不发闷）</div>
         <div class="opts" data-q="natural"></div></div>
       </div>
-      <div class="q"><div class="label">3. 哪些<b>吃字</b>了？（主讲人的字被压掉、断掉；可多选）</div>
+      <div class="q"><div class="label">3. 每个候选：拿它去<b>开会</b>行吗？有没有<b>吃字</b>（主讲人的字被压掉、断掉）？</div>
+        <div id="candRows"></div>
         <div class="opts" id="eatenOpts"></div></div>
-      <div class="q"><div class="label">4. 每个候选：拿它去<b>开会</b>行吗？</div>
-        <div id="candRows"></div></div>
       <div class="q"><div class="label">备注（可选，一句话）</div><textarea id="note" maxlength="300"></textarea></div>
 
       <div class="nav">
@@ -276,23 +275,23 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
         b.dataset.v = v; g.appendChild(b);
       }
     });
+    const toggleEaten = (v) => {
+      const a = ans();
+      if (v === "none") a.eaten = a.eaten.includes("none") ? [] : ["none"];
+      else { a.eaten = a.eaten.filter((x) => x !== "none"); a.eaten = a.eaten.includes(v) ? a.eaten.filter((x) => x !== v) : [...a.eaten, v].sort(); }
+      touch(a);
+    };
     const eo = $("eatenOpts"); eo.innerHTML = "";
-    for (const v of [...Ls, "none"]) {
-      const b = btn(v === "none" ? "都没有" : `${v} 吃字`, () => {
-        const a = ans();
-        if (v === "none") a.eaten = a.eaten.includes("none") ? [] : ["none"];
-        else { a.eaten = a.eaten.filter((x) => x !== "none"); a.eaten = a.eaten.includes(v) ? a.eaten.filter((x) => x !== v) : [...a.eaten, v].sort(); }
-        touch(a);
-      });
-      b.dataset.v = v; eo.appendChild(b);
-    }
+    const nb = btn("都没有吃字", () => toggleEaten("none"), "small"); nb.dataset.v = "none"; eo.appendChild(nb);
     const rows = $("candRows"); rows.innerHTML = "";
     for (const L of Ls) {
       const row = document.createElement("div"); row.className = "cand";
       const u = document.createElement("div"); u.className = "opts";
       const who = document.createElement("span"); who.className = "who"; who.textContent = L; u.appendChild(who);
       for (const [v, lab] of USABLE) { const b = btn(lab, () => { const a = ans(); a.usable[L] = v; touch(a); }, "small"); b.dataset.u = v; b.dataset.l = L; u.appendChild(b); }
-      const tg = document.createElement("div"); tg.className = "opts tagrow"; tg.dataset.l = L;
+      const eb = btn("☐ 吃字", () => toggleEaten(L), "small"); eb.dataset.e = L; u.appendChild(eb);
+      const tb = btn("＋毛病", () => { const r = row.querySelector(".tagrow"); r.classList.toggle("hidden"); }, "small"); tb.dataset.tt = L; u.appendChild(tb);
+      const tg = document.createElement("div"); tg.className = "opts tagrow hidden"; tg.dataset.l = L;
       const tl = document.createElement("span"); tl.className = "muted"; tl.textContent = "听到的毛病（可选）："; tg.appendChild(tl);
       for (const [v, lab] of TAGS) {
         const b = btn(lab, () => { const a = ans(); const cur = a.tags[L] || []; a.tags[L] = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]; touch(a); }, "small");
@@ -302,15 +301,15 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
     }
   }
   function touch(a) { a.answered_at = now(); save(); paintAnswers(); }
-  const coreDone = (a) => !!(a.clearer && a.natural && a.eaten.length);
-  const allDone = (a) => coreDone(a) && letters().every((L) => a.usable[L]);
+  const allDone = (a) => !!(a.clearer && a.natural && a.eaten.length) && letters().every((L) => a.usable[L]);
   function paintAnswers() {
     const a = ans(); const can = letters().every((L) => a.heard[L]);
     document.querySelectorAll(".opts[data-q] button").forEach((b) => { b.disabled = !can; b.classList.toggle("on", a[b.parentElement.dataset.q] === b.dataset.v); });
     document.querySelectorAll("#eatenOpts button").forEach((b) => { b.disabled = !can; b.classList.toggle("on", a.eaten.includes(b.dataset.v)); });
+    document.querySelectorAll("#candRows button[data-e]").forEach((b) => { const on = a.eaten.includes(b.dataset.e); b.disabled = !can; b.classList.toggle("on", on); b.textContent = (on ? "☑" : "☐") + " 吃字"; });
+    document.querySelectorAll("#candRows button[data-tt]").forEach((b) => { const n = (a.tags[b.dataset.tt] || []).length; b.disabled = !can; b.textContent = n ? `＋毛病（${n}）` : "＋毛病"; });
     document.querySelectorAll("#candRows button[data-u]").forEach((b) => { b.disabled = !can; b.classList.toggle("on", a.usable[b.dataset.l] === b.dataset.u); });
     document.querySelectorAll("#candRows button[data-t]").forEach((b) => { b.classList.toggle("on", (a.tags[b.dataset.l] || []).includes(b.dataset.t)); });
-    document.querySelectorAll("#candRows .tagrow").forEach((r) => r.classList.toggle("hidden", !coreDone(a)));
     $("note").value = a.note || "";
     $("nextBtn").disabled = !allDone(a);
     $("nextBtn").textContent = S.i === S.trials.length - 1 ? "完成 →" : "下一段 →";
