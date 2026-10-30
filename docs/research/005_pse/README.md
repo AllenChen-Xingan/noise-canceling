@@ -14,7 +14,7 @@
 | 2 | [sources.md](sources.md) | 两类来源：自有积累 / 他人积累 | ✅ 已填 |
 | 3 | [assign.md](assign.md) | **派活模板**——怎么把材料交出去读 | ✅ 已照此派活（workflow wf_7240073b-611：8 核查 + 4 怀疑派 + 评测 + 批评） |
 | 4 | [gap.md](gap.md) | **差距表**——我该先做哪一件 | ✅ 已填 |
-| 5 | [decision.md](decision.md) | **取舍卡**——选什么、舍什么、哪里要你拍板 | ✅ 已填（6 条待人拍板） |
+| 5 | [decision.md](decision.md) | **取舍卡**——选什么、舍什么、哪里要你拍板 | ✅ 已填（7 条待人拍板） |
 
 新增积累的实验住 `docs/experiments/expNNN-<slug>/`——**不在本目录下另开一处**。
 
