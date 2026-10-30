@@ -82,7 +82,7 @@ def main():
     m1 = rng.choice(models)
     f1 = files[c1["id"]]["versions"][m1]["file"]
     traps.append({"id": "trap-identical", "clip": c1["id"], "desc": c1["desc"],
-                  "label": "所有候选其实是同一个文件（应答「差不多」）",
+                  "label": "所有候选其实是同一个文件（应答「分不出」）",
                   "ref": up(files[c1["id"]]["versions"]["noisy"]["file"]), "cands": [up(f1)] * len(models),
                   "names": ["same"] * len(models), "expect": {"best": ["same"]}, "source_model": m1})
     m2 = rng.choice(models)
@@ -95,7 +95,7 @@ def main():
     slots = [(m2, f2), ("degraded", fd)] + [(m, files[c2["id"]]["versions"][m]["file"]) for m in others[: len(models) - 2]]
     rng.shuffle(slots)
     traps.append({"id": "trap-degraded", "clip": c2["id"], "desc": c2["desc"],
-                  "label": "其中一份是明显劣化版（最清楚、最自然都不该选它，也不该答「差不多」）",
+                  "label": "其中一份是明显劣化版（最清楚、最自然都不该选它）",
                   "ref": up(files[c2["id"]]["versions"]["noisy"]["file"]), "cands": [up(f) for _, f in slots],
                   "names": [n for n, _ in slots], "expect": {"not": ["degraded"]}, "source_model": m2})
 

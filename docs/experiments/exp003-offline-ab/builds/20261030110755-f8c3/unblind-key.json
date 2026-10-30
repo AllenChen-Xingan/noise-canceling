@@ -72,7 +72,7 @@
    "id": "trap-identical",
    "clip": "c11",
    "desc": "中文 · 邻桌 3 人（英文）说话 + 食堂底噪，SNR 0 dB",
-   "label": "所有候选其实是同一个文件（应答「差不多」）",
+   "label": "所有候选其实是同一个文件（应答「分不出」）",
    "ref": "../../audio/c11_abecea.wav",
    "cands": [
     "../../audio/c11_ff8a4d.wav",
@@ -95,7 +95,7 @@
    "id": "trap-degraded",
    "clip": "c04",
    "desc": "邻座一人说话 + 咖啡馆露台底噪，SNR 5 dB",
-   "label": "其中一份是明显劣化版（最清楚、最自然都不该选它，也不该答「差不多」）",
+   "label": "其中一份是明显劣化版（最清楚、最自然都不该选它）",
    "ref": "../../audio/c04_310dee.wav",
    "cands": [
     "../../audio/c04_568560.wav",
