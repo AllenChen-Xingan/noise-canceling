@@ -22,3 +22,6 @@
 - 2026-10-30 `research.sh` 建 `docs/research/006_sota-landscape/`（自动提交 ae31338）
 - 2026-10-30 Workflow 计划报大总管并获批；起 wf_5b5f8eb3-fe1（6 检索 + 3 怀疑派 + 1 批评者），中间产物在 scratchpad/wf/
 - 2026-10-30 大总管转人新要求（训练放最后、现成模型 + 跨行业让延迟不可感、能耗低）：加第⑦块，起 wf_b412f601-4d1（1 检索 + 1 怀疑派）；⑥与前 5 件按「不训练优先」排
+- 2026-10-30 主 Workflow（10 代理）与第⑦块完成；大总管转人追问「降噪后补偿 / RX」→ 起第⑧块 wf_55ec3686-951（总代理数 14，已报）
+- 2026-10-30 亲自核 FastEnhancer：MIT、状态显式（`scripts/test_onnx_spec.py:44-61`）、算法延迟约 32 ms（`docs/docs/onnx.md:48-50`）；浅克隆进主目录 `resources/fastenhancer`
+- 2026-10-30 写 sources.md（按怀疑派改正）；等第⑧块再写 gap / decision
