@@ -9,6 +9,8 @@
 |---|---|---|---|---|
 | model | 002 起步模型与代码 | `_tmp/20261029-b1/model.md` | `state/handoff/model.md` | 完成，已收尾（窗口已关）；剩 3 题 + 三命门待人拍板 |
 | pipeline | 003 Mac 音频管线 | `_tmp/20261029-b1/pipeline.md` | `state/handoff/pipeline.md` | 完成，已收尾（窗口已关）；剩 10 条待人拍板 |
+| pse | 005 个性化降噪（PSE）调研 | `_tmp/20261030-b2/pse.md` | `state/handoff/pse.md` | 已报到（noise-canceling-45） |
+| abtest | exp003 DPDFNet-2 vs GTCRN 离线 AB 听测 | `_tmp/20261030-b2/abtest.md` | `state/handoff/abtest.md` | 已报到（noise-canceling-7f） |
 | evaltool | 004 评测工具链 | `_tmp/20261029-b1/evaltool.md` | `state/handoff/evaltool.md` | 完成，已收尾（窗口已关）；剩 11 题待人拍板 |
 
 ## 规矩
@@ -30,6 +32,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 第二批 20261030-b2（人原话「好可以的」）：pse 已报到 · abtest 已报到
 - 21:20 model：完成，大总管验收通过，窗口已关
 - 21:05 pipeline：完成，大总管验收通过，窗口已关
 - 21:12 evaltool：完成，大总管验收通过，窗口已关
@@ -52,4 +55,4 @@
 - [x] 第一批 24 题 + 个性化 + P.808 —— 2026-10-30 已拍板，见 `docs/plan/001_decisions-20261029-b1.md`
 - [ ] 远程仓库地址 —— 来源 board
 - [ ] 放权边界 —— 来源 board
-- [ ] 开下一批 005「个性化降噪（PSE）」调研？（D08 定为核心）—— 等人点头
+- [x] 开下一批 005 PSE + exp003 AB 听测 —— 人 2026-10-30 同意，已派
