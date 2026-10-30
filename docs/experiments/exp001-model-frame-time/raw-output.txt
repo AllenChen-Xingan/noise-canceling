@@ -1,0 +1,17 @@
+onnxruntime 1.31.1
+baseline.onnx	inputs=[('spec', [1, 1, 161, 2]), ('state_in', [38256])]	state_loop=1
+  ms/frame mean=0.286 p50=0.285 p99=0.316 p99.9=0.355 max=0.484
+dpdfnet2.onnx	inputs=[('spec', [1, 1, 161, 2]), ('state_in', [45424])]	state_loop=1
+  ms/frame mean=0.717 p50=0.745 p99=0.783 p99.9=0.823 max=1.152
+dpdfnet4.onnx	inputs=[('spec', [1, 1, 161, 2]), ('state_in', [52592])]	state_loop=1
+  ms/frame mean=1.157 p50=1.214 p99=1.263 p99.9=1.300 max=1.869
+dpdfnet8.onnx	inputs=[('spec', [1, 1, 161, 2]), ('state_in', [66928])]	state_loop=1
+  ms/frame mean=2.040 p50=2.143 p99=2.205 p99.9=2.243 max=3.240
+dpdfnet2_48khz_hr.onnx	inputs=[('spec', [1, 1, 481, 2]), ('state_in', [56436])]	state_loop=1
+  ms/frame mean=1.026 p50=1.083 p99=1.124 p99.9=1.150 max=1.799
+dpdfnet8_48khz_hr.onnx	inputs=[('spec', [1, 1, 481, 2]), ('state_in', [90228])]	state_loop=1
+  ms/frame mean=2.913 p50=3.142 p99=3.242 p99.9=3.926 max=5.725
+gtcrn.onnx	inputs=[('mix', [1, 257, 1, 2]), ('conv_cache', [2, 1, 16, 16, 33]), ('tra_cache', [2, 3, 1, 1, 16]), ('inter_cache', [2, 1, 33, 16])]	state_loop=3
+  ms/frame mean=0.397 p50=0.397 p99=0.434 p99.9=0.488 max=0.983
+gtcrn_simple.onnx	inputs=[('mix', [1, 257, 1, 2]), ('conv_cache', [2, 1, 16, 16, 33]), ('tra_cache', [2, 3, 1, 1, 16]), ('inter_cache', [2, 1, 33, 16])]	state_loop=3
+  ms/frame mean=0.395 p50=0.396 p99=0.430 p99.9=0.496 max=0.608
