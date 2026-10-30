@@ -1,6 +1,6 @@
 # 现状页 · rubric（批次 20261030-b2）
 
-状态：**验收通过（待重算）**——窗口不关。等 ① abtest 的 VoxLock 版终版 scores.json ② 人的 AB 导出 JSON（大总管转来），然后重算 `dryrun-exp003.md` 与 `decision.md`（人耳列填实），再报收尾
+状态：**验收通过（待重算）**——窗口不关。① 终版 scores.json 已收（sha e84730fa…），dryrun 与 decision 已重算；② 还等人的 AB 导出 JSON（大总管转来），填人耳列后报收尾
 
 ## 手上
 007 降噪 rubric：评分标准 + 用它筛候选。交代 `_tmp/20261030-b2/rubric.md`（主目录）
@@ -35,3 +35,4 @@
 - 2026-10-30 三视角自审：怀疑派 3 P0（小样本放过吃字 / 几乎不处理也能入围 / 响度没对齐）+ 11 P1；实现派 5 P0（显著线表一格算错 / C2、C4 在 exp003 算不了 / 矛盾判不了 / V7 永不触发 / 骨架顺序与 `if H`）+ 约 15 P1；产品派 4 P0（时长低估 / 「GTCRN 领先」误导 / 默认值暗中生效 / D01 不在表里）。全部按条修改：rubric 整篇重写，decision 重写
 - 2026-10-30 用 exp003 临时 scores.json 预演 rubric → `dryrun-exp003.md`（单独成文，防先入为主）；问 abtest 数是否终版；给 abtest 可选减负建议
 - 2026-10-30 收尾
+- 2026-10-30 abtest 交终版 scores.json（sha256 e84730fa…，含 voxlock_given / voxlock_live）+ voxlock_bench.json；重算 dryrun：VoxLock 两种都因 M5 单线程最坏一块超块长（最好 102%）被 V3 否决；DPDFNet-2 风险不变；GTCRN G3 降到 +0.91，只剩 c04 疑似。decision 的 VoxLock 行、时长（一屏 4 候选，约 25 分钟）同步改
