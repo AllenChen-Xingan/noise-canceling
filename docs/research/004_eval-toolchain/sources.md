@@ -28,7 +28,7 @@
 | UTMOS22 strong（原仓） | `resources/UTMOS22` | MIT / MIT（HF Space `sarulab-speech/UTMOS-demo` 元数据 `license: mit`，明载） | 要比的 | 逐条核查 | 2024-04 |
 | SpeechMOS（UTMOS22 打包，URGENT 2024 分析实际用的就是它） | `resources/SpeechMOS` | MIT / MIT（`hubconf.py:14` 明载权重派生自 UTMOS22、MIT） | 要比的 | 逐条核查 | 2023-10 |
 | UTMOSv2 | `resources/UTMOSv2` | MIT / MIT（HF 模型卡明载） | 要比的 | 逐条核查 | 2026-04 |
-| **SCOREQ**（核实时补进，原检索漏了） | github.com/alessandroragano/scoreq（未克隆） | MIT（README:151 明载；**仓库无 LICENSE 文件**）/ CC BY 4.0（Zenodo 13860326，明载） | 要比的 | 读 README + 核实代理查 Zenodo | 2025-08 |
+| **SCOREQ**（核实时补进，原检索漏了） | github.com/alessandroragano/scoreq（未克隆） | MIT（README:151 明载；**仓库无 LICENSE 文件**）/ CC BY 4.0（默认用的 ONNX 在 Zenodo 15739280，每个 378 MB；PyTorch 版在 13860326；都明载） | 要比的 | 读 README 与 `src/scoreq/scoreq.py` | 2025-08 |
 | URGENT-PK（成对排序） | `resources/URGENT-PK` | Apache-2.0 / **无模型卡、无许可**（HF `Twinkzzzzz/URGENT-PK`，明载为空），训练数据 NC | 要学的 | 只读思路 | 2026-08 |
 | URGENT 2026 Track2 基线 Uni-VERSA-Ext | `resources/urgent2026_challenge_track2` | pyproject 写 MIT、**无 LICENSE 文件** / 无许可，训练数据含 NC 与 Unknown（`README.md:139-166`） | 要比的 | 逐条核查 | 2026-06 |
 | torchaudio SQUIM | docs.pytorch.org/audio/2.9.0 | BSD-2 / OBJECTIVE CC BY 4.0、SUBJECTIVE CC BY-NC 4.0（明载） | 零件 | 一两行 | torchaudio 2.9 进入维护期（issue #3902） |
@@ -44,7 +44,9 @@
 | WhisperKit（argmax-oss-swift） | github.com/argmaxinc/argmax-oss-swift（未克隆） | MIT / MIT（HF `argmaxinc/whisperkit-coreml` 明载） | 要比的 | 读 README | 2026-10-27 |
 | faster-whisper | github.com/SYSTRAN/faster-whisper（未克隆） | MIT / MIT（二手） | 要比的 → 排除 | 读 README | — |
 | SenseVoiceSmall（中文第二意见） | github.com/FunAudioLLM/SenseVoice（现跳转 QwenAudio/SenseVoice） | MIT / FunASR Model License v1.1（允许商用、需署名；**澄清只覆盖官方权重**，README 约 :503-506 明载） | 要比的 | 读 README | 2026-09 |
-| jiwer | github.com/jitsi/jiwer | Apache-2.0 | 零件 | 读 `alignment.py`、`process.py`、`transformations.py` | 2026-09 |
+| jiwer | github.com/jitsi/jiwer（未克隆，经 gh api 读源码） | Apache-2.0 | 零件 | 读 `alignment.py`、`process.py`、`transformations.py` | 2026-09 |
+| OpenCC（中文繁简规范化） | github.com/BYVoid/OpenCC | Apache-2.0（gh api 明载） | 零件 | 一行 | — |
+| libopus（输出端编码模拟，候选） | github.com/xiph/opus | 官方称 BSD；GitHub API 显示 NOASSERTION，待核 | 零件 | 一行 | — |
 
 ### 有参考指标与音色指标
 
