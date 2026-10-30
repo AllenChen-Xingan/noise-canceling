@@ -23,6 +23,7 @@ import onnxruntime as ort
 import pyloudnorm
 import soundfile as sf
 
+from _common import vad_mask
 from _paths import RES, ROOT  # resources/ 只在主目录
 HERE = Path(__file__).resolve().parent
 OUT = ROOT / "_tmp/20261030-exp003"
@@ -31,6 +32,8 @@ GTCRN = RES / "gtcrn/stream/onnx_models/gtcrn_simple.onnx"
 SR = 16000
 TARGET_LUFS = -26.0
 PEAK_MAX_DB = -1.0
+FE_DIR = Path.home() / "vdn-data/models/fastenhancer-dns-v1.0.0"  # 官方 release onnx-dns-v1.0.0 的 wav2wav 版
+FE_SIZE = "m"  # bench_fastenhancer.py 按「最坏一帧 ≤ 周期一半」选出的最大档
 VOXLOCK_DIR = Path.home() / "vdn-data/models/voxlock"  # HF arbazsiddiqui/voxlock onnx/v2，sha256 见 README
 VOXLOCK_PRECISION = "int8"   # 官方默认；fp32 只用于计时对照
 VOXLOCK_CHUNK = 160          # 每次推 10 ms；int8 输出随块长略变（resources/voxlock/README.md:96），听测固定这一种
@@ -94,6 +97,35 @@ class Gtcrn:
         self.caches = {"conv_cache": c1, "tra_cache": c2, "inter_cache": c3}
         y = enh.reshape(-1, 2)
         return y[:, 0] + 1j * y[:, 1]
+
+
+class FastEnhancer:
+    """FastEnhancer（官方 wav2wav ONNX，STFT/iSTFT/OLA 都在图里）：每次喂一个 hop，缓存原样回灌，
+    同官方 resources/fastenhancer/scripts/test_onnx.py。输出比输入晚 n_fft − hop 个样本（官方 docs/docs/onnx.md），
+    这里 n_fft = 512：M 档 hop 160 → 晚 352 样本。按此平移，再用互相关核对。"""
+
+    def __init__(self, size=FE_SIZE):
+        self.sess = session(FE_DIR / f"fastenhancer_{size}.onnx")
+        self.name = f"fastenhancer_{size}"
+        self.hop = self.sess.get_inputs()[0].shape[-1]
+        self.delay = 512 - self.hop
+        self.feed = {i.name: np.zeros(i.shape, np.float32) for i in self.sess.get_inputs() if i.name.startswith("cache_in_")}
+
+    def run(self, x):
+        h = self.hop
+        xp = np.concatenate([x, np.zeros(self.delay + h, np.float32)])
+        xp = np.pad(xp, (0, (-len(xp)) % h))
+        out = []
+        for i in range(0, len(xp), h):
+            self.feed["wav_in"] = xp[None, i: i + h]
+            o = self.sess.run(None, self.feed)
+            out.append(o[0][0])
+            for j in range(len(o) - 1):
+                self.feed[f"cache_in_{j}"] = o[j + 1]
+        y = np.concatenate(out).astype(np.float32)
+        if not np.all(np.isfinite(y)):
+            raise RuntimeError(f"{self.name}: 输出非有限值")
+        return y[self.delay: self.delay + len(x)]
 
 
 class Voxlock:
@@ -174,6 +206,8 @@ def main():
         for M in (Dpdfnet, Gtcrn):
             m = M()  # 每段重新建状态，互不串
             versions[m.name] = stream(m, x)
+        fe = FastEnhancer()
+        versions[fe.name] = fe.run(x)
         if "--no-voxlock" not in sys.argv:
             for mode in ("given", "live"):
                 m = Voxlock(mode, OUT / "src" / f"{cid}_enroll.wav")
@@ -185,8 +219,11 @@ def main():
         align[cid]["probe"] = "clean" if ref is not None else "noisy"
         for k, v in versions.items():
             sf.write(OUT / "raw" / f"{cid}_{k}.wav", v, SR, subtype="FLOAT")
-        # 响度统一
-        gains = {k: TARGET_LUFS - meter.integrated_loudness(v) for k, v in versions.items()}
+        # 响度统一：只在主讲人说话的区间（按干净参考 VAD）测 BS.1770 响度再对齐。
+        # 不用整段响度，因为停顿里压得越狠的模型整段越安静、被抬得越多，说话声就更响，听起来「更清楚」（自审怀疑派 P1）
+        mask, nm = vad_mask(ref)
+        sl = lambda v: meter.integrated_loudness(v[:nm][mask])
+        gains = {k: TARGET_LUFS - sl(v) for k, v in versions.items()}
         peaks = {k: 20 * np.log10(np.max(np.abs(v)) + 1e-12) + gains[k] for k, v in versions.items()}
         extra = min(0.0, PEAK_MAX_DB - max(peaks.values()))
         files[cid] = {"lufs_target": TARGET_LUFS + extra, "versions": {}}
@@ -196,11 +233,12 @@ def main():
             sf.write(OUT / "audio" / fname, y, SR, subtype="PCM_16")
             files[cid]["versions"][k] = {
                 "file": f"audio/{fname}",
+                "speech_lufs_after": round(float(sl(y)), 2),
                 "lufs_after": round(float(meter.integrated_loudness(y)), 2),
                 "peak_dbfs": round(float(20 * np.log10(np.max(np.abs(y)) + 1e-12)), 2),
                 "gain_db": round(float(gains[k] + extra), 2),
             }
-        print(cid, align[cid], {k: v["lufs_after"] for k, v in files[cid]["versions"].items()}, flush=True)
+        print(cid, align[cid], {k: v["speech_lufs_after"] for k, v in files[cid]["versions"].items()}, flush=True)
     (HERE / "align.json").write_text(json.dumps({"lag_samples": align, "voxlock_lock_at_s": lock, "files": files}, ensure_ascii=False, indent=1))
     (OUT / "files.json").write_text(json.dumps(files, ensure_ascii=False, indent=1))
 
