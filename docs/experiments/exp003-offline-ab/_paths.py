@@ -11,12 +11,12 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def _main_root():
-    if (ROOT / "resources").is_dir():
+    if (ROOT / "resources/weights").is_dir():  # worktree 里也有个只放 README 的 resources/，要看实物
         return ROOT
     common = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--path-format=absolute", "--git-common-dir"],
                             capture_output=True, text=True, check=True).stdout.strip()
     main = Path(common).parent
-    if not (main / "resources").is_dir():
+    if not (main / "resources/weights").is_dir():
         raise FileNotFoundError(f"找不到 resources/：{ROOT} 与 {main} 下都没有")
     return main
 
