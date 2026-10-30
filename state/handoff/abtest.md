@@ -7,19 +7,16 @@
 ## 手上
 exp003：DPDFNet-2 对 GTCRN 的离线 AB 听测（交代 `_tmp/20261030-b2/abtest.md`）
 
-## 做到哪
-四个脚本 + 页面模板已写完（都还**没跑过**）；素材下载大半完成。还没申请过名额、没跑过任何推理。
+## 做到哪（2026-10-30 更新）
+- **两模型轮已完成**：12 段素材 · 逐帧增强（对齐滞后 12/12 为 0、三版 −26 LUFS）· 页面 `_tmp/20261030-exp003/index.html`（静音无头冒烟通过）· 客观分数 `docs/experiments/exp003-offline-ab/scores.json`。DNSMOS OVRL DPDFNet-2 2.75 对 GTCRN 2.44（9/12 段赢）；删除率 4.6% 对 4.3%（原声 3.2%）；Qwen3-ASR 两次转写 48/48 逐字一致。吃字逐词明细 `eaten_words.md`：两者各 7 个「原声没删、降噪后删了」的词
+- **VoxLock 轮进行中**（名额已批）：正在跑 `bench_voxlock.py`（int8/fp32 × 块长 8/10/20/40 ms 单线程计时）
+- 页面已按 rubric 加：开会能用/勉强/不能用、缺陷标签、播放/切换计数、切换 5 ms 淡出淡入、两问顺序随机
 
-## 下一步（接手者照做）
-1. **改 `make_clips.py` 的 c11**：把 `DATA / "zh/zh_bubbling_well_road_timshi.ogg", 120.0, 9.5` 换成 `DATA / "zh/zh_popobing_landxia.ogg", 120.0, 9.5`；`main()` 里 `srcs` 列表同样替换。原因：TimShi 那份全程有约 −35 dB 底噪（语音约 −22 dB），不能当干净参考；婆婆冰（Landxia）静音段 −90 dB，120 s 起 9.5 s 有声占 89%
-2. 等下载完：`SCAFE_48k.zip`（md5 1a4ee387f1900f4b15ba219481c76556）、`DKITCHEN_16k.zip`（md5 见 Zenodo API `records/1227121`）、`ggml-large-v3-turbo.bin`（sha1 应为 `4af2b29d7ec73d781377bfd1758ca957a807e941`，大总管要求核对并在 README 记 URL/哈希/大小）。核 md5 后在 `~/vdn-data/demand/` 解压（得到 `SCAFE/ch01.wav`、`DKITCHEN/ch01.wav`）。若后台下载因会话关闭中断，重下：`curl -sSL -o ~/vdn-data/demand/<名>.zip https://zenodo.org/api/records/1227121/files/<名>.zip/content`；whisper：`https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin`
-3. 申请名额后依次跑（项目根下，venv 复用 `_tmp/exp002-venv`，已含 onnxruntime/librosa/scipy/pystoi/pyloudnorm/soundfile）：
-   `make_clips.py` → `enhance.py` → `build_page.py` → `score.py --whisper`
-   - 跑完核 `align.json`：互相关滞后应为 0（DPDFNet 已按 4 帧=640 样本平移，GTCRN 0 帧）；不为 0 就查
-   - 核响度：三版 `lufs_after` 应相同（目标 −26 LUFS，峰值超 −1 dBFS 时三版一起降）
-4. 浏览器打开 `_tmp/20261030-exp003/index.html` 冒烟（能播、切换、答题、导出）；**不要放声音**（红线），只看界面与控制台
-5. 写 `docs/experiments/exp003-offline-ab/README.md`（素材清单：来源 URL · 许可 · sha256，`clips.json` 里有 `source_sha256`；处理方法；分数表；页面用法；局限与缺口）
-6. 自审三视角（怀疑派 · 实现派 · 产品派），修完报大总管「abtest 可以收尾」+ 页面路径 + 一句客观分数谁领先
+## 下一步
+1. 计时跑完 → make_clips（加注册样本，核各段音频哈希不变）→ enhance（加 voxlock_given / voxlock_live）→ build_page → score --asr（新两列）→ eaten_words.py。预计计时后约 10 分钟
+2. 归还名额，报大总管：页面路径 + VoxLock 每块 p99.9/max 占周期 + 端到端延迟推算
+3. 写 README（素材许可哈希 · 方法 · 分数表 · 纯噪音段 c09/c10 上 VoxLock 对比 · 吃字一节 · 局限）
+4. 三视角自审，修完报「abtest 可以收尾」
 
 ## 已写文件（都在 `docs/experiments/exp003-offline-ab/`，已被 hook 自动提交）
 - `make_clips.py`：12 段素材（c01–c03 urgent 赌场 5/0/−5 dB 截 12 s；c04–c10 LibriSpeech 合成：单干扰者 5/0 dB + SCAFE、babble 3 人 0 dB/6 人 −5 dB/4 人 10 dB、DKITCHEN 杯碟 0 dB、钢琴 5 dB；c11–c12 中文）。目标语音前留 1 s、后留 0.5 s 纯噪音。种子 20261030。产出 `_tmp/20261030-exp003/src/` + `clips.json`
