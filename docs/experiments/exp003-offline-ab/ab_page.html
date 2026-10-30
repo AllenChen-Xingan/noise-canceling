@@ -143,7 +143,7 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
 (() => {
   "use strict";
   const M = window.EXP003;
-  const KEY = JSON.parse(atob(M.key));            // 揭盲表：{clips: {段: [槽位 s0.. 的模型]}, traps: {题: [...]}}
+  const KEY = JSON.parse(atob(M.slotmap || M.key));            // 揭盲表：{clips: {段: [槽位 s0.. 的模型]}, traps: {题: [...]}}
   const N = M.n_cands;
   const LETTERS = "ABCD".slice(0, N).split("");
   const MODELS = Object.keys(M.models);

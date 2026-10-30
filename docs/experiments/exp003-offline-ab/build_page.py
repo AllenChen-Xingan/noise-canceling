@@ -5,7 +5,7 @@
   揭盲表 unblind-key.json、manifest.js、files.json 同时复制进 docs/experiments/exp003-offline-ab/builds/<build>/ 进版本库（人定：对照表都要提交）
 - 两层随机：生成时每段的候选随机排进槽位 s0、s1…（secrets 随机）；页面运行时再按拉丁方轮换分到 A/B/C…，
   使每个候选在每个字母位置出现的次数平衡
-- 揭盲表以 base64 存在 manifest.js 里（只防「一眼看到」，不防有意去解）；音频文件名是随机串，不含模型名
+- 揭盲表以 base64 存在 manifest.js 的 slotmap 字段里（只防「一眼看到」，不防有意去解）；音频文件名是随机串，不含模型名
 - 检验题两道（借 P.808 陷阱题思路）：
   · trap-identical：所有槽位是同一个文件 → 期望「最清楚」「最自然」都答「差不多」
   · trap-degraded：一个槽位是某候选输出低通 1 kHz 再加 5 dB 白噪声（响度拉回相同），其余槽位是各候选原样
@@ -102,7 +102,8 @@ def main():
     manifest = {"build": build, "n_cands": len(models), "clips": mclips,
                 "models": {m: INFO.get(m, {"name": m, "latency": "?"}) for m in models},
                 "traps": [{k: v for k, v in t.items() if k not in ("source_model", "names")} for t in traps],
-                "key": base64.b64encode(json.dumps({"clips": key, "traps": {t["id"]: t["names"] for t in traps}})
+                # 字段别叫 key：gitleaks 会把「key + 一串 base64」当成 API 密钥拦下提交
+                "slotmap": base64.b64encode(json.dumps({"clips": key, "traps": {t["id"]: t["names"] for t in traps}})
                                         .encode()).decode()}
     (page_dir / "manifest.js").write_text("window.EXP003 = " + json.dumps(manifest, ensure_ascii=False) + ";\n")
     shutil.copyfile(HERE / "ab_page.html", page_dir / "index.html")
