@@ -32,7 +32,7 @@
 ## 进度板
 
 进度（HH:MM）
-- 第二批 20261030-b2（人原话「好可以的」）：pse 已报到 · abtest 已报到
+- 第二批 20261030-b2（人原话「好可以的」）：pse must-know 已起草，workflow 批准约 12 代理（原计划 18，怀疑派合并）· abtest 素材定 12 段（casino 3 + LibriSpeech 合成 7 + 中文 2）；批准下载 whisper large-v3-turbo 1.6 GB 到 ~/vdn-data/models/（超 500 MB 线，大总管批：吃字率是 D01 关键旁证）
 - 21:20 model：完成，大总管验收通过，窗口已关
 - 21:05 pipeline：完成，大总管验收通过，窗口已关
 - 21:12 evaltool：完成，大总管验收通过，窗口已关

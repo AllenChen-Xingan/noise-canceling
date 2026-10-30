@@ -110,3 +110,27 @@ cat 提示词文件 | opencode run --model <厂商/模型>
 **横向拼表，你自己裁**。
 
 > **统一问题，比统一结论更重要。** 各人自选维度，每份都对，却没法比。
+
+---
+
+## 本次实际怎么派的（2026-10-30 · workflow `wf_7240073b-611`）
+
+> 按大总管要求压到 12 个代理（原计划 18 个）。全程只读：不写项目文件、不下权重、不跑推理。
+
+| 阶段 | 代理 | 管什么 |
+|---|---|---|
+| 核查（8） | `msft-parnamaa` | Pärnamaa & Saabas 2024 · 微软 pDCCRN / 个性化 PercepNet · TSOS · Teams 被动注册 |
+| | `samsung-usef` | 三星 cross-attention 动态挑帧 · USEF-PNet / DSEF-PNet · USEF-TSE 一类 |
+| | `dns-pse-track` | DNS 个性化赛道规则与开源方案（TEA-PSE、pTFGridNet、pDFN 等） |
+| | `gating-voicefilter` | VoiceFilter-Lite 及开源复现 · LiveKit 插件 · Personal VAD · 门控与重叠语音 |
+| | `wesep-tse` | WeSep · 因果 SpeakerBeam / SpEx · 流式 TSE |
+| | `spk-embed` | WeSpeaker · SpeechBrain ECAPA · 3D-Speaker · TitaNet · VoxCeleb 许可原文 |
+| | `auto-enroll` | 在线聚类（diart 等）· 被动注册 · 近场物理线索 · 防污染 · 收敛时间 |
+| | `open-discovery` | 上面没覆盖的因果 + 开源权重 PSE，最多 3 个 |
+| 怀疑派（4） | 每人审 2 组 | 回论文 / 源码 / 模型卡 / 许可原文逐条反驳 |
+| 评测（1） | `eval-metrics` | 干扰者残留 · 声纹相似度 · TSOS 与吃字率 · 注册收敛时间 · CI / 本机分流 |
+| 批评（1） | `critic` | 还缺什么、冲突未解、必须实测的点 |
+
+**同一张核查表**（每项答 原生 / 部分 / 没有 / 未知 + 出处）：C1 因果与延迟（①②③ 同 002 口径，声纹更新频率）· C2 采样率 · C3 计算量（主模型 + 声纹）· C4 ONNX 与状态显式 · C5 注册方式 · C6 babble / 单个干扰者效果证据（注明测试集）· C7 主人不说话时输出什么 · C8 误杀主人证据 · C9 代码 / 权重 / 训练数据许可证 · C10 维护 · C11 坑。
+
+**必须给判断**：直接用 / 改造 / 只借鉴架构 / 不适合；本组首选 + 备选 + 三个风险。字数上限 1500（怀疑派 1000）。

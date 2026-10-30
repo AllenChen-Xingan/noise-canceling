@@ -20,3 +20,4 @@
 - 2026-10-30 报到 noise-canceling-69
 - 2026-10-30 读完 common / 交代 / 设计稿 §5 §9 §10 §11 §13 / 002 must-know·decision·gap / 004 babble 行
 - 2026-10-30 `research.sh` 建 `docs/research/005_pse/`（自动提交 fdc142c）
+- 2026-10-30 起 workflow wf_7240073b-611（先 18 代理，按大总管要求停掉改 12 代理续跑）；填 assign.md 派活记录
