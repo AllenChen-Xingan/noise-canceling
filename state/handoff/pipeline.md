@@ -34,3 +34,4 @@
 - 20:46 MetalVoice+AudioCap 核查回来 → MetalVoice 是反例（回调里分配内存加锁、无漂移补偿）；AudioCap 可改造（BSD-2）；P3 部分成立（多一道系统录音权限，与麦克风时钟对齐未验证）
 - 20:46 Rust 零件核查回来 → 6 个都可直接用；P4 改判：异步推理线程不该加入设备 workgroup，应自建 work interval，Rust 无现成封装（scratchpad/out-rust-parts.md）
 - 20:46 BlackHole+Apple 示例核查回来 → BlackHole M0–M2 直接用、最终只借鉴；P2 成立带 4 个坑；发现 AudioServerPlugIn.h:34 称插件跑在独立进程，可能改写命门 1 前提，排进对抗核实（scratchpad/out-blackhole-apple.md）
+- 20:47 本机只读实测（macOS 27.0.1）：/Library/Audio/Plug-Ins/HAL 下有第三方 ParrotAudioPlugin.driver；进程表无独立「Core Audio Driver」宿主，只有 coreaudiod(570) 与 com.apple.audio.DriverHelper(585)；无 sudo 无法 lsof 确认插件被谁加载 → 交对抗核实

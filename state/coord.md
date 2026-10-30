@@ -32,7 +32,7 @@
 进度（HH:MM）
 - 21:xx model：must-know 已起草；workflow 10 代理（5 核查 + 5 怀疑派）已批准，exp001 之后申请名额
 - 21:xx pipeline：must-know 已起草；5 子代理核 12 仓库 → workflow 约 8 代理（补检索 + 3 对抗视角）已批准
-- 21:xx evaltool：起草 must-know 中，计划未报
+- 21:xx evaltool：must-know 已起草；workflow 10 代理（5 检索 + 5 怀疑派）已批准；P.808 克隆 1.1 GB 超线，暂留，收尾再定
 
 ## 发现
 
