@@ -17,6 +17,7 @@
 | [`must-know.md`](must-know.md) | 设计 rubric 前必须知道的判断（调研结论） |
 | [`sources.md`](sources.md) | 来源登记 |
 | [`gap.md`](gap.md) | rubric 要的数据 × 现在有没有；要补的实验 |
+| [`dryrun-exp003.md`](dryrun-exp003.md) | 用 exp003 临时机器分预演一遍 rubric（**作者听完 AB 再看**） |
 
 ## 在三层验证里的位置（CLAUDE.md 第三节）
 
