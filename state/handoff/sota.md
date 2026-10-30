@@ -21,3 +21,4 @@
 - 2026-10-30 读完 common / 交代 / intent / 路线图 / 28 条拍板 / 002 must-know·decision / 005 decision·sources / 设计稿 §4 §5 §7–§9 §11 §18
 - 2026-10-30 `research.sh` 建 `docs/research/006_sota-landscape/`（自动提交 ae31338）
 - 2026-10-30 Workflow 计划报大总管并获批；起 wf_5b5f8eb3-fe1（6 检索 + 3 怀疑派 + 1 批评者），中间产物在 scratchpad/wf/
+- 2026-10-30 大总管转人新要求（训练放最后、现成模型 + 跨行业让延迟不可感、能耗低）：加第⑦块，起 wf_b412f601-4d1（1 检索 + 1 怀疑派）；⑥与前 5 件按「不训练优先」排
