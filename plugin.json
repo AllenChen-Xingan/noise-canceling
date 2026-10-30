@@ -1,0 +1,8 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "vdn",
+  "version": "0.1.0",
+  "description": "Mac 开源实时语音降噪",
+  "license": "MIT",
+  "keywords": ["aias"]
+}

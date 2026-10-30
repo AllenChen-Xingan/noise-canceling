@@ -1,0 +1,20 @@
+# 最小闸门：先有闸门，再有检查。检查随项目长（实时安全、延迟基准、评测回归）。
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: manifests
+        run: python3 scripts/check-manifests.py
+      - name: rust
+        # 还没有 Cargo workspace 时跳过；建了第一个 crate 就自动生效
+        run: |
+          if [ ! -f Cargo.toml ]; then echo "no Cargo.toml yet, skip"; exit 0; fi
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
