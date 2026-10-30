@@ -31,3 +31,6 @@
 - 20:45 大总管追加：带上 macOS 26/27 的变化 → 排进第二个 Workflow
 - 20:46 BackgroundMusic 核查回来 → 只借鉴架构（scratchpad/out-backgroundmusic.md）
 - 20:46 libASPL+roc-vad 核查回来 → libASPL 可改造（MIT），roc-vad 只借鉴架构；roc-vad 把 DSP 放在 coreaudiod 内，是 P1 的反例（scratchpad/out-libaspl-rocvad.md）
+- 20:46 MetalVoice+AudioCap 核查回来 → MetalVoice 是反例（回调里分配内存加锁、无漂移补偿）；AudioCap 可改造（BSD-2）；P3 部分成立（多一道系统录音权限，与麦克风时钟对齐未验证）
+- 20:46 Rust 零件核查回来 → 6 个都可直接用；P4 改判：异步推理线程不该加入设备 workgroup，应自建 work interval，Rust 无现成封装（scratchpad/out-rust-parts.md）
+- 20:46 BlackHole+Apple 示例核查回来 → BlackHole M0–M2 直接用、最终只借鉴；P2 成立带 4 个坑；发现 AudioServerPlugIn.h:34 称插件跑在独立进程，可能改写命门 1 前提，排进对抗核实（scratchpad/out-blackhole-apple.md）
