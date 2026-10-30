@@ -1,6 +1,6 @@
 # exp003 · 吃字逐段明细（脚本生成，勿手改）
 
-ASR：qwen3-asr-plus:1.7b，每个文件转写两次，逐字一致 72/72。
+ASR：qwen3-asr-plus:1.7b，每个文件转写两次，逐字一致 84/84。
 「新删」= 降噪后转写里被删、原声转写里没被删的参照词。参照 = 干净参考的转写。
 
 ## c02 · 赌场环境（人声 + 机器声），SNR 0 dB
@@ -10,6 +10,9 @@ ASR：qwen3-asr-plus:1.7b，每个文件转写两次，逐字一致 72/72。
 - **gtcrn** 新删 2 个：store、crash
   - 参照中位置（加粗）：the stray cat gave birth to kittens the lazy cow lay in the cool grass the friendly gang left the drug **store** we talked of the sideshow in the circus the set of china hit the floor with a **crash**
   - gtcrn 转写：The stray cat gave birth to kittens. The lazy cow lay in the cool grass. The friendly gang left the drug. We caught of the sideshow in the circus. The set of china hit the floor with a.（两次一致：True）
+- **fastenhancer_m** 新删 2 个：a、crash
+  - 参照中位置（加粗）：the stray cat gave birth to kittens the lazy cow lay in the cool grass the friendly gang left the drug store we talked of the sideshow in the circus the set of china hit the floor with **a** **crash**
+  - fastenhancer_m 转写：The stray cat gave birth to kittens. The lazy cow lay in the cool grass. The friendly gang left the drugs. We talked of the sideshow and the circus. The set of china hit the floor with.（两次一致：True）
 - **voxlock_given** 新删 2 个：talked、crash
   - 参照中位置（加粗）：the stray cat gave birth to kittens the lazy cow lay in the cool grass the friendly gang left the drug store we **talked** of the sideshow in the circus the set of china hit the floor with a **crash**
   - voxlock_given 转写：The stray cat gave birth to kittens. The lazy cow lay in the cool grass. The friendly gang left the drugstore. We watched the sideshow in the circus. The set of china hit the floor with a.（两次一致：True）
@@ -24,9 +27,12 @@ ASR：qwen3-asr-plus:1.7b，每个文件转写两次，逐字一致 72/72。
 - **dpdfnet2** 新删 1 个：yacht
   - 参照中位置（加粗）：clams are small round soft and tasty the line where the edges join was clean stop whistling and watch the boys march a cruise in warm waters in a sleek **yacht** is fun
   - dpdfnet2 转写：Clams are small, round, soft, and tasty. Doc whistled and watched the boys work. He firmed in warm waters and a sleep yawn.（两次一致：True）
-- **gtcrn** 新删 2 个：stop、whistling
-  - 参照中位置（加粗）：clams are small round soft and tasty the line where the edges join was clean **stop** **whistling** and watch the boys march a cruise in warm waters in a sleek yacht is fun
-  - gtcrn 转写：Clams are small, then soft and tasty. That's mostly what's to be learned. Clams in warm waters in the Great Yards.（两次一致：True）
+- **gtcrn** 新删 4 个：stop、whistling、and、watch
+  - 参照中位置（加粗）：clams are small round soft and tasty the line where the edges join was clean **stop** **whistling** **and** **watch** the boys march a cruise in warm waters in a sleek yacht is fun
+  - gtcrn 转写：Clams are small, then soft and tasty. That's mostly what's to be learned. I played in one boys' and schoolyard.（两次一致：True）
+- **fastenhancer_m** 新删 1 个：yacht
+  - 参照中位置（加粗）：clams are small round soft and tasty the line where the edges join was clean stop whistling and watch the boys march a cruise in warm waters in a sleek **yacht** is fun
+  - fastenhancer_m 转写：Clams are small, brown, soft, and tasty. The edges from stop whistling and watch the boys work. A friend in warm waters and a sleepy young.（两次一致：True）
 - **voxlock_given** 新删 17 个：clams、are、small、round、soft、and、tasty、stop、whistling、and、watch、the、boys、march、cruise、in、warm
   - 参照中位置（加粗）：**clams** **are** **small** **round** **soft** **and** **tasty** the line where the edges join was clean **stop** **whistling** **and** **watch** **the** **boys** **march** a **cruise** **in** **warm** waters in a sleek yacht is fun
   - voxlock_given 转写：Friends in long hours and sleepless nights.（两次一致：True）
@@ -39,6 +45,9 @@ ASR：qwen3-asr-plus:1.7b，每个文件转写两次，逐字一致 72/72。
 - **gtcrn** 新删 1 个：with
   - 参照中位置（加粗）：by this time lord chelford and wilder returned and disgusted rather **with** myself i ruminated on my want of generalship
   - gtcrn 转写：What I mean is that I, by this time, Lord Chelford and Wilder returned, and disgusted rather myself, I ruminated on my want of generalship.（两次一致：True）
+- **fastenhancer_m** 新删 1 个：of
+  - 参照中位置（加粗）：by this time lord chelford and wilder returned and disgusted rather with myself i ruminated on my want **of** generalship
+  - fastenhancer_m 转写：What I mean is that I won't promise never to see you again, no matter how often I must bid rather myself. I ruminated on my want, general.（两次一致：True）
 - **voxlock_given** 新删 1 个：by
   - 参照中位置（加粗）：**by** this time lord chelford and wilder returned and disgusted rather with myself i ruminated on my want of generalship
   - voxlock_given 转写：This time, or to see me again, I am disgusted rather with myself. I ruminated on my want of generalship.（两次一致：True）
@@ -51,12 +60,27 @@ ASR：qwen3-asr-plus:1.7b，每个文件转写两次，逐字一致 72/72。
 - **dpdfnet2** 新删 3 个：bannister、in、the
   - 参照中位置（加粗）：his troubled blue eyes glanced at each of us and finally rested with an expression of blank dismay upon **bannister** **in** **the** farther corner
   - dpdfnet2 转写：His troubled blue eyes glanced at each of us, and finally rested with an expression of blank dismay upon Banister Brindle.（两次一致：True）
+- **fastenhancer_m** 新删 4 个：bannister、in、the、farther
+  - 参照中位置（加粗）：his troubled blue eyes glanced at each of us and finally rested with an expression of blank dismay upon **bannister** **in** **the** **farther** corner
+  - fastenhancer_m 转写：His troubled blue eyes glanced at each of us, and finally rested with an expression of blank dismay upon Banting.（两次一致：True）
 - **voxlock_given** 新删 2 个：bannister、in
   - 参照中位置（加粗）：his troubled blue eyes glanced at each of us and finally rested with an expression of blank dismay upon **bannister** **in** the farther corner
   - voxlock_given 转写：His troubled blue eyes fell on each of us, and finally rested, with an expression of blank dismay, upon Van's friend, Rachel.（两次一致：True）
-- **voxlock_live** 新删 2 个：bannister、in
-  - 参照中位置（加粗）：his troubled blue eyes glanced at each of us and finally rested with an expression of blank dismay upon **bannister** **in** the farther corner
-  - voxlock_live 转写：His troubled blue eyes glanced at each of us, and finally rested, with an expression of blank dismay, upon Bams's farther corner, Rachel.（两次一致：True）
+- **voxlock_live** 新删 1 个：bannister
+  - 参照中位置（加粗）：his troubled blue eyes glanced at each of us and finally rested with an expression of blank dismay upon **bannister** in the farther corner
+  - voxlock_live 转写：His troubled blue eyes glanced at each of us, and finally rested, with an expression of blank dismay, upon Vance's farthest corner, Rachel.（两次一致：True）
+
+## c07 · 邻桌 6 人说话 + 咖啡馆露台底噪，SNR −5 dB
+
+- 人工转写（LibriSpeech）：its origin was small a germ an insignificant seed hardly to be thought of as likely to arouse opposition
+- 参照（干净参考转写）：Its origin was small, a germ, an insignificant seed, hardly to be thought of as likely to arouse opposition.
+- 原声转写：It was hardly in the language of stories, adventures, and scenes hardly to be thought of as likely to arouse emotions.（两次一致：True）
+- **fastenhancer_m** 新删 3 个：its、small、a
+  - 参照中位置（加粗）：**its** origin was **small** **a** germ an insignificant seed hardly to be thought of as likely to arouse opposition
+  - fastenhancer_m 转写：It was hardly at all convenient. It seemed exceedingly hard-hearted and likely to arouse opposition.（两次一致：True）
+- **voxlock_given** 新删 1 个：its
+  - 参照中位置（加粗）：**its** origin was small a germ an insignificant seed hardly to be thought of as likely to arouse opposition
+  - voxlock_given 转写：It was most of the pleasures, and it seemed to be thought of as likely to arouse opposition.（两次一致：True）
 
 ## c11 · 中文 · 邻桌 3 人（英文）说话 + 食堂底噪，SNR 0 dB
 
@@ -65,6 +89,9 @@ ASR：qwen3-asr-plus:1.7b，每个文件转写两次，逐字一致 72/72。
 - **dpdfnet2** 新删 3 个：红、色、的
   - 参照中位置（加粗）：**红** 色 的 草 莓 口 味 与 黄 **色** **的** 香 蕉 口 味 交 替 涂 抹 在 甜 筒 上 近 年 来 销 售 员 将 冰 品 盛 装 成 精 致 玫 瑰 花 形 的
   - dpdfnet2 转写：这个草莓口味与黄桃加草莓交替涂抹在皮肤上，接下来，销售员将产品盛装成一束玫瑰花形。（两次一致：True）
+- **fastenhancer_m** 新删 3 个：红、色、形
+  - 参照中位置（加粗）：**红** 色 的 草 莓 口 味 与 黄 **色** 的 香 蕉 口 味 交 替 涂 抹 在 甜 筒 上 近 年 来 销 售 员 将 冰 品 盛 装 成 精 致 玫 瑰 花 **形** 的
+  - fastenhancer_m 转写：在一场美口味与黄皮肤的混味，试图抹去黑楚的肤色。后来，张秀元将一场盛装从一次玫瑰花红。（两次一致：True）
 - **voxlock_given** 新删 2 个：近、销
   - 参照中位置（加粗）：红 色 的 草 莓 口 味 与 黄 色 的 香 蕉 口 味 交 替 涂 抹 在 甜 筒 上 **近** 年 来 **销** 售 员 将 冰 品 盛 装 成 精 致 玫 瑰 花 形 的
   - voxlock_given 转写：红色的草莓口味与黄色的香丹口味交替涂抹在甜筒上。原来，圣元将产品盛装成精致玫瑰花形的。（两次一致：True）
@@ -77,6 +104,7 @@ ASR：qwen3-asr-plus:1.7b，每个文件转写两次，逐字一致 72/72。
 | 候选 | 新删 |
 |---|---|
 | dpdfnet2 | 7 |
-| gtcrn | 5 |
-| voxlock_given | 24 |
-| voxlock_live | 8 |
+| gtcrn | 7 |
+| fastenhancer_m | 14 |
+| voxlock_given | 25 |
+| voxlock_live | 7 |

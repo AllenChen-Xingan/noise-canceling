@@ -1,12 +1,11 @@
 """exp003 脚本共用的小函数（只放一份，score.py / enhance.py / eaten_words.py 都从这里取）。"""
 import re
 
-import numpy as np
-
 
 def vad_mask(ref, frame=320, thr_db=-35.0, dilate=5):
     """按干净参考做能量 VAD：20 ms 帧，高于最响帧 thr_db 算有声，前后各扩 dilate 帧（100 ms）。
     返回 (逐样本布尔掩码, 掩码覆盖的样本数)。"""
+    import numpy as np  # 放在函数里：eaten_words.py 用系统 python 跑，不需要 numpy
     nf = len(ref) // frame
     e = 10 * np.log10(np.mean(ref[: nf * frame].reshape(nf, frame) ** 2, axis=1) + 1e-12)
     m = e > e.max() + thr_db
