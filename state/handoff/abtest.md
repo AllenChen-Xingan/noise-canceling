@@ -49,3 +49,7 @@ exp003：DPDFNet-2 对 GTCRN 的离线 AB 听测（交代 `_tmp/20261030-b2/abte
 - 2026-10-30 【接替会话】报到；核 md5：SCAFE_48k 1a4ee387…、DKITCHEN_16k 7ffbf52d… 均一致，已解压到 `~/vdn-data/demand/{SCAFE,DKITCHEN}/`
 - 2026-10-30 新增 `_paths.py`（worktree 里按 git 公共目录找回主目录 resources/）；四个脚本改用它；c11 换婆婆冰（Landxia）
 - 2026-10-30 score.py：`--whisper` → `--asr`（Qwen3-ASR，同一文件转两次核逐字相同，插入另记 ins_rate=脑补率）；whisper 模型人定已删，不再用
+- 2026-10-30 申请名额获批 → make_clips（12 段）· enhance（滞后 12/12 为 0，三版 −26 LUFS）· build_page · score --asr（Qwen3-ASR 1.7B，48/48 两次逐字相同）；DNSMOS OVRL DPDFNet-2 2.75 对 GTCRN 2.44（9/12 段），删除率 4.6% 对 4.3%（原声 3.2%）；名额已归还
+- 2026-10-30 页面改为通用 N 候选（A/B/C… + 原声，拉丁方轮换），按 rubric 加「开会能用/勉强/不能用」、缺陷标签、plays/switches/started_at；静音无头冒烟（Playwright + 系统 Chrome，play 打桩 + --mute-audio）通过
+- 2026-10-30 修 score.py：numpy 整数写 JSON 报错；加转写缓存 `_tmp/20261030-exp003/asr_cache.json`；中文段英文按词计（c12 ASR 转出了英文干扰者）
+- 2026-10-30 VoxLock 权重下到 `~/vdn-data/models/voxlock/`（int8+fp32，sha256 记在 README）；enhance 加 given/live 两模式，make_clips 加注册样本，写 bench_voxlock.py；已申请下一轮名额

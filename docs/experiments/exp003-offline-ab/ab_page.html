@@ -93,10 +93,12 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
       <label class="muted"><input type="checkbox" id="loopChk" checked> 循环播放</label>
       <p class="muted" id="heardLbl"></p>
 
-      <div class="q"><div class="label">1. 哪个<b>最清楚</b>？（主讲人的字听得清）</div>
+      <div id="qPair">
+      <div class="q" id="q-clearer"><div class="label"><span class="qn"></span>. 哪个<b>最清楚</b>？（主讲人的字听得清）</div>
         <div class="opts" data-q="clearer"></div></div>
-      <div class="q"><div class="label">2. 哪个<b>最自然</b>？（没有怪声、背景不忽大忽小、不发闷）</div>
+      <div class="q" id="q-natural"><div class="label"><span class="qn"></span>. 哪个<b>最自然</b>？（没有怪声、背景不忽大忽小、不发闷）</div>
         <div class="opts" data-q="natural"></div></div>
+      </div>
       <div class="q"><div class="label">3. 哪些<b>吃字</b>了？（主讲人的字被压掉、断掉；可多选）</div>
         <div class="opts" id="eatenOpts"></div></div>
       <div class="q"><div class="label">4. 每个候选：拿它去<b>开会</b>行吗？</div>
@@ -170,13 +172,13 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
     const trials = order.map((id, i) => {
       const slots = {};
       LETTERS.forEach((L, j) => { slots[L] = KEY.clips[id].indexOf(base[(i + j) % N]); });
-      return { kind: "real", clip: id, slots };
+      return { kind: "real", clip: id, slots, qorder: rnd(2) ? ["clearer", "natural"] : ["natural", "clearer"] };
     });
     // 检验题：插在第 3 段之后的随机位置
     for (const t of M.traps) {
       const perm = shuffle([...Array(N).keys()]);
       const slots = {}; LETTERS.forEach((L, j) => { slots[L] = perm[j]; });
-      trials.splice(3 + rnd(trials.length - 2), 0, { kind: "trap", trap: t.id, clip: t.clip, slots });
+      trials.splice(3 + rnd(trials.length - 2), 0, { kind: "trap", trap: t.id, clip: t.clip, slots, qorder: rnd(2) ? ["clearer", "natural"] : ["natural", "clearer"] });
     }
     return { started: now(), trials, answers: {}, i: 0, ua: navigator.userAgent };
   }
@@ -220,14 +222,25 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
     }
     cur = "A"; playing = false; paintSrc(); paintPlay(); tick();
   }
+  // 切换：旧的约 5 ms 淡出 → 暂停 → 新的同位置约 5 ms 淡入（不交叉淡变；ITU-R BS.1534-3 §5.3 的做法，
+  // 免得切换咔嗒被听成伪影）。用 1 ms 定时器调 volume，时间是近似的，不是采样精确。
+  const FADE_MS = 5;
+  function ramp(a, from, to, done) {
+    let k = 0; a.volume = from;
+    const id = setInterval(() => { k += 1; a.volume = Math.max(0, Math.min(1, from + (to - from) * k / FADE_MS)); if (k >= FADE_MS) { clearInterval(id); if (done) done(); } }, 1);
+  }
+  let switching = false;
   function switchTo(slot) {
-    if (!players[slot] || slot === cur) return;
-    const t = players[cur].currentTime;
-    if (playing) players[cur].pause();
-    cur = slot; players[cur].currentTime = t;
+    if (!players[slot] || slot === cur || switching) return;
+    const old = players[cur];
     ans().switches += 1;
-    if (playing) { players[cur].play(); markPlay(); }
-    save(); paintSrc();
+    const go = () => {
+      const t = old.currentTime; old.pause(); old.volume = 1;
+      cur = slot; players[cur].currentTime = t;
+      if (playing) { players[cur].volume = 0; players[cur].play(); ramp(players[cur], 0, 1); markPlay(); }
+      switching = false; save(); paintSrc();
+    };
+    if (playing) { switching = true; ramp(old, 1, 0, go); } else go();
   }
   function togglePlay() {
     if (playing) { players[cur].pause(); playing = false; }
@@ -313,6 +326,9 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
     $("trialTitle").textContent = `第 ${S.i + 1} 段`;
     $("trialDesc").textContent = t.kind === "self" ? "自录片段" : itemOf(t).desc;
     const a = ans(); if (!a.started_at) { a.started_at = now(); save(); }
+    // 「最清楚」「最自然」上下顺序每屏随机（仿 P.835 的 SIG/BAK 先后随机），存在题里，回看时不变
+    const qo = t.qorder || ["clearer", "natural"];
+    qo.forEach((q, j) => { const el = $("q-" + q); $("qPair").appendChild(el); el.querySelector(".qn").textContent = String(j + 1); });
     buildQuestions(); buildPlayers(t); paintHeard();
     window.scrollTo(0, 0);
   }
@@ -341,7 +357,7 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
       const um = (v) => (v == null ? null : (map[v] !== undefined ? map[v] : v));
       return {
         order: idx + 1, kind: t.kind, clip: t.clip || null, trap: t.trap || null, self: t.kind === "self" ? t.id : null,
-        slots: map,
+        slots: map, qorder: t.qorder || ["clearer", "natural"],
         answer: { clearer: a.clearer || null, natural: a.natural || null, eaten: a.eaten || [], usable: a.usable || {}, tags: a.tags || {} },
         by_model: {
           clearer: um(a.clearer), natural: um(a.natural), eaten: (a.eaten || []).map(um),
@@ -426,7 +442,7 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
     selfTrials[id] = { ref: URL.createObjectURL(ref), cands: picked.map((x) => URL.createObjectURL(x.f)), names: picked.map((x) => x.name), desc: "自录片段" };
     const perm = shuffle([...picked.keys()]);
     const slots = {}; LETTERS.concat("ABCD".split("")).slice(0, picked.length).forEach((L, j) => { slots[L] = perm[j]; });
-    S.trials.push({ kind: "self", id, slots });
+    S.trials.push({ kind: "self", id, slots, qorder: rnd(2) ? ["clearer", "natural"] : ["natural", "clearer"] });
     save();
     $("selfMsg").textContent = `已加在最后（第 ${S.trials.length} 段）。注意：刷新页面后自录文件要重新选。`;
   });
