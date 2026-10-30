@@ -1,0 +1,22 @@
+onnxruntime 1.31.1 | input mix.wav
+baseline	sr=16000 n_fft=320 hop=160(10 ms)	nonfinite_frames=0	out/in energy=-2.7 dB
+  model ms  p50=0.287 p99=0.312 p999=0.338 max=0.515
+  stft+istft ms (numpy) p50=0.014 p99=0.019 p999=0.035 max=0.047
+dpdfnet2	sr=16000 n_fft=320 hop=160(10 ms)	nonfinite_frames=0	out/in energy=-2.7 dB
+  model ms  p50=0.746 p99=0.779 p999=0.804 max=0.842
+  stft+istft ms (numpy) p50=0.015 p99=0.026 p999=0.039 max=0.050
+dpdfnet4	sr=16000 n_fft=320 hop=160(10 ms)	nonfinite_frames=0	out/in energy=-2.7 dB
+  model ms  p50=1.218 p99=1.252 p999=1.272 max=1.310
+  stft+istft ms (numpy) p50=0.015 p99=0.027 p999=0.046 max=0.089
+dpdfnet8	sr=16000 n_fft=320 hop=160(10 ms)	nonfinite_frames=0	out/in energy=-2.6 dB
+  model ms  p50=2.148 p99=2.197 p999=2.223 max=2.432
+  stft+istft ms (numpy) p50=0.016 p99=0.029 p999=0.041 max=0.091
+dpdfnet2_48khz_hr	sr=48000 n_fft=960 hop=480(10 ms)	nonfinite_frames=0	out/in energy=-2.8 dB
+  model ms  p50=1.084 p99=1.118 p999=1.140 max=1.199
+  stft+istft ms (numpy) p50=0.019 p99=0.028 p999=0.040 max=0.055
+dpdfnet8_48khz_hr	sr=48000 n_fft=960 hop=480(10 ms)	nonfinite_frames=0	out/in energy=-2.8 dB
+  model ms  p50=3.178 p99=3.233 p999=3.407 max=3.887
+  stft+istft ms (numpy) p50=0.021 p99=0.041 p999=0.064 max=0.104
+gtcrn_simple	sr=16000 n_fft=512 hop=256(16 ms)	nonfinite_frames=0	out/in energy=-2.7 dB
+  model ms  p50=0.400 p99=0.422 p999=0.440 max=0.572
+  stft+istft ms (numpy) p50=0.017 p99=0.020 p999=0.039 max=0.050
