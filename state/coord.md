@@ -21,7 +21,7 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | model（exp001 每帧耗时，21:xx 起，预计 5 分钟） |
+| 重编译 / 全量测试（1 个） | evaltool（exp002 DNSMOS 打分 + 耗时） |
 
 排队：（空）
 
@@ -37,6 +37,7 @@
 ## 发现
 
 - 17:35 首派失败：spawn-worker.sh 不识别新版信任提示 → 超时退出，后两窗未开；已修脚本 BLOCK_RE（人定 2026-10-29）
+- exp001（M5 · ORT CPU 单线程）每帧 p99：DPDFNet baseline 0.32 · dpdfnet2 0.78 · dpdfnet4 1.26 · dpdfnet8 2.21 · 2_48k 1.12 · 8_48k 3.24 · GTCRN 0.43 ms；dpdfnet8 两版超 2 ms 预算 → docs/experiments/exp001-model-frame-time/
 - 交代里大总管名 5-app-89 失效，现为 noise-canceling-69，批次文件已改
 
 ## 待定清单（攒着等人一次看完）
