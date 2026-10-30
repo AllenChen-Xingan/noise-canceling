@@ -1,6 +1,6 @@
 # 现状页 · rubric（批次 20261030-b2）
 
-状态：**已收尾**（等大总管验收）
+状态：**验收通过（待重算）**——窗口不关。等 ① abtest 的 VoxLock 版终版 scores.json ② 人的 AB 导出 JSON（大总管转来），然后重算 `dryrun-exp003.md` 与 `decision.md`（人耳列填实），再报收尾
 
 ## 手上
 007 降噪 rubric：评分标准 + 用它筛候选。交代 `_tmp/20261030-b2/rubric.md`（主目录）
@@ -20,7 +20,8 @@
 另：D01 延迟上限仍是人的决定，decision.md 开头写了怎么用这份表定它
 
 ## 未了
-- exp003 `scores.json`（sha256 2cf753a7…）是临时数，已问 abtest 是否终版；VoxLock 加入后预演要重算
+- exp003 `scores.json`（sha256 2cf753a7…）是临时数：abtest 回「会变」，正在加 voxlock_given / voxlock_live 两列；旧三列除 c12 插入 / 替换外不变（我用的那份 c12 插入已是新值，删除数不受影响 → 预演结论不变）。abtest 发来新 sha256 后重算 `dryrun-exp003.md`
+- 给 abtest 的减负建议：已采纳（吃字并进每个候选一行 + 「都没有吃字」按钮；标签折叠成「＋毛病」）
 - 给 abtest 的可选减负建议（吃字并进每个候选一行、标签默认折叠）：由它定
 
 ## 流水
