@@ -20,7 +20,7 @@ import librosa
 import numpy as np
 import soundfile as sf
 
-ROOT = Path(__file__).resolve().parents[3]
+from _paths import MAIN, ROOT  # resources/ 只在主目录（MAIN）
 HERE = Path(__file__).resolve().parent
 OUT = ROOT / "_tmp/20261030-exp003/src"
 DATA = Path.home() / "vdn-data"
@@ -160,14 +160,43 @@ def synth(cid, desc, category, target, snr_db, n_talkers, bed_kind, bed_db, lang
 
 
 def ready_made(cid, desc, category, noisy_rel, clean_rel, snr_db, crop=12.0):
-    noisy = load(ROOT / noisy_rel)[: int(crop * SR)]
-    clean = load(ROOT / clean_rel)[: int(crop * SR)]
+    noisy = load(MAIN / noisy_rel)[: int(crop * SR)]
+    clean = load(MAIN / clean_rel)[: int(crop * SR)]
     sf.write(OUT / f"{cid}_noisy.wav", noisy, SR, subtype="FLOAT")
     sf.write(OUT / f"{cid}_clean.wav", clean, SR, subtype="FLOAT")
     return {"id": cid, "desc": desc, "category": category, "lang": "en", "snr_db": snr_db, "has_ref": True,
             "kind": "ready-made", "dur_s": round(len(noisy) / SR, 2),
             "noisy_src": noisy_rel, "clean_src": clean_rel,
-            "noisy_sha256": sha256(ROOT / noisy_rel), "clean_sha256": sha256(ROOT / clean_rel)}
+            "noisy_sha256": sha256(MAIN / noisy_rel), "clean_sha256": sha256(MAIN / clean_rel)}
+
+
+def loudest(a, sec=3.0):
+    """a 里能量最大的连续 sec 秒（10 ms 帧滑窗）。"""
+    n, w = len(a) // 160, int(sec * SR / 160)
+    e = (a[: n * 160].reshape(n, 160).astype(np.float64) ** 2).mean(1)
+    st = int(np.convolve(e, np.ones(w), "valid").argmax()) * 160
+    return a[st: st + int(sec * SR)]
+
+
+def enroll(c):
+    """VoxLock「给定样本」模式的 3 s 注册音频：尽量取同一说话人、但不在本段里出现的干净语音。
+    - LibriSpeech 段：同一说话人的另一条语句（不是目标句，取最长的一条），其中最响的 3 s
+    - 中文段：同一份录音里 300–310 s 这一窗（目标段在 120 s 起）中最响的 3 s
+    - 现成赌场段（c01–c03）：没有同一说话人的其他录音，只能用本段干净参考里最响的 3 s——和测试内容重叠，偏乐观，README 里注明
+    不用随机数，不影响上面各段的生成结果。"""
+    if c["kind"] == "ready-made":
+        a, info = load(MAIN / c["clean_src"]), {"from": c["clean_src"], "overlap_with_clip": True}
+    elif c["lang"] == "en":
+        stem = Path(c["target"]["file"]).stem
+        mine = sorted((u for u in UTTS if u["spk"] == c["target"]["spk"] and u["path"].stem != stem),
+                      key=lambda u: (-u["dur"], u["path"].name))
+        a, info = load(mine[0]["path"]), {"from": str(mine[0]["path"]).replace(str(Path.home()), "~"), "overlap_with_clip": False}
+    else:
+        f = Path(c["target"]["file"].replace("~", str(Path.home()), 1))
+        a, info = load(f, 300.0, 10.0), {"from": c["target"]["file"], "start_s": 300.0, "dur_s": 10.0, "overlap_with_clip": False}
+    s = loudest(a)
+    sf.write(OUT / f"{c['id']}_enroll.wav", s / np.max(np.abs(s)) * 0.5, SR, subtype="FLOAT")
+    return info
 
 
 def main():
@@ -184,12 +213,14 @@ def main():
         synth("c08", "邻桌 4 人说话 + 食堂底噪，SNR 10 dB", "babble-多人", pick_target("F"), 10, 4, "PCAFETER", -6),
         synth("c09", "厨房杯碟水声（非人声），SNR 0 dB", "非人声-杯碟", pick_target("M"), 0, 0, "DKITCHEN", 0),
         synth("c10", "背景钢琴曲（拉格泰姆），SNR 5 dB", "非人声-背景音乐", pick_target("F"), 5, 0, "MUSIC", 0),
-        synth("c11", "中文 · 邻桌 3 人（英文）说话 + 食堂底噪，SNR 0 dB", "babble-多人", (DATA / "zh/zh_bubbling_well_road_timshi.ogg", 120.0, 9.5), 0, 3, "PCAFETER", -6, lang="zh"),
+        synth("c11", "中文 · 邻桌 3 人（英文）说话 + 食堂底噪，SNR 0 dB", "babble-多人", (DATA / "zh/zh_popobing_landxia.ogg", 120.0, 9.5), 0, 3, "PCAFETER", -6, lang="zh"),
         synth("c12", "中文 · 邻座一人（英文）说话 + 咖啡馆露台底噪，SNR 5 dB", "babble-单个干扰者", (DATA / "zh/zh_braille_commusic.ogg", 120.0, 9.5), 5, 1, "SCAFE", -10, lang="zh"),
     ]
+    for c in clips:
+        c["enroll"] = enroll(c)
     srcs = {}
     for p in [DATA / "demand/PCAFETER/ch01.wav", DATA / "demand/SCAFE/ch01.wav", DATA / "demand/DKITCHEN/ch01.wav",
-              DATA / "music/Scott_Joplin_-_Maple_Leaf_Rag.ogg", DATA / "zh/zh_bubbling_well_road_timshi.ogg",
+              DATA / "music/Scott_Joplin_-_Maple_Leaf_Rag.ogg", DATA / "zh/zh_popobing_landxia.ogg",
               DATA / "zh/zh_braille_commusic.ogg", DATA / "librispeech/test-clean.tar.gz"]:
         srcs[str(p).replace(str(Path.home()), "~")] = sha256(p)
     (HERE / "clips.json").write_text(json.dumps({"seed": 20261030, "sr": SR, "clips": clips, "source_sha256": srcs},

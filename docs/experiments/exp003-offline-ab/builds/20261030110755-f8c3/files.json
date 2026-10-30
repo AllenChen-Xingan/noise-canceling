@@ -1,0 +1,566 @@
+{
+ "c01": {
+  "lufs_target": -26.0,
+  "versions": {
+   "noisy": {
+    "file": "audio/c01_f05769.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.12,
+    "peak_dbfs": -5.81,
+    "gain_db": -1.41
+   },
+   "dpdfnet2": {
+    "file": "audio/c01_6dec63.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.05,
+    "peak_dbfs": -5.2,
+    "gain_db": -0.54
+   },
+   "gtcrn": {
+    "file": "audio/c01_f14f29.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.05,
+    "peak_dbfs": -4.75,
+    "gain_db": -0.1
+   },
+   "fastenhancer_m": {
+    "file": "audio/c01_9bcf93.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.01,
+    "peak_dbfs": -5.22,
+    "gain_db": -0.47
+   },
+   "voxlock_given": {
+    "file": "audio/c01_780acd.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.06,
+    "peak_dbfs": -5.13,
+    "gain_db": -1.21
+   },
+   "voxlock_live": {
+    "file": "audio/c01_0a0cad.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.05,
+    "peak_dbfs": -5.49,
+    "gain_db": -1.24
+   }
+  }
+ },
+ "c02": {
+  "lufs_target": -26.0,
+  "versions": {
+   "noisy": {
+    "file": "audio/c02_8d7e32.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.08,
+    "peak_dbfs": -5.95,
+    "gain_db": -3.35
+   },
+   "dpdfnet2": {
+    "file": "audio/c02_c8f8d0.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.03,
+    "peak_dbfs": -5.72,
+    "gain_db": -0.51
+   },
+   "gtcrn": {
+    "file": "audio/c02_b6518c.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.06,
+    "peak_dbfs": -4.7,
+    "gain_db": 2.52
+   },
+   "fastenhancer_m": {
+    "file": "audio/c02_2b93fc.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.03,
+    "peak_dbfs": -5.73,
+    "gain_db": -0.37
+   },
+   "voxlock_given": {
+    "file": "audio/c02_c70c82.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.24,
+    "peak_dbfs": -5.48,
+    "gain_db": -1.02
+   },
+   "voxlock_live": {
+    "file": "audio/c02_000243.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.13,
+    "peak_dbfs": -6.99,
+    "gain_db": -2.03
+   }
+  }
+ },
+ "c03": {
+  "lufs_target": -26.0,
+  "versions": {
+   "noisy": {
+    "file": "audio/c03_7b7296.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.02,
+    "peak_dbfs": -8.34,
+    "gain_db": -6.06
+   },
+   "dpdfnet2": {
+    "file": "audio/c03_c62a0c.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -25.99,
+    "peak_dbfs": -7.12,
+    "gain_db": 0.8
+   },
+   "gtcrn": {
+    "file": "audio/c03_5e04e5.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -25.99,
+    "peak_dbfs": -6.56,
+    "gain_db": 7.52
+   },
+   "fastenhancer_m": {
+    "file": "audio/c03_bf1a03.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -25.99,
+    "peak_dbfs": -7.21,
+    "gain_db": 1.14
+   },
+   "voxlock_given": {
+    "file": "audio/c03_0fc48b.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.03,
+    "peak_dbfs": -1.0,
+    "gain_db": 9.74
+   },
+   "voxlock_live": {
+    "file": "audio/c03_8b5348.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.02,
+    "peak_dbfs": -8.34,
+    "gain_db": -6.06
+   }
+  }
+ },
+ "c04": {
+  "lufs_target": -26.0,
+  "versions": {
+   "noisy": {
+    "file": "audio/c04_310dee.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.53,
+    "peak_dbfs": -6.05,
+    "gain_db": -0.05
+   },
+   "dpdfnet2": {
+    "file": "audio/c04_d5c5ac.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.3,
+    "peak_dbfs": -4.23,
+    "gain_db": 3.05
+   },
+   "gtcrn": {
+    "file": "audio/c04_faf8a3.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.53,
+    "peak_dbfs": -5.34,
+    "gain_db": 0.87
+   },
+   "fastenhancer_m": {
+    "file": "audio/c04_ae78a6.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.39,
+    "peak_dbfs": -4.44,
+    "gain_db": 2.23
+   },
+   "voxlock_given": {
+    "file": "audio/c04_8f824c.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.4,
+    "peak_dbfs": -5.46,
+    "gain_db": 5.27
+   },
+   "voxlock_live": {
+    "file": "audio/c04_63bcff.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.55,
+    "peak_dbfs": -5.93,
+    "gain_db": 1.58
+   }
+  }
+ },
+ "c05": {
+  "lufs_target": -26.0,
+  "versions": {
+   "noisy": {
+    "file": "audio/c05_eb313c.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.27,
+    "peak_dbfs": -6.44,
+    "gain_db": -1.78
+   },
+   "dpdfnet2": {
+    "file": "audio/c05_977ee8.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.07,
+    "peak_dbfs": -4.41,
+    "gain_db": 1.44
+   },
+   "gtcrn": {
+    "file": "audio/c05_133041.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.25,
+    "peak_dbfs": -5.56,
+    "gain_db": -0.76
+   },
+   "fastenhancer_m": {
+    "file": "audio/c05_480d84.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.13,
+    "peak_dbfs": -4.57,
+    "gain_db": 0.33
+   },
+   "voxlock_given": {
+    "file": "audio/c05_8a57d4.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.0,
+    "peak_dbfs": -4.51,
+    "gain_db": 0.71
+   },
+   "voxlock_live": {
+    "file": "audio/c05_9035f3.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.18,
+    "peak_dbfs": -5.21,
+    "gain_db": -0.53
+   }
+  }
+ },
+ "c06": {
+  "lufs_target": -26.0,
+  "versions": {
+   "noisy": {
+    "file": "audio/c06_51c708.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.62,
+    "peak_dbfs": -5.73,
+    "gain_db": 0.11
+   },
+   "dpdfnet2": {
+    "file": "audio/c06_99b4c5.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.63,
+    "peak_dbfs": -3.76,
+    "gain_db": 3.0
+   },
+   "gtcrn": {
+    "file": "audio/c06_7f497f.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.64,
+    "peak_dbfs": -3.91,
+    "gain_db": 4.41
+   },
+   "fastenhancer_m": {
+    "file": "audio/c06_440a4b.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.55,
+    "peak_dbfs": -3.55,
+    "gain_db": 2.89
+   },
+   "voxlock_given": {
+    "file": "audio/c06_225578.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.57,
+    "peak_dbfs": -3.55,
+    "gain_db": 2.09
+   },
+   "voxlock_live": {
+    "file": "audio/c06_7d073f.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.62,
+    "peak_dbfs": -5.5,
+    "gain_db": 0.35
+   }
+  }
+ },
+ "c07": {
+  "lufs_target": -26.0,
+  "versions": {
+   "noisy": {
+    "file": "audio/c07_ebfb5e.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.05,
+    "peak_dbfs": -8.78,
+    "gain_db": -2.1
+   },
+   "dpdfnet2": {
+    "file": "audio/c07_15bfa7.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.04,
+    "peak_dbfs": -3.72,
+    "gain_db": 6.42
+   },
+   "gtcrn": {
+    "file": "audio/c07_74f87f.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -25.21,
+    "peak_dbfs": -4.92,
+    "gain_db": 10.6
+   },
+   "fastenhancer_m": {
+    "file": "audio/c07_e5ae24.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -25.9,
+    "peak_dbfs": -2.38,
+    "gain_db": 6.65
+   },
+   "voxlock_given": {
+    "file": "audio/c07_d890f1.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.13,
+    "peak_dbfs": -2.93,
+    "gain_db": 3.48
+   },
+   "voxlock_live": {
+    "file": "audio/c07_516924.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.03,
+    "peak_dbfs": -8.36,
+    "gain_db": -1.42
+   }
+  }
+ },
+ "c08": {
+  "lufs_target": -26.0,
+  "versions": {
+   "noisy": {
+    "file": "audio/c08_9f80c8.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.13,
+    "peak_dbfs": -8.63,
+    "gain_db": -2.53
+   },
+   "dpdfnet2": {
+    "file": "audio/c08_1020a8.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.0,
+    "peak_dbfs": -7.76,
+    "gain_db": -1.85
+   },
+   "gtcrn": {
+    "file": "audio/c08_583d8b.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.27,
+    "peak_dbfs": -8.17,
+    "gain_db": 0.63
+   },
+   "fastenhancer_m": {
+    "file": "audio/c08_ffb4ba.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -25.99,
+    "peak_dbfs": -7.94,
+    "gain_db": -1.89
+   },
+   "voxlock_given": {
+    "file": "audio/c08_331204.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -25.99,
+    "peak_dbfs": -8.08,
+    "gain_db": -2.72
+   },
+   "voxlock_live": {
+    "file": "audio/c08_4efa5c.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.09,
+    "peak_dbfs": -8.78,
+    "gain_db": -2.67
+   }
+  }
+ },
+ "c09": {
+  "lufs_target": -26.55892286693145,
+  "versions": {
+   "noisy": {
+    "file": "audio/c09_30d729.wav",
+    "speech_lufs_after": -26.56,
+    "lufs_after": -26.03,
+    "peak_dbfs": -1.0,
+    "gain_db": -0.08
+   },
+   "dpdfnet2": {
+    "file": "audio/c09_0a814c.wav",
+    "speech_lufs_after": -26.56,
+    "lufs_after": -26.46,
+    "peak_dbfs": -9.43,
+    "gain_db": 0.28
+   },
+   "gtcrn": {
+    "file": "audio/c09_39afe1.wav",
+    "speech_lufs_after": -26.56,
+    "lufs_after": -26.4,
+    "peak_dbfs": -8.29,
+    "gain_db": 0.22
+   },
+   "fastenhancer_m": {
+    "file": "audio/c09_ac79c0.wav",
+    "speech_lufs_after": -26.56,
+    "lufs_after": -26.52,
+    "peak_dbfs": -8.72,
+    "gain_db": 0.14
+   },
+   "voxlock_given": {
+    "file": "audio/c09_da56ca.wav",
+    "speech_lufs_after": -26.56,
+    "lufs_after": -25.94,
+    "peak_dbfs": -1.02,
+    "gain_db": -0.48
+   },
+   "voxlock_live": {
+    "file": "audio/c09_51a44e.wav",
+    "speech_lufs_after": -26.56,
+    "lufs_after": -26.01,
+    "peak_dbfs": -1.19,
+    "gain_db": -0.27
+   }
+  }
+ },
+ "c10": {
+  "lufs_target": -26.0,
+  "versions": {
+   "noisy": {
+    "file": "audio/c10_08d677.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.46,
+    "peak_dbfs": -8.24,
+    "gain_db": -3.23
+   },
+   "dpdfnet2": {
+    "file": "audio/c10_4f25dc.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -25.97,
+    "peak_dbfs": -7.77,
+    "gain_db": -1.92
+   },
+   "gtcrn": {
+    "file": "audio/c10_30ffd5.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -25.98,
+    "peak_dbfs": -7.83,
+    "gain_db": -0.3
+   },
+   "fastenhancer_m": {
+    "file": "audio/c10_c3de7d.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.0,
+    "peak_dbfs": -7.97,
+    "gain_db": -1.81
+   },
+   "voxlock_given": {
+    "file": "audio/c10_631a16.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -25.96,
+    "peak_dbfs": -7.78,
+    "gain_db": -2.63
+   },
+   "voxlock_live": {
+    "file": "audio/c10_65cf55.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.33,
+    "peak_dbfs": -8.27,
+    "gain_db": -3.26
+   }
+  }
+ },
+ "c11": {
+  "lufs_target": -26.0,
+  "versions": {
+   "noisy": {
+    "file": "audio/c11_abecea.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.26,
+    "peak_dbfs": -9.99,
+    "gain_db": -7.58
+   },
+   "dpdfnet2": {
+    "file": "audio/c11_b33ef6.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -25.54,
+    "peak_dbfs": -5.5,
+    "gain_db": 0.37
+   },
+   "gtcrn": {
+    "file": "audio/c11_ff8a4d.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -25.93,
+    "peak_dbfs": -8.03,
+    "gain_db": -0.68
+   },
+   "fastenhancer_m": {
+    "file": "audio/c11_19085c.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.21,
+    "peak_dbfs": -8.63,
+    "gain_db": -2.77
+   },
+   "voxlock_given": {
+    "file": "audio/c11_521fc3.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.18,
+    "peak_dbfs": -9.56,
+    "gain_db": -3.77
+   },
+   "voxlock_live": {
+    "file": "audio/c11_a51e02.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.21,
+    "peak_dbfs": -7.71,
+    "gain_db": -5.17
+   }
+  }
+ },
+ "c12": {
+  "lufs_target": -26.0,
+  "versions": {
+   "noisy": {
+    "file": "audio/c12_05f0e9.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -27.08,
+    "peak_dbfs": -10.05,
+    "gain_db": -5.19
+   },
+   "dpdfnet2": {
+    "file": "audio/c12_71952a.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.73,
+    "peak_dbfs": -9.31,
+    "gain_db": -0.66
+   },
+   "gtcrn": {
+    "file": "audio/c12_bf59de.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -27.1,
+    "peak_dbfs": -10.14,
+    "gain_db": -4.98
+   },
+   "fastenhancer_m": {
+    "file": "audio/c12_83d6a8.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.82,
+    "peak_dbfs": -8.56,
+    "gain_db": -2.47
+   },
+   "voxlock_given": {
+    "file": "audio/c12_cbe041.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.22,
+    "peak_dbfs": -10.28,
+    "gain_db": -5.14
+   },
+   "voxlock_live": {
+    "file": "audio/c12_4d232b.wav",
+    "speech_lufs_after": -26.0,
+    "lufs_after": -26.81,
+    "peak_dbfs": -7.74,
+    "gain_db": -2.2
+   }
+  }
+ }
+}
