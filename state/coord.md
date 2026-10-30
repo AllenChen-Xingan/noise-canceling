@@ -9,15 +9,15 @@
 |---|---|---|---|---|
 | model | 002 起步模型与代码 | `_tmp/20261029-b1/model.md` | `state/handoff/model.md` | 完成，已收尾（窗口已关）；剩 3 题 + 三命门待人拍板 |
 | pipeline | 003 Mac 音频管线 | `_tmp/20261029-b1/pipeline.md` | `state/handoff/pipeline.md` | 完成，已收尾（窗口已关）；剩 10 条待人拍板 |
-| pse | 005 个性化降噪（PSE）调研 · issue #1 | `_tmp/20261030-b2/pse.md` | `state/handoff/pse.md` | 已报到（noise-canceling-45） |
-| abtest | exp003 DPDFNet-2 vs GTCRN 离线 AB 听测 · issue #2 | `_tmp/20261030-b2/abtest.md` | `state/handoff/abtest.md` | 已报到（noise-canceling-7f） |
+| pse | 005 个性化降噪（PSE）调研 · issue #1 · 分支 `research/005-pse`（主目录） | `_tmp/20261030-b2/pse.md` | `state/handoff/pse.md` | 已报到（noise-canceling-45） |
+| abtest | exp003 DPDFNet-2 vs GTCRN 离线 AB 听测 · issue #2 · 分支 `exp/003-offline-ab`（worktree `../noise_canceling-exp003`） | `_tmp/20261030-b2/abtest.md` | `state/handoff/abtest.md` | 已报到（noise-canceling-7f） |
 | evaltool | 004 评测工具链 | `_tmp/20261029-b1/evaltool.md` | `state/handoff/evaltool.md` | 完成，已收尾（窗口已关）；剩 11 题待人拍板 |
 
 ## 规矩
 
 - 见 `_tmp/20261029-b1/common.md`；本账本只记人后来改过的条目（标「人定 <日期>」）
 - 调研必须用 workflow / deep research 做，要非常完整（人定 2026-10-29，原话：「需要用 workflow来做 researrch deep research 来弄，就是这个研究需要非常完整」）
-- 一切走提交 · issue · PR（人定 2026-10-30，CLAUDE.md 铁律 15）：本批分支 `batch/20261030-b2`，收尾时大总管推送、开 PR（Closes #1 #2）、CI 过后自己合并
+- 一切走提交 · issue · PR（人定 2026-10-30，CLAUDE.md 铁律 15）：每条线一个分支 + worktree（人 2026-10-30 追加「现在必须开分之 调研分支」）：research/005-pse（Closes #1）· exp/003-offline-ab（Closes #2），各自 PR、CI 过后自己合并
 - 提交由 hook 自动做（人定 2026-10-29，CLAUDE.md 铁律 14）；手下不做 git 写操作
 
 ## 名额
