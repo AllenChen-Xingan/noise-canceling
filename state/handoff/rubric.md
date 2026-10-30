@@ -18,4 +18,7 @@
 - 2026-10-30 读交代 + common；报到大总管（会话名：abtest=noise-canceling-exp003-2d · pse=noise-canceling-45 · sota=noise-canceling-sota-4f）
 - 2026-10-30 读 intent · 001 决策 · 002 路线图 · 004 decision/must-know · exp001/002 · 002 decision · 005 decision · 设计稿 §3/§9/§13 · abtest 分支的 ab_page.html / build_page.py
 - 2026-10-30 与 abtest 对齐：现有三问（clearer/natural/eaten）+ 两道陷阱题原样采用；abtest 同意加 usable_A/B（能用/勉强/不能用）、tags_A/B（metallic/pumping_bg/muffled/vacuum/clipped_onsets/pumping_voice）、started_at/answered_at/plays/switches；VoxLock 本批进（终版三候选）；score.py 已用 Qwen3-ASR 1.7B，scores.json 含 noisy 列（del/sub/ins_rate）。已抄送大总管
-- 2026-10-30 报 Workflow 计划给大总管，开跑
+- 2026-10-30 报 Workflow 计划给大总管，开跑（wf_158ffb40-3f9；大总管批准）
+- 2026-10-30 abtest 定：每段一屏 A/B/C + 原声，「最清楚/最自然」选一个，吃字多选，usable/tags 每候选各答，拉丁方轮换
+- 2026-10-30 写 README · rubric 正文初稿（`specs/rubric/denoise.md`，权重合计 100）· gap.md；算了单侧符号检验门槛（12 段需 ≥10 胜）
+- 2026-10-30 等调研结果 → 写 must-know / sources / decision
