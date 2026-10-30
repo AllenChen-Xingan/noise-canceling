@@ -37,7 +37,7 @@
 |---|---|---|---|---|---|---|
 | 设备注册 | HAL 插件 ✅ `BlackHole.plist:25-35` | HAL 插件 ✅（官方示例） | HAL 插件 ✅ `README.md:31-45` | HAL 插件（基于 libASPL）✅ | HAL 插件 ✅ | ❌ 自己不注册，依赖 BlackHole |
 | 和用户态怎么传音频 | 插件内部回环，无 IPC `BlackHole.c:339-340` | 内部回环（照 BlackHole 的形状自己写） | 库不提供 IPC `README.md:506-518` | 音频在插件里收发 RTP；控制走 gRPC/TCP `driver/driver.cpp:82-92` | 走 HAL 回环；XPC 只做控制 `BGM_XPCHelper.m:68-71` | 单进程 |
-| 重活在哪 | 无重活 | 无重活 | — | **在插件里**（反例）`driver/request_handler.cpp:61-134` | 在用户态 app | **在实时回调里跑模型**（反例）`DeepFilterNetDSP.swift:262-272` |
+| 重活在哪 | 无重活 | 无重活 | — | **在插件里**（反例）`driver/request_handler.cpp:61-134` | 在用户态 app | **在实时回调里跑模型**（反例）`Sources/Core/AudioProcessing/DeepFilterNetDSP.swift:262-272` |
 | 漂移补偿 | ❌ 只有手动 ±1% 调速 `BlackHole.c:290-291,792` | 由 Rust 侧做 | ❌ `src/Device.cpp:1261-1298` | ✅ roc 自适应重采样（在插件里） | ❌ 跳帧重对齐 | ❌ 丢帧兜底 |
 | 运行中改采样率 | ✅ `BlackHole.c:915-935` | 要自己写（照官方配置变更流程） | ✅ `src/Device.g.cpp:179-204` | ❌ | ❌ 只在启动时同步一次 | ✅ 重建转换器 |
 | 断供时输出 | 静音 `BlackHole.c:4561-4571` | 由我们定（建议原声，见上） | — | 静音 `driver/ring_buffer.cpp:112-135` | — | 静音（欠载填零） |

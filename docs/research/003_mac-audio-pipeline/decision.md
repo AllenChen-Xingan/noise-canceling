@@ -60,7 +60,7 @@
 
 ## 反对它的最强依据
 
-> **没有一个开源先例做成过我们这整条路：真麦克风 → 独立进程推理 → 自有虚拟麦克风，同时满足 20 ms 稳定、漂移补偿、出事送原声。** 唯一同路的 MetalVoice 三条命门全踩（模型跑在实时回调里，`resources/MetalVoice/Sources/DSP/DeepFilterNetDSP.swift:262-272`；没有漂移补偿，`resources/MetalVoice/Sources/Core/AudioModel.swift:196-218`；没有设备列表监听）。回环做法比共享内存直供多一个 IO 周期，推算约 1.5–3 ms，没实测。如果模型前瞻已经吃掉大部分预算，这一跳可能逼我们回到共享内存。另外，「原声兜底」和「两层进程」完全没有先例。
+> **没有一个开源先例做成过我们这整条路：真麦克风 → 独立进程推理 → 自有虚拟麦克风，同时满足 20 ms 稳定、漂移补偿、出事送原声。** 唯一同路的 MetalVoice 三条命门全踩（模型跑在实时回调里，`resources/MetalVoice/Sources/Core/AudioProcessing/DeepFilterNetDSP.swift:262-272`；没有漂移补偿，`resources/MetalVoice/Sources/Core/AudioModel.swift:196-218`；没有设备列表监听）。回环做法比共享内存直供多一个 IO 周期，推算约 1.5–3 ms，没实测。如果模型前瞻已经吃掉大部分预算，这一跳可能逼我们回到共享内存。另外，「原声兜底」和「两层进程」完全没有先例。
 
 ## 仍未补齐的缺口
 

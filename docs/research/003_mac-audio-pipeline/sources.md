@@ -14,7 +14,7 @@
 | 是什么 | 在哪 | 还算数吗 | 判据 |
 |---|---|---|---|
 | 人整理的设计与参考汇总 §6 / §7 / §11 / §16 | `vault/raw/20261029-voice-denoise-design.md:223-299, 309-355, 474-531, 677-708` | **部分算**：标【你定的】的目标算；系统层的四条预判有两条被推翻或修正（见 `must-know.md` 预判表与 `gap.md`） | 人手原件，只读；它的预判是建议，不是标准 |
-| 本机 macOS 27 的进程与插件现状 | 本机 `ps` / `ls /Library/Audio/Plug-Ins/HAL` | 算（今天测的） | 【测】HAL 目录里有一个第三方 `ParrotAudioPlugin.driver`；进程里有 `coreaudiod` 和 `com.apple.audio.DriverHelper.xpc`。没有 sudo，看不到插件被哪个进程加载 |
+| 本机 macOS 27 的进程与插件现状 | 本机 `ps` · `ls /Library/Audio/Plug-Ins/HAL` · `codesign -dv` · `log show`（开机日志） | 算（今天测的） | 【测】HAL 目录里只有 Apple 自家的 `ParrotAudioPlugin.driver`（Platform identifier 26），**没有第三方插件，也没装 BlackHole**。开机日志显示 coreaudiod「skipping in-process plug-ins」，插件工厂在独立的 `Core-Audio-Driver-Service.helper` 进程里执行 |
 
 ---
 
@@ -66,13 +66,18 @@
 |---|---|---|---|
 | Notarizing macOS software before distribution | developer.apple.com/documentation/security/notarizing-macos-software-before-distribution | 【官】 | 算 |
 | macOS 15 起不能按住 Control 绕过 Gatekeeper | developer.apple.com/news/?id=saqachfa（2024-08-06） | 【官】 | 算 |
-| DTS 回帖：coreaudiod 不要求插件公证 | developer.apple.com/forums/thread/116601（2019） | 【官·旧】 | **待核**：已过 7 年，交给版本核实代理 |
+| DTS 回帖：coreaudiod 不要求插件公证 | developer.apple.com/forums/thread/116601（2019，10.14.5） | 【官·旧】 | **算旧证据**：之后没有更新的官方说法，也没被推翻。旁证：本机宿主 helper 只检查签名是否有效（字符串 "not signed but is being loaded anyway"），带 `disable-library-validation` |
 | AudioDriverKit 只支持实体设备，虚拟设备用 HAL 插件 | developer.apple.com/forums/thread/775341 | 【官】（Apple 工程师引用官方文档） | 算 |
 | Requesting entitlements for DriverKit development | developer.apple.com/documentation/driverkit/requesting-entitlements-for-driverkit-development | 【官】 | 算 |
 | Adding parallel / asynchronous real-time threads to audio workgroups | developer.apple.com/documentation/audiotoolbox/adding-parallel-real-time-threads-to-audio-workgroups · …/adding-asynchronous-real-time-threads-to-audio-workgroups | 【官】 | 算 |
 | Capturing system audio with Core Audio taps | developer.apple.com/documentation/coreaudio/capturing-system-audio-with-core-audio-taps | 【官】 | 算 |
 | Apple Developer Program 年费 99 美元 | developer.apple.com/programs/whats-included/ | 【官】 | 算 |
-| 第三方插件宿主进程叫 `Core-Audio-Driver-Service.helper` | gist.github.com/cyounkins/a4c9ca82684f861f14d5ba055eff10dc（macOS 12.5.1 崩溃报告） | 【传】 | **待核**：本机 macOS 27 的进程表里没看到它 |
+| 插件宿主进程叫 `Core-Audio-Driver-Service.helper` | gist.github.com/cyounkins/a4c9ca82684f861f14d5ba055eff10dc（macOS 12.5.1 崩溃报告）· `resources/roc-vad/README.md:679-681`（2023 年日志） | 【传】+【源】 | **算**：本机开机日志也证实了（Apple 插件样本）；平时不在进程表里，有插件要加载时才拉起 |
+
+| macOS 27 SDK 新增：插件 IO 回调标 `CA_REALTIME_API`（编译期不阻塞检查）、`kAudioDevicePropertySuggestedReferenceDevice` | 本机 `MacOSX27.0.sdk` `AudioServerPlugIn.h:1014,1080,1123,1153` · `AudioHardware.h:1006,1031` | 【源】 | 算；26.5 SDK 里没有 |
+| macOS 27 release notes：Intel 版 HAL 插件到 28 不再兼容；不加载带隔离属性的 launchd plist | developer.apple.com/documentation/macos-release-notes/macos-27-release-notes | 【官】 | 算 |
+| 「macOS 15+ ad-hoc 签名插件被拒」 | tympan-aspl README · github.com/cortexuvula/MacAudio | 【传】 | **有矛盾**：boss-gt-10（github.com/lukasmalkmus/boss-gt-10-driver-macos `docs/VERIFICATION.md:4`）称 macOS 27 上 ad-hoc 能加载，关键是复制到位后再就地签名。只能实测 |
+| Homebrew 从 2026-09-01 起禁用过不了 Gatekeeper 的 cask | github.com/Homebrew/brew/issues/20755 | 【传】 | 待用前再核 |
 
 ---
 
