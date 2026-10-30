@@ -30,7 +30,9 @@
 ## 进度板
 
 进度（HH:MM）
-- 20:5x 重派：model 起草 must-know · pipeline 起草 must-know + 克隆候选仓库 · evaltool 起草 must-know
+- 21:xx model：must-know 已起草；workflow 10 代理（5 核查 + 5 怀疑派）已批准，exp001 之后申请名额
+- 21:xx pipeline：must-know 已起草；5 子代理核 12 仓库 → workflow 约 8 代理（补检索 + 3 对抗视角）已批准
+- 21:xx evaltool：起草 must-know 中，计划未报
 
 ## 发现
 
