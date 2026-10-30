@@ -14,6 +14,8 @@
 用法：<主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp003-offline-ab/score.py [--asr] [--asr-model qwen3-asr-plus:0.6b]
       （--whisper 是旧名，等同 --asr）
 """
+import hashlib
+import itertools
 import json
 import re
 import sys
@@ -34,7 +36,6 @@ sys.path.insert(0, str(DNSMOS_DIR))
 from dnsmos_local import ComputeScore  # noqa: E402
 
 SR = 16000
-VERS = ["noisy", "dpdfnet2", "gtcrn"]
 ASR_URL = "http://127.0.0.1:11520/v1/audio/transcriptions"
 ASR_KEY = "42model"  # 本机服务的固定占位 key，不是密钥
 ASR_MODEL = "qwen3-asr-plus:1.7b"
@@ -64,19 +65,28 @@ def frame_power(x, mask, n):
     return float(np.mean(x[mask] ** 2) + 1e-12), float(np.mean(x[~mask] ** 2) + 1e-12)
 
 
-def asr_once(path, lang, model):
+CACHE_FILE = OUT / "asr_cache.json"  # 转写缓存：键 = 文件 sha256 + 模型 + 第几次，重跑打分不重复调 ASR
+CACHE = json.loads(CACHE_FILE.read_text()) if CACHE_FILE.exists() else {}
+
+
+def asr_once(path, lang, model, rep):
+    k = f"{hashlib.sha256(Path(path).read_bytes()).hexdigest()}|{model}|{lang}|{rep}"
+    if k in CACHE:
+        return CACHE[k]
     with open(path, "rb") as f:
         r = requests.post(ASR_URL, headers={"Authorization": f"Bearer {ASR_KEY}"},
                           data={"model": model, "language": ASR_LANG[lang], "temperature": "0",
                                 "response_format": "json"},
                           files={"file": (Path(path).name, f, "audio/wav")}, timeout=600)
     r.raise_for_status()
-    return " ".join(r.json()["text"].split())
+    CACHE[k] = " ".join(r.json()["text"].split())
+    CACHE_FILE.write_text(json.dumps(CACHE, ensure_ascii=False, indent=0))
+    return CACHE[k]
 
 
 def asr_text(path, lang, model):
     """转写两次；返回 (第一次文本, 两次是否逐字相同, 第二次文本)。"""
-    a, b = asr_once(path, lang, model), asr_once(path, lang, model)
+    a, b = asr_once(path, lang, model, 1), asr_once(path, lang, model, 2)
     return a, a == b, b
 
 
@@ -98,13 +108,13 @@ def edit_ops(ref, hyp):
     i, j, D, S, I = n, m, 0, 0, 0
     while i > 0 or j > 0:
         if i > 0 and j > 0 and d[i, j] == d[i - 1, j - 1] + (ref[i - 1] != hyp[j - 1]):
-            S += ref[i - 1] != hyp[j - 1]
+            S += int(ref[i - 1] != hyp[j - 1])
             i, j = i - 1, j - 1
         elif i > 0 and d[i, j] == d[i - 1, j] + 1:
             D, i = D + 1, i - 1
         else:
             I, j = I + 1, j - 1
-    return D, S, I
+    return int(D), int(S), int(I)
 
 
 def main():
@@ -112,6 +122,8 @@ def main():
     model = sys.argv[sys.argv.index("--asr-model") + 1] if "--asr-model" in sys.argv else ASR_MODEL
     clips = json.loads((HERE / "clips.json").read_text())["clips"]
     files = json.loads((OUT / "files.json").read_text())
+    VERS = list(next(iter(files.values()))["versions"])  # noisy + 各候选（files.json 里有几个算几个）
+    models = [v for v in VERS if v != "noisy"]
     scorer = ComputeScore(str(DNSMOS_DIR / "DNSMOS/sig_bak_ovr.onnx"), str(DNSMOS_DIR / "DNSMOS/model_v8.onnx"))
     res = {}
     for c in clips:
@@ -153,13 +165,15 @@ def main():
     keys = ["SIG", "BAK", "OVRL", "ESTOI", "SI_SDR_dB", "noise_att_db", "resid_rel_db"] + (["del_rate", "sub_rate", "ins_rate"] if use_asr else [])
     summary = {v: {k: round(float(np.mean([res[c][v][k] for c in res])), 3) for k in keys} for v in VERS}
     higher_better = {"SIG", "BAK", "OVRL", "ESTOI", "SI_SDR_dB"}
-    wins = {}
-    for k in keys:
-        dp = sum((res[c]["dpdfnet2"][k] > res[c]["gtcrn"][k]) == (k in higher_better)
-                 for c in res if res[c]["dpdfnet2"][k] != res[c]["gtcrn"][k])
-        ties = sum(res[c]["dpdfnet2"][k] == res[c]["gtcrn"][k] for c in res)
-        wins[k] = {"dpdfnet2": int(dp), "gtcrn": len(res) - int(dp) - ties, "tie": ties}
-    out = {"per_clip": res, "mean": summary, "dpdfnet2_vs_gtcrn_wins": wins, "asr": use_asr}
+    wins = {}  # 两两比较：每项指标上逐段谁更好（删除/替换/插入率越低越好）
+    for a, b in itertools.combinations(models, 2):
+        w = {}
+        for k in keys:
+            better_a = sum((res[c][a][k] > res[c][b][k]) == (k in higher_better) for c in res if res[c][a][k] != res[c][b][k])
+            ties = sum(res[c][a][k] == res[c][b][k] for c in res)
+            w[k] = {a: int(better_a), b: len(res) - int(better_a) - ties, "tie": ties}
+        wins[f"{a}_vs_{b}"] = w
+    out = {"per_clip": res, "mean": summary, "pairwise_wins": wins, "asr": use_asr}
     if use_asr:
         n_files = [res[c].get("asr_ref_stable") for c in res] + [res[c][v]["asr_stable"] for c in res for v in VERS]
         out["asr_model"] = {"service": ASR_URL, "model": model, "params": "temperature=0, language=<en|zh>",

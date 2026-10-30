@@ -385,12 +385,10 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
       ${row("吃字（段数）", (p) => p.eaten, s.eaten_none)}
       ${row("能用 / 勉强 / 不能用", (p) => `${p.usable.ok} / ${p.usable.marginal} / ${p.usable.no}`, "")}
       ${row("听到的毛病", tagTxt, "")}
-      ${row("延迟", (p, i) => "", "")}</table>
+      </table>
       <p class="muted">共 ${s.n_real} 段正式题。检验题：</p>
       <ul>${s.traps.map((t) => `<li class="${t.pass ? "ok" : "warn"}">${t.pass ? "✓ 通过" : "✗ 没通过"}：${esc(t.desc)}</li>`).join("")}</ul>
       <p class="muted">延迟：${MODELS.map((m) => `${esc(NAME(m))} ${esc(M.models[m].latency)}`).join(" · ")}。这里只比效果，延迟上限由你结合这张表来定。</p>`;
-    // 「延迟」行留空太怪，删掉
-    $("summary").querySelectorAll("tr").forEach((tr) => { if (tr.firstElementChild && tr.firstElementChild.textContent === "延迟") tr.remove(); });
     const lab = (v) => v == null ? "—" : NAME(v);
     $("detail").innerHTML = `<table><tr><th>#</th><th>片段</th><th>槽位</th><th>最清楚</th><th>最自然</th><th>吃字</th><th>开会</th><th>备注</th></tr>` +
       R.trials.map((r) => `<tr><td>${r.order}</td><td>${r.kind === "real" ? esc(clipById[r.clip].desc) : (r.kind === "trap" ? "（检验题）" : "（自录）")}</td>
