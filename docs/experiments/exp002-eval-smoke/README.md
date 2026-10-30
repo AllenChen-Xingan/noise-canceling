@@ -34,7 +34,14 @@
 ## 结论
 
 1. **假设成立**：这组工具纯 CPU、离线在 M5 上跑通，DNSMOS 预热后每段约 10 秒的音频只要约 0.05 s（实时倍率约 0.005）。由此推算，1 小时音频打一遍 DNSMOS 约 20 s，**能进 CI**（推算值，没有实测长音频）。
-2. **意外**：`resources/DNS-Challenge/DNSMOS/dnsmos_local.py:53` 用位置参数调 `librosa.resample(aud, input_fs, fs)`，librosa 0.10 起会报 `TypeError`，所以非 16 kHz 输入会直接崩。绕法：先自己转成 16 kHz（smoke.py 里就这么做的）。正式评测代码要么锁定 librosa 版本，要么自己做重采样。
+2. **意外**：`resources/DNS-Challenge/DNSMOS/dnsmos_local.py:53` 用位置参数调 `librosa.resample(aud, input_fs, fs)`。本机 librosa 1.0.0（0.10 起 `orig_sr`/`target_sr` 只能用关键字传）第一次运行时，48 kHz 输入报错原文：
+   ```
+   File ".../resources/DNS-Challenge/DNSMOS/dnsmos_local.py", line 53, in __call__
+       audio = librosa.resample(aud, input_fs, fs)
+   TypeError: resample() takes 1 positional argument but 3 were given
+   ```
+   这一行只在输入不是 16 kHz 时才走到。绕法（smoke.py 第 80–86 行）：先用 `librosa.resample(audio, orig_sr=sr, target_sr=16000)` 自己转成 16 kHz，写到 `_tmp/exp002-16k/<名字>.wav`，再把这个文件交给 `ComputeScore(path, 16000, False)`。正式评测代码要么锁定 `librosa<0.10`，要么（建议）自己做重采样，不走这一行。
+   另：`dnsmos_local.py:24-25` 建 `InferenceSession` 时没指定执行器，本机实际用的是 `['CPUExecutionProvider']`（已核实），CoreML 没用上。
 3. **一个小信号，不能当结论**（每类只有 1 段）：两段含噪样例的 SIG（3.60–3.61）**反而高于**干净样例（3.55），gtcrn 增强后 SIG 从 3.61 降到 3.40，BAK 却从 2.64 升到 4.00。这说明 DNSMOS 的 SIG 对「人声有没有被伤」可能不灵敏、甚至方向相反，BAK 才主导 OVRL。这和意向书「无参考 MOS 只作筛选，不作结论」一致，也说明「吃字率 / 语音帧能量损失」这类专项尺子不能省。
 4. 干净样例的 LUFS（−29.7）比含噪的（−24.0）低近 6 LU，说明合成时没有做响度对齐。以后评测「人声被压低」要先按语音段做响度归一化再比。
 
