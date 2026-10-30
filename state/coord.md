@@ -9,7 +9,7 @@
 |---|---|---|---|---|
 | model | 002 起步模型与代码 | `_tmp/20261029-b1/model.md` | `state/handoff/model.md` | 四份初稿已写，自审中（noise-canceling-f0） |
 | pipeline | 003 Mac 音频管线 | `_tmp/20261029-b1/pipeline.md` | `state/handoff/pipeline.md` | 完成，已收尾（窗口已关）；剩 10 条待人拍板 |
-| evaltool | 004 评测工具链 | `_tmp/20261029-b1/evaltool.md` | `state/handoff/evaltool.md` | 四份已填，交付前自审中（noise-canceling-0b） |
+| evaltool | 004 评测工具链 | `_tmp/20261029-b1/evaltool.md` | `state/handoff/evaltool.md` | 四份已填，自审中；修 P0「缺回归门禁」（noise-canceling-0b） |
 
 ## 规矩
 
@@ -21,7 +21,7 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | 空 |
+| 重编译 / 全量测试（1 个） | model（exp001 重跑：真实语音 + 真 state + NaN 检查 + STFT 计时） |
 
 排队：（空）
 
@@ -37,7 +37,7 @@
 ## 发现
 
 - 17:35 首派失败：spawn-worker.sh 不识别新版信任提示 → 超时退出，后两窗未开；已修脚本 BLOCK_RE（人定 2026-10-29）
-- exp001（M5 · ORT CPU 单线程）每帧 p99：DPDFNet baseline 0.32 · dpdfnet2 0.78 · dpdfnet4 1.26 · dpdfnet8 2.21 · 2_48k 1.12 · 8_48k 3.24 · GTCRN 0.43 ms；dpdfnet8 两版超 2 ms 预算 → docs/experiments/exp001-model-frame-time/（README + raw-output，大总管已抽查数字一致，验收通过）
+- exp001（M5 · ORT CPU 单线程）每帧 p99：DPDFNet baseline 0.32 · dpdfnet2 0.78 · dpdfnet4 1.26 · dpdfnet8 2.21 · 2_48k 1.12 · 8_48k 3.24 · GTCRN 0.43 ms；dpdfnet8 两版超 2 ms 预算 → docs/experiments/exp001-model-frame-time/（README + raw-output，大总管已抽查数字一致；⚠️ 自审发现 state 用随机数、未检查输出，数字作废待重跑）
 - evaltool 取舍：每把尺子「主指标 + 交叉指标」、分 CI 层 / 本机层；吃字 = whisper.cpp 删除率（中文加 SenseVoice 第二意见）；自然整体 = SCOREQ + UTMOS（DNSMOS 降为冒烟）；NISQA 权重 NC-SA 只作用户自装；PESQ 不进仓；附加延迟现成工具全不覆盖，要自写
 - model 发现：DPDFNet 流式输出落后输入 4 帧（mask 2 + DF 2），前瞻 40 ms；分三列：窗长+前瞻 60 ms · DNS 口径（窗长+步长+前瞻）70 ms · 端到端推算约 65–70+ ms（DNS 定义已对 PDF 原文核实）
 - pipeline 结论：开发期 cpal 双流写 BlackHole + rubato 按水位补漂移；最终自写极简 C 回环插件，推理永不进插件；不用共享内存 / DriverKit
