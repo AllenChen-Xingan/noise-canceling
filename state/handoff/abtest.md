@@ -50,3 +50,5 @@ exp003：DPDFNet-2 对 GTCRN 的离线 AB 听测（交代 `_tmp/20261030-b2/abte
 - 2026-10-30 页面改为通用 N 候选（A/B/C… + 原声，拉丁方轮换），按 rubric 加「开会能用/勉强/不能用」、缺陷标签、plays/switches/started_at；静音无头冒烟（Playwright + 系统 Chrome，play 打桩 + --mute-audio）通过
 - 2026-10-30 修 score.py：numpy 整数写 JSON 报错；加转写缓存 `_tmp/20261030-exp003/asr_cache.json`；中文段英文按词计（c12 ASR 转出了英文干扰者）
 - 2026-10-30 VoxLock 权重下到 `~/vdn-data/models/voxlock/`（int8+fp32，sha256 记在 README）；enhance 加 given/live 两模式，make_clips 加注册样本，写 bench_voxlock.py；已申请下一轮名额
+- 2026-10-30 VoxLock 轮：计时（M5 单线程 int8 每 8 ms 帧 p50 8.4 ms，跟不上实时；40 ms 块 p99.9 31 ms）· 注册样本 · enhance 四候选（滞后 60/60 为 0）· 页面 4 候选 · 打分（72/72 转写一致）；名额已归还，已报大总管与 rubric（scores.json sha256 e84730fa…）
+- 2026-10-30 页面按 rubric：切换 5 ms 淡出淡入、两问顺序平衡随机、吃字并进每行、标签折叠；写 README、eaten_words.py/.md；派三视角自审（怀疑派 · 实现派 · 产品派）进行中
