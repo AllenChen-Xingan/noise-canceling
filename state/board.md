@@ -4,6 +4,14 @@
 > **非轮规则：每轮有效工作必更新本文件**（倒序追加，新的在上，带日期与 commit hash）。
 > 每完成一个可命名的逻辑单元存一次；破坏性操作之前也存一次。这是给你自己留的后路，不是给别人看的历史。
 
+> ## ✅ 第一批调研收尾与拍板（2026-10-30）
+> - 002 / 003 / 004 三条线全部验收、收尾、关窗；27 题已拍板 → `docs/plan/001_decisions-20261029-b1.md`
+> - ⚠️ 与建议不同的两条：**许可证 GPL-3.0**（D04）· **个性化定为核心**（D08）
+> - 已回写：三份取舍卡勾选、三份 must-know 命门改写（待人过目）、删 `resources/P.808`
+> - **人要做**：装 BlackHole（`brew install blackhole-2ch` + 重启）· 过目三份命门 · 给远程仓库地址 · 定放权边界
+> - **下一步**：经人同意后派 005 PSE 调研；同时可开 M0 直通与「DPDFNet-2 vs GTCRN」离线 AB 听测（D01）
+> - 未回写：根目录 `LICENSE`（等远程仓库）· `.42cog/real.md` 许可证一条（留人过目）
+
 > ## ⚠️ 派活巡检（2026-10-29 20:38 · 36949e2）
 > - 三个手下**都没跑起来**：`model` 窗口卡在 Claude Code「是否信任此文件夹」弹窗（17:35 起）；`pipeline`、`evaltool` 窗口不存在（派活在第一个窗口后中断）
 > - `docs/research/002–004` 仍是 17:33 的空模板；`state/handoff/` 为空
@@ -19,7 +27,7 @@
 > - 设计文档移入 `vault/raw/20261029-voice-denoise-design.md`；telegram 调研移入 `docs/research/001_telegram-aias/`
 > - `scripts/check-tools.sh` 补 Rust 与音频工具（缺 sox）；`rust-toolchain.toml` 锁 1.99.1；`.github/workflows/ci.yml` 最小闸门
 > - 收敛方向人已确认（2026-10-29）；自动提交 hook 上线（改动超过 5 行即提交，见 CLAUDE.md 铁律 14）
-> - **待人定**：① 个性化（只保留主人声音）：推后 / 核心 / 不做（默认推后）② 远程仓库地址 ③ 放权边界
+> - **待人定**：~~① 个性化~~（2026-10-30 定为核心，D08）② 远程仓库地址 ③ 放权边界
 > - **下一步**：`vdn-research` 三个决策——起步模型与代码 · Mac 音频管线 · 评测工具链；然后 `vdn-proto` 定标「好的会议声音」
 > - 系统做轻量版（参照 `docs/research/001_telegram-aias/` 第五节）：状态只记 board + handoff；评审设轮数上限
 

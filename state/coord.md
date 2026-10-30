@@ -49,12 +49,7 @@
 
 ## 待定清单（攒着等人一次看完）
 
-- [ ] 个性化（只保留主人声音）：推后 / 核心 / 不做（默认推后）—— 来源 board
+- [x] 第一批 24 题 + 个性化 + P.808 —— 2026-10-30 已拍板，见 `docs/plan/001_decisions-20261029-b1.md`
 - [ ] 远程仓库地址 —— 来源 board
 - [ ] 放权边界 —— 来源 board
-- [ ] 【最关键】附加延迟上限定多少（40 ms 是 AI 从 DNS Challenge 搬的草稿，人未定）：DPDFNet 前瞻 40 ms，端到端推算约 65–70 ms；零前瞻候选只有 DFN3 _ll（许可不明、停更）、GTCRN/UL-UNAS（约 38–42 ms、效果弱）、nnnoiseless —— 来源 model，见 docs/research/002_model-baseline/decision.md
-- [ ] 【急】本机现在装 BlackHole 吗（M0 前提）：A 现在 brew 装并重启（建议）/ B 推后 M0 —— 来源 pipeline
-- [ ] 【急】批准插件加载与崩溃实验（写 /Library/Audio/Plug-Ins/HAL + killall coreaudiod，越过本批红线）：A 批准、放 M3 开头（建议）/ B 等开发者账号 / C 不做 —— 来源 pipeline
-- [ ] evaltool 11 题（含中文评测集二选一、回归门禁数值）—— 见 docs/research/004_eval-toolchain/decision.md 末节
-- [ ] resources/P.808（1.1 GB，可重克隆，git 忽略）删不删：建议删，要用时 sparse-checkout 只拿 src/ —— 来源 evaltool
-- [ ] pipeline 其余 8 条（共 10 条，何时办开发者账号 · 出事送原声还是静音 · 回声消除用不用 process tap · BlackHole 阶段给不给外部用户 · 装完 killall 还是重启 · must-know 命门照核实改写）—— 见 docs/research/003_mac-audio-pipeline/decision.md 末节
+- [ ] 开下一批 005「个性化降噪（PSE）」调研？（D08 定为核心）—— 等人点头
