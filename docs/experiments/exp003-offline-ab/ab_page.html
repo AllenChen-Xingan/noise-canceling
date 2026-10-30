@@ -33,16 +33,20 @@ button:hover { border-color: var(--accent); }
 button:disabled { opacity: .45; cursor: not-allowed; }
 button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 .src { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
-.src button { min-width: 88px; font-weight: 600; }
+.src button { min-width: 72px; font-weight: 600; }
 .src button.on { background: var(--sel); border-color: var(--accent); }
 .bar { display: flex; align-items: center; gap: 10px; margin: 8px 0 4px; }
-.bar input[type=range] { flex: 1; }
-.q { margin: 14px 0 0; }
+.bar input[type=range] { flex: 1; min-width: 0; }
+.q { margin: 16px 0 0; }
 .q .label { font-weight: 600; }
-.opts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.opts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
 .opts button.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.opts button.small { padding: 4px 10px; font-size: .88rem; }
+.cand { border-top: 1px solid var(--line); padding: 8px 0; }
+.cand .who { font-weight: 700; min-width: 1.6em; display: inline-block; }
 textarea { width: 100%; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
   border-radius: 8px; padding: 8px; min-height: 2.6em; }
+input[type=text] { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
 .nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
 .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin: 10px 0; }
 .progress > div { height: 100%; background: var(--accent); }
@@ -58,15 +62,16 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
 <body>
 <main>
   <h1>降噪盲听对比</h1>
-  <p class="muted">两个降噪模型各处理同一段录音，随机标成 A / B。听完每段回答三个问题，最后导出结果。全程本机，不联网、不上传。</p>
+  <p class="muted" id="lede"></p>
 
   <section class="card" id="intro">
     <h2>开始前</h2>
     <ol>
       <li>戴耳机。先在第一段把系统音量调到舒适，之后别再动。</li>
-      <li>A、B 和「原声」可以随时切换，播放位置不变。快捷键：<kbd>1</kbd> A · <kbd>2</kbd> B · <kbd>3</kbd> 原声 · <kbd>空格</kbd> 播放 / 暂停。</li>
+      <li id="keysTip"></li>
       <li>「原声」是没处理过的带噪录音。主讲人是录音开始约 1 秒后才开口、声音最近最清楚的那位；其他人声算噪音。</li>
-      <li>A 和 B 都至少听一遍才能作答。拿不准就选「差不多」，别猜。</li>
+      <li>每个候选都至少听一遍才能作答。拿不准就选「差不多」，别猜。</li>
+      <li>每段先答三问（最清楚 · 最自然 · 吃字），再给每个候选打「拿去开会行不行」；答完后可以勾听到的毛病（可不勾）。</li>
       <li>其中有一两段是检验题，照实听照实答即可。</li>
     </ol>
     <p class="muted" id="resumeNote"></p>
@@ -79,11 +84,7 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
     <div class="card">
       <h2 id="trialTitle"></h2>
       <div class="muted" id="trialDesc"></div>
-      <div class="src">
-        <button data-src="A">A</button>
-        <button data-src="B">B</button>
-        <button data-src="ref">原声</button>
-      </div>
+      <div class="src" id="srcBtns"></div>
       <div class="bar">
         <button id="playBtn">▶ 播放</button>
         <input type="range" id="seek" min="0" max="1000" value="0" aria-label="播放位置">
@@ -92,12 +93,14 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
       <label class="muted"><input type="checkbox" id="loopChk" checked> 循环播放</label>
       <p class="muted" id="heardLbl"></p>
 
-      <div class="q"><div class="label">1. 哪个更<b>清楚</b>？（主讲人的字听得清）</div>
-        <div class="opts" data-q="clearer"><button data-v="A">A</button><button data-v="B">B</button><button data-v="same">差不多</button></div></div>
-      <div class="q"><div class="label">2. 哪个更<b>自然</b>？（没有怪声、背景不忽大忽小、不发闷）</div>
-        <div class="opts" data-q="natural"><button data-v="A">A</button><button data-v="B">B</button><button data-v="same">差不多</button></div></div>
-      <div class="q"><div class="label">3. 有没有<b>吃字</b>？（主讲人的字被压掉、断掉）</div>
-        <div class="opts" data-q="eaten"><button data-v="A">A 吃字</button><button data-v="B">B 吃字</button><button data-v="both">都有</button><button data-v="none">都没有</button></div></div>
+      <div class="q"><div class="label">1. 哪个<b>最清楚</b>？（主讲人的字听得清）</div>
+        <div class="opts" data-q="clearer"></div></div>
+      <div class="q"><div class="label">2. 哪个<b>最自然</b>？（没有怪声、背景不忽大忽小、不发闷）</div>
+        <div class="opts" data-q="natural"></div></div>
+      <div class="q"><div class="label">3. 哪些<b>吃字</b>了？（主讲人的字被压掉、断掉；可多选）</div>
+        <div class="opts" id="eatenOpts"></div></div>
+      <div class="q"><div class="label">4. 每个候选：拿它去<b>开会</b>行吗？</div>
+        <div id="candRows"></div></div>
       <div class="q"><div class="label">备注（可选，一句话）</div><textarea id="note" maxlength="300"></textarea></div>
 
       <div class="nav">
@@ -110,7 +113,7 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
   <section id="done" class="hidden">
     <div class="card">
       <h2>听完了，揭盲结果</h2>
-      <div id="summary"></div>
+      <div class="tablewrap" id="summary"></div>
       <div class="nav">
         <button class="primary" id="exportBtn">导出结果 JSON</button>
         <button id="reviewBtn">回去改答案</button>
@@ -118,20 +121,15 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
       </div>
       <p class="muted">导出的文件会下载到本机「下载」文件夹，交给大总管放进 <code>docs/experiments/exp003-offline-ab/</code>。</p>
     </div>
-    <div class="card" id="detailCard"><h2>逐段明细</h2><div class="tablewrap" id="detail"></div></div>
+    <div class="card"><h2>逐段明细</h2><div class="tablewrap" id="detail"></div></div>
   </section>
 
   <section class="card" id="selfrec">
     <h2>加自录片段（以后用）</h2>
-    <p class="muted">有了自己的咖啡馆录音后，选三份同长度的文件：原声、处理版 1、处理版 2。它们会作为一道额外的盲听题加在最后，结果一起导出。文件只在本页内存里读，不会上传。</p>
-    <div class="opts">
-      <label>原声 <input type="file" accept="audio/*" id="selfRef"></label>
-      <label>处理版 1 <input type="file" accept="audio/*" id="selfX"></label>
-      <label>处理版 2 <input type="file" accept="audio/*" id="selfY"></label>
-    </div>
-    <div class="opts"><input type="text" id="selfXName" placeholder="处理版 1 的名字（揭盲用）" maxlength="40">
-      <input type="text" id="selfYName" placeholder="处理版 2 的名字" maxlength="40">
-      <button id="selfAdd">加进题目</button></div>
+    <p class="muted">有了自己的咖啡馆录音后，选一份原声和两到三份同长度的处理版。它们会作为额外的盲听题加在最后，结果一起导出。文件只在本页内存里读，不会上传。</p>
+    <div class="opts"><label>原声 <input type="file" accept="audio/*" id="selfRef"></label></div>
+    <div id="selfCands"></div>
+    <div class="opts"><button id="selfAdd">加进题目</button></div>
     <p class="muted" id="selfMsg"></p>
   </section>
 </main>
@@ -141,31 +139,46 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
 (() => {
   "use strict";
   const M = window.EXP003;
-  const KEY = JSON.parse(atob(M.key));            // 揭盲表：文件槽位 → 模型名
-  const STORE = "exp003-ab-v1";
+  const KEY = JSON.parse(atob(M.key));            // 揭盲表：{clips: {段: [槽位 s0.. 的模型]}, traps: {题: [...]}}
+  const N = M.n_cands;
+  const LETTERS = "ABCD".slice(0, N).split("");
+  const MODELS = Object.keys(M.models);
+  const NAME = (m) => (M.models[m] && M.models[m].name) || ({ same: "差不多", none: "都没有", degraded: "劣化版" }[m] || m);
+  const STORE = "exp003-ab-v2";
+  const USABLE = [["ok", "能用"], ["marginal", "勉强"], ["no", "不能用"]];
+  const TAGS = [["metallic", "金属声/水声"], ["pumping_bg", "背景忽大忽小"], ["muffled", "发闷"],
+                ["vacuum", "真空感（背景被抽空）"], ["clipped_onsets", "字头字尾被削"], ["pumping_voice", "人声忽大忽小"]];
   const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+  const now = () => new Date().toISOString();
 
-  // ---- 本机进度（失败也能用，只是刷新会丢） ----
+  $("lede").textContent = `${N} 个降噪候选各处理同一段录音，随机标成 ${LETTERS.join(" / ")}。听完每段作答，最后导出结果。全程本机，不联网、不上传。`;
+  $("keysTip").innerHTML = `候选和「原声」可以随时切换，播放位置不变。快捷键：${LETTERS.map((L, i) => `<kbd>${i + 1}</kbd> ${L}`).join(" · ")} · <kbd>0</kbd> 原声 · <kbd>空格</kbd> 播放 / 暂停。`;
+
+  // ---- 本机进度（存不了也能用，只是刷新会丢） ----
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} };
   const load = () => { try { return JSON.parse(localStorage.getItem(STORE) || "null"); } catch (e) { return null; } };
 
-  // ---- 用浏览器密码学随机数，Fisher–Yates 洗牌 ----
+  // ---- 浏览器密码学随机数，Fisher–Yates 洗牌 ----
   const rnd = (n) => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; };
   const shuffle = (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = rnd(i + 1); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
 
   function newSession() {
-    // 正式题：一半段落 DPDFNet 在 A，一半在 B（平衡后再洗牌）
-    const real = M.clips.map((c) => c.id);
-    const flips = shuffle(real.map((_, i) => i < Math.ceil(real.length / 2)));
-    let trials = real.map((id, i) => ({ kind: "real", clip: id, A: flips[i] ? "x" : "y", B: flips[i] ? "y" : "x" }));
-    shuffle(trials);
+    // 正式题：拉丁方轮换——第 i 段的字母 j 放模型 base[(i + j) % N]，每个模型在每个字母位置出现次数平衡
+    const base = shuffle(MODELS.slice());
+    const order = shuffle(M.clips.map((c) => c.id));
+    const trials = order.map((id, i) => {
+      const slots = {};
+      LETTERS.forEach((L, j) => { slots[L] = KEY.clips[id].indexOf(base[(i + j) % N]); });
+      return { kind: "real", clip: id, slots };
+    });
     // 检验题：插在第 3 段之后的随机位置
     for (const t of M.traps) {
-      const pair = rnd(2) ? ["s1", "s2"] : ["s2", "s1"];
-      const trial = { kind: "trap", trap: t.id, clip: t.clip, A: pair[0], B: pair[1] };
-      trials.splice(3 + rnd(trials.length - 2), 0, trial);
+      const perm = shuffle([...Array(N).keys()]);
+      const slots = {}; LETTERS.forEach((L, j) => { slots[L] = perm[j]; });
+      trials.splice(3 + rnd(trials.length - 2), 0, { kind: "trap", trap: t.id, clip: t.clip, slots });
     }
-    return { started: new Date().toISOString(), trials, answers: {}, i: 0, ua: navigator.userAgent };
+    return { started: now(), trials, answers: {}, i: 0, ua: navigator.userAgent };
   }
 
   let S = load();
@@ -176,71 +189,120 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
   const trapById = Object.fromEntries(M.traps.map((t) => [t.id, t]));
   const selfTrials = {};  // 自录题的文件只存在内存
 
-  function fileOf(trial, slot) {
-    if (trial.kind === "self") return selfTrials[trial.id][slot];
-    if (trial.kind === "trap") {
-      const t = trapById[trial.trap];
-      return slot === "ref" ? t.ref : t[trial[slot]];
-    }
-    const c = clipById[trial.clip];
-    return slot === "ref" ? c.ref : c[trial[slot]];
+  function itemOf(t) { return t.kind === "self" ? selfTrials[t.id] : (t.kind === "trap" ? trapById[t.trap] : clipById[t.clip]); }
+  function fileOf(t, slot) { const it = itemOf(t); return slot === "ref" ? it.ref : it.cands[t.slots[slot]]; }
+  function modelOf(t, L) {
+    if (t.kind === "self") return selfTrials[t.id] ? selfTrials[t.id].names[t.slots[L]] : null;
+    if (t.kind === "trap") return KEY.traps[t.trap][t.slots[L]];
+    return KEY.clips[t.clip][t.slots[L]];
   }
 
-  // ---- 播放：三路 <audio>，切换时同步位置 ----
-  const players = {}; let cur = "A"; let playing = false; let heard = { A: false, B: false };
-  function buildPlayers(trial) {
+  // ---- 每题作答记录 ----
+  const key = (t) => t.kind === "self" ? t.id : (t.kind === "trap" ? "trap:" + t.trap : t.clip);
+  function ans() {
+    const k = key(S.trials[S.i]);
+    return (S.answers[k] ||= { heard: {}, plays: { ref: 0 }, switches: 0, usable: {}, tags: {}, eaten: [], started_at: null });
+  }
+  const letters = () => LETTERS.slice(0, S.trials[S.i].kind === "self" ? Object.keys(S.trials[S.i].slots).length : N);
+
+  // ---- 播放：每个槽位一个 <audio>，切换时同步位置 ----
+  const players = {}; let cur = "A"; let playing = false;
+  function buildPlayers(t) {
     for (const k of Object.keys(players)) { players[k].pause(); delete players[k]; }
-    for (const slot of ["A", "B", "ref"]) {
-      const a = new Audio(fileOf(trial, slot)); a.preload = "auto"; a.loop = $("loopChk").checked;
+    const box = $("srcBtns"); box.innerHTML = "";
+    for (const slot of [...letters(), "ref"]) {
+      const a = new Audio(fileOf(t, slot)); a.preload = "auto"; a.loop = $("loopChk").checked;
       a.addEventListener("timeupdate", () => { if (slot === cur) tick(); });
       a.addEventListener("ended", () => { if (slot === cur) { playing = false; paintPlay(); } });
       players[slot] = a;
+      const b = document.createElement("button"); b.dataset.src = slot; b.textContent = slot === "ref" ? "原声" : slot;
+      b.addEventListener("click", () => switchTo(slot)); box.appendChild(b);
     }
     cur = "A"; playing = false; paintSrc(); paintPlay(); tick();
   }
   function switchTo(slot) {
+    if (!players[slot] || slot === cur) return;
     const t = players[cur].currentTime;
     if (playing) players[cur].pause();
     cur = slot; players[cur].currentTime = t;
-    if (playing) { players[cur].play(); markHeard(); }
-    paintSrc();
+    ans().switches += 1;
+    if (playing) { players[cur].play(); markPlay(); }
+    save(); paintSrc();
   }
   function togglePlay() {
     if (playing) { players[cur].pause(); playing = false; }
-    else { players[cur].play(); playing = true; markHeard(); }
+    else { players[cur].play(); playing = true; markPlay(); }
     paintPlay();
   }
-  function markHeard() {
-    if (cur === "A" || cur === "B") { heard[cur] = true; const a = ans(); a.heard = { ...heard }; save(); paintHeard(); }
+  function markPlay() {
+    const a = ans(); a.plays[cur] = (a.plays[cur] || 0) + 1;
+    if (cur !== "ref") a.heard[cur] = true;
+    save(); paintHeard();
   }
   function tick() {
     const a = players[cur]; if (!a) return;
     const d = a.duration || 0; $("timeLbl").textContent = `${a.currentTime.toFixed(1)} s`;
     if (d) $("seek").value = String(Math.round(1000 * a.currentTime / d));
   }
-  const paintSrc = () => document.querySelectorAll(".src button").forEach((b) => b.classList.toggle("on", b.dataset.src === cur));
+  const paintSrc = () => document.querySelectorAll("#srcBtns button").forEach((b) => b.classList.toggle("on", b.dataset.src === cur));
   const paintPlay = () => { $("playBtn").textContent = playing ? "⏸ 暂停" : "▶ 播放"; };
   function paintHeard() {
-    $("heardLbl").textContent = `已听：A ${heard.A ? "✓" : "—"} · B ${heard.B ? "✓" : "—"}`;
+    const a = ans();
+    $("heardLbl").textContent = "已听：" + letters().map((L) => `${L} ${a.heard[L] ? "✓" : "—"}`).join(" · ");
     paintAnswers();
   }
 
-  // ---- 作答 ----
-  const key = (t) => t.kind === "self" ? t.id : (t.kind === "trap" ? "trap:" + t.trap : t.clip);
-  function ans() { const t = S.trials[S.i]; const k = key(t); return (S.answers[k] ||= { listens: 0 }); }
-  function paintAnswers() {
-    const a = ans(); const canAnswer = heard.A && heard.B;
+  // ---- 作答界面（每段按槽位数重建） ----
+  function btn(label, onClick, cls) { const b = document.createElement("button"); b.textContent = label; if (cls) b.className = cls; b.addEventListener("click", onClick); return b; }
+  function buildQuestions() {
+    const Ls = letters();
     document.querySelectorAll(".opts[data-q]").forEach((g) => {
-      g.querySelectorAll("button").forEach((b) => { b.disabled = !canAnswer; b.classList.toggle("on", a[g.dataset.q] === b.dataset.v); });
+      g.innerHTML = "";
+      for (const v of [...Ls, "same"]) {
+        const b = btn(v === "same" ? "差不多" : v, () => { const a = ans(); a[g.dataset.q] = v; touch(a); });
+        b.dataset.v = v; g.appendChild(b);
+      }
     });
+    const eo = $("eatenOpts"); eo.innerHTML = "";
+    for (const v of [...Ls, "none"]) {
+      const b = btn(v === "none" ? "都没有" : `${v} 吃字`, () => {
+        const a = ans();
+        if (v === "none") a.eaten = a.eaten.includes("none") ? [] : ["none"];
+        else { a.eaten = a.eaten.filter((x) => x !== "none"); a.eaten = a.eaten.includes(v) ? a.eaten.filter((x) => x !== v) : [...a.eaten, v].sort(); }
+        touch(a);
+      });
+      b.dataset.v = v; eo.appendChild(b);
+    }
+    const rows = $("candRows"); rows.innerHTML = "";
+    for (const L of Ls) {
+      const row = document.createElement("div"); row.className = "cand";
+      const u = document.createElement("div"); u.className = "opts";
+      const who = document.createElement("span"); who.className = "who"; who.textContent = L; u.appendChild(who);
+      for (const [v, lab] of USABLE) { const b = btn(lab, () => { const a = ans(); a.usable[L] = v; touch(a); }, "small"); b.dataset.u = v; b.dataset.l = L; u.appendChild(b); }
+      const tg = document.createElement("div"); tg.className = "opts tagrow"; tg.dataset.l = L;
+      const tl = document.createElement("span"); tl.className = "muted"; tl.textContent = "听到的毛病（可选）："; tg.appendChild(tl);
+      for (const [v, lab] of TAGS) {
+        const b = btn(lab, () => { const a = ans(); const cur = a.tags[L] || []; a.tags[L] = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]; touch(a); }, "small");
+        b.dataset.t = v; b.dataset.l = L; tg.appendChild(b);
+      }
+      row.appendChild(u); row.appendChild(tg); rows.appendChild(row);
+    }
+  }
+  function touch(a) { a.answered_at = now(); save(); paintAnswers(); }
+  const coreDone = (a) => !!(a.clearer && a.natural && a.eaten.length);
+  const allDone = (a) => coreDone(a) && letters().every((L) => a.usable[L]);
+  function paintAnswers() {
+    const a = ans(); const can = letters().every((L) => a.heard[L]);
+    document.querySelectorAll(".opts[data-q] button").forEach((b) => { b.disabled = !can; b.classList.toggle("on", a[b.parentElement.dataset.q] === b.dataset.v); });
+    document.querySelectorAll("#eatenOpts button").forEach((b) => { b.disabled = !can; b.classList.toggle("on", a.eaten.includes(b.dataset.v)); });
+    document.querySelectorAll("#candRows button[data-u]").forEach((b) => { b.disabled = !can; b.classList.toggle("on", a.usable[b.dataset.l] === b.dataset.u); });
+    document.querySelectorAll("#candRows button[data-t]").forEach((b) => { b.classList.toggle("on", (a.tags[b.dataset.l] || []).includes(b.dataset.t)); });
+    document.querySelectorAll("#candRows .tagrow").forEach((r) => r.classList.toggle("hidden", !coreDone(a)));
     $("note").value = a.note || "";
-    $("nextBtn").disabled = !(a.clearer && a.natural && a.eaten);
+    $("nextBtn").disabled = !allDone(a);
     $("nextBtn").textContent = S.i === S.trials.length - 1 ? "完成 →" : "下一段 →";
     $("prevBtn").disabled = S.i === 0;
   }
-  document.querySelectorAll(".opts[data-q] button").forEach((b) => b.addEventListener("click", () => {
-    const a = ans(); a[b.parentElement.dataset.q] = b.dataset.v; a.t = new Date().toISOString(); save(); paintAnswers();
-  }));
   $("note").addEventListener("input", (e) => { ans().note = e.target.value; save(); });
 
   function showTrial() {
@@ -249,84 +311,99 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
     $("trialHead").textContent = `第 ${S.i + 1} / ${S.trials.length} 段`;
     $("progFill").style.width = `${100 * S.i / S.trials.length}%`;
     $("trialTitle").textContent = `第 ${S.i + 1} 段`;
-    $("trialDesc").textContent = t.kind === "self" ? "自录片段" : (t.kind === "trap" ? trapById[t.trap].desc : clipById[t.clip].desc);
-    const a = ans(); heard = a.heard ? { ...a.heard } : { A: false, B: false };
-    buildPlayers(t); paintHeard();
+    $("trialDesc").textContent = t.kind === "self" ? "自录片段" : itemOf(t).desc;
+    const a = ans(); if (!a.started_at) { a.started_at = now(); save(); }
+    buildQuestions(); buildPlayers(t); paintHeard();
     window.scrollTo(0, 0);
   }
 
   $("startBtn").addEventListener("click", () => { if (S.i >= S.trials.length) showDone(); else showTrial(); });
-  $("nextBtn").addEventListener("click", () => {
-    stopAll(); S.i += 1; save(); if (S.i >= S.trials.length) showDone(); else showTrial();
-  });
+  $("nextBtn").addEventListener("click", () => { stopAll(); S.i += 1; save(); if (S.i >= S.trials.length) showDone(); else showTrial(); });
   $("prevBtn").addEventListener("click", () => { stopAll(); S.i = Math.max(0, S.i - 1); save(); showTrial(); });
-  document.querySelectorAll(".src button").forEach((b) => b.addEventListener("click", () => switchTo(b.dataset.src)));
   $("playBtn").addEventListener("click", togglePlay);
   $("seek").addEventListener("input", (e) => { const a = players[cur]; if (a && a.duration) a.currentTime = a.duration * e.target.value / 1000; });
   $("loopChk").addEventListener("change", (e) => Object.values(players).forEach((a) => { a.loop = e.target.checked; }));
   document.addEventListener("keydown", (e) => {
     if ($("trial").classList.contains("hidden") || e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
-    if (e.key === "1") switchTo("A"); else if (e.key === "2") switchTo("B"); else if (e.key === "3") switchTo("ref");
+    const n = parseInt(e.key, 10);
+    if (e.key === "0") switchTo("ref");
+    else if (n >= 1 && n <= letters().length) switchTo(LETTERS[n - 1]);
     else if (e.key === " ") { e.preventDefault(); togglePlay(); }
   });
   function stopAll() { Object.values(players).forEach((a) => a.pause()); playing = false; }
 
   // ---- 揭盲与汇总 ----
-  const NAME = { dpdfnet2: "DPDFNet-2", gtcrn: "GTCRN" };
-  function unblind(t, v) {
-    // 把 A/B/same/both/none 翻成模型名
-    if (v === "same" || v === "none" || v === "both") return v;
-    if (t.kind === "self") return selfTrials[t.id].names[t[v]];
-    if (t.kind === "trap") return trapById[t.trap].names[t[v]];
-    return KEY[t.clip][t[v]];
-  }
   function results() {
     const rows = S.trials.map((t, idx) => {
-      const a = S.answers[key(t)] || {};
+      const a = S.answers[key(t)] || { heard: {}, plays: {}, usable: {}, tags: {}, eaten: [] };
+      const Ls = Object.keys(t.slots);
+      const map = Object.fromEntries(Ls.map((L) => [L, modelOf(t, L)]));
+      const um = (v) => (v == null ? null : (map[v] !== undefined ? map[v] : v));
       return {
         order: idx + 1, kind: t.kind, clip: t.clip || null, trap: t.trap || null, self: t.kind === "self" ? t.id : null,
-        A: t.kind === "real" ? KEY[t.clip][t.A] : (t.kind === "trap" ? trapById[t.trap].names[t.A] : selfTrials[t.id]?.names[t.A]),
-        B: t.kind === "real" ? KEY[t.clip][t.B] : (t.kind === "trap" ? trapById[t.trap].names[t.B] : selfTrials[t.id]?.names[t.B]),
-        answer: { clearer: a.clearer || null, natural: a.natural || null, eaten: a.eaten || null },
-        unblinded: { clearer: a.clearer ? unblind(t, a.clearer) : null, natural: a.natural ? unblind(t, a.natural) : null,
-                     eaten: a.eaten ? unblind(t, a.eaten) : null },
-        note: a.note || "", heard: a.heard || null, answered_at: a.t || null,
+        slots: map,
+        answer: { clearer: a.clearer || null, natural: a.natural || null, eaten: a.eaten || [], usable: a.usable || {}, tags: a.tags || {} },
+        by_model: {
+          clearer: um(a.clearer), natural: um(a.natural), eaten: (a.eaten || []).map(um),
+          usable: Object.fromEntries(Object.entries(a.usable || {}).map(([L, v]) => [map[L], v])),
+          tags: Object.fromEntries(Object.entries(a.tags || {}).map(([L, v]) => [map[L], v])),
+        },
+        note: a.note || "", heard: a.heard || {}, plays: a.plays || {}, switches: a.switches || 0,
+        started_at: a.started_at || null, answered_at: a.answered_at || null,
       };
     });
     const traps = rows.filter((r) => r.kind === "trap").map((r) => {
-      const t = trapById[r.trap];
-      const pass = t.expect.clearer.includes(r.unblinded.clearer) && t.expect.natural.includes(r.unblinded.natural);
-      return { trap: r.trap, desc: t.label, unblinded: r.unblinded, pass };
+      const ex = trapById[r.trap].expect;
+      const ok = (v) => ex.best ? ex.best.includes(v) : (v != null && !ex.not.includes(v));
+      return { trap: r.trap, desc: trapById[r.trap].label, by_model: { clearer: r.by_model.clearer, natural: r.by_model.natural },
+               pass: ok(r.by_model.clearer) && ok(r.by_model.natural) };
     });
     const real = rows.filter((r) => r.kind === "real");
-    const tally = (q) => { const o = { "DPDFNet-2": 0, GTCRN: 0, same: 0 }; real.forEach((r) => { const v = r.unblinded[q]; if (v === "same") o.same++; else if (v) o[NAME[v]]++; }); return o; };
-    const eat = { "只有 DPDFNet-2": 0, "只有 GTCRN": 0, both: 0, none: 0 };
-    real.forEach((r) => { const v = r.unblinded.eaten; if (v === "dpdfnet2") eat["只有 DPDFNet-2"]++; else if (v === "gtcrn") eat["只有 GTCRN"]++; else if (v) eat[v]++; });
-    return { exp: "exp003-offline-ab", build: M.build, started: S.started, finished: new Date().toISOString(),
-             user_agent: S.ua, summary: { clearer: tally("clearer"), natural: tally("natural"), eaten: eat, traps }, trials: rows };
+    const per = {};
+    for (const m of MODELS) per[m] = { clearer_best: 0, natural_best: 0, eaten: 0, usable: { ok: 0, marginal: 0, no: 0 }, tags: {} };
+    const same = { clearer: 0, natural: 0 }; let noneEaten = 0;
+    for (const r of real) {
+      for (const q of ["clearer", "natural"]) { const v = r.by_model[q]; if (v === "same") same[q]++; else if (per[v]) per[v][q + "_best"]++; }
+      if (r.by_model.eaten.includes("none")) noneEaten++;
+      r.by_model.eaten.forEach((m) => { if (per[m]) per[m].eaten++; });
+      for (const [m, v] of Object.entries(r.by_model.usable)) if (per[m]) per[m].usable[v]++;
+      for (const [m, v] of Object.entries(r.by_model.tags)) if (per[m]) v.forEach((x) => { per[m].tags[x] = (per[m].tags[x] || 0) + 1; });
+    }
+    return { exp: "exp003-offline-ab", build: M.build, models: M.models, started: S.started, finished: now(), user_agent: S.ua,
+             summary: { n_real: real.length, per_model: per, same, eaten_none: noneEaten, traps }, trials: rows };
   }
   function showDone() {
     stopAll();
     $("trial").classList.add("hidden"); $("intro").classList.add("hidden"); $("done").classList.remove("hidden");
     const R = results(); const s = R.summary;
-    const trapTxt = s.traps.map((t) => `<li class="${t.pass ? "ok" : "warn"}">${t.pass ? "✓ 通过" : "✗ 没通过"}：${t.desc}</li>`).join("");
-    $("summary").innerHTML = `
-      <table><tr><th></th><th>DPDFNet-2</th><th>GTCRN</th><th>差不多</th></tr>
-      <tr><td>更清楚</td><td>${s.clearer["DPDFNet-2"]}</td><td>${s.clearer.GTCRN}</td><td>${s.clearer.same}</td></tr>
-      <tr><td>更自然</td><td>${s.natural["DPDFNet-2"]}</td><td>${s.natural.GTCRN}</td><td>${s.natural.same}</td></tr></table>
-      <p>吃字：只有 DPDFNet-2 ${s.eaten["只有 DPDFNet-2"]} 段 · 只有 GTCRN ${s.eaten["只有 GTCRN"]} 段 · 都有 ${s.eaten.both} 段 · 都没有 ${s.eaten.none} 段</p>
-      <p class="muted">检验题：</p><ul>${trapTxt}</ul>
-      <p class="muted">提醒：DPDFNet-2 端到端约多 30 ms 延迟（约 66–70 ms 对 38–42 ms）。这里只比效果，延迟上限由你结合这张表来定。</p>`;
-    const lab = (v) => v == null ? "—" : ({ same: "差不多", both: "都有", none: "都没有" }[v] || NAME[v] || v);
-    $("detail").innerHTML = `<table><tr><th>#</th><th>片段</th><th>A / B</th><th>更清楚</th><th>更自然</th><th>吃字</th><th>备注</th></tr>` +
-      R.trials.map((r) => `<tr><td>${r.order}</td><td>${r.kind === "real" ? clipById[r.clip].desc : (r.kind === "trap" ? "（检验题）" : "（自录）")}</td>
-        <td>${lab(r.A)} / ${lab(r.B)}</td><td>${lab(r.unblinded.clearer)}</td><td>${lab(r.unblinded.natural)}</td><td>${lab(r.unblinded.eaten)}</td>
-        <td>${(r.note || "").replace(/[<>&]/g, "")}</td></tr>`).join("") + `</table>`;
+    const head = `<tr><th></th>${MODELS.map((m) => `<th>${esc(NAME(m))}</th>`).join("")}<th>差不多 / 都没有</th></tr>`;
+    const row = (lab, f, tail) => `<tr><td>${lab}</td>${MODELS.map((m) => `<td>${f(s.per_model[m])}</td>`).join("")}<td>${tail}</td></tr>`;
+    const tagTxt = (p) => Object.entries(p.tags).map(([k, v]) => `${esc((TAGS.find((x) => x[0] === k) || [k, k])[1])} ${v}`).join("<br>") || "—";
+    $("summary").innerHTML = `<table>${head}
+      ${row("最清楚（段数）", (p) => p.clearer_best, s.same.clearer)}
+      ${row("最自然（段数）", (p) => p.natural_best, s.same.natural)}
+      ${row("吃字（段数）", (p) => p.eaten, s.eaten_none)}
+      ${row("能用 / 勉强 / 不能用", (p) => `${p.usable.ok} / ${p.usable.marginal} / ${p.usable.no}`, "")}
+      ${row("听到的毛病", tagTxt, "")}
+      ${row("延迟", (p, i) => "", "")}</table>
+      <p class="muted">共 ${s.n_real} 段正式题。检验题：</p>
+      <ul>${s.traps.map((t) => `<li class="${t.pass ? "ok" : "warn"}">${t.pass ? "✓ 通过" : "✗ 没通过"}：${esc(t.desc)}</li>`).join("")}</ul>
+      <p class="muted">延迟：${MODELS.map((m) => `${esc(NAME(m))} ${esc(M.models[m].latency)}`).join(" · ")}。这里只比效果，延迟上限由你结合这张表来定。</p>`;
+    // 「延迟」行留空太怪，删掉
+    $("summary").querySelectorAll("tr").forEach((tr) => { if (tr.firstElementChild && tr.firstElementChild.textContent === "延迟") tr.remove(); });
+    const lab = (v) => v == null ? "—" : NAME(v);
+    $("detail").innerHTML = `<table><tr><th>#</th><th>片段</th><th>槽位</th><th>最清楚</th><th>最自然</th><th>吃字</th><th>开会</th><th>备注</th></tr>` +
+      R.trials.map((r) => `<tr><td>${r.order}</td><td>${r.kind === "real" ? esc(clipById[r.clip].desc) : (r.kind === "trap" ? "（检验题）" : "（自录）")}</td>
+        <td>${Object.entries(r.slots).map(([L, m]) => `${L}=${esc(lab(m))}`).join("<br>")}</td>
+        <td>${esc(lab(r.by_model.clearer))}</td><td>${esc(lab(r.by_model.natural))}</td>
+        <td>${r.by_model.eaten.map((m) => esc(lab(m))).join("、") || "—"}</td>
+        <td>${Object.entries(r.by_model.usable).map(([m, v]) => `${esc(lab(m))}：${(USABLE.find((x) => x[0] === v) || [v, v])[1]}`).join("<br>")}</td>
+        <td>${esc(r.note || "")}</td></tr>`).join("") + `</table>`;
   }
   $("exportBtn").addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(results(), null, 1)], { type: "application/json" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-    a.download = `exp003-ab-result-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "")}.json`;
+    a.download = `exp003-ab-result-${new Date().toISOString().slice(0, 16).replace(/[:T-]/g, "")}.json`;
     document.body.appendChild(a); a.click(); a.remove();
   });
   $("reviewBtn").addEventListener("click", () => { S.i = 0; save(); showTrial(); });
@@ -335,17 +412,23 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
     S = newSession(); S.manifest = M.build; save(); location.reload();
   });
 
-  // ---- 自录片段 ----
+  // ---- 自录片段：一份原声 + 2–4 份处理版 ----
+  const selfBox = $("selfCands");
+  for (let i = 0; i < Math.max(3, N); i++) {
+    const d = document.createElement("div"); d.className = "opts";
+    d.innerHTML = `<label>处理版 ${i + 1}${i >= 2 ? "（可选）" : ""} <input type="file" accept="audio/*" class="selfFile"></label>
+      <input type="text" class="selfName" placeholder="处理版 ${i + 1} 的名字（揭盲用）" maxlength="40">`;
+    selfBox.appendChild(d);
+  }
   $("selfAdd").addEventListener("click", () => {
-    const f = [$("selfRef").files[0], $("selfX").files[0], $("selfY").files[0]];
-    if (f.some((x) => !x)) { $("selfMsg").textContent = "三份文件都要选。"; return; }
+    const ref = $("selfRef").files[0];
+    const picked = [...document.querySelectorAll(".selfFile")].map((el, i) => ({ f: el.files[0], name: document.querySelectorAll(".selfName")[i].value || `处理版 ${i + 1}` })).filter((x) => x.f);
+    if (!ref || picked.length < 2) { $("selfMsg").textContent = "要选一份原声和至少两份处理版。"; return; }
     const id = "self" + (Object.keys(selfTrials).length + 1);
-    const names = { x: $("selfXName").value || "处理版 1", y: $("selfYName").value || "处理版 2" };
-    selfTrials[id] = { ref: URL.createObjectURL(f[0]), x: URL.createObjectURL(f[1]), y: URL.createObjectURL(f[2]), names };
-    const flip = rnd(2) === 1;
-    S.trials.push({ kind: "self", id, A: flip ? "x" : "y", B: flip ? "y" : "x" });
-    // selfTrials 的文件只在内存：A/B 槽位解析走 selfTrials[id][slot 对应的 x/y]
-    selfTrials[id].A = selfTrials[id][flip ? "x" : "y"]; selfTrials[id].B = selfTrials[id][flip ? "y" : "x"];
+    selfTrials[id] = { ref: URL.createObjectURL(ref), cands: picked.map((x) => URL.createObjectURL(x.f)), names: picked.map((x) => x.name), desc: "自录片段" };
+    const perm = shuffle([...picked.keys()]);
+    const slots = {}; LETTERS.concat("ABCD".split("")).slice(0, picked.length).forEach((L, j) => { slots[L] = perm[j]; });
+    S.trials.push({ kind: "self", id, slots });
     save();
     $("selfMsg").textContent = `已加在最后（第 ${S.trials.length} 段）。注意：刷新页面后自录文件要重新选。`;
   });
