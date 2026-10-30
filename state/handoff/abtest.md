@@ -1,6 +1,8 @@
 # 现状页 · abtest（批次 20261030-b2）
 
-状态：**已停（应大总管要求，搬到 worktree 分支 exp/003-offline-ab 由新会话接手）**
+状态：**进行中（接替会话，worktree `noise_canceling-exp003`，分支 exp/003-offline-ab）**
+
+人新定 D28：吃字率改用本机 Qwen3-ASR-Plus 1.7B（42model 服务），不用 whisper。范围追加：VoxLock 作第三候选（M5 单线程逐帧计时 + 加进 AB 页），接入说明在主目录 `docs/research/005_pse/gap.md` 末节。
 
 ## 手上
 exp003：DPDFNet-2 对 GTCRN 的离线 AB 听测（交代 `_tmp/20261030-b2/abtest.md`）
@@ -44,3 +46,6 @@ exp003：DPDFNet-2 对 GTCRN 的离线 AB 听测（交代 `_tmp/20261030-b2/abte
 - 2026-10-30 写 enhance.py / make_clips.py / score.py / ab_page.html / build_page.py（未运行）
 - 2026-10-30 PCAFETER md5 核对一致；发现 TimShi 中文录音有底噪，换婆婆冰（Landxia），make_clips.py 尚未改
 - 2026-10-30 应大总管要求停在安全点，写交接
+- 2026-10-30 【接替会话】报到；核 md5：SCAFE_48k 1a4ee387…、DKITCHEN_16k 7ffbf52d… 均一致，已解压到 `~/vdn-data/demand/{SCAFE,DKITCHEN}/`
+- 2026-10-30 新增 `_paths.py`（worktree 里按 git 公共目录找回主目录 resources/）；四个脚本改用它；c11 换婆婆冰（Landxia）
+- 2026-10-30 score.py：`--whisper` → `--asr`（Qwen3-ASR，同一文件转两次核逐字相同，插入另记 ins_rate=脑补率）；whisper 模型人定已删，不再用
