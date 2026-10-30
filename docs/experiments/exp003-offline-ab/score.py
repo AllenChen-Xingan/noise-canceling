@@ -178,8 +178,8 @@ def main():
         n_files = [res[c].get("asr_ref_stable") for c in res] + [res[c][v]["asr_stable"] for c in res for v in VERS]
         out["asr_model"] = {"service": ASR_URL, "model": model, "params": "temperature=0, language=<en|zh>",
                             "repeat": 2, "stable_files": f"{sum(n_files)}/{len(n_files)}"}
-    (HERE / "scores.json").write_text(json.dumps(out, ensure_ascii=False, indent=1))
-    print(json.dumps({"mean": summary, "wins": wins}, ensure_ascii=False, indent=1))
+    (HERE / "scores.json").write_text(json.dumps(out, ensure_ascii=False, indent=1, default=lambda o: o.item()))
+    print(json.dumps({"mean": summary, "wins": wins}, ensure_ascii=False, indent=1, default=lambda o: o.item()))
 
 
 if __name__ == "__main__":
