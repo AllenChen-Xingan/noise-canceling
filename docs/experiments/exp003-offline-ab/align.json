@@ -1,0 +1,342 @@
+{
+ "lag_samples": {
+  "c01": {
+   "dpdfnet2": 0,
+   "gtcrn": 0,
+   "probe": "clean"
+  },
+  "c02": {
+   "dpdfnet2": 0,
+   "gtcrn": 0,
+   "probe": "clean"
+  },
+  "c03": {
+   "dpdfnet2": 0,
+   "gtcrn": 0,
+   "probe": "clean"
+  },
+  "c04": {
+   "dpdfnet2": 0,
+   "gtcrn": 0,
+   "probe": "clean"
+  },
+  "c05": {
+   "dpdfnet2": 0,
+   "gtcrn": 0,
+   "probe": "clean"
+  },
+  "c06": {
+   "dpdfnet2": 0,
+   "gtcrn": 0,
+   "probe": "clean"
+  },
+  "c07": {
+   "dpdfnet2": 0,
+   "gtcrn": 0,
+   "probe": "clean"
+  },
+  "c08": {
+   "dpdfnet2": 0,
+   "gtcrn": 0,
+   "probe": "clean"
+  },
+  "c09": {
+   "dpdfnet2": 0,
+   "gtcrn": 0,
+   "probe": "clean"
+  },
+  "c10": {
+   "dpdfnet2": 0,
+   "gtcrn": 0,
+   "probe": "clean"
+  },
+  "c11": {
+   "dpdfnet2": 0,
+   "gtcrn": 0,
+   "probe": "clean"
+  },
+  "c12": {
+   "dpdfnet2": 0,
+   "gtcrn": 0,
+   "probe": "clean"
+  }
+ },
+ "files": {
+  "c01": {
+   "lufs_target": -26.0,
+   "versions": {
+    "noisy": {
+     "file": "audio/c01_53fd07.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -5.69,
+     "gain_db": -1.29
+    },
+    "dpdfnet2": {
+     "file": "audio/c01_28b3b0.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -5.15,
+     "gain_db": -0.49
+    },
+    "gtcrn": {
+     "file": "audio/c01_4b634c.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -4.7,
+     "gain_db": -0.05
+    }
+   }
+  },
+  "c02": {
+   "lufs_target": -26.0,
+   "versions": {
+    "noisy": {
+     "file": "audio/c02_cf39af.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -5.87,
+     "gain_db": -3.27
+    },
+    "dpdfnet2": {
+     "file": "audio/c02_efca80.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -5.69,
+     "gain_db": -0.47
+    },
+    "gtcrn": {
+     "file": "audio/c02_4c2b8f.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -4.65,
+     "gain_db": 2.58
+    }
+   }
+  },
+  "c03": {
+   "lufs_target": -26.0,
+   "versions": {
+    "noisy": {
+     "file": "audio/c03_665ebc.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -8.33,
+     "gain_db": -6.04
+    },
+    "dpdfnet2": {
+     "file": "audio/c03_96736a.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -7.13,
+     "gain_db": 0.79
+    },
+    "gtcrn": {
+     "file": "audio/c03_ec9b2d.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -6.57,
+     "gain_db": 7.51
+    }
+   }
+  },
+  "c04": {
+   "lufs_target": -26.0,
+   "versions": {
+    "noisy": {
+     "file": "audio/c04_9854e8.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -5.52,
+     "gain_db": 0.48
+    },
+    "dpdfnet2": {
+     "file": "audio/c04_9e1c3a.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -3.94,
+     "gain_db": 3.35
+    },
+    "gtcrn": {
+     "file": "audio/c04_8f20f2.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -4.81,
+     "gain_db": 1.4
+    }
+   }
+  },
+  "c05": {
+   "lufs_target": -26.0,
+   "versions": {
+    "noisy": {
+     "file": "audio/c05_c2d2cd.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -6.17,
+     "gain_db": -1.51
+    },
+    "dpdfnet2": {
+     "file": "audio/c05_5df79c.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -4.34,
+     "gain_db": 1.51
+    },
+    "gtcrn": {
+     "file": "audio/c05_7566cd.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -5.31,
+     "gain_db": -0.51
+    }
+   }
+  },
+  "c06": {
+   "lufs_target": -26.0,
+   "versions": {
+    "noisy": {
+     "file": "audio/c06_cd458e.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -5.11,
+     "gain_db": 0.74
+    },
+    "dpdfnet2": {
+     "file": "audio/c06_65e427.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -3.13,
+     "gain_db": 3.63
+    },
+    "gtcrn": {
+     "file": "audio/c06_48cedd.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -3.28,
+     "gain_db": 5.04
+    }
+   }
+  },
+  "c07": {
+   "lufs_target": -26.0,
+   "versions": {
+    "noisy": {
+     "file": "audio/c07_606ac4.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -8.73,
+     "gain_db": -2.05
+    },
+    "dpdfnet2": {
+     "file": "audio/c07_1f28bd.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -3.68,
+     "gain_db": 6.46
+    },
+    "gtcrn": {
+     "file": "audio/c07_113ba0.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -5.71,
+     "gain_db": 9.8
+    }
+   }
+  },
+  "c08": {
+   "lufs_target": -26.0,
+   "versions": {
+    "noisy": {
+     "file": "audio/c08_9a83f3.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -8.5,
+     "gain_db": -2.4
+    },
+    "dpdfnet2": {
+     "file": "audio/c08_3dc70f.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -7.76,
+     "gain_db": -1.86
+    },
+    "gtcrn": {
+     "file": "audio/c08_b3c80a.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -7.9,
+     "gain_db": 0.9
+    }
+   }
+  },
+  "c09": {
+   "lufs_target": -26.02788252019721,
+   "versions": {
+    "noisy": {
+     "file": "audio/c09_ebe4f4.wav",
+     "lufs_after": -26.03,
+     "peak_dbfs": -1.0,
+     "gain_db": -0.08
+    },
+    "dpdfnet2": {
+     "file": "audio/c09_0d6107.wav",
+     "lufs_after": -26.03,
+     "peak_dbfs": -8.99,
+     "gain_db": 0.72
+    },
+    "gtcrn": {
+     "file": "audio/c09_c366cb.wav",
+     "lufs_after": -26.03,
+     "peak_dbfs": -7.92,
+     "gain_db": 0.59
+    }
+   }
+  },
+  "c10": {
+   "lufs_target": -26.0,
+   "versions": {
+    "noisy": {
+     "file": "audio/c10_443391.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -7.78,
+     "gain_db": -2.77
+    },
+    "dpdfnet2": {
+     "file": "audio/c10_8ac331.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -7.8,
+     "gain_db": -1.95
+    },
+    "gtcrn": {
+     "file": "audio/c10_e2f3d6.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -7.85,
+     "gain_db": -0.33
+    }
+   }
+  },
+  "c11": {
+   "lufs_target": -26.0,
+   "versions": {
+    "noisy": {
+     "file": "audio/c11_0c7dec.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -9.73,
+     "gain_db": -7.32
+    },
+    "dpdfnet2": {
+     "file": "audio/c11_a404b8.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -5.96,
+     "gain_db": -0.09
+    },
+    "gtcrn": {
+     "file": "audio/c11_4cb141.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -8.1,
+     "gain_db": -0.75
+    }
+   }
+  },
+  "c12": {
+   "lufs_target": -26.0,
+   "versions": {
+    "noisy": {
+     "file": "audio/c12_0a8182.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -8.97,
+     "gain_db": -4.11
+    },
+    "dpdfnet2": {
+     "file": "audio/c12_070673.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -8.58,
+     "gain_db": 0.07
+    },
+    "gtcrn": {
+     "file": "audio/c12_5ad922.wav",
+     "lufs_after": -26.0,
+     "peak_dbfs": -9.04,
+     "gain_db": -3.88
+    }
+   }
+  }
+ }
+}
