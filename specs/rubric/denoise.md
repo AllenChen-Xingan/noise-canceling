@@ -342,7 +342,7 @@ L4 映射：`rust_frame` 为 `native` → ✅，`onnx_explicit_state_shell_neede
 ### 8.2 输入与输出
 
 - **机器打分**：scores.json，`per_clip[clip][version]` 含 `SIG` `BAK` `OVRL` `ESTOI` `SI_SDR_dB` `noise_att_db` `resid_rel_db` `asr_stable` `ref_len` `del` `sub` `ins` `del_rate` `sub_rate` `ins_rate`；`version` 含 `noisy`。现在**没有**：SCOREQ、UTMOS、NISQA、语音帧能量损失、词首损失、N3 电平序列、LTASS、IRL（见 `gap.md`）
-- **人耳**：AB 导出（abtest 定稿）。每屏 `answer.usable{A,B,C}`（值 `ok` / `marginal` / `no`）· `answer.tags{A,B,C}` · `answer.eaten`（槽位数组或 `["none"]`）· `plays{A,B,C,ref}` · `switches` · `started_at` · `answered_at` · `qorder`；揭盲后 `by_model.*`
+- **人耳**：AB 导出（abtest 定稿）。每屏 `answer.usable{A,B,C}`（值 `ok` / `marginal` / `no`）· `answer.tags{A,B,C}` · `answer.eaten`（槽位数组或 `["none"]`）· `plays{A,B,C,ref}` · `listen_s{槽位: 秒}` · `switches` · `started_at` · `answered_at` · `qorder`；揭盲后 `by_model.*`、`summary.head_to_head`（只作核对）
 - **输出** `rubric_result.json`：
 
 ```json
