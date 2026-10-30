@@ -211,7 +211,7 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
     paintPlay();
   }
   function markHeard() {
-    if (cur === "A" || cur === "B") { heard[cur] = true; const a = ans(); a.heard = { ...heard }; paintHeard(); }
+    if (cur === "A" || cur === "B") { heard[cur] = true; const a = ans(); a.heard = { ...heard }; save(); paintHeard(); }
   }
   function tick() {
     const a = players[cur]; if (!a) return;
@@ -296,7 +296,7 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
     const traps = rows.filter((r) => r.kind === "trap").map((r) => {
       const t = trapById[r.trap];
       const pass = t.expect.clearer.includes(r.unblinded.clearer) && t.expect.natural.includes(r.unblinded.natural);
-      return { trap: r.trap, desc: t.desc, unblinded: r.unblinded, pass };
+      return { trap: r.trap, desc: t.label, unblinded: r.unblinded, pass };
     });
     const real = rows.filter((r) => r.kind === "real");
     const tally = (q) => { const o = { "DPDFNet-2": 0, GTCRN: 0, same: 0 }; real.forEach((r) => { const v = r.unblinded[q]; if (v === "same") o.same++; else if (v) o[NAME[v]]++; }); return o; };
