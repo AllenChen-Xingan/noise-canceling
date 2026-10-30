@@ -5,8 +5,9 @@
 - 逐帧：每次只喂一帧（DPDFNet 320/160 vorbis 窗；GTCRN 512/256 周期 sqrt-Hann），状态回灌，和实时一致
 - 开头补 n_fft 个零，让第一个真实样本也有完整的重叠相加；结尾补零把模型内部延迟冲出来
 - 对齐：DPDFNet 输出比输入晚 4 帧（4×160=640 样本），GTCRN 0 帧；按此平移，再用互相关核对（结果写进 JSON）
-- 响度：三个版本都用 BS.1770（pyloudnorm）归一到同一目标 LUFS；若某版本峰值超 -1 dBFS，
-  同一段的三个版本一起再降同样的分贝，保持三者响度相同
+- 响度：各版本只在主讲人说话区间（按干净参考 VAD）测 BS.1770 响度（pyloudnorm），对齐到同一目标；
+  若某版本峰值超 -1 dBFS，同一段所有版本一起再降同样的分贝，保持说话声响度相同
+- 候选：DPDFNet-2 · GTCRN · FastEnhancer-M（官方 wav2wav）· VoxLock 两种（--no-voxlock 可跳过；页面里放哪几个由 build_page.py 定）
 输入：_tmp/20261030-exp003/src/<id>_noisy.wav（make_clips.py 产出）
 输出：_tmp/20261030-exp003/raw/<id>_{noisy,dpdfnet2,gtcrn}.wav（对齐后、未归一，给打分用）
       _tmp/20261030-exp003/audio/<id>_<随机名>.wav（归一后，给对比页用）
