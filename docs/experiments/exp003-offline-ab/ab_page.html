@@ -179,6 +179,9 @@ kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-si
       const slots = {}; LETTERS.forEach((L, j) => { slots[L] = perm[j]; });
       trials.splice(3 + rnd(trials.length - 2), 0, { kind: "trap", trap: t.id, clip: t.clip, slots, qorder: rnd(2) ? ["clearer", "natural"] : ["natural", "clearer"] });
     }
+    // 两问先后：一半屏「最清楚」在上、一半「最自然」在上，再洗牌
+    const qo = shuffle(trials.map((_, i) => i < Math.ceil(trials.length / 2)));
+    trials.forEach((t, i) => { t.qorder = qo[i] ? ["clearer", "natural"] : ["natural", "clearer"]; });
     return { started: now(), trials, answers: {}, i: 0, ua: navigator.userAgent };
   }
 
