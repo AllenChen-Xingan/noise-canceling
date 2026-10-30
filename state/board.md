@@ -4,6 +4,13 @@
 > **非轮规则：每轮有效工作必更新本文件**（倒序追加，新的在上，带日期与 commit hash）。
 > 每完成一个可命名的逻辑单元存一次；破坏性操作之前也存一次。这是给你自己留的后路，不是给别人看的历史。
 
+> ## ✅ 第二批收尾（2026-10-30）
+> - 005 个性化（#5）· 006 前沿全景（#6）· exp003 盲听（#7）· 007 评分标准（#8）全部合并
+> - 人定：D32 延迟 ≤ 45 ms · D33 主模型 GTCRN、FastEnhancer-M 同接口备选（人耳打平，证据弱）· D34 「只留你的声音」并进 M1
+> - 教训两条：揭盲表丢失之坑（CLAUDE.md 第五节第 1 条）· `gh pr merge --delete-branch` 会删 worktree 里的忽略文件（记忆）
+> - **下一步**：等人点头派第三批——定标 + 评测 · Rust 离线跑通 GTCRN · 自动认出你的声音（第一步）；人要装 BlackHole 才能开 M0
+> - 待人拍板：005 剩 5 题 · 006 4 题 · 007 4 题 · 放权边界 · FastEnhancer 许可要不要问
+
 > ## 🔗 远程仓库与 PR 流程（2026-10-30）
 > - 人定：私有仓库 https://github.com/AllenChen-Xingan/noise-canceling ；每条线一个 issue；AI 开 PR 并自己合并（CLAUDE.md 铁律 15，记忆 `state/memory/20261030-commit-issue-pr.md`）
 > - main 已推送；第二批在分支 `batch/20261030-b2`，issue #1（pse）· #2（abtest）
