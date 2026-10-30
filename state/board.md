@@ -4,13 +4,18 @@
 > **非轮规则：每轮有效工作必更新本文件**（倒序追加，新的在上，带日期与 commit hash）。
 > 每完成一个可命名的逻辑单元存一次；破坏性操作之前也存一次。这是给你自己留的后路，不是给别人看的历史。
 
+> ## 🔗 远程仓库与 PR 流程（2026-10-30）
+> - 人定：私有仓库 https://github.com/AllenChen-Xingan/noise-canceling ；每条线一个 issue；AI 开 PR 并自己合并（CLAUDE.md 铁律 15，记忆 `state/memory/20261030-commit-issue-pr.md`）
+> - main 已推送；第二批在分支 `batch/20261030-b2`，issue #1（pse）· #2（abtest）
+> - 根目录 `LICENSE`（GPL-3.0）已加在 `batch/20261030-b2`（6e0d8c2），随第二批 PR 进 main
+
 > ## ✅ 第一批调研收尾与拍板（2026-10-30）
 > - 002 / 003 / 004 三条线全部验收、收尾、关窗；27 题已拍板 → `docs/plan/001_decisions-20261029-b1.md`
 > - ⚠️ 与建议不同的两条：**许可证 GPL-3.0**（D04）· **个性化定为核心**（D08）
 > - 已回写：三份取舍卡勾选、三份 must-know 命门改写（待人过目）、删 `resources/P.808`
-> - **人要做**：装 BlackHole（`brew install blackhole-2ch` + 重启）· 过目三份命门 · 给远程仓库地址 · 定放权边界
+> - **人要做**：装 BlackHole（`brew install blackhole-2ch` + 重启）· 过目三份命门 · 定放权边界
 > - **第二批已派（人同意）**：`pse`（005 个性化调研，workflow 深调研）· `abtest`（exp003 离线 AB 对比页 + 客观分数）；两个都已报到。M0 直通等人装好 BlackHole
-> - 未回写：根目录 `LICENSE`（等远程仓库）· `.42cog/real.md` 许可证一条（留人过目）
+> - 未回写：`.42cog/real.md` 许可证一条（留人过目）
 
 > ## ⚠️ 派活巡检（2026-10-29 20:38 · 36949e2）
 > - 三个手下**都没跑起来**：`model` 窗口卡在 Claude Code「是否信任此文件夹」弹窗（17:35 起）；`pipeline`、`evaltool` 窗口不存在（派活在第一个窗口后中断）

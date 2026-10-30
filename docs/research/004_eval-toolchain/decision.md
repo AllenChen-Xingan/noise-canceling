@@ -15,7 +15,7 @@
 
 | 尺子 | 主指标（实现） | 交叉 / 诊断 | 层 | 出处 |
 |---|---|---|---|---|
-| **清楚 · 吃字** | whisper.cpp large-v3-turbo（锁 sha1 `4af2b29d…`，Metal，贪心，`-tp 0 -nf -mc 0`，不开 `--vad`）+ jiwer，删除、替换、插入分开记；吃字率 = 删除 ÷ 参考词数 | 中文加 SenseVoiceSmall。门禁上**任一家**报警就拦、交人 AB 复核；下结论时要两家一致 | 本机层（CI 能不能跑待实测，见门禁） | `gap.md`「吃字率配方」；`whisper.cpp/src/whisper.cpp:3823-3826,7082-7087,7296`；`jiwer/process.py:126` |
+| **清楚 · 吃字** | **Qwen3-ASR-Plus 1.7B**（本机 `42model` 服务，人定 2026-10-30，`docs/plan/001_decisions-20261029-b1.md` D28；原方案 whisper.cpp large-v3-turbo 作废）+ 编辑距离，删除、替换、插入分开记；吃字率 = 删除 ÷ 参考词（字）数；插入另记「脑补率」——LLM 解码器可能把被吞的字补回来 | 中文加 SenseVoiceSmall。门禁上**任一家**报警就拦、交人 AB 复核；下结论时要两家一致 | 本机层（CI 能不能跑待实测，见门禁） | 原出处见 `gap.md`「吃字率配方」（按 whisper 写，换 ASR 后参数待 exp003 重定） |
 | **清楚 · 压噪与人声** | 语音帧能量损失 + 非语音段残留噪音电平（Rust，`ebur128` crate；VAD 用参考信号上的能量门限，确定性） | ESTOI（pystoi，URGENT 2024 SRCC .80）· SI-SDR（手写） | CI 层 | crates.io `ebur128`（MIT）；`urgent2024_analysis/mos/mos_correlations.png` |
 | **清楚 · babble** | 单设「单个干扰说话人」与「多人 babble」格子（干扰语音取 LibriSpeech 其他说话人），量干扰者残留电平 | 声纹相似度（设计稿 §13；模型许可没核） | 能量指标 CI；声纹本机 | `gap.md` §二 |
 | **自然 · 整体** | SCOREQ natural NR（onnxruntime，权重 378 MB，CC BY 4.0） | UTMOS22 strong（SpeechMOS，MIT） | 本机层 | 逐句 SRCC：URGENT 2024 SCOREQ .79 / UTMOS .74；CHiME-7 .75 / .33（`urgent2026_challenge_track2/BENCHMARK.md:2-21`） |
