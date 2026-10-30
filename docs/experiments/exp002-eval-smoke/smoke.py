@@ -77,8 +77,13 @@ def main():
     for name, path in CLIPS.items():
         audio = load16k(path)
         dur = len(audio) / 16000
+        # dnsmos_local.py 第 53 行用位置参数调 librosa.resample，librosa>=0.10 会报错；
+        # 所以先自己转成 16 kHz 存到 _tmp，再交给它（输入已是 16 kHz 就不会走那一行）。
+        tmp16 = ROOT / "_tmp/exp002-16k" / f"{name}.wav"
+        tmp16.parent.mkdir(parents=True, exist_ok=True)
+        sf.write(tmp16, audio, 16000)
         t = time.perf_counter()
-        s = scorer(str(ROOT / path), 16000, False)
+        s = scorer(str(tmp16), 16000, False)
         el = time.perf_counter() - t
         out["clips"][name] = {
             "path": path,
