@@ -110,3 +110,35 @@ cat 提示词文件 | opencode run --model <厂商/模型>
 **横向拼表，你自己裁**。
 
 > **统一问题，比统一结论更重要。** 各人自选维度，每份都对，却没法比。
+
+---
+
+## 本线实际使用的核查表（2026-10-29，手下 pipeline）
+
+三轮共 14 个读材料的代理，**全部复用这一张表**：第一轮 5 个会话内子代理，补检索 Workflow 4 个，对抗核实 Workflow 5 个。
+
+**角色分派**
+
+| 角色 | 材料 |
+|---|---|
+| 要比的 · 逐条 | BlackHole · libASPL · roc-vad · MetalVoice · Apple 官方 AudioServerPlugIn / AudioDriverKit 示例 |
+| 要学的 · 只读架构 | Background Music（三件套）· AudioCap（process tap） |
+| 零件 · 一两行 | cpal · coreaudio-rs · rtrb · rubato · webrtc-audio-processing · audio_thread_priority |
+
+**逐条核查（每条给「原生 ✅ / 部分 / 没有 ❌ + 文件:行号 + 一句话」）**
+
+1. 设备怎么注册：HAL AudioServerPlugIn / DriverKit / 其他
+2. 插件与用户态处理进程怎么通信：共享内存 / XPC / Mach / 内部环形缓冲 / socket
+3. 时钟：GetZeroTimeStamp 怎么算；漂移怎么补；运行中采样率变化怎么处理
+4. 附加延迟：缓冲大小、safety offset、延迟属性；有没有实测数字
+5. 安装与签名：装到哪；要不要管理员；要不要重启 coreaudiod；要不要公证；要不要关 SIP
+6. 许可证：只读懂后自己写，或从 Rust 链接，会不会被 GPL 传染
+7. 能不能从 Rust 驱动或改写
+8. 维护状态：最近提交日期、支持的 macOS 版本
+9. 提交历史里试过又放弃的东西
+
+**请推翻的预判**：P1–P5，原文见 `must-know.md` 第四节。
+
+**纪律**：证据分「官方明载 / 源码可证 / 本机实测 / 传言」；没有就写没有；每个候选四选一（直接用 / 在它基础上改造 / 只借鉴架构 / 不适合）；每份 ≤ 800 字。另有红线：不装驱动、不写 `/Library/Audio/Plug-Ins/`、不重启 coreaudiod、不加 sudo、不编译。
+
+**对抗核实的三个视角**：怀疑派（结论站得住吗，回源码抽查行号）· 实现派（明天照这个写代码会卡在哪）· 产品派（对开会的普通用户有什么用、装得上吗）。另外两个专项：macOS 15 / 26 / 27 的版本差异；第三方插件到底被哪个进程加载。
