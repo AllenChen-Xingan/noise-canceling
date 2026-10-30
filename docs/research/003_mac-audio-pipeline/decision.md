@@ -61,7 +61,7 @@
 
 ## 支持它的最强依据
 
-> 1. 维护最活跃的开源虚拟麦克风 BlackHole 用的就是「插件内部回环、用户态把它当普通设备写」（ReadInput / WriteMix，`resources/BlackHole/BlackHole/BlackHole.c:4553-4620`，最近提交 2026-10-28；维护者称 macOS 27 上能用【传】，本机未验证）。克隆的 4 个插件仓库（BlackHole · Background Music · roc-vad · libASPL）grep `shm_open` / `mmap` 零命中。
+> 1. 维护最活跃的开源虚拟麦克风 BlackHole 用的就是「插件内部回环、用户态把它当普通设备写」（ReadInput / WriteMix，`resources/BlackHole/BlackHole/BlackHole.c:4558-4611`，最近提交 2026-10-28；维护者称 macOS 27 上能用【传】，本机未验证）。克隆的 4 个插件仓库（BlackHole · Background Music · roc-vad · libASPL）grep `shm_open` / `mmap` 零命中。
 > 2. Apple 官方：插件宿主有沙箱，IO 跑在实时线程上不得阻塞（SDK `AudioServerPlugIn.h:38-42,83-89`）；虚拟设备应该用 HAL 插件，AudioDriverKit 只支持实体设备（developer.apple.com/forums/thread/775341）。
 > 3. 零件都在、都活着：rubato 运行中可调比率（`resources/rubato/src/asynchro.rs:806-830`）；rtrb 实时安全（`resources/rtrb/src/lib.rs:1-9`）；cpal 会报流作废和设备断开（`resources/cpal/src/host/coreaudio/macos.rs:251-268`）。
 
