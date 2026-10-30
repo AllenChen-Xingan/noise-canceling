@@ -22,11 +22,11 @@ import onnxruntime as ort
 import pyloudnorm
 import soundfile as sf
 
-ROOT = Path(__file__).resolve().parents[3]
+from _paths import RES, ROOT  # resources/ 只在主目录
 HERE = Path(__file__).resolve().parent
 OUT = ROOT / "_tmp/20261030-exp003"
-DPDF = ROOT / "resources/weights/dpdfnet/dpdfnet2.onnx"
-GTCRN = ROOT / "resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx"
+DPDF = RES / "weights/dpdfnet/dpdfnet2.onnx"
+GTCRN = RES / "gtcrn/stream/onnx_models/gtcrn_simple.onnx"
 SR = 16000
 TARGET_LUFS = -26.0
 PEAK_MAX_DB = -1.0

@@ -19,7 +19,7 @@ import pyloudnorm
 import soundfile as sf
 from scipy.signal import butter, sosfilt
 
-ROOT = Path(__file__).resolve().parents[3]
+from _paths import ROOT
 HERE = Path(__file__).resolve().parent
 OUT = ROOT / "_tmp/20261030-exp003"
 SR = 16000
