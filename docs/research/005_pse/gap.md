@@ -66,3 +66,27 @@
 | 「开头别人先说话」时注册器会不会锁错人 | 跑它（合成场景，见 decision.md「评测」第 4 条），等注册器写出来再说 |
 | 门控在主人与邻桌重叠时会不会误杀 | 跑它，M3 门控原型阶段 |
 | TEA-PSE / PVQE 到底多好 | **不用跑**：没有权重，跑不了 |
+
+### 给 abtest 的 VoxLock 接入说明（exp003 用；大总管 2026-10-30 定：并进 exp003，不另开线）
+
+> 全部出自本机 `resources/voxlock`（浅克隆，版本 1.2.1）与其 HF 模型卡；pse 只读核过，**没跑**。
+
+- **官方仓库**：github.com/arbazsiddiqui/voxlock（Apache-2.0；权重许可依据见 `NOTICE:4-7`，是基线作者的私下确认）
+- **权重**：HF `arbazsiddiqui/voxlock`，路径 `onnx/v2/`，代码锁定 revision `2413b292bc2c337bfc19a9802aaf3e011e68e9c4`（`voxlock/core.py:12`）。每种精度两个文件（`core.py:43-48`；大小 `README.md:153-158`）：
+
+  | 精度 | 文件 | 合计 |
+  |---|---|---|
+  | int8（默认） | `enroll.onnx` + `chunk_int8.onnx` | 74 MB |
+  | int8-full | `enroll.onnx` + `chunk_int8_full.onnx` | 71 MB |
+  | fp16 | `enroll_fp16.onnx` + `chunk_fp16.onnx` | 47 MB |
+  | fp32 | `enroll.onnx` + `chunk.onnx` | 94 MB |
+
+  建议只下 int8 与 fp32（共约 168 MB，`enroll.onnx` 共用）。放仓外（D22），记 sha256。⚠️ 1.1 版的旧文件（`onnx/` 根目录，chunk 有 `context` 输入）不兼容（`core.py:79-81`）
+- **采样率 / 帧**：16 kHz 单声道 float32；NFFT 512（32 ms）、HOP 128（8 ms）、开头 reflect 补 256 点（torch.stft center），开窗 Hann² 做 OLA 归一（`core.py:11,13,136-152`）。按 002 口径 ① 32 ms；官方「输出落后输入 24 ms」（`core.py:156`）是另一口径，**exp003 用脉冲实测为准**
+- **enroll.onnx**（每通电话跑一次）：输入 `enroll` [1, 48000]（**恰好 3 s**，更长的取前 30 s 里最响的 3 s，`core.py:29-34`）→ 输出 `enroll_n`、`k`、`v`（`export_onnx.py:254`），原样喂给每次 chunk
+- **chunk.onnx**（逐块跑）：输入 `wav` [1, (K−1)·128 + 512]（K 帧的波形，含帧间重叠）、`enroll_n`、`k`、`v`、`h`、`c`；输出 `frames` [1, K, 512]（已在图内做完 iSTFT 并开窗的时域帧）、`h_out`、`c_out`（`export_onnx.py:259-262`）。**状态显式**：`h`/`c` 形状从 `chunk.get_inputs()` 读（`core.py:82`），零初始化（`core.py:118`）；**OLA 在图外**（`core.py:139-145`），结果 × `GAIN = −0.5`（网络输出约 −2 倍，`core.py:14`）
+- **注册音频怎么喂**（两种，AB 页建议都做一列）：
+  1. 给定样本：`VoxLock(threads=1).stream(sample)`，从第一块起就隔离（`README.md:90-94`）。样本取同一段录音里**只有你**的 3 s（模拟「已注册」）
+  2. 自动：`live()`——先原样直通，等听满 3 s「比近 2 s 最安静帧高 10 dB」的 10 ms 帧再锁定，锁定时先回放至多 30 s 预热（`core.py:180-230`、`README.md:86`）；**不分是谁**，谁先说满 3 s 就锁谁——正好用来看咖啡馆录音里会不会锁错人
+- **计时建议**（对齐 exp001）：`VoxLock(model_dir=<仓外目录>, precision=..., threads=1)`；块长扫 8（单帧）/ 10 / 20 / 40 ms；记每块耗时 p99.9 与最大值，折算成「每 10 ms 音频耗时」与 002 的 2 ms 线比；int8 输出随块长略变（`README.md:96`），听测固定一种块长
+- **必须记下的坑**：Krisp 基准是 CC BY-NC，**不要用它**做 AB 素材；`isolate()` 整段模式用「前 15 s 最响 3 s」当样本，前提是你比邻桌响，和实时 `live()` 不是一回事
