@@ -37,7 +37,7 @@
 ## 依据来自哪一类
 
 - [x] 自有积累：设计稿 §13 的五层评测框架仍算数，作骨架；exp002 实测确认 CI 层能跑
-- [x] 他人积累：19 个仓库浅克隆，逐条核查到文件行号；URGENT 2024 相关图、Track2 BENCHMARK、各 HF / Zenodo / OpenSLR 许可页。Workflow 里每路都配了怀疑派，推翻了 11 条原结论，包括漏掉的 SCOREQ、DTW 必须加 `-nfa`、jiwer 计数方法、MUSAN 逐文件许可、MLS 不是 CC0、DNSMOS「唯一干净」不成立
+- [x] 他人积累：19 个仓库浅克隆，逐条核查到文件行号；URGENT 2024 相关图、Track2 BENCHMARK、各 HF / Zenodo / OpenSLR 许可页。Workflow 里每路都配了怀疑派，推翻了 12 条原结论，包括漏掉的 SCOREQ、DTW 必须加 `-nfa`、jiwer 计数方法、MUSAN 逐文件许可、MLS 不是 CC0、DNSMOS「唯一干净」不成立
 - [x] 自己跑的：exp002 确认 DNSMOS 不需要 GPU 或 PyTorch，10 秒音频 0.05 秒；顺带发现 `dnsmos_local.py:53` 不兼容新版 librosa，并改了一条实现约束：评测代码自己负责重采样
 
 ---

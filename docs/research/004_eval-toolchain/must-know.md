@@ -30,13 +30,13 @@
 
 ## 四、我的预判
 
-| 我怀疑 | 请核实 |
-|---|---|
-| DNSMOS 的 ONNX 模型很小、Mac CPU 上能跑，但模型权重的许可证没单独写清楚 | 回 `resources/DNS-Challenge/DNSMOS/` 与 LICENSE、LICENSE-CODE 确认 |
-| NISQA 代码是 MIT，但预训练权重另有许可（可能是非商用） | 回 `resources/NISQA/` README 与 weights 目录确认 |
-| UTMOS 是在 TTS 合成语音上训的（VoiceMOS 2022），对降噪伪影的相关性证据弱 | 回论文 / 仓库确认训练数据；查 URGENT 2024 分析论文里各指标与人耳 MOS 的相关性 |
-| URGENT 挑战赛已经算过「哪些客观指标和真人 MOS 最相关」，这是命门 3 最好的现成证据 | 回 `resources/urgent2024_analysis/` 与 URGENT 2025/2026 论文确认 |
-| mlx-whisper 在 Apple Silicon 上比 whisper.cpp 快，但逐词时间戳 whisper.cpp / openai-whisper 更成熟 | 回仓库确认词级时间戳支持；速度数据只信官方明载或本机实测 |
-| PESQ 的官方 ITU 实现有专利与许可限制，python-pesq 的许可不等于 ITU 许可 | 回 `resources/PESQ/` 的 LICENSE 与 README 确认 |
-| FSD50K 里混有 CC-BY-NC 的片段，整包不能直接用于训练可商用权重 | 查 Zenodo 页与官方说明 |
-| DNS Challenge 数据混有多种许可（部分来自 NC 数据集） | 查仓库 README 许可证段 |
+| 我怀疑 | 请核实 | 核实结果（2026-10-29） |
+|---|---|---|
+| DNSMOS 的 ONNX 模型很小、Mac CPU 上能跑，但模型权重的许可证没单独写清楚 | 回 `resources/DNS-Challenge/DNSMOS/` 与 LICENSE、LICENSE-CODE 确认 | 推翻一半：ONNX 是真文件，约 2.9 MB；仓库非代码内容是 CC BY 4.0（`README.md:247-250`），能再分发 |
+| NISQA 代码是 MIT，但预训练权重另有许可（可能是非商用） | 回 `resources/NISQA/` README 与 weights 目录确认 | 成立：权重 CC BY-NC-SA 4.0（`NISQA/README.md:166`） |
+| UTMOS 是在 TTS 合成语音上训的（VoiceMOS 2022），对降噪伪影的相关性证据弱 | 回论文 / 仓库确认训练数据；查 URGENT 2024 分析论文里各指标与人耳 MOS 的相关性 | 成立一半：训练集确实是合成语音，但在 URGENT 2024 增强语音上 SRCC .91，为最高之一；换到 CHiME-7 真实录音掉到 .20 |
+| URGENT 挑战赛已经算过「哪些客观指标和真人 MOS 最相关」，这是命门 3 最好的现成证据 | 回 `resources/urgent2024_analysis/` 与 URGENT 2025/2026 论文确认 | 成立：`urgent2024_analysis/mos/mos_correlations.png`；但粒度没写明，n=23 |
+| mlx-whisper 在 Apple Silicon 上比 whisper.cpp 快，但逐词时间戳 whisper.cpp / openai-whisper 更成熟 | 回仓库确认词级时间戳支持；速度数据只信官方明载或本机实测 | 速度没有官方数据；另发现 mlx-whisper 没有 beam search（`decoding.py:436-437`） |
+| PESQ 的官方 ITU 实现有专利与许可限制，python-pesq 的许可不等于 ITU 许可 | 回 `resources/PESQ/` 的 LICENSE 与 README 确认 | 成立，而且更严：内嵌 ITU C 代码禁止修改、翻译、分发（`PESQ/pesq/dsp.c:34-75`） |
+| FSD50K 里混有 CC-BY-NC 的片段，整包不能直接用于训练可商用权重 | 查 Zenodo 页与官方说明 | 成立：NC 片段占 11.8%（Zenodo 4060432） |
+| DNS Challenge 数据混有多种许可（部分来自 NC 数据集） | 查仓库 README 许可证段 | 推翻：README 列的子集都不是 NC（`README.md:264-290`）；含 DEMAND（CC BY-SA 3.0） |

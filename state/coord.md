@@ -38,7 +38,7 @@
 
 - 17:35 首派失败：spawn-worker.sh 不识别新版信任提示 → 超时退出，后两窗未开；已修脚本 BLOCK_RE（人定 2026-10-29）
 - exp001（M5 · ORT CPU 单线程）每帧 p99：DPDFNet baseline 0.32 · dpdfnet2 0.78 · dpdfnet4 1.26 · dpdfnet8 2.21 · 2_48k 1.12 · 8_48k 3.24 · GTCRN 0.43 ms；dpdfnet8 两版超 2 ms 预算 → docs/experiments/exp001-model-frame-time/（README + raw-output，大总管已抽查数字一致，验收通过）
-- model 发现：DPDFNet 流式输出落后输入 4 帧（mask 2 + DF 2），前瞻 40 ms；已要求区分算法延迟与端到端延迟两种口径
+- model 发现：DPDFNet 流式输出落后输入 4 帧（mask 2 + DF 2），前瞻 40 ms；分三列：窗长+前瞻 60 ms · DNS 口径（窗长+步长+前瞻）70 ms · 端到端推算约 65–70+ ms（DNS 定义已对 PDF 原文核实）
 - pipeline 核实：第三方 HAL 插件由独立 helper 进程加载、不在 coreaudiod 里（开机日志实测）→ 设计稿「崩了整机没声音」前提过时；开源先例断供都送静音，违背「从不吃字」；异步推理线程应自建 work interval；本机缺 meson
 - exp002（M5 CPU）：DNSMOS 每段约 10 s 音频打分约 0.05 s，PESQ/STOI 各约 0.05 s——评测几乎零成本；坑：DNS 仓 dnsmos_local.py:53 与 librosa≥0.10 不兼容，非 16 kHz 输入报错，需先自行重采样（smoke.py:80-86）→ docs/experiments/exp002-eval-smoke/（大总管已抽查：clean 自检 PESQ 4.64 / STOI 1.000，验收通过）
 - 交代里大总管名 5-app-89 失效，现为 noise-canceling-69，批次文件已改
