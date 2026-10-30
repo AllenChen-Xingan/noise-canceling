@@ -1,86 +1,79 @@
 # 两类来源 · Mac 上的实时音频管线与虚拟麦克风怎么接
 
-> 2026-10-29。按**谁积累的**分尽：自己积累的、别人积累的。
-> **两类进来都问同一句：它今天还算数吗？**
->
-> ⚠️ 「都没有所以自己跑」不在这里——**那不是来源，是做法**，见 `gap.md` 的「它们没做的」。
->
-> ⚠️ 下面的市场与站点**会变**，用前核一眼；名字对不上就搜同类。**方法不变，名单会老。**
+> 2026-10-29，手下 pipeline 填。**两类进来都问同一句：它今天还算数吗？**
+> 证据等级：【官】官方明载 ·【源】源码可证 ·【测】本机只读实测 ·【传】论坛 / 博客 / 第三方自述 ·【推】由前几类推出、未验证。
+> 路径 `resources/…` 是浅克隆的参考区（不进仓，可用 `clone.sh` 重建）；逐条核查底稿在会话 scratchpad，结论已全部搬进本文件与 `gap.md`。
+> 本机：macOS 27.0.1（26A434），SDK 头文件取自本机 Xcode / CommandLineTools。
 
 ---
 
-## 一、自有积累 —— 可照搬，先确认权利与时效
+## 一、自有积累
 
-自家旧项目、老代码、团队规约、你自己写过的东西。
-
-### 怎么查
-
-**先跑一把**：`bash skills/aias-meta-research/scripts/scan-own.sh "<关键词>"`
-——一次扫完本机项目、提交历史、过往对话记录，按最后改动时间排。
-
-| 去哪 | 怎么翻 |
-|---|---|
-| **过去的项目目录** | 直接看。做过类似的事没有？哪一版跑通过？ |
-| **自己的提交历史** | `git log --oneline --all` · `git log --author=<你>` ——**代码记做成什么样，提交记当时为什么这么定** |
-| **过往对话记录** | 记忆和现实对不上时，去翻当时的讨论——**文档说 A、代码做了 B、你记得是 C，谁都别直接信** |
-| **团队的仓库与规约** | 别人踩过的坑，规约里往往留着痕迹 |
-| **自己写过的文档** | 笔记、总结、发过的文章 |
-
-### 登记
+`scan-own.sh "AudioServerPlugIn"` / `"BlackHole"`：本机 `B-MyCreate/` 下没有做过音频驱动或实时音频的旧项目。
 
 | 是什么 | 在哪 | 还算数吗 | 判据 |
 |---|---|---|---|
-| | `resources/…` | 算 / 不算了 | 例：生产环境跑通过 ／ 规约可能过时 |
-
-⚠️ **不自动可信**。同是自家的东西，判决可能相反：
-「这个规约可能过时了，可以参考，但不能完全从它出发」vs「这个我反复测试过、生产跑通了，尽量复用」。
-
-⚠️ **你三个月前写的东西，和陌生人写的东西，享受同一套审查。区别只在于——你有权照搬它。**
+| 人整理的设计与参考汇总 §6 / §7 / §11 / §16 | `vault/raw/20261029-voice-denoise-design.md:223-299, 309-355, 474-531, 677-708` | **部分算**：标【你定的】的目标算；系统层的四条预判有两条被推翻或修正（见 `must-know.md` 预判表与 `gap.md`） | 人手原件，只读；它的预判是建议，不是标准 |
+| 本机 macOS 27 的进程与插件现状 | 本机 `ps` / `ls /Library/Audio/Plug-Ins/HAL` | 算（今天测的） | 【测】HAL 目录里有一个第三方 `ParrotAudioPlugin.driver`；进程里有 `coreaudiod` 和 `com.apple.audio.DriverHelper.xpc`。没有 sudo，看不到插件被哪个进程加载 |
 
 ---
 
-## 二、他人积累 —— 只读借鉴，先查协议
+## 二、他人积累
 
-### 查四类，用同一套方法
+### 要比的（逐条核查，同一张核查表，见 `assign.md` 末节）
 
-**换对象，方法不变**——都是同一个决策点、同一套派活四件事（见 `assign.md`）。
-
-| 查什么 | 查什么问题 | 去哪查 |
-|---|---|---|
-| **技能生态** | 这件事有没有人做成过技能？ | 各家插件市场与技能仓库；搜 `awesome-<你的领域>` 一类的清单仓 |
-| **命令行工具** | 有哪些硬工具，用哪个？ | 三大分发市场：**Homebrew**（Mac）· **npm**（JS，四百万包）· **PyPI**（Python，八十多万项目）。Windows 看 **Scoop** / **winget** |
-| **模型** | 这个活该用哪个模型？ | 公开评测榜单与各家技术报告。**要多模态、要长上下文，就得专门看那一栏** |
-| **别人的项目** | 源码 · 提交历史 · 放弃过什么 | 代码托管平台（GitHub / GitLab / 国内平台）。**浅克隆到参考区再读**，别在网页上翻 |
-
-**取材**：`bash skills/aias-meta-research/scripts/clone.sh <url>`（要挖提交历史加 `-d 200`）
-
-### 查模型这一栏，多问三句
-
-榜单也是他人积累，**同样要判时效、判来路**：
-
-- **谁做的榜**？做榜的人和被测的模型有没有利害关系？
-- **什么时候的**？半年前的榜单在这个行当里基本等于过期。
-- **测的是不是你要的那件事**？综合分高，不代表你这一类任务上强。
-
-**最后一句最要紧**：能自己拿三五个真实任务试一遍，胜过读十份榜单。
-
-### 登记
-
-| 是什么 | 在哪 | 协议 | 角色 | 读多深 | 还活着吗 |
+| 是什么 | 在哪 | 协议 | 读多深 | 还活着吗 | 一句话判断 |
 |---|---|---|---|---|---|
-| | `resources/…` | MIT / Apache / GPL… | 要比的 / 要学的 / 零件 | 逐条核查 / 只读架构 / 一两行 | 最近提交时间 |
+| **BlackHole** v0.7.1（纯 C 的 HAL 插件，回环虚拟设备） | `resources/BlackHole` · github.com/ExistentialAudio/BlackHole | 源码 GPL-3.0；**官方二进制和名字保留所有权利**（`LICENSE:1-9`） | 逐条 | 活跃，最近提交 2026-10-28 | **M0–M2 直接用；最终产品只借鉴架构** |
+| **libASPL**（C++17 的 AudioServerPlugIn 库） | `resources/libASPL` · github.com/gavv/libASPL | MIT（另含 Apple 示例代码许可） | 逐条 | 最近提交 2025-04-14；CI 覆盖 macOS 13–15 | **在它基础上改造**（自制插件的骨架首选） |
+| **roc-vad**（基于 libASPL 的网络虚拟设备） | `resources/roc-vad` · github.com/roc-streaming/roc-vad | MPL-2.0 | 逐条 | 最近提交 2025-04-13 | **只借鉴架构**：重活全放在插件里，是我们的反例 |
+| **MetalVoice**（Swift，DFN3 + BlackHole，跟我们同一件事） | `resources/MetalVoice` · github.com/Ghostkwebb/MetalVoice | MIT | 逐条 | 最近提交 2026-08-31，20 个提交，单人 | **只借鉴架构，主要当负例** |
+| **Apple 官方示例** NullAudio / SimpleAudio / AudioDriverKit | developer.apple.com/documentation/coreaudio/creating-an-audio-server-driver-plug-in · …/building-an-audio-server-plug-in-and-driver-extension · developer.apple.com/documentation/audiodriverkit/creating-an-audio-device-driver | Apple 示例代码许可（NullAudio 许可证本次没核实） | 读官方说明，没下载 zip | 官方在维护 | **NullAudio：在它基础上改造；AudioDriverKit：不适合**（虚拟设备拿不到 entitlement） |
+| **AudioServerPlugIn.h**（SDK 头文件） | 本机 `…/CoreAudio.framework/Headers/AudioServerPlugIn.h` | — | 逐段 | 随 SDK 27.0 | 官方对沙箱、IPC、实时线程的唯一成文说法 |
 
-⚠️ **读懂 → 自己写，绝不复制粘贴。** GPL / AGPL 只参考不链接。
-⚠️ **协议不只回答「能不能用」，还决定「能读到哪一步」。**
+### 要学的（只读架构）
+
+| 是什么 | 在哪 | 协议 | 还活着吗 | 学到什么 |
+|---|---|---|---|---|
+| **Background Music**（虚拟输出设备 + 用户态 app + XPC helper 三件套） | `resources/BackgroundMusic` · github.com/kyleneideck/BackgroundMusic | GPL-2.0+（只读懂后自己写，不复制、不链接） | v0.5.0，2026-06-10 | 驱动只当设备、处理放在 app；Mach 服务白名单加 LaunchDaemon 中转只做控制；app 崩溃后把默认设备改回去 |
+| **AudioCap**（process tap 样例） | `resources/AudioCap` · github.com/insidegui/AudioCap | BSD-2-Clause | 2025-08-07，定位是 API 样例 | 怎么建 tap 和聚合设备、要什么权限 |
+
+### 零件（一两行）
+
+| 零件 | 在哪 | 协议 | 版本 / 最近提交 | 能接在哪 · 关键事实 |
+|---|---|---|---|---|
+| `cpal` | `resources/cpal` | Apache-2.0 | 0.19.0 / 2026-10-28 | 采集麦克风、写 BlackHole 或自制设备。底层是 AUHAL；支持 `BufferSize::Fixed`（`src/host/coreaudio/macos/device.rs:904-930`）；采样率一变就报 `StreamInvalidated`，要上层重建（`macos.rs:262-268`）；loopback 已经用上 process tap 加漂移补偿（`macos/loopback.rs:93-123`）；**没有** workgroup |
+| `coreaudio-rs` | `resources/coreaudio-rs` | MIT/Apache | 0.14.2 / 2026-06-18 | 只封装了采样率监听（`src/audio_unit/macos_helpers.rs:707-787`）；设备列表监听、聚合设备要直接调 `objc2-core-audio` |
+| `rtrb` | `resources/rtrb` | MIT/Apache | 0.4.1 / 2026-10-25 | 进程内无锁 SPSC 环形缓冲，实时安全；**不能放进跨进程共享内存**（数据区是堆指针，`src/lib.rs:114,159`） |
+| `rubato` | `resources/rubato` | MIT/Apache | 5.0.1 / 2026-10-01 | 漂移补偿：`Async` 重采样器运行中可调比率（`src/asynchro.rs:806-830`）；sinc 128 点约 1.3 ms @48k；实时路径只用 `process_into_buffer` |
+| `webrtc-audio-processing`（tonarino） | `resources/webrtc-audio-processing` | BSD 风格 | 2.1.0 / 2026-07-16 | AEC3（`webrtc-audio-processing-sys/src/wrapper.cpp:46-58`）；帧长必须 10 ms，否则 panic（`src/lib.rs:209,246`）；`bundled` 要 meson + ninja |
+| `audio_thread_priority`（mozilla） | `resources/audio_thread_priority` | MPL-2.0 | 0.38.0 / 2026-09-17 | 用 Mach 时间约束策略提升实时优先级（`src/rt_mach.rs:63-140`）；**不碰 workgroup** |
+| Audio Workgroup 的 Rust 绑定 | docs.rs/objc2-core-audio（常量 `kAudioDevicePropertyIOThreadOSWorkgroup`） | — | — | 只有常量；`os_workgroup_join`、`AudioWorkIntervalCreate` **没有 Rust 封装**，要自己写几行 `extern "C"` |
+
+### 补检索查到的（多为网页，没克隆）
+
+| 是什么 | 在哪 | 协议 | 还活着吗 | 判断 |
+|---|---|---|---|---|
+| **tympan-aspl**（纯 Rust 的 AudioServerPlugIn 框架） | github.com/penta2himajin/tympan-aspl · docs.rs/tympan-aspl | MIT 或 Apache-2.0（两处说法不一，都不传染） | 0.1.0，2026-05 建仓，只发过一版，CI 只验证到「尝试加载」 | 观察项；它关于 macOS 15 签名的说法是线索，要交叉核实 |
+| **eqMac** | github.com/bitgapp/eqMac | Apache-2.0 | 公开代码停在 v1.3.2 | 不适合：本质也是设备内部回环，和 BlackHole 一类 |
+| Soundflower | github.com/mattingalls/Soundflower | MIT | 已废弃，不支持 Apple Silicon | 不适合 |
+| NoiseTorch-ng / werman noise-suppression-for-voice | GitHub | GPL-3.0 | 一个只支持 Linux；一个只做 AU/VST、不注册设备 | 不适合 |
+| Krisp / Loopback / NVIDIA Broadcast | 商业 | — | — | 没找到官方技术文档，不登记做法 |
+
+### 官方文档与论坛（逐条结论里引用的）
+
+| 是什么 | URL | 等级 | 还算数吗 |
+|---|---|---|---|
+| Notarizing macOS software before distribution | developer.apple.com/documentation/security/notarizing-macos-software-before-distribution | 【官】 | 算 |
+| macOS 15 起不能按住 Control 绕过 Gatekeeper | developer.apple.com/news/?id=saqachfa（2024-08-06） | 【官】 | 算 |
+| DTS 回帖：coreaudiod 不要求插件公证 | developer.apple.com/forums/thread/116601（2019） | 【官·旧】 | **待核**：已过 7 年，交给版本核实代理 |
+| AudioDriverKit 只支持实体设备，虚拟设备用 HAL 插件 | developer.apple.com/forums/thread/775341 | 【官】（Apple 工程师引用官方文档） | 算 |
+| Requesting entitlements for DriverKit development | developer.apple.com/documentation/driverkit/requesting-entitlements-for-driverkit-development | 【官】 | 算 |
+| Adding parallel / asynchronous real-time threads to audio workgroups | developer.apple.com/documentation/audiotoolbox/adding-parallel-real-time-threads-to-audio-workgroups · …/adding-asynchronous-real-time-threads-to-audio-workgroups | 【官】 | 算 |
+| Capturing system audio with Core Audio taps | developer.apple.com/documentation/coreaudio/capturing-system-audio-with-core-audio-taps | 【官】 | 算 |
+| Apple Developer Program 年费 99 美元 | developer.apple.com/programs/whats-included/ | 【官】 | 算 |
+| 第三方插件宿主进程叫 `Core-Audio-Driver-Service.helper` | gist.github.com/cyounkins/a4c9ca82684f861f14d5ba055eff10dc（macOS 12.5.1 崩溃报告） | 【传】 | **待核**：本机 macOS 27 的进程表里没看到它 |
 
 ---
 
-## 两类都不算数时
-
-那不是失败，那是**下一步的入口**：确认了没有，才该去跑实验。
-接着填 `gap.md` 的「它们没做的」——**「压根没有」是查完之后的结果，不是时间判断。**
-
-## 最后
-
-**读，是复用别人的；跑，是长出你自己的。** 这一份只管前半——材料从哪来；
-后半在 `gap.md` 与 `decision.md`。
+⚠️ **读懂 → 自己写，绝不复制粘贴。** GPL（BlackHole、Background Music）只参考、不链接、不复制；MPL（roc-vad、audio_thread_priority）改了它的文件就要开源那个文件；MIT / Apache / BSD（libASPL、AudioCap、Rust 零件）照协议保留声明即可。
