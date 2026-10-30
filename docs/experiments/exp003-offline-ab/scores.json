@@ -673,10 +673,10 @@
     "ref_len": 20,
     "del": 0,
     "sub": 19,
-    "ins": 118,
+    "ins": 7,
     "del_rate": 0.0,
     "sub_rate": 0.95,
-    "ins_rate": 5.9
+    "ins_rate": 0.35
    },
    "dpdfnet2": {
     "SIG": 3.425,
@@ -691,10 +691,10 @@
     "ref_len": 20,
     "del": 0,
     "sub": 19,
-    "ins": 116,
+    "ins": 7,
     "del_rate": 0.0,
     "sub_rate": 0.95,
-    "ins_rate": 5.8
+    "ins_rate": 0.35
    },
    "gtcrn": {
     "SIG": 3.438,
@@ -709,10 +709,10 @@
     "ref_len": 20,
     "del": 0,
     "sub": 19,
-    "ins": 115,
+    "ins": 7,
     "del_rate": 0.0,
     "sub_rate": 0.95,
-    "ins_rate": 5.75
+    "ins_rate": 0.35
    }
   }
  },
@@ -727,7 +727,7 @@
    "resid_rel_db": -4.489,
    "del_rate": 0.032,
    "sub_rate": 0.154,
-   "ins_rate": 0.523
+   "ins_rate": 0.06
   },
   "dpdfnet2": {
    "SIG": 3.21,
@@ -739,7 +739,7 @@
    "resid_rel_db": -27.557,
    "del_rate": 0.046,
    "sub_rate": 0.227,
-   "ins_rate": 0.568
+   "ins_rate": 0.113
   },
   "gtcrn": {
    "SIG": 2.961,
@@ -751,7 +751,45 @@
    "resid_rel_db": -7.637,
    "del_rate": 0.043,
    "sub_rate": 0.201,
-   "ins_rate": 0.559
+   "ins_rate": 0.109
+  }
+ },
+ "median": {
+  "noisy": {
+   "SIG": 2.317,
+   "BAK": 1.547,
+   "OVRL": 1.59,
+   "ESTOI": 0.551,
+   "SI_SDR_dB": -0.205,
+   "noise_att_db": 0.0,
+   "resid_rel_db": -4.735,
+   "del_rate": 0.0,
+   "sub_rate": 0.024,
+   "ins_rate": 0.0
+  },
+  "dpdfnet2": {
+   "SIG": 3.231,
+   "BAK": 3.8,
+   "OVRL": 2.865,
+   "ESTOI": 0.631,
+   "SI_SDR_dB": 4.78,
+   "noise_att_db": -8.145,
+   "resid_rel_db": -10.88,
+   "del_rate": 0.0,
+   "sub_rate": 0.087,
+   "ins_rate": 0.0
+  },
+  "gtcrn": {
+   "SIG": 3.113,
+   "BAK": 3.398,
+   "OVRL": 2.466,
+   "ESTOI": 0.595,
+   "SI_SDR_dB": 3.63,
+   "noise_att_db": -5.72,
+   "resid_rel_db": -5.255,
+   "del_rate": 0.0,
+   "sub_rate": 0.033,
+   "ins_rate": 0.0
   }
  },
  "pairwise_wins": {
@@ -803,8 +841,8 @@
    },
    "ins_rate": {
     "dpdfnet2": 1,
-    "gtcrn": 2,
-    "tie": 9
+    "gtcrn": 1,
+    "tie": 10
    }
   }
  },

@@ -91,8 +91,8 @@ def asr_text(path, lang, model):
 
 
 def tokens(text, lang):
-    if lang == "zh":
-        return [c for c in text if re.match(r"[一-鿿0-9a-zA-Z]", c)]
+    if lang == "zh":  # 汉字逐字；夹在中文里的英文 / 数字按词（否则一句英文会按字母算成几十个插入）
+        return re.findall(r"[一-鿿]|[a-z0-9']+", text.lower())
     return re.findall(r"[a-z0-9']+", text.lower())
 
 
@@ -164,6 +164,7 @@ def main():
         print(cid, {v: (r[v]["OVRL"], r[v]["ESTOI"], r[v]["SI_SDR_dB"], r[v].get("del_rate"), r[v].get("ins_rate")) for v in VERS}, flush=True)
     keys = ["SIG", "BAK", "OVRL", "ESTOI", "SI_SDR_dB", "noise_att_db", "resid_rel_db"] + (["del_rate", "sub_rate", "ins_rate"] if use_asr else [])
     summary = {v: {k: round(float(np.mean([res[c][v][k] for c in res])), 3) for k in keys} for v in VERS}
+    median = {v: {k: round(float(np.median([res[c][v][k] for c in res])), 3) for k in keys} for v in VERS}
     higher_better = {"SIG", "BAK", "OVRL", "ESTOI", "SI_SDR_dB"}
     wins = {}  # 两两比较：每项指标上逐段谁更好（删除/替换/插入率越低越好）
     for a, b in itertools.combinations(models, 2):
@@ -173,7 +174,7 @@ def main():
             ties = sum(res[c][a][k] == res[c][b][k] for c in res)
             w[k] = {a: int(better_a), b: len(res) - int(better_a) - ties, "tie": ties}
         wins[f"{a}_vs_{b}"] = w
-    out = {"per_clip": res, "mean": summary, "pairwise_wins": wins, "asr": use_asr}
+    out = {"per_clip": res, "mean": summary, "median": median, "pairwise_wins": wins, "asr": use_asr}
     if use_asr:
         n_files = [res[c].get("asr_ref_stable") for c in res] + [res[c][v]["asr_stable"] for c in res for v in VERS]
         out["asr_model"] = {"service": ASR_URL, "model": model, "params": "temperature=0, language=<en|zh>",
