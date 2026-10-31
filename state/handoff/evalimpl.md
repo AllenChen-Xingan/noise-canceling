@@ -12,3 +12,6 @@
 - xtask 加 `eval ci|qa`（子进程转调，不依赖 vdn crate）；ci.yml 加 `eval ci` 一步；规约 §7.1 + G12；cog.md 加 vdn-eval 一行
 - 申请名额（cargo test -p vdn-eval + eval ci + calib），排队第一
 - 待办：main 已合 PR #34（Cargo.toml members、cog.md 有改动）→ 收尾前同步 main（大总管要求）
+- 名额跑完：cargo test -p vdn-eval 21 过（修了 Kendall τ 的 signum(0)=1 bug）；eval ci --system ref：回归 pass^k 12/16、能力 0/10、探针 5/5 全抓住，门禁通过；冻结基线 87 项写入 suite/baseline-ci.json；报告记录 results/20261030-235322-f3e9757-ci.*
+- 首跑发现：① R01/R03 字头门控漏开（停顿 < −70 dBFS 绝对门限，底噪跟踪只看到语音帧）→ 挪进能力集 C10；② 纯噪声停顿里门控 ~50% 时间开着（noise_open），停顿只压约 5 dB——可能是 exp005「都没降噪」的引擎层原因（ref 上测得，GTCRN 待验）
+- 定标第 1 轮（exp003）：48 对 12 屏，没有一条 ≥ L1（最好 Δ(del+sub) 0.64 [0.41, 0.84]；DNSMOS OVRL 0.48）；按 012 第 1 轮是定标轮 → 正式全 L0；calib/20261031-exp003-round1.*
