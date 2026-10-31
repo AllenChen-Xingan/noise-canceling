@@ -34,7 +34,7 @@ impl Gtcrn {
         if names != ["mix", "conv_cache", "tra_cache", "inter_cache"] {
             return Err(format!("GTCRN 输入不符：{names:?}").into());
         }
-        let mut sel = OutputSelector::no_default();
+        let mut sel = OutputSelector::default();
         sel = sel.preallocate(OUT_NAMES[0], session::zeros(&[1, BINS, 1, 2])?);
         for (name, shape) in OUT_NAMES[1..].iter().zip(CACHE_SHAPES) {
             sel = sel.preallocate(*name, session::zeros(shape)?);

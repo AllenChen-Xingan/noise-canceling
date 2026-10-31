@@ -39,7 +39,7 @@ impl FastEnhancer {
             })
             .collect::<Result<_, _>>()?;
         let hop = *shapes[0].last().ok_or("wav_in 形状为空")?;
-        let mut sel = OutputSelector::no_default();
+        let mut sel = OutputSelector::default();
         let outs = session.outputs();
         if outs.len() != ins.len() {
             return Err("FastEnhancer 输入输出个数不符".into());
