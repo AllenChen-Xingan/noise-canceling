@@ -33,7 +33,7 @@
 | crate 的档位与禁依赖 | 写进各 crate `Cargo.toml` 的 `[package.metadata.vdn]`（§5.4），这是机读正本 |
 | bin 名 | 开发期 `vdn`；两层进程 `vdn-capture`（送音）、`vdn-denoised`（推理）⟨拍板 4⟩ |
 | 推理后端 crate（拆出之后） | `vdn-backend-<名>` |
-| 工具 | `src/xtask/`（package 名 `xtask`；放 `src/` 下以免新开顶层目录，铁律 10），`.cargo/config.toml` 设 `[alias] xtask = "run --quiet -p xtask --"`；xtask 不依赖任何 vdn crate |
+| 工具 | `src/xtask/`（package 名 `xtask`；放 `src/` 下以免新开顶层目录，铁律 10），**不设 `cargo xtask` 别名**：别名要新建顶层目录 `.cargo/`（铁律 10），为一个别名不值得，文档与 CI 一律写全 `cargo run -p xtask -- tidy` / `cargo run -p xtask -- check-deps`；xtask 不依赖任何 vdn crate |
 | 模型权重 | 仓外；仓里只留来源 · 许可 · sha256（CLAUDE.md 铁律 8） |
 | 构建产物 | `/target/` 在第一次构建前就在 `.gitignore` 里（2026-10-30 p1 分支误提交 target/ 后由大总管定） |
 
@@ -288,7 +288,7 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 |---|---|---|---|
 | 静态·写法 | clippy `disallowed-methods/types/macros`（根 `clippy.toml` **一份**）+ restriction lint | 本 crate 里实时代码的调用点 | 依赖 crate 内部、宏展开内部；漏列的 API（禁用清单是第一层，不是兜底） |
 | 静态·依赖直接边 | cargo-deny `[bans]`，内部 crate 也列进 deny（`allow-workspace` 保持默认 false） | 谁能**直接**依赖 X | 传递依赖（wrappers 只查直接依赖者，`resources/cargo-deny/src/bans.rs:616-650`） |
-| 静态·依赖闭包 | `cargo xtask check-deps` | 某 crate / bin 的**整个闭包**里不许出现 X | — |
+| 静态·依赖闭包 | `cargo run -p xtask -- check-deps` | 某 crate / bin 的**整个闭包**里不许出现 X | — |
 | 静态·项目约定 | xtask tidy（普通 `#[test]`，文本 / 轻语法检查，照 rust-analyzer） | forbid 头、`// NRT:` 注释、`.gitignore`、哨兵、`std::fs` / `log` 文本检查 | 语义 |
 | 运行期·Rust 分配 | 计数分配器（release 有效）；debug 测试里的「不许分配」断言（009：nice-assert-no-alloc 或自写约 60 行） | Rust 全局分配器上的分配 | C / C++ 库的分配 |
 | 运行期·libc | rtsan-standalone `#[nonblocking]`，`RTSAN_ENABLE=1` 构建，经 `cargo test` / `cargo run` 跑回放 | malloc / free / 锁 / sleep 等，包括 C++ 内部 | 回放没跑到的路径 |
@@ -334,7 +334,7 @@ unsafe = false                     # true = 进 unsafe 白名单
 forbid = ["ort", "hound", "serde", "cpal"]   # 闭包里不许出现的 crate
 ```
 
-- `cargo xtask check-deps`：用 `cargo metadata --format-version 1` 读 `resolve.nodes[].deps[]`，只取普通依赖（`dep_kinds[].kind == null`），按包 BFS 求闭包，与 `forbid` 求交，非空以 1 退出。resolve 是 feature 合并后的图，只会多报，不会漏报
+- `cargo run -p xtask -- check-deps`：用 `cargo metadata --format-version 1` 读 `resolve.nodes[].deps[]`，只取普通依赖（`dep_kinds[].kind == null`），按包 BFS 求闭包，与 `forbid` 求交，非空以 1 退出。resolve 是 feature 合并后的图，只会多报，不会漏报
 - tidy 校验：`deny.toml` 的 bans 与各 crate 的 `forbid` 一致；`unsafe = false` 的 crate 有 forbid 头；`tier` 为 A/B 的 crate 有实时 lint
 - 这样拆 crate 时只改各自的 `Cargo.toml`，不用同步三处
 
@@ -376,7 +376,7 @@ forbid = ["ort", "hound", "serde", "cpal"]   # 闭包里不许出现的 crate
 |---|---|---|---|---|
 | G1 | 格式 | `cargo fmt --all --check` | L0 L1 | 风格；自动修 |
 | G2 | lint 与实时禁用 API | `cargo clippy --workspace --all-targets -- -D warnings` | L0 L1 | 实时路径出现分配 / 锁 / IO / panic 写法 |
-| G3 | 依赖方向与许可 | `cargo deny check` + `cargo xtask check-deps` | L1 | 模块边界被打破，或不能按 GPL-3.0 分发 |
+| G3 | 依赖方向与许可 | `cargo deny check` + `cargo run -p xtask -- check-deps` | L1 | 模块边界被打破，或不能按 GPL-3.0 分发 |
 | G4 | tidy | `cargo test -p xtask` | L0 L1 | 规约被绕开 |
 | G5 | 单元 + 集成 | `cargo nextest run`（含计数分配器断言、故障注入） | L1 | 功能回归 / 实时路径分配 |
 | G6 | 分块不变性 | proptest：同一段音频随机切块喂 Pipeline，与整段一次喂的结果逐样本一致 | L1 少量 / L3 大量 | eval 与实时不是同一条路 |

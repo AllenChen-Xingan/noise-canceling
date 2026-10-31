@@ -1,3 +1,0 @@
-# cargo xtask tidy / cargo xtask check-deps（specs/rust/architecture.md §1、§5）
-[alias]
-xtask = "run --quiet -p xtask --"

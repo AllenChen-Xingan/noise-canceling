@@ -6,7 +6,7 @@
 # 每条都在 align 的哨兵探针里确认过会报红（state/handoff/align.md「clippy 清单探针」，clippy 1.99）。
 # 探针确认**放不进来**的两条（别再加回来）：
 # - `assert!` / `assert_eq!` / `assert_ne!`：debug_assert* 展开就是它们，禁了连 debug_assert 一起报红。
-#   R4 改由 `cargo xtask tidy` 文本检查实时文件里没有非 debug 的 assert
+#   R4 改由 `cargo run -p xtask -- tidy` 文本检查实时文件里没有非 debug 的 assert
 # - `<[T]>::to_vec`：各种路径写法都报 "does not refer to a reachable function" 或不命中；交给计数分配器与 RTSan
 
 allow-unwrap-in-tests = true

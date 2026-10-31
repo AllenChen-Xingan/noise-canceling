@@ -1,7 +1,7 @@
 //! xtask：项目规矩的机器检查（specs/rust/architecture.md §5.1「静态·依赖闭包」「静态·项目约定」）。
 //!
-//! - `cargo xtask check-deps`：每个 crate 的**普通依赖闭包**与它 `[package.metadata.vdn].forbid` 求交，非空即红（R12）
-//! - `cargo xtask tidy`：文本 / 轻语法检查（R3 · R4 · R10 · R14 与 §5.3 的 NRT 例外写法）
+//! - `cargo run -p xtask -- check-deps`：每个 crate 的**普通依赖闭包**与它 `[package.metadata.vdn].forbid` 求交，非空即红（R12）
+//! - `cargo run -p xtask -- tidy`：文本 / 轻语法检查（R3 · R4 · R10 · R14 与 §5.3 的 NRT 例外写法）
 //!
 //! 两样都随 `cargo test -p xtask` 跑（照 rust-analyzer：架构规则即测试）。不依赖任何 vdn crate。
 
@@ -56,7 +56,7 @@ fn main() -> ExitCode {
             }
         },
         _ => {
-            eprintln!("用法：cargo xtask <check-deps | tidy>");
+            eprintln!("用法：cargo run -p xtask -- <check-deps | tidy>");
             ExitCode::FAILURE
         }
     }
