@@ -165,8 +165,10 @@ fn kendall_tau_b(x: &[f64], y: &[f64]) -> Option<f64> {
     let (mut c, mut d, mut tx, mut ty) = (0.0f64, 0.0f64, 0.0f64, 0.0f64);
     for i in 0..n {
         for j in i + 1..n {
-            let a = (x[i] - x[j]).signum();
-            let b = (y[i] - y[j]).signum();
+            // f64::signum(0.0) == 1.0，打平要自己判
+            let sign = |v: f64| if v.abs() < 1e-12 { 0.0 } else { v.signum() };
+            let a = sign(x[i] - x[j]);
+            let b = sign(y[i] - y[j]);
             if a == 0.0 && b == 0.0 {
                 continue;
             } else if a == 0.0 {
