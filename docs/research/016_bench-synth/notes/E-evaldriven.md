@@ -66,7 +66,7 @@
 | 留出「感知不相似、难度相当」的第二套 benchmark | ImageNet-C̄：AugMix +3.2、Patch Gaussian +7.3 点，基线 −0.4 | 2102.11273 表 1【论文】 |
 | 对齐统计量，不复制样本；素材源分离 | CHiME-3 训练模拟用**不同语句、同环境的不同噪声段**，只沿用真实条的滤波与 SNR | Vincent 2017 §2.3.2【论文】 |
 | 留出生成器 | ASVspoof 2019 LA：训练 A01–A06，评测含 11 种未见攻击（A07–A15、A17、A18），A16/A19 与训练同算法（A04、A06）但用不同数据构建；未见的神经声码器类（A10/A12/A15）最伤 | 前半已核：arXiv 1911.01601 表 1 注、§3【论文】；「A10/A12/A15 最伤」在该文中没找到【二手·未核】 |
-| 盲测集禁止用于调参 | DNS 2022；URGENT 2025 分 non-blind / blind 两阶段 | DNS 页【二手】；`resources/urgent2025_challenge/README.md:53-55`【源码】 |
+| 盲测集禁止用于调参 | DNS 2022（规则未直读）；URGENT 2025 分 non-blind / blind 两阶段 | DNS 页【二手·未核】；`resources/urgent2025_challenge/README.md:53-55`【源码】，这几行只写了「blind 测试集用于最终排名」「非盲阶段结束后才放 clean」，**没有**「禁止调参」的字样 |
 | 只随机化虚假因素，保留有用的域因素 | targeted augmentation 的「同地区背景」约束 | 2302.11861 §5【论文】 |
 
 ---
@@ -100,6 +100,6 @@
 - 【论文】Gao, Sagawa, Koh, Hashimoto, Liang, Out-of-Domain Robustness via Targeted Augmentations, arXiv 2302.11861（§3–5）
 - 【论文·摘要】Chen 等 Slice-based Learning arXiv 1909.06349；Eyuboglu 等 Domino arXiv 2203.14960；Tobin 等 arXiv 1703.06907；OpenAI arXiv 1910.07113；Chebotar 等 SimOpt arXiv 1810.05687；Ramos 等 BayesSim arXiv 1906.01728；Kar 等 Meta-Sim arXiv 1904.11621；Ruiz 等 arXiv 1810.02513；SUPERB-SG arXiv 2203.06849；URGENT 2025 arXiv 2505.23212（摘要未给测试集构成）
 - 【官方】NIST ACTS：https://csrc.nist.gov/projects/automated-combinatorial-testing-for-software
-- 【源码】`resources/urgent2025_challenge/README.md:53-55`；`resources/DNS-Challenge/README.md:9`
+- 【源码】`resources/urgent2025_challenge/README.md:53-55`；`resources/DNS-Challenge/README.md:9`（注：本地仓库的 README 是 **ICASSP 2023** 版，第 9 行讲 P.835 + WAcc，不是 2022 规则）
 - 【二手】ASVspoof 2019 arXiv 1911.01601（未直读）；DeepCT arXiv 1806.07723；arXiv 2306.00998、2309.17267、Amazon OOV 合成音频论文；arXiv 2606.31552、2406.19959；DNS 2022 微软挑战页规则
 - 内部：015 `notes/B-synth-data.md:24,26,73`（Landini、pDNS）
