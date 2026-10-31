@@ -21,7 +21,7 @@
 | p2 | P2 认出你的声音（离线）· issue #18 · `feat/p2-speaker` | `_tmp/20261031-b4/p2.md` | 其 worktree | 已报到（noise-canceling-p2-63） |
 | scene | 场景识别与路由 + 修音链 + 模拟环境 · issue #19 · `feat/scene-polish` | `_tmp/20261031-b4/scene.md` | 其 worktree | 已报到（noise-canceling-scene-f7） |
 | ondevice | 010 设备端自适应 + 可靠性调研 · issue #20 · `research/010-ondevice-adaptation` | `_tmp/20261031-b4/ondevice.md` | 其 worktree | 完成，PR #23 已合并（issue #20 关），窗口已关；3 题待人拍板 |
-| multitalker | 011 一大堆人同时说话（调研）· issue #21 · `research/011-multitalker` | `_tmp/20261031-b4/multitalker.md` | 其 worktree | 已报到（noise-canceling-multitalker-fc） |
+| multitalker | 011 一大堆人同时说话（调研）· issue #21 · `research/011-multitalker` | `_tmp/20261031-b4/multitalker.md` | 其 worktree | 完成，PR 已合并（issue #21 关），窗口已关；6 题待人拍板 |
 | evalstd | 012 工业级 rubric 与评测的行业标准 · issue #22 · `research/012-eval-standards` | `_tmp/20261031-b4/evalstd.md` | 其 worktree | 已报到（noise-canceling-evalstd-94） |
 
 ## 规矩
@@ -91,6 +91,8 @@
 - [ ] 009 待人拍板 4 题（最低系统 14.2→14.4 · GPL-3.0-or-later vs -only · HAL 拿共享内存方式 · RustFFT 破例）—— `docs/research/009_rust-ecosystem/decision.md` §五
 - [ ] 008 待人拍板 7 题（意向书「不分配不加锁」改三档表述 · 目录名 · panic=abort · 两个进程 · HAL 目录放哪 · 延迟超 45 ms 先砍哪 · tract 对照实验）—— `docs/research/008_rust-architecture/decision.md`
 - [ ] 008 给 p1 后续批次 5 项改动（含 exp004 README 补注「0 次分配只计 Rust 侧」）—— 同上「给 p1 线的后续改动」
+- [ ] 011 待人拍板 6 题（「只留我」一个开关 · 声纹认好后默认开 · 会议室自动放开 · 试借语音突显 · 菜单栏小图标提前 · 提示规则）—— `docs/research/011_multitalker/decision.md`
+- [ ] 待开实验（011）：① VPIO / 语音突显 + 4 声道 + 蓝牙麦延迟（随 dev-4，P0）② babble 人数×SNR 曲线（dev-3）③ 近 / 远特征 AUC ④ 会议室识别回归 ⑤ 商业对照；提醒 dev-4：别的进程在内置麦开 VPIO 时 HAL 读到的电平骤降（cubeb 源码）
 - [ ] 010 待人拍板 3 题（空闲小更新素材：只累计归一化统计 · 通话中不探索 · 软件内「检查更新」算云端、不做）—— `docs/research/010_ondevice-adaptation/decision.md` 第五节
 - [ ] 006 待人拍板 4 题（延迟察觉实验 · RX 当天花板参照 · 开 issue 问许可等）—— `docs/research/006_sota-landscape/decision.md` 末节
 - [ ] 007 待人拍板 4 题（权重 · 耳朵与机器怎么合 · V8 口径 · 下一轮怎么听）—— `docs/research/007_denoise-rubric/decision.md`
