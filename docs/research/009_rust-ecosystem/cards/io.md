@@ -22,7 +22,7 @@
 | 进程内 SPSC（送音进程内部、推理进程内部） | `rtrb`（另一组详查） | `ringbuf` | voice-strip 两处热路径都用 rtrb 的 chunk API |
 | 实时线程优先级（推理进程的降噪线程） | **自写 Mach time-constraint（~30 行）** 或 `audio_thread_priority` 0.38 | 同左互为备选 | audio_thread_priority 只做 time-constraint，**不支持 workgroup**；MPL-2.0 与 GPL-3.0 兼容 |
 | os_workgroup / 工作区间（降噪线程按 10 ms 截止期提频） | **自写 FFI：`AudioWorkIntervalCreate` + `os_workgroup_join` + `interval_start/finish`**（照 voice-strip `rt.rs`） | 无现成 crate | objc2-audio-toolbox 明确跳过了 `AudioWorkIntervalCreate`；全 GitHub 只搜到零星应用内手写 |
-| 声纹线程放能效核 | `libc` 的 `pthread_set_qos_class_self_np(QOS_CLASS_UTILITY/BACKGROUND)`【推断】 | `thread-priority` 3.1.1 | 不需要单独依赖；QoS 低档位由调度器优先放 E 核（Apple 文档语义，未在本组源码中验证） |
+| 声纹线程放能效核 | `libc` 的 `pthread_set_qos_class_self_np(QOS_CLASS_UTILITY/BACKGROUND)`（libc 确有此绑定【官方】https://github.com/rust-lang/libc/blob/main/src/new/apple/libpthread/pthread_/qos.rs 第 19 行，并在 `libc-test/semver/apple.txt` 登记为稳定 API） | `thread-priority` 3.1.1 | 不需要单独依赖；QoS 低档位由调度器优先放 E 核（Apple 文档语义，未在本组源码中验证【推断】） |
 | 控制面（control：参数、状态、心跳之外的命令） | std `UnixStream`（无依赖） | `ipc-channel` 0.23.1 | 控制面不上实时线程，ipc-channel 走 serde 序列化，有分配，只能用于非实时；我们消息少，自己拼即可 |
 
 ## 本组最值得学的 2 个设计
@@ -39,7 +39,7 @@
 | 项 | 内容 |
 |---|---|
 | 做什么 | Rust 写的 Linux + macOS 麦克风效果链 app，DeepFilterNet3 降噪，输出为虚拟麦克风；macOS 侧**自带纯 Rust 的 AudioServerPlugIn 驱动**，与 app 用 POSIX 共享内存连接——几乎就是我们架构的单进程版 |
-| 许可证 | `MIT OR Apache-2.0`【源码】`resources/voice-strip/Cargo.toml:18`；与 GPL-3.0 兼容：**是**。驱动 crate 只依赖 `libc`【源码】`crates/vdev-macos-driver/Cargo.toml`；降噪 crate 依赖作者 fork 的 DeepFilterNet（git rev，MIT/Apache）、ndarray、sha2，无不兼容项【源码】`crates/denoise-neural/Cargo.toml` |
+| 许可证 | `MIT OR Apache-2.0`【源码】`resources/voice-strip/Cargo.toml:18`（仓内有 LICENSE-MIT + LICENSE-APACHE；GitHub API 只识别出 `Apache-2.0`【API】，不矛盾）；与 GPL-3.0 兼容：**是**。驱动 crate 只依赖 `libc`【源码】`crates/vdev-macos-driver/Cargo.toml`；降噪 crate 依赖作者 fork 的 DeepFilterNet（git rev，MIT/Apache）、ndarray、sha2，无不兼容项【源码】`crates/denoise-neural/Cargo.toml` |
 | 维护状态 | v0.7.3 / 2026-10-23；最近提交 2026-10-23；open issues 2；**仓库 2026-10-17 才建**，单人维护，README 自述大量由 AI 编码代理生成【API】【源码】`README.md` Warning 段。最近 5 个 issue/PR 全是作者自己发的，无外部 issue 可判响应速度【API】 |
 | 实时安全做法 | ① 采集 IOProc 只做「拷通道 0 → 转换 → 处理 → 写环」，文件头声明无分配无锁无等待【源码】`crates/vdev-macos/src/backend.rs:5-9`，实现 `:106-213`；② 转换器有 `assert_no_alloc` 测试覆盖变块长与变比率【源码】`crates/vdev-macos/tests/convert_alloc.rs:1-30`；③ 驱动 `do_io_operation` 只有 `READERS` 两次原子加减 + `MISSING` 一次计数 + 一次环读【源码】`crates/vdev-macos-driver/src/plugin.rs:771-810`（加减在 `:797`、`:807`，计数在 `:808`）；④ shm 映射/重映射/心跳检测全放在驱动内一个 250 ms 轮询的看门线程里，不在 IO 线程【源码】`plugin.rs:352-415`；⑤ 推理（tract 会分配）不进音频线程，音频线程用 rtrb 交帧 + `Thread::unpark` 唤醒工作线程【源码】`crates/denoise-neural/src/lib.rs:4-9`、`:238-249`。⚠️ `unpark` 在 park 状态下是一次非阻塞内核唤醒，严格讲违背「零系统调用」，是实践中可接受的折中——作者自己也承认，VAD 那条线特意攒满一个模型块才唤醒一次，注释原话 "each wakeup is a system call on the audio thread"【源码】`crates/vad/src/lib.rs:255-256`；DFN 那条线则每帧 `submit` 都 `unpark`【源码】`crates/denoise-neural/src/lib.rs:248`。⑥ 模型/链换装后旧对象经 rtrb「回收队列」送回非 RT 线程释放，队列满就暂存下一块再试，从不在 IO 线程 free【源码】`crates/engine/src/processor.rs:327-331`、`:350-355`（注释 `:350-352`） |
 | 值得学的一处 | 见上文「最值得学」1、2。另：设备时间轴直接钉在 host clock 上（`kAudioDeviceClockAlgorithmRaw` 语义），app 只凭 host time 就能算出写入位置，不用从驱动读回任何东西【源码】`crates/vdev-macos-driver/src/clock.rs:1-9`；驱动读位置 = 客户端 input sample_time − 固定 128 帧传输余量【源码】`plugin.rs:796`、`model.rs:19`。这让「送音进程写、HAL 读」不需要任何握手 |
@@ -54,8 +54,8 @@
 | 做什么 | Rust 跨平台底层音频 I/O；macOS 后端基于 coreaudio-rs（AUHAL）+ objc2 家族 |
 | 许可证 | `Apache-2.0`【API】；兼容 GPL-3.0：**是**（Apache-2.0 → GPL-3.0 单向兼容）。Apple 目标下的直接依赖：coreaudio-rs（MIT/Apache）、objc2-*（Zlib/Apache/MIT）、mach2（BSD-2/MIT/Apache）、dasp_sample（MIT/Apache）——无不兼容【API】crates.io 0.18.2 dependencies |
 | 维护状态 | 0.18.2 / 2026-08-16；最近提交 2026-10-28；open issues 97；最近 5 个 issue/PR 中有 COLLABORATOR 回复（#1416、#1411 有 10 条讨论），活跃【API】 |
-| 实时安全做法 | 输入回调里只读原子（`draining`、`pending_xrun.swap`）、包装数据指针后调用户回调，无分配【源码】`resources/cpal/src/host/coreaudio/macos/device.rs:621-657`；错误路径用 `try_lock`，拿不到就丢【源码】`resources/cpal/src/host/error_emit.rs:29`；overload 监听器在 RT 线程触发，只置标志【源码】`resources/cpal/src/host/coreaudio/macos.rs:195`。但底层 coreaudio-rs 输入回调在帧数变化时会分配（见下卡），cpal 层兜不住 |
-| 值得学的一处 | xrun 用一个 `AtomicBool` 从 overload 监听线程传到数据回调，在回调里 `swap(false)` 后随 `CallbackInfo` 交给用户【源码】`device.rs:655-656`——把「出过事」这种低频事件塞进热路径的零成本做法，我们的送音进程报告「本周期用了原声旁路」可照做 |
+| 实时安全做法 | ⚠️ **版本错位（复核更正）**：本地克隆是 main（`Cargo.toml:3` 写 `0.19.0`，未发布），下面的 xrun 机制**只在 main**；已发布的 0.18.2 tag 里 `device.rs` 没有 `xrun`/`pending_xrun`【API】GitHub contents `?ref=v0.18.2`。main 的输入回调：常态只读原子（`draining`、`pending_xrun.swap`）、包装数据指针后调用户回调【源码】`resources/cpal/src/host/coreaudio/macos/device.rs:621-657`；但**每次回调都调一次 `mach_timebase_info`**【源码】`resources/cpal/src/host/coreaudio.rs:76-78`（是否陷入内核未核【推断】）；错误路径用 `try_lock`，拿不到就丢【源码】`resources/cpal/src/host/error_emit.rs:29`，但错误对象本身带 `String` 消息（`coreaudio.rs:82`），错误路径会在 RT 线程分配【推断】；overload 监听器在 RT 线程触发，只置标志【源码】`resources/cpal/src/host/coreaudio/macos.rs:195-196`。底层 coreaudio-rs 输入回调在帧数变化时会跨库读属性并可能扩容（见下卡），cpal 层兜不住 |
+| 值得学的一处 | （main 分支）xrun 用一个 `AtomicBool` 从 overload 监听线程传到数据回调，在回调里 `swap(false)` 后随 `CallbackInfo` 交给用户【源码】`device.rs:655-656`——把「出过事」这种低频事件塞进热路径的零成本做法，我们的送音进程报告「本周期用了原声旁路」可照做 |
 | 我们怎么用 | **直接依赖，但只在非实时/原型处**：eval 的设备枚举、早期原型；正式送音进程首选自写 IOProc。做 HAL 虚拟设备 cpal 帮不上（它是客户端 API）——预判成立 |
 | 风险 | 每个设备/默认设备变化要 cpal 重建流；AUHAL 额外一层缓冲带来的延迟未量化【推断】；跨平台抽象让 host_time / sample_time 细节被包装成 `StreamInstant` |
 | 证据 | 【源码】×4 ·【API】×3 |
@@ -67,7 +67,7 @@
 | 做什么 | Core Audio / AudioUnit 的 Rust 友好封装，cpal 的 macOS 底座；0.14 起改用 objc2-* 绑定 |
 | 许可证 | `MIT/Apache-2.0`（crates.io）；GitHub 标 Apache-2.0【API】；兼容：**是** |
 | 维护状态 | 0.14.2 / 2026-04-29；最近提交 2026-06-18（仅 CI 依赖升级），最近实质 PR #152 2026-04；open issues 25；最近 5 个 issue 0 评论，外部 issue #155（2026-09-08）无人回复——**维护偏慢**【API】 |
-| 实时安全做法 | `set_input_callback` 在注册时按当前 buffer 大小预分配 `AudioBufferList`【源码】`resources/coreaudio-rs/src/audio_unit/render_callback.rs:565-603`；**但**回调中一旦 `in_number_frames` 与预期不同，就在 RT 线程上 `get_property` 读流格式并 `vec.resize`【源码】`render_callback.rs:622`、`:627`、`:649`——这是分配 + 跨库调用，命门 2 **不满足**（变帧数场景：采样率转换、设备切换后） |
+| 实时安全做法 | `set_input_callback` 在注册时按当前 buffer 大小预分配 `AudioBufferList`【源码】`resources/coreaudio-rs/src/audio_unit/render_callback.rs:565-603`；**但**回调中一旦 `in_number_frames` 与上次不同，就在 RT 线程上 `get_property` 读流格式并 `vec.resize`【源码】`render_callback.rs:622`、`:627`、`:649`——跨库属性调用每次变帧数都发生；`resize` 只在新尺寸超过已有容量时才真分配（变小不分配），命门 2 **不满足**（变帧数场景：采样率转换、设备切换后；帧数来回跳时每次都读属性） |
 | 值得学的一处 | 反面：预分配思路对，但「尺寸变化就地扩容」不对；我们应在初始化时按 `kAudioDevicePropertyBufferFrameSizeRange` 的最大值一次分配，回调里只截取切片【推断】 |
 | 我们怎么用 | **不要直接依赖**（间接经 cpal 用于原型可以） |
 | 风险 | 维护慢；上述 RT 分配 |
@@ -78,13 +78,13 @@
 | 项 | 内容 |
 |---|---|
 | 做什么 | Firefox 用的「把线程提到实时音频优先级」小库；macOS 用 Mach time-constraint policy |
-| 许可证 | `MPL-2.0`【API】；兼容 GPL-3.0：**是**（MPL-2.0 §3.3 允许与 GPL 组合，除非标注 Incompatible With Secondary Licenses，未见此标注）【推断】。macOS 依赖仅 `mach2`、`libc`、`log`【源码】`resources/audio_thread_priority/Cargo.toml:14-29` |
+| 许可证 | `MPL-2.0`【API】；兼容 GPL-3.0：**是**（MPL-2.0 §3.3 允许与 GPL 组合，除非源文件附 Exhibit B「Incompatible With Secondary Licenses」声明）。复核：全仓 grep 该短语只命中 `LICENSE` 里的条款正文与 Exhibit B 模板（`LICENSE:24`、`:369-372`），没有任何源文件附此声明【源码】。macOS 依赖仅 `mach2`、`libc`、`log`【源码】`resources/audio_thread_priority/Cargo.toml:14-29` |
 | 维护状态 | 0.38.0 / 2026-09-17；最近提交 2026-09-17；open issues 1；外部 issue #49（musl 编译）有 3 条回复并有修复 PR #50【API】 |
 | 实时安全做法 | 只在线程启动时调用一次，不在热路径；computation 取回调周期一半、上限 50 ms【源码】`resources/audio_thread_priority/src/rt_mach.rs:113-134` |
 | 值得学的一处 | 保存旧 policy 以便 demote 恢复【源码】`rt_mach.rs:91-106`。**不支持 os_workgroup**：全仓 grep `workgroup` 无结果【源码】（推翻「它可能支持 workgroup」的猜想） |
 | 我们怎么用 | 推理进程降噪线程：**直接依赖或抄 30 行自写**，二选一；workgroup 另写 |
-| 风险 | 参数「somewhat arbitrary」（源码自述 `rt_mach.rs:112`）；我们 10 ms 帧应自己给 period/computation/constraint（voice-strip 用 10/2/2.6 ms）【源码】`voice-strip/crates/denoise-neural/src/rt.rs:111-116` |
-| 证据 | 【源码】×5 ·【API】×2 ·【推断】×1 |
+| 风险 | 参数「somewhat arbitrary」（源码自述 `rt_mach.rs:113`）；我们 10 ms 帧应自己给 period/computation/constraint（voice-strip 用 10/2/2.6 ms）【源码】`voice-strip/crates/denoise-neural/src/rt.rs:111-116` |
+| 证据 | 【源码】×6 ·【API】×2 |
 
 ### tympan-aspl（https://github.com/penta2himajin/tympan-aspl）
 
@@ -94,7 +94,7 @@
 | 许可证 | `MIT OR Apache-2.0`【API】；唯一运行时依赖 `crossbeam-utils`（MIT/Apache）【源码】`resources/tympan-aspl/Cargo.toml:32-33`；兼容：**是** |
 | 维护状态 | 0.1.0 / 2026-05-17（crates.io 下载 52）；最近提交 2026-05-17，之后 5 个半月无提交；0 star，issues 全是作者自己的 PR【API】 |
 | 实时安全做法 | `process_io` 先查原子状态再分派，注释写明无分配无内核调用【源码】`resources/tympan-aspl/src/driver.rs:343-357`；CI 用 `assert_no_alloc` 钉住每个示例的 `process_io`、TSan 跑环形缓冲（README CI 表）【源码】`README.md` |
-| 值得学的一处 | `RealtimeContext`：一个 `PhantomData<*const ()>` 让它 `!Send`、只有框架能构造，凡要求在实时线程调用的 API 都收 `&RealtimeContext`，把「这段在 RT 线程」变成类型信息【源码】`src/realtime/context.rs:16-28`、`:52`。我们 engine 的 `process()` 可以照此给签名加标记 |
+| 值得学的一处 | `RealtimeContext`：一个 `PhantomData<*const ()>` 让它 `!Send`、构造函数是 `pub unsafe fn new_unchecked`（用户要写 `unsafe` 才能自造，并非「只有框架能构造」），凡要求在实时线程调用的 API 都收 `&RealtimeContext`，把「这段在 RT 线程」变成类型信息【源码】`src/realtime/context.rs:16-28`、`:52`。我们 engine 的 `process()` 可以照此给签名加标记 |
 | 我们怎么用 | **抄思路**（类型标记、生命周期状态机、CI 分层）；不直接依赖 |
 | 风险 | 没有跨进程 shm 设施（grep `shm_open/mmap` 无结果）；CI 自述 AMFI 拒绝 ad-hoc 签名，设备枚举与数据通路未自动验证；单人项目可能已停 |
 | 证据 | 【源码】×4 ·【API】×2 |
@@ -192,7 +192,7 @@
 | 做什么 | Firefox 在 Mac 上的音频后端（Rust） |
 | 许可证 | `ISC`【API】；依赖 ringbuf、triple_buffer、mach2、cubeb-backend 等，宽松【源码】`resources/cubeb-coreaudio-rs/Cargo.toml:10-22`；兼容：是 |
 | 维护状态 | 最近提交 2026-10-21；open issues 34；不单独发 crates.io【API】 |
-| 实时安全做法 | 输入回调把数据推进预分配的 buffer manager【源码】`src/backend/mod.rs:637-638`；但全双工日志路径每回调 `push` 一条记录【源码】`mod.rs:645-656`（容量是否预留未查）。未见 workgroup 用法（grep 无） |
+| 实时安全做法 | 输入回调把数据推进预分配的 buffer manager【源码】`src/backend/mod.rs:637-638`；全双工日志路径每回调 `push` 一条记录【源码】`mod.rs:645-656`——复核：`InputCallbackLogger` 是建时定长 16 的 ringbuf，`push` 只是 `try_push`、满了就丢，**不分配**【源码】`mod.rs:3250-3265`。未见 workgroup 用法（grep 无） |
 | 值得学的一处 | 工业级处理设备切换/聚合设备的经验在这里（5484 行 `mod.rs`），遇到设备热插拔问题时回来查 |
 | 我们怎么用 | **只看看** |
 | 风险 | 体量大、与 cubeb C API 耦合 |
@@ -280,7 +280,7 @@
 1. **跨进程唤醒用什么最好**：voice-strip 是单进程，用 `Thread::unpark`。我们送音进程→推理进程要跨进程通知「新帧到了」。候选：推理线程按 10 ms 周期自定时轮询（work interval 本身就给周期，最简单）、POSIX 命名信号量 `sem_post`、Mach `semaphore_signal`（要传端口）、`os_sync_wake_by_address_any`（macOS 14.4+ 支持跨进程共享内存地址？未核实）。本组没有找到 Rust 现成实现，**存疑，建议 008/p1 做一次有界小实验**。
 2. **workgroup 能否跨进程共享**：理想是推理线程加入**麦克风设备 IO 线程的 workgroup**（`kAudioDevicePropertyIOThreadOSWorkgroup`），这样调度器把两进程当一个截止期链。os_workgroup 有 `os_workgroup_copy_port` / `create_with_port` 可跨进程传，但本组没找到任何 Rust 或开源实例；voice-strip 是新建独立 work interval【源码】`rt.rs:243`。**存疑**。
 3. **HAL 驱动沙箱里 POSIX shm 的权限**：voice-strip 用 0644 让 `_coreaudiod` 可读并自认不适合发布【源码】`shm.rs:7-10`；它说的「认证通道」具体怎么做（Info.plist `AudioServerPlugIn_MachServices` + XPC 传 fd？）没查到实现。**存疑，hal-plugin 发布前必须定**。
-4. **E 核放置**：`pthread_set_qos_class_self_np` 低 QoS 会优先上 E 核是 Apple 文档的一般语义，本组未在任何 Rust 源码里见到声纹类负载的实测；`libc` crate 是否导出该函数与 `qos_class_t` 常量未逐行核对。【推断】
+4. **E 核放置**：`pthread_set_qos_class_self_np` 低 QoS 会优先上 E 核是 Apple 文档的一般语义，本组未在任何 Rust 源码里见到声纹类负载的实测；`libc` crate 导出该函数已由复核确认（见推荐表）；E 核放置效果仍是【推断】。
 5. **未克隆**：iceoryx2（26 MB，判为不用）、HushMic（非 Mac）、objc2 全仓（13 MB，只用 GitHub API 读了两个配置文件）。
 6. **GitHub 搜「AudioServerPlugIn rust」只有 tympan-aspl 一个框架**；带驱动的 Rust 应用只找到 voice-strip、prism、duomic（C++ 驱动）。可能有私有/未标注语言的仓漏网。
 7. 本组未覆盖：rtrb / ringbuf / triple-buffer / seqlock / assert_no_alloc / rtsan（已在 resources/，属「实时零件」组）。
