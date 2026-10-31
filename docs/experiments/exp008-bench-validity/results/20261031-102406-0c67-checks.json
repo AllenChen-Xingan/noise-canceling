@@ -1,0 +1,283 @@
+{
+ "build": "20261031-102406-0c67",
+ "S1_repro": {
+  "compared": 60,
+  "identical": 60,
+  "pass": true
+ },
+ "S2_control": {
+  "S-SNR": {
+   "clips": 12,
+   "others_frozen": 12,
+   "monotone": 12,
+   "max_abs_err_db": 0.0,
+   "pass": true
+  },
+  "S-NOISE": {
+   "clips": 12,
+   "others_frozen": 12,
+   "monotone": 12,
+   "max_abs_err_db": null,
+   "pass": true
+  },
+  "S-RT60": {
+   "clips": 12,
+   "others_frozen": 12,
+   "monotone": 12,
+   "max_abs_err_db": null,
+   "pass": true
+  },
+  "S-SIR": {
+   "clips": 12,
+   "others_frozen": 12,
+   "monotone": 12,
+   "max_abs_err_db": 0.0,
+   "pass": true
+  }
+ },
+ "S3_truth": {
+  "worst_residual_db": -148.8,
+  "label_len_mismatch": 0,
+  "pass": true
+ },
+ "S6_align_noise": {
+  "cafe": {
+   "real_envs": [
+    "PCAFETER",
+    "SCAFE"
+   ],
+   "n_ref": 64,
+   "n_held": 64,
+   "thr_p95": {
+    "ltas": 3.0563263903162454,
+    "mod": 4.9347075831311145,
+    "level": 1.6782282673334652
+   },
+   "gen": {
+    "A": {
+     "ltas": {
+      "median_dist": 1.49,
+      "pass_rate": 1.0
+     },
+     "mod": {
+      "median_dist": 2.35,
+      "pass_rate": 1.0
+     },
+     "level": {
+      "median_dist": 1.01,
+      "pass_rate": 1.0
+     },
+     "verdict": "过",
+     "pass": true
+    },
+    "B": {
+     "ltas": {
+      "median_dist": 1.92,
+      "pass_rate": 0.88
+     },
+     "mod": {
+      "median_dist": 3.25,
+      "pass_rate": 0.88
+     },
+     "level": {
+      "median_dist": 0.66,
+      "pass_rate": 1.0
+     },
+     "verdict": "过",
+     "pass": true
+    }
+   }
+  },
+  "babble": {
+   "real_envs": [
+    "PCAFETER",
+    "SCAFE",
+    "PRESTO"
+   ],
+   "n_ref": 96,
+   "n_held": 96,
+   "thr_p95": {
+    "ltas": 3.1397915908726004,
+    "mod": 5.127981490312394,
+    "level": 1.8690334020999348
+   },
+   "gen": {
+    "A": {
+     "ltas": {
+      "median_dist": 2.69,
+      "pass_rate": 0.69
+     },
+     "mod": {
+      "median_dist": 3.29,
+      "pass_rate": 1.0
+     },
+     "level": {
+      "median_dist": 0.65,
+      "pass_rate": 0.97
+     },
+     "verdict": "临界",
+     "pass": false
+    },
+    "B": {
+     "ltas": {
+      "median_dist": 2.31,
+      "pass_rate": 0.88
+     },
+     "mod": {
+      "median_dist": 3.09,
+      "pass_rate": 0.97
+     },
+     "level": {
+      "median_dist": 0.65,
+      "pass_rate": 0.91
+     },
+     "verdict": "过",
+     "pass": true
+    }
+   }
+  },
+  "clatter": {
+   "real_envs": [
+    "DKITCHEN"
+   ],
+   "n_ref": 32,
+   "n_held": 32,
+   "thr_p95": {
+    "ltas": 5.338193900646425,
+    "mod": 13.564160119675668,
+    "level": 1.2182079364668406
+   },
+   "gen": {
+    "A": {
+     "ltas": {
+      "median_dist": 3.08,
+      "pass_rate": 0.91
+     },
+     "mod": {
+      "median_dist": 8.78,
+      "pass_rate": 0.91
+     },
+     "level": {
+      "median_dist": 0.57,
+      "pass_rate": 0.91
+     },
+     "verdict": "过",
+     "pass": true
+    },
+    "B": {
+     "ltas": {
+      "median_dist": 10.35,
+      "pass_rate": 0.0
+     },
+     "mod": {
+      "median_dist": 6.81,
+      "pass_rate": 1.0
+     },
+     "level": {
+      "median_dist": 11.63,
+      "pass_rate": 0.0
+     },
+     "verdict": "不过",
+     "pass": false
+    }
+   }
+  },
+  "traffic": {
+   "real_envs": [
+    "STRAFFIC",
+    "TBUS"
+   ],
+   "n_ref": 64,
+   "n_held": 64,
+   "thr_p95": {
+    "ltas": 3.7003309866376397,
+    "mod": 8.169472169201512,
+    "level": 2.058828755477831
+   },
+   "gen": {
+    "A": {
+     "ltas": {
+      "median_dist": 1.72,
+      "pass_rate": 1.0
+     },
+     "mod": {
+      "median_dist": 5.77,
+      "pass_rate": 1.0
+     },
+     "level": {
+      "median_dist": 1.16,
+      "pass_rate": 0.97
+     },
+     "verdict": "过",
+     "pass": true
+    },
+    "B": {
+     "ltas": {
+      "median_dist": 2.41,
+      "pass_rate": 0.94
+     },
+     "mod": {
+      "median_dist": 5.17,
+      "pass_rate": 1.0
+     },
+     "level": {
+      "median_dist": 0.96,
+      "pass_rate": 0.88
+     },
+     "verdict": "过",
+     "pass": true
+    }
+   }
+  },
+  "music": {
+   "real_envs": [
+    "__piano__"
+   ],
+   "n_ref": 32,
+   "n_held": 32,
+   "thr_p95": {
+    "ltas": 2.4882193357586413,
+    "mod": 4.037990341185508,
+    "level": 1.9168887042392613
+   },
+   "gen": {
+    "A": {
+     "ltas": {
+      "median_dist": 9.0,
+      "pass_rate": 0.0
+     },
+     "mod": {
+      "median_dist": 6.18,
+      "pass_rate": 0.0
+     },
+     "level": {
+      "median_dist": 1.29,
+      "pass_rate": 0.97
+     },
+     "verdict": "不过",
+     "pass": false
+    },
+    "B": {
+     "ltas": {
+      "median_dist": 1.6,
+      "pass_rate": 0.88
+     },
+     "mod": {
+      "median_dist": 3.03,
+      "pass_rate": 0.97
+     },
+     "level": {
+      "median_dist": 0.59,
+      "pass_rate": 1.0
+     },
+     "verdict": "过",
+     "pass": true
+    }
+   }
+  },
+  "stationary": {
+   "verdict": "无真实参照",
+   "level": "D0"
+  }
+ }
+}
