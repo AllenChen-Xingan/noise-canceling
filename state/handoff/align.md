@@ -18,3 +18,18 @@
 | 10-31 | 大总管定：删 `.cargo/config.toml`（新顶层目录，铁律 10），一律写全 `cargo run -p xtask -- tidy / check-deps`；xtask 放 `src/xtask/` 获同意 |
 | 10-31 | 规约 §1 · §2 · §3.1 · §3.3 · 新增 §3.7（感知 · 策略 · 场景参数表 · 记忆与学习 · 决策日志 · 延迟账）· R4 · R13 · §5.3；`.42cog/cog.md` 实体表 |
 | 10-31 | 单 crate 测试：types 40 · dsp 6 · engine 8 · xtask 5 全过；等名额跑全量 debug + release |
+| 10-31 | 三视角自审（实时安全 · 接口设计 · 机器检查与延迟账）。修：GTCRN 长度不符改返回 `Err(Shape)`；两模型出错即清缓存（防半更新）；irfft `InputValues` 不再整帧清零；**滞回按 (用户层, 细场景) 比较（P0：只出用户层的分类器原来永远切不过去）**；低置信打断确认；锁定冻结「表+配置」、旋钮仍生效；用户层以表为准；`Policy::observe`、`Stage::set_params`；日志加 `SceneObserved`、`PreferA/B`、`DeviceChanged{rate}`；参数表 `[user]` 必须在 `[fine]` 前；我的配置拒重复小节与 NaN；删 `params_for` |
+| 10-31 | **延迟账改为逐项硬加**：原「IO 缓冲并入攒 hop」推断对 FE-M 不成立（480 帧 hop 不被 256 整除），已删。009 目标（IO 256 帧）47.00 ms 超 2 ms，钉成已知缺口；提议 IO 块 96 帧（两模型 hop 公约数）→ 43.67 ms，测试按它断言 ≤45 |
+| 10-31 | tidy 加固：`expect(`/`cfg_attr(allow` 也要理由、`allow(dead_code)` 不再豁免整文件、`assert !(`/同行 `{`/模块头 deny 都查、`#[cfg(test)]` 只在紧跟 `mod` 时截断；check-deps 用 `--all-features`；核心 crate forbid 加 coreaudio/objc2（types 另加 libc）；crate 根加 `unreachable`/`todo` |
+| 10-31 | ondevice 需求 ①②③ 落类型（`ParamBlock`、`Transition` 限速与手动斜坡、`FrameFeatures`），④⑤⑥ 写进规约 §3.7.4b；R11 补 NaN 硬切。ondevice 会话已结束、回信未送达，经大总管转 |
+
+## 自审未修（P2，留给下一批）
+- `Engine::process` 长度不符分支送的是未对齐原声（比正常早 latency 个样本、无接缝），目前只计数；接 Pipeline 时一并改
+- `ToneId` 无范围校验（预设个数归 polish 定）；手动模式下 `SceneCommitted` 记门判结果、`ParamsApplied` 记 0，日志两条细场景不一致
+- `copy_from_slice` 长度不等会 panic，现各调用点都先查长度，但没有机器守；tidy 的 crate 根检查是文本包含
+- deny.toml / cargo-deny 未建（E-deny）
+
+## 待人拍板（经大总管）
+| # | 题面 | 选项 | 代价 | 建议 | 默认 |
+|---|---|---|---|---|---|
+| 1 | 延迟账按 009 目标（IO 256 帧）逐项硬加 47 ms，超 D32 2 ms。把「IO 块 96 帧（2 ms）」定为 P3 调参目标吗？ | A 定 96 帧为目标 · B 保留 256、超出部分等 P3 实测再走 008 ⟨拍板 6⟩ | A：每秒约 500 次回调，多唤醒、略增 CPU / xrun 风险，设备不一定支持；B：账面先超 | A（都是推断，P3 脉冲法裁决） | A 写进账与测试，P3 前不改 |
