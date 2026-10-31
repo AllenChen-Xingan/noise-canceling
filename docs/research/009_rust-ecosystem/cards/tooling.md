@@ -155,7 +155,7 @@
 | 做什么 | 自定义全局分配器：在闭包内一旦分配/释放就 abort 或计数告警 |
 | 许可证 | BSD-1-Clause（`resources/rust-assert-no-alloc/Cargo.toml:6`；GitHub 显示 NOASSERTION）；兼容：是（宽松许可） |
 | 维护状态 | 1.1.2（**2021-08-03**）；最近提交 2022-09（**超过 12 个月**）；issue #17「New crates.io release?」（2024-03）无维护者回复【API】 |
-| 实时安全做法 | 线程局部计数器 `ALLOC_FORBID_COUNT`（`resources/rust-assert-no-alloc/src/lib.rs:35-36`）；RAII 守卫进出 +1/-1，panic 展开也能复原（`:60-75`）；分配器 `alloc`/`dealloc` 先 `check` 再转给 `System`（`:180-189`），违规时 `handle_alloc_error`（`:151-176`）。默认特性 `disable_release` 让 release 版变 no-op（`resources/rust-assert-no-alloc/Cargo.toml:16`） |
+| 实时安全做法 | 线程局部计数器 `ALLOC_FORBID_COUNT`（`resources/rust-assert-no-alloc/src/lib.rs:35-36`）；RAII 守卫进出 +1/-1，panic 展开也能复原（`:60-75`）；分配器 `alloc`/`dealloc` 先 `check` 再转给 `System`（`:180-189`），违规时 `handle_alloc_error`（`:151-176`）。默认特性 `disable_release` 让 release 版变 no-op（`resources/rust-assert-no-alloc/Cargo.toml:15`；复核 3 把原写的 :16 改成 :15） |
 | 值得学的一处 | 整个机制约 60 行，「线程局部计数 + 全局分配器包一层」——自写一份放进 dsp 的测试工具模块，给 `process_frame` 的单测包一层 |
 | 我们怎么用 | **抄思路自己写**（engine/dsp 的 `#[cfg(test)]`）。不直接依赖：不维护，且全局分配器一个进程只能有一个 |
 | 风险 | 只抓分配，**抓不到锁和系统调用**；ONNX Runtime 走 C++ 自己的分配器，**Rust 全局分配器看不到 ORT 内部的 malloc**【推断】→ 推理线程要靠 rtsan |
@@ -167,10 +167,10 @@
 | 做什么 | LLVM RealtimeSanitizer 的独立版 Rust 包装：标了 `#[nonblocking]` 的函数里，拦截 malloc/锁/阻塞系统调用并报栈 |
 | 许可证 | Apache-2.0（`resources/rtsan-standalone-rs/Cargo.toml:10`）；底层运行时库来自 LLVM compiler-rt（Apache-2.0 WITH LLVM-exception【推断】）；兼容：是 |
 | 维护状态 | 0.3.0（2025-09-27）；**最近提交 2025-09-27（13 个月，刚超 12 个月线）**；open 1【API】。上游 RTSan 在 LLVM 主线里持续开发【推断】 |
-| 实时安全做法 | 未启用时零开销：构建脚本只对 6 个 target 设 `rtsan_supported`，含 `aarch64-apple-darwin`（`resources/rtsan-standalone-rs/build.rs:10-17`），只有设了 `RTSAN_ENABLE` 才设 `rtsan_enabled`；`realtime_enter` 等函数体在 `#[cfg(rtsan_enabled)]` 下才调 FFI（`resources/rtsan-standalone-rs/src/lib.rs:32-37`）；宏在函数开头插 RAII 守卫（`resources/rtsan-standalone-rs/crates/rtsan-standalone-macros/src/lib.rs:33`）。macOS 链 `libclang_rt.rtsan_osx_dynamic.dylib`（`resources/rtsan-standalone-rs/crates/rtsan-standalone-sys/build.rs:23-24`） |
+| 实时安全做法 | 未启用时零开销：构建脚本只对 6 个 target 设 `rtsan_supported`，含 `aarch64-apple-darwin`（`resources/rtsan-standalone-rs/build.rs:10-17`），只有设了 `RTSAN_ENABLE` 才设 `rtsan_enabled`（`:27-30`）；`realtime_enter` 等函数体在 `#[cfg(rtsan_enabled)]` 下才调 FFI（`resources/rtsan-standalone-rs/src/lib.rs:32-37`）；宏在函数开头插 RAII 守卫（`resources/rtsan-standalone-rs/crates/rtsan-standalone-macros/src/lib.rs:33`）。macOS 链 `libclang_rt.rtsan_osx_dynamic.dylib`（`resources/rtsan-standalone-rs/crates/rtsan-standalone-sys/build.rs:23-24`） |
 | 值得学的一处 | 见文首「最值得学」第 1 条：永久标注、按需开启 |
 | 我们怎么用 | **直接依赖**（engine 的 `process_frame`、io-macos 的 IO 回调、dsp 的重采样/环形缓冲热路径标 `#[nonblocking]`）；CI 一条 macOS job 带 `RTSAN_ENABLE=1` 跑 eval 的离线 WAV。顺带能**量化 ONNX Runtime 在推理线程里到底分配/加锁多少**——这正是 D33 架构要知道的 |
-| 风险 | ① 默认特性用 `curl -L` 从 rtsan-libs 的 GitHub Release 下载预编译库，**无哈希校验**（`resources/rtsan-standalone-rs/crates/rtsan-standalone-sys/build.rs:78-95`）→ 关掉 `prebuilt-libs`，用 `RTSAN_LIBRARY_PATH` 指向我们自己核过哈希的库。② 维护刚过 12 个月线。③ ORT 内部的违规会刷屏，需要 `ScopedDisabler`/`no_sanitize_realtime` 有意识地圈出来并登记 |
+| 风险 | ① 默认特性 `prebuilt-libs`（`resources/rtsan-standalone-rs/Cargo.toml:43`）用 `curl -L` 从 rtsan-libs 的 GitHub Release 下载预编译库，**无哈希校验**（`resources/rtsan-standalone-rs/crates/rtsan-standalone-sys/build.rs:78-95`）。只有设了 `RTSAN_ENABLE` 才会走到下载这一步，平时构建不会下载（`:40-44`）。对策：关掉 `prebuilt-libs`，用 **`RTSAN_LIB_PATH`**（复核 3 更正：原写的 `RTSAN_LIBRARY_PATH` 不对，见 `:54`）指向我们自己核过哈希的库。② 维护刚过 12 个月线。③ ORT 内部的违规会刷屏，需要 `ScopedDisabler`/`no_sanitize_realtime` 有意识地圈出来并登记 |
 | 证据 | 【源码】build.rs、src/lib.rs、macros、sys/build.rs ·【API】·【推断】LLVM 许可、上游状态 |
 
 ### divan（https://github.com/nvzqz/divan）· 半深读
