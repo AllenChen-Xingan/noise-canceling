@@ -210,7 +210,8 @@ fn decide(
             }
         }
         Set::Regression => {
-            let hard = kind != Kind::Perceptual || level >= Level::L2;
+            // 按级别判阻断（模拟真值指标在真实片段上已降为 L0，不能再阻断）
+            let hard = level >= Level::L2;
             if let (Some(b), Some(v)) = (baseline, score.value)
                 && kind == Kind::Perceptual
                 && score.better.worse_by(v, b, baseline_delta(score.unit))
