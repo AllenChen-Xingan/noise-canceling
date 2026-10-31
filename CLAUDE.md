@@ -1,6 +1,6 @@
 # CLAUDE.md — Mac 开源实时语音降噪（vdn）
 
-> AI 开工必读：本文件 + **`.42cog/` 四份**（`intent` 意向书 · `real` 现实约束 · `cog` 认知模型 · `meta` 项目身份）+ `state/board.md` + `state/memory/MEMORY.md`。
+> AI 开工必读：本文件 + **`.42cog/` 四份**（`intent` 意向书 · `real` 现实约束 · `cog` 认知模型 · `meta` 项目身份）+ `state/board.md` + `state/memory/MEMORY.md` + **`state/pending-decisions.md`**（要问人的事，唯一清单）+ **`specs/rubric/preferences.md`**（人耳偏好，每次听测后更新；人定 2026-10-31「让大家都同步」）+ `docs/plan/001_decisions-20261029-b1.md` 末尾最新决策。
 > 本文只留**祈使句与硬约束**：目录速查见 `README.md`，命名与格式规约见 `specs/README.md`，工具与降级见 `scripts/check-tools.sh`。
 > **这份文件应该越用越长——但由你和它一起长，不是一开始就发给你一堆。**
 
