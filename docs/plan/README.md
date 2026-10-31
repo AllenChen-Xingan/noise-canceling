@@ -19,3 +19,4 @@
 | — | 2026-10-31 | 设备端自适应与可靠性 → 取舍卡见 `docs/research/010_ondevice-adaptation/decision.md` |
 | — | 2026-10-31 | 一大堆人同时说话 → 取舍卡见 `docs/research/011_multitalker/decision.md` |
 | — | 2026-10-31 | 工业级评测标准与 verifier 框架 → 取舍卡见 `docs/research/012_eval-standards/decision.md` |
+| — | 2026-10-31 | RL 环境与训练路线 → 取舍卡见 `docs/research/013_rl-environment/decision.md` |
