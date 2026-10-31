@@ -146,10 +146,10 @@ impl SceneAnalyzer {
         let mut mass = 0.0f32;
         for (i, &p) in self.ema.iter().enumerate() {
             let c = NoiseClass::ALL[i];
-            if let Some(u) = self.manual {
-                if route::user_of(c) != u {
-                    continue;
-                }
+            if let Some(u) = self.manual
+                && route::user_of(c) != u
+            {
+                continue;
             }
             mass += p;
             if p > best_p {

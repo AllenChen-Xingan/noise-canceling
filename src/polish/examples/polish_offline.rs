@@ -63,7 +63,7 @@ fn main() {
     let mut dry_spec = vec![realfft::num_complex::Complex32::new(0.0, 0.0); N_FFT / 2 + 1];
     let mut ti = 0;
     let (mut t_spec, mut t_time, mut hops) = (Duration::ZERO, Duration::ZERO, 0u64);
-    for (k, (d, w)) in pad_d.chunks_exact(HOP).zip(pad_w.chunks_exact(HOP)).enumerate() {
+    for (k, (d, w)) in pad_d.as_chunks::<HOP>().0.iter().zip(pad_w.as_chunks::<HOP>().0).enumerate() {
         let t = (k * HOP) as f32 / SR;
         while ti < timeline.len() && timeline[ti].0 <= t {
             chain.set_target(PolishParams::preset(timeline[ti].1));

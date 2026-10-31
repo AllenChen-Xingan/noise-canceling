@@ -71,7 +71,7 @@ fn main() {
         let x = read_wav(path);
         let mut sa = SceneAnalyzer::new(16000, HOP);
         sa.set_tuning(h, ema);
-        for (k, hop) in x.chunks_exact(HOP).enumerate() {
+        for (k, hop) in x.as_chunks::<HOP>().0.iter().enumerate() {
             let t0 = Instant::now();
             sa.push_hop(hop);
             let d = t0.elapsed();

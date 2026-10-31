@@ -207,10 +207,10 @@ impl FeatureExtractor {
         // 频带能量与正向通量
         let mut band = [0f32; NB];
         let mut flux = 0.0;
-        for b in 0..NB {
+        for (b, (bd, pb)) in band.iter_mut().zip(&self.prev_band).enumerate() {
             let s: f32 = self.pow[self.band_edges[b]..self.band_edges[b + 1]].iter().sum();
-            band[b] = 10.0 * s.max(1e-12).log10();
-            flux += (band[b] - self.prev_band[b]).max(0.0);
+            *bd = 10.0 * s.max(1e-12).log10();
+            flux += (*bd - pb).max(0.0);
         }
         self.prev_band = band;
         // 谐波度：功率谱逆变换 = 自相关；在 40–200 样本（80–400 Hz）里找归一化峰
