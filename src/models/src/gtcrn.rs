@@ -9,7 +9,7 @@ use std::path::Path;
 use ort::session::{HasSelectedOutputs, OutputSelector, RunOptions, Session};
 use ort::value::Tensor;
 use vdn_dsp::{StreamingStft, window};
-use vdn_engine::{Model, ModelError};
+use vdn_types::{Model, ModelError};
 
 use crate::session::{self, BoxError};
 

@@ -8,12 +8,19 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+vdn-types.workspace = true
 vdn-dsp.workspace = true
-vdn-engine.workspace = true
 ort.workspace = true
 
 [dev-dependencies]
+vdn-engine.workspace = true
 assert_no_alloc.workspace = true
 
 [lints]
 workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）。ort 只许在这里（拆出后端 crate 前）
+[package.metadata.vdn]
+tier = "B"
+unsafe = false
+forbid = ["hound", "serde", "serde_json", "cpal", "clap", "vdn-engine"]

@@ -1,4 +1,4 @@
-//! vdn-models：具体模型的适配器（实现 `vdn_engine::Model`）。ONNX Runtime 只在这一个 crate 里出现。
+//! vdn-models：具体模型的适配器（实现 `vdn_types::Model`）。ONNX Runtime 只在这一个 crate 里出现。
 //!
 //! 实时安全的现状（详见 exp004 README）：适配器自己的代码不分配；但 `ort` 的 `run` 在 Rust 侧仍有少量分配，
 //! ORT C++ 内部的分配也绕过 Rust 分配器——这是登记在案的债，推理线程按软实时管。
@@ -72,7 +72,7 @@ macro_rules! each {
     };
 }
 
-impl vdn_engine::Model for AnyModel {
+impl vdn_types::Model for AnyModel {
     fn name(&self) -> &'static str {
         each!(self, m => m.name())
     }
@@ -88,7 +88,7 @@ impl vdn_engine::Model for AnyModel {
     fn reset(&mut self) {
         each!(self, m => m.reset())
     }
-    fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), vdn_engine::ModelError> {
+    fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), vdn_types::ModelError> {
         each!(self, m => m.process(input, output))
     }
 }
