@@ -95,25 +95,10 @@
 - exp002（M5 CPU）：DNSMOS 每段约 10 s 音频打分约 0.05 s，PESQ/STOI 各约 0.05 s——评测几乎零成本；坑：DNS 仓 dnsmos_local.py:53 与 librosa≥0.10 不兼容，非 16 kHz 输入报错，需先自行重采样（smoke.py:80-86）→ docs/experiments/exp002-eval-smoke/（大总管已抽查：clean 自检 PESQ 4.64 / STOI 1.000，验收通过）
 - 交代里大总管名 5-app-89 失效，现为 noise-canceling-69，批次文件已改
 
-## 待定清单（攒着等人一次看完）
+## 待定清单
 
-- [x] 第一批 24 题 + 个性化 + P.808 —— 2026-10-30 已拍板，见 `docs/plan/001_decisions-20261029-b1.md`
-- [x] 远程仓库 —— 2026-10-30 建私有仓库 AllenChen-Xingan/noise-canceling
-- [ ] 放权边界 —— 来源 board
-- [ ] P1 待人拍板 3 题（快开慢关默认关掉 · GTCRN 权重复制到 ~/vdn-data · CI 建议）—— `docs/experiments/exp004-p1-rust-parity/README.md`
-- [ ] 009 待人拍板 4 题（最低系统 14.2→14.4 · GPL-3.0-or-later vs -only · HAL 拿共享内存方式 · RustFFT 破例）—— `docs/research/009_rust-ecosystem/decision.md` §五
-- [ ] 008 待人拍板 7 题（意向书「不分配不加锁」改三档表述 · 目录名 · panic=abort · 两个进程 · HAL 目录放哪 · 延迟超 45 ms 先砍哪 · tract 对照实验）—— `docs/research/008_rust-architecture/decision.md`
-- [ ] 008 给 p1 后续批次 5 项改动（含 exp004 README 补注「0 次分配只计 Rust 侧」）—— 同上「给 p1 线的后续改动」
-- [ ] 规约跟进（下一批接入线）：`specs/rust/architecture.md` §2.1 / §4 补 vdn-speaker（B 档）与 vdn-speaker-lab；speaker-lab tier tool → C 待定；bin 名不合 §1 记例外；CI 补 `--features onnx` 测试；ORT 一个进程只许一个 Environment（vdn-models 也要改为调用方传入）
-- [ ] exp006 待人拍板 6 题（scene README §6）
-- [ ] 014 待人拍板 6 题（CHiME-4 买不买 · 签 ECHI 协议 · 首批下载约 20 GB（改 D22）· 许可不清只评测本机 · CC BY 真实集不进训练 · 公开集旁人声音照 D19）
-- [ ] FE-M 修音 A/B/C（scene `docs/experiments/exp006-scene-sim/notes/fem-polish.md`）：官方有 `fastenhancer_m.spec.onnx`（STFT 在图外，Hann 512 / hop 160），换用后共用 dsp StreamingStft 与频谱修音链、额外延迟 0；⚠️ Σw² 非常数（每 10 ms 起伏 0.14 dB＝嗡声），合成端要加包络归一（vdn-dsp，下一批接入时做）
-- [ ] 012 待人拍板 9 题（「工业级」在本项目指什么 · 众包与 D39 · rlenv 过渡期能否用 L1 当弱奖励等）+ rubric 修改清单 R1–R14 —— `docs/research/012_eval-standards/decision.md`；升级清单 P0：人耳加 P.835 三量表 · RL 奖励同策略审计 · ETSI 噪声格子 · verifier 定标统计 L0–L3
-- [ ] 011 待人拍板 5 题（「只留我」一个开关 · 声纹认好后默认开 · 会议室自动放开 · 试借语音突显 · 菜单栏小图标提前）；~~#6 提示规则~~ 人已否决（D42：不做耳麦提示）—— `docs/research/011_multitalker/decision.md`
-- [ ] 待开实验（011）：① VPIO / 语音突显 + 4 声道 + 蓝牙麦延迟（随 dev-4，P0）② babble 人数×SNR 曲线（dev-3）③ 近 / 远特征 AUC ④ 会议室识别回归 ⑤ 商业对照；提醒 dev-4：别的进程在内置麦开 VPIO 时 HAL 读到的电平骤降（cubeb 源码）
-- [ ] 010 待人拍板 3 题（空闲小更新素材：只累计归一化统计 · 通话中不探索 · 软件内「检查更新」算云端、不做）—— `docs/research/010_ondevice-adaptation/decision.md` 第五节
-- [ ] 006 待人拍板 4 题（延迟察觉实验 · RX 当天花板参照 · 开 issue 问许可等）—— `docs/research/006_sota-landscape/decision.md` 末节
-- [ ] 007 待人拍板 4 题（权重 · 耳朵与机器怎么合 · V8 口径 · 下一轮怎么听）—— `docs/research/007_denoise-rubric/decision.md`
-- [ ] 要不要去 FastEnhancer 仓库开 issue 问权重许可（对外发言）：仓库 MIT，权重无单独声明（训练数据 DNS3 宽带 + VCTK 0.92）；建议等听测后它排前面再问 —— 来源 rubric / abtest
-- [ ] 005 PSE 待人拍板 7 条（训练与否 · VoxCeleb 声纹模型 · 耗电上限 · 零设置口径 · 隐私存什么 · 状态提示 · 对外开 issue）—— 见 `docs/research/005_pse/decision.md` 末节；#3 耗电与 VoxLock 等 exp003 实测后再问
-- [x] 开下一批 005 PSE + exp003 AB 听测 —— 人 2026-10-30 同意，已派
+**已移到唯一清单 `state/pending-decisions.md`**（2026-10-31，人要求「要问我的问题单独放在一个地方」）。本账本不再列题。
+
+- [ ] 待开实验（011）：① VPIO / 语音突显 + 4 声道 + 蓝牙麦延迟（随 dev-4，P0）② babble 人数×SNR 曲线（dev-3）③ 近 / 远特征 AUC ④ 会议室识别回归 ⑤ 商业对照；提醒 dev-4：别的进程在内置麦开 VPIO 时 HAL 读到的电平骤降
+- [ ] 规约跟进（下一批接入线）：`specs/rust/architecture.md` §2.1 / §4 补 vdn-speaker（B 档）、vdn-speaker-lab、vdn-scene、vdn-polish；speaker-lab tier；CI 补 `--features onnx`；ORT 一个进程只许一个 Environment
+- [ ] 008 给 P1 后续改动第 5 项（exp004 README 补注「0 次分配只计 Rust 侧」）是否已由 align 完成——下一批核对
