@@ -25,7 +25,7 @@
 | 延迟上报（latency_samples） | 抄 nih-plug：原子 swap，变了才通知非实时线程（nih-plug/src/wrapper/clap/wrapper.rs:1737-1745） | clack：延迟只在 activate 内允许变（clack/extensions/src/latency.rs:99） | 我们由 engine 上报，HAL 驱动读 `kAudioDevicePropertyLatency`；采 clack 的规矩更简单：**换模型 = 重激活**，延迟只在激活时定 |
 | 后台任务（模型加载、声纹注册） | 抄 nih-plug `BackgroundTask` 有界队列 + `try_send` 失败即丢（nih-plug/src/event_loop/background_thread.rs:61-69） | Firewheel 的事件组送回模式（handle_messages.rs:44） | 但队列换成 rtrb：crossbeam 首次在新线程调用会因线程本地存储分配（background_thread.rs:62-63 作者自注） |
 | 音频图 | **不要图**，自写固定管线 | Firewheel（真要动态图时） | 链路固定；dasp_graph 每次 process 都 DFS 遍历（dasp/dasp_graph/src/lib.rs:322），且 2020 后没发版 |
-| 离线评测读 WAV（eval） | symphonia（MPL-2.0，0.6.1 · 2026-08） | hound（本组未查，见存疑） | 只用在 eval，不进实时路径 |
+| 离线评测读 WAV（eval） | symphonia（MPL-2.0，0.6.1 · 2026-08） | hound（Apache-2.0；最后发布 3.5.1 · 2023-09-25，但默认分支 2026-08-09 还有提交【API】，复核 3 补查） | 只用在 eval，不进实时路径 |
 
 ## 本组最值得学的两个设计
 
@@ -226,5 +226,5 @@
 4. **跨进程参数通道**：本组原语（triple_buffer、ringbuf、crossbeam）都只在进程内有效；共享内存里的 SPSC 环与原子发布要另查（rtrb 是否能放进 `mmap` 区域需核实）。
 5. **panic 策略**：clack 用 `catch_unwind` 把 panic 变成错误码；我们是两进程，推理进程可直接 `panic = "abort"` 让送音进程走原声旁路，但送音进程该选哪种，待 rustarch 线定。
 6. **rtsan 在 macOS/aarch64 上的可用性**：只查了仓库活跃度，未验证能否构建。
-7. **hound**（WAV 读写）未查许可证与维护状态。
+7. ~~**hound**（WAV 读写）未查许可证与维护状态。~~ 复核 3 已查：Apache-2.0；crates.io 上最后发布 3.5.1（2023-09-25）；GitHub 默认分支 2026-08-09 有提交，40 个 open issue【API】。按「近 12 个月有提交」算，达标。
 8. nih-plug 的 `editor()` 在 plugin.rs:165，只看了签名（编辑器在宿主线程创建、通过 `Arc<Params>` 读参数），没深读 GUI 包装。
