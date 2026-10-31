@@ -159,7 +159,7 @@
 |---|---|
 | 做什么 | Silero VAD 的 ort 封装，带流式 / 迭代器 API |
 | 许可证 | crates.io 上显示「non-standard」（用的是 license-file）【API】，文件内容是 MIT 原文【源码】`resources/voice_activity_detector/LICENSE:1`；兼容：是 |
-| 维护状态 | 0.2.1（2025-08-04）【API】；最后一次提交 2025-08-04；6 个 open issue；最近的 PR 有回复【API】。**刚好在 12 个月边缘之外，命门 3 不达标** |
+| 维护状态 | 0.2.1（2025-08-04）【API】；最后一次提交 2025-08-04；6 个 open issue；最近的 PR 有回复【API】。**到今天已经约 15 个月，命门 3 不达标** |
 | 实时安全做法 | **不安全**：每次 predict 都 `zeros` 新建输入，`to_owned` 拷贝状态【源码】`src/vad.rs:59`、`:69-70`；推理前要拿 `Mutex` 锁【源码】`:74`；出错直接 `unwrap` panic【源码】`:75` |
 | 值得学的一处 | 反面教材：「状态 `mem::take` 出来再 `to_owned`」这种写法每帧都要分配【源码】`src/vad.rs:65-83` |
 | 我们怎么用 | **不要** |
@@ -219,7 +219,7 @@
 |---|---|
 | 做什么 | 另外两个 Silero VAD 的 Rust 封装 |
 | 许可证 | 都是 MIT【API】 |
-| 维护状态 | silero-vad-rs 0.1.2（2025-04-04），4 个 open issue 都没回复【API】，**停更**；silero-rs 最后一次实质提交 2026-07-23，之后只有 dependabot 的 PR 还开着【API】，crates.io 同名的 `silero-rs` 0.1.0（2023-11）不确定是不是同一个仓库【API】 |
+| 维护状态 | silero-vad-rs 0.1.2（2025-04-04），4 个 open issue 都没回复【API】，**停更**；silero-rs 最后一次实质提交 2026-07-23，之后只有 dependabot 的 PR 还开着【API】，crates.io 上同名的 `silero-rs` 0.1.0（2023-11-17）**不是**这个仓库：它的 repository 字段指向 Infoserv-Systems-Ltd/sileror-rs，许可证是 Unlicense【API】（复核 3 查清） |
 | 实时安全做法 | 没读 |
 | 值得学的一处 | — |
 | 我们怎么用 | **不要**（findit-studio 的 silero 更完整） |
@@ -272,5 +272,5 @@
 4. **ORT `run` 在热路径上会分配输出张量**，这是推断；是否要用 IoBinding 预绑输出，归 engine 组定。声纹线程不是实时线程，影响不大。
 5. **sherpa-onnx 自带的 ORT 和 `ort` crate 能不能共存于同一进程**没验证（推断会冲突）。如果整包用 sherpa-onnx，就只能全用它的 ORT。
 6. **WeSpeaker、3D-Speaker、pyannote / PLDA 权重的许可**不在本组范围，见 005 #2；speakrs 下载的 PLDA 文件也一样。
-7. WeSpeaker / 3D-Speaker 仓库 LICENSE 我没逐个打开，Apache-2.0 是推断。
+7. ~~WeSpeaker / 3D-Speaker 仓库 LICENSE 我没逐个打开，Apache-2.0 是推断。~~ 复核 3 已打开核实：都是 Apache-2.0。
 8. 所有「能在 macOS/aarch64 编过」的判断都没实测：earshot、kaldi-fbank 是纯 Rust，风险低；sherpa-onnx 依赖它在 Releases 里有没有 macOS 预编译包（build.rs 里有 xcframework 的地址，推断有）。
