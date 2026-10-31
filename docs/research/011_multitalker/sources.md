@@ -11,7 +11,7 @@
 | exp003：邻桌 6 人 / 旁边有人说话的 8 段，三个通用模型几乎全「不能用」且吃字 | `docs/experiments/exp003-offline-ab/results/` · D34 | 算数，是本题的起点 |
 | 005 PSE：自写注册器 + 不对称门控（第 1 步）、VoxLock 超预算、Teams 提示用户自己关 | `docs/research/005_pse/decision.md` · `sources.md:84` | 算数；本线不重复调研这些候选 |
 | 006：Apple Voice Isolation 当商业对照（要人手动开） | `docs/research/006_sota-landscape/decision.md:72` | 算数，本线把它并进实验建议 |
-| D40 / D41 场景路由与两层场景 | `docs/plan/005_evolution-and-simulation.md` | 算数，本线的「多人同用」识别挂在判断回路上 |
+| D40 / D41 场景路由与两层场景 | `docs/plan/005_evolution-and-simulation.md` | 算数，本线的「会议室」识别挂在判断回路上 |
 
 ## 二、他人积累（按问题）
 
