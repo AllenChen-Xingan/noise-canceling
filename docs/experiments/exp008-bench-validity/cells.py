@@ -230,6 +230,7 @@ def main():
     ap.add_argument("--n", type=int, default=6)
     ap.add_argument("--only", default="")
     ap.add_argument("--out-root", default=str(OUT_ROOT))
+    ap.add_argument("--docs-root", default=str(HERE / "builds"), help="清单写哪；冒烟时指到仓外，免得试错产物进仓")
     a = ap.parse_args()
     build = a.build or time.strftime("%Y%m%d%H%M%S") + "-" + secrets.token_hex(2)
     only = [s for s in a.only.split(",") if s]
@@ -249,12 +250,12 @@ def main():
             files[k] = {"path": str(p.relative_to(root)), "sha256": sha256(p)}
         rows.append({**{k: j[k] for k in ("cell", "gen", "clip", "mat_seed")}, "level": j["level"], "cond": j["cond"],
                      "files": files, "labels_hop": HOP, "labels": labels, **meta})
-    docs = HERE / "builds" / build
+    docs = Path(a.docs_root) / build
     docs.mkdir(parents=True, exist_ok=True)
     with open(docs / "truth.jsonl", "w") as f:
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
-    manifest = {"build": build, "audio_root": str(root.relative_to(MAIN)), "sr": SR, "clip_s": CLIP_S, "n_clips": a.n,
+    manifest = {"build": build, "audio_root": str(root.relative_to(MAIN)) if root.is_relative_to(MAIN) else "(仓外临时目录)", "sr": SR, "clip_s": CLIP_S, "n_clips": a.n,
                 "base": BASE, "axes": {k: v[1] for k, v in AXES.items()}, "multi": MULTI, "count": len(rows),
                 "script_sha256": sha256(__file__), "sim_sha256": sha256(sim.__file__), "seconds": round(time.time() - t0, 1)}
     (docs / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1))
