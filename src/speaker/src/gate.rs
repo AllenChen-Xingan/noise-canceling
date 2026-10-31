@@ -158,9 +158,13 @@ impl Stage for AsymGate {
                 onset = true;
             }
             self.silent_samples = 0;
-            // 背景电平（约 1 s），只跟有声 hop
-            let a = one_pole_coef(1.0, self.p.sr / n as f32);
-            self.slow_db += (st_db - self.slow_db) * a;
+            // 背景电平（约 1 s），只跟有声 hop；第一次有声直接取当前值，免得从 −120 dB 慢慢爬时一路判「电平跳起」
+            if self.slow_db <= -119.0 {
+                self.slow_db = st_db;
+            } else {
+                let a = one_pole_coef(1.0, self.p.sr / n as f32);
+                self.slow_db += (st_db - self.slow_db) * a;
+            }
         } else {
             self.silent_samples = self.silent_samples.saturating_add(n as u64);
         }

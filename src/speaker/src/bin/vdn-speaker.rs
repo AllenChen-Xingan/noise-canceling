@@ -312,6 +312,7 @@ fn cmd_run(args: &[String]) -> R<()> {
     let mut gate = AsymGate::new(gp);
     let mut y_p = y_ve.clone();
     let mut gains = Vec::with_capacity(n_hops);
+    let mut onset_cum = Vec::with_capacity(n_hops);
     let mut stage_ns_gate = Vec::with_capacity(n_hops);
     for k in 0..n_hops {
         let r = k * HOP..(k + 1) * HOP;
@@ -325,6 +326,7 @@ fn cmd_run(args: &[String]) -> R<()> {
         gate.process(&mut y_p[r.clone()], &dry[r], ctx);
         stage_ns_gate.push(t0.elapsed().as_nanos() as u64);
         gains.push(gate.gain());
+        onset_cum.push(gate.onsets());
     }
     versions.push(("energy", y_en));
     versions.push(("vad", y_ve));
@@ -350,6 +352,7 @@ fn cmd_run(args: &[String]) -> R<()> {
         "clusters": clusters,
         "per_hop": {
             "gain": gains,
+            "onset_cum": onset_cum,
             "energy_open": energy_open,
             "vad_open": vad_open,
             "vad_prob": vad_probs,

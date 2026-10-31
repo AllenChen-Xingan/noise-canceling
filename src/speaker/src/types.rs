@@ -100,6 +100,8 @@ pub trait Stage: Send {
     fn name(&self) -> &'static str;
     fn reset(&mut self);
     fn process(&mut self, wet: &mut [f32], dry: &[f32], ctx: FrameCtx);
+    /// align 草案另有 `fn set_params(&mut self, _p: &ParamSet) {}`（默认空，判断回路下发参数用）；
+    /// `ParamSet` 在 vdn-types 里，本镜像不复制，接入时门控从那里取 floor_db 等
     /// 本级附加延迟（样本）；进延迟账，本 crate 的级全部为 0
     fn latency_samples(&self) -> usize {
         0
