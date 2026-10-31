@@ -17,10 +17,10 @@
 | 子需求 | 首选 | 备选 | 理由 |
 |---|---|---|---|
 | 依赖树许可证白名单（命门 1） | **cargo-deny** `licenses` | cargo-about 的 `accepted`（同样会拒） | 默认全拒、只放白名单；对 `A OR B` 表达式逐项求值；支持按 crate 的 exceptions、忽略自家私有 crate、限定 `targets` 只看 aarch64-apple-darwin |
-| GPL 发布用第三方许可清单 | **cargo-about**（模板出 HTML/TXT） | cargo-license（只列表，不带全文，14 个月无提交） | GPL 发布要随附各依赖的许可全文；cargo-about 与 cargo-deny 同一家同一套 spdx 识别 |
+| GPL 发布用第三方许可清单 | **cargo-about**（模板出 HTML/TXT） | cargo-license（只列表，不带全文，15 个月无提交） | GPL 发布要随附各依赖的许可全文；cargo-about 与 cargo-deny 同一家同一套 spdx 识别 |
 | 漏洞通告 / 被撤版本 | **cargo-deny** `advisories` | cargo-audit | 一个工具一份配置管四件事；cargo-audit 维护活跃，可作交叉 |
 | 禁用 crate / 重复版本 / 构建脚本审查 | **cargo-deny** `bans` | — | `deny` + `wrappers`、`allow-build-scripts` 白名单，能把「谁能拉进来 ort 这类带下载脚本的 crate」写死 |
-| 热路径零分配**断言**（命门 2，单测期） | **assert_no_alloc 的思路自己写**（~60 行，在 dsp/engine 的测试里装计数分配器） | divan `AllocProfiler`（基准里顺带数分配次数） | 原 crate 4 年没发版；思路极简：线程局部计数 + 自定义全局分配器 |
+| 热路径零分配**断言**（命门 2，单测期） | **assert_no_alloc 的思路自己写**（~60 行，在 dsp/engine 的测试里装计数分配器） | divan `AllocProfiler`（基准里顺带数分配次数） | 原 crate 5 年多没发版（1.1.2 · 2021-08-03）；思路极简：线程局部计数 + 自定义全局分配器 |
 | 热路径零锁零系统调用**检测**（命门 2，集成期） | **rtsan-standalone**（RTSan，macOS arm64 支持） | 无对等替代；退而求其次用 assert_no_alloc 只抓分配 | 唯一能同时抓 malloc / mutex / 系统调用的；平时零开销 no-op，`RTSAN_ENABLE=1` 才生效 |
 | 环形缓冲 / 原子发布的并发正确性 | **loom**（算法层，线程模型） | Miri（UB + 数据竞争，rtrb 已在 CI 用） | 两者互补：loom 穷举交错，Miri 抓未定义行为；二者都**测不了真正跨进程 mmap**，需把算法与共享内存映射拆开 |
 | 跑测试 | **cargo-nextest** | cargo test | 每测试一进程、超时与重试、JUnit 输出；活跃（今天还有提交） |
@@ -250,7 +250,7 @@
 |---|---|
 | 做什么 | 浮点近似相等：绝对差 / 相对差 / ULPs |
 | 许可证 | Apache-2.0（`resources/approx/approx/Cargo.toml:5`）；兼容：是 |
-| 维护状态 | crates.io 0.5.1（API 返回 2026-02-05）；仓内已是 0.6.0-rc2；提交 2026-07-09；open 15；issue #108「0.6.0 Release」无回复【API】 |
+| 维护状态 | crates.io 最新稳定版 0.5.1 发布于 **2022-01-23**；2026-02-05 是 crate 的 `updated_at`，也就是 0.6.0-rc2 预发布版上 crates.io 的日期（rc1 已被 yank）【API】（复核 3 更正）；提交 2026-07-09；open 15；issue #108「0.6.0 Release」无回复【API】 |
 | 实时安全做法 | 纯计算无分配 |
 | 值得学的一处 | `relative_eq` 先判相等/无穷，再「绝对差 ≤ epsilon 即过（接近 0 时）」，否则「≤ 较大绝对值 × max_relative」（`resources/approx/approx/src/relative_eq.rs:86-115`）——这正是 fbank 对拍要的混合判据（log 能量接近 0 处用绝对容差）。但切片比较只返回 bool（`:278-282`），说不出第几帧第几维挂了 |
 | 我们怎么用 | **抄思路自己写**：eval 里一个 `compare(rust, python, eps_abs, eps_rel) -> Report{max_abs, max_rel, argmax(frame,bin), n_fail}`；断言简单场合可直接用 approx 宏 |
