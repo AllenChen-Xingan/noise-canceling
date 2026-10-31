@@ -222,3 +222,33 @@
 6. **fbank 前端**（声纹组的事）：kaldi fbank 窗 25 ms/10 ms @16k = 400 点补到 512，也会用 realfft；Rust 版 kaldi fbank 现成 crate 本组未查。
 7. **vDSP 与 realfft 在 512 点的实际速度对比**未测；只有需要时再做。
 8. easyfft 源码是经 GitHub API 读取，不在 resources/ 里，行号以 main 分支当日为准。
+
+## 复核记录（怀疑派 2）
+
+> 2026-10-30 · 只读复核：亲手打开源码行、gh api、crates.io API；没跑构建或推理，也没克隆新仓。
+
+**查了多少**：【源码】行号约 60 处（rubato、realfft、RustFFT、accelerate-rs、sonora、webrtc-audio-processing、nnnoiseless、libDF、biquad、ebur128、gtcrn），许可证与维护日期 18 个仓 / 22 个 crate 全部用 API 重查，issue 13 条（#103 #102 #713 realfft#45/#48/#49 rubato#142/#143 hound#101/#102 nnnoiseless#40/#41 ebur128#65）。
+
+**改了哪些**
+1. rubato `Fft` 延迟：原文「默认 → 16 kHz 侧约 8 ms」只说对了一个方向。按 synchro.rs:221-222、298-319、692-694 推算，上采样约 8 ms，下采样约 2.7 ms；风险栏和「存疑 1」都已改。
+2. realfft 的证据行号前后不一致（669-680/748-752）：统一改成亲眼看过的 671-682、752-754。
+3. sonora：补了**反例**。`GainController2::process`（gain_controller2.rs:238）每帧调 3 次 `extract_channels`（108-111，`to_vec` 复制）和多次 `collect`（264、313-331），所以「只有 Limiter 一处分配」不成立。
+4. webrtc-audio-processing：`collect` 在 lib.rs:215，原来写的 210-214 没包含它，已改成 210-215。
+5. DeepFilterNet #713：原文把 NaN 归因到「GRU 状态」，**不对**。issue 正文说的是开 FTZ 后，递推的 unit-norm 状态被清成 0，再算 0/0 得到 NaN。已改正，并加了「FTZ 不是免费的」这条教训。
+6. biquad 写「无运行时依赖」**不对**：它依赖 num-traits（开 libm），许可证仍兼容。
+7. 「Apple Silicon 没有现成 FTZ crate」**不对**：resources/no_denormals 在 aarch64 上设 FPCR bit 24（src/lib.rs:5、37-41）。不过它 2025-09-11 之后没更新，过不了命门 3，所以建议照着自己写。
+8. hound #101 只影响 32 位平台，风险降级。ebur128 的行号 250-252 改成 250-253。
+
+**核实无误（未改）**：rubato 的双接口（lib.rs:213-230、263-268）、Slip（slip.rs:9-30）；RustFFT 的 NEON 检测（neon_planner.rs:156-157）和规划顺序（plan.rs:73-87）；libDF 每帧两次分配（lib.rs:360、397）；nnnoiseless 用栈数组、静音时跳过网络（denoise.rs:95-113、features.rs:160）；easyfft 的线程局部缓存（经 API 读取，lib.rs:57-58、dyn_size/realfft.rs:96-113）。各 crate 的版本号和日期都与 API 一致。
+
+**查不了的**
+- symphonia、fundsp、dasp 只核了 API，没读源码。symphonia 的 lib.rs 文件头只有 MPL Exhibit A，没有 Exhibit B，已确认。
+- 「vDSP 的 execute 不分配」「GPL 系统库例外」两条仍是推断。
+- webrtc C++ 内部有没有锁：子模块没检出，看不到。
+- rubato 的延迟数字是复核者手算的，没跑过。
+
+**对推荐的异议**
+- 首选的三条命门都没违反：realfft、rubato、biquad 都是 MIT/Apache，近 12 个月有发版，热路径有预分配接口。
+- RustFFT 最后一次发版是 2025-09-18，已经超过 12 个月，严格按命门 3 是边缘情况。它的仓库仍活跃，可以接受，但建议在待人拍板里写一句。
+- sonora：不只限幅器要「照思路自己写」。如果把 sonora 当实时门控的 VAD 候选，也要先用 assert_no_alloc 实测。直接依赖整条 AGC2 管线进实时线程是**不行**的。
+- 漏掉的备选：去非正规数可以参考 no_denormals（照着自己写）；零分配实测工具 resources/ 里已经有 rust-assert-no-alloc、nice-assert-no-alloc、rtsan-standalone-rs，卡里应该指过去。fbank 用的 Rust crate 可以看 resources/kaldi-native-fbank-rs（归声纹组）。

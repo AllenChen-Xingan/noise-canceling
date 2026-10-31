@@ -196,3 +196,36 @@
 - **nnnoiseless 提交 #40 的 LazyLock 具体用在哪**：没读 diff。
 - **rten 的 GRU 和 ScatterND 实现**：只看到文件名。
 - **FastEnhancer-M 的 16 kHz ONNX**：~~发布物里只看到 48 kHz 的那一组~~ 复核发现 onnx-dns-v1.0.0 / onnx-vd-v1.0.0 里有 `fastenhancer_m.spec.onnx`；其采样率与 STFT 参数是否与 GTCRN 对齐，交给 D33 那条线确认。
+
+## 复核记录（怀疑派 2）
+
+> 2026-10-30 · 只读复核：亲手打开源码行、gh api、crates.io API、拉取 ORT CoreML EP 官方页面；没跑构建或推理，也没克隆新仓。
+
+**查了多少**：【源码】行号约 55 处（ort、biglinux-gtcrn、libDF 和它的 ladspa、tract、nnnoiseless、gtcrn、fastenhancer），13 个仓 / 14 个 crate 的许可证与日期用 API 重查，candle-onnx 的 eval.rs、burn-onnx 的算子表、rten 的 buffer_pool.rs 经 API 重新拉取，CoreML EP 的算子表也重新拉了一遍。
+
+**改了哪些**
+1. libDF `make_input_vec` 在 lib.rs:**360**，不是 359（两处都改了）。补了 `make_output_vec`（:397）。
+2. ort 的 MSRV/edition 在 Cargo.toml:**29-30**，不是 31-33。
+3. `extract_tensor_mut` 在 extract.rs:**427**，258 是 `try_extract_tensor_mut`。
+4. biglinux 的 `create_session` 在 model.rs:**84-90**。补全了调用链 plugin.rs:640 → 490 → 378-385。
+5. libDF ladspa：原文写「忙等」**不准确**。实际是音频回调里循环 `lock` 加 `sleep`（:419-432），还有 `control_tx.send`（:406），比忙等更糟。
+6. ort：`from_array_view` 和未预分配的输出，在 Rust 侧也各有一次 `Arc::new`（value/mod.rs:103），补进卡里。
+7. **spinning 和 FTZ 的建议降级**。intra=1 时，spinning 吃能耗只是推断。`with_flush_to_zero` 的文档写的是作用于线程池线程（impl_config_keys.rs:47-48），intra=1 时对推理线程是否生效没有证实。DeepFilterNet #713 又说明 FTZ 会引出 0/0 → NaN，所以「该打开」改成了「待实测」。
+8. **FastEnhancer 结论有错**。onnx-dns-v1.0.0 和 onnx-vd-v1.0.0 两组发布物里都有 `fastenhancer_m.spec.onnx`（vd 那组还带 `gtcrn.spec.onnx`），「只看到 48 kHz」不对，已改正。它们是 16 kHz 仍是推断。
+9. nnnoiseless #40 的 LazyLock 已经确认用在 src/lib.rs:99-115 的三个静态表上，从推断升级为源码证据。
+10. ort-tract：官方支持清单（tract.mdx:8-31）没有列 RunOptions/OutputSelector/线程设置，补了一条风险：双缓冲方案在 ort-tract 下可能用不了。
+11. ort 的 features：`default-features=false` 时还要显式选 TLS feature 和 `api-NN`，已补上。
+
+**核实无误（未改）**：ort 的栈路径（stack.rs:13-15、21、23，输入 ≤6、输出 ≤4、名字 <768 B、≤12 个指针），GTCRN 4 进 4 出正好在内；`preallocate` 只做 `Arc::clone`（run_options.rs:100、125-126、138；value/mod.rs:393-397）；`run_inner` 和 `SessionOutputs` 都用 SmallVec（run.rs:237-248、output.rs:38-41）；Run 不能多线程并发的注释（run.rs:210-219）；IoBinding 的 `GetBoundOutputValues`（run.rs:301）；biglinux 的状态常量、预热、起音（model.rs:25-33、130-149、226-239、264-271、278-302）；32 个算子（required_ops.config 第 4 行）。tract 那边：plan.rs:607-608、682-692，blocked.rs:118，rec.rs:10，array/mod.rs:42，tract 的 LICENSE 是 MIT/Apache 双许可。candle-onnx 确实没有 GRU 和 ConvTranspose。burn-onnx 支持 GRU、ScatterND、ConvTranspose、PRelu。rten 的 BufferPool 用 `Mutex`。wonnx 已归档。CoreML EP 算子表里确实没有 GRU、ScatterND（也没有 ConstantOfShape、Equal、Expand、Range、Where），图被切碎的判断更站得住了。
+
+**查不了的**
+- ORT 的 C++ 内部（arena、锁、稳态会不会分配），只能实测。
+- Apple ANE 那篇文章里的功耗数字没有重新核对。
+- `ConvTranspose` 只在 MLProgram 下支持：没逐字核对。
+- ORT 预编译包的 ThirdPartyNotices 没有逐项看。
+- tract 的 ScatterND/GRU 数值是否正确，没有验证。
+
+**对推荐的异议**
+- 首选 ort 站得住：MIT/Apache，2026-10 有发版，aarch64-apple-darwin 有预编译包（dist.tsv:2）。但 ort 还是 rc，加上 ORT 内部不透明，严格说**命门 2 只在 Rust 侧过关，C++ 侧待实测**。两进程加原声旁路的架构兜得住这一点。
+- 「奇偶帧双缓冲」的方向对，但要补一条：取出输出时必须在下一帧 run 之前 drop 掉 `SessionOutputs`（它持有预分配 Value 的 Arc 克隆）。别名问题仍待实测。
+- 漏掉的备选：FastEnhancer 的 16 kHz spec2spec 发布物（见上）直接影响 D33「同接口」的工作量，应该回写给 D33 那条线。resources/ 里的 sherpa-onnx 是 C++，不算 Rust 备选，可以不列。
