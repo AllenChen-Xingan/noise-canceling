@@ -1,7 +1,7 @@
-# vdn workspace：crate 放 src/<crate>/，依赖单向 dsp ← engine ← models ← cli（理由见 docs/experiments/exp004-p1-rust-parity/README.md「crate 划分」）
+# vdn workspace：crate 放 src/<crate>/。依赖方向见 specs/rust/architecture.md §2.2：types ← dsp ← engine；models → types + dsp；cli → engine + models；xtask 不依赖任何 vdn crate
 [workspace]
 resolver = "3"
-members = ["src/dsp", "src/engine", "src/models", "src/cli"]
+members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab"]
 
 [workspace.package]
 version = "0.1.0"
@@ -11,6 +11,7 @@ rust-version = "1.92"
 publish = false
 
 [workspace.dependencies]
+vdn-types = { path = "src/types" }
 vdn-dsp = { path = "src/dsp" }
 vdn-engine = { path = "src/engine" }
 vdn-models = { path = "src/models" }
@@ -27,3 +28,8 @@ unsafe_code = "deny"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+# 禁用清单（根 clippy.toml）默认放行，只在实时 impl 块 / 实时模块上升为 deny（specs/rust/architecture.md §5.3）
+disallowed_methods = "allow"
+disallowed_types = "allow"
+disallowed_macros = "allow"
+undocumented_unsafe_blocks = "deny"

@@ -1,0 +1,38 @@
+[package]
+name = "vdn-speaker"
+description = "认出你的声音：VAD、fbank、声纹、零设置注册、不对称门控（P2 离线）"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# 默认什么都不带：核心只依赖 dsp + earshot + realfft（规约 §2.2 规则 1）
+default = []
+# 声纹模型（ort）。过渡期例外：拆出推理后端 crate 后移走（同 vdn-models 的 ort 例外）
+onnx = ["dep:ort"]
+# 离线实验命令行已挪到 src/speaker-lab/（vdn-speaker-lab，tier = tool；2026-10-31 p2fix）
+
+[dependencies]
+# 本 crate 新引入的依赖
+earshot = "=1.2.2"
+# 以下沿用 workspace 的唯一一份钉
+realfft.workspace = true
+vdn-dsp.workspace = true
+ort = { workspace = true, optional = true }
+
+[dev-dependencies]
+assert_no_alloc.workspace = true
+
+# 机读正本（规约 §5.4）：B 档。理由：实时 Stage（envelope / gate / vad）的 process / reset 每 hop 跑在降噪线程，
+# 按规约 §4 那是 B 档线程（§4 按线程定档；实时入口 = 会在 A/B 档线程上被调用的 process / reset）；判断回路（fbank / embed / enroll / judge）
+# 是 C 档，在各自模块头以 NRT 整模块放行。§2.1 表与 §4 实时 crate 清单仍写 C / 未列，只算了声纹那半，待改规约（已报大总管）
+[package.metadata.vdn]
+tier = "B"
+unsafe = false
+forbid = ["hound", "serde", "serde_json", "cpal", "clap", "vdn-engine", "vdn-models", "coreaudio-rs", "coreaudio-sys", "objc2"]
+forbid_note = "ort 只经 onnx feature 进入（过渡期例外，同 vdn-models）"
+
+[lints]
+workspace = true

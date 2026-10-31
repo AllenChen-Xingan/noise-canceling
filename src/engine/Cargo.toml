@@ -8,6 +8,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+vdn-types.workspace = true
 vdn-dsp.workspace = true
 
 [dev-dependencies]
@@ -15,3 +16,9 @@ assert_no_alloc.workspace = true
 
 [lints]
 workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）
+[package.metadata.vdn]
+tier = "B"
+unsafe = false
+forbid = ["ort", "hound", "serde", "serde_json", "cpal", "clap", "vdn-models", "coreaudio-rs", "coreaudio-sys", "objc2"]
