@@ -1,8 +1,0 @@
-{
- "build": "smoke",
- "audio_dir": "_tmp/20261031-exp006/smoke",
- "n": 9,
- "seconds": 1.1,
- "only": "train,test,seq",
- "n_limit": 3
-}
