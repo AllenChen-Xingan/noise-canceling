@@ -1,0 +1,136 @@
+{
+ "build": "20261030223232-700e",
+ "data_build": "20261030214530-44df",
+ "models": [
+  "base",
+  "route",
+  "polish",
+  "both"
+ ],
+ "key": {
+  "te0039": [
+   "route",
+   "both",
+   "polish",
+   "base"
+  ],
+  "te0137": [
+   "polish",
+   "both",
+   "base",
+   "route"
+  ],
+  "te0111": [
+   "route",
+   "base",
+   "both",
+   "polish"
+  ],
+  "te0151": [
+   "both",
+   "base",
+   "route",
+   "polish"
+  ],
+  "te0190": [
+   "base",
+   "both",
+   "polish",
+   "route"
+  ],
+  "te0110": [
+   "base",
+   "polish",
+   "both",
+   "route"
+  ],
+  "te0164": [
+   "both",
+   "route",
+   "polish",
+   "base"
+  ],
+  "te0046": [
+   "polish",
+   "base",
+   "both",
+   "route"
+  ],
+  "te0011": [
+   "polish",
+   "base",
+   "both",
+   "route"
+  ],
+  "te0028": [
+   "both",
+   "polish",
+   "base",
+   "route"
+  ],
+  "te0239": [
+   "polish",
+   "route",
+   "both",
+   "base"
+  ],
+  "te0009": [
+   "polish",
+   "both",
+   "base",
+   "route"
+  ]
+ },
+ "traps": [
+  {
+   "id": "trap-identical",
+   "clip": "te0046",
+   "desc": "街道 / 公交",
+   "label": "所有候选其实是同一个文件（应答「分不出」）",
+   "ref": "../../audio/te0046_6a735a59.wav",
+   "cands": [
+    "../../audio/te0046_ef726add.wav",
+    "../../audio/te0046_ef726add.wav",
+    "../../audio/te0046_ef726add.wav",
+    "../../audio/te0046_ef726add.wav"
+   ],
+   "names": [
+    "same",
+    "same",
+    "same",
+    "same"
+   ],
+   "expect": {
+    "best": [
+     "same"
+    ]
+   },
+   "source_model": "polish"
+  },
+  {
+   "id": "trap-degraded",
+   "clip": "te0028",
+   "desc": "背景音乐",
+   "label": "其中一份是明显劣化版（最清楚、最自然都不该选它）",
+   "ref": "../../audio/te0028_cc9ec5b0.wav",
+   "cands": [
+    "../../audio/te0028_1d8500f5.wav",
+    "../../audio/te0028_df5b32.wav",
+    "../../audio/te0028_2ec85dfe.wav",
+    "../../audio/te0028_be3c5357.wav"
+   ],
+   "names": [
+    "base",
+    "degraded",
+    "route",
+    "polish"
+   ],
+   "expect": {
+    "not": [
+     "degraded"
+    ]
+   },
+   "source_model": "polish"
+  }
+ ]
+}
