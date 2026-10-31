@@ -21,3 +21,4 @@
 | — | 2026-10-31 | 工业级评测标准与 verifier 框架 → 取舍卡见 `docs/research/012_eval-standards/decision.md` |
 | — | 2026-10-31 | RL 环境与训练路线 → 取舍卡见 `docs/research/013_rl-environment/decision.md` |
 | — | 2026-10-30 | 选哪几个真实录音公开数据集做真实回归与 sim-to-real 校准 → 取舍卡见 `docs/research/014_real-datasets/decision.md` |
+| — | 2026-10-31 | 真实录音数据集 → 取舍卡见 `docs/research/014_real-datasets/decision.md` |

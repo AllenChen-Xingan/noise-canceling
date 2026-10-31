@@ -20,3 +20,4 @@
 | [013](013_rl-environment/) | 2026-10-31 | 强化学习环境与分场景训练：模拟器当环境、verifier 当奖励、先策略后训练、第一个实验是说话人条件辅助小模型 |
 | [013](013_rl-environment/) | 2026-10-31 | 强化学习环境与分场景训练：第一个最小实验＝说话人条件辅助小模型（Personal VAD + FiLM） |
 | [014](014_real-datasets/) | 2026-10-31 | 真实录音公开数据集：没有「笔记本麦 + 咖啡馆 + 参考」的公开集；首选 DNS 真实测试集 · CHiME-6 · AliMeeting · DR-VCTK ·（CHiME-4 / ACE）|
+| [014](014_real-datasets/) | 2026-10-31 | 真实录音的公开数据集：DNS 真实测试集 · CHiME-6 · AliMeeting · DR-VCTK 等（51 张卡） |
