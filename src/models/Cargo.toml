@@ -1,0 +1,19 @@
+[package]
+name = "vdn-models"
+description = "模型适配器：GTCRN、FastEnhancer-M（ort 单线程 CPU）。ONNX Runtime 只在这里出现"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+vdn-dsp.workspace = true
+vdn-engine.workspace = true
+ort.workspace = true
+
+[dev-dependencies]
+assert_no_alloc.workspace = true
+
+[lints]
+workspace = true
