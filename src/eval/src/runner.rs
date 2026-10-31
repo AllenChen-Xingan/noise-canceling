@@ -22,7 +22,7 @@ use crate::{Level, Score, Verdict, wav};
 
 /// QA 层的额外评分器（ASR、DNSMOS）。CI 层传 `None`。
 pub trait Extra {
-    fn score(&mut self, v: &str, task: &Task, clip: &Clip, out: &[f32], p: &Params) -> Option<Score>;
+    fn score(&mut self, v: &str, sys: &str, task: &Task, clip: &Clip, out: &[f32], p: &Params) -> Option<Score>;
 }
 
 /// 冻结基线：(系统, 任务, 试验, verifier) → 数值。
@@ -360,6 +360,7 @@ fn prepare(task: &Task, sys: SystemKind, clip: Clip) -> Result<Prepared, String>
 
 fn score_one(
     g: &Grader,
+    sys: SystemKind,
     task: &Task,
     p: &Prepared,
     out: &[f32],
@@ -369,7 +370,7 @@ fn score_one(
     let layer = info(&g.v).map_or("ci", |i| i.layer);
     if layer == "qa" {
         if let Some(x) = extra.as_deref_mut()
-            && let Some(s) = x.score(&g.v, task, &p.clip, out, &g.params)
+            && let Some(s) = x.score(&g.v, sys.as_str(), task, &p.clip, out, &g.params)
         {
             return s;
         }
@@ -483,10 +484,10 @@ pub fn run_task(
         for g in &task.graders {
             let level = level_of(opts, &g.v, synthetic);
             let kind = info(&g.v).map_or(Kind::Perceptual, |i| i.kind);
-            let score = score_one(g, task, &prep, out, opts, &mut extra);
+            let score = score_one(g, sys, task, &prep, out, opts, &mut extra);
             let base = degraded
                 .is_some()
-                .then(|| score_one(g, task, &prep, &prep.run.out, opts, &mut extra));
+                .then(|| score_one(g, sys, task, &prep, &prep.run.out, opts, &mut extra));
             let baseline = opts
                 .baseline
                 .get(&baseline_key(sys.as_str(), &task.id, i, &g.v))
