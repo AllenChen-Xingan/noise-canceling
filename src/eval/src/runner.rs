@@ -101,6 +101,8 @@ pub struct TaskResult {
     pub system: SystemKind,
     pub trials: Vec<TrialResult>,
     pub skipped: Option<String>,
+    /// 已知失败的原因（任务清单 `xfail`）
+    pub xfail: Option<String>,
 }
 
 impl TaskResult {
@@ -117,6 +119,10 @@ impl TaskResult {
     /// pass^k：k 次全过
     pub fn pass_pow_k(&self) -> Option<bool> {
         (self.k() > 0).then(|| self.passes() == self.k())
+    }
+    /// 已知失败的任务全部试验都过了：可以转正（去掉 xfail）。
+    pub fn xfail_now_passes(&self) -> bool {
+        self.xfail.is_some() && self.pass_pow_k() == Some(true)
     }
     pub fn blocks(&self) -> Vec<String> {
         let mut out = Vec::new();
@@ -464,6 +470,7 @@ pub fn run_task(
         system: sys,
         trials: Vec::new(),
         skipped: None,
+        xfail: task.xfail.clone(),
     };
     // 探针借用基础任务的场景
     let (scene_task, probe): (&Task, Option<Probe>) = match &task.probe {
@@ -521,7 +528,22 @@ pub fn run_task(
                 .baseline
                 .get(&baseline_key(sys.as_str(), &task.id, i, &g.v))
                 .copied();
-            let gate = decide(task.set, g, level, kind, &score, base.as_ref(), baseline);
+            let mut gate = decide(task.set, g, level, kind, &score, base.as_ref(), baseline);
+            // 回归集的感知量没有基线项（任务改名、新 verifier、改了试验次数）→ 报警，提示重写基线
+            if gate == Gate::Ok
+                && task.set == Set::Regression
+                && kind == Kind::Perceptual
+                && !g.info_only
+                && baseline.is_none()
+                && !opts.baseline.is_empty()
+                && score.value.is_some()
+            {
+                gate = Gate::Warn("没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）".into());
+            }
+            // 已知失败：阻断降为报警，留给修复线
+            if let (Some(x), Gate::Block(w)) = (&task.xfail, &gate) {
+                gate = Gate::Warn(format!("已知失败（{x}）：{w}"));
+            }
             graders.push(GraderResult {
                 v: g.v.clone(),
                 info_only: g.info_only,
