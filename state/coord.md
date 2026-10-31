@@ -18,7 +18,7 @@
 | rustarch | 008 Rust 架构（含 AST 模块化）· issue #11 · 分支 `research/008-rust-architecture` | `_tmp/20261030-b3/rustarch.md` | 其 worktree | 完成，PR #15 已合并（issue #11 关），窗口已关；7 题待人拍板 |
 | rusteco | 009 GitHub 上可学的 Rust 项目 · issue #12 · 分支 `research/009-rust-ecosystem` | `_tmp/20261030-b3/rusteco.md` | 其 worktree | 完成，PR #14 已合并（issue #12 关），窗口已关；4 题待人拍板 |
 | align | 架构对齐 + 智能体部件接口 + 延迟账 · issue #17 · `feat/arch-align` | `_tmp/20261031-b4/align.md` | 其 worktree | 完成，PR #26 已合并（issue #17 关），窗口已关；待人拍板：IO 96 帧（延迟账 47.00 → 43.67 ms） |
-| p2 | P2 认出你的声音（离线）· issue #18 · `feat/p2-speaker` | `_tmp/20261031-b4/p2.md` | 其 worktree | 已报到（noise-canceling-p2-63） |
+| p2 | P2 认出你的声音（离线）· issue #18 · `feat/p2-speaker` | `_tmp/20261031-b4/p2.md` | 其 worktree | 交付已收；合并 main 后 xtask tidy 报 tier 非法 + R12 禁用依赖（离线实验命令行带进 engine / models / serde_json）→ 派 p2fix 拆出工具 crate；盲听页 v2 已在人桌面 |
 | scene | 场景识别与路由 + 修音链 + 模拟环境 · issue #19 · `feat/scene-polish` | `_tmp/20261031-b4/scene.md` | 其 worktree | 已报到（noise-canceling-scene-f7） |
 | ondevice | 010 设备端自适应 + 可靠性调研 · issue #20 · `research/010-ondevice-adaptation` | `_tmp/20261031-b4/ondevice.md` | 其 worktree | 完成，PR #23 已合并（issue #20 关），窗口已关；3 题待人拍板 |
 | multitalker | 011 一大堆人同时说话（调研）· issue #21 · `research/011-multitalker` | `_tmp/20261031-b4/multitalker.md` | 其 worktree | 完成，PR 已合并（issue #21 关），窗口已关；6 题待人拍板 |
@@ -26,6 +26,7 @@
 | rlenv | 013 强化学习环境与分场景训练方案 · issue #25 · `research/013-rl-environment` | `_tmp/20261031-b4/rlenv.md` | 其 worktree | 完成，PR #29 已合并（issue #25 关），窗口已关；9 题待人拍板 |
 | datasets | 014 真实录音公开数据集 · issue #30 · `research/014-real-datasets` | `_tmp/20261031-b4/datasets.md` | 其 worktree | 已派 |
 | evalimpl | eval 实现：vdn-eval · CI / QA / 人工三层 · 回归集与能力集 · issue #31 · `feat/eval-verifiers` | `_tmp/20261031-b4/evalimpl.md` | 其 worktree | 已报到（noise-canceling-evalimpl-7f） |
+| p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 已派 |
 
 ## 规矩
 
@@ -38,9 +39,9 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | p2（exp005 四候选新 build，约 15 分钟） |
+| 重编译 / 全量测试（1 个） | scene（exp006 重跑 4 版推理 + DNSMOS + Qwen 打分，约 30 分钟） |
 
-排队：scene（exp006 打分：DNSMOS + Qwen 92 段，约 25 分钟）
+排队：（空）
 
 等人许可的弹窗 / 长时间前台运行：（空）
 
