@@ -17,7 +17,7 @@
 
 **建议（2026-10-30 更正，以此为准）**：**不用 `run_binding`，用 `run_with_options` + `OutputSelector::preallocate` 把全部输出都预分配**。这条路 Rust 侧可以零分配：
 - 预分配的输出走 `DynValue::clone_of`，只是 `Arc::clone`，不 `Arc::new`【源码】`ort/src/session/run_options.rs:138`、`ort/src/value/mod.rs:393-397`；只有没预分配的输出才走 `from_session_output_ptr` 的 `Arc::new`【源码】`ort/src/session/run.rs:270-281`
-- 输入输出名合计 ≤ 12 个、总长 ≤ 768 字节时走栈【源码】`ort/src/util/stack.rs:21-23`
+- 输入 ≤ 6、输出 ≤ 4 个时，名字与指针数组放在栈上（SmallVec，`ort/src/util/stack.rs:13-15`；C 字符串另有 ≤ 12 个、总长 ≤ 768 字节的栈缓冲，`:21-23`）。FE-M 7 进 7 出超过前两项，p1 实测每帧 7 次小分配
 - 输入用初始化时建好的自有 `Tensor`，每帧用 `extract_tensor_mut` 写数，**不要每帧 `TensorRef::from_array_view`**（它也会 `Arc::new`，`ort/src/value/mod.rs:103`，怀疑派复核）
 - GTCRN 的缓存状态：建两套状态张量 + 两个 `RunOptions`（A 的输出是 B 的输入，奇偶帧轮换），参考 `resources/biglinux-gtcrn/ladspa/src/model.rs:282-302`（它自己每帧新建 TensorRef，是反例的一半）
 - 每帧拿到的 `SessionOutputs` 里持有预分配值的 Arc 克隆，**下一帧 run 前必须 drop 掉**；输入输出是否允许别名没查到文档，乒乓方案正好避开
@@ -51,11 +51,13 @@ cargo-deny 0.20.2（2026-07），MIT OR Apache-2.0【API】。起步模板（`de
 ```toml
 [licenses]
 allow = ["MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause", "BSD-3-Clause",
-         "BSD-1-Clause", "ISC", "Zlib", "0BSD", "Unicode-3.0", "MPL-2.0", "GPL-3.0-or-later", "GPL-3.0-only",
+         "BSD-1-Clause", "ISC", "Zlib", "0BSD", "Unicode-3.0", "Unicode-DFS-2016", "Unlicense", "MPL-2.0",
+         "GPL-3.0-or-later", "GPL-3.0-only", "GPL-2.0-or-later",
          "LGPL-3.0-or-later", "LGPL-2.1-or-later", "BSL-1.0", "CC0-1.0"]
 confidence-threshold = 0.9
 ```
-不放 `GPL-2.0-only`（与 GPL-3.0 不兼容）。`BSD-1-Clause` 是给 assert_no_alloc 用的。ort 链接的 onnxruntime 二进制是 MIT，cargo-deny 看不到，要在第三方许可清单里手写一条【推断】。（rustarch 线在写「规则用哪个工具」，最终模板以它为准。）
+不放 `GPL-2.0-only`（与 GPL-3.0 不兼容）。`BSD-1-Clause` 是给 assert_no_alloc 用的。
+（自审更正）FSF 兼容列表核过：0BSD、BSL-1.0、CC0、Unicode-3.0 / DFS-2016、Zlib、ISC、Unlicense、GPL-2.0-or-later、Apache-2.0（仅对 GPLv3）兼容；**BSD-1-Clause 与 Apache-2.0 WITH LLVM-exception 在 FSF 列表上查不到**，按条文都只比所列兼容许可更宽松，判兼容是【推断】，更稳妥的做法是改放进只针对具体 crate 的 `exceptions`。MPL-2.0 全局放行，但 cargo-deny 查不出 Exhibit B，CI 里另加 grep「Incompatible With Secondary Licenses」。**白名单正本以 rustarch 008 为准**（`cards/tooling.md` 也有一份草稿，三份以 008 统一）。ort 链接的 onnxruntime 二进制是 MIT，cargo-deny 看不到，要在第三方许可清单里手写一条【推断】。（rustarch 线在写「规则用哪个工具」，最终模板以它为准。）
 
 ## 6. FTZ / 非正规数：no_denormals 0.3.0
 现成可用，但 0.3.0 发于 2025-09-11，已超 12 个月（命门 3 边缘）；替代是照 nih-plug `ScopedFtz` 自写两条指令（`resources/nih-plug/src/wrapper/util.rs:25,191`）。MIT，2025-09-11【API】；aarch64 上读写 FPCR 置 FZ 位（含 fp16）【源码，GitHub 上 `src/lib.rs:5,72-78`】，用的是 RAII guard（drop 时恢复原值，guard 不能跨线程）。在推理线程入口持有一个 guard 即可，不用自己写内联汇编。注意：FPCR 是线程级的，ORT 自己的线程池线程不受影响——又一个设 `intra_threads(1)` 的理由【推断】。

@@ -17,7 +17,7 @@
 ### 1. 音频 I/O 与线程（io-macos · hal-plugin）
 | 需求 | 首选 | 备选 | 理由 · 出处 |
 |---|---|---|---|
-| 麦克风采集 | M0 直通沿用路线图的 cpal 0.18.2；**M1 起换成自写 HAL IOProc**（`AudioDeviceCreateIOProcID`），绑定用 **coreaudio-sys**（bindgen 生成，含 HAL 驱动接口）+ **mach2**（Mach 时间、端口），不整套手写 FFI | cpal 继续用于设备枚举、eval | cpal 底层 coreaudio-rs 在帧数变化时在实时线程读属性并 `Vec::resize`（`resources/coreaudio-rs/src/audio_unit/render_callback.rs:622,649`）；cpal 每次回调调 `mach_timebase_info`（`resources/cpal/src/host/coreaudio.rs:76-78`，读的是 main 分支）。IOProc 直接给设备的 sample/host time。coreaudio-sys 含 `AudioServerPlugInDriverInterface`（`resources/prism/…/driver.rs:3,2052`，io 卡）；cubeb-coreaudio-rs（Firefox 生产代码）就依赖 mach2（`resources/cubeb-coreaudio-rs/Cargo.toml:17`） |
+| 麦克风采集 | M0 直通沿用路线图的 cpal 0.18.2；**M1 起换成自写 HAL IOProc**（`AudioDeviceCreateIOProcID`），绑定用 **coreaudio-sys**（bindgen 生成，含 HAL 驱动接口）+ **mach2**（Mach 时间、端口），不整套手写 FFI | cpal 继续用于设备枚举、eval | cpal 底层 coreaudio-rs 在帧数变化时在实时线程读属性并 `Vec::resize`（`resources/coreaudio-rs/src/audio_unit/render_callback.rs:622,649`）；cpal 每次回调调 `mach_timebase_info`（`resources/cpal/src/host/coreaudio.rs:76-78`，读的是 main 分支）。IOProc 直接给设备的 sample/host time。coreaudio-sys 含 `AudioServerPlugInDriverInterface`（`resources/prism/src/driver.rs:3,2052`，io 卡）；cubeb-coreaudio-rs（Firefox 生产代码）就依赖 mach2（`resources/cubeb-coreaudio-rs/Cargo.toml:17`） |
 | 虚拟麦克风 HAL 驱动 | **学思路**：照 voice-strip `vdev-macos-driver` 的结构自写 Rust cdylib | tympan-aspl 0.1.0（0 star、只发过一版） | voice-strip 证明纯 Rust 驱动可行，IO 路径只有原子加减 + 一次读环（`resources/voice-strip/crates/vdev-macos-driver/src/plugin.rs:771-810`）。objc2-core-audio 最后发版 2025-10-04，已过 12 个月线 |
 | 跨进程音频共享内存 | **学思路**：`shm_open + mmap` + 固定 `#[repr(C)]` 全原子布局，用 voice-strip 的「时间轴 + 分槽序号」环 | memmap2 0.9.12 只管映射 | 见「设计 1」及其 D03 补丁。iceoryx2 太重（macOS 只是 tier 2），shared_memory 2022 后不发版【API】 |
 | 共享内存安全交接 | **学思路**：LaunchDaemon 登记 Mach 服务，用 `xpc_shmem_create` 把匿名共享区交给驱动；驱动 Info.plist 要声明 `AudioServerPlugIn_MachServices` 才能在 coreaudiod 沙箱里连服务 | — | GPL-3.0 先例 `resources/m-audio-fast-track-ultra-macos-driver`（gaps.md G1）；voice-strip 用 0644 文件，自注只够 spike（`shm.rs:7-10`）。见待人拍板 3 |
@@ -114,7 +114,7 @@
 **1. voice-strip 的「时间轴 + 分槽序号」共享内存环，加上我们的 D03 补丁**
 写端改一个槽前把序号置成奇数，写完置成偶数；读端前后两次看到同一个偶数才认，否则这段当「缺」，**从不等待写端**。位置按绝对时间轴（host clock）算，所以送音进程写、HAL 读不需要握手。
 出处：`resources/voice-strip/crates/vdev-macos-driver/src/shm.rs:143-173`（write）、`:180-`（read，本人复看过）；驱动 IO 路径 `plugin.rs:771-810`；时钟 `clock.rs:1-9`。
-**注意，它判缺后是填零，不是送原声**（`shm.rs:180-230`、`plugin.rs:798`），出来的是静音。D03 要的是原声，而且原声要和降噪路径对齐到同一延迟，否则逐槽在「降噪声 / 静音 / 原声」之间跳，会有咔哒声。我们的补丁：
+**注意，它判缺后是填零，不是送原声**（`shm.rs:178,211-215`；映射不在时整块填零 `plugin.rs:803`），出来的是静音。D03 要的是原声，而且原声要和降噪路径对齐到同一延迟，否则逐槽在「降噪声 / 静音 / 原声」之间跳，会有咔哒声。我们的补丁：
 - 送音进程留一条**原声延迟线**，按同一时间轴取样；
 - **连续缺 N 帧才切旁路**，恢复前先预热；
 - 切换两头都用交叉淡化（设计 2 的 Declicker）；
