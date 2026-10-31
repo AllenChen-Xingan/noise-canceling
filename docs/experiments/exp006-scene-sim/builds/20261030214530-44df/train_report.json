@@ -10,7 +10,7 @@
  "hysteresis": {
   "confirm_s": 1.0,
   "min_confidence": 0.4,
-  "min_dwell_s": 5.0,
+  "min_dwell_s": 3.0,
   "ema_s": 0.5
  },
  "class_counts_train": {
