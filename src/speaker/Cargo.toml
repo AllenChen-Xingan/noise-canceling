@@ -1,0 +1,36 @@
+[package]
+name = "vdn-speaker"
+description = "认出你的声音：VAD、fbank、声纹、零设置注册、不对称门控（P2 离线）"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+default = ["onnx", "offline"]
+# 声纹模型（ort）。关掉后只剩 VAD、包络、门控、fbank、注册器，可用假声纹测
+onnx = ["dep:ort"]
+# 离线实验命令行 vdn-speaker（读写 WAV、跑 GTCRN）
+offline = ["onnx", "dep:vdn-engine", "dep:vdn-models", "dep:hound", "dep:serde_json"]
+
+[dependencies]
+earshot = "=1.2.2"
+realfft = "3.5"
+vdn-dsp = { path = "../dsp" }
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "download-binaries", "tls-native", "copy-dylibs", "api-31"], optional = true }
+vdn-engine = { path = "../engine", optional = true }
+vdn-models = { path = "../models", optional = true }
+hound = { version = "3.5", optional = true }
+serde_json = { version = "1", optional = true }
+
+[dev-dependencies]
+assert_no_alloc = "1.1"
+
+[[bin]]
+name = "vdn-speaker"
+path = "src/bin/vdn-speaker.rs"
+required-features = ["offline"]
+
+[lints]
+workspace = true
