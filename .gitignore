@@ -33,3 +33,6 @@ __pycache__/
 *.pyc
 node_modules/
 .venv/
+
+# Rust 构建产物（可重建，绝不入库；见 CLAUDE.md 第五节第 2 条）
+/target/
