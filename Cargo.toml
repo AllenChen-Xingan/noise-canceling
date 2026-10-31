@@ -1,7 +1,7 @@
 # vdn workspace：crate 放 src/<crate>/。依赖方向见 specs/rust/architecture.md §2.2：types ← dsp ← engine；models → types + dsp；cli → engine + models；xtask 不依赖任何 vdn crate
 [workspace]
 resolver = "3"
-members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask"]
+members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab"]
 
 [workspace.package]
 version = "0.1.0"
