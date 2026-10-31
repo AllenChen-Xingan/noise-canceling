@@ -1,0 +1,23 @@
+[package]
+name = "vdn-scene"
+description = "场景识别与路由：便宜特征 → 细场景 → 用户层基本场景；滞回与平滑过渡；细场景 → 参数组（模型选择 + 修音链参数）。跑在约 0.5 s 一次的判断回路"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+vdn-dsp = { path = "../dsp" }
+vdn-polish = { path = "../polish" }
+
+[dev-dependencies]
+assert_no_alloc = "1.1"
+hound = "3.5"
+
+[lints]
+workspace = true
+
+[package.metadata.vdn]
+tier = "C"
+forbid = ["ort", "hound", "serde", "serde_json", "cpal", "coreaudio-rs"]
