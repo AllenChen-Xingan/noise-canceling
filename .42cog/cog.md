@@ -30,15 +30,28 @@
 | **标准样本 / 负例** | 「好的会议声音」与典型失败的样本 | 跟着作品住（`-proto` 定） | 人挑、人改 |
 | **真相源** | 设计文档等原始材料 | `vault/raw/` | 人 |
 
-### 已建的 crate（依赖单向 dsp ← engine ← models ← cli）
+### 已建的 crate（依赖方向见 `specs/rust/architecture.md` §2.2：types ← dsp ← engine；models → types + dsp；cli → engine + models）
 
 | crate | 是什么 | 谁产生 | 谁是谁的输入 |
 |---|---|---|---|
+| `vdn-types`（`src/types/`） | 共享词汇，零依赖：`trait Model` / `Stage`、帧上下文与声纹判决、智能体部件接口（感知输出 · 参数组 · 场景参数表 · 策略 · 我的配置 · 学习接口 · 决策日志 · 延迟账 · 版本号） | AI 写（align，2026-10-31） | 被 engine、models 以及以后的 speaker、scene、polish 用；不依赖任何 crate |
 | `vdn-dsp`（`src/dsp/`） | 纯信号处理积木：STFT/iSTFT、延迟线、快开慢关包络、窗 | AI 写（p1，2026-10-30） | 被 engine、models 用；不依赖任何本项目 crate |
-| `vdn-engine`（`src/engine/`） | 模型接口 `trait Model`、逐帧调度 + 三件保命、故障注入、离线驱动 | AI 写（p1） | 输入：dsp 积木 + 任一 `Model`；被 models、cli 用。不链接 ONNX Runtime |
-| `vdn-models`（`src/models/`） | 模型适配器 GTCRN、FastEnhancer-M（ort 单线程 CPU）、`AnyModel` | AI 写（p1） | 输入：模型权重（仓外）；实现 engine 的 `Model`；被 cli 用 |
+| `vdn-engine`（`src/engine/`） | 逐帧调度 + 三件保命、故障注入、离线驱动、延迟账汇总（`latency_ledger`） | AI 写（p1；align 收尾） | 输入：dsp 积木 + 任一 `Model`；被 cli 用。不认识具体模型、不链接 ONNX Runtime |
+| `vdn-models`（`src/models/`） | 模型适配器 GTCRN、FastEnhancer-M（ort 单线程 CPU）、`AnyModel`、各模型声明的 hop 与延迟 | AI 写（p1；align 收尾） | 输入：模型权重（仓外）；实现 types 的 `Model`；被 cli 用 |
 | `vdn-cli`（`src/cli/`，可执行 `vdn`） | 命令行 `denoise` / `bench`，WAV 读写 | AI 写（p1） | 输入：WAV + 模型权重；产出降噪 WAV 与计时 JSON（评测报告的原料） |
 | `vdn-speaker`（`src/speaker/`，可执行 `vdn-speaker`） | 认出你的声音：VAD 快开慢关、不对称门控（实时级，0 延迟）+ fbank、声纹、零设置注册、判断回路（约 0.5 s 一次） | AI 写（p2，2026-10-30） | 输入：降噪输出 + 原声 + 声纹模型（仓外）；产出 `SpeakerVerdict` 与门控后的声音；默认只依赖 dsp + earshot；声纹推理经 `onnx` feature 用 ort（过渡期例外，同 vdn-models），离线命令行经 `offline` feature 另依赖 engine、models（待迁到 cli / eval）；接口镜像 `vdn-types` |
+
+| `xtask`（`src/xtask/`） | 项目规矩的机器检查：`cargo run -p xtask -- tidy` / `-- check-deps`，也随 `cargo test -p xtask` 跑 | AI 写（align，2026-10-31） | 输入：`cargo metadata` 与源码文本；不依赖任何 vdn crate |
+
+### 智能体部件的数据（D35 · D40 · D41；类型在 `vdn-types`，规约 §3.7）
+
+| 实体 | 是什么 | 存在哪 | 谁产生 | 谁是谁的输入 |
+|---|---|---|---|---|
+| **场景标签** | 两层：用户层基本场景 + 内部细场景、置信度、时间戳 | 内存（判断回路每 0.5 s 一个） | 感知（scene 线的分类器） | 策略的输入 |
+| **场景参数表** | 每个场景一组参数；版本号 + 内容 ID；行文本 | 随软件发布（文本文件） | 开发方在模拟环境里调出、过门禁 | 策略查表 |
+| **我的配置** | 用户按场景拧过的旋钮；只存参数、不存音频 | 本机，不上传（D39） | 用户操作 + 学习部件（空闲时提议、过门禁） | 策略叠加在表上 |
+| **决策日志 / 会话记录** | 每个决定与人的每次操作；不含音频 | 本机，不上传 | 策略、engine、用户操作 | 学习部件、事后追溯 |
+| **延迟账** | 每个部件声明的延迟及合计（≤ 45 ms） | 代码（测试里断言） | 各部件声明，engine 汇总 | 改模型 / 改链路时的门禁 |
 
 **建一个，就在这张表里加一行**（是什么 · 谁产生 · 谁是谁的输入）。初拟划分见 `vault/raw/20261029-voice-denoise-design.md` §6（dsp · engine · speaker · io-macos · hal-plugin · control · eval），以 `-research` 结论为准。
 

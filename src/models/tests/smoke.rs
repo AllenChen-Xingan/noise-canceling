@@ -4,7 +4,9 @@
 use vdn_engine::{Engine, Model, SafetyConfig, offline};
 use vdn_models::ModelKind;
 
-fn run(kind: ModelKind, hop: usize, latency: usize) {
+fn run(kind: ModelKind) {
+    let d = kind.declared();
+    let (hop, latency) = (d.hop, d.latency_samples);
     let Some(path) = kind.default_path() else {
         // 设了 VDN_REQUIRE_MODELS 就不许跳过（本机验收用）；CI 上没有权重，不设，打印一行跳过
         assert!(
@@ -15,7 +17,11 @@ fn run(kind: ModelKind, hop: usize, latency: usize) {
         return;
     };
     let m = kind.open(&path).expect("打开模型");
-    assert_eq!((m.hop(), m.latency_samples()), (hop, latency));
+    // 声明（延迟账用的）必须和打开后的实际一致
+    assert_eq!(
+        (m.sample_rate(), m.hop(), m.latency_samples()),
+        (d.sample_rate, hop, latency)
+    );
     let x: Vec<f32> = (0..16000)
         .map(|i| 0.1 * (i as f32 * 0.07).sin() + 0.01 * ((i * 7919 % 101) as f32 / 50.0 - 1.0))
         .collect();
@@ -35,10 +41,10 @@ fn run(kind: ModelKind, hop: usize, latency: usize) {
 
 #[test]
 fn gtcrn_runs() {
-    run(ModelKind::Gtcrn, 256, 256);
+    run(ModelKind::Gtcrn);
 }
 
 #[test]
 fn fastenhancer_m_runs() {
-    run(ModelKind::FastEnhancerM, 160, 352);
+    run(ModelKind::FastEnhancerM);
 }
