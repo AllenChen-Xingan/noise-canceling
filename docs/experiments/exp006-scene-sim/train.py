@@ -1,7 +1,7 @@
 """exp006 第二步：用 Rust 算出的特征（scene_offline 的输出）训练细场景分类器，生成 src/scene/src/weights.rs。
 
 - 特征只在 Rust 里实现一份（src/scene/src/features.rs），这里只读它吐出的 JSONL，不在 Python 里重写（铁律 7 唯一编码）
-- 训练只用 train 组（说话人、噪音时段、种子都与 test 不重叠）；只取 t ≥ 2 s 的判断（2 s 缓冲已满）
+- 训练只用 train 组（说话人、噪音时段、种子都与 test 不重叠）；取 t ≥ 1 s 的判断（缓冲满 1 s 起就交给滞回，所以 1–2 s 的半满缓冲也要训练；第一版只用 ≥ 2 s，开机头几秒偏向「交通」）
 - 模型：标准化 → 24 个 tanh 隐单元 → softmax 7 类；numpy 全批 Adam，类别按频次反比加权，固定种子
 - 设备阈值：窄带蓝牙看特征 8（hf_p90），削波看特征 21（log10 平顶占比），各取 train 上平衡准确率最高的切点
 - 滞回与后验平滑的数值不在这里定，由 eval.py 扫参后写回（--hyst 参数）
@@ -31,7 +31,7 @@ def load(build, split):
     return truth, rows
 
 
-def xy(truth, rows, t_min=2.0):
+def xy(truth, rows, t_min=1.0):
     X, y, dev, ids = [], [], [], []
     for r in rows:
         if r["t"] < t_min:

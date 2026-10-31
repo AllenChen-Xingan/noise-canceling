@@ -1,12 +1,12 @@
 {
  "build": "20261030214530-44df",
- "n_train_windows": 26880,
- "train_acc_raw": 0.8746,
- "test_acc_raw_python": 0.8225,
- "bt_threshold": -12.63,
- "bt_balanced_acc_train": 0.958,
+ "n_train_windows": 30240,
+ "train_acc_raw": 0.8764,
+ "test_acc_raw_python": 0.8313,
+ "bt_threshold": -12.65,
+ "bt_balanced_acc_train": 0.9539,
  "clip_threshold": -4.0,
- "clip_balanced_acc_train": 0.8663,
+ "clip_balanced_acc_train": 0.8631,
  "hysteresis": {
   "confirm_s": 1.0,
   "min_confidence": 0.4,
@@ -14,12 +14,12 @@
   "ema_s": 0.5
  },
  "class_counts_train": {
-  "quiet": 3840,
-  "hvac": 2560,
-  "babble": 4752,
-  "neighbor": 4560,
-  "clatter": 3248,
-  "traffic": 4208,
-  "music": 3712
+  "quiet": 4320,
+  "hvac": 2880,
+  "babble": 5346,
+  "neighbor": 5130,
+  "clatter": 3654,
+  "traffic": 4734,
+  "music": 4176
  }
 }
