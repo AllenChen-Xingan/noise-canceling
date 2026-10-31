@@ -41,6 +41,7 @@ def load(build, split, suffix=""):
 
 def eval_test(truth, rows):
     n = 0
+    n5, hit5, hit5_u = 0, 0, 0
     hit = {"raw": 0, "smooth": 0, "committed": 0}
     hit_u = {"raw": 0, "smooth": 0, "committed": 0}
     conf = np.zeros((len(CLASSES), len(CLASSES)), int)
@@ -73,6 +74,10 @@ def eval_test(truth, rows):
             for k, p in preds.items():
                 hit[k] += p == y
                 hit_u[k] += p >= 0 and USER[CLASSES[p]] == USER[CLASSES[y]]
+            if r["t"] >= 5.0:
+                n5 += 1
+                hit5 += preds["committed"] == y
+                hit5_u += preds["committed"] >= 0 and USER[CLASSES[preds["committed"]]] == USER[CLASSES[y]]
             if preds["committed"] >= 0:
                 conf[y, preds["committed"]] += 1
                 conf_u[USERS.index(USER[CLASSES[y]]), USERS.index(USER[CLASSES[preds["committed"]]])] += 1
@@ -82,6 +87,7 @@ def eval_test(truth, rows):
         "windows": n,
         "acc_fine_class": {k: round(v / n, 4) for k, v in hit.items()},
         "acc_user_scene": {k: round(v / n, 4) for k, v in hit_u.items()},
+        "acc_committed_after_5s": {"fine_class": round(hit5 / max(n5, 1), 4), "user_scene": round(hit5_u / max(n5, 1), 4)},
         "per_class_recall_committed": {c: round(conf[i, i] / max(conf[i].sum(), 1), 3) for i, c in enumerate(CLASSES)},
         "confusion_committed": {"labels": CLASSES, "rows_truth_cols_pred": conf.tolist()},
         "confusion_user_committed": {"labels": USERS, "rows_truth_cols_pred": conf_u.tolist()},

@@ -69,6 +69,8 @@ pub struct SceneAnalyzer {
     ema_s: f32,
     last_judge: u64,
     manual: Option<UserScene>,
+    device: Device,
+    last_committed: FineSceneId,
 }
 
 impl SceneAnalyzer {
@@ -87,6 +89,8 @@ impl SceneAnalyzer {
             ema_s: weights::EMA_S,
             last_judge: 0,
             manual: None,
+            device: Device::Normal,
+            last_committed: FineSceneId::UNKNOWN,
         }
     }
 
@@ -110,6 +114,8 @@ impl SceneAnalyzer {
         self.gate.reset();
         self.clock = 0;
         self.last_judge = 0;
+        self.device = Device::Normal;
+        self.last_committed = FineSceneId::UNKNOWN;
     }
 
     /// 逐帧：喂一个 hop 的麦克风原声。
@@ -152,32 +158,53 @@ impl SceneAnalyzer {
             }
         }
         let class = NoiseClass::ALL[best];
-        let device = if self.clip > 0.5 {
-            Device::Clipping
-        } else if self.bt > 0.5 {
-            Device::BtNarrow
-        } else {
-            Device::Normal
+        // 设备：施密特触发（升过 0.7 才认、降过 0.3 才撤），与噪音大类分开滞回——设备是物理的，很少变
+        self.device = match self.device {
+            Device::Clipping if self.clip > 0.3 => Device::Clipping,
+            Device::BtNarrow if self.bt > 0.3 && self.clip <= 0.7 => Device::BtNarrow,
+            _ if self.clip > 0.7 => Device::Clipping,
+            _ if self.bt > 0.7 => Device::BtNarrow,
+            _ => Device::Normal,
         };
+        let device = self.device;
         let mut conf = if self.manual.is_some() { best_p / mass.max(1e-6) } else { best_p };
         if self.fx.filled() < MIN_FILL {
             conf = 0.0; // 缓冲不满 1 s 的判断不进滞回（置信度 0 = 不推进）
         }
+        // 滞回只看噪音大类（设备另有施密特触发），否则设备估计一抖，候选就从头确认
         let (fine, user) = match self.manual {
             Some(UserScene::Meeting) => (route::MEETING, UserScene::Meeting),
-            _ => (route::fine_id(class, device), route::user_of(class)),
+            _ => (route::fine_id(class, Device::Normal), route::user_of(class)),
         };
-        let label = SceneLabel { user, fine, confidence: Confidence::new(conf), at: SampleClock(self.clock) };
-        let switched = self.gate.step(&label, self.rate);
-        let committed = self.gate.committed();
+        let at = SampleClock(self.clock);
+        let gate_label = SceneLabel { user, fine, confidence: Confidence::new(conf), at };
+        let class_switch = self.gate.step(&gate_label, self.rate);
+        let (cu, cf) = self.gate.committed();
+        let committed_fine = match route::decode(cf) {
+            Some((c, _)) => route::fine_id(c, device),
+            None => cf,
+        };
+        let switched = if class_switch.is_some() || (committed_fine != self.last_committed && cf != FineSceneId::UNKNOWN) {
+            Some((self.last_committed, committed_fine))
+        } else {
+            None
+        };
+        self.last_committed = committed_fine;
+        let label = SceneLabel {
+            fine: match self.manual {
+                Some(UserScene::Meeting) => route::MEETING,
+                _ => route::fine_id(class, device),
+            },
+            ..gate_label
+        };
         Judgement {
             label,
             raw,
             smooth: self.ema,
             device,
-            committed,
+            committed: (cu, committed_fine),
             switched,
-            params: route::params_for(committed.1),
+            params: route::params_for(committed_fine),
             features: self.feats,
         }
     }
