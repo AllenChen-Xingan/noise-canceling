@@ -34,6 +34,11 @@ impl Gtcrn {
         if names != ["mix", "conv_cache", "tra_cache", "inter_cache"] {
             return Err(format!("GTCRN 输入不符：{names:?}").into());
         }
+        // 输出按会话顺序取（outs[i]），名字必须和 OUT_NAMES 逐个对上
+        let out_names: Vec<&str> = session.outputs().iter().map(|o| o.name()).collect();
+        if out_names != OUT_NAMES {
+            return Err(format!("GTCRN 输出不符：{out_names:?}").into());
+        }
         let mut sel = OutputSelector::default();
         sel = sel.preallocate(OUT_NAMES[0], session::zeros(&[1, BINS, 1, 2])?);
         for (name, shape) in OUT_NAMES[1..].iter().zip(CACHE_SHAPES) {
@@ -74,6 +79,19 @@ impl Model for Gtcrn {
     }
 
     fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), ModelError> {
+        let r = self.infer(input);
+        if r.is_err() {
+            // 出错也要照常合成一帧（频谱清零），否则重叠相加缓冲不移位，之后整体错位一个 hop（自审 P2）
+            self.stft.spectrum_mut().fill(Default::default());
+        }
+        self.stft.synthesize(output);
+        r
+    }
+}
+
+impl Gtcrn {
+    /// 分析一帧 → 推理 → 把增强后的频谱写回 STFT、缓存拷回输入。不做合成。
+    fn infer(&mut self, input: &[f32]) -> Result<(), ModelError> {
         let spec = self.stft.analyze(input);
         {
             let (_, m) = self.mix.extract_tensor_mut();
@@ -110,8 +128,6 @@ impl Model for Gtcrn {
             }
             dst.copy_from_slice(src);
         }
-        drop(outs);
-        self.stft.synthesize(output);
         Ok(())
     }
 }

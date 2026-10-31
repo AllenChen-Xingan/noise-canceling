@@ -13,7 +13,6 @@ vdn-engine.workspace = true
 ort.workspace = true
 
 [dev-dependencies]
-hound.workspace = true
 assert_no_alloc.workspace = true
 
 [lints]

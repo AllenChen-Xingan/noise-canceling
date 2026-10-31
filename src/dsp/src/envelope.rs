@@ -36,7 +36,9 @@ pub struct OpenCloseEnvelope {
     a_down: f32,
     m: f32,
     noise_db: f32,
-    hang_left: f32,
+    /// 剩余保持样本数（整数计，避免浮点逐 hop 相减在整除时多开一个 hop）
+    hang_left: usize,
+    hang_total: usize,
     voiced: bool,
 }
 
@@ -48,7 +50,8 @@ impl OpenCloseEnvelope {
             a_down: one_pole_coef(p.release_s, p.sr),
             m: p.closed,
             noise_db: f32::INFINITY,
-            hang_left: 0.0,
+            hang_left: 0,
+            hang_total: (p.hangover_s * p.sr).round().max(0.0) as usize,
             voiced: false,
             p,
         }
@@ -57,7 +60,7 @@ impl OpenCloseEnvelope {
     pub fn reset(&mut self) {
         self.m = self.p.closed;
         self.noise_db = f32::INFINITY;
-        self.hang_left = 0.0;
+        self.hang_left = 0;
         self.voiced = false;
     }
 
@@ -85,11 +88,11 @@ impl OpenCloseEnvelope {
         }
         let speech = e_db > self.p.abs_min_db && e_db > self.noise_db + self.p.detect_db;
         if speech {
-            self.hang_left = self.p.hangover_s;
+            self.hang_left = self.hang_total;
         } else {
-            self.hang_left = (self.hang_left - hop_s).max(0.0);
+            self.hang_left = self.hang_left.saturating_sub(n);
         }
-        self.voiced = speech || self.hang_left > 0.0;
+        self.voiced = speech || self.hang_left > 0;
         let target = if self.voiced {
             self.p.open
         } else {

@@ -31,7 +31,7 @@ pub struct SafetyConfig {
     /// 衰减下限
     pub floor: bool,
     pub floor_db: f32,
-    /// 快开慢关
+    /// 快开慢关（建在衰减下限之上：`floor` 关时它也不生效）
     pub fast_open: bool,
     pub open_db: f32,
     pub attack_s: f32,
@@ -124,6 +124,8 @@ impl<M: Model> Engine<M> {
     pub fn new(model: M, cfg: SafetyConfig) -> Self {
         let hop = model.hop();
         let sr = model.sample_rate() as f32;
+        assert!(hop > 0 && sr > 0.0, "模型的 hop 与采样率必须为正");
+        debug_assert!(cfg.crossfade_s >= 0.0 && cfg.recover_hold_s >= 0.0 && cfg.max_abs > 0.0);
         let floor_lin = if cfg.floor {
             db_to_lin(cfg.floor_db)
         } else {
@@ -319,6 +321,7 @@ impl<M: Model> Engine<M> {
                     *o = w + m * (d - w);
                 }
             }
+            None if self.floor_lin == 0.0 => output.copy_from_slice(&self.wet),
             None => {
                 let m = self.floor_lin;
                 for (o, (w, d)) in output.iter_mut().zip(self.wet.iter().zip(&self.dry)) {

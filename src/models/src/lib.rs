@@ -5,7 +5,7 @@
 
 pub mod fastenhancer;
 pub mod gtcrn;
-pub mod session;
+mod session;
 
 use std::path::{Path, PathBuf};
 
