@@ -199,10 +199,10 @@ fn cmd_run(args: &[String]) -> R<()> {
     }
     let dry = read_wav(&input)?;
 
-    // 1) 降噪输出：`--wet` 给出（由 `vdn-speaker denoise` 在另一个进程里产出——ort 一个进程只许一个 Environment，
+    // 1) 降噪输出：`--wet` 给出（由 `vdn-speaker-lab denoise` 在另一个进程里产出——ort 一个进程只许一个 Environment，
     //    vdn-models 与本 crate 各建一个会冲突，接入时要共用一个，见 README「接入注意」）
     let wet_path = PathBuf::from(
-        arg(args, "--wet").ok_or("缺 --wet <denoised.wav>（先跑 vdn-speaker denoise）")?,
+        arg(args, "--wet").ok_or("缺 --wet <denoised.wav>（先跑 vdn-speaker-lab denoise）")?,
     );
     let wet = read_wav(&wet_path)?;
     if wet.len() != dry.len() {
@@ -546,10 +546,10 @@ fn main() {
         Some("envelope") => cmd_envelope(&args[1..]),
         Some("fbank") => cmd_fbank(&args[1..]),
         Some("embed") => cmd_embed(&args[1..]),
-        _ => Err("用法：vdn-speaker run|fbank|embed …（见源码头注释）".into()),
+        _ => Err("用法：vdn-speaker-lab run|fbank|embed …（见源码头注释）".into()),
     };
     if let Err(e) = r {
-        eprintln!("vdn-speaker: {e}");
+        eprintln!("vdn-speaker-lab: {e}");
         std::process::exit(1);
     }
 }
