@@ -77,7 +77,7 @@
 | 许可证 | crate 声明 MIT OR Apache-2.0【源码】`resources/earshot/Cargo.toml:12`（GitHub API 识别成 Apache-2.0【API】）；**与 GPL-3.0 兼容：是**。默认没有运行时依赖，`libm` 可选【源码】`Cargo.toml:32-33` |
 | 维护状态 | 1.2.2（2026-08-19）、1.2.1（2026-07-22）【API】；最后一次提交 2026-08-30；2 个 open issue（#4、#5 都 0 回复），外部 PR #7、#8 有维护者回复并已合并【API】。**在维护，issue 响应偏慢** |
 | 实时安全做法 | **安全**。状态全部是定长数组：环形采样缓冲、3 帧特征、FFT 缓冲【源码】`src/lib.rs:107-113`；移窗用 `ptr::copy`【源码】`:245-247`、`:276-278`；网络状态是 `[i16; 128]`【源码】`src/default_predictor.rs:35-37`；权重用 `include_bytes!` 编进二进制并按 4 字节对齐【源码】`src/default_predictor.rs:5-12`；`predict` 不分配、不加锁、不做系统调用【源码】`src/lib.rs:238-293`。帧长不对时直接返回 0 分，不 panic【源码】`:240-242` |
-| 值得学的一处 | 帧长 `FRAME_SIZE=256`（16 ms @16 kHz），只往回看 3 帧上下文，没有前瞻【源码】`src/lib.rs:91-94`、`src/frame.rs:2`；GTCRN 的流式 hop 正好也是 256【源码】`resources/gtcrn/stream/gtcrn_stream.py:456`。**同一个 16 ms 时钟上，降噪和 VAD 可以对齐，不用另起缓冲** |
+| 值得学的一处 | 帧长 `FRAME_SIZE=256`（16 ms @16 kHz），只往回看 3 帧上下文，没有前瞻【源码】`src/lib.rs:91-94`、`src/frame.rs:2`；GTCRN 的流式 hop 正好也是 256【源码】`resources/gtcrn/stream/gtcrn_stream.py:455`（istft 的 `hop_length=256`；复核 3 把原写的 :456 改成 :455）。**同一个 16 ms 时钟上，降噪和 VAD 可以对齐，不用另起缓冲** |
 | 我们怎么用 | **直接依赖**，用在降噪线程的「快速放开」判据（`engine` 的门控）；离线 eval 也用同一个实例 |
 | 风险 | 模型训练数据和权重来源，仓库里没找到说明（README 只说「any language」「SNR ≥ 3 dB」）【源码】`README.md`，**权重能不能按 GPL 分发要再核**（许可证文件覆盖整个 crate，包括 weights.bin）；精度只有 README 里作者自己的图，我们要在自己的素材上重测；只支持 16 kHz |
 | 证据 | 【源码】【API】【推断】 |
