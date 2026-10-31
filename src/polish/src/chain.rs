@@ -102,6 +102,9 @@ impl PolishChain {
 }
 
 impl SpectralStage for PolishChain {
+    fn name(&self) -> &'static str {
+        "polish-spectral"
+    }
     fn reset(&mut self) {
         PolishChain::reset(self);
     }
@@ -112,6 +115,9 @@ impl SpectralStage for PolishChain {
 
 /// 时域 Stage 只做 AGC（频谱部分要先经 `SpectralStage` 那一路）。
 impl Stage for PolishChain {
+    fn name(&self) -> &'static str {
+        "polish-agc"
+    }
     fn reset(&mut self) {
         PolishChain::reset(self);
     }

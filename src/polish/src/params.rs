@@ -42,6 +42,46 @@ impl PolishParams {
         agc_range_db: 10.0,
     };
 
+    /// 预设表：`vdn-types` 的 `ParamSet.tone: ToneId(u8)` 就是这里的编号（0 = 不加工）。
+    /// 1–6 按细场景大类给起步值；+10 是同一预设的「窄带蓝牙」版（4 kHz 以上本来就没有，关掉去发闷）。
+    /// 数值是 exp006 模拟数据上的初调，**待人耳定**；未知编号退回 `DEFAULT`。
+    pub fn preset(tone: u8) -> Self {
+        let base = |smooth, floor_db, comfort_db, demuffle_max_db| Self {
+            smooth,
+            floor_db,
+            comfort_db,
+            demuffle_max_db,
+            agc: 1.0,
+            agc_target_dbfs: -26.0,
+            agc_range_db: 10.0,
+        };
+        let (b, narrow) = if tone > 10 { (tone - 10, true) } else { (tone, false) };
+        let mut p = match b {
+            0 => return Self::OFF,
+            1 => base(0.4, -30.0, -12.0, 3.0), // 安静 / 空调：残留少，轻处理
+            2 => base(0.8, -22.0, -8.0, 4.0),  // 咖啡馆 babble / 杯碟：音乐噪声最多，平滑最强
+            3 => base(0.6, -30.0, -6.0, 4.0),  // 邻座说话：下限压低（别把旁人的话带回来），用合成舒适噪声补真空
+            4 => base(0.7, -22.0, -8.0, 3.0),  // 交通：低频轰鸣，保留一点环境感
+            5 => base(0.8, -20.0, -10.0, 2.0), // 音乐：残留是有音高的，平滑强
+            6 => base(0.3, -16.0, -100.0, 3.0), // 多人会议（占位）：近处人声都留，处理最轻
+            _ => Self::DEFAULT,
+        };
+        if narrow {
+            p.demuffle_max_db = 0.0;
+        }
+        p
+    }
+
+    /// 用户「降噪强度」旋钮（0..=1，1 = 表里的值）对修音链的作用：只缩放平滑强度，下限往更响（更少处理）方向走。
+    pub fn with_strength(mut self, strength: f32) -> Self {
+        let s = strength.clamp(0.0, 1.0);
+        self.smooth *= s;
+        if self.floor_db > -99.0 {
+            self.floor_db = self.floor_db * s + (-6.0) * (1.0 - s);
+        }
+        self
+    }
+
     /// 线性插值：`t` = 0 得 `a`，1 得 `b`。
     pub fn lerp(a: &Self, b: &Self, t: f32) -> Self {
         let t = t.clamp(0.0, 1.0);
