@@ -15,7 +15,15 @@
 3. `with_intra_threads(1)` 加关掉 spinning（`with_intra_op_spinning(false)`，`ort/src/session/builder/impl_config_keys.rs:135`）：不起线程池、不空转，也省电（D31）【源码 + 推断】
 4. **用 RTSan 量**：它在 libc 层拦截 `malloc` / `pthread_mutex_lock` 等，**连 ORT 的 C++ 分配也能抓到**，正好补 assert_no_alloc 的盲区（见第 2 条）
 
-**建议**：P1 先用 `run_binding`，输出预绑定到预分配的张量，缓存状态在两组张量之间交替（乒乓）；每帧剩下的几次小分配先接受、登记为已知债，P3 实时化时用 RTSan 实测再决定要不要改走 tract 或给 ort 提补丁。版本跟 Python 1.31 对齐利于对拍，同意。
+**建议（2026-10-30 更正，以此为准）**：**不用 `run_binding`，用 `run_with_options` + `OutputSelector::preallocate` 把全部输出都预分配**。这条路 Rust 侧可以零分配：
+- 预分配的输出走 `DynValue::clone_of`，只是 `Arc::clone`，不 `Arc::new`【源码】`ort/src/session/run_options.rs:138`、`ort/src/value/mod.rs:393-397`；只有没预分配的输出才走 `from_session_output_ptr` 的 `Arc::new`【源码】`ort/src/session/run.rs:270-281`
+- 输入输出名合计 ≤ 12 个、总长 ≤ 768 字节时走栈【源码】`ort/src/util/stack.rs:21-23`
+- 输入用初始化时建好的自有 `Tensor`，每帧用 `extract_tensor_mut` 写数，**不要每帧 `TensorRef::from_array_view`**（它也会 `Arc::new`，`ort/src/value/mod.rs:103`，怀疑派复核）
+- GTCRN 的缓存状态：建两套状态张量 + 两个 `RunOptions`（A 的输出是 B 的输入，奇偶帧轮换），参考 `resources/biglinux-gtcrn/ladspa/src/model.rs:282-302`（它自己每帧新建 TensorRef，是反例的一半）
+- 每帧拿到的 `SessionOutputs` 里持有预分配值的 Arc 克隆，**下一帧 run 前必须 drop 掉**；输入输出是否允许别名没查到文档，乒乓方案正好避开
+- ORT C++ 内部（arena、线程池）稳态是否还 malloc：未实测，用 RTSan 量；`with_flush_to_zero` 先别默认开（DeepFilterNet #713：FTZ + 单位范数 0/0 出 NaN），先加 NaN/Inf 守卫
+
+版本跟 Python 1.31 对齐利于对拍，同意。
 
 ## 2. 不分配断言：assert_no_alloc vs rtsan-standalone
 
