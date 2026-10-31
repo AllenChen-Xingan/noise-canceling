@@ -229,13 +229,16 @@ mod tests {
         let mut wet = vec![0.0f32; 256];
         let dry = vec![0.0f32; 256];
         let mut opened = 0;
-        for _ in 0..200 {
+        // 前 50 个 hop（0.8 s）是 earshot 的上下文预热，不计
+        for k in 0..250 {
             for w in wet.iter_mut() {
                 seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
                 *w = ((seed >> 8) as f32 / (1u32 << 24) as f32 - 0.5) * 0.05;
             }
             st.process(&mut wet, &dry, ctx());
-            opened += st.voiced() as usize;
+            if k >= 50 {
+                opened += st.voiced() as usize;
+            }
         }
         assert!(opened < 20, "白噪声里开了 {opened}/200 个 hop");
     }
