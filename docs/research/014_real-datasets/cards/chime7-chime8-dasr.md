@@ -1,0 +1,13 @@
+### CHiME-7 DASR（2023）/ CHiME-8 DASR（2024），CHiME 组织方
+- **做什么**：远场多说话人日志+转写的统一基准；不是新录音，是已有语料的统一切分与标注
+- **录音设备与距离**：继承子集：CHiME-6（Kinect 阵列 + 双耳）、DiPCo（5×7 麦圆阵 + 头戴）、Mixer 6（14 路麦，领夹/头戴为近讲）、CHiME-8 增 NOTSOFAR-1（每场只给一台阵列设备）
+- **环境**：家庭聚会 / 模拟晚餐 / LDC 办公室访谈 / 会议室
+- **说话人数与重叠**：2–8 人不等
+- **语言**：英语
+- **参考**：近讲 有 · 转写 有（JSON：speaker/words/start_time/end_time）· 说话人标签 有；Mixer 6 训练集只标被试；CHiME-8 NOTSOFAR dev 真值不公开、经排行榜评分
+- **大小**：CHiME-8 DASR：CHiME-6 40:05/4:27/5:12；DiPCo 1:12/1:30/2:36；Mixer 6 6:13/8:56/5:45（+train_call 182:34、train_intv 51:10）；NOTSOFAR1 38:43/13:25/20:00（+train_sc 53:43）
+- **许可**：CHiME-8 数据页未写许可，按各子集原许可；Mixer 6 挑战版须签 LDC_CHiME8_Evaluation_Agreement（不同于 LDC2013S03 公开版）→ 合集整体按最严者处理：只评测
+- **获取**：注册挑战 + `chime-utils dgen dasr` 自动下载生成 CHiME-6/DiPCo/NOTSOFAR1（这三者实际直接下载）；仅 Mixer 6 需把协议 PDF 发 ldc@ldc.upenn.edu 审批。CHiME-7 与 CHiME-8 切分不同不可混用
+- **接近度**：3.5/5 · 一站拿到多场景真实重叠 + 统一标注；但无 babble 人群、无中文
+- **用途建议**：真实回归集的统一切分与标注格式（复用 uem/转写）；校准重叠率
+- **出处**：https://www.chimechallenge.org/challenges/chime7/task1/data 【官方】；https://www.chimechallenge.org/challenges/chime8/task1/data 【官方】；arXiv:2507.18161（CHiME-7/8 DASR 综述）【论文】

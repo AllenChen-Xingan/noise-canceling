@@ -1,0 +1,13 @@
+### DNS Challenge 5 真实测试集（2023，Microsoft）
+- **做什么**：Track1 头戴、Track2 免提（speakerphone），联合降噪、去混响、压邻座干扰
+- **录音设备与距离**：dev 全部笔记本或台式机；近讲与 1、2、3 m 远讲。blind 设备清单论文留占位符 '[list of devices]'，未给出【论文 §3】
+- **环境**：dev：家庭、厨房、办公、户外车辆、车内、键鼠声；blind 另含 café、background babble、airport announcements、in-car neighboring talkers【论文】
+- **说话人数与重叠**：个性化 dev 1443 = 737 主+噪声、347 主+邻座、166 主+邻座+噪声、193 情感——与 DNS4 PDNS dev 完全同数，疑为同一批复用【推算】
+- **语言**：英语
+- **参考**：近讲 无 · 转写：说法冲突——README 称 speakerphone dev 有 ground truth、headset 只给 ASR 输出与提示词；论文称 'Dev testset was not transcribed'、blind 全部人工转写但未公开（README 标 TBD）· 说话人：每条 10–30 s enrollment
+- **大小**：dev 600 + 1443 条；blind 条数未查到
+- **许可**：仓库 CC BY 4.0，测试集未单列 → 按只评测处理
+- **获取**：blind `dnschallengepublic.blob.core.windows.net/dns5archive/V5_BlindTestSet.zip`（脚本 download-dns5-blind-testset.sh）；dev `download-dns5-dev-testset.sh`
+- **接近度**：3.5/5 · blind 明列咖啡馆 + babble + 邻座，但无逐条场景/设备标签、无中文、无参考、条数未知
+- **用途建议**：D42/D47 人耳听测（需人工听选咖啡馆/babble 段）；speakerphone dev 转写若存在可算 WAcc
+- **出处**：arXiv:2303.11510 §3.2–3.3【论文】；raw.githubusercontent.com/microsoft/DNS-Challenge/master/README.md 与 download-dns5-blind-testset.sh【官方】

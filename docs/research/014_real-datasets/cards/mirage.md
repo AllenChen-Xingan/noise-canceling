@@ -1,0 +1,13 @@
+### MIRaGe（2019，TU Liberec + Bar-Ilan Univ.）
+- **做什么**：46×36×32 cm 立方网格 4104 个源位置的多通道 RIR，3 档混响。
+- **录音设备与距离**：6 个 5 麦线阵（-13/-5/0/+5/+13 cm），3 个正对网格在 1/2/3 m，3 个 -45° 同距离；麦 31 贴扬声器前 2 cm。
+- **环境**：Bar-Ilan 可变混响实验室，T60 100/300/600 ms；每档 1 h 底噪 + 1 h **8 只扬声器回放的扩散 babble**（各放不同多人语音序列，距墙约 1 m）。
+- **说话人数与重叠**：babble 为回放。
+- **语言**：未查到。
+- **参考**：RIR 本身；无转写。
+- **大小**：每阵列约 12 GB。
+- **许可**：未查到。
+- **获取**：直接下载（Google Drive）· https://asap.ite.tul.cz/downloads/MIRaGe/ ；GitHub JarCme/MIRaGe_Utils
+- **接近度**：1.5/5。
+- **用途建议**：babble 场相干性参考；许可确认前不训练。
+- **出处**：https://asap.ite.tul.cz/downloads/MIRaGe/ 【官方】；arXiv:1907.12421 【论文】

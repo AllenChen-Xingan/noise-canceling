@@ -1,0 +1,13 @@
+### Aachen Impulse Response Database（2009–2012，RWTH Aachen IKS）
+- **做什么**：实测双耳 RIR + 人工嘴→模拟手机（mock-up phone）RIR。
+- **录音设备与距离**：假人头双耳麦；手机部分为 mock-up phone（v1.4，2012-10 扩充手机配置）；距离约 0.5–10 m。无笔记本麦。
+- **环境**：录音棚间、办公室、会议室、报告厅、Aula Carolina 等。
+- **说话人数与重叠**：不涉及。
+- **语言**：不涉及。
+- **参考**：RIR 本身。
+- **大小**：175 MB（v1.4）。
+- **许可**：MIT（证据来自搜索摘录，包内文件未亲见）· 结论：可训练（待核）。
+- **获取**：直接下载 · https://www.iks.rwth-aachen.de/en/research/tools-downloads/databases/aachen-impulse-response-database ；镜像 https://openslr.org/20
+- **接近度**：1.5/5。
+- **用途建议**：训练/仿真 RIR 池。
+- **出处**：官方页（搜索摘录）【二手】；https://openslr.org/20 【官方】；Jeub et al. DSP 2009 【论文】

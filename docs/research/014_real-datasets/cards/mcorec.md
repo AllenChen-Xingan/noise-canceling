@@ -1,0 +1,13 @@
+### MCoRec（2025，CHiME-9 Task 1；数据方 Datoid LLC）
+- **做什么**：同一房间里多组同时对话的识别与聚类，即真实的鸡尾酒会场景。
+- **录音设备与距离**：桌中 360° 相机自带麦（单通道 16 kHz，所有 split 都有），距参与者 50 cm–2 m；每人有一支手机领夹近讲麦（单通道 16 kHz，**只在 train 中发布**）。
+- **环境**：10 个真实室内场所，背景就是其他组真人的谈话。
+- **说话人数与重叠**：每场最多 8 人、4 组对话同时进行，重叠率最高可达 100%。
+- **语言**：英语（HF 数据卡）。
+- **参考**：近讲 部分（只有 train 带领夹麦，dev/eval 只有中心相机）· 转写 有（带时间戳）· 说话人与对话分组标签 有。
+- **大小**：约 15 h，229 GB（含视频）。
+- **许可**：MCoRec Data Agreement · 结论：只评测；发布音视频示例前要先联系组织者。
+- **获取**：签协议，经 HF 门控：https://huggingface.co/datasets/MCoRecChallenge/MCoRec
+- **接近度**：3/5。
+- **用途建议**：D42 的 babble 密度与 D47 回归；听测。只存本机（含人脸和人声）。
+- **出处**：https://huggingface.co/datasets/MCoRecChallenge/MCoRec 【官方】· arXiv 2510.23276（Nguyen, Zmolikova, Ma, Pham, Fuegen, Waibel，ICASSP 2026）【论文】

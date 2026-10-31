@@ -1,0 +1,13 @@
+### ASPIRE（2019/2020，Stirling / Edinburgh Napier，AV-COGHEAR）
+- **做什么**：用真实嘈杂视听语料做语音增强挑战。
+- **录音设备与距离**：iPad mini 2 距说话人 90 cm，接领夹麦；另用 Zoom H4n Pro 双耳录音，距说话人约 140 cm（arXiv 1910.00424 §2.3）。
+- **环境**：大学食堂与餐厅午餐高峰时段真实录制（Zenodo 写「cafe, restaurants」），另在隔音棚录了一份。
+- **说话人数与重叠**：5 人单人朗读，没有对话重叠。
+- **语言**：英语，Grid 固定语法句。
+- **参考**：近讲 部分（领夹麦也在食堂里，不是干净参考）· 转写 有 · 说话人标签 有。
+- **大小**：13.0 GB，10,000 句。
+- **许可**：Zenodo 标「Non-Commercial Government Licence」，链接却指向 Apache-2.0，两者矛盾 · 结论：按非商用算，只评测。
+- **获取**：Zenodo 直接下载 https://zenodo.org/records/4585619 （引用要求为 CochleaNet, Information Fusion 2020）。
+- **接近度**：3/5。
+- **用途建议**：真实回归集；用领夹和 iPad 两路估计真实 SNR 分布。
+- **出处**：https://zenodo.org/records/4585619 【官方】· arXiv 1910.00424 §2 【论文】

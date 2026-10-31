@@ -1,0 +1,13 @@
+### NISQA_TEST_LIVETALK（2021，TU Berlin，Mittag 等，NISQA Corpus 子集）
+- **做什么**：语音质量预测（MOS）的真实通话测试集。
+- **录音设备与距离**：说话人直接对着终端说：手机经移动网络，或 VoIP（Skype / Facebook）。**VoIP 通话在笔记本上录**，移动通话在 Google Pixel 3 上录。
+- **环境**：咖啡馆、高速路上的车里、信号差的楼里、电梯、商场、地铁站、繁忙街道；有的条件要求大声 / 小声、用免提、或放背景音乐。
+- **说话人数与重叠**：8 人（4 男 4 女），单人说话，无重叠。
+- **语言**：**德语**。
+- **参考**：近讲 无 · 干净参考 无 · 转写 未查到 · **有 MOS 标签**：每条 24 票，整体质量 + 质量维度。
+- **大小**：232 条（58 条件 × 4），每条 6–12 s；压缩包大小未查到。
+- **许可**：LIVETALK 原句「This dataset is made available for research purposes under Creative Commons Attribution 4.0 International」；整个 Corpus 原句「The datasets are provided under the original terms of the used source speech and noise samples.」· 结论：CC BY 4.0 字面可训练，但写了「for research purposes」，**保守按只评测**。
+- **获取**：直接下载 https://zenodo.org/record/4728081 （NISQA_Corpus.zip，含其它子集）。
+- **接近度**：1.5/5 · 真实咖啡馆 + 笔记本链路，有人耳 MOS；但经过编解码 / 网络、德语、无参考、量小。
+- **用途建议**：012 无参考 MOS 预测器（V-NRMOS）在「真实设备 + 真实环境」上的定标旁证——这是本轮唯一带大规模人耳 MOS 的真实嘈杂录音。不当降噪输入。
+- **出处**：https://github.com/gabrielmittag/NISQA/wiki/NISQA-Corpus 【官方】（本会话主线直接核，2026-10-31）
