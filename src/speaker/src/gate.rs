@@ -3,7 +3,7 @@
 //! - **快开（只看 VAD，不等声纹）**：检测到「新的人声起始」立刻 `g → 1`（时间常数 `attack_s`，几 ms）。起始有两种：
 //!   ① 停顿 ≥ `onset_gap_s` 后 VAD 转有声；② 一直有人声但本 hop 电平比近 300 ms 均值高 `onset_jump_db`
 //!   （主人离麦近，插话时电平跳起来——覆盖「邻座还在说、主人接着开口」）
-//! - **慢收（要声纹确认）**：只有连续 `confirm_n` 份判决都是 OthersOnly、且判决窗口**覆盖了最近一次起始之后至少
+//! - **慢收（要声纹确认）**：只有连续 `confirm_n` 份判决都是 Other、且判决窗口**覆盖了最近一次起始之后至少
 //!   `min_cover_s` 秒**，才按 `release_s` 慢慢收到 `floor`。起始之前算的判决一律不作数——这是「你接着邻桌开口，
 //!   第一个字不被吞」的关键
 //! - Owner / Unknown 判决 → 回到 1（`reopen_s`，比起始放开慢一点，避免误判来回抽）；NoSpeech → 保持（停顿里不抽动）
@@ -106,6 +106,10 @@ impl AsymGate {
 }
 
 impl Stage for AsymGate {
+    fn name(&self) -> &'static str {
+        "asym-gate"
+    }
+
     fn reset(&mut self) {
         self.vad.reset();
         self.hyst.reset();
@@ -159,15 +163,15 @@ impl Stage for AsymGate {
             self.last_verdict_end = v.window_end;
             let cover = (self.p.min_cover_s * self.p.sr) as u64;
             match v.class {
-                SpeakerClass::OthersOnly if v.window_end >= self.last_onset + cover => {
+                SpeakerClass::Other if v.window_end >= self.last_onset + cover => {
                     self.others_streak += 1;
                     if self.others_streak >= self.p.confirm_n {
                         self.closing = true;
                     }
                 }
-                SpeakerClass::OthersOnly => {}
+                SpeakerClass::Other => {}
                 SpeakerClass::NoSpeech => {}
-                SpeakerClass::Owner | SpeakerClass::Unknown => {
+                SpeakerClass::Target | SpeakerClass::Unknown => {
                     self.others_streak = 0;
                     self.closing = false;
                 }
@@ -212,10 +216,10 @@ mod tests {
         let dry = wet.clone();
         let mut pos = 0u64;
         let mut v = SpeakerVerdict::UNKNOWN;
-        // 4 s，判决每 0.5 s 一份 OthersOnly
+        // 4 s，判决每 0.5 s 一份 Other
         for _ in 0..250 {
             if pos % 8000 < hop && pos >= 24000 {
-                v = verdict(SpeakerClass::OthersOnly, pos);
+                v = verdict(SpeakerClass::Other, pos);
             }
             wet.fill(0.0);
             g.process(&mut wet, &dry, FrameCtx { speaker: v, sample_pos: pos });
@@ -228,12 +232,12 @@ mod tests {
     #[test]
     fn stale_verdict_before_onset_is_ignored() {
         let mut g = AsymGate::new(GateParams::default());
-        // 起始发生在 pos=100000；之前算的 OthersOnly（窗尾 100500 < 起始 + 1 s）不作数
+        // 起始发生在 pos=100000；之前算的 Other（窗尾 100500 < 起始 + 1 s）不作数
         g.last_onset = 100_000;
         let mut wet = vec![0.0f32; 256];
         let dry = wet.clone();
         for k in 0..3 {
-            let v = verdict(SpeakerClass::OthersOnly, 100_500 + k);
+            let v = verdict(SpeakerClass::Other, 100_500 + k);
             g.process(&mut wet, &dry, FrameCtx { speaker: v, sample_pos: 100_256 + k * 256 });
         }
         assert!(!g.closing());

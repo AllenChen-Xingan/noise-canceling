@@ -91,8 +91,8 @@ fn class_str(c: SpeakerClass) -> &'static str {
     match c {
         SpeakerClass::Unknown => "unknown",
         SpeakerClass::NoSpeech => "nospeech",
-        SpeakerClass::Owner => "owner",
-        SpeakerClass::OthersOnly => "others",
+        SpeakerClass::Target => "owner",
+        SpeakerClass::Other => "others",
     }
 }
 

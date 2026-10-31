@@ -6,8 +6,8 @@
 //! 片段怎么挑（注册用）：窗里 VAD 有声帧 ≥ `enroll_voiced_frac`，且与上一个窗（重叠 1 s）声纹相似度 ≥ `consist_sim`
 //! ——连续两个窗像同一个人，说明窗里没有换人、没有明显重叠（003 §2.2 第 2 条「清楚的单人片段」）。
 //!
-//! 判决（相似度 = 与主人声纹的余弦）：≥ `owner_hi` → Owner；≤ `others_lo` → OthersOnly；两者之间 → Unknown（不压）。
-//! 滞回：上一份是 OthersOnly 且相似度仍 < 两档中点，维持 OthersOnly。
+//! 判决（相似度 = 与主人声纹的余弦）：≥ `owner_hi` → Owner；≤ `others_lo` → Other；两者之间 → Unknown（不压）。
+//! 滞回：上一份是 Other 且相似度仍 < 两档中点，维持 Other。
 
 use std::time::{Duration, Instant};
 
@@ -90,7 +90,7 @@ pub struct Judge<E: EmbedSource> {
     next_tick: u64,
     prev_emb: Option<Vec<f32>>,
     last: SpeakerVerdict,
-    /// 是否允许发 OthersOnly（关掉 = 只注册、不个性化）
+    /// 是否允许发 Other（关掉 = 只注册、不个性化）
     pub personalize: bool,
     pub logs: Vec<JudgeLog>,
 }
@@ -218,11 +218,11 @@ impl<E: EmbedSource> Judge<E> {
                             log.owner_sim = s;
                             let mid = 0.5 * (self.p.owner_hi + self.p.others_lo);
                             if s >= self.p.owner_hi {
-                                SpeakerClass::Owner
+                                SpeakerClass::Target
                             } else if s <= self.p.others_lo
-                                || (self.last.class == SpeakerClass::OthersOnly && s < mid)
+                                || (self.last.class == SpeakerClass::Other && s < mid)
                             {
-                                SpeakerClass::OthersOnly
+                                SpeakerClass::Other
                             } else {
                                 SpeakerClass::Unknown
                             }
@@ -233,7 +233,7 @@ impl<E: EmbedSource> Judge<E> {
                 }
             }
         };
-        let class = if !self.personalize && class == SpeakerClass::OthersOnly {
+        let class = if !self.personalize && class == SpeakerClass::Other {
             SpeakerClass::Unknown
         } else {
             class

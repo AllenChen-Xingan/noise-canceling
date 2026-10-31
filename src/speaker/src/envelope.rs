@@ -97,6 +97,10 @@ impl VadEnvelopeStage {
 }
 
 impl Stage for VadEnvelopeStage {
+    fn name(&self) -> &'static str {
+        "vad-envelope"
+    }
+
     fn reset(&mut self) {
         self.vad.reset();
         self.hyst.reset();
@@ -157,6 +161,10 @@ impl EnergyEnvelopeStage {
 }
 
 impl Stage for EnergyEnvelopeStage {
+    fn name(&self) -> &'static str {
+        "energy-envelope"
+    }
+
     fn reset(&mut self) {
         self.env.reset();
     }
@@ -184,6 +192,10 @@ impl FloorStage {
 }
 
 impl Stage for FloorStage {
+    fn name(&self) -> &'static str {
+        "floor"
+    }
+
     fn reset(&mut self) {}
 
     fn process(&mut self, wet: &mut [f32], dry: &[f32], _ctx: FrameCtx) {

@@ -1,7 +1,9 @@
 //! engine 接口的最小镜像（`specs/rust/architecture.md` §3.3）。
 //!
 //! 本批 p2 只新建自己的 crate，不依赖 `vdn-types`（align 在建）；接入 engine 时把这里的类型换成 `vdn-types` 的，
-//! 字段与语义按下面写的对齐。比规约多出来的字段（`SpeakerVerdict` 的时间戳与相似度）是给 align 的提议。
+//! 命名对齐 align 的草案（`../noise_canceling-align/src/types/src/frame.rs`、`stage.rs`：Target / Other / Unknown、
+//! `Stage::{name, latency_samples}`）。草案里没有、门控又必需的四样（判决窗口时间戳、NoSpeech、主人电平、
+//! FrameCtx 的当前样本位置）已于 2026-10-30 发给 align 请其加进 `vdn-types`，这里先按提议写。
 
 /// 判断回路给出的「现在谁在说」。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -11,9 +13,9 @@ pub enum SpeakerClass {
     /// 窗里人声太少，判不了人：门控保持现状（不因为停顿而放开，否则背景忽大忽小）
     NoSpeech,
     /// 窗里是主人（或主人加别人）
-    Owner,
+    Target,
     /// 窗里有人声，且确认只有别人在说
-    OthersOnly,
+    Other,
 }
 
 /// 判决结果。由判断回路（非实时线程，约 0.5 s 一次）发布，实时线程每 hop 读最新一份。
@@ -51,6 +53,11 @@ pub struct FrameCtx {
 /// 降噪之后的处理级，跑在模型采样率；`wet` 原地改，`dry` 是与 `wet` 对齐的原声。
 /// 规约 §3.3：P2 前所有 Stage 延迟必须为 0。
 pub trait Stage: Send {
+    fn name(&self) -> &'static str;
+    /// 本级附加延迟（模型采样率样本）；进延迟账，本 crate 的级全部为 0
+    fn latency_samples(&self) -> usize {
+        0
+    }
     fn reset(&mut self);
     fn process(&mut self, wet: &mut [f32], dry: &[f32], ctx: FrameCtx);
 }
