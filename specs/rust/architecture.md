@@ -408,12 +408,24 @@ forbid = ["ort", "hound", "serde", "cpal"]   # 闭包里不许出现的 crate
 | G9 | UB 与并发 | Miri（`vdn-dsp`、`vdn-shm`）；loom（`vdn-shm`） | L2 | 自写无锁协议有竞争 |
 | G10 | 耗时与分配计数 | bench 每 hop p50 / p99 / p99.9 / max + 分配数 | L4（CI 虚拟机数值不可信） | 实时余量被吃掉 |
 | G11 | 端到端延迟 | 脉冲法（P3 起） | L4 | 超 D32 |
-| G12 | 评测集回归 | `vdn-eval` 与基线比 | L3 + 改模型 / DSP 时 | 客观指标退化（指标过 ≠ 人耳过，D33） |
+| G12 | 评测集回归 | `cargo run -p xtask -- eval ci`（CI 层，每个 PR）· `-- eval qa`（QA 层，本机，改模型 / DSP 时）；见 §7.1 | L1（CI 层）· L4（QA 层） | 回归集退化或 verifier 被骗过（指标过 ≠ 人耳过，D33） |
 | G13 | 长跑 | 真设备 ≥ 1 h：xrun、漂移、内存 | L4 | 现场才遇到的问题 |
 | G14 | 人耳 | 盲听页（CLAUDE.md 第五节第 1 条） | 里程碑 | 验证红线 |
 
 - **许可**：`deny.toml` 的 allow 列表以文件为准。原则：只放 GNU 列表上与 GPLv3 兼容的许可（Apache-2.0 只与 GPLv3 兼容、不与 GPLv2 兼容【官】https://www.gnu.org/licenses/license-list.en.html）；列表上查不到的（如 BSD-1-Clause、LLVM-exception）用 per-crate `exceptions` 逐个放行；MPL-2.0 的 Exhibit B cargo-deny 查不出，CI 另 grep；ORT 预编译库与 `.onnx` 权重不在 Cargo 图里，另列资产清单（来源 · 哈希 · 许可）
 - **CI 费用**：核心 crate 不依赖平台，G1–G7、G9 放 Linux；macOS job 只跑 clippy（`aarch64-apple-darwin`）、io-macos 测试与 G8，并用 `paths:` 过滤（私有仓 macOS 分钟数约是 Linux 的 10 倍【官】GitHub Actions 计费文档）
+
+### 7.1 eval（`vdn-eval`，`src/eval/`；设计与逐条对照见 `docs/experiments/exp007-eval-suite/README.md`）
+
+**祈使句**：
+1. **verifier 只住在 `vdn-eval`**，一条一个函数，登记在 `verifiers.rs` 的 `REGISTRY`（定义 · 算法 · 锚点 · 默认级别 · 已知失效）。结论只有三种：过 · 不过 · **不知道**（带原因）。前提不满足时返回不知道，不硬给分
+2. **和实时同一份处理代码**：被测系统一律是真 `vdn_engine::Engine` 包模型、逐 hop 调 `process`；频谱分析用 `vdn_dsp::StreamingStft`。不许在 eval 里另写一条处理链
+3. **两层**：CI 层（`cargo run -p xtask -- eval ci`）纯 DSP、确定性、无模型权重、几分钟内跑完，挂在 `ci.yml`；QA 层（`-- eval qa`）要本机模型（Qwen3-ASR、DNSMOS），不进 CI。CI 没有权重时被测系统是参考降噪器 `ref`（crate 内，替身，不是产品模型）；本机有 GTCRN 权重时自动加跑
+4. **门禁规则**（`runner.rs` 头注释是正本）：回归集 L3 不过 → 阻断；L0/L1 感知量只报警，但**比冻结基线 `suite/baseline-ci.json` 差容差以上 → 阻断**；能力集从不阻断；防作弊探针没抓住劣化 → 阻断
+5. **级别正本是 `suite/levels.json`**，只由 `vdn-eval calib --write-levels` 改。感知类定标前一律 L0；模拟真值指标只在合成片段上算 L3
+6. **任务清单与参数进仓，音频不进仓**：CI 任务是合成场景（参数 + 种子即全部）；QA 任务引用仓外音频并核 sha256。报告 `--record` 进 `docs/experiments/exp007-eval-suite/results/`
+7. 有意改变行为（改 engine 默认参数、换模型）时：`vdn-eval ci --write-baseline` 重写基线，PR 里写为什么变
+8. ort 在 `vdn-eval` 里直接用（DNSMOS），是登记的例外；拆 `vdn-backend-ort` 时并入后端
 
 ---
 
