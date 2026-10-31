@@ -223,9 +223,12 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 
 #### 3.7.2 策略（`src/types/src/policy.rs`）
 - `trait Policy: Send { name; reset; decide(&PolicyInput) -> Decision }`，**可单独替换**（005 第〇节）；`TablePolicy` = 查表 + 滞回的参考实现
-- 滞回 `Hysteresis { confirm_s, min_confidence, min_dwell_s }`：连续确认才换、换后至少停留；低置信判断不推进也不清零候选
+- 滞回 `Hysteresis { confirm_s, min_confidence, min_dwell_s }`：按 `(用户层, 细场景)` 这一对比较（分类器只出用户层时也能切）；连续确认才换，**一次低置信就打断、候选从头算**；换后至少停留
+- 细场景在表里时，用户层以表为准（标签里的 `user` 只在细场景未知时用）
 - 平滑 `Transition { glide_s, model_crossfade_s }`：连续参数一阶平滑，离散参数（模型、修音链预设）即时切、由 engine 交叉淡化（§3.5）
-- 用户优先：`UserControl { scene: Auto | Manual(UserScene), lock, knobs }`，手动选场景时只用该场景下的细场景；锁定时参数冻结；旋钮盖过一切
+- 用户优先：`UserControl { scene: Auto | Manual(UserScene), lock, knobs }`，手动选场景时只用该场景下的细场景；锁定冻结的是「表 + 我的配置」那一层，**旋钮照常盖在上面**
+- 反馈入口 `Policy::observe(&DecisionEvent)`（默认空）：以后的老虎机从这里拿奖励（005 第三节 B 第 3 步）
+- 参数进 Stage：`Stage::set_params(&ParamSet)`（默认空，实时线程逐 hop 调，不分配）
 - 默认数值（2 s / 0.6 / 5 s / 1 s / 50 ms）是占位，由 scene 线在模拟环境上标定
 
 #### 3.7.3 场景参数表（`src/types/src/table.rs`）与参数组（`params.rs`）
@@ -240,7 +243,7 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 - `trait Learner { propose(&[SessionRecord], &UserProfile) -> Option<UserProfile> }`：只在空闲时调（插电 · 未开会 · 不发热，D38），返回**候选**，过回归门禁 / 影子比对更好才换；在线只调参数、不改权重（005 第五节待人定 #2）。**本批不实现**
 
 #### 3.7.5 决策日志（`src/types/src/record.rs`）
-- `DecisionEvent`（`Copy`，≤ 64 B）：`SceneCommitted` · `ParamsApplied`（带完整 `ParamSet` 与来源 `ParamSource`）· `UserAction`（开关、旋钮、选场景、锁定、手动换模型、反馈「吃字 / 怪声 / 太吵 / 好」、换设备——不记设备名）· `Bypass` · `Enroll`（声纹注册锁定 / 重锁 / 清空）· `TableChanged` · `ProfileChanged`
+- `DecisionEvent`（`Copy`，≤ 64 B）：`SceneObserved`（感知原始输出，未经滞回；细场景分类的回放与回归靠它）· `SceneCommitted` · `ParamsApplied`（带完整 `ParamSet` 与来源 `ParamSource`）· `UserAction`（开关、旋钮、选场景、锁定、手动换模型、反馈「吃字 / 怪声 / 太吵 / 好 / AB 选 A / 选 B」、换设备——不记设备名、带新采样率）· `Bypass` · `Enroll`（声纹注册锁定 / 重锁 / 清空）· `TableChanged` · `ProfileChanged`
 - `SessionRecord { header: { rate, table: (版本, 内容 ID), profile: (版本, 内容 ID) }, events }`：**不含音频**（D19）、只在本机（D39）；文本一行一事件
 - 实时线程不写日志（R3）：送原声等事件以后经 rtrb 送出，由 C 档汇总成一条
 
@@ -248,6 +251,7 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 - 每个部件声明自己的延迟：`Model::latency_samples()`、`Stage::latency_samples()`、engine 的「攒满一个 hop」；`Engine::latency_ledger()` 汇总成 `LatencyLedger`，平台部分（重采样、IO、跨进程环、HAL）在写进代码前按 009 延迟账「目标上限」记成 `Basis::Budget`（`latency::planned_platform()`），P3 实测后改 `Basis::Measured`
 - 判断回路与学习回路不进账
 - 路由池里只放同延迟档的模型：`vdn-models::ModelKind::declared()` 声明 hop 与延迟，`tests/smoke.rs` 打开真模型核对
+- **逐项硬加，不认「两段等待重叠」的推断**（align 自审：「IO 缓冲并入攒 hop」要求 IO 块整除模型 hop，FE-M 的 hop 是 480 帧 @48k，256 不整除，不成立）
 - **当前账（2026-10-31）**：
 
 | 项 | ms | 依据 |
@@ -255,12 +259,15 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 | 攒满一个模型 hop（GTCRN 256 / FE-M 160 样本 @16 kHz） | 16.00 / 10.00 | 代码声明 |
 | 模型算法延迟（GTCRN 256 / FE-M 352 样本） | 16.00 / 22.00 | 代码声明 |
 | 重采样 48→16 + 16→48 | 4.00 | 规划预算 |
-| 麦克风 IO 缓冲 256 帧 @48k | （5.33，并入攒 hop） | 规划预算 · 条件见下 |
+| 麦克风 IO 块：009 目标 256 帧 / **提议 96 帧** @48k | 5.33 / **2.00** | 规划预算 |
 | 跨进程环余量 | 3.00 | 规划预算 |
 | HAL 传输余量 128 帧 | 2.67 | 规划预算 |
-| **合计** | **41.67**（逐项硬加 47.00） | 预算 45 |
+| **合计** | **009 目标 47.00（超 2 ms）· 提议 43.67** | 预算 45 |
 
-  「IO 缓冲并入攒 hop」只在 IO 块（256 帧）整除并对齐模型 hop（768 帧 @48k）时成立：两段等待结束于同一时刻【推】。设备不按 256 帧给或不对齐时按硬加算，超 2 ms——由 P3 脉冲法裁决（`decision.md` E-lat、⟨拍板 6⟩）。测试 `src/models/tests/latency.rs` 断言每个模型合计 ≤ 45 ms、池内同延迟，并钉住这两个数字
+  - 模型部分两个模型都是 32 ms（= STFT 窗长 512 样本），池内同延迟
+  - 提议 IO 块 96 帧（`vdn_types::IO_BLOCK_PROPOSED`）：两模型 hop（768 / 480 帧 @48k）的最大公约数，回调与两种 hop 都对齐。代价：每秒约 500 次回调，多唤醒、多一点 CPU 与 xrun 风险，设备 / 蓝牙不一定给这么小的块【推】。P3 实测（`decision.md` E-lat）后定；做不到走 ⟨拍板 6⟩
+  - 测试 `src/models/tests/latency.rs`：提议块下每个模型 ≤ 45 ms、池内同延迟；009 原目标 47 ms 钉成**已知缺口**（断言超预算），任何一项变了都会红
+  - 对外口径：「代码里的部分 32 ms；平台部分未实测，按 009 目标合计 47 ms、按提议参数 43.67 ms」
 
 ---
 
