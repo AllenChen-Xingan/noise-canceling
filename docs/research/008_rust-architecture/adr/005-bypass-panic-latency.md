@@ -8,11 +8,11 @@ D03：推理进程崩了，送音进程照样送原声。p1 的 `Engine` 已实�
 
 ## 决定
 1. **两层送原声，分工写死**：
-   - 模型级由 `vdn-engine` 做：单帧故障、状态坏、换模型
+   - 模型级由 `vdn-engine` 的 `Pipeline` 做（用 **48 kHz 原声**，否则原声缺 8 kHz 以上；P1 离线期间仍由 `Engine` 在 16 kHz 做）：单帧故障、状态坏、换模型
    - 进程级由送音进程输出回调做：推理进程卡死、崩溃、心跳停
-   - 两层用同一个 `L_total`（engine 报告，经 `vdn-shm` 头传给送音进程），不各自对齐
+   - 两层用同一个 `L_total`（启动时按所有启用模型的最大延迟定死，经 `vdn-shm` 头传给送音进程），不各自对齐，换模型也不改
 2. **panic**：实时代码按 R4 写成不 panic；release `panic = "abort"`；推理进程 abort 由进程级送原声兜底；no_panic 证明构建另开 unwind profile
-3. **延迟记账**：`Engine::latency_samples()` = 重采样 + 模型 + 各 Stage 之和，单测断言不超预算；固定比例重采样（48↔16 kHz）放 `vdn-engine`，让 eval 读 48 kHz WAV 也走同一条路；`Slip` 漂移补偿只在 `vdn-io-macos`（eval 不需要）
+3. **延迟记账**（本 ADR 是延迟账的正本）：`Pipeline::latency_samples()` = 重分块（最多一个 IO hop）+ 两次重采样 + 模型（Stage 在 P2 前必须为 0 延迟），统一按 IO 采样率样本计，单测断言不超预算；固定比例重采样（48↔16 kHz）放 `vdn-engine::Pipeline`，eval 读 48 kHz WAV 也走同一条路；`Slip` 漂移补偿只在 `vdn-io-macos`（eval 不需要）
 4. P3 第一件事是脉冲法实测端到端延迟
 
 ## 理由
@@ -22,6 +22,6 @@ D03：推理进程崩了，送音进程照样送原声。p1 的 `Engine` 已实�
 - rubato `Fft` 同步重采样延迟 `fft_size_out / 2`，`Slip` 延迟 0【源】`resources/rubato/src/synchro.rs:692-694`、`slip.rs:481-483`
 
 ## 代价
-- `vdn-shm` 头多一个字段；改模型时 `L_total` 变，送音进程要能跟着变（或者换模型停流重建）
+- `vdn-shm` 头多一个字段；`L_total` 取最大延迟，延迟较小的模型也多付一点
 - abort 意味着推理进程里没有「接住 panic 再继续」的机会，每次 panic 都是一次进程重启 + 一段原声
 - 延迟真超了 45 ms，要人定砍哪一级（⟨待拍板 6⟩）

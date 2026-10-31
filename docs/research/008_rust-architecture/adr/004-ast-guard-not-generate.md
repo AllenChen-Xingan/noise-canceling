@@ -9,7 +9,8 @@
 ## 决定
 1. **模块化**由 crate / module / trait 承担（编译器在语法树上强制的边界），核心包 = `vdn-types · vdn-dsp · vdn-models · vdn-engine · vdn-speaker`
 2. **守规矩**用 AST / 依赖图工具，进 CI：
-   - 根目录**一份** `clippy.toml` 禁用清单 + 实时 crate 根的 deny 头
+   - 根目录**一份** `clippy.toml` 禁用清单 + 实时 impl 块 / 模块上的 deny（构造函数放另一个 impl 块）
+   - 各 crate `Cargo.toml` 的 `[package.metadata.vdn]`（档位、unsafe、禁依赖）作为依赖规则的机读正本
    - cargo-deny `[bans]` 管直接依赖边（含内部 crate）
    - `cargo xtask check-deps` 管传递闭包
    - xtask tidy（`#[test]`，文本 / 轻语法检查）
@@ -27,7 +28,8 @@
 - 过程宏的触发条件与 CLAUDE.md「同一类错误犯到第三次，必须沉淀成一条规则」同构
 
 ## 代价
-- xtask 要自己维护（tidy、check-deps 两个子命令，预计各一两百行）
+- xtask 要自己维护（tidy、check-deps 两个子命令）
+- 禁用清单是打地鼠，漏列的 API（`clone` 等）静态层拦不住；每条禁令配一个必须报红的哨兵负例，防止写错路径后悄悄失效
 - clippy 只看本 crate 的调用点，看不到依赖内部与宏展开内部——靠 RTSan 补，而 RTSan 只覆盖回放跑到的路径
 - 静态层证明的是「写法与依赖」，运行期层证明的是「回放覆盖范围内的行为」；这就是「机器证明」的诚实口径（⟨待拍板 1⟩ 一并确认）
 
