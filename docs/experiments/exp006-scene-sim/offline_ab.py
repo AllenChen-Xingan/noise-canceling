@@ -306,9 +306,14 @@ def page(build):
     up = lambda f: "../../" + f
     rng = secrets.SystemRandom()
     key, mclips = {}, []
-    for cid in listen:
-        order = VERS[:]
-        rng.shuffle(order)
+    # 拉丁方在生成时定死：随机基序 base，第 i 段的槽位 j 放 base[(i + j) % 4]，每个版本在每个字母位置正好 3 次。
+    # 页面不再在运行时按模型名轮换（它根本不知道哪个槽位是哪个版本）
+    base = VERS[:]
+    rng.shuffle(base)
+    listen = listen[:]
+    rng.shuffle(listen)
+    for i, cid in enumerate(listen):
+        order = [base[(i + j) % 4] for j in range(4)]
         key[cid] = order
         v = clips[cid]["versions"]
         mclips.append({"id": cid, "desc": DESC[clips[cid]["fine"]], "text": None, "ref": up(v["noisy"]["file"]),
@@ -319,7 +324,7 @@ def page(build):
     m1 = rng.choice(VERS)
     traps = [{"id": "trap-identical", "clip": c1, "desc": DESC[clips[c1]["fine"]], "label": "所有候选其实是同一个文件（应答「分不出」）",
               "ref": up(clips[c1]["versions"]["noisy"]["file"]), "cands": [up(clips[c1]["versions"][m1]["file"])] * 4,
-              "names": ["same"] * 4, "expect": {"best": ["same"]}, "source_model": m1}]
+              "names": ["same"] * 4, "expect": {"best": ["same"]}, "source_model": m1}]  # 这题页面里就能判
     m2 = rng.choice(VERS)
     y, _ = sf.read(ab / clips[c2]["versions"][m2]["file"], dtype="float32")
     fd = f"audio/{c2}_{secrets.token_hex(3)}.wav"
@@ -328,16 +333,22 @@ def page(build):
     rng.shuffle(others)
     slots = [(m2, clips[c2]["versions"][m2]["file"]), ("degraded", fd)] + [(m, clips[c2]["versions"][m]["file"]) for m in others[:2]]
     rng.shuffle(slots)
-    traps.append({"id": "trap-degraded", "clip": c2, "desc": DESC[clips[c2]["fine"]], "label": "其中一份是明显劣化版（最清楚、最自然都不该选它）",
+    traps.append({"id": "trap-degraded", "clip": c2, "desc": DESC[clips[c2]["fine"]], "label": "其中一份是明显劣化版（揭盲后离线判：最清楚、最自然都不该选它）",
                   "ref": up(clips[c2]["versions"]["noisy"]["file"]), "cands": [up(f) for _, f in slots],
-                  "names": [n for n, _ in slots], "expect": {"not": ["degraded"]}, "source_model": m2})
-    # 页面上的名字不出现「路由 / 修音链」以外的实现细节；揭盲前根本不显示
-    manifest = {"build": pid, "n_cands": 4, "clips": mclips, "models": {m: INFO[m] for m in VERS},
-                "traps": [{k: v for k, v in t.items() if k not in ("source_model", "names")} for t in traps],
-                "slotmap": base64.b64encode(json.dumps({"clips": key, "traps": {t["id"]: t["names"] for t in traps}}).encode()).decode()}
+                  "names": [n for n, _ in slots], "expect": {"not": []}, "source_model": m2})
+    # manifest 里**没有答案**：没有槽位→版本映射、没有版本名（CLAUDE.md 第五节第 1 条，2026-10-31 补）。
+    # 页面只记录「哪个字母是第几个槽位」，揭盲由仓里的 unblind.py 拿 docs/ 里的对照表做
+    manifest = {"build": pid, "n_cands": 4, "clips": mclips,
+                "models": {f"slot{i}": {"name": f"槽位 {i}", "latency": ""} for i in range(4)},
+                "traps": [{k: v for k, v in t.items() if k not in ("source_model", "names")} for t in traps]}
     (pdir / "manifest.js").write_text("window.EXP003 = " + json.dumps(manifest, ensure_ascii=False) + ";\n")
     html = (EXP3 / "ab_page.html").read_text()
     subs = [
+        ('const KEY = JSON.parse(atob(M.slotmap || M.key));', 'const KEY = null;  // exp006：页面里不放答案，揭盲在仓里用 unblind.py 做'),
+        ('LETTERS.forEach((L, j) => { slots[L] = KEY.clips[id].indexOf(base[(i + j) % N]); });',
+         'LETTERS.forEach((L, j) => { slots[L] = j; });  // 生成时已按拉丁方排好每段的槽位顺序'),
+        ('if (t.kind === "trap") return KEY.traps[t.trap][t.slots[L]];\n    return KEY.clips[t.clip][t.slots[L]];', 'return "slot" + t.slots[L];'),
+        ('<h2>听完了，揭盲结果</h2>', '<h2>听完了</h2><p class="muted">页面里没有答案：下表只按槽位统计，看不出哪个是哪个。导出 JSON 交大总管揭盲。</p>'),
         ("<title>降噪盲听对比</title>", "<title>修音与场景盲听</title>"),
         ("<h1>降噪盲听对比</h1>", "<h1>修音与场景盲听（exp006）</h1>"),
         ("主讲人是声音最近、最清楚的那位（多数段开头约 1 秒后才开口，前 3 段一开头就说）；其他人声都算噪音。",
@@ -352,6 +363,7 @@ def page(build):
     for a, b in subs:
         assert html.count(a) == 1, f"exp003 页面变了，找不到：{a[:30]}"
         html = html.replace(a, b)
+    assert "KEY." not in html.replace("KEY.clips[id].indexOf", ""), "页面里还有用到答案的地方"
     (pdir / "index.html").write_text(html)
     unblind = json.dumps({"build": pid, "data_build": build, "models": VERS, "key": key, "traps": traps}, ensure_ascii=False, indent=1)
     keep = HERE / "builds" / build / "pages" / pid
@@ -361,7 +373,23 @@ def page(build):
     shutil.copyfile(pdir / "manifest.js", keep / "manifest.js")
     sub = {c: {k: v for k, v in clips[c].items()} for c in listen}
     (keep / "files.json").write_text(json.dumps({"meta": files["meta"], "clips": sub}, ensure_ascii=False, indent=0))
+    self_check(ab, pdir, key)
     print("page", pid, "→", pdir / "index.html")
+
+
+def self_check(ab, pdir, key):
+    """听测目录自检：不许有揭盲表 / 清单；页面与 manifest 里不许出现版本名或映射；音频文件名是「段号_随机串」。"""
+    import re
+    bad = [p for p in ab.rglob("*") if p.is_file() and (p.name in ("unblind-key.json", "files.json") or p.suffix == ".txt")]
+    assert not bad, f"听测目录里有不该有的文件：{bad}"
+    names = set(VERS) | {i["name"] for i in INFO.values()} | {"slotmap", "unblind"}
+    for f in (pdir / "manifest.js", pdir / "index.html"):
+        txt = f.read_text()
+        hit = [n for n in names if re.search(r'(?<![A-Za-z_])' + re.escape(n) + r'(?![A-Za-z_])', txt)]
+        assert not hit, f"{f.name} 里出现了 {hit}"
+    odd = [p.name for p in (ab / "audio").iterdir() if not re.fullmatch(r"te\d{4}_[0-9a-f]{6,8}\.wav", p.name)]
+    assert not odd, f"音频文件名不对：{odd[:3]}"
+    print("自检通过：听测目录无揭盲表 / 清单，页面与 manifest 无版本名与映射")
 
 
 if __name__ == "__main__":
