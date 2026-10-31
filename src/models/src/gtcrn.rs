@@ -35,7 +35,7 @@ impl Gtcrn {
         if names != ["mix", "conv_cache", "tra_cache", "inter_cache"] {
             return Err(format!("GTCRN 输入不符：{names:?}").into());
         }
-        // 输出按会话顺序取（outs[i]），名字必须和 OUT_NAMES 逐个对上
+        // 输出按会话顺序取（outs.values()），名字必须和 OUT_NAMES 逐个对上
         let out_names: Vec<&str> = session.outputs().iter().map(|o| o.name()).collect();
         if out_names != OUT_NAMES {
             return Err(format!("GTCRN 输出不符：{out_names:?}").into());
@@ -99,11 +99,9 @@ impl Gtcrn {
             if m.len() != 2 * spec.len() {
                 return Err(ModelError::Shape);
             }
-            for (pair, c) in m.chunks_exact_mut(2).zip(spec.iter()) {
-                if let [re, im] = pair {
-                    *re = c.re;
-                    *im = c.im;
-                }
+            for ([re, im], c) in m.as_chunks_mut::<2>().0.iter_mut().zip(spec.iter()) {
+                *re = c.re;
+                *im = c.im;
             }
         }
         let [c0, c1, c2] = &self.caches;
@@ -122,11 +120,9 @@ impl Gtcrn {
                 return Err(ModelError::Shape);
             }
             let spec = self.stft.spectrum_mut();
-            for (c, pair) in spec.iter_mut().zip(enh.chunks_exact(2)) {
-                if let [re, im] = pair {
-                    c.re = *re;
-                    c.im = *im;
-                }
+            for (c, [re, im]) in spec.iter_mut().zip(enh.as_chunks::<2>().0) {
+                c.re = *re;
+                c.im = *im;
             }
         }
         for cache in self.caches.iter_mut() {
