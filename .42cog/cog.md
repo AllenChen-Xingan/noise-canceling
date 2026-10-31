@@ -39,6 +39,8 @@
 | `vdn-engine`（`src/engine/`） | 逐帧调度 + 三件保命、故障注入、离线驱动、延迟账汇总（`latency_ledger`） | AI 写（p1；align 收尾） | 输入：dsp 积木 + 任一 `Model`；被 cli 用。不认识具体模型、不链接 ONNX Runtime |
 | `vdn-models`（`src/models/`） | 模型适配器 GTCRN、FastEnhancer-M（ort 单线程 CPU）、`AnyModel`、各模型声明的 hop 与延迟 | AI 写（p1；align 收尾） | 输入：模型权重（仓外）；实现 types 的 `Model`；被 cli 用 |
 | `vdn-cli`（`src/cli/`，可执行 `vdn`） | 命令行 `denoise` / `bench`，WAV 读写 | AI 写（p1） | 输入：WAV + 模型权重；产出降噪 WAV 与计时 JSON（评测报告的原料） |
+| `vdn-speaker`（`src/speaker/`，tier B） | 认出你的声音：VAD 快开慢关、不对称门控（实时级，0 延迟）+ fbank、声纹、零设置注册、判断回路（约 0.5 s 一次） | AI 写（p2，2026-10-30） | 输入：降噪输出 + 原声 + 声纹模型（仓外）；产出 `SpeakerVerdict` 与门控后的声音；默认只依赖 dsp + earshot；声纹推理经 `onnx` feature 用 ort（过渡期例外，同 vdn-models）；离线命令行已挪到 `vdn-speaker-lab`；接口镜像 `vdn-types` |
+| `vdn-speaker-lab`（`src/speaker-lab/`，可执行 `vdn-speaker-lab`，tier tool） | P2 离线实验命令行（exp005）：读写 WAV、跑 GTCRN、调 vdn-speaker 的实时级与判断回路 | AI 写（p2fix，2026-10-31，从 vdn-speaker 的 `offline` feature 挪出） | 依赖 vdn-speaker（onnx）+ engine + models + ort + hound + serde_json；不进实时线程、不进产品 bin；`vdn-eval` 建起来后并进去 |
 
 | `xtask`（`src/xtask/`） | 项目规矩的机器检查：`cargo run -p xtask -- tidy` / `-- check-deps`，也随 `cargo test -p xtask` 跑 | AI 写（align，2026-10-31） | 输入：`cargo metadata` 与源码文本；不依赖任何 vdn crate |
 

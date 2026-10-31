@@ -1,0 +1,789 @@
+{
+ "model": "qwen3-asr-plus:1.7b",
+ "service": "http://127.0.0.1:11520/v1/audio/transcriptions",
+ "per_clip": {
+  "c01": [
+   {
+    "seg": 0,
+    "t": [
+     0.5,
+     3.855
+    ],
+    "ref": "Yes, sire, and ready dressed for the ballet.",
+    "mix": "Yes, sire, and ready dressed for the ballet.",
+    "raw": "Yes, sir, and ready dressed for the ballet.",
+    "vad": "Yes, sire, and ready dressed for the ballet.",
+    "personal": "Yes, sire, and ready dressed for the ballet.",
+    "aggressive": "Yes, sir, and ready dressed for the ballet."
+   },
+   {
+    "seg": 1,
+    "t": [
+     9.267,
+     15.527
+    ],
+    "ref": "There cannot be a doubt. He received you kindly, for in fact, you returned without his permission.",
+    "mix": "There cannot be a doubt. He received you kindly, for in fact, you returned without his permission.",
+    "raw": "There cannot be a doubt. He received you kindly, for in fact, you returned without his permission.",
+    "vad": "There cannot be a doubt. He received you kindly, for in fact, you returned without his permission.",
+    "personal": "There cannot be a doubt. He received you kindly, for in fact, you returned without his permission.",
+    "aggressive": "There cannot be a doubt. He received you kindly, for in fact, you returned without his permission."
+   },
+   {
+    "seg": 2,
+    "t": [
+     18.965,
+     29.08
+    ],
+    "ref": "Forgive me. I hardly know what I am saying. A thousand times, forgive me. Madame was right—quite right. This brutal exile has completely turned my brain.",
+    "mix": "Forgive me. I hardly know what I am saying. A thousand times, forgive me. Madame was right—quite right. This brutal exile has completely turned my brain. She too.",
+    "raw": "Forgive me. I hardly know what I am saying. A thousand times, forgive me. Madame was right—quite right. This brutal exile has completely turned my brain. She too.",
+    "vad": "Forgive me. I hardly know what I am saying. A thousand times, forgive me. Madame was right—quite right. This brutal exile has completely turned my brain. She too.",
+    "personal": "Forgive me. I hardly know what I am saying. A thousand times, forgive me. Madame was right—quite right. This brutal exile has completely turned my brain. She too.",
+    "aggressive": "Forgive me. I hardly know what I am saying. A thousand times, forgive me. Madame was right—quite right. This brutal exile has completely turned my brain. She too."
+   },
+   {
+    "seg": 3,
+    "t": [
+     32.543,
+     38.002
+    ],
+    "ref": "She then rose, humming the air to which she was presently going to dance.",
+    "mix": "She then rose, humming the air to which she was presently going to dance.",
+    "raw": "She then rose, humming the air to which she was presently going to dance.",
+    "vad": "She then rose, humming the air to which she was presently going to dance.",
+    "personal": "She then rose, humming the air to which she was presently going to dance.",
+    "aggressive": "She then rose, humming the air to which she was presently going to dance."
+   },
+   {
+    "seg": 4,
+    "t": [
+     44.378,
+     49.488
+    ],
+    "ref": "It is too difficult,\" replied Mademoiselle de Tournachon, laughing loudly.",
+    "mix": "It is too difficult,\" replied Mademoiselle de Tournay-Chaun, laughing loudly.",
+    "raw": "It is too difficult,\" replied Mademoiselle de Fani Chauan, laughing loudly.",
+    "vad": "It is too difficult,\" replied Mademoiselle de Tournay-Chaun, laughing loudly.",
+    "personal": "It is too difficult,\" replied Mademoiselle de Tournay-Chaon, laughing loudly.",
+    "aggressive": "It is too difficult,\" replied Mademoiselle de Fani Chauan, laughing loudly."
+   },
+   {
+    "seg": 5,
+    "t": [
+     59.197,
+     62.507
+    ],
+    "ref": "The princess inquired, \"No.\"",
+    "mix": "The princess inquired. No.",
+    "raw": "The princess inquired. No.",
+    "vad": "The princess inquired. No.",
+    "personal": "The princess inquired. No.",
+    "aggressive": "The princess inquired, \"No.\""
+   },
+   {
+    "seg": 6,
+    "t": [
+     71.666,
+     79.126
+    ],
+    "ref": "Quick, quick! Then, among the high reed grass, said Montalais, \"Stoop, Athene! You are so tall.\"",
+    "mix": "Quick, quick! Then, among the high reed grass, said Montalais, \"Stoop, Athenae, you are so tall.\"",
+    "raw": "Quick, quick! Then, among the high reed grass, said Montalais, \"Stoop, Athenae, you are so tall.\"",
+    "vad": "Quick, quick! Then, among the high reed grass, said Montalais, \"Stoop, Athenae, you are so tall.\"",
+    "personal": "Quick, quick! Then, among the high reed grass, said Montalais, \"Stoop, Athenae, you are so tall.\"",
+    "aggressive": "Quick, quick! Then, among the high reed grass, said Montalais, \"Stoop, Athenae, you are so tall.\""
+   }
+  ],
+  "c02": [
+   {
+    "seg": 0,
+    "t": [
+     0.5,
+     11.44
+    ],
+    "ref": "Sire,\" he said, \"Your Majesty's most devoted servant approaches to perform a service on this occasion with similar zeal that he has already shown on the field of battle.\"",
+    "mix": "Sire,\" he said, \"Your Majesty's most devoted servant approaches to perform a service on this occasion with similar zeal that he has already shown on the field of battle.\"",
+    "raw": "Sire,\" he said, \"Your Majesty's most devoted servant approaches to perform a service on this occasion with similar zeal that he has already shown on the field of battle.\"",
+    "vad": "Sire,\" he said, \"Your Majesty's most devoted servant approaches to perform a service on this occasion with similar zeal that he has already shown on the field of battle.\"",
+    "personal": "Sire,\" he said, \"Your Majesty's most devoted servant approaches to perform a service on this occasion with similar zeal that he has already shown on the field of battle.\"",
+    "aggressive": "Sire,\" he said, \"Your Majesty's most devoted servant approaches to perform a service on this occasion with similar zeal that he has already shown on the field of battle.\""
+   },
+   {
+    "seg": 1,
+    "t": [
+     14.501,
+     24.571
+    ],
+    "ref": "In fact, the sound of Madame's and the Queen's carriages could be heard in the distance upon the hard, dry ground of the roads, followed by the mountain cavaliers.",
+    "mix": "In fact, the sound of Madame's and the Queen's carriages could be heard in the distance upon the hard, dry ground of the roads, followed by the mountain cavaliers.",
+    "raw": "In fact, the sound of Madame's and the Queen's carriages could be heard in the distance upon the hard, dry ground of the roads, followed by the mountain cavaliers.",
+    "vad": "In fact, the sound of Madame's and the Queen's carriages could be heard in the distance upon the hard, dry ground of the roads, followed by the mountain cavaliers.",
+    "personal": "In fact, the sound of Madame's and the Queen's carriages could be heard in the distance upon the hard, dry ground of the roads, followed by the mountain cavaliers.",
+    "aggressive": "In fact, the sound of Madame's and the Queen's carriages could be heard in the distance upon the hard, dry ground of the roads, followed by the mountain cavaliers."
+   },
+   {
+    "seg": 2,
+    "t": [
+     33.235,
+     38.52
+    ],
+    "ref": "The young girls had indeed made themselves small; indeed, invisible.",
+    "mix": "The young girls had indeed made themselves small, indeed invisible.",
+    "raw": "The young girls had indeed made themselves small, indeed invisible.",
+    "vad": "The young girls had indeed made themselves small, indeed invisible.",
+    "personal": "The young girls had indeed made themselves small, indeed invisible.",
+    "aggressive": "The young girls had indeed made themselves small, indeed invisible."
+   },
+   {
+    "seg": 3,
+    "t": [
+     44.769,
+     50.749
+    ],
+    "ref": "Yes, the character which your royal highness assumed is in perfect harmony with your own.",
+    "mix": "Yes, the character which your royal highness assumed is in perfect harmony with your own.",
+    "raw": "Yes, the character which your royal highness assumed is in perfect harmony with your own.",
+    "vad": "Yes, the character which your royal highness assumed is in perfect harmony with your own.",
+    "personal": "Yes, the character which your royal highness assumed is in perfect harmony with your own.",
+    "aggressive": "Yes, the character which your royal highness assumed is in perfect harmony with your own."
+   },
+   {
+    "seg": 4,
+    "t": [
+     55.458,
+     64.038
+    ],
+    "ref": "The king had completed his toilet by nine o'clock. He appeared in an open carriage decorated with branches of trees and flowers.",
+    "mix": "The king had completed his toilet by nine o'clock. He appeared in an open carriage decorated with branches of trees and flowers.",
+    "raw": "The king had completed his toilet by nine o'clock. He appeared in an open carriage decorated with branches of trees and flowers. For some years.",
+    "vad": "The king had completed his toilet by nine o'clock. He appeared in an open carriage decorated with branches of trees and flowers.",
+    "personal": "The king had completed his toilet by nine o'clock. He appeared in an open carriage decorated with branches of trees and flowers.",
+    "aggressive": "The king had completed his toilet by nine o'clock. He appeared in an open carriage decorated with branches of trees and flowers. For some years."
+   },
+   {
+    "seg": 5,
+    "t": [
+     73.346,
+     80.0
+    ],
+    "ref": "Disdainful of a success of which Madame showed no acknowledgment, he thought of nothing but boldly.",
+    "mix": "Disdainful of a success of which Madame showed no acknowledgment, he thought of nothing but boldly.",
+    "raw": "Disdainful of a success of which Madame showed no acknowledgment, he thought of nothing but boldly.",
+    "vad": "Disdainful of a success of which Madame showed no acknowledgment, he thought of nothing but boldly.",
+    "personal": "Disdainful of a success of which Madame showed no acknowledgment, he thought of nothing but boldly.",
+    "aggressive": "Disdainful of a success of which Madame showed no acknowledgment, he thought of nothing but boldly."
+   }
+  ],
+  "c03": [
+   {
+    "seg": 0,
+    "t": [
+     0.5,
+     11.71
+    ],
+    "ref": "The seasons, allies of spring, followed him closely to form a quadrille, which, after many words of more or less flattering import, was the commencement of the dance.",
+    "mix": "The seasons, allies of spring, followed him closely to form a quadrille, which, after many words of more or less flattering import, was the commencement of the dance.",
+    "raw": "The seasons, allies of spring, followed him closely to form a quadrille, which, after many words of more or less flattering import, was the commencement of the dance.",
+    "vad": "The seasons, allies of spring, followed him closely to form a quadrille, which, after many words of more or less flattering import, was the commencement of the dance.",
+    "personal": "The seasons, allies of spring, followed him closely to form a quadrille, which, after many words of more or less flattering import, was the commencement of the dance.",
+    "aggressive": "The seasons, allies of spring, followed him closely to form a quadrille, which, after many words of more or less flattering import, was the commencement of the dance."
+   },
+   {
+    "seg": 1,
+    "t": [
+     17.708,
+     21.863
+    ],
+    "ref": "The arrow pierced his heart, and wounded him mortally.",
+    "mix": "The arrow pierced his heart, and wounded him mortally.",
+    "raw": "The arrow pierced his heart, and wounded him mortally.",
+    "vad": "The arrow pierced his heart, and wounded him mortally.",
+    "personal": "The arrow pierced his heart, and wounded him mortally.",
+    "aggressive": "The arrow pierced his heart, and wounded him mortally."
+   },
+   {
+    "seg": 2,
+    "t": [
+     27.142,
+     37.317
+    ],
+    "ref": "The queens had taken their seats upon a magnificent dais or platform erected upon the borders of the lake, in a theatre of wonderful elegance of construction.",
+    "mix": "The queens had taken their seats upon a magnificent dais or platform erected upon the borders of the lake, in a theatre of wonderful elegance of construction.",
+    "raw": "The queens had taken their seats upon a magnificent dais or platform erected upon the borders of the lake, in a theatre of wonderful elegance of construction.",
+    "vad": "The queens had taken their seats upon a magnificent dais or platform erected upon the borders of the lake, in a theatre of wonderful elegance of construction.",
+    "personal": "The queens had taken their seats upon a magnificent dais or platform erected upon the borders of the lake, in a theatre of wonderful elegance of construction.",
+    "aggressive": "The queens had taken their seats upon a magnificent dais or platform erected upon the borders of the lake, in a theatre of wonderful elegance of construction."
+   },
+   {
+    "seg": 3,
+    "t": [
+     40.123,
+     43.743
+    ],
+    "ref": "Remain, I implore you. The evening is most lovely.",
+    "mix": "Remain, I implore you. The evening is most lovely.",
+    "raw": "Remain, I implore you. The evening is most lovely.",
+    "vad": "Remain, I implore you. The evening is most lovely.",
+    "personal": "Remain, I implore you. The evening is most lovely.",
+    "aggressive": "Remain, I implore you. The evening is most lovely."
+   },
+   {
+    "seg": 4,
+    "t": [
+     48.615,
+     56.095
+    ],
+    "ref": "Oh, Mademoiselle, why have I not a devoted sister or a true friend such as yourself?",
+    "mix": "Oh, Mademoiselle, why have I not a devoted sister or a true friend such as yourself?",
+    "raw": "Oh, Mademoiselle, why have I not a devoted sister or a true friend such as yourself?",
+    "vad": "Oh, Mademoiselle, why have I not a devoted sister or a true friend such as yourself?",
+    "personal": "Oh, Mademoiselle, why have I not a devoted sister or a true friend such as yourself?",
+    "aggressive": "Oh, Mademoiselle, why have I not a devoted sister or a true friend such as yourself?"
+   },
+   {
+    "seg": 5,
+    "t": [
+     58.803,
+     62.038
+    ],
+    "ref": "Do you think so? She replied with indifference.",
+    "mix": "Do you think so? She replied with indifference.",
+    "raw": "Do you think so? She replied with indifference.",
+    "vad": "Do you think so? She replied with indifference.",
+    "personal": "Do you think so? She replied with indifference.",
+    "aggressive": "Do you think so? She replied with indifference."
+   },
+   {
+    "seg": 6,
+    "t": [
+     64.747,
+     69.207
+    ],
+    "ref": "Does your Majesty then no longer believe the disloyal attempt?",
+    "mix": "Does your Majesty then no longer believe the disloyal attempt?",
+    "raw": "Does your Majesty then no longer believe the disloyal attempt?",
+    "vad": "Does your Majesty then no longer believe the disloyal attempt?",
+    "personal": "Does your Majesty then no longer believe the disloyal attempt?",
+    "aggressive": "Does your Majesty then no longer believe the disloyal attempt?"
+   },
+   {
+    "seg": 7,
+    "t": [
+     74.453,
+     80.0
+    ],
+    "ref": "He has given them with too much grace, not to have others still to give, if they are required.",
+    "mix": "He has given them with too much grace, not to have others still to give, if they are required.",
+    "raw": "He has given them too much grace, not to have others still to give, if they are required.",
+    "vad": "He has given them with too much grace, not to have others still to give, if they are required.",
+    "personal": "He has given them with too much grace, not to have others still to give, if they are required.",
+    "aggressive": "He has given them too much grace, not to have others still to give, if they are required."
+   }
+  ],
+  "c04": [
+   {
+    "seg": 0,
+    "t": [
+     28.449,
+     34.019
+    ],
+    "ref": "Exquisite, soft turf of the woods. The happiness which your friendship confers upon me.",
+    "mix": "Exquisite, soft turf of the woods. The happiness which your friendship confers upon me.",
+    "raw": "Exquisite, soft perf of the woods. The happiness which your friendship confers upon me.",
+    "vad": "Exquisite, soft turf of the woods. The happiness which your friendship confers upon me.",
+    "personal": "Exquisite, soft turf of the woods. The happiness which your friendship confers upon me.",
+    "aggressive": "Exquisite, soft perf of the woods. The happiness which your friendship confers upon me."
+   },
+   {
+    "seg": 1,
+    "t": [
+     40.824,
+     49.689
+    ],
+    "ref": "How is it, La Valliere?\" said Mademoiselle de Tenierschant, \"that the Vicomte de Bragelonne spoke of you as Louise.\"",
+    "mix": "How is it, Levalier?\" said Mademoiselle de Tournachon, \"that the Vicomte de Bragelonne spoke of you as Louise.\"",
+    "raw": "How is it, Levalier?\" said Mademoiselle de Ternichande, \"that the Vicomte de Bragelonne spoke of you as Louise.\"",
+    "vad": "How is it, Levalier?\" said Mademoiselle de Tournachon, \"that the Vicomte de Bragelonne spoke of you as Louise.\"",
+    "personal": "How is it, Levalier?\" said Mademoiselle de Tournachon, \"that the Vicomte de Bragelonne spoke of you as Louise.\"",
+    "aggressive": "How is it, Levalier?\" said Mademoiselle de Ternichande, \"that the Vicomte de Bragelonne spoke of you as Louise.\""
+   },
+   {
+    "seg": 2,
+    "t": [
+     54.11,
+     58.6
+    ],
+    "ref": "Certainly, sire, but I must have money to do that. What?",
+    "mix": "Certainly, sire, but I must have money to do that. What?",
+    "raw": "Certainly, sire, but I must have money to do that. What?",
+    "vad": "Certainly, sire, but I must have money to do that. What?",
+    "personal": "Certainly, sire, but I must have money to do that. What?",
+    "aggressive": "Certainly, sire, but I must have money to do that. What?"
+   },
+   {
+    "seg": 3,
+    "t": [
+     68.657,
+     75.987
+    ],
+    "ref": "Look yonder! Do you not see the moon slowly rising, silvering the topmost branches of the chestnuts and the oaks?",
+    "mix": "Look yonder! Do you not see the moon slowly rising, silvering the topmost branches of the chestnuts and the oaks?",
+    "raw": "Look yonder! Do you not see the moon slowly rising, silvering the topmost branches of the chestnuts and the oaks?",
+    "vad": "Look yonder! Do you not see the moon slowly rising, silvering the topmost branches of the chestnuts and the oaks?",
+    "personal": "Look yonder! Do you not see the moon slowly rising, silvering the topmost branches of the chestnuts and the oaks?",
+    "aggressive": "Look yonder! Do you not see the moon slowly rising, silvering the topmost branches of the chestnuts and the oaks?"
+   },
+   {
+    "seg": 4,
+    "t": [
+     86.708,
+     90.308
+    ],
+    "ref": "Your Majesty's plan, then, in this affair, is.",
+    "mix": "Your Majesty's plan, then, in this affair, is.",
+    "raw": "Your Majesty's plan, then, in this affair, is.",
+    "vad": "Your Majesty's plan, then, in this affair, is.",
+    "personal": "Your Majesty's plan, then, in this affair, is.",
+    "aggressive": "Your Majesty's plan, then, in this affair, is."
+   },
+   {
+    "seg": 5,
+    "t": [
+     92.122,
+     96.932
+    ],
+    "ref": "Gentlemen, do your posts. Whereupon, Saint Aignan and Villeroy took their leave.",
+    "mix": "Gentlemen, do your posts. Whereupon, Saint-Aignan and Villeroix took their leave.",
+    "raw": "Gentlemen, to your posts. Whereupon Saint-Aignan and Villeroy took their leave.",
+    "vad": "Gentlemen, do your posts. Whereupon, Saint-Aignan and Villeroix took their leave.",
+    "personal": "Gentlemen, do your posts. Whereupon, Saint-Aignan and Villeroy took their leave.",
+    "aggressive": "Gentlemen, do your posts. Whereupon, Saint-Aignan and Villeroy took their leave."
+   }
+  ],
+  "c05": [
+   {
+    "seg": 0,
+    "t": [
+     48.385,
+     52.345
+    ],
+    "ref": "The ballet began. The effect was more than beautiful.",
+    "mix": "The ballet began. The effect was more than beautiful.",
+    "raw": "The ballet began. The effect was more than beautiful.",
+    "vad": "The ballet began. The effect was more than beautiful.",
+    "personal": "The ballet began. The effect was more than beautiful.",
+    "aggressive": "The ballet began. The effect was more than beautiful."
+   },
+   {
+    "seg": 1,
+    "t": [
+     56.464,
+     65.604
+    ],
+    "ref": "There was something in his carriage which resembled the buoyant movements of an immortal, and he did not dance so much as seemed to soar along.",
+    "mix": "There was something in his carriage which resembled the buoyant movements of an immortal, and he did not dance so much as seemed to soar along.",
+    "raw": "There was something in his carriage which resembled the buoyant movements of an immortal, and he did not dance so much as seemed to soar along.",
+    "vad": "There was something in his carriage which resembled the buoyant movements of an immortal, and he did not dance so much as seemed to soar along.",
+    "personal": "There was something in his carriage which resembled the buoyant movements of an immortal, and he did not dance so much as seemed to soar along.",
+    "aggressive": "There was something in his carriage which resembled the buoyant movements of an immortal, and he did not dance so much as seemed to soar along."
+   },
+   {
+    "seg": 2,
+    "t": [
+     72.667,
+     81.532
+    ],
+    "ref": "When she perceived the young man, she rose like a woman surprised in the midst of ideas she was desirous of concealing from herself.",
+    "mix": "When she perceived the young man, she rose like a woman surprised in the midst of ideas she was desirous of concealing from herself.",
+    "raw": "When she perceived the young man, she rose like a woman surprised in the midst of ideas she was desirous of concealing from herself.",
+    "vad": "When she perceived the young man, she rose like a woman surprised in the midst of ideas she was desirous of concealing from herself.",
+    "personal": "When she perceived the young man, she rose like a woman surprised in the midst of ideas she was desirous of concealing from herself.",
+    "aggressive": "When she perceived the young man, she rose like a woman surprised in the midst of ideas she was desirous of concealing from herself."
+   },
+   {
+    "seg": 3,
+    "t": [
+     85.357,
+     91.997
+    ],
+    "ref": "Upon this, Madame deigned to turn her eyes languishingly towards the Comte, observing.",
+    "mix": "Upon this, Madame deigned to turn her eyes languishingly towards the Comte, observing.",
+    "raw": "Upon this, Madame deined turn her eyes languishingly towards the Comte, observing.",
+    "vad": "Upon this, Madame deigned to turn her eyes languishingly towards the Comte, observing.",
+    "personal": "Upon this, Madame deigned to turn her eyes languishingly towards the Comte, observing.",
+    "aggressive": "Upon this, Madame deigned to turn her eyes languishingly towards the Comte, observing."
+   },
+   {
+    "seg": 4,
+    "t": [
+     101.2,
+     105.92
+    ],
+    "ref": "Not at all. You are, on the contrary, most agreeable to me.",
+    "mix": "Not at all. You are, on the contrary, most agreeable to me.",
+    "raw": "Not at all. You are, on the contrary, most agreeable to me.",
+    "vad": "Not at all. You are, on the contrary, most agreeable to me.",
+    "personal": "Not at all. You are, on the contrary, most agreeable to me.",
+    "aggressive": "Not at all. You are, on the contrary, most agreeable to me."
+   },
+   {
+    "seg": 5,
+    "t": [
+     115.201,
+     119.946
+    ],
+    "ref": "Yes, but perhaps I frightened her. In what way?",
+    "mix": "Yes, but perhaps I frightened her. In what way?",
+    "raw": "Yes, but perhaps I frightened her. In what way?",
+    "vad": "Yes, but perhaps I frightened her. In what way?",
+    "personal": "Yes, but perhaps I frightened her. In what way?",
+    "aggressive": "Yes, but perhaps I frightened her. In what way?"
+   }
+  ],
+  "c06": [
+   {
+    "seg": 0,
+    "t": [
+     0.5,
+     4.375
+    ],
+    "ref": "Did not the dancing amuse you? No.",
+    "mix": "Did not the dancing amuse you? No.",
+    "raw": "Did not the dancing amuse you? No.",
+    "vad": "Did not the dancing amuse you? No.",
+    "personal": "Did not the dancing amuse you? No.",
+    "aggressive": "Did not the dancing amuse you? No."
+   },
+   {
+    "seg": 1,
+    "t": [
+     6.137,
+     13.652
+    ],
+    "ref": "Suddenly, for the purpose of restoring peace and order, Spring, accompanied by his whole court, made his appearance.",
+    "mix": "Suddenly, for the purpose of restoring peace and order, Spring, accompanied by his whole court, made his appearance.",
+    "raw": "Suddenly, for the purpose of restoring peace and order, Spring, accompanied by his whole court, made his appearance.",
+    "vad": "Suddenly, for the purpose of restoring peace and order, Spring, accompanied by his whole court, made his appearance.",
+    "personal": "Suddenly, for the purpose of restoring peace and order, Spring, accompanied by his whole court, made his appearance.",
+    "aggressive": "Suddenly, for the purpose of restoring peace and order, Spring, accompanied by his whole court, made his appearance."
+   },
+   {
+    "seg": 2,
+    "t": [
+     14.37,
+     17.54
+    ],
+    "ref": "You will take them from my private treasure.",
+    "mix": "You will take them from my private treasure.",
+    "raw": "You will take them from my private treasure.",
+    "vad": "You will take them from my private treasure.",
+    "personal": "You will take them from my private treasure.",
+    "aggressive": "You will take them from my private treasure."
+   },
+   {
+    "seg": 3,
+    "t": [
+     18.652,
+     22.397
+    ],
+    "ref": "The king seemed only pleased with every one present.",
+    "mix": "The king seemed only pleased with every one present.",
+    "raw": "The king seemed only pleased with every one present.",
+    "vad": "The king seemed only pleased with every one present.",
+    "personal": "The king seemed only pleased with every one present.",
+    "aggressive": "The king seemed only pleased with every one present."
+   },
+   {
+    "seg": 4,
+    "t": [
+     22.891,
+     32.761
+    ],
+    "ref": "The news circulated with the rapidity of lightning. During its progress, it kindled every variety of coquetry, desire, and wild ambition.",
+    "mix": "The news circulated with the rapidity of lightning. During its progress, it kindled every variety of coquetry, desire, and wild ambition.",
+    "raw": "The news circulated with the rapidity of lightning. During its progress, it kindled every variety of coquetry, desire, and wild ambition.",
+    "vad": "The news circulated with the rapidity of lightning. During its progress, it kindled every variety of coquetry, desire, and wild ambition.",
+    "personal": "The news circulated with the rapidity of lightning. During its progress, it kindled every variety of coquetry, desire, and wild ambition.",
+    "aggressive": "The news circulated with the rapidity of lightning. During its progress, it kindled every variety of coquetry, desire, and wild ambition."
+   },
+   {
+    "seg": 5,
+    "t": [
+     33.423,
+     39.978
+    ],
+    "ref": "Well said, Mademoiselle de Tournachon. I also think a good deal, but I take care.",
+    "mix": "Well said, Mademoiselle de Tournachon. I also think a good deal, but I take care.",
+    "raw": "Well said, Mademoiselle de Tournaychelant. I also think a good deal, but I take care.",
+    "vad": "Well said, Mademoiselle de Tournachon. I also think a good deal, but I take care.",
+    "personal": "Well said, Mademoiselle de Tournachon. I also think a good deal, but I take care.",
+    "aggressive": "Well said, Mademoiselle de Tournaychelant. I also think a good deal, but I take care."
+   },
+   {
+    "seg": 6,
+    "t": [
+     40.51,
+     48.6
+    ],
+    "ref": "To say nothing, said Montalais, so that when Mademoiselle de Tournachon thinks, Athenais is the only one who knows it.",
+    "mix": "To say nothing, said Montalais, so that when Mademoiselle de Tournaycharent thinks Athanase is the only one who knows it.",
+    "raw": "To say nothing,\" said Montalais, \"so that when Mademoiselle de Tournaycharent thinks Athanase is the only one who knows it.\"",
+    "vad": "To say nothing,\" said Montalais, \"so that when Mademoiselle de Tournaycharent thinks Athanase is the only one who knows it.\"",
+    "personal": "To say nothing,\" said Montalais, \"so that when Mademoiselle de Tournaycharent thinks Athanase is the only one who knows it.\"",
+    "aggressive": "To say nothing,\" said Montalais, \"so that when Mademoiselle de Tournaycharent thinks Athanase is the only one who knows it.\""
+   },
+   {
+    "seg": 7,
+    "t": [
+     49.329,
+     54.084
+    ],
+    "ref": "It is necessary, therefore, that he should comply. The king frowned.",
+    "mix": "It is necessary, therefore, that he should comply. The king frowned.",
+    "raw": "It is necessary, therefore, that he should comply. The king frowned.",
+    "vad": "It is necessary, therefore, that he should comply. The king frowned.",
+    "personal": "It is necessary, therefore, that he should comply. The king frowned.",
+    "aggressive": "It is necessary, therefore, that he should comply. The king frowned."
+   },
+   {
+    "seg": 8,
+    "t": [
+     55.541,
+     60.631
+    ],
+    "ref": "Monsieur was the only one who did not understand anything about the matter.",
+    "mix": "Monsieur was the only one who did not understand anything about the matter.",
+    "raw": "Monsieur was the only one who did not understand anything about the matter.",
+    "vad": "Monsieur was the only one who did not understand anything about the matter.",
+    "personal": "Monsieur was the only one who did not understand anything about the matter.",
+    "aggressive": "Monsieur was the only one who did not understand anything about the matter."
+   },
+   {
+    "seg": 9,
+    "t": [
+     62.318,
+     66.733
+    ],
+    "ref": "Good gracious! Has the king any right to interfere in matters of that kind?",
+    "mix": "Good gracious! Has the king any right to interfere in matters of that kind?",
+    "raw": "Good gracious! Has the king any right to interfere in matters of that kind?",
+    "vad": "Good gracious! Has the king any right to interfere in matters of that kind?",
+    "personal": "Good gracious! Has the king any right to interfere in matters of that kind?",
+    "aggressive": "Good gracious! Has the king any right to interfere in matters of that kind?"
+   },
+   {
+    "seg": 10,
+    "t": [
+     67.639,
+     74.159
+    ],
+    "ref": "Far from it, sire. Your Majesty, having given no directions about it, the musicians have retained it.",
+    "mix": "Far from it, sire. Your Majesty, having given no directions about it, the musicians have retained it.",
+    "raw": "Far from it, sire. Your Majesty, having given no directions about it, the musicians have retained it.",
+    "vad": "Far from it, sire. Your Majesty, having given no directions about it, the musicians have retained it.",
+    "personal": "Far from it, sire. Your Majesty, having given no directions about it, the musicians have retained it.",
+    "aggressive": "Far from it, sire. Your Majesty, having given no directions about it, the musicians have retained it."
+   },
+   {
+    "seg": 11,
+    "t": [
+     75.825,
+     80.0
+    ],
+    "ref": "The king, who had from this moment become in reality.",
+    "mix": "The king, who had from this moment become in reality.",
+    "raw": "The king, who had from this moment become in reality.",
+    "vad": "The king, who had from this moment become in reality.",
+    "personal": "The king, who had from this moment become in reality.",
+    "aggressive": "The king, who had from this moment become in reality."
+   }
+  ],
+  "c07": [
+   {
+    "seg": 0,
+    "t": [
+     0.5,
+     5.545
+    ],
+    "ref": "I remember now, and I congratulate myself. Do you love anyone?",
+    "mix": "I remember now, and I congratulate myself. Do you love anyone?",
+    "raw": "I remember now, and I congratulate myself. Do you love anyone?",
+    "vad": "I remember now, and I congratulate myself. Do you love anyone?",
+    "personal": "I remember now, and I congratulate myself. Do you love anyone?",
+    "aggressive": "I remember now, and I congratulate myself. Do you love anyone?"
+   },
+   {
+    "seg": 1,
+    "t": [
+     12.222,
+     16.217
+    ],
+    "ref": "La Valliere is quite a poetess,\" said Tonnay Charente.",
+    "mix": "La Valliere is quite a poetess,\" said Tonnay Charente.",
+    "raw": "La Valliere is quite a poetess,\" said Tonnay Charente.",
+    "vad": "La Valliere is quite a poetess,\" said Tonnay Charente.",
+    "personal": "La Valliere is quite a poetess,\" said Tonnay Charente.",
+    "aggressive": "La Valliere is quite a poetess,\" said Tonnay Charente."
+   },
+   {
+    "seg": 2,
+    "t": [
+     19.467,
+     23.507
+    ],
+    "ref": "I have been here this quarter of an hour,\" replied Levalier.",
+    "mix": "I have been here this quarter of an hour,\" replied Levalier.",
+    "raw": "I have been here this quarter of an hour,\" replied Levalier.",
+    "vad": "I have been here this quarter of an hour,\" replied Levalier.",
+    "personal": "I have been here this quarter of an hour,\" replied Levalier.",
+    "aggressive": "I have been here this quarter of an hour,\" replied Levalier."
+   },
+   {
+    "seg": 3,
+    "t": [
+     28.43,
+     37.255
+    ],
+    "ref": "Oh, I am speaking seriously,\" replied Montalais. \"And my opinion in this case is quite as good as the king's. I suppose, is it not, Louise?\"",
+    "mix": "Oh, I am speaking seriously,\" replied Montalais. \"And my opinion in this case is quite as good as the king's. I suppose, is it not, Louise?\"",
+    "raw": "Oh, I am speaking seriously,\" replied Montalais. \"And my opinion in this case is quite as good as the king's. I suppose, is it not, Louise?\"",
+    "vad": "Oh, I am speaking seriously,\" replied Montalais. \"And my opinion in this case is quite as good as the king's. I suppose, is it not, Louise?\"",
+    "personal": "Oh, I am speaking seriously,\" replied Montalais. \"And my opinion in this case is quite as good as the king's. I suppose, is it not, Louise?\"",
+    "aggressive": "Oh, I am speaking seriously,\" replied Montalais. \"And my opinion in this case is quite as good as the king's. I suppose, is it not, Louise?\""
+   },
+   {
+    "seg": 4,
+    "t": [
+     41.839,
+     53.099
+    ],
+    "ref": "Let us run,\" then said all three. And gracefully lifting up the long skirts of their silk dresses, they lightly ran across the open space between the lake and the thickest covert of the park.",
+    "mix": "Let us run,\" then said all three, and gracefully lifting up the long skirts of their silk dresses, they lightly ran across the open space between the lake and the thickest covert of the park.",
+    "raw": "Let us run,\" then said all three, and gracefully lifting up the long skirts of their silk dresses, they lightly ran across the open space between the lake and the thickest covert of the park.",
+    "vad": "Let us run,\" then said all three, and gracefully lifting up the long skirts of their silk dresses, they lightly ran across the open space between the lake and the thickest covert of the park.",
+    "personal": "Let us run,\" then said all three, and gracefully lifting up the long skirts of their silk dresses, they lightly ran across the open space between the lake and the thickest covert of the park.",
+    "aggressive": "Let us run,\" then said all three, and gracefully lifting up the long skirts of their silk dresses, they lightly ran across the open space between the lake and the thickest covert of the park."
+   },
+   {
+    "seg": 5,
+    "t": [
+     57.042,
+     60.397
+    ],
+    "ref": "Yes, sire, and ready dressed for the ballet.",
+    "mix": "Yes, sire, and ready dressed for the ballet.",
+    "raw": "Yes, sire, and ready dressed for the ballet.",
+    "vad": "Yes, sire, and ready dressed for the ballet.",
+    "personal": "Yes, sire, and ready dressed for the ballet.",
+    "aggressive": "Yes, sire, and ready dressed for the ballet."
+   },
+   {
+    "seg": 6,
+    "t": [
+     65.369,
+     71.629
+    ],
+    "ref": "There cannot be a doubt. He received you kindly, for in fact, you returned without his permission.",
+    "mix": "There cannot be a doubt. He received you kindly, for in fact, you returned without his permission.",
+    "raw": "There cannot be a doubt. He received you kindly, for in fact, you returned without his permission.",
+    "vad": "There cannot be a doubt. He received you kindly, for in fact, you returned without his permission.",
+    "personal": "There cannot be a doubt. He received you kindly, for in fact, you returned without his permission.",
+    "aggressive": "There cannot be a doubt. He received you kindly, for in fact, you returned without his permission."
+   }
+  ],
+  "c08": [
+   {
+    "seg": 0,
+    "t": [
+     0.5,
+     10.615
+    ],
+    "ref": "Forgive me. I hardly know what I am saying. A thousand times, forgive me. Madame was right—quite right. This brutal exile has completely turned my brain.",
+    "mix": "Forgive me. I hardly know what I am saying. A thousand times, forgive me, Madame was right—quite right. This brutal exile has completely turned my brain.",
+    "raw": "Forgive me. I hardly know what I am saying. A thousand times, forgive me. Madame was right. Quite right. This brutal exile has completely turned my brain.",
+    "vad": "Forgive me. I hardly know what I am saying. A thousand times, forgive me. Madame was right—quite right. This brutal exile has completely turned my brain.",
+    "personal": "Forgive me. I hardly know what I am saying. A thousand times, forgive me. Madame was right—quite right. This brutal exile has completely turned my brain.",
+    "aggressive": "Forgive me. I hardly know what I am saying. A thousand times, forgive me. Madame was right. Quite right. This brutal exile has completely turned my brain."
+   },
+   {
+    "seg": 1,
+    "t": [
+     15.377,
+     20.837
+    ],
+    "ref": "She then rose, humming the air to which she was presently going to dance.",
+    "mix": "She then rose, humming the air to which she was presently going to dance.",
+    "raw": "He then rose, humming the air to which she was presently going to dance.",
+    "vad": "She then rose, humming the air to which she was presently going to dance.",
+    "personal": "She then rose, humming the air to which she was presently going to dance.",
+    "aggressive": "He then rose, humming the air to which she was presently going to dance."
+   },
+   {
+    "seg": 2,
+    "t": [
+     26.258,
+     31.368
+    ],
+    "ref": "It is too difficult,\" replied Mademoiselle de Tournachon, laughing loudly.",
+    "mix": "It is too difficult,\" replied Mademoiselle de Tournaychon, laughing loudly.",
+    "raw": "It is too difficult,\" replied Mademoiselle de Tournaychon, laughing loudly.",
+    "vad": "It is too difficult,\" replied Mademoiselle de Tournay-Chauny, laughing loudly.",
+    "personal": "It is too difficult,\" replied Mademoiselle de Tournay-Chauny, laughing loudly.",
+    "aggressive": "It is too difficult,\" replied Mademoiselle de Tournaychon, laughing loudly."
+   },
+   {
+    "seg": 3,
+    "t": [
+     35.83,
+     39.14
+    ],
+    "ref": "The princess inquired, \"No.\"",
+    "mix": "The princess inquired, \"No.\"",
+    "raw": "The princess inquired, \"No.\"",
+    "vad": "The princess inquired, \"No.\"",
+    "personal": "The princess inquired, \"No.\"",
+    "aggressive": "The princess inquired, \"No.\""
+   },
+   {
+    "seg": 4,
+    "t": [
+     42.23,
+     49.69
+    ],
+    "ref": "Quick, quick! Then, among the high reed grass, said Montalais, \"Stoop, Athene! You are so tall.\"",
+    "mix": "Quick, quick! Then, among the high reed grass, said Montalais, \"Stoop, Athene, you are so tall.\"",
+    "raw": "Quick! Quick! Then, among the high reed grass, said Montalais, \"Stoop, Athene, you are so tall.\"",
+    "vad": "Quick, quick! Then, among the high reed grass, said Montalais, \"Stoop, Athene, you are so tall.\"",
+    "personal": "Quick, quick! Then, among the high reed grass, said Montalais, \"Stoop, Athene, you are so tall.\"",
+    "aggressive": "Quick! Quick! Then, among the high reed grass, said Montalais, \"Stoop, Athene, you are so tall.\""
+   },
+   {
+    "seg": 5,
+    "t": [
+     55.102,
+     66.042
+    ],
+    "ref": "Sire,\" he said, \"Your Majesty's most devoted servant approaches to perform a service on this occasion with similar zeal that he has already shown on the field of battle.\"",
+    "mix": "Sire,\" he said, \"Your Majesty's most devoted servant approaches to perform a service on this occasion with similar zeal that he has already shown on the field of battle.\"",
+    "raw": "Sire,\" he said, \"Your Majesty's most devoted servant approaches to perform a service on this occasion with similar zeal that he has already shown on the field of battle.\"",
+    "vad": "Sire,\" he said, \"Your Majesty's most devoted servant approaches to perform a service on this occasion with similar zeal that he has already shown on the field of battle.\"",
+    "personal": "Sire,\" he said, \"Your Majesty's most devoted servant approaches to perform a service on this occasion with similar zeal that he has already shown on the field of battle.\"",
+    "aggressive": "Sire,\" he said, \"Your Majesty's most devoted servant approaches to perform a service on this occasion with similar zeal that he has already shown on the field of battle.\""
+   },
+   {
+    "seg": 6,
+    "t": [
+     69.988,
+     80.0
+    ],
+    "ref": "In fact, the sound of Madame's and the Queen's carriages could be heard in the distance upon the hard, dry ground of the roads, followed by the mountain cavaliers.",
+    "mix": "In fact, the sound of Madame's and the Queen's carriages could be heard in the distance upon the hard, dry ground of the roads, followed by the mounted cavaliers.",
+    "raw": "In fact, the sound of Madame's and the Queen's carriages could be heard in the distance upon the hard, dry ground of the road, followed by the mounted cavaliers.",
+    "vad": "In fact, the sound of Madame's and the Queen's carriages could be heard in the distance upon the hard, dry ground of the roads, followed by the mounted cavaliers.",
+    "personal": "In fact, the sound of Madame's and the Queen's carriages could be heard in the distance upon the hard, dry ground of the roads, followed by the mounted cavaliers.",
+    "aggressive": "In fact, the sound of Madame's and the Queen's carriages could be heard in the distance upon the hard, dry ground of the road, followed by the mounted cavaliers."
+   }
+  ]
+ }
+}
