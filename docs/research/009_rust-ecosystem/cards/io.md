@@ -284,3 +284,37 @@
 5. **未克隆**：iceoryx2（26 MB，判为不用）、HushMic（非 Mac）、objc2 全仓（13 MB，只用 GitHub API 读了两个配置文件）。
 6. **GitHub 搜「AudioServerPlugIn rust」只有 tympan-aspl 一个框架**；带驱动的 Rust 应用只找到 voice-strip、prism、duomic（C++ 驱动）。可能有私有/未标注语言的仓漏网。
 7. 本组未覆盖：rtrb / ringbuf / triple-buffer / seqlock / assert_no_alloc / rtsan（已在 resources/，属「实时零件」组）。
+
+---
+
+## 复核记录（怀疑派 1）
+
+> 2026-10-30 · 怀疑派复核子代理。只读源码、git log、GitHub / crates.io API；没跑 build / 推理，没克隆新仓。
+
+**查了几条**：【源码】行号 46 处（voice-strip 18 · cpal 4 · coreaudio-rs 5 · audio_thread_priority 4 · tympan-aspl 4 · prism 5 · opennc-app 4 · duomic 5 · memmap2 2 · cubeb 3 · 其他 2）；【官方】objc2 三处 URL 行号；crates.io 13 个 crate 的版本/日期/许可证；GitHub 20 个仓的 license / pushed_at / open issues / star；issue 5 条（coreaudio-rs #155、ipc-channel #457 等）。热路径反例搜了 voice-strip 的 IOProc → `AudioProcessor::process` → dsp 链 / VAD / DFN 提交，以及 cpal 输入回调全链。
+
+**改了哪些**：
+1. **cpal 版本错位**（最重要）：卡里读的是 main（`Cargo.toml:3` = 0.19.0 未发布），却按 0.18.2 写结论。xrun / `pending_xrun` 只在 main，0.18.2 tag 没有（API 取 `?ref=v0.18.2` 的 `device.rs` 核过）。已在卡里标注。
+2. cpal「无分配」降级：每次回调都调 `mach_timebase_info`（`coreaudio.rs:76-78`），错误路径构造带 `String` 的 Error（推断会分配）。
+3. coreaudio-rs：`vec.resize` 只在扩容时分配；更准确的说法是「变帧数时必跨库读属性，扩容时才分配」。结论（命门 2 不满足）不变。
+4. 行号更正：`plugin.rs:796-797` → `:797`、`:807`；`rt_mach.rs:112` → `:113`；`macos.rs:195` → `:195-196`。
+5. voice-strip 驱动 IO 路径补上 `MISSING` 计数那一次原子（`:808`）；`unpark` 是系统调用这条从【推断】升为【源码】（作者自注 `vad/src/lib.rs:255-256`）；补了回收队列证据（`engine/src/processor.rs:327-331`、`:350-355`）。
+6. audio_thread_priority 的 MPL「无 Incompatible 声明」从【推断】升为【源码】（全仓 grep 只命中 LICENSE 模板）。
+7. tympan-aspl：`RealtimeContext` 的构造函数是 `pub unsafe fn`，并非「只有框架能构造」。
+8. cubeb：「容量是否预留未查」已查——定长 16 的 ringbuf `try_push`，不分配（`mod.rs:3250-3265`）。
+9. libc 确有 `pthread_set_qos_class_self_np` 绑定（官方源码 URL），推荐表与存疑 4 已更新。
+10. voice-strip 许可证补注：GitHub API 只认出 Apache-2.0，仓内实为 MIT + Apache 双文件，不矛盾。
+
+**核对无误（不改）**：voice-strip shm 协议行号（`shm.rs:138/143/180`、槽 32 帧 × 512）、看门线程 `plugin.rs:352-415`、work interval `rt.rs:243-262/271-275`、time-constraint 10/2/2.6 ms；prism 的 `format!`+`syslog` 反例；opennc 的 `Vec::with_capacity` + `Mutex<VecDeque>` 反例；duomic 在 RT 线程 `open/lseek/mmap` 反例；objc2-audio-toolbox 跳过 `AudioWorkIntervalCreate`（translation-config 第 56-62 行）；所有 crates.io 版本与日期、GitHub license。
+
+**哪些查不了**：
+- `mach_timebase_info` 在 arm64 上是不是真陷入内核（要看 libsyscall 或实测）。
+- `thread-priority` 有没有封装 macOS QoS class（GitHub 代码搜索没命中，也没克隆）。
+- iceoryx2 在 `coreaudiod` 沙箱里能不能用（原卡本来就是推断）。
+- voice-strip 的 `READERS` 换映射协议在 SeqCst 下是否严格正确：我按 SC 全序推了一遍，认为正确，但没做形式验证；另外如果 IO 读者持续重叠，`publish` 可能一直等下去（只影响看门线程，不影响 RT）【推断】。
+
+**对推荐的异议**：
+1. **跨进程环协议两卡打架**：本卡说送音↔推理也「照 voice-strip `shm.rs`」（绝对时间轴 + 分槽序号，读端撕裂即判缺），rtsafe 卡说送音↔推理用「自写 `#[repr(C)]` head/tail SPSC 环」。两种对 D03 的含义不同：head/tail 环要消费端推进 head，推理进程崩了之后生产端看到的是「满」，重启后还要重置 head/tail，必须另加代际号；时间轴环天然「不更新 = 缺 = 送原声」，重启也不需要握手。**建议架构线统一成时间轴环**（至少推理→送音那一路），head/tail SPSC 只用在进程内。
+2. **objc2-core-audio 当首选绑定偏弱**：最后发版 2025-10-04，已超 12 个月；voice-strip 已证明 hal-plugin 只靠 `libc` + 几十行手写 FFI 就够。建议 hal-plugin 首选手写 FFI，objc2-core-audio 降为 io-macos 的备选（命门 3 只算有条件满足）。
+3. cpal 作为原型 / eval 设备枚举的备选仍成立，但要钉在 0.18.2 的行为上写代码，别照 main 的 xrun API 写。
+4. 没发现被漏掉的、更好的 HAL 驱动 Rust 框架：crates.io 搜 "audioserverplugin" 只有 tympan-aspl；搜 workgroup / work interval 也没有现成 crate，「自写 FFI」的判断成立。
