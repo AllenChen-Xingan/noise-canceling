@@ -37,14 +37,14 @@ pub mod text;
 pub mod version;
 
 pub use frame::{BypassReason, Confidence, FrameCtx, SampleClock, SpeakerVerdict, Status};
-pub use latency::{Basis, LatencyItem, LatencyLedger, LATENCY_BUDGET_MS};
+pub use latency::{Basis, LATENCY_BUDGET_MS, LatencyItem, LatencyLedger};
 pub use log::{DecisionEvent, FeedbackKind, SessionHeader, SessionRecord, UserAction};
 pub use memory::{Learner, Overrides, SceneKey, UserProfile};
 pub use model::{Model, ModelError};
 pub use params::{ModelId, ParamError, ParamField, ParamSet, ToneId};
 pub use policy::{
-    Decision, Hysteresis, HysteresisGate, ParamSource, Policy, PolicyInput, Transition, UserControl,
-    TablePolicy, UserSceneChoice, resolve_params,
+    Decision, Hysteresis, HysteresisGate, ParamSource, Policy, PolicyInput, TablePolicy,
+    Transition, UserControl, UserSceneChoice, resolve_params,
 };
 pub use scene::{FineSceneId, SceneLabel, SceneName, UserScene};
 pub use stage::Stage;

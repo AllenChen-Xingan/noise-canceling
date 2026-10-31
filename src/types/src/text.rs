@@ -112,10 +112,34 @@ mod tests {
         assert_eq!(
             got,
             vec![
-                (2, Line::Kv { key: "fmt", value: "1" }),
-                (4, Line::Section { kind: "scene", name: "cafe" }),
-                (5, Line::Kv { key: "floor_db", value: "-12" }),
-                (6, Line::Section { kind: "end", name: "" }),
+                (
+                    2,
+                    Line::Kv {
+                        key: "fmt",
+                        value: "1"
+                    }
+                ),
+                (
+                    4,
+                    Line::Section {
+                        kind: "scene",
+                        name: "cafe"
+                    }
+                ),
+                (
+                    5,
+                    Line::Kv {
+                        key: "floor_db",
+                        value: "-12"
+                    }
+                ),
+                (
+                    6,
+                    Line::Section {
+                        kind: "end",
+                        name: ""
+                    }
+                ),
             ]
         );
     }

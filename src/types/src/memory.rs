@@ -78,7 +78,10 @@ impl UserProfile {
     const HEADER: &'static str = "vdn-profile";
 
     pub fn get(&self, k: SceneKey) -> Option<&Overrides> {
-        self.entries.iter().find(|(key, _)| *key == k).map(|(_, o)| o)
+        self.entries
+            .iter()
+            .find(|(key, _)| *key == k)
+            .map(|(_, o)| o)
     }
 
     /// 改一个场景的覆盖；空覆盖 = 删掉这一条。不自动加版本号（由调用方决定什么时候成一版）。
@@ -173,10 +176,15 @@ impl UserProfile {
                     cur = Some((key, Overrides::default()));
                 }
                 Line::Kv { key, value } => match cur.as_mut() {
-                    None if key == "version" => prof.version = ProfileVersion(text::num(line, value)?),
+                    None if key == "version" => {
+                        prof.version = ProfileVersion(text::num(line, value)?)
+                    }
                     None => return Err(text::err(line, "未知的键")),
                     Some((_, o)) => match key {
-                        "model" => o.model = Some(ModelId::parse(value).ok_or(text::err(line, "未知的模型"))?),
+                        "model" => {
+                            o.model =
+                                Some(ModelId::parse(value).ok_or(text::err(line, "未知的模型"))?)
+                        }
                         "tone" => o.tone = Some(ToneId(text::num(line, value)?)),
                         _ => {
                             let f = ParamField::parse(key).ok_or(text::err(line, "未知的参数"))?;
@@ -270,7 +278,8 @@ mod tests {
         for l in prof.to_text().lines().filter(|l| !l.starts_with('[')) {
             let k = l.split('=').next().unwrap().trim();
             assert!(
-                ["vdn-profile", "version", "model", "tone"].contains(&k) || ParamField::parse(k).is_some(),
+                ["vdn-profile", "version", "model", "tone"].contains(&k)
+                    || ParamField::parse(k).is_some(),
                 "{k}"
             );
         }

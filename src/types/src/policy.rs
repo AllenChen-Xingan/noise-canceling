@@ -288,7 +288,8 @@ impl Policy for TablePolicy {
     fn decide(&mut self, i: &PolicyInput<'_>) -> Decision {
         let switched = self.gate.step(&i.label, i.rate);
         let (u, f) = self.gate.committed();
-        let (user, scene, mut target, mut source) = resolve_params(i.table, i.profile, i.control, u, f);
+        let (user, scene, mut target, mut source) =
+            resolve_params(i.table, i.profile, i.control, u, f);
         if i.control.lock
             && let Some(prev) = self.last
         {
@@ -331,9 +332,11 @@ mod tests {
 
     fn table() -> SceneTable {
         let mut t = SceneTable::default();
-        let mut p = ParamSet::default();
-        p.floor_db = -20.0;
-        p.model = ModelId::FastEnhancerM;
+        let p = ParamSet {
+            floor_db: -20.0,
+            model: ModelId::FastEnhancerM,
+            ..ParamSet::default()
+        };
         t.insert(SceneEntry {
             id: FineSceneId(7),
             name: SceneName::new("cafe+bt").unwrap(),
@@ -361,7 +364,10 @@ mod tests {
         let mut g = HysteresisGate::new(Hysteresis::default());
         for k in 0..40 {
             let fine = if k % 2 == 0 { 7 } else { 8 };
-            assert_eq!(g.step(&label(fine, UserScene::Cafe, k as f64 * 0.5, 0.9), SR), None);
+            assert_eq!(
+                g.step(&label(fine, UserScene::Cafe, k as f64 * 0.5, 0.9), SR),
+                None
+            );
         }
     }
 
@@ -369,7 +375,10 @@ mod tests {
     fn low_confidence_does_not_count() {
         let mut g = HysteresisGate::new(Hysteresis::default());
         for k in 0..20 {
-            assert_eq!(g.step(&label(7, UserScene::Cafe, k as f64 * 0.5, 0.3), SR), None);
+            assert_eq!(
+                g.step(&label(7, UserScene::Cafe, k as f64 * 0.5, 0.3), SR),
+                None
+            );
         }
     }
 
@@ -388,10 +397,17 @@ mod tests {
     fn layering_and_user_priority() {
         let t = table();
         let mut prof = UserProfile::default();
-        prof.remember_knob(crate::memory::SceneKey::Fine(FineSceneId(7)), ParamField::Strength, 0.8);
+        prof.remember_knob(
+            crate::memory::SceneKey::Fine(FineSceneId(7)),
+            ParamField::Strength,
+            0.8,
+        );
         let ctl = UserControl::default();
         let (_, _, p, src) = resolve_params(&t, &prof, &ctl, UserScene::Cafe, FineSceneId(7));
-        assert_eq!((p.floor_db, p.strength, src), (-20.0, 0.8, ParamSource::Profile));
+        assert_eq!(
+            (p.floor_db, p.strength, src),
+            (-20.0, 0.8, ParamSource::Profile)
+        );
 
         let mut ctl = UserControl::default();
         ctl.knobs.set(ParamField::FloorDb, Some(-6.0));
@@ -404,7 +420,10 @@ mod tests {
             ..Default::default()
         };
         let (u, f, p, _) = resolve_params(&t, &prof, &ctl, UserScene::Cafe, FineSceneId(7));
-        assert_eq!((u, f, p.model), (UserScene::Quiet, FineSceneId::UNKNOWN, ModelId::Gtcrn));
+        assert_eq!(
+            (u, f, p.model),
+            (UserScene::Quiet, FineSceneId::UNKNOWN, ModelId::Gtcrn)
+        );
     }
 
     #[test]
@@ -427,7 +446,13 @@ mod tests {
         }
         // 第一次：默认参数（ParamsApplied）；2 s 时换到 7（SceneCommitted + ParamsApplied）
         assert_eq!(log.len(), 3);
-        assert!(matches!(log[1], DecisionEvent::SceneCommitted { to: FineSceneId(7), .. }));
+        assert!(matches!(
+            log[1],
+            DecisionEvent::SceneCommitted {
+                to: FineSceneId(7),
+                ..
+            }
+        ));
 
         ctl.lock = true;
         for k in 5..30 {

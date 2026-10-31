@@ -33,7 +33,10 @@ pub enum FeedbackKind {
 pub enum UserAction {
     DenoiseOn,
     DenoiseOff,
-    Knob { field: ParamField, value: f32 },
+    Knob {
+        field: ParamField,
+        value: f32,
+    },
     ChooseScene(UserSceneChoice),
     Lock,
     Unlock,
@@ -99,7 +102,13 @@ impl DecisionEvent {
     pub fn to_line(&self) -> String {
         let mut s = format!("{} ", self.at().0);
         let _ = match *self {
-            DecisionEvent::SceneCommitted { from, to, user, confidence, .. } => write!(
+            DecisionEvent::SceneCommitted {
+                from,
+                to,
+                user,
+                confidence,
+                ..
+            } => write!(
                 s,
                 "scene {} {} {} {}",
                 from.0,
@@ -107,7 +116,12 @@ impl DecisionEvent {
                 user,
                 text::f32_str(confidence.get())
             ),
-            DecisionEvent::ParamsApplied { scene, source, params, .. } => {
+            DecisionEvent::ParamsApplied {
+                scene,
+                source,
+                params,
+                ..
+            } => {
                 let _ = write!(
                     s,
                     "params {} {} {} {}",
@@ -141,7 +155,9 @@ impl DecisionEvent {
             DecisionEvent::Bypass { reason, hops, .. } => {
                 write!(s, "bypass {} {}", bypass_str(reason), hops)
             }
-            DecisionEvent::TableChanged { version, id, .. } => write!(s, "table {} {}", version.0, id),
+            DecisionEvent::TableChanged { version, id, .. } => {
+                write!(s, "table {} {}", version.0, id)
+            }
             DecisionEvent::ProfileChanged { version, id, .. } => {
                 write!(s, "profile {} {}", version.0, id)
             }
@@ -173,7 +189,12 @@ impl DecisionEvent {
                 for f in ParamField::ALL {
                     params.set(f, text::num(line, next()?)?);
                 }
-                DecisionEvent::ParamsApplied { at, scene, source, params }
+                DecisionEvent::ParamsApplied {
+                    at,
+                    scene,
+                    source,
+                    params,
+                }
             }
             "user" => {
                 let action = match next()? {
@@ -353,9 +374,11 @@ mod tests {
 
     fn every_kind() -> Vec<DecisionEvent> {
         let at = SampleClock(96_000);
-        let mut p = ParamSet::default();
-        p.floor_db = -18.5;
-        p.model = ModelId::FastEnhancerM;
+        let p = ParamSet {
+            floor_db: -18.5,
+            model: ModelId::FastEnhancerM,
+            ..ParamSet::default()
+        };
         let mut v = vec![
             DecisionEvent::SceneCommitted {
                 at,

@@ -232,7 +232,11 @@ impl SceneTable {
         Ok(t)
     }
 
-    fn close(&mut self, sec: &Section, pending: &mut Vec<(usize, &str, &str)>) -> Result<(), TableError> {
+    fn close(
+        &mut self,
+        sec: &Section,
+        pending: &mut Vec<(usize, &str, &str)>,
+    ) -> Result<(), TableError> {
         let kvs = core::mem::take(pending);
         match *sec {
             Section::Top => Ok(()),
@@ -249,10 +253,13 @@ impl SceneTable {
                 for (line, k, v) in &kvs {
                     match *k {
                         "name" => {
-                            name = Some(SceneName::new(v).ok_or(text::err(*line, "细场景名不合法"))?)
+                            name =
+                                Some(SceneName::new(v).ok_or(text::err(*line, "细场景名不合法"))?)
                         }
                         "user" => {
-                            user = Some(UserScene::parse(v).ok_or(text::err(*line, "未知的用户层场景"))?)
+                            user = Some(
+                                UserScene::parse(v).ok_or(text::err(*line, "未知的用户层场景"))?,
+                            )
                         }
                         _ => {}
                     }
@@ -290,7 +297,12 @@ pub(crate) fn write_params(s: &mut String, p: &ParamSet) {
     }
 }
 
-pub(crate) fn apply_param(p: &mut ParamSet, line: usize, k: &str, v: &str) -> Result<(), TextError> {
+pub(crate) fn apply_param(
+    p: &mut ParamSet,
+    line: usize,
+    k: &str,
+    v: &str,
+) -> Result<(), TextError> {
     match k {
         "model" => p.model = ModelId::parse(v).ok_or(text::err(line, "未知的模型"))?,
         "tone" => p.tone = ToneId(text::num(line, v)?),
@@ -312,8 +324,10 @@ mod tests {
             version: TableVersion(3),
             ..Default::default()
         };
-        let mut cafe = ParamSet::default();
-        cafe.floor_db = -18.0;
+        let cafe = ParamSet {
+            floor_db: -18.0,
+            ..ParamSet::default()
+        };
         t.set_user_params(UserScene::Cafe, cafe).unwrap();
         let mut p = cafe;
         p.model = ModelId::FastEnhancerM;
@@ -356,9 +370,15 @@ mod tests {
             TableError::DuplicateId(FineSceneId(3))
         );
         let zero = "vdn-scene-table = 1\n[fine 0]\nname = a\nuser = quiet\n";
-        assert_eq!(SceneTable::from_text(zero).unwrap_err(), TableError::ReservedId);
+        assert_eq!(
+            SceneTable::from_text(zero).unwrap_err(),
+            TableError::ReservedId
+        );
         let oob = "vdn-scene-table = 1\n[user quiet]\nfloor_db = 5\n";
-        assert!(matches!(SceneTable::from_text(oob), Err(TableError::Param(_))));
+        assert!(matches!(
+            SceneTable::from_text(oob),
+            Err(TableError::Param(_))
+        ));
     }
 
     #[test]

@@ -131,14 +131,14 @@ impl Default for ParamSet {
 
 impl ParamSet {
     pub const DEFAULT: ParamSet = ParamSet {
-            model: ModelId::Gtcrn,
-            tone: ToneId(0),
-            strength: 1.0,
-            floor_db: -12.0,
-            open_db: -6.0,
-            detect_db: 9.0,
-            release_s: 0.3,
-            hangover_s: 0.15,
+        model: ModelId::Gtcrn,
+        tone: ToneId(0),
+        strength: 1.0,
+        floor_db: -12.0,
+        open_db: -6.0,
+        detect_db: 9.0,
+        release_s: 0.3,
+        hangover_s: 0.15,
     };
 
     pub fn get(&self, f: ParamField) -> f32 {
@@ -200,8 +200,10 @@ mod tests {
 
     #[test]
     fn validate_rejects_out_of_range_and_nan() {
-        let mut p = ParamSet::default();
-        p.floor_db = 3.0;
+        let mut p = ParamSet {
+            floor_db: 3.0,
+            ..ParamSet::default()
+        };
         assert_eq!(p.validate().unwrap_err().field, ParamField::FloorDb);
         p.floor_db = -12.0;
         p.strength = f32::NAN;
@@ -211,9 +213,11 @@ mod tests {
     #[test]
     fn glide_converges_and_switches_discrete_at_once() {
         let mut cur = ParamSet::default();
-        let mut tgt = ParamSet::default();
-        tgt.floor_db = -24.0;
-        tgt.model = ModelId::FastEnhancerM;
+        let tgt = ParamSet {
+            floor_db: -24.0,
+            model: ModelId::FastEnhancerM,
+            ..ParamSet::default()
+        };
         cur.glide_toward(&tgt, 0.5);
         assert_eq!(cur.floor_db, -18.0);
         assert_eq!(cur.model, ModelId::FastEnhancerM);

@@ -46,7 +46,13 @@ pub struct LatencyItem {
 }
 
 impl LatencyItem {
-    pub const fn new(component: &'static str, samples: u32, rate: u32, basis: Basis, note: &'static str) -> Self {
+    pub const fn new(
+        component: &'static str,
+        samples: u32,
+        rate: u32,
+        basis: Basis,
+        note: &'static str,
+    ) -> Self {
         Self {
             component,
             samples,
@@ -93,7 +99,11 @@ impl LatencyLedger {
 
     /// 合计：并入别项的不重复计。
     pub fn total_ms(&self) -> f64 {
-        self.items.iter().filter(|i| i.absorbed_by.is_none()).map(LatencyItem::ms).sum()
+        self.items
+            .iter()
+            .filter(|i| i.absorbed_by.is_none())
+            .map(LatencyItem::ms)
+            .sum()
     }
 
     /// 逐项硬加（不认任何「同时发生」）：最保守的上界。
@@ -107,8 +117,12 @@ impl LatencyLedger {
             .items
             .iter()
             .filter(|i| {
-                i.absorbed_by
-                    .is_some_and(|c| !self.items.iter().any(|j| j.component == c && j.absorbed_by.is_none()))
+                i.absorbed_by.is_some_and(|c| {
+                    !self
+                        .items
+                        .iter()
+                        .any(|j| j.component == c && j.absorbed_by.is_none())
+                })
             })
             .map(LatencyItem::ms)
             .sum();
@@ -118,7 +132,8 @@ impl LatencyLedger {
 
     /// Markdown 表，测试失败时打印、也可贴进文档。
     pub fn render(&self) -> String {
-        let mut s = String::from("| 部件 | 样本 @ 采样率 | ms | 依据 | 备注 |\n|---|---|---|---|---|\n");
+        let mut s =
+            String::from("| 部件 | 样本 @ 采样率 | ms | 依据 | 备注 |\n|---|---|---|---|---|\n");
         for i in &self.items {
             let ms = match i.absorbed_by {
                 Some(c) => format!("（{:.2}，并入 {c}）", i.ms()),
@@ -153,14 +168,44 @@ impl LatencyLedger {
 pub fn planned_platform() -> [LatencyItem; 5] {
     const IO: u32 = 48_000;
     [
-        LatencyItem::new("resample-down", 96, IO, Basis::Budget, "48→16 kHz，目标每跳 ≤ 2 ms（009）"),
-        LatencyItem::new("resample-up", 96, IO, Basis::Budget, "16→48 kHz，目标每跳 ≤ 2 ms（009）"),
+        LatencyItem::new(
+            "resample-down",
+            96,
+            IO,
+            Basis::Budget,
+            "48→16 kHz，目标每跳 ≤ 2 ms（009）",
+        ),
+        LatencyItem::new(
+            "resample-up",
+            96,
+            IO,
+            Basis::Budget,
+            "16→48 kHz，目标每跳 ≤ 2 ms（009）",
+        ),
         LatencyItem {
             absorbed_by: Some("hop-buffer"),
-            ..LatencyItem::new("io-input", 256, IO, Basis::Budget, "256 帧；整除并对齐模型 hop 时与攒 hop 同时发生")
+            ..LatencyItem::new(
+                "io-input",
+                256,
+                IO,
+                Basis::Budget,
+                "256 帧；整除并对齐模型 hop 时与攒 hop 同时发生",
+            )
         },
-        LatencyItem::new("ipc-ring", 144, IO, Basis::Budget, "跨进程环余量 ≤ 3 ms（009）"),
-        LatencyItem::new("hal-output", 128, IO, Basis::Budget, "HAL 传输余量 128 帧（009）"),
+        LatencyItem::new(
+            "ipc-ring",
+            144,
+            IO,
+            Basis::Budget,
+            "跨进程环余量 ≤ 3 ms（009）",
+        ),
+        LatencyItem::new(
+            "hal-output",
+            128,
+            IO,
+            Basis::Budget,
+            "HAL 传输余量 128 帧（009）",
+        ),
     ]
 }
 
@@ -171,8 +216,14 @@ mod tests {
     #[test]
     fn ms_and_totals() {
         let mut l = LatencyLedger::new();
-        l.push(LatencyItem::new("hop-buffer", 256, 16_000, Basis::Declared, ""))
-            .push(LatencyItem::new("model", 256, 16_000, Basis::Declared, ""));
+        l.push(LatencyItem::new(
+            "hop-buffer",
+            256,
+            16_000,
+            Basis::Declared,
+            "",
+        ))
+        .push(LatencyItem::new("model", 256, 16_000, Basis::Declared, ""));
         assert_eq!(l.total_ms(), 32.0);
         assert_eq!(l.check(LATENCY_BUDGET_MS), Ok(32.0));
         assert!(l.check(30.0).is_err());
@@ -184,7 +235,13 @@ mod tests {
         l.extend(planned_platform());
         // hop-buffer 不在账上：io-input 的「并入」不成立，按硬加
         assert!((l.check(100.0).unwrap() - l.naive_total_ms()).abs() < 1e-9);
-        l.push(LatencyItem::new("hop-buffer", 256, 16_000, Basis::Declared, ""));
+        l.push(LatencyItem::new(
+            "hop-buffer",
+            256,
+            16_000,
+            Basis::Declared,
+            "",
+        ));
         assert!(l.check(100.0).unwrap() < l.naive_total_ms());
     }
 
