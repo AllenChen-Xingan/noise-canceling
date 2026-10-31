@@ -8,29 +8,39 @@ rust-version.workspace = true
 publish.workspace = true
 
 [features]
-default = ["onnx", "offline"]
-# 声纹模型（ort）。关掉后只剩 VAD、包络、门控、fbank、注册器，可用假声纹测
+# 默认什么都不带：核心只依赖 dsp + earshot + realfft（规约 §2.2 规则 1）
+default = []
+# 声纹模型（ort）。过渡期例外：拆出推理后端 crate 后移走（同 vdn-models 的 ort 例外）
 onnx = ["dep:ort"]
-# 离线实验命令行 vdn-speaker（读写 WAV、跑 GTCRN）
+# 离线实验命令行 vdn-speaker（读写 WAV、跑 GTCRN）。待迁移到 vdn-cli / vdn-eval（规约 §2.1 离线层）
 offline = ["onnx", "dep:vdn-engine", "dep:vdn-models", "dep:hound", "dep:serde_json"]
 
 [dependencies]
+# 本 crate 新引入的依赖
 earshot = "=1.2.2"
-realfft = "3.5"
-vdn-dsp = { path = "../dsp" }
-ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "download-binaries", "tls-native", "copy-dylibs", "api-31"], optional = true }
-vdn-engine = { path = "../engine", optional = true }
-vdn-models = { path = "../models", optional = true }
-hound = { version = "3.5", optional = true }
-serde_json = { version = "1", optional = true }
+# 以下沿用 workspace 的唯一一份钉
+realfft.workspace = true
+vdn-dsp.workspace = true
+ort = { workspace = true, optional = true }
+vdn-engine = { workspace = true, optional = true }
+vdn-models = { workspace = true, optional = true }
+hound = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
-assert_no_alloc = "1.1"
+assert_no_alloc.workspace = true
 
 [[bin]]
 name = "vdn-speaker"
 path = "src/bin/vdn-speaker.rs"
 required-features = ["offline"]
+
+# 机读正本（规约 §5.4）：核心档；实时 Stage（envelope / gate / vad）跑在降噪线程，按 B 档要求写
+[package.metadata.vdn]
+tier = "core"
+unsafe = false
+forbid = ["hound", "serde", "serde_json", "vdn-engine", "vdn-models", "cpal"]
+forbid_note = "以上只允许经 offline feature 进入（离线实验命令行）；ort 只经 onnx feature"
 
 [lints]
 workspace = true
