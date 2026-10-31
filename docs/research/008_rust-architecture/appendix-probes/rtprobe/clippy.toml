@@ -1,0 +1,5 @@
+disallowed-methods = [
+  { path = "alloc::vec::Vec::push", reason = "RT path: no growth; use pre-sized buffers" },
+  { path = "std::sync::Mutex::lock", reason = "RT path: no blocking locks" },
+]
+disallowed-types = [ { path = "std::sync::Mutex", reason = "RT path: no blocking locks" } ]

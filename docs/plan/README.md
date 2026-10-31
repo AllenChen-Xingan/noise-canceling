@@ -13,3 +13,4 @@
 | 002 | 2026-10-30 | 项目路线图（阶段 A–C · M0–M4 · 发布，统一编号） → `002_roadmap.md` |
 | — | 2026-10-30 | 实时语音降噪与声音自然的前沿全景：哪些能被我们用上 → 取舍卡见 `docs/research/006_sota-landscape/decision.md` |
 | — | 2026-10-30 | Rust 生态：每个模块的推荐依赖与可学设计 → 取舍卡见 `docs/research/009_rust-ecosystem/decision.md` |
+| — | 2026-10-30 | Rust 架构（规约 `specs/rust/architecture.md` + ADR 001–005） → 取舍卡见 `docs/research/008_rust-architecture/decision.md` |
