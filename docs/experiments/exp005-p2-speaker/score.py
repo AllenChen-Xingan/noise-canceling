@@ -138,6 +138,7 @@ def cmd_score(tag=""):
         own = sf.read(str(SRC / f"{cid}_owner.wav"), dtype="float32")[0]
         itf = sf.read(str(SRC / f"{cid}_interf.wav"), dtype="float32")[0]
         log = json.loads((OUT / f"{cid}.log{tag}.json").read_text())
+        WIN = log["judge"]["window_s"]
         ys = {v: sf.read(str(OUT / f"{cid}.{v}{tag if v == 'personal' else ''}.wav"), dtype="float32")[0] for v in VERS}
         n = len(ys["raw"])
         own, itf = own[:n], itf[:n]
@@ -167,7 +168,7 @@ def cmd_score(tag=""):
         vc = {"owner_win": {"owner": 0, "others": 0, "unknown": 0}, "interf_win": {"owner": 0, "others": 0, "unknown": 0}}
         false_other = 0
         for l in log["judge_logs"]:
-            a, b = int((l["t"] - 1.5) * SR), int(l["t"] * SR)
+            a, b = int((l["t"] - WIN) * SR), int(l["t"] * SR)
             fo, fi = om[max(0, a):b].mean(), im[max(0, a):b].mean()
             if l["class"] == "others" and fo > 0.3:
                 false_other += 1

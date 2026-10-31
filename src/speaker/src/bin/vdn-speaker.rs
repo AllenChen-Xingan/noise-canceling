@@ -188,7 +188,19 @@ fn cmd_run(args: &[String]) -> R<()> {
     let (dry, wet) = (&dry[..n_hops * HOP], &wet[..n_hops * HOP]);
 
     // 2) 判断回路：喂降噪输出 + 逐帧 VAD（与 VadEnvelopeStage 同一个 VAD 口径），按实测计算时间延后生效
-    let jp = JudgeParams::default();
+    let mut jp = JudgeParams::default();
+    if let Some(v) = arg(args, "--win") {
+        jp.window_s = v.parse()?;
+    }
+    if let Some(v) = arg(args, "--judge-hop") {
+        jp.hop_s = v.parse()?;
+    }
+    if let Some(v) = arg(args, "--owner-hi") {
+        jp.owner_hi = v.parse()?;
+    }
+    if let Some(v) = arg(args, "--others-lo") {
+        jp.others_lo = v.parse()?;
+    }
     let mut vad = vdn_speaker::vad::Vad::new();
     let mut vad_probs = Vec::with_capacity(n_hops);
     let mut verdicts = vec![SpeakerVerdict::UNKNOWN; n_hops + 1];
