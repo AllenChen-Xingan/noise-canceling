@@ -834,6 +834,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "vdn-polish"
+version = "0.1.0"
+dependencies = [
+ "assert_no_alloc",
+ "hound",
+ "realfft",
+ "vdn-dsp",
+]
+
+[[package]]
+name = "vdn-scene"
+version = "0.1.0"
+dependencies = [
+ "assert_no_alloc",
+ "hound",
+ "vdn-dsp",
+ "vdn-polish",
+]
+
+[[package]]
 name = "webpki-root-certs"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
