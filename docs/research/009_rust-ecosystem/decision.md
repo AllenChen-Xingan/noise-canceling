@@ -15,7 +15,7 @@
 ### 1. 音频 I/O 与线程（io-macos · hal-plugin）
 | 需求 | 首选 | 备选 | 理由 · 出处 |
 |---|---|---|---|
-| 麦克风采集 | **抄思路**：自写 HAL IOProc（`AudioDeviceCreateIOProcID`），手写 FFI | cpal 0.18.2（只用于原型、设备枚举、eval） | cpal 底层 coreaudio-rs 在帧数变化时在实时线程读属性并 `Vec::resize`（`resources/coreaudio-rs/src/audio_unit/render_callback.rs:622,649`）；cpal 每次回调调 `mach_timebase_info`（`resources/cpal/src/host/coreaudio/…:76-78`，复核降级）。IOProc 直接给设备 sample/host time，便于对齐时间轴 |
+| 麦克风采集 | **抄思路**：自写 HAL IOProc（`AudioDeviceCreateIOProcID`），手写 FFI | cpal 0.18.2（只用于原型、设备枚举、eval） | cpal 底层 coreaudio-rs 在帧数变化时在实时线程读属性并 `Vec::resize`（`resources/coreaudio-rs/src/audio_unit/render_callback.rs:622,649`）；cpal 每次回调调 `mach_timebase_info`（`resources/cpal/src/host/coreaudio.rs:76-78`，读的是 main 分支，0.18.2 行为以 tag 为准）。IOProc 直接给设备 sample/host time，便于对齐时间轴 |
 | 虚拟麦克风 HAL 驱动 | **抄思路**：照 voice-strip `vdev-macos-driver` 自写 Rust cdylib，只依赖 libc | tympan-aspl 0.1.0（0 star、只发过一版） | voice-strip 证明纯 Rust 驱动可行，IO 路径只有原子加减 + 一次读环（`resources/voice-strip/crates/vdev-macos-driver/src/plugin.rs:771-810`）。objc2-core-audio 最后发版 2025-10-04，已超 12 个月，复核建议手写 FFI |
 | 跨进程音频共享内存 | **抄思路**：`shm_open + mmap` + 固定 `#[repr(C)]` 全原子布局，用 voice-strip 的「时间轴 + 分槽序号」环 | memmap2 0.9.12 只管映射 | 见下文「设计 1」。iceoryx2 太重（macOS 只是 tier 2），shared_memory 2022 后不发版【API】 |
 | 共享内存安全交接（发布必需） | **抄思路**：LaunchDaemon 登记 Mach 服务，用 `xpc_shmem_create` 把匿名共享区交给驱动；只放行 `_coreaudiod` 和本用户 | — | GPL-3.0 先例 `resources/m-audio-fast-track-ultra-macos-driver`（gaps.md G1）；voice-strip 用 0644 文件，自注「只够 spike」（`shm.rs:7-10`） |

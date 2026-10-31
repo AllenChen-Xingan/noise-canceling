@@ -1,86 +1,29 @@
 # 两类来源 · Rust 生态：每个模块用哪个依赖、学谁的设计
 
-> 2026-10-30。按**谁积累的**分尽：自己积累的、别人积累的。
-> **两类进来都问同一句：它今天还算数吗？**
->
-> ⚠️ 「都没有所以自己跑」不在这里——**那不是来源，是做法**，见 `gap.md` 的「它们没做的」。
->
-> ⚠️ 下面的市场与站点**会变**，用前核一眼；名字对不上就搜同类。**方法不变，名单会老。**
+> 2026-10-30 rusteco。逐项目的核查表在 `cards/`，本页只登记「从哪来、还算不算数」。
 
----
+## 一、自有积累
 
-## 一、自有积累 —— 可照搬，先确认权利与时效
-
-自家旧项目、老代码、团队规约、你自己写过的东西。
-
-### 怎么查
-
-**先跑一把**：`bash skills/aias-meta-research/scripts/scan-own.sh "<关键词>"`
-——一次扫完本机项目、提交历史、过往对话记录，按最后改动时间排。
-
-| 去哪 | 怎么翻 |
-|---|---|
-| **过去的项目目录** | 直接看。做过类似的事没有？哪一版跑通过？ |
-| **自己的提交历史** | `git log --oneline --all` · `git log --author=<你>` ——**代码记做成什么样，提交记当时为什么这么定** |
-| **过往对话记录** | 记忆和现实对不上时，去翻当时的讨论——**文档说 A、代码做了 B、你记得是 C，谁都别直接信** |
-| **团队的仓库与规约** | 别人踩过的坑，规约里往往留着痕迹 |
-| **自己写过的文档** | 笔记、总结、发过的文章 |
-
-### 登记
-
-| 是什么 | 在哪 | 还算数吗 | 判据 |
-|---|---|---|---|
-| | `resources/…` | 算 / 不算了 | 例：生产环境跑通过 ／ 规约可能过时 |
-
-⚠️ **不自动可信**。同是自家的东西，判决可能相反：
-「这个规约可能过时了，可以参考，但不能完全从它出发」vs「这个我反复测试过、生产跑通了，尽量复用」。
-
-⚠️ **你三个月前写的东西，和陌生人写的东西，享受同一套审查。区别只在于——你有权照搬它。**
-
----
-
-## 二、他人积累 —— 只读借鉴，先查协议
-
-### 查四类，用同一套方法
-
-**换对象，方法不变**——都是同一个决策点、同一套派活四件事（见 `assign.md`）。
-
-| 查什么 | 查什么问题 | 去哪查 |
+| 来源 | 还算数吗 | 用在哪 |
 |---|---|---|
-| **技能生态** | 这件事有没有人做成过技能？ | 各家插件市场与技能仓库；搜 `awesome-<你的领域>` 一类的清单仓 |
-| **命令行工具** | 有哪些硬工具，用哪个？ | 三大分发市场：**Homebrew**（Mac）· **npm**（JS，四百万包）· **PyPI**（Python，八十多万项目）。Windows 看 **Scoop** / **winget** |
-| **模型** | 这个活该用哪个模型？ | 公开评测榜单与各家技术报告。**要多模态、要长上下文，就得专门看那一栏** |
-| **别人的项目** | 源码 · 提交历史 · 放弃过什么 | 代码托管平台（GitHub / GitLab / 国内平台）。**浅克隆到参考区再读**，别在网页上翻 |
+| `docs/plan/003_tech-design.md`（两进程架构、engine 接口、离线实时同一份代码）| 算数（2026-10-30）| 每个模块的需求清单 |
+| `docs/plan/001_decisions-20261029-b1.md` D03 / D04 / D31 / D32 / D33 | 算数 | 三条命门 |
+| p1 的 exp004 实测（ort rc.15 跑 GTCRN 每帧 0 次分配、FE-M 每帧 7 次、CoreML 坑）| 算数，本机实测 | decision.md §一.4 |
+| 003 号调研 `docs/research/003_mac-audio-pipeline/`（BlackHole、libASPL 等 C/C++ 对照）| 算数 | io 组对照 |
 
-**取材**：`bash skills/aias-meta-research/scripts/clone.sh <url>`（要挖提交历史加 `-d 200`）
+## 二、他人积累（全部只读借鉴，铁律 3）
 
-### 查模型这一栏，多问三句
+本轮新浅克隆进主目录 `resources/`（单仓均 < 100 MB）：
+- io：voice-strip · tympan-aspl · prism · duomic · opennc-app · cubeb-coreaudio-rs · memmap2-rs · m-audio-fast-track-ultra-macos-driver
+- rtsafe：ringbuf · basedrop · triple-buffer · arc-swap · rust-assert-no-alloc · nice-assert-no-alloc · rtsan-standalone-rs · no_denormals · atomic_float · crossbeam · seqlock
+- dsp：realfft · RustFFT · sonora · biquad-rs · ebur128 · accelerate-rs · dasp
+- infer：ort · tract
+- speaker：pyannote-rs · kaldi-native-fbank · kaldi-native-fbank-rs · kaldi-fbank · earshot · silero-findit · voice_activity_detector · speakrs · sherpa-onnx
+- arch：nih-plug · Firewheel · clack · kira
+- tooling：cargo-deny · loom · approx · gungraun · cargo-dist
 
-榜单也是他人积累，**同样要判时效、判来路**：
+此前已有：cpal · coreaudio-rs · rtrb · rubato · audio_thread_priority · nnnoiseless · biglinux-gtcrn · DeepFilterNet · webrtc-audio-processing · fastenhancer · wespeaker · 3D-Speaker。
 
-- **谁做的榜**？做榜的人和被测的模型有没有利害关系？
-- **什么时候的**？半年前的榜单在这个行当里基本等于过期。
-- **测的是不是你要的那件事**？综合分高，不代表你这一类任务上强。
+只用 API / 官方文档、没克隆的：objc2 家族、iceoryx2、ipc-channel、shared_memory、pipewire-rs、candle、burn、wonnx、hound、symphonia、fundsp、knyst、glicol、rodio、oddio、Meadowlark、cargo-about、nextest、criterion、divan、cargo-packager、cargo-auditable、cargo-machete、proptest、insta 等（各卡标「浅读」）。
 
-**最后一句最要紧**：能自己拿三五个真实任务试一遍，胜过读十份榜单。
-
-### 登记
-
-| 是什么 | 在哪 | 协议 | 角色 | 读多深 | 还活着吗 |
-|---|---|---|---|---|---|
-| | `resources/…` | MIT / Apache / GPL… | 要比的 / 要学的 / 零件 | 逐条核查 / 只读架构 / 一两行 | 最近提交时间 |
-
-⚠️ **读懂 → 自己写，绝不复制粘贴。** GPL / AGPL 只参考不链接。
-⚠️ **协议不只回答「能不能用」，还决定「能读到哪一步」。**
-
----
-
-## 两类都不算数时
-
-那不是失败，那是**下一步的入口**：确认了没有，才该去跑实验。
-接着填 `gap.md` 的「它们没做的」——**「压根没有」是查完之后的结果，不是时间判断。**
-
-## 最后
-
-**读，是复用别人的；跑，是长出你自己的。** 这一份只管前半——材料从哪来；
-后半在 `gap.md` 与 `decision.md`。
+**今天还算数吗**：维护日期都是 2026-10-30 当日从 GitHub / crates.io API 取的；近 12 个月无发版的已在卡里标出（RustFFT、hound、no_denormals、basedrop、rtsan-standalone、assert_no_alloc、objc2-core-audio、divan、loom），归 decision.md 待人拍板 1。
