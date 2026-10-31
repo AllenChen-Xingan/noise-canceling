@@ -18,3 +18,8 @@ jobs:
           cargo fmt --all --check
           cargo clippy --workspace --all-targets -- -D warnings
           cargo test --workspace
+      - name: eval ci
+        # CI 层评测：纯 DSP、确定性、无模型权重；回归集 L3 不过 / 比冻结基线差 / 探针没抓住 → 失败（exp007）
+        run: |
+          if [ ! -f src/eval/Cargo.toml ]; then echo "no vdn-eval yet, skip"; exit 0; fi
+          cargo run -p xtask -- eval ci

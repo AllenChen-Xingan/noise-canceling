@@ -39,6 +39,7 @@
 | `vdn-engine`（`src/engine/`） | 逐帧调度 + 三件保命、故障注入、离线驱动、延迟账汇总（`latency_ledger`） | AI 写（p1；align 收尾） | 输入：dsp 积木 + 任一 `Model`；被 cli 用。不认识具体模型、不链接 ONNX Runtime |
 | `vdn-models`（`src/models/`） | 模型适配器 GTCRN、FastEnhancer-M（ort 单线程 CPU）、`AnyModel`、各模型声明的 hop 与延迟 | AI 写（p1；align 收尾） | 输入：模型权重（仓外）；实现 types 的 `Model`；被 cli 用 |
 | `vdn-cli`（`src/cli/`，可执行 `vdn`） | 命令行 `denoise` / `bench`，WAV 读写 | AI 写（p1） | 输入：WAV + 模型权重；产出降噪 WAV 与计时 JSON（评测报告的原料） |
+| `vdn-eval`（`src/eval/`，可执行 `vdn-eval`） | 评测：verifier（CI 层纯 DSP 16 条 · QA 层 ASR / DNSMOS）、任务集（回归 · 能力 · 防作弊探针，`src/eval/suite/`）、定标（人耳答卷 → L0–L3，`suite/levels.json`）、报告（JSON + Markdown + 抽查样本） | AI 写（evalimpl，2026-10-31） | 输入：engine + models（同一份处理代码）、合成场景或仓外真实片段、人耳答卷；产出评测报告与级别表；`cargo run -p xtask -- eval ci` 挂在 CI |
 
 | `xtask`（`src/xtask/`） | 项目规矩的机器检查：`cargo run -p xtask -- tidy` / `-- check-deps`，也随 `cargo test -p xtask` 跑 | AI 写（align，2026-10-31） | 输入：`cargo metadata` 与源码文本；不依赖任何 vdn crate |
 
