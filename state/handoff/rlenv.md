@@ -12,3 +12,6 @@
 - 2026-10-31 收到 D47：第一个最小实验 = Personal VAD 式辅助小模型（模拟真值 + 教师蒸馏 + 按过线 verifier 用 RL 调；对照算法版辅助判断）；派 1 个代理查 PVAD 论文/实现/MPS 可行性
 - 2026-10-31 Workflow 完成，10 份笔记落 notes/；写完 assign · sources · gap；等 PVAD 代理后写 decision
 - 2026-10-31 写完 decision · README，登记研究索引；开始自审（3 个对抗视角）
+- 2026-10-31 evalstd 更新：L2 改为片段内 Kendall τ 下界 ≥0.2；同策略审计（每轮听 3 段奖励最高输出）；吃字否决用 Δ(del+sub)、段数不足视为不通过；感知类到 L2 约 5–6 轮——待自审后一并改 decision
+- 2026-10-31 evalstd 同意模拟真值指标（V-SIM-GATE / V-SIM-FA / V-SIM-SWLAT，L3 仅限模拟），三限定：真实上换人耳/教师并量落差；只作门控子模块目标，输出仍过吃字否决 + V-ONSET + V-BGSTAB + 同策略审计；真值规则写死进仓且与模型输入不同源
+- 2026-10-31 012 已合并 main（PR #27）；注意：V-SIM-GATE/FA/SWLAT（§3.4）是合并后 evalstd worktree 的提交 5f9085f，main 上还没有——收尾时告诉大总管
