@@ -27,6 +27,9 @@ pub struct GateParams {
     pub onset_jump_db: f32,
     pub min_cover_s: f32,
     pub confirm_n: u32,
+    /// 已知主人电平时，起始的电平要 ≥ 主人电平 − 这么多 dB 才算「可能是主人开口」（邻座远场更轻，不触发放开）。
+    /// 设成很大（如 200）= 任何起始都放开
+    pub onset_level_margin_db: f32,
     pub vad_on: f32,
     pub vad_off: f32,
 }
@@ -43,6 +46,7 @@ impl Default for GateParams {
             onset_jump_db: 6.0,
             min_cover_s: 1.0,
             confirm_n: 2,
+            onset_level_margin_db: 10.0,
             vad_on: 0.5,
             vad_off: 0.35,
         }
@@ -126,10 +130,12 @@ impl Stage for AsymGate {
         let e_db = 10.0 * (e + 1e-12).log10();
         let gap = (self.p.onset_gap_s * self.p.sr) as u64;
         let mut onset = false;
+        let ol = ctx.speaker.owner_level_db;
+        let loud_enough = !ol.is_finite() || e_db >= ol - self.p.onset_level_margin_db;
         if voiced {
-            if self.silent_samples >= gap {
-                onset = true;
-            } else if e_db > self.slow_db + self.p.onset_jump_db {
+            if loud_enough
+                && (self.silent_samples >= gap || e_db > self.slow_db + self.p.onset_jump_db)
+            {
                 onset = true;
             }
             self.silent_samples = 0;
@@ -194,6 +200,7 @@ mod tests {
             window_start: end.saturating_sub(24000),
             window_end: end,
             owner_sim: 0.0,
+            owner_level_db: f32::NAN,
         }
     }
 

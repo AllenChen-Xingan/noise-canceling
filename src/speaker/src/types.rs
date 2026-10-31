@@ -26,6 +26,8 @@ pub struct SpeakerVerdict {
     pub window_end: u64,
     /// 与主人声纹的余弦相似度；未注册时为 NaN
     pub owner_sim: f32,
+    /// 注册器记下的主人说话电平（dB，降噪输出上有声帧的均方）；未注册时为 NaN。门控用它分辨「近讲起始」
+    pub owner_level_db: f32,
 }
 
 impl SpeakerVerdict {
@@ -34,6 +36,7 @@ impl SpeakerVerdict {
         window_start: 0,
         window_end: 0,
         owner_sim: f32::NAN,
+        owner_level_db: f32::NAN,
     };
 }
 

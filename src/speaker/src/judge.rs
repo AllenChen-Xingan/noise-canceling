@@ -245,6 +245,11 @@ impl<E: EmbedSource> Judge<E> {
             window_start: start,
             window_end: end,
             owner_sim: log.owner_sim,
+            owner_level_db: self
+                .enroller
+                .owner_index()
+                .map(|i| self.enroller.clusters()[i].level_db)
+                .unwrap_or(f32::NAN),
         };
         self.logs.push(log);
         Some(self.last)
