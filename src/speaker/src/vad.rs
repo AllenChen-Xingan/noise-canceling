@@ -6,8 +6,9 @@
 //!
 //! 输入先夹到 [-1, 1]：earshot 在 debug 构建里对越界样本 `debug_assert!`（`resources/earshot/src/lib.rs:249`）。
 
-pub const VAD_SR: u32 = earshot::SAMPLE_RATE as u32;
-pub const VAD_FRAME: usize = earshot::FRAME_SIZE;
+/// earshot 1.2.2 写死的采样率与帧长（`Detector::predict_f32` 文档）
+pub const VAD_SR: u32 = 16_000;
+pub const VAD_FRAME: usize = 256;
 
 pub struct Vad {
     det: earshot::Detector,
@@ -49,7 +50,7 @@ impl Vad {
             self.buf[self.fill] = if s.is_finite() { s.clamp(-1.0, 1.0) } else { 0.0 };
             self.fill += 1;
             if self.fill == VAD_FRAME {
-                self.prob = self.det.predict(&self.buf[..]).raw;
+                self.prob = self.det.predict_f32(&self.buf);
                 self.fill = 0;
                 self.new_frames += 1;
             }
