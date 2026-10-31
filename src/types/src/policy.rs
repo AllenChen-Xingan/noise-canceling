@@ -359,6 +359,12 @@ mod tests {
     use crate::table::SceneEntry;
 
     const SR: u32 = 48_000;
+    // 测试用固定参数（不跟默认值走，默认值会随标定变）
+    const H: Hysteresis = Hysteresis {
+        confirm_s: 2.0,
+        min_confidence: 0.6,
+        min_dwell_s: 5.0,
+    };
 
     fn label(fine: u16, user: UserScene, sec: f64, conf: f32) -> SceneLabel {
         SceneLabel {
@@ -388,7 +394,7 @@ mod tests {
 
     #[test]
     fn needs_continuous_confirmation() {
-        let mut g = HysteresisGate::new(Hysteresis::default());
+        let mut g = HysteresisGate::new(H);
         assert_eq!(g.step(&label(7, UserScene::Cafe, 0.0, 0.9), SR), None);
         assert_eq!(g.step(&label(7, UserScene::Cafe, 1.0, 0.9), SR), None);
         assert_eq!(
@@ -400,7 +406,7 @@ mod tests {
 
     #[test]
     fn flapping_never_switches() {
-        let mut g = HysteresisGate::new(Hysteresis::default());
+        let mut g = HysteresisGate::new(H);
         for k in 0..40 {
             let fine = if k % 2 == 0 { 7 } else { 8 };
             assert_eq!(
@@ -412,7 +418,7 @@ mod tests {
 
     #[test]
     fn low_confidence_does_not_count_and_breaks_the_run() {
-        let mut g = HysteresisGate::new(Hysteresis::default());
+        let mut g = HysteresisGate::new(H);
         for k in 0..20 {
             assert_eq!(
                 g.step(&label(7, UserScene::Cafe, k as f64 * 0.5, 0.3), SR),
@@ -420,7 +426,7 @@ mod tests {
             );
         }
         // 0 s 高置信、中间全是低置信、10 s 再来一次：不算连续，不切
-        let mut g = HysteresisGate::new(Hysteresis::default());
+        let mut g = HysteresisGate::new(H);
         g.step(&label(7, UserScene::Cafe, 0.0, 0.9), SR);
         for k in 1..20 {
             g.step(&label(7, UserScene::Cafe, k as f64 * 0.5, 0.3), SR);
@@ -431,7 +437,7 @@ mod tests {
     #[test]
     fn user_layer_only_labels_can_switch() {
         // 分类器只出用户层（fine = 0）
-        let mut g = HysteresisGate::new(Hysteresis::default());
+        let mut g = HysteresisGate::new(H);
         g.step(&label(0, UserScene::Cafe, 0.0, 0.9), SR);
         assert!(g.step(&label(0, UserScene::Cafe, 2.0, 0.9), SR).is_some());
         assert_eq!(g.committed(), (UserScene::Cafe, FineSceneId::UNKNOWN));
@@ -449,7 +455,7 @@ mod tests {
 
     #[test]
     fn dwell_blocks_quick_second_switch() {
-        let mut g = HysteresisGate::new(Hysteresis::default());
+        let mut g = HysteresisGate::new(H);
         g.step(&label(7, UserScene::Cafe, 0.0, 0.9), SR);
         assert!(g.step(&label(7, UserScene::Cafe, 2.0, 0.9), SR).is_some());
         // 2 s 后又稳定判成 8，确认够了但停留不够 5 s
@@ -495,7 +501,7 @@ mod tests {
     fn table_policy_logs_switch_and_respects_lock() {
         let t = table();
         let prof = UserProfile::default();
-        let mut pol = TablePolicy::new(Hysteresis::default(), Transition::default());
+        let mut pol = TablePolicy::new(H, Transition::default());
         let mut log = Vec::new();
         let mut ctl = UserControl::default();
         let step = |pol: &mut TablePolicy, ctl: &UserControl, l: SceneLabel, log: &mut Vec<_>| {
