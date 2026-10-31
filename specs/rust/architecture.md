@@ -216,6 +216,11 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 
 **数据流**：感知 → `SceneLabel` → `HysteresisGate`（换不换场景）→ `resolve_params`（场景参数表 → 我的配置 → 当前旋钮）→ `Decision { target: ParamSet, transition }` → rtrb 送一个 `Copy` 包进实时线程 → 实时侧 `ParamSet::glide_toward` 逐 hop 平滑；同时 `Decision::log_into` 写决策日志。
 
+**进出实时线程的两个包**（ondevice 线需求，2026-10-31）：
+- 判断 → 实时：`ParamBlock { seq, config: ContentId, model_hash: ContentId, params: ParamSet, transition }`，`Copy`，经 rtrb 送（§3.4「必须同时生效的一组参数」那一行就是它；§3.4 的 `AtomicU32` 只留给单个旋钮的即时值）。实时线程在帧边界取最新一份，没有新的沿用旧的，绝不等。进 Stage 走 `Stage::set_params`
+- 实时 → 判断：`FrameFeatures { now, level_db, noise_db, voice_prob, bands_db: [f32; 16], bypassed }`，每 hop 一个经 rtrb 送出，满了丢弃并计数；噪声谱复用模型的 STFT，不另算。字段由 scene 线定稿
+- 平滑：连续参数在 hop 内逐样本插值、dB 类字段限速 `Transition::max_db_per_s`（初值 1 dB/s）、手动改动最短斜坡 `manual_ramp_s`（初值 30 ms）；离散参数（模型、修音链预设）走交叉淡化，**等增益**（等功率对相关信号会鼓 +3 dB），淡化期算力 ×2 计入最坏帧
+
 #### 3.7.1 感知输出（`src/types/src/scene.rs`）
 - `SceneLabel { user: UserScene, fine: FineSceneId, confidence: Confidence, at: SampleClock }`，`at` = 所用音频窗的末尾
 - 两层（D41）：`UserScene`（用户看得到、可手动切、可锁定；现为 Quiet · Cafe · Commute · Music · Meeting，**类目待人定**）· `FineSceneId(u16)`（内部细场景，含义由场景参数表定义，加类目不改代码；0 = 未知）
@@ -241,6 +246,12 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 - 「我的配置」`UserProfile`：按 `SceneKey::{User, Fine}` 存 `Overrides`（每个字段 `Option`），叠加顺序 表 → 用户层覆盖 → 细场景覆盖；**只存参数，类型里没有放音频的位置**（D39）；有 `ProfileVersion` + `ContentId`，可回滚、可一键清空
 - 声纹向量不放这里，归 `vdn-speaker` 自存
 - `trait Learner { propose(&[SessionRecord], &UserProfile) -> Option<UserProfile> }`：只在空闲时调（插电 · 未开会 · 不发热，D38），返回**候选**，过回归门禁 / 影子比对更好才换；在线只调参数、不改权重（005 第五节待人定 #2）。**本批不实现**
+
+#### 3.7.4b 留给后续 crate 的约束（ondevice 线提出，本批只记不做）
+- **小适配器 / BN·LN 覆盖层**要在导出模型时就做成图输入（ORT 加载时会把 BN 融进卷积，事后改不了）；换覆盖层走 §3.5：预热、暗跑 N 帧、等增益淡化
+- **计数器**（xrun、最坏帧 `fetch_max`、NaN 次数、按原因分的送原声次数）放进 `vdn-shm` 头，判断回路按 0.5 s 窗口 `swap(0)` 读清
+- **配置仓的消费方是 `vdn-denoised`**，不是 HAL 插件（插件在沙箱里读不到用户目录）；场景参数表与我的配置绑定「模型哈希 · 设备 · macOS 大版本」，对不上就回出厂
+- 进程级送原声由送音进程按心跳立即触发；看门狗只管重启（§3.6）
 
 #### 3.7.5 决策日志（`src/types/src/record.rs`）
 - `DecisionEvent`（`Copy`，≤ 64 B）：`SceneObserved`（感知原始输出，未经滞回；细场景分类的回放与回归靠它）· `SceneCommitted` · `ParamsApplied`（带完整 `ParamSet` 与来源 `ParamSource`）· `UserAction`（开关、旋钮、选场景、锁定、手动换模型、反馈「吃字 / 怪声 / 太吵 / 好 / AB 选 A / 选 B」、换设备——不记设备名、带新采样率）· `Bypass` · `Enroll`（声纹注册锁定 / 重锁 / 清空）· `TableChanged` · `ProfileChanged`
@@ -314,7 +325,7 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 | R8 | 实时线程有 time-constraint 优先级并加入 Audio Workgroup | 启动自检读回线程策略、检查 `os_workgroup_join` 返回码；失败计数并上报，不静默 |
 | R9 | FTZ 守卫只包住 DSP 段，**不包推理调用** | 单测：守卫内非正规数被冲成 0、守卫外不冲；`Model::process` 的推理调用在守卫外（009 §一.2：intra=1 时 FTZ 会作用到 ORT，DeepFilterNet #713） |
 | R10 | unsafe 只在白名单 crate | workspace `unsafe_code = "deny"`；非白名单 crate 的 `lib.rs` 写 `#![forbid(unsafe_code)]`（workspace 设 forbid 再局部 allow 会报 E0453）· `undocumented_unsafe_blocks = "deny"` · tidy 查 forbid 头。白名单 = `metadata.vdn.unsafe = true` 的 crate |
-| R11 | 实时路径出错 = 返回 `Status` + 送原声 | `#[must_use] Status` · 故障注入：超时 / NaN → 输出等于对齐原声（带淡化） |
+| R11 | 实时路径出错 = 返回 `Status` + 送原声（NaN / 异常帧不能拿来做交叉淡化：硬切原声，用接缝偏移衰减保持波形连续——p1 `Engine` 已这样做） | `#[must_use] Status` · 故障注入：超时 / NaN → 输出等于对齐原声（带淡化） |
 | R12 | 依赖方向（§2.2） | cargo-deny 管直接边 · check-deps 管闭包；规则都从 `metadata.vdn.forbid` 读 |
 | R13 | 延迟有账 | `LatencyLedger`（§3.7.6）· `src/models/tests/latency.rs` 断言 ≤ 45 ms、池内同延迟；接入 Pipeline 后改断言 `Pipeline::latency_samples()`；P3 脉冲法实测（延迟账正本 ADR 005） |
 | R14 | 构建产物不进库 | tidy 查 `.gitignore` 含 `/target/` |

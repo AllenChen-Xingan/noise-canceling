@@ -250,6 +250,14 @@ mod tests {
     }
 
     #[test]
+    fn param_block_is_small_copy() {
+        fn is_copy<T: Copy>() {}
+        is_copy::<ParamBlock>();
+        // 经 rtrb 按值送进实时线程：守住体积
+        assert!(core::mem::size_of::<ParamBlock>() <= 96);
+    }
+
+    #[test]
     fn names_roundtrip() {
         for f in ParamField::ALL {
             assert_eq!(ParamField::parse(f.as_str()), Some(f));
