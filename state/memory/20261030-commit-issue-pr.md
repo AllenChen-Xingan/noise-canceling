@@ -8,7 +8,7 @@ type: feedback
 
 **怎么用**（规则正本是 `CLAUDE.md` 铁律 15，这里只记操作顺序）：
 1. 派活之前，**每条线一个分支 + 一个 worktree**（人 2026-10-30 追加：「现在必须开分之 调研分支」）：`git worktree add -b research/<NNN>-<slug> ../noise_canceling-<slug> main`（实验线用 `exp/`）；在那个目录里起手下（auto-commit hook 按会话所在目录提交，所以手下必须在自己的 worktree 里起会话）；每条线 `gh issue create`，编号记进 `state/coord.md` 手下表。`_tmp/` 不跨 worktree，交代文件给绝对路径。开之前先 `df -h` 看盘
-2. 收尾（每条线各一个 PR）：铁律 12 外发检查（密钥 / 个人信息 / 大文件）→ `git push -u origin <分支>` → `gh pr create`，正文逐条 `Closes #N` → 等 CI → `gh pr merge --merge --delete-branch` → `git switch main && git pull` → `git worktree remove ../noise_canceling-<slug>`。⚠️ **合并前先把该 worktree 里 git 忽略的产物（`_tmp/` 音频、页面等）搬到主目录 `_tmp/` 或人桌面**：`gh pr merge --delete-branch` 会连 worktree 一起删，忽略文件跟着没了（2026-10-30 exp003 的 44 MB 音频就这样没的，幸好桌面有一份）
+2. 收尾（每条线各一个 PR）：**先确认手下窗口已空闲、关窗后再推送**，推送后核对 PR 的末端提交 = 分支末端（2026-10-31 evalstd 报收尾后又提交了 5f9085f，PR #27 漏掉，靠 #28 补回）；铁律 12 外发检查（密钥 / 个人信息 / 大文件）→ `git push -u origin <分支>` → `gh pr create`，正文逐条 `Closes #N` → 等 CI → `gh pr merge --merge --delete-branch` → `git switch main && git pull` → `git worktree remove ../noise_canceling-<slug>`。⚠️ **合并前先把该 worktree 里 git 忽略的产物（`_tmp/` 音频、页面等）搬到主目录 `_tmp/` 或人桌面**：`gh pr merge --delete-branch` 会连 worktree 一起删，忽略文件跟着没了（2026-10-30 exp003 的 44 MB 音频就这样没的，幸好桌面有一份）
 3. **大总管自己的看板 / 账本改动也不直接落 main**：主目录开 `chore/coord-<日期>-<批次>`，本批收尾时一起开 PR；**合并完切回 main 后，动任何文件之前先开下一个 chore 分支**（auto-commit 会立刻提交到当前分支）
 4. 手下仍然**不做任何 git 写操作**，这些都归大总管
 5. 仓库改公开、删远程分支以外的不可逆操作，仍先问人
