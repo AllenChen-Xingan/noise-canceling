@@ -4,7 +4,7 @@
 //! 在同一帧网格上处理后合成——这是对「挂在模型 STFT 上」的模拟。这次额外的 STFT 让离线输出晚 256 样本，
 //! 写文件前平移掉；**实时接入时它不存在**（频谱来自模型适配器），所以不进延迟账。
 //!
-//! 用法：polish_offline <dry.wav> <wet.wav> <out.wav> <tone 或 时间线文件> [--ramp 秒]
+//! 用法：polish_offline <dry.wav> <wet.wav> <out.wav> <tone 或 时间线文件> [--ramp 秒] [--params s,floor,comfort,demuffle,agc]
 //! 时间线文件每行 `<起始秒> <tone>`（scene 的决策），按时间顺序；给一个整数就是全程固定预设。
 
 use std::time::{Duration, Instant};
@@ -67,6 +67,22 @@ fn main() {
         PolishParams::preset(timeline.first().map(|t| t.1).unwrap_or(0)),
     );
     chain.set_ramp_s(ramp);
+    // --params smooth,floor_db,comfort_db,demuffle_max_db,agc：全程固定这组参数（对照实验用，忽略 tone）
+    let fixed: Option<PolishParams> = a.iter().position(|x| x == "--params").map(|i| {
+        let v: Vec<f32> = a[i + 1].split(',').map(|x| x.parse().unwrap()).collect();
+        PolishParams {
+            smooth: v[0],
+            floor_db: v[1],
+            comfort_db: v[2],
+            demuffle_max_db: v[3],
+            agc: v[4],
+            ..PolishParams::DEFAULT
+        }
+    });
+    if let Some(p) = fixed {
+        chain.set_ramp_s(0.0);
+        chain.set_target(p);
+    }
     let mut sd = StreamingStft::new(N_FFT, HOP, sqrt_hann_periodic(N_FFT));
     let mut sw = StreamingStft::new(N_FFT, HOP, sqrt_hann_periodic(N_FFT));
     let lat = sw.latency_samples();
@@ -87,7 +103,7 @@ fn main() {
         .enumerate()
     {
         let t = (k * HOP) as f32 / SR;
-        while ti < timeline.len() && timeline[ti].0 <= t {
+        while fixed.is_none() && ti < timeline.len() && timeline[ti].0 <= t {
             chain.set_target(PolishParams::preset(timeline[ti].1));
             ti += 1;
         }
