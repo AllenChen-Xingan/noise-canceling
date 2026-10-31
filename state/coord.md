@@ -24,7 +24,7 @@
 | multitalker | 011 一大堆人同时说话（调研）· issue #21 · `research/011-multitalker` | `_tmp/20261031-b4/multitalker.md` | 其 worktree | 完成，PR 已合并（issue #21 关），窗口已关；6 题待人拍板 |
 | evalstd | 012 工业级 rubric 与评测的行业标准 · issue #22 · `research/012-eval-standards` | `_tmp/20261031-b4/evalstd.md` | 其 worktree | 完成，PR #27 已合并（issue #22 关），窗口已关；9 题待人拍板 + rubric 修改清单 R1–R14 |
 | rlenv | 013 强化学习环境与分场景训练方案 · issue #25 · `research/013-rl-environment` | `_tmp/20261031-b4/rlenv.md` | 其 worktree | 完成，PR #29 已合并（issue #25 关），窗口已关；9 题待人拍板 |
-| datasets | 014 真实录音公开数据集 · issue #30 · `research/014-real-datasets` | `_tmp/20261031-b4/datasets.md` | 其 worktree | 已派 |
+| datasets | 014 真实录音公开数据集 · issue #30 · `research/014-real-datasets` | `_tmp/20261031-b4/datasets.md` | 其 worktree | 完成，PR 已合并（issue #30 关），窗口已关；6 题待人拍板 |
 | evalimpl | eval 实现：vdn-eval · CI / QA / 人工三层 · 回归集与能力集 · issue #31 · `feat/eval-verifiers` | `_tmp/20261031-b4/evalimpl.md` | 其 worktree | 已报到（noise-canceling-evalimpl-7f） |
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
 
@@ -102,6 +102,7 @@
 - [ ] 008 待人拍板 7 题（意向书「不分配不加锁」改三档表述 · 目录名 · panic=abort · 两个进程 · HAL 目录放哪 · 延迟超 45 ms 先砍哪 · tract 对照实验）—— `docs/research/008_rust-architecture/decision.md`
 - [ ] 008 给 p1 后续批次 5 项改动（含 exp004 README 补注「0 次分配只计 Rust 侧」）—— 同上「给 p1 线的后续改动」
 - [ ] 规约跟进（下一批接入线）：`specs/rust/architecture.md` §2.1 / §4 补 vdn-speaker（B 档）与 vdn-speaker-lab；speaker-lab tier tool → C 待定；bin 名不合 §1 记例外；CI 补 `--features onnx` 测试；ORT 一个进程只许一个 Environment（vdn-models 也要改为调用方传入）
+- [ ] 014 待人拍板 6 题（CHiME-4 买不买 · 签 ECHI 协议 · 首批下载约 20 GB（改 D22）· 许可不清只评测本机 · CC BY 真实集不进训练 · 公开集旁人声音照 D19）
 - [ ] FE-M 修音 A/B/C（scene `docs/experiments/exp006-scene-sim/notes/fem-polish.md`）：官方有 `fastenhancer_m.spec.onnx`（STFT 在图外，Hann 512 / hop 160），换用后共用 dsp StreamingStft 与频谱修音链、额外延迟 0；⚠️ Σw² 非常数（每 10 ms 起伏 0.14 dB＝嗡声），合成端要加包络归一（vdn-dsp，下一批接入时做）
 - [ ] 012 待人拍板 9 题（「工业级」在本项目指什么 · 众包与 D39 · rlenv 过渡期能否用 L1 当弱奖励等）+ rubric 修改清单 R1–R14 —— `docs/research/012_eval-standards/decision.md`；升级清单 P0：人耳加 P.835 三量表 · RL 奖励同策略审计 · ETSI 噪声格子 · verifier 定标统计 L0–L3
 - [ ] 011 待人拍板 5 题（「只留我」一个开关 · 声纹认好后默认开 · 会议室自动放开 · 试借语音突显 · 菜单栏小图标提前）；~~#6 提示规则~~ 人已否决（D42：不做耳麦提示）—— `docs/research/011_multitalker/decision.md`
