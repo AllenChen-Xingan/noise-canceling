@@ -69,7 +69,7 @@ impl<M: Model> Model for FaultInjector<M> {
                 FaultKind::Nan => output.fill(f32::NAN),
                 FaultKind::Stall(d) => std::thread::sleep(d),
                 FaultKind::Error => out = Err(ModelError::Backend),
-                FaultKind::Explode => output.iter_mut().for_each(|v| *v = 1e3 + *v),
+                FaultKind::Explode => output.iter_mut().for_each(|v| *v += 1e3),
             }
         }
         out

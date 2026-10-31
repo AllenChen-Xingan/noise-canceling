@@ -49,7 +49,7 @@ mod tests {
     fn delays_by_exact_samples() {
         let mut d = DelayLine::new(5);
         let x: Vec<f32> = (1..=12).map(|v| v as f32).collect();
-        let mut y = vec![0.0; 12];
+        let mut y = [0.0; 12];
         d.process(&x[..7], &mut y[..7]);
         d.process(&x[7..], &mut y[7..]);
         assert_eq!(&y[..5], &[0.0; 5]);

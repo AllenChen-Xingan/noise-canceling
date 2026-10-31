@@ -98,7 +98,7 @@ impl StreamingStft {
         // numpy irfft 忽略 DC 与 Nyquist 的虚部；realfft 遇到非零虚部会报错，这里先清掉
         let last = self.spec.len() - 1;
         self.spec[0].im = 0.0;
-        if self.n_fft % 2 == 0 {
+        if self.n_fft.is_multiple_of(2) {
             self.spec[last].im = 0.0;
         }
         self.inv
