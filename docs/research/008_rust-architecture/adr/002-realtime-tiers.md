@@ -1,0 +1,31 @@
+# ADR 002 · 实时分三档；推理线程允许 ONNX Runtime 内部分配
+
+- 状态：提议（2026-10-30，rustarch）· **涉及 `.42cog/intent.md` 作品区「音频线程不分配内存、不加锁」的口径，⟨待拍板 1⟩**
+- 规约落点：`specs/rust/architecture.md` §4
+
+## 背景
+设计稿 §7「音频线程里不分配内存、不加锁、不做系统调用」。003 管线已定 IO 回调与推理线程分开，中间用环形缓冲，原声旁路由输出回调做。问题是推理线程能不能也做到零分配。
+
+## 证据
+本机探针（`appendix-probes/README.md` §1，命令、版本、原始日志都在）：ort `=2.0.0-rc.15`、GTCRN simple、intra=1、IoBinding 绑一次、预热 200 帧后，RTSan 逐次计数**每个稳态帧 malloc 1554、free 1555、pthread_mutex lock/unlock 各 376**；2 帧严格翻倍【测】。来源是 ORT 的 `BFCArena`、`Tensor::InitOrtValue`、`MemPatternPlanner`、MLAS GEMM。耗时：p99.9 0.80–0.94 ms，max ≤ 1.07 ms，hop 16 ms【测】。
+同时 Rust 计数分配器在 raw `RunWithBinding` 调法下每帧 ≈ 0 次——Rust 全局分配器看不到 C++ 的 malloc【测】。
+
+## 决定
+| 档 | 线程 | 承诺 |
+|---|---|---|
+| A 硬实时 | IO 回调（以后 HAL 插件 IO） | 零分配、零锁、零系统调用、不 panic，第三方代码也算；RTSan 零豁免 |
+| B 软实时 | 推理进程降噪线程 | 我们的 Rust 代码零分配零锁；ORT 内部分配 / arena 锁允许，**登记在进仓的 RTSan 豁免文件里**，新栈即红；每帧截止时间，超时 / 出错走模型级送原声；验收看 p99.9 与 max |
+| C 非实时 | 声纹、控制、日志、eval、构造期 | 不限 |
+
+## 理由
+- B 档就算偶尔慢一帧，也不会直接造成爆音：IO 回调读到环 B 欠载就切到原声环 C（003 decision M1–M2 行）。真正不能出错的是 A 档
+- ort 的分配在 C++ 内核里，Rust 侧改不掉；替代方案（tract、自写推理）都还没验证（`specs/rust/architecture.md` §8 E-tract）
+- 耗时余量约 15 倍，分配带来的抖动目前看不出来，但要在负载、能效核下重测（E-load）
+
+## 代价
+- intent.md 的「音频线程不分配、不加锁」要改成分档表述，需要人同意
+- 豁免文件是一个新的维护面：升级 ort 时要重跑 RTSan、重审豁免栈
+- 如果负载下 p99.9 变差，要回头做 E-ort（关 arena、自定义分配器）或换 tract
+
+## 对 p1 / exp004 的影响
+p1 的「每帧 0 次分配」统计的是 Rust 全局分配器，C++ 层看不到，与上面的结论不矛盾。exp004 README 要补一句注明口径（由大总管转给后续批次改）。另：p1 的 `Gtcrn::process` 走 `run_with_options(ort::inputs![…])`，Rust 侧每帧也会分配（`run` 调法实测 54 次），现有 no_alloc 测试只覆盖假模型。
