@@ -68,7 +68,8 @@ def paths(build):
     """(数据目录, 听测目录, 工作目录)。听测目录只放打乱命名的音频与页面——**不放**揭盲表、写着条件名的清单和
     以条件名命名的文件（CLAUDE.md 第五节第 1 条，2026-10-31 补）；这些都在工作目录或 docs/ 里。"""
     d = ROOT / "_tmp/20261031-exp006" / build
-    return d, d / "listen", d / "ab_work"
+    # 听测目录单独放一棵树，不和工作目录同父（往上翻一级也看不到答案）
+    return d, ROOT / "_tmp/20261031-exp006-listen" / build, d / "ab_work"
 
 
 def truth_of(build):
@@ -340,7 +341,8 @@ def page(build):
     # 页面只记录「哪个字母是第几个槽位」，揭盲由仓里的 unblind.py 拿 docs/ 里的对照表做
     manifest = {"build": pid, "n_cands": 4, "clips": mclips,
                 "models": {f"slot{i}": {"name": f"槽位 {i}", "latency": ""} for i in range(4)},
-                "traps": [{k: v for k, v in t.items() if k not in ("source_model", "names")} for t in traps]}
+                # 检验题在页面里只叫「检验题」，真实说明（哪道是全同 / 劣化）只在 docs/ 的对照表里
+                "traps": [{**{k: v for k, v in t.items() if k not in ("source_model", "names", "label")}, "label": "检验题"} for t in traps]}
     (pdir / "manifest.js").write_text("window.EXP003 = " + json.dumps(manifest, ensure_ascii=False) + ";\n")
     html = (EXP3 / "ab_page.html").read_text()
     subs = [
