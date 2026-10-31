@@ -12,3 +12,4 @@
 | 2026-10-30 | 发现 p1 分支提交了 target/（1799 文件 146 MB，未推送），已报 p1 与大总管；p1 骨架初审 → docs/research/008_rust-architecture/p1-review.md，已发 p1 |
 | 2026-10-30 | 大总管已清 p1 历史、主线 .gitignore 加 /target/、CLAUDE.md 五.2 记坑；规约质量闸门要列「构建产物先忽略」 |
 | 2026-10-30 | Workflow 完成；ort 探针证据入 appendix-probes/；写完规约 specs/rust/architecture.md、ADR 001–005、README/sources/assign/gap；按 rusteco 009 更正两处（p1 Rust 侧确为 0、延迟默认约 56 ms）。p1、rusteco 已关窗，对 p1 的更正请大总管转 |
+| 2026-10-30 | 写完 decision.md（7 条待人拍板）；派三视角自审（怀疑派 / 实现派 / 维护派，提示里禁止构建） |
