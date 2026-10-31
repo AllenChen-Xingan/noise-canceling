@@ -126,6 +126,10 @@ def enhance(build):
     meter = pyloudnorm.Meter(SR)
     files = {}
     perf = []
+    import os
+    lim = int(os.environ.get("EXP006_LIMIT", "0"))  # 冒烟用：只跑前几段 + 听测段
+    if lim:
+        test = [t for t in test if t["id"] in listen][:lim]
     for t in test:
         cid = t["id"]
         x, _ = sf.read(d / "test" / f"{cid}_noisy.wav", dtype="float32")
