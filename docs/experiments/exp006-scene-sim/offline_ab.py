@@ -344,10 +344,11 @@ def page(build):
     (pdir / "manifest.js").write_text("window.EXP003 = " + json.dumps(manifest, ensure_ascii=False) + ";\n")
     html = (EXP3 / "ab_page.html").read_text()
     subs = [
-        ('const KEY = JSON.parse(atob(M.slotmap || M.key));', 'const KEY = null;  // exp006：页面里不放答案，揭盲在仓里用 unblind.py 做'),
+        ('const KEY = JSON.parse(atob(M.slotmap || M.key));', 'const KEY = null;  // exp006：页面里不放答案，揭盲在仓里做'),
         ('LETTERS.forEach((L, j) => { slots[L] = KEY.clips[id].indexOf(base[(i + j) % N]); });',
          'LETTERS.forEach((L, j) => { slots[L] = j; });  // 生成时已按拉丁方排好每段的槽位顺序'),
         ('if (t.kind === "trap") return KEY.traps[t.trap][t.slots[L]];\n    return KEY.clips[t.clip][t.slots[L]];', 'return "slot" + t.slots[L];'),
+        ('      ${s.head_to_head.dpdfnet2_vs_gtcrn ? `<p><b>DPDFNet-2 对 GTCRN 逐段</b>（先比「开会」评级，平级再看谁被选为最清楚）：DPDFNet-2 好 ${s.head_to_head.dpdfnet2_vs_gtcrn.dpdfnet2} 段 · GTCRN 好 ${s.head_to_head.dpdfnet2_vs_gtcrn.gtcrn} 段 · 分不出 ${s.head_to_head.dpdfnet2_vs_gtcrn.tie} 段。这就是「多 30 ms 延迟换来的效果」的主要证据。</p>` : ""}', ""),  # exp003 专用的「DPDFNet-2 对 GTCRN」一句
         ('<h2>听完了，揭盲结果</h2>', '<h2>听完了</h2><p class="muted">页面里没有答案：下表只按槽位统计，看不出哪个是哪个。导出 JSON 交大总管揭盲。</p>'),
         ("<title>降噪盲听对比</title>", "<title>修音与场景盲听</title>"),
         ("<h1>降噪盲听对比</h1>", "<h1>修音与场景盲听（exp006）</h1>"),
