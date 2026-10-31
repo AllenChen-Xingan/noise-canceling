@@ -188,7 +188,7 @@ fn kendall_tau_b(x: &[f64], y: &[f64]) -> Option<f64> {
 pub fn calibrate(answers: &Value, scores: &Value, round: u32) -> Value {
     let (pairs, h3) = extract(answers);
     let per = &scores["per_clip"];
-    let is_validation = round % 2 == 0;
+    let is_validation = round.is_multiple_of(2);
     let discounted = answers["summary"]["traps"]
         .as_array()
         .is_some_and(|a| a.iter().any(|t| t["pass"] == false));

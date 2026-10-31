@@ -249,7 +249,7 @@ impl RunOut {
 fn build(spec: &SystemSpec) -> Result<Engine<FaultInjector<EvalModel>>, String> {
     let model = match spec.kind {
         SystemKind::Passthrough => EvalModel::Passthrough(DelayGain::new(256, 0, 1.0)),
-        SystemKind::Ref => EvalModel::Ref(Box::new(RefWiener::new())),
+        SystemKind::Ref => EvalModel::Ref(Box::default()),
         k => {
             let mk = k.model_kind().ok_or("内部错误：未知模型")?;
             let path = mk

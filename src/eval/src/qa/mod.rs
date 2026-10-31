@@ -27,6 +27,9 @@ pub struct EatRow {
     pub out_sub: usize,
 }
 
+/// 参考分词 + 原声的 (删, 替, 插)。
+type RefEntry = Result<(Vec<String>, (usize, usize, usize)), String>;
+
 pub struct QaExtra {
     pub asr: Option<asr::Asr>,
     pub dnsmos: Option<dnsmos::Dnsmos>,
@@ -34,7 +37,7 @@ pub struct QaExtra {
     tmp: PathBuf,
     pub eat: Vec<EatRow>,
     /// 任务 → 参考分词与原声的 (删, 替, 插)，每个任务只转写一次
-    refs: BTreeMap<String, Result<(Vec<String>, (usize, usize, usize)), String>>,
+    refs: BTreeMap<String, RefEntry>,
     mix_mos: BTreeMap<String, f64>,
 }
 

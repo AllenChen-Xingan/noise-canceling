@@ -180,7 +180,7 @@ impl Spectrogram {
     /// 帧 k 中心落在哪个 10 ms 掩码帧（落在开头之前时为 `None`）。
     pub fn mask_frame(&self, k: usize) -> Option<usize> {
         let c = self.center(k);
-        (c >= 0).then(|| c as usize / MASK_FRAME)
+        (c >= 0).then_some(c as usize / MASK_FRAME)
     }
 
     pub fn bin_hz(&self, b: usize, sr: u32) -> f64 {
@@ -251,7 +251,7 @@ pub fn smoothed_level_db(x: &[f32], sr: u32, tau_s: f64) -> Vec<f64> {
     let a = 1.0 - (-1.0 / (tau_s * sr as f64)).exp();
     let mut e = 0.0f64;
     let mut out = Vec::with_capacity(x.len() / MASK_FRAME);
-    for c in x.chunks_exact(MASK_FRAME) {
+    for c in x.as_chunks::<MASK_FRAME>().0 {
         for &v in c {
             e += a * ((v as f64).powi(2) - e);
         }

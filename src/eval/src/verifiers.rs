@@ -935,7 +935,7 @@ fn owner_onsets(c: &Ctx) -> Vec<usize> {
     out
 }
 
-fn need_sim(c: &Ctx, id: &'static str, unit: &'static str) -> Result<HopTruth, Score> {
+fn need_sim(c: &Ctx, id: &'static str, unit: &'static str) -> Result<HopTruth, Box<Score>> {
     if !c.clip.tracks {
         return Err(Score::unknown(
             id,
@@ -945,7 +945,12 @@ fn need_sim(c: &Ctx, id: &'static str, unit: &'static str) -> Result<HopTruth, S
         ));
     }
     let Some(r) = c.run else {
-        return Err(Score::unknown(id, unit, Better::Lower, "没有系统运行记录"));
+        return Err(Box::new(Score::unknown(
+            id,
+            unit,
+            Better::Lower,
+            "没有系统运行记录",
+        )));
     };
     Ok(hop_truth(c, r))
 }
@@ -954,7 +959,7 @@ fn v_sim_gate(c: &Ctx, p: &Params) -> Score {
     const ID: &str = "V-SIM-GATE";
     let t = match need_sim(c, ID, "比例") {
         Ok(t) => t,
-        Err(s) => return s,
+        Err(s) => return *s,
     };
     let act: Vec<usize> = (0..t.owner.len()).filter(|&h| t.owner[h]).collect();
     if act.len() < 20 {
@@ -1003,7 +1008,7 @@ fn v_sim_fa(c: &Ctx, p: &Params) -> Score {
     const ID: &str = "V-SIM-FA";
     let t = match need_sim(c, ID, "比例") {
         Ok(t) => t,
-        Err(s) => return s,
+        Err(s) => return *s,
     };
     let only: Vec<usize> = (0..t.owner.len())
         .filter(|&h| t.interf[h] && !t.owner_near[h])
@@ -1020,7 +1025,7 @@ fn v_sim_swlat(c: &Ctx, p: &Params) -> Score {
     const ID: &str = "V-SIM-SWLAT";
     let t = match need_sim(c, ID, "ms") {
         Ok(t) => t,
-        Err(s) => return s,
+        Err(s) => return *s,
     };
     let ms_per_hop = t.hop as f64 * 1000.0 / c.clip.sr as f64;
     let mut lats = Vec::new();
