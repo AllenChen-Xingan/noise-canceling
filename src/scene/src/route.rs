@@ -96,7 +96,7 @@ pub fn params_for(id: FineSceneId) -> ParamSet {
         return p;
     }
     let Some((c, d)) = decode(id) else {
-        p.tone = ToneId(1);
+        p.tone = ToneId(9); // 还没判出场景：修音链默认值
         return p;
     };
     let (model, tone) = match c {

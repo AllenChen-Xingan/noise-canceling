@@ -1,0 +1,367 @@
+"""exp006 第五步：离线开 / 关对比——路由（开 / 关）× 修音链（开 / 关）= 4 版，客观打分 + 盲听页。
+
+| 版本 | 模型 | 修音链 |
+|---|---|---|
+| `base`   | 全程 GTCRN（D33 主模型） | 关 |
+| `route`  | 按 vdn-scene 的已生效场景选模型（GTCRN / FastEnhancer-M），换模型处 50 ms 交叉淡化 | 关 |
+| `polish` | 全程 GTCRN | 开，固定默认预设（tone 9，没有场景信息） |
+| `both`   | 同 `route` | 开，预设跟着已生效场景走（tone 时间线，参数 1 s 过渡） |
+
+- 场景决策来自 Rust `scene_offline` 在带噪输入上的输出（`feat_<split>_final.jsonl`），第 t 秒的决策只用 t 秒以前的声音，因果
+- 模型推理直接调 exp003 `enhance.py` 的 `Gtcrn` / `FastEnhancer` / `stream`（只调用，不复制）；两个模型输出都已对齐到 0 延迟。
+  路由的「两套模型同时跑、交叉淡化」是理想化：实时里新模型冷启动、要预热（规约 §3.5），这里两套从头一直在跑
+- 修音链调 Rust `polish_offline`（离线多做一次 STFT 模拟「挂在模型 STFT 上」，见该文件说明）
+- 响度：同 exp003——只在主讲人说话区间（干净参考能量 VAD）测 BS.1770，各版统一到 −26 LUFS；峰值超 −1 dBFS 时同段一起降。
+  这只统一整段响度，段内忽大忽小（AGC 要治的）保留
+
+客观指标（`scores.json`，旁证，人耳为准）：
+- DNSMOS P.835（SIG / BAK / OVRL，非个性化）、ESTOI（对干净参考）
+- 吃字：本机 Qwen3-ASR（D28）删除率，参照 = 干净参考的转写；只跑 ASR 子集（每类 12 段）
+- 四种毛病的代理指标（自定义，口径写在下面）：
+  · **音乐噪声** `lkr`：非语音帧、300–6000 Hz 的 STFT 功率的峰度，输出 ÷ 带噪输入取自然对数（对数峰度比，Uemura 等 2009 的做法；越大越「叮叮」）
+  · **真空感** `resid_rel_db`：输出非语音段功率 ÷ 输出语音段功率（dB）；越负越「抽空」。另报 `gap_flutter_db`：非语音帧电平的标准差（背景忽有忽无）
+  · **忽大忽小** `level_std_db`：语音占比 ≥ 50% 的 400 ms 窗的输出电平标准差（dB），减去干净参考的同一量（素材里故意加了说话人电平漂移）
+  · **发闷** `hf_loss_db`：语音帧里 4–7.5 kHz 对 0.5–4 kHz 的能量比，输出减干净参考（dB，越负越闷）；窄带蓝牙段不算
+
+用法（worktree 根下，**跑推理要先申请名额**）：
+  <主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp006-scene-sim/offline_ab.py <build> enhance   # 推理 + 路由 + 修音链 + 响度
+  <主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp006-scene-sim/offline_ab.py <build> score [--asr]
+  <主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp006-scene-sim/offline_ab.py <build> page    # 新的盲听页 build
+"""
+import base64
+import hashlib
+import json
+import secrets
+import shutil
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+import pyloudnorm
+import soundfile as sf
+from pystoi import stoi
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[2]
+EXP3 = ROOT / "docs/experiments/exp003-offline-ab"
+sys.path.insert(0, str(EXP3))
+from _common import tokens, vad_mask  # noqa: E402
+from _paths import RES  # noqa: E402
+
+SR = 16000
+VERS = ["base", "route", "polish", "both"]
+INFO = {
+    "base": {"name": "基线：GTCRN，修音链关", "latency": "模型 16 ms；本行同 exp003 的 GTCRN"},
+    "route": {"name": "路由开：按场景选 GTCRN / FastEnhancer-M，修音链关", "latency": "按池内最大（FE-M 22 ms）补齐，GTCRN 场景多 6 ms"},
+    "polish": {"name": "修音链开（默认预设）：GTCRN", "latency": "修音链 0 ms（零前瞻）"},
+    "both": {"name": "路由 + 修音链都开（预设跟场景）", "latency": "同「路由开」；修音链 0 ms"},
+}
+XFADE = int(0.05 * SR)
+TARGET_LUFS, PEAK_MAX_DB = -26.0, -1.0
+LISTEN = {"babble": 2, "neighbor": 2, "clatter": 2, "traffic": 2, "music": 2, "hvac": 1, "quiet": 1}
+ASR_PER_CLASS = 12
+
+
+def paths(build):
+    d = ROOT / "_tmp/20261031-exp006" / build
+    return d, d / "ab"
+
+
+def truth_of(build):
+    return {json.loads(l)["id"]: json.loads(l) for l in (HERE / "builds" / build / "truth.jsonl").read_text().splitlines()}
+
+
+def decisions(build, split):
+    d, _ = paths(build)
+    out = {}
+    for l in (d / f"feat_{split}_final.jsonl").read_text().splitlines():
+        r = json.loads(l)
+        out.setdefault(r["id"], []).append((r["t"], r["model"], r["tone"], r["committed_name"]))
+    return out
+
+
+def model_weight(dec, n):
+    """FE-M 的逐样本权重（0 = GTCRN，1 = FE-M）；决策在 t 秒生效，换模型处 50 ms 线性交叉淡化。开头还没决策时用 GTCRN。"""
+    w = np.zeros(n, np.float32)
+    cur = 0.0
+    for t, model, _, _ in dec:
+        k = int(t * SR)
+        tgt = 1.0 if model == "fastenhancer-m" else 0.0
+        if tgt != cur and k < n:
+            e = min(n, k + XFADE)
+            w[k:e] = np.linspace(cur, tgt, e - k, endpoint=False)
+            w[e:] = tgt
+            cur = tgt
+    return w
+
+
+def selection(truth):
+    test = sorted([t for t in truth.values() if t["split"] == "test" and t["has_target"]], key=lambda t: t["id"])
+    rng = np.random.default_rng(20261106)
+    listen, asr = [], []
+    for c in LISTEN:
+        pool = [t for t in test if t["fine"] == c and t["device"] == "none" and 0 <= (t["snr_db"] or 0) <= 12]
+        if c == "music":
+            pool = [t for t in pool if t["noise"].startswith("MapleLeaf")] + [t for t in pool if not t["noise"].startswith("MapleLeaf")]
+            listen += pool[:LISTEN[c]]
+        else:
+            listen += list(rng.choice(pool, size=min(LISTEN[c], len(pool)), replace=False))
+    for c in LISTEN:
+        pool = [t for t in test if t["fine"] == c]
+        asr += list(rng.choice(pool, size=min(ASR_PER_CLASS, len(pool)), replace=False))
+    return test, [t["id"] for t in listen], sorted({t["id"] for t in asr} | {t["id"] for t in listen})
+
+
+def enhance(build):
+    import enhance as e3  # exp003：只调用
+    d, ab = paths(build)
+    (ab / "raw").mkdir(parents=True, exist_ok=True)
+    (ab / "audio").mkdir(parents=True, exist_ok=True)
+    truth = truth_of(build)
+    test, listen, _ = selection(truth)
+    dec = decisions(build, "test")
+    polish_bin = ROOT / "target/release/examples/polish_offline"
+    meter = pyloudnorm.Meter(SR)
+    files = {}
+    perf = []
+    for t in test:
+        cid = t["id"]
+        x, _ = sf.read(d / "test" / f"{cid}_noisy.wav", dtype="float32")
+        ref, _ = sf.read(d / "test" / f"{cid}_clean.wav", dtype="float32")
+        g = e3.stream(e3.Gtcrn(), x)
+        f = e3.FastEnhancer().run(x)
+        w = model_weight(dec[cid], len(x))
+        routed = (1 - w) * g + w * f
+        raw = {"noisy": x, "base": g, "route": routed}
+        for v in ("noisy", "base", "route"):
+            sf.write(ab / "raw" / f"{cid}_{v}.wav", raw[v], SR, subtype="FLOAT")
+        tl = ab / "raw" / f"{cid}_tones.txt"
+        tl.write_text("0 9\n" + "".join(f"{tt:.3f} {tone}\n" for tt, _, tone, _ in dec[cid]))
+        for v, wet, tone in (("polish", "base", "9"), ("both", "route", str(tl))):
+            p = subprocess.run([str(polish_bin), str(ab / "raw" / f"{cid}_noisy.wav"), str(ab / "raw" / f"{cid}_{wet}.wav"),
+                                str(ab / "raw" / f"{cid}_{v}.wav"), tone], capture_output=True, text=True, check=True)
+            perf.append(json.loads(p.stderr.strip().splitlines()[-1]))
+            raw[v], _ = sf.read(ab / "raw" / f"{cid}_{v}.wav", dtype="float32")
+        # 响度：主讲人说话区间统一到 −26 LUFS，峰值超限同段一起降
+        mask, n = vad_mask(ref)
+        gains = {}
+        for v in ["noisy", *VERS]:
+            y = raw[v][:n][mask]
+            gains[v] = TARGET_LUFS - meter.integrated_loudness(y) if len(y) > SR // 2 else 0.0
+        peak = max(db(np.max(np.abs(raw[v])) * 10 ** (gains[v] / 20)) for v in gains)
+        extra = min(0.0, PEAK_MAX_DB - peak)
+        files[cid] = {"fine": t["fine"], "user": t["user"], "device": t["device"], "snr_db": t["snr_db"], "noise": t["noise"],
+                      "route": [(tt, m, tone, nm) for tt, m, tone, nm in dec[cid]], "extra_gain_db": round(extra, 2), "versions": {}}
+        for v in ["noisy", *VERS]:
+            y = raw[v] * 10 ** ((gains[v] + extra) / 20)
+            fn = f"audio/{cid}_{secrets.token_hex(4)}.wav"
+            sf.write(ab / fn, y, SR, subtype="PCM_16")
+            files[cid]["versions"][v] = {"file": fn, "sha256": hashlib.sha256((ab / fn).read_bytes()).hexdigest(),
+                                         "gain_db": round(gains[v] + extra, 2)}
+        print(cid, t["fine"], files[cid]["route"][-1][1:], flush=True)
+    sp = float(np.mean([p["spectral_us_per_hop"] for p in perf]))
+    ag = float(np.mean([p["agc_us_per_hop"] for p in perf]))
+    meta = {"build": build, "listen": listen, "n_clips": len(files), "polish_us_per_hop": {"spectral": round(sp, 2), "agc": round(ag, 2),
+            "cpu_share_pct_of_one_core": round(100 * (sp + ag) / 16000, 3)}}
+    (ab / "files.json").write_text(json.dumps({"meta": meta, "clips": files}, ensure_ascii=False, indent=0))
+    print(json.dumps(meta, ensure_ascii=False))
+
+
+def db(x):
+    return 20 * np.log10(max(float(x), 1e-12))
+
+
+def stft_pow(x, n_fft=512, hop=256):
+    win = np.sqrt(0.5 - 0.5 * np.cos(2 * np.pi * np.arange(n_fft) / n_fft))
+    nf = (len(x) - n_fft) // hop + 1
+    fr = np.stack([x[i * hop: i * hop + n_fft] * win for i in range(nf)])
+    return np.abs(np.fft.rfft(fr, axis=1)) ** 2
+
+
+def flaw_metrics(y, noisy, ref, device):
+    """四种毛病的代理指标（口径见文件头）。帧 = 512/256，帧的有声与否按干净参考帧能量（高于最响帧 −35 dB）。"""
+    P, Pn, Pr = stft_pow(y), stft_pow(noisy), stft_pow(ref)
+    n = min(len(P), len(Pn), len(Pr))
+    P, Pn, Pr = P[:n], Pn[:n], Pr[:n]
+    er = 10 * np.log10(Pr.sum(1) + 1e-12)
+    sp = er > er.max() - 35
+    ns = ~sp
+    f = np.arange(P.shape[1]) * SR / 512
+    band = (f >= 300) & (f <= 6000)
+    out = {}
+    if ns.sum() >= 10:
+        def kurt(a):
+            a = a.ravel()
+            return np.mean(a ** 2) / (np.mean(a) ** 2 + 1e-30)
+        out["lkr"] = round(float(np.log(kurt(P[ns][:, band]) / kurt(Pn[ns][:, band]))), 3)
+        e_ns = 10 * np.log10(P[ns].sum(1) + 1e-12)
+        out["gap_flutter_db"] = round(float(np.std(e_ns)), 2)
+    out["resid_rel_db"] = round(float(10 * np.log10((P[ns].sum(1).mean() + 1e-12) / (P[sp].sum(1).mean() + 1e-12))), 2) if ns.any() else None
+    # 400 ms 窗（≈25 帧）的语音电平
+    def lvl_std(Q):
+        vals = []
+        for i in range(0, n - 25, 12):
+            m = sp[i: i + 25]
+            if m.mean() >= 0.5:
+                vals.append(10 * np.log10(Q[i: i + 25][m].sum(1).mean() + 1e-12))
+        return float(np.std(vals)) if len(vals) >= 3 else None
+    a, b = lvl_std(P), lvl_std(Pr)
+    out["level_std_db"] = round(a - b, 2) if a is not None and b is not None else None
+    if device != "bt_narrow":
+        hi, mid = (f >= 4000) & (f <= 7500), (f >= 500) & (f < 4000)
+        r = lambda Q: 10 * np.log10(Q[sp][:, hi].sum() / (Q[sp][:, mid].sum() + 1e-12) + 1e-12)
+        out["hf_loss_db"] = round(float(r(P) - r(Pr)), 2)
+    return out
+
+
+def score(build, use_asr):
+    sys.path.insert(0, str(RES / "DNS-Challenge/DNSMOS"))
+    from dnsmos_local import ComputeScore
+    import score as s3  # exp003：ASR 与编辑距离，只调用
+    d, ab = paths(build)
+    s3.CACHE_FILE = ab / "asr_cache.json"
+    s3.CACHE = json.loads(s3.CACHE_FILE.read_text()) if s3.CACHE_FILE.exists() else {}
+    files = json.loads((ab / "files.json").read_text())
+    _, _, asr_ids = selection(truth_of(build))
+    dn = RES / "DNS-Challenge/DNSMOS/DNSMOS"
+    scorer = ComputeScore(str(dn / "sig_bak_ovr.onnx"), str(dn / "model_v8.onnx"))
+    per = {}
+    for cid, c in files["clips"].items():
+        ref, _ = sf.read(d / "test" / f"{cid}_clean.wav", dtype="float32")
+        raw = {v: sf.read(ab / "raw" / f"{cid}_{v}.wav", dtype="float32")[0] for v in ["noisy", *VERS]}
+        r = {}
+        do_asr = use_asr and cid in asr_ids
+        if do_asr:
+            ref_tok = tokens(s3.asr_once(d / "test" / f"{cid}_clean.wav", "en", s3.ASR_MODEL, 1), "en")
+        for v in ["noisy", *VERS]:
+            s = scorer(str(ab / c["versions"][v]["file"]), SR, False)
+            row = {"SIG": round(float(s["SIG"]), 3), "BAK": round(float(s["BAK"]), 3), "OVRL": round(float(s["OVRL"]), 3),
+                   "ESTOI": round(float(stoi(ref, raw[v][: len(ref)], SR, extended=True)), 4)}
+            row.update(flaw_metrics(raw[v] * 10 ** (c["versions"][v]["gain_db"] / 20), raw["noisy"], ref, c["device"]))
+            if do_asr:
+                hyp = s3.asr_once(ab / c["versions"][v]["file"], "en", s3.ASR_MODEL, 1)
+                D, S, I = s3.edit_ops(ref_tok, tokens(hyp, "en"))
+                row.update({"del_rate": round(D / max(1, len(ref_tok)), 4), "ins_rate": round(I / max(1, len(ref_tok)), 4)})
+            r[v] = row
+        per[cid] = r
+        print(cid, c["fine"], {v: r[v]["OVRL"] for v in r}, flush=True)
+    keys = ["SIG", "BAK", "OVRL", "ESTOI", "lkr", "resid_rel_db", "gap_flutter_db", "level_std_db", "hf_loss_db", "del_rate", "ins_rate"]
+
+    def agg(ids):
+        out = {}
+        for v in ["noisy", *VERS]:
+            out[v] = {}
+            for k in keys:
+                vals = [per[c][v][k] for c in ids if per[c][v].get(k) is not None]
+                if vals:
+                    out[v][k] = {"mean": round(float(np.mean(vals)), 3), "median": round(float(np.median(vals)), 3), "n": len(vals)}
+        return out
+
+    by_class = {}
+    for fine in LISTEN:
+        by_class[fine] = agg([c for c in per if files["clips"][c]["fine"] == fine])
+    # 成对比较：修音链开 vs 关（同模型）、路由开 vs 关（同修音链状态），逐段胜负
+    better_low = {"lkr", "gap_flutter_db", "level_std_db", "del_rate", "ins_rate"}
+
+    def wins(a, b, k):
+        w = l = 0
+        for c in per:
+            x, y = per[c][a].get(k), per[c][b].get(k)
+            if x is None or y is None or x == y:
+                continue
+            if (x < y) == (k in better_low):
+                w += 1
+            else:
+                l += 1
+        return {"win": w, "lose": l}
+
+    pairs = {f"{a}_vs_{b}": {k: wins(a, b, k) for k in keys} for a, b in [("polish", "base"), ("both", "route"), ("route", "base"), ("both", "base")]}
+    out = {"build": build, "n": len(per), "asr_n": sum(1 for c in per if "del_rate" in per[c]["base"]), "all": agg(list(per)),
+           "by_class": by_class, "pairwise": pairs, "per_clip": per, "polish_cost": files["meta"]["polish_us_per_hop"]}
+    (HERE / "builds" / build / "ab_scores.json").write_text(json.dumps(out, ensure_ascii=False, indent=1))
+    print(json.dumps({"all": out["all"], "pairwise": pairs}, ensure_ascii=False))
+
+
+def page(build):
+    """盲听页：复用 exp003 的 ab_page.html（4 个候选它已支持），只替换几处文案与存储前缀；
+    毛病标签默认展开（本实验就是要人标毛病）。每次一个新 page build，不覆盖旧的。"""
+    _, ab = paths(build)
+    files = json.loads((ab / "files.json").read_text())
+    listen = files["meta"]["listen"]
+    clips = files["clips"]
+    DESC = {"babble": "咖啡馆 / 餐厅多人嘈杂", "neighbor": "邻座有人说话", "clatter": "杯碟 / 键盘声", "traffic": "街道 / 公交",
+            "music": "背景音乐", "hvac": "空调 / 风扇", "quiet": "安静房间"}
+    pid = datetime.now().strftime("%Y%m%d%H%M%S") + "-" + secrets.token_hex(2)
+    pdir = ab / "pages" / pid
+    pdir.mkdir(parents=True, exist_ok=False)
+    up = lambda f: "../../" + f
+    rng = secrets.SystemRandom()
+    key, mclips = {}, []
+    for cid in listen:
+        order = VERS[:]
+        rng.shuffle(order)
+        key[cid] = order
+        v = clips[cid]["versions"]
+        mclips.append({"id": cid, "desc": DESC[clips[cid]["fine"]], "text": None, "ref": up(v["noisy"]["file"]),
+                       "cands": [up(v[m]["file"]) for m in order]})
+    # 检验题：全同 + 劣化（劣化法同 exp003：低通 1 kHz + 5 dB 白噪，响度拉回）
+    import build_page as b3  # exp003：只调用 degrade
+    c1, c2 = rng.sample(listen, 2)
+    m1 = rng.choice(VERS)
+    traps = [{"id": "trap-identical", "clip": c1, "desc": DESC[clips[c1]["fine"]], "label": "所有候选其实是同一个文件（应答「分不出」）",
+              "ref": up(clips[c1]["versions"]["noisy"]["file"]), "cands": [up(clips[c1]["versions"][m1]["file"])] * 4,
+              "names": ["same"] * 4, "expect": {"best": ["same"]}, "source_model": m1}]
+    m2 = rng.choice(VERS)
+    y, _ = sf.read(ab / clips[c2]["versions"][m2]["file"], dtype="float32")
+    fd = f"audio/{c2}_{secrets.token_hex(3)}.wav"
+    sf.write(ab / fd, b3.degrade(y, pyloudnorm.Meter(SR)), SR, subtype="PCM_16")
+    others = [m for m in VERS if m != m2]
+    rng.shuffle(others)
+    slots = [(m2, clips[c2]["versions"][m2]["file"]), ("degraded", fd)] + [(m, clips[c2]["versions"][m]["file"]) for m in others[:2]]
+    rng.shuffle(slots)
+    traps.append({"id": "trap-degraded", "clip": c2, "desc": DESC[clips[c2]["fine"]], "label": "其中一份是明显劣化版（最清楚、最自然都不该选它）",
+                  "ref": up(clips[c2]["versions"]["noisy"]["file"]), "cands": [up(f) for _, f in slots],
+                  "names": [n for n, _ in slots], "expect": {"not": ["degraded"]}, "source_model": m2})
+    # 页面上的名字不出现「路由 / 修音链」以外的实现细节；揭盲前根本不显示
+    manifest = {"build": pid, "n_cands": 4, "clips": mclips, "models": {m: INFO[m] for m in VERS},
+                "traps": [{k: v for k, v in t.items() if k not in ("source_model", "names")} for t in traps],
+                "slotmap": base64.b64encode(json.dumps({"clips": key, "traps": {t["id"]: t["names"] for t in traps}}).encode()).decode()}
+    (pdir / "manifest.js").write_text("window.EXP003 = " + json.dumps(manifest, ensure_ascii=False) + ";\n")
+    html = (EXP3 / "ab_page.html").read_text()
+    subs = [
+        ("<title>降噪盲听对比</title>", "<title>修音与场景盲听</title>"),
+        ("<h1>降噪盲听对比</h1>", "<h1>修音与场景盲听（exp006）</h1>"),
+        ("主讲人是声音最近、最清楚的那位（多数段开头约 1 秒后才开口，前 3 段一开头就说）；其他人声都算噪音。",
+         "主讲人是声音最近、最清楚的那位（有的段开头 1 秒内就开口）；其他人声都算噪音。四个候选用的降噪模型相近，差别主要在<b>听感毛病</b>：金属声 / 水声、真空感、忽大忽小、发闷——听到就在每个候选下面点出来。"),
+        ("大约 25–30 分钟。", "大约 25–35 分钟。"),
+        ('const STORE = "exp003-ab-" + M.build;', 'const STORE = "exp006-ab-" + M.build;'),
+        ('tg.className = "opts tagrow hidden";', 'tg.className = "opts tagrow";'),
+        ('exp: "exp003-offline-ab"', 'exp: "exp006-scene-sim"'),
+        ("a.download = `exp003-ab-result-", "a.download = `exp006-ab-result-"),
+        ("交给大总管放进 <code>docs/experiments/exp003-offline-ab/</code>。", "交给大总管放进 <code>docs/experiments/exp006-scene-sim/results/</code>。"),
+    ]
+    for a, b in subs:
+        assert html.count(a) == 1, f"exp003 页面变了，找不到：{a[:30]}"
+        html = html.replace(a, b)
+    (pdir / "index.html").write_text(html)
+    (pdir / "unblind-key.json").write_text(json.dumps({"build": pid, "data_build": build, "models": VERS, "key": key, "traps": traps},
+                                                      ensure_ascii=False, indent=1))
+    keep = HERE / "builds" / build / "pages" / pid
+    keep.mkdir(parents=True, exist_ok=False)
+    for f in ["unblind-key.json", "manifest.js"]:
+        shutil.copyfile(pdir / f, keep / f)
+    sub = {c: {k: v for k, v in clips[c].items()} for c in listen}
+    (keep / "files.json").write_text(json.dumps({"meta": files["meta"], "clips": sub}, ensure_ascii=False, indent=0))
+    print("page", pid, "→", pdir / "index.html")
+
+
+if __name__ == "__main__":
+    b, stage = sys.argv[1], sys.argv[2]
+    if stage == "enhance":
+        enhance(b)
+    elif stage == "score":
+        score(b, "--asr" in sys.argv)
+    elif stage == "page":
+        page(b)

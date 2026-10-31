@@ -43,7 +43,7 @@ impl PolishParams {
     };
 
     /// 预设表：`vdn-types` 的 `ParamSet.tone: ToneId(u8)` 就是这里的编号（0 = 不加工）。
-    /// 1–6 按细场景大类给起步值；+10 是同一预设的「窄带蓝牙」版（4 kHz 以上本来就没有，关掉去发闷）。
+    /// 1–6 按细场景大类给起步值；9 = 还没判出场景时用的 `DEFAULT`；+10 是同一预设的「窄带蓝牙」版（4 kHz 以上本来就没有，关掉去发闷）。
     /// 数值是 exp006 模拟数据上的初调，**待人耳定**；未知编号退回 `DEFAULT`。
     pub fn preset(tone: u8) -> Self {
         let base = |smooth, floor_db, comfort_db, demuffle_max_db| Self {
@@ -64,6 +64,7 @@ impl PolishParams {
             4 => base(0.7, -22.0, -8.0, 3.0),  // 交通：低频轰鸣，保留一点环境感
             5 => base(0.8, -20.0, -10.0, 2.0), // 音乐：残留是有音高的，平滑强
             6 => base(0.3, -16.0, -100.0, 3.0), // 多人会议（占位）：近处人声都留，处理最轻
+            9 => Self::DEFAULT,
             _ => Self::DEFAULT,
         };
         if narrow {
