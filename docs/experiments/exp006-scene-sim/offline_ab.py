@@ -76,7 +76,7 @@ def truth_of(build):
 
 
 def decisions(build, split):
-    d, _ = paths(build)
+    d, _, _ = paths(build)
     out = {}
     for l in (d / f"feat_{split}_final.jsonl").read_text().splitlines():
         r = json.loads(l)
