@@ -4,11 +4,15 @@
 //!   ① 停顿 ≥ `onset_gap_s` 后 VAD 转有声；② 一直有人声但短时电平（最近 3 个 hop ≈ 48 ms）比近 1 s 均值高
 //!   `onset_jump_db`（主人离麦近，插话时电平跳起来——覆盖「邻座还在说、主人接着开口」）。
 //!   **已知主人电平时，两种起始都还要短时电平 ≥ 主人电平 − `onset_level_margin_db`**：邻座远场更轻，他每句话之间
-//!   的停顿不该把门重新打开（exp005 第一轮：不加这条时每段 80 s 触发 600–980 次起始，门控根本收不住）
-//! - **慢收（要声纹确认）**：只有连续 `confirm_n` 份判决都是 Other、且判决窗**整个落在最近一次起始之后**
+//!   的停顿不该把门重新打开（exp005 第一轮：不加这条时每段 80 s 触发 600–980 次起始，门控根本收不住）。
+//!   停顿后 VAD 刚转有声时，起始判据保持 `onset_arm_s`（100 ms）有效——句首软起音头一个 hop 不够响也不错过；
+//!   电平跳起的起始有 `onset_refractory_s` 不应期，免得同一个人的重音峰反复刷新起始
+//! - **电平口径**：短时电平量的是 `dry`（原声，与判断回路记主人电平的信号相同，见 `judge.rs`），不量包络混过原声的 wet——
+//!   两边同一个信号，余量才不随信噪比漂（自审 P1-2）
+//! - **慢收（要声纹确认）**：只有 `confirm_n` 份作数的 Other 判决（中间夹的 NoSpeech、起始前的 Other 不打断也不计数）、且判决窗**整个落在最近一次起始之后**
 //!   （`SpeakerVerdict::valid_after`），才按 `release_s` 慢慢收到 `floor`。起始之前算的判决一律不作数——
 //!   这是「你接着邻桌开口，第一个字不被吞」的关键
-//! - Owner / Unknown 判决 → 回到 1（`reopen_s`，比起始放开慢一点，避免误判来回抽）；NoSpeech → 保持（停顿里不抽动）
+//! - Target / Unknown 判决 → 回到 1（`reopen_s`，比起始放开慢一点，避免误判来回抽）；NoSpeech → 保持（停顿里不抽动）
 //! - 衰减下限 `floor_db`（初值 −12 dB，不压成真空）
 //!
 //! 零前瞻、零算法延迟。实时安全：`process` 只有算术，不分配。
@@ -35,6 +39,10 @@ pub struct GateParams {
     /// 就先开始慢收，不等声纹确认。偏离 003 §2.3「声纹确认才收」，作为待拍板项单独评测（exp005）
     pub level_close_db: Option<f32>,
     pub level_close_hold_s: f32,
+    /// 停顿后 VAD 转有声起，起始判据保持有效的时长
+    pub onset_arm_s: f32,
+    /// 电平跳起型起始的不应期
+    pub onset_refractory_s: f32,
     pub vad_on: f32,
     pub vad_off: f32,
 }
@@ -53,6 +61,8 @@ impl Default for GateParams {
             onset_level_margin_db: 3.0,
             level_close_db: None,
             level_close_hold_s: 0.3,
+            onset_arm_s: 0.1,
+            onset_refractory_s: 0.3,
             vad_on: 0.5,
             vad_off: 0.35,
         }
@@ -74,6 +84,8 @@ pub struct AsymGate {
     short_e: [f32; 3],
     short_i: usize,
     quiet_voiced: u64,
+    /// 停顿后转有声时，起始判据有效到这个时刻
+    armed_until: SampleClock,
     last_onset: SampleClock,
     last_verdict_end: SampleClock,
     others_streak: u32,
@@ -96,6 +108,7 @@ impl AsymGate {
             short_e: [0.0; 3],
             short_i: 0,
             quiet_voiced: 0,
+            armed_until: SampleClock(0),
             last_onset: SampleClock(0),
             last_verdict_end: SampleClock(0),
             others_streak: 0,
@@ -132,43 +145,54 @@ impl Stage for AsymGate {
         self.short_e = [0.0; 3];
         self.short_i = 0;
         self.quiet_voiced = 0;
+        self.armed_until = SampleClock(0);
         self.last_onset = SampleClock(0);
         self.last_verdict_end = SampleClock(0);
         self.others_streak = 0;
         self.closing = false;
+        self.onsets = 0;
     }
 
-    fn process(&mut self, wet: &mut [f32], _dry: &[f32], ctx: FrameCtx) {
+    fn process(&mut self, wet: &mut [f32], dry: &[f32], ctx: FrameCtx) {
         let n = wet.len();
         if n == 0 {
             return;
         }
         // 1) 起始检测：人声概率优先用上游给的（与包络同一个 VAD），没有就自己算
         let p = match ctx.voice_prob {
-            Some(p) => p,
-            None => self.vad.push(wet),
+            Some(p) if p.is_finite() => p,
+            _ => self.vad.push(wet),
         };
         let voiced = self.hyst.update(p);
-        let e = wet.iter().map(|v| v * v).sum::<f32>() / n as f32;
+        // 短时电平量原声（与主人电平同一口径）；非有限样本当 0
+        let lvl_src = if dry.len() == n { dry } else { &wet[..] };
+        let e = lvl_src.iter().map(|v| if v.is_finite() { v * v } else { 0.0 }).sum::<f32>() / n as f32;
         self.short_e[self.short_i] = e;
         self.short_i = (self.short_i + 1) % self.short_e.len();
         let st_db =
             10.0 * (self.short_e.iter().sum::<f32>() / self.short_e.len() as f32 + 1e-12).log10();
         let gap = (self.p.onset_gap_s * self.p.sr) as u64;
         let loud_enough = match ctx.speaker.owner_level_db {
-            Some(ol) => st_db >= ol - self.p.onset_level_margin_db,
-            None => true,
+            Some(ol) if ol.is_finite() => st_db >= ol - self.p.onset_level_margin_db,
+            _ => true,
         };
         let mut onset = false;
         if voiced {
-            if loud_enough
-                && (self.silent_samples >= gap || st_db > self.slow_db + self.p.onset_jump_db)
-            {
+            if self.silent_samples >= gap {
+                // 停顿后刚转有声：起始判据保持 onset_arm_s
+                self.armed_until = SampleClock(ctx.now.0 + (self.p.onset_arm_s * self.p.sr) as u64);
+            }
+            let armed = ctx.now < self.armed_until;
+            let refractory_over =
+                self.onsets == 0 || ctx.now.since(self.last_onset) >= (self.p.onset_refractory_s * self.p.sr) as u64;
+            let jump = refractory_over && st_db > self.slow_db + self.p.onset_jump_db;
+            if loud_enough && (armed || jump) {
                 onset = true;
+                self.armed_until = SampleClock(0);
             }
             self.silent_samples = 0;
             // 背景电平（约 1 s），只跟有声 hop；第一次有声直接取当前值，免得从 −120 dB 慢慢爬时一路判「电平跳起」
-            if self.slow_db <= -119.0 {
+            if self.slow_db <= -119.0 || !self.slow_db.is_finite() {
                 self.slow_db = st_db;
             } else {
                 let a = one_pole_coef(1.0, self.p.sr / n as f32);
@@ -182,15 +206,16 @@ impl Stage for AsymGate {
             self.last_onset = ctx.now;
             self.others_streak = 0;
             self.closing = false;
+            self.quiet_voiced = 0;
         }
-        // 快路径：持续的「轻」人声 → 先收（可选）
+        // 快路径：连续的「轻」人声 → 先收（可选）。停顿、起始、Target/Unknown 判决都让计数归零
         if let (Some(d), Some(ol)) = (self.p.level_close_db, ctx.speaker.owner_level_db) {
             if voiced && !onset && st_db < ol - d {
                 self.quiet_voiced += n as u64;
                 if self.quiet_voiced >= (self.p.level_close_hold_s * self.p.sr) as u64 {
                     self.closing = true;
                 }
-            } else if voiced {
+            } else {
                 self.quiet_voiced = 0;
             }
         }
@@ -209,6 +234,7 @@ impl Stage for AsymGate {
                 SpeakerClass::Target | SpeakerClass::Unknown => {
                     self.others_streak = 0;
                     self.closing = false;
+                    self.quiet_voiced = 0;
                 }
             }
         }
@@ -221,6 +247,9 @@ impl Stage for AsymGate {
         } else {
             (1.0, self.a_reopen)
         };
+        if !self.g.is_finite() {
+            self.g = 1.0;
+        }
         for w in wet.iter_mut() {
             self.g += (target - self.g) * a;
             *w *= self.g;
@@ -257,7 +286,7 @@ mod tests {
         let mut g = AsymGate::new(GateParams::default());
         let hop = 256u64;
         let mut wet = vec![0.01f32; hop as usize];
-        let dry = wet.clone();
+        let mut dry = wet.clone();
         let mut pos = 0u64;
         let mut v = SpeakerVerdict::UNKNOWN;
         for _ in 0..400 {
@@ -273,11 +302,13 @@ mod tests {
         // 停顿 0.3 s（判决不变）
         for _ in 0..19 {
             wet.fill(0.0);
+            dry.fill(0.0);
             g.process(&mut wet, &dry, ctx(v, pos, 0.0));
             pos += hop;
         }
         // 新人声：一个 hop 内放开
         wet.fill(0.01);
+        dry.fill(0.01);
         g.process(&mut wet, &dry, ctx(v, pos, 0.9));
         assert!(!g.closing());
         assert!(g.gain() > 0.9, "起始没有立刻放开：{}", g.gain());
@@ -299,6 +330,30 @@ mod tests {
             );
         }
         assert!(!g.closing());
+    }
+
+    /// 门已收、主人电平已知：停顿后句首第一个 hop 很轻（软起音），下一个 hop 才够响 → 仍算起始、放开（自审 P1-1）
+    #[test]
+    fn soft_start_after_pause_still_reopens() {
+        let mut g = AsymGate::new(GateParams::default());
+        g.closing = true;
+        g.g = g.floor;
+        g.silent_samples = 100_000;
+        g.slow_db = -30.0;
+        g.onsets = 1;
+        let v = SpeakerVerdict { owner_level_db: Some(-25.0), ..verdict(SpeakerClass::Other, 1000) };
+        let mut pos = 200_000u64;
+        // 第一个 hop −45 dB（软起音），之后 −22 dB
+        for (k, amp) in [0.0056f32, 0.079, 0.079, 0.079].iter().enumerate() {
+            let mut wet = vec![*amp; 256];
+            let dry = wet.clone();
+            g.process(&mut wet, &dry, ctx(v, pos, 0.9));
+            pos += 256;
+            if k == 0 {
+                assert!(g.closing(), "软起音那一 hop 不该放开");
+            }
+        }
+        assert!(!g.closing(), "句首够响后应放开");
     }
 
     /// 已知主人电平时，比主人轻 10 dB 以上的起始（远场邻座）不触发放开
