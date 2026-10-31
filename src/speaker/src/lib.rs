@@ -1,4 +1,15 @@
 #![forbid(unsafe_code)]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::indexing_slicing,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 //! vdn-speaker：认出你的声音（P2 离线，`docs/plan/003_tech-design.md` 第二节）。
 //!
 //! 两条回路：

@@ -847,13 +847,21 @@ version = "0.1.0"
 dependencies = [
  "assert_no_alloc",
  "earshot",
- "hound",
  "ort",
  "realfft",
- "serde_json",
  "vdn-dsp",
+]
+
+[[package]]
+name = "vdn-speaker-lab"
+version = "0.1.0"
+dependencies = [
+ "hound",
+ "ort",
+ "serde_json",
  "vdn-engine",
  "vdn-models",
+ "vdn-speaker",
 ]
 
 [[package]]
