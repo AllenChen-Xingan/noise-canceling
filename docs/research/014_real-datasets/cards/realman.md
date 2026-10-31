@@ -1,0 +1,13 @@
+### RealMAN（2024，西湖大学 AudioLab + AISHELL，NeurIPS 2024 Datasets）
+- **做什么**：真实录制的 32 通道阵列普通话语音与噪声，用于动态语音增强和声源定位。
+- **录音设备与距离**：32 通道高保真麦克风阵列；**语音由音箱回放**（不是真人），全向鱼眼相机按音箱位置标注方位；含静止声源 48.3 h 与移动声源 35.4 h。阵列尺寸、距离：未查到。
+- **环境**：32 个语音录制场景 + 31 个噪声录制场景，覆盖室内、室外、半室外、交通工具。**具体场所名（是否有食堂 / 餐厅 / 咖啡馆）官方页与摘要都没列**，未查到；目录示例里只出现 BadmintonCourt2。
+- **说话人数与重叠**：单声源回放，无重叠。
+- **语言**：普通话（源语音约 35 h）。
+- **参考**：近讲 无；**直达声参考**有（源语音经「估计的直达声传递函数」滤波得到，`dp_speech`）· 转写 有（`transcriptions.trn`）· 说话人标签 未查到。
+- **大小**：语音 83.7 h + 噪声 144.5 h；train 531.4 GB、val 27.5 GB、test 39.3 GB、val_raw 66.4 GB、test_raw 91.6 GB。
+- **许可**：原句「The dataset is licensed under the Creative Commons Attribution 4.0 International (CC-BY-4.0) license.」· 结论：可训练。
+- **获取**：直接下载，HuggingFace `AISHELL/RealMAN` 或 aishelltech.com/RealMAN。
+- **接近度**：2/5 · 中文、真实声场与真实噪声、许可干净；但语音是回放、噪声分开录（属「部分真实」），阵列不是笔记本麦，没有重叠，体积很大。
+- **用途建议**：中文 sim-to-real 校准（真实场景噪声谱、电平分布，只下 test 39.3 GB）；可选作训练用的真实噪声库。不作首选回归集。
+- **出处**：https://github.com/Audio-WestlakeU/RealMAN 【官方】· arXiv:2406.19959 摘要【论文】（本会话主线直接核，2026-10-31）
