@@ -825,6 +825,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "vdn-eval"
+version = "0.1.0"
+dependencies = [
+ "hound",
+ "ort",
+ "serde_json",
+ "vdn-dsp",
+ "vdn-engine",
+ "vdn-models",
+ "vdn-types",
+]
+
+[[package]]
 name = "vdn-models"
 version = "0.1.0"
 dependencies = [
