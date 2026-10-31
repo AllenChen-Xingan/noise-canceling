@@ -35,7 +35,9 @@
 | 平台 | 都行 | Linux / macOS / iOS（README 明载）|
 | 代价 | 几乎零，可常开 | 构建脚本默认用 curl 下载预编译库（供应链与离线构建要注意，可改为本地编译 LLVM，首编几分钟）；`RTSAN_ENABLE=1` 才生效 |
 
-**建议**：两个都用，分工——**`assert_no_alloc` 常开在 debug/test**（便宜，管纯 Rust 的 dsp crate）；**rtsan-standalone 作为可选 feature**（`--features rtsan`），在 CI 的一个 job 和 P3 实测时开，专抓 ORT 与系统调用。dsp crate 做成纯 Rust、零分配，用 assert_no_alloc 就够。
+更正补充（复核后）：rtsan-standalone 默认分支最后提交 2025-09-27，命门 3 只算有条件满足；默认特性 `prebuilt-libs` 在 `RTSAN_ENABLE` 设了时才联网下载；环境变量是 `RTSAN_LIB_PATH`（README 写错成 RTSAN_LIBRARY_PATH，以 `sys/build.rs:54` 为准）。另有 rustc nightly 原生 `-Zsanitizer=realtime`，已支持 aarch64-apple-darwin，可做第二条路。assert_no_alloc 的替身可选 `nice-assert-no-alloc` 1.0.0（stable、零依赖），或照它自写约 60 行计数分配器。
+
+**建议**：两个都用，分工——**`assert_no_alloc`（或 nice-assert-no-alloc）常开在 debug/test**（便宜，管纯 Rust 的 dsp crate）；**rtsan-standalone 作为可选 feature**（`--features rtsan`），在 CI 的一个 job 和 P3 实测时开，专抓 ORT 与系统调用。dsp crate 做成纯 Rust、零分配，用 assert_no_alloc 就够。
 
 ## 3. FFT：realfft 3.x
 同意。realfft 3.5.1 最新发布 2026-10-26，MIT【API】；rustfft 6.4.1，MIT OR Apache-2.0【API】，aarch64 有 NEON 实现【推断，Workflow 在核文件:行号】。用 `process_with_scratch`，planner 与 scratch 在初始化时分配。
@@ -56,4 +58,4 @@ confidence-threshold = 0.9
 不放 `GPL-2.0-only`（与 GPL-3.0 不兼容）。`BSD-1-Clause` 是给 assert_no_alloc 用的。ort 链接的 onnxruntime 二进制是 MIT，cargo-deny 看不到，要在第三方许可清单里手写一条【推断】。（rustarch 线在写「规则用哪个工具」，最终模板以它为准。）
 
 ## 6. FTZ / 非正规数：no_denormals 0.3.0
-现成可用：MIT，2025-09-11【API】；aarch64 上读写 FPCR 置 FZ 位（含 fp16）【源码，GitHub 上 `src/lib.rs:5,72-78`】，用的是 RAII guard（drop 时恢复原值，guard 不能跨线程）。在推理线程入口持有一个 guard 即可，不用自己写内联汇编。注意：FPCR 是线程级的，ORT 自己的线程池线程不受影响——又一个设 `intra_threads(1)` 的理由【推断】。
+现成可用，但 0.3.0 发于 2025-09-11，已超 12 个月（命门 3 边缘）；替代是照 nih-plug `ScopedFtz` 自写两条指令（`resources/nih-plug/src/wrapper/util.rs:25,191`）。MIT，2025-09-11【API】；aarch64 上读写 FPCR 置 FZ 位（含 fp16）【源码，GitHub 上 `src/lib.rs:5,72-78`】，用的是 RAII guard（drop 时恢复原值，guard 不能跨线程）。在推理线程入口持有一个 guard 即可，不用自己写内联汇编。注意：FPCR 是线程级的，ORT 自己的线程池线程不受影响——又一个设 `intra_threads(1)` 的理由【推断】。
