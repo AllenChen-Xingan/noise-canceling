@@ -55,6 +55,8 @@ from _paths import RES  # noqa: E402
 
 SR = 16000
 VERS = ["base", "route", "polish", "both"]
+# 4 阶 Williams 方阵：行 = 段（循环使用），列 = 字母位置，值 = 基序里的第几个版本
+WILLIAMS4 = [[0, 1, 3, 2], [1, 2, 0, 3], [2, 3, 1, 0], [3, 0, 2, 1]]
 INFO = {
     "base": {"name": "基线：GTCRN，修音链关", "latency": "模型 16 ms；本行同 exp003 的 GTCRN"},
     "route": {"name": "路由开：按场景选 GTCRN / FastEnhancer-M，修音链关", "latency": "按池内最大（FE-M 22 ms）补齐，GTCRN 场景多 6 ms"},
@@ -380,14 +382,14 @@ def page(build):
     up = lambda f: "../../" + f
     rng = secrets.SystemRandom()
     key, mclips = {}, []
-    # 拉丁方在生成时定死：随机基序 base，第 i 段的槽位 j 放 base[(i + j) % 4]，每个版本在每个字母位置正好 3 次。
-    # 页面不再在运行时按模型名轮换（它根本不知道哪个槽位是哪个版本）
+    # Williams 设计（4 阶）在生成时定死：每个版本在每个字母位置正好 3 次，且「谁紧挨在谁前面」的 12 种先后对各出现一次 / 每 4 段。
+    # 循环拉丁方每段的环形先后都一样，平衡不了相邻顺序（自审 P3）。页面不在运行时轮换（它根本不知道哪个槽位是哪个版本）
     base = VERS[:]
     rng.shuffle(base)
     listen = listen[:]
     rng.shuffle(listen)
     for i, cid in enumerate(listen):
-        order = [base[(i + j) % 4] for j in range(4)]
+        order = [base[k] for k in WILLIAMS4[i % 4]]
         key[cid] = order
         v = clips[cid]["versions"]
         mclips.append({"id": cid, "desc": DESC[clips[cid]["fine"]], "text": None, "ref": up(v["noisy"]["file"]),
@@ -403,7 +405,7 @@ def page(build):
               "names": ["same"] * 4, "expect": {"best": ["same"]}, "source_model": m1}]  # 这题页面里就能判
     m2 = rng.choice(VERS)
     y, _ = sf.read(ab / clips[c2]["versions"][m2]["file"], dtype="float32")
-    fd = f"audio/{c2}_{secrets.token_hex(3)}.wav"
+    fd = f"audio/{c2}_{secrets.token_hex(4)}.wav"  # 与正常文件同长（第一版 6 位十六进制，看文件名就能认出劣化版）
     sf.write(ab / fd, b3.degrade(y, pyloudnorm.Meter(SR)), SR, subtype="PCM_16")
     others = [m for m in VERS if m != m2]
     rng.shuffle(others)
@@ -417,7 +419,8 @@ def page(build):
     manifest = {"build": pid, "n_cands": 4, "clips": mclips,
                 "models": {f"slot{i}": {"name": f"槽位 {i}", "latency": ""} for i in range(4)},
                 # 检验题在页面里只叫「检验题」，真实说明（哪道是全同 / 劣化）只在 docs/ 的对照表里
-                "traps": [{**{k: v for k, v in t.items() if k not in ("source_model", "names", "label", "kind")}, "label": "检验题"} for t in traps]}
+                "traps": [{**{k: v for k, v in t.items() if k not in ("source_model", "names", "label", "kind", "expect")}, "label": "检验题"}
+                          for t in traps]}
     (pdir / "manifest.js").write_text("window.EXP003 = " + json.dumps(manifest, ensure_ascii=False) + ";\n")
     html = (EXP3 / "ab_page.html").read_text()
     subs = [
@@ -427,6 +430,7 @@ def page(build):
         ('if (t.kind === "trap") return KEY.traps[t.trap][t.slots[L]];\n    return KEY.clips[t.clip][t.slots[L]];', 'return "slot" + t.slots[L];'),
         ('      ${s.head_to_head.dpdfnet2_vs_gtcrn ? `<p><b>DPDFNet-2 对 GTCRN 逐段</b>（先比「开会」评级，平级再看谁被选为最清楚）：DPDFNet-2 好 ${s.head_to_head.dpdfnet2_vs_gtcrn.dpdfnet2} 段 · GTCRN 好 ${s.head_to_head.dpdfnet2_vs_gtcrn.gtcrn} 段 · 分不出 ${s.head_to_head.dpdfnet2_vs_gtcrn.tie} 段。这就是「多 30 ms 延迟换来的效果」的主要证据。</p>` : ""}', ""),  # exp003 专用的「DPDFNet-2 对 GTCRN」一句
         ("// 两两对比（主要看 DPDFNet-2 对 GTCRN）：", "// 两两对比："),
+        ("const ex = trapById[r.trap].expect;", "const ex = { not: [] };  // 检验题在页面里不判（判法会泄露是哪道），揭盲后离线判"),
         ('<h2>听完了，揭盲结果</h2>', '<h2>听完了</h2><p class="muted">页面里没有答案：下表只按槽位统计，看不出哪个是哪个。导出 JSON 交大总管揭盲。</p>'),
         ("<title>降噪盲听对比</title>", "<title>修音与场景盲听</title>"),
         ("<h1>降噪盲听对比</h1>", "<h1>修音与场景盲听（exp006）</h1>"),
@@ -462,12 +466,12 @@ def self_check(ab, pdir, key):
     bad = [p for p in ab.rglob("*") if p.is_file() and (p.name in ("unblind-key.json", "files.json") or p.suffix == ".txt")]
     assert not bad, f"听测目录里有不该有的文件：{bad}"
     shown = {i["name"] for i in INFO.values()} | {"slotmap", "unblind", "GTCRN", "FastEnhancer"}
-    checks = [(pdir / "manifest.js", set(VERS) | shown | {"identical", "degraded", "劣化", "同一个文件"}), (pdir / "index.html", shown)]  # 页面代码里有 JS 变量叫 base，只查显示名
+    checks = [(pdir / "manifest.js", set(VERS) | shown | {"identical", "degraded", "劣化", "同一个文件", "expect"}), (pdir / "index.html", shown)]  # 页面代码里有 JS 变量叫 base，只查显示名
     for f, names in checks:
         txt = f.read_text()
         hit = [n for n in names if re.search(r'(?<![A-Za-z_])' + re.escape(n) + r'(?![A-Za-z_])', txt)]
         assert not hit, f"{f.name} 里出现了 {hit}"
-    odd = [p.name for p in (ab / "audio").iterdir() if not re.fullmatch(r"te\d{4}_[0-9a-f]{6,8}\.wav", p.name)]
+    odd = [p.name for p in (ab / "audio").iterdir() if not re.fullmatch(r"te\d{4}_[0-9a-f]{8}\.wav", p.name)]
     assert not odd, f"音频文件名不对：{odd[:3]}"
     print("自检通过：听测目录无揭盲表 / 清单，页面与 manifest 无版本名与映射")
 
