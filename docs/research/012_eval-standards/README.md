@@ -15,6 +15,6 @@
 | 3 | [assign.md](assign.md) | 派活记录（6 路 + 怀疑派）| ☑ |
 | 4 | [gap.md](gap.md) | **差距表**：004 每个指标、007 每个维度与否决线 → 已对齐 / 可对齐 / 行业没有 / 不适用 | ☑ |
 | 5 | [verifiers.md](verifiers.md) | **D44**：主观项拆解框架、定标四级 L0–L3、verifier 清单、给 rlenv 的接口、人耳回灌流程 | ☑ |
-| 6 | [decision.md](decision.md) | **取舍卡**：升级清单 15 条、rubric 修改清单 12 条（交大总管）、待人拍板 6 题 | ☑ |
+| 6 | [decision.md](decision.md) | **取舍卡**：升级清单 16 条（P0 四条）、rubric 修改清单 14 条（交大总管）、待人拍板 9 题 | ☑ |
 
 没有新实验。第一个该做的实验：用 exp003 现有数据算第一张 verifier 定标表（`verifiers.md` 第五节末）。
