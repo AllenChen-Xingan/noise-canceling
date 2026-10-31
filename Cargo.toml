@@ -1,7 +1,7 @@
 # vdn workspace：crate 放 src/<crate>/，依赖单向 dsp ← engine ← models ← cli（理由见 docs/experiments/exp004-p1-rust-parity/README.md「crate 划分」）
 [workspace]
 resolver = "3"
-members = ["src/dsp", "src/engine", "src/models", "src/cli"]
+members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/speaker"]
 
 [workspace.package]
 version = "0.1.0"
