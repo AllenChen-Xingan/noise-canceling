@@ -68,7 +68,10 @@ impl ParamSource {
     }
 }
 
-/// 滞回：边界上不来回跳（005：「连续确认数秒才换场景」）。数值是占位初值，待模拟环境标定（D41）。
+/// 滞回：边界上不来回跳（005：「连续确认数秒才换场景」）。默认值由 scene 线在模拟数据上标定（exp006 held-out：
+/// 已生效场景准确率用户层 93%、换场景后生效延迟中位 3.7 s / p90 6.4 s、错切 0.88 次/分钟；
+/// `docs/experiments/exp006-scene-sim/builds/20261030214530-44df/{sweep,eval_final}.json`）。感知侧另有 0.5 s 后验 EMA（在 scene 内）。
+/// 设备位（蓝牙 / 削波）不进滞回，另用施密特触发，生效后再拼进细场景。
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Hysteresis {
     /// 新场景要连续被判中这么久才换（秒）
@@ -82,9 +85,9 @@ pub struct Hysteresis {
 impl Default for Hysteresis {
     fn default() -> Self {
         Self {
-            confirm_s: 2.0,
-            min_confidence: 0.6,
-            min_dwell_s: 5.0,
+            confirm_s: 1.0,
+            min_confidence: 0.4,
+            min_dwell_s: 3.0,
         }
     }
 }

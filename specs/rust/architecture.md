@@ -218,7 +218,7 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 
 **进出实时线程的两个包**（ondevice 线需求，2026-10-31）：
 - 判断 → 实时：`ParamBlock { seq, config: ContentId, model_hash: ContentId, params: ParamSet, transition }`，`Copy`，经 rtrb 送（§3.4「必须同时生效的一组参数」那一行就是它；§3.4 的 `AtomicU32` 只留给单个旋钮的即时值）。实时线程在帧边界取最新一份，没有新的沿用旧的，绝不等。完整格式校验在判断线程写入前做；实时线程只调 `ParamBlock::accept_rt`（`seq` 更新、`model_hash` 与正在跑的模型一致、全部有限 → 钳位后采用，否则沿用旧块）。**覆盖层张量绝不进参数块**。进 Stage 走 `Stage::set_params`
-- 实时 → 判断：`FrameFeatures { now, level_db, noise_db, snr_db, voice_prob, bands_db: [f32; 16], bypassed }`，每 hop 一个经 rtrb 送出，满了丢弃并计数；噪声谱复用模型的 STFT（扩展 trait `SpectrumTap::last_magnitude`，不改 `Model`），不另算。字段由 scene 线定稿
+- 实时 → 判断：`FrameFeatures`（scene 定稿：电平 · 底噪 · SNR · VAD · 16 带能量 · 平坦度 · 高低频比 · 质心 · 谐波性与峰位 · 谱峰保持率 · 削波占比 · 是否送原声；谱取带噪输入、与 GTCRN STFT 同口径），每 hop 一个经 rtrb 送出，满了丢弃并计数；噪声谱复用模型的 STFT（扩展 trait `SpectrumTap::last_magnitude`，不改 `Model`），不另算。FE-M 这类拿不到谱的由特征通道自己做一次 FFT，只喂判断、不进音频路径
 - 平滑：连续参数在 hop 内逐样本插值、dB 类字段限速 `Transition::max_db_per_s`（初值 1 dB/s）、手动改动最短斜坡 `manual_ramp_s`（初值 30 ms）；离散参数（模型、修音链预设）走交叉淡化，**等增益**（等功率对相关信号会鼓 +3 dB），淡化期算力 ×2 计入最坏帧；48 kHz 层的参数（`strength` 湿干比）在 Pipeline 层渐变。零前瞻、零附加延迟
 
 #### 3.7.1 感知输出（`src/types/src/scene.rs`）
@@ -234,7 +234,7 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 - 用户优先：`UserControl { scene: Auto | Manual(UserScene), lock, knobs }`，手动选场景时只用该场景下的细场景；锁定冻结的是「表 + 我的配置」那一层，**旋钮照常盖在上面**
 - 反馈入口 `Policy::observe(&DecisionEvent)`（默认空）：以后的老虎机从这里拿奖励（005 第三节 B 第 3 步）
 - 参数进 Stage：`Stage::set_params(&ParamSet)`（默认空，实时线程逐 hop 调，不分配）
-- 默认数值（2 s / 0.6 / 5 s / 1 s / 50 ms）是占位，由 scene 线在模拟环境上标定
+- 滞回默认 1 s / 0.4 / 3 s 由 scene 线在模拟数据上标定（exp006 held-out：用户层准确率 93%、生效延迟中位 3.7 s、错切 0.88 次/分钟）；设备位不进滞回、另用施密特触发；平滑 1 s / 50 ms 仍是占位，待听测
 
 #### 3.7.3 场景参数表（`src/types/src/table.rs`）与参数组（`params.rs`）
 - `ParamSet`（`Copy`）：`model: ModelId` · `tone: ToneId`（修音链预设编号，0 = 不加工，预设内容归 `vdn-polish`）· `strength`（只管模型湿干比）· `floor_db` · `open_db` · `detect_db` · `release_s` · `hangover_s`；每个连续字段有闭区间范围，加载时校验，越界拒收

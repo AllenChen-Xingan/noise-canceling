@@ -101,13 +101,14 @@ pub struct FrameCtx {
     pub voice_prob: Option<f32>,
 }
 
-/// 实时 → 判断回路的每帧特征包（ondevice 需求 ③）：每 hop 一个，经 rtrb 送出，**满了丢弃并计数**，实时侧绝不等。
-/// 噪声谱复用模型的 STFT，不另算。字段是草案，由感知（scene 线）定稿。
+/// 实时 → 判断回路的每帧特征包（ondevice 需求 ③，字段由 scene 线定稿 2026-10-31）：每 hop 一个，经 rtrb 送出，
+/// **满了丢弃并计数**，实时侧绝不等（约 5 µs/hop）。谱特征取自**带噪输入**、与 GTCRN STFT 同口径（512 点 sqrt-Hann、hop 256）：
+/// 有 [`crate::SpectrumTap`] 就复用，FE-M 这类拿不到谱的由特征通道自己做一次 FFT——只喂判断，不进音频路径、不加延迟。
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct FrameFeatures {
     /// 本 hop 首样本（IO 采样率）
     pub now: SampleClock,
-    /// 输入电平（dBFS）
+    /// 全频帧能量（dBFS）
     pub level_db: f32,
     /// 底噪跟踪值（dBFS）
     pub noise_db: f32,
@@ -115,14 +116,41 @@ pub struct FrameFeatures {
     pub snr_db: f32,
     /// 人声概率（VAD）；`None` = 没跑
     pub voice_prob: Option<f32>,
-    /// 噪声谱（按 [`FrameFeatures::BANDS`] 个频带汇总的 dB），取自模型 STFT
+    /// 100 Hz–8 kHz 对数等分 [`FrameFeatures::BANDS`] 带的能量（dB）
     pub bands_db: [f32; FrameFeatures::BANDS],
+    /// 100 Hz 以上谱平坦度
+    pub flatness: f32,
+    /// 4–8 kHz 对 1–4 kHz 的能量比（dB）
+    pub hf_db: f32,
+    /// 300 Hz 以下能量占比（dB）
+    pub low_db: f32,
+    /// 谱质心（kHz）
+    pub centroid_khz: f32,
+    /// 谐波性：功率谱逆变换的自相关在 40–200 样本的归一化峰
+    pub harmonicity: f32,
+    /// 上一项的峰位（样本）
+    pub pitch_lag: u16,
+    /// 200–4000 Hz 谱峰的帧间保持率
+    pub peak_persist: f32,
+    /// 平顶（削波）样本占比，时域算
+    pub clip_frac: f32,
     /// 本 hop 是否整段送了原声
     pub bypassed: bool,
 }
 
 impl FrameFeatures {
     pub const BANDS: usize = 16;
+}
+
+#[cfg(test)]
+mod feature_tests {
+    #[test]
+    fn features_are_small_copy() {
+        fn is_copy<T: Copy>() {}
+        is_copy::<super::FrameFeatures>();
+        // 每 hop 经 rtrb 按值送：守住体积
+        assert!(core::mem::size_of::<super::FrameFeatures>() <= 160);
+    }
 }
 
 /// 为什么整段送原声。
