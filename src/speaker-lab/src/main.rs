@@ -1,10 +1,10 @@
-//! vdn-speaker：P2 离线实验命令行（exp005）。
+//! vdn-speaker-lab：P2 离线实验命令行（exp005）。从 vdn-speaker 的 offline feature 挪出（2026-10-31 p2fix，规约 §2.2 规则 1）。
 //!
 //! ```text
-//! vdn-speaker denoise <noisy.wav> <wet.wav> [--model-path gtcrn.onnx]   # GTCRN 原样输出（对齐）
-//! vdn-speaker run   <noisy.wav> <out_dir> --wet <wet.wav> [--speaker-onnx ecapa.onnx] [--preload owner.json] [--save-owner owner.json]
-//! vdn-speaker fbank <in.wav> <out.f32>        # fbank 原始特征（CMN 前），行主序 float32，对拍用
-//! vdn-speaker embed <in.wav>                  # 打印整段的声纹向量（JSON），对拍用
+//! vdn-speaker-lab denoise <noisy.wav> <wet.wav> [--model-path gtcrn.onnx]   # GTCRN 原样输出（对齐）
+//! vdn-speaker-lab run   <noisy.wav> <out_dir> --wet <wet.wav> [--speaker-onnx ecapa.onnx] [--preload owner.json] [--save-owner owner.json]
+//! vdn-speaker-lab fbank <in.wav> <out.f32>        # fbank 原始特征（CMN 前），行主序 float32，对拍用
+//! vdn-speaker-lab embed <in.wav>                  # 打印整段的声纹向量（JSON），对拍用
 //! ```
 //!
 //! `run` 一次出 5 个版本（共用同一份降噪输出）：
