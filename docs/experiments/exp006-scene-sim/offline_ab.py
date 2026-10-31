@@ -65,8 +65,10 @@ ASR_PER_CLASS = 12
 
 
 def paths(build):
+    """(数据目录, 听测目录, 工作目录)。听测目录只放打乱命名的音频与页面——**不放**揭盲表、写着条件名的清单和
+    以条件名命名的文件（CLAUDE.md 第五节第 1 条，2026-10-31 补）；这些都在工作目录或 docs/ 里。"""
     d = ROOT / "_tmp/20261031-exp006" / build
-    return d, d / "ab"
+    return d, d / "listen", d / "ab_work"
 
 
 def truth_of(build):
@@ -117,8 +119,8 @@ def selection(truth):
 
 def enhance(build):
     import enhance as e3  # exp003：只调用
-    d, ab = paths(build)
-    (ab / "raw").mkdir(parents=True, exist_ok=True)
+    d, ab, wk = paths(build)
+    (wk / "raw").mkdir(parents=True, exist_ok=True)
     (ab / "audio").mkdir(parents=True, exist_ok=True)
     truth = truth_of(build)
     test, listen, _ = selection(truth)
@@ -141,14 +143,14 @@ def enhance(build):
         routed = (1 - w) * g + w * f
         raw = {"noisy": x, "base": g, "route": routed}
         for v in ("noisy", "base", "route"):
-            sf.write(ab / "raw" / f"{cid}_{v}.wav", raw[v], SR, subtype="FLOAT")
-        tl = ab / "raw" / f"{cid}_tones.txt"
+            sf.write(wk / "raw" / f"{cid}_{v}.wav", raw[v], SR, subtype="FLOAT")
+        tl = wk / "raw" / f"{cid}_tones.txt"
         tl.write_text("0 9\n" + "".join(f"{tt:.3f} {tone}\n" for tt, _, tone, _ in dec[cid]))
         for v, wet, tone in (("polish", "base", "9"), ("both", "route", str(tl))):
-            p = subprocess.run([str(polish_bin), str(ab / "raw" / f"{cid}_noisy.wav"), str(ab / "raw" / f"{cid}_{wet}.wav"),
-                                str(ab / "raw" / f"{cid}_{v}.wav"), tone], capture_output=True, text=True, check=True)
+            p = subprocess.run([str(polish_bin), str(wk / "raw" / f"{cid}_noisy.wav"), str(wk / "raw" / f"{cid}_{wet}.wav"),
+                                str(wk / "raw" / f"{cid}_{v}.wav"), tone], capture_output=True, text=True, check=True)
             perf.append(json.loads(p.stderr.strip().splitlines()[-1]))
-            raw[v], _ = sf.read(ab / "raw" / f"{cid}_{v}.wav", dtype="float32")
+            raw[v], _ = sf.read(wk / "raw" / f"{cid}_{v}.wav", dtype="float32")
         # 响度：主讲人说话区间统一到 −26 LUFS，峰值超限同段一起降
         mask, n = vad_mask(ref)
         gains = {}
@@ -170,7 +172,7 @@ def enhance(build):
     ag = float(np.mean([p["agc_us_per_hop"] for p in perf]))
     meta = {"build": build, "listen": listen, "n_clips": len(files), "polish_us_per_hop": {"spectral": round(sp, 2), "agc": round(ag, 2),
             "cpu_share_pct_of_one_core": round(100 * (sp + ag) / 16000, 3)}}
-    (ab / "files.json").write_text(json.dumps({"meta": meta, "clips": files}, ensure_ascii=False, indent=0))
+    (wk / "files.json").write_text(json.dumps({"meta": meta, "clips": files}, ensure_ascii=False, indent=0))
     print(json.dumps(meta, ensure_ascii=False))
 
 
@@ -225,17 +227,17 @@ def score(build, use_asr):
     sys.path.insert(0, str(RES / "DNS-Challenge/DNSMOS"))
     from dnsmos_local import ComputeScore
     import score as s3  # exp003：ASR 与编辑距离，只调用
-    d, ab = paths(build)
-    s3.CACHE_FILE = ab / "asr_cache.json"
+    d, ab, wk = paths(build)
+    s3.CACHE_FILE = wk / "asr_cache.json"
     s3.CACHE = json.loads(s3.CACHE_FILE.read_text()) if s3.CACHE_FILE.exists() else {}
-    files = json.loads((ab / "files.json").read_text())
+    files = json.loads((wk / "files.json").read_text())
     _, _, asr_ids = selection(truth_of(build))
     dn = RES / "DNS-Challenge/DNSMOS/DNSMOS"
     scorer = ComputeScore(str(dn / "sig_bak_ovr.onnx"), str(dn / "model_v8.onnx"))
     per = {}
     for cid, c in files["clips"].items():
         ref, _ = sf.read(d / "test" / f"{cid}_clean.wav", dtype="float32")
-        raw = {v: sf.read(ab / "raw" / f"{cid}_{v}.wav", dtype="float32")[0] for v in ["noisy", *VERS]}
+        raw = {v: sf.read(wk / "raw" / f"{cid}_{v}.wav", dtype="float32")[0] for v in ["noisy", *VERS]}
         r = {}
         do_asr = use_asr and cid in asr_ids
         if do_asr:
@@ -292,8 +294,8 @@ def score(build, use_asr):
 def page(build):
     """盲听页：复用 exp003 的 ab_page.html（4 个候选它已支持），只替换几处文案与存储前缀；
     毛病标签默认展开（本实验就是要人标毛病）。每次一个新 page build，不覆盖旧的。"""
-    _, ab = paths(build)
-    files = json.loads((ab / "files.json").read_text())
+    _, ab, wk = paths(build)
+    files = json.loads((wk / "files.json").read_text())
     listen = files["meta"]["listen"]
     clips = files["clips"]
     DESC = {"babble": "咖啡馆 / 餐厅多人嘈杂", "neighbor": "邻座有人说话", "clatter": "杯碟 / 键盘声", "traffic": "街道 / 公交",
@@ -351,12 +353,12 @@ def page(build):
         assert html.count(a) == 1, f"exp003 页面变了，找不到：{a[:30]}"
         html = html.replace(a, b)
     (pdir / "index.html").write_text(html)
-    (pdir / "unblind-key.json").write_text(json.dumps({"build": pid, "data_build": build, "models": VERS, "key": key, "traps": traps},
-                                                      ensure_ascii=False, indent=1))
+    unblind = json.dumps({"build": pid, "data_build": build, "models": VERS, "key": key, "traps": traps}, ensure_ascii=False, indent=1)
     keep = HERE / "builds" / build / "pages" / pid
     keep.mkdir(parents=True, exist_ok=False)
-    for f in ["unblind-key.json", "manifest.js"]:
-        shutil.copyfile(pdir / f, keep / f)
+    (keep / "unblind-key.json").write_text(unblind)  # 揭盲表只进 docs/（提交）与工作目录，不进听测目录
+    (wk / f"unblind-key-{pid}.json").write_text(unblind)
+    shutil.copyfile(pdir / "manifest.js", keep / "manifest.js")
     sub = {c: {k: v for k, v in clips[c].items()} for c in listen}
     (keep / "files.json").write_text(json.dumps({"meta": files["meta"], "clips": sub}, ensure_ascii=False, indent=0))
     print("page", pid, "→", pdir / "index.html")
