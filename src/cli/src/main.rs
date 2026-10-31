@@ -121,11 +121,11 @@ struct BenchArgs {
 
 fn main() {
     let cli = Cli::parse();
-    // 推理线程入口开 flush-to-zero：安静时 RNN 数值掉进 denormal 会慢几十倍（设计稿 §7「实时编程纪律」）
-    let res = no_denormals::no_denormals(|| match cli.cmd {
+    // flush-to-zero 暂不开：P1 要和 Python 逐值对拍，且 no_denormals 是 unsafe；留到 P3 实时线程入口（exp004 README「已知局限」）
+    let res = match cli.cmd {
         Cmd::Denoise(a) => denoise(a),
         Cmd::Bench(a) => bench(a),
-    });
+    };
     if let Err(e) = res {
         eprintln!("vdn: {e}");
         std::process::exit(1);
