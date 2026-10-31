@@ -1,0 +1,248 @@
+{
+  "metrics": [
+    {
+      "agreement": 0.4791666666666667,
+      "agreement_ci95": [
+        0.2619047619047619,
+        0.7046401515151501
+      ],
+      "by_source": [
+        {
+          "agreement": 0.4722222222222222,
+          "pairs": 18,
+          "source": "clearer"
+        },
+        {
+          "agreement": 0.42857142857142855,
+          "pairs": 14,
+          "source": "h3"
+        },
+        {
+          "agreement": 0.53125,
+          "pairs": 16,
+          "source": "natural"
+        }
+      ],
+      "level": "L0",
+      "level_if_validation": "L0",
+      "metric": "DNSMOS OVRL",
+      "pairs": 48,
+      "screens": 9,
+      "tau_clips": 7,
+      "tau_lo95": -0.4665694748158435,
+      "tau_within_clip_mean": -0.0904275945507789,
+      "verifier": "V-DNSMOS",
+      "why": "第 1 轮是定标轮（奇数轮），验证集为空 → 正式级别 L0（012 §2.3 第 1 条）"
+    },
+    {
+      "agreement": 0.5625,
+      "agreement_ci95": [
+        0.3333333333333333,
+        0.782608695652174
+      ],
+      "by_source": [
+        {
+          "agreement": 0.5555555555555556,
+          "pairs": 18,
+          "source": "clearer"
+        },
+        {
+          "agreement": 0.5,
+          "pairs": 14,
+          "source": "h3"
+        },
+        {
+          "agreement": 0.625,
+          "pairs": 16,
+          "source": "natural"
+        }
+      ],
+      "level": "L0",
+      "level_if_validation": "L0",
+      "metric": "DNSMOS SIG",
+      "pairs": 48,
+      "screens": 9,
+      "tau_clips": 7,
+      "tau_lo95": -0.4665694748158435,
+      "tau_within_clip_mean": 0.0,
+      "verifier": "V-DNSMOS.SIG",
+      "why": "第 1 轮是定标轮（奇数轮），验证集为空 → 正式级别 L0（012 §2.3 第 1 条）"
+    },
+    {
+      "agreement": 0.5,
+      "agreement_ci95": [
+        0.2391304347826087,
+        0.782608695652174
+      ],
+      "by_source": [
+        {
+          "agreement": 0.5,
+          "pairs": 18,
+          "source": "clearer"
+        },
+        {
+          "agreement": 0.5,
+          "pairs": 14,
+          "source": "h3"
+        },
+        {
+          "agreement": 0.5,
+          "pairs": 16,
+          "source": "natural"
+        }
+      ],
+      "level": "L0",
+      "level_if_validation": "L0",
+      "metric": "DNSMOS BAK",
+      "pairs": 48,
+      "screens": 9,
+      "tau_clips": 7,
+      "tau_lo95": -0.4665694748158435,
+      "tau_within_clip_mean": 0.0,
+      "verifier": "V-DNSMOS.BAK",
+      "why": "第 1 轮是定标轮（奇数轮），验证集为空 → 正式级别 L0（012 §2.3 第 1 条）"
+    },
+    {
+      "agreement": 0.5208333333333334,
+      "agreement_ci95": [
+        0.3333333333333333,
+        0.7115384615384616
+      ],
+      "by_source": [
+        {
+          "agreement": 0.5,
+          "pairs": 18,
+          "source": "clearer"
+        },
+        {
+          "agreement": 0.5,
+          "pairs": 14,
+          "source": "h3"
+        },
+        {
+          "agreement": 0.5625,
+          "pairs": 16,
+          "source": "natural"
+        }
+      ],
+      "level": "L0",
+      "level_if_validation": "L0",
+      "metric": "停顿衰减 noise_att_db（越低 = 压得越多）",
+      "pairs": 48,
+      "screens": 9,
+      "tau_clips": 7,
+      "tau_lo95": -0.3499271061118826,
+      "tau_within_clip_mean": 0.0,
+      "verifier": "V-NR",
+      "why": "第 1 轮是定标轮（奇数轮），验证集为空 → 正式级别 L0（012 §2.3 第 1 条）"
+    },
+    {
+      "agreement": 0.6354166666666666,
+      "agreement_ci95": [
+        0.41,
+        0.84
+      ],
+      "by_source": [
+        {
+          "agreement": 0.6388888888888888,
+          "pairs": 18,
+          "source": "clearer"
+        },
+        {
+          "agreement": 0.6785714285714286,
+          "pairs": 14,
+          "source": "h3"
+        },
+        {
+          "agreement": 0.59375,
+          "pairs": 16,
+          "source": "natural"
+        }
+      ],
+      "level": "L0",
+      "level_if_validation": "L0",
+      "metric": "Δ(del + sub) 相对原声（越低越好）",
+      "pairs": 48,
+      "screens": 9,
+      "tau_clips": 5,
+      "tau_lo95": -0.3,
+      "tau_within_clip_mean": 0.4265986323710905,
+      "verifier": "V-EAT-ASR",
+      "why": "第 1 轮是定标轮（奇数轮），验证集为空 → 正式级别 L0（012 §2.3 第 1 条）"
+    },
+    {
+      "agreement": 0.5208333333333334,
+      "agreement_ci95": [
+        0.2962962962962963,
+        0.75
+      ],
+      "by_source": [
+        {
+          "agreement": 0.5555555555555556,
+          "pairs": 18,
+          "source": "clearer"
+        },
+        {
+          "agreement": 0.5,
+          "pairs": 14,
+          "source": "h3"
+        },
+        {
+          "agreement": 0.5,
+          "pairs": 16,
+          "source": "natural"
+        }
+      ],
+      "level": "L0",
+      "level_if_validation": "L0",
+      "metric": "ESTOI",
+      "pairs": 48,
+      "screens": 9,
+      "tau_clips": 7,
+      "tau_lo95": -0.4665694748158435,
+      "tau_within_clip_mean": 0.0,
+      "verifier": "ESTOI（未登记）",
+      "why": "第 1 轮是定标轮（奇数轮），验证集为空 → 正式级别 L0（012 §2.3 第 1 条）"
+    },
+    {
+      "agreement": 0.6041666666666666,
+      "agreement_ci95": [
+        0.36538461538461536,
+        0.8409090909090909
+      ],
+      "by_source": [
+        {
+          "agreement": 0.6111111111111112,
+          "pairs": 18,
+          "source": "clearer"
+        },
+        {
+          "agreement": 0.6428571428571429,
+          "pairs": 14,
+          "source": "h3"
+        },
+        {
+          "agreement": 0.5625,
+          "pairs": 16,
+          "source": "natural"
+        }
+      ],
+      "level": "L0",
+      "level_if_validation": "L0",
+      "metric": "SI-SDR",
+      "pairs": 48,
+      "screens": 9,
+      "tau_clips": 7,
+      "tau_lo95": -0.23328473740792174,
+      "tau_within_clip_mean": 0.23328473740792174,
+      "verifier": "SI-SDR（未登记）",
+      "why": "第 1 轮是定标轮（奇数轮），验证集为空 → 正式级别 L0（012 §2.3 第 1 条）"
+    }
+  ],
+  "pairs_total": 48,
+  "round": 1,
+  "rules": "配对：最清楚 / 最自然被选者对同屏其余各一对 + H3 同屏差 ≥ 1 级；按屏聚类 bootstrap 10000 次（种子 20261030）；L1：配对 ≥ 20 且下界 > 0.5；L2：再加片段 ≥ 30 且片段内 τ 下界 ≥ 0.2〔建议值，012 拍板 #8〕",
+  "screens": 12,
+  "session_discounted": true,
+  "set": "calibration"
+}
