@@ -4,8 +4,13 @@
 两者都标出处。暂不改 src/eval/（evalimpl 合并后由它加载本文件，或让 parse_suite 读 tasks/）。
 
 输出：tasks/human-tasks.json
-用法：python3 docs/experiments/human-prefs/make_tasks.py [--check]
+用法：python3 docs/experiments/human-prefs/make_tasks.py [--check] [--registry <verifiers.rs>]
+  --check     只比对，不写
+  --registry  verifier 注册表（默认 src/eval/src/verifiers.rs；本分支还没合 main 时可指向一份副本）
+校验（每次都跑）：id 唯一（含 src/eval/suite/*.json）· set / polarity 取值 · origin 非空 · real.kind ∈ exp003/exp005 ·
+  graders / info 的 v 都在注册表里（找不到注册表时只警告）
 """
+import re
 import json
 import sys
 from pathlib import Path
@@ -196,8 +201,43 @@ def repro(exp, clip):
             "judged_audio": "builds/20261030224448-ab48/files.json 有被听的每份节选的 sha256（human.screens[].audio_out_sha256）"}
 
 
+def validate(d):
+    repo = HERE.parent.parent.parent
+    reg_path = Path(sys.argv[sys.argv.index("--registry") + 1]) if "--registry" in sys.argv else repo / "src/eval/src/verifiers.rs"
+    errs = []
+    reg = set(re.findall(r'id: "(V-[A-Z0-9-]+)"', reg_path.read_text())) if reg_path.exists() else None
+    if reg is None:
+        print(f"警告：找不到 verifier 注册表 {reg_path}，跳过 verifier id 校验")
+    other = []
+    for f in sorted((repo / "src/eval/suite").glob("*.json")) if (repo / "src/eval/suite").exists() else []:
+        other += [t["id"] for t in json.loads(f.read_text()).get("tasks", [])]
+    ids = [t["id"] for t in d["tasks"]]
+    dup = {i for i in ids + other if (ids + other).count(i) > 1}
+    if dup:
+        errs.append(f"id 重复：{sorted(dup)}")
+    for t in d["tasks"]:
+        if t["set"] not in ("regression", "capability", "probe"):
+            errs.append(f"{t['id']} set={t['set']}")
+        if t.get("polarity") not in (None, "suppress", "preserve", "both", "robust"):
+            errs.append(f"{t['id']} polarity={t['polarity']}")
+        if not t.get("origin"):
+            errs.append(f"{t['id']} 缺 origin")
+        if t["real"]["kind"] not in ("exp003", "exp005"):
+            errs.append(f"{t['id']} real.kind={t['real']['kind']}（vdn-eval 只认 exp003 / exp005）")
+        if not t["human"]["screens"]:
+            errs.append(f"{t['id']} 没有人判屏")
+        for g in t["graders"] + t.get("info", []):
+            if reg is not None and g["v"] not in reg:
+                errs.append(f"{t['id']} verifier {g['v']} 不在注册表")
+    if errs:
+        print("校验失败：\n  " + "\n  ".join(errs))
+        sys.exit(1)
+    print(f"校验通过（注册表 {len(reg) if reg else '—'} 个 verifier；对照其他清单 {len(other)} 个任务 id）")
+
+
 def main():
     text = json.dumps(build(), ensure_ascii=False, indent=1) + "\n"
+    validate(json.loads(text))
     if "--check" in sys.argv:
         ok = OUT.exists() and OUT.read_text() == text
         print("一致" if ok else "与仓里不一致（重跑 make_tasks.py）")
