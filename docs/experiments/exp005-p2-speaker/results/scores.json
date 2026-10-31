@@ -78,7 +78,26 @@
     "vad": -39.171669006347656,
     "personal": -39.85794448852539
    },
-   "asr": {},
+   "asr": {
+    "vad": {
+     "del": 0.0,
+     "sub": 0.020833333333333332,
+     "ins": 0.03125,
+     "ref_words": 96,
+     "n_del": 0,
+     "n_sub": 2,
+     "n_ins": 3
+    },
+    "personal": {
+     "del": 0.0,
+     "sub": 0.020833333333333332,
+     "ins": 0.03125,
+     "ref_words": 96,
+     "n_del": 0,
+     "n_sub": 2,
+     "n_ins": 3
+    }
+   },
    "compute": {
     "judge_ms_p50": 6.164604500000001,
     "judge_ms_max": 7.440542,
@@ -168,7 +187,26 @@
     "vad": -41.498023986816406,
     "personal": -41.78902053833008
    },
-   "asr": {},
+   "asr": {
+    "vad": {
+     "del": 0.0,
+     "sub": 0.0,
+     "ins": 0.0,
+     "ref_words": 121,
+     "n_del": 0,
+     "n_sub": 0,
+     "n_ins": 0
+    },
+    "personal": {
+     "del": 0.0,
+     "sub": 0.0,
+     "ins": 0.0,
+     "ref_words": 121,
+     "n_del": 0,
+     "n_sub": 0,
+     "n_ins": 0
+    }
+   },
    "compute": {
     "judge_ms_p50": 5.994625,
     "judge_ms_max": 6.987208,
@@ -201,7 +239,7 @@
      "cos_owner": 0.5399042182770132,
      "cos_interf": 0.0991653261403906
     },
-    "lock_correct": false,
+    "lock_correct": null,
     "n_relock": 0
    },
    "verdicts": {
@@ -257,7 +295,26 @@
     "vad": -41.659339904785156,
     "personal": -41.871116638183594
    },
-   "asr": {},
+   "asr": {
+    "vad": {
+     "del": 0.0,
+     "sub": 0.0,
+     "ins": 0.0,
+     "ref_words": 126,
+     "n_del": 0,
+     "n_sub": 0,
+     "n_ins": 0
+    },
+    "personal": {
+     "del": 0.0,
+     "sub": 0.0,
+     "ins": 0.0,
+     "ref_words": 126,
+     "n_del": 0,
+     "n_sub": 0,
+     "n_ins": 0
+    }
+   },
    "compute": {
     "judge_ms_p50": 6.074187500000001,
     "judge_ms_max": 7.543667,
@@ -348,7 +405,26 @@
     "vad": -39.52102279663086,
     "personal": -39.78520965576172
    },
-   "asr": {},
+   "asr": {
+    "vad": {
+     "del": 0.011904761904761904,
+     "sub": 0.03571428571428571,
+     "ins": 0.0,
+     "ref_words": 84,
+     "n_del": 1,
+     "n_sub": 3,
+     "n_ins": 0
+    },
+    "personal": {
+     "del": 0.011904761904761904,
+     "sub": 0.023809523809523808,
+     "ins": 0.0,
+     "ref_words": 84,
+     "n_del": 1,
+     "n_sub": 2,
+     "n_ins": 0
+    }
+   },
    "compute": {
     "judge_ms_p50": 5.899083,
     "judge_ms_max": 8.760333000000001,
@@ -439,7 +515,26 @@
     "vad": -39.14725112915039,
     "personal": -39.77618408203125
    },
-   "asr": {},
+   "asr": {
+    "vad": {
+     "del": 0.0,
+     "sub": 0.0,
+     "ins": 0.0,
+     "ref_words": 93,
+     "n_del": 0,
+     "n_sub": 0,
+     "n_ins": 0
+    },
+    "personal": {
+     "del": 0.0,
+     "sub": 0.0,
+     "ins": 0.0,
+     "ref_words": 93,
+     "n_del": 0,
+     "n_sub": 0,
+     "n_ins": 0
+    }
+   },
    "compute": {
     "judge_ms_p50": 5.848478999999999,
     "judge_ms_max": 6.996916,
@@ -510,7 +605,26 @@
     "vad": -39.809261322021484,
     "personal": -39.809261322021484
    },
-   "asr": {},
+   "asr": {
+    "vad": {
+     "del": 0.0,
+     "sub": 0.012269938650306749,
+     "ins": 0.0,
+     "ref_words": 163,
+     "n_del": 0,
+     "n_sub": 2,
+     "n_ins": 0
+    },
+    "personal": {
+     "del": 0.0,
+     "sub": 0.012269938650306749,
+     "ins": 0.0,
+     "ref_words": 163,
+     "n_del": 0,
+     "n_sub": 2,
+     "n_ins": 0
+    }
+   },
    "compute": {
     "judge_ms_p50": 5.513750000000001,
     "judge_ms_max": 7.2321670000000005,
@@ -600,7 +714,26 @@
     "vad": -67.10707092285156,
     "personal": -67.34801483154297
    },
-   "asr": {},
+   "asr": {
+    "vad": {
+     "del": 0.0,
+     "sub": 0.0,
+     "ins": 0.0,
+     "ref_words": 117,
+     "n_del": 0,
+     "n_sub": 0,
+     "n_ins": 0
+    },
+    "personal": {
+     "del": 0.0,
+     "sub": 0.0,
+     "ins": 0.0,
+     "ref_words": 117,
+     "n_del": 0,
+     "n_sub": 0,
+     "n_ins": 0
+    }
+   },
    "compute": {
     "judge_ms_p50": 6.228584,
     "judge_ms_max": 7.3557500000000005,
@@ -633,7 +766,7 @@
      "cos_owner": 0.5886479465541805,
      "cos_interf": 0.23355623758343558
     },
-    "lock_correct": false,
+    "lock_correct": null,
     "n_relock": 0
    },
    "verdicts": {
@@ -689,7 +822,26 @@
     "vad": -41.32807159423828,
     "personal": -41.32808303833008
    },
-   "asr": {},
+   "asr": {
+    "vad": {
+     "del": 0.0,
+     "sub": 0.015503875968992248,
+     "ins": 0.007751937984496124,
+     "ref_words": 129,
+     "n_del": 0,
+     "n_sub": 2,
+     "n_ins": 1
+    },
+    "personal": {
+     "del": 0.0,
+     "sub": 0.015503875968992248,
+     "ins": 0.007751937984496124,
+     "ref_words": 129,
+     "n_del": 0,
+     "n_sub": 2,
+     "n_ins": 1
+    }
+   },
    "compute": {
     "judge_ms_p50": 6.320583,
     "judge_ms_max": 8.254166,

@@ -179,7 +179,7 @@ def cmd_score(tag=""):
             elif fi >= 0.6 and fo < 0.1:
                 vc["interf_win"][l["class"]] += 1
         ow = vc["owner_win"]
-        lock_correct = None if lock_t is None else (ow["owner"] > ow["others"])
+        lock_correct = None if lock_t is None or (ow["owner"] + ow["others"]) == 0 else (ow["owner"] > ow["others"])
         # IRL
         lk = int(lock_t * SR) if lock_t else n
         irl, irl_post = {}, {}
