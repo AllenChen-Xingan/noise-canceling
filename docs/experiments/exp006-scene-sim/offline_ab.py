@@ -323,7 +323,9 @@ def page(build):
     import build_page as b3  # exp003：只调用 degrade
     c1, c2 = rng.sample(listen, 2)
     m1 = rng.choice(VERS)
-    traps = [{"id": "trap-identical", "clip": c1, "desc": DESC[clips[c1]["fine"]], "label": "所有候选其实是同一个文件（应答「分不出」）",
+    tid = ["trap-1", "trap-2"]
+    rng.shuffle(tid)  # 题号不透露哪道是全同、哪道是劣化
+    traps = [{"id": tid[0], "kind": "identical", "clip": c1, "desc": DESC[clips[c1]["fine"]], "label": "所有候选其实是同一个文件（应答「分不出」）",
               "ref": up(clips[c1]["versions"]["noisy"]["file"]), "cands": [up(clips[c1]["versions"][m1]["file"])] * 4,
               "names": ["same"] * 4, "expect": {"best": ["same"]}, "source_model": m1}]  # 这题页面里就能判
     m2 = rng.choice(VERS)
@@ -334,7 +336,7 @@ def page(build):
     rng.shuffle(others)
     slots = [(m2, clips[c2]["versions"][m2]["file"]), ("degraded", fd)] + [(m, clips[c2]["versions"][m]["file"]) for m in others[:2]]
     rng.shuffle(slots)
-    traps.append({"id": "trap-degraded", "clip": c2, "desc": DESC[clips[c2]["fine"]], "label": "其中一份是明显劣化版（揭盲后离线判：最清楚、最自然都不该选它）",
+    traps.append({"id": tid[1], "kind": "degraded", "clip": c2, "desc": DESC[clips[c2]["fine"]], "label": "其中一份是明显劣化版（揭盲后离线判：最清楚、最自然都不该选它）",
                   "ref": up(clips[c2]["versions"]["noisy"]["file"]), "cands": [up(f) for _, f in slots],
                   "names": [n for n, _ in slots], "expect": {"not": []}, "source_model": m2})
     # manifest 里**没有答案**：没有槽位→版本映射、没有版本名（CLAUDE.md 第五节第 1 条，2026-10-31 补）。
@@ -342,7 +344,7 @@ def page(build):
     manifest = {"build": pid, "n_cands": 4, "clips": mclips,
                 "models": {f"slot{i}": {"name": f"槽位 {i}", "latency": ""} for i in range(4)},
                 # 检验题在页面里只叫「检验题」，真实说明（哪道是全同 / 劣化）只在 docs/ 的对照表里
-                "traps": [{**{k: v for k, v in t.items() if k not in ("source_model", "names", "label")}, "label": "检验题"} for t in traps]}
+                "traps": [{**{k: v for k, v in t.items() if k not in ("source_model", "names", "label", "kind")}, "label": "检验题"} for t in traps]}
     (pdir / "manifest.js").write_text("window.EXP003 = " + json.dumps(manifest, ensure_ascii=False) + ";\n")
     html = (EXP3 / "ab_page.html").read_text()
     subs = [

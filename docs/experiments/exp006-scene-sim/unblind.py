@@ -26,6 +26,7 @@ def main():
     ans = json.loads(ans_path.read_text())
     key = json.loads((HERE / "builds" / data_build / "pages" / ans["build"] / "unblind-key.json").read_text())
     traps = {t["id"]: t["names"] for t in key["traps"]}
+    trap_kind = {t["id"]: t.get("kind", t["id"].removeprefix("trap-")) for t in key["traps"]}
 
     def ver(trial, slot):  # slot 形如 "slot2"；"same" / "none" 原样
         if not isinstance(slot, str) or not slot.startswith("slot"):
@@ -44,11 +45,11 @@ def main():
              "tags": {ver(t, s): v for s, v in bm["tags"].items()}, "note": t.get("note", "")}
         rows.append(r)
         if t["kind"] == "trap":
-            if t["trap"] == "trap-identical":
+            if trap_kind[t["trap"]] == "identical":
                 ok = r["clearer"] == "same" and r["natural"] == "same"
             else:
                 ok = r["clearer"] != "degraded" and r["natural"] != "degraded"
-            trap_res.append({"trap": t["trap"], "pass": ok, "clearer": r["clearer"], "natural": r["natural"]})
+            trap_res.append({"trap": t["trap"], "kind": trap_kind[t["trap"]], "pass": ok, "clearer": r["clearer"], "natural": r["natural"]})
             continue
         if t["kind"] != "real":
             continue
