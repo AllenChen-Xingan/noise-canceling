@@ -8,41 +8,47 @@
   "quietest": "最安静（旁人声音最小）"
  },
  "n_pairs": 219,
- "n_trials": 30,
+ "n_trials": 29,
  "pairs_by_dim": {
   "clearer": {
    "decisive": 20,
    "identical_audio": 0,
+   "invalid": 0,
    "pairs": 29,
    "tie": 9
   },
   "defects": {
    "decisive": 7,
    "identical_audio": 0,
+   "invalid": 0,
    "pairs": 7,
    "tie": 0
   },
   "eaten": {
    "decisive": 15,
    "identical_audio": 2,
+   "invalid": 0,
    "pairs": 62,
    "tie": 47
   },
   "meeting": {
    "decisive": 32,
    "identical_audio": 1,
+   "invalid": 1,
    "pairs": 54,
    "tie": 22
   },
   "natural": {
    "decisive": 34,
    "identical_audio": 0,
+   "invalid": 0,
    "pairs": 46,
    "tie": 12
   },
   "quietest": {
    "decisive": 6,
    "identical_audio": 2,
+   "invalid": 0,
    "pairs": 21,
    "tie": 15
   }
@@ -62,7 +68,7 @@
    "notes": 0,
    "screens_real": 2,
    "screens_trap": 0,
-   "unblindable": 5,
+   "unblindable": 4,
    "validity": "unverified",
    "why": "答到第 6 题中止，两道检验题都没答到；揭盲表丢失，只恢复了 c01–c03"
   },

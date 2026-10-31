@@ -138,8 +138,8 @@ def exp003_partial(ans_path, key_path, clips):
         if t["clip"] not in ans["answers"]:
             continue  # 没答到
         a = ans["answers"][t["clip"]] if t["kind"] == "real" else None
-        if a is None:
-            continue
+        if a is None or not a.get("answered_at"):
+            continue  # 打开了但没答完（如第 7 屏 c07 只听了 B）
         rec = base_rec("exp003", key["build"], ans_path, key_path, i, t)
         fine, user, desc = EXP003_SCENE[t["clip"]]
         rec["clip"] = t["clip"]
@@ -344,6 +344,9 @@ def pairs_of(rec):
 
     def emit(dim, x, y, winner, rule, strength):
         same_audio = bool(shas.get(x)) and shas.get(x) == shas.get(y)
+        if same_audio and winner != "tie":
+            # 两份逐字节相同却分出了胜负 = 这一对的判断是随机的（位置 / 噪声），不能当偏好
+            rule, strength = rule + "+identical_audio", "invalid"
         out.append({
             "rec_id": rec["rec_id"], "exp": rec["exp"], "build": rec["build"], "clip": rec["clip"],
             "scene_fine": rec["scene"]["fine"], "scene_user": rec["scene"]["user"],
@@ -422,10 +425,11 @@ def summarize(trials, pairs):
                     s["best_of_letters"][q][L] += 1
     by_dim = {}
     for p in pairs:
-        d = by_dim.setdefault(p["dim"], {"pairs": 0, "decisive": 0, "tie": 0, "identical_audio": 0})
+        d = by_dim.setdefault(p["dim"], {"pairs": 0, "decisive": 0, "tie": 0, "identical_audio": 0, "invalid": 0})
         d["pairs"] += 1
         d["tie" if p["winner"] == "tie" else "decisive"] += 1
         d["identical_audio"] += p["identical_audio"]
+        d["invalid"] += p["strength"] == "invalid"
     return {"n_trials": len(trials), "n_pairs": len(pairs), "sessions": sessions, "pairs_by_dim": by_dim,
             "dims": DIMS}
 
