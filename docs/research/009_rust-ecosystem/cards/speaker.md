@@ -110,7 +110,7 @@
 | 项 | 内容 |
 |---|---|
 | 做什么 | Rust 版说话人分离，复刻 pyannote community-1 流程（分段 + WeSpeaker ResNet34 + PLDA + VBx / AHC），后端有原生 CPU、CoreML、CUDA |
-| 许可证 | Apache-2.0【源码】`resources/speakrs/Cargo.toml:27`；关键依赖 kodama 0.3（层次聚类，MIT【推断】）、ndarray、rustfft【源码】`Cargo.toml:90-96`；**代码与 GPL-3.0 兼容：是**；**它下载的 pyannote / PLDA 模型文件另有许可，没核**（见文末存疑） |
+| 许可证 | Apache-2.0【源码】`resources/speakrs/Cargo.toml:27`；关键依赖 kodama 0.3（层次聚类，MIT【API】crates.io；0.3.0 发布于 2023-01-04，已停更，但只在 eval 里用）、ndarray、rustfft【源码】`Cargo.toml:90-96`；**代码与 GPL-3.0 兼容：是**；**它下载的 pyannote / PLDA 模型文件另有许可，没核**（见文末存疑） |
 | 维护状态 | 0.7.0（2026-10-26）【API】；最后一次提交 2026-10-28；0 个 open issue；最近 5 个都是维护者自己提、自己合【API】。**非常活跃，基本是单人维护** |
 | 实时安全做法 | fbank 这一层零分配：FFT 计划和 mel 表放进 `Arc<Recipe>` 共享，工作区每个句柄一份，输出写进调用方给的 `ArrayViewMut2`【源码】`src/inference/cpu/fbank.rs:15-75`；逐帧循环只用栈上的 `[0.0; SPECTRUM_BINS]` 和预分配好的工作区【源码】`:88-123`。但它的窗长固定 10 s（160 000 点、998 帧）【源码】`src/inference/native_model/fbank.rs:7-13`，按批处理设计，不是流式。AHC 每次都分配距离矩阵【源码】`src/clustering/ahc.rs:43`、`:73-77` |
 | 值得学的一处 | 见文件开头「最值得学」第 1 条（`fbank.rs:15-34`、`:58-75`、`:92-105`）；还有一处：按 bin 求 CMN 均值时也用 f64 累加【源码】`:126-131`。它的测试拿一个独立的 f64 参考实现对拍，容差 1e-3【源码】`src/inference/cpu/fbank/tests.rs:87`、`:145-161`，**我们对拍时可以照这个容差起步** |
@@ -122,8 +122,8 @@
 | 项 | 内容 |
 |---|---|
 | 做什么 | 两个候选声纹模型的官方训练 / 推理 / 导出代码，是我们 fbank 对拍的**唯一基准** |
-| 许可证 | 两者代码都是 Apache-2.0【推断，按仓库 LICENSE 惯例；没逐个打开】；代码兼容 GPL-3.0；**预训练权重的许可不在本卡范围**（005 #2 待拍板） |
-| 维护状态 | 已在 resources 里，没再查 API【—】 |
+| 许可证 | 两者代码都是 Apache-2.0【源码】`resources/wespeaker/LICENSE:1-3`、`resources/3D-Speaker/LICENSE:1-3`【API】（复核 3 打开核过，从【推断】升级）；代码兼容 GPL-3.0；**预训练权重的许可不在本卡范围**（005 #2 待拍板） |
+| 维护状态 | WeSpeaker 最近 push 2026-09-22，38 个 open issue；3D-Speaker 最近 push 2025-12-08，5 个 open issue【API】（复核 3 补查）。两个都在 12 个月以内 |
 | 实时安全做法 | 不适用（Python）；WeSpeaker 的 C++ runtime fbank 每帧都 new 一个 `std::vector`【源码】`resources/wespeaker/runtime/core/frontend/fbank.h:147-148` |
 | 值得学的一处 | WeSpeaker 的 C++ fbank 整个 `Compute` 不到 70 行，流程是：去直流 → 预加重（首样本也减 `coeff*x[0]`）→ hamming 窗 → 补零到 2 的幂做 FFT → 功率谱 → 三角 mel 加权 → 按 eps 下限取 log【源码】`resources/wespeaker/runtime/core/frontend/fbank.h:138-198`（预加重在 `:122-127`，mel 表构建在 `:51-88`）。**说明自写 fbank 的工作量很小**，难点只在参数对齐 |
 | 我们怎么用 | **只看看 + 当对拍基准**。导出的输入输出名：WeSpeaker 是 `feats` → `embs`，T 维动态，opset 14【源码】`resources/wespeaker/wespeaker/bin/export_onnx.py:88-99`；3D-Speaker 是 `feature` → `embedding`，opset 11【源码】`resources/3D-Speaker/speakerlab/bin/export_speaker_embedding_onnx.py:181-190`。`speaker` 的适配器要能吃这两种命名 |
