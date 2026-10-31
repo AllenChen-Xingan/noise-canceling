@@ -44,7 +44,7 @@ pub use model::{Model, ModelError};
 pub use params::{ModelId, ParamError, ParamField, ParamSet, ToneId};
 pub use policy::{
     Decision, Hysteresis, HysteresisGate, ParamSource, Policy, PolicyInput, Transition, UserControl,
-    UserSceneChoice, resolve_params,
+    TablePolicy, UserSceneChoice, resolve_params,
 };
 pub use scene::{FineSceneId, SceneLabel, SceneName, UserScene};
 pub use stage::Stage;
