@@ -68,8 +68,9 @@ impl OpenCloseEnvelope {
 
     /// 用 `detect`（一个 hop 的判据信号）更新状态，把逐样本混回比例写进 `mix`（与 `detect` 等长）。
     pub fn process(&mut self, detect: &[f32], mix: &mut [f32]) {
-        assert_eq!(detect.len(), mix.len());
-        let n = detect.len();
+        debug_assert_eq!(detect.len(), mix.len());
+        let n = detect.len().min(mix.len());
+        let (detect, mix) = (&detect[..n], &mut mix[..n]);
         let hop_s = n as f32 / self.p.sr;
         let e = detect.iter().map(|v| v * v).sum::<f32>() / n.max(1) as f32;
         let e_db = 10.0 * (e + 1e-12).log10();
@@ -121,6 +122,24 @@ mod tests {
             detect_db: 9.0,
             abs_min_db: -70.0,
             noise_rise_db_per_s: 6.0,
+        }
+    }
+
+    /// 开头的数字静音不能把底噪钉死：零之后来的稳定底噪应当判为无声。
+    #[test]
+    fn leading_silence_does_not_pin_noise_floor() {
+        let mut env = OpenCloseEnvelope::new(params());
+        let hop = 256;
+        let zeros = vec![0.0f32; hop];
+        let noise = vec![3e-3f32; hop];
+        let mut mix = vec![0.0; hop];
+        for _ in 0..5 {
+            env.process(&zeros, &mut mix);
+        }
+        env.process(&noise, &mut mix);
+        for _ in 0..20 {
+            env.process(&noise, &mut mix);
+            assert!(!env.voiced(), "稳定底噪被判成有声");
         }
     }
 
