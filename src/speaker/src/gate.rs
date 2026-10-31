@@ -167,16 +167,14 @@ impl Stage for AsymGate {
                 }
             }
         }
-        // 3) 增益
-        let (target, a) = if onset {
-            // 起始：立刻放开
-            (1.0, self.a_att)
-        } else if self.closing {
+        // 3) 增益：收 = 慢；起始后 100 ms 内放开 = 快；其余放开 = 中速
+        let fast = ctx.sample_pos < self.last_onset + (0.1 * self.p.sr) as u64 && self.onsets > 0;
+        let (target, a) = if self.closing {
             (self.floor, self.a_rel)
-        } else if self.g < 1.0 && self.last_onset == ctx.sample_pos {
+        } else if fast {
             (1.0, self.a_att)
         } else {
-            (1.0, if self.g < 0.999 && self.silent_samples == 0 && ctx.sample_pos.saturating_sub(self.last_onset) < (0.1 * self.p.sr) as u64 { self.a_att } else { self.a_reopen })
+            (1.0, self.a_reopen)
         };
         for w in wet.iter_mut() {
             self.g += (target - self.g) * a;
