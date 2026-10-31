@@ -14,7 +14,12 @@ fn run(kind: ModelKind, hop: usize, latency: usize) {
     let x: Vec<f32> = (0..16000)
         .map(|i| 0.1 * (i as f32 * 0.07).sin() + 0.01 * ((i * 7919 % 101) as f32 / 50.0 - 1.0))
         .collect();
-    let mut e = Engine::new(m, SafetyConfig::off());
+    // 开着「出事送原声」才会给故障计数
+    let cfg = SafetyConfig {
+        fallback: true,
+        ..SafetyConfig::off()
+    };
+    let mut e = Engine::new(m, cfg);
     let y = offline::run(&mut e, &x, 0).output;
     assert_eq!(y.len(), x.len());
     assert!(y.iter().all(|v| v.is_finite()));
