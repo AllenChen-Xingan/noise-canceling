@@ -20,7 +20,11 @@ pub struct Confidence(f32);
 
 impl Confidence {
     pub fn new(v: f32) -> Self {
-        if v.is_nan() { Self(0.0) } else { Self(v.clamp(0.0, 1.0)) }
+        if v.is_nan() {
+            Self(0.0)
+        } else {
+            Self(v.clamp(0.0, 1.0))
+        }
     }
     pub fn get(self) -> f32 {
         self.0
@@ -40,7 +44,13 @@ pub enum UserScene {
 }
 
 impl UserScene {
-    pub const ALL: [UserScene; 5] = [UserScene::Quiet, UserScene::Cafe, UserScene::Commute, UserScene::Music, UserScene::Meeting];
+    pub const ALL: [UserScene; 5] = [
+        UserScene::Quiet,
+        UserScene::Cafe,
+        UserScene::Commute,
+        UserScene::Music,
+        UserScene::Meeting,
+    ];
     pub fn as_str(self) -> &'static str {
         match self {
             UserScene::Quiet => "quiet",
@@ -141,7 +151,13 @@ pub struct HysteresisGate {
 
 impl HysteresisGate {
     pub fn new(params: Hysteresis) -> Self {
-        Self { params, committed: FineSceneId::UNKNOWN, committed_user: UserScene::Quiet, committed_at: None, candidate: None }
+        Self {
+            params,
+            committed: FineSceneId::UNKNOWN,
+            committed_user: UserScene::Quiet,
+            committed_at: None,
+            candidate: None,
+        }
     }
 
     pub fn committed(&self) -> (UserScene, FineSceneId) {

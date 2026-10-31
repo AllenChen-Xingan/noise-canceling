@@ -108,7 +108,11 @@ pub fn params_for(id: FineSceneId) -> ParamSet {
         NoiseClass::Music => (ModelId::FastEnhancerM, 5),
     };
     p.model = model;
-    p.tone = ToneId(if d == Device::BtNarrow { tone + 10 } else { tone });
+    p.tone = ToneId(if d == Device::BtNarrow {
+        tone + 10
+    } else {
+        tone
+    });
     p
 }
 
@@ -120,7 +124,12 @@ pub fn table_text() -> String {
         let id = FineSceneId(i);
         let p = params_for(id);
         name(id, &mut nm);
-        s.push_str(&format!("{i} {nm} {} {} {}\n", user_of_id(id).as_str(), p.model.as_str(), p.tone.0));
+        s.push_str(&format!(
+            "{i} {nm} {} {} {}\n",
+            user_of_id(id).as_str(),
+            p.model.as_str(),
+            p.tone.0
+        ));
     }
     s
 }
@@ -143,8 +152,17 @@ mod tests {
 
     #[test]
     fn evidence_based_models() {
-        assert_eq!(params_for(fine_id(NoiseClass::Babble, Device::Normal)).model, ModelId::FastEnhancerM);
-        assert_eq!(params_for(fine_id(NoiseClass::Neighbor, Device::Normal)).model, ModelId::Gtcrn);
-        assert_eq!(params_for(fine_id(NoiseClass::Neighbor, Device::BtNarrow)).tone, ToneId(13));
+        assert_eq!(
+            params_for(fine_id(NoiseClass::Babble, Device::Normal)).model,
+            ModelId::FastEnhancerM
+        );
+        assert_eq!(
+            params_for(fine_id(NoiseClass::Neighbor, Device::Normal)).model,
+            ModelId::Gtcrn
+        );
+        assert_eq!(
+            params_for(fine_id(NoiseClass::Neighbor, Device::BtNarrow)).tone,
+            ToneId(13)
+        );
     }
 }

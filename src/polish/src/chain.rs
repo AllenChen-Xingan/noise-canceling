@@ -56,7 +56,11 @@ impl PolishChain {
         self.from = self.cur;
         self.to = p;
         self.t = 0.0;
-        self.step = if self.ramp_s <= 0.0 { 1.0 } else { 1.0 / (self.ramp_s * self.fps) };
+        self.step = if self.ramp_s <= 0.0 {
+            1.0
+        } else {
+            1.0 / (self.ramp_s * self.fps)
+        };
     }
 
     /// 当前生效的参数（过渡中的插值）。
@@ -88,7 +92,9 @@ impl PolishChain {
 
     /// 时域部分。没有外部 VAD 时借用频谱节点的人声存在度。
     pub fn process_time(&mut self, wet: &mut [f32]) {
-        let vp = self.last_vp.unwrap_or_else(|| self.spectral.last_speech_presence());
+        let vp = self
+            .last_vp
+            .unwrap_or_else(|| self.spectral.last_speech_presence());
         let p = self.cur;
         self.agc.process(wet, &p, vp);
     }

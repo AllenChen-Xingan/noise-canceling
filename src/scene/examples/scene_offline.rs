@@ -60,14 +60,17 @@ fn main() {
     }
     let out = std::io::stdout();
     let mut out = BufWriter::new(out.lock());
-    let (mut t_push, mut n_push, mut t_judge, mut n_judge) = (Duration::ZERO, 0u64, Duration::ZERO, 0u64);
+    let (mut t_push, mut n_push, mut t_judge, mut n_judge) =
+        (Duration::ZERO, 0u64, Duration::ZERO, 0u64);
     let mut max_push = Duration::ZERO;
     let mut max_judge = Duration::ZERO;
     let mut line = String::new();
     let mut nm = String::new();
     for row in std::fs::read_to_string(list).expect("读不了清单").lines() {
         let mut it = row.split_whitespace();
-        let (Some(id), Some(path)) = (it.next(), it.next()) else { continue };
+        let (Some(id), Some(path)) = (it.next(), it.next()) else {
+            continue;
+        };
         let x = read_wav(path);
         let mut sa = SceneAnalyzer::new(16000, HOP);
         sa.set_tuning(h, ema);

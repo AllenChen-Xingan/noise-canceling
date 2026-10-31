@@ -44,10 +44,41 @@ const N_FFT: usize = 512;
 const BINS: usize = N_FFT / 2 + 1;
 
 pub const FEATURE_NAMES: [&str; NF] = [
-    "snr_est", "floor_db", "mid_spread", "flat_lo", "flat_all", "flux_mean", "flux_peaky", "hf_mean", "hf_p90",
-    "low_ratio", "centroid", "harm_frac", "harm_mean", "pitch_stab", "peak_persist", "mod_lo", "mod_4", "mod_hi",
-    "e_std", "band_stat", "decay", "clip", "slope", "bmod_1", "bmod_2", "bmod_3", "bmod_4", "floor_1", "floor_2", "floor_3", "floor_4", "floor_5", "floor_6",
-    "floor_7", "floor_8",
+    "snr_est",
+    "floor_db",
+    "mid_spread",
+    "flat_lo",
+    "flat_all",
+    "flux_mean",
+    "flux_peaky",
+    "hf_mean",
+    "hf_p90",
+    "low_ratio",
+    "centroid",
+    "harm_frac",
+    "harm_mean",
+    "pitch_stab",
+    "peak_persist",
+    "mod_lo",
+    "mod_4",
+    "mod_hi",
+    "e_std",
+    "band_stat",
+    "decay",
+    "clip",
+    "slope",
+    "bmod_1",
+    "bmod_2",
+    "bmod_3",
+    "bmod_4",
+    "floor_1",
+    "floor_2",
+    "floor_3",
+    "floor_4",
+    "floor_5",
+    "floor_6",
+    "floor_7",
+    "floor_8",
 ];
 
 #[derive(Clone, Copy, Default)]
@@ -177,7 +208,11 @@ impl FeatureExtractor {
         for ((t, s), w) in self.time.iter_mut().zip(&self.input).zip(&self.win) {
             *t = s * w;
         }
-        if self.fwd.process_with_scratch(&mut self.time, &mut self.spec, &mut self.scratch_f).is_err() {
+        if self
+            .fwd
+            .process_with_scratch(&mut self.time, &mut self.spec, &mut self.scratch_f)
+            .is_err()
+        {
             return;
         }
         let mut total = 0.0f32;
@@ -203,12 +238,18 @@ impl FeatureExtractor {
             }
         }
         let e_db = 10.0 * (total / (N_FFT as f32 * N_FFT as f32)).max(1e-12).log10();
-        let flat = if cnt > 0 { (log_sum / cnt as f32).exp() / (lin_sum / cnt as f32) } else { 0.0 };
+        let flat = if cnt > 0 {
+            (log_sum / cnt as f32).exp() / (lin_sum / cnt as f32)
+        } else {
+            0.0
+        };
         // 频带能量与正向通量
         let mut band = [0f32; NB];
         let mut flux = 0.0;
         for (b, (bd, pb)) in band.iter_mut().zip(&self.prev_band).enumerate() {
-            let s: f32 = self.pow[self.band_edges[b]..self.band_edges[b + 1]].iter().sum();
+            let s: f32 = self.pow[self.band_edges[b]..self.band_edges[b + 1]]
+                .iter()
+                .sum();
             *bd = 10.0 * s.max(1e-12).log10();
             flux += (*bd - pb).max(0.0);
         }
@@ -218,7 +259,12 @@ impl FeatureExtractor {
             *c = Complex32::new(*p, 0.0);
         }
         let (mut harm, mut lag) = (0.0f32, 0u16);
-        if self.inv.process_with_scratch(&mut self.spec, &mut self.acorr, &mut self.scratch_i).is_ok() && self.acorr[0] > 0.0 {
+        if self
+            .inv
+            .process_with_scratch(&mut self.spec, &mut self.acorr, &mut self.scratch_i)
+            .is_ok()
+            && self.acorr[0] > 0.0
+        {
             let r0 = self.acorr[0];
             for (l, &r) in self.acorr.iter().enumerate().take(201).skip(40) {
                 let v = r / r0;
@@ -236,7 +282,11 @@ impl FeatureExtractor {
         }
         for k in k0.max(2)..k1.min(BINS - 2) {
             let p = self.pow[k];
-            if p > 4.0 * self.pow[k - 2] && p > 4.0 * self.pow[k + 2] && p >= self.pow[k - 1] && p >= self.pow[k + 1] {
+            if p > 4.0 * self.pow[k - 2]
+                && p > 4.0 * self.pow[k + 2]
+                && p >= self.pow[k - 1]
+                && p >= self.pow[k + 1]
+            {
                 self.cur_peak[k] = true;
                 peaks += 1;
                 if self.prev_peak[k - 1] || self.prev_peak[k] || self.prev_peak[k + 1] {
@@ -255,7 +305,11 @@ impl FeatureExtractor {
             centroid: cen_num / total / 1000.0,
             harm,
             lag,
-            persist: if peaks > 0 { kept as f32 / peaks as f32 } else { 0.0 },
+            persist: if peaks > 0 {
+                kept as f32 / peaks as f32
+            } else {
+                0.0
+            },
             clip: flat_top as f32 / h.max(1) as f32,
         };
         self.ring[self.head] = fr;
@@ -291,8 +345,10 @@ impl FeatureExtractor {
         out[1] = p10;
         out[2] = p50 - p10;
         // 平坦度、通量、高频、低频、质心、谐波、保持率、削波
-        let (mut flat_lo, mut nlo, mut flat_all, mut flux_m, mut hf_m, mut low_m, mut cen_m) = (0.0f32, 0usize, 0.0, 0.0, 0.0, 0.0, 0.0);
-        let (mut hcount, mut hsum, mut stable, mut pairs, mut persist, mut clip) = (0usize, 0.0f32, 0usize, 0usize, 0.0f32, 0.0f32);
+        let (mut flat_lo, mut nlo, mut flat_all, mut flux_m, mut hf_m, mut low_m, mut cen_m) =
+            (0.0f32, 0usize, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let (mut hcount, mut hsum, mut stable, mut pairs, mut persist, mut clip) =
+            (0usize, 0.0f32, 0usize, 0usize, 0.0f32, 0.0f32);
         let mut prev_h: Option<u16> = None;
         for i in 0..n {
             let f = *self.at(i);
@@ -343,7 +399,11 @@ impl FeatureExtractor {
         out[10] = cen_m / nf;
         out[11] = hcount as f32 / nf;
         out[12] = hsum / nf;
-        out[13] = if pairs > 0 { stable as f32 / pairs as f32 } else { 0.0 };
+        out[13] = if pairs > 0 {
+            stable as f32 / pairs as f32
+        } else {
+            0.0
+        };
         out[14] = persist / nf;
         // 调制谱：帧率 = sr / hop；对去均值的包络在若干调制频率上做 DFT（直接求和，n ≤ 125）
         let fps = self.sr / self.hop as f32;

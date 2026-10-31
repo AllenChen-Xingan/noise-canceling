@@ -106,7 +106,13 @@ impl SpectralPolish {
     }
 
     /// 处理一帧。`dry.len() == wet.len() == bins()`。
-    pub fn process(&mut self, dry: &[Complex32], wet: &mut [Complex32], p: &PolishParams, voice_prob: Option<f32>) {
+    pub fn process(
+        &mut self,
+        dry: &[Complex32],
+        wet: &mut [Complex32],
+        p: &PolishParams,
+        voice_prob: Option<f32>,
+    ) {
         let n = self.bins.min(dry.len()).min(wet.len());
         // 1. 底噪跟踪（第一帧直接初始化）
         let mut e_wet = 0.0f32;
@@ -145,7 +151,11 @@ impl SpectralPolish {
         let alpha = 0.85 * s * (1.0 - sp); // 无人声时最强（s=1 时 τ≈6 帧≈0.1 s）
         for k in 0..n {
             let dx = dry[k].norm();
-            let g = if dx > 1e-9 { (wet[k].norm() / dx).min(1.0) } else { 0.0 };
+            let g = if dx > 1e-9 {
+                (wet[k].norm() / dx).min(1.0)
+            } else {
+                0.0
+            };
             // 上升（人声起音）时只用 alpha 的四分之一，避免吃字头
             let a = if g > self.g_s[k] { alpha * 0.25 } else { alpha };
             self.g_s[k] = a * self.g_s[k] + (1.0 - a) * g;
@@ -172,7 +182,11 @@ impl SpectralPolish {
                 if f < EQ_EDGES_HZ[0] || f >= EQ_EDGES_HZ[N_EQ] {
                     continue;
                 }
-                let b = EQ_EDGES_HZ.iter().rposition(|&e| f >= e).unwrap_or(0).min(N_EQ - 1);
+                let b = EQ_EDGES_HZ
+                    .iter()
+                    .rposition(|&e| f >= e)
+                    .unwrap_or(0)
+                    .min(N_EQ - 1);
                 c[b] += (dry[k].norm_sqr() - self.noise[k]).max(0.0);
                 w[b] += wet[k].norm_sqr();
                 nn[b] += self.noise[k];
@@ -184,8 +198,10 @@ impl SpectralPolish {
             }
         }
         for b in 0..N_EQ {
-            let target = if p.demuffle_max_db > 0.0 && self.eq_snr[b] > 6.0 && self.eq_wet[b] > 0.0 {
-                (0.5 * (pow_to_db(self.eq_clean[b]) - pow_to_db(self.eq_wet[b]))).clamp(0.0, p.demuffle_max_db)
+            let target = if p.demuffle_max_db > 0.0 && self.eq_snr[b] > 6.0 && self.eq_wet[b] > 0.0
+            {
+                (0.5 * (pow_to_db(self.eq_clean[b]) - pow_to_db(self.eq_wet[b])))
+                    .clamp(0.0, p.demuffle_max_db)
             } else {
                 0.0
             };
@@ -197,7 +213,11 @@ impl SpectralPolish {
             let f = k as f32 * self.hz_per_bin;
             let mut gdb = 0.0;
             if f >= EQ_EDGES_HZ[0] {
-                let b = EQ_EDGES_HZ.iter().rposition(|&e| f >= e).unwrap_or(0).min(N_EQ - 1);
+                let b = EQ_EDGES_HZ
+                    .iter()
+                    .rposition(|&e| f >= e)
+                    .unwrap_or(0)
+                    .min(N_EQ - 1);
                 gdb = self.eq_gain_db[b];
             } else if f >= 1500.0 {
                 gdb = self.eq_gain_db[0] * (f - 1500.0) / 500.0; // 1.5–2 kHz 斜坡过渡，避免台阶
@@ -206,8 +226,16 @@ impl SpectralPolish {
         }
 
         // 4–6. 下限、补偿、写回、舒适噪声
-        let floor = if p.floor_db <= -99.0 { 0.0 } else { 10f32.powf(p.floor_db / 20.0) };
-        let comfort = if p.comfort_db <= -99.0 { 0.0 } else { 10f32.powf(p.comfort_db / 20.0) };
+        let floor = if p.floor_db <= -99.0 {
+            0.0
+        } else {
+            10f32.powf(p.floor_db / 20.0)
+        };
+        let comfort = if p.comfort_db <= -99.0 {
+            0.0
+        } else {
+            10f32.powf(p.comfort_db / 20.0)
+        };
         for k in 0..n {
             let g = self.g_tmp[k];
             let gt = (self.g_s[k].max(floor) * self.boost[k]).min(1.0);

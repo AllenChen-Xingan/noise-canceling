@@ -21,7 +21,11 @@ const SR: f32 = 16000.0;
 fn read(path: &str) -> Vec<f32> {
     let mut r = hound::WavReader::open(path).unwrap_or_else(|e| panic!("读不了 {path}：{e}"));
     let s = r.spec();
-    assert_eq!((s.sample_rate, s.channels), (16000, 1), "{path} 要 16 kHz 单声道");
+    assert_eq!(
+        (s.sample_rate, s.channels),
+        (16000, 1),
+        "{path} 要 16 kHz 单声道"
+    );
     match s.sample_format {
         hound::SampleFormat::Int => {
             let k = (1i64 << (s.bits_per_sample - 1)) as f32;
@@ -33,7 +37,10 @@ fn read(path: &str) -> Vec<f32> {
 
 fn main() {
     let a: Vec<String> = std::env::args().collect();
-    assert!(a.len() >= 5, "用法：polish_offline <dry> <wet> <out> <tone|时间线> [--ramp 秒]");
+    assert!(
+        a.len() >= 5,
+        "用法：polish_offline <dry> <wet> <out> <tone|时间线> [--ramp 秒]"
+    );
     let dry = read(&a[1]);
     let wet = read(&a[2]);
     let n = dry.len().min(wet.len());
@@ -48,8 +55,17 @@ fn main() {
             })
             .collect(),
     };
-    let ramp = a.iter().position(|x| x == "--ramp").map(|i| a[i + 1].parse::<f32>().unwrap()).unwrap_or(1.0);
-    let mut chain = PolishChain::new(N_FFT, HOP, SR, PolishParams::preset(timeline.first().map(|t| t.1).unwrap_or(0)));
+    let ramp = a
+        .iter()
+        .position(|x| x == "--ramp")
+        .map(|i| a[i + 1].parse::<f32>().unwrap())
+        .unwrap_or(1.0);
+    let mut chain = PolishChain::new(
+        N_FFT,
+        HOP,
+        SR,
+        PolishParams::preset(timeline.first().map(|t| t.1).unwrap_or(0)),
+    );
     chain.set_ramp_s(ramp);
     let mut sd = StreamingStft::new(N_FFT, HOP, sqrt_hann_periodic(N_FFT));
     let mut sw = StreamingStft::new(N_FFT, HOP, sqrt_hann_periodic(N_FFT));
@@ -63,7 +79,13 @@ fn main() {
     let mut dry_spec = vec![realfft::num_complex::Complex32::new(0.0, 0.0); N_FFT / 2 + 1];
     let mut ti = 0;
     let (mut t_spec, mut t_time, mut hops) = (Duration::ZERO, Duration::ZERO, 0u64);
-    for (k, (d, w)) in pad_d.as_chunks::<HOP>().0.iter().zip(pad_w.as_chunks::<HOP>().0).enumerate() {
+    for (k, (d, w)) in pad_d
+        .as_chunks::<HOP>()
+        .0
+        .iter()
+        .zip(pad_w.as_chunks::<HOP>().0)
+        .enumerate()
+    {
         let t = (k * HOP) as f32 / SR;
         while ti < timeline.len() && timeline[ti].0 <= t {
             chain.set_target(PolishParams::preset(timeline[ti].1));
@@ -82,12 +104,21 @@ fn main() {
         hops += 1;
     }
     let y = &out[lat..lat + n];
-    let spec = hound::WavSpec { channels: 1, sample_rate: 16000, bits_per_sample: 32, sample_format: hound::SampleFormat::Float };
+    let spec = hound::WavSpec {
+        channels: 1,
+        sample_rate: 16000,
+        bits_per_sample: 32,
+        sample_format: hound::SampleFormat::Float,
+    };
     let mut wr = hound::WavWriter::create(&a[3], spec).expect("写不了输出");
     for v in y {
         wr.write_sample(*v).unwrap();
     }
     wr.finalize().unwrap();
     let us = |d: Duration| d.as_secs_f64() * 1e6 / hops.max(1) as f64;
-    eprintln!("{{\"spectral_us_per_hop\":{:.2},\"agc_us_per_hop\":{:.2},\"hops\":{hops}}}", us(t_spec), us(t_time));
+    eprintln!(
+        "{{\"spectral_us_per_hop\":{:.2},\"agc_us_per_hop\":{:.2},\"hops\":{hops}}}",
+        us(t_spec),
+        us(t_time)
+    );
 }

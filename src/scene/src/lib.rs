@@ -27,11 +27,14 @@ pub mod classify;
 pub mod features;
 pub mod mirror;
 pub mod route;
+#[rustfmt::skip]
 pub mod weights;
 
 use classify::{NoiseClass, posterior};
 use features::{FeatureExtractor, NF};
-use mirror::{Confidence, FineSceneId, HysteresisGate, ParamSet, SampleClock, SceneLabel, UserScene};
+use mirror::{
+    Confidence, FineSceneId, HysteresisGate, ParamSet, SampleClock, SceneLabel, UserScene,
+};
 use route::Device;
 use weights::NC;
 
@@ -131,9 +134,21 @@ impl SceneAnalyzer {
         posterior(&self.feats, &mut raw);
         let dt = (self.clock - self.last_judge) as f32 / self.rate as f32;
         self.last_judge = self.clock;
-        let a = if !self.have || self.ema_s <= 0.0 { 1.0 } else { 1.0 - (-dt / self.ema_s).exp() };
-        let bt_now = if self.feats[8] < weights::BT_HF_P90_MAX { 1.0 } else { 0.0 };
-        let clip_now = if self.feats[21] > weights::CLIP_MIN { 1.0 } else { 0.0 };
+        let a = if !self.have || self.ema_s <= 0.0 {
+            1.0
+        } else {
+            1.0 - (-dt / self.ema_s).exp()
+        };
+        let bt_now = if self.feats[8] < weights::BT_HF_P90_MAX {
+            1.0
+        } else {
+            0.0
+        };
+        let clip_now = if self.feats[21] > weights::CLIP_MIN {
+            1.0
+        } else {
+            0.0
+        };
         for (e, r) in self.ema.iter_mut().zip(&raw) {
             *e += a * (r - *e);
         }
@@ -167,7 +182,11 @@ impl SceneAnalyzer {
             _ => Device::Normal,
         };
         let device = self.device;
-        let mut conf = if self.manual.is_some() { best_p / mass.max(1e-6) } else { best_p };
+        let mut conf = if self.manual.is_some() {
+            best_p / mass.max(1e-6)
+        } else {
+            best_p
+        };
         if self.fx.filled() < MIN_FILL {
             conf = 0.0; // 缓冲不满 1 s 的判断不进滞回（置信度 0 = 不推进）
         }
@@ -177,14 +196,21 @@ impl SceneAnalyzer {
             _ => (route::fine_id(class, Device::Normal), route::user_of(class)),
         };
         let at = SampleClock(self.clock);
-        let gate_label = SceneLabel { user, fine, confidence: Confidence::new(conf), at };
+        let gate_label = SceneLabel {
+            user,
+            fine,
+            confidence: Confidence::new(conf),
+            at,
+        };
         let class_switch = self.gate.step(&gate_label, self.rate);
         let (cu, cf) = self.gate.committed();
         let committed_fine = match route::decode(cf) {
             Some((c, _)) => route::fine_id(c, device),
             None => cf,
         };
-        let switched = if class_switch.is_some() || (committed_fine != self.last_committed && cf != FineSceneId::UNKNOWN) {
+        let switched = if class_switch.is_some()
+            || (committed_fine != self.last_committed && cf != FineSceneId::UNKNOWN)
+        {
             Some((self.last_committed, committed_fine))
         } else {
             None

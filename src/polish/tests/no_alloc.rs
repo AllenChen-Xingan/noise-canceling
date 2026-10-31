@@ -12,7 +12,9 @@ static A: AllocDisabler = AllocDisabler;
 #[test]
 fn per_frame_paths_do_not_allocate() {
     let mut chain = PolishChain::new(512, 256, 16000.0, PolishParams::preset(2));
-    let dry: Vec<Complex32> = (0..257).map(|k| Complex32::new((k as f32 * 0.37).sin(), (k as f32 * 0.11).cos())).collect();
+    let dry: Vec<Complex32> = (0..257)
+        .map(|k| Complex32::new((k as f32 * 0.37).sin(), (k as f32 * 0.11).cos()))
+        .collect();
     let mut wet = dry.clone();
     let mut hop = vec![0.1f32; 256];
     assert_no_alloc(|| {
@@ -23,7 +25,13 @@ fn per_frame_paths_do_not_allocate() {
             for (w, d) in wet.iter_mut().zip(&dry) {
                 *w = *d * 0.3;
             }
-            chain.process_spectrum(&mut wet, &dry, FrameCtx { voice_prob: Some((i % 3) as f32 * 0.5) });
+            chain.process_spectrum(
+                &mut wet,
+                &dry,
+                FrameCtx {
+                    voice_prob: Some((i % 3) as f32 * 0.5),
+                },
+            );
             chain.process_time(&mut hop);
         }
     });

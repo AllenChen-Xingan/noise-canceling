@@ -96,11 +96,19 @@ impl Agc {
             let peak = x[start..end].iter().fold(0.0f32, |m, v| m.max(v.abs()));
             let need = if peak > CEIL { CEIL / peak } else { 1.0 };
             let g_prev = self.lim_gain;
-            let g_next = if need < g_prev { need } else { (g_prev + self.lim_release * (1.0 - g_prev)).min(need) };
+            let g_next = if need < g_prev {
+                need
+            } else {
+                (g_prev + self.lim_release * (1.0 - g_prev)).min(need)
+            };
             // 攻击时整段用 min(prev, next)，保证本子帧峰值不超；释放时线性插值
             let len = (end - start) as f32;
             for (i, v) in x[start..end].iter_mut().enumerate() {
-                let g = if g_next < g_prev { g_next } else { g_prev + (g_next - g_prev) * i as f32 / len };
+                let g = if g_next < g_prev {
+                    g_next
+                } else {
+                    g_prev + (g_next - g_prev) * i as f32 / len
+                };
                 *v *= g;
             }
             self.lim_gain = g_next;
