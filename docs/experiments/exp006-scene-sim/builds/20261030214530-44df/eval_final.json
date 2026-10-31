@@ -1,0 +1,168 @@
+{
+ "test": {
+  "windows": 4480,
+  "acc_fine_class": {
+   "raw": 0.8225,
+   "smooth": 0.8402,
+   "committed": 0.6788
+  },
+  "acc_user_scene": {
+   "raw": 0.9196,
+   "smooth": 0.9304,
+   "committed": 0.7429
+  },
+  "acc_committed_after_5s": {
+   "fine_class": 0.8421,
+   "user_scene": 0.9254
+  },
+  "per_class_recall_committed": {
+   "quiet": 0.712,
+   "hvac": 0.635,
+   "babble": 0.612,
+   "neighbor": 0.508,
+   "clatter": 0.625,
+   "traffic": 0.974,
+   "music": 0.73
+  },
+  "confusion_committed": {
+   "labels": [
+    "quiet",
+    "hvac",
+    "babble",
+    "neighbor",
+    "clatter",
+    "traffic",
+    "music"
+   ],
+   "rows_truth_cols_pred": [
+    [
+     353,
+     15,
+     0,
+     12,
+     7,
+     109,
+     0
+    ],
+    [
+     0,
+     264,
+     0,
+     0,
+     7,
+     145,
+     0
+    ],
+    [
+     0,
+     13,
+     568,
+     109,
+     0,
+     238,
+     0
+    ],
+    [
+     14,
+     19,
+     126,
+     423,
+     27,
+     223,
+     0
+    ],
+    [
+     33,
+     0,
+     0,
+     10,
+     370,
+     179,
+     0
+    ],
+    [
+     0,
+     12,
+     0,
+     0,
+     7,
+     701,
+     0
+    ],
+    [
+     4,
+     0,
+     4,
+     14,
+     0,
+     112,
+     362
+    ]
+   ]
+  },
+  "confusion_user_committed": {
+   "labels": [
+    "quiet",
+    "cafe",
+    "commute",
+    "music"
+   ],
+   "rows_truth_cols_pred": [
+    [
+     632,
+     26,
+     254,
+     0
+    ],
+    [
+     79,
+     1633,
+     640,
+     0
+    ],
+    [
+     12,
+     7,
+     701,
+     0
+    ],
+    [
+     4,
+     18,
+     112,
+     362
+    ]
+   ]
+  },
+  "jitter_test": {
+   "clips": 280,
+   "mean_extra_switches": 1.525,
+   "clips_with_any": 235,
+   "max": 5,
+   "wrong_switches_per_clip": 0.036
+  },
+  "device": {
+   "bt_narrow": {
+    "recall": 0.93,
+    "false_alarm": 0.027
+   },
+   "clip": {
+    "recall": 0.679,
+    "false_alarm": 0.044
+   }
+  }
+ },
+ "seq": {
+  "sequences": 16,
+  "extra_switches_mean": 4.0,
+  "extra_switches_total": 64,
+  "change_delay_s": {
+   "median": 3.85,
+   "p90": 8.0,
+   "n": 46
+  },
+  "changes_never_reached_correct": 2,
+  "wrong_switches_per_minute": 0.945,
+  "time_correct_frac": 0.6328
+ }
+}

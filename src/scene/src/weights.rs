@@ -18,5 +18,5 @@ pub const BT_HF_P90_MAX: f32 = -12.6;
 /// 特征 21（log10 平顶占比）高于它判为削波
 pub const CLIP_MIN: f32 = -4.0;
 /// 后验平滑时间常数（秒）
-pub const EMA_S: f32 = 1.5;
-pub const HYSTERESIS: Hysteresis = Hysteresis { confirm_s: 2.0, min_confidence: 0.6, min_dwell_s: 5.0 };
+pub const EMA_S: f32 = 0.5;
+pub const HYSTERESIS: Hysteresis = Hysteresis { confirm_s: 1.0, min_confidence: 0.4, min_dwell_s: 3.0 };

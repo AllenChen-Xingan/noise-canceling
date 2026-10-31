@@ -8,10 +8,10 @@
  "clip_threshold": -4.0,
  "clip_balanced_acc_train": 0.8663,
  "hysteresis": {
-  "confirm_s": 2.0,
-  "min_confidence": 0.6,
-  "min_dwell_s": 5.0,
-  "ema_s": 1.5
+  "confirm_s": 1.0,
+  "min_confidence": 0.4,
+  "min_dwell_s": 3.0,
+  "ema_s": 0.5
  },
  "class_counts_train": {
   "quiet": 3840,
