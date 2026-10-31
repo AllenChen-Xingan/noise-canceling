@@ -1,0 +1,13 @@
+### URGENT 2025 blind 测试集（2025，URGENT 组委会）
+- **做什么**：多语种通用语音增强
+- **录音设备与距离**：真实录音来自训练外语料，未点名；另加了训练中没有的失真
+- **环境**：未查到
+- **说话人数与重叠**：未查到
+- **语言**：6 种，含中文
+- **参考**：近讲 无 · 转写：官网说 CER 仅 'if transcription is available'，是否公开未查到 · 说话人标签 无
+- **大小**：900 条，真实约 450 条【推算】
+- **许可**：测试集本体未查到（不能套用 sqa 衍生集的 CC BY-NC-SA 4.0）→ 暂按只评测、仅本机
+- **获取**：Google Drive（drive.google.com/file/d/1dHvYEGHCf9rsB1q-Cd9rXOeQaa_vjG2u）
+- **接近度**：2/5 · 有中文真实片段，但来源、设备、场景都没标，无参考
+- **用途建议**：中文泛化抽检
+- **出处**：urgent-challenge.github.io/urgent2025/data/【官方】；arXiv:2505.23212 §3.3.3【论文，未独立复核】；huggingface.co/datasets/urgent-challenge/urgent2025-sqa【官方】

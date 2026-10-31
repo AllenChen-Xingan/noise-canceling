@@ -1,0 +1,13 @@
+### VOiCES（2018，SRI International + IQT Lab41）
+- **做什么**：真实房间里音箱回放重录的远场语料（属「部分」真实）
+- **录音设备与距离**：12 支麦——SHURE SM58 动圈、AKG 417L 领夹、SHURE SM11；距前景音箱约 0.7–5.8 m，含遮挡位；电动转台模拟转头
+- **环境**：真实房间；干扰为电视、音乐、babble（MUSAN 会议人声多音箱回放）
+- **说话人数与重叠**：前景 1 人（LibriSpeech clean 300 人）+ 回放的 babble
+- **语言**：英语
+- **参考**：近讲 有（与录音同步的源音频）· 转写 有 · 说话人标签 有
+- **大小**：1440 h
+- **许可**：CC BY 4.0（AWS Open Data Registry）→ 可训练（源语料 LibriSpeech 亦 CC BY 4.0）
+- **获取**：直接下载，`aws s3 ls --no-sign-request s3://lab41openaudiocorpus/`（us-east-1，免账号）
+- **接近度**：2.5/5 · 不是笔记本，babble 是回放的；但有干净参考和精确距离
+- **用途建议**：按距离和 babble 档位校准模拟器；有参考回归；可进训练
+- **出处**：arXiv:1804.05053 §2.1–2.2、表 1–2【论文，未独立复核】；iqtlabs.github.io/voices/downloads/【官方】；registry.opendata.aws/lab41-sri-voices/【官方】

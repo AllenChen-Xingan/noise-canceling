@@ -1,0 +1,13 @@
+### VOiCES（2018，SRI / IQT Lab41）
+- **做什么**：LibriSpeech 在家具真实房间用旋转平台上的扬声器重放，另有扬声器同时放干扰，12 麦远场重录。
+- **录音设备与距离**：7 只 SHURE SM58（心形动圈）、4 只 AKG 417L（全向电容领夹）、1 只 SHURE SM11（全向动圈领夹）；**领夹麦是摆在房间里的，不是佩戴在说话人身上的近讲**；成对放在扬声器后、前方桌面、更远桌面、对角，其余部分遮挡；距离约 38–228 inch（约 1–5.8 m）。无笔记本麦。
+- **环境**：论文 release 1 为 2 个房间（§2.2），项目页称 3 个房间；空调与窗外噪声真实。TV/音乐由 1 只扬声器、babble 由 3 只扬声器回放。
+- **说话人数与重叠**：前景单说话人 + 回放 babble（重叠为回放）。
+- **语言**：英语。
+- **参考**：干净源 有 · 转写 有 · 说话人标签 有。
+- **大小**：约 15 h 源×12 麦；总 GB 未查到。
+- **许可**：CC BY 4.0（项目页：free for commercial, academic, and government use）· 结论：可训练。
+- **获取**：直接下载（AWS 公共桶）· https://registry.opendata.aws/lab41-sri-voices/ ；https://iqtlabs.github.io/voices/
+- **接近度**：2.5/5。
+- **用途建议**：真实回归集；多距离 SNR/混响校准；训练。
+- **出处**：https://registry.opendata.aws/lab41-sri-voices/ 【官方】；https://iqtlabs.github.io/voices/ 【官方】；arXiv:1804.05053 §2.1–2.2、表 1 【论文】

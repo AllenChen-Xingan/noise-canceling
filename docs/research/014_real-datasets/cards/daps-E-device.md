@@ -1,0 +1,13 @@
+### DAPS（2014，Adobe Research / Mysore）
+- **做什么**：同一批朗读语音的录音棚版与消费设备在真实房间回放重录版逐条对齐。
+- **录音设备与距离**：iPad Air（支架模拟手持，全部环境；平放桌面 2 个环境）、iPhone 5S（支架，3 个环境）【二手，HF 数据卡；Zenodo 页只写“tablets and smartphones”】；回放扬声器型号与距离 未查到。
+- **环境**：office1/2、confroom1/2、livingroom1、bedroom1、balcony1（重车流）。无多人 babble。
+- **说话人数与重叠**：20 人（10 男 10 女），单人，无重叠。
+- **语言**：英语。
+- **参考**：干净 studio 版 有（对齐）· 转写 有（supplementary_files 内含朗读脚本，每人 5 篇，篇章级非时间戳）【二手】· 说话人标签 有。
+- **大小**：16.1 GB。
+- **许可**：CC BY-NC 4.0 · 结论：只评测。
+- **获取**：直接下载 · https://zenodo.org/records/4660670（v1.0，发布日 2014-05-20）；分段版 https://zenodo.org/records/4783456
+- **接近度**：2.5/5 · 非笔记本、无 babble、无重叠。
+- **用途建议**：设备链校准；侵入式指标回归集；听测。不进训练。
+- **出处**：https://zenodo.org/records/4660670 【官方】；https://huggingface.co/datasets/corvj/daps/blob/main/README.md 【二手】；Mysore, IEEE SPL 2015, DOI 10.1109/LSP.2014.2379648 【论文】

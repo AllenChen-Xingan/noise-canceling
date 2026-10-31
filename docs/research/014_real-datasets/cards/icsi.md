@@ -1,0 +1,13 @@
+### ICSI Meeting Corpus（2000–2002 录制，2004 发布，ICSI Berkeley）
+- **做什么**：自然会议语料，大多是研究组每周例会。
+- **录音设备与距离**：每人一个近讲麦（多为头戴，早期部分是领夹）；桌面 4 个全向 PZM 沿桌中线摆放，另有一台「假 PDA」装了 2 个廉价麦，放在桌子大致中间，是这几个集里最接近消费级设备的。每场最多 16 通道。
+- **环境**：ICSI 会议室，没有公共场所噪声。
+- **说话人数与重叠**：每场 3–10 人，平均 6 人，共 53 位说话人；有自然重叠，具体重叠率未查到。
+- **语言**：英语。
+- **参考**：近讲 有 · 转写 有（LDC2004T04，带时间）· 说话人标签 有
+- **大小**：75 场，约 72 h。
+- **许可**：爱丁堡 AMI 站点的托管版明确写 CC BY 4.0；LDC 目录版走 LDC 用户协议。两个版本并存 · 结论：用爱丁堡 CC BY 4.0 版可训练
+- **获取**：直接下载（groups.inf.ed.ac.uk/ami/icsi，SPH 分通道或混合 WAV）；或走 LDC
+- **接近度**：2/5 · PDA 廉价麦比阵列更接近笔记本麦；但房间安静，录于 2000 年代初，设备老旧
+- **用途建议**：sim-to-real 校准（廉价麦频响、远场电平）；有近讲的英文回归集
+- **出处**：https://groups.inf.ed.ac.uk/ami/icsi/【官方】；https://groups.inf.ed.ac.uk/ami/icsi/license.shtml【官方】；https://catalog.ldc.upenn.edu/LDC2004S02【官方 LDC】；https://catalog.ldc.upenn.edu/docs/LDC2004T04/overview.txt【官方 LDC】；https://www1.icsi.berkeley.edu/ftp/pub/speech/papers/icassp03-janin.pdf【论文】

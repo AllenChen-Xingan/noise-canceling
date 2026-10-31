@@ -1,0 +1,13 @@
+### DNS Challenge 1 真实测试集（2020，Microsoft）
+- **做什么**：首届 DNS 的开发/盲测集，含真实录音与合成两类
+- **录音设备与距离**：dev 真实段是 MS 内部在开放办公室与会议室录的嘈杂语音；另 300 条是从 AudioSet（YouTube 片段）手挑的，设备不明。blind 真实段由 MTurk 众包，用耳机或免提（speakerphone）设备录。型号、距离：未查到【论文】
+- **环境**：开放办公、会议室、各类真实噪声
+- **说话人数与重叠**：未标注
+- **语言**：英语为主
+- **参考**：近讲 无 · 转写 无 · 说话人标签 无（只有合成段有干净参考）
+- **大小**：dev 4 类 × 300 条（其中真实 600 条：MS 内部 300 + AudioSet 300）；blind 300 真实 + 300 合成
+- **许可**：仓库 LICENSE 为 CC BY 4.0，但 README 说数据集按各源原条款提供；AudioSet 段的音频来自 YouTube，第三方版权不归 MS → 按只评测、仅本机处理
+- **获取**：直接下载，GitHub microsoft/DNS-Challenge 分支 `interspeech2020/master` 的 `datasets/test_set`
+- **接近度**：2/5 · 有开放办公真实场景，但无设备/场景逐条标签、无中文、无参考
+- **用途建议**：人耳听测素材；DNSMOS 类无参考指标的真实回归集
+- **出处**：arXiv:2005.13981 §2.4.1–2.4.2【论文】；github.com/microsoft/DNS-Challenge/tree/interspeech2020/master/datasets/test_set【官方】；github.com/microsoft/DNS-Challenge/blob/master/LICENSE【官方】

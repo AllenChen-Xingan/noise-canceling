@@ -1,0 +1,13 @@
+### DNS Challenge 3 真实测试集（2021，Microsoft）
+- **做什么**：宽带与全带实时降噪的盲测
+- **录音设备与距离**：众包录制；'collected at a distance of 1-5 meters from the microphone when they were not using a headphone'。型号：未查到【论文 §4】
+- **环境**：多种背景噪声、SNR 与目标电平；含情感语音（笑、哭、喊、惊讶）、乐器背景、稳态噪声
+- **说话人数与重叠**：未标注
+- **语言**：英语 + 声调语言（普通话、粤语、旁遮普语、越南语）+ 西/德/葡/法语
+- **参考**：近讲 无 · 转写 无 · 说话人标签 无
+- **大小**：V3 blind 600 条（论文未给条数，以下载脚本为准）
+- **许可**：仓库 CC BY 4.0，测试集未单列 → 按只评测处理
+- **获取**：直接下载，`https://dnschallengepublic.blob.core.windows.net/dns3archive/V2_V3_Challenge_Combined_Blindset.zip`（Azure blob 现行可用性未核）
+- **接近度**：2.5/5 · 有普通话、1–5 m 远讲；但无设备/场景标签，babble 未明列，无参考
+- **用途建议**：中英文人耳听测素材；DNSMOS 无参考回归
+- **出处**：arXiv:2101.01902 §4【论文】；github.com/microsoft/DNS-Challenge 中的 download_dns_v2_v3_blindset.sh【官方】

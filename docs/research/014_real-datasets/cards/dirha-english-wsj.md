@@ -1,0 +1,13 @@
+### DIRHA English WSJ（2018 LDC 发行，FBK）
+- **做什么**：真实公寓多房间分布式麦远场朗读 WSJ，含真实与仿真两部分。
+- **录音设备与距离**：32 麦（客厅 26，厨房 6），主体为 Shure MX391/O 全向麦 + 电驻极体/MEMS 谐波阵列；距离未查到；无笔记本麦。
+- **环境**：真实公寓；真实录音 SNR 低于仿真。
+- **说话人数与重叠**：LDC 版 6 名美式英语母语者；重叠未查到。
+- **语言**：英语。
+- **参考**：同步近讲 未查到（论文 close-talk 基线用的是录音棚另录版本）· 转写 有（WSJ 文本）。
+- **大小**：约 85 h。
+- **许可**：DIRHA English WSJ Audio Agreement · 结论：只评测。
+- **获取**：LDC（LDC2018S01，费用需登录查看）· https://catalog.ldc.upenn.edu/LDC2018S01
+- **接近度**：1.5/5。
+- **用途建议**：无 LDC 会员则跳过。
+- **出处**：https://catalog.ldc.upenn.edu/LDC2018S01 【官方】；https://catalog.ldc.upenn.edu/license/dirha-english-wsj-audio-agreement.pdf 【官方】；arXiv:1710.02560 §3.1–3.4 【论文】

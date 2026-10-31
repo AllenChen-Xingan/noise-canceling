@@ -1,0 +1,13 @@
+### NOTSOFAR-1（2024，Microsoft）
+- **做什么**：CHiME-8 远场会议转写（DASR）基准，单通道 / 多通道两条赛道。
+- **录音设备与距离**：桌中 4 台圆形 7 麦设备（Yealink SmartVision 60、Yealink Intelligent Speaker、EPOS Expand Capture 5、Sennheiser TeamConnect Intelligent Speaker），既出 SC 也出原始 MC 流；房间前方线阵设备只出 SC：Logitech MeetUp（全部集）、Poly Studio（仅 eval）、Jabra PanaCast 50（部分 eval）（论文表 2）。**SC 流是设备内部处理过的**（论文的说法是典型处理包括 AEC、去混响、波束、降噪，没说每台具体做了哪些）；MC 流是「未经处理直接从阵列录的原始格式」。**没有笔记本**。嘴到麦距离：未查到。
+- **环境**：30 间微软会议室；包含走动、白板、进出、笑声咳嗽、瞬态噪声。不是咖啡馆那种一大片人声。
+- **说话人数与重叠**：每场 4–8 人，共 35 人；元数据标注了重叠和声学事件。
+- **语言**：英语。
+- **参考**：近讲 有（Shure WH20 头戴 + TASCAM DR-40X，只有 train/dev，eval 没有；论文说近讲**可能有少量串音**）· 转写 有（专业转写员依据近讲人工转写，多数场次两人独立转写再由第三人裁定）· 说话人标签 有
+- **大小**：train 110 场 55 h SC / 44 h MC；dev 35 场 17.5 / 14 h；eval 170 场 102 / 68 h（论文表 1，按设备累加，不是会议时长）。eval_small 的场次数：未查到。HF 仓总量 19.5 TB（含模拟集）。
+- **许可**：CC BY 4.0，没有 NC/SA。Dev-set-2「只批准在 NOTSOFAR-1 挑战赛内使用」，因法律和质量原因已下架 · 结论：可训练（不要用 Dev-set-2）
+- **获取**：HuggingFace `microsoft/NOTSOFAR`（脚本要 HF_TOKEN，HF 页面没写 gated 审批）；HF 数据卡另写了 Azure Blob + AzCopy 的旧路径。版本 240825.1_train / 240825.1_dev1 / 240825.1_eval_full_with_GT、240629.1_eval_small_with_GT；模拟集 v1.5
+- **接近度**：2.5/5 · 真实，重叠多，英文，许可干净；但用的是会议设备不是笔记本麦，背景不是大片人声，SC 流已被处理过，得用 MC 原始流
+- **用途建议**：英文真实回归集（取 MC 原始流的单个麦；eval 没有近讲，只能对照转写）；sim-to-real 校准混响和重叠统计；可训练
+- **出处**：https://arxiv.org/abs/2401.08887 §4.1、表 1–2【论文】；https://github.com/microsoft/NOTSOFAR1-Challenge README（Dev-set-2 条款、版本号）【官方】；https://raw.githubusercontent.com/microsoft/NOTSOFAR1-Challenge/main/DATA_LICENSE【官方】；https://huggingface.co/datasets/microsoft/NOTSOFAR【官方】
