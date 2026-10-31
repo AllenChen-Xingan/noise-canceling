@@ -16,3 +16,4 @@
 | — | 2026-10-30 | Rust 架构（规约 `specs/rust/architecture.md` + ADR 001–005） → 取舍卡见 `docs/research/008_rust-architecture/decision.md` |
 | 003 | 2026-10-30 | 技术方案：原型怎么搭 · 怎么认出你的声音（AI 方案待人过目） → `003_tech-design.md` |
 | 004 | 2026-10-30 | 极端情况与抗压：一百万人的长尾（AI 方案待人过目） → `004_robustness.md` |
+| 005 | 2026-10-31 | 自进化框架 · 统一语法树（处理图与会话记录）· 模拟测试环境（AI 方案待人过目） → `005_evolution-and-simulation.md` |
