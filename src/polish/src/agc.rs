@@ -59,7 +59,7 @@ impl Agc {
     pub fn energy_voice_prob(&mut self, x: &[f32]) -> f32 {
         let n = x.len().max(1);
         let ms = x.iter().map(|v| v * v).sum::<f32>() / n as f32;
-        if !(ms > 1e-12) {
+        if ms.is_nan() || ms <= 1e-12 {
             return 0.0; // 数字静音不更新底噪
         }
         let e = 10.0 * ms.log10();

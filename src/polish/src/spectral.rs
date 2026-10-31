@@ -122,11 +122,10 @@ impl SpectralPolish {
         //    否则跟踪值掉到 0 / 次正规数后「乘法慢升」永远升不回来（自审 P0）
         let e_dry: f32 = dry[..n].iter().map(|c| c.norm_sqr()).sum();
         let e_wet: f32 = wet[..n].iter().map(|c| c.norm_sqr()).sum();
-        let silent = !(e_dry > SILENT_POW) || !e_wet.is_finite();
+        let silent = e_dry.is_nan() || e_dry <= SILENT_POW || !e_wet.is_finite();
         if !silent {
-            for k in 0..n {
-                let px = dry[k].norm_sqr().max(NOISE_MIN);
-                let nk = &mut self.noise[k];
+            for (d, nk) in dry[..n].iter().zip(self.noise[..n].iter_mut()) {
+                let px = d.norm_sqr().max(NOISE_MIN);
                 if self.frames == 0 {
                     *nk = px;
                 } else if px < *nk {
