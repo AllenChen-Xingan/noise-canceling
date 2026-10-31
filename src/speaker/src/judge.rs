@@ -67,7 +67,8 @@ pub struct JudgeLog {
     pub level_db: f32,
     pub owner_sim: f32,
     pub prev_sim: f32,
-    pub enrolled_cluster: Option<usize>,
+    /// 这个窗被当作「清楚的单人片段」喂给了注册器
+    pub enrolled: bool,
     pub event: EnrollEvent,
     pub class: SpeakerClass,
     pub compute: Duration,
@@ -188,7 +189,7 @@ impl<E: EmbedSource> Judge<E> {
             level_db,
             owner_sim: f32::NAN,
             prev_sim: f32::NAN,
-            enrolled_cluster: None,
+            enrolled: false,
             event: EnrollEvent::None,
             class: SpeakerClass::NoSpeech,
             compute: Duration::ZERO,
@@ -208,7 +209,7 @@ impl<E: EmbedSource> Judge<E> {
                     if vf >= self.p.enroll_voiced_frac && ps >= self.p.consist_sim {
                         let dur = self.p.hop_s;
                         log.event = self.enroller.observe(&v, end as f64 / self.p.sr as f64, dur, level_db);
-                        log.enrolled_cluster = Some(usize::MAX);
+                        log.enrolled = true;
                     }
                     let c = match self.enroller.owner() {
                         None => SpeakerClass::Unknown,
