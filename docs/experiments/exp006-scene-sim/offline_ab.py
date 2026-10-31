@@ -21,12 +21,15 @@
   · **音乐噪声** `lkr`：非语音帧、300–6000 Hz 的 STFT 功率的峰度，输出 ÷ 带噪输入取自然对数（对数峰度比，Uemura 等 2009 的做法；越大越「叮叮」）
   · **真空感** `resid_rel_db`：输出非语音段功率 ÷ 输出语音段功率（dB）；越负越「抽空」。另报 `gap_flutter_db`：非语音帧电平的标准差（背景忽有忽无）
   · **忽大忽小** `level_std_db`：语音占比 ≥ 50% 的 400 ms 窗的输出电平标准差（dB），减去干净参考的同一量（素材里故意加了说话人电平漂移）
-  · **发闷** `hf_loss_db`：语音帧里 4–7.5 kHz 对 0.5–4 kHz 的能量比，输出减干净参考（dB，越负越闷）；窄带蓝牙段不算
+  · **发闷 / 过亮** `hf_loss_db`：语音帧里 4–7.5 kHz 对 0.5–4 kHz 的能量比，输出减干净参考（dB；负 = 闷，正 = 比干净参考更亮）；
+    理想值 0，胜负按 |偏差|（`hf_dev_abs`）判；窄带蓝牙段不算
 
 用法（worktree 根下，**跑推理要先申请名额**）：
   <主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp006-scene-sim/offline_ab.py <build> enhance   # 推理 + 路由 + 修音链 + 响度
   <主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp006-scene-sim/offline_ab.py <build> score [--asr]
   <主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp006-scene-sim/offline_ab.py <build> page    # 新的盲听页 build
+  <主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp006-scene-sim/offline_ab.py <build> null    # 同底噪零假设对照（只算毛病指标）
+  <主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp006-scene-sim/offline_ab.py <build> agg     # 只重新汇总
 """
 import base64
 import hashlib
@@ -255,27 +258,58 @@ def score(build, use_asr):
             r[v] = row
         per[cid] = r
         print(cid, c["fine"], {v: r[v]["OVRL"] for v in r}, flush=True)
-    keys = ["SIG", "BAK", "OVRL", "ESTOI", "lkr", "resid_rel_db", "gap_flutter_db", "level_std_db", "hf_loss_db", "del_rate", "ins_rate"]
+    aggregate(build, per, files)
+
+
+# AGC 时间常数是在这 120 段上比出来的（按段号排序的前 120 段，见 README §4）；报告时另报其余段
+AGC_TUNE_N = 120
+# ASR 判定为不可信的段：任何一版删除率 ≥ 0.9（整句都没转出来——通常是 ASR 转成了旁人的话，原声也一样）
+ASR_FAIL = 0.9
+
+
+def sign_test_p(w, l):
+    """双侧符号检验 p 值（平局已剔除）。"""
+    from math import comb
+    n, k = w + l, min(w, l)
+    if n == 0:
+        return 1.0
+    return min(1.0, 2 * sum(comb(n, i) for i in range(k + 1)) / 2 ** n)
+
+
+def aggregate(build, per, files):
+    """从逐段分数汇总（不重算任何分数）。规则写在这里：
+    - 「发闷」hf_loss_db 理想值是 0（与干净参考同样亮），按 |偏差| 判胜负、报 hf_dev_abs；正值 = 比干净参考更亮
+      （第一版按「越大越好」判，方向错了，自审 P0）
+    - 删除率：报全部与「去掉 ASR 不可信段」两套，并给符号检验 p 值
+    - 有 null（同底噪对照）就一起报；AGC 调参段与其余段分开报音量起伏"""
+    vers = ["noisy", *VERS] + (["null"] if any("null" in r for r in per.values()) else [])
+    for r in per.values():
+        for v in vers:
+            if v in r and r[v].get("hf_loss_db") is not None:
+                r[v]["hf_dev_abs"] = round(abs(r[v]["hf_loss_db"]), 3)
+    keys = ["SIG", "BAK", "OVRL", "ESTOI", "lkr", "resid_rel_db", "gap_flutter_db", "level_std_db", "hf_loss_db", "hf_dev_abs",
+            "del_rate", "ins_rate"]
+    asr_bad = sorted(c for c, r in per.items() if any(r[v].get("del_rate", 0) >= ASR_FAIL for v in VERS + ["noisy"] if v in r))
 
     def agg(ids):
         out = {}
-        for v in ["noisy", *VERS]:
+        for v in vers:
             out[v] = {}
             for k in keys:
-                vals = [per[c][v][k] for c in ids if per[c][v].get(k) is not None]
+                vals = [per[c][v][k] for c in ids if v in per[c] and per[c][v].get(k) is not None]
                 if vals:
                     out[v][k] = {"mean": round(float(np.mean(vals)), 3), "median": round(float(np.median(vals)), 3), "n": len(vals)}
         return out
 
-    by_class = {}
-    for fine in LISTEN:
-        by_class[fine] = agg([c for c in per if files["clips"][c]["fine"] == fine])
-    # 成对比较：修音链开 vs 关（同模型）、路由开 vs 关（同修音链状态），逐段胜负
-    better_low = {"lkr", "gap_flutter_db", "level_std_db", "del_rate", "ins_rate"}
+    by_class = {fine: agg([c for c in per if files["clips"][c]["fine"] == fine]) for fine in LISTEN}
+    better_low = {"lkr", "gap_flutter_db", "level_std_db", "hf_dev_abs", "del_rate", "ins_rate"}
+    no_wins = {"hf_loss_db"}  # 有正负两侧的量不直接比大小
 
-    def wins(a, b, k):
+    def wins(a, b, k, ids):
         w = l = 0
-        for c in per:
+        for c in ids:
+            if a not in per[c] or b not in per[c]:
+                continue
             x, y = per[c][a].get(k), per[c][b].get(k)
             if x is None or y is None or x == y:
                 continue
@@ -283,13 +317,52 @@ def score(build, use_asr):
                 w += 1
             else:
                 l += 1
-        return {"win": w, "lose": l}
+        return {"win": w, "lose": l, "p_sign": round(sign_test_p(w, l), 4)}
 
-    pairs = {f"{a}_vs_{b}": {k: wins(a, b, k) for k in keys} for a, b in [("polish", "base"), ("both", "route"), ("route", "base"), ("both", "base")]}
-    out = {"build": build, "n": len(per), "asr_n": sum(1 for c in per if "del_rate" in per[c]["base"]), "all": agg(list(per)),
-           "by_class": by_class, "pairwise": pairs, "per_clip": per, "polish_cost": files["meta"]["polish_us_per_hop"]}
+    ids = list(per)
+    pair_list = [("polish", "base"), ("both", "route"), ("route", "base"), ("both", "base")]
+    if "null" in vers:
+        pair_list += [("polish", "null"), ("null", "base")]
+    pairs = {f"{a}_vs_{b}": {k: wins(a, b, k, ids) for k in keys if k not in no_wins} for a, b in pair_list}
+    ok_asr = [c for c in ids if c not in asr_bad]
+    asr_clean = {f"{a}_vs_{b}": {k: wins(a, b, k, ok_asr) for k in ("del_rate", "ins_rate")} for a, b in pair_list}
+    tune = sorted(ids)[:AGC_TUNE_N]
+    rest = sorted(ids)[AGC_TUNE_N:]
+    agc_split = {"tune_ids_n": len(tune), "rest_ids_n": len(rest),
+                 "polish_vs_base_level_std_tune": wins("polish", "base", "level_std_db", tune),
+                 "polish_vs_base_level_std_rest": wins("polish", "base", "level_std_db", rest),
+                 "mean_level_std_rest": {v: agg(rest)[v].get("level_std_db", {}).get("mean") for v in ("base", "polish")}}
+    out = {"build": build, "n": len(per), "asr_n": sum(1 for c in per if "del_rate" in per[c]["base"]),
+           "rules": aggregate.__doc__, "asr_unreliable_clips": asr_bad,
+           "all": agg(ids), "all_asr_reliable": agg(ok_asr), "by_class": by_class, "pairwise": pairs,
+           "pairwise_asr_reliable": asr_clean, "agc_tau_split": agc_split, "per_clip": per,
+           "polish_cost": files["meta"]["polish_us_per_hop"]}
     (HERE / "builds" / build / "ab_scores.json").write_text(json.dumps(out, ensure_ascii=False, indent=1))
-    print(json.dumps({"all": out["all"], "pairwise": pairs}, ensure_ascii=False))
+    print(json.dumps({"all": out["all"], "pairwise": pairs, "asr_bad": asr_bad}, ensure_ascii=False)[:3000])
+
+
+def null_control(build):
+    """零假设对照：base（GTCRN）输出只加修音链默认预设的下限 + 舒适噪声（不平滑、不去发闷、不 AGC），
+    看四种毛病的代理指标单靠「加底噪」会降多少（自审：lkr / 背景忽有忽无会被底噪按构造压低）。只算毛病指标，不跑模型、不跑 ASR。"""
+    d, ab, wk = paths(build)
+    files = json.loads((wk / "files.json").read_text())
+    sc = json.loads((HERE / "builds" / build / "ab_scores.json").read_text())
+    per = sc["per_clip"]
+    dp = PolishParamsDefault
+    pol = ROOT / "target/release/examples/polish_offline"
+    for cid, c in files["clips"].items():
+        ref, _ = sf.read(d / "test" / f"{cid}_clean.wav", dtype="float32")
+        out = wk / "raw" / f"{cid}_null.wav"
+        subprocess.run([str(pol), str(wk / "raw" / f"{cid}_noisy.wav"), str(wk / "raw" / f"{cid}_base.wav"), str(out), "9",
+                        "--params", f"0,{dp['floor_db']},{dp['comfort_db']},0,0"], capture_output=True, check=True)
+        y, _ = sf.read(out, dtype="float32")
+        x, _ = sf.read(wk / "raw" / f"{cid}_noisy.wav", dtype="float32")
+        per[cid]["null"] = flaw_metrics(y, x, ref, c["device"])
+    aggregate(build, per, files)
+
+
+# 与 vdn_polish::PolishParams::DEFAULT（tone 9）一致；null 对照只取其中的下限与舒适噪声
+PolishParamsDefault = {"floor_db": -24.0, "comfort_db": -10.0}
 
 
 def page(build):
@@ -407,3 +480,9 @@ if __name__ == "__main__":
         score(b, "--asr" in sys.argv)
     elif stage == "page":
         page(b)
+    elif stage == "agg":  # 只重新汇总（不重算分数）
+        _, _, wk = paths(b)
+        sc = json.loads((HERE / "builds" / b / "ab_scores.json").read_text())
+        aggregate(b, sc["per_clip"], json.loads((wk / "files.json").read_text()))
+    elif stage == "null":
+        null_control(b)
