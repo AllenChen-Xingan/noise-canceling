@@ -7,8 +7,9 @@
 > ## 🧭 第四批收尾 · 接续点（2026-10-31）
 > **一句话**：离线三件（认人 · 场景路由 · 修音链）与评测地基（verifier 框架、eval crate）都有了；人耳 v2 偏好「保守、带一点背景声」；下一步是把它们接进引擎、按场景定参数、开 dev-4 实时管线。
 > - **已合并（第四批）**：#23 设备端自适应（010）· #24 一大堆人（011）· #26 架构对齐（vdn-types · 智能体接口 · 延迟账）· #27 #28 工业级评测标准 + verifier 框架（012）· #29 RL 环境（013）· #32 P2 认人（vdn-speaker / speaker-lab · exp005）· #33 真实数据集（014）· #34 大总管整理（D35–D48 · 意向书 · 方案 005 / 006）· #35 场景路由 + 修音链 + 模拟环境 v1（exp006）
-> - **仍在跑**：evalimpl（`feat/eval-verifiers`，issue #31）——vdn-eval：CI 层 16 + QA 层 2 条 verifier、回归集 / 能力集 / 5 探针、首轮定标 0 条 ≥ L1；正在真模型上验证「纯噪声停顿里 engine 门控约 50% 时间开着、混回 −6 dB 原声 → 停顿只压约 5 dB」（疑为「都没降噪」的引擎层原因）。人说「手下可以先跑完」——跑完由大总管验收合并
+> - **eval 已合并（PR #38）**：每个 PR 的 CI 自动跑 `eval ci`（回归 13/17 · 能力 0/10 · 探针 5/5 · 门禁通过）；GTCRN 权重不在仓内，CI 只跑 ref（待拍板 4-6）。原记录：vdn-eval：CI 层 16 + QA 层 2 条 verifier、回归集 / 能力集 / 5 探针、首轮定标 0 条 ≥ L1；正在真模型上验证「纯噪声停顿里 engine 门控约 50% 时间开着、混回 −6 dB 原声 → 停顿只压约 5 dB」（疑为「都没降噪」的引擎层原因）
 > - **人耳**：exp005 v2 已揭盲（保守「最自然」7/8；激进被标吃字最多；咖啡馆要一点背景声、安静处要更安静）→ `docs/experiments/exp005-p2-speaker/results/human-feedback.md`。scene 的 exp006 盲听页在人桌面 `~/Desktop/20261031-vdn-scene-polish-listen/`，**答卷未交**
+> - **仍在跑**：prefs（`feat/eval-prefs`，issue #37）——人耳结果 → 偏好数据集 · eval 任务清单 · 分场景默认参数 · `specs/rubric/preferences.md`（CLAUDE.md 已列为开工必读）
 > - **要人定的事**：唯一清单 `state/pending-decisions.md`（五组，第一组阻塞：装 BlackHole · 训练在哪 · 回放重录 / 咖啡馆实录 · IO 96 帧）
 > - **下一批建议**：①接入线（p2 / scene 接进 engine；FE-M 换 spec 版 + 合成端包络归一；规约补新 crate；ORT 单 Environment）②修 engine 停顿门控（已用真模型确认：GTCRN 纯噪声停顿门控误开 0.99；根因 `src/dsp/src/envelope.rs:91-97` + `src/engine/src/engine.rs:355`；验收 = 回归任务 R17 由 xfail 转为通过）③不训练的重叠说话处理（多线索快速辅助判断 + 说话人音高，D45 / D47 第 1 步）④按人耳偏好定分场景参数（D40）
 > - **教训（已进记忆 / CLAUDE.md）**：揭盲表丢失之坑 · target 入库之坑 · 给人听的目录不许带答案 · 推送前确认手下空闲且 `git status` 为空 · `--delete-branch` 会删 worktree 忽略文件 · 合并后先开分支再动文件

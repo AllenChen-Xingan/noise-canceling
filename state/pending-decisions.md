@@ -42,6 +42,7 @@
 | 4-2 | 人耳听测改为 P.835 三量表 + 固定锚点 | 改 | 维持现页 | 012 升级清单 P0 |
 | 4-3 | rubric 权重 · 耳朵与机器怎么合 · V8 口径 · 下一轮怎么听 | 见出处 | 见出处 | `docs/research/007_denoise-rubric/decision.md` |
 | 4-4 | 真实数据集：首批下载约 20 GB（改 D22）· 签 ECHI 协议 · CHiME-4 买不买 · 许可不清的只评测本机 · CC BY 真实集不进训练 · 公开集旁人声音照 D19 | 下载约 20 GB · 签 ECHI · 不买 CHiME-4 · 其余照建议 | 几 GB、不签、不买 | `docs/research/014_real-datasets/decision.md` 第六节 |
+| 4-6 | eval（exp007）：GTCRN 权重（535 KB，MIT）进仓让 CI 跑真模型 · 能力任务何时「毕业」进回归集 · 各 verifier 的建议阈值 · 下轮听测导出音频 + P.835 三量表 | 进仓 · 照 Anthropic 文章「接近 100% 才毕业」· 先用建议值 · 改三量表 | 不进仓（CI 只跑 ref）| `docs/experiments/exp007-eval-suite/README.md` 末尾 |
 | 4-5 | rlenv 其余：数据下载 · 许可灰区与 ECAPA · 模拟真值沿用 · 成功标准 · 训练触发条件 · RL 做到哪 · 听测节奏 | 见出处 | 见出处 | 013 末节（9 题，1-2 / 1-3 已拆出） |
 
 ## 第五组 · 工程细节（有默认，可一次性「全部按建议」）
@@ -53,6 +54,7 @@
 | 5-3 | P1：GTCRN 权重复制到 `~/vdn-data` · CI 建议 | exp004 README |
 | 5-4 | 006 sota：RX 当天花板参照 · 开 issue 问许可 | 006 末节 |
 | 5-5 | 去 FastEnhancer 仓库开 issue 问权重许可（对外发言） | 建议等它确定进产品再问 |
+| 5-7 | 仓库改公开前：全仓（含历史）清理本机绝对路径（`/Users/<用户名>/…` 已出现在 008 notes、exp004 bench.json、exp007 早期报告等）；以后报告一律写相对路径 | 改公开时一并做 | 仓库保持私有 | evalimpl 收尾（PR #38） |
 | 5-6 | 放权边界（哪些事 AI 可以自己做、哪些要先问） | board 开仓时就挂着 |
 
 ## 已定（留档，不删）
