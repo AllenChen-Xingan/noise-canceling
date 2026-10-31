@@ -1,0 +1,29 @@
+# vdn workspace：crate 放 src/<crate>/，依赖单向 dsp ← engine ← models ← cli（理由见 docs/experiments/exp004-p1-rust-parity/README.md「crate 划分」）
+[workspace]
+resolver = "3"
+members = ["src/dsp", "src/engine", "src/models", "src/cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+rust-version = "1.92"
+publish = false
+
+[workspace.dependencies]
+vdn-dsp = { path = "src/dsp" }
+vdn-engine = { path = "src/engine" }
+vdn-models = { path = "src/models" }
+realfft = "3.5"
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "download-binaries", "tls-native", "copy-dylibs", "api-31"] }
+hound = "3.5"
+clap = { version = "4", features = ["derive"] }
+assert_no_alloc = "1.1"
+serde_json = "1"
+stats_alloc = "0.1"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }

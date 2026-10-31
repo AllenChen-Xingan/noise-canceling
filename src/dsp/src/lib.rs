@@ -1,0 +1,29 @@
+//! vdn-dsp：纯信号处理积木。
+//!
+//! 规矩（所有 crate 的样板）：
+//! - `new()` 里一次性分配好所有缓冲；每帧调用的方法（`process` / `analyze` / `synthesize` …）不分配、不加锁、不做 I/O，
+//!   由 `tests/` 里的 `assert_no_alloc` 测试证明
+//! - 这里不认识任何模型，也不认识 WAV 文件
+
+pub mod delay;
+pub mod envelope;
+pub mod stft;
+pub mod window;
+
+pub use delay::DelayLine;
+pub use envelope::{OpenCloseEnvelope, OpenCloseParams};
+pub use stft::StreamingStft;
+
+/// 分贝 → 线性幅度。
+pub fn db_to_lin(db: f32) -> f32 {
+    10f32.powf(db / 20.0)
+}
+
+/// 一阶平滑系数：时间常数 `tau_s` 秒、采样率 `sr`。`tau_s <= 0` 时返回 1（立刻跟上）。
+pub fn one_pole_coef(tau_s: f32, sr: f32) -> f32 {
+    if tau_s <= 0.0 {
+        1.0
+    } else {
+        1.0 - (-1.0 / (tau_s * sr)).exp()
+    }
+}
