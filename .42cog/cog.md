@@ -38,6 +38,8 @@
 | `vdn-engine`（`src/engine/`） | 模型接口 `trait Model`、逐帧调度 + 三件保命、故障注入、离线驱动 | AI 写（p1） | 输入：dsp 积木 + 任一 `Model`；被 models、cli 用。不链接 ONNX Runtime |
 | `vdn-models`（`src/models/`） | 模型适配器 GTCRN、FastEnhancer-M（ort 单线程 CPU）、`AnyModel` | AI 写（p1） | 输入：模型权重（仓外）；实现 engine 的 `Model`；被 cli 用 |
 | `vdn-cli`（`src/cli/`，可执行 `vdn`） | 命令行 `denoise` / `bench`，WAV 读写 | AI 写（p1） | 输入：WAV + 模型权重；产出降噪 WAV 与计时 JSON（评测报告的原料） |
+| `vdn-polish`（`src/polish/`） | 修音链：频谱平滑（金属声）· 下限 + 舒适噪声（真空感）· 去发闷 · AGC + 限幅（忽大忽小）；全部零前瞻，预设编号 = `ToneId` | AI 写（scene，2026-10-31） | 输入：模型 STFT 上的带噪 / 降噪频谱 + 降噪后时域 hop；依赖 dsp；接入 engine 待下一批 |
+| `vdn-scene`（`src/scene/`） | 场景识别与路由：35 维便宜特征 → 7 个噪音大类 × 设备 = 细场景 → 用户层场景；滞回；细场景 → 参数组（模型 + 修音链预设） | AI 写（scene，2026-10-31）；分类器权重由 exp006 模拟数据训练生成 | 输入：麦克风原声（判断回路约 0.5 s）；产出 `SceneLabel` 与 `ParamSet`；依赖 dsp、polish；接口暂为 vdn-types 镜像 |
 
 **建一个，就在这张表里加一行**（是什么 · 谁产生 · 谁是谁的输入）。初拟划分见 `vault/raw/20261029-voice-denoise-design.md` §6（dsp · engine · speaker · io-macos · hal-plugin · control · eval），以 `-research` 结论为准。
 
