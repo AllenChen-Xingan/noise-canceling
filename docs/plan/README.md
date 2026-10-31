@@ -18,3 +18,4 @@
 | 004 | 2026-10-30 | 极端情况与抗压：一百万人的长尾（AI 方案待人过目） → `004_robustness.md` |
 | — | 2026-10-31 | 设备端自适应与可靠性 → 取舍卡见 `docs/research/010_ondevice-adaptation/decision.md` |
 | — | 2026-10-31 | 一大堆人同时说话 → 取舍卡见 `docs/research/011_multitalker/decision.md` |
+| — | 2026-10-31 | 工业级评测标准与 verifier 框架 → 取舍卡见 `docs/research/012_eval-standards/decision.md` |
