@@ -108,7 +108,9 @@ pub fn params_for(id: FineSceneId) -> ParamSet {
         NoiseClass::Music => (ModelId::FastEnhancerM, 5),
     };
     p.model = model;
-    p.tone = ToneId(if d == Device::BtNarrow {
+    p.tone = ToneId(if model == ModelId::FastEnhancerM {
+        20 + tone // FE-M（wav2wav）拿不到频谱：修音链只开 AGC，见 vdn_polish::PolishParams::preset
+    } else if d == Device::BtNarrow {
         tone + 10
     } else {
         tone

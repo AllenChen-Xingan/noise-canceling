@@ -43,7 +43,9 @@ impl PolishParams {
     };
 
     /// 预设表：`vdn-types` 的 `ParamSet.tone: ToneId(u8)` 就是这里的编号（0 = 不加工）。
-    /// 1–6 按细场景大类给起步值；9 = 还没判出场景时用的 `DEFAULT`；+10 是同一预设的「窄带蓝牙」版（4 kHz 以上本来就没有，关掉去发闷）。
+    /// 1–6 按细场景大类给起步值；9 = 还没判出场景时用的 `DEFAULT`；+10 是同一预设的「窄带蓝牙」版（4 kHz 以上本来就没有，关掉去发闷）；
+    /// **20 及以上 = 只开 AGC**：给拿不到模型频谱的模型（FastEnhancer-M 的 wav2wav 图）用——频谱节点要另做 STFT 才能跑，
+    /// 会多 16 ms，违反「修音链零前瞻」，所以那一路只留时域的 AGC（自审 P1）。
     /// 数值是 exp006 模拟数据上的初调，**待人耳定**；未知编号退回 `DEFAULT`。
     pub fn preset(tone: u8) -> Self {
         let base = |smooth, floor_db, comfort_db, demuffle_max_db| Self {
@@ -55,6 +57,9 @@ impl PolishParams {
             agc_target_dbfs: -26.0,
             agc_range_db: 10.0,
         };
+        if tone >= 20 {
+            return Self { agc: 1.0, ..Self::OFF };
+        }
         let (b, narrow) = if tone > 10 {
             (tone - 10, true)
         } else {
