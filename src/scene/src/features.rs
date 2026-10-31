@@ -28,6 +28,7 @@
 //! | 21 | clip | log10(平顶样本占比)：削波 |
 //! | 22 | slope | 频带能量对 log 频率的斜率（dB/倍频程） |
 //! | 23–26 | bmod_1..4 | 四组频带各自包络的 2–8 Hz 调制占比（人声在中频最强） |
+//! | 27–34 | floor_1..8 | 底噪谱形：8 组频带（每组 2 个）各自时间 p20 的 dB，减去 8 组均值（与电平无关，只看形状） |
 
 use std::sync::Arc;
 
@@ -35,7 +36,7 @@ use realfft::num_complex::Complex32;
 use realfft::{ComplexToReal, RealFftPlanner, RealToComplex};
 use vdn_dsp::window::sqrt_hann_periodic;
 
-pub const NF: usize = 27;
+pub const NF: usize = 35;
 /// 环形缓冲长度（帧）：125 × 16 ms = 2 s
 pub const CTX: usize = 125;
 const NB: usize = 16;
@@ -45,7 +46,8 @@ const BINS: usize = N_FFT / 2 + 1;
 pub const FEATURE_NAMES: [&str; NF] = [
     "snr_est", "floor_db", "mid_spread", "flat_lo", "flat_all", "flux_mean", "flux_peaky", "hf_mean", "hf_p90",
     "low_ratio", "centroid", "harm_frac", "harm_mean", "pitch_stab", "peak_persist", "mod_lo", "mod_4", "mod_hi",
-    "e_std", "band_stat", "decay", "clip", "slope", "bmod_1", "bmod_2", "bmod_3", "bmod_4",
+    "e_std", "band_stat", "decay", "clip", "slope", "bmod_1", "bmod_2", "bmod_3", "bmod_4", "floor_1", "floor_2", "floor_3", "floor_4", "floor_5", "floor_6",
+    "floor_7", "floor_8",
 ];
 
 #[derive(Clone, Copy, Default)]
@@ -409,6 +411,22 @@ impl FeatureExtractor {
                 self.tmp[i] = 10.0 * s.max(1e-12).log10();
             }
             out[23 + g] = mod_split(&mut self.tmp[..n], fps).1;
+        }
+        // 底噪谱形
+        let mut fl = [0.0f32; 8];
+        for (g, fg) in fl.iter_mut().enumerate() {
+            for i in 0..n {
+                let f = self.at(i);
+                let s = 10f32.powf(f.band[2 * g] / 10.0) + 10f32.powf(f.band[2 * g + 1] / 10.0);
+                self.tmp[i] = 10.0 * s.max(1e-12).log10();
+            }
+            let s = &mut self.tmp[..n];
+            s.sort_unstable_by(f32::total_cmp);
+            *fg = s[n / 5];
+        }
+        let m = fl.iter().sum::<f32>() / 8.0;
+        for g in 0..8 {
+            out[27 + g] = fl[g] - m;
         }
         for v in out.iter_mut() {
             if !v.is_finite() {

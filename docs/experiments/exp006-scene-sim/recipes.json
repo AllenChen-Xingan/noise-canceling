@@ -3,7 +3,7 @@
   "sr": 16000,
   "clip_s": 10.0,
   "seed": {"train": 20261031, "test": 20261131, "seq": 20261231},
-  "count": {"train": 560, "test": 280, "seq": 16},
+  "count": {"train": 1680, "test": 280, "seq": 16},
   "no_target_prob": 0.12,
   "target_level_dbfs": [-34, -20],
   "target_drift_db": [0, 6],

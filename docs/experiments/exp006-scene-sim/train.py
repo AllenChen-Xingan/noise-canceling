@@ -18,7 +18,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 CLASSES = list(json.loads((HERE / "recipes.json").read_text())["fine"])  # 顺序 = Rust NoiseClass 顺序
-NF, NH = 27, 24
+NF, NH = 35, 24
 DEVICES = ["none", "bt_narrow", "clip"]
 
 
