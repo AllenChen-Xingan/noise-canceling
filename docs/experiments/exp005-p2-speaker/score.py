@@ -33,7 +33,9 @@ from _paths import MAIN  # noqa: E402
 BASE = MAIN / "_tmp/20261031-exp005"
 SRC, OUT = BASE / "src", BASE / "out"
 SR, HOP = 16000, 256
-VERS = ["raw", "floor", "energy", "vad", "personal"]
+VERS = ["raw", "floor", "energy", "vad", "personal", "aggressive"]
+TAGGED = ("personal", "aggressive")  # 重放时带 tag 的版本
+ASR_VERS = ["mix", "raw", "vad", "personal", "aggressive"]
 ASR_URL = "http://127.0.0.1:11520/v1/audio/transcriptions"
 ASR_KEY = "42model"  # 本机服务的固定占位 key，不是密钥（同 exp003 score.py）
 ASR_MODEL = "qwen3-asr-plus:1.7b"
@@ -107,7 +109,8 @@ def cmd_asr():
     for c in clips():
         cid = c["id"]
         tracks = {"ref": sf.read(str(SRC / f"{cid}_owner.wav"), dtype="float32")[0]}
-        for v in ("vad", "personal"):
+        tracks["mix"] = sf.read(str(SRC / f"{cid}_mix.wav"), dtype="float32")[0]
+        for v in ASR_VERS[1:]:
             tracks[v] = sf.read(str(OUT / f"{cid}.{v}.wav"), dtype="float32")[0]
         rows = []
         for k, (s, e) in enumerate(c["timeline"]["owner"]):
@@ -139,7 +142,8 @@ def cmd_score(tag=""):
         itf = sf.read(str(SRC / f"{cid}_interf.wav"), dtype="float32")[0]
         log = json.loads((OUT / f"{cid}.log{tag}.json").read_text())
         WIN = log["judge"]["window_s"]
-        ys = {v: sf.read(str(OUT / f"{cid}.{v}{tag if v == 'personal' else ''}.wav"), dtype="float32")[0] for v in VERS}
+        ys = {v: sf.read(str(OUT / f"{cid}.{v}{tag if v in TAGGED else ''}.wav"), dtype="float32")[0] for v in VERS}
+        ys["mix"] = sf.read(str(SRC / f"{cid}_mix.wav"), dtype="float32")[0][: len(ys["raw"])]
         n = len(ys["raw"])
         own, itf = own[:n], itf[:n]
         om = vad_mask(own)[0][:n] if own.any() else np.zeros(n, bool)
@@ -184,7 +188,7 @@ def cmd_score(tag=""):
         lk = int(lock_t * SR) if lock_t else n
         irl, irl_post = {}, {}
         for v, y in ys.items():
-            if io.any():
+            if io.any() and len(y) == n:
                 irl[v] = db(np.sum(y[io] ** 2)) - db(np.sum(itf[io] ** 2))
                 post = io.copy()
                 post[:lk] = False
@@ -202,26 +206,35 @@ def cmd_score(tag=""):
             "vad": {"silence": float(vo[hop_sil].mean()) if hop_sil.any() else None, "owner_speech": float(vo[hop_own].mean()),
                     "interf_only": float(vo[hop_io].mean()) if hop_io.any() else None},
         }
-        # 主人被压
-        g = np.array(log["per_hop"]["gain"][:nh])
-        gdb = 20 * np.log10(np.maximum(g, 1e-6))
+        # 主人被压（门控增益）：保守 / 激进两套；全段与「锁定之后」分开报（锁定前门控不动，全段会稀释）
         onset_hops = np.zeros(nh, bool)
-        for s, e in c["timeline"]["owner"]:
-            onset_hops[int(s * SR / HOP): min(nh, int(min(e, s + 2.0) * SR / HOP))] = True
-        owner_supp = {
-            "hops_lt_m3db": float((gdb[hop_own] < -3).mean()),
-            "hops_lt_m3db_first2s": float((gdb[onset_hops & hop_own] < -3).mean()) if (onset_hops & hop_own).any() else None,
-            "mean_gain_db_owner": float(gdb[hop_own].mean()),
-            "mean_gain_db_interf_only": float(gdb[hop_io].mean()) if hop_io.any() else None,
-            "mean_gain_db_interf_only_postlock": float(gdb[hop_io & (np.arange(nh) * HOP >= lk)].mean())
-            if (hop_io & (np.arange(nh) * HOP >= lk)).any() else None,
-        }
+        for s_, e_ in c["timeline"]["owner"]:
+            onset_hops[int(s_ * SR / HOP): min(nh, int(min(e_, s_ + 2.0) * SR / HOP))] = True
+        post = np.arange(nh) * HOP >= lk
+
+        def supp(key):
+            g = np.array(log["per_hop"][key][:nh])
+            gdb = 20 * np.log10(np.maximum(g, 1e-6))
+            def frac(m):
+                return float((gdb[m] < -3).mean()) if m.any() else None
+            def mean(m):
+                return float(gdb[m].mean()) if m.any() else None
+            return {
+                "hops_lt_m3db": frac(hop_own), "hops_lt_m3db_first2s": frac(onset_hops & hop_own),
+                "hops_lt_m3db_postlock": frac(hop_own & post), "hops_lt_m3db_first2s_postlock": frac(onset_hops & hop_own & post),
+                "mean_gain_db_owner": mean(hop_own), "mean_gain_db_interf_only": mean(hop_io),
+                "mean_gain_db_interf_only_postlock": mean(hop_io & post),
+            }
+        owner_supp = supp("gain")
+        owner_supp_aggr = supp("gain_aggressive")
         # 背景：无人声 hop 的输出电平（vad vs personal），看门控有没有让底噪忽大忽小
-        sil_lvl = {v: db(np.mean(ys[v][sil] ** 2)) if sil.any() else None for v in ("vad", "personal")}
+        sil_lvl = {v: db(np.mean(ys[v][sil] ** 2)) if sil.any() else None for v in ("mix", "raw", "vad", "personal", "aggressive")}
         # 吃字
         wer = {}
         if cid in asr_res:
-            for v in ("vad", "personal"):
+            for v in ASR_VERS:
+                if v not in asr_res[cid][0]:
+                    continue
                 D = S = I = N = 0
                 for r in asr_res[cid]:
                     ref = tokens(r["ref"], "en")
@@ -237,7 +250,7 @@ def cmd_score(tag=""):
             "enroll": {"lock_t": lock_t, "owner_speech_before_lock_s": own_before, "events": events, "final_owner": final,
                        "lock_correct": lock_correct, "n_relock": sum(1 for e in events if "relocked" in e)},
             "verdicts": {"false_other_on_owner_any": false_other, "postlock": vc, "n": len(log["judge_logs"])},
-            "irl_db": irl, "irl_db_postlock": irl_post, "open_ratio": open_ratio, "owner_suppression": owner_supp,
+            "irl_db": irl, "irl_db_postlock": irl_post, "open_ratio": open_ratio, "owner_suppression": owner_supp, "owner_suppression_aggressive": owner_supp_aggr,
             "silence_level_db": sil_lvl, "asr": wer,
             "compute": {"judge_ms_p50": float(np.median(emb_comp)) if len(emb_comp) else None,
                         "judge_ms_max": float(emb_comp.max()) if len(emb_comp) else None,
@@ -246,7 +259,9 @@ def cmd_score(tag=""):
                         "gate_us_p50": float(np.median(st["stage_ns_gate"])), "gate_us_max": float(st["stage_ns_gate"].max())},
         }
         print(cid, json.dumps({"lock": lock_t, "ok": lock_correct, "vc": vc, "irl_post_vad": irl_post.get("vad"), "irl_post_pers": irl_post.get("personal"),
-                               "supp": owner_supp["hops_lt_m3db"], "supp2s": owner_supp["hops_lt_m3db_first2s"]}, default=str))
+                               "irl_post_aggr": irl_post.get("aggressive"), "irl_post_raw": irl_post.get("raw"),
+                               "supp": owner_supp["hops_lt_m3db_postlock"], "supp2s": owner_supp["hops_lt_m3db_first2s_postlock"],
+                               "supp_aggr": owner_supp_aggr["hops_lt_m3db_postlock"], "supp2s_aggr": owner_supp_aggr["hops_lt_m3db_first2s_postlock"]}, default=str))
     (HERE / "results").mkdir(exist_ok=True)
     (HERE / f"results/scores{tag}.json").write_text(json.dumps({"per_clip": per}, ensure_ascii=False, indent=1) + "\n")
 
