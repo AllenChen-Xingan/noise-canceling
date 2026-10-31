@@ -7,9 +7,9 @@
 //! 以后的老虎机 / 学到的策略换掉它即可。用户优先：手动选场景、锁定、旋钮都盖过自动（005「用户优先」）。
 
 use crate::frame::SampleClock;
-use crate::log::DecisionEvent;
 use crate::memory::{Overrides, UserProfile};
 use crate::params::ParamSet;
+use crate::record::DecisionEvent;
 use crate::scene::{FineSceneId, SceneLabel, UserScene};
 use crate::table::SceneTable;
 
