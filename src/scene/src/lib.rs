@@ -35,6 +35,9 @@ use mirror::{Confidence, FineSceneId, HysteresisGate, ParamSet, SampleClock, Sce
 use route::Device;
 use weights::NC;
 
+/// 缓冲里至少有这么多帧（≈1 s）才把判断交给滞回。
+const MIN_FILL: usize = 62;
+
 /// 一次判断的全部结果（离线评测与决策日志用）。
 #[derive(Clone, Copy, Debug)]
 pub struct Judgement {
@@ -156,7 +159,10 @@ impl SceneAnalyzer {
         } else {
             Device::Normal
         };
-        let conf = if self.manual.is_some() { best_p / mass.max(1e-6) } else { best_p };
+        let mut conf = if self.manual.is_some() { best_p / mass.max(1e-6) } else { best_p };
+        if self.fx.filled() < MIN_FILL {
+            conf = 0.0; // 缓冲不满 1 s 的判断不进滞回（置信度 0 = 不推进）
+        }
         let (fine, user) = match self.manual {
             Some(UserScene::Meeting) => (route::MEETING, UserScene::Meeting),
             _ => (route::fine_id(class, device), route::user_of(class)),
