@@ -22,11 +22,12 @@
      "parity_vs_py": {
       "max_abs": 1.6391277313232422e-07,
       "rms_err": 1.050762676868544e-08,
-      "snr_db": 133.0174560546875
+      "snr_db": 133.0174560546875,
+      "identical": false
      }
     },
     "safe": {
-     "si_sdr": 9.277414321899414,
+     "si_sdr": 9.301712036132812,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -36,7 +37,7 @@
       "hops": 752,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 750
+      "voiced_hops": 733
      },
      "finite": true
     },
@@ -75,11 +76,12 @@
      "parity_vs_py": {
       "max_abs": 0.0,
       "rms_err": 0.0,
-      "snr_db": 326.5985412597656
+      "snr_db": null,
+      "identical": true
      }
     },
     "safe": {
-     "si_sdr": 10.331450462341309,
+     "si_sdr": 10.36129379272461,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -89,7 +91,7 @@
       "hops": 1203,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 1170
+      "voiced_hops": 1150
      },
      "finite": true
     },
@@ -132,11 +134,12 @@
      "parity_vs_py": {
       "max_abs": 2.384185791015625e-07,
       "rms_err": 1.4972194151141593e-08,
-      "snr_db": 127.3468017578125
+      "snr_db": 127.3468017578125,
+      "identical": false
      }
     },
     "safe": {
-     "si_sdr": 3.0816869735717773,
+     "si_sdr": 3.08571457862854,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -146,7 +149,7 @@
       "hops": 752,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 748
+      "voiced_hops": 736
      },
      "finite": true
     },
@@ -185,11 +188,12 @@
      "parity_vs_py": {
       "max_abs": 0.0,
       "rms_err": 0.0,
-      "snr_db": 326.4183044433594
+      "snr_db": null,
+      "identical": true
      }
     },
     "safe": {
-     "si_sdr": 4.880117416381836,
+     "si_sdr": 4.9191060066223145,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -199,7 +203,7 @@
       "hops": 1203,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 1176
+      "voiced_hops": 1168
      },
      "finite": true
     },
@@ -242,11 +246,12 @@
      "parity_vs_py": {
       "max_abs": 1.7881393432617188e-07,
       "rms_err": 1.0952620144166758e-08,
-      "snr_db": 125.73688507080078
+      "snr_db": 125.73688507080078,
+      "identical": false
      }
     },
     "safe": {
-     "si_sdr": -2.8966429233551025,
+     "si_sdr": -2.8743231296539307,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -256,7 +261,7 @@
       "hops": 752,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 751
+      "voiced_hops": 722
      },
      "finite": true
     },
@@ -295,11 +300,12 @@
      "parity_vs_py": {
       "max_abs": 0.0,
       "rms_err": 0.0,
-      "snr_db": 325.0835876464844
+      "snr_db": null,
+      "identical": true
      }
     },
     "safe": {
-     "si_sdr": -0.8579551577568054,
+     "si_sdr": -0.8376521468162537,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -309,7 +315,7 @@
       "hops": 1203,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 1201
+      "voiced_hops": 1185
      },
      "finite": true
     },
@@ -352,12 +358,13 @@
      "parity_vs_py": {
       "max_abs": 4.470348358154297e-07,
       "rms_err": 1.3188969916200222e-08,
-      "snr_db": 129.61585998535156
+      "snr_db": 129.61585998535156,
+      "identical": false
      },
      "nonspeech_atten_db": -0.9367446899414062
     },
     "safe": {
-     "si_sdr": 4.728435516357422,
+     "si_sdr": 4.728957653045654,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -367,10 +374,10 @@
       "hops": 673,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 671
+      "voiced_hops": 659
      },
      "finite": true,
-     "nonspeech_atten_db": -0.4986916184425354
+     "nonspeech_atten_db": -0.5004335045814514
     },
     "floor": {
      "si_sdr": 4.801900863647461,
@@ -409,12 +416,13 @@
      "parity_vs_py": {
       "max_abs": 0.0,
       "rms_err": 0.0,
-      "snr_db": 322.86981201171875
+      "snr_db": null,
+      "identical": true
      },
      "nonspeech_atten_db": -1.229868769645691
     },
     "safe": {
-     "si_sdr": 4.402312278747559,
+     "si_sdr": 4.405608177185059,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -424,10 +432,10 @@
       "hops": 1075,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 1049
+      "voiced_hops": 1028
      },
      "finite": true,
-     "nonspeech_atten_db": -0.752592146396637
+     "nonspeech_atten_db": -0.7568119764328003
     },
     "floor": {
      "si_sdr": 3.628937244415283,
@@ -470,12 +478,13 @@
      "parity_vs_py": {
       "max_abs": 1.862645149230957e-07,
       "rms_err": 1.1689698986572239e-08,
-      "snr_db": 132.11862182617188
+      "snr_db": 132.11862182617188,
+      "identical": false
      },
      "nonspeech_atten_db": -0.9217115640640259
     },
     "safe": {
-     "si_sdr": -0.9123349189758301,
+     "si_sdr": -0.9116770029067993,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -485,10 +494,10 @@
       "hops": 632,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 631
+      "voiced_hops": 620
      },
      "finite": true,
-     "nonspeech_atten_db": -0.5042200684547424
+     "nonspeech_atten_db": -0.505997896194458
     },
     "floor": {
      "si_sdr": -1.1113762855529785,
@@ -507,7 +516,7 @@
      "nonspeech_atten_db": -0.7257635593414307
     },
     "fault": {
-     "si_sdr": -0.7045122385025024,
+     "si_sdr": -0.7037886381149292,
      "stats": {
       "bypass_hops": 25,
       "fault_abnormal": 1,
@@ -517,33 +526,61 @@
       "hops": 632,
       "model_resets": 3,
       "nonfinite_samples": 0,
-      "voiced_hops": 606
+      "voiced_hops": 594
      },
      "finite": true,
-     "nonspeech_atten_db": -0.5200951099395752,
+     "nonspeech_atten_db": -0.521879255771637,
      "max_step": 0.6126129627227783,
      "max_step_safe": 0.6173692941665649,
      "max_step_noisy": 0.6201561689376831,
-     "local_step": {
-      "nan": {
-       "fault": 0.16988994181156158,
-       "safe": 0.16988994181156158,
-       "noisy": 0.18561209738254547
+     "seams": {
+      "nan_enter": {
+       "pos": 25088,
+       "fault_d2": 0.15289147198200226,
+       "ref_d2": 0.162146657705307,
+       "ratio": 0.9429208973266315
       },
-      "error": {
-       "fault": 0.08464507758617401,
-       "safe": 0.0734034925699234,
-       "noisy": 0.08798731863498688
+      "nan_exit": {
+       "pos": 27136,
+       "fault_d2": 0.04364335536956787,
+       "ref_d2": 0.04364335536956787,
+       "ratio": 1.0
       },
-      "explode": {
-       "fault": 0.024125603958964348,
-       "safe": 0.01537271123379469,
-       "noisy": 0.024125603958964348
+      "error_enter": {
+       "pos": 50688,
+       "fault_d2": 0.041764162480831146,
+       "ref_d2": 0.0509890615940094,
+       "ratio": 0.8190808219490341
       },
-      "stall": {
-       "fault": 0.10671010613441467,
-       "safe": 0.10724254697561264,
-       "noisy": 0.11314347386360168
+      "error_exit": {
+       "pos": 52736,
+       "fault_d2": 0.012366386130452156,
+       "ref_d2": 0.014664938673377037,
+       "ratio": 0.8432620419274095
+      },
+      "explode_enter": {
+       "pos": 76288,
+       "fault_d2": 0.020904820412397385,
+       "ref_d2": 0.020874178037047386,
+       "ratio": 1.0014679560218187
+      },
+      "explode_exit": {
+       "pos": 78336,
+       "fault_d2": 0.3650525212287903,
+       "ref_d2": 0.36796778440475464,
+       "ratio": 0.9920773956321197
+      },
+      "stall_enter": {
+       "pos": 101888,
+       "fault_d2": 0.060783710330724716,
+       "ref_d2": 0.060765136033296585,
+       "ratio": 1.0003056735924685
+      },
+      "stall_exit": {
+       "pos": 102144,
+       "fault_d2": 0.029180703684687614,
+       "ref_d2": 0.029180703684687614,
+       "ratio": 1.0
       }
      }
     },
@@ -568,12 +605,13 @@
      "parity_vs_py": {
       "max_abs": 0.0,
       "rms_err": 0.0,
-      "snr_db": 324.5618896484375
+      "snr_db": null,
+      "identical": true
      },
      "nonspeech_atten_db": -0.6238395571708679
     },
     "safe": {
-     "si_sdr": -1.6817973852157593,
+     "si_sdr": -1.6802599430084229,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -583,10 +621,10 @@
       "hops": 1011,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 1005
+      "voiced_hops": 986
      },
      "finite": true,
-     "nonspeech_atten_db": -0.365648090839386
+     "nonspeech_atten_db": -0.3737165927886963
     },
     "floor": {
      "si_sdr": -2.540597915649414,
@@ -605,7 +643,7 @@
      "nonspeech_atten_db": -0.5096242427825928
     },
     "fault": {
-     "si_sdr": -1.1912717819213867,
+     "si_sdr": -1.1898951530456543,
      "stats": {
       "bypass_hops": 34,
       "fault_abnormal": 1,
@@ -615,33 +653,61 @@
       "hops": 1011,
       "model_resets": 3,
       "nonfinite_samples": 0,
-      "voiced_hops": 971
+      "voiced_hops": 956
      },
      "finite": true,
-     "nonspeech_atten_db": -0.35457316040992737,
+     "nonspeech_atten_db": -0.36262109875679016,
      "max_step": 0.6198770403862,
      "max_step_safe": 0.618882954120636,
      "max_step_noisy": 0.6201561689376831,
-     "local_step": {
-      "nan": {
-       "fault": 0.024832725524902344,
-       "safe": 0.015771467238664627,
-       "noisy": 0.031317632645368576
+     "seams": {
+      "nan_enter": {
+       "pos": 15648,
+       "fault_d2": 0.009032497182488441,
+       "ref_d2": 0.009339813143014908,
+       "ratio": 0.9670961339567802
       },
-      "error": {
-       "fault": 0.040151648223400116,
-       "safe": 0.025653298944234848,
-       "noisy": 0.04015171155333519
+      "nan_exit": {
+       "pos": 17408,
+       "fault_d2": 0.22980153560638428,
+       "ref_d2": 0.22998948395252228,
+       "ratio": 0.9991827959135001
       },
-      "explode": {
-       "fault": 0.10696776211261749,
-       "safe": 0.056821130216121674,
-       "noisy": 0.1069677546620369
+      "error_enter": {
+       "pos": 31648,
+       "fault_d2": 0.032551415264606476,
+       "ref_d2": 0.032546497881412506,
+       "ratio": 1.0001510879361548
       },
-      "stall": {
-       "fault": 0.33223778009414673,
-       "safe": 0.3043785095214844,
-       "noisy": 0.33265751600265503
+      "error_exit": {
+       "pos": 33408,
+       "fault_d2": 0.1070207953453064,
+       "ref_d2": 0.10774701088666916,
+       "ratio": 0.9932599936147963
+      },
+      "explode_enter": {
+       "pos": 47648,
+       "fault_d2": 0.04339774698019028,
+       "ref_d2": 0.07141098380088806,
+       "ratio": 0.6077180941967444
+      },
+      "explode_exit": {
+       "pos": 49408,
+       "fault_d2": 0.014694355428218842,
+       "ref_d2": 0.01638546958565712,
+       "ratio": 0.8967918405635088
+      },
+      "stall_enter": {
+       "pos": 63648,
+       "fault_d2": 0.3308181166648865,
+       "ref_d2": 0.33080780506134033,
+       "ratio": 1.0000311709802139
+      },
+      "stall_exit": {
+       "pos": 63808,
+       "fault_d2": 0.3734202980995178,
+       "ref_d2": 0.3734202980995178,
+       "ratio": 1.0
       }
      }
     },
@@ -670,12 +736,13 @@
      "parity_vs_py": {
       "max_abs": 2.980232238769531e-07,
       "rms_err": 1.2452616715563636e-08,
-      "snr_db": 125.61676025390625
+      "snr_db": 125.61676025390625,
+      "identical": false
      },
      "nonspeech_atten_db": -4.821101188659668
     },
     "safe": {
-     "si_sdr": 0.8220639228820801,
+     "si_sdr": 0.8356144428253174,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -685,10 +752,10 @@
       "hops": 601,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 600
+      "voiced_hops": 565
      },
      "finite": true,
-     "nonspeech_atten_db": -2.290982246398926
+     "nonspeech_atten_db": -2.313542604446411
     },
     "floor": {
      "si_sdr": 1.739750623703003,
@@ -707,7 +774,7 @@
      "nonspeech_atten_db": -3.554194450378418
     },
     "fault": {
-     "si_sdr": 0.40385693311691284,
+     "si_sdr": 0.40432441234588623,
      "stats": {
       "bypass_hops": 25,
       "fault_abnormal": 1,
@@ -717,33 +784,61 @@
       "hops": 601,
       "model_resets": 3,
       "nonfinite_samples": 0,
-      "voiced_hops": 575
+      "voiced_hops": 564
      },
      "finite": true,
-     "nonspeech_atten_db": -2.347370147705078,
+     "nonspeech_atten_db": -2.349557638168335,
      "max_step": 0.5026243329048157,
      "max_step_safe": 0.5026243329048157,
      "max_step_noisy": 0.5750701427459717,
-     "local_step": {
-      "nan": {
-       "fault": 0.5026243329048157,
-       "safe": 0.5026243329048157,
-       "noisy": 0.5750701427459717
+     "seams": {
+      "nan_enter": {
+       "pos": 25088,
+       "fault_d2": 0.7519229054450989,
+       "ref_d2": 0.8530594110488892,
+       "ratio": 0.8814426002528514
       },
-      "error": {
-       "fault": 0.05515800043940544,
-       "safe": 0.046590931713581085,
-       "noisy": 0.05515800043940544
+      "nan_exit": {
+       "pos": 27136,
+       "fault_d2": 0.15014539659023285,
+       "ref_d2": 0.15014539659023285,
+       "ratio": 1.0
       },
-      "explode": {
-       "fault": 0.040512558072805405,
-       "safe": 0.039221808314323425,
-       "noisy": 0.05454313009977341
+      "error_enter": {
+       "pos": 50688,
+       "fault_d2": 0.03987855836749077,
+       "ref_d2": 0.03990454599261284,
+       "ratio": 0.999348755273976
       },
-      "stall": {
-       "fault": 0.142753005027771,
-       "safe": 0.09621672332286835,
-       "noisy": 0.15514223277568817
+      "error_exit": {
+       "pos": 52736,
+       "fault_d2": 0.5336725115776062,
+       "ref_d2": 0.5358055233955383,
+       "ratio": 0.9960190559357905
+      },
+      "explode_enter": {
+       "pos": 76288,
+       "fault_d2": 0.03636820614337921,
+       "ref_d2": 0.03636778146028519,
+       "ratio": 1.000011677453971
+      },
+      "explode_exit": {
+       "pos": 78336,
+       "fault_d2": 0.045348312705755234,
+       "ref_d2": 0.045576345175504684,
+       "ratio": 0.9949966924975808
+      },
+      "stall_enter": {
+       "pos": 101888,
+       "fault_d2": 0.12169201672077179,
+       "ref_d2": 0.12168331444263458,
+       "ratio": 1.0000715157881512
+      },
+      "stall_exit": {
+       "pos": 102144,
+       "fault_d2": 0.2128858119249344,
+       "ref_d2": 0.22327327728271484,
+       "ratio": 0.9534764505443812
       }
      }
     },
@@ -768,12 +863,13 @@
      "parity_vs_py": {
       "max_abs": 0.0,
       "rms_err": 0.0,
-      "snr_db": 320.45098876953125
+      "snr_db": null,
+      "identical": true
      },
      "nonspeech_atten_db": -3.9081287384033203
     },
     "safe": {
-     "si_sdr": 1.5639294385910034,
+     "si_sdr": 1.6038691997528076,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -783,10 +879,10 @@
       "hops": 960,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 958
+      "voiced_hops": 922
      },
      "finite": true,
-     "nonspeech_atten_db": -2.147395372390747
+     "nonspeech_atten_db": -2.2879459857940674
     },
     "floor": {
      "si_sdr": 2.556166172027588,
@@ -805,7 +901,7 @@
      "nonspeech_atten_db": -3.1436636447906494
     },
     "fault": {
-     "si_sdr": 1.3814483880996704,
+     "si_sdr": 1.4177377223968506,
      "stats": {
       "bypass_hops": 34,
       "fault_abnormal": 1,
@@ -815,33 +911,61 @@
       "hops": 960,
       "model_resets": 3,
       "nonfinite_samples": 0,
-      "voiced_hops": 924
+      "voiced_hops": 891
      },
      "finite": true,
-     "nonspeech_atten_db": -1.9042598009109497,
+     "nonspeech_atten_db": -2.0370397567749023,
      "max_step": 0.5463513135910034,
      "max_step_safe": 0.5452313423156738,
      "max_step_noisy": 0.5750701427459717,
-     "local_step": {
-      "nan": {
-       "fault": 0.0295781958848238,
-       "safe": 0.017691990360617638,
-       "noisy": 0.02957814373075962
+     "seams": {
+      "nan_enter": {
+       "pos": 15648,
+       "fault_d2": 0.04390334337949753,
+       "ref_d2": 0.04390139877796173,
+       "ratio": 1.0000442947511907
       },
-      "error": {
-       "fault": 0.06186502426862717,
-       "safe": 0.06075933575630188,
-       "noisy": 0.06738582253456116
+      "nan_exit": {
+       "pos": 17408,
+       "fault_d2": 0.016940642148256302,
+       "ref_d2": 0.016940642148256302,
+       "ratio": 1.0
       },
-      "explode": {
-       "fault": 0.09628757834434509,
-       "safe": 0.09510920941829681,
-       "noisy": 0.10043877363204956
+      "error_enter": {
+       "pos": 31648,
+       "fault_d2": 0.03096073679625988,
+       "ref_d2": 0.03381595015525818,
+       "ratio": 0.9155660761892171
       },
-      "stall": {
-       "fault": 0.03159135952591896,
-       "safe": 0.016012366861104965,
-       "noisy": 0.03158237040042877
+      "error_exit": {
+       "pos": 33408,
+       "fault_d2": 0.08837206661701202,
+       "ref_d2": 0.08837206661701202,
+       "ratio": 1.0
+      },
+      "explode_enter": {
+       "pos": 47648,
+       "fault_d2": 0.12941256165504456,
+       "ref_d2": 0.13099133968353271,
+       "ratio": 0.9879474625398718
+      },
+      "explode_exit": {
+       "pos": 49408,
+       "fault_d2": 0.057444918900728226,
+       "ref_d2": 0.06445806473493576,
+       "ratio": 0.8911983184253675
+      },
+      "stall_enter": {
+       "pos": 63648,
+       "fault_d2": 0.029777877032756805,
+       "ref_d2": 0.02980879694223404,
+       "ratio": 0.9989627253479182
+      },
+      "stall_exit": {
+       "pos": 63808,
+       "fault_d2": 0.04128997400403023,
+       "ref_d2": 0.04783704876899719,
+       "ratio": 0.8631379875338365
       }
      }
     },
@@ -870,12 +994,13 @@
      "parity_vs_py": {
       "max_abs": 1.30385160446167e-07,
       "rms_err": 8.706477316877681e-09,
-      "snr_db": 125.65817260742188
+      "snr_db": 125.65817260742188,
+      "identical": false
      },
      "nonspeech_atten_db": -8.195075988769531
     },
     "safe": {
-     "si_sdr": -5.404932022094727,
+     "si_sdr": -5.359121322631836,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -885,10 +1010,10 @@
       "hops": 643,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 642
+      "voiced_hops": 575
      },
      "finite": true,
-     "nonspeech_atten_db": -3.466738224029541
+     "nonspeech_atten_db": -3.5596764087677
     },
     "floor": {
      "si_sdr": -5.309568405151367,
@@ -927,12 +1052,13 @@
      "parity_vs_py": {
       "max_abs": 0.0,
       "rms_err": 0.0,
-      "snr_db": 319.9195556640625
+      "snr_db": null,
+      "identical": true
      },
      "nonspeech_atten_db": -8.613327980041504
     },
     "safe": {
-     "si_sdr": -4.044454574584961,
+     "si_sdr": -4.031368732452393,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -942,10 +1068,10 @@
       "hops": 1027,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 1025
+      "voiced_hops": 1013
      },
      "finite": true,
-     "nonspeech_atten_db": -4.065658092498779
+     "nonspeech_atten_db": -4.153428554534912
     },
     "floor": {
      "si_sdr": -3.0268213748931885,
@@ -988,12 +1114,13 @@
      "parity_vs_py": {
       "max_abs": 2.384185791015625e-07,
       "rms_err": 1.6878923148055947e-08,
-      "snr_db": 128.08401489257812
+      "snr_db": 128.08401489257812,
+      "identical": false
      },
      "nonspeech_atten_db": -3.614701747894287
     },
     "safe": {
-     "si_sdr": 9.610479354858398,
+     "si_sdr": 9.614557266235352,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -1003,10 +1130,10 @@
       "hops": 655,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 654
+      "voiced_hops": 637
      },
      "finite": true,
-     "nonspeech_atten_db": -1.7589067220687866
+     "nonspeech_atten_db": -1.7680317163467407
     },
     "floor": {
      "si_sdr": 9.072717666625977,
@@ -1045,12 +1172,13 @@
      "parity_vs_py": {
       "max_abs": 0.0,
       "rms_err": 0.0,
-      "snr_db": 327.55255126953125
+      "snr_db": null,
+      "identical": true
      },
      "nonspeech_atten_db": -8.848201751708984
     },
     "safe": {
-     "si_sdr": 12.220987319946289,
+     "si_sdr": 12.22582721710205,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -1060,10 +1188,10 @@
       "hops": 1047,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 1046
+      "voiced_hops": 1017
      },
      "finite": true,
-     "nonspeech_atten_db": -3.969964027404785
+     "nonspeech_atten_db": -3.9783098697662354
     },
     "floor": {
      "si_sdr": 13.362934112548828,
@@ -1106,12 +1234,13 @@
      "parity_vs_py": {
       "max_abs": 7.450580596923828e-08,
       "rms_err": 7.347396469015166e-09,
-      "snr_db": 136.94639587402344
+      "snr_db": 136.94639587402344,
+      "identical": false
      },
      "nonspeech_atten_db": -6.591856479644775
     },
     "safe": {
-     "si_sdr": 0.9876024723052979,
+     "si_sdr": 0.9880041480064392,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -1121,10 +1250,10 @@
       "hops": 603,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 602
+      "voiced_hops": 596
      },
      "finite": true,
-     "nonspeech_atten_db": -3.530106544494629
+     "nonspeech_atten_db": -3.5310862064361572
     },
     "floor": {
      "si_sdr": 1.646654725074768,
@@ -1163,12 +1292,13 @@
      "parity_vs_py": {
       "max_abs": 0.0,
       "rms_err": 0.0,
-      "snr_db": 324.835693359375
+      "snr_db": null,
+      "identical": true
      },
      "nonspeech_atten_db": -6.717247486114502
     },
     "safe": {
-     "si_sdr": 3.4684886932373047,
+     "si_sdr": 3.4796860218048096,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -1178,10 +1308,10 @@
       "hops": 963,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 867
+      "voiced_hops": 845
      },
      "finite": true,
-     "nonspeech_atten_db": -3.871055841445923
+     "nonspeech_atten_db": -3.885594367980957
     },
     "floor": {
      "si_sdr": 5.825757026672363,
@@ -1224,12 +1354,13 @@
      "parity_vs_py": {
       "max_abs": 1.7881393432617188e-07,
       "rms_err": 1.2952396488685736e-08,
-      "snr_db": 131.8739471435547
+      "snr_db": 131.8739471435547,
+      "identical": false
      },
      "nonspeech_atten_db": -28.843069076538086
     },
     "safe": {
-     "si_sdr": 7.808835983276367,
+     "si_sdr": 7.847891807556152,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -1239,10 +1370,10 @@
       "hops": 650,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 618
+      "voiced_hops": 577
      },
      "finite": true,
-     "nonspeech_atten_db": -6.631534099578857
+     "nonspeech_atten_db": -7.0509772300720215
     },
     "floor": {
      "si_sdr": 9.855886459350586,
@@ -1261,7 +1392,7 @@
      "nonspeech_atten_db": -11.618593215942383
     },
     "fault": {
-     "si_sdr": 7.479672908782959,
+     "si_sdr": 7.5156097412109375,
      "stats": {
       "bypass_hops": 25,
       "fault_abnormal": 1,
@@ -1271,33 +1402,61 @@
       "hops": 650,
       "model_resets": 3,
       "nonfinite_samples": 0,
-      "voiced_hops": 595
+      "voiced_hops": 553
      },
      "finite": true,
-     "nonspeech_atten_db": -6.620175361633301,
+     "nonspeech_atten_db": -7.050833225250244,
      "max_step": 0.23093003034591675,
      "max_step_safe": 0.23254448175430298,
      "max_step_noisy": 0.25362733006477356,
-     "local_step": {
-      "nan": {
-       "fault": 0.18741285800933838,
-       "safe": 0.18741285800933838,
-       "noisy": 0.20807886123657227
+     "seams": {
+      "nan_enter": {
+       "pos": 25088,
+       "fault_d2": 0.12393917143344879,
+       "ref_d2": 0.12386937439441681,
+       "ratio": 1.000563472927616
       },
-      "error": {
-       "fault": 0.06510389596223831,
-       "safe": 0.06300577521324158,
-       "noisy": 0.07141128182411194
+      "nan_exit": {
+       "pos": 27136,
+       "fault_d2": 0.010575754567980766,
+       "ref_d2": 0.010575754567980766,
+       "ratio": 1.0
       },
-      "explode": {
-       "fault": 0.12101694941520691,
-       "safe": 0.1242169737815857,
-       "noisy": 0.1407531350851059
+      "error_enter": {
+       "pos": 50688,
+       "fault_d2": 0.04633811116218567,
+       "ref_d2": 0.048753514885902405,
+       "ratio": 0.9504568290231075
       },
-      "stall": {
-       "fault": 0.11288522183895111,
-       "safe": 0.10910318791866302,
-       "noisy": 0.12704095244407654
+      "error_exit": {
+       "pos": 52736,
+       "fault_d2": 0.0223248153924942,
+       "ref_d2": 0.02545425295829773,
+       "ratio": 0.8770563971792629
+      },
+      "explode_enter": {
+       "pos": 76288,
+       "fault_d2": 0.11962176859378815,
+       "ref_d2": 0.15420666337013245,
+       "ratio": 0.7757237331999566
+      },
+      "explode_exit": {
+       "pos": 78336,
+       "fault_d2": 0.019124820828437805,
+       "ref_d2": 0.019124820828437805,
+       "ratio": 1.0
+      },
+      "stall_enter": {
+       "pos": 101888,
+       "fault_d2": 0.05493439733982086,
+       "ref_d2": 0.05990156531333923,
+       "ratio": 0.9170778268057671
+      },
+      "stall_exit": {
+       "pos": 102144,
+       "fault_d2": 0.02692282199859619,
+       "ref_d2": 0.02740529179573059,
+       "ratio": 0.9823950133160209
       }
      }
     },
@@ -1322,12 +1481,13 @@
      "parity_vs_py": {
       "max_abs": 0.0,
       "rms_err": 0.0,
-      "snr_db": 327.7957458496094
+      "snr_db": null,
+      "identical": true
      },
      "nonspeech_atten_db": -63.358306884765625
     },
     "safe": {
-     "si_sdr": 9.725353240966797,
+     "si_sdr": 9.766698837280273,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -1337,10 +1497,10 @@
       "hops": 1039,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 846
+      "voiced_hops": 835
      },
      "finite": true,
-     "nonspeech_atten_db": -10.98771858215332
+     "nonspeech_atten_db": -11.150485038757324
     },
     "floor": {
      "si_sdr": 12.809581756591797,
@@ -1359,7 +1519,7 @@
      "nonspeech_atten_db": -11.99893569946289
     },
     "fault": {
-     "si_sdr": 9.268411636352539,
+     "si_sdr": 9.279378890991211,
      "stats": {
       "bypass_hops": 34,
       "fault_abnormal": 1,
@@ -1369,33 +1529,61 @@
       "hops": 1039,
       "model_resets": 3,
       "nonfinite_samples": 0,
-      "voiced_hops": 818
+      "voiced_hops": 815
      },
      "finite": true,
-     "nonspeech_atten_db": -8.191736221313477,
+     "nonspeech_atten_db": -8.22717571258545,
      "max_step": 0.23995962738990784,
      "max_step_safe": 0.240217387676239,
      "max_step_noisy": 0.25362733006477356,
-     "local_step": {
-      "nan": {
-       "fault": 0.044925399124622345,
-       "safe": 0.011287497356534004,
-       "noisy": 0.044925399124622345
+     "seams": {
+      "nan_enter": {
+       "pos": 15648,
+       "fault_d2": 0.025855284184217453,
+       "ref_d2": 0.028094038367271423,
+       "ratio": 0.920312126231662
       },
-      "error": {
-       "fault": 0.07626450806856155,
-       "safe": 0.07670266926288605,
-       "noisy": 0.09765534102916718
+      "nan_exit": {
+       "pos": 17408,
+       "fault_d2": 0.01643431931734085,
+       "ref_d2": 0.01708187535405159,
+       "ratio": 0.962091045433302
       },
-      "explode": {
-       "fault": 0.04276376590132713,
-       "safe": 0.02776379883289337,
-       "noisy": 0.05187109112739563
+      "error_enter": {
+       "pos": 31648,
+       "fault_d2": 0.03433769568800926,
+       "ref_d2": 0.04323626309633255,
+       "ratio": 0.7941874072581889
       },
-      "stall": {
-       "fault": 0.053146444261074066,
-       "safe": 0.0435003899037838,
-       "noisy": 0.07247714698314667
+      "error_exit": {
+       "pos": 33408,
+       "fault_d2": 0.03029826283454895,
+       "ref_d2": 0.030238747596740723,
+       "ratio": 1.0019681780013483
+      },
+      "explode_enter": {
+       "pos": 47648,
+       "fault_d2": 0.03307357430458069,
+       "ref_d2": 0.03311989828944206,
+       "ratio": 0.9986013246642083
+      },
+      "explode_exit": {
+       "pos": 49408,
+       "fault_d2": 0.07131589949131012,
+       "ref_d2": 0.0729903131723404,
+       "ratio": 0.9770597822059381
+      },
+      "stall_enter": {
+       "pos": 63648,
+       "fault_d2": 0.029280031099915504,
+       "ref_d2": 0.04368559271097183,
+       "ratio": 0.6702445653795992
+      },
+      "stall_exit": {
+       "pos": 63808,
+       "fault_d2": 0.03683155030012131,
+       "ref_d2": 0.03683154657483101,
+       "ratio": 1.0000001011440096
       }
      }
     },
@@ -1424,12 +1612,13 @@
      "parity_vs_py": {
       "max_abs": 3.948807716369629e-07,
       "rms_err": 3.3174774927147155e-08,
-      "snr_db": 124.4349365234375
+      "snr_db": 124.4349365234375,
+      "identical": false
      },
      "nonspeech_atten_db": -4.852957248687744
     },
     "safe": {
-     "si_sdr": -0.3427594304084778,
+     "si_sdr": -0.33299511671066284,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -1439,10 +1628,10 @@
       "hops": 690,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 689
+      "voiced_hops": 670
      },
      "finite": true,
-     "nonspeech_atten_db": -2.25003981590271
+     "nonspeech_atten_db": -2.255171775817871
     },
     "floor": {
      "si_sdr": -0.38041478395462036,
@@ -1481,12 +1670,13 @@
      "parity_vs_py": {
       "max_abs": 0.0,
       "rms_err": 0.0,
-      "snr_db": 329.2644958496094
+      "snr_db": null,
+      "identical": true
      },
      "nonspeech_atten_db": -6.353202819824219
     },
     "safe": {
-     "si_sdr": 0.8361285924911499,
+     "si_sdr": 0.8433103561401367,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -1496,10 +1686,10 @@
       "hops": 1103,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 1091
+      "voiced_hops": 1068
      },
      "finite": true,
-     "nonspeech_atten_db": -3.480384111404419
+     "nonspeech_atten_db": -3.523468017578125
     },
     "floor": {
      "si_sdr": 1.0255320072174072,
@@ -1542,12 +1732,13 @@
      "parity_vs_py": {
       "max_abs": 2.5331974029541016e-07,
       "rms_err": 1.5586655521815374e-08,
-      "snr_db": 134.43504333496094
+      "snr_db": 134.43504333496094,
+      "identical": false
      },
      "nonspeech_atten_db": -0.63581383228302
     },
     "safe": {
-     "si_sdr": 4.751615047454834,
+     "si_sdr": 4.751631736755371,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -1557,10 +1748,10 @@
       "hops": 690,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 687
+      "voiced_hops": 686
      },
      "finite": true,
-     "nonspeech_atten_db": -0.3768165111541748
+     "nonspeech_atten_db": -0.3768709897994995
     },
     "floor": {
      "si_sdr": 4.853000164031982,
@@ -1599,12 +1790,13 @@
      "parity_vs_py": {
       "max_abs": 0.0,
       "rms_err": 0.0,
-      "snr_db": 328.16680908203125
+      "snr_db": null,
+      "identical": true
      },
      "nonspeech_atten_db": -0.5071265697479248
     },
     "safe": {
-     "si_sdr": 2.0848116874694824,
+     "si_sdr": 2.0122268199920654,
      "stats": {
       "bypass_hops": 0,
       "fault_abnormal": 0,
@@ -1614,10 +1806,10 @@
       "hops": 1103,
       "model_resets": 0,
       "nonfinite_samples": 0,
-      "voiced_hops": 1067
+      "voiced_hops": 1041
      },
      "finite": true,
-     "nonspeech_atten_db": -0.3407096862792969
+     "nonspeech_atten_db": -0.34079256653785706
     },
     "floor": {
      "si_sdr": 0.24034789204597473,
@@ -1642,55 +1834,85 @@
  "summary": {
   "gtcrn": {
    "parity_max_abs_worst": 4.470348358154297e-07,
+   "parity_identical_clips": 0,
    "parity_snr_db_min": 124.4349365234375,
    "parity_snr_db_median": 128.84993743896484,
+   "seam_ratio_max": 1.0014679560218187,
    "py_si_sdr_mean": 3.6780922661225,
    "raw_si_sdr_mean": 3.6780921667814255,
-   "safe_si_sdr_mean": 2.625955358147621,
+   "safe_si_sdr_mean": 2.6396639247735343,
    "floor_si_sdr_mean": 3.374430149793625,
    "si_sdr_diff_raw_minus_py_max_abs": 1.9073486328125e-06,
    "nonspeech_atten_db_median": {
     "py": -4.821101188659668,
     "raw": -4.821101188659668,
-    "safe": -2.25003981590271,
+    "safe": -2.255171775817871,
     "floor": -3.5217738151550293,
     "n_clips": 9
    },
    "nonspeech_atten_db_min": {
     "raw": -28.843069076538086,
-    "safe": -6.631534099578857,
+    "safe": -7.0509772300720215,
     "floor": -11.618593215942383
    },
-   "voiced_hop_fraction_safe": 0.993725448015371,
+   "voiced_hop_fraction_safe": 0.9601616522334164,
    "fault": {
     "c05": {
      "finite": true,
      "max_step": 0.6126129627227783,
      "max_step_safe": 0.6173692941665649,
      "max_step_noisy": 0.6201561689376831,
-     "local_step": {
-      "nan": {
-       "fault": 0.16988994181156158,
-       "safe": 0.16988994181156158,
-       "noisy": 0.18561209738254547
+     "seams": {
+      "nan_enter": {
+       "pos": 25088,
+       "fault_d2": 0.15289147198200226,
+       "ref_d2": 0.162146657705307,
+       "ratio": 0.9429208973266315
       },
-      "error": {
-       "fault": 0.08464507758617401,
-       "safe": 0.0734034925699234,
-       "noisy": 0.08798731863498688
+      "nan_exit": {
+       "pos": 27136,
+       "fault_d2": 0.04364335536956787,
+       "ref_d2": 0.04364335536956787,
+       "ratio": 1.0
       },
-      "explode": {
-       "fault": 0.024125603958964348,
-       "safe": 0.01537271123379469,
-       "noisy": 0.024125603958964348
+      "error_enter": {
+       "pos": 50688,
+       "fault_d2": 0.041764162480831146,
+       "ref_d2": 0.0509890615940094,
+       "ratio": 0.8190808219490341
       },
-      "stall": {
-       "fault": 0.10671010613441467,
-       "safe": 0.10724254697561264,
-       "noisy": 0.11314347386360168
+      "error_exit": {
+       "pos": 52736,
+       "fault_d2": 0.012366386130452156,
+       "ref_d2": 0.014664938673377037,
+       "ratio": 0.8432620419274095
+      },
+      "explode_enter": {
+       "pos": 76288,
+       "fault_d2": 0.020904820412397385,
+       "ref_d2": 0.020874178037047386,
+       "ratio": 1.0014679560218187
+      },
+      "explode_exit": {
+       "pos": 78336,
+       "fault_d2": 0.3650525212287903,
+       "ref_d2": 0.36796778440475464,
+       "ratio": 0.9920773956321197
+      },
+      "stall_enter": {
+       "pos": 101888,
+       "fault_d2": 0.060783710330724716,
+       "ref_d2": 0.060765136033296585,
+       "ratio": 1.0003056735924685
+      },
+      "stall_exit": {
+       "pos": 102144,
+       "fault_d2": 0.029180703684687614,
+       "ref_d2": 0.029180703684687614,
+       "ratio": 1.0
       }
      },
-     "si_sdr": -0.7045122385025024,
+     "si_sdr": -0.7037886381149292,
      "stats": {
       "bypass_hops": 25,
       "fault_abnormal": 1,
@@ -1700,38 +1922,66 @@
       "hops": 632,
       "model_resets": 3,
       "nonfinite_samples": 0,
-      "voiced_hops": 606
+      "voiced_hops": 594
      },
-     "safe_si_sdr": -0.9123349189758301
+     "safe_si_sdr": -0.9116770029067993
     },
     "c06": {
      "finite": true,
      "max_step": 0.5026243329048157,
      "max_step_safe": 0.5026243329048157,
      "max_step_noisy": 0.5750701427459717,
-     "local_step": {
-      "nan": {
-       "fault": 0.5026243329048157,
-       "safe": 0.5026243329048157,
-       "noisy": 0.5750701427459717
+     "seams": {
+      "nan_enter": {
+       "pos": 25088,
+       "fault_d2": 0.7519229054450989,
+       "ref_d2": 0.8530594110488892,
+       "ratio": 0.8814426002528514
       },
-      "error": {
-       "fault": 0.05515800043940544,
-       "safe": 0.046590931713581085,
-       "noisy": 0.05515800043940544
+      "nan_exit": {
+       "pos": 27136,
+       "fault_d2": 0.15014539659023285,
+       "ref_d2": 0.15014539659023285,
+       "ratio": 1.0
       },
-      "explode": {
-       "fault": 0.040512558072805405,
-       "safe": 0.039221808314323425,
-       "noisy": 0.05454313009977341
+      "error_enter": {
+       "pos": 50688,
+       "fault_d2": 0.03987855836749077,
+       "ref_d2": 0.03990454599261284,
+       "ratio": 0.999348755273976
       },
-      "stall": {
-       "fault": 0.142753005027771,
-       "safe": 0.09621672332286835,
-       "noisy": 0.15514223277568817
+      "error_exit": {
+       "pos": 52736,
+       "fault_d2": 0.5336725115776062,
+       "ref_d2": 0.5358055233955383,
+       "ratio": 0.9960190559357905
+      },
+      "explode_enter": {
+       "pos": 76288,
+       "fault_d2": 0.03636820614337921,
+       "ref_d2": 0.03636778146028519,
+       "ratio": 1.000011677453971
+      },
+      "explode_exit": {
+       "pos": 78336,
+       "fault_d2": 0.045348312705755234,
+       "ref_d2": 0.045576345175504684,
+       "ratio": 0.9949966924975808
+      },
+      "stall_enter": {
+       "pos": 101888,
+       "fault_d2": 0.12169201672077179,
+       "ref_d2": 0.12168331444263458,
+       "ratio": 1.0000715157881512
+      },
+      "stall_exit": {
+       "pos": 102144,
+       "fault_d2": 0.2128858119249344,
+       "ref_d2": 0.22327327728271484,
+       "ratio": 0.9534764505443812
       }
      },
-     "si_sdr": 0.40385693311691284,
+     "si_sdr": 0.40432441234588623,
      "stats": {
       "bypass_hops": 25,
       "fault_abnormal": 1,
@@ -1741,38 +1991,66 @@
       "hops": 601,
       "model_resets": 3,
       "nonfinite_samples": 0,
-      "voiced_hops": 575
+      "voiced_hops": 564
      },
-     "safe_si_sdr": 0.8220639228820801
+     "safe_si_sdr": 0.8356144428253174
     },
     "c10": {
      "finite": true,
      "max_step": 0.23093003034591675,
      "max_step_safe": 0.23254448175430298,
      "max_step_noisy": 0.25362733006477356,
-     "local_step": {
-      "nan": {
-       "fault": 0.18741285800933838,
-       "safe": 0.18741285800933838,
-       "noisy": 0.20807886123657227
+     "seams": {
+      "nan_enter": {
+       "pos": 25088,
+       "fault_d2": 0.12393917143344879,
+       "ref_d2": 0.12386937439441681,
+       "ratio": 1.000563472927616
       },
-      "error": {
-       "fault": 0.06510389596223831,
-       "safe": 0.06300577521324158,
-       "noisy": 0.07141128182411194
+      "nan_exit": {
+       "pos": 27136,
+       "fault_d2": 0.010575754567980766,
+       "ref_d2": 0.010575754567980766,
+       "ratio": 1.0
       },
-      "explode": {
-       "fault": 0.12101694941520691,
-       "safe": 0.1242169737815857,
-       "noisy": 0.1407531350851059
+      "error_enter": {
+       "pos": 50688,
+       "fault_d2": 0.04633811116218567,
+       "ref_d2": 0.048753514885902405,
+       "ratio": 0.9504568290231075
       },
-      "stall": {
-       "fault": 0.11288522183895111,
-       "safe": 0.10910318791866302,
-       "noisy": 0.12704095244407654
+      "error_exit": {
+       "pos": 52736,
+       "fault_d2": 0.0223248153924942,
+       "ref_d2": 0.02545425295829773,
+       "ratio": 0.8770563971792629
+      },
+      "explode_enter": {
+       "pos": 76288,
+       "fault_d2": 0.11962176859378815,
+       "ref_d2": 0.15420666337013245,
+       "ratio": 0.7757237331999566
+      },
+      "explode_exit": {
+       "pos": 78336,
+       "fault_d2": 0.019124820828437805,
+       "ref_d2": 0.019124820828437805,
+       "ratio": 1.0
+      },
+      "stall_enter": {
+       "pos": 101888,
+       "fault_d2": 0.05493439733982086,
+       "ref_d2": 0.05990156531333923,
+       "ratio": 0.9170778268057671
+      },
+      "stall_exit": {
+       "pos": 102144,
+       "fault_d2": 0.02692282199859619,
+       "ref_d2": 0.02740529179573059,
+       "ratio": 0.9823950133160209
       }
      },
-     "si_sdr": 7.479672908782959,
+     "si_sdr": 7.5156097412109375,
      "stats": {
       "bypass_hops": 25,
       "fault_abnormal": 1,
@@ -1782,63 +2060,93 @@
       "hops": 650,
       "model_resets": 3,
       "nonfinite_samples": 0,
-      "voiced_hops": 595
+      "voiced_hops": 553
      },
-     "safe_si_sdr": 7.808835983276367
+     "safe_si_sdr": 7.847891807556152
     }
    }
   },
   "fastenhancer_m": {
    "parity_max_abs_worst": 0.0,
-   "parity_snr_db_min": 319.9195556640625,
-   "parity_snr_db_median": 325.7509460449219,
+   "parity_identical_clips": 12,
+   "parity_snr_db_min": null,
+   "parity_snr_db_median": null,
+   "seam_ratio_max": 1.0019681780013483,
    "py_si_sdr_mean": 4.902328249067068,
    "raw_si_sdr_mean": 4.902328249067068,
-   "safe_si_sdr_mean": 3.5774476677179337,
+   "safe_si_sdr_mean": 3.5890288005272546,
    "floor_si_sdr_mean": 4.749858381847541,
    "si_sdr_diff_raw_minus_py_max_abs": 0.0,
    "nonspeech_atten_db_median": {
     "py": -6.353202819824219,
     "raw": -6.353202819824219,
-    "safe": -3.480384111404419,
+    "safe": -3.523468017578125,
     "floor": -5.2267842292785645,
     "n_clips": 9
    },
    "nonspeech_atten_db_min": {
     "raw": -63.358306884765625,
-    "safe": -10.98771858215332,
+    "safe": -11.150485038757324,
     "floor": -11.99893569946289
    },
-   "voiced_hop_fraction_safe": 0.9653661553076129,
+   "voiced_hop_fraction_safe": 0.9462292582123322,
    "fault": {
     "c05": {
      "finite": true,
      "max_step": 0.6198770403862,
      "max_step_safe": 0.618882954120636,
      "max_step_noisy": 0.6201561689376831,
-     "local_step": {
-      "nan": {
-       "fault": 0.024832725524902344,
-       "safe": 0.015771467238664627,
-       "noisy": 0.031317632645368576
+     "seams": {
+      "nan_enter": {
+       "pos": 15648,
+       "fault_d2": 0.009032497182488441,
+       "ref_d2": 0.009339813143014908,
+       "ratio": 0.9670961339567802
       },
-      "error": {
-       "fault": 0.040151648223400116,
-       "safe": 0.025653298944234848,
-       "noisy": 0.04015171155333519
+      "nan_exit": {
+       "pos": 17408,
+       "fault_d2": 0.22980153560638428,
+       "ref_d2": 0.22998948395252228,
+       "ratio": 0.9991827959135001
       },
-      "explode": {
-       "fault": 0.10696776211261749,
-       "safe": 0.056821130216121674,
-       "noisy": 0.1069677546620369
+      "error_enter": {
+       "pos": 31648,
+       "fault_d2": 0.032551415264606476,
+       "ref_d2": 0.032546497881412506,
+       "ratio": 1.0001510879361548
       },
-      "stall": {
-       "fault": 0.33223778009414673,
-       "safe": 0.3043785095214844,
-       "noisy": 0.33265751600265503
+      "error_exit": {
+       "pos": 33408,
+       "fault_d2": 0.1070207953453064,
+       "ref_d2": 0.10774701088666916,
+       "ratio": 0.9932599936147963
+      },
+      "explode_enter": {
+       "pos": 47648,
+       "fault_d2": 0.04339774698019028,
+       "ref_d2": 0.07141098380088806,
+       "ratio": 0.6077180941967444
+      },
+      "explode_exit": {
+       "pos": 49408,
+       "fault_d2": 0.014694355428218842,
+       "ref_d2": 0.01638546958565712,
+       "ratio": 0.8967918405635088
+      },
+      "stall_enter": {
+       "pos": 63648,
+       "fault_d2": 0.3308181166648865,
+       "ref_d2": 0.33080780506134033,
+       "ratio": 1.0000311709802139
+      },
+      "stall_exit": {
+       "pos": 63808,
+       "fault_d2": 0.3734202980995178,
+       "ref_d2": 0.3734202980995178,
+       "ratio": 1.0
       }
      },
-     "si_sdr": -1.1912717819213867,
+     "si_sdr": -1.1898951530456543,
      "stats": {
       "bypass_hops": 34,
       "fault_abnormal": 1,
@@ -1848,38 +2156,66 @@
       "hops": 1011,
       "model_resets": 3,
       "nonfinite_samples": 0,
-      "voiced_hops": 971
+      "voiced_hops": 956
      },
-     "safe_si_sdr": -1.6817973852157593
+     "safe_si_sdr": -1.6802599430084229
     },
     "c06": {
      "finite": true,
      "max_step": 0.5463513135910034,
      "max_step_safe": 0.5452313423156738,
      "max_step_noisy": 0.5750701427459717,
-     "local_step": {
-      "nan": {
-       "fault": 0.0295781958848238,
-       "safe": 0.017691990360617638,
-       "noisy": 0.02957814373075962
+     "seams": {
+      "nan_enter": {
+       "pos": 15648,
+       "fault_d2": 0.04390334337949753,
+       "ref_d2": 0.04390139877796173,
+       "ratio": 1.0000442947511907
       },
-      "error": {
-       "fault": 0.06186502426862717,
-       "safe": 0.06075933575630188,
-       "noisy": 0.06738582253456116
+      "nan_exit": {
+       "pos": 17408,
+       "fault_d2": 0.016940642148256302,
+       "ref_d2": 0.016940642148256302,
+       "ratio": 1.0
       },
-      "explode": {
-       "fault": 0.09628757834434509,
-       "safe": 0.09510920941829681,
-       "noisy": 0.10043877363204956
+      "error_enter": {
+       "pos": 31648,
+       "fault_d2": 0.03096073679625988,
+       "ref_d2": 0.03381595015525818,
+       "ratio": 0.9155660761892171
       },
-      "stall": {
-       "fault": 0.03159135952591896,
-       "safe": 0.016012366861104965,
-       "noisy": 0.03158237040042877
+      "error_exit": {
+       "pos": 33408,
+       "fault_d2": 0.08837206661701202,
+       "ref_d2": 0.08837206661701202,
+       "ratio": 1.0
+      },
+      "explode_enter": {
+       "pos": 47648,
+       "fault_d2": 0.12941256165504456,
+       "ref_d2": 0.13099133968353271,
+       "ratio": 0.9879474625398718
+      },
+      "explode_exit": {
+       "pos": 49408,
+       "fault_d2": 0.057444918900728226,
+       "ref_d2": 0.06445806473493576,
+       "ratio": 0.8911983184253675
+      },
+      "stall_enter": {
+       "pos": 63648,
+       "fault_d2": 0.029777877032756805,
+       "ref_d2": 0.02980879694223404,
+       "ratio": 0.9989627253479182
+      },
+      "stall_exit": {
+       "pos": 63808,
+       "fault_d2": 0.04128997400403023,
+       "ref_d2": 0.04783704876899719,
+       "ratio": 0.8631379875338365
       }
      },
-     "si_sdr": 1.3814483880996704,
+     "si_sdr": 1.4177377223968506,
      "stats": {
       "bypass_hops": 34,
       "fault_abnormal": 1,
@@ -1889,38 +2225,66 @@
       "hops": 960,
       "model_resets": 3,
       "nonfinite_samples": 0,
-      "voiced_hops": 924
+      "voiced_hops": 891
      },
-     "safe_si_sdr": 1.5639294385910034
+     "safe_si_sdr": 1.6038691997528076
     },
     "c10": {
      "finite": true,
      "max_step": 0.23995962738990784,
      "max_step_safe": 0.240217387676239,
      "max_step_noisy": 0.25362733006477356,
-     "local_step": {
-      "nan": {
-       "fault": 0.044925399124622345,
-       "safe": 0.011287497356534004,
-       "noisy": 0.044925399124622345
+     "seams": {
+      "nan_enter": {
+       "pos": 15648,
+       "fault_d2": 0.025855284184217453,
+       "ref_d2": 0.028094038367271423,
+       "ratio": 0.920312126231662
       },
-      "error": {
-       "fault": 0.07626450806856155,
-       "safe": 0.07670266926288605,
-       "noisy": 0.09765534102916718
+      "nan_exit": {
+       "pos": 17408,
+       "fault_d2": 0.01643431931734085,
+       "ref_d2": 0.01708187535405159,
+       "ratio": 0.962091045433302
       },
-      "explode": {
-       "fault": 0.04276376590132713,
-       "safe": 0.02776379883289337,
-       "noisy": 0.05187109112739563
+      "error_enter": {
+       "pos": 31648,
+       "fault_d2": 0.03433769568800926,
+       "ref_d2": 0.04323626309633255,
+       "ratio": 0.7941874072581889
       },
-      "stall": {
-       "fault": 0.053146444261074066,
-       "safe": 0.0435003899037838,
-       "noisy": 0.07247714698314667
+      "error_exit": {
+       "pos": 33408,
+       "fault_d2": 0.03029826283454895,
+       "ref_d2": 0.030238747596740723,
+       "ratio": 1.0019681780013483
+      },
+      "explode_enter": {
+       "pos": 47648,
+       "fault_d2": 0.03307357430458069,
+       "ref_d2": 0.03311989828944206,
+       "ratio": 0.9986013246642083
+      },
+      "explode_exit": {
+       "pos": 49408,
+       "fault_d2": 0.07131589949131012,
+       "ref_d2": 0.0729903131723404,
+       "ratio": 0.9770597822059381
+      },
+      "stall_enter": {
+       "pos": 63648,
+       "fault_d2": 0.029280031099915504,
+       "ref_d2": 0.04368559271097183,
+       "ratio": 0.6702445653795992
+      },
+      "stall_exit": {
+       "pos": 63808,
+       "fault_d2": 0.03683155030012131,
+       "ref_d2": 0.03683154657483101,
+       "ratio": 1.0000001011440096
       }
      },
-     "si_sdr": 9.268411636352539,
+     "si_sdr": 9.279378890991211,
      "stats": {
       "bypass_hops": 34,
       "fault_abnormal": 1,
@@ -1930,9 +2294,9 @@
       "hops": 1039,
       "model_resets": 3,
       "nonfinite_samples": 0,
-      "voiced_hops": 818
+      "voiced_hops": 815
      },
-     "safe_si_sdr": 9.725353240966797
+     "safe_si_sdr": 9.766698837280273
     }
    }
   }
