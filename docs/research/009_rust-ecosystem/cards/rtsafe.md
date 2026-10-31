@@ -13,17 +13,17 @@
 
 ## 一句话总判
 
-**跨进程那一段（送音进程 ↔ 推理进程的共享内存）没有任何一个现成 crate 能直接用**：rtrb / ringbuf / triple_buffer 都把索引和数据指针放在堆上的 `Box`/`Arc` 里，指针在另一个进程地址空间里无效【源码】resources/rtrb/src/lib.rs:155-160；resources/ringbuf/src/storage.rs:57-60。所以：**进程内用现成 crate，跨进程自写一个 `#[repr(C)]`、只用偏移不用指针的 SPSC 环 + 三缓冲，照抄 rtrb 的「缓存对端索引」和 triple_buffer 的「一个原子字节换槽位」两招**。
+**跨进程那一段（送音进程 ↔ 推理进程的共享内存）没有任何一个现成 crate 能直接用**：rtrb / ringbuf / triple_buffer 都把索引和数据指针放在堆上的 `Box`/`Arc` 里，指针在另一个进程地址空间里无效【源码】resources/rtrb/src/lib.rs:155-160；resources/ringbuf/src/storage.rs:57-60；resources/triple-buffer/src/lib.rs:238（`shared: Arc<SharedState<T>>`）。（复核补：ringbuf 的 `StaticRb<T, N>` = `SharedRb<Array<T, N>>` 是内联数组、本身不含指针【源码】resources/ringbuf/src/alias.rs:17、resources/ringbuf/src/storage.rs:102，但结构不是 `#[repr(C)]`、构造只按值返回、无跨进程语义保证，结论「自写」不变【推断】）所以：**进程内用现成 crate，跨进程自写一个 `#[repr(C)]`、只用偏移不用指针的 SPSC 环 + 三缓冲，照抄 rtrb 的「缓存对端索引」和 triple_buffer 的「一个原子字节换槽位」两招**。
 
 ## 推荐（每个子需求一行）
 
 | 子需求 | 首选 | 备选 | 理由 |
 |---|---|---|---|
-| 进程内 SPSC 音频环（如采集回调 → 送音主循环、推理进程内 IO 线程 → 降噪线程） | **rtrb 0.4.1** | ringbuf 0.6.0 | rtrb push/pop 热路径只有 1 次 Acquire load（仅在看似满/空时）+ 1 次 Release store，无分配无锁；10 月仍在发版；API 稳。ringbuf 功能更多但 2026-10 刚爆出两个 soundness 问题且 0.4→0.6 API 在剧烈变动 |
+| 进程内 SPSC 音频环（如采集回调 → 送音主循环、推理进程内 IO 线程 → 降噪线程） | **rtrb 0.4.1** | ringbuf 0.6.0 | rtrb push/pop 热路径只有 1 次 Acquire load（仅在看似满/空时）+ 1 次 Release store，无分配无锁；10 月仍在发版；API 稳。ringbuf 功能更多但 2026-10 刚爆出两个 soundness 问题（#65/#66，已于 2026-10-30 随 0.6.0 的破坏性变更关闭【API】，修复未经时间检验）且 0.4→0.6 API 在剧烈变动 |
 | 跨进程共享内存 SPSC 环（送音 ↔ 推理） | **自写**（抄 rtrb 思路） | — | 现成的都不支持放进 shm（见上）；要 `#[repr(C)]` 头 + `CachePadded<AtomicU64>` head/tail + 偏移寻址 |
 | 「最新值」发布（声纹线程 → 降噪线程的门控判定；推理 → 送音的心跳/状态） | **triple_buffer 9.0.0**（进程内） | 自写 shm 版三缓冲；arc-swap（仅非 RT 端） | publish/update 各一次 `swap(AcqRel)`，零分配零锁，读写都不等待；MPL-2.0 与 GPL-3.0 兼容 |
 | 单个参数（衰减下限 dB、旁路开关、增益） | **自写 `AtomicU32` + `f32::to_bits`**（十来行） | portable-atomic `float` 特性；atomic_float | atomic_float 两年没发版；做法本身极简，没必要背依赖 |
-| 大对象换装（切模型 GTCRN↔FastEnhancer、换声纹质心）后旧对象的释放 | **basedrop**（或抄思路自写一个 collector） | rtrb 反向队列把旧 Box 送回非 RT 线程 drop | RT 线程只做一次无锁链表入队，真正 free 在非 RT 线程 `collect()`；但维护边缘、SharedCell 有未回复的竞态报告 |
+| 大对象换装（切模型 GTCRN↔FastEnhancer、换声纹质心）后旧对象的释放 | **rtrb 回收队列**（复核改首选：RT 线程把旧 `Box` push 回非 RT 线程 drop，满了就暂存下一块再试；voice-strip 已这样落地【源码】resources/voice-strip/crates/engine/src/processor.rs:327-331、350-355） | basedrop（或抄其 collector 思路自写） | 少一个依赖、我们反正要用 rtrb；basedrop 最后发版 2025-10-29，到今天已超 12 个月（命门 3 不满足），SharedCell 有未回复的竞态报告 |
 | 调试期抓「RT 线程分配」 | **assert_no_alloc（用 nice-assert-no-alloc 分叉）** | — | 稳定版 Rust、零外部依赖、只看 Rust 全局分配器 |
 | 调试期抓「分配 + 锁 + 系统调用 + C/C++ 里的 malloc（ORT！）」 | **rtsan-standalone 0.3.0** | rustc nightly `-Zsanitizer=realtime` | 拦截 libc 层，能看到 ONNX Runtime 内部的 malloc/mutex，这是 assert_no_alloc 看不到的；构建时不设 `RTSAN_ENABLE` 就是空操作 |
 | 去非正规数（FTZ） | **自写 RAII guard（抄 nih-plug ScopedFtz，`msr fpcr` 置 bit 24）** | no_denormals 0.3.0 | 6 行内联汇编；aarch64 只有 FZ 位，没有单独 DAZ |
@@ -55,35 +55,35 @@
 | 项 | 内容 |
 |---|---|
 | 做什么 | 功能更全的无锁 SPSC FIFO：本地/共享两种 rb、可选外部存储（数组/切片/引用/堆）、可选缓存包装、async/blocking 子 crate |
-| 许可证 | MIT OR Apache-2.0，**兼容**；依赖 crossbeam-utils（MIT/Apache）、可选 portable-atomic（Apache/MIT）【源码】resources/ringbuf/Cargo.toml:6、34-37 |
-| 维护状态 | 0.6.0 发布于 **2026-10-30（今天）**【API crates.io】；最近提交 2026-10-30「Support owned and borrowed exclusive buffer handles」【源码 git log】；open issues 7；最近 5 个 issue 均有回复（1–2 条），维护者 agerasev 对 #65 当天确认【API】。但 GitHub Releases 页最后一条仍是 v0.4.0（2024-04）【API】 |
+| 许可证 | MIT OR Apache-2.0，**兼容**；依赖 crossbeam-utils（MIT/Apache）、可选 portable-atomic（Apache/MIT）【源码】resources/ringbuf/Cargo.toml:7、34-37 |
+| 维护状态 | 0.6.0 发布于 **2026-10-30（今天）**【API crates.io】；最近提交 2026-10-30「Support owned and borrowed exclusive buffer handles」【源码 git log】；open issues 7；最近 5 个 issue 均有回复（1–2 条），维护者 agerasev 对 #65（10-26 报）在 10-30 回复确认并当天关闭【API】。但 GitHub Releases 页最后一条仍是 v0.4.0（2024-04）【API】 |
 | 实时安全做法 | 共享版索引 `read_index`/`write_index` 为 `CachePadded<AtomicUsize>`，Acquire 读 / Release 写【源码】resources/ringbuf/src/rb/shared.rs:51-56、98-104、209-215。缓存包装 `CachingProd::try_push`：先按本地缓存判满，满了才 `fetch()` 刷新对端索引，与 rtrb 同一招【源码】resources/ringbuf/src/wrap/caching.rs:124-138、58-65。热路径无分配无锁 |
 | 值得学的一处 | `Storage` trait 把「存储从哪来」与「环的逻辑」分开，`Ref` 存储只是 `ptr + len`【源码】resources/ringbuf/src/storage.rs:57-60 —— 思路可借给 shm 环：存储由 mmap 区域提供。但注意 `Ref` 存的是**裸指针**，跨进程仍不可用 |
 | 我们怎么用 | **只看看**（rtrb 的备选）；不作首选 |
-| 风险 | ① **soundness**：#65「Public API is unsound」（2026-10-26，ASan 报 use-after-free，维护者确认并称修复需破坏性变更）、#66「safe traits 但提供 unsafe 能力」【API】；② 0.4→0.5→0.6 一年内多次破坏性升级，跟版成本高【推断】；③ 同样不能直接放进 shm |
+| 风险 | ① **soundness**：#65「Public API is unsound」（2026-10-26，ASan 报 use-after-free，维护者确认并称修复需破坏性变更）、#66「safe traits 但提供 unsafe 能力」——两者均已于 2026-10-30 关闭，对应 0.6.0 当天发布【API】；修复刚出、未经时间检验；cubeb-coreaudio-rs 还钉在 0.5.2【源码】resources/cubeb-coreaudio-rs/Cargo.toml:20；② 0.4→0.5→0.6 一年内多次破坏性升级，跟版成本高【推断】；③ 同样不能直接放进 shm |
 | 证据 | 【源码】×6 【API】×4 【推断】×1 |
 
 ### triple_buffer（https://github.com/HadrienG2/triple-buffer）
 | 项 | 内容 |
 |---|---|
 | 做什么 | 单写单读的三缓冲：写端随时发布新值，读端随时取最新完整快照，两端互不等待 |
-| 许可证 | **MPL-2.0**；与 GPL-3.0 **兼容**（MPL-2.0 §3.3 允许与 GPL 组合，除非文件标了 "Incompatible With Secondary Licenses"，本仓未见此标注【推断，需复核 LICENSE 头】）；依赖仅 crossbeam-utils（MIT/Apache）【源码】resources/triple-buffer/Cargo.toml:22 及 `[dependencies]` |
-| 维护状态 | 9.0.0 发布于 2026-02-22【API crates.io / GitHub release】；最近提交 2026-07-29【源码 git log】；open issues 2；最近 5 个均为维护者自己的 PR，已合并【API】。MSRV 1.86【源码】Cargo.toml:24 |
+| 许可证 | **MPL-2.0**；与 GPL-3.0 **兼容**（MPL-2.0 §3.3 允许与 GPL 组合，除非文件附 Exhibit B "Incompatible With Secondary Licenses" 声明；复核 grep 全仓只命中 `LICENSE` 条款正文与 Exhibit B 模板（LICENSE:24、:369-372），无源文件附此声明【源码】）；依赖仅 crossbeam-utils（MIT/Apache）【源码】resources/triple-buffer/Cargo.toml:22 及 `[dependencies]` |
+| 维护状态 | 9.0.0 发布于 2026-02-22【API crates.io / GitHub release】；最近提交 2026-07-29【源码 git log】；open issues 2；最近 5 个均为维护者自己的 PR，已合并【API】。MSRV 1.86【源码】Cargo.toml:24；crates 徽章自标 `passively-maintained`【源码】Cargo.toml:27 |
 | 实时安全做法 | 三个 `CachePadded<UnsafeCell<T>>` 槽 + 一个 `CachePadded` 原子字节 `back_info`【源码】resources/triple-buffer/src/lib.rs:566-569。写端 `publish()` = 一次 `swap(AcqRel)`【源码】lib.rs:320-348；读端 `update()` = 先 Relaxed 看脏位，有新值才一次 `swap(AcqRel)`【源码】lib.rs:516-547。**零分配零锁零系统调用，且是 wait-free**。`write(value)` 是 move 进槽，T 若带堆内存则旧值 drop 时会 free——我们放定长 `#[repr(C)]` 结构（声纹得分、门控状态、时间戳）就没有这个问题【推断】 |
 | 值得学的一处 | 见文件头「最值得学」#2；注释里把 AcqRel 为什么不能降成 Release 讲得很透（lib.rs:321-337），可直接作为我们 shm 版的正确性论证 |
 | 我们怎么用 | **直接依赖**：`speaker`（声纹线程 → 降噪线程发布「是不是你 / 置信度」）。**抄思路自写**：shm 版三缓冲（推理 → 送音发布心跳/状态；送音 → 推理发布控制参数），放在 shm 模块 |
-| 风险 | ① 读端每次只拿最新值，中间值会丢（对门控是想要的行为）；② 进程内版本不能放 shm；③ MPL-2.0 是文件级 copyleft：若我们改了它的文件，改动须以 MPL 公开——我们只依赖不改，无影响【推断】 |
-| 证据 | 【源码】×6 【API】×3 【推断】×4 |
+| 风险 | ① 读端每次只拿最新值，中间值会丢（对门控是想要的行为）；② 进程内版本不能放 shm（`Arc<SharedState>`，lib.rs:238）；④ 维护者自标被动维护（Cargo.toml:27）；③ MPL-2.0 是文件级 copyleft：若我们改了它的文件，改动须以 MPL 公开——我们只依赖不改，无影响【推断】 |
+| 证据 | 【源码】×8 【API】×3 【推断】×3 |
 
 ### basedrop（https://github.com/micahrj/basedrop)
 | 项 | 内容 |
 |---|---|
 | 做什么 | 实时音频用的内存管理：`Owned<T>`/`Shared<T>` 在 RT 线程被 drop 时不 free，而是挂到 collector 的无锁队列，由非 RT 线程 `collect()` 真正释放；另有 `SharedCell` 原子换指针 |
 | 许可证 | MIT/Apache-2.0，**兼容**；零依赖【源码】resources/basedrop/Cargo.toml（`[dependencies]` 为空）|
-| 维护状态 | 0.1.3 发布于 2025-10-29【API】；最近提交 2025-10-29「prepare for release of 0.1.3」【源码 git log】——**恰好卡在 12 个月边界**；open issues 4；#10「SharedCell::get 与 replace 之间无序，可能二次 queue_drop」（2026-09-22）**0 回复**【API】。整体：低频维护，响应慢 |
-| 实时安全做法 | `Owned::drop` / `Shared::drop`（引用计数归零时）只调 `Node::queue_drop`【源码】resources/basedrop/src/owned.rs:64-66；resources/basedrop/src/shared.rs:102-108。`queue_drop` = 一次 `tail.swap(AcqRel)` + 一次 `next.store(Release)`，**节点是侵入式的（分配时就带链表头），入队不再分配**【源码】resources/basedrop/src/collector.rs:97-102。释放发生在 `Collector::collect()`（非 RT 线程调用）【源码】collector.rs:237、268-284。**注意** `SharedCell::replace` 会自旋等待读者计数归零（`while readers != 0 {}`）【源码】resources/basedrop/src/shared_cell.rs:112-118，所以 replace 只能在非 RT 线程调；RT 线程只调 `get()`（两次原子）【源码】shared_cell.rs:61-71 |
+| 维护状态 | 0.1.3 发布于 2025-10-29【API】；最近提交 2025-10-29「prepare for release of 0.1.3」【源码 git log】——到 2026-10-30 已**超出 12 个月一天，命门 3 严格说不满足**；open issues 4；#10「SharedCell::get 与 replace 之间无序，可能二次 queue_drop」（2026-09-22）**0 回复**【API】。整体：低频维护，响应慢 |
+| 实时安全做法 | `Owned::drop` / `Shared::drop`（引用计数归零时）只调 `Node::queue_drop`【源码】resources/basedrop/src/owned.rs:64-66；resources/basedrop/src/shared.rs:102-108。`queue_drop` = 一次 `tail.swap(AcqRel)` + 一次 `next.store(Release)`，**节点是侵入式的（分配时就带链表头），入队不再分配**【源码】resources/basedrop/src/collector.rs:97-102。释放发生在 `Collector::collect()`（非 RT 线程调用）【源码】collector.rs:237、268-284。**注意** `SharedCell::replace` 会自旋等待读者计数归零（`while readers != 0 {}`）【源码】resources/basedrop/src/shared_cell.rs:112-118，所以 replace 只能在非 RT 线程调；RT 线程只调 `get()`（复核更正：是 4 次原子——readers 加、node load、`clone` 引用计数加、readers 减）【源码】shared_cell.rs:61-71。另：`Owned::new`/`Shared::new` 要分配节点，只能在非 RT 线程建【推断】 |
 | 值得学的一处 | 「侵入式节点 + 单原子 swap 入队」的延迟释放（collector.rs:97-102）：RT 线程丢弃旧模型状态 / 旧声纹质心时 O(1)、无分配、无锁 |
-| 我们怎么用 | **抄思路自写**（首选）或直接依赖（若 #10 有结论）。用在 `engine`：热切模型（GTCRN ↔ FastEnhancer-M）时旧适配器对象交给 collector；`speaker`：替换声纹质心。更简单的替代：用 rtrb 开一条「回收队列」，RT 线程把旧 `Box` push 回控制线程 drop【推断】 |
+| 我们怎么用 | **只抄思路**；复核后首选改为 rtrb 回收队列（见推荐表，voice-strip 已实证）。basedrop 适合将来出现「RT 线程上 `Shared` 引用计数归零」这类回收队列表达不了的场景再引入 |
 | 风险 | ① #10 竞态报告未回复（报告者自称用 agent 写的，需自己复核）；② 2024 年 Miri 报过 collector 测试的数据竞争（#7，后由 #9 修订内存序）【API】；③ 维护边缘 |
 | 证据 | 【源码】×7 【API】×4 【推断】×1 |
 
@@ -127,8 +127,8 @@
 | 项 | 内容 |
 |---|---|
 | 做什么 | 自定义全局分配器：在 `assert_no_alloc(|| …)` 闭包内若发生 Rust 堆分配/释放就中止（或计数告警）；`permit_alloc` 局部放行 |
-| 许可证 | BSD-1-Clause（GitHub 显示 NOASSERTION，Cargo.toml 写 BSD-1-Clause）【源码】resources/rust-assert-no-alloc/Cargo.toml:5；与 GPL-3.0 **兼容**（极宽松许可）；可选依赖 backtrace/log 均 MIT/Apache【推断】 |
-| 维护状态 | 1.1.2 发布于 **2021-08-03**；最近推送 2023-08-09；open issues 10，最近 5 个（2023–2024）**全部 0 回复**，含 #17「New crates.io release?」【API】——**原仓已停维护**。活分叉：**nice-assert-no-alloc 1.0.0（2026-05-17，BillyDM）**，内容基本是原仓 + 合并「嵌套 assert_no_alloc / permit_alloc 修复」（原仓 PR #13 一直没合）【源码】resources/nice-assert-no-alloc 与原仓 diff 主要是格式化；【API】nice-assert-no-alloc PR #1。nih-plug 至今用的是 robbert-vdh 的 git 分支【源码】resources/nih-plug/Cargo.toml:101 |
+| 许可证 | BSD-1-Clause（GitHub 显示 NOASSERTION，Cargo.toml 写 BSD-1-Clause）【源码】resources/rust-assert-no-alloc/Cargo.toml:6；与 GPL-3.0 **兼容**（极宽松许可）；可选依赖 backtrace/log 均 MIT/Apache【推断】 |
+| 维护状态 | 1.1.2 发布于 **2021-08-03**；最近推送 2023-08-09；open issues 10，最近 5 个（2023–2024）中 4 个 0 回复、#17「New crates.io release?」仅 1 条外部用户回复【API】——**原仓已停维护**（#17 只有一条外部用户的 +1，无维护者回复）。活分叉：**nice-assert-no-alloc 1.0.0（2026-05-17，BillyDM）**，内容基本是原仓 + 合并「嵌套 assert_no_alloc / permit_alloc 修复」（原仓 PR #13 一直没合）【源码】resources/nice-assert-no-alloc 与原仓 diff 主要是格式化；【API】nice-assert-no-alloc PR #1。nih-plug 至今用的是 robbert-vdh 的 git 分支【源码】resources/nih-plug/Cargo.toml:101 |
 | 实时安全做法 | 线程本地两个计数器 `ALLOC_FORBID_COUNT` / `ALLOC_PERMIT_COUNT`【源码】resources/rust-assert-no-alloc/src/lib.rs:35-37；`GlobalAlloc::alloc/dealloc` 先 `check()`：forbid>0 且 permit==0 就 `handle_alloc_error` 中止【源码】lib.rs:151-175、178-188。默认特性 `disable_release`：release 构建里整个变空操作【源码】lib.rs:43-50、Cargo.toml `[features]` |
 | 值得学的一处 | RAII Guard 增减计数器，保证 `catch_unwind` 时计数也正确（lib.rs:60-74）——我们自己的「RT 区段」标记也该这样写 |
 | 我们怎么用 | **直接依赖（dev/debug 特性）**，用 nice-assert-no-alloc；包在 `engine::process_block` 与送音回调外层，只在 debug 与离线 `eval` 对拍时开 |
@@ -140,8 +140,8 @@
 |---|---|
 | 做什么 | 把 LLVM RealtimeSanitizer（RTSan）运行时链进 Rust 程序：`#[nonblocking]` 标记的函数里若调到 malloc/free、pthread 锁、sleep、文件/网络 IO 等「RT 不安全」libc 函数，就打栈报错 |
 | 许可证 | 绑定本身 Apache-2.0【源码】resources/rtsan-standalone-rs/Cargo.toml（`license = "Apache-2.0"`）；运行时来自 LLVM compiler-rt（Apache-2.0 WITH LLVM-exception）【官方】https://clang.llvm.org/docs/RealtimeSanitizer.html；均与 GPL-3.0 **兼容**，且只在测试构建里链接、不随产品分发【推断】 |
-| 维护状态 | 0.3.0 发布于 2025-09-27；仓最近推送 2026-09-15；open issues 1（#29 2026-04，维护者自开）；最近 5 个 issue/PR 有回复【API】。预编译库仓 rtsan-libs 最新 v20.1.1.3（2026-02-24）【API】，而 build.rs 写死的是 `v20.1.1.1`【源码】crates/rtsan-standalone-sys/build.rs:7 |
-| 实时安全做法 | 不是零件而是**检测器**。只有构建时设了 `RTSAN_ENABLE` 且目标在列表里（含 `aarch64-apple-darwin` → `libclang_rt.rtsan_osx_dynamic.dylib`）才启用，否则所有 API 编译成空函数【源码】resources/rtsan-standalone-rs/crates/rtsan-standalone-sys/build.rs:12-28、40-47；resources/rtsan-standalone-rs/src/lib.rs:32-33。启用时默认**构建期用 curl 从 GitHub 下载预编译 dylib**【源码】build.rs:78-98，或设 `RTSAN_LIB_PATH` 用本地库【源码】build.rs:54 |
+| 维护状态 | 0.3.0 发布于 2025-09-27；仓最近推送 2026-09-15；open issues 1（#29 2026-04，维护者自开）；最近 5 个 issue/PR 有回复【API】。预编译库仓 rtsan-libs 最新 v20.1.1.3（2026-02-24）【API】，而 build.rs 写死的是 `v20.1.1.1`【源码】crates/rtsan-standalone-sys/build.rs:7。⚠️ crates.io 最后发版 0.3.0 已过 12 个月，仅仓库推送在 12 个月内——命门 3 **有条件满足**（且只做 dev 依赖，不进产品） |
+| 实时安全做法 | 不是零件而是**检测器**。只有构建时设了 `RTSAN_ENABLE` 且目标在列表里（含 `aarch64-apple-darwin` → `libclang_rt.rtsan_osx_dynamic.dylib`）才启用，否则所有 API 编译成空函数【源码】resources/rtsan-standalone-rs/crates/rtsan-standalone-sys/build.rs:12-28、40-47；resources/rtsan-standalone-rs/src/lib.rs:32-33。启用时默认**构建期用 curl 从 GitHub 下载预编译 dylib**（默认特性 `prebuilt-libs`【源码】resources/rtsan-standalone-rs/Cargo.toml:43）【源码】build.rs:78-98，或设 `RTSAN_LIB_PATH` 用本地库【源码】build.rs:54；若关掉默认特性又不给本地库，build.rs 会 `git clone` llvm-project 并用 cmake 现场编译【源码】build.rs:102-125（很重） |
 | 值得学的一处 | 「构建期环境变量开关 + 不支持就静默 no-op」（build.rs:40-44）——让检测器能常驻代码里而不影响正式构建 |
 | 我们怎么用 | **直接依赖（dev-dependency / 可选特性）**：`engine`、`io-macos`、`hal-plugin` 的 RT 函数加 `#[nonblocking]`；在 `eval` 离线跑整段 WAV 时开 `RTSAN_ENABLE=1`，一次把 ORT 推理路径里的 malloc/锁全扫出来 |
 | 风险 | ① README 写的环境变量是 `RTSAN_LIBRARY_PATH`，build.rs 实际读 `RTSAN_LIB_PATH`——**文档与代码不一致**【源码】README.md「Using Custom-Built RTSan Libraries」节 vs build.rs:54；② 构建期联网下载二进制（供应链 / 离线构建问题，建议固定本地库）；③ 只在启用时有开销，开销来自每次被拦截函数调用时检查线程状态【官方】clang 文档；④ HAL 插件运行在 coreaudiod 里，dylib 注入不现实，只能在单元/离线层面测【推断】 |
@@ -156,8 +156,8 @@
 | 实时安全做法 | 同 RTSan（检测器）；**需要 nightly**；PR 作者提醒对 async 函数/闭包行为不符合预期【API PR 正文】 |
 | 值得学的一处 | — |
 | 我们怎么用 | **只看看**；主线用 stable + rtsan-standalone，等它稳定化再换（浅读） |
-| 风险 | nightly only；aarch64-apple-darwin 是否已在支持目标列表**未核实** |
-| 证据 | 【API】×3 |
+| 风险 | nightly only。复核：`aarch64-apple-darwin` 的 `supported_sanitizers` 已含 `SanitizerSet::REALTIME`【官方】https://github.com/rust-lang/rust/blob/master/compiler/rustc_target/src/spec/targets/aarch64_apple_darwin.rs （第 23-26 行） |
+| 证据 | 【API】×3 【官方】×1 |
 
 ### no_denormals（https://github.com/Sin-tel/no_denormals）
 | 项 | 内容 |
@@ -244,12 +244,12 @@
 
 ## 没查到 / 存疑
 
-1. **跨进程 shm 无锁环的现成 Rust crate**：本组没找到维护中、可直接用的（候选如 `shared_memory`、`ipc-channel`、`raw_sync` 未在本组范围内调研）。建议架构线或 io 线补查；当前判断是自写。
+1. **跨进程 shm 无锁环的现成 Rust crate**：本组没找到维护中、可直接用的（候选如 `shared_memory`、`ipc-channel`、`raw_sync` 未在本组范围内调研）。复核补：crates.io 上有几个 2026 年新建的小 crate——`shmring` 0.4.1（MIT，下载 269）、`shm-rings` 1.0.0（MIT/Apache，2673）、`ringfire` 0.5.2（MIT/Apache，88）【API】，都是单人新仓、下载极少、未读源码，不建议依赖；当前判断仍是自写（io 卡 `shared_memory` 已判停更）。
 2. **ONNX Runtime 推理路径是否 RT 安全**：不属于本组，但决定 RTSan 的价值——ORT 默认每次 `Run` 可能分配中间张量（arena 有时能复用），需在 engine 线用 RTSan 实测（本组按规矩没跑）。
 3. **ORT 的 `session.set_denormal_as_zero` 选项在 aarch64 是否生效**：未核实【推断：可能只对 x86 SSE 有效】，因此 FTZ 仍建议在我们自己线程入口设，并让 ORT 单线程。
 4. **aarch64 FPCR.FZ 是否同时涵盖「输入非正规数当零」**（即 x86 DAZ 的等价）：ARMv8 文档对 FZ=1 的描述是输入与输出非正规数均按零处理（不同于 x86 FTZ/DAZ 两位），本组未亲读 ARM 文档原文，标【推断】；nih-plug 与 no_denormals 都只置 bit 24，侧面印证 aarch64 不需要第二个位。
 5. **共享内存里放 `AtomicU64` 跨进程是否可靠**：aarch64 上 64 位原子是无锁且地址无关的，跨进程映射同一物理页应可用【推断】；需架构线确认 macOS `shm_open`/`mmap` 的对齐与 `MAP_SHARED` 语义。
-6. **triple_buffer LICENSE 文件头是否带 "Incompatible With Secondary Licenses"**：未逐字核对，按惯例没有【推断】，合入前复核一次。
+6. ~~triple_buffer 是否带 "Incompatible With Secondary Licenses"~~：复核 grep 已确认无源文件附此声明（见该卡）。
 7. **basedrop #10 竞态是否成立**：报告未获维护者回复，本组未做独立验证。
-8. **rustc `-Zsanitizer=realtime` 的 macOS aarch64 支持**：未核实目标列表。
+8. ~~rustc `-Zsanitizer=realtime` 的 macOS aarch64 支持~~：复核已确认支持（见该卡风险栏）。
 9. **audio_thread_priority（mozilla，MPL-2.0，0.38.0 · 2026-09-17）**：已在 resources/，实时线程优先级/workgroup 属于 io-macos 组，本组未写卡。

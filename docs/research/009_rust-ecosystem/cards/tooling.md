@@ -51,7 +51,7 @@
 | 值得学的一处 | ① 许可证求值：表达式每个叶子先查 exceptions 再查 allow，都不中则拒（`resources/cargo-deny/src/licenses.rs:74-97`）。② 自 0.18.4 起 GNU 许可**按字面匹配**：允许 `GPL-3.0-or-later` 不等于允许 `GPL-3.0-only`，要逐个写（`resources/cargo-deny/docs/src/checks/licenses/cfg.md:79-83`）。③ `private = { ignore = true }` 跳过自家 `publish = false` 的 crate（同文件 :163-183）。④ `targets` 只看实际构建目标，非目标平台专属依赖被剔除（`resources/cargo-deny/docs/src/checks/cfg.md:50`）。⑤ `bans.build.allow-build-scripts` 置空列表即「谁都不许有构建脚本」，再逐个放行（`resources/cargo-deny/docs/src/checks/bans/cfg.md:301`）——ort 的构建脚本会下载 ONNX Runtime，可用它把这件事显式化 |
 | 我们怎么用 | **直接用**（CI 工具，workspace 根放 `deny.toml`）。白名单草案【推断，需人核】：MIT、Apache-2.0、Apache-2.0 WITH LLVM-exception、BSD-2-Clause、BSD-3-Clause、BSD-1-Clause、ISC、Zlib、0BSD、CC0-1.0、Unlicense、BSL-1.0、Unicode-3.0、MPL-2.0、LGPL-2.1-or-later、LGPL-3.0-or-later、GPL-2.0-or-later、GPL-3.0-or-later、GPL-3.0-only；**不放** GPL-2.0-only、EPL、CDDL、AGPL 之外的强 copyleft 变体 |
 | 风险 | ① 只看 Cargo 元数据与 LICENSE 文件，**看不到构建脚本下载的原生库**（ONNX Runtime dylib/静态库、模型权重），要在 cargo-about 清单里手工补【推断】。② 官方 GitHub Action 是 Docker 动作（action.yml `using: "docker"`【API EmbarkStudios/cargo-deny-action】），**macOS runner 跑不了**；放 ubuntu runner 并在 `targets` 写 `aarch64-apple-darwin` 即可，或在 macOS 上装预编译二进制。③ 「兼容」语义靠我们写对白名单，工具不懂 GPL 兼容性 |
-| 证据 | 【源码】licenses.rs、docs/*.md、CI 在 macos-14 测 aarch64-apple-darwin（`resources/cargo-deny/.github/workflows/ci.yaml:170`）·【API】版本/issue/action.yml ·【推断】白名单、原生库盲区 |
+| 证据 | 【源码】licenses.rs、docs/*.md、CI 的 Test job 在 `[ubuntu-24.04, macos-14]` 上跑（`resources/cargo-deny/.github/workflows/ci.yaml:61`），Release job 出 aarch64-apple-darwin 二进制（`:168-170`）（复核 3 更正：原引的 :170 是 release 矩阵，不是测试）·【API】版本/issue/action.yml ·【推断】白名单、原生库盲区 |
 
 ### cargo-about（https://github.com/EmbarkStudios/cargo-about）· 浅读
 | 项 | 内容 |
