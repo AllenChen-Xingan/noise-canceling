@@ -153,3 +153,129 @@ fn agc_moves_toward_target_and_limiter_caps() {
         assert!(x.iter().all(|v| v.abs() <= 0.8913), "限幅后超了 −1 dBFS");
     }
 }
+
+// ---- 自审（实时 / Rust 视角）抓到的问题的回归测试 ----
+
+#[test]
+fn silent_start_does_not_kill_noise_tracking() {
+    // 设备刚打开送 50 帧全零，之后才有噪音：舒适噪声必须照常出现（第一版卡在 −300 dB）
+    let mut sp = SpectralPolish::new(512, 256, 16000.0);
+    let p = PolishParams {
+        comfort_db: -10.0,
+        ..PolishParams::OFF
+    };
+    let zero = vec![Complex32::new(0.0, 0.0); BINS];
+    for _ in 0..50 {
+        let mut wet = zero.clone();
+        sp.process(&zero, &mut wet, &p, None);
+        assert!(wet.iter().all(|c| c.norm() == 0.0));
+    }
+    let mut s = 11u64;
+    let mut r = -300.0;
+    for _ in 0..100 {
+        let dry = noise_spec(&mut s, 1.0);
+        let mut wet = vec![Complex32::new(0.0, 0.0); BINS];
+        sp.process(&dry, &mut wet, &p, Some(0.0));
+        let e = wet.iter().map(|c| c.norm_sqr()).sum::<f32>()
+            / dry.iter().map(|c| c.norm_sqr()).sum::<f32>();
+        r = 10.0 * e.log10();
+    }
+    assert!(r > -20.0, "静音开头后舒适噪声只有 {r:.1} dB");
+}
+
+#[test]
+fn smoothing_does_not_increase_isolated_spike_residual() {
+    // 无人声时零星的增益尖峰：平滑后残留能量不能比不平滑更多（第一版是峰值保持，反而多 1.3 dB）
+    let run = |smooth: f32| {
+        let mut sp = SpectralPolish::new(512, 256, 16000.0);
+        let p = PolishParams {
+            smooth,
+            ..PolishParams::OFF
+        };
+        let mut s = 5u64;
+        let mut e = 0.0f32;
+        for f in 0..400 {
+            let dry = noise_spec(&mut s, 1.0);
+            let mut wet: Vec<Complex32> = dry
+                .iter()
+                .enumerate()
+                .map(|(k, d)| {
+                    if (k * 7 + f * 13) % 23 == 0 {
+                        *d
+                    } else {
+                        *d * 0.01
+                    }
+                })
+                .collect();
+            sp.process(&dry, &mut wet, &p, Some(0.0));
+            if f > 50 {
+                e += wet.iter().map(|c| c.norm_sqr()).sum::<f32>();
+            }
+        }
+        e
+    };
+    let (raw, smooth) = (run(0.0), run(1.0));
+    assert!(smooth < raw, "平滑前 {raw:.1}，平滑后 {smooth:.1}");
+}
+
+#[test]
+fn never_louder_than_noisy_and_nan_safe() {
+    let mut sp = SpectralPolish::new(512, 256, 16000.0);
+    let p = PolishParams::preset(2);
+    let mut s = 9u64;
+    for f in 0..300 {
+        let dry = noise_spec(&mut s, 1.0);
+        // 模型某些频点比带噪还响；第 100 帧整帧 NaN
+        let mut wet: Vec<Complex32> = dry
+            .iter()
+            .enumerate()
+            .map(|(k, d)| if k % 9 == 0 { *d * 2.0 } else { *d * 0.5 })
+            .collect();
+        if f == 100 {
+            wet.iter_mut()
+                .for_each(|c| *c = Complex32::new(f32::NAN, 0.0));
+            sp.process(&dry, &mut wet, &p, Some(1.0));
+            continue;
+        }
+        sp.process(&dry, &mut wet, &p, Some(if f % 2 == 0 { 1.0 } else { 0.0 }));
+        for (w, d) in wet.iter().zip(&dry) {
+            assert!(
+                w.norm() <= d.norm() * 1.0001 + 1e-9,
+                "第 {f} 帧有频点比带噪响"
+            );
+        }
+    }
+    assert!(sp.demuffle_gain_db().iter().all(|g| g.is_finite()));
+}
+
+#[test]
+fn time_only_path_runs_agc_and_ramps() {
+    use vdn_polish::PolishChain;
+    use vdn_polish::mirror::FrameCtx;
+    // 只走时域（FE-M wav2wav 那一路）：AGC 要用外部 VAD 或能量粗判工作，参数过渡也要推进
+    let mut chain = PolishChain::new(512, 256, 16000.0, PolishParams::OFF);
+    chain.set_ramp_s(0.5);
+    chain.set_target(PolishParams {
+        agc: 1.0,
+        agc_target_dbfs: -26.0,
+        agc_range_db: 10.0,
+        ..PolishParams::OFF
+    });
+    for _ in 0..62 * 8 {
+        let mut x: Vec<f32> = (0..256)
+            .map(|i| (i as f32 * 0.07).sin() * 0.01414)
+            .collect();
+        chain.process_time_ctx(
+            &mut x,
+            FrameCtx {
+                voice_prob: Some(1.0),
+            },
+        );
+    }
+    assert!(chain.current().agc >= 0.99, "参数没过渡");
+    assert!(
+        (chain.agc().gain_db() - 10.0).abs() < 0.3,
+        "AGC 增益 {:.2}",
+        chain.agc().gain_db()
+    );
+}

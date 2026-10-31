@@ -63,3 +63,21 @@ fn silence_is_finite_and_manual_restricts() {
     let j = last.unwrap();
     assert_eq!(j.label.user, UserScene::Music);
 }
+
+#[test]
+fn manual_meeting_commits() {
+    // 自审 P1：手动选「多人会议」第一版永远提交不了
+    let mut sa = SceneAnalyzer::new(16000, 256);
+    sa.set_manual(Some(UserScene::Meeting));
+    let x: Vec<f32> = (0..256).map(|i| (i as f32 * 0.3).sin() * 0.05).collect();
+    let mut last = None;
+    for k in 0..31 * 10 {
+        sa.push_hop(&x);
+        if k % 31 == 30 {
+            last = Some(sa.judge());
+        }
+    }
+    let j = last.unwrap();
+    assert_eq!(j.committed.0, UserScene::Meeting);
+    assert_eq!(j.params.tone.0, 6);
+}

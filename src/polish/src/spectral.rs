@@ -155,7 +155,11 @@ impl SpectralPolish {
         };
         self.last_sp = sp;
         // 全关时真透传（只更新跟踪量，不碰 wet）
-        if p.smooth <= 0.0 && p.floor_db <= -99.0 && p.comfort_db <= -99.0 && p.demuffle_max_db <= 0.0 {
+        if p.smooth <= 0.0
+            && p.floor_db <= -99.0
+            && p.comfort_db <= -99.0
+            && p.demuffle_max_db <= 0.0
+        {
             self.g_s[..n].fill(1.0);
             return;
         }

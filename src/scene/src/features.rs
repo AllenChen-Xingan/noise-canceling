@@ -127,7 +127,10 @@ impl FeatureExtractor {
     /// 只支持 16 kHz、hop 256（与 GTCRN 和 p2 的 VAD 帧对齐）：缓冲长度、调制谱频率、分类器权重都按它训练。
     /// 换 hop（如 FE-M 的 160）必须按时长重算帧数并重训，所以这里直接拦下（自审 P2）。
     pub fn new(sr: f32, hop: usize) -> Self {
-        assert!(hop == 256 && (sr - 16000.0).abs() < 1.0, "vdn-scene 目前只支持 16 kHz / hop 256");
+        assert!(
+            hop == 256 && (sr - 16000.0).abs() < 1.0,
+            "vdn-scene 目前只支持 16 kHz / hop 256"
+        );
         let mut planner = RealFftPlanner::<f32>::new();
         let fwd = planner.plan_fft_forward(N_FFT);
         let inv = planner.plan_fft_inverse(N_FFT);
