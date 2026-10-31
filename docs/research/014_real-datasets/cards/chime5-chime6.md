@@ -11,3 +11,21 @@
 - **接近度**：3.5/5 · 真实多人重叠 + 近讲参考最贴 D47；但只有 4 人、无“一大片人” babble，Kinect 阵列非笔记本麦，家庭而非咖啡馆
 - **用途建议**：真实回归集（kitchen/dining 段的邻座重叠）、sim-to-real 校准（混响/电平/重叠率）、人耳听测（只存本机）
 - **出处**：https://www.openslr.org/150/ 【官方】；https://www.openslr.org/resources/150/LICENSE.txt 【官方】；https://www.chimechallenge.org/datasets/chime5 【官方】；https://www.chimechallenge.org/challenges/chime6/track1_data 【官方】；arXiv:1803.10609 §2.1–2.3 【论文】
+
+<details><summary>另一路的卡片（chime6.md，怀疑派已修正；与上文冲突处见 ../decision.md 附录「卡片冲突裁定」）</summary>
+
+#### CHiME-6 / CHiME-5（2018/2020，Sheffield 等）
+- **做什么**：真实家庭晚宴的远讲 ASR 与日志；CHiME-6 修正了 CHiME-5 的阵列同步错误。
+- **录音设备与距离**：每场 6 台 Kinect（各 4 麦线阵），每人佩戴双耳麦。远场距离不固定。
+- **环境**：20 场真实家中晚宴，跨厨房、餐厅、客厅。
+- **说话人数与重叠**：每场 4 人，大量重叠。
+- **语言**：英语。
+- **参考**：近讲 有（双耳麦，串扰明显）· 转写 有（JSON，带时间戳）· 说话人标签 有。
+- **大小**：约 49.7 h；下载约 120 GB。
+- **许可**：CC BY-SA 4.0 · 结论：只评测（SA）。
+- **获取**：OpenSLR SLR150 直接下载 https://openslr.org/150
+- **接近度**：3/5。
+- **用途建议**：D47 回归；听测；校准 babble 与餐具噪声的谱。只存本机。
+- **出处**：https://openslr.org/150 【官方】· arXiv 1803.10609 【论文】
+
+</details>

@@ -11,3 +11,21 @@
 - **接近度**：3/5 · 真实多人重叠 + 近讲；有音乐背景；但仅 5.3 h、4 人小桌、非一大片人；无中文
 - **用途建议**：量太小，更宜整份当真实回归集/校准集；若拿来训练则不能再当回归集
 - **出处**：https://zenodo.org/record/8122551 【官方】；arXiv:1909.13447 §2.1–2.4, Table 1–3, §4 【论文】；https://huggingface.co/datasets/huckiyang/DiPCo 【二手】；https://dipco-sre.univ-avignon.fr/ 【二手】
+
+<details><summary>另一路的卡片（dipco-D-cafe.md，怀疑派已修正；与上文冲突处见 ../decision.md 附录「卡片冲突裁定」）</summary>
+
+#### DiPCo（2019/2020，Amazon + JHU）
+- **做什么**：晚宴场景远讲 ASR。
+- **录音设备与距离**：5 台远场设备，每台是 7 麦阵列，放在同一房间的不同位置；另有单通道近讲麦（Zenodo 只写「a single-channel close-talk microphone」，没写清每人是否各一支，按论文说是每人一支【论文·未复核】）。
+- **环境**：同一房间里的模拟晚宴，4 人围桌自然聊天，有真实的餐具和进食声。
+- **说话人数与重叠**：每场 4 人，自然重叠。
+- **语言**：英语。
+- **参考**：近讲 有 · 转写 有 · 说话人标签 有。
+- **大小**：约 5.3 h，13.4 GB。
+- **许可**：CDLA-Permissive-1.0 · 结论：可训练。
+- **获取**：Zenodo 直接下载 https://zenodo.org/records/8122551
+- **接近度**：3/5。
+- **用途建议**：小量微调；D47 回归；听测。只存本机。
+- **出处**：https://zenodo.org/records/8122551 【官方】· arXiv 1909.13447 【论文】
+
+</details>

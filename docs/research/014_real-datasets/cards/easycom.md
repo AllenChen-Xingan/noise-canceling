@@ -11,3 +11,21 @@
 - **接近度**：3.5/5 · 餐厅噪声 + 邻座多人，接近 D42/D47；但噪声为扬声器回放、设备为眼镜阵列
 - **用途建议**：sim-to-real 校准（71 dB SPL 餐厅场景的 SNR/谱/混响）、本机回归集、人耳听测；不训练
 - **出处**：https://github.com/facebookresearch/EasyComDataset 【官方】；arXiv:2107.04174v2 §III, §III-B 【论文】
+
+<details><summary>另一路的卡片（easycom-D-cafe.md，怀疑派已修正；与上文冲突处见 ../decision.md 附录「卡片冲突裁定」）</summary>
+
+#### EasyCom（2021，Meta Reality Labs）
+- **做什么**：AR 眼镜在嘈杂环境里辅助对话。
+- **录音设备与距离**：佩戴者戴 AR 眼镜（镜框 4 麦 + 2 支入耳麦）；邻座约 1 m 级【推算】。
+- **环境**：10 通道扬声器播放空间不相关的餐厅噪声，固定在约 71 dB SPL——**噪声是回放的**，对话是真人现场。
+- **说话人数与重叠**：多人围桌（含一名「服务员」），有重叠。
+- **语言**：英语。
+- **参考**：近讲 有，**但只给非佩戴者**（佩戴者和服务员都没有头戴麦）——设备佩戴者自己的语音没有近讲参考 · 转写 有 · 说话人标签 有。
+- **大小**：5 h 18 min。
+- **许可**：CC BY-NC 4.0 · 结论：只评测。
+- **获取**：直接下载（GitHub releases）https://github.com/facebookresearch/EasyComDataset
+- **接近度**：3/5。
+- **用途建议**：回归；听测；参照 71 dB SPL 做电平校准。只存本机。
+- **出处**：https://github.com/facebookresearch/EasyComDataset 【官方】· arXiv 2107.04174 【论文】
+
+</details>
