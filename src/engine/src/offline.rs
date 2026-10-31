@@ -3,6 +3,12 @@
 //! 对齐口径同 exp003：开头先喂 `lead_in` 个零（GTCRN 对拍时取一个 hop，让第一次推理也是全零帧，和 Python 一致），
 //! 结尾补零把延迟冲出来，再丢掉前 `lead_in + latency` 个样本，输出与输入等长、逐样本对齐。
 
+#![allow(
+    clippy::indexing_slicing,
+    clippy::disallowed_methods,
+    clippy::disallowed_macros
+)] // NRT: 离线驱动，整段分配缓冲，不在实时线程上跑
+
 use std::time::Duration;
 
 use crate::engine::Engine;

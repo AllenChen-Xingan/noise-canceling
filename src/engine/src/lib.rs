@@ -19,11 +19,11 @@ pub mod offline;
 
 pub use engine::{Engine, EngineStats, SafetyConfig};
 pub use fault::{FaultInjector, FaultKind};
-pub use model::{Model, ModelError};
+pub use vdn_types::{FrameCtx, Model, ModelError, Stage};
 
 /// 测试与示例用的假模型。
 pub mod testing {
-    use crate::model::{Model, ModelError};
+    use vdn_types::{Model, ModelError};
 
     /// 输出 = 输入延迟 `latency` 个样本再乘 `gain`（`latency` 必须是 `hop` 的整数倍以内的任意值）。
     pub struct DelayGain {
