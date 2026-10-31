@@ -19,7 +19,9 @@
         clippy::unwrap_used,
         clippy::expect_used,
         clippy::panic,
-        clippy::indexing_slicing
+        clippy::indexing_slicing,
+        clippy::unreachable,
+        clippy::todo
     )
 )]
 
@@ -39,7 +41,9 @@ pub mod version;
 pub use frame::{
     BypassReason, Confidence, FrameCtx, SampleClock, SpeakerClass, SpeakerVerdict, Status,
 };
-pub use latency::{Basis, LATENCY_BUDGET_MS, LatencyItem, LatencyLedger};
+pub use latency::{
+    Basis, IO_BLOCK_009, IO_BLOCK_PROPOSED, LATENCY_BUDGET_MS, LatencyItem, LatencyLedger,
+};
 pub use memory::{Learner, Overrides, SceneKey, UserProfile};
 pub use model::{Model, ModelError};
 pub use params::{ModelId, ParamError, ParamField, ParamSet, ToneId};

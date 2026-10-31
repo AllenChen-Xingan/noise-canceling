@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use crate::deps::metadata;
 use crate::root;
 
-const GUARDED_LINTS: [&str; 7] = [
+const GUARDED_LINTS: [&str; 11] = [
     "disallowed_methods",
     "disallowed_types",
     "disallowed_macros",
@@ -24,13 +24,39 @@ const GUARDED_LINTS: [&str; 7] = [
     "unwrap_used",
     "expect_used",
     "clippy::panic",
+    "clippy::unreachable",
+    "clippy::todo",
+    "clippy::restriction",
+    "clippy::all",
 ];
-const PANIC_LINTS: [&str; 4] = [
+const PANIC_LINTS: [&str; 6] = [
     "clippy::unwrap_used",
     "clippy::expect_used",
     "clippy::panic",
     "clippy::indexing_slicing",
+    "clippy::unreachable",
+    "clippy::todo",
 ];
+
+/// 这一行是不是「放行」类属性的开头：`#[allow(` / `#[expect(` / `#![…]` / `cfg_attr(…, allow(`。
+fn is_allow_attr(code: &str) -> bool {
+    let t = code.trim_start();
+    (t.starts_with("#[") || t.starts_with("#![")) && (t.contains("allow(") || t.contains("expect("))
+}
+
+/// 去掉空白后，`s` 在 `at` 处是不是会在 release panic 的 assert 宏（`assert!` / `assert_eq!` / `assert_ne!`，允许宏名与 `!` 之间有空白）。
+fn release_assert_at(s: &str, at: usize) -> bool {
+    let before = &s[..at];
+    if before.ends_with("debug_") || before.ends_with(|c: char| c.is_alphanumeric() || c == '_') {
+        return false;
+    }
+    let rest = &s[at + "assert".len()..];
+    let rest = rest
+        .strip_prefix("_eq")
+        .or_else(|| rest.strip_prefix("_ne"))
+        .unwrap_or(rest);
+    rest.trim_start().starts_with('!')
+}
 
 pub struct Tidy {
     pub problems: Vec<String>,
@@ -79,7 +105,10 @@ fn is_nrt_module(lines: &[&str]) -> bool {
         }
         if t.starts_with("#![allow(") {
             let end = attr_span(lines, i);
-            return lines[i..=end].iter().any(|l| has_nrt_reason(l));
+            let body: String = lines[i..=end].iter().map(|l| code_of(l)).collect();
+            // 只有放行的是实时 lint 才算整模块 NRT（allow(dead_code) 之类不算，自审 P1）
+            return GUARDED_LINTS.iter().any(|g| body.contains(g))
+                && lines[i..=end].iter().any(|l| has_nrt_reason(l));
         }
         if !t.starts_with("#!") {
             return false;
@@ -96,16 +125,16 @@ fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usi
     let lines: Vec<&str> = src.lines().collect();
     let mut rt_blocks = 0;
 
-    // `#[cfg(test)]` 之后的部分（单元测试）不查
+    // `#[cfg(test)]` 紧跟 `mod … {` 的单元测试模块（约定放在文件末尾）之后不查
     let test_from = lines
-        .iter()
-        .position(|l| l.trim() == "#[cfg(test)]")
+        .windows(2)
+        .position(|w| w[0].trim() == "#[cfg(test)]" && w[1].trim_start().starts_with("mod "))
         .unwrap_or(lines.len());
 
     // 1. allow 例外必须带 NRT 理由
     for (i, l) in lines.iter().enumerate().take(test_from) {
         let c = code_of(l);
-        if !(c.contains("#[allow(") || c.contains("#![allow(")) {
+        if !is_allow_attr(c) {
             continue;
         }
         let end = attr_span(&lines, i);
@@ -145,7 +174,28 @@ fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usi
     let mut i = 0;
     while i < test_from {
         let c = code_of(lines[i]);
-        if c.contains("#[deny(") || c.contains("#![deny(") {
+        if c.contains("#![deny(") {
+            // 模块头：整文件都是实时块
+            let end = attr_span(&lines, i);
+            let body: String = lines[i..=end].iter().map(|l| code_of(l)).collect();
+            if body.contains("clippy::disallowed_macros") {
+                rt_blocks += 1;
+                for (j, l) in lines.iter().enumerate().take(test_from).skip(end + 1) {
+                    let cj = code_of(l);
+                    if cj
+                        .match_indices("assert")
+                        .any(|(k, _)| release_assert_at(cj, k))
+                    {
+                        t.problems.push(format!(
+                            "{rel}:{}：实时模块里有会在 release panic 的 assert，改 debug_assert*（R4）",
+                            j + 1
+                        ));
+                    }
+                }
+                break;
+            }
+        }
+        if c.contains("#[deny(") {
             let end = attr_span(&lines, i);
             let body: String = lines[i..=end].iter().map(|l| code_of(l)).collect();
             if body.contains("clippy::disallowed_macros") {
@@ -156,19 +206,7 @@ fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usi
                 let mut j = end + 1;
                 while j < lines.len() {
                     let cj = code_of(lines[j]);
-                    for (k, _) in cj.match_indices("assert") {
-                        let before = &cj[..k];
-                        let after = &cj[k..];
-                        let is_macro = after.starts_with("assert!(")
-                            || after.starts_with("assert_eq!(")
-                            || after.starts_with("assert_ne!(");
-                        if opened && is_macro && !before.ends_with("debug_") {
-                            t.problems.push(format!(
-                                "{rel}:{}：实时块里有会在 release panic 的 assert，改 debug_assert*（R4）",
-                                j + 1
-                            ));
-                        }
-                    }
+                    let was_open = opened;
                     for ch in cj.chars() {
                         match ch {
                             '{' => {
@@ -178,6 +216,17 @@ fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usi
                             '}' => depth -= 1,
                             _ => {}
                         }
+                    }
+                    // 与 `{` 同一行的 assert 也算在块里（自审 P2）
+                    if (was_open || opened)
+                        && cj
+                            .match_indices("assert")
+                            .any(|(k, _)| release_assert_at(cj, k))
+                    {
+                        t.problems.push(format!(
+                            "{rel}:{}：实时块里有会在 release panic 的 assert，改 debug_assert*（R4）",
+                            j + 1
+                        ));
                     }
                     if opened && depth <= 0 {
                         break;
@@ -335,6 +384,41 @@ mod tests {
         let t = run(src, true);
         assert_eq!(t.problems.len(), 1, "{:?}", t.problems);
         assert!(t.problems[0].contains(":7："));
+    }
+
+    #[test]
+    fn bypass_tricks_are_caught() {
+        // expect( 与 cfg_attr(allow) 也要理由
+        let t = run("#[expect(clippy::indexing_slicing)]\nfn f() {}\n", false);
+        assert_eq!(t.problems.len(), 1);
+        let t = run(
+            "#[cfg_attr(not(test), allow(clippy::unwrap_used))]\nfn f() {}\n",
+            false,
+        );
+        assert_eq!(t.problems.len(), 1);
+        // allow(dead_code) 的文件头不能豁免整文件
+        let t = run(
+            "#![allow(dead_code)] // NRT: x\nfn f() { let _ = std::fs::read(\"a\"); }\n",
+            true,
+        );
+        assert_eq!(t.problems.len(), 1, "{:?}", t.problems);
+        // `assert !(`、与 `{` 同行、模块头 deny
+        let t = run(
+            "#[deny(clippy::disallowed_macros)]\nimpl X { fn p() { assert !(true); } }\n",
+            true,
+        );
+        assert_eq!(t.problems.len(), 1, "{:?}", t.problems);
+        let t = run(
+            "#![deny(clippy::disallowed_macros)]\nuse a::{b};\nfn p() { assert_eq!(1, 1); }\n",
+            true,
+        );
+        assert_eq!(t.problems.len(), 1, "{:?}", t.problems);
+        // 非测试代码前的孤立 #[cfg(test)] 不截断检查
+        let t = run(
+            "#[cfg(test)]\nuse x::y;\nfn f() { let _ = std::fs::read(\"a\"); }\n",
+            true,
+        );
+        assert_eq!(t.problems.len(), 1, "{:?}", t.problems);
     }
 
     #[test]

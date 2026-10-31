@@ -23,4 +23,4 @@ workspace = true
 [package.metadata.vdn]
 tier = "B"
 unsafe = false
-forbid = ["hound", "serde", "serde_json", "cpal", "clap", "vdn-engine"]
+forbid = ["hound", "serde", "serde_json", "cpal", "clap", "vdn-engine", "coreaudio-rs", "coreaudio-sys", "objc2", "rtrb"]

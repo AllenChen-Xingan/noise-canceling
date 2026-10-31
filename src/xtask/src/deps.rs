@@ -1,5 +1,5 @@
 //! check-deps（规约 §5.4）：`cargo metadata` 的 `resolve.nodes[].deps[]`，只取普通依赖（`dep_kinds[].kind == null`），
-//! 按包 BFS 求闭包，与 `metadata.vdn.forbid` 求交。resolve 是 feature 合并后的图，只会多报、不会漏报。
+//! 按包 BFS 求闭包，与 `metadata.vdn.forbid` 求交。用 `--all-features` 解析，全部 feature 合并后的图只会多报、不会漏报（目标平台条件依赖也都在内）。
 
 use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::process::Command;
@@ -15,7 +15,8 @@ pub struct Meta {
 pub fn metadata() -> Result<Meta, String> {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
     let out = Command::new(cargo)
-        .args(["metadata", "--format-version", "1"])
+        // --all-features：可选依赖（如以后的 rtsan feature）也进闭包，只会多报、不会漏报
+        .args(["metadata", "--format-version", "1", "--all-features"])
         .current_dir(root())
         .output()
         .map_err(|e| format!("调不起 cargo metadata：{e}"))?;
