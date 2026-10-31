@@ -1,0 +1,136 @@
+{
+ "build": "20261030224448-ab48",
+ "cands": {
+  "raw": "只有 GTCRN（模型原样输出）",
+  "personal": "保守版：下限 −12 dB + VAD 快开慢关（open −6 dB）+ 门控（下限 −12 dB、确认 2 次、慢收 0.5 s）",
+  "aggressive": "激进版：不混回原声 + 门控（下限 −20 dB、确认 1 次、慢收 0.3 s）"
+ },
+ "key": {
+  "q1c105b": {
+   "clip": "c01",
+   "order": [
+    "personal",
+    "aggressive",
+    "raw"
+   ],
+   "excerpt_s": [
+    54.012,
+    79.012
+   ],
+   "lock_t": 36.512,
+   "trap": false
+  },
+  "q0db641": {
+   "clip": "c02",
+   "order": [
+    "aggressive",
+    "personal",
+    "raw"
+   ],
+   "excerpt_s": [
+    51.504,
+    76.504
+   ],
+   "lock_t": 23.504,
+   "trap": false
+  },
+  "qbbe104": {
+   "clip": "c03",
+   "order": [
+    "aggressive",
+    "raw",
+    "personal"
+   ],
+   "excerpt_s": [
+    38.504,
+    63.504
+   ],
+   "lock_t": 33.504,
+   "trap": false
+  },
+  "qfeee4a": {
+   "clip": "c04",
+   "order": [
+    "aggressive",
+    "raw",
+    "personal"
+   ],
+   "excerpt_s": [
+    74.0,
+    99.0
+   ],
+   "lock_t": 74.0,
+   "trap": false
+  },
+  "qaf6f8b": {
+   "clip": "c05",
+   "order": [
+    "aggressive",
+    "personal",
+    "raw"
+   ],
+   "excerpt_s": [
+    81.008,
+    106.008
+   ],
+   "lock_t": 81.008,
+   "trap": false
+  },
+  "qa06f91": {
+   "clip": "c06",
+   "order": [
+    "aggressive",
+    "raw",
+    "personal"
+   ],
+   "excerpt_s": [
+    27.5,
+    52.5
+   ],
+   "lock_t": 32.512,
+   "trap": false
+  },
+  "q984fc4": {
+   "clip": "c07",
+   "order": [
+    "raw",
+    "aggressive",
+    "personal"
+   ],
+   "excerpt_s": [
+    52.0,
+    77.0
+   ],
+   "lock_t": 46.0,
+   "trap": false
+  },
+  "qb5fabb": {
+   "clip": "c08",
+   "order": [
+    "aggressive",
+    "personal",
+    "raw"
+   ],
+   "excerpt_s": [
+    27.5,
+    52.5
+   ],
+   "lock_t": null,
+   "trap": false
+  },
+  "q901b95": {
+   "clip": "c05",
+   "order": [
+    "raw",
+    "personal",
+    "personal"
+   ],
+   "excerpt_s": [
+    81.008,
+    106.008
+   ],
+   "trap": true,
+   "expect": "两份相同的槽位不该被分出高下（例如不该一个被选为最轻、另一个被选为最响）"
+  }
+ }
+}
