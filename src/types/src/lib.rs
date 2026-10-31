@@ -46,7 +46,7 @@ pub use latency::{
     Basis, IO_BLOCK_009, IO_BLOCK_PROPOSED, LATENCY_BUDGET_MS, LatencyItem, LatencyLedger,
 };
 pub use memory::{Learner, Overrides, SceneKey, UserProfile};
-pub use model::{Model, ModelError};
+pub use model::{Model, ModelError, SpectrumTap};
 pub use params::{ModelId, ParamBlock, ParamError, ParamField, ParamSet, ToneId};
 pub use policy::{
     Decision, Hysteresis, HysteresisGate, ParamSource, Policy, PolicyInput, TablePolicy,
@@ -58,4 +58,4 @@ pub use record::{
 pub use scene::{FineSceneId, SceneLabel, SceneName, UserScene};
 pub use stage::Stage;
 pub use table::{SceneEntry, SceneTable, TableError};
-pub use version::{ContentId, ProfileVersion, TableVersion};
+pub use version::{ConfigBinding, ContentId, ProfileVersion, TableVersion};

@@ -55,6 +55,33 @@ impl fmt::Display for ContentId {
     }
 }
 
+/// 配置绑定（ondevice #8）：场景参数表与「我的配置」只在这三样都对得上时生效，任一对不上回出厂。
+/// `device` 存输入设备 UID 的内容 ID（本机算，不存设备名）。
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct ConfigBinding {
+    pub model_hash: ContentId,
+    pub device: ContentId,
+    /// macOS 大版本（如 27）
+    pub os_major: u16,
+}
+
+impl ConfigBinding {
+    /// 行文本形态：`<模型> <设备> <系统大版本>`
+    pub fn to_value(&self) -> String {
+        format!("{} {} {}", self.model_hash, self.device, self.os_major)
+    }
+
+    pub fn parse(v: &str) -> Option<Self> {
+        let mut it = v.split_whitespace();
+        let b = Self {
+            model_hash: ContentId::parse(it.next()?)?,
+            device: ContentId::parse(it.next()?)?,
+            os_major: it.next()?.parse().ok()?,
+        };
+        it.next().is_none().then_some(b)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -71,6 +98,17 @@ mod tests {
         let id = ContentId::of(b"vdn");
         assert_eq!(ContentId::parse(&id.to_string()), Some(id));
         assert_eq!(ContentId::parse("xyz"), None);
+    }
+
+    #[test]
+    fn binding_roundtrips() {
+        let b = ConfigBinding {
+            model_hash: ContentId::of(b"m"),
+            device: ContentId::of(b"d"),
+            os_major: 27,
+        };
+        assert_eq!(ConfigBinding::parse(&b.to_value()), Some(b));
+        assert_eq!(ConfigBinding::parse("x"), None);
     }
 
     #[test]

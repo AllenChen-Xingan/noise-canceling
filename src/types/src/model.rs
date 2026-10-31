@@ -31,6 +31,13 @@ impl fmt::Display for ModelError {
 
 impl std::error::Error for ModelError {}
 
+/// 扩展 trait：频域模型把本帧输入的幅度谱借出来，特征通道与声纹复用它，不另算 STFT（规约 §3.1「共用一次 STFT」；ondevice #4）。
+/// 不改 `Model` 本身；时域模型不实现它。
+pub trait SpectrumTap: Model {
+    /// 最近一次 `process` 输入帧的幅度谱（长度 = 频点数）；还没处理过任何帧时为 `None`。实时线程可调，不分配
+    fn last_magnitude(&self) -> Option<&[f32]>;
+}
+
 /// `Send`：模型要搬到实时线程上跑。
 pub trait Model: Send {
     /// 短名，用于日志与结果文件（例如 `"gtcrn"`）

@@ -12,7 +12,7 @@ use crate::params::{ModelId, ParamField, ParamSet, ToneId};
 use crate::record::SessionRecord;
 use crate::scene::{FineSceneId, UserScene};
 use crate::text::{self, Line, TextError};
-use crate::version::{ContentId, ProfileVersion};
+use crate::version::{ConfigBinding, ContentId, ProfileVersion};
 
 /// 覆盖：`None` = 不改表里的值。
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -70,6 +70,8 @@ pub enum SceneKey {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct UserProfile {
     pub version: ProfileVersion,
+    /// 绑定（模型 · 设备 · 系统大版本）；加载时与当前环境不符就回出厂（`None` = 未绑定，按出厂处理由调用方定）
+    pub binding: Option<ConfigBinding>,
     entries: Vec<(SceneKey, Overrides)>,
 }
 
@@ -104,6 +106,11 @@ impl UserProfile {
         &self.entries
     }
 
+    /// 绑定是否与当前环境一致；不一致（或未绑定）时调用方应回出厂（ondevice #8）。
+    pub fn binding_matches(&self, now: &ConfigBinding) -> bool {
+        self.binding.as_ref() == Some(now)
+    }
+
     /// 表内参数 → 用户层覆盖 → 细场景覆盖。
     pub fn apply(&self, user: UserScene, fine: FineSceneId, p: &mut ParamSet) {
         if let Some(o) = self.get(SceneKey::User(user)) {
@@ -120,6 +127,9 @@ impl UserProfile {
         let mut s = String::new();
         let _ = writeln!(s, "{} = {}", Self::HEADER, Self::FORMAT);
         let _ = writeln!(s, "version = {}", self.version.0);
+        if let Some(b) = &self.binding {
+            let _ = writeln!(s, "binding = {}", b.to_value());
+        }
         for (k, o) in &self.entries {
             match k {
                 SceneKey::User(u) => {
@@ -181,6 +191,11 @@ impl UserProfile {
                 Line::Kv { key, value } => match cur.as_mut() {
                     None if key == "version" => {
                         prof.version = ProfileVersion(text::num(line, value)?)
+                    }
+                    None if key == "binding" => {
+                        prof.binding = Some(
+                            ConfigBinding::parse(value).ok_or(text::err(line, "绑定格式不对"))?,
+                        )
                     }
                     None => return Err(text::err(line, "未知的键")),
                     Some((_, o)) => match key {
@@ -255,6 +270,11 @@ mod tests {
     fn text_roundtrip() {
         let mut prof = UserProfile {
             version: ProfileVersion(4),
+            binding: Some(ConfigBinding {
+                model_hash: ContentId::of(b"m"),
+                device: ContentId::of(b"d"),
+                os_major: 27,
+            }),
             ..Default::default()
         };
         prof.remember_knob(SceneKey::Fine(FineSceneId(7)), ParamField::DetectDb, 10.5);
@@ -293,7 +313,7 @@ mod tests {
         for l in prof.to_text().lines().filter(|l| !l.starts_with('[')) {
             let k = l.split('=').next().unwrap().trim();
             assert!(
-                ["vdn-profile", "version", "model", "tone"].contains(&k)
+                ["vdn-profile", "version", "binding", "model", "tone"].contains(&k)
                     || ParamField::parse(k).is_some(),
                 "{k}"
             );

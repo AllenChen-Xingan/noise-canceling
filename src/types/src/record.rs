@@ -45,6 +45,8 @@ pub enum EnrollEvent {
 /// 人的一次操作。
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UserAction {
+    /// 撤销上一次操作
+    Undo,
     DenoiseOn,
     DenoiseOff,
     Knob {
@@ -87,8 +89,11 @@ pub enum DecisionEvent {
         source: ParamSource,
         params: ParamSet,
     },
+    /// 人的操作 = 反馈事件总线（ondevice #7）：带当时的细场景与配置内容 ID，学习部件据此归因
     UserAction {
         at: SampleClock,
+        scene: FineSceneId,
+        config: ContentId,
         action: UserAction,
     },
     /// 模型级送原声（engine 计数，按段汇总后记一条）
@@ -176,9 +181,15 @@ impl DecisionEvent {
                 }
                 Ok(())
             }
-            DecisionEvent::UserAction { action, .. } => {
-                s.push_str("user ");
+            DecisionEvent::UserAction {
+                scene,
+                config,
+                action,
+                ..
+            } => {
+                let _ = write!(s, "user {} {} ", scene.0, config);
                 match action {
+                    UserAction::Undo => write!(s, "undo"),
                     UserAction::DenoiseOn => write!(s, "on"),
                     UserAction::DenoiseOff => write!(s, "off"),
                     UserAction::Knob { field, value } => {
@@ -245,7 +256,10 @@ impl DecisionEvent {
                 }
             }
             "user" => {
+                let scene = FineSceneId(text::num(line, next()?)?);
+                let config = ContentId::parse(next()?).ok_or_else(bad)?;
                 let action = match next()? {
+                    "undo" => UserAction::Undo,
                     "on" => UserAction::DenoiseOn,
                     "off" => UserAction::DenoiseOff,
                     "knob" => UserAction::Knob {
@@ -267,7 +281,12 @@ impl DecisionEvent {
                     },
                     _ => return Err(bad()),
                 };
-                DecisionEvent::UserAction { at, action }
+                DecisionEvent::UserAction {
+                    at,
+                    scene,
+                    config,
+                    action,
+                }
             }
             "bypass" => DecisionEvent::Bypass {
                 at,
@@ -510,8 +529,14 @@ mod tests {
             UserAction::Feedback(FeedbackKind::WordsEaten),
             UserAction::DeviceChanged { rate: 44_100 },
             UserAction::Feedback(FeedbackKind::PreferB),
+            UserAction::Undo,
         ] {
-            v.push(DecisionEvent::UserAction { at, action });
+            v.push(DecisionEvent::UserAction {
+                at,
+                scene: FineSceneId(7),
+                config: ContentId::of(b"cfg"),
+                action,
+            });
         }
         v
     }

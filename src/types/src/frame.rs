@@ -111,6 +111,8 @@ pub struct FrameFeatures {
     pub level_db: f32,
     /// 底噪跟踪值（dBFS）
     pub noise_db: f32,
+    /// 估计信噪比（dB）
+    pub snr_db: f32,
     /// 人声概率（VAD）；`None` = 没跑
     pub voice_prob: Option<f32>,
     /// 噪声谱（按 [`FrameFeatures::BANDS`] 个频带汇总的 dB），取自模型 STFT

@@ -211,6 +211,36 @@ pub struct ParamBlock {
     pub transition: crate::policy::Transition,
 }
 
+// 实时侧收块（ondevice #1）：完整格式校验在判断线程写入前做；实时线程只做有限值检查、钳位、核对模型
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
+impl ParamBlock {
+    /// 实时线程拿到新块时调用：`seq` 不比手上新、`model_hash` 与正在跑的模型不符、或有非有限值 → `None`（沿用旧块）；
+    /// 否则返回钳位进范围的参数。换模型不走参数块，走规约 §3.5 的换 Pipeline 流程。不分配。
+    pub fn accept_rt(
+        &self,
+        held_seq: u32,
+        running_model: crate::version::ContentId,
+    ) -> Option<ParamSet> {
+        if self.seq <= held_seq || self.model_hash != running_model {
+            return None;
+        }
+        let mut p = self.params;
+        for f in ParamField::ALL {
+            let v = p.get(f);
+            if !v.is_finite() {
+                return None;
+            }
+            let (lo, hi) = f.range();
+            p.set(f, v.clamp(lo, hi));
+        }
+        Some(p)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -255,6 +285,23 @@ mod tests {
         is_copy::<ParamBlock>();
         // 经 rtrb 按值送进实时线程：守住体积
         assert!(core::mem::size_of::<ParamBlock>() <= 96);
+    }
+
+    #[test]
+    fn accept_rt_rules() {
+        use crate::version::ContentId;
+        let m = ContentId::of(b"gtcrn");
+        let mut b = ParamBlock {
+            seq: 5,
+            model_hash: m,
+            ..Default::default()
+        };
+        b.params.floor_db = 9.0;
+        assert_eq!(b.accept_rt(4, m).unwrap().floor_db, 0.0, "越界钳位");
+        assert!(b.accept_rt(5, m).is_none(), "不比手上新");
+        assert!(b.accept_rt(4, ContentId::of(b"fe")).is_none(), "模型不符");
+        b.params.strength = f32::NAN;
+        assert!(b.accept_rt(4, m).is_none(), "非有限值");
     }
 
     #[test]
