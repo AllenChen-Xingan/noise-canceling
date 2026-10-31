@@ -33,7 +33,7 @@
 | crate 的档位与禁依赖 | 写进各 crate `Cargo.toml` 的 `[package.metadata.vdn]`（§5.4），这是机读正本 |
 | bin 名 | 开发期 `vdn`；两层进程 `vdn-capture`（送音）、`vdn-denoised`（推理）⟨拍板 4⟩ |
 | 推理后端 crate（拆出之后） | `vdn-backend-<名>` |
-| 工具 | `xtask/`，`.cargo/config.toml` 设 `[alias] xtask = "run -p xtask --"`；xtask 不依赖任何 vdn crate |
+| 工具 | `src/xtask/`（package 名 `xtask`；放 `src/` 下以免新开顶层目录，铁律 10），**不设 `cargo xtask` 别名**：别名要新建顶层目录 `.cargo/`（铁律 10），为一个别名不值得，文档与 CI 一律写全 `cargo run -p xtask -- tidy` / `cargo run -p xtask -- check-deps`；xtask 不依赖任何 vdn crate |
 | 模型权重 | 仓外；仓里只留来源 · 许可 · sha256（CLAUDE.md 铁律 8） |
 | 构建产物 | `/target/` 在第一次构建前就在 `.gitignore` 里（2026-10-30 p1 分支误提交 target/ 后由大总管定） |
 
@@ -45,7 +45,7 @@
 
 | 层 | crate | 档 | 一句话 |
 |---|---|---|---|
-| 核心·词汇 | `vdn-types` | A/B | 共享的 trait 与小类型：`Model`、`ModelError`、`Status`、`BypassReason`、`SpeakerVerdict` |
+| 核心·词汇 | `vdn-types` | A/B | 共享的 trait 与小类型，零依赖：`Model`、`ModelError`、`Stage`、`FrameCtx`、`Status`、`BypassReason`、`SpeakerVerdict`；智能体部件的接口（§3.7）：感知输出、参数组、场景参数表、策略、我的配置、决策日志、延迟账、版本号 |
 | 核心 | `vdn-dsp` | B | 纯信号处理积木：STFT、延迟线、包络、淡化、biquad、限幅、重分块器、固定比例重采样包装、FTZ 守卫 |
 | 核心 | `vdn-models` | B | 每个模型一个文件 + `AnyModel` |
 | 核心 | `vdn-engine` | B | `Engine`（模型采样率）与 `Pipeline`（IO 采样率，§3.3）；eval 与实时进程唯一的处理入口 |
@@ -86,7 +86,7 @@ HAL 虚拟麦克风驱动：003 定为 C 插件，不进 workspace；009 建议�
 1. 分界线以上（核心）不依赖分界线以下的任何 crate，也不依赖平台库、推理库、serde、hound
 2. `vdn-engine` 不依赖 `vdn-models` 与后端；把具体模型交给引擎的是 bin（`Engine<AnyModel>`）
 3. `vdn-capture` 的依赖闭包里没有 `vdn-engine`、`vdn-models`、推理库（D03 崩溃隔离）
-4. **过渡期例外**：P2 拆出 `vdn-types` 之前，trait 住在 `vdn-engine::model`，所以 `vdn-models → vdn-engine` 这条边允许（p1 现状）；P1 的 `vdn-models` 直接依赖 ort，拆后端后改依赖后端
+4. `vdn-types` 已拆出（2026-10-31，align；比 §2.3 的触发事件提前，因为智能体部件的接口要在 speaker / scene / engine 之间共享）：`vdn-models` 只依赖 `vdn-types` + `vdn-dsp` + ort，**不再依赖 `vdn-engine`**（engine 只在 models 的 dev-dependencies 里供测试用）；`vdn_engine::model` 留一个转出模块兼容旧路径。P1 的 `vdn-models` 直接依赖 ort，拆后端后改依赖后端
 
 ### 2.3 什么时候拆（可观察的事件）
 
@@ -94,7 +94,7 @@ HAL 虚拟麦克风驱动：003 定为 C 插件，不进 workspace；009 建议�
 
 | 事件 | 拆 / 加 | 拆完怎么验 |
 |---|---|---|
-| `vdn-speaker` 第一次要把判决交给引擎 | 把 `engine::model` 搬成 `vdn-types`；加 `vdn-speaker` | check-deps：speaker → engine 这条边不存在 |
+| `vdn-speaker` 第一次要把判决交给引擎 | 加 `vdn-speaker`（`vdn-types` 已于 2026-10-31 先拆出） | check-deps：speaker → engine 这条边不存在 |
 | 第一次要算指标、写报告 JSON | 加 `vdn-eval`，CLI 的评测子命令改调它 | check-deps：engine 闭包里没有 hound / serde |
 | 第一次要接第二个推理后端（tract） | 拆 `vdn-backend-ort` / `vdn-backend-tract`，models 只认后端 trait；**不用互斥 feature** | cargo-deny：ort 的直接依赖者只有 `vdn-backend-ort` |
 | P3 开工（第一次碰真设备） | 加 `vdn-io-macos`、`vdn-rt-thread`、bin `vdn-capture` | check-deps：核心闭包里没有 cpal / coreaudio |
@@ -108,7 +108,7 @@ HAL 虚拟麦克风驱动：003 定为 C 插件，不进 workspace；009 建议�
 
 ### 3.1 模型接口
 
-p1 的 `Model` 保持不变（`src/engine/src/model.rs`，P2 搬进 `vdn-types`）：`Send`；`name / sample_rate / hop / latency_samples / reset / process`；一个 hop 进、一个 hop 出的波形接口；`ModelError` 是不带 `String` 的 `Copy` 枚举。规则：
+p1 的 `Model` 保持不变，已搬进 `vdn-types`（`src/types/src/model.rs`）：`Send`；`name / sample_rate / hop / latency_samples / reset / process`；一个 hop 进、一个 hop 出的波形接口；`ModelError` 是不带 `String` 的 `Copy` 枚举。规则：
 - **构造在非实时线程**（打开会话、预分配、预热），实时线程只调 `process` 与 `reset`
 - 频域模型在适配器里自己做 STFT；「共用一次 STFT」（设计稿 §11）以后用**扩展 trait** 补，不改 `Model`
 - 加载时用 `session.inputs()/outputs()` 校验名字与形状，不从 ONNX 元数据生成代码（p1 `gtcrn.rs` 已这样做）
@@ -121,9 +121,15 @@ p1 的 `Model` 保持不变（`src/engine/src/model.rs`，P2 搬进 `vdn-types`�
 ### 3.3 Engine 与 Pipeline：两个采样率，两层
 
 ```rust
-// vdn-types
-#[derive(Clone, Copy)]
-pub struct FrameCtx { pub speaker: SpeakerVerdict }   // 时间以 Pipeline 的样本计数为准，Engine 不另计
+// vdn-types（src/types/src/frame.rs；p2 提议后的形态）
+pub struct SampleClock(pub u64);                       // 流时间 = IO 采样率样本数；所有时间戳都用它
+pub enum SpeakerClass { Unknown /*放开*/, NoSpeech /*保持现状*/, Target, Other }
+pub struct SpeakerVerdict {                            // Copy；经 triple_buffer 进实时线程
+    pub class: SpeakerClass, pub confidence: Confidence,
+    pub window_start: SampleClock, pub window_end: SampleClock,   // 判决所用声纹窗：起始之后算出的判决才作数
+    pub owner_level_db: Option<f32>,                   // 主人说话电平；None = 未注册
+}
+pub struct FrameCtx { pub now: SampleClock /*本 hop 首样本*/, pub speaker: SpeakerVerdict, pub voice_prob: Option<f32> }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BypassReason { Backend, NonFinite, Abnormal, Deadline, BadLen }
@@ -150,9 +156,11 @@ impl<M: Model> Pipeline<M> {
     pub fn latency_samples(&self) -> usize;
 }
 
-pub trait Stage: Send {          // 门控、衰减下限、音色链节点，跑在模型采样率
+pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音链节点，跑在模型采样率
+    fn name(&self) -> &'static str;
     fn reset(&mut self);
     fn process(&mut self, wet: &mut [f32], dry: &[f32], ctx: FrameCtx);
+    fn latency_samples(&self) -> usize { 0 }   // 进延迟账（§3.7.5）
 }
 ```
 
@@ -193,6 +201,90 @@ pub trait Stage: Send {          // 门控、衰减下限、音色链节点，�
 
 两层用同一个 `L_total`（推理进程写进 `vdn-shm` 头），不各自对齐（ADR 005）。
 
+### 3.7 智能体部件：感知 · 策略 · 记忆 · 学习 · 延迟账
+
+> 依据：D35（降噪是没有语言模型的智能体系统）· D38（本机实时自适应，察觉不到、可关）· D39（无云端、不上传）· D40（场景路由）· D41（两层场景）；`docs/plan/005_evolution-and-simulation.md` 第〇节与「场景路由」。
+> 接口与数据结构住在 `vdn-types`（零依赖）；**本节只定接口**，场景分类、声纹、学习的实现分别归 scene、speaker（p2）与后续批次。
+
+**三条回路，三档线程**：
+
+| 回路 | 周期 | 部件 | 档 | 碰声音吗 | 进延迟账吗 |
+|---|---|---|---|---|---|
+| 反射 | 每 hop（16 ms） | `Model` · `Stage` · `Engine` / `Pipeline` | B | 碰 | 进 |
+| 判断 | 约 0.5 s | 感知（`SceneLabel`）· 策略（`Policy`） | C | **不碰**，只出 `ParamSet` | **不进** |
+| 学习 | 数天，空闲时 | 学习（`Learner`）· 记忆（`UserProfile`）· 决策日志（`SessionRecord`） | C，省电核低优先级 | 不碰 | 不进 |
+
+**数据流**：感知 → `SceneLabel` → `HysteresisGate`（换不换场景）→ `resolve_params`（场景参数表 → 我的配置 → 当前旋钮）→ `Decision { target: ParamSet, transition }` → rtrb 送一个 `Copy` 包进实时线程 → 实时侧 `ParamSet::glide_toward` 逐 hop 平滑；同时 `Decision::log_into` 写决策日志。
+
+**进出实时线程的两个包**（ondevice 线需求，2026-10-31）：
+- 判断 → 实时：`ParamBlock { seq, config: ContentId, model_hash: ContentId, params: ParamSet, transition }`，`Copy`，经 rtrb 送（§3.4「必须同时生效的一组参数」那一行就是它；§3.4 的 `AtomicU32` 只留给单个旋钮的即时值）。实时线程在帧边界取最新一份，没有新的沿用旧的，绝不等。完整格式校验在判断线程写入前做；实时线程只调 `ParamBlock::accept_rt`（`seq` 更新、`model_hash` 与正在跑的模型一致、全部有限 → 钳位后采用，否则沿用旧块）。**覆盖层张量绝不进参数块**。进 Stage 走 `Stage::set_params`
+- 实时 → 判断：`FrameFeatures`（scene 定稿：电平 · 底噪 · SNR · VAD · 16 带能量 · 平坦度 · 高低频比 · 质心 · 谐波性与峰位 · 谱峰保持率 · 削波占比 · 是否送原声；谱取带噪输入、与 GTCRN STFT 同口径），每 hop 一个经 rtrb 送出，满了丢弃并计数；噪声谱复用模型的 STFT（扩展 trait `SpectrumTap::last_magnitude`，不改 `Model`），不另算。FE-M 这类拿不到谱的由特征通道自己做一次 FFT，只喂判断、不进音频路径
+- 平滑：连续参数在 hop 内逐样本插值、dB 类字段限速 `Transition::max_db_per_s`（初值 1 dB/s）、手动改动最短斜坡 `manual_ramp_s`（初值 30 ms）；离散参数（模型、修音链预设）走交叉淡化，**等增益**（等功率对相关信号会鼓 +3 dB），淡化期算力 ×2 计入最坏帧；48 kHz 层的参数（`strength` 湿干比）在 Pipeline 层渐变。零前瞻、零附加延迟
+
+#### 3.7.1 感知输出（`src/types/src/scene.rs`）
+- `SceneLabel { user: UserScene, fine: FineSceneId, confidence: Confidence, at: SampleClock }`，`at` = 所用音频窗的末尾
+- 两层（D41）：`UserScene`（用户看得到、可手动切、可锁定；现为 Quiet · Cafe · Commute · Music · Meeting，**类目待人定**）· `FineSceneId(u16)`（内部细场景，含义由场景参数表定义，加类目不改代码；0 = 未知）
+- 判不准时不出新标签、保持当前场景；不设 `Other`
+
+#### 3.7.2 策略（`src/types/src/policy.rs`）
+- `trait Policy: Send { name; reset; decide(&PolicyInput) -> Decision }`，**可单独替换**（005 第〇节）；`TablePolicy` = 查表 + 滞回的参考实现
+- 滞回 `Hysteresis { confirm_s, min_confidence, min_dwell_s }`：按 `(用户层, 细场景)` 这一对比较（分类器只出用户层时也能切）；连续确认才换，**一次低置信就打断、候选从头算**；换后至少停留
+- 细场景在表里时，用户层以表为准（标签里的 `user` 只在细场景未知时用）
+- 平滑 `Transition { glide_s, model_crossfade_s }`：连续参数一阶平滑，离散参数（模型、修音链预设）即时切、由 engine 交叉淡化（§3.5）
+- 用户优先：`UserControl { scene: Auto | Manual(UserScene), lock, knobs }`，手动选场景时只用该场景下的细场景；锁定冻结的是「表 + 我的配置」那一层，**旋钮照常盖在上面**
+- 反馈入口 `Policy::observe(&DecisionEvent)`（默认空）：以后的老虎机从这里拿奖励（005 第三节 B 第 3 步）
+- 参数进 Stage：`Stage::set_params(&ParamSet)`（默认空，实时线程逐 hop 调，不分配）
+- 滞回默认 1 s / 0.4 / 3 s 由 scene 线在模拟数据上标定（exp006 held-out：用户层准确率 93%、生效延迟中位 3.7 s、错切 0.88 次/分钟）；设备位不进滞回、另用施密特触发；平滑 1 s / 50 ms 仍是占位，待听测
+
+#### 3.7.3 场景参数表（`src/types/src/table.rs`）与参数组（`params.rs`）
+- `ParamSet`（`Copy`）：`model: ModelId` · `tone: ToneId`（修音链预设编号，0 = 不加工，预设内容归 `vdn-polish`）· `strength`（只管模型湿干比）· `floor_db` · `open_db` · `detect_db` · `release_s` · `hangover_s`；每个连续字段有闭区间范围，加载时校验，越界拒收
+- `SceneTable`：每个用户层场景一组基础参数 + 最多 64 个细场景；**定长 `Copy`、< 8 KB**，控制线程解析校验好后按值换上，实时线程不分配
+- 版本化：`TableVersion`（单调递增，回滚 = 换回旧版本）+ `ContentId`（规范文本的 FNV-1a 64，决策日志里记它）
+- 序列化：自写行文本格式（`text.rs`：`键 = 值` + `[种类 名字]` 小节，第一行 `vdn-scene-table = <格式号>`，格式号比程序新一律拒读），往返无损；**核心不引 serde**（§2.2 规则 1）。细场景小节先继承所属用户层的参数
+
+#### 3.7.4 记忆与学习（`src/types/src/memory.rs`）
+- 配置绑定 `ConfigBinding { model_hash, device（输入设备 UID 的内容 ID，不存设备名）, os_major }`：`UserProfile::binding_matches` 不符就回出厂；配置文件当不可信输入校验（格式号、范围、重复、非有限值都拒收）
+- 「我的配置」`UserProfile`：按 `SceneKey::{User, Fine}` 存 `Overrides`（每个字段 `Option`），叠加顺序 表 → 用户层覆盖 → 细场景覆盖；**只存参数，类型里没有放音频的位置**（D39）；有 `ProfileVersion` + `ContentId`，可回滚、可一键清空
+- 声纹向量不放这里，归 `vdn-speaker` 自存
+- `trait Learner { propose(&[SessionRecord], &UserProfile) -> Option<UserProfile> }`：只在空闲时调（插电 · 未开会 · 不发热，D38），返回**候选**，过回归门禁 / 影子比对更好才换；在线只调参数、不改权重（005 第五节待人定 #2）。**本批不实现**
+
+#### 3.7.4b 留给后续 crate 的约束（ondevice 线提出，本批只记不做）
+- **小适配器 / BN·LN 覆盖层**要在导出模型时就做成图输入（ORT 加载时会把 BN 融进卷积，事后改不了）；换覆盖层走 §3.5：预热、暗跑 N 帧、等增益淡化
+- **计数器**（xrun、最坏帧 `fetch_max`、NaN 次数、按原因分的送原声次数）放进 `vdn-shm` 头，判断回路按 0.5 s 窗口 `swap(0)` 读清
+- **配置仓的消费方是 `vdn-denoised`**，不是 HAL 插件（插件在沙箱里读不到用户目录）；场景参数表与我的配置绑定「模型哈希 · 设备 · macOS 大版本」，对不上就回出厂
+- 进程级送原声由送音进程按每块心跳**立即**触发；看门狗只管重启推理进程（次数有上限）；所有失败走原声不走静音、延迟对齐（§3.6、ADR 005）
+- **影子比对走离线同码路径**：`vdn-engine::offline` + `SafetyConfig::apply_params` 能跑任意参数组，用出厂测试集 / 模拟环境比，不在通话中跑
+- **「正在开会」信号**：虚拟麦的 `StartIO` / `StopIO` 计数经 `vdn-shm` 头对外只读，空闲回路据此决定开不开跑
+- **本地功能开关**：每个新行为一个开关，发版包里写死到期日，不联网下发（D39）；开关清单随 `vdn-control` 落地
+- （若 ondevice 拍板 #1 选「通话中累计归一化统计」）推理时把 BN 输入的均值 / 方差作额外图输出，判断线程累加，不存音频；实时线程只拷固定大小数组，额外开销先实测
+
+#### 3.7.5 决策日志（`src/types/src/record.rs`）
+- `DecisionEvent`（`Copy`，≤ 64 B）：`SceneObserved`（感知原始输出，未经滞回；细场景分类的回放与回归靠它）· `SceneCommitted` · `ParamsApplied`（带完整 `ParamSet` 与来源 `ParamSource`）· `UserAction`（反馈事件总线：每条带当时的细场景与配置内容 ID；开关、旋钮、撤销、选场景、锁定、手动换模型、反馈「吃字 / 怪声 / 太吵 / 好 / AB 选 A / 选 B」、换设备——不记设备名、带新采样率）· `Bypass` · `Enroll`（声纹注册锁定 / 重锁 / 清空）· `TableChanged` · `ProfileChanged`
+- `SessionRecord { header: { rate, table: (版本, 内容 ID), profile: (版本, 内容 ID) }, events }`：**不含音频**（D19）、只在本机（D39）；文本一行一事件
+- 实时线程不写日志（R3）：送原声等事件以后经 rtrb 送出，由 C 档汇总成一条
+
+#### 3.7.6 延迟账（`src/types/src/latency.rs`；ADR 005 是正本）
+- 每个部件声明自己的延迟：`Model::latency_samples()`、`Stage::latency_samples()`、engine 的「攒满一个 hop」；`Engine::latency_ledger()` 汇总成 `LatencyLedger`，平台部分（重采样、IO、跨进程环、HAL）在写进代码前按 009 延迟账「目标上限」记成 `Basis::Budget`（`latency::planned_platform()`），P3 实测后改 `Basis::Measured`
+- 判断回路与学习回路不进账
+- 路由池里只放同延迟档的模型：`vdn-models::ModelKind::declared()` 声明 hop 与延迟，`tests/smoke.rs` 打开真模型核对
+- **逐项硬加，不认「两段等待重叠」的推断**（align 自审：「IO 缓冲并入攒 hop」要求 IO 块整除模型 hop，FE-M 的 hop 是 480 帧 @48k，256 不整除，不成立）
+- **当前账（2026-10-31）**：
+
+| 项 | ms | 依据 |
+|---|---|---|
+| 攒满一个模型 hop（GTCRN 256 / FE-M 160 样本 @16 kHz） | 16.00 / 10.00 | 代码声明 |
+| 模型算法延迟（GTCRN 256 / FE-M 352 样本） | 16.00 / 22.00 | 代码声明 |
+| 重采样 48→16 + 16→48 | 4.00 | 规划预算 |
+| 麦克风 IO 块：009 目标 256 帧 / **提议 96 帧** @48k | 5.33 / **2.00** | 规划预算 |
+| 跨进程环余量 | 3.00 | 规划预算 |
+| HAL 传输余量 128 帧 | 2.67 | 规划预算 |
+| **合计** | **009 目标 47.00（超 2 ms）· 提议 43.67** | 预算 45 |
+
+  - 模型部分两个模型都是 32 ms（= STFT 窗长 512 样本），池内同延迟
+  - 提议 IO 块 96 帧（`vdn_types::IO_BLOCK_PROPOSED`）：两模型 hop（768 / 480 帧 @48k）的最大公约数，回调与两种 hop 都对齐。代价：每秒约 500 次回调，多唤醒、多一点 CPU 与 xrun 风险，设备 / 蓝牙不一定给这么小的块【推】。P3 实测（`decision.md` E-lat）后定；做不到走 ⟨拍板 6⟩
+  - 测试 `src/models/tests/latency.rs`：提议块下每个模型 ≤ 45 ms、池内同延迟；009 原目标 47 ms 钉成**已知缺口**（断言超预算），任何一项变了都会红
+  - 对外口径：「代码里的部分 32 ms；平台部分未实测，按 009 目标合计 47 ms、按提议参数 43.67 ms」
+
 ---
 
 ## 4. 实时三档
@@ -219,7 +311,7 @@ pub trait Stage: Send {          // 门控、衰减下限、音色链节点，�
 |---|---|---|---|
 | 静态·写法 | clippy `disallowed-methods/types/macros`（根 `clippy.toml` **一份**）+ restriction lint | 本 crate 里实时代码的调用点 | 依赖 crate 内部、宏展开内部；漏列的 API（禁用清单是第一层，不是兜底） |
 | 静态·依赖直接边 | cargo-deny `[bans]`，内部 crate 也列进 deny（`allow-workspace` 保持默认 false） | 谁能**直接**依赖 X | 传递依赖（wrappers 只查直接依赖者，`resources/cargo-deny/src/bans.rs:616-650`） |
-| 静态·依赖闭包 | `cargo xtask check-deps` | 某 crate / bin 的**整个闭包**里不许出现 X | — |
+| 静态·依赖闭包 | `cargo run -p xtask -- check-deps` | 某 crate / bin 的**整个闭包**里不许出现 X | — |
 | 静态·项目约定 | xtask tidy（普通 `#[test]`，文本 / 轻语法检查，照 rust-analyzer） | forbid 头、`// NRT:` 注释、`.gitignore`、哨兵、`std::fs` / `log` 文本检查 | 语义 |
 | 运行期·Rust 分配 | 计数分配器（release 有效）；debug 测试里的「不许分配」断言（009：nice-assert-no-alloc 或自写约 60 行） | Rust 全局分配器上的分配 | C / C++ 库的分配 |
 | 运行期·libc | rtsan-standalone `#[nonblocking]`，`RTSAN_ENABLE=1` 构建，经 `cargo test` / `cargo run` 跑回放 | malloc / free / 锁 / sleep 等，包括 C++ 内部 | 回放没跑到的路径 |
@@ -231,16 +323,16 @@ pub trait Stage: Send {          // 门控、衰减下限、音色链节点，�
 | R1 | 实时路径不分配、不释放 | 禁用清单（分配类）· 计数分配器每 hop 计数 = 0（按模型登记的上限除外，§4 B 档）· RTSan |
 | R2 | 实时路径不加阻塞锁 | 禁用清单（`Mutex`、`RwLock`、`Condvar`、`mpsc`）· RTSan |
 | R3 | 实时路径不做 IO、日志、sleep | 禁用清单（`println!` 等宏、`thread::sleep`）· tidy 文本检查实时模块里没有 `std::fs`、`log::` · RTSan |
-| R4 | 实时路径不 panic | 实时 impl 块 deny `unwrap_used / expect_used / panic / indexing_slicing / unreachable / todo`，并禁 `assert!` / `assert_eq!` / `assert_ne!` 宏（只许 `debug_assert*`）· 故障注入测试 |
+| R4 | 实时路径不 panic | crate 根 deny `unwrap_used / expect_used / panic / indexing_slicing`（不作用于测试）· `assert!` / `assert_eq!` / `assert_ne!` 由 **tidy** 查实时块（clippy 禁不了：`debug_assert*` 展开就是 `assert*`，禁了一起红【测】）· 故障注入测试 |
 | R5 | 不用最坏情况无界的算法 | bench 看 p99.9 / max（§6 G10） |
 | R6 | 跨线程只用 §3.4 的原语 | 禁用清单（类型类）· 自写无锁结构只许在 `vdn-shm`，跑 loom + Miri |
 | R7 | 实时线程不 drop 堆对象 | RTSan 拦 `free` · 计数分配器计 dealloc · 回收队列满的单测 |
 | R8 | 实时线程有 time-constraint 优先级并加入 Audio Workgroup | 启动自检读回线程策略、检查 `os_workgroup_join` 返回码；失败计数并上报，不静默 |
 | R9 | FTZ 守卫只包住 DSP 段，**不包推理调用** | 单测：守卫内非正规数被冲成 0、守卫外不冲；`Model::process` 的推理调用在守卫外（009 §一.2：intra=1 时 FTZ 会作用到 ORT，DeepFilterNet #713） |
 | R10 | unsafe 只在白名单 crate | workspace `unsafe_code = "deny"`；非白名单 crate 的 `lib.rs` 写 `#![forbid(unsafe_code)]`（workspace 设 forbid 再局部 allow 会报 E0453）· `undocumented_unsafe_blocks = "deny"` · tidy 查 forbid 头。白名单 = `metadata.vdn.unsafe = true` 的 crate |
-| R11 | 实时路径出错 = 返回 `Status` + 送原声 | `#[must_use] Status` · 故障注入：超时 / NaN → 输出等于对齐原声（带淡化） |
+| R11 | 实时路径出错 = 返回 `Status` + 送原声（NaN / 异常帧不能拿来做交叉淡化：硬切原声，用接缝偏移衰减保持波形连续——p1 `Engine` 已这样做） | `#[must_use] Status` · 故障注入：超时 / NaN → 输出等于对齐原声（带淡化） |
 | R12 | 依赖方向（§2.2） | cargo-deny 管直接边 · check-deps 管闭包；规则都从 `metadata.vdn.forbid` 读 |
-| R13 | 延迟有账 | 单测断言 `Pipeline::latency_samples()` 不超预算；P3 脉冲法实测（延迟账见 ADR 005） |
+| R13 | 延迟有账 | `LatencyLedger`（§3.7.6）· `src/models/tests/latency.rs` 断言 ≤ 45 ms、池内同延迟；接入 Pipeline 后改断言 `Pipeline::latency_samples()`；P3 脉冲法实测（延迟账正本 ADR 005） |
 | R14 | 构建产物不进库 | tidy 查 `.gitignore` 含 `/target/` |
 
 ### 5.3 clippy 配置的写法
@@ -250,6 +342,7 @@ pub trait Stage: Send {          // 门控、衰减下限、音色链节点，�
 - panic 类 lint 放 crate 根，但不作用于测试：`#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing))]`；根 `clippy.toml` 设 `allow-unwrap-in-tests` 等
 - 非实时整模块（离线驱动、故障注入器）在模块头 `#![allow(...)] // NRT: <理由>`
 - 例外写法：`#[allow(clippy::disallowed_…)] // NRT: <理由>`，注释在同一行行尾或紧邻的上一行；tidy 用正则检查理由非空，并统计 allow 总数，总数涨了在 PR 里显示
+- **探针结论（align，2026-10-31，clippy 1.99）**：根 `clippy.toml` 里每一条都在哨兵 crate 里确认会报红；两条**放不进**：`assert*!`（会连 `debug_assert*` 一起禁，改由 tidy 查）、`<[T]>::to_vec`（各种路径写法都不命中，交给计数分配器与 RTSan）
 - **初版禁用清单的类别**：分配（`Vec::push / with_capacity / reserve / extend_from_slice / resize / insert`、`Box::new`、`Arc::new`、`<[T]>::to_vec`、`Iterator::collect`、`vec!`、`format!`）· 锁与阻塞（`Mutex`、`RwLock`、`Condvar`、`mpsc`、`thread::sleep`、`thread::spawn`）· IO 与日志（`println! / eprintln! / print! / eprint! / dbg!`）· panic 宏（`assert! / assert_eq! / assert_ne!`）。**已实测命中的只有**：`Vec::push`、`Vec::reserve`、`Box::new`、`std::sync::Mutex`、`println!`、`format!`、`vec!`（`appendix-probes/README.md` §5）；其余每加一条，先在哨兵 crate 里写一个必须报红的负例
 - 注意：`std::io::stdout` 拦不住 `println!`（展开调的是 `std::io::_print`）【测】；trait 方法（如 `Clone::clone`）会误伤 `Copy` 类型，不列，交给 RTSan 与计数分配器
 
@@ -264,7 +357,7 @@ unsafe = false                     # true = 进 unsafe 白名单
 forbid = ["ort", "hound", "serde", "cpal"]   # 闭包里不许出现的 crate
 ```
 
-- `cargo xtask check-deps`：用 `cargo metadata --format-version 1` 读 `resolve.nodes[].deps[]`，只取普通依赖（`dep_kinds[].kind == null`），按包 BFS 求闭包，与 `forbid` 求交，非空以 1 退出。resolve 是 feature 合并后的图，只会多报，不会漏报
+- `cargo run -p xtask -- check-deps`：用 `cargo metadata --format-version 1` 读 `resolve.nodes[].deps[]`，只取普通依赖（`dep_kinds[].kind == null`），按包 BFS 求闭包，与 `forbid` 求交，非空以 1 退出。resolve 是 feature 合并后的图，只会多报，不会漏报
 - tidy 校验：`deny.toml` 的 bans 与各 crate 的 `forbid` 一致；`unsafe = false` 的 crate 有 forbid 头；`tier` 为 A/B 的 crate 有实时 lint
 - 这样拆 crate 时只改各自的 `Cargo.toml`，不用同步三处
 
@@ -306,7 +399,7 @@ forbid = ["ort", "hound", "serde", "cpal"]   # 闭包里不许出现的 crate
 |---|---|---|---|---|
 | G1 | 格式 | `cargo fmt --all --check` | L0 L1 | 风格；自动修 |
 | G2 | lint 与实时禁用 API | `cargo clippy --workspace --all-targets -- -D warnings` | L0 L1 | 实时路径出现分配 / 锁 / IO / panic 写法 |
-| G3 | 依赖方向与许可 | `cargo deny check` + `cargo xtask check-deps` | L1 | 模块边界被打破，或不能按 GPL-3.0 分发 |
+| G3 | 依赖方向与许可 | `cargo deny check` + `cargo run -p xtask -- check-deps` | L1 | 模块边界被打破，或不能按 GPL-3.0 分发 |
 | G4 | tidy | `cargo test -p xtask` | L0 L1 | 规约被绕开 |
 | G5 | 单元 + 集成 | `cargo nextest run`（含计数分配器断言、故障注入） | L1 | 功能回归 / 实时路径分配 |
 | G6 | 分块不变性 | proptest：同一段音频随机切块喂 Pipeline，与整段一次喂的结果逐样本一致 | L1 少量 / L3 大量 | eval 与实时不是同一条路 |

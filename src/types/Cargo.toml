@@ -1,0 +1,19 @@
+[package]
+name = "vdn-types"
+description = "共享词汇：模型接口、帧上下文、Stage、场景与参数、场景参数表、我的配置、决策日志、延迟账、版本号。零依赖"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）
+[package.metadata.vdn]
+tier = "B"
+unsafe = false
+forbid = ["ort", "hound", "serde", "serde_json", "cpal", "clap", "vdn-dsp", "vdn-engine", "vdn-models", "coreaudio-rs", "coreaudio-sys", "objc2", "libc"]

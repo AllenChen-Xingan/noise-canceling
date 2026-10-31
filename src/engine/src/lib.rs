@@ -2,6 +2,18 @@
 //!
 //! 不认识任何具体模型（那在 `vdn-models`），也不链接 ONNX Runtime：engine 的逻辑可以用假模型单独测。
 
+#![forbid(unsafe_code)]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::indexing_slicing,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 pub mod engine;
 pub mod fault;
 pub mod model;
@@ -9,11 +21,11 @@ pub mod offline;
 
 pub use engine::{Engine, EngineStats, SafetyConfig};
 pub use fault::{FaultInjector, FaultKind};
-pub use model::{Model, ModelError};
+pub use vdn_types::{FrameCtx, Model, ModelError, Stage};
 
 /// 测试与示例用的假模型。
 pub mod testing {
-    use crate::model::{Model, ModelError};
+    use vdn_types::{Model, ModelError};
 
     /// 输出 = 输入延迟 `latency` 个样本再乘 `gain`（`latency` 必须是 `hop` 的整数倍以内的任意值）。
     pub struct DelayGain {

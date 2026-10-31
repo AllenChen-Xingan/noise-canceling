@@ -42,6 +42,7 @@ pub struct OpenCloseEnvelope {
     voiced: bool,
 }
 
+// 构造：非实时线程
 impl OpenCloseEnvelope {
     pub fn new(p: OpenCloseParams) -> Self {
         assert!(p.open >= p.closed, "open 必须 >= closed");
@@ -56,7 +57,15 @@ impl OpenCloseEnvelope {
             p,
         }
     }
+}
 
+// 实时：每 hop 调用（specs/rust/architecture.md §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
+impl OpenCloseEnvelope {
     pub fn reset(&mut self) {
         self.m = self.p.closed;
         self.noise_db = f32::INFINITY;
@@ -73,9 +82,8 @@ impl OpenCloseEnvelope {
     pub fn process(&mut self, detect: &[f32], mix: &mut [f32]) {
         debug_assert_eq!(detect.len(), mix.len());
         let n = detect.len().min(mix.len());
-        let (detect, mix) = (&detect[..n], &mut mix[..n]);
         let hop_s = n as f32 / self.p.sr;
-        let e = detect.iter().map(|v| v * v).sum::<f32>() / n.max(1) as f32;
+        let e = detect.iter().take(n).map(|v| v * v).sum::<f32>() / n.max(1) as f32;
         let e_db = 10.0 * (e + 1e-12).log10();
         // 底噪跟踪：往下立刻跟，往上慢慢涨。低于绝对门限的 hop（数字静音、开头补的零、模型延迟里的零输出）
         // 不参与跟踪——否则底噪会被钉在 −120 dB，之后要十几秒才涨回来，期间什么都判「有声」（exp004 自审 P0）
@@ -98,7 +106,7 @@ impl OpenCloseEnvelope {
         } else {
             self.p.closed
         };
-        for m in mix.iter_mut() {
+        for m in mix.iter_mut().take(n) {
             let a = if target > self.m {
                 self.a_up
             } else {
