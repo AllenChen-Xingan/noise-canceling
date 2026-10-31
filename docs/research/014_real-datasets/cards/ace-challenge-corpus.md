@@ -1,7 +1,7 @@
 ### ACE Challenge corpus（2015，Imperial College London）
 - **做什么**：盲估 T60/DRR 挑战赛语料；含实测 RIR + 同条件录制的 ambient/fan/**真人 babble** 噪声 + 消声室语音。
 - **录音设备与距离**：2ch 笔记本＝Chromebook Pixel 内置麦（间距 62 mm，arecord 直录）；3ch “Mobile”＝DPA 4060 搭的模拟阵列（非真手机）；另有 Single、Crucif(5ch)、Lin8Ch、EM32。声源–麦距离见技术报告。
-- **环境**：7 个真实房间（办公室、会议室、报告厅、带咖啡厅的大楼大堂）。babble＝4–7 名真人在声源附近持续朗读（非自由交谈）。
+- **环境**：7 个真实房间（办公室、会议室、报告厅、带咖啡厅的大楼大堂）。babble＝4–7 名真人在声源附近持续朗读（非自由交谈；出自 WASPAA 2015 §2.3 与 arXiv 1606.03365，014 自审时 Zenodo 页只核到「babble noise」，人数待回论文复核）。
 - **说话人数与重叠**：babble 内部真重叠；目标语音为消声室录音，需自行卷积相加（即“真实噪声+人工混合”）。
 - **语言**：英语。
 - **参考**：目标语音干净源 + 实测 RIR 可构造参考；babble 无转写。
