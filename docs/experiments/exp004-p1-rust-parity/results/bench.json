@@ -5,101 +5,299 @@
  "warmup": 200,
  "steps": 6000,
  "rust": {
-  "gtcrn": {
-   "engine_raw_ms": {
-    "max": 1.324,
-    "n": 6000,
-    "p50": 0.706041,
-    "p99": 0.925219170000002,
-    "p999": 1.1963811670000069
+  "gtcrn": [
+   {
+    "engine_raw_ms": {
+     "max": 0.930666,
+     "n": 6000,
+     "p50": 0.7144579999999999,
+     "p99": 0.729166,
+     "p999": 0.7688005410000095
+    },
+    "engine_safety_ms": {
+     "max": 0.8867499999999999,
+     "n": 6000,
+     "p50": 0.7155,
+     "p99": 0.73025042,
+     "p999": 0.7520880000000055
+    },
+    "hop": 256,
+    "input": "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/test_wavs/mix.wav",
+    "model": "gtcrn",
+    "model_ms": {
+     "max": 0.9297500000000001,
+     "n": 6000,
+     "p50": 0.7137089999999999,
+     "p99": 0.72841684,
+     "p999": 0.7677169170000099
+    },
+    "model_path": "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx",
+    "nonfinite_samples": 0,
+    "period_ms": 16.0,
+    "rust_allocs_per_hop": {
+     "hops_with_alloc": 0,
+     "max": 0,
+     "mean": 0.0,
+     "note": "只计 Rust 全局分配器；ORT C++ 内部分配不在内"
+    },
+    "steps": 6000,
+    "threads": 1,
+    "warmup": 200
    },
-   "engine_safety_ms": {
-    "max": 1.307709,
-    "n": 6000,
-    "p50": 0.7074374999999999,
-    "p99": 1.0807525,
-    "p999": 1.2408342500000014
+   {
+    "engine_raw_ms": {
+     "max": 0.893583,
+     "n": 6000,
+     "p50": 0.711666,
+     "p99": 0.72379241,
+     "p999": 0.7372509580000011
+    },
+    "engine_safety_ms": {
+     "max": 0.836583,
+     "n": 6000,
+     "p50": 0.712375,
+     "p99": 0.72616601,
+     "p999": 0.7307915430000006
+    },
+    "hop": 256,
+    "input": "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/test_wavs/mix.wav",
+    "model": "gtcrn",
+    "model_ms": {
+     "max": 0.892583,
+     "n": 6000,
+     "p50": 0.710917,
+     "p99": 0.723083,
+     "p999": 0.7363759590000011
+    },
+    "model_path": "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx",
+    "nonfinite_samples": 0,
+    "period_ms": 16.0,
+    "rust_allocs_per_hop": {
+     "hops_with_alloc": 0,
+     "max": 0,
+     "mean": 0.0,
+     "note": "只计 Rust 全局分配器；ORT C++ 内部分配不在内"
+    },
+    "steps": 6000,
+    "threads": 1,
+    "warmup": 200
    },
-   "hop": 256,
-   "input": "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/test_wavs/mix.wav",
-   "model": "gtcrn",
-   "model_ms": {
-    "max": 1.323166,
-    "n": 6000,
-    "p50": 0.7052705,
-    "p99": 0.924427750000002,
-    "p999": 1.1955891250000068
+   {
+    "engine_raw_ms": {
+     "max": 0.894792,
+     "n": 6000,
+     "p50": 0.696833,
+     "p99": 0.73025125,
+     "p999": 0.7494600000000023
+    },
+    "engine_safety_ms": {
+     "max": 0.881334,
+     "n": 6000,
+     "p50": 0.699625,
+     "p99": 0.73187625,
+     "p999": 0.7665431250000013
+    },
+    "hop": 256,
+    "input": "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/test_wavs/mix.wav",
+    "model": "gtcrn",
+    "model_ms": {
+     "max": 0.893791,
+     "n": 6000,
+     "p50": 0.696083,
+     "p99": 0.72950084,
+     "p999": 0.748668874000002
+    },
+    "model_path": "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx",
+    "nonfinite_samples": 0,
+    "period_ms": 16.0,
+    "rust_allocs_per_hop": {
+     "hops_with_alloc": 0,
+     "max": 0,
+     "mean": 0.0,
+     "note": "只计 Rust 全局分配器；ORT C++ 内部分配不在内"
+    },
+    "steps": 6000,
+    "threads": 1,
+    "warmup": 200
+   }
+  ],
+  "fastenhancer_m": [
+   {
+    "engine_raw_ms": {
+     "max": 0.77725,
+     "n": 6000,
+     "p50": 0.6752499999999999,
+     "p99": 0.6870004200000001,
+     "p999": 0.7083788340000042
+    },
+    "engine_safety_ms": {
+     "max": 0.764292,
+     "n": 6000,
+     "p50": 0.676334,
+     "p99": 0.68554241,
+     "p999": 0.6915424180000016
+    },
+    "hop": 160,
+    "input": "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/test_wavs/mix.wav",
+    "model": "fastenhancer",
+    "model_ms": {
+     "max": 0.776375,
+     "n": 6000,
+     "p50": 0.6747920000000001,
+     "p99": 0.686542,
+     "p999": 0.7077120830000045
+    },
+    "model_path": "/Users/allenchen/vdn-data/models/fastenhancer-dns-v1.0.0/fastenhancer_m.onnx",
+    "nonfinite_samples": 0,
+    "period_ms": 10.0,
+    "rust_allocs_per_hop": {
+     "hops_with_alloc": 6000,
+     "max": 7,
+     "mean": 7.0,
+     "note": "只计 Rust 全局分配器；ORT C++ 内部分配不在内"
+    },
+    "steps": 6000,
+    "threads": 1,
+    "warmup": 200
    },
-   "model_path": "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx",
-   "nonfinite_samples": 0,
-   "period_ms": 16.0,
-   "rust_allocs_per_hop": {
-    "hops_with_alloc": 0,
-    "max": 0,
-    "mean": 0.0,
-    "note": "只计 Rust 全局分配器；ORT C++ 内部分配不在内"
+   {
+    "engine_raw_ms": {
+     "max": 0.794834,
+     "n": 6000,
+     "p50": 0.6749590000000001,
+     "p99": 0.687917,
+     "p999": 0.7143588750000288
+    },
+    "engine_safety_ms": {
+     "max": 0.754791,
+     "n": 6000,
+     "p50": 0.664375,
+     "p99": 0.6791674100000001,
+     "p999": 0.6944209160000044
+    },
+    "hop": 160,
+    "input": "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/test_wavs/mix.wav",
+    "model": "fastenhancer",
+    "model_ms": {
+     "max": 0.79425,
+     "n": 6000,
+     "p50": 0.674542,
+     "p99": 0.68741783,
+     "p999": 0.7136087080000286
+    },
+    "model_path": "/Users/allenchen/vdn-data/models/fastenhancer-dns-v1.0.0/fastenhancer_m.onnx",
+    "nonfinite_samples": 0,
+    "period_ms": 10.0,
+    "rust_allocs_per_hop": {
+     "hops_with_alloc": 6000,
+     "max": 7,
+     "mean": 7.0,
+     "note": "只计 Rust 全局分配器；ORT C++ 内部分配不在内"
+    },
+    "steps": 6000,
+    "threads": 1,
+    "warmup": 200
    },
-   "steps": 6000,
-   "threads": 1,
-   "warmup": 200
-  },
-  "fastenhancer_m": {
-   "engine_raw_ms": {
-    "max": 1.197625,
-    "n": 6000,
-    "p50": 0.686417,
-    "p99": 0.78962709,
-    "p999": 1.0198874580000137
-   },
-   "engine_safety_ms": {
-    "max": 1.389125,
-    "n": 6000,
-    "p50": 0.686958,
-    "p99": 1.03483842,
-    "p999": 1.2614220410000057
-   },
-   "hop": 160,
-   "input": "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/test_wavs/mix.wav",
-   "model": "fastenhancer",
-   "model_ms": {
-    "max": 1.197042,
-    "n": 6000,
-    "p50": 0.6859999999999999,
-    "p99": 0.7892504100000001,
-    "p999": 1.0192207510000142
-   },
-   "model_path": "/Users/allenchen/vdn-data/models/fastenhancer-dns-v1.0.0/fastenhancer_m.onnx",
-   "nonfinite_samples": 0,
-   "period_ms": 10.0,
-   "rust_allocs_per_hop": {
-    "hops_with_alloc": 6000,
-    "max": 7,
-    "mean": 7.0,
-    "note": "只计 Rust 全局分配器；ORT C++ 内部分配不在内"
-   },
-   "steps": 6000,
-   "threads": 1,
-   "warmup": 200
-  }
+   {
+    "engine_raw_ms": {
+     "max": 0.9331670000000001,
+     "n": 6000,
+     "p50": 0.6689795000000001,
+     "p99": 0.6908762500000001,
+     "p999": 0.7367008750000377
+    },
+    "engine_safety_ms": {
+     "max": 0.9709169999999999,
+     "n": 6000,
+     "p50": 0.677459,
+     "p99": 0.6962936700000001,
+     "p999": 0.7909195000000495
+    },
+    "hop": 160,
+    "input": "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/test_wavs/mix.wav",
+    "model": "fastenhancer",
+    "model_ms": {
+     "max": 0.932292,
+     "n": 6000,
+     "p50": 0.6685000000000001,
+     "p99": 0.6903348300000001,
+     "p999": 0.7359928740000378
+    },
+    "model_path": "/Users/allenchen/vdn-data/models/fastenhancer-dns-v1.0.0/fastenhancer_m.onnx",
+    "nonfinite_samples": 0,
+    "period_ms": 10.0,
+    "rust_allocs_per_hop": {
+     "hops_with_alloc": 6000,
+     "max": 7,
+     "mean": 7.0,
+     "note": "只计 Rust 全局分配器；ORT C++ 内部分配不在内"
+    },
+    "steps": 6000,
+    "threads": 1,
+    "warmup": 200
+   }
+  ]
  },
  "python": {
-  "gtcrn": {
-   "onnxruntime": "1.31.1",
-   "model_ms": {
-    "p50": 0.7275205007317709,
-    "p99": 1.0173555074652545,
-    "p999": 1.241393375970822,
-    "max": 1.4452079994953237
+  "gtcrn": [
+   {
+    "onnxruntime": "1.31.1",
+    "model_ms": {
+     "p50": 0.7230839983094484,
+     "p99": 0.7484588454826735,
+     "p999": 0.8728772115500785,
+     "max": 1.0419169993838295
+    }
+   },
+   {
+    "onnxruntime": "1.31.1",
+    "model_ms": {
+     "p50": 0.7148750009946525,
+     "p99": 0.7393344083538977,
+     "p999": 0.8398764166558992,
+     "max": 1.0239170005661435
+    }
+   },
+   {
+    "onnxruntime": "1.31.1",
+    "model_ms": {
+     "p50": 0.7104795004124753,
+     "p99": 0.7369164211559109,
+     "p999": 0.8284895455217689,
+     "max": 1.0150839952984825
+    }
    }
-  },
-  "fastenhancer_m": {
-   "model_ms": {
-    "p50": 0.688,
-    "p99": 1.008,
-    "p999": 1.21,
-    "max": 1.303,
-    "mean": 0.698
+  ],
+  "fastenhancer_m": [
+   {
+    "model_ms": {
+     "p50": 0.686,
+     "p99": 0.699,
+     "p999": 0.713,
+     "max": 0.781,
+     "mean": 0.686
+    }
+   },
+   {
+    "model_ms": {
+     "p50": 0.68,
+     "p99": 0.737,
+     "p999": 0.912,
+     "max": 1.486,
+     "mean": 0.681
+    }
+   },
+   {
+    "model_ms": {
+     "p50": 0.681,
+     "p99": 0.702,
+     "p999": 0.736,
+     "max": 0.989,
+     "mean": 0.682
+    }
    }
-  }
- }
+  ]
+ },
+ "rounds": 3,
+ "note": "Rust model_ms = 适配器整次 process（GTCRN 含 Rust 的 STFT/iSTFT；FE-M 的 STFT 在图里）；Python model_ms = 只计 sess.run（GTCRN 不含 numpy STFT）。口径对 GTCRN 偏向 Python"
 }
