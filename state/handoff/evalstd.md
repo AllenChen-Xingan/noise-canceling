@@ -14,3 +14,9 @@
 - 自己补核：ITU-T G.160 (06/12) 附录 II（SNRI/TNLR/DSN，有推荐值和 ANSI-C 参考码，数值未读到——PDF 下载 500）；3GPP TS 26.077 现行 19.0.0
 - 下载 Microsoft Teams V5 规范 ZIP（19 MB）到主目录 `resources/teams-v5-spec/`（git 忽略；sha256 5a6863cd…d7df）；读了 Audio Spec 的通过线表、§6.21/6.26/6.35/8.1
 - 写 sources.md → 进行中
+- D44（大总管转人）：加 `verifiers.md`（主观项拆解 + verifier 清单 + 人耳回灌校准）；回 rlenv：文件路径、参考/成本/可微三栏、过线阈值（L2 = Spearman 95% 下界 ≥ 0.5 且 ≥ 30 段，另需 L1）
+- 写完 gap.md · verifiers.md · decision.md · README.md；Teams 规范 README 写进 `resources/teams-v5-spec/README.md`
+- 自审 Workflow wf_3cac798e-29c（3 代理：怀疑派 / 实现派 / 产品派）→ 进行中
+
+## 待人拍板
+见 `docs/research/012_eval-standards/decision.md` 末尾 6 题：①自研 TS 103 281 前先核许可 ②人耳加 P.835 三量表 ③加听者（含众包与 D39 的关系）④ETSI 噪声短样本进仓 ⑤对外报告并列 Teams / TS 26.131 数字 ⑥是否设法读 P.835 (07/26) 正文
