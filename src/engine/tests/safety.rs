@@ -51,7 +51,11 @@ fn nan_falls_back_to_aligned_dry_without_click() {
     let y = offline::run(&mut e, &x, 0).output;
     assert!(y.iter().all(|v| v.is_finite()));
     // 增益 1 的模型 = 原声，所以送原声前后都应几乎等于输入（无爆音、无错位）
-    let max_err = x.iter().zip(&y).map(|(a, b)| (a - b).abs()).fold(0.0, f32::max);
+    let max_err = x
+        .iter()
+        .zip(&y)
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0, f32::max);
     assert!(max_err < 1e-4, "max_err={max_err}");
     let s = e.stats();
     assert_eq!(s.fault_nonfinite, 1);
@@ -67,9 +71,18 @@ fn bypass_seam_is_continuous() {
     let m = FaultInjector::new(DelayGain::new(HOP, LAT, 0.2), plan);
     let mut e = Engine::new(m, SafetyConfig::off_but_fallback());
     let y = offline::run(&mut e, &x, 0).output;
-    let max_step_x = x.windows(2).map(|w| (w[1] - w[0]).abs()).fold(0.0, f32::max);
-    let max_step_y = y.windows(2).map(|w| (w[1] - w[0]).abs()).fold(0.0, f32::max);
-    assert!(max_step_y < max_step_x * 2.5, "x {max_step_x} y {max_step_y}");
+    let max_step_x = x
+        .windows(2)
+        .map(|w| (w[1] - w[0]).abs())
+        .fold(0.0, f32::max);
+    let max_step_y = y
+        .windows(2)
+        .map(|w| (w[1] - w[0]).abs())
+        .fold(0.0, f32::max);
+    assert!(
+        max_step_y < max_step_x * 2.5,
+        "x {max_step_x} y {max_step_y}"
+    );
     let s = e.stats();
     assert_eq!((s.fault_backend, s.fault_abnormal), (1, 1));
 }
@@ -94,7 +107,11 @@ fn deadline_miss_uses_dry_but_keeps_state() {
 fn process_does_not_allocate() {
     let x = tone(HOP);
     let mut y = vec![0.0; HOP];
-    let plan = vec![(3, FaultKind::Nan), (9, FaultKind::Error), (15, FaultKind::Explode)];
+    let plan = vec![
+        (3, FaultKind::Nan),
+        (9, FaultKind::Error),
+        (15, FaultKind::Explode),
+    ];
     let m = FaultInjector::new(DelayGain::new(HOP, LAT, 0.3), plan);
     let mut e = Engine::new(m, SafetyConfig::default());
     assert_no_alloc(|| {

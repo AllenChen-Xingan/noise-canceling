@@ -25,7 +25,8 @@ pub fn open(path: &Path) -> Result<Session, BoxError> {
         return Err(format!("找不到模型文件：{}", path.display()).into());
     }
     // 建会话各步的错误类型 `ort::Error<SessionBuilder>` 不是 Send + Sync，统一转成文字
-    let b = |e: ort::Error<ort::session::builder::SessionBuilder>| -> BoxError { e.to_string().into() };
+    let b =
+        |e: ort::Error<ort::session::builder::SessionBuilder>| -> BoxError { e.to_string().into() };
     let s = Session::builder(env()?)?
         .with_optimization_level(GraphOptimizationLevel::All)
         .map_err(b)?
@@ -44,5 +45,8 @@ pub fn open(path: &Path) -> Result<Session, BoxError> {
 /// 全零 f32 张量。
 pub fn zeros(shape: &[usize]) -> Result<ort::value::Tensor<f32>, BoxError> {
     let n = shape.iter().product();
-    Ok(ort::value::Tensor::from_array((shape.to_vec(), vec![0.0f32; n]))?)
+    Ok(ort::value::Tensor::from_array((
+        shape.to_vec(),
+        vec![0.0f32; n],
+    ))?)
 }

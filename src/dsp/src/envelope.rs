@@ -86,9 +86,17 @@ impl OpenCloseEnvelope {
             self.hang_left = (self.hang_left - hop_s).max(0.0);
         }
         self.voiced = speech || self.hang_left > 0.0;
-        let target = if self.voiced { self.p.open } else { self.p.closed };
+        let target = if self.voiced {
+            self.p.open
+        } else {
+            self.p.closed
+        };
         for m in mix.iter_mut() {
-            let a = if target > self.m { self.a_up } else { self.a_down };
+            let a = if target > self.m {
+                self.a_up
+            } else {
+                self.a_down
+            };
             self.m += (target - self.m) * a;
             *m = self.m;
         }

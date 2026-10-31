@@ -13,7 +13,6 @@ pub use fastenhancer::FastEnhancer;
 pub use gtcrn::Gtcrn;
 pub use session::BoxError;
 
-
 /// 可选的模型。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ModelKind {

@@ -124,7 +124,11 @@ impl<M: Model> Engine<M> {
     pub fn new(model: M, cfg: SafetyConfig) -> Self {
         let hop = model.hop();
         let sr = model.sample_rate() as f32;
-        let floor_lin = if cfg.floor { db_to_lin(cfg.floor_db) } else { 0.0 };
+        let floor_lin = if cfg.floor {
+            db_to_lin(cfg.floor_db)
+        } else {
+            0.0
+        };
         let env = (cfg.fast_open && cfg.floor).then(|| {
             OpenCloseEnvelope::new(OpenCloseParams {
                 sr,

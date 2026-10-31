@@ -125,7 +125,9 @@ mod tests {
     fn identity_reconstructs_with_latency() {
         let (n, h) = (512, 256);
         let mut s = StreamingStft::new(n, h, sqrt_hann_periodic(n));
-        let x: Vec<f32> = (0..h * 40).map(|i| ((i as f32) * 0.013).sin() * 0.5).collect();
+        let x: Vec<f32> = (0..h * 40)
+            .map(|i| ((i as f32) * 0.013).sin() * 0.5)
+            .collect();
         let mut y = vec![0.0; x.len()];
         for (xi, yi) in x.chunks(h).zip(y.chunks_mut(h)) {
             s.analyze(xi);
