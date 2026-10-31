@@ -1,0 +1,136 @@
+{
+ "build": "20261030235644-6a99",
+ "data_build": "20261030214530-44df",
+ "models": [
+  "base",
+  "route",
+  "polish",
+  "both"
+ ],
+ "key": {
+  "te0239": [
+   "both",
+   "polish",
+   "route",
+   "base"
+  ],
+  "te0137": [
+   "polish",
+   "base",
+   "both",
+   "route"
+  ],
+  "te0151": [
+   "base",
+   "route",
+   "polish",
+   "both"
+  ],
+  "te0039": [
+   "route",
+   "both",
+   "base",
+   "polish"
+  ],
+  "te0164": [
+   "both",
+   "polish",
+   "route",
+   "base"
+  ],
+  "te0009": [
+   "polish",
+   "base",
+   "both",
+   "route"
+  ],
+  "te0190": [
+   "base",
+   "route",
+   "polish",
+   "both"
+  ],
+  "te0110": [
+   "route",
+   "both",
+   "base",
+   "polish"
+  ],
+  "te0046": [
+   "both",
+   "polish",
+   "route",
+   "base"
+  ],
+  "te0111": [
+   "polish",
+   "base",
+   "both",
+   "route"
+  ],
+  "te0028": [
+   "base",
+   "route",
+   "polish",
+   "both"
+  ],
+  "te0011": [
+   "route",
+   "both",
+   "base",
+   "polish"
+  ]
+ },
+ "traps": [
+  {
+   "id": "trap-1",
+   "kind": "identical",
+   "clip": "te0009",
+   "desc": "安静房间",
+   "label": "所有候选其实是同一个文件（应答「分不出」）",
+   "ref": "../../audio/te0009_4d452364.wav",
+   "cands": [
+    "../../audio/te0009_2f1e25b1.wav",
+    "../../audio/te0009_2f1e25b1.wav",
+    "../../audio/te0009_2f1e25b1.wav",
+    "../../audio/te0009_2f1e25b1.wav"
+   ],
+   "names": [
+    "same",
+    "same",
+    "same",
+    "same"
+   ],
+   "expect": {
+    "best": [
+     "same"
+    ]
+   },
+   "source_model": "both"
+  },
+  {
+   "id": "trap-2",
+   "kind": "degraded",
+   "clip": "te0046",
+   "desc": "街道 / 公交",
+   "label": "其中一份是明显劣化版（揭盲后离线判：最清楚、最自然都不该选它）",
+   "ref": "../../audio/te0046_c766bdec.wav",
+   "cands": [
+    "../../audio/te0046_15c7cb69.wav",
+    "../../audio/te0046_ac3ca0e1.wav",
+    "../../audio/te0046_a4aec7ca.wav",
+    "../../audio/te0046_733de621.wav"
+   ],
+   "names": [
+    "polish",
+    "base",
+    "both",
+    "degraded"
+   ],
+   "expect": {
+    "not": []
+   },
+   "source_model": "base"
+  }
+ ]
+}

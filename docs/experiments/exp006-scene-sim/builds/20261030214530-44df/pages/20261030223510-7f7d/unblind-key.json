@@ -1,0 +1,134 @@
+{
+ "build": "20261030223510-7f7d",
+ "data_build": "20261030214530-44df",
+ "models": [
+  "base",
+  "route",
+  "polish",
+  "both"
+ ],
+ "key": {
+  "te0164": [
+   "route",
+   "both",
+   "polish",
+   "base"
+  ],
+  "te0151": [
+   "both",
+   "polish",
+   "base",
+   "route"
+  ],
+  "te0190": [
+   "polish",
+   "base",
+   "route",
+   "both"
+  ],
+  "te0111": [
+   "base",
+   "route",
+   "both",
+   "polish"
+  ],
+  "te0046": [
+   "route",
+   "both",
+   "polish",
+   "base"
+  ],
+  "te0137": [
+   "both",
+   "polish",
+   "base",
+   "route"
+  ],
+  "te0011": [
+   "polish",
+   "base",
+   "route",
+   "both"
+  ],
+  "te0028": [
+   "base",
+   "route",
+   "both",
+   "polish"
+  ],
+  "te0009": [
+   "route",
+   "both",
+   "polish",
+   "base"
+  ],
+  "te0039": [
+   "both",
+   "polish",
+   "base",
+   "route"
+  ],
+  "te0110": [
+   "polish",
+   "base",
+   "route",
+   "both"
+  ],
+  "te0239": [
+   "base",
+   "route",
+   "both",
+   "polish"
+  ]
+ },
+ "traps": [
+  {
+   "id": "trap-identical",
+   "clip": "te0028",
+   "desc": "背景音乐",
+   "label": "所有候选其实是同一个文件（应答「分不出」）",
+   "ref": "../../audio/te0028_cc9ec5b0.wav",
+   "cands": [
+    "../../audio/te0028_1d8500f5.wav",
+    "../../audio/te0028_1d8500f5.wav",
+    "../../audio/te0028_1d8500f5.wav",
+    "../../audio/te0028_1d8500f5.wav"
+   ],
+   "names": [
+    "same",
+    "same",
+    "same",
+    "same"
+   ],
+   "expect": {
+    "best": [
+     "same"
+    ]
+   },
+   "source_model": "base"
+  },
+  {
+   "id": "trap-degraded",
+   "clip": "te0046",
+   "desc": "街道 / 公交",
+   "label": "其中一份是明显劣化版（揭盲后离线判：最清楚、最自然都不该选它）",
+   "ref": "../../audio/te0046_6a735a59.wav",
+   "cands": [
+    "../../audio/te0046_ef726add.wav",
+    "../../audio/te0046_fe1749e8.wav",
+    "../../audio/te0046_366797b2.wav",
+    "../../audio/te0046_c297d4.wav"
+   ],
+   "names": [
+    "polish",
+    "route",
+    "base",
+    "degraded"
+   ],
+   "expect": {
+    "not": []
+   },
+   "source_model": "route"
+  }
+ ]
+}

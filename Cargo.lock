@@ -842,6 +842,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "vdn-polish"
+version = "0.1.0"
+dependencies = [
+ "assert_no_alloc",
+ "hound",
+ "realfft",
+ "vdn-dsp",
+]
+
+[[package]]
+name = "vdn-scene"
+version = "0.1.0"
+dependencies = [
+ "assert_no_alloc",
+ "hound",
+ "realfft",
+ "vdn-dsp",
+ "vdn-polish",
+]
+
+[[package]]
 name = "vdn-speaker"
 version = "0.1.0"
 dependencies = [

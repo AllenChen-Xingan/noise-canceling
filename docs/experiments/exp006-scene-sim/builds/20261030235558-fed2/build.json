@@ -1,0 +1,9 @@
+{
+ "build": "20261030235558-fed2",
+ "audio_dir": "_tmp/20261031-exp006/20261030235558-fed2",
+ "n": 296,
+ "seconds": 6.3,
+ "only": "test,seq",
+ "n_limit": null,
+ "seed_salt": 1
+}
