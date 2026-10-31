@@ -1,0 +1,312 @@
+//! 分析积木：P.56 主动电平、分帧能量、真值掩码、频谱（用 `vdn-dsp` 的 STFT，和实时同一份代码）、统计量。
+
+use vdn_dsp::StreamingStft;
+
+use crate::db10;
+use crate::synth::Truth;
+
+/// 掩码的帧长：10 ms @16 kHz。
+pub const MASK_FRAME: usize = 160;
+
+/// P.56 方法 B 的主动语音电平（自写，按标准描述：T = 0.03 s 的两级包络、H = 0.2 s 拖尾、M = 15.9 dB 余量、
+/// 2 倍步进的门限阶梯，两级之间线性插值）。返回 (电平 dBov, 活动比例)；全零或太短时返回 `None`。
+/// 0 dBov = 满幅（幅度 1.0）的均方。
+pub fn active_level(x: &[f32], sr: u32) -> Option<(f64, f64)> {
+    const NJ: usize = 16;
+    const M: f64 = 15.9;
+    if x.is_empty() {
+        return None;
+    }
+    let sr = sr as f64;
+    let g = (-1.0 / (sr * 0.03)).exp();
+    let hang = (0.2 * sr).round() as usize;
+    let c: Vec<f64> = (0..NJ).map(|j| 2f64.powi(j as i32 - 15)).collect();
+    let mut a = [0usize; NJ];
+    let mut h = [hang; NJ];
+    let (mut p, mut q, mut sq) = (0.0f64, 0.0f64, 0.0f64);
+    for &v in x {
+        let v = v as f64;
+        sq += v * v;
+        p = g * p + (1.0 - g) * v.abs();
+        q = g * q + (1.0 - g) * p;
+        for j in 0..NJ {
+            if q >= c[j] {
+                a[j] += 1;
+                h[j] = 0;
+            } else if h[j] < hang {
+                a[j] += 1;
+                h[j] += 1;
+            }
+        }
+    }
+    if sq <= 0.0 {
+        return None;
+    }
+    let n = x.len() as f64;
+    let mut prev: Option<(f64, f64, f64)> = None; // (A_j, δ_j, a_j)
+    for j in 0..NJ {
+        if a[j] == 0 {
+            break;
+        }
+        let aj = db10(sq / a[j] as f64);
+        let cj = 20.0 * c[j].log10();
+        let d = aj - cj;
+        if d <= M {
+            return Some(match prev {
+                None => (aj, a[j] as f64 / n),
+                Some((ap, dp, actp)) => {
+                    // δ 随 j 单调下降；在 δ = M 处线性插值
+                    let t = if (dp - d).abs() < 1e-12 {
+                        0.0
+                    } else {
+                        (dp - M) / (dp - d)
+                    };
+                    (
+                        ap + t * (aj - ap),
+                        (actp + t * (a[j] as f64 - actp)) / n,
+                    )
+                }
+            });
+        }
+        prev = Some((aj, d, a[j] as f64));
+    }
+    prev.map(|(ap, _, act)| (ap, act / n))
+}
+
+/// 只要电平（找不到时为 −∞）。
+pub fn active_level_db(x: &[f32], sr: u32) -> f64 {
+    active_level(x, sr).map_or(f64::NEG_INFINITY, |v| v.0)
+}
+
+/// 分帧均方（不重叠）。最后不满一帧的丢掉。
+pub fn frame_power(x: &[f32], flen: usize) -> Vec<f64> {
+    x.chunks_exact(flen)
+        .map(|c| c.iter().map(|v| (*v as f64).powi(2)).sum::<f64>() / flen as f64)
+        .collect()
+}
+
+/// 帧级掩码（10 ms）。`guard` 帧数向两边扩，避开分析窗的边缘效应。
+#[derive(Clone, Debug)]
+pub struct Masks {
+    pub owner: Vec<bool>,
+    pub interf: Vec<bool>,
+    /// 主讲人与干扰者都不在（扩 guard 后），且混合信号不是数字静音
+    pub noise_only: Vec<bool>,
+    /// 只有干扰者（主讲人扩 guard 后也不在）
+    pub interf_only: Vec<bool>,
+}
+
+fn paint(ivs: &[(usize, usize)], nf: usize, guard: usize) -> Vec<bool> {
+    let mut m = vec![false; nf];
+    for &(a, b) in ivs {
+        let fa = (a / MASK_FRAME).saturating_sub(guard);
+        let fb = (b.div_ceil(MASK_FRAME) + guard).min(nf);
+        for v in m.iter_mut().take(fb).skip(fa) {
+            *v = true;
+        }
+    }
+    m
+}
+
+pub fn masks(truth: &Truth, mix: &[f32], guard_s: f64) -> Masks {
+    let nf = mix.len() / MASK_FRAME;
+    let guard = (guard_s * 1000.0 / 10.0).round() as usize;
+    let owner = paint(&truth.owner, nf, 0);
+    let interf = paint(&truth.interf, nf, 0);
+    let og = paint(&truth.owner, nf, guard);
+    let ig = paint(&truth.interf, nf, guard);
+    let pw = frame_power(mix, MASK_FRAME);
+    let noise_only = (0..nf).map(|f| !og[f] && !ig[f] && pw[f] > 1e-14).collect();
+    let interf_only = (0..nf).map(|f| interf[f] && !og[f]).collect();
+    Masks {
+        owner,
+        interf,
+        noise_only,
+        interf_only,
+    }
+}
+
+/// 没有逐段真值的真实片段：从干净参考按 012 V-ONSET 的口径（20 ms 帧、比最大帧低 35 dB 以内算有声）求区间。
+pub fn truth_from_clean(clean: &[f32]) -> Vec<(usize, usize)> {
+    const F: usize = 320;
+    let p = frame_power(clean, F);
+    let max = p.iter().cloned().fold(0.0f64, f64::max);
+    if max <= 0.0 {
+        return Vec::new();
+    }
+    let thr = max * 10f64.powf(-35.0 / 10.0);
+    let mut out = Vec::new();
+    let mut start: Option<usize> = None;
+    for (i, &v) in p.iter().enumerate() {
+        match (v > thr, start) {
+            (true, None) => start = Some(i),
+            (false, Some(s)) => {
+                out.push((s * F, i * F));
+                start = None;
+            }
+            _ => {}
+        }
+    }
+    if let Some(s) = start {
+        out.push((s * F, p.len() * F));
+    }
+    out
+}
+
+/// 幅度平方谱，逐帧（帧 k 覆盖样本 `[(k+1)·hop − n_fft, (k+1)·hop)`，中心约在 `(k+1)·hop − n_fft/2`）。
+/// 用 `vdn_dsp::StreamingStft`，窗 = 周期 Hann（sqrt-Hann 的平方）。
+pub struct Spectrogram {
+    pub n_fft: usize,
+    pub hop: usize,
+    pub frames: Vec<Vec<f32>>,
+}
+
+impl Spectrogram {
+    pub fn new(x: &[f32], n_fft: usize, hop: usize) -> Spectrogram {
+        let win: Vec<f32> = vdn_dsp::window::sqrt_hann_periodic(n_fft)
+            .iter()
+            .map(|w| w * w)
+            .collect();
+        let mut st = StreamingStft::new(n_fft, hop, win);
+        let frames = x
+            .chunks_exact(hop)
+            .map(|c| st.analyze(c).iter().map(|z| z.norm_sqr()).collect())
+            .collect();
+        Spectrogram { n_fft, hop, frames }
+    }
+
+    /// 帧 k 的中心样本。
+    pub fn center(&self, k: usize) -> isize {
+        ((k + 1) * self.hop) as isize - (self.n_fft / 2) as isize
+    }
+
+    /// 帧 k 中心落在哪个 10 ms 掩码帧（落在开头之前时为 `None`）。
+    pub fn mask_frame(&self, k: usize) -> Option<usize> {
+        let c = self.center(k);
+        (c >= 0).then(|| c as usize / MASK_FRAME)
+    }
+
+    pub fn bin_hz(&self, b: usize, sr: u32) -> f64 {
+        b as f64 * sr as f64 / self.n_fft as f64
+    }
+}
+
+pub fn mean(v: &[f64]) -> f64 {
+    if v.is_empty() {
+        f64::NAN
+    } else {
+        v.iter().sum::<f64>() / v.len() as f64
+    }
+}
+
+/// 峰度 E[(x−μ)⁴] / σ⁴（非超额峰度，高斯为 3）。
+pub fn kurtosis(v: &[f64]) -> f64 {
+    let m = mean(v);
+    let (mut m2, mut m4) = (0.0, 0.0);
+    for &x in v {
+        let d = x - m;
+        m2 += d * d;
+        m4 += d * d * d * d;
+    }
+    let n = v.len().max(1) as f64;
+    let (m2, m4) = (m2 / n, m4 / n);
+    if m2 <= 0.0 { f64::NAN } else { m4 / (m2 * m2) }
+}
+
+/// 分位（线性插值，`q` ∈ [0, 1]）。
+pub fn quantile(v: &[f64], q: f64) -> f64 {
+    if v.is_empty() {
+        return f64::NAN;
+    }
+    let mut s: Vec<f64> = v.iter().copied().filter(|x| !x.is_nan()).collect();
+    if s.is_empty() {
+        return f64::NAN;
+    }
+    s.sort_by(|a, b| a.total_cmp(b));
+    let pos = q.clamp(0.0, 1.0) * (s.len() - 1) as f64;
+    let lo = pos.floor() as usize;
+    let hi = pos.ceil() as usize;
+    s[lo] + (s[hi] - s[lo]) * (pos - lo as f64)
+}
+
+/// `y` 相对 `x` 的延迟（样本）：在 `0..=max_lag` 里找互相关峰。只用前 `win` 个样本，够定位、又不慢。
+pub fn xcorr_lag(x: &[f32], y: &[f32], max_lag: usize, win: usize) -> Option<usize> {
+    let n = win.min(x.len());
+    let mut best: Option<(usize, f64)> = None;
+    for lag in 0..=max_lag {
+        if lag + n > y.len() {
+            break;
+        }
+        let s: f64 = x[..n]
+            .iter()
+            .zip(&y[lag..lag + n])
+            .map(|(a, b)| *a as f64 * *b as f64)
+            .sum();
+        if best.is_none_or(|(_, bs)| s > bs) {
+            best = Some((lag, s));
+        }
+    }
+    best.and_then(|(l, s)| (s > 0.0).then_some(l))
+}
+
+/// 35 ms 时间常数（P.1120 §11.14.5）的平滑功率，逐 10 ms 掩码帧取帧末值，单位 dB。
+pub fn smoothed_level_db(x: &[f32], sr: u32, tau_s: f64) -> Vec<f64> {
+    let a = 1.0 - (-1.0 / (tau_s * sr as f64)).exp();
+    let mut e = 0.0f64;
+    let mut out = Vec::with_capacity(x.len() / MASK_FRAME);
+    for c in x.chunks_exact(MASK_FRAME) {
+        for &v in c {
+            e += a * ((v as f64).powi(2) - e);
+        }
+        out.push(db10(e));
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn p56_of_continuous_sine_is_its_rms() {
+        // 连续正弦：活动 100%，主动电平 = RMS 电平 = 20log10(A/√2)
+        let a = 0.1f32;
+        let x: Vec<f32> = (0..32000)
+            .map(|i| a * (2.0 * std::f32::consts::PI * 440.0 * i as f32 / 16000.0).sin())
+            .collect();
+        let (lvl, act) = active_level(&x, 16000).unwrap();
+        let want = 20.0 * (a as f64 / 2f64.sqrt()).log10();
+        assert!((lvl - want).abs() < 0.3, "{lvl} vs {want}");
+        assert!(act > 0.95, "{act}");
+    }
+
+    #[test]
+    fn p56_ignores_silence_half() {
+        // 一半正弦一半静音：主动电平不变（≈ 连续时），活动约一半
+        let a = 0.1f32;
+        let mut x: Vec<f32> = (0..32000)
+            .map(|i| a * (2.0 * std::f32::consts::PI * 440.0 * i as f32 / 16000.0).sin())
+            .collect();
+        x.extend(std::iter::repeat_n(0.0, 32000));
+        let (lvl, act) = active_level(&x, 16000).unwrap();
+        let want = 20.0 * (a as f64 / 2f64.sqrt()).log10();
+        assert!((lvl - want).abs() < 0.6, "{lvl} vs {want}");
+        assert!((0.45..0.62).contains(&act), "{act}");
+    }
+
+    #[test]
+    fn xcorr_finds_delay() {
+        let mut r = crate::rng::Rng::new(3);
+        let x: Vec<f32> = (0..8000).map(|_| r.normal() as f32).collect();
+        let mut y = vec![0.0f32; 300];
+        y.extend_from_slice(&x);
+        assert_eq!(xcorr_lag(&x, &y, 600, 4000), Some(300));
+    }
+
+    #[test]
+    fn kurtosis_of_gaussian_is_three() {
+        let mut r = crate::rng::Rng::new(5);
+        let v: Vec<f64> = (0..200_000).map(|_| r.normal()).collect();
+        assert!((kurtosis(&v) - 3.0).abs() < 0.1);
+    }
+}
