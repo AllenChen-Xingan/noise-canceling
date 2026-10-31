@@ -24,7 +24,10 @@ use crate::vad::{Hysteresis, Vad};
 
 #[derive(Clone, Copy, Debug)]
 pub struct GateParams {
+    /// 本级处理的采样率（模型采样率）
     pub sr: f32,
+    /// `ctx.now` 的时钟频率（vdn-types：IO 采样率）。所有「秒 → 时钟」的换算用它；离线 = sr
+    pub clock_rate: f32,
     pub floor_db: f32,
     pub attack_s: f32,
     pub reopen_s: f32,
@@ -51,13 +54,15 @@ impl Default for GateParams {
     fn default() -> Self {
         Self {
             sr: 16000.0,
+            clock_rate: 16000.0,
             floor_db: -12.0,
             attack_s: 0.005,
             reopen_s: 0.05,
             release_s: 0.5,
             onset_gap_s: 0.3,
             onset_jump_db: 8.0,
-            confirm_n: 1,
+            // 1 次确认在 exp005 上多压约 0.4 dB，但 c02（邻座近）句首误压 2.5% → 11.4%；按「宁可漏噪音也不吃字」取 2
+            confirm_n: 2,
             onset_level_margin_db: 3.0,
             level_close_db: None,
             level_close_hold_s: 0.3,
@@ -180,11 +185,11 @@ impl Stage for AsymGate {
         if voiced {
             if self.silent_samples >= gap {
                 // 停顿后刚转有声：起始判据保持 onset_arm_s
-                self.armed_until = SampleClock(ctx.now.0 + (self.p.onset_arm_s * self.p.sr) as u64);
+                self.armed_until = SampleClock(ctx.now.0 + (self.p.onset_arm_s * self.p.clock_rate) as u64);
             }
             let armed = ctx.now < self.armed_until;
             let refractory_over =
-                self.onsets == 0 || ctx.now.since(self.last_onset) >= (self.p.onset_refractory_s * self.p.sr) as u64;
+                self.onsets == 0 || ctx.now.since(self.last_onset) >= (self.p.onset_refractory_s * self.p.clock_rate) as u64;
             let jump = refractory_over && st_db > self.slow_db + self.p.onset_jump_db;
             if loud_enough && (armed || jump) {
                 onset = true;
@@ -239,7 +244,7 @@ impl Stage for AsymGate {
             }
         }
         // 3) 增益：收 = 慢；起始后 100 ms 内放开 = 快；其余放开 = 中速
-        let fast = self.onsets > 0 && ctx.now.since(self.last_onset) < (0.1 * self.p.sr) as u64;
+        let fast = self.onsets > 0 && ctx.now.since(self.last_onset) < (0.1 * self.p.clock_rate) as u64;
         let (target, a) = if self.closing {
             (self.floor, self.a_rel)
         } else if fast {
@@ -288,7 +293,7 @@ mod tests {
         let mut wet = vec![0.01f32; hop as usize];
         let mut dry = wet.clone();
         let mut pos = 0u64;
-        let mut v = SpeakerVerdict::UNKNOWN;
+        let mut v = SpeakerVerdict::default();
         for _ in 0..400 {
             if pos % 8000 < hop && pos >= 24000 {
                 v = verdict(SpeakerClass::Other, pos);
@@ -330,6 +335,27 @@ mod tests {
             );
         }
         assert!(!g.closing());
+    }
+
+    /// 时钟是 48 kHz（IO 采样率）、处理是 16 kHz 时，起始后快放窗仍是 100 ms、起始前的旧判决仍被拒
+    #[test]
+    fn io_clock_domain() {
+        let p = GateParams { clock_rate: 48000.0, ..GateParams::default() };
+        let mut g = AsymGate::new(p);
+        let mut wet = vec![0.01f32; 256];
+        let dry = wet.clone();
+        // 起始发生在时钟 480 000（10 s @48k）
+        g.process(&mut wet, &dry, ctx(SpeakerVerdict::default(), 480_000, 0.9));
+        assert_eq!(g.onsets(), 1);
+        // 窗起点早于起始 → 不作数
+        let stale = SpeakerVerdict { window_start: SampleClock(470_000), window_end: SampleClock(490_000), ..verdict(SpeakerClass::Other, 0) };
+        for k in 0..3u64 {
+            let v = SpeakerVerdict { window_end: SampleClock(490_000 + k), ..stale };
+            g.process(&mut wet, &dry, ctx(v, 480_768 + k * 768, 0.9));
+        }
+        assert!(!g.closing());
+        // 快放窗：起始后 4 800 个时钟（100 ms @48k）内算快放；用 since 换算检查
+        assert!(SampleClock(480_000 + 4_799).since(SampleClock(480_000)) < (0.1 * p.clock_rate) as u64);
     }
 
     /// 门已收、主人电平已知：停顿后句首第一个 hop 很轻（软起音），下一个 hop 才够响 → 仍算起始、放开（自审 P1-1）

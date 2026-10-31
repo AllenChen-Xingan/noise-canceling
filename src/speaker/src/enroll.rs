@@ -6,12 +6,12 @@
 //! 2. **得分 = 按最近程度衰减的累计说话时长 × 近讲系数**。近讲系数按电平：比最响的簇每低 6 dB，系数减半
 //!    （主人离麦最近，邻座经过远场衰减；对策「会议开头别人先说话」的第一道）
 //! 3. **锁定条件**（全满足）：首簇累计 ≥ `min_owner_s`；首簇得分 ≥ 次簇 × `lock_margin`；连续 `stable_updates` 次都是它；
-//!    簇内平均相似度 ≥ `min_cohesion`；**只见过一个簇时要更长**（`single_cluster_min_s`）——
+//!    簇内平均相似度 ≥ `min_cohesion`（0.6，高于并入阈 0.5）；**只见过一个簇时要更长**（`single_cluster_min_s`）——
 //!    开头只有邻座在说时，他是唯一的簇，最容易被错锁（对策第二道）
 //! 4. **锁定后能改判**：另一簇得分超过主人 × `relock_ratio`、累计也够 `min_owner_s`，就改认它（对策第三道，纠错）
 //! 5. 只存声纹向量；`reset()` 一键清空
 
-use crate::embed::{cosine, l2_normalize};
+use crate::vecmath::{all_finite, cosine, l2_normalize};
 
 #[derive(Clone, Copy, Debug)]
 pub struct EnrollParams {
@@ -39,7 +39,8 @@ impl Default for EnrollParams {
             single_cluster_min_s: 30.0,
             lock_margin: 1.5,
             stable_updates: 6,
-            min_cohesion: 0.5,
+            // 必须高于并入阈 assign_sim，否则形同虚设（自审 P2-3）
+            min_cohesion: 0.6,
             recency_half_life_s: 300.0,
             level_halving_db: 6.0,
             relock_ratio: 2.0,
@@ -50,7 +51,10 @@ impl Default for EnrollParams {
 
 #[derive(Clone, Debug)]
 pub struct Cluster {
+    /// 对外的簇中心 = normalize(sum)
     pub centroid: Vec<f32>,
+    /// 未归一化的和（n 封顶后按指数平均衰减），簇中心由它归一化得到（自审 P2：不在归一化向量上做增量平均）
+    pub sum: Vec<f32>,
     pub n: f32,
     /// 累计时长（秒，不衰减）
     pub dur_s: f32,
@@ -59,7 +63,7 @@ pub struct Cluster {
     pub last_t: f64,
     /// 电平（dB）的滑动平均
     pub level_db: f32,
-    /// 并入时与中心相似度的滑动平均
+    /// 并入时与中心相似度的滑动平均；还没有任何并入时为 NaN（不能锁定）
     pub cohesion: f32,
 }
 
@@ -70,7 +74,8 @@ pub enum EnrollState {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum EnrollEvent {
+/// 注册器每次观察的结果（与 vdn-types 的决策日志事件 `EnrollEvent { Locked, Relocked, Reset }` 不同名，接入时映射）
+pub enum EnrollOutcome {
     None,
     Locked { cluster: usize },
     Relocked { from: usize, to: usize },
@@ -131,6 +136,7 @@ impl Enroller {
         let mut c = owner.to_vec();
         l2_normalize(&mut c);
         self.clusters.push(Cluster {
+            sum: c.clone(),
             centroid: c,
             n: self.p.centroid_cap * 0.25,
             dur_s: self.p.min_owner_s,
@@ -162,7 +168,10 @@ impl Enroller {
     }
 
     /// 喂一个清楚的单人片段。`t` 为片段终点（秒），`dur_s` 为片段里新增的人声时长，`level_db` 为片段人声电平。
-    pub fn observe(&mut self, emb: &[f32], t: f64, dur_s: f32, level_db: f32) -> EnrollEvent {
+    pub fn observe(&mut self, emb: &[f32], t: f64, dur_s: f32, level_db: f32) -> EnrollOutcome {
+        if !all_finite(emb) || !dur_s.is_finite() {
+            return EnrollOutcome::None;
+        }
         // 衰减
         let dt = (t - self.now).max(0.0) as f32;
         self.now = t;
@@ -181,11 +190,19 @@ impl Enroller {
             Some((i, s)) if s >= self.p.assign_sim => {
                 let cap = self.p.centroid_cap;
                 let c = &mut self.clusters[i];
-                c.n = (c.n + 1.0).min(cap);
-                let a = 1.0 / c.n;
-                for (x, &e) in c.centroid.iter_mut().zip(emb) {
-                    *x += (e - *x) * a;
+                // n 未到上限：sum 是算术和；到上限后先按 (cap-1)/cap 衰减再加，等价于长度 cap 的指数平均
+                if c.n >= cap {
+                    let k = (cap - 1.0) / cap;
+                    for x in c.sum.iter_mut() {
+                        *x *= k;
+                    }
+                } else {
+                    c.n += 1.0;
                 }
+                for (x, &e) in c.sum.iter_mut().zip(emb) {
+                    *x += e;
+                }
+                c.centroid.copy_from_slice(&c.sum);
                 l2_normalize(&mut c.centroid);
                 c.dur_s += dur_s;
                 c.decayed_s += dur_s;
@@ -196,7 +213,11 @@ impl Enroller {
                 } else {
                     level_db
                 };
-                c.cohesion += (s - c.cohesion) * la;
+                c.cohesion = if c.cohesion.is_finite() {
+                    c.cohesion + (s - c.cohesion) * la
+                } else {
+                    s
+                };
                 i
             }
             _ => {
@@ -205,12 +226,13 @@ impl Enroller {
                 }
                 self.clusters.push(Cluster {
                     centroid: emb.to_vec(),
+                    sum: emb.to_vec(),
                     n: 1.0,
                     dur_s,
                     decayed_s: dur_s,
                     last_t: t,
                     level_db,
-                    cohesion: 1.0,
+                    cohesion: f32::NAN,
                 });
                 self.clusters.len() - 1
             }
@@ -245,12 +267,12 @@ impl Enroller {
         }
     }
 
-    fn decide(&mut self) -> EnrollEvent {
+    fn decide(&mut self) -> EnrollOutcome {
         let scores = self.scores();
         let mut order: Vec<usize> = (0..scores.len()).collect();
         order.sort_by(|&a, &b| scores[b].total_cmp(&scores[a]));
         let Some(&top) = order.first() else {
-            return EnrollEvent::None;
+            return EnrollOutcome::None;
         };
         let second = order.get(1).map(|&i| scores[i]).unwrap_or(0.0);
         if self.candidate == Some(top) {
@@ -270,12 +292,13 @@ impl Enroller {
                 if c.dur_s >= need
                     && scores[top] >= second * self.p.lock_margin
                     && self.streak >= self.p.stable_updates
+                    && c.cohesion.is_finite()
                     && c.cohesion >= self.p.min_cohesion
                 {
                     self.owner = Some(top);
-                    return EnrollEvent::Locked { cluster: top };
+                    return EnrollOutcome::Locked { cluster: top };
                 }
-                EnrollEvent::None
+                EnrollOutcome::None
             }
             Some(o) if o != top => {
                 if c.dur_s >= self.p.min_owner_s
@@ -283,11 +306,11 @@ impl Enroller {
                     && self.streak >= self.p.stable_updates
                 {
                     self.owner = Some(top);
-                    return EnrollEvent::Relocked { from: o, to: top };
+                    return EnrollOutcome::Relocked { from: o, to: top };
                 }
-                EnrollEvent::None
+                EnrollOutcome::None
             }
-            Some(_) => EnrollEvent::None,
+            Some(_) => EnrollOutcome::None,
         }
     }
 }
@@ -312,19 +335,19 @@ mod tests {
         let mut e = Enroller::new(EnrollParams::default());
         let mut s = 7;
         let mut t = 0.0;
-        let mut ev = EnrollEvent::None;
+        let mut ev = EnrollOutcome::None;
         // 主人（第 0 维，-20 dB）与邻座（第 1 维，-30 dB）轮流，主人说得多
         for i in 0..200 {
             t += 0.5;
             let (k, lvl) = if i % 3 == 0 { (1, -30.0) } else { (0, -20.0) };
             let r = e.observe(&unit(16, k, 0.3, &mut s), t, 0.5, lvl);
-            if r != EnrollEvent::None && ev == EnrollEvent::None {
+            if r != EnrollOutcome::None && ev == EnrollOutcome::None {
                 ev = r;
             }
         }
         let o = e.owner().expect("应已锁定");
         assert!(o[0] > 0.9, "锁错人：{o:?}");
-        assert!(matches!(ev, EnrollEvent::Locked { .. }));
+        assert!(matches!(ev, EnrollOutcome::Locked { .. }));
     }
 
     #[test]
@@ -361,7 +384,7 @@ mod tests {
         let mut relocked = false;
         for _ in 0..200 {
             t += 0.5;
-            if let EnrollEvent::Relocked { .. } =
+            if let EnrollOutcome::Relocked { .. } =
                 e.observe(&unit(16, 0, 0.3, &mut s), t, 0.5, -20.0)
             {
                 relocked = true;

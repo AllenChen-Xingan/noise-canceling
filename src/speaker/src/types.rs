@@ -4,7 +4,8 @@
 //! （`../noise_canceling-align/src/types/src/frame.rs`、`stage.rs`，2026-10-30 按 p2 的提议加了判决时间戳、
 //! NoSpeech、主人电平、`FrameCtx::{now, voice_prob}`），接入时把 `use crate::types::…` 换成 `use vdn_types::…`。
 //!
-//! 唯一差别：`SampleClock` 在 vdn-types 里按 **IO 采样率**计；本 crate 离线只跑模型采样率（16 kHz），接入时换算。
+//! `SampleClock` 在 vdn-types 里按 **IO 采样率**计。本 crate 凡拿时长和 `SampleClock` 比，都按参数里的 `clock_rate` 换算
+//! （`GateParams::clock_rate`、`JudgeParams::clock_per_sample`）；离线实验里时钟 = 16 kHz 模型样本，接入时设成 IO 采样率。
 
 /// 样本计数（时间戳一律用它）。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -70,14 +71,6 @@ pub struct SpeakerVerdict {
 }
 
 impl SpeakerVerdict {
-    pub const UNKNOWN: Self = Self {
-        class: SpeakerClass::Unknown,
-        confidence: Confidence::ZERO,
-        window_start: SampleClock(0),
-        window_end: SampleClock(0),
-        owner_level_db: None,
-    };
-
     /// 判决窗整个落在 `onset` 之后才作数（起始之前算的判决不能拿来压刚开口的人）。
     pub fn valid_after(&self, onset: SampleClock) -> bool {
         self.window_start >= onset

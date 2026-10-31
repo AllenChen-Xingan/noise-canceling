@@ -6,13 +6,14 @@
 
 use std::path::{Path, PathBuf};
 
+use ort::environment::Environment;
 use ort::session::Session;
 use ort::session::builder::{AutoDevicePolicy, GraphOptimizationLevel};
 use ort::value::Tensor;
 
 use crate::fbank::{Fbank, FbankConfig, cmn};
 
-pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
+pub use crate::vecmath::BoxError;
 
 /// 默认查找：环境变量 `VDN_SPEAKER_ONNX` → `~/vdn-data/models/wespeaker/voxceleb_ECAPA512.onnx`。
 pub fn default_model_path() -> Option<PathBuf> {
@@ -34,24 +35,14 @@ pub struct Embedder {
     input_name: String,
 }
 
-static ENV: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
-
-fn env() -> Result<&'static ort::environment::Environment, BoxError> {
-    if let Some(e) = ENV.get() {
-        return Ok(e);
-    }
-    let e = ort::init().with_name("vdn-speaker").build()?;
-    Ok(ENV.get_or_init(|| e))
-}
-
-fn open_session(path: &Path) -> Result<Session, BoxError> {
+fn open_session(env: &Environment, path: &Path) -> Result<Session, BoxError> {
     if !path.is_file() {
         return Err(format!("找不到声纹模型：{}", path.display()).into());
     }
     let b =
         |e: ort::Error<ort::session::builder::SessionBuilder>| -> BoxError { e.to_string().into() };
     // 单线程：声纹线程放能效核，不和降噪线程抢（003 §1）；CPU 执行器，同 vdn-models 的理由（CoreML 自动挂载不稳）
-    Ok(Session::builder(env()?)?
+    Ok(Session::builder(env)?
         .with_auto_device(AutoDevicePolicy::PreferCPU)
         .map_err(b)?
         .with_optimization_level(GraphOptimizationLevel::All)
@@ -69,8 +60,10 @@ fn open_session(path: &Path) -> Result<Session, BoxError> {
 
 impl Embedder {
     /// `max_samples`：一次最长送多少样本（决定特征缓冲大小）。
-    pub fn open(path: &Path, fbank: FbankConfig, max_samples: usize) -> Result<Self, BoxError> {
-        let session = open_session(path)?;
+    /// `env`：进程里唯一的 ORT Environment，由调用方建好传入（ort 一个进程只许一个，`ort-2.0.0-rc.15/src/environment.rs:514-516`；
+    /// 接入时与 vdn-models 共用同一个，见 `src/speaker/README.md`「接入注意」）。
+    pub fn open(env: &Environment, path: &Path, fbank: FbankConfig, max_samples: usize) -> Result<Self, BoxError> {
+        let session = open_session(env, path)?;
         let inputs: Vec<&str> = session.inputs().iter().map(|i| i.name()).collect();
         if inputs.len() != 1 {
             return Err(format!("声纹模型应只有一个输入，实际 {inputs:?}").into());
@@ -113,6 +106,9 @@ impl Embedder {
             .run(ort::inputs![self.input_name.as_str() => t])?;
         let (_, v) = outs[0].try_extract_tensor::<f32>()?;
         let mut v = v.to_vec();
+        if !crate::vecmath::all_finite(&v) {
+            return Err("声纹含非有限值".into());
+        }
         l2_normalize(&mut v);
         Ok(v)
     }
@@ -126,16 +122,4 @@ impl Embedder {
     }
 }
 
-pub fn l2_normalize(v: &mut [f32]) {
-    let n = v.iter().map(|x| x * x).sum::<f32>().sqrt();
-    if n > 0.0 && n.is_finite() {
-        for x in v.iter_mut() {
-            *x /= n;
-        }
-    }
-}
-
-/// 两个已归一化向量的余弦相似度。
-pub fn cosine(a: &[f32], b: &[f32]) -> f32 {
-    a.iter().zip(b).map(|(x, y)| x * y).sum()
-}
+pub use crate::vecmath::{cosine, l2_normalize};

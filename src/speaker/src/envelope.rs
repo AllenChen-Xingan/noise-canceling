@@ -110,9 +110,13 @@ impl Stage for VadEnvelopeStage {
         self.raw_voice = false;
     }
 
-    fn process(&mut self, wet: &mut [f32], dry: &[f32], _ctx: FrameCtx) {
+    fn process(&mut self, wet: &mut [f32], dry: &[f32], ctx: FrameCtx) {
         let n = wet.len().min(dry.len());
-        let p = self.vad.push(&wet[..n]);
+        // 上游给了人声概率就用它（接入后全链只跑一份 VAD），没有才自己算
+        let p = match ctx.voice_prob {
+            Some(p) if p.is_finite() => p,
+            _ => self.vad.push(&wet[..n]),
+        };
         self.raw_voice = self.hyst.update(p);
         if self.raw_voice {
             self.hang_left = self.hang_total;
@@ -216,7 +220,7 @@ mod tests {
 
     fn ctx() -> FrameCtx {
         FrameCtx {
-            speaker: SpeakerVerdict::UNKNOWN,
+            speaker: SpeakerVerdict::default(),
             ..FrameCtx::default()
         }
     }

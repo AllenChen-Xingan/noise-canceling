@@ -6,13 +6,14 @@
 //! 片段怎么挑（注册用）：窗里 VAD 有声帧 ≥ `enroll_voiced_frac`，且与上一个窗（重叠 1 s）声纹相似度 ≥ `consist_sim`
 //! ——连续两个窗像同一个人，说明窗里没有换人、没有明显重叠（003 §2.2 第 2 条「清楚的单人片段」）。
 //!
-//! 判决（相似度 = 与主人声纹的余弦）：≥ `owner_hi` → Owner；≤ `others_lo` → Other；两者之间 → Unknown（不压）。
-//! 滞回：上一份是 Other 且相似度仍 < 两档中点，维持 Other。
+//! 判决（相似度 = 与主人声纹的余弦）：≥ `owner_hi` → Target；≤ `others_lo` → Other；两者之间 → Unknown（不压）。
+//! 滞回：上一份「有人声」的判决是 Other 且相似度仍 < 两档中点，维持 Other（中间的 NoSpeech 不打断）。
+//! 电平（喂注册器的近讲线索、发给门控的主人电平）在**原声**上量，与门控量起始电平同一口径。
 
 use std::time::{Duration, Instant};
 
-use crate::embed::{BoxError, cosine};
-use crate::enroll::{EnrollEvent, Enroller};
+use crate::enroll::{EnrollOutcome, Enroller};
+use crate::vecmath::{BoxError, all_finite, cosine};
 use crate::types::{Confidence, SampleClock, SpeakerClass, SpeakerVerdict};
 use crate::vad::VAD_FRAME;
 
@@ -39,8 +40,10 @@ pub struct JudgeParams {
     pub consist_sim: f32,
     pub owner_hi: f32,
     pub others_lo: f32,
-    /// VAD 帧算「有声」的概率门限
+    /// VAD 帧算「有声」的概率门限（硬门限；实时级用 0.5/0.35 滞回，口径不同：这里只为数「窗里多少帧有声」）
     pub vad_thr: f32,
+    /// 一个模型样本对应几个时钟单位（时钟 = vdn-types 的 SampleClock，IO 采样率；离线 16 kHz 时为 1，48 kHz IO 时为 3）
+    pub clock_per_sample: u64,
 }
 
 impl Default for JudgeParams {
@@ -55,6 +58,7 @@ impl Default for JudgeParams {
             owner_hi: 0.45,
             others_lo: 0.25,
             vad_thr: 0.5,
+            clock_per_sample: 1,
         }
     }
 }
@@ -69,7 +73,7 @@ pub struct JudgeLog {
     pub prev_sim: f32,
     /// 这个窗被当作「清楚的单人片段」喂给了注册器
     pub enrolled: bool,
-    pub event: EnrollEvent,
+    pub event: EnrollOutcome,
     pub class: SpeakerClass,
     pub compute: Duration,
 }
@@ -86,7 +90,14 @@ pub struct Judge<E: EmbedSource> {
     vad_pos: usize,
     vad_filled: usize,
     window: Vec<f32>,
+    /// 判电平用的原声（与门控量起始电平的信号相同，自审 P1-2）
+    lvl_ring: Vec<f32>,
+    lvl_window: Vec<f32>,
     pos: u64,
+    /// 最近一次送进来的音频块末尾对应的时钟（由调用方给，不自己数——实时版环满会丢块）
+    clock_end: u64,
+    /// 上一份「有人声」的判决类别（滞回只看有人声的判决，NoSpeech 不打断）
+    last_speech_class: SpeakerClass,
     next_tick: u64,
     prev_emb: Option<Vec<f32>>,
     last: SpeakerVerdict,
@@ -107,10 +118,14 @@ impl<E: EmbedSource> Judge<E> {
             vad_pos: 0,
             vad_filled: 0,
             window: vec![0.0; wn],
+            lvl_ring: vec![0.0; wn],
+            lvl_window: vec![0.0; wn],
             pos: 0,
+            clock_end: 0,
+            last_speech_class: SpeakerClass::Unknown,
             next_tick: (p.hop_s * p.sr as f32) as u64,
             prev_emb: None,
-            last: SpeakerVerdict::UNKNOWN,
+            last: SpeakerVerdict::default(),
             personalize: true,
             logs: Vec::new(),
             p,
@@ -127,15 +142,17 @@ impl<E: EmbedSource> Judge<E> {
         self.last
     }
 
-    /// 送一段音频（降噪输出）。
-    pub fn push_audio(&mut self, x: &[f32]) {
+    /// 送一段音频：`wet` = 降噪输出（算声纹），`dry` = 同一段原声（量电平），`start` = 这段首样本的时钟。
+    pub fn push_audio(&mut self, wet: &[f32], dry: &[f32], start: SampleClock) {
         let n = self.ring.len();
-        for &s in x {
+        for (i, &s) in wet.iter().enumerate() {
             self.ring[self.ring_pos] = s;
+            self.lvl_ring[self.ring_pos] = dry.get(i).copied().unwrap_or(0.0);
             self.ring_pos = (self.ring_pos + 1) % n;
         }
-        self.filled = (self.filled + x.len()).min(n);
-        self.pos += x.len() as u64;
+        self.filled = (self.filled + wet.len()).min(n);
+        self.pos += wet.len() as u64;
+        self.clock_end = start.0 + wet.len() as u64 * self.p.clock_per_sample;
     }
 
     /// 送一个 VAD 帧概率（每 16 ms 一个）。
@@ -159,8 +176,11 @@ impl<E: EmbedSource> Judge<E> {
         let n = self.ring.len();
         for i in 0..n {
             self.window[i] = self.ring[(self.ring_pos + i) % n];
+            self.lvl_window[i] = self.lvl_ring[(self.ring_pos + i) % n];
         }
-        let (start, end) = (self.pos - n as u64, self.pos);
+        // 判决窗的时钟：由调用方给的时钟推回窗长
+        let end = self.clock_end;
+        let start = end.saturating_sub(n as u64 * self.p.clock_per_sample);
         // 有声帧比例、有声帧电平
         let vn = self.vad_filled;
         let voiced: Vec<bool> = (0..vn)
@@ -176,7 +196,7 @@ impl<E: EmbedSource> Judge<E> {
         for (i, &v) in voiced.iter().enumerate() {
             if v {
                 let a = off + i * VAD_FRAME;
-                let fr = &self.window[a..(a + VAD_FRAME).min(n)];
+                let fr = &self.lvl_window[a..(a + VAD_FRAME).min(n)];
                 e += fr.iter().map(|&x| (x as f64) * (x as f64)).sum::<f64>();
                 cnt += fr.len();
             }
@@ -187,13 +207,13 @@ impl<E: EmbedSource> Judge<E> {
             f32::NEG_INFINITY
         };
         let mut log = JudgeLog {
-            window_end: end,
+            window_end: self.pos,
             voiced_frac: vf,
             level_db,
             owner_sim: f32::NAN,
             prev_sim: f32::NAN,
             enrolled: false,
-            event: EnrollEvent::None,
+            event: EnrollOutcome::None,
             class: SpeakerClass::NoSpeech,
             compute: Duration::ZERO,
         };
@@ -202,6 +222,10 @@ impl<E: EmbedSource> Judge<E> {
             SpeakerClass::NoSpeech
         } else {
             match self.emb.embed(&self.window) {
+                Ok(v) if !all_finite(&v) => {
+                    self.prev_emb = None;
+                    SpeakerClass::Unknown
+                }
                 Err(_) => {
                     self.prev_emb = None;
                     SpeakerClass::Unknown
@@ -214,10 +238,13 @@ impl<E: EmbedSource> Judge<E> {
                         .unwrap_or(f32::NAN);
                     log.prev_sim = ps;
                     if vf >= self.p.enroll_voiced_frac && ps >= self.p.consist_sim {
-                        let dur = self.p.hop_s;
+                        // 新增人声时长 = hop × 最近一个 hop 里的有声帧比例（不是固定 hop，自审 P2-6）
+                        let k = ((self.p.hop_s * self.p.sr as f32) as usize / VAD_FRAME).clamp(1, voiced.len().max(1));
+                        let recent = &voiced[voiced.len().saturating_sub(k)..];
+                        let dur = self.p.hop_s * recent.iter().filter(|&&v| v).count() as f32 / k as f32;
                         log.event =
                             self.enroller
-                                .observe(&v, end as f64 / self.p.sr as f64, dur, level_db);
+                                .observe(&v, self.pos as f64 / self.p.sr as f64, dur, level_db);
                         log.enrolled = true;
                     }
                     let c = match self.enroller.owner() {
@@ -229,7 +256,7 @@ impl<E: EmbedSource> Judge<E> {
                             if s >= self.p.owner_hi {
                                 SpeakerClass::Target
                             } else if s <= self.p.others_lo
-                                || (self.last.class == SpeakerClass::Other && s < mid)
+                                || (self.last_speech_class == SpeakerClass::Other && s < mid)
                             {
                                 SpeakerClass::Other
                             } else {
@@ -247,6 +274,9 @@ impl<E: EmbedSource> Judge<E> {
         } else {
             class
         };
+        if class != SpeakerClass::NoSpeech {
+            self.last_speech_class = class;
+        }
         log.class = class;
         log.compute = t0.elapsed();
         self.last = SpeakerVerdict {

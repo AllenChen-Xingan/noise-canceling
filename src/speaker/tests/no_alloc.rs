@@ -35,7 +35,7 @@ fn realtime_stages_do_not_allocate() {
                     window_start: SampleClock(pos),
                     window_end: SampleClock(pos + k),
                     owner_level_db: Some(-25.0),
-                    ..SpeakerVerdict::UNKNOWN
+                    ..SpeakerVerdict::default()
                 };
                 let ctx = FrameCtx {
                     now: SampleClock(pos),

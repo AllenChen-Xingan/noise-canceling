@@ -89,7 +89,7 @@ fn run_stage<S: Stage>(
     for (k, (w, d)) in out.chunks_mut(HOP).zip(dry.chunks(HOP)).enumerate() {
         let ctx = FrameCtx {
             now: SampleClock((k * HOP) as u64),
-            speaker: verdicts.get(k).copied().unwrap_or(SpeakerVerdict::UNKNOWN),
+            speaker: verdicts.get(k).copied().unwrap_or(SpeakerVerdict::default()),
             voice_prob: None,
         };
         st.process(w, d, ctx);
@@ -206,7 +206,7 @@ fn cmd_run(args: &[String]) -> R<()> {
     }
     let mut vad = vdn_speaker::vad::Vad::new();
     let mut vad_probs = Vec::with_capacity(n_hops);
-    let mut verdicts = vec![SpeakerVerdict::UNKNOWN; n_hops + 1];
+    let mut verdicts = vec![SpeakerVerdict::default(); n_hops + 1];
     let mut events: Vec<serde_json::Value> = Vec::new();
     let (judge_logs, clusters, owner_idx, emb_dim);
     if let Some(old) = &replay {
@@ -216,7 +216,7 @@ fn cmd_run(args: &[String]) -> R<()> {
         let evs = old["verdict_events"]
             .as_array()
             .ok_or("重放日志里没有 verdict_events")?;
-        let mut cur = SpeakerVerdict::UNKNOWN;
+        let mut cur = SpeakerVerdict::default();
         let mut it = evs.iter().peekable();
         for (k, slot) in verdicts.iter_mut().enumerate().take(n_hops) {
             while let Some(e) = it.peek() {
@@ -247,7 +247,7 @@ fn cmd_run(args: &[String]) -> R<()> {
             enroller.preload(&v);
         }
         let mut judge = Judge::new(jp, emb, enroller);
-        let mut cur = SpeakerVerdict::UNKNOWN;
+        let mut cur = SpeakerVerdict::default();
         let mut pending: std::collections::VecDeque<(usize, SpeakerVerdict)> = Default::default();
         for k in 0..n_hops {
             // 本 hop 生效的判决
