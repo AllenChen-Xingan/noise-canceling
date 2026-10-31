@@ -175,9 +175,9 @@
           ],
           "pass": true,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R01-quiet-room-no-artifacts-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R01-quiet-room-no-artifacts-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R01-quiet-room-no-artifacts-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R01-quiet-room-no-artifacts-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R01-quiet-room-no-artifacts-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R01-quiet-room-no-artifacts-t0-clean.wav"
           ],
           "seed": 2513659872476338495,
           "trial": 0
@@ -299,9 +299,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R01-quiet-room-no-artifacts-t1-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R01-quiet-room-no-artifacts-t1-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R01-quiet-room-no-artifacts-t1-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R01-quiet-room-no-artifacts-t1-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R01-quiet-room-no-artifacts-t1-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R01-quiet-room-no-artifacts-t1-clean.wav"
           ],
           "seed": 9276248227639041280,
           "trial": 1
@@ -1271,9 +1271,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R04-pause-noise-suppressed-pink-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R04-pause-noise-suppressed-pink-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R04-pause-noise-suppressed-pink-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R04-pause-noise-suppressed-pink-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R04-pause-noise-suppressed-pink-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R04-pause-noise-suppressed-pink-t0-clean.wav"
           ],
           "seed": 17285624999950588239,
           "trial": 0
@@ -1715,9 +1715,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R05-pause-noise-suppressed-white-t1-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R05-pause-noise-suppressed-white-t1-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R05-pause-noise-suppressed-white-t1-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R05-pause-noise-suppressed-white-t1-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R05-pause-noise-suppressed-white-t1-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R05-pause-noise-suppressed-white-t1-clean.wav"
           ],
           "seed": 3913757200860020018,
           "trial": 1
@@ -1909,9 +1909,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R06-fan-hum-suppressed-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R06-fan-hum-suppressed-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R06-fan-hum-suppressed-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R06-fan-hum-suppressed-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R06-fan-hum-suppressed-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R06-fan-hum-suppressed-t0-clean.wav"
           ],
           "seed": 13117856209644770951,
           "trial": 0
@@ -2799,9 +2799,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R09-background-music-timbre-t1-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R09-background-music-timbre-t1-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R09-background-music-timbre-t1-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R09-background-music-timbre-t1-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R09-background-music-timbre-t1-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R09-background-music-timbre-t1-clean.wav"
           ],
           "seed": 116555497097274850,
           "trial": 1
@@ -3031,9 +3031,9 @@
           ],
           "pass": true,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R11-silence-after-speech-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R11-silence-after-speech-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R11-silence-after-speech-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R11-silence-after-speech-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R11-silence-after-speech-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R11-silence-after-speech-t0-clean.wav"
           ],
           "seed": 5743843384466594769,
           "trial": 0
@@ -4074,9 +4074,9 @@
           ],
           "pass": true,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R16-safety-off-parity-latency-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R16-safety-off-parity-latency-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R16-safety-off-parity-latency-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R16-safety-off-parity-latency-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R16-safety-off-parity-latency-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/R16-safety-off-parity-latency-t0-clean.wav"
           ],
           "seed": 17807201023662401438,
           "trial": 0
@@ -4185,9 +4185,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C01-neighbor-alternating-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C01-neighbor-alternating-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C01-neighbor-alternating-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C01-neighbor-alternating-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C01-neighbor-alternating-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C01-neighbor-alternating-t0-clean.wav"
           ],
           "seed": 12668229544160596876,
           "trial": 0
@@ -4480,9 +4480,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C02-owner-and-neighbor-overlap-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C02-owner-and-neighbor-overlap-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C02-owner-and-neighbor-overlap-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C02-owner-and-neighbor-overlap-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C02-owner-and-neighbor-overlap-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C02-owner-and-neighbor-overlap-t0-clean.wav"
           ],
           "seed": 1113882230613851791,
           "trial": 0
@@ -4752,9 +4752,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C03-neighbor-talks-first-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C03-neighbor-talks-first-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C03-neighbor-talks-first-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C03-neighbor-talks-first-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C03-neighbor-talks-first-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C03-neighbor-talks-first-t0-clean.wav"
           ],
           "seed": 2323199442226687927,
           "trial": 0
@@ -5004,9 +5004,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C04-builtin-mic-crowd-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C04-builtin-mic-crowd-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C04-builtin-mic-crowd-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C04-builtin-mic-crowd-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C04-builtin-mic-crowd-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C04-builtin-mic-crowd-t0-clean.wav"
           ],
           "seed": 14362213726402338792,
           "trial": 0
@@ -5285,9 +5285,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C05-crowd-minus5-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C05-crowd-minus5-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C05-crowd-minus5-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C05-crowd-minus5-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C05-crowd-minus5-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C05-crowd-minus5-t0-clean.wav"
           ],
           "seed": 18309012515782959309,
           "trial": 0
@@ -5498,9 +5498,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C06-neighbor-louder-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C06-neighbor-louder-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C06-neighbor-louder-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C06-neighbor-louder-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C06-neighbor-louder-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C06-neighbor-louder-t0-clean.wav"
           ],
           "seed": 3745191359221241161,
           "trial": 0
@@ -5687,9 +5687,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C07-canteen-mix-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C07-canteen-mix-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C07-canteen-mix-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C07-canteen-mix-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C07-canteen-mix-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C07-canteen-mix-t0-clean.wav"
           ],
           "seed": 11086616511587080913,
           "trial": 0
@@ -5918,9 +5918,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C08-white-minus5-no-eating-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C08-white-minus5-no-eating-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C08-white-minus5-no-eating-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C08-white-minus5-no-eating-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C08-white-minus5-no-eating-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C08-white-minus5-no-eating-t0-clean.wav"
           ],
           "seed": 1073500265182567545,
           "trial": 0
@@ -6149,9 +6149,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C09-aggressive-20db-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C09-aggressive-20db-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C09-aggressive-20db-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C09-aggressive-20db-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C09-aggressive-20db-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C09-aggressive-20db-t0-clean.wav"
           ],
           "seed": 15094757806940600985,
           "trial": 0
@@ -6358,9 +6358,9 @@
           ],
           "pass": true,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C10-quiet-room-gate-onsets-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C10-quiet-room-gate-onsets-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C10-quiet-room-gate-onsets-t0-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C10-quiet-room-gate-onsets-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C10-quiet-room-gate-onsets-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C10-quiet-room-gate-onsets-t0-clean.wav"
           ],
           "seed": 12766758857625754063,
           "trial": 0
@@ -6416,9 +6416,9 @@
           ],
           "pass": false,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C10-quiet-room-gate-onsets-t1-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C10-quiet-room-gate-onsets-t1-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C10-quiet-room-gate-onsets-t1-clean.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C10-quiet-room-gate-onsets-t1-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C10-quiet-room-gate-onsets-t1-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/C10-quiet-room-gate-onsets-t1-clean.wav"
           ],
           "seed": 1402072221098466800,
           "trial": 1
@@ -7198,10 +7198,10 @@
           ],
           "pass": true,
           "samples": [
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/P05-mute-all-must-fail-t0-mix.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/P05-mute-all-must-fail-t0-out.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/P05-mute-all-must-fail-t0-clean.wav",
-            "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalimpl/_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/P05-mute-all-must-fail-t0-probe.wav"
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/P05-mute-all-must-fail-t0-mix.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/P05-mute-all-must-fail-t0-out.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/P05-mute-all-must-fail-t0-clean.wav",
+            "_tmp/exp007/20261030-235700-e30824c-ci/audio/gtcrn/P05-mute-all-must-fail-t0-probe.wav"
           ],
           "seed": 17285624999950588239,
           "trial": 0
