@@ -223,7 +223,7 @@ def check_repro(build, docs, root, out_root, docs_root):
     subprocess.run(cmd, check=True, capture_output=True)
     a = {(r["gen"], r["cell"], r["clip"], str(r["level"])): r["files"] for r in load_rows(docs) if r["cell"] == "S-SNR"}
     b = {(r["gen"], r["cell"], r["clip"], str(r["level"])): r["files"] for r in load_rows(tmp / "docs" / build)}
-    same = sum(all(a[k][t]["sha256"] == b[k][t]["sha256"] for t in a[k]) for k in a if k in b)
+    same = sum(all(a[k][t]["pcm_sha256"] == b[k][t]["pcm_sha256"] for t in a[k]) for k in a if k in b)
     return {"compared": len(a), "identical": same, "pass": len(a) > 0 and same == len(a)}
 
 
@@ -245,8 +245,8 @@ def main():
            "S6_align_noise": align(a.n_align, int(4.0 * SR))}
     out = Path(a.results)
     out.mkdir(parents=True, exist_ok=True)
-    (out / f"{a.build}-checks.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1))
-    print(json.dumps(rep, ensure_ascii=False, indent=1)[:4000])
+    (out / f"{a.build}-checks.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1, default=lambda o: o.item() if hasattr(o, "item") else str(o)))
+    print(json.dumps(rep, ensure_ascii=False, indent=1, default=lambda o: o.item() if hasattr(o, "item") else str(o))[:4000])
 
 
 if __name__ == "__main__":

@@ -179,7 +179,11 @@ def make_clip(gen, cond, mat_seed, n):
     rng_n = np.random.default_rng(mat_seed + 13)
     noise, ndesc = noise_tab[cond["noise"]](rng_n, n, cond["room"])
     noise = sim.fit(np.asarray(noise, np.float64), n)
-    # 电平：主讲人主动电平 → level_dbfs；SIR、SNR 都相对主讲人主动电平
+    # 定义点（S2）：电平、SIR、SNR 一律在**设备链之后**（= 麦克风输出、模型输入）量。先过线性设备链，再定增益。
+    # 先定后过会让实测 SNR 偏离名义值（smoke：最多 6.3 dB，设备链的高 / 低通吃掉的噪声能量比语音多）
+    owner = device_chain(owner, cond["device"])
+    interf = device_chain(interf, cond["device"])
+    noise = device_chain(noise, cond["device"])
     g = 10 ** (cond["level_dbfs"] / 20) / active_level(owner)
     owner *= g
     lo = active_level(owner)
@@ -189,7 +193,7 @@ def make_clip(gen, cond, mat_seed, n):
     else:
         interf *= lo / active_level(interf) * 10 ** (-cond["sir_db"] / 20)
     noise *= lo / sim.rms(noise) * 10 ** (-cond["snr_db"] / 20)
-    tracks = {k: device_chain(v, cond["device"]) for k, v in (("owner", owner), ("interf", interf), ("noise", noise))}
+    tracks = {"owner": owner, "interf": interf, "noise": noise}
     mix = tracks["owner"] + tracks["interf"] + tracks["noise"]
     peak = float(np.max(np.abs(mix)))
     if peak > 0.99:  # 不削波：整体降，记录（削波另有专门的格）
@@ -239,6 +243,11 @@ def sha256(p):
     return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
 
+def pcm_sha256(x):
+    """内容哈希：对写入的 float32 样本算，不对 wav 文件算——libsndfile 的 float wav 带 PEAK 块（含时间戳），同样的样本两次写出文件哈希不同（smoke 实测）。"""
+    return hashlib.sha256(np.ascontiguousarray(x, dtype="<f4").tobytes()).hexdigest()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--build")
@@ -262,7 +271,7 @@ def main():
         for k, x in (("mix", mix), *tracks.items()):
             p = d / f"{stem}_{k}.wav"
             sf.write(p, x.astype(np.float32), SR, subtype="FLOAT")
-            files[k] = {"path": str(p.relative_to(root)), "sha256": sha256(p)}
+            files[k] = {"path": str(p.relative_to(root)), "pcm_sha256": pcm_sha256(x)}
         rows.append({**{k: j[k] for k in ("cell", "gen", "clip", "mat_seed")}, "level": j["level"], "cond": j["cond"],
                      "files": files, "labels_hop": HOP, "labels": labels, **meta})
     docs = Path(a.docs_root) / build
