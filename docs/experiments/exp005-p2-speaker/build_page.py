@@ -16,6 +16,7 @@
 import hashlib
 import re
 import json
+import os
 import secrets
 import shutil
 import sys
@@ -31,7 +32,8 @@ from _common import vad_mask  # noqa: E402
 from _paths import MAIN  # noqa: E402
 
 BASE = MAIN / "_tmp/20261031-exp005"
-SRC, OUT = BASE / "src", BASE / "out"
+# 每轮输出一个目录，不覆盖上一轮：out = 第一轮（自审前，build 7448 用的），out-r2 = 自审修完后
+SRC, OUT = BASE / "src", BASE / os.environ.get("EXP005_RUN", "out-r2")
 SR = 16000
 EXC = 25.0
 CANDS = ["raw", "personal", "aggressive"]
