@@ -14,6 +14,7 @@
 用法（项目根下）：<主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp005-p2-speaker/build_page.py
 """
 import hashlib
+import re
 import json
 import secrets
 import shutil
@@ -125,8 +126,9 @@ def main():
     leaked = [f.name for f in page.iterdir() if f.name in ("unblind-key.json", "files.json")]
     assert not leaked, f"听测目录里不该有揭盲文件：{leaked}"
     mtxt = (page / "manifest.js").read_text()
-    for word in CANDS + ["trap", "slotmap", "c0"]:
+    for word in CANDS + ["trap", "slotmap"]:
         assert word not in mtxt, f"manifest.js 里出现了 {word!r}"
+    assert not re.search(r"\bc0\d\b", mtxt), "manifest.js 里出现了段号"
     names = [f for it in items for f in it["cands"]]
     assert len(names) == len(set(names)), "manifest.js 里有重复的音频文件名"
     print("build", build, "→", page / "index.html")
