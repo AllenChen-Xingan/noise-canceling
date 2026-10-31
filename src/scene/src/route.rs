@@ -166,5 +166,14 @@ mod tests {
             params_for(fine_id(NoiseClass::Neighbor, Device::BtNarrow)).tone,
             ToneId(13)
         );
+        // FE-M 场景只开 AGC（拿不到频谱）
+        assert_eq!(
+            params_for(fine_id(NoiseClass::Babble, Device::Normal)).tone,
+            ToneId(22)
+        );
+        assert_eq!(
+            params_for(fine_id(NoiseClass::Music, Device::BtNarrow)).tone,
+            ToneId(25)
+        );
     }
 }

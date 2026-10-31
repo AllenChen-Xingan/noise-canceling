@@ -58,7 +58,10 @@ impl PolishParams {
             agc_range_db: 10.0,
         };
         if tone >= 20 {
-            return Self { agc: 1.0, ..Self::OFF };
+            return Self {
+                agc: 1.0,
+                ..Self::OFF
+            };
         }
         let (b, narrow) = if tone > 10 {
             (tone - 10, true)

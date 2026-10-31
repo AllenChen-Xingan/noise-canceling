@@ -279,3 +279,13 @@ fn time_only_path_runs_agc_and_ramps() {
         chain.agc().gain_db()
     );
 }
+
+#[test]
+fn agc_only_presets_leave_spectrum_alone() {
+    // tone ≥ 20 给 FE-M（拿不到频谱）：频谱节点必须全关，只剩 AGC
+    for t in [22u8, 25] {
+        let p = PolishParams::preset(t);
+        assert_eq!((p.smooth, p.demuffle_max_db), (0.0, 0.0));
+        assert!(p.floor_db <= -99.0 && p.comfort_db <= -99.0 && p.agc >= 0.5);
+    }
+}
