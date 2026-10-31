@@ -1,0 +1,8 @@
+disallowed-methods = [
+  { path = "std::io::stdout", reason = "probe-stdout" },
+  { path = "std::vec::Vec::push", reason = "probe-std-path" },
+]
+disallowed-macros = [
+  { path = "std::println", reason = "probe-println" },
+  { path = "alloc::vec", reason = "probe-vec-macro" },
+]

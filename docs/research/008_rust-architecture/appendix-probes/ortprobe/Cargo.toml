@@ -1,0 +1,9 @@
+[package]
+name = "ortprobe"
+version = "0.1.0"
+edition = "2021"
+[dependencies]
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "download-binaries", "copy-dylibs", "tls-native"] }
+rtsan-standalone = "0.3"
+[profile.release]
+debug = 1
