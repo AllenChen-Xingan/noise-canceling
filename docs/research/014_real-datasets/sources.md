@@ -1,86 +1,27 @@
-# 两类来源 · 选哪几个真实录音公开数据集做真实回归与 sim-to-real 校准
+# 来源登记 · 014 真实录音公开数据集
 
-> 2026-10-30。按**谁积累的**分尽：自己积累的、别人积累的。
-> **两类进来都问同一句：它今天还算数吗？**
->
-> ⚠️ 「都没有所以自己跑」不在这里——**那不是来源，是做法**，见 `gap.md` 的「它们没做的」。
->
-> ⚠️ 下面的市场与站点**会变**，用前核一眼；名字对不上就搜同类。**方法不变，名单会老。**
+> 2026-10-31。**两类来源，同一个问题：它今天还算数吗？**
 
----
+## 一、自有积累
 
-## 一、自有积累 —— 可照搬，先确认权利与时效
-
-自家旧项目、老代码、团队规约、你自己写过的东西。
-
-### 怎么查
-
-**先跑一把**：`bash skills/aias-meta-research/scripts/scan-own.sh "<关键词>"`
-——一次扫完本机项目、提交历史、过往对话记录，按最后改动时间排。
-
-| 去哪 | 怎么翻 |
-|---|---|
-| **过去的项目目录** | 直接看。做过类似的事没有？哪一版跑通过？ |
-| **自己的提交历史** | `git log --oneline --all` · `git log --author=<你>` ——**代码记做成什么样，提交记当时为什么这么定** |
-| **过往对话记录** | 记忆和现实对不上时，去翻当时的讨论——**文档说 A、代码做了 B、你记得是 C，谁都别直接信** |
-| **团队的仓库与规约** | 别人踩过的坑，规约里往往留着痕迹 |
-| **自己写过的文档** | 笔记、总结、发过的文章 |
-
-### 登记
-
-| 是什么 | 在哪 | 还算数吗 | 判据 |
-|---|---|---|---|
-| | `resources/…` | 算 / 不算了 | 例：生产环境跑通过 ／ 规约可能过时 |
-
-⚠️ **不自动可信**。同是自家的东西，判决可能相反：
-「这个规约可能过时了，可以参考，但不能完全从它出发」vs「这个我反复测试过、生产跑通了，尽量复用」。
-
-⚠️ **你三个月前写的东西，和陌生人写的东西，享受同一套审查。区别只在于——你有权照搬它。**
-
----
-
-## 二、他人积累 —— 只读借鉴，先查协议
-
-### 查四类，用同一套方法
-
-**换对象，方法不变**——都是同一个决策点、同一套派活四件事（见 `assign.md`）。
-
-| 查什么 | 查什么问题 | 去哪查 |
+| 来源 | 用到什么 | 还算数吗 |
 |---|---|---|
-| **技能生态** | 这件事有没有人做成过技能？ | 各家插件市场与技能仓库；搜 `awesome-<你的领域>` 一类的清单仓 |
-| **命令行工具** | 有哪些硬工具，用哪个？ | 三大分发市场：**Homebrew**（Mac）· **npm**（JS，四百万包）· **PyPI**（Python，八十多万项目）。Windows 看 **Scoop** / **winget** |
-| **模型** | 这个活该用哪个模型？ | 公开评测榜单与各家技术报告。**要多模态、要长上下文，就得专门看那一栏** |
-| **别人的项目** | 源码 · 提交历史 · 放弃过什么 | 代码托管平台（GitHub / GitLab / 国内平台）。**浅克隆到参考区再读**，别在网页上翻 |
+| `docs/research/013_rl-environment/decision.md` §1.1、§1.3、§4.2 | 真实录音只做回归、永不进训练；sim-to-real 四步；辅助小模型要真实验收集 | 算数（2026-10-31 合并） |
+| `docs/research/012_eval-standards/decision.md`、`verifiers.md` §3.4 | V-EAT-ASR 要转写；模拟真值指标到真实要量落差；感知类全 L0 | 算数；§3.4 当时尚未进 main（见 013 现状页） |
+| `docs/plan/001_decisions-20261029-b1.md` D19 / D22 / D26 / D42 / D47 | 隐私、存放、许可、攻坚场景 | 算数 |
+| 013 `sources.md` 第三节 | 干净语料（LibriSpeech、AISHELL-1、MLS）与噪声（DEMAND、MUSAN）的许可 | 算数；本线不重复 |
 
-**取材**：`bash skills/aias-meta-research/scripts/clone.sh <url>`（要挖提交历史加 `-d 200`）
+## 二、他人积累
 
-### 查模型这一栏，多问三句
+全部是网页 / 论文 / LICENSE / 数据卡，**没有克隆仓库、没有下载数据本体**。逐条出处在各卡末尾，证据等级【官方】【论文】【二手】【推算】。
 
-榜单也是他人积累，**同样要判时效、判来路**：
+| 族 | 卡片 | 主要一手来源 | 还算数吗 |
+|---|---|---|---|
+| 会议 | ami · icsi · alimeeting · aishell-4 · notsofar-1 · libricss | groups.inf.ed.ac.uk/ami、openslr.org/119 /111、github.com/microsoft/NOTSOFAR1-Challenge、arXiv 2401.08887 / 2110.07393 / 2104.03603 | 算数；NOTSOFAR Dev-set-2 已下架 |
+| CHiME 与可穿戴 | chime5-chime6 · chime7-chime8-dasr · chime9-echi · dipco · mixer6 · misp2021 · misp-meeting · easycom · mmcsg · mcorec | chimechallenge.org、openslr.org/150 LICENSE.txt、HF CHiME9-ECHI 数据卡、zenodo 8122551、github.com/facebookresearch/EasyComDataset | 算数；CHiME-5/6 许可 2024-01-01 改为 CC BY-SA 4.0；ECHI eval 未发放；ECHI-2 计划 2027-02 公开 |
+| 降噪真实测试集 | dns1–dns5 · dns-challenge-blind-real · ms-aec-challenge-real · urgent2024/2025/2026 · real-m · chime7-udase · clarity-cec3-task2 | github.com/microsoft/DNS-Challenge（各届分支 README）、arXiv 2005.13981 / 2009.06122 / 2101.01902 / 2202.13288 / 2303.11510 / 2110.10812 | 算数；DNS 盲测转写未公开 |
+| 咖啡馆 / 设备麦搜罗 | chime3-chime4-real · aspire-stirling · arte · common-voice · aishell-5 · libri-adhoc40 · wham-noise | chimechallenge.org/challenges/chime4、catalog.ldc.upenn.edu/LDC2017S24、zenodo 4585619 / 3386569 | 算数；Common Voice 托管已迁 mozilladatacollective.com，条款页本轮没能复核 |
+| 设备链与 RIR | dr-vctk · ace-challenge-corpus · daps · voices-corpus · but-reverbdb · aachen-air · mirage · mit-ir-survey · voicehome-2 · dirha-english-wsj · dechorate · ears-reverb · openair | datashare.ed.ac.uk/handle/10283/3038 README.txt、zenodo 6257551、Imperial ACE 项目页 | 算数；ACE 两处官方许可冲突；OpenAIR 证书过期、AIR 官方页拒连 |
+| 主线补核 | realman · nisqa-livetalk | github.com/Audio-WestlakeU/RealMAN、arXiv 2406.19959、NISQA wiki | 算数 |
 
-- **谁做的榜**？做榜的人和被测的模型有没有利害关系？
-- **什么时候的**？半年前的榜单在这个行当里基本等于过期。
-- **测的是不是你要的那件事**？综合分高，不代表你这一类任务上强。
-
-**最后一句最要紧**：能自己拿三五个真实任务试一遍，胜过读十份榜单。
-
-### 登记
-
-| 是什么 | 在哪 | 协议 | 角色 | 读多深 | 还活着吗 |
-|---|---|---|---|---|---|
-| | `resources/…` | MIT / Apache / GPL… | 要比的 / 要学的 / 零件 | 逐条核查 / 只读架构 / 一两行 | 最近提交时间 |
-
-⚠️ **读懂 → 自己写，绝不复制粘贴。** GPL / AGPL 只参考不链接。
-⚠️ **协议不只回答「能不能用」，还决定「能读到哪一步」。**
-
----
-
-## 两类都不算数时
-
-那不是失败，那是**下一步的入口**：确认了没有，才该去跑实验。
-接着填 `gap.md` 的「它们没做的」——**「压根没有」是查完之后的结果，不是时间判断。**
-
-## 最后
-
-**读，是复用别人的；跑，是长出你自己的。** 这一份只管前半——材料从哪来；
-后半在 `gap.md` 与 `decision.md`。
+**怀疑派提到、本轮没有建卡的**：MC-WSJ-AV / REVERB 真实部分（LDC2014S03，付费）· ConferencingSpeech 2021 · Mixer 6 CHiME-8 转写版（LDC2025S07）· Ego4D 对话子集 · MCAS（Aria 设备响应）· TAU / DCASE 场景录音 · Bern Cocktail Party · Libri-Adapt（噪声人工叠加，不满足命门 1）· OpenSLR SLR28。判断：都不改变首选组合（要么付费 / 签协议、要么不是嘈杂多人或设备麦），留作下次补卡。
