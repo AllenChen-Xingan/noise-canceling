@@ -67,6 +67,11 @@ pub struct SceneName {
 
 impl SceneName {
     pub const CAP: usize = 32;
+    /// 空名（只用作定长表里未用槽位的占位）。
+    pub const EMPTY: SceneName = SceneName {
+        len: 0,
+        buf: [0; SceneName::CAP],
+    };
 
     /// 超长、含空白或 `#[]=` 时返回 `None`（这些字符会破坏文本格式）。
     pub fn new(s: &str) -> Option<Self> {

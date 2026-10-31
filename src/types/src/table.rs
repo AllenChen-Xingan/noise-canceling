@@ -61,18 +61,10 @@ impl From<TextError> for TableError {
 
 const EMPTY: SceneEntry = SceneEntry {
     id: FineSceneId::UNKNOWN,
-    name: match SceneName::new_const("-") {
-        Some(n) => n,
-        None => unreachable_name(),
-    },
+    name: SceneName::EMPTY,
     user: UserScene::Quiet,
     params: ParamSet::DEFAULT,
 };
-
-const fn unreachable_name() -> SceneName {
-    // 只在常量求值期走到；"-" 合法，不会走到这里
-    SceneName::EMPTY
-}
 
 /// 场景参数表。
 #[derive(Clone, Copy, Debug, PartialEq)]

@@ -125,7 +125,12 @@ pub struct ParamSet {
 
 impl Default for ParamSet {
     fn default() -> Self {
-        Self {
+        Self::DEFAULT
+    }
+}
+
+impl ParamSet {
+    pub const DEFAULT: ParamSet = ParamSet {
             model: ModelId::Gtcrn,
             tone: ToneId(0),
             strength: 1.0,
@@ -134,11 +139,8 @@ impl Default for ParamSet {
             detect_db: 9.0,
             release_s: 0.3,
             hangover_s: 0.15,
-        }
-    }
-}
+    };
 
-impl ParamSet {
     pub fn get(&self, f: ParamField) -> f32 {
         match f {
             ParamField::Strength => self.strength,
