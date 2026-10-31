@@ -38,6 +38,7 @@
 | `vdn-engine`（`src/engine/`） | 模型接口 `trait Model`、逐帧调度 + 三件保命、故障注入、离线驱动 | AI 写（p1） | 输入：dsp 积木 + 任一 `Model`；被 models、cli 用。不链接 ONNX Runtime |
 | `vdn-models`（`src/models/`） | 模型适配器 GTCRN、FastEnhancer-M（ort 单线程 CPU）、`AnyModel` | AI 写（p1） | 输入：模型权重（仓外）；实现 engine 的 `Model`；被 cli 用 |
 | `vdn-cli`（`src/cli/`，可执行 `vdn`） | 命令行 `denoise` / `bench`，WAV 读写 | AI 写（p1） | 输入：WAV + 模型权重；产出降噪 WAV 与计时 JSON（评测报告的原料） |
+| `vdn-speaker`（`src/speaker/`，可执行 `vdn-speaker`） | 认出你的声音：VAD 快开慢关、不对称门控（实时级，0 延迟）+ fbank、声纹、零设置注册、判断回路（约 0.5 s 一次） | AI 写（p2，2026-10-30） | 输入：降噪输出 + 原声 + 声纹模型（仓外）；产出 `SpeakerVerdict` 与门控后的声音；依赖 dsp（离线命令行另依赖 engine、models）；接口镜像 `vdn-types` |
 
 **建一个，就在这张表里加一行**（是什么 · 谁产生 · 谁是谁的输入）。初拟划分见 `vault/raw/20261029-voice-denoise-design.md` §6（dsp · engine · speaker · io-macos · hal-plugin · control · eval），以 `-research` 结论为准。
 
