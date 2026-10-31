@@ -4,7 +4,7 @@
 //! 用内部定长缓冲重分块：攒满 256 个样本才出一个新概率，其间沿用上一个。**只影响判据的时效（最多晚 16 ms），
 //! 不延迟声音**——声音照常一个 hop 进一个 hop 出。
 //!
-//! 输入先夹到 [-1, 1]：earshot 在 debug 构建里对越界样本 `debug_assert!`（`resources/earshot/src/lib.rs:249`）。
+//! 输入先夹到 [-1, 1]：earshot 在 debug 构建里对越界样本 `debug_assert!`（crates.io 1.2.2 `predict_f32` 里的断言；`resources/earshot` 的 HEAD 已改名 `predict`，本 crate 钉 1.2.2）。
 
 /// earshot 1.2.2 写死的采样率与帧长（`Detector::predict_f32` 文档）
 pub const VAD_SR: u32 = 16_000;
