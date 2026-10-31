@@ -10,7 +10,8 @@
       "origin": "rubric 硬规则 4「比原声只好不坏」· exp003 c08（最容易的一段，人仍给 DPDFNet-2 打了 5 个缺陷标签）",
       "desc": "安静房间（粉噪 SNR 35 dB）里的独白：不许加怪声、不许压人声、不许改音色",
       "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 35 },
-      "graders": [ { "v": "V-NAN" }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-TIMBRE", "max": 6 }, { "v": "V-MUSIC", "max": 2 } ]
+      "graders": [ { "v": "V-NAN" }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-TIMBRE", "max": 6 }, { "v": "V-MUSIC", "max": 2 }, { "v": "V-SIM-GATE", "max": 0.4, "onset_max": 0.5 } ],
+      "note": "V-SIM-GATE 用放宽的护栏线（0.4 / 0.5）：严格线在能力集 C10；这里只防进一步退化（红军自审 P2）"
     },
     {
       "id": "R02-owner-monologue-not-gated",
@@ -26,7 +27,7 @@
       "origin": "012 V-ONSET 已知失效「VAD 门限对低电平说话人失准」· engine 绝对门限 −70 dBFS",
       "desc": "轻声说话的人（−38 dBov）+ 粉噪 15 dB：门控照样要开",
       "scene": { "owner": { "level_dbov": -38 }, "noise": "pink", "snr_db": 15 },
-      "graders": [ { "v": "V-NAN" }, { "v": "V-ONSET", "max": 3 }, { "v": "V-SPLVL", "min": -3 } ]
+      "graders": [ { "v": "V-NAN" }, { "v": "V-ONSET", "max": 3 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-SIM-GATE", "max": 0.4, "onset_max": 0.5 } ]
     },
     {
       "id": "R04-pause-noise-suppressed-pink",
@@ -137,6 +138,16 @@
       "safety": false,
       "graders": [ { "v": "V-NAN" }, { "v": "V-LAT" } ],
       "trials": 1
+    },
+    {
+      "id": "R17-gate-closes-in-pauses",
+      "set": "regression", "polarity": "suppress",
+      "origin": "exp005 人原话「我怎么觉得这个盲听测试所有的都没降噪呢」· exp007 定位（2026-10-31）：GTCRN 在粉噪 10 dB 的纯噪声停顿里门控约 99% 时间开着，混回 −6 dB 而不是 −12 dB 原声，停顿只压约 5 dB",
+      "desc": "没人说话时门控必须关（停顿才能压到衰减下限）。现在 main 过不了：标「已知失败」留给修复线，修好后去掉 xfail 转正",
+      "xfail": "engine 门控底噪跟踪被模型输出的低谷钉住：src/dsp/src/envelope.rs:91-97（往下立刻跟、往上 6 dB/s、超底噪 9 dB 判有声）+ src/engine/src/engine.rs:355（判据信号是模型输出 wet）",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 10, "pause_s": [1.0, 2.0] },
+      "graders": [ { "v": "V-SIM-QUIET", "max": 0.1 }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 } ],
+      "info": [ { "v": "V-NR", "max": -8 } ]
     },
     {
       "id": "C01-neighbor-alternating",
