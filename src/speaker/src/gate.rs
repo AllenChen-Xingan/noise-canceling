@@ -1,8 +1,10 @@
 //! 不对称门控（003 §2.3、005 decision「门控是不对称的」）：降噪之后乘一个慢变增益 `g ∈ [floor, 1]`。
 //!
 //! - **快开（只看 VAD，不等声纹）**：检测到「新的人声起始」立刻 `g → 1`（时间常数 `attack_s`，几 ms）。起始有两种：
-//!   ① 停顿 ≥ `onset_gap_s` 后 VAD 转有声；② 一直有人声但本 hop 电平比近 300 ms 均值高 `onset_jump_db`
-//!   （主人离麦近，插话时电平跳起来——覆盖「邻座还在说、主人接着开口」）
+//!   ① 停顿 ≥ `onset_gap_s` 后 VAD 转有声；② 一直有人声但短时电平（最近 3 个 hop ≈ 48 ms）比近 1 s 均值高
+//!   `onset_jump_db`（主人离麦近，插话时电平跳起来——覆盖「邻座还在说、主人接着开口」）。
+//!   **已知主人电平时，两种起始都还要短时电平 ≥ 主人电平 − `onset_level_margin_db`**：邻座远场更轻，他每句话之间
+//!   的停顿不该把门重新打开（exp005 第一轮：不加这条时每段 80 s 触发 600–980 次起始，门控根本收不住）
 //! - **慢收（要声纹确认）**：只有连续 `confirm_n` 份判决都是 Other、且判决窗**整个落在最近一次起始之后**
 //!   （`SpeakerVerdict::valid_after`），才按 `release_s` 慢慢收到 `floor`。起始之前算的判决一律不作数——
 //!   这是「你接着邻桌开口，第一个字不被吞」的关键
@@ -41,10 +43,10 @@ impl Default for GateParams {
             attack_s: 0.005,
             reopen_s: 0.05,
             release_s: 0.7,
-            onset_gap_s: 0.2,
-            onset_jump_db: 6.0,
+            onset_gap_s: 0.3,
+            onset_jump_db: 8.0,
             confirm_n: 2,
-            onset_level_margin_db: 10.0,
+            onset_level_margin_db: 3.0,
             vad_on: 0.5,
             vad_off: 0.35,
         }
@@ -62,6 +64,9 @@ pub struct AsymGate {
     g: f32,
     silent_samples: u64,
     slow_db: f32,
+    /// 最近 3 个 hop 的能量（环形）
+    short_e: [f32; 3],
+    short_i: usize,
     last_onset: SampleClock,
     last_verdict_end: SampleClock,
     others_streak: u32,
@@ -81,6 +86,8 @@ impl AsymGate {
             g: 1.0,
             silent_samples: u64::MAX / 2,
             slow_db: -120.0,
+            short_e: [0.0; 3],
+            short_i: 0,
             last_onset: SampleClock(0),
             last_verdict_end: SampleClock(0),
             others_streak: 0,
@@ -114,6 +121,8 @@ impl Stage for AsymGate {
         self.g = 1.0;
         self.silent_samples = u64::MAX / 2;
         self.slow_db = -120.0;
+        self.short_e = [0.0; 3];
+        self.short_i = 0;
         self.last_onset = SampleClock(0);
         self.last_verdict_end = SampleClock(0);
         self.others_streak = 0;
@@ -132,23 +141,23 @@ impl Stage for AsymGate {
         };
         let voiced = self.hyst.update(p);
         let e = wet.iter().map(|v| v * v).sum::<f32>() / n as f32;
-        let e_db = 10.0 * (e + 1e-12).log10();
+        self.short_e[self.short_i] = e;
+        self.short_i = (self.short_i + 1) % self.short_e.len();
+        let st_db = 10.0 * (self.short_e.iter().sum::<f32>() / self.short_e.len() as f32 + 1e-12).log10();
         let gap = (self.p.onset_gap_s * self.p.sr) as u64;
         let loud_enough = match ctx.speaker.owner_level_db {
-            Some(ol) => e_db >= ol - self.p.onset_level_margin_db,
+            Some(ol) => st_db >= ol - self.p.onset_level_margin_db,
             None => true,
         };
         let mut onset = false;
         if voiced {
-            if loud_enough
-                && (self.silent_samples >= gap || e_db > self.slow_db + self.p.onset_jump_db)
-            {
+            if loud_enough && (self.silent_samples >= gap || st_db > self.slow_db + self.p.onset_jump_db) {
                 onset = true;
             }
             self.silent_samples = 0;
-            // 慢均值（约 300 ms），只跟有声 hop
-            let a = one_pole_coef(0.3, self.p.sr / n as f32);
-            self.slow_db += (e_db - self.slow_db) * a;
+            // 背景电平（约 1 s），只跟有声 hop
+            let a = one_pole_coef(1.0, self.p.sr / n as f32);
+            self.slow_db += (st_db - self.slow_db) * a;
         } else {
             self.silent_samples = self.silent_samples.saturating_add(n as u64);
         }
