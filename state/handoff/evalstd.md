@@ -9,3 +9,4 @@
 - 2026-10-30 读交代、common.md、意向书、004 decision、`specs/rubric/denoise.md`、007 sources → 完成
 - 报到 noise-canceling-69 → 成功；大总管回同批会话名（scene 对齐 ES 202 396-1）
 - 建 `docs/research/012_eval-standards/`（编号按交代用 012，research.sh 会编成 010，故手建）
+- Workflow wf_3e12ea68-f47 起（12 代理：6 路调研 × 怀疑派），大总管已批
