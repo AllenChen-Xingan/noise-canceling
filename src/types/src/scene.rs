@@ -10,7 +10,8 @@ use core::fmt;
 
 use crate::frame::{Confidence, SampleClock};
 
-/// 用户层基本场景。类目待 scene 线定稿（005「场景路由」：如安静 · 咖啡馆 · 通勤 · 音乐）；
+/// 用户层基本场景。类目由人定（scene 线提议，写进待人拍板）；`Meeting` = 一屋子人共用一台电脑，
+/// 保留近处所有人声、只压远处噪音，暂时只能手动选。不设 `Other`：判不准时保持当前场景。
 /// 加一个变体 = 改这里 + `ALL` + 名字表，文本格式用名字存，不受顺序影响。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum UserScene {
@@ -19,14 +20,16 @@ pub enum UserScene {
     Cafe,
     Commute,
     Music,
+    Meeting,
 }
 
 impl UserScene {
-    pub const ALL: [UserScene; 4] = [
+    pub const ALL: [UserScene; 5] = [
         UserScene::Quiet,
         UserScene::Cafe,
         UserScene::Commute,
         UserScene::Music,
+        UserScene::Meeting,
     ];
 
     /// 文本格式里的名字（稳定，不随显示文案变）。
@@ -36,6 +39,7 @@ impl UserScene {
             UserScene::Cafe => "cafe",
             UserScene::Commute => "commute",
             UserScene::Music => "music",
+            UserScene::Meeting => "meeting",
         }
     }
 

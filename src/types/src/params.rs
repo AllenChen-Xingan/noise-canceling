@@ -29,14 +29,16 @@ impl ModelId {
     }
 }
 
-/// 音色目标预设编号（修音链的目标曲线；`0` = 不加工）。曲线本身由 scene/polish 线定义。
+/// 修音链预设编号（`0` = 不加工；`1..=N` 是 `vdn-polish` 里的预设：频谱平滑强度、舒适噪声、去发闷上限、AGC 等）。
+/// 路由表只给编号，预设内容归 polish。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct ToneId(pub u8);
 
 /// 连续可调的参数字段。旋钮、覆盖、文本键都按它寻址。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ParamField {
-    /// 降噪强度 0..=1（D36 给用户的旋钮）：输出 = 原声 + strength·(降噪结果 − 原声)，1 = 全量
+    /// 降噪强度 0..=1（D36 给用户的旋钮）：输出 = 原声 + strength·(降噪结果 − 原声)，1 = 全量。
+    /// 只管模型的湿干比，不缩放修音链（修音链走 `tone` 预设）——一个旋钮一个含义，日志与学习才读得懂
     Strength,
     /// 衰减下限（dB，≤ 0）：停顿时背景最多压到这里，即「背景保留」
     FloorDb,

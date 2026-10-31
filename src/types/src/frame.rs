@@ -42,22 +42,63 @@ impl Confidence {
     }
 }
 
-/// 声纹判决（`vdn-speaker` 产出，经 triple_buffer 送进实时线程，规约 §3.4）。
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub enum SpeakerVerdict {
-    /// 还没注册 / 还没判出来：门控不动作
+/// 声纹判决的类别。
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SpeakerClass {
+    /// 还没注册 / 不确定：门控**放开、不压**
     #[default]
     Unknown,
+    /// 窗里人声太少、判不了：门控**保持现状**（停顿里不反复开合）
+    NoSpeech,
     /// 是注册的那个人
-    Target(Confidence),
+    Target,
     /// 是别人
-    Other(Confidence),
+    Other,
+}
+
+/// 声纹判决（`vdn-speaker` 产出，经 triple_buffer 送进实时线程，规约 §3.4）。
+///
+/// 带判决所用声纹窗的起止时刻：门控规则「新人声起始之后算出来的判决才作数」——起始前的 `Other`
+/// 不能拿来压人，否则邻座之后你开口的第一个字会被吞（p2 提议，2026-10-31）。
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SpeakerVerdict {
+    pub class: SpeakerClass,
+    pub confidence: Confidence,
+    /// 判决所用声纹窗的首样本（IO 采样率）
+    pub window_start: SampleClock,
+    /// 判决所用声纹窗的末样本之后（IO 采样率）
+    pub window_end: SampleClock,
+    /// 主人说话电平（dBFS）；`None` = 还没注册。门控用它判「近讲起始」，远场更轻的起始不触发放开
+    pub owner_level_db: Option<f32>,
+}
+
+impl Default for SpeakerVerdict {
+    fn default() -> Self {
+        Self {
+            class: SpeakerClass::Unknown,
+            confidence: Confidence::ZERO,
+            window_start: SampleClock(0),
+            window_end: SampleClock(0),
+            owner_level_db: None,
+        }
+    }
+}
+
+impl SpeakerVerdict {
+    /// 这个判决是否在 `onset`（一段新人声的起始）之后才算出来、可以拿来动作。
+    pub fn valid_after(&self, onset: SampleClock) -> bool {
+        self.window_start >= onset
+    }
 }
 
 /// 每帧上下文。
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct FrameCtx {
+    /// 本 hop 首样本的流时间（IO 采样率；规约 §3.3「时间以 Pipeline 的样本计数为准」）
+    pub now: SampleClock,
     pub speaker: SpeakerVerdict,
+    /// 本帧人声概率 0..=1（VAD，如 earshot，每 16 ms）；`None` = 没跑 VAD。门控与修音链 AGC 读它
+    pub voice_prob: Option<f32>,
 }
 
 /// 为什么整段送原声。
@@ -92,6 +133,18 @@ mod tests {
         assert_eq!(Confidence::new(1.5).get(), 1.0);
         assert_eq!(Confidence::new(-0.1).get(), 0.0);
         assert_eq!(Confidence::new(f32::NAN).get(), 0.0);
+    }
+
+    #[test]
+    fn verdict_only_counts_after_onset() {
+        let v = SpeakerVerdict {
+            class: SpeakerClass::Other,
+            window_start: SampleClock(1000),
+            window_end: SampleClock(2000),
+            ..Default::default()
+        };
+        assert!(v.valid_after(SampleClock(1000)));
+        assert!(!v.valid_after(SampleClock(1500)));
     }
 
     #[test]

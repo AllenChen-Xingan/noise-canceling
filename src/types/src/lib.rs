@@ -36,9 +36,11 @@ pub mod table;
 pub mod text;
 pub mod version;
 
-pub use frame::{BypassReason, Confidence, FrameCtx, SampleClock, SpeakerVerdict, Status};
+pub use frame::{
+    BypassReason, Confidence, FrameCtx, SampleClock, SpeakerClass, SpeakerVerdict, Status,
+};
 pub use latency::{Basis, LATENCY_BUDGET_MS, LatencyItem, LatencyLedger};
-pub use log::{DecisionEvent, FeedbackKind, SessionHeader, SessionRecord, UserAction};
+pub use log::{DecisionEvent, EnrollEvent, FeedbackKind, SessionHeader, SessionRecord, UserAction};
 pub use memory::{Learner, Overrides, SceneKey, UserProfile};
 pub use model::{Model, ModelError};
 pub use params::{ModelId, ParamError, ParamField, ParamSet, ToneId};

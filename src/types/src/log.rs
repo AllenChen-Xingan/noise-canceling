@@ -28,6 +28,17 @@ pub enum FeedbackKind {
     Good,
 }
 
+/// 声纹注册状态变化（`vdn-speaker` 产出）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EnrollEvent {
+    /// 自动注册完成、锁定
+    Locked,
+    /// 重新锁定（声纹更新）
+    Relocked,
+    /// 清空重来
+    Reset,
+}
+
 /// 人的一次操作。
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UserAction {
@@ -74,6 +85,10 @@ pub enum DecisionEvent {
         reason: BypassReason,
         hops: u32,
     },
+    Enroll {
+        at: SampleClock,
+        kind: EnrollEvent,
+    },
     TableChanged {
         at: SampleClock,
         version: TableVersion,
@@ -93,6 +108,7 @@ impl DecisionEvent {
             | DecisionEvent::ParamsApplied { at, .. }
             | DecisionEvent::UserAction { at, .. }
             | DecisionEvent::Bypass { at, .. }
+            | DecisionEvent::Enroll { at, .. }
             | DecisionEvent::TableChanged { at, .. }
             | DecisionEvent::ProfileChanged { at, .. } => at,
         }
@@ -224,6 +240,10 @@ impl DecisionEvent {
                 reason: parse_bypass(next()?).ok_or_else(bad)?,
                 hops: text::num(line, next()?)?,
             },
+            "enroll" => DecisionEvent::Enroll {
+                at,
+                kind: parse_enroll(next()?).ok_or_else(bad)?,
+            },
             "table" => DecisionEvent::TableChanged {
                 at,
                 version: TableVersion(text::num(line, next()?)?),
@@ -261,6 +281,24 @@ fn parse_feedback(s: &str) -> Option<FeedbackKind> {
     ]
     .into_iter()
     .find(|k| feedback_str(*k) == s)
+}
+
+fn enroll_str(k: EnrollEvent) -> &'static str {
+    match k {
+        EnrollEvent::Locked => "locked",
+        EnrollEvent::Relocked => "relocked",
+        EnrollEvent::Reset => "reset",
+    }
+}
+
+fn parse_enroll(s: &str) -> Option<EnrollEvent> {
+    [
+        EnrollEvent::Locked,
+        EnrollEvent::Relocked,
+        EnrollEvent::Reset,
+    ]
+    .into_iter()
+    .find(|k| enroll_str(*k) == s)
 }
 
 fn bypass_str(r: BypassReason) -> &'static str {
@@ -397,6 +435,10 @@ mod tests {
                 at,
                 reason: BypassReason::Deadline,
                 hops: 3,
+            },
+            DecisionEvent::Enroll {
+                at,
+                kind: EnrollEvent::Relocked,
             },
             DecisionEvent::TableChanged {
                 at,
