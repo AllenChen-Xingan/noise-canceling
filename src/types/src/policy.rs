@@ -489,18 +489,17 @@ mod tests {
         let mut pol = TablePolicy::new(Hysteresis::default(), Transition::default());
         let mut log = Vec::new();
         let mut ctl = UserControl::default();
-        let mut step =
-            |pol: &mut TablePolicy, ctl: &UserControl, l: SceneLabel, log: &mut Vec<_>| {
-                let d = pol.decide(&PolicyInput {
-                    label: l,
-                    rate: SR,
-                    table: &t,
-                    profile: &prof,
-                    control: ctl,
-                });
-                d.log_into(&l, log);
-                d
-            };
+        let step = |pol: &mut TablePolicy, ctl: &UserControl, l: SceneLabel, log: &mut Vec<_>| {
+            let d = pol.decide(&PolicyInput {
+                label: l,
+                rate: SR,
+                table: &t,
+                profile: &prof,
+                control: ctl,
+            });
+            d.log_into(&l, log);
+            d
+        };
         for k in 0..=4 {
             step(
                 &mut pol,
