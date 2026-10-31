@@ -253,3 +253,37 @@
 7. **basedrop #10 竞态是否成立**：报告未获维护者回复，本组未做独立验证。
 8. ~~rustc `-Zsanitizer=realtime` 的 macOS aarch64 支持~~：复核已确认支持（见该卡风险栏）。
 9. **audio_thread_priority（mozilla，MPL-2.0，0.38.0 · 2026-09-17）**：已在 resources/，实时线程优先级/workgroup 属于 io-macos 组，本组未写卡。
+
+---
+
+## 复核记录（怀疑派 1）
+
+> 2026-10-30 · 怀疑派复核子代理。只读源码、git log、GitHub / crates.io API；没跑 build / 测试，没克隆新仓。
+
+**查了几条**：【源码】行号约 60 处（rtrb 8 · ringbuf 6 · triple_buffer 6 · basedrop 7 · arc-swap 4 · crossbeam 3 · seqlock 4 · assert_no_alloc 6 · rtsan 9 · no_denormals 4 · nih-plug 5 · atomic_float 4）；crates.io 14 个 crate 的版本、日期、许可证；GitHub 15 个仓的 license / pushed_at / open issues；issue/PR 9 条（ringbuf #65 #66、basedrop #7 #10、arc-swap #210、assert_no_alloc #17、seqlock #10、atomic_float #15、nice-assert-no-alloc PR #1）；rustc PR #147935 与 #148750 / #149250。「零分配 / 无锁」结论回热路径找了反例：rtrb push/pop/chunk、triple_buffer publish/update、basedrop drop/queue_drop/SharedCell、crossbeam ArrayQueue。
+
+**改了哪些**：
+1. **ringbuf #65 / #66 已关闭**（2026-10-30，跟 0.6.0 同一天），原卡写的是 open、「维护者当天确认」——实际是 10-26 报、10-30 回复并关闭。结论「rtrb 首选」不变，理由改为「修复刚出、未经时间检验」。
+2. **basedrop 命门 3**：最后发版 2025-10-29，到今天已超 12 个月，不再算「卡在边界」。`SharedCell::get` 是 4 次原子，不是 2 次。**换装旧对象释放的首选改成 rtrb 回收队列**（voice-strip `engine/src/processor.rs:327-331`、`:350-355` 已落地），basedrop 降为备选。
+3. 一句话总判补注：ringbuf 的 `StaticRb` 是内联数组、本身不含指针（`alias.rs:17`），「都把指针放堆上」说过头了；但它不是 `repr(C)`、没有跨进程保证，结论「自写」不变。补了 triple_buffer 用 `Arc` 的证据（`lib.rs:238`）。
+4. triple_buffer 的 MPL 声明从【推断】升为【源码】（grep 只命中 LICENSE 模板）；补「passively-maintained」徽章（`Cargo.toml:27`）。
+5. rtsan-standalone：crates.io 0.3.0 已过 12 个月（命门 3 有条件满足）；补上默认特性 `prebuilt-libs`（`Cargo.toml:43`），以及「关掉它又不给本地库，就现场 clone LLVM 用 cmake 编」（`build.rs:102-125`）。
+6. rustc `-Zsanitizer=realtime`：已确认 `aarch64-apple-darwin` 支持（官方 target spec 第 23-26 行）。存疑 8 关闭。
+7. 行号更正：ringbuf `Cargo.toml:6` → `:7`；assert_no_alloc `Cargo.toml:5` → `:6`。assert_no_alloc #17 有 1 条外部 +1，不是「0 回复」。
+8. 存疑 1 补：crates.io 上有 `shmring` / `shm-rings` / `ringfire` 几个 2026 年新建的跨进程环 crate，都是单人新仓、下载极少，不建议依赖。
+9. seqlock 那一行补注：只否定 seqlock 这个 crate，不否定 io 卡首推的 voice-strip 分槽序号环。
+
+**核对无误（不改）**：rtrb 缓存对端索引（`lib.rs:490-503`、`778-791`）、唯一分配点 / 释放点（`lib.rs:155-160`、`arc_ring_buffer.rs:47-85`）；triple_buffer 两次 `swap(AcqRel)`；arc-swap 首次 load 时 `Box::leak`；crossbeam `snooze` 会调 `yield_now`；seqlock 用 `parking_lot::Mutex` + `yield_now`；no_denormals / nih-plug 的 FPCR bit 24；assert_no_alloc 默认 `disable_release`；rtsan 的 `RTSAN_LIB_PATH` 与 README 的 `RTSAN_LIBRARY_PATH` 确实不一致（README:74、:79 vs `build.rs:54`）。所有 crates.io 版本与日期都和卡一致。
+
+**哪些查不了**：
+- basedrop #10 的竞态到底成不成立（要形式化推理或 loom，没跑）。
+- arc-swap #210 的根因。
+- RTSan 能不能拦到 macOS 上 Rust `std::sync::Mutex` 的那个底层原语（要实测）。
+- aarch64 FPCR.FZ 是否同时管输入非正规数（要读 ARM ARM 原文，没取）。
+- ORT 的 `Run()` 里有没有 malloc / 锁（按规矩不跑推理）。
+
+**对推荐的异议**：
+1. **跨进程环协议和 io 卡打架**（最重要）：本卡给送音↔推理推荐 head/tail SPSC 环，io 卡推荐 voice-strip 的「绝对时间轴 + 分槽序号」环。head/tail 环在推理进程崩溃时，生产端看到的是「满」，重启要重置索引、得另加代际号；时间轴环天然就是「不更新 = 缺 → 送原声」，正好贴合 D03。**建议跨进程统一用时间轴环**，head/tail SPSC（rtrb）只用在进程内。三缓冲搬进 shm 做状态 / 心跳发布这一条不冲突，可以保留。
+2. 换装旧对象释放：已改首选为 rtrb 回收队列（见上）。
+3. rtsan-standalone 作 dev 依赖仍成立，但它对命门 3 只算有条件满足，而且构建要联网。rustc 原生 RTSan 已支持 aarch64-apple-darwin，可以开一个 nightly-only 的 CI 作业当第二条路，不必「等稳定化再换」。
+4. 「最新值」发布首选 triple_buffer：成立（零依赖风险低、wait-free、MPL 兼容）。只是它自标被动维护，要知道这一点。
