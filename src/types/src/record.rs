@@ -26,6 +26,9 @@ pub enum FeedbackKind {
     TooNoisy,
     /// 「这样好」
     Good,
+    /// AB 对比里选了 A / B
+    PreferA,
+    PreferB,
 }
 
 /// 声纹注册状态变化（`vdn-speaker` 产出）。
@@ -53,13 +56,22 @@ pub enum UserAction {
     Unlock,
     ManualModel(ModelId),
     Feedback(FeedbackKind),
-    /// 换了输入设备（不记设备名：可能含个人信息）
-    DeviceChanged,
+    /// 换了输入设备（不记设备名：可能含个人信息）；`rate` = 新的 IO 采样率，之后的事件时刻按它换算
+    DeviceChanged {
+        rate: u32,
+    },
 }
 
 /// 一条决策事件。
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DecisionEvent {
+    /// 感知的原始输出（每次判断一条，未经滞回）：细场景分类的回放与回归靠它（005 第三节 A）
+    SceneObserved {
+        at: SampleClock,
+        user: UserScene,
+        fine: FineSceneId,
+        confidence: Confidence,
+    },
     /// 策略确认换场景（过了滞回）
     SceneCommitted {
         at: SampleClock,
@@ -104,7 +116,8 @@ pub enum DecisionEvent {
 impl DecisionEvent {
     pub fn at(&self) -> SampleClock {
         match *self {
-            DecisionEvent::SceneCommitted { at, .. }
+            DecisionEvent::SceneObserved { at, .. }
+            | DecisionEvent::SceneCommitted { at, .. }
             | DecisionEvent::ParamsApplied { at, .. }
             | DecisionEvent::UserAction { at, .. }
             | DecisionEvent::Bypass { at, .. }
@@ -118,6 +131,18 @@ impl DecisionEvent {
     pub fn to_line(&self) -> String {
         let mut s = format!("{} ", self.at().0);
         let _ = match *self {
+            DecisionEvent::SceneObserved {
+                user,
+                fine,
+                confidence,
+                ..
+            } => write!(
+                s,
+                "observed {} {} {}",
+                user,
+                fine.0,
+                text::f32_str(confidence.get())
+            ),
             DecisionEvent::SceneCommitted {
                 from,
                 to,
@@ -165,7 +190,7 @@ impl DecisionEvent {
                     UserAction::Unlock => write!(s, "unlock"),
                     UserAction::ManualModel(m) => write!(s, "model {}", m.as_str()),
                     UserAction::Feedback(k) => write!(s, "feedback {}", feedback_str(k)),
-                    UserAction::DeviceChanged => write!(s, "device"),
+                    UserAction::DeviceChanged { rate } => write!(s, "device {rate}"),
                 }
             }
             DecisionEvent::Bypass { reason, hops, .. } => {
@@ -188,6 +213,12 @@ impl DecisionEvent {
         let mut next = || it.next().ok_or_else(bad);
         let at = SampleClock(text::num(line, next()?)?);
         let ev = match next()? {
+            "observed" => DecisionEvent::SceneObserved {
+                at,
+                user: UserScene::parse(next()?).ok_or_else(bad)?,
+                fine: FineSceneId(text::num(line, next()?)?),
+                confidence: Confidence::new(text::num(line, next()?)?),
+            },
             "scene" => DecisionEvent::SceneCommitted {
                 at,
                 from: FineSceneId(text::num(line, next()?)?),
@@ -231,7 +262,9 @@ impl DecisionEvent {
                     "unlock" => UserAction::Unlock,
                     "model" => UserAction::ManualModel(ModelId::parse(next()?).ok_or_else(bad)?),
                     "feedback" => UserAction::Feedback(parse_feedback(next()?).ok_or_else(bad)?),
-                    "device" => UserAction::DeviceChanged,
+                    "device" => UserAction::DeviceChanged {
+                        rate: text::num(line, next()?)?,
+                    },
                     _ => return Err(bad()),
                 };
                 DecisionEvent::UserAction { at, action }
@@ -270,6 +303,8 @@ fn feedback_str(k: FeedbackKind) -> &'static str {
         FeedbackKind::Artifact => "artifact",
         FeedbackKind::TooNoisy => "too_noisy",
         FeedbackKind::Good => "good",
+        FeedbackKind::PreferA => "prefer_a",
+        FeedbackKind::PreferB => "prefer_b",
     }
 }
 
@@ -279,6 +314,8 @@ fn parse_feedback(s: &str) -> Option<FeedbackKind> {
         FeedbackKind::Artifact,
         FeedbackKind::TooNoisy,
         FeedbackKind::Good,
+        FeedbackKind::PreferA,
+        FeedbackKind::PreferB,
     ]
     .into_iter()
     .find(|k| feedback_str(*k) == s)
@@ -419,6 +456,12 @@ mod tests {
             ..ParamSet::default()
         };
         let mut v = vec![
+            DecisionEvent::SceneObserved {
+                at,
+                user: UserScene::Cafe,
+                fine: FineSceneId(7),
+                confidence: Confidence::new(0.5),
+            },
             DecisionEvent::SceneCommitted {
                 at,
                 from: FineSceneId(0),
@@ -465,7 +508,8 @@ mod tests {
             UserAction::Unlock,
             UserAction::ManualModel(ModelId::Gtcrn),
             UserAction::Feedback(FeedbackKind::WordsEaten),
-            UserAction::DeviceChanged,
+            UserAction::DeviceChanged { rate: 44_100 },
+            UserAction::Feedback(FeedbackKind::PreferB),
         ] {
             v.push(DecisionEvent::UserAction { at, action });
         }

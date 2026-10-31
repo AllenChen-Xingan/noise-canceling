@@ -11,7 +11,7 @@ use core::fmt;
 use core::fmt::Write as _;
 
 use crate::params::{ModelId, ParamField, ParamSet, ToneId};
-use crate::scene::{FineSceneId, SceneLabel, SceneName, UserScene};
+use crate::scene::{FineSceneId, SceneName, UserScene};
 use crate::text::{self, Line, TextError};
 use crate::version::{ContentId, TableVersion};
 
@@ -141,14 +141,6 @@ impl SceneTable {
         Ok(())
     }
 
-    /// 某个感知结果该用的表内参数：细场景查得到就用它，否则退回用户层场景的基础参数。
-    pub fn params_for(&self, label: &SceneLabel) -> ParamSet {
-        match self.lookup(label.fine) {
-            Some(e) => e.params,
-            None => *self.user_params(label.user),
-        }
-    }
-
     /// 规范文本（写全每个字段，细场景按编号升序）。
     pub fn to_text(&self) -> String {
         let mut s = String::new();
@@ -176,6 +168,7 @@ impl SceneTable {
     pub fn from_text(src: &str) -> Result<Self, TableError> {
         let mut t = SceneTable::default();
         let mut seen_header = false;
+        let mut seen_fine = false;
         let mut sec = Section::Top;
         let mut pending: Vec<(usize, &str, &str)> = Vec::new();
         let mut fail: Option<TableError> = None;
@@ -201,10 +194,17 @@ impl SceneTable {
                         return Err(text::err(line, "上一小节不合法"));
                     }
                     sec = match kind {
+                        "user" if seen_fine => {
+                            return Err(text::err(
+                                line,
+                                "[user] 小节必须都写在 [fine] 之前（细场景继承用户层参数）",
+                            ));
+                        }
                         "user" => Section::User(
                             UserScene::parse(name).ok_or(text::err(line, "未知的用户层场景"))?,
                         ),
                         "fine" => {
+                            seen_fine = true;
                             let id: u16 = text::num(line, name)?;
                             Section::Fine(FineSceneId(id))
                         }
@@ -317,7 +317,6 @@ pub(crate) fn apply_param(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::frame::{Confidence, SampleClock};
 
     fn sample() -> SceneTable {
         let mut t = SceneTable {
@@ -382,16 +381,10 @@ mod tests {
     }
 
     #[test]
-    fn unknown_fine_scene_falls_back_to_user_layer() {
-        let t = sample();
-        let label = SceneLabel {
-            user: UserScene::Cafe,
-            fine: FineSceneId(99),
-            confidence: Confidence::ONE,
-            at: SampleClock(0),
-        };
-        assert_eq!(t.params_for(&label).floor_db, -18.0);
-        assert_eq!(t.params_for(&label).model, ModelId::Gtcrn);
+    fn user_after_fine_is_rejected() {
+        let src =
+            "vdn-scene-table = 1\n[fine 3]\nname = a\nuser = cafe\n[user cafe]\nfloor_db = -20\n";
+        assert!(SceneTable::from_text(src).is_err());
     }
 
     #[test]

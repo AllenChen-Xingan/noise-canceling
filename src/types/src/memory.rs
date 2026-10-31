@@ -173,6 +173,9 @@ impl UserProfile {
                         "fine" => SceneKey::Fine(FineSceneId(text::num(line, name)?)),
                         _ => return Err(text::err(line, "未知的小节")),
                     };
+                    if prof.get(key).is_some() {
+                        return Err(text::err(line, "同一场景的小节重复"));
+                    }
                     cur = Some((key, Overrides::default()));
                 }
                 Line::Kv { key, value } => match cur.as_mut() {
@@ -188,7 +191,11 @@ impl UserProfile {
                         "tone" => o.tone = Some(ToneId(text::num(line, value)?)),
                         _ => {
                             let f = ParamField::parse(key).ok_or(text::err(line, "未知的参数"))?;
-                            o.set(f, Some(text::num(line, value)?));
+                            let v: f32 = text::num(line, value)?;
+                            if !v.is_finite() {
+                                return Err(text::err(line, "数值必须有限"));
+                            }
+                            o.set(f, Some(v));
                         }
                     },
                 },
@@ -260,6 +267,14 @@ mod tests {
         let back = UserProfile::from_text(&prof.to_text()).unwrap();
         assert_eq!(back, prof);
         assert_eq!(back.content_id(), prof.content_id());
+    }
+
+    #[test]
+    fn rejects_duplicates_and_non_finite() {
+        let dup = "vdn-profile = 1\n[user cafe]\nstrength = 0.5\n[user cafe]\nstrength = 0.6\n";
+        assert!(UserProfile::from_text(dup).is_err());
+        let nan = "vdn-profile = 1\n[user cafe]\nstrength = NaN\n";
+        assert!(UserProfile::from_text(nan).is_err());
     }
 
     #[test]

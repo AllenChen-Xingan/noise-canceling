@@ -134,18 +134,20 @@ impl HysteresisGate {
     }
 
     /// 喂一个感知结果；换场景时返回 `(旧, 新)`。`rate` = IO 采样率。
+    /// 场景按 `(用户层, 细场景)` 这一对比较：分类器只出用户层（`fine` = 0）时也能切换（自审 P0）。
     pub fn step(&mut self, label: &SceneLabel, rate: u32) -> Option<(FineSceneId, FineSceneId)> {
         let secs = |n: u64| n as f64 / f64::from(rate.max(1));
         if label.confidence.get() < self.params.min_confidence {
-            // 不确定的判断不推进、也不清零候选：短暂的低置信不该让确认从头来
+            // 「连续确认」：一次不确定就打断，候选从头来（宁可晚切，不误切）
+            self.candidate = None;
             return None;
         }
-        if label.fine == self.committed {
+        if (label.user, label.fine) == (self.committed_user, self.committed) {
             self.candidate = None;
             return None;
         }
         let since = match self.candidate {
-            Some((id, _, t)) if id == label.fine => t,
+            Some((id, u, t)) if (id, u) == (label.fine, label.user) => t,
             _ => {
                 self.candidate = Some((label.fine, label.user, label.at));
                 label.at
@@ -177,6 +179,24 @@ pub fn resolve_params(
     user: UserScene,
     fine: FineSceneId,
 ) -> (UserScene, FineSceneId, ParamSet, ParamSource) {
+    let (user, fine, mut p, src) = resolve_base(table, profile, control, user, fine);
+    if !control.knobs.is_empty() {
+        control.knobs.apply_to(&mut p);
+        return (user, fine, p, ParamSource::UserKnob);
+    }
+    (user, fine, p, src)
+}
+
+/// 表 → 我的配置（不含旋钮）。锁定时冻结的就是这一层。
+fn resolve_base(
+    table: &SceneTable,
+    profile: &UserProfile,
+    control: &UserControl,
+    user: UserScene,
+    fine: FineSceneId,
+) -> (UserScene, FineSceneId, ParamSet, ParamSource) {
+    // 细场景在表里时，用户层以表为准（标签里的 user 只在细场景未知时用）
+    let user = table.lookup(fine).map_or(user, |e| e.user);
     let (user, fine) = match control.scene {
         UserSceneChoice::Auto => (user, fine),
         UserSceneChoice::Manual(u) => match table.lookup(fine) {
@@ -193,10 +213,6 @@ pub fn resolve_params(
     profile.apply(user, fine, &mut p);
     if p != before {
         src = ParamSource::Profile;
-    }
-    if !control.knobs.is_empty() {
-        control.knobs.apply_to(&mut p);
-        src = ParamSource::UserKnob;
     }
     (user, fine, p, src)
 }
@@ -255,6 +271,9 @@ pub trait Policy: Send {
     fn name(&self) -> &'static str;
     fn reset(&mut self);
     fn decide(&mut self, input: &PolicyInput<'_>) -> Decision;
+    /// 反馈入口（005 第三节 B 第 3 步「按反馈加权」的老虎机从这里拿奖励）：用户操作、送原声等事件都喂进来。
+    /// 查表策略不用，默认什么也不做
+    fn observe(&mut self, _event: &DecisionEvent) {}
 }
 
 /// 参考实现：查表 + 滞回 + 用户优先。不学习、不探索。
@@ -263,6 +282,8 @@ pub struct TablePolicy {
     pub gate: HysteresisGate,
     pub transition: Transition,
     last: Option<ParamSet>,
+    /// 锁定那一刻的「表 + 我的配置」
+    locked: Option<(UserScene, FineSceneId, ParamSet)>,
 }
 
 impl TablePolicy {
@@ -271,6 +292,7 @@ impl TablePolicy {
             gate: HysteresisGate::new(h),
             transition: t,
             last: None,
+            locked: None,
         }
     }
 }
@@ -283,18 +305,26 @@ impl Policy for TablePolicy {
     fn reset(&mut self) {
         self.gate.reset();
         self.last = None;
+        self.locked = None;
     }
 
     fn decide(&mut self, i: &PolicyInput<'_>) -> Decision {
         let switched = self.gate.step(&i.label, i.rate);
         let (u, f) = self.gate.committed();
-        let (user, scene, mut target, mut source) =
-            resolve_params(i.table, i.profile, i.control, u, f);
-        if i.control.lock
-            && let Some(prev) = self.last
-        {
-            target = prev;
-            source = ParamSource::Locked;
+        // 锁定冻结「表 + 我的配置」；旋钮照常盖在上面（用户优先，自审 P1）
+        let (user, scene, mut target, mut source) = if i.control.lock {
+            let (lu, lf, lp) = *self.locked.get_or_insert_with(|| {
+                let (u, f, p, _) = resolve_base(i.table, i.profile, i.control, u, f);
+                (u, f, p)
+            });
+            (lu, lf, lp, ParamSource::Locked)
+        } else {
+            self.locked = None;
+            resolve_base(i.table, i.profile, i.control, u, f)
+        };
+        if !i.control.knobs.is_empty() {
+            i.control.knobs.apply_to(&mut target);
+            source = ParamSource::UserKnob;
         }
         let changed = self.last != Some(target);
         self.last = Some(target);
@@ -372,7 +402,7 @@ mod tests {
     }
 
     #[test]
-    fn low_confidence_does_not_count() {
+    fn low_confidence_does_not_count_and_breaks_the_run() {
         let mut g = HysteresisGate::new(Hysteresis::default());
         for k in 0..20 {
             assert_eq!(
@@ -380,6 +410,32 @@ mod tests {
                 None
             );
         }
+        // 0 s 高置信、中间全是低置信、10 s 再来一次：不算连续，不切
+        let mut g = HysteresisGate::new(Hysteresis::default());
+        g.step(&label(7, UserScene::Cafe, 0.0, 0.9), SR);
+        for k in 1..20 {
+            g.step(&label(7, UserScene::Cafe, k as f64 * 0.5, 0.3), SR);
+        }
+        assert_eq!(g.step(&label(7, UserScene::Cafe, 10.0, 0.9), SR), None);
+    }
+
+    #[test]
+    fn user_layer_only_labels_can_switch() {
+        // 分类器只出用户层（fine = 0）
+        let mut g = HysteresisGate::new(Hysteresis::default());
+        g.step(&label(0, UserScene::Cafe, 0.0, 0.9), SR);
+        assert!(g.step(&label(0, UserScene::Cafe, 2.0, 0.9), SR).is_some());
+        assert_eq!(g.committed(), (UserScene::Cafe, FineSceneId::UNKNOWN));
+    }
+
+    #[test]
+    fn table_decides_user_layer_of_known_fine_scene() {
+        let t = table();
+        let prof = UserProfile::default();
+        let ctl = UserControl::default();
+        // 标签说 Music，表里 7 属于 Cafe：以表为准
+        let (u, _, _, _) = resolve_params(&t, &prof, &ctl, UserScene::Music, FineSceneId(7));
+        assert_eq!(u, UserScene::Cafe);
     }
 
     #[test]
@@ -433,16 +489,25 @@ mod tests {
         let mut pol = TablePolicy::new(Hysteresis::default(), Transition::default());
         let mut log = Vec::new();
         let mut ctl = UserControl::default();
+        let mut step =
+            |pol: &mut TablePolicy, ctl: &UserControl, l: SceneLabel, log: &mut Vec<_>| {
+                let d = pol.decide(&PolicyInput {
+                    label: l,
+                    rate: SR,
+                    table: &t,
+                    profile: &prof,
+                    control: ctl,
+                });
+                d.log_into(&l, log);
+                d
+            };
         for k in 0..=4 {
-            let l = label(7, UserScene::Cafe, k as f64 * 0.5, 0.9);
-            let d = pol.decide(&PolicyInput {
-                label: l,
-                rate: SR,
-                table: &t,
-                profile: &prof,
-                control: &ctl,
-            });
-            d.log_into(&l, &mut log);
+            step(
+                &mut pol,
+                &ctl,
+                label(7, UserScene::Cafe, k as f64 * 0.5, 0.9),
+                &mut log,
+            );
         }
         // 第一次：默认参数（ParamsApplied）；2 s 时换到 7（SceneCommitted + ParamsApplied）
         assert_eq!(log.len(), 3);
@@ -456,16 +521,27 @@ mod tests {
 
         ctl.lock = true;
         for k in 5..30 {
-            let l = label(1, UserScene::Quiet, k as f64 * 0.5, 0.9);
-            let d = pol.decide(&PolicyInput {
-                label: l,
-                rate: SR,
-                table: &t,
-                profile: &prof,
-                control: &ctl,
-            });
+            let d = step(
+                &mut pol,
+                &ctl,
+                label(1, UserScene::Quiet, k as f64 * 0.5, 0.9),
+                &mut log,
+            );
             assert_eq!(d.target.model, ModelId::FastEnhancerM);
             assert_eq!(d.source, ParamSource::Locked);
         }
+        // 锁定中旋钮仍然生效
+        ctl.knobs.set(ParamField::FloorDb, Some(-3.0));
+        let d = step(
+            &mut pol,
+            &ctl,
+            label(1, UserScene::Quiet, 15.0, 0.9),
+            &mut log,
+        );
+        assert_eq!(
+            (d.target.floor_db, d.target.model),
+            (-3.0, ModelId::FastEnhancerM)
+        );
+        assert_eq!(d.source, ParamSource::UserKnob);
     }
 }

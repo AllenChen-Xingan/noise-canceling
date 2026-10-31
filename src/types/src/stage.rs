@@ -1,6 +1,7 @@
 //! 后处理级（门控、衰减下限、音色链节点），跑在模型采样率（规约 §3.3）。
 
 use crate::frame::FrameCtx;
+use crate::params::ParamSet;
 
 pub trait Stage: Send {
     /// 短名，进延迟账与决策日志
@@ -14,4 +15,6 @@ pub trait Stage: Send {
     fn latency_samples(&self) -> usize {
         0
     }
+    /// 策略下发的参数（engine 平滑后逐 hop 调用，实时线程，不分配）。用不到的级默认忽略
+    fn set_params(&mut self, _p: &ParamSet) {}
 }
