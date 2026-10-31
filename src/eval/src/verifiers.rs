@@ -937,12 +937,12 @@ fn owner_onsets(c: &Ctx) -> Vec<usize> {
 
 fn need_sim(c: &Ctx, id: &'static str, unit: &'static str) -> Result<HopTruth, Box<Score>> {
     if !c.clip.tracks {
-        return Err(Score::unknown(
+        return Err(Box::new(Score::unknown(
             id,
             unit,
             Better::Lower,
-            "不是模拟片段，没有逐帧真值",
-        ));
+            "没有逐轨分存，没有逐帧真值",
+        )));
     }
     let Some(r) = c.run else {
         return Err(Box::new(Score::unknown(
