@@ -1,0 +1,25 @@
+{
+ "build": "20261030214530-44df",
+ "n_train_windows": 26880,
+ "train_acc_raw": 0.8746,
+ "test_acc_raw_python": 0.8225,
+ "bt_threshold": -12.63,
+ "bt_balanced_acc_train": 0.958,
+ "clip_threshold": -4.0,
+ "clip_balanced_acc_train": 0.8663,
+ "hysteresis": {
+  "confirm_s": 2.0,
+  "min_confidence": 0.6,
+  "min_dwell_s": 5.0,
+  "ema_s": 1.5
+ },
+ "class_counts_train": {
+  "quiet": 3840,
+  "hvac": 2560,
+  "babble": 4752,
+  "neighbor": 4560,
+  "clatter": 3248,
+  "traffic": 4208,
+  "music": 3712
+ }
+}
