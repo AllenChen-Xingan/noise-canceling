@@ -1,5 +1,5 @@
 {
- "build": "20261030223456-4fae",
+ "build": "20261030223510-7f7d",
  "data_build": "20261030214530-44df",
  "models": [
   "base",
@@ -8,91 +8,91 @@
   "both"
  ],
  "key": {
-  "te0111": [
-   "both",
-   "base",
-   "polish",
-   "route"
-  ],
-  "te0009": [
-   "base",
-   "polish",
-   "route",
-   "both"
-  ],
-  "te0046": [
-   "polish",
+  "te0164": [
    "route",
    "both",
+   "polish",
    "base"
   ],
-  "te0239": [
-   "route",
+  "te0151": [
    "both",
-   "base",
-   "polish"
-  ],
-  "te0039": [
-   "both",
-   "base",
    "polish",
+   "base",
    "route"
   ],
-  "te0110": [
-   "base",
+  "te0190": [
    "polish",
+   "base",
    "route",
    "both"
   ],
-  "te0151": [
-   "polish",
+  "te0111": [
+   "base",
    "route",
    "both",
+   "polish"
+  ],
+  "te0046": [
+   "route",
+   "both",
+   "polish",
    "base"
   ],
   "te0137": [
-   "route",
    "both",
-   "base",
-   "polish"
-  ],
-  "te0164": [
-   "both",
-   "base",
    "polish",
+   "base",
    "route"
   ],
   "te0011": [
-   "base",
    "polish",
+   "base",
    "route",
    "both"
   ],
   "te0028": [
-   "polish",
+   "base",
    "route",
    "both",
+   "polish"
+  ],
+  "te0009": [
+   "route",
+   "both",
+   "polish",
    "base"
   ],
-  "te0190": [
+  "te0039": [
+   "both",
+   "polish",
+   "base",
+   "route"
+  ],
+  "te0110": [
+   "polish",
+   "base",
+   "route",
+   "both"
+  ],
+  "te0239": [
+   "base",
    "route",
    "both",
-   "base",
    "polish"
   ]
  },
  "traps": [
   {
    "id": "trap-identical",
-   "clip": "te0190",
-   "desc": "杯碟 / 键盘声",
+   "clip": "te0028",
+   "desc": "背景音乐",
    "label": "所有候选其实是同一个文件（应答「分不出」）",
-   "ref": "../../audio/te0190_875ba615.wav",
+   "ref": "../../audio/te0028_cc9ec5b0.wav",
    "cands": [
-    "../../audio/te0190_1168ca3d.wav",
-    "../../audio/te0190_1168ca3d.wav",
-    "../../audio/te0190_1168ca3d.wav",
-    "../../audio/te0190_1168ca3d.wav"
+    "../../audio/te0028_1d8500f5.wav",
+    "../../audio/te0028_1d8500f5.wav",
+    "../../audio/te0028_1d8500f5.wav",
+    "../../audio/te0028_1d8500f5.wav"
    ],
    "names": [
     "same",
@@ -105,24 +105,24 @@
      "same"
     ]
    },
-   "source_model": "both"
+   "source_model": "base"
   },
   {
    "id": "trap-degraded",
-   "clip": "te0111",
-   "desc": "邻座有人说话",
+   "clip": "te0046",
+   "desc": "街道 / 公交",
    "label": "其中一份是明显劣化版（揭盲后离线判：最清楚、最自然都不该选它）",
-   "ref": "../../audio/te0111_95f0108b.wav",
+   "ref": "../../audio/te0046_6a735a59.wav",
    "cands": [
-    "../../audio/te0111_3987c5ed.wav",
-    "../../audio/te0111_9111e2d4.wav",
-    "../../audio/te0111_649fe07e.wav",
-    "../../audio/te0111_c4c495.wav"
+    "../../audio/te0046_ef726add.wav",
+    "../../audio/te0046_fe1749e8.wav",
+    "../../audio/te0046_366797b2.wav",
+    "../../audio/te0046_c297d4.wav"
    ],
    "names": [
+    "polish",
     "route",
     "base",
-    "polish",
     "degraded"
    ],
    "expect": {
