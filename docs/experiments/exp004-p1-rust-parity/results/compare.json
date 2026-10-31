@@ -1,0 +1,1691 @@
+{
+ "per_clip": {
+  "c01": {
+   "nonspeech_s": 0.6,
+   "noisy_si_sdr": 5.773153305053711,
+   "gtcrn": {
+    "py_si_sdr": 11.550500869750977,
+    "raw": {
+     "si_sdr": 11.550498962402344,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 752,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 1.6391277313232422e-07,
+      "rms_err": 1.050762676868544e-08,
+      "snr_db": 133.0174560546875
+     }
+    },
+    "safe": {
+     "si_sdr": 9.277414321899414,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 752,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 750
+     },
+     "finite": true
+    },
+    "floor": {
+     "si_sdr": 10.987371444702148,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 752,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true
+    }
+   },
+   "fastenhancer_m": {
+    "py_si_sdr": 14.11068058013916,
+    "raw": {
+     "si_sdr": 14.11068058013916,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1203,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 0.0,
+      "rms_err": 0.0,
+      "snr_db": 326.5985412597656
+     }
+    },
+    "safe": {
+     "si_sdr": 10.331450462341309,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1203,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 1170
+     },
+     "finite": true
+    },
+    "floor": {
+     "si_sdr": 12.989206314086914,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1203,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true
+    }
+   }
+  },
+  "c02": {
+   "nonspeech_s": 0.56,
+   "noisy_si_sdr": 0.1964021474123001,
+   "gtcrn": {
+    "py_si_sdr": 6.169187545776367,
+    "raw": {
+     "si_sdr": 6.169188499450684,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 752,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 2.384185791015625e-07,
+      "rms_err": 1.4972194151141593e-08,
+      "snr_db": 127.3468017578125
+     }
+    },
+    "safe": {
+     "si_sdr": 3.0816869735717773,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 752,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 748
+     },
+     "finite": true
+    },
+    "floor": {
+     "si_sdr": 5.115386962890625,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 752,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true
+    }
+   },
+   "fastenhancer_m": {
+    "py_si_sdr": 9.316362380981445,
+    "raw": {
+     "si_sdr": 9.316362380981445,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1203,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 0.0,
+      "rms_err": 0.0,
+      "snr_db": 326.4183044433594
+     }
+    },
+    "safe": {
+     "si_sdr": 4.880117416381836,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1203,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 1176
+     },
+     "finite": true
+    },
+    "floor": {
+     "si_sdr": 7.930449962615967,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1203,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true
+    }
+   }
+  },
+  "c03": {
+   "nonspeech_s": 0.08,
+   "noisy_si_sdr": -4.829472064971924,
+   "gtcrn": {
+    "py_si_sdr": 1.8163058757781982,
+    "raw": {
+     "si_sdr": 1.8163058757781982,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 752,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 1.7881393432617188e-07,
+      "rms_err": 1.0952620144166758e-08,
+      "snr_db": 125.73688507080078
+     }
+    },
+    "safe": {
+     "si_sdr": -2.8966429233551025,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 752,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 751
+     },
+     "finite": true
+    },
+    "floor": {
+     "si_sdr": -0.7781476378440857,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 752,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true
+    }
+   },
+   "fastenhancer_m": {
+    "py_si_sdr": 3.7259521484375,
+    "raw": {
+     "si_sdr": 3.7259521484375,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1203,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 0.0,
+      "rms_err": 0.0,
+      "snr_db": 325.0835876464844
+     }
+    },
+    "safe": {
+     "si_sdr": -0.8579551577568054,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1203,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 1201
+     },
+     "finite": true
+    },
+    "floor": {
+     "si_sdr": 2.196807384490967,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1203,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true
+    }
+   }
+  },
+  "c04": {
+   "nonspeech_s": 2.16,
+   "noisy_si_sdr": 4.383263111114502,
+   "gtcrn": {
+    "py_si_sdr": 4.7877044677734375,
+    "raw": {
+     "si_sdr": 4.7877044677734375,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 673,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 4.470348358154297e-07,
+      "rms_err": 1.3188969916200222e-08,
+      "snr_db": 129.61585998535156
+     },
+     "nonspeech_atten_db": -0.9367446899414062
+    },
+    "safe": {
+     "si_sdr": 4.728435516357422,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 673,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 671
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.4986916184425354
+    },
+    "floor": {
+     "si_sdr": 4.801900863647461,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 673,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.7267001867294312
+    },
+    "py_nonspeech_atten_db": -0.9367440938949585
+   },
+   "fastenhancer_m": {
+    "py_si_sdr": 2.2507681846618652,
+    "raw": {
+     "si_sdr": 2.2507681846618652,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1075,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 0.0,
+      "rms_err": 0.0,
+      "snr_db": 322.86981201171875
+     },
+     "nonspeech_atten_db": -1.229868769645691
+    },
+    "safe": {
+     "si_sdr": 4.402312278747559,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1075,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 1049
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.752592146396637
+    },
+    "floor": {
+     "si_sdr": 3.628937244415283,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1075,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -1.0337344408035278
+    },
+    "py_nonspeech_atten_db": -1.229868769645691
+   }
+  },
+  "c05": {
+   "nonspeech_s": 1.3,
+   "noisy_si_sdr": -0.7387341260910034,
+   "gtcrn": {
+    "py_si_sdr": -1.4023088216781616,
+    "raw": {
+     "si_sdr": -1.402308464050293,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 632,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 1.862645149230957e-07,
+      "rms_err": 1.1689698986572239e-08,
+      "snr_db": 132.11862182617188
+     },
+     "nonspeech_atten_db": -0.9217115640640259
+    },
+    "safe": {
+     "si_sdr": -0.9123349189758301,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 632,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 631
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.5042200684547424
+    },
+    "floor": {
+     "si_sdr": -1.1113762855529785,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 632,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.7257635593414307
+    },
+    "fault": {
+     "si_sdr": -0.7045122385025024,
+     "stats": {
+      "bypass_hops": 25,
+      "fault_abnormal": 1,
+      "fault_backend": 1,
+      "fault_deadline": 1,
+      "fault_nonfinite": 1,
+      "hops": 632,
+      "model_resets": 3,
+      "nonfinite_samples": 0,
+      "voiced_hops": 606
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.5200951099395752,
+     "max_step": 0.6126129627227783,
+     "max_step_safe": 0.6173692941665649,
+     "max_step_noisy": 0.6201561689376831
+    },
+    "py_nonspeech_atten_db": -0.9217115640640259
+   },
+   "fastenhancer_m": {
+    "py_si_sdr": -3.7406020164489746,
+    "raw": {
+     "si_sdr": -3.7406020164489746,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1011,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 0.0,
+      "rms_err": 0.0,
+      "snr_db": 324.5618896484375
+     },
+     "nonspeech_atten_db": -0.6238395571708679
+    },
+    "safe": {
+     "si_sdr": -1.6817973852157593,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1011,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 1005
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.365648090839386
+    },
+    "floor": {
+     "si_sdr": -2.540597915649414,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1011,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.5096242427825928
+    },
+    "fault": {
+     "si_sdr": -1.1912717819213867,
+     "stats": {
+      "bypass_hops": 34,
+      "fault_abnormal": 1,
+      "fault_backend": 1,
+      "fault_deadline": 1,
+      "fault_nonfinite": 1,
+      "hops": 1011,
+      "model_resets": 3,
+      "nonfinite_samples": 0,
+      "voiced_hops": 971
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.35457316040992737,
+     "max_step": 0.6198770403862,
+     "max_step_safe": 0.618882954120636,
+     "max_step_noisy": 0.6201561689376831
+    },
+    "py_nonspeech_atten_db": -0.6238395571708679
+   }
+  },
+  "c06": {
+   "nonspeech_s": 1.98,
+   "noisy_si_sdr": -0.7279850244522095,
+   "gtcrn": {
+    "py_si_sdr": 2.4749183654785156,
+    "raw": {
+     "si_sdr": 2.4749181270599365,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 601,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 2.980232238769531e-07,
+      "rms_err": 1.2452616715563636e-08,
+      "snr_db": 125.61676025390625
+     },
+     "nonspeech_atten_db": -4.821101188659668
+    },
+    "safe": {
+     "si_sdr": 0.8220639228820801,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 601,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 600
+     },
+     "finite": true,
+     "nonspeech_atten_db": -2.290982246398926
+    },
+    "floor": {
+     "si_sdr": 1.739750623703003,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 601,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -3.554194450378418
+    },
+    "fault": {
+     "si_sdr": 0.40385693311691284,
+     "stats": {
+      "bypass_hops": 25,
+      "fault_abnormal": 1,
+      "fault_backend": 1,
+      "fault_deadline": 1,
+      "fault_nonfinite": 1,
+      "hops": 601,
+      "model_resets": 3,
+      "nonfinite_samples": 0,
+      "voiced_hops": 575
+     },
+     "finite": true,
+     "nonspeech_atten_db": -2.347370147705078,
+     "max_step": 0.5026243329048157,
+     "max_step_safe": 0.5026243329048157,
+     "max_step_noisy": 0.5750701427459717
+    },
+    "py_nonspeech_atten_db": -4.821101188659668
+   },
+   "fastenhancer_m": {
+    "py_si_sdr": 2.662546396255493,
+    "raw": {
+     "si_sdr": 2.662546396255493,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 960,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 0.0,
+      "rms_err": 0.0,
+      "snr_db": 320.45098876953125
+     },
+     "nonspeech_atten_db": -3.9081287384033203
+    },
+    "safe": {
+     "si_sdr": 1.5639294385910034,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 960,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 958
+     },
+     "finite": true,
+     "nonspeech_atten_db": -2.147395372390747
+    },
+    "floor": {
+     "si_sdr": 2.556166172027588,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 960,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -3.1436636447906494
+    },
+    "fault": {
+     "si_sdr": 1.3814483880996704,
+     "stats": {
+      "bypass_hops": 34,
+      "fault_abnormal": 1,
+      "fault_backend": 1,
+      "fault_deadline": 1,
+      "fault_nonfinite": 1,
+      "hops": 960,
+      "model_resets": 3,
+      "nonfinite_samples": 0,
+      "voiced_hops": 924
+     },
+     "finite": true,
+     "nonspeech_atten_db": -1.9042598009109497,
+     "max_step": 0.5463513135910034,
+     "max_step_safe": 0.5452313423156738,
+     "max_step_noisy": 0.5750701427459717
+    },
+    "py_nonspeech_atten_db": -3.9081287384033203
+   }
+  },
+  "c07": {
+   "nonspeech_s": 1.3,
+   "noisy_si_sdr": -5.6728363037109375,
+   "gtcrn": {
+    "py_si_sdr": -6.191580772399902,
+    "raw": {
+     "si_sdr": -6.191581726074219,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 643,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 1.30385160446167e-07,
+      "rms_err": 8.706477316877681e-09,
+      "snr_db": 125.65817260742188
+     },
+     "nonspeech_atten_db": -8.195075988769531
+    },
+    "safe": {
+     "si_sdr": -5.404932022094727,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 643,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 642
+     },
+     "finite": true,
+     "nonspeech_atten_db": -3.466738224029541
+    },
+    "floor": {
+     "si_sdr": -5.309568405151367,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 643,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -5.696604251861572
+    },
+    "py_nonspeech_atten_db": -8.195075035095215
+   },
+   "fastenhancer_m": {
+    "py_si_sdr": -3.148353338241577,
+    "raw": {
+     "si_sdr": -3.148353338241577,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1027,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 0.0,
+      "rms_err": 0.0,
+      "snr_db": 319.9195556640625
+     },
+     "nonspeech_atten_db": -8.613327980041504
+    },
+    "safe": {
+     "si_sdr": -4.044454574584961,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1027,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 1025
+     },
+     "finite": true,
+     "nonspeech_atten_db": -4.065658092498779
+    },
+    "floor": {
+     "si_sdr": -3.0268213748931885,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1027,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -6.564723968505859
+    },
+    "py_nonspeech_atten_db": -8.613327980041504
+   }
+  },
+  "c08": {
+   "nonspeech_s": 1.92,
+   "noisy_si_sdr": 9.321388244628906,
+   "gtcrn": {
+    "py_si_sdr": 7.849770545959473,
+    "raw": {
+     "si_sdr": 7.849770545959473,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 655,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 2.384185791015625e-07,
+      "rms_err": 1.6878923148055947e-08,
+      "snr_db": 128.08401489257812
+     },
+     "nonspeech_atten_db": -3.614701747894287
+    },
+    "safe": {
+     "si_sdr": 9.610479354858398,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 655,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 654
+     },
+     "finite": true,
+     "nonspeech_atten_db": -1.7589067220687866
+    },
+    "floor": {
+     "si_sdr": 9.072717666625977,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 655,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -2.6887993812561035
+    },
+    "py_nonspeech_atten_db": -3.614701747894287
+   },
+   "fastenhancer_m": {
+    "py_si_sdr": 13.673332214355469,
+    "raw": {
+     "si_sdr": 13.673332214355469,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1047,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 0.0,
+      "rms_err": 0.0,
+      "snr_db": 327.55255126953125
+     },
+     "nonspeech_atten_db": -8.848201751708984
+    },
+    "safe": {
+     "si_sdr": 12.220987319946289,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1047,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 1046
+     },
+     "finite": true,
+     "nonspeech_atten_db": -3.969964027404785
+    },
+    "floor": {
+     "si_sdr": 13.362934112548828,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1047,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -6.489572048187256
+    },
+    "py_nonspeech_atten_db": -8.848201751708984
+   }
+  },
+  "c09": {
+   "nonspeech_s": 2.62,
+   "noisy_si_sdr": -0.7564473748207092,
+   "gtcrn": {
+    "py_si_sdr": 1.994915246963501,
+    "raw": {
+     "si_sdr": 1.994915246963501,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 603,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 7.450580596923828e-08,
+      "rms_err": 7.347396469015166e-09,
+      "snr_db": 136.94639587402344
+     },
+     "nonspeech_atten_db": -6.591856479644775
+    },
+    "safe": {
+     "si_sdr": 0.9876024723052979,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 603,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 602
+     },
+     "finite": true,
+     "nonspeech_atten_db": -3.530106544494629
+    },
+    "floor": {
+     "si_sdr": 1.646654725074768,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 603,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -5.380062103271484
+    },
+    "py_nonspeech_atten_db": -6.591856002807617
+   },
+   "fastenhancer_m": {
+    "py_si_sdr": 7.30083703994751,
+    "raw": {
+     "si_sdr": 7.30083703994751,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 963,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 0.0,
+      "rms_err": 0.0,
+      "snr_db": 324.835693359375
+     },
+     "nonspeech_atten_db": -6.717247486114502
+    },
+    "safe": {
+     "si_sdr": 3.4684886932373047,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 963,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 867
+     },
+     "finite": true,
+     "nonspeech_atten_db": -3.871055841445923
+    },
+    "floor": {
+     "si_sdr": 5.825757026672363,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 963,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -5.706136226654053
+    },
+    "py_nonspeech_atten_db": -6.717247486114502
+   }
+  },
+  "c10": {
+   "nonspeech_s": 1.58,
+   "noisy_si_sdr": 4.3747758865356445,
+   "gtcrn": {
+    "py_si_sdr": 11.092687606811523,
+    "raw": {
+     "si_sdr": 11.092687606811523,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 650,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 1.7881393432617188e-07,
+      "rms_err": 1.2952396488685736e-08,
+      "snr_db": 131.8739471435547
+     },
+     "nonspeech_atten_db": -28.843069076538086
+    },
+    "safe": {
+     "si_sdr": 7.808835983276367,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 650,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 618
+     },
+     "finite": true,
+     "nonspeech_atten_db": -6.631534099578857
+    },
+    "floor": {
+     "si_sdr": 9.855886459350586,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 650,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -11.618593215942383
+    },
+    "fault": {
+     "si_sdr": 7.479672908782959,
+     "stats": {
+      "bypass_hops": 25,
+      "fault_abnormal": 1,
+      "fault_backend": 1,
+      "fault_deadline": 1,
+      "fault_nonfinite": 1,
+      "hops": 650,
+      "model_resets": 3,
+      "nonfinite_samples": 0,
+      "voiced_hops": 595
+     },
+     "finite": true,
+     "nonspeech_atten_db": -6.620175361633301,
+     "max_step": 0.23093003034591675,
+     "max_step_safe": 0.23254448175430298,
+     "max_step_noisy": 0.25362733006477356
+    },
+    "py_nonspeech_atten_db": -28.843074798583984
+   },
+   "fastenhancer_m": {
+    "py_si_sdr": 14.955559730529785,
+    "raw": {
+     "si_sdr": 14.955559730529785,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1039,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 0.0,
+      "rms_err": 0.0,
+      "snr_db": 327.7957458496094
+     },
+     "nonspeech_atten_db": -63.358306884765625
+    },
+    "safe": {
+     "si_sdr": 9.725353240966797,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1039,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 846
+     },
+     "finite": true,
+     "nonspeech_atten_db": -10.98771858215332
+    },
+    "floor": {
+     "si_sdr": 12.809581756591797,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1039,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -11.99893569946289
+    },
+    "fault": {
+     "si_sdr": 9.268411636352539,
+     "stats": {
+      "bypass_hops": 34,
+      "fault_abnormal": 1,
+      "fault_backend": 1,
+      "fault_deadline": 1,
+      "fault_nonfinite": 1,
+      "hops": 1039,
+      "model_resets": 3,
+      "nonfinite_samples": 0,
+      "voiced_hops": 818
+     },
+     "finite": true,
+     "nonspeech_atten_db": -8.191736221313477,
+     "max_step": 0.23995962738990784,
+     "max_step_safe": 0.240217387676239,
+     "max_step_noisy": 0.25362733006477356
+    },
+    "py_nonspeech_atten_db": -63.358306884765625
+   }
+  },
+  "c11": {
+   "nonspeech_s": 1.76,
+   "noisy_si_sdr": -0.6095248460769653,
+   "gtcrn": {
+    "py_si_sdr": -0.9148829579353333,
+    "raw": {
+     "si_sdr": -0.9148823618888855,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 690,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 3.948807716369629e-07,
+      "rms_err": 3.3174774927147155e-08,
+      "snr_db": 124.4349365234375
+     },
+     "nonspeech_atten_db": -4.852957248687744
+    },
+    "safe": {
+     "si_sdr": -0.3427594304084778,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 690,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 689
+     },
+     "finite": true,
+     "nonspeech_atten_db": -2.25003981590271
+    },
+    "floor": {
+     "si_sdr": -0.38041478395462036,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 690,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -3.5217738151550293
+    },
+    "py_nonspeech_atten_db": -4.852958679199219
+   },
+   "fastenhancer_m": {
+    "py_si_sdr": 0.039145901799201965,
+    "raw": {
+     "si_sdr": 0.039145901799201965,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1103,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 0.0,
+      "rms_err": 0.0,
+      "snr_db": 329.2644958496094
+     },
+     "nonspeech_atten_db": -6.353202819824219
+    },
+    "safe": {
+     "si_sdr": 0.8361285924911499,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1103,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 1091
+     },
+     "finite": true,
+     "nonspeech_atten_db": -3.480384111404419
+    },
+    "floor": {
+     "si_sdr": 1.0255320072174072,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1103,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -5.2267842292785645
+    },
+    "py_nonspeech_atten_db": -6.353202819824219
+   }
+  },
+  "c12": {
+   "nonspeech_s": 3.32,
+   "noisy_si_sdr": 4.435197353363037,
+   "gtcrn": {
+    "py_si_sdr": 4.909889221191406,
+    "raw": {
+     "si_sdr": 4.909889221191406,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 690,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 2.5331974029541016e-07,
+      "rms_err": 1.5586655521815374e-08,
+      "snr_db": 134.43504333496094
+     },
+     "nonspeech_atten_db": -0.63581383228302
+    },
+    "safe": {
+     "si_sdr": 4.751615047454834,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 690,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 687
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.3768165111541748
+    },
+    "floor": {
+     "si_sdr": 4.853000164031982,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 690,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.5226995944976807
+    },
+    "py_nonspeech_atten_db": -0.63581383228302
+   },
+   "fastenhancer_m": {
+    "py_si_sdr": -2.3182902336120605,
+    "raw": {
+     "si_sdr": -2.3182902336120605,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1103,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "parity_vs_py": {
+      "max_abs": 0.0,
+      "rms_err": 0.0,
+      "snr_db": 328.16680908203125
+     },
+     "nonspeech_atten_db": -0.5071265697479248
+    },
+    "safe": {
+     "si_sdr": 2.0848116874694824,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1103,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 1067
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.3407096862792969
+    },
+    "floor": {
+     "si_sdr": 0.24034789204597473,
+     "stats": {
+      "bypass_hops": 0,
+      "fault_abnormal": 0,
+      "fault_backend": 0,
+      "fault_deadline": 0,
+      "fault_nonfinite": 0,
+      "hops": 1103,
+      "model_resets": 0,
+      "nonfinite_samples": 0,
+      "voiced_hops": 0
+     },
+     "finite": true,
+     "nonspeech_atten_db": -0.44761544466018677
+    },
+    "py_nonspeech_atten_db": -0.5071265697479248
+   }
+  }
+ },
+ "summary": {
+  "gtcrn": {
+   "parity_max_abs_worst": 4.470348358154297e-07,
+   "parity_snr_db_min": 124.4349365234375,
+   "parity_snr_db_median": 128.84993743896484,
+   "py_si_sdr_mean": 3.6780922661225,
+   "raw_si_sdr_mean": 3.6780921667814255,
+   "safe_si_sdr_mean": 2.625955358147621,
+   "floor_si_sdr_mean": 3.374430149793625,
+   "si_sdr_diff_raw_minus_py_max_abs": 1.9073486328125e-06,
+   "nonspeech_atten_db_median": {
+    "py": -4.821101188659668,
+    "raw": -4.821101188659668,
+    "safe": -2.25003981590271,
+    "floor": -3.5217738151550293,
+    "n_clips": 9
+   },
+   "nonspeech_atten_db_min": {
+    "raw": -28.843069076538086,
+    "safe": -6.631534099578857,
+    "floor": -11.618593215942383
+   },
+   "voiced_hop_fraction_safe": 0.993725448015371,
+   "fault": {
+    "c05": {
+     "finite": true,
+     "max_step": 0.6126129627227783,
+     "max_step_safe": 0.6173692941665649,
+     "max_step_noisy": 0.6201561689376831,
+     "si_sdr": -0.7045122385025024,
+     "stats": {
+      "bypass_hops": 25,
+      "fault_abnormal": 1,
+      "fault_backend": 1,
+      "fault_deadline": 1,
+      "fault_nonfinite": 1,
+      "hops": 632,
+      "model_resets": 3,
+      "nonfinite_samples": 0,
+      "voiced_hops": 606
+     },
+     "safe_si_sdr": -0.9123349189758301
+    },
+    "c06": {
+     "finite": true,
+     "max_step": 0.5026243329048157,
+     "max_step_safe": 0.5026243329048157,
+     "max_step_noisy": 0.5750701427459717,
+     "si_sdr": 0.40385693311691284,
+     "stats": {
+      "bypass_hops": 25,
+      "fault_abnormal": 1,
+      "fault_backend": 1,
+      "fault_deadline": 1,
+      "fault_nonfinite": 1,
+      "hops": 601,
+      "model_resets": 3,
+      "nonfinite_samples": 0,
+      "voiced_hops": 575
+     },
+     "safe_si_sdr": 0.8220639228820801
+    },
+    "c10": {
+     "finite": true,
+     "max_step": 0.23093003034591675,
+     "max_step_safe": 0.23254448175430298,
+     "max_step_noisy": 0.25362733006477356,
+     "si_sdr": 7.479672908782959,
+     "stats": {
+      "bypass_hops": 25,
+      "fault_abnormal": 1,
+      "fault_backend": 1,
+      "fault_deadline": 1,
+      "fault_nonfinite": 1,
+      "hops": 650,
+      "model_resets": 3,
+      "nonfinite_samples": 0,
+      "voiced_hops": 595
+     },
+     "safe_si_sdr": 7.808835983276367
+    }
+   }
+  },
+  "fastenhancer_m": {
+   "parity_max_abs_worst": 0.0,
+   "parity_snr_db_min": 319.9195556640625,
+   "parity_snr_db_median": 325.7509460449219,
+   "py_si_sdr_mean": 4.902328249067068,
+   "raw_si_sdr_mean": 4.902328249067068,
+   "safe_si_sdr_mean": 3.5774476677179337,
+   "floor_si_sdr_mean": 4.749858381847541,
+   "si_sdr_diff_raw_minus_py_max_abs": 0.0,
+   "nonspeech_atten_db_median": {
+    "py": -6.353202819824219,
+    "raw": -6.353202819824219,
+    "safe": -3.480384111404419,
+    "floor": -5.2267842292785645,
+    "n_clips": 9
+   },
+   "nonspeech_atten_db_min": {
+    "raw": -63.358306884765625,
+    "safe": -10.98771858215332,
+    "floor": -11.99893569946289
+   },
+   "voiced_hop_fraction_safe": 0.9653661553076129,
+   "fault": {
+    "c05": {
+     "finite": true,
+     "max_step": 0.6198770403862,
+     "max_step_safe": 0.618882954120636,
+     "max_step_noisy": 0.6201561689376831,
+     "si_sdr": -1.1912717819213867,
+     "stats": {
+      "bypass_hops": 34,
+      "fault_abnormal": 1,
+      "fault_backend": 1,
+      "fault_deadline": 1,
+      "fault_nonfinite": 1,
+      "hops": 1011,
+      "model_resets": 3,
+      "nonfinite_samples": 0,
+      "voiced_hops": 971
+     },
+     "safe_si_sdr": -1.6817973852157593
+    },
+    "c06": {
+     "finite": true,
+     "max_step": 0.5463513135910034,
+     "max_step_safe": 0.5452313423156738,
+     "max_step_noisy": 0.5750701427459717,
+     "si_sdr": 1.3814483880996704,
+     "stats": {
+      "bypass_hops": 34,
+      "fault_abnormal": 1,
+      "fault_backend": 1,
+      "fault_deadline": 1,
+      "fault_nonfinite": 1,
+      "hops": 960,
+      "model_resets": 3,
+      "nonfinite_samples": 0,
+      "voiced_hops": 924
+     },
+     "safe_si_sdr": 1.5639294385910034
+    },
+    "c10": {
+     "finite": true,
+     "max_step": 0.23995962738990784,
+     "max_step_safe": 0.240217387676239,
+     "max_step_noisy": 0.25362733006477356,
+     "si_sdr": 9.268411636352539,
+     "stats": {
+      "bypass_hops": 34,
+      "fault_abnormal": 1,
+      "fault_backend": 1,
+      "fault_deadline": 1,
+      "fault_nonfinite": 1,
+      "hops": 1039,
+      "model_resets": 3,
+      "nonfinite_samples": 0,
+      "voiced_hops": 818
+     },
+     "safe_si_sdr": 9.725353240966797
+    }
+   }
+  }
+ },
+ "fault_plan": {
+  "clips": [
+   "c05",
+   "c06",
+   "c10"
+  ],
+  "hops": {
+   "nan": 100,
+   "error": 200,
+   "explode": 300,
+   "stall": 400
+  },
+  "stall_ms": 40,
+  "deadline": "hop 周期的一半"
+ }
+}
