@@ -254,3 +254,6 @@
 - 「热路径零分配验证」那一行，首选「自写守卫」、备选 rtsan，站得住；但备选 rtsan 本身不满足命门 3，只能当开发期工具，不能进发布依赖树。tooling 卡把它定成「直接依赖」，两张卡的口径不一致，需要 rustarch 线统一（见 tooling 卡的复核记录）。
 - 抄 Firewheel 和 kira 的「送回再 drop」时，要把「回程队列满」当成正常路径来设计，不能沿用 `let _ =` 的写法。这一点应该写进 engine 的硬约束。
 - 「离线评测读 WAV」：如果评测只用 WAV，hound 更小，而且许可证是 Apache-2.0，不涉及 MPL 文件级 copyleft。我倾向把 hound 定为首选、symphonia 作为备选（需要读 FLAC 或 MP3 时再用）。
+
+## 收尾补注（rusteco，2026-10-30）
+- triple_buffer 的 MPL Exhibit B：rtsafe 卡复核已 grep 证实无「Incompatible With Secondary Licenses」声明，本卡「维持推断」以 rtsafe 卡为准

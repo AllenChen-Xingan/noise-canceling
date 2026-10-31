@@ -229,3 +229,7 @@
 - 首选 ort 站得住：MIT/Apache，2026-10 有发版，aarch64-apple-darwin 有预编译包（dist.tsv:2）。但 ort 还是 rc，加上 ORT 内部不透明，严格说**命门 2 只在 Rust 侧过关，C++ 侧待实测**。两进程加原声旁路的架构兜得住这一点。
 - 「奇偶帧双缓冲」的方向对，但要补一条：取出输出时必须在下一帧 run 之前 drop 掉 `SessionOutputs`（它持有预分配 Value 的 Arc 克隆）。别名问题仍待实测。
 - 漏掉的备选：FastEnhancer 的 16 kHz spec2spec 发布物（见上）直接影响 D33「同接口」的工作量，应该回写给 D33 那条线。resources/ 里的 sherpa-onnx 是 C++，不算 Rust 备选，可以不列。
+
+## 收尾补注（rusteco，2026-10-30 自审后）
+- FastEnhancer 16 kHz：已核 GitHub release 说明，`onnx-dns-v1.0.0`（DNS-Challenge 3 wideband 16kHz）与 `onnx-vd-v1.0.0`（VCTK-Demand @16kHz）都明载 16 kHz，含 `fastenhancer_m.spec.onnx`——由【推断】升为【官方】；首选 dns 组
+- ort 零分配：p1 本机实测 `run_with_options` + `OutputSelector::default().preallocate` 全部输出，GTCRN 每帧 Rust 侧 0 次分配；FE-M 7 进 7 出每帧 7 次；`no_default()` 会报错；macOS 默认挂 CoreML 须 `PreferCPU`【实测】
