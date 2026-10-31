@@ -28,3 +28,8 @@ unsafe_code = "deny"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+# 禁用清单（根 clippy.toml）默认放行，只在实时 impl 块 / 实时模块上升为 deny（specs/rust/architecture.md §5.3）
+disallowed_methods = "allow"
+disallowed_types = "allow"
+disallowed_macros = "allow"
+undocumented_unsafe_blocks = "deny"
