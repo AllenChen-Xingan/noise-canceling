@@ -5,10 +5,10 @@
 //! 每帧步骤：
 //! 1. 底噪谱 `noise[k]`：对 `|dry|²` 做「快降慢升」的最小值跟踪（降 τ≈0.08 s，升 +3 dB/s）——稳态部分，人声峰带不进来
 //! 2. 本帧有没有人声 `sp ∈ [0,1]`：有 VAD（`FrameCtx.voice_prob`）就用；没有就用降噪后帧能量对其自身底噪的后验信噪比粗判
-//! 3. 隐含增益 `g = |wet| / |dry|`（封顶 1）。无人声时对 `g` 做时间平滑（系数随 `smooth`）和三点频率平滑，
+//! 3. 隐含增益 `g = |wet| / |dry|`（封顶 1）。无人声时对 `g` 做「慢升快降」的时间平滑（系数随 `smooth`）和三点频率平滑，
 //!    把孤立跳动的增益尖峰（音乐噪声的来源）抹平；有人声时几乎不平滑，避免拖尾、吃字头
-//! 4. 下限：`g' = max(g_s, floor)`；再乘去发闷补偿 `b[k]`，但 `g'·b ≤ 1`（永远不比带噪输入更响）
-//! 5. `wet ← wet · g'·b / g`（保留模型的相位）；`g` 极小时用带噪相位
+//! 4. 下限：`g' = max(g_s, floor)`；再乘去发闷补偿 `b[k]`，但 `g'·b ≤ 1`；写回时按 `g'·b·|dry|` 定幅度，所以每个频点都不比带噪输入更响（舒适噪声补完也封顶到 |dry|）
+//! 5. `wet ← wet · g'·b·|dry| / |wet|`（保留模型的相位）；`|wet|` 极小时用带噪相位
 //! 6. 舒适噪声：若 `|wet|² < c²·noise[k]`，补上差额的随机相位分量（只补缺口，不叠加到已有声音上）
 //!
 //! 去发闷：只在语音帧上，以「带噪 − 底噪」估计干净语音在 2–3 / 3–4.5 / 4.5–6 / 6–8 kHz 四个频带的能量，与降噪后能量比，
@@ -20,6 +20,10 @@ use crate::params::PolishParams;
 use crate::{db_to_pow, pow_to_db};
 
 const N_EQ: usize = 4;
+/// 帧功率低于它当数字静音（|X|² 未归一，16-bit 满幅正弦约 1e10 量级）
+const SILENT_POW: f32 = 1e-9;
+/// 底噪跟踪的下限（防次正规数）
+const NOISE_MIN: f32 = 1e-14;
 const EQ_EDGES_HZ: [f32; N_EQ + 1] = [2000.0, 3000.0, 4500.0, 6000.0, 8000.0];
 
 pub struct SpectralPolish {
@@ -114,27 +118,33 @@ impl SpectralPolish {
         voice_prob: Option<f32>,
     ) {
         let n = self.bins.min(dry.len()).min(wet.len());
-        // 1. 底噪跟踪（第一帧直接初始化）
-        let mut e_wet = 0.0f32;
-        for k in 0..n {
-            let px = dry[k].norm_sqr();
-            let nk = &mut self.noise[k];
-            if self.frames == 0 {
-                *nk = px;
-            } else if px < *nk {
-                *nk += self.a_down * (px - *nk);
-            } else {
-                *nk = (*nk * self.rise).min(px);
+        // 1. 底噪跟踪：第一帧「非静音」时初始化；数字静音帧（设备刚打开常送全零）不更新，
+        //    否则跟踪值掉到 0 / 次正规数后「乘法慢升」永远升不回来（自审 P0）
+        let e_dry: f32 = dry[..n].iter().map(|c| c.norm_sqr()).sum();
+        let e_wet: f32 = wet[..n].iter().map(|c| c.norm_sqr()).sum();
+        let silent = !(e_dry > SILENT_POW) || !e_wet.is_finite();
+        if !silent {
+            for k in 0..n {
+                let px = dry[k].norm_sqr().max(NOISE_MIN);
+                let nk = &mut self.noise[k];
+                if self.frames == 0 {
+                    *nk = px;
+                } else if px < *nk {
+                    *nk += self.a_down * (px - *nk);
+                } else {
+                    *nk = (*nk * self.rise).min(px);
+                }
             }
-            e_wet += wet[k].norm_sqr();
-        }
-        // 2. 人声存在度
-        if self.frames == 0 {
-            self.wet_noise = e_wet;
-        } else if e_wet < self.wet_noise {
-            self.wet_noise += self.a_down * (e_wet - self.wet_noise);
-        } else {
-            self.wet_noise = (self.wet_noise * self.rise).min(e_wet);
+            // 2. 降噪后帧能量的底噪（无 VAD 时判人声用）
+            let ew = e_wet.max(NOISE_MIN);
+            if self.frames == 0 {
+                self.wet_noise = ew;
+            } else if ew < self.wet_noise {
+                self.wet_noise += self.a_down * (ew - self.wet_noise);
+            } else {
+                self.wet_noise = (self.wet_noise * self.rise).min(ew);
+            }
+            self.frames += 1;
         }
         let sp = match voice_prob {
             Some(v) => v.clamp(0.0, 1.0),
@@ -144,11 +154,18 @@ impl SpectralPolish {
             }
         };
         self.last_sp = sp;
-        self.frames += 1;
+        // 全关时真透传（只更新跟踪量，不碰 wet）
+        if p.smooth <= 0.0 && p.floor_db <= -99.0 && p.comfort_db <= -99.0 && p.demuffle_max_db <= 0.0 {
+            self.g_s[..n].fill(1.0);
+            return;
+        }
+        if self.frames == 0 {
+            return; // 还没见过非静音帧：没有底噪估计，不处理
+        }
 
         // 3. 隐含增益与平滑
         let s = p.smooth.clamp(0.0, 1.0);
-        let alpha = 0.85 * s * (1.0 - sp); // 无人声时最强（s=1 时 τ≈6 帧≈0.1 s）
+        let alpha = 0.85 * s * (1.0 - sp); // 无人声时最强（s=1 时 τ≈6 帧≈0.1 s）；有人声时 → 0，不拖字头
         for k in 0..n {
             let dx = dry[k].norm();
             let g = if dx > 1e-9 {
@@ -156,8 +173,9 @@ impl SpectralPolish {
             } else {
                 0.0
             };
-            // 上升（人声起音）时只用 alpha 的四分之一，避免吃字头
-            let a = if g > self.g_s[k] { alpha * 0.25 } else { alpha };
+            // 慢升快降：孤立的增益尖峰（音乐噪声）升不起来，降下去很快。
+            // 第一版写反了（快升慢降 = 峰值保持，反而把尖峰拖长，自审 P1）。起音不靠这里保护，靠 sp → 1 时 alpha → 0
+            let a = if g > self.g_s[k] { alpha } else { alpha * 0.5 };
             self.g_s[k] = a * self.g_s[k] + (1.0 - a) * g;
             self.g_tmp[k] = g;
         }
@@ -191,7 +209,11 @@ impl SpectralPolish {
                 w[b] += wet[k].norm_sqr();
                 nn[b] += self.noise[k];
             }
+            let finite = c.iter().chain(&w).chain(&nn).all(|v| v.is_finite());
             for b in 0..N_EQ {
+                if !finite {
+                    break; // 模型出一帧 NaN 不能把统计永久污染（自审 P2）
+                }
                 self.eq_clean[b] += self.a_eq * (c[b] - self.eq_clean[b]);
                 self.eq_wet[b] += self.a_eq * (w[b] - self.eq_wet[b]);
                 self.eq_snr[b] += self.a_eq * (pow_to_db(c[b]) - pow_to_db(nn[b]) - self.eq_snr[b]);
@@ -237,10 +259,12 @@ impl SpectralPolish {
             10f32.powf(p.comfort_db / 20.0)
         };
         for k in 0..n {
-            let g = self.g_tmp[k];
+            let dx = dry[k].norm();
             let gt = (self.g_s[k].max(floor) * self.boost[k]).min(1.0);
-            if g > 1e-4 {
-                wet[k] *= gt / g;
+            // 按「目标幅度 = gt·|dry|」缩放（保留模型相位）；这样任何频点都不会比带噪输入更响
+            let wm = wet[k].norm();
+            if wm > 1e-12 && wm.is_finite() {
+                wet[k] *= gt * dx / wm;
             } else {
                 wet[k] = dry[k] * gt;
             }
@@ -248,9 +272,14 @@ impl SpectralPolish {
                 let target = comfort * comfort * self.noise[k];
                 let have = wet[k].norm_sqr();
                 if have < target {
+                    // 补差额的随机相位分量（期望功率 = target），再封顶到 |dry|
                     let mag = (target - have).sqrt();
                     let ph = self.rand_unit() * std::f32::consts::TAU;
                     wet[k] += Complex32::new(mag * ph.cos(), mag * ph.sin());
+                    let m = wet[k].norm();
+                    if m > dx && m > 0.0 {
+                        wet[k] *= dx / m;
+                    }
                 }
             }
         }

@@ -3,7 +3,7 @@
 日期 2026-10-30 · 只调研不实现 · 标注：【官方】官方文档/发布说明 ·【源码】xiph/opus 源码 ·【论文】论文 ·【推断】我的推断（与前三类分开看）
 
 取材：
-- xiph/opus `main` 浅克隆，HEAD `bafd40dcbd`（2026-10-29），位于 `resources/opus/`（worktree 下，已被 `.gitignore:12 resources/**` 忽略，未入库）。下文 "源码" 行号均指此 HEAD。
+- xiph/opus `main` 浅克隆，HEAD `bafd40dcbd`（2026-10-29），位于主目录 `resources/opus/`（被 `.gitignore` 的 `resources/**` 忽略，不入库）。下文 "源码" 行号均指此 HEAD。
 - 官方发布包 `opus-1.6.tar.gz`（sha256 `b7637334527201fdfd6dd6a02e67aceffb0e5e60155bbd89175647a80301c92c`，36 MB），解在 scratchpad `opus16/`。
 - crates.io 下载 `opusic-sys 0.7.6` 源码包，解在 scratchpad `crates/opusic/`。
 - 没能做 CPU 实测：在 scratchpad 里 `configure --enable-osce` 编译 `bwe_demo` 的命令被权限分类器拦下（外部代码），所以 CPU 只有论文给的 FLOPS 数和推断。
