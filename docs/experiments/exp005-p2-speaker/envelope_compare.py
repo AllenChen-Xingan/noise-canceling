@@ -51,7 +51,6 @@ def main():
         n = len(j["vad_open"]) * HOP
         x = sf.read(str(noisy), dtype="float32")[0][:n]
         w = sf.read(str(wet), dtype="float32")[0][:n]
-        floor = 0.75 * w + 0.25 * x  # 10^(-12/20) ≈ 0.251
         floor = (1 - 10 ** (-12 / 20)) * w + 10 ** (-12 / 20) * x
         r = {"id": cid, "desc": c.get("desc", "")}
         for k in ("energy", "vad"):
