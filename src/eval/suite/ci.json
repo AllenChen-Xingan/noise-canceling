@@ -1,0 +1,256 @@
+{
+  "name": "exp007-ci",
+  "doc": "CI 层任务集：全是确定性合成场景（参数 + 种子即全部，音频不进仓）。set: regression 已经做好的不许退步 · capability 攻坚、起点通过率低、不阻断 · probe 防作弊探针（verifier 自测）。polarity: suppress 该压的 · preserve 不该压的 · robust 保命与物理量。阈值凡 012 标〔建议值〕的，这里照抄、未定标。每个任务的 origin 写它取自哪次真实失败或哪条规约。",
+  "seed": 20261031,
+  "defaults": { "dur_s": 10, "trials": 3 },
+  "tasks": [
+    {
+      "id": "R01-quiet-room-no-artifacts",
+      "set": "regression", "polarity": "preserve",
+      "origin": "rubric 硬规则 4「比原声只好不坏」· exp003 c08（最容易的一段，人仍给 DPDFNet-2 打了 5 个缺陷标签）",
+      "desc": "安静房间（粉噪 SNR 35 dB）里的独白：不许加怪声、不许压人声、不许改音色",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 35 },
+      "graders": [ { "v": "V-NAN" }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-TIMBRE", "max": 6 }, { "v": "V-MUSIC", "max": 2 }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 } ]
+    },
+    {
+      "id": "R02-owner-monologue-not-gated",
+      "set": "regression", "polarity": "preserve",
+      "origin": "exp003 人耳：三家 8–9/12 段被勾吃字（H4 全 D）· 交代「主人独白不被门控」",
+      "desc": "主讲人在粉噪 10 dB 里独白：门控不能关掉主讲人，字头不能被吞，人声电平不能被压",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 10 },
+      "graders": [ { "v": "V-NAN" }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 }, { "v": "V-SIM-SWLAT", "max": 32 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-LAT" }, { "v": "V-FRAME", "max": 0.5 } ]
+    },
+    {
+      "id": "R03-soft-speaker-still-opens",
+      "set": "regression", "polarity": "preserve",
+      "origin": "012 V-ONSET 已知失效「VAD 门限对低电平说话人失准」· engine 绝对门限 −70 dBFS",
+      "desc": "轻声说话的人（−38 dBov）+ 粉噪 15 dB：门控照样要开",
+      "scene": { "owner": { "level_dbov": -38 }, "noise": "pink", "snr_db": 15 },
+      "graders": [ { "v": "V-NAN" }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-SPLVL", "min": -3 } ]
+    },
+    {
+      "id": "R04-pause-noise-suppressed-pink",
+      "set": "regression", "polarity": "suppress",
+      "origin": "exp005 人原话「我怎么觉得这个盲听测试所有的都没降噪呢」· 交代「非人声停顿要压」",
+      "desc": "粉噪 5 dB、停顿长：停顿里的平稳噪声必须压下去至少 6 dB，且不许冒音乐噪声",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 5, "pause_s": [0.8, 1.6] },
+      "graders": [ { "v": "V-NAN" }, { "v": "V-NR", "max": -6 }, { "v": "V-MUSIC", "max": 2 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-VACUUM", "min": -40 } ]
+    },
+    {
+      "id": "R05-pause-noise-suppressed-white",
+      "set": "regression", "polarity": "suppress",
+      "origin": "exp005「所有的都没降噪」· rubric C2",
+      "desc": "白噪 0 dB：停顿要压至少 6 dB，压的同时字头不能丢",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "white", "snr_db": 0, "pause_s": [0.8, 1.6] },
+      "graders": [ { "v": "V-NAN" }, { "v": "V-NR", "max": -6 }, { "v": "V-MUSIC", "max": 2 }, { "v": "V-ONSET", "max": 3 } ]
+    },
+    {
+      "id": "R06-fan-hum-suppressed",
+      "set": "regression", "polarity": "suppress",
+      "origin": "D02 场景组「空调 / 风扇」· exp005 素材底噪",
+      "desc": "风扇 + 100 Hz 嗡声 5 dB：停顿要压，人声音色不能被带偏",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "hum", "snr_db": 5, "pause_s": [0.8, 1.6] },
+      "graders": [ { "v": "V-NAN" }, { "v": "V-NR", "max": -6 }, { "v": "V-TIMBRE", "max": 6 } ]
+    },
+    {
+      "id": "R07-background-stability-p1120",
+      "set": "regression", "polarity": "preserve",
+      "origin": "exp003 人耳标签 pumping_bg ×3（c08 / c09 / c10「背景忽大忽小」）· P.1120 §11.14.5",
+      "desc": "先放 6 s 粉噪再插入语音：停顿里的背景不许随说话涌上来又抽下去（与不插语音的同一噪声比）",
+      "scene": { "owner": { "level_dbov": -26 }, "owner_start_s": 6.0, "noise": "pink", "snr_db": 10, "dur_s": 14 },
+      "graders": [ { "v": "V-NAN" }, { "v": "V-BGSTAB", "max": 10, "from_s": 5.0 }, { "v": "V-VACUUM", "min": -40 } ]
+    },
+    {
+      "id": "R08-cafe-clinks",
+      "set": "regression", "polarity": "both",
+      "origin": "exp003 c09 杯碟 0 dB：人耳三家全「能用」（正例）· rubric 第 7 节正例「杯碟声变成远处轻响」",
+      "desc": "咖啡馆（粉噪 + 杯碟）5 dB：背景稳定、不冒音乐噪声、人声不被压",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "cafe", "snr_db": 5, "pause_s": [0.8, 1.6] },
+      "graders": [ { "v": "V-NAN" }, { "v": "V-BGSTAB", "max": 10 }, { "v": "V-MUSIC", "max": 2 }, { "v": "V-SPLVL", "min": -3 } ]
+    },
+    {
+      "id": "R09-background-music-timbre",
+      "set": "regression", "polarity": "preserve",
+      "origin": "exp003 c10 钢琴 5 dB（人选 F，GTCRN 被勾吃字）· rubric 第 7 节正例「人声不发闷」",
+      "desc": "背景音乐 5 dB：人声音色与电平不能被带偏",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "music", "snr_db": 5 },
+      "graders": [ { "v": "V-NAN" }, { "v": "V-TIMBRE", "max": 6 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 } ]
+    },
+    {
+      "id": "R10-digital-silence",
+      "set": "regression", "polarity": "robust",
+      "origin": "012 V-MUTE · [S35] Works With Meet 静音条款 · rubric V6",
+      "desc": "整段数字静音输入：输出必须是静音",
+      "scene": { "owner": null, "noise": "none", "dur_s": 4 },
+      "graders": [ { "v": "V-NAN" }, { "v": "V-MUTE", "max_dbfs": -90.3, "settle_s": 0.3 } ],
+      "trials": 1
+    },
+    {
+      "id": "R11-silence-after-speech",
+      "set": "regression", "polarity": "robust",
+      "origin": "012 V-MUTE · engine 自审 P0（开头补零钉死底噪）的反方向：说完话后的数字静音，模型状态不许拖出声音",
+      "desc": "说话 + 粉噪，结尾 3 s 数字静音：静音段输出必须回到静音",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 10, "tail_silence_s": 3.0 },
+      "graders": [ { "v": "V-NAN" }, { "v": "V-MUTE", "max_dbfs": -90.3, "settle_s": 0.3 } ]
+    },
+    {
+      "id": "R12-fault-nan-fallback",
+      "set": "regression", "polarity": "robust",
+      "origin": "006 decision 第 3 件「出事送原声」· engine tests/safety.rs",
+      "desc": "第 200 个 hop 模型吐 NaN：输出不许有 NaN，切到原声与切回来不许爆音",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 10 },
+      "faults": [ { "hop": 200, "kind": "nan" } ],
+      "graders": [ { "v": "V-NAN" }, { "v": "V-SWITCH", "max": 2 } ]
+    },
+    {
+      "id": "R13-fault-error-explode",
+      "set": "regression", "polarity": "robust",
+      "origin": "006 decision 第 3 件 · 012 V-SWITCH",
+      "desc": "后端报错 + 状态发散：输出有限、切换无跳变",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 10 },
+      "faults": [ { "hop": 180, "kind": "error" }, { "hop": 400, "kind": "explode" } ],
+      "graders": [ { "v": "V-NAN" }, { "v": "V-SWITCH", "max": 2 } ]
+    },
+    {
+      "id": "R14-loud-speaker",
+      "set": "regression", "polarity": "robust",
+      "origin": "engine max_abs = 4 的状态异常判据不能误伤正常大声说话",
+      "desc": "大声说话（−12 dBov）+ 粉噪 20 dB：不许误判状态异常而送原声、不许失真",
+      "scene": { "owner": { "level_dbov": -12 }, "noise": "pink", "snr_db": 20 },
+      "graders": [ { "v": "V-NAN" }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-TIMBRE", "max": 6 } ]
+    },
+    {
+      "id": "R15-tonal-language",
+      "set": "regression", "polarity": "preserve",
+      "origin": "exp003 c11 / c12 中文段（三家都不能用）· rubric 第 7 节正例「声调、句尾虚字都在」",
+      "desc": "声调式音节（f0 升降）+ 粉噪 10 dB：字头与电平",
+      "scene": { "owner": { "level_dbov": -26, "f0": [160, 230], "tonal": true }, "noise": "pink", "snr_db": 10 },
+      "lang": "zh",
+      "graders": [ { "v": "V-NAN" }, { "v": "V-ONSET", "max": 3 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 } ]
+    },
+    {
+      "id": "R16-safety-off-parity-latency",
+      "set": "regression", "polarity": "robust",
+      "origin": "D32 延迟账 · 规约 R13：保命全关时延迟账不变",
+      "desc": "三件保命全关（对拍模式）：延迟账与实测仍一致",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 10 },
+      "safety": false,
+      "graders": [ { "v": "V-NAN" }, { "v": "V-LAT" } ],
+      "trials": 1
+    },
+    {
+      "id": "C01-neighbor-alternating",
+      "set": "capability", "polarity": "suppress",
+      "origin": "exp005 c01 / c02（邻座一人轮流说，SIR 3–6 dB）· exp003 c04 / c05 邻座",
+      "desc": "邻座一人在主讲人停顿里说话（SIR 6 dB）：邻座的话要压掉、门控不能为邻座打开",
+      "scene": { "owner": { "level_dbov": -26 }, "interferers": [ { "mode": "alternate", "sir_db": 6 } ], "noise": "pink", "snr_db": 20, "dur_s": 14 },
+      "graders": [ { "v": "V-SIM-FA", "max": 0.1 }, { "v": "V-INTF", "max": -10 }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 }, { "v": "V-SPLVL", "min": -3 } ]
+    },
+    {
+      "id": "C02-owner-and-neighbor-overlap",
+      "set": "capability", "polarity": "both",
+      "origin": "交代「主人与邻座同时说」· exp005 overlap 0.2",
+      "desc": "邻座与主讲人重叠说话（SIR 3 dB）：压邻座、不伤主讲人",
+      "scene": { "owner": { "level_dbov": -26 }, "interferers": [ { "mode": "overlap", "sir_db": 3 } ], "noise": "pink", "snr_db": 20, "dur_s": 14 },
+      "graders": [ { "v": "V-INTF", "max": -10 }, { "v": "V-SIM-FA", "max": 0.1 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 } ]
+    },
+    {
+      "id": "C03-neighbor-talks-first",
+      "set": "capability", "polarity": "suppress",
+      "origin": "exp005 c04 / c05 other_first（邻座先说 25–45 s）",
+      "desc": "邻座先说 6 s、主讲人后开口：开头不能为邻座开门，主讲人一开口要立刻跟上",
+      "scene": { "owner": { "level_dbov": -26 }, "owner_start_s": 6.0, "interferers": [ { "mode": "other_first", "sir_db": 6 } ], "noise": "pink", "snr_db": 20, "dur_s": 16 },
+      "graders": [ { "v": "V-SIM-FA", "max": 0.1 }, { "v": "V-SIM-SWLAT", "max": 32 }, { "v": "V-INTF", "max": -10 } ]
+    },
+    {
+      "id": "C04-builtin-mic-crowd",
+      "set": "capability", "polarity": "both",
+      "origin": "交代「内置麦 + 一大片人」· exp003 c06 / c07 邻桌多人（三家都被勾吃字）",
+      "desc": "6 人 babble 0 dB：压掉人群、字头不丢、不冒音乐噪声",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "babble", "snr_db": 0, "pause_s": [0.8, 1.6] },
+      "graders": [ { "v": "V-NR", "max": -6 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-MUSIC", "max": 2 }, { "v": "V-SPLVL", "min": -3 } ]
+    },
+    {
+      "id": "C05-crowd-minus5",
+      "set": "capability", "polarity": "both",
+      "origin": "exp003 c03 / c07（−5 dB，三家全「不能用」）",
+      "desc": "6 人 babble −5 dB：压 10 dB 以上且人声电平不掉",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "babble", "snr_db": -5, "pause_s": [0.8, 1.6] },
+      "graders": [ { "v": "V-NR", "max": -10 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 } ]
+    },
+    {
+      "id": "C06-neighbor-louder",
+      "set": "capability", "polarity": "suppress",
+      "origin": "exp005 难段：邻座比主讲人还近（SIR −3 dB）",
+      "desc": "邻座比主讲人响 3 dB、轮流说：邻座要压掉",
+      "scene": { "owner": { "level_dbov": -26 }, "interferers": [ { "mode": "alternate", "sir_db": -3 } ], "noise": "pink", "snr_db": 20, "dur_s": 14 },
+      "graders": [ { "v": "V-INTF", "max": -10 }, { "v": "V-SIM-FA", "max": 0.1 } ]
+    },
+    {
+      "id": "C07-canteen-mix",
+      "set": "capability", "polarity": "both",
+      "origin": "exp003 c11（中文 + 邻桌 3 人 + 食堂底噪 0 dB，全不能用）",
+      "desc": "咖啡馆底噪 + 邻座 + 人群：都要压，人声不掉",
+      "scene": { "owner": { "level_dbov": -26 }, "interferers": [ { "mode": "overlap", "sir_db": 6 } ], "noise": "cafe", "snr_db": 0, "dur_s": 14 },
+      "graders": [ { "v": "V-NR", "max": -6 }, { "v": "V-INTF", "max": -10 }, { "v": "V-SPLVL", "min": -3 } ]
+    },
+    {
+      "id": "C08-white-minus5-no-eating",
+      "set": "capability", "polarity": "both",
+      "origin": "rubric 负例「过度抑制吃字」· exp003 c03 / c07",
+      "desc": "白噪 −5 dB：压 10 dB 以上，同时字头与电平不丢",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "white", "snr_db": -5, "pause_s": [0.8, 1.6] },
+      "graders": [ { "v": "V-NR", "max": -10 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-SPLVL", "min": -3 } ]
+    },
+    {
+      "id": "C09-aggressive-20db",
+      "set": "capability", "polarity": "suppress",
+      "origin": "exp005 处置「下一版加激进设置对照」：衰减下限 −12 dB 封顶，GTCRN 对邻座只低 0.6–5.6 dB",
+      "desc": "粉噪 0 dB：停顿压 20 dB 以上（现在衰减下限 −12 dB 封顶，过不了——给爬坡空间）",
+      "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 0, "pause_s": [0.8, 1.6] },
+      "graders": [ { "v": "V-NR", "max": -20 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-VACUUM", "min": -40 } ]
+    },
+    {
+      "id": "P01-onset-cut-must-fail",
+      "set": "probe", "polarity": "both",
+      "origin": "rubric 第 7 节负例护栏 ①：削每个词首 50 ms → C3 必须变差",
+      "desc": "把 R02 的输出削掉词首 50 ms：V-ONSET 必须判不过",
+      "probe": { "base": "R02-owner-monologue-not-gated", "kind": "onset_cut_50ms" },
+      "graders": [ { "v": "V-ONSET", "max": 3 } ]
+    },
+    {
+      "id": "P02-nonspeech-minus40-must-fail",
+      "set": "probe", "polarity": "both",
+      "origin": "rubric 第 7 节负例护栏 ②：非语音段 −40 dB → N3 必须变差",
+      "desc": "把 R07 的输出在非语音段压 40 dB：V-BGSTAB 与 V-VACUUM 必须判不过；V-NR 会被它刷高（只报，证明 V-NR 要制衡）",
+      "probe": { "base": "R07-background-stability-p1120", "kind": "nonspeech_minus40" },
+      "graders": [ { "v": "V-BGSTAB", "max": 10, "from_s": 5.0 }, { "v": "V-VACUUM", "min": -40 } ],
+      "info": [ { "v": "V-NR", "max": -6 } ]
+    },
+    {
+      "id": "P03-lowpass-1k-must-fail",
+      "set": "probe", "polarity": "both",
+      "origin": "rubric 第 7 节负例护栏 ③：1 kHz 低通 → N4 必须变差（exp003 trap-degraded）",
+      "desc": "把 R09 的输出做 1 kHz 低通：V-TIMBRE 必须判不过",
+      "probe": { "base": "R09-background-music-timbre", "kind": "lowpass_1k" },
+      "graders": [ { "v": "V-TIMBRE", "max": 6 } ]
+    },
+    {
+      "id": "P04-do-nothing-must-fail",
+      "set": "probe", "polarity": "suppress",
+      "origin": "exp005「所有的都没降噪」：什么都不做的输出必须被 V-NR 抓到",
+      "desc": "输出 = 带噪输入：V-NR 必须判不过",
+      "probe": { "base": "R04-pause-noise-suppressed-pink", "kind": "identity" },
+      "graders": [ { "v": "V-NR", "max": -6 } ]
+    },
+    {
+      "id": "P05-mute-all-must-fail",
+      "set": "probe", "polarity": "preserve",
+      "origin": "Anthropic「评分器要防钻空子」：全静音能把 V-NR 刷到满分，制衡项 V-SPLVL 必须拦下",
+      "desc": "输出 = 0：V-SPLVL 必须判不过；V-NR 只报（会是满分）",
+      "probe": { "base": "R04-pause-noise-suppressed-pink", "kind": "mute" },
+      "graders": [ { "v": "V-SPLVL", "min": -3 } ],
+      "info": [ { "v": "V-NR", "max": -6 } ]
+    }
+  ]
+}
