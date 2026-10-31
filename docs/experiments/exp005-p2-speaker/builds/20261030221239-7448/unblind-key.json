@@ -1,0 +1,101 @@
+{
+ "build": "20261030221239-7448",
+ "cands": {
+  "vad": "个性化关（VAD 快开慢关 + 下限）",
+  "personal": "个性化开（+ 注册 + 不对称门控）"
+ },
+ "key": {
+  "c01": {
+   "order": [
+    "vad",
+    "personal"
+   ],
+   "excerpt_s": [
+    29.008,
+    54.008
+   ],
+   "lock_t": 29.008
+  },
+  "c02": {
+   "order": [
+    "personal",
+    "vad"
+   ],
+   "excerpt_s": [
+    51.5,
+    76.5
+   ],
+   "lock_t": 22.0
+  },
+  "c03": {
+   "order": [
+    "personal",
+    "vad"
+   ],
+   "excerpt_s": [
+    38.5,
+    63.5
+   ],
+   "lock_t": 32.0
+  },
+  "c04": {
+   "order": [
+    "personal",
+    "vad"
+   ],
+   "excerpt_s": [
+    71.008,
+    96.008
+   ],
+   "lock_t": 71.008
+  },
+  "c05": {
+   "order": [
+    "vad",
+    "personal"
+   ],
+   "excerpt_s": [
+    79.008,
+    104.008
+   ],
+   "lock_t": 79.008
+  },
+  "c06": {
+   "order": [
+    "vad",
+    "personal"
+   ],
+   "excerpt_s": [
+    27.5,
+    52.5
+   ],
+   "lock_t": 29.504
+  },
+  "c07": {
+   "order": [
+    "personal",
+    "vad"
+   ],
+   "excerpt_s": [
+    52.008,
+    77.008
+   ],
+   "lock_t": 37.008
+  },
+  "c08": {
+   "order": [
+    "vad",
+    "personal"
+   ],
+   "excerpt_s": [
+    46.512,
+    71.512
+   ],
+   "lock_t": 46.512
+  }
+ },
+ "trap": {
+  "clip": "c08",
+  "version": "personal"
+ }
+}
