@@ -102,10 +102,10 @@ rustarch 初审（`p1-review-v1`）同意这个划分，并定了：`eval` 现�
 |---|---|---|
 | ort 2.0.0-rc.15 / ort-sys | MIT OR Apache-2.0 | 推理 |
 | ONNX Runtime 1.31（ort 构建时下载的 pyke 预编译库，静态链接） | MIT（微软） | 推理 |
-| realfft · rustfft · clap · serde_json · num-complex 等 | MIT OR Apache-2.0 | |
+| realfft（MIT）· rustfft · clap · serde_json · num-complex 等 | MIT 或 MIT OR Apache-2.0 | |
 | hound | Apache-2.0 | WAV 读写 |
 | stats_alloc | MIT | bench 分配计数 |
-| assert_no_alloc（只在测试） | BSD-2-Clause | 不分配断言 |
+| assert_no_alloc（只在测试） | BSD-1-Clause | 不分配断言 |
 | 构建期（ort-sys 下载用）：openssl · ureq · webpki-root-certs 等 | Apache-2.0 / MIT / ISC / CDLA-Permissive-2.0 | 只在构建时下载 ORT，不进成品 |
 
 全部是宽松许可，与 GPL-3.0 兼容；没有 GPL-2.0-only。**模型权重另算**：GTCRN 仓库 MIT；FastEnhancer 代码 MIT，release 权重的许可待核（003 §5，发布前必须定）。`download-binaries` 构建时联网下载 ORT，复现与 CI 要钉版本与哈希（rustarch 初审），本批没钉。
