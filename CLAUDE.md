@@ -58,6 +58,7 @@
    - 该 build 的揭盲表、清单、文件哈希、参数等小文件（不含音频）当场复制进 `docs/experiments/<实验>/builds/<build-id>/` 并提交
    - 人交回的答卷（导出的 JSON）当场放进 `docs/experiments/<实验>/results/` 并提交
    - 揭盲表进仓不影响盲测：人不看仓库；给人的页面里仍不出现模型名
+   - **给人听的那份目录里不许带揭盲表和清单**（`unblind-key.json`、写着条件名的 `files.json` 等）：页面生成时把它们写在听测目录之外；复制给人前再查一遍（2026-10-31 复制到桌面时发现目录里带着答案）
 2. **target 入库之坑（2026-10-30）：任何会产生大量可重建产物的工具，先写进 `.gitignore` 再第一次运行**。起因：p1 第一次 `cargo build` 前 `.gitignore` 没有 `/target/`，auto-commit hook 把 2459 个构建文件（146 MB）连提三次，违反铁律 8；靠改写未推送历史才清掉。做法：
    - 新开 worktree / 新引入工具链（cargo、uv venv、node、模型缓存）之前，大总管先确认 `.gitignore` 已覆盖其产物目录
    - 已提交进去的：**推送前**在该分支用 `git filter-branch --index-filter 'git rm -r --cached --ignore-unmatch <目录>'` 只改写未推送的提交，改完逐字核对其余内容不变；**已推送的**先停下问人
