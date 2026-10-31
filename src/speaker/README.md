@@ -36,8 +36,11 @@ P2 离线：VAD 驱动的快开慢关 · Kaldi 兼容 fbank · 声纹（ONNX）�
 
 - 默认不带任何 feature：核心只依赖 `vdn-dsp`、earshot、realfft（规约 §2.2 规则 1）
 - `onnx`：声纹推理（ort），过渡期例外，拆出推理后端 crate 后移走
-- `offline`：离线实验命令行（再拉 engine、models、hound、serde_json）。**待迁移**到 vdn-cli / vdn-eval（规约 §2.1 离线层）
-- 构建命令行：`cargo build --release -p vdn-speaker --features offline`
+- 没有 `offline` feature 了：离线实验命令行在 `src/speaker-lab/`（2026-10-31 p2fix），本 crate 的依赖闭包里不再有 engine、models、hound、serde_json（check-deps 守）
+
+## 档位
+
+`metadata.vdn.tier = "B"`：`envelope` / `gate` / `vad` 的 `process` / `reset` 每 hop 跑在降噪线程（规约 §4 的 B 档线程），这些 `impl` 块升了禁用清单（§5.3）；判断回路 `fbank` / `embed` / `enroll` / `judge` 是 C 档，模块头 `#![allow(clippy::indexing_slicing)] // NRT`。规约 §2.1 表里写的是 C，只算了声纹那半
 
 ## 接入注意（下一批接 engine 时）
 
@@ -55,12 +58,4 @@ P2 离线：VAD 驱动的快开慢关 · Kaldi 兼容 fbank · 声纹（ONNX）�
 
 ## 命令行（离线实验）
 
-```sh
-vdn-speaker denoise <noisy.wav> <wet.wav> [--model-path gtcrn.onnx]
-vdn-speaker run   <noisy.wav> <out_dir> --wet <wet.wav> [--speaker-onnx ecapa.onnx] [--replay log.json --tag .x] [--overwrite] [门控参数…]
-vdn-speaker envelope <noisy.wav> <wet.wav> <out_prefix>
-vdn-speaker fbank <in.wav> <out.f32>
-vdn-speaker embed <in.wav>
-```
-
-`run` 一次出 `raw / floor / energy / vad / personal / aggressive` 六个版本和一份 `log.json`（判断回路每次判决、注册事件、逐 hop 增益与耗时）。目标文件已存在时拒绝覆盖，除非换 `--tag` 或加 `--overwrite`；`--replay` 必须带 `--tag`。
+已挪到 `src/speaker-lab/`（`vdn-speaker-lab`，tier = tool），见那里的 README。
