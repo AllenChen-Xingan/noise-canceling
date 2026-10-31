@@ -21,7 +21,7 @@
 | GTCRN ↔ FastEnhancer-M 交叉淡化 | 抄 Firewheel `Declicker::process_crossfade` + 预计算淡化表 `DeclickValues`（firewheel-core/src/dsp/declick.rs:17,113,486） | 用 Smoother(Linear) 生成增益自己乘 | 预计算表 SIMD 友好、零分配；默认 3 ms（declick.rs:494）对我们偏短，模型切换建议 20–50 ms |
 | 实时线程不释放内存（换模型、换调度） | 抄 Firewheel：新调度 Box 从 ringbuf 送进，旧调度原路送回主线程释放（firewheel-graph/src/processor/handle_messages.rs:69-116） | basedrop / Firewheel 自带 `collector`（ArcGc，firewheel-core/src/collector.rs:1-2） | 「送回去再 drop」实现最简单，用已在 resources 里的 rtrb 即可 |
 | 热路径零分配验证 | 自写 debug-only 全局分配器守卫（思路同 nih-plug 用 assert_no_alloc：nih-plug/src/wrapper/util.rs:35-37,189-199） | rtsan-standalone-rs（还能抓锁与系统调用） | assert_no_alloc 上次发布 2021、仓库 2023 后无推送，不合「仍在维护」；逻辑很小，自写更稳。rtsan 能管「零锁零系统调用」，但要构建 LLVM 运行时，放 CI |
-| 非正规数（denormal）防护 | 抄 nih-plug `ScopedFtz`，aarch64 的 FPCR FZ 位（nih-plug/src/wrapper/util.rs:25,191） | no_denormals crate（MIT，0.3.0 · 2025-09） | GRU/卷积尾部衰减极易进 denormal，Apple Silicon 上要显式开 FZ |
+| 非正规数（denormal）防护 | 抄 nih-plug `ScopedFtz`，aarch64 的 FPCR FZ 位（nih-plug/src/wrapper/util.rs:25,191） | no_denormals crate（MIT，0.3.0 · 2025-09-11【API】，已超过 12 个月，备选也要慎用） | GRU/卷积尾部衰减极易进 denormal，Apple Silicon 上要显式开 FZ |
 | 延迟上报（latency_samples） | 抄 nih-plug：原子 swap，变了才通知非实时线程（nih-plug/src/wrapper/clap/wrapper.rs:1737-1745） | clack：延迟只在 activate 内允许变（clack/extensions/src/latency.rs:99） | 我们由 engine 上报，HAL 驱动读 `kAudioDevicePropertyLatency`；采 clack 的规矩更简单：**换模型 = 重激活**，延迟只在激活时定 |
 | 后台任务（模型加载、声纹注册） | 抄 nih-plug `BackgroundTask` 有界队列 + `try_send` 失败即丢（nih-plug/src/event_loop/background_thread.rs:61-69） | Firewheel 的事件组送回模式（handle_messages.rs:44） | 但队列换成 rtrb：crossbeam 首次在新线程调用会因线程本地存储分配（background_thread.rs:62-63 作者自注） |
 | 音频图 | **不要图**，自写固定管线 | Firewheel（真要动态图时） | 链路固定；dasp_graph 每次 process 都 DFS 遍历（dasp/dasp_graph/src/lib.rs:322），且 2020 后没发版 |
@@ -185,7 +185,7 @@
 |---|---|
 | 做什么 | LLVM RealtimeSanitizer 的 Rust 绑定：给函数标「非阻塞」，运行时抓分配、锁、系统调用 |
 | 许可证 | Apache-2.0；兼容：是 |
-| 维护状态 | crates 0.3.0 · 2025-09-27；最近推送 2026-09-15；open issues 1【API】 |
+| 维护状态 | crates 0.3.0 · 2025-09-27；GitHub `pushed_at` 是 2026-09-15，但**默认分支最后一次提交是 2025-09-27**（commits API），已超过 12 个月，**命门 3 不达标**（复核 3 更正）；open issues 1【API】 |
 | 实时安全做法 | 正是三条命门中「零分配零锁零系统调用」的运行时检查器 |
 | 值得学的一处 | — |
 | 我们怎么用 | 备选：CI 里对 eval 跑一遍离线处理（与实时回调同一份代码）当回归检查 |
@@ -201,7 +201,7 @@
 | 实时安全做法 | 未读源码；Firewheel 自带同类 `collector`（resources/Firewheel/crates/firewheel-core/src/collector.rs:1-2） |
 | 值得学的一处 | — |
 | 我们怎么用 | 备选；首选是更简单的「rtrb 送回再 drop」 |
-| 风险 | 0.1；近 12 个月只此一次发版 |
+| 风险 | 0.1；0.1.3（2025-10-29）也是最后一次提交，到 2026-10-30 已经 366 天，**刚好超出 12 个月线**（复核 3 更正） |
 | 证据 | 【API】【源码】Firewheel 同类实现 |
 
 ### triple_buffer（https://github.com/HadrienG2/triple-buffer）【浅读】
