@@ -827,6 +827,7 @@ dependencies = [
 name = "vdn-models"
 version = "0.1.0"
 dependencies = [
+ "assert_no_alloc",
  "hound",
  "ort",
  "vdn-dsp",

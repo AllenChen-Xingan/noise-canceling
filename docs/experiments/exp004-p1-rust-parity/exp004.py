@@ -157,6 +157,18 @@ def step_compare():
                     m["max_step"] = float(np.max(np.abs(np.diff(y))))
                     m["max_step_safe"] = float(np.max(np.abs(np.diff(safe))))
                     m["max_step_noisy"] = float(np.max(np.abs(np.diff(x))))
+                    # 故障点附近（该 hop 前 1 个到后 3 个 hop）的最大相邻样本差：故障版 vs 无故障版，看切换有没有爆音
+                    hop = 256 if name == "gtcrn" else 160
+                    lat = 256 if name == "gtcrn" else 352
+                    lead = MODELS[name][2]
+                    loc = {}
+                    for kind, h in FAULT_HOPS.items():
+                        pos = h * hop - lead - lat
+                        w = slice(max(pos - hop, 0), pos + 3 * hop)
+                        loc[kind] = {"fault": float(np.max(np.abs(np.diff(y[w])))),
+                                     "safe": float(np.max(np.abs(np.diff(safe[w])))),
+                                     "noisy": float(np.max(np.abs(np.diff(x[w]))))}
+                    m["local_step"] = loc
                 r[mode] = m
             if ns_sec >= 1.0:
                 r["py_nonspeech_atten_db"] = float(10 * np.log10(np.mean(py[:nm][ns] ** 2) / np.mean(x[:nm][ns] ** 2)))
@@ -184,7 +196,7 @@ def step_compare():
         s["nonspeech_atten_db_min"] = {m: float(min(pc[c][name][m]["nonspeech_atten_db"] for c in ns_clips))
                                        for m in ("raw", "safe", "floor")}
         s["voiced_hop_fraction_safe"] = float(np.mean([pc[c][name]["safe"]["stats"]["voiced_hops"] / pc[c][name]["safe"]["stats"]["hops"] for c in pc]))
-        s["fault"] = {c: {k: pc[c][name]["fault"][k] for k in ("finite", "max_step", "max_step_safe", "max_step_noisy", "si_sdr")}
+        s["fault"] = {c: {k: pc[c][name]["fault"][k] for k in ("finite", "max_step", "max_step_safe", "max_step_noisy", "local_step", "si_sdr")}
                       | {"stats": pc[c][name]["fault"]["stats"], "safe_si_sdr": pc[c][name]["safe"]["si_sdr"]}
                       for c in FAULT_CLIPS}
         out["summary"][name] = s
