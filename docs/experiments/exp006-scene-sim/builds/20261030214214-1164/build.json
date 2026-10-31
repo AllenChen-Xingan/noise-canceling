@@ -1,0 +1,8 @@
+{
+ "build": "20261030214214-1164",
+ "audio_dir": "_tmp/20261031-exp006/20261030214214-1164",
+ "n": 856,
+ "seconds": 11.3,
+ "only": "train,test,seq",
+ "n_limit": null
+}
