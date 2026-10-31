@@ -26,8 +26,8 @@ button { background:var(--acc); color:var(--bg); border:none; padding:10px 18px;
 </head>
 <body>
 <main>
-<h1>盲听：哪一份把旁边的人压得更好，又没伤到主人</h1>
-<p class="lead">每题三段：<b>原声</b>（参考，未处理）和 <b>A</b>、<b>B</b> 两种处理。主人 = 离麦最近、声音最大的那位。请戴耳机，按顺序听。答案自动存在本浏览器里，听完点最下面的「导出答卷」把文件交回。</p>
+<h1>盲听：压得干净，还是不吃字</h1>
+<p class="lead">每题一段<b>原声</b>（参照，未处理）和 <b>A</b>、<b>B</b>、<b>C</b> 三种处理。主人 = 离麦最近、声音最大的那位；「旁边的人」= 其余说话的人。请戴耳机，按顺序听。答案自动存在本浏览器里，听完点最下面的「导出答卷」把文件交回。</p>
 <div id="items"></div>
 <p><button id="export">导出答卷</button><span id="status"></span></p>
 </main>
@@ -39,10 +39,12 @@ button { background:var(--acc); color:var(--bg); border:none; padding:10px 18px;
   let ans = {};
   try { ans = JSON.parse(localStorage.getItem(store) || "{}"); } catch (e) { ans = {}; }
   const save = () => { try { localStorage.setItem(store, JSON.stringify(ans)); } catch (e) {} };
+  // [键, 题面, 选项, 多选?]
   const Q = [
-    ["neighbor", "旁边的人说话时，哪一份把他压得更轻？", ["A", "B", "差不多"]],
-    ["owner", "主人说话时，哪一份有吞字、变轻、开头被切掉？", ["A 有", "B 有", "都有", "都没有"]],
-    ["natural", "哪一份听着更自然（背景不忽大忽小、没有怪声）？", ["A", "B", "差不多"]],
+    ["quietest", "旁边的人说话时，哪一份里他的声音最小（最听不见）？", ["A", "B", "C", "分不出"], false],
+    ["eaten", "主人说话时，哪几份有吞字、变轻或句首被切？（可多选）", ["A", "B", "C", "都没有"], true],
+    ["natural", "哪一份听着最自然（背景不忽大忽小、没有怪声）？", ["A", "B", "C", "分不出"], false],
+    ["pick", "如果真在开会，你愿意让对方听到哪一份？", ["A", "B", "C", "原声"], false],
   ];
   const root = document.getElementById("items");
   M.items.forEach((it, i) => {
@@ -51,10 +53,13 @@ button { background:var(--acc); color:var(--bg); border:none; padding:10px 18px;
     const a = ans[it.id] || (ans[it.id] = {});
     let h = `<h2>第 ${i + 1} 题 · ${it.desc}</h2>`;
     h += `<div class="row"><b>原声</b><audio controls preload="none" src="${it.ref}"></audio></div>`;
-    it.cands.forEach((f, k) => { h += `<div class="row"><b>${"AB"[k]}</b><audio controls preload="none" src="${f}"></audio></div>`; });
-    Q.forEach(([q, text, opts]) => {
-      h += `<fieldset><legend>${text}</legend>` + opts.map(o =>
-        `<label><input type="radio" name="${it.id}-${q}" value="${o}" ${a[q] === o ? "checked" : ""}> ${o}</label>`).join("") + `</fieldset>`;
+    it.cands.forEach((f, k) => { h += `<div class="row"><b>${"ABC"[k]}</b><audio controls preload="none" src="${f}"></audio></div>`; });
+    Q.forEach(([q, text, opts, multi]) => {
+      const cur = a[q] || (multi ? [] : "");
+      h += `<fieldset><legend>${text}</legend>` + opts.map(o => {
+        const on = multi ? cur.includes(o) : cur === o;
+        return `<label><input type="${multi ? "checkbox" : "radio"}" name="${it.id}|${q}" value="${o}" ${on ? "checked" : ""}> ${o}</label>`;
+      }).join("") + `</fieldset>`;
     });
     h += `<fieldset><legend>备注（可空）</legend><textarea data-id="${it.id}">${a.note || ""}</textarea></fieldset>`;
     d.innerHTML = h;
@@ -62,7 +67,15 @@ button { background:var(--acc); color:var(--bg); border:none; padding:10px 18px;
   });
   root.addEventListener("change", e => {
     const t = e.target;
-    if (t.type === "radio") { const [id, q] = t.name.split(/-(?=[^-]+$)/); ans[id] = ans[id] || {}; ans[id][q] = t.value; save(); }
+    if (t.type !== "radio" && t.type !== "checkbox") return;
+    const [id, q] = t.name.split("|");
+    ans[id] = ans[id] || {};
+    if (t.type === "radio") { ans[id][q] = t.value; }
+    else {
+      const boxes = [...root.querySelectorAll(`input[name="${t.name}"]`)];
+      ans[id][q] = boxes.filter(b => b.checked).map(b => b.value);
+    }
+    save();
   });
   root.addEventListener("input", e => {
     const t = e.target;
@@ -75,8 +88,8 @@ button { background:var(--acc); color:var(--bg); border:none; padding:10px 18px;
     const el = document.createElement("a");
     el.href = url; el.download = `exp005-answers-${M.build}.json`; el.click();
     URL.revokeObjectURL(url);
-    const n = M.items.filter(it => ans[it.id] && Q.every(([q]) => ans[it.id][q])).length;
-    document.getElementById("status").textContent = `已导出（答完 ${n}/${M.items.length} 题）`;
+    const done = M.items.filter(it => ans[it.id] && Q.every(([q, , , multi]) => multi ? (ans[it.id][q] || []).length : ans[it.id][q])).length;
+    document.getElementById("status").textContent = `已导出（答完 ${done}/${M.items.length} 题）`;
   };
 })();
 </script>
