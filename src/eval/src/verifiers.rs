@@ -261,6 +261,19 @@ pub const REGISTRY: &[Info] = &[
         failure: "同 V-SIM-GATE；可测起点 < 3 个判「不知道」",
     },
     Info {
+        id: "V-SIM-QUIET",
+        name: "没人说话时门控要关（模拟真值）",
+        layer: "ci",
+        kind: Kind::Sim,
+        default_level: Level::L3,
+        unit: "比例",
+        better: Better::Lower,
+        definition: "主讲人（±200 ms 拖尾容许）与干扰者都不在的 hop 里，门控开着的比例",
+        algorithm: "同 V-SIM-GATE。门控开着时 engine 混回 open_db（−6 dB）原声而不是 floor_db（−12 dB），停顿就压不下去",
+        anchor: "≤ 10%〔建议值〕。exp007 首跑：GTCRN 在粉噪 10 dB 下约 99%（engine 底噪跟踪「往下立刻跟」被模型输出的低谷钉住，见 README）",
+        failure: "同 V-SIM-GATE；拖尾容许 200 ms 是〔建议值〕",
+    },
+    Info {
         id: "V-EAT-ASR",
         name: "吃字（ASR 删除 + 替换差）",
         layer: "qa",
@@ -350,6 +363,7 @@ pub fn eval(id: &str, c: &Ctx, p: &Params) -> Score {
         "V-SIM-GATE" => v_sim_gate(c, p),
         "V-SIM-FA" => v_sim_fa(c, p),
         "V-SIM-SWLAT" => v_sim_swlat(c, p),
+        "V-SIM-QUIET" => v_sim_quiet(c, p),
         _ => Score::unknown("V-?", "", Better::Lower, format!("CI 层没有 verifier {id}")),
     }
 }
@@ -1029,6 +1043,23 @@ fn v_sim_fa(c: &Ctx, p: &Params) -> Score {
     let fa = only.iter().filter(|&&h| t.gate[h]).count() as f64 / only.len() as f64;
     Score::judged(ID, fa, "比例", Better::Lower, Some(p.f_or("max", 0.1)), &[])
         .with_extra("interf_only_hops", only.len() as f64)
+}
+
+fn v_sim_quiet(c: &Ctx, p: &Params) -> Score {
+    const ID: &str = "V-SIM-QUIET";
+    let t = match need_sim(c, ID, "比例") {
+        Ok(t) => t,
+        Err(s) => return *s,
+    };
+    let quiet: Vec<usize> = (0..t.owner.len())
+        .filter(|&h| !t.owner_near[h] && !t.interf[h])
+        .collect();
+    if quiet.len() < 20 {
+        return Score::unknown(ID, "比例", Better::Lower, "没人说话的 hop 不足 20 个");
+    }
+    let open = quiet.iter().filter(|&&h| t.gate[h]).count() as f64 / quiet.len() as f64;
+    Score::judged(ID, open, "比例", Better::Lower, Some(p.f_or("max", 0.1)), &[])
+        .with_extra("quiet_hops", quiet.len() as f64)
 }
 
 fn v_sim_swlat(c: &Ctx, p: &Params) -> Score {

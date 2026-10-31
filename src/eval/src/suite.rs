@@ -108,6 +108,8 @@ pub struct Task {
     pub trials: usize,
     /// 探针：(基础任务 id, 劣化)
     pub probe: Option<(String, Probe)>,
+    /// 已知失败（写原因 / issue）：阻断降为报警；全部试验意外通过时报「可转正」
+    pub xfail: Option<String>,
 }
 
 pub struct Suite {
@@ -281,6 +283,7 @@ pub fn parse_suite(text: &str) -> Result<Suite, String> {
                 .and_then(Value::as_u64)
                 .map_or(trials_default, |v| v as usize),
             probe,
+            xfail: s(t, "xfail").map(String::from),
         });
     }
     // 探针的基础任务必须存在
