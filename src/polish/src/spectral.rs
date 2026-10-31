@@ -61,7 +61,10 @@ impl SpectralPolish {
         let mut eq_ramp = vec![0.0; bins];
         for (k, (b, r)) in eq_band.iter_mut().zip(eq_ramp.iter_mut()).enumerate() {
             let f = k as f32 * hz;
-            if let Some(i) = EQ_EDGES_HZ.windows(2).position(|e| matches!(e, [lo, hi] if f >= *lo && f < *hi)) {
+            if let Some(i) = EQ_EDGES_HZ
+                .windows(2)
+                .position(|e| matches!(e, [lo, hi] if f >= *lo && f < *hi))
+            {
                 *b = i as u8;
                 *r = 1.0;
             } else if (1500.0..2000.0).contains(&f) {
@@ -129,8 +132,18 @@ impl SpectralPolish {
     }
 
     /// 处理一帧。`dry.len() == wet.len() == bins()`，长度不对就原样放过（不 panic）。
-    #[deny(clippy::disallowed_macros, clippy::disallowed_methods, clippy::disallowed_types)]
-    pub fn process(&mut self, dry: &[Complex32], wet: &mut [Complex32], p: &PolishParams, voice_prob: Option<f32>) {
+    #[deny(
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::disallowed_types
+    )]
+    pub fn process(
+        &mut self,
+        dry: &[Complex32],
+        wet: &mut [Complex32],
+        p: &PolishParams,
+        voice_prob: Option<f32>,
+    ) {
         if dry.len() != self.bins || wet.len() != self.bins {
             return;
         }
@@ -170,7 +183,11 @@ impl SpectralPolish {
         };
         self.last_sp = sp;
         // 全关时真透传（只更新跟踪量，不碰 wet）
-        if p.smooth <= 0.0 && p.floor_db <= -99.0 && p.comfort_db <= -99.0 && p.demuffle_max_db <= 0.0 {
+        if p.smooth <= 0.0
+            && p.floor_db <= -99.0
+            && p.comfort_db <= -99.0
+            && p.demuffle_max_db <= 0.0
+        {
             self.g_s.fill(1.0);
             return;
         }
@@ -181,9 +198,17 @@ impl SpectralPolish {
         // 3. 隐含增益与平滑
         let s = p.smooth.clamp(0.0, 1.0);
         let alpha = 0.85 * s * (1.0 - sp); // 无人声时最强（s=1 时 τ≈6 帧≈0.1 s）；有人声时 → 0，不拖字头
-        for ((d, w), (gs, gt)) in dry.iter().zip(wet.iter()).zip(self.g_s.iter_mut().zip(self.g_tmp.iter_mut())) {
+        for ((d, w), (gs, gt)) in dry
+            .iter()
+            .zip(wet.iter())
+            .zip(self.g_s.iter_mut().zip(self.g_tmp.iter_mut()))
+        {
             let dx = d.norm();
-            let g = if dx > 1e-9 { (w.norm() / dx).min(1.0) } else { 0.0 };
+            let g = if dx > 1e-9 {
+                (w.norm() / dx).min(1.0)
+            } else {
+                0.0
+            };
             // 慢升快降：孤立的增益尖峰（音乐噪声）升不起来，降下去很快。
             // 第一版写反了（快升慢降 = 峰值保持，反而把尖峰拖长，自审 P1）。起音不靠这里保护，靠 sp → 1 时 alpha → 0
             let a = if g > *gs { alpha } else { alpha * 0.5 };
@@ -195,7 +220,11 @@ impl SpectralPolish {
             // 三点频率平滑（两端用自身补齐）；用 boost 当暂存，下面会重算
             for (k, out) in self.boost.iter_mut().enumerate() {
                 let c = self.g_s.get(k).copied().unwrap_or(1.0);
-                let l = k.checked_sub(1).and_then(|j| self.g_s.get(j)).copied().unwrap_or(c);
+                let l = k
+                    .checked_sub(1)
+                    .and_then(|j| self.g_s.get(j))
+                    .copied()
+                    .unwrap_or(c);
                 let r = self.g_s.get(k + 1).copied().unwrap_or(c);
                 *out = (1.0 - beta) * c + beta * 0.5 * (l + r);
             }
@@ -207,15 +236,20 @@ impl SpectralPolish {
             let mut c = [0.0f32; N_EQ];
             let mut w = [0.0f32; N_EQ];
             let mut nn = [0.0f32; N_EQ];
-            for (((d, wt), nk), (&b, &r)) in
-                dry.iter().zip(wet.iter()).zip(&self.noise).zip(self.eq_band.iter().zip(&self.eq_ramp))
+            for (((d, wt), nk), (&b, &r)) in dry
+                .iter()
+                .zip(wet.iter())
+                .zip(&self.noise)
+                .zip(self.eq_band.iter().zip(&self.eq_ramp))
             {
                 if r < 1.0 {
                     continue; // 只统计 2–8 kHz（斜坡区不算）
                 }
-                if let (Some(cb), Some(wb), Some(nb)) =
-                    (c.get_mut(usize::from(b)), w.get_mut(usize::from(b)), nn.get_mut(usize::from(b)))
-                {
+                if let (Some(cb), Some(wb), Some(nb)) = (
+                    c.get_mut(usize::from(b)),
+                    w.get_mut(usize::from(b)),
+                    nn.get_mut(usize::from(b)),
+                ) {
                     *cb += (d.norm_sqr() - nk).max(0.0);
                     *wb += wt.norm_sqr();
                     *nb += nk;
@@ -237,7 +271,13 @@ impl SpectralPolish {
                 }
             }
         }
-        for (((g, &ec), &ew), &es) in self.eq_gain_db.iter_mut().zip(&self.eq_clean).zip(&self.eq_wet).zip(&self.eq_snr) {
+        for (((g, &ec), &ew), &es) in self
+            .eq_gain_db
+            .iter_mut()
+            .zip(&self.eq_clean)
+            .zip(&self.eq_wet)
+            .zip(&self.eq_snr)
+        {
             let target = if p.demuffle_max_db > 0.0 && es > 6.0 && ew > 0.0 {
                 (0.5 * (pow_to_db(ec) - pow_to_db(ew))).clamp(0.0, p.demuffle_max_db)
             } else {
@@ -252,11 +292,21 @@ impl SpectralPolish {
         }
 
         // 4–6. 下限、补偿、写回、舒适噪声
-        let floor = if p.floor_db <= -99.0 { 0.0 } else { 10f32.powf(p.floor_db / 20.0) };
-        let comfort = if p.comfort_db <= -99.0 { 0.0 } else { 10f32.powf(p.comfort_db / 20.0) };
+        let floor = if p.floor_db <= -99.0 {
+            0.0
+        } else {
+            10f32.powf(p.floor_db / 20.0)
+        };
+        let comfort = if p.comfort_db <= -99.0 {
+            0.0
+        } else {
+            10f32.powf(p.comfort_db / 20.0)
+        };
         let rng = &mut self.rng;
-        for ((d, w), ((&gs, &bst), &nk)) in
-            dry.iter().zip(wet.iter_mut()).zip(self.g_s.iter().zip(&self.boost).zip(&self.noise))
+        for ((d, w), ((&gs, &bst), &nk)) in dry
+            .iter()
+            .zip(wet.iter_mut())
+            .zip(self.g_s.iter().zip(&self.boost).zip(&self.noise))
         {
             let dx = d.norm();
             let gt = (gs.max(floor) * bst).min(1.0);

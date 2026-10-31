@@ -80,7 +80,11 @@ impl Agc {
     }
 
     /// 原地处理一个 hop。`x.len() == hop`（更长只处理前 hop 个）。
-    #[deny(clippy::disallowed_macros, clippy::disallowed_methods, clippy::disallowed_types)]
+    #[deny(
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::disallowed_types
+    )]
     pub fn process(&mut self, x: &mut [f32], p: &PolishParams, voice_prob: f32) {
         let n = x.len().min(self.hop);
         let Some(x) = x.get_mut(..n) else { return };
