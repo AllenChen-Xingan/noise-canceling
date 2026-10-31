@@ -24,6 +24,8 @@ pub struct PolishChain {
     ramp_s: f32,
     fps: f32,
     last_vp: Option<f32>,
+    /// 本 hop 频谱那一路跑过没有（只走时域的模型，如 FE-M wav2wav，没有频谱）
+    spec_ran: bool,
 }
 
 impl PolishChain {
@@ -40,6 +42,7 @@ impl PolishChain {
             ramp_s: 1.0,
             fps,
             last_vp: None,
+            spec_ran: false,
         }
     }
 
@@ -85,18 +88,35 @@ impl PolishChain {
 
     pub fn process_spectrum(&mut self, wet: &mut [Complex32], dry: &[Complex32], ctx: FrameCtx) {
         self.advance();
+        self.spec_ran = true;
         self.last_vp = ctx.voice_prob;
         let p = self.cur;
         self.spectral.process(dry, wet, &p, ctx.voice_prob);
     }
 
-    /// 时域部分。没有外部 VAD 时借用频谱节点的人声存在度。
+    /// 时域部分（频谱那一路之后调；或者没有频谱时单独调）。人声概率依次取：外部 VAD → 频谱节点的估计 → AGC 自己的能量粗判。
+    /// 每个 hop 参数只推进一次：频谱那一路跑过就不再推进。
     pub fn process_time(&mut self, wet: &mut [f32]) {
-        let vp = self
-            .last_vp
-            .unwrap_or_else(|| self.spectral.last_speech_presence());
+        if !self.spec_ran {
+            self.advance();
+        }
+        let vp = match (self.last_vp, self.spec_ran) {
+            (Some(v), _) => v,
+            (None, true) => self.spectral.last_speech_presence(),
+            (None, false) => self.agc.energy_voice_prob(wet),
+        };
         let p = self.cur;
         self.agc.process(wet, &p, vp);
+        self.spec_ran = false;
+        self.last_vp = None;
+    }
+
+    /// 只有时域、带外部上下文时用（例如 FE-M wav2wav 那一路）。
+    pub fn process_time_ctx(&mut self, wet: &mut [f32], ctx: FrameCtx) {
+        if ctx.voice_prob.is_some() {
+            self.last_vp = ctx.voice_prob;
+        }
+        self.process_time(wet);
     }
 
     pub fn reset(&mut self) {
@@ -120,6 +140,8 @@ impl SpectralStage for PolishChain {
 }
 
 /// 时域 Stage 只做 AGC（频谱部分要先经 `SpectralStage` 那一路）。
+/// 注意：同一个实例同时实现两个 trait，engine 接入时要把它当「一个节点、两个挂点」，不能当两个独立节点各放一份；
+/// 两个 trait 的 `reset` 都是整链重置。
 impl Stage for PolishChain {
     fn name(&self) -> &'static str {
         "polish-agc"
@@ -127,7 +149,7 @@ impl Stage for PolishChain {
     fn reset(&mut self) {
         PolishChain::reset(self);
     }
-    fn process(&mut self, wet: &mut [f32], _dry: &[f32], _ctx: FrameCtx) {
-        self.process_time(wet);
+    fn process(&mut self, wet: &mut [f32], _dry: &[f32], ctx: FrameCtx) {
+        self.process_time_ctx(wet, ctx);
     }
 }
