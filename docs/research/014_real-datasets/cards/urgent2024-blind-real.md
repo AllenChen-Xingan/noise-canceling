@@ -1,0 +1,13 @@
+### URGENT 2024 blind 测试集（2024，URGENT 组委会 / NeurIPS 2024 竞赛）
+- **做什么**：通用语音增强，多采样率、多失真
+- **录音设备与距离**：真实部分来源未公开
+- **环境**：未查到
+- **说话人数与重叠**：未查到
+- **语言**：英语（数据卡 'All speech samples in this dataset are in English'）
+- **参考**：近讲 无 · 转写：HF 数据卡写 blind 'no labels or meta information' → 视为无 · 说话人标签 无
+- **大小**：真实 500 条；另有 MOS 子集（urgent2024_mos）
+- **许可**：CC BY-NC-SA 4.0 → 非商业 + 相同方式共享 → 只评测
+- **获取**：直接下载，huggingface.co/datasets/urgent-challenge/urgent2024_official
+- **接近度**：2/5 · 来源不明，无设备或场景标签，无中文
+- **用途建议**：泛化回归集，看有没有退化；MOS 子集可校准无参考指标
+- **出处**：huggingface.co/datasets/urgent-challenge/urgent2024_official【官方】；urgent-challenge.github.io/urgent2024/data/【官方】；arXiv:2506.01611 §2.3【论文，未独立复核】

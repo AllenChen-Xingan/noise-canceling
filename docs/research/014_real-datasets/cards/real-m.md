@@ -1,0 +1,13 @@
+### REAL-M（2021，Mila / SpeechBrain 团队）
+- **做什么**：真实双人同时说话的分离评测集
+- **录音设备与距离**：众包，'laptops and smartphones' 等；144 条一方经视频会议软件录。距离未给
+- **环境**：各家真实房间，不是咖啡馆
+- **说话人数与重叠**：两人同时朗读，高重叠
+- **语言**：英语（50 位 native 与 non-native 说话人）
+- **参考**：近讲 无（'no oracle SI-SNR is available'）· 转写 有（LibriSpeech test 句子，无时间戳）· 说话人标签 未查到
+- **大小**：1436 条，约 3 h
+- **许可**：未查到 → 先当只评测、仅本机
+- **获取**：直接下载，sourceseparationresearch.com/static/REAL-M-v0.1.0.tar.gz
+- **接近度**：2.5/5 · 笔记本 + 双人重叠贴近 D47；但无背景人群、无参考、无中文、许可不明
+- **用途建议**：D47 人耳听测；用转写看 ASR WER 有没有退化
+- **出处**：arXiv:2110.10812 §1、§2、§4.2.1、§4.3【论文】；huggingface.co/speechbrain/REAL-M-sisnr-estimator【官方】

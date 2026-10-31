@@ -1,0 +1,36 @@
+{
+ "reference": "kaldi-native-fbank 1.22.5 + onnxruntime 1.31.1",
+ "model": "voxceleb_ECAPA512.onnx",
+ "segments": [
+  {
+   "seg": "c01_owner",
+   "frames": 298,
+   "fbank_max_abs": 0.00013780593872070312,
+   "fbank_mean_abs": 4.648972208087798e-06,
+   "fbank_rel_max": 7.407417433569208e-05,
+   "emb_dim": 192,
+   "emb_cos": 1.000000238418579,
+   "emb_max_abs": 9.909272193908691e-07
+  },
+  {
+   "seg": "c01_mix",
+   "frames": 298,
+   "fbank_max_abs": 9.632110595703125e-05,
+   "fbank_mean_abs": 4.547034222923685e-06,
+   "fbank_rel_max": 6.046773251000559e-06,
+   "emb_dim": 192,
+   "emb_cos": 0.9999998211860657,
+   "emb_max_abs": 1.4124670997262e-06
+  },
+  {
+   "seg": "c06_owner_1p5",
+   "frames": 148,
+   "fbank_max_abs": 0.00010776519775390625,
+   "fbank_mean_abs": 4.8521806093049236e-06,
+   "fbank_rel_max": 1.2043098649883177e-05,
+   "emb_dim": 192,
+   "emb_cos": 1.0,
+   "emb_max_abs": 1.2330710887908936e-06
+  }
+ ]
+}

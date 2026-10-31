@@ -1,0 +1,13 @@
+### Clarity CEC3 Task 2（2024，Clarity 团队 / Sheffield 等）
+- **做什么**：助听器语音增强，用真人佩戴、音箱回放的真实录音
+- **录音设备与距离**：真人佩戴助听器壳（前/中/后 3 麦，间距约 1 cm），Vicon 跟踪头动；13 个音箱，前方 9 个距 2–4 m（0.5 m 步进、±60°），后方 4 个
+- **环境**：Sheffield 录音室（约 6×6×3 m），80 种音箱布局；目标语音 + 干扰（speech / music / noise）回放，SNR 设计 -12~6 dB
+- **说话人数与重叠**：目标 1 人 + 多个干扰，可能含语音干扰
+- **语言**：英语
+- **参考**：近讲 有（train/dev 每场景 reference.wav 供 HASPI；eval 不给）· 转写 未查到 · 说话人标签 未查到
+- **大小**：10,000 场景
+- **许可**：未查到 → 先当只评测
+- **获取**：MyAirBridge（mab.to/BndoGwtUhjTL3）
+- **接近度**：1.5/5 · 回放重录、助听器麦、录音室，离笔记本 + 咖啡馆很远
+- **用途建议**：研究多干扰源校准；许可确认前不训练
+- **出处**：claritychallenge.org/docs/cec3/task_2/cec3_task2_data【官方】；claritychallenge.org/docs/cec3/cec3_download【官方】；zenodo.org/records/17063983【官方】

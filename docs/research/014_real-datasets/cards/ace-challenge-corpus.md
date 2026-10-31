@@ -1,0 +1,13 @@
+### ACE Challenge corpus（2015，Imperial College London）
+- **做什么**：盲估 T60/DRR 挑战赛语料；含实测 RIR + 同条件录制的 ambient/fan/**真人 babble** 噪声 + 消声室语音。
+- **录音设备与距离**：2ch 笔记本＝Chromebook Pixel 内置麦（间距 62 mm，arecord 直录）；3ch “Mobile”＝DPA 4060 搭的模拟阵列（非真手机）；另有 Single、Crucif(5ch)、Lin8Ch、EM32。声源–麦距离见技术报告。
+- **环境**：7 个真实房间（办公室、会议室、报告厅、带咖啡厅的大楼大堂）。babble＝4–7 名真人在声源附近持续朗读（非自由交谈；出自 WASPAA 2015 §2.3 与 arXiv 1606.03365，014 自审时 Zenodo 页只核到「babble noise」，人数待回论文复核）。
+- **说话人数与重叠**：babble 内部真重叠；目标语音为消声室录音，需自行卷积相加（即“真实噪声+人工混合”）。
+- **语言**：英语。
+- **参考**：目标语音干净源 + 实测 RIR 可构造参考；babble 无转写。
+- **大小**：24.5 GB；Chromebook 档 1.1 GB。
+- **许可**：Zenodo 记录 CC BY 4.0；Imperial 项目页 CC BY-ND 4.0 · 结论：**冲突未决，暂按只评测**，交人拍板。
+- **获取**：直接下载 https://zenodo.org/records/6257551（v1，记录发布日 2015-03-02，2022 建档）；Imperial 页仍指向注册入口 https://acecorpus.ee.ic.ac.uk/wp-login.php?action=register。
+- **接近度**：3/5 · 真笔记本内置麦 + 真人多人 babble；但 Chromebook≠MacBook、babble 为朗读、大堂非咖啡馆主体、目标语音需人工混合、无 D47 近距离对话。
+- **用途建议**：sim-to-real 校准；听测素材（大堂 babble）。
+- **出处**：https://zenodo.org/records/6257551 【官方】；https://www.imperial.ac.uk/speech-audio-processing/projects/ace-challenge/ 【官方】；Eaton et al. WASPAA 2015 §2.2–2.3 【论文】；arXiv:1606.03365 【论文】
