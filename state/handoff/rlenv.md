@@ -15,3 +15,11 @@
 - 2026-10-31 evalstd 更新：L2 改为片段内 Kendall τ 下界 ≥0.2；同策略审计（每轮听 3 段奖励最高输出）；吃字否决用 Δ(del+sub)、段数不足视为不通过；感知类到 L2 约 5–6 轮——待自审后一并改 decision
 - 2026-10-31 evalstd 同意模拟真值指标（V-SIM-GATE / V-SIM-FA / V-SIM-SWLAT，L3 仅限模拟），三限定：真实上换人耳/教师并量落差；只作门控子模块目标，输出仍过吃字否决 + V-ONSET + V-BGSTAB + 同策略审计；真值规则写死进仓且与模型输入不同源
 - 2026-10-31 012 已合并 main（PR #27）；注意：V-SIM-GATE/FA/SWLAT（§3.4）是合并后 evalstd worktree 的提交 5f9085f，main 上还没有——收尾时告诉大总管
+- 2026-10-31 三视角自审（事实 · 实现 · 符合度）完成，P0 5 条、P1 十余条已改进 decision；must-know · gap · sources 同步
+- 2026-10-31 已发 scene（模拟器前置与域随机化清单）、p2（babble 下快开不触发的吃字漏洞；辅助模型复用声纹线程）
+
+## 待人拍板（详见 docs/research/013_rl-environment/decision.md 末尾）
+1 训练在哪（建议本机）· 2 数据下载存放（建议先 train-clean-100 约 6 GB）· 3 许可灰区与 ECAPA（建议只作推理条件输入，与 005 #2 同定）· 4a 回放重录（建议做）· 4b 咖啡馆实录（建议做，本机 30 天删）· 5 模拟真值指标沿用 012 §3.4（确认）· 6 成功标准先冻结方向 · 7 训练触发条件 · 8 D47 强化学习做到哪（建议先黑盒调门控，平台期再 RL 微调权重）· 9 人耳听测节奏（5–6 轮 × 35 分钟）
+
+## 已收尾（2026-10-31）
+交付：docs/research/013_rl-environment/（README · must-know · sources · assign · gap · decision · notes/）
