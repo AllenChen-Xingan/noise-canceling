@@ -1,6 +1,6 @@
 # 现状页 · align（批次 20261031-b4）
 
-- **状态**：进行中
+- **状态**：**已收尾**（2026-10-31），等大总管合 PR；分支 `feat/arch-align`
 - **手上**：架构对齐（008 规约收尾 P1）+ 拆 `vdn-types` + 智能体部件接口骨架（感知 · 策略 · 场景参数表 · 记忆 · 决策日志 · 延迟账）
 - **交代**：主目录 `_tmp/20261031-b4/align.md`；分支 `feat/arch-align`
 
@@ -22,6 +22,14 @@
 | 10-31 | **延迟账改为逐项硬加**：原「IO 缓冲并入攒 hop」推断对 FE-M 不成立（480 帧 hop 不被 256 整除），已删。009 目标（IO 256 帧）47.00 ms 超 2 ms，钉成已知缺口；提议 IO 块 96 帧（两模型 hop 公约数）→ 43.67 ms，测试按它断言 ≤45 |
 | 10-31 | tidy 加固：`expect(`/`cfg_attr(allow` 也要理由、`allow(dead_code)` 不再豁免整文件、`assert !(`/同行 `{`/模块头 deny 都查、`#[cfg(test)]` 只在紧跟 `mod` 时截断；check-deps 用 `--all-features`；核心 crate forbid 加 coreaudio/objc2（types 另加 libc）；crate 根加 `unreachable`/`todo` |
 | 10-31 | ondevice 需求 ①②③ 落类型（`ParamBlock`、`Transition` 限速与手动斜坡、`FrameFeatures`），④⑤⑥ 写进规约 §3.7.4b；R11 补 NaN 硬切。ondevice 会话已结束、回信未送达，经大总管转 |
+
+| 10-31 | 名额内全量：fmt --check ✓、clippy -D warnings ✓、`cargo test --workspace` debug 73 / release 71 全过；真权重补跑 models 冒烟（VDN_REQUIRE_MODELS=1）debug / release 都过，GTCRN 每帧 Rust 侧零分配断言过；名额已归还 |
+| 10-31 | scene 标定：`Hysteresis` 默认改 1 s / 0.4 / 3 s（exp006 held-out）；`FrameFeatures` 按 scene 定稿字段改；策略测试改用固定参数，不跟默认值走 |
+
+## 交付
+- 代码：`src/types/`（新）· `src/xtask/`（新）· 根 `clippy.toml`（新）· `src/{dsp,engine,models,cli}` · 根 `Cargo.toml`（members 末尾追加、一行依赖、四行 lints）
+- 文档：`specs/rust/architecture.md`（§1 · §2 · §3.1 · §3.3 · 新 §3.7 · R4 · R11 · R13 · §5.3）· `.42cog/cog.md` · `docs/experiments/exp004-p1-rust-parity/README.md`（口径补注）
+- 延迟账：代码部分 32 ms（两模型同）；平台部分未实测，按 009 目标逐项硬加 47.00 ms（超 2 ms，已知缺口）、按提议 IO 块 96 帧 43.67 ms
 
 ## 自审未修（P2，留给下一批）
 - `Engine::process` 长度不符分支送的是未对齐原声（比正常早 latency 个样本、无接缝），目前只计数；接 Pipeline 时一并改
