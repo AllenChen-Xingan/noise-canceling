@@ -849,6 +849,7 @@ version = "0.1.0"
 dependencies = [
  "assert_no_alloc",
  "hound",
+ "realfft",
  "vdn-dsp",
  "vdn-polish",
 ]

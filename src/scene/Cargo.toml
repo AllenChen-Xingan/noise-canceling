@@ -10,6 +10,7 @@ publish.workspace = true
 [dependencies]
 vdn-dsp = { path = "../dsp" }
 vdn-polish = { path = "../polish" }
+realfft = "3.5"
 
 [dev-dependencies]
 assert_no_alloc = "1.1"

@@ -1,0 +1,57 @@
+{
+  "_说明": "exp006 场景合成器的参数表。sim.py 按这张表批量生成带真值标签的片段。改表 = 改实验，走提交链。字段解释见 README「参数表」。",
+  "sr": 16000,
+  "clip_s": 10.0,
+  "seed": {"train": 20261031, "test": 20261131, "seq": 20261231},
+  "count": {"train": 560, "test": 280, "seq": 16},
+  "no_target_prob": 0.12,
+  "target_level_dbfs": [-34, -20],
+  "target_drift_db": [0, 6],
+  "user_scene": {
+    "quiet": "安静",
+    "cafe": "咖啡馆 / 人多",
+    "commute": "通勤 / 交通",
+    "music": "音乐",
+    "other": "其他"
+  },
+  "fine": {
+    "quiet":    {"user": "quiet",   "snr_db": [28, 45], "weight": 1.0, "rooms": ["office", "living", "meeting"]},
+    "hvac":     {"user": "quiet",   "snr_db": [8, 25],  "weight": 0.8, "rooms": ["office", "meeting", "living"]},
+    "babble":   {"user": "cafe",    "snr_db": [-5, 15], "weight": 1.4, "rooms": ["cafe", "hall", "living"]},
+    "neighbor": {"user": "cafe",    "snr_db": [0, 15],  "weight": 1.2, "rooms": ["cafe", "office", "living"]},
+    "clatter":  {"user": "cafe",    "snr_db": [0, 20],  "weight": 1.0, "rooms": ["cafe", "office", "living"]},
+    "traffic":  {"user": "commute", "snr_db": [-5, 15], "weight": 1.2, "rooms": ["car", "street"]},
+    "music":    {"user": "music",   "snr_db": [0, 15],  "weight": 1.0, "rooms": ["living", "cafe", "hall"]}
+  },
+  "noise_sources": {
+    "quiet":    [{"kind": "synth_room"}],
+    "hvac":     [{"kind": "synth_hvac"}],
+    "babble":   [{"kind": "demand", "env": "PCAFETER"}, {"kind": "demand", "env": "PRESTO"}, {"kind": "demand", "env": "SCAFE"}, {"kind": "synth_babble", "talkers": [4, 8]}],
+    "neighbor": [{"kind": "talkers", "talkers": [1, 1], "bed": ["PCAFETER", "SCAFE", "PRESTO", "synth_room"], "bed_db": [-18, -8]},
+                 {"kind": "talkers", "talkers": [2, 3], "bed": ["PCAFETER", "SCAFE", "PRESTO"], "bed_db": [-14, -6]}],
+    "clatter":  [{"kind": "demand", "env": "DKITCHEN"}, {"kind": "synth_keyboard"}, {"kind": "synth_dishes"}],
+    "traffic":  [{"kind": "demand", "env": "STRAFFIC"}, {"kind": "demand", "env": "TBUS"}],
+    "music":    [{"kind": "synth_music"}, {"kind": "file_music", "only_split": "test"}]
+  },
+  "demand_split": {"_说明": "每个 DEMAND 环境 16 路各 5 分钟：前 60% 时段给 train，后 40% 给 test，避免同一段噪音两边都见过", "train_frac": 0.6},
+  "speaker_split": {"_说明": "LibriSpeech test-clean 40 个说话人按编号排序，奇数位 train、偶数位 test"},
+  "rooms": {
+    "_说明": "合成房间脉冲响应：直达声 + 早期反射 + 按频带指数衰减的尾巴。rt60 单位秒（低/中/高三个频带）",
+    "office":  {"rt60": [0.45, 0.35, 0.25]},
+    "meeting": {"rt60": [0.6, 0.5, 0.35]},
+    "living":  {"rt60": [0.55, 0.45, 0.3]},
+    "cafe":    {"rt60": [0.9, 0.7, 0.5]},
+    "hall":    {"rt60": [1.6, 1.3, 0.9]},
+    "car":     {"rt60": [0.12, 0.08, 0.06]},
+    "street":  {"rt60": [0.0, 0.0, 0.0]}
+  },
+  "target_distance_m": [0.3, 0.8],
+  "interferer_distance_m": [1.0, 4.0],
+  "device": {
+    "_说明": "设备效果的抽样概率；mic_tilt 是每段随机的麦克风频响倾斜（dB/倍频程）",
+    "none": 0.6, "bt_narrow": 0.2, "clip": 0.2,
+    "clip_drive_db": [6, 16],
+    "mic_tilt_db_per_oct": [-1.5, 1.5]
+  },
+  "seq": {"_说明": "切换序列：每条 4 段、每段 15 s、段间噪音 1 s 交叉淡化，目标说话人全程同一人", "segments": 4, "segment_s": 15.0, "xfade_s": 1.0}
+}
