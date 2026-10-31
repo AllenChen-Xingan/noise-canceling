@@ -101,6 +101,28 @@ pub struct FrameCtx {
     pub voice_prob: Option<f32>,
 }
 
+/// 实时 → 判断回路的每帧特征包（ondevice 需求 ③）：每 hop 一个，经 rtrb 送出，**满了丢弃并计数**，实时侧绝不等。
+/// 噪声谱复用模型的 STFT，不另算。字段是草案，由感知（scene 线）定稿。
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct FrameFeatures {
+    /// 本 hop 首样本（IO 采样率）
+    pub now: SampleClock,
+    /// 输入电平（dBFS）
+    pub level_db: f32,
+    /// 底噪跟踪值（dBFS）
+    pub noise_db: f32,
+    /// 人声概率（VAD）；`None` = 没跑
+    pub voice_prob: Option<f32>,
+    /// 噪声谱（按 [`FrameFeatures::BANDS`] 个频带汇总的 dB），取自模型 STFT
+    pub bands_db: [f32; FrameFeatures::BANDS],
+    /// 本 hop 是否整段送了原声
+    pub bypassed: bool,
+}
+
+impl FrameFeatures {
+    pub const BANDS: usize = 16;
+}
+
 /// 为什么整段送原声。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BypassReason {

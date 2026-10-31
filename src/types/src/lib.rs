@@ -39,14 +39,15 @@ pub mod text;
 pub mod version;
 
 pub use frame::{
-    BypassReason, Confidence, FrameCtx, SampleClock, SpeakerClass, SpeakerVerdict, Status,
+    BypassReason, Confidence, FrameCtx, FrameFeatures, SampleClock, SpeakerClass, SpeakerVerdict,
+    Status,
 };
 pub use latency::{
     Basis, IO_BLOCK_009, IO_BLOCK_PROPOSED, LATENCY_BUDGET_MS, LatencyItem, LatencyLedger,
 };
 pub use memory::{Learner, Overrides, SceneKey, UserProfile};
 pub use model::{Model, ModelError};
-pub use params::{ModelId, ParamError, ParamField, ParamSet, ToneId};
+pub use params::{ModelId, ParamBlock, ParamError, ParamField, ParamSet, ToneId};
 pub use policy::{
     Decision, Hysteresis, HysteresisGate, ParamSource, Policy, PolicyInput, TablePolicy,
     Transition, UserControl, UserSceneChoice, resolve_params,

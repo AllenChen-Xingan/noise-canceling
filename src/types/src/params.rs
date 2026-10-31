@@ -197,6 +197,20 @@ impl ParamSet {
     }
 }
 
+/// 进实时线程的参数块（ondevice 需求 ①）：`Copy` 纯数据，经 rtrb 送一个包（规约 §3.4「必须同时生效的一组参数」）。
+/// 实时线程在帧边界取最新一份，没有新的就沿用旧的，**绝不等**。
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ParamBlock {
+    /// 单调递增；实时侧只认比手上新的
+    pub seq: u32,
+    /// 生成它的配置（场景参数表 + 我的配置）的内容 ID，进决策日志
+    pub config: crate::version::ContentId,
+    /// 当时选的模型文件的内容哈希；与实时侧正在跑的不一致时，离散切换走交叉淡化流程（规约 §3.5）
+    pub model_hash: crate::version::ContentId,
+    pub params: ParamSet,
+    pub transition: crate::policy::Transition,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

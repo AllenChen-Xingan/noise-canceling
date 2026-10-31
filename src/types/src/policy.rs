@@ -94,8 +94,12 @@ impl Default for Hysteresis {
 pub struct Transition {
     /// 连续参数的一阶平滑时间常数（秒），engine 用 `vdn_dsp::one_pole_coef` 换成逐 hop 系数
     pub glide_s: f32,
-    /// 换模型的交叉淡化时长（秒）
+    /// 换模型的交叉淡化时长（秒）；等增益淡化（不用等功率，相关信号会鼓 +3 dB）
     pub model_crossfade_s: f32,
+    /// 连续参数的 dB 类字段每秒最多变多少（限速；ondevice 需求 ②，参照 1 dB/s）
+    pub max_db_per_s: f32,
+    /// 用户手动改动的最短斜坡（秒，20–50 ms），防拉链声
+    pub manual_ramp_s: f32,
 }
 
 impl Default for Transition {
@@ -103,6 +107,8 @@ impl Default for Transition {
         Self {
             glide_s: 1.0,
             model_crossfade_s: 0.05,
+            max_db_per_s: 1.0,
+            manual_ramp_s: 0.03,
         }
     }
 }
