@@ -28,6 +28,7 @@
 | evalimpl | eval 实现：vdn-eval · CI / QA / 人工三层 · 回归集与能力集 · issue #31 · `feat/eval-verifiers` | 完成，PR #38 已合并（issue #31 关），窗口已关；CI 每个 PR 跑 eval ci（回归 13/17 · 能力 0/10 · 探针 5/5）；4 题已并入待拍板清单 |
 | prefs | 人耳结果 → eval 任务 · 偏好数据集 · 分场景默认 · `specs/rubric/preferences.md` · issue #37 · `feat/eval-prefs` | `_tmp/20261031-b4/prefs.md` | 其 worktree | 已报到（noise-canceling-prefs-f3） |
 | benchsynth | 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
+| ears | 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已派（2026-10-31），等报到 |
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
 
 ## 规矩
@@ -41,7 +42,7 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | evalimpl（eval ci --system gtcrn + eval qa，验证 engine 停顿门控问题） |
+| 重编译 / 全量测试（1 个） | benchsynth（exp008 第二轮：装 torch + 补 Hush · DFN3 · RNNoise · WebRTC NS · FRCRN · MossFormer 系 · BSRNN · G-MaP-SE 重跑排名） |
 
 排队：（空）
 
@@ -50,6 +51,10 @@
 ## 进度板
 
 进度（HH:MM）
+- 人（2026-10-31）：「如果只有我一个人的话，我觉得肯定不够……我们必须做到这样」→ 派 ears（017）
+- 人定（2026-10-31）：Hush arm64 预编译 dylib 允许（只作对照）· torch 现在就装（人选，非 AI 建议的「等第一轮」）
+- benchsynth exp008 第一轮（12 系统 + oracle，348 段，6287 s，0 错）：生成器 A/B 排名一致 τ 中位 0.79–0.85（SI-SDR 0.55）→ 合成格自身稳；合成格预测 exp003 人耳配对一致率 0.25–0.38（48 对、3 系统，功效低），直接在 exp003 片段上 0.48–0.56 → 预测人耳尚无证据、可能反向
+- benchsynth 系统阶梯：不装新环境可凑 16 个（5 个族）；名额给第一轮 12 个 + 理想掩码；批准 cargo 小 crate（nnnoiseless / WebRTC NS）与 OpenNC v1、FE VCTK ONNX 小下载；Hush 预编译 dylib、装 torch（约 0.5–1 GB，换架构独立的 FRCRN / MossFormer 等）待人定
 - benchsynth exp008 数据侧（build 20261031-102406-0c67，348 段，A/B 两生成器）：可复现 60/60 · 可控 12/12 · 三轨残差 −149 dB 全过；统计对齐：exp006 合成杯碟不过（LTAS 距离 10.4 dB，线 5.3）· 合成音乐不过（9.0，线 2.5）· babble 临界；稳态噪声无真实参照只到 D0；两坑进标准（float wav 头带时间戳→用样本哈希；电平须在设备链后定，否则 SNR 偏 6.3 dB）
 - 人定（2026-10-31，原话「可以多弄几个来对比」）：exp008 系统阶梯扩到 ≥ 12 个，独立模型为主；非因果 / 大模型可当对照，不进产品；已转 benchsynth
 - benchsynth：MVP 实验编号给 exp008（`docs/experiments/exp008-bench-validity/`）；约束：vdn-eval 任务集编译进去、只有 3 个系统 → 排名效度要 ≥ 8 个系统（8 个时 τ ≥ 0.57 才显著）；MVP 先 Python 数据侧，`--suite` + 系统阶梯写成给实现线的建议
