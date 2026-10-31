@@ -172,6 +172,9 @@ rustarch 的终版规约（`specs/rust/architecture.md`）出来后再对一遍�
 9. 不加 lead-in 时 GTCRN 开头的差异没量
 10. **盲听没做**：003 第四节说 P1 要由人用 exp003 素材再听一版「Rust 版不比 Python 版差」。保命关闭时两边逐值相同，再听一遍没有意义；值得听的是「保命开 vs 关」（待拍板 #2）
 11. 接缝无咔声只有波形判据，没有人耳确认
+12. 两个以后可做的优化（rusteco `answers-p1.md` 更新版），本批都没做：
+    - 缓存现在每帧拷回输入；可以改成两套张量 + 两个 RunOptions 奇偶帧轮换，省掉这次拷贝
+    - FastEnhancer 有 16 kHz 的 spec2spec 发布物（`fastenhancer_m.spec.onnx`），可以和 GTCRN 共用 Rust 的 STFT，也可能绕开每帧 7 次分配
 
 ## CI 建议（`.github/workflows/ci.yml` 不在 p1 的写入范围，交给大总管）
 - 三条 cargo 命令加 `--locked`

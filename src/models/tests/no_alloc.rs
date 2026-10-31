@@ -4,6 +4,8 @@
 //!   bench 里计数（`rust_allocs_per_hop`），这里不断言
 //!
 //! 模型文件不在就跳过。
+// assert_no_alloc 的 AllocDisabler 只在 debug_assertions 下存在：release 测试跳过这个文件
+#![cfg(debug_assertions)]
 
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use vdn_engine::{Engine, SafetyConfig};

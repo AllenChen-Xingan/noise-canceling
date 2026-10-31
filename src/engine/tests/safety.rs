@@ -2,10 +2,13 @@
 
 use std::time::Duration;
 
+#[cfg(debug_assertions)]
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use vdn_engine::testing::DelayGain;
 use vdn_engine::{Engine, FaultInjector, FaultKind, SafetyConfig, offline};
 
+// AllocDisabler 只在 debug_assertions 下存在：release 下只跑行为测试，不分配断言跳过
+#[cfg(debug_assertions)]
 #[global_allocator]
 static A: AllocDisabler = AllocDisabler;
 
@@ -103,6 +106,7 @@ fn deadline_miss_uses_dry_but_keeps_state() {
     assert_eq!(s.model_resets, 0);
 }
 
+#[cfg(debug_assertions)]
 #[test]
 fn process_does_not_allocate() {
     let x = tone(HOP);

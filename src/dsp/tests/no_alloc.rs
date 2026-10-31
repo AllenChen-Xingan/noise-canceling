@@ -1,4 +1,6 @@
 //! 证明每帧路径不分配内存：在 assert_no_alloc 里跑 analyze / synthesize / delay / envelope，分配就 panic。
+// assert_no_alloc 的 AllocDisabler 只在 debug_assertions 下存在：release 测试跳过这个文件
+#![cfg(debug_assertions)]
 
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use vdn_dsp::{DelayLine, OpenCloseEnvelope, OpenCloseParams, StreamingStft, window};
