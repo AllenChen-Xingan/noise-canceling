@@ -4,7 +4,7 @@
 //! `out = (1 - m)·降噪 + m·原声`。`closed` 就是衰减下限（模型把噪音压到零时，背景只降 `20·log10(closed)` dB）。
 //!
 //! 人声判据只看能量（设计稿 003 §2.3：放开不等声纹）：本 hop 能量比「底噪跟踪值」高出 `detect_db`，
-//! 且高于绝对门限 `abs_min_db`，就算有声。底噪跟踪：往下立刻跟，往上每秒最多涨 `noise_rise_db_per_s`。
+//! 且高于绝对门限 `abs_min_db`，就算有声。底噪跟踪：初值取第一个 hop，往下立刻跟，往上每秒最多涨 `noise_rise_db_per_s`。
 
 use crate::one_pole_coef;
 
@@ -47,7 +47,7 @@ impl OpenCloseEnvelope {
             a_up: one_pole_coef(p.attack_s, p.sr),
             a_down: one_pole_coef(p.release_s, p.sr),
             m: p.closed,
-            noise_db: p.abs_min_db,
+            noise_db: f32::INFINITY,
             hang_left: 0.0,
             voiced: false,
             p,
@@ -56,7 +56,7 @@ impl OpenCloseEnvelope {
 
     pub fn reset(&mut self) {
         self.m = self.p.closed;
-        self.noise_db = self.p.abs_min_db;
+        self.noise_db = f32::INFINITY;
         self.hang_left = 0.0;
         self.voiced = false;
     }
