@@ -150,6 +150,9 @@ fn gate_params(args: &[String]) -> R<GateParams> {
     if let Some(v) = f("--release")? {
         p.release_s = v;
     }
+    if let Some(v) = f("--level-close")? {
+        p.level_close_db = Some(v);
+    }
     if let Some(v) = f("--confirm")? {
         p.confirm_n = v as u32;
     }

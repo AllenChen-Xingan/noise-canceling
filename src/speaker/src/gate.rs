@@ -31,6 +31,10 @@ pub struct GateParams {
     /// 已知主人电平时，起始的电平要 ≥ 主人电平 − 这么多 dB 才算「可能是主人开口」（邻座远场更轻，不触发放开）。
     /// 设成很大（如 200）= 任何起始都放开
     pub onset_level_margin_db: f32,
+    /// **可选快路径（默认关 = None）**：已知主人电平时，连续 `level_close_hold_s` 秒「有人声但短时电平 < 主人电平 − 它」
+    /// 就先开始慢收，不等声纹确认。偏离 003 §2.3「声纹确认才收」，作为待拍板项单独评测（exp005）
+    pub level_close_db: Option<f32>,
+    pub level_close_hold_s: f32,
     pub vad_on: f32,
     pub vad_off: f32,
 }
@@ -47,6 +51,8 @@ impl Default for GateParams {
             onset_jump_db: 8.0,
             confirm_n: 2,
             onset_level_margin_db: 3.0,
+            level_close_db: None,
+            level_close_hold_s: 0.3,
             vad_on: 0.5,
             vad_off: 0.35,
         }
@@ -67,6 +73,7 @@ pub struct AsymGate {
     /// 最近 3 个 hop 的能量（环形）
     short_e: [f32; 3],
     short_i: usize,
+    quiet_voiced: u64,
     last_onset: SampleClock,
     last_verdict_end: SampleClock,
     others_streak: u32,
@@ -88,6 +95,7 @@ impl AsymGate {
             slow_db: -120.0,
             short_e: [0.0; 3],
             short_i: 0,
+            quiet_voiced: 0,
             last_onset: SampleClock(0),
             last_verdict_end: SampleClock(0),
             others_streak: 0,
@@ -123,6 +131,7 @@ impl Stage for AsymGate {
         self.slow_db = -120.0;
         self.short_e = [0.0; 3];
         self.short_i = 0;
+        self.quiet_voiced = 0;
         self.last_onset = SampleClock(0);
         self.last_verdict_end = SampleClock(0);
         self.others_streak = 0;
@@ -173,6 +182,17 @@ impl Stage for AsymGate {
             self.last_onset = ctx.now;
             self.others_streak = 0;
             self.closing = false;
+        }
+        // 快路径：持续的「轻」人声 → 先收（可选）
+        if let (Some(d), Some(ol)) = (self.p.level_close_db, ctx.speaker.owner_level_db) {
+            if voiced && !onset && st_db < ol - d {
+                self.quiet_voiced += n as u64;
+                if self.quiet_voiced >= (self.p.level_close_hold_s * self.p.sr) as u64 {
+                    self.closing = true;
+                }
+            } else if voiced {
+                self.quiet_voiced = 0;
+            }
         }
         // 2) 吸收新判决（每份只算一次）
         let v = ctx.speaker;
