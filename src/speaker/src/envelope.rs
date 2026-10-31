@@ -122,7 +122,11 @@ impl Stage for VadEnvelopeStage {
         self.voiced = self.raw_voice || self.hang_left > 0;
         let target = if self.voiced { self.open } else { self.closed };
         for (w, &d) in wet[..n].iter_mut().zip(&dry[..n]) {
-            let a = if target > self.m { self.a_up } else { self.a_down };
+            let a = if target > self.m {
+                self.a_up
+            } else {
+                self.a_down
+            };
             self.m += (target - self.m) * a;
             *w = (1.0 - self.m) * *w + self.m * d;
         }

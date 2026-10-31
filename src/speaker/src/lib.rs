@@ -8,8 +8,8 @@
 //!
 //! 与 engine 的接口按 `specs/rust/architecture.md` §3.3 在 [`types`] 里写了最小镜像，接入由下一批统一做。
 
-pub mod envelope;
 pub mod enroll;
+pub mod envelope;
 pub mod fbank;
 pub mod gate;
 pub mod judge;

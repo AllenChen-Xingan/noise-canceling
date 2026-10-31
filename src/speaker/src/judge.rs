@@ -164,7 +164,10 @@ impl<E: EmbedSource> Judge<E> {
         // 有声帧比例、有声帧电平
         let vn = self.vad_filled;
         let voiced: Vec<bool> = (0..vn)
-            .map(|i| self.vad_ring[(self.vad_pos + self.vad_ring.len() - vn + i) % self.vad_ring.len()] > self.p.vad_thr)
+            .map(|i| {
+                self.vad_ring[(self.vad_pos + self.vad_ring.len() - vn + i) % self.vad_ring.len()]
+                    > self.p.vad_thr
+            })
             .collect();
         let vf = voiced.iter().filter(|&&v| v).count() as f32 / vn.max(1) as f32;
         // VAD 帧与窗尾对齐：最后 vn 帧对应窗的最后 vn·256 个样本
@@ -204,11 +207,17 @@ impl<E: EmbedSource> Judge<E> {
                     SpeakerClass::Unknown
                 }
                 Ok(v) => {
-                    let ps = self.prev_emb.as_ref().map(|p| cosine(p, &v)).unwrap_or(f32::NAN);
+                    let ps = self
+                        .prev_emb
+                        .as_ref()
+                        .map(|p| cosine(p, &v))
+                        .unwrap_or(f32::NAN);
                     log.prev_sim = ps;
                     if vf >= self.p.enroll_voiced_frac && ps >= self.p.consist_sim {
                         let dur = self.p.hop_s;
-                        log.event = self.enroller.observe(&v, end as f64 / self.p.sr as f64, dur, level_db);
+                        log.event =
+                            self.enroller
+                                .observe(&v, end as f64 / self.p.sr as f64, dur, level_db);
                         log.enrolled = true;
                     }
                     let c = match self.enroller.owner() {

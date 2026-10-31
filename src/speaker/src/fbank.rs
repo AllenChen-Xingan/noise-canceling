@@ -173,9 +173,9 @@ impl Fbank {
             }
             self.frame[len..].fill(0.0);
             // 长度都由同一个计划生成，不会出错
-            let _ = self
-                .fft
-                .process_with_scratch(&mut self.frame, &mut self.spec, &mut self.scratch);
+            let _ =
+                self.fft
+                    .process_with_scratch(&mut self.frame, &mut self.spec, &mut self.scratch);
             let row = &mut out[f * nb..(f + 1) * nb];
             for (o, (start, w)) in row.iter_mut().zip(&self.banks) {
                 let mut e = 0.0f32;
@@ -227,7 +227,7 @@ mod tests {
         let nf = fb.num_frames(x.len());
         let mut out = vec![0.0; nf * 80];
         fb.compute_into(&x, &mut out);
-        let row = &out[40 * 0..80];
+        let row = &out[..80];
         let argmax = row
             .iter()
             .enumerate()

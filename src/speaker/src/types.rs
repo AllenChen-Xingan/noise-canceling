@@ -12,7 +12,11 @@ pub struct SampleClock(pub u64);
 
 impl SampleClock {
     pub fn seconds(self, rate: u32) -> f64 {
-        if rate == 0 { 0.0 } else { self.0 as f64 / f64::from(rate) }
+        if rate == 0 {
+            0.0
+        } else {
+            self.0 as f64 / f64::from(rate)
+        }
     }
     pub fn since(self, earlier: SampleClock) -> u64 {
         self.0.saturating_sub(earlier.0)
@@ -27,7 +31,11 @@ impl Confidence {
     pub const ZERO: Confidence = Confidence(0.0);
     pub const ONE: Confidence = Confidence(1.0);
     pub fn new(v: f32) -> Self {
-        if v.is_nan() { Self(0.0) } else { Self(v.clamp(0.0, 1.0)) }
+        if v.is_nan() {
+            Self(0.0)
+        } else {
+            Self(v.clamp(0.0, 1.0))
+        }
     }
     pub fn get(self) -> f32 {
         self.0

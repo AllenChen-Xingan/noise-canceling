@@ -48,7 +48,8 @@ fn open_session(path: &Path) -> Result<Session, BoxError> {
     if !path.is_file() {
         return Err(format!("找不到声纹模型：{}", path.display()).into());
     }
-    let b = |e: ort::Error<ort::session::builder::SessionBuilder>| -> BoxError { e.to_string().into() };
+    let b =
+        |e: ort::Error<ort::session::builder::SessionBuilder>| -> BoxError { e.to_string().into() };
     // 单线程：声纹线程放能效核，不和降噪线程抢（003 §1）；CPU 执行器，同 vdn-models 的理由（CoreML 自动挂载不稳）
     Ok(Session::builder(env()?)?
         .with_auto_device(AutoDevicePolicy::PreferCPU)

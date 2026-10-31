@@ -140,7 +140,9 @@ impl Stage for AsymGate {
         };
         let mut onset = false;
         if voiced {
-            if loud_enough && (self.silent_samples >= gap || e_db > self.slow_db + self.p.onset_jump_db) {
+            if loud_enough
+                && (self.silent_samples >= gap || e_db > self.slow_db + self.p.onset_jump_db)
+            {
                 onset = true;
             }
             self.silent_samples = 0;
@@ -206,7 +208,11 @@ mod tests {
     }
 
     fn ctx(v: SpeakerVerdict, pos: u64, p: f32) -> FrameCtx {
-        FrameCtx { now: SampleClock(pos), speaker: v, voice_prob: Some(p) }
+        FrameCtx {
+            now: SampleClock(pos),
+            speaker: v,
+            voice_prob: Some(p),
+        }
     }
 
     /// 只有别人在说（持续有声、无起始）→ 收到下限；然后停顿 0.3 s 再来一个人声 → 立刻放开
@@ -243,7 +249,18 @@ mod tests {
         for k in 0..60 {
             pos += hop;
             let stale = verdict(SpeakerClass::Other, pos - 100 + k);
-            g.process(&mut wet, &dry, ctx(SpeakerVerdict { window_start: SampleClock(pos - 30000), ..stale }, pos, 0.9));
+            g.process(
+                &mut wet,
+                &dry,
+                ctx(
+                    SpeakerVerdict {
+                        window_start: SampleClock(pos - 30000),
+                        ..stale
+                    },
+                    pos,
+                    0.9,
+                ),
+            );
         }
         assert!(!g.closing());
     }
@@ -257,7 +274,10 @@ mod tests {
         g.silent_samples = 100_000;
         let mut wet = vec![0.003f32; 256]; // ≈ −50 dB
         let dry = wet.clone();
-        let v = SpeakerVerdict { owner_level_db: Some(-25.0), ..verdict(SpeakerClass::Other, 1000) };
+        let v = SpeakerVerdict {
+            owner_level_db: Some(-25.0),
+            ..verdict(SpeakerClass::Other, 1000)
+        };
         g.process(&mut wet, &dry, ctx(v, 50_000, 0.9));
         assert!(g.closing());
     }

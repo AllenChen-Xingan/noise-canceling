@@ -47,7 +47,11 @@ impl Vad {
     /// 喂任意长度的一段（16 kHz）；返回喂完后的最新人声概率。
     pub fn push(&mut self, x: &[f32]) -> f32 {
         for &s in x {
-            self.buf[self.fill] = if s.is_finite() { s.clamp(-1.0, 1.0) } else { 0.0 };
+            self.buf[self.fill] = if s.is_finite() {
+                s.clamp(-1.0, 1.0)
+            } else {
+                0.0
+            };
             self.fill += 1;
             if self.fill == VAD_FRAME {
                 self.prob = self.det.predict_f32(&self.buf);

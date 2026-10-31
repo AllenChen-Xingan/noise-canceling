@@ -19,8 +19,8 @@ use serde_json::json;
 use vdn_engine::{Engine, SafetyConfig, offline};
 use vdn_models::ModelKind;
 use vdn_speaker::embed::{Embedder, default_model_path};
-use vdn_speaker::envelope::{EnergyEnvelopeStage, EnvelopeParams, FloorStage, VadEnvelopeStage};
 use vdn_speaker::enroll::{EnrollEvent, EnrollParams, Enroller};
+use vdn_speaker::envelope::{EnergyEnvelopeStage, EnvelopeParams, FloorStage, VadEnvelopeStage};
 use vdn_speaker::fbank::FbankConfig;
 use vdn_speaker::gate::{AsymGate, GateParams};
 use vdn_speaker::judge::{Judge, JudgeParams};
@@ -65,7 +65,9 @@ fn write_wav(p: &Path, x: &[f32]) -> R<()> {
 }
 
 fn arg(args: &[String], name: &str) -> Option<String> {
-    args.iter().position(|a| a == name).and_then(|i| args.get(i + 1).cloned())
+    args.iter()
+        .position(|a| a == name)
+        .and_then(|i| args.get(i + 1).cloned())
 }
 
 fn speaker_path(args: &[String]) -> R<PathBuf> {
@@ -76,7 +78,12 @@ fn speaker_path(args: &[String]) -> R<PathBuf> {
 }
 
 /// 把一个 Stage 套在整段（已对齐的 wet / dry）上，逐 hop 跑；`verdicts[k]` 是第 k 个 hop 看到的判决。
-fn run_stage<S: Stage>(st: &mut S, wet: &[f32], dry: &[f32], verdicts: &[SpeakerVerdict]) -> Vec<f32> {
+fn run_stage<S: Stage>(
+    st: &mut S,
+    wet: &[f32],
+    dry: &[f32],
+    verdicts: &[SpeakerVerdict],
+) -> Vec<f32> {
     let mut out = wet.to_vec();
     for (k, (w, d)) in out.chunks_mut(HOP).zip(dry.chunks(HOP)).enumerate() {
         let ctx = FrameCtx {
@@ -102,7 +109,12 @@ fn cmd_run(args: &[String]) -> R<()> {
     let input = PathBuf::from(args.first().ok_or("缺 <noisy.wav>")?);
     let out_dir = PathBuf::from(args.get(1).ok_or("缺 <out_dir>")?);
     std::fs::create_dir_all(&out_dir)?;
-    let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("x").trim_end_matches("_noisy").to_string();
+    let stem = input
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("x")
+        .trim_end_matches("_noisy")
+        .to_string();
     let dry = read_wav(&input)?;
 
     // 1) 降噪（GTCRN，保命全关 = 模型原样输出，与输入逐样本对齐）
@@ -118,7 +130,11 @@ fn cmd_run(args: &[String]) -> R<()> {
 
     // 2) 判断回路：喂降噪输出 + 逐帧 VAD（与 VadEnvelopeStage 同一个 VAD 口径），按实测计算时间延后生效
     let jp = JudgeParams::default();
-    let emb = Embedder::open(&speaker_path(args)?, FbankConfig::wespeaker(), (jp.window_s * SR as f32) as usize)?;
+    let emb = Embedder::open(
+        &speaker_path(args)?,
+        FbankConfig::wespeaker(),
+        (jp.window_s * SR as f32) as usize,
+    )?;
     let emb_dim = emb.dim();
     let mut enroller = Enroller::new(EnrollParams::default());
     if let Some(p) = arg(args, "--preload") {
@@ -159,7 +175,10 @@ fn cmd_run(args: &[String]) -> R<()> {
     // 3) 各版本
     let ep = EnvelopeParams::p1_like(SR as f32);
     let mut versions: Vec<(&str, Vec<f32>)> = vec![("raw", wet.to_vec())];
-    versions.push(("floor", run_stage(&mut FloorStage::new(ep.floor_db), wet, dry, &verdicts)));
+    versions.push((
+        "floor",
+        run_stage(&mut FloorStage::new(ep.floor_db), wet, dry, &verdicts),
+    ));
     // 能量版 / VAD 版：顺带记逐 hop「开着」的标记
     let mut en = EnergyEnvelopeStage::new(ep, HOP);
     let mut ve = VadEnvelopeStage::new(ep);
@@ -170,7 +189,10 @@ fn cmd_run(args: &[String]) -> R<()> {
     let mut stage_ns_vad = Vec::with_capacity(n_hops);
     for k in 0..n_hops {
         let r = k * HOP..(k + 1) * HOP;
-        let ctx = FrameCtx { now: SampleClock((k * HOP) as u64), ..FrameCtx::default() };
+        let ctx = FrameCtx {
+            now: SampleClock((k * HOP) as u64),
+            ..FrameCtx::default()
+        };
         en.process(&mut y_en[r.clone()], &dry[r.clone()], ctx);
         energy_open.push(en.voiced() as u8);
         let t0 = Instant::now();
@@ -186,7 +208,11 @@ fn cmd_run(args: &[String]) -> R<()> {
     for k in 0..n_hops {
         let r = k * HOP..(k + 1) * HOP;
         // 门控用与 VAD 包络同一个 VAD 的概率（ctx.voice_prob），接入 engine 后也是这样传
-        let ctx = FrameCtx { now: SampleClock((k * HOP) as u64), speaker: verdicts[k], voice_prob: Some(vad_probs[k]) };
+        let ctx = FrameCtx {
+            now: SampleClock((k * HOP) as u64),
+            speaker: verdicts[k],
+            voice_prob: Some(vad_probs[k]),
+        };
         let t0 = Instant::now();
         gate.process(&mut y_p[r.clone()], &dry[r], ctx);
         stage_ns_gate.push(t0.elapsed().as_nanos() as u64);
@@ -249,8 +275,14 @@ fn cmd_run(args: &[String]) -> R<()> {
         },
         "onsets": gate.onsets(),
     });
-    std::fs::write(out_dir.join(format!("{stem}.log.json")), serde_json::to_string(&log)?)?;
-    println!("{stem}: hops={n_hops} owner={:?}", judge.enroller.owner_index());
+    std::fs::write(
+        out_dir.join(format!("{stem}.log.json")),
+        serde_json::to_string(&log)?,
+    )?;
+    println!(
+        "{stem}: hops={n_hops} owner={:?}",
+        judge.enroller.owner_index()
+    );
     Ok(())
 }
 
@@ -278,7 +310,10 @@ fn cmd_embed(args: &[String]) -> R<()> {
         v = e.embed(&x)?;
     }
     let ms = t0.elapsed().as_secs_f64() * 1e3 / n as f64;
-    println!("{}", json!({"dim": v.len(), "ms_per_call": ms, "samples": x.len(), "emb": v}));
+    println!(
+        "{}",
+        json!({"dim": v.len(), "ms_per_call": ms, "samples": x.len(), "emb": v})
+    );
     Ok(())
 }
 

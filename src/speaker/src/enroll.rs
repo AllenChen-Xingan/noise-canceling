@@ -361,7 +361,9 @@ mod tests {
         let mut relocked = false;
         for _ in 0..200 {
             t += 0.5;
-            if let EnrollEvent::Relocked { .. } = e.observe(&unit(16, 0, 0.3, &mut s), t, 0.5, -20.0) {
+            if let EnrollEvent::Relocked { .. } =
+                e.observe(&unit(16, 0, 0.3, &mut s), t, 0.5, -20.0)
+            {
                 relocked = true;
             }
         }
