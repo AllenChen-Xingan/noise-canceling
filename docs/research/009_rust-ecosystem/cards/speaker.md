@@ -52,8 +52,8 @@
 | 做什么 | 把 kaldi-native-fbank 的 FBank 流程从零移植成纯 Rust 的流式特征提取器，各项参数都保留 |
 | 许可证 | Apache-2.0【源码】`resources/kaldi-fbank/Cargo.toml:7`；**与 GPL-3.0 兼容：是**（Apache-2.0 → GPLv3 单向兼容）。运行时依赖只有 realfft、rustfft（都是 MIT/Apache）【源码】`Cargo.toml:17-18` |
 | 维护状态 | crates.io 0.1.0（2026-09-01）【API】；最后一次提交 2026-09-01，0 个 open issue，2 颗星，仓库建于 2026-09-01【API】。**只有一次集中提交、没有 issue 历史，响应速度没法判断** |
-| 实时安全做法 | FFT 只在构造时规划一次、预分配 scratch【源码】`src/fft.rs:31`、`:41-44`；`FbankComputer::compute` 接收调用方给的 `signal_frame` 和 `feature` 两个切片，**本身不分配**【源码】`src/feature_fbank.rs:66-128`。但 `OnlineFbank` 每帧都 `self.feature.clone()` 推进 VecDeque【源码】`src/online.rs:191`，波形缓冲用 `extend_from_slice` / `drain` 增减【源码】`src/online.rs:146`、`:205`，**这一层会分配**。mel 表放在 HashMap 里按 VTLN 系数缓存，compute 里会查一次表【源码】`src/feature_fbank.rs:53-57`、`:107` |
-| 值得学的一处 | 把「抽取一帧窗」（`extract_window`）和「算一帧特征」（`FbankComputer::compute`）拆成两个纯函数，各自接收预分配的缓冲【源码】`src/online.rs:175-190`。我们自写的时候照这条接缝切：环形缓冲归我们自己管，算特征的那一半做成纯函数，离线和实时可以共用 |
+| 实时安全做法 | FFT 只在构造时规划一次、预分配 scratch【源码】`src/fft.rs:31`、`:41-44`；`FbankComputer::compute` 接收调用方给的 `signal_frame` 和 `feature` 两个切片，**本身不分配**【源码】`src/feature_fbank.rs:66-128`。但 `OnlineFbank` 每帧都 `self.feature.clone()` 推进 VecDeque【源码】`src/online.rs:191`，波形缓冲用 `extend_from_slice` / `drain` 增减【源码】`src/online.rs:146`、`:205`，**这一层会分配**。mel 表放在 HashMap 里按 VTLN 系数缓存，compute 里会查一次表【源码】`src/feature_fbank.rs:53-57`、`:107`；构造函数已预先放进 warp=1.0 那一份【源码】`src/feature_fbank.rs:35`，所以 **vtln_warp 固定为 1.0 时 compute 不分配**；换别的 warp 值，第一次调用会在 `or_insert_with` 里新建 MelBanks（分配）（复核 3 补充） |
+| 值得学的一处 | 把「抽取一帧窗」（`extract_window`）和「算一帧特征」（`FbankComputer::compute`）拆成两个纯函数，各自接收预分配的缓冲【源码】`src/online.rs:175-190`（这是调用处；`extract_window` 的定义在 `src/feature_window.rs:163`，函数体里没有分配。注意 `FbankComputer::compute` 要 `&mut self`，严格说不算纯函数）。我们自写的时候照这条接缝切：环形缓冲归我们自己管，算特征的那一半做成纯函数，离线和实时可以共用 |
 | 我们怎么用 | **dev-dependency 当第二个对照**（`dsp` 的测试）；备选方案里直接依赖它的 `FbankComputer`。注意默认 dither=0.00003、窗型 povey、snip_edges=true【源码】`src/options.rs:52`、`:55`、`:58`，必须显式改成和模型一致；use_energy 默认 false【源码】`src/options.rs:247` |
 | 风险 | 单作者、刚发布，长期维护存疑；README 说和 C++ 参考版 604 组用例全部一致，但对照的是 C++ knf，**不是 torchaudio**【官方】https://github.com/ryaningli/kaldi-fbank#readme；ARM 基准测的是 RK3576（Linux），不是 Apple Silicon【源码】`docs/benchmark-arm.md` 开头 |
 | 证据 | 【源码】【API】【官方】 |
@@ -79,7 +79,7 @@
 | 实时安全做法 | **安全**。状态全部是定长数组：环形采样缓冲、3 帧特征、FFT 缓冲【源码】`src/lib.rs:107-113`；移窗用 `ptr::copy`【源码】`:245-247`、`:276-278`；网络状态是 `[i16; 128]`【源码】`src/default_predictor.rs:35-37`；权重用 `include_bytes!` 编进二进制并按 4 字节对齐【源码】`src/default_predictor.rs:5-12`；`predict` 不分配、不加锁、不做系统调用【源码】`src/lib.rs:238-293`。帧长不对时直接返回 0 分，不 panic【源码】`:240-242` |
 | 值得学的一处 | 帧长 `FRAME_SIZE=256`（16 ms @16 kHz），只往回看 3 帧上下文，没有前瞻【源码】`src/lib.rs:91-94`、`src/frame.rs:2`；GTCRN 的流式 hop 正好也是 256【源码】`resources/gtcrn/stream/gtcrn_stream.py:455`（istft 的 `hop_length=256`；复核 3 把原写的 :456 改成 :455）。**同一个 16 ms 时钟上，降噪和 VAD 可以对齐，不用另起缓冲** |
 | 我们怎么用 | **直接依赖**，用在降噪线程的「快速放开」判据（`engine` 的门控）；离线 eval 也用同一个实例 |
-| 风险 | 模型训练数据和权重来源，仓库里没找到说明（README 只说「any language」「SNR ≥ 3 dB」）【源码】`README.md`，**权重能不能按 GPL 分发要再核**（许可证文件覆盖整个 crate，包括 weights.bin）；精度只有 README 里作者自己的图，我们要在自己的素材上重测；只支持 16 kHz |
+| 风险 | 模型训练数据和权重来源，仓库里没找到说明（README 只说「any language」「SNR ≥ 3 dB」）【源码】`README.md`，**权重能不能按 GPL 分发要再核**（许可证文件覆盖整个 crate，包括 weights.bin）；精度只有 README 里作者自己的图，我们要在自己的素材上重测；只支持 16 kHz。**debug 构建下会 panic**：f32 输入先乘 32768【源码】`src/frame.rs:25`，再 `debug_assert!` 检查是否在 ±32768 以内【源码】`src/lib.rs:249`。降噪输出一旦超过 ±1.0，调试构建会直接崩，所以喂进去之前要先 clamp（复核 3 补充） |
 | 证据 | 【源码】【API】【推断】 |
 
 ### silero（findit-studio）（https://github.com/findit-studio/silero）【深读】
