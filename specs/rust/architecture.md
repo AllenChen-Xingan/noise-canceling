@@ -217,9 +217,9 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 **数据流**：感知 → `SceneLabel` → `HysteresisGate`（换不换场景）→ `resolve_params`（场景参数表 → 我的配置 → 当前旋钮）→ `Decision { target: ParamSet, transition }` → rtrb 送一个 `Copy` 包进实时线程 → 实时侧 `ParamSet::glide_toward` 逐 hop 平滑；同时 `Decision::log_into` 写决策日志。
 
 **进出实时线程的两个包**（ondevice 线需求，2026-10-31）：
-- 判断 → 实时：`ParamBlock { seq, config: ContentId, model_hash: ContentId, params: ParamSet, transition }`，`Copy`，经 rtrb 送（§3.4「必须同时生效的一组参数」那一行就是它；§3.4 的 `AtomicU32` 只留给单个旋钮的即时值）。实时线程在帧边界取最新一份，没有新的沿用旧的，绝不等。进 Stage 走 `Stage::set_params`
-- 实时 → 判断：`FrameFeatures { now, level_db, noise_db, voice_prob, bands_db: [f32; 16], bypassed }`，每 hop 一个经 rtrb 送出，满了丢弃并计数；噪声谱复用模型的 STFT，不另算。字段由 scene 线定稿
-- 平滑：连续参数在 hop 内逐样本插值、dB 类字段限速 `Transition::max_db_per_s`（初值 1 dB/s）、手动改动最短斜坡 `manual_ramp_s`（初值 30 ms）；离散参数（模型、修音链预设）走交叉淡化，**等增益**（等功率对相关信号会鼓 +3 dB），淡化期算力 ×2 计入最坏帧
+- 判断 → 实时：`ParamBlock { seq, config: ContentId, model_hash: ContentId, params: ParamSet, transition }`，`Copy`，经 rtrb 送（§3.4「必须同时生效的一组参数」那一行就是它；§3.4 的 `AtomicU32` 只留给单个旋钮的即时值）。实时线程在帧边界取最新一份，没有新的沿用旧的，绝不等。完整格式校验在判断线程写入前做；实时线程只调 `ParamBlock::accept_rt`（`seq` 更新、`model_hash` 与正在跑的模型一致、全部有限 → 钳位后采用，否则沿用旧块）。**覆盖层张量绝不进参数块**。进 Stage 走 `Stage::set_params`
+- 实时 → 判断：`FrameFeatures { now, level_db, noise_db, snr_db, voice_prob, bands_db: [f32; 16], bypassed }`，每 hop 一个经 rtrb 送出，满了丢弃并计数；噪声谱复用模型的 STFT（扩展 trait `SpectrumTap::last_magnitude`，不改 `Model`），不另算。字段由 scene 线定稿
+- 平滑：连续参数在 hop 内逐样本插值、dB 类字段限速 `Transition::max_db_per_s`（初值 1 dB/s）、手动改动最短斜坡 `manual_ramp_s`（初值 30 ms）；离散参数（模型、修音链预设）走交叉淡化，**等增益**（等功率对相关信号会鼓 +3 dB），淡化期算力 ×2 计入最坏帧；48 kHz 层的参数（`strength` 湿干比）在 Pipeline 层渐变。零前瞻、零附加延迟
 
 #### 3.7.1 感知输出（`src/types/src/scene.rs`）
 - `SceneLabel { user: UserScene, fine: FineSceneId, confidence: Confidence, at: SampleClock }`，`at` = 所用音频窗的末尾
@@ -243,6 +243,7 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 - 序列化：自写行文本格式（`text.rs`：`键 = 值` + `[种类 名字]` 小节，第一行 `vdn-scene-table = <格式号>`，格式号比程序新一律拒读），往返无损；**核心不引 serde**（§2.2 规则 1）。细场景小节先继承所属用户层的参数
 
 #### 3.7.4 记忆与学习（`src/types/src/memory.rs`）
+- 配置绑定 `ConfigBinding { model_hash, device（输入设备 UID 的内容 ID，不存设备名）, os_major }`：`UserProfile::binding_matches` 不符就回出厂；配置文件当不可信输入校验（格式号、范围、重复、非有限值都拒收）
 - 「我的配置」`UserProfile`：按 `SceneKey::{User, Fine}` 存 `Overrides`（每个字段 `Option`），叠加顺序 表 → 用户层覆盖 → 细场景覆盖；**只存参数，类型里没有放音频的位置**（D39）；有 `ProfileVersion` + `ContentId`，可回滚、可一键清空
 - 声纹向量不放这里，归 `vdn-speaker` 自存
 - `trait Learner { propose(&[SessionRecord], &UserProfile) -> Option<UserProfile> }`：只在空闲时调（插电 · 未开会 · 不发热，D38），返回**候选**，过回归门禁 / 影子比对更好才换；在线只调参数、不改权重（005 第五节待人定 #2）。**本批不实现**
@@ -251,10 +252,14 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 - **小适配器 / BN·LN 覆盖层**要在导出模型时就做成图输入（ORT 加载时会把 BN 融进卷积，事后改不了）；换覆盖层走 §3.5：预热、暗跑 N 帧、等增益淡化
 - **计数器**（xrun、最坏帧 `fetch_max`、NaN 次数、按原因分的送原声次数）放进 `vdn-shm` 头，判断回路按 0.5 s 窗口 `swap(0)` 读清
 - **配置仓的消费方是 `vdn-denoised`**，不是 HAL 插件（插件在沙箱里读不到用户目录）；场景参数表与我的配置绑定「模型哈希 · 设备 · macOS 大版本」，对不上就回出厂
-- 进程级送原声由送音进程按心跳立即触发；看门狗只管重启（§3.6）
+- 进程级送原声由送音进程按每块心跳**立即**触发；看门狗只管重启推理进程（次数有上限）；所有失败走原声不走静音、延迟对齐（§3.6、ADR 005）
+- **影子比对走离线同码路径**：`vdn-engine::offline` + `SafetyConfig::apply_params` 能跑任意参数组，用出厂测试集 / 模拟环境比，不在通话中跑
+- **「正在开会」信号**：虚拟麦的 `StartIO` / `StopIO` 计数经 `vdn-shm` 头对外只读，空闲回路据此决定开不开跑
+- **本地功能开关**：每个新行为一个开关，发版包里写死到期日，不联网下发（D39）；开关清单随 `vdn-control` 落地
+- （若 ondevice 拍板 #1 选「通话中累计归一化统计」）推理时把 BN 输入的均值 / 方差作额外图输出，判断线程累加，不存音频；实时线程只拷固定大小数组，额外开销先实测
 
 #### 3.7.5 决策日志（`src/types/src/record.rs`）
-- `DecisionEvent`（`Copy`，≤ 64 B）：`SceneObserved`（感知原始输出，未经滞回；细场景分类的回放与回归靠它）· `SceneCommitted` · `ParamsApplied`（带完整 `ParamSet` 与来源 `ParamSource`）· `UserAction`（开关、旋钮、选场景、锁定、手动换模型、反馈「吃字 / 怪声 / 太吵 / 好 / AB 选 A / 选 B」、换设备——不记设备名、带新采样率）· `Bypass` · `Enroll`（声纹注册锁定 / 重锁 / 清空）· `TableChanged` · `ProfileChanged`
+- `DecisionEvent`（`Copy`，≤ 64 B）：`SceneObserved`（感知原始输出，未经滞回；细场景分类的回放与回归靠它）· `SceneCommitted` · `ParamsApplied`（带完整 `ParamSet` 与来源 `ParamSource`）· `UserAction`（反馈事件总线：每条带当时的细场景与配置内容 ID；开关、旋钮、撤销、选场景、锁定、手动换模型、反馈「吃字 / 怪声 / 太吵 / 好 / AB 选 A / 选 B」、换设备——不记设备名、带新采样率）· `Bypass` · `Enroll`（声纹注册锁定 / 重锁 / 清空）· `TableChanged` · `ProfileChanged`
 - `SessionRecord { header: { rate, table: (版本, 内容 ID), profile: (版本, 内容 ID) }, events }`：**不含音频**（D19）、只在本机（D39）；文本一行一事件
 - 实时线程不写日志（R3）：送原声等事件以后经 rtrb 送出，由 C 档汇总成一条
 

@@ -32,4 +32,21 @@
 ## 待人拍板（经大总管）
 | # | 题面 | 选项 | 代价 | 建议 | 默认 |
 |---|---|---|---|---|---|
-| 1 | 延迟账按 009 目标（IO 256 帧）逐项硬加 47 ms，超 D32 2 ms。把「IO 块 96 帧（2 ms）」定为 P3 调参目标吗？ | A 定 96 帧为目标 · B 保留 256、超出部分等 P3 实测再走 008 ⟨拍板 6⟩ | A：每秒约 500 次回调，多唤醒、略增 CPU / xrun 风险，设备不一定支持；B：账面先超 | A（都是推断，P3 脉冲法裁决） | A 写进账与测试，P3 前不改 |
+| 1 | 延迟账按 009 目标（麦克风 IO 块 256 帧）逐项硬加 47 ms，超 D32 的 45 ms 2 ms。把「IO 块 96 帧」定为 P3 调参目标吗？（96 帧是两个模型 hop 的公约数，按它合计 43.67 ms） | A 定 96 帧为目标 · B 保留 256 帧、超出的 2 ms 等 P3 实测再走 008 ⟨拍板 6⟩（换低延迟重采样 / 推理进程直写 HAL 环 / 放宽 D32） | A：音频回调从约 5.3 ms 一次变成 2 ms 一次（每秒约 188 次 → 500 次）——①CPU 开销：唤醒与回调固定开销约 2.7 倍，耗电略升，与 D37「察觉不到占用」要实测对账；②掉帧风险：每次回调的时间余量从 5.3 ms 缩到 2 ms，系统一忙更容易爆音（xrun）；③设备支持：内建麦一般能设这么小的缓冲，**蓝牙耳机麦通常由系统定更大的块、可能根本给不到 96 帧**，那时该设备上仍按大块算、延迟账超标【推，P3 逐设备实测】。B：账面先超 2 ms，问题后移到 P3 | A（全部是推断，P3 脉冲法裁决；蓝牙给不到时按设备回退并在账上分设备记） | A 写进账与测试，P3 前不改 |
+
+## ondevice 13 条接口需求 → 落在哪（来源 `origin/main:docs/research/010_ondevice-adaptation/gap.md` 第三节）
+| # | 需求 | 落点 | 形态 |
+|---|---|---|---|
+| 1 | 参数块 Copy、带 config_id / model_hash、帧边界取最新绝不等；实时侧只做有限值 · 钳位 · 核对模型 | `src/types/src/params.rs` `ParamBlock` + `accept_rt`；规约 §3.7「进出实时线程的两个包」（写明 §3.4 那行就是它） | 类型 + 测试 |
+| 2 | 参数块怎么进 Stage | `src/types/src/stage.rs` `Stage::set_params` | 类型 |
+| 3 | 限速渐变、hop 内逐样本插值、手动最短斜坡、离散走交叉淡化、48 kHz 层在 Pipeline 渐变 | `Transition { max_db_per_s, manual_ramp_s }`（policy.rs）；离散 = `model` / `tone`；插值与 Pipeline 层渐变写规约 §3.7 | 类型 + 行为约束 |
+| 4 | 实时 → 判断特征通道，复用模型 STFT | `src/types/src/frame.rs` `FrameFeatures`（含 `snr_db`）；`src/types/src/model.rs` 扩展 trait `SpectrumTap` | 类型（字段待 scene 定稿） |
+| 5 | BN/LN 覆盖层导出成图输入；换覆盖层走 §3.5 暗跑 + 等增益 | 规约 §3.7.4b | 行为约束 |
+| 6 | 计数器 fetch_max / swap(0)，放 vdn-shm 头 | 规约 §3.7.4b | 行为约束（vdn-shm 未建） |
+| 7 | 反馈事件总线：旋钮、开关、撤销、手动切场景、吃字，带时间 · 场景 · config_id | `src/types/src/record.rs` `DecisionEvent::UserAction { at, scene, config, action }` + `UserAction::Undo` | 类型 + 测试 |
+| 8 | 配置仓有版本、绑定（模型哈希 · 设备 · 系统大版本），不符回出厂；消费方 vdn-denoised | `src/types/src/version.rs` `ConfigBinding`；`UserProfile.binding` + `binding_matches`；消费方写规约 §3.7.4b | 类型 + 测试 + 约束 |
+| 9 | 离线同码路径跑任意配置做影子比对 | 已有 `vdn-engine::offline` + `SafetyConfig::apply_params`；规约 §3.7.4b | 行为约束 |
+| 10 | 「正在开会」信号（StartIO / StopIO 计数只读） | 规约 §3.7.4b | 行为约束（HAL / vdn-shm 未建） |
+| 11 | 本地功能开关、写死到期日、不联网 | 规约 §3.7.4b | 行为约束（随 vdn-control） |
+| 12 | 送原声与看门狗分开；NaN 硬切写进 R11 例外 | 规约 §3.7.4b、R11 | 行为约束 |
+| 13 | （条件）通话中累计 BN 统计作额外图输出 | 规约 §3.7.4b | 行为约束（待 ondevice 拍板 #1） |
