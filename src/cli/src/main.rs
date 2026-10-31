@@ -6,6 +6,8 @@
 //! ```
 //! 只读写 16 kHz 单声道 WAV；不碰音频设备。
 
+#![forbid(unsafe_code)]
+
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 

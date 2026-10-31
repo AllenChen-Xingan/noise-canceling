@@ -1,0 +1,30 @@
+[package]
+name = "vdn-speaker-lab"
+description = "P2 离线实验命令行（exp005）：读写 WAV、跑 GTCRN、调 vdn-speaker 的实时级与判断回路"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+vdn-speaker = { path = "../speaker", features = ["onnx"] }
+vdn-engine.workspace = true
+vdn-models.workspace = true
+ort.workspace = true
+hound.workspace = true
+serde_json.workspace = true
+
+[[bin]]
+name = "vdn-speaker-lab"
+path = "src/main.rs"
+
+# 机读正本（规约 §5.4）：离线工具，不进实时线程，也不进产品 bin。
+# 只服务 exp005；规约 §2.3 的 vdn-eval 建出来后并进去
+[package.metadata.vdn]
+tier = "tool"
+unsafe = false
+forbid = ["cpal", "coreaudio-rs", "coreaudio-sys", "objc2"]
+
+[lints]
+workspace = true

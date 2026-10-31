@@ -1,6 +1,12 @@
 //! 故障注入：包住任意模型，在指定的 hop 上制造故障，用来离线验证「出事送原声」。
 //! 只用于测试与实验；`Stall` 会让线程睡眠，绝不能出现在真实的实时路径上。
 
+#![allow(
+    clippy::indexing_slicing,
+    clippy::disallowed_methods,
+    clippy::disallowed_macros
+)] // NRT: 故障注入器只用于测试与实验（Stall 会 sleep），绝不进实时路径
+
 use std::time::Duration;
 
 use crate::model::{Model, ModelError};

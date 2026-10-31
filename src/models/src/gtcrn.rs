@@ -9,7 +9,7 @@ use std::path::Path;
 use ort::session::{HasSelectedOutputs, OutputSelector, RunOptions, Session};
 use ort::value::Tensor;
 use vdn_dsp::{StreamingStft, window};
-use vdn_engine::{Model, ModelError};
+use vdn_types::{Model, ModelError};
 
 use crate::session::{self, BoxError};
 
@@ -27,6 +27,7 @@ pub struct Gtcrn {
     caches: [Tensor<f32>; 3],
 }
 
+// 构造：非实时线程
 impl Gtcrn {
     pub fn open(path: &Path) -> Result<Self, BoxError> {
         let session = session::open(path)?;
@@ -34,7 +35,7 @@ impl Gtcrn {
         if names != ["mix", "conv_cache", "tra_cache", "inter_cache"] {
             return Err(format!("GTCRN 输入不符：{names:?}").into());
         }
-        // 输出按会话顺序取（outs[i]），名字必须和 OUT_NAMES 逐个对上
+        // 输出按会话顺序取（outs.values()），名字必须和 OUT_NAMES 逐个对上
         let out_names: Vec<&str> = session.outputs().iter().map(|o| o.name()).collect();
         if out_names != OUT_NAMES {
             return Err(format!("GTCRN 输出不符：{out_names:?}").into());
@@ -58,6 +59,12 @@ impl Gtcrn {
     }
 }
 
+// 实时（specs/rust/architecture.md §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Model for Gtcrn {
     fn name(&self) -> &'static str {
         "gtcrn"
@@ -79,25 +86,43 @@ impl Model for Gtcrn {
     }
 
     fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), ModelError> {
+        if input.len() != HOP || output.len() != HOP {
+            // 调用方的 bug：不静默产出错音频（align 自审 P1）
+            output.fill(0.0);
+            return Err(ModelError::Shape);
+        }
         let r = self.infer(input);
         if r.is_err() {
             // 出错也要照常合成一帧（频谱清零），否则重叠相加缓冲不移位，之后整体错位一个 hop（自审 P2）
             self.stft.spectrum_mut().fill(Default::default());
+            // 缓存可能只回拷了一半：清回初值，不带着坏状态进下一帧（align 自审 P2）
+            for c in &mut self.caches {
+                c.extract_tensor_mut().1.fill(0.0);
+            }
         }
         self.stft.synthesize(output);
         r
     }
 }
 
+// 实时（specs/rust/architecture.md §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Gtcrn {
     /// 分析一帧 → 推理 → 把增强后的频谱写回 STFT、缓存拷回输入。不做合成。
     fn infer(&mut self, input: &[f32]) -> Result<(), ModelError> {
         let spec = self.stft.analyze(input);
         {
             let (_, m) = self.mix.extract_tensor_mut();
-            for (k, c) in spec.iter().enumerate() {
-                m[2 * k] = c.re;
-                m[2 * k + 1] = c.im;
+            if m.len() != 2 * spec.len() {
+                return Err(ModelError::Shape);
+            }
+            for ([re, im], c) in m.as_chunks_mut::<2>().0.iter_mut().zip(spec.iter()) {
+                *re = c.re;
+                *im = c.im;
             }
         }
         let [c0, c1, c2] = &self.caches;
@@ -105,21 +130,25 @@ impl Gtcrn {
             .session
             .run_with_options(ort::inputs![&self.mix, c0, c1, c2], &self.run)
             .map_err(|_| ModelError::Backend)?;
+        // 全部输出都预分配了，values() 按会话输出顺序给出，名字已在 open() 里逐个核对
+        let mut vals = outs.values();
         {
-            let (_, enh) = outs[0]
+            let first = vals.next().ok_or(ModelError::Shape)?;
+            let (_, enh) = first
                 .try_extract_tensor::<f32>()
                 .map_err(|_| ModelError::Shape)?;
             if enh.len() != 2 * BINS {
                 return Err(ModelError::Shape);
             }
             let spec = self.stft.spectrum_mut();
-            for (k, c) in spec.iter_mut().enumerate() {
-                c.re = enh[2 * k];
-                c.im = enh[2 * k + 1];
+            for (c, [re, im]) in spec.iter_mut().zip(enh.as_chunks::<2>().0) {
+                c.re = *re;
+                c.im = *im;
             }
         }
-        for (i, cache) in self.caches.iter_mut().enumerate() {
-            let (_, src) = outs[i + 1]
+        for cache in self.caches.iter_mut() {
+            let v = vals.next().ok_or(ModelError::Shape)?;
+            let (_, src) = v
                 .try_extract_tensor::<f32>()
                 .map_err(|_| ModelError::Shape)?;
             let dst = cache.extract_tensor_mut().1;

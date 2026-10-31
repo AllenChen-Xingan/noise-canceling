@@ -1,0 +1,20 @@
+[package]
+name = "xtask"
+description = "项目规矩的机器检查：tidy（文本 / 轻语法）与 check-deps（依赖闭包）。不依赖任何 vdn crate"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）
+[package.metadata.vdn]
+tier = "tool"
+unsafe = false
+forbid = ["vdn-types", "vdn-dsp", "vdn-engine", "vdn-models", "vdn-cli"]

@@ -138,3 +138,25 @@ impl OffButFallback for SafetyConfig {
         }
     }
 }
+
+#[test]
+fn latency_ledger_is_hop_plus_model_latency() {
+    // GTCRN 形态：hop 256、算法延迟 256 @16 kHz → 32 ms；保命不加延迟
+    let e = Engine::new(DelayGain::new(256, 256, 1.0), SafetyConfig::default());
+    let l = e.latency_ledger();
+    assert_eq!(l.items().len(), 2);
+    assert!((l.total_ms() - 32.0).abs() < 1e-9);
+    assert!(l.check(vdn_types::LATENCY_BUDGET_MS).is_ok());
+}
+
+#[test]
+fn apply_params_maps_policy_output() {
+    let p = vdn_types::ParamSet {
+        floor_db: -20.0,
+        detect_db: 12.0,
+        ..Default::default()
+    };
+    let mut c = SafetyConfig::default();
+    c.apply_params(&p);
+    assert_eq!((c.floor_db, c.detect_db), (-20.0, 12.0));
+}

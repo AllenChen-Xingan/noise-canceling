@@ -1,0 +1,13 @@
+### OpenAIR（2010–，University of York AudioLab）
+- **做什么**：众包声学 IR 库（音乐厅、教堂、历史建筑、户外为主）。
+- **录音设备与距离**：逐条不同，无消费设备。
+- **环境**：大空间为主。
+- **说话人数与重叠**：不涉及。
+- **语言**：不涉及。
+- **参考**：IR 本身。
+- **大小**：未查到。
+- **许可**：逐条标注 · 结论：逐条核。
+- **获取**：https://www.openair.hosted.york.ac.uk/ （上一轮 TLS 证书过期未能直连，本轮未复核）
+- **接近度**：0.5/5。
+- **用途建议**：基本不用。
+- **出处**：https://www.openair.hosted.york.ac.uk/?page_id=2 【二手】；https://www.york.ac.uk/physics-engineering-technology/research/communication-technologies/projects/open-acoustic-impulse-response-library/ 【官方】

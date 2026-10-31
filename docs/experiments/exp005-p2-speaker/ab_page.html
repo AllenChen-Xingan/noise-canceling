@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>盲听 · 认出你的声音</title>
+<style>
+:root { --bg:#fbfaf7; --fg:#1d1d1b; --mut:#6b6a66; --line:#dedbd3; --acc:#2f5d8a; --card:#ffffff; }
+@media (prefers-color-scheme: dark) { :root { --bg:#1b1b1a; --fg:#ecebe7; --mut:#a3a19b; --line:#3a3936; --acc:#8db4dc; --card:#242422; } }
+body { background:var(--bg); color:var(--fg); font:16px/1.6 -apple-system, "PingFang SC", sans-serif; margin:0; padding:16px; }
+main { max-width:760px; margin:0 auto; }
+h1 { font-size:1.4rem; margin:0.5rem 0; }
+.lead { color:var(--mut); }
+.item { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin:16px 0; }
+.item h2 { font-size:1rem; margin:0 0 6px; }
+.row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:6px 0; }
+.row b { width:3.5em; }
+audio { width:100%; max-width:520px; }
+fieldset { border:none; padding:0; margin:10px 0 0; }
+legend { font-weight:600; font-size:0.95rem; }
+label { margin-right:14px; white-space:nowrap; }
+textarea { width:100%; box-sizing:border-box; min-height:3em; background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:6px; }
+button { background:var(--acc); color:var(--bg); border:none; padding:10px 18px; border-radius:8px; font-size:1rem; cursor:pointer; }
+#status { color:var(--mut); margin-left:10px; }
+</style>
+</head>
+<body>
+<main>
+<h1>盲听：压得干净，还是不吃字</h1>
+<p class="lead">每题一段<b>原声</b>（参照，未处理）和 <b>A</b>、<b>B</b>、<b>C</b> 三种处理。主人 = 离麦最近、声音最大的那位；「旁边的人」= 其余说话的人。请戴耳机，按顺序听。答案自动存在本浏览器里，听完点最下面的「导出答卷」把文件交回。</p>
+<div id="items"></div>
+<p><button id="export">导出答卷</button><span id="status"></span></p>
+</main>
+<script src="manifest.js"></script>
+<script>
+(function () {
+  const M = window.EXP005;
+  const store = "exp005-" + M.build;
+  let ans = {};
+  try { ans = JSON.parse(localStorage.getItem(store) || "{}"); } catch (e) { ans = {}; }
+  const save = () => { try { localStorage.setItem(store, JSON.stringify(ans)); } catch (e) {} };
+  // [键, 题面, 选项, 多选?]
+  const Q = [
+    ["quietest", "旁边的人说话时，哪一份里他的声音最小（最听不见）？", ["A", "B", "C", "分不出"], false],
+    ["eaten", "主人说话时，哪几份有吞字、变轻或句首被切？（可多选）", ["A", "B", "C", "都没有"], true],
+    ["natural", "哪一份听着最自然（背景不忽大忽小、没有怪声）？", ["A", "B", "C", "分不出"], false],
+    ["pick", "如果真在开会，你愿意让对方听到哪一份？", ["A", "B", "C", "原声"], false],
+  ];
+  const root = document.getElementById("items");
+  M.items.forEach((it, i) => {
+    const d = document.createElement("section");
+    d.className = "item";
+    const a = ans[it.id] || (ans[it.id] = {});
+    let h = `<h2>第 ${i + 1} 题 · ${it.desc}</h2>`;
+    h += `<div class="row"><b>原声</b><audio controls preload="none" src="${it.ref}"></audio></div>`;
+    it.cands.forEach((f, k) => { h += `<div class="row"><b>${"ABC"[k]}</b><audio controls preload="none" src="${f}"></audio></div>`; });
+    Q.forEach(([q, text, opts, multi]) => {
+      const cur = a[q] || (multi ? [] : "");
+      h += `<fieldset><legend>${text}</legend>` + opts.map(o => {
+        const on = multi ? cur.includes(o) : cur === o;
+        return `<label><input type="${multi ? "checkbox" : "radio"}" name="${it.id}|${q}" value="${o}" ${on ? "checked" : ""}> ${o}</label>`;
+      }).join("") + `</fieldset>`;
+    });
+    h += `<fieldset><legend>备注（可空）</legend><textarea data-id="${it.id}">${a.note || ""}</textarea></fieldset>`;
+    d.innerHTML = h;
+    root.appendChild(d);
+  });
+  root.addEventListener("change", e => {
+    const t = e.target;
+    if (t.type !== "radio" && t.type !== "checkbox") return;
+    const [id, q] = t.name.split("|");
+    ans[id] = ans[id] || {};
+    if (t.type === "radio") { ans[id][q] = t.value; }
+    else {
+      const boxes = [...root.querySelectorAll(`input[name="${t.name}"]`)];
+      ans[id][q] = boxes.filter(b => b.checked).map(b => b.value);
+    }
+    save();
+  });
+  root.addEventListener("input", e => {
+    const t = e.target;
+    if (t.tagName === "TEXTAREA") { ans[t.dataset.id] = ans[t.dataset.id] || {}; ans[t.dataset.id].note = t.value; save(); }
+  });
+  document.getElementById("export").onclick = () => {
+    const out = { build: M.build, exported_at: new Date().toISOString(), answers: ans };
+    const blob = new Blob([JSON.stringify(out, null, 1)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const el = document.createElement("a");
+    el.href = url; el.download = `exp005-answers-${M.build}.json`; el.click();
+    URL.revokeObjectURL(url);
+    const done = M.items.filter(it => ans[it.id] && Q.every(([q, , , multi]) => multi ? (ans[it.id][q] || []).length : ans[it.id][q])).length;
+    document.getElementById("status").textContent = `已导出（答完 ${done}/${M.items.length} 题）`;
+  };
+})();
+</script>
+</body>
+</html>

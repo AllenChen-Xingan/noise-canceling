@@ -1,0 +1,51 @@
+# vdn 根 clippy 配置：全 workspace 只此一份（crate 目录下放 clippy.toml 会整份替换本文件、不合并，
+# 008 appendix-probes/README.md §5）。规则原则见 specs/rust/architecture.md §5.3；清单以本文件为准。
+#
+# 这些禁用项在 [workspace.lints.clippy] 里是 allow，只在实时 impl 块 / 实时模块上用
+# `#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]` 升为 deny。
+# 每条都在 align 的哨兵探针里确认过会报红（state/handoff/align.md「clippy 清单探针」，clippy 1.99）。
+# 探针确认**放不进来**的两条（别再加回来）：
+# - `assert!` / `assert_eq!` / `assert_ne!`：debug_assert* 展开就是它们，禁了连 debug_assert 一起报红。
+#   R4 改由 `cargo run -p xtask -- tidy` 文本检查实时文件里没有非 debug 的 assert
+# - `<[T]>::to_vec`：各种路径写法都报 "does not refer to a reachable function" 或不命中；交给计数分配器与 RTSan
+
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-indexing-slicing-in-tests = true
+
+disallowed-methods = [
+    # R1 分配
+    { path = "alloc::vec::Vec::push", reason = "实时路径不分配（R1）" },
+    { path = "alloc::vec::Vec::reserve", reason = "实时路径不分配（R1）" },
+    { path = "alloc::vec::Vec::with_capacity", reason = "实时路径不分配（R1）" },
+    { path = "alloc::vec::Vec::extend_from_slice", reason = "实时路径不分配（R1）" },
+    { path = "alloc::vec::Vec::resize", reason = "实时路径不分配（R1）" },
+    { path = "alloc::vec::Vec::insert", reason = "实时路径不分配（R1）" },
+    { path = "alloc::boxed::Box::new", reason = "实时路径不分配（R1）" },
+    { path = "alloc::sync::Arc::new", reason = "实时路径不分配（R1）" },
+    { path = "core::iter::Iterator::collect", reason = "实时路径不分配（R1）" },
+    # R2 / R3 阻塞
+    { path = "std::thread::sleep", reason = "实时路径不 sleep（R3）" },
+    { path = "std::thread::spawn", reason = "实时路径不起线程（R2）" },
+]
+
+disallowed-types = [
+    { path = "std::sync::Mutex", reason = "实时路径不加锁（R2）" },
+    { path = "std::sync::RwLock", reason = "实时路径不加锁（R2）" },
+    { path = "std::sync::Condvar", reason = "实时路径不加锁（R2）" },
+    { path = "std::sync::mpsc::Sender", reason = "跨线程只用 §3.4 的原语（R6）" },
+    { path = "std::sync::mpsc::Receiver", reason = "跨线程只用 §3.4 的原语（R6）" },
+]
+
+disallowed-macros = [
+    # R3 IO 与日志
+    { path = "std::println", reason = "实时路径不做 IO（R3）" },
+    { path = "std::eprintln", reason = "实时路径不做 IO（R3）" },
+    { path = "std::print", reason = "实时路径不做 IO（R3）" },
+    { path = "std::eprint", reason = "实时路径不做 IO（R3）" },
+    { path = "std::dbg", reason = "实时路径不做 IO（R3）" },
+    # R1 分配
+    { path = "std::format", reason = "实时路径不分配（R1）" },
+    { path = "std::vec", reason = "实时路径不分配（R1）" },
+]

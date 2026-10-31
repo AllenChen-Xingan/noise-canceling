@@ -17,6 +17,16 @@
 | p1 | P1 离线原型（Rust · GTCRN · 三件保命）· issue #10 · 分支 `feat/p1-offline-gtcrn`（worktree `../noise_canceling-p1`） | `_tmp/20261030-b3/p1.md` | 其 worktree `state/handoff/p1.md` | 完成，PR #13 已合并（issue #10 关），窗口已关；3 题待人拍板 |
 | rustarch | 008 Rust 架构（含 AST 模块化）· issue #11 · 分支 `research/008-rust-architecture` | `_tmp/20261030-b3/rustarch.md` | 其 worktree | 完成，PR #15 已合并（issue #11 关），窗口已关；7 题待人拍板 |
 | rusteco | 009 GitHub 上可学的 Rust 项目 · issue #12 · 分支 `research/009-rust-ecosystem` | `_tmp/20261030-b3/rusteco.md` | 其 worktree | 完成，PR #14 已合并（issue #12 关），窗口已关；4 题待人拍板 |
+| align | 架构对齐 + 智能体部件接口 + 延迟账 · issue #17 · `feat/arch-align` | `_tmp/20261031-b4/align.md` | 其 worktree | 完成，PR #26 已合并（issue #17 关），窗口已关；待人拍板：IO 96 帧（延迟账 47.00 → 43.67 ms） |
+| p2 | P2 认出你的声音（离线）· issue #18 · `feat/p2-speaker` | 完成，PR #32 已合并（issue #18 关），窗口已关；4 题待人拍板；盲听页 v2 在人桌面 |
+| scene | 场景识别与路由 + 修音链 + 模拟环境 · issue #19 · `feat/scene-polish` | `_tmp/20261031-b4/scene.md` | 其 worktree | 已报到（noise-canceling-scene-f7） |
+| ondevice | 010 设备端自适应 + 可靠性调研 · issue #20 · `research/010-ondevice-adaptation` | `_tmp/20261031-b4/ondevice.md` | 其 worktree | 完成，PR #23 已合并（issue #20 关），窗口已关；3 题待人拍板 |
+| multitalker | 011 一大堆人同时说话（调研）· issue #21 · `research/011-multitalker` | `_tmp/20261031-b4/multitalker.md` | 其 worktree | 完成，PR 已合并（issue #21 关），窗口已关；6 题待人拍板 |
+| evalstd | 012 工业级 rubric 与评测的行业标准 · issue #22 · `research/012-eval-standards` | `_tmp/20261031-b4/evalstd.md` | 其 worktree | 完成，PR #27 已合并（issue #22 关），窗口已关；9 题待人拍板 + rubric 修改清单 R1–R14 |
+| rlenv | 013 强化学习环境与分场景训练方案 · issue #25 · `research/013-rl-environment` | `_tmp/20261031-b4/rlenv.md` | 其 worktree | 完成，PR #29 已合并（issue #25 关），窗口已关；9 题待人拍板 |
+| datasets | 014 真实录音公开数据集 · issue #30 · `research/014-real-datasets` | `_tmp/20261031-b4/datasets.md` | 其 worktree | 完成，PR 已合并（issue #30 关），窗口已关；6 题待人拍板 |
+| evalimpl | eval 实现：vdn-eval · CI / QA / 人工三层 · 回归集与能力集 · issue #31 · `feat/eval-verifiers` | `_tmp/20261031-b4/evalimpl.md` | 其 worktree | 已报到（noise-canceling-evalimpl-7f） |
+| p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
 
 ## 规矩
 
@@ -29,7 +39,7 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | 空 |
+| 重编译 / 全量测试（1 个） | scene（exp006 重跑 4 版推理 + DNSMOS + Qwen 打分，约 30 分钟） |
 
 排队：（空）
 
@@ -38,6 +48,18 @@
 ## 进度板
 
 进度（HH:MM）
+- align 全量：fmt / clippy 过；test debug 73 · release 71 全过；真权重冒烟（GTCRN · FE-M）debug / release 过；tidy / check-deps 过
+- align 延迟账改逐项硬加：按 009 目标 IO 256 帧 = 47.00 ms（超 D32 2 ms，测试里钉成已知缺口）；提议 IO 96 帧（两模型 hop 公约数）= 43.67 ms → 待人拍板（代价：回调约 2 ms 一次的 CPU 开销、掉帧风险、蓝牙能否支持）
+- 010 ondevice：最值得照搬 ReSound Learning VC（每场景一个偏移量 + 滑动平均 + 停手才算同意 + 不一致降学习率）；接口需求 13 条已给 align；要另开实验：powermetrics 耗电、一周空闲窗口计数；⚠️ 一路检索子代理违规跑了一行只读 python3 -c（已自报）
+- scene 4 版推理完（244 段，修音链约 0.05% 个核）；自审修 P0 1 + P1 3（底噪跟踪开头静音卡死 · 平滑方向反 · 时域 AGC 不工作 · 手动「会议」不生效），+5 回归测试共 15 过
+- p2 build 7448 作废：人耳「所有的都没降噪」（与数据一致：GTCRN 只压邻座 0.6–5.6 dB、混回 −6 dB 原声、下限 −12 dB），反馈已提交 results/human-feedback.md；下一版四候选
+- p2 段②：fbank 对拍最大差 1.4e-4、声纹余弦 1.000000；8 段锁定 8/8 都锁对主人（含「开头别人先说 25 s / 45 s」），锁定后主人独白 0 次判成别人；⚠️ 个性化只比不个性化多压邻座约 0.5–3 dB——门控要等 1.5 s 声纹窗确认，邻座每段 3–8 s，大半时间门开着
+- p2 段①：vdn-speaker 13 测试过（含实时不分配断言，hop 256 / 160），clippy / fmt 过；段②进行中
+- align：vdn-types（零依赖，模型接口 + 感知 / 策略 / 场景参数表 / 记忆 / 决策日志 / 延迟账，40 单测）；008 P1 五项完成；xtask 放 src/xtask/（避开铁律 10）；已要求删 `.cargo/config.toml`（新顶层目录，铁律 10），改写全命令
+- multitalker ②（待自审核实）：MacBook 内置三麦对第三方只给 1 路、已被系统波束成形（本机 system_profiler 1ch/48k），AirPods 单声道 → 内置麦上自己做波束成形走不通，降为「外接多麦」实验线；语音突显只对开了 VPIO 的 app 生效、需用户手动选——可考虑用 VPIO 采集让系统先突显，VPIO 附加延迟与能否关其 AGC / 降噪待实验
+- scene 滞回已修：已生效准确率（held-out，不含开机头 1 s）噪音大类 87% · 用户层 93%（5 s 后 95%）；换场景中位 3.7 s 生效、错切 0.88 次 / 分钟；参数 EMA 0.5 s / 确认 1 s / 置信 0.4 / 停留 3 s（已发 align）；算力约 0.07% 个核；「多人会议」只留手动占位，自动识别列待人拍板
+- scene：exp006 模拟 856 段 / 2.6 h；特征 + 判断合计约 0.06% 个核；分类器（held-out 逐窗）细场景 73% · 用户层 85% · 蓝牙检出 93% 误报 1.3%；滞回「第一判即生效」有 bug（已生效准确率 41%）修复中。名额规则补充：单 crate 增量构建 + 秒级特征提取不占名额，推理 / 全量 / 超 1 分钟满载仍要申请
+- 第四批 20261031-b4（人原话见 `_tmp/20261031-b4/common.md`；硬约束：延迟账 ≤ 45 ms · 察觉不到占用 · 无云端 · 不同线不改同一批文件）：align · p2 · scene · ondevice 已起；人追问「一大堆人」后追加 multitalker（011）；人要求「所有效果都要有工业级的 rubrics 和 eval」后追加 evalstd（012）；人提出「别人做不好的才做 · RL 环境分场景训模型」（D42 · D43）后追加 rlenv（013）；人要真实数据集后追加 datasets（014）；人问「verifier 开始写了吗」并指定参考 Anthropic《Demystifying evals for AI agents》后追加 evalimpl；大总管分支 `chore/coord-20261031-b4`
 - 009 rusteco：进程内依赖 ort · realfft · rubato · rtrb · triple_buffer · biquad · earshot · hound；最值得学 voice-strip（Rust HAL 虚拟麦 + 共享内存环）；⚠️ 默认参数延迟账约 56 ms 超 D32，重采样与 IO 缓冲必须调参
 - 008 rustarch 实测（RTSan）：ort 跑 GTCRN 稳态每帧约 1550 次 malloc、约 380 对 mutex——推理不能进 IO 回调线程，架构分档（IO 硬实时 / 推理软实时 + 截止时间送原声）；p1 的「0 次分配」只计 Rust 侧，exp004 README 需补注
 - ⚠️ rustarch 的 Workflow 子代理未申请名额就构建运行了小探针（scratchpad，未动仓库），已主动交代；规则：起 Workflow 时提示里写死「不许构建，实测先申请」
@@ -79,6 +101,13 @@
 - [ ] 009 待人拍板 4 题（最低系统 14.2→14.4 · GPL-3.0-or-later vs -only · HAL 拿共享内存方式 · RustFFT 破例）—— `docs/research/009_rust-ecosystem/decision.md` §五
 - [ ] 008 待人拍板 7 题（意向书「不分配不加锁」改三档表述 · 目录名 · panic=abort · 两个进程 · HAL 目录放哪 · 延迟超 45 ms 先砍哪 · tract 对照实验）—— `docs/research/008_rust-architecture/decision.md`
 - [ ] 008 给 p1 后续批次 5 项改动（含 exp004 README 补注「0 次分配只计 Rust 侧」）—— 同上「给 p1 线的后续改动」
+- [ ] 规约跟进（下一批接入线）：`specs/rust/architecture.md` §2.1 / §4 补 vdn-speaker（B 档）与 vdn-speaker-lab；speaker-lab tier tool → C 待定；bin 名不合 §1 记例外；CI 补 `--features onnx` 测试；ORT 一个进程只许一个 Environment（vdn-models 也要改为调用方传入）
+- [ ] 014 待人拍板 6 题（CHiME-4 买不买 · 签 ECHI 协议 · 首批下载约 20 GB（改 D22）· 许可不清只评测本机 · CC BY 真实集不进训练 · 公开集旁人声音照 D19）
+- [ ] FE-M 修音 A/B/C（scene `docs/experiments/exp006-scene-sim/notes/fem-polish.md`）：官方有 `fastenhancer_m.spec.onnx`（STFT 在图外，Hann 512 / hop 160），换用后共用 dsp StreamingStft 与频谱修音链、额外延迟 0；⚠️ Σw² 非常数（每 10 ms 起伏 0.14 dB＝嗡声），合成端要加包络归一（vdn-dsp，下一批接入时做）
+- [ ] 012 待人拍板 9 题（「工业级」在本项目指什么 · 众包与 D39 · rlenv 过渡期能否用 L1 当弱奖励等）+ rubric 修改清单 R1–R14 —— `docs/research/012_eval-standards/decision.md`；升级清单 P0：人耳加 P.835 三量表 · RL 奖励同策略审计 · ETSI 噪声格子 · verifier 定标统计 L0–L3
+- [ ] 011 待人拍板 5 题（「只留我」一个开关 · 声纹认好后默认开 · 会议室自动放开 · 试借语音突显 · 菜单栏小图标提前）；~~#6 提示规则~~ 人已否决（D42：不做耳麦提示）—— `docs/research/011_multitalker/decision.md`
+- [ ] 待开实验（011）：① VPIO / 语音突显 + 4 声道 + 蓝牙麦延迟（随 dev-4，P0）② babble 人数×SNR 曲线（dev-3）③ 近 / 远特征 AUC ④ 会议室识别回归 ⑤ 商业对照；提醒 dev-4：别的进程在内置麦开 VPIO 时 HAL 读到的电平骤降（cubeb 源码）
+- [ ] 010 待人拍板 3 题（空闲小更新素材：只累计归一化统计 · 通话中不探索 · 软件内「检查更新」算云端、不做）—— `docs/research/010_ondevice-adaptation/decision.md` 第五节
 - [ ] 006 待人拍板 4 题（延迟察觉实验 · RX 当天花板参照 · 开 issue 问许可等）—— `docs/research/006_sota-landscape/decision.md` 末节
 - [ ] 007 待人拍板 4 题（权重 · 耳朵与机器怎么合 · V8 口径 · 下一轮怎么听）—— `docs/research/007_denoise-rubric/decision.md`
 - [ ] 要不要去 FastEnhancer 仓库开 issue 问权重许可（对外发言）：仓库 MIT，权重无单独声明（训练数据 DNS3 宽带 + VCTK 0.92）；建议等听测后它排前面再问 —— 来源 rubric / abtest
