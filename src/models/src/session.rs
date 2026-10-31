@@ -5,7 +5,7 @@ use std::sync::OnceLock;
 
 use ort::environment::Environment;
 use ort::session::Session;
-use ort::session::builder::GraphOptimizationLevel;
+use ort::session::builder::{AutoDevicePolicy, GraphOptimizationLevel};
 
 pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -27,7 +27,11 @@ pub fn open(path: &Path) -> Result<Session, BoxError> {
     // 建会话各步的错误类型 `ort::Error<SessionBuilder>` 不是 Send + Sync，统一转成文字
     let b =
         |e: ort::Error<ort::session::builder::SessionBuilder>| -> BoxError { e.to_string().into() };
+    // ort rc.15 在 macOS 上默认按 MaxEfficiency 自动挂 CoreML（ort src/session/builder/impl_options.rs:354），
+    // 对 GTCRN 直接编译失败；P1 只用 CPU，和 Python 的 CPUExecutionProvider 对齐
     let s = Session::builder(env()?)?
+        .with_auto_device(AutoDevicePolicy::PreferCPU)
+        .map_err(b)?
         .with_optimization_level(GraphOptimizationLevel::All)
         .map_err(b)?
         .with_intra_threads(1)

@@ -56,6 +56,8 @@ impl ModelKind {
 }
 
 /// 运行期可选的模型（rustarch 初审：手写 enum 静态分发，不用 `Box<dyn>`；两个变体不值得上宏）。
+// 只在启动时建一次、不在实时路径上搬动，大小差异无所谓
+#[allow(clippy::large_enum_variant)]
 pub enum AnyModel {
     Gtcrn(Gtcrn),
     FastEnhancer(FastEnhancer),
