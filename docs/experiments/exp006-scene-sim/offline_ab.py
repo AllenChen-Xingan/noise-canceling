@@ -102,7 +102,8 @@ def selection(truth):
     rng = np.random.default_rng(20261106)
     listen, asr = [], []
     for c in LISTEN:
-        pool = [t for t in test if t["fine"] == c and t["device"] == "none" and 0 <= (t["snr_db"] or 0) <= 12]
+        lo, hi = (0, 12) if c not in ("quiet", "hvac") else (-99, 99)  # 安静 / 空调的信噪比本来就高
+        pool = [t for t in test if t["fine"] == c and t["device"] == "none" and lo <= (t["snr_db"] or 0) <= hi]
         if c == "music":
             pool = [t for t in pool if t["noise"].startswith("MapleLeaf")] + [t for t in pool if not t["noise"].startswith("MapleLeaf")]
             listen += pool[:LISTEN[c]]

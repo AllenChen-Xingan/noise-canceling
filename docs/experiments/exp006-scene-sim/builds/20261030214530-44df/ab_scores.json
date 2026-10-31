@@ -1,0 +1,1297 @@
+{
+ "build": "20261030214530-44df",
+ "n": 3,
+ "asr_n": 3,
+ "all": {
+  "noisy": {
+   "SIG": {
+    "mean": 1.199,
+    "median": 1.172,
+    "n": 3
+   },
+   "BAK": {
+    "mean": 1.169,
+    "median": 1.132,
+    "n": 3
+   },
+   "OVRL": {
+    "mean": 1.108,
+    "median": 1.098,
+    "n": 3
+   },
+   "ESTOI": {
+    "mean": 0.5,
+    "median": 0.453,
+    "n": 3
+   },
+   "lkr": {
+    "mean": 0.0,
+    "median": 0.0,
+    "n": 3
+   },
+   "resid_rel_db": {
+    "mean": -5.703,
+    "median": -5.78,
+    "n": 3
+   },
+   "gap_flutter_db": {
+    "mean": 2.523,
+    "median": 2.63,
+    "n": 3
+   },
+   "level_std_db": {
+    "mean": -1.61,
+    "median": -1.59,
+    "n": 3
+   },
+   "hf_loss_db": {
+    "mean": -3.71,
+    "median": -3.34,
+    "n": 3
+   },
+   "del_rate": {
+    "mean": 0.0,
+    "median": 0.0,
+    "n": 3
+   },
+   "ins_rate": {
+    "mean": 0.0,
+    "median": 0.0,
+    "n": 3
+   }
+  },
+  "base": {
+   "SIG": {
+    "mean": 2.49,
+    "median": 2.446,
+    "n": 3
+   },
+   "BAK": {
+    "mean": 3.643,
+    "median": 3.757,
+    "n": 3
+   },
+   "OVRL": {
+    "mean": 2.219,
+    "median": 2.255,
+    "n": 3
+   },
+   "ESTOI": {
+    "mean": 0.653,
+    "median": 0.665,
+    "n": 3
+   },
+   "lkr": {
+    "mean": 2.967,
+    "median": 3.522,
+    "n": 3
+   },
+   "resid_rel_db": {
+    "mean": -20.453,
+    "median": -19.69,
+    "n": 3
+   },
+   "gap_flutter_db": {
+    "mean": 10.22,
+    "median": 9.96,
+    "n": 3
+   },
+   "level_std_db": {
+    "mean": 0.38,
+    "median": 0.49,
+    "n": 3
+   },
+   "hf_loss_db": {
+    "mean": 0.817,
+    "median": -0.02,
+    "n": 3
+   },
+   "del_rate": {
+    "mean": 0.0,
+    "median": 0.0,
+    "n": 3
+   },
+   "ins_rate": {
+    "mean": 0.013,
+    "median": 0.0,
+    "n": 3
+   }
+  },
+  "route": {
+   "SIG": {
+    "mean": 2.646,
+    "median": 2.777,
+    "n": 3
+   },
+   "BAK": {
+    "mean": 3.663,
+    "median": 3.82,
+    "n": 3
+   },
+   "OVRL": {
+    "mean": 2.345,
+    "median": 2.57,
+    "n": 3
+   },
+   "ESTOI": {
+    "mean": 0.687,
+    "median": 0.684,
+    "n": 3
+   },
+   "lkr": {
+    "mean": 2.962,
+    "median": 3.523,
+    "n": 3
+   },
+   "resid_rel_db": {
+    "mean": -19.953,
+    "median": -16.68,
+    "n": 3
+   },
+   "gap_flutter_db": {
+    "mean": 18.403,
+    "median": 12.67,
+    "n": 3
+   },
+   "level_std_db": {
+    "mean": 1.427,
+    "median": 1.33,
+    "n": 3
+   },
+   "hf_loss_db": {
+    "mean": -0.6,
+    "median": -1.42,
+    "n": 3
+   },
+   "del_rate": {
+    "mean": 0.0,
+    "median": 0.0,
+    "n": 3
+   },
+   "ins_rate": {
+    "mean": 0.016,
+    "median": 0.0,
+    "n": 3
+   }
+  },
+  "polish": {
+   "SIG": {
+    "mean": 2.484,
+    "median": 2.608,
+    "n": 3
+   },
+   "BAK": {
+    "mean": 2.717,
+    "median": 2.608,
+    "n": 3
+   },
+   "OVRL": {
+    "mean": 1.989,
+    "median": 2.072,
+    "n": 3
+   },
+   "ESTOI": {
+    "mean": 0.611,
+    "median": 0.6,
+    "n": 3
+   },
+   "lkr": {
+    "mean": 1.495,
+    "median": 0.932,
+    "n": 3
+   },
+   "resid_rel_db": {
+    "mean": -20.607,
+    "median": -19.82,
+    "n": 3
+   },
+   "gap_flutter_db": {
+    "mean": 4.193,
+    "median": 4.88,
+    "n": 3
+   },
+   "level_std_db": {
+    "mean": 0.317,
+    "median": 0.4,
+    "n": 3
+   },
+   "hf_loss_db": {
+    "mean": 1.683,
+    "median": 1.03,
+    "n": 3
+   },
+   "del_rate": {
+    "mean": 0.0,
+    "median": 0.0,
+    "n": 3
+   },
+   "ins_rate": {
+    "mean": 0.013,
+    "median": 0.0,
+    "n": 3
+   }
+  },
+  "both": {
+   "SIG": {
+    "mean": 2.771,
+    "median": 2.514,
+    "n": 3
+   },
+   "BAK": {
+    "mean": 3.084,
+    "median": 3.06,
+    "n": 3
+   },
+   "OVRL": {
+    "mean": 2.279,
+    "median": 2.1,
+    "n": 3
+   },
+   "ESTOI": {
+    "mean": 0.628,
+    "median": 0.628,
+    "n": 3
+   },
+   "lkr": {
+    "mean": 1.355,
+    "median": 0.818,
+    "n": 3
+   },
+   "resid_rel_db": {
+    "mean": -19.787,
+    "median": -21.36,
+    "n": 3
+   },
+   "gap_flutter_db": {
+    "mean": 4.997,
+    "median": 5.17,
+    "n": 3
+   },
+   "level_std_db": {
+    "mean": 1.557,
+    "median": 1.92,
+    "n": 3
+   },
+   "hf_loss_db": {
+    "mean": -0.67,
+    "median": -2.37,
+    "n": 3
+   },
+   "del_rate": {
+    "mean": 0.0,
+    "median": 0.0,
+    "n": 3
+   },
+   "ins_rate": {
+    "mean": 0.0,
+    "median": 0.0,
+    "n": 3
+   }
+  }
+ },
+ "by_class": {
+  "babble": {
+   "noisy": {
+    "SIG": {
+     "mean": 1.256,
+     "median": 1.256,
+     "n": 1
+    },
+    "BAK": {
+     "mean": 1.249,
+     "median": 1.249,
+     "n": 1
+    },
+    "OVRL": {
+     "mean": 1.132,
+     "median": 1.132,
+     "n": 1
+    },
+    "ESTOI": {
+     "mean": 0.626,
+     "median": 0.626,
+     "n": 1
+    },
+    "lkr": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 1
+    },
+    "resid_rel_db": {
+     "mean": -7.2,
+     "median": -7.2,
+     "n": 1
+    },
+    "gap_flutter_db": {
+     "mean": 3.24,
+     "median": 3.24,
+     "n": 1
+    },
+    "level_std_db": {
+     "mean": -1.59,
+     "median": -1.59,
+     "n": 1
+    },
+    "hf_loss_db": {
+     "mean": -1.99,
+     "median": -1.99,
+     "n": 1
+    },
+    "del_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 1
+    },
+    "ins_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 1
+    }
+   },
+   "base": {
+    "SIG": {
+     "mean": 2.316,
+     "median": 2.316,
+     "n": 1
+    },
+    "BAK": {
+     "mean": 3.323,
+     "median": 3.323,
+     "n": 1
+    },
+    "OVRL": {
+     "mean": 1.977,
+     "median": 1.977,
+     "n": 1
+    },
+    "ESTOI": {
+     "mean": 0.68,
+     "median": 0.68,
+     "n": 1
+    },
+    "lkr": {
+     "mean": 0.986,
+     "median": 0.986,
+     "n": 1
+    },
+    "resid_rel_db": {
+     "mean": -19.69,
+     "median": -19.69,
+     "n": 1
+    },
+    "gap_flutter_db": {
+     "mean": 9.96,
+     "median": 9.96,
+     "n": 1
+    },
+    "level_std_db": {
+     "mean": 0.05,
+     "median": 0.05,
+     "n": 1
+    },
+    "hf_loss_db": {
+     "mean": -0.02,
+     "median": -0.02,
+     "n": 1
+    },
+    "del_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 1
+    },
+    "ins_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 1
+    }
+   },
+   "route": {
+    "SIG": {
+     "mean": 2.266,
+     "median": 2.266,
+     "n": 1
+    },
+    "BAK": {
+     "mean": 3.078,
+     "median": 3.078,
+     "n": 1
+    },
+    "OVRL": {
+     "mean": 1.858,
+     "median": 1.858,
+     "n": 1
+    },
+    "ESTOI": {
+     "mean": 0.684,
+     "median": 0.684,
+     "n": 1
+    },
+    "lkr": {
+     "mean": 0.963,
+     "median": 0.963,
+     "n": 1
+    },
+    "resid_rel_db": {
+     "mean": -13.91,
+     "median": -13.91,
+     "n": 1
+    },
+    "gap_flutter_db": {
+     "mean": 10.78,
+     "median": 10.78,
+     "n": 1
+    },
+    "level_std_db": {
+     "mean": 1.33,
+     "median": 1.33,
+     "n": 1
+    },
+    "hf_loss_db": {
+     "mean": -2.82,
+     "median": -2.82,
+     "n": 1
+    },
+    "del_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 1
+    },
+    "ins_rate": {
+     "mean": 0.048,
+     "median": 0.048,
+     "n": 1
+    }
+   },
+   "polish": {
+    "SIG": {
+     "mean": 2.608,
+     "median": 2.608,
+     "n": 1
+    },
+    "BAK": {
+     "mean": 3.013,
+     "median": 3.013,
+     "n": 1
+    },
+    "OVRL": {
+     "mean": 2.097,
+     "median": 2.097,
+     "n": 1
+    },
+    "ESTOI": {
+     "mean": 0.675,
+     "median": 0.675,
+     "n": 1
+    },
+    "lkr": {
+     "mean": 0.805,
+     "median": 0.805,
+     "n": 1
+    },
+    "resid_rel_db": {
+     "mean": -19.82,
+     "median": -19.82,
+     "n": 1
+    },
+    "gap_flutter_db": {
+     "mean": 4.88,
+     "median": 4.88,
+     "n": 1
+    },
+    "level_std_db": {
+     "mean": 0.4,
+     "median": 0.4,
+     "n": 1
+    },
+    "hf_loss_db": {
+     "mean": 1.03,
+     "median": 1.03,
+     "n": 1
+    },
+    "del_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 1
+    },
+    "ins_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 1
+    }
+   },
+   "both": {
+    "SIG": {
+     "mean": 2.435,
+     "median": 2.435,
+     "n": 1
+    },
+    "BAK": {
+     "mean": 3.06,
+     "median": 3.06,
+     "n": 1
+    },
+    "OVRL": {
+     "mean": 1.988,
+     "median": 1.988,
+     "n": 1
+    },
+    "ESTOI": {
+     "mean": 0.677,
+     "median": 0.677,
+     "n": 1
+    },
+    "lkr": {
+     "mean": 0.818,
+     "median": 0.818,
+     "n": 1
+    },
+    "resid_rel_db": {
+     "mean": -15.43,
+     "median": -15.43,
+     "n": 1
+    },
+    "gap_flutter_db": {
+     "mean": 6.43,
+     "median": 6.43,
+     "n": 1
+    },
+    "level_std_db": {
+     "mean": 2.1,
+     "median": 2.1,
+     "n": 1
+    },
+    "hf_loss_db": {
+     "mean": -2.39,
+     "median": -2.39,
+     "n": 1
+    },
+    "del_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 1
+    },
+    "ins_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 1
+    }
+   }
+  },
+  "neighbor": {
+   "noisy": {},
+   "base": {},
+   "route": {},
+   "polish": {},
+   "both": {}
+  },
+  "clatter": {
+   "noisy": {},
+   "base": {},
+   "route": {},
+   "polish": {},
+   "both": {}
+  },
+  "traffic": {
+   "noisy": {},
+   "base": {},
+   "route": {},
+   "polish": {},
+   "both": {}
+  },
+  "music": {
+   "noisy": {
+    "SIG": {
+     "mean": 1.171,
+     "median": 1.171,
+     "n": 2
+    },
+    "BAK": {
+     "mean": 1.129,
+     "median": 1.129,
+     "n": 2
+    },
+    "OVRL": {
+     "mean": 1.095,
+     "median": 1.095,
+     "n": 2
+    },
+    "ESTOI": {
+     "mean": 0.437,
+     "median": 0.437,
+     "n": 2
+    },
+    "lkr": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 2
+    },
+    "resid_rel_db": {
+     "mean": -4.955,
+     "median": -4.955,
+     "n": 2
+    },
+    "gap_flutter_db": {
+     "mean": 2.165,
+     "median": 2.165,
+     "n": 2
+    },
+    "level_std_db": {
+     "mean": -1.62,
+     "median": -1.62,
+     "n": 2
+    },
+    "hf_loss_db": {
+     "mean": -4.57,
+     "median": -4.57,
+     "n": 2
+    },
+    "del_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 2
+    },
+    "ins_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 2
+    }
+   },
+   "base": {
+    "SIG": {
+     "mean": 2.577,
+     "median": 2.577,
+     "n": 2
+    },
+    "BAK": {
+     "mean": 3.804,
+     "median": 3.804,
+     "n": 2
+    },
+    "OVRL": {
+     "mean": 2.34,
+     "median": 2.34,
+     "n": 2
+    },
+    "ESTOI": {
+     "mean": 0.639,
+     "median": 0.639,
+     "n": 2
+    },
+    "lkr": {
+     "mean": 3.958,
+     "median": 3.958,
+     "n": 2
+    },
+    "resid_rel_db": {
+     "mean": -20.835,
+     "median": -20.835,
+     "n": 2
+    },
+    "gap_flutter_db": {
+     "mean": 10.35,
+     "median": 10.35,
+     "n": 2
+    },
+    "level_std_db": {
+     "mean": 0.545,
+     "median": 0.545,
+     "n": 2
+    },
+    "hf_loss_db": {
+     "mean": 1.235,
+     "median": 1.235,
+     "n": 2
+    },
+    "del_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 2
+    },
+    "ins_rate": {
+     "mean": 0.019,
+     "median": 0.019,
+     "n": 2
+    }
+   },
+   "route": {
+    "SIG": {
+     "mean": 2.837,
+     "median": 2.837,
+     "n": 2
+    },
+    "BAK": {
+     "mean": 3.955,
+     "median": 3.955,
+     "n": 2
+    },
+    "OVRL": {
+     "mean": 2.589,
+     "median": 2.589,
+     "n": 2
+    },
+    "ESTOI": {
+     "mean": 0.689,
+     "median": 0.689,
+     "n": 2
+    },
+    "lkr": {
+     "mean": 3.961,
+     "median": 3.961,
+     "n": 2
+    },
+    "resid_rel_db": {
+     "mean": -22.975,
+     "median": -22.975,
+     "n": 2
+    },
+    "gap_flutter_db": {
+     "mean": 22.215,
+     "median": 22.215,
+     "n": 2
+    },
+    "level_std_db": {
+     "mean": 1.475,
+     "median": 1.475,
+     "n": 2
+    },
+    "hf_loss_db": {
+     "mean": 0.51,
+     "median": 0.51,
+     "n": 2
+    },
+    "del_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 2
+    },
+    "ins_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 2
+    }
+   },
+   "polish": {
+    "SIG": {
+     "mean": 2.422,
+     "median": 2.422,
+     "n": 2
+    },
+    "BAK": {
+     "mean": 2.57,
+     "median": 2.57,
+     "n": 2
+    },
+    "OVRL": {
+     "mean": 1.934,
+     "median": 1.934,
+     "n": 2
+    },
+    "ESTOI": {
+     "mean": 0.579,
+     "median": 0.579,
+     "n": 2
+    },
+    "lkr": {
+     "mean": 1.841,
+     "median": 1.841,
+     "n": 2
+    },
+    "resid_rel_db": {
+     "mean": -21.0,
+     "median": -21.0,
+     "n": 2
+    },
+    "gap_flutter_db": {
+     "mean": 3.85,
+     "median": 3.85,
+     "n": 2
+    },
+    "level_std_db": {
+     "mean": 0.275,
+     "median": 0.275,
+     "n": 2
+    },
+    "hf_loss_db": {
+     "mean": 2.01,
+     "median": 2.01,
+     "n": 2
+    },
+    "del_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 2
+    },
+    "ins_rate": {
+     "mean": 0.019,
+     "median": 0.019,
+     "n": 2
+    }
+   },
+   "both": {
+    "SIG": {
+     "mean": 2.939,
+     "median": 2.939,
+     "n": 2
+    },
+    "BAK": {
+     "mean": 3.096,
+     "median": 3.096,
+     "n": 2
+    },
+    "OVRL": {
+     "mean": 2.425,
+     "median": 2.425,
+     "n": 2
+    },
+    "ESTOI": {
+     "mean": 0.604,
+     "median": 0.604,
+     "n": 2
+    },
+    "lkr": {
+     "mean": 1.624,
+     "median": 1.624,
+     "n": 2
+    },
+    "resid_rel_db": {
+     "mean": -21.965,
+     "median": -21.965,
+     "n": 2
+    },
+    "gap_flutter_db": {
+     "mean": 4.28,
+     "median": 4.28,
+     "n": 2
+    },
+    "level_std_db": {
+     "mean": 1.285,
+     "median": 1.285,
+     "n": 2
+    },
+    "hf_loss_db": {
+     "mean": 0.19,
+     "median": 0.19,
+     "n": 2
+    },
+    "del_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 2
+    },
+    "ins_rate": {
+     "mean": 0.0,
+     "median": 0.0,
+     "n": 2
+    }
+   }
+  },
+  "hvac": {
+   "noisy": {},
+   "base": {},
+   "route": {},
+   "polish": {},
+   "both": {}
+  },
+  "quiet": {
+   "noisy": {},
+   "base": {},
+   "route": {},
+   "polish": {},
+   "both": {}
+  }
+ },
+ "pairwise": {
+  "polish_vs_base": {
+   "SIG": {
+    "win": 2,
+    "lose": 1
+   },
+   "BAK": {
+    "win": 0,
+    "lose": 3
+   },
+   "OVRL": {
+    "win": 1,
+    "lose": 2
+   },
+   "ESTOI": {
+    "win": 0,
+    "lose": 3
+   },
+   "lkr": {
+    "win": 3,
+    "lose": 0
+   },
+   "resid_rel_db": {
+    "win": 1,
+    "lose": 2
+   },
+   "gap_flutter_db": {
+    "win": 3,
+    "lose": 0
+   },
+   "level_std_db": {
+    "win": 1,
+    "lose": 2
+   },
+   "hf_loss_db": {
+    "win": 2,
+    "lose": 1
+   },
+   "del_rate": {
+    "win": 0,
+    "lose": 0
+   },
+   "ins_rate": {
+    "win": 0,
+    "lose": 0
+   }
+  },
+  "both_vs_route": {
+   "SIG": {
+    "win": 2,
+    "lose": 1
+   },
+   "BAK": {
+    "win": 0,
+    "lose": 3
+   },
+   "OVRL": {
+    "win": 2,
+    "lose": 1
+   },
+   "ESTOI": {
+    "win": 0,
+    "lose": 3
+   },
+   "lkr": {
+    "win": 3,
+    "lose": 0
+   },
+   "resid_rel_db": {
+    "win": 1,
+    "lose": 2
+   },
+   "gap_flutter_db": {
+    "win": 3,
+    "lose": 0
+   },
+   "level_std_db": {
+    "win": 1,
+    "lose": 2
+   },
+   "hf_loss_db": {
+    "win": 2,
+    "lose": 1
+   },
+   "del_rate": {
+    "win": 0,
+    "lose": 0
+   },
+   "ins_rate": {
+    "win": 1,
+    "lose": 0
+   }
+  },
+  "route_vs_base": {
+   "SIG": {
+    "win": 2,
+    "lose": 1
+   },
+   "BAK": {
+    "win": 2,
+    "lose": 1
+   },
+   "OVRL": {
+    "win": 2,
+    "lose": 1
+   },
+   "ESTOI": {
+    "win": 3,
+    "lose": 0
+   },
+   "lkr": {
+    "win": 1,
+    "lose": 2
+   },
+   "resid_rel_db": {
+    "win": 1,
+    "lose": 2
+   },
+   "gap_flutter_db": {
+    "win": 0,
+    "lose": 3
+   },
+   "level_std_db": {
+    "win": 0,
+    "lose": 3
+   },
+   "hf_loss_db": {
+    "win": 0,
+    "lose": 3
+   },
+   "del_rate": {
+    "win": 0,
+    "lose": 0
+   },
+   "ins_rate": {
+    "win": 1,
+    "lose": 1
+   }
+  },
+  "both_vs_base": {
+   "SIG": {
+    "win": 3,
+    "lose": 0
+   },
+   "BAK": {
+    "win": 0,
+    "lose": 3
+   },
+   "OVRL": {
+    "win": 2,
+    "lose": 1
+   },
+   "ESTOI": {
+    "win": 0,
+    "lose": 3
+   },
+   "lkr": {
+    "win": 3,
+    "lose": 0
+   },
+   "resid_rel_db": {
+    "win": 2,
+    "lose": 1
+   },
+   "gap_flutter_db": {
+    "win": 3,
+    "lose": 0
+   },
+   "level_std_db": {
+    "win": 0,
+    "lose": 3
+   },
+   "hf_loss_db": {
+    "win": 0,
+    "lose": 3
+   },
+   "del_rate": {
+    "win": 0,
+    "lose": 0
+   },
+   "ins_rate": {
+    "win": 1,
+    "lose": 0
+   }
+  }
+ },
+ "per_clip": {
+  "te0011": {
+   "noisy": {
+    "SIG": 1.172,
+    "BAK": 1.126,
+    "OVRL": 1.093,
+    "ESTOI": 0.4525,
+    "lkr": 0.0,
+    "gap_flutter_db": 1.7,
+    "resid_rel_db": -5.78,
+    "level_std_db": -2.18,
+    "hf_loss_db": -5.8,
+    "del_rate": 0.0,
+    "ins_rate": 0.0
+   },
+   "base": {
+    "SIG": 2.446,
+    "BAK": 3.85,
+    "OVRL": 2.255,
+    "ESTOI": 0.6139,
+    "lkr": 4.394,
+    "gap_flutter_db": 8.24,
+    "resid_rel_db": -27.3,
+    "level_std_db": 0.6,
+    "hf_loss_db": -1.03,
+    "del_rate": 0.0,
+    "ins_rate": 0.0
+   },
+   "route": {
+    "SIG": 2.777,
+    "BAK": 4.09,
+    "OVRL": 2.57,
+    "ESTOI": 0.6528,
+    "lkr": 4.399,
+    "gap_flutter_db": 31.76,
+    "resid_rel_db": -29.27,
+    "level_std_db": 1.65,
+    "hf_loss_db": -1.42,
+    "del_rate": 0.0,
+    "ins_rate": 0.0
+   },
+   "polish": {
+    "SIG": 2.094,
+    "BAK": 2.608,
+    "OVRL": 1.797,
+    "ESTOI": 0.5579,
+    "lkr": 0.932,
+    "gap_flutter_db": 2.72,
+    "resid_rel_db": -22.56,
+    "level_std_db": 0.87,
+    "hf_loss_db": -1.13,
+    "del_rate": 0.0,
+    "ins_rate": 0.0
+   },
+   "both": {
+    "SIG": 2.514,
+    "BAK": 2.846,
+    "OVRL": 2.1,
+    "ESTOI": 0.5793,
+    "lkr": 0.588,
+    "gap_flutter_db": 3.39,
+    "resid_rel_db": -22.57,
+    "level_std_db": 1.92,
+    "hf_loss_db": -2.37,
+    "del_rate": 0.0,
+    "ins_rate": 0.0
+   }
+  },
+  "te0028": {
+   "noisy": {
+    "SIG": 1.169,
+    "BAK": 1.132,
+    "OVRL": 1.098,
+    "ESTOI": 0.4206,
+    "lkr": -0.0,
+    "gap_flutter_db": 2.63,
+    "resid_rel_db": -4.13,
+    "level_std_db": -1.06,
+    "hf_loss_db": -3.34,
+    "del_rate": 0.0,
+    "ins_rate": 0.0
+   },
+   "base": {
+    "SIG": 2.707,
+    "BAK": 3.757,
+    "OVRL": 2.424,
+    "ESTOI": 0.6646,
+    "lkr": 3.522,
+    "gap_flutter_db": 12.46,
+    "resid_rel_db": -14.37,
+    "level_std_db": 0.49,
+    "hf_loss_db": 3.5,
+    "del_rate": 0.0,
+    "ins_rate": 0.0385
+   },
+   "route": {
+    "SIG": 2.896,
+    "BAK": 3.82,
+    "OVRL": 2.608,
+    "ESTOI": 0.7251,
+    "lkr": 3.523,
+    "gap_flutter_db": 12.67,
+    "resid_rel_db": -16.68,
+    "level_std_db": 1.3,
+    "hf_loss_db": 2.44,
+    "del_rate": 0.0,
+    "ins_rate": 0.0
+   },
+   "polish": {
+    "SIG": 2.751,
+    "BAK": 2.531,
+    "OVRL": 2.072,
+    "ESTOI": 0.5997,
+    "lkr": 2.749,
+    "gap_flutter_db": 4.98,
+    "resid_rel_db": -19.44,
+    "level_std_db": -0.32,
+    "hf_loss_db": 5.15,
+    "del_rate": 0.0,
+    "ins_rate": 0.0385
+   },
+   "both": {
+    "SIG": 3.364,
+    "BAK": 3.345,
+    "OVRL": 2.749,
+    "ESTOI": 0.628,
+    "lkr": 2.66,
+    "gap_flutter_db": 5.17,
+    "resid_rel_db": -21.36,
+    "level_std_db": 0.65,
+    "hf_loss_db": 2.75,
+    "del_rate": 0.0,
+    "ins_rate": 0.0
+   }
+  },
+  "te0039": {
+   "noisy": {
+    "SIG": 1.256,
+    "BAK": 1.249,
+    "OVRL": 1.132,
+    "ESTOI": 0.6265,
+    "lkr": -0.0,
+    "gap_flutter_db": 3.24,
+    "resid_rel_db": -7.2,
+    "level_std_db": -1.59,
+    "hf_loss_db": -1.99,
+    "del_rate": 0.0,
+    "ins_rate": 0.0
+   },
+   "base": {
+    "SIG": 2.316,
+    "BAK": 3.323,
+    "OVRL": 1.977,
+    "ESTOI": 0.68,
+    "lkr": 0.986,
+    "gap_flutter_db": 9.96,
+    "resid_rel_db": -19.69,
+    "level_std_db": 0.05,
+    "hf_loss_db": -0.02,
+    "del_rate": 0.0,
+    "ins_rate": 0.0
+   },
+   "route": {
+    "SIG": 2.266,
+    "BAK": 3.078,
+    "OVRL": 1.858,
+    "ESTOI": 0.6845,
+    "lkr": 0.963,
+    "gap_flutter_db": 10.78,
+    "resid_rel_db": -13.91,
+    "level_std_db": 1.33,
+    "hf_loss_db": -2.82,
+    "del_rate": 0.0,
+    "ins_rate": 0.0476
+   },
+   "polish": {
+    "SIG": 2.608,
+    "BAK": 3.013,
+    "OVRL": 2.097,
+    "ESTOI": 0.675,
+    "lkr": 0.805,
+    "gap_flutter_db": 4.88,
+    "resid_rel_db": -19.82,
+    "level_std_db": 0.4,
+    "hf_loss_db": 1.03,
+    "del_rate": 0.0,
+    "ins_rate": 0.0
+   },
+   "both": {
+    "SIG": 2.435,
+    "BAK": 3.06,
+    "OVRL": 1.988,
+    "ESTOI": 0.6766,
+    "lkr": 0.818,
+    "gap_flutter_db": 6.43,
+    "resid_rel_db": -15.43,
+    "level_std_db": 2.1,
+    "hf_loss_db": -2.39,
+    "del_rate": 0.0,
+    "ins_rate": 0.0
+   }
+  }
+ },
+ "polish_cost": {
+  "spectral": 8.09,
+  "agc": 0.72,
+  "cpu_share_pct_of_one_core": 0.055
+ }
+}
