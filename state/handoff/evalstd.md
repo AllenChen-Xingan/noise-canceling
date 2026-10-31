@@ -1,6 +1,6 @@
 # 现状页 · evalstd（批次 20261031-b4）
 
-- **状态**：进行中
+- **状态**：已收尾（待大总管验收）
 - **手上**：012 工业级评测标准调研（ITU-T / ETSI / 3GPP / ITU-R / IEC / 认证 / 测量公司 / 比赛协议 / 助听器）+ 对 004 与 007 的差距表 + 升级清单
 - **交代**：主目录 `_tmp/20261031-b4/evalstd.md`
 - **交付**：`docs/research/012_eval-standards/`（六份）
@@ -19,4 +19,14 @@
 - 自审 Workflow wf_3cac798e-29c（3 代理：怀疑派 / 实现派 / 产品派）→ 进行中
 
 ## 待人拍板
-见 `docs/research/012_eval-standards/decision.md` 末尾 6 题：①自研 TS 103 281 前先核许可 ②人耳加 P.835 三量表 ③加听者（含众包与 D39 的关系）④ETSI 噪声短样本进仓 ⑤对外报告并列 Teams / TS 26.131 数字 ⑥是否设法读 P.835 (07/26) 正文
+见 `docs/research/012_eval-standards/decision.md` 末尾 9 题：①自研 TS 103 281 前先核许可 ②人耳加 P.835 三量表 ③加听者（含众包与 D39 的关系）④ETSI 噪声短样本进仓 ⑤对外报告并列 Teams / TS 26.131 数字 ⑥是否设法读 P.835 (07/26) 正文 ⑦「工业级」在本项目指什么 ⑧verifier 判据建议值 ⑨rlenv 过渡期能否用 L1 当弱奖励
+- 自审 3 视角回来：怀疑派 0 P0 / 3 P1 / 5 P2；实现派 2 P0（单轮降级会把 verifier 全降光；跨片段相关被片段难度带偏）；产品派 1 P0（RL 刷分查不出）→ 逐条核实，全部采纳并修完（唯一不采纳：V-SNG「要三路输入」——D 路怀疑派已核 TS 103 281 §6.2 只要两路；改为补「全带模型 vs 16 kHz」提醒）
+- 已收尾
+
+## 交付
+`docs/research/012_eval-standards/`：README · must-know · sources（[S1]–[S44]）· assign · gap · **verifiers**（D44）· decision（升级清单 16 条、rubric 修改清单 R1–R14 交大总管、待人拍板 9 题）
+
+## 转交大总管
+- rubric 修改清单 R1–R14（`decision.md`），本线没改 `specs/rubric/denoise.md`
+- 第一个该做的实验：用 exp003 现有数据算第一张 verifier 定标表（纯计算）
+- `resources/teams-v5-spec/`（19 MB，git 忽略，README 记来源与哈希）
