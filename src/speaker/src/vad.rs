@@ -55,7 +55,11 @@ impl Vad {
         for &s in x {
             // fill < VAD_FRAME 恒成立（满即清零），get_mut 只为不留 panic 路径（R4）
             if let Some(b) = self.buf.get_mut(self.fill) {
-                *b = if s.is_finite() { s.clamp(-1.0, 1.0) } else { 0.0 };
+                *b = if s.is_finite() {
+                    s.clamp(-1.0, 1.0)
+                } else {
+                    0.0
+                };
             }
             self.fill += 1;
             if self.fill == VAD_FRAME {
