@@ -1,0 +1,17 @@
+[package]
+name = "vdn-dsp"
+description = "纯信号处理积木：STFT/iSTFT、延迟线、包络、交叉淡化。不依赖模型、不做 I/O"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+realfft.workspace = true
+
+[dev-dependencies]
+assert_no_alloc.workspace = true
+
+[lints]
+workspace = true

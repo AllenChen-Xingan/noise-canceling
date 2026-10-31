@@ -30,7 +30,16 @@
 | **标准样本 / 负例** | 「好的会议声音」与典型失败的样本 | 跟着作品住（`-proto` 定） | 人挑、人改 |
 | **真相源** | 设计文档等原始材料 | `vault/raw/` | 人 |
 
-`src/` 下面的 crate 还没建。**建一个，就在这张表里加一行**（是什么 · 谁产生 · 谁是谁的输入）。初拟划分见 `vault/raw/20261029-voice-denoise-design.md` §6（dsp · engine · speaker · io-macos · hal-plugin · control · eval），以 `-research` 结论为准。
+### 已建的 crate（依赖单向 dsp ← engine ← models ← cli）
+
+| crate | 是什么 | 谁产生 | 谁是谁的输入 |
+|---|---|---|---|
+| `vdn-dsp`（`src/dsp/`） | 纯信号处理积木：STFT/iSTFT、延迟线、快开慢关包络、窗 | AI 写（p1，2026-10-30） | 被 engine、models 用；不依赖任何本项目 crate |
+| `vdn-engine`（`src/engine/`） | 模型接口 `trait Model`、逐帧调度 + 三件保命、故障注入、离线驱动 | AI 写（p1） | 输入：dsp 积木 + 任一 `Model`；被 models、cli 用。不链接 ONNX Runtime |
+| `vdn-models`（`src/models/`） | 模型适配器 GTCRN、FastEnhancer-M（ort 单线程 CPU）、`AnyModel` | AI 写（p1） | 输入：模型权重（仓外）；实现 engine 的 `Model`；被 cli 用 |
+| `vdn-cli`（`src/cli/`，可执行 `vdn`） | 命令行 `denoise` / `bench`，WAV 读写 | AI 写（p1） | 输入：WAV + 模型权重；产出降噪 WAV 与计时 JSON（评测报告的原料） |
+
+**建一个，就在这张表里加一行**（是什么 · 谁产生 · 谁是谁的输入）。初拟划分见 `vault/raw/20261029-voice-denoise-design.md` §6（dsp · engine · speaker · io-macos · hal-plugin · control · eval），以 `-research` 结论为准。
 
 ## 参与者
 
