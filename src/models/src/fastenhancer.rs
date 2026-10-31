@@ -82,6 +82,12 @@ impl FastEnhancer {
     }
 }
 
+// 实时（specs/rust/architecture.md §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Model for FastEnhancer {
     fn name(&self) -> &'static str {
         "fastenhancer"

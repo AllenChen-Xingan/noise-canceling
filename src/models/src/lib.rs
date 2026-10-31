@@ -82,6 +82,12 @@ macro_rules! each {
     };
 }
 
+// 实时（specs/rust/architecture.md §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl vdn_types::Model for AnyModel {
     fn name(&self) -> &'static str {
         each!(self, m => m.name())

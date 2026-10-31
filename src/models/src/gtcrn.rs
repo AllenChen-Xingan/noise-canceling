@@ -59,6 +59,12 @@ impl Gtcrn {
     }
 }
 
+// 实时（specs/rust/architecture.md §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Model for Gtcrn {
     fn name(&self) -> &'static str {
         "gtcrn"
@@ -90,6 +96,12 @@ impl Model for Gtcrn {
     }
 }
 
+// 实时（specs/rust/architecture.md §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Gtcrn {
     /// 分析一帧 → 推理 → 把增强后的频谱写回 STFT、缓存拷回输入。不做合成。
     fn infer(&mut self, input: &[f32]) -> Result<(), ModelError> {
