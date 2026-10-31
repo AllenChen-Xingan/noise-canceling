@@ -1,0 +1,168 @@
+{
+ "test": {
+  "windows": 4480,
+  "acc_fine_class": {
+   "raw": 0.819,
+   "smooth": 0.8359,
+   "committed": 0.8471
+  },
+  "acc_user_scene": {
+   "raw": 0.9152,
+   "smooth": 0.9288,
+   "committed": 0.9279
+  },
+  "acc_committed_after_5s": {
+   "fine_class": 0.8586,
+   "user_scene": 0.9468
+  },
+  "per_class_recall_committed": {
+   "quiet": 0.896,
+   "hvac": 0.961,
+   "babble": 0.744,
+   "neighbor": 0.739,
+   "clatter": 0.938,
+   "traffic": 0.974,
+   "music": 0.958
+  },
+  "confusion_committed": {
+   "labels": [
+    "quiet",
+    "hvac",
+    "babble",
+    "neighbor",
+    "clatter",
+    "traffic",
+    "music"
+   ],
+   "rows_truth_cols_pred": [
+    [
+     532,
+     16,
+     0,
+     7,
+     39,
+     0,
+     0
+    ],
+    [
+     0,
+     365,
+     0,
+     0,
+     15,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     595,
+     205,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     25,
+     111,
+     471,
+     30,
+     0,
+     0
+    ],
+    [
+     26,
+     0,
+     0,
+     0,
+     395,
+     0,
+     0
+    ],
+    [
+     9,
+     8,
+     0,
+     0,
+     7,
+     896,
+     0
+    ],
+    [
+     0,
+     0,
+     4,
+     20,
+     0,
+     0,
+     541
+    ]
+   ]
+  },
+  "confusion_user_committed": {
+   "labels": [
+    "quiet",
+    "cafe",
+    "commute",
+    "music"
+   ],
+   "rows_truth_cols_pred": [
+    [
+     913,
+     61,
+     0,
+     0
+    ],
+    [
+     51,
+     1807,
+     0,
+     0
+    ],
+    [
+     17,
+     7,
+     896,
+     0
+    ],
+    [
+     0,
+     24,
+     0,
+     541
+    ]
+   ]
+  },
+  "jitter_test": {
+   "clips": 280,
+   "mean_extra_switches": 0.589,
+   "clips_with_any": 103,
+   "max": 4,
+   "wrong_switches_per_clip": 0.1
+  },
+  "device": {
+   "bt_narrow": {
+    "recall": 0.945,
+    "false_alarm": 0.036
+   },
+   "clip": {
+    "recall": 0.712,
+    "false_alarm": 0.045
+   }
+  }
+ },
+ "seq": {
+  "sequences": 16,
+  "extra_switches_mean": 4.81,
+  "extra_switches_total": 77,
+  "change_delay_s": {
+   "median": 3.73,
+   "p90": 8.86,
+   "n": 47
+  },
+  "changes_never_reached_correct": 1,
+  "wrong_switches_per_minute": 1.008,
+  "time_correct_frac": 0.651
+ }
+}

@@ -465,6 +465,8 @@ def main():
     ap.add_argument("--build", default=None)
     ap.add_argument("--only", default="train,test,seq")
     ap.add_argument("--n", type=int, default=None, help="每组只生成前 n 段（冒烟用）")
+    ap.add_argument("--seed-salt", type=int, default=0,
+                    help="种子加盐：生成一组新的留出数据（滞回扫参用过 test / seq，报告要在没见过的数据上再报一次）")
     a = ap.parse_args()
     build = a.build or time.strftime("%Y%m%d%H%M%S") + "-" + secrets.token_hex(2)
     audio_root = ROOT / "_tmp/20261031-exp006" / build
@@ -475,7 +477,8 @@ def main():
         (audio_root / split).mkdir(parents=True, exist_ok=True)
         cnt = RECIPES["count"][split] if a.n is None else min(a.n, RECIPES["count"][split])
         for i in range(cnt):
-            jobs.append({"split": split, "idx": i, "seed": RECIPES["seed"][split] * 1000 + i, "out": str(audio_root / split)})
+            jobs.append({"split": split, "idx": i, "seed": RECIPES["seed"][split] * 1000 + i + a.seed_salt * 10_000_000,
+                         "out": str(audio_root / split)})
     t0 = time.time()
     with ProcessPoolExecutor(max_workers=max(1, (os.cpu_count() or 4) // 2)) as ex:
         truths = list(ex.map(run_job, jobs, chunksize=4))
@@ -486,7 +489,8 @@ def main():
     (doc_root / "files.json").write_text(json.dumps(files, indent=0))
     (doc_root / "recipes.snapshot.json").write_text((HERE / "recipes.json").read_text())
     (doc_root / "build.json").write_text(json.dumps({"build": build, "audio_dir": str(audio_root.relative_to(ROOT)), "n": len(truths),
-                                                     "seconds": round(time.time() - t0, 1), "only": a.only, "n_limit": a.n}, indent=1))
+                                                     "seconds": round(time.time() - t0, 1), "only": a.only, "n_limit": a.n,
+                                                     "seed_salt": a.seed_salt}, indent=1))
     print(build, len(truths), f"{time.time() - t0:.1f}s")
 
 
