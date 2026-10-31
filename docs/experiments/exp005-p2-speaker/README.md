@@ -56,7 +56,7 @@ $PY docs/experiments/exp005-p2-speaker/build_page.py                        # �
 | c07 | 一人轮流说，**无底噪** | 80 s | −6 dB | 43 / 28 s |
 | c08 | 邻桌 4 人 | 80 s | 每人 −6 dB | 52 / 76 s |
 
-注：c03 用的主人素材里恰好也选中 3570 作邻座之一的候选被排除——邻座集合不含主人（`make_clips.py::pick_neighbors`）。
+邻座候选里排除了主人（`make_clips.py::pick_neighbors`）。
 
 ## 结果
 
@@ -144,6 +144,7 @@ IRL = 只有邻座在说的样本上 10·log10(Σ输出² / Σ输入邻座²)，
 - build **`20261030221239-7448`**：`<主目录>/_tmp/20261031-exp005/builds/20261030221239-7448/index.html`
 - 8 段各取锁定之后约 25 s 节选（邻座独白与主人说话都有的那一段），A / B = 个性化关 / 开（随机），加原声参考；一道检验题（A、B 同一文件）
 - 对照表：`builds/20261030221239-7448/{unblind-key.json, manifest.js, files.json}`（已提交）。答卷交回后放 `results/`
+- 这个 build 生成时听测目录里也放了 unblind-key.json / files.json（manifest.js 里还有 base64 槽位映射），大总管已手动处理；脚本已改成揭盲文件只写进仓库目录、manifest 不带映射，并断言听测目录里没有揭盲文件、manifest.js 里不出现版本名（之后的 build 生效）
 - 两份候选**不做响度归一**：门控本身就是电平差
 
 ## 已知局限

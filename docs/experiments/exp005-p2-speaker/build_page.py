@@ -3,13 +3,13 @@
 - 每段取约 25 s 的节选：锁定之后、「只有邻座在说」与「主人在说」都有的那一段（没锁定的段取正中）
 - 每段两份候选：vad（个性化关）· personal（个性化开），随机排进 A / B；另给原声（参考）
 - 检验题一道：A、B 是同一个文件（应答「差不多」）
-- **每次生成一个新 build**：页面与音频写进 <主目录>/_tmp/20261031-exp005/builds/<build>/，不覆盖任何旧文件；
-  揭盲表 unblind-key.json、manifest.js、files.json 当场复制进 docs/experiments/exp005-p2-speaker/builds/<build>/
-  （CLAUDE.md 第五节第 1 条「揭盲表丢失之坑」）。页面与文件名里不出现版本名
+- **每次生成一个新 build**：页面与音频写进 <主目录>/_tmp/20261031-exp005/builds/<build>/，不覆盖任何旧文件
+- **答案不放在听测目录里**（CLAUDE.md 第五节第 1 条）：揭盲表 unblind-key.json 与写着版本名的 files.json 只写进
+  docs/experiments/exp005-p2-speaker/builds/<build>/ 并提交；听测目录只有 index.html、manifest.js（不含槽位映射）和随机名音频，
+  页面运行时不依赖揭盲表。manifest.js 同时复制一份进仓
 - 节选做 15 ms 淡入淡出；两份候选按同一节选位置截取，不做响度归一（门控本身就是电平差，归一会抹掉它）
 用法（项目根下）：<主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp005-p2-speaker/build_page.py
 """
-import base64
 import hashlib
 import json
 import secrets
@@ -105,20 +105,21 @@ def main():
             "cands": [f, f]}
     items = mclips + [trap]
     rng.shuffle(items)
-    manifest = {"build": build, "items": items,
-                "slotmap": base64.b64encode(json.dumps({"clips": {k: v["order"] for k, v in key.items()},
-                                                        "trap": {"clip": tc["id"], "version": tv}}).encode()).decode()}
+    manifest = {"build": build, "items": items}
     (page / "manifest.js").write_text("window.EXP005 = " + json.dumps(manifest, ensure_ascii=False) + ";\n")
     shutil.copyfile(HERE / "ab_page.html", page / "index.html")
-    (page / "unblind-key.json").write_text(json.dumps({"build": build, "cands": {"vad": "个性化关（VAD 快开慢关 + 下限）",
+    keep = HERE / "builds" / build
+    keep.mkdir(parents=True, exist_ok=False)
+    (keep / "unblind-key.json").write_text(json.dumps({"build": build, "cands": {"vad": "个性化关（VAD 快开慢关 + 下限）",
                                                                               "personal": "个性化开（+ 注册 + 不对称门控）"},
                                                        "key": key, "trap": {"clip": tc["id"], "version": tv}},
                                                       ensure_ascii=False, indent=1))
-    (page / "files.json").write_text(json.dumps(files, ensure_ascii=False, indent=1))
-    keep = HERE / "builds" / build
-    keep.mkdir(parents=True, exist_ok=False)
-    for x in ["unblind-key.json", "manifest.js", "files.json"]:
-        shutil.copyfile(page / x, keep / x)
+    (keep / "files.json").write_text(json.dumps(files, ensure_ascii=False, indent=1))
+    shutil.copyfile(page / "manifest.js", keep / "manifest.js")
+    leaked = [f.name for f in page.iterdir() if f.name in ("unblind-key.json", "files.json")]
+    assert not leaked, f"听测目录里不该有揭盲文件：{leaked}"
+    mtxt = (page / "manifest.js").read_text()
+    assert all(v not in mtxt for v in CANDS), "manifest.js 里出现了版本名"
     print("build", build, "→", page / "index.html")
 
 
