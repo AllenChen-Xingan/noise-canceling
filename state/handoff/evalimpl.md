@@ -20,3 +20,17 @@
 - 新 verifier V-SIM-QUIET（L3 模拟）+ 回归任务 R17（xfail，留给修复线）；xfail 机制：阻断降为报警、全过时提示转正
 - 自审（红军 · 实现派）已回，修了：ort 双 Environment（DNSMOS 改子进程）· V-VACUUM 不进基线 · 报告路径改相对 · 缺基线项报警 · R01/R03 放宽护栏 · ASR key 读环境变量、curl -f · 规约 :58 口径
 - 跑 QA 层中（后台）；怀疑派自审未回
+- QA 层跑完（12 分钟，ASR 72 次调用）：真实片段 V-NR 卡在 5–6 dB、V-INTF −0.3 至 −6.7 dB、V-SIM-FA 85–99%、Δdel ≈ 0（9 段）、DNSMOS 均不低于输入；结果 results/20261031-000116-c339edd-qa.*（在 verifier 修复前构建，V-ONSET 数字作废）
+- 怀疑派自审修完：V-SPLVL/V-ONSET 改投影能量、V-MUSIC 按频点归一、DNSMOS 窗数 trunc、V-SIM-SWLAT 挪到 R17；门禁按级别判阻断（真实片段上 Sim 降 L0 不再阻断）
+- 重写冻结基线 243 项（ref + gtcrn + fastenhancer-m）；CI 口径（xtask、debug）复跑门禁通过：results/20261031-001701-a5032bd-ci.*
+- 早期报告里的本机绝对路径已在工作区替换；旧内容在未推送提交 e30824c、0697b48 里——推送前是否改写由大总管定
+- 给 prefs 回了任务格式：docs/experiments/exp007-eval-suite/task-schema.md；README 写了「人判任务从 docs/experiments/human-prefs/ 接入」
+
+## 待人拍板（同 README 末尾）
+1. GTCRN 权重（535 KB，MIT）进不进仓让 CI 测真模型（建议进；默认不进）
+2. 能力任务毕业进回归集的规则（建议连续 3 次 PR pass^3 全过自动提议、人确认）
+3. 012〔建议值〕照用试跑两轮
+4. 下一轮听测同时导出候选音频 + P.835 三量表（否则新 DSP verifier 永远定不了标）
+
+## 已收尾（2026-10-31）
+交付：src/eval/ · src/eval/suite/{ci,qa,levels,baseline-ci}.json · xtask eval ci|qa · ci.yml 一步 · specs/rust/architecture.md §7.1 · .42cog/cog.md 一行 · docs/experiments/exp007-eval-suite/{README.md,task-schema.md,calib/,results/}
