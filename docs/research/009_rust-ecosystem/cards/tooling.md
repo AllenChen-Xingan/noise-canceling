@@ -353,3 +353,36 @@
 6. **cargo-nextest 在 macOS 上的已知问题**、**insta / proptest 源码**未读（浅读）。
 7. **HAL 驱动 .pkg 的签名公证全流程**没有现成 Rust 工具覆盖：cargo-dist（不签 pkg、不公证）、cargo-packager（不出 pkg）、cargo-bundle（不公证）都不够，结论是自写脚本；BlackHole / BackgroundMusic（已在 resources/）的发布脚本可能是更好的参照，本组未读。
 8. GitHub macOS runner 上墙钟基准的噪声大小是推断，未测。
+
+## 复核记录（怀疑派 3）
+
+复核日 2026-10-30。只读源码、GitHub API 和 crates.io API；没克隆新仓，没构建。
+
+**查了多少**：本地【源码】行号约 40 处，逐行打开看过（cargo-deny 的 licenses.rs 和 3 份 docs、CI；cargo-dist 的 sign/macos.rs、sign/mod.rs、macpkg.rs；loom 的 lib.rs、model.rs、README；rtrb 的 CI、Cargo.toml、benches；assert_no_alloc 的 lib.rs、Cargo.toml；rtsan 的 build.rs、src/lib.rs、macros、sys/build.rs；gungraun 的 README；approx 的 relative_eq.rs、Cargo.toml）。GitHub API 复查了 23 个仓，crates.io 复查了 23 个 crate，另外核了 cargo-deny-action 的 action.yml、cargo-dist 和 rtsan 的 releases、loom 和 divan 的 commits。远程读的那些文件（cargo-packager、cargo-bundle、divan）**没有复核行号**。
+
+**改了哪些**：
+1. cargo-deny 的 CI 引用：原引 `ci.yaml:170` 是 release 矩阵；测试矩阵实际在 `:61`，已改。
+2. assert_no_alloc 的 `disable_release` 默认特性在 `Cargo.toml:15`，不是 :16，已改。
+3. **rtsan 的环境变量名写错了**：应该是 `RTSAN_LIB_PATH`（`sys/build.rs:54`），不是 `RTSAN_LIBRARY_PATH`。另外补上：只有设了 `RTSAN_ENABLE` 才会下载（`:40-44`），平时构建不联网。
+4. **approx 的日期写错了**：0.5.1 发布于 2022-01-23；2026-02-05 是 0.6.0-rc2 预发布的日期，已改。
+5. assert_no_alloc 原写「4 年没发版」，实际 5 年多；cargo-license 原写「14 个月」，实际 15 个月，已改。
+
+**查对了的（没改）**：
+- cargo-deny 的许可证求值顺序（先 exceptions、再 allow、否则 deny）、GNU 许可证按字面匹配、`private.ignore`、`targets`、`allow-build-scripts`，都核过。
+- cargo-deny-action 确实是 `using: "docker"`。
+- cargo-dist 只签可执行文件，也不做公证。`productsign` 只出现在钥匙串 ACL 的 `-T` 参数里（`sign/macos.rs:108`），没有被调用，所以「.pkg 不签名」成立。
+- loom 的 sync 门面、`LOOM_MAX_PREEMPTIONS`、README 列的不支持项，rtrb 跑三遍 Miri，rtsan 的 6 个 target 和 dylib 名，assert_no_alloc 的计数加 RAII 机制，都核过。
+- 所有许可证与 API 一致，各版本日期也都对得上（cargo-dist v0.33.1 在 GitHub 上，crates.io 停在 0.32.0）。
+
+**查不了的**：
+- cargo-packager、cargo-bundle、divan 远程文件的行号（没在本地）。
+- Rust nightly 有没有 `-Zsanitizer=realtime`（存疑 1）。
+- ORT 内部分配能不能被 rtsan 拦到（要实验）。
+- FSF 兼容表的逐条核对（存疑 3）。
+- 「最近 N 个 issue 无回复」只抽查了 nih-plug（在 arch 卡），本卡的没有逐条复核。
+
+**对推荐的异议**：
+1. **rtsan-standalone 首选「直接依赖」违反命门 3**：默认分支最后一次提交是 2025-09-27，超过 12 个月（arch 卡原写的「推送 2026-09-15」是 `pushed_at`，不是提交）。另外它带一个默认会联网下载的构建特性。建议降为 `[dev-dependencies]`，或者做成一个关掉 `prebuilt-libs` 的可选 feature（`rtsan`），不进发布二进制的依赖树；`#[nonblocking]` 标注通过 `cfg_attr(feature = "rtsan", ...)` 挂上。要是嫌它停更，可以直接调 `__rtsan_realtime_enter/exit` 这两个 C 符号（几行 FFI），不必依赖这个 crate。
+2. 白名单草案里 `Unicode-3.0` 既放进了全局 allow，「最值得学 2」又拿它举例说要放 exceptions，口径自相矛盾，人定的时候二选一。
+3. 「热路径零分配断言」首选自写守卫，站得住。补一个限制：全局分配器一个进程只能有一个，跟 divan 的 `AllocProfiler` 不能同时装在同一个测试二进制里，基准和断言要分开放。
+4. 「macOS 打包」结论成立（三个现成工具都不能覆盖 .pkg + 签名 + 公证）。没漏掉更好的 Rust 备选；本组也没读 BlackHole 和 BackgroundMusic 的发布脚本（存疑 7），建议 hal-plugin 线去读。
