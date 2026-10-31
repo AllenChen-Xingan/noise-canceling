@@ -14,6 +14,9 @@
 | sota | 006 降噪前沿全景 · issue #3 · 分支 `research/006-sota-landscape`（worktree `../noise_canceling-sota`） | `_tmp/20261030-b2/sota.md` | `state/handoff/sota.md`（在其 worktree） | 完成，PR #6 已合并（issue #3 关），窗口已关；4 题待人拍板 |
 | rubric | 007 降噪评分标准 rubric · issue #4 · 分支 `research/007-denoise-rubric`（worktree `../noise_canceling-rubric`） | `_tmp/20261030-b2/rubric.md` | `state/handoff/rubric.md`（在其 worktree） | 完成，PR #8 已合并（issue #4 关），窗口已关；4 题待人拍板 |
 | evaltool | 004 评测工具链 | `_tmp/20261029-b1/evaltool.md` | `state/handoff/evaltool.md` | 完成，已收尾（窗口已关）；剩 11 题待人拍板 |
+| p1 | P1 离线原型（Rust · GTCRN · 三件保命）· issue #10 · 分支 `feat/p1-offline-gtcrn`（worktree `../noise_canceling-p1`） | `_tmp/20261030-b3/p1.md` | 其 worktree `state/handoff/p1.md` | 已报到（noise-canceling-p1-a8） |
+| rustarch | 008 Rust 架构（含 AST 模块化）· issue #11 · 分支 `research/008-rust-architecture` | `_tmp/20261030-b3/rustarch.md` | 其 worktree | 已报到（noise-canceling-rustarch-27） |
+| rusteco | 009 GitHub 上可学的 Rust 项目 · issue #12 · 分支 `research/009-rust-ecosystem` | `_tmp/20261030-b3/rusteco.md` | 其 worktree | 已派（noise-canceling-rusteco-3b） |
 
 ## 规矩
 
@@ -26,7 +29,7 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | 空 |
+| 重编译 / 全量测试（1 个） | p1（workspace release 构建 + 测试，首次下载 ort） |
 
 排队：（空）
 
@@ -35,6 +38,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 第三批 20261030-b3（人原话见 `_tmp/20261030-b3/common.md`）：p1 · rustarch · rusteco 已起；大总管分支 `chore/coord-20261030-b3`（含技术方案 003）
 - 第二批 20261030-b2 **全部收尾**：PR #5 #6 #7 #8 已合并；人定 D32 延迟 ≤ 45 ms · D33 主模型 GTCRN、FastEnhancer-M 备选 · D34 个性化前移
 - 第二批追加 sota（006）、rubric（007）：人原话见 `_tmp/20261030-b2/sota.md`、`rubric.md`「人的原话」
 - 第二批 20261030-b2（人原话「好可以的」）：pse must-know 已起草，workflow 批准约 12 代理（原计划 18，怀疑派合并）· abtest 素材定 12 段（casino 3 + LibriSpeech 合成 7 + 中文 2）；批准下载 whisper large-v3-turbo 1.6 GB 到 ~/vdn-data/models/（超 500 MB 线，大总管批：吃字率是 D01 关键旁证）
