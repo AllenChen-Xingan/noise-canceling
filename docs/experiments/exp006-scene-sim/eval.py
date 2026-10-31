@@ -51,12 +51,19 @@ def eval_test(truth, rows):
     dev_n = defaultdict(int)
     dev_fp = defaultdict(int)
     n_clips = 0
+    wrong_sw = [0]
     for cid, rs in rows.items():
         t = truth[cid]
         y = CLASSES.index(t["fine"])
         n_clips += 1
         sw = sum(1 for r in rs if r["switched"]) - 1  # 第一次生效不算抖动
         switches.append(max(sw, 0))
+        was_right = False
+        for r in rs:
+            c = cls_of_fine_id(r["committed_fine"])
+            if r["switched"] and was_right and c != t["fine"]:
+                wrong_sw[0] += 1
+            was_right = c == t["fine"]
         last = rs[-1]
         dev_n[t["device"]] += 1
         for d in ("bt_narrow", "clip"):
@@ -92,13 +99,14 @@ def eval_test(truth, rows):
         "confusion_committed": {"labels": CLASSES, "rows_truth_cols_pred": conf.tolist()},
         "confusion_user_committed": {"labels": USERS, "rows_truth_cols_pred": conf_u.tolist()},
         "jitter_test": {"clips": len(sw), "mean_extra_switches": round(float(sw.mean()), 3), "clips_with_any": int((sw > 0).sum()),
-                        "max": int(sw.max()) if len(sw) else 0},
+                        "max": int(sw.max()) if len(sw) else 0,
+                        "wrong_switches_per_clip": round(wrong_sw[0] / max(len(sw), 1), 3)},
         "device": {d: {"recall": round(dev_tp[d] / max(dev_n[d], 1), 3), "false_alarm": round(dev_fp[d] / max(neg[d], 1), 3)} for d in ("bt_narrow", "clip")},
     }
 
 
 def eval_seq(truth, rows):
-    extra, delays, correct_time, total_time, missed = [], [], 0.0, 0.0, 0
+    extra, delays, correct_time, total_time, missed, wrong = [], [], 0.0, 0.0, 0, []
     for cid, rs in rows.items():
         tl = truth[cid]["timeline"]
 
@@ -109,7 +117,14 @@ def eval_seq(truth, rows):
             return tl[-1]["fine"]
 
         n_sw = sum(1 for r in rs if r["switched"])
-        extra.append(n_sw - len(tl))  # 理想：开头 1 次 + 每次换场景 1 次 = len(tl)
+        extra.append(n_sw - len(tl))
+        prev_right = False
+        for r in rs:
+            c = cls_of_fine_id(r["committed_fine"])
+            right = c == true_at(r["t"] - 0.25)
+            if r["switched"] and prev_right and not right:
+                wrong.append(1)
+            prev_right = right  # 理想：开头 1 次 + 每次换场景 1 次 = len(tl)
         for seg in tl[1:]:
             d = None
             for r in rs:
@@ -126,7 +141,8 @@ def eval_seq(truth, rows):
     d = np.array(delays) if delays else np.array([np.nan])
     return {"sequences": len(rows), "extra_switches_mean": round(float(np.mean(extra)), 2), "extra_switches_total": int(np.sum(extra)),
             "change_delay_s": {"median": round(float(np.median(d)), 2), "p90": round(float(np.percentile(d, 90)), 2), "n": len(delays)},
-            "changes_never_reached_correct": missed, "time_correct_frac": round(correct_time / max(total_time, 1e-9), 4)}
+            "changes_never_reached_correct": missed,
+            "wrong_switches_per_minute": round(len(wrong) / max(total_time / 60, 1e-9), 3), "time_correct_frac": round(correct_time / max(total_time, 1e-9), 4)}
 
 
 def main():
