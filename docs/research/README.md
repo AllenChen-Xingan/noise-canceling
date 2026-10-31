@@ -14,3 +14,4 @@
 | [007](007_denoise-rubric/) | 2026-10-30 | 降噪评分标准（rubric）：降噪效果 + 人耳听感，筛选现成实现 |
 | [009](009_rust-ecosystem/) | 2026-10-30 | GitHub 上可学的 Rust 音频 / 实时 / 推理项目：每个模块用什么、学什么 |
 | [008](008_rust-architecture/) | 2026-10-30 | Rust 架构与语法结构：crate 划分 · 实时三档 · AST 守规矩不造代码 |
+| [012](012_eval-standards/) | 2026-10-31 | 工业级 rubric 与评测的行业标准：ITU-T · ETSI · 3GPP · Teams 认证；verifier 框架（D44） |
