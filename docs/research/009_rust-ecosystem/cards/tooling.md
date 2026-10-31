@@ -36,7 +36,7 @@
 
 ## 本组最值得学的设计
 
-1. **rtsan 的「平时零开销、打开才拦截」开关**：构建脚本按 target 白名单 + 环境变量 `RTSAN_ENABLE` 决定是否设 `cfg(rtsan_enabled)`（`resources/rtsan-standalone-rs/build.rs:10-17`），API 函数体全包在 `#[cfg(rtsan_enabled)]` 里（`resources/rtsan-standalone-rs/src/lib.rs:32-37`），宏只在函数开头插一个 RAII 守卫（`resources/rtsan-standalone-rs/crates/rtsan-standalone-macros/src/lib.rs:33`）。→ 我们 engine 的 `process_frame` 和送音进程的 IO 回调可以**永久**标 `#[nonblocking]`，发布版零成本，CI 开一个 job 带 `RTSAN_ENABLE=1` 跑离线 WAV 评测，等于每次提交都验一遍命门 2。
+1. **rtsan 的「平时零开销、打开才拦截」开关**：构建脚本按 target 白名单 + 环境变量 `RTSAN_ENABLE` 决定是否设 `cfg(rtsan_enabled)`（白名单在 `resources/rtsan-standalone-rs/build.rs:10-17`，环境变量判断在 `:27-30`），API 函数体全包在 `#[cfg(rtsan_enabled)]` 里（`resources/rtsan-standalone-rs/src/lib.rs:32-37`），宏只在函数开头插一个 RAII 守卫（`resources/rtsan-standalone-rs/crates/rtsan-standalone-macros/src/lib.rs:33`）。→ 我们 engine 的 `process_frame` 和送音进程的 IO 回调可以**永久**标 `#[nonblocking]`，发布版零成本，CI 开一个 job 带 `RTSAN_ENABLE=1` 跑离线 WAV 评测，等于每次提交都验一遍命门 2。
 2. **cargo-deny 许可证求值 = 对 SPDX 表达式的每个叶子先查 per-crate exception 再查全局白名单**（`resources/cargo-deny/src/licenses.rs:74-97`）。→ 我们只需维护一张「GPL-3.0 兼容」白名单，`MIT OR Apache-2.0` 这类双许可自动过；个别只在一处出现的许可（如某 crate 的 `Unicode-3.0`）放 exceptions，不污染全局。
 
 ---

@@ -20,7 +20,7 @@
 | 子需求 | 首选 | 备选 | 理由 |
 |---|---|---|---|
 | 进程内 SPSC 音频环（如采集回调 → 送音主循环、推理进程内 IO 线程 → 降噪线程） | **rtrb 0.4.1** | ringbuf 0.6.0 | rtrb push/pop 热路径只有 1 次 Acquire load（仅在看似满/空时）+ 1 次 Release store，无分配无锁；10 月仍在发版；API 稳。ringbuf 功能更多但 2026-10 刚爆出两个 soundness 问题（#65/#66，已于 2026-10-30 随 0.6.0 的破坏性变更关闭【API】，修复未经时间检验）且 0.4→0.6 API 在剧烈变动 |
-| 跨进程共享内存 SPSC 环（送音 ↔ 推理） | **自写**（抄 rtrb 思路） | — | 现成的都不支持放进 shm（见上）；要 `#[repr(C)]` 头 + `CachePadded<AtomicU64>` head/tail + 偏移寻址 |
+| 跨进程共享内存 SPSC 环（送音 ↔ 推理） | **自写**（抄 rtrb 思路） | 自写 voice-strip 式「绝对时间轴 + 分槽序号」环（io 卡首选） | 现成的都不支持放进 shm（见上）；要 `#[repr(C)]` 头 + `CachePadded<AtomicU64>` head/tail + 偏移寻址。⚠️ 复核异议：与 io 卡对同一条链给了不同协议，见文末复核记录 |
 | 「最新值」发布（声纹线程 → 降噪线程的门控判定；推理 → 送音的心跳/状态） | **triple_buffer 9.0.0**（进程内） | 自写 shm 版三缓冲；arc-swap（仅非 RT 端） | publish/update 各一次 `swap(AcqRel)`，零分配零锁，读写都不等待；MPL-2.0 与 GPL-3.0 兼容 |
 | 单个参数（衰减下限 dB、旁路开关、增益） | **自写 `AtomicU32` + `f32::to_bits`**（十来行） | portable-atomic `float` 特性；atomic_float | atomic_float 两年没发版；做法本身极简，没必要背依赖 |
 | 大对象换装（切模型 GTCRN↔FastEnhancer、换声纹质心）后旧对象的释放 | **rtrb 回收队列**（复核改首选：RT 线程把旧 `Box` push 回非 RT 线程 drop，满了就暂存下一块再试；voice-strip 已这样落地【源码】resources/voice-strip/crates/engine/src/processor.rs:327-331、350-355） | basedrop（或抄其 collector 思路自写） | 少一个依赖、我们反正要用 rtrb；basedrop 最后发版 2025-10-29，到今天已超 12 个月（命门 3 不满足），SharedCell 有未回复的竞态报告 |
@@ -28,7 +28,7 @@
 | 调试期抓「分配 + 锁 + 系统调用 + C/C++ 里的 malloc（ORT！）」 | **rtsan-standalone 0.3.0** | rustc nightly `-Zsanitizer=realtime` | 拦截 libc 层，能看到 ONNX Runtime 内部的 malloc/mutex，这是 assert_no_alloc 看不到的；构建时不设 `RTSAN_ENABLE` 就是空操作 |
 | 去非正规数（FTZ） | **自写 RAII guard（抄 nih-plug ScopedFtz，`msr fpcr` 置 bit 24）** | no_denormals 0.3.0 | 6 行内联汇编；aarch64 只有 FZ 位，没有单独 DAZ |
 | MPMC 有界队列（若真需要） | crossbeam `ArrayQueue` | — | 无分配，但争用时 `snooze()` 会 `yield_now()` 系统调用；SPSC 场景用 rtrb 更合适 |
-| seqlock | **不要**（seqlock crate） | 三缓冲替代 | 写端用 parking_lot Mutex，读端争用时 `yield_now()`；2023 起无提交 |
+| seqlock | **不要**（seqlock crate） | 三缓冲替代 | 写端用 parking_lot Mutex，读端争用时 `yield_now()`；2023 起无提交。（复核注：只否定这个 crate。io 卡首推的 voice-strip shm 环本身就是「每槽 seqlock」，但数据格是 `AtomicU32`、读端撕裂即判缺、从不重试，不在此列【源码】resources/voice-strip/crates/vdev-macos-driver/src/shm.rs:143-199） |
 
 ## 本组最值得学的 2 个设计
 
