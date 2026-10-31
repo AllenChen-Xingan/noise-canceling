@@ -1,0 +1,89 @@
+{
+ "build": "20261030224448-ab48",
+ "exported_at": "2026-10-31T07:04:39.236Z",
+ "answers": {
+  "qfeee4a": {
+   "quietest": "分不出",
+   "eaten": [
+    "A",
+    "B",
+    "都没有"
+   ],
+   "natural": "C",
+   "pick": "C",
+   "note": "我是喜欢带着一点点背景声的，感觉不错"
+  },
+  "qaf6f8b": {
+   "quietest": "C",
+   "eaten": [
+    "A"
+   ],
+   "natural": "B",
+   "pick": "A",
+   "note": "这种情况下，其实就是相对更安静比较好，就本来周围就是比较安静的情况，那就比较安静会更好"
+  },
+  "qa06f91": {
+   "quietest": "分不出",
+   "eaten": [
+    "都没有"
+   ],
+   "natural": "C",
+   "pick": "C",
+   "note": "我觉得这种咖啡馆，其实就是有一点点bg 是不错的"
+  },
+  "q984fc4": {
+   "quietest": "A",
+   "eaten": [
+    "A",
+    "B"
+   ],
+   "natural": "C",
+   "pick": "B",
+   "note": "这种还是安静一点比较好"
+  },
+  "q1c105b": {
+   "quietest": "分不出",
+   "eaten": [
+    "都没有"
+   ],
+   "natural": "B",
+   "pick": "B"
+  },
+  "q0db641": {
+   "quietest": "A",
+   "eaten": [
+    "A"
+   ],
+   "natural": "B",
+   "pick": "B",
+   "note": "我觉得b 不错，因为留下来一点点混响"
+  },
+  "qb5fabb": {
+   "quietest": "分不出",
+   "eaten": [
+    "都没有"
+   ],
+   "natural": "B",
+   "pick": "C",
+   "note": "我觉得b 有点太吵了，别人的声音太吵了，c虽然有点不自然，但是可以开会"
+  },
+  "q901b95": {
+   "quietest": "分不出",
+   "eaten": [
+    "都没有"
+   ],
+   "natural": "分不出",
+   "pick": "A",
+   "note": "差不多 "
+  },
+  "qbbe104": {
+   "quietest": "分不出",
+   "eaten": [
+    "都没有"
+   ],
+   "natural": "C",
+   "pick": "B",
+   "note": "c别人说太吵了"
+  }
+ }
+}
