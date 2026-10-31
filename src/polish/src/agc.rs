@@ -1,6 +1,6 @@
 //! AGC + 零前瞻限幅（时域，模型采样率，一个 hop 进出）。治「音量忽大忽小」。
 //!
-//! - **电平**：只在人声帧（`voice_prob ≥ 0.5`）更新语音电平估计（τ≈0.6 s 的一阶平滑，dB 域）；无人声时冻结，
+//! - **电平**：只在人声帧（`voice_prob ≥ 0.5`）更新语音电平估计（τ = 4 s 的一阶平滑，dB 域）；无人声时冻结，
 //!   所以停顿里不会把底噪越抬越高（AGC 抽吸）
 //! - **增益**：目标 = `agc_target_dbfs − 电平`，限在 ±`agc_range_db`；增益变化限速（升 ≤ 4 dB/s，降 ≤ 10 dB/s），
 //!   hop 内逐样本线性插值，不出台阶
@@ -13,6 +13,9 @@
 use crate::params::PolishParams;
 
 const SUB: usize = 8;
+/// 语音电平估计的时间常数。第一版 0.6 s 会追着音节走，反而把电平起伏放大（exp006：400 ms 窗电平标准差比不开还高 0.17 dB）；
+/// 离线在 120 段上比 0.6 / 2 / 4 s，4 s 最平（比不开 AGC 低 0.20 dB），见 exp006 README §3
+const LEVEL_TAU_S: f32 = 4.0;
 const CEIL: f32 = 0.891; // −1 dBFS
 
 pub struct Agc {
@@ -40,7 +43,7 @@ impl Agc {
             gain_db: 0.0,
             lim_gain: 1.0,
             lim_release: 1.0 - (-1.0 / (0.06 * sub_rate)).exp(),
-            a_level: 1.0 - (-1.0 / (0.6 * fps)).exp(),
+            a_level: 1.0 - (-1.0 / (LEVEL_TAU_S * fps)).exp(),
             floor_db: -100.0,
             have_floor: false,
         }
