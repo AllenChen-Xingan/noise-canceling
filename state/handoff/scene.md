@@ -1,6 +1,6 @@
 # 现状页 · scene（批次 20261031-b4）
 
-- **状态**：进行中
+- **状态**：**已收尾**（2026-10-31），等大总管验收；分支 `feat/scene-polish`，未推送（推送 / PR / 与 main 合并归大总管）
 - **手上**：场景识别与路由（`vdn-scene`）+ 修音链（`vdn-polish`）+ 模拟环境第一版（exp006）
 - **交代**：主目录 `_tmp/20261031-b4/scene.md`、`common.md`
 - **分支**：`feat/scene-polish`（worktree `../noise_canceling-scene`）
@@ -24,4 +24,10 @@
 | 10-31 | 大总管转人问：FE-M 修音怎么办 → `notes/fem-polish.md`（官方有 spec2spec 版；Hann/hop160 Σw² 每 10 ms 起伏 0.14 dB）；BBWENet 可行性 → `notes/bwe-feasibility.md` |
 | 10-31 | 名额内 4 版推理 + 打分（244 段，ASR 92 段）；AGC τ 0.6 s 反增起伏 → 离线比 0.6/2/4 s 选 4 s → 整批重跑；第一版分数留 `ab_scores_agc-tau0.6s.json` |
 | 10-31 | 盲听页 `_tmp/20261031-exp006-listen/20261030214530-44df/pages/20261030234932-1a0b/index.html`；对照表已入 docs；作废 4 个 build 留痕 |
-| 10-31 | 自审③（实验方法怀疑派）进行中 |
+| 10-31 | 自审③（实验方法怀疑派）：P0「发闷」指标方向判反 → 改按 |偏差|，结论变为「去发闷补过头」；te0114 ASR 失灵段剔除后路由吃字 2.4→3.4% 不显著；滞回在报告集上调参 → 新种子留出集复报（大类 84.7% / 用户层 92.8%）；加「只加底噪」零假设对照——代理指标的改善几乎都能被它解释；AGC 调参段 / 其余段分开报；盲听页改 Williams 设计、检验题从源码也认不出 |
+| 10-31 | 盲听页定版 `_tmp/20261031-exp006-listen/20261030214530-44df/pages/20261030235644-6a99/index.html`；作废 5 个 build 留痕 |
+
+## 交付
+- 代码：`src/scene/`（vdn-scene）· `src/polish/`（vdn-polish）；16 测试、clippy（含 B 档 panic 类 deny）、fmt 全过
+- 实验：`docs/experiments/exp006-scene-sim/`（README · sim / train / eval / sweep / offline_ab / unblind 脚本 · recipes.json · builds/ 真值、哈希、结果、盲听对照表 · notes/ 带宽扩展与 FE-M 修音调研）
+- `.42cog/cog.md` 两行；待人拍板 6 题在 exp006 README §6
