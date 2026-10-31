@@ -1,0 +1,116 @@
+{
+ "dims": {
+  "clearer": "清楚",
+  "defects": "缺陷标签（没被标的胜，标签可选、证据弱）",
+  "eaten": "吃字（没被勾的胜）",
+  "meeting": "开会可用",
+  "natural": "自然",
+  "quietest": "最安静（旁人声音最小）"
+ },
+ "n_pairs": 219,
+ "n_trials": 30,
+ "pairs_by_dim": {
+  "clearer": {
+   "decisive": 20,
+   "identical_audio": 0,
+   "pairs": 29,
+   "tie": 9
+  },
+  "defects": {
+   "decisive": 7,
+   "identical_audio": 0,
+   "pairs": 7,
+   "tie": 0
+  },
+  "eaten": {
+   "decisive": 15,
+   "identical_audio": 2,
+   "pairs": 62,
+   "tie": 47
+  },
+  "meeting": {
+   "decisive": 32,
+   "identical_audio": 1,
+   "pairs": 54,
+   "tie": 22
+  },
+  "natural": {
+   "decisive": 34,
+   "identical_audio": 0,
+   "pairs": 46,
+   "tie": 12
+  },
+  "quietest": {
+   "decisive": 6,
+   "identical_audio": 2,
+   "pairs": 21,
+   "tie": 15
+  }
+ },
+ "sessions": {
+  "exp003/20261030102301-68ab": {
+   "best_of_letters": {
+    "clearer": {
+     "B": 2
+    },
+    "natural": {
+     "B": 2
+    }
+   },
+   "build": "20261030102301-68ab",
+   "exp": "exp003",
+   "notes": 0,
+   "screens_real": 2,
+   "screens_trap": 0,
+   "unblindable": 5,
+   "validity": "unverified",
+   "why": "答到第 6 题中止，两道检验题都没答到；揭盲表丢失，只恢复了 c01–c03"
+  },
+  "exp003/20261030110755-f8c3": {
+   "best_of_letters": {
+    "clearer": {
+     "A": 2,
+     "B": 1,
+     "C": 6
+    },
+    "natural": {
+     "A": 2,
+     "C": 6
+    }
+   },
+   "build": "20261030110755-f8c3",
+   "exp": "exp003",
+   "notes": 3,
+   "screens_real": 12,
+   "screens_trap": 2,
+   "unblindable": 0,
+   "validity": "discounted",
+   "why": "trap-identical 没过（全同题选了 C）；trap-degraded「最自然」答分不出（rubric 4.2 打折）"
+  },
+  "exp005/20261030224448-ab48": {
+   "best_of_letters": {
+    "natural": {
+     "B": 4,
+     "C": 4
+    },
+    "pick": {
+     "A": 1,
+     "B": 4,
+     "C": 3
+    },
+    "quietest": {
+     "A": 2,
+     "C": 1
+    }
+   },
+   "build": "20261030224448-ab48",
+   "exp": "exp005",
+   "notes": 8,
+   "screens_real": 8,
+   "screens_trap": 1,
+   "unblindable": 0,
+   "validity": "valid",
+   "why": "唯一一道检验题（两槽位相同）过了；没有劣化检验题"
+  }
+ }
+}
