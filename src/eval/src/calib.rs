@@ -158,7 +158,7 @@ pub fn extract(answers: &Value) -> (Vec<Pair>, BTreeMap<String, BTreeMap<String,
 
 fn kendall_tau_b(x: &[f64], y: &[f64]) -> Option<f64> {
     let n = x.len();
-    let (mut c, mut d, mut tx, mut ty) = (0.0, 0.0, 0.0, 0.0);
+    let (mut c, mut d, mut tx, mut ty) = (0.0f64, 0.0f64, 0.0f64, 0.0f64);
     for i in 0..n {
         for j in i + 1..n {
             let a = (x[i] - x[j]).signum();

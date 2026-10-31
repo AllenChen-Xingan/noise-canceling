@@ -555,7 +555,11 @@ pub fn run_suite(
             // 抽查样本：每 5 个任务固定抽 1 个通过的（失败的一律抽）
             let sample = k % 5 == 0;
             eprintln!("  [{}] {}", sys.as_str(), t.id);
-            tasks.push(run_task(suite, t, sys, opts, extra.as_deref_mut(), sample));
+            let e: Option<&mut dyn Extra> = match &mut extra {
+                Some(x) => Some(&mut **x),
+                None => None,
+            };
+            tasks.push(run_task(suite, t, sys, opts, e, sample));
         }
     }
     SuiteResult {
