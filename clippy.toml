@@ -3,7 +3,11 @@
 #
 # 这些禁用项在 [workspace.lints.clippy] 里是 allow，只在实时 impl 块 / 实时模块上用
 # `#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]` 升为 deny。
-# 每条都在 align 的探针里确认过会报红（state/handoff/align.md「clippy 清单探针」）。
+# 每条都在 align 的哨兵探针里确认过会报红（state/handoff/align.md「clippy 清单探针」，clippy 1.99）。
+# 探针确认**放不进来**的两条（别再加回来）：
+# - `assert!` / `assert_eq!` / `assert_ne!`：debug_assert* 展开就是它们，禁了连 debug_assert 一起报红。
+#   R4 改由 `cargo xtask tidy` 文本检查实时文件里没有非 debug 的 assert
+# - `<[T]>::to_vec`：各种路径写法都报 "does not refer to a reachable function" 或不命中；交给计数分配器与 RTSan
 
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true
@@ -20,7 +24,6 @@ disallowed-methods = [
     { path = "alloc::vec::Vec::insert", reason = "实时路径不分配（R1）" },
     { path = "alloc::boxed::Box::new", reason = "实时路径不分配（R1）" },
     { path = "alloc::sync::Arc::new", reason = "实时路径不分配（R1）" },
-    { path = "alloc::slice::<impl [T]>::to_vec", reason = "实时路径不分配（R1）" },
     { path = "core::iter::Iterator::collect", reason = "实时路径不分配（R1）" },
     # R2 / R3 阻塞
     { path = "std::thread::sleep", reason = "实时路径不 sleep（R3）" },
@@ -45,8 +48,4 @@ disallowed-macros = [
     # R1 分配
     { path = "std::format", reason = "实时路径不分配（R1）" },
     { path = "std::vec", reason = "实时路径不分配（R1）" },
-    # R4 不 panic：只许 debug_assert*
-    { path = "core::assert", reason = "实时路径不 panic，用 debug_assert!（R4）" },
-    { path = "core::assert_eq", reason = "实时路径不 panic，用 debug_assert_eq!（R4）" },
-    { path = "core::assert_ne", reason = "实时路径不 panic，用 debug_assert_ne!（R4）" },
 ]
