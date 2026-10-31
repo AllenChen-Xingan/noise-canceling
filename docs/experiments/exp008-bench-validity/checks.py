@@ -125,7 +125,11 @@ def align(n_per, n):
             for s in STATS:
                 d = [dist(f[s], center[s]) for f in fs]
                 g[s] = {"median_dist": round(float(np.median(d)), 2), "pass_rate": round(float(np.mean([v <= thr[s] for v in d])), 2)}
-            g["pass"] = all(g[s]["pass_rate"] >= 0.8 for s in STATS)
+            worst = min(g[s]["pass_rate"] for s in STATS)
+            # 三档〔建议值〕：真实留出样本自己按 p95 线约 95% 过线，且同类别真实环境互比也只有 75–100%（smoke 实测），
+            # 所以 0.8 附近是噪声底：≥ 0.8 过 · 0.5–0.8 临界（不判，加样本）· < 0.5 不过
+            g["verdict"] = "过" if worst >= 0.8 else ("临界" if worst >= 0.5 else "不过")
+            g["pass"] = g["verdict"] == "过"
             row["gen"][gen] = g
         res[kind] = row
     return res
