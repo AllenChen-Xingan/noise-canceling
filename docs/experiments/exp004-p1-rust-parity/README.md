@@ -92,6 +92,7 @@ rustarch 的终版规约（`specs/rust/architecture.md`）出来后再对一遍�
   - GTCRN 有 4 个输入、4 个输出，落在 ort 的栈上小数组里，再加上预分配输出，**Rust 侧零分配**。`src/models/tests/no_alloc.rs` 用 assert_no_alloc 断言了这一点。反例自测：在断言里分配 64 字节，进程立刻中止
   - FE-M 有 7 个输入、7 个输出，超过 ort 的栈上容量（输入 6、输出 4，ort `src/util/stack.rs:13-15`），每帧固定分配 7 次
   - ORT C++ 内部的分配不走 Rust 分配器，两个模型都量不到
+  - **口径（2026-10-31 补注，008 decision「给 p1 线的后续改动」第 5 条）**：本表与下文的「每帧 0 次分配」只统计 Rust 全局分配器；ONNX Runtime（C++）直接调 libc，内部每帧仍有约 1554 次 malloc、376 对 mutex（GTCRN，`docs/research/008_rust-architecture/appendix-probes/README.md` §1，rtsan 实测）。两者同时成立、不矛盾；推理线程因此按 B 档软实时管（`specs/rust/architecture.md` §4）
 
 ## 三件保命（`src/engine/src/engine.rs`）
 

@@ -24,6 +24,7 @@ pub struct StreamingStft {
     inv: Arc<dyn ComplexToReal<f32>>,
 }
 
+// 构造：非实时线程（会分配、会 assert）
 impl StreamingStft {
     /// `win` 长度必须等于 `n_fft`，且 `hop <= n_fft`。
     pub fn new(n_fft: usize, hop: usize, win: Vec<f32>) -> Self {
@@ -46,7 +47,15 @@ impl StreamingStft {
             inv,
         }
     }
+}
 
+// 实时：每 hop 调用。不分配、不 panic（specs/rust/architecture.md §5.3、R4）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
+impl StreamingStft {
     pub fn n_fft(&self) -> usize {
         self.n_fft
     }
@@ -72,18 +81,27 @@ impl StreamingStft {
     }
 
     /// 喂一个 hop 的新样本，返回这一帧的频谱（可原地改写，再调 [`Self::synthesize`]）。
+    /// `hop_in.len()` 应等于 `hop()`（调用方的 bug：debug 下 panic；release 下不足的补零、多的丢掉）。
     pub fn analyze(&mut self, hop_in: &[f32]) -> &mut [Complex32] {
-        assert_eq!(hop_in.len(), self.hop);
+        debug_assert_eq!(hop_in.len(), self.hop);
         self.input.copy_within(self.hop.., 0);
         let tail = self.n_fft - self.hop;
-        self.input[tail..].copy_from_slice(hop_in);
+        let mut src = hop_in.iter();
+        for d in self.input.iter_mut().skip(tail) {
+            *d = src.next().copied().unwrap_or(0.0);
+        }
         for ((t, x), w) in self.time.iter_mut().zip(&self.input).zip(&self.win) {
             *t = x * w;
         }
-        // 长度都由 planner 给定，不会出错
-        self.fwd
+        // 缓冲长度都由 planner 给定，不会出错；万一出错，这一帧当静音
+        if self
+            .fwd
             .process_with_scratch(&mut self.time, &mut self.spec, &mut self.scratch_fwd)
-            .expect("rfft 长度不匹配");
+            .is_err()
+        {
+            debug_assert!(false, "rfft 长度不匹配");
+            self.spec.fill(Complex32::default());
+        }
         &mut self.spec
     }
 
@@ -93,25 +111,42 @@ impl StreamingStft {
     }
 
     /// 把当前频谱做逆变换、加窗、重叠相加，输出一个 hop 的完整样本。
+    /// `hop_out.len()` 应等于 `hop()`（调用方的 bug：debug 下 panic；release 下多出的部分清零）。
     pub fn synthesize(&mut self, hop_out: &mut [f32]) {
-        assert_eq!(hop_out.len(), self.hop);
+        debug_assert_eq!(hop_out.len(), self.hop);
         // numpy irfft 忽略 DC 与 Nyquist 的虚部；realfft 遇到非零虚部会报错，这里先清掉
-        let last = self.spec.len() - 1;
-        self.spec[0].im = 0.0;
-        if self.n_fft.is_multiple_of(2) {
-            self.spec[last].im = 0.0;
+        if let Some(dc) = self.spec.first_mut() {
+            dc.im = 0.0;
         }
-        self.inv
+        if self.n_fft.is_multiple_of(2)
+            && let Some(ny) = self.spec.last_mut()
+        {
+            ny.im = 0.0;
+        }
+        // InputValues（DC / Nyquist 虚部非零）时 realfft 照样算完、结果可用；只有缓冲长度类错误才当静音
+        match self
+            .inv
             .process_with_scratch(&mut self.spec, &mut self.time, &mut self.scratch_inv)
-            .expect("irfft 长度不匹配");
+        {
+            Ok(()) | Err(realfft::FftError::InputValues(..)) => {}
+            Err(_) => {
+                debug_assert!(false, "irfft 长度不匹配");
+                self.time.fill(0.0);
+            }
+        }
         let norm = 1.0 / self.n_fft as f32;
         for ((o, t), w) in self.ola.iter_mut().zip(&self.time).zip(&self.win) {
             *o += t * norm * w;
         }
-        hop_out.copy_from_slice(&self.ola[..self.hop]);
+        let mut src = self.ola.iter().take(self.hop);
+        for o in hop_out.iter_mut() {
+            *o = src.next().copied().unwrap_or(0.0);
+        }
         self.ola.copy_within(self.hop.., 0);
         let tail = self.n_fft - self.hop;
-        self.ola[tail..].fill(0.0);
+        for o in self.ola.iter_mut().skip(tail) {
+            *o = 0.0;
+        }
     }
 }
 

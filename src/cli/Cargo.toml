@@ -21,3 +21,9 @@ stats_alloc.workspace = true
 
 [lints]
 workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）。bin：离线开发工具
+[package.metadata.vdn]
+tier = "C"
+unsafe = false
+forbid = ["cpal"]

@@ -12,8 +12,7 @@
 use std::time::{Duration, Instant};
 
 use vdn_dsp::{DelayLine, OpenCloseEnvelope, OpenCloseParams, db_to_lin};
-
-use crate::model::Model;
+use vdn_types::{Basis, LatencyItem, LatencyLedger, Model, ParamSet};
 
 /// 三件保命的开关与参数。默认值是 P1 的初值，待 AB 听测与吃字率标定（006 decision 第 3 件）。
 #[derive(Clone, Debug)]
@@ -72,6 +71,18 @@ impl SafetyConfig {
     }
 }
 
+impl SafetyConfig {
+    /// 把策略给的参数组套进来（判断回路 → 新建 / 重配 Engine 时用；构造期，非实时）。
+    /// `strength`、`model`、`tone` 不归 Engine 管：strength 由 Pipeline 混合时用，模型切换与修音链在外层（规约 §3.5）。
+    pub fn apply_params(&mut self, p: &ParamSet) {
+        self.floor_db = p.floor_db;
+        self.open_db = p.open_db;
+        self.detect_db = p.detect_db;
+        self.release_s = p.release_s;
+        self.hangover_s = p.hangover_s;
+    }
+}
+
 /// 计数。全是整数，`process` 里只做加法。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct EngineStats {
@@ -120,6 +131,7 @@ pub struct Engine<M: Model> {
     stats: EngineStats,
 }
 
+// 构造：非实时线程（会分配）
 impl<M: Model> Engine<M> {
     pub fn new(model: M, cfg: SafetyConfig) -> Self {
         let hop = model.hop();
@@ -170,6 +182,36 @@ impl<M: Model> Engine<M> {
         }
     }
 
+    /// 延迟账（D32 · 规约 R13）：攒满一个 hop 的等待 + 模型算法延迟；保命（送原声、衰减下限、快开慢关）不加延迟。
+    /// 构造期调用（会分配）。平台部分（重采样、IO、环、HAL）由调用方追加，见 `vdn_types::latency::planned_platform`。
+    pub fn latency_ledger(&self) -> LatencyLedger {
+        let sr = self.model.sample_rate();
+        let mut l = LatencyLedger::new();
+        l.push(LatencyItem::new(
+            "hop-buffer",
+            self.hop as u32,
+            sr,
+            Basis::Declared,
+            "攒满一个模型 hop 才能处理",
+        ))
+        .push(LatencyItem::new(
+            self.model.name(),
+            self.model.latency_samples() as u32,
+            sr,
+            Basis::Declared,
+            "模型算法延迟（Model::latency_samples）",
+        ));
+        l
+    }
+}
+
+// 实时：每 hop 调用。不分配、不加锁、不 panic（specs/rust/architecture.md §5.3、R1–R4）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
+impl<M: Model> Engine<M> {
     pub fn hop(&self) -> usize {
         self.hop
     }
@@ -217,9 +259,10 @@ impl<M: Model> Engine<M> {
         self.stats.hops += 1;
         if input.len() != self.hop || output.len() != self.hop {
             self.stats.bad_len += 1;
-            let n = input.len().min(output.len());
-            output[..n].copy_from_slice(&input[..n]);
-            output[n..].fill(0.0);
+            let mut src = input.iter();
+            for o in output.iter_mut() {
+                *o = src.next().copied().unwrap_or(0.0);
+            }
             return;
         }
         self.delay.process(input, &mut self.dry);
@@ -281,8 +324,8 @@ impl<M: Model> Engine<M> {
                 }
             }
         }
-        self.last_out = output[self.hop - 1];
-        self.last_dry = self.dry[self.hop - 1];
+        self.last_out = output.last().copied().unwrap_or(0.0);
+        self.last_dry = self.dry.last().copied().unwrap_or(0.0);
     }
 
     fn classify(&self, backend_err: bool) -> Option<Fault> {

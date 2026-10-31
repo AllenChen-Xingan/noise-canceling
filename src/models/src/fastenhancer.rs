@@ -8,7 +8,7 @@ use std::path::Path;
 
 use ort::session::{HasSelectedOutputs, OutputSelector, RunOptions, Session};
 use ort::value::Tensor;
-use vdn_engine::{Model, ModelError};
+use vdn_types::{Model, ModelError};
 
 use crate::session::{self, BoxError};
 
@@ -22,7 +22,9 @@ pub struct FastEnhancer {
     caches: Vec<Tensor<f32>>,
 }
 
+// 构造：非实时线程
 impl FastEnhancer {
+    #[allow(clippy::indexing_slicing)] // NRT: 构造期一次性读形状；shapes 非空已由上面的 wav_in 检查保证
     pub fn open(path: &Path) -> Result<Self, BoxError> {
         let session = session::open(path)?;
         let ins = session.inputs();
@@ -80,6 +82,12 @@ impl FastEnhancer {
     }
 }
 
+// 实时（specs/rust/architecture.md §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Model for FastEnhancer {
     fn name(&self) -> &'static str {
         "fastenhancer"
@@ -100,28 +108,53 @@ impl Model for FastEnhancer {
     }
 
     fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), ModelError> {
-        self.wav_in.extract_tensor_mut().1.copy_from_slice(input);
-        let c = &self.caches;
-        // 输入个数固定为 7（wav_in + 6 个缓存）；用定长数组避免拼 Vec
-        if c.len() != 6 {
+        let r = self.infer(input, output);
+        if r.is_err() {
+            // 缓存可能只回拷了一半：清回初值，不带着坏状态进下一帧（align 自审 P2）
+            self.reset();
+            output.fill(0.0);
+        }
+        r
+    }
+}
+
+// 实时（specs/rust/architecture.md §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
+impl FastEnhancer {
+    fn infer(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), ModelError> {
+        let wav = self.wav_in.extract_tensor_mut().1;
+        if wav.len() != input.len() {
             return Err(ModelError::Shape);
         }
+        wav.copy_from_slice(input);
+        // 输入个数固定为 7（wav_in + 6 个缓存）；用定长数组避免拼 Vec
+        let [c0, c1, c2, c3, c4, c5] = self.caches.as_slice() else {
+            return Err(ModelError::Shape);
+        };
         let outs = self
             .session
             .run_with_options(
-                ort::inputs![&self.wav_in, &c[0], &c[1], &c[2], &c[3], &c[4], &c[5]],
+                ort::inputs![&self.wav_in, c0, c1, c2, c3, c4, c5],
                 &self.run,
             )
             .map_err(|_| ModelError::Backend)?;
-        let (_, y) = outs[0]
+        // 全部输出都预分配了，values() 按会话输出顺序给出（ort session/output.rs Values）
+        let mut vals = outs.values();
+        let first = vals.next().ok_or(ModelError::Shape)?;
+        let (_, y) = first
             .try_extract_tensor::<f32>()
             .map_err(|_| ModelError::Shape)?;
         if y.len() != output.len() {
             return Err(ModelError::Shape);
         }
         output.copy_from_slice(y);
-        for (i, cache) in self.caches.iter_mut().enumerate() {
-            let (_, src) = outs[i + 1]
+        for cache in self.caches.iter_mut() {
+            let v = vals.next().ok_or(ModelError::Shape)?;
+            let (_, src) = v
                 .try_extract_tensor::<f32>()
                 .map_err(|_| ModelError::Shape)?;
             let dst = cache.extract_tensor_mut().1;
