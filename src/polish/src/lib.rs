@@ -15,6 +15,18 @@
 //!
 //! 规矩：`new()` 里一次性分配；每帧方法不分配、不加锁、不 panic（`tests/no_alloc.rs` 证明不分配）。
 
+#![forbid(unsafe_code)]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::indexing_slicing,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 pub mod agc;
 pub mod chain;
 pub mod mirror;

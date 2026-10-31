@@ -79,15 +79,17 @@ impl Agc {
         self.gain_db
     }
 
-    /// 原地处理一个 hop。`x.len() == hop`。
+    /// 原地处理一个 hop。`x.len() == hop`（更长只处理前 hop 个）。
+    #[deny(clippy::disallowed_macros, clippy::disallowed_methods, clippy::disallowed_types)]
     pub fn process(&mut self, x: &mut [f32], p: &PolishParams, voice_prob: f32) {
         let n = x.len().min(self.hop);
+        let Some(x) = x.get_mut(..n) else { return };
         if n == 0 {
             return;
         }
         let on = p.agc >= 0.5;
         // 电平（用增益前的信号）
-        let ms = x[..n].iter().map(|v| v * v).sum::<f32>() / n as f32;
+        let ms = x.iter().map(|v| v * v).sum::<f32>() / n as f32;
         let e_db = 10.0 * ms.max(1e-12).log10();
         if voice_prob >= 0.5 && e_db > -70.0 {
             if self.have_level {
@@ -110,15 +112,13 @@ impl Agc {
         let l0 = 10f32.powf(g0 / 20.0);
         let l1 = 10f32.powf(g1 / 20.0);
         let inv = 1.0 / n as f32;
-        for (i, v) in x[..n].iter_mut().enumerate() {
+        for (i, v) in x.iter_mut().enumerate() {
             *v *= l0 + (l1 - l0) * i as f32 * inv;
         }
         // 限幅：子帧峰值 → 所需增益 → 立即攻击 / 慢释放 → 子帧间插值
         let sub = n.div_ceil(SUB);
-        let mut start = 0;
-        while start < n {
-            let end = (start + sub).min(n);
-            let peak = x[start..end].iter().fold(0.0f32, |m, v| m.max(v.abs()));
+        for chunk in x.chunks_mut(sub) {
+            let peak = chunk.iter().fold(0.0f32, |m, v| m.max(v.abs()));
             let need = if peak > CEIL { CEIL / peak } else { 1.0 };
             let g_prev = self.lim_gain;
             let g_next = if need < g_prev {
@@ -127,8 +127,8 @@ impl Agc {
                 (g_prev + self.lim_release * (1.0 - g_prev)).min(need)
             };
             // 攻击时整段用 min(prev, next)，保证本子帧峰值不超；释放时线性插值
-            let len = (end - start) as f32;
-            for (i, v) in x[start..end].iter_mut().enumerate() {
+            let len = chunk.len() as f32;
+            for (i, v) in chunk.iter_mut().enumerate() {
                 let g = if g_next < g_prev {
                     g_next
                 } else {
@@ -137,7 +137,6 @@ impl Agc {
                 *v *= g;
             }
             self.lim_gain = g_next;
-            start = end;
         }
     }
 }

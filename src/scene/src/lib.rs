@@ -23,6 +23,7 @@
 //! 用户控制（手动选 / 锁定用户层场景、旋钮）按 vdn-types 草案的 `resolve_params` 叠在路由表之上，本 crate 只给
 //! [`SceneAnalyzer::set_manual`] 的最小版本：手动选了用户层场景后，自动判断只在该场景下属的细场景里挑。
 
+#![forbid(unsafe_code)]
 pub mod classify;
 pub mod features;
 pub mod mirror;
