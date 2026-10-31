@@ -1,0 +1,2573 @@
+{
+  "ci": false,
+  "commit": "c339edd",
+  "eat_summary": [
+    {
+      "clips": 9,
+      "d_del_ci95": [
+        0.0,
+        0.0
+      ],
+      "d_del_pp": 0.0,
+      "d_del_sub_ci95": [
+        -0.6356016410228774,
+        0.27586206896551724
+      ],
+      "d_del_sub_pp": -0.11750881316098707,
+      "rubric_v7": "pass（片段 < 30，只是点估计）",
+      "system": "fastenhancer-m"
+    },
+    {
+      "clips": 9,
+      "d_del_ci95": [
+        -0.44709388971684055,
+        0.0
+      ],
+      "d_del_pp": -0.11750881316098707,
+      "d_del_sub_ci95": [
+        -0.3745435393258427,
+        0.38024019995753777
+      ],
+      "d_del_sub_pp": 0.0,
+      "rubric_v7": "pass（片段 < 30，只是点估计）",
+      "system": "gtcrn"
+    }
+  ],
+  "gate": {
+    "blocks": [
+      "Q01-e005-owner-only [fastenhancer-m] 试验 0：V-SIM-GATE — L0 级不过线：0.07 比例（线 0.05）"
+    ],
+    "ok": false
+  },
+  "layer": "qa",
+  "profile": "release",
+  "run_id": "20261031-000116-c339edd",
+  "skipped_systems": [],
+  "suite": "exp007-qa",
+  "summary": [
+    {
+      "pass_at_k": 0,
+      "pass_pow_k": 0,
+      "set": "regression",
+      "skipped": 0,
+      "system": "fastenhancer-m",
+      "tasks": 2,
+      "trial_passes": 0,
+      "trials": 2
+    },
+    {
+      "pass_at_k": 0,
+      "pass_pow_k": 0,
+      "set": "capability",
+      "skipped": 0,
+      "system": "fastenhancer-m",
+      "tasks": 9,
+      "trial_passes": 0,
+      "trials": 9
+    },
+    {
+      "pass_at_k": 0,
+      "pass_pow_k": 0,
+      "set": "regression",
+      "skipped": 0,
+      "system": "gtcrn",
+      "tasks": 2,
+      "trial_passes": 0,
+      "trials": 2
+    },
+    {
+      "pass_at_k": 0,
+      "pass_pow_k": 0,
+      "set": "capability",
+      "skipped": 0,
+      "system": "gtcrn",
+      "tasks": 9,
+      "trial_passes": 0,
+      "trials": 9
+    }
+  ],
+  "systems": [
+    "gtcrn",
+    "fastenhancer-m"
+  ],
+  "tasks": [
+    {
+      "desc": "真实独白：不许比原声更吃字、门控不能关主讲人",
+      "id": "Q01-e005-owner-only",
+      "k": 1,
+      "origin": "exp005 c06 owner_only（主讲人独白 + 底噪 10 dB）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "preserve",
+      "set": "regression",
+      "skipped": null,
+      "system": "gtcrn",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 0.0,
+                "d_sub_pp": 0.0,
+                "ref_len": 163.0
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {
+                "bak": 3.0657,
+                "ovrl_noisy": 2.4825,
+                "sig": 3.5454
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "过线 = 不比带噪输入的 OVRL 差（L0 约束）",
+              "probe_base_value": null,
+              "threshold": 2.482546753458987,
+              "unit": "MOS",
+              "unknown_reason": null,
+              "v": "V-DNSMOS",
+              "value": 2.7632,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {},
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": "A",
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -3.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-SPLVL",
+              "value": -0.981,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "onsets": 34.0,
+                "p90_onset_loss_db": 40.0,
+                "voiced_loss_db": 0.981
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "L0 级只报警：10.65 dB（线 3）"
+              },
+              "grade": "D",
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 3.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-ONSET",
+              "value": 10.6507,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "noise_open": 0.4481,
+                "onset_miss": 0.1676,
+                "owner_hops": 3437.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 0.05,
+              "unit": "比例",
+              "unknown_reason": null,
+              "v": "V-SIM-GATE",
+              "value": 0.0393,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q01-e005-owner-only-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q01-e005-owner-only-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q01-e005-owner-only-t0-clean.wav"
+          ],
+          "seed": 18081900046578918889,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "真实邻座：压邻座、不吃主讲人的字",
+      "id": "Q02-e005-one-neighbor-sir6",
+      "k": 1,
+      "origin": "exp005 c01（邻座一人 SIR 6 dB）· 人原话「所有的都没降噪」",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "gtcrn",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 2655.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -1.6274,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "interf_only_hops": 1652.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 0.1,
+              "unit": "比例",
+              "unknown_reason": null,
+              "v": "V-SIM-FA",
+              "value": 0.9915,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 16.6667,
+                "d_sub_pp": 0.0,
+                "ref_len": 96.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {
+                "bak": 2.6499,
+                "ovrl_noisy": 1.976,
+                "sig": 3.1962
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "过线 = 不比带噪输入的 OVRL 差（L0 约束）",
+              "probe_base_value": null,
+              "threshold": 1.9759637827224847,
+              "unit": "MOS",
+              "unknown_reason": null,
+              "v": "V-DNSMOS",
+              "value": 2.4117,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q02-e005-one-neighbor-sir6-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q02-e005-one-neighbor-sir6-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q02-e005-one-neighbor-sir6-t0-clean.wav"
+          ],
+          "seed": 15618532790618645272,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "邻座更响：压邻座",
+      "id": "Q03-e005-one-neighbor-sir3",
+      "k": 1,
+      "origin": "exp005 c02（邻座一人 SIR 3 dB）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "gtcrn",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 2707.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -1.4324,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "interf_only_hops": 1644.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 0.1,
+              "unit": "比例",
+              "unknown_reason": null,
+              "v": "V-SIM-FA",
+              "value": 0.9872,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 9.0909,
+                "d_sub_pp": 0.0,
+                "ref_len": 121.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q03-e005-one-neighbor-sir3-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q03-e005-one-neighbor-sir3-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q03-e005-one-neighbor-sir3-t0-clean.wav"
+          ],
+          "seed": 13988638870364253342,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "多个邻座：压邻座",
+      "id": "Q04-e005-three-neighbors",
+      "k": 1,
+      "origin": "exp005 c03（邻座 3 人轮流）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "gtcrn",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 2789.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -3.1635,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 0.0,
+                "d_sub_pp": 0.0,
+                "ref_len": 126.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q04-e005-three-neighbors-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q04-e005-three-neighbors-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q04-e005-three-neighbors-t0-clean.wav"
+          ],
+          "seed": 16082062078509129696,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "邻座先说：开头别为邻座开门",
+      "id": "Q05-e005-neighbor-first-25s",
+      "k": 1,
+      "origin": "exp005 c04 other_first（邻座先说 25 s）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "gtcrn",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "interf_only_hops": 2780.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 0.1,
+              "unit": "比例",
+              "unknown_reason": null,
+              "v": "V-SIM-FA",
+              "value": 0.9845,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {},
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": null,
+              "unit": "ms",
+              "unknown_reason": "门控关着时开口的起点只有 2 个",
+              "v": "V-SIM-SWLAT",
+              "value": null,
+              "verdict": "unknown"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 4480.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -2.968,
+              "verdict": "fail"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q05-e005-neighbor-first-25s-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q05-e005-neighbor-first-25s-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q05-e005-neighbor-first-25s-t0-clean.wav"
+          ],
+          "seed": 9028699793235826315,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "邻座先说更久",
+      "id": "Q06-e005-neighbor-first-45s",
+      "k": 1,
+      "origin": "exp005 c05 other_first（邻座先说 45 s）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "gtcrn",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "interf_only_hops": 3988.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 0.1,
+              "unit": "比例",
+              "unknown_reason": null,
+              "v": "V-SIM-FA",
+              "value": 0.9819,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 6389.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -3.0205,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 4.3011,
+                "d_sub_pp": 0.0,
+                "ref_len": 93.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q06-e005-neighbor-first-45s-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q06-e005-neighbor-first-45s-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q06-e005-neighbor-first-45s-t0-clean.wav"
+          ],
+          "seed": 15207676675301136384,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "只有邻座没有底噪：纯粹考「认人」",
+      "id": "Q07-e005-neighbor-no-noise",
+      "k": 1,
+      "origin": "exp005 c07（邻座、无底噪）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "gtcrn",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 2230.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -0.322,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "interf_only_hops": 1374.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 0.1,
+              "unit": "比例",
+              "unknown_reason": null,
+              "v": "V-SIM-FA",
+              "value": 0.9942,
+              "verdict": "fail"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q07-e005-neighbor-no-noise-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q07-e005-neighbor-no-noise-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q07-e005-neighbor-no-noise-t0-clean.wav"
+          ],
+          "seed": 13546248335390888924,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "四个邻座",
+      "id": "Q08-e005-four-neighbors",
+      "k": 1,
+      "origin": "exp005 c08（邻座 4 人轮流）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "gtcrn",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 2928.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -2.3826,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 0.0,
+                "d_sub_pp": 0.0,
+                "ref_len": 129.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q08-e005-four-neighbors-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q08-e005-four-neighbors-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q08-e005-four-neighbors-t0-clean.wav"
+          ],
+          "seed": 15901428731956077896,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "真实 babble + 机器声 5 dB：压背景、不吃字",
+      "id": "Q09-e003-casino-5db",
+      "k": 1,
+      "origin": "exp003 c01 赌场 5 dB（人选 FastEnhancer-M「能用」；ASR 三家删除都是 0）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "both",
+      "set": "regression",
+      "skipped": null,
+      "system": "gtcrn",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 0.0,
+                "d_sub_pp": 0.0,
+                "ref_len": 40.0
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {
+                "bak": 2.315,
+                "ovrl_noisy": 1.7385,
+                "sig": 3.508
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "过线 = 不比带噪输入的 OVRL 差（L0 约束）",
+              "probe_base_value": null,
+              "threshold": 1.738520520773914,
+              "unit": "MOS",
+              "unknown_reason": null,
+              "v": "V-DNSMOS",
+              "value": 2.3671,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 154.0,
+                "snri_db": 5.2751
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "L0 级只报警：-5.65 dB（线 -6）"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -6.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-NR",
+              "value": -5.6459,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {},
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": "A",
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -3.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-SPLVL",
+              "value": -0.2176,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "onsets": 7.0,
+                "p90_onset_loss_db": 16.8901,
+                "voiced_loss_db": 0.2176
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "L0 级只报警：5.37 dB（线 3）"
+              },
+              "grade": "D",
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 3.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-ONSET",
+              "value": 5.3689,
+              "verdict": "fail"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q09-e003-casino-5db-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q09-e003-casino-5db-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q09-e003-casino-5db-t0-clean.wav"
+          ],
+          "seed": 17467441539311842292,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "0 dB：压背景、不吃字",
+      "id": "Q10-e003-casino-0db",
+      "k": 1,
+      "origin": "exp003 c02 赌场 0 dB（全部被勾吃字；DPDFNet-2 / GTCRN 不能用）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "both",
+      "set": "capability",
+      "skipped": null,
+      "system": "gtcrn",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 0.0,
+                "d_sub_pp": 2.5,
+                "ref_len": 40.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 2.5,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {
+                "bak": 1.106,
+                "ovrl_noisy": 1.1201,
+                "sig": 1.9415
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "过线 = 不比带噪输入的 OVRL 差（L0 约束）",
+              "probe_base_value": null,
+              "threshold": 1.120095390509392,
+              "unit": "MOS",
+              "unknown_reason": null,
+              "v": "V-DNSMOS",
+              "value": 1.2554,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 179.0,
+                "snri_db": 4.0244
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -6.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-NR",
+              "value": -5.6491,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {},
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": "B",
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -3.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-SPLVL",
+              "value": -1.1074,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q10-e003-casino-0db-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q10-e003-casino-0db-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q10-e003-casino-0db-t0-clean.wav"
+          ],
+          "seed": 17456393680530205833,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "−5 dB：现有三家都过不了",
+      "id": "Q11-e003-casino-minus5db",
+      "k": 1,
+      "origin": "exp003 c03 赌场 −5 dB（三家全不能用、全勾吃字、ASR 删除 7–13）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "both",
+      "set": "capability",
+      "skipped": null,
+      "system": "gtcrn",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": -2.3256,
+                "d_ins_pp": 0.0,
+                "d_sub_pp": 0.0,
+                "ref_len": 43.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": -2.3256,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {
+                "bak": 1.1368,
+                "ovrl_noisy": 1.0816,
+                "sig": 1.1838
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "过线 = 不比带噪输入的 OVRL 差（L0 约束）",
+              "probe_base_value": null,
+              "threshold": 1.0815676514702972,
+              "unit": "MOS",
+              "unknown_reason": null,
+              "v": "V-DNSMOS",
+              "value": 1.0898,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 121.0,
+                "snri_db": 2.3299
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -6.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-NR",
+              "value": -5.68,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {},
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": "C",
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -3.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-SPLVL",
+              "value": -2.5824,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q11-e003-casino-minus5db-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q11-e003-casino-minus5db-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/gtcrn/Q11-e003-casino-minus5db-t0-clean.wav"
+          ],
+          "seed": 1328482630576960485,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "真实独白：不许比原声更吃字、门控不能关主讲人",
+      "id": "Q01-e005-owner-only",
+      "k": 1,
+      "origin": "exp005 c06 owner_only（主讲人独白 + 底噪 10 dB）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "preserve",
+      "set": "regression",
+      "skipped": null,
+      "system": "fastenhancer-m",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 0.0,
+                "d_sub_pp": 0.0,
+                "ref_len": 163.0
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {
+                "bak": 3.2305,
+                "ovrl_noisy": 2.4825,
+                "sig": 3.6132
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "过线 = 不比带噪输入的 OVRL 差（L0 约束）",
+              "probe_base_value": null,
+              "threshold": 2.482546753458987,
+              "unit": "MOS",
+              "unknown_reason": null,
+              "v": "V-DNSMOS",
+              "value": 2.9003,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {},
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": "A",
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -3.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-SPLVL",
+              "value": -0.0655,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "onsets": 34.0,
+                "p90_onset_loss_db": 40.0,
+                "voiced_loss_db": 0.0655
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "L0 级只报警：14.57 dB（线 3）"
+              },
+              "grade": "D",
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 3.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-ONSET",
+              "value": 14.5656,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "noise_open": 0.0788,
+                "onset_miss": 0.2828,
+                "owner_hops": 5450.0
+              },
+              "gate": {
+                "kind": "block",
+                "why": "L0 级不过线：0.07 比例（线 0.05）"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 0.05,
+              "unit": "比例",
+              "unknown_reason": null,
+              "v": "V-SIM-GATE",
+              "value": 0.073,
+              "verdict": "fail"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q01-e005-owner-only-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q01-e005-owner-only-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q01-e005-owner-only-t0-clean.wav"
+          ],
+          "seed": 18081900046578918889,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "真实邻座：压邻座、不吃主讲人的字",
+      "id": "Q02-e005-one-neighbor-sir6",
+      "k": 1,
+      "origin": "exp005 c01（邻座一人 SIR 6 dB）· 人原话「所有的都没降噪」",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "fastenhancer-m",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 2655.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -3.6544,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "interf_only_hops": 2638.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 0.1,
+              "unit": "比例",
+              "unknown_reason": null,
+              "v": "V-SIM-FA",
+              "value": 0.8453,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": -45.8333,
+                "d_sub_pp": 0.0,
+                "ref_len": 96.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {
+                "bak": 2.7754,
+                "ovrl_noisy": 1.976,
+                "sig": 3.2373
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "过线 = 不比带噪输入的 OVRL 差（L0 约束）",
+              "probe_base_value": null,
+              "threshold": 1.9759637827224847,
+              "unit": "MOS",
+              "unknown_reason": null,
+              "v": "V-DNSMOS",
+              "value": 2.4945,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q02-e005-one-neighbor-sir6-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q02-e005-one-neighbor-sir6-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q02-e005-one-neighbor-sir6-t0-clean.wav"
+          ],
+          "seed": 15618532790618645272,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "邻座更响：压邻座",
+      "id": "Q03-e005-one-neighbor-sir3",
+      "k": 1,
+      "origin": "exp005 c02（邻座一人 SIR 3 dB）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "fastenhancer-m",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 2707.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -1.5266,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "interf_only_hops": 2626.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 0.1,
+              "unit": "比例",
+              "unknown_reason": null,
+              "v": "V-SIM-FA",
+              "value": 0.9231,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 0.8264,
+                "d_sub_pp": 0.0,
+                "ref_len": 121.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q03-e005-one-neighbor-sir3-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q03-e005-one-neighbor-sir3-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q03-e005-one-neighbor-sir3-t0-clean.wav"
+          ],
+          "seed": 13988638870364253342,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "多个邻座：压邻座",
+      "id": "Q04-e005-three-neighbors",
+      "k": 1,
+      "origin": "exp005 c03（邻座 3 人轮流）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "fastenhancer-m",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 2789.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -6.6907,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 0.0,
+                "d_sub_pp": 0.0,
+                "ref_len": 126.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q04-e005-three-neighbors-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q04-e005-three-neighbors-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q04-e005-three-neighbors-t0-clean.wav"
+          ],
+          "seed": 16082062078509129696,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "邻座先说：开头别为邻座开门",
+      "id": "Q05-e005-neighbor-first-25s",
+      "k": 1,
+      "origin": "exp005 c04 other_first（邻座先说 25 s）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "fastenhancer-m",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "interf_only_hops": 4440.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 0.1,
+              "unit": "比例",
+              "unknown_reason": null,
+              "v": "V-SIM-FA",
+              "value": 0.8727,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "already_open": 5.0,
+                "onsets": 4.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 32.0,
+              "unit": "ms",
+              "unknown_reason": null,
+              "v": "V-SIM-SWLAT",
+              "value": 206.0,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 4480.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -3.1673,
+              "verdict": "fail"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q05-e005-neighbor-first-25s-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q05-e005-neighbor-first-25s-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q05-e005-neighbor-first-25s-t0-clean.wav"
+          ],
+          "seed": 9028699793235826315,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "邻座先说更久",
+      "id": "Q06-e005-neighbor-first-45s",
+      "k": 1,
+      "origin": "exp005 c05 other_first（邻座先说 45 s）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "fastenhancer-m",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "interf_only_hops": 6370.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 0.1,
+              "unit": "比例",
+              "unknown_reason": null,
+              "v": "V-SIM-FA",
+              "value": 0.929,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 6389.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -2.2779,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": -2.1505,
+                "d_sub_pp": 0.0,
+                "ref_len": 93.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q06-e005-neighbor-first-45s-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q06-e005-neighbor-first-45s-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q06-e005-neighbor-first-45s-t0-clean.wav"
+          ],
+          "seed": 15207676675301136384,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "只有邻座没有底噪：纯粹考「认人」",
+      "id": "Q07-e005-neighbor-no-noise",
+      "k": 1,
+      "origin": "exp005 c07（邻座、无底噪）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "fastenhancer-m",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 2230.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -0.7098,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "interf_only_hops": 2196.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 0.1,
+              "unit": "比例",
+              "unknown_reason": null,
+              "v": "V-SIM-FA",
+              "value": 0.9668,
+              "verdict": "fail"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q07-e005-neighbor-no-noise-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q07-e005-neighbor-no-noise-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q07-e005-neighbor-no-noise-t0-clean.wav"
+          ],
+          "seed": 13546248335390888924,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "四个邻座",
+      "id": "Q08-e005-four-neighbors",
+      "k": 1,
+      "origin": "exp005 c08（邻座 4 人轮流）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "suppress",
+      "set": "capability",
+      "skipped": null,
+      "system": "fastenhancer-m",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 2928.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -10.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-INTF",
+              "value": -4.7192,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 0.0,
+                "d_sub_pp": 0.0,
+                "ref_len": 129.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 0.0,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q08-e005-four-neighbors-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q08-e005-four-neighbors-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q08-e005-four-neighbors-t0-clean.wav"
+          ],
+          "seed": 15901428731956077896,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "真实 babble + 机器声 5 dB：压背景、不吃字",
+      "id": "Q09-e003-casino-5db",
+      "k": 1,
+      "origin": "exp003 c01 赌场 5 dB（人选 FastEnhancer-M「能用」；ASR 三家删除都是 0）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "both",
+      "set": "regression",
+      "skipped": null,
+      "system": "fastenhancer-m",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 0.0,
+                "d_sub_pp": -2.5,
+                "ref_len": 40.0
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": -2.5,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {
+                "bak": 2.5182,
+                "ovrl_noisy": 1.7385,
+                "sig": 3.5539
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "过线 = 不比带噪输入的 OVRL 差（L0 约束）",
+              "probe_base_value": null,
+              "threshold": 1.738520520773914,
+              "unit": "MOS",
+              "unknown_reason": null,
+              "v": "V-DNSMOS",
+              "value": 2.4947,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 154.0,
+                "snri_db": 6.2428
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -6.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-NR",
+              "value": -6.4388,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {},
+              "gate": {
+                "kind": "warn",
+                "why": "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）"
+              },
+              "grade": "A",
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -3.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-SPLVL",
+              "value": -0.0428,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "onsets": 7.0,
+                "p90_onset_loss_db": 16.697,
+                "voiced_loss_db": 0.0428
+              },
+              "gate": {
+                "kind": "warn",
+                "why": "L0 级只报警：5.36 dB（线 3）"
+              },
+              "grade": "D",
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": 3.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-ONSET",
+              "value": 5.3622,
+              "verdict": "fail"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q09-e003-casino-5db-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q09-e003-casino-5db-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q09-e003-casino-5db-t0-clean.wav"
+          ],
+          "seed": 17467441539311842292,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "0 dB：压背景、不吃字",
+      "id": "Q10-e003-casino-0db",
+      "k": 1,
+      "origin": "exp003 c02 赌场 0 dB（全部被勾吃字；DPDFNet-2 / GTCRN 不能用）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "both",
+      "set": "capability",
+      "skipped": null,
+      "system": "fastenhancer-m",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 0.0,
+                "d_sub_pp": 2.5,
+                "ref_len": 40.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": 2.5,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {
+                "bak": 1.1949,
+                "ovrl_noisy": 1.1201,
+                "sig": 2.1021
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "过线 = 不比带噪输入的 OVRL 差（L0 约束）",
+              "probe_base_value": null,
+              "threshold": 1.120095390509392,
+              "unit": "MOS",
+              "unknown_reason": null,
+              "v": "V-DNSMOS",
+              "value": 1.3141,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 179.0,
+                "snri_db": 5.5536
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -6.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-NR",
+              "value": -6.1398,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {},
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": "A",
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -3.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-SPLVL",
+              "value": -0.0689,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q10-e003-casino-0db-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q10-e003-casino-0db-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q10-e003-casino-0db-t0-clean.wav"
+          ],
+          "seed": 17456393680530205833,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    },
+    {
+      "desc": "−5 dB：现有三家都过不了",
+      "id": "Q11-e003-casino-minus5db",
+      "k": 1,
+      "origin": "exp003 c03 赌场 −5 dB（三家全不能用、全勾吃字、ASR 删除 7–13）",
+      "pass_at_k": false,
+      "pass_pow_k": false,
+      "passes": 0,
+      "polarity": "both",
+      "set": "capability",
+      "skipped": null,
+      "system": "fastenhancer-m",
+      "trials": [
+        {
+          "graders": [
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "d_del_pp": 0.0,
+                "d_ins_pp": 0.0,
+                "d_sub_pp": -2.3256,
+                "ref_len": 43.0
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "单片段点估计；集合层区间见报告「吃字（集合层）」",
+              "probe_base_value": null,
+              "threshold": 1.0,
+              "unit": "百分点",
+              "unknown_reason": null,
+              "v": "V-EAT-ASR",
+              "value": -2.3256,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {
+                "bak": 1.1468,
+                "ovrl_noisy": 1.0816,
+                "sig": 1.1968
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "过线 = 不比带噪输入的 OVRL 差（L0 约束）",
+              "probe_base_value": null,
+              "threshold": 1.0815676514702972,
+              "unit": "MOS",
+              "unknown_reason": null,
+              "v": "V-DNSMOS",
+              "value": 1.0933,
+              "verdict": "pass"
+            },
+            {
+              "baseline": null,
+              "better": "lower",
+              "extra": {
+                "frames": 121.0,
+                "snri_db": 4.8129
+              },
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": null,
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -6.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-NR",
+              "value": -5.9654,
+              "verdict": "fail"
+            },
+            {
+              "baseline": null,
+              "better": "higher",
+              "extra": {},
+              "gate": {
+                "kind": "ok"
+              },
+              "grade": "A",
+              "info_only": false,
+              "level": "L0",
+              "note": "",
+              "probe_base_value": null,
+              "threshold": -3.0,
+              "unit": "dB",
+              "unknown_reason": null,
+              "v": "V-SPLVL",
+              "value": -0.3849,
+              "verdict": "pass"
+            }
+          ],
+          "pass": false,
+          "samples": [
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q11-e003-casino-minus5db-t0-mix.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q11-e003-casino-minus5db-t0-out.wav",
+            "_tmp/exp007/20261031-000116-c339edd-qa/audio/fastenhancer-m/Q11-e003-casino-minus5db-t0-clean.wav"
+          ],
+          "seed": 1328482630576960485,
+          "trial": 0
+        }
+      ],
+      "xfail": null,
+      "xfail_now_passes": false
+    }
+  ],
+  "verifiers": [
+    {
+      "basis": "物理量：判事实，012 §2.1 直接 L3",
+      "better": "lower",
+      "id": "V-LAT",
+      "kind": "physical",
+      "layer": "ci",
+      "level": "L3",
+      "name": "附加延迟",
+      "unit": "ms"
+    },
+    {
+      "basis": "物理量：判事实，012 §2.1 直接 L3",
+      "better": "lower",
+      "id": "V-FRAME",
+      "kind": "physical",
+      "layer": "ci",
+      "level": "L3",
+      "name": "最坏一帧耗时",
+      "unit": "×周期"
+    },
+    {
+      "basis": "物理量：判事实，012 §2.1 直接 L3",
+      "better": "lower",
+      "id": "V-NAN",
+      "kind": "physical",
+      "layer": "ci",
+      "level": "L3",
+      "name": "数值失效",
+      "unit": "个"
+    },
+    {
+      "basis": "物理量：判事实，012 §2.1 直接 L3",
+      "better": "lower",
+      "id": "V-MUTE",
+      "kind": "physical",
+      "layer": "ci",
+      "level": "L3",
+      "name": "静音全零",
+      "unit": "dBFS"
+    },
+    {
+      "basis": "物理量：判事实，012 §2.1 直接 L3",
+      "better": "lower",
+      "id": "V-SWITCH",
+      "kind": "physical",
+      "layer": "ci",
+      "level": "L3",
+      "name": "送原声切换跳变",
+      "unit": "×"
+    },
+    {
+      "basis": "感知量：定标前一律 L0（012 §2.1）",
+      "better": "lower",
+      "id": "V-BGSTAB",
+      "kind": "perceptual",
+      "layer": "ci",
+      "level": "L0",
+      "name": "背景跳变 / 抽吸",
+      "unit": "dB"
+    },
+    {
+      "basis": "感知量：定标前一律 L0（012 §2.1）",
+      "better": "lower",
+      "id": "V-ONSET",
+      "kind": "perceptual",
+      "layer": "ci",
+      "level": "L0",
+      "name": "吞字头",
+      "unit": "dB"
+    },
+    {
+      "basis": "定标第 1 轮（calibration）：配对 48、一致率 0.52 [0.33, 0.71]、片段内 τ 0.00；第 1 轮是定标轮（奇数轮），验证集为空 → 正式级别 L0（012 §2.3 第 1 条）",
+      "better": "lower",
+      "id": "V-NR",
+      "kind": "perceptual",
+      "layer": "ci",
+      "level": "L0",
+      "name": "残留噪声电平（TNLR）",
+      "unit": "dB"
+    },
+    {
+      "basis": "感知量：定标前一律 L0（012 §2.1）",
+      "better": "lower",
+      "id": "V-INTF",
+      "kind": "perceptual",
+      "layer": "ci",
+      "level": "L0",
+      "name": "邻座压低",
+      "unit": "dB"
+    },
+    {
+      "basis": "感知量：定标前一律 L0（012 §2.1）",
+      "better": "higher",
+      "id": "V-SPLVL",
+      "kind": "perceptual",
+      "layer": "ci",
+      "level": "L0",
+      "name": "人声被压低",
+      "unit": "dB"
+    },
+    {
+      "basis": "感知量：定标前一律 L0（012 §2.1）",
+      "better": "lower",
+      "id": "V-MUSIC",
+      "kind": "perceptual",
+      "layer": "ci",
+      "level": "L0",
+      "name": "音乐噪声（残留频谱峰度）",
+      "unit": "×"
+    },
+    {
+      "basis": "感知量：定标前一律 L0（012 §2.1）",
+      "better": "higher",
+      "id": "V-VACUUM",
+      "kind": "perceptual",
+      "layer": "ci",
+      "level": "L0",
+      "name": "真空感",
+      "unit": "dB"
+    },
+    {
+      "basis": "感知量：定标前一律 L0（012 §2.1）",
+      "better": "lower",
+      "id": "V-TIMBRE",
+      "kind": "perceptual",
+      "layer": "ci",
+      "level": "L0",
+      "name": "音色偏移（发闷 / 齿音）",
+      "unit": "dB"
+    },
+    {
+      "basis": "模拟真值：只在模拟内 L3（012 §3.4 限定 1）；真实录音上按 L0 看",
+      "better": "lower",
+      "id": "V-SIM-GATE",
+      "kind": "sim",
+      "layer": "ci",
+      "level": "L3",
+      "name": "门控漏开（模拟真值）",
+      "unit": "比例"
+    },
+    {
+      "basis": "模拟真值：只在模拟内 L3（012 §3.4 限定 1）；真实录音上按 L0 看",
+      "better": "lower",
+      "id": "V-SIM-FA",
+      "kind": "sim",
+      "layer": "ci",
+      "level": "L3",
+      "name": "门控误开（只有邻座说话时）",
+      "unit": "比例"
+    },
+    {
+      "basis": "模拟真值：只在模拟内 L3（012 §3.4 限定 1）；真实录音上按 L0 看",
+      "better": "lower",
+      "id": "V-SIM-SWLAT",
+      "kind": "sim",
+      "layer": "ci",
+      "level": "L3",
+      "name": "门控跟上的延迟",
+      "unit": "ms"
+    },
+    {
+      "basis": "模拟真值：只在模拟内 L3（012 §3.4 限定 1）；真实录音上按 L0 看",
+      "better": "lower",
+      "id": "V-SIM-QUIET",
+      "kind": "sim",
+      "layer": "ci",
+      "level": "L3",
+      "name": "没人说话时门控要关（模拟真值）",
+      "unit": "比例"
+    },
+    {
+      "basis": "定标第 1 轮（calibration）：配对 48、一致率 0.64 [0.41, 0.84]、片段内 τ 0.43；第 1 轮是定标轮（奇数轮），验证集为空 → 正式级别 L0（012 §2.3 第 1 条）",
+      "better": "lower",
+      "id": "V-EAT-ASR",
+      "kind": "perceptual",
+      "layer": "qa",
+      "level": "L0",
+      "name": "吃字（ASR 删除 + 替换差）",
+      "unit": "百分点"
+    },
+    {
+      "basis": "定标第 1 轮（calibration）：配对 48、一致率 0.48 [0.26, 0.70]、片段内 τ -0.09；第 1 轮是定标轮（奇数轮），验证集为空 → 正式级别 L0（012 §2.3 第 1 条）",
+      "better": "higher",
+      "id": "V-DNSMOS",
+      "kind": "perceptual",
+      "layer": "qa",
+      "level": "L0",
+      "name": "DNSMOS P.835（SIG / BAK / OVRL）",
+      "unit": "MOS"
+    }
+  ]
+}
