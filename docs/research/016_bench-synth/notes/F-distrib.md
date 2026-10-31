@@ -152,3 +152,31 @@
 - Campione E, Véronis J. 2002. A large-scale multilingual study of silent pause duration. Speech Prosody. https://mail.sprosig.org/sp2002/pdf/campione-veronis.pdf
 - Stivers T, et al. 2009. Universals and cultural variation in turn-taking. PNAS 106(26):10587. https://forms.mpi.nl/node/50939 ；https://languagelog.ldc.upenn.edu/nll/?p=7997
 - 源码：`resources/DNS-Challenge/pdns_synthesizer_icassp2023.cfg:43-49,110-112`；`resources/urgent2026_challenge_track1/baseline_code/dataset.py:21-76`
+
+## 怀疑派复核（2026-10-31）
+
+> 复核人：怀疑派复核代理。方法：逐条回原文（PMC 全文、RFC、会议 PDF 全文、本地 resources 源码）。「成立」= 数字和出处都对上；「改正」= 已在正文改；「未核」= 没拿到原文，已在正文降级标注。
+
+| # | 说法 | 核实结果 | 依据 |
+|---|---|---|---|
+| 1 | Wu 2018：894 个场景，62.9% 在 2–14 dB，众数约 8，7.5% < 0，5.5% > 20 | **成立**（数字逐字对上）；但补了测量方式：LENA 挂胸前、目标是交谈对象、65–80 岁、894 是 5 分钟录音段数 | PMC5824438 Results / Methods【论文】 |
+| 2 | Wu 2018：拐点 59.3 dBA，斜率 0.34 / 0.54，拐点语音 66.0；40 dBA→SNR 20、74 dBA→0 dB；分簇 12.2/7.4/4.2 dB；环境中位 9.9/9.3/9.7/5.6/5.3；家中 53.6/63.7 dBA；跨研究 15.5% / 4.2% / 13.7% | **成立**；加注：原文不叫 Lombard，斜率里含「对听损者提高音量」成分 | PMC5824438 Fig. 3、Table 1–2、Discussion【论文】 |
+| 3 | 五行结论 3：餐厅 59–80 dBA 对应真实 SNR 约 0–8 dB【推断】 | **改正**：按 Wu 的分段关系外推是约 +7 到 −3 dB；香港均值 73.9 ≈ 0 dB、纽约 78 ≈ −2 dB。连带指出网格里「70 dBA + 5 dB」不自洽（70 dBA 应约 +2 dB） | 用 #2 的原文数字计算【推断】 |
+| 4 | 五行结论 1：「DNS/URGENT 把负 SNR 权重放大了好几倍」 | **改正为「约 2.7 倍」并降为方向性证据**：均匀 −5~20 dB 下 <0 占 20%（源码核实），Wu 7.5%；但两边 SNR 定义与测点不同（听者胸前 vs 合成 RMS） | `resources/DNS-Challenge/pdns_synthesizer_icassp2023.cfg:43-45`；`resources/urgent2026_challenge_track1/baseline_code/dataset.py:21-34`【源码】 |
+| 5 | DNS T60 0.3–1.3 s；URGENT 2026 风噪 −10~15、编解码只有 mp3/ogg-vorbis qscale 1–10、丢包 20 ms 包、U(0.05,0.25)、最多连丢 10 包 | **成立** | `pdns_synthesizer_icassp2023.cfg:110-112`、`noisyspeech_synthesizer.cfg:81-83`、`dataset.py:21-76`【源码】 |
+| 6 | Smeds 2015：20 人、18–81 岁、babble 约 5 dB、负 / 近 0 dB 很少；「3–4 天」 | 前四项**成立**；「3–4 天」**未核**（摘要写的是平均每人 84 min） | PubMed 25690777 摘要【论文·摘要】 |
+| 7 | 香港餐厅 66.7–82.6 dBA，均值 73.9，SD 3.81，占座密度为预测因子，越满波动越小；「LAeq,1h」 | 数字**成立**；「LAeq,1h」**未核**（摘要只写 dBA），餐厅数摘要未给 | research.mpu.edu.mo 摘要页【论文·摘要】 |
+| 8 | 纽约餐厅 78 / 酒吧 81 dBA，>1800 家，约 71% 不利于交谈 | **成立**；补：是曼哈顿 >1800 家（标题写全纽约 2250），酒吧 90% 不利交谈；分档阈值通俗稿未给 | acoustics.org 3aAA1【二手 / 会议通俗稿】 |
+| 9 | Bottalico 2018 餐厅 Lombard 拐点 57.3 / 干扰 52.2 dBA，标【论文·摘要】 | 数字**成立**；**等级降为【二手 / 会议通俗稿】**，并补「实验室播放餐厅噪声、28 名学生朗读」——不是真实餐厅实测 | acoustics.org 4aNS11 |
+| 10 | Lombard 斜率 0.3–1 dB/dB、起点 46–57 dBA | **成立**（Whittico et al. 2020, JASA 147(6):EL552 Introduction 的综述句） | PMC7316514【论文（综述句）】 |
+| 11 | Traer & McDermott 2016：271 处；10 间房 T 0.51–1.19 s，DRR 中位 32–45 dB；200–2000 Hz 衰减最慢 | 数字**成立**；补：共 301 处、测 271；调查距离 1.5 m，10 间房那批是 10 m 重录，DRR 定义是「直达声 vs 早期混响」，与 ③ 的能量 DRR 推算不可比 | PMC5137703 Results / Methods【论文】 |
+| 12 | RFC 7587 §3.1.1：20 ms 帧下 NB 8–12、WB 16–20、FB 28–40 kbit/s | **成立** | rfc-editor.org/rfc/rfc7587 §3.1.1【官方】 |
+| 13 | Yuan 2006：214±6.73 / 193±0.71 wpm，247±10.2 / 228±2.85 字/分；「英文 Fisher 总体 196 wpm（说话人 111–291）」；男快约 2% | Table 2 数字**成立**，但 ± 是 95% 置信区间不是 SD；**改正**：196 wpm 与 111–291 来自 ICSI 对齐的 **Switchboard**，是**按通对话**、含停顿，净语速 236（158–312）。连带改了语速 verifier 的上限口径 | Yuan 2006 PDF §2、Table 2、§3【论文，已读全文】 |
+| 14 | Campione & Véronis 2002：5 种语言约 6000 停顿、对数正态三峰；「三簇切点来自 MDPI 综述【二手】」 | **改正**：切点就在原文 Table 3【论文】；但 5 种语言部分全是 EUROM1 **朗读**，自发语只有 1 h 法语独白，>1000 ms 簇只出现在自发语；短峰权重 0.04–0.23。连带放宽停顿 verifier（不再要求短峰可见） | campione-veronis.pdf §2–4、Table 1–3、Table 5【论文】 |
+| 15 | Stivers 2009：众数 0、中位 +100 ms；日语中位 0、丹麦语中位约 +300；均值 ±250 ms | 众数 / 中位 / ±250 **成立**；各语言中位**未核**，原文正文给的是**均值**：日语 +7、丹麦语 +469 ms；**样本只含是非问句回答**，原「换人间隔」泛称过度推广，已加注 | PMC2705608 正文【论文】 |
+| 16 | ANSI S3.5 四档 62.35/68.34/74.85/82.30 dB | **未核**：所引 rdrr.io SII 页没有这些数，只列档位名；数字与记忆中的 S3.5 Table 3 一致，但未见原文，正文已标 | rdrr.io/rforge/SII/man/sii.html |
+| 17 | Lebo 27 家 59–80 dBA、峰值 87 | 数字在多处二手转引中一致（AIHce 2013 报告、JOEH 2015）；**原文仍未核** | WebSearch 结果中的二手转引 |
+
+**改动计数**：正文改正 4 处（#3 SNR 换算、#4 倍数、#13 Yuan 语料与口径、#14 停顿切点出处）；降级 / 标未核 5 处（#6 Smeds 天数、#7 LAeq,1h、#9 Bottalico 等级、#15 各语言中位、#16 ANSI 数值）；过度推广加注 6 处（#1 Wu 测点、#2 斜率成分、#11 DRR 定义、#15 只含问句、verifier 3 参考距离、verifier 5 网络延迟）；verifier 改写 3 条（4、5、6），网格加注 2 条（SNR、停顿）。
+
+**这份笔记漏了什么最要紧的**：**没有任何一条数据是在「设备麦处、近讲者（自己）vs 背景 / 邻座说话」这个几何下量的**——Wu 量的是听者胸前、对方说话；Smeds 是助听器麦；餐厅数据只有噪声级没有语音。本项目真正要的两个分布——①笔记本麦处用户自身语音的 SNR、②邻座竞争说话人的 SIR（signal-to-interference ratio）——都没有出处，也没写进「空白」。最直接的补法：从带设备麦 / 远讲麦的真实会议语料（AMI、ICSI、AliMeeting 等，许可见 014）按「近讲轨 vs 远讲轨」估一次麦处 SNR / SIR 分布；或自录几段咖啡馆笔记本录音做锚点。此外，ETSI EG 202 396-1 / ITU-T P.1100 类终端测试标准里的标准背景噪声场景与规定声级（咖啡馆、酒吧等）也没查，可作「整体」层噪声级的官方锚点【未核，待查】。
