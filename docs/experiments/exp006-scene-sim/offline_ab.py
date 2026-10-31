@@ -382,8 +382,9 @@ def self_check(ab, pdir, key):
     import re
     bad = [p for p in ab.rglob("*") if p.is_file() and (p.name in ("unblind-key.json", "files.json") or p.suffix == ".txt")]
     assert not bad, f"听测目录里有不该有的文件：{bad}"
-    names = set(VERS) | {i["name"] for i in INFO.values()} | {"slotmap", "unblind"}
-    for f in (pdir / "manifest.js", pdir / "index.html"):
+    shown = {i["name"] for i in INFO.values()} | {"slotmap", "unblind", "GTCRN", "FastEnhancer"}
+    checks = [(pdir / "manifest.js", set(VERS) | shown), (pdir / "index.html", shown)]  # 页面代码里有 JS 变量叫 base，只查显示名
+    for f, names in checks:
         txt = f.read_text()
         hit = [n for n in names if re.search(r'(?<![A-Za-z_])' + re.escape(n) + r'(?![A-Za-z_])', txt)]
         assert not hit, f"{f.name} 里出现了 {hit}"
