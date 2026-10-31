@@ -19,7 +19,7 @@
 | rusteco | 009 GitHub 上可学的 Rust 项目 · issue #12 · 分支 `research/009-rust-ecosystem` | `_tmp/20261030-b3/rusteco.md` | 其 worktree | 完成，PR #14 已合并（issue #12 关），窗口已关；4 题待人拍板 |
 | align | 架构对齐 + 智能体部件接口 + 延迟账 · issue #17 · `feat/arch-align` | `_tmp/20261031-b4/align.md` | 其 worktree | 完成，PR #26 已合并（issue #17 关），窗口已关；待人拍板：IO 96 帧（延迟账 47.00 → 43.67 ms） |
 | p2 | P2 认出你的声音（离线）· issue #18 · `feat/p2-speaker` | 完成，PR #32 已合并（issue #18 关），窗口已关；4 题待人拍板；盲听页 v2 在人桌面 |
-| scene | 场景识别与路由 + 修音链 + 模拟环境 · issue #19 · `feat/scene-polish` | `_tmp/20261031-b4/scene.md` | 其 worktree | 已报到（noise-canceling-scene-f7） |
+| scene | 场景识别与路由 + 修音链 + 模拟环境 · issue #19 · `feat/scene-polish` | 完成，PR #35 已合并（issue #19 关），窗口已关；6 题待人拍板；盲听页在人桌面；_tmp 音频已移到主目录 |
 | ondevice | 010 设备端自适应 + 可靠性调研 · issue #20 · `research/010-ondevice-adaptation` | `_tmp/20261031-b4/ondevice.md` | 其 worktree | 完成，PR #23 已合并（issue #20 关），窗口已关；3 题待人拍板 |
 | multitalker | 011 一大堆人同时说话（调研）· issue #21 · `research/011-multitalker` | `_tmp/20261031-b4/multitalker.md` | 其 worktree | 完成，PR 已合并（issue #21 关），窗口已关；6 题待人拍板 |
 | evalstd | 012 工业级 rubric 与评测的行业标准 · issue #22 · `research/012-eval-standards` | `_tmp/20261031-b4/evalstd.md` | 其 worktree | 完成，PR #27 已合并（issue #22 关），窗口已关；9 题待人拍板 + rubric 修改清单 R1–R14 |
@@ -105,6 +105,7 @@
 - [ ] 008 待人拍板 7 题（意向书「不分配不加锁」改三档表述 · 目录名 · panic=abort · 两个进程 · HAL 目录放哪 · 延迟超 45 ms 先砍哪 · tract 对照实验）—— `docs/research/008_rust-architecture/decision.md`
 - [ ] 008 给 p1 后续批次 5 项改动（含 exp004 README 补注「0 次分配只计 Rust 侧」）—— 同上「给 p1 线的后续改动」
 - [ ] 规约跟进（下一批接入线）：`specs/rust/architecture.md` §2.1 / §4 补 vdn-speaker（B 档）与 vdn-speaker-lab；speaker-lab tier tool → C 待定；bin 名不合 §1 记例外；CI 补 `--features onnx` 测试；ORT 一个进程只许一个 Environment（vdn-models 也要改为调用方传入）
+- [ ] exp006 待人拍板 6 题（scene README §6）
 - [ ] 014 待人拍板 6 题（CHiME-4 买不买 · 签 ECHI 协议 · 首批下载约 20 GB（改 D22）· 许可不清只评测本机 · CC BY 真实集不进训练 · 公开集旁人声音照 D19）
 - [ ] FE-M 修音 A/B/C（scene `docs/experiments/exp006-scene-sim/notes/fem-polish.md`）：官方有 `fastenhancer_m.spec.onnx`（STFT 在图外，Hann 512 / hop 160），换用后共用 dsp StreamingStft 与频谱修音链、额外延迟 0；⚠️ Σw² 非常数（每 10 ms 起伏 0.14 dB＝嗡声），合成端要加包络归一（vdn-dsp，下一批接入时做）
 - [ ] 012 待人拍板 9 题（「工业级」在本项目指什么 · 众包与 D39 · rlenv 过渡期能否用 L1 当弱奖励等）+ rubric 修改清单 R1–R14 —— `docs/research/012_eval-standards/decision.md`；升级清单 P0：人耳加 P.835 三量表 · RL 奖励同策略审计 · ETSI 噪声格子 · verifier 定标统计 L0–L3
