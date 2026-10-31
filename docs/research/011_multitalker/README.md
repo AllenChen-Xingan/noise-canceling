@@ -17,7 +17,7 @@
 | 4 | [gap.md](gap.md) | 差距表：每种手段 × 命门，哪些要实测 |
 | 5 | [decision.md](decision.md) | 取舍卡：三种情况的推荐方案 + 待人拍板 |
 
-实验住 `docs/experiments/expNNN-<slug>/`，不在本目录另开。
+七路原始发现（逐条出处）在 `findings/`；上面五份只引用不抄。实验住 `docs/experiments/expNNN-<slug>/`，不在本目录另开。
 
 ## 什么时候算够
 
