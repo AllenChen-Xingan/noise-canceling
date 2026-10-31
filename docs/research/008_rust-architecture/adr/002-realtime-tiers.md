@@ -19,7 +19,7 @@
 
 ## 理由
 - B 档就算偶尔慢一帧，也不会直接造成爆音：IO 回调读到环 B 欠载就切到原声环 C（003 decision M1–M2 行）。真正不能出错的是 A 档
-- ort 的分配在 C++ 内核里，Rust 侧改不掉；替代方案（tract、自写推理）都还没验证（`specs/rust/architecture.md` §8 E-tract）
+- ort 的分配在 C++ 内核里，Rust 侧改不掉；替代方案（tract、自写推理）都还没验证（`decision.md`「仍未补齐」E-tract）
 - 耗时余量约 15 倍，分配带来的抖动目前看不出来，但要在负载、能效核下重测（E-load）
 
 ## 代价

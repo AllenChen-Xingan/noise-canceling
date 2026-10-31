@@ -24,4 +24,4 @@
 | 共享内存上的 SPSC | 没顾上做（rtrb 放不进 shm）【源】 | `vdn-shm` 自写，loom + Miri |
 | Rust 大会上的音频架构演讲 | 无人涉足（RustConf 等没找到） | 实时规则学 ADC，工程组织学 matklad / rust-analyzer |
 | 端到端延迟账 | 没人算过整条链 | rusteco 估约 56 ms（默认参数）；P3 实测 |
-| ast-grep 规则带属性函数的写法、cargo-deny ban 工作区成员 | 未实测 | `specs/rust/architecture.md` §8 E-deny |
+| ast-grep 规则带属性函数的写法、cargo-deny ban 工作区成员 | 未实测 | `decision.md`「仍未补齐」E-deny |
