@@ -13,6 +13,8 @@ pub use fastenhancer::FastEnhancer;
 pub use gtcrn::Gtcrn;
 pub use session::BoxError;
 
+use vdn_engine::Model as _;
+
 /// 可选的模型。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ModelKind {
@@ -46,11 +48,47 @@ impl ModelKind {
         candidates.into_iter().find(|p| p.is_file())
     }
 
-    /// 打开模型，装进 `Box<dyn Model>`。
-    pub fn open(self, path: &Path) -> Result<Box<dyn vdn_engine::Model + Send>, BoxError> {
+    /// 打开模型。
+    pub fn open(self, path: &Path) -> Result<AnyModel, BoxError> {
         Ok(match self {
-            ModelKind::Gtcrn => Box::new(Gtcrn::open(path)?),
-            ModelKind::FastEnhancerM => Box::new(FastEnhancer::open(path)?),
+            ModelKind::Gtcrn => AnyModel::Gtcrn(Gtcrn::open(path)?),
+            ModelKind::FastEnhancerM => AnyModel::FastEnhancer(FastEnhancer::open(path)?),
         })
+    }
+}
+
+/// 运行期可选的模型（rustarch 初审：手写 enum 静态分发，不用 `Box<dyn>`；两个变体不值得上宏）。
+pub enum AnyModel {
+    Gtcrn(Gtcrn),
+    FastEnhancer(FastEnhancer),
+}
+
+macro_rules! each {
+    ($self:ident, $m:ident => $e:expr) => {
+        match $self {
+            AnyModel::Gtcrn($m) => $e,
+            AnyModel::FastEnhancer($m) => $e,
+        }
+    };
+}
+
+impl vdn_engine::Model for AnyModel {
+    fn name(&self) -> &'static str {
+        each!(self, m => m.name())
+    }
+    fn sample_rate(&self) -> u32 {
+        each!(self, m => m.sample_rate())
+    }
+    fn hop(&self) -> usize {
+        each!(self, m => m.hop())
+    }
+    fn latency_samples(&self) -> usize {
+        each!(self, m => m.latency_samples())
+    }
+    fn reset(&mut self) {
+        each!(self, m => m.reset())
+    }
+    fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), vdn_engine::ModelError> {
+        each!(self, m => m.process(input, output))
     }
 }

@@ -83,6 +83,8 @@ pub struct EngineStats {
     pub model_resets: u64,
     /// 输出完全是原声的 hop 数
     pub bypass_hops: u64,
+    /// 调用方给的长度不等于 hop、原样送原声的次数
+    pub bad_len: u64,
     /// 判为有声（含 hangover）的 hop 数
     pub voiced_hops: u64,
 }
@@ -201,11 +203,19 @@ impl<M: Model> Engine<M> {
         self.last_dry = 0.0;
     }
 
-    /// 处理一个 hop。`input.len() == output.len() == hop()`。
+    /// 处理一个 hop。`input.len() == output.len() == hop()`；
+    /// 长度不符时（调用方的 bug）debug 下 panic，release 下原样送原声并计数，不在实时线程上 panic。
     pub fn process(&mut self, input: &[f32], output: &mut [f32]) {
-        assert_eq!(input.len(), self.hop);
-        assert_eq!(output.len(), self.hop);
+        debug_assert_eq!(input.len(), self.hop);
+        debug_assert_eq!(output.len(), self.hop);
         self.stats.hops += 1;
+        if input.len() != self.hop || output.len() != self.hop {
+            self.stats.bad_len += 1;
+            let n = input.len().min(output.len());
+            output[..n].copy_from_slice(&input[..n]);
+            output[n..].fill(0.0);
+            return;
+        }
         self.delay.process(input, &mut self.dry);
 
         let t0 = Instant::now();

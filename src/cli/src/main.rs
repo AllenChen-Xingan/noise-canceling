@@ -12,7 +12,7 @@ use std::time::Duration;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use serde_json::json;
 use vdn_engine::{Engine, FaultInjector, FaultKind, Model, SafetyConfig, offline};
-use vdn_models::{BoxError, ModelKind};
+use vdn_models::{AnyModel, BoxError, ModelKind};
 
 #[derive(Parser)]
 #[command(name = "vdn", version, about = "Mac 开源实时语音降噪 · P1 离线原型")]
@@ -128,7 +128,7 @@ fn main() {
     }
 }
 
-fn open_model(m: &ModelOpts) -> Result<(Box<dyn Model + Send>, PathBuf), BoxError> {
+fn open_model(m: &ModelOpts) -> Result<(AnyModel, PathBuf), BoxError> {
     let kind = ModelKind::from(m.model);
     let path = match &m.model_path {
         Some(p) => p.clone(),

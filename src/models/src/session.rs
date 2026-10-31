@@ -24,12 +24,19 @@ pub fn open(path: &Path) -> Result<Session, BoxError> {
     if !path.is_file() {
         return Err(format!("找不到模型文件：{}", path.display()).into());
     }
+    // 建会话各步的错误类型 `ort::Error<SessionBuilder>` 不是 Send + Sync，统一转成文字
+    let b = |e: ort::Error<ort::session::builder::SessionBuilder>| -> BoxError { e.to_string().into() };
     let s = Session::builder(env()?)?
-        .with_optimization_level(GraphOptimizationLevel::All)?
-        .with_intra_threads(1)?
-        .with_inter_threads(1)?
-        .with_parallel_execution(false)?
-        .with_intra_op_spinning(false)?
+        .with_optimization_level(GraphOptimizationLevel::All)
+        .map_err(b)?
+        .with_intra_threads(1)
+        .map_err(b)?
+        .with_inter_threads(1)
+        .map_err(b)?
+        .with_parallel_execution(false)
+        .map_err(b)?
+        .with_intra_op_spinning(false)
+        .map_err(b)?
         .commit_from_file(path)?;
     Ok(s)
 }

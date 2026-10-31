@@ -28,7 +28,8 @@ impl fmt::Display for ModelError {
 
 impl std::error::Error for ModelError {}
 
-pub trait Model {
+/// `Send`：模型要搬到实时线程上跑。
+pub trait Model: Send {
     /// 短名，用于日志与结果文件（例如 `"gtcrn"`）
     fn name(&self) -> &'static str;
     /// 采样率（Hz）
@@ -41,25 +42,4 @@ pub trait Model {
     fn reset(&mut self);
     /// 处理一个 hop。`input.len() == output.len() == hop()`。
     fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), ModelError>;
-}
-
-impl<M: Model + ?Sized> Model for Box<M> {
-    fn name(&self) -> &'static str {
-        (**self).name()
-    }
-    fn sample_rate(&self) -> u32 {
-        (**self).sample_rate()
-    }
-    fn hop(&self) -> usize {
-        (**self).hop()
-    }
-    fn latency_samples(&self) -> usize {
-        (**self).latency_samples()
-    }
-    fn reset(&mut self) {
-        (**self).reset()
-    }
-    fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), ModelError> {
-        (**self).process(input, output)
-    }
 }
