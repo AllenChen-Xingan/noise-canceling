@@ -49,7 +49,7 @@
 | 许可证 | MIT；**兼容：是**。唯一依赖 rustfft（MIT OR Apache-2.0）。注：3.5.1 才补上缺失的 LICENSE 文件（issue #48/#49，2026-10-26）；#45「改为 MIT+Apache 双许可」仍 open，对我们无影响 |
 | 维护状态 | 最新 3.5.1（2026-10-26）；最近提交 2026-10-26；open issues 2；#48 用户提问当天维护者处理并发版——快 |
 | 实时安全做法 | 两套接口：`process()` 内部每次 new scratch（resources/realfft/src/lib.rs:128-131、311-313）——**实时线程禁用**；`process_with_scratch()` 用调用方给的 scratch（lib.rs:138-143），scratch 由 `make_scratch_vec()`/`get_scratch_len()` 在初始化时备好。输入缓冲会被当草稿改写（lib.rs:128 文档）|
-| 值得学的一处 | 逆变换遇到 DC / Nyquist 处虚部非零时，**先把虚部清零照常算完，再返回 `Err(InputValues)`**（lib.rs:669-680、748-752）。神经网络掩码乘出来的频谱几乎必然带非零虚部，所以我们的 iSTFT 必须把这个错误当「已处理的警告」而不是 `unwrap()` 崩掉——libDF 就是这么做的（见下） |
+| 值得学的一处 | 逆变换遇到 DC / Nyquist 处虚部非零时，**先把虚部清零照常算完，再返回 `Err(InputValues)`**（lib.rs:671-682、752-754）。神经网络掩码乘出来的频谱几乎必然带非零虚部，所以我们的 iSTFT 必须把这个错误当「已处理的警告」而不是 `unwrap()` 崩掉——libDF 就是这么做的（见下） |
 | 我们怎么用 | **直接依赖**：`dsp`（STFT/iSTFT、fbank 的 FFT），供 `engine`、`speaker`、`eval` 共用 |
 | 风险 | 维护者单人（HEnquist，同 rubato）；`Err` 不能 unwrap；features 与 RustFFT 一一映射，默认已开 neon（resources/realfft/Cargo.toml `default = ["rustfft/default"]`） |
 | 证据 | 【源码】realfft/src/lib.rs:128-143、311-313、669-680、748-752；realfft/Cargo.toml features 段 ·【API】crates.io 3.5.1/2026-10-26；issues #45 #48 #49 |
@@ -97,10 +97,10 @@
 | 许可证 | crates.io 显示 non-standard（用 `license-file = "COPYING"`，resources/webrtc-audio-processing/Cargo.toml:25），COPYING 实为 Google 的 BSD-3 文本（COPYING:1-5）；**兼容：是**【推断：BSD-3 + WebRTC 专利授权与 GPL-3.0 无冲突】 |
 | 维护状态 | 最新 2.1.0（2026-05-13）；最近提交 2026-07-16；open issues 8；**#103「Panic on MacOS 27」（2026-09-20，bundled 构建在 macOS 27 + rustc 1.98 上 panic）只有报告者自己补充，未见维护者回复**；#102 修 Apple 交叉编译的 PR 仍 open |
 | 实时安全做法 | 每次 `process_capture_frame` 都把声道指针 `collect()` 成一个新 `Vec<*mut f32>`（resources/webrtc-audio-processing/src/lib.rs:210-214、388-401）——**热路径有堆分配**；C++ 侧 APM 内部用锁【推断：本地子模块未检出，未亲见】；帧长必须正好 10 ms，否则 panic（lib.rs:208-209 文档） |
-| 值得学的一处 | `stream_delay_ms` 用原子量存，`u64` 存不进 `i32` 就表示「未设置」（lib.rs:224），一个原子同时表达「值 + 有无」，免锁——我们「原子发布声纹结果」可借这种编码 |
+| 值得学的一处 | `stream_delay_ms` 用原子量存，`u64` 存不进 `i32` 就表示「未设置」（lib.rs:224-225），一个原子同时表达「值 + 有无」，免锁——我们「原子发布声纹结果」可借这种编码 |
 | 我们怎么用 | **不要**（实时侧）；若要 WebRTC 基线，用纯 Rust 的 sonora |
 | 风险 | 我们的机器正是 macOS 27（Darwin 27），#103 直接撞上；需要 meson/C++ 工具链；热路径分配 |
-| 证据 | 【源码】Cargo.toml:25；COPYING:1-5；src/lib.rs:208-214、224、388-401 ·【API】crates.io 2.1.0/2026-05-13；GitHub issues #99-#103 ·【推断】C++ 内部锁、专利授权兼容 |
+| 证据 | 【源码】Cargo.toml:25；COPYING:1-5；src/lib.rs:208-214、224-225、388-401 ·【API】crates.io 2.1.0/2026-05-13；GitHub issues #99-#103 ·【推断】C++ 内部锁、专利授权兼容 |
 
 ### nnnoiseless（https://github.com/jneem/nnnoiseless）
 | 项 | 内容 |
