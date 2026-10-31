@@ -7,8 +7,8 @@
 | 是什么 | 在哪 | 算数吗 | 判据 |
 |---|---|---|---|
 | exp006 场景模拟器 | scene worktree `docs/experiments/exp006-scene-sim/`（`sim.py` · `recipes.json` · `sweep.py`） | **算，但只是分类器的数据工厂** | 7 细场景、40 个 LibriSpeech 说话人、单路、无内置麦 / AGC 模型；`make_clip(job)` 是纯函数，可在线采样（scene 回复，2026-10-31） |
-| exp006 切换评测 | `builds/20261030214530-44df/eval_final.json` | 算 | 细场景提交准确率 0.867，babble ↔ neighbor 互混 181 / 113 次；序列 16 条，正确时间 0.66、错切 0.88 次/分钟 |
-| verifier 清单与定标级 | evalstd worktree `docs/research/012_eval-standards/verifiers.md` | **算，是奖励的唯一来源（D44）** | 今天感知类全部 L0；物理量 L3；V-EAT-ASR 一票否决 |
+| exp006 切换评测 | `builds/20261030214530-44df/eval_final.json` | 算 | 细场景提交准确率 0.869，babble → neighbor 144 次、neighbor → babble 110 次（scene 重跑同一 build 后的现值）；序列 16 条，正确时间 0.66、错切 0.88 次/分钟 |
+| verifier 清单与定标级 | `origin/main:docs/research/012_eval-standards/verifiers.md`（PR #27；§3.4 模拟真值指标在 evalstd worktree 提交 5f9085f，未进 main） | **算，是奖励的唯一来源（D44）** | 今天感知类全部 L0，到 L2 约 5–6 轮听测；物理量 L3；吃字否决用 Δ(删除 + 替换)；V-SIM-* 为 L3（仅限模拟） |
 | rubric 与校准 | `specs/rubric/denoise.md` · `docs/research/007_denoise-rubric/` | 算 | 硬规则（DNSMOS 只报警、增益为正记 0 等） |
 | 设备端自适应 | `docs/research/010_ondevice-adaptation/decision.md` | 算 | 用户端只做零开销选择 + 空闲小更新；不在通话中探索；无参考 MOS 不当奖励 |
 | 多人说话 | `docs/research/011_multitalker/decision.md` | 部分算 | 「内置麦 + 一大片人只能不吃字」与耳麦提示已被 D42 否决；babble 人数曲线实验（其实验 2）仍有效 |
