@@ -63,8 +63,8 @@ impl Dnsmos {
             let c = a.clone();
             a.extend_from_slice(&c);
         }
-        // 窗数 = floor(len / 1 s) − 9.01 + 1，取整同官方
-        let n = ((a.len() / SR) as f64 - WIN as f64 / SR as f64).floor() as isize + 1;
+        // 窗数 = int(floor(len / 1 s) − 9.01) + 1：官方用 int() 向零截断，不是 floor（自审 P1）
+        let n = ((a.len() / SR) as f64 - WIN as f64 / SR as f64).trunc() as isize + 1;
         let (mut s, mut b, mut o, mut k) = (0.0, 0.0, 0.0, 0usize);
         for i in 0..n.max(0) as usize {
             let from = i * HOP;

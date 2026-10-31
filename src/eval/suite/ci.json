@@ -19,7 +19,7 @@
       "origin": "exp003 人耳：三家 8–9/12 段被勾吃字（H4 全 D）· 交代「主人独白不被门控」",
       "desc": "主讲人在粉噪 10 dB 里独白：门控不能关掉主讲人，字头不能被吞，人声电平不能被压",
       "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 10 },
-      "graders": [ { "v": "V-NAN" }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 }, { "v": "V-SIM-SWLAT", "max": 32 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-LAT" }, { "v": "V-FRAME", "max": 0.5 } ]
+      "graders": [ { "v": "V-NAN" }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-LAT" }, { "v": "V-FRAME", "max": 0.5 } ]
     },
     {
       "id": "R03-soft-speaker-still-opens",
@@ -146,7 +146,7 @@
       "desc": "没人说话时门控必须关（停顿才能压到衰减下限）。现在 main 过不了：标「已知失败」留给修复线，修好后去掉 xfail 转正",
       "xfail": "engine 门控底噪跟踪被模型输出的低谷钉住：src/dsp/src/envelope.rs:91-97（往下立刻跟、往上 6 dB/s、超底噪 9 dB 判有声）+ src/engine/src/engine.rs:355（判据信号是模型输出 wet）",
       "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 10, "pause_s": [1.0, 2.0] },
-      "graders": [ { "v": "V-SIM-QUIET", "max": 0.1 }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 } ],
+      "graders": [ { "v": "V-SIM-QUIET", "max": 0.1 }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 }, { "v": "V-SIM-SWLAT", "max": 32 } ],
       "info": [ { "v": "V-NR", "max": -8 } ]
     },
     {

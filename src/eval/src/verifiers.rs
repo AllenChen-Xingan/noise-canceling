@@ -126,7 +126,7 @@ pub const REGISTRY: &[Info] = &[
         unit: "dB",
         better: Better::Lower,
         definition: "同一噪声「插入语音」与「不插语音」两次处理，停顿帧里输出噪声电平之差的最大绝对值",
-        algorithm: "P.1120 §11.14.5 式：先放 ≥ 5 s 平稳噪声再插入语音。改动：用 10 ms 帧功率、只取主讲人与干扰者都不在的帧（扩 50 ms），帧间 3 帧滑动平均，不用 35 ms 一阶平滑（那会把语音能量拖进停顿帧）",
+        algorithm: "P.1120 §11.14.5 式：先放 ≥ 5 s 平稳噪声再插入语音。改动：用 10 ms 帧功率、只取主讲人与干扰者都不在的帧（掩码自带 30 ms + 再扩 50 ms），帧间 3 帧滑动平均，不用 35 ms 一阶平滑（那会把语音能量拖进停顿帧）",
         anchor: "> 10 dB → D（P.1120 原文线）；≤ 3 / 6 / 10 为 A / B / C〔建议值〕",
         failure: "把噪声换成恒定假底噪也能拿满分 → 与 V-VACUUM、V-TIMBRE 制衡；要求噪声逐样本可重放（合成场景满足，真实录音不满足 → 判「不知道」）",
     },
@@ -139,7 +139,7 @@ pub const REGISTRY: &[Info] = &[
         unit: "dB",
         better: Better::Lower,
         definition: "字头 50 ms 的能量损失 − 全部有声帧的平均能量损失",
-        algorithm: "clean 20 ms 帧、比最大帧低 35 dB 以内算有声；前面 ≥ 100 ms 无声的有声帧为起点；输出能量先减去停顿帧估出的残留噪声功率",
+        algorithm: "clean 20 ms 帧、比最大帧低 35 dB 以内算有声；前面 ≥ 100 ms 无声的有声帧为起点；字头 50 ms 与有声段逐 20 ms 帧都用输出对干净参考的投影能量（不受残留噪声影响）",
         anchor: "> 3 dB → 吞字头（rubric C3）",
         failure: "原声起音被噪声盖住；VAD 门限对低电平说话人失准；起点少于 3 个判「不知道」",
     },
@@ -178,7 +178,7 @@ pub const REGISTRY: &[Info] = &[
         unit: "dB",
         better: Better::Higher,
         definition: "主讲人有声帧（无干扰者）里，输出语音功率（减去残留噪声）÷ 干净参考功率；增益为正记 0",
-        algorithm: "G.160 式扣噪声的帧功率比（不是 P.56 的门限阶梯：输出含噪声时 P.56 会把噪声算成语音）",
+        algorithm: "逐 10 ms 帧把输出投影到干净参考上（⟨o,c⟩²/‖c‖²），合计后比干净参考能量；不用 P.56（输出含噪声时 P.56 会把噪声算成语音），也不用停顿帧估噪声再扣（门控开合使两者差约 6 dB）",
         anchor: "≥ −3 dB 过〔建议值〕；rubric C3 损失档",
         failure: "后级 AGC 会掩盖；残留噪声估计偏大时会高估损失",
     },
@@ -191,7 +191,7 @@ pub const REGISTRY: &[Info] = &[
         unit: "×",
         better: Better::Lower,
         definition: "纯噪声帧上，输出功率谱值的峰度 ÷ 输入功率谱值的峰度；旁报孤立亮点密度",
-        algorithm: "STFT 512/256（vdn-dsp），125 Hz–6 kHz，帧中心 ±2 个 10 ms 帧都是纯噪声帧才计；亮点：比 3×3 邻域中位数高 ≥ 12 dB 且上下左右都低于它 6 dB 以上，每秒个数",
+        algorithm: "STFT 512/256（vdn-dsp），125 Hz–6 kHz，帧中心 ±2 个 10 ms 帧都是纯噪声帧才计；每个频点先除以它在停顿帧上的均值再合并（去掉谱倾斜）；亮点：比 3×3 邻域中位数高 ≥ 12 dB 且上下左右都低于它 6 dB 以上，每秒个数",
         anchor: "峰度比 ≤ 1.2 A · ≤ 1.5 B · ≤ 2 C · > 2 D〔建议值〕",
         failure: "峰度与感知只弱相关（arXiv 2105.13079）；杯碟等瞬态本身峰度高（比值能部分抵消）；纯噪声帧 < 30 判「不知道」",
     },
@@ -598,9 +598,16 @@ fn v_bgstab(c: &Ctx, p: &Params) -> Score {
     .with_extra("frames", n as f64)
 }
 
-/// 输出在停顿帧上的平均功率（作残留噪声估计）。
-fn residual_noise_power(c: &Ctx) -> f64 {
-    power_over(c.out, &c.masks.noise_only).map_or(0.0, |v| v.0)
+/// 输出投影到干净参考上的能量 ⟨o, c⟩² / ‖c‖²：只留下与参考相关的部分，不受不相关的残留噪声影响
+///（怀疑派自审 P1：停顿帧估的残留噪声比说话时小约 6 dB——门控开着时混回的原声更多——扣不干净会把人声损失藏掉）。
+fn proj_energy(o: &[f32], c: &[f32]) -> (f64, f64) {
+    let (mut oc, mut cc) = (0.0f64, 0.0f64);
+    for (a, b) in o.iter().zip(c) {
+        oc += *a as f64 * *b as f64;
+        cc += *b as f64 * *b as f64;
+    }
+    let p = if cc > 0.0 { oc * oc / cc } else { 0.0 };
+    (p, cc)
 }
 
 fn v_onset(c: &Ctx, p: &Params) -> Score {
@@ -608,7 +615,6 @@ fn v_onset(c: &Ctx, p: &Params) -> Score {
     const F: usize = 320;
     const W: usize = 800; // 50 ms
     let ivs = truth_from_clean(&c.clip.clean);
-    let pn = residual_noise_power(c);
     let mut onsets = Vec::new();
     let mut last_end: Option<usize> = None;
     for &(a, b) in &ivs {
@@ -625,25 +631,27 @@ fn v_onset(c: &Ctx, p: &Params) -> Score {
             format!("字头只有 {} 个", onsets.len()),
         );
     }
-    let energy = |x: &[f32]| x.iter().map(|v| (*v as f64).powi(2)).sum::<f64>();
-    let loss = |ec: f64, eo: f64, n: usize| -> f64 {
-        let eo = (eo - pn * n as f64).max(ec * 1e-4);
-        (db10(ec) - db10(eo)).min(40.0)
-    };
+    let loss = |eo: f64, ec: f64| -> f64 { (db10(ec) - db10(eo.max(ec * 1e-4))).min(40.0) };
     let per: Vec<f64> = onsets
         .iter()
-        .map(|&s| loss(energy(&c.clip.clean[s..s + W]), energy(&c.out[s..s + W]), W))
+        .map(|&s| {
+            let (po, pc) = proj_energy(&c.out[s..s + W], &c.clip.clean[s..s + W]);
+            loss(po, pc)
+        })
         .collect();
-    let (mut ec, mut eo, mut nv) = (0.0, 0.0, 0usize);
+    // 有声段：逐 20 ms 帧投影后合计（容许慢变的增益）
+    let (mut ec, mut eo) = (0.0, 0.0);
     for &(a, b) in &ivs {
         let b = b.min(c.out.len());
-        if b > a {
-            ec += energy(&c.clip.clean[a..b]);
-            eo += energy(&c.out[a..b]);
-            nv += b - a;
+        let mut t = a;
+        while t + F <= b {
+            let (po, pc) = proj_energy(&c.out[t..t + F], &c.clip.clean[t..t + F]);
+            eo += po;
+            ec += pc;
+            t += F;
         }
     }
-    let avg = loss(ec, eo, nv);
+    let avg = loss(eo, ec);
     let excess = mean(&per) - avg;
     Score::judged(
         ID,
@@ -723,14 +731,20 @@ fn v_splvl(c: &Ctx, p: &Params) -> Score {
     let own: Vec<bool> = (0..c.masks.owner.len())
         .map(|f| c.masks.owner[f] && !c.masks.interf[f])
         .collect();
-    let (Some((po, n)), Some((pc, _))) = (power_over(c.out, &own), power_over(&c.clip.clean, &own))
-    else {
-        return Score::unknown(ID, "dB", Better::Higher, "没有主讲人单独说话的帧");
-    };
-    if n < 50 || pc <= 1e-14 {
-        return Score::unknown(ID, "dB", Better::Higher, "主讲人有声帧不足 0.5 s");
+    let (mut ps, mut pc, mut n) = (0.0, 0.0, 0usize);
+    for (f, &m) in own.iter().enumerate() {
+        let (a, b) = (f * MASK_FRAME, (f + 1) * MASK_FRAME);
+        if m && b <= c.out.len() {
+            let (po, cc) = proj_energy(&c.out[a..b], &c.clip.clean[a..b]);
+            ps += po;
+            pc += cc;
+            n += 1;
+        }
     }
-    let ps = (po - residual_noise_power(c)).max(pc * 1e-4);
+    if n < 50 || pc <= 1e-14 {
+        return Score::unknown(ID, "dB", Better::Higher, "主讲人单独说话的帧不足 0.5 s");
+    }
+    let ps = ps.max(pc * 1e-4);
     let d = (db10(ps) - db10(pc)).min(0.0);
     Score::judged(
         ID,
@@ -766,10 +780,16 @@ fn v_music(c: &Ctx, p: &Params) -> Score {
         );
     }
     let (b0, b1) = (4usize, 192usize);
+    // 每个频点先除以它在停顿帧上的均值再合并：否则合并后的峰度量到的主要是谱倾斜（怀疑派自审 P1：白噪 9、粉噪 112）
     let collect = |sg: &Spectrogram| -> Vec<f64> {
-        ks.iter()
-            .flat_map(|&k| sg.frames[k][b0..=b1].iter().map(|v| *v as f64))
-            .collect()
+        let mut out = Vec::with_capacity(ks.len() * (b1 - b0 + 1));
+        for b in b0..=b1 {
+            let m = ks.iter().map(|&k| sg.frames[k][b] as f64).sum::<f64>() / ks.len() as f64;
+            if m > 0.0 {
+                out.extend(ks.iter().map(|&k| sg.frames[k][b] as f64 / m));
+            }
+        }
+        out
     };
     let ki = kurtosis(&collect(&si));
     let ko = kurtosis(&collect(&so));
