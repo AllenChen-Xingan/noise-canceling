@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 vdn-dsp = { path = "../dsp" }
+realfft = "3.5"
 
 [dev-dependencies]
 assert_no_alloc = "1.1"
@@ -19,4 +20,5 @@ workspace = true
 
 [package.metadata.vdn]
 tier = "B"
+unsafe = false
 forbid = ["ort", "hound", "serde", "serde_json", "cpal", "coreaudio-rs"]

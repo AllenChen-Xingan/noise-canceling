@@ -20,4 +20,5 @@ workspace = true
 
 [package.metadata.vdn]
 tier = "C"
+unsafe = false
 forbid = ["ort", "hound", "serde", "serde_json", "cpal", "coreaudio-rs"]

@@ -3,8 +3,6 @@
 //! 照 `specs/rust/architecture.md` §3.3 的 `trait Stage` 写；`SpectralStage` 是 §3.1 说的「共用一次 STFT」扩展 trait 的草案。
 //! align 的 `vdn-types` 定稿后，这里整个删掉，改用 `vdn_types::{FrameCtx, Stage}`；字段差异以 `vdn-types` 为准。
 
-use vdn_dsp::stft::StreamingStft;
-
 /// 每帧随路传的上下文（镜像）。规约 §3.3 现有 `speaker: SpeakerVerdict`；
 /// `voice_prob` 是 p2 向 align 提议加的字段（vdn-speaker 的 earshot VAD，每 16 ms 一帧，[0, 1]），没有时填 `None`。
 #[derive(Clone, Copy, Debug, Default)]
@@ -25,24 +23,4 @@ pub trait SpectralStage: Send {
     fn process_spectrum(&mut self, wet: &mut [Complex32], dry: &[Complex32], ctx: FrameCtx);
 }
 
-pub use realfft_complex::Complex32;
-
-mod realfft_complex {
-    // vdn-dsp 的 STFT 用 realfft 的 Complex32；从那里转出，不另加依赖
-    pub type Complex32 = <super::StftSpec as super::SpecElem>::T;
-}
-
-#[doc(hidden)]
-pub trait SpecElem {
-    type T;
-}
-#[doc(hidden)]
-pub struct StftSpec;
-impl SpecElem for StftSpec {
-    type T = StftComplex;
-}
-type StftComplex = <fn(&mut StreamingStft) -> &mut [C] as Ret>::Out;
-#[doc(hidden)]
-pub trait Ret {
-    type Out;
-}
+pub use realfft::num_complex::Complex32;
