@@ -23,3 +23,4 @@
 
 ## 已收尾（2026-10-31）
 交付：docs/research/013_rl-environment/（README · must-know · sources · assign · gap · decision · notes/）
+- 2026-10-31 p2 回复：已有持续 babble 快开（48 ms +8 dB、≥使用者电平 −3 dB），c02 句首仍误压 2.5–11%；接口 Enroller::owner() 192 维、判决滞后 1.5–2 s——已写进 decision §4.1
