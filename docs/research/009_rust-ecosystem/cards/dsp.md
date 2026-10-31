@@ -39,7 +39,7 @@
 | 实时安全做法 | `process_into_buffer` 写入调用方预分配的缓冲（resources/rubato/src/lib.rs:263-268）；`Fft` 的 FFT 用构造时备好的 scratch 调 `process_with_scratch`（resources/rubato/src/synchro.rs:123-124、156-157、180-184）；内部输入/输出暂存在 `new_custom` 里一次分配（synchro.rs:329、350-353）；热路径里只有 `copy_from_slice`/`copy_within`。声道掩码用 `copy_from_slice` 写进已有数组，不分配（lib.rs:169-183）。日志宏不开 `log` feature 时编译为空（lib.rs:14-18）——**开了 `log` feature 的 trace 会格式化 Debug，实时线程务必别开** |
 | 值得学的一处 | `Slip`：两时钟差几 ppm 时偶尔插/丢一帧，并用最长 128 帧的交叉淡化把一帧位移摊开，说明里论证了为何几十帧就听不出（resources/rubato/src/slip.rs:9-30）。送音进程「真麦 → 虚拟麦」正好是这个场景，比完整重采样省延迟省电 |
 | 我们怎么用 | **直接依赖**：`io-macos`（48k↔16k、漂移补偿）与 `dsp`（离线 eval 同一份重采样）。默认开 `fft_resampler`，不开 `log` |
-| 风险 | ① 延迟：`Fft` 延迟 = `fft_size_out / 2` 个输出帧（synchro.rs:692-694），默认子块约 256 帧（synchro.rs:221-222）→ 16 kHz 侧约 8 ms，太多；需 `new_custom` 调小子块（整数比 3 时最小块 3:1，可以很小，synchro.rs:298-319），代价是抗混叠截止变低。sinc 版延迟 = `sinc_len × 比率 / 2`（asynchro.rs:747-749）。② 5.x 刚换成 audioadapter 接口，API 近期变动多，锁版本 |
+| 风险 | ① 延迟：`Fft` 延迟 = `fft_size_out / 2` 个输出帧（synchro.rs:692-694），默认按约 256 帧切子块（synchro.rs:221-222）。按 synchro.rs:298-319 的算法推算：**上采样 16k→48k 约 384 个输出帧 ≈ 8 ms；下采样 48k→16k 约 43 个输出帧 ≈ 2.7 ms**（`FixedSync::Input`，chunk ≥ 256 时）【推断：复核者按源码手算，未实测】，往返合计约 11 ms，偏多；需 `new_custom` 调小子块（整数比 3 时最小块 3:1，可以很小，synchro.rs:298-319），代价是抗混叠截止变低。sinc 版延迟 = `sinc_len × 比率 / 2`（asynchro.rs:747-749）。② 5.x 刚换成 audioadapter 接口，API 近期变动多，锁版本 |
 | 证据 | 【源码】lib.rs:14-18、169-183、213-230、263-268；synchro.rs:123-124、156-157、180-184、221-222、298-319、329-353、692-694；asynchro.rs:747-749、806-820；slip.rs:9-30 ·【API】crates.io 5.0.1/2026-10-01；GitHub pushed 2026-10-01、issues #142-#144 |
 
 ### realfft（https://github.com/HEnquist/realfft）
@@ -52,7 +52,7 @@
 | 值得学的一处 | 逆变换遇到 DC / Nyquist 处虚部非零时，**先把虚部清零照常算完，再返回 `Err(InputValues)`**（lib.rs:671-682、752-754）。神经网络掩码乘出来的频谱几乎必然带非零虚部，所以我们的 iSTFT 必须把这个错误当「已处理的警告」而不是 `unwrap()` 崩掉——libDF 就是这么做的（见下） |
 | 我们怎么用 | **直接依赖**：`dsp`（STFT/iSTFT、fbank 的 FFT），供 `engine`、`speaker`、`eval` 共用 |
 | 风险 | 维护者单人（HEnquist，同 rubato）；`Err` 不能 unwrap；features 与 RustFFT 一一映射，默认已开 neon（resources/realfft/Cargo.toml `default = ["rustfft/default"]`） |
-| 证据 | 【源码】realfft/src/lib.rs:128-143、311-313、669-680、748-752；realfft/Cargo.toml features 段 ·【API】crates.io 3.5.1/2026-10-26；issues #45 #48 #49 |
+| 证据 | 【源码】realfft/src/lib.rs:128-143、311-313、671-682、752-754；realfft/Cargo.toml features 段 ·【API】crates.io 3.5.1/2026-10-26；issues #45 #48 #49 |
 
 ### RustFFT（https://github.com/ejmahler/RustFFT）
 | 项 | 内容 |
@@ -84,7 +84,7 @@
 | 做什么 | WebRTC AudioProcessing（M145 + 后续修复）的**纯 Rust 移植**：AEC3、噪声抑制、AGC2（含限幅器、RNN VAD）、高通、重采样、Ooura/PFFFT |
 | 许可证 | BSD-3-Clause；**兼容：是**。外部依赖 cpufeatures、derive_more、tracing、bytemuck 等（resources/sonora/Cargo.toml workspace.dependencies），均宽松许可 |
 | 维护状态 | 最新 0.2.0（2026-07-29）；最近提交 2026-10-09（主干）、2026-10-17 依赖机器人；open issues 9（全是 dependabot PR，无人工 issue 可看响应）。README 自述移植「AI assisted」，并称 2400+ C++ 测试在 Rust 后端通过（README「History」第 4 条）；CI 含 macOS ARM64 构建与测试 |
-| 实时安全做法 | 公开 API 是 `&mut self`（resources/sonora/crates/sonora/src/audio_processing.rs:615-637），**没有 C++ 版那样的内部 mutex**（在 sonora/src 下 grep `Mutex/RwLock/.lock()` 无结果）。但并非处处零分配：`Limiter::process` 每次 `collect()` 一个 `Vec<&[f32]>`（crates/sonora-agc2/src/limiter.rs:98）；其余模块的 `vec!` 多在构造与测试里。全管线是否零分配**需实测（如 assert_no_alloc）** |
+| 实时安全做法 | 公开 API 是 `&mut self`（resources/sonora/crates/sonora/src/audio_processing.rs:615-637），**没有 C++ 版那样的内部 mutex**（在 sonora/src 下 grep `Mutex/RwLock/.lock()` 无结果）。但并非处处零分配：`Limiter::process` 每次 `collect()` 一个 `Vec<&[f32]>`（crates/sonora-agc2/src/limiter.rs:98）；**复核补反例**：`GainController2::process`（crates/sonora/src/gain_controller2.rs:238）每帧调三次 `extract_channels`（同文件 108-111，把每个声道 `to_vec()` 复制成 `Vec<Vec<f32>>`），再 `collect` 出 `Vec<&mut [f32]>`（313-331），噪声估计处还有一次 `collect`（264）——**AGC2 整条管线每帧多次堆分配，不只 Limiter 一处**。全管线是否零分配**需实测（如 resources/ 里的 rust-assert-no-alloc / rtsan-standalone-rs）** |
 | 值得学的一处 | AGC2 限幅器（见文件开头「最值得学」第 2 条，limiter.rs:12-40、93-117）：状态都是定长数组（limiter.rs:68-74），按子帧插值、攻击段幂次插值，零前瞻。另：RNN VAD 内部固定 24 kHz、10 ms 一帧，`analyze()` 先重采样到预分配缓冲再算（crates/sonora-agc2/src/vad_wrapper.rs:131-147；rnn_vad/common.rs:5-6），可作门控「快开」的 VAD 候选 |
 | 我们怎么用 | **抄思路自己写**：`dsp` 的限幅器/轻压缩；**直接依赖（仅 eval）**：WebRTC NS 作为传统降噪对照基线、RNN VAD 作对照 |
 | 风险 | 0.x、单维护者、AI 辅助移植——数值正确性靠其自报的 C++ 测试；限幅器热路径有分配；MSRV 1.91、edition 2024 |
@@ -96,11 +96,11 @@
 | 做什么 | 对 C++ WebRTC AudioProcessing（PulseAudio 抽出版）的 Rust 绑定，`bundled` feature 现场编 C++ |
 | 许可证 | crates.io 显示 non-standard（用 `license-file = "COPYING"`，resources/webrtc-audio-processing/Cargo.toml:25），COPYING 实为 Google 的 BSD-3 文本（COPYING:1-5）；**兼容：是**【推断：BSD-3 + WebRTC 专利授权与 GPL-3.0 无冲突】 |
 | 维护状态 | 最新 2.1.0（2026-05-13）；最近提交 2026-07-16；open issues 8；**#103「Panic on MacOS 27」（2026-09-20，bundled 构建在 macOS 27 + rustc 1.98 上 panic）只有报告者自己补充，未见维护者回复**；#102 修 Apple 交叉编译的 PR 仍 open |
-| 实时安全做法 | 每次 `process_capture_frame` 都把声道指针 `collect()` 成一个新 `Vec<*mut f32>`（resources/webrtc-audio-processing/src/lib.rs:210-214、388-401）——**热路径有堆分配**；C++ 侧 APM 内部用锁【推断：本地子模块未检出，未亲见】；帧长必须正好 10 ms，否则 panic（lib.rs:208-209 文档） |
+| 实时安全做法 | 每次 `process_capture_frame` 都把声道指针 `collect()` 成一个新 `Vec<*mut f32>`（resources/webrtc-audio-processing/src/lib.rs:210-215、388-401）——**热路径有堆分配**；C++ 侧 APM 内部用锁【推断：本地子模块未检出，未亲见】；帧长必须正好 10 ms，否则 panic（lib.rs:208-209 文档） |
 | 值得学的一处 | `stream_delay_ms` 用原子量存，`u64` 存不进 `i32` 就表示「未设置」（lib.rs:224-225），一个原子同时表达「值 + 有无」，免锁——我们「原子发布声纹结果」可借这种编码 |
 | 我们怎么用 | **不要**（实时侧）；若要 WebRTC 基线，用纯 Rust 的 sonora |
 | 风险 | 我们的机器正是 macOS 27（Darwin 27），#103 直接撞上；需要 meson/C++ 工具链；热路径分配 |
-| 证据 | 【源码】Cargo.toml:25；COPYING:1-5；src/lib.rs:208-214、224-225、388-401 ·【API】crates.io 2.1.0/2026-05-13；GitHub issues #99-#103 ·【推断】C++ 内部锁、专利授权兼容 |
+| 证据 | 【源码】Cargo.toml:25；COPYING:1-5；src/lib.rs:208-215、224-225、388-401 ·【API】crates.io 2.1.0/2026-05-13；GitHub issues #99-#103 ·【推断】C++ 内部锁、专利授权兼容 |
 
 ### nnnoiseless（https://github.com/jneem/nnnoiseless）
 | 项 | 内容 |
@@ -123,14 +123,14 @@
 | 实时安全做法 | 好的一面：FFT scratch 在构造时备好（libDF/src/lib.rs:119-122），调用 `process_with_scratch`（lib.rs:385-388、398-400）；逆变换把 `InputValues` 错误吞掉（lib.rs:401-402），正是 realfft 卡里说的处理法。坏的一面：`frame_analysis` 每帧 `make_input_vec()` 新分配一个缓冲（lib.rs:360），`frame_synthesis` 每帧 `make_output_vec()`（lib.rs:397）；`rotate_left` 移位 analysis/synthesis 记忆（lib.rs:377-379、411-413） |
 | 值得学的一处 | 帧分析/合成的结构本身：「上一帧剩余 × 前半窗 + 新输入 × 后半窗 → FFT → 归一化只在分析端做一次」（lib.rs:356-393），合成端加窗 + 重叠相加记忆（lib.rs:396-427）。我们照这个骨架写，把两处每帧分配改成结构体里的预分配缓冲，`rotate_left` 换成环形索引或 `copy_within` |
 | 我们怎么用 | **抄思路自己写**：`dsp::stft`（窗改 sqrt-Hann 512/256，对齐 GTCRN 的 `torch.stft(x, 512, 256, 512, hann_window(512).pow(0.5))`，resources/gtcrn/stream/gtcrn_stream.py:371、375） |
-| 风险 | 已停更；issue #713（2026-10-28）报告「连续约 78 s 纯数字静音后输出变 NaN」——提醒我们 GRU 状态在长静音下会出数值问题，engine 必须有 NaN/Inf 检查 + 送原声兜底 |
+| 风险 | 已停更；issue #713（2026-10-28，标题「Output turns to NaN after 78 s of digital silence when flush-to-zero is on」）报告：**开着 flush-to-zero** 时连续约 78 s 纯数字静音后输出变 NaN。报告者给的原因**不是 GRU 状态**，而是特征归一化 `band_unit_norm` 的递推状态每帧 ×0.99 衰减，掉到最小正规数以下被 FTZ 清成 0，随后 `0/sqrt(0)` = NaN；不开 FTZ 时停在次正规数、不出 NaN【API：issue 正文】。教训：①凡是「除以递推估计量」的地方都要防 0；②**开 FTZ 不是免费的**，会把「慢慢趋零」变成「突然等于零」；③engine 仍必须有 NaN/Inf 检查 + 送原声兜底 |
 | 证据 | 【源码】libDF/Cargo.toml:8；libDF/src/lib.rs:119-122、356-427；gtcrn/stream/gtcrn_stream.py:371、375 ·【API】GitHub pushed 2024-10-17、release v0.5.6、issue #713 正文 |
 
 ### biquad（https://github.com/korken89/biquad-rs）
 | 项 | 内容 |
 |---|---|
 | 做什么 | no_std 的二阶 IIR（DF1 / DF2T），带常见滤波器系数计算 |
-| 许可证 | MIT OR Apache-2.0；**兼容：是**；无运行时依赖（中读） |
+| 许可证 | MIT OR Apache-2.0；**兼容：是**；运行时依赖 num-traits（开 `libm` feature，均 MIT/Apache）（resources/biquad-rs/Cargo.toml `[dependencies]`）（中读） |
 | 维护状态 | 0.6.0（2026-03-22）；最近提交 2026-03-22；open issues 0；最近 PR 由维护者合并、有评论——低频但在维护 |
 | 实时安全做法 | `#![no_std]`（resources/biquad-rs/src/lib.rs:51）；DF2T `run()` 只做 5 次乘加和状态更新（lib.rs:170-181），`update_coefficients` 直接替换系数（lib.rs:183-185），零分配零锁 |
 | 值得学的一处 | 系数热替换不清状态（lib.rs:183-185）——音色链「慢慢均衡」改 EQ 时不爆音；但大幅跳变仍需平滑插值系数【推断】 |
@@ -145,10 +145,10 @@
 | 许可证 | MIT；**兼容：是**；依赖 bitflags、smallvec、dasp_sample/dasp_frame（均宽松） |
 | 维护状态 | 0.1.11（2026-10-26）；最近提交 2026-10-27；open issues 4；#65（2026-10-23 用户报 bug）三天内维护者修复发版（#66-#68）——快 |
 | 实时安全做法 | 默认 Queue 历史是 `VecDeque`，上限前会增长（resources/ebur128/src/history.rs:160-178）；Histogram 模式是定长 `Box<[u64;1000]>`（history.rs:52-61）——要在线用只能开 HISTOGRAM 模式。本项目只在 eval 里用，不进实时线程 |
-| 值得学的一处 | 非正规数处理：x86 上用 RAII 守卫临时打开 FTZ、离开作用域恢复（resources/ebur128/src/filter.rs:395-431）；**非 x86（含 Apple Silicon）走手动兜底：状态绝对值小于 `f64::MIN_POSITIVE` 就置零**（filter.rs:250-252）。我们的滤波器/GRU 状态在 aarch64 上要自己做同样的事（或在实时线程设 FPCR.FZ）|
+| 值得学的一处 | 非正规数处理：x86 上用 RAII 守卫临时打开 FTZ、离开作用域恢复（resources/ebur128/src/filter.rs:395-431）；**非 x86（含 Apple Silicon）走手动兜底：状态绝对值小于 `f64::MIN_POSITIVE` 就置零**（filter.rs:250-253）。我们的滤波器/GRU 状态在 aarch64 上要自己做同样的事（或在实时线程设 FPCR.FZ）|
 | 我们怎么用 | **直接依赖**：`eval`（响度指标、音色链调参） |
 | 风险 | 无大风险；f64 计算，离线用无妨 |
-| 证据 | 【源码】ebur128/src/history.rs:52-61、160-178；filter.rs:250-252、395-431 ·【API】crates.io 0.1.11/2026-10-26；issues #64-#68 |
+| 证据 | 【源码】ebur128/src/history.rs:52-61、160-178；filter.rs:250-253、395-431 ·【API】crates.io 0.1.11/2026-10-26；issues #64-#68 |
 
 ### dasp（https://github.com/RustAudio/dasp）— 浅读
 | 项 | 内容 |
@@ -183,7 +183,7 @@
 | 实时安全做法 | 不进实时线程，不评 |
 | 值得学的一处 | —— |
 | 我们怎么用 | **直接依赖**：`eval` 与离线命令行（P1/P2） |
-| 风险 | #101 的 soundness 修复在 main 上、**未发版**；我们只用 f32/i16 读写，避开 `get_i16_writer` 或锁 git 版【推断】 |
+| 风险 | #101 的 soundness 修复在 main 上、**未发版**；但 #101 标题写明是 **32 位平台**上的整数溢出，aarch64（64 位）基本不触发【API：issue 标题】；仍建议避开 `get_i16_writer` |
 | 证据 | 【API】crates.io 3.5.1/2023-09-25；GitHub issues #98-#102 |
 
 ### symphonia（https://github.com/pdeljanov/Symphonia）— 浅读
@@ -214,8 +214,8 @@
 
 ## 没查到 / 存疑
 
-1. **延迟预算要实测**：GTCRN 的 STFT（窗 512、帧移 256 @16 kHz）算法延迟约等于窗长 32 ms【推断】，剩给「两次重采样 + 设备缓冲 + 共享内存交接」的只有约 13 ms。rubato `Fft` 默认参数单边就约 8 ms，必须调小子块或改用 sinc 版——哪种在音质/延迟/耗电上最划算，要在实验线里量。
-2. **非正规数（denormal）**：Apple Silicon 上 Rust 没有现成的 FTZ 守卫 crate（ebur128 在非 x86 只能手动清零，filter.rs:250-252）。要么在实时线程入口用内联汇编设 FPCR.FZ（bit 24），要么在 biquad/GRU 状态上手动清零；ONNX Runtime 线程是否自设 FZ 未查【推断】。配合 DeepFilterNet #713 的「长静音变 NaN」，engine 必须有 NaN/Inf 守卫。
+1. **延迟预算要实测**：GTCRN 的 STFT（窗 512、帧移 256 @16 kHz）算法延迟约等于窗长 32 ms【推断】，剩给「两次重采样 + 设备缓冲 + 共享内存交接」的只有约 13 ms。rubato `Fft` 默认参数上采样方向约 8 ms、下采样约 2.7 ms（复核者按源码推算），必须调小子块或改用 sinc 版——哪种在音质/延迟/耗电上最划算，要在实验线里量。
+2. **非正规数（denormal）**：~~Apple Silicon 上 Rust 没有现成的 FTZ 守卫 crate~~ **复核更正：有**——resources/no_denormals（MIT，0.3.0）在 aarch64 上设 FPCR 的 FZ 位（resources/no_denormals/src/lib.rs:5、37-41，`1 << 24`，有 fp16 时再加 bit 19），但最后发版/推送 2025-09-11，**已超 12 个月**，体量很小，建议照它自写十来行而不依赖。ebur128 在非 x86 只能手动清零（filter.rs:250-253）。要么在实时线程入口设 FPCR.FZ（bit 24），要么在 biquad/GRU 状态上手动清零；ONNX Runtime 线程是否自设 FZ 未查【推断】。配合 DeepFilterNet #713 的「长静音变 NaN」，engine 必须有 NaN/Inf 守卫。
 3. **sonora 全管线是否零分配**：只确认了 Limiter 有一处每帧分配，其余没逐个函数核；若要直接依赖需用 `assert_no_alloc` 一类工具实测。
 4. **webrtc-audio-processing C++ 内部锁**：本地子模块未检出，只能推断 APM 内部有 mutex。
 5. **torch.stft 对拍细节**：`torch.hann_window` 默认是 periodic 窗；`torch.stft` 默认 `center=True` 会反射填充——离线 eval 对拍要按此复现，实时流式则无 center 填充，两者首尾帧不同，对拍时只比中段【推断】。
