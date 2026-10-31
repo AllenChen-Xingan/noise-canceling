@@ -4,7 +4,7 @@
 
 ## 结论
 
-**没有任何公开集是「笔记本内置麦 + 咖啡馆 + 有参考」。** 最贴近的是 DNS Challenge（ICASSP 2022 / 2023）真实测试集（笔记本 / 台式机录、1–3 m、邻座重叠、带注册语音，但无干净参考）。首选组合：DNS 真实测试集 · CHiME-6 · AliMeeting · DR-VCTK · CHiME-4 咖啡馆段（付费，待拍板）或 ACE 笔记本档。详见 [decision.md](decision.md)。
+**没有任何公开集是「笔记本内置麦 + 咖啡馆 + 有参考」。** 最贴近的是 DNS Challenge（ICASSP 2022 / 2023）真实测试集（笔记本或台式机录、1–3 m、邻座重叠，但无干净参考、无逐帧标签）。首选组合：DNS 真实测试集 · CHiME-6 · AliMeeting · DR-VCTK · CHiME-4 咖啡馆段（付费，待拍板）或 ACE 笔记本档。详见 [decision.md](decision.md)。
 
 ## 文件
 

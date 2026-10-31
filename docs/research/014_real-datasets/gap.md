@@ -10,9 +10,9 @@
 | 真实咖啡馆 / 食堂 / 餐厅声场 | CHiME-3/4 CAF（平板）· ASPIRE（食堂，iPad）· ARTE（无语音）· DNS5 盲测（明列 café / babble，无标签） | ECHI、EasyCom、MIRaGe（人群声是音箱回放）· ACE 大堂（真人朗读 babble） | AMI / ICSI / AliMeeting / AISHELL-4 / NOTSOFAR（会议室） |
 | 近距离邻座同时说话（D47） | CHiME-6、AliMeeting、DiPCo、ECHI、MMCSG（真实对话重叠）· DNS 个性化 dev 513 条邻座 | REAL-M（两人同读） | CHiME-4、DR-VCTK、ACE |
 | 同步近讲参考 | CHiME-6（双耳）· AliMeeting（头戴，含 Test）· NOTSOFAR（train / dev）· AMI · ICSI · CHiME-4 ch0 · ECHI（仅限训练时用） | EasyCom（佩戴者无）· MCoRec（仅 train） | DNS、REAL-M、URGENT、AISHELL-4（录了未公开） |
-| 时间戳转写 | CHiME-6 · AliMeeting · AISHELL-4 · NOTSOFAR · AMI · ICSI | DNS4 dev（无时间戳 WAcc 表）· CHiME-4（句级） | DNS 盲测（转了没公开）· URGENT · ECHI（未提） |
+| 时间戳转写 | CHiME-6 · AliMeeting · AISHELL-4 · NOTSOFAR · AMI · ICSI | DNS4 dev（无时间戳转写 tsv，只在 2022 分支）· CHiME-4（句级） | DNS 盲测（转了没公开）· URGENT · ECHI（未提） |
 | 中文 | AliMeeting · AISHELL-4 · MISP · AISHELL-5 · RealMAN（回放） | DNS2 / 3（少量普通话） | 其余 |
-| 可训练许可 | AMI · ICSI（爱丁堡版）· NOTSOFAR · DiPCo · DR-VCTK · VOiCES · BUT ReverbDB · RealMAN | Common Voice（CC0 但下载条款限制） | SA / NC / 自定义协议 / LDC 的全部 |
+| 可训练许可 | AMI · ICSI（爱丁堡版）· NOTSOFAR · DiPCo · VOiCES · BUT ReverbDB · RealMAN | Common Voice（CC0 但下载条款限制）· DR-VCTK（CC BY，End-user Licence 待核） | SA / NC / 自定义协议 / LDC 的全部 |
 
 ## 二、它们没做的
 

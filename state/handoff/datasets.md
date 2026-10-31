@@ -6,3 +6,7 @@
 - 2026-10-31 建 `docs/research/014_real-datasets/`，写 must-know（三命门：真实录音 · 可对齐参考 · 许可可得）
 - 2026-10-31 起 Workflow wf_5c707fee-0a3（5 路调研 × 每路 1 怀疑派 = 10 代理）；大总管批准，要求许可抄原句 + 链接
 - 2026-10-31 Workflow 完成；卡片落 cards/（51 张，合并跨路重复）、记录落 notes/；补核 RealMAN（回放 + CC BY 4.0）、NISQA LIVETALK；写完 decision
+- 2026-10-31 写完 README · must-know · sources · assign · gap · decision；研究索引 014 行已更新；起三视角自审（事实 · 规矩符合度 · 实现）
+
+## 待人拍板（详见 docs/research/014_real-datasets/decision.md 第六节）
+1 CHiME-3/4 要不要 LDC 付费（建议先不买）· 2 签不签 ECHI DUA（建议签 ECHI）· 3 首批下载量（建议约 25–28 GB 起步）· 4 许可不清的只评测只存本机（建议）· 5 CC BY 真实集维持不进训练（建议）
