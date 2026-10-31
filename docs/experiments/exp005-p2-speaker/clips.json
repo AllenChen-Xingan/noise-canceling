@@ -1,0 +1,1129 @@
+{
+ "seed": 20261031,
+ "sr": 16000,
+ "owner_speaker": "7127",
+ "owner_sex": "M",
+ "owner_db": -23.0,
+ "rir": {
+  "near": {
+   "rt60": 0.15,
+   "drr_db": 12
+  },
+  "far": {
+   "rt60": 0.6,
+   "drr_db": -3
+  }
+ },
+ "noise": "DEMAND PCAFETER ch01",
+ "out_dir": "_tmp/20261031-exp005/src",
+ "clips": [
+  {
+   "id": "c01",
+   "kind": "one",
+   "dur_s": 80,
+   "params": {
+    "sir": 6,
+    "snr": 10,
+    "overlap": 0.2,
+    "nb_sex": "F"
+   },
+   "owner_speaker": "7127",
+   "neighbors": [
+    "1995"
+   ],
+   "timeline": {
+    "owner": [
+     [
+      0.5,
+      3.855
+     ],
+     [
+      9.267,
+      15.527
+     ],
+     [
+      18.965,
+      29.08
+     ],
+     [
+      32.543,
+      38.002
+     ],
+     [
+      44.378,
+      49.488
+     ],
+     [
+      59.197,
+      62.507
+     ],
+     [
+      71.666,
+      79.126
+     ]
+    ],
+    "interf": [
+     [
+      5.033,
+      8.408,
+      "1995"
+     ],
+     [
+      16.231,
+      18.546,
+      "1995"
+     ],
+     [
+      28.139,
+      31.619,
+      "1995"
+     ],
+     [
+      38.841,
+      43.446,
+      "1995"
+     ],
+     [
+      50.45,
+      58.695,
+      "1995"
+     ],
+     [
+      63.107,
+      71.072,
+      "1995"
+     ]
+    ]
+   },
+   "owner_utts": [
+    {
+     "id": "7127-75946-0021",
+     "text": "YES SIRE AND READY DRESSED FOR THE BALLET"
+    },
+    {
+     "id": "7127-75947-0015",
+     "text": "THERE CANNOT BE A DOUBT HE RECEIVED YOU KINDLY FOR IN FACT YOU RETURNED WITHOUT HIS PERMISSION"
+    },
+    {
+     "id": "7127-75947-0014",
+     "text": "FORGIVE ME I HARDLY KNOW WHAT I AM SAYING A THOUSAND TIMES FORGIVE ME MADAME WAS RIGHT QUITE RIGHT THIS BRUTAL EXILE HAS COMPLETELY TURNED MY BRAIN"
+    },
+    {
+     "id": "7127-75947-0007",
+     "text": "SHE THEN ROSE HUMMING THE AIR TO WHICH SHE WAS PRESENTLY GOING TO DANCE"
+    },
+    {
+     "id": "7127-75947-0023",
+     "text": "IT IS TOO DIFFICULT REPLIED MADEMOISELLE DE TONNAY CHARENTE LAUGHING LOUDLY"
+    },
+    {
+     "id": "7127-75947-0006",
+     "text": "THE PRINCESS INQUIRED NO"
+    },
+    {
+     "id": "7127-75947-0028",
+     "text": "QUICK QUICK THEN AMONG THE HIGH REED GRASS SAID MONTALAIS STOOP ATHENAIS YOU ARE SO TALL"
+    }
+   ],
+   "files": {
+    "mix": {
+     "file": "c01_mix.wav",
+     "sha256": "d9f7835e50182d8c5ac9e1fbd871000329af89776dd63646ef977e30e1cff8d0"
+    },
+    "owner": {
+     "file": "c01_owner.wav",
+     "sha256": "f62a6825173fe3d30fe2bb7c769ef77f55f80b3dacf2cf374beef1ebfd17874f"
+    },
+    "interf": {
+     "file": "c01_interf.wav",
+     "sha256": "11594c973ca4af04c9802d51d5d35483e8c24015d2e7a86e7bca37e2ee389596"
+    },
+    "noise": {
+     "file": "c01_noise.wav",
+     "sha256": "b746844218000873584dff76d8280e4738b6fcce1e17fa9e09baff58b08e84b7"
+    }
+   }
+  },
+  {
+   "id": "c02",
+   "kind": "one",
+   "dur_s": 80,
+   "params": {
+    "sir": 3,
+    "snr": 10,
+    "overlap": 0.2,
+    "nb_sex": "M"
+   },
+   "owner_speaker": "7127",
+   "neighbors": [
+    "2300"
+   ],
+   "timeline": {
+    "owner": [
+     [
+      0.5,
+      11.44
+     ],
+     [
+      14.501,
+      24.571
+     ],
+     [
+      33.235,
+      38.52
+     ],
+     [
+      44.769,
+      50.749
+     ],
+     [
+      55.458,
+      64.038
+     ],
+     [
+      73.346,
+      80.0
+     ]
+    ],
+    "interf": [
+     [
+      11.744,
+      15.494,
+      "2300"
+     ],
+     [
+      25.172,
+      33.776,
+      "2300"
+     ],
+     [
+      38.883,
+      45.968,
+      "2300"
+     ],
+     [
+      51.302,
+      55.052,
+      "2300"
+     ],
+     [
+      63.07,
+      72.675,
+      "2300"
+     ]
+    ]
+   },
+   "owner_utts": [
+    {
+     "id": "7127-75946-0022",
+     "text": "SIRE HE SAID YOUR MAJESTY'S MOST DEVOTED SERVANT APPROACHES TO PERFORM A SERVICE ON THIS OCCASION WITH SIMILAR ZEAL THAT HE HAS ALREADY SHOWN ON THE FIELD OF BATTLE"
+    },
+    {
+     "id": "7127-75947-0039",
+     "text": "IN FACT THE SOUND OF MADAME'S AND THE QUEEN'S CARRIAGES COULD BE HEARD IN THE DISTANCE UPON THE HARD DRY GROUND OF THE ROADS FOLLOWED BY THE MOUNTED CAVALIERS"
+    },
+    {
+     "id": "7127-75947-0029",
+     "text": "THE YOUNG GIRLS HAD INDEED MADE THEMSELVES SMALL INDEED INVISIBLE"
+    },
+    {
+     "id": "7127-75947-0003",
+     "text": "YES THE CHARACTER WHICH YOUR ROYAL HIGHNESS ASSUMED IS IN PERFECT HARMONY WITH YOUR OWN"
+    },
+    {
+     "id": "7127-75946-0013",
+     "text": "THE KING HAD COMPLETED HIS TOILETTE BY NINE O'CLOCK HE APPEARED IN AN OPEN CARRIAGE DECORATED WITH BRANCHES OF TREES AND FLOWERS"
+    },
+    {
+     "id": "7127-75946-0027",
+     "text": "DISDAINFUL OF A SUCCESS OF WHICH MADAME SHOWED NO ACKNOWLEDGEMENT HE THOUGHT OF NOTHING BUT BOLDLY REGAINING THE MARKED PREFERENCE OF THE PRINCESS"
+    }
+   ],
+   "files": {
+    "mix": {
+     "file": "c02_mix.wav",
+     "sha256": "ac78de4efff25b922db72f102bd4b03dd1e4ed4bf6341580c8c53ebf5b5aac9f"
+    },
+    "owner": {
+     "file": "c02_owner.wav",
+     "sha256": "91827945963b0270b43ebd6a5b70ae6440cba87e29881acb7f8c4f97a716f9d9"
+    },
+    "interf": {
+     "file": "c02_interf.wav",
+     "sha256": "e945538d81e1ce0e32ddff08e38d1f059d161317e185e89ca6d5a7779565b782"
+    },
+    "noise": {
+     "file": "c02_noise.wav",
+     "sha256": "da849c0d202299d56ea2592bb0a6fe0f198e567fb697799df7bddf351494d131"
+    }
+   }
+  },
+  {
+   "id": "c03",
+   "kind": "multi",
+   "dur_s": 80,
+   "params": {
+    "sir": 9,
+    "snr": 10,
+    "n_nb": 3
+   },
+   "owner_speaker": "7127",
+   "neighbors": [
+    "3570",
+    "8455",
+    "4970"
+   ],
+   "timeline": {
+    "owner": [
+     [
+      0.5,
+      11.71
+     ],
+     [
+      17.708,
+      21.863
+     ],
+     [
+      27.142,
+      37.317
+     ],
+     [
+      40.123,
+      43.743
+     ],
+     [
+      48.615,
+      56.095
+     ],
+     [
+      58.803,
+      62.038
+     ],
+     [
+      64.747,
+      69.207
+     ],
+     [
+      74.453,
+      80.0
+     ]
+    ],
+    "interf": [
+     [
+      0.3,
+      8.635,
+      "3570"
+     ],
+     [
+      8.99,
+      14.525,
+      "8455"
+     ],
+     [
+      15.019,
+      20.499,
+      "4970"
+     ],
+     [
+      20.995,
+      29.855,
+      "3570"
+     ],
+     [
+      30.14,
+      37.55,
+      "8455"
+     ],
+     [
+      37.936,
+      40.966,
+      "4970"
+     ],
+     [
+      41.1,
+      44.855,
+      "3570"
+     ],
+     [
+      45.122,
+      53.227,
+      "8455"
+     ],
+     [
+      53.396,
+      61.466,
+      "4970"
+     ],
+     [
+      62.001,
+      66.161,
+      "3570"
+     ],
+     [
+      66.59,
+      73.665,
+      "8455"
+     ],
+     [
+      73.884,
+      76.749,
+      "4970"
+     ],
+     [
+      76.916,
+      80.0,
+      "3570"
+     ]
+    ]
+   },
+   "owner_utts": [
+    {
+     "id": "7127-75946-0016",
+     "text": "THE SEASONS ALLIES OF SPRING FOLLOWED HIM CLOSELY TO FORM A QUADRILLE WHICH AFTER MANY WORDS OF MORE OR LESS FLATTERING IMPORT WAS THE COMMENCEMENT OF THE DANCE"
+    },
+    {
+     "id": "7127-75947-0008",
+     "text": "THE ARROW PIERCED HIS HEART AND WOUNDED HIM MORTALLY"
+    },
+    {
+     "id": "7127-75946-0014",
+     "text": "THE QUEENS HAD TAKEN THEIR SEATS UPON A MAGNIFICENT DIAS OR PLATFORM ERECTED UPON THE BORDERS OF THE LAKE IN A THEATER OF WONDERFUL ELEGANCE OF CONSTRUCTION"
+    },
+    {
+     "id": "7127-75947-0011",
+     "text": "REMAIN I IMPLORE YOU THE EVENING IS MOST LOVELY"
+    },
+    {
+     "id": "7127-75947-0016",
+     "text": "OH MADEMOISELLE WHY HAVE I NOT A DEVOTED SISTER OR A TRUE FRIEND SUCH AS YOURSELF"
+    },
+    {
+     "id": "7127-75947-0002",
+     "text": "DO YOU THINK SO SHE REPLIED WITH INDIFFERENCE"
+    },
+    {
+     "id": "7127-75946-0008",
+     "text": "DOES YOUR MAJESTY THEN NO LONGER BELIEVE THE DISLOYAL ATTEMPT"
+    },
+    {
+     "id": "7127-75946-0006",
+     "text": "HE HAS GIVEN THEM WITH TOO MUCH GRACE NOT TO HAVE OTHERS STILL TO GIVE IF THEY ARE REQUIRED WHICH IS THE CASE AT THE PRESENT MOMENT"
+    }
+   ],
+   "files": {
+    "mix": {
+     "file": "c03_mix.wav",
+     "sha256": "0acb3a63d9cba6d6e3d61f3454d30edc9ac4e120586ef94f931aaf89764c47e0"
+    },
+    "owner": {
+     "file": "c03_owner.wav",
+     "sha256": "95f42359cd2c5b2ae166460cd2ea7e52c91ed9f28e827c42360f24b527da9dfe"
+    },
+    "interf": {
+     "file": "c03_interf.wav",
+     "sha256": "fa5c4e23952be6ea2e1138096c6f2119afd95ef53592a9d1028f493daa8d1ce8"
+    },
+    "noise": {
+     "file": "c03_noise.wav",
+     "sha256": "f7f606a4562c261b942a806b1cde1095066881f1b87600b85b2d144d1bc6964c"
+    }
+   }
+  },
+  {
+   "id": "c04",
+   "kind": "other_first",
+   "dur_s": 80,
+   "params": {
+    "sir": 6,
+    "snr": 10,
+    "overlap": 0.2,
+    "first_s": 25,
+    "nb_sex": "F"
+   },
+   "owner_speaker": "7127",
+   "neighbors": [
+    "4992"
+   ],
+   "timeline": {
+    "owner": [
+     [
+      28.449,
+      34.019
+     ],
+     [
+      40.824,
+      49.689
+     ],
+     [
+      54.11,
+      58.6
+     ],
+     [
+      68.657,
+      75.987
+     ]
+    ],
+    "interf": [
+     [
+      0.5,
+      7.23,
+      "4992"
+     ],
+     [
+      7.855,
+      12.35,
+      "4992"
+     ],
+     [
+      12.945,
+      18.43,
+      "4992"
+     ],
+     [
+      19.264,
+      27.574,
+      "4992"
+     ],
+     [
+      34.92,
+      39.675,
+      "4992"
+     ],
+     [
+      50.555,
+      55.05,
+      "4992"
+     ],
+     [
+      58.989,
+      67.639,
+      "4992"
+     ],
+     [
+      76.909,
+      80.0,
+      "4992"
+     ]
+    ]
+   },
+   "owner_utts": [
+    {
+     "id": "7127-75947-0025",
+     "text": "EXQUISITE SOFT TURF OF THE WOODS THE HAPPINESS WHICH YOUR FRIENDSHIP CONFERS UPON ME"
+    },
+    {
+     "id": "7127-75947-0033",
+     "text": "HOW IS IT LA VALLIERE SAID MADEMOISELLE DE TONNAY CHARENTE THAT THE VICOMTE DE BRAGELONNE SPOKE OF YOU AS LOUISE"
+    },
+    {
+     "id": "7127-75946-0004",
+     "text": "CERTAINLY SIRE BUT I MUST HAVE MONEY TO DO THAT WHAT"
+    },
+    {
+     "id": "7127-75947-0024",
+     "text": "LOOK YONDER DO YOU NOT SEE THE MOON SLOWLY RISING SILVERING THE TOPMOST BRANCHES OF THE CHESTNUTS AND THE OAKS"
+    }
+   ],
+   "files": {
+    "mix": {
+     "file": "c04_mix.wav",
+     "sha256": "40a5d66418c81a97154c54773fc871b508864aacfb046c01639d57f8874230d6"
+    },
+    "owner": {
+     "file": "c04_owner.wav",
+     "sha256": "f3936feaeb612c34638ca661145eacfaea8c315320355c6011f95bb4833a5171"
+    },
+    "interf": {
+     "file": "c04_interf.wav",
+     "sha256": "83433c29512abc5ef9c80e5103b034ec463708078d5667d34e480ea3cea559d2"
+    },
+    "noise": {
+     "file": "c04_noise.wav",
+     "sha256": "413642f383fdbf3dd67ea80803353d5e358ff26aaa91bc9a82bf94280323df83"
+    }
+   }
+  },
+  {
+   "id": "c05",
+   "kind": "other_first",
+   "dur_s": 100,
+   "params": {
+    "sir": 6,
+    "snr": 10,
+    "overlap": 0.2,
+    "first_s": 45,
+    "nb_sex": "M"
+   },
+   "owner_speaker": "7127",
+   "neighbors": [
+    "672"
+   ],
+   "timeline": {
+    "owner": [
+     [
+      46.942,
+      50.542
+     ],
+     [
+      60.588,
+      65.398
+     ],
+     [
+      69.661,
+      73.621
+     ],
+     [
+      76.913,
+      86.053
+     ],
+     [
+      96.263,
+      100.0
+     ]
+    ],
+    "interf": [
+     [
+      0.5,
+      3.53,
+      "672"
+     ],
+     [
+      4.138,
+      7.398,
+      "672"
+     ],
+     [
+      7.717,
+      12.792,
+      "672"
+     ],
+     [
+      13.478,
+      18.703,
+      "672"
+     ],
+     [
+      19.403,
+      22.753,
+      "672"
+     ],
+     [
+      23.392,
+      26.442,
+      "672"
+     ],
+     [
+      26.767,
+      31.842,
+      "672"
+     ],
+     [
+      32.471,
+      35.371,
+      "672"
+     ],
+     [
+      35.789,
+      39.569,
+      "672"
+     ],
+     [
+      40.373,
+      43.723,
+      "672"
+     ],
+     [
+      44.468,
+      46.488,
+      "672"
+     ],
+     [
+      51.284,
+      59.514,
+      "672"
+     ],
+     [
+      65.904,
+      69.229,
+      "672"
+     ],
+     [
+      72.756,
+      77.471,
+      "672"
+     ],
+     [
+      87.144,
+      95.349,
+      "672"
+     ]
+    ]
+   },
+   "owner_utts": [
+    {
+     "id": "7127-75946-0010",
+     "text": "YOUR MAJESTY'S PLAN THEN IN THIS AFFAIR IS"
+    },
+    {
+     "id": "7127-75946-0003",
+     "text": "GENTLEMEN TO YOUR POSTS WHEREUPON SAINT AIGNAN AND VILLEROY TOOK THEIR LEAVE"
+    },
+    {
+     "id": "7127-75946-0025",
+     "text": "THE BALLET BEGAN THE EFFECT WAS MORE THAN BEAUTIFUL"
+    },
+    {
+     "id": "7127-75946-0018",
+     "text": "THERE WAS SOMETHING IN HIS CARRIAGE WHICH RESEMBLED THE BUOYANT MOVEMENTS OF AN IMMORTAL AND HE DID NOT DANCE SO MUCH AS SEEM TO SOAR ALONG"
+    },
+    {
+     "id": "7127-75947-0010",
+     "text": "WHEN SHE PERCEIVED THE YOUNG MAN SHE ROSE LIKE A WOMAN SURPRISED IN THE MIDST OF IDEAS SHE WAS DESIROUS OF CONCEALING FROM HERSELF"
+    }
+   ],
+   "files": {
+    "mix": {
+     "file": "c05_mix.wav",
+     "sha256": "396763b8de5ac29606f4482b45c1c257d3248f590439fc99a992396debed7475"
+    },
+    "owner": {
+     "file": "c05_owner.wav",
+     "sha256": "5cd3e989f79637f6f5b5cb218ddd8bef51e6ce913998e3e7b30e6ab37893579b"
+    },
+    "interf": {
+     "file": "c05_interf.wav",
+     "sha256": "1862f82ddaf71ad16b7be4c1dc3e1090104025d9e01fdc7ead45ddf1b7f786a0"
+    },
+    "noise": {
+     "file": "c05_noise.wav",
+     "sha256": "f56e138af30826c7b5db4e3f29ecca031f19cbf7645a4897ff155910b78a2c36"
+    }
+   }
+  },
+  {
+   "id": "c06",
+   "kind": "owner_only",
+   "dur_s": 80,
+   "params": {
+    "snr": 10
+   },
+   "owner_speaker": "7127",
+   "neighbors": [],
+   "timeline": {
+    "owner": [
+     [
+      0.5,
+      7.14
+     ],
+     [
+      8.055,
+      12.774
+     ],
+     [
+      13.44,
+      18.185
+     ],
+     [
+      19.226,
+      23.101
+     ],
+     [
+      24.048,
+      31.563
+     ],
+     [
+      33.326,
+      36.495
+     ],
+     [
+      37.213,
+      40.958
+     ],
+     [
+      42.07,
+      51.94
+     ],
+     [
+      52.434,
+      58.989
+     ],
+     [
+      59.651,
+      67.741
+     ],
+     [
+      68.273,
+      73.028
+     ],
+     [
+      73.758,
+      78.847
+     ]
+    ],
+    "interf": []
+   },
+   "owner_utts": [
+    {
+     "id": "7127-75947-0001",
+     "text": "UPON THIS MADAME DEIGNED TO TURN HER EYES LANGUISHINGLY TOWARDS THE COMTE OBSERVING"
+    },
+    {
+     "id": "7127-75946-0009",
+     "text": "NOT AT ALL YOU ARE ON THE CONTRARY MOST AGREEABLE TO ME"
+    },
+    {
+     "id": "7127-75947-0032",
+     "text": "YES BUT PERHAPS I FRIGHTENED HER IN WHAT WAY"
+    },
+    {
+     "id": "7127-75947-0019",
+     "text": "DID NOT THE DANCING AMUSE YOU NO"
+    },
+    {
+     "id": "7127-75946-0015",
+     "text": "SUDDENLY FOR THE PURPOSE OF RESTORING PEACE AND ORDER SPRING ACCOMPANIED BY HIS WHOLE COURT MADE HIS APPEARANCE"
+    },
+    {
+     "id": "7127-75946-0011",
+     "text": "YOU WILL TAKE THEM FROM MY PRIVATE TREASURE"
+    },
+    {
+     "id": "7127-75946-0023",
+     "text": "THE KING SEEMED ONLY PLEASED WITH EVERY ONE PRESENT"
+    },
+    {
+     "id": "7127-75946-0012",
+     "text": "THE NEWS CIRCULATED WITH THE RAPIDITY OF LIGHTNING DURING ITS PROGRESS IT KINDLED EVERY VARIETY OF COQUETRY DESIRE AND WILD AMBITION"
+    },
+    {
+     "id": "7127-75947-0026",
+     "text": "WELL SAID MADEMOISELLE DE TONNAY CHARENTE I ALSO THINK A GOOD DEAL BUT I TAKE CARE"
+    },
+    {
+     "id": "7127-75947-0027",
+     "text": "TO SAY NOTHING SAID MONTALAIS SO THAT WHEN MADEMOISELLE DE TONNAY CHARENTE THINKS ATHENAIS IS THE ONLY ONE WHO KNOWS IT"
+    },
+    {
+     "id": "7127-75946-0007",
+     "text": "IT IS NECESSARY THEREFORE THAT HE SHOULD COMPLY THE KING FROWNED"
+    },
+    {
+     "id": "7127-75946-0024",
+     "text": "MONSIEUR WAS THE ONLY ONE WHO DID NOT UNDERSTAND ANYTHING ABOUT THE MATTER"
+    }
+   ],
+   "files": {
+    "mix": {
+     "file": "c06_mix.wav",
+     "sha256": "dc62042bcb3c1f323cf489d7ef760a83982c65018eea8ed446f3e60112fb8226"
+    },
+    "owner": {
+     "file": "c06_owner.wav",
+     "sha256": "0b4d203d74c2b50ae69b53d636b379e15545780970f353fe3ec31644087807ff"
+    },
+    "interf": {
+     "file": "c06_interf.wav",
+     "sha256": "c081647963ff55d6f5bda14044f1d5f6d8141192781da777bab3876e1cac39ed"
+    },
+    "noise": {
+     "file": "c06_noise.wav",
+     "sha256": "8f102a62273626413e8fc21e3a325b276190161456ba402b47e06ab057e09afb"
+    }
+   }
+  },
+  {
+   "id": "c07",
+   "kind": "one",
+   "dur_s": 80,
+   "params": {
+    "sir": 6,
+    "snr": null,
+    "overlap": 0.2,
+    "nb_sex": "F"
+   },
+   "owner_speaker": "7127",
+   "neighbors": [
+    "5683"
+   ],
+   "timeline": {
+    "owner": [
+     [
+      0.5,
+      4.915
+     ],
+     [
+      12.65,
+      19.17
+     ],
+     [
+      30.522,
+      39.807
+     ],
+     [
+      45.631,
+      50.676
+     ],
+     [
+      59.522,
+      63.517
+     ],
+     [
+      68.596,
+      72.636
+     ],
+     [
+      76.698,
+      80.0
+     ]
+    ],
+    "interf": [
+     [
+      5.927,
+      11.547,
+      "5683"
+     ],
+     [
+      19.764,
+      29.654,
+      "5683"
+     ],
+     [
+      40.188,
+      44.773,
+      "5683"
+     ],
+     [
+      51.448,
+      58.543,
+      "5683"
+     ],
+     [
+      64.449,
+      67.749,
+      "5683"
+     ],
+     [
+      73.395,
+      76.175,
+      "5683"
+     ]
+    ]
+   },
+   "owner_utts": [
+    {
+     "id": "7127-75947-0035",
+     "text": "GOOD GRACIOUS HAS THE KING ANY RIGHT TO INTERFERE IN MATTERS OF THAT KIND"
+    },
+    {
+     "id": "7127-75946-0020",
+     "text": "FAR FROM IT SIRE YOUR MAJESTY HAVING GIVEN NO DIRECTIONS ABOUT IT THE MUSICIANS HAVE RETAINED IT"
+    },
+    {
+     "id": "7127-75946-0029",
+     "text": "THE KING WHO HAD FROM THIS MOMENT BECOME IN REALITY THE PRINCIPAL DANCER IN THE QUADRILLE CAST A LOOK UPON HIS VANQUISHED RIVAL"
+    },
+    {
+     "id": "7127-75947-0013",
+     "text": "I REMEMBER NOW AND I CONGRATULATE MYSELF DO YOU LOVE ANY ONE"
+    },
+    {
+     "id": "7127-75947-0021",
+     "text": "LA VALLIERE IS QUITE A POETESS SAID TONNAY CHARENTE"
+    },
+    {
+     "id": "7127-75947-0018",
+     "text": "I HAVE BEEN HERE THIS QUARTER OF AN HOUR REPLIED LA VALLIERE"
+    },
+    {
+     "id": "7127-75947-0037",
+     "text": "OH I AM SPEAKING SERIOUSLY REPLIED MONTALAIS AND MY OPINION IN THIS CASE IS QUITE AS GOOD AS THE KING'S I SUPPOSE IS IT NOT LOUISE"
+    }
+   ],
+   "files": {
+    "mix": {
+     "file": "c07_mix.wav",
+     "sha256": "88e07ac5ba58562fcd57d50adca57dfe91be7e9be810c608a6e3920d2e2ba193"
+    },
+    "owner": {
+     "file": "c07_owner.wav",
+     "sha256": "f6ad2592fc718e3b30bead06b6170ec8e511e686d16ec0d9c2c44db378cfb683"
+    },
+    "interf": {
+     "file": "c07_interf.wav",
+     "sha256": "35045566a468eb7e77da5a8883eb7f811c62908cf6660a5bda1a9f0b1aad506d"
+    },
+    "noise": {
+     "file": "c07_noise.wav",
+     "sha256": "c081647963ff55d6f5bda14044f1d5f6d8141192781da777bab3876e1cac39ed"
+    }
+   }
+  },
+  {
+   "id": "c08",
+   "kind": "multi",
+   "dur_s": 80,
+   "params": {
+    "sir": 6,
+    "snr": 10,
+    "n_nb": 4
+   },
+   "owner_speaker": "7127",
+   "neighbors": [
+    "5639",
+    "5105",
+    "8224",
+    "6930"
+   ],
+   "timeline": {
+    "owner": [
+     [
+      0.5,
+      11.76
+     ],
+     [
+      14.933,
+      18.288
+     ],
+     [
+      24.134,
+      30.394
+     ],
+     [
+      33.051,
+      43.166
+     ],
+     [
+      46.191,
+      51.651
+     ],
+     [
+      53.934,
+      59.044
+     ],
+     [
+      62.35,
+      65.66
+     ],
+     [
+      69.382,
+      76.842
+     ]
+    ],
+    "interf": [
+     [
+      0.3,
+      8.02,
+      "5639"
+     ],
+     [
+      8.535,
+      10.845,
+      "5105"
+     ],
+     [
+      11.301,
+      18.111,
+      "8224"
+     ],
+     [
+      18.646,
+      24.961,
+      "6930"
+     ],
+     [
+      25.239,
+      33.834,
+      "5639"
+     ],
+     [
+      33.994,
+      40.009,
+      "5105"
+     ],
+     [
+      40.118,
+      49.933,
+      "8224"
+     ],
+     [
+      50.097,
+      54.462,
+      "6930"
+     ],
+     [
+      54.97,
+      61.834,
+      "5639"
+     ],
+     [
+      62.326,
+      70.611,
+      "5105"
+     ],
+     [
+      71.111,
+      74.981,
+      "8224"
+     ],
+     [
+      75.472,
+      79.307,
+      "6930"
+     ]
+    ]
+   },
+   "owner_utts": [
+    {
+     "id": "7127-75947-0038",
+     "text": "LET US RUN THEN SAID ALL THREE AND GRACEFULLY LIFTING UP THE LONG SKIRTS OF THEIR SILK DRESSES THEY LIGHTLY RAN ACROSS THE OPEN SPACE BETWEEN THE LAKE AND THE THICKEST COVERT OF THE PARK"
+    },
+    {
+     "id": "7127-75946-0021",
+     "text": "YES SIRE AND READY DRESSED FOR THE BALLET"
+    },
+    {
+     "id": "7127-75947-0015",
+     "text": "THERE CANNOT BE A DOUBT HE RECEIVED YOU KINDLY FOR IN FACT YOU RETURNED WITHOUT HIS PERMISSION"
+    },
+    {
+     "id": "7127-75947-0014",
+     "text": "FORGIVE ME I HARDLY KNOW WHAT I AM SAYING A THOUSAND TIMES FORGIVE ME MADAME WAS RIGHT QUITE RIGHT THIS BRUTAL EXILE HAS COMPLETELY TURNED MY BRAIN"
+    },
+    {
+     "id": "7127-75947-0007",
+     "text": "SHE THEN ROSE HUMMING THE AIR TO WHICH SHE WAS PRESENTLY GOING TO DANCE"
+    },
+    {
+     "id": "7127-75947-0023",
+     "text": "IT IS TOO DIFFICULT REPLIED MADEMOISELLE DE TONNAY CHARENTE LAUGHING LOUDLY"
+    },
+    {
+     "id": "7127-75947-0006",
+     "text": "THE PRINCESS INQUIRED NO"
+    },
+    {
+     "id": "7127-75947-0028",
+     "text": "QUICK QUICK THEN AMONG THE HIGH REED GRASS SAID MONTALAIS STOOP ATHENAIS YOU ARE SO TALL"
+    }
+   ],
+   "files": {
+    "mix": {
+     "file": "c08_mix.wav",
+     "sha256": "cccf2d3ce33d52b974648a60b84309820f1754e42cf7e99f90384f5cd4e33e3f"
+    },
+    "owner": {
+     "file": "c08_owner.wav",
+     "sha256": "c31f7bd7eb6cd1347bc5f917ba1614bcf588fa6726d9d8efad0674cd30b3e7b0"
+    },
+    "interf": {
+     "file": "c08_interf.wav",
+     "sha256": "a6552a6bddf19a48bfccdfed8e76c38fc9792d8785a1a8cf608ca113bb194628"
+    },
+    "noise": {
+     "file": "c08_noise.wav",
+     "sha256": "c880413b1659cf8476f6e15636d3f33b5b2f01a04f6e6577292c26b59bef4774"
+    }
+   }
+  }
+ ]
+}
