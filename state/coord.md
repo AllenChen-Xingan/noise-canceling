@@ -22,7 +22,7 @@
 | scene | 场景识别与路由 + 修音链 + 模拟环境 · issue #19 · `feat/scene-polish` | `_tmp/20261031-b4/scene.md` | 其 worktree | 已报到（noise-canceling-scene-f7） |
 | ondevice | 010 设备端自适应 + 可靠性调研 · issue #20 · `research/010-ondevice-adaptation` | `_tmp/20261031-b4/ondevice.md` | 其 worktree | 完成，PR #23 已合并（issue #20 关），窗口已关；3 题待人拍板 |
 | multitalker | 011 一大堆人同时说话（调研）· issue #21 · `research/011-multitalker` | `_tmp/20261031-b4/multitalker.md` | 其 worktree | 完成，PR 已合并（issue #21 关），窗口已关；6 题待人拍板 |
-| evalstd | 012 工业级 rubric 与评测的行业标准 · issue #22 · `research/012-eval-standards` | `_tmp/20261031-b4/evalstd.md` | 其 worktree | 已报到（noise-canceling-evalstd-94） |
+| evalstd | 012 工业级 rubric 与评测的行业标准 · issue #22 · `research/012-eval-standards` | `_tmp/20261031-b4/evalstd.md` | 其 worktree | 完成，PR #27 已合并（issue #22 关），窗口已关；9 题待人拍板 + rubric 修改清单 R1–R14 |
 | rlenv | 013 强化学习环境与分场景训练方案 · issue #25 · `research/013-rl-environment` | `_tmp/20261031-b4/rlenv.md` | 其 worktree | 已派 |
 
 ## 规矩
@@ -36,9 +36,9 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | p2（定参重测 → 段③ Qwen 转写 → 盲听页） |
+| 重编译 / 全量测试（1 个） | scene（exp006 开 / 关对比推理 + DNSMOS + Qwen 打分） |
 
-排队：scene（exp006 开 / 关对比：GTCRN + FE-M 推理 246 段 + 修音链 → DNSMOS + Qwen 84 段，约 20 分钟）
+排队：（空）
 
 等人许可的弹窗 / 长时间前台运行：（空）
 
@@ -96,6 +96,7 @@
 - [ ] 009 待人拍板 4 题（最低系统 14.2→14.4 · GPL-3.0-or-later vs -only · HAL 拿共享内存方式 · RustFFT 破例）—— `docs/research/009_rust-ecosystem/decision.md` §五
 - [ ] 008 待人拍板 7 题（意向书「不分配不加锁」改三档表述 · 目录名 · panic=abort · 两个进程 · HAL 目录放哪 · 延迟超 45 ms 先砍哪 · tract 对照实验）—— `docs/research/008_rust-architecture/decision.md`
 - [ ] 008 给 p1 后续批次 5 项改动（含 exp004 README 补注「0 次分配只计 Rust 侧」）—— 同上「给 p1 线的后续改动」
+- [ ] 012 待人拍板 9 题（「工业级」在本项目指什么 · 众包与 D39 · rlenv 过渡期能否用 L1 当弱奖励等）+ rubric 修改清单 R1–R14 —— `docs/research/012_eval-standards/decision.md`；升级清单 P0：人耳加 P.835 三量表 · RL 奖励同策略审计 · ETSI 噪声格子 · verifier 定标统计 L0–L3
 - [ ] 011 待人拍板 5 题（「只留我」一个开关 · 声纹认好后默认开 · 会议室自动放开 · 试借语音突显 · 菜单栏小图标提前）；~~#6 提示规则~~ 人已否决（D42：不做耳麦提示）—— `docs/research/011_multitalker/decision.md`
 - [ ] 待开实验（011）：① VPIO / 语音突显 + 4 声道 + 蓝牙麦延迟（随 dev-4，P0）② babble 人数×SNR 曲线（dev-3）③ 近 / 远特征 AUC ④ 会议室识别回归 ⑤ 商业对照；提醒 dev-4：别的进程在内置麦开 VPIO 时 HAL 读到的电平骤降（cubeb 源码）
 - [ ] 010 待人拍板 3 题（空闲小更新素材：只累计归一化统计 · 通话中不探索 · 软件内「检查更新」算云端、不做）—— `docs/research/010_ondevice-adaptation/decision.md` 第五节
