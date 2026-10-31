@@ -2,8 +2,7 @@
 //!
 //! 照 align 的草案写（`../noise_canceling-align/src/types/src/{frame,scene,params,policy}.rs`，2026-10-31）：
 //! 只抄本 crate 用得到的字段与 `HysteresisGate` 的判定逻辑（要在模拟数据上标定它的三个数）。
-//! **定稿后整个文件删掉，改 `use vdn_types::…`**；与草案的差异（已报 align）：
-//! - `HysteresisGate::step`：还没有任何场景（UNKNOWN）时第一次判出直接生效，不等确认（开机后尽快有参数）——建议草案也这样
+//! **定稿后整个文件删掉，改 `use vdn_types::…`**。`HysteresisGate::step` 与草案逐行一致（标定结果才能直接搬过去）。
 
 /// 流时间（样本数）。镜像里用模型采样率计（离线 16 kHz）；接入后按 vdn-types 改成 IO 采样率。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -154,17 +153,19 @@ impl HysteresisGate {
     }
 
     /// 喂一个感知结果；换场景时返回 `(旧, 新)`。`rate` = `SampleClock` 的采样率。
+    /// 与 align 草案（2026-10-31 自审后版）逐行一致：按 `(user, fine)` 比较；一次低置信就打断、候选从头算。
     pub fn step(&mut self, label: &SceneLabel, rate: u32) -> Option<(FineSceneId, FineSceneId)> {
         let secs = |n: u64| n as f64 / f64::from(rate.max(1));
         if label.confidence.get() < self.params.min_confidence {
+            self.candidate = None;
             return None;
         }
-        if label.fine == self.committed {
+        if (label.user, label.fine) == (self.committed_user, self.committed) {
             self.candidate = None;
             return None;
         }
         let since = match self.candidate {
-            Some((id, _, t)) if id == label.fine => t,
+            Some((id, u, t)) if (id, u) == (label.fine, label.user) => t,
             _ => {
                 self.candidate = Some((label.fine, label.user, label.at));
                 label.at
@@ -175,8 +176,7 @@ impl HysteresisGate {
             None => true,
             Some(t) => secs(label.at.since(t)) >= f64::from(self.params.min_dwell_s),
         };
-        // 第一次判出（还是 UNKNOWN）不等确认：开机后尽快有个场景
-        if (confirmed && dwelt) || self.committed == FineSceneId::UNKNOWN {
+        if confirmed && dwelt {
             let from = self.committed;
             self.committed = label.fine;
             self.committed_user = label.user;
