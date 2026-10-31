@@ -11,3 +11,4 @@
 | 2026-10-30 | rusteco 回：nih-plug/firewheel 架构卡将落 ../noise_canceling-rusteco/docs/research/009_rust-ecosystem/cards/arch.md；assert_no_alloc vs rtsan 对比见同目录 answers-p1.md §2 |
 | 2026-10-30 | 发现 p1 分支提交了 target/（1799 文件 146 MB，未推送），已报 p1 与大总管；p1 骨架初审 → docs/research/008_rust-architecture/p1-review.md，已发 p1 |
 | 2026-10-30 | 大总管已清 p1 历史、主线 .gitignore 加 /target/、CLAUDE.md 五.2 记坑；规约质量闸门要列「构建产物先忽略」 |
+| 2026-10-30 | Workflow 完成；ort 探针证据入 appendix-probes/；写完规约 specs/rust/architecture.md、ADR 001–005、README/sources/assign/gap；按 rusteco 009 更正两处（p1 Rust 侧确为 0、延迟默认约 56 ms）。p1、rusteco 已关窗，对 p1 的更正请大总管转 |

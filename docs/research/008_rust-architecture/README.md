@@ -1,33 +1,18 @@
-# 008 · 本项目 Rust 代码怎么组织（crate 划分 · 核心 trait · 实时安全 · AST 工具）
+# 008 · Rust 代码怎么组织（crate 划分 · 核心 trait · 实时安全 · AST 工具）
 
-> 2026-10-30 起。四步走第二步：系统分析。**分析即取舍。**
+> 2026-10-30，手下 rustarch（批次 20261030-b3），分支 `research/008-rust-architecture`。
+> **结论的正本是规约 `specs/rust/architecture.md`**；本目录放取舍过程与证据。
 
-## 这次要决定的
+| 文件 | 回答 |
+|---|---|
+| [`must-know.md`](must-know.md) | 三条命门：同一份处理代码 · 实时安全要机器证明 · 模型可替换 |
+| [`sources.md`](sources.md) | 两类来源登记（自有 · 他人），还算不算数 |
+| [`assign.md`](assign.md) | 这次怎么派活（Workflow 8 代理） |
+| [`gap.md`](gap.md) | 它们做到的 / 没做的 |
+| [`decision.md`](decision.md) | **取舍卡**，末尾「待人拍板」 |
+| [`adr/`](adr/) | 5 条架构决策记录 |
+| [`p1-review.md`](p1-review.md) | 对 p1 骨架的初审（含一处更正） |
+| [`notes/`](notes/) | 8 份调研笔记原件（r7 / r8 的更正优先） |
+| [`appendix-probes/`](appendix-probes/) | 本机探针：源码、版本、RTSan 原始日志 |
 
-本项目 Rust 代码怎么组织（crate 划分 · 核心 trait · 实时安全 · AST 工具）
-
-## 五份文件，按这个顺序走
-
-| # | 文件 | 干什么 | 状态 |
-|---|---|---|---|
-| 1 | [must-know.md](must-know.md) | **决策点**——不可妥协的几条 | ☐ |
-| 2 | [sources.md](sources.md) | 两类来源：自有积累 / 他人积累 | ☐ |
-| 3 | [assign.md](assign.md) | **派活模板**——怎么把材料交出去读 | ☐ |
-| 4 | [gap.md](gap.md) | **差距表**——我该先做哪一件 | ☐ |
-| 5 | [decision.md](decision.md) | **取舍卡**——选什么、舍什么、哪里要你拍板 | ☐ |
-
-新增积累的实验住 `docs/experiments/expNNN-<slug>/`——**不在本目录下另开一处**。
-
-## 取材
-
-```bash
-bash skills/aias-meta-research/scripts/clone.sh <url>          # 浅克隆进参考区
-bash skills/aias-meta-research/scripts/clone.sh <url> -d 200   # 要挖提交历史就加深度
-```
-
-## 什么时候算够
-
-> **能列出「需要你拍板的地方」，就够了。**
-> 列不出来，是还没读懂；列出来了，就该停。
-
-**分析的终点不是把材料读完，是把决策权交回人手上。**
+同批：p1 骨架在分支 `feat/p1-offline-gtcrn`；生态逐项目核查见 rusteco 的 `docs/research/009_rust-ecosystem/`。
