@@ -1,0 +1,136 @@
+{
+ "build": "20261030234932-1a0b",
+ "data_build": "20261030214530-44df",
+ "models": [
+  "base",
+  "route",
+  "polish",
+  "both"
+ ],
+ "key": {
+  "te0009": [
+   "polish",
+   "route",
+   "base",
+   "both"
+  ],
+  "te0011": [
+   "route",
+   "base",
+   "both",
+   "polish"
+  ],
+  "te0190": [
+   "base",
+   "both",
+   "polish",
+   "route"
+  ],
+  "te0028": [
+   "both",
+   "polish",
+   "route",
+   "base"
+  ],
+  "te0111": [
+   "polish",
+   "route",
+   "base",
+   "both"
+  ],
+  "te0239": [
+   "route",
+   "base",
+   "both",
+   "polish"
+  ],
+  "te0151": [
+   "base",
+   "both",
+   "polish",
+   "route"
+  ],
+  "te0110": [
+   "both",
+   "polish",
+   "route",
+   "base"
+  ],
+  "te0164": [
+   "polish",
+   "route",
+   "base",
+   "both"
+  ],
+  "te0039": [
+   "route",
+   "base",
+   "both",
+   "polish"
+  ],
+  "te0046": [
+   "base",
+   "both",
+   "polish",
+   "route"
+  ],
+  "te0137": [
+   "both",
+   "polish",
+   "route",
+   "base"
+  ]
+ },
+ "traps": [
+  {
+   "id": "trap-2",
+   "kind": "identical",
+   "clip": "te0011",
+   "desc": "背景音乐",
+   "label": "所有候选其实是同一个文件（应答「分不出」）",
+   "ref": "../../audio/te0011_1cebfe91.wav",
+   "cands": [
+    "../../audio/te0011_9f7aa3d7.wav",
+    "../../audio/te0011_9f7aa3d7.wav",
+    "../../audio/te0011_9f7aa3d7.wav",
+    "../../audio/te0011_9f7aa3d7.wav"
+   ],
+   "names": [
+    "same",
+    "same",
+    "same",
+    "same"
+   ],
+   "expect": {
+    "best": [
+     "same"
+    ]
+   },
+   "source_model": "both"
+  },
+  {
+   "id": "trap-1",
+   "kind": "degraded",
+   "clip": "te0137",
+   "desc": "咖啡馆 / 餐厅多人嘈杂",
+   "label": "其中一份是明显劣化版（揭盲后离线判：最清楚、最自然都不该选它）",
+   "ref": "../../audio/te0137_e64d6824.wav",
+   "cands": [
+    "../../audio/te0137_275b8912.wav",
+    "../../audio/te0137_353cae32.wav",
+    "../../audio/te0137_dc3bd5.wav",
+    "../../audio/te0137_58e8a98e.wav"
+   ],
+   "names": [
+    "route",
+    "polish",
+    "degraded",
+    "base"
+   ],
+   "expect": {
+    "not": []
+   },
+   "source_model": "base"
+  }
+ ]
+}
