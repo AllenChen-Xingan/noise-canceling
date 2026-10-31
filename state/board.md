@@ -10,7 +10,7 @@
 > - **仍在跑**：evalimpl（`feat/eval-verifiers`，issue #31）——vdn-eval：CI 层 16 + QA 层 2 条 verifier、回归集 / 能力集 / 5 探针、首轮定标 0 条 ≥ L1；正在真模型上验证「纯噪声停顿里 engine 门控约 50% 时间开着、混回 −6 dB 原声 → 停顿只压约 5 dB」（疑为「都没降噪」的引擎层原因）。人说「手下可以先跑完」——跑完由大总管验收合并
 > - **人耳**：exp005 v2 已揭盲（保守「最自然」7/8；激进被标吃字最多；咖啡馆要一点背景声、安静处要更安静）→ `docs/experiments/exp005-p2-speaker/results/human-feedback.md`。scene 的 exp006 盲听页在人桌面 `~/Desktop/20261031-vdn-scene-polish-listen/`，**答卷未交**
 > - **要人定的事**：唯一清单 `state/pending-decisions.md`（五组，第一组阻塞：装 BlackHole · 训练在哪 · 回放重录 / 咖啡馆实录 · IO 96 帧）
-> - **下一批建议**：①接入线（p2 / scene 接进 engine；FE-M 换 spec 版 + 合成端包络归一；规约补新 crate；ORT 单 Environment）②修 evalimpl 查到的 engine 停顿门控问题（以 verifier 回归任务为验收）③不训练的重叠说话处理（多线索快速辅助判断 + 说话人音高，D45 / D47 第 1 步）④按人耳偏好定分场景参数（D40）
+> - **下一批建议**：①接入线（p2 / scene 接进 engine；FE-M 换 spec 版 + 合成端包络归一；规约补新 crate；ORT 单 Environment）②修 engine 停顿门控（已用真模型确认：GTCRN 纯噪声停顿门控误开 0.99；根因 `src/dsp/src/envelope.rs:91-97` + `src/engine/src/engine.rs:355`；验收 = 回归任务 R17 由 xfail 转为通过）③不训练的重叠说话处理（多线索快速辅助判断 + 说话人音高，D45 / D47 第 1 步）④按人耳偏好定分场景参数（D40）
 > - **教训（已进记忆 / CLAUDE.md）**：揭盲表丢失之坑 · target 入库之坑 · 给人听的目录不许带答案 · 推送前确认手下空闲且 `git status` 为空 · `--delete-branch` 会删 worktree 忽略文件 · 合并后先开分支再动文件
 
 > ## ✅ 第二批收尾（2026-10-30）
