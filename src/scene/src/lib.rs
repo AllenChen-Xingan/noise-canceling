@@ -7,7 +7,7 @@
 //!  2 s 环形缓冲
 //!     │ 约每 0.5 s：SceneAnalyzer::judge           ← 判断回路（C 档线程），不碰声音、不加延迟
 //!     ▼
-//!  27 维特征 → 分类器后验（7 个噪音大类）→ 后验平滑（EMA）
+//!  35 维特征 → 分类器后验（7 个噪音大类）→ 后验平滑（EMA）
 //!           + 设备线索（窄带蓝牙 / 削波）
 //!     ▼
 //!  细场景 = 大类 × 设备（21 个 + 多人会议占位）→ SceneLabel
@@ -134,7 +134,10 @@ impl SceneAnalyzer {
         posterior(&self.feats, &mut raw);
         let dt = (self.clock - self.last_judge) as f32 / self.rate as f32;
         self.last_judge = self.clock;
-        let a = if !self.have || self.ema_s <= 0.0 {
+        let warm = self.fx.filled() >= 8; // 不足 8 帧时特征全 0，不拿它当后验平滑的初值
+        let a = if !warm {
+            0.0
+        } else if !self.have || self.ema_s <= 0.0 {
             1.0
         } else {
             1.0 - (-dt / self.ema_s).exp()
@@ -154,7 +157,7 @@ impl SceneAnalyzer {
         }
         self.bt += a * (bt_now - self.bt);
         self.clip += a * (clip_now - self.clip);
-        self.have = true;
+        self.have |= warm;
         // 取最大（手动选了用户层场景时只在其下属大类里取）
         let mut best = 0usize;
         let mut best_p = -1.0f32;
@@ -189,6 +192,9 @@ impl SceneAnalyzer {
         };
         if self.fx.filled() < MIN_FILL {
             conf = 0.0; // 缓冲不满 1 s 的判断不进滞回（置信度 0 = 不推进）
+        }
+        if self.manual == Some(UserScene::Meeting) {
+            conf = 1.0; // 会议下没有噪音大类可判：人手选的直接算确定（自审 P1：否则永远提交不了）
         }
         // 滞回只看噪音大类（设备另有施密特触发），否则设备估计一抖，候选就从头确认
         let (fine, user) = match self.manual {

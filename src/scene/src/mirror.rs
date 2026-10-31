@@ -139,7 +139,8 @@ impl Default for Hysteresis {
     }
 }
 
-/// 滞回状态机（镜像草案 `policy.rs` 的判定逻辑，行为须一致：低置信不推进也不清零候选；回到当前场景清掉候选）。
+/// 滞回状态机（镜像 vdn-types `policy.rs` 的判定逻辑，须一致：低置信打断并清掉候选；回到当前场景清掉候选）。
+/// ⚠️ 接入时注意：vdn-types 的 `SampleClock` / `rate` 是 **IO 采样率**（48 kHz），这里离线用 16 kHz，换算错了确认与停留时长都会偏 3 倍。
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct HysteresisGate {
     pub params: Hysteresis,
