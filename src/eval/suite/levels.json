@@ -1,0 +1,78 @@
+{
+ "doc": "verifier 定标级别正本（012 §5 第 ⑦ 步「级别变动写进 verifier 状态表」）。只由 `vdn-eval calib --write-levels` 改；改动随提交记录。rlenv 只读这张表。",
+ "updated": "2026-10-31",
+ "verifiers": {
+  "V-LAT": {
+   "level": "L3",
+   "basis": "物理量：判事实，012 §2.1 直接 L3"
+  },
+  "V-FRAME": {
+   "level": "L3",
+   "basis": "物理量：判事实，012 §2.1 直接 L3"
+  },
+  "V-NAN": {
+   "level": "L3",
+   "basis": "物理量：判事实，012 §2.1 直接 L3"
+  },
+  "V-MUTE": {
+   "level": "L3",
+   "basis": "物理量：判事实，012 §2.1 直接 L3"
+  },
+  "V-SWITCH": {
+   "level": "L3",
+   "basis": "物理量：判事实，012 §2.1 直接 L3"
+  },
+  "V-SIM-GATE": {
+   "level": "L3",
+   "basis": "模拟真值：只在模拟内 L3（012 §3.4 限定 1）；真实录音上按 L0 看"
+  },
+  "V-SIM-FA": {
+   "level": "L3",
+   "basis": "模拟真值：只在模拟内 L3（012 §3.4 限定 1）；真实录音上按 L0 看"
+  },
+  "V-SIM-SWLAT": {
+   "level": "L3",
+   "basis": "模拟真值：只在模拟内 L3（012 §3.4 限定 1）；真实录音上按 L0 看"
+  },
+  "V-BGSTAB": {
+   "level": "L0",
+   "basis": "感知量：定标前一律 L0（012 §2.1）"
+  },
+  "V-ONSET": {
+   "level": "L0",
+   "basis": "感知量：定标前一律 L0（012 §2.1）"
+  },
+  "V-NR": {
+   "level": "L0",
+   "basis": "感知量：定标前一律 L0（012 §2.1）"
+  },
+  "V-INTF": {
+   "level": "L0",
+   "basis": "感知量：定标前一律 L0（012 §2.1）"
+  },
+  "V-SPLVL": {
+   "level": "L0",
+   "basis": "感知量：定标前一律 L0（012 §2.1）"
+  },
+  "V-MUSIC": {
+   "level": "L0",
+   "basis": "感知量：定标前一律 L0（012 §2.1）"
+  },
+  "V-VACUUM": {
+   "level": "L0",
+   "basis": "感知量：定标前一律 L0（012 §2.1）"
+  },
+  "V-TIMBRE": {
+   "level": "L0",
+   "basis": "感知量：定标前一律 L0（012 §2.1）"
+  },
+  "V-EAT-ASR": {
+   "level": "L0",
+   "basis": "感知量：定标前一律 L0（012 §2.1）"
+  },
+  "V-DNSMOS": {
+   "level": "L0",
+   "basis": "感知量：定标前一律 L0（012 §2.1）"
+  }
+ }
+}
