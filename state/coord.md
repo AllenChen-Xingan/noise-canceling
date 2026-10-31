@@ -21,7 +21,7 @@
 | p2 | P2 认出你的声音（离线）· issue #18 · `feat/p2-speaker` | `_tmp/20261031-b4/p2.md` | 其 worktree | 已报到（noise-canceling-p2-63） |
 | scene | 场景识别与路由 + 修音链 + 模拟环境 · issue #19 · `feat/scene-polish` | `_tmp/20261031-b4/scene.md` | 其 worktree | 已报到（noise-canceling-scene-f7） |
 | ondevice | 010 设备端自适应 + 可靠性调研 · issue #20 · `research/010-ondevice-adaptation` | `_tmp/20261031-b4/ondevice.md` | 其 worktree | 已派（noise-canceling-ondevice-00） |
-| multitalker | 011 一大堆人同时说话（调研）· issue #21 · `research/011-multitalker` | `_tmp/20261031-b4/multitalker.md` | 其 worktree | 已派 |
+| multitalker | 011 一大堆人同时说话（调研）· issue #21 · `research/011-multitalker` | `_tmp/20261031-b4/multitalker.md` | 其 worktree | 已报到（noise-canceling-multitalker-fc） |
 
 ## 规矩
 
