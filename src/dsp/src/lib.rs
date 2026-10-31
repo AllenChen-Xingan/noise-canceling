@@ -5,6 +5,16 @@
 //!   由 `tests/` 里的 `assert_no_alloc` 测试证明
 //! - 这里不认识任何模型，也不认识 WAV 文件
 
+#![forbid(unsafe_code)]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::indexing_slicing
+    )
+)]
 pub mod delay;
 pub mod envelope;
 pub mod stft;

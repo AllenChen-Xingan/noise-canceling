@@ -2,6 +2,16 @@
 //!
 //! 不认识任何具体模型（那在 `vdn-models`），也不链接 ONNX Runtime：engine 的逻辑可以用假模型单独测。
 
+#![forbid(unsafe_code)]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::indexing_slicing
+    )
+)]
 pub mod engine;
 pub mod fault;
 pub mod model;

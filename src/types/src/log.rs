@@ -171,6 +171,7 @@ impl DecisionEvent {
             DecisionEvent::Bypass { reason, hops, .. } => {
                 write!(s, "bypass {} {}", bypass_str(reason), hops)
             }
+            DecisionEvent::Enroll { kind, .. } => write!(s, "enroll {}", enroll_str(kind)),
             DecisionEvent::TableChanged { version, id, .. } => {
                 write!(s, "table {} {}", version.0, id)
             }
