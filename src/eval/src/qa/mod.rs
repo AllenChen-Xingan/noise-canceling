@@ -1,0 +1,217 @@
+//! QA 层：要本机模型的 verifier（V-EAT-ASR · V-DNSMOS）。只在本机跑，CI 不跑。
+
+pub mod asr;
+pub mod dnsmos;
+
+use std::collections::BTreeMap;
+use std::path::PathBuf;
+
+use serde_json::{Value, json};
+
+use crate::rng::Rng;
+use crate::runner::Extra;
+use crate::suite::{Task, resolve};
+use crate::synth::{Clip, SR};
+use crate::verifiers::Params;
+use crate::{Better, Score, wav};
+
+/// 一个片段的吃字计数（集合层 bootstrap 用）。
+#[derive(Clone, Debug)]
+pub struct EatRow {
+    pub system: String,
+    pub task: String,
+    pub ref_len: usize,
+    pub mix_del: usize,
+    pub mix_sub: usize,
+    pub out_del: usize,
+    pub out_sub: usize,
+}
+
+pub struct QaExtra {
+    pub asr: Option<asr::Asr>,
+    pub dnsmos: Option<dnsmos::Dnsmos>,
+    pub dnsmos_err: Option<String>,
+    tmp: PathBuf,
+    pub eat: Vec<EatRow>,
+    /// 任务 → 参考分词与原声的 (删, 替, 插)，每个任务只转写一次
+    refs: BTreeMap<String, Result<(Vec<String>, (usize, usize, usize)), String>>,
+    mix_mos: BTreeMap<String, f64>,
+}
+
+fn fnv(x: &[f32]) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for v in x {
+        for b in v.to_le_bytes() {
+            h ^= b as u64;
+            h = h.wrapping_mul(0x0100_0000_01b3);
+        }
+    }
+    h
+}
+
+impl QaExtra {
+    pub fn new(tmp: PathBuf) -> QaExtra {
+        let asr = asr::Asr::alive().then(|| asr::Asr::new(tmp.join("asr_cache.json")));
+        let (dnsmos, dnsmos_err) = match resolve("resources/DNS-Challenge/DNSMOS/DNSMOS/sig_bak_ovr.onnx") {
+            Some(p) => match dnsmos::Dnsmos::open(&p) {
+                Ok(d) => (Some(d), None),
+                Err(e) => (None, Some(format!("DNSMOS 打不开：{e}"))),
+            },
+            None => (None, Some("找不到 resources/DNS-Challenge/DNSMOS/DNSMOS/sig_bak_ovr.onnx".into())),
+        };
+        QaExtra {
+            asr,
+            dnsmos,
+            dnsmos_err,
+            tmp,
+            eat: Vec::new(),
+            refs: BTreeMap::new(),
+            mix_mos: BTreeMap::new(),
+        }
+    }
+
+    fn dump(&self, name: &str, x: &[f32]) -> Result<(PathBuf, String), String> {
+        let p = self.tmp.join("asr-wav").join(format!("{name}-{:016x}.wav", fnv(x)));
+        if !p.exists() {
+            wav::write(&p, x, SR)?;
+        }
+        let sha = wav::sha256(&p)?;
+        Ok((p, sha))
+    }
+
+    fn transcribe(&mut self, name: &str, x: &[f32], lang: &str) -> Result<Vec<String>, String> {
+        let (p, sha) = self.dump(name, x)?;
+        let a = self.asr.as_mut().ok_or("ASR 服务不在（127.0.0.1:11520）")?;
+        let (text, stable) = a.transcribe(&p, &sha, lang)?;
+        if !stable {
+            return Err(format!("ASR 对 {name} 两次转写不一致（剔除，rubric V7）"));
+        }
+        Ok(asr::tokens(&text, lang))
+    }
+
+    fn eat(&mut self, sys: &str, task: &Task, clip: &Clip, out: &[f32], p: &Params) -> Score {
+        const ID: &str = "V-EAT-ASR";
+        const U: &str = "百分点";
+        if !self.refs.contains_key(&task.id) {
+            let r = (|| {
+                let rt = self.transcribe(&format!("{}-clean", task.id), &clip.clean, &task.lang)?;
+                if rt.is_empty() {
+                    return Err("参考转写为空".to_string());
+                }
+                let mt = self.transcribe(&format!("{}-mix", task.id), &clip.mix, &task.lang)?;
+                let ops = asr::edit_ops(&rt, &mt);
+                Ok((rt, ops))
+            })();
+            self.refs.insert(task.id.clone(), r);
+        }
+        let (rt, (md, ms, mi)) = match self.refs.get(&task.id) {
+            Some(Ok(v)) => v.clone(),
+            Some(Err(e)) => return Score::unknown(ID, U, Better::Lower, e.clone()),
+            None => return Score::unknown(ID, U, Better::Lower, "内部错误"),
+        };
+        let ot = match self.transcribe(&format!("{}-{sys}", task.id), out, &task.lang) {
+            Ok(t) => t,
+            Err(e) => return Score::unknown(ID, U, Better::Lower, e),
+        };
+        let (od, os, oi) = asr::edit_ops(&rt, &ot);
+        let l = rt.len() as f64;
+        let pp = |a: usize, b: usize| (a as f64 - b as f64) / l * 100.0;
+        self.eat.push(EatRow {
+            system: sys.to_string(),
+            task: task.id.clone(),
+            ref_len: rt.len(),
+            mix_del: md,
+            mix_sub: ms,
+            out_del: od,
+            out_sub: os,
+        });
+        Score::judged(ID, pp(od + os, md + ms), U, Better::Lower, Some(p.f_or("max", 1.0)), &[])
+            .with_extra("d_del_pp", pp(od, md))
+            .with_extra("d_sub_pp", pp(os, ms))
+            .with_extra("d_ins_pp", pp(oi, mi))
+            .with_extra("ref_len", l)
+            .with_note("单片段点估计；集合层区间见报告「吃字（集合层）」")
+    }
+
+    fn mos(&mut self, task: &Task, clip: &Clip, out: &[f32]) -> Score {
+        const ID: &str = "V-DNSMOS";
+        let Some(d) = self.dnsmos.as_mut() else {
+            return Score::unknown(ID, "MOS", Better::Higher, self.dnsmos_err.clone().unwrap_or_default());
+        };
+        if !self.mix_mos.contains_key(&task.id) {
+            match d.score(&clip.mix) {
+                Ok(m) => {
+                    self.mix_mos.insert(task.id.clone(), m.ovrl);
+                }
+                Err(e) => return Score::unknown(ID, "MOS", Better::Higher, format!("DNSMOS：{e}")),
+            }
+        }
+        let mix = self.mix_mos.get(&task.id).copied();
+        match d.score(out) {
+            Ok(m) => Score::judged(ID, m.ovrl, "MOS", Better::Higher, mix, &[])
+                .with_extra("sig", m.sig)
+                .with_extra("bak", m.bak)
+                .with_extra("ovrl_noisy", mix.unwrap_or(f64::NAN))
+                .with_note("过线 = 不比带噪输入的 OVRL 差（L0 约束）"),
+            Err(e) => Score::unknown(ID, "MOS", Better::Higher, format!("DNSMOS：{e}")),
+        }
+    }
+
+    /// 集合层吃字：按片段配对 bootstrap（rubric V7，10000 次，种子 20261030）。
+    pub fn eat_summary(&self) -> Value {
+        let mut by: BTreeMap<&str, Vec<&EatRow>> = BTreeMap::new();
+        for r in &self.eat {
+            by.entry(r.system.as_str()).or_default().push(r);
+        }
+        let mut out = Vec::new();
+        for (sys, rows) in by {
+            let stat = |idx: &[usize], del_only: bool| -> f64 {
+                let (mut c, mut m, mut l) = (0.0, 0.0, 0.0);
+                for &i in idx {
+                    let r = rows[i];
+                    c += (r.out_del + if del_only { 0 } else { r.out_sub }) as f64;
+                    m += (r.mix_del + if del_only { 0 } else { r.mix_sub }) as f64;
+                    l += r.ref_len as f64;
+                }
+                (c - m) / l.max(1.0) * 100.0
+            };
+            let all: Vec<usize> = (0..rows.len()).collect();
+            let mut rng = Rng::new(20_261_030);
+            let mut bs_del = Vec::with_capacity(10_000);
+            let mut bs_ds = Vec::with_capacity(10_000);
+            for _ in 0..10_000 {
+                let idx: Vec<usize> = (0..rows.len()).map(|_| rng.below(rows.len())).collect();
+                bs_del.push(stat(&idx, true));
+                bs_ds.push(stat(&idx, false));
+            }
+            let q = crate::analysis::quantile;
+            let n = rows.len();
+            let d_del = stat(&all, true);
+            let lo = q(&bs_del, 0.025);
+            let verdict = if n >= 30 {
+                if d_del > 1.0 && lo > 0.0 { "veto" } else { "pass" }
+            } else if d_del > 1.0 {
+                "v7_suspect（片段 < 30，不否决）"
+            } else {
+                "pass（片段 < 30，只是点估计）"
+            };
+            out.push(json!({
+                "system": sys, "clips": n,
+                "d_del_pp": d_del, "d_del_ci95": [lo, q(&bs_del, 0.975)],
+                "d_del_sub_pp": stat(&all, false), "d_del_sub_ci95": [q(&bs_ds, 0.025), q(&bs_ds, 0.975)],
+                "rubric_v7": verdict,
+            }));
+        }
+        json!(out)
+    }
+}
+
+impl Extra for QaExtra {
+    fn score(&mut self, v: &str, sys: &str, task: &Task, clip: &Clip, out: &[f32], p: &Params) -> Option<Score> {
+        match v {
+            "V-EAT-ASR" => Some(self.eat(sys, task, clip, out, p)),
+            "V-DNSMOS" => Some(self.mos(task, clip, out)),
+            _ => None,
+        }
+    }
+}
