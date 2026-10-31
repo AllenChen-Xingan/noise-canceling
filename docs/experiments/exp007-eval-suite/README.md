@@ -34,6 +34,8 @@ cargo run -p vdn-eval -- list                 # 列任务与 verifier
 
 报告：`_tmp/exp007/<run-id>-<层>/report.{json,md}`；加 `--record` 复制进本目录 `results/`（进仓）。
 
+任务清单格式见 `task-schema.md`。**人判任务从 `docs/experiments/human-prefs/` 接入**（prefs 线整理，定标答卷走 `vdn-eval calib --answers`）。
+
 ## 设计
 
 ### 三层（D46 / CLAUDE.md 第五节第 3 条）
