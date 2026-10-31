@@ -228,3 +228,29 @@
 6. **rtsan 在 macOS/aarch64 上的可用性**：只查了仓库活跃度，未验证能否构建。
 7. ~~**hound**（WAV 读写）未查许可证与维护状态。~~ 复核 3 已查：Apache-2.0；crates.io 上最后发布 3.5.1（2023-09-25）；GitHub 默认分支 2026-08-09 有提交，40 个 open issue【API】。按「近 12 个月有提交」算，达标。
 8. nih-plug 的 `editor()` 在 plugin.rs:165，只看了签名（编辑器在宿主线程创建、通过 `Arc<Params>` 读参数），没深读 GUI 包装。
+
+## 复核记录（怀疑派 3）
+
+复核日 2026-10-30。只读源码、GitHub API 和 crates.io API；没克隆新仓，没构建。
+
+**查了多少**：源码行号约 70 处，逐行打开看过（nih-plug 的 plugin、params、smoothing、buffer、wrapper/util、clap/wrapper、event_loop、derive、stft、crossover、debug；Firewheel 的 node、processor、handle_messages、process、declick、collector、graph、context、DESIGN_DOC；clack 的 plugin、instance、wrapper、latency；kira 的 command、resources、tween；dasp_graph 的 buffer、lib、Cargo.toml）。GitHub API 复查了 15 个仓，crates.io 复查了 19 个 crate，另外用 commits API 核了 6 个仓的默认分支最后一次提交。
+
+**改了哪些**：
+1. **Firewheel「实时线程全程不释放」说过头了**：`let _ = try_push(...)` 在回程队列满的时候，会在音频线程上 drop 掉 Box / Vec，也就是释放内存；`assert_eq!` 也可能 panic。已在「最值得学 1」里写明，并给出补救办法：队列满了就先留在本地槽位，下一块再送。
+2. **nih-plug 漏了一个系统调用反例**：`schedule_gui` 在非主线程会调 `CFRunLoopWakeUp`（发 mach 消息），延迟一变就会走到这一步，已补上。
+3. **kira 的风险写反了**：`remove_unused` 的循环条件里已经有 `!is_full()`，所以作者本来就是「满了留到下一块」，已更正。
+4. rtsan-standalone-rs：原写的「最近推送 2026-09-15」是 `pushed_at`；默认分支最后一次提交是 2025-09-27，命门 3 不达标，已改。
+5. basedrop 刚好超出 12 个月（366 天），no_denormals 0.3.0（2025-09-11）也超出了，已标注。
+6. hound 补查完成（Apache-2.0，2026-08 还有提交），存疑 7 已关闭。
+
+**查对了的（没改）**：nih-plug 的 `initialize / reset / process` 在 :204 / :216 / :239，clack 的 `activate / process / deactivate` 在 :198 / :225 / :249，Smoother 的原子字段和「最后一步落到目标值」，Declicker 四态、`DeclickValues`、3 ms 默认值，dasp_graph 的 DFS 和 `inputs.push`，`latency_frames` 在 firewheel-graph 里确实没有用到（grep 只命中流级别的 `input_to_output_latency_seconds`）。所有许可证与 API 一致；Meadowlark 迁往 Codeberg 已从 README 核实；nih-plug 最近 5 个 issue / PR 的评论数全是 0，核实了。
+
+**查不了的**：
+- symphonia / triple_buffer 有没有逐文件标「Incompatible With Secondary Licenses」（Exhibit B）：LICENSE 里只有模板原文，逐文件检查要克隆，维持【推断】兼容。
+- rtsan 在 macOS / aarch64 上能不能真正构建（要重活名额）。
+- Firewheel、clack、kira「最近 5 个 issue 里几个有回复」没有逐条复核。
+
+**对推荐的异议**：
+- 「热路径零分配验证」那一行，首选「自写守卫」、备选 rtsan，站得住；但备选 rtsan 本身不满足命门 3，只能当开发期工具，不能进发布依赖树。tooling 卡把它定成「直接依赖」，两张卡的口径不一致，需要 rustarch 线统一（见 tooling 卡的复核记录）。
+- 抄 Firewheel 和 kira 的「送回再 drop」时，要把「回程队列满」当成正常路径来设计，不能沿用 `let _ =` 的写法。这一点应该写进 engine 的硬约束。
+- 「离线评测读 WAV」：如果评测只用 WAV，hound 更小，而且许可证是 Apache-2.0，不涉及 MPL 文件级 copyleft。我倾向把 hound 定为首选、symphonia 作为备选（需要读 FLAC 或 MP3 时再用）。
