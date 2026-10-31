@@ -49,10 +49,18 @@ impl FastEnhancer {
             let (want_in, want_out) = if i == 0 {
                 ("wav_in".to_string(), "wav_out".to_string())
             } else {
-                (format!("cache_in_{}", i - 1), format!("cache_out_{}", i - 1))
+                (
+                    format!("cache_in_{}", i - 1),
+                    format!("cache_out_{}", i - 1),
+                )
             };
             if a.name() != want_in || b.name() != want_out {
-                return Err(format!("FastEnhancer 第 {i} 对输入输出名不符：{} / {}", a.name(), b.name()).into());
+                return Err(format!(
+                    "FastEnhancer 第 {i} 对输入输出名不符：{} / {}",
+                    a.name(),
+                    b.name()
+                )
+                .into());
             }
         }
         for (o, shape) in outs.iter().zip(&shapes) {

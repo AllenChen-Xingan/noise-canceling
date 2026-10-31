@@ -6,7 +6,12 @@ use vdn_models::ModelKind;
 
 fn run(kind: ModelKind, hop: usize, latency: usize) {
     let Some(path) = kind.default_path() else {
-        eprintln!("跳过 {kind:?}：找不到模型文件");
+        // 设了 VDN_REQUIRE_MODELS 就不许跳过（本机验收用）；CI 上没有权重，不设，打印一行跳过
+        assert!(
+            std::env::var_os("VDN_REQUIRE_MODELS").is_none(),
+            "VDN_REQUIRE_MODELS 已设，但找不到模型文件"
+        );
+        eprintln!("跳过：找不到模型文件（设 VDN_GTCRN_ONNX / VDN_FASTENHANCER_ONNX）");
         return;
     };
     let m = kind.open(&path).expect("打开模型");

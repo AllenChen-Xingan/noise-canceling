@@ -15,7 +15,12 @@ static A: AllocDisabler = AllocDisabler;
 #[test]
 fn gtcrn_engine_process_does_not_allocate_in_rust() {
     let Some(path) = ModelKind::Gtcrn.default_path() else {
-        eprintln!("跳过：找不到 GTCRN 模型文件（设 VDN_GTCRN_ONNX）");
+        // 设了 VDN_REQUIRE_MODELS 就不许跳过（本机验收用）；CI 上没有权重，不设，打印一行跳过
+        assert!(
+            std::env::var_os("VDN_REQUIRE_MODELS").is_none(),
+            "VDN_REQUIRE_MODELS 已设，但找不到模型文件"
+        );
+        eprintln!("跳过：找不到模型文件（设 VDN_GTCRN_ONNX / VDN_FASTENHANCER_ONNX）");
         return;
     };
     let m = ModelKind::Gtcrn.open(&path).expect("打开模型");
