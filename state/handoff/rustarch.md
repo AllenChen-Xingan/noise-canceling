@@ -13,3 +13,8 @@
 | 2026-10-30 | 大总管已清 p1 历史、主线 .gitignore 加 /target/、CLAUDE.md 五.2 记坑；规约质量闸门要列「构建产物先忽略」 |
 | 2026-10-30 | Workflow 完成；ort 探针证据入 appendix-probes/；写完规约 specs/rust/architecture.md、ADR 001–005、README/sources/assign/gap；按 rusteco 009 更正两处（p1 Rust 侧确为 0、延迟默认约 56 ms）。p1、rusteco 已关窗，对 p1 的更正请大总管转 |
 | 2026-10-30 | 写完 decision.md（7 条待人拍板）；派三视角自审（怀疑派 / 实现派 / 维护派，提示里禁止构建） |
+| 2026-10-30 | 三视角自审收回（怀疑派 23 条 / 实现派 14 条 / 维护派 14 条，P0 共 11 条）。已修：RTSan 豁免改按函数名 + 符号化（ORT 静态链接）；Engine（16 kHz）/ Pipeline（48 kHz）两层、送原声用 48 kHz；换模型照 p1 方向（双 Pipeline 淡化、L_total 取最大）；p1 已完成项不再列为待办；规约只留规则与指针，待办迁入 decision.md，数字归 appendix，依赖选型以 009 为准；依赖规则机读正本改为各 crate 的 [package.metadata.vdn]；clippy 只一份、实时 impl 块级 deny；禁用清单区分已测 / 待哨兵；加白话 §0 与词表 |
+| 2026-10-30 | **已收尾**。交付：specs/rust/architecture.md · docs/research/008_rust-architecture/（6 份 + adr/001–005 + notes/ + appendix-probes/ + p1-review.md）。待人拍板 7 条在 decision.md 末尾 |
+
+## 待人拍板（正本在 decision.md 末尾）
+1. 「音频线程不分配」改三档表述（建议 A）· 2. 目录名带不带 vdn- 前缀（建议保持现状）· 3. release panic=abort（建议 A）· 4. 两层进程两个程序（建议 A）· 5. HAL 驱动目录（M3 前不建）· 6. 延迟超 45 ms 先砍哪级（先调参）· 7. tract 对照实验（建议 ort 出问题再做）
