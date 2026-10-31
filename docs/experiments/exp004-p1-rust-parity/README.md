@@ -132,6 +132,7 @@ rustarch 的终版规约（`specs/rust/architecture.md`）出来后再对一遍�
   - `vdn-dsp` 与 `vdn-engine` 有 assert_no_alloc 测试，后者用假模型，故障路径也在内
   - GTCRN 真模型路径也有同样的测试，只覆盖 Rust 侧
   - FE-M 每帧 7 次 Rust 分配来自 ort 的栈上容量，已登记
+  - 这些不分配断言**只在 debug 下跑**：assert_no_alloc 的 `AllocDisabler` 只在 `debug_assertions` 下存在。`cargo test --release` 会跳过它们（dsp、models 的 `no_alloc.rs` 整个文件，engine `safety.rs` 里那一条），其余行为测试照跑
 - 选型依据 rusteco 的 `answers-p1.md`：
   - assert_no_alloc 常开在测试里
   - rtsan-standalone 在 libc 层拦截，连 ORT 的 C++ 分配也能抓，留作以后 CI 的一个可选任务，本批没接
