@@ -72,16 +72,6 @@ impl PolishParams {
         p
     }
 
-    /// 用户「降噪强度」旋钮（0..=1，1 = 表里的值）对修音链的作用：只缩放平滑强度，下限往更响（更少处理）方向走。
-    pub fn with_strength(mut self, strength: f32) -> Self {
-        let s = strength.clamp(0.0, 1.0);
-        self.smooth *= s;
-        if self.floor_db > -99.0 {
-            self.floor_db = self.floor_db * s + (-6.0) * (1.0 - s);
-        }
-        self
-    }
-
     /// 线性插值：`t` = 0 得 `a`，1 得 `b`。
     pub fn lerp(a: &Self, b: &Self, t: f32) -> Self {
         let t = t.clamp(0.0, 1.0);

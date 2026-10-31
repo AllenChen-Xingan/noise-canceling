@@ -2,8 +2,7 @@
 //!
 //! 照 align 的草案写（`../noise_canceling-align/src/types/src/{frame,scene,params,policy}.rs`，2026-10-31）：
 //! 只抄本 crate 用得到的字段与 `HysteresisGate` 的判定逻辑（要在模拟数据上标定它的三个数）。
-//! **定稿后整个文件删掉，改 `use vdn_types::…`**；与草案的差异只有一处，已报 align：
-//! - `UserScene` 多一个 `Meeting`（多人会议，大总管 2026-10-31 加的候选；分类器暂不自动判，只能手动选）
+//! **定稿后整个文件删掉，改 `use vdn_types::…`**；与草案的差异（已报 align）：
 //! - `HysteresisGate::step`：还没有任何场景（UNKNOWN）时第一次判出直接生效，不等确认（开机后尽快有参数）——建议草案也这样
 
 /// 流时间（样本数）。镜像里用模型采样率计（离线 16 kHz）；接入后按 vdn-types 改成 IO 采样率。
@@ -37,7 +36,7 @@ pub enum UserScene {
     Cafe,
     Commute,
     Music,
-    /// 多人会议（占位）：保留近处所有人声，只压远处噪音
+    /// 多人会议（占位，align 已加进草案）：保留近处所有人声，只压远处噪音；分类器暂不自动判，只能手动选
     Meeting,
 }
 
