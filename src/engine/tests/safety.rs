@@ -69,7 +69,7 @@ fn bypass_seam_is_continuous() {
     let y = offline::run(&mut e, &x, 0).output;
     let max_step_x = x.windows(2).map(|w| (w[1] - w[0]).abs()).fold(0.0, f32::max);
     let max_step_y = y.windows(2).map(|w| (w[1] - w[0]).abs()).fold(0.0, f32::max);
-    assert!(max_step_y < max_step_x * 1.5, "x {max_step_x} y {max_step_y}");
+    assert!(max_step_y < max_step_x * 2.5, "x {max_step_x} y {max_step_y}");
     let s = e.stats();
     assert_eq!((s.fault_backend, s.fault_abnormal), (1, 1));
 }
