@@ -118,12 +118,37 @@ def si_sdr(est, ref):
     return score.si_sdr(est, ref)
 
 
+HOLD_S = 0.1  # 与 SafetyConfig::default().recover_hold_s 一致
+
+
+def seams(name, y, safe, x, half=32):
+    """每个故障有两个接缝：切到原声（故障那一帧开头）、切回模型（hold 结束后 5 ms 交叉淡化开头）。
+    在接缝前后 half 个样本内量二阶差分的最大绝对值（咔声在二阶差分上最显眼），
+    和同一窗口里「无故障版」与「原声」两者中较大的那个比：比值 ≤ 1 说明接缝没有比两路信号本身更尖的跳变。"""
+    hop = 256 if name == "gtcrn" else 160
+    lat = 256 if name == "gtcrn" else 352
+    lead = MODELS[name][2]
+    hold = int(np.ceil(HOLD_S * SR / hop))
+    d2 = lambda a, w: float(np.max(np.abs(np.diff(a[w], 2))))
+    out = {}
+    for kind, h in FAULT_HOPS.items():
+        back = h + 1 + (0 if kind == "stall" else hold)  # 卡顿不复位，下一帧就切回
+        for side, hh in (("enter", h), ("exit", back)):
+            pos = hh * hop - lead - lat
+            w = slice(max(pos - half, 0), pos + half)
+            ref = max(d2(safe, w), d2(x, w))
+            out[f"{kind}_{side}"] = {"pos": pos, "fault_d2": d2(y, w), "ref_d2": ref, "ratio": d2(y, w) / ref}
+    return out
+
+
 def parity(rs, py):
     d = rs - py
     return {
         "max_abs": float(np.max(np.abs(d))),
         "rms_err": float(np.sqrt(np.mean(d ** 2))),
-        "snr_db": float(10 * np.log10(np.sum(py ** 2) / max(np.sum(d ** 2), 1e-30))),
+        # 逐样本相同时误差为 0、SNR 无穷大（JSON 里记 null，看 identical）
+        "snr_db": float(10 * np.log10(np.sum(py ** 2) / np.sum(d ** 2))) if np.any(d) else None,
+        "identical": bool(not np.any(d)),
     }
 
 
@@ -157,18 +182,7 @@ def step_compare():
                     m["max_step"] = float(np.max(np.abs(np.diff(y))))
                     m["max_step_safe"] = float(np.max(np.abs(np.diff(safe))))
                     m["max_step_noisy"] = float(np.max(np.abs(np.diff(x))))
-                    # 故障点附近（该 hop 前 1 个到后 3 个 hop）的最大相邻样本差：故障版 vs 无故障版，看切换有没有爆音
-                    hop = 256 if name == "gtcrn" else 160
-                    lat = 256 if name == "gtcrn" else 352
-                    lead = MODELS[name][2]
-                    loc = {}
-                    for kind, h in FAULT_HOPS.items():
-                        pos = h * hop - lead - lat
-                        w = slice(max(pos - hop, 0), pos + 3 * hop)
-                        loc[kind] = {"fault": float(np.max(np.abs(np.diff(y[w])))),
-                                     "safe": float(np.max(np.abs(np.diff(safe[w])))),
-                                     "noisy": float(np.max(np.abs(np.diff(x[w]))))}
-                    m["local_step"] = loc
+                    m["seams"] = seams(name, y, safe, x)
                 r[mode] = m
             if ns_sec >= 1.0:
                 r["py_nonspeech_atten_db"] = float(10 * np.log10(np.mean(py[:nm][ns] ** 2) / np.mean(x[:nm][ns] ** 2)))
@@ -180,8 +194,11 @@ def step_compare():
         s = {}
         par = [pc[c][name]["raw"]["parity_vs_py"] for c in pc]
         s["parity_max_abs_worst"] = max(p["max_abs"] for p in par)
-        s["parity_snr_db_min"] = min(p["snr_db"] for p in par)
-        s["parity_snr_db_median"] = float(np.median([p["snr_db"] for p in par]))
+        snrs = [p["snr_db"] for p in par if p["snr_db"] is not None]
+        s["parity_identical_clips"] = sum(p["identical"] for p in par)
+        s["parity_snr_db_min"] = min(snrs) if snrs else None
+        s["parity_snr_db_median"] = float(np.median(snrs)) if snrs else None
+        s["seam_ratio_max"] = max(v["ratio"] for c in FAULT_CLIPS for v in pc[c][name]["fault"]["seams"].values())
         for k in ("py",):
             s[f"{k}_si_sdr_mean"] = float(np.mean([pc[c][name]["py_si_sdr"] for c in pc]))
         for mode in ("raw", "safe", "floor"):
@@ -196,7 +213,7 @@ def step_compare():
         s["nonspeech_atten_db_min"] = {m: float(min(pc[c][name][m]["nonspeech_atten_db"] for c in ns_clips))
                                        for m in ("raw", "safe", "floor")}
         s["voiced_hop_fraction_safe"] = float(np.mean([pc[c][name]["safe"]["stats"]["voiced_hops"] / pc[c][name]["safe"]["stats"]["hops"] for c in pc]))
-        s["fault"] = {c: {k: pc[c][name]["fault"][k] for k in ("finite", "max_step", "max_step_safe", "max_step_noisy", "local_step", "si_sdr")}
+        s["fault"] = {c: {k: pc[c][name]["fault"][k] for k in ("finite", "max_step", "max_step_safe", "max_step_noisy", "seams", "si_sdr")}
                       | {"stats": pc[c][name]["fault"]["stats"], "safe_si_sdr": pc[c][name]["safe"]["si_sdr"]}
                       for c in FAULT_CLIPS}
         out["summary"][name] = s
@@ -240,18 +257,30 @@ def step_bench():
     assert sr == SR
     res = {"platform": platform.platform(), "machine": platform.machine(), "input": "resources/gtcrn/test_wavs/mix.wav",
            "warmup": 200, "steps": 6000, "rust": {}, "python": {}}
-    for name, (arg, path, _, _) in MODELS.items():
-        j = OUT / f"bench_rs_{name}.json"
-        subprocess.run([str(VDN), "bench", "--model", arg, "--model-path", str(path), "--input", str(wav),
-                        "--json", str(j)], check=True, capture_output=True)
-        res["rust"][name] = json.loads(j.read_text())
-    res["python"]["gtcrn"] = py_bench_gtcrn(x)
-    fe = bench_fastenhancer.run("m", x)
-    res["python"]["fastenhancer_m"] = {"model_ms": fe["step_ms"]}
+    # Rust 与 Python 交替跑 ROUNDS 轮（同一模型挨着跑），减少「先后跑、负载不同」的偏差；每轮各自热身 200、计 6000
+    ROUNDS = 3
+    for name in MODELS:
+        res["rust"][name], res["python"][name] = [], []
+    for r in range(ROUNDS):
+        for name, (arg, path, _, _) in MODELS.items():
+            j = OUT / f"bench_rs_{name}_r{r}.json"
+            subprocess.run([str(VDN), "bench", "--model", arg, "--model-path", str(path), "--input", str(wav),
+                            "--json", str(j)], check=True, capture_output=True)
+            res["rust"][name].append(json.loads(j.read_text()))
+            if name == "gtcrn":
+                res["python"][name].append(py_bench_gtcrn(x))
+            else:
+                res["python"][name].append({"model_ms": bench_fastenhancer.run("m", x)["step_ms"]})
+            print("round", r, name, flush=True)
+    res["rounds"] = ROUNDS
+    res["note"] = ("Rust model_ms = 适配器整次 process（GTCRN 含 Rust 的 STFT/iSTFT；FE-M 的 STFT 在图里）；"
+                   "Python model_ms = 只计 sess.run（GTCRN 不含 numpy STFT）。口径对 GTCRN 偏向 Python")
     RESULTS.mkdir(exist_ok=True)
     (RESULTS / "bench.json").write_text(json.dumps(res, ensure_ascii=False, indent=1, default=str))
     for name in MODELS:
-        print(name, "rust", res["rust"][name]["model_ms"], "python", res["python"][name]["model_ms"])
+        for k in ("p50", "p999", "max"):
+            print(name, k, "rust", [round(v["model_ms"][k], 3) for v in res["rust"][name]],
+                  "python", [round(v["model_ms"][k], 3) for v in res["python"][name]])
 
 
 if __name__ == "__main__":
