@@ -13,7 +13,7 @@
 | # | 结论 | 出处 | 标记 |
 |---|---|---|---|
 | 1 | MacBook Air 规格页原文：「Three-mic array with directional beamforming」，并写「Voice Isolation and Wide Spectrum microphone modes for enhanced voice clarity in audio and video calls」 | https://www.apple.com/macbook-air/specs/ | 【官方】 |
-| 2 | 本机（Mac17,3，MacBook Air，macOS 27）只读查询：`MacBook Air Microphone` 显示 **Input Channels: 1**，Current SampleRate 48000 | `system_profiler SPAudioDataType` 只读输出 | 【源码】可证（本机实查） |
+| 2 | 本机（Mac17,3，MacBook Air，macOS 27）只读查询：`MacBook Air Microphone` 显示 **Input Channels: 1**，Current SampleRate 48000 | `system_profiler SPAudioDataType` 只读输出（只显示当前格式） | 【本机】 |
 | 3 | macOS 上波束成形由 Apple 在**用户态软件**里做（自适应波束成形）。硬件裸阵列在 Linux 上能看到多路，需要自写 MVDR 才能用：「without beamforming, the array is far too sensitive and omnidirectional」 | triforce README（Asahi，GPL-2.0）https://github.com/chadmed/triforce ；Debian triforce-lv2 包说明 | 【官方】（对 Asahi 而言）／对 macOS 内部实现是【推断】 |
 | 4 | Apple 帮助页说，「Use ambient noise reduction」这个选项「does not appear if a 4-channel built-in microphone format is selected in Audio MIDI Setup … on a Mac with Apple silicon or on Mac models with an Apple T2 chip」。说明内置麦**至少在部分机型上有 4 声道格式可选**，但没说内容是否原始；原句断句也有歧义 | https://support.apple.com/en-gb/guide/mac-help/mchlp2567/14.0/mac/14.4.1 | 【官方】（内容不详） |
 | 5 | 有用户报告：新款 Mac 的内置麦呈现为 1 声道，旧款（2015）呈现为 2 声道 | https://forum.audacityteam.org/t/built-in-mic-on-old-mac-is-stereo-on-the-new-one-it-is-mono/117951 | 【传言】 |
@@ -31,7 +31,7 @@
 | 17 | WWDC23「What's new in voice processing」原话：「Choosing Apple's voice processing APIs also grants users full control over the mic mode settings **for your app**, including Standard, Voice Isolation, and Wide Spectrum.」 | https://developer.apple.com/videos/play/wwdc2023/10235/ （约 0:00–3:19） | 【官方】 |
 | 18 | Apple 帮助页：要「Go to an app that supports Mic Modes, such as FaceTime」，并说「options vary by app」 | https://support.apple.com/en-au/guide/mac-help/mchle82b42f0/mac | 【官方】 |
 | 19 | 麦克风面板是否出现，和 app 怎么开麦有关：Firefox 先建 VPIO 再换成 HAL 单元时，面板会消失 | https://connect.mozilla.org/t5/ideas/voice-isolation-on-macos/idc-p/71913 等 | 【传言】（工程师论坛帖） |
-| 20 | **我们现在的采集路径不会触发麦克风模式**：cpal 固定用 HalOutput 单元（「We explicitly pin HalOutput unit here」），没有 VPIO | `res/cpal/src/host/coreaudio/macos/device.rs:89-91` | 【源码】 |
+| 20 | **我们现在的采集路径不会触发麦克风模式**：cpal 固定用 HalOutput 单元（「We explicitly pin HalOutput unit here」），没有 VPIO | `res/cpal/src/host/coreaudio/macos/device.rs:67,82-84`（勘误：原写 89-91 是输出分支） | 【源码】 |
 | 21 | AVAudioEngine 的语音处理：必须输入、输出两个节点都开；只能在引擎渲染到真实设备时开，**manual rendering 模式不支持** | `AVAudioIONode.h:141-164` | 【官方】头文件 |
 | 22 | HAL 层自带 VAD（不必开 VPIO）：`kAudioDevicePropertyVoiceActivityDetectionEnable`('vAd+') / `…State`('vAdS')，作用在回声消除后的输入上，process mute 时也能检测。macOS 27 新增 `kAudioDevicePropertySuggestedReferenceDevice`('eord')，用来指定回声参考的输出设备 | `SDK/CoreAudio.framework/Headers/AudioHardware.h:995-1031`；WWDC23 10235 约 11:37 | 【官方】头文件 |
 | 23 | macOS 26/27 新 API 里**没有新的语音处理模式**：AVFAudio 新增的是 `AVAudioSessionCapability`（26）和实时安全的 manual rendering 输入块（27，`AVAudioIONode.h:50,218`）。AirPods「高质量录音」`AVAudioSessionCategoryOptionBluetoothHighQualityRecording` 和 `FarFieldInput` 标的是 **API_UNAVAILABLE(macos)**，只在 iOS 26 可用。`AVAudioSessionPortExtensionBluetoothMicrophone` 同样标 macOS 不可用 | `SDK/AVFAudio.framework/Headers/AVAudioSessionTypes.h:600-635`；`AVAudioSessionRoute.h:130-150` | 【官方】头文件 |
