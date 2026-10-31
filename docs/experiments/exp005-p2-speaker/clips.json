@@ -128,19 +128,19 @@
    "files": {
     "mix": {
      "file": "c01_mix.wav",
-     "sha256": "d9f7835e50182d8c5ac9e1fbd871000329af89776dd63646ef977e30e1cff8d0"
+     "sha256": "046ceadc400a4dbde61d72c517d042a089ff8825ff8d26d792effd1e9965874d"
     },
     "owner": {
      "file": "c01_owner.wav",
-     "sha256": "f62a6825173fe3d30fe2bb7c769ef77f55f80b3dacf2cf374beef1ebfd17874f"
+     "sha256": "4c9b04592e9a408c423e9fd339e51b70b3b792c698fcbd4ce8f2d0068c2d6d95"
     },
     "interf": {
      "file": "c01_interf.wav",
-     "sha256": "11594c973ca4af04c9802d51d5d35483e8c24015d2e7a86e7bca37e2ee389596"
+     "sha256": "0a6333b40f37ec3a6cf7576693b4e778f96e2c8a5bf8526d80d81163845ea7fc"
     },
     "noise": {
      "file": "c01_noise.wav",
-     "sha256": "b746844218000873584dff76d8280e4738b6fcce1e17fa9e09baff58b08e84b7"
+     "sha256": "956ac61ed3faa2e4de6233c4ab24fc4e642e92b25aae664d62dc1c9b9144ee25"
     }
    }
   },
@@ -242,19 +242,19 @@
    "files": {
     "mix": {
      "file": "c02_mix.wav",
-     "sha256": "ac78de4efff25b922db72f102bd4b03dd1e4ed4bf6341580c8c53ebf5b5aac9f"
+     "sha256": "8fdeaf624345682376fcf7042da2e31d5a4d703475e1f070a369a4a1d17a57b1"
     },
     "owner": {
      "file": "c02_owner.wav",
-     "sha256": "91827945963b0270b43ebd6a5b70ae6440cba87e29881acb7f8c4f97a716f9d9"
+     "sha256": "d2d52a750e0d26b0d21ff1bd8e95fa86deadc683402c71a7f5d6f8f09ccc061a"
     },
     "interf": {
      "file": "c02_interf.wav",
-     "sha256": "e945538d81e1ce0e32ddff08e38d1f059d161317e185e89ca6d5a7779565b782"
+     "sha256": "351cec19928bd0bacd27866a03390474212137e8ba81ce484d0a06f933f634e8"
     },
     "noise": {
      "file": "c02_noise.wav",
-     "sha256": "da849c0d202299d56ea2592bb0a6fe0f198e567fb697799df7bddf351494d131"
+     "sha256": "d25d6f8daed3566edb7dce12bcdb8696252904288cb22b247e0f9be00bb19de0"
     }
    }
   },
@@ -413,26 +413,26 @@
    "files": {
     "mix": {
      "file": "c03_mix.wav",
-     "sha256": "0acb3a63d9cba6d6e3d61f3454d30edc9ac4e120586ef94f931aaf89764c47e0"
+     "sha256": "c266909f2112cf55320f55af5a82a443ed66319f2d62de2032aefb9a99e83908"
     },
     "owner": {
      "file": "c03_owner.wav",
-     "sha256": "95f42359cd2c5b2ae166460cd2ea7e52c91ed9f28e827c42360f24b527da9dfe"
+     "sha256": "ab50d224546ed1cbe7620ed2c185476fb857ad7de20f704ae43a8ea9fa5d2c98"
     },
     "interf": {
      "file": "c03_interf.wav",
-     "sha256": "fa5c4e23952be6ea2e1138096c6f2119afd95ef53592a9d1028f493daa8d1ce8"
+     "sha256": "ca473f834168da41e8668b1c434dfd6da42dd6156d9747a5a4c5b3c48a193395"
     },
     "noise": {
      "file": "c03_noise.wav",
-     "sha256": "f7f606a4562c261b942a806b1cde1095066881f1b87600b85b2d144d1bc6964c"
+     "sha256": "7fa76eef959c6f0a06d0012f7302b8df5cdd72f8ab3a749c81fbc6fad349faf3"
     }
    }
   },
   {
    "id": "c04",
    "kind": "other_first",
-   "dur_s": 80,
+   "dur_s": 100,
    "params": {
     "sir": 6,
     "snr": 10,
@@ -461,6 +461,14 @@
      [
       68.657,
       75.987
+     ],
+     [
+      86.708,
+      90.308
+     ],
+     [
+      92.122,
+      96.932
      ]
     ],
     "interf": [
@@ -501,7 +509,12 @@
      ],
      [
       76.909,
-      80.0,
+      86.064,
+      "4992"
+     ],
+     [
+      90.648,
+      93.353,
       "4992"
      ]
     ]
@@ -522,31 +535,39 @@
     {
      "id": "7127-75947-0024",
      "text": "LOOK YONDER DO YOU NOT SEE THE MOON SLOWLY RISING SILVERING THE TOPMOST BRANCHES OF THE CHESTNUTS AND THE OAKS"
+    },
+    {
+     "id": "7127-75946-0010",
+     "text": "YOUR MAJESTY'S PLAN THEN IN THIS AFFAIR IS"
+    },
+    {
+     "id": "7127-75946-0003",
+     "text": "GENTLEMEN TO YOUR POSTS WHEREUPON SAINT AIGNAN AND VILLEROY TOOK THEIR LEAVE"
     }
    ],
    "files": {
     "mix": {
      "file": "c04_mix.wav",
-     "sha256": "40a5d66418c81a97154c54773fc871b508864aacfb046c01639d57f8874230d6"
+     "sha256": "68afb4cd36cfacb2ed8e8a287252557ad92985370e39fabc07a7594fe7f7b027"
     },
     "owner": {
      "file": "c04_owner.wav",
-     "sha256": "f3936feaeb612c34638ca661145eacfaea8c315320355c6011f95bb4833a5171"
+     "sha256": "c233cbe5bc916a58993205f00a906f45d26bcf72df24b1968c5eaadd45a38a3d"
     },
     "interf": {
      "file": "c04_interf.wav",
-     "sha256": "83433c29512abc5ef9c80e5103b034ec463708078d5667d34e480ea3cea559d2"
+     "sha256": "f76761c181e2128e68565b271b8051e43d6827ee6d46fd8b948a79ecdbcfa042"
     },
     "noise": {
      "file": "c04_noise.wav",
-     "sha256": "413642f383fdbf3dd67ea80803353d5e358ff26aaa91bc9a82bf94280323df83"
+     "sha256": "987efa275b58a88817f9f4921975307e9b3f1fe4224a04766b3b47056df19a4f"
     }
    }
   },
   {
    "id": "c05",
    "kind": "other_first",
-   "dur_s": 100,
+   "dur_s": 120,
    "params": {
     "sir": 6,
     "snr": 10,
@@ -556,118 +577,94 @@
    },
    "owner_speaker": "7127",
    "neighbors": [
-    "672"
+    "7729"
    ],
    "timeline": {
     "owner": [
      [
-      46.942,
-      50.542
+      48.385,
+      52.345
      ],
      [
-      60.588,
-      65.398
+      56.464,
+      65.604
      ],
      [
-      69.661,
-      73.621
+      72.667,
+      81.532
      ],
      [
-      76.913,
-      86.053
+      85.357,
+      91.997
      ],
      [
-      96.263,
-      100.0
+      101.2,
+      105.92
+     ],
+     [
+      115.201,
+      119.946
      ]
     ],
     "interf": [
      [
       0.5,
-      3.53,
-      "672"
+      9.43,
+      "7729"
      ],
      [
-      4.138,
-      7.398,
-      "672"
+      10.069,
+      16.884,
+      "7729"
      ],
      [
-      7.717,
-      12.792,
-      "672"
+      17.444,
+      20.894,
+      "7729"
      ],
      [
-      13.478,
-      18.703,
-      "672"
+      21.523,
+      29.228,
+      "7729"
      ],
      [
-      19.403,
-      22.753,
-      "672"
+      30.009,
+      38.549,
+      "7729"
      ],
      [
-      23.392,
-      26.442,
-      "672"
+      39.353,
+      47.653,
+      "7729"
      ],
      [
-      26.767,
-      31.842,
-      "672"
+      52.854,
+      55.564,
+      "7729"
      ],
      [
-      32.471,
-      35.371,
-      "672"
+      66.588,
+      71.883,
+      "7729"
      ],
      [
-      35.789,
-      39.569,
-      "672"
+      80.928,
+      85.003,
+      "7729"
      ],
      [
-      40.373,
-      43.723,
-      "672"
+      91.054,
+      100.279,
+      "7729"
      ],
      [
-      44.468,
-      46.488,
-      "672"
-     ],
-     [
-      51.284,
-      59.514,
-      "672"
-     ],
-     [
-      65.904,
-      69.229,
-      "672"
-     ],
-     [
-      72.756,
-      77.471,
-      "672"
-     ],
-     [
-      87.144,
-      95.349,
-      "672"
+      106.692,
+      114.612,
+      "7729"
      ]
     ]
    },
    "owner_utts": [
-    {
-     "id": "7127-75946-0010",
-     "text": "YOUR MAJESTY'S PLAN THEN IN THIS AFFAIR IS"
-    },
-    {
-     "id": "7127-75946-0003",
-     "text": "GENTLEMEN TO YOUR POSTS WHEREUPON SAINT AIGNAN AND VILLEROY TOOK THEIR LEAVE"
-    },
     {
      "id": "7127-75946-0025",
      "text": "THE BALLET BEGAN THE EFFECT WAS MORE THAN BEAUTIFUL"
@@ -679,24 +676,36 @@
     {
      "id": "7127-75947-0010",
      "text": "WHEN SHE PERCEIVED THE YOUNG MAN SHE ROSE LIKE A WOMAN SURPRISED IN THE MIDST OF IDEAS SHE WAS DESIROUS OF CONCEALING FROM HERSELF"
+    },
+    {
+     "id": "7127-75947-0001",
+     "text": "UPON THIS MADAME DEIGNED TO TURN HER EYES LANGUISHINGLY TOWARDS THE COMTE OBSERVING"
+    },
+    {
+     "id": "7127-75946-0009",
+     "text": "NOT AT ALL YOU ARE ON THE CONTRARY MOST AGREEABLE TO ME"
+    },
+    {
+     "id": "7127-75947-0032",
+     "text": "YES BUT PERHAPS I FRIGHTENED HER IN WHAT WAY"
     }
    ],
    "files": {
     "mix": {
      "file": "c05_mix.wav",
-     "sha256": "396763b8de5ac29606f4482b45c1c257d3248f590439fc99a992396debed7475"
+     "sha256": "87de70f4743fdd5bf67ddbb30d0e941ae3ddec818289a8c3bf9f389c3fd7d68a"
     },
     "owner": {
      "file": "c05_owner.wav",
-     "sha256": "5cd3e989f79637f6f5b5cb218ddd8bef51e6ce913998e3e7b30e6ab37893579b"
+     "sha256": "c24495a8bd6ec70fd42772132ed7b8f423fdc7cf5e69c3bf969ac55d20d2a277"
     },
     "interf": {
      "file": "c05_interf.wav",
-     "sha256": "1862f82ddaf71ad16b7be4c1dc3e1090104025d9e01fdc7ead45ddf1b7f786a0"
+     "sha256": "2f27a57a943258a3411c11e4dbc1c05cdb03da682b175fdca136968e5ae334f7"
     },
     "noise": {
      "file": "c05_noise.wav",
-     "sha256": "f56e138af30826c7b5db4e3f29ecca031f19cbf7645a4897ff155910b78a2c36"
+     "sha256": "191a2226dcf617b34cf2e7f8808b9ed624d59806e548004b81d2792993b7474f"
     }
    }
   },
@@ -713,68 +722,56 @@
     "owner": [
      [
       0.5,
-      7.14
+      4.375
      ],
      [
-      8.055,
-      12.774
+      6.137,
+      13.652
      ],
      [
-      13.44,
-      18.185
+      14.37,
+      17.54
      ],
      [
-      19.226,
-      23.101
+      18.652,
+      22.397
      ],
      [
-      24.048,
-      31.563
+      22.891,
+      32.761
      ],
      [
-      33.326,
-      36.495
+      33.423,
+      39.978
      ],
      [
-      37.213,
-      40.958
+      40.51,
+      48.6
      ],
      [
-      42.07,
-      51.94
+      49.329,
+      54.084
      ],
      [
-      52.434,
-      58.989
+      55.541,
+      60.631
      ],
      [
-      59.651,
-      67.741
+      62.318,
+      66.733
      ],
      [
-      68.273,
-      73.028
+      67.639,
+      74.159
      ],
      [
-      73.758,
-      78.847
+      75.825,
+      80.0
      ]
     ],
     "interf": []
    },
    "owner_utts": [
-    {
-     "id": "7127-75947-0001",
-     "text": "UPON THIS MADAME DEIGNED TO TURN HER EYES LANGUISHINGLY TOWARDS THE COMTE OBSERVING"
-    },
-    {
-     "id": "7127-75946-0009",
-     "text": "NOT AT ALL YOU ARE ON THE CONTRARY MOST AGREEABLE TO ME"
-    },
-    {
-     "id": "7127-75947-0032",
-     "text": "YES BUT PERHAPS I FRIGHTENED HER IN WHAT WAY"
-    },
     {
      "id": "7127-75947-0019",
      "text": "DID NOT THE DANCING AMUSE YOU NO"
@@ -810,24 +807,36 @@
     {
      "id": "7127-75946-0024",
      "text": "MONSIEUR WAS THE ONLY ONE WHO DID NOT UNDERSTAND ANYTHING ABOUT THE MATTER"
+    },
+    {
+     "id": "7127-75947-0035",
+     "text": "GOOD GRACIOUS HAS THE KING ANY RIGHT TO INTERFERE IN MATTERS OF THAT KIND"
+    },
+    {
+     "id": "7127-75946-0020",
+     "text": "FAR FROM IT SIRE YOUR MAJESTY HAVING GIVEN NO DIRECTIONS ABOUT IT THE MUSICIANS HAVE RETAINED IT"
+    },
+    {
+     "id": "7127-75946-0029",
+     "text": "THE KING WHO HAD FROM THIS MOMENT BECOME IN REALITY THE PRINCIPAL DANCER IN THE QUADRILLE CAST A LOOK UPON HIS VANQUISHED RIVAL"
     }
    ],
    "files": {
     "mix": {
      "file": "c06_mix.wav",
-     "sha256": "dc62042bcb3c1f323cf489d7ef760a83982c65018eea8ed446f3e60112fb8226"
+     "sha256": "9520f51ebca9c3876c2c29b6f1945ad8757da27a3b170269f9b3c28c81a07f70"
     },
     "owner": {
      "file": "c06_owner.wav",
-     "sha256": "0b4d203d74c2b50ae69b53d636b379e15545780970f353fe3ec31644087807ff"
+     "sha256": "6b407b03e619ade1f3e80ee346e10fd9b4a68bac65090f88acc53cfbd3628e60"
     },
     "interf": {
      "file": "c06_interf.wav",
-     "sha256": "c081647963ff55d6f5bda14044f1d5f6d8141192781da777bab3876e1cac39ed"
+     "sha256": "1f377a66653e8762be6b5bae74508195f68c479c04c24dd9ec1e2b4f72e2398a"
     },
     "noise": {
      "file": "c06_noise.wav",
-     "sha256": "8f102a62273626413e8fc21e3a325b276190161456ba402b47e06ab057e09afb"
+     "sha256": "b51aaec8c9117f4848434035ac653606095282ba18a7dd54fc4ba65cd57b363e"
     }
    }
   },
@@ -843,85 +852,78 @@
    },
    "owner_speaker": "7127",
    "neighbors": [
-    "5683"
+    "4446"
    ],
    "timeline": {
     "owner": [
      [
       0.5,
-      4.915
+      5.545
      ],
      [
-      12.65,
-      19.17
+      12.222,
+      16.217
      ],
      [
-      30.522,
-      39.807
+      19.467,
+      23.507
      ],
      [
-      45.631,
-      50.676
+      28.43,
+      37.255
      ],
      [
-      59.522,
-      63.517
+      41.839,
+      53.099
      ],
      [
-      68.596,
-      72.636
+      57.042,
+      60.397
      ],
      [
-      76.698,
-      80.0
+      65.369,
+      71.629
      ]
     ],
     "interf": [
      [
-      5.927,
-      11.547,
-      "5683"
+      6.546,
+      11.596,
+      "4446"
      ],
      [
-      19.764,
-      29.654,
-      "5683"
+      16.974,
+      20.674,
+      "4446"
      ],
      [
-      40.188,
-      44.773,
-      "5683"
+      24.492,
+      27.627,
+      "4446"
      ],
      [
-      51.448,
-      58.543,
-      "5683"
+      38.036,
+      42.791,
+      "4446"
      ],
      [
-      64.449,
-      67.749,
-      "5683"
+      54.051,
+      56.561,
+      "4446"
      ],
      [
-      73.395,
-      76.175,
-      "5683"
+      60.906,
+      64.496,
+      "4446"
+     ],
+     [
+      72.451,
+      77.946,
+      "4446"
      ]
     ]
    },
    "owner_utts": [
-    {
-     "id": "7127-75947-0035",
-     "text": "GOOD GRACIOUS HAS THE KING ANY RIGHT TO INTERFERE IN MATTERS OF THAT KIND"
-    },
-    {
-     "id": "7127-75946-0020",
-     "text": "FAR FROM IT SIRE YOUR MAJESTY HAVING GIVEN NO DIRECTIONS ABOUT IT THE MUSICIANS HAVE RETAINED IT"
-    },
-    {
-     "id": "7127-75946-0029",
-     "text": "THE KING WHO HAD FROM THIS MOMENT BECOME IN REALITY THE PRINCIPAL DANCER IN THE QUADRILLE CAST A LOOK UPON HIS VANQUISHED RIVAL"
-    },
     {
      "id": "7127-75947-0013",
      "text": "I REMEMBER NOW AND I CONGRATULATE MYSELF DO YOU LOVE ANY ONE"
@@ -937,24 +939,36 @@
     {
      "id": "7127-75947-0037",
      "text": "OH I AM SPEAKING SERIOUSLY REPLIED MONTALAIS AND MY OPINION IN THIS CASE IS QUITE AS GOOD AS THE KING'S I SUPPOSE IS IT NOT LOUISE"
+    },
+    {
+     "id": "7127-75947-0038",
+     "text": "LET US RUN THEN SAID ALL THREE AND GRACEFULLY LIFTING UP THE LONG SKIRTS OF THEIR SILK DRESSES THEY LIGHTLY RAN ACROSS THE OPEN SPACE BETWEEN THE LAKE AND THE THICKEST COVERT OF THE PARK"
+    },
+    {
+     "id": "7127-75946-0021",
+     "text": "YES SIRE AND READY DRESSED FOR THE BALLET"
+    },
+    {
+     "id": "7127-75947-0015",
+     "text": "THERE CANNOT BE A DOUBT HE RECEIVED YOU KINDLY FOR IN FACT YOU RETURNED WITHOUT HIS PERMISSION"
     }
    ],
    "files": {
     "mix": {
      "file": "c07_mix.wav",
-     "sha256": "88e07ac5ba58562fcd57d50adca57dfe91be7e9be810c608a6e3920d2e2ba193"
+     "sha256": "512b2040ae5bf1ea7fe70907082c9aee4aabfeaa82d2bfe5869ece235d232a3a"
     },
     "owner": {
      "file": "c07_owner.wav",
-     "sha256": "f6ad2592fc718e3b30bead06b6170ec8e511e686d16ec0d9c2c44db378cfb683"
+     "sha256": "c84df2343c576fb5124e7f6a782ea619f1ede958845e47ad7082d96baa2196fa"
     },
     "interf": {
      "file": "c07_interf.wav",
-     "sha256": "35045566a468eb7e77da5a8883eb7f811c62908cf6660a5bda1a9f0b1aad506d"
+     "sha256": "f85f91c748bf95fc0d8eb9192e95b2cc0497c0c5d019c5a53118ab1ac8f2ddcd"
     },
     "noise": {
      "file": "c07_noise.wav",
-     "sha256": "c081647963ff55d6f5bda14044f1d5f6d8141192781da777bab3876e1cac39ed"
+     "sha256": "a640b7d597c712581dadcfb93aa0ad1d49c73fb4f83ca55c60e5e5425813981f"
     }
    }
   },
@@ -969,122 +983,111 @@
    },
    "owner_speaker": "7127",
    "neighbors": [
-    "5639",
-    "5105",
+    "7021",
+    "8555",
     "8224",
-    "6930"
+    "61"
    ],
    "timeline": {
     "owner": [
      [
       0.5,
-      11.76
+      10.615
      ],
      [
-      14.933,
-      18.288
+      15.377,
+      20.837
      ],
      [
-      24.134,
-      30.394
+      26.258,
+      31.368
      ],
      [
-      33.051,
-      43.166
+      35.83,
+      39.14
      ],
      [
-      46.191,
-      51.651
+      42.23,
+      49.69
      ],
      [
-      53.934,
-      59.044
+      55.102,
+      66.042
      ],
      [
-      62.35,
-      65.66
-     ],
-     [
-      69.382,
-      76.842
+      69.988,
+      80.0
      ]
     ],
     "interf": [
      [
       0.3,
-      8.02,
-      "5639"
+      2.78,
+      "7021"
      ],
      [
-      8.535,
-      10.845,
-      "5105"
+      2.941,
+      11.981,
+      "8555"
      ],
      [
-      11.301,
-      18.111,
+      12.089,
+      21.904,
       "8224"
      ],
      [
-      18.646,
-      24.961,
-      "6930"
+      22.069,
+      24.219,
+      "61"
      ],
      [
-      25.239,
-      33.834,
-      "5639"
+      24.726,
+      28.306,
+      "7021"
      ],
      [
-      33.994,
-      40.009,
-      "5105"
+      28.797,
+      36.822,
+      "8555"
      ],
      [
-      40.118,
-      49.933,
+      37.322,
+      41.192,
       "8224"
      ],
      [
-      50.097,
-      54.462,
-      "6930"
+      41.684,
+      44.819,
+      "61"
      ],
      [
-      54.97,
-      61.834,
-      "5639"
+      45.195,
+      53.734,
+      "7021"
      ],
      [
-      62.326,
-      70.611,
-      "5105"
+      53.981,
+      60.811,
+      "8555"
      ],
      [
-      71.111,
-      74.981,
+      60.993,
+      66.433,
       "8224"
      ],
      [
-      75.472,
-      79.307,
-      "6930"
+      66.661,
+      71.261,
+      "61"
+     ],
+     [
+      71.524,
+      79.534,
+      "7021"
      ]
     ]
    },
    "owner_utts": [
-    {
-     "id": "7127-75947-0038",
-     "text": "LET US RUN THEN SAID ALL THREE AND GRACEFULLY LIFTING UP THE LONG SKIRTS OF THEIR SILK DRESSES THEY LIGHTLY RAN ACROSS THE OPEN SPACE BETWEEN THE LAKE AND THE THICKEST COVERT OF THE PARK"
-    },
-    {
-     "id": "7127-75946-0021",
-     "text": "YES SIRE AND READY DRESSED FOR THE BALLET"
-    },
-    {
-     "id": "7127-75947-0015",
-     "text": "THERE CANNOT BE A DOUBT HE RECEIVED YOU KINDLY FOR IN FACT YOU RETURNED WITHOUT HIS PERMISSION"
-    },
     {
      "id": "7127-75947-0014",
      "text": "FORGIVE ME I HARDLY KNOW WHAT I AM SAYING A THOUSAND TIMES FORGIVE ME MADAME WAS RIGHT QUITE RIGHT THIS BRUTAL EXILE HAS COMPLETELY TURNED MY BRAIN"
@@ -1104,24 +1107,32 @@
     {
      "id": "7127-75947-0028",
      "text": "QUICK QUICK THEN AMONG THE HIGH REED GRASS SAID MONTALAIS STOOP ATHENAIS YOU ARE SO TALL"
+    },
+    {
+     "id": "7127-75946-0022",
+     "text": "SIRE HE SAID YOUR MAJESTY'S MOST DEVOTED SERVANT APPROACHES TO PERFORM A SERVICE ON THIS OCCASION WITH SIMILAR ZEAL THAT HE HAS ALREADY SHOWN ON THE FIELD OF BATTLE"
+    },
+    {
+     "id": "7127-75947-0039",
+     "text": "IN FACT THE SOUND OF MADAME'S AND THE QUEEN'S CARRIAGES COULD BE HEARD IN THE DISTANCE UPON THE HARD DRY GROUND OF THE ROADS FOLLOWED BY THE MOUNTED CAVALIERS"
     }
    ],
    "files": {
     "mix": {
      "file": "c08_mix.wav",
-     "sha256": "cccf2d3ce33d52b974648a60b84309820f1754e42cf7e99f90384f5cd4e33e3f"
+     "sha256": "3eedc2aca3fccd6f1d52bda706406089654672cf45b68d4d1d7eb671e2c53001"
     },
     "owner": {
      "file": "c08_owner.wav",
-     "sha256": "c31f7bd7eb6cd1347bc5f917ba1614bcf588fa6726d9d8efad0674cd30b3e7b0"
+     "sha256": "7f1f98018705307e0e4725a22bff660b5bd7d8557ac244816f8ba2963e04aafb"
     },
     "interf": {
      "file": "c08_interf.wav",
-     "sha256": "a6552a6bddf19a48bfccdfed8e76c38fc9792d8785a1a8cf608ca113bb194628"
+     "sha256": "a45d8dd8ba004c97df8befe450e73cc396839a8db86d68654842c7fdec320b70"
     },
     "noise": {
      "file": "c08_noise.wav",
-     "sha256": "c880413b1659cf8476f6e15636d3f33b5b2f01a04f6e6577292c26b59bef4774"
+     "sha256": "4197c8a139e4a4f5c6bff8c5c5939156f18d87d1543f523b93aa32f9b4c20764"
     }
    }
   }
