@@ -129,7 +129,7 @@ def db(x):
     return float(10 * np.log10(x + 1e-20))
 
 
-def cmd_score():
+def cmd_score(tag=""):
     truth = json.loads((OUT / "truth_emb.json").read_text())
     asr_res = json.loads((HERE / "results/asr.json").read_text())["per_clip"] if (HERE / "results/asr.json").exists() else {}
     per = {}
@@ -137,8 +137,8 @@ def cmd_score():
         cid = c["id"]
         own = sf.read(str(SRC / f"{cid}_owner.wav"), dtype="float32")[0]
         itf = sf.read(str(SRC / f"{cid}_interf.wav"), dtype="float32")[0]
-        log = json.loads((OUT / f"{cid}.log.json").read_text())
-        ys = {v: sf.read(str(OUT / f"{cid}.{v}.wav"), dtype="float32")[0] for v in VERS}
+        log = json.loads((OUT / f"{cid}.log{tag}.json").read_text())
+        ys = {v: sf.read(str(OUT / f"{cid}.{v}{tag if v == 'personal' else ''}.wav"), dtype="float32")[0] for v in VERS}
         n = len(ys["raw"])
         own, itf = own[:n], itf[:n]
         om = vad_mask(own)[0][:n] if own.any() else np.zeros(n, bool)
@@ -162,21 +162,23 @@ def cmd_score():
             return {"is_owner": so > si, "cos_owner": so, "cos_interf": si}
         own_before = sum(max(0.0, min(e, lock_t) - s) for s, e in c["timeline"]["owner"]) if lock_t else None
         # 事件里的簇号会因挤掉而变，最终簇用 owner_cluster；锁定对错按最终与各事件时的簇中心无法复原，报最终
-        final = who(log["owner_cluster"])
-        wrong_locks = 0
-        if final is not None and final != "owner?" and not final["is_owner"]:
-            wrong_locks += 1
-        # 锁定后主人在说的窗被判 Other
-        false_other, other_ok = 0, 0
+        final = who(log["owner_cluster"])  # 只作参考：整段干净主人轨的声纹与降噪后窗口的声纹余弦普遍偏低（见 README）
+        # 判决对错（按时间表核对；只看锁定之后）：主人独白窗 / 邻座独白窗各被判成什么
+        vc = {"owner_win": {"owner": 0, "others": 0, "unknown": 0}, "interf_win": {"owner": 0, "others": 0, "unknown": 0}}
+        false_other = 0
         for l in log["judge_logs"]:
             a, b = int((l["t"] - 1.5) * SR), int(l["t"] * SR)
-            frac_own = om[max(0, a):b].mean() if b > a else 0
-            frac_itf = io[max(0, a):b].mean() if b > a else 0
-            if l["class"] == "others":
-                if frac_own > 0.3:
-                    false_other += 1
-                elif frac_itf > 0.3:
-                    other_ok += 1
+            fo, fi = om[max(0, a):b].mean(), im[max(0, a):b].mean()
+            if l["class"] == "others" and fo > 0.3:
+                false_other += 1
+            if lock_t is None or l["t"] < lock_t or l["class"] == "nospeech":
+                continue
+            if fo >= 0.6 and fi < 0.1:
+                vc["owner_win"][l["class"]] += 1
+            elif fi >= 0.6 and fo < 0.1:
+                vc["interf_win"][l["class"]] += 1
+        ow = vc["owner_win"]
+        lock_correct = None if lock_t is None else (ow["owner"] > ow["others"])
         # IRL
         lk = int(lock_t * SR) if lock_t else n
         irl, irl_post = {}, {}
@@ -232,9 +234,8 @@ def cmd_score():
         per[cid] = {
             "kind": c["kind"], "params": c["params"],
             "enroll": {"lock_t": lock_t, "owner_speech_before_lock_s": own_before, "events": events, "final_owner": final,
-                       "wrong_final_lock": wrong_locks, "n_relock": sum(1 for e in events if "relocked" in e)},
-            "verdicts": {"false_other_on_owner": false_other, "other_on_interf": other_ok,
-                         "n": len(log["judge_logs"])},
+                       "lock_correct": lock_correct, "n_relock": sum(1 for e in events if "relocked" in e)},
+            "verdicts": {"false_other_on_owner_any": false_other, "postlock": vc, "n": len(log["judge_logs"])},
             "irl_db": irl, "irl_db_postlock": irl_post, "open_ratio": open_ratio, "owner_suppression": owner_supp,
             "silence_level_db": sil_lvl, "asr": wer,
             "compute": {"judge_ms_p50": float(np.median(emb_comp)) if len(emb_comp) else None,
@@ -243,9 +244,10 @@ def cmd_score():
                         "vad_env_us_p50": float(np.median(st["stage_ns_vad_env"])), "vad_env_us_max": float(st["stage_ns_vad_env"].max()),
                         "gate_us_p50": float(np.median(st["stage_ns_gate"])), "gate_us_max": float(st["stage_ns_gate"].max())},
         }
-        print(cid, json.dumps({"lock": lock_t, "final": final, "irl_post": irl_post, "supp": owner_supp["hops_lt_m3db"]}, default=str)[:300])
+        print(cid, json.dumps({"lock": lock_t, "ok": lock_correct, "vc": vc, "irl_post_vad": irl_post.get("vad"), "irl_post_pers": irl_post.get("personal"),
+                               "supp": owner_supp["hops_lt_m3db"], "supp2s": owner_supp["hops_lt_m3db_first2s"]}, default=str))
     (HERE / "results").mkdir(exist_ok=True)
-    (HERE / "results/scores.json").write_text(json.dumps({"per_clip": per}, ensure_ascii=False, indent=1) + "\n")
+    (HERE / f"results/scores{tag}.json").write_text(json.dumps({"per_clip": per}, ensure_ascii=False, indent=1) + "\n")
 
 
 if __name__ == "__main__":
@@ -255,4 +257,4 @@ if __name__ == "__main__":
     elif cmd == "asr":
         cmd_asr()
     elif cmd == "score":
-        cmd_score()
+        cmd_score(sys.argv[2] if len(sys.argv) > 2 else "")
