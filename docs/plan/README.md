@@ -12,4 +12,6 @@
 | — | 2026-10-30 | 个性化降噪（PSE）：站在哪个模型肩膀上、声纹怎么零设置注册、效果怎么量 → 取舍卡见 `docs/research/005_pse/decision.md` |
 | 002 | 2026-10-30 | 项目路线图（阶段 A–C · M0–M4 · 发布，统一编号） → `002_roadmap.md` |
 | — | 2026-10-30 | 实时语音降噪与声音自然的前沿全景：哪些能被我们用上 → 取舍卡见 `docs/research/006_sota-landscape/decision.md` |
+| — | 2026-10-30 | Rust 生态：每个模块的推荐依赖与可学设计 → 取舍卡见 `docs/research/009_rust-ecosystem/decision.md` |
+| — | 2026-10-30 | Rust 架构（规约 `specs/rust/architecture.md` + ADR 001–005） → 取舍卡见 `docs/research/008_rust-architecture/decision.md` |
 | 003 | 2026-10-30 | 技术方案：原型怎么搭 · 怎么认出你的声音（AI 方案待人过目） → `003_tech-design.md` |
