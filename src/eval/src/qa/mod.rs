@@ -32,7 +32,9 @@ type RefEntry = Result<(Vec<String>, (usize, usize, usize)), String>;
 
 pub struct QaExtra {
     pub asr: Option<asr::Asr>,
-    pub dnsmos: Option<dnsmos::Dnsmos>,
+    /// DNSMOS 模型路径。ort 一个进程只许一个 Environment（ort rc.15 environment.rs:515），
+    /// 而 vdn-models 已建了一个，所以 DNSMOS 在子进程 `vdn-eval dnsmos` 里跑
+    pub dnsmos: Option<PathBuf>,
     pub dnsmos_err: Option<String>,
     tmp: PathBuf,
     pub eat: Vec<EatRow>,
@@ -57,10 +59,7 @@ impl QaExtra {
         let asr = asr::Asr::alive().then(|| asr::Asr::new(tmp.join("asr_cache.json")));
         let (dnsmos, dnsmos_err) =
             match resolve("resources/DNS-Challenge/DNSMOS/DNSMOS/sig_bak_ovr.onnx") {
-                Some(p) => match dnsmos::Dnsmos::open(&p) {
-                    Ok(d) => (Some(d), None),
-                    Err(e) => (None, Some(format!("DNSMOS 打不开：{e}"))),
-                },
+                Some(p) => (Some(p), None),
                 None => (
                     None,
                     Some("找不到 resources/DNS-Challenge/DNSMOS/DNSMOS/sig_bak_ovr.onnx".into()),
@@ -152,16 +151,16 @@ impl QaExtra {
 
     fn mos(&mut self, task: &Task, clip: &Clip, out: &[f32]) -> Score {
         const ID: &str = "V-DNSMOS";
-        let Some(d) = self.dnsmos.as_mut() else {
+        if self.dnsmos.is_none() {
             return Score::unknown(
                 ID,
                 "MOS",
                 Better::Higher,
                 self.dnsmos_err.clone().unwrap_or_default(),
             );
-        };
+        }
         if !self.mix_mos.contains_key(&task.id) {
-            match d.score(&clip.mix) {
+            match self.dnsmos_sub(&format!("{}-mix", task.id), &clip.mix) {
                 Ok(m) => {
                     self.mix_mos.insert(task.id.clone(), m.ovrl);
                 }
@@ -169,7 +168,7 @@ impl QaExtra {
             }
         }
         let mix = self.mix_mos.get(&task.id).copied();
-        match d.score(out) {
+        match self.dnsmos_sub(&format!("{}-out", task.id), out) {
             Ok(m) => Score::judged(ID, m.ovrl, "MOS", Better::Higher, mix, &[])
                 .with_extra("sig", m.sig)
                 .with_extra("bak", m.bak)
@@ -177,6 +176,31 @@ impl QaExtra {
                 .with_note("过线 = 不比带噪输入的 OVRL 差（L0 约束）"),
             Err(e) => Score::unknown(ID, "MOS", Better::Higher, format!("DNSMOS：{e}")),
         }
+    }
+
+    /// 在子进程里跑 DNSMOS（`vdn-eval dnsmos <模型> <wav>`，输出一行 JSON）。
+    fn dnsmos_sub(&self, name: &str, x: &[f32]) -> Result<dnsmos::Mos, String> {
+        let model = self.dnsmos.as_ref().ok_or("没有 DNSMOS 模型")?;
+        let (wav_path, _) = self.dump(name, x)?;
+        let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+        let o = std::process::Command::new(exe)
+            .arg("dnsmos")
+            .arg(model)
+            .arg(&wav_path)
+            .output()
+            .map_err(|e| format!("起不来 DNSMOS 子进程：{e}"))?;
+        if !o.status.success() {
+            return Err(String::from_utf8_lossy(&o.stderr).trim().to_string());
+        }
+        let v: Value =
+            serde_json::from_slice(&o.stdout).map_err(|e| format!("DNSMOS 子进程输出：{e}"))?;
+        let f = |k: &str| v[k].as_f64().ok_or_else(|| format!("DNSMOS 缺 {k}"));
+        Ok(dnsmos::Mos {
+            sig: f("sig")?,
+            bak: f("bak")?,
+            ovrl: f("ovrl")?,
+            windows: v["windows"].as_u64().unwrap_or(0) as usize,
+        })
     }
 
     /// 集合层吃字：按片段配对 bootstrap（rubric V7，10000 次，种子 20261030）。

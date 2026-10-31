@@ -70,7 +70,7 @@ fn task_json(t: &TaskResult) -> Value {
                 "trial": tr.trial,
                 "seed": tr.seed,
                 "pass": tr.pass,
-                "samples": tr.samples.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
+                "samples": tr.samples.iter().map(|p| rel(p)).collect::<Vec<_>>(),
                 "graders": graders,
             })
         })
@@ -83,6 +83,8 @@ fn task_json(t: &TaskResult) -> Value {
         "origin": t.origin,
         "desc": t.desc,
         "skipped": t.skipped,
+        "xfail": t.xfail,
+        "xfail_now_passes": t.xfail_now_passes(),
         "k": t.k(),
         "passes": t.passes(),
         "pass_at_k": t.pass_at_k(),
@@ -157,6 +159,17 @@ pub fn to_json(r: &SuiteResult, meta: &Meta, levels: &BTreeMap<String, (Level, S
     })
 }
 
+/// 仓库内路径写成相对路径（报告进仓，不留本机绝对路径——铁律 12）。
+fn rel(p: &std::path::Path) -> String {
+    let root = crate::suite::repo_root();
+    p.strip_prefix(&root)
+        .map(|r| r.display().to_string())
+        .unwrap_or_else(|_| {
+            p.file_name()
+                .map_or_else(String::new, |f| format!("<仓外>/{}", f.to_string_lossy()))
+        })
+}
+
 fn yn(b: Option<bool>) -> &'static str {
     match b {
         Some(true) => "✓",
@@ -191,6 +204,35 @@ pub fn to_markdown(
     let _ = writeln!(s, "被测系统：{}", sys.join("、"));
     for (k, w) in &r.skipped_systems {
         let _ = writeln!(s, "- 跳过 `{}`：{w}", k.as_str());
+    }
+    if r.skipped_systems.iter().any(|(k, _)| {
+        matches!(
+            k,
+            crate::system::SystemKind::Gtcrn | crate::system::SystemKind::FastEnhancerM
+        )
+    }) {
+        let _ = writeln!(
+            s,
+            "\n**注意：本次没测产品模型**（权重不在本机），门禁只覆盖 Engine + 参考降噪器。"
+        );
+    }
+    let xf: Vec<&TaskResult> = r.tasks.iter().filter(|t| t.xfail.is_some()).collect();
+    if !xf.is_empty() {
+        let _ = writeln!(s, "\n已知失败（xfail，阻断降为报警，留给修复线）：");
+        for t in xf {
+            let _ = writeln!(
+                s,
+                "- {} [{}]：{}{}",
+                t.id,
+                t.system.as_str(),
+                t.xfail.as_deref().unwrap_or(""),
+                if t.xfail_now_passes() {
+                    " —— **本次全过，可以转正**"
+                } else {
+                    ""
+                }
+            );
+        }
     }
     let _ = writeln!(
         s,
@@ -366,7 +408,7 @@ pub fn to_markdown(
                 yn(tr.pass),
                 tr.samples
                     .iter()
-                    .map(|p| format!("`{}`", p.display()))
+                    .map(|p| format!("`{}`", rel(p)))
                     .collect::<Vec<_>>()
                     .join(" · ")
             );

@@ -55,7 +55,7 @@
 | 适配·平台 | `vdn-rt-thread` | — | 实时优先级、Audio Workgroup、启动自检 |
 | 适配·平台 | `vdn-io-macos` | A | 采集与输出、设备监听、进程级原声旁路、`Slip` 漂移补偿 |
 | 边界 | `vdn-control` | C | 配置、控制消息；serde 只在这里和 bin 里 |
-| 边界·离线 | `vdn-eval` | C | 读 WAV 逐帧喂 `Pipeline`；指标、报告 |
+| 边界·离线 | `vdn-eval` | C | 读 WAV / 合成场景逐 hop 喂 `Engine`（`Pipeline` 落地后改喂它，§7.1）；verifier、任务集、定标、报告 |
 | 应用 | `vdn` · `vdn-capture` · `vdn-denoised` | — | bin |
 
 HAL 虚拟麦克风驱动：003 定为 C 插件，不进 workspace；009 建议改用 Rust cdylib。两者谁对由 003 / 009 的拍板定；若改用 Rust，它进 workspace 成为 A 档 crate `vdn-hal`，只依赖 `vdn-shm`。驱动目录 ⟨拍板 5⟩。

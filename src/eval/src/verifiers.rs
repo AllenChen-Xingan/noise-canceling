@@ -1058,8 +1058,15 @@ fn v_sim_quiet(c: &Ctx, p: &Params) -> Score {
         return Score::unknown(ID, "比例", Better::Lower, "没人说话的 hop 不足 20 个");
     }
     let open = quiet.iter().filter(|&&h| t.gate[h]).count() as f64 / quiet.len() as f64;
-    Score::judged(ID, open, "比例", Better::Lower, Some(p.f_or("max", 0.1)), &[])
-        .with_extra("quiet_hops", quiet.len() as f64)
+    Score::judged(
+        ID,
+        open,
+        "比例",
+        Better::Lower,
+        Some(p.f_or("max", 0.1)),
+        &[],
+    )
+    .with_extra("quiet_hops", quiet.len() as f64)
 }
 
 fn v_sim_swlat(c: &Ctx, p: &Params) -> Score {

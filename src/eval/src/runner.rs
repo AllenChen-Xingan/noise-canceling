@@ -538,7 +538,9 @@ pub fn run_task(
                 && !opts.baseline.is_empty()
                 && score.value.is_some()
             {
-                gate = Gate::Warn("没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）".into());
+                gate = Gate::Warn(
+                    "没有冻结基线项（任务改名 / 新 verifier？重写基线并在 PR 里说明）".into(),
+                );
             }
             // 已知失败：阻断降为报警，留给修复线
             if let (Some(x), Gate::Block(w)) = (&task.xfail, &gate) {

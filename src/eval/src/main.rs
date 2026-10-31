@@ -103,7 +103,11 @@ fn write_baseline(r: &SuiteResult, m: &Meta) -> Result<usize, String> {
         }
         for tr in &t.trials {
             for g in &tr.graders {
-                if g.info_only || info(&g.v).is_none_or(|i| i.kind != Kind::Perceptual) {
+                // V-VACUUM 与 V-NR 是同一个数、方向相反：进基线会把「多压噪声」判成变差，只按 −40 dB 线报警
+                if g.info_only
+                    || g.v == "V-VACUUM"
+                    || info(&g.v).is_none_or(|i| i.kind != Kind::Perceptual)
+                {
                     continue;
                 }
                 if let Some(v) = g.score.value {
@@ -319,6 +323,24 @@ fn cmd_calib(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// 子进程入口：`vdn-eval dnsmos <模型.onnx> <音频.wav>` → 一行 JSON。
+fn cmd_dnsmos(args: &[String]) -> Result<bool, String> {
+    let (Some(model), Some(wav)) = (args.get(1), args.get(2)) else {
+        return Err("用法：vdn-eval dnsmos <模型.onnx> <音频.wav>".into());
+    };
+    let (x, sr) = vdn_eval::wav::read(Path::new(wav))?;
+    if sr != 16_000 {
+        return Err(format!("只支持 16 kHz，实际 {sr}"));
+    }
+    let mut d = vdn_eval::qa::dnsmos::Dnsmos::open(Path::new(model)).map_err(|e| e.to_string())?;
+    let m = d.score(&x).map_err(|e| e.to_string())?;
+    println!(
+        "{}",
+        json!({"sig": m.sig, "bak": m.bak, "ovrl": m.ovrl, "windows": m.windows})
+    );
+    Ok(true)
+}
+
 fn cmd_list() {
     for (name, text) in [("ci", CI_SUITE), ("qa", QA_SUITE)] {
         match parse_suite(text) {
@@ -356,6 +378,7 @@ fn main() -> ExitCode {
         "ci" => cmd_eval(&args, "ci"),
         "qa" => cmd_eval(&args, "qa"),
         "calib" => cmd_calib(&args).map(|()| true),
+        "dnsmos" => cmd_dnsmos(&args),
         "list" => {
             cmd_list();
             Ok(true)

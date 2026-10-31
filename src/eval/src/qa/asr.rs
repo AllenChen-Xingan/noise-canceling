@@ -11,8 +11,8 @@ use std::process::Command;
 use serde_json::Value;
 
 pub const URL: &str = "http://127.0.0.1:11520/v1/audio/transcriptions";
-/// 本机服务的固定占位 key，不是密钥（同 exp003 score.py）
-const KEY: &str = "42model";
+/// 本机服务的固定占位 key，不是密钥（同 exp003 score.py）；可用环境变量 VDN_ASR_KEY 覆盖
+const DEFAULT_KEY: &str = "42model";
 pub const MODEL: &str = "qwen3-asr-plus:1.7b";
 pub const REPEATS: usize = 2;
 
@@ -62,8 +62,11 @@ impl Asr {
         }
         let file_arg = format!("file=@{};type=audio/wav", path.display());
         let o = Command::new("curl")
-            .args(["-s", "-m", "600", "-X", "POST", URL, "-H"])
-            .arg(format!("Authorization: Bearer {KEY}"))
+            .args(["-sS", "-f", "-m", "600", "-X", "POST", URL, "-H"])
+            .arg(format!(
+                "Authorization: Bearer {}",
+                std::env::var("VDN_ASR_KEY").unwrap_or_else(|_| DEFAULT_KEY.into())
+            ))
             .args([
                 "-F",
                 &format!("model={MODEL}"),
@@ -82,7 +85,11 @@ impl Asr {
             .map_err(|e| format!("调不起 curl：{e}"))?;
         self.calls += 1;
         if !o.status.success() {
-            return Err(format!("ASR 请求失败（curl 退出码 {:?}）", o.status.code()));
+            return Err(format!(
+                "ASR 请求失败（curl 退出码 {:?}）：{}",
+                o.status.code(),
+                String::from_utf8_lossy(&o.stderr).trim()
+            ));
         }
         let v: Value =
             serde_json::from_slice(&o.stdout).map_err(|e| format!("ASR 返回不是 JSON：{e}"))?;
