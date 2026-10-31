@@ -12,7 +12,7 @@ Rust 生态：每个模块用哪个依赖、学谁的设计
 |---|---|---|---|
 | 1 | [must-know.md](must-know.md) | **决策点**——不可妥协的几条 | ☑ |
 | 2 | [sources.md](sources.md) | 两类来源：自有积累 / 他人积累 | ☑ |
-| 3 | [assign.md](assign.md) | **派活模板**——怎么把材料交出去读 | ☐ |
+| 3 | [assign.md](assign.md) | **派活模板**——怎么把材料交出去读 | ☑ |
 | 4 | [gap.md](gap.md) | **差距表**——我该先做哪一件 | ☑ |
 | 5 | [decision.md](decision.md) | **取舍卡**——选什么、舍什么、哪里要你拍板 | ☑ |
 
