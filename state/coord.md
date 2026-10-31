@@ -16,7 +16,7 @@
 | evaltool | 004 评测工具链 | `_tmp/20261029-b1/evaltool.md` | `state/handoff/evaltool.md` | 完成，已收尾（窗口已关）；剩 11 题待人拍板 |
 | p1 | P1 离线原型（Rust · GTCRN · 三件保命）· issue #10 · 分支 `feat/p1-offline-gtcrn`（worktree `../noise_canceling-p1`） | `_tmp/20261030-b3/p1.md` | 其 worktree `state/handoff/p1.md` | 完成，PR #13 已合并（issue #10 关），窗口已关；3 题待人拍板 |
 | rustarch | 008 Rust 架构（含 AST 模块化）· issue #11 · 分支 `research/008-rust-architecture` | `_tmp/20261030-b3/rustarch.md` | 其 worktree | 已报到（noise-canceling-rustarch-27） |
-| rusteco | 009 GitHub 上可学的 Rust 项目 · issue #12 · 分支 `research/009-rust-ecosystem` | `_tmp/20261030-b3/rusteco.md` | 其 worktree | 已派（noise-canceling-rusteco-3b） |
+| rusteco | 009 GitHub 上可学的 Rust 项目 · issue #12 · 分支 `research/009-rust-ecosystem` | `_tmp/20261030-b3/rusteco.md` | 其 worktree | 完成，PR #14 已合并（issue #12 关），窗口已关；4 题待人拍板 |
 
 ## 规矩
 
@@ -38,6 +38,9 @@
 ## 进度板
 
 进度（HH:MM）
+- 009 rusteco：进程内依赖 ort · realfft · rubato · rtrb · triple_buffer · biquad · earshot · hound；最值得学 voice-strip（Rust HAL 虚拟麦 + 共享内存环）；⚠️ 默认参数延迟账约 56 ms 超 D32，重采样与 IO 缓冲必须调参
+- 008 rustarch 实测（RTSan）：ort 跑 GTCRN 稳态每帧约 1550 次 malloc、约 380 对 mutex——推理不能进 IO 回调线程，架构分档（IO 硬实时 / 推理软实时 + 截止时间送原声）；p1 的「0 次分配」只计 Rust 侧，exp004 README 需补注
+- ⚠️ rustarch 的 Workflow 子代理未申请名额就构建运行了小探针（scratchpad，未动仓库），已主动交代；规则：起 Workflow 时提示里写死「不许构建，实测先申请」
 - P1（p1 报，待抽查）：Rust 对 Python 对拍 GTCRN 最大误差 4.5e-7（SNR ≥124 dB）、FastEnhancer-M 逐样本相同；单线程每帧 p99.9/max GTCRN 1.20/1.32 ms · FE-M 1.02/1.20 ms（与 Python 持平）；GTCRN 推理每帧 0 次分配，⚠️ FE-M 7 次（ort 内部）；故障注入 4 类全接住；~~快开慢关 96–99% 帧判有声~~ 自审 P0（底噪钉 −120 dB）已修，但有声帧仍 96.0% / 94.6%——主因是只靠能量 + 逐帧最小值分不开停顿与说话（模型残噪逐帧起伏 10–25 dB）；建议 P1 默认关掉快开慢关，等 P2 用真 VAD / 声纹；交替 3 轮计时 GTCRN max 0.89–0.93 ms · FE-M 0.78–0.93 ms；接缝 48 点无咔声
 - 第三批 20261030-b3（人原话见 `_tmp/20261030-b3/common.md`）：p1 · rustarch · rusteco 已起；大总管分支 `chore/coord-20261030-b3`（含技术方案 003）
 - 第二批 20261030-b2 **全部收尾**：PR #5 #6 #7 #8 已合并；人定 D32 延迟 ≤ 45 ms · D33 主模型 GTCRN、FastEnhancer-M 备选 · D34 个性化前移
@@ -72,6 +75,7 @@
 - [x] 远程仓库 —— 2026-10-30 建私有仓库 AllenChen-Xingan/noise-canceling
 - [ ] 放权边界 —— 来源 board
 - [ ] P1 待人拍板 3 题（快开慢关默认关掉 · GTCRN 权重复制到 ~/vdn-data · CI 建议）—— `docs/experiments/exp004-p1-rust-parity/README.md`
+- [ ] 009 待人拍板 4 题（最低系统 14.2→14.4 · GPL-3.0-or-later vs -only · HAL 拿共享内存方式 · RustFFT 破例）—— `docs/research/009_rust-ecosystem/decision.md` §五
 - [ ] 006 待人拍板 4 题（延迟察觉实验 · RX 当天花板参照 · 开 issue 问许可等）—— `docs/research/006_sota-landscape/decision.md` 末节
 - [ ] 007 待人拍板 4 题（权重 · 耳朵与机器怎么合 · V8 口径 · 下一轮怎么听）—— `docs/research/007_denoise-rubric/decision.md`
 - [ ] 要不要去 FastEnhancer 仓库开 issue 问权重许可（对外发言）：仓库 MIT，权重无单独声明（训练数据 DNS3 宽带 + VCTK 0.92）；建议等听测后它排前面再问 —— 来源 rubric / abtest
