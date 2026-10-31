@@ -274,3 +274,31 @@
 6. **WeSpeaker、3D-Speaker、pyannote / PLDA 权重的许可**不在本组范围，见 005 #2；speakrs 下载的 PLDA 文件也一样。
 7. ~~WeSpeaker / 3D-Speaker 仓库 LICENSE 我没逐个打开，Apache-2.0 是推断。~~ 复核 3 已打开核实：都是 Apache-2.0。
 8. 所有「能在 macOS/aarch64 编过」的判断都没实测：earshot、kaldi-fbank 是纯 Rust，风险低；sherpa-onnx 依赖它在 Releases 里有没有 macOS 预编译包（build.rs 里有 xcframework 的地址，推断有）。
+
+## 复核记录（怀疑派 3）
+
+复核日 2026-10-30。只读源码、GitHub API 和 crates.io API；没克隆新仓，没构建。
+
+**查了多少**：【源码】文件:行号约 85 处，逐行打开看过（kaldi-fbank、pyannote-rs/knf-rs、earshot、silero-findit、sherpa-onnx、speakrs、WeSpeaker、3D-Speaker、knf C++、RustedBytes knf、voice_activity_detector、gtcrn）；GitHub API 复查 21 个仓（许可证、pushed_at、open issues、归档），crates.io 复查 18 个 crate（最新版本、日期、许可证）。
+
+**改了哪些**：
+1. `gtcrn_stream.py:456` 行号偏了一行，hop=256 实际在 `:455`，已改。
+2. kaldi-fbank：补上构造函数里预先放好的 warp=1.0 mel 表（`feature_fbank.rs:35`），所以「compute 本身不分配」只在 warp 固定为 1.0 时成立，已写明条件；补上 `extract_window` 的定义处 `feature_window.rs:163`（原来引的是调用处）。
+3. earshot：补一个实时安全风险。f32 输入会先 ×32768 再 `debug_assert!`（`frame.rs:25`、`lib.rs:249`），所以样本超过 ±1.0 时 debug 构建会 panic，release 构建下不影响。
+4. kodama 的许可证从【推断】改成【API】MIT。
+5. WeSpeaker / 3D-Speaker 的许可证打开 LICENSE 文件核过，从【推断】改成【源码】；原来空着的维护状态按 API 补上。
+6. voice_activity_detector 原写「刚好在 12 个月边缘之外」，实际约 15 个月，已改。
+7. crates.io 上的 `silero-rs` 0.1.0 已查清，是另一个仓库（Infoserv-Systems-Ltd/sileror-rs，Unlicense），不是 emotechlab 的。
+
+**查对了的（没改）**：所有许可证与 API 一致（TEN VAD 的附加条款原文核过）；所有发布与提交日期误差在一天以内（pushed_at 和 commit 日期差一点，属于正常）；knf-rs / sherpa-onnx / voice_activity_detector / RustedBytes knf 的「不安全」反例都在热路径上亲眼看到了（`new float[]`、`to_vec()`、`Mutex::lock`、`unwrap`、`vec!`）；earshot 的 `predict` 把预测器那部分（`default_predictor.rs`）也看过，没有 Vec、Box、锁、打印或系统调用。
+
+**查不了的**：
+- torchaudio `kaldi.fbank` 的 snip_edges 默认值（resources 里没有 torchaudio，维持【推断】True）。
+- earshot 权重的训练数据来源。
+- 各仓「最近 issue 有没有维护者回复」只抽查了几条，没有逐条复核。
+- sherpa-onnx 自带的 ORT 和 `ort` crate 会不会符号冲突（要构建才知道）。
+
+**对推荐的异议**：
+- 推荐整体站得住，首选都没违反三条命门：earshot、silero、speakrs 都在 12 个月内有更新，许可证都兼容。kaldi-fbank 只当 dev-dependency，单作者的风险可以接受。
+- **漏掉的备选**：nnnoiseless（BSD-3-Clause，`resources/nnnoiseless/Cargo.toml:6`）的 `DenoiseState::process_frame` 本身就会返回 VAD 概率（`src/denoise.rs:95`），48 kHz、10 ms 一帧、纯 Rust、栈数组。可以作为「快速放开」门控在 48 kHz 域的零依赖备选，省掉一次降采样；infer 卡把它定成「只看看」，本卡没提到。
+- earshot 当实时门控之前要先写 clamp（见改动 3），否则单测里就可能崩。
