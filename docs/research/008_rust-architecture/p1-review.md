@@ -17,3 +17,8 @@
 - `ort` 用 `download-binaries`：构建时联网下载 ORT 二进制，CI/复现要钉版本与哈希；GPL-3.0 与 ORT(MIT) 兼容，没问题。
 - `Instant::now()` 在 macOS 走 mach_absolute_time，实时线程里可以用。
 - `SafetyConfig` 里有 `Option<Duration>` 等，参数以后要跨线程实时改（门控、下限），建议到 P2 拆成「构造期配置」和「运行期参数（原子/三缓冲）」两半，现在不用动。
+
+
+## 终审补注（2026-10-30）
+
+骨架终审以 `specs/rust/architecture.md` 为准；p1 已做完和还剩的改动列在 `decision.md`「给 p1 线的后续改动」。本页第 3 问「Box<dyn> 与 AnyModel 二选一」：p1 已统一为 `AnyModel`。
