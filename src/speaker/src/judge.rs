@@ -10,6 +10,8 @@
 //! 滞回：上一份「有人声」的判决是 Other 且相似度仍 < 两档中点，维持 Other（中间的 NoSpeech 不打断）。
 //! 电平（喂注册器的近讲线索、发给门控的主人电平）在**原声**上量，与门控量起始电平同一口径。
 
+#![allow(clippy::indexing_slicing)] // NRT: 判断回路（C 档线程，约 0.5 s 一次），不在降噪线程上跑
+
 use std::time::{Duration, Instant};
 
 use crate::enroll::{EnrollOutcome, Enroller};

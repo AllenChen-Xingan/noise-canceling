@@ -25,6 +25,12 @@ impl Default for Vad {
     }
 }
 
+// 实时：每 hop 在降噪线程（B 档）上调用。不分配、不加锁、不 panic（specs/rust/architecture.md §5.3、R1–R4）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Vad {
     pub const fn new() -> Self {
         Self {
@@ -47,11 +53,10 @@ impl Vad {
     /// 喂任意长度的一段（16 kHz）；返回喂完后的最新人声概率。
     pub fn push(&mut self, x: &[f32]) -> f32 {
         for &s in x {
-            self.buf[self.fill] = if s.is_finite() {
-                s.clamp(-1.0, 1.0)
-            } else {
-                0.0
-            };
+            // fill < VAD_FRAME 恒成立（满即清零），get_mut 只为不留 panic 路径（R4）
+            if let Some(b) = self.buf.get_mut(self.fill) {
+                *b = if s.is_finite() { s.clamp(-1.0, 1.0) } else { 0.0 };
+            }
             self.fill += 1;
             if self.fill == VAD_FRAME {
                 self.prob = self.det.predict_f32(&self.buf);
@@ -81,6 +86,12 @@ pub struct Hysteresis {
     state: bool,
 }
 
+// 实时：每 hop 在降噪线程（B 档）上调用。不分配、不加锁、不 panic（specs/rust/architecture.md §5.3、R1–R4）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Hysteresis {
     pub const fn new(on: f32, off: f32) -> Self {
         Self {

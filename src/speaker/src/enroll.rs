@@ -11,6 +11,8 @@
 //! 4. **锁定后能改判**：另一簇得分超过主人 × `relock_ratio`、累计也够 `min_owner_s`，就改认它（对策第三道，纠错）
 //! 5. 只存声纹向量；`reset()` 一键清空
 
+#![allow(clippy::indexing_slicing)] // NRT: 判断回路里的注册器（C 档线程），不在降噪线程上跑
+
 use crate::vecmath::{all_finite, cosine, l2_normalize};
 
 #[derive(Clone, Copy, Debug)]

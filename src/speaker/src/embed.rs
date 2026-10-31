@@ -4,6 +4,8 @@
 //! 同接口的 WeSpeaker CAM++（`voxceleb_CAM++.onnx`，512 维）可直接替换，前端相同。
 //! 3D-Speaker 的 CAM++ 前端不同（povey 窗、输入不放大）：换 [`FbankConfig`] 即可，模型输入名不同时在 `open` 里报错。
 
+#![allow(clippy::indexing_slicing)] // NRT: 声纹推理（C 档线程，构造与推理都不在降噪线程上）
+
 use std::path::{Path, PathBuf};
 
 use ort::environment::Environment;

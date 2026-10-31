@@ -136,6 +136,12 @@ impl AsymGate {
     }
 }
 
+// 实时：每 hop 在降噪线程（B 档）上调用。不分配、不加锁、不 panic（specs/rust/architecture.md §5.3、R1–R4）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Stage for AsymGate {
     fn name(&self) -> &'static str {
         "asym-gate"
@@ -176,7 +182,9 @@ impl Stage for AsymGate {
             .map(|v| if v.is_finite() { v * v } else { 0.0 })
             .sum::<f32>()
             / n as f32;
-        self.short_e[self.short_i] = e;
+        if let Some(slot) = self.short_e.get_mut(self.short_i) {
+            *slot = e;
+        }
         self.short_i = (self.short_i + 1) % self.short_e.len();
         let st_db =
             10.0 * (self.short_e.iter().sum::<f32>() / self.short_e.len() as f32 + 1e-12).log10();

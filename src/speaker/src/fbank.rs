@@ -6,6 +6,8 @@
 //!
 //! 一个 [`Fbank`] 自带 FFT 计划和工作区，`compute_into` 不分配（声纹在非实时线程，但每 0.5 s 一次，没必要每次分配）。
 
+#![allow(clippy::indexing_slicing)] // NRT: 判断回路（C 档线程，约 0.5 s 一次），不在降噪线程上跑
+
 use std::sync::Arc;
 
 use realfft::num_complex::Complex32;

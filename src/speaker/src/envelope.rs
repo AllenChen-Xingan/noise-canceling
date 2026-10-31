@@ -96,6 +96,12 @@ impl VadEnvelopeStage {
     }
 }
 
+// 实时：每 hop 在降噪线程（B 档）上调用。不分配、不加锁、不 panic（specs/rust/architecture.md §5.3、R1–R4）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Stage for VadEnvelopeStage {
     fn name(&self) -> &'static str {
         "vad-envelope"
@@ -115,7 +121,7 @@ impl Stage for VadEnvelopeStage {
         // 上游给了人声概率就用它（接入后全链只跑一份 VAD），没有才自己算
         let p = match ctx.voice_prob {
             Some(p) if p.is_finite() => p,
-            _ => self.vad.push(&wet[..n]),
+            _ => self.vad.push(wet.get(..n).unwrap_or_default()),
         };
         self.raw_voice = self.hyst.update(p);
         if self.raw_voice {
@@ -125,7 +131,8 @@ impl Stage for VadEnvelopeStage {
         }
         self.voiced = self.raw_voice || self.hang_left > 0;
         let target = if self.voiced { self.open } else { self.closed };
-        for (w, &d) in wet[..n].iter_mut().zip(&dry[..n]) {
+        // zip 自然截到较短的那个 = n
+        for (w, &d) in wet.iter_mut().zip(dry) {
             let a = if target > self.m {
                 self.a_up
             } else {
@@ -168,6 +175,12 @@ impl EnergyEnvelopeStage {
     }
 }
 
+// 实时：每 hop 在降噪线程（B 档）上调用。不分配、不加锁、不 panic（specs/rust/architecture.md §5.3、R1–R4）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Stage for EnergyEnvelopeStage {
     fn name(&self) -> &'static str {
         "energy-envelope"
@@ -179,8 +192,12 @@ impl Stage for EnergyEnvelopeStage {
 
     fn process(&mut self, wet: &mut [f32], dry: &[f32], _ctx: FrameCtx) {
         let n = wet.len().min(dry.len()).min(self.mix.len());
-        self.env.process(&wet[..n], &mut self.mix[..n]);
-        for ((w, &d), &m) in wet[..n].iter_mut().zip(&dry[..n]).zip(&self.mix[..n]) {
+        let (Some(w_in), Some(mix)) = (wet.get(..n), self.mix.get_mut(..n)) else {
+            return;
+        };
+        self.env.process(w_in, mix);
+        // zip 截到三者中最短的 = n（mix 已是 n 长）
+        for ((w, &d), &m) in wet.iter_mut().zip(dry).zip(&*mix) {
             *w = (1.0 - m) * *w + m * d;
         }
     }
@@ -199,6 +216,12 @@ impl FloorStage {
     }
 }
 
+// 实时：每 hop 在降噪线程（B 档）上调用。不分配、不加锁、不 panic（specs/rust/architecture.md §5.3、R1–R4）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Stage for FloorStage {
     fn name(&self) -> &'static str {
         "floor"
