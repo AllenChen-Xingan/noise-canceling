@@ -385,6 +385,38 @@ fn cmd_run(args: &[String]) -> R<()> {
     Ok(())
 }
 
+/// 只跑快开慢关两版（能量 / VAD），给 exp004 素材复算：写 `<prefix>.energy.wav`、`<prefix>.vad.wav`、`<prefix>.env.json`。
+fn cmd_envelope(args: &[String]) -> R<()> {
+    let dry = read_wav(Path::new(args.first().ok_or("缺 <noisy.wav>")?))?;
+    let wet = read_wav(Path::new(args.get(1).ok_or("缺 <wet.wav>")?))?;
+    let prefix = args.get(2).ok_or("缺 <out_prefix>")?;
+    let n_hops = dry.len().min(wet.len()) / HOP;
+    let ep = EnvelopeParams::p1_like(SR as f32);
+    let mut en = EnergyEnvelopeStage::new(ep, HOP);
+    let mut ve = VadEnvelopeStage::new(ep);
+    let (mut y_en, mut y_ve) = (wet[..n_hops * HOP].to_vec(), wet[..n_hops * HOP].to_vec());
+    let (mut eo, mut vo, mut vp) = (Vec::new(), Vec::new(), Vec::new());
+    for k in 0..n_hops {
+        let r = k * HOP..(k + 1) * HOP;
+        let ctx = FrameCtx {
+            now: SampleClock((k * HOP) as u64),
+            ..FrameCtx::default()
+        };
+        en.process(&mut y_en[r.clone()], &dry[r.clone()], ctx);
+        ve.process(&mut y_ve[r.clone()], &dry[r], ctx);
+        eo.push(en.voiced() as u8);
+        vo.push(ve.voiced() as u8);
+        vp.push(ve.vad_prob());
+    }
+    write_wav(Path::new(&format!("{prefix}.energy.wav")), &y_en)?;
+    write_wav(Path::new(&format!("{prefix}.vad.wav")), &y_ve)?;
+    std::fs::write(
+        format!("{prefix}.env.json"),
+        serde_json::to_string(&json!({"energy_open": eo, "vad_open": vo, "vad_prob": vp}))?,
+    )?;
+    Ok(())
+}
+
 /// GTCRN 降噪（保命全关 = 模型原样输出，与输入逐样本对齐），写 32-bit float WAV。
 fn cmd_denoise(args: &[String]) -> R<()> {
     let input = PathBuf::from(args.first().ok_or("缺 <in.wav>")?);
@@ -440,6 +472,7 @@ fn main() {
     let r = match args.first().map(String::as_str) {
         Some("run") => cmd_run(&args[1..]),
         Some("denoise") => cmd_denoise(&args[1..]),
+        Some("envelope") => cmd_envelope(&args[1..]),
         Some("fbank") => cmd_fbank(&args[1..]),
         Some("embed") => cmd_embed(&args[1..]),
         _ => Err("用法：vdn-speaker run|fbank|embed …（见源码头注释）".into()),
