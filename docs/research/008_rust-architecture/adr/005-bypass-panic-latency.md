@@ -18,7 +18,7 @@ D03：推理进程崩了，送音进程照样送原声。p1 的 `Engine` 已实�
 ## 理由
 - 不写死分工，两层都做延迟对齐，就会对齐两次，切换时跳字或重字（003 decision「拿三把尺子量一遍」清楚行）【推】`notes/r8-critic.md` C9
 - 进程隔离是唯一能挡住「我们自己的代码崩溃」的兜底；有了它，release 用 abort 比 unwind 更简单可预测【推】`notes/r4-realtime.md` §2.5
-- 延迟估算 41–49 ms 贴着 45 ms：GTCRN 512/256 约 32 ms + 管线 6–10 ms + 两次重采样 2–6 ms + 推理 ≤ 1 ms【源+推】`notes/r8-critic.md` §3.8；重采样器放 engine 是延迟与「同一份代码」两条硬约束的交点
+- 延迟按默认参数估约 56 ms，**超 45 ms**：STFT 32 + rubato `Fft` 默认两跳约 10.7 + IO 缓冲 512 帧 10.7 + HAL 余量 2.7 + 环余量【推】rusteco 009 `decision.md` §一.3（r8 按管线 6–10 ms、重采样 2–6 ms 估的 41–49 ms 偏乐观，`notes/r8-critic.md` §3.8）；所以重采样和 IO 缓冲必须调参；重采样器放 engine 是延迟与「同一份代码」两条硬约束的交点
 - rubato `Fft` 同步重采样延迟 `fft_size_out / 2`，`Slip` 延迟 0【源】`resources/rubato/src/synchro.rs:692-694`、`slip.rs:481-483`
 
 ## 代价

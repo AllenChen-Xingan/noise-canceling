@@ -228,7 +228,7 @@ pub trait Stage: Send {
 
 **为什么 B 档不承诺零分配**：本机实测 ort 2.0.0-rc.15 跑 GTCRN simple，IoBinding 绑一次、单线程、预热 200 帧后，稳态每帧约 **1554 次 malloc、1555 次 free、376 对 mutex lock/unlock**，1 帧 → 2 帧严格翻倍；来源是 ORT 的 `BFCArena`、`Tensor::InitOrtValue`、MLAS GEMM【测】`appendix-probes/README.md` §1。同时耗时余量很大：最坏一帧约 1 ms，hop 16 ms【测】。所以「推理线程零分配」靠 ort 做不到，靠截止时间 + 送原声兜底更现实。降低分配的后续手段（关 arena、自定义分配器、tract 对照）见 `decision.md`「仍未补齐」。
 
-**与 p1 / exp004「每帧 0 次分配」的关系（务必写进 exp004 README 补注）**：p1 测的是 **Rust 全局分配器**（`assert_no_alloc` / 计数分配器）。ONNX Runtime 是 C++，直接调 libc `malloc`，Rust 全局分配器**看不到**。所以「Rust 侧 0 次」和「C++ 侧约 1550 次」同时成立，不矛盾；只有 RTSan 这类在 libc 层拦截的工具看得到后者【源+测】`notes/r7-skeptic.md` C1、`appendix-probes/README.md` §1。另外 ort 的 Rust 封装本身每帧也会分配：`run_binding` 28 次、`run` 54 次；绕开要直接调 C API `RunWithBinding`【测】【源】`ort-2.0.0-rc.15/src/session/run.rs:288-320`。p1 现在的 `Gtcrn::process` 走 `run_with_options(ort::inputs![…])`，属于后者，**Rust 侧也不是 0**——现有 no_alloc 测试只覆盖假模型。
+**与 p1 / exp004「每帧 0 次分配」的关系（务必写进 exp004 README 补注）**：p1 测的是 **Rust 全局分配器**（`assert_no_alloc` / 计数分配器）。ONNX Runtime 是 C++，直接调 libc `malloc`，Rust 全局分配器**看不到**。所以「Rust 侧 0 次」和「C++ 侧约 1550 次」同时成立，不矛盾；只有 RTSan 这类在 libc 层拦截的工具看得到后者【源+测】`notes/r7-skeptic.md` C1、`appendix-probes/README.md` §1。Rust 侧是不是 0 取决于调法：p1 用 `run_with_options` + `OutputSelector` 预分配全部输出，实测 GTCRN 每帧 0 次【测·p1】（rusteco 009 `decision.md` §一.4）；探针里不预分配输出的 `run` 调法是 54 次、`run_binding` 是 28 次（`GetBoundOutputValues` 后 collect 出新的 `SessionOutputs`）【测】【源】`ort-2.0.0-rc.15/src/session/run.rs:288-320`。所以**规定 B 档的 ort 调法只用「预分配全部输出」或 raw `RunWithBinding`**。另外 ort 把输入 ≤ 6、输出 ≤ 4 放在栈上，FastEnhancer-M 是 7 进 7 出，超出上限，**每帧 7 次小分配**【源+测·p1】`ort/src/util/stack.rs:13-15`（rusteco 009 同节）——要么登记为 B 档已知分配，要么把状态张量合并后重新导出。
 
 ### 4.2 实时 crate 名单
 
@@ -264,7 +264,7 @@ pub trait Stage: Send {
 | R10 | unsafe 只在白名单 crate | 全仓 | ① `[workspace.lints.rust] unsafe_code = "deny"`；非白名单 crate 的 `lib.rs` 写 `#![forbid(unsafe_code)]`（crate 内可从 deny 升 forbid；workspace 设 forbid 再局部 allow 会报 E0453【测】）② `clippy::undocumented_unsafe_blocks = "deny"` ③ xtask tidy 检查每个非白名单 crate 有 forbid 头。白名单：`vdn-shm`、`vdn-rt-thread`、`vdn-io-macos`、`vdn-backend-ort`（raw `RunWithBinding` 要 unsafe） |
 | R11 | 实时路径出错 = 返回 `Status` + 送原声，不传播、不阻塞上报 | B | ① `#[must_use] Status` ② 故障注入：模拟超时 / NaN → 断言输出 = 对齐原声（带淡化） |
 | R12 | 依赖方向（§2.2）：核心不依赖适配层；`vdn-capture` 不链推理库与 engine | 全仓 | ① cargo-deny：把**内部 crate 本身**列进 deny 并给 wrappers，例如 `{ name = "vdn-io-macos", wrappers = ["vdn-capture"] }`、`{ name = "ort", wrappers = ["vdn-models"] }`（P1）→ 拆后 `["vdn-backend-ort"]`（cargo-deny 默认允许 ban 工作区成员【源】`bans/cfg.rs:567`，**未实测**）② `cargo xtask check-deps`：对每个核心 crate 和每个 bin 求依赖闭包，与禁表求交，非空即红（等价人工命令 `cargo tree -p vdn-capture -i ort` 为空） |
-| R13 | 延迟有账：`Engine::latency_samples()` = 各级之和，不超预算 | B | 单测断言 `latency_samples / sr ≤ 预算`；P3 用脉冲法实测端到端（§8 E-lat）。r8 的估算是 41–49 ms，**贴着 D32 的 45 ms**【推】`notes/r8-critic.md` §3.8 |
+| R13 | 延迟有账：`Engine::latency_samples()` = 各级之和，不超预算 | B | 单测断言 `latency_samples / sr ≤ 预算`；P3 用脉冲法实测端到端（§8 E-lat）。按默认参数估算约 **56 ms，超 D32 的 45 ms**（STFT 32 + rubato `Fft` 默认两跳约 10.7 + IO 缓冲 512 帧 10.7 + HAL 余量 2.7，另加跨进程环余量）【推】rusteco 009 `decision.md` §一.3；调参后的目标：重采样两跳各 ≤ 2 ms、IO 缓冲 256 帧、环余量 ≤ 3 ms，合计 ≤ 45 ms |
 | R14 | 构建产物不进库 | 全仓 | xtask tidy 检查 `.gitignore` 含 `/target/`；auto-commit hook 之前先有忽略规则 |
 
 ### 5.1 禁用清单（根目录 `clippy.toml` 的正本内容）
@@ -374,7 +374,7 @@ disallowed-macros = [
 | G13 | 长跑 | BlackHole / 真设备 ≥ 1 h：xrun、漂移、内存曲线 | L4 | 现场才会遇到的问题 |
 | G14 | 人耳 | 盲听页（CLAUDE.md 第五节第 1 条：build id、揭盲表入库） | 里程碑 | 验证红线，不交给机器 |
 
-**许可**（G3 的 `deny.toml` `allow` 列表）：`GPL-3.0-or-later`（本项目）、`Apache-2.0`、`MIT`、`BSD-2-Clause`、`BSD-3-Clause`、`ISC`、`Zlib`、`BSL-1.0`、`Unicode-3.0`、`MPL-2.0`（audio_thread_priority、triple_buffer）。Apache-2.0 与 GPLv3 兼容、与 GPLv2 不兼容，所以本项目必须是 GPL-**3**【官】https://www.gnu.org/licenses/license-list.en.html 。cargo-deny 看不到 ort 下载的 ONNX Runtime 二进制和 `.onnx` 权重——这两类另列资产清单（来源 · 哈希 · 许可）。
+**许可**（G3 的 `deny.toml` `allow` 列表）：`GPL-3.0-or-later`（本项目）、`Apache-2.0`、`MIT`、`BSD-2-Clause`、`BSD-3-Clause`、`ISC`、`Zlib`、`BSL-1.0`、`Unicode-3.0`、`MPL-2.0`（audio_thread_priority、triple_buffer）。FSF 兼容列表上查不到的（如 `BSD-1-Clause`、`Apache-2.0 WITH LLVM-exception`）不进全局 allow，用 per-crate `exceptions` 逐个放行；MPL-2.0 的 Exhibit B（「不兼容次级许可」声明）cargo-deny 查不出，CI 另 grep 依赖源码。本节是 cargo-deny 白名单的**唯一正本**，rusteco 009 的草稿（`answers-p1.md` §5、`cards/tooling.md`）以此为准。本项目写 `GPL-3.0-or-later` 还是 `-only` 见 rusteco 009 待人拍板 2（p1 现为 or-later）。Apache-2.0 与 GPLv3 兼容、与 GPLv2 不兼容，所以本项目必须是 GPL-**3**【官】https://www.gnu.org/licenses/license-list.en.html 。cargo-deny 看不到 ort 下载的 ONNX Runtime 二进制和 `.onnx` 权重——这两类另列资产清单（来源 · 哈希 · 许可）。
 
 **CI 费用**：私有仓库的 macOS 分钟数约是 Linux 的 10 倍【官】GitHub Actions 计费文档；核心 crate 不依赖平台，G1–G7、G9 都放 Linux，macOS job 只跑 clippy（`aarch64-apple-darwin`）、`vdn-io-macos` 测试与 G8，并用 `paths:` 过滤。
 
@@ -386,10 +386,10 @@ disallowed-macros = [
 
 | # | 待核 | 为什么挡路 | 怎么核 |
 |---|---|---|---|
-| E-lat | 端到端延迟账 | 估算 41–49 ms，贴着 45 ms【推】 | P3 脉冲法；超了再拍板砍哪一级 ⟨待拍板 6⟩ |
+| E-lat | 端到端延迟账 | 默认参数估约 56 ms，**必须调参**才进 45 ms【推】（R13） | P3 脉冲法逐项测：重采样型号与子块、IO 缓冲、环余量；调完仍超再拍板砍哪一级 ⟨待拍板 6⟩。另一条省法「推理进程直接写 HAL 读的环、缺数据改读原声环」可少一跳环，属 003 管线的「二期共享内存」决定，按 003 的触发条件（M0 实测）定，`vdn-shm` 的布局两种都能承载 |
 | E-tract | tract 能不能跑 GTCRN、每帧分配多少 | B 档能不能更干净 | 用已发布的 `tract-onnx 0.23.9`；GTCRN simple 的 24 种算子 tract 都有注册【源】，但没跑过；要联网下载 crate + 名额 ⟨待拍板 7⟩ |
 | E-ort | ort 关 arena / 自定义分配器后的 RTSan 计数 | 能否缩小 B 档豁免 | 改 `appendix-probes/ortprobe` |
 | E-deny | cargo-deny 对工作区成员的 ban 实际效果 | R12 第 ① 层 | 装 cargo-deny 跑一次 |
-| E-fe | FastEnhancer-M 的 hop、状态形状 | 第二个 `Model` 实现 | 读 `resources/fastenhancer/configs/`、`onnx/` |
+| E-fe | FastEnhancer-M 的 hop、状态形状 | 第二个 `Model` 实现 | rusteco 009 已定用官方 16 kHz spec2spec 导出 `onnx-dns-v1.0.0/fastenhancer_m.spec.onnx`（可与 GTCRN 共用 dsp 的 STFT）；形状以加载期校验为准 |
 | E-load | 负载下、能效核上的 p99.9 | 空载数据偏乐观 | P3 时重测 |
 | E-rate | 音色链跑在 16 kHz 还是 48 kHz | 延迟账与 `vdn-dsp` 参数 | 默认：模型采样率（16 kHz）上跑，限幅器放 48 kHz 末端【推】；带宽扩展上了再定 |

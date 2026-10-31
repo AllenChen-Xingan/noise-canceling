@@ -13,7 +13,7 @@
 
 ## 我看到的另外几处
 - `Engine::process` 里两个 `assert_eq!`：实时路径会 panic。改 `debug_assert_eq!`，release 下长度不符直接整 hop 送原声并计数。
-- **`Gtcrn::process` 会分配**：`ort::inputs![]` 建 Vec，`run_with_options` 返回的 SessionOutputs 也分配（待 rusteco/调研核实到行号）。现在的 no_alloc 测试只覆盖假模型，**它证明不了真模型路径**。P1 离线无所谓，但请在 gap 里写明，并在 bench 里加「每 hop 分配次数」计数（divan 的 AllocProfiler 或自写计数分配器），给 P3/P4 留基线。架构上我会把规则分两档：IO 回调线程=硬实时（绝不分配，机器挡）；推理线程=软实时（先量 p99.9 与分配次数，再逐步清零）。
+- ~~**`Gtcrn::process` 会分配**~~（**更正 2026-10-30**：p1 用 OutputSelector 预分配输出后实测 Rust 侧 0 次，这条不成立；但 C++ 侧 ORT 每帧约 1554 次 malloc，见 `adr/002-realtime-tiers.md`）原话：`ort::inputs![]` 建 Vec，`run_with_options` 返回的 SessionOutputs 也分配（待 rusteco/调研核实到行号）。现在的 no_alloc 测试只覆盖假模型，**它证明不了真模型路径**。P1 离线无所谓，但请在 gap 里写明，并在 bench 里加「每 hop 分配次数」计数（divan 的 AllocProfiler 或自写计数分配器），给 P3/P4 留基线。架构上我会把规则分两档：IO 回调线程=硬实时（绝不分配，机器挡）；推理线程=软实时（先量 p99.9 与分配次数，再逐步清零）。
 - `ort` 用 `download-binaries`：构建时联网下载 ORT 二进制，CI/复现要钉版本与哈希；GPL-3.0 与 ORT(MIT) 兼容，没问题。
 - `Instant::now()` 在 macOS 走 mach_absolute_time，实时线程里可以用。
 - `SafetyConfig` 里有 `Option<Duration>` 等，参数以后要跨线程实时改（门控、下限），建议到 P2 拆成「构造期配置」和「运行期参数（原子/三缓冲）」两半，现在不用动。

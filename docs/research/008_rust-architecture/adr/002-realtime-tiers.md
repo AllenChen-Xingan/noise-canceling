@@ -28,4 +28,4 @@
 - 如果负载下 p99.9 变差，要回头做 E-ort（关 arena、自定义分配器）或换 tract
 
 ## 对 p1 / exp004 的影响
-p1 的「每帧 0 次分配」统计的是 Rust 全局分配器，C++ 层看不到，与上面的结论不矛盾。exp004 README 要补一句注明口径（由大总管转给后续批次改）。另：p1 的 `Gtcrn::process` 走 `run_with_options(ort::inputs![…])`，Rust 侧每帧也会分配（`run` 调法实测 54 次），现有 no_alloc 测试只覆盖假模型。
+p1 的「每帧 0 次分配」统计的是 Rust 全局分配器，C++ 层看不到，与上面的结论不矛盾。exp004 README 要补一句注明口径（由大总管转给后续批次改）。Rust 侧的 0 依赖调法：p1 用 `OutputSelector` 预分配全部输出，实测 0 次；不预分配的 `run` 是 54 次。FastEnhancer-M 7 进 7 出超出 ort 栈上限，每帧 7 次小分配（rusteco 009 `decision.md` §一.4），要登记为 B 档已知分配或重新导出。
