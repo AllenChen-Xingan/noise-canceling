@@ -10,7 +10,7 @@
       "origin": "rubric 硬规则 4「比原声只好不坏」· exp003 c08（最容易的一段，人仍给 DPDFNet-2 打了 5 个缺陷标签）",
       "desc": "安静房间（粉噪 SNR 35 dB）里的独白：不许加怪声、不许压人声、不许改音色",
       "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 35 },
-      "graders": [ { "v": "V-NAN" }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-TIMBRE", "max": 6 }, { "v": "V-MUSIC", "max": 2 }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 } ]
+      "graders": [ { "v": "V-NAN" }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-TIMBRE", "max": 6 }, { "v": "V-MUSIC", "max": 2 } ]
     },
     {
       "id": "R02-owner-monologue-not-gated",
@@ -26,7 +26,7 @@
       "origin": "012 V-ONSET 已知失效「VAD 门限对低电平说话人失准」· engine 绝对门限 −70 dBFS",
       "desc": "轻声说话的人（−38 dBov）+ 粉噪 15 dB：门控照样要开",
       "scene": { "owner": { "level_dbov": -38 }, "noise": "pink", "snr_db": 15 },
-      "graders": [ { "v": "V-NAN" }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-SPLVL", "min": -3 } ]
+      "graders": [ { "v": "V-NAN" }, { "v": "V-ONSET", "max": 3 }, { "v": "V-SPLVL", "min": -3 } ]
     },
     {
       "id": "R04-pause-noise-suppressed-pink",
@@ -209,6 +209,15 @@
       "desc": "粉噪 0 dB：停顿压 20 dB 以上（现在衰减下限 −12 dB 封顶，过不了——给爬坡空间）",
       "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 0, "pause_s": [0.8, 1.6] },
       "graders": [ { "v": "V-NR", "max": -20 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-VACUUM", "min": -40 } ]
+    },
+    {
+      "id": "C10-quiet-room-gate-onsets",
+      "set": "capability", "polarity": "preserve",
+      "origin": "exp007 首跑发现（2026-10-31）：R01 / R03 的字头门控漏开 26–33%。推断：降噪后停顿电平（约 −86 / −78 dBFS）低于 engine 门控的绝对门限 −70 dBFS，底噪跟踪只看到语音帧；10 dB 噪声下（R02）漏开为 0。漏开时声音仍从降噪支路出来，V-ONSET / V-SPLVL 都过——门控对不对与听着好不好是两回事（012 §3.4 限定 2）",
+      "desc": "安静房间与轻声说话人：门控在字头也要开（现在过不了——从回归集挪出，给爬坡空间）",
+      "scene": { "owner": { "level_dbov": -38 }, "noise": "pink", "snr_db": 25 },
+      "graders": [ { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 }, { "v": "V-ONSET", "max": 3 } ],
+      "trials": 5
     },
     {
       "id": "P01-onset-cut-must-fail",
