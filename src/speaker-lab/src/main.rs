@@ -1,13 +1,8 @@
 //! vdn-speaker-lab：P2 离线实验命令行（exp005）。从 vdn-speaker 的 offline feature 挪出（2026-10-31 p2fix，规约 §2.2 规则 1）。
 //!
-//! ```text
-//! vdn-speaker-lab denoise <noisy.wav> <wet.wav> [--model-path gtcrn.onnx]   # GTCRN 原样输出（对齐）
-//! vdn-speaker-lab run   <noisy.wav> <out_dir> --wet <wet.wav> [--speaker-onnx ecapa.onnx] [--preload owner.json] [--save-owner owner.json]
-//! vdn-speaker-lab fbank <in.wav> <out.f32>        # fbank 原始特征（CMN 前），行主序 float32，对拍用
-//! vdn-speaker-lab embed <in.wav>                  # 打印整段的声纹向量（JSON），对拍用
-//! ```
+//! 子命令与参数以 `src/speaker-lab/README.md` 为准（denoise · run · envelope · fbank · embed），这里不另抄一份。
 //!
-//! `run` 一次出 5 个版本（共用同一份降噪输出）：
+//! `run` 一次出 6 个版本（共用同一份降噪输出）：
 //! - `raw`：模型原样输出 · `floor`：只开衰减下限 −12 dB · `energy`：p1 能量版快开慢关
 //! - `vad`：VAD 版快开慢关（= 个性化关）· `personal`：VAD 版 + 判断回路 + 不对称门控（= 保守版个性化）
 //! - `aggressive`：模型原样输出（不混回原声）+ 门控（下限 −20 dB、确认 1 次、慢收 0.3 s）（= 激进版个性化）
@@ -548,7 +543,7 @@ fn main() {
         Some("envelope") => cmd_envelope(&args[1..]),
         Some("fbank") => cmd_fbank(&args[1..]),
         Some("embed") => cmd_embed(&args[1..]),
-        _ => Err("用法：vdn-speaker-lab run|fbank|embed …（见源码头注释）".into()),
+        _ => Err("用法：vdn-speaker-lab denoise|run|envelope|fbank|embed …（见 src/speaker-lab/README.md）".into()),
     };
     if let Err(e) = r {
         eprintln!("vdn-speaker-lab: {e}");

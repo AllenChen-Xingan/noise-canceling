@@ -26,8 +26,8 @@ ort = { workspace = true, optional = true }
 assert_no_alloc.workspace = true
 
 # 机读正本（规约 §5.4）：B 档。理由：实时 Stage（envelope / gate / vad）的 process / reset 每 hop 跑在降噪线程，
-# 按规约 §4 那是 B 档线程（「实时 crate」= 有代码会在 A/B 档线程上被调用）；判断回路（fbank / embed / enroll / judge）
-# 是 C 档，在各自模块头以 NRT 整模块放行。§2.1 表里写 C 是只算了声纹那半，待 align 改表
+# 按规约 §4 那是 B 档线程（§4 按线程定档；实时入口 = 会在 A/B 档线程上被调用的 process / reset）；判断回路（fbank / embed / enroll / judge）
+# 是 C 档，在各自模块头以 NRT 整模块放行。§2.1 表与 §4 实时 crate 清单仍写 C / 未列，只算了声纹那半，待改规约（已报大总管）
 [package.metadata.vdn]
 tier = "B"
 unsafe = false

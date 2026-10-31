@@ -121,6 +121,7 @@ impl Stage for VadEnvelopeStage {
         // 上游给了人声概率就用它（接入后全链只跑一份 VAD），没有才自己算
         let p = match ctx.voice_prob {
             Some(p) if p.is_finite() => p,
+            // n ≤ wet.len()，get 恒为 Some；unwrap_or_default 只为不留 panic 路径（R4）
             _ => self.vad.push(wet.get(..n).unwrap_or_default()),
         };
         self.raw_voice = self.hyst.update(p);
