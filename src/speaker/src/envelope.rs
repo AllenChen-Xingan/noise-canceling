@@ -213,7 +213,7 @@ mod tests {
     fn ctx() -> FrameCtx {
         FrameCtx {
             speaker: SpeakerVerdict::UNKNOWN,
-            sample_pos: 0,
+            ..FrameCtx::default()
         }
     }
 

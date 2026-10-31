@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 
 use crate::embed::{BoxError, cosine};
 use crate::enroll::{EnrollEvent, Enroller};
-use crate::types::{SpeakerClass, SpeakerVerdict};
+use crate::types::{Confidence, SampleClock, SpeakerClass, SpeakerVerdict};
 use crate::vad::VAD_FRAME;
 
 /// 声纹来源（真模型或测试用的假模型）。
@@ -242,14 +242,14 @@ impl<E: EmbedSource> Judge<E> {
         log.compute = t0.elapsed();
         self.last = SpeakerVerdict {
             class,
-            window_start: start,
-            window_end: end,
-            owner_sim: log.owner_sim,
+            confidence: Confidence::new(log.owner_sim),
+            window_start: SampleClock(start),
+            window_end: SampleClock(end),
             owner_level_db: self
                 .enroller
                 .owner_index()
                 .map(|i| self.enroller.clusters()[i].level_db)
-                .unwrap_or(f32::NAN),
+                .filter(|l| l.is_finite()),
         };
         self.logs.push(log);
         Some(self.last)

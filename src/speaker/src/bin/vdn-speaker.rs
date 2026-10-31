@@ -24,6 +24,7 @@ use vdn_speaker::enroll::{EnrollEvent, EnrollParams, Enroller};
 use vdn_speaker::fbank::FbankConfig;
 use vdn_speaker::gate::{AsymGate, GateParams};
 use vdn_speaker::judge::{Judge, JudgeParams};
+use vdn_speaker::types::SampleClock;
 use vdn_speaker::{FrameCtx, SpeakerClass, SpeakerVerdict, Stage};
 
 type R<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -79,8 +80,9 @@ fn run_stage<S: Stage>(st: &mut S, wet: &[f32], dry: &[f32], verdicts: &[Speaker
     let mut out = wet.to_vec();
     for (k, (w, d)) in out.chunks_mut(HOP).zip(dry.chunks(HOP)).enumerate() {
         let ctx = FrameCtx {
+            now: SampleClock((k * HOP) as u64),
             speaker: verdicts.get(k).copied().unwrap_or(SpeakerVerdict::UNKNOWN),
-            sample_pos: (k * HOP) as u64,
+            voice_prob: None,
         };
         st.process(w, d, ctx);
     }
@@ -168,7 +170,7 @@ fn cmd_run(args: &[String]) -> R<()> {
     let mut stage_ns_vad = Vec::with_capacity(n_hops);
     for k in 0..n_hops {
         let r = k * HOP..(k + 1) * HOP;
-        let ctx = FrameCtx { speaker: SpeakerVerdict::UNKNOWN, sample_pos: (k * HOP) as u64 };
+        let ctx = FrameCtx { now: SampleClock((k * HOP) as u64), ..FrameCtx::default() };
         en.process(&mut y_en[r.clone()], &dry[r.clone()], ctx);
         energy_open.push(en.voiced() as u8);
         let t0 = Instant::now();
@@ -183,7 +185,8 @@ fn cmd_run(args: &[String]) -> R<()> {
     let mut stage_ns_gate = Vec::with_capacity(n_hops);
     for k in 0..n_hops {
         let r = k * HOP..(k + 1) * HOP;
-        let ctx = FrameCtx { speaker: verdicts[k], sample_pos: (k * HOP) as u64 };
+        // 门控用与 VAD 包络同一个 VAD 的概率（ctx.voice_prob），接入 engine 后也是这样传
+        let ctx = FrameCtx { now: SampleClock((k * HOP) as u64), speaker: verdicts[k], voice_prob: Some(vad_probs[k]) };
         let t0 = Instant::now();
         gate.process(&mut y_p[r.clone()], &dry[r], ctx);
         stage_ns_gate.push(t0.elapsed().as_nanos() as u64);
