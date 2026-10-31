@@ -16,19 +16,19 @@
 ## 怎么跑
 
 ```sh
-cargo build --release -p vdn-speaker --features offline
+cargo build --release -p vdn-speaker-lab           # 2026-10-31 起命令行在 src/speaker-lab/（原 vdn-speaker --features offline）
 PY=<主目录>/_tmp/exp002-venv/bin/python
 D=docs/experiments/exp005-p2-speaker
 $PY $D/make_clips.py                                  # 8 段素材 → <主目录>/_tmp/20261031-exp005/src/
-$PY $D/parity.py target/release/vdn-speaker           # fbank / 声纹对拍 → results/parity.json
-$PY $D/score.py run target/release/vdn-speaker        # GTCRN + 6 个版本 + 判断回路日志 → _tmp/…/out-r2/
+$PY $D/parity.py target/release/vdn-speaker-lab       # fbank / 声纹对拍 → results/parity.json
+$PY $D/score.py run target/release/vdn-speaker-lab    # GTCRN + 6 个版本 + 判断回路日志 → _tmp/…/out-r2/
 $PY $D/score.py asr                                   # 按主人每句话切段，Qwen3-ASR 转写 5 个版本
 $PY $D/score.py score                                 # → results/scores.json
-$PY $D/envelope_compare.py target/release/vdn-speaker # exp004 素材上比两版快开慢关
+$PY $D/envelope_compare.py target/release/vdn-speaker-lab # exp004 素材上比两版快开慢关
 $PY $D/build_page.py                                  # 盲听页（每次新 build）
 ```
 
-输出目录按轮次分（环境变量 `EXP005_RUN`，默认 `out-r2`），命令行拒绝覆盖已有日志。门控调参不重算声纹：`vdn-speaker run … --replay <log.json> --tag .x [门控参数]`。
+输出目录按轮次分（环境变量 `EXP005_RUN`，默认 `out-r2`），命令行拒绝覆盖已有日志。门控调参不重算声纹：`vdn-speaker-lab run … --replay <log.json> --tag .x [门控参数]`。
 
 ## 管线与四个版本
 
