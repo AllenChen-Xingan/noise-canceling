@@ -9,7 +9,8 @@
 //!
 //! `run` 一次出 5 个版本（共用同一份降噪输出）：
 //! - `raw`：模型原样输出 · `floor`：只开衰减下限 −12 dB · `energy`：p1 能量版快开慢关
-//! - `vad`：VAD 版快开慢关（= 个性化关）· `personal`：VAD 版 + 判断回路 + 不对称门控（= 个性化开）
+//! - `vad`：VAD 版快开慢关（= 个性化关）· `personal`：VAD 版 + 判断回路 + 不对称门控（= 保守版个性化）
+//! - `aggressive`：模型原样输出（不混回原声）+ 门控（下限 −20 dB、确认 1 次、慢收 0.3 s）（= 激进版个性化）
 //!
 //! 判断回路的判决按**实测计算时间**延后生效（向上取整到 hop），模拟它在另一个线程上跑。
 
@@ -20,7 +21,7 @@ use serde_json::json;
 use vdn_engine::{Engine, SafetyConfig, offline};
 use vdn_models::ModelKind;
 use vdn_speaker::embed::{Embedder, default_model_path};
-use vdn_speaker::enroll::{EnrollEvent, EnrollParams, Enroller};
+use vdn_speaker::enroll::{EnrollOutcome, EnrollParams, Enroller};
 use vdn_speaker::envelope::{EnergyEnvelopeStage, EnvelopeParams, FloorStage, VadEnvelopeStage};
 use vdn_speaker::fbank::FbankConfig;
 use vdn_speaker::gate::{AsymGate, GateParams};
@@ -71,6 +72,11 @@ fn arg(args: &[String], name: &str) -> Option<String> {
         .and_then(|i| args.get(i + 1).cloned())
 }
 
+/// 本进程唯一的 ORT Environment（离线命令行自己建；接入时由宿主建好传给 Embedder）。
+fn ort_env() -> R<ort::environment::Environment> {
+    Ok(ort::init().with_name("vdn-speaker").build()?)
+}
+
 fn speaker_path(args: &[String]) -> R<PathBuf> {
     arg(args, "--speaker-onnx")
         .map(PathBuf::from)
@@ -89,7 +95,10 @@ fn run_stage<S: Stage>(
     for (k, (w, d)) in out.chunks_mut(HOP).zip(dry.chunks(HOP)).enumerate() {
         let ctx = FrameCtx {
             now: SampleClock((k * HOP) as u64),
-            speaker: verdicts.get(k).copied().unwrap_or(SpeakerVerdict::default()),
+            speaker: verdicts
+                .get(k)
+                .copied()
+                .unwrap_or(SpeakerVerdict::default()),
             voice_prob: None,
         };
         st.process(w, d, ctx);
@@ -176,6 +185,18 @@ fn cmd_run(args: &[String]) -> R<()> {
         None => None,
     };
     let tag = arg(args, "--tag").unwrap_or_default();
+    if replay.is_some() && tag.is_empty() {
+        return Err("--replay 必须带 --tag（不许覆盖被重放的那份日志与音频）".into());
+    }
+    let overwrite = args.iter().any(|a| a == "--overwrite");
+    let log_path = out_dir.join(format!("{stem}.log{tag}.json"));
+    if log_path.exists() && !overwrite {
+        return Err(format!(
+            "{} 已存在；换 --tag，或明确加 --overwrite",
+            log_path.display()
+        )
+        .into());
+    }
     let dry = read_wav(&input)?;
 
     // 1) 降噪输出：`--wet` 给出（由 `vdn-speaker denoise` 在另一个进程里产出——ort 一个进程只许一个 Environment，
@@ -235,7 +256,9 @@ fn cmd_run(args: &[String]) -> R<()> {
         owner_idx = old["owner_cluster"].clone();
         emb_dim = old["emb_dim"].clone();
     } else {
+        let env = ort_env()?;
         let emb = Embedder::open(
+            &env,
             &speaker_path(args)?,
             FbankConfig::wespeaker(),
             (jp.window_s * SR as f32) as usize,
@@ -249,6 +272,12 @@ fn cmd_run(args: &[String]) -> R<()> {
         let mut judge = Judge::new(jp, emb, enroller);
         let mut cur = SpeakerVerdict::default();
         let mut pending: std::collections::VecDeque<(usize, SpeakerVerdict)> = Default::default();
+        // 声纹线程是单线程串行的：上一份还没算完时，下一份要排队（自审 P2-8）
+        let mut busy_until = 0.0f64;
+        let slowdown: f64 = match arg(args, "--judge-slowdown") {
+            Some(v) => v.parse()?,
+            None => 1.0,
+        };
         for k in 0..n_hops {
             // 本 hop 生效的判决
             while let Some(&(at, v)) = pending.front() {
@@ -263,15 +292,29 @@ fn cmd_run(args: &[String]) -> R<()> {
             let w = &wet[k * HOP..(k + 1) * HOP];
             let p = vad.push(w);
             vad_probs.push(p);
-            judge.push_audio(w);
+            judge.push_audio(
+                w,
+                &dry[k * HOP..(k + 1) * HOP],
+                SampleClock((k * HOP) as u64),
+            );
             for _ in 0..vad.take_new_frames() {
                 judge.push_vad(p);
             }
             if let Some(v) = judge.tick() {
-                let c = judge.logs.last().map(|l| l.compute).unwrap_or_default();
-                let delay = (c.as_secs_f64() * SR as f64 / HOP as f64).ceil() as usize;
-                pending.push_back((k + 1 + delay, v));
-                events.push(verdict_to_json(&v, k + 1 + delay));
+                let c = judge
+                    .logs
+                    .last()
+                    .map(|l| l.compute)
+                    .unwrap_or_default()
+                    .as_secs_f64()
+                    * slowdown;
+                // 到点 = 本 hop 结束；开始算 = max(到点, 上一份算完)；生效 = 算完后的下一个 hop
+                let due = ((k + 1) * HOP) as f64 / SR as f64;
+                let done = due.max(busy_until) + c;
+                busy_until = done;
+                let at = (done * SR as f64 / HOP as f64).ceil() as usize;
+                pending.push_back((at, v));
+                events.push(verdict_to_json(&v, at));
             }
         }
         judge_logs = json!(judge.logs.iter().map(|l| json!({
@@ -281,7 +324,7 @@ fn cmd_run(args: &[String]) -> R<()> {
             "sim": if l.owner_sim.is_finite() { json!(l.owner_sim) } else { json!(null) },
             "prev_sim": if l.prev_sim.is_finite() { json!(l.prev_sim) } else { json!(null) },
             "enrolled": l.enrolled,
-            "event": match l.event { EnrollEvent::None => json!(null), EnrollEvent::Locked{cluster} => json!({"locked": cluster}), EnrollEvent::Relocked{from,to} => json!({"relocked": [from,to]}) },
+            "event": match l.event { EnrollOutcome::None => json!(null), EnrollOutcome::Locked{cluster} => json!({"locked": cluster}), EnrollOutcome::Relocked{from,to} => json!({"relocked": [from,to]}) },
             "class": class_str(l.class),
             "compute_ms": l.compute.as_secs_f64() * 1e3,
         })).collect::<Vec<_>>());
@@ -343,12 +386,34 @@ fn cmd_run(args: &[String]) -> R<()> {
         gains.push(gate.gain());
         onset_cum.push(gate.onsets());
     }
+    // 激进版（大总管 2026-10-30 定：给人听「压得干净 vs 不吃字」的取舍）：不混回原声、门控下限 −20 dB、
+    // 认人确认 1 次、慢收 0.3 s；其余与保守版相同（同一份判决序列）
+    let gp_aggr = GateParams {
+        floor_db: -20.0,
+        confirm_n: 1,
+        release_s: 0.3,
+        ..gp
+    };
+    let mut gate_a = AsymGate::new(gp_aggr);
+    let mut y_a = wet.to_vec();
+    let mut gains_aggr = Vec::with_capacity(n_hops);
+    for k in 0..n_hops {
+        let r = k * HOP..(k + 1) * HOP;
+        let ctx = FrameCtx {
+            now: SampleClock((k * HOP) as u64),
+            speaker: verdicts[k],
+            voice_prob: Some(vad_probs[k]),
+        };
+        gate_a.process(&mut y_a[r.clone()], &dry[r], ctx);
+        gains_aggr.push(gate_a.gain());
+    }
     versions.push(("energy", y_en));
     versions.push(("vad", y_ve));
     versions.push(("personal", y_p));
+    versions.push(("aggressive", y_a));
     for (name, y) in &versions {
         // 重放只写个性化那一版
-        if replay.is_none() || *name == "personal" {
+        if replay.is_none() || *name == "personal" || *name == "aggressive" {
             write_wav(&out_dir.join(format!("{stem}.{name}{tag}.wav")), y)?;
         }
     }
@@ -361,12 +426,15 @@ fn cmd_run(args: &[String]) -> R<()> {
         "emb_dim": emb_dim,
         "judge": {"window_s": jp.window_s, "hop_s": jp.hop_s, "owner_hi": jp.owner_hi, "others_lo": jp.others_lo},
         "gate": format!("{gp:?}"),
+        "gate_aggressive": format!("{gp_aggr:?}"),
+        "replay_of": arg(args, "--replay"),
         "judge_logs": judge_logs,
         "verdict_events": events,
         "owner_cluster": owner_idx,
         "clusters": clusters,
         "per_hop": {
             "gain": gains,
+            "gain_aggressive": gains_aggr,
             "onset_cum": onset_cum,
             "energy_open": energy_open,
             "vad_open": vad_open,
@@ -377,10 +445,7 @@ fn cmd_run(args: &[String]) -> R<()> {
         },
         "onsets": gate.onsets(),
     });
-    std::fs::write(
-        out_dir.join(format!("{stem}.log{tag}.json")),
-        serde_json::to_string(&log)?,
-    )?;
+    std::fs::write(&log_path, serde_json::to_string(&log)?)?;
     println!("{stem}{tag}: hops={n_hops} onsets={}", gate.onsets());
     Ok(())
 }
@@ -451,7 +516,13 @@ fn cmd_fbank(args: &[String]) -> R<()> {
 
 fn cmd_embed(args: &[String]) -> R<()> {
     let x = read_wav(Path::new(args.first().ok_or("缺 <in.wav>")?))?;
-    let mut e = Embedder::open(&speaker_path(args)?, FbankConfig::wespeaker(), x.len())?;
+    let env = ort_env()?;
+    let mut e = Embedder::open(
+        &env,
+        &speaker_path(args)?,
+        FbankConfig::wespeaker(),
+        x.len(),
+    )?;
     let n = 20;
     let mut v = e.embed(&x)?;
     // 计时：同一段重复 n 次

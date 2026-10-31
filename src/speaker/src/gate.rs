@@ -171,7 +171,11 @@ impl Stage for AsymGate {
         let voiced = self.hyst.update(p);
         // 短时电平量原声（与主人电平同一口径）；非有限样本当 0
         let lvl_src = if dry.len() == n { dry } else { &wet[..] };
-        let e = lvl_src.iter().map(|v| if v.is_finite() { v * v } else { 0.0 }).sum::<f32>() / n as f32;
+        let e = lvl_src
+            .iter()
+            .map(|v| if v.is_finite() { v * v } else { 0.0 })
+            .sum::<f32>()
+            / n as f32;
         self.short_e[self.short_i] = e;
         self.short_i = (self.short_i + 1) % self.short_e.len();
         let st_db =
@@ -185,11 +189,13 @@ impl Stage for AsymGate {
         if voiced {
             if self.silent_samples >= gap {
                 // 停顿后刚转有声：起始判据保持 onset_arm_s
-                self.armed_until = SampleClock(ctx.now.0 + (self.p.onset_arm_s * self.p.clock_rate) as u64);
+                self.armed_until =
+                    SampleClock(ctx.now.0 + (self.p.onset_arm_s * self.p.clock_rate) as u64);
             }
             let armed = ctx.now < self.armed_until;
-            let refractory_over =
-                self.onsets == 0 || ctx.now.since(self.last_onset) >= (self.p.onset_refractory_s * self.p.clock_rate) as u64;
+            let refractory_over = self.onsets == 0
+                || ctx.now.since(self.last_onset)
+                    >= (self.p.onset_refractory_s * self.p.clock_rate) as u64;
             let jump = refractory_over && st_db > self.slow_db + self.p.onset_jump_db;
             if loud_enough && (armed || jump) {
                 onset = true;
@@ -244,7 +250,8 @@ impl Stage for AsymGate {
             }
         }
         // 3) 增益：收 = 慢；起始后 100 ms 内放开 = 快；其余放开 = 中速
-        let fast = self.onsets > 0 && ctx.now.since(self.last_onset) < (0.1 * self.p.clock_rate) as u64;
+        let fast =
+            self.onsets > 0 && ctx.now.since(self.last_onset) < (0.1 * self.p.clock_rate) as u64;
         let (target, a) = if self.closing {
             (self.floor, self.a_rel)
         } else if fast {
@@ -340,7 +347,10 @@ mod tests {
     /// 时钟是 48 kHz（IO 采样率）、处理是 16 kHz 时，起始后快放窗仍是 100 ms、起始前的旧判决仍被拒
     #[test]
     fn io_clock_domain() {
-        let p = GateParams { clock_rate: 48000.0, ..GateParams::default() };
+        let p = GateParams {
+            clock_rate: 48000.0,
+            ..GateParams::default()
+        };
         let mut g = AsymGate::new(p);
         let mut wet = vec![0.01f32; 256];
         let dry = wet.clone();
@@ -348,14 +358,23 @@ mod tests {
         g.process(&mut wet, &dry, ctx(SpeakerVerdict::default(), 480_000, 0.9));
         assert_eq!(g.onsets(), 1);
         // 窗起点早于起始 → 不作数
-        let stale = SpeakerVerdict { window_start: SampleClock(470_000), window_end: SampleClock(490_000), ..verdict(SpeakerClass::Other, 0) };
+        let stale = SpeakerVerdict {
+            window_start: SampleClock(470_000),
+            window_end: SampleClock(490_000),
+            ..verdict(SpeakerClass::Other, 0)
+        };
         for k in 0..3u64 {
-            let v = SpeakerVerdict { window_end: SampleClock(490_000 + k), ..stale };
+            let v = SpeakerVerdict {
+                window_end: SampleClock(490_000 + k),
+                ..stale
+            };
             g.process(&mut wet, &dry, ctx(v, 480_768 + k * 768, 0.9));
         }
         assert!(!g.closing());
         // 快放窗：起始后 4 800 个时钟（100 ms @48k）内算快放；用 since 换算检查
-        assert!(SampleClock(480_000 + 4_799).since(SampleClock(480_000)) < (0.1 * p.clock_rate) as u64);
+        assert!(
+            SampleClock(480_000 + 4_799).since(SampleClock(480_000)) < (0.1 * p.clock_rate) as u64
+        );
     }
 
     /// 门已收、主人电平已知：停顿后句首第一个 hop 很轻（软起音），下一个 hop 才够响 → 仍算起始、放开（自审 P1-1）
@@ -367,7 +386,10 @@ mod tests {
         g.silent_samples = 100_000;
         g.slow_db = -30.0;
         g.onsets = 1;
-        let v = SpeakerVerdict { owner_level_db: Some(-25.0), ..verdict(SpeakerClass::Other, 1000) };
+        let v = SpeakerVerdict {
+            owner_level_db: Some(-25.0),
+            ..verdict(SpeakerClass::Other, 1000)
+        };
         let mut pos = 200_000u64;
         // 第一个 hop −45 dB（软起音），之后 −22 dB
         for (k, amp) in [0.0056f32, 0.079, 0.079, 0.079].iter().enumerate() {

@@ -62,7 +62,12 @@ impl Embedder {
     /// `max_samples`：一次最长送多少样本（决定特征缓冲大小）。
     /// `env`：进程里唯一的 ORT Environment，由调用方建好传入（ort 一个进程只许一个，`ort-2.0.0-rc.15/src/environment.rs:514-516`；
     /// 接入时与 vdn-models 共用同一个，见 `src/speaker/README.md`「接入注意」）。
-    pub fn open(env: &Environment, path: &Path, fbank: FbankConfig, max_samples: usize) -> Result<Self, BoxError> {
+    pub fn open(
+        env: &Environment,
+        path: &Path,
+        fbank: FbankConfig,
+        max_samples: usize,
+    ) -> Result<Self, BoxError> {
         let session = open_session(env, path)?;
         let inputs: Vec<&str> = session.inputs().iter().map(|i| i.name()).collect();
         if inputs.len() != 1 {

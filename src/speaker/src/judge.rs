@@ -13,9 +13,9 @@
 use std::time::{Duration, Instant};
 
 use crate::enroll::{EnrollOutcome, Enroller};
-use crate::vecmath::{BoxError, all_finite, cosine};
 use crate::types::{Confidence, SampleClock, SpeakerClass, SpeakerVerdict};
 use crate::vad::VAD_FRAME;
+use crate::vecmath::{BoxError, all_finite, cosine};
 
 /// 声纹来源（真模型或测试用的假模型）。
 pub trait EmbedSource {
@@ -239,12 +239,17 @@ impl<E: EmbedSource> Judge<E> {
                     log.prev_sim = ps;
                     if vf >= self.p.enroll_voiced_frac && ps >= self.p.consist_sim {
                         // 新增人声时长 = hop × 最近一个 hop 里的有声帧比例（不是固定 hop，自审 P2-6）
-                        let k = ((self.p.hop_s * self.p.sr as f32) as usize / VAD_FRAME).clamp(1, voiced.len().max(1));
+                        let k = ((self.p.hop_s * self.p.sr as f32) as usize / VAD_FRAME)
+                            .clamp(1, voiced.len().max(1));
                         let recent = &voiced[voiced.len().saturating_sub(k)..];
-                        let dur = self.p.hop_s * recent.iter().filter(|&&v| v).count() as f32 / k as f32;
-                        log.event =
-                            self.enroller
-                                .observe(&v, self.pos as f64 / self.p.sr as f64, dur, level_db);
+                        let dur =
+                            self.p.hop_s * recent.iter().filter(|&&v| v).count() as f32 / k as f32;
+                        log.event = self.enroller.observe(
+                            &v,
+                            self.pos as f64 / self.p.sr as f64,
+                            dur,
+                            level_db,
+                        );
                         log.enrolled = true;
                     }
                     let c = match self.enroller.owner() {
