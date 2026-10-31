@@ -14,6 +14,8 @@
 //!
 //! 判断回路的判决按**实测计算时间**延后生效（向上取整到 hop），模拟它在另一个线程上跑。
 
+#![forbid(unsafe_code)]
+
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 

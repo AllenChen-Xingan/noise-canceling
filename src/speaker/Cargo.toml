@@ -12,8 +12,7 @@ publish.workspace = true
 default = []
 # 声纹模型（ort）。过渡期例外：拆出推理后端 crate 后移走（同 vdn-models 的 ort 例外）
 onnx = ["dep:ort"]
-# 离线实验命令行 vdn-speaker（读写 WAV、跑 GTCRN）。待迁移到 vdn-cli / vdn-eval（规约 §2.1 离线层）
-offline = ["onnx", "dep:vdn-engine", "dep:vdn-models", "dep:hound", "dep:serde_json"]
+# 离线实验命令行已挪到 src/speaker-lab/（vdn-speaker-lab，tier = tool；2026-10-31 p2fix）
 
 [dependencies]
 # 本 crate 新引入的依赖
@@ -22,25 +21,18 @@ earshot = "=1.2.2"
 realfft.workspace = true
 vdn-dsp.workspace = true
 ort = { workspace = true, optional = true }
-vdn-engine = { workspace = true, optional = true }
-vdn-models = { workspace = true, optional = true }
-hound = { workspace = true, optional = true }
-serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
 assert_no_alloc.workspace = true
 
-[[bin]]
-name = "vdn-speaker"
-path = "src/bin/vdn-speaker.rs"
-required-features = ["offline"]
-
-# 机读正本（规约 §5.4）：核心档；实时 Stage（envelope / gate / vad）跑在降噪线程，按 B 档要求写
+# 机读正本（规约 §5.4）：B 档。理由：实时 Stage（envelope / gate / vad）的 process / reset 每 hop 跑在降噪线程，
+# 按规约 §4 那是 B 档线程（「实时 crate」= 有代码会在 A/B 档线程上被调用）；判断回路（fbank / embed / enroll / judge）
+# 是 C 档，在各自模块头以 NRT 整模块放行。§2.1 表里写 C 是只算了声纹那半，待 align 改表
 [package.metadata.vdn]
-tier = "core"
+tier = "B"
 unsafe = false
-forbid = ["hound", "serde", "serde_json", "vdn-engine", "vdn-models", "cpal"]
-forbid_note = "以上只允许经 offline feature 进入（离线实验命令行）；ort 只经 onnx feature"
+forbid = ["hound", "serde", "serde_json", "cpal", "clap", "vdn-engine", "vdn-models", "coreaudio-rs", "coreaudio-sys", "objc2"]
+forbid_note = "ort 只经 onnx feature 进入（过渡期例外，同 vdn-models）"
 
 [lints]
 workspace = true
