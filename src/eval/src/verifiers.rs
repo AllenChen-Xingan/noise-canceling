@@ -966,6 +966,15 @@ fn v_sim_gate(c: &Ctx, p: &Params) -> Score {
         return Score::unknown(ID, "比例", Better::Lower, "主讲人有声 hop 不足 20 个");
     }
     let miss = act.iter().filter(|&&h| !t.gate[h]).count() as f64 / act.len() as f64;
+    // 旁报：主讲人（含拖尾容许）与干扰者都不在的 hop 里门控开着的比例（噪声误开）
+    let quiet: Vec<usize> = (0..t.owner.len())
+        .filter(|&h| !t.owner_near[h] && !t.interf[h])
+        .collect();
+    let noise_open = if quiet.is_empty() {
+        f64::NAN
+    } else {
+        quiet.iter().filter(|&&h| t.gate[h]).count() as f64 / quiet.len() as f64
+    };
     let w = (0.2 * c.clip.sr as f64) as usize;
     let mut on_total = 0usize;
     let mut on_miss = 0usize;
@@ -991,6 +1000,7 @@ fn v_sim_gate(c: &Ctx, p: &Params) -> Score {
         &[],
     )
     .with_extra("onset_miss", onset_miss)
+    .with_extra("noise_open", noise_open)
     .with_extra("owner_hops", act.len() as f64);
     let omax = p.f_or("onset_max", 0.2);
     if s.verdict.is_pass() && onset_miss > omax {
