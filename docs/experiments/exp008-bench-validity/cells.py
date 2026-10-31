@@ -127,6 +127,21 @@ def device_chain(x, kind):
     raise ValueError(kind)
 
 
+def rir_stats(h):
+    """实测 RIR：Schroeder 反向积分，T20 外推 T60（−5…−25 dB 线性拟合）；直混比 = 直达 ±2.5 ms 能量 ÷ 其余。"""
+    if len(h) < 2:
+        return {"t60_s": 0.0, "drr_db": None}
+    e = np.cumsum(h[::-1] ** 2)[::-1]
+    edc = 10 * np.log10(e / e[0] + 1e-30)
+    t = np.arange(len(h)) / SR
+    sel = (edc <= -5) & (edc >= -25)
+    t60 = float(-60 / np.polyfit(t[sel], edc[sel], 1)[0]) if sel.sum() > 10 else None
+    k = int(0.0025 * SR)
+    d = float(np.sum(h[:k] ** 2))
+    r = float(np.sum(h[k:] ** 2))
+    return {"t60_s": None if t60 is None else round(t60, 3), "drr_db": round(10 * np.log10(d / max(r, 1e-30)), 2)}
+
+
 def active_level(x, thr_db=-35):
     m = sim.active_mask(x, frame=320, thr_db=thr_db)
     return sim.rms(x[m]) if m.any() else sim.rms(x)
@@ -183,7 +198,7 @@ def make_clip(gen, cond, mat_seed, n):
         mix *= 0.99 / peak
     labels = frame_labels(owner_dry, interf_dry)
     meta = {"speaker": spk, "neighbor": nb if cond["sir_db"] is not None else None, "noise_src": ndesc,
-            "rir_len": len(h_o), "peak_scaled": peak > 0.99}
+            "rir": rir_stats(h_o), "peak_scaled": peak > 0.99}
     return mix, tracks, labels, meta
 
 
