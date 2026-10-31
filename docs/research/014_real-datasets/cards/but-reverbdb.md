@@ -1,0 +1,13 @@
+### BUT ReverbDB（2019，Brno University of Technology）
+- **做什么**：9 个真实房间 RIR + 背景噪声 + LibriSpeech test-clean 扬声器重放重录。
+- **录音设备与距离**：每房间 31 支麦（驻极体模块 + Sennheiser MKE 2，含遮挡/平放/悬挂位）；Hi-Fi 扬声器平均约 5 个位置；麦–扬声器 0.5–15 m。无笔记本/手机内置麦。
+- **环境**：办公室×3、楼梯、酒店房、会议室、报告厅×2、会议室 C236（LibriSpeech 重录只在其中 5 间）。非多人嘈杂。
+- **说话人数与重叠**：单扬声器，无重叠。
+- **语言**：英语。
+- **参考**：干净源 有 · 转写 有 · 说话人标签 有。
+- **大小**：8.7 GB + 117 GB。
+- **许可**：CC BY 4.0 · 结论：可训练（NIST/HUB5 部分不公开）。
+- **获取**：直接下载 · https://speech.fit.vut.cz/software/but-speech-fit-reverb-database
+- **接近度**：2.5/5。
+- **用途建议**：sim-to-real 校准；训练 RIR 池；已知干净源回归集。
+- **出处**：https://speech.fit.vut.cz/software/but-speech-fit-reverb-database 【官方】；Szőke et al. IEEE JSTSP 2019, DOI 10.1109/JSTSP.2019.2917582 【论文】

@@ -1,0 +1,13 @@
+### LibriCSS（2020，Microsoft）
+- **做什么**：评测连续语音分离（CSS），按重叠率分档。
+- **录音设备与距离**：把 LibriSpeech test-clean 拼成「模拟对话」，用多只扬声器在一间办公室 / 会议室**回放**，再用 7 通道圆阵重录（论文 §3.1：中心 1 个 + 半径 4.25 cm 一圈 6 个；扬声器到麦 33–409 cm，本轮未逐字核到）。
+- **环境**：普通房间，真实混响，没有人声背景噪声。
+- **说话人数与重叠**：每个 mini-session 8 人，重叠率分 0S/0L/10/20/30/40% 六档。
+- **语言**：英语朗读。
+- **参考**：近讲 无，但发布包含**回放用的源信号**，可以对齐 · 转写 有（带分段边界）· 说话人标签 有
+- **大小**：10 h；dataprep 脚本可生成 7ch 和 monaural 两个版本。
+- **许可**：仓库 MIT（另含 py-webrtcvad MIT、WebRTC VAD BSD）；源语音 LibriSpeech CC BY 4.0；都没有 NC/SA · 结论：可训练
+- **获取**：直接下载，GitHub chenzhuo1011/libri_css 里链接的 Google Drive 包
+- **接近度**：1.5/5 · 回放重录，只算部分真实；朗读语音，没有笔记本麦也没有嘈杂背景
+- **用途建议**：重叠率可控的分离回归集（有源信号，可算 SI-SDR）；校准重叠率与混响；不适合人耳听测
+- **出处**：https://arxiv.org/abs/2001.11482 §3.1【论文】；https://github.com/chenzhuo1011/libri_css【官方】；https://raw.githubusercontent.com/chenzhuo1011/libri_css/master/LICENSE【官方】

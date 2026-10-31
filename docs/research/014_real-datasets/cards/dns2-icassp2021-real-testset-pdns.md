@@ -1,0 +1,13 @@
+### DNS Challenge 2 真实测试集（2021，Microsoft）
+- **做什么**：Track1 实时降噪；Track2 个性化降噪（pDNS），给 2 分钟目标说话人干净语音，要求压掉邻座说话人和背景噪声
+- **录音设备与距离**：众包平台 + MS 内部，'a variety of devices, acoustic and noisy conditions'；型号、距离：未查到【论文】
+- **环境**：真实嘈杂；pDNS blind 'the noise source in the majority of these clips is a secondary speaker'
+- **说话人数与重叠**：pDNS dev 分三种：主说话人+邻座、主说话人+背景噪声、两者都有；无重叠时段标注
+- **语言**：Track1 dev 英语 300 条复用自 DNS1 blind，非英语 100 条；blind 含 tonal languages 112 条；pDNS 全英语
+- **参考**：近讲 无 · 转写 无 · 说话人：pDNS 每个主说话人 2 分钟干净语音
+- **大小**：T1 dev 400 真实；T1 blind 650 真实；pDNS dev 100 真实；pDNS blind 500 真实
+- **许可**：仓库 CC BY 4.0，测试集未单列 → 按只评测处理
+- **获取**：dev 在分支 `icassp2021-final` 的 `ICASSP_dev_test_set`（git LFS）；T1 blind 在 `dnschallengepublic.blob.core.windows.net/dns3archive/V2_V3_Challenge_Combined_Blindset.zip`；pDNS blind 是否公开：未查到
+- **接近度**：3/5 · pDNS 对 D47 邻座场景，非英语段有普通话；但 dev pDNS 仅 100 条、blind 公开与否未查到，无笔记本/咖啡馆标签
+- **用途建议**：普通话段做听测；pDNS dev 做 D47 小规模听测
+- **出处**：arXiv:2009.06122 §4、§4.1.1、§4.1.3、§4.2.1、§4.2.3【论文】；raw.githubusercontent.com/microsoft/DNS-Challenge/master/download_dns_v2_v3_blindset.sh【官方】

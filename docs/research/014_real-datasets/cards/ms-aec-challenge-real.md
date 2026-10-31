@@ -1,0 +1,13 @@
+### Microsoft AEC Challenge 真实录音集（2021–2023，Microsoft）
+- **做什么**：回声消除。只看近端部分：`nearend_singletalk` 只有麦克风信号；双讲是 mic + 环回（lpb）
+- **录音设备与距离**：众包，PC 与移动设备（另有 `fullband_mobile` 目录）；距离：未查到
+- **环境**：真实家庭和办公；无专门咖啡馆或 babble 标注
+- **说话人数与重叠**：近端单讲 1 人；双讲是远端回放 + 近端，不是邻座
+- **语言**：英语
+- **参考**：近讲 无 · 转写 无公开文件 · 说话人标签 无
+- **大小**：10,000+ 设备/说话人；精确条数未在 README 核到
+- **许可**：MIT 只管代码；数据按各源原条款 → 真实录音许可未查到
+- **获取**：直接下载，github.com/microsoft/AEC-Challenge（git lfs clone）`datasets/real*`、`blind_test_set_*`
+- **接近度**：2/5 · 设备真实、量大，但不是嘈杂人群，也没有邻座重叠
+- **用途建议**：近端单讲片段用于 sim-to-real 校准（各种笔记本麦的电平、频响、设备 DSP 残留）
+- **出处**：arXiv:2309.12553 §4.1、§5【论文，未独立复核】；github.com/microsoft/AEC-Challenge（README）【官方】；github.com/microsoft/AEC-Challenge/blob/main/LICENSE【官方】

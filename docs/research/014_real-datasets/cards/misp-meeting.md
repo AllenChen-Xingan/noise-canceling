@@ -1,0 +1,13 @@
+### MISP-Meeting（2025，MISP 组织方，ACL 2025 / Interspeech 2025 挑战）
+- **做什么**：真实会议的长时转写与摘要，音视频
+- **录音设备与距离**：桌面 8 麦阵列 + 360° 全景相机；每人头戴麦经 Zoom F8N 录制（近场 SNR > 15 dB）；距离未查到【论文 arXiv:2505.13971】
+- **环境**：23 个真实会议室，远场含键盘、点击、开门、风扇声；非咖啡馆
+- **说话人数与重叠**：每场 4–8 人，共 286 人，含重叠
+- **语言**：中文普通话
+- **参考**：近讲 有（头戴 F8N 包）· 转写 有（train 12.23 MB / dev 448.93 KB 转写包；是否带时间戳页面未写，按 AVDR 任务推断有【推算】）· 说话人标签 有【推算】
+- **大小**：125.15 h；train 118.80 / dev 3.24 / eval 3.11；train CSOBx3 151 G、F8N 46.2 G；dev F8N 1.26 G、eval F8N 1.27 G
+- **许可**：Non-commercial Data License Agreement for MISP-Meeting → 仅非商业 → 只评测
+- **获取**：直接下载 · challenge.xfyun.cn/misp_dataset 页面直接给 zip 链接，写明“By using the corpus, you agree to the terms of this License”（无签字审批步骤）
+- **接近度**：3/5 · 中文 + 真实 4–8 人重叠 + 近讲参考，补上 D47 中文缺口；但会议室、阵列非笔记本麦、无大片 babble
+- **用途建议**：中文 D47 型真实回归集（取 F8N 近讲 + 阵列单通道）、校准重叠率；只存本机
+- **出处**：https://challenge.xfyun.cn/misp_dataset 【官方】；arXiv:2505.13971 【论文】；https://aclanthology.org/2025.acl-long.753 【论文】；https://lawinsider.com/contracts/6L1fBfnGGIG 【二手】

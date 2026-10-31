@@ -1,0 +1,13 @@
+### URGENT 2026 Track1 blind 测试集（2026，URGENT 组委会）
+- **做什么**：通用语音增强；Track2 是增强后语音的质量评估
+- **录音设备与距离**：真实样本 'collected from public sources'，未点名
+- **环境**：未查到
+- **说话人数与重叠**：未查到
+- **语言**：未见语言为印地、韩、阿拉伯、日、意
+- **参考**：近讲 无 · 转写 未查到 · 说话人标签 无
+- **大小**：真实 480 条
+- **许可**：未查到；HF 仓库无数据卡、无 license 字段
+- **获取**：huggingface.co/datasets/urgent-challenge/urgent2026_leaderboard（文件 track1/blind_noisy.zip 的路径未在页面核到）
+- **接近度**：1/5 · 盲测重点语言不含中英，来源不明，许可不明
+- **用途建议**：只作泛化抽检
+- **出处**：arXiv:2601.13531 §3【论文，未独立复核】；urgent-challenge.github.io/urgent2026/track1/【官方】；huggingface.co/datasets/urgent-challenge/urgent2026_leaderboard【官方】

@@ -1,0 +1,13 @@
+### EARS-Reverb（2024，Univ. Hamburg / Meta；benchmark v2 2025-04）
+- **做什么**：EARS 消声室语音 卷积 实测 RIR 的去混响基准（**合成混合**）。
+- **录音设备与距离**：干净语音消声室测量麦录制；RIR 2313 条，来自 ACE（84 条）、AIR、ARNI、BRUDEX、dEchorate、DetmoldSRIR、Palimpsest 等；是否含 ACE Chromebook 通道 未查到。
+- **环境**：RIR 真实，混合为人工卷积；无噪声。
+- **说话人数与重叠**：107 人，单人。
+- **语言**：英语。
+- **参考**：干净源 有。
+- **大小**：未查到。
+- **许可**：CC BY-NC 4.0 · 结论：只评测。
+- **获取**：https://github.com/sp-uhh/ears_benchmark ；https://github.com/facebookresearch/ears_dataset
+- **接近度**：1/5。
+- **用途建议**：不作真实回归；仅借 RIR 源列表。
+- **出处**：arXiv:2406.06185 §2–3、表 2 【论文】；https://raw.githubusercontent.com/sp-uhh/ears_benchmark/main/README.md 【官方】

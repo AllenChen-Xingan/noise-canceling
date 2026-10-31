@@ -1,0 +1,13 @@
+### DNS Challenge 4 真实测试集（2022，Microsoft）
+- **做什么**：全带 48 kHz 降噪，非个性化与个性化（PDNS）两赛道
+- **录音设备与距离**：dev 全部用笔记本或台式机录，分近讲与 1、2、3 m 远讲【论文 §3.2】。blind 859 条中 638 条是手机（约 70%），其余台式机/笔记本【README】
+- **环境**：非个性化 dev 噪声如风扇、打字、狗叫；193 条情感语音。blind 噪声分布见论文图 1，咖啡馆/babble 是否在内：未查到
+- **说话人数与重叠**：PDNS dev = 737 主说话人+噪声、166 主说话人+邻座+噪声、347 主说话人+邻座（无噪声）、193 情感
+- **语言**：英语
+- **参考**：近讲 无 · 转写：dev 有公开 `WAcc/DNSChallenge4_devtest.tsv`（无时间戳）；blind 由第三方转写、专家校对，但 README 标 TBD，未公开 · 说话人：blind 每人 2.5 分钟 enrollment
+- **大小**：dev 930 + 1443 条；blind 859 条
+- **许可**：仓库 CC BY 4.0，数据按各源原条款，测试集未单列 → 按只评测处理
+- **获取**：直接下载，分支 `v4dnschallenge_ICASSP2022`；blind `dns4public.blob.core.windows.net/dns4archive/blind_testset_bothtracks.zip`
+- **接近度**：3.5/5 · dev 笔记本/台式机 + 1–3 m + 513 条邻座重叠，贴近 D47；但无逐条设备/距离标签、无咖啡馆 babble 证据、无中文、无干净参考
+- **用途建议**：D47 回归集（PDNS dev 邻座子集）；人耳听测；WAcc 回归
+- **出处**：arXiv:2202.13288 §3.2–3.3【论文】；github.com/microsoft/DNS-Challenge/blob/v4dnschallenge_ICASSP2022/README.md【官方】

@@ -1,0 +1,13 @@
+### Mixer 6 Speech（2013 发布，2009–2010 录制，LDC）
+- **做什么**：说话人识别用大规模语料：访谈、朗读、电话
+- **录音设备与距离**：14 路麦同步录成单声道文件，两间 LDC 多通道录音室相同布置；CH01/CH02 领夹、CH03 头戴为近讲【据 CHiME-7 页】，其余为不同类型远场麦；具体距离在 mx6_collection_doc.pdf，未读到
+- **环境**：安静录音室，非嘈杂场景
+- **说话人数与重叠**：594 人；访谈为被试 + 访谈员两人，重叠少
+- **语言**：英语（费城地区美式母语）
+- **参考**：近讲 有（领夹/头戴）· 转写 公开版目录页未提（readme 称可能日后另发对齐）；CHiME-7/8 DASR 版有时间戳转写 · 说话人标签 有（DASR 版）
+- **大小**：15,863 h；麦克风音频 16 kHz 16-bit 单声道
+- **许可**：目录页写“members-only corpus”，费用需登录查看；LDC 语料一般禁再分发（协议原文未核实）→ 不可再分发
+- **获取**：LDC 付费 · catalog.ldc.upenn.edu/LDC2013S03；带转写的 DASR 版须签 LDC CHiME-8 评测协议
+- **接近度**：1.5/5 · 安静录音室两人访谈，与 D42/D47 差距大
+- **用途建议**：仅作多距离麦的混响/电平参照；不建议投入
+- **出处**：https://catalog.ldc.upenn.edu/LDC2013S03 【官方】；https://catalog.ldc.upenn.edu/docs/LDC2013S03/readme.txt 【官方】；https://www.chimechallenge.org/challenges/chime7/task1/data 【官方】

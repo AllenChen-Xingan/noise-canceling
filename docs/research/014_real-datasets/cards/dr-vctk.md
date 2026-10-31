@@ -1,0 +1,13 @@
+### Device Recorded VCTK（2018，NII / Edinburgh，Sarfjoo & Yamagishi）
+- **做什么**：VCTK 干净语音在办公室经扬声器回放，用多种消费设备同步重录，形成平行语料。
+- **录音设备与距离**：8 通道＝**MacBook Air（2ch）**、Apogee MiC、Blue Snowball、iPhone 5S（2ch）、iPad（2ch）；回放扬声器 Bose SoundLink III，距麦 **2 m**。
+- **环境**：中等大小办公室，开窗/关窗两种背景条件（共 16 条件）。无 babble。
+- **说话人数与重叠**：训练 28 人（14 男 14 女）、测试 2 人；单人，无重叠。
+- **语言**：英语。
+- **参考**：干净源 有（原 VCTK，已用自相关去延迟、裁静音）· 转写 有（VCTK 文本，推算）· 说话人标签 有。
+- **大小**：1.67 GB（原录 48 kHz，发布 16 kHz）。
+- **许可**：README 写 CC BY 4.0；datashare 页另附 End-user Licence 未读到 · 结论：**待核**，核完前按只评测（014 自审更正）。
+- **获取**：直接下载 · https://datashare.ed.ac.uk/handle/10283/3038（DOI 10.7488/ds/2316）
+- **接近度**：3/5 · 本族唯一查到的 **Apple 笔记本内置麦**真实重录 + 逐样本平行参考；但为回放、单人、2 m、仅 16 kHz、无 babble/重叠。
+- **用途建议**：MacBook 麦频响/底噪校准（最高优先）；侵入式指标回归集。
+- **出处**：https://datashare.ed.ac.uk/bitstream/handle/10283/3038/README.txt 【官方】；https://datashare.ed.ac.uk/handle/10283/3038?show=full 【官方】

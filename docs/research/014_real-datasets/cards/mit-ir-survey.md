@@ -1,0 +1,13 @@
+### MIT IR Survey（2016，MIT McDermott Lab）
+- **做什么**：跟踪志愿者日常行踪随机采样地点，实测 271 条 IR（301 个地点）。
+- **录音设备与距离**：扬声器–麦 1.5 m（模拟对话距离）；设备型号官方页未写。
+- **环境**：日常真实场所（类别分布见 PNAS 论文，本次未核）。
+- **说话人数与重叠**：不涉及。
+- **语言**：不涉及。
+- **参考**：IR 本身。
+- **大小**：271 IR。
+- **许可**：未查到 · 结论：未查到，确认前不训练。
+- **获取**：直接下载 · https://mcdermottlab.mit.edu/Reverb/IR_Survey.html
+- **接近度**：1.5/5。
+- **用途建议**：混响先验分布。
+- **出处**：https://mcdermottlab.mit.edu/Reverb/IR_Survey.html 【官方】；Traer & McDermott PNAS 2016, DOI 10.1073/pnas.1612524113 【论文】；https://huggingface.co/datasets/hashdoa/MIT_environmental_impulse_responses 【二手】
