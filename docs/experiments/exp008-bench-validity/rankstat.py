@@ -3,7 +3,7 @@
 S7  每个格（cell × 档位）、每个指标：系统在生成器 A 上的均值排名 vs 在 B 上的排名 → Kendall τ_b（τ_AB）。
     参照上限：同一生成器内两半片段（偶数号 vs 奇数号）的 τ（split-half 信度）。τ_AB 明显低于信度 = 排名被生成器左右。
     区间：A、B 各自按片段有放回重采样 2000 次（种子 20261031），取 2.5 / 97.5 分位。
-    三种系统集合：全体（含作弊天花板）· 去掉天花板与参数变体 · 每族一个代表（6 个，只看点估计）
+    四种系统集合：全体（含作弊天花板）· 去掉天花板与参数变体 · 每族一个代表（6 个）· 只看神经模型（8 个）；后两种只看点估计
 S8  exp003 人耳（build f8c3，3 个系统 × 12 屏，会话打折）：配对规则同 vdn-eval calib（最清楚 / 最自然被选者胜同屏其余；
     能用 > 勉强 > 不能用 差 ≥ 1 级）。用「近似匹配的合成格」上的系统均值预测每一对的胜负，算一致率；
     对照组 = 同一指标直接在 exp003 片段上算（scores.json），也就是 calib round 1 的口径。**3 个系统、48 对，功效很低，只作方向参考。**
@@ -28,6 +28,7 @@ METRICS = {  # 指标: 方向（+1 越大越好；-1 越小越好；0 = 越接�
 CEILING = {"oracle_irm"}
 VARIANTS = {"gtcrn_mix05"}
 REPS = ["passthrough", "wiener_dd", "gtcrn_vctk", "gtcrn", "dpdf8", "oracle_irm"]  # 每族一个代表（C 地板 · C · A′ · A · B · O）
+NEURAL = {"gtcrn_vctk", "gtcrn", "ulunas", "fe_s", "fe_m", "dpdf_base", "dpdf2", "dpdf8"}  # 只看神经模型：去掉 DSP 与地板后排名难得多
 
 
 def kendall_tau_b(x, y):
@@ -77,7 +78,8 @@ def tau_between(ma, mb):
 
 def s7(rows):
     systems_all = sorted({r["system"] for r in rows})
-    sets = {"all": set(systems_all), "no_ceiling_variant": set(systems_all) - CEILING - VARIANTS, "reps": set(REPS) & set(systems_all)}
+    sets = {"all": set(systems_all), "no_ceiling_variant": set(systems_all) - CEILING - VARIANTS, "reps": set(REPS) & set(systems_all),
+            "neural": NEURAL & set(systems_all)}
     cells = defaultdict(list)
     for r in rows:
         cells[(r["cell"], json.dumps(r["level"]))].append(r)
@@ -102,7 +104,7 @@ def s7(rows):
                 d = {"n_sys": len(set(ma) & set(mb)), "tau_ab": round(t, 3),
                      "split_half_a": None if sh_a is None else round(sh_a, 3),
                      "split_half_b": None if sh_b is None else round(sh_b, 3)}
-                if name != "reps":
+                if name not in ("reps", "neural"):
                     boots = []
                     for _ in range(2000):
                         ca = [rng.choice(clips_a) for _ in clips_a]
@@ -200,16 +202,22 @@ def main():
     r8 = s8(rows)
     (HERE / "results" / f"{build}-rankstat.json").write_text(json.dumps({"build": build, "S7": r7, "S8": r8}, ensure_ascii=False, indent=1))
     # 摘要：每个指标跨格的 τ_AB 与 split-half 中位数
+    med = lambda v: sorted(v)[len(v) // 2] if v else None  # noqa: E731
     print("S7（no_ceiling_variant，系统数 / τ_AB 中位 / 信度 A、B 中位 / 下界 > 0 的格数）")
     for metric in METRICS:
         xs = [r["no_ceiling_variant"] for r in r7 if r["metric"] == metric and "no_ceiling_variant" in r]
         if not xs:
             continue
-        med = lambda v: sorted(v)[len(v) // 2] if v else None  # noqa: E731
         print(f"  {metric:16s} n={xs[0]['n_sys']:2d} τ_AB={med([x['tau_ab'] for x in xs])} "
               f"信度A={med([x['split_half_a'] for x in xs if x['split_half_a'] is not None])} "
               f"信度B={med([x['split_half_b'] for x in xs if x['split_half_b'] is not None])} "
               f"下界>0: {sum(x['ci95'][0] > 0 for x in xs)}/{len(xs)}")
+    print("S7（neural，8 个神经模型，τ_AB 中位 / 信度 A、B 中位）")
+    for metric in METRICS:
+        xs = [r["neural"] for r in r7 if r["metric"] == metric and "neural" in r]
+        if xs:
+            print(f"  {metric:16s} τ_AB={med([x['tau_ab'] for x in xs])} 信度A={med([x['split_half_a'] for x in xs if x['split_half_a'] is not None])} "
+                  f"信度B={med([x['split_half_b'] for x in xs if x['split_half_b'] is not None])}")
     print("S8（exp003 人耳配对一致率：合成格预测 vs 片段自身）")
     for m, v in r8.items():
         print(f"  {m:16s} 合成格 {v['synthetic_cell']}  片段自身 {v['on_exp003_clip']}")
