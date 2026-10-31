@@ -1,0 +1,6937 @@
+{
+ "build": "20261031-102406-0c67",
+ "S7": [
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.473,
+    "split_half_a": 0.56,
+    "split_half_b": 0.077,
+    "ci95": [
+     -0.209,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.364,
+    "split_half_a": 0.545,
+    "split_half_b": -0.061,
+    "ci95": [
+     -0.364,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.467,
+    "split_half_a": 0.733,
+    "split_half_b": 0.467
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.538,
+    "split_half_a": 0.714,
+    "split_half_b": 0.442,
+    "ci95": [
+     0.011,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.394,
+    "split_half_a": 0.636,
+    "split_half_b": 0.364,
+    "ci95": [
+     -0.152,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.67,
+    "split_half_a": 0.473,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.385,
+     0.78
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.515,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.424,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.467,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.67,
+    "split_half_a": 0.407,
+    "split_half_b": 0.495,
+    "ci95": [
+     0.209,
+     0.736
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.455,
+    "split_half_b": 0.485,
+    "ci95": [
+     0.152,
+     0.758
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.333,
+    "split_half_b": 0.6
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.604,
+    "split_half_a": 0.604,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.429,
+     0.78
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.576,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.545,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.467,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.736,
+    "split_half_a": 0.846,
+    "split_half_b": 0.692,
+    "ci95": [
+     0.516,
+     0.824
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.818,
+    "split_half_b": 0.697,
+    "ci95": [
+     0.545,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "metric": "nonowner_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.626,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.604,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.545,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.545,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.868,
+    "split_half_b": 0.736,
+    "ci95": [
+     0.648,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.879,
+    "split_half_b": 0.697,
+    "ci95": [
+     0.606,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.6
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.187,
+    "split_half_a": 0.626,
+    "split_half_b": 0.165,
+    "ci95": [
+     -0.363,
+     0.626
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.121,
+    "split_half_a": 0.545,
+    "split_half_b": 0.091,
+    "ci95": [
+     -0.545,
+     0.545
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.2,
+    "split_half_a": 0.867,
+    "split_half_b": 0.333
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.209,
+    "split_half_a": 0.802,
+    "split_half_b": 0.692,
+    "ci95": [
+     -0.143,
+     0.692
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.091,
+    "split_half_a": 0.758,
+    "split_half_b": 0.667,
+    "ci95": [
+     -0.303,
+     0.667
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.333,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.692,
+    "split_half_a": 0.846,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.582,
+     0.824
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.818,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.606,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.758,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.604,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.697,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.606,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.6,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.692,
+    "split_half_a": 0.758,
+    "split_half_b": 0.736,
+    "ci95": [
+     0.516,
+     0.824
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.697,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.545,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.714,
+    "split_half_a": 0.692,
+    "split_half_b": 0.736,
+    "ci95": [
+     0.473,
+     0.802
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.606,
+    "split_half_b": 0.667,
+    "ci95": [
+     0.485,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "metric": "nonowner_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.736,
+    "split_half_b": 1.0,
+    "ci95": [
+     0.648,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.667,
+    "split_half_b": 1.0,
+    "ci95": [
+     0.576,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.733,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.868,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.626,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.848,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.545,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.516,
+    "split_half_a": 0.253,
+    "split_half_b": 0.824,
+    "ci95": [
+     -0.077,
+     0.78
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.455,
+    "split_half_a": 0.152,
+    "split_half_b": 0.758,
+    "ci95": [
+     -0.242,
+     0.727
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.467,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.582,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.473,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.515,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.364,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.6,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.692,
+    "split_half_a": 0.758,
+    "split_half_b": 0.67,
+    "ci95": [
+     0.538,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.727,
+    "split_half_a": 0.758,
+    "split_half_b": 0.697,
+    "ci95": [
+     0.606,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.385,
+    "split_half_a": 0.67,
+    "split_half_b": 0.319,
+    "ci95": [
+     -0.121,
+     0.648
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.394,
+    "split_half_a": 0.667,
+    "split_half_b": 0.455,
+    "ci95": [
+     -0.182,
+     0.667
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.6,
+    "split_half_b": 0.6
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.802,
+    "split_half_b": 0.692,
+    "ci95": [
+     0.538,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.758,
+    "split_half_b": 0.727,
+    "ci95": [
+     0.576,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.824,
+    "split_half_b": 0.626,
+    "ci95": [
+     0.626,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.758,
+    "split_half_b": 0.606,
+    "ci95": [
+     0.636,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "metric": "nonowner_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.758,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.736,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.727,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.727,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.604,
+    "split_half_b": 0.78,
+    "ci95": [
+     0.604,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.576,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.576,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.6,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.319,
+    "split_half_a": 0.429,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.011,
+     0.824
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.242,
+    "split_half_a": 0.364,
+    "split_half_b": 0.909,
+    "ci95": [
+     -0.121,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.067,
+    "split_half_a": 0.6,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.67,
+    "split_half_a": 0.626,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.275,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.606,
+    "split_half_a": 0.576,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.212,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.6,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.846,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.736,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.939,
+    "split_half_a": 0.97,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.758,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.78,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.714,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.848,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.697,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.846,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.692,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.909,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.667,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.846,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.538,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.818,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.545,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "metric": "nonowner_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.692,
+    "split_half_a": 0.846,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.648,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.727,
+    "split_half_a": 0.788,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.697,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 1.0,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.89,
+    "split_half_b": 0.978,
+    "ci95": [
+     0.692,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.879,
+    "split_half_b": 0.97,
+    "ci95": [
+     0.667,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.604,
+    "split_half_a": 0.78,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.363,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.545,
+    "split_half_a": 0.788,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.333,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.467,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.67,
+    "split_half_b": 0.78,
+    "ci95": [
+     0.604,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.576,
+    "split_half_b": 0.727,
+    "ci95": [
+     0.485,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.846,
+    "split_half_b": 0.78,
+    "ci95": [
+     0.692,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.879,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.697,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.868,
+    "split_half_b": 0.692,
+    "ci95": [
+     0.692,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.879,
+    "split_half_b": 0.667,
+    "ci95": [
+     0.667,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.714,
+    "split_half_a": 0.758,
+    "split_half_b": 0.714,
+    "ci95": [
+     0.582,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.727,
+    "split_half_a": 0.788,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.606,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.824,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.736,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.788,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.636,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.846,
+    "split_half_b": 0.78,
+    "ci95": [
+     0.736,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.788,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.727,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.934,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.802,
+     1.0
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.909,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.788,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.956,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.824,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.939,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.818,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.934,
+    "split_half_a": 0.956,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.824,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.97,
+    "split_half_a": 0.97,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.848,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.758,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.714,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.939,
+    "split_half_a": 0.727,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.636,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.6,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.956,
+    "split_half_a": 0.934,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.802,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.939,
+    "split_half_a": 0.939,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.788,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.956,
+    "split_half_b": 0.802,
+    "ci95": [
+     0.67,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.939,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.636,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.934,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.824,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.939,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.788,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.956,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.648,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.97,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.576,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.978,
+    "split_half_b": 0.84,
+    "ci95": [
+     0.802,
+     1.0
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.97,
+    "split_half_b": 0.809,
+    "ci95": [
+     0.758,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 1.0,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.868,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.78,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.879,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.788,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.934,
+    "split_half_a": 0.495,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.451,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.485,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.515,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.934,
+    "split_half_a": 0.802,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.758,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.97,
+    "split_half_a": 0.788,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.727,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.956,
+    "split_half_a": 0.934,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.758,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.939,
+    "split_half_a": 0.939,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.788,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.978,
+    "split_half_a": 0.956,
+    "split_half_b": 0.956,
+    "ci95": [
+     0.758,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 1.0,
+    "split_half_a": 0.97,
+    "split_half_b": 1.0,
+    "ci95": [
+     0.727,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.956,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.802,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.939,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.758,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 1.0,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.978,
+    "split_half_a": 0.934,
+    "split_half_b": 0.802,
+    "ci95": [
+     0.802,
+     1.0
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.97,
+    "split_half_a": 0.939,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.818,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 1.0,
+    "split_half_a": 0.912,
+    "split_half_b": 0.934,
+    "ci95": [
+     0.846,
+     1.0
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 1.0,
+    "split_half_a": 0.939,
+    "split_half_b": 0.97,
+    "ci95": [
+     0.848,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.733,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.978,
+    "split_half_a": 0.495,
+    "split_half_b": 0.78,
+    "ci95": [
+     0.516,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 1.0,
+    "split_half_a": 0.606,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.606,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.333,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.978,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.736,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.97,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.667,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.824,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.604,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.758,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.515,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.978,
+    "split_half_a": 0.868,
+    "split_half_b": 0.956,
+    "ci95": [
+     0.802,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.97,
+    "split_half_a": 0.879,
+    "split_half_b": 0.97,
+    "ci95": [
+     0.788,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "babble",
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.516,
+    "split_half_b": 0.78,
+    "ci95": [
+     0.648,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.394,
+    "split_half_b": 0.697,
+    "ci95": [
+     0.576,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.733,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "babble",
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.89,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.78,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.879,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.727,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "babble",
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.862,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.714,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.87,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.667,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "babble",
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.824,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.473,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.788,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.515,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "babble",
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.934,
+    "split_half_a": 0.758,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.714,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.667,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.636,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "babble",
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.802,
+    "split_half_b": 0.802,
+    "ci95": [
+     0.714,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.788,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.727,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "babble",
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "babble",
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.824,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.758,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.939,
+    "split_half_a": 0.818,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.697,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "cafe",
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.67,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.67,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.576,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.576,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "cafe",
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.956,
+    "split_half_a": 0.824,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.758,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.939,
+    "split_half_a": 0.758,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.667,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "cafe",
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.934,
+    "split_half_a": 0.89,
+    "split_half_b": 0.802,
+    "ci95": [
+     0.824,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.97,
+    "split_half_a": 0.909,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.848,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "cafe",
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.868,
+    "split_half_b": 0.714,
+    "ci95": [
+     0.604,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 1.0,
+    "split_half_a": 0.848,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.667,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "cafe",
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.758,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.67,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.697,
+    "split_half_b": 0.667,
+    "ci95": [
+     0.606,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "cafe",
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.89,
+    "split_half_b": 0.692,
+    "ci95": [
+     0.736,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.879,
+    "split_half_b": 0.576,
+    "ci95": [
+     0.667,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "cafe",
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "cafe",
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.78,
+    "split_half_b": 0.802,
+    "ci95": [
+     0.604,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.818,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.576,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "clatter",
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.692,
+    "split_half_a": 0.89,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.626,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.576,
+    "split_half_a": 0.848,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.515,
+     0.788
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "clatter",
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.934,
+    "split_half_b": 0.978,
+    "ci95": [
+     0.824,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.909,
+    "split_half_b": 0.97,
+    "ci95": [
+     0.758,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "clatter",
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.736,
+    "split_half_a": 0.692,
+    "split_half_b": 0.692,
+    "ci95": [
+     0.451,
+     0.824
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.667,
+    "split_half_a": 0.697,
+    "split_half_b": 0.667,
+    "ci95": [
+     0.394,
+     0.788
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.733,
+    "split_half_b": 0.467
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "clatter",
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.582,
+    "split_half_a": 0.165,
+    "split_half_b": 0.473,
+    "ci95": [
+     -0.231,
+     0.714
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.545,
+    "split_half_a": 0.303,
+    "split_half_b": 0.515,
+    "ci95": [
+     -0.303,
+     0.697
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.467,
+    "split_half_a": 0.067,
+    "split_half_b": 0.467
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "clatter",
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.692,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.648,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.606,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.576,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "clatter",
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.758,
+    "split_half_b": 0.626,
+    "ci95": [
+     0.516,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.667,
+    "split_half_b": 0.545,
+    "ci95": [
+     0.424,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.467
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "clatter",
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "clatter",
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.692,
+    "split_half_a": 0.868,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.495,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.667,
+    "split_half_a": 0.909,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.485,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "music",
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.824,
+    "split_half_b": 0.956,
+    "ci95": [
+     0.824,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.758,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.788,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.733,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "music",
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.934,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.824,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.909,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.788,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "music",
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.67,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.648,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.697,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.636,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "music",
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.67,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.626,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.758,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.636,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "music",
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.604,
+    "split_half_b": 0.692,
+    "ci95": [
+     0.516,
+     0.802
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.545,
+    "split_half_b": 0.576,
+    "ci95": [
+     0.394,
+     0.758
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "music",
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.714,
+    "split_half_a": 0.956,
+    "split_half_b": 0.56,
+    "ci95": [
+     0.538,
+     0.78
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.636,
+    "split_half_a": 0.939,
+    "split_half_b": 0.394,
+    "ci95": [
+     0.394,
+     0.697
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "music",
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "music",
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.934,
+    "split_half_a": 0.78,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.736,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.939,
+    "split_half_a": 0.727,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.727,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "stationary",
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.956,
+    "split_half_a": 0.824,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.758,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.939,
+    "split_half_a": 0.788,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.727,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.733,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "stationary",
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.978,
+    "split_half_a": 0.978,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.868,
+     1.0
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.97,
+    "split_half_a": 0.97,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.818,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "stationary",
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.714,
+    "split_half_a": 0.89,
+    "split_half_b": 0.78,
+    "ci95": [
+     0.67,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.909,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.727,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.867,
+    "split_half_b": 0.6
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "stationary",
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.604,
+    "split_half_a": 0.626,
+    "split_half_b": 0.582,
+    "ci95": [
+     0.319,
+     0.78
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.727,
+    "split_half_b": 0.636,
+    "ci95": [
+     0.485,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "stationary",
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.538,
+    "split_half_b": 0.451,
+    "ci95": [
+     0.473,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.394,
+    "split_half_b": 0.394,
+    "ci95": [
+     0.333,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.6,
+    "split_half_b": 0.6
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "stationary",
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.429,
+    "split_half_a": 0.912,
+    "split_half_b": 0.604,
+    "ci95": [
+     0.407,
+     0.78
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.303,
+    "split_half_a": 0.879,
+    "split_half_b": 0.485,
+    "ci95": [
+     0.242,
+     0.758
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 1.0,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "stationary",
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "stationary",
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.912,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.714,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.879,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.697,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "traffic",
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.846,
+    "split_half_b": 0.956,
+    "ci95": [
+     0.736,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.788,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.667,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "traffic",
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.89,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.78,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.848,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.667,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "traffic",
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.846,
+    "split_half_b": 0.648,
+    "ci95": [
+     0.648,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.848,
+    "split_half_b": 0.667,
+    "ci95": [
+     0.636,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.6
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "traffic",
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.56,
+    "split_half_a": 0.714,
+    "split_half_b": 0.319,
+    "ci95": [
+     0.253,
+     0.758
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.848,
+    "split_half_b": 0.303,
+    "ci95": [
+     0.394,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.733,
+    "split_half_b": 0.467
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "traffic",
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.714,
+    "split_half_a": 0.516,
+    "split_half_b": 0.473,
+    "ci95": [
+     0.473,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.606,
+    "split_half_a": 0.333,
+    "split_half_b": 0.364,
+    "ci95": [
+     0.303,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.6
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "traffic",
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.56,
+    "split_half_a": 0.956,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.451,
+     0.758
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.515,
+    "split_half_a": 0.939,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.424,
+     0.758
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "traffic",
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-NOISE",
+   "level": "traffic",
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.758,
+    "split_half_b": 0.714,
+    "ci95": [
+     0.692,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.788,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.697,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "cafe",
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.67,
+    "split_half_b": 0.934,
+    "ci95": [
+     0.582,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.636,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.485,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "cafe",
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.956,
+    "split_half_a": 0.868,
+    "split_half_b": 0.934,
+    "ci95": [
+     0.824,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.939,
+    "split_half_a": 0.848,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.758,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "cafe",
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.78,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.736,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.758,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.697,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.6,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "cafe",
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.67,
+    "split_half_a": 0.736,
+    "split_half_b": 0.495,
+    "ci95": [
+     0.363,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.758,
+    "split_half_b": 0.606,
+    "ci95": [
+     0.485,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.467,
+    "split_half_a": 0.6,
+    "split_half_b": 0.2
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "cafe",
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.736,
+    "split_half_a": 0.824,
+    "split_half_b": 0.714,
+    "ci95": [
+     0.604,
+     0.824
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.667,
+    "split_half_a": 0.788,
+    "split_half_b": 0.636,
+    "ci95": [
+     0.485,
+     0.758
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "cafe",
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.868,
+    "split_half_b": 0.67,
+    "ci95": [
+     0.648,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.667,
+    "split_half_a": 0.848,
+    "split_half_b": 0.545,
+    "ci95": [
+     0.515,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "cafe",
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-RT60",
+   "level": "cafe",
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.67,
+    "split_half_a": 0.802,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.56,
+     0.802
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.636,
+    "split_half_a": 0.788,
+    "split_half_b": 0.97,
+    "ci95": [
+     0.515,
+     0.788
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "car",
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.978,
+    "split_half_a": 0.714,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.736,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.97,
+    "split_half_a": 0.636,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.697,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "car",
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.736,
+    "split_half_b": 0.84,
+    "ci95": [
+     0.692,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.697,
+    "split_half_b": 0.809,
+    "ci95": [
+     0.636,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.6,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "car",
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.934,
+    "split_half_a": 0.802,
+    "split_half_b": 0.802,
+    "ci95": [
+     0.758,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.939,
+    "split_half_a": 0.848,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.758,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "car",
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.714,
+    "split_half_b": 0.275,
+    "ci95": [
+     0.341,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.727,
+    "split_half_b": 0.364,
+    "ci95": [
+     0.394,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.867,
+    "split_half_b": 0.467
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "car",
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.67,
+    "split_half_b": 0.78,
+    "ci95": [
+     0.714,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.697,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.697,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "car",
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.89,
+    "split_half_b": 0.78,
+    "ci95": [
+     0.714,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.909,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.697,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "car",
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-RT60",
+   "level": "car",
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.846,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.692,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.848,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.697,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "hall",
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.297,
+    "split_half_a": 0.736,
+    "split_half_b": 0.934,
+    "ci95": [
+     -0.033,
+     0.604
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.242,
+    "split_half_a": 0.636,
+    "split_half_b": 0.939,
+    "ci95": [
+     -0.212,
+     0.576
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.467,
+    "split_half_a": 0.733,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "hall",
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.473,
+    "split_half_a": 0.78,
+    "split_half_b": 0.934,
+    "ci95": [
+     0.407,
+     0.626
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.455,
+    "split_half_a": 0.788,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.303,
+     0.606
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.467,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "hall",
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.758,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.736,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.727,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.667,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "hall",
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.648,
+    "split_half_a": 0.78,
+    "split_half_b": 0.297,
+    "ci95": [
+     0.143,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.758,
+    "split_half_b": 0.364,
+    "ci95": [
+     0.242,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.733,
+    "split_half_b": 0.467
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "hall",
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.824,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.626,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.818,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.485,
+     0.788
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "hall",
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.692,
+    "split_half_a": 0.89,
+    "split_half_b": 0.714,
+    "ci95": [
+     0.626,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.576,
+    "split_half_a": 0.848,
+    "split_half_b": 0.606,
+    "ci95": [
+     0.485,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "hall",
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-RT60",
+   "level": "hall",
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.604,
+    "split_half_a": 0.868,
+    "split_half_b": 0.934,
+    "ci95": [
+     0.538,
+     0.758
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.576,
+    "split_half_a": 0.879,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.515,
+     0.758
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "office",
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.934,
+    "split_half_a": 0.846,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.846,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.788,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.788,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "office",
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.956,
+    "split_half_a": 0.802,
+    "split_half_b": 0.934,
+    "ci95": [
+     0.824,
+     1.0
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.939,
+    "split_half_a": 0.727,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.758,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.733,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "office",
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.846,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.758,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.909,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.788,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.6,
+    "split_half_b": 0.6
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "office",
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.934,
+    "split_half_b": 0.473,
+    "ci95": [
+     0.363,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 1.0,
+    "split_half_b": 0.576,
+    "ci95": [
+     0.545,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 1.0,
+    "split_half_b": 0.467
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "office",
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.846,
+    "split_half_b": 0.736,
+    "ci95": [
+     0.67,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.848,
+    "split_half_b": 0.667,
+    "ci95": [
+     0.606,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "office",
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.978,
+    "split_half_b": 0.692,
+    "ci95": [
+     0.692,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 1.0,
+    "split_half_b": 0.667,
+    "ci95": [
+     0.636,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-RT60",
+   "level": "office",
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-RT60",
+   "level": "office",
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.868,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.648,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.879,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.606,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": -6.0,
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.67,
+    "split_half_a": 0.473,
+    "split_half_b": 0.692,
+    "ci95": [
+     0.121,
+     0.824
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.606,
+    "split_half_a": 0.394,
+    "split_half_b": 0.606,
+    "ci95": [
+     0.0,
+     0.758
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.733,
+    "split_half_b": 0.467
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": -6.0,
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.648,
+    "split_half_b": 0.67,
+    "ci95": [
+     0.341,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.545,
+    "split_half_b": 0.606,
+    "ci95": [
+     0.182,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.6
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": -6.0,
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.604,
+    "split_half_b": 0.67,
+    "ci95": [
+     0.473,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.667,
+    "split_half_b": 0.636,
+    "ci95": [
+     0.455,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.6,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": -6.0,
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.714,
+    "split_half_a": 0.67,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.451,
+     0.78
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.727,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.545,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.6,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": -6.0,
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.626,
+    "split_half_b": 0.56,
+    "ci95": [
+     0.516,
+     0.824
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.697,
+    "split_half_b": 0.576,
+    "ci95": [
+     0.485,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": -6.0,
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.802,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.692,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.727,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.667,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": -6.0,
+   "metric": "nonowner_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.802,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.692,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.727,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.697,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": -6.0,
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.824,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.758,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.758,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.697,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 0.0,
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.56,
+    "split_half_a": -0.099,
+    "split_half_b": 0.626,
+    "ci95": [
+     -0.055,
+     0.78
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.485,
+    "split_half_a": -0.303,
+    "split_half_b": 0.576,
+    "ci95": [
+     -0.273,
+     0.727
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": -0.067,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 0.0,
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.516,
+    "split_half_a": 0.495,
+    "split_half_b": 0.736,
+    "ci95": [
+     0.033,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.424,
+    "split_half_a": 0.394,
+    "split_half_b": 0.667,
+    "ci95": [
+     -0.182,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.6,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 0.0,
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.626,
+    "split_half_a": 0.802,
+    "split_half_b": 0.78,
+    "ci95": [
+     0.516,
+     0.78
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.636,
+    "split_half_a": 0.758,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.485,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 0.0,
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.78,
+    "split_half_b": 0.736,
+    "ci95": [
+     0.582,
+     0.824
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.758,
+    "split_half_b": 0.727,
+    "ci95": [
+     0.576,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 0.0,
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.67,
+    "split_half_a": 0.824,
+    "split_half_b": 0.714,
+    "ci95": [
+     0.538,
+     0.802
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.727,
+    "split_half_a": 0.818,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.515,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 0.0,
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.868,
+    "split_half_b": 0.714,
+    "ci95": [
+     0.648,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.879,
+    "split_half_b": 0.727,
+    "ci95": [
+     0.636,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 0.6
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 0.0,
+   "metric": "nonowner_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.868,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.78,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.818,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.727,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 0.0,
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.67,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.714,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.545,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.606,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.6,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 10.0,
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.648,
+    "split_half_a": 0.56,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.231,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.606,
+    "split_half_a": 0.485,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.091,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.333,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 10.0,
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.692,
+    "split_half_a": 0.714,
+    "split_half_b": 0.956,
+    "ci95": [
+     0.385,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.606,
+    "split_half_a": 0.667,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.273,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.733,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 10.0,
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.934,
+    "split_half_a": 0.868,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.758,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.909,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.727,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 10.0,
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.78,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.692,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.848,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.697,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 10.0,
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.78,
+    "split_half_b": 0.714,
+    "ci95": [
+     0.648,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.788,
+    "split_half_b": 0.697,
+    "ci95": [
+     0.606,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 10.0,
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.802,
+    "split_half_b": 0.516,
+    "ci95": [
+     0.648,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.727,
+    "split_half_a": 0.788,
+    "split_half_b": 0.455,
+    "ci95": [
+     0.606,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.733,
+    "split_half_b": 0.467
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 10.0,
+   "metric": "nonowner_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.934,
+    "split_half_a": 0.824,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.714,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.818,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.727,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 10.0,
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.736,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.56,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.727,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.515,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.6,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 20.0,
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.473,
+    "split_half_a": 0.626,
+    "split_half_b": 0.934,
+    "ci95": [
+     0.143,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.364,
+    "split_half_a": 0.545,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.0,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.6,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 20.0,
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.692,
+    "split_half_a": 0.714,
+    "split_half_b": 0.956,
+    "ci95": [
+     0.429,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.606,
+    "split_half_a": 0.636,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.303,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 20.0,
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.89,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.648,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.879,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.636,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 20.0,
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.692,
+    "split_half_a": 0.868,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.495,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.727,
+    "split_half_a": 0.848,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.485,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 20.0,
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.89,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.67,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.879,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.636,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 20.0,
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.802,
+    "split_half_b": 0.473,
+    "ci95": [
+     0.56,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.727,
+    "split_half_a": 0.758,
+    "split_half_b": 0.394,
+    "ci95": [
+     0.485,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.467
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 20.0,
+   "metric": "nonowner_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.868,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.56,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.909,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.485,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 20.0,
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.692,
+    "split_half_a": 0.824,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.538,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.636,
+    "split_half_a": 0.788,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.455,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 5.0,
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.648,
+    "split_half_a": 0.187,
+    "split_half_b": 0.912,
+    "ci95": [
+     -0.033,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.545,
+    "split_half_a": 0.03,
+    "split_half_b": 0.879,
+    "ci95": [
+     -0.242,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.2,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 5.0,
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.626,
+    "split_half_a": 0.67,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.033,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.545,
+    "split_half_a": 0.636,
+    "split_half_b": 0.848,
+    "ci95": [
+     -0.152,
+     0.788
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.467,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 5.0,
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.824,
+    "split_half_b": 0.802,
+    "ci95": [
+     0.648,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.727,
+    "split_half_a": 0.788,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.606,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 5.0,
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.824,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.67,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.727,
+    "split_half_a": 0.818,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.636,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 5.0,
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.846,
+    "split_half_b": 0.626,
+    "ci95": [
+     0.604,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.727,
+    "split_half_a": 0.788,
+    "split_half_b": 0.576,
+    "ci95": [
+     0.515,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 5.0,
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.89,
+    "split_half_a": 0.846,
+    "split_half_b": 0.67,
+    "ci95": [
+     0.692,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.818,
+    "split_half_b": 0.697,
+    "ci95": [
+     0.667,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 0.6
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 5.0,
+   "metric": "nonowner_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.824,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.758,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.818,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.727,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": 5.0,
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.736,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.604,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.667,
+    "split_half_a": 0.667,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.455,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.6,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": null,
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.429,
+    "split_half_a": 0.67,
+    "split_half_b": 0.934,
+    "ci95": [
+     0.121,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.303,
+    "split_half_a": 0.606,
+    "split_half_b": 0.909,
+    "ci95": [
+     -0.061,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.467,
+    "split_half_a": 0.467,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": null,
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.714,
+    "split_half_a": 0.736,
+    "split_half_b": 0.978,
+    "ci95": [
+     0.429,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.636,
+    "split_half_a": 0.667,
+    "split_half_b": 0.97,
+    "ci95": [
+     0.303,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": null,
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.758,
+    "split_half_a": 0.868,
+    "split_half_b": 0.956,
+    "ci95": [
+     0.648,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.818,
+    "split_half_b": 0.97,
+    "ci95": [
+     0.636,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": null,
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.736,
+    "split_half_a": 0.89,
+    "split_half_b": 0.934,
+    "ci95": [
+     0.516,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.879,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.515,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": null,
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.846,
+    "split_half_b": 0.824,
+    "ci95": [
+     0.626,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.818,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.545,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": null,
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.912,
+    "split_half_b": 0.67,
+    "ci95": [
+     0.538,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.788,
+    "split_half_a": 0.879,
+    "split_half_b": 0.576,
+    "ci95": [
+     0.424,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-SIR",
+   "level": null,
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-SIR",
+   "level": null,
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.648,
+    "split_half_a": 0.78,
+    "split_half_b": 0.802,
+    "ci95": [
+     0.516,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.606,
+    "split_half_a": 0.727,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.455,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.6,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": -5.0,
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.429,
+    "split_half_a": 0.363,
+    "split_half_b": 0.868,
+    "ci95": [
+     -0.121,
+     0.78
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.394,
+    "split_half_a": 0.273,
+    "split_half_b": 0.818,
+    "ci95": [
+     -0.242,
+     0.788
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": -5.0,
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.363,
+    "split_half_a": 0.495,
+    "split_half_b": 0.648,
+    "ci95": [
+     -0.077,
+     0.714
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.273,
+    "split_half_a": 0.394,
+    "split_half_b": 0.576,
+    "ci95": [
+     -0.182,
+     0.687
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.733,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": -5.0,
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.802,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.714,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.818,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.697,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": -5.0,
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.604,
+    "split_half_b": 0.802,
+    "ci95": [
+     0.67,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.606,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.636,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": -5.0,
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.736,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.692,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.697,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.636,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": -5.0,
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.956,
+    "split_half_b": 0.956,
+    "ci95": [
+     0.758,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.97,
+    "split_half_b": 1.0,
+    "ci95": [
+     0.667,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": -5.0,
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-SNR",
+   "level": -5.0,
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.736,
+    "split_half_b": 0.956,
+    "ci95": [
+     0.648,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.636,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.515,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 0.0,
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.582,
+    "split_half_a": 0.692,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.407,
+     0.802
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.515,
+    "split_half_a": 0.636,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.333,
+     0.788
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.2,
+    "split_half_a": 0.467,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 0.0,
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.604,
+    "split_half_a": 0.516,
+    "split_half_b": 0.978,
+    "ci95": [
+     0.275,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.515,
+    "split_half_a": 0.424,
+    "split_half_b": 0.97,
+    "ci95": [
+     0.182,
+     0.818
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.467,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 0.0,
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.868,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.736,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.909,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.727,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 0.0,
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.846,
+    "split_half_a": 0.846,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.736,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.879,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.697,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 0.0,
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.934,
+    "split_half_b": 0.736,
+    "ci95": [
+     0.714,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.909,
+    "split_half_b": 0.727,
+    "ci95": [
+     0.697,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 0.0,
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.934,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.78,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.939,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.758,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 0.0,
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-SNR",
+   "level": 0.0,
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.714,
+    "split_half_a": 0.824,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.604,
+     0.824
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.788,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.606,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.733,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 10.0,
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.473,
+    "split_half_a": 0.253,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.253,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.364,
+    "split_half_a": 0.091,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.091,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.467,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 10.0,
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.824,
+    "split_half_a": 0.626,
+    "split_half_b": 0.956,
+    "ci95": [
+     0.538,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.576,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.455,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.6,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 10.0,
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.824,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.758,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.879,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.788,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 10.0,
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.736,
+    "split_half_b": 0.648,
+    "ci95": [
+     0.582,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.848,
+    "split_half_a": 0.758,
+    "split_half_b": 0.667,
+    "ci95": [
+     0.606,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 10.0,
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.758,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.714,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.727,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.667,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 10.0,
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.89,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.736,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.879,
+    "split_half_a": 0.879,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.697,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.867,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 10.0,
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-SNR",
+   "level": 10.0,
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.648,
+    "split_half_a": 0.626,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.516,
+     0.802
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.576,
+    "split_half_a": 0.636,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.424,
+     0.788
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.733,
+    "split_half_a": 0.733,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 20.0,
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.473,
+    "split_half_a": 0.275,
+    "split_half_b": 0.692,
+    "ci95": [
+     0.121,
+     0.736
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.333,
+    "split_half_a": 0.091,
+    "split_half_b": 0.576,
+    "ci95": [
+     -0.121,
+     0.697
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.333,
+    "split_half_a": 0.467,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 20.0,
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.575,
+    "split_half_a": 0.495,
+    "split_half_b": 0.751,
+    "ci95": [
+     0.385,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.504,
+    "split_half_a": 0.394,
+    "split_half_b": 0.687,
+    "ci95": [
+     0.273,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.552,
+    "split_half_a": 0.6,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 20.0,
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.802,
+    "split_half_a": 0.736,
+    "split_half_b": 0.758,
+    "ci95": [
+     0.604,
+     0.912
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.667,
+    "split_half_b": 0.788,
+    "ci95": [
+     0.545,
+     0.909
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 0.733
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 20.0,
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.495,
+    "split_half_a": 0.165,
+    "split_half_b": 0.648,
+    "ci95": [
+     0.011,
+     0.692
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.485,
+    "split_half_a": 0.242,
+    "split_half_b": 0.727,
+    "ci95": [
+     0.091,
+     0.758
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.333,
+    "split_half_a": 0.333,
+    "split_half_b": 0.6
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 20.0,
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.736,
+    "split_half_a": 0.714,
+    "split_half_b": 0.78,
+    "ci95": [
+     0.56,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.636,
+    "split_half_a": 0.606,
+    "split_half_b": 0.697,
+    "ci95": [
+     0.424,
+     0.788
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.6,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 20.0,
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.78,
+    "split_half_a": 0.736,
+    "split_half_b": 0.956,
+    "ci95": [
+     0.692,
+     0.978
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.697,
+    "split_half_a": 0.636,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.545,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 20.0,
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-SNR",
+   "level": 20.0,
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.648,
+    "split_half_a": 0.363,
+    "split_half_b": 0.868,
+    "ci95": [
+     0.495,
+     0.846
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.606,
+    "split_half_a": 0.273,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.424,
+     0.848
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 5.0,
+   "metric": "si_sdr",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.648,
+    "split_half_a": 0.473,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.407,
+     0.89
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.545,
+    "split_half_a": 0.424,
+    "split_half_b": 0.848,
+    "ci95": [
+     0.303,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.6,
+    "split_half_a": 0.467,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 5.0,
+   "metric": "estoi",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.868,
+    "split_half_a": 0.538,
+    "split_half_b": 0.956,
+    "ci95": [
+     0.56,
+     0.934
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.818,
+    "split_half_a": 0.455,
+    "split_half_b": 0.939,
+    "ci95": [
+     0.455,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.6,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 5.0,
+   "metric": "dnsmos_ovrl",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.956,
+    "split_half_a": 0.912,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.802,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.97,
+    "split_half_a": 0.939,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.788,
+     1.0
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 5.0,
+   "metric": "dnsmos_sig",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.934,
+    "split_half_a": 0.868,
+    "split_half_b": 0.89,
+    "ci95": [
+     0.758,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.939,
+    "split_half_a": 0.879,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.758,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 1.0,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 5.0,
+   "metric": "dnsmos_bak",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.868,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.714,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.848,
+    "split_half_b": 0.818,
+    "ci95": [
+     0.636,
+     0.939
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 1.0,
+    "split_half_a": 0.867,
+    "split_half_b": 1.0
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 5.0,
+   "metric": "noise_att_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.912,
+    "split_half_a": 0.956,
+    "split_half_b": 0.846,
+    "ci95": [
+     0.802,
+     0.956
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.909,
+    "split_half_a": 0.97,
+    "split_half_b": 0.879,
+    "ci95": [
+     0.818,
+     0.97
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 1.0,
+    "split_half_b": 0.867
+   }
+  },
+  {
+   "cell": "S-SNR",
+   "level": 5.0,
+   "metric": "nonowner_att_db"
+  },
+  {
+   "cell": "S-SNR",
+   "level": 5.0,
+   "metric": "spl_db",
+   "all": {
+    "n_sys": 14,
+    "tau_ab": 0.714,
+    "split_half_a": 0.714,
+    "split_half_b": 0.912,
+    "ci95": [
+     0.56,
+     0.868
+    ]
+   },
+   "no_ceiling_variant": {
+    "n_sys": 12,
+    "tau_ab": 0.758,
+    "split_half_a": 0.727,
+    "split_half_b": 0.909,
+    "ci95": [
+     0.545,
+     0.879
+    ]
+   },
+   "reps": {
+    "n_sys": 6,
+    "tau_ab": 0.867,
+    "split_half_a": 0.733,
+    "split_half_b": 0.867
+   }
+  }
+ ],
+ "S8": {
+  "si_sdr": {
+   "pairs": 48,
+   "synthetic_cell": {
+    "n": 48,
+    "agree": 0.25
+   },
+   "on_exp003_clip": {
+    "n": 0,
+    "agree": null
+   }
+  },
+  "estoi": {
+   "pairs": 48,
+   "synthetic_cell": {
+    "n": 48,
+    "agree": 0.354
+   },
+   "on_exp003_clip": {
+    "n": 48,
+    "agree": 0.521
+   }
+  },
+  "dnsmos_ovrl": {
+   "pairs": 48,
+   "synthetic_cell": {
+    "n": 48,
+    "agree": 0.333
+   },
+   "on_exp003_clip": {
+    "n": 46,
+    "agree": 0.478
+   }
+  },
+  "dnsmos_sig": {
+   "pairs": 48,
+   "synthetic_cell": {
+    "n": 48,
+    "agree": 0.354
+   },
+   "on_exp003_clip": {
+    "n": 48,
+    "agree": 0.562
+   }
+  },
+  "dnsmos_bak": {
+   "pairs": 48,
+   "synthetic_cell": {
+    "n": 48,
+    "agree": 0.375
+   },
+   "on_exp003_clip": {
+    "n": 48,
+    "agree": 0.5
+   }
+  },
+  "noise_att_db": {
+   "pairs": 48,
+   "synthetic_cell": {
+    "n": 48,
+    "agree": 0.354
+   },
+   "on_exp003_clip": {
+    "n": 48,
+    "agree": 0.521
+   }
+  }
+ }
+}
