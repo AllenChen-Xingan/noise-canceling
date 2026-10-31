@@ -50,6 +50,23 @@ SYSTEMS = {  # id: (族, 说明)
     "dpdf8": ("B", "DPDFNet-8"),
     "oracle_irm": ("O", "理想比值掩码（用干净轨，作弊天花板）"),
 }
+# 第二轮（人定 2026-10-31：Hush dylib 允许、torch 现在装）：这些系统由 enh/ 下各自的脚本在自己的运行环境里先跑完，
+# 增强音频写到 <audio-root>/<build>-enh/<id>/<mix 相对路径>（16 kHz float32，已补偿延迟、与输入等长），本脚本只读文件算指标。
+# 全部只作对照、不进产品；「非因果」的连产品候选都不是。
+FILE_SYSTEMS = {
+    "hush": ("B", "Hush（Weya DFN-SE 16 k，预编译 arm64 dylib，衰减不设上限）"),
+    "hush_lim12": ("B", "Hush 衰减上限 12 dB（参数变体）"),
+    "dfn3": ("B", "DeepFilterNet3 默认版 48 k（经 Hush dylib 内的 libDF；权重许可不明，只作对照）"),
+    "rnnoise": ("E", "RNNoise（nnnoiseless Rust 版，48 k）"),
+    "webrtc_ns18": ("C*", "WebRTC NS 18 dB 档（sonora-ns；DSP，但噪声估计与增益规则不同于 C 族）"),
+    "webrtc_ns6": ("C*", "WebRTC NS 6 dB 档（参数变体）"),
+    "frcrn": ("F", "FRCRN_SE_16K（ClearerVoice，非因果）"),
+    "mossformer_gan": ("F", "MossFormerGAN_SE_16K（ClearerVoice，非因果；与 FRCRN 同家同数据）"),
+    "mossformer2_48k": ("F", "MossFormer2_SE_48K（ClearerVoice，非因果，48 k 往返）"),
+    "urgent_bsrnn": ("G", "URGENT 2026 BSRNN 基线（非因果）"),
+    "gmap_se": ("I", "G-MaP-SE（VoiceBank+DEMAND，非因果）"),
+}
+SYSTEMS.update(FILE_SYSTEMS)
 
 
 # ---------------- 经典 DSP（numpy，512/256 sqrt-Hann） ----------------
@@ -198,8 +215,13 @@ def make_model(sid):
     raise KeyError(sid)
 
 
-def process(sid, x, owner):
+def process(sid, x, owner, enh_path=None):
     x = x.astype(np.float32)
+    if sid in FILE_SYSTEMS:
+        y = sf.read(enh_path, dtype="float64")[0]
+        if len(y) != len(x):
+            raise RuntimeError(f"长度 {len(y)} ≠ 输入 {len(x)}")
+        return y
     if sid == "passthrough":
         return x.astype(np.float64)
     if sid == "specsub":
@@ -280,7 +302,7 @@ def job(args):
     for sid in systems:
         t0 = time.time()
         try:
-            y = process(sid, mix, owner)
+            y = process(sid, mix, owner, root.parent / f"{root.name}-enh" / sid / f["mix"]["path"])
             if not np.all(np.isfinite(y)):
                 raise RuntimeError("非有限值")
             m = metrics(y, mix, owner, row["labels"])
@@ -306,6 +328,7 @@ def main():
     ap.add_argument("--audio-root", default=str(MAIN / "_tmp/exp008"))
     ap.add_argument("--docs-root", default=str(HERE / "builds"))
     ap.add_argument("--results", default=str(HERE / "results"))
+    ap.add_argument("--tag", default="", help="输出名后缀，例如 r2；第二轮写新文件，不覆盖第一轮")
     a = ap.parse_args()
     systems = [s for s in a.systems.split(",") if s]
     rows = [json.loads(l) for l in open(Path(a.docs_root) / a.build / "truth.jsonl")]
@@ -321,7 +344,7 @@ def main():
                 print(f"{i + 1}/{len(rows)} 段 · {time.time() - t0:.0f} s", flush=True)
     out = Path(a.results)
     out.mkdir(parents=True, exist_ok=True)
-    tag = f"{a.build}-scores" + (f"-limit{a.limit}" if a.limit else "")
+    tag = f"{a.build}-scores" + (f"-{a.tag}" if a.tag else "") + (f"-limit{a.limit}" if a.limit else "")
     with open(out / f"{tag}.jsonl", "w") as f:
         for r in res:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
@@ -333,7 +356,8 @@ def main():
                "fe_s": Path.home() / "vdn-data/models/fastenhancer-dns-v1.0.0/fastenhancer_s.onnx",
                "fe_m": Path.home() / "vdn-data/models/fastenhancer-dns-v1.0.0/fastenhancer_m.onnx"}
     meta = {"build": a.build, "systems": {s: {"family": SYSTEMS[s][0], "desc": SYSTEMS[s][1],
-                                              "weight_sha256": sha_file(weights[s]) if s in weights else None} for s in systems},
+                                              "weight_sha256": sha_file(weights[s]) if s in weights else None,
+                                              "enh_record": f"builds/{a.build}/enh/{s}.json" if s in FILE_SYSTEMS else None} for s in systems},
             "rank_py_sha256": sha_file(__file__), "rows": len(rows), "seconds": round(time.time() - t0, 1),
             "errors": sum(1 for r in res if r["error"])}
     (out / f"{tag}-meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))

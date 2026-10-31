@@ -55,8 +55,15 @@ def score(v, direction):
 
 
 def load(build):
-    rows = [json.loads(l) for l in open(HERE / "results" / f"{build}-scores.jsonl")]
-    return [r for r in rows if not r["error"]]
+    """第一轮 + 第二轮（若有 -scores-r2.jsonl）合并；同一 (段, 系统) 只留一条，后来的覆盖先来的。"""
+    rows = {}
+    for tag in ("", "-r2"):
+        p = HERE / "results" / f"{build}-scores{tag}.jsonl"
+        if p.exists():
+            for l in open(p):
+                r = json.loads(l)
+                rows[(r["cell"], r["gen"], r["clip"], json.dumps(r["level"]), r["system"])] = r
+    return [r for r in rows.values() if not r["error"]]
 
 
 def means(rows, systems, metric, clips=None):
