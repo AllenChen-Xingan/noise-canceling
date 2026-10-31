@@ -143,7 +143,8 @@ impl Stage for AsymGate {
         let e = wet.iter().map(|v| v * v).sum::<f32>() / n as f32;
         self.short_e[self.short_i] = e;
         self.short_i = (self.short_i + 1) % self.short_e.len();
-        let st_db = 10.0 * (self.short_e.iter().sum::<f32>() / self.short_e.len() as f32 + 1e-12).log10();
+        let st_db =
+            10.0 * (self.short_e.iter().sum::<f32>() / self.short_e.len() as f32 + 1e-12).log10();
         let gap = (self.p.onset_gap_s * self.p.sr) as u64;
         let loud_enough = match ctx.speaker.owner_level_db {
             Some(ol) => st_db >= ol - self.p.onset_level_margin_db,
@@ -151,7 +152,9 @@ impl Stage for AsymGate {
         };
         let mut onset = false;
         if voiced {
-            if loud_enough && (self.silent_samples >= gap || st_db > self.slow_db + self.p.onset_jump_db) {
+            if loud_enough
+                && (self.silent_samples >= gap || st_db > self.slow_db + self.p.onset_jump_db)
+            {
                 onset = true;
             }
             self.silent_samples = 0;
