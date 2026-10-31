@@ -50,7 +50,7 @@
 | 项 | 内容 |
 |---|---|
 | 做什么 | 把 kaldi-native-fbank 的 FBank 流程从零移植成纯 Rust 的流式特征提取器，各项参数都保留 |
-| 许可证 | Apache-2.0【源码】`resources/kaldi-fbank/Cargo.toml:6`；**与 GPL-3.0 兼容：是**（Apache-2.0 → GPLv3 单向兼容）。运行时依赖只有 realfft、rustfft（都是 MIT/Apache）【源码】`Cargo.toml:15-17` |
+| 许可证 | Apache-2.0【源码】`resources/kaldi-fbank/Cargo.toml:7`；**与 GPL-3.0 兼容：是**（Apache-2.0 → GPLv3 单向兼容）。运行时依赖只有 realfft、rustfft（都是 MIT/Apache）【源码】`Cargo.toml:17-18` |
 | 维护状态 | crates.io 0.1.0（2026-09-01）【API】；最后一次提交 2026-09-01，0 个 open issue，2 颗星，仓库建于 2026-09-01【API】。**只有一次集中提交、没有 issue 历史，响应速度没法判断** |
 | 实时安全做法 | FFT 只在构造时规划一次、预分配 scratch【源码】`src/fft.rs:31`、`:41-44`；`FbankComputer::compute` 接收调用方给的 `signal_frame` 和 `feature` 两个切片，**本身不分配**【源码】`src/feature_fbank.rs:66-128`。但 `OnlineFbank` 每帧都 `self.feature.clone()` 推进 VecDeque【源码】`src/online.rs:191`，波形缓冲用 `extend_from_slice` / `drain` 增减【源码】`src/online.rs:146`、`:205`，**这一层会分配**。mel 表放在 HashMap 里按 VTLN 系数缓存，compute 里会查一次表【源码】`src/feature_fbank.rs:53-57`、`:107` |
 | 值得学的一处 | 把「抽取一帧窗」（`extract_window`）和「算一帧特征」（`FbankComputer::compute`）拆成两个纯函数，各自接收预分配的缓冲【源码】`src/online.rs:175-190`。我们自写的时候照这条接缝切：环形缓冲归我们自己管，算特征的那一半做成纯函数，离线和实时可以共用 |
@@ -74,7 +74,7 @@
 | 项 | 内容 |
 |---|---|
 | 做什么 | 纯 Rust 的流式 VAD：16 ms 帧进，0–1 分数出；内置约 40 KiB 的小型 GRU 类网络，不需要 ORT |
-| 许可证 | crate 声明 MIT OR Apache-2.0【源码】`resources/earshot/Cargo.toml:12`（GitHub API 识别成 Apache-2.0【API】）；**与 GPL-3.0 兼容：是**。默认没有运行时依赖，`libm` 可选【源码】`Cargo.toml:30-31` |
+| 许可证 | crate 声明 MIT OR Apache-2.0【源码】`resources/earshot/Cargo.toml:12`（GitHub API 识别成 Apache-2.0【API】）；**与 GPL-3.0 兼容：是**。默认没有运行时依赖，`libm` 可选【源码】`Cargo.toml:32-33` |
 | 维护状态 | 1.2.2（2026-08-19）、1.2.1（2026-07-22）【API】；最后一次提交 2026-08-30；2 个 open issue（#4、#5 都 0 回复），外部 PR #7、#8 有维护者回复并已合并【API】。**在维护，issue 响应偏慢** |
 | 实时安全做法 | **安全**。状态全部是定长数组：环形采样缓冲、3 帧特征、FFT 缓冲【源码】`src/lib.rs:107-113`；移窗用 `ptr::copy`【源码】`:245-247`、`:276-278`；网络状态是 `[i16; 128]`【源码】`src/default_predictor.rs:35-37`；权重用 `include_bytes!` 编进二进制并按 4 字节对齐【源码】`src/default_predictor.rs:5-12`；`predict` 不分配、不加锁、不做系统调用【源码】`src/lib.rs:238-293`。帧长不对时直接返回 0 分，不 panic【源码】`:240-242` |
 | 值得学的一处 | 帧长 `FRAME_SIZE=256`（16 ms @16 kHz），只往回看 3 帧上下文，没有前瞻【源码】`src/lib.rs:91-94`、`src/frame.rs:2`；GTCRN 的流式 hop 正好也是 256【源码】`resources/gtcrn/stream/gtcrn_stream.py:456`。**同一个 16 ms 时钟上，降噪和 VAD 可以对齐，不用另起缓冲** |
@@ -98,7 +98,7 @@
 | 项 | 内容 |
 |---|---|
 | 做什么 | k2-fsa 的全家桶 C++ 推理库；`sherpa-onnx` / `sherpa-onnx-sys` 两个 crate 是官方的安全封装和 FFI，覆盖声纹提取、声纹管理器、离线分离、VAD（silero / ten-vad）、流式降噪（GTCRN、DPDFNet、voxlock）等 |
-| 许可证 | Apache-2.0【源码】`resources/sherpa-onnx/sherpa-onnx/rust/sherpa-onnx/Cargo.toml:5`；**与 GPL-3.0 兼容：是**；预编译库里静态链接了 onnxruntime（MIT）【推断】。**如果启用 ten-vad 模型，那份模型带「不得和 Agora 竞争」附加条款，与 GPL 不兼容**（见 TEN VAD 卡） |
+| 许可证 | Apache-2.0【源码】`resources/sherpa-onnx/sherpa-onnx/rust/sherpa-onnx/Cargo.toml:6`；**与 GPL-3.0 兼容：是**；预编译库里静态链接了 onnxruntime（MIT）【推断】。**如果启用 ten-vad 模型，那份模型带「不得和 Agora 竞争」附加条款，与 GPL 不兼容**（见 TEN VAD 卡） |
 | 维护状态 | 2.0.1（2026-10-26/27）【API】；最后一次提交 2026-10-29；637 个 open issue，最近 5 条都是当天提的，PR 有回复【API】。**非常活跃，但 issue 积压多** |
 | 实时安全做法 | **不安全**：每次 `compute` 都 `from_raw_parts(..).to_vec()` 拷出，再调 C 侧的 Destroy 释放【源码】`rust/sherpa-onnx/src/speaker_embedding.rs:108-109`；C++ silero 每次推理都新建 `std::vector<Ort::Value>`【源码】`sherpa-onnx/csrc/silero-vad-model.cc:430-438`；管理器每 Add 一次就 `conservativeResize` 一次【源码】`csrc/speaker-embedding-manager.cc:31` |
 | 值得学的一处 | **声纹管理器**：注册时多条向量先求和（「反正要归一化，不用除以 N」），再 L2 归一化，存成矩阵的一行【源码】`csrc/speaker-embedding-manager.cc:63-81`；检索时只把查询向量归一化，然后「矩阵 × 向量」一次算出所有余弦，取最大值和阈值比【源码】`:117-135`。另外，模型元数据里写 `framework` 和 `normalize_samples`，前端据此决定是否 ×32768【源码】`csrc/speaker-embedding-extractor-model.cc:97-107`、`scripts/wespeaker/add_meta_data.py:127`。**我们的 `speaker` crate 可以照这个约定，给 ONNX 带一份前端参数清单** |
@@ -110,12 +110,12 @@
 | 项 | 内容 |
 |---|---|
 | 做什么 | Rust 版说话人分离，复刻 pyannote community-1 流程（分段 + WeSpeaker ResNet34 + PLDA + VBx / AHC），后端有原生 CPU、CoreML、CUDA |
-| 许可证 | Apache-2.0【源码】`resources/speakrs/Cargo.toml:25`；关键依赖 kodama 0.3（层次聚类，MIT【推断】）、ndarray、rustfft【源码】`Cargo.toml:90-96`；**代码与 GPL-3.0 兼容：是**；**它下载的 pyannote / PLDA 模型文件另有许可，没核**（见文末存疑） |
+| 许可证 | Apache-2.0【源码】`resources/speakrs/Cargo.toml:27`；关键依赖 kodama 0.3（层次聚类，MIT【推断】）、ndarray、rustfft【源码】`Cargo.toml:90-96`；**代码与 GPL-3.0 兼容：是**；**它下载的 pyannote / PLDA 模型文件另有许可，没核**（见文末存疑） |
 | 维护状态 | 0.7.0（2026-10-26）【API】；最后一次提交 2026-10-28；0 个 open issue；最近 5 个都是维护者自己提、自己合【API】。**非常活跃，基本是单人维护** |
 | 实时安全做法 | fbank 这一层零分配：FFT 计划和 mel 表放进 `Arc<Recipe>` 共享，工作区每个句柄一份，输出写进调用方给的 `ArrayViewMut2`【源码】`src/inference/cpu/fbank.rs:15-75`；逐帧循环只用栈上的 `[0.0; SPECTRUM_BINS]` 和预分配好的工作区【源码】`:88-123`。但它的窗长固定 10 s（160 000 点、998 帧）【源码】`src/inference/native_model/fbank.rs:7-13`，按批处理设计，不是流式。AHC 每次都分配距离矩阵【源码】`src/clustering/ahc.rs:43`、`:73-77` |
 | 值得学的一处 | 见文件开头「最值得学」第 1 条（`fbank.rs:15-34`、`:58-75`、`:92-105`）；还有一处：按 bin 求 CMN 均值时也用 f64 累加【源码】`:126-131`。它的测试拿一个独立的 f64 参考实现对拍，容差 1e-3【源码】`src/inference/cpu/fbank/tests.rs:87`、`:145-161`，**我们对拍时可以照这个容差起步** |
 | 我们怎么用 | `eval` 里**当开发工具**（离线造分离标签、做对照）；fbank 的结构**抄思路**写进 `dsp`；AHC 的阈值与流程**只看看**，锁定前一次性聚类时可以参考 |
-| 风险 | 默认 feature `online` 会在运行时从 HF Hub 下载模型，还要 native-tls【源码】`Cargo.toml:37`；功能面很大（CUDA / PTX），我们只需要其中一小块 |
+| 风险 | 默认 feature `online` 会在运行时从 HF Hub 下载模型，还要 native-tls【源码】`Cargo.toml:38`；功能面很大（CUDA / PTX），我们只需要其中一小块 |
 | 证据 | 【源码】【API】【推断】 |
 
 ### WeSpeaker 与 3D-Speaker（https://github.com/wenet-e2e/wespeaker · https://github.com/modelscope/3D-Speaker）【中读：fbank 基准与 ONNX 导出】
@@ -146,7 +146,7 @@
 | 项 | 内容 |
 |---|---|
 | 做什么 | knf 的另一个 Rust 移植，带 fbank / mfcc / whisper 特征 / stft |
-| 许可证 | MIT【源码】`resources/kaldi-native-fbank-rs/Cargo.toml:5`；依赖 realfft、rustfft、rand、thiserror、anyhow、log，都兼容 |
+| 许可证 | MIT【源码】`resources/kaldi-native-fbank-rs/Cargo.toml:6`；依赖 realfft、rustfft、rand、thiserror、anyhow、log，都兼容 |
 | 维护状态 | crates.io 0.1.0（2026-01-12）【API】；最后一次提交 2026-04-19（改 README）；0 个 issue，3 颗星【API】 |
 | 实时安全做法 | **不安全**：每帧 FFT 都 `to_vec()` 一份输入、`vec!` 一份输出【源码】`src/rfft.rs:66`、`:69`；在线层每次调用新建窗缓冲，每帧新建特征 Vec【源码】`src/online.rs:105`、`:123` |
 | 值得学的一处 | 反面教材：**默认 `use_energy: true`**【源码】`src/fbank.rs:23`，和上游的 false【源码】`resources/kaldi-native-fbank/kaldi-native-fbank/csrc/feature-fbank.h:41` 不一样，不留神输出就是 81 维；dither 用的是均匀分布，不是高斯【源码】`src/window.rs:189`；测试只断言 `is_finite`，没有数值对拍【源码】`tests/all.rs:230` |
@@ -163,7 +163,7 @@
 | 实时安全做法 | **不安全**：每次 predict 都 `zeros` 新建输入，`to_owned` 拷贝状态【源码】`src/vad.rs:59`、`:69-70`；推理前要拿 `Mutex` 锁【源码】`:74`；出错直接 `unwrap` panic【源码】`:75` |
 | 值得学的一处 | 反面教材：「状态 `mem::take` 出来再 `to_owned`」这种写法每帧都要分配【源码】`src/vad.rs:65-83` |
 | 我们怎么用 | **不要** |
-| 风险 | 把 ort 钉死在 `=2.0.0-rc.10`【源码】`Cargo.toml:25-34` |
+| 风险 | 把 ort 钉死在 `=2.0.0-rc.10`【源码】`Cargo.toml:22-30` |
 | 证据 | 【源码】【API】 |
 
 ### sherpa-rs（https://github.com/thewh1teagle/sherpa-rs）【浅读】
