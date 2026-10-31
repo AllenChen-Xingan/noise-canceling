@@ -30,3 +30,4 @@
 - rubric 修改清单 R1–R14（`decision.md`），本线没改 `specs/rubric/denoise.md`
 - 第一个该做的实验：用 exp003 现有数据算第一张 verifier 定标表（纯计算）
 - `resources/teams-v5-spec/`（19 MB，git 忽略，README 记来源与哈希）
+- 应 rlenv 提议，verifiers.md 新增 3.4「模拟真值指标」（L3 仅限模拟，附三个限定）；原 3.4 改为 3.5
