@@ -381,7 +381,9 @@ fn v_lat(c: &Ctx) -> Score {
             r.latency
         );
     } else {
-        s.note = "账面 = 引擎延迟账 + 平台预算（IO 块 96 帧）；平台项是预算，P3 实测前只证明账面不超".into();
+        s.note =
+            "账面 = 引擎延迟账 + 平台预算（IO 块 96 帧）；平台项是预算，P3 实测前只证明账面不超"
+                .into();
     }
     s
 }
@@ -401,8 +403,15 @@ fn v_frame(c: &Ctx, p: &Params) -> Score {
         .map(|d| d.as_secs_f64() / period)
         .collect();
     let max = t.iter().cloned().fold(0.0, f64::max);
-    let s = Score::judged(ID, max, "×周期", Better::Lower, Some(p.f_or("max", 0.5)), &[])
-        .with_extra("p999", quantile(&t, 0.999));
+    let s = Score::judged(
+        ID,
+        max,
+        "×周期",
+        Better::Lower,
+        Some(p.f_or("max", 0.5)),
+        &[],
+    )
+    .with_extra("p999", quantile(&t, 0.999));
     if s.verdict.is_fail() && (c.ci || cfg!(debug_assertions)) {
         let why = if c.ci {
             "CI 虚拟机计时不可信（规约 §7 G10 放 L4）"
@@ -416,7 +425,11 @@ fn v_frame(c: &Ctx, p: &Params) -> Score {
 
 fn v_nan(c: &Ctx) -> Score {
     let bad = c.out.iter().filter(|v| !v.is_finite()).count();
-    let huge = c.out.iter().filter(|v| v.is_finite() && v.abs() > 4.0).count();
+    let huge = c
+        .out
+        .iter()
+        .filter(|v| v.is_finite() && v.abs() > 4.0)
+        .count();
     Score::judged(
         "V-NAN",
         (bad + huge) as f64,
@@ -439,7 +452,12 @@ fn v_mute(c: &Ctx, p: &Params) -> Score {
     let settle = (p.f_or("settle_s", 0.3) * c.clip.sr as f64) as usize;
     let from = start + settle;
     if x.len() < from + c.clip.sr as usize / 4 {
-        return Score::unknown(ID, "dBFS", Better::Lower, "输入末尾没有 ≥ 0.25 s 的数字静音");
+        return Score::unknown(
+            ID,
+            "dBFS",
+            Better::Lower,
+            "输入末尾没有 ≥ 0.25 s 的数字静音",
+        );
     }
     let seg = &c.out[from..x.len().min(c.out.len())];
     let (mn, mx) = seg
@@ -635,9 +653,15 @@ fn tnlr(c: &Ctx) -> Option<(f64, usize)> {
 fn v_nr(c: &Ctx, p: &Params) -> Score {
     const ID: &str = "V-NR";
     let Some((t, n)) = tnlr(c) else {
-        return Score::unknown(ID, "dB", Better::Lower, "纯噪声帧不足 0.5 s，或输入停顿是数字静音");
+        return Score::unknown(
+            ID,
+            "dB",
+            Better::Lower,
+            "纯噪声帧不足 0.5 s，或输入停顿是数字静音",
+        );
     };
-    let mut s = Score::judged(ID, t, "dB", Better::Lower, p.f("max"), &[]).with_extra("frames", n as f64);
+    let mut s =
+        Score::judged(ID, t, "dB", Better::Lower, p.f("max"), &[]).with_extra("frames", n as f64);
     let own: Vec<bool> = (0..c.masks.owner.len())
         .map(|f| c.masks.owner[f] && !c.masks.interf[f])
         .collect();
@@ -662,10 +686,22 @@ fn v_intf(c: &Ctx, p: &Params) -> Score {
         return Score::unknown(ID, "dB", Better::Lower, "没有只有干扰者说话的帧");
     };
     if n < 50 {
-        return Score::unknown(ID, "dB", Better::Lower, format!("只有干扰者的帧只有 {n} 个"));
+        return Score::unknown(
+            ID,
+            "dB",
+            Better::Lower,
+            format!("只有干扰者的帧只有 {n} 个"),
+        );
     }
-    Score::judged(ID, db10(po) - db10(pi), "dB", Better::Lower, p.f("max"), &[])
-        .with_extra("frames", n as f64)
+    Score::judged(
+        ID,
+        db10(po) - db10(pi),
+        "dB",
+        Better::Lower,
+        p.f("max"),
+        &[],
+    )
+    .with_extra("frames", n as f64)
 }
 
 fn v_splvl(c: &Ctx, p: &Params) -> Score {
@@ -682,16 +718,22 @@ fn v_splvl(c: &Ctx, p: &Params) -> Score {
     }
     let ps = (po - residual_noise_power(c)).max(pc * 1e-4);
     let d = (db10(ps) - db10(pc)).min(0.0);
-    Score::judged(ID, d, "dB", Better::Higher, Some(p.f_or("min", -3.0)), &[-1.0, -2.0, -3.0])
+    Score::judged(
+        ID,
+        d,
+        "dB",
+        Better::Higher,
+        Some(p.f_or("min", -3.0)),
+        &[-1.0, -2.0, -3.0],
+    )
 }
 
 fn noise_spec_frames(c: &Ctx, sg: &Spectrogram) -> Vec<usize> {
     let q = &c.masks.noise_only;
     (0..sg.frames.len())
         .filter(|&k| {
-            sg.mask_frame(k).is_some_and(|m| {
-                m >= 2 && m + 2 < q.len() && (m - 2..=m + 2).all(|f| q[f])
-            })
+            sg.mask_frame(k)
+                .is_some_and(|m| m >= 2 && m + 2 < q.len() && (m - 2..=m + 2).all(|f| q[f]))
         })
         .collect()
 }
@@ -702,7 +744,12 @@ fn v_music(c: &Ctx, p: &Params) -> Score {
     let si = Spectrogram::new(&c.clip.mix, 512, 256);
     let ks = noise_spec_frames(c, &so);
     if ks.len() < 30 {
-        return Score::unknown(ID, "×", Better::Lower, format!("纯噪声谱帧只有 {} 个", ks.len()));
+        return Score::unknown(
+            ID,
+            "×",
+            Better::Lower,
+            format!("纯噪声谱帧只有 {} 个", ks.len()),
+        );
     }
     let (b0, b1) = (4usize, 192usize);
     let collect = |sg: &Spectrogram| -> Vec<f64> {
@@ -713,7 +760,12 @@ fn v_music(c: &Ctx, p: &Params) -> Score {
     let ki = kurtosis(&collect(&si));
     let ko = kurtosis(&collect(&so));
     if !ki.is_finite() || !ko.is_finite() || ki <= 0.0 {
-        return Score::unknown(ID, "×", Better::Lower, "峰度算不出（输入或输出在停顿里全零）");
+        return Score::unknown(
+            ID,
+            "×",
+            Better::Lower,
+            "峰度算不出（输入或输出在停顿里全零）",
+        );
     }
     // 孤立亮点
     let db = |k: usize, b: usize| 10.0 * (so.frames[k][b] as f64).max(1e-20).log10();
@@ -764,12 +816,15 @@ fn v_vacuum(c: &Ctx, p: &Params) -> Score {
 
 fn v_timbre(c: &Ctx, p: &Params) -> Score {
     const ID: &str = "V-TIMBRE";
-    const BANDS: [(f64, f64); 4] = [(100.0, 1000.0), (1000.0, 2000.0), (2000.0, 4000.0), (4000.0, 7900.0)];
+    const BANDS: [(f64, f64); 4] = [
+        (100.0, 1000.0),
+        (1000.0, 2000.0),
+        (2000.0, 4000.0),
+        (4000.0, 7900.0),
+    ];
     let so = Spectrogram::new(c.out, 512, 256);
     let sc = Spectrogram::new(&c.clip.clean, 512, 256);
-    let own = |m: usize| {
-        m < c.masks.owner.len() && c.masks.owner[m] && !c.masks.interf[m]
-    };
+    let own = |m: usize| m < c.masks.owner.len() && c.masks.owner[m] && !c.masks.interf[m];
     let speech: Vec<usize> = (0..so.frames.len())
         .filter(|&k| so.mask_frame(k).is_some_and(own))
         .collect();
@@ -811,7 +866,10 @@ fn v_timbre(c: &Ctx, p: &Params) -> Score {
     let dev: Vec<f64> = (0..4)
         .map(|i| (db10(po[i]) - db10(tot_o)) - (db10(pc[i]) - db10(tot_c)))
         .collect();
-    let worst = dev.iter().cloned().fold(0.0f64, |a, b| if b.abs() > a.abs() { b } else { a });
+    let worst = dev
+        .iter()
+        .cloned()
+        .fold(0.0f64, |a, b| if b.abs() > a.abs() { b } else { a });
     Score::judged(
         ID,
         worst.abs(),
@@ -879,7 +937,12 @@ fn owner_onsets(c: &Ctx) -> Vec<usize> {
 
 fn need_sim(c: &Ctx, id: &'static str, unit: &'static str) -> Result<HopTruth, Score> {
     if !c.clip.tracks {
-        return Err(Score::unknown(id, unit, Better::Lower, "不是模拟片段，没有逐帧真值"));
+        return Err(Score::unknown(
+            id,
+            unit,
+            Better::Lower,
+            "不是模拟片段，没有逐帧真值",
+        ));
     }
     let Some(r) = c.run else {
         return Err(Score::unknown(id, unit, Better::Lower, "没有系统运行记录"));
@@ -914,13 +977,24 @@ fn v_sim_gate(c: &Ctx, p: &Params) -> Score {
     } else {
         0.0
     };
-    let mut s = Score::judged(ID, miss, "比例", Better::Lower, Some(p.f_or("max", 0.05)), &[])
-        .with_extra("onset_miss", onset_miss)
-        .with_extra("owner_hops", act.len() as f64);
+    let mut s = Score::judged(
+        ID,
+        miss,
+        "比例",
+        Better::Lower,
+        Some(p.f_or("max", 0.05)),
+        &[],
+    )
+    .with_extra("onset_miss", onset_miss)
+    .with_extra("owner_hops", act.len() as f64);
     let omax = p.f_or("onset_max", 0.2);
     if s.verdict.is_pass() && onset_miss > omax {
         s.verdict = Verdict::Fail;
-        s.note = format!("字头 200 ms 漏开 {:.0}% > {:.0}%", onset_miss * 100.0, omax * 100.0);
+        s.note = format!(
+            "字头 200 ms 漏开 {:.0}% > {:.0}%",
+            onset_miss * 100.0,
+            omax * 100.0
+        );
     }
     s
 }

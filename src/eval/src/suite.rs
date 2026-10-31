@@ -126,10 +126,7 @@ fn s<'a>(v: &'a Value, k: &str) -> Option<&'a str> {
 
 fn pair(v: &Value, k: &str, d: (f64, f64)) -> (f64, f64) {
     match v.get(k).and_then(Value::as_array) {
-        Some(a) if a.len() == 2 => (
-            a[0].as_f64().unwrap_or(d.0),
-            a[1].as_f64().unwrap_or(d.1),
-        ),
+        Some(a) if a.len() == 2 => (a[0].as_f64().unwrap_or(d.0), a[1].as_f64().unwrap_or(d.1)),
         _ => d,
     }
 }
@@ -183,7 +180,11 @@ fn parse_fault(v: &Value) -> Result<(u64, FaultKind), String> {
         Some("nan") => FaultKind::Nan,
         Some("error") => FaultKind::Error,
         Some("explode") => FaultKind::Explode,
-        k => return Err(format!("未知故障 {k:?}（CI 不注入 stall：会 sleep、计时不稳）")),
+        k => {
+            return Err(format!(
+                "未知故障 {k:?}（CI 不注入 stall：会 sleep、计时不稳）"
+            ));
+        }
     };
     Ok((hop, kind))
 }
@@ -255,7 +256,12 @@ pub fn parse_suite(text: &str) -> Result<Suite, String> {
             return Err(format!("{id}：既没有 scene 也没有 real"));
         }
         let mut faults = Vec::new();
-        for fv in t.get("faults").and_then(Value::as_array).into_iter().flatten() {
+        for fv in t
+            .get("faults")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
             faults.push(parse_fault(fv).map_err(|e| format!("{id}：{e}"))?);
         }
         tasks.push(Task {
@@ -294,7 +300,10 @@ pub fn parse_suite(text: &str) -> Result<Suite, String> {
     }
     Ok(Suite {
         name: s(&root, "name").unwrap_or("suite").into(),
-        base_seed: root.get("seed").and_then(Value::as_u64).unwrap_or(20_261_031),
+        base_seed: root
+            .get("seed")
+            .and_then(Value::as_u64)
+            .unwrap_or(20_261_031),
         tasks,
     })
 }
@@ -318,7 +327,9 @@ pub fn parse_levels(text: &str) -> Result<BTreeMap<String, (Level, String)>, Str
         .and_then(Value::as_object)
         .ok_or("levels.json 缺 verifiers")?
     {
-        let l = s(e, "level").and_then(Level::parse).ok_or_else(|| format!("{k}：级别不对"))?;
+        let l = s(e, "level")
+            .and_then(Level::parse)
+            .ok_or_else(|| format!("{k}：级别不对"))?;
         out.insert(k.clone(), (l, s(e, "basis").unwrap_or("").to_string()));
     }
     Ok(out)
@@ -347,9 +358,16 @@ mod tests {
         let ci = parse_suite(CI_SUITE).unwrap();
         let qa = parse_suite(QA_SUITE).unwrap();
         let n = ci.tasks.len() + qa.tasks.len();
-        assert!((20..=50).contains(&n), "任务数 {n}（Anthropic：起步 20–50 个）");
+        assert!(
+            (20..=50).contains(&n),
+            "任务数 {n}（Anthropic：起步 20–50 个）"
+        );
         for set in [Set::Regression, Set::Capability, Set::Probe] {
-            assert!(ci.tasks.iter().any(|t| t.set == set), "CI 缺 {}", set.as_str());
+            assert!(
+                ci.tasks.iter().any(|t| t.set == set),
+                "CI 缺 {}",
+                set.as_str()
+            );
         }
         // 正反两面：既有「该压」也有「不该压」
         assert!(ci.tasks.iter().any(|t| t.polarity == "suppress"));

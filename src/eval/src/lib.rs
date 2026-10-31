@@ -208,7 +208,14 @@ impl Score {
 impl fmt::Display for Score {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.value {
-            Some(v) => write!(f, "{} = {:.3} {} [{}]", self.id, v, self.unit, self.verdict.as_str()),
+            Some(v) => write!(
+                f,
+                "{} = {:.3} {} [{}]",
+                self.id,
+                v,
+                self.unit,
+                self.verdict.as_str()
+            ),
             None => write!(f, "{} = ? [{}]", self.id, self.verdict.as_str()),
         }
     }

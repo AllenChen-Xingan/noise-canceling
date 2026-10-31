@@ -114,7 +114,11 @@ pub fn extract(answers: &Value) -> (Vec<Pair>, BTreeMap<String, BTreeMap<String,
         };
         let models: Vec<String> = t["slots"]
             .as_object()
-            .map(|o| o.values().filter_map(|v| v.as_str().map(String::from)).collect())
+            .map(|o| {
+                o.values()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default();
         for q in ["clearer", "natural"] {
             if let Some(w) = t["by_model"][q].as_str()
@@ -190,7 +194,9 @@ pub fn calibrate(answers: &Value, scores: &Value, round: u32) -> Value {
         .is_some_and(|a| a.iter().any(|t| t["pass"] == false));
     let mut rows = Vec::new();
     for m in exp003_metrics() {
-        let val = |clip: &str, model: &str| -> Option<f64> { (m.get)(&per[clip][model], &per[clip]["noisy"]) };
+        let val = |clip: &str, model: &str| -> Option<f64> {
+            (m.get)(&per[clip][model], &per[clip]["noisy"])
+        };
         // 每对：1 = 指标与耳朵同向，0 = 反向，0.5 = 指标打平
         let scored: Vec<(String, &'static str, f64)> = pairs
             .iter()
@@ -227,7 +233,9 @@ pub fn calibrate(answers: &Value, scores: &Value, round: u32) -> Value {
         let mut rng = Rng::new(20_261_030);
         let bs: Vec<f64> = (0..10_000)
             .map(|_| {
-                let idx: Vec<usize> = (0..screens.len()).map(|_| rng.below(screens.len())).collect();
+                let idx: Vec<usize> = (0..screens.len())
+                    .map(|_| rng.below(screens.len()))
+                    .collect();
                 rate(&idx)
             })
             .collect();
@@ -253,15 +261,25 @@ pub fn calibrate(answers: &Value, scores: &Value, round: u32) -> Value {
         let mut rng = Rng::new(20_261_030);
         let tbs: Vec<f64> = (0..10_000)
             .map(|_| {
-                let s: Vec<f64> = (0..taus.len()).map(|_| taus[rng.below(taus.len())]).collect();
+                let s: Vec<f64> = (0..taus.len())
+                    .map(|_| taus[rng.below(taus.len())])
+                    .collect();
                 crate::analysis::mean(&s)
             })
             .collect();
-        let tau_lo = if taus.is_empty() { f64::NAN } else { quantile(&tbs, 0.025) };
+        let tau_lo = if taus.is_empty() {
+            f64::NAN
+        } else {
+            quantile(&tbs, 0.025)
+        };
         let n = scored.len();
         // 若这些数据是验证集，会是哪一级（只作参考）
         let as_if = if n >= 20 && lo > 0.5 {
-            if taus.len() >= 30 && tau_lo >= 0.2 { Level::L2 } else { Level::L1 }
+            if taus.len() >= 30 && tau_lo >= 0.2 {
+                Level::L2
+            } else {
+                Level::L1
+            }
         } else {
             Level::L0
         };
@@ -307,17 +325,29 @@ pub fn calibrate(answers: &Value, scores: &Value, round: u32) -> Value {
 pub fn to_markdown(c: &Value, src: &str) -> String {
     use std::fmt::Write as _;
     let mut s = String::new();
-    let _ = writeln!(s, "# 定标 · 第 {} 轮（{}）\n", c["round"], c["set"].as_str().unwrap_or(""));
+    let _ = writeln!(
+        s,
+        "# 定标 · 第 {} 轮（{}）\n",
+        c["round"],
+        c["set"].as_str().unwrap_or("")
+    );
     let _ = writeln!(s, "数据：{src}\n");
     let _ = writeln!(
         s,
         "配对 {} 对、{} 屏；会话{}。规则：{}\n",
         c["pairs_total"],
         c["screens"],
-        if c["session_discounted"] == true { "**打折**（陷阱 trap-identical 没过）" } else { "有效" },
+        if c["session_discounted"] == true {
+            "**打折**（陷阱 trap-identical 没过）"
+        } else {
+            "有效"
+        },
         c["rules"].as_str().unwrap_or("")
     );
-    let _ = writeln!(s, "| verifier | 指标 | 配对 | 一致率 | 95% 区间（按屏聚类） | 片段内 τ 均值 / 下界（片段数） | 若作验证集 | **正式级别** |");
+    let _ = writeln!(
+        s,
+        "| verifier | 指标 | 配对 | 一致率 | 95% 区间（按屏聚类） | 片段内 τ 均值 / 下界（片段数） | 若作验证集 | **正式级别** |"
+    );
     let _ = writeln!(s, "|---|---|---|---|---|---|---|---|");
     for r in c["metrics"].as_array().into_iter().flatten() {
         let f = |v: &Value| v.as_f64().map_or("—".into(), |x| format!("{x:.2}"));
@@ -337,7 +367,10 @@ pub fn to_markdown(c: &Value, src: &str) -> String {
             r["level"].as_str().unwrap_or("")
         );
     }
-    let _ = writeln!(s, "\n一致率 0.5 = 和抛硬币一样；低于 0.5 = 指标与耳朵**反向**。片段内 τ > 0 = 同一片段里指标排序与 H3 同向。");
+    let _ = writeln!(
+        s,
+        "\n一致率 0.5 = 和抛硬币一样；低于 0.5 = 指标与耳朵**反向**。片段内 τ > 0 = 同一片段里指标排序与 H3 同向。"
+    );
     s
 }
 
@@ -348,7 +381,10 @@ mod tests {
     #[test]
     fn tau_basic() {
         assert_eq!(kendall_tau_b(&[1.0, 2.0, 3.0], &[1.0, 2.0, 3.0]), Some(1.0));
-        assert_eq!(kendall_tau_b(&[1.0, 2.0, 3.0], &[3.0, 2.0, 1.0]), Some(-1.0));
+        assert_eq!(
+            kendall_tau_b(&[1.0, 2.0, 3.0], &[3.0, 2.0, 1.0]),
+            Some(-1.0)
+        );
         assert_eq!(kendall_tau_b(&[1.0, 2.0], &[1.0, 1.0]), None);
     }
 

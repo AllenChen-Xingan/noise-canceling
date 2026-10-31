@@ -38,7 +38,16 @@ impl Asr {
     /// 服务在不在（GET 根路径能连上即可）。
     pub fn alive() -> bool {
         Command::new("curl")
-            .args(["-s", "-m", "3", "-o", "/dev/null", "-w", "%{http_code}", "http://127.0.0.1:11520/"])
+            .args([
+                "-s",
+                "-m",
+                "3",
+                "-o",
+                "/dev/null",
+                "-w",
+                "%{http_code}",
+                "http://127.0.0.1:11520/",
+            ])
             .output()
             .is_ok_and(|o| {
                 let code = String::from_utf8_lossy(&o.stdout);
@@ -55,16 +64,28 @@ impl Asr {
         let o = Command::new("curl")
             .args(["-s", "-m", "600", "-X", "POST", URL, "-H"])
             .arg(format!("Authorization: Bearer {KEY}"))
-            .args(["-F", &format!("model={MODEL}"), "-F", &format!("language={lang}")])
-            .args(["-F", "temperature=0", "-F", "response_format=json", "-F", &file_arg])
+            .args([
+                "-F",
+                &format!("model={MODEL}"),
+                "-F",
+                &format!("language={lang}"),
+            ])
+            .args([
+                "-F",
+                "temperature=0",
+                "-F",
+                "response_format=json",
+                "-F",
+                &file_arg,
+            ])
             .output()
             .map_err(|e| format!("调不起 curl：{e}"))?;
         self.calls += 1;
         if !o.status.success() {
             return Err(format!("ASR 请求失败（curl 退出码 {:?}）", o.status.code()));
         }
-        let v: Value = serde_json::from_slice(&o.stdout)
-            .map_err(|e| format!("ASR 返回不是 JSON：{e}"))?;
+        let v: Value =
+            serde_json::from_slice(&o.stdout).map_err(|e| format!("ASR 返回不是 JSON：{e}"))?;
         let text = v["text"]
             .as_str()
             .ok_or_else(|| format!("ASR 返回缺 text：{v}"))?
@@ -81,7 +102,12 @@ impl Asr {
     }
 
     /// 转写 `REPEATS` 次，返回 (第一次文本, 是否每次逐字相同)。
-    pub fn transcribe(&mut self, path: &Path, sha: &str, lang: &str) -> Result<(String, bool), String> {
+    pub fn transcribe(
+        &mut self,
+        path: &Path,
+        sha: &str,
+        lang: &str,
+    ) -> Result<(String, bool), String> {
         let first = self.once(path, sha, lang, 1)?;
         let mut stable = true;
         for rep in 2..=REPEATS {

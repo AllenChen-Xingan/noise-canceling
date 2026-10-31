@@ -256,7 +256,8 @@ fn build(spec: &SystemSpec) -> Result<Engine<FaultInjector<EvalModel>>, String> 
                 .default_path()
                 .ok_or_else(|| format!("{} 的权重不在本机", k.as_str()))?;
             EvalModel::Real(Box::new(
-                mk.open(&path).map_err(|e| format!("打开 {}：{e}", path.display()))?,
+                mk.open(&path)
+                    .map_err(|e| format!("打开 {}：{e}", path.display()))?,
             ))
         }
     };
@@ -265,7 +266,10 @@ fn build(spec: &SystemSpec) -> Result<Engine<FaultInjector<EvalModel>>, String> 
     } else {
         SafetyConfig::off()
     };
-    Ok(Engine::new(FaultInjector::new(model, spec.faults.clone()), cfg))
+    Ok(Engine::new(
+        FaultInjector::new(model, spec.faults.clone()),
+        cfg,
+    ))
 }
 
 /// 跑一段。

@@ -165,14 +165,22 @@ fn yn(b: Option<bool>) -> &'static str {
     }
 }
 
-pub fn to_markdown(r: &SuiteResult, meta: &Meta, levels: &BTreeMap<String, (Level, String)>) -> String {
+pub fn to_markdown(
+    r: &SuiteResult,
+    meta: &Meta,
+    levels: &BTreeMap<String, (Level, String)>,
+) -> String {
     let mut s = String::new();
     let blocks = r.blocks();
     let _ = writeln!(s, "# 评测报告 · {} · {}\n", r.suite, meta.run_id);
     let _ = writeln!(
         s,
         "**门禁：{}**（阻断 {} 处）· 层 `{}` · 提交 `{}` · 构建 `{}`{}\n",
-        if blocks.is_empty() { "通过" } else { "不通过" },
+        if blocks.is_empty() {
+            "通过"
+        } else {
+            "不通过"
+        },
         blocks.len(),
         r.layer,
         meta.commit,
@@ -190,7 +198,10 @@ pub fn to_markdown(r: &SuiteResult, meta: &Meta, levels: &BTreeMap<String, (Leve
     );
 
     let _ = writeln!(s, "## 汇总（回归 / 能力 / 探针分开）\n");
-    let _ = writeln!(s, "| 系统 | 集合 | 任务 | pass@k | pass^k | 试验通过 | 跳过 |");
+    let _ = writeln!(
+        s,
+        "| 系统 | 集合 | 任务 | pass@k | pass^k | 试验通过 | 跳过 |"
+    );
     let _ = writeln!(s, "|---|---|---|---|---|---|---|");
     for ((sy, set), v) in summarize(r) {
         let _ = writeln!(
@@ -240,7 +251,10 @@ pub fn to_markdown(r: &SuiteResult, meta: &Meta, levels: &BTreeMap<String, (Leve
     }
 
     let _ = writeln!(s, "## 逐任务\n");
-    let _ = writeln!(s, "| 任务 | 集合 | 正反 | 系统 | 过/k | pass^k | 各 verifier（第 1 次试验：值 · 判 · 级） |");
+    let _ = writeln!(
+        s,
+        "| 任务 | 集合 | 正反 | 系统 | 过/k | pass^k | 各 verifier（第 1 次试验：值 · 判 · 级） |"
+    );
     let _ = writeln!(s, "|---|---|---|---|---|---|---|");
     for t in &r.tasks {
         if let Some(w) = &t.skipped {
@@ -261,10 +275,7 @@ pub fn to_markdown(r: &SuiteResult, meta: &Meta, levels: &BTreeMap<String, (Leve
                 tr.graders
                     .iter()
                     .map(|g| {
-                        let v = g
-                            .score
-                            .value
-                            .map_or("?".to_string(), |v| format!("{v:.2}"));
+                        let v = g.score.value.map_or("?".to_string(), |v| format!("{v:.2}"));
                         let mark = match (&g.gate, &g.score.verdict) {
                             (Gate::Info, _) => "ⓘ",
                             (Gate::Block(_), _) => "⛔",
@@ -277,7 +288,12 @@ pub fn to_markdown(r: &SuiteResult, meta: &Meta, levels: &BTreeMap<String, (Leve
                             .as_ref()
                             .and_then(|b| b.value)
                             .map_or(String::new(), |b| format!("（原 {b:.2}）"));
-                        format!("{} {v}{}{base} {mark} {}", g.v, g.score.unit, g.level.as_str())
+                        format!(
+                            "{} {v}{}{base} {mark} {}",
+                            g.v,
+                            g.score.unit,
+                            g.level.as_str()
+                        )
                     })
                     .collect()
             })
@@ -306,7 +322,9 @@ pub fn to_markdown(r: &SuiteResult, meta: &Meta, levels: &BTreeMap<String, (Leve
     for i in REGISTRY {
         let l = levels.get(i.id).map_or(i.default_level, |e| e.0);
         let usage = match (i.kind, l) {
-            (crate::verifiers::Kind::Perceptual, Level::L0 | Level::L1) => "回归集只报警 + 不许比冻结基线差",
+            (crate::verifiers::Kind::Perceptual, Level::L0 | Level::L1) => {
+                "回归集只报警 + 不许比冻结基线差"
+            }
             (crate::verifiers::Kind::Perceptual, _) => "回归集阻断",
             (crate::verifiers::Kind::Sim, _) => "回归集阻断（仅模拟片段）",
             (crate::verifiers::Kind::Physical, _) => "回归集阻断",
@@ -334,7 +352,10 @@ pub fn to_markdown(r: &SuiteResult, meta: &Meta, levels: &BTreeMap<String, (Leve
     if samples.is_empty() {
         let _ = writeln!(s, "本次没写音频（CI 默认不写；本机加 `--audio`）。");
     } else {
-        let _ = writeln!(s, "每个失败任务的第一次失败试验 + 每 5 个任务固定抽 1 个。音频在仓外，不进仓。\n");
+        let _ = writeln!(
+            s,
+            "每个失败任务的第一次失败试验 + 每 5 个任务固定抽 1 个。音频在仓外，不进仓。\n"
+        );
         for (t, tr) in samples {
             let _ = writeln!(
                 s,

@@ -22,7 +22,15 @@ use crate::{Level, Score, Verdict, wav};
 
 /// QA 层的额外评分器（ASR、DNSMOS）。CI 层传 `None`。
 pub trait Extra {
-    fn score(&mut self, v: &str, sys: &str, task: &Task, clip: &Clip, out: &[f32], p: &Params) -> Option<Score>;
+    fn score(
+        &mut self,
+        v: &str,
+        sys: &str,
+        task: &Task,
+        clip: &Clip,
+        out: &[f32],
+        p: &Params,
+    ) -> Option<Score>;
 }
 
 /// 冻结基线：(系统, 任务, 试验, verifier) → 数值。
@@ -115,7 +123,13 @@ impl TaskResult {
         for t in &self.trials {
             for g in &t.graders {
                 if let Gate::Block(why) = &g.gate {
-                    out.push(format!("{} [{}] 试验 {}：{} — {why}", self.id, self.system.as_str(), t.trial, g.v));
+                    out.push(format!(
+                        "{} [{}] 试验 {}：{} — {why}",
+                        self.id,
+                        self.system.as_str(),
+                        t.trial,
+                        g.v
+                    ));
                 }
             }
         }
@@ -174,7 +188,9 @@ fn decide(
                 return Gate::Block("探针缺原输出分数".into());
             };
             match (score.value, b.value) {
-                (Some(v), Some(bv)) if score.verdict.is_fail() && score.better.worse(v, bv) => Gate::Ok,
+                (Some(v), Some(bv)) if score.verdict.is_fail() && score.better.worse(v, bv) => {
+                    Gate::Ok
+                }
                 (Some(v), Some(bv)) => Gate::Block(format!(
                     "劣化版没被抓到：劣化 {v:.2} [{}] vs 原输出 {bv:.2} [{}]",
                     score.verdict.as_str(),
@@ -200,16 +216,12 @@ fn decide(
                 ));
             }
             match (&score.verdict, hard) {
-                (Verdict::Fail, true) => Gate::Block(format!(
-                    "{} 级不过线：{}",
-                    level.as_str(),
-                    fmt_val(score)
-                )),
-                (Verdict::Fail, false) => Gate::Warn(format!(
-                    "{} 级只报警：{}",
-                    level.as_str(),
-                    fmt_val(score)
-                )),
+                (Verdict::Fail, true) => {
+                    Gate::Block(format!("{} 级不过线：{}", level.as_str(), fmt_val(score)))
+                }
+                (Verdict::Fail, false) => {
+                    Gate::Warn(format!("{} 级只报警：{}", level.as_str(), fmt_val(score)))
+                }
                 (Verdict::Unknown(why), true) => Gate::Warn(format!("判不了：{why}")),
                 _ => Gate::Ok,
             }
@@ -231,7 +243,10 @@ pub fn load_real(src: &RealSource) -> Result<Clip, String> {
         if let Some(w) = want {
             let got = wav::sha256(p)?;
             if got != w {
-                return Err(format!("{} 的 sha256 对不上（清单 {w}，实际 {got}）", p.display()));
+                return Err(format!(
+                    "{} 的 sha256 对不上（清单 {w}，实际 {got}）",
+                    p.display()
+                ));
             }
         }
         Ok(())
@@ -251,8 +266,9 @@ pub fn load_real(src: &RealSource) -> Result<Clip, String> {
         } => {
             let cp = resolve(clips).ok_or_else(|| format!("找不到 {clips}（exp005 未合并？）"))?;
             let dir = resolve(audio_dir).ok_or_else(|| format!("找不到音频目录 {audio_dir}"))?;
-            let j: Value = serde_json::from_str(&std::fs::read_to_string(&cp).map_err(|e| e.to_string())?)
-                .map_err(|e| e.to_string())?;
+            let j: Value =
+                serde_json::from_str(&std::fs::read_to_string(&cp).map_err(|e| e.to_string())?)
+                    .map_err(|e| e.to_string())?;
             let c = j["clips"]
                 .as_array()
                 .and_then(|a| a.iter().find(|c| c["id"] == clip.as_str()))
@@ -266,7 +282,8 @@ pub fn load_real(src: &RealSource) -> Result<Clip, String> {
             }
             let n = tr.values().map(Vec::len).min().unwrap_or(0);
             let take = |k: &str| tr.get(k).map(|v| v[..n].to_vec()).unwrap_or_default();
-            let (mix, clean, interf, noise) = (take("mix"), take("owner"), take("interf"), take("noise"));
+            let (mix, clean, interf, noise) =
+                (take("mix"), take("owner"), take("interf"), take("noise"));
             Ok(Clip {
                 sr: SR,
                 truth: Truth {
@@ -282,14 +299,17 @@ pub fn load_real(src: &RealSource) -> Result<Clip, String> {
         }
         RealSource::Exp003 { clips, clip } => {
             let cp = resolve(clips).ok_or_else(|| format!("找不到 {clips}"))?;
-            let j: Value = serde_json::from_str(&std::fs::read_to_string(&cp).map_err(|e| e.to_string())?)
-                .map_err(|e| e.to_string())?;
+            let j: Value =
+                serde_json::from_str(&std::fs::read_to_string(&cp).map_err(|e| e.to_string())?)
+                    .map_err(|e| e.to_string())?;
             let c = j["clips"]
                 .as_array()
                 .and_then(|a| a.iter().find(|c| c["id"] == clip.as_str()))
                 .ok_or_else(|| format!("{clips} 里没有 {clip}"))?;
             let get = |k: &str, h: &str| -> Result<Vec<f32>, String> {
-                let rel = c[k].as_str().ok_or_else(|| format!("{clip} 缺 {k}（不是现成片段）"))?;
+                let rel = c[k]
+                    .as_str()
+                    .ok_or_else(|| format!("{clip} 缺 {k}（不是现成片段）"))?;
                 let p = resolve(rel).ok_or_else(|| format!("找不到 {rel}"))?;
                 check(&p, c[h].as_str())?;
                 load(&p)
@@ -340,7 +360,12 @@ fn prepare(task: &Task, sys: SystemKind, clip: Clip) -> Result<Prepared, String>
     let needs_noise = task.graders.iter().any(|g| g.v == "V-BGSTAB");
     // 只在合成场景上做「只有噪音」的对照处理：真实录音的噪音轨不是逐样本可重放的同一段输入
     let noise_out = if needs_noise && task.scene.is_some() {
-        let bg: Vec<f32> = clip.noise.iter().zip(&clip.interf).map(|(a, b)| a + b).collect();
+        let bg: Vec<f32> = clip
+            .noise
+            .iter()
+            .zip(&clip.interf)
+            .map(|(a, b)| a + b)
+            .collect();
         let spec = SystemSpec {
             faults: Vec::new(),
             ..spec
@@ -451,7 +476,11 @@ pub fn run_task(
         },
         None => (task, None),
     };
-    let trials = if task.real.is_some() { 1 } else { task.trials.max(1) };
+    let trials = if task.real.is_some() {
+        1
+    } else {
+        task.trials.max(1)
+    };
     for i in 0..trials {
         let seed = trial_seed(suite.base_seed, &scene_task.id, i);
         let clip = match &task.real {
@@ -507,7 +536,10 @@ pub fn run_task(
         let pass = if task.set == Set::Probe {
             // 探针的「过」= verifier 抓到了劣化
             Some(counted.iter().all(|g| g.gate == Gate::Ok))
-        } else if counted.iter().all(|g| matches!(g.score.verdict, Verdict::Unknown(_))) {
+        } else if counted
+            .iter()
+            .all(|g| matches!(g.score.verdict, Verdict::Unknown(_)))
+        {
             None
         } else {
             Some(counted.iter().all(|g| !g.score.verdict.is_fail()))

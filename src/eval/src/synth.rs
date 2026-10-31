@@ -380,8 +380,8 @@ fn noise_track(kind: NoiseKind, rng: &mut Rng, n: usize) -> Vec<f32> {
         }
         NoiseKind::Cafe => {
             let mut buf = pink(rng, n);
-            let rms = (buf.iter().map(|v| (*v as f64).powi(2)).sum::<f64>() / n.max(1) as f64)
-                .sqrt();
+            let rms =
+                (buf.iter().map(|v| (*v as f64).powi(2)).sum::<f64>() / n.max(1) as f64).sqrt();
             let mut t = rng.range(0.1, 0.6);
             while ((t * sr) as usize) < n {
                 let at = (t * sr) as usize;
@@ -391,9 +391,8 @@ fn noise_track(kind: NoiseKind, rng: &mut Rng, n: usize) -> Vec<f32> {
                 let len = ((tau * 6.0) * sr) as usize;
                 for (i, b) in buf.iter_mut().skip(at).take(len).enumerate() {
                     let tt = i as f64 / sr;
-                    *b += (amp
-                        * (-tt / tau).exp()
-                        * (2.0 * std::f64::consts::PI * f * tt).sin()) as f32;
+                    *b += (amp * (-tt / tau).exp() * (2.0 * std::f64::consts::PI * f * tt).sin())
+                        as f32;
                 }
                 // 泊松到达，平均每秒 1.5 次
                 t += -(rng.uniform().max(1e-9)).ln() / 1.5;
@@ -490,7 +489,15 @@ pub fn render(spec: &SceneSpec) -> Clip {
         let guard = (0.25 * sr) as usize;
         match is.mode {
             InterfMode::Overlap => {
-                monologue(&mut r, &t, &mut one, 0, speech_end, (0.3, 1.0), &mut truth.interf);
+                monologue(
+                    &mut r,
+                    &t,
+                    &mut one,
+                    0,
+                    speech_end,
+                    (0.3, 1.0),
+                    &mut truth.interf,
+                );
             }
             InterfMode::Alternate | InterfMode::OtherFirst => {
                 let mut gaps = Vec::new();
@@ -601,7 +608,10 @@ mod tests {
         let c = render(&spec());
         for &(a, b) in &c.truth.interf {
             for &(oa, ob) in &c.truth.owner {
-                assert!(b <= oa || a >= ob, "干扰者 {a}..{b} 与主讲人 {oa}..{ob} 重叠");
+                assert!(
+                    b <= oa || a >= ob,
+                    "干扰者 {a}..{b} 与主讲人 {oa}..{ob} 重叠"
+                );
             }
         }
     }

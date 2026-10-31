@@ -52,13 +52,17 @@ fn fnv(x: &[f32]) -> u64 {
 impl QaExtra {
     pub fn new(tmp: PathBuf) -> QaExtra {
         let asr = asr::Asr::alive().then(|| asr::Asr::new(tmp.join("asr_cache.json")));
-        let (dnsmos, dnsmos_err) = match resolve("resources/DNS-Challenge/DNSMOS/DNSMOS/sig_bak_ovr.onnx") {
-            Some(p) => match dnsmos::Dnsmos::open(&p) {
-                Ok(d) => (Some(d), None),
-                Err(e) => (None, Some(format!("DNSMOS 打不开：{e}"))),
-            },
-            None => (None, Some("找不到 resources/DNS-Challenge/DNSMOS/DNSMOS/sig_bak_ovr.onnx".into())),
-        };
+        let (dnsmos, dnsmos_err) =
+            match resolve("resources/DNS-Challenge/DNSMOS/DNSMOS/sig_bak_ovr.onnx") {
+                Some(p) => match dnsmos::Dnsmos::open(&p) {
+                    Ok(d) => (Some(d), None),
+                    Err(e) => (None, Some(format!("DNSMOS 打不开：{e}"))),
+                },
+                None => (
+                    None,
+                    Some("找不到 resources/DNS-Challenge/DNSMOS/DNSMOS/sig_bak_ovr.onnx".into()),
+                ),
+            };
         QaExtra {
             asr,
             dnsmos,
@@ -71,7 +75,10 @@ impl QaExtra {
     }
 
     fn dump(&self, name: &str, x: &[f32]) -> Result<(PathBuf, String), String> {
-        let p = self.tmp.join("asr-wav").join(format!("{name}-{:016x}.wav", fnv(x)));
+        let p = self
+            .tmp
+            .join("asr-wav")
+            .join(format!("{name}-{:016x}.wav", fnv(x)));
         if !p.exists() {
             wav::write(&p, x, SR)?;
         }
@@ -125,18 +132,30 @@ impl QaExtra {
             out_del: od,
             out_sub: os,
         });
-        Score::judged(ID, pp(od + os, md + ms), U, Better::Lower, Some(p.f_or("max", 1.0)), &[])
-            .with_extra("d_del_pp", pp(od, md))
-            .with_extra("d_sub_pp", pp(os, ms))
-            .with_extra("d_ins_pp", pp(oi, mi))
-            .with_extra("ref_len", l)
-            .with_note("单片段点估计；集合层区间见报告「吃字（集合层）」")
+        Score::judged(
+            ID,
+            pp(od + os, md + ms),
+            U,
+            Better::Lower,
+            Some(p.f_or("max", 1.0)),
+            &[],
+        )
+        .with_extra("d_del_pp", pp(od, md))
+        .with_extra("d_sub_pp", pp(os, ms))
+        .with_extra("d_ins_pp", pp(oi, mi))
+        .with_extra("ref_len", l)
+        .with_note("单片段点估计；集合层区间见报告「吃字（集合层）」")
     }
 
     fn mos(&mut self, task: &Task, clip: &Clip, out: &[f32]) -> Score {
         const ID: &str = "V-DNSMOS";
         let Some(d) = self.dnsmos.as_mut() else {
-            return Score::unknown(ID, "MOS", Better::Higher, self.dnsmos_err.clone().unwrap_or_default());
+            return Score::unknown(
+                ID,
+                "MOS",
+                Better::Higher,
+                self.dnsmos_err.clone().unwrap_or_default(),
+            );
         };
         if !self.mix_mos.contains_key(&task.id) {
             match d.score(&clip.mix) {
@@ -189,7 +208,11 @@ impl QaExtra {
             let d_del = stat(&all, true);
             let lo = q(&bs_del, 0.025);
             let verdict = if n >= 30 {
-                if d_del > 1.0 && lo > 0.0 { "veto" } else { "pass" }
+                if d_del > 1.0 && lo > 0.0 {
+                    "veto"
+                } else {
+                    "pass"
+                }
             } else if d_del > 1.0 {
                 "v7_suspect（片段 < 30，不否决）"
             } else {
@@ -207,7 +230,15 @@ impl QaExtra {
 }
 
 impl Extra for QaExtra {
-    fn score(&mut self, v: &str, sys: &str, task: &Task, clip: &Clip, out: &[f32], p: &Params) -> Option<Score> {
+    fn score(
+        &mut self,
+        v: &str,
+        sys: &str,
+        task: &Task,
+        clip: &Clip,
+        out: &[f32],
+        p: &Params,
+    ) -> Option<Score> {
         match v {
             "V-EAT-ASR" => Some(self.eat(sys, task, clip, out, p)),
             "V-DNSMOS" => Some(self.mos(task, clip, out)),

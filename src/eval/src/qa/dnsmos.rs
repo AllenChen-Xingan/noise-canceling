@@ -40,7 +40,9 @@ type BoxError = Box<dyn std::error::Error + Send + Sync>;
 impl Dnsmos {
     pub fn open(path: &Path) -> Result<Dnsmos, BoxError> {
         let env = ort::init().with_name("vdn-eval-dnsmos").build()?;
-        let b = |e: ort::Error<ort::session::builder::SessionBuilder>| -> BoxError { e.to_string().into() };
+        let b = |e: ort::Error<ort::session::builder::SessionBuilder>| -> BoxError {
+            e.to_string().into()
+        };
         let session = Session::builder(&env)?
             .with_auto_device(AutoDevicePolicy::PreferCPU)
             .map_err(b)?

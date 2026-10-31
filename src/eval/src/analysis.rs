@@ -61,10 +61,7 @@ pub fn active_level(x: &[f32], sr: u32) -> Option<(f64, f64)> {
                     } else {
                         (dp - M) / (dp - d)
                     };
-                    (
-                        ap + t * (aj - ap),
-                        (actp + t * (a[j] as f64 - actp)) / n,
-                    )
+                    (ap + t * (aj - ap), (actp + t * (a[j] as f64 - actp)) / n)
                 }
             });
         }
