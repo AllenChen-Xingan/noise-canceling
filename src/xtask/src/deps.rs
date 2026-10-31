@@ -68,7 +68,11 @@ impl Meta {
     /// 包 id → 普通依赖的包 id
     fn normal_edges(&self) -> HashMap<String, Vec<String>> {
         let mut g = HashMap::new();
-        for n in self.json["resolve"]["nodes"].as_array().into_iter().flatten() {
+        for n in self.json["resolve"]["nodes"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
             let id = n["id"].as_str().unwrap_or_default().to_string();
             let deps = n["deps"]
                 .as_array()

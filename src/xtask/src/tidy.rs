@@ -96,8 +96,14 @@ fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usi
     let lines: Vec<&str> = src.lines().collect();
     let mut rt_blocks = 0;
 
+    // `#[cfg(test)]` 之后的部分（单元测试）不查
+    let test_from = lines
+        .iter()
+        .position(|l| l.trim() == "#[cfg(test)]")
+        .unwrap_or(lines.len());
+
     // 1. allow 例外必须带 NRT 理由
-    for (i, l) in lines.iter().enumerate() {
+    for (i, l) in lines.iter().enumerate().take(test_from) {
         let c = code_of(l);
         if !(c.contains("#[allow(") || c.contains("#![allow(")) {
             continue;
@@ -110,8 +116,10 @@ fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usi
         t.nrt_allows += 1;
         let prev_ok = i > 0 && has_nrt_reason(lines[i - 1]);
         if !(prev_ok || lines[i..=end].iter().any(|l| has_nrt_reason(l))) {
-            t.problems
-                .push(format!("{rel}:{}：放行实时 lint 的 allow 缺「// NRT: 理由」（§5.3）", i + 1));
+            t.problems.push(format!(
+                "{rel}:{}：放行实时 lint 的 allow 缺「// NRT: 理由」（§5.3）",
+                i + 1
+            ));
         }
     }
 
@@ -122,16 +130,13 @@ fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usi
         return 0;
     }
 
-    // 2. R3：实时 crate 不做 IO、日志、sleep（#[cfg(test)] 之后的部分不查）
-    let test_from = lines
-        .iter()
-        .position(|l| l.trim() == "#[cfg(test)]")
-        .unwrap_or(lines.len());
+    // 2. R3：实时 crate 不做 IO、日志、sleep
     for (i, l) in lines.iter().enumerate().take(test_from) {
         let c = code_of(l);
         for bad in ["std::fs", "log::", "thread::sleep"] {
-            if c.contains(bad) && !c.contains("crate::record") {
-                t.problems.push(format!("{rel}:{}：实时 crate 里出现 {bad}（R3）", i + 1));
+            if c.contains(bad) {
+                t.problems
+                    .push(format!("{rel}:{}：实时 crate 里出现 {bad}（R3）", i + 1));
             }
         }
     }
@@ -204,7 +209,10 @@ pub fn check() -> Result<Tidy, String> {
     // 根 clippy.toml 只许一份
     let mut all = Vec::new();
     rs_files(&root.join("src"), &mut all);
-    for d in fs::read_dir(root.join("src")).map_err(|e| e.to_string())?.flatten() {
+    for d in fs::read_dir(root.join("src"))
+        .map_err(|e| e.to_string())?
+        .flatten()
+    {
         if d.path().join("clippy.toml").exists() || d.path().join(".clippy.toml").exists() {
             t.problems.push(format!(
                 "{}：crate 目录下不许放 clippy.toml（会整份替换根配置，§5.3）",
@@ -214,7 +222,10 @@ pub fn check() -> Result<Tidy, String> {
     }
 
     if !root.join("deny.toml").exists() {
-        t.notes.push("deny.toml 尚未建立：cargo-deny 未装，直接边检查待 E-deny（decision.md「仍未补齐」）".into());
+        t.notes.push(
+            "deny.toml 尚未建立：cargo-deny 未装，直接边检查待 E-deny（decision.md「仍未补齐」）"
+                .into(),
+        );
     }
 
     let meta = metadata()?;
@@ -224,15 +235,19 @@ pub fn check() -> Result<Tidy, String> {
             .map(Path::to_path_buf)
             .unwrap_or_default();
         let Some(vdn) = vdn else {
-            t.problems.push(format!("{name}：缺 [package.metadata.vdn]（§5.4）"));
+            t.problems
+                .push(format!("{name}：缺 [package.metadata.vdn]（§5.4）"));
             continue;
         };
         let tier = vdn["tier"].as_str().unwrap_or("");
         if !["A", "B", "C", "tool"].contains(&tier) {
-            t.problems.push(format!("{name}：metadata.vdn.tier 必须是 A/B/C/tool，现在是 {tier:?}"));
+            t.problems.push(format!(
+                "{name}：metadata.vdn.tier 必须是 A/B/C/tool，现在是 {tier:?}"
+            ));
         }
         if !vdn["forbid"].is_array() {
-            t.problems.push(format!("{name}：metadata.vdn.forbid 必须是数组"));
+            t.problems
+                .push(format!("{name}：metadata.vdn.forbid 必须是数组"));
         }
         let crate_root = ["src/lib.rs", "src/main.rs"]
             .iter()
@@ -243,11 +258,13 @@ pub fn check() -> Result<Tidy, String> {
             .and_then(|p| fs::read_to_string(p).ok())
             .unwrap_or_default();
         match vdn["unsafe"].as_bool() {
-            Some(false) if !root_src.contains("#![forbid(unsafe_code)]") => t
-                .problems
-                .push(format!("{name}：unsafe = false 但 crate 根没有 #![forbid(unsafe_code)]（R10）")),
+            Some(false) if !root_src.contains("#![forbid(unsafe_code)]") => t.problems.push(
+                format!("{name}：unsafe = false 但 crate 根没有 #![forbid(unsafe_code)]（R10）"),
+            ),
             Some(_) => {}
-            None => t.problems.push(format!("{name}：metadata.vdn.unsafe 必须是 true/false")),
+            None => t
+                .problems
+                .push(format!("{name}：metadata.vdn.unsafe 必须是 true/false")),
         }
         let realtime = tier == "A" || tier == "B";
         if realtime && !PANIC_LINTS.iter().all(|l| root_src.contains(l)) {
@@ -297,10 +314,16 @@ mod tests {
     fn allow_without_reason_is_flagged() {
         let t = run("#[allow(clippy::indexing_slicing)]\nfn f() {}\n", false);
         assert_eq!(t.problems.len(), 1);
-        let t = run("#[allow(clippy::indexing_slicing)] // NRT: 构造期\nfn f() {}\n", false);
+        let t = run(
+            "#[allow(clippy::indexing_slicing)] // NRT: 构造期\nfn f() {}\n",
+            false,
+        );
         assert!(t.problems.is_empty());
         assert_eq!(t.nrt_allows, 1);
-        let t = run("#[allow(clippy::indexing_slicing)] // NRT:\nfn f() {}\n", false);
+        let t = run(
+            "#[allow(clippy::indexing_slicing)] // NRT:\nfn f() {}\n",
+            false,
+        );
         assert_eq!(t.problems.len(), 1, "理由不许为空");
         let t = run("#[allow(clippy::large_enum_variant)]\nenum E {}\n", false);
         assert!(t.problems.is_empty(), "不相关的 allow 不管");

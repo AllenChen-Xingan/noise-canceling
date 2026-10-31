@@ -131,6 +131,12 @@ impl Default for ParamSet {
     }
 }
 
+// 实时可调（glide_toward 在实时线程逐帧平滑）：不分配、不 panic（specs/rust/architecture.md §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl ParamSet {
     pub const DEFAULT: ParamSet = ParamSet {
         model: ModelId::Gtcrn,

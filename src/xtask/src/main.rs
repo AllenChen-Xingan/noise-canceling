@@ -16,10 +16,7 @@ use std::process::ExitCode;
 /// workspace 根（xtask 在 `src/xtask/`）。
 pub fn root() -> PathBuf {
     let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    here.ancestors()
-        .nth(2)
-        .map(PathBuf::from)
-        .unwrap_or(here)
+    here.ancestors().nth(2).map(PathBuf::from).unwrap_or(here)
 }
 
 fn report(name: &str, problems: &[String]) -> ExitCode {
