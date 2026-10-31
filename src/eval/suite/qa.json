@@ -1,0 +1,96 @@
+{
+  "name": "exp007-qa",
+  "doc": "QA 层任务集：真实录音（仓外音频，按清单里的 sha256 核对；对不上的任务判「不知道」并跳过）。要本机模型：Qwen3-ASR（127.0.0.1:11520）与 DNSMOS ONNX；被测系统默认 GTCRN、FastEnhancer-M（有权重才跑）。感知类 verifier 全部 L0：只报警、只作「不比基线差」的约束，不阻断。",
+  "seed": 20261031,
+  "defaults": { "trials": 1 },
+  "tasks": [
+    {
+      "id": "Q01-e005-owner-only",
+      "set": "regression", "polarity": "preserve",
+      "origin": "exp005 c06 owner_only（主讲人独白 + 底噪 10 dB）",
+      "desc": "真实独白：不许比原声更吃字、门控不能关主讲人",
+      "real": { "kind": "exp005", "clips": "docs/experiments/exp005-p2-speaker/clips.json", "audio_dir": "_tmp/20261031-exp005/src", "clip": "c06" },
+      "graders": [ { "v": "V-EAT-ASR", "max": 1.0 }, { "v": "V-DNSMOS" }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-SIM-GATE", "max": 0.05, "onset_max": 0.2 } ]
+    },
+    {
+      "id": "Q02-e005-one-neighbor-sir6",
+      "set": "capability", "polarity": "suppress",
+      "origin": "exp005 c01（邻座一人 SIR 6 dB）· 人原话「所有的都没降噪」",
+      "desc": "真实邻座：压邻座、不吃主讲人的字",
+      "real": { "kind": "exp005", "clips": "docs/experiments/exp005-p2-speaker/clips.json", "audio_dir": "_tmp/20261031-exp005/src", "clip": "c01" },
+      "graders": [ { "v": "V-INTF", "max": -10 }, { "v": "V-SIM-FA", "max": 0.1 }, { "v": "V-EAT-ASR", "max": 1.0 }, { "v": "V-DNSMOS" } ]
+    },
+    {
+      "id": "Q03-e005-one-neighbor-sir3",
+      "set": "capability", "polarity": "suppress",
+      "origin": "exp005 c02（邻座一人 SIR 3 dB）",
+      "desc": "邻座更响：压邻座",
+      "real": { "kind": "exp005", "clips": "docs/experiments/exp005-p2-speaker/clips.json", "audio_dir": "_tmp/20261031-exp005/src", "clip": "c02" },
+      "graders": [ { "v": "V-INTF", "max": -10 }, { "v": "V-SIM-FA", "max": 0.1 }, { "v": "V-EAT-ASR", "max": 1.0 } ]
+    },
+    {
+      "id": "Q04-e005-three-neighbors",
+      "set": "capability", "polarity": "suppress",
+      "origin": "exp005 c03（邻座 3 人轮流）",
+      "desc": "多个邻座：压邻座",
+      "real": { "kind": "exp005", "clips": "docs/experiments/exp005-p2-speaker/clips.json", "audio_dir": "_tmp/20261031-exp005/src", "clip": "c03" },
+      "graders": [ { "v": "V-INTF", "max": -10 }, { "v": "V-EAT-ASR", "max": 1.0 } ]
+    },
+    {
+      "id": "Q05-e005-neighbor-first-25s",
+      "set": "capability", "polarity": "suppress",
+      "origin": "exp005 c04 other_first（邻座先说 25 s）",
+      "desc": "邻座先说：开头别为邻座开门",
+      "real": { "kind": "exp005", "clips": "docs/experiments/exp005-p2-speaker/clips.json", "audio_dir": "_tmp/20261031-exp005/src", "clip": "c04" },
+      "graders": [ { "v": "V-SIM-FA", "max": 0.1 }, { "v": "V-SIM-SWLAT", "max": 32 }, { "v": "V-INTF", "max": -10 } ]
+    },
+    {
+      "id": "Q06-e005-neighbor-first-45s",
+      "set": "capability", "polarity": "suppress",
+      "origin": "exp005 c05 other_first（邻座先说 45 s）",
+      "desc": "邻座先说更久",
+      "real": { "kind": "exp005", "clips": "docs/experiments/exp005-p2-speaker/clips.json", "audio_dir": "_tmp/20261031-exp005/src", "clip": "c05" },
+      "graders": [ { "v": "V-SIM-FA", "max": 0.1 }, { "v": "V-INTF", "max": -10 }, { "v": "V-EAT-ASR", "max": 1.0 } ]
+    },
+    {
+      "id": "Q07-e005-neighbor-no-noise",
+      "set": "capability", "polarity": "suppress",
+      "origin": "exp005 c07（邻座、无底噪）",
+      "desc": "只有邻座没有底噪：纯粹考「认人」",
+      "real": { "kind": "exp005", "clips": "docs/experiments/exp005-p2-speaker/clips.json", "audio_dir": "_tmp/20261031-exp005/src", "clip": "c07" },
+      "graders": [ { "v": "V-INTF", "max": -10 }, { "v": "V-SIM-FA", "max": 0.1 } ]
+    },
+    {
+      "id": "Q08-e005-four-neighbors",
+      "set": "capability", "polarity": "suppress",
+      "origin": "exp005 c08（邻座 4 人轮流）",
+      "desc": "四个邻座",
+      "real": { "kind": "exp005", "clips": "docs/experiments/exp005-p2-speaker/clips.json", "audio_dir": "_tmp/20261031-exp005/src", "clip": "c08" },
+      "graders": [ { "v": "V-INTF", "max": -10 }, { "v": "V-EAT-ASR", "max": 1.0 } ]
+    },
+    {
+      "id": "Q09-e003-casino-5db",
+      "set": "regression", "polarity": "both",
+      "origin": "exp003 c01 赌场 5 dB（人选 FastEnhancer-M「能用」；ASR 三家删除都是 0）",
+      "desc": "真实 babble + 机器声 5 dB：压背景、不吃字",
+      "real": { "kind": "exp003", "clips": "docs/experiments/exp003-offline-ab/clips.json", "clip": "c01" },
+      "graders": [ { "v": "V-EAT-ASR", "max": 1.0 }, { "v": "V-DNSMOS" }, { "v": "V-NR", "max": -6 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 } ]
+    },
+    {
+      "id": "Q10-e003-casino-0db",
+      "set": "capability", "polarity": "both",
+      "origin": "exp003 c02 赌场 0 dB（全部被勾吃字；DPDFNet-2 / GTCRN 不能用）",
+      "desc": "0 dB：压背景、不吃字",
+      "real": { "kind": "exp003", "clips": "docs/experiments/exp003-offline-ab/clips.json", "clip": "c02" },
+      "graders": [ { "v": "V-EAT-ASR", "max": 1.0 }, { "v": "V-DNSMOS" }, { "v": "V-NR", "max": -6 }, { "v": "V-SPLVL", "min": -3 } ]
+    },
+    {
+      "id": "Q11-e003-casino-minus5db",
+      "set": "capability", "polarity": "both",
+      "origin": "exp003 c03 赌场 −5 dB（三家全不能用、全勾吃字、ASR 删除 7–13）",
+      "desc": "−5 dB：现有三家都过不了",
+      "real": { "kind": "exp003", "clips": "docs/experiments/exp003-offline-ab/clips.json", "clip": "c03" },
+      "graders": [ { "v": "V-EAT-ASR", "max": 1.0 }, { "v": "V-DNSMOS" }, { "v": "V-NR", "max": -6 }, { "v": "V-SPLVL", "min": -3 } ]
+    }
+  ]
+}
