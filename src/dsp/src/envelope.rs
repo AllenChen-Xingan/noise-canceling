@@ -73,12 +73,15 @@ impl OpenCloseEnvelope {
         let hop_s = n as f32 / self.p.sr;
         let e = detect.iter().map(|v| v * v).sum::<f32>() / n.max(1) as f32;
         let e_db = 10.0 * (e + 1e-12).log10();
-        // 底噪跟踪：往下立刻跟，往上慢慢涨
-        self.noise_db = if e_db < self.noise_db {
-            e_db
-        } else {
-            (self.noise_db + self.p.noise_rise_db_per_s * hop_s).min(e_db)
-        };
+        // 底噪跟踪：往下立刻跟，往上慢慢涨。低于绝对门限的 hop（数字静音、开头补的零、模型延迟里的零输出）
+        // 不参与跟踪——否则底噪会被钉在 −120 dB，之后要十几秒才涨回来，期间什么都判「有声」（exp004 自审 P0）
+        if e_db > self.p.abs_min_db {
+            self.noise_db = if e_db < self.noise_db {
+                e_db
+            } else {
+                (self.noise_db + self.p.noise_rise_db_per_s * hop_s).min(e_db)
+            };
+        }
         let speech = e_db > self.p.abs_min_db && e_db > self.noise_db + self.p.detect_db;
         if speech {
             self.hang_left = self.p.hangover_s;
