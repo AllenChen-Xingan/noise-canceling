@@ -4,25 +4,25 @@
   "acc_fine_class": {
    "raw": 0.8239,
    "smooth": 0.844,
-   "committed": 0.854
+   "committed": 0.8665
   },
   "acc_user_scene": {
    "raw": 0.9217,
    "smooth": 0.9359,
-   "committed": 0.948
+   "committed": 0.9482
   },
   "acc_committed_after_5s": {
-   "fine_class": 0.8486,
-   "user_scene": 0.9486
+   "fine_class": 0.8721,
+   "user_scene": 0.9514
   },
   "per_class_recall_committed": {
-   "quiet": 0.835,
-   "hvac": 0.942,
-   "babble": 0.767,
-   "neighbor": 0.744,
-   "clatter": 0.889,
-   "traffic": 0.979,
-   "music": 0.923
+   "quiet": 0.817,
+   "hvac": 0.962,
+   "babble": 0.752,
+   "neighbor": 0.79,
+   "clatter": 0.941,
+   "traffic": 0.986,
+   "music": 0.917
   },
   "confusion_committed": {
    "labels": [
@@ -36,67 +36,67 @@
    ],
    "rows_truth_cols_pred": [
     [
-     414,
-     39,
+     405,
+     51,
+     0,
+     0,
+     40,
+     0,
+     0
+    ],
+    [
+     4,
+     400,
+     0,
+     4,
+     8,
+     0,
+     0
+    ],
+    [
      0,
      12,
-     31,
+     698,
+     181,
      0,
+     37,
      0
     ],
     [
-     10,
-     392,
-     0,
-     4,
-     10,
-     0,
-     0
-    ],
-    [
-     0,
-     4,
-     712,
-     194,
-     0,
-     18,
-     0
-    ],
-    [
-     22,
-     17,
-     135,
-     619,
-     19,
-     20,
-     0
-    ],
-    [
-     26,
-     0,
-     7,
-     17,
-     526,
-     16,
-     0
-    ],
-    [
-     0,
-     5,
-     0,
-     0,
-     10,
-     705,
+     8,
+     8,
+     113,
+     657,
+     9,
+     37,
      0
     ],
     [
      11,
      0,
-     4,
-     23,
+     0,
+     8,
+     557,
+     16,
+     0
+    ],
+    [
+     0,
+     7,
      0,
      0,
-     458
+     3,
+     710,
+     0
+    ],
+    [
+     8,
+     0,
+     8,
+     25,
+     0,
+     0,
+     455
     ]
    ]
   },
@@ -109,37 +109,37 @@
    ],
    "rows_truth_cols_pred": [
     [
-     855,
-     57,
+     860,
+     52,
      0,
      0
     ],
     [
-     69,
-     2229,
-     54,
+     39,
+     2223,
+     90,
      0
     ],
     [
-     5,
-     10,
-     705,
+     7,
+     3,
+     710,
      0
     ],
     [
-     11,
-     27,
+     8,
+     33,
      0,
-     458
+     455
     ]
    ]
   },
   "jitter_test": {
    "clips": 280,
-   "mean_extra_switches": 0.986,
-   "clips_with_any": 150,
+   "mean_extra_switches": 0.875,
+   "clips_with_any": 143,
    "max": 5,
-   "wrong_switches_per_clip": 0.132
+   "wrong_switches_per_clip": 0.086
   },
   "device": {
    "bt_narrow": {
@@ -154,15 +154,15 @@
  },
  "seq": {
   "sequences": 16,
-  "extra_switches_mean": 3.31,
-  "extra_switches_total": 53,
+  "extra_switches_mean": 2.69,
+  "extra_switches_total": 43,
   "change_delay_s": {
-   "median": 3.73,
-   "p90": 6.38,
+   "median": 3.85,
+   "p90": 7.64,
    "n": 47
   },
   "changes_never_reached_correct": 1,
-  "wrong_switches_per_minute": 1.071,
-  "time_correct_frac": 0.6672
+  "wrong_switches_per_minute": 0.756,
+  "time_correct_frac": 0.6667
  }
 }

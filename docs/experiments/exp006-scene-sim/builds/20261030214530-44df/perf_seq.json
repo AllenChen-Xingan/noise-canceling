@@ -1,1 +1,1 @@
-{"weights":"exp006/20261030214530-44df","push_hop_us_mean":4.99,"push_hop_us_max":34.5,"judge_us_mean":200.8,"judge_us_max":424.1,"hops":60000,"judges":1920,"cpu_share_pct":0.0717}
+{"weights":"exp006/20261030214530-44df","push_hop_us_mean":4.76,"push_hop_us_max":242.0,"judge_us_mean":192.3,"judge_us_max":436.4,"hops":60000,"judges":1920,"cpu_share_pct":0.0685}
