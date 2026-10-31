@@ -18,7 +18,10 @@ fn run(kind: ModelKind) {
     };
     let m = kind.open(&path).expect("打开模型");
     // 声明（延迟账用的）必须和打开后的实际一致
-    assert_eq!((m.sample_rate(), m.hop(), m.latency_samples()), (d.sample_rate, hop, latency));
+    assert_eq!(
+        (m.sample_rate(), m.hop(), m.latency_samples()),
+        (d.sample_rate, hop, latency)
+    );
     let x: Vec<f32> = (0..16000)
         .map(|i| 0.1 * (i as f32 * 0.07).sin() + 0.01 * ((i * 7919 % 101) as f32 / 50.0 - 1.0))
         .collect();

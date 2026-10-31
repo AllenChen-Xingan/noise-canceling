@@ -17,7 +17,10 @@ fn every_routed_model_fits_the_budget() {
     for k in ModelKind::ALL {
         let l = full(k);
         if let Err(t) = l.check(LATENCY_BUDGET_MS) {
-            panic!("{k:?} 延迟账 {t:.2} ms 超 {LATENCY_BUDGET_MS} ms：\n{}", l.render());
+            panic!(
+                "{k:?} 延迟账 {t:.2} ms 超 {LATENCY_BUDGET_MS} ms：\n{}",
+                l.render()
+            );
         }
     }
 }
@@ -33,7 +36,9 @@ fn model_part_is_32_ms_for_both() {
 #[test]
 fn route_pool_has_equal_latency() {
     let totals: Vec<f64> = ModelKind::ALL.iter().map(|k| full(*k).total_ms()).collect();
-    let (lo, hi) = totals.iter().fold((f64::MAX, f64::MIN), |(a, b), t| (a.min(*t), b.max(*t)));
+    let (lo, hi) = totals
+        .iter()
+        .fold((f64::MAX, f64::MIN), |(a, b), t| (a.min(*t), b.max(*t)));
     assert!(hi - lo < 1e-9, "池内延迟不一致：{totals:?}");
 }
 
