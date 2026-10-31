@@ -27,6 +27,7 @@ pub struct Gtcrn {
     caches: [Tensor<f32>; 3],
 }
 
+// 构造：非实时线程
 impl Gtcrn {
     pub fn open(path: &Path) -> Result<Self, BoxError> {
         let session = session::open(path)?;
@@ -95,9 +96,14 @@ impl Gtcrn {
         let spec = self.stft.analyze(input);
         {
             let (_, m) = self.mix.extract_tensor_mut();
-            for (k, c) in spec.iter().enumerate() {
-                m[2 * k] = c.re;
-                m[2 * k + 1] = c.im;
+            if m.len() != 2 * spec.len() {
+                return Err(ModelError::Shape);
+            }
+            for (pair, c) in m.chunks_exact_mut(2).zip(spec.iter()) {
+                if let [re, im] = pair {
+                    *re = c.re;
+                    *im = c.im;
+                }
             }
         }
         let [c0, c1, c2] = &self.caches;
@@ -105,21 +111,27 @@ impl Gtcrn {
             .session
             .run_with_options(ort::inputs![&self.mix, c0, c1, c2], &self.run)
             .map_err(|_| ModelError::Backend)?;
+        // 全部输出都预分配了，values() 按会话输出顺序给出，名字已在 open() 里逐个核对
+        let mut vals = outs.values();
         {
-            let (_, enh) = outs[0]
+            let first = vals.next().ok_or(ModelError::Shape)?;
+            let (_, enh) = first
                 .try_extract_tensor::<f32>()
                 .map_err(|_| ModelError::Shape)?;
             if enh.len() != 2 * BINS {
                 return Err(ModelError::Shape);
             }
             let spec = self.stft.spectrum_mut();
-            for (k, c) in spec.iter_mut().enumerate() {
-                c.re = enh[2 * k];
-                c.im = enh[2 * k + 1];
+            for (c, pair) in spec.iter_mut().zip(enh.chunks_exact(2)) {
+                if let [re, im] = pair {
+                    c.re = *re;
+                    c.im = *im;
+                }
             }
         }
-        for (i, cache) in self.caches.iter_mut().enumerate() {
-            let (_, src) = outs[i + 1]
+        for cache in self.caches.iter_mut() {
+            let v = vals.next().ok_or(ModelError::Shape)?;
+            let (_, src) = v
                 .try_extract_tensor::<f32>()
                 .map_err(|_| ModelError::Shape)?;
             let dst = cache.extract_tensor_mut().1;
