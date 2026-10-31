@@ -14,6 +14,10 @@ use serde_json::json;
 use vdn_engine::{Engine, FaultInjector, FaultKind, Model, SafetyConfig, offline};
 use vdn_models::{AnyModel, BoxError, ModelKind};
 
+/// 计数分配器：bench 里量「每 hop 在 Rust 侧分配几次」（ORT C++ 内部的分配绕过它，量不到）。
+#[global_allocator]
+static GLOBAL: &stats_alloc::StatsAlloc<std::alloc::System> = &stats_alloc::INSTRUMENTED_SYSTEM;
+
 #[derive(Parser)]
 #[command(name = "vdn", version, about = "Mac 开源实时语音降噪 · P1 离线原型")]
 struct Cli {
@@ -292,11 +296,18 @@ fn bench(a: BenchArgs) -> Result<(), BoxError> {
     let mut t_model = Vec::with_capacity(a.steps);
     let mut t_engine = Vec::with_capacity(a.steps);
     let mut nonfinite = 0usize;
+    let (mut alloc_total, mut alloc_max, mut alloc_hops) = (0usize, 0usize, 0usize);
     for (k, xi) in xs.chunks_exact(hop).enumerate() {
+        let region = stats_alloc::Region::new(GLOBAL);
         let t0 = std::time::Instant::now();
         raw.process(xi, &mut y);
         let te = t0.elapsed();
+        let ch = region.change();
         if k >= a.warmup {
+            let n = ch.allocations + ch.reallocations;
+            alloc_total += n;
+            alloc_max = alloc_max.max(n);
+            alloc_hops += usize::from(n > 0);
             t_model.push(raw.last_model_time());
             t_engine.push(te);
             nonfinite += y.iter().filter(|v| !v.is_finite()).count();
@@ -318,6 +329,10 @@ fn bench(a: BenchArgs) -> Result<(), BoxError> {
         "model": raw.model().name(), "model_path": path, "input": a.input,
         "hop": hop, "period_ms": period_ms, "warmup": a.warmup, "steps": a.steps,
         "threads": 1, "nonfinite_samples": nonfinite,
+        "rust_allocs_per_hop": {
+            "mean": alloc_total as f64 / a.steps.max(1) as f64, "max": alloc_max,
+            "hops_with_alloc": alloc_hops, "note": "只计 Rust 全局分配器；ORT C++ 内部分配不在内",
+        },
         "model_ms": percentiles(&t_model),
         "engine_raw_ms": percentiles(&t_engine),
         "engine_safety_ms": percentiles(&t_safe),
