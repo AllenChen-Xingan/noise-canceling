@@ -52,7 +52,9 @@ def cmd_run(exe):
     truth = {}
     for c in clips():
         cid = c["id"]
-        subprocess.run([exe, "run", str(SRC / f"{cid}_mix.wav"), str(OUT), "--model-path", str(gtcrn),
+        wet = OUT / f"{cid}.wet.wav"
+        subprocess.run([exe, "denoise", str(SRC / f"{cid}_mix.wav"), str(wet), "--model-path", str(gtcrn)], check=True)
+        subprocess.run([exe, "run", str(SRC / f"{cid}_mix.wav"), str(OUT), "--wet", str(wet),
                         "--speaker-onnx", str(ONNX)], check=True)
         truth[cid] = {}
         for tr in ("owner", "interf"):

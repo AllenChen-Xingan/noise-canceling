@@ -1,12 +1,13 @@
 //! vdn-speaker：P2 离线实验命令行（exp005）。
 //!
 //! ```text
-//! vdn-speaker run   <noisy.wav> <out_dir> [--model-path gtcrn.onnx] [--speaker-onnx ecapa.onnx] [--preload owner.json] [--save-owner owner.json]
+//! vdn-speaker denoise <noisy.wav> <wet.wav> [--model-path gtcrn.onnx]   # GTCRN 原样输出（对齐）
+//! vdn-speaker run   <noisy.wav> <out_dir> --wet <wet.wav> [--speaker-onnx ecapa.onnx] [--preload owner.json] [--save-owner owner.json]
 //! vdn-speaker fbank <in.wav> <out.f32>        # fbank 原始特征（CMN 前），行主序 float32，对拍用
 //! vdn-speaker embed <in.wav>                  # 打印整段的声纹向量（JSON），对拍用
 //! ```
 //!
-//! `run` 一次出 5 个版本（GTCRN 降噪只跑一遍，共用）：
+//! `run` 一次出 5 个版本（共用同一份降噪输出）：
 //! - `raw`：模型原样输出 · `floor`：只开衰减下限 −12 dB · `energy`：p1 能量版快开慢关
 //! - `vad`：VAD 版快开慢关（= 个性化关）· `personal`：VAD 版 + 判断回路 + 不对称门控（= 个性化开）
 //!
@@ -117,14 +118,15 @@ fn cmd_run(args: &[String]) -> R<()> {
         .to_string();
     let dry = read_wav(&input)?;
 
-    // 1) 降噪（GTCRN，保命全关 = 模型原样输出，与输入逐样本对齐）
-    let mpath = arg(args, "--model-path")
-        .map(PathBuf::from)
-        .or_else(|| ModelKind::Gtcrn.default_path())
-        .ok_or("找不到 GTCRN（--model-path）")?;
-    let model = ModelKind::Gtcrn.open(&mpath)?;
-    let mut engine = Engine::new(model, SafetyConfig::off());
-    let wet = offline::run(&mut engine, &dry, HOP).output;
+    // 1) 降噪输出：`--wet` 给出（由 `vdn-speaker denoise` 在另一个进程里产出——ort 一个进程只许一个 Environment，
+    //    vdn-models 与本 crate 各建一个会冲突，接入时要共用一个，见 README「接入注意」）
+    let wet_path = PathBuf::from(
+        arg(args, "--wet").ok_or("缺 --wet <denoised.wav>（先跑 vdn-speaker denoise）")?,
+    );
+    let wet = read_wav(&wet_path)?;
+    if wet.len() != dry.len() {
+        return Err("--wet 与输入长度不同".into());
+    }
     let n_hops = dry.len() / HOP;
     let (dry, wet) = (&dry[..n_hops * HOP], &wet[..n_hops * HOP]);
 
@@ -257,8 +259,7 @@ fn cmd_run(args: &[String]) -> R<()> {
     let log = json!({
         "input": input.display().to_string(),
         "sr": SR, "hop": HOP,
-        "model": mpath.display().to_string(),
-        "model_latency_samples": engine.latency_samples(),
+        "wet": wet_path.display().to_string(),
         "emb_dim": emb_dim,
         "judge": {"window_s": jp.window_s, "hop_s": jp.hop_s, "owner_hi": jp.owner_hi, "others_lo": jp.others_lo},
         "judge_logs": logs,
@@ -282,6 +283,25 @@ fn cmd_run(args: &[String]) -> R<()> {
     println!(
         "{stem}: hops={n_hops} owner={:?}",
         judge.enroller.owner_index()
+    );
+    Ok(())
+}
+
+/// GTCRN 降噪（保命全关 = 模型原样输出，与输入逐样本对齐），写 32-bit float WAV。
+fn cmd_denoise(args: &[String]) -> R<()> {
+    let input = PathBuf::from(args.first().ok_or("缺 <in.wav>")?);
+    let out = PathBuf::from(args.get(1).ok_or("缺 <out.wav>")?);
+    let dry = read_wav(&input)?;
+    let mpath = arg(args, "--model-path")
+        .map(PathBuf::from)
+        .or_else(|| ModelKind::Gtcrn.default_path())
+        .ok_or("找不到 GTCRN（--model-path）")?;
+    let mut engine = Engine::new(ModelKind::Gtcrn.open(&mpath)?, SafetyConfig::off());
+    let wet = offline::run(&mut engine, &dry, HOP).output;
+    write_wav(&out, &wet)?;
+    println!(
+        "{}",
+        json!({"model": mpath.display().to_string(), "latency_samples": engine.latency_samples()})
     );
     Ok(())
 }
@@ -321,6 +341,7 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let r = match args.first().map(String::as_str) {
         Some("run") => cmd_run(&args[1..]),
+        Some("denoise") => cmd_denoise(&args[1..]),
         Some("fbank") => cmd_fbank(&args[1..]),
         Some("embed") => cmd_embed(&args[1..]),
         _ => Err("用法：vdn-speaker run|fbank|embed …（见源码头注释）".into()),
