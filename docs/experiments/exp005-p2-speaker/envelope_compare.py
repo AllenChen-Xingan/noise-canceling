@@ -4,7 +4,7 @@
 指标（与 exp004 README「实测效果」同口径）：
 - 判为有声（含 hangover）的 hop 比例：全段 / 目标说话人停顿里 / 目标说话人说话时（停顿 = exp003 `vad_mask` 按干净参考判的无声）
 - 均值 SI-SDR（对干净参考）：只开下限（−12 dB）· 能量版 · VAD 版
-用法（项目根下）：<主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp005-p2-speaker/envelope_compare.py <vdn-speaker>
+用法（项目根下）：<主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp005-p2-speaker/envelope_compare.py <vdn-speaker-lab 可执行文件>
 输出：results/envelope_compare.json
 """
 import json

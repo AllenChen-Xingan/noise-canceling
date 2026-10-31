@@ -1,6 +1,6 @@
 """exp005 第二、三步：跑 Rust 离线管线、打分。
 
-  run    对每段 mix 跑 `vdn-speaker run`（GTCRN + 5 个版本 + 判断回路日志），再对主人轨 / 干扰轨各算一个整段声纹作「真值」
+  run    对每段 mix 跑 `vdn-speaker-lab run`（GTCRN + 5 个版本 + 判断回路日志），再对主人轨 / 干扰轨各算一个整段声纹作「真值」
   asr    按主人每句话切段，Qwen3-ASR（本机 42model 服务，D28）转写 主人轨（参照）· vad（个性化关）· personal（个性化开）
   score  汇总指标 → results/scores.json
 
@@ -12,7 +12,7 @@
 - 认错人：锁错 / 改判错的次数；锁定后「主人在说」的窗被判成 Other 的次数
 - 吃字：参照 = 主人轨同一段的转写；按词计删除 / 替换 / 插入（插入多半是邻座漏进来的词，单列）
 - 算力：判断回路每次计算耗时（单线程）、实时级每 hop 耗时
-用法（项目根下）：<主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp005-p2-speaker/score.py {run|asr|score} <vdn-speaker 可执行文件>
+用法（项目根下）：<主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp005-p2-speaker/score.py {run|asr|score} <vdn-speaker-lab 可执行文件>
 音频与日志：<主目录>/_tmp/20261031-exp005/out/
 """
 import hashlib

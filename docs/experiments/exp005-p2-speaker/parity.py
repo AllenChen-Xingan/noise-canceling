@@ -3,9 +3,9 @@
 - fbank 基准 = kaldi-native-fbank（pip `kaldi-native-fbank`，Kaldi 的 C++ 重写，sherpa-onnx / WeSpeaker runtime 用它），
   选项与 `src/speaker/src/fbank.rs::FbankConfig::wespeaker()` 一致：25/10 ms、80 mel、hamming、dither 0、snip_edges、
   去直流、预加重 0.97、low 20 Hz、high = 奈奎斯特、不带能量；输入 ×32768（`resources/wespeaker/wespeaker/bin/infer_onnx.py:31-50`）
-- 声纹基准 = Python onnxruntime 跑同一个 ONNX，输入 = 基准 fbank 减均值（CMN）；比 Rust `vdn-speaker embed` 的输出
+- 声纹基准 = Python onnxruntime 跑同一个 ONNX，输入 = 基准 fbank 减均值（CMN）；比 Rust `vdn-speaker-lab embed` 的输出
 素材：exp005 的 c01 主人轨 / 混合轨 各取 3 s 段 + c06 主人轨 1.5 s 段（写成临时 WAV 喂 Rust）
-用法（项目根下）：<主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp005-p2-speaker/parity.py <vdn-speaker 可执行文件>
+用法（项目根下）：<主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp005-p2-speaker/parity.py <vdn-speaker-lab 可执行文件>
 输出：本目录 results/parity.json
 """
 import json
