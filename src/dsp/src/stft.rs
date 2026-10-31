@@ -123,13 +123,16 @@ impl StreamingStft {
         {
             ny.im = 0.0;
         }
-        if self
+        // InputValues（DC / Nyquist 虚部非零）时 realfft 照样算完、结果可用；只有缓冲长度类错误才当静音
+        match self
             .inv
             .process_with_scratch(&mut self.spec, &mut self.time, &mut self.scratch_inv)
-            .is_err()
         {
-            debug_assert!(false, "irfft 长度不匹配");
-            self.time.fill(0.0);
+            Ok(()) | Err(realfft::FftError::InputValues(..)) => {}
+            Err(_) => {
+                debug_assert!(false, "irfft 长度不匹配");
+                self.time.fill(0.0);
+            }
         }
         let norm = 1.0 / self.n_fft as f32;
         for ((o, t), w) in self.ola.iter_mut().zip(&self.time).zip(&self.win) {

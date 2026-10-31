@@ -86,10 +86,19 @@ impl Model for Gtcrn {
     }
 
     fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), ModelError> {
+        if input.len() != HOP || output.len() != HOP {
+            // 调用方的 bug：不静默产出错音频（align 自审 P1）
+            output.fill(0.0);
+            return Err(ModelError::Shape);
+        }
         let r = self.infer(input);
         if r.is_err() {
             // 出错也要照常合成一帧（频谱清零），否则重叠相加缓冲不移位，之后整体错位一个 hop（自审 P2）
             self.stft.spectrum_mut().fill(Default::default());
+            // 缓存可能只回拷了一半：清回初值，不带着坏状态进下一帧（align 自审 P2）
+            for c in &mut self.caches {
+                c.extract_tensor_mut().1.fill(0.0);
+            }
         }
         self.stft.synthesize(output);
         r

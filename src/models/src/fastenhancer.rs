@@ -108,6 +108,24 @@ impl Model for FastEnhancer {
     }
 
     fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), ModelError> {
+        let r = self.infer(input, output);
+        if r.is_err() {
+            // 缓存可能只回拷了一半：清回初值，不带着坏状态进下一帧（align 自审 P2）
+            self.reset();
+            output.fill(0.0);
+        }
+        r
+    }
+}
+
+// 实时（specs/rust/architecture.md §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
+impl FastEnhancer {
+    fn infer(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), ModelError> {
         let wav = self.wav_in.extract_tensor_mut().1;
         if wav.len() != input.len() {
             return Err(ModelError::Shape);
