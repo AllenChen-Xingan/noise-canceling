@@ -97,7 +97,7 @@
    "screens_trap": 2,
    "unblindable": 0,
    "validity": "discounted",
-   "why": "trap-identical 没过（全同题选了 C）；trap-degraded「最自然」答分不出（rubric 4.2 打折）"
+   "why": "trap-identical 没过；trap-degraded 有一问答「分不出」（rubric 4.2 打折）"
   },
   "exp005/20261030224448-ab48": {
    "best_of_letters": {

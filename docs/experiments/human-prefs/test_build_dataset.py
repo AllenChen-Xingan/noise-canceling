@@ -49,47 +49,72 @@ def test_existing():
     check(len(inv) == 1 and inv[0]["clip"] == "c08" and inv[0]["dim"] == "meeting", "exp005 c08 激进 = 只有 GTCRN 同一文件，开会选择那一对标 invalid")
 
 
-def test_exp006_interface():
-    e6 = bd.EXP / "exp006-scene-sim"
-    data_build = e6 / "builds" / "20261030214530-44df"
-    page = "20261030235644-6a99"
+def fake_exp006(page, pick_trap_identical, pick_degraded, extra_self=False):
+    """按页面真实导出格式造答卷：slots 字母 → "slotK"，answer 是原始字母，by_model 是 "slotK"。"""
+    data_build = bd.EXP / "exp006-scene-sim" / "builds" / "20261030214530-44df"
     key = bd.jload(data_build / "pages" / page / "unblind-key.json")
     trials = []
+    slots = {L: f"slot{j}" for j, L in enumerate("ABCD")}
+    letter = {v: k for k, v in slots.items()}
     for i, (clip, names) in enumerate(key["key"].items(), 1):
-        slots = {L: f"slot{j}" for j, L in enumerate("ABCD")}
         best = "slot" + str(names.index("polish"))  # 假设每屏都选 polish
         trials.append({"order": i, "kind": "real", "clip": clip, "trap": None, "slots": slots,
                        "qorder": ["clearer", "natural"],
+                       "answer": {"clearer": letter[best], "natural": "same", "eaten": ["none"],
+                                  "usable": {L: "ok" for L in slots}, "tags": {}},
                        "by_model": {"clearer": best, "natural": "same", "eaten": ["none"],
                                     "usable": {s: "ok" for s in slots.values()}, "tags": {}},
-                       "note": "假答卷", "listen_s": {"A": 4.0, "ref": 3.0}, "plays": {"A": 1}, "switches": 1,
-                       "started_at": "x", "answered_at": "y"})
+                       "note": "假答卷", "heard": {L: True for L in slots}, "listen_s": {"A": 4.0, "ref": 3.0},
+                       "plays": {"A": 1}, "switches": 1, "started_at": "x", "answered_at": "y"})
     for tr in key["traps"]:
-        slots = {L: f"slot{j}" for j, L in enumerate("ABCD")}
-        if tr["kind"] == "identical":
-            bm = {"clearer": "same", "natural": "same"}
+        kind = tr.get("kind") or tr["id"].removeprefix("trap-")
+        if kind == "identical":
+            c = pick_trap_identical  # "same" 或 "slot2" 之类
         else:
-            bm = {"clearer": "slot" + str(tr["names"].index("degraded")), "natural": "same"}  # 故意选劣化版
-        bm.update({"eaten": [], "usable": {}, "tags": {}})
+            c = "slot" + str(tr["names"].index("degraded")) if pick_degraded else "slot" + str(next(i for i, n in enumerate(tr["names"]) if n != "degraded"))
+        bm = {"clearer": c, "natural": c, "eaten": [], "usable": {s: "marginal" for s in slots.values()}, "tags": {}}
         trials.append({"order": len(trials) + 1, "kind": "trap", "clip": tr["clip"], "trap": tr["id"],
-                       "slots": slots, "by_model": bm})
-    ans = {"exp": "exp006-scene-sim", "build": page, "started": "s", "finished": "f", "trials": trials}
+                       "slots": slots, "answer": {"clearer": letter.get(c, c), "natural": letter.get(c, c)}, "by_model": bm})
+    if extra_self:
+        trials.append({"order": len(trials) + 1, "kind": "self", "clip": None, "trap": None, "slots": slots, "by_model": {}})
+    return {"exp": "exp006-scene-sim", "build": page, "started": "s", "finished": "f", "trials": trials}, data_build
+
+
+def run_exp006(ans, data_build):
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / "fake.json"
         p.write_text(json.dumps(ans))
+        old = bd.rel
         bd.rel = lambda x: str(x)  # 临时文件不在仓里
-        recs = bd.exp006(p, data_build)
+        try:
+            return bd.exp006(p, data_build)
+        finally:
+            bd.rel = old
+
+
+def test_exp006_interface():
+    page = "20261030235644-6a99"
+    recs = run_exp006(*fake_exp006(page, "same", True, extra_self=True))
     real = [r for r in recs if r["kind"] == "real"]
+    check(len(recs) == 14, "exp006 自录题（kind = self）被跳过、不崩")
     check(len(real) == 12 and all(r["answers"]["clearer"] == "polish" for r in real), "exp006 揭盲：12 屏都揭成 polish")
     check(all(r["scene"]["fine"] for r in real), "exp006 场景标签取自 files.json")
     check(recs[0]["session"]["validity"] == "void", "exp006 劣化检验题选了劣化版 → 会话作废")
     for r in recs:
         r["rec_id"] = "t"
     pairs = [p for r in recs for p in bd.pairs_of(r)]
-    inv = [p for p in pairs if p["strength"] == "invalid"]
-    # te0239 等段 base 与 route 是同一文件：假答卷选 polish，polish 对 both 若同文件也会被标
-    check(all(p["identical_audio"] for p in inv), "exp006 相同音频分出胜负的对全部标 invalid")
+    check(all(p["identical_audio"] for p in pairs if p["strength"] in ("invalid", "consistency")), "exp006 相同音频的对只会标 invalid / consistency")
     check(any(p["identical_audio"] for p in pairs), "exp006 能识别出同一文件的候选（base = route 等）")
+    # 全同检验题：选了某个槽位必须判没过（曾因 "same" 撞名永远判过）
+    recs = run_exp006(*fake_exp006(page, "slot2", False))
+    tr = [r for r in recs if r["kind"] == "trap" and r["trap"]["type"] == "trap-identical"][0]
+    check(tr["trap"]["pass"] is False and tr["answers"]["clearer"] == "identical#3", "exp006 全同题选了槽位 2 → 判没过，答案揭成 identical#3")
+    check(recs[0]["session"]["validity"] == "discounted", "exp006 全同题没过 → 会话打折")
+    # 旧页面 traps 没有 kind 字段
+    recs = run_exp006(*fake_exp006("20261030223232-700e", "same", True))
+    types = sorted(r["trap"]["type"] for r in recs if r["kind"] == "trap")
+    check(types == ["trap-degraded", "trap-identical"] and recs[0]["session"]["validity"] == "void",
+          "旧页面（traps 无 kind）检验题类型判对，选劣化版 → 作废")
 
 
 if __name__ == "__main__":
