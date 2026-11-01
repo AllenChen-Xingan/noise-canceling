@@ -128,7 +128,11 @@ def s7(rows):
                         if tb is not None:
                             boots.append(tb)
                     boots.sort()
-                    d["ci95"] = [round(boots[int(0.025 * len(boots))], 3), round(boots[int(0.975 * len(boots)) - 1], 3)]
+                    # 分位 = 排序后下标 int(0.025N) 与 int(0.975N)−1（不插值；换实现时照此）
+                    d["ci95"] = [round(boots[int(0.025 * len(boots))], 3), round(boots[int(0.975 * len(boots)) - 1], 3)] if boots else None
+                    # S7 过线（synth-standard S7）：95% 下界 > 0，且同样本量的 τ_AB(半) ≥ min(两个 split-half) − 0.2
+                    rel = [x for x in (sh_a, sh_b) if x is not None]
+                    d["s7_pass"] = bool(d["ci95"] and d["ci95"][0] > 0 and t_half is not None and rel and t_half >= min(rel) - 0.2)
                 row[name] = d
             out.append(row)
     return out
