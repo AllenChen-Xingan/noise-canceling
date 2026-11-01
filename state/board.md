@@ -6,7 +6,7 @@
 
 > ## 📘 给人的学习材料只放桌面（2026-11-01）
 > - 人原话：「科普不要放在plan里面，放到桌面，给我学习用的」→ 三份科普已从 `docs/plan/` 删除（历史在提交 86e5257 · 9ecc8c6 · 1305410），记忆 `state/memory/20261101-study-notes-desktop-only.md`
-> - 桌面：`20261031-vdn-beginner-guide-zh` · `20261101-vdn-rubrics-and-aux-heads-zh` · `20261101-vdn-qwen3asr-and-hush-zh` · `20261101-vdn-distillation-zh`（各 .md + .pdf）
+> - 桌面：`20261031-vdn-beginner-guide-zh` · `20261101-vdn-rubrics-and-aux-heads-zh` · `20261101-vdn-qwen3asr-and-hush-zh` · `20261101-vdn-distillation-zh` · `20261101-vdn-scoreq-zh`（各 .md + .pdf）
 
 > ## 🧩 当前实体 = 模型四实体（2026-10-31）
 > - 人定：大总管同时只抓 2–4 个**实体**（CLAUDE.md 第五节第 4 条）；当前四个 = 模型 · 推理后端 · 评测器 · 数据，总入口 `docs/plan/009_model-map.md`
