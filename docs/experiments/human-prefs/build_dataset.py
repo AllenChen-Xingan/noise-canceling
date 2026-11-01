@@ -84,7 +84,12 @@ def exp003_full(ans_path, build_dir, clips):
     if trap_degraded.get("pass") is False:
         validity, why = "void", "trap-degraded 选了劣化版"
     elif trap_identical_pass is False or deg_same:
-        validity, why = "discounted", "trap-identical 没过（全同题选了 C）；trap-degraded「最自然」答分不出（rubric 4.2 打折）"
+        reasons = []
+        if trap_identical_pass is False:
+            reasons.append("trap-identical 没过")
+        if deg_same:
+            reasons.append("trap-degraded 有一问答「分不出」")
+        validity, why = "discounted", "；".join(reasons) + "（rubric 4.2 打折）"
     else:
         validity, why = "valid", "两道检验题都过"
     out = []
@@ -277,7 +282,15 @@ def exp006(ans_path, data_build_dir):
     traps = {t["id"]: t for t in key["traps"]}
     out, trap_res = [], []
     for i, t in enumerate(ans["trials"], 1):
-        names = traps[t["trap"]]["names"] if t["kind"] == "trap" else key["key"][t["clip"]]
+        if t["kind"] not in ("real", "trap"):
+            continue  # 自录题（kind = self）没有对照表，不进数据集
+        names = list(traps[t["trap"]]["names"] if t["kind"] == "trap" else key["key"][t["clip"]])
+        # 全同检验题四个槽位都叫 "same"，与「分不出」撞名 → 改名 identical#k（同 exp003_full）
+        if len(set(names)) < len(names):
+            seen = {}
+            for j, m in enumerate(names):
+                seen[m] = seen.get(m, 0) + 1
+                names[j] = f"identical#{seen[m]}" if m == "same" else f"{m}#{seen[m]}"
 
         def mp(s):
             if isinstance(s, str) and s.startswith("slot"):
@@ -318,7 +331,8 @@ def exp006(ans_path, data_build_dir):
             },
         })
         if t["kind"] == "trap":
-            kind = traps[t["trap"]].get("kind")
+            tr = traps[t["trap"]]
+            kind = tr.get("kind") or tr["id"].removeprefix("trap-")  # 旧页面的 traps 没有 kind（同 unblind.py）
             a = rec["answers"]
             ok = (a["clearer"] == "same" and a["natural"] == "same") if kind == "identical" else \
                  (a["clearer"] != "degraded" and a["natural"] != "degraded")
@@ -450,16 +464,24 @@ def summarize(trials, pairs):
             "dims": DIMS}
 
 
+def _safe(fn, *args):
+    try:
+        return fn(*args)
+    except FileNotFoundError as e:
+        print(f"警告：缺文件，跳过 {fn.__name__}：{e}", file=sys.stderr)
+        return []
+
+
 def collect():
     trials = []
     e3 = EXP / "exp003-offline-ab"
     clips3 = {c["id"]: c for c in jload(e3 / "clips.json")["clips"]}
-    trials += exp003_partial(e3 / "results/20261030-human-partial-build-20261030102301-68ab.json",
+    trials += _safe(exp003_partial, e3 / "results/20261030-human-partial-build-20261030102301-68ab.json",
                              e3 / "builds/20261030102301-68ab/recovered-key.json", clips3)
-    trials += exp003_full(e3 / "results/20261030-human-build-20261030110755-f8c3.json",
+    trials += _safe(exp003_full, e3 / "results/20261030-human-build-20261030110755-f8c3.json",
                           e3 / "builds/20261030110755-f8c3", clips3)
     e5 = EXP / "exp005-p2-speaker"
-    trials += exp005(e5 / "results/20261031-human-build-20261030224448-ab48.json",
+    trials += _safe(exp005, e5 / "results/20261031-human-build-20261030224448-ab48.json",
                      e5 / "builds/20261030224448-ab48", e5 / "clips.json")
     # exp006：自动发现答卷（人交回后放 results/）
     e6 = EXP / "exp006-scene-sim"
@@ -467,7 +489,7 @@ def collect():
         if p.name.endswith(".unblinded.json"):
             continue
         data_build = "20261030214530-44df"
-        trials += exp006(p, e6 / "builds" / data_build)
+        trials += _safe(exp006, p, e6 / "builds" / data_build)
     for r in trials:
         r["rec_id"] = f"{r['exp']}/{r['build']}/{r['trial_order']:02d}-{r.get('clip')}"
     pairs = [p for r in trials for p in pairs_of(r)]
