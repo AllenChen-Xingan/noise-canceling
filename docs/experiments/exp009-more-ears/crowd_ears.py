@@ -149,12 +149,13 @@ def part_a(ds, rng):
         a, n = rate(ok, hit)
         okb = ok & big
         ab, nb = rate(okb, hit)
+        fin = np.isfinite(x)  # 上游 .scp 偶有 nan（URGENT 2024 的 distill_mos），相关只用有限值
         systems = sorted(set(ds.sys))
-        sx = [ds.mos[ds.sys == s].mean() for s in systems]
-        sy = [x[ds.sys == s].mean() for s in systems]
+        sx = [ds.mos[(ds.sys == s) & fin].mean() for s in systems]
+        sy = [x[(ds.sys == s) & fin].mean() for s in systems]
         out[p] = {"pairs": n, "agree": r3(a), "ci95": cluster_ci(ok, hit, ds.psrc, rng),
-                  "big_gap_pairs": nb, "big_gap_agree": r3(ab) if nb else None,
-                  "utt_srcc": r3(spearmanr(x, ds.mos)[0]), "sys_srcc": r3(spearmanr(sx, sy)[0]),
+                  "big_gap_pairs": nb, "big_gap_agree": r3(ab) if nb else None, "nan_clips": int((~fin).sum()),
+                  "utt_srcc": r3(spearmanr(x[fin], ds.mos[fin])[0]), "sys_srcc": r3(spearmanr(sx, sy)[0]),
                   "sys_ktau": r3(kendalltau(sx, sy)[0]), "n_systems": len(systems)}
     return out
 
