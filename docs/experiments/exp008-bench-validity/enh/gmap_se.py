@@ -70,7 +70,7 @@ RECORD = {
         {"path": "resources/G-MaP-SE/ckpt/clean_gmm_mu_k.pt", "sha256": None, "bytes": None,
          "license": "MIT", "license_source": "resources/G-MaP-SE/LICENSE"},
         {"path": "~/vdn-data/models/wespeaker/voxceleb_ECAPA512.onnx", "sha256": None, "bytes": None,
-         "license": "见 wespeaker 发布页（G-MaP-SE README 指向 wenet.org.cn 下载）", "license_source": "未在本机核实"},
+         "license": "Apache-2.0", "license_source": "~/vdn-data/models/wespeaker/README.hf.md（HF 卡 license: apache-2.0）"},
     ],
     "code_source": "resources/G-MaP-SE（models/model_g_map_se.py、dataset.py、env.py 只读导入；推理流程照 inference_g_map_se.py）",
     "notes": "无注册：说话人嵌入取自带噪输入本身（官方推理即如此，MPNet.forward 内部对 noisy_wav 跑 ECAPA），"
