@@ -4,12 +4,9 @@
 > **非轮规则：每轮有效工作必更新本文件**（倒序追加，新的在上，带日期与 commit hash）。
 > 每完成一个可命名的逻辑单元存一次；破坏性操作之前也存一次。这是给你自己留的后路，不是给别人看的历史。
 
-> ## 📘 小白科普续篇（2026-11-01）
-> - `docs/plan/011_rubrics-and-aux-heads.md`：打分标准怎么设计 · Hush 与辅助头 · 主干 / 头的三种搭法；桌面 `20261101-vdn-rubrics-and-aux-heads-zh.{md,pdf}`
-
-> ## 📘 小白科普文档（2026-10-31）
-> - 人原话：「我现在是一个小白……能否给我写一个给小白的详细的科普文档」「东西放桌面」
-> - 正本 `docs/plan/010_beginner-guide.md`；桌面 `~/Desktop/20261031-vdn-beginner-guide-zh.md` 与 `.pdf`（17 页）
+> ## 📘 给人的学习材料只放桌面（2026-11-01）
+> - 人原话：「科普不要放在plan里面，放到桌面，给我学习用的」→ 三份科普已从 `docs/plan/` 删除（历史在提交 86e5257 · 9ecc8c6 · 1305410），记忆 `state/memory/20261101-study-notes-desktop-only.md`
+> - 桌面：`20261031-vdn-beginner-guide-zh` · `20261101-vdn-rubrics-and-aux-heads-zh` · `20261101-vdn-qwen3asr-and-hush-zh`（各 .md + .pdf）
 
 > ## 🧩 当前实体 = 模型四实体（2026-10-31）
 > - 人定：大总管同时只抓 2–4 个**实体**（CLAUDE.md 第五节第 4 条）；当前四个 = 模型 · 推理后端 · 评测器 · 数据，总入口 `docs/plan/009_model-map.md`
