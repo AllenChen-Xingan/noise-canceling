@@ -11020,6 +11020,786 @@
    "metric": "nonowner_att_g_db"
   }
  ],
+ "S7b": {
+  "no_ceiling_variant": [
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "si_sdr",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.683,
+    "p_perm": 0.0833,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "estoi",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.776,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "dnsmos_ovrl",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.726,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "dnsmos_sig",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.761,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "dnsmos_bak",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.906,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "noise_att_db",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.861,
+    "p_perm": 0.0833,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "nonowner_att_db",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.789,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "spl_db",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.646,
+    "p_perm": 0.0833,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "si_sdr",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.83,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "estoi",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.722,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "dnsmos_ovrl",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.787,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "dnsmos_sig",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.708,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "dnsmos_bak",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.903,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "noise_att_db",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.894,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "spl_db",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.969,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "si_sdr",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.663,
+    "p_perm": 0.0014,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "estoi",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.733,
+    "p_perm": 0.0028,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "dnsmos_ovrl",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.818,
+    "p_perm": 0.0014,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "dnsmos_sig",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.843,
+    "p_perm": 0.0028,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "dnsmos_bak",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.831,
+    "p_perm": 0.0028,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "noise_att_db",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.34,
+    "p_perm": 0.0458,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "spl_db",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.726,
+    "p_perm": 0.0056,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "si_sdr",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.451,
+    "p_perm": 0.125,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "estoi",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.403,
+    "p_perm": 0.1667,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "dnsmos_ovrl",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.351,
+    "p_perm": 0.1667,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "dnsmos_sig",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.142,
+    "p_perm": 0.4167,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "dnsmos_bak",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": -0.08,
+    "p_perm": 0.625,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "noise_att_db",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": 0.669,
+    "p_perm": 0.1667,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "spl_db",
+    "n_levels": 4,
+    "n_sys": 12,
+    "r_interaction": -0.049,
+    "p_perm": 0.5833,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "si_sdr",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.593,
+    "p_perm": 0.0083,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "estoi",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.867,
+    "p_perm": 0.0028,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "dnsmos_ovrl",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.486,
+    "p_perm": 0.025,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "dnsmos_sig",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.031,
+    "p_perm": 0.4333,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "dnsmos_bak",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.685,
+    "p_perm": 0.0056,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "noise_att_db",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.747,
+    "p_perm": 0.0083,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "spl_db",
+    "n_levels": 6,
+    "n_sys": 12,
+    "r_interaction": 0.541,
+    "p_perm": 0.0236,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "si_sdr",
+    "n_levels": 5,
+    "n_sys": 12,
+    "r_interaction": 0.737,
+    "p_perm": 0.0083,
+    "n_perm": 120
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "estoi",
+    "n_levels": 5,
+    "n_sys": 12,
+    "r_interaction": 0.662,
+    "p_perm": 0.075,
+    "n_perm": 120
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "dnsmos_ovrl",
+    "n_levels": 5,
+    "n_sys": 12,
+    "r_interaction": 0.773,
+    "p_perm": 0.0083,
+    "n_perm": 120
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "dnsmos_sig",
+    "n_levels": 5,
+    "n_sys": 12,
+    "r_interaction": 0.805,
+    "p_perm": 0.0083,
+    "n_perm": 120
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "dnsmos_bak",
+    "n_levels": 5,
+    "n_sys": 12,
+    "r_interaction": 0.896,
+    "p_perm": 0.0083,
+    "n_perm": 120
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "noise_att_db",
+    "n_levels": 5,
+    "n_sys": 12,
+    "r_interaction": 0.891,
+    "p_perm": 0.0083,
+    "n_perm": 120
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "spl_db",
+    "n_levels": 5,
+    "n_sys": 12,
+    "r_interaction": 0.807,
+    "p_perm": 0.0083,
+    "n_perm": 120
+   }
+  ],
+  "neural": [
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "si_sdr",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.537,
+    "p_perm": 0.0833,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "estoi",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.74,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "dnsmos_ovrl",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.63,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "dnsmos_sig",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.581,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "dnsmos_bak",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.257,
+    "p_perm": 0.2083,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "noise_att_db",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.551,
+    "p_perm": 0.0833,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "nonowner_att_db",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.461,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SIRxSNR",
+    "metric": "spl_db",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.364,
+    "p_perm": 0.2083,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "si_sdr",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.621,
+    "p_perm": 0.0833,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "estoi",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.517,
+    "p_perm": 0.0833,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "dnsmos_ovrl",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.814,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "dnsmos_sig",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.861,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "dnsmos_bak",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.944,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "noise_att_db",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.836,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "M-SNRxNOISE",
+    "metric": "spl_db",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.922,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "si_sdr",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.723,
+    "p_perm": 0.0194,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "estoi",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.885,
+    "p_perm": 0.0014,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "dnsmos_ovrl",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.646,
+    "p_perm": 0.0236,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "dnsmos_sig",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.471,
+    "p_perm": 0.0722,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "dnsmos_bak",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.814,
+    "p_perm": 0.0014,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "noise_att_db",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.242,
+    "p_perm": 0.1736,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-NOISE",
+    "metric": "spl_db",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.643,
+    "p_perm": 0.0069,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "si_sdr",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.567,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "estoi",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.724,
+    "p_perm": 0.0417,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "dnsmos_ovrl",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.101,
+    "p_perm": 0.375,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "dnsmos_sig",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.144,
+    "p_perm": 0.2917,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "dnsmos_bak",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": -0.137,
+    "p_perm": 0.75,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "noise_att_db",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.618,
+    "p_perm": 0.1667,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-RT60",
+    "metric": "spl_db",
+    "n_levels": 4,
+    "n_sys": 8,
+    "r_interaction": 0.063,
+    "p_perm": 0.4583,
+    "n_perm": 24
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "si_sdr",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.276,
+    "p_perm": 0.0431,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "estoi",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.534,
+    "p_perm": 0.0083,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "dnsmos_ovrl",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.635,
+    "p_perm": 0.0097,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "dnsmos_sig",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.604,
+    "p_perm": 0.0069,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "dnsmos_bak",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.713,
+    "p_perm": 0.0014,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "noise_att_db",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.505,
+    "p_perm": 0.0056,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SIR",
+    "metric": "spl_db",
+    "n_levels": 6,
+    "n_sys": 8,
+    "r_interaction": 0.19,
+    "p_perm": 0.2,
+    "n_perm": 720
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "si_sdr",
+    "n_levels": 5,
+    "n_sys": 8,
+    "r_interaction": 0.717,
+    "p_perm": 0.0083,
+    "n_perm": 120
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "estoi",
+    "n_levels": 5,
+    "n_sys": 8,
+    "r_interaction": 0.549,
+    "p_perm": 0.0917,
+    "n_perm": 120
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "dnsmos_ovrl",
+    "n_levels": 5,
+    "n_sys": 8,
+    "r_interaction": 0.64,
+    "p_perm": 0.0583,
+    "n_perm": 120
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "dnsmos_sig",
+    "n_levels": 5,
+    "n_sys": 8,
+    "r_interaction": 0.57,
+    "p_perm": 0.05,
+    "n_perm": 120
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "dnsmos_bak",
+    "n_levels": 5,
+    "n_sys": 8,
+    "r_interaction": 0.858,
+    "p_perm": 0.0083,
+    "n_perm": 120
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "noise_att_db",
+    "n_levels": 5,
+    "n_sys": 8,
+    "r_interaction": 0.851,
+    "p_perm": 0.0083,
+    "n_perm": 120
+   },
+   {
+    "axis": "S-SNR",
+    "metric": "spl_db",
+    "n_levels": 5,
+    "n_sys": 8,
+    "r_interaction": 0.642,
+    "p_perm": 0.0583,
+    "n_perm": 120
+   }
+  ]
+ },
  "S8": {
   "si_sdr": {
    "pairs": 48,
