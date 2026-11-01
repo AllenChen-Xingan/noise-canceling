@@ -1,7 +1,7 @@
 # 大总管看板
 
 > 只有大总管跟人说话。手下做完、卡住、要名额，只报给大总管。
-> 大总管会话名：`noise-canceling-69`（换班后在这里改）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
+> 大总管会话名：`noise-canceling-c4`（2026-10-31 换班；旧名 noise-canceling-69）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
 
 ## 手下
 
@@ -28,7 +28,7 @@
 | evalimpl | eval 实现：vdn-eval · CI / QA / 人工三层 · 回归集与能力集 · issue #31 · `feat/eval-verifiers` | 完成，PR #38 已合并（issue #31 关），窗口已关；CI 每个 PR 跑 eval ci（回归 13/17 · 能力 0/10 · 探针 5/5）；4 题已并入待拍板清单 |
 | prefs | 人耳结果 → eval 任务 · 偏好数据集 · 分场景默认 · `specs/rubric/preferences.md` · issue #37 · `feat/eval-prefs` | `_tmp/20261031-b4/prefs.md` | 其 worktree | 已报到（noise-canceling-prefs-f3） |
 | benchsynth | 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
-| ears | 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已派（2026-10-31），等报到 |
+| ears | 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已报到（noise-canceling-ears-03）· 实验编号 exp009 |
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
 
 ## 规矩
@@ -51,6 +51,8 @@
 ## 进度板
 
 进度（HH:MM）
+- 巡检：benchsynth、prefs 因电脑休眠中断（API Error），已发消息让其从现状页续做；ears 调研 7/8 完成，D 笔记：免调开源音频 LLM 在噪声维与人相关≈0，闭源成对 70–74% 但为云端
+- ears workflow 已起（8 代理）：A 通话类人评集 · B 增强语音人评集（逐听众评分？）· C 无参考预测器与人相关性 · D 音频 LLM 评委 · E 单人耳朵增效 · F 个体 vs 大众偏差 + 现场最少人数 · G 其他 + 1 完整性批评；之后做 exp009
 - 人（2026-10-31）：「如果只有我一个人的话，我觉得肯定不够……我们必须做到这样」→ 派 ears（017）
 - 人定（2026-10-31）：Hush arm64 预编译 dylib 允许（只作对照）· torch 现在就装（人选，非 AI 建议的「等第一轮」）
 - benchsynth exp008 第一轮（12 系统 + oracle，348 段，6287 s，0 错）：生成器 A/B 排名一致 τ 中位 0.79–0.85（SI-SDR 0.55）→ 合成格自身稳；合成格预测 exp003 人耳配对一致率 0.25–0.38（48 对、3 系统，功效低），直接在 exp003 片段上 0.48–0.56 → 预测人耳尚无证据、可能反向
