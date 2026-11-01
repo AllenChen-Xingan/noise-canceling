@@ -1,0 +1,623 @@
+{
+ "seed": 20261030,
+ "author": {
+  "dnsmos_ovrl": 0.48,
+  "dnsmos_ci95": [
+   0.26,
+   0.7
+  ],
+  "n_pairs": 48,
+  "n_screens": 12
+ },
+ "results": {
+  "chime7": {
+   "desc": "CHiME-7 UDASE · 真实多人嘈杂（英语）· 5 条件 · 32 名固定听众、每条 8 人 · P.835 OVRL · CC BY-SA 4.0",
+   "clips": 640,
+   "pairs": 1280,
+   "A": {
+    "dnsmos_ovrl": {
+     "pairs": 1191,
+     "agree": 0.485,
+     "ci95": [
+      0.456,
+      0.516
+     ],
+     "big_gap_pairs": 250,
+     "big_gap_agree": 0.448,
+     "utt_srcc": 0.232,
+     "sys_srcc": -0.1,
+     "sys_ktau": 0.0,
+     "n_systems": 5
+    },
+    "scoreq": {
+     "pairs": 1191,
+     "agree": 0.767,
+     "ci95": [
+      0.742,
+      0.792
+     ],
+     "big_gap_pairs": 250,
+     "big_gap_agree": 0.924,
+     "utt_srcc": 0.744,
+     "sys_srcc": 0.9,
+     "sys_ktau": 0.8,
+     "n_systems": 5
+    },
+    "distill_mos": {
+     "pairs": 1191,
+     "agree": 0.691,
+     "ci95": [
+      0.66,
+      0.722
+     ],
+     "big_gap_pairs": 250,
+     "big_gap_agree": 0.844,
+     "utt_srcc": 0.7,
+     "sys_srcc": 0.7,
+     "sys_ktau": 0.6,
+     "n_systems": 5
+    },
+    "utmos": {
+     "pairs": 1191,
+     "agree": 0.534,
+     "ci95": [
+      0.5,
+      0.566
+     ],
+     "big_gap_pairs": 250,
+     "big_gap_agree": 0.548,
+     "utt_srcc": 0.327,
+     "sys_srcc": 0.2,
+     "sys_ktau": 0.2,
+     "n_systems": 5
+    },
+    "nisqa_mos": {
+     "pairs": 1191,
+     "agree": 0.568,
+     "ci95": [
+      0.535,
+      0.601
+     ],
+     "big_gap_pairs": 250,
+     "big_gap_agree": 0.604,
+     "utt_srcc": 0.424,
+     "sys_srcc": 0.2,
+     "sys_ktau": 0.2,
+     "n_systems": 5
+    }
+   },
+   "listener": {
+    "listeners": 32,
+    "own_tie_rate_mean": 0.392,
+    "single_vs_loo": {
+     "n": 32,
+     "min": 0.603,
+     "p10": 0.71,
+     "median": 0.794,
+     "p90": 0.826,
+     "max": 0.861,
+     "mean": 0.774
+    },
+    "pred_vs_single": {
+     "dnsmos_ovrl": {
+      "n": 32,
+      "min": 0.29,
+      "p10": 0.344,
+      "median": 0.454,
+      "p90": 0.612,
+      "max": 0.689,
+      "mean": 0.468
+     },
+     "scoreq": {
+      "n": 32,
+      "min": 0.588,
+      "p10": 0.654,
+      "median": 0.726,
+      "p90": 0.768,
+      "max": 0.799,
+      "mean": 0.716
+     },
+     "distill_mos": {
+      "n": 32,
+      "min": 0.546,
+      "p10": 0.577,
+      "median": 0.657,
+      "p90": 0.718,
+      "max": 0.756,
+      "mean": 0.656
+     },
+     "utmos": {
+      "n": 32,
+      "min": 0.326,
+      "p10": 0.435,
+      "median": 0.524,
+      "p90": 0.604,
+      "max": 0.628,
+      "mean": 0.523
+     },
+     "nisqa_mos": {
+      "n": 32,
+      "min": 0.389,
+      "p10": 0.436,
+      "median": 0.536,
+      "p90": 0.649,
+      "max": 0.716,
+      "mean": 0.543
+     }
+    },
+    "pred_vs_crowd_minus_vs_single_median": {},
+    "panel_curve": [
+     {
+      "k": 1,
+      "panel_vs_heldout4": 0.765,
+      "pred_vs_panel": {
+       "dnsmos_ovrl": 0.471,
+       "scoreq": 0.714,
+       "distill_mos": 0.657,
+       "utmos": 0.528,
+       "nisqa_mos": 0.547
+      }
+     },
+     {
+      "k": 2,
+      "panel_vs_heldout4": 0.786,
+      "pred_vs_panel": {
+       "dnsmos_ovrl": 0.476,
+       "scoreq": 0.73,
+       "distill_mos": 0.663,
+       "utmos": 0.532,
+       "nisqa_mos": 0.558
+      }
+     },
+     {
+      "k": 3,
+      "panel_vs_heldout4": 0.797,
+      "pred_vs_panel": {
+       "dnsmos_ovrl": 0.477,
+       "scoreq": 0.742,
+       "distill_mos": 0.667,
+       "utmos": 0.533,
+       "nisqa_mos": 0.559
+      }
+     },
+     {
+      "k": 4,
+      "panel_vs_heldout4": 0.803,
+      "pred_vs_panel": {
+       "dnsmos_ovrl": 0.477,
+       "scoreq": 0.75,
+       "distill_mos": 0.673,
+       "utmos": 0.534,
+       "nisqa_mos": 0.558
+      }
+     }
+    ],
+    "author_like_48": {
+     "dnsmos_ovrl": {
+      "p2.5": 0.208,
+      "p50": 0.462,
+      "p97.5": 0.737,
+      "share_le_0.48": 0.549
+     },
+     "scoreq": {
+      "p2.5": 0.516,
+      "p50": 0.72,
+      "p97.5": 0.893,
+      "share_le_0.48": 0.011
+     },
+     "single_vs_loo": {
+      "p2.5": 0.542,
+      "p50": 0.786,
+      "p97.5": 0.952
+     }
+    },
+    "pairs_needed": [
+     {
+      "pairs": 48,
+      "half_width_mean": 0.159,
+      "note": "n>128 屏时屏有放回抽，偏乐观"
+     },
+     {
+      "pairs": 100,
+      "half_width_mean": 0.092,
+      "note": "n>128 屏时屏有放回抽，偏乐观"
+     },
+     {
+      "pairs": 200,
+      "half_width_mean": 0.086,
+      "note": "n>128 屏时屏有放回抽，偏乐观"
+     },
+     {
+      "pairs": 400,
+      "half_width_mean": 0.06,
+      "note": "n>128 屏时屏有放回抽，偏乐观"
+     }
+    ]
+   }
+  },
+  "urgent2024": {
+   "desc": "URGENT 2024 盲测 · 英语 · 23 系统 · 每条 8 票（P.808 众包，无听众 ID）· CC BY-NC-SA 4.0 只评测",
+   "clips": 6900,
+   "pairs": 75900,
+   "A": {
+    "dnsmos_ovrl": {
+     "pairs": 70375,
+     "agree": 0.641,
+     "ci95": [
+      0.633,
+      0.65
+     ],
+     "big_gap_pairs": 16442,
+     "big_gap_agree": 0.801,
+     "utt_srcc": 0.641,
+     "sys_srcc": 0.556,
+     "sys_ktau": 0.423,
+     "n_systems": 23
+    },
+    "scoreq": {
+     "pairs": 70381,
+     "agree": 0.695,
+     "ci95": [
+      0.686,
+      0.705
+     ],
+     "big_gap_pairs": 16443,
+     "big_gap_agree": 0.89,
+     "utt_srcc": 0.789,
+     "sys_srcc": 0.926,
+     "sys_ktau": 0.771,
+     "n_systems": 23
+    },
+    "distill_mos": {
+     "pairs": 64267,
+     "agree": 0.682,
+     "ci95": [
+      0.673,
+      0.692
+     ],
+     "big_gap_pairs": 15256,
+     "big_gap_agree": 0.87,
+     "utt_srcc": NaN,
+     "sys_srcc": NaN,
+     "sys_ktau": NaN,
+     "n_systems": 23
+    },
+    "utmos": {
+     "pairs": 70361,
+     "agree": 0.677,
+     "ci95": [
+      0.667,
+      0.687
+     ],
+     "big_gap_pairs": 16442,
+     "big_gap_agree": 0.85,
+     "utt_srcc": 0.741,
+     "sys_srcc": 0.902,
+     "sys_ktau": 0.747,
+     "n_systems": 23
+    },
+    "nisqa_mos": {
+     "pairs": 70385,
+     "agree": 0.675,
+     "ci95": [
+      0.666,
+      0.684
+     ],
+     "big_gap_pairs": 16443,
+     "big_gap_agree": 0.859,
+     "utt_srcc": 0.702,
+     "sys_srcc": 0.702,
+     "sys_ktau": 0.621,
+     "n_systems": 23
+    }
+   },
+   "votes": {
+    "ratings_per_clip": 8,
+    "random_single_vote_vs_loo": 0.62,
+    "pred_vs_random_single_vote": {
+     "dnsmos_ovrl": 0.594,
+     "scoreq": 0.625,
+     "distill_mos": 0.619,
+     "utmos": 0.613,
+     "nisqa_mos": 0.613
+    },
+    "system_ranking": [
+     {
+      "clips_per_system": 5,
+      "votes_per_clip": 1,
+      "votes_per_system": 5,
+      "ktau_median": 0.362,
+      "ktau_p10": 0.165
+     },
+     {
+      "clips_per_system": 5,
+      "votes_per_clip": 2,
+      "votes_per_system": 10,
+      "ktau_median": 0.448,
+      "ktau_p10": 0.278
+     },
+     {
+      "clips_per_system": 5,
+      "votes_per_clip": 4,
+      "votes_per_system": 20,
+      "ktau_median": 0.517,
+      "ktau_p10": 0.402
+     },
+     {
+      "clips_per_system": 5,
+      "votes_per_clip": 8,
+      "votes_per_system": 40,
+      "ktau_median": 0.597,
+      "ktau_p10": 0.448
+     },
+     {
+      "clips_per_system": 10,
+      "votes_per_clip": 1,
+      "votes_per_system": 10,
+      "ktau_median": 0.445,
+      "ktau_p10": 0.241
+     },
+     {
+      "clips_per_system": 10,
+      "votes_per_clip": 2,
+      "votes_per_system": 20,
+      "ktau_median": 0.557,
+      "ktau_p10": 0.376
+     },
+     {
+      "clips_per_system": 10,
+      "votes_per_clip": 4,
+      "votes_per_system": 40,
+      "ktau_median": 0.613,
+      "ktau_p10": 0.489
+     },
+     {
+      "clips_per_system": 10,
+      "votes_per_clip": 8,
+      "votes_per_system": 80,
+      "ktau_median": 0.679,
+      "ktau_p10": 0.607
+     },
+     {
+      "clips_per_system": 20,
+      "votes_per_clip": 1,
+      "votes_per_system": 20,
+      "ktau_median": 0.554,
+      "ktau_p10": 0.404
+     },
+     {
+      "clips_per_system": 20,
+      "votes_per_clip": 2,
+      "votes_per_system": 40,
+      "ktau_median": 0.649,
+      "ktau_p10": 0.527
+     },
+     {
+      "clips_per_system": 20,
+      "votes_per_clip": 4,
+      "votes_per_system": 80,
+      "ktau_median": 0.708,
+      "ktau_p10": 0.628
+     },
+     {
+      "clips_per_system": 20,
+      "votes_per_clip": 8,
+      "votes_per_system": 160,
+      "ktau_median": 0.774,
+      "ktau_p10": 0.699
+     },
+     {
+      "clips_per_system": 50,
+      "votes_per_clip": 1,
+      "votes_per_system": 50,
+      "ktau_median": 0.669,
+      "ktau_p10": 0.583
+     },
+     {
+      "clips_per_system": 50,
+      "votes_per_clip": 2,
+      "votes_per_system": 100,
+      "ktau_median": 0.75,
+      "ktau_p10": 0.636
+     },
+     {
+      "clips_per_system": 50,
+      "votes_per_clip": 4,
+      "votes_per_system": 200,
+      "ktau_median": 0.807,
+      "ktau_p10": 0.736
+     },
+     {
+      "clips_per_system": 50,
+      "votes_per_clip": 8,
+      "votes_per_system": 400,
+      "ktau_median": 0.867,
+      "ktau_p10": 0.802
+     },
+     {
+      "clips_per_system": 100,
+      "votes_per_clip": 1,
+      "votes_per_system": 100,
+      "ktau_median": 0.75,
+      "ktau_p10": 0.681
+     },
+     {
+      "clips_per_system": 100,
+      "votes_per_clip": 2,
+      "votes_per_system": 200,
+      "ktau_median": 0.803,
+      "ktau_p10": 0.755
+     },
+     {
+      "clips_per_system": 100,
+      "votes_per_clip": 4,
+      "votes_per_system": 400,
+      "ktau_median": 0.868,
+      "ktau_p10": 0.823
+     },
+     {
+      "clips_per_system": 100,
+      "votes_per_clip": 8,
+      "votes_per_system": 800,
+      "ktau_median": 0.913,
+      "ktau_p10": 0.881
+     }
+    ]
+   }
+  },
+  "urgent2025": {
+   "desc": "URGENT 2025 盲测 · 多语 · 26 系统 · 只有均值（无逐票）· 随源集 NC 只评测",
+   "clips": 23400,
+   "pairs": 292500,
+   "A": {
+    "dnsmos_ovrl": {
+     "pairs": 272059,
+     "agree": 0.657,
+     "ci95": [
+      0.651,
+      0.662
+     ],
+     "big_gap_pairs": 70846,
+     "big_gap_agree": 0.799,
+     "utt_srcc": 0.654,
+     "sys_srcc": 0.67,
+     "sys_ktau": 0.545,
+     "n_systems": 26
+    },
+    "scoreq": {
+     "pairs": 272084,
+     "agree": 0.708,
+     "ci95": [
+      0.702,
+      0.713
+     ],
+     "big_gap_pairs": 70846,
+     "big_gap_agree": 0.877,
+     "utt_srcc": 0.744,
+     "sys_srcc": 0.87,
+     "sys_ktau": 0.698,
+     "n_systems": 26
+    },
+    "distill_mos": {
+     "pairs": 272098,
+     "agree": 0.683,
+     "ci95": [
+      0.677,
+      0.688
+     ],
+     "big_gap_pairs": 70849,
+     "big_gap_agree": 0.841,
+     "utt_srcc": 0.698,
+     "sys_srcc": 0.816,
+     "sys_ktau": 0.655,
+     "n_systems": 26
+    },
+    "utmos": {
+     "pairs": 271959,
+     "agree": 0.671,
+     "ci95": [
+      0.666,
+      0.677
+     ],
+     "big_gap_pairs": 70833,
+     "big_gap_agree": 0.818,
+     "utt_srcc": 0.685,
+     "sys_srcc": 0.848,
+     "sys_ktau": 0.686,
+     "n_systems": 26
+    },
+    "nisqa_mos": {
+     "pairs": 272097,
+     "agree": 0.674,
+     "ci95": [
+      0.668,
+      0.679
+     ],
+     "big_gap_pairs": 70846,
+     "big_gap_agree": 0.824,
+     "utt_srcc": 0.664,
+     "sys_srcc": 0.789,
+     "sys_ktau": 0.594,
+     "n_systems": 26
+    }
+   }
+  },
+  "tmhint": {
+   "desc": "TMHINT-QI 测试 · 中文 · 老式 DNN 增强 · 每条 3–11 票（无同人同句配对）",
+   "clips": 1786,
+   "pairs": 342,
+   "A": {
+    "dnsmos_ovrl": {
+     "pairs": 322,
+     "agree": 0.463,
+     "ci95": [
+      0.408,
+      0.518
+     ],
+     "big_gap_pairs": 126,
+     "big_gap_agree": 0.421,
+     "utt_srcc": 0.165,
+     "sys_srcc": -0.257,
+     "sys_ktau": -0.2,
+     "n_systems": 6
+    },
+    "scoreq": {
+     "pairs": 322,
+     "agree": 0.453,
+     "ci95": [
+      0.395,
+      0.514
+     ],
+     "big_gap_pairs": 126,
+     "big_gap_agree": 0.444,
+     "utt_srcc": 0.291,
+     "sys_srcc": -0.714,
+     "sys_ktau": -0.6,
+     "n_systems": 6
+    },
+    "distill_mos": {
+     "pairs": 322,
+     "agree": 0.469,
+     "ci95": [
+      0.414,
+      0.522
+     ],
+     "big_gap_pairs": 126,
+     "big_gap_agree": 0.46,
+     "utt_srcc": 0.279,
+     "sys_srcc": -0.657,
+     "sys_ktau": -0.467,
+     "n_systems": 6
+    },
+    "utmos": {
+     "pairs": 322,
+     "agree": 0.531,
+     "ci95": [
+      0.474,
+      0.591
+     ],
+     "big_gap_pairs": 126,
+     "big_gap_agree": 0.579,
+     "utt_srcc": 0.301,
+     "sys_srcc": 0.143,
+     "sys_ktau": 0.067,
+     "n_systems": 6
+    },
+    "nisqa_mos": {
+     "pairs": 322,
+     "agree": 0.457,
+     "ci95": [
+      0.398,
+      0.52
+     ],
+     "big_gap_pairs": 126,
+     "big_gap_agree": 0.429,
+     "utt_srcc": 0.12,
+     "sys_srcc": -0.143,
+     "sys_ktau": -0.067,
+     "n_systems": 6
+    }
+   }
+  }
+ }
+}
