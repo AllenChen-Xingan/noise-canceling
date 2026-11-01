@@ -51,6 +51,7 @@
 ## 进度板
 
 进度（HH:MM）
+- prefs 收尾验收过（自测 18/18、无绝对路径、无音频）→ PR #43；偏好 K1–K9 均低 / 很低置信；⚠️ `exp006-scene-sim/unblind.py` 全同检验题撞名 bug（选任一槽都判通过）——exp006 答卷到了以 `human-prefs/build_dataset.py` 为准或先修；待拍板 4-7 / 4-8 已并入
 - 人定 D51：评委不按作者微调，只校准作者 vs 大众听感；再用更多合成数据告诉模型什么好 → 已转 ears / benchsynth
 - ears 补检索已派（人追问更多人耳数据）：CPC1/2/3 听写 · DNS5 WAcc 逐条 · SSI/AEC 逐条 P.835/P.804 · speecheval/speechjudge → notes/H-extra-sources.md
 - prefs 恢复：偏好数据集 29 屏 / 219 对、eval 任务 20 个已完成；发现 ① exp005 c06 / c08「激进」与「只有 GTCRN」逐字节相同，c08 开会那 1 票随机、不算数 ② exp006 盲听页 12 屏中 10 屏「路由开」=「路由关」同文件，路由效果只 3 屏可测
