@@ -29,8 +29,8 @@
 | prefs | 人耳结果 → eval 任务 · 偏好数据集 · 分场景默认 · `specs/rubric/preferences.md` · issue #37 · `feat/eval-prefs` | `_tmp/20261031-b4/prefs.md` | 其 worktree | 完成，PR #43 已合并（issue #37 关），窗口已关；待拍板 4-7 / 4-8 已并入；worktree `../noise_canceling-prefs` 保留待清 |
 | benchsynth | 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
 | ears | 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已报到（noise-canceling-ears-03）· 实验编号 exp009 |
-| judgeloop | 018 本机评分模型 + 调节模型闭环（D52）· issue #44 · `research/018-ondevice-judge`（worktree `../noise_canceling-judge-loop`） | `_tmp/20261031-b6/judgeloop.md` | 其 worktree | 已派（2026-10-31），等报到 |
-| engine | 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已派（2026-10-31），等报到 |
+| judgeloop | 018 本机评分模型 + 调节模型闭环（D52）· issue #44 · `research/018-ondevice-judge`（worktree `../noise_canceling-judge-loop`） | `_tmp/20261031-b6/judgeloop.md` | 其 worktree | 已报到 |
+| engine | 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已报到 |
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
 
 ## 规矩
@@ -53,6 +53,8 @@
 ## 进度板
 
 进度（HH:MM）
+- judgeloop workflow 已起（7 代理）：R1 评分模型小型化 · R2 评分当奖励 / 在线调参先例 · R3 声音→效果参数与助听器在线偏好学习 · R4 本机微调风险与护栏 · R5 本机盘点 + 2 怀疑派
+- benchsynth 自审改结论：S7「自身稳」被打掉（错配格 τ 也 0.82，无区分力）→ 改交互一致性 S7b：SNR / 噪声 / SIR 轴 A/B 一致（r 0.5–0.9，p ≤ 0.04），混响轴不一致；S8「反向」降为「判不了」；红队 P0：exp008 素材与 exp006 训练段重叠，项目模型上阶梯前要换素材池；D51 合成好坏配对 P1–P7 已写；第二轮 RNNoise / WebRTC 出音频，torch 组在跑（负载 34）；engine 给 exp010、judgeloop 给 exp011
 - 人定 D52（评分模型放到用户电脑上，调节模型取代场景查表，本机微调）· D53（推理必须 Core ML / MLX 或自写 Rust，推翻 009）→ 派 judgeloop（018 #44）· engine（019 #45）
 - ears exp009 第一段：CHiME-7 32 人单人 vs 其余 7 人一致率中位 0.79；DNSMOS vs 单人 0.45；作者的 0.48 说明不了偏好特殊；SCOREQ 可真检验「作者 vs 大众」
 - prefs 收尾验收过（自测 18/18、无绝对路径、无音频）→ PR #43；偏好 K1–K9 均低 / 很低置信；⚠️ `exp006-scene-sim/unblind.py` 全同检验题撞名 bug（选任一槽都判通过）——exp006 答卷到了以 `human-prefs/build_dataset.py` 为准或先修；待拍板 4-7 / 4-8 已并入
