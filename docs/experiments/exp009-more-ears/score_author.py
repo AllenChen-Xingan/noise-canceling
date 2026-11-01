@@ -49,7 +49,7 @@ def predict_all():
         for m in ["noisy"] + MODELS:
             p = REGEN / c["versions"][m]["file"]
             x, sr = sf.read(p, dtype="float32")
-            s = dns(str(p), sr, False) if dns.__call__.__code__.co_argcount > 3 else dns(str(p), sr)
+            s = dns(str(p), sr, False)  # 与 exp003 score.py 同调用
             with torch.no_grad():
                 dmos = float(dm(torch.from_numpy(x)[None, :]).squeeze())
             out[cid][m] = {"scoreq": round(float(sq.predict(test_path=str(p), ref_path=None)), 4),
