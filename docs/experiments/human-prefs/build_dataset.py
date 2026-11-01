@@ -14,7 +14,7 @@
 
 接新答卷：
   exp003 / exp006 答卷放进各自的 results/，exp006 无需改代码（自动发现 results/*.json，跳过 *.unblinded.json）；
-  新实验在 ADAPTERS 里加一个函数，返回同格式的 trial 记录。
+  新实验写一个适配器函数（返回同格式的 trial 记录），在 collect() 里加一行调用。
 """
 import json
 import sys

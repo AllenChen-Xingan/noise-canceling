@@ -66,7 +66,7 @@ verifier id 照 `src/eval/src/verifiers.rs` 的注册表。**感知类全部 L0*
 ## 4. 每次听测后更新本文件（流程）
 
 1. **答卷当场提交**：人导出的 JSON 原样放进 `docs/experiments/<实验>/results/` 并提交（CLAUDE.md 第五节第 1 条）；对照表已在 `builds/<build>/`
-2. **重建数据集**：`python3 docs/experiments/human-prefs/build_dataset.py`（新实验先在 `ADAPTERS` 里加适配器；exp006 自动发现）→ `python3 docs/experiments/human-prefs/test_build_dataset.py` → `python3 docs/experiments/human-prefs/make_tasks.py`
+2. **重建数据集**：`python3 docs/experiments/human-prefs/build_dataset.py`（新实验先写适配器并在 `collect()` 里调用；exp006 自动发现）→ `python3 docs/experiments/human-prefs/test_build_dataset.py` → `python3 docs/experiments/human-prefs/make_tasks.py`
 3. **改本文件**：
    - 每条 K 的「量」与「置信度」按新数据重算；新数据反向 → 改条目或降级，**不删**，写「被 `<rec_id>` 推翻」
    - 人原话备注里的新说法 → 新 K 条目（照录原话）或新 U 问题
