@@ -84,7 +84,9 @@ def _init(sid):
     ckpt = MODELS / spec["hf"] / open(MODELS / spec["hf"] / "last_best_checkpoint").readline().strip()
     n = _load_state(model, ckpt)
     model.eval()
-    _M.update(sid=sid, args=args, model=model, decode=decode_one_audio, norm=audio_norm, n_params=n)
+    dev = torch.device(os.environ.get("VDN_DEVICE", "cpu"))
+    model.to(dev)
+    _M.update(sid=sid, args=args, model=model, dev=dev, decode=decode_one_audio, norm=audio_norm, n_params=n)
 
 
 def enhance(x16):
@@ -100,7 +102,7 @@ def enhance(x16):
         x, scalar = _M["norm"](x)
     torch.manual_seed(0)  # 48K 的 kaldi fbank 带 dither=1.0，固定种子以便复现
     with torch.no_grad():
-        y = _M["decode"](_M["model"], torch.device("cpu"), x[None, :].astype(np.float32), args)
+        y = _M["decode"](_M["model"], _M["dev"], x[None, :].astype(np.float32), args)
     y = np.asarray(y, dtype=np.float64).reshape(-1)
     if len(y) < len(x):
         raise RuntimeError(f"模型输出 {len(y)} 短于输入 {len(x)}")
@@ -207,7 +209,7 @@ def main(sid):
         "delay_comp_samples": 0,
         "delay_check": {"n": len(checks), "ok": ok, "rule": "输出 vs owner 互相关 ±2000 样本峰值滞后 |lag|≤1", "items": checks},
         "runtime": f"python {platform.python_version()} / torch {torch.__version__} / torchaudio {torchaudio.__version__} / "
-                   f"CPU, torch.set_num_threads(1) per process",
+                   f"device={os.environ.get('VDN_DEVICE', 'cpu')}, torch.set_num_threads(1) per process",
         "n_written": n_written, "n_total": len(all_rows),
         "seconds": round(sum(r["seconds"] for r in runs), 1),
         "runs": runs,
