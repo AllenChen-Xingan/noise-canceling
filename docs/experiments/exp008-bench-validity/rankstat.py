@@ -163,6 +163,48 @@ def _boot_means(rows, systems, metric, clip_sample):
     return out
 
 
+def s7b(rows, systems):
+    """S7b 交互一致性：同一条轴上，A 与 B 是否给出同样的「名次随档位怎么变」。
+    每条轴、每个指标：系统 × 档位均值矩阵，双中心化（去掉系统主效应与档位主效应），A、B 残差的 Pearson r。
+    零分布：把 B 的档位标签做全部置换（4–6 档，精确），p = 置换 r ≥ 观测 r 的比例。整条轴一个单位（各档共用同批素材）。"""
+    import numpy as np
+    out = []
+    axes = sorted({r["cell"] for r in rows})
+    for axis in axes:
+        rs = [r for r in rows if r["cell"] == axis and r["system"] in systems]
+        levels = sorted({json.dumps(r["level"], sort_keys=True) for r in rs})
+        if len(levels) < 3:
+            continue
+        for metric in METRICS:
+            mats = {}
+            for g in ("A", "B"):
+                acc = defaultdict(list)
+                for r in rs:
+                    if r["gen"] == g:
+                        v = score(r["metrics"].get(metric), METRICS[metric])
+                        if v is not None:
+                            acc[(r["system"], json.dumps(r["level"], sort_keys=True))].append(v)
+                ss = sorted(systems)
+                try:
+                    M = np.array([[sum(acc[(s_, l)]) / len(acc[(s_, l)]) for l in levels] for s_ in ss])
+                except ZeroDivisionError:
+                    M = None
+                mats[g] = M
+            if mats["A"] is None or mats["B"] is None:
+                continue
+            dc = lambda M: M - M.mean(1, keepdims=True) - M.mean(0, keepdims=True) + M.mean()  # noqa: E731
+            ra, rb = dc(mats["A"]).ravel(), dc(mats["B"]).ravel()
+            if ra.std() == 0 or rb.std() == 0:
+                continue
+            r_obs = float(np.corrcoef(ra, rb)[0, 1])
+            perms = list(itertools.permutations(range(len(levels))))
+            null = [float(np.corrcoef(ra, dc(mats["B"][:, list(pm)]).ravel())[0, 1]) for pm in perms]
+            p = sum(x >= r_obs - 1e-12 for x in null) / len(null)
+            out.append({"axis": axis, "metric": metric, "n_levels": len(levels), "n_sys": len(systems),
+                        "r_interaction": round(r_obs, 3), "p_perm": round(p, 4), "n_perm": len(perms)})
+    return out
+
+
 # ---------------- S8 ----------------
 EXP003_MODEL = {"gtcrn": "gtcrn", "fastenhancer_m": "fe_m", "dpdfnet2": "dpdf2"}
 # exp003 片段 → 近似匹配的合成格（cell, level）。都是「近似」：噪声素材、说话人、具体 SNR / SIR 都对不上，只对上大类
@@ -227,7 +269,9 @@ def main():
     rows = load(build)
     r7 = s7(rows)
     r8 = s8(rows)
-    (HERE / "results" / f"{build}-rankstat.json").write_text(json.dumps({"build": build, "S7": r7, "S8": r8}, ensure_ascii=False, indent=1))
+    systems_all = sorted({r["system"] for r in rows})
+    r7b = {"no_ceiling_variant": s7b(rows, set(systems_all) - CEILING - VARIANTS), "neural": s7b(rows, NEURAL & set(systems_all))}
+    (HERE / "results" / f"{build}-rankstat.json").write_text(json.dumps({"build": build, "S7": r7, "S7b": r7b, "S8": r8}, ensure_ascii=False, indent=1))
     # 摘要：每个指标跨格的 τ_AB 与 split-half 中位数
     med = lambda v: sorted(v)[len(v) // 2] if v else None  # noqa: E731
     print("S7（no_ceiling_variant，系统数 / τ_AB 中位 / 同样本量 τ_AB(半) 中位 / 信度 A、B 中位 / 下界 > 0 的格数 / 过 S7 的格数）")
@@ -248,6 +292,12 @@ def main():
                 print(f"  {metric:18s} τ_AB={med([x['tau_ab'] for x in xs])} 错配={med([x['mismatch_median'] for x in xs if x.get('mismatch_median') is not None])} "
                       f"τ_AB(半)={med([x['tau_ab_half'] for x in xs if x['tau_ab_half'] is not None])} 信度A={med([x['split_half_a'] for x in xs if x['split_half_a'] is not None])} "
                       f"旧过 {sum(x['s7_pass_old'] for x in xs)}/{len(xs)} 新过 {sum(x['s7_pass'] for x in xs)}/{len(xs)}")
+    for setname, xs in r7b.items():
+        print(f"S7b 交互一致性（{setname}；每轴 r / 精确置换 p）")
+        for metric in METRICS:
+            row = [x for x in xs if x["metric"] == metric]
+            if row:
+                print(f"  {metric:18s} " + " · ".join(f"{x['axis']} {x['r_interaction']:+.2f} (p={x['p_perm']:.3f})" for x in row))
     print("S8（exp003 人耳配对一致率：合成格预测 vs 片段自身）")
     for m, v in r8.items():
         print(f"  {m:16s} 合成格 {v['synthetic_cell']}  片段自身 {v['on_exp003_clip']}")
