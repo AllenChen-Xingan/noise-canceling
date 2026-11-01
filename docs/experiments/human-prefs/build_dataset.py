@@ -89,8 +89,20 @@ def exp003_full(ans_path, build_dir, clips):
         validity, why = "valid", "两道检验题都过"
     out = []
     for t in ans["trials"]:
-        bm = t["by_model"]
-        slots = t["slots"]
+        slots = dict(t["slots"])
+        # 全同检验题三个槽位都叫 "same"，与「分不出」的取值撞名 → 改名 identical#1/#2/#3，答案从原始字母重新揭
+        if len(set(slots.values())) < len(slots):
+            seen = {}
+            for L in sorted(slots):
+                m = slots[L]
+                seen[m] = seen.get(m, 0) + 1
+                slots[L] = f"identical#{seen[m]}" if m == "same" else f"{m}#{seen[m]}"
+        raw = t["answer"]
+        mp = lambda x: slots.get(x, x)  # 字母 → 版本；"same" / "none" 原样
+        bm = {"clearer": mp(raw["clearer"]), "natural": mp(raw["natural"]),
+              "eaten": [mp(x) for x in raw.get("eaten", [])],
+              "usable": {mp(k): v for k, v in raw.get("usable", {}).items()},
+              "tags": {mp(k): v for k, v in raw.get("tags", {}).items()}}
         models = [m for m in slots.values()]
         pos = {m: L for L, m in slots.items()}
         meta = clips.get(t["clip"], {})
@@ -125,6 +137,7 @@ def exp003_full(ans_path, build_dir, clips):
         if t["kind"] == "trap":
             tr = traps.get(t["trap"], {})
             rec["trap"] = {"type": t["trap"], "pass": tr.get("pass"), "expect": tr.get("desc")}
+            rec["raw_answer_letters"] = raw
         out.append(rec)
     return out
 
@@ -248,7 +261,8 @@ def exp005(ans_path, build_dir, clips_path):
             rec["trap"] = {"type": "trap-identical-pair", "pass": passed, "expect": k.get("expect")}
         out.append(rec)
     validity = "valid" if trap_ok else "discounted"
-    why = ("唯一一道检验题（两槽位相同）过了；没有劣化检验题" if trap_ok else "检验题没过")
+    why = ("唯一一道检验题（两槽位相同）过了；没有劣化检验题；导出没有 listen_s / 时间戳，rubric 4.2 的屏级作废未检"
+           if trap_ok else "检验题没过")
     for r in out:
         r["session"]["validity"], r["session"]["why"] = validity, why
     return out
@@ -344,9 +358,10 @@ def pairs_of(rec):
 
     def emit(dim, x, y, winner, rule, strength):
         same_audio = bool(shas.get(x)) and shas.get(x) == shas.get(y)
-        if same_audio and winner != "tie":
-            # 两份逐字节相同却分出了胜负 = 这一对的判断是随机的（位置 / 噪声），不能当偏好
-            rule, strength = rule + "+identical_audio", "invalid"
+        if same_audio:
+            # 两份逐字节相同：分出胜负 = 随机（invalid）；判平 = 一致性检验（consistency）。两者都不当偏好用
+            rule = rule + "+identical_audio"
+            strength = "invalid" if winner != "tie" else "consistency"
         out.append({
             "rec_id": rec["rec_id"], "exp": rec["exp"], "build": rec["build"], "clip": rec["clip"],
             "scene_fine": rec["scene"]["fine"], "scene_user": rec["scene"]["user"],
@@ -425,7 +440,8 @@ def summarize(trials, pairs):
                     s["best_of_letters"][q][L] += 1
     by_dim = {}
     for p in pairs:
-        d = by_dim.setdefault(p["dim"], {"pairs": 0, "decisive": 0, "tie": 0, "identical_audio": 0, "invalid": 0})
+        d = by_dim.setdefault(p["dim"], {"pairs": 0, "decisive": 0, "tie": 0, "identical_audio": 0, "invalid": 0, "consistency": 0})
+        d["consistency"] += p["strength"] == "consistency"
         d["pairs"] += 1
         d["tie" if p["winner"] == "tie" else "decisive"] += 1
         d["identical_audio"] += p["identical_audio"]
