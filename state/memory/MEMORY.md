@@ -7,3 +7,4 @@
 
 - [一切走提交 · issue · PR](20261030-commit-issue-pr.md) — 何时开分支、开 issue、推送、开 PR、AI 自己合并（人定 2026-10-30）
 - [实验对照表与答卷一律提交](20261030-commit-experiment-keys.md) — 揭盲表、清单、人的答卷当场进 git；听测页每次重建写新 build 目录（揭盲表丢失之坑）
+- [学习材料只放桌面](20261101-study-notes-desktop-only.md) — 给人的科普 / 讲解只出到桌面（.md + .pdf），不进 docs/plan（人定 2026-11-01）
