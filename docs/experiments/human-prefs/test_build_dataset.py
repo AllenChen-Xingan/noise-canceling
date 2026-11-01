@@ -44,6 +44,10 @@ def test_existing():
     # 旧 build 可揭盲的两题（exp003 results/README.md「部分揭盲」）
     t68 = {r["clip"]: r for r in trials if r["build"] == "20261030102301-68ab" and not r.get("unblindable")}
     check(t68["c02"]["answers"]["clearer"] == "gtcrn" and t68["c01"]["answers"]["clearer"] == "dpdfnet2", "68ab c02→GTCRN、c01→DPDFNet-2")
+    # exp003 全同检验题：人选了 C，不能被揭成「分不出」（曾因 "same" 撞名丢掉答案）
+    tid = [r for r in trials if r["build"] == "20261030110755-f8c3" and r["kind"] == "trap" and r["trap"]["type"] == "trap-identical"][0]
+    check(tid["answers"]["clearer"] == "identical#3" and tid["raw_answer_letters"]["clearer"] == "C" and tid["trap"]["pass"] is False,
+          "exp003 全同检验题保留人的原答案（选了 C → identical#3，判没过）")
     # 相同音频
     inv = [p for p in pairs if p["strength"] == "invalid"]
     check(len(inv) == 1 and inv[0]["clip"] == "c08" and inv[0]["dim"] == "meeting", "exp005 c08 激进 = 只有 GTCRN 同一文件，开会选择那一对标 invalid")

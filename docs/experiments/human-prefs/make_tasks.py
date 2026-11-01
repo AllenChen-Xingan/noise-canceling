@@ -3,20 +3,26 @@
 只做数据整理：任务的「人判结论」从 trials.jsonl 自动取（不手抄），过线值只用 verifier 注册表锚点或已有实测值，
 两者都标出处。暂不改 src/eval/（evalimpl 合并后由它加载本文件，或让 parse_suite 读 tasks/）。
 
-输出：tasks/human-tasks.json
+输出：tasks/human-tasks.json（vdn-eval 现在就能解析、能跑的）· tasks/human-tasks-blocked.json（同格式，但 vdn-eval 还跑不了，
+  每个任务带 blocked 字段说明缺什么；补上能力后挪回主清单）
 用法：python3 docs/experiments/human-prefs/make_tasks.py [--check] [--registry <verifiers.rs>]
   --check     只比对，不写
-  --registry  verifier 注册表（默认 src/eval/src/verifiers.rs；本分支还没合 main 时可指向一份副本）
-校验（每次都跑）：id 唯一（含 src/eval/suite/*.json）· set / polarity 取值 · origin 非空 · real.kind ∈ exp003/exp005 ·
-  graders / info 的 v 都在注册表里（找不到注册表时只警告）
+  --registry  verifier 注册表；不给时依次找 src/eval/src/verifiers.rs、`git show origin/main:src/eval/src/verifiers.rs`，都没有就报错退出
+校验（每次都跑，任一不过退出码 1）：id 唯一（含 src/eval/suite/*.json，同样回退到 origin/main）· set / polarity 取值 ·
+  origin 非空 · real.kind ∈ exp003/exp005 · graders / info 的 v 都在注册表里 ·
+  可运行性：exp003 片段必须在 clips.json 里有 noisy_src / clean_src（vdn-eval runner 只读现成片段），否则进 blocked
+注意：V-EAT-ASR / V-DNSMOS 是 qa 层 verifier，这批任务应并进 `vdn-eval qa` 跑（ci 层对它们只会判「不知道」）
 """
 import re
 import json
+import subprocess
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "tasks" / "human-tasks.json"
+OUT_BLOCKED = HERE / "tasks" / "human-tasks-blocked.json"
+REPO = HERE.parent.parent.parent
 
 E3 = {"kind": "exp003", "clips": "docs/experiments/exp003-offline-ab/clips.json"}
 E5 = {"kind": "exp005", "clips": "docs/experiments/exp005-p2-speaker/clips.json", "audio_dir": "_tmp/20261031-exp005/src"}
@@ -178,6 +184,9 @@ def build():
             t["human"]["caveat"] = ("人听的是锁定之后约 25 s 节选（excerpt_s）；vdn-eval 跑整段 80–120 s。"
                                     "被判的保守版 / 激进版是 vdn-speaker-lab 的个性化管线，现在 vdn-eval 的 --system 里没有，"
                                     "接入前只能拿 GTCRN（= raw）跑")
+        why = blocked_reason(exp, clip)
+        if why:
+            t["blocked"] = why
         tasks.append(t)
     return {
         "name": "human-prefs",
@@ -188,6 +197,41 @@ def build():
         "defaults": {"trials": 1},
         "tasks": tasks,
     }
+
+
+def blocked_reason(exp, clip):
+    if exp != "exp003":
+        return None
+    c = {x["id"]: x for x in json.loads((REPO / E3["clips"]).read_text())["clips"]}[clip]
+    if not (c.get("noisy_src") and c.get("clean_src")):
+        return (f"exp003 {clip} 是合成片段（kind = {c.get('kind')}），clips.json 没有 noisy_src / clean_src；"
+                "vdn-eval 的 Exp003 来源只读现成片段。要跑：给 vdn-eval 加合成来源（按 make_clips.py 种子 20261030 重建），"
+                "或把合成片段落盘并在 clips.json 补路径与哈希")
+    return None
+
+
+def split(d):
+    main = dict(d, tasks=[t for t in d["tasks"] if "blocked" not in t])
+    blk = dict(d, name="human-prefs-blocked",
+               doc="与 human-tasks.json 同格式，但 vdn-eval 现在跑不了（见每个任务的 blocked）。补上能力后挪回主清单。",
+               tasks=[t for t in d["tasks"] if "blocked" in t])
+    return main, blk
+
+
+def git_show(path):
+    try:
+        return subprocess.run(["git", "-C", str(REPO), "show", f"origin/main:{path}"], capture_output=True,
+                              text=True, check=True).stdout
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+def read_repo_or_main(path):
+    f = REPO / path
+    if f.exists():
+        return f.read_text(), str(f.relative_to(REPO))
+    t = git_show(path)
+    return (t, f"origin/main:{path}") if t is not None else (None, None)
 
 
 def repro(exp, clip):
@@ -202,15 +246,23 @@ def repro(exp, clip):
 
 
 def validate(d):
-    repo = HERE.parent.parent.parent
-    reg_path = Path(sys.argv[sys.argv.index("--registry") + 1]) if "--registry" in sys.argv else repo / "src/eval/src/verifiers.rs"
     errs = []
-    reg = set(re.findall(r'id: "(V-[A-Z0-9-]+)"', reg_path.read_text())) if reg_path.exists() else None
-    if reg is None:
-        print(f"警告：找不到 verifier 注册表 {reg_path}，跳过 verifier id 校验")
+    if "--registry" in sys.argv:
+        rp = Path(sys.argv[sys.argv.index("--registry") + 1])
+        reg_text, reg_src = (rp.read_text(), str(rp)) if rp.exists() else (None, None)
+    else:
+        reg_text, reg_src = read_repo_or_main("src/eval/src/verifiers.rs")
+    if reg_text is None:
+        print("校验失败：找不到 verifier 注册表（src/eval/src/verifiers.rs 与 origin/main 都没有；可用 --registry 指定）")
+        sys.exit(1)
+    reg = set(re.findall(r'id: "(V-[A-Z0-9-]+)"', reg_text))
     other = []
-    for f in sorted((repo / "src/eval/suite").glob("*.json")) if (repo / "src/eval/suite").exists() else []:
-        other += [t["id"] for t in json.loads(f.read_text()).get("tasks", [])]
+    for name in ("ci.json", "qa.json"):
+        txt, _ = read_repo_or_main(f"src/eval/suite/{name}")
+        if txt is None:
+            errs.append(f"找不到 src/eval/suite/{name}（无法查 id 冲突）")
+            continue
+        other += [t["id"] for t in json.loads(txt).get("tasks", [])]
     ids = [t["id"] for t in d["tasks"]]
     dup = {i for i in ids + other if (ids + other).count(i) > 1}
     if dup:
@@ -227,24 +279,29 @@ def validate(d):
         if not t["human"]["screens"]:
             errs.append(f"{t['id']} 没有人判屏")
         for g in t["graders"] + t.get("info", []):
-            if reg is not None and g["v"] not in reg:
+            if g["v"] not in reg:
                 errs.append(f"{t['id']} verifier {g['v']} 不在注册表")
     if errs:
         print("校验失败：\n  " + "\n  ".join(errs))
         sys.exit(1)
-    print(f"校验通过（注册表 {len(reg) if reg else '—'} 个 verifier；对照其他清单 {len(other)} 个任务 id）")
+    print(f"校验通过（注册表 {reg_src}：{len(reg)} 个 verifier；对照 ci / qa 清单 {len(other)} 个任务 id）")
 
 
 def main():
-    text = json.dumps(build(), ensure_ascii=False, indent=1) + "\n"
-    validate(json.loads(text))
+    d = build()
+    validate(d)
+    main_d, blk = split(d)
+    outs = {OUT: json.dumps(main_d, ensure_ascii=False, indent=1) + "\n",
+            OUT_BLOCKED: json.dumps(blk, ensure_ascii=False, indent=1) + "\n"}
     if "--check" in sys.argv:
-        ok = OUT.exists() and OUT.read_text() == text
-        print("一致" if ok else "与仓里不一致（重跑 make_tasks.py）")
-        sys.exit(0 if ok else 1)
-    OUT.write_text(text)
-    d = json.loads(text)
-    print(f"{len(d['tasks'])} 个任务：回归 {sum(t['set'] == 'regression' for t in d['tasks'])} · 能力 {sum(t['set'] == 'capability' for t in d['tasks'])}")
+        bad = [p.name for p, t in outs.items() if not p.exists() or p.read_text() != t]
+        print("一致" if not bad else f"与仓里不一致（重跑 make_tasks.py）：{bad}")
+        sys.exit(0 if not bad else 1)
+    for p, t in outs.items():
+        p.write_text(t)
+    cnt = lambda x, s: sum(t["set"] == s for t in x["tasks"])
+    print(f"能跑 {len(main_d['tasks'])} 个（回归 {cnt(main_d, 'regression')} · 能力 {cnt(main_d, 'capability')}）· "
+          f"暂跑不了 {len(blk['tasks'])} 个（回归 {cnt(blk, 'regression')} · 能力 {cnt(blk, 'capability')}）")
 
 
 if __name__ == "__main__":
