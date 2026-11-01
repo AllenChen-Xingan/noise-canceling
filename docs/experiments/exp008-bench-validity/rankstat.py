@@ -91,6 +91,10 @@ def s7(rows):
     for r in rows:
         cells[(r["cell"], json.dumps(r["level"]))].append(r)
     rng = random.Random(20261031)
+    # 阴性对照（统计怀疑派评审 P0）：A 本格 vs B 的**其它**格。宽阶梯在任何条件下都差不多这么排，
+    # 所以 τ_AB 必须明显高于「错配格 τ」才说明排名跟着条件走、且跨生成器保住了
+    bmeans = {(k, name, metric): means([r for r in rs if r["gen"] == "B"], ss, metric)
+              for k, rs in cells.items() for name, ss in sets.items() for metric in METRICS}
     out = []
     for (cell, lv), rs in sorted(cells.items()):
         A = [r for r in rs if r["gen"] == "A"]
@@ -118,7 +122,7 @@ def s7(rows):
                      "tau_ab_half": None if t_half is None else round(t_half, 3),
                      "split_half_a": None if sh_a is None else round(sh_a, 3),
                      "split_half_b": None if sh_b is None else round(sh_b, 3)}
-                if name not in ("reps", "neural"):
+                if name in ("no_ceiling_variant", "neural"):
                     boots = []
                     for _ in range(2000):
                         ca = [rng.choice(clips_a) for _ in clips_a]
@@ -133,7 +137,12 @@ def s7(rows):
                     d["ci95"] = [round(boots[int(0.025 * len(boots))], 3), round(boots[int(0.975 * len(boots)) - 1], 3)] if boots else None
                     # S7 过线（synth-standard S7）：95% 下界 > 0，且同样本量的 τ_AB(半) ≥ min(两个 split-half) − 0.2
                     rel = [x for x in (sh_a, sh_b) if x is not None]
-                    d["s7_pass"] = bool(d["ci95"] and d["ci95"][0] > 0 and t_half is not None and rel and t_half >= min(rel) - 0.2)
+                    mis = sorted(x for x in (tau_between(ma, bmeans[(k2, name, metric)]) for k2 in cells if k2 != (cell, lv)) if x is not None)
+                    d["mismatch_median"] = round(mis[len(mis) // 2], 3) if mis else None
+                    d["mismatch_p95"] = round(mis[int(0.95 * len(mis)) - 1], 3) if mis else None
+                    d["s7_pass_old"] = bool(d["ci95"] and d["ci95"][0] > 0 and t_half is not None and rel and t_half >= min(rel) - 0.2)
+                    # 现行判据：旧两条 + τ_AB 高于错配格 τ 的 95 分位
+                    d["s7_pass"] = bool(d["s7_pass_old"] and mis and t > d["mismatch_p95"])
                 row[name] = d
             out.append(row)
     return out
@@ -230,13 +239,15 @@ def main():
               f"信度A={med([x['split_half_a'] for x in xs if x['split_half_a'] is not None])} "
               f"信度B={med([x['split_half_b'] for x in xs if x['split_half_b'] is not None])} "
               f"τ_AB(半)={med([x['tau_ab_half'] for x in xs if x['tau_ab_half'] is not None])} "
-              f"下界>0: {sum(bool(x['ci95']) and x['ci95'][0] > 0 for x in xs)}/{len(xs)} 过S7: {sum(x['s7_pass'] for x in xs)}/{len(xs)}")
-    print("S7（neural，8 个神经模型，τ_AB 中位 / 信度 A、B 中位）")
-    for metric in METRICS:
-        xs = [r["neural"] for r in r7 if r["metric"] == metric and "neural" in r]
-        if xs:
-            print(f"  {metric:16s} τ_AB={med([x['tau_ab'] for x in xs])} 信度A={med([x['split_half_a'] for x in xs if x['split_half_a'] is not None])} "
-                  f"信度B={med([x['split_half_b'] for x in xs if x['split_half_b'] is not None])}")
+              f"下界>0: {sum(bool(x['ci95']) and x['ci95'][0] > 0 for x in xs)}/{len(xs)}")
+    for setname in ("no_ceiling_variant", "neural"):
+        print(f"S7 阴性对照（{setname}：τ_AB 中位 / 错配格 τ 中位 / 旧判据过 / 新判据过）")
+        for metric in METRICS:
+            xs = [r[setname] for r in r7 if r["metric"] == metric and setname in r]
+            if xs:
+                print(f"  {metric:18s} τ_AB={med([x['tau_ab'] for x in xs])} 错配={med([x['mismatch_median'] for x in xs if x.get('mismatch_median') is not None])} "
+                      f"τ_AB(半)={med([x['tau_ab_half'] for x in xs if x['tau_ab_half'] is not None])} 信度A={med([x['split_half_a'] for x in xs if x['split_half_a'] is not None])} "
+                      f"旧过 {sum(x['s7_pass_old'] for x in xs)}/{len(xs)} 新过 {sum(x['s7_pass'] for x in xs)}/{len(xs)}")
     print("S8（exp003 人耳配对一致率：合成格预测 vs 片段自身）")
     for m, v in r8.items():
         print(f"  {m:16s} 合成格 {v['synthetic_cell']}  片段自身 {v['on_exp003_clip']}")
