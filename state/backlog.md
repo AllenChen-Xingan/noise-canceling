@@ -11,6 +11,11 @@
 
 - [ ] **查 Silero VAD 能否纯 Rust、实时线程零分配地跑，能就替换 earshot**（D59，发布阻断）· 出处 `docs/plan/009_model-map.md` 第二节
 
+## 数据
+
+- [ ] **核对 DEMAND 的许可**（exp006 README 第 34 行写 CC BY 4.0，015-5 写 BY-SA），再定场景小模型要不要换素材重训（它用 DEMAND 前 60% 时段合成数据训练过；D26 · D63）· 出处 `docs/plan/001_decisions-20261029-b1.md` D63
+- [ ] 016 benchsynth 交代补一条：合成原料可用公开集训练份，与测试份按说话人 / 场次隔离（D63）
+
 ## 仓库与工作区
 
 - [ ] **清理**：删已合并的 worktree `../noise_canceling-prefs`；删 `../noise_canceling-dfnhush`（015 已随 PR #40 合并，D61）；本地 main 同步到远端（落后 77）；推送 `chore/coord-20261031-b6`；`_tmp/` 8.3 GB 看哪些能删
