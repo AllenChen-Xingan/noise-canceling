@@ -1,0 +1,824 @@
+{
+ "name": "human-prefs-blocked",
+ "doc": "与 human-tasks.json 同格式，但 vdn-eval 现在跑不了（见每个任务的 blocked）。补上能力后挪回主清单。",
+ "seed": 20261031,
+ "defaults": {
+  "trials": 1
+ },
+ "tasks": [
+  {
+   "id": "R60-h-e003-c09-clatter-clean",
+   "set": "regression",
+   "polarity": "both",
+   "origin": "exp003 c09 人耳盲听（exp003/20261030110755-f8c3/11-c09） · 人原话「c最好，非常干净，而且背景细节也处理的很好」",
+   "desc": "杯碟水声、无旁人：三家人都判能用，DPDFNet-2 最好（停顿里压 −72 dB 仍被说「非常干净」）",
+   "real": {
+    "kind": "exp003",
+    "clips": "docs/experiments/exp003-offline-ab/clips.json",
+    "clip": "c09"
+   },
+   "graders": [
+    {
+     "v": "V-EAT-ASR",
+     "max": 1.0
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    },
+    {
+     "v": "V-ONSET",
+     "max": 3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-VACUUM"
+    },
+    {
+     "v": "V-MUSIC"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "dpdfnet2",
+     "gtcrn",
+     "fastenhancer_m"
+    ],
+    "eval_systems": {
+     "dpdfnet2": null,
+     "gtcrn": "gtcrn",
+     "fastenhancer_m": "fastenhancer-m"
+    },
+    "screens": [
+     {
+      "rec_id": "exp003/20261030110755-f8c3/11-c09",
+      "session_validity": "discounted",
+      "best": {
+       "clearer": "dpdfnet2",
+       "natural": "dpdfnet2"
+      },
+      "usable": {
+       "dpdfnet2": "ok",
+       "fastenhancer_m": "ok",
+       "gtcrn": "ok"
+      },
+      "eaten": [],
+      "eaten_none": true,
+      "tags": {
+       "fastenhancer_m": [
+        "pumping_bg"
+       ]
+      },
+      "note": "c最好，非常干净，而且背景细节也处理的很好",
+      "positions": {
+       "dpdfnet2": "C",
+       "fastenhancer_m": "B",
+       "gtcrn": "A"
+      },
+      "audio_out_sha256": {
+       "dpdfnet2": null,
+       "gtcrn": null,
+       "fastenhancer_m": null
+      },
+      "excerpt_s": null
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材；exp003 会话打折、有位置偏好）"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕；V-VACUUM 只报：本题是它的反例（深压 −72 dB 人说干净）",
+   "repro": {
+    "inputs": "docs/experiments/exp003-offline-ab/clips.json（c01–c03 现成：noisy_sha256 / clean_sha256；c04–c12 合成：make_clips.py，种子 20261030，来源哈希 source_sha256）",
+    "outputs": "docs/experiments/exp003-offline-ab/enhance.py（逐帧流式，同 build 20261030110755-f8c3）",
+    "gap": "被判的那几份输出音频本机已不在、也没记哈希；重跑 enhance.py 得到的输出与人听的是否逐字节相同，未核"
+   },
+   "blocked": "exp003 c09 是合成片段（kind = synthetic），clips.json 没有 noisy_src / clean_src；vdn-eval 的 Exp003 来源只读现成片段。要跑：给 vdn-eval 加合成来源（按 make_clips.py 种子 20261030 重建），或把合成片段落盘并在 clips.json 补路径与哈希"
+  },
+  {
+   "id": "R61-h-e003-c10-music-fem",
+   "set": "regression",
+   "polarity": "both",
+   "origin": "exp003 c10 人耳盲听（exp003/20261030110755-f8c3/03-c10）",
+   "desc": "背景钢琴：FE-M 被选最清楚 / 最自然、能用；DPDFNet-2 能用；GTCRN 勉强并被标背景忽大忽小",
+   "real": {
+    "kind": "exp003",
+    "clips": "docs/experiments/exp003-offline-ab/clips.json",
+    "clip": "c10"
+   },
+   "graders": [
+    {
+     "v": "V-EAT-ASR",
+     "max": 1.0
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-MUSIC"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "fastenhancer_m",
+     "dpdfnet2"
+    ],
+    "eval_systems": {
+     "fastenhancer_m": "fastenhancer-m",
+     "dpdfnet2": null
+    },
+    "screens": [
+     {
+      "rec_id": "exp003/20261030110755-f8c3/03-c10",
+      "session_validity": "discounted",
+      "best": {
+       "clearer": "fastenhancer_m",
+       "natural": "fastenhancer_m"
+      },
+      "usable": {
+       "dpdfnet2": "ok",
+       "fastenhancer_m": "ok",
+       "gtcrn": "marginal"
+      },
+      "eaten": [
+       "gtcrn"
+      ],
+      "eaten_none": false,
+      "tags": {
+       "gtcrn": [
+        "pumping_bg"
+       ]
+      },
+      "note": null,
+      "positions": {
+       "dpdfnet2": "A",
+       "fastenhancer_m": "C",
+       "gtcrn": "B"
+      },
+      "audio_out_sha256": {
+       "fastenhancer_m": null,
+       "dpdfnet2": null
+      },
+      "excerpt_s": null
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材；exp003 会话打折、有位置偏好）"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp003-offline-ab/clips.json（c01–c03 现成：noisy_sha256 / clean_sha256；c04–c12 合成：make_clips.py，种子 20261030，来源哈希 source_sha256）",
+    "outputs": "docs/experiments/exp003-offline-ab/enhance.py（逐帧流式，同 build 20261030110755-f8c3）",
+    "gap": "被判的那几份输出音频本机已不在、也没记哈希；重跑 enhance.py 得到的输出与人听的是否逐字节相同，未核"
+   },
+   "blocked": "exp003 c10 是合成片段（kind = synthetic），clips.json 没有 noisy_src / clean_src；vdn-eval 的 Exp003 来源只读现成片段。要跑：给 vdn-eval 加合成来源（按 make_clips.py 种子 20261030 重建），或把合成片段落盘并在 clips.json 补路径与哈希"
+  },
+  {
+   "id": "R62-h-e003-c08-babble10-gtcrn",
+   "set": "regression",
+   "polarity": "preserve",
+   "origin": "exp003 c08 人耳盲听（exp003/20261030110755-f8c3/02-c08）",
+   "desc": "邻桌 4 人 10 dB：GTCRN 最清楚 / 最自然、能用、无缺陷标签；另两家被打 4–5 个缺陷标签",
+   "real": {
+    "kind": "exp003",
+    "clips": "docs/experiments/exp003-offline-ab/clips.json",
+    "clip": "c08"
+   },
+   "graders": [
+    {
+     "v": "V-EAT-ASR",
+     "max": 1.0
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    },
+    {
+     "v": "V-ONSET",
+     "max": 3
+    },
+    {
+     "v": "V-TIMBRE",
+     "max": 6
+    }
+   ],
+   "info": [
+    {
+     "v": "V-MUSIC"
+    },
+    {
+     "v": "V-VACUUM"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "gtcrn"
+    ],
+    "eval_systems": {
+     "gtcrn": "gtcrn"
+    },
+    "screens": [
+     {
+      "rec_id": "exp003/20261030110755-f8c3/02-c08",
+      "session_validity": "discounted",
+      "best": {
+       "clearer": "gtcrn",
+       "natural": "gtcrn"
+      },
+      "usable": {
+       "dpdfnet2": "marginal",
+       "fastenhancer_m": "ok",
+       "gtcrn": "ok"
+      },
+      "eaten": [],
+      "eaten_none": true,
+      "tags": {
+       "dpdfnet2": [
+        "metallic",
+        "pumping_bg",
+        "muffled",
+        "vacuum",
+        "clipped_onsets"
+       ],
+       "fastenhancer_m": [
+        "metallic",
+        "muffled",
+        "clipped_onsets",
+        "pumping_voice"
+       ]
+      },
+      "note": null,
+      "positions": {
+       "dpdfnet2": "B",
+       "fastenhancer_m": "A",
+       "gtcrn": "C"
+      },
+      "audio_out_sha256": {
+       "gtcrn": null
+      },
+      "excerpt_s": null
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材；exp003 会话打折、有位置偏好）"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp003-offline-ab/clips.json（c01–c03 现成：noisy_sha256 / clean_sha256；c04–c12 合成：make_clips.py，种子 20261030，来源哈希 source_sha256）",
+    "outputs": "docs/experiments/exp003-offline-ab/enhance.py（逐帧流式，同 build 20261030110755-f8c3）",
+    "gap": "被判的那几份输出音频本机已不在、也没记哈希；重跑 enhance.py 得到的输出与人听的是否逐字节相同，未核"
+   },
+   "blocked": "exp003 c08 是合成片段（kind = synthetic），clips.json 没有 noisy_src / clean_src；vdn-eval 的 Exp003 来源只读现成片段。要跑：给 vdn-eval 加合成来源（按 make_clips.py 种子 20261030 重建），或把合成片段落盘并在 clips.json 补路径与哈希"
+  },
+  {
+   "id": "C71-h-e003-c07-babble6-m5",
+   "set": "capability",
+   "polarity": "both",
+   "origin": "exp003 c07 人耳盲听（exp003/20261030110755-f8c3/05-c07）",
+   "desc": "邻桌 6 人 −5 dB：三家都不能用、都被勾吃字",
+   "real": {
+    "kind": "exp003",
+    "clips": "docs/experiments/exp003-offline-ab/clips.json",
+    "clip": "c07"
+   },
+   "graders": [
+    {
+     "v": "V-EAT-ASR",
+     "max": 1.0
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    },
+    {
+     "v": "V-ONSET",
+     "max": 3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "dpdfnet2",
+     "gtcrn",
+     "fastenhancer_m"
+    ],
+    "eval_systems": {
+     "dpdfnet2": null,
+     "gtcrn": "gtcrn",
+     "fastenhancer_m": "fastenhancer-m"
+    },
+    "screens": [
+     {
+      "rec_id": "exp003/20261030110755-f8c3/05-c07",
+      "session_validity": "discounted",
+      "best": {
+       "clearer": "same",
+       "natural": "same"
+      },
+      "usable": {
+       "dpdfnet2": "no",
+       "fastenhancer_m": "no",
+       "gtcrn": "no"
+      },
+      "eaten": [
+       "fastenhancer_m",
+       "dpdfnet2",
+       "gtcrn"
+      ],
+      "eaten_none": false,
+      "tags": null,
+      "note": null,
+      "positions": {
+       "dpdfnet2": "B",
+       "fastenhancer_m": "A",
+       "gtcrn": "C"
+      },
+      "audio_out_sha256": {
+       "dpdfnet2": null,
+       "gtcrn": null,
+       "fastenhancer_m": null
+      },
+      "excerpt_s": null
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材；exp003 会话打折、有位置偏好）"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp003-offline-ab/clips.json（c01–c03 现成：noisy_sha256 / clean_sha256；c04–c12 合成：make_clips.py，种子 20261030，来源哈希 source_sha256）",
+    "outputs": "docs/experiments/exp003-offline-ab/enhance.py（逐帧流式，同 build 20261030110755-f8c3）",
+    "gap": "被判的那几份输出音频本机已不在、也没记哈希；重跑 enhance.py 得到的输出与人听的是否逐字节相同，未核"
+   },
+   "xfail": "人耳：三家全「不能用」（exp003 f8c3 第 5 屏）",
+   "blocked": "exp003 c07 是合成片段（kind = synthetic），clips.json 没有 noisy_src / clean_src；vdn-eval 的 Exp003 来源只读现成片段。要跑：给 vdn-eval 加合成来源（按 make_clips.py 种子 20261030 重建），或把合成片段落盘并在 clips.json 补路径与哈希"
+  },
+  {
+   "id": "C72-h-e003-c11-zh-babble3",
+   "set": "capability",
+   "polarity": "both",
+   "origin": "exp003 c11 人耳盲听（exp003/20261030110755-f8c3/12-c11） · 人原话「都不太清楚，声音都差不多大」",
+   "desc": "中文目标 + 英文邻桌 3 人：三家都不能用；人原话「都不太清楚」",
+   "real": {
+    "kind": "exp003",
+    "clips": "docs/experiments/exp003-offline-ab/clips.json",
+    "clip": "c11"
+   },
+   "graders": [
+    {
+     "v": "V-EAT-ASR",
+     "max": 1.0
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "zh",
+   "human": {
+    "judged_systems": [
+     "dpdfnet2",
+     "gtcrn",
+     "fastenhancer_m"
+    ],
+    "eval_systems": {
+     "dpdfnet2": null,
+     "gtcrn": "gtcrn",
+     "fastenhancer_m": "fastenhancer-m"
+    },
+    "screens": [
+     {
+      "rec_id": "exp003/20261030110755-f8c3/12-c11",
+      "session_validity": "discounted",
+      "best": {
+       "clearer": "same",
+       "natural": "same"
+      },
+      "usable": {
+       "dpdfnet2": "no",
+       "fastenhancer_m": "no",
+       "gtcrn": "no"
+      },
+      "eaten": [
+       "fastenhancer_m",
+       "dpdfnet2",
+       "gtcrn"
+      ],
+      "eaten_none": false,
+      "tags": null,
+      "note": "都不太清楚，声音都差不多大",
+      "positions": {
+       "dpdfnet2": "B",
+       "fastenhancer_m": "A",
+       "gtcrn": "C"
+      },
+      "audio_out_sha256": {
+       "dpdfnet2": null,
+       "gtcrn": null,
+       "fastenhancer_m": null
+      },
+      "excerpt_s": null
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材；exp003 会话打折、有位置偏好）"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp003-offline-ab/clips.json（c01–c03 现成：noisy_sha256 / clean_sha256；c04–c12 合成：make_clips.py，种子 20261030，来源哈希 source_sha256）",
+    "outputs": "docs/experiments/exp003-offline-ab/enhance.py（逐帧流式，同 build 20261030110755-f8c3）",
+    "gap": "被判的那几份输出音频本机已不在、也没记哈希；重跑 enhance.py 得到的输出与人听的是否逐字节相同，未核"
+   },
+   "xfail": "人耳：三家全「不能用」（exp003 f8c3 第 12 屏）",
+   "blocked": "exp003 c11 是合成片段（kind = synthetic），clips.json 没有 noisy_src / clean_src；vdn-eval 的 Exp003 来源只读现成片段。要跑：给 vdn-eval 加合成来源（按 make_clips.py 种子 20261030 重建），或把合成片段落盘并在 clips.json 补路径与哈希"
+  },
+  {
+   "id": "C73-h-e003-c12-zh-neighbor",
+   "set": "capability",
+   "polarity": "suppress",
+   "origin": "exp003 c12 人耳盲听（exp003/20261030110755-f8c3/09-c12）",
+   "desc": "中文目标 + 英文邻座：三家都不能用；GTCRN 相对最好；ASR 转写里带出邻座的话",
+   "real": {
+    "kind": "exp003",
+    "clips": "docs/experiments/exp003-offline-ab/clips.json",
+    "clip": "c12"
+   },
+   "graders": [
+    {
+     "v": "V-EAT-ASR",
+     "max": 1.0
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "zh",
+   "human": {
+    "judged_systems": [
+     "dpdfnet2",
+     "gtcrn",
+     "fastenhancer_m"
+    ],
+    "eval_systems": {
+     "dpdfnet2": null,
+     "gtcrn": "gtcrn",
+     "fastenhancer_m": "fastenhancer-m"
+    },
+    "screens": [
+     {
+      "rec_id": "exp003/20261030110755-f8c3/09-c12",
+      "session_validity": "discounted",
+      "best": {
+       "clearer": "gtcrn",
+       "natural": "gtcrn"
+      },
+      "usable": {
+       "dpdfnet2": "no",
+       "fastenhancer_m": "no",
+       "gtcrn": "no"
+      },
+      "eaten": [
+       "fastenhancer_m",
+       "dpdfnet2",
+       "gtcrn"
+      ],
+      "eaten_none": false,
+      "tags": null,
+      "note": null,
+      "positions": {
+       "dpdfnet2": "B",
+       "fastenhancer_m": "A",
+       "gtcrn": "C"
+      },
+      "audio_out_sha256": {
+       "dpdfnet2": null,
+       "gtcrn": null,
+       "fastenhancer_m": null
+      },
+      "excerpt_s": null
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材；exp003 会话打折、有位置偏好）"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕；压邻座要三轨（exp003 没分轨）→ V-INTF 现在算不了",
+   "repro": {
+    "inputs": "docs/experiments/exp003-offline-ab/clips.json（c01–c03 现成：noisy_sha256 / clean_sha256；c04–c12 合成：make_clips.py，种子 20261030，来源哈希 source_sha256）",
+    "outputs": "docs/experiments/exp003-offline-ab/enhance.py（逐帧流式，同 build 20261030110755-f8c3）",
+    "gap": "被判的那几份输出音频本机已不在、也没记哈希；重跑 enhance.py 得到的输出与人听的是否逐字节相同，未核"
+   },
+   "xfail": "人耳：三家全「不能用」（exp003 f8c3 第 9 屏）",
+   "blocked": "exp003 c12 是合成片段（kind = synthetic），clips.json 没有 noisy_src / clean_src；vdn-eval 的 Exp003 来源只读现成片段。要跑：给 vdn-eval 加合成来源（按 make_clips.py 种子 20261030 重建），或把合成片段落盘并在 clips.json 补路径与哈希"
+  },
+  {
+   "id": "C74-h-e003-c06-babble3-0db",
+   "set": "capability",
+   "polarity": "both",
+   "origin": "exp003 c06 人耳盲听（exp003/20261030110755-f8c3/08-c06）",
+   "desc": "邻桌 3 人 0 dB：GTCRN 勉强、另两家不能用；三家都被勾吃字（ASR 也说 D / F 丢 “bannister in the”）",
+   "real": {
+    "kind": "exp003",
+    "clips": "docs/experiments/exp003-offline-ab/clips.json",
+    "clip": "c06"
+   },
+   "graders": [
+    {
+     "v": "V-EAT-ASR",
+     "max": 1.0
+    },
+    {
+     "v": "V-ONSET",
+     "max": 3
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "dpdfnet2",
+     "gtcrn",
+     "fastenhancer_m"
+    ],
+    "eval_systems": {
+     "dpdfnet2": null,
+     "gtcrn": "gtcrn",
+     "fastenhancer_m": "fastenhancer-m"
+    },
+    "screens": [
+     {
+      "rec_id": "exp003/20261030110755-f8c3/08-c06",
+      "session_validity": "discounted",
+      "best": {
+       "clearer": "gtcrn",
+       "natural": "gtcrn"
+      },
+      "usable": {
+       "dpdfnet2": "no",
+       "fastenhancer_m": "no",
+       "gtcrn": "marginal"
+      },
+      "eaten": [
+       "gtcrn",
+       "fastenhancer_m",
+       "dpdfnet2"
+      ],
+      "eaten_none": false,
+      "tags": null,
+      "note": null,
+      "positions": {
+       "dpdfnet2": "C",
+       "fastenhancer_m": "B",
+       "gtcrn": "A"
+      },
+      "audio_out_sha256": {
+       "dpdfnet2": null,
+       "gtcrn": null,
+       "fastenhancer_m": null
+      },
+      "excerpt_s": null
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材；exp003 会话打折、有位置偏好）"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp003-offline-ab/clips.json（c01–c03 现成：noisy_sha256 / clean_sha256；c04–c12 合成：make_clips.py，种子 20261030，来源哈希 source_sha256）",
+    "outputs": "docs/experiments/exp003-offline-ab/enhance.py（逐帧流式，同 build 20261030110755-f8c3）",
+    "gap": "被判的那几份输出音频本机已不在、也没记哈希；重跑 enhance.py 得到的输出与人听的是否逐字节相同，未核"
+   },
+   "xfail": "人耳：最好的也只「勉强」、全部被勾吃字（exp003 f8c3 第 8 屏）",
+   "blocked": "exp003 c06 是合成片段（kind = synthetic），clips.json 没有 noisy_src / clean_src；vdn-eval 的 Exp003 来源只读现成片段。要跑：给 vdn-eval 加合成来源（按 make_clips.py 种子 20261030 重建），或把合成片段落盘并在 clips.json 补路径与哈希"
+  },
+  {
+   "id": "C75-h-e003-c05-neighbor-0db",
+   "set": "capability",
+   "polarity": "suppress",
+   "origin": "exp003 c05 人耳盲听（exp003/20261030110755-f8c3/04-c05）",
+   "desc": "邻座 1 人 0 dB：GTCRN 勉强、另两家不能用且被勾吃字（机器分偏 DPDFNet-2，人耳相反）",
+   "real": {
+    "kind": "exp003",
+    "clips": "docs/experiments/exp003-offline-ab/clips.json",
+    "clip": "c05"
+   },
+   "graders": [
+    {
+     "v": "V-EAT-ASR",
+     "max": 1.0
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "dpdfnet2",
+     "gtcrn",
+     "fastenhancer_m"
+    ],
+    "eval_systems": {
+     "dpdfnet2": null,
+     "gtcrn": "gtcrn",
+     "fastenhancer_m": "fastenhancer-m"
+    },
+    "screens": [
+     {
+      "rec_id": "exp003/20261030110755-f8c3/04-c05",
+      "session_validity": "discounted",
+      "best": {
+       "clearer": "gtcrn",
+       "natural": "gtcrn"
+      },
+      "usable": {
+       "dpdfnet2": "no",
+       "fastenhancer_m": "no",
+       "gtcrn": "marginal"
+      },
+      "eaten": [
+       "fastenhancer_m",
+       "dpdfnet2"
+      ],
+      "eaten_none": false,
+      "tags": null,
+      "note": null,
+      "positions": {
+       "dpdfnet2": "C",
+       "fastenhancer_m": "B",
+       "gtcrn": "A"
+      },
+      "audio_out_sha256": {
+       "dpdfnet2": null,
+       "gtcrn": null,
+       "fastenhancer_m": null
+      },
+      "excerpt_s": null
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材；exp003 会话打折、有位置偏好）"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp003-offline-ab/clips.json（c01–c03 现成：noisy_sha256 / clean_sha256；c04–c12 合成：make_clips.py，种子 20261030，来源哈希 source_sha256）",
+    "outputs": "docs/experiments/exp003-offline-ab/enhance.py（逐帧流式，同 build 20261030110755-f8c3）",
+    "gap": "被判的那几份输出音频本机已不在、也没记哈希；重跑 enhance.py 得到的输出与人听的是否逐字节相同，未核"
+   },
+   "xfail": "人耳：最好的也只「勉强」（exp003 f8c3 第 4 屏）",
+   "blocked": "exp003 c05 是合成片段（kind = synthetic），clips.json 没有 noisy_src / clean_src；vdn-eval 的 Exp003 来源只读现成片段。要跑：给 vdn-eval 加合成来源（按 make_clips.py 种子 20261030 重建），或把合成片段落盘并在 clips.json 补路径与哈希"
+  },
+  {
+   "id": "C76-h-e003-c04-neighbor-5db",
+   "set": "capability",
+   "polarity": "suppress",
+   "origin": "exp003 c04 人耳盲听（exp003/20261030110755-f8c3/06-c04）",
+   "desc": "邻座 1 人 5 dB：GTCRN 勉强、另两家不能用；三家都被勾吃字",
+   "real": {
+    "kind": "exp003",
+    "clips": "docs/experiments/exp003-offline-ab/clips.json",
+    "clip": "c04"
+   },
+   "graders": [
+    {
+     "v": "V-EAT-ASR",
+     "max": 1.0
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "dpdfnet2",
+     "gtcrn",
+     "fastenhancer_m"
+    ],
+    "eval_systems": {
+     "dpdfnet2": null,
+     "gtcrn": "gtcrn",
+     "fastenhancer_m": "fastenhancer-m"
+    },
+    "screens": [
+     {
+      "rec_id": "exp003/20261030110755-f8c3/06-c04",
+      "session_validity": "discounted",
+      "best": {
+       "clearer": "gtcrn",
+       "natural": "same"
+      },
+      "usable": {
+       "dpdfnet2": "no",
+       "fastenhancer_m": "no",
+       "gtcrn": "marginal"
+      },
+      "eaten": [
+       "dpdfnet2",
+       "gtcrn",
+       "fastenhancer_m"
+      ],
+      "eaten_none": false,
+      "tags": null,
+      "note": null,
+      "positions": {
+       "dpdfnet2": "A",
+       "fastenhancer_m": "C",
+       "gtcrn": "B"
+      },
+      "audio_out_sha256": {
+       "dpdfnet2": null,
+       "gtcrn": null,
+       "fastenhancer_m": null
+      },
+      "excerpt_s": null
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材；exp003 会话打折、有位置偏好）"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp003-offline-ab/clips.json（c01–c03 现成：noisy_sha256 / clean_sha256；c04–c12 合成：make_clips.py，种子 20261030，来源哈希 source_sha256）",
+    "outputs": "docs/experiments/exp003-offline-ab/enhance.py（逐帧流式，同 build 20261030110755-f8c3）",
+    "gap": "被判的那几份输出音频本机已不在、也没记哈希；重跑 enhance.py 得到的输出与人听的是否逐字节相同，未核"
+   },
+   "xfail": "人耳：最好的也只「勉强」、全部被勾吃字（exp003 f8c3 第 6 屏）",
+   "blocked": "exp003 c04 是合成片段（kind = synthetic），clips.json 没有 noisy_src / clean_src；vdn-eval 的 Exp003 来源只读现成片段。要跑：给 vdn-eval 加合成来源（按 make_clips.py 种子 20261030 重建），或把合成片段落盘并在 clips.json 补路径与哈希"
+  }
+ ]
+}

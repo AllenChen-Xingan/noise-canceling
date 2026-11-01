@@ -7,9 +7,13 @@
 
 - [ ] **dev-4 实时管线 + Rust 虚拟麦克风**：第一步是 D05 空插件加载与崩溃实验（D54 · D55）；要人输密码、断音几秒 · 出处 `docs/plan/001_decisions-20261029-b1.md` D54 / D55
 
+## 模型
+
+- [ ] **查 Silero VAD 能否纯 Rust、实时线程零分配地跑，能就替换 earshot**（D59，发布阻断）· 出处 `docs/plan/009_model-map.md` 第二节
+
 ## 仓库与工作区
 
-- [ ] **清理**：删已合并的 worktree `../noise_canceling-prefs`；查清 `../noise_canceling-dfnhush`（015，账本没记、D49 / D50 未合并）要不要；本地 main 同步到远端（落后 77）；推送 `chore/coord-20261031-b6`；`_tmp/` 8.3 GB 看哪些能删
+- [ ] **清理**：删已合并的 worktree `../noise_canceling-prefs`；删 `../noise_canceling-dfnhush`（015 已随 PR #40 合并，D61）；本地 main 同步到远端（落后 77）；推送 `chore/coord-20261031-b6`；`_tmp/` 8.3 GB 看哪些能删
 
 ## 引擎（engine）
 
