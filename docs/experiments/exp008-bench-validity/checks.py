@@ -179,7 +179,9 @@ def corr1(a, b):
 
 
 def check_control(rows, root):
-    """单类轴：同一 clip 各档，未被扫的轨必须相同（相关 ≥ 0.9999，允许整体缩放）；被扫因素的实测值随名义值单调。"""
+    """单类轴：同一 clip 各档，未被扫的轨必须相同（相关 ≥ 0.9999，允许整体缩放）；被扫因素的实测值随名义值单调。
+    注意：③「实测与名义差」里 SNR / SIR 的实测用的是与生成时设增益**同一个** active_level，偏差 0 是构造出来的（红队 P2-9）；
+    要独立复测得换一种电平测量（真 P.56 或另一种 VAD），待写。多类格（M-）还没检。"""
     varied_track = {"snr_db": "noise", "sir_db": "interf", "room": None, "noise": "noise"}
     out = {}
     for cell, (key, levels) in cells.AXES.items():
@@ -193,9 +195,9 @@ def check_control(rows, root):
                 total += 1
                 ref = grp[0]
                 ok = True
-                for k in ("owner", "interf", "noise"):
-                    if k == varied_track[key] or (key == "room"):
-                        continue
+                # room 轴：主讲人 / 干扰者都过 RIR 会变，只有噪声轨必须冻结（评审 P1-4：原先整轴跳过 = 空检）
+                frozen_tracks = ("noise",) if key == "room" else tuple(k for k in ("owner", "interf", "noise") if k != varied_track[key])
+                for k in frozen_tracks:
                     a = read(root, ref["files"][k]["path"])
                     for g in grp[1:]:
                         if corr1(a, read(root, g["files"][k]["path"])) < 0.9999:
@@ -211,7 +213,11 @@ def check_control(rows, root):
                     t = [mm["t60_s"] or 0 for mm in m]
                     mono_ok += all(b > a for a, b in zip(t, t[1:]))
                 else:
-                    mono_ok += 1
+                    # noise 轴是类别，没有单调可言：改判「实测 SNR 与基点 snr_db 差 ≤ 1 dB」（不再无条件计过）
+                    base = cells.BASE["snr_db"]
+                    errs = [abs(mm["snr_db"] - base) for mm in m]
+                    err += errs
+                    mono_ok += all(e <= 1.0 for e in errs)
         out[cell] = {"clips": total, "others_frozen": frozen_ok, "monotone": mono_ok,
                      "max_abs_err_db": round(max(err), 2) if err else None,
                      "pass": frozen_ok == total and mono_ok == total and (not err or max(err) <= 1.0)}
