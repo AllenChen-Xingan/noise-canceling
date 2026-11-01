@@ -94,7 +94,12 @@ fn zeros(shape: &[usize]) -> Result<Tensor<f32>, Err> {
 impl OrtGtcrn {
     fn open(path: &Path) -> Result<Self, Err> {
         let b = |e: ort::Error<ort::session::builder::SessionBuilder>| -> Err { e.to_string().into() };
-        let session = Session::builder()?
+        static ENV: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
+        if ENV.get().is_none() {
+            let e = ort::init().with_name("exp010").build()?;
+            let _ = ENV.set(e);
+        }
+        let session = Session::builder(ENV.get().ok_or("env")?)?
             .with_auto_device(AutoDevicePolicy::PreferCPU)
             .map_err(b)?
             .with_optimization_level(GraphOptimizationLevel::All)
@@ -132,13 +137,15 @@ impl OrtGtcrn {
         let [c0, c1, c2] = &self.caches;
         let outs = self.session.run_with_options(ort::inputs![&self.mix, c0, c1, c2], &self.run)?;
         let mut vals = outs.values();
-        let (_, enh) = vals.next().ok_or("无输出")?.try_extract_tensor::<f32>()?;
+        let v0 = vals.next().ok_or("无输出")?;
+        let (_, enh) = v0.try_extract_tensor::<f32>()?;
         for k in 0..BINS {
             re[k] = enh[2 * k];
             im[k] = enh[2 * k + 1];
         }
         for cache in self.caches.iter_mut() {
-            let (_, src) = vals.next().ok_or("无缓存输出")?.try_extract_tensor::<f32>()?;
+            let v = vals.next().ok_or("无缓存输出")?;
+            let (_, src) = v.try_extract_tensor::<f32>()?;
             cache.extract_tensor_mut().1.copy_from_slice(src);
         }
         Ok(())
