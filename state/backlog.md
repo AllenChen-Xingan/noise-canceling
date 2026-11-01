@@ -13,7 +13,7 @@
 
 ## 数据
 
-- [ ] **核对 DEMAND 的许可**（exp006 README 第 34 行写 CC BY 4.0，015-5 写 BY-SA），再定场景小模型要不要换素材重训（它用 DEMAND 前 60% 时段合成数据训练过；D26 · D63）· 出处 `docs/plan/001_decisions-20261029-b1.md` D63
+- [ ] **DEMAND 署名**：按 D64，SA 与 CC BY 都可训练，场景小模型不必因许可重训；发布模型卡时写明 DEMAND 来源与许可（exp006 README 第 34 行写 CC BY 4.0，015-5 写 BY-SA，以 Zenodo 原页为准）· 出处 D63 · D64
 - [ ] 016 benchsynth 交代补一条：合成原料可用公开集训练份，与测试份按说话人 / 场次隔离（D63）
 
 ## 仓库与工作区
