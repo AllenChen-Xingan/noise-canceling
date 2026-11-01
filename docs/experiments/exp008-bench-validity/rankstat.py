@@ -107,7 +107,14 @@ def s7(rows):
                 sh_a = tau_between(means(A, ss, metric, ev), means(A, ss, metric, od))
                 ev, od = set(clips_b[0::2]), set(clips_b[1::2])
                 sh_b = tau_between(means(B, ss, metric, ev), means(B, ss, metric, od))
+                # 同样本量的对照：A 半边 × B 半边（3 段 vs 3 段）四种组合的平均 τ，和 split-half 一样大小，才能公平相比
+                halves_a = [set(clips_a[0::2]), set(clips_a[1::2])]
+                halves_b = [set(clips_b[0::2]), set(clips_b[1::2])]
+                hh = [tau_between(means(A, ss, metric, ha), means(B, ss, metric, hb)) for ha in halves_a for hb in halves_b]
+                hh = [x for x in hh if x is not None]
+                t_half = sum(hh) / len(hh) if hh else None
                 d = {"n_sys": len(set(ma) & set(mb)), "tau_ab": round(t, 3),
+                     "tau_ab_half": None if t_half is None else round(t_half, 3),
                      "split_half_a": None if sh_a is None else round(sh_a, 3),
                      "split_half_b": None if sh_b is None else round(sh_b, 3)}
                 if name not in ("reps", "neural"):
