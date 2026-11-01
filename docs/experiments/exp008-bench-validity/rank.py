@@ -7,8 +7,9 @@
 那里还没有「对任意清单打分」的入口，见 mvp.md 给实现线的建议）：
   si_sdr（对主讲人轨）· estoi（对主讲人轨）· dnsmos_ovrl / sig / bak（无参考）·
   noise_att_db（无人声帧：输出功率 − 带噪功率，越低压得越多，对应 V-NR）·
-  spl_db（主讲人帧：输出在主讲人轨上的投影增益，对应 V-SPLVL；越接近 0 越好）·
-  nonowner_att_db（只有干扰者帧：输出 − 带噪，对应 V-INTF 的近似）
+  spl_db（主讲人帧，含重叠帧：输出在主讲人轨上的全局投影增益；**只是 V-SPLVL 的近似**——V-SPLVL 只用非重叠帧、逐帧累计、截到 ≤ 0；越接近 0 越好）·
+  nonowner_att_db（只有干扰者帧：输出 − 带噪，对应 V-INTF 的近似）·
+  noise_att_g_db / nonowner_att_g_db（同上两项的带护栏版：另要求混响后主讲人轨比其余低 ≥ 15 dB、前后 2 hop 也满足）
 
 用法：$PY docs/experiments/exp008-bench-validity/rank.py <build> [--systems a,b] [--jobs 8] [--limit N]
 输出：docs/experiments/exp008-bench-validity/results/<build>-scores.jsonl（进仓，只有数，没有音频）
@@ -277,6 +278,7 @@ def metrics(y, mix, owner, labels):
     y, mix, owner = y[:n], mix[:n], owner[:n]
     lab = np.array(labels)[: n // HOP]
     py, pm = hop_power(y), hop_power(mix)
+    lab = lab[: len(py)]
     nv = lab == 0
     oi = lab == 2
     ow = np.isin(lab, (1, 3))
@@ -285,6 +287,15 @@ def metrics(y, mix, owner, labels):
          "dnsmos_ovrl": ovrl, "dnsmos_sig": sig, "dnsmos_bak": bak,
          "noise_att_db": float(10 * np.log10(py[nv].mean() / pm[nv].mean())) if nv.sum() >= 10 else None,
          "nonowner_att_db": float(10 * np.log10(py[oi].mean() / pm[oi].mean())) if oi.sum() >= 10 else None}
+    # 带护栏版（实现者评审 P1-2：标签取自干轨，高 SNR / 强混响格里「无人声」帧混着主讲人混响尾）：
+    # 再要求该 hop 上（混响后的）主讲人轨功率比其余成分（mix − owner）低 ≥ 15 dB，且前后各 2 hop 也满足
+    po, pr = hop_power(owner), hop_power(mix - owner)
+    quiet = po <= pr * 10 ** (-15 / 10)
+    k = 2
+    qg = np.array([quiet[max(0, i - k): i + k + 1].all() for i in range(len(quiet))])[: len(lab)]
+    for name, base in (("noise_att_g_db", nv), ("nonowner_att_g_db", oi)):
+        sel = base & qg[: len(base)]
+        m[name] = float(10 * np.log10(py[: len(sel)][sel].mean() / pm[: len(sel)][sel].mean())) if sel.sum() >= 10 else None
     if ow.any():
         idx = np.repeat(ow, HOP)[:n]
         idx = np.concatenate([idx, np.zeros(n - len(idx), bool)])

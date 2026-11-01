@@ -24,6 +24,7 @@ EXP003 = HERE.parent / "exp003-offline-ab"
 METRICS = {  # 指标: 方向（+1 越大越好；-1 越小越好；0 = 越接近 0 越好）
     "si_sdr": 1, "estoi": 1, "dnsmos_ovrl": 1, "dnsmos_sig": 1, "dnsmos_bak": 1,
     "noise_att_db": -1, "nonowner_att_db": -1, "spl_db": 0,
+    "noise_att_g_db": -1, "nonowner_att_g_db": -1,
 }
 CEILING = {"oracle_irm"}
 VARIANTS = {"gtcrn_mix05"}
@@ -220,7 +221,7 @@ def main():
     (HERE / "results" / f"{build}-rankstat.json").write_text(json.dumps({"build": build, "S7": r7, "S8": r8}, ensure_ascii=False, indent=1))
     # 摘要：每个指标跨格的 τ_AB 与 split-half 中位数
     med = lambda v: sorted(v)[len(v) // 2] if v else None  # noqa: E731
-    print("S7（no_ceiling_variant，系统数 / τ_AB 中位 / 信度 A、B 中位 / 下界 > 0 的格数）")
+    print("S7（no_ceiling_variant，系统数 / τ_AB 中位 / 同样本量 τ_AB(半) 中位 / 信度 A、B 中位 / 下界 > 0 的格数 / 过 S7 的格数）")
     for metric in METRICS:
         xs = [r["no_ceiling_variant"] for r in r7 if r["metric"] == metric and "no_ceiling_variant" in r]
         if not xs:
@@ -228,7 +229,8 @@ def main():
         print(f"  {metric:16s} n={xs[0]['n_sys']:2d} τ_AB={med([x['tau_ab'] for x in xs])} "
               f"信度A={med([x['split_half_a'] for x in xs if x['split_half_a'] is not None])} "
               f"信度B={med([x['split_half_b'] for x in xs if x['split_half_b'] is not None])} "
-              f"下界>0: {sum(x['ci95'][0] > 0 for x in xs)}/{len(xs)}")
+              f"τ_AB(半)={med([x['tau_ab_half'] for x in xs if x['tau_ab_half'] is not None])} "
+              f"下界>0: {sum(bool(x['ci95']) and x['ci95'][0] > 0 for x in xs)}/{len(xs)} 过S7: {sum(x['s7_pass'] for x in xs)}/{len(xs)}")
     print("S7（neural，8 个神经模型，τ_AB 中位 / 信度 A、B 中位）")
     for metric in METRICS:
         xs = [r["neural"] for r in r7 if r["metric"] == metric and "neural" in r]

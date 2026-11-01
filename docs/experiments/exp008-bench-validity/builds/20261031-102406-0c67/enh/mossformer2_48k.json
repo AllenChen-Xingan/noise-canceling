@@ -23,7 +23,7 @@
  "runtime": "python 3.12.14 / torch 2.15.0 / torchaudio 2.11.1 / CPU, torch.set_num_threads(1) per process",
  "n_written": 0,
  "n_total": 348,
- "seconds": 16.4,
+ "seconds": 36.9,
  "runs": [
   {
    "cells": "all",
@@ -38,6 +38,43 @@
    "fails": [
     {
      "path": "A/S-SNR/c00_-5.0_mix.wav",
+     "error": "BrokenProcessPool('A process in the process pool was terminated abruptly while the future was running or pending.')"
+    }
+   ]
+  },
+  {
+   "cells": "all",
+   "limit": 6,
+   "jobs": 2,
+   "n_run": 6,
+   "n_fail": 6,
+   "seconds": 20.5,
+   "sec_per_seg_mean": null,
+   "max_abs_out": 0,
+   "max_abs_in": 0,
+   "fails": [
+    {
+     "path": "A/S-SNR/c00_-5.0_mix.wav",
+     "error": "BrokenProcessPool('A process in the process pool was terminated abruptly while the future was running or pending.')"
+    },
+    {
+     "path": "A/S-SNR/c00_0.0_mix.wav",
+     "error": "BrokenProcessPool('A process in the process pool was terminated abruptly while the future was running or pending.')"
+    },
+    {
+     "path": "A/S-SNR/c00_5.0_mix.wav",
+     "error": "BrokenProcessPool('A process in the process pool was terminated abruptly while the future was running or pending.')"
+    },
+    {
+     "path": "A/S-SNR/c00_10.0_mix.wav",
+     "error": "BrokenProcessPool('A process in the process pool was terminated abruptly while the future was running or pending.')"
+    },
+    {
+     "path": "A/S-SNR/c00_20.0_mix.wav",
+     "error": "BrokenProcessPool('A process in the process pool was terminated abruptly while the future was running or pending.')"
+    },
+    {
+     "path": "A/S-SNR/c01_-5.0_mix.wav",
      "error": "BrokenProcessPool('A process in the process pool was terminated abruptly while the future was running or pending.')"
     }
    ]
