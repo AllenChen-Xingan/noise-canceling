@@ -1,7 +1,7 @@
 # exp008 · benchmark 格子的效度检查（MVP）
 
 > 2026-10-31 · 手下 benchsynth（016 线，issue #41）。设计见 `docs/research/016_bench-synth/{benchmark,synth-standard,mvp}.md`。
-> 证据等级：【测】本机实测 ·【推】推断。**本目录目前只有数据侧检查（不跑降噪模型、不需要名额）；排名效度（S7 / S8）要系统阶梯，见 mvp.md 第二步。**
+> 证据等级：【测】本机实测 ·【推】推断。数据侧检查（S1–S3、S6）不用名额；排名效度（S7 / S8）用系统阶梯，第一轮结果见下文末节与 `016/mvp.md` 2.2。
 
 ## 跑了什么
 
@@ -44,6 +44,15 @@
 4. **S6 的三组统计量是自选的**〔建议值〕：没有证据说这三组距离小就等于「对降噪排名的影响小」；这正是 S7 / S8 要回答的
 5. 设备链 `laptop`（100 Hz 高通 + 7 kHz 低通）是假设，等待人拍板 1-3（回放重录）实测替换
 
-## 怎么接下一步
+## 排名效度（第一轮：12 系统 + 理想掩码，348 段，6287 s，0 错误）【测】
 
-见 `docs/research/016_bench-synth/mvp.md` 第二步：系统阶梯（≥ 12 个系统）跑同一批格子 → S7 生成器 A / B 排名一致 · S8 对 exp003 人耳的低功效检查。要名额。
+| 文件 | 做什么 |
+|---|---|
+| `rank.py` | 系统阶梯 × 每段 → Python 近似指标（SI-SDR · ESTOI · DNSMOS · 压噪 · 主讲人电平 · 邻座段压制）；第二轮系统读 `enh/` 先写好的增强音频（`--tag r2`） |
+| `enh/` | 第二轮系统的增强脚本与约定（`enh/README.md`） |
+| `rankstat.py` | S7 生成器 A / B 的 Kendall τ_b + bootstrap 区间 + split-half 信度；S8 对 exp003 人耳配对 |
+| `results/<build>-scores*.jsonl` · `-rankstat.json` | 分数与统计（只有数） |
+
+- **S7**：12 系统时 DNSMOS OVRL τ_AB 中位 0.85、信度 0.85；ESTOI 0.79；SI-SDR 0.55（15/29 格过）。只看 8 个神经模型：OVRL / SIG / ESTOI 0.79，其余 0.5–0.64，信度一起掉 → 瓶颈是每格 6 段
+- **S8**：合成格预测 exp003 人耳配对一致率 0.25–0.38（48 对、3 个系统），片段自身 0.48–0.56；人耳 GTCRN > FE-M > DPDF-2，指标正好相反
+- 读法与局限见 `docs/research/016_bench-synth/mvp.md` 2.2
