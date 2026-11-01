@@ -1,6 +1,6 @@
 {
  "id": "webrtc_ns18",
- "family": "C",
+ "family": "C*",
  "causal": true,
  "sr_model": 16000,
  "weights": [],

@@ -35,7 +35,7 @@ SYSTEMS = {
         notes="DenoiseState::process_frame，输入按 ±32768 量级缩放；权重编进源码（RNNoise 2017 原始模型）；外面 resample_poly 16→48→16 k",
     ),
     "webrtc_ns18": dict(
-        family="C", sr_model=16000, crate="webrtc_ns_raw", bin="exp008-webrtc-ns-raw", args=["18"],
+        family="C*", sr_model=16000, crate="webrtc_ns_raw", bin="exp008-webrtc-ns-raw", args=["18"],
         delay=None,  # 由 delay 探针定，见 DELAY_NS
         code_source="resources/sonora/crates/sonora-ns（dignifiedquire/sonora 0.2.0，git 373f1d73fd4429ef38dd8854b3162f40e0eb7eb0）",
         license="BSD-3-Clause", license_source="resources/sonora/LICENSE",
@@ -43,7 +43,7 @@ SYSTEMS = {
         notes="NoiseSuppressor::with_level(K18dB)，单频带 16 k，每帧 analyze→process（同 sonora capture 路径），输入按 ±32768 量级",
     ),
     "webrtc_ns6": dict(
-        family="C", sr_model=16000, crate="webrtc_ns_raw", bin="exp008-webrtc-ns-raw", args=["6"],
+        family="C*", sr_model=16000, crate="webrtc_ns_raw", bin="exp008-webrtc-ns-raw", args=["6"],
         delay=None,
         code_source="resources/sonora/crates/sonora-ns（dignifiedquire/sonora 0.2.0，git 373f1d73fd4429ef38dd8854b3162f40e0eb7eb0）",
         license="BSD-3-Clause", license_source="resources/sonora/LICENSE",
