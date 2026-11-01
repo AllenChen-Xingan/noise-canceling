@@ -150,7 +150,7 @@ def part_a(ds, rng):
         okb = ok & big
         ab, nb = rate(okb, hit)
         fin = np.isfinite(x)  # 上游 .scp 偶有 nan（URGENT 2024 的 distill_mos），相关只用有限值
-        systems = sorted(set(ds.sys))
+        systems = sorted(s for s in set(ds.sys) if fin[ds.sys == s].any())  # 整个系统缺分就不计
         sx = [ds.mos[(ds.sys == s) & fin].mean() for s in systems]
         sy = [x[(ds.sys == s) & fin].mean() for s in systems]
         out[p] = {"pairs": n, "agree": r3(a), "ci95": cluster_ci(ok, hit, ds.psrc, rng),

@@ -286,9 +286,9 @@
      "big_gap_agree": 0.87,
      "nan_clips": 300,
      "utt_srcc": 0.757,
-     "sys_srcc": NaN,
-     "sys_ktau": NaN,
-     "n_systems": 23
+     "sys_srcc": 0.772,
+     "sys_ktau": 0.662,
+     "n_systems": 22
     },
     "utmos": {
      "pairs": 70361,
