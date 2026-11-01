@@ -55,10 +55,9 @@ def score(v, direction):
 
 
 def load(build):
-    """第一轮 + 第二轮（若有 -scores-r2.jsonl）合并；同一 (段, 系统) 只留一条，后来的覆盖先来的。"""
+    """第一轮 + 第二轮（-scores-r2*.jsonl，按系统分批）合并；同一 (段, 系统) 只留一条，后来的覆盖先来的。"""
     rows = {}
-    for tag in ("", "-r2"):
-        p = HERE / "results" / f"{build}-scores{tag}.jsonl"
+    for p in [HERE / "results" / f"{build}-scores.jsonl"] + sorted((HERE / "results").glob(f"{build}-scores-r2*.jsonl")):
         if p.exists():
             for l in open(p):
                 r = json.loads(l)
