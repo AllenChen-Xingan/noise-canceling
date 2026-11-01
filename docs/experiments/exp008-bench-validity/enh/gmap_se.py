@@ -75,7 +75,11 @@ RECORD = {
     "code_source": "resources/G-MaP-SE（models/model_g_map_se.py、dataset.py、env.py 只读导入；推理流程照 inference_g_map_se.py）",
     "notes": "无注册：说话人嵌入取自带噪输入本身（官方推理即如此，MPNet.forward 内部对 noisy_wav 跑 ECAPA），"
              "未使用 owner 干净轨或任何额外同说话人素材。训练数据 VoiceBank+DEMAND（窄域，I 级）。"
-             "单位 RMS 归一后推理再还原电平（照官方）。每个工作进程载一次权重，各段独立前向（无跨段状态）。",
+             "单位 RMS 归一后推理再还原电平（照官方）。每个工作进程载一次权重，各段独立前向（无跨段状态）。"
+             "怪现象：本格上表现很差（冒烟 S-SNR c00：20 dB 混合 SI-SDR 18.7 → 输出 2.2；-5 dB → -10.5），且压低电平。"
+             "管线自检：VBD 样例 + 5 dB 白噪 → 5.0→12.8 / 5.0→11.1 dB，说明加载与前后处理无误；"
+             "诊断（仅诊断，不作注册）：把 owner 轨本身喂入，输出对 owner 仅 12.2 dB，owner+5 dB 白噪 → 8.6 dB——"
+             "推测为 VBD 窄域训练对本格的房间/设备染色失配（假设）。CPU 争用下每段约 100 s。",
 }
 
 

@@ -79,7 +79,10 @@ RECORD = {
     "code_source": "resources/urgent2026_challenge_track1/baseline_code/models/bsrnn.py（结构读懂后自写于本脚本）+ pip espnet==202611 的 STFTEncoder/STFTDecoder/BSRNNSeparator（--no-deps，另装 torch_complex、typeguard）",
     "notes": "原生多采样率模型，16 k 直接输入（STFT 320/160，161 频点，频带切分按输入频点截断，与官方 inference 同路径）。"
              "ckpt hparams: num_channel=196, num_layer=6；state_dict strict 加载通过。"
-             "未做官方 inference.py 的峰值归一 0.9。每个工作进程载一次权重，各段独立前向（模型无跨段状态）。",
+             "未做官方 inference.py 的峰值归一 0.9。每个工作进程载一次权重，各段独立前向（模型无跨段状态）。"
+             "怪现象（冒烟实测）：输出 RMS 约为输入的 3–6 倍（-26 dBFS 输入 → 约 -10 dBFS 输出）；对输入电平敏感，"
+             "同一段乘 0.25/1/4 的 SI-SDR：c00_20dB 6.6/14.0/15.9，c00_-5dB -27.3/-22.0/-19.9（-5 dB cafe 段锁错目标）。"
+             "按约定输入原样喂入、不做电平预归一。",
 }
 
 if __name__ == "__main__":
