@@ -1,0 +1,31 @@
+[package]
+name = "vdn-eval"
+description = "评测：verifier（CI 层纯 DSP · QA 层要模型）、任务集（回归 / 能力 / 防作弊探针）、定标、报告。和实时走同一份处理代码（vdn-engine + vdn-dsp）"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "vdn-eval"
+path = "src/main.rs"
+
+[dependencies]
+vdn-types.workspace = true
+vdn-dsp.workspace = true
+vdn-engine.workspace = true
+vdn-models.workspace = true
+# DNSMOS（QA 层）。拆出 vdn-backend-ort 后改走后端（specs/rust/architecture.md §2.3）
+ort.workspace = true
+hound.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）。离线评测工具：C 档
+[package.metadata.vdn]
+tier = "C"
+unsafe = false
+forbid = ["cpal", "coreaudio-rs", "coreaudio-sys", "objc2"]
