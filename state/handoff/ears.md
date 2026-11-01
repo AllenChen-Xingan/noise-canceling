@@ -23,3 +23,5 @@
 ## 流水
 - 读交代、common、协议、intent、待拍板、D44/D48、exp007 calib → 作者一致率基线：DNSMOS OVRL 0.48 [0.26,0.70]（48 对）
 - 报到大总管（noise-canceling-c4）→ 给 exp009；名额在 benchsynth 手里
+- 起 workflow wf_ad512269-bb9（7 调研 + 1 批评，笔记写 docs/research/017_more-ears/notes/）
+- 摸本机：DNSMOS onnx（_tmp/exp002-venv）、NISQA 权重（resources/NISQA/weights）、torch venv（_tmp/exp008-torch-venv，benchsynth 的，只读借用或自建 exp009-venv）；exp007 定标法在 src/eval/src/calib.rs（同屏配对、按屏聚类 bootstrap、种子 20261030）——exp009 照此口径
