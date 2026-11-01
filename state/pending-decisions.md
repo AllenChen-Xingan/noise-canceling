@@ -55,7 +55,7 @@
 | 4-1 | 「工业级」在本项目指什么（听测人数、要不要外部听众；众包与 D39 的关系：本机现场可、网上众包不可） | 见出处 | 只有作者一人 | `docs/research/012_eval-standards/decision.md` 末节（9 题）+ rubric 修改清单 R1–R14 |
 | 4-2 | 人耳听测改为 P.835 三量表 + 固定锚点 | 改 | 维持现页 | 012 升级清单 P0 |
 | 4-3 | rubric 权重 · 耳朵与机器怎么合 · V8 口径 · 下一轮怎么听 | 见出处 | 见出处 | `docs/research/007_denoise-rubric/decision.md` |
-| ~~4-4~~ ✅ D62 | ~~真实数据集首批下载约 20 GB · 签 ECHI · CHiME-4~~ → 人定：开发阶段不追真实录音，不下载、不签（2026-11-01） | — | — | `docs/research/014_real-datasets/decision.md` 第六节 |
+| ~~4-4~~ ✅ D65 | ~~真实数据集下载~~ → 人定：全量约 40 GB（不含 ECHI、CHiME-4），等要开始训练 / 合成时再下（2026-11-01）；ECHI 签不签、CHiME-4 买不买仍未定 | — | — | `docs/research/014_real-datasets/decision.md` 第六节 |
 | 4-6 | eval（exp007）：GTCRN 权重（535 KB，MIT）进仓让 CI 跑真模型 · 能力任务何时「毕业」进回归集 · 各 verifier 的建议阈值 · 下轮听测导出音频 + P.835 三量表 | 进仓 · 照 Anthropic 文章「接近 100% 才毕业」· 先用建议值 · 改三量表 | 不进仓（CI 只跑 ref）| `docs/experiments/exp007-eval-suite/README.md` 末尾 |
 | 4-7 | 「背景保留」先怎么定：A 按场景固定（咖啡馆 −12 dB）· B「我的配置」给「背景多 / 少」旋钮，默认 −12 dB · C 等下一轮听测再定 | B + C | A | `docs/experiments/human-prefs/scene-defaults.md` 末节 #1（prefs，PR #43） |
 | 4-8 | 下一轮盲听专测「背景保留量」（同段只改下限 −6 / −12 / −20 / −30 dB，4 段 × 4 档约 10 分钟，加问「这段环境本来安静吗」） | 测 | 不测 | 同上 #2 |
