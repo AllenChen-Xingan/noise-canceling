@@ -39,6 +39,7 @@
 - 调研必须用 workflow / deep research 做，要非常完整（人定 2026-10-29，原话：「需要用 workflow来做 researrch deep research 来弄，就是这个研究需要非常完整」）
 - 一切走提交 · issue · PR（人定 2026-10-30，CLAUDE.md 铁律 15）：每条线一个分支 + worktree（人 2026-10-30 追加「现在必须开分之 调研分支」）：research/005-pse（Closes #1）· exp/003-offline-ab（Closes #2），各自 PR、CI 过后自己合并
 - 提交由 hook 自动做（人定 2026-10-29，CLAUDE.md 铁律 14）；手下不做 git 写操作
+- **大总管同时只处理 2–4 件事（实体）**（人定 2026-10-31，原话：「记住我们一个大总管处理最多只有2-4个实体 / 如果超过，那我们就吧事情记下来，后面在处理」）：在跑的线 + 正在和人讨论的主题合计不超过 4；超出的写进 `state/backlog.md`，当前事收尾后再从那里取
 
 ## 名额
 
@@ -46,13 +47,14 @@
 |---|---|
 | 重编译 / 全量测试（1 个） | benchsynth（exp008 第二轮：装 torch + 补 Hush · DFN3 · RNNoise · WebRTC NS · FRCRN · MossFormer 系 · BSRNN · G-MaP-SE 重跑排名） |
 
-排队：ears（exp003 音频重生成 + SCOREQ / Distill-MOS / DNSMOS 打分，已批）→ 之后 judgeloop / engine 按申请先后
+排队：ears（exp003 音频重生成 + SCOREQ / Distill-MOS / DNSMOS 打分，已批）→ engine（venv：torch + coremltools + mlx + onnxruntime，< 300 MB；exp010 基准）→ judgeloop
 
 等人许可的弹窗 / 长时间前台运行：benchsynth 跑 Hush 预编译 dylib（Hush ×2 + DFN3）被其会话自动权限检查拦下（Code from External）；人的批准经大总管转达不算该会话授权 → 需人在 tmux vdn 的 benchsynth 窗口直接批准，否则记缺口
 
 ## 进度板
 
 进度（HH:MM）
+- engine workflow 已起（7 代理）：Core ML · BNNS Graph（macOS 15+ 实时音频 CPU 推理，号称零分配）· MLX · 纯 Rust（candle / burn / tract / Accelerate / Metal）· 公开实测 · 五类模型盘点 + 1 核实员；自写 GTCRN Rust 先行
 - judgeloop workflow 已起（7 代理）：R1 评分模型小型化 · R2 评分当奖励 / 在线调参先例 · R3 声音→效果参数与助听器在线偏好学习 · R4 本机微调风险与护栏 · R5 本机盘点 + 2 怀疑派
 - benchsynth 自审改结论：S7「自身稳」被打掉（错配格 τ 也 0.82，无区分力）→ 改交互一致性 S7b：SNR / 噪声 / SIR 轴 A/B 一致（r 0.5–0.9，p ≤ 0.04），混响轴不一致；S8「反向」降为「判不了」；红队 P0：exp008 素材与 exp006 训练段重叠，项目模型上阶梯前要换素材池；D51 合成好坏配对 P1–P7 已写；第二轮 RNNoise / WebRTC 出音频，torch 组在跑（负载 34）；engine 给 exp010、judgeloop 给 exp011
 - 人定 D52（评分模型放到用户电脑上，调节模型取代场景查表，本机微调）· D53（推理必须 Core ML / MLX 或自写 Rust，推翻 009）→ 派 judgeloop（018 #44）· engine（019 #45）
