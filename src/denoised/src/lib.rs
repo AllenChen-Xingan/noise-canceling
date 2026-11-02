@@ -233,15 +233,19 @@ mod tests {
 
     #[test]
     fn identity_pipeline_latency() {
-        let p = identity_pipeline().unwrap();
+        let p = identity_pipeline(None).unwrap();
         assert_eq!(Processor::latency_samples(&p), 863);
+        let p = identity_pipeline(Some(96)).unwrap();
+        assert_eq!(Processor::latency_samples(&p), 768);
+        assert!(identity_pipeline(Some(100)).is_err());
     }
 
     /// Worker + Forwarder 经同一条进程内总线：直通管线下输出 = 输入延迟 L_total（重采样有轻微纹波，按相关判）
     #[test]
     fn worker_and_forwarder_align_end_to_end() {
-        let (block, lead) = (480, 1440);
-        let mut w = Worker::new(identity_pipeline().unwrap(), block);
+        // IO 块 480，降噪块 96（定块长管线）
+        let (block, lead, dblock) = (480, 1440, 96);
+        let mut w = Worker::new(identity_pipeline(Some(dblock)).unwrap(), dblock);
         let l_total = w.l_total(lead);
         let bus = heap(l_total);
         w.prime(&bus, lead);
@@ -250,7 +254,7 @@ mod tests {
         let mut y = vec![0.0; x.len()];
         for (c, yc) in x.chunks(block).zip(y.chunks_mut(block)) {
             forward(&mut f, &bus, c);
-            w.step(&bus);
+            while w.step(&bus) == Step::Block {}
             assert_eq!(bus.ring(RingId::Out).pop(yc), c.len());
         }
         assert_eq!(f.stats().proc_underrun, 0);
