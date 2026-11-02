@@ -31,7 +31,7 @@
 | 分轨 | 只有 `<id>_clean.wav` + `<id>_noisy.wav`（邻座干扰混在噪声里）；【已核改】无目标说话人的 36 段**没有** `_clean.wav`（目录 524 个文件 = 244×2 + 36×1） | `mix / owner / interf / noise` 四轨，float32 |
 | 格档名 | 每段 `fine`（7 类：traffic 58 · babble 52 · neighbor 43 · quiet 39 · music 36 · clatter 27 · hvac 25）、`user`、`device`（【已核改】取值是 `none` 166 / `bt_narrow` 55 / `clip` 59，没有 `normal`）、`snr_db`、`rt60_mid` | 目录 `<A|B>/<格>/c<NN>_<档>_<轨>.wav`；格 = S-SNR（−5…20）· S-NOISE（stationary/cafe/babble/clatter/traffic/music）· S-RT60（car/office/cafe/hall）· S-SIR（none,20…−6）· M-SNRxNOISE · M-SIRxSNR |
 | 真值 | `truth.jsonl`（场景真值，可直接喂路由表）；另有 Rust 场景特征 `feat_test_final.jsonl`（每 0.5 s 一行、35 维 `feat`） | `truth.jsonl` 每段 `cond` + 逐 hop（256）四类标签 0 无人声 / 1 主讲人 / 2 干扰 / 3 重叠 + 素材出处 + PCM 哈希 |
-| 出处 | 【本机】`J/docs/experiments/exp006-scene-sim/builds/20261030235558-fed2/{build,truth}.jsonl`；音频 `M/_tmp/20261031-exp006/20261030235558-fed2/test/`；README §1 表 `J/…/exp006-scene-sim/README.md:12-35` | 【本机】`B/docs/experiments/exp008-bench-validity/builds/20261031-102406-0c67/{manifest.json,truth.jsonl}`；`cells.py:150-160`（标签规则）；音频 `M/_tmp/exp008/20261031-102406-0c67/` |
+| 出处 | 【本机】`J/docs/experiments/exp006-scene-sim/builds/20261030235558-fed2/{build.json,truth.jsonl}`【已核改：是 build.json】；特征 `M/_tmp/20261031-exp006/20261030235558-fed2/feat_test_final.jsonl`（仓外，5600 行 = 280 × 20）；音频 `M/_tmp/20261031-exp006/20261030235558-fed2/test/`；README §1 表 `J/…/exp006-scene-sim/README.md:12-35` | 【本机】`B/docs/experiments/exp008-bench-validity/builds/20261031-102406-0c67/{manifest.json,truth.jsonl}`；`cells.py:150-160`（标签规则）；音频 `M/_tmp/exp008/20261031-102406-0c67/` |
 | 坑 | fed2 **从没参与任何调参**（README:53）；但修音预设是在 44df 上初调的 | **exp008 不在 main、远端也没有这条分支**（只在本机 benchsynth worktree）；S-NOISE 没有 quiet / neighbor 类，映不全路由表；合成杯碟 / 音乐与真实录音统计不对齐（README S6 表）；A 的素材与 exp006 训练集重叠（局限 6） |
 
 **意外收获**：exp006 调参集 44df 的 244 段已缓存**原始 GTCRN 输出**（`*_base.wav`，Python 流式、未过 Engine）、带噪、FE-M 路由混合、修音各版——`M/_tmp/20261031-exp006/20261030214530-44df/ab_work/raw/`（1708 个文件，899 MB）【本机】。
@@ -42,7 +42,7 @@
 |---|---|---|---|
 | GTCRN | Python `exp003/enhance.py` `stream()`（ORT，输出与输入逐样本对齐）；或 Rust `vdn denoise`、vdn-eval `SystemKind::Gtcrn` | —（只跑一次） | 【源码】`J/docs/experiments/exp003-offline-ab/enhance.py:136, 164`；`J/docs/experiments/exp006-scene-sim/offline_ab.py:126-157` |
 | 下限 / 快开慢关 | `out = w + m·(d − w)`，`m` 由 `OpenCloseEnvelope` 按**模型输出 wet** 的 hop 能量判；`apply_params` 只写 floor/open/detect/release/hangover | **能**：只依赖 wet 与延迟对齐的 dry | 【源码】`J/src/engine/src/engine.rs:7-8, 77-83, 351-378`；`J/src/dsp/src/envelope.rs:82-98` |
-| strength | 定义「输出 = 原声 + strength·(降噪 − 原声)」，**全仓还没有实现**（只在 types / memory / policy 出现） | **能**（纯湿干比）；与下限的先后顺序未定 | 【源码】`J/src/types/src/params.rs:40, 117-150`；`engine.rs:76` |
+| strength | 定义「输出 = 原声 + strength·(降噪 − 原声)」，**全仓还没有实现**（只在 types / memory / policy 出现；【已核改】另有 `scene/src/mirror.rs:107, 119` 一个同名字段与 `engine.rs:76` 注释，均无混合计算） | **能**（纯湿干比）；与下限的先后顺序未定 | 【源码】`J/src/types/src/params.rs:40, 117-150`；`engine.rs:76` |
 | tone 修音 | `polish_offline <dry> <wet> <out> <tone|时间线> [--params smooth,floor,comfort,demuffle,agc]`，对 dry/wet 各做一次 512/256 STFT 模拟「挂在模型 STFT 上」 | **能**：exp006 就是对缓存 GTCRN 输出跑的 | 【源码】`J/src/polish/examples/polish_offline.rs:1-8, 70-85`；预设表 `J/src/polish/src/params.rs:50-86` |
 | model | GTCRN / FE-M 二选一 | 不能「叠加」，FE-M 要另跑一次 | `J/src/types/src/params.rs:11` |
 | vdn-cli | `vdn denoise` 有 `--floor-db --open-db --hangover-ms --release-ms --no-floor…`，**无 `--detect-db`、无 strength**，每次重跑模型 | 否 | 【源码】`J/src/cli/src/main.rs:64-98, 235-245` |
@@ -62,7 +62,7 @@
 | V-EAT-ASR 吃字 | `:277`；`qa/mod.rs:101-150` | 干净参考的 ASR 转写当参考；Δ(删+替) | L0 |
 | V-DNSMOS | `:290` | 无参考；过线 = 不比带噪 OVRL 差 | L0 |
 
-级别正本 `J/src/eval/suite/levels.json:5-80`【源码】。**命令行单独调用**：只有 `dnsmos` 能对任意 wav 跑；其余只能经 `vdn-eval ci|qa` 跑任务集（`main.rs:1-13, 374-382`），被测系统固定为 `SafetyConfig::default()`（`system.rs:249-274`），**不能注参数、不能吃外部 wav 对**。但任务集支持 `real.kind = "exp005"`：读一个 clips.json，每段 `files.{mix,owner,interf,noise}.{file,sha256}`，sha256 可空（`runner.rs:248-305`）——**exp008 正好是这四轨，换个清单就能进**【源码】。
+级别正本 `J/src/eval/suite/levels.json:5-80`【源码】。**命令行单独调用**：只有 `dnsmos` 能对任意 wav 跑；其余只能经 `vdn-eval ci|qa` 跑任务集（`main.rs:1-13, 374-382`），被测系统固定为 `SafetyConfig::default()`（`system.rs:249-274`），**不能注参数、不能吃外部 wav 对**。但任务集支持 `real.kind = "exp005"`：读一个 clips.json，每段 `files.{mix,owner,interf,noise}.{file,sha256}`，sha256 可空（`runner.rs:248-305`）——exp008 正好是这四轨，但**不是「换个清单就能进」**【已核改】【源码】：① 任务集是 `include_str!` 编进二进制的（`suite.rs:16-17`），加任务要改 `suite/qa.json` 并重编；② 每个 task 只指一个 `clip`（`suite.rs:85-89`），348 段 = 348 条 task；③ exp008 清单字段是 `path` / `pcm_sha256`，loader 要 `file` / `sha256`，且后者是整文件 `shasum`（`wav.rs:45-53`）不是 PCM 哈希，照搬会校验失败，只能留空或重算；④ 被测系统仍固定 `SafetyConfig::default()`，所以这条路只能评默认参数，不能扫参。
 
 ### 5 · 耗时参照
 
