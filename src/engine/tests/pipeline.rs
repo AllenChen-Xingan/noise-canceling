@@ -112,7 +112,10 @@ fn ledger_total_equals_latency_samples() {
     let p = Pipeline::new(e, SR).unwrap();
     let want_ms = p.latency_samples() as f64 * 1000.0 / f64::from(SR);
     let got = p.latency_ledger().total_ms();
-    assert!((got - want_ms).abs() < 1e-9, "账 {got} ms ≠ 声明 {want_ms} ms");
+    assert!(
+        (got - want_ms).abs() < 1e-9,
+        "账 {got} ms ≠ 声明 {want_ms} ms"
+    );
     assert_eq!(p.latency_samples(), 480 - 1 + 96 + 352 * 3);
 }
 
@@ -169,7 +172,11 @@ fn mode_switch_fades_over_one_hop_and_keeps_alignment() {
     // 第 k 个切换后样本的原声占比 = (k+1)/hop
     for k in [0usize, 100, 383, 700, hop - 1] {
         let want = ((k + 1) as f32 / hop as f32).min(1.0);
-        assert!((y[sw + k] - want).abs() < 1e-4, "k={k} y={} want={want}", y[sw + k]);
+        assert!(
+            (y[sw + k] - want).abs() < 1e-4,
+            "k={k} y={} want={want}",
+            y[sw + k]
+        );
     }
     assert!(y[sw + hop..].iter().all(|v| *v == 1.0));
     assert!(sw > l); // 切换时原声已经到了

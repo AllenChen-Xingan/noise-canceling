@@ -6,9 +6,9 @@
 
 use std::path::Path;
 
-use vdn_backend_ort::ort;
 use ort::session::{HasSelectedOutputs, OutputSelector, RunOptions, Session};
 use ort::value::Tensor;
+use vdn_backend_ort::ort;
 use vdn_dsp::{StreamingStft, window};
 use vdn_types::{Model, ModelError};
 

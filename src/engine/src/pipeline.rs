@@ -20,8 +20,8 @@
 
 use core::fmt;
 
-use vdn_dsp::resample::{self, Decimator3, FACTOR, Interpolator3};
 use vdn_dsp::DelayLine;
+use vdn_dsp::resample::{self, Decimator3, FACTOR, Interpolator3};
 use vdn_types::{Basis, LatencyItem, LatencyLedger, Model};
 
 use crate::engine::Engine;
@@ -115,8 +115,7 @@ impl<M: Model> Pipeline<M> {
         let hop_model = engine.hop();
         let hop_io = hop_model * FACTOR;
         let prefill = hop_io - 1;
-        let latency =
-            prefill + 2 * resample::delay_high() + engine.latency_samples() * FACTOR;
+        let latency = prefill + 2 * resample::delay_high() + engine.latency_samples() * FACTOR;
         let mut p = Self {
             io_rate,
             hop_io,

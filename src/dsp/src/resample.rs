@@ -299,7 +299,9 @@ mod tests {
             .collect();
         let y = round_trip(&x, 768);
         let corr = |lag: usize| -> f32 { (4000..18000).map(|i| y[i] * x[i - lag]).sum() };
-        let best = (80..112).max_by(|&a, &b| corr(a).total_cmp(&corr(b))).unwrap();
+        let best = (80..112)
+            .max_by(|&a, &b| corr(a).total_cmp(&corr(b)))
+            .unwrap();
         assert_eq!(best, 2 * delay_high());
     }
 
