@@ -220,19 +220,21 @@ impl Interpolator3 {
     /// `output.len() == input.len() * 3`（调用方的 bug：debug 下 panic；release 下多出的输出清零，不 panic）。
     pub fn process(&mut self, input: &[f32], output: &mut [f32]) {
         debug_assert_eq!(input.len() * FACTOR, output.len());
-        let mut chunks = output.chunks_exact_mut(FACTOR);
+        let (triples, rest) = output.as_chunks_mut::<FACTOR>();
+        rest.fill(0.0);
+        let (phases, _) = self.poly.as_chunks::<PHASE_TAPS>();
+        let mut triples = triples.iter_mut();
         for &x in input {
-            let Some(chunk) = chunks.next() else { break };
+            let Some(chunk) = triples.next() else { break };
             self.hist.push(x);
             let w = self.hist.window();
-            for (o, h) in chunk.iter_mut().zip(self.poly.chunks_exact(PHASE_TAPS)) {
+            for (o, h) in chunk.iter_mut().zip(phases) {
                 *o = dot(h, w);
             }
         }
-        for c in chunks.by_ref() {
+        for c in triples {
             c.fill(0.0);
         }
-        chunks.into_remainder().fill(0.0);
     }
 }
 
