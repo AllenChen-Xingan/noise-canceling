@@ -96,7 +96,7 @@ const _: () = {
     assert!(HEADER_BYTES == 128 + 3 * 128);
     assert!(align_of::<Header>() == 64);
     // 样本槽紧跟头部，对齐到 AtomicU32
-    assert!(HEADER_BYTES % align_of::<AtomicU32>() == 0);
+    assert!(HEADER_BYTES.is_multiple_of(align_of::<AtomicU32>()));
     // AtomicU32 / AtomicU64 与 u32 / u64 同大小同对齐（跨进程、跨语言读同一块内存的前提）
     assert!(size_of::<AtomicU32>() == 4 && align_of::<AtomicU32>() == 4);
     assert!(size_of::<AtomicU64>() == 8 && align_of::<AtomicU64>() == 8);
