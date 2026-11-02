@@ -263,10 +263,10 @@ impl<M: Model> Pipeline<M> {
         }
         self.pop(y);
 
-        let dry = self.dry.get_mut(..k).unwrap_or(&mut []);
-        self.dry_line.process(x, dry);
         let target = self.fade_target();
         let full = self.hop_io;
+        let dry = self.dry.get_mut(..k).unwrap_or(&mut []);
+        self.dry_line.process(x, dry);
         for (o, d) in y.iter_mut().zip(dry.iter()) {
             if self.fade_pos < target {
                 self.fade_pos += 1;
