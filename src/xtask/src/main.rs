@@ -5,12 +5,17 @@
 //! - `cargo run -p xtask -- eval ci|qa [选项…]`：转调 `cargo run -p vdn-eval -- ci|qa`（xtask 不依赖任何 vdn crate，只起子进程）。
 //!   `eval ci` = CI 层（纯 DSP、无模型、门禁不过退出码 1）；`eval qa` = 本机 QA 层（ASR、DNSMOS、真实片段）
 //!
-//! 两样都随 `cargo test -p xtask` 跑（照 rust-analyzer：架构规则即测试）。不依赖任何 vdn crate。
+//! - `cargo run -p xtask -- ci [--fail-fast]`：一条闸门——fmt · clippy · test · tidy · check-deps（· cargo-deny，装了才跑），见 `ci.rs`
+//! - `cargo run -p xtask -- todo`：按 crate 列出 `#[ignore = "待实现…"]` 与 `Unimplemented`
+//!
+//! tidy 与 check-deps 都随 `cargo test -p xtask` 跑（照 rust-analyzer：架构规则即测试）。不依赖任何 vdn crate。
 
 #![forbid(unsafe_code)]
 
+mod ci;
 mod deps;
 mod tidy;
+mod todo;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -59,33 +64,53 @@ fn eval(rest: &[String]) -> ExitCode {
     }
 }
 
+pub(crate) fn run_check_deps() -> bool {
+    match deps::check() {
+        Ok(p) => report("check-deps", &p) == ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("check-deps 跑不起来：{e}");
+            false
+        }
+    }
+}
+
+pub(crate) fn run_tidy() -> bool {
+    match tidy::check() {
+        Ok(t) => {
+            println!("NRT 例外（allow）共 {} 处", t.nrt_allows);
+            for n in &t.notes {
+                println!("注：{n}");
+            }
+            report("tidy", &t.problems) == ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("tidy 跑不起来：{e}");
+            false
+        }
+    }
+}
+
+fn exit(ok: bool) -> ExitCode {
+    if ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let cmd = args.first().cloned().unwrap_or_default();
     match cmd.as_str() {
         "eval" => eval(&args[1..]),
-        "check-deps" => match deps::check() {
-            Ok(p) => report("check-deps", &p),
-            Err(e) => {
-                eprintln!("check-deps 跑不起来：{e}");
-                ExitCode::FAILURE
-            }
-        },
-        "tidy" => match tidy::check() {
-            Ok(t) => {
-                println!("NRT 例外（allow）共 {} 处", t.nrt_allows);
-                for n in &t.notes {
-                    println!("注：{n}");
-                }
-                report("tidy", &t.problems)
-            }
-            Err(e) => {
-                eprintln!("tidy 跑不起来：{e}");
-                ExitCode::FAILURE
-            }
-        },
+        "ci" => ci::run(&args[1..]),
+        "todo" => todo::run(),
+        "check-deps" => exit(run_check_deps()),
+        "tidy" => exit(run_tidy()),
         _ => {
-            eprintln!("用法：cargo run -p xtask -- <check-deps | tidy | eval ci|qa>");
+            eprintln!(
+                "用法：cargo run -p xtask -- <ci [--fail-fast] | todo | check-deps | tidy | eval ci|qa>"
+            );
             ExitCode::FAILURE
         }
     }
@@ -97,6 +122,17 @@ mod tests {
     fn check_deps_passes() {
         let p = super::deps::check().expect("cargo metadata");
         assert!(p.is_empty(), "{p:#?}");
+    }
+
+    #[test]
+    fn todo_finds_known_markers() {
+        let hits = super::todo::collect().expect("todo");
+        assert!(
+            hits.iter()
+                .any(|h| h.krate == "vdn-shm" && h.text.contains("待实现：loom")),
+            "vdn-shm 的 loom 占位测试应被统计到"
+        );
+        assert!(hits.iter().all(|h| h.krate != "xtask"));
     }
 
     #[test]

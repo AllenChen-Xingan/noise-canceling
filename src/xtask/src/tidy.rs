@@ -65,7 +65,7 @@ pub struct Tidy {
     pub notes: Vec<String>,
 }
 
-fn rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
+pub(crate) fn rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(rd) = fs::read_dir(dir) else { return };
     let mut entries: Vec<PathBuf> = rd.filter_map(|e| e.ok().map(|e| e.path())).collect();
     entries.sort();
@@ -498,7 +498,10 @@ mod tests {
             1,
             "中间隔了代码不算"
         );
-        assert!(safety("unsafe fn f() {}\nunsafe extern \"C\" {}\n").is_empty(), "声明不算块");
+        assert!(
+            safety("unsafe fn f() {}\nunsafe extern \"C\" {}\n").is_empty(),
+            "声明不算块"
+        );
         assert!(safety("let not_unsafe = 1; my_unsafe {\n").is_empty());
     }
 
