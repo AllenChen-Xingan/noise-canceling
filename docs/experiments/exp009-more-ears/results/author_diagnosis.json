@@ -70,5 +70,50 @@
    "distill_mos": 2.84,
    "OVRL": 2.81
   }
+ },
+ "distinct_pairs": 20,
+ "screens": 9,
+ "author_vs_on_distinct": {
+  "scoreq": {
+   "agree": 0.4,
+   "n": 20
+  },
+  "distill_mos": {
+   "agree": 0.6,
+   "n": 20
+  },
+  "OVRL": {
+   "agree": 0.526,
+   "n": 19
+  }
+ },
+ "machine_vs_machine_on_distinct": {
+  "scoreq~distill_mos": {
+   "agree": 0.8,
+   "n": 20
+  },
+  "scoreq~OVRL": {
+   "agree": 0.737,
+   "n": 19
+  },
+  "distill_mos~OVRL": {
+   "agree": 0.737,
+   "n": 19
+  }
+ },
+ "scoreq_disagreements_by_model_pair_distinct": {
+  "dpdfnet2~gtcrn": 5,
+  "fastenhancer_m~gtcrn": 4,
+  "dpdfnet2~fastenhancer_m": 3
+ },
+ "isomorphic_reference_scoreq": {
+  "design": "一个 CHiME-7 固定听众 × 9 屏 × 同一组 3 个条件的 3 对（去重计数），剔平局，4000 次，种子 20261030",
+  "valid_sims": 4000,
+  "p2.5": 0.389,
+  "p50": 0.722,
+  "p97.5": 0.952,
+  "author_distinct_agree": 0.4,
+  "share_le_author": 0.031,
+  "author_below_p2.5": false
  }
 }
