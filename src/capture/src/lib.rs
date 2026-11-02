@@ -378,7 +378,11 @@ impl Forwarder {
         }
 
         // 2. 本地延迟原声；处理后的先默认成它（缺的位置就是原声）
-        match (self.raw_delayed.get_mut(..n), self.proc_buf.get_mut(..n), self.have.get_mut(..n)) {
+        match (
+            self.raw_delayed.get_mut(..n),
+            self.proc_buf.get_mut(..n),
+            self.have.get_mut(..n),
+        ) {
             (Some(rd), Some(pb), Some(hv)) => {
                 self.delay.process(x, rd);
                 pb.copy_from_slice(rd);
@@ -468,7 +472,12 @@ impl Forwarder {
         let fade = self.cfg.fade;
         let timeout = self.cfg.timeout;
         let rd = self.raw_delayed.get(..n).unwrap_or(&[]);
-        for (((yi, &r), &p), &has) in y.iter_mut().zip(rd.iter()).zip(self.proc_buf.iter()).zip(self.have.iter()) {
+        for (((yi, &r), &p), &has) in y
+            .iter_mut()
+            .zip(rd.iter())
+            .zip(self.proc_buf.iter())
+            .zip(self.have.iter())
+        {
             let mut cut = core::mem::take(&mut self.pending_cut);
             if has {
                 self.ok_run = self.ok_run.saturating_add(1);
@@ -490,7 +499,11 @@ impl Forwarder {
                 self.ok_run = 0;
                 self.stats.cuts += 1;
             }
-            let target = if self.fresh && self.ok_run >= fade { 1.0 } else { 0.0 };
+            let target = if self.fresh && self.ok_run >= fade {
+                1.0
+            } else {
+                0.0
+            };
             if self.gain < target {
                 self.gain = (self.gain + self.step).min(1.0);
             } else if self.gain > target {

@@ -100,7 +100,8 @@ pub struct OwnedBus {
 impl OwnedBus {
     pub fn create(name: &str, cfg: vdn_shm::BusConfig) -> Result<Self, String> {
         vdn_control::validate_bus_name(name).map_err(|e| e.to_string())?;
-        let lock_path = std::env::temp_dir().join(format!("vdn-bus-lock{}", name.replace('/', "_")));
+        let lock_path =
+            std::env::temp_dir().join(format!("vdn-bus-lock{}", name.replace('/', "_")));
         let lock = std::fs::File::options()
             .create(true)
             .truncate(false)
@@ -110,9 +111,13 @@ impl OwnedBus {
         match lock.try_lock() {
             Ok(()) => {}
             Err(std::fs::TryLockError::WouldBlock) => {
-                return Err(format!("总线 {name} 正被另一个降噪进程（或 chain-test）使用；换个 --bus 名字，或先停掉它"));
+                return Err(format!(
+                    "总线 {name} 正被另一个降噪进程（或 chain-test）使用；换个 --bus 名字，或先停掉它"
+                ));
             }
-            Err(std::fs::TryLockError::Error(e)) => return Err(format!("锁 {}：{e}", lock_path.display())),
+            Err(std::fs::TryLockError::Error(e)) => {
+                return Err(format!("锁 {}：{e}", lock_path.display()));
+            }
         }
         // 有锁 = 没有活着的建方；同名对象只可能是上次异常退出的残留
         let _ = Bus::unlink_name(name);
@@ -126,7 +131,10 @@ impl OwnedBus {
 
     /// 删名字（只删一次；已删过返回 Ok）。映射本身仍可用到 drop。
     pub fn unlink(&self) -> Result<(), vdn_shm::ShmError> {
-        if self.unlinked.swap(true, std::sync::atomic::Ordering::AcqRel) {
+        if self
+            .unlinked
+            .swap(true, std::sync::atomic::Ordering::AcqRel)
+        {
             return Ok(());
         }
         self.bus.unlink()

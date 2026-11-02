@@ -8,7 +8,12 @@
 //! 打开降噪进程建好的总线（等它最多 `--wait` 秒）→ 每块原声走 `Forwarder` → Out 环 → 出口。
 
 #![forbid(unsafe_code)]
-#![allow(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)] // NRT: 进程编排（等总线、开设备、正弦节拍、写文件）；回调闭包只调 lib 里带 deny 的 forward / HalSource::render
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
+// NRT: 进程编排（等总线、开设备、正弦节拍、写文件）；回调闭包只调 lib 里带 deny 的 forward / HalSource::render
 #![cfg_attr(
     not(test),
     deny(
@@ -120,7 +125,11 @@ struct Link {
 impl Link {
     fn current(&self) -> (u64, Arc<Bus>) {
         let g = self.epoch.load(Ordering::Acquire);
-        let b = self.bus.lock().map(|b| b.clone()).unwrap_or_else(|p| p.into_inner().clone());
+        let b = self
+            .bus
+            .lock()
+            .map(|b| b.clone())
+            .unwrap_or_else(|p| p.into_inner().clone());
         (g, b)
     }
 }
@@ -131,7 +140,12 @@ fn forwarder_for(bus: &Bus, block: usize, timeout: usize) -> Forwarder {
     Forwarder::new(fcfg)
 }
 
-fn open_mic(dev: Option<&str>, bus: Arc<Bus>, block: usize, timeout: usize) -> Result<InputStream, String> {
+fn open_mic(
+    dev: Option<&str>,
+    bus: Arc<Bus>,
+    block: usize,
+    timeout: usize,
+) -> Result<InputStream, String> {
     let mut fwd = forwarder_for(&bus, block, timeout);
     let s = InputStream::open(dev, IO_RATE, block, move |m: &[f32]| {
         forward(&mut fwd, &bus, m);
@@ -176,7 +190,10 @@ fn real_main() -> Result<(), String> {
 
     let first = Arc::new(open_bus(&cfg.bus_name, a.wait)?);
     if first.rate() != IO_RATE {
-        return Err(format!("总线采样率 {} Hz，本程序只支持 {IO_RATE}", first.rate()));
+        return Err(format!(
+            "总线采样率 {} Hz，本程序只支持 {IO_RATE}",
+            first.rate()
+        ));
     }
     eprintln!(
         "vdn-capture: 已接上总线 {} · L_total {} 样本（{:.2} ms）· 块长 {block}",
@@ -223,7 +240,12 @@ fn real_main() -> Result<(), String> {
             }))
         }
         Source::Mic => {
-            mic = Some(open_mic(cfg.input_device.as_deref(), first.clone(), block, timeout)?);
+            mic = Some(open_mic(
+                cfg.input_device.as_deref(),
+                first.clone(),
+                block,
+                timeout,
+            )?);
             None
         }
     };
@@ -236,7 +258,11 @@ fn real_main() -> Result<(), String> {
             None
         }
         Sink::Speaker => {
-            speaker = Some(open_speaker(cfg.output_device.as_deref(), first.clone(), block)?);
+            speaker = Some(open_speaker(
+                cfg.output_device.as_deref(),
+                first.clone(),
+                block,
+            )?);
             None
         }
         Sink::File => {
@@ -270,7 +296,9 @@ fn real_main() -> Result<(), String> {
     let mut reconnects = 0u32;
     loop {
         thread::sleep(Duration::from_millis(100));
-        if until.is_some_and(|u| Instant::now() >= u) || sine.as_ref().is_some_and(|t| t.is_finished()) {
+        if until.is_some_and(|u| Instant::now() >= u)
+            || sine.as_ref().is_some_and(|t| t.is_finished())
+        {
             break;
         }
         let (_, cur) = link.current();
@@ -296,10 +324,19 @@ fn real_main() -> Result<(), String> {
         );
         // 先停旧流再开新流：中间会断一小段（开流耗时，未量化）
         if mic.take().is_some() {
-            mic = Some(open_mic(cfg.input_device.as_deref(), new.clone(), block, timeout)?);
+            mic = Some(open_mic(
+                cfg.input_device.as_deref(),
+                new.clone(),
+                block,
+                timeout,
+            )?);
         }
         if speaker.take().is_some() {
-            speaker = Some(open_speaker(cfg.output_device.as_deref(), new.clone(), block)?);
+            speaker = Some(open_speaker(
+                cfg.output_device.as_deref(),
+                new.clone(),
+                block,
+            )?);
         }
         if let Ok(mut slot) = link.bus.lock() {
             *slot = new.clone();

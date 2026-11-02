@@ -239,7 +239,9 @@ fn process_into_matches_process_and_splits_long_input() {
 /// 相邻样本最大跳变。测试信号最大斜率 2π(440·0.5 + 2000·0.3)/48000 ≈ 0.107；淡化 10 ms 时
 /// 处理后 ↔ 原声 的权重每样本只变 1/480，带来的额外跳变 ≤ 0.8/480。硬切若不抹平，落差可达 0.9 × 0.8 = 0.72。
 fn max_jump(y: &[f32]) -> f32 {
-    y.windows(2).map(|w| (w[1] - w[0]).abs()).fold(0.0, f32::max)
+    y.windows(2)
+        .map(|w| (w[1] - w[0]).abs())
+        .fold(0.0, f32::max)
 }
 
 const JUMP_LIMIT: f32 = 0.13;

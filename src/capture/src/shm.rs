@@ -9,14 +9,22 @@ use vdn_shm::{Bus, Ring, RingId};
 use crate::{Heartbeat, Pop, Push};
 
 // 实时（A 档）：全部转调 vdn-shm 的实时方法
-#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Push for Ring<'_> {
     fn push(&mut self, x: &[f32]) -> usize {
         Ring::push(self, x)
     }
 }
 
-#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Pop for Ring<'_> {
     fn pop(&mut self, out: &mut [f32]) -> usize {
         Ring::pop(self, out)
@@ -30,7 +38,11 @@ impl Pop for Ring<'_> {
     }
 }
 
-#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Heartbeat for Bus {
     fn heartbeat(&self) -> u64 {
         Bus::heartbeat(self)
@@ -67,7 +79,11 @@ impl OutSource {
     }
 }
 
-#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl vdn_hal::SampleSource for OutSource {
     fn pop(&mut self, out: &mut [f32]) -> usize {
         let ring = self.bus.ring(RingId::Out);
