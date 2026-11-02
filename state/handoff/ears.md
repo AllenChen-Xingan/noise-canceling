@@ -39,3 +39,4 @@
 - 写 exp009 README（预注册 V-AUTHOR-VS-CROWD 判据：作者 SCOREQ 一致率 < 0.516 才算偏离）、decision.md 初稿（含 D51 要的评委起点一节）
 - 回 judgeloop（018）：起点 SCOREQ + 各数据集数字、本机现成评分模型路径（DNSMOS · NISQA；SCOREQ 待名额）
 - 2026-11-02 b7：读交代/common/D56–D65 → 报到 noise-canceling-e3，名额排第二 → 重看第 8 节并改 decision；核第二段输入齐（exp003 build f8c3 答卷、exp004 src 在；exp009-venv 未建）
+- 2026-11-02 回 judgeloop（018）：本机查实 SCOREQ / Distill-MOS 都没装、没权重、速度未测；将装进 _tmp/exp009-venv（排名额）；无新证据推翻「SCOREQ 当老师」

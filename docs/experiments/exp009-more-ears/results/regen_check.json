@@ -1,0 +1,535 @@
+{
+ "build": "20261030110755-f8c3",
+ "max_abs_delta_db": 0.0,
+ "same_as_heard": true,
+ "rows": [
+  {
+   "clip": "c01",
+   "model": "noisy",
+   "build_file": "audio/c01_f05769.wav",
+   "regen_file": "audio/c01_34742e.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c01",
+   "model": "dpdfnet2",
+   "build_file": "audio/c01_6dec63.wav",
+   "regen_file": "audio/c01_7abbf6.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c01",
+   "model": "gtcrn",
+   "build_file": "audio/c01_f14f29.wav",
+   "regen_file": "audio/c01_b054d7.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c01",
+   "model": "fastenhancer_m",
+   "build_file": "audio/c01_9bcf93.wav",
+   "regen_file": "audio/c01_28fe0b.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c02",
+   "model": "noisy",
+   "build_file": "audio/c02_8d7e32.wav",
+   "regen_file": "audio/c02_224685.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c02",
+   "model": "dpdfnet2",
+   "build_file": "audio/c02_c8f8d0.wav",
+   "regen_file": "audio/c02_5b9eab.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c02",
+   "model": "gtcrn",
+   "build_file": "audio/c02_b6518c.wav",
+   "regen_file": "audio/c02_703aab.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c02",
+   "model": "fastenhancer_m",
+   "build_file": "audio/c02_2b93fc.wav",
+   "regen_file": "audio/c02_db4dc7.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c03",
+   "model": "noisy",
+   "build_file": "audio/c03_7b7296.wav",
+   "regen_file": "audio/c03_58ecfb.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c03",
+   "model": "dpdfnet2",
+   "build_file": "audio/c03_c62a0c.wav",
+   "regen_file": "audio/c03_4ed734.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c03",
+   "model": "gtcrn",
+   "build_file": "audio/c03_5e04e5.wav",
+   "regen_file": "audio/c03_93a8eb.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c03",
+   "model": "fastenhancer_m",
+   "build_file": "audio/c03_bf1a03.wav",
+   "regen_file": "audio/c03_981f74.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c04",
+   "model": "noisy",
+   "build_file": "audio/c04_310dee.wav",
+   "regen_file": "audio/c04_92241e.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c04",
+   "model": "dpdfnet2",
+   "build_file": "audio/c04_d5c5ac.wav",
+   "regen_file": "audio/c04_7f00a7.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c04",
+   "model": "gtcrn",
+   "build_file": "audio/c04_faf8a3.wav",
+   "regen_file": "audio/c04_cb5449.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c04",
+   "model": "fastenhancer_m",
+   "build_file": "audio/c04_ae78a6.wav",
+   "regen_file": "audio/c04_f32f0b.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c05",
+   "model": "noisy",
+   "build_file": "audio/c05_eb313c.wav",
+   "regen_file": "audio/c05_1e92c7.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c05",
+   "model": "dpdfnet2",
+   "build_file": "audio/c05_977ee8.wav",
+   "regen_file": "audio/c05_9b751e.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c05",
+   "model": "gtcrn",
+   "build_file": "audio/c05_133041.wav",
+   "regen_file": "audio/c05_628450.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c05",
+   "model": "fastenhancer_m",
+   "build_file": "audio/c05_480d84.wav",
+   "regen_file": "audio/c05_0bb995.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c06",
+   "model": "noisy",
+   "build_file": "audio/c06_51c708.wav",
+   "regen_file": "audio/c06_417bdb.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c06",
+   "model": "dpdfnet2",
+   "build_file": "audio/c06_99b4c5.wav",
+   "regen_file": "audio/c06_1a5faa.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c06",
+   "model": "gtcrn",
+   "build_file": "audio/c06_7f497f.wav",
+   "regen_file": "audio/c06_a5eaaa.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c06",
+   "model": "fastenhancer_m",
+   "build_file": "audio/c06_440a4b.wav",
+   "regen_file": "audio/c06_8f28f5.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c07",
+   "model": "noisy",
+   "build_file": "audio/c07_ebfb5e.wav",
+   "regen_file": "audio/c07_0195aa.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c07",
+   "model": "dpdfnet2",
+   "build_file": "audio/c07_15bfa7.wav",
+   "regen_file": "audio/c07_7c6efa.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c07",
+   "model": "gtcrn",
+   "build_file": "audio/c07_74f87f.wav",
+   "regen_file": "audio/c07_df82d7.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c07",
+   "model": "fastenhancer_m",
+   "build_file": "audio/c07_e5ae24.wav",
+   "regen_file": "audio/c07_862825.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c08",
+   "model": "noisy",
+   "build_file": "audio/c08_9f80c8.wav",
+   "regen_file": "audio/c08_f2746f.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c08",
+   "model": "dpdfnet2",
+   "build_file": "audio/c08_1020a8.wav",
+   "regen_file": "audio/c08_c1d4ab.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c08",
+   "model": "gtcrn",
+   "build_file": "audio/c08_583d8b.wav",
+   "regen_file": "audio/c08_d639c6.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c08",
+   "model": "fastenhancer_m",
+   "build_file": "audio/c08_ffb4ba.wav",
+   "regen_file": "audio/c08_4fcdb0.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c09",
+   "model": "noisy",
+   "build_file": "audio/c09_30d729.wav",
+   "regen_file": "audio/c09_9e5df3.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c09",
+   "model": "dpdfnet2",
+   "build_file": "audio/c09_0a814c.wav",
+   "regen_file": "audio/c09_cd27c8.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c09",
+   "model": "gtcrn",
+   "build_file": "audio/c09_39afe1.wav",
+   "regen_file": "audio/c09_e3a350.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c09",
+   "model": "fastenhancer_m",
+   "build_file": "audio/c09_ac79c0.wav",
+   "regen_file": "audio/c09_965966.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c10",
+   "model": "noisy",
+   "build_file": "audio/c10_08d677.wav",
+   "regen_file": "audio/c10_d36944.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c10",
+   "model": "dpdfnet2",
+   "build_file": "audio/c10_4f25dc.wav",
+   "regen_file": "audio/c10_467374.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c10",
+   "model": "gtcrn",
+   "build_file": "audio/c10_30ffd5.wav",
+   "regen_file": "audio/c10_cc738a.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c10",
+   "model": "fastenhancer_m",
+   "build_file": "audio/c10_c3de7d.wav",
+   "regen_file": "audio/c10_94fa7b.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c11",
+   "model": "noisy",
+   "build_file": "audio/c11_abecea.wav",
+   "regen_file": "audio/c11_daef05.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c11",
+   "model": "dpdfnet2",
+   "build_file": "audio/c11_b33ef6.wav",
+   "regen_file": "audio/c11_461a5a.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c11",
+   "model": "gtcrn",
+   "build_file": "audio/c11_ff8a4d.wav",
+   "regen_file": "audio/c11_7591f5.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c11",
+   "model": "fastenhancer_m",
+   "build_file": "audio/c11_19085c.wav",
+   "regen_file": "audio/c11_d14e50.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c12",
+   "model": "noisy",
+   "build_file": "audio/c12_05f0e9.wav",
+   "regen_file": "audio/c12_34d7ea.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c12",
+   "model": "dpdfnet2",
+   "build_file": "audio/c12_71952a.wav",
+   "regen_file": "audio/c12_d1e711.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c12",
+   "model": "gtcrn",
+   "build_file": "audio/c12_bf59de.wav",
+   "regen_file": "audio/c12_efe12a.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  },
+  {
+   "clip": "c12",
+   "model": "fastenhancer_m",
+   "build_file": "audio/c12_83d6a8.wav",
+   "regen_file": "audio/c12_64c370.wav",
+   "delta": {
+    "gain_db": 0.0,
+    "lufs_after": 0.0,
+    "peak_dbfs": 0.0
+   }
+  }
+ ]
+}
