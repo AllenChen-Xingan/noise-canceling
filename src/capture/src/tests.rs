@@ -51,7 +51,7 @@ impl Rig {
         let mut processed = FakeRing::new(1 << 16);
         processed.push(&vec![0.0; LEAD]);
         Self {
-            fwd: Forwarder::new(ForwarderConfig::new(LEAD, BLOCK)),
+            fwd: Forwarder::new(ForwarderConfig::new(LEAD, BLOCK), LEAD),
             raw: FakeRing::new(1 << 16),
             processed,
             out: FakeRing::new(1 << 20),
@@ -190,7 +190,15 @@ fn backlog_is_capped() {
     r.processed.push(&vec![0.25; 20 * BLOCK]);
     r.tick();
     assert!(r.fwd.stats().discarded > 0);
+    assert_eq!(r.fwd.stats().resyncs, 1);
     assert!(r.processed.available() <= LEAD + 2 * BLOCK);
+    // 重新对账后照常出声、不再欠载
+    let before = r.fwd.stats().proc_underrun;
+    for _ in 0..20 {
+        r.tick();
+    }
+    assert_eq!(r.fwd.stats().proc_underrun, before);
+    assert_eq!(r.fwd.stats().resyncs, 1);
 }
 
 #[test]

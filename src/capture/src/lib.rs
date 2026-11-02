@@ -355,16 +355,7 @@ impl Forwarder {
             }
         }
 
-        // 4. 积压上限：多出来的（多半是换了个降噪进程、账对不上了）丢掉，剩下的当作「从现在起对齐」
-        let backlog = processed.available();
-        if backlog > self.cfg.max_backlog {
-            let d = self.discard(processed, backlog - self.cfg.max_backlog);
-            self.advance(d);
-            self.head_shift += t0 + self.cfg.max_backlog.min(self.lead.max(0) as usize) as i64 - self.head_time();
-            self.stats.resyncs += 1;
-        }
-
-        // 5. 按对齐账取处理后的
+        // 4. 按对齐账取处理后的
         let end = t0 + n as i64;
         let mut t = t0;
         let mut missing = 0usize;
@@ -409,7 +400,7 @@ impl Forwarder {
             self.stats.stale_samples += n as u64;
         }
 
-        // 6. 混合：权重按样本走向目标
+        // 5. 混合：权重按样本走向目标
         let target = if self.fresh { 1.0 } else { 0.0 };
         let rd = self.raw_delayed.get(..n).unwrap_or(&[]);
         for ((yi, &r), &p) in y.iter_mut().zip(rd.iter()).zip(self.proc_buf.iter()) {
@@ -421,6 +412,18 @@ impl Forwarder {
             *yi = self.gain * p + (1.0 - self.gain) * r;
         }
         self.stats.samples += n as u64;
+
+        // 6. 积压上限（迟到的已在第 4 步按账丢过）：还多，多半是换了个降噪进程、账对不上了。
+        //    丢到只剩 lead 个，剩下的当作「从下一块起对齐」
+        let backlog = processed.available();
+        if backlog > self.cfg.max_backlog {
+            let keep = usize::try_from(self.lead).unwrap_or(0);
+            let d = self.discard(processed, backlog - keep.min(backlog));
+            self.advance(d);
+            self.head_shift += end - self.head_time();
+            self.n_gaps = 0;
+            self.stats.resyncs += 1;
+        }
     }
 
     /// 从 Processed 丢掉至多 `want` 个样本，返回丢了多少。
