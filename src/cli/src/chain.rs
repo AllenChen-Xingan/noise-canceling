@@ -190,6 +190,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         l_total,
         l_pipe,
         lead: o.lead,
+        denoise_block: o.denoise_block,
         fwd,
         hal_underrun_blocks: ub,
         hal_underrun_samples: us,
@@ -222,11 +223,12 @@ impl std::fmt::Display for Verdict {
 /// 延迟分项一行。
 pub fn latency_line(r: &ChainRun) -> String {
     format!(
-        "L_total = {} 样本（{:.2} ms）= Pipeline {}（{:.2} ms）+ 环余量 {}（{:.2} ms）",
+        "L_total = {} 样本（{:.2} ms）= Pipeline {}（{:.2} ms，降噪块长 {}）+ 环余量 {}（{:.2} ms）",
         r.l_total,
         ms48(r.l_total),
         r.l_pipe,
         ms48(r.l_pipe),
+        r.denoise_block,
         r.lead,
         ms48(r.lead)
     )

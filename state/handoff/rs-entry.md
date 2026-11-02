@@ -5,26 +5,32 @@
 
 ## 手上
 - 自审（三个对抗视角的子代理在跑）
-- 等 `Pipeline::with_block` 合入后接上（降噪块长默认 96），重跑 V1–V4
 
-## 判据结果（2026-11-02，本机 debug 构建，机器判）
+## 判据结果（2026-11-02，本机 debug 构建，机器判；降噪块长 96，定块长 Pipeline）
 
 | # | 判据 | 命令 | 结果 |
 |---|---|---|---|
-| V1 | 直通逐样本对齐 | `vdn chain-test --mode passthrough` | **过**：相关 1.000000（线 ≥ 0.999）· 实测延迟 2303 = L_total · 虚拟麦欠载 0 |
+| V1 | 直通逐样本对齐 | `vdn chain-test --mode passthrough` | **过**：相关 1.000000（线 ≥ 0.999）· 实测延迟 2208 = L_total · 虚拟麦欠载 0 |
 | V2 | 降噪死掉仍出声 | `vdn chain-test --kill-denoiser-at 2` | **过**：110.0 ms 切原声（线 ≤ 150）· 最长静音 0 ms；GTCRN 下同样 110.0 ms |
 | V3 | 真模型出声 | `vdn chain-test --mode denoise --model-path <gtcrn_simple.onnx>` | **过**：均方根 0.1151（线 > 0.01）· 非有限 0 · 长度 240000 / 240000 |
-| V4 | 两个真进程 | 见下 | **过**：相关 1.000000 · 实测延迟 2303 · 读出欠载 0 · 实时提升成功 · Ctrl-C 后 unlink 成功 |
+| V4 | 两个真进程 | 见下 | **过**：相关 1.000000 · 实测延迟 2208 · 读出欠载 0 · 实时提升成功 · 结束后 unlink 成功 |
 | V5 | 真麦克风（人判） | 见「V5 人工步骤」 | 待人做 |
 
-- 延迟分项：直通 L_total = 2303 样本（47.98 ms）= Pipeline 863（17.98 ms）+ 环余量 1440（30 ms）；GTCRN 3071（63.98 ms）= 1631 + 1440
-- 加测 lead = 1 块（480）：直通 3 次、GTCRN 3 次，**欠载都是 0**（空闲机器，不是压测）；GTCRN 时 L_total = 2111 样本（43.98 ms）
+- **延迟分项**（`with_block` 合入后）：
+  - 直通：L_total = 2208 样本（46.00 ms）= Pipeline 768（16.00 ms）+ 环余量 1440（30.00 ms）
+  - GTCRN：L_total = 2976 样本（62.00 ms）= Pipeline 1536（32.00 ms）+ 环余量 1440（30.00 ms）
+  - 合入前（块长 480、`Pipeline::new`）：直通 2303（47.98 ms）· GTCRN 3071（63.98 ms）；V1–V4 当时也全过
+- **加测 lead = 1 块（480，不作过线条件，只计数）**：
+  - 降噪块长 96：直通 3 次「处理后欠载」1728 / 0 / 0 样本；GTCRN 3 次 480 / 480 / 1920 样本（缺的用延迟原声补，不是静音；虚拟麦欠载都是 0）。GTCRN 时 L_total = 2016 样本（42.00 ms）
+  - 降噪块长 480（合入前）：直通、GTCRN 各 3 次全 0
+  - 推断（未核实）：GTCRN 第一次推理慢（预热），10 ms 余量不够；debug 构建、降噪线程空闲时睡 0.5 ms 也有影响
+- 坏块长：`--denoise-block 100` 启动即报错「块长 100 不整除 hop 768」【测】
 - V3 用的权重：`../noise_canceling/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx`（sha256 前缀 `b4718df6228e7bdf`；本工作区 `resources/` 里没有）
 - V4 命令：
   ```
-  ./target/debug/vdn-denoised --passthrough --bus /vdn-v4 --seconds 9 &
-  ./target/debug/vdn-capture --source sine --sink file _tmp/20261102-rs-entry-v4/out.wav --bus /vdn-v4 --seconds 5
-  ./target/debug/vdn chain-check _tmp/20261102-rs-entry-v4/out.wav --l-total 2303
+  ./target/debug/vdn-denoised --passthrough --bus /vdn-v4b --seconds 9 &
+  ./target/debug/vdn-capture --source sine --sink file _tmp/20261102-rs-entry-v4/out2.wav --bus /vdn-v4b --seconds 5
+  ./target/debug/vdn chain-check _tmp/20261102-rs-entry-v4/out2.wav --l-total 2208
   ```
 
 ## V5 人工步骤（给大总管转人）
@@ -36,7 +42,7 @@
 3. 第一次跑时 macOS 会弹「终端想使用麦克风」，请点「允许」（点了之后要重跑第 2 步）
 4. 5 秒内对着麦克风说话
 
-**算过**：耳机里听到自己的声音，比嘴上晚一点点（约 48 ms），没有断续、没有爆音。
+**算过**：耳机里听到自己的声音，比嘴上晚一点点（链路内约 48 ms，另加设备缓冲），没有断续、没有爆音。
 **算不过**：没声音、断断续续、有咔哒声或啸叫。结束时终端会打印「输出欠载 N 样本」，请把那一行发回来。
 
 ## 改了哪些文件
@@ -73,4 +79,5 @@
 - 2026-11-02 大总管合入三家零件（65e62a9）；接线：capture 的 shm/hal 适配、两个 bin、vdn devices / run / chain-test / chain-check
 - 2026-11-02 check-deps 报 vdn-denoised 闭包有 cpal（经 vdn-capture）→ Worker 改直接用 Bus，capture 改 dev 依赖，复跑通过
 - 2026-11-02 V1–V4 过；lead = 1 块加测 6 次欠载 0；Ctrl-C 退出后总线已删【测】
+- 2026-11-02 大总管合入 `Pipeline::with_block`（fd26a1d）；`Config.denoise_block` 默认 96，vdn-denoised 与 chain-test 用定块长，`vdn run` 仍用 `Pipeline::new`；V1–V4 重跑全过
 - 2026-11-02 4 个 crate 27 个单测过（含 1.2 s 版 V1 / V2 真共享内存测试），clippy 0 警告，fmt 过
