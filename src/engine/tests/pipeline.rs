@@ -302,3 +302,149 @@ fn wet_and_dry_are_aligned_through_a_switch() {
         .fold(0.0f32, f32::max);
     assert!(err < 0.01, "切换前后误差 {err}");
 }
+
+// ---- 定块长省延迟（人定 2026-11-02）----
+
+/// GTCRN 的形状：模型 hop 256、算法延迟 256（16 kHz）→ 48 kHz hop 768、模型延迟 768。
+fn gtcrn_like(gain: f32, safety: SafetyConfig) -> Engine<DelayGain> {
+    Engine::new(DelayGain::new(256, 256, gain), safety)
+}
+
+#[test]
+fn with_block_declared_latency_matches_measured() {
+    // GTCRN 形状、块长 96：672 + 96 + 768 = 1536（32.00 ms）
+    let mut p = Pipeline::with_block(gtcrn_like(1.0, SafetyConfig::off()), SR, 96).unwrap();
+    assert_eq!(p.latency_samples(), 768 - 96 + 96 + 768);
+    assert_eq!(p.latency_samples(), 1536);
+    let got_ms = p.latency_ledger().total_ms();
+    assert!((got_ms - 32.0).abs() < 1e-9, "账 {got_ms} ms");
+    let x = multisine(SR as usize);
+    let lens = vec![96; x.len() / 96];
+    let x = &x[..lens.len() * 96];
+    let y = run(&mut p, x, &lens);
+    assert_eq!(measured_lag(x, &y, 3000), p.latency_samples());
+    let l = p.latency_samples();
+    let err = (l + 2000..x.len())
+        .map(|i| (y[i] - x[i - l]).abs())
+        .fold(0.0f32, f32::max);
+    assert!(err < 0.01, "残差 {err}");
+    let s = p.stats();
+    assert_eq!((s.misaligned_blocks, s.queue_faults), (0, 0));
+
+    // Identity、块长 96：672 + 96 + 0 = 768（16.00 ms）
+    let mut p = Pipeline::with_block(Engine::new(Identity, SafetyConfig::off()), SR, 96).unwrap();
+    assert_eq!(p.latency_samples(), 768);
+    assert!((p.latency_ledger().total_ms() - 16.0).abs() < 1e-9);
+    let y = run(&mut p, x, &lens);
+    assert_eq!(measured_lag(x, &y, 3000), 768);
+}
+
+#[test]
+fn with_block_saves_block_minus_one_and_output_is_shifted_new() {
+    // 带三件保命的默认配置：定块长输出 = 任意块长版输出提前 95 个样本，逐样本一致（只省等待，不改内容）
+    let x = multisine(SR as usize);
+    let n = x.len() / 96 * 96;
+    let x = &x[..n];
+    let lens = vec![96; n / 96];
+    let mut fixed = Pipeline::with_block(gtcrn_like(0.5, SafetyConfig::default()), SR, 96).unwrap();
+    let a = run(&mut fixed, x, &lens);
+    let mut any = Pipeline::new(gtcrn_like(0.5, SafetyConfig::default()), SR).unwrap();
+    let b = run(&mut any, x, &lens);
+    assert_eq!(any.latency_samples() - fixed.latency_samples(), 95);
+    assert_eq!(&a[..n - 95], &b[95..]);
+    // 同一块长 96：分多次调用（中途 reset 前后各一段）与一口气按 96 切喂一致
+    let mut p = Pipeline::with_block(gtcrn_like(0.5, SafetyConfig::default()), SR, 96).unwrap();
+    let mut c = run(&mut p, &x[..96 * 100], &lens[..100]);
+    c.extend(run(&mut p, &x[96 * 100..], &lens[100..]));
+    assert_eq!(c, a);
+    assert_eq!(fixed.stats().misaligned_blocks, 0);
+}
+
+#[test]
+fn with_block_rejects_unaligned_block() {
+    let bad = |b: usize| Pipeline::with_block(gtcrn_like(1.0, SafetyConfig::off()), SR, b).err();
+    assert_eq!(
+        bad(480),
+        Some(PipelineError::BlockNotAligned {
+            block: 480,
+            hop_io: 768
+        })
+    );
+    assert!(matches!(
+        bad(0),
+        Some(PipelineError::BlockNotAligned { block: 0, .. })
+    ));
+    assert!(matches!(
+        bad(1536),
+        Some(PipelineError::BlockNotAligned { .. })
+    ));
+    for ok in [1usize, 96, 256, 384, 768] {
+        assert!(bad(ok).is_none(), "块长 {ok} 应当可以");
+    }
+    // 采样率错仍先报采样率
+    assert!(matches!(
+        Pipeline::with_block(gtcrn_like(1.0, SafetyConfig::off()), 44_100, 96),
+        Err(PipelineError::UnsupportedRate { .. })
+    ));
+}
+
+#[test]
+fn with_block_misaligned_input_does_not_panic() {
+    let mut p = Pipeline::with_block(gtcrn_like(1.0, SafetyConfig::default()), SR, 96).unwrap();
+    let x = multisine(20_000);
+    // 先对齐几块，再随机块长（含 1、7、500），再回到 96
+    let mut lens = vec![96; 20];
+    let mid = chunk_lens(11, 20_000 - 96 * 40, 500);
+    let n_mid = mid.iter().filter(|&&n| n != 96).count() as u64;
+    lens.extend(mid);
+    lens.extend(vec![96; 20]);
+    let y = run(&mut p, &x, &lens);
+    assert!(y.iter().all(|v| v.is_finite()));
+    let s = p.stats();
+    assert_eq!(s.misaligned_blocks, n_mid);
+    assert!(n_mid > 0);
+    // 欠载补零的样本数不超过 block - 1（之后队列水位等同于任意块长版，不再欠载）
+    assert!(s.queue_faults <= 95, "欠载 {}", s.queue_faults);
+    assert!(y[x.len() - 5000..].iter().any(|v| *v != 0.0));
+}
+
+#[cfg(debug_assertions)]
+#[test]
+fn with_block_realtime_path_does_not_allocate() {
+    let plan = (0..400)
+        .step_by(5)
+        .map(|h| {
+            (
+                h,
+                if h % 2 == 0 {
+                    FaultKind::Nan
+                } else {
+                    FaultKind::Error
+                },
+            )
+        })
+        .collect();
+    let m = FaultInjector::new(DelayGain::new(256, 256, 0.8), plan);
+    let mut p = Pipeline::with_block(Engine::new(m, SafetyConfig::default()), SR, 96).unwrap();
+    let x = multisine(96 * 64);
+    let mut y = vec![0.0; x.len()];
+    assert_no_alloc(|| {
+        for round in 0..20 {
+            for (xi, yi) in x.chunks(96).zip(y.chunks_mut(96)) {
+                p.process(xi, yi);
+            }
+            // 不对齐块也走一遍（欠载补零路径）
+            p.process(&x[..7], &mut y[..7]);
+            p.set_mode(if round % 2 == 0 {
+                Mode::Passthrough
+            } else {
+                Mode::Denoise
+            });
+            let _ = p.latency_samples();
+            let _ = p.stats();
+        }
+        p.reset();
+    });
+    assert!(p.stats().hops > 0);
+    assert_eq!(p.stats().misaligned_blocks, 20);
+}
