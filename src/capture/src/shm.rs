@@ -100,13 +100,31 @@ impl vdn_hal::SampleSource for OutSource {
     }
 }
 
-/// 一块原声走一遍 `Forwarder`，三个环都取自同一条总线。
+/// 一块原声走一遍 `Forwarder`：Raw / Processed / 心跳取自降噪总线 `bus`（`None` = 还没有降噪进程，整段送延迟原声），
+/// 结果推进送音端自己建的 Out 总线 `out`（插件只连它，降噪进程重启不影响它）。
 #[deny(
     clippy::disallowed_methods,
     clippy::disallowed_types,
     clippy::disallowed_macros
 )]
-pub fn forward(fwd: &mut crate::Forwarder, bus: &Bus, input: &[f32]) {
+pub fn forward(fwd: &mut crate::Forwarder, bus: Option<&Bus>, out: &Bus, input: &[f32]) {
+    let mut o = out.ring(RingId::Out);
+    match bus {
+        Some(b) => {
+            let (mut raw, mut processed) = (b.ring(RingId::Raw), b.ring(RingId::Processed));
+            fwd.process(input, &mut raw, &mut processed, &mut o, b);
+        }
+        None => fwd.process(input, &mut crate::NullRing, &mut crate::NullRing, &mut o, &crate::NoBeat),
+    }
+}
+
+/// 旧写法（Out 也在降噪总线上）：单进程 `vdn run`、测试用。
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
+pub fn forward_same_bus(fwd: &mut crate::Forwarder, bus: &Bus, input: &[f32]) {
     let (mut raw, mut processed, mut out) = (
         bus.ring(RingId::Raw),
         bus.ring(RingId::Processed),

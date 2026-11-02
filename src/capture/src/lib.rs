@@ -83,6 +83,38 @@ impl<T: Heartbeat + ?Sized> Heartbeat for &T {
     }
 }
 
+/// 没有降噪总线时的替身：推多少收多少（扔掉），取永远是 0。
+#[derive(Clone, Copy, Debug, Default)]
+pub struct NullRing;
+
+impl Push for NullRing {
+    fn push(&mut self, x: &[f32]) -> usize {
+        x.len()
+    }
+}
+
+impl Pop for NullRing {
+    fn pop(&mut self, _out: &mut [f32]) -> usize {
+        0
+    }
+    fn available(&self) -> usize {
+        0
+    }
+    fn discard(&mut self, _n: usize) -> usize {
+        0
+    }
+}
+
+/// 没有降噪总线时的心跳：永远不动（= 一直送原声）。
+#[derive(Clone, Copy, Debug, Default)]
+pub struct NoBeat;
+
+impl Heartbeat for NoBeat {
+    fn heartbeat(&self) -> u64 {
+        0
+    }
+}
+
 /// `Forwarder` 的参数（全部按 48 kHz 样本数）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ForwarderConfig {

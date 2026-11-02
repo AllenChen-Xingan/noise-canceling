@@ -650,7 +650,7 @@ fn v7(a: V7Args) -> Result<bool, BoxError> {
     };
     println!(
         "V7：{} · {} 次 × {} s · IO 块 {} · 降噪块 {} · 核数 {cores} · 压力组忙线程 {stress} · release 构建：{}",
-        kind.id(),
+        format!("{kind:?}"),
         a.runs,
         a.seconds,
         a.block,
@@ -744,7 +744,7 @@ fn v7(a: V7Args) -> Result<bool, BoxError> {
     );
     if let Some(j) = &a.json {
         let out = json!({
-            "model": kind.id(), "runs": a.runs, "seconds": a.seconds, "block": a.block,
+            "model": format!("{kind:?}"), "runs": a.runs, "seconds": a.seconds, "block": a.block,
             "denoise_block": a.denoise_block, "cores": cores, "stress_threads": stress,
             "release": !cfg!(debug_assertions), "leads": leads, "min_clean_lead": best.map(|b| b.0),
             "pass": pass, "rows": rows,
