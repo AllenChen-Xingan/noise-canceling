@@ -19,11 +19,13 @@
 )]
 pub mod delay;
 pub mod envelope;
+pub mod resample;
 pub mod stft;
 pub mod window;
 
 pub use delay::DelayLine;
 pub use envelope::{OpenCloseEnvelope, OpenCloseParams};
+pub use resample::{Decimator3, Interpolator3};
 pub use stft::StreamingStft;
 
 /// 分贝 → 线性幅度。

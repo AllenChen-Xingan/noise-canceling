@@ -3,7 +3,9 @@
 #![cfg(debug_assertions)]
 
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
-use vdn_dsp::{DelayLine, OpenCloseEnvelope, OpenCloseParams, StreamingStft, window};
+use vdn_dsp::{
+    Decimator3, DelayLine, Interpolator3, OpenCloseEnvelope, OpenCloseParams, StreamingStft, window,
+};
 
 #[global_allocator]
 static A: AllocDisabler = AllocDisabler;
@@ -36,5 +38,32 @@ fn per_frame_paths_do_not_allocate() {
             delay.process(&x, &mut d);
             env.process(&y, &mut m);
         }
+    });
+}
+
+#[test]
+fn resample_blocks_do_not_allocate() {
+    let mut d = Decimator3::new();
+    let mut u = Interpolator3::new();
+    let x: Vec<f32> = (0..768).map(|i| (i as f32 * 0.03).sin()).collect();
+    let mut lo = vec![0.0; 256];
+    let mut y = vec![0.0; 768];
+    assert_no_alloc(|| {
+        for _ in 0..50 {
+            for (xi, li) in x.chunks(96).zip(lo.chunks_mut(32)) {
+                d.process(xi, li);
+            }
+            u.process(&lo, &mut y);
+        }
+        // 不是 3 的倍数的块长（相位跨块延续）
+        let mut i = 0;
+        for n in [1usize, 7, 2, 100, 5] {
+            let mut lo1 = [0.0f32; 64];
+            let m = d.output_len(n);
+            d.process(&x[i..i + n], &mut lo1[..m]);
+            i += n;
+        }
+        d.reset();
+        u.reset();
     });
 }

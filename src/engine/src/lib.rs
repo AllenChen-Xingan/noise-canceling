@@ -1,4 +1,4 @@
-//! vdn-engine：模型适配器接口、逐帧调度、三件保命、离线驱动。
+//! vdn-engine：模型适配器接口、逐帧调度、三件保命、离线驱动；`Pipeline`（48 kHz 任意块长 → 16 kHz 模型 → 48 kHz）。
 //!
 //! 不认识任何具体模型（那在 `vdn-models`），也不链接 ONNX Runtime：engine 的逻辑可以用假模型单独测。
 
@@ -18,14 +18,43 @@ pub mod engine;
 pub mod fault;
 pub mod model;
 pub mod offline;
+pub mod pipeline;
 
 pub use engine::{Engine, EngineStats, SafetyConfig};
 pub use fault::{FaultInjector, FaultKind};
+pub use pipeline::{Mode, Pipeline, PipelineError, PipelineStats};
 pub use vdn_types::{FrameCtx, Model, ModelError, Stage};
 
 /// 测试与示例用的假模型。
 pub mod testing {
     use vdn_types::{Model, ModelError};
+
+    /// 输出 = 输入：16 kHz、hop 256、延迟 0。没有模型权重时用它跑通整条链路（`vdn-denoised --passthrough`、`chain-test`）。
+    #[derive(Clone, Copy, Debug, Default)]
+    pub struct Identity;
+
+    impl Model for Identity {
+        fn name(&self) -> &'static str {
+            "identity"
+        }
+        fn sample_rate(&self) -> u32 {
+            16000
+        }
+        fn hop(&self) -> usize {
+            256
+        }
+        fn latency_samples(&self) -> usize {
+            0
+        }
+        fn reset(&mut self) {}
+        fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), ModelError> {
+            let n = input.len().min(output.len());
+            if let (Some(o), Some(i)) = (output.get_mut(..n), input.get(..n)) {
+                o.copy_from_slice(i);
+            }
+            Ok(())
+        }
+    }
 
     /// 输出 = 输入延迟 `latency` 个样本再乘 `gain`（`latency` 必须是 `hop` 的整数倍以内的任意值）。
     pub struct DelayGain {
