@@ -35,6 +35,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 子代理（省 2 ms）：`Pipeline::with_block` 完成，GTCRN 块长 96 时 1536 样本 = 32.00 ms（原 33.98），实测 = 声明；engine 测试 16 条过、clippy 无警告 → 合入骨架（113dd13）与 rs-entry（fd26a1d）
 - rs-entry：**V1–V4 全过**（V1 相关 1.000000、延迟 2303 = L_total、欠载 0；V2 杀降噪 110 ms 切原声、最长静音 0；V3 GTCRN 有声无 NaN、L_total 64 ms；V4 两真进程同 V1，Ctrl-C 后 unlink）。lead = 1 块时欠载 0、GTCRN L_total 44 ms（空闲机器）。修了 denoised 经 capture 带进 cpal。自审中，等 with_block
 - 三家合并后 `xtask ci` 全绿（test 26.5 s；cargo-deny 未装跳过）；骨架分支已合进 rs-entry（65e62a9）
 - rs-core：验收通过（4 crate 测试全过，GTCRN / FE-M 真跑；vdn denoise 改造前后逐字节一致；自审 P0 1 · P1 2 已修）→ 合入、关窗。自报一次 git rm --cached（只涉被删的 session.rs）
