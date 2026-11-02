@@ -29,8 +29,6 @@ vdn-io-macos = { path = "src/io-macos" }
 vdn-hal = { path = "src/hal" }
 libc = "0.2"
 mach2 = "0.6"
-vdn-shm = { path = "src/shm" }
-vdn-rt-thread = { path = "src/rt-thread" }
 
 [workspace.lints.rust]
 unsafe_code = "deny"
