@@ -55,18 +55,34 @@ pub struct RunOpts {
 }
 
 pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<(), String> {
+    // 块长 / 环余量走 vdn-control 的同一套范围检查
+    let cfg = vdn_control::Config {
+        block: o.block,
+        lead_frames: o.lead,
+        ..vdn_control::Config::default()
+    };
+    cfg.validate().map_err(|e| e.to_string())?;
     let mut worker = Worker::new(pipeline, o.block);
     let l_pipe = worker.processor().latency_samples();
     let l_total = worker.l_total(o.lead);
+    let capacity = IO_RATE;
+    if capacity as usize <= l_total + 2 * o.block {
+        return Err(format!(
+            "环容量 {capacity} 太小：L_total {l_total} + 2 块要 {}；请减小 --lead 或 --block",
+            l_total + 2 * o.block
+        ));
+    }
     let bus = Arc::new(
         Bus::heap(BusConfig {
             rate: IO_RATE,
-            capacity_frames: IO_RATE,
+            capacity_frames: capacity,
             l_total: u32::try_from(l_total).map_err(|_| "L_total 太大")?,
         })
         .map_err(|e| e.to_string())?,
     );
-    worker.prime(&bus, o.lead);
+    if worker.prime(&bus, o.lead) != o.lead {
+        return Err("Processed 环放不下 lead 个零".into());
+    }
 
     let stop = Arc::new(AtomicBool::new(false));
     {

@@ -114,7 +114,7 @@ struct ChainArgs {
     /// 降噪块长（48 kHz 样本，须整除模型 hop × 3）
     #[arg(long, default_value_t = vdn_control::Config::DEFAULT_DENOISE_BLOCK)]
     denoise_block: usize,
-    /// 共享内存名（默认带进程号，避免撞名）
+    /// 共享内存名（默认 /vdn-chaintest）
     #[arg(long)]
     bus: Option<String>,
     /// 心跳超时（ms）
@@ -487,7 +487,8 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
         kill_at: a.kill_denoiser_at,
         bus_name: a
             .bus
-            .unwrap_or_else(|| format!("/vdn-ct-{}", std::process::id())),
+            // 固定默认名：上次被 Ctrl-C 打断留下的残留，下次拿到锁时会清掉；同时跑两个会报「正被占用」
+            .unwrap_or_else(|| "/vdn-chaintest".to_owned()),
         heartbeat_timeout: a.heartbeat_ms as usize * 48,
     };
     vdn_control::validate_bus_name(&o.bus_name)?;
