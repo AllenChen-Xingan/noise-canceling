@@ -234,10 +234,10 @@ impl Forwarder {
         self.skip -= dropped as i64;
 
         // 2. 本地延迟原声
-        let Some(rd) = self.raw_delayed.get_mut(..n) else {
-            return;
-        };
-        self.delay.process(x, rd);
+        match self.raw_delayed.get_mut(..n) {
+            Some(rd) => self.delay.process(x, rd),
+            None => return,
+        }
 
         // 3. 心跳
         let beat = hb.heartbeat();
@@ -304,6 +304,7 @@ impl Forwarder {
         let target = if self.fresh { 1.0 } else { 0.0 };
         let first_proc = hold;
         let last_proc = hold + got;
+        let rd = self.raw_delayed.get(..n).unwrap_or(&[]);
         for (i, ((yi, &r), &p)) in y.iter_mut().zip(rd.iter()).zip(self.proc_buf.iter()).enumerate() {
             let p = if (first_proc..last_proc).contains(&i) { p } else { r };
             if self.gain < target {
