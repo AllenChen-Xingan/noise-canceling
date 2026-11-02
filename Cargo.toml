@@ -1,7 +1,7 @@
 # vdn workspace：crate 放 src/<crate>/。依赖方向见 specs/rust/architecture.md §2.2：types ← dsp ← engine；models → types + dsp；cli → engine + models；xtask 不依赖任何 vdn crate
 [workspace]
 resolver = "3"
-members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab", "src/scene", "src/polish", "src/eval"]
+members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab", "src/scene", "src/polish", "src/eval", "src/control", "src/capture", "src/denoised"]
 
 [workspace.package]
 version = "0.1.0"
@@ -15,12 +15,16 @@ vdn-types = { path = "src/types" }
 vdn-dsp = { path = "src/dsp" }
 vdn-engine = { path = "src/engine" }
 vdn-models = { path = "src/models" }
+vdn-control = { path = "src/control" }
+vdn-capture = { path = "src/capture" }
+vdn-denoised = { path = "src/denoised" }
 realfft = "3.5"
 ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "download-binaries", "tls-native", "copy-dylibs", "api-31"] }
 hound = "3.5"
 clap = { version = "4", features = ["derive"] }
 assert_no_alloc = "1.1"
 serde_json = "1"
+serde = { version = "1", features = ["derive"] }
 stats_alloc = "0.1"
 
 [workspace.lints.rust]
