@@ -8,8 +8,8 @@ S8  exp003 人耳（build f8c3，3 个系统 × 12 屏，会话打折）：配�
     能用 > 勉强 > 不能用 差 ≥ 1 级）。用「近似匹配的合成格」上的系统均值预测每一对的胜负，算一致率；
     对照组 = 同一指标直接在 exp003 片段上算（scores.json），也就是 calib round 1 的口径。**3 个系统、48 对，功效很低，只作方向参考。**
 
-用法：python3 docs/experiments/exp008-bench-validity/rankstat.py <build>
-输出：results/<build>-rankstat.json + 屏幕摘要
+用法：python3 docs/experiments/exp008-bench-validity/rankstat.py <build> [tag]
+输出：results/<build>-rankstat[-<tag>].json + 屏幕摘要（第二轮用 tag r2，不覆盖第一轮）
 """
 import itertools
 import json
@@ -27,6 +27,8 @@ METRICS = {  # 指标: 方向（+1 越大越好；-1 越小越好；0 = 越接�
     "noise_att_g_db": -1, "nonowner_att_g_db": -1,
 }
 CEILING = {"oracle_irm"}
+FLOOR = {"passthrough"}  # 直通地板：synth-standard S7 口径要去掉（2026-11-02 自审 P1；第一轮 mvp 2.2 的表仍含地板）
+MIN_SYS = 6  # 少于这么多系统的集合不判过、不算 S7b（精确置换下 n < 6 时 τ 只有几个可能值）
 VARIANTS = {"gtcrn_mix05", "webrtc_ns6", "hush_lim12"}  # 参数变体：不计入独立系统数
 REPS = ["passthrough", "wiener_dd", "gtcrn_vctk", "gtcrn", "dpdf8", "oracle_irm",
         "rnnoise", "webrtc_ns18", "mossformer2_48k", "urgent_bsrnn", "gmap_se"]  # 每族一个代表（C 地板 · C · A′ · A · B · O · E · C* · F · G · I）；没跑完的系统不在 rows 里，自动略过
@@ -64,8 +66,10 @@ def load(build):
         if p.exists():
             for l in open(p):
                 r = json.loads(l)
+                if r["error"]:
+                    continue  # 先滤错误行再覆盖：后来的错误行不冲掉先前的好数据
                 rows[(r["cell"], r["gen"], r["clip"], json.dumps(r["level"]), r["system"])] = r
-    return [r for r in rows.values() if not r["error"]]
+    return list(rows.values())
 
 
 def means(rows, systems, metric, clips=None):
@@ -87,7 +91,7 @@ def tau_between(ma, mb):
 
 def s7(rows):
     systems_all = sorted({r["system"] for r in rows})
-    sets = {"all": set(systems_all), "no_ceiling_variant": set(systems_all) - CEILING - VARIANTS, "reps": set(REPS) & set(systems_all),
+    sets = {"all": set(systems_all), "no_ceiling_variant": set(systems_all) - CEILING - VARIANTS - FLOOR, "reps": set(REPS) & set(systems_all),
             "neural": NEURAL & set(systems_all)}
     cells = defaultdict(list)
     for r in rows:
@@ -145,6 +149,9 @@ def s7(rows):
                     d["s7_pass_old"] = bool(d["ci95"] and d["ci95"][0] > 0 and t_half is not None and rel and t_half >= min(rel) - 0.2)
                     # 现行判据：旧两条 + τ_AB 高于错配格 τ 的 95 分位
                     d["s7_pass"] = bool(d["s7_pass_old"] and mis and t > d["mismatch_p95"])
+                    if d["n_sys"] < MIN_SYS:
+                        d["s7_pass_old"] = d["s7_pass"] = False
+                        d["note"] = f"系统数 < {MIN_SYS}，不判"
                 row[name] = d
             out.append(row)
     return out
@@ -186,14 +193,15 @@ def s7b(rows, systems):
                         v = score(r["metrics"].get(metric), METRICS[metric])
                         if v is not None:
                             acc[(r["system"], json.dumps(r["level"], sort_keys=True))].append(v)
-                ss = sorted(systems)
-                try:
-                    M = np.array([[sum(acc[(s_, l)]) / len(acc[(s_, l)]) for l in levels] for s_ in ss])
-                except ZeroDivisionError:
-                    M = None
-                mats[g] = M
-            if mats["A"] is None or mats["B"] is None:
+                mats[g] = acc
+            # 只留 A、B 每一档都有值的系统（缺档的系统整个剔除并记下，不再整轴悄悄丢掉；2026-11-02 实现派 P1）
+            ss = sorted(s_ for s_ in systems if all(mats[g].get((s_, l)) for g in ("A", "B") for l in levels))
+            dropped = sorted(set(systems) & {r["system"] for r in rs} - set(ss))
+            if len(ss) < MIN_SYS:
                 continue
+            for g in ("A", "B"):
+                acc = mats[g]
+                mats[g] = np.array([[sum(acc[(s_, l)]) / len(acc[(s_, l)]) for l in levels] for s_ in ss])
             dc = lambda M: M - M.mean(1, keepdims=True) - M.mean(0, keepdims=True) + M.mean()  # noqa: E731
             ra, rb = dc(mats["A"]).ravel(), dc(mats["B"]).ravel()
             if ra.std() == 0 or rb.std() == 0:
@@ -202,7 +210,7 @@ def s7b(rows, systems):
             perms = list(itertools.permutations(range(len(levels))))
             null = [float(np.corrcoef(ra, dc(mats["B"][:, list(pm)]).ravel())[0, 1]) for pm in perms]
             p = sum(x >= r_obs - 1e-12 for x in null) / len(null)
-            out.append({"axis": axis, "metric": metric, "n_levels": len(levels), "n_sys": len(systems),
+            out.append({"axis": axis, "metric": metric, "n_levels": len(levels), "n_sys": len(ss), "dropped": dropped,
                         "r_interaction": round(r_obs, 3), "p_perm": round(p, 4), "n_perm": len(perms)})
     return out
 
@@ -273,7 +281,7 @@ def main():
     r7 = s7(rows)
     r8 = s8(rows)
     systems_all = sorted({r["system"] for r in rows})
-    r7b = {"no_ceiling_variant": s7b(rows, set(systems_all) - CEILING - VARIANTS), "neural": s7b(rows, NEURAL & set(systems_all))}
+    r7b = {"no_ceiling_variant": s7b(rows, set(systems_all) - CEILING - VARIANTS - FLOOR), "neural": s7b(rows, NEURAL & set(systems_all))}
     (HERE / "results" / (f"{build}-rankstat" + (f"-{tag}" if tag else "") + ".json")).write_text(json.dumps({"build": build, "S7": r7, "S7b": r7b, "S8": r8}, ensure_ascii=False, indent=1))
     # 摘要：每个指标跨格的 τ_AB 与 split-half 中位数
     med = lambda v: sorted(v)[len(v) // 2] if v else None  # noqa: E731
