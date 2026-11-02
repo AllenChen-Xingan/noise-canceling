@@ -144,8 +144,11 @@ impl Interpolator3 {
         for p in 0..FACTOR {
             for j in 0..PHASE_TAPS {
                 // 窗里下标 PHASE_TAPS-1-j 是 x[m-j]
-                if let Some(&hk) = h.get(p + FACTOR * j) {
-                    poly[p * PHASE_TAPS + (PHASE_TAPS - 1 - j)] = hk * FACTOR as f32;
+                if let (Some(&hk), Some(slot)) = (
+                    h.get(p + FACTOR * j),
+                    poly.get_mut(p * PHASE_TAPS + (PHASE_TAPS - 1 - j)),
+                ) {
+                    *slot = hk * FACTOR as f32;
                 }
             }
         }
@@ -176,7 +179,8 @@ impl Decimator3 {
 
     /// 本次调用会输出几个样本（与当前相位有关；从 0 相开始、`n` 是 3 的倍数时正好 `n / 3`）。
     pub fn output_len(&self, n: usize) -> usize {
-        (n + (FACTOR - self.phase) % FACTOR).div_ceil(FACTOR)
+        n.saturating_sub((FACTOR - self.phase) % FACTOR)
+            .div_ceil(FACTOR)
     }
 
     /// `output.len()` 应等于 [`Self::output_len`]`(input.len())`（调用方的 bug：debug 下 panic；
