@@ -190,7 +190,7 @@ mod tests {
             FakeBeat::default(),
         );
         w.prime(&mut processed, lead);
-        let mut f = Forwarder::new(ForwarderConfig::new(w.l_total(lead), block), lead);
+        let mut f = Forwarder::new(ForwarderConfig::new(w.l_total(lead), block));
         let x: Vec<f32> = (0..100 * block).map(|i| (i as f32 * 0.01).sin()).collect();
         for c in x.chunks(block) {
             f.process(c, &mut raw, &mut processed, &mut out, &hb);

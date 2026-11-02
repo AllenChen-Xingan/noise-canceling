@@ -52,7 +52,7 @@ impl Rig {
         let mut processed = FakeRing::new(1 << 16);
         processed.push(&vec![0.0; LEAD]);
         Self {
-            fwd: Forwarder::new(ForwarderConfig::new(LEAD, BLOCK), LEAD),
+            fwd: Forwarder::new(ForwarderConfig::new(LEAD, BLOCK)),
             raw: FakeRing::new(1 << 16),
             processed,
             out: FakeRing::new(1 << 20),

@@ -8,6 +8,8 @@
 
 #![forbid(unsafe_code)]
 
+mod verify;
+
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 

@@ -135,9 +135,9 @@ const MAX_GAPS: usize = 32;
 
 /// 送音进程的转发器：原声 → Raw；Processed / 延迟原声 → Out。
 ///
-/// 对齐账：Processed 里第 j 个样本对应「推进 Raw 的第 `j - lead` 个原声」，它该在输出时刻
-/// `A(j - lead) + lead` 播出（`A` 把「推进去的序号」换成原声时刻，跨过 Raw 环满丢掉的缺口；
-/// `lead = l_total - 管线延迟` 正好是降噪进程开头推的零的个数）。
+/// 对齐账：Processed 里第 j 个样本 = 开头 `lead` 个零之后、管线（延迟 `L_pipe`）对「推进 Raw 的第
+/// `j - lead - L_pipe = j - L_total` 个原声」的输出，所以它该在输出时刻 `A(j - L_total) + L_total` 播出
+/// （`A` 把「推进去的序号」换成原声时刻，跨过 Raw 环满丢掉的缺口）。只用到 `L_total`，总线头里就有。
 /// 迟到的（时刻已过）丢掉，超前的（缺口造成）先用原声顶，缺的用原声补——任何时候都逐样本对齐。
 pub struct Forwarder {
     cfg: ForwarderConfig,
@@ -161,22 +161,19 @@ pub struct Forwarder {
     /// 环头之后还没跨过的缺口（按 at 递增）
     gaps: [Gap; MAX_GAPS],
     n_gaps: usize,
-    /// lead（= Processed 开头零的个数；按 l_total 推算不出，构造时给）
-    lead: i64,
     stats: ForwarderStats,
 }
 
 // 构造：非实时线程
 impl Forwarder {
-    /// `lead` = 降噪进程开头往 Processed 推的零的个数（= `l_total - 管线延迟`）。
-    pub fn new(cfg: ForwarderConfig, lead: usize) -> Self {
+    pub fn new(cfg: ForwarderConfig) -> Self {
         let max_block = cfg.max_block.max(1);
         let mut cfg = cfg;
         cfg.max_block = max_block;
         if cfg.max_backlog == 0 {
             cfg.max_backlog = cfg.l_total + 2 * max_block;
         }
-        let lead = lead as i64;
+        let l_total = cfg.l_total as i64;
         Self {
             cfg,
             delay: DelayLine::new(cfg.l_total),
@@ -190,11 +187,10 @@ impl Forwarder {
             since_beat: 0,
             fresh: false,
             accepted: 0,
-            head_acc: -lead,
+            head_acc: -l_total,
             head_shift: 0,
             gaps: [Gap::default(); MAX_GAPS],
             n_gaps: 0,
-            lead,
             stats: ForwarderStats::default(),
         }
     }
@@ -274,7 +270,7 @@ impl Forwarder {
 
     /// 环头样本该在哪个输出时刻播出
     fn head_time(&self) -> i64 {
-        self.head_acc + self.head_shift + self.lead
+        self.head_acc + self.head_shift + self.cfg.l_total as i64
     }
 
     /// 环头到下一个缺口还有几个连续样本
@@ -433,10 +429,10 @@ impl Forwarder {
         self.stats.samples += n as u64;
 
         // 6. 积压上限（迟到的已在第 4 步按账丢过）：还多，多半是换了个降噪进程、账对不上了。
-        //    丢到只剩 lead 个，剩下的当作「从下一块起对齐」
+        //    丢到只剩两块，剩下的当作「从下一块起对齐」
         let backlog = processed.available();
         if backlog > self.cfg.max_backlog {
-            let keep = usize::try_from(self.lead).unwrap_or(0);
+            let keep = 2 * self.cfg.max_block;
             let d = self.discard(processed, backlog - keep.min(backlog));
             self.advance(d);
             self.head_shift += end - self.head_time();
