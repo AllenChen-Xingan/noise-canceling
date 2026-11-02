@@ -35,6 +35,7 @@
 ## 进度板
 
 进度（HH:MM）
+- rs-entry：with_block 接进降噪进程，V1–V4 重跑全过；L_total 直通 2208（46.00 ms）、GTCRN 2976（62.00 ms）；块长 100 启动即报错。新现象：lead = 1 块 + 块长 96 时 6 次里 4 次「处理后欠载」480–1920 样本（用延迟原声补，非静音），块长 480 时 0 次；推断是首次推理预热 + debug 构建，未核实 → backlog
 - 子代理（省 2 ms）：`Pipeline::with_block` 完成，GTCRN 块长 96 时 1536 样本 = 32.00 ms（原 33.98），实测 = 声明；engine 测试 16 条过、clippy 无警告 → 合入骨架（113dd13）与 rs-entry（fd26a1d）
 - rs-entry：**V1–V4 全过**（V1 相关 1.000000、延迟 2303 = L_total、欠载 0；V2 杀降噪 110 ms 切原声、最长静音 0；V3 GTCRN 有声无 NaN、L_total 64 ms；V4 两真进程同 V1，Ctrl-C 后 unlink）。lead = 1 块时欠载 0、GTCRN L_total 44 ms（空闲机器）。修了 denoised 经 capture 带进 cpal。自审中，等 with_block
 - 三家合并后 `xtask ci` 全绿（test 26.5 s；cargo-deny 未装跳过）；骨架分支已合进 rs-entry（65e62a9）
@@ -63,4 +64,4 @@
 - [ ] V6：release 测试 + 全量 `xtask ci`
 - [ ] 改过时说法：根 Cargo.toml 第 1 行注释 · speaker README / Cargo.toml · 规约 §2.2 · §3.7.6（细节见 rs-core 现状页）
 - [ ] 新 crate 实体行写进 `.42cog/cog.md`（各现状页有行）
-- [ ] backlog：Ring 拆 Producer / Consumer 句柄；共享内存权限 0600 与 coreaudiod（装驱动那批实测，补 009 待拍板 3）；cargo-deny / Miri 未装；models 不直接依赖 ort 尚无机器检查
+- [ ] backlog：lead 压到 1 块时块长 96 的欠载（release + 预热核实）；Ring 拆 Producer / Consumer 句柄；共享内存权限 0600 与 coreaudiod（装驱动那批实测，补 009 待拍板 3）；cargo-deny / Miri 未装；models 不直接依赖 ort 尚无机器检查
