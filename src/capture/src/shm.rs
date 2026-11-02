@@ -2,6 +2,7 @@
 //! shm 与 hal 互不依赖，这层小包装归送音端（大总管定，2026-11-02）。
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use vdn_shm::{Bus, Ring, RingId};
 
@@ -37,25 +38,46 @@ impl Heartbeat for Bus {
 }
 
 /// Out 环的消费端，给 `HalSource` 用（开发期也给扬声器输出回调、文件写出线程用）。
-/// 欠载：`HalSource` 补零后调 `note_underrun`，这里转记进 Out 环头部的计数器。
+/// - 欠载：`HalSource` 补零后调 `note_underrun`，这里转记进 Out 环头部的计数器
+/// - 积压上限：读方停过一阵再回来时，Out 里会积着旧声音，照读会让用户这一侧永久多出那么多延迟。
+///   可读量超过 `max_backlog + 本次要的量` 就先丢掉最旧的多余部分（计入 `dropped()`）
 pub struct OutSource {
     bus: Arc<Bus>,
+    max_backlog: usize,
+    dropped: Arc<AtomicU64>,
 }
 
 impl OutSource {
+    /// 默认积压上限 200 ms（9600 样本）
+    pub const DEFAULT_MAX_BACKLOG: usize = 9600;
+
     pub fn new(bus: Arc<Bus>) -> Self {
-        Self { bus }
+        Self::with_max_backlog(bus, Self::DEFAULT_MAX_BACKLOG)
+    }
+    pub fn with_max_backlog(bus: Arc<Bus>, max_backlog: usize) -> Self {
+        Self {
+            bus,
+            max_backlog,
+            dropped: Arc::new(AtomicU64::new(0)),
+        }
+    }
+    /// 因积压超限丢掉的样本数（可在别的线程读）
+    pub fn dropped(&self) -> Arc<AtomicU64> {
+        self.dropped.clone()
     }
 }
 
-#[deny(
-    clippy::disallowed_methods,
-    clippy::disallowed_types,
-    clippy::disallowed_macros
-)]
+#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]
 impl vdn_hal::SampleSource for OutSource {
     fn pop(&mut self, out: &mut [f32]) -> usize {
-        self.bus.ring(RingId::Out).pop(out)
+        let ring = self.bus.ring(RingId::Out);
+        let limit = self.max_backlog.saturating_add(out.len());
+        let avail = ring.available();
+        if avail > limit {
+            let d = ring.discard(avail - limit);
+            self.dropped.fetch_add(d as u64, Ordering::Relaxed);
+        }
+        ring.pop(out)
     }
     fn note_underrun(&mut self, missing: usize) {
         self.bus.ring(RingId::Out).note_underrun(missing);
@@ -75,4 +97,33 @@ pub fn forward(fwd: &mut crate::Forwarder, bus: &Bus, input: &[f32]) {
         bus.ring(RingId::Out),
     );
     fwd.process(input, &mut raw, &mut processed, &mut out, bus);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vdn_hal::SampleSource;
+    use vdn_shm::BusConfig;
+
+    #[test]
+    fn out_backlog_is_capped() {
+        let bus = Arc::new(
+            Bus::heap(BusConfig {
+                rate: 48_000,
+                capacity_frames: 48_000,
+                l_total: 0,
+            })
+            .unwrap(),
+        );
+        let out = bus.ring(RingId::Out);
+        let x: Vec<f32> = (0..20_000).map(|i| i as f32).collect();
+        assert_eq!(out.push(&x), 20_000);
+        let mut src = OutSource::with_max_backlog(bus.clone(), 1000);
+        let mut y = [0.0f32; 480];
+        assert_eq!(src.pop(&mut y), 480);
+        // 留下的是最新的 1000 + 480 个：第一个读到的是 20000 - 1480
+        assert_eq!(y[0], (20_000 - 1480) as f32);
+        assert_eq!(src.dropped().load(Ordering::Relaxed), 20_000 - 1480);
+        assert_eq!(bus.ring(RingId::Out).available(), 1000);
+    }
 }

@@ -509,12 +509,11 @@ impl Forwarder {
         self.stats.samples += n as u64;
 
         // 6. 积压上限（迟到的已在第 4 步按账丢过）。同一条总线上正常不会超（积压 ≤ lead）；
-        //    实际触发多是送音端重启、接到一条 Raw 积满的旧总线。丢到只剩两块，当作「从下一块起对齐」，
+        //    实际触发多是送音端重启、接到一条 Raw 积满的旧总线。全部丢掉，之后新到的当作「从下一块起对齐」，
         //    并强制下一个样本硬切到原声、再按回滞淡回（对上的账是猜的，不能直接满权重播）
         let backlog = processed.available();
         if backlog > self.cfg.max_backlog {
-            let keep = 2 * self.cfg.max_block;
-            let d = self.discard(processed, backlog - keep.min(backlog));
+            let d = self.discard(processed, backlog);
             self.advance(d);
             self.head_shift += end - self.head_time();
             self.n_gaps = 0;
