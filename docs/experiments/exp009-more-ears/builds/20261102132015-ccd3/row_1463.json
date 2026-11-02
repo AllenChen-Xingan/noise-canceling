@@ -1,0 +1,36 @@
+{
+ "sample_id": "ccr_fileid_60_1395_1399",
+ "audio_a": {
+  "file": "ccr_fileid_60_1395_1399_a.flac",
+  "sha256": "330264c15847797535cf31618ae07af5403f9ab9a8ca7e8619a4121e3302ee38",
+  "type": "audio/flac"
+ },
+ "audio_b": {
+  "file": "ccr_fileid_60_1395_1399_b.flac",
+  "sha256": "84d2b4a6bd08157cdbc93b55411be256639632246482175ce2485f6cf792b250",
+  "type": "audio/flac"
+ },
+ "utterance_id": "fileid_60",
+ "system_id_a": "1395",
+ "system_id_b": "1399",
+ "team_name_a": "baird",
+ "team_name_b": "Ali-Universal-SE",
+ "language": "eng",
+ "speaker_id": "spk_097",
+ "text": "A large sum of money is at stake, for the scholarship is a very valuable one, and an unscrupulous man might very well run a risk in order to gain an advantage over his fellows.",
+ "is_simulated": true,
+ "sample_rate": 24000,
+ "duration": 8.68,
+ "cmos": 1.75,
+ "listener_scores": [
+  2,
+  1,
+  1,
+  2,
+  1,
+  2,
+  3,
+  2
+ ],
+ "row_idx": 1463
+}

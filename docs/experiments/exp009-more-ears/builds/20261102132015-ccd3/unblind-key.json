@@ -1,0 +1,73 @@
+{
+ "build": "20261102132015-ccd3",
+ "source": "urgent-challenge/urgent2026-sqa · ccr · CC BY 4.0",
+ "cmos_sign": "正值 = audio_a 更好（数据卡）",
+ "loudness": "未统一，保持众人听到的样子",
+ "questions": {
+  "q1": {
+   "row_idx": 8575,
+   "sample_id": "ccr_fileid_20_1348_1397",
+   "language": "zho",
+   "text": "成为国家经济发展的重要方面",
+   "X": {
+    "side": "a",
+    "system_id": "1348",
+    "team": "RICK2000"
+   },
+   "Y": {
+    "side": "b",
+    "system_id": "1397",
+    "team": "GHW"
+   },
+   "cmos_a_minus_b": -1.571,
+   "votes_a_minus_b": [
+    -2,
+    -1,
+    -1,
+    -3,
+    -1,
+    -1,
+    -2
+   ],
+   "n_votes": 7,
+   "crowd_prefers_slot": "Y",
+   "source_sha256": {
+    "a": "100bcc338f9a3091bf2f5a800240513d8c5c23cf9b6fdc7516accc276c37aba5",
+    "b": "746841c1bb52238d7664239abe20d8db5573a2424e2f77e6d8215a9f27092fe6"
+   }
+  },
+  "q2": {
+   "row_idx": 1463,
+   "sample_id": "ccr_fileid_60_1395_1399",
+   "language": "eng",
+   "text": "A large sum of money is at stake, for the scholarship is a very valuable one, and an unscrupulous man might very well run a risk in order to gain an advantage over his fellows.",
+   "X": {
+    "side": "b",
+    "system_id": "1399",
+    "team": "Ali-Universal-SE"
+   },
+   "Y": {
+    "side": "a",
+    "system_id": "1395",
+    "team": "baird"
+   },
+   "cmos_a_minus_b": 1.75,
+   "votes_a_minus_b": [
+    2,
+    1,
+    1,
+    2,
+    1,
+    2,
+    3,
+    2
+   ],
+   "n_votes": 8,
+   "crowd_prefers_slot": "Y",
+   "source_sha256": {
+    "a": "330264c15847797535cf31618ae07af5403f9ab9a8ca7e8619a4121e3302ee38",
+    "b": "84d2b4a6bd08157cdbc93b55411be256639632246482175ce2485f6cf792b250"
+   }
+  }
+ }
+}
