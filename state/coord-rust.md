@@ -27,9 +27,9 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | 空 |
+| 重编译 / 全量测试（1 个） | rs-entry：release 构建 + V7 基线（0.5 ms 轮询版，约 15 分钟，压力组整机满载） |
 
-排队：（空）
+排队：rs-wake 装 cargo-deny 若来申请，排在 rs-entry 之后
 
 等人许可的弹窗 / 长时间前台运行：（空）
 
@@ -37,6 +37,8 @@
 
 进度（HH:MM）
 - rs-entry 自审：1 P0 + 5 P1 已修（两进程 SIGKILL 重启：相关 1.000000、静音 0）。6 条交大总管 → 定：①Out 环改由送音端自建（rs-entry）②③总线头加 lead · 降噪块长 · 会话 ID · 缺口计数（rs-wake），积压超 lead 丢旧并记缺口（rs-entry）④无缝换设备 → backlog ⑤tidy 查 main.rs → rs-wake；cargo-deny 本批不装 ⑥规约文字收尾时大总管改
+- 人定 D66（原话「c」）：「超级语法树」两种都要；处理图统一表示排在骨架之后。对照审查子代理在跑（008 / 005 / 009 三样）
+- rs-wake：新签名（头部版本 2 · notify / wait · lead / 降噪块长 / 会话 ID / 缺口 · OwnedBus），vdn-shm 测试全过；BusConfig 多两个字段，rs-entry 要补
 - 人定 2026-11-02（原话「还有手下，装」，大总管理解为装检查工具）：装 cargo-deny 并接进 `xtask ci`；装 nightly + Miri 跑 vdn-shm（及 dsp）→ rs-wake
 - 追加定案：OwnedBus（按总线名文件锁独占建立）收进 vdn-shm（rs-wake），denoised 里那份到时删；Out 总线固定名 `/vdn-out`（Config 可改），不带 pid
 - rs-entry 延迟修复做法：IO 块默认 96 · 预热 + 每块耗时计数 · chain-test 线程提实时优先级 + `--stress N` · `vdn v7` 子命令（可扫 lead）
