@@ -230,7 +230,11 @@ fn real_main() -> Result<(), String> {
                     let (g, b) = link.current();
                     if g != epoch {
                         (epoch, bus) = (g, b);
-                        fwd = forwarder_for(&bus, block, timeout);
+                        if bus.l_total() as usize == fwd.config().l_total {
+                            fwd.rebind(); // 原声不断
+                        } else {
+                            fwd = forwarder_for(&bus, block, timeout);
+                        }
                         link.switch_at.store(off, Ordering::Release);
                     }
                     let k = block.min(n - off);
@@ -343,7 +347,10 @@ fn real_main() -> Result<(), String> {
             )?);
         }
         // 正弦入口会自己写换总线的位置；麦克风入口已重开，读方立刻换
-        link.switch_at.store(if sine.is_some() { usize::MAX } else { 0 }, Ordering::Release);
+        link.switch_at.store(
+            if sine.is_some() { usize::MAX } else { 0 },
+            Ordering::Release,
+        );
         if let Ok(mut slot) = link.bus.lock() {
             *slot = new.clone();
         }

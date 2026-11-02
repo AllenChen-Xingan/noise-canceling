@@ -257,6 +257,23 @@ impl Forwarder {
         self.gain
     }
 
+    /// 换到一条新总线（降噪进程重启后建的，`L_total` 不变）：保留本地延迟线和时间轴（原声不断），
+    /// 只把对齐账清零——新总线 Processed 的第 0 个样本对应「从现在起推进 Raw 的第 −L_total 个」。
+    /// 立刻切原声，等新心跳和回滞再淡回。`L_total` 变了不能用它，要新建 `Forwarder`。
+    pub fn rebind(&mut self) {
+        let t = self.stats.samples as i64;
+        self.accepted = 0;
+        self.head_acc = -(self.cfg.l_total as i64);
+        self.head_shift = t;
+        self.n_gaps = 0;
+        self.last_beat = None;
+        self.since_beat = 0;
+        self.fresh = false;
+        self.late_run = 0;
+        self.ok_run = 0;
+        self.pending_cut = self.gain > 0.0;
+    }
+
     /// 一块原声进，一块结果推进 Out。
     pub fn process<R, P, O, H>(
         &mut self,

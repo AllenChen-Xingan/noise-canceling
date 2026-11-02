@@ -320,6 +320,36 @@ fn slow_denoiser_is_reported() {
 }
 
 #[test]
+fn rebind_to_new_bus_keeps_raw_continuous_and_realigns() {
+    let mut r = rig_01();
+    for _ in 0..100 {
+        r.tick();
+    }
+    // 降噪进程被杀；过一阵新进程建了新总线（新环、开头 lead 个零、心跳从 0 起）
+    r.den.alive = false;
+    for _ in 0..50 {
+        r.tick();
+    }
+    r.fwd.rebind();
+    r.raw = FakeRing::new(1 << 16);
+    r.processed = FakeRing::new(1 << 16);
+    r.processed.push(&vec![0.0; LEAD]);
+    r.hb = FakeBeat::default();
+    r.den.alive = true;
+    for _ in 0..100 {
+        r.tick();
+    }
+    let y = r.out.drain_all();
+    assert!(max_jump(&y[LEAD..]) < JUMP_LIMIT);
+    // 最后一段是处理后的（0.1 倍）且对齐
+    let x = sig(y.len(), 0);
+    for k in y.len() - 20 * BLOCK..y.len() {
+        assert!((y[k] - 0.1 * x[k - LEAD]).abs() < 1e-4, "k={k}");
+    }
+    assert!(r.fwd.is_fresh());
+}
+
+#[test]
 fn process_into_does_not_allocate() {
     let mut r = Rig::new();
     let x = sig(BLOCK, 0);
