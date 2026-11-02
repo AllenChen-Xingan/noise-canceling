@@ -8,12 +8,12 @@
 //! 打开降噪进程建好的总线（等它最多 `--wait` 秒）→ 每块原声走 `Forwarder` → Out 环 → 出口。
 
 #![forbid(unsafe_code)]
+// NRT: 进程编排（等总线、开设备、正弦节拍、写文件）；回调闭包只调 lib 里带 deny 的 forward / HalSource::render
 #![allow(
     clippy::disallowed_methods,
     clippy::disallowed_types,
     clippy::disallowed_macros
 )]
-// NRT: 进程编排（等总线、开设备、正弦节拍、写文件）；回调闭包只调 lib 里带 deny 的 forward / HalSource::render
 #![cfg_attr(
     not(test),
     deny(
