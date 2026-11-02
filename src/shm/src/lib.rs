@@ -75,20 +75,32 @@ pub enum ShmError {
     /// 头部 magic 不对：不是 vdn 总线
     BadMagic,
     /// 布局版本不一致：两端程序版本不同
-    BadVersion { found: u32, expected: u32 },
+    BadVersion {
+        found: u32,
+        expected: u32,
+    },
     /// 头部记的大小与映射大小对不上
-    BadSize { header: u64, mapped: u64 },
+    BadSize {
+        header: u64,
+        mapped: u64,
+    },
     /// 本平台 / 本构建没有 POSIX 共享内存（feature `posix` 关了或非 unix）
     Unsupported,
     OutOfMemory,
     /// 系统调用失败
-    Os { op: &'static str, errno: i32 },
+    Os {
+        op: &'static str,
+        errno: i32,
+    },
 }
 
 impl core::fmt::Display for ShmError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::InvalidName => write!(f, "共享内存名字须以 /vdn- 开头、≤31 字节、不含其他 / 与 NUL"),
+            Self::InvalidName => write!(
+                f,
+                "共享内存名字须以 /vdn- 开头、≤31 字节、不含其他 / 与 NUL"
+            ),
             Self::InvalidConfig(why) => write!(f, "总线配置非法：{why}"),
             Self::AlreadyExists => write!(f, "同名共享内存已存在"),
             Self::NotFound => write!(f, "没有这个共享内存"),

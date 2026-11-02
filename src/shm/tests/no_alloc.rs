@@ -30,7 +30,12 @@ fn realtime_path_does_not_allocate() {
                 r.pop(&mut dst);
                 r.pop(&mut dst); // 欠载路径
                 r.note_underrun(1);
-                let _ = (r.available(), r.free_space(), r.take_overflows(), r.take_underruns());
+                let _ = (
+                    r.available(),
+                    r.free_space(),
+                    r.take_overflows(),
+                    r.take_underruns(),
+                );
             }
             bus.beat();
             let _ = (bus.heartbeat(), bus.l_total(), bus.rate(), bus.capacity());

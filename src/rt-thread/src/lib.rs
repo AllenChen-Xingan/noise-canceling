@@ -74,7 +74,10 @@ pub struct RtStatus {
 pub enum RtError {
     InvalidParams(&'static str),
     /// 内核调用返回非 KERN_SUCCESS（参数超内核允许范围也会走这里）
-    Kernel { op: &'static str, code: i32 },
+    Kernel {
+        op: &'static str,
+        code: i32,
+    },
     /// 非 macOS
     Unsupported,
     /// 本批未实现
@@ -200,7 +203,8 @@ mod mach {
         let mut count = THREAD_TIME_CONSTRAINT_POLICY_COUNT;
         // 传入 0：要当前值；返回后为 1 表示线程没设这个策略、给的是默认值
         let mut get_default: mach2::boolean::boolean_t = 0;
-        let info: thread_policy_t = (&mut policy as *mut thread_time_constraint_policy_data_t).cast();
+        let info: thread_policy_t =
+            (&mut policy as *mut thread_time_constraint_policy_data_t).cast();
         // SAFETY: policy / count / get_default 都可写，count 与结构大小匹配；线程端口是当前线程。
         let kr = unsafe {
             thread_policy_get(

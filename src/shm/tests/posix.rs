@@ -54,8 +54,18 @@ fn create_open_validate_unlink() {
 
 #[test]
 fn bad_names_are_rejected() {
-    for n in ["vdn-x", "/vdn-", "/other-x", "/vdn-a/b", "/vdn-0123456789012345678901234567"] {
-        assert_eq!(Bus::create(n, CFG).err(), Some(ShmError::InvalidName), "{n}");
+    for n in [
+        "vdn-x",
+        "/vdn-",
+        "/other-x",
+        "/vdn-a/b",
+        "/vdn-0123456789012345678901234567",
+    ] {
+        assert_eq!(
+            Bus::create(n, CFG).err(),
+            Some(ShmError::InvalidName),
+            "{n}"
+        );
     }
 }
 

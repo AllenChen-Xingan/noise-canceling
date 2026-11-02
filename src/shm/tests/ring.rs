@@ -28,10 +28,23 @@ fn header_reads_back() {
 
 #[test]
 fn bad_config_is_rejected() {
-    let c = |rate, cap| BusConfig { rate, capacity_frames: cap, l_total: 0 };
-    assert!(matches!(Bus::heap(c(48_000, 0)), Err(ShmError::InvalidConfig(_))));
-    assert!(matches!(Bus::heap(c(0, 8)), Err(ShmError::InvalidConfig(_))));
-    assert!(matches!(Bus::heap(c(48_000, (1 << 24) + 1)), Err(ShmError::InvalidConfig(_))));
+    let c = |rate, cap| BusConfig {
+        rate,
+        capacity_frames: cap,
+        l_total: 0,
+    };
+    assert!(matches!(
+        Bus::heap(c(48_000, 0)),
+        Err(ShmError::InvalidConfig(_))
+    ));
+    assert!(matches!(
+        Bus::heap(c(0, 8)),
+        Err(ShmError::InvalidConfig(_))
+    ));
+    assert!(matches!(
+        Bus::heap(c(48_000, (1 << 24) + 1)),
+        Err(ShmError::InvalidConfig(_))
+    ));
 }
 
 #[test]
