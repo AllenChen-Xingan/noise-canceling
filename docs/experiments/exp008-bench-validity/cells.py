@@ -118,7 +118,7 @@ def _babble(rng, n, room, split, rir_fn):
 
 
 def device_chain(x, kind):
-    """线性设备链（同一份作用在三轨上，三轨仍可相加）：laptop = 100 Hz 二阶高通 + 7 kHz 低通（内置麦量级的假设，待 1-3 实测替换）。"""
+    """线性设备链（同一份作用在三轨上，三轨仍可相加）：laptop = 100 Hz 二阶高通 + 7 kHz 低通（内置麦量级的假设；按 D62 开发阶段不实测，发版前试用时再核）。"""
     if kind == "none":
         return x
     if kind == "laptop":

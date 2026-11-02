@@ -71,7 +71,7 @@ V-LAT · V-FRAME · V-CPU（○）· V-DROP（○）· V-NAN · V-MUTE · V-SWIT
 | F5 | 重叠 / 插话 | 两条独立时间轴（重叠率随说话占比自然出现） | 重叠率 0 · 10 · 25 · 50%；「邻座说话中途你开口」有 / 无 | 两人电话 10.5–13%、会议 5–20%、晚餐 27.5–33.9%；约 40% 换人间隔是重叠 | 015 B §2.1【论】 |
 | F6 | 混响 T60 | 0.35 s（办公室） | 0.08（车）· 0.35 · 0.7 · 1.3 s | 会议室目标 0.5–0.7 s、视频会议室 0.8–1.2 s；WHAMR! 三档 U(0.1,0.3) / U(0.2,0.6) / U(0.4,1.0) | F 篇 ③【论 / 官】；015 B §1.1【论】；Traer 2016 有 271 处大样本但中位数只在图里 |
 | F7 | 距离 / DRR | 0.5 m | 0.3 · 0.5 · 0.8 · 1.2 m | **没有笔记本使用距离实测**【假设】；DRR 由距离 + 临界距离推出，不单独抽 | 015 B §2.2【推】；DRR JND 0 dB 处 2.4 dB（Larsen 2008）【论】 |
-| F8 | 设备链 | 「laptop」线性链（100 Hz 高通 + 7 kHz 低通，**假设**） | 无 · laptop · laptop + 慢 AGC · 窄带蓝牙（HFP CVSD 近似）· 削波 6 / 12 dB | **全缺**：MacBook 内置麦频响、AGC 时间常数、Voice Isolation 都没有公开实测 → 待人拍板 1-3（回放重录） | F 篇 ④【空白】；DR-VCTK 只给 8 kHz 以下相对频响（014 #4） |
+| F8 | 设备链 | 「laptop」线性链（100 Hz 高通 + 7 kHz 低通，**假设**） | 无 · laptop · laptop + 慢 AGC · 窄带蓝牙（HFP CVSD 近似）· 削波 6 / 12 dB | **全缺**：MacBook 内置麦频响、AGC 时间常数、Voice Isolation 都没有公开实测 → 按 D62 开发阶段不实测（回放重录留给发版前试用） | F 篇 ④【空白】；DR-VCTK 只给 8 kHz 以下相对频响（014 #4） |
 | F9 | 下游编解码（对方听到的） | 无 | 无 · Opus 12k NB · 20k WB · 32k FB · mSBC · 丢包 5 / 15 % | 会议软件实际码率未查到 | RFC 7587 §3.1.1【官】；URGENT 2026 丢包区间【源】。**只进评测链、不进模型输入**（015 B §1.3） |
 | F10 | 说话人音高 | 按性别 | 男 ~110 · 女 ~200 · 高 ~300 Hz | 按性别 | F 篇 ⑤【论】 |
 | F11 | 发声力度 / 轻声 | normal | soft −9 · normal · raised +6 · loud +12.5 dB | 随 F3 联动 | ANSI S3.5 经 Bottalico 2017 转引【二手】 |
@@ -92,12 +92,12 @@ V-LAT · V-FRAME · V-CPU（○）· V-DROP（○）· V-NAN · V-MUTE · V-SWIT
 | 格 | 扫什么 | 主测维度 | verifier | 将来配的真实锚 |
 |---|---|---|---|---|
 | S-SNR | F2 | 压噪 · 吃字 · 人声损伤 | V-NR · V-EAT-ASR · V-SPLVL · V-ONSET | 作者咖啡馆实录按电平分段（1-3）；CHiME-4 CAF（014 #5，付费） |
-| S-NOISE | F1 | 压噪 · 音乐噪声 · 背景稳定 | V-NR · V-MUSIC · V-BGSTAB · V-VACUUM | 各噪声类真实录音（DEMAND、WHAM! 噪声、ACE 大堂） |
+| S-NOISE | F1 | 压噪 · 音乐噪声 · 背景稳定 | V-NR · V-MUSIC · V-BGSTAB · V-VACUUM | 各噪声类真实录音作**统计参照**（DEMAND 只有噪声、已当合成原料，不算锚；WHAM! 噪声、ACE 大堂随 D65） |
 | S-SIR | F4 | 邻座残留 · 门控误开 · 吃字 | V-INTF · V-SIM-FA · V-SIM-GATE · V-EAT-ASR | DNS4 个性化 dev「主 + 邻座」347 条（无参考，只能吃字 + 人耳） |
 | S-OVL | F5 | 词首误关 · 换人延迟 | V-SIM-GATE（词首）· V-SIM-SWLAT · V-ONSET | CHiME-6 / AliMeeting 转写派生标签（014 第三节，非真值） |
 | S-RT60 | F6 | 人声损伤 · 音色 · 吃字 | V-SPLVL · V-TIMBRE · V-EAT-ASR · V-ESTOI | ACE（实测 RIR + 笔记本档）；dEchorate / METU 实测 RIR 卷积 |
 | S-DIST | F7 | 同上 + 门控（远讲像邻座） | 同上 + V-SIM-GATE | 回放重录不同距离（1-3） |
-| S-DEV | F8 | 音色 · 削波后伪影 · 保命 | V-TIMBRE · V-CLICK · V-NAN | 回放重录（1-3）；DR-VCTK（只评测） |
+| S-DEV | F8 | 音色 · 削波后伪影 · 保命 | V-TIMBRE · V-CLICK · V-NAN | 回放重录（1-3）；DR-VCTK（许可待核，先只评测；D65 第 4 条） |
 | S-CODEC | F9 | 对方听到的清楚 / 自然 | V-EAT-ASR · V-DNSMOS（下游） | 无（编解码是确定性变换，物理上可信度高【推】） |
 | S-PITCH · S-SOFT · S-RATE | F10–F12 | 轻声被吞 · 字头 · 吃字 | V-WEAK · V-ONSET · V-EAT-ASR | 作者本人轻声 / 快语速录音（1-3） |
 | S-LANG | F13 | 吃字（中文）· 附和笑声被吃 | V-EAT-ASR（zh）· **耳** | AliMeeting（014 #3）；AMI 近讲附和段 |

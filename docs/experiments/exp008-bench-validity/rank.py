@@ -11,8 +11,9 @@
   nonowner_att_db（只有干扰者帧：输出 − 带噪，对应 V-INTF 的近似）·
   noise_att_g_db / nonowner_att_g_db（同上两项的带护栏版：另要求混响后主讲人轨比其余低 ≥ 15 dB、前后 2 hop 也满足）
 
-用法：$PY docs/experiments/exp008-bench-validity/rank.py <build> [--systems a,b] [--jobs 8] [--limit N]
-输出：docs/experiments/exp008-bench-validity/results/<build>-scores.jsonl（进仓，只有数，没有音频）
+用法：$PY docs/experiments/exp008-bench-validity/rank.py <build> [--systems a,b] [--jobs 8] [--limit N] [--tag r2]
+输出：docs/experiments/exp008-bench-validity/results/<build>-scores[-<tag>].jsonl（进仓，只有数，没有音频）
+注意：同一 tag 会以写模式覆盖；第二轮按系统分批时每批给不同 tag（如 r2、r2b），rankstat 会合并全部 -scores-r2*.jsonl
 """
 import argparse
 import hashlib
