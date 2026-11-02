@@ -21,6 +21,8 @@ struct FakeDenoiser {
     alive: bool,
     /// 每次最多搬多少（模拟慢）
     rate_limit: usize,
+    /// 处理后 = 原声 × gain（1 = 直通；0.1 = 和原声明显不同，用来查切换是否连续）
+    gain: f32,
 }
 
 impl FakeDenoiser {
@@ -31,6 +33,9 @@ impl FakeDenoiser {
         let mut b = vec![0.0; self.rate_limit];
         let n = raw.pop(&mut b);
         if n > 0 {
+            for v in &mut b[..n] {
+                *v *= self.gain;
+            }
             processed.push(&b[..n]);
             hb.beat();
         }
@@ -60,6 +65,7 @@ impl Rig {
             den: FakeDenoiser {
                 alive: true,
                 rate_limit: BLOCK,
+                gain: 1.0,
             },
             t: 0,
         }
@@ -228,6 +234,87 @@ fn process_into_matches_process_and_splits_long_input() {
         .process_into(&x, &mut y, &mut b.raw, &mut b.processed, &b.hb);
     assert_eq!(a.out.drain_all(), y);
     assert_eq!(b.raw.len(), x.len());
+}
+
+/// 相邻样本最大跳变。测试信号最大斜率 2π(440·0.5 + 2000·0.3)/48000 ≈ 0.107；淡化 10 ms 时
+/// 处理后 ↔ 原声 的权重每样本只变 1/480，带来的额外跳变 ≤ 0.8/480。硬切若不抹平，落差可达 0.9 × 0.8 = 0.72。
+fn max_jump(y: &[f32]) -> f32 {
+    y.windows(2).map(|w| (w[1] - w[0]).abs()).fold(0.0, f32::max)
+}
+
+const JUMP_LIMIT: f32 = 0.13;
+
+fn rig_01() -> Rig {
+    let mut r = Rig::new();
+    r.den.gain = 0.1;
+    r
+}
+
+#[test]
+fn switching_is_continuous_when_denoiser_dies() {
+    let mut r = rig_01();
+    for i in 0..300 {
+        r.den.alive = i < 100;
+        r.tick();
+    }
+    let y = r.out.drain_all();
+    let j = max_jump(&y[LEAD..]);
+    assert!(j < JUMP_LIMIT, "最大跳变 {j}");
+    let s = r.fwd.stats();
+    assert_eq!(s.stale_switches, 1);
+    assert!(s.cuts >= 1);
+    // 死了以后输出 = 延迟原声（接缝偏移衰减完以后）
+    let x = sig(y.len(), 0);
+    for k in 250 * BLOCK..y.len() {
+        assert!((y[k] - x[k - LEAD]).abs() < 1e-4, "k={k}");
+    }
+}
+
+#[test]
+fn switching_is_continuous_on_stalls_and_recovery() {
+    let mut r = rig_01();
+    for i in 0..600 {
+        // 卡 50 ms（5 块）后恢复；之后每 50 块停 4 块
+        r.den.alive = !(100..105).contains(&i) && !(i > 200 && i % 50 < 4);
+        r.den.rate_limit = 8 * BLOCK;
+        r.tick();
+    }
+    let y = r.out.drain_all();
+    let j = max_jump(&y[LEAD..]);
+    assert!(j < JUMP_LIMIT, "最大跳变 {j}");
+    assert!(r.fwd.stats().cuts > 1);
+    // 稳定期间是处理后的（0.1 倍）：回滞之后权重回到 1
+    assert!(r.fwd.is_fresh());
+}
+
+#[test]
+fn resync_does_not_jump() {
+    let mut r = rig_01();
+    for _ in 0..50 {
+        r.tick();
+    }
+    r.processed.push(&vec![0.7; 20 * BLOCK]);
+    for _ in 0..50 {
+        r.tick();
+    }
+    assert_eq!(r.fwd.stats().resyncs, 1);
+    let y = r.out.drain_all();
+    let j = max_jump(&y[LEAD..]);
+    assert!(j < JUMP_LIMIT, "最大跳变 {j}");
+}
+
+#[test]
+fn slow_denoiser_is_reported() {
+    let mut r = rig_01();
+    for i in 0..400 {
+        // 吞吐只有实时的 2/3：每 3 块里搬 2 块
+        r.den.alive = i % 3 != 2;
+        r.den.rate_limit = BLOCK;
+        r.tick();
+    }
+    let s = r.fwd.stats();
+    assert_eq!(s.stale_switches, 0, "心跳一直在动");
+    assert!(s.slow_episodes >= 1, "{s:?}");
 }
 
 #[test]
