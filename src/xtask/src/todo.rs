@@ -71,6 +71,35 @@ pub fn collect() -> Result<Vec<Hit>, String> {
     Ok(hits)
 }
 
+pub fn run() -> std::process::ExitCode {
+    match collect() {
+        Ok(hits) => {
+            let mut cur = "";
+            let mut per: Vec<(String, usize)> = Vec::new();
+            for h in &hits {
+                if h.krate != cur {
+                    println!("{}：", h.krate);
+                    per.push((h.krate.clone(), 0));
+                }
+                cur = &h.krate;
+                if let Some(last) = per.last_mut() {
+                    last.1 += 1;
+                }
+                println!("  {}  {}", h.at, h.text);
+            }
+            println!("== 待实现共 {} 处 ==", hits.len());
+            for (k, n) in per {
+                println!("  {k}: {n}");
+            }
+            std::process::ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("todo 跑不起来：{e}");
+            std::process::ExitCode::FAILURE
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::is_marker;
@@ -99,34 +128,5 @@ mod tests {
             !is_marker("Err(RtError::Unimplemented(\"x\"))", true),
             "tests/ 下的断言"
         );
-    }
-}
-
-pub fn run() -> std::process::ExitCode {
-    match collect() {
-        Ok(hits) => {
-            let mut cur = "";
-            let mut per: Vec<(String, usize)> = Vec::new();
-            for h in &hits {
-                if h.krate != cur {
-                    println!("{}：", h.krate);
-                    per.push((h.krate.clone(), 0));
-                }
-                cur = &h.krate;
-                if let Some(last) = per.last_mut() {
-                    last.1 += 1;
-                }
-                println!("  {}  {}", h.at, h.text);
-            }
-            println!("== 待实现共 {} 处 ==", hits.len());
-            for (k, n) in per {
-                println!("  {k}: {n}");
-            }
-            std::process::ExitCode::SUCCESS
-        }
-        Err(e) => {
-            eprintln!("todo 跑不起来：{e}");
-            std::process::ExitCode::FAILURE
-        }
     }
 }
