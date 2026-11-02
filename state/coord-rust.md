@@ -15,6 +15,7 @@
 | rs-shm | 共享内存总线 · 实时线程 · 闸门 · 实体：vdn-shm · vdn-rt-thread · xtask · `feat/rust-skeleton-shm`（`../noise_canceling-rs-shm`） | `_tmp/20261102-b8-rust/rs-shm.md` | 其 worktree `state/handoff/rs-shm.md` | 完成，已合入 feat/rust-skeleton（449f40d），窗口已关 |
 | rs-io | 音频进出 · 虚拟麦克风读出端 · 实体：vdn-io-macos · vdn-hal · `feat/rust-skeleton-io`（`../noise_canceling-rs-io`） | `_tmp/20261102-b8-rust/rs-io.md` | 其 worktree `state/handoff/rs-io.md` | 完成，已合入 feat/rust-skeleton（a9d4c83），窗口已关 |
 | rs-entry | 接线 · 实体：vdn-control · vdn-capture · vdn-denoised · vdn-cli · `feat/rust-skeleton-entry`（`../noise_canceling-rs-entry`） | `_tmp/20261102-b8-rust/rs-entry.md` | 其 worktree `state/handoff/rs-entry.md` | 已报到（noise-canceling-rs-entry-c3）· 三家已合进其分支（65e62a9），接线中 |
+| rs-wake | 跨进程唤醒替掉 sleep 轮询 + 唤醒 / 轮询对照实验 · 实体：vdn-shm · vdn-rt-thread · `feat/rust-skeleton-shm`（`../noise_canceling-rs-shm`） | `_tmp/20261102-b8-rust/rs-wake.md` | 其 worktree `state/handoff/rs-wake.md` | 已派 |
 
 ## 规矩
 
@@ -35,6 +36,7 @@
 ## 进度板
 
 进度（HH:MM）
+- **延迟修复（人定 2026-11-02：「帮我看下，为啥有这么多问题 / 直接修复」）**：诊断 `_tmp/20261102-b8-rust/latency-fix.md`（A IO 块 480 · B sleep 轮询 · C 推理突发与预热 · D debug 构建 · E lead 留 3 块）；判据 V7 = release、10 次 × 10 s、空闲 + 压力、欠载 0、lead ≤ 192（目标 144）。rs-entry 管 A C D E；新起 rs-wake 管 B
 - rs-entry：with_block 接进降噪进程，V1–V4 重跑全过；L_total 直通 2208（46.00 ms）、GTCRN 2976（62.00 ms）；块长 100 启动即报错。新现象：lead = 1 块 + 块长 96 时 6 次里 4 次「处理后欠载」480–1920 样本（用延迟原声补，非静音），块长 480 时 0 次；推断是首次推理预热 + debug 构建，未核实 → backlog
 - 子代理（省 2 ms）：`Pipeline::with_block` 完成，GTCRN 块长 96 时 1536 样本 = 32.00 ms（原 33.98），实测 = 声明；engine 测试 16 条过、clippy 无警告 → 合入骨架（113dd13）与 rs-entry（fd26a1d）
 - rs-entry：**V1–V4 全过**（V1 相关 1.000000、延迟 2303 = L_total、欠载 0；V2 杀降噪 110 ms 切原声、最长静音 0；V3 GTCRN 有声无 NaN、L_total 64 ms；V4 两真进程同 V1，Ctrl-C 后 unlink）。lead = 1 块时欠载 0、GTCRN L_total 44 ms（空闲机器）。修了 denoised 经 capture 带进 cpal。自审中，等 with_block
