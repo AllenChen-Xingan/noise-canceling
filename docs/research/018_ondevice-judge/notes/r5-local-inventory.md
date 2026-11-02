@@ -16,7 +16,7 @@
 | DNSMOS P.835 | 本机有 `sig_bak_ovr.onnx`（1.16 MB）、`model_v8.onnx`；Rust 自写推理，9.01 s 窗 1 s 跳，不够长自我重复 | 【本机】`M/resources/DNS-Challenge/DNSMOS/DNSMOS/`；【源码】`J/src/eval/src/qa/dnsmos.rs:1-20` |
 | DNSMOS 怎么调 | 单独命令 `vdn-eval dnsmos <模型.onnx> <音频.wav>`，只收 16 kHz，输出一行 JSON `{sig,bak,ovrl,windows}`；QA 层在子进程里调它（ort 一个进程只许一个 Environment） | 【源码】`J/src/eval/src/main.rs:327-342`；`qa/mod.rs:35-37, 58-66, 182-205` |
 | SCOREQ | **不在本机**：所有 venv 都没有 `scoreq`；ears 线计划的 `exp009-venv` 不存在；`~/.cache/huggingface`、`~/vdn-data` 下无权重。exp009 的 SCOREQ 数来自上游元数据里**预先算好的** `scoreq.scp`，不是本机推理 | 【本机】`~/vdn-data/public-mos/vmc2026-track1-meta/ebe09d8…/*/test/scoreq.scp`；`E/docs/experiments/exp009-more-ears/README.md:33`（「SCOREQ 首次下载 ONNX 约 378 MB」）；`score_author.py:40-41`（`scoreq.Scoreq(data_domain="natural", mode="nr")`） |
-| SCOREQ 对众人 | URGENT24 语句 SRCC 0.789 / 系统 0.926；CHiME-7 0.744 / 0.9；DNSMOS CHiME-7 语句 0.232 | 【本机实测，ears】`E/…/exp009-more-ears/results/crowd_ears.md:10-16` |
+| SCOREQ 对众人 | URGENT24 语句 SRCC 0.789 / 系统 0.926；CHiME-7 0.744 / 0.9；DNSMOS CHiME-7 语句 0.232 | 【本机统计，分数是上游预算】【已核改】相关系数是 ears 在本机算的，但 SCOREQ / DNSMOS / Distill-MOS / UTMOS / NISQA 各分全读自上游 `vmc2026-track1-meta` 的 `<指标>.scp`（`E/…/exp009-more-ears/crowd_ears.py:33, 82, 97`），**不是本机推理**；DNSMOS 0.232 也不是本仓 Rust DNSMOS 的分。`E/…/exp009-more-ears/results/crowd_ears.md:10-16` |
 | NISQA | 源码 + 权重 `nisqa.tar` 1.05 MB / `nisqa_mos_only.tar` 0.91 MB；要 torch（exp008-torch-venv 有 torch 2.15，但没装 pandas）。CHiME-7 语句 SRCC 0.424 | 【本机】`M/resources/NISQA/weights/`；`crowd_ears.md` nisqa 行 |
 | UTMOS22 / UTMOSv2 / SpeechMOS / URGENT-PK / versa | 只有源码，**无权重** | 【本机】`M/resources/` |
 | venv | `M/_tmp/exp002-venv`（441 MB）：numpy · scipy · librosa · soundfile · onnxruntime 1.31.1 · pesq · pystoi；`M/_tmp/exp008-torch-venv`（1.1 GB）：另加 torch 2.15.0 · torchaudio 2.11.1。**两者都没有 scoreq / nisqa 包 / transformers / qwen**；`E/` 没有 `_tmp/` | 【本机】`*/lib/python3.12/site-packages` |
@@ -28,8 +28,8 @@
 | 项 | exp006 留出 `fed2` | exp008 `20261031-102406-0c67` |
 |---|---|---|
 | 规模 | test 280 段 + seq 16 条，10 s；有目标说话人约 88% | 348 段 × 8 s = A / B 两套生成器各 174 |
-| 分轨 | 只有 `<id>_clean.wav` + `<id>_noisy.wav`（邻座干扰混在噪声里） | `mix / owner / interf / noise` 四轨，float32 |
-| 格档名 | 每段 `fine`（7 类：traffic 58 · babble 52 · neighbor 43 · quiet 39 · music 36 · clatter 27 · hvac 25）、`user`、`device`（normal / bt_narrow / clip）、`snr_db`、`rt60_mid` | 目录 `<A|B>/<格>/c<NN>_<档>_<轨>.wav`；格 = S-SNR（−5…20）· S-NOISE（stationary/cafe/babble/clatter/traffic/music）· S-RT60（car/office/cafe/hall）· S-SIR（none,20…−6）· M-SNRxNOISE · M-SIRxSNR |
+| 分轨 | 只有 `<id>_clean.wav` + `<id>_noisy.wav`（邻座干扰混在噪声里）；【已核改】无目标说话人的 36 段**没有** `_clean.wav`（目录 524 个文件 = 244×2 + 36×1） | `mix / owner / interf / noise` 四轨，float32 |
+| 格档名 | 每段 `fine`（7 类：traffic 58 · babble 52 · neighbor 43 · quiet 39 · music 36 · clatter 27 · hvac 25）、`user`、`device`（【已核改】取值是 `none` 166 / `bt_narrow` 55 / `clip` 59，没有 `normal`）、`snr_db`、`rt60_mid` | 目录 `<A|B>/<格>/c<NN>_<档>_<轨>.wav`；格 = S-SNR（−5…20）· S-NOISE（stationary/cafe/babble/clatter/traffic/music）· S-RT60（car/office/cafe/hall）· S-SIR（none,20…−6）· M-SNRxNOISE · M-SIRxSNR |
 | 真值 | `truth.jsonl`（场景真值，可直接喂路由表）；另有 Rust 场景特征 `feat_test_final.jsonl`（每 0.5 s 一行、35 维 `feat`） | `truth.jsonl` 每段 `cond` + 逐 hop（256）四类标签 0 无人声 / 1 主讲人 / 2 干扰 / 3 重叠 + 素材出处 + PCM 哈希 |
 | 出处 | 【本机】`J/docs/experiments/exp006-scene-sim/builds/20261030235558-fed2/{build,truth}.jsonl`；音频 `M/_tmp/20261031-exp006/20261030235558-fed2/test/`；README §1 表 `J/…/exp006-scene-sim/README.md:12-35` | 【本机】`B/docs/experiments/exp008-bench-validity/builds/20261031-102406-0c67/{manifest.json,truth.jsonl}`；`cells.py:150-160`（标签规则）；音频 `M/_tmp/exp008/20261031-102406-0c67/` |
 | 坑 | fed2 **从没参与任何调参**（README:53）；但修音预设是在 44df 上初调的 | **exp008 不在 main、远端也没有这条分支**（只在本机 benchsynth worktree）；S-NOISE 没有 quiet / neighbor 类，映不全路由表；合成杯碟 / 音乐与真实录音统计不对齐（README S6 表）；A 的素材与 exp006 训练集重叠（局限 6） |
