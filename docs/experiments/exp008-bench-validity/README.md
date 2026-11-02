@@ -59,5 +59,6 @@
 - **S7b 交互一致性**（主判据，每轴系统 × 档位残差 r、精确置换）：S-SNR / S-NOISE / S-SIR 上 r 0.5–0.9、p ≤ 0.025；S-RT60 上 r −0.08–0.45、p ≥ 0.13 → 混响格依赖 RIR 生成器
 - **S8**（D4-add）：合成格预测 exp003 人耳配对 0.25–0.38，屏聚类区间含 0.5；片段自身 0.48–0.56 → 判不了方向
 - **S2 重检**（`results/*-checks-s2fix.json`）：room / noise 轴原先是空检，补后仍全过
-- **第二轮（2026-11-02）**：RNNoise · WebRTC NS 18 / 6 dB · MossFormer2-48k 读文件打分（`results/*-scores-r2.jsonl`，0 错误），合并统计 `results/*-rankstat-r2.json`（`rankstat.py <build> r2`，不覆盖第一轮）。去天花板与变体 15 个系统：S7b 结论不变；DNSMOS SIG 在 S-SIR 轴 r 0.04 不复现。FRCRN 等 4 个 torch 系统中断待续跑；Hush ×2 + DFN3 未跑（权限缺口）
+- **第二轮（2026-11-02）**：RNNoise · WebRTC NS 18 / 6 dB · MossFormer2-48k 读文件打分（`results/*-scores-r2.jsonl`，0 错误），合并统计 `results/*-rankstat-r2.json`（`rankstat.py <build> r2`，不覆盖第一轮）。去天花板、变体与直通地板 14 个系统：S7b 加 3 个系统后不变（未校正）；DNSMOS SIG 在 S-SIR 轴 r 0.07 不一致（第一轮已有，只在含 DSP 的阶梯上）。`rankstat.py` 已改：缺档系统剔除并记 `dropped`、< 6 个系统不判、先滤错误行。FRCRN 等 4 个 torch 系统中断待续跑；Hush ×2 + DFN3 未跑（权限缺口）
+- **S10 交集**（`s10.py <build> <训练 build 的 truth.jsonl> [--split train]`，纯标准库，秒级）：对 exp006 训练 build 44df，A 72 / 174 段、B 174 / 174 段重叠；对 exp006 留出 fed2，A 的主讲人 174 / 174 相同。结果 `results/*-s10-*.json`
 - 读法与局限见 `docs/research/016_bench-synth/mvp.md` 2.2 / 2.3

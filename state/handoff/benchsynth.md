@@ -15,3 +15,12 @@
 - 2026-11-02 新会话接续（vdn 会话 10-31 晚中断）。盘点第二轮：RNNoise · WebRTC ×2 · MossFormer2-48k 出全 348 段、未打分；FRCRN 179 · MossFormerGAN 44 · URGENT-BSRNN 40 · G-MaP-SE 11 段中断；Hush ×2 + DFN3 记缺口。上轮留的两个未提交改动（mossformer2 记录跑完 348 段、现状页一行）核对无误，已由 hook 提交
 - 2026-11-02 名额①（4 个系统打分 `rank.py --tag r2`）已拿到并在跑；名额②（续跑 4 个 torch 系统）排在 ears 后
 - 2026-11-02 按 D62–D65 改正文：真实锚「为零」改述为「开发阶段不追（D62），数据侧目标级 D2」；S4 / S10 / S11 加公开集测试份 / 训练份切分与 SA 可训练；待拍板 1、2、8 标已定。S10 红队 P0 处理定为「标限制（0c67 只评第三方模型）+ 下一 build 按 D63 换池」，写进 synth-standard S10 处理段、mvp 2.2、exp008 README。rankstat.py 加第二轮变体 / 族代表、输出加 tag 不覆盖第一轮
+- 2026-11-02 名额①跑完已归还（4 系统 348 段，838 s，0 错误）；回填 mvp 2.3、decision 第一节、exp008 README
+- 2026-11-02 三路对抗自审（统计怀疑派 / 红队与决策一致性 / 实现派）回来并已改：SIG×S-SIR 不是新发现（第一轮已有）；压噪行标为无护栏旧版、带护栏版不进合并结论；S7b 集合去掉直通地板（14 系统）；未校正多重比较写明、「复现」改「加 3 个系统后不变」；有效系统数未估；rankstat 缺档系统剔除并记 dropped、< 6 系统不判、先滤错误行；复现命令补全；S10 换池规则改为 A、B 都不调 sim.py；**truth.jsonl 其实有说话人与噪声起点**（初稿说没有，错）→ 新写 `exp008/s10.py` 逐段实测交集（A 72/174、B 174/174；A 与 fed2 说话人 174/174 相同，已告知 judgeloop）；DEMAND 已合成过的 6 个环境不能当测试份；「裁判原料」第三类进待拍板第 10 题；D2 只许说「格 X 上 verifier Y 过线」
+
+## 转交（给大总管）
+1. **下载申请**：LibriSpeech dev-clean（约 0.3 GB，测试份）+ train-clean-100（约 6.3 GB，训练原料），不在 D65 清单内、超 500 MB——下一个换池 build 要用，时机随 D65
+2. **待拍板登记**：016 decision.md 第四节第 3–7、9、10 题未进 `state/pending-decisions.md`；建议第四组加「4-9 · 016」指针行，第 3 题并 4-3、第 6 题并 4-6
+3. **Hush ×2 + DFN3**：仍需人在 benchsynth 终端直接批准运行预编译 dylib（不绕）
+4. **名额②**：续跑 FRCRN（179/348）· MossFormerGAN（44）· URGENT-BSRNN（40）· G-MaP-SE（11），排在 ears、judgeloop 之后；结论不等它们，跑完只补充
+5. 给实现线（不改 `src/eval/`）：`vdn-eval score --suite <外部清单>`；exp007 QA 改名「加法混合」
