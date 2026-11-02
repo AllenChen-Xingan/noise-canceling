@@ -40,7 +40,7 @@
 | evalimpl | eval 实现：vdn-eval · CI / QA / 人工三层 · 回归集与能力集 · issue #31 · `feat/eval-verifiers` | 完成，PR #38 已合并（issue #31 关），窗口已关；CI 每个 PR 跑 eval ci（回归 13/17 · 能力 0/10 · 探针 5/5）；4 题已并入待拍板清单 |
 | prefs | 人耳结果 → eval 任务 · 偏好数据集 · 分场景默认 · `specs/rubric/preferences.md` · issue #37 · `feat/eval-prefs` | `_tmp/20261031-b4/prefs.md` | 其 worktree | 完成，PR #43 已合并（issue #37 关），窗口已关；待拍板 4-7 / 4-8 已并入；worktree `../noise_canceling-prefs` 保留待清 |
 | benchsynth | **b7 重派（2026-11-02，交代 `_tmp/20261102-b7/benchsynth.md`）· 已报到（noise-canceling-benchsynth-19），完成，PR #47 已合并（cabf3d0，issue #41 关），远端分支已删，窗口已关；worktree `../noise_canceling-benchsynth` 保留待清（手下自己提交并推送了现状页 780eea3，越过「手下不做 git 写」，内容无害，已记）** · 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
-| ears | **b7 重派 · 已报到（noise-canceling-ears-08）** · 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已报到（noise-canceling-ears-03）· 实验编号 exp009 |
+| ears | **b7 重派 · 完成，PR #48 已合并（issue #42 关），远端分支已删，窗口已关；worktree 保留待清；人答卷回来后由大总管放 exp009 results/** · 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已报到（noise-canceling-ears-03）· 实验编号 exp009 |
 | judgeloop | **b7 重派 · 已报到（noise-canceling-judge-loop-21），补调研 r1/r2/r5 已批** · 018 本机评分模型 + 调节模型闭环（D52）· issue #44 · `research/018-ondevice-judge`（worktree `../noise_canceling-judge-loop`） | `_tmp/20261031-b6/judgeloop.md` | 其 worktree | 已报到 |
 | engine | **停（2026-10-31 会话中断），转 backlog** · 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已报到 |
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
@@ -64,6 +64,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 ears 收尾：PR #48；E2 按人「可以」记 D66；E6 登记 4-11
 - 2026-11-02 ears ①② 完成：① `notes/I-why-scorers-pick-dpdfnet.md`（实测 12 段：停顿处背景 DPDFNet-2 −7.8 dB vs GTCRN −5.1 dB；GTCRN 人声音色近原声 0.6 dB；高频、吃字无差）② 2 道众人锚点题 build 20261102132015-ccd3，揭盲表已提交；已查无答案后复制到 `~/Desktop/20261102-vdn-crowd-anchor-listen/`。揭晓时要告诉人：第 1 题两边响度差约 9.5 dB；两题众人都选 Y 是随机分配。答卷 `answers-20261102132015-ccd3.json` 交回给 ears 放 results/
 - 2026-11-02 ears 自审更正：「作者偏离大众」参照线抽样结构与作者答卷不同；换同构参照线后作者 0.40 vs 线 0.389 → 结论由「有证据」改为「边缘，不能说作者偏离」，decision 已改。①② 在做：① 12 段纯信号量 GTCRN vs DPDFNet-2（不跑模型）② 盲听用 URGENT 2026 配对打分集（CC BY 4.0），按行取 2 对，几 MB
 - 2026-11-02 人新提（转 ears，优先于自审）：「我们到底用什么模型 / 为啥评分器选择的都是dfn 的模型，但我选择的是另外的 / 评分器用的这个模型的逻辑是啥 / 帮我找两个大众都弄过的，让我听一下」→ ① 评分器逻辑短文 + GTCRN vs DPDFNet-2 实测差别 ② 2 道大众已评分的盲听题
