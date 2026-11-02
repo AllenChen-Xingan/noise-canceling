@@ -341,6 +341,13 @@ fn rebind_to_new_bus_keeps_raw_continuous_and_realigns() {
     }
     let y = r.out.drain_all();
     assert!(max_jump(&y[LEAD..]) < JUMP_LIMIT);
+    // 换总线前后都没有静音段（新总线开头的占位零不播）
+    let longest_quiet = y[LEAD..]
+        .split(|v| v.abs() >= 1e-3)
+        .map(<[f32]>::len)
+        .max()
+        .unwrap_or(0);
+    assert!(longest_quiet < 50, "最长静音 {longest_quiet} 样本");
     // 最后一段是处理后的（0.1 倍）且对齐
     let x = sig(y.len(), 0);
     for k in y.len() - 20 * BLOCK..y.len() {
