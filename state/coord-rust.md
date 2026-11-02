@@ -14,7 +14,7 @@
 | rs-core | 48 kHz 处理层 · 实体：vdn-dsp · vdn-engine · vdn-backend-ort · vdn-models · `feat/rust-skeleton-core`（`../noise_canceling-rs-core`） | `_tmp/20261102-b8-rust/rs-core.md` | 其 worktree `state/handoff/rs-core.md` | 已报到（noise-canceling-rs-core-2d） |
 | rs-shm | 共享内存总线 · 实时线程 · 闸门 · 实体：vdn-shm · vdn-rt-thread · xtask · `feat/rust-skeleton-shm`（`../noise_canceling-rs-shm`） | `_tmp/20261102-b8-rust/rs-shm.md` | 其 worktree `state/handoff/rs-shm.md` | 已报到（noise-canceling-rs-shm-dc） |
 | rs-io | 音频进出 · 虚拟麦克风读出端 · 实体：vdn-io-macos · vdn-hal · `feat/rust-skeleton-io`（`../noise_canceling-rs-io`） | `_tmp/20261102-b8-rust/rs-io.md` | 其 worktree `state/handoff/rs-io.md` | 已报到（noise-canceling-rs-io-7b） |
-| rs-entry | 接线 · 实体：vdn-control · vdn-capture · vdn-denoised · vdn-cli · `feat/rust-skeleton-entry`（`../noise_canceling-rs-entry`） | `_tmp/20261102-b8-rust/rs-entry.md` | 其 worktree `state/handoff/rs-entry.md` | 已派 |
+| rs-entry | 接线 · 实体：vdn-control · vdn-capture · vdn-denoised · vdn-cli · `feat/rust-skeleton-entry`（`../noise_canceling-rs-entry`） | `_tmp/20261102-b8-rust/rs-entry.md` | 其 worktree `state/handoff/rs-entry.md` | 已报到（noise-canceling-rs-entry-c3） |
 
 ## 规矩
 
@@ -35,11 +35,15 @@
 ## 进度板
 
 进度（HH:MM）
-- 16:xx 四个手下已起（tmux `vdn-rust`）；rs-core · rs-shm · rs-io 已报到，rs-entry 等报到
+- rs-shm：Bus / rt-thread 签名定（check_current 改返回 Result，认可），已转 rs-entry；在写测试；Miri / cargo-deny 未装、不装
+- rs-io：io-macos / hal 签名定（回调 ≤ block 帧；HalSource 对 SampleSource 泛型），已转 rs-entry；Out 环 → SampleSource 的包装归 rs-entry
+- rs-entry：链路缓冲余量 lead 定为参数，默认 1440 样本（30 ms）；GTCRN 时 L_total 64 ms，超 45 ms 预算 → 记已知缺口，后续批次压
+- rs-core：Pipeline 签名定（不设 max_block；Identity 延迟 863、GTCRN 1631 样本 @48k），已转 rs-entry；在写测试与拆 backend-ort
+- 16:xx 四个手下已起（tmux `vdn-rust`）；四个都已报到
 
 ## 发现
 
-- （暂无）
+- 2026-11-02 · rs-entry：跨进程缓冲余量 30 ms（预算 3 ms），骨架期接受、记已知缺口
 
 ## 待定清单（攒着等人一次看完）
 
