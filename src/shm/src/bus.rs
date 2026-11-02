@@ -294,6 +294,19 @@ impl Ring<'_> {
         n
     }
 
+    /// 消费方：读出最多 `dst.len()` 个样本，不够的部分**填 0 并计欠载**，返回读到的个数（HAL 输出等「必须交满一块」的地方用）。
+    pub fn pop_or_zero(&self, dst: &mut [f32]) -> usize {
+        let n = self.pop(dst);
+        let missing = dst.len() - n;
+        if missing > 0 {
+            for x in dst.iter_mut().skip(n) {
+                *x = 0.0;
+            }
+            self.note_underrun(missing);
+        }
+        n
+    }
+
     /// 消费方：丢掉最多 `n` 个样本（重新对齐用），返回丢掉的个数。
     pub fn discard(&self, n: usize) -> usize {
         let r = self.hdr.cons.read.load(Relaxed);
@@ -305,8 +318,9 @@ impl Ring<'_> {
 
     /// 可读样本数（消费方看是下限，生产方看是上限）。
     pub fn available(&self) -> usize {
-        let w = self.hdr.prod.write.load(Acquire);
+        // 先读 read 再读 write：两个索引都只增不减，这样第三方线程读到的 write ≥ read，不会回绕成「满」（自审 P2）
         let r = self.hdr.cons.read.load(Acquire);
+        let w = self.hdr.prod.write.load(Acquire);
         self.used(w, r) as usize
     }
 

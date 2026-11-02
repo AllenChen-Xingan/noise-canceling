@@ -29,6 +29,7 @@ fn realtime_path_does_not_allocate() {
                 r.discard(100);
                 r.pop(&mut dst);
                 r.pop(&mut dst); // 欠载路径
+                r.pop_or_zero(&mut dst);
                 r.note_underrun(1);
                 let _ = (
                     r.available(),

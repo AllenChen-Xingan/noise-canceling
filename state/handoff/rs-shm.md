@@ -1,8 +1,8 @@
 # 现状页 · 手下 rs-shm（批次 20261102-b8-rust）
 
 - **手上**：vdn-shm（新）· vdn-rt-thread（新）· xtask（闸门）
-- **做到哪**：读完交代与规约，开始写 vdn-shm
-- **下一步**：Bus 接口编译通过 → 通知大总管、rs-entry、rs-io
+- **做到哪**：三个 crate 都写完，单 crate 测试全过；自审子代理在跑；已申请名额跑 `xtask ci`
+- **下一步**：拿到名额跑全量闸门 → 按自审修 → 收尾
 
 ## 流水
 - 2026-11-02 报到；读 010 第十 / 十一节、规约 §2–§7、009 decision 相关行、现有 xtask 与 ci.yml
@@ -13,3 +13,4 @@
 - 2026-11-02 签名发给大总管、rs-io、rs-entry（state/handoff/rs-shm-api.md）；大总管认可 check_current 返回 Result，并让我在根 Cargo.toml 加 vdn-shm / vdn-rt-thread 两行 workspace 依赖（已加）
 - 2026-11-02 xtask：新增 `ci`（ci.rs）· `todo`（todo.rs）；tidy 加 SAFETY 检查（unsafe=true 的 crate）；deny.toml 建好（未实跑：本机没装 cargo-deny）；ci.yml 改调 `xtask ci`
 - 2026-11-02 Miri：未实跑（stable 1.99.1 无 miri 组件，没装 nightly）。loom：本批不做（ring.rs 里 #[ignore = "待实现：loom…"]）
+- 2026-11-02 拿名额跑 `cargo run -p xtask -- ci`：全绿，23 s（fmt · clippy · test · tidy · check-deps 过；cargo-deny 跳过，未装）；名额已归还

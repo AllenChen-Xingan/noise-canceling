@@ -13,6 +13,10 @@
 //! - 单生产者单消费者是**约定**：同一个环同一时刻只许一个线程 push、一个线程 pop（跨进程无法由类型系统保证）
 //! - 样本槽是 `AtomicU32`（存 `f32::to_bits`）；读写索引 Release / Acquire，样本本身 Relaxed（由索引的 Release / Acquire 发布）
 //! - 环满：`push` 只写得下的部分，其余丢掉并计溢出；环空：`pop` 只读得到的部分，欠载由调用方经 `note_underrun` 计
+//!   （或用 `pop_or_zero`：余下填 0 并自动计欠载）
+//! - 环满时丢的是**最新**样本，不覆盖未读的旧样本；两端时钟漂移时环会停在满、延迟停在最大，
+//!   **由消费方负责按 `l_total` 用 `discard` 重新对齐**（本 crate 不自动纠正）
+//! - `Ring` 是 `Copy`：同一环两端「各只一个线程」靠约定，类型挡不住（自审 P2，拆 Producer / Consumer 句柄待大总管定）
 //! - 本 crate 不依赖任何 vdn crate；POSIX 部分（feature `posix`，默认开）只用 libc
 
 #![cfg_attr(

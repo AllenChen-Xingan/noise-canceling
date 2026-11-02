@@ -14,7 +14,7 @@
 use core::mem::{align_of, offset_of, size_of};
 use core::sync::atomic::{AtomicU32, AtomicU64};
 
-/// "VDN_SHM1" 的大端字节。0 = 创建方还没写完头。
+/// 数值读作 ASCII "VDN_SHM1"（按本机小端存，十六进制工具里看到的字节是倒序的）。0 = 创建方还没写完头。
 pub const MAGIC: u64 = 0x5644_4E5F_5348_4D31;
 /// 布局版本。改了本文件里任何一个字段、顺序或大小，就加 1。
 pub const VERSION: u32 = 1;
@@ -79,11 +79,18 @@ pub const fn total_bytes(capacity_frames: u32) -> Option<usize> {
     Some(HEADER_BYTES + RINGS * capacity_frames as usize * SLOT_BYTES)
 }
 
+// 跨进程要求 64 位原子操作无锁（arm64 / x86_64 都满足）
+#[cfg(not(target_has_atomic = "64"))]
+compile_error!("vdn-shm 需要无锁的 64 位原子操作");
+
 // 布局钉死：任何一项变了编译就失败，提醒升 VERSION 并通知 HAL / 对端（若驱动是 C，cbindgen 出头文件）。
 // 这些是编译期断言，不在运行期执行。
 const _: () = {
     assert!(size_of::<ProdLine>() == 64 && size_of::<ConsLine>() == 64);
     assert!(size_of::<RingHdr>() == 128);
+    assert!(offset_of!(RingHdr, prod) == 0 && offset_of!(RingHdr, cons) == 64);
+    assert!(offset_of!(ProdLine, write) == 0 && offset_of!(ProdLine, overflow) == 8);
+    assert!(offset_of!(ConsLine, read) == 0 && offset_of!(ConsLine, underrun) == 8);
     assert!(size_of::<ConfigLine>() == 64);
     assert!(offset_of!(ConfigLine, magic) == 0);
     assert!(offset_of!(ConfigLine, version) == 8);

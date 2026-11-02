@@ -134,5 +134,35 @@ fn special_floats_roundtrip_bit_exact() {
 }
 
 #[test]
+fn pop_or_zero_fills_and_counts() {
+    let b = bus(8);
+    let r = b.ring(RingId::Out);
+    r.push(&[1.0, 2.0]);
+    let mut dst = [9.0f32; 5];
+    assert_eq!(r.pop_or_zero(&mut dst), 2);
+    assert_eq!(
+        dst,
+        [1.0, 2.0, 0.0, 0.0, 0.0],
+        "不够的部分填 0，不留上一块的声音"
+    );
+    assert_eq!(r.underruns(), 3);
+}
+
+#[test]
+fn drift_full_ring_realigned_by_discard() {
+    // 生产方快于消费方：环停在满、多出来的被丢；消费方按目标积压 discard 回去
+    let b = bus(16);
+    let r = b.ring(RingId::Processed);
+    for _ in 0..10 {
+        r.push(&[0.5; 4]);
+    }
+    assert_eq!(r.available(), 16);
+    assert!(r.overflows() > 0);
+    let target = 4;
+    r.discard(r.available() - target);
+    assert_eq!(r.available(), target);
+}
+
+#[test]
 #[ignore = "待实现：loom 模型检查 SPSC 协议（本批不做）"]
 fn loom_spsc() {}
