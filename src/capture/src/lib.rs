@@ -131,8 +131,12 @@ pub struct ForwarderStats {
     pub discarded: u64,
     /// 积压超限、按「从现在起对齐」重新对账的次数
     pub resyncs: u64,
-    /// 缺口记录满了、合并记账的次数（> 0 说明对齐可能错了）
+    /// 缺口记录满了、合并进最后一段的次数（只影响落后那一段的对齐，那段样本本来就迟到会被丢；追上后恢复）
     pub gap_overflow: u64,
+    /// 硬切次数：该用处理后的位置却没有处理后的样本，只能立刻切原声（用接缝偏移保持波形连续）
+    pub cuts: u64,
+    /// 「降噪太慢」次数：心跳在动、但处理后的连续缺了超过心跳超时那么久（心跳过期计数看不到这种情况）
+    pub slow_episodes: u64,
     /// 最近一次 新鲜 → 过期 发生在第几个样本（`samples` 计）
     pub last_stale_at: Option<u64>,
 }
@@ -159,9 +163,21 @@ pub struct Forwarder {
     raw_delayed: Vec<f32>,
     proc_buf: Vec<f32>,
     out_buf: Vec<f32>,
+    /// 这一块里每个位置有没有取到处理后的样本
+    have: Vec<bool>,
     /// 处理后声音的权重（0 = 全原声，1 = 全处理后）
     gain: f32,
     step: f32,
+    /// 连续取到处理后样本的个数（回滞：够 `fade` 个才往回淡）
+    ok_run: usize,
+    /// 心跳新鲜时连续缺处理后样本的个数（判「降噪太慢」）
+    late_run: usize,
+    /// 接缝偏移：硬切那一刻输出的落差，按指数衰减加回去，保持波形连续（规约 R11）
+    seam: f32,
+    seam_decay: f32,
+    last_y: f32,
+    /// 下一个样本强制按硬切处理（重新对账之后）
+    pending_cut: bool,
     last_beat: Option<u64>,
     since_beat: usize,
     fresh: bool,
@@ -193,8 +209,16 @@ impl Forwarder {
             raw_delayed: vec![0.0; max_block],
             proc_buf: vec![0.0; max_block],
             out_buf: vec![0.0; max_block],
+            have: vec![false; max_block],
             gain: 0.0,
             step: 1.0 / cfg.fade.max(1) as f32,
+            ok_run: 0,
+            late_run: 0,
+            seam: 0.0,
+            // 时间常数 2 ms（96 样本 @ 48 kHz）
+            seam_decay: (-1.0f32 / 96.0).exp(),
+            last_y: 0.0,
+            pending_cut: false,
             last_beat: None,
             since_beat: 0,
             fresh: false,
@@ -351,10 +375,11 @@ impl Forwarder {
         }
 
         // 2. 本地延迟原声；处理后的先默认成它（缺的位置就是原声）
-        match (self.raw_delayed.get_mut(..n), self.proc_buf.get_mut(..n)) {
-            (Some(rd), Some(pb)) => {
+        match (self.raw_delayed.get_mut(..n), self.proc_buf.get_mut(..n), self.have.get_mut(..n)) {
+            (Some(rd), Some(pb), Some(hv)) => {
                 self.delay.process(x, rd);
                 pb.copy_from_slice(rd);
+                hv.fill(false);
             }
             _ => return,
         }
@@ -417,6 +442,9 @@ impl Forwarder {
                 Some(b) => processed.pop(b).min(k),
                 None => 0,
             };
+            if let Some(hv) = self.have.get_mut(i..i + got) {
+                hv.fill(true);
+            }
             self.advance(got);
             t += got as i64;
             if got < k {
@@ -430,21 +458,55 @@ impl Forwarder {
             self.stats.stale_samples += n as u64;
         }
 
-        // 5. 混合：权重按样本走向目标
-        let target = if self.fresh { 1.0 } else { 0.0 };
+        // 5. 混合（逐样本）：
+        //    - 心跳过期 → 按 `fade` 淡到原声（处理后的还有，能淡）
+        //    - 该用处理后的位置却没有 → 只能立刻切原声（硬切），落差用接缝偏移抹平
+        //    - 回滞：连续取到 `fade` 个处理后样本、且心跳新鲜，才往回淡
+        let fade = self.cfg.fade;
+        let timeout = self.cfg.timeout;
         let rd = self.raw_delayed.get(..n).unwrap_or(&[]);
-        for ((yi, &r), &p) in y.iter_mut().zip(rd.iter()).zip(self.proc_buf.iter()) {
+        for (((yi, &r), &p), &has) in y.iter_mut().zip(rd.iter()).zip(self.proc_buf.iter()).zip(self.have.iter()) {
+            let mut cut = core::mem::take(&mut self.pending_cut);
+            if has {
+                self.ok_run = self.ok_run.saturating_add(1);
+                self.late_run = 0;
+            } else {
+                self.ok_run = 0;
+                if self.fresh {
+                    self.late_run = self.late_run.saturating_add(1);
+                    if self.late_run == timeout {
+                        self.stats.slow_episodes += 1;
+                    }
+                }
+                if self.gain > 0.0 {
+                    cut = true;
+                }
+            }
+            if cut {
+                self.gain = 0.0;
+                self.ok_run = 0;
+                self.stats.cuts += 1;
+            }
+            let target = if self.fresh && self.ok_run >= fade { 1.0 } else { 0.0 };
             if self.gain < target {
                 self.gain = (self.gain + self.step).min(1.0);
             } else if self.gain > target {
                 self.gain = (self.gain - self.step).max(0.0);
             }
-            *yi = self.gain * p + (1.0 - self.gain) * r;
+            let cand = self.gain * p + (1.0 - self.gain) * r;
+            if cut {
+                self.seam = self.last_y - cand;
+            }
+            let v = cand + self.seam;
+            self.seam *= self.seam_decay;
+            self.last_y = v;
+            *yi = v;
         }
         self.stats.samples += n as u64;
 
-        // 6. 积压上限（迟到的已在第 4 步按账丢过）：还多，多半是换了个降噪进程、账对不上了。
-        //    丢到只剩两块，剩下的当作「从下一块起对齐」
+        // 6. 积压上限（迟到的已在第 4 步按账丢过）。同一条总线上正常不会超（积压 ≤ lead）；
+        //    实际触发多是送音端重启、接到一条 Raw 积满的旧总线。丢到只剩两块，当作「从下一块起对齐」，
+        //    并强制下一个样本硬切到原声、再按回滞淡回（对上的账是猜的，不能直接满权重播）
         let backlog = processed.available();
         if backlog > self.cfg.max_backlog {
             let keep = 2 * self.cfg.max_block;
@@ -453,6 +515,8 @@ impl Forwarder {
             self.head_shift += end - self.head_time();
             self.n_gaps = 0;
             self.stats.resyncs += 1;
+            self.pending_cut = self.gain > 0.0;
+            self.ok_run = 0;
         }
     }
 
