@@ -6,7 +6,7 @@
 //! vdn-denoised --config vdn.json
 //! ```
 //! 建总线 → 往 Processed 推 lead 个零 → 循环：Raw 够一块就跑 Pipeline → 推 Processed → 心跳。
-//! Ctrl-C（或 `--seconds` 到点）干净退出并 unlink 总线。
+//! Ctrl-C / SIGTERM / SIGHUP（或 `--seconds` 到点）干净退出并 unlink 总线；同名总线已有活着的建方时拒绝启动。
 
 #![forbid(unsafe_code)]
 #![allow(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)] // NRT: 进程编排（建总线、信号、日志、空闲让出 sleep）；实时部分在 lib 的 Worker::step。空闲 sleep 轮询待换跨进程唤醒（backlog）
@@ -30,9 +30,9 @@ use std::time::{Duration, Instant};
 use clap::Parser;
 use vdn_control::{Config, Mode, ModelChoice};
 use vdn_denoised::{
-    IO_RATE, Processor, Step, Worker, identity_pipeline, model_kind, model_pipeline,
+    IO_RATE, OwnedBus, Processor, Step, Worker, identity_pipeline, model_kind, model_pipeline,
 };
-use vdn_shm::{Bus, BusConfig, RingId};
+use vdn_shm::{BusConfig, RingId};
 
 #[derive(Parser)]
 #[command(
@@ -140,32 +140,37 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
         ));
     }
 
-    // 上次异常退出可能留了同名对象
-    let _ = Bus::unlink_name(&cfg.bus_name);
-    let bus = Bus::create(
+    if cfg.lead_frames < cfg.block + cfg.denoise_block {
+        eprintln!(
+            "vdn-denoised: 警告：环余量 {} < 送音块长 {} + 降噪块长 {}，送音端会经常取不到处理后的（用原声补）",
+            cfg.lead_frames, cfg.block, cfg.denoise_block
+        );
+    }
+
+    // 先装信号处理（Ctrl-C / SIGTERM / SIGHUP）再建总线：之间收到信号也能走正常退出、删名字
+    let stop = Arc::new(AtomicBool::new(false));
+    {
+        let stop = stop.clone();
+        ctrlc::set_handler(move || stop.store(true, Ordering::Relaxed))
+            .map_err(|e| format!("装信号处理：{e}"))?;
+    }
+
+    // 拿到这个名字的锁才建（同名第二个降噪进程直接报错，不删别人在用的总线）；
+    // 之后任何返回路径（含出错、panic 展开）都由守卫删名字
+    let bus = OwnedBus::create(
         &cfg.bus_name,
         BusConfig {
             rate: IO_RATE,
             capacity_frames: a.capacity,
             l_total: u32::try_from(l_total).map_err(|_| "L_total 太大")?,
         },
-    )
-    .map_err(|e| format!("建总线 {}：{e}", cfg.bus_name))?;
-    let bus = Arc::new(bus);
+    )?;
     let primed = worker.prime(&bus, cfg.lead_frames);
     if primed != cfg.lead_frames {
-        let _ = bus.unlink();
         return Err(format!(
             "Processed 环只放下 {primed} / {} 个零",
             cfg.lead_frames
         ));
-    }
-
-    let stop = Arc::new(AtomicBool::new(false));
-    {
-        let stop = stop.clone();
-        ctrlc::set_handler(move || stop.store(true, Ordering::Relaxed))
-            .map_err(|e| format!("装 Ctrl-C 处理：{e}"))?;
     }
 
     eprintln!(
