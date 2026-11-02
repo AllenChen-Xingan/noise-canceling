@@ -1,0 +1,50 @@
+{
+ "id": "webrtc_ns18",
+ "family": "C*",
+ "causal": true,
+ "sr_model": 16000,
+ "weights": [],
+ "code_source": "resources/sonora/crates/sonora-ns（dignifiedquire/sonora 0.2.0，git 373f1d73fd4429ef38dd8854b3162f40e0eb7eb0）",
+ "license": "BSD-3-Clause",
+ "license_source": "resources/sonora/LICENSE",
+ "delay_comp_samples": 96,
+ "delay_check": {
+  "method": "前 6 段输出 vs _owner.wav 互相关，±2000 样本",
+  "lags": [
+   {
+    "path": "A/S-SNR/c00_-5.0_mix.wav",
+    "lag": 0
+   },
+   {
+    "path": "A/S-SNR/c00_0.0_mix.wav",
+    "lag": 0
+   },
+   {
+    "path": "A/S-SNR/c00_5.0_mix.wav",
+    "lag": 0
+   },
+   {
+    "path": "A/S-SNR/c00_10.0_mix.wav",
+    "lag": 0
+   },
+   {
+    "path": "A/S-SNR/c00_20.0_mix.wav",
+    "lag": 0
+   },
+   {
+    "path": "A/S-SNR/c01_-5.0_mix.wav",
+    "lag": 0
+   }
+  ],
+  "pass": true
+ },
+ "runtime": "python 3.12.14 · numpy 2.5.4 · scipy 1.18.1 · exp008-webrtc-ns-raw sha256 6b0656e3980a88c51c89f63d020714965836c3c27f77051c5f3ad0d307eeee2f（rustc 1.99.1 (58cf8f9c3 2026-10-13)）",
+ "bin_source": "docs/experiments/exp008-bench-validity/enh/rust/webrtc_ns_raw/",
+ "n_written": 348,
+ "n_rows": 348,
+ "failures": [],
+ "seconds": 4.7,
+ "jobs": 2,
+ "limit": 0,
+ "notes": "NoiseSuppressor::with_level(K18dB)，单频带 16 k，每帧 analyze→process（同 sonora capture 路径），输入按 ±32768 量级"
+}
