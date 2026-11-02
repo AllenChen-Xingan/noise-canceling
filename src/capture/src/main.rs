@@ -110,16 +110,16 @@ fn open_bus(name: &str, wait: f64) -> Result<Bus, String> {
     }
 }
 
-/// 送音端和它当前接着的那条总线。降噪进程重启后换成新总线，`gen` 加一。
+/// 送音端和它当前接着的那条总线。降噪进程重启后换成新总线，`epoch` 加一。
 struct Link {
     bus: Mutex<Arc<Bus>>,
-    gen: AtomicU64,
+    epoch: AtomicU64,
     stop: AtomicBool,
 }
 
 impl Link {
     fn current(&self) -> (u64, Arc<Bus>) {
-        let g = self.gen.load(Ordering::Acquire);
+        let g = self.epoch.load(Ordering::Acquire);
         let b = self.bus.lock().map(|b| b.clone()).unwrap_or_else(|p| p.into_inner().clone());
         (g, b)
     }
@@ -186,7 +186,7 @@ fn real_main() -> Result<(), String> {
     );
     let link = Arc::new(Link {
         bus: Mutex::new(first.clone()),
-        gen: AtomicU64::new(0),
+        epoch: AtomicU64::new(0),
         stop: AtomicBool::new(false),
     });
 
@@ -194,22 +194,22 @@ fn real_main() -> Result<(), String> {
     let block_dur = Duration::from_secs_f64(block as f64 / f64::from(IO_RATE));
     let total = seconds.map(|s| ((s * f64::from(IO_RATE)) as usize).div_ceil(block) * block);
 
-    // 入口：正弦线程自己跟着 gen 换总线；麦克风流由下面的监视循环重开
+    // 入口：正弦线程自己跟着 epoch 换总线；麦克风流由下面的监视循环重开
     let mut mic = None;
     let sine = match a.source {
         Source::Sine => {
             let link = link.clone();
             let n = total.unwrap_or(usize::MAX / 2);
             Some(thread::spawn(move || {
-                let (mut gen, mut bus) = link.current();
+                let (mut epoch, mut bus) = link.current();
                 let mut fwd = forwarder_for(&bus, block, timeout);
                 let mut buf = vec![0.0f32; block];
                 let (mut off, mut i) = (0usize, 0u32);
                 while off < n && !link.stop.load(Ordering::Relaxed) {
                     sleep_until(start + block_dur * i);
                     let (g, b) = link.current();
-                    if g != gen {
-                        (gen, bus) = (g, b);
+                    if g != epoch {
+                        (epoch, bus) = (g, b);
                         fwd = forwarder_for(&bus, block, timeout);
                     }
                     let k = block.min(n - off);
@@ -243,7 +243,7 @@ fn real_main() -> Result<(), String> {
             let n = total.unwrap_or(0);
             let link = link.clone();
             Some(thread::spawn(move || {
-                let (mut gen, bus) = link.current();
+                let (mut epoch, bus) = link.current();
                 let mut src = HalSource::new(OutSource::new(bus));
                 let mut y = vec![0.0f32; n];
                 let mut underrun = 0u64;
@@ -251,9 +251,9 @@ fn real_main() -> Result<(), String> {
                     // 晚 1.5 块读，模拟插件 IO 线程
                     sleep_until(start + block_dur * i as u32 + block_dur * 3 / 2);
                     let (g, b) = link.current();
-                    if g != gen {
+                    if g != epoch {
                         underrun += src.counters().underrun_samples();
-                        gen = g;
+                        epoch = g;
                         src = HalSource::new(OutSource::new(b));
                     }
                     let _: RenderStatus = src.render(yb);
@@ -304,7 +304,7 @@ fn real_main() -> Result<(), String> {
         if let Ok(mut slot) = link.bus.lock() {
             *slot = new.clone();
         }
-        link.gen.fetch_add(1, Ordering::AcqRel);
+        link.epoch.fetch_add(1, Ordering::AcqRel);
         (last_beat, beat_at) = (new.heartbeat(), Instant::now());
         reconnects += 1;
     }
