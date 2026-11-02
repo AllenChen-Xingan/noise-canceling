@@ -6,12 +6,13 @@
 
 use std::path::Path;
 
+use vdn_backend_ort::ort;
 use ort::session::{HasSelectedOutputs, OutputSelector, RunOptions, Session};
 use ort::value::Tensor;
 use vdn_dsp::{StreamingStft, window};
 use vdn_types::{Model, ModelError};
 
-use crate::session::{self, BoxError};
+use vdn_backend_ort::{self as session, BoxError};
 
 const N_FFT: usize = 512;
 const HOP: usize = 256;
