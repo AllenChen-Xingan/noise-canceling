@@ -14,6 +14,8 @@ fn realtime_path_does_not_allocate() {
         rate: 48_000,
         capacity_frames: 1024,
         l_total: 0,
+        lead: 0,
+        denoise_block: 0,
     })
     .unwrap();
     let src = [0.25f32; 512];

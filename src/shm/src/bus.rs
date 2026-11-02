@@ -320,9 +320,10 @@ impl Bus {
                 }
             }
         }
+    }
 }
 
-/// 实时可调：不分配、不加锁、不做系统调用、不 panic。
+/// 实时可调：不分配、不加锁、不 panic；除 `notify` 的一次非阻塞唤醒外不做系统调用。
 #[deny(
     clippy::disallowed_methods,
     clippy::disallowed_types,

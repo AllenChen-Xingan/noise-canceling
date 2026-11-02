@@ -7,6 +7,8 @@ fn bus(cap: u32) -> Bus {
         rate: 48_000,
         capacity_frames: cap,
         l_total: 123,
+        lead: 0,
+        denoise_block: 0,
     })
     .unwrap()
 }
@@ -32,6 +34,8 @@ fn bad_config_is_rejected() {
         rate,
         capacity_frames: cap,
         l_total: 0,
+        lead: 0,
+        denoise_block: 0,
     };
     assert!(matches!(
         Bus::heap(c(48_000, 0)),
