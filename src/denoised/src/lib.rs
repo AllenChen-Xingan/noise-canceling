@@ -53,12 +53,21 @@ fn build<M: Model>(engine: Engine<M>, block: Option<usize>) -> Result<Pipeline<M
 }
 
 /// 直通管线（`testing::Identity`，不需要模型权重）。
-pub fn identity_pipeline(block: Option<usize>) -> Result<Pipeline<vdn_engine::testing::Identity>, String> {
-    build(Engine::new(vdn_engine::testing::Identity, SafetyConfig::off()), block)
+pub fn identity_pipeline(
+    block: Option<usize>,
+) -> Result<Pipeline<vdn_engine::testing::Identity>, String> {
+    build(
+        Engine::new(vdn_engine::testing::Identity, SafetyConfig::off()),
+        block,
+    )
 }
 
 /// 真模型管线（三件保命按默认开）。`path` 不给就按 vdn-models 的默认路径查找。
-pub fn model_pipeline(kind: ModelKind, path: Option<&Path>, block: Option<usize>) -> Result<Pipeline<AnyModel>, String> {
+pub fn model_pipeline(
+    kind: ModelKind,
+    path: Option<&Path>,
+    block: Option<usize>,
+) -> Result<Pipeline<AnyModel>, String> {
     let p = match path {
         Some(p) => p.to_path_buf(),
         None => kind

@@ -492,11 +492,17 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
     };
     vdn_control::validate_bus_name(&o.bus_name)?;
     let r = match o.mode {
-        chain::ChainMode::Passthrough => chain::run(vdn_denoised::identity_pipeline(Some(o.denoise_block))?, &o)?,
+        chain::ChainMode::Passthrough => {
+            chain::run(vdn_denoised::identity_pipeline(Some(o.denoise_block))?, &o)?
+        }
         chain::ChainMode::Denoise => {
             let kind = ModelKind::from(a.m.model);
             chain::run(
-                vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref(), Some(o.denoise_block))?,
+                vdn_denoised::model_pipeline(
+                    kind,
+                    a.m.model_path.as_deref(),
+                    Some(o.denoise_block),
+                )?,
                 &o,
             )?
         }

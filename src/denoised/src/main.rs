@@ -157,10 +157,10 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     }
 
     eprintln!(
-        "vdn-denoised: 总线 {} 已建 · 模式 {:?} · 块长 {} · L_total {} 样本（{:.2} ms）= Pipeline {} + 环余量 {}",
+        "vdn-denoised: 总线 {} 已建 · 模式 {:?} · 降噪块长 {} · L_total {} 样本（{:.2} ms）= Pipeline {} + 环余量 {}",
         cfg.bus_name,
         cfg.mode,
-        cfg.block,
+        cfg.denoise_block,
         l_total,
         l_total as f64 / 48.0,
         l_pipe,
