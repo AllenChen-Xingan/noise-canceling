@@ -48,6 +48,35 @@ pub struct ChainOpts {
     pub kill_at: Option<f64>,
     pub bus_name: String,
     pub heartbeat_timeout: usize,
+    /// 三个线程提 time-constraint 实时优先级（模拟真 IO 线程；不提时会被普通调度拖）
+    pub rt: bool,
+    /// 后台压力：再起这么多个忙线程（V7 压力组）
+    pub stress: usize,
+    /// 降噪线程开始服务前预热多少块
+    pub warmup_blocks: usize,
+    /// 虚拟麦克风比送音端晚多少样本读 Out（模拟插件 IO 相位；不在 L_total 里）
+    pub hal_offset: usize,
+}
+
+impl ChainOpts {
+    /// 默认值（直通、5 s、IO 块与降噪块按 vdn-control 默认）
+    pub fn new(bus_name: &str) -> Self {
+        let block = vdn_control::Config::DEFAULT_BLOCK;
+        Self {
+            mode: ChainMode::Passthrough,
+            seconds: 5.0,
+            block,
+            lead: vdn_control::Config::DEFAULT_LEAD,
+            denoise_block: vdn_control::Config::DEFAULT_DENOISE_BLOCK,
+            kill_at: None,
+            bus_name: bus_name.to_owned(),
+            heartbeat_timeout: 4800,
+            rt: true,
+            stress: 0,
+            warmup_blocks: 64,
+            hal_offset: block * 3 / 2,
+        }
+    }
 }
 
 /// 一次运行的原始结果。
@@ -63,7 +92,17 @@ pub struct ChainRun {
     pub hal_underrun_blocks: u64,
     pub hal_underrun_samples: u64,
     pub killed_at: Option<u64>,
-    pub worker_blocks: u64,
+    pub worker: vdn_denoised::WorkerStats,
+    pub warmup: vdn_denoised::Warmup,
+    pub hal_offset: usize,
+    /// 实时优先级提升失败的线程数
+    pub rt_failures: u32,
+}
+
+/// 当前线程提 time-constraint 优先级；失败返回 false（照常跑，计数）。
+fn promote(block: usize, load: f64) -> bool {
+    let p = vdn_rt_thread::RtParams::for_block(block as u32, RATE, load);
+    vdn_rt_thread::promote_current(p).is_ok()
 }
 
 /// 任何返回路径（含某个线程 panic、`?` 提前返回）都让降噪线程停下。
@@ -85,6 +124,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
     let block = o.block;
     let total = ((o.seconds * f64::from(RATE)) as usize).div_ceil(block) * block;
     let mut worker = Worker::new(pipeline, o.denoise_block);
+    let warmup = worker.warm_up(o.warmup_blocks);
     let l_pipe = worker.processor().latency_samples();
     let l_total = l_pipe + o.lead;
 
@@ -113,8 +153,26 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
     let _stop_guard = StopOnDrop(stop.clone());
     let cap_pos = Arc::new(AtomicU64::new(0));
     let killed_at = Arc::new(AtomicU64::new(u64::MAX));
+    let rt_failures = Arc::new(AtomicU64::new(0));
     let start = Instant::now() + Duration::from_millis(20);
     let block_dur = Duration::from_secs_f64(block as f64 / f64::from(RATE));
+    let hal_delay = Duration::from_secs_f64(o.hal_offset as f64 / f64::from(RATE));
+
+    // 后台压力：忙线程（不提优先级）
+    let stressors: Vec<_> = (0..o.stress)
+        .map(|_| {
+            let stop = stop.clone();
+            thread::spawn(move || {
+                let mut v = 1u64;
+                while !stop.load(Ordering::Relaxed) {
+                    for _ in 0..10_000 {
+                        v = std::hint::black_box(v.wrapping_mul(6364136223846793005).wrapping_add(1));
+                    }
+                }
+                v
+            })
+        })
+        .collect();
 
     // 降噪
     let den = {
@@ -125,7 +183,11 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
             killed_at.clone(),
         );
         let kill_samples = o.kill_at.map(|s| (s * f64::from(RATE)) as u64);
+        let (rt, dblock, rtf) = (o.rt, o.denoise_block, rt_failures.clone());
         thread::spawn(move || {
+            if rt && !promote(dblock, 0.75) {
+                rtf.fetch_add(1, Ordering::Relaxed);
+            }
             let mut consumed = 0u64;
             while !stop.load(Ordering::Relaxed) {
                 if kill_samples.is_some_and(|k| consumed >= k) {
@@ -137,7 +199,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
                     Step::Idle => thread::sleep(Duration::from_micros(500)),
                 }
             }
-            worker.stats().blocks
+            worker.stats()
         })
     };
 
@@ -148,7 +210,11 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         fcfg.timeout = o.heartbeat_timeout;
         let mut fwd = Forwarder::new(fcfg);
         let x = test_tone(RATE, total, 0);
+        let (rt, rtf) = (o.rt, rt_failures.clone());
         thread::spawn(move || {
+            if rt && !promote(block, 0.25) {
+                rtf.fetch_add(1, Ordering::Relaxed);
+            }
             for (i, xb) in x.chunks(block).enumerate() {
                 sleep_until(start + block_dur * i as u32);
                 vdn_capture::shm::forward(&mut fwd, &bus, xb);
@@ -158,15 +224,19 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         })
     };
 
-    // 虚拟麦克风：晚 1.5 块开始读
+    // 虚拟麦克风：晚 hal_offset 个样本开始读
     let hal = {
         let bus = hal_bus.clone();
+        let (rt, rtf) = (o.rt, rt_failures.clone());
         thread::spawn(move || {
+            if rt && !promote(block, 0.25) {
+                rtf.fetch_add(1, Ordering::Relaxed);
+            }
             let mut src = HalSource::new(vdn_capture::shm::OutSource::new(bus));
             let mut y = vec![0.0f32; total];
             let (mut ub, mut us) = (0u64, 0u64);
             for (i, yb) in y.chunks_mut(block).enumerate() {
-                sleep_until(start + block_dur * i as u32 + block_dur * 3 / 2);
+                sleep_until(start + block_dur * i as u32 + hal_delay);
                 if let RenderStatus::Underrun { got } = src.render(yb) {
                     ub += 1;
                     us += (yb.len() - got) as u64;
@@ -179,7 +249,10 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
     let (x, fwd) = cap.join().map_err(|_| "收音线程 panic")?;
     let (y, ub, us) = hal.join().map_err(|_| "虚拟麦线程 panic")?;
     stop.store(true, Ordering::Relaxed);
-    let worker_blocks = den.join().map_err(|_| "降噪线程 panic")?;
+    let worker_stats = den.join().map_err(|_| "降噪线程 panic")?;
+    for s in stressors {
+        let _ = s.join();
+    }
     let k = killed_at.load(Ordering::Acquire);
     den_bus.unlink().map_err(|e| format!("unlink：{e}"))?;
     drop(den_bus);
@@ -194,7 +267,10 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         hal_underrun_blocks: ub,
         hal_underrun_samples: us,
         killed_at: (k != u64::MAX).then_some(k),
-        worker_blocks,
+        worker: worker_stats,
+        warmup,
+        hal_offset: o.hal_offset,
+        rt_failures: u32::try_from(rt_failures.load(Ordering::Relaxed)).unwrap_or(u32::MAX),
     })
 }
 
