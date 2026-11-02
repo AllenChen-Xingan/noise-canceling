@@ -115,49 +115,86 @@ pub struct ForwarderStats {
     pub recoveries: u64,
     /// 为保持对齐或限积压而丢掉的处理后样本
     pub discarded: u64,
+    /// 积压超限、按「从现在起对齐」重新对账的次数
+    pub resyncs: u64,
+    /// 缺口记录满了、合并记账的次数（> 0 说明对齐可能错了）
+    pub gap_overflow: u64,
     /// 最近一次 新鲜 → 过期 发生在第几个样本（`samples` 计）
     pub last_stale_at: Option<u64>,
 }
 
+/// Raw 环满时丢掉的一段原声：在「已推进 Raw 的第 `at` 个样本」之前缺了 `len` 个。
+#[derive(Clone, Copy, Debug, Default)]
+struct Gap {
+    at: i64,
+    len: i64,
+}
+
+/// 最多记多少段未消化的缺口；满了就并进最后一段（对齐会错，计入 `gap_overflow`）
+const MAX_GAPS: usize = 32;
+
 /// 送音进程的转发器：原声 → Raw；Processed / 延迟原声 → Out。
+///
+/// 对齐账：Processed 里第 j 个样本对应「推进 Raw 的第 `j - lead` 个原声」，它该在输出时刻
+/// `A(j - lead) + lead` 播出（`A` 把「推进去的序号」换成原声时刻，跨过 Raw 环满丢掉的缺口；
+/// `lead = l_total - 管线延迟` 正好是降噪进程开头推的零的个数）。
+/// 迟到的（时刻已过）丢掉，超前的（缺口造成）先用原声顶，缺的用原声补——任何时候都逐样本对齐。
 pub struct Forwarder {
     cfg: ForwarderConfig,
     delay: DelayLine,
     raw_delayed: Vec<f32>,
     proc_buf: Vec<f32>,
     out_buf: Vec<f32>,
+    scratch: Vec<f32>,
     /// 处理后声音的权重（0 = 全原声，1 = 全处理后）
     gain: f32,
     step: f32,
     last_beat: Option<u64>,
     since_beat: usize,
     fresh: bool,
-    /// 对齐账：> 0 = Processed 欠我们这么多样本（下次到了先丢掉）；< 0 = Processed 超前（先不取，用原声）
-    skip: i64,
+    /// 已推进 Raw 的原声样本数
+    accepted: i64,
+    /// Processed 环头那个样本对应的「推进序号」（开头 = -lead，即那 lead 个零）
+    head_acc: i64,
+    /// 环头已跨过的缺口总长
+    head_shift: i64,
+    /// 环头之后还没跨过的缺口（按 at 递增）
+    gaps: [Gap; MAX_GAPS],
+    n_gaps: usize,
+    /// lead（= Processed 开头零的个数；按 l_total 推算不出，构造时给）
+    lead: i64,
     stats: ForwarderStats,
 }
 
 // 构造：非实时线程
 impl Forwarder {
-    pub fn new(cfg: ForwarderConfig) -> Self {
+    /// `lead` = 降噪进程开头往 Processed 推的零的个数（= `l_total - 管线延迟`）。
+    pub fn new(cfg: ForwarderConfig, lead: usize) -> Self {
         let max_block = cfg.max_block.max(1);
         let mut cfg = cfg;
         cfg.max_block = max_block;
         if cfg.max_backlog == 0 {
             cfg.max_backlog = cfg.l_total + 2 * max_block;
         }
+        let lead = lead as i64;
         Self {
             cfg,
             delay: DelayLine::new(cfg.l_total),
             raw_delayed: vec![0.0; max_block],
             proc_buf: vec![0.0; max_block],
             out_buf: vec![0.0; max_block],
+            scratch: vec![0.0; max_block],
             gain: 0.0,
             step: 1.0 / cfg.fade.max(1) as f32,
             last_beat: None,
             since_beat: 0,
             fresh: false,
-            skip: 0,
+            accepted: 0,
+            head_acc: -lead,
+            head_shift: 0,
+            gaps: [Gap::default(); MAX_GAPS],
+            n_gaps: 0,
+            lead,
             stats: ForwarderStats::default(),
         }
     }
@@ -219,6 +256,52 @@ impl Forwarder {
         }
     }
 
+    /// 环头样本该在哪个输出时刻播出
+    fn head_time(&self) -> i64 {
+        self.head_acc + self.head_shift + self.lead
+    }
+
+    /// 环头到下一个缺口还有几个连续样本
+    fn run_to_gap(&self) -> i64 {
+        match self.gaps.first() {
+            Some(g) if self.n_gaps > 0 => (g.at - self.head_acc).max(0),
+            _ => i64::MAX,
+        }
+    }
+
+    /// 环头前进 k 个样本，跨过的缺口计入 head_shift
+    fn advance(&mut self, k: usize) {
+        self.head_acc += k as i64;
+        while self.n_gaps > 0 {
+            let Some(g) = self.gaps.first().copied() else {
+                break;
+            };
+            if g.at > self.head_acc {
+                break;
+            }
+            self.head_shift += g.len;
+            self.gaps.copy_within(1..self.n_gaps, 0);
+            self.n_gaps -= 1;
+        }
+    }
+
+    fn note_gap(&mut self, len: i64) {
+        let at = self.accepted;
+        if let Some(last) = self.n_gaps.checked_sub(1).and_then(|i| self.gaps.get_mut(i)) {
+            if last.at == at {
+                last.len += len;
+                return;
+            }
+        }
+        if let Some(slot) = self.gaps.get_mut(self.n_gaps) {
+            *slot = Gap { at, len };
+            self.n_gaps += 1;
+        } else if let Some(last) = self.gaps.last_mut() {
+            last.len += len;
+            self.stats.gap_overflow += 1;
+        }
+    }
+
     /// `x.len() == y.len() ≤ max_block`
     fn chunk<R, P, H>(&mut self, x: &[f32], y: &mut [f32], raw: &mut R, processed: &mut P, hb: &H)
     where
@@ -227,16 +310,23 @@ impl Forwarder {
         H: Heartbeat + ?Sized,
     {
         let n = x.len();
-        // 1. 原声推 Raw；推不进去的样本，降噪进程那边的流就少了这一段 → Processed 超前
+        let t0 = self.stats.samples as i64;
+        // 1. 原声推 Raw；推不进去的记成缺口
         let pushed = raw.push(x).min(n);
+        self.accepted += pushed as i64;
         let dropped = n - pushed;
-        self.stats.raw_overflow += dropped as u64;
-        self.skip -= dropped as i64;
+        if dropped > 0 {
+            self.stats.raw_overflow += dropped as u64;
+            self.note_gap(dropped as i64);
+        }
 
-        // 2. 本地延迟原声
-        match self.raw_delayed.get_mut(..n) {
-            Some(rd) => self.delay.process(x, rd),
-            None => return,
+        // 2. 本地延迟原声；处理后的先默认成它（缺的位置就是原声）
+        match (self.raw_delayed.get_mut(..n), self.proc_buf.get_mut(..n)) {
+            (Some(rd), Some(pb)) => {
+                self.delay.process(x, rd);
+                pb.copy_from_slice(rd);
+            }
+            _ => return,
         }
 
         // 3. 心跳
@@ -265,48 +355,64 @@ impl Forwarder {
             }
         }
 
-        // 4. 对齐账与积压
-        if self.skip > 0 {
-            let want = usize::try_from(self.skip).unwrap_or(usize::MAX);
-            let d = self.discard(processed, want);
-            self.skip -= d as i64;
-        }
+        // 4. 积压上限：多出来的（多半是换了个降噪进程、账对不上了）丢掉，剩下的当作「从现在起对齐」
         let backlog = processed.available();
         if backlog > self.cfg.max_backlog {
             let d = self.discard(processed, backlog - self.cfg.max_backlog);
-            // 丢掉的是最旧的；既然限了积压，旧的对齐账作废
-            if d > 0 {
-                self.skip = 0;
+            self.advance(d);
+            self.head_shift += t0 + self.cfg.max_backlog.min(self.lead.max(0) as usize) as i64 - self.head_time();
+            self.stats.resyncs += 1;
+        }
+
+        // 5. 按对齐账取处理后的
+        let end = t0 + n as i64;
+        let mut t = t0;
+        let mut missing = 0usize;
+        while t < end {
+            let ht = self.head_time();
+            let run = self.run_to_gap();
+            if ht < t {
+                // 迟到：丢掉（不跨缺口，跨了时刻会跳）
+                let want = usize::try_from((t - ht).min(run).max(1)).unwrap_or(1);
+                let d = self.discard(processed, want);
+                self.advance(d);
+                if d < want {
+                    // 没有更多了
+                    missing += usize::try_from(end - t).unwrap_or(0);
+                    break;
+                }
+                continue;
+            }
+            if ht > t {
+                // 超前（前面有缺口）：这段用原声
+                let h = (ht - t).min(end - t);
+                missing += usize::try_from(h).unwrap_or(0);
+                t += h;
+                continue;
+            }
+            let i = usize::try_from(t - t0).unwrap_or(0);
+            let k = usize::try_from((end - t).min(run).max(1)).unwrap_or(1);
+            let got = match self.proc_buf.get_mut(i..i + k) {
+                Some(b) => processed.pop(b).min(k),
+                None => 0,
+            };
+            self.advance(got);
+            t += got as i64;
+            if got < k {
+                missing += usize::try_from(end - t).unwrap_or(0);
+                break;
             }
         }
-        let hold = if self.skip < 0 {
-            let h = usize::try_from(-self.skip).unwrap_or(usize::MAX).min(n);
-            self.skip += h as i64;
-            h
-        } else {
-            0
-        };
-
-        // 5. 取处理后的（前 hold 个位置不取，用原声）
-        let Some(pb) = self.proc_buf.get_mut(hold..n) else {
-            return;
-        };
-        let got = processed.pop(pb).min(n - hold);
-        let missing = n - hold - got;
-        self.skip += missing as i64;
         if self.fresh {
-            self.stats.proc_underrun += (missing + hold) as u64;
+            self.stats.proc_underrun += missing as u64;
         } else {
             self.stats.stale_samples += n as u64;
         }
 
-        // 6. 混合：缺的位置用原声；权重按样本走向目标
+        // 6. 混合：权重按样本走向目标
         let target = if self.fresh { 1.0 } else { 0.0 };
-        let first_proc = hold;
-        let last_proc = hold + got;
         let rd = self.raw_delayed.get(..n).unwrap_or(&[]);
-        for (i, ((yi, &r), &p)) in y.iter_mut().zip(rd.iter()).zip(self.proc_buf.iter()).enumerate() {
-            let p = if (first_proc..last_proc).contains(&i) { p } else { r };
+        for ((yi, &r), &p) in y.iter_mut().zip(rd.iter()).zip(self.proc_buf.iter()) {
             if self.gain < target {
                 self.gain = (self.gain + self.step).min(1.0);
             } else if self.gain > target {
@@ -321,8 +427,8 @@ impl Forwarder {
     fn discard<P: Pop>(&mut self, processed: &mut P, want: usize) -> usize {
         let mut left = want;
         while left > 0 {
-            let k = left.min(self.proc_buf.len());
-            let Some(b) = self.proc_buf.get_mut(..k) else {
+            let k = left.min(self.scratch.len());
+            let Some(b) = self.scratch.get_mut(..k) else {
                 break;
             };
             let got = processed.pop(b);
