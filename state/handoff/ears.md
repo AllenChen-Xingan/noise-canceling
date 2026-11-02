@@ -37,3 +37,4 @@
 - crowd_ears.py 第一段出数（3 分钟，无推理）；修 distill_mos nan
 - 申请名额（regen + venv + 打分），大总管批准下载 ~400 MB、排队中
 - 写 exp009 README（预注册 V-AUTHOR-VS-CROWD 判据：作者 SCOREQ 一致率 < 0.516 才算偏离）、decision.md 初稿（含 D51 要的评委起点一节）
+- 回 judgeloop（018）：起点 SCOREQ + 各数据集数字、本机现成评分模型路径（DNSMOS · NISQA；SCOREQ 待名额）
