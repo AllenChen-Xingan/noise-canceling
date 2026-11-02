@@ -24,3 +24,8 @@
 3. **Hush ×2 + DFN3**：仍需人在 benchsynth 终端直接批准运行预编译 dylib（不绕）
 4. **名额②**：续跑 FRCRN（179/348）· MossFormerGAN（44）· URGENT-BSRNN（40）· G-MaP-SE（11），排在 ears、judgeloop 之后；结论不等它们，跑完只补充
 5. 给实现线（不改 `src/eval/`）：`vdn-eval score --suite <外部清单>`；exp007 QA 改名「加法混合」
+
+## 已收尾（2026-11-02）
+- 大总管验收通过，PR #47（Closes #41）。处理：名额②续跑挪进 backlog、本批不跑；LibriSpeech 6.6 GB 暂不下，挂在 decision 第 7 题与 D65 触发条件上；第 3–7、9、10 题登记为总清单 4-9
+- 改过的文件：`docs/research/016_bench-synth/{benchmark,synth-standard,mvp,decision}.md` · `docs/experiments/exp008-bench-validity/{README.md,rankstat.py,rank.py,cells.py,s10.py,results/*-scores-r2*,results/*-rankstat-r2.json,results/*-s10-*.json}` · 本页
+- 待人拍板：decision.md 第四节（总清单 4-9）；Hush ×2 + DFN3 需人在 benchsynth 终端直接批准
