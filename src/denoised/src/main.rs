@@ -9,6 +9,18 @@
 //! Ctrl-C（或 `--seconds` 到点）干净退出并 unlink 总线。
 
 #![forbid(unsafe_code)]
+#![allow(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)] // NRT: 进程编排（建总线、信号、日志、空闲让出 sleep）；实时部分在 lib 的 Worker::step。空闲 sleep 轮询待换跨进程唤醒（backlog）
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::indexing_slicing,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -55,7 +67,7 @@ struct Args {
     #[arg(long, default_value_t = 48_000)]
     capacity: u32,
     /// 跑多少秒后退出；不给就一直跑到 Ctrl-C
-    #[arg(long)]
+    #[arg(long, value_parser = vdn_control::parse_seconds)]
     seconds: Option<f64>,
     /// 不提升实时优先级
     #[arg(long)]

@@ -8,6 +8,18 @@
 //! 打开降噪进程建好的总线（等它最多 `--wait` 秒）→ 每块原声走 `Forwarder` → Out 环 → 出口。
 
 #![forbid(unsafe_code)]
+#![allow(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)] // NRT: 进程编排（等总线、开设备、正弦节拍、写文件）；回调闭包只调 lib 里带 deny 的 forward / HalSource::render
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::indexing_slicing,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -67,10 +79,10 @@ struct Args {
     #[arg(long)]
     output_device: Option<String>,
     /// 跑多少秒；`--sink file` 默认 5，其余默认一直跑到 Ctrl-C
-    #[arg(long)]
+    #[arg(long, value_parser = vdn_control::parse_seconds)]
     seconds: Option<f64>,
     /// 等降噪进程建总线最多多少秒
-    #[arg(long, default_value_t = 10.0)]
+    #[arg(long, default_value_t = 10.0, value_parser = vdn_control::parse_seconds)]
     wait: f64,
 }
 

@@ -76,7 +76,7 @@ struct RunArgs {
     #[command(flatten)]
     m: ModelOpts,
     /// 跑多少秒；不给就一直跑到 Ctrl-C
-    #[arg(long)]
+    #[arg(long, value_parser = vdn_control::parse_seconds)]
     seconds: Option<f64>,
     #[arg(long, default_value_t = vdn_control::Config::DEFAULT_BLOCK)]
     block: usize,
@@ -102,9 +102,9 @@ struct ChainArgs {
     #[command(flatten)]
     m: ModelOpts,
     /// 第几秒让降噪线程退出（测 V2）
-    #[arg(long)]
+    #[arg(long, value_parser = vdn_control::parse_seconds)]
     kill_denoiser_at: Option<f64>,
-    #[arg(long, default_value_t = 5.0)]
+    #[arg(long, default_value_t = 5.0, value_parser = vdn_control::parse_seconds)]
     seconds: f64,
     #[arg(long, default_value_t = vdn_control::Config::DEFAULT_BLOCK)]
     block: usize,

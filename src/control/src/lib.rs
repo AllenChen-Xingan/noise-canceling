@@ -188,6 +188,16 @@ fn hi_block() -> usize {
     Config::BLOCK_RANGE.1
 }
 
+/// 命令行里的秒数：有限、≥ 0、≤ 1 000 000（`Duration::from_secs_f64` 遇负数 / NaN 会 panic）。给 clap 的 `value_parser` 用。
+pub fn parse_seconds(s: &str) -> Result<f64, String> {
+    let v: f64 = s.trim().parse().map_err(|_| format!("{s:?} 不是数字"))?;
+    if v.is_finite() && (0.0..=1_000_000.0).contains(&v) {
+        Ok(v)
+    } else {
+        Err(format!("{s:?}：须在 0 到 1000000 秒之间"))
+    }
+}
+
 /// 共享内存名：`/vdn-` 开头、后面非空且不再含 `/`、总长 ≤ 31（与 vdn-shm 同一规则）。
 pub fn validate_bus_name(name: &str) -> Result<(), ConfigError> {
     let ok = name.len() <= Config::BUS_NAME_MAX
@@ -279,6 +289,14 @@ mod tests {
                 matches!(Config::from_json(bad), Err(ConfigError::Invalid(_))),
                 "{bad}"
             );
+        }
+    }
+
+    #[test]
+    fn seconds_parser() {
+        assert_eq!(parse_seconds("2.5"), Ok(2.5));
+        for bad in ["-1", "NaN", "inf", "x", "1e9"] {
+            assert!(parse_seconds(bad).is_err(), "{bad}");
         }
     }
 

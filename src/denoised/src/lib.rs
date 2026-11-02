@@ -2,7 +2,7 @@
 //!
 //! - 档：B（软实时）。`Worker::step` 不分配、不加锁、不 panic；推理库内部的分配按 §4 B 档登记
 //! - 对 [`Processor`] 泛型：真链路用 `vdn_engine::Pipeline`，单测用假处理器
-//! - 直接用 `vdn_shm::Bus`（单测用进程内的 `Bus::heap`）；**不依赖 `vdn-capture`**（它带设备库，本 crate 禁 cpal）
+//! - 直接用 `vdn_shm::Bus`（单测用进程内的 `Bus::heap`）；正式依赖里**不含 `vdn-capture`**（它带设备库，本 crate 禁 cpal），只在 dev 依赖里用它对拍
 //!
 //! 对齐约定：建总线后先往 Processed 推 `lead` 个零，再逐块推处理结果；总线头写 `L_total = 管线延迟 + lead`。
 
@@ -25,8 +25,8 @@ use vdn_engine::{Engine, Model, Pipeline, SafetyConfig};
 use vdn_models::{AnyModel, ModelKind};
 use vdn_shm::{Bus, RingId};
 
-/// IO 采样率（docs/plan/010 第十节）
-pub const IO_RATE: u32 = 48_000;
+/// IO 采样率（正本在 vdn-control）
+pub use vdn_control::IO_RATE;
 
 /// 一块进、等长一块出，延迟固定（48 kHz 样本）。
 pub trait Processor {
