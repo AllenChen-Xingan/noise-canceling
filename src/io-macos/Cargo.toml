@@ -1,0 +1,20 @@
+[package]
+name = "vdn-io-macos"
+description = "Mac 音频进出：列设备、开麦克风输入流与扬声器输出流（单声道 f32 语义）。本批底层用 cpal（规约 §4：P3 允许，A 档按已知违规清单）"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+cpal.workspace = true
+
+[lints]
+workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）
+[package.metadata.vdn]
+tier = "A"
+unsafe = false
+forbid = ["ort", "hound", "serde", "serde_json", "clap", "vdn-engine", "vdn-models", "vdn-backend-ort"]
