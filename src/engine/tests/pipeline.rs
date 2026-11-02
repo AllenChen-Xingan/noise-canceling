@@ -206,9 +206,11 @@ fn realtime_path_does_not_allocate() {
         SR,
     )
     .unwrap();
-    let x = multisine(4096);
-    let mut y = vec![0.0; 4096];
-    let lens = chunk_lens(9, 4096, 1000);
+    // 小块随机 + 一次 8192 大块（块长无上限，大块也不能分配）
+    let x = multisine(4096 + 8192);
+    let mut y = vec![0.0; x.len()];
+    let mut lens = chunk_lens(9, 4096, 1000);
+    lens.push(8192);
     assert_no_alloc(|| {
         for round in 0..20 {
             let mut i = 0;
