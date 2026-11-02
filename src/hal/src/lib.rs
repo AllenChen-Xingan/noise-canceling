@@ -25,4 +25,4 @@
 pub mod factory;
 pub mod source;
 
-pub use source::{HalSource, RenderStatus, SampleSource};
+pub use source::{FnSource, HalCounters, HalSource, RenderStatus, SampleSource};

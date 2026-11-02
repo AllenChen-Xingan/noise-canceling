@@ -5,10 +5,25 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 /// 单消费者样本源。将来由 `vdn-shm` 的 `Out` 环消费端实现；本批测试用假源。
 ///
-/// 实现者在 `pop` 里不许分配、加锁、阻塞（A 档）。
+/// 实现者在 `pop` / `note_underrun` 里不许分配、加锁、阻塞（A 档）。
+///
+/// 接 `vdn-shm`（合并后，rs-shm 给的签名：`bus.ring(RingId::Out)` 是 `Ring<'_>`，`pop(&self, &mut [f32]) -> usize`，
+/// 欠载由读方调 `ring.note_underrun(n)` 记进共享头部）：持有 `Arc<Bus>`，写一个小结构把这两个方法转过去即可。
 pub trait SampleSource {
     /// 尽量填满 `out`，返回实际写入的样本数（≤ `out.len()`）。没有数据返回 0，不阻塞。
     fn pop(&mut self, out: &mut [f32]) -> usize;
+
+    /// `render` 补了 `missing` 个零时调用一次，让源把欠载记到它自己的计数器（如共享内存头部）。默认什么都不做。
+    fn note_underrun(&mut self, _missing: usize) {}
+}
+
+/// 把闭包当源：`HalSource::new(FnSource(move |o: &mut [f32]| ring_pop(o)))`。欠载只记在 `HalCounters`。
+pub struct FnSource<F>(pub F);
+
+impl<F: FnMut(&mut [f32]) -> usize> SampleSource for FnSource<F> {
+    fn pop(&mut self, out: &mut [f32]) -> usize {
+        (self.0)(out)
+    }
 }
 
 /// 一次 `render` 的结果。
@@ -97,10 +112,12 @@ impl<S: SampleSource> HalSource<S> {
         if let Some(rest) = out.get_mut(got..) {
             rest.fill(0.0);
         }
+        let missing = out.len() - got;
         self.counters.underruns.fetch_add(1, Ordering::Relaxed);
         self.counters
             .underrun_samples
-            .fetch_add((out.len() - got) as u64, Ordering::Relaxed);
+            .fetch_add(missing as u64, Ordering::Relaxed);
+        self.source.note_underrun(missing);
         RenderStatus::Underrun { got }
     }
 }
@@ -158,6 +175,30 @@ mod tests {
             (c.underruns(), c.underrun_samples(), c.renders()),
             (2, 10, 3)
         );
+    }
+
+    #[test]
+    fn underrun_is_reported_to_source_and_fn_source_works() {
+        struct Noting(usize);
+        impl SampleSource for Noting {
+            fn pop(&mut self, _out: &mut [f32]) -> usize {
+                0
+            }
+            fn note_underrun(&mut self, missing: usize) {
+                self.0 += missing;
+            }
+        }
+        let mut h = HalSource::new(Noting(0));
+        let _ = h.render(&mut [1.0; 5]);
+        assert_eq!(h.into_inner().0, 5);
+
+        let mut h = HalSource::new(FnSource(|o: &mut [f32]| {
+            o.fill(0.5);
+            o.len()
+        }));
+        let mut out = [0.0; 3];
+        assert_eq!(h.render(&mut out), RenderStatus::Full);
+        assert_eq!(out, [0.5; 3]);
     }
 
     #[test]
