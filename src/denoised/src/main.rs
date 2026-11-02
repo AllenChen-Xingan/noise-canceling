@@ -73,6 +73,9 @@ struct Args {
     /// 跑多少秒后退出；不给就一直跑到 Ctrl-C
     #[arg(long, value_parser = vdn_control::parse_seconds)]
     seconds: Option<f64>,
+    /// 启动预热多少块（喂零、丢输出，让推理库第一次的慢调用不落在服务期）
+    #[arg(long, default_value_t = 64)]
+    warmup_blocks: usize,
     /// 不提升实时优先级
     #[arg(long)]
     no_rt: bool,
@@ -134,6 +137,15 @@ fn real_main() -> Result<(), String> {
 
 fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String> {
     let mut worker = Worker::new(pipeline, cfg.denoise_block);
+    let w = worker.warm_up(a.warmup_blocks);
+    eprintln!(
+        "vdn-denoised: 预热 {} 块 · 第一块 {:.3} ms · 之后最长 {:.3} ms · 平均 {:.3} ms（一块音频 {:.3} ms）",
+        w.blocks,
+        w.first_ns as f64 / 1e6,
+        w.max_after_first_ns as f64 / 1e6,
+        w.mean_ns as f64 / 1e6,
+        worker.block_ns() as f64 / 1e6
+    );
     let l_pipe = worker.processor().latency_samples();
     let l_total = worker.l_total(cfg.lead_frames);
     if a.capacity as usize <= l_total + 2 * cfg.denoise_block {
@@ -211,8 +223,11 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     let s = worker.stats();
     let unlinked = bus.unlink();
     eprintln!(
-        "vdn-denoised: 退出 · 处理 {} 块 · Processed 溢出 {} 样本 · Raw 溢出 {} · 实时提升失败 {} · unlink {}",
+        "vdn-denoised: 退出 · 处理 {} 块 · 单块最长 {:.3} ms · 平均 {:.3} ms · 超一块时长 {} 块 · Processed 溢出 {} 样本 · Raw 溢出 {} · 实时提升失败 {} · unlink {}",
         s.blocks,
+        s.max_process_ns as f64 / 1e6,
+        s.total_process_ns as f64 / 1e6 / s.blocks.max(1) as f64,
+        s.over_budget,
         s.proc_overflow,
         bus.ring(RingId::Raw).overflows(),
         rt_failures,
