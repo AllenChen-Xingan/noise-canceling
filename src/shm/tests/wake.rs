@@ -39,7 +39,10 @@ fn ready_immediately_when_data_is_there() {
         WaitResult::Ready { available: 96 }
     );
     assert!(t.elapsed() < Duration::from_millis(50));
-    assert!(b.wait(RingId::Raw, 0, Duration::ZERO).is_ready(), "要 0 个立刻好");
+    assert!(
+        b.wait(RingId::Raw, 0, Duration::ZERO).is_ready(),
+        "要 0 个立刻好"
+    );
 }
 
 #[test]
@@ -47,7 +50,10 @@ fn times_out_and_returns() {
     let b = Bus::heap(CFG).unwrap();
     for (strategy, timeout) in [
         (WaitStrategy::Wake, Duration::from_millis(20)),
-        (WaitStrategy::Poll(Duration::from_micros(500)), Duration::from_millis(20)),
+        (
+            WaitStrategy::Poll(Duration::from_micros(500)),
+            Duration::from_millis(20),
+        ),
         (WaitStrategy::Wake, Duration::ZERO),
     ] {
         let mut b2 = Bus::heap(CFG).unwrap();
@@ -57,7 +63,10 @@ fn times_out_and_returns() {
         let el = t.elapsed();
         assert_eq!(r, WaitResult::TimedOut { available: 0 }, "{strategy:?}");
         assert!(el >= timeout, "{strategy:?} 早退 {el:?}");
-        assert!(el < timeout + Duration::from_millis(200), "{strategy:?} 晚退 {el:?}");
+        assert!(
+            el < timeout + Duration::from_millis(200),
+            "{strategy:?} 晚退 {el:?}"
+        );
     }
     // 别的 notify（数据不够）叫醒后接着等，最后仍按超时返回
     b.ring(RingId::Raw).push(&[0.0; 10]);
@@ -76,9 +85,18 @@ fn times_out_and_returns() {
 
 #[test]
 fn min_above_capacity_is_clamped() {
-    let b = Bus::heap(BusConfig { capacity_frames: 8, lead: 0, denoise_block: 0, ..CFG }).unwrap();
+    let b = Bus::heap(BusConfig {
+        capacity_frames: 8,
+        lead: 0,
+        denoise_block: 0,
+        ..CFG
+    })
+    .unwrap();
     b.ring(RingId::Raw).push(&[0.0; 8]);
-    assert!(b.wait(RingId::Raw, 1000, Duration::from_millis(10)).is_ready());
+    assert!(
+        b.wait(RingId::Raw, 1000, Duration::from_millis(10))
+            .is_ready()
+    );
 }
 
 /// 生产方每块 push + notify，消费方每块 wait 再 pop；任何一次唤醒丢了，那次 wait 就会等满 1 s 超时。
@@ -155,16 +173,26 @@ fn header_v2_fields_and_session() {
     assert_eq!(b2.ring(RingId::Processed).gaps(), 480);
     assert_eq!(b2.ring(RingId::Processed).take_gaps(), 480);
     assert_eq!(a2.ring(RingId::Processed).gaps(), 0);
-    assert_eq!(a2.ring(RingId::Processed).underruns(), 0, "缺口与欠载分开计");
+    assert_eq!(
+        a2.ring(RingId::Processed).underruns(),
+        0,
+        "缺口与欠载分开计"
+    );
 }
 
 #[test]
 fn bad_lead_or_block_is_rejected() {
     for cfg in [
         BusConfig { lead: 4097, ..CFG },
-        BusConfig { denoise_block: 4097, ..CFG },
+        BusConfig {
+            denoise_block: 4097,
+            ..CFG
+        },
     ] {
-        assert!(matches!(Bus::heap(cfg).err(), Some(ShmError::InvalidConfig(_))));
+        assert!(matches!(
+            Bus::heap(cfg).err(),
+            Some(ShmError::InvalidConfig(_))
+        ));
     }
 }
 
@@ -189,7 +217,11 @@ mod owned {
         // 锁放了，可以再建
         let b = OwnedBus::create(&name, CFG).unwrap();
         drop(b);
-        assert_eq!(Bus::open(&name).err(), Some(ShmError::NotFound), "Drop 删了名字");
+        assert_eq!(
+            Bus::open(&name).err(),
+            Some(ShmError::NotFound),
+            "Drop 删了名字"
+        );
     }
 
     #[test]
@@ -205,7 +237,10 @@ mod owned {
 
     #[test]
     fn bad_name_creates_no_lock_file() {
-        assert_eq!(OwnedBus::create("/nope", CFG).err(), Some(ShmError::InvalidName));
+        assert_eq!(
+            OwnedBus::create("/nope", CFG).err(),
+            Some(ShmError::InvalidName)
+        );
         assert!(!OwnedBus::lock_path_for("/nope").exists());
     }
 }

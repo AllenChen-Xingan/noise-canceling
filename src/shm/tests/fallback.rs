@@ -22,7 +22,11 @@ fn falls_back_to_polling_and_counts() {
         WaitResult::TimedOut { available: 0 }
     );
     assert!(t.elapsed() >= Duration::from_millis(10));
-    assert_eq!(b.ring(RingId::Raw).wait_fallbacks(), 1, "每次 wait 最多记 1");
+    assert_eq!(
+        b.ring(RingId::Raw).wait_fallbacks(),
+        1,
+        "每次 wait 最多记 1"
+    );
     std::thread::scope(|s| {
         s.spawn(|| {
             std::thread::sleep(Duration::from_millis(5));

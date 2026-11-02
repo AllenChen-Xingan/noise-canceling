@@ -28,7 +28,14 @@ mod imp {
     use std::sync::Once;
 
     /// `int os_sync_wait_on_address_with_timeout(void *addr, uint64_t value, size_t size, uint32_t flags, os_clockid_t clockid, uint64_t timeout_ns)`
-    type WaitFn = unsafe extern "C" fn(*mut c_void, u64, libc::size_t, u32, libc::os_clockid_t, u64) -> libc::c_int;
+    type WaitFn = unsafe extern "C" fn(
+        *mut c_void,
+        u64,
+        libc::size_t,
+        u32,
+        libc::os_clockid_t,
+        u64,
+    ) -> libc::c_int;
     /// `int os_sync_wake_by_address_any(void *addr, size_t size, uint32_t flags)`
     type WakeFn = unsafe extern "C" fn(*mut c_void, libc::size_t, u32) -> libc::c_int;
 
@@ -42,9 +49,15 @@ mod imp {
     pub(crate) fn init() {
         INIT.call_once(|| {
             // SAFETY: RTLD_DEFAULT 是合法句柄；符号名是以 NUL 结尾的字面量；dlsym 只读不写，找不到返回 NULL。
-            let wait = unsafe { libc::dlsym(libc::RTLD_DEFAULT, c"os_sync_wait_on_address_with_timeout".as_ptr()) };
+            let wait = unsafe {
+                libc::dlsym(
+                    libc::RTLD_DEFAULT,
+                    c"os_sync_wait_on_address_with_timeout".as_ptr(),
+                )
+            };
             // SAFETY: 同上。
-            let wake = unsafe { libc::dlsym(libc::RTLD_DEFAULT, c"os_sync_wake_by_address_any".as_ptr()) };
+            let wake =
+                unsafe { libc::dlsym(libc::RTLD_DEFAULT, c"os_sync_wake_by_address_any".as_ptr()) };
             // 两个都找到才算支持：只有一个时两边都当不支持
             if !wait.is_null() && !wake.is_null() {
                 WAIT.store(wait, Release);
@@ -127,10 +140,14 @@ mod imp {
     }
     pub(crate) fn force_unsupported() {}
     pub(crate) fn wake_one(_addr: &AtomicU32, _shared: bool) {}
-    pub(crate) fn wait(_addr: &AtomicU32, _expected: u32, _shared: bool, _timeout_ns: u64) -> Outcome {
+    pub(crate) fn wait(
+        _addr: &AtomicU32,
+        _expected: u32,
+        _shared: bool,
+        _timeout_ns: u64,
+    ) -> Outcome {
         Outcome::Failed
     }
 }
 
 pub(crate) use imp::{force_unsupported, init, supported, wait, wake_one};
-

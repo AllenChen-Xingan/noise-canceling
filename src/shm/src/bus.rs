@@ -1,8 +1,8 @@
 //! `Bus`（一块总线）与 `Ring`（其中一个环的视图）。本文件不含 unsafe（系统调用在 `wake.rs` / `region.rs`）。
 
+use core::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 use core::sync::atomic::{AtomicBool, AtomicU32};
 use core::time::Duration;
-use core::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 #[cfg(all(unix, feature = "posix"))]
 use std::ffi::CString;
 
@@ -252,7 +252,9 @@ fn validate(h: &Header, mapped: usize) -> Result<usize, ShmError> {
         return Err(ShmError::InvalidConfig("对端写的采样率为 0"));
     }
     if c.lead.load(Relaxed) > cap || c.denoise_block.load(Relaxed) > cap {
-        return Err(ShmError::InvalidConfig("对端写的 lead 或降噪块长大于环容量"));
+        return Err(ShmError::InvalidConfig(
+            "对端写的 lead 或降噪块长大于环容量",
+        ));
     }
     Ok(cap as usize)
 }
