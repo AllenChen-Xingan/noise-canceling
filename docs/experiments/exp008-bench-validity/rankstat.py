@@ -27,9 +27,11 @@ METRICS = {  # 指标: 方向（+1 越大越好；-1 越小越好；0 = 越接�
     "noise_att_g_db": -1, "nonowner_att_g_db": -1,
 }
 CEILING = {"oracle_irm"}
-VARIANTS = {"gtcrn_mix05"}
-REPS = ["passthrough", "wiener_dd", "gtcrn_vctk", "gtcrn", "dpdf8", "oracle_irm"]  # 每族一个代表（C 地板 · C · A′ · A · B · O）
-NEURAL = {"gtcrn_vctk", "gtcrn", "ulunas", "fe_s", "fe_m", "dpdf_base", "dpdf2", "dpdf8"}  # 只看神经模型：去掉 DSP 与地板后排名难得多
+VARIANTS = {"gtcrn_mix05", "webrtc_ns6", "hush_lim12"}  # 参数变体：不计入独立系统数
+REPS = ["passthrough", "wiener_dd", "gtcrn_vctk", "gtcrn", "dpdf8", "oracle_irm",
+        "rnnoise", "webrtc_ns18", "mossformer2_48k", "urgent_bsrnn", "gmap_se"]  # 每族一个代表（C 地板 · C · A′ · A · B · O · E · C* · F · G · I）；没跑完的系统不在 rows 里，自动略过
+NEURAL = {"gtcrn_vctk", "gtcrn", "ulunas", "fe_s", "fe_m", "dpdf_base", "dpdf2", "dpdf8",
+          "rnnoise", "frcrn", "mossformer_gan", "mossformer2_48k", "urgent_bsrnn", "gmap_se", "hush", "dfn3"}  # 只看神经模型：去掉 DSP 与地板后排名难得多
 
 
 def kendall_tau_b(x, y):
@@ -266,12 +268,13 @@ def s8(rows):
 
 def main():
     build = sys.argv[1]
+    tag = sys.argv[2] if len(sys.argv) > 2 else ""  # 例如 r2：写新文件，不覆盖上一轮的 rankstat
     rows = load(build)
     r7 = s7(rows)
     r8 = s8(rows)
     systems_all = sorted({r["system"] for r in rows})
     r7b = {"no_ceiling_variant": s7b(rows, set(systems_all) - CEILING - VARIANTS), "neural": s7b(rows, NEURAL & set(systems_all))}
-    (HERE / "results" / f"{build}-rankstat.json").write_text(json.dumps({"build": build, "S7": r7, "S7b": r7b, "S8": r8}, ensure_ascii=False, indent=1))
+    (HERE / "results" / (f"{build}-rankstat" + (f"-{tag}" if tag else "") + ".json")).write_text(json.dumps({"build": build, "S7": r7, "S7b": r7b, "S8": r8}, ensure_ascii=False, indent=1))
     # 摘要：每个指标跨格的 τ_AB 与 split-half 中位数
     med = lambda v: sorted(v)[len(v) // 2] if v else None  # noqa: E731
     print("S7（no_ceiling_variant，系统数 / τ_AB 中位 / 同样本量 τ_AB(半) 中位 / 信度 A、B 中位 / 下界 > 0 的格数 / 过 S7 的格数）")
