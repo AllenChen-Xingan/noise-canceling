@@ -60,7 +60,7 @@
 | 4-7 | 「背景保留」先怎么定：A 按场景固定（咖啡馆 −12 dB）· B「我的配置」给「背景多 / 少」旋钮，默认 −12 dB · C 等下一轮听测再定 | B + C | A | `docs/experiments/human-prefs/scene-defaults.md` 末节 #1（prefs，PR #43） |
 | 4-9 | 016 合成数据标准的 7 题：下一轮听测覆盖 ≥ 8 个系统（并进 4-3）· Hush / DFN3 是否在 benchsynth 终端批准 · 每格段数 6 → 15–30（阶梯重跑约 5 倍时间）· QA 层改名并加外部清单打分（并进 4-6）· 新 build 换素材池（要下 LibriSpeech 约 6.6 GB）· 标准升 specs/ · 素材分三类 | 见出处 | 不加段数 · 不换池（旧 build 照用但标限制）· 标准留草稿 · 素材分三类 | 016 `docs/research/016_bench-synth/decision.md` 第四节 3–7、9、10（PR #47） |
 | ~~4-10~~ ✅ D66 | ~~017 E2：每轮盲听夹 4–6 道大众已评题~~ → 人答「可以」（2026-11-02） | — | — | `docs/research/017_more-ears/decision.md` 第 8 节 |
-| 4-11 | 〔人 2026-11-02 答「可以公开」，要先看内容；草稿 `_tmp/20261102-b7/upstream-issues-draft.md` 待人过目〕017 E6：用你的 GitHub 账号向上游公开报两处数据错误（CHiME-7 MOS 三表混算 · BENCHMARK.md NISQA 行抄错）；我们自己的数字已绕开 | 见出处 | 不报 | `docs/research/017_more-ears/decision.md` 第 8 节（PR #48） |
+| ~~4-11~~ ✅ D67 | ~~017 E6：向上游报两处数据错误~~ → 人答「发吧」，已发 urgent2026_challenge_track2 issue #3 · #4（2026-11-02） | — | — | `docs/research/017_more-ears/decision.md` 第 8 节（PR #48） |
 | 4-8 | 下一轮盲听专测「背景保留量」（同段只改下限 −6 / −12 / −20 / −30 dB，4 段 × 4 档约 10 分钟，加问「这段环境本来安静吗」） | 测 | 不测 | 同上 #2 |
 | 4-5 | rlenv 其余：数据下载 · 许可灰区与 ECAPA · 模拟真值沿用 · 成功标准 · 训练触发条件 · RL 做到哪 · 听测节奏 | 见出处 | 见出处 | 013 末节（9 题，1-2 / 1-3 已拆出） |
 | 4-6 | 015：Hush 怎么测（客观小加测 4 段 / 进主盲听）· SIR 下限 −6 dB · 训练时辅助头只进辅助小模型 · 冷启动无注册模式 · WHAM! 卡改正与 DEMAND 按 BY-SA · 自己笑和附和算「你」 | 小加测 · −6 dB · 只进辅助模型 · 采用 · 改 · 算 | 同建议（冷启动默认不采用） | `docs/research/015_dfn-hush-synth/decision.md` 第五节 015-1~6 |
