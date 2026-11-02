@@ -75,8 +75,7 @@ impl Rig {
             &mut self.out,
             &self.hb,
         );
-        self.den
-            .step(&mut self.raw, &mut self.processed, &mut self.hb);
+        self.den.step(&mut self.raw, &mut self.processed, &self.hb);
     }
 }
 
