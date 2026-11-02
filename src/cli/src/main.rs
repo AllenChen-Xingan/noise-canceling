@@ -111,6 +111,9 @@ struct ChainArgs {
     /// 环余量（48 kHz 样本）
     #[arg(long, default_value_t = vdn_control::Config::DEFAULT_LEAD)]
     lead: usize,
+    /// 降噪块长（48 kHz 样本，须整除模型 hop × 3）
+    #[arg(long, default_value_t = vdn_control::Config::DEFAULT_DENOISE_BLOCK)]
+    denoise_block: usize,
     /// 共享内存名（默认带进程号，避免撞名）
     #[arg(long)]
     bus: Option<String>,
@@ -458,11 +461,12 @@ fn run(a: RunArgs) -> Result<(), BoxError> {
         output_device: a.output_device,
     };
     if a.mode.passthrough {
-        live::run(vdn_denoised::identity_pipeline()?, &o)?;
+        // 单进程：cpal 回调块长不固定，用任意块长的 Pipeline::new
+        live::run(vdn_denoised::identity_pipeline(None)?, &o)?;
     } else {
         let kind = ModelKind::from(a.m.model);
         live::run(
-            vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref())?,
+            vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref(), None)?,
             &o,
         )?;
     }
@@ -479,6 +483,7 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
         seconds: a.seconds,
         block: a.block,
         lead: a.lead,
+        denoise_block: a.denoise_block,
         kill_at: a.kill_denoiser_at,
         bus_name: a
             .bus
@@ -487,11 +492,11 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
     };
     vdn_control::validate_bus_name(&o.bus_name)?;
     let r = match o.mode {
-        chain::ChainMode::Passthrough => chain::run(vdn_denoised::identity_pipeline()?, &o)?,
+        chain::ChainMode::Passthrough => chain::run(vdn_denoised::identity_pipeline(Some(o.denoise_block))?, &o)?,
         chain::ChainMode::Denoise => {
             let kind = ModelKind::from(a.m.model);
             chain::run(
-                vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref())?,
+                vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref(), Some(o.denoise_block))?,
                 &o,
             )?
         }
@@ -502,13 +507,14 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
         write_wav48(Path::new(&format!("{p}-out.wav")), &r.y)?;
     }
     println!(
-        "chain-test：模式 {} · {} s · 块长 {} · 心跳超时 {} ms{}",
+        "chain-test：模式 {} · {} s · IO 块长 {} · 降噪块长 {} · 心跳超时 {} ms{}",
         match o.mode {
             chain::ChainMode::Passthrough => "直通",
             chain::ChainMode::Denoise => "降噪",
         },
         o.seconds,
         o.block,
+        o.denoise_block,
         a.heartbeat_ms,
         o.kill_at
             .map_or(String::new(), |k| format!(" · 第 {k} s 让降噪线程退出"))

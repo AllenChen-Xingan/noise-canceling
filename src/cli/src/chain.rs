@@ -43,6 +43,8 @@ pub struct ChainOpts {
     pub seconds: f64,
     pub block: usize,
     pub lead: usize,
+    /// 降噪线程每次处理的块长（定块长 Pipeline）
+    pub denoise_block: usize,
     pub kill_at: Option<f64>,
     pub bus_name: String,
     pub heartbeat_timeout: usize,
@@ -55,6 +57,8 @@ pub struct ChainRun {
     pub l_total: usize,
     pub l_pipe: usize,
     pub lead: usize,
+    /// 降噪线程每次处理的块长（定块长 Pipeline）
+    pub denoise_block: usize,
     pub fwd: ForwarderStats,
     pub hal_underrun_blocks: u64,
     pub hal_underrun_samples: u64,
@@ -80,7 +84,7 @@ fn sleep_until(t: Instant) {
 pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<ChainRun, String> {
     let block = o.block;
     let total = ((o.seconds * f64::from(RATE)) as usize).div_ceil(block) * block;
-    let mut worker = Worker::new(pipeline, block);
+    let mut worker = Worker::new(pipeline, o.denoise_block);
     let l_pipe = worker.processor().latency_samples();
     let l_total = l_pipe + o.lead;
 
@@ -335,6 +339,7 @@ mod tests {
             seconds,
             block: 480,
             lead: 1440,
+            denoise_block: 96,
             kill_at,
             bus_name: format!("/vdn-t{tag}-{}", std::process::id()),
             heartbeat_timeout: 4800,
@@ -345,20 +350,20 @@ mod tests {
     #[test]
     fn v1_short() {
         let r = run(
-            vdn_denoised::identity_pipeline().unwrap(),
+            vdn_denoised::identity_pipeline(Some(96)).unwrap(),
             &opts(1.2, None, "v1"),
         )
         .unwrap();
         let v = judge_v1(&r);
         assert!(v.pass, "{v}");
-        assert_eq!(r.l_total, 863 + 1440);
+        assert_eq!(r.l_total, 768 + 1440);
     }
 
     /// V2 的短版：0.5 s 处让降噪线程退出
     #[test]
     fn v2_short() {
         let r = run(
-            vdn_denoised::identity_pipeline().unwrap(),
+            vdn_denoised::identity_pipeline(Some(96)).unwrap(),
             &opts(1.2, Some(0.5), "v2"),
         )
         .unwrap();
@@ -371,7 +376,7 @@ mod tests {
     #[test]
     fn bus_unlinked_after_run() {
         let o = opts(0.3, None, "ul");
-        run(vdn_denoised::identity_pipeline().unwrap(), &o).unwrap();
+        run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).unwrap();
         assert!(matches!(
             Bus::open(&o.bus_name),
             Err(vdn_shm::ShmError::NotFound)

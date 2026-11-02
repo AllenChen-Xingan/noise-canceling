@@ -48,6 +48,9 @@ struct Args {
     /// 环余量（48 kHz 样本）
     #[arg(long)]
     lead: Option<usize>,
+    /// 降噪块长（48 kHz 样本，须整除模型 hop × 3，默认 96）
+    #[arg(long)]
+    denoise_block: Option<usize>,
     /// 每个环的容量（样本）
     #[arg(long, default_value_t = 48_000)]
     capacity: u32,
@@ -91,15 +94,22 @@ fn real_main() -> Result<(), String> {
     if let Some(b) = a.block {
         cfg.block = b;
     }
+    if let Some(b) = a.denoise_block {
+        cfg.denoise_block = b;
+    }
     if let Some(l) = a.lead {
         cfg.lead_frames = l;
     }
     cfg.validate().map_err(|e| e.to_string())?;
 
     match cfg.mode {
-        Mode::Passthrough => serve(identity_pipeline()?, &cfg, &a),
+        Mode::Passthrough => serve(identity_pipeline(Some(cfg.denoise_block))?, &cfg, &a),
         Mode::Denoise => serve(
-            model_pipeline(model_kind(cfg.model), cfg.model_path.as_deref())?,
+            model_pipeline(
+                model_kind(cfg.model),
+                cfg.model_path.as_deref(),
+                Some(cfg.denoise_block),
+            )?,
             &cfg,
             &a,
         ),
@@ -107,14 +117,14 @@ fn real_main() -> Result<(), String> {
 }
 
 fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String> {
-    let mut worker = Worker::new(pipeline, cfg.block);
+    let mut worker = Worker::new(pipeline, cfg.denoise_block);
     let l_pipe = worker.processor().latency_samples();
     let l_total = worker.l_total(cfg.lead_frames);
-    if a.capacity as usize <= l_total + 2 * cfg.block {
+    if a.capacity as usize <= l_total + 2 * cfg.denoise_block {
         return Err(format!(
             "--capacity {} 太小：至少要 L_total + 2 块 = {}",
             a.capacity,
-            l_total + 2 * cfg.block
+            l_total + 2 * cfg.denoise_block
         ));
     }
 
@@ -160,7 +170,7 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     // 处理线程 = 本线程；提升失败只记数、不退出
     let mut rt_failures = 0u32;
     if !a.no_rt {
-        let p = vdn_rt_thread::RtParams::for_block(cfg.block as u32, IO_RATE, 0.5);
+        let p = vdn_rt_thread::RtParams::for_block(cfg.denoise_block as u32, IO_RATE, 0.5);
         if let Err(e) = vdn_rt_thread::promote_current(p) {
             rt_failures += 1;
             eprintln!("vdn-denoised: 实时优先级提升失败（照常运行）：{e:?}");
