@@ -1,19 +1,32 @@
-//! `Bus`（一块总线）与 `Ring`（其中一个环的视图）。本文件不含 unsafe。
+//! `Bus`（一块总线）与 `Ring`（其中一个环的视图）。本文件不含 unsafe（系统调用在 `wake.rs` / `region.rs`）。
 
-use core::sync::atomic::AtomicU32;
+use core::sync::atomic::{AtomicBool, AtomicU32};
+use core::time::Duration;
 use core::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 #[cfg(all(unix, feature = "posix"))]
 use std::ffi::CString;
 
 use crate::layout::{self, Header, MAGIC, RINGS, RingHdr, VERSION};
 use crate::region::Region;
-use crate::{BusConfig, RingId, ShmError};
+use crate::wake::{self, Outcome};
+use crate::{BusConfig, RingId, ShmError, WaitResult, WaitStrategy};
+
+/// 系统不支持唤醒或调用出错时，`wait` 退回的轮询间隔。
+pub const FALLBACK_POLL: Duration = Duration::from_micros(200);
+/// `wait` 连续几次「可重试的提前返回」之后，这一轮改睡一个轮询间隔（防 EFAULT 一直重复时空转）。
+const MAX_RETRIES: u32 = 3;
 
 /// 一块总线。`Bus` 是 `Send + Sync`：可以 `&Bus` 分给生产线程与消费线程（遵守单生产者单消费者约定）。
 /// Drop 只解映射；名字要创建方显式 `unlink()`。
 pub struct Bus {
     region: Region,
     cap: usize,
+    /// 是不是跨进程映射（决定 SHARED 标志：同一块内存两端必须一致）
+    shared: bool,
+    /// 本进程里 `wait` 用哪种方式等（不进共享内存）
+    strategy: WaitStrategy,
+    /// 唤醒系统调用出过不可恢复的错：本进程之后一律轮询
+    wake_broken: AtomicBool,
     #[cfg(all(unix, feature = "posix"))]
     name: Option<CString>,
 }
@@ -35,6 +48,12 @@ fn checked_len(cfg: &BusConfig) -> Result<usize, ShmError> {
     if cfg.rate == 0 {
         return Err(ShmError::InvalidConfig("采样率为 0"));
     }
+    if cfg.lead > cfg.capacity_frames {
+        return Err(ShmError::InvalidConfig("lead 大于环容量"));
+    }
+    if cfg.denoise_block > cfg.capacity_frames {
+        return Err(ShmError::InvalidConfig("降噪块长大于环容量"));
+    }
     layout::total_bytes(cfg.capacity_frames)
         .ok_or(ShmError::InvalidConfig("容量为 0 或超过上限 2^24 帧"))
 }
@@ -44,12 +63,7 @@ impl Bus {
     /// 进程内总线（测试、单进程开发模式）。
     pub fn heap(cfg: BusConfig) -> Result<Self, ShmError> {
         let len = checked_len(&cfg)?;
-        let bus = Self {
-            region: Region::heap(len)?,
-            cap: cfg.capacity_frames as usize,
-            #[cfg(all(unix, feature = "posix"))]
-            name: None,
-        };
+        let bus = Self::wrap(Region::heap(len)?, cfg.capacity_frames as usize, false);
         bus.init_header(&cfg, len);
         Ok(bus)
     }
@@ -60,11 +74,12 @@ impl Bus {
         {
             let cname = checked_name(name)?;
             let len = checked_len(&cfg)?;
-            let bus = Self {
-                region: crate::region::posix::create(&cname, len)?,
-                cap: cfg.capacity_frames as usize,
-                name: Some(cname),
-            };
+            let mut bus = Self::wrap(
+                crate::region::posix::create(&cname, len)?,
+                cfg.capacity_frames as usize,
+                true,
+            );
+            bus.name = Some(cname);
             bus.init_header(&cfg, len);
             Ok(bus)
         }
@@ -82,11 +97,9 @@ impl Bus {
             let cname = checked_name(name)?;
             let region = crate::region::posix::open(&cname)?;
             let cap = validate(region.header(), region.len())?;
-            Ok(Self {
-                region,
-                cap,
-                name: Some(cname),
-            })
+            let mut bus = Self::wrap(region, cap, true);
+            bus.name = Some(cname);
+            Ok(bus)
         }
         #[cfg(not(all(unix, feature = "posix")))]
         {
@@ -135,6 +148,48 @@ impl Bus {
             rate: c.rate.load(Relaxed),
             capacity_frames: c.capacity_frames.load(Relaxed),
             l_total: c.l_total.load(Relaxed),
+            lead: c.lead.load(Relaxed),
+            denoise_block: c.denoise_block.load(Relaxed),
+        }
+    }
+
+    /// 会话 ID：`create` / `heap` 时随机生成，非 0。打开方记下它；重开后值不同 = 总线换了（降噪进程重启过）。
+    pub fn session_id(&self) -> u64 {
+        self.region.header().config.session.load(Relaxed)
+    }
+
+    /// 选 `wait` 的等法（只影响本进程本句柄）。默认 `WaitStrategy::Wake`。
+    pub fn set_wait_strategy(&mut self, s: WaitStrategy) {
+        self.strategy = s;
+    }
+
+    pub fn wait_strategy(&self) -> WaitStrategy {
+        self.strategy
+    }
+
+    /// 本进程能不能用跨进程唤醒（macOS 14.4+ 且找到了系统函数）。不能时 `wait` 用 200 µs 轮询。
+    pub fn wake_supported() -> bool {
+        wake::init();
+        wake::supported()
+    }
+
+    /// 只给测试用：让本进程假装系统不支持唤醒（验证退回轮询那条路）。全进程生效、不可撤销。
+    #[doc(hidden)]
+    pub fn force_wake_unsupported_for_test() {
+        wake::init();
+        wake::force_unsupported();
+    }
+
+    fn wrap(region: Region, cap: usize, shared: bool) -> Self {
+        wake::init();
+        Self {
+            region,
+            cap,
+            shared,
+            strategy: WaitStrategy::Wake,
+            wake_broken: AtomicBool::new(false),
+            #[cfg(all(unix, feature = "posix"))]
+            name: None,
         }
     }
 
@@ -145,9 +200,23 @@ impl Bus {
         c.capacity_frames.store(cfg.capacity_frames, Relaxed);
         c.l_total.store(cfg.l_total, Relaxed);
         c.total_bytes.store(len as u64, Relaxed);
+        c.lead.store(cfg.lead, Relaxed);
+        c.denoise_block.store(cfg.denoise_block, Relaxed);
+        c.session.store(new_session_id(), Relaxed);
         // 最后写 magic（Release）：打开方 Acquire 读到 MAGIC 时，上面各字段都已可见
         c.magic.store(MAGIC, Release);
     }
+}
+
+/// 随机、非 0 的会话 ID。std 的 `RandomState` 每个实例取一份系统随机种子；再混进时间与 pid。
+fn new_session_id() -> u64 {
+    use std::hash::{BuildHasher, Hasher};
+    let mut h = std::collections::hash_map::RandomState::new().build_hasher();
+    h.write_u32(std::process::id());
+    if let Ok(t) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+        h.write_u128(t.as_nanos());
+    }
+    h.finish().max(1)
 }
 
 /// 打开方校验头部；返回每环容量。
@@ -182,7 +251,77 @@ fn validate(h: &Header, mapped: usize) -> Result<usize, ShmError> {
     if c.rate.load(Relaxed) == 0 {
         return Err(ShmError::InvalidConfig("对端写的采样率为 0"));
     }
+    if c.lead.load(Relaxed) > cap || c.denoise_block.load(Relaxed) > cap {
+        return Err(ShmError::InvalidConfig("对端写的 lead 或降噪块长大于环容量"));
+    }
     Ok(cap as usize)
+}
+
+/// 等待（非实时：会睡、会做系统调用；**只许在非实时线程调**，例如降噪进程的处理线程在空闲时）
+impl Bus {
+    /// 等到 `id` 环里至少有 `min_available` 个样本可读，或过了 `timeout`。
+    ///
+    /// - 数据已经够：立刻返回 `Ready`，不做系统调用
+    /// - 不够：`WaitStrategy::Wake` 下睡在该环的唤醒计数字上，生产方 `notify` 一下就醒；
+    ///   系统不支持（低于 macOS 14.4）或调用出错，改用 200 µs 间隔轮询，并给该环的 `wait_fallbacks` 加 1（每次调用最多 1）
+    /// - `WaitStrategy::Poll(间隔)`：按给定间隔轮询（对照实验用；不计 `wait_fallbacks`）
+    /// - `min_available` 大于环容量时按容量算（否则永远等不到）；为 0 时立刻返回
+    /// - 一定在 `timeout` 之后不久返回（不会永远睡死）：生产方崩了也只是超时。`timeout` 为 0 = 只看一眼
+    /// - 被别的 `notify`（数据还不够）叫醒会接着等，不算返回
+    pub fn wait(&self, id: RingId, min_available: usize, timeout: Duration) -> WaitResult {
+        let ring = self.ring(id);
+        let want = min_available.min(self.cap);
+        let word = &ring.hdr.prod.wake;
+        let start = std::time::Instant::now();
+        let deadline = start.checked_add(timeout);
+        let mut fell_back = false;
+        let mut retries = 0u32;
+        loop {
+            // 先读计数字、再看数据：生产方是「先 push 再加计数字」，所以看漏的数据一定伴随计数字已变，
+            // 系统调用比较时发现值不同会立刻返回——唤醒不会丢
+            let seen = word.load(Acquire);
+            let available = ring.available();
+            if available >= want {
+                return WaitResult::Ready { available };
+            }
+            let now = std::time::Instant::now();
+            let left = match deadline {
+                Some(d) if now >= d => return WaitResult::TimedOut { available },
+                Some(d) => d - now,
+                None => Duration::from_secs(3600), // timeout 大到溢出：按一小时一轮继续等
+            };
+            let poll = |iv: Duration| {
+                #[allow(clippy::disallowed_methods)] // NRT: wait 只在非实时线程调
+                std::thread::sleep(iv.min(left));
+            };
+            match self.strategy {
+                WaitStrategy::Poll(iv) => poll(iv.max(Duration::from_micros(1))),
+                WaitStrategy::Wake => {
+                    let usable = wake::supported() && !self.wake_broken.load(Relaxed);
+                    let outcome = if usable && retries < MAX_RETRIES {
+                        let ns = u64::try_from(left.as_nanos()).unwrap_or(u64::MAX);
+                        wake::wait(word, seen, self.shared, ns)
+                    } else {
+                        Outcome::Failed
+                    };
+                    match outcome {
+                        Outcome::Woken | Outcome::TimedOut => retries = 0,
+                        Outcome::Retry => retries += 1,
+                        Outcome::Failed => {
+                            if usable && retries < MAX_RETRIES {
+                                self.wake_broken.store(true, Relaxed);
+                            }
+                            retries = 0;
+                            if !fell_back {
+                                fell_back = true;
+                                ring.hdr.cons.wait_fallbacks.fetch_add(1, Relaxed);
+                            }
+                            poll(FALLBACK_POLL);
+                        }
+                    }
+                }
+            }
+        }
 }
 
 /// 实时可调：不分配、不加锁、不做系统调用、不 panic。
@@ -207,6 +346,16 @@ impl Bus {
             .and_then(|all| all.get(i * self.cap..(i + 1) * self.cap))
             .unwrap_or(&[]);
         Ring { hdr, slots }
+    }
+
+    /// 生产方：push 完调一次，叫醒在 `wait(id, ..)` 上睡着的消费方。
+    /// 实时可调（规约 §4 A 档唯一例外）：一次原子加 + 至多一次非阻塞系统调用（`os_sync_wake_by_address_any`），
+    /// 不分配、不加锁、不阻塞；没人在等时系统立刻返回。系统不支持时只做原子加。
+    pub fn notify(&self, id: RingId) {
+        let w = &self.ring(id).hdr.prod.wake;
+        // Release：消费方 Acquire 读到新值时，之前 push 的样本都可见
+        w.fetch_add(1, Release);
+        wake::wake_one(w, self.shared);
     }
 
     /// 降噪进程每处理完一块调一次。
@@ -352,5 +501,25 @@ impl Ring<'_> {
     /// 读清欠载计数。
     pub fn take_underruns(&self) -> u64 {
         self.hdr.cons.underrun.swap(0, Relaxed)
+    }
+
+    /// 消费方记缺口（因落后主动丢掉的积压，例如 `discard` 之后调），与欠载分开。
+    pub fn note_gap(&self, n: usize) {
+        self.hdr.cons.gaps.fetch_add(n as u64, Relaxed);
+    }
+
+    /// 累计缺口样本数。
+    pub fn gaps(&self) -> u64 {
+        self.hdr.cons.gaps.load(Relaxed)
+    }
+
+    /// 读清缺口计数。
+    pub fn take_gaps(&self) -> u64 {
+        self.hdr.cons.gaps.swap(0, Relaxed)
+    }
+
+    /// `wait` 退回轮询的累计次数（系统不支持或调用出错）。
+    pub fn wait_fallbacks(&self) -> u64 {
+        self.hdr.cons.wait_fallbacks.load(Relaxed)
     }
 }
