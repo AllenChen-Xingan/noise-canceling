@@ -234,12 +234,12 @@ mod tests {
         w.prime(&bus, lead);
         let mut f = Forwarder::new(ForwarderConfig::new(l_total, block));
         let x = vdn_capture::testing::test_tone(IO_RATE, 200 * block, 0);
-        for c in x.chunks(block) {
+        let mut y = vec![0.0; x.len()];
+        for (c, yc) in x.chunks(block).zip(y.chunks_mut(block)) {
             forward(&mut f, &bus, c);
             w.step(&bus);
+            assert_eq!(bus.ring(RingId::Out).pop(yc), c.len());
         }
-        let mut y = vec![0.0; x.len()];
-        assert_eq!(bus.ring(RingId::Out).pop(&mut y), x.len());
         assert_eq!(f.stats().proc_underrun, 0);
         assert!(f.is_fresh());
         // 相关（跳过开头 100 ms）
