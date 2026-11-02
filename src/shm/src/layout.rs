@@ -4,7 +4,7 @@
 //! 偏移 0      Header（#[repr(C, align(64))]，大小 = HEADER_BYTES）
 //!               ├ 第 0 行：magic · version · rate · capacity_frames · l_total · total_bytes   （创建方写一次）
 //!               ├ 第 1 行：heartbeat                                                          （降噪进程写）
-//!               └ rings[3]：每个环两行，生产方一行（write · overflow）、消费方一行（read · underrun）
+//!               └ rings[3]：每个环两行，生产方一行（write · overflow · wake）、消费方一行（read · underrun · wait_fallbacks）
 //! 偏移 HEADER_BYTES   样本槽：3 × capacity_frames 个 AtomicU32（f32::to_bits），按 Raw · Processed · Out 排
 //! ```
 //!
@@ -17,24 +17,31 @@ use core::sync::atomic::{AtomicU32, AtomicU64};
 /// 数值读作 ASCII "VDN_SHM1"（按本机小端存，十六进制工具里看到的字节是倒序的）。0 = 创建方还没写完头。
 pub const MAGIC: u64 = 0x5644_4E5F_5348_4D31;
 /// 布局版本。改了本文件里任何一个字段、顺序或大小，就加 1。
-pub const VERSION: u32 = 1;
+/// - 1：初版
+/// - 2：生产方行加 `wake`（唤醒计数字，`Bus::notify` / `Bus::wait` 用），消费方行加 `wait_fallbacks`
+pub const VERSION: u32 = 2;
 /// 环的个数（`RingId` 的变体数）。
 pub const RINGS: usize = 3;
 /// 单环容量上限（帧）：防止对方写进来的头字段让我们算出离谱的映射大小。
 pub const MAX_CAPACITY_FRAMES: u32 = 1 << 24;
 
-/// 生产方独占的一行：写索引与溢出计数。
+/// 生产方独占的一行：写索引、溢出计数、唤醒计数字。
 #[repr(C, align(64))]
 pub struct ProdLine {
     pub write: AtomicU64,
     pub overflow: AtomicU64,
+    /// 唤醒计数字：`notify` 每次加 1 再叫醒；`wait` 拿它当 `os_sync_wait_on_address` 的比较值。
+    /// 必须是 4 字节、按 4 对齐（系统调用的要求），并且跟 `write` 分开：`push` 不碰它
+    pub wake: AtomicU32,
 }
 
-/// 消费方独占的一行：读索引与欠载计数。
+/// 消费方独占的一行：读索引、欠载计数、等待退回轮询的次数。
 #[repr(C, align(64))]
 pub struct ConsLine {
     pub read: AtomicU64,
     pub underrun: AtomicU64,
+    /// `wait` 因系统不支持（低于 macOS 14.4）或系统调用出错而改用轮询的次数（每次 `wait` 调用最多记 1）
+    pub wait_fallbacks: AtomicU64,
 }
 
 #[repr(C)]
@@ -90,7 +97,9 @@ const _: () = {
     assert!(size_of::<RingHdr>() == 128);
     assert!(offset_of!(RingHdr, prod) == 0 && offset_of!(RingHdr, cons) == 64);
     assert!(offset_of!(ProdLine, write) == 0 && offset_of!(ProdLine, overflow) == 8);
+    assert!(offset_of!(ProdLine, wake) == 16);
     assert!(offset_of!(ConsLine, read) == 0 && offset_of!(ConsLine, underrun) == 8);
+    assert!(offset_of!(ConsLine, wait_fallbacks) == 16);
     assert!(size_of::<ConfigLine>() == 64);
     assert!(offset_of!(ConfigLine, magic) == 0);
     assert!(offset_of!(ConfigLine, version) == 8);
