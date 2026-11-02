@@ -1,0 +1,28 @@
+[package]
+name = "vdn-shm"
+description = "跨进程共享内存总线：收音进程 · 降噪进程 · 虚拟麦克风之间传声音（三个单生产者单消费者环 + 心跳 + 计数器）。不依赖任何 vdn crate"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+default = ["posix"]
+# POSIX 共享内存（shm_open + mmap）；关掉只剩进程内 heap 版
+posix = ["dep:libc"]
+
+[dependencies]
+libc = { workspace = true, optional = true }
+
+[dev-dependencies]
+assert_no_alloc.workspace = true
+
+[lints]
+workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）
+[package.metadata.vdn]
+tier = "A"
+unsafe = true
+forbid = ["vdn-types", "vdn-dsp", "vdn-engine", "vdn-models", "vdn-cli", "vdn-speaker", "vdn-scene", "vdn-polish", "vdn-eval", "vdn-rt-thread", "vdn-io-macos", "vdn-control", "vdn-hal", "vdn-capture", "vdn-denoised", "vdn-backend-ort", "ort", "hound", "serde", "serde_json", "cpal", "clap", "coreaudio-rs", "coreaudio-sys", "objc2"]

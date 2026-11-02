@@ -1,0 +1,49 @@
+# cargo-deny 配置（规约 §7 G3「依赖方向与许可」）。本机未装 cargo-deny：本文件尚未实跑（2026-11-02，rs-shm）。
+# `cargo run -p xtask -- ci` 里装了就跑 `cargo deny check`，没装就跳过并打印「未装」。
+
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+yanked = "warn"
+
+[licenses]
+version = 2
+# 只放 GNU 许可列表上与 GPLv3 兼容的（https://www.gnu.org/licenses/license-list.en.html）。
+# Apache-2.0 只与 GPLv3 兼容、不与 GPLv2 兼容；本项目是 GPL-3.0-or-later，可以用。
+allow = [
+    "GPL-3.0",
+    "GPL-3.0-or-later",
+    "LGPL-2.1-or-later",
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unlicense",
+    "CC0-1.0",
+    "BSL-1.0",
+    "MPL-2.0",          # Exhibit B（不兼容次级许可）cargo-deny 查不出，CI 另 grep（规约 §7，待做）
+    "Unicode-3.0",
+]
+confidence-threshold = 0.9
+# 列表上查不到的许可：逐个 crate 放行，写明理由
+exceptions = [
+    # BSD-1-Clause：比 BSD-2-Clause 更宽，GNU 列表未单列；只作 dev-dependency（实时零分配测试）
+    { allow = ["BSD-1-Clause"], crate = "assert_no_alloc" },
+    # CDLA-Permissive-2.0：根证书数据（ort 下载预编译库走 TLS 时用），不是代码；GNU 列表未列
+    { allow = ["CDLA-Permissive-2.0"], crate = "webpki-root-certs" },
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# 工作区内部的 path 依赖不算通配（publish = false）
+allow-wildcard-paths = true
+# 直接边规则（谁能直接依赖谁）待补：与各 crate 的 metadata.vdn.forbid 保持一致，tidy 校验（规约 §5.4，本批未做）
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

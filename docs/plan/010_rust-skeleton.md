@@ -136,16 +136,16 @@
 | crate | 必须对外提供（签名可微调，语义不变） |
 |---|---|
 | `vdn-dsp` | `resample::{Decimator3, Interpolator3, delay_high()}`：3 倍降 / 升，固定延迟，实时块不分配。草稿已在 `src/dsp/src/resample.rs`（大总管起的头，**未编译未测**，归核心手下核实或重写） |
-| `vdn-engine` | `Pipeline<M: Model>`：`new(engine, io_rate) -> Result<Self, PipelineError>` · `process(&mut self, input: &[f32], output: &mut [f32])`（任意块长 ≤ `max_block`，输出与输入等长）· `set_mode(Mode::{Denoise, Passthrough})`（两模式延迟相同，切换按 hop 淡化）· `latency_samples()`（48 kHz）。`testing::Identity`（输出 = 输入、16 kHz、hop 256、延迟 0），供没有模型权重时跑通链路 |
+| `vdn-engine` | `Pipeline<M: Model>`：`new(engine, io_rate) -> Result<Self, PipelineError>` · `process(&mut self, input: &[f32], output: &mut [f32])`（任意块长、无上限，输出与输入等长；最终签名见 rs-core 现状页，2026-11-02 定）· `set_mode(Mode::{Denoise, Passthrough})`（两模式延迟相同，切换按 hop 淡化）· `latency_samples()`（48 kHz）。`testing::Identity`（输出 = 输入、16 kHz、hop 256、延迟 0），供没有模型权重时跑通链路 |
 | `vdn-backend-ort` | 从 `vdn-models/src/session.rs` 拆出：`open(path) -> Result<Session, BoxError>` · `zeros` · `pub use ort`；之后 `vdn-models` 不再直接依赖 `ort` |
 | `vdn-shm` | `Bus`：`create(name, BusConfig) / open(name)`（POSIX 共享内存，跨进程）· `heap(BusConfig)`（进程内，测试用）。`BusConfig { rate, capacity_frames, l_total }`。`ring(RingId::{Raw, Processed, Out})` 给出单生产者 `push(&[f32]) -> usize` / 单消费者 `pop(&mut [f32]) -> usize` / `available()`；头部：`magic` · `version` · `beat()` / `heartbeat()`（降噪进程每块 +1）· `l_total()` · 计数器（溢出 · 欠载）。样本槽用 `AtomicU32` 存 `f32::to_bits`，读写索引 Release / Acquire。`unsafe` 只在 mmap 与布局转换处 |
-| `vdn-rt-thread` | `promote_current(RtParams { period_ns, computation_ns, constraint_ns }) -> Result<(), RtError>`（mach time-constraint 策略）· `check_current() -> RtStatus`（读回策略，自检用）。Audio Workgroup 加入：本批返回 `RtError::Unimplemented` |
+| `vdn-rt-thread` | `promote_current(RtParams { period_ns, computation_ns, constraint_ns }) -> Result<(), RtError>`（mach time-constraint 策略）· `check_current() -> Result<RtStatus, RtError>`（读回策略，自检用；2026-11-02 改为 Result）。Audio Workgroup 加入：本批返回 `RtError::Unimplemented` |
 | `vdn-io-macos` | `devices() -> Vec<DeviceInfo>` · `InputStream::open(device: Option<&str>, rate, block, cb: impl FnMut(&[f32]) + Send + 'static)` · `OutputStream::open(…, cb: impl FnMut(&mut [f32]) + Send + 'static)`；多声道设备取第 1 声道 / 复制到各声道。本批用 cpal（规约 §4：P3 允许，A 档按已知违规清单） |
 | `vdn-hal` | `HalSource::new(consumer)` · `render(&mut [f32]) -> RenderStatus`（不够就补零并计欠载）；cdylib 工厂函数 `VdnHalFactory` 先返回空指针（= 不加载，安全）；`bundle/Info.plist` 模板。真驱动接口归后续批次（装插件要人输密码，D05） |
 | `vdn-control` | `Config`（serde_json 文件：设备 · 块长 · 模式 · 模型 · 总线名）· `Cmd`（小 `Copy` 枚举：SetMode · Shutdown）。serde 只许在这里和 bin 里 |
 | `vdn-capture`（lib + bin） | `Forwarder`：输入一块原声 → 推 Raw → 从 Processed 取同样多 → 按心跳决定用处理后的还是本地延迟原声 → 推 Out。**心跳超过 100 ms 不动就切原声**，恢复后淡回 |
 | `vdn-denoised`（bin） | 建总线 → 循环：Raw 够一块就跑 `Pipeline` → 推 Processed → `beat()`；`--passthrough` 用 `Identity`，不需要模型权重 |
-| `vdn`（cli） | 新增 `devices` · `run --passthrough｜--denoise`（单进程开发模式：麦克风 → Pipeline → 扬声器）· `chain-test`（无设备：合成信号走完整链路，打印结果并按判据退出）|
+| `vdn`（cli） | （2026-11-02 定：forbid 去掉 cpal，开发期单进程入口可用 io-macos；cpal 仍禁在核心 crate 与 `vdn-denoised`）新增 `devices` · `run --passthrough｜--denoise`（单进程开发模式：麦克风 → Pipeline → 扬声器）· `chain-test`（无设备：合成信号走完整链路，打印结果并按判据退出）|
 
 ## 十一、「送声音出声音」的判据（verifier，机器判）
 
