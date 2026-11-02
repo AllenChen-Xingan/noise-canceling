@@ -43,17 +43,22 @@ impl<M: Model> Processor for Pipeline<M> {
     }
 }
 
-/// 直通管线（`testing::Identity`，不需要模型权重）。
-pub fn identity_pipeline() -> Result<Pipeline<vdn_engine::testing::Identity>, String> {
-    Pipeline::new(
-        Engine::new(vdn_engine::testing::Identity, SafetyConfig::off()),
-        IO_RATE,
-    )
+/// 建管线：`block = Some(b)` 用定块长（`with_block`，每次 `process` 恰好 b 个样本，省延迟）；`None` 任意块长。
+fn build<M: Model>(engine: Engine<M>, block: Option<usize>) -> Result<Pipeline<M>, String> {
+    match block {
+        Some(b) => Pipeline::with_block(engine, IO_RATE, b),
+        None => Pipeline::new(engine, IO_RATE),
+    }
     .map_err(|e| e.to_string())
 }
 
+/// 直通管线（`testing::Identity`，不需要模型权重）。
+pub fn identity_pipeline(block: Option<usize>) -> Result<Pipeline<vdn_engine::testing::Identity>, String> {
+    build(Engine::new(vdn_engine::testing::Identity, SafetyConfig::off()), block)
+}
+
 /// 真模型管线（三件保命按默认开）。`path` 不给就按 vdn-models 的默认路径查找。
-pub fn model_pipeline(kind: ModelKind, path: Option<&Path>) -> Result<Pipeline<AnyModel>, String> {
+pub fn model_pipeline(kind: ModelKind, path: Option<&Path>, block: Option<usize>) -> Result<Pipeline<AnyModel>, String> {
     let p = match path {
         Some(p) => p.to_path_buf(),
         None => kind
@@ -61,7 +66,7 @@ pub fn model_pipeline(kind: ModelKind, path: Option<&Path>) -> Result<Pipeline<A
             .ok_or("找不到模型文件：用 --model-path 指定，或设环境变量 VDN_GTCRN_ONNX / VDN_FASTENHANCER_ONNX")?,
     };
     let model = kind.open(&p).map_err(|e| format!("{}：{e}", p.display()))?;
-    Pipeline::new(Engine::new(model, SafetyConfig::default()), IO_RATE).map_err(|e| e.to_string())
+    build(Engine::new(model, SafetyConfig::default()), block)
 }
 
 /// `vdn-control` 的模型名 → `vdn-models` 的类型。
