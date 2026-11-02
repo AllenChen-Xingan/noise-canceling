@@ -27,6 +27,8 @@ const CFG: BusConfig = BusConfig {
     rate: 48_000,
     capacity_frames: 4096,
     l_total: 960,
+    lead: 0,
+    denoise_block: 0,
 };
 
 #[test]

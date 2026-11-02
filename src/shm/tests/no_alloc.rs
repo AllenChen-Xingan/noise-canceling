@@ -14,6 +14,8 @@ fn realtime_path_does_not_allocate() {
         rate: 48_000,
         capacity_frames: 1024,
         l_total: 0,
+        lead: 0,
+        denoise_block: 0,
     })
     .unwrap();
     let src = [0.25f32; 512];
@@ -23,6 +25,7 @@ fn realtime_path_does_not_allocate() {
             for id in RingId::ALL {
                 let r = bus.ring(id);
                 r.push(&src);
+                bus.notify(id); // 实时可调：一次原子加 + 一次系统调用，不分配
                 r.push(&src);
                 r.push(&src); // 溢出路径
                 r.pop(&mut dst);
@@ -31,6 +34,8 @@ fn realtime_path_does_not_allocate() {
                 r.pop(&mut dst); // 欠载路径
                 r.pop_or_zero(&mut dst);
                 r.note_underrun(1);
+                r.note_gap(1);
+                let _ = (r.gaps(), r.take_gaps(), r.wait_fallbacks());
                 let _ = (
                     r.available(),
                     r.free_space(),

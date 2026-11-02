@@ -18,6 +18,13 @@
 //!   **由消费方负责按 `l_total` 用 `discard` 重新对齐**（本 crate 不自动纠正）
 //! - `Ring` 是 `Copy`：同一环两端「各只一个线程」靠约定，类型挡不住（自审 P2，拆 Producer / Consumer 句柄待大总管定）
 //! - 本 crate 不依赖任何 vdn crate；POSIX 部分（feature `posix`，默认开）只用 libc
+//!
+//! 唤醒（头部版本 2 起）：
+//! - 生产方 push 完调 `Bus::notify(id)`：实时可调，一次原子加 + 一次非阻塞系统调用（规约 §4 A 档唯一例外）
+//! - 消费方在**非实时线程**调 `Bus::wait(id, 至少几个样本, 超时)`：数据够了立刻返回，不够就睡到被叫醒或超时
+//! - 低于 macOS 14.4（没有 `os_sync_wait_on_address`）或调用出错：`wait` 自动改 200 µs 轮询，并计 `wait_fallbacks`
+//!
+//! 建总线的一方用 `OwnedBus::create`（每个名字一把文件锁，拿到锁才清残留；Drop 时删一次名字）。
 
 #![cfg_attr(
     not(test),
@@ -33,9 +40,47 @@
 
 mod bus;
 pub mod layout;
+#[cfg(all(unix, feature = "posix"))]
+mod owned;
 mod region;
+mod wait;
+mod wake;
 
 pub use bus::{Bus, Ring};
+#[cfg(all(unix, feature = "posix"))]
+pub use owned::OwnedBus;
+pub use wait::FALLBACK_POLL;
+
+/// `Bus::wait` 怎么等（每个进程自己选，不进共享内存）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WaitStrategy {
+    /// 睡在唤醒计数字上，生产方 `notify` 一下就醒（默认）；系统不支持时自动退回 200 µs 轮询
+    Wake,
+    /// 按固定间隔 sleep 后看一眼（对照实验、或明确不想用唤醒时）
+    Poll(core::time::Duration),
+}
+
+/// `Bus::wait` 的结果；两种都带返回那一刻的可读样本数。
+#[must_use]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WaitResult {
+    /// 可读样本数已达到要求
+    Ready { available: usize },
+    /// 超时还不够
+    TimedOut { available: usize },
+}
+
+impl WaitResult {
+    pub fn available(self) -> usize {
+        match self {
+            Self::Ready { available } | Self::TimedOut { available } => available,
+        }
+    }
+
+    pub fn is_ready(self) -> bool {
+        matches!(self, Self::Ready { .. })
+    }
+}
 
 /// 建总线时的配置；`open` 时从头部读回。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,6 +91,10 @@ pub struct BusConfig {
     pub capacity_frames: u32,
     /// 送原声用的总延迟（48 kHz 样本，规约 §3.6、ADR 005），由降噪进程按所有启用模型的最大延迟定
     pub l_total: u32,
+    /// 跨进程缓冲余量（48 kHz 样本）；送音端读回来核对自己的设置。≤ `capacity_frames`
+    pub lead: u32,
+    /// 降噪进程的处理块长（样本）；≤ `capacity_frames`
+    pub denoise_block: u32,
 }
 
 /// 三个环。
@@ -91,6 +140,8 @@ pub enum ShmError {
     /// 本平台 / 本构建没有 POSIX 共享内存（feature `posix` 关了或非 unix）
     Unsupported,
     OutOfMemory,
+    /// `OwnedBus::create`：同名总线正被另一个活着的建方持有（文件锁拿不到）
+    Busy,
     /// 系统调用失败
     Os {
         op: &'static str,
@@ -118,6 +169,7 @@ impl core::fmt::Display for ShmError {
             }
             Self::Unsupported => write!(f, "本构建不支持 POSIX 共享内存"),
             Self::OutOfMemory => write!(f, "分配失败"),
+            Self::Busy => write!(f, "同名总线正被另一个进程建着用（换个名字，或先停掉它）"),
             Self::Os { op, errno } => write!(f, "{op} 失败（errno {errno}）"),
         }
     }
