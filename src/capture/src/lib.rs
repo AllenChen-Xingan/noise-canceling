@@ -39,6 +39,21 @@ pub trait Pop {
     fn pop(&mut self, out: &mut [f32]) -> usize;
     /// 现在可读的样本数
     fn available(&self) -> usize;
+    /// 丢掉至多 `n` 个样本，返回丢了多少。默认实现读出再扔（栈上 256 样本一段）；
+    /// 真环应覆盖成 O(1) 的挪读指针（`vdn_shm::Ring::discard`）。
+    fn discard(&mut self, n: usize) -> usize {
+        let mut buf = [0.0f32; 256];
+        let mut left = n;
+        while left > 0 {
+            let k = left.min(buf.len());
+            let got = self.pop(buf.get_mut(..k).unwrap_or(&mut []));
+            left -= got.min(left);
+            if got < k {
+                break;
+            }
+        }
+        n - left
+    }
 }
 
 /// 读心跳：降噪进程每处理一块 +1。
@@ -57,6 +72,9 @@ impl<T: Pop + ?Sized> Pop for &mut T {
     }
     fn available(&self) -> usize {
         (**self).available()
+    }
+    fn discard(&mut self, n: usize) -> usize {
+        (**self).discard(n)
     }
 }
 impl<T: Heartbeat + ?Sized> Heartbeat for &T {
@@ -141,7 +159,6 @@ pub struct Forwarder {
     raw_delayed: Vec<f32>,
     proc_buf: Vec<f32>,
     out_buf: Vec<f32>,
-    scratch: Vec<f32>,
     /// 处理后声音的权重（0 = 全原声，1 = 全处理后）
     gain: f32,
     step: f32,
@@ -176,7 +193,6 @@ impl Forwarder {
             raw_delayed: vec![0.0; max_block],
             proc_buf: vec![0.0; max_block],
             out_buf: vec![0.0; max_block],
-            scratch: vec![0.0; max_block],
             gain: 0.0,
             step: 1.0 / cfg.fade.max(1) as f32,
             last_beat: None,
@@ -288,7 +304,10 @@ impl Forwarder {
                 break;
             }
             self.head_shift += g.len;
-            self.gaps.copy_within(1..self.n_gaps, 0);
+            // 切片写法：不变式（n_gaps ≤ MAX_GAPS）坏了也不 panic
+            if let Some(live) = self.gaps.get_mut(..self.n_gaps) {
+                live.copy_within(1.., 0);
+            }
             self.n_gaps -= 1;
         }
     }
@@ -439,19 +458,7 @@ impl Forwarder {
 
     /// 从 Processed 丢掉至多 `want` 个样本，返回丢了多少。
     fn discard<P: Pop>(&mut self, processed: &mut P, want: usize) -> usize {
-        let mut left = want;
-        while left > 0 {
-            let k = left.min(self.scratch.len());
-            let Some(b) = self.scratch.get_mut(..k) else {
-                break;
-            };
-            let got = processed.pop(b);
-            left -= got.min(left);
-            if got < k {
-                break;
-            }
-        }
-        let d = want - left;
+        let d = processed.discard(want).min(want);
         self.stats.discarded += d as u64;
         d
     }
