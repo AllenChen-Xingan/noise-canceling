@@ -26,7 +26,7 @@
 )]
 
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -118,6 +118,9 @@ fn open_bus(name: &str, wait: f64) -> Result<Bus, String> {
 struct Link {
     bus: Mutex<Arc<Bus>>,
     epoch: AtomicU64,
+    /// 新总线的 Out 流从第几个样本起（正弦线程换总线时写；读方在这个位置换，前后不错位）。
+    /// `usize::MAX` = 还没定（读方先别换）
+    switch_at: AtomicUsize,
     stop: AtomicBool,
 }
 
@@ -203,6 +206,7 @@ fn real_main() -> Result<(), String> {
     let link = Arc::new(Link {
         bus: Mutex::new(first.clone()),
         epoch: AtomicU64::new(0),
+        switch_at: AtomicUsize::new(0),
         stop: AtomicBool::new(false),
     });
 
@@ -227,6 +231,7 @@ fn real_main() -> Result<(), String> {
                     if g != epoch {
                         (epoch, bus) = (g, b);
                         fwd = forwarder_for(&bus, block, timeout);
+                        link.switch_at.store(off, Ordering::Release);
                     }
                     let k = block.min(n - off);
                     let x = buf.get_mut(..k).unwrap_or(&mut []);
@@ -276,7 +281,7 @@ fn real_main() -> Result<(), String> {
                     // 晚 1.5 块读，模拟插件 IO 线程
                     sleep_until(start + block_dur * i as u32 + block_dur * 3 / 2);
                     let (g, b) = link.current();
-                    if g != epoch {
+                    if g != epoch && i * block >= link.switch_at.load(Ordering::Acquire) {
                         underrun += src.counters().underrun_samples();
                         epoch = g;
                         src = HalSource::new(OutSource::new(b));
@@ -337,6 +342,8 @@ fn real_main() -> Result<(), String> {
                 block,
             )?);
         }
+        // 正弦入口会自己写换总线的位置；麦克风入口已重开，读方立刻换
+        link.switch_at.store(if sine.is_some() { usize::MAX } else { 0 }, Ordering::Release);
         if let Ok(mut slot) = link.bus.lock() {
             *slot = new.clone();
         }
