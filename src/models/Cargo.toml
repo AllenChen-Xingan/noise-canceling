@@ -19,7 +19,7 @@ assert_no_alloc.workspace = true
 [lints]
 workspace = true
 
-# 机读正本（specs/rust/architecture.md §5.4）。ort 只经 vdn-backend-ort 间接进入；直接依赖 ort 由 cargo-deny 的 wrappers 管
+# 机读正本（specs/rust/architecture.md §5.4）。ort 只经 vdn-backend-ort 间接进入。「models 不许直接依赖 ort」现在没有机器检查（deny.toml 尚未建立，check-deps 只看闭包），待 cargo-deny wrappers 落地
 [package.metadata.vdn]
 tier = "B"
 unsafe = false

@@ -55,6 +55,14 @@ fn resample_blocks_do_not_allocate() {
             }
             u.process(&lo, &mut y);
         }
+        // 不是 3 的倍数的块长（相位跨块延续）
+        let mut i = 0;
+        for n in [1usize, 7, 2, 100, 5] {
+            let mut lo1 = [0.0f32; 64];
+            let m = d.output_len(n);
+            d.process(&x[i..i + n], &mut lo1[..m]);
+            i += n;
+        }
         d.reset();
         u.reset();
     });

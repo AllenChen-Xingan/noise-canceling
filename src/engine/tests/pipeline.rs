@@ -217,7 +217,16 @@ fn realtime_path_does_not_allocate() {
     // 带故障的模型（NaN、后端报错交替），走 Engine 送原声与 Pipeline 淡化的降级路径
     let plan = (0..400)
         .step_by(7)
-        .map(|h| (h, if h % 2 == 0 { FaultKind::Nan } else { FaultKind::Error }))
+        .map(|h| {
+            (
+                h,
+                if h % 2 == 0 {
+                    FaultKind::Nan
+                } else {
+                    FaultKind::Error
+                },
+            )
+        })
         .collect();
     let m = FaultInjector::new(DelayGain::new(256, 256, 0.8), plan);
     let mut p = Pipeline::new(Engine::new(m, SafetyConfig::default()), SR).unwrap();
