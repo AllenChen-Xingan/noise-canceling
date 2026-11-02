@@ -313,16 +313,37 @@ pub fn latency_line(r: &ChainRun) -> String {
 pub fn counters_line(r: &ChainRun) -> String {
     let f = &r.fwd;
     format!(
-        "计数：虚拟麦欠载 {} 块 / {} 样本 · 处理后欠载 {} 样本 · Raw 溢出 {} · Out 溢出 {} · 丢弃 {} · 重新对账 {} · 切原声 {} 次 · 降噪块数 {}",
+        "计数：虚拟麦欠载 {} 块 / {} 样本 · 处理后欠载 {} 样本 · 硬切 {} · Raw 溢出 {} · Out 溢出 {} · 丢弃 {} · 重新对账 {} · 切原声 {} 次 · 降噪太慢 {} 次 · 降噪块数 {}",
         r.hal_underrun_blocks,
         r.hal_underrun_samples,
         f.proc_underrun,
+        f.cuts,
         f.raw_overflow,
         f.out_overflow,
         f.discarded,
         f.resyncs,
         f.stale_switches,
-        r.worker_blocks
+        f.slow_episodes,
+        r.worker.blocks
+    )
+}
+
+/// 耗时一行（降噪线程）。
+pub fn timing_line(r: &ChainRun) -> String {
+    let w = &r.worker;
+    let block_ms = ms48(r.denoise_block);
+    format!(
+        "耗时：预热 {} 块（第一块 {:.3} ms，之后最长 {:.3} ms）· 服务期单块最长 {:.3} ms、平均 {:.4} ms、超一块时长（{:.3} ms）{} 块 · 虚拟麦读相位 {} 样本（{:.2} ms，不在 L_total 里）· 实时提升失败 {} 个线程",
+        r.warmup.blocks,
+        r.warmup.first_ns as f64 / 1e6,
+        r.warmup.max_after_first_ns as f64 / 1e6,
+        w.max_process_ns as f64 / 1e6,
+        w.total_process_ns as f64 / 1e6 / w.blocks.max(1) as f64,
+        block_ms,
+        w.over_budget,
+        r.hal_offset,
+        ms48(r.hal_offset),
+        r.rt_failures
     )
 }
 
@@ -424,16 +445,15 @@ mod tests {
     use super::*;
 
     fn opts(seconds: f64, kill_at: Option<f64>, tag: &str) -> ChainOpts {
-        ChainOpts {
-            mode: ChainMode::Passthrough,
-            seconds,
-            block: 480,
-            lead: 1440,
-            denoise_block: 96,
-            kill_at,
-            bus_name: format!("/vdn-t{tag}-{}", std::process::id()),
-            heartbeat_timeout: 4800,
-        }
+        let mut o = ChainOpts::new(&format!("/vdn-t{tag}-{}", std::process::id()));
+        o.seconds = seconds;
+        o.kill_at = kill_at;
+        o.block = 480;
+        o.hal_offset = 720;
+        o.warmup_blocks = 8;
+        o.rt = false;
+        o
+    }
     }
 
     /// V1 的短版（1.2 s）：真共享内存、三线程
