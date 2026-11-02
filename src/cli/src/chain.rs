@@ -219,7 +219,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
             }
             for (i, xb) in x.chunks(block).enumerate() {
                 sleep_until(start + block_dur * i as u32);
-                vdn_capture::shm::forward(&mut fwd, &bus, xb);
+                vdn_capture::shm::forward_same_bus(&mut fwd, &bus, xb);
                 cap_pos.store(fwd.stats().samples, Ordering::Release);
             }
             (x, fwd.stats())

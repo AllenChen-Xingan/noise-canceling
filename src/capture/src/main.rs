@@ -32,7 +32,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use clap::{Parser, ValueEnum};
-use vdn_capture::shm::{OutSource, forward};
+use vdn_capture::shm::{OutSource, forward_same_bus};
 use vdn_capture::testing::fill_tone;
 use vdn_capture::{Forwarder, ForwarderConfig};
 use vdn_control::Config;
@@ -150,7 +150,7 @@ fn open_mic(
 ) -> Result<InputStream, String> {
     let mut fwd = forwarder_for(&bus, block, timeout);
     let s = InputStream::open(dev, IO_RATE, block, move |m: &[f32]| {
-        forward(&mut fwd, &bus, m);
+        forward_same_bus(&mut fwd, &bus, m);
     })
     .map_err(|e| format!("开麦克风：{e}"))?;
     eprintln!("vdn-capture: 麦克风 {:?}", s.info());
@@ -240,7 +240,7 @@ fn real_main() -> Result<(), String> {
                     let k = block.min(n - off);
                     let x = buf.get_mut(..k).unwrap_or(&mut []);
                     fill_tone(x, IO_RATE, off);
-                    forward(&mut fwd, &bus, x);
+                    forward_same_bus(&mut fwd, &bus, x);
                     off += k;
                     i += 1;
                 }

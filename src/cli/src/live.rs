@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use vdn_capture::shm::{OutSource, forward};
+use vdn_capture::shm::{OutSource, forward_same_bus};
 use vdn_capture::{Forwarder, ForwarderConfig};
 use vdn_denoised::{Processor, Step, Worker};
 use vdn_hal::HalSource;
@@ -115,7 +115,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<()
             IO_RATE,
             o.block,
             move |m: &[f32]| {
-                forward(&mut fwd, &bus, m);
+                forward_same_bus(&mut fwd, &bus, m);
             },
         )
         .map_err(|e| format!("开麦克风：{e}"))?

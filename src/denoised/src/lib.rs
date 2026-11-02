@@ -250,7 +250,7 @@ impl<P: Processor> Worker<P> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vdn_capture::shm::forward;
+    use vdn_capture::shm::forward_same_bus;
     use vdn_capture::{Forwarder, ForwarderConfig};
     use vdn_shm::BusConfig;
 
@@ -355,7 +355,7 @@ mod tests {
         let x = vdn_capture::testing::test_tone(IO_RATE, 200 * block, 0);
         let mut y = vec![0.0; x.len()];
         for (c, yc) in x.chunks(block).zip(y.chunks_mut(block)) {
-            forward(&mut f, &bus, c);
+            forward_same_bus(&mut f, &bus, c);
             while w.step(&bus) == Step::Block {}
             assert_eq!(bus.ring(RingId::Out).pop(yc), c.len());
         }
@@ -389,13 +389,13 @@ mod tests {
         let junk = vec![0.5f32; 20 * block];
         // 热身
         for _ in 0..10 {
-            forward(&mut f, &bus, &x);
+            forward_same_bus(&mut f, &bus, &x);
             while w.step(&bus) == Step::Block {}
             bus.ring(RingId::Out).pop(&mut y);
         }
         assert_no_alloc::assert_no_alloc(|| {
             for i in 0..400 {
-                forward(&mut f, &bus, &x);
+                forward_same_bus(&mut f, &bus, &x);
                 if !(100..200).contains(&i) {
                     while w.step(&bus) == Step::Block {}
                 }
