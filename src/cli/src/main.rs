@@ -56,6 +56,9 @@ struct ChainCheckArgs {
     /// 期望的总延迟（48 kHz 样本；vdn-capture 启动时打印）
     #[arg(long)]
     l_total: usize,
+    /// 从第几秒起判（重接之后那段）
+    #[arg(long, default_value_t = 0.0, value_parser = vdn_control::parse_seconds)]
+    from: f64,
 }
 
 #[derive(Args)]
@@ -567,7 +570,7 @@ fn chain_check(a: ChainCheckArgs) -> Result<bool, BoxError> {
         return Err(format!("{}：只收 48 kHz 单声道 32 位浮点", a.wav.display()).into());
     }
     let y = r.samples::<f32>().collect::<Result<Vec<_>, _>>()?;
-    let v = chain::judge_file(&y, a.l_total);
+    let v = chain::judge_file(&y, a.l_total, (a.from * 48_000.0) as usize);
     println!("{} · 文件 {}（{} 样本）", v, a.wav.display(), y.len());
     Ok(v.pass)
 }

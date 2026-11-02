@@ -310,13 +310,26 @@ pub fn judge_v3(r: &ChainRun) -> Verdict {
 }
 
 /// V4：文件里应是测试正弦延迟 `l_total`（同 V1 的相关判据；欠载看不到，由 vdn-capture 的计数报）。
-pub fn judge_file(y: &[f32], l_total: usize) -> Verdict {
+pub fn judge_file(y: &[f32], l_total: usize, from: usize) -> Verdict {
     let x = test_tone(RATE, y.len(), 0);
-    let corr = pearson_at_lag(&x, y, l_total, SKIP).unwrap_or(0.0);
-    let found = onset(y, 0.05).and_then(|on| {
-        best_lag(&x, y, on.saturating_sub(600), on + 600, SKIP, 9600).map(|(lag, _)| lag)
-    });
-    let (_, sil) = longest_silence(y, SILENCE, l_total + SKIP);
+    let skip = SKIP.max(from);
+    let corr = pearson_at_lag(&x, y, l_total, skip).unwrap_or(0.0);
+    let found = if from == 0 {
+        onset(y, 0.05).and_then(|on| {
+            best_lag(&x, y, on.saturating_sub(600), on + 600, SKIP, 9600).map(|(lag, _)| lag)
+        })
+    } else {
+        best_lag(
+            &x,
+            y,
+            l_total.saturating_sub(600),
+            l_total + 600,
+            skip,
+            9600,
+        )
+        .map(|(lag, _)| lag)
+    };
+    let (_, sil) = longest_silence(y, SILENCE, l_total + skip);
     let pass = corr >= 0.999;
     Verdict {
         id: "V4",
@@ -389,7 +402,7 @@ mod tests {
         let x = test_tone(RATE, 48_000, 0);
         let mut y = vec![0.0; 2303];
         y.extend_from_slice(&x[..48_000 - 2303]);
-        assert!(judge_file(&y, 2303).pass);
-        assert!(!judge_file(&y, 2303 + 300).pass);
+        assert!(judge_file(&y, 2303, 0).pass);
+        assert!(!judge_file(&y, 2303 + 300, 0).pass);
     }
 }
