@@ -2,7 +2,11 @@
 //!
 //! `run` 用进程内总线（`Bus::heap`）把三方串起来，走的代码和两个进程时完全相同：
 //! 输入回调 = `Forwarder`，降噪线程 = `Worker`，输出回调 = `HalSource` 读 Out。
-#![allow(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)] // NRT: 编排；实时部分在各 crate 内
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)] // NRT: 编排；实时部分在各 crate 内
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -30,7 +34,11 @@ pub fn list_devices() {
                 Direction::Output => "输出",
             },
             d.name,
-            if d.is_default { "（系统默认）" } else { "" },
+            if d.is_default {
+                "（系统默认）"
+            } else {
+                ""
+            },
             d.default_rate,
             d.channels,
             if d.supports_io_rate { "是" } else { "否" }
@@ -63,7 +71,8 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<()
     let stop = Arc::new(AtomicBool::new(false));
     {
         let stop = stop.clone();
-        ctrlc::set_handler(move || stop.store(true, Ordering::Relaxed)).map_err(|e| format!("装 Ctrl-C 处理：{e}"))?;
+        ctrlc::set_handler(move || stop.store(true, Ordering::Relaxed))
+            .map_err(|e| format!("装 Ctrl-C 处理：{e}"))?;
     }
 
     let den = {
@@ -85,16 +94,26 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<()
     let mut fwd = Forwarder::new(ForwarderConfig::new(l_total, o.block));
     let input = {
         let bus = bus.clone();
-        InputStream::open(o.input_device.as_deref(), IO_RATE, o.block, move |m: &[f32]| {
-            forward(&mut fwd, &bus, m);
-        })
+        InputStream::open(
+            o.input_device.as_deref(),
+            IO_RATE,
+            o.block,
+            move |m: &[f32]| {
+                forward(&mut fwd, &bus, m);
+            },
+        )
         .map_err(|e| format!("开麦克风：{e}"))?
     };
     let output = {
         let mut src = HalSource::new(OutSource::new(bus.clone()));
-        OutputStream::open(o.output_device.as_deref(), IO_RATE, o.block, move |out: &mut [f32]| {
-            let _ = src.render(out);
-        })
+        OutputStream::open(
+            o.output_device.as_deref(),
+            IO_RATE,
+            o.block,
+            move |out: &mut [f32]| {
+                let _ = src.render(out);
+            },
+        )
         .map_err(|e| format!("开扬声器：{e}"))?
     };
     eprintln!(
@@ -107,7 +126,9 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<()
         o.lead
     );
 
-    let until = o.seconds.map(|s| Instant::now() + Duration::from_secs_f64(s));
+    let until = o
+        .seconds
+        .map(|s| Instant::now() + Duration::from_secs_f64(s));
     while !stop.load(Ordering::Relaxed) && until.is_none_or(|u| Instant::now() < u) {
         thread::sleep(Duration::from_millis(50));
         if input.health().needs_reopen() || output.health().needs_reopen() {

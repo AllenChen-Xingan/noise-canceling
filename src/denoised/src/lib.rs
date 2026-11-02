@@ -45,7 +45,11 @@ impl<M: Model> Processor for Pipeline<M> {
 
 /// 直通管线（`testing::Identity`，不需要模型权重）。
 pub fn identity_pipeline() -> Result<Pipeline<vdn_engine::testing::Identity>, String> {
-    Pipeline::new(Engine::new(vdn_engine::testing::Identity, SafetyConfig::off()), IO_RATE).map_err(|e| e.to_string())
+    Pipeline::new(
+        Engine::new(vdn_engine::testing::Identity, SafetyConfig::off()),
+        IO_RATE,
+    )
+    .map_err(|e| e.to_string())
 }
 
 /// 真模型管线（三件保命按默认开）。`path` 不给就按 vdn-models 的默认路径查找。
@@ -124,7 +128,11 @@ impl<P: Processor> Worker<P> {
 }
 
 // 实时（B 档）
-#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl<P: Processor> Worker<P> {
     pub fn stats(&self) -> WorkerStats {
         self.stats
@@ -245,7 +253,11 @@ mod tests {
         // 相关（跳过开头 100 ms）
         let skip = 4800;
         let (a, b) = (&x[skip..x.len() - l_total], &y[skip + l_total..]);
-        let dot: f64 = a.iter().zip(b).map(|(p, q)| f64::from(*p) * f64::from(*q)).sum();
+        let dot: f64 = a
+            .iter()
+            .zip(b)
+            .map(|(p, q)| f64::from(*p) * f64::from(*q))
+            .sum();
         let na: f64 = a.iter().map(|p| f64::from(*p).powi(2)).sum();
         let nb: f64 = b.iter().map(|q| f64::from(*q).powi(2)).sum();
         let r = dot / (na * nb).sqrt();

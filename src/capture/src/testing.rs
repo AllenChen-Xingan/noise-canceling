@@ -75,8 +75,8 @@ pub fn test_tone(rate: u32, n: usize, off: usize) -> Vec<f32> {
     (0..n)
         .map(|i| {
             let t = (i + off) as f64 / r;
-            (0.5 * (2.0 * std::f64::consts::PI * 440.0 * t).sin() + 0.3 * (2.0 * std::f64::consts::PI * 2000.0 * t).sin())
-                as f32
+            (0.5 * (2.0 * std::f64::consts::PI * 440.0 * t).sin()
+                + 0.3 * (2.0 * std::f64::consts::PI * 2000.0 * t).sin()) as f32
         })
         .collect()
 }

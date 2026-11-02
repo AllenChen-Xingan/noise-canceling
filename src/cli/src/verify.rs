@@ -37,7 +37,14 @@ pub fn pearson_at_lag(x: &[f32], y: &[f32], lag: usize, skip: usize) -> Option<f
 }
 
 /// 在 `lo..=hi` 里找相关最大的延迟；只用 `skip` 之后 `win` 个样本算（控制耗时）。
-pub fn best_lag(x: &[f32], y: &[f32], lo: usize, hi: usize, skip: usize, win: usize) -> Option<(usize, f64)> {
+pub fn best_lag(
+    x: &[f32],
+    y: &[f32],
+    lo: usize,
+    hi: usize,
+    skip: usize,
+    win: usize,
+) -> Option<(usize, f64)> {
     let xw = &x[..x.len().min(skip + win)];
     let mut best: Option<(usize, f64)> = None;
     for lag in lo..=hi {

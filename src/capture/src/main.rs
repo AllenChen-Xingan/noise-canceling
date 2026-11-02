@@ -42,7 +42,11 @@ enum Sink {
 }
 
 #[derive(Parser)]
-#[command(name = "vdn-capture", version, about = "vdn 送音进程：原声 → 共享内存 → 处理后 / 延迟原声 → 出口")]
+#[command(
+    name = "vdn-capture",
+    version,
+    about = "vdn 送音进程：原声 → 共享内存 → 处理后 / 延迟原声 → 出口"
+)]
 struct Args {
     #[arg(long, value_enum)]
     source: Source,
@@ -113,7 +117,10 @@ fn real_main() -> Result<(), String> {
 
     let bus = Arc::new(open_bus(&cfg.bus_name, a.wait)?);
     if bus.rate() != IO_RATE {
-        return Err(format!("总线采样率 {} Hz，本程序只支持 {IO_RATE}", bus.rate()));
+        return Err(format!(
+            "总线采样率 {} Hz，本程序只支持 {IO_RATE}",
+            bus.rate()
+        ));
     }
     let l_total = bus.l_total() as usize;
     let block = cfg.block;
@@ -152,9 +159,14 @@ fn real_main() -> Result<(), String> {
         }
         Source::Mic => {
             let bus = bus.clone();
-            let s = InputStream::open(cfg.input_device.as_deref(), IO_RATE, block, move |m: &[f32]| {
-                forward(&mut fwd, &bus, m);
-            })
+            let s = InputStream::open(
+                cfg.input_device.as_deref(),
+                IO_RATE,
+                block,
+                move |m: &[f32]| {
+                    forward(&mut fwd, &bus, m);
+                },
+            )
             .map_err(|e| format!("开麦克风：{e}"))?;
             eprintln!("vdn-capture: 麦克风 {:?}", s.info());
             _input = Some(s);
@@ -171,9 +183,14 @@ fn real_main() -> Result<(), String> {
         }
         Sink::Speaker => {
             let mut src = HalSource::new(OutSource::new(bus.clone()));
-            let s = OutputStream::open(cfg.output_device.as_deref(), IO_RATE, block, move |o: &mut [f32]| {
-                let _ = src.render(o);
-            })
+            let s = OutputStream::open(
+                cfg.output_device.as_deref(),
+                IO_RATE,
+                block,
+                move |o: &mut [f32]| {
+                    let _ = src.render(o);
+                },
+            )
             .map_err(|e| format!("开扬声器：{e}"))?;
             eprintln!("vdn-capture: 扬声器 {:?}", s.info());
             _output = Some(s);
@@ -201,7 +218,10 @@ fn real_main() -> Result<(), String> {
             let st = s.join().map_err(|_| "送音线程 panic")?;
             let (y, c) = f.join().map_err(|_| "写文件线程 panic")?;
             write_wav(a.out.as_deref(), &y)?;
-            eprintln!("vdn-capture: 计数 {st:?} · 读出欠载 {} 样本", c.underrun_samples());
+            eprintln!(
+                "vdn-capture: 计数 {st:?} · 读出欠载 {} 样本",
+                c.underrun_samples()
+            );
         }
         (s, f) => {
             match seconds {
@@ -240,7 +260,8 @@ fn write_wav(path: Option<&std::path::Path>, y: &[f32]) -> Result<(), String> {
         bits_per_sample: 32,
         sample_format: hound::SampleFormat::Float,
     };
-    let mut w = hound::WavWriter::create(path, spec).map_err(|e| format!("{}：{e}", path.display()))?;
+    let mut w =
+        hound::WavWriter::create(path, spec).map_err(|e| format!("{}：{e}", path.display()))?;
     for &v in y {
         w.write_sample(v).map_err(|e| e.to_string())?;
     }

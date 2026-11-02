@@ -41,7 +41,11 @@ impl OutSource {
     }
 }
 
-#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl vdn_hal::SampleSource for OutSource {
     fn pop(&mut self, out: &mut [f32]) -> usize {
         self.bus.ring(RingId::Out).pop(out)
@@ -52,8 +56,16 @@ impl vdn_hal::SampleSource for OutSource {
 }
 
 /// 一块原声走一遍 `Forwarder`，三个环都取自同一条总线。
-#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 pub fn forward(fwd: &mut crate::Forwarder, bus: &Bus, input: &[f32]) {
-    let (mut raw, mut processed, mut out) = (bus.ring(RingId::Raw), bus.ring(RingId::Processed), bus.ring(RingId::Out));
+    let (mut raw, mut processed, mut out) = (
+        bus.ring(RingId::Raw),
+        bus.ring(RingId::Processed),
+        bus.ring(RingId::Out),
+    );
     fwd.process(input, &mut raw, &mut processed, &mut out, bus);
 }

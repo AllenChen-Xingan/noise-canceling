@@ -461,7 +461,10 @@ fn run(a: RunArgs) -> Result<(), BoxError> {
         live::run(vdn_denoised::identity_pipeline()?, &o)?;
     } else {
         let kind = ModelKind::from(a.m.model);
-        live::run(vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref())?, &o)?;
+        live::run(
+            vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref())?,
+            &o,
+        )?;
     }
     Ok(())
 }
@@ -477,7 +480,9 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
         block: a.block,
         lead: a.lead,
         kill_at: a.kill_denoiser_at,
-        bus_name: a.bus.unwrap_or_else(|| format!("/vdn-ct-{}", std::process::id())),
+        bus_name: a
+            .bus
+            .unwrap_or_else(|| format!("/vdn-ct-{}", std::process::id())),
         heartbeat_timeout: a.heartbeat_ms as usize * 48,
     };
     vdn_control::validate_bus_name(&o.bus_name)?;
@@ -485,7 +490,10 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
         chain::ChainMode::Passthrough => chain::run(vdn_denoised::identity_pipeline()?, &o)?,
         chain::ChainMode::Denoise => {
             let kind = ModelKind::from(a.m.model);
-            chain::run(vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref())?, &o)?
+            chain::run(
+                vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref())?,
+                &o,
+            )?
         }
     };
     if let Some(prefix) = &a.dump {
@@ -502,7 +510,8 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
         o.seconds,
         o.block,
         a.heartbeat_ms,
-        o.kill_at.map_or(String::new(), |k| format!(" · 第 {k} s 让降噪线程退出"))
+        o.kill_at
+            .map_or(String::new(), |k| format!(" · 第 {k} s 让降噪线程退出"))
     );
     println!("{}", chain::latency_line(&r));
     println!("{}", chain::counters_line(&r));
@@ -538,7 +547,10 @@ fn write_wav48(path: &Path, y: &[f32]) -> Result<(), BoxError> {
 fn chain_check(a: ChainCheckArgs) -> Result<bool, BoxError> {
     let mut r = hound::WavReader::open(&a.wav)?;
     let spec = r.spec();
-    if spec.channels != 1 || spec.sample_rate != 48_000 || spec.sample_format != hound::SampleFormat::Float {
+    if spec.channels != 1
+        || spec.sample_rate != 48_000
+        || spec.sample_format != hound::SampleFormat::Float
+    {
         return Err(format!("{}：只收 48 kHz 单声道 32 位浮点", a.wav.display()).into());
     }
     let y = r.samples::<f32>().collect::<Result<Vec<_>, _>>()?;

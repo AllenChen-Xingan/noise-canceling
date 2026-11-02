@@ -17,11 +17,17 @@ use std::time::{Duration, Instant};
 
 use clap::Parser;
 use vdn_control::{Config, Mode, ModelChoice};
-use vdn_denoised::{IO_RATE, Processor, Step, Worker, identity_pipeline, model_kind, model_pipeline};
+use vdn_denoised::{
+    IO_RATE, Processor, Step, Worker, identity_pipeline, model_kind, model_pipeline,
+};
 use vdn_shm::{Bus, BusConfig, RingId};
 
 #[derive(Parser)]
-#[command(name = "vdn-denoised", version, about = "vdn 降噪进程：Raw 环 → Pipeline → Processed 环 + 心跳")]
+#[command(
+    name = "vdn-denoised",
+    version,
+    about = "vdn 降噪进程：Raw 环 → Pipeline → Processed 环 + 心跳"
+)]
 struct Args {
     /// 配置文件（JSON，见 vdn-control）；命令行参数覆盖其中的同名项
     #[arg(long)]
@@ -70,7 +76,11 @@ fn real_main() -> Result<(), String> {
         cfg.mode = Mode::Passthrough;
     }
     if let Some(m) = &a.model {
-        cfg.model = if m == "gtcrn" { ModelChoice::Gtcrn } else { ModelChoice::FastenhancerM };
+        cfg.model = if m == "gtcrn" {
+            ModelChoice::Gtcrn
+        } else {
+            ModelChoice::FastenhancerM
+        };
     }
     if let Some(p) = &a.model_path {
         cfg.model_path = Some(p.clone());
@@ -88,7 +98,11 @@ fn real_main() -> Result<(), String> {
 
     match cfg.mode {
         Mode::Passthrough => serve(identity_pipeline()?, &cfg, &a),
-        Mode::Denoise => serve(model_pipeline(model_kind(cfg.model), cfg.model_path.as_deref())?, &cfg, &a),
+        Mode::Denoise => serve(
+            model_pipeline(model_kind(cfg.model), cfg.model_path.as_deref())?,
+            &cfg,
+            &a,
+        ),
     }
 }
 
@@ -97,7 +111,11 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     let l_pipe = worker.processor().latency_samples();
     let l_total = worker.l_total(cfg.lead_frames);
     if a.capacity as usize <= l_total + 2 * cfg.block {
-        return Err(format!("--capacity {} 太小：至少要 L_total + 2 块 = {}", a.capacity, l_total + 2 * cfg.block));
+        return Err(format!(
+            "--capacity {} 太小：至少要 L_total + 2 块 = {}",
+            a.capacity,
+            l_total + 2 * cfg.block
+        ));
     }
 
     // 上次异常退出可能留了同名对象
@@ -115,13 +133,17 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     let primed = worker.prime(&bus, cfg.lead_frames);
     if primed != cfg.lead_frames {
         let _ = bus.unlink();
-        return Err(format!("Processed 环只放下 {primed} / {} 个零", cfg.lead_frames));
+        return Err(format!(
+            "Processed 环只放下 {primed} / {} 个零",
+            cfg.lead_frames
+        ));
     }
 
     let stop = Arc::new(AtomicBool::new(false));
     {
         let stop = stop.clone();
-        ctrlc::set_handler(move || stop.store(true, Ordering::Relaxed)).map_err(|e| format!("装 Ctrl-C 处理：{e}"))?;
+        ctrlc::set_handler(move || stop.store(true, Ordering::Relaxed))
+            .map_err(|e| format!("装 Ctrl-C 处理：{e}"))?;
     }
 
     eprintln!(
@@ -145,7 +167,9 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
         }
     }
 
-    let deadline = a.seconds.map(|s| Instant::now() + Duration::from_secs_f64(s));
+    let deadline = a
+        .seconds
+        .map(|s| Instant::now() + Duration::from_secs_f64(s));
     while !stop.load(Ordering::Relaxed) && deadline.is_none_or(|d| Instant::now() < d) {
         if worker.step(&bus) == Step::Idle {
             // B 档：没活就让出 0.5 ms（后续批次换 os_sync_wait 唤醒）

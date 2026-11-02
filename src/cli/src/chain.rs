@@ -4,7 +4,11 @@
 //! - 收音：按 48 kHz 实时节拍产生测试信号，`Forwarder` 推 Raw、取 Processed、推 Out（自己 `Bus::open` 一份映射）
 //! - 降噪：`Worker` + `Pipeline`（建总线的一方）；`--kill-denoiser-at` 到点就退出（不再心跳、不再推）
 //! - 虚拟麦克风：`HalSource` 按同样节拍读 Out（再 `Bus::open` 一份映射）
-#![allow(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)] // NRT: 测试编排；实时部分在各 crate 内
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)] // NRT: 测试编排；实时部分在各 crate 内
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -16,7 +20,9 @@ use vdn_denoised::{Processor, Step, Worker};
 use vdn_hal::{HalSource, RenderStatus};
 use vdn_shm::{Bus, BusConfig};
 
-use crate::verify::{best_lag, longest_silence, ms48, nonfinite, onset, pearson_at_lag, rms, test_tone};
+use crate::verify::{
+    best_lag, longest_silence, ms48, nonfinite, onset, pearson_at_lag, rms, test_tone,
+};
 
 const RATE: u32 = 48_000;
 /// 判相关前跳过的样本（淡入与重采样起振）
@@ -85,13 +91,17 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         capacity_frames: RATE, // 1 s
         l_total: u32::try_from(l_total).map_err(|_| "L_total 太大")?,
     };
-    let den_bus = Arc::new(Bus::create(&o.bus_name, cfg).map_err(|e| format!("建总线 {}：{e}", o.bus_name))?);
+    let den_bus =
+        Arc::new(Bus::create(&o.bus_name, cfg).map_err(|e| format!("建总线 {}：{e}", o.bus_name))?);
     let _guard = Unlink(o.bus_name.clone());
     // 收音方与虚拟麦克风方各自 open（走真跨进程那条路）
     let cap_bus = Arc::new(Bus::open(&o.bus_name).map_err(|e| format!("收音端打开总线：{e}"))?);
     let hal_bus = Arc::new(Bus::open(&o.bus_name).map_err(|e| format!("虚拟麦端打开总线：{e}"))?);
     if cap_bus.l_total() as usize != l_total {
-        return Err(format!("总线头 L_total = {}，应为 {l_total}", cap_bus.l_total()));
+        return Err(format!(
+            "总线头 L_total = {}，应为 {l_total}",
+            cap_bus.l_total()
+        ));
     }
 
     if worker.prime(&den_bus, o.lead) != o.lead {
@@ -106,7 +116,12 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
 
     // 降噪
     let den = {
-        let (bus, stop, cap_pos, killed_at) = (den_bus.clone(), stop.clone(), cap_pos.clone(), killed_at.clone());
+        let (bus, stop, cap_pos, killed_at) = (
+            den_bus.clone(),
+            stop.clone(),
+            cap_pos.clone(),
+            killed_at.clone(),
+        );
         let kill_samples = o.kill_at.map(|s| (s * f64::from(RATE)) as u64);
         thread::spawn(move || {
             let mut consumed = 0u64;
@@ -189,7 +204,14 @@ pub struct Verdict {
 
 impl std::fmt::Display for Verdict {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}：{} · {}", self.id, self.what, if self.pass { "过" } else { "不过" }, self.detail)
+        write!(
+            f,
+            "{} {}：{} · {}",
+            self.id,
+            self.what,
+            if self.pass { "过" } else { "不过" },
+            self.detail
+        )
     }
 }
 
@@ -286,8 +308,9 @@ pub fn judge_v3(r: &ChainRun) -> Verdict {
 pub fn judge_file(y: &[f32], l_total: usize) -> Verdict {
     let x = test_tone(RATE, y.len(), 0);
     let corr = pearson_at_lag(&x, y, l_total, SKIP).unwrap_or(0.0);
-    let found = onset(y, 0.05)
-        .and_then(|on| best_lag(&x, y, on.saturating_sub(600), on + 600, SKIP, 9600).map(|(lag, _)| lag));
+    let found = onset(y, 0.05).and_then(|on| {
+        best_lag(&x, y, on.saturating_sub(600), on + 600, SKIP, 9600).map(|(lag, _)| lag)
+    });
     let (_, sil) = longest_silence(y, SILENCE, l_total + SKIP);
     let pass = corr >= 0.999;
     Verdict {
@@ -299,5 +322,68 @@ pub fn judge_file(y: &[f32], l_total: usize) -> Verdict {
             found.map_or("未找到".to_owned(), |l| l.to_string()),
             ms48(sil)
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn opts(seconds: f64, kill_at: Option<f64>, tag: &str) -> ChainOpts {
+        ChainOpts {
+            mode: ChainMode::Passthrough,
+            seconds,
+            block: 480,
+            lead: 1440,
+            kill_at,
+            bus_name: format!("/vdn-t{tag}-{}", std::process::id()),
+            heartbeat_timeout: 4800,
+        }
+    }
+
+    /// V1 的短版（1.2 s）：真共享内存、三线程
+    #[test]
+    fn v1_short() {
+        let r = run(
+            vdn_denoised::identity_pipeline().unwrap(),
+            &opts(1.2, None, "v1"),
+        )
+        .unwrap();
+        let v = judge_v1(&r);
+        assert!(v.pass, "{v}");
+        assert_eq!(r.l_total, 863 + 1440);
+    }
+
+    /// V2 的短版：0.5 s 处让降噪线程退出
+    #[test]
+    fn v2_short() {
+        let r = run(
+            vdn_denoised::identity_pipeline().unwrap(),
+            &opts(1.2, Some(0.5), "v2"),
+        )
+        .unwrap();
+        let v = judge_v2(&r);
+        assert!(v.pass, "{v}");
+        assert_eq!(r.fwd.stale_switches, 1);
+    }
+
+    /// 退出后名字已删：再 open 应找不到
+    #[test]
+    fn bus_unlinked_after_run() {
+        let o = opts(0.3, None, "ul");
+        run(vdn_denoised::identity_pipeline().unwrap(), &o).unwrap();
+        assert!(matches!(
+            Bus::open(&o.bus_name),
+            Err(vdn_shm::ShmError::NotFound)
+        ));
+    }
+
+    #[test]
+    fn judge_file_on_synthetic() {
+        let x = test_tone(RATE, 48_000, 0);
+        let mut y = vec![0.0; 2303];
+        y.extend_from_slice(&x[..48_000 - 2303]);
+        assert!(judge_file(&y, 2303).pass);
+        assert!(!judge_file(&y, 2303 + 300).pass);
     }
 }
