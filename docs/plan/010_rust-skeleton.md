@@ -145,7 +145,7 @@
 | `vdn-control` | `Config`（serde_json 文件：设备 · 块长 · 模式 · 模型 · 总线名）· `Cmd`（小 `Copy` 枚举：SetMode · Shutdown）。serde 只许在这里和 bin 里 |
 | `vdn-capture`（lib + bin） | `Forwarder`：输入一块原声 → 推 Raw → 从 Processed 取同样多 → 按心跳决定用处理后的还是本地延迟原声 → 推 Out。**心跳超过 100 ms 不动就切原声**，恢复后淡回 |
 | `vdn-denoised`（bin） | 建总线 → 循环：Raw 够一块就跑 `Pipeline` → 推 Processed → `beat()`；`--passthrough` 用 `Identity`，不需要模型权重 |
-| `vdn`（cli） | 新增 `devices` · `run --passthrough｜--denoise`（单进程开发模式：麦克风 → Pipeline → 扬声器）· `chain-test`（无设备：合成信号走完整链路，打印结果并按判据退出）|
+| `vdn`（cli） | （2026-11-02 定：forbid 去掉 cpal，开发期单进程入口可用 io-macos；cpal 仍禁在核心 crate 与 `vdn-denoised`）新增 `devices` · `run --passthrough｜--denoise`（单进程开发模式：麦克风 → Pipeline → 扬声器）· `chain-test`（无设备：合成信号走完整链路，打印结果并按判据退出）|
 
 ## 十一、「送声音出声音」的判据（verifier，机器判）
 

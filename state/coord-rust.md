@@ -13,7 +13,7 @@
 |---|---|---|---|---|
 | rs-core | 48 kHz 处理层 · 实体：vdn-dsp · vdn-engine · vdn-backend-ort · vdn-models · `feat/rust-skeleton-core`（`../noise_canceling-rs-core`） | `_tmp/20261102-b8-rust/rs-core.md` | 其 worktree `state/handoff/rs-core.md` | 已报到（noise-canceling-rs-core-2d） |
 | rs-shm | 共享内存总线 · 实时线程 · 闸门 · 实体：vdn-shm · vdn-rt-thread · xtask · `feat/rust-skeleton-shm`（`../noise_canceling-rs-shm`） | `_tmp/20261102-b8-rust/rs-shm.md` | 其 worktree `state/handoff/rs-shm.md` | 已报到（noise-canceling-rs-shm-dc） |
-| rs-io | 音频进出 · 虚拟麦克风读出端 · 实体：vdn-io-macos · vdn-hal · `feat/rust-skeleton-io`（`../noise_canceling-rs-io`） | `_tmp/20261102-b8-rust/rs-io.md` | 其 worktree `state/handoff/rs-io.md` | 已报到（noise-canceling-rs-io-7b） |
+| rs-io | 音频进出 · 虚拟麦克风读出端 · 实体：vdn-io-macos · vdn-hal · `feat/rust-skeleton-io`（`../noise_canceling-rs-io`） | `_tmp/20261102-b8-rust/rs-io.md` | 其 worktree `state/handoff/rs-io.md` | 完成，已合入 feat/rust-skeleton（a9d4c83），窗口已关 |
 | rs-entry | 接线 · 实体：vdn-control · vdn-capture · vdn-denoised · vdn-cli · `feat/rust-skeleton-entry`（`../noise_canceling-rs-entry`） | `_tmp/20261102-b8-rust/rs-entry.md` | 其 worktree `state/handoff/rs-entry.md` | 已报到（noise-canceling-rs-entry-c3） |
 
 ## 规矩
@@ -35,6 +35,9 @@
 ## 进度板
 
 进度（HH:MM）
+- rs-io：验收通过（测试 23 过 · 2 个真设备测试待人 · clippy / tidy / check-deps 绿；自审 P0 0 · P1 2 已修）→ 合入、关窗。已知违规 8 条见其现状页；待接：hal 接 shm 的 Out 环（归 rs-entry）
+- rs-shm：名额已还；`xtask ci` 在 shm 分支全绿，23 s（cargo-deny 未装、跳过）；自审中
+- rs-io：本机 4 个设备都支持 48 kHz；发现 cli forbid 含 cpal 与 `vdn run` 冲突 → 定：cli 去掉 cpal（rs-entry 改）；在自审
 - rs-shm：Bus / rt-thread 签名定（check_current 改返回 Result，认可），已转 rs-entry；在写测试；Miri / cargo-deny 未装、不装
 - rs-io：io-macos / hal 签名定（回调 ≤ block 帧；HalSource 对 SampleSource 泛型），已转 rs-entry；Out 环 → SampleSource 的包装归 rs-entry
 - rs-entry：链路缓冲余量 lead 定为参数，默认 1440 样本（30 ms）；GTCRN 时 L_total 64 ms，超 45 ms 预算 → 记已知缺口，后续批次压
