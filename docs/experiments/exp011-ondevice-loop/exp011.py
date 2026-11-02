@@ -105,7 +105,7 @@ def cmd_select():
     rng = np.random.default_rng(SEED)
     chosen = []
     for fine in sorted(ROUTE):
-        pool = [t for t in truth if t["fine"] == fine and t.get("has_target") and t["device"] in ("none", "bt_narrow")
+        pool = [t for t in truth if t.get("split") == "test" and t.get("fine") == fine and t.get("has_target") and t["device"] in ("none", "bt_narrow")
                 and (FED2_AUDIO / f"{t['id']}_clean.wav").exists()]
         idx = rng.choice(len(pool), size=min(PER_CLASS, len(pool)), replace=False)
         chosen += [pool[i] for i in sorted(idx)]
@@ -327,10 +327,6 @@ def del_sub(ref, hyp):
         else:
             j -= 1
     return ds + i, len(r)
-
-
-def resample16k_tmp(p, d):
-    return p  # 全是 16 kHz，DNSMOS 直接吃
 
 
 def cmd_judge(build):
