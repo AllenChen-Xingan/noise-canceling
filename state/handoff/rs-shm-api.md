@@ -26,6 +26,7 @@ bus.l_total() -> u32; bus.rate() -> u32; bus.capacity() -> usize
 
 ring.push(&[f32]) -> usize        // 写不下的丢掉并计溢出
 ring.pop(&mut [f32]) -> usize     // 不够只读到的部分，dst 余下不动；欠载调用方自己 note_underrun
+ring.pop_or_zero(&mut [f32]) -> usize  // 不够的部分填 0 并自动计欠载（HAL 输出用）
 ring.discard(n) -> usize          // 消费方丢样本重对齐
 ring.available() / free_space() / capacity()
 ring.note_underrun(n); overflows(); underruns(); take_overflows(); take_underruns()   // take_* = swap(0)
