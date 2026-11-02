@@ -176,6 +176,8 @@ pub struct Forwarder {
     seam: f32,
     seam_decay: f32,
     last_y: f32,
+    /// 上一个样本的延迟原声（接缝偏移 = 上一个输出 − 上一个原声）
+    last_r: f32,
     /// 下一个样本强制按硬切处理（重新对账之后）
     pending_cut: bool,
     last_beat: Option<u64>,
@@ -218,6 +220,7 @@ impl Forwarder {
             // 时间常数 2 ms（96 样本 @ 48 kHz）
             seam_decay: (-1.0f32 / 96.0).exp(),
             last_y: 0.0,
+            last_r: 0.0,
             pending_cut: false,
             last_beat: None,
             since_beat: 0,
@@ -493,13 +496,14 @@ impl Forwarder {
             } else if self.gain > target {
                 self.gain = (self.gain - self.step).max(0.0);
             }
-            let cand = self.gain * p + (1.0 - self.gain) * r;
             if cut {
-                self.seam = self.last_y - cand;
+                // 切到原声：输出原来比原声高 / 低多少，就从这里开始把这段落差慢慢收掉
+                self.seam = self.last_y - self.last_r;
             }
-            let v = cand + self.seam;
+            let v = self.gain * p + (1.0 - self.gain) * r + self.seam;
             self.seam *= self.seam_decay;
             self.last_y = v;
+            self.last_r = r;
             *yi = v;
         }
         self.stats.samples += n as u64;
