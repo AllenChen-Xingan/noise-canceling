@@ -76,7 +76,7 @@
 ## 对本项目的含义（全部「假设」）
 
 1. **评分模型分工**：本机今天能当奖励候选的只有 DNSMOS（D58 后是旁证）。要按 D58 用 SCOREQ 当奖励，exp011 第 0 步得新建 venv 装 `scoreq`（权重约 378 MB，超铁律 8 的 50 MB 线 → 放 `~/vdn-data/models/`，仓里只留路径 + 哈希），**下载需人点头**。建议：**SCOREQ = 调参奖励，DNSMOS + NISQA = 留出防讨好**（三者对众人的一致率差得多，留出那方偏弱，这点要写进结论）；吃字 / 人声被压低 / 吞字头 / 门控漏开一票否决。
-2. **合成格**：fed2 test 按 7 个 fine 类各取 12 段（只取 device=normal 与 bt_narrow，有目标说话人）≈ **84 段 ≈ 14 分钟音频**；再从 exp008 取 S-SIR + M-SIRxSNR 的 A 组 ≈ 24 段补干扰者红线（V-INTF / V-SIM-FA），B 组同档当「换生成器」留出。fed2 清单按 exp005 格式写：interf 置零、noise = noisy − clean。
+2. **合成格**：fed2 test 按 7 个 fine 类各取 12 段（只取 device=`none`【已核改：没有 `normal` 这个值，按字面过滤只剩 bt_narrow】与 bt_narrow，有目标说话人；可选段数 traffic 44 · babble 39 · neighbor 28 · quiet 26 · music 23 · clatter 17 · hvac 14，每类 ≥12 够取）≈ **84 段 ≈ 14 分钟音频**；再从 exp008 取 S-SIR + M-SIRxSNR 的 A 组（【已核改】实为 36 + 24 = **60 段**，不是 ≈ 24；要 24 段需再抽样）补干扰者红线（V-INTF / V-SIM-FA），B 组同档当「换生成器」留出。fed2 清单按 exp005 格式写：interf 置零、noise = noisy − clean。
 3. **对照**：「路由表查表」要喂 fed2 的真值 fine，babble / music 要用 FE-M → 每段额外跑一次 FE-M（或另报一个「只换 tone 的 GTCRN 版查表」）；「固定默认」= `ParamSet::DEFAULT` + tone 9；「事后最优」= 每段全网格里奖励最高且红线全过的那组。
 4. **要补的积木（Rust，一个 example 即可）**：读 dry + 缓存 wet + 参数组 → 复用 `OpenCloseEnvelope` 与混合公式 + strength 湿干比 → 调 `PolishChain` → 输出 wav + 逐 hop 门控；再把 V-ONSET / V-SPLVL / V-SIM-GATE / V-NAN 以库函数方式对它评分（`verifiers::eval` 是 pub，`Ctx.run` 可用伪造的 `RunOut`）。
 5. **CPU 估算**【推算】：GTCRN 84 段 × 10 s ≈ 52 k 帧 × 0.4 ms ≈ 0.4 分钟（Python 开销算进去约 2 分钟）；FE-M 同量级几分钟。参数网格设 48 组（floor 4 × open/detect 3 × release/hangover 2 × strength 2，tone 取路由预设 + 默认）：84 × 48 ≈ 4000 次后处理，每次 < 0.2 s → 约 10 分钟。SCOREQ 速度未测，按 wav2vec 级编码器 RTF 0.05–0.1 粗估：4000 × 10 s × 0.1 ≈ **67 分钟**，是大头 → 先用 DNSMOS + 物理红线筛到每段前 8 组再上 SCOREQ（≈ 11 分钟）。吃字只对候选前沿跑：84 段 × 3 版（默认 / 查表 / 选中）× 2 次转写，若每条 1–3 s 约 15–25 分钟。**合计约 1–1.5 小时单机**。

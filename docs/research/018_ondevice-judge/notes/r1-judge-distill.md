@@ -6,7 +6,7 @@
 
 ## 一句话结论
 
-**有现成先例：DistillMOS 把 478M 参数的 XLS-R 老师蒸成 4.3M 的卷积 Transformer，体积约降到 1/111，PCC 加权均值从 0.81 降到 0.76（掉 0.05）。本项目自己的 exp009 也量过：在 URGENT24 上，DistillMOS 语句 SRCC 0.757，SCOREQ 0.789，只差 0.03。** 所以 D60 走得通，验收线可以照这个量级定：学生与人的 SRCC 比 SCOREQ 低不超过约 0.05，而且**必须不输 DistillMOS**，否则直接用 DistillMOS 更省事。体积目标 1–5 MB，算力 ≤50 MMAC/s，可以做到。最难的不是压体积，是**短窗**：老师在 4 s 片段上训练（推荐 10–15 s），我们每 0.5 s 要出一次分，所以学生只能是「滑动 2–4 s 窗、每 0.5 s 出一次」，没法用 0.5 s 窗直接判。
+**有现成先例：DistillMOS 把 478M 参数的 XLS-R 老师蒸成 4.3M 的卷积 Transformer，参数量约降到 1/111【已核改：原写「体积」，论文给的是参数量】，PCC 加权均值从 0.81 降到 0.76（掉 0.05）。本项目自己的 exp009 也量过：在 URGENT24 上，DistillMOS 语句 SRCC 0.757，SCOREQ 0.789，只差 0.03。**【已核改：补限定】但**系统级差得多**：URGENT24 系统 SRCC 0.772 对 0.926（差 0.15），CHiME-7 配对一致率 0.691 对 0.767；且 URGENT24 上 DistillMOS 只有 64,267 对 / 22 个系统，SCOREQ 是 70,381 对 / 23 个系统，两者不是同一批样本（`crowd_ears.md:16-17`）。 所以 D60 走得通，验收线可以照这个量级定：学生与人的 SRCC 比 SCOREQ 低不超过约 0.05，而且**必须不输 DistillMOS**，否则直接用 DistillMOS 更省事。体积目标 1–5 MB，算力 ≤50 MMAC/s，可以做到。最难的不是压体积，是**短窗**：老师在 4 s 片段上训练（推荐 10–15 s），我们每 0.5 s 要出一次分，所以学生只能是「滑动 2–4 s 窗、每 0.5 s 出一次」，没法用 0.5 s 窗直接判。
 
 ## 一、证据表
 
@@ -28,7 +28,7 @@
 
 | 模型 | 参数 · 体积 | 算力 | 输入 | 与人一致（标明系统级 / 段级） | 在 DNN 降噪输出上验证过吗 | 许可 | 出处 |
 |---|---|---|---|---|---|---|---|
-| **DistillMOS**（Stahl & Gamper，ICASSP 2025） | 学生 v7 **4.3M**（老师 478M，约 1/111）；pip 包约 15.6 MB【二手】 | 论文没给 | 16 kHz；实/虚部压缩谱（窗 320、跳 160）→ 卷积 Transformer | PCC 加权均值：老师 0.81 → 蒸馏 0.76 → 只用有标签数据训的同尺寸模型 0.72，**蒸馏补回约一半差距**；DNS3 0.82→0.79，SIG2024 0.70→0.60，Blizzard FR 0.58→0.22（跨域掉得最狠）。项目实测语句 SRCC：URGENT24 0.757、URGENT25 0.698、CHiME-7 0.70 | 是（DNS3 / PLC / SIG 2024 测试集；本项目 exp009） | 代码 MIT；README 说主要在英语和增强场景上训练 | arXiv 2502.05356 Table I、§IV-B、§VI【论文】；github.com/microsoft/Distill-MOS【官方】；exp009【源码】 |
+| **DistillMOS**（Stahl & Gamper，ICASSP 2025） | 学生 v7 **4.3M**（老师 478M，约 1/111）；pip 包约 15.6 MB【二手】 | 论文没给 | 16 kHz；实/虚部压缩谱（窗 320、跳 160）→ 卷积 Transformer | PCC 加权均值：老师 0.81 → 蒸馏 0.76 → 只用有标签数据训的同尺寸模型 0.72，**蒸馏补回约一半差距**；DNS3 0.82→0.79，SIG2024 0.70→0.60，Blizzard FR 0.58→0.22（跨域掉得最狠）。项目实测语句 SRCC：URGENT24 0.757、URGENT25 0.698、CHiME-7 0.70 | 是（DNS3、SIG 2024 测试集；PLC 2024 是丢包补偿不是降噪【已核改】；本项目 exp009）。官方 README：输入 7.68 s 片段，更长按段切【已核改：补】 | 代码 MIT；README 说主要在英语和增强场景上训练 | arXiv 2502.05356 Table I、§IV-B、§VI【论文】；github.com/microsoft/Distill-MOS【官方】；exp009【源码】 |
 | DistillMOS 的配方 | 无标签数据：DNS4 约 2,600 h 干净语音 + 180 h 噪声，其中 15% 是 17 个 TTS 生成的；老师给软标签。**有标签数据混入 20%**（在 0/10/20/40/80% 里网格搜出来的）。250k 步，batch 20 | — | — | 剪枝对照：PruneMOS 剪到原来的 29%（139M）时加权 PCC 0.80；**小尺寸下蒸馏优于剪枝** | — | — | 同上 §III、§IV、§V-B【论文】 |
 | DNSMOS P.835 | ONNX `sig_bak_ovr.onnx` 1,157,965 B；DistillMOS 表里记 0.17M（按文件大小反推约 0.29M，两者对不上） | 论文没给 | 9.01 s 窗、1 s 跳；对数功率谱（20 ms 窗、10 ms 跳）→ 纯 CNN | **模型级** PCC SIG 0.94 / BAK 0.98 / OVRL 0.98；**片段级** PCC 0.71 / 0.83 / 0.82，SRCC 0.72 / 0.82 / 0.81。项目实测 CHiME-7 语句 SRCC **0.232** | 是（17 个降噪器） | 文档 CC BY 4.0，代码 MIT | arXiv 2110.01763 Table 2–3【论文】；`resources/DNS-Challenge/DNSMOS/dnsmos_local.py:19-20,27`、`LICENSE`【源码】 |
 | DNSMOS P.808 | `model_v8.onnx` 224,860 B；DistillMOS 表记 0.05M | — | 120 维 mel | — | 是 | 同上 | 同上；arXiv 2502.05356 Table I【论文】 |
