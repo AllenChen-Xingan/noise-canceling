@@ -3,7 +3,7 @@
 #[cfg(debug_assertions)]
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use vdn_engine::testing::{DelayGain, Identity};
-use vdn_engine::{Engine, Mode, Pipeline, PipelineError, SafetyConfig};
+use vdn_engine::{Engine, FaultInjector, FaultKind, Mode, Pipeline, PipelineError, SafetyConfig};
 use vdn_types::Model;
 
 // AllocDisabler 只在 debug_assertions 下存在：release 下只跑行为测试
@@ -70,14 +70,13 @@ fn identity() -> Pipeline<Identity> {
 #[test]
 fn rejects_non_triple_rate() {
     let e = Engine::new(Identity, SafetyConfig::off());
-    match Pipeline::new(e, 44_100) {
+    assert!(matches!(
+        Pipeline::new(e, 44_100),
         Err(PipelineError::UnsupportedRate {
             io_rate: 44_100,
             model_rate: 16_000,
-        }) => {}
-        Err(e) => panic!("错误不对：{e:?}"),
-        Ok(_) => panic!("44.1 kHz 应被拒绝"),
-    }
+        })
+    ));
 }
 
 #[test]
@@ -104,6 +103,12 @@ fn model_latency_counts_three_times() {
     let x = multisine(SR as usize);
     let y = run(&mut p, &x, &chunk_lens(2, x.len(), 96));
     assert_eq!(measured_lag(&x, &y, 3000), p.latency_samples());
+    // 互相关相邻 ±1 的峰值差不大，再用残差钉死：在声明延迟处逐样本接近
+    let l = p.latency_samples();
+    let err = (l + 2000..x.len())
+        .map(|i| (y[i] - x[i - l]).abs())
+        .fold(0.0f32, f32::max);
+    assert!(err < 0.01, "残差 {err}");
 }
 
 #[test]
@@ -138,8 +143,9 @@ fn chunking_does_not_change_output() {
 
 #[test]
 fn passthrough_is_exactly_delayed_dry() {
+    // 模型输出非零且很大（增益 1e6）：直通也必须逐样本等于延迟原声，不能被 o + (d - o) 的舍入吃掉
     let mut p = Pipeline::new(
-        Engine::new(DelayGain::new(256, 256, 0.0), SafetyConfig::off()),
+        Engine::new(DelayGain::new(256, 256, 1e6), SafetyConfig::off()),
         SR,
     )
     .unwrap();
@@ -208,12 +214,14 @@ fn reset_reproduces_fresh_output() {
 #[cfg(debug_assertions)]
 #[test]
 fn realtime_path_does_not_allocate() {
-    let mut p = Pipeline::new(
-        Engine::new(DelayGain::new(256, 256, 0.8), SafetyConfig::default()),
-        SR,
-    )
-    .unwrap();
-    // 小块随机 + 一次 8192 大块（块长无上限，大块也不能分配）
+    // 带故障的模型（NaN、后端报错交替），走 Engine 送原声与 Pipeline 淡化的降级路径
+    let plan = (0..400)
+        .step_by(7)
+        .map(|h| (h, if h % 2 == 0 { FaultKind::Nan } else { FaultKind::Error }))
+        .collect();
+    let m = FaultInjector::new(DelayGain::new(256, 256, 0.8), plan);
+    let mut p = Pipeline::new(Engine::new(m, SafetyConfig::default()), SR).unwrap();
+    // 小块随机（含 1、7 等不是 3 的倍数的块长） + 一次 8192 大块（块长无上限，大块也不能分配）
     let x = multisine(4096 + 8192);
     let mut y = vec![0.0; x.len()];
     let mut lens = chunk_lens(9, 4096, 1000);
@@ -246,4 +254,42 @@ fn mismatched_lengths_do_not_panic_in_release() {
     p.process(&[0.5; 7], &mut y);
     assert_eq!(&y[7..], &[0.0; 3]);
     assert_eq!(p.stats().bad_len, 1);
+}
+
+#[test]
+fn passthrough_blocks_non_finite_model_output() {
+    // 保命全关、模型每帧出 NaN：降噪模式会漏 NaN（Engine 不拦），直通模式必须是干净的延迟原声（R11）
+    let plan = (0..200).map(|h| (h, FaultKind::Nan)).collect();
+    let m = FaultInjector::new(DelayGain::new(256, 256, 1.0), plan);
+    let mut p = Pipeline::new(Engine::new(m, SafetyConfig::off()), SR).unwrap();
+    p.set_mode(Mode::Passthrough);
+    p.reset();
+    let x = multisine(20_000);
+    let y = run(&mut p, &x, &chunk_lens(8, x.len(), 700));
+    let l = p.latency_samples();
+    assert_eq!(&y[l..], &x[..x.len() - l]);
+    // 淡化途中遇到 NaN 也送原声：切回降噪的第一个 hop 里不出现非有限值
+    p.set_mode(Mode::Denoise);
+    let mut z = vec![0.0; p.hop_io() - 1];
+    p.process(&x[..z.len()], &mut z);
+    assert!(z.iter().all(|v| v.is_finite()));
+}
+
+#[test]
+fn wet_and_dry_are_aligned_through_a_switch() {
+    // Identity、保命全关：降噪路 ≈ 原声路，中途切换前后都应 ≈ x[t - L]（没有错位、没有梳状）
+    let mut p = identity();
+    let l = p.latency_samples();
+    let x = multisine(30_000);
+    let mut y = vec![0.0; x.len()];
+    let (a, b) = (9_001, 17_777);
+    p.process(&x[..a], &mut y[..a]);
+    p.set_mode(Mode::Passthrough);
+    p.process(&x[a..b], &mut y[a..b]);
+    p.set_mode(Mode::Denoise);
+    p.process(&x[b..], &mut y[b..]);
+    let err = (l + 2000..x.len())
+        .map(|i| (y[i] - x[i - l]).abs())
+        .fold(0.0f32, f32::max);
+    assert!(err < 0.01, "切换前后误差 {err}");
 }

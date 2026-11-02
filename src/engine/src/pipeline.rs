@@ -324,8 +324,8 @@ impl<M: Model> Pipeline<M> {
         let cap = self.q.len();
         for o in y.iter_mut() {
             // 由预填保证不欠载；万一欠载（不应发生）补零
+            debug_assert!(self.q_len > 0, "输出队列欠载");
             if self.q_len == 0 {
-                debug_assert!(false, "输出队列欠载");
                 self.stats.queue_faults += 1;
                 *o = 0.0;
                 continue;
