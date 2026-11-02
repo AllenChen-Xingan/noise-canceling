@@ -1371,11 +1371,19 @@ name = "vdn-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "ctrlc",
  "hound",
  "serde_json",
  "stats_alloc",
+ "vdn-capture",
+ "vdn-control",
+ "vdn-denoised",
  "vdn-engine",
+ "vdn-hal",
+ "vdn-io-macos",
  "vdn-models",
+ "vdn-rt-thread",
+ "vdn-shm",
 ]
 
 [[package]]

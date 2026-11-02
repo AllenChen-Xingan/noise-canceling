@@ -24,6 +24,7 @@ vdn-denoised.workspace = true
 vdn-shm.workspace = true
 vdn-hal.workspace = true
 vdn-io-macos.workspace = true
+vdn-rt-thread.workspace = true
 ctrlc.workspace = true
 
 [lints]
