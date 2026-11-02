@@ -71,6 +71,9 @@ pub struct Config {
     /// 环余量（48 kHz 样本）：降噪进程开头往 Processed 先推这么多个零，让送音端每块都取得到。
     /// 链路总延迟 `L_total` = 管线延迟 + 本值（人定默认 1440 = 30 ms，2026-11-02）
     pub lead_frames: usize,
+    /// 降噪进程每次从 Raw 取多少样本跑一次 Pipeline（48 kHz）；须整除模型 hop × 3（GTCRN 768），
+    /// 不整除由 vdn-denoised 启动时报错（人定省 2 ms，2026-11-02）
+    pub denoise_block: usize,
 }
 
 impl Default for Config {
@@ -85,6 +88,7 @@ impl Default for Config {
             bus_name: Self::DEFAULT_BUS.to_owned(),
             heartbeat_timeout_ms: Self::DEFAULT_HEARTBEAT_MS,
             lead_frames: Self::DEFAULT_LEAD,
+            denoise_block: Self::DEFAULT_DENOISE_BLOCK,
         }
     }
 }
@@ -95,6 +99,8 @@ impl Config {
     pub const DEFAULT_BUS: &'static str = "/vdn-bus";
     /// 3 块 × 480 = 30 ms
     pub const DEFAULT_LEAD: usize = 1440;
+    /// 2 ms @ 48 kHz
+    pub const DEFAULT_DENOISE_BLOCK: usize = 96;
     /// 环余量上限（0.5 s）
     pub const LEAD_MAX: usize = 24_000;
     /// 共享内存名前缀（vdn-shm 的规则）
@@ -149,6 +155,13 @@ impl Config {
                 self.heartbeat_timeout_ms
             )));
         }
+        if !(1..=hi_block()).contains(&self.denoise_block) {
+            return Err(ConfigError::Invalid(format!(
+                "denoise_block = {}，须在 1..={}",
+                self.denoise_block,
+                hi_block()
+            )));
+        }
         if self.lead_frames > Self::LEAD_MAX {
             return Err(ConfigError::Invalid(format!(
                 "lead_frames = {}，须 ≤ {}",
@@ -169,6 +182,10 @@ impl Config {
         }
         Ok(())
     }
+}
+
+fn hi_block() -> usize {
+    Config::BLOCK_RANGE.1
 }
 
 /// 共享内存名：`/vdn-` 开头、后面非空且不再含 `/`、总长 ≤ 31（与 vdn-shm 同一规则）。
@@ -253,6 +270,7 @@ mod tests {
             r#"{"bus_name":"/vdn-"}"#,
             r#"{"bus_name":"/other"}"#,
             r#"{"lead_frames":100000}"#,
+            r#"{"denoise_block":0}"#,
             r#"{"bus_name":"/vdn-a/b"}"#,
             r#"{"bus_name":"/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
             r#"{"input_device":"  "}"#,
