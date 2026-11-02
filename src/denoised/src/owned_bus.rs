@@ -1,7 +1,6 @@
 //! 建总线一方的守卫（构造期、退出期用，非实时）。
-// NRT: 开锁文件、建 / 删共享内存都是系统调用，只在启动和退出时调
 #![allow(
-    clippy::disallowed_methods,
+    clippy::disallowed_methods, // NRT: 开锁文件、建 / 删共享内存都是系统调用，只在启动和退出时调
     clippy::disallowed_types,
     clippy::disallowed_macros
 )]

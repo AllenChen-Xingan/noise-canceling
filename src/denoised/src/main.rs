@@ -9,9 +9,8 @@
 //! Ctrl-C / SIGTERM / SIGHUP（或 `--seconds` 到点）干净退出并 unlink 总线；同名总线已有活着的建方时拒绝启动。
 
 #![forbid(unsafe_code)]
-// NRT: 进程编排（建总线、信号、日志、空闲让出 sleep）；实时部分在 lib 的 Worker::step。空闲 sleep 轮询待换跨进程唤醒（backlog）
 #![allow(
-    clippy::disallowed_methods,
+    clippy::disallowed_methods, // NRT: 进程编排（建总线、信号、日志、空闲让出 sleep）；实时部分在 lib 的 Worker::step。空闲 sleep 轮询待换跨进程唤醒（backlog）
     clippy::disallowed_types,
     clippy::disallowed_macros
 )]
