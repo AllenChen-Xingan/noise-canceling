@@ -155,4 +155,5 @@ S8 要「合成格排名 ≈ 真实 / 人耳排名」，门槛 ≥ 12 个系统�
 - 数据与预测器：notes/A（通话类）· notes/B（增强语音人评集）· notes/C（预测器公开相关）· notes/H（CPC、DNS5 WAcc、SSI / AEC、vmc2026 speecheval / speechjudge）
 - 评委：notes/D（音频 LLM）· notes/G（其他办法、URGENT-PK、听觉模型）
 - 单人与小评审团：notes/E（主动选对、重测、每日微场次）· notes/F（单人 vs 大众、人数 × 题数）
+- 为什么评分器都选 DPDFNet-2：notes/I-why-scorers-pick-dpdfnet.md（给人看的短文，2026-11-02）
 - 纠错与补查：notes/Z-critic.md（CHiME-7 固定听众、三表混算 bug、vmc2026-dev 无逐人分、TMHINT-QI 无同人同句配对）

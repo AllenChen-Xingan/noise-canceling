@@ -44,7 +44,7 @@ python3 docs/experiments/exp009-more-ears/fetch_labels.py          # 下标签 �
 - DNSMOS 用主目录 `resources/DNS-Challenge/DNSMOS/`（git 忽略，按 004 克隆）
 - `score_author.py` 发现 `results/exp003_predictors.json` 已存在就读缓存；要真重打分加 `--rescore`
 - 两个首次运行别并行：`import scoreq` 本身会下载权重，两个进程同时下会读到半截文件（报 INVALID_PROTOBUF）
-- 权重哈希（sha256）：SCOREQ `~/.cache/scoreq/onnx-models/adapt_nr_telephone.onnx` d493ba8a…7300b4（378,049,307 B）；Distill-MOS `<venv>/site-packages/distillmos/weights/distill_mos_v7.pt` b18b3ac6…027031a40
+- 权重哈希（sha256）：SCOREQ `~/.cache/scoreq/onnx-models/adapt_nr_telephone.onnx` d493ba8a…7300b4（378,049,307 B）；Distill-MOS `<venv>/site-packages/distillmos/weights/distill_mos_v7.pt` b18b3ac6…e27031a40
 - 重生成音频与作者所听一致的两重证据：增益 / 响度 / 峰值差 0.0 dB（`regen_check.json`），DNSMOS 重算与 exp003 差 0.0（`author_vs_crowd.json`）
 ```
 
