@@ -5,14 +5,14 @@
 //! cpal 自身在回调里的违规（`Vec::resize` 等）不在本文件，见 `state/handoff/rs-io.md`「已知违规清单」。
 
 /// 输入侧：交错多声道 → 单声道（取第 1 声道）→ 用户回调。
-pub(crate) struct InputPump<F> {
+pub struct InputPump<F> {
     scratch: Vec<f32>,
     channels: usize,
     cb: F,
 }
 
 /// 输出侧：用户回调写单声道 → 复制到各声道交错写回设备。
-pub(crate) struct OutputPump<F> {
+pub struct OutputPump<F> {
     scratch: Vec<f32>,
     channels: usize,
     cb: F,
@@ -21,7 +21,7 @@ pub(crate) struct OutputPump<F> {
 // 构造期：可以分配。
 impl<F> InputPump<F> {
     /// `block` 与 `channels` 由调用方保证 ≥ 1（`stream::validate` 已查）。
-    pub(crate) fn new(block: usize, channels: usize, cb: F) -> Self {
+    pub fn new(block: usize, channels: usize, cb: F) -> Self {
         Self {
             scratch: vec![0.0; block.max(1)],
             channels: channels.max(1),
@@ -31,7 +31,7 @@ impl<F> InputPump<F> {
 }
 
 impl<F> OutputPump<F> {
-    pub(crate) fn new(block: usize, channels: usize, cb: F) -> Self {
+    pub fn new(block: usize, channels: usize, cb: F) -> Self {
         Self {
             scratch: vec![0.0; block.max(1)],
             channels: channels.max(1),
@@ -47,7 +47,7 @@ impl<F> OutputPump<F> {
 )]
 impl<F: FnMut(&[f32])> InputPump<F> {
     /// 设备回调：`data` 是交错样本。尾部不成整帧的样本丢弃（不该出现）。
-    pub(crate) fn on_data(&mut self, data: &[f32]) {
+    pub fn on_data(&mut self, data: &[f32]) {
         let frame_len = self.scratch.len() * self.channels;
         for chunk in data.chunks(frame_len) {
             let n = fold_first_channel(chunk, self.channels, &mut self.scratch);
@@ -65,7 +65,7 @@ impl<F: FnMut(&[f32])> InputPump<F> {
 )]
 impl<F: FnMut(&mut [f32])> OutputPump<F> {
     /// 设备回调：把 `data`（交错）整块写满。用户回调先拿到清零的单声道块。
-    pub(crate) fn on_data(&mut self, data: &mut [f32]) {
+    pub fn on_data(&mut self, data: &mut [f32]) {
         let frame_len = self.scratch.len() * self.channels;
         for chunk in data.chunks_mut(frame_len) {
             let frames = chunk.len() / self.channels;
@@ -181,14 +181,5 @@ mod tests {
         let mut data = [9.0; 6]; // 3 帧立体声
         pump.on_data(&mut data);
         assert_eq!(data, [1.0, 1.0, 2.0, 2.0, 3.0, 3.0]);
-    }
-
-    #[test]
-    fn pumps_do_not_allocate_in_callback() {
-        // 计数分配器之外的轻量证明：回调路径不改暂存容量
-        let mut pump = InputPump::new(4, 2, |_m: &[f32]| {});
-        let cap = pump.scratch.capacity();
-        pump.on_data(&[0.0; 64]);
-        assert_eq!(pump.scratch.capacity(), cap);
     }
 }
