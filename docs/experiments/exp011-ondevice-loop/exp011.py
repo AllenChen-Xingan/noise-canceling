@@ -44,14 +44,14 @@ XFADE_S = 0.05                    # 窗间等增益交叉淡化
 PER_CLASS = 12
 SEED = 20261102
 
-# 候选参数（README 第 3 节）；c0 = 默认
+# 候选参数（README 第 3 节）；c0 = 默认。c1 / c5 的下限 −6 dB 等于默认的放开值，门控会失效，所以放开值改 −3 dB（自审 2026-11-02）
 CANDS = {
     "c0": {"floor_db": -12, "detect_db": 9, "strength": 1.0},
-    "c1": {"floor_db": -6, "detect_db": 9, "strength": 1.0},
+    "c1": {"floor_db": -6, "open_db": -3, "detect_db": 9, "strength": 1.0},
     "c2": {"floor_db": -20, "detect_db": 9, "strength": 1.0},
     "c3": {"floor_db": -12, "detect_db": 6, "strength": 1.0},
     "c4": {"floor_db": -12, "detect_db": 12, "strength": 1.0},
-    "c5": {"floor_db": -6, "detect_db": 9, "strength": 0.8},
+    "c5": {"floor_db": -6, "open_db": -3, "detect_db": 9, "strength": 0.8},
     "c6": {"floor_db": -12, "detect_db": 9, "strength": 0.8},
     "c7": {"floor_db": -20, "detect_db": 6, "strength": 1.0},
 }
