@@ -24,6 +24,7 @@
     )
 )]
 
+pub mod shm;
 pub mod testing;
 
 use vdn_dsp::DelayLine;

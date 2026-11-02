@@ -1325,7 +1325,14 @@ name = "vdn-capture"
 version = "0.1.0"
 dependencies = [
  "assert_no_alloc",
+ "clap",
+ "hound",
+ "vdn-control",
  "vdn-dsp",
+ "vdn-hal",
+ "vdn-io-macos",
+ "vdn-rt-thread",
+ "vdn-shm",
 ]
 
 [[package]]
