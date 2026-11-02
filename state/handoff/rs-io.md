@@ -3,10 +3,10 @@
 - 窗口：rs-io · 大总管 noise-canceling-47 · 分支 `feat/rust-skeleton-io`
 - 管的实体：`vdn-io-macos`（新）· `vdn-hal`（新）
 
-## 手上 · 做到哪 · 下一步
-- 手上：两个 crate 已写完；单测全过、clippy 0 警告、tidy 通过、check-deps 通过（均为实测，单 crate / xtask 级）
-- 做到哪：独立自审进行中
-- 下一步：按自审结果修 → 收尾
+## 已收尾（2026-11-02）
+- 两个 crate 已写完并自审修完。实测：`cargo test -p vdn-io-macos -p vdn-hal` 全过（io-macos 13 + 不分配 1，hal 8 + 不分配 1，真设备 2 个 ignored）；clippy 0 警告；tidy 通过；check-deps 通过
+- 没跑：开真麦克风 / 扬声器的 2 个测试（会弹权限框、出声，要经大总管问人）。人工跑法：`cargo test -p vdn-io-macos --test real_device -- --ignored --nocapture`
+- 合并后要做：`vdn-hal` 接 `vdn-shm` 的 `Out` 环（见下「最终签名」末条）
 
 ## 改了哪些文件
 - 新：`src/io-macos/`（`Cargo.toml` · `src/lib.rs` · `src/pump.rs` · `src/stream.rs` · `tests/no_alloc.rs` · `tests/real_device.rs` · `examples/devices.rs`）
@@ -39,13 +39,17 @@ InputStream::open(device: Option<&str>, rate: u32, block: usize,
 OutputStream::open(device: Option<&str>, rate: u32, block: usize,
                    cb: impl FnMut(&mut [f32]) + Send + 'static) -> Result<OutputStream, IoError>;
 // 两者都有 info() -> &OpenedInfo { device, rate, channels, block, device_buffer: Option<u32> }
-//         health() -> &StreamHealth { errors(), device_lost() }
+//         health() -> &StreamHealth { errors(), xruns(), device_lost(), needs_reopen(), device_changed(), callback_panicked() }
 pub enum IoError { InvalidParam, NoDefaultDevice, DeviceNotFound{wanted, direction, candidates},
                    UnsupportedRate{device, wanted, supported: Vec<RateRange>}, Backend(String) }
 ```
 - 回调拿单声道；每次 **≤ block 帧**，可能更少，不保证恰好 block
 - 输出回调拿到已清零的块
-- drop 句柄即停流；设备拔掉不 panic，`health().device_lost()` 变 true，不自动重建
+- drop 句柄即停流；设备拔掉或设备采样率被别的程序改掉时不 panic，`health().needs_reopen()` 变 true，不自动重建
+- 用户回调 panic：被接住，之后输入丢弃、输出静音，`callback_panicked()` 变 true
+- 副作用：开流会改设备全局采样率与硬件缓冲帧数，同设备上的会议软件也受影响，失败或 drop 后不还原（还原留到自写 IOProc 那批）
+- `device = None` 的默认输出流跟随系统默认输出切换（`device_changed()` 变 true）；按名字开的不跟随
+- 名字为空、或两台设备同名：返回 `DeviceNotFound` 列出候选，不猜
 - 设备硬件缓冲：设备接受就设成 block，不接受就用设备默认（`info().device_buffer` 为 `None`），不因此失败
 - 设备名：先精确匹配，再找唯一一个不分大小写包含的
 - 设备不支持 rate → `UnsupportedRate`，错误文字列出设备支持的「Hz × 声道」
@@ -77,7 +81,10 @@ HalSource::new(source) / render(&mut [f32]) -> RenderStatus { Full | Underrun { 
 2. `coreaudio-rs-0.14.2/src/audio_unit/render_callback.rs:622-649`：输入回调里帧数一变就读 AudioUnit 属性并 `Vec::resize`（分配）
 3. `cpal-0.18.2/src/host/coreaudio/macos/device.rs:781`：时间戳出错时走 `try_emit_error`（`host/error_emit.rs:25-31`：在实时线程上对错误回调的 `Mutex` 做 `try_lock`，拿到锁就在实时线程上跑错误回调。我们的错误回调 `StreamHealth::record` 只做原子操作；但 `cpal::Error` 可能带堆上的消息字符串，构造与 drop 都在实时线程，属分配 / 释放，只在出错时发生）
 4. `cpal-0.18.2/src/traits.rs:279`（输出侧 `:336`）：`build_input_stream` / `build_output_stream` 包装里有 `.expect("host supplied incorrect sample type")`；我们只要 f32，实际走不到，但它是回调路径上的 panic 点
-5. 我们自己的回调泵：零分配（`tests/no_alloc.rs` 实测）、无锁、无 panic 路径（crate 根 panic 类 deny + 实时块 deny 禁用清单）
+5. `cpal macos/mod.rs:112-116, 181-191`：处理器过载通知在实时线程上经 `try_lock` 调我们的错误回调。我们的错误回调只做原子操作，**今后也必须保持这样**
+6. `cpal macos/device.rs:785`（输入）· `:913`（输出）：`len / channels`，设备若报 0 声道会除零 panic（理论上）
+7. `coreaudio-rs-0.14.2/src/audio_unit/render_callback.rs:667`：`NonNull::new(..).unwrap()`
+8. 我们自己的回调泵：零分配（`tests/no_alloc.rs` 实测）、无锁、无 panic 路径（crate 根 panic 类 deny + 实时块 deny 禁用清单）
 
 ## 待人拍板
 - 无（cli 禁 cpal 的冲突已报大总管，不是人题）
@@ -91,4 +98,8 @@ HalSource::new(source) / render(&mut [f32]) -> RenderStatus { Full | Underrun { 
 - 签名发大总管与 rs-entry；问 rs-shm 拿到 Out 环签名，加 `note_underrun` 钩子与 `FnSource`
 - 自审第一轮（自己）：硬件缓冲设不了改为回退默认；空段不调用户回调；文档写明用户回调不许 panic
 - tidy 通过、check-deps 通过；发现 `src/cli` 的 forbid 含 cpal，报大总管
-- 派一个子代理做三视角对抗自审（实时安全 · 拔插健壮性 · 插件外壳）
+- 派一个子代理做三视角对抗自审（实时安全 · 拔插健壮性 · 插件外壳）：P0 0 条，P1 2 条，P2 4 条，P3 3 条
+- 修：P1-1 健康计数分出 xrun / 需重开 / 设备切换；P1-2 改设备全局设置写进文档（不还原，留后批）；P2-3 回调 panic 用 catch_unwind 接住并静音；P2-4 补进已知违规清单；P2-5 默认设备跟随写进文档并置位；P2-6 同名设备不猜；P3-8 空名拒绝；P3-9 plist 测试不再依赖缩进。P3-7 无需改
+- 插件外壳自审结论：不会被系统误加载（只产出 `target/` 下的 dylib；即使打包，工厂返回空也会被跳过）；工厂签名与 Info.plist 两张表正确
+- 打包时要做（记给 D05 那批）：可执行文件改名进 `Contents/MacOS/VdnVirtualMic`；真工厂要核对请求的类型 UUID 并返回驱动接口；每个导出的 C 入口都要 catch_unwind（panic 会拖垮 coreaudiod，全机没声）；签名；加 `AudioServerPlugIn_MachServices`
+- 修完复跑：测试全过、clippy 0 警告、tidy 通过、check-deps 通过
