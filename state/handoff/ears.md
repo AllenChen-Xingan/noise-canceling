@@ -1,10 +1,10 @@
-# 现状页 · ears（批次 20261031-b6）
+# 现状页 · ears（批次 20261102-b7，续 20261031-b6）
 
 - **状态**：进行中
 - **手上**：找一切办法把「更多人耳」接进评测，做成可验证的东西（issue #42）
-- **交代**：主目录 `_tmp/20261031-b6/ears.md`
-- **做到哪**（2026-10-31）：调研 8 线 + H 线完成；exp009 第一段（纯标签）出数；decision.md 初稿写完；等名额跑第二段（SCOREQ 给作者听过的音频打分 → V-AUTHOR-VS-CROWD）
-- **下一步**：对抗自审；拿到名额跑 regen_exp003 + score_author，回填 decision 第 6 节
+- **交代**：主目录 `_tmp/20261102-b7/ears.md`（续 `_tmp/20261031-b6/ears.md`）
+- **做到哪**（2026-11-02）：b7 收口。第 3 步完成：decision 第 8 节按 D58/D60/D62/D64 重看，E1/E3/E4/E5/E7 划掉写依据，剩 E2（盲听夹大众已评题）· E6（向上游报错）按人能感知的后果改写；第 0/1/2/3/4 节与 D62 冲突处已改
+- **下一步**：等名额（排 benchsynth 后）跑 regen_exp003 + score_author（要建 _tmp/exp009-venv）→ 回填第 6 节 → 对抗自审 → 报收尾
 
 ## 改了哪些文件
 | 文件 | 改了什么 |
@@ -21,7 +21,7 @@
 - URGENT 2024 distill_mos.scp 有一个系统整片缺分（300 条 nan）
 
 ## 待人拍板
-见 `docs/research/017_more-ears/decision.md` 第 8 节 E1–E7（现场评审团 · 锚点题 · >500 MB 下载 · 云端音频 LLM · 本机音频 LLM · 向上游报 bug · NC 数据）
+见 `docs/research/017_more-ears/decision.md` 第 8 节：只剩 E2（盲听每轮多听 4–6 道大众已评题）· E6（用你的账号向上游报两处数据错误）；E1 并入已有待拍板 4-1
 
 ## 转交（范围外，留给大总管）
 - 
@@ -38,3 +38,4 @@
 - 申请名额（regen + venv + 打分），大总管批准下载 ~400 MB、排队中
 - 写 exp009 README（预注册 V-AUTHOR-VS-CROWD 判据：作者 SCOREQ 一致率 < 0.516 才算偏离）、decision.md 初稿（含 D51 要的评委起点一节）
 - 回 judgeloop（018）：起点 SCOREQ + 各数据集数字、本机现成评分模型路径（DNSMOS · NISQA；SCOREQ 待名额）
+- 2026-11-02 b7：读交代/common/D56–D65 → 报到 noise-canceling-e3，名额排第二 → 重看第 8 节并改 decision；核第二段输入齐（exp003 build f8c3 答卷、exp004 src 在；exp009-venv 未建）
