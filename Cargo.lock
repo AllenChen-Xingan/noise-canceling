@@ -1391,6 +1391,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "vdn-rt-thread"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "mach2",
+]
+
+[[package]]
 name = "vdn-scene"
 version = "0.1.0"
 dependencies = [
@@ -1399,6 +1407,14 @@ dependencies = [
  "realfft",
  "vdn-dsp",
  "vdn-polish",
+]
+
+[[package]]
+name = "vdn-shm"
+version = "0.1.0"
+dependencies = [
+ "assert_no_alloc",
+ "libc",
 ]
 
 [[package]]

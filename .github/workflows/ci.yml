@@ -1,4 +1,5 @@
-# 最小闸门：先有闸门，再有检查。检查随项目长（实时安全、延迟基准、评测回归）。
+# 闸门：本机与 CI 共用一条命令 `cargo run -p xtask -- ci`（fmt · clippy · test · tidy · check-deps；cargo-deny 装了才跑）。
+# 本批全在 macOS 上跑；按规约 §7「CI 费用」把核心 crate 拆到 Linux、macOS 只跑平台部分，后续批次做。
 name: ci
 on:
   pull_request:
@@ -11,13 +12,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: manifests
         run: python3 scripts/check-manifests.py
-      - name: rust
-        # 还没有 Cargo workspace 时跳过；建了第一个 crate 就自动生效
-        run: |
-          if [ ! -f Cargo.toml ]; then echo "no Cargo.toml yet, skip"; exit 0; fi
-          cargo fmt --all --check
-          cargo clippy --workspace --all-targets -- -D warnings
-          cargo test --workspace
+      - name: rust gate
+        run: cargo run -p xtask -- ci
       - name: eval ci
         # CI 层评测：纯 DSP、确定性、无模型权重；回归集 L3 不过 / 比冻结基线差 / 探针没抓住 → 失败（exp007）
         run: |

@@ -1,7 +1,7 @@
 # vdn workspace：crate 放 src/<crate>/。依赖方向见 specs/rust/architecture.md §2.2：types ← dsp ← engine；models → types + dsp；cli → engine + models；xtask 不依赖任何 vdn crate
 [workspace]
 resolver = "3"
-members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab", "src/scene", "src/polish", "src/eval", "src/io-macos", "src/hal"]
+members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab", "src/scene", "src/polish", "src/eval", "src/io-macos", "src/hal", "src/shm", "src/rt-thread"]
 
 [workspace.package]
 version = "0.1.0"
@@ -15,6 +15,8 @@ vdn-types = { path = "src/types" }
 vdn-dsp = { path = "src/dsp" }
 vdn-engine = { path = "src/engine" }
 vdn-models = { path = "src/models" }
+vdn-shm = { path = "src/shm" }
+vdn-rt-thread = { path = "src/rt-thread" }
 realfft = "3.5"
 ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "download-binaries", "tls-native", "copy-dylibs", "api-31"] }
 hound = "3.5"
@@ -25,6 +27,10 @@ stats_alloc = "0.1"
 cpal = "0.18.2"
 vdn-io-macos = { path = "src/io-macos" }
 vdn-hal = { path = "src/hal" }
+libc = "0.2"
+mach2 = "0.6"
+vdn-shm = { path = "src/shm" }
+vdn-rt-thread = { path = "src/rt-thread" }
 
 [workspace.lints.rust]
 unsafe_code = "deny"
