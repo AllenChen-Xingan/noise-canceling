@@ -62,6 +62,8 @@ pub struct OpenedInfo {
     pub channels: u16,
     /// 用户回调每次最多拿到的帧数
     pub block: usize,
+    /// 设备硬件缓冲帧数：`Some(block)` = 设成了 block；`None` = 设备不接受，用了设备默认
+    pub device_buffer: Option<u32>,
 }
 
 impl fmt::Debug for InputStream {
@@ -268,10 +270,21 @@ fn plan(
     })?;
     let frames =
         u32::try_from(block).map_err(|_| IoError::InvalidParam(format!("块长 {block} 太大")))?;
+    // 设备硬件缓冲能设成 block 就设；设不了用设备默认（回调泵照样按 ≤ block 切段），不因此开流失败
+    let buf_range = ranges
+        .iter()
+        .find(|r| {
+            r.channels() == channels && r.min_sample_rate() <= rate && rate <= r.max_sample_rate()
+        })
+        .and_then(|r| match r.buffer_size() {
+            cpal::SupportedBufferSize::Range { min, max } => Some((*min, *max)),
+            cpal::SupportedBufferSize::Unknown => None,
+        });
+    let buffer_size = choose_buffer(buf_range, frames);
     let config = cpal::StreamConfig {
         channels,
         sample_rate: rate,
-        buffer_size: cpal::BufferSize::Fixed(frames),
+        buffer_size,
     };
     Ok((
         OpenedInfo {
@@ -279,9 +292,21 @@ fn plan(
             rate,
             channels,
             block,
+            device_buffer: match buffer_size {
+                cpal::BufferSize::Fixed(f) => Some(f),
+                cpal::BufferSize::Default => None,
+            },
         },
         config,
     ))
+}
+
+/// 设备硬件缓冲长度：`frames` 落在设备报的范围里就固定为它，否则（或范围未知）用设备默认。
+pub fn choose_buffer(range: Option<(u32, u32)>, frames: u32) -> cpal::BufferSize {
+    match range {
+        Some((min, max)) if min <= frames && frames <= max => cpal::BufferSize::Fixed(frames),
+        _ => cpal::BufferSize::Default,
+    }
 }
 
 /// 在支持表里挑声道数：优先默认声道数（且该声道数有一档覆盖 `rate`），否则第一档覆盖 `rate` 的。
@@ -313,6 +338,14 @@ mod tests {
             validate(48_000, MAX_BLOCK + 1),
             Err(IoError::InvalidParam(_))
         ));
+    }
+
+    #[test]
+    fn choose_buffer_falls_back_to_default() {
+        use cpal::BufferSize::{Default, Fixed};
+        assert_eq!(choose_buffer(Some((15, 4096)), 480), Fixed(480));
+        assert_eq!(choose_buffer(Some((512, 4096)), 480), Default);
+        assert_eq!(choose_buffer(None, 480), Default);
     }
 
     #[test]

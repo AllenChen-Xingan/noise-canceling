@@ -51,6 +51,9 @@ impl<F: FnMut(&[f32])> InputPump<F> {
         let frame_len = self.scratch.len() * self.channels;
         for chunk in data.chunks(frame_len) {
             let n = fold_first_channel(chunk, self.channels, &mut self.scratch);
+            if n == 0 {
+                continue;
+            }
             if let Some(mono) = self.scratch.get(..n) {
                 (self.cb)(mono);
             }
@@ -69,6 +72,10 @@ impl<F: FnMut(&mut [f32])> OutputPump<F> {
         let frame_len = self.scratch.len() * self.channels;
         for chunk in data.chunks_mut(frame_len) {
             let frames = chunk.len() / self.channels;
+            if frames == 0 {
+                chunk.fill(0.0);
+                continue;
+            }
             if let Some(mono) = self.scratch.get_mut(..frames) {
                 mono.fill(0.0);
                 (self.cb)(mono);
