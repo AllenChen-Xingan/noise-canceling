@@ -37,6 +37,7 @@
 
 进度（HH:MM）
 - rs-entry 自审：1 P0 + 5 P1 已修（两进程 SIGKILL 重启：相关 1.000000、静音 0）。6 条交大总管 → 定：①Out 环改由送音端自建（rs-entry）②③总线头加 lead · 降噪块长 · 会话 ID · 缺口计数（rs-wake），积压超 lead 丢旧并记缺口（rs-entry）④无缝换设备 → backlog ⑤tidy 查 main.rs → rs-wake；cargo-deny 本批不装 ⑥规约文字收尾时大总管改
+- 人定 2026-11-02（原话「还有手下，装」，大总管理解为装检查工具）：装 cargo-deny 并接进 `xtask ci`；装 nightly + Miri 跑 vdn-shm（及 dsp）→ rs-wake
 - 追加定案：OwnedBus（按总线名文件锁独占建立）收进 vdn-shm（rs-wake），denoised 里那份到时删；Out 总线固定名 `/vdn-out`（Config 可改），不带 pid
 - rs-entry 延迟修复做法：IO 块默认 96 · 预热 + 每块耗时计数 · chain-test 线程提实时优先级 + `--stress N` · `vdn v7` 子命令（可扫 lead）
 - **延迟修复（人定 2026-11-02：「帮我看下，为啥有这么多问题 / 直接修复」）**：诊断 `_tmp/20261102-b8-rust/latency-fix.md`（A IO 块 480 · B sleep 轮询 · C 推理突发与预热 · D debug 构建 · E lead 留 3 块）；判据 V7 = release、10 次 × 10 s、空闲 + 压力、欠载 0、lead ≤ 192（目标 144）。rs-entry 管 A C D E；新起 rs-wake 管 B
@@ -69,4 +70,4 @@
 - [ ] V6：release 测试 + 全量 `xtask ci`
 - [ ] 改过时说法：规约 §2.2 图里 vdn-capture 补 vdn-dsp · vdn-hal · clap · hound ·根 Cargo.toml 第 1 行注释 · speaker README / Cargo.toml · 规约 §2.2 · §3.7.6（细节见 rs-core 现状页）
 - [ ] 新 crate 实体行写进 `.42cog/cog.md`（各现状页有行）
-- [ ] backlog：麦克风流无缝重接（回调里无锁换总线，要新依赖）；lead 压到 1 块时块长 96 的欠载（release + 预热核实）；Ring 拆 Producer / Consumer 句柄；共享内存权限 0600 与 coreaudiod（装驱动那批实测，补 009 待拍板 3）；cargo-deny / Miri 未装；models 不直接依赖 ort 尚无机器检查
+- [ ] backlog：麦克风流无缝重接（回调里无锁换总线，要新依赖）；lead 压到 1 块时块长 96 的欠载（release + 预热核实）；Ring 拆 Producer / Consumer 句柄；共享内存权限 0600 与 coreaudiod（装驱动那批实测，补 009 待拍板 3）；models 不直接依赖 ort 尚无机器检查
