@@ -290,10 +290,8 @@ impl Bus {
                 Some(d) => d - now,
                 None => Duration::from_secs(3600), // timeout 大到溢出：按一小时一轮继续等
             };
-            let poll = |iv: Duration| {
-                #[allow(clippy::disallowed_methods)] // NRT: wait 只在非实时线程调
-                std::thread::sleep(iv.min(left));
-            };
+            // 本 impl 块不在实时 deny 之下：wait 只给非实时线程用
+            let poll = |iv: Duration| std::thread::sleep(iv.min(left));
             match self.strategy {
                 WaitStrategy::Poll(iv) => poll(iv.max(Duration::from_micros(1))),
                 WaitStrategy::Wake => {
