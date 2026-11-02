@@ -46,6 +46,16 @@ enum Cmd {
     Run(RunArgs),
     /// 无设备链路测试：进程内三线程 + 真 POSIX 共享内存，按 V1 / V2 / V3 判据打印并给退出码
     ChainTest(ChainArgs),
+    /// 按 V1 判据检查一个 48 kHz WAV（V4：两个真进程写出的文件）：应是测试正弦延迟 L_total
+    ChainCheck(ChainCheckArgs),
+}
+
+#[derive(Args)]
+struct ChainCheckArgs {
+    wav: PathBuf,
+    /// 期望的总延迟（48 kHz 样本；vdn-capture 启动时打印）
+    #[arg(long)]
+    l_total: usize,
 }
 
 #[derive(Args)]
@@ -209,6 +219,11 @@ fn main() {
             Ok(())
         }
         Cmd::Run(a) => run(a),
+        Cmd::ChainCheck(a) => match chain_check(a) {
+            Ok(true) => Ok(()),
+            Ok(false) => std::process::exit(1),
+            Err(e) => Err(e),
+        },
         Cmd::ChainTest(a) => match chain_test(a) {
             Ok(true) => Ok(()),
             Ok(false) => std::process::exit(1),
@@ -518,4 +533,16 @@ fn write_wav48(path: &Path, y: &[f32]) -> Result<(), BoxError> {
     }
     w.finalize()?;
     Ok(())
+}
+
+fn chain_check(a: ChainCheckArgs) -> Result<bool, BoxError> {
+    let mut r = hound::WavReader::open(&a.wav)?;
+    let spec = r.spec();
+    if spec.channels != 1 || spec.sample_rate != 48_000 || spec.sample_format != hound::SampleFormat::Float {
+        return Err(format!("{}：只收 48 kHz 单声道 32 位浮点", a.wav.display()).into());
+    }
+    let y = r.samples::<f32>().collect::<Result<Vec<_>, _>>()?;
+    let v = chain::judge_file(&y, a.l_total);
+    println!("{} · 文件 {}（{} 样本）", v, a.wav.display(), y.len());
+    Ok(v.pass)
 }

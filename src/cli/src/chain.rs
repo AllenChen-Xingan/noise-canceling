@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use vdn_capture::{Forwarder, ForwarderConfig, ForwarderStats};
 use vdn_denoised::{Processor, Step, Worker};
 use vdn_hal::{HalSource, RenderStatus};
-use vdn_shm::{Bus, BusConfig, RingId};
+use vdn_shm::{Bus, BusConfig};
 
 use crate::verify::{best_lag, longest_silence, ms48, nonfinite, onset, pearson_at_lag, rms, test_tone};
 
@@ -278,6 +278,26 @@ pub fn judge_v3(r: &ChainRun) -> Verdict {
             "输出均方根 {level:.4}（线 > 0.01）· 非有限样本 {bad}（线 = 0）· 长度 {} / {}",
             r.y.len(),
             r.x.len()
+        ),
+    }
+}
+
+/// V4：文件里应是测试正弦延迟 `l_total`（同 V1 的相关判据；欠载看不到，由 vdn-capture 的计数报）。
+pub fn judge_file(y: &[f32], l_total: usize) -> Verdict {
+    let x = test_tone(RATE, y.len(), 0);
+    let corr = pearson_at_lag(&x, y, l_total, SKIP).unwrap_or(0.0);
+    let found = onset(y, 0.05)
+        .and_then(|on| best_lag(&x, y, on.saturating_sub(600), on + 600, SKIP, 9600).map(|(lag, _)| lag));
+    let (_, sil) = longest_silence(y, SILENCE, l_total + SKIP);
+    let pass = corr >= 0.999;
+    Verdict {
+        id: "V4",
+        what: "两个真进程",
+        pass,
+        detail: format!(
+            "相关 {corr:.6}（线 ≥ 0.999）· 实测延迟 {}（应为 {l_total}）· 最长静音 {:.1} ms",
+            found.map_or("未找到".to_owned(), |l| l.to_string()),
+            ms48(sil)
         ),
     }
 }
