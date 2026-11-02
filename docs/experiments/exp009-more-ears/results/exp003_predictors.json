@@ -1,0 +1,266 @@
+{
+ "c01": {
+  "noisy": {
+   "scoreq": 2.0795,
+   "distill_mos": 2.4304,
+   "OVRL": 1.901
+  },
+  "dpdfnet2": {
+   "scoreq": 3.4753,
+   "distill_mos": 3.986,
+   "OVRL": 3.316
+  },
+  "gtcrn": {
+   "scoreq": 2.5734,
+   "distill_mos": 3.0517,
+   "OVRL": 2.763
+  },
+  "fastenhancer_m": {
+   "scoreq": 2.9375,
+   "distill_mos": 3.5675,
+   "OVRL": 3.259
+  }
+ },
+ "c02": {
+  "noisy": {
+   "scoreq": 1.8061,
+   "distill_mos": 1.8993,
+   "OVRL": 1.125
+  },
+  "dpdfnet2": {
+   "scoreq": 2.4542,
+   "distill_mos": 3.1145,
+   "OVRL": 2.673
+  },
+  "gtcrn": {
+   "scoreq": 1.8869,
+   "distill_mos": 2.2813,
+   "OVRL": 2.007
+  },
+  "fastenhancer_m": {
+   "scoreq": 2.1822,
+   "distill_mos": 2.7204,
+   "OVRL": 2.565
+  }
+ },
+ "c03": {
+  "noisy": {
+   "scoreq": 1.1654,
+   "distill_mos": 1.5241,
+   "OVRL": 1.085
+  },
+  "dpdfnet2": {
+   "scoreq": 1.8045,
+   "distill_mos": 2.1776,
+   "OVRL": 2.351
+  },
+  "gtcrn": {
+   "scoreq": 1.3679,
+   "distill_mos": 1.5641,
+   "OVRL": 1.937
+  },
+  "fastenhancer_m": {
+   "scoreq": 1.4357,
+   "distill_mos": 1.7046,
+   "OVRL": 2.392
+  }
+ },
+ "c04": {
+  "noisy": {
+   "scoreq": 1.5689,
+   "distill_mos": 2.911,
+   "OVRL": 2.244
+  },
+  "dpdfnet2": {
+   "scoreq": 1.6731,
+   "distill_mos": 2.9507,
+   "OVRL": 2.815
+  },
+  "gtcrn": {
+   "scoreq": 1.6252,
+   "distill_mos": 2.9746,
+   "OVRL": 2.506
+  },
+  "fastenhancer_m": {
+   "scoreq": 1.4094,
+   "distill_mos": 2.2564,
+   "OVRL": 2.831
+  }
+ },
+ "c05": {
+  "noisy": {
+   "scoreq": 1.9044,
+   "distill_mos": 2.5696,
+   "OVRL": 2.311
+  },
+  "dpdfnet2": {
+   "scoreq": 2.1343,
+   "distill_mos": 3.0069,
+   "OVRL": 3.164
+  },
+  "gtcrn": {
+   "scoreq": 1.8096,
+   "distill_mos": 2.4199,
+   "OVRL": 2.79
+  },
+  "fastenhancer_m": {
+   "scoreq": 1.9544,
+   "distill_mos": 2.6718,
+   "OVRL": 2.859
+  }
+ },
+ "c06": {
+  "noisy": {
+   "scoreq": 1.4597,
+   "distill_mos": 2.48,
+   "OVRL": 1.333
+  },
+  "dpdfnet2": {
+   "scoreq": 1.8918,
+   "distill_mos": 2.9315,
+   "OVRL": 2.372
+  },
+  "gtcrn": {
+   "scoreq": 1.4613,
+   "distill_mos": 2.5183,
+   "OVRL": 2.498
+  },
+  "fastenhancer_m": {
+   "scoreq": 1.4819,
+   "distill_mos": 2.1362,
+   "OVRL": 2.587
+  }
+ },
+ "c07": {
+  "noisy": {
+   "scoreq": 1.2249,
+   "distill_mos": 1.8178,
+   "OVRL": 1.105
+  },
+  "dpdfnet2": {
+   "scoreq": 1.2994,
+   "distill_mos": 1.5391,
+   "OVRL": 2.066
+  },
+  "gtcrn": {
+   "scoreq": 1.1703,
+   "distill_mos": 1.7504,
+   "OVRL": 1.55
+  },
+  "fastenhancer_m": {
+   "scoreq": 1.2624,
+   "distill_mos": 1.5967,
+   "OVRL": 2.22
+  }
+ },
+ "c08": {
+  "noisy": {
+   "scoreq": 2.4642,
+   "distill_mos": 2.8457,
+   "OVRL": 2.743
+  },
+  "dpdfnet2": {
+   "scoreq": 2.9164,
+   "distill_mos": 3.7389,
+   "OVRL": 3.073
+  },
+  "gtcrn": {
+   "scoreq": 2.4195,
+   "distill_mos": 3.0573,
+   "OVRL": 2.75
+  },
+  "fastenhancer_m": {
+   "scoreq": 2.642,
+   "distill_mos": 3.3972,
+   "OVRL": 3.112
+  }
+ },
+ "c09": {
+  "noisy": {
+   "scoreq": 2.4474,
+   "distill_mos": 2.7592,
+   "OVRL": 2.707
+  },
+  "dpdfnet2": {
+   "scoreq": 4.6533,
+   "distill_mos": 4.7071,
+   "OVRL": 3.371
+  },
+  "gtcrn": {
+   "scoreq": 4.0918,
+   "distill_mos": 3.9566,
+   "OVRL": 3.099
+  },
+  "fastenhancer_m": {
+   "scoreq": 4.1805,
+   "distill_mos": 4.2853,
+   "OVRL": 3.309
+  }
+ },
+ "c10": {
+  "noisy": {
+   "scoreq": 1.7768,
+   "distill_mos": 2.4619,
+   "OVRL": 1.083
+  },
+  "dpdfnet2": {
+   "scoreq": 4.332,
+   "distill_mos": 4.4592,
+   "OVRL": 2.921
+  },
+  "gtcrn": {
+   "scoreq": 2.5527,
+   "distill_mos": 3.0705,
+   "OVRL": 2.181
+  },
+  "fastenhancer_m": {
+   "scoreq": 4.4283,
+   "distill_mos": 4.6371,
+   "OVRL": 2.921
+  }
+ },
+ "c11": {
+  "noisy": {
+   "scoreq": 1.3034,
+   "distill_mos": 2.2086,
+   "OVRL": 1.115
+  },
+  "dpdfnet2": {
+   "scoreq": 1.3121,
+   "distill_mos": 1.6715,
+   "OVRL": 2.0
+  },
+  "gtcrn": {
+   "scoreq": 1.1951,
+   "distill_mos": 2.2807,
+   "OVRL": 2.143
+  },
+  "fastenhancer_m": {
+   "scoreq": 1.2677,
+   "distill_mos": 1.8713,
+   "OVRL": 2.477
+  }
+ },
+ "c12": {
+  "noisy": {
+   "scoreq": 2.1469,
+   "distill_mos": 3.4275,
+   "OVRL": 2.712
+  },
+  "dpdfnet2": {
+   "scoreq": 2.5778,
+   "distill_mos": 3.3422,
+   "OVRL": 2.928
+  },
+  "gtcrn": {
+   "scoreq": 2.3076,
+   "distill_mos": 3.5211,
+   "OVRL": 3.143
+  },
+  "fastenhancer_m": {
+   "scoreq": 2.3176,
+   "distill_mos": 3.2679,
+   "OVRL": 3.133
+  }
+ }
+}
