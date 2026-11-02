@@ -68,6 +68,9 @@ pub struct Config {
     pub bus_name: String,
     /// 心跳多久不动就切原声（ms）
     pub heartbeat_timeout_ms: u32,
+    /// 环余量（48 kHz 样本）：降噪进程开头往 Processed 先推这么多个零，让送音端每块都取得到。
+    /// 链路总延迟 `L_total` = 管线延迟 + 本值（人定默认 1440 = 30 ms，2026-11-02）
+    pub lead_frames: usize,
 }
 
 impl Default for Config {
@@ -81,6 +84,7 @@ impl Default for Config {
             model_path: None,
             bus_name: Self::DEFAULT_BUS.to_owned(),
             heartbeat_timeout_ms: Self::DEFAULT_HEARTBEAT_MS,
+            lead_frames: Self::DEFAULT_LEAD,
         }
     }
 }
@@ -89,6 +93,12 @@ impl Config {
     /// 10 ms @ 48 kHz
     pub const DEFAULT_BLOCK: usize = 480;
     pub const DEFAULT_BUS: &'static str = "/vdn-bus";
+    /// 3 块 × 480 = 30 ms
+    pub const DEFAULT_LEAD: usize = 1440;
+    /// 环余量上限（0.5 s）
+    pub const LEAD_MAX: usize = 24_000;
+    /// 共享内存名前缀（vdn-shm 的规则）
+    pub const BUS_PREFIX: &'static str = "/vdn-";
     /// docs/plan/010 第十节：心跳超过 100 ms 不动就切原声
     pub const DEFAULT_HEARTBEAT_MS: u32 = 100;
     /// 块长范围：32 样本（0.67 ms）到 4800 样本（100 ms）
@@ -135,6 +145,13 @@ impl Config {
                 self.heartbeat_timeout_ms
             )));
         }
+        if self.lead_frames > Self::LEAD_MAX {
+            return Err(ConfigError::Invalid(format!(
+                "lead_frames = {}，须 ≤ {}",
+                self.lead_frames,
+                Self::LEAD_MAX
+            )));
+        }
         validate_bus_name(&self.bus_name)?;
         for (k, v) in [("input_device", &self.input_device), ("output_device", &self.output_device)] {
             if v.as_deref().is_some_and(|s| s.trim().is_empty()) {
@@ -145,15 +162,18 @@ impl Config {
     }
 }
 
-/// 共享内存名：`/` 开头、后面非空且不再含 `/`、总长 ≤ 31。
+/// 共享内存名：`/vdn-` 开头、后面非空且不再含 `/`、总长 ≤ 31（与 vdn-shm 同一规则）。
 pub fn validate_bus_name(name: &str) -> Result<(), ConfigError> {
     let ok = name.len() <= Config::BUS_NAME_MAX
-        && name.strip_prefix('/').is_some_and(|rest| !rest.is_empty() && !rest.contains('/') && !rest.contains('\0'));
+        && name
+            .strip_prefix(Config::BUS_PREFIX)
+            .is_some_and(|rest| !rest.is_empty() && !rest.contains('/') && !rest.contains('\0'));
     if ok {
         Ok(())
     } else {
         Err(ConfigError::Invalid(format!(
-            "bus_name = {name:?}：须以 / 开头、只含一个 /、总长 ≤ {}",
+            "bus_name = {name:?}：须以 {} 开头、只含一个 /、总长 ≤ {}",
+            Config::BUS_PREFIX,
             Config::BUS_NAME_MAX
         )))
     }
@@ -218,7 +238,10 @@ mod tests {
             r#"{"heartbeat_timeout_ms":1}"#,
             r#"{"bus_name":"vdn"}"#,
             r#"{"bus_name":"/"}"#,
-            r#"{"bus_name":"/a/b"}"#,
+            r#"{"bus_name":"/vdn-"}"#,
+            r#"{"bus_name":"/other"}"#,
+            r#"{"lead_frames":100000}"#,
+            r#"{"bus_name":"/vdn-a/b"}"#,
             r#"{"bus_name":"/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
             r#"{"input_device":"  "}"#,
         ] {
