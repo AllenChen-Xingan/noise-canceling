@@ -92,3 +92,29 @@ URGENT 2025：DNSMOS、NISQA、UTMOS（`resources/urgent2025_challenge/evaluatio
 - **D63 冲突（要人拍板）**：URGENT 人评输出拿来当锚点，用哪一份？目前设想「URGENT24 当锚、URGENT25 加 CHiME-7 当测」，但 URGENT 人评本身是不是「测试份」要回原数据集核对。
 - DNSMOS P.835 的参数量，DistillMOS 记的 0.17M 和按文件大小反推的约 0.29M 对不上，没装 onnx 包，没核。
 - Audiobox Aesthetics、Uni-VERSA 的权重许可没核。Squim 的许可写的是「BSD」，来源是二手。
+
+## 怀疑派核对
+
+> 2026-11-02 · 怀疑派核对员。下载 PDF 用 `pdftotext` 读**全文**（不是摘要）逐条对数；本机文件用 `ls -l` / `sed -n` 对行号。只改本文件。正文判错的地方已就地加「【已核改】」。
+
+| # | 断言（原文） | 实际 | 判定 | 出处 |
+|---|---|---|---|---|
+| 1 | DistillMOS：老师 478M → 学生 v7 4.3M，约 1/111 | Table I：XLS-R(2B)-L10+T(BA) 478M，DistillMOS v7 4.3M；478/4.3≈111。是**参数量**比，原文一句话结论写成「体积」 | 对（措辞已核改） | arXiv 2502.05356 Table I【论文 · 全文】 |
+| 2 | PCC 加权均值 老师 0.81 → 蒸馏 0.76 → 同尺寸只用标签 0.72；蒸馏补回约一半 | 0.81 / 0.76 / 0.72 与 Table I「weighted mean」列一致；§VI 原话「closes half the gap」 | 对 | 同上 Table I、§VI、§VII【论文 · 全文】 |
+| 3 | DNS3 0.82→0.79，SIG2024 0.70→0.60，Blizzard FR 0.58→0.22 | 一致（Blizzard 2023 FR TTS 列；SA 列是 0.60→0.32） | 对 | 同上 Table I【论文 · 全文】 |
+| 4 | 有标签混入 20%（0/10/20/40/80% 网格）；250k 步、batch 20；无标签 DNS4 约 2,600 h 干净 + 180 h 噪声，15% 由 17 个 TTS 生成 | 全部一致（85% 真实语音 → 余 15% 为 TTS） | 对 | 同上 §IV-A/B【论文 · 全文】 |
+| 5 | PruneMOS 29%（139M）加权 PCC 0.80；小尺寸蒸馏优于剪枝 | 一致；但 139M 带「†：稀疏索引按半个参数计」，不是真实稠密参数量 | 对（加注） | 同上 Table I 脚注、Fig. 3【论文 · 全文】 |
+| 6 | DistillMOS「在 DNN 降噪输出上验证过」：DNS3 / PLC / SIG 2024 | PLC 2024 是**丢包补偿**，不算降噪；另官方 README 写输入是 **7.68 s** 片段（原文没提，影响「直接拿它当 0.5 s 判断起点」的设想） | 存疑（已核改） | github.com/microsoft/Distill-MOS README【官方】 |
+| 7 | exp009：URGENT24 DistillMOS 0.757 vs SCOREQ 0.789，「只差 0.03」 | 数字对；但**系统级** 0.772 vs 0.926 差 0.15；DistillMOS 64,267 对 / 22 系统 vs SCOREQ 70,381 对 / 23 系统，**样本不同**，0.03 不是严格同集比较 | 存疑（选择性引用，已核改） | `noise_canceling-ears/.../crowd_ears.md:16-17`【源码 · 本项目实测】 |
+| 8 | SCOREQ NR Adapt PCC：NOIZEUS 0.91、TENCENT 0.86、LIVETALK 0.86、TCD-VoIP 0.85、TENCENT-Rev 0.79 | 与 Table 3「NR · SCOREQ Adapt · PC」列一致 | 对 | arXiv 2410.06675 Table 3【论文 · 全文】 |
+| 9 | SCOREQ：w2v BASE，CNN 冻结，均值后 ReLU+FC→256 维；训 4 s；NISQA TRAIN SIM 10,000 条；0.75 s/步（4 条） | 一致（§3「Architecture」、App. G/H、App. B、App. D）。**原文漏了**：论文 App. K 有个 4 层 Transformer 从零训的 **w2vlight**，SCOREQ Adapt 下 PCC 普遍比 w2v 低 0.03–0.1（如 NOIZEUS 0.80、TCD 0.87），是现成的「小老师」对照 | 对（有遗漏） | arXiv 2410.06675 §3、App. B/D/G/H/K Table 8【论文 · 全文】 |
+| 10 | SCOREQ 权重每个约 378 MB、CC BY 4.0；推 ≈9.4–9.5 千万参数 | Zenodo：4 个 .onnx 378.0 MB + 4 个 .pt 378.4 MB，CC-BY-4.0；378/4≈94.5M。GitHub README **没写**权重许可，许可只出自 Zenodo | 对 | zenodo.org/records/15739280【官方】 |
+| 11 | DNSMOS P.835 模型级 PCC 0.94/0.98/0.98，片段级 PCC 0.71/0.83/0.82、SRCC 0.72/0.82/0.81；17 个降噪器 | 一致（17 个微软内部降噪模型、850 段）；ONNX 1,157,965 B、P.808 224,860 B、9.01 s 与本机文件一致 | 对 | arXiv 2110.01763 Table 3、§5【论文 · 全文】；`noise_canceling/resources/DNS-Challenge/DNSMOS/`【源码】 |
+| 12 | AttentiveMOS 约 86K（D=16）；NISQA 集 PCC P501 0.666、FOR 0.558、LIVETALK 0.359，明显不如大模型 | 86K/D=16 对。**PCC 三个数在 v1、v2 全文都没有**；论文只在 SOMOS/BVCC（TTS）上评，SOMOS-clean 验证 PCC 0.449 ≈ SSL-MOS 0.453。0.666 是 Table 1 的 NISQA 评分者标准差 | **错**（张冠李戴 + 出处不存在，已核改） | arXiv 2410.12675v1/v2 Table 1、Table 3【论文 · 全文】 |
+| 13 | Uni-VERSA：无参考 MOS LCC .77 / SRCC .78；Fbank 比 WavLM 低约 0.05；跨域 TTS .60 | 数字对；但「低 0.05」只在**多任务联合**下成立，单任务 MOS 时 Fbank .53/.55 vs WavLM .80/.80，差 0.27——对「谱特征小学生」是更不利的证据 | 存疑（选择性引用，已核改） | arXiv 2505.20741 Table 3–5【论文 · 全文】 |
+| 14 | Squim 7.39M、40.27 GMAC/5 s、PESQ SRCC 0.963 | 一致（Table 2「Ours with MTL」）；是**客观指标**回归，与人评无关——原文已标明，没有把客观增益说成人评 | 对 | arXiv 2304.01448 Table 1–2【论文 · 全文】 |
+| 15 | Audiobox PQ VMC22-main 0.689 / 0.752，DNSMOS 0.612 / 0.773；UTMOSv2 0.916 / 0.932 带泄漏 | 一致（Table 1，脚注「Data leakage: … BVCC test set」） | 对 | arXiv 2502.05139 Table 1【论文 · 全文】 |
+| 16 | DistilHuBERT 23.49M / 94.68M、574 s vs 992 s（4 CPU）、PR 16.27、WER 13.37；LightHuBERT a_Small 27M PR 6.60 / WER 8.33；FitHuBERT 23.8% / 35.9% / 12.1% / 13.3% | 全部一致；「约 90–100 MB」按 23.49–27M×4 B 应为 94–108 MB | 对（MB 小误已核改） | arXiv 2110.01900 Table 1–2；2203.15610 Table 4；2207.00555 摘要【论文】 |
+| 17 | URGENT 2026 Track 1 加了 SCOREQ、DistillMOS（`inference.sh:47`） | 一致；但这些 `resources/` 路径在主仓 `noise_canceling/resources/`，本 worktree 里没有 | 对（路径需加前缀） | `noise_canceling/resources/urgent2026_challenge_track1/inference.sh:47`【源码】 |
+
+**核对小结**：17 条里 12 条对，4 条存疑 / 选择性引用，1 条错（AttentiveMOS 的三个 PCC 在原论文里找不到）。没发现「只读到摘要却写成全文」——标了「只读到摘要」的 FitHuBERT 摘要数字也对得上。推算部分（wav2vec2-base 约 8 GMAC/s、学生 ≤50 MMAC/s 时占能效核 3–10%）按 CNN 前端约 2.5 GMAC/s 加 Transformer 约 4.3 GMAC/s 复算约 6.8 GMAC/s，量级一致【推算】。

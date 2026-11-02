@@ -112,10 +112,10 @@
 | 14 | 门控/下限 `out = w + m·(d−w)`，包络按 **wet** 判；`apply_params` 只写 5 个门控参数 → 可对缓存重算 | `env.process(&self.wet, …)` 属实；`apply_params` 只写 floor/open/detect/release/hangover | 对 | `J/src/engine/src/engine.rs:74-84, 352-378`；`J/src/dsp/src/envelope.rs:82-98` |
 | 15 | strength 全仓未实现 | 无任何混合计算；但除 types/memory/policy 外 `scene/src/mirror.rs` 也有同名字段 | 对（补注） | `grep -rn strength J/src` |
 | 16 | `vdn denoise` 无 `--detect-db`、无 strength | `DenoiseArgs` 只有 floor/open/hangover/release/deadline/lead_in/no_* | 对 | `J/src/cli/src/main.rs:64-98, 236-246` |
-| 17 | `polish_offline <dry> <wet> <out> <tone|时间线> [--params …]`；预设 1–6/9/+10/≥20 | 一致；`--params` 时忽略 tone、ramp 置 0 | 对 | `J/src/polish/examples/polish_offline.rs:7-8, 70-85`；`J/src/polish/src/params.rs:45-86` |
+| 17 | `polish_offline <dry> <wet> <out> <tone\|时间线> [--params …]`；预设 1–6/9/+10/≥20 | 一致；`--params` 时忽略 tone、ramp 置 0 | 对 | `J/src/polish/examples/polish_offline.rs:7-8, 70-85`；`J/src/polish/src/params.rs:45-86` |
 | 18 | 路由表：babble→FE-M+22，music→FE-M+25，窄带 +10，未判出 9，其余参数 DEFAULT | 一致；另有 MEETING → tone 6（笔记未提）；`ParamSet::DEFAULT.tone` 是 0 不是 9 | 对（补注） | `J/src/scene/src/route.rs:92-120`；`types/src/params.rs:141-150` |
 | 19 | verifier 行号与级别（V-LAT 56/371 … V-DNSMOS 290） | 8 条 id 行号、`fn v_*` 行号、levels.json 级别逐条吻合 | 对 | `J/src/eval/src/verifiers.rs`；`J/src/eval/suite/levels.json` |
 | 20 | 44df `ab_work/raw/` 1708 文件 899 MB、244 段缓存 GTCRN 输出 | 1708 = 244 × 7（noisy · base · route · polish · both · null · tones.txt）；899 M。**纯 FE-M 输出没有单存**，`route` 是按决策权重的 GTCRN/FE-M 混合 | 对（补注） | `J/docs/experiments/exp006-scene-sim/offline_ab.py:146-157` |
-| 21 | 「exp006 92 段的转写缓存」 | `asr_cache.json` 652 条（键 = 文件 sha256 | 模型 | 语言 | 次）；按段数未能反推 | 存疑 | `M/_tmp/…/44df/ab_work/asr_cache.json` |
+| 21 | 「exp006 92 段的转写缓存」 | `asr_cache.json` 652 条（键 = 文件 sha256 · 模型 · 语言 · 次）；按段数未能反推 | 存疑 | `M/_tmp/…/44df/ab_work/asr_cache.json` |
 
 **漏掉的积木（补）**：众人表里有 **Distill-MOS**（CHiME-7 语句 SRCC 0.7 / 系统 0.7；URGENT24 0.757 / 0.772）【本机统计，分数上游预算】`crowd_ears.md:13, 18`——它本身就是「蒸馏出的小评分模型」，与 D60 直接相关；本机同样**没装** `distillmos` 包（`score_author.py:42` 要 `exp009-venv`，不存在）。
