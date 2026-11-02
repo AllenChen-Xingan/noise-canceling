@@ -43,11 +43,13 @@ pub mod layout;
 #[cfg(all(unix, feature = "posix"))]
 mod owned;
 mod region;
+mod wait;
 mod wake;
 
-pub use bus::{Bus, FALLBACK_POLL, Ring};
+pub use bus::{Bus, Ring};
 #[cfg(all(unix, feature = "posix"))]
 pub use owned::OwnedBus;
+pub use wait::FALLBACK_POLL;
 
 /// `Bus::wait` 怎么等（每个进程自己选，不进共享内存）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

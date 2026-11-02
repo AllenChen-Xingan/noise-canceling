@@ -46,18 +46,16 @@ mod imp {
     /// 只给测试用：假装系统不支持（验证退回轮询那条路）。
     static FORCE_OFF: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
 
+    /// 按名字找系统函数；找不到返回 NULL。
+    fn sym(name: &core::ffi::CStr) -> *mut c_void {
+        // SAFETY: RTLD_DEFAULT 是合法句柄；name 以 NUL 结尾；dlsym 只读不写，找不到返回 NULL。
+        unsafe { libc::dlsym(libc::RTLD_DEFAULT, name.as_ptr()) }
+    }
+
     pub(crate) fn init() {
         INIT.call_once(|| {
-            // SAFETY: RTLD_DEFAULT 是合法句柄；符号名是以 NUL 结尾的字面量；dlsym 只读不写，找不到返回 NULL。
-            let wait = unsafe {
-                libc::dlsym(
-                    libc::RTLD_DEFAULT,
-                    c"os_sync_wait_on_address_with_timeout".as_ptr(),
-                )
-            };
-            // SAFETY: 同上。
-            let wake =
-                unsafe { libc::dlsym(libc::RTLD_DEFAULT, c"os_sync_wake_by_address_any".as_ptr()) };
+            let wait = sym(c"os_sync_wait_on_address_with_timeout");
+            let wake = sym(c"os_sync_wake_by_address_any");
             // 两个都找到才算支持：只有一个时两边都当不支持
             if !wait.is_null() && !wake.is_null() {
                 WAIT.store(wait, Release);

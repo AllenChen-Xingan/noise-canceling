@@ -11,6 +11,8 @@
 //! 注意：锁只在**建方之间**互斥；打开方（`Bus::open`）不碰锁。两个建方的 `$TMPDIR` 不同时锁不住彼此
 //! （同一用户的普通进程 `$TMPDIR` 相同）。
 
+#![allow(clippy::disallowed_methods, clippy::disallowed_types)] // NRT: 开锁文件、建 / 删共享内存只在启动和退出时调
+
 use core::ops::Deref;
 use core::sync::atomic::{AtomicBool, Ordering::AcqRel};
 use std::fs::{File, TryLockError};
