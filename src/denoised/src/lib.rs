@@ -96,6 +96,23 @@ pub struct WorkerStats {
     pub blocks: u64,
     /// Processed 环满，没推进去的样本
     pub proc_overflow: u64,
+    /// 单块处理（`Processor::process`）最长耗时（ns）。GTCRN 每 hop 才推理一次，最长的那块就是推理那块
+    pub max_process_ns: u64,
+    /// 处理耗时总和（ns），除以 `blocks` 得平均
+    pub total_process_ns: u64,
+    /// 处理耗时超过一块音频时长的块数
+    pub over_budget: u64,
+}
+
+/// 预热结果（耗时都按单块 `process` 计，ns）。
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Warmup {
+    pub blocks: usize,
+    pub first_ns: u64,
+    pub max_ns: u64,
+    /// 去掉第一块后的最长耗时（稳态里推理那一块的耗时）
+    pub max_after_first_ns: u64,
+    pub mean_ns: u64,
 }
 
 /// 一次 `step` 的结果。
@@ -142,6 +159,36 @@ impl<P: Processor> Worker<P> {
     pub fn block(&self) -> usize {
         self.block
     }
+
+    /// 一块音频的时长（ns）
+    pub fn block_ns(&self) -> u64 {
+        self.block as u64 * 1_000_000_000 / u64::from(IO_RATE)
+    }
+
+    /// 预热：喂 `blocks` 块零、丢掉输出（推理库第一次调用慢，别让它落在服务期）。
+    /// 对齐不受影响：之后管线的第 k 个输出仍对应第 k − L_pipe 个真输入，之前的输入就是这些零（和占位样本同理）。
+    pub fn warm_up(&mut self, blocks: usize) -> Warmup {
+        let mut w = Warmup {
+            blocks,
+            ..Warmup::default()
+        };
+        let mut total = 0u64;
+        self.inbuf.fill(0.0);
+        for k in 0..blocks {
+            let t0 = std::time::Instant::now();
+            self.proc.process(&self.inbuf, &mut self.outbuf);
+            let dt = u64::try_from(t0.elapsed().as_nanos()).unwrap_or(u64::MAX);
+            total = total.saturating_add(dt);
+            w.max_ns = w.max_ns.max(dt);
+            if k == 0 {
+                w.first_ns = dt;
+            } else {
+                w.max_after_first_ns = w.max_after_first_ns.max(dt);
+            }
+        }
+        w.mean_ns = total / blocks.max(1) as u64;
+        w
+    }
 }
 
 // 实时（B 档）
@@ -184,7 +231,14 @@ impl<P: Processor> Worker<P> {
                 rest.fill(0.0);
             }
         }
+        let t0 = std::time::Instant::now();
         self.proc.process(&self.inbuf, &mut self.outbuf);
+        let dt = u64::try_from(t0.elapsed().as_nanos()).unwrap_or(u64::MAX);
+        self.stats.max_process_ns = self.stats.max_process_ns.max(dt);
+        self.stats.total_process_ns = self.stats.total_process_ns.saturating_add(dt);
+        if dt > self.block_ns() {
+            self.stats.over_budget += 1;
+        }
         let pushed = processed.push(&self.outbuf);
         self.stats.proc_overflow += (self.block - pushed.min(self.block)) as u64;
         self.stats.blocks += 1;

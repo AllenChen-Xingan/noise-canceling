@@ -94,8 +94,8 @@ impl Default for Config {
 }
 
 impl Config {
-    /// 10 ms @ 48 kHz
-    pub const DEFAULT_BLOCK: usize = 480;
+    /// 2 ms @ 48 kHz（规约提议的 IO 块；480 时环余量至少要盖住 10 ms，人定修延迟 2026-11-02）
+    pub const DEFAULT_BLOCK: usize = 96;
     pub const DEFAULT_BUS: &'static str = "/vdn-bus";
     /// 3 块 × 480 = 30 ms
     pub const DEFAULT_LEAD: usize = 1440;
