@@ -75,8 +75,8 @@ HalSource::new(source) / render(&mut [f32]) -> RenderStatus { Full | Underrun { 
 读源码确认，路径都在 `~/.cargo/registry/src/index.crates.io-*/`：
 1. `cpal-0.18.2/src/host/coreaudio/mod.rs:69-71`：每次回调调 `mach_timebase_info`（系统调用）
 2. `coreaudio-rs-0.14.2/src/audio_unit/render_callback.rs:622-649`：输入回调里帧数一变就读 AudioUnit 属性并 `Vec::resize`（分配）
-3. `cpal-0.18.2/src/host/coreaudio/macos/device.rs:779`：时间戳出错时走 `try_emit_error`，对错误回调的 `Mutex` 做 `try_lock`（不阻塞，但属锁）
-4. `cpal-0.18.2/src/traits.rs:261-283`：`build_input_stream` 包装里有 `.expect("host supplied incorrect sample type")`；我们只要 f32，实际走不到，但它是回调路径上的 panic 点
+3. `cpal-0.18.2/src/host/coreaudio/macos/device.rs:781`：时间戳出错时走 `try_emit_error`（`host/error_emit.rs:25-31`：在实时线程上对错误回调的 `Mutex` 做 `try_lock`，拿到锁就在实时线程上跑错误回调。我们的错误回调 `StreamHealth::record` 只做原子操作；但 `cpal::Error` 可能带堆上的消息字符串，构造与 drop 都在实时线程，属分配 / 释放，只在出错时发生）
+4. `cpal-0.18.2/src/traits.rs:279`（输出侧 `:336`）：`build_input_stream` / `build_output_stream` 包装里有 `.expect("host supplied incorrect sample type")`；我们只要 f32，实际走不到，但它是回调路径上的 panic 点
 5. 我们自己的回调泵：零分配（`tests/no_alloc.rs` 实测）、无锁、无 panic 路径（crate 根 panic 类 deny + 实时块 deny 禁用清单）
 
 ## 待人拍板

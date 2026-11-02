@@ -3,7 +3,12 @@
 //! 设备拔掉、流作废：cpal 调错误回调（不在实时线程），这里只计数并记下最后一次错误的种类，
 //! 不 panic、不重建（重建归后续批次，003「重建入口」）。调用方读 `health()` 自己决定怎么办。
 //!
-//! 用户回调跑在 Core Audio 的实时线程上：不许分配、加锁、阻塞、panic。回调里 panic 会穿过 C 边界，进程直接 abort。
+//! 用户回调跑在 Core Audio 的实时线程上：不许分配、加锁、阻塞、panic。万一 panic，回调泵接住并静音（见 `pump.rs`）。
+//!
+//! 副作用（cpal 行为，读源码确认）：开流会把**设备的全局**采样率设成 `rate`，`block` 被设备接受时还会改设备全局的
+//! 硬件缓冲帧数——同一设备上的其他程序（会议软件）也受影响；开流失败或 drop 后不还原。还原留到自写 IOProc 那批。
+//! `device = None` 打开的默认输出流会跟着系统默认输出设备切换（cpal 报 `DeviceChanged`），之后 `info().device` 是旧名字；
+//! 按名字打开的流不跟随。
 
 use std::fmt;
 use std::sync::Arc;
@@ -17,26 +22,67 @@ use crate::{Direction, IoError, RateRange};
 /// 块长上限（帧）：1 秒 @ 48 kHz。超过说明调用方传错了。
 pub const MAX_BLOCK: usize = 48_000;
 
-/// 流的健康计数：错误回调写，任何线程读。
+/// 流的健康计数：错误回调与回调泵写，任何线程读。全部是原子量：cpal 有时在实时线程上调错误回调。
 #[derive(Debug, Default)]
 pub struct StreamHealth {
     errors: AtomicU64,
+    xruns: AtomicU64,
     device_lost: AtomicBool,
+    needs_reopen: AtomicBool,
+    device_changed: AtomicBool,
+    callback_panicked: AtomicBool,
 }
 
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl StreamHealth {
-    /// 错误回调被调用的次数。
+    /// 错误回调被调用的总次数（含 xrun）。
     pub fn errors(&self) -> u64 {
         self.errors.load(Ordering::Relaxed)
     }
-    /// 设备是否已断开（拔掉、被系统收回）。断开后流不会再出声，要重新 `open`。
+    /// 其中 xrun（处理器过载、丢块）的次数。xrun 后流仍在跑。
+    pub fn xruns(&self) -> u64 {
+        self.xruns.load(Ordering::Relaxed)
+    }
+    /// 设备已断开（拔掉、被系统收回）。
     pub fn device_lost(&self) -> bool {
         self.device_lost.load(Ordering::Relaxed)
     }
-    fn record(&self, err: &cpal::Error) {
+    /// 流已停、要重新 `open`：设备断开，或设备采样率被别的程序改了（cpal 报 `StreamInvalidated` 并暂停流）。
+    pub fn needs_reopen(&self) -> bool {
+        self.needs_reopen.load(Ordering::Relaxed)
+    }
+    /// 默认设备流跟着系统默认设备换了设备；`info().device` 已过时。
+    pub fn device_changed(&self) -> bool {
+        self.device_changed.load(Ordering::Relaxed)
+    }
+    /// 用户回调 panic 过；之后不再调用它（输入丢弃、输出静音）。
+    pub fn callback_panicked(&self) -> bool {
+        self.callback_panicked.load(Ordering::Relaxed)
+    }
+    pub(crate) fn mark_panicked(&self) {
+        self.callback_panicked.store(true, Ordering::Relaxed);
+    }
+    pub(crate) fn record(&self, kind: cpal::ErrorKind) {
         self.errors.fetch_add(1, Ordering::Relaxed);
-        if matches!(err.kind(), cpal::ErrorKind::DeviceNotAvailable) {
-            self.device_lost.store(true, Ordering::Relaxed);
+        match kind {
+            cpal::ErrorKind::Xrun => {
+                self.xruns.fetch_add(1, Ordering::Relaxed);
+            }
+            cpal::ErrorKind::DeviceNotAvailable => {
+                self.device_lost.store(true, Ordering::Relaxed);
+                self.needs_reopen.store(true, Ordering::Relaxed);
+            }
+            cpal::ErrorKind::StreamInvalidated => {
+                self.needs_reopen.store(true, Ordering::Relaxed);
+            }
+            cpal::ErrorKind::DeviceChanged => {
+                self.device_changed.store(true, Ordering::Relaxed);
+            }
+            _ => {}
         }
     }
 }
@@ -98,14 +144,14 @@ impl InputStream {
         let host = cpal::default_host();
         let dev = pick(&host, Direction::Input, device)?;
         let (info, config) = plan(&dev, Direction::Input, rate, block)?;
-        let health = Arc::new(StreamHealth::default());
-        let h = Arc::clone(&health);
         let mut pump = InputPump::new(block, usize::from(info.channels), cb);
+        let health = pump.health();
+        let h = pump.health();
         let stream = dev
             .build_input_stream::<f32, _, _>(
                 config,
                 move |data: &[f32], _: &cpal::InputCallbackInfo| pump.on_data(data),
-                move |e| h.record(&e),
+                move |e: cpal::Error| h.record(e.kind()),
                 None,
             )
             .map_err(|e| IoError::Backend(e.to_string()))?;
@@ -139,14 +185,14 @@ impl OutputStream {
         let host = cpal::default_host();
         let dev = pick(&host, Direction::Output, device)?;
         let (info, config) = plan(&dev, Direction::Output, rate, block)?;
-        let health = Arc::new(StreamHealth::default());
-        let h = Arc::clone(&health);
         let mut pump = OutputPump::new(block, usize::from(info.channels), cb);
+        let health = pump.health();
+        let h = pump.health();
         let stream = dev
             .build_output_stream::<f32, _, _>(
                 config,
                 move |data: &mut [f32], _: &cpal::OutputCallbackInfo| pump.on_data(data),
-                move |e| h.record(&e),
+                move |e: cpal::Error| h.record(e.kind()),
                 None,
             )
             .map_err(|e| IoError::Backend(e.to_string()))?;
@@ -212,11 +258,29 @@ fn pick(host: &cpal::Host, dir: Direction, wanted: Option<&str>) -> Result<cpal:
     }
 }
 
-/// 名字匹配：先精确相等；否则找不分大小写包含 `wanted` 的，恰好一个才算。
+/// 名字匹配：空名不匹配；先精确相等（恰好一个）；否则找不分大小写包含 `wanted` 的，恰好一个才算。
 /// 失败返回「供人挑的候选名」：有多个包含匹配时列这几个，一个都没有时列全部。
 pub fn match_name(names: &[&str], wanted: &str) -> Result<usize, Vec<String>> {
-    if let Some(i) = names.iter().position(|n| *n == wanted) {
-        return Ok(i);
+    if wanted.trim().is_empty() {
+        return Err(names.iter().map(|s| s.to_string()).collect());
+    }
+    let exact: Vec<usize> = names
+        .iter()
+        .enumerate()
+        .filter(|(_, n)| **n == wanted)
+        .map(|(i, _)| i)
+        .collect();
+    match exact.as_slice() {
+        [i] => return Ok(*i),
+        [] => {}
+        // 两台同名设备（如两个同型号 USB 麦克风）：不猜
+        many => {
+            return Err(many
+                .iter()
+                .filter_map(|&i| names.get(i))
+                .map(|s| s.to_string())
+                .collect());
+        }
     }
     let w = wanted.to_lowercase();
     let hits: Vec<usize> = names
@@ -332,6 +396,20 @@ mod tests {
     use super::*;
 
     #[test]
+    fn health_latches_by_error_kind() {
+        let h = StreamHealth::default();
+        h.record(cpal::ErrorKind::Xrun);
+        assert_eq!((h.errors(), h.xruns(), h.needs_reopen()), (1, 1, false));
+        h.record(cpal::ErrorKind::StreamInvalidated);
+        assert!(h.needs_reopen() && !h.device_lost());
+        h.record(cpal::ErrorKind::DeviceChanged);
+        assert!(h.device_changed());
+        h.record(cpal::ErrorKind::DeviceNotAvailable);
+        assert!(h.device_lost() && h.needs_reopen());
+        assert_eq!(h.errors(), 4);
+    }
+
+    #[test]
     fn validate_rejects_bad_params() {
         assert!(validate(48_000, 480).is_ok());
         assert!(matches!(validate(0, 480), Err(IoError::InvalidParam(_))));
@@ -365,6 +443,11 @@ mod tests {
         );
         // 一个都没有：列全部
         assert_eq!(match_name(&names, "zzz").map_err(|v| v.len()), Err(3));
+        // 空名不匹配任何设备
+        assert!(match_name(&names, "  ").is_err());
+        // 两台同名：不挑第一个
+        let dup = ["USB Mic", "USB Mic"];
+        assert_eq!(match_name(&dup, "USB Mic").map_err(|v| v.len()), Err(2));
     }
 
     #[test]

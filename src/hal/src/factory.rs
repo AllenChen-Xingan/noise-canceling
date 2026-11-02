@@ -43,19 +43,20 @@ mod tests {
 
     #[test]
     fn plist_names_our_factory_and_audio_server_type() {
+        // 去掉全部空白再比，plist 换缩进不影响
+        let flat: String = PLIST.split_whitespace().collect();
         // 工厂表：UUID → 函数名
-        let factory_entry =
-            format!("<key>{FACTORY_UUID}</key>\n\t\t<string>{FACTORY_SYMBOL}</string>");
+        let factory_entry = format!("<key>{FACTORY_UUID}</key><string>{FACTORY_SYMBOL}</string>");
         assert!(
-            PLIST.contains(&factory_entry),
+            flat.contains(&factory_entry),
             "CFPlugInFactories 要把 {FACTORY_UUID} 映射到 {FACTORY_SYMBOL}"
         );
         // 类型表：AudioServerPlugIn 类型 → [工厂 UUID]
         let type_entry = format!(
-            "<key>{AUDIO_SERVER_PLUGIN_TYPE_UUID}</key>\n\t\t<array>\n\t\t\t<string>{FACTORY_UUID}</string>"
+            "<key>{AUDIO_SERVER_PLUGIN_TYPE_UUID}</key><array><string>{FACTORY_UUID}</string></array>"
         );
         assert!(
-            PLIST.contains(&type_entry),
+            flat.contains(&type_entry),
             "CFPlugInTypes 要把类型 UUID 映射到工厂 UUID"
         );
     }
