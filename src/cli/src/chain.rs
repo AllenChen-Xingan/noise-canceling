@@ -16,7 +16,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use vdn_capture::{Forwarder, ForwarderConfig, ForwarderStats};
-use vdn_denoised::{Processor, Step, Worker};
+use vdn_denoised::{OwnedBus, Processor, Step, Worker};
 use vdn_hal::{HalSource, RenderStatus};
 use vdn_shm::{Bus, BusConfig};
 
@@ -66,11 +66,11 @@ pub struct ChainRun {
     pub worker_blocks: u64,
 }
 
-/// 名字在退出（含出错）时一定 unlink。
-struct Unlink(String);
-impl Drop for Unlink {
+/// 任何返回路径（含某个线程 panic、`?` 提前返回）都让降噪线程停下。
+struct StopOnDrop(Arc<AtomicBool>);
+impl Drop for StopOnDrop {
     fn drop(&mut self) {
-        let _ = Bus::unlink_name(&self.0);
+        self.0.store(true, Ordering::Relaxed);
     }
 }
 
@@ -88,16 +88,13 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
     let l_pipe = worker.processor().latency_samples();
     let l_total = l_pipe + o.lead;
 
-    // 降噪方建总线
-    let _ = Bus::unlink_name(&o.bus_name); // 上次异常退出的残留
+    // 降噪方建总线：拿到名字的锁才建（不会删掉别人在用的同名总线），守卫在任何返回路径上删名字（只删一次）
     let cfg = BusConfig {
         rate: RATE,
         capacity_frames: RATE, // 1 s
         l_total: u32::try_from(l_total).map_err(|_| "L_total 太大")?,
     };
-    let den_bus =
-        Arc::new(Bus::create(&o.bus_name, cfg).map_err(|e| format!("建总线 {}：{e}", o.bus_name))?);
-    let _guard = Unlink(o.bus_name.clone());
+    let den_bus = Arc::new(OwnedBus::create(&o.bus_name, cfg)?);
     // 收音方与虚拟麦克风方各自 open（走真跨进程那条路）
     let cap_bus = Arc::new(Bus::open(&o.bus_name).map_err(|e| format!("收音端打开总线：{e}"))?);
     let hal_bus = Arc::new(Bus::open(&o.bus_name).map_err(|e| format!("虚拟麦端打开总线：{e}"))?);
@@ -113,6 +110,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
     }
 
     let stop = Arc::new(AtomicBool::new(false));
+    let _stop_guard = StopOnDrop(stop.clone());
     let cap_pos = Arc::new(AtomicU64::new(0));
     let killed_at = Arc::new(AtomicU64::new(u64::MAX));
     let start = Instant::now() + Duration::from_millis(20);
@@ -184,6 +182,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
     let worker_blocks = den.join().map_err(|_| "降噪线程 panic")?;
     let k = killed_at.load(Ordering::Acquire);
     den_bus.unlink().map_err(|e| format!("unlink：{e}"))?;
+    drop(den_bus);
     Ok(ChainRun {
         x,
         y,
