@@ -13,6 +13,10 @@
 //! - 两次重采样：`2 × resample::delay_high()`
 //! - 模型：`Model::latency_samples() × 3`
 //!
+//! 和规约 §3.3 示意的差别：`process` 不收 `FrameCtx`（与 010 第十节一致，接声纹判决时再加）；没有 `max_block`（缓冲只按 hop 定）。
+//! 延迟账口径：`latency_ledger()` 里的重采样是代码声明的 2 ms；`vdn_types::latency::planned_platform()` 里还按规划预算记着
+//! 重采样 4 ms，两本账不要直接 `extend` 到一起，否则重采样记两次（拼平台项时去掉预算里的重采样项）。
+//!
 //! 送原声：两种模式延迟相同（原声走同一个 `L_total` 延迟线）。模型级故障的送原声本批仍在 `Engine` 里按 16 kHz 做
 //! （p1 现状）；改成「Engine 只回报 `Status`、Pipeline 用 48 kHz 原声切换」要改 `Engine::process` 的签名，归后续批次。
 //!
@@ -66,6 +70,8 @@ pub struct PipelineStats {
     pub hops: u64,
     /// 输入输出不等长的调用次数（调用方的 bug）
     pub bad_len: u64,
+    /// 输出队列欠载或溢出的样本数（由预填推导不会发生；非 0 说明有 bug，湿路会与原声错位）
+    pub queue_faults: u64,
 }
 
 pub struct Pipeline<M: Model> {
@@ -95,9 +101,8 @@ pub struct Pipeline<M: Model> {
     dry: Vec<f32>,
 
     mode: Mode,
-    /// 原声占比 0..=1（1 = 全原声）
-    dry_gain: f32,
-    fade_step: f32,
+    /// 淡化进度 0..=hop_io，原声占比 = fade_pos / hop_io（整数计数，淡化正好 hop_io 个样本）
+    fade_pos: usize,
     stats: PipelineStats,
 }
 
@@ -134,8 +139,7 @@ impl<M: Model> Pipeline<M> {
             dry_line: DelayLine::new(latency),
             dry: vec![0.0; hop_io],
             mode: Mode::Denoise,
-            dry_gain: 0.0,
-            fade_step: 1.0 / hop_io as f32,
+            fade_pos: 0,
             stats: PipelineStats::default(),
             engine,
         };
@@ -222,10 +226,7 @@ impl<M: Model> Pipeline<M> {
         self.q_read = 0;
         self.q_len = self.prefill;
         self.dry_line.reset();
-        self.dry_gain = match self.mode {
-            Mode::Denoise => 0.0,
-            Mode::Passthrough => 1.0,
-        };
+        self.fade_pos = self.fade_target();
     }
 
     /// 处理任意长度的一块。`output.len()` 应等于 `input.len()`（调用方的 bug：debug 下 panic；
@@ -264,19 +265,32 @@ impl<M: Model> Pipeline<M> {
 
         let dry = self.dry.get_mut(..k).unwrap_or(&mut []);
         self.dry_line.process(x, dry);
-        let target = match self.mode {
-            Mode::Denoise => 0.0,
-            Mode::Passthrough => 1.0,
-        };
+        let target = self.fade_target();
+        let full = self.hop_io;
         for (o, d) in y.iter_mut().zip(dry.iter()) {
-            if self.dry_gain != target {
-                self.dry_gain = if self.dry_gain < target {
-                    (self.dry_gain + self.fade_step).min(target)
-                } else {
-                    (self.dry_gain - self.fade_step).max(target)
-                };
+            if self.fade_pos < target {
+                self.fade_pos += 1;
+            } else if self.fade_pos > target {
+                self.fade_pos -= 1;
             }
-            *o += self.dry_gain * (d - *o);
+            // 全原声时直接取原声：逐样本精确，模型输出是 NaN / Inf 也漏不过来（R11）；
+            // 淡化中模型输出非有限时同样直接送原声
+            if self.fade_pos == 0 {
+                continue;
+            }
+            if self.fade_pos >= full || !o.is_finite() {
+                *o = *d;
+            } else {
+                let g = self.fade_pos as f32 / full as f32;
+                *o += g * (d - *o);
+            }
+        }
+    }
+
+    fn fade_target(&self) -> usize {
+        match self.mode {
+            Mode::Denoise => 0,
+            Mode::Passthrough => self.hop_io,
         }
     }
 
@@ -298,7 +312,12 @@ impl<M: Model> Pipeline<M> {
                 w = 0;
             }
         }
-        self.q_len = (self.q_len + self.hop_io).min(cap);
+        let len = self.q_len + self.hop_io;
+        debug_assert!(len <= cap, "输出队列溢出");
+        if len > cap {
+            self.stats.queue_faults += (len - cap) as u64;
+        }
+        self.q_len = len.min(cap);
     }
 
     fn pop(&mut self, y: &mut [f32]) {
@@ -306,6 +325,8 @@ impl<M: Model> Pipeline<M> {
         for o in y.iter_mut() {
             // 由预填保证不欠载；万一欠载（不应发生）补零
             if self.q_len == 0 {
+                debug_assert!(false, "输出队列欠载");
+                self.stats.queue_faults += 1;
                 *o = 0.0;
                 continue;
             }
