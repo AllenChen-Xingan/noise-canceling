@@ -24,7 +24,7 @@ struct FakeDenoiser {
 }
 
 impl FakeDenoiser {
-    fn step(&mut self, raw: &mut FakeRing, processed: &mut FakeRing, hb: &mut FakeBeat) {
+    fn step(&mut self, raw: &mut FakeRing, processed: &mut FakeRing, hb: &FakeBeat) {
         if !self.alive {
             return;
         }

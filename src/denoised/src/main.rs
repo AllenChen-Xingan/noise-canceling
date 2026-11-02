@@ -112,7 +112,7 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     )
     .map_err(|e| format!("建总线 {}：{e}", cfg.bus_name))?;
     let bus = Arc::new(bus);
-    let primed = worker.prime(&mut bus.ring(RingId::Processed), cfg.lead_frames);
+    let primed = worker.prime(&bus, cfg.lead_frames);
     if primed != cfg.lead_frames {
         let _ = bus.unlink();
         return Err(format!("Processed 环只放下 {primed} / {} 个零", cfg.lead_frames));
@@ -146,10 +146,8 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     }
 
     let deadline = a.seconds.map(|s| Instant::now() + Duration::from_secs_f64(s));
-    let mut b: &Bus = &bus;
     while !stop.load(Ordering::Relaxed) && deadline.is_none_or(|d| Instant::now() < d) {
-        let (mut raw, mut processed) = (bus.ring(RingId::Raw), bus.ring(RingId::Processed));
-        if worker.step(&mut raw, &mut processed, &mut b) == Step::Idle {
+        if worker.step(&bus) == Step::Idle {
             // B 档：没活就让出 0.5 ms（后续批次换 os_sync_wait 唤醒）
             std::thread::sleep(Duration::from_micros(500));
         }
