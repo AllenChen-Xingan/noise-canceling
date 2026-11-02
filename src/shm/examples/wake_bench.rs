@@ -32,14 +32,34 @@ fn now_ns() -> u64 {
     ts.tv_sec as u64 * 1_000_000_000 + ts.tv_nsec as u64
 }
 
-/// (用户 + 系统 CPU 秒, 主动上下文切换次数)
-fn rusage() -> (f64, i64) {
+unsafe extern "C" {
+    /// libproc：`int proc_pid_rusage(int pid, int flavor, rusage_info_t *buffer)`（macOS 10.9+）
+    fn proc_pid_rusage(
+        pid: libc::c_int,
+        flavor: libc::c_int,
+        buffer: *mut libc::rusage_info_v2,
+    ) -> libc::c_int;
+}
+const RUSAGE_INFO_V2: libc::c_int = 2;
+
+/// (用户 + 系统 CPU 秒, 唤醒次数 = 空闲唤醒 + 中断唤醒；活动监视器「空闲唤醒」那一栏的来源)
+fn rusage() -> (f64, u64) {
     // SAFETY: rusage 是纯数据结构，全零合法；getrusage 只写它。
     let mut r: libc::rusage = unsafe { core::mem::zeroed() };
     // SAFETY: RUSAGE_SELF 合法，r 可写。
     unsafe { libc::getrusage(libc::RUSAGE_SELF, &mut r) };
     let t = |tv: libc::timeval| tv.tv_sec as f64 + tv.tv_usec as f64 * 1e-6;
-    (t(r.ru_utime) + t(r.ru_stime), r.ru_nvcsw)
+    // SAFETY: 纯数据结构，全零合法。
+    let mut ri: libc::rusage_info_v2 = unsafe { core::mem::zeroed() };
+    // SAFETY: 查自己的 pid；flavor = V2 与缓冲区类型一致；ri 可写。
+    let ok =
+        unsafe { proc_pid_rusage(std::process::id() as libc::c_int, RUSAGE_INFO_V2, &mut ri) } == 0;
+    let wk = if ok {
+        ri.ri_pkg_idle_wkups + ri.ri_interrupt_wkups
+    } else {
+        0
+    };
+    (t(r.ru_utime) + t(r.ru_stime), wk)
 }
 
 /// 时间戳拆成 4 个 16 位整数，按 f32 存（整数 < 2^24，f32 精确表示）。
