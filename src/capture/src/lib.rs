@@ -148,6 +148,11 @@ struct Gap {
     len: i64,
 }
 
+/// `have` 的取值：没取到 / 取到真声音 / 取到占位样本
+const MISSING: u8 = 0;
+const OK: u8 = 1;
+const PLACEHOLDER: u8 = 2;
+
 /// 最多记多少段未消化的缺口；满了就并进最后一段（对齐会错，计入 `gap_overflow`）
 const MAX_GAPS: usize = 32;
 
@@ -164,7 +169,7 @@ pub struct Forwarder {
     proc_buf: Vec<f32>,
     out_buf: Vec<f32>,
     /// 这一块里每个位置有没有取到处理后的样本
-    have: Vec<bool>,
+    have: Vec<u8>,
     /// 处理后声音的权重（0 = 全原声，1 = 全处理后）
     gain: f32,
     step: f32,
@@ -211,7 +216,7 @@ impl Forwarder {
             raw_delayed: vec![0.0; max_block],
             proc_buf: vec![0.0; max_block],
             out_buf: vec![0.0; max_block],
-            have: vec![false; max_block],
+            have: vec![MISSING; max_block],
             gain: 0.0,
             step: 1.0 / cfg.fade.max(1) as f32,
             ok_run: 0,
@@ -403,7 +408,7 @@ impl Forwarder {
             (Some(rd), Some(pb), Some(hv)) => {
                 self.delay.process(x, rd);
                 pb.copy_from_slice(rd);
-                hv.fill(false);
+                hv.fill(MISSING);
             }
             _ => return,
         }
@@ -466,8 +471,18 @@ impl Forwarder {
                 Some(b) => processed.pop(b).min(k),
                 None => 0,
             };
-            if let Some(hv) = self.have.get_mut(i..i + got) {
-                hv.fill(true);
+            // 推进序号 < 0 的是占位样本（开头 lead 个零 + 管线起振的 L_pipe 个输出），不是真声音
+            let placeholders = usize::try_from(-self.head_acc).unwrap_or(0).min(got);
+            if let (Some(hv), Some(pb), Some(rd)) = (
+                self.have.get_mut(i..i + got),
+                self.proc_buf.get_mut(i..i + placeholders),
+                self.raw_delayed.get(i..i + placeholders),
+            ) {
+                hv.fill(OK);
+                if let Some(ph) = hv.get_mut(..placeholders) {
+                    ph.fill(PLACEHOLDER);
+                }
+                pb.copy_from_slice(rd);
             }
             self.advance(got);
             t += got as i64;
@@ -496,9 +511,16 @@ impl Forwarder {
             .zip(self.have.iter())
         {
             let mut cut = core::mem::take(&mut self.pending_cut);
-            if has {
+            if has == OK {
                 self.ok_run = self.ok_run.saturating_add(1);
                 self.late_run = 0;
+            } else if has == PLACEHOLDER {
+                // 占位：照常用原声，不算迟到
+                self.ok_run = 0;
+                self.late_run = 0;
+                if self.gain > 0.0 {
+                    cut = true;
+                }
             } else {
                 self.ok_run = 0;
                 if self.fresh {
