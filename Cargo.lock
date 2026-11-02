@@ -1398,6 +1398,7 @@ dependencies = [
 name = "vdn-denoised"
 version = "0.1.0"
 dependencies = [
+ "assert_no_alloc",
  "clap",
  "ctrlc",
  "vdn-capture",

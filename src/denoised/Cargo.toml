@@ -23,6 +23,7 @@ ctrlc.workspace = true
 [dev-dependencies]
 # 只在单测里用 Forwarder 对拍；正式依赖里不能有它（它带设备库，本 crate 禁 cpal）
 vdn-capture.workspace = true
+assert_no_alloc.workspace = true
 
 [lints]
 workspace = true

@@ -377,4 +377,46 @@ mod tests {
         let r = dot / (na * nb).sqrt();
         assert!(r > 0.999, "相关 {r}");
     }
+    /// 实时路径不分配（R1）：真进程内总线 + 定块长直通管线，走遍 正常 → 降噪停（Raw 溢出、缺口、心跳过期）
+    /// → 恢复（迟到丢弃）→ 积压超限重新对账 这几条路径，Forwarder 与 Worker 都在 assert_no_alloc 里跑
+    #[test]
+    fn realtime_paths_do_not_allocate() {
+        let (block, lead, dblock) = (480, 1440, 96);
+        let mut w = Worker::new(identity_pipeline(Some(dblock)).unwrap(), dblock);
+        let l_total = w.l_total(lead);
+        let bus = heap(l_total);
+        w.prime(&bus, lead);
+        let mut f = Forwarder::new(ForwarderConfig::new(l_total, block));
+        let x = vdn_capture::testing::test_tone(IO_RATE, block, 0);
+        let mut y = vec![0.0f32; block];
+        let junk = vec![0.5f32; 20 * block];
+        // 热身
+        for _ in 0..10 {
+            forward(&mut f, &bus, &x);
+            while w.step(&bus) == Step::Block {}
+            bus.ring(RingId::Out).pop(&mut y);
+        }
+        assert_no_alloc::assert_no_alloc(|| {
+            for i in 0..400 {
+                forward(&mut f, &bus, &x);
+                if !(100..200).contains(&i) {
+                    while w.step(&bus) == Step::Block {}
+                }
+                if i == 300 {
+                    bus.ring(RingId::Processed).push(&junk);
+                }
+                bus.ring(RingId::Out).pop(&mut y);
+            }
+        });
+        let s = f.stats();
+        assert!(s.raw_overflow > 0, "{s:?}");
+        assert!(s.stale_switches >= 1, "{s:?}");
+        assert!(s.discarded > 0, "{s:?}");
+        assert!(s.resyncs >= 1, "{s:?}");
+        assert!(s.cuts >= 1, "{s:?}");
+    }
 }
+
+#[cfg(all(test, debug_assertions))]
+#[global_allocator]
+static A: assert_no_alloc::AllocDisabler = assert_no_alloc::AllocDisabler;
