@@ -9,6 +9,7 @@
 //! | 放行禁用清单 / panic 类 lint 的 `allow` 必须带 `// NRT: <理由>` | §5.3 |
 //! | A/B 档 crate 的源码（整模块 NRT 除外）不出现 `std::fs`、`log::`、`thread::sleep` | R3 |
 //! | 实时块（带 `deny(clippy::disallowed_macros)` 的 impl / mod）里没有非 debug 的 `assert*!` | R4（clippy 禁不了，见根 clippy.toml） |
+//! | `unsafe = true` 的 crate：每个 `unsafe {` / `unsafe impl` 同行或紧邻上方的连续注释里有 `SAFETY:` | R10 |
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -241,6 +242,39 @@ fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usi
     rt_blocks
 }
 
+/// 这一行代码里有没有 unsafe 块或 unsafe impl（`unsafe fn` / `unsafe extern` 声明不算）。
+fn opens_unsafe(code: &str) -> bool {
+    code.match_indices("unsafe").any(|(k, _)| {
+        let before_ok = !code[..k].ends_with(|c: char| c.is_alphanumeric() || c == '_');
+        let rest = code[k + "unsafe".len()..].trim_start();
+        before_ok && (rest.starts_with('{') || rest.starts_with("impl"))
+    })
+}
+
+/// R10：unsafe 白名单 crate 里每个 unsafe 块 / impl 要有 SAFETY 说明——同一行，或紧邻上方连续的 `//` 注释行里。
+fn check_safety(path: &Path, rel: &str, t: &mut Tidy) {
+    let Ok(src) = fs::read_to_string(path) else {
+        return;
+    };
+    let lines: Vec<&str> = src.lines().collect();
+    for (i, l) in lines.iter().enumerate() {
+        if !opens_unsafe(code_of(l)) || l.contains("SAFETY:") {
+            continue;
+        }
+        let documented = lines[..i]
+            .iter()
+            .rev()
+            .take_while(|p| p.trim_start().starts_with("//"))
+            .any(|p| p.contains("SAFETY:"));
+        if !documented {
+            t.problems.push(format!(
+                "{rel}:{}：unsafe 块缺「// SAFETY:」说明（同行或紧邻上方注释，R10）",
+                i + 1
+            ));
+        }
+    }
+}
+
 pub fn check() -> Result<Tidy, String> {
     let root = root();
     let mut t = Tidy {
@@ -315,6 +349,7 @@ pub fn check() -> Result<Tidy, String> {
                 .problems
                 .push(format!("{name}：metadata.vdn.unsafe 必须是 true/false")),
         }
+        let unsafe_crate = vdn["unsafe"].as_bool() == Some(true);
         let realtime = tier == "A" || tier == "B";
         if realtime && !PANIC_LINTS.iter().all(|l| root_src.contains(l)) {
             t.problems.push(format!(
@@ -330,6 +365,18 @@ pub fn check() -> Result<Tidy, String> {
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|_| f.display().to_string());
             blocks += check_file(&f, &rel, realtime, &mut t);
+        }
+        if unsafe_crate {
+            let mut all_rs = Vec::new();
+            rs_files(&dir.join("src"), &mut all_rs);
+            rs_files(&dir.join("tests"), &mut all_rs);
+            for f in all_rs {
+                let rel = f
+                    .strip_prefix(&root)
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_else(|_| f.display().to_string());
+                check_safety(&f, &rel, &mut t);
+            }
         }
         if realtime && blocks == 0 {
             t.problems.push(format!(
@@ -419,6 +466,40 @@ mod tests {
             true,
         );
         assert_eq!(t.problems.len(), 1, "{:?}", t.problems);
+    }
+
+    fn safety(src: &str) -> Vec<String> {
+        let dir = std::env::temp_dir().join(format!("vdn-tidy-safety-{}", std::process::id()));
+        let _ = fs::create_dir_all(&dir);
+        let p = dir.join(format!("{}.rs", src.len()));
+        fs::write(&p, src).unwrap();
+        let mut t = Tidy {
+            problems: Vec::new(),
+            nrt_allows: 0,
+            notes: Vec::new(),
+        };
+        check_safety(&p, "x/src/a.rs", &mut t);
+        let _ = fs::remove_file(&p);
+        t.problems
+    }
+
+    #[test]
+    fn unsafe_without_safety_comment_is_flagged() {
+        assert_eq!(safety("fn f() { let x = unsafe { g() }; }\n").len(), 1);
+        assert_eq!(safety("unsafe impl Send for X {}\n").len(), 1);
+        assert!(safety("// SAFETY: 理由\nlet x = unsafe { g() };\n").is_empty());
+        assert!(safety("let x = unsafe { g() }; // SAFETY: 理由\n").is_empty());
+        assert!(
+            safety("// SAFETY: 第一行\n// 第二行\nunsafe impl Sync for X {}\n").is_empty(),
+            "紧邻上方连续注释算数"
+        );
+        assert_eq!(
+            safety("// SAFETY: 太远\nlet a = 1;\nlet x = unsafe { g() };\n").len(),
+            1,
+            "中间隔了代码不算"
+        );
+        assert!(safety("unsafe fn f() {}\nunsafe extern \"C\" {}\n").is_empty(), "声明不算块");
+        assert!(safety("let not_unsafe = 1; my_unsafe {\n").is_empty());
     }
 
     #[test]

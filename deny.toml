@@ -40,6 +40,8 @@ exceptions = [
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# 工作区内部的 path 依赖不算通配（publish = false）
+allow-wildcard-paths = true
 # 直接边规则（谁能直接依赖谁）待补：与各 crate 的 metadata.vdn.forbid 保持一致，tidy 校验（规约 §5.4，本批未做）
 
 [sources]
