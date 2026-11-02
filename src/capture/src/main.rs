@@ -141,7 +141,7 @@ fn real_main() -> Result<(), String> {
                 let mut off = 0usize;
                 let mut i = 0u32;
                 while off < n {
-                    thread::sleep_until_compat(start + block_dur * i);
+                    sleep_until(start + block_dur * i);
                     let x = test_tone(IO_RATE, block.min(n - off), off);
                     forward(&mut fwd, &bus, &x);
                     off += x.len();
@@ -187,7 +187,7 @@ fn real_main() -> Result<(), String> {
                 let mut y = vec![0.0f32; n];
                 for (i, yb) in y.chunks_mut(block).enumerate() {
                     // 晚 1.5 块读，模拟插件 IO 线程
-                    thread::sleep_until_compat(start + block_dur * i as u32 + block_dur * 3 / 2);
+                    sleep_until(start + block_dur * i as u32 + block_dur * 3 / 2);
                     let _: RenderStatus = src.render(yb);
                 }
                 (y, src.counters())
@@ -249,15 +249,10 @@ fn write_wav(path: Option<&std::path::Path>, y: &[f32]) -> Result<(), String> {
     Ok(())
 }
 
-/// `std::thread::sleep_until` 还不稳定，这里自己写一个。
-trait SleepUntil {
-    fn sleep_until_compat(t: Instant);
-}
-impl SleepUntil for thread::Thread {
-    fn sleep_until_compat(t: Instant) {
-        let now = Instant::now();
-        if t > now {
-            thread::sleep(t - now);
-        }
+/// 睡到某个时刻（已过就立刻返回）。
+fn sleep_until(t: Instant) {
+    let now = Instant::now();
+    if t > now {
+        thread::sleep(t - now);
     }
 }
