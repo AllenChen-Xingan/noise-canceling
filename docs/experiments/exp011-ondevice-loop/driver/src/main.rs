@@ -1,11 +1,12 @@
 //! exp011 驱动：对缓存的（修音后）GTCRN 输出做「衰减下限 / 快开慢关 + 湿干比」后处理，并用 vdn-eval 的红线评测打分。
 //!
 //! 从标准输入读 JSONL，每行一个任务，结果按行写到标准输出：
-//! - 处理并打分：`{"id", "dry", "wet", "clean", "out", "floor_db", "detect_db", "strength"}`（可选 open_db · release_s · hangover_s）
+//! - 处理并打分：`{"id", "dry", "wet", "detect", "clean", "out", "floor_db", "detect_db", "strength"}`（可选 open_db · release_s · hangover_s）
+//!   `detect` = 未修音的模型输出（引擎 `mix_out` 用模型原始输出判有声，`engine.rs:355`）；缺省时用 wet
 //! - 只打分：`{"id", "dry", "clean", "score": <已处理好的 wav>}`
 //!
 //! 包络口径照 `src/engine/src/engine.rs` 的 `OpenCloseParams` 构造（attack 2 ms、abs_min −70 dB、底噪上涨 6 dB/s），
-//! hop 256 @ 16 kHz，判据信号 = 修音后的 wet。湿干比放最后一步：out = dry + strength·(gated − dry)（本实验的选择，不是规约）。
+//! hop 256 @ 16 kHz，判据信号 = 未修音的模型输出，混合用修音后的 wet。湿干比放最后一步：out = dry + strength·(gated − dry)（本实验的选择，不是规约）。
 
 use std::io::{BufRead, Write};
 
@@ -50,7 +51,7 @@ fn f(j: &Value, k: &str, d: f32) -> f32 {
 }
 
 /// 返回（输出, 每 hop 是否判有声）。
-fn post(dry: &[f32], wet: &[f32], j: &Value) -> (Vec<f32>, Vec<bool>) {
+fn post(dry: &[f32], wet: &[f32], det: &[f32], j: &Value) -> (Vec<f32>, Vec<bool>) {
     let floor_lin = db_to_lin(f(j, "floor_db", -12.0));
     let mut env = OpenCloseEnvelope::new(OpenCloseParams {
         sr: SR as f32,
@@ -64,7 +65,7 @@ fn post(dry: &[f32], wet: &[f32], j: &Value) -> (Vec<f32>, Vec<bool>) {
         noise_rise_db_per_s: 6.0,
     });
     let s = f(j, "strength", 1.0);
-    let n = dry.len().min(wet.len());
+    let n = dry.len().min(wet.len()).min(det.len());
     let mut out = vec![0.0f32; n];
     let mut voiced = Vec::with_capacity(n / HOP + 1);
     let mut mix = vec![0.0f32; HOP];
@@ -72,7 +73,7 @@ fn post(dry: &[f32], wet: &[f32], j: &Value) -> (Vec<f32>, Vec<bool>) {
     while a < n {
         let b = (a + HOP).min(n);
         let m = &mut mix[..b - a];
-        env.process(&wet[a..b], m);
+        env.process(&det[a..b], m);
         voiced.push(env.voiced());
         for i in a..b {
             let gated = wet[i] + m[i - a] * (dry[i] - wet[i]);
@@ -146,7 +147,8 @@ fn main() {
             (read(p), None)
         } else {
             let wet = read(&s("wet"));
-            let (o, v) = post(&dry, &wet, &j);
+            let det = j.get("detect").and_then(Value::as_str).map(read).unwrap_or_else(|| wet.clone());
+            let (o, v) = post(&dry, &wet, &det, &j);
             write(&s("out"), &o);
             let frac = v.iter().filter(|x| **x).count() as f64 / v.len().max(1) as f64;
             (o, Some(frac))

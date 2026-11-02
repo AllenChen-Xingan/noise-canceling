@@ -36,3 +36,6 @@ node_modules/
 
 # Rust 构建产物（可重建，绝不入库；见 CLAUDE.md 第五节第 2 条）
 /target/
+
+# 实验目录里的独立小 crate（exp011 driver 等）：构建产物不入库（CLAUDE.md 五.2）
+docs/experiments/*/driver/target/
