@@ -39,7 +39,7 @@
 | datasets | 014 真实录音公开数据集 · issue #30 · `research/014-real-datasets` | `_tmp/20261031-b4/datasets.md` | 其 worktree | 完成，PR 已合并（issue #30 关），窗口已关；6 题待人拍板 |
 | evalimpl | eval 实现：vdn-eval · CI / QA / 人工三层 · 回归集与能力集 · issue #31 · `feat/eval-verifiers` | 完成，PR #38 已合并（issue #31 关），窗口已关；CI 每个 PR 跑 eval ci（回归 13/17 · 能力 0/10 · 探针 5/5）；4 题已并入待拍板清单 |
 | prefs | 人耳结果 → eval 任务 · 偏好数据集 · 分场景默认 · `specs/rubric/preferences.md` · issue #37 · `feat/eval-prefs` | `_tmp/20261031-b4/prefs.md` | 其 worktree | 完成，PR #43 已合并（issue #37 关），窗口已关；待拍板 4-7 / 4-8 已并入；worktree `../noise_canceling-prefs` 保留待清 |
-| benchsynth | **b7 重派（2026-11-02，交代 `_tmp/20261102-b7/benchsynth.md`）· 已报到（noise-canceling-benchsynth-19），第①段打分已完成** · 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
+| benchsynth | **b7 重派（2026-11-02，交代 `_tmp/20261102-b7/benchsynth.md`）· 已报到（noise-canceling-benchsynth-19），验收通过，PR #47 已开，待 CI 后合并、关窗** · 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
 | ears | **b7 重派 · 已报到（noise-canceling-ears-08）** · 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已报到（noise-canceling-ears-03）· 实验编号 exp009 |
 | judgeloop | **b7 重派 · 已报到（noise-canceling-judge-loop-21），补调研 r1/r2/r5 已批** · 018 本机评分模型 + 调节模型闭环（D52）· issue #44 · `research/018-ondevice-judge`（worktree `../noise_canceling-judge-loop`） | `_tmp/20261031-b6/judgeloop.md` | 其 worktree | 已报到 |
 | engine | **停（2026-10-31 会话中断），转 backlog** · 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已报到 |
@@ -57,13 +57,16 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | ears：建 exp009 环境（约 400 MB）+ 第二段 regen_exp003 + score_author |
+| 重编译 / 全量测试 / 跑模型（1 个） | judgeloop：exp011 第 1–4 步（第 4 步用 ears 装好的 SCOREQ / DistillMOS） |
 
-排队：benchsynth 第②段（续跑 FRCRN · MossFormerGAN · URGENT-BSRNN · GMAP-SE 再打分）→ judgeloop（exp011）
+排队：无（benchsynth 第②段已转 backlog）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 benchsynth 收尾：PR #47（Closes #41）；第②段续跑与 LibriSpeech 6.6 GB 下载转 backlog；7 题登记为 4-9
+- 2026-11-02 ears 第二段：作者 vs SCOREQ 一致率 0.375（48 对 · 9 屏，区间 0.14–0.64，事先定的线 0.516）；Distill-MOS 0.562；两台评分机器不一致，结论强度低，在核。名额转 judgeloop
+- 2026-11-02 judgeloop：r1 / r2 / r5 补完（各经怀疑派核对）；decision.md 与 exp011 设计已写（`docs/research/018_ondevice-judge/decision.md` · `docs/experiments/exp011-ondevice-loop/README.md`）；申请名额跑 exp011 第 1–3 步
 - 2026-11-02 benchsynth 第①段完成（4 系统 × 348 段，838 s，0 错误）：阶梯 12 → 15 系统；交互一致性结论不变——SNR / 噪声 / 邻座干扰三轴两套生成器一致（多数 r 0.5–0.9，p ≤ 0.025），混响轴不一致（r −0.07–0.61，p ≥ 0.13）；新发现 DNSMOS SIG 在邻座干扰轴 r 0.04；已答 judgeloop 三问。名额转 ears
 - 2026-11-02 ears 第 3 步完成：017 待定题 7 → 2（5 题被 D58–D62 答掉，已划并写依据）；剩 E2「每轮盲听多听 4–6 道大众已评题，多约 2–3 分钟」· E6「用人的 GitHub 账号向上游报两处数据错误」，默认都不做，收尾时并入待拍板清单；与 D62 冲突 5 处已改；等名额跑第二段
 - engine workflow 已起（7 代理）：Core ML · BNNS Graph（macOS 15+ 实时音频 CPU 推理，号称零分配）· MLX · 纯 Rust（candle / burn / tract / Accelerate / Metal）· 公开实测 · 五类模型盘点 + 1 核实员；自写 GTCRN Rust 先行
