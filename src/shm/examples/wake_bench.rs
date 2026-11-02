@@ -55,7 +55,12 @@ fn decode(buf: &[f32; BLOCK]) -> u64 {
 }
 
 fn promote() -> bool {
-    vdn_rt_thread::promote_current(vdn_rt_thread::RtParams::for_block(BLOCK as u32, 48_000, 0.25)).is_ok()
+    vdn_rt_thread::promote_current(vdn_rt_thread::RtParams::for_block(
+        BLOCK as u32,
+        48_000,
+        0.25,
+    ))
+    .is_ok()
 }
 
 fn strategy(mode: &str) -> WaitStrategy {
@@ -108,7 +113,11 @@ fn consumer(name: &str, mode: &str, rt: bool) {
     let wall = (now_ns() - t0) as f64 * 1e-9;
     let mut v: Vec<f64> = lat_us.into_iter().skip(WARMUP).collect();
     v.sort_by(f64::total_cmp);
-    let q = |p: f64| v.get(((v.len() as f64 - 1.0) * p).round() as usize).copied().unwrap_or(f64::NAN);
+    let q = |p: f64| {
+        v.get(((v.len() as f64 - 1.0) * p).round() as usize)
+            .copied()
+            .unwrap_or(f64::NAN)
+    };
     println!(
         "RESULT n={} p50={:.1} p99={:.1} max={:.1} wake_per_s={:.0} cpu_pct={:.2} fallbacks={} rt_ok={}",
         v.len(),
@@ -123,7 +132,11 @@ fn consumer(name: &str, mode: &str, rt: bool) {
 }
 
 fn load() {
-    let n = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4).saturating_sub(2).max(1);
+    let n = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4)
+        .saturating_sub(2)
+        .max(1);
     let hs: Vec<_> = (0..n)
         .map(|_| {
             std::thread::spawn(|| {
@@ -152,7 +165,11 @@ fn one(mode: &str, secs: u64, rt: bool, with_load: bool) -> String {
     };
     let bus = OwnedBus::create(&name, cfg).expect("建总线");
     let mut loader = with_load.then(|| {
-        Command::new(&exe).arg("load").stdout(Stdio::null()).spawn().expect("起压力进程")
+        Command::new(&exe)
+            .arg("load")
+            .stdout(Stdio::null())
+            .spawn()
+            .expect("起压力进程")
     });
     let child = Command::new(&exe)
         .args(["consumer", &name, mode, if rt { "1" } else { "0" }])
@@ -185,12 +202,18 @@ fn one(mode: &str, secs: u64, rt: bool, with_load: bool) -> String {
         let _ = l.kill();
         let _ = l.wait();
     }
-    let line = String::from_utf8_lossy(&out.stdout).lines().find(|l| l.starts_with("RESULT")).unwrap_or("RESULT 失败").to_string();
+    let line = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .find(|l| l.starts_with("RESULT"))
+        .unwrap_or("RESULT 失败")
+        .to_string();
     format!("{line} producer_rt={producer_rt}")
 }
 
 fn field<'a>(line: &'a str, k: &str) -> &'a str {
-    line.split_whitespace().find_map(|t| t.strip_prefix(k).and_then(|r| r.strip_prefix('='))).unwrap_or("?")
+    line.split_whitespace()
+        .find_map(|t| t.strip_prefix(k).and_then(|r| r.strip_prefix('=')))
+        .unwrap_or("?")
 }
 
 fn main() {
@@ -198,10 +221,15 @@ fn main() {
     match a.get(1).map(String::as_str) {
         Some("consumer") => consumer(&a[2], &a[3], a[4] == "1"),
         Some("load") => load(),
-        Some("one") => println!("{}", one(&a[2], a[3].parse().unwrap_or(10), a[4] == "1", a[5] == "1")),
+        Some("one") => println!(
+            "{}",
+            one(&a[2], a[3].parse().unwrap_or(10), a[4] == "1", a[5] == "1")
+        ),
         Some("all") => {
             let secs: u64 = a.get(2).and_then(|s| s.parse().ok()).unwrap_or(10);
-            println!("| 方式 | 消费者实时优先级 | 后台压力 | 块数 | p50 µs | p99 µs | max µs | 每秒醒来次数 | 消费者 CPU % | 退回轮询 |");
+            println!(
+                "| 方式 | 消费者实时优先级 | 后台压力 | 块数 | p50 µs | p99 µs | max µs | 每秒醒来次数 | 消费者 CPU % | 退回轮询 |"
+            );
             println!("|---|---|---|---|---|---|---|---|---|---|");
             for with_load in [false, true] {
                 for rt in [false, true] {
