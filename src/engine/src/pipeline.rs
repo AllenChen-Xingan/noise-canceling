@@ -73,8 +73,6 @@ pub struct Pipeline<M: Model> {
     io_rate: u32,
     /// 48 kHz hop
     hop_io: usize,
-    /// 模型 hop
-    hop_model: usize,
     prefill: usize,
     latency: usize,
 
@@ -122,7 +120,6 @@ impl<M: Model> Pipeline<M> {
         let mut p = Self {
             io_rate,
             hop_io,
-            hop_model,
             prefill,
             latency,
             dec: Decimator3::new(),
