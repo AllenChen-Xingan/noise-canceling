@@ -1,22 +1,19 @@
 # 大总管看板
 
 > 只有大总管跟人说话。手下做完、卡住、要名额，只报给大总管。
-> 大总管会话名：`noise-canceling-c4`（2026-10-31 换班；旧名 noise-canceling-69）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
+> 大总管会话名：`noise-canceling-e3`（2026-11-02 换班；旧名 c4 · 69）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
 
-## 当前实体（2–4 个）
+## 当前大事（2026-11-02）
 
-> ⚠️ 2026-11-02 规则改为「大总管一件大事 · 每个手下 2–4 个实体」；本表是旧版写法，定下当前大事后改写
+**把「效果好不好」变成能量的尺子**（意向书真难题第 2 条）。批次 `_tmp/20261102-b7/`。
 
-> 总入口：`docs/plan/009_model-map.md`（模型大问题的四个实体 · 矛盾 · 待拍板 M-1–M-6）。人定 2026-10-31：「就关于模型这个大问题的4个实体，我们吧ta 里清楚」。
+| 手下 | 线 | 管的实体 |
+|---|---|---|
+| benchsynth | 016 评测基准与合成数据标准收口 · #41 | 数据 · 评测器 |
+| ears | 017 多找些人耳反馈收口 · #42 | 评测器 · 模型（评分模型） |
+| judgeloop | **b7 重派 · 已派** · 018 本机评分模型 + 调节模型闭环 · #44 | 模型 · 评测器 · 数据 |
 
-| 实体 | 挂在下面的线 |
-|---|---|
-| **模型**（降噪 · 认人 · 场景 · 评分 · 调节） | 018 judgeloop |
-| **推理后端**（ORT → Core ML / MLX / 自写 Rust，D53） | 019 engine |
-| **评测器**（verifier · 评委 · 人耳） | 017 ears |
-| **数据**（合成格 · 真实锚 · 众人评分） | 016 benchsynth |
-
-训练是作用在「数据 → 模型、由评测器判」上的事，不单列。
+019 推理引擎（#45）不在本大事内，已记进 `state/backlog.md`。旧的「模型四实体」总入口仍是 `docs/plan/009_model-map.md`。
 
 ## 手下
 
@@ -42,10 +39,10 @@
 | datasets | 014 真实录音公开数据集 · issue #30 · `research/014-real-datasets` | `_tmp/20261031-b4/datasets.md` | 其 worktree | 完成，PR 已合并（issue #30 关），窗口已关；6 题待人拍板 |
 | evalimpl | eval 实现：vdn-eval · CI / QA / 人工三层 · 回归集与能力集 · issue #31 · `feat/eval-verifiers` | 完成，PR #38 已合并（issue #31 关），窗口已关；CI 每个 PR 跑 eval ci（回归 13/17 · 能力 0/10 · 探针 5/5）；4 题已并入待拍板清单 |
 | prefs | 人耳结果 → eval 任务 · 偏好数据集 · 分场景默认 · `specs/rubric/preferences.md` · issue #37 · `feat/eval-prefs` | `_tmp/20261031-b4/prefs.md` | 其 worktree | 完成，PR #43 已合并（issue #37 关），窗口已关；待拍板 4-7 / 4-8 已并入；worktree `../noise_canceling-prefs` 保留待清 |
-| benchsynth | 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
-| ears | 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已报到（noise-canceling-ears-03）· 实验编号 exp009 |
-| judgeloop | 018 本机评分模型 + 调节模型闭环（D52）· issue #44 · `research/018-ondevice-judge`（worktree `../noise_canceling-judge-loop`） | `_tmp/20261031-b6/judgeloop.md` | 其 worktree | 已报到 |
-| engine | 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已报到 |
+| benchsynth | **b7 重派（2026-11-02，交代 `_tmp/20261102-b7/benchsynth.md`）· 已派** · 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
+| ears | **b7 重派 · 已报到（noise-canceling-ears-08）** · 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已报到（noise-canceling-ears-03）· 实验编号 exp009 |
+| judgeloop | **b7 重派 · 已派** · 018 本机评分模型 + 调节模型闭环（D52）· issue #44 · `research/018-ondevice-judge`（worktree `../noise_canceling-judge-loop`） | `_tmp/20261031-b6/judgeloop.md` | 其 worktree | 已报到 |
+| engine | **停（2026-10-31 会话中断），转 backlog** · 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已报到 |
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
 
 ## 规矩
@@ -60,11 +57,9 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | benchsynth（exp008 第二轮：装 torch + 补 Hush · DFN3 · RNNoise · WebRTC NS · FRCRN · MossFormer 系 · BSRNN · G-MaP-SE 重跑排名） |
+| 重编译 / 全量测试 / 跑模型（1 个） | 空（b7 起，2026-11-02；旧批持有全部失效） |
 
-排队：ears（exp003 音频重生成 + SCOREQ / Distill-MOS / DNSMOS 打分，已批）→ engine（venv：torch + coremltools + mlx + onnxruntime，< 300 MB；exp010 基准）→ judgeloop
-
-等人许可的弹窗 / 长时间前台运行：benchsynth 跑 Hush 预编译 dylib（Hush ×2 + DFN3）被其会话自动权限检查拦下（Code from External）；人的批准经大总管转达不算该会话授权 → 需人在 tmux vdn 的 benchsynth 窗口直接批准，否则记缺口
+排队：benchsynth（第二轮补跑，待申请）→ ears（第二段 regen_exp003 + score_author，已申请）→ judgeloop
 
 ## 进度板
 
