@@ -166,7 +166,9 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
                 let mut v = 1u64;
                 while !stop.load(Ordering::Relaxed) {
                     for _ in 0..10_000 {
-                        v = std::hint::black_box(v.wrapping_mul(6364136223846793005).wrapping_add(1));
+                        v = std::hint::black_box(
+                            v.wrapping_mul(6364136223846793005).wrapping_add(1),
+                        );
                     }
                 }
                 v
@@ -453,7 +455,6 @@ mod tests {
         o.warmup_blocks = 8;
         o.rt = false;
         o
-    }
     }
 
     /// V1 的短版（1.2 s）：真共享内存、三线程

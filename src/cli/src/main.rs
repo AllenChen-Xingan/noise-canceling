@@ -46,8 +46,38 @@ enum Cmd {
     Run(RunArgs),
     /// 无设备链路测试：进程内三线程 + 真 POSIX 共享内存，按 V1 / V2 / V3 判据打印并给退出码
     ChainTest(ChainArgs),
+    /// V7 延迟判据：GTCRN 链路 N 次 × T 秒，空闲一组 + 后台压力一组；可扫环余量找最小无欠载值
+    V7(V7Args),
     /// 按 V1 判据检查一个 48 kHz WAV（V4：两个真进程写出的文件）：应是测试正弦延迟 L_total
     ChainCheck(ChainCheckArgs),
+}
+
+#[derive(Args)]
+struct V7Args {
+    #[command(flatten)]
+    m: ModelOpts,
+    /// 每组跑几次
+    #[arg(long, default_value_t = 10)]
+    runs: usize,
+    /// 每次几秒
+    #[arg(long, default_value_t = 10.0, value_parser = vdn_control::parse_seconds)]
+    seconds: f64,
+    /// 环余量（逗号分隔可扫多个，如 96,144,192）；默认取 vdn-control 的默认值
+    #[arg(long)]
+    leads: Option<String>,
+    /// 压力组的忙线程数；默认 = 核数 − 3（三个链路线程各占一个核）
+    #[arg(long)]
+    stress: Option<usize>,
+    /// 只跑空闲组
+    #[arg(long)]
+    idle_only: bool,
+    #[arg(long, default_value_t = vdn_control::Config::DEFAULT_BLOCK)]
+    block: usize,
+    #[arg(long, default_value_t = vdn_control::Config::DEFAULT_DENOISE_BLOCK)]
+    denoise_block: usize,
+    /// 结果写成 JSON
+    #[arg(long)]
+    json: Option<PathBuf>,
 }
 
 #[derive(Args)]
@@ -123,6 +153,18 @@ struct ChainArgs {
     /// 心跳超时（ms）
     #[arg(long, default_value_t = vdn_control::Config::DEFAULT_HEARTBEAT_MS)]
     heartbeat_ms: u32,
+    /// 三个线程不提实时优先级
+    #[arg(long)]
+    no_rt: bool,
+    /// 后台压力：再起这么多个忙线程
+    #[arg(long, default_value_t = 0)]
+    stress: usize,
+    /// 降噪线程预热块数
+    #[arg(long, default_value_t = 64)]
+    warmup_blocks: usize,
+    /// 虚拟麦克风比送音端晚多少样本读 Out（默认 1.5 块）
+    #[arg(long)]
+    hal_offset: Option<usize>,
     /// 把输入 / 输出写成 WAV（48 kHz）方便人听：<前缀>-in.wav / <前缀>-out.wav
     #[arg(long)]
     dump: Option<PathBuf>,
@@ -225,6 +267,11 @@ fn main() {
             Ok(())
         }
         Cmd::Run(a) => run(a),
+        Cmd::V7(a) => match v7(a) {
+            Ok(true) => Ok(()),
+            Ok(false) => std::process::exit(1),
+            Err(e) => Err(e),
+        },
         Cmd::ChainCheck(a) => match chain_check(a) {
             Ok(true) => Ok(()),
             Ok(false) => std::process::exit(1),
@@ -493,6 +540,10 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
             // 固定默认名：上次被 Ctrl-C 打断留下的残留，下次拿到锁时会清掉；同时跑两个会报「正被占用」
             .unwrap_or_else(|| "/vdn-chaintest".to_owned()),
         heartbeat_timeout: a.heartbeat_ms as usize * 48,
+        rt: !a.no_rt,
+        stress: a.stress,
+        warmup_blocks: a.warmup_blocks,
+        hal_offset: a.hal_offset.unwrap_or(a.block * 3 / 2),
     };
     vdn_control::validate_bus_name(&o.bus_name)?;
     let r = match o.mode {
@@ -531,6 +582,7 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
     );
     println!("{}", chain::latency_line(&r));
     println!("{}", chain::counters_line(&r));
+    println!("{}", chain::timing_line(&r));
     let mut verdicts = Vec::new();
     match (o.mode, o.kill_at) {
         (chain::ChainMode::Passthrough, None) => verdicts.push(chain::judge_v1(&r)),
@@ -573,4 +625,131 @@ fn chain_check(a: ChainCheckArgs) -> Result<bool, BoxError> {
     let v = chain::judge_file(&y, a.l_total, (a.from * 48_000.0) as usize);
     println!("{} · 文件 {}（{} 样本）", v, a.wav.display(), y.len());
     Ok(v.pass)
+}
+
+/// V7 线（docs/plan/010 延迟修复，latency-fix.md）
+const V7_LEAD_MAX: usize = 192;
+const V7_LTOTAL_MAX: usize = 36 * 48;
+
+/// 返回 Ok(true) = 判据过。
+fn v7(a: V7Args) -> Result<bool, BoxError> {
+    let leads: Vec<usize> = match &a.leads {
+        Some(s) => s
+            .split(',')
+            .map(|t| t.trim().parse::<usize>())
+            .collect::<Result<_, _>>()?,
+        None => vec![vdn_control::Config::DEFAULT_LEAD],
+    };
+    let cores = std::thread::available_parallelism().map_or(4, |n| n.get());
+    let stress = a.stress.unwrap_or(cores.saturating_sub(3).max(1));
+    let kind = ModelKind::from(a.m.model);
+    let groups: Vec<(&str, usize)> = if a.idle_only {
+        vec![("空闲", 0)]
+    } else {
+        vec![("空闲", 0), ("压力", stress)]
+    };
+    println!(
+        "V7：{} · {} 次 × {} s · IO 块 {} · 降噪块 {} · 核数 {cores} · 压力组忙线程 {stress} · release 构建：{}",
+        kind.id(),
+        a.runs,
+        a.seconds,
+        a.block,
+        a.denoise_block,
+        if cfg!(debug_assertions) {
+            "否（debug，数字不作数）"
+        } else {
+            "是"
+        }
+    );
+    let mut rows = Vec::new();
+    let mut clean_leads = Vec::new();
+    for &lead in &leads {
+        let mut all_clean = true;
+        let mut l_total = 0;
+        for &(gname, n_stress) in &groups {
+            for run in 0..a.runs {
+                let mut o = chain::ChainOpts::new("/vdn-v7");
+                o.mode = chain::ChainMode::Denoise;
+                o.seconds = a.seconds;
+                o.block = a.block;
+                o.denoise_block = a.denoise_block;
+                o.lead = lead;
+                o.stress = n_stress;
+                o.hal_offset = a.block * 3 / 2;
+                let p = vdn_denoised::model_pipeline(
+                    kind,
+                    a.m.model_path.as_deref(),
+                    Some(a.denoise_block),
+                )?;
+                let r = chain::run(p, &o)?;
+                l_total = r.l_total;
+                let f = &r.fwd;
+                let clean =
+                    f.proc_underrun == 0 && r.hal_underrun_samples == 0 && f.stale_switches == 0;
+                all_clean &= clean;
+                println!(
+                    "  lead {lead:>4} · {gname} #{:>2}：处理后欠载 {:>5} · 虚拟麦欠载 {:>5} · 硬切 {:>3} · 切原声 {} · 单块最长 {:.3} ms · 超一块时长 {:>3} 块 · {}",
+                    run + 1,
+                    f.proc_underrun,
+                    r.hal_underrun_samples,
+                    f.cuts,
+                    f.stale_switches,
+                    r.worker.max_process_ns as f64 / 1e6,
+                    r.worker.over_budget,
+                    if clean { "无欠载" } else { "有欠载" }
+                );
+                rows.push(json!({
+                    "lead": lead, "group": gname, "stress_threads": n_stress, "run": run + 1,
+                    "l_total": r.l_total, "proc_underrun": f.proc_underrun, "hal_underrun": r.hal_underrun_samples,
+                    "cuts": f.cuts, "stale_switches": f.stale_switches, "slow_episodes": f.slow_episodes,
+                    "max_process_ms": r.worker.max_process_ns as f64 / 1e6,
+                    "mean_process_ms": r.worker.total_process_ns as f64 / 1e6 / r.worker.blocks.max(1) as f64,
+                    "over_budget_blocks": r.worker.over_budget, "rt_failures": r.rt_failures,
+                    "warmup_first_ms": r.warmup.first_ns as f64 / 1e6,
+                }));
+            }
+        }
+        println!(
+            "lead {lead}（{:.2} ms）· L_total {l_total}（{:.2} ms）：{}",
+            verify::ms48(lead),
+            verify::ms48(l_total),
+            if all_clean {
+                "全部无欠载"
+            } else {
+                "有欠载"
+            }
+        );
+        if all_clean {
+            clean_leads.push((lead, l_total));
+        }
+    }
+    let best = clean_leads.iter().min_by_key(|(l, _)| *l).copied();
+    let pass = best.is_some_and(|(l, lt)| l <= V7_LEAD_MAX && lt <= V7_LTOTAL_MAX);
+    println!(
+        "V7 延迟判据：{} · 最小无欠载 lead {}（线 ≤ {V7_LEAD_MAX}，目标 144）· 对应 L_total {}（线 ≤ {V7_LTOTAL_MAX}）{}",
+        if pass { "过" } else { "不过" },
+        best.map_or(
+            "无（所给的 lead 都有欠载）".to_owned(),
+            |(l, _)| format!("{l}（{:.2} ms）", verify::ms48(l))
+        ),
+        best.map_or("—".to_owned(), |(_, lt)| format!(
+            "{lt}（{:.2} ms）",
+            verify::ms48(lt)
+        )),
+        if cfg!(debug_assertions) {
+            " · ⚠️ debug 构建，不作数"
+        } else {
+            ""
+        }
+    );
+    if let Some(j) = &a.json {
+        let out = json!({
+            "model": kind.id(), "runs": a.runs, "seconds": a.seconds, "block": a.block,
+            "denoise_block": a.denoise_block, "cores": cores, "stress_threads": stress,
+            "release": !cfg!(debug_assertions), "leads": leads, "min_clean_lead": best.map(|b| b.0),
+            "pass": pass, "rows": rows,
+        });
+        std::fs::write(j, serde_json::to_string_pretty(&out)?)?;
+    }
+    Ok(pass)
 }
