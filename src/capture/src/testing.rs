@@ -71,12 +71,17 @@ impl FakeBeat {
 
 /// 测试信号：0.5·sin(440 Hz) + 0.3·sin(2 kHz)，从第 `off` 个样本起（docs/plan/010 第十一节 V1）。
 pub fn test_tone(rate: u32, n: usize, off: usize) -> Vec<f32> {
+    let mut v = vec![0.0; n];
+    fill_tone(&mut v, rate, off);
+    v
+}
+
+/// 同 [`test_tone`]，就地写进 `out`，不分配。
+pub fn fill_tone(out: &mut [f32], rate: u32, off: usize) {
     let r = f64::from(rate);
-    (0..n)
-        .map(|i| {
-            let t = (i + off) as f64 / r;
-            (0.5 * (2.0 * std::f64::consts::PI * 440.0 * t).sin()
-                + 0.3 * (2.0 * std::f64::consts::PI * 2000.0 * t).sin()) as f32
-        })
-        .collect()
+    for (i, o) in out.iter_mut().enumerate() {
+        let t = (i + off) as f64 / r;
+        *o = (0.5 * (2.0 * std::f64::consts::PI * 440.0 * t).sin()
+            + 0.3 * (2.0 * std::f64::consts::PI * 2000.0 * t).sin()) as f32;
+    }
 }

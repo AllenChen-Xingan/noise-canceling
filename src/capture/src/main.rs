@@ -22,13 +22,14 @@
 )]
 
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use clap::{Parser, ValueEnum};
 use vdn_capture::shm::{OutSource, forward};
-use vdn_capture::testing::test_tone;
+use vdn_capture::testing::fill_tone;
 use vdn_capture::{Forwarder, ForwarderConfig};
 use vdn_control::Config;
 use vdn_hal::{HalSource, RenderStatus};
@@ -84,6 +85,9 @@ struct Args {
     /// 等降噪进程建总线最多多少秒
     #[arg(long, default_value_t = 10.0, value_parser = vdn_control::parse_seconds)]
     wait: f64,
+    /// 心跳停了多少秒后，开始试着接同名的新总线（降噪进程重启后会建新的）
+    #[arg(long, default_value_t = 1.0, value_parser = vdn_control::parse_seconds)]
+    reconnect_after: f64,
 }
 
 fn main() {
@@ -106,6 +110,47 @@ fn open_bus(name: &str, wait: f64) -> Result<Bus, String> {
     }
 }
 
+/// 送音端和它当前接着的那条总线。降噪进程重启后换成新总线，`gen` 加一。
+struct Link {
+    bus: Mutex<Arc<Bus>>,
+    gen: AtomicU64,
+    stop: AtomicBool,
+}
+
+impl Link {
+    fn current(&self) -> (u64, Arc<Bus>) {
+        let g = self.gen.load(Ordering::Acquire);
+        let b = self.bus.lock().map(|b| b.clone()).unwrap_or_else(|p| p.into_inner().clone());
+        (g, b)
+    }
+}
+
+fn forwarder_for(bus: &Bus, block: usize, timeout: usize) -> Forwarder {
+    let mut fcfg = ForwarderConfig::new(bus.l_total() as usize, block);
+    fcfg.timeout = timeout;
+    Forwarder::new(fcfg)
+}
+
+fn open_mic(dev: Option<&str>, bus: Arc<Bus>, block: usize, timeout: usize) -> Result<InputStream, String> {
+    let mut fwd = forwarder_for(&bus, block, timeout);
+    let s = InputStream::open(dev, IO_RATE, block, move |m: &[f32]| {
+        forward(&mut fwd, &bus, m);
+    })
+    .map_err(|e| format!("开麦克风：{e}"))?;
+    eprintln!("vdn-capture: 麦克风 {:?}", s.info());
+    Ok(s)
+}
+
+fn open_speaker(dev: Option<&str>, bus: Arc<Bus>, block: usize) -> Result<OutputStream, String> {
+    let mut src = HalSource::new(OutSource::new(bus));
+    let s = OutputStream::open(dev, IO_RATE, block, move |o: &mut [f32]| {
+        let _ = src.render(o);
+    })
+    .map_err(|e| format!("开扬声器：{e}"))?;
+    eprintln!("vdn-capture: 扬声器 {:?}", s.info());
+    Ok(s)
+}
+
 fn real_main() -> Result<(), String> {
     let a = Args::parse();
     let mut cfg = match &a.config {
@@ -126,134 +171,159 @@ fn real_main() -> Result<(), String> {
     }
     cfg.validate().map_err(|e| e.to_string())?;
     let seconds = a.seconds.or((a.sink == Sink::File).then_some(5.0));
-
-    let bus = Arc::new(open_bus(&cfg.bus_name, a.wait)?);
-    if bus.rate() != IO_RATE {
-        return Err(format!(
-            "总线采样率 {} Hz，本程序只支持 {IO_RATE}",
-            bus.rate()
-        ));
-    }
-    let l_total = bus.l_total() as usize;
     let block = cfg.block;
-    let mut fcfg = ForwarderConfig::new(l_total, block);
-    fcfg.timeout = cfg.heartbeat_timeout_samples();
-    let mut fwd = Forwarder::new(fcfg);
+    let timeout = cfg.heartbeat_timeout_samples();
+
+    let first = Arc::new(open_bus(&cfg.bus_name, a.wait)?);
+    if first.rate() != IO_RATE {
+        return Err(format!("总线采样率 {} Hz，本程序只支持 {IO_RATE}", first.rate()));
+    }
     eprintln!(
         "vdn-capture: 已接上总线 {} · L_total {} 样本（{:.2} ms）· 块长 {block}",
         cfg.bus_name,
-        l_total,
-        l_total as f64 / 48.0
+        first.l_total(),
+        f64::from(first.l_total()) / 48.0
     );
+    let link = Arc::new(Link {
+        bus: Mutex::new(first.clone()),
+        gen: AtomicU64::new(0),
+        stop: AtomicBool::new(false),
+    });
 
     let start = Instant::now() + Duration::from_millis(20);
     let block_dur = Duration::from_secs_f64(block as f64 / f64::from(IO_RATE));
     let total = seconds.map(|s| ((s * f64::from(IO_RATE)) as usize).div_ceil(block) * block);
 
-    // 入口
-    let mut _input = None;
+    // 入口：正弦线程自己跟着 gen 换总线；麦克风流由下面的监视循环重开
+    let mut mic = None;
     let sine = match a.source {
         Source::Sine => {
-            let bus = bus.clone();
+            let link = link.clone();
             let n = total.unwrap_or(usize::MAX / 2);
             Some(thread::spawn(move || {
-                let mut off = 0usize;
-                let mut i = 0u32;
-                while off < n {
+                let (mut gen, mut bus) = link.current();
+                let mut fwd = forwarder_for(&bus, block, timeout);
+                let mut buf = vec![0.0f32; block];
+                let (mut off, mut i) = (0usize, 0u32);
+                while off < n && !link.stop.load(Ordering::Relaxed) {
                     sleep_until(start + block_dur * i);
-                    let x = test_tone(IO_RATE, block.min(n - off), off);
-                    forward(&mut fwd, &bus, &x);
-                    off += x.len();
+                    let (g, b) = link.current();
+                    if g != gen {
+                        (gen, bus) = (g, b);
+                        fwd = forwarder_for(&bus, block, timeout);
+                    }
+                    let k = block.min(n - off);
+                    let x = buf.get_mut(..k).unwrap_or(&mut []);
+                    fill_tone(x, IO_RATE, off);
+                    forward(&mut fwd, &bus, x);
+                    off += k;
                     i += 1;
                 }
                 fwd.stats()
             }))
         }
         Source::Mic => {
-            let bus = bus.clone();
-            let s = InputStream::open(
-                cfg.input_device.as_deref(),
-                IO_RATE,
-                block,
-                move |m: &[f32]| {
-                    forward(&mut fwd, &bus, m);
-                },
-            )
-            .map_err(|e| format!("开麦克风：{e}"))?;
-            eprintln!("vdn-capture: 麦克风 {:?}", s.info());
-            _input = Some(s);
+            mic = Some(open_mic(cfg.input_device.as_deref(), first.clone(), block, timeout)?);
             None
         }
     };
 
     // 出口
-    let mut _output = None;
+    let mut speaker = None;
     let file = match a.sink {
         Sink::Hal => {
             eprintln!("vdn-capture: Out 环留给虚拟麦克风插件读（本批插件未装，环满后计溢出）");
             None
         }
         Sink::Speaker => {
-            let mut src = HalSource::new(OutSource::new(bus.clone()));
-            let s = OutputStream::open(
-                cfg.output_device.as_deref(),
-                IO_RATE,
-                block,
-                move |o: &mut [f32]| {
-                    let _ = src.render(o);
-                },
-            )
-            .map_err(|e| format!("开扬声器：{e}"))?;
-            eprintln!("vdn-capture: 扬声器 {:?}", s.info());
-            _output = Some(s);
+            speaker = Some(open_speaker(cfg.output_device.as_deref(), first.clone(), block)?);
             None
         }
         Sink::File => {
             let n = total.unwrap_or(0);
-            let bus = bus.clone();
+            let link = link.clone();
             Some(thread::spawn(move || {
+                let (mut gen, bus) = link.current();
                 let mut src = HalSource::new(OutSource::new(bus));
                 let mut y = vec![0.0f32; n];
+                let mut underrun = 0u64;
                 for (i, yb) in y.chunks_mut(block).enumerate() {
                     // 晚 1.5 块读，模拟插件 IO 线程
                     sleep_until(start + block_dur * i as u32 + block_dur * 3 / 2);
+                    let (g, b) = link.current();
+                    if g != gen {
+                        underrun += src.counters().underrun_samples();
+                        gen = g;
+                        src = HalSource::new(OutSource::new(b));
+                    }
                     let _: RenderStatus = src.render(yb);
                 }
-                (y, src.counters())
+                (y, underrun + src.counters().underrun_samples())
             }))
         }
     };
 
-    // 等结束
-    match (sine, file) {
-        (Some(s), Some(f)) => {
-            let st = s.join().map_err(|_| "送音线程 panic")?;
-            let (y, c) = f.join().map_err(|_| "写文件线程 panic")?;
-            write_wav(a.out.as_deref(), &y)?;
-            eprintln!(
-                "vdn-capture: 计数 {st:?} · 读出欠载 {} 样本",
-                c.underrun_samples()
-            );
+    // 监视循环：到点 / 正弦放完就停；心跳停了超过 --reconnect-after 秒，而同名能打开一条心跳不同的总线 → 换过去
+    let until = seconds.map(|s| start + Duration::from_secs_f64(s));
+    let reconnect_after = Duration::from_secs_f64(a.reconnect_after);
+    let (mut last_beat, mut beat_at) = (first.heartbeat(), Instant::now());
+    let mut reconnects = 0u32;
+    loop {
+        thread::sleep(Duration::from_millis(100));
+        if until.is_some_and(|u| Instant::now() >= u) || sine.as_ref().is_some_and(|t| t.is_finished()) {
+            break;
         }
-        (s, f) => {
-            match seconds {
-                Some(sec) => thread::sleep(Duration::from_secs_f64(sec)),
-                None => loop {
-                    thread::sleep(Duration::from_secs(3600));
-                },
-            }
-            if let Some(f) = f {
-                let (y, _) = f.join().map_err(|_| "写文件线程 panic")?;
-                write_wav(a.out.as_deref(), &y)?;
-            }
-            if let Some(s) = s {
-                let st = s.join().map_err(|_| "送音线程 panic")?;
-                eprintln!("vdn-capture: 计数 {st:?}");
-            }
+        let (_, cur) = link.current();
+        let hb = cur.heartbeat();
+        if hb != last_beat {
+            (last_beat, beat_at) = (hb, Instant::now());
+            continue;
         }
+        if beat_at.elapsed() < reconnect_after {
+            continue;
+        }
+        let Ok(new) = Bus::open(&cfg.bus_name) else {
+            continue;
+        };
+        if new.heartbeat() == hb || new.rate() != IO_RATE {
+            continue; // 多半还是同一条（降噪进程卡住而不是重启）
+        }
+        let new = Arc::new(new);
+        eprintln!(
+            "vdn-capture: 降噪进程换了一条总线（心跳 {hb} → {}），重接 · 新 L_total {}",
+            new.heartbeat(),
+            new.l_total()
+        );
+        // 先停旧流再开新流：中间会断一小段（开流耗时，未量化）
+        if mic.take().is_some() {
+            mic = Some(open_mic(cfg.input_device.as_deref(), new.clone(), block, timeout)?);
+        }
+        if speaker.take().is_some() {
+            speaker = Some(open_speaker(cfg.output_device.as_deref(), new.clone(), block)?);
+        }
+        if let Ok(mut slot) = link.bus.lock() {
+            *slot = new.clone();
+        }
+        link.gen.fetch_add(1, Ordering::AcqRel);
+        (last_beat, beat_at) = (new.heartbeat(), Instant::now());
+        reconnects += 1;
     }
+    link.stop.store(true, Ordering::Relaxed);
+    drop(mic);
+    drop(speaker);
+
+    if let Some(s) = sine {
+        let st = s.join().map_err(|_| "送音线程 panic")?;
+        eprintln!("vdn-capture: 计数（最后一条总线）{st:?}");
+    }
+    if let Some(f) = file {
+        let (y, underrun) = f.join().map_err(|_| "写文件线程 panic")?;
+        write_wav(a.out.as_deref(), &y)?;
+        eprintln!("vdn-capture: 读出欠载 {underrun} 样本");
+    }
+    let (_, bus) = link.current();
     eprintln!(
-        "vdn-capture: 退出 · Raw 溢出 {} · Out 溢出 {} · Out 欠载 {} · 心跳 {}",
+        "vdn-capture: 退出 · 重接 {reconnects} 次 · Raw 溢出 {} · Out 溢出 {} · Out 欠载 {} · 心跳 {}",
         bus.ring(RingId::Raw).overflows(),
         bus.ring(RingId::Out).overflows(),
         bus.ring(RingId::Out).underruns(),
