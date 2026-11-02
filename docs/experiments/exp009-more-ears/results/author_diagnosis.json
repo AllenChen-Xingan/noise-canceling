@@ -1,0 +1,74 @@
+{
+ "machine_vs_machine_on_author_pairs": {
+  "scoreq~distill_mos": {
+   "agree": 0.812,
+   "n": 48
+  },
+  "scoreq~OVRL": {
+   "agree": 0.783,
+   "n": 46
+  },
+  "distill_mos~OVRL": {
+   "agree": 0.761,
+   "n": 46
+  }
+ },
+ "machine_vs_machine_all_pairs": {
+  "scoreq~distill_mos": {
+   "agree": 0.75,
+   "n": 72
+  },
+  "scoreq~OVRL": {
+   "agree": 0.746,
+   "n": 71
+  },
+  "distill_mos~OVRL": {
+   "agree": 0.69,
+   "n": 71
+  }
+ },
+ "author_win_loss": {
+  "dpdfnet2": {
+   "win": 5,
+   "loss": 22
+  },
+  "gtcrn": {
+   "win": 25,
+   "loss": 12
+  },
+  "fastenhancer_m": {
+   "win": 18,
+   "loss": 14
+  }
+ },
+ "author_pair_counts": {
+  "gtcrn>dpdfnet2": 13,
+  "gtcrn>fastenhancer_m": 12,
+  "fastenhancer_m>dpdfnet2": 9,
+  "fastenhancer_m>gtcrn": 9,
+  "dpdfnet2>gtcrn": 3,
+  "dpdfnet2>fastenhancer_m": 2
+ },
+ "machine_mean_scores": {
+  "noisy": {
+   "scoreq": 1.78,
+   "distill_mos": 2.44,
+   "OVRL": 1.79
+  },
+  "dpdfnet2": {
+   "scoreq": 2.54,
+   "distill_mos": 3.14,
+   "OVRL": 2.75
+  },
+  "gtcrn": {
+   "scoreq": 2.04,
+   "distill_mos": 2.7,
+   "OVRL": 2.45
+  },
+  "fastenhancer_m": {
+   "scoreq": 2.29,
+   "distill_mos": 2.84,
+   "OVRL": 2.81
+  }
+ }
+}
