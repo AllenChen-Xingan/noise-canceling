@@ -1,7 +1,7 @@
 # vdn workspace：crate 放 src/<crate>/。依赖方向见 specs/rust/architecture.md §2.2：types ← dsp ← engine；models → types + dsp；cli → engine + models；xtask 不依赖任何 vdn crate
 [workspace]
 resolver = "3"
-members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab", "src/scene", "src/polish", "src/eval"]
+members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab", "src/scene", "src/polish", "src/eval", "src/io-macos", "src/hal"]
 
 [workspace.package]
 version = "0.1.0"
@@ -22,6 +22,9 @@ clap = { version = "4", features = ["derive"] }
 assert_no_alloc = "1.1"
 serde_json = "1"
 stats_alloc = "0.1"
+cpal = "0.18.2"
+vdn-io-macos = { path = "src/io-macos" }
+vdn-hal = { path = "src/hal" }
 
 [workspace.lints.rust]
 unsafe_code = "deny"
