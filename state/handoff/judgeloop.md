@@ -4,7 +4,9 @@
 - 状态：进行中
 
 ## 做到哪
-10-31 tmux 断掉，旧 workflow 中断（只写出 r3、r4）。11-02 重派：补 r1 · r2 · r5 workflow 在跑（wf_3d6391bc-bd2，各配怀疑派）；之后写 decision.md，exp011 等 benchsynth/ears 与名额（排第三）。
+- 调研 r1–r5 全部写完并经怀疑派核对；`docs/research/018_ondevice-judge/decision.md` 已写（建议，待人定 2 题）
+- exp011 设计 `docs/experiments/exp011-ondevice-loop/README.md`；驱动 `driver/`（Rust，未编译）+ `exp011.py`；选段 build `20261102-130903-e7a4`（84 段，调参 43 / 报分 41）
+- 等名额（e3：第 1–3 步排第二）；第 4 步等 ears 装 DistillMOS / SCOREQ
 
 ## 流水
 - 2026-10-31 读交代 · common · CLAUDE.md · intent/cog · pending · D51–D53；向 c4 报到
@@ -21,3 +23,8 @@
 - 2026-10-31 ears 回：起点倾向 SCOREQ（URGENT24 语句 SRCC 0.789 / 系统 0.926；CHiME-7 真实 0.744 / 0.90），DNSMOS 在 CHiME-7 语句 0.232、系统 −0.10；本机现成 = DNSMOS P.835（resources/DNS-Challenge…，exp002-venv）· NISQA v2（要 torch）；SCOREQ 待 ears 装（_tmp/exp009-venv）。出处：ears worktree docs/experiments/exp009-more-ears/results/crowd_ears.md
 - 2026-10-31 benchsynth 回：exp008 = 348 段（2 生成器 × 29 格档 × 6），mix/owner/interf/noise 分轨，_tmp/exp008/20261031-102406-0c67/；owner 轨是过 RIR+设备链后的主讲人；逐帧标签要自己重算加 ±40 ms guard；A 部分与 exp006 训练集不隔离 → 查表对照给「真值场景」（对查表最有利的上界），或只用 exp006 留出 build fed2；好坏配对未实现
 - 2026-11-02 新会话接续（批次 b7）：读 judgeloop.md / common.md / 旧交代 / D56–D65；向 e3 报到，e3 同意计划；起 workflow wf_3d6391bc-bd2（r1 答 D60 SCOREQ 蒸馏 · r2 · r5，各配怀疑派，共 6 代理）
+- 2026-11-02 workflow 回：r1（D60：DistillMOS 先例 478M→4.3M，相关掉 0.05；难点是短窗）· r2（单一评分当奖励几乎都被钻；SCOREQ 被钻最狠）· r5（DNSMOS 在本机；SCOREQ / DistillMOS 不在；Qwen3-ASR 在）；合并 origin/main
+- 2026-11-02 benchsynth 回：exp008 只能当评测（与 exp006 训练侧不隔离），调参半与报分半要切开；好坏配对未实现；标准 `016_bench-synth/synth-standard.md`（在其分支）
+- 2026-11-02 ears 回：SCOREQ、DistillMOS 本机都没装，ears 排名额后装在 `_tmp/exp009-venv`；DistillMOS 当奖励替身可行，但与 SCOREQ 错法未必独立 → 讨好判断以 DNSMOS + 吃字为主
+- 2026-11-02 写 decision.md、exp011 README / driver / exp011.py；select 完成；向 e3 申请名额
+
