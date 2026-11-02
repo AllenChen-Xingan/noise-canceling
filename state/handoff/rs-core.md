@@ -76,3 +76,16 @@
 - 13:18 后端加 `copy_out`（实时块），两个模型改用它；clippy 无警告
 - 13:21 按自审改 Pipeline 混音与淡化、补 4 条测试；dsp 不分配测试加不对齐块长
 - 13:24 复跑：四个 crate 测试全过（设 `VDN_REQUIRE_MODELS=1`，GTCRN 与 FE-M 都是真跑）；clippy 无警告；`cargo run -p xtask -- tidy` 通过；`vdn denoise` 再次对拍字节一致
+
+## 省 2 ms（人定 2026-11-02）
+人原话「可以省」。上面「待人拍板」第 1 题就此定：省，但只在调用方声明块长固定时省。
+- **改了什么**（手下 rs-core 子代理，只动 `src/engine/src/pipeline.rs`、`src/engine/tests/pipeline.rs`）
+  - 新构造函数 `Pipeline::with_block(engine, io_rate, block) -> Result<Self, PipelineError>`。块长必须 > 0 且整除 48 kHz hop，否则返回新错误 `PipelineError::BlockNotAligned { block, hop_io }`。输出预填 = hop − 块长
+  - `Pipeline::new` 签名与行为不变（预填仍 hop − 1）
+  - 块长不对时不 panic：计入新计数 `PipelineStats::misaligned_blocks`，照常处理。可能欠载补零（计入 `queue_faults`；推断上界 = 块长 − 1，测试里断言过）；之后降噪路比原声路晚最多块长 − 1 个样本，直到 `reset()`
+  - ⚠️ `PipelineError` 多了一个变体：别处若对它做穷举 `match` 要补一支（本 worktree 里没有）
+- **新延迟**（实测 = 声明，正弦互相关找峰）
+  - GTCRN 形状（模型 hop 256、算法延迟 256），块长 96：672 + 96 + 768 = 1536 样本 = 32.00 ms（原 1631 样本 = 33.98 ms）
+  - Identity，块长 96：672 + 96 + 0 = 768 样本 = 16.00 ms（原 863 样本）
+  - 定块长输出 = 任意块长版输出提前 95 个样本，逐样本一致（带三件保命的默认配置）
+- **测试**：`cargo test -p vdn-engine` 全过（pipeline 16 条，新增 5 条：声明与实测延迟一致、与 `new` 版逐样本差 95、块长 480 / 0 / 1536 报错、不对齐块不 panic 且计数、实时路径不分配）；`cargo clippy -p vdn-engine --all-targets -- -D warnings` 无警告；`cargo run -p xtask -- tidy` 通过；`cargo fmt -p vdn-engine` 已跑

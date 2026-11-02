@@ -10,6 +10,9 @@
 //! 延迟（48 kHz 样本，逐项硬加，`latency_samples()`）：
 //! - 重分块：输出队列开头预填 `hop_io - 1` 个零。逐样本看，第 t 个输入进来后、取第 t 个输出前，队列里至少剩 1 个样本，
 //!   所以任意块长都不会欠载；块内先攒后取与逐样本交替等价，因此**输出与切块方式无关**（规约 G6）
+//!   - 定块长（`Pipeline::with_block`，人定 2026-11-02「可以省」）：调用方保证每次块长都是 `block`、且 `block` 整除
+//!     `hop_io`，预填降到 `hop_io - block`（块长 96、GTCRN 时省 95 个样本 ≈ 2 ms）。块边界和 hop 边界对齐，攒满 hop 的
+//!     那一块里先跑 hop 再取输出，所以同样不欠载。块长不对时照常处理、不 panic，但可能欠载补零（见 `process`）
 //! - 两次重采样：`2 × resample::delay_high()`
 //! - 模型：`Model::latency_samples() × 3`
 //!
@@ -45,6 +48,8 @@ pub enum Mode {
 pub enum PipelineError {
     /// IO 采样率必须正好是模型采样率的 3 倍（本批只有固定 3 倍重采样）
     UnsupportedRate { io_rate: u32, model_rate: u32 },
+    /// `Pipeline::with_block` 的块长必须 > 0 且整除 48 kHz hop
+    BlockNotAligned { block: usize, hop_io: usize },
 }
 
 impl fmt::Display for PipelineError {
@@ -56,6 +61,10 @@ impl fmt::Display for PipelineError {
             } => write!(
                 f,
                 "IO 采样率 {io_rate} Hz 不是模型采样率 {model_rate} Hz 的 3 倍（本批只支持固定 3 倍重采样）"
+            ),
+            PipelineError::BlockNotAligned { block, hop_io } => write!(
+                f,
+                "块长 {block} 不整除 IO 采样率下的 hop {hop_io}（定块长省延迟要求块长 > 0 且整除 hop）"
             ),
         }
     }
@@ -70,8 +79,11 @@ pub struct PipelineStats {
     pub hops: u64,
     /// 输入输出不等长的调用次数（调用方的 bug）
     pub bad_len: u64,
-    /// 输出队列欠载或溢出的样本数（由预填推导不会发生；非 0 说明有 bug，湿路会与原声错位）
+    /// 输出队列欠载或溢出的样本数。`new` 构造时由预填推导不会发生（非 0 说明有 bug）；`with_block` 构造时，
+    /// 块长不对会欠载补零并计在这里。欠载后降噪路比原声路晚，直到 `reset()`
     pub queue_faults: u64,
+    /// `with_block` 构造时，块长不等于 `block` 的调用次数（`new` 构造时恒为 0）
+    pub misaligned_blocks: u64,
 }
 
 pub struct Pipeline<M: Model> {
@@ -79,6 +91,8 @@ pub struct Pipeline<M: Model> {
     io_rate: u32,
     /// 48 kHz hop
     hop_io: usize,
+    /// `with_block` 的定块长；`None` = 任意块长
+    block: Option<usize>,
     prefill: usize,
     latency: usize,
 
@@ -110,6 +124,21 @@ pub struct Pipeline<M: Model> {
 impl<M: Model> Pipeline<M> {
     /// `io_rate` 必须是 `engine.sample_rate() × 3`。块长无上限：内部缓冲只按 hop 定，不按块长定。
     pub fn new(engine: Engine<M>, io_rate: u32) -> Result<Self, PipelineError> {
+        Self::build(engine, io_rate, None)
+    }
+
+    /// 定块长构造（省延迟）：调用方保证每次 `process` 的块长都是 `block`。`block` 必须 > 0 且整除
+    /// `hop_io`（= 模型 hop × 3），否则返回 `BlockNotAligned`。输出预填 `hop_io - block`，比 `new` 少 `block - 1` 个样本。
+    /// 块长不对时不 panic，见 `process`。
+    pub fn with_block(
+        engine: Engine<M>,
+        io_rate: u32,
+        block: usize,
+    ) -> Result<Self, PipelineError> {
+        Self::build(engine, io_rate, Some(block))
+    }
+
+    fn build(engine: Engine<M>, io_rate: u32, block: Option<usize>) -> Result<Self, PipelineError> {
         let model_rate = engine.sample_rate();
         if model_rate == 0 || u64::from(io_rate) != u64::from(model_rate) * FACTOR as u64 {
             return Err(PipelineError::UnsupportedRate {
@@ -119,11 +148,16 @@ impl<M: Model> Pipeline<M> {
         }
         let hop_model = engine.hop();
         let hop_io = hop_model * FACTOR;
-        let prefill = hop_io - 1;
+        let prefill = match block {
+            None => hop_io - 1,
+            Some(b) if b > 0 && hop_io.is_multiple_of(b) => hop_io - b,
+            Some(b) => return Err(PipelineError::BlockNotAligned { block: b, hop_io }),
+        };
         let latency = prefill + 2 * resample::delay_high() + engine.latency_samples() * FACTOR;
         let mut p = Self {
             io_rate,
             hop_io,
+            block,
             prefill,
             latency,
             dec: Decimator3::new(),
@@ -157,7 +191,10 @@ impl<M: Model> Pipeline<M> {
             self.prefill as u32,
             self.io_rate,
             Basis::Declared,
-            "攒满一个 48 kHz hop（模型 hop × 3）；输出队列预填 hop - 1",
+            match self.block {
+                None => "攒满一个 48 kHz hop（模型 hop × 3）；输出队列预填 hop - 1",
+                Some(_) => "攒满一个 48 kHz hop（模型 hop × 3）；定块长，输出队列预填 hop - 块长",
+            },
         ))
         .push(LatencyItem::new(
             "resample",
@@ -231,9 +268,16 @@ impl<M: Model> Pipeline<M> {
 
     /// 处理任意长度的一块。`output.len()` 应等于 `input.len()`（调用方的 bug：debug 下 panic；
     /// release 下只处理较短的那段，`output` 多出的部分清零并计数，不 panic）。
+    ///
+    /// `with_block` 构造时块长不等于 `block`：不 panic，计入 `stats().misaligned_blocks`，照常处理（宁可抖动也不断声）。
+    /// 这时输出队列可能欠载，欠载的样本补零（计入 `queue_faults`），之后降噪路比声明延迟晚最多 `block - 1` 个样本、
+    /// 与原声路错位，直到 `reset()`。
     pub fn process(&mut self, input: &[f32], output: &mut [f32]) {
         debug_assert_eq!(input.len(), output.len());
         let n = input.len().min(output.len());
+        if self.block.is_some_and(|b| b != n) {
+            self.stats.misaligned_blocks += 1;
+        }
         let (head, tail) = output.split_at_mut(n);
         if !tail.is_empty() || input.len() != n {
             self.stats.bad_len += 1;
@@ -323,8 +367,8 @@ impl<M: Model> Pipeline<M> {
     fn pop(&mut self, y: &mut [f32]) {
         let cap = self.q.len();
         for o in y.iter_mut() {
-            // 由预填保证不欠载；万一欠载（不应发生）补零
-            debug_assert!(self.q_len > 0, "输出队列欠载");
+            // 由预填保证不欠载；万一欠载补零（`new` 构造时不应发生；`with_block` 构造时块长不对会发生，不算 bug）
+            debug_assert!(self.q_len > 0 || self.block.is_some(), "输出队列欠载");
             if self.q_len == 0 {
                 self.stats.queue_faults += 1;
                 *o = 0.0;
