@@ -1,0 +1,119 @@
+{
+ "machine_vs_machine_on_author_pairs": {
+  "scoreq~distill_mos": {
+   "agree": 0.812,
+   "n": 48
+  },
+  "scoreq~OVRL": {
+   "agree": 0.783,
+   "n": 46
+  },
+  "distill_mos~OVRL": {
+   "agree": 0.761,
+   "n": 46
+  }
+ },
+ "machine_vs_machine_all_pairs": {
+  "scoreq~distill_mos": {
+   "agree": 0.75,
+   "n": 72
+  },
+  "scoreq~OVRL": {
+   "agree": 0.746,
+   "n": 71
+  },
+  "distill_mos~OVRL": {
+   "agree": 0.69,
+   "n": 71
+  }
+ },
+ "author_win_loss": {
+  "dpdfnet2": {
+   "win": 5,
+   "loss": 22
+  },
+  "gtcrn": {
+   "win": 25,
+   "loss": 12
+  },
+  "fastenhancer_m": {
+   "win": 18,
+   "loss": 14
+  }
+ },
+ "author_pair_counts": {
+  "gtcrn>dpdfnet2": 13,
+  "gtcrn>fastenhancer_m": 12,
+  "fastenhancer_m>dpdfnet2": 9,
+  "fastenhancer_m>gtcrn": 9,
+  "dpdfnet2>gtcrn": 3,
+  "dpdfnet2>fastenhancer_m": 2
+ },
+ "machine_mean_scores": {
+  "noisy": {
+   "scoreq": 1.78,
+   "distill_mos": 2.44,
+   "OVRL": 1.79
+  },
+  "dpdfnet2": {
+   "scoreq": 2.54,
+   "distill_mos": 3.14,
+   "OVRL": 2.75
+  },
+  "gtcrn": {
+   "scoreq": 2.04,
+   "distill_mos": 2.7,
+   "OVRL": 2.45
+  },
+  "fastenhancer_m": {
+   "scoreq": 2.29,
+   "distill_mos": 2.84,
+   "OVRL": 2.81
+  }
+ },
+ "distinct_pairs": 20,
+ "screens": 9,
+ "author_vs_on_distinct": {
+  "scoreq": {
+   "agree": 0.4,
+   "n": 20
+  },
+  "distill_mos": {
+   "agree": 0.6,
+   "n": 20
+  },
+  "OVRL": {
+   "agree": 0.526,
+   "n": 19
+  }
+ },
+ "machine_vs_machine_on_distinct": {
+  "scoreq~distill_mos": {
+   "agree": 0.8,
+   "n": 20
+  },
+  "scoreq~OVRL": {
+   "agree": 0.737,
+   "n": 19
+  },
+  "distill_mos~OVRL": {
+   "agree": 0.737,
+   "n": 19
+  }
+ },
+ "scoreq_disagreements_by_model_pair_distinct": {
+  "dpdfnet2~gtcrn": 5,
+  "fastenhancer_m~gtcrn": 4,
+  "dpdfnet2~fastenhancer_m": 3
+ },
+ "isomorphic_reference_scoreq": {
+  "design": "一个 CHiME-7 固定听众 × 9 屏 × 同一组 3 个条件的 3 对（去重计数），剔平局，4000 次，种子 20261030",
+  "valid_sims": 4000,
+  "p2.5": 0.389,
+  "p50": 0.722,
+  "p97.5": 0.952,
+  "author_distinct_agree": 0.4,
+  "share_le_author": 0.031,
+  "author_below_p2.5": false
+ }
+}

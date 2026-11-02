@@ -1,0 +1,66 @@
+{
+  "family": "G-MaP-SE（MP-SENet 式 TS-Conformer 幅相双解码 + ECAPA 说话人嵌入 → 干净 GMM 先验门控融合）",
+  "causal": false,
+  "sr_model": 16000,
+  "weights": [
+    {
+      "path": "resources/G-MaP-SE/ckpt/g_best",
+      "sha256": "04b4f555722877aeeddfbf7e9064b82f05dcfa10dc20c49eebe5862a26cf553d",
+      "bytes": 9380700,
+      "license": "MIT",
+      "license_source": "resources/G-MaP-SE/LICENSE（Copyright (c) 2026 Hello3orld）"
+    },
+    {
+      "path": "resources/G-MaP-SE/ckpt/clean_gmm_mu_k.pt",
+      "sha256": "740c7fd87d08000e108a4219e7547644cc6d90c385d17b46ebbd42f449bb0f58",
+      "bytes": 148671,
+      "license": "MIT",
+      "license_source": "resources/G-MaP-SE/LICENSE"
+    },
+    {
+      "path": "~/vdn-data/models/wespeaker/voxceleb_ECAPA512.onnx",
+      "sha256": "f901ae3571912bad4e11e157744cb8b7d77a0b46923b83c410bdbb6c77d69736",
+      "bytes": 24861931,
+      "license": "Apache-2.0",
+      "license_source": "~/vdn-data/models/wespeaker/README.hf.md（HF 卡 license: apache-2.0）"
+    }
+  ],
+  "code_source": "resources/G-MaP-SE（models/model_g_map_se.py、dataset.py、env.py 只读导入；推理流程照 inference_g_map_se.py）",
+  "notes": "无注册：说话人嵌入取自带噪输入本身（官方推理即如此，MPNet.forward 内部对 noisy_wav 跑 ECAPA），未使用 owner 干净轨或任何额外同说话人素材。训练数据 VoiceBank+DEMAND（窄域，I 级）。单位 RMS 归一后推理再还原电平（照官方）。每个工作进程载一次权重，各段独立前向（无跨段状态）。",
+  "id": "gmap_se",
+  "delay_comp_samples": 0,
+  "delay_check": {
+    "method": "xcorr vs _owner.wav, ±2000 samples",
+    "lags": [
+      {
+        "clip": "A/S-SNR/c00_-5.0_mix.wav",
+        "lag": 0
+      },
+      {
+        "clip": "A/S-SNR/c00_0.0_mix.wav",
+        "lag": 0
+      },
+      {
+        "clip": "A/S-SNR/c00_5.0_mix.wav",
+        "lag": 0
+      },
+      {
+        "clip": "A/S-SNR/c00_10.0_mix.wav",
+        "lag": 0
+      },
+      {
+        "clip": "A/S-SNR/c00_20.0_mix.wav",
+        "lag": 0
+      },
+      {
+        "clip": "A/S-SNR/c01_-5.0_mix.wav",
+        "lag": 0
+      }
+    ],
+    "pass": true
+  },
+  "runtime": "python 3.12.14 / torch 2.15.0 / CPU, 每进程 1 线程，1 进程",
+  "n_written": 6,
+  "seconds": 608.6,
+  "sec_per_clip_this_run": 99.36
+}

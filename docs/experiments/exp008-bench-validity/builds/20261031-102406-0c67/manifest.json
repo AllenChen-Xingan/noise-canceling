@@ -1,0 +1,89 @@
+{
+ "build": "20261031-102406-0c67",
+ "audio_root": "_tmp/exp008/20261031-102406-0c67",
+ "sr": 16000,
+ "clip_s": 8.0,
+ "n_clips": 6,
+ "base": {
+  "snr_db": 10.0,
+  "noise": "cafe",
+  "room": "office",
+  "dist_m": 0.5,
+  "sir_db": null,
+  "level_dbfs": -26.0,
+  "device": "laptop"
+ },
+ "axes": {
+  "S-SNR": [
+   -5.0,
+   0.0,
+   5.0,
+   10.0,
+   20.0
+  ],
+  "S-NOISE": [
+   "stationary",
+   "cafe",
+   "babble",
+   "clatter",
+   "traffic",
+   "music"
+  ],
+  "S-RT60": [
+   "car",
+   "office",
+   "cafe",
+   "hall"
+  ],
+  "S-SIR": [
+   null,
+   20.0,
+   10.0,
+   5.0,
+   0.0,
+   -6.0
+  ]
+ },
+ "multi": {
+  "M-SNRxNOISE": [
+   {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   {
+    "snr_db": 10.0,
+    "noise": "babble"
+   }
+  ],
+  "M-SIRxSNR": [
+   {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   }
+  ]
+ },
+ "count": 348,
+ "script_sha256": "6e5eee5165eda2a915250af3749636011c1eeb7f3f4204dc2683c2569bf9b504",
+ "sim_sha256": "3e20fff65929bfadc8540a7a0bb0a1659c017acba79e71bcb240b51a7717a700",
+ "seconds": 6.2
+}

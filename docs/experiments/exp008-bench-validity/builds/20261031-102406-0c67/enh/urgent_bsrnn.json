@@ -1,0 +1,52 @@
+{
+  "family": "BSRNN（频带分割 RNN，判别式）· URGENT 2026 Track1 官方基线",
+  "causal": false,
+  "sr_model": 16000,
+  "weights": [
+    {
+      "path": "~/vdn-data/models/urgent2026_bsrnn/bsrnn.ckpt",
+      "sha256": "5d6b24eb0ba387428f3490a36238d17902cdc96da534fd2707a8e44f0d2431c8",
+      "bytes": 151456890,
+      "license": "MIT",
+      "license_source": "HF lichenda/icassp_2026_urgent_baseline 模型卡 cardData.license=mit；代码 Apache-2.0（resources/urgent2026_challenge_track1/LICENSE.txt）"
+    }
+  ],
+  "code_source": "resources/urgent2026_challenge_track1/baseline_code/models/bsrnn.py（结构读懂后自写于本脚本）+ pip espnet==202611 的 STFTEncoder/STFTDecoder/BSRNNSeparator（--no-deps，另装 torch_complex、typeguard）",
+  "notes": "原生多采样率模型，16 k 直接输入（STFT 320/160，161 频点，频带切分按输入频点截断，与官方 inference 同路径）。ckpt hparams: num_channel=196, num_layer=6；state_dict strict 加载通过。未做官方 inference.py 的峰值归一 0.9。每个工作进程载一次权重，各段独立前向（模型无跨段状态）。",
+  "id": "urgent_bsrnn",
+  "delay_comp_samples": 0,
+  "delay_check": {
+    "method": "xcorr vs _owner.wav, ±2000 samples",
+    "lags": [
+      {
+        "clip": "A/S-SNR/c00_-5.0_mix.wav",
+        "lag": 0
+      },
+      {
+        "clip": "A/S-SNR/c00_0.0_mix.wav",
+        "lag": 0
+      },
+      {
+        "clip": "A/S-SNR/c00_5.0_mix.wav",
+        "lag": 0
+      },
+      {
+        "clip": "A/S-SNR/c00_10.0_mix.wav",
+        "lag": 0
+      },
+      {
+        "clip": "A/S-SNR/c00_20.0_mix.wav",
+        "lag": 0
+      },
+      {
+        "clip": "A/S-SNR/c01_-5.0_mix.wav",
+        "lag": 0
+      }
+    ],
+    "pass": true
+  },
+  "runtime": "python 3.12.14 / torch 2.15.0 / CPU, 每进程 1 线程，2 进程",
+  "n_written": 6,
+  "seconds": 38.7,
+  "sec_per_clip_this_run": 11.93
+}

@@ -1,0 +1,112 @@
+{
+ "regen_dnsmos_max_abs_delta_vs_exp003": 0.0,
+ "pairs": 48,
+ "author_vs": {
+  "OVRL": {
+   "calib_ties_half": {
+    "agree": 0.479,
+    "n": 48,
+    "screens": 9,
+    "ci95": [
+     0.261,
+     0.708
+    ]
+   },
+   "ties_dropped": {
+    "agree": 0.478,
+    "n": 46,
+    "screens": 9,
+    "ci95": [
+     0.261,
+     0.727
+    ]
+   },
+   "by_source": {
+    "clearer": 0.472,
+    "natural": 0.531,
+    "h3": 0.429
+   }
+  },
+  "scoreq": {
+   "calib_ties_half": {
+    "agree": 0.375,
+    "n": 48,
+    "screens": 9,
+    "ci95": [
+     0.14,
+     0.64
+    ]
+   },
+   "ties_dropped": {
+    "agree": 0.375,
+    "n": 48,
+    "screens": 9,
+    "ci95": [
+     0.14,
+     0.64
+    ]
+   },
+   "by_source": {
+    "clearer": 0.389,
+    "natural": 0.375,
+    "h3": 0.357
+   }
+  },
+  "distill_mos": {
+   "calib_ties_half": {
+    "agree": 0.562,
+    "n": 48,
+    "screens": 9,
+    "ci95": [
+     0.308,
+     0.812
+    ]
+   },
+   "ties_dropped": {
+    "agree": 0.562,
+    "n": 48,
+    "screens": 9,
+    "ci95": [
+     0.308,
+     0.812
+    ]
+   },
+   "by_source": {
+    "clearer": 0.611,
+    "natural": 0.562,
+    "h3": 0.5
+   }
+  }
+ },
+ "crowd_reference_chime7_48pairs": {
+  "scoreq": {
+   "p2.5": 0.516,
+   "p50": 0.72,
+   "p97.5": 0.893,
+   "share_le_0.48": 0.011
+  },
+  "dnsmos_ovrl": {
+   "p2.5": 0.208,
+   "p50": 0.462,
+   "p97.5": 0.737,
+   "share_le_0.48": 0.549
+  },
+  "single_vs_loo": {
+   "p2.5": 0.542,
+   "p50": 0.786,
+   "p97.5": 0.952
+  }
+ },
+ "verdict": {
+  "verifier": "V-AUTHOR-VS-CROWD",
+  "author_scoreq_agree": 0.375,
+  "threshold_p2.5": 0.516,
+  "author_deviates": true,
+  "text": "作者偏离大众：有证据（SCOREQ 代理）",
+  "caveats": [
+   "众人分布来自 CHiME-7（英语、ACR 相减）；作者是 2AFC + 中英混合会议片段",
+   "SCOREQ 在我们片段上的准确度未测（尚无判据），偏离也可能是模型不在分布内",
+   "exp003 会话陷阱 trap-identical 未过（会话打折）"
+  ]
+ }
+}
