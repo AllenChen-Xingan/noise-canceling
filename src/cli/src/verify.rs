@@ -88,17 +88,7 @@ pub fn rms(y: &[f32]) -> f64 {
     (y.iter().map(|&v| f64::from(v) * f64::from(v)).sum::<f64>() / y.len() as f64).sqrt()
 }
 
-/// 测试信号：0.5·sin(440 Hz) + 0.3·sin(2 kHz)，从第 `off` 个样本起。
-pub fn test_tone(rate: u32, n: usize, off: usize) -> Vec<f32> {
-    let r = f64::from(rate);
-    (0..n)
-        .map(|i| {
-            let t = (i + off) as f64 / r;
-            (0.5 * (2.0 * std::f64::consts::PI * 440.0 * t).sin() + 0.3 * (2.0 * std::f64::consts::PI * 2000.0 * t).sin())
-                as f32
-        })
-        .collect()
-}
+pub use vdn_capture::testing::test_tone;
 
 /// 样本数 → 毫秒（48 kHz）。
 pub fn ms48(samples: usize) -> f64 {

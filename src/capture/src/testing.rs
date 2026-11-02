@@ -68,3 +68,15 @@ impl Beat for FakeBeat {
         self.0.set(self.0.get().wrapping_add(1));
     }
 }
+
+/// 测试信号：0.5·sin(440 Hz) + 0.3·sin(2 kHz)，从第 `off` 个样本起（docs/plan/010 第十一节 V1）。
+pub fn test_tone(rate: u32, n: usize, off: usize) -> Vec<f32> {
+    let r = f64::from(rate);
+    (0..n)
+        .map(|i| {
+            let t = (i + off) as f64 / r;
+            (0.5 * (2.0 * std::f64::consts::PI * 440.0 * t).sin() + 0.3 * (2.0 * std::f64::consts::PI * 2000.0 * t).sin())
+                as f32
+        })
+        .collect()
+}
