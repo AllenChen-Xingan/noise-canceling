@@ -6,8 +6,6 @@
 
 #![allow(unsafe_code)] // 白名单 crate（metadata.vdn.unsafe = true）；每个 unsafe 块带 SAFETY
 
-use core::sync::atomic::AtomicU32;
-
 /// 一次等待的结果。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Outcome {
@@ -136,8 +134,3 @@ mod imp {
 
 pub(crate) use imp::{force_unsupported, init, supported, wait, wake_one};
 
-// 让未用到的导入在非 macOS 上也不报警
-#[allow(dead_code)]
-fn _type_check(a: &AtomicU32) {
-    wake_one(a, false);
-}
