@@ -154,7 +154,7 @@ pub struct Forwarder {
     fresh: bool,
     /// 已推进 Raw 的原声样本数
     accepted: i64,
-    /// Processed 环头那个样本对应的「推进序号」（开头 = -lead，即那 lead 个零）
+    /// Processed 环头那个样本对应的「推进序号」（开头 = -L_total：lead 个零 + 管线开头的 L_pipe 个输出）
     head_acc: i64,
     /// 环头已跨过的缺口总长
     head_shift: i64,
