@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use vdn_shm::{Bus, Ring, RingId};
 
-use crate::{Beat, Heartbeat, Pop, Push};
+use crate::{Heartbeat, Pop, Push};
 
 // 实时（A 档）：全部转调 vdn-shm 的实时方法
 impl Push for Ring<'_> {
@@ -26,12 +26,6 @@ impl Pop for Ring<'_> {
 impl Heartbeat for Bus {
     fn heartbeat(&self) -> u64 {
         Bus::heartbeat(self)
-    }
-}
-
-impl Beat for &Bus {
-    fn beat(&mut self) {
-        Bus::beat(self);
     }
 }
 

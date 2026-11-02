@@ -46,11 +46,6 @@ pub trait Heartbeat {
     fn heartbeat(&self) -> u64;
 }
 
-/// 写心跳（降噪进程一侧）。
-pub trait Beat {
-    fn beat(&mut self);
-}
-
 impl<T: Push + ?Sized> Push for &mut T {
     fn push(&mut self, x: &[f32]) -> usize {
         (**self).push(x)

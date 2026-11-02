@@ -4,7 +4,7 @@
 use std::cell::Cell;
 use std::collections::VecDeque;
 
-use crate::{Beat, Heartbeat, Pop, Push};
+use crate::{Heartbeat, Pop, Push};
 
 /// 有界假环（同一线程内用）。
 #[derive(Debug, Default, Clone)]
@@ -63,8 +63,8 @@ impl Heartbeat for FakeBeat {
     }
 }
 
-impl Beat for FakeBeat {
-    fn beat(&mut self) {
+impl FakeBeat {
+    pub fn beat(&self) {
         self.0.set(self.0.get().wrapping_add(1));
     }
 }
