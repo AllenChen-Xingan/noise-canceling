@@ -10,8 +10,8 @@ static A: AllocDisabler = AllocDisabler;
 
 #[test]
 fn pump_callbacks_do_not_allocate() {
-    let mut sum = 0.0f32;
-    let mut inp = InputPump::new(128, 2, move |m: &[f32]| sum += m.iter().sum::<f32>());
+    let mut frames = 0usize;
+    let mut inp = InputPump::new(128, 2, |m: &[f32]| frames += m.len());
     let mut out = OutputPump::new(128, 2, |m: &mut [f32]| m.fill(0.5));
     let data_in = vec![0.25f32; 2 * 1000]; // 1000 帧立体声，比块长大，会切段
     let mut data_out = vec![0.0f32; 2 * 1000];
@@ -19,5 +19,7 @@ fn pump_callbacks_do_not_allocate() {
         inp.on_data(&data_in);
         out.on_data(&mut data_out);
     });
+    drop(inp);
+    assert_eq!(frames, 1000);
     assert!(data_out.iter().all(|&s| s == 0.5));
 }

@@ -82,7 +82,9 @@ impl<S: SampleSource> HalSource<S> {
         let mut got = 0;
         // 源可能分段给（环形缓冲绕回），循环到取不到为止
         while got < out.len() {
-            let Some(rest) = out.get_mut(got..) else { break };
+            let Some(rest) = out.get_mut(got..) else {
+                break;
+            };
             let n = self.source.pop(rest).min(rest.len());
             if n == 0 {
                 break;
@@ -152,7 +154,10 @@ mod tests {
         assert_eq!(h.render(&mut out), RenderStatus::Underrun { got: 0 });
         assert_eq!(out, [0.0; 4]);
         let c = h.counters();
-        assert_eq!((c.underruns(), c.underrun_samples(), c.renders()), (2, 10, 3));
+        assert_eq!(
+            (c.underruns(), c.underrun_samples(), c.renders()),
+            (2, 10, 3)
+        );
     }
 
     #[test]

@@ -66,12 +66,16 @@ pub struct OpenedInfo {
 
 impl fmt::Debug for InputStream {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("InputStream").field("info", &self.info).finish()
+        f.debug_struct("InputStream")
+            .field("info", &self.info)
+            .finish()
     }
 }
 impl fmt::Debug for OutputStream {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("OutputStream").field("info", &self.info).finish()
+        f.debug_struct("OutputStream")
+            .field("info", &self.info)
+            .finish()
     }
 }
 
@@ -172,11 +176,7 @@ pub fn validate(rate: u32, block: usize) -> Result<(), IoError> {
 }
 
 /// 按名字选设备。名字匹配规则见 [`match_name`]。
-fn pick(
-    host: &cpal::Host,
-    dir: Direction,
-    wanted: Option<&str>,
-) -> Result<cpal::Device, IoError> {
+fn pick(host: &cpal::Host, dir: Direction, wanted: Option<&str>) -> Result<cpal::Device, IoError> {
     let Some(wanted) = wanted else {
         let d = match dir {
             Direction::Input => host.default_input_device(),
@@ -266,8 +266,8 @@ fn plan(
             supported: supported.clone(),
         }
     })?;
-    let frames = u32::try_from(block)
-        .map_err(|_| IoError::InvalidParam(format!("块长 {block} 太大")))?;
+    let frames =
+        u32::try_from(block).map_err(|_| IoError::InvalidParam(format!("块长 {block} 太大")))?;
     let config = cpal::StreamConfig {
         channels,
         sample_rate: rate,
@@ -335,14 +335,30 @@ mod tests {
     #[test]
     fn choose_channels_prefers_default_and_needs_rate() {
         let sup = [
-            RateRange { min: 44_100, max: 44_100, channels: 2 },
-            RateRange { min: 48_000, max: 48_000, channels: 1 },
-            RateRange { min: 8_000, max: 96_000, channels: 2 },
+            RateRange {
+                min: 44_100,
+                max: 44_100,
+                channels: 2,
+            },
+            RateRange {
+                min: 48_000,
+                max: 48_000,
+                channels: 1,
+            },
+            RateRange {
+                min: 8_000,
+                max: 96_000,
+                channels: 2,
+            },
         ];
         assert_eq!(choose_channels(&sup, 48_000, Some(2)), Some(2));
         assert_eq!(choose_channels(&sup, 48_000, Some(6)), Some(1));
         assert_eq!(choose_channels(&sup, 48_000, None), Some(1));
-        let only44 = [RateRange { min: 44_100, max: 44_100, channels: 2 }];
+        let only44 = [RateRange {
+            min: 44_100,
+            max: 44_100,
+            channels: 2,
+        }];
         assert_eq!(choose_channels(&only44, 48_000, Some(2)), None);
     }
 
@@ -351,9 +367,16 @@ mod tests {
         let e = IoError::UnsupportedRate {
             device: "某麦克风".into(),
             wanted: 48_000,
-            supported: vec![RateRange { min: 44_100, max: 44_100, channels: 1 }],
+            supported: vec![RateRange {
+                min: 44_100,
+                max: 44_100,
+                channels: 1,
+            }],
         };
         let s = e.to_string();
-        assert!(s.contains("48000") && s.contains("44100") && s.contains("某麦克风"), "{s}");
+        assert!(
+            s.contains("48000") && s.contains("44100") && s.contains("某麦克风"),
+            "{s}"
+        );
     }
 }

@@ -124,7 +124,10 @@ impl fmt::Display for IoError {
                 wanted,
                 supported,
             } => {
-                write!(f, "设备「{device}」不支持 {wanted} Hz（本批不重采样）；它支持：")?;
+                write!(
+                    f,
+                    "设备「{device}」不支持 {wanted} Hz（本批不重采样）；它支持："
+                )?;
                 if supported.is_empty() {
                     f.write_str("（设备没报任何配置）")
                 } else {

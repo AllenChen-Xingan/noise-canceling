@@ -20,9 +20,13 @@ pub const FACTORY_SYMBOL: &str = "VdnHalFactory";
 /// CFPlugIn 工厂函数。签名照 `CFPlugInFactoryFunction`：`void *(*)(CFAllocatorRef, CFUUIDRef)`。
 ///
 /// 真驱动接口待实现（D05）。现在不看参数、不解引用任何指针，直接返回空指针 = 不加载。
-#[allow(unsafe_code)] // R10：导出 C 符号要 #[unsafe(no_mangle)]；本 crate 在 unsafe 白名单（metadata.vdn.unsafe = true）
+#[allow(unsafe_code)]
+// R10：导出 C 符号要 #[unsafe(no_mangle)]；本 crate 在 unsafe 白名单（metadata.vdn.unsafe = true）
 #[unsafe(no_mangle)]
-pub extern "C" fn VdnHalFactory(_allocator: *const c_void, _requested_type: *const c_void) -> *mut c_void {
+pub extern "C" fn VdnHalFactory(
+    _allocator: *const c_void,
+    _requested_type: *const c_void,
+) -> *mut c_void {
     std::ptr::null_mut()
 }
 
@@ -40,13 +44,20 @@ mod tests {
     #[test]
     fn plist_names_our_factory_and_audio_server_type() {
         // 工厂表：UUID → 函数名
-        let factory_entry = format!("<key>{FACTORY_UUID}</key>\n\t\t<string>{FACTORY_SYMBOL}</string>");
-        assert!(PLIST.contains(&factory_entry), "CFPlugInFactories 要把 {FACTORY_UUID} 映射到 {FACTORY_SYMBOL}");
+        let factory_entry =
+            format!("<key>{FACTORY_UUID}</key>\n\t\t<string>{FACTORY_SYMBOL}</string>");
+        assert!(
+            PLIST.contains(&factory_entry),
+            "CFPlugInFactories 要把 {FACTORY_UUID} 映射到 {FACTORY_SYMBOL}"
+        );
         // 类型表：AudioServerPlugIn 类型 → [工厂 UUID]
         let type_entry = format!(
             "<key>{AUDIO_SERVER_PLUGIN_TYPE_UUID}</key>\n\t\t<array>\n\t\t\t<string>{FACTORY_UUID}</string>"
         );
-        assert!(PLIST.contains(&type_entry), "CFPlugInTypes 要把类型 UUID 映射到工厂 UUID");
+        assert!(
+            PLIST.contains(&type_entry),
+            "CFPlugInTypes 要把类型 UUID 映射到工厂 UUID"
+        );
     }
 
     #[test]
