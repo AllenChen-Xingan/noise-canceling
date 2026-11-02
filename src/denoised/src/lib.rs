@@ -80,7 +80,11 @@ impl<P: Processor> Worker<P> {
 }
 
 // 实时（B 档）
-#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl<P: Processor> Worker<P> {
     pub fn stats(&self) -> WorkerStats {
         self.stats
@@ -102,7 +106,12 @@ impl<P: Processor> Worker<P> {
     }
 
     /// Raw 够一块就处理一块、推 Processed、心跳一次。
-    pub fn step<R: Pop, O: Push, B: Beat + ?Sized>(&mut self, raw: &mut R, processed: &mut O, beat: &mut B) -> Step {
+    pub fn step<R: Pop, O: Push, B: Beat + ?Sized>(
+        &mut self,
+        raw: &mut R,
+        processed: &mut O,
+        beat: &mut B,
+    ) -> Step {
         if raw.available() < self.block {
             return Step::Idle;
         }
@@ -146,7 +155,11 @@ mod tests {
     #[test]
     fn prime_then_steps_beat_once_per_block() {
         let mut w = Worker::new(Copy0, 480);
-        let (mut raw, mut processed, mut hb) = (FakeRing::new(1 << 14), FakeRing::new(1 << 14), FakeBeat::default());
+        let (mut raw, mut processed, mut hb) = (
+            FakeRing::new(1 << 14),
+            FakeRing::new(1 << 14),
+            FakeBeat::default(),
+        );
         assert_eq!(w.prime(&mut processed, 1440), 1440);
         assert_eq!(w.step(&mut raw, &mut processed, &mut hb), Step::Idle);
         raw.push(&[1.0; 1000]);
@@ -170,8 +183,12 @@ mod tests {
         let block = 480;
         let lead = 1440;
         let mut w = Worker::new(Copy0, block);
-        let (mut raw, mut processed, mut out, mut hb) =
-            (FakeRing::new(1 << 14), FakeRing::new(1 << 14), FakeRing::new(1 << 20), FakeBeat::default());
+        let (mut raw, mut processed, mut out, mut hb) = (
+            FakeRing::new(1 << 14),
+            FakeRing::new(1 << 14),
+            FakeRing::new(1 << 20),
+            FakeBeat::default(),
+        );
         w.prime(&mut processed, lead);
         let mut f = Forwarder::new(ForwarderConfig::new(w.l_total(lead), block), lead);
         let x: Vec<f32> = (0..100 * block).map(|i| (i as f32 * 0.01).sin()).collect();

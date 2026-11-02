@@ -10,7 +10,8 @@ fn sig(n: usize, off: usize) -> Vec<f32> {
     (0..n)
         .map(|i| {
             let t = (i + off) as f32 / 48_000.0;
-            0.5 * (2.0 * std::f32::consts::PI * 440.0 * t).sin() + 0.3 * (2.0 * std::f32::consts::PI * 2000.0 * t).sin()
+            0.5 * (2.0 * std::f32::consts::PI * 440.0 * t).sin()
+                + 0.3 * (2.0 * std::f32::consts::PI * 2000.0 * t).sin()
         })
         .collect()
 }
@@ -67,8 +68,15 @@ impl Rig {
     fn tick(&mut self) {
         let x = sig(BLOCK, self.t);
         self.t += BLOCK;
-        self.fwd.process(&x, &mut self.raw, &mut self.processed, &mut self.out, &self.hb);
-        self.den.step(&mut self.raw, &mut self.processed, &mut self.hb);
+        self.fwd.process(
+            &x,
+            &mut self.raw,
+            &mut self.processed,
+            &mut self.out,
+            &self.hb,
+        );
+        self.den
+            .step(&mut self.raw, &mut self.processed, &mut self.hb);
     }
 }
 
@@ -76,7 +84,12 @@ impl Rig {
 fn assert_aligned(y: &[f32], from: usize) {
     let x = sig(y.len(), 0);
     for k in from.max(LEAD)..y.len() {
-        assert!((y[k] - x[k - LEAD]).abs() < 1e-5, "k={k}: {} vs {}", y[k], x[k - LEAD]);
+        assert!(
+            (y[k] - x[k - LEAD]).abs() < 1e-5,
+            "k={k}: {} vs {}",
+            y[k],
+            x[k - LEAD]
+        );
     }
 }
 
@@ -114,7 +127,10 @@ fn denoiser_dies_switches_to_raw_within_timeout_without_gap() {
     assert_eq!(s.stale_switches, 1);
     let switch = s.last_stale_at.unwrap() - kill_at;
     // 超时 4800 + 一块粒度
-    assert!(switch <= 4800 + 2 * BLOCK as u64, "switch after {switch} samples");
+    assert!(
+        switch <= 4800 + 2 * BLOCK as u64,
+        "switch after {switch} samples"
+    );
     assert!(!r.fwd.is_fresh());
     assert_eq!(r.fwd.gain(), 0.0);
     // 死掉之后照样逐样本对齐（缺的处理后样本由延迟原声补），没有静音
@@ -206,9 +222,11 @@ fn process_into_matches_process_and_splits_long_input() {
     let mut a = Rig::new();
     let mut b = Rig::new();
     let x = sig(5 * BLOCK + 17, 0);
-    a.fwd.process(&x, &mut a.raw, &mut a.processed, &mut a.out, &a.hb);
+    a.fwd
+        .process(&x, &mut a.raw, &mut a.processed, &mut a.out, &a.hb);
     let mut y = vec![9.0; x.len()];
-    b.fwd.process_into(&x, &mut y, &mut b.raw, &mut b.processed, &b.hb);
+    b.fwd
+        .process_into(&x, &mut y, &mut b.raw, &mut b.processed, &b.hb);
     assert_eq!(a.out.drain_all(), y);
     assert_eq!(b.raw.len(), x.len());
 }
@@ -218,7 +236,8 @@ fn process_into_does_not_allocate() {
     let mut r = Rig::new();
     let x = sig(BLOCK, 0);
     let mut y = vec![0.0; BLOCK];
-    r.fwd.process_into(&x, &mut y, &mut r.raw, &mut r.processed, &r.hb); // 热身
+    r.fwd
+        .process_into(&x, &mut y, &mut r.raw, &mut r.processed, &r.hb); // 热身
     // FakeRing::push 会分配，所以这里用不分配的「空环」验 Forwarder 自身
     struct Sink;
     impl Push for Sink {

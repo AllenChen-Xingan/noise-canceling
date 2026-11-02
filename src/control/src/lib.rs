@@ -117,7 +117,8 @@ impl Config {
 
     /// 从文件读，并校验。
     pub fn load(path: &Path) -> Result<Self, ConfigError> {
-        let text = std::fs::read_to_string(path).map_err(|e| ConfigError::Io(format!("{}：{e}", path.display())))?;
+        let text = std::fs::read_to_string(path)
+            .map_err(|e| ConfigError::Io(format!("{}：{e}", path.display())))?;
         Self::from_json(&text)
     }
 
@@ -136,7 +137,10 @@ impl Config {
     pub fn validate(&self) -> Result<(), ConfigError> {
         let (lo, hi) = Self::BLOCK_RANGE;
         if !(lo..=hi).contains(&self.block) {
-            return Err(ConfigError::Invalid(format!("block = {}，须在 {lo}..={hi}", self.block)));
+            return Err(ConfigError::Invalid(format!(
+                "block = {}，须在 {lo}..={hi}",
+                self.block
+            )));
         }
         let (lo, hi) = Self::HEARTBEAT_RANGE_MS;
         if !(lo..=hi).contains(&self.heartbeat_timeout_ms) {
@@ -153,9 +157,14 @@ impl Config {
             )));
         }
         validate_bus_name(&self.bus_name)?;
-        for (k, v) in [("input_device", &self.input_device), ("output_device", &self.output_device)] {
+        for (k, v) in [
+            ("input_device", &self.input_device),
+            ("output_device", &self.output_device),
+        ] {
             if v.as_deref().is_some_and(|s| s.trim().is_empty()) {
-                return Err(ConfigError::Invalid(format!("{k} 是空字符串；要用系统默认请删掉这个键")));
+                return Err(ConfigError::Invalid(format!(
+                    "{k} 是空字符串；要用系统默认请删掉这个键"
+                )));
             }
         }
         Ok(())
@@ -221,7 +230,10 @@ mod tests {
 
     #[test]
     fn unknown_key_rejected() {
-        assert!(matches!(Config::from_json(r#"{"blok":256}"#), Err(ConfigError::Parse(_))));
+        assert!(matches!(
+            Config::from_json(r#"{"blok":256}"#),
+            Err(ConfigError::Parse(_))
+        ));
     }
 
     #[test]
@@ -245,7 +257,10 @@ mod tests {
             r#"{"bus_name":"/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
             r#"{"input_device":"  "}"#,
         ] {
-            assert!(matches!(Config::from_json(bad), Err(ConfigError::Invalid(_))), "{bad}");
+            assert!(
+                matches!(Config::from_json(bad), Err(ConfigError::Invalid(_))),
+                "{bad}"
+            );
         }
     }
 

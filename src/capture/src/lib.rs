@@ -201,7 +201,11 @@ impl Forwarder {
 }
 
 // 实时（specs/rust/architecture.md §5.3）
-#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Forwarder {
     pub fn config(&self) -> ForwarderConfig {
         self.cfg
@@ -219,8 +223,14 @@ impl Forwarder {
     }
 
     /// 一块原声进，一块结果推进 Out。
-    pub fn process<R, P, O, H>(&mut self, input: &[f32], raw: &mut R, processed: &mut P, out: &mut O, hb: &H)
-    where
+    pub fn process<R, P, O, H>(
+        &mut self,
+        input: &[f32],
+        raw: &mut R,
+        processed: &mut P,
+        out: &mut O,
+        hb: &H,
+    ) where
         R: Push,
         P: Pop,
         O: Push,
@@ -240,8 +250,14 @@ impl Forwarder {
     }
 
     /// 同 [`Self::process`]，但结果写进 `output`（与 `input` 等长）而不推 Out：开发期直接接扬声器 / 文件用。
-    pub fn process_into<R, P, H>(&mut self, input: &[f32], output: &mut [f32], raw: &mut R, processed: &mut P, hb: &H)
-    where
+    pub fn process_into<R, P, H>(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        raw: &mut R,
+        processed: &mut P,
+        hb: &H,
+    ) where
         R: Push,
         P: Pop,
         H: Heartbeat + ?Sized,
@@ -287,11 +303,14 @@ impl Forwarder {
 
     fn note_gap(&mut self, len: i64) {
         let at = self.accepted;
-        if let Some(last) = self.n_gaps.checked_sub(1).and_then(|i| self.gaps.get_mut(i)) {
-            if last.at == at {
-                last.len += len;
-                return;
-            }
+        if let Some(last) = self
+            .n_gaps
+            .checked_sub(1)
+            .and_then(|i| self.gaps.get_mut(i))
+            && last.at == at
+        {
+            last.len += len;
+            return;
         }
         if let Some(slot) = self.gaps.get_mut(self.n_gaps) {
             *slot = Gap { at, len };
