@@ -73,3 +73,36 @@ pub fn zeros(shape: &[usize]) -> Result<ort::value::Tensor<f32>, BoxError> {
         vec![0.0f32; n],
     ))?)
 }
+
+/// 每帧读输出张量失败的原因（`Copy`，不带 `String`，实时线程上可以直接返回）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CopyError {
+    /// 不是 f32 张量
+    Type,
+    /// 元素个数与目标不符
+    Len,
+}
+
+// 实时（B 档推理线程，每帧调用；规约 §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
+mod per_frame {
+    use super::{CopyError, ort};
+
+    /// 把一个 f32 输出张量的数据拷进 `dst`（缓存回灌、取模型输出用）。不分配；长度不符时不写 `dst`。
+    pub fn copy_out(src: &ort::value::DynValue, dst: &mut [f32]) -> Result<(), CopyError> {
+        let (_, data) = src
+            .try_extract_tensor::<f32>()
+            .map_err(|_| CopyError::Type)?;
+        if data.len() != dst.len() {
+            return Err(CopyError::Len);
+        }
+        dst.copy_from_slice(data);
+        Ok(())
+    }
+}
+
+pub use per_frame::copy_out;

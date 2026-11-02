@@ -149,14 +149,7 @@ impl Gtcrn {
         }
         for cache in self.caches.iter_mut() {
             let v = vals.next().ok_or(ModelError::Shape)?;
-            let (_, src) = v
-                .try_extract_tensor::<f32>()
-                .map_err(|_| ModelError::Shape)?;
-            let dst = cache.extract_tensor_mut().1;
-            if src.len() != dst.len() {
-                return Err(ModelError::Shape);
-            }
-            dst.copy_from_slice(src);
+            session::copy_out(&v, cache.extract_tensor_mut().1).map_err(|_| ModelError::Shape)?;
         }
         Ok(())
     }

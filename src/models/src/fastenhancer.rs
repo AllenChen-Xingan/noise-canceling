@@ -146,23 +146,10 @@ impl FastEnhancer {
         // 全部输出都预分配了，values() 按会话输出顺序给出（ort session/output.rs Values）
         let mut vals = outs.values();
         let first = vals.next().ok_or(ModelError::Shape)?;
-        let (_, y) = first
-            .try_extract_tensor::<f32>()
-            .map_err(|_| ModelError::Shape)?;
-        if y.len() != output.len() {
-            return Err(ModelError::Shape);
-        }
-        output.copy_from_slice(y);
+        session::copy_out(&first, output).map_err(|_| ModelError::Shape)?;
         for cache in self.caches.iter_mut() {
             let v = vals.next().ok_or(ModelError::Shape)?;
-            let (_, src) = v
-                .try_extract_tensor::<f32>()
-                .map_err(|_| ModelError::Shape)?;
-            let dst = cache.extract_tensor_mut().1;
-            if src.len() != dst.len() {
-                return Err(ModelError::Shape);
-            }
-            dst.copy_from_slice(src);
+            session::copy_out(&v, cache.extract_tensor_mut().1).map_err(|_| ModelError::Shape)?;
         }
         Ok(())
     }

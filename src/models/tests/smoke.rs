@@ -82,7 +82,10 @@ fn run_pipeline(kind: ModelKind) {
         i = end;
     }
     assert!(y.iter().all(|v| v.is_finite()));
-    assert!(y[p.latency_samples()..].iter().any(|v| v.abs() > 1e-4), "输出全是零");
+    assert!(
+        y[p.latency_samples()..].iter().any(|v| v.abs() > 1e-4),
+        "输出全是零"
+    );
     let s = p.engine().stats();
     assert_eq!(s.fault_backend + s.fault_nonfinite + s.fault_abnormal, 0);
 }
