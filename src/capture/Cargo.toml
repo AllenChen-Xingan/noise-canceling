@@ -1,0 +1,28 @@
+[package]
+name = "vdn-capture"
+description = "送音进程：原声 → 共享内存 → 处理后 / 延迟原声 → 虚拟麦克风；不含引擎与模型"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "vdn-capture"
+path = "src/main.rs"
+
+[dependencies]
+vdn-dsp.workspace = true
+
+[dev-dependencies]
+assert_no_alloc.workspace = true
+
+[lints]
+workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）。Forwarder 跑在 IO 回调里（A 档）。
+# 依赖闭包里不许有引擎、模型、推理库（§2.2 规则 3，D03 崩溃隔离）
+[package.metadata.vdn]
+tier = "A"
+unsafe = false
+forbid = ["vdn-engine", "vdn-models", "vdn-backend-ort", "ort", "ort-sys"]
