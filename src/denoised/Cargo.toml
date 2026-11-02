@@ -13,6 +13,13 @@ path = "src/main.rs"
 
 [dependencies]
 vdn-capture.workspace = true
+vdn-engine.workspace = true
+vdn-models.workspace = true
+vdn-shm.workspace = true
+vdn-rt-thread.workspace = true
+vdn-control.workspace = true
+clap.workspace = true
+ctrlc.workspace = true
 
 [lints]
 workspace = true

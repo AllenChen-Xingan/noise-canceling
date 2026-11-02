@@ -16,12 +16,53 @@
     )
 )]
 
+use std::path::Path;
+
 use vdn_capture::{Beat, Pop, Push};
+use vdn_engine::{Engine, Model, Pipeline, SafetyConfig};
+use vdn_models::{AnyModel, ModelKind};
+
+/// IO 采样率（docs/plan/010 第十节）
+pub const IO_RATE: u32 = 48_000;
 
 /// 一块进、等长一块出，延迟固定（48 kHz 样本）。
 pub trait Processor {
     fn process(&mut self, input: &[f32], output: &mut [f32]);
     fn latency_samples(&self) -> usize;
+}
+
+impl<M: Model> Processor for Pipeline<M> {
+    fn process(&mut self, input: &[f32], output: &mut [f32]) {
+        Pipeline::process(self, input, output);
+    }
+    fn latency_samples(&self) -> usize {
+        Pipeline::latency_samples(self)
+    }
+}
+
+/// 直通管线（`testing::Identity`，不需要模型权重）。
+pub fn identity_pipeline() -> Result<Pipeline<vdn_engine::testing::Identity>, String> {
+    Pipeline::new(Engine::new(vdn_engine::testing::Identity, SafetyConfig::off()), IO_RATE).map_err(|e| e.to_string())
+}
+
+/// 真模型管线（三件保命按默认开）。`path` 不给就按 vdn-models 的默认路径查找。
+pub fn model_pipeline(kind: ModelKind, path: Option<&Path>) -> Result<Pipeline<AnyModel>, String> {
+    let p = match path {
+        Some(p) => p.to_path_buf(),
+        None => kind
+            .default_path()
+            .ok_or("找不到模型文件：用 --model-path 指定，或设环境变量 VDN_GTCRN_ONNX / VDN_FASTENHANCER_ONNX")?,
+    };
+    let model = kind.open(&p).map_err(|e| format!("{}：{e}", p.display()))?;
+    Pipeline::new(Engine::new(model, SafetyConfig::default()), IO_RATE).map_err(|e| e.to_string())
+}
+
+/// `vdn-control` 的模型名 → `vdn-models` 的类型。
+pub fn model_kind(c: vdn_control::ModelChoice) -> ModelKind {
+    match c {
+        vdn_control::ModelChoice::Gtcrn => ModelKind::Gtcrn,
+        vdn_control::ModelChoice::FastenhancerM => ModelKind::FastEnhancerM,
+    }
 }
 
 /// 计数器（只增不减）。
@@ -169,6 +210,12 @@ mod tests {
         assert_eq!(hb.heartbeat(), 2);
         assert_eq!(processed.len(), 1440 + 960);
         assert_eq!(w.stats().blocks, 2);
+    }
+
+    #[test]
+    fn identity_pipeline_latency() {
+        let p = identity_pipeline().unwrap();
+        assert_eq!(Processor::latency_samples(&p), 863);
     }
 
     #[test]
