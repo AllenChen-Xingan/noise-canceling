@@ -341,14 +341,23 @@ ASR_MODEL = "qwen3-asr-plus:1.7b"
 ASR_REPEATS = 2   # 照 V-EAT-ASR：转两次，两次不一致的段不计（verifiers.rs:285）
 
 
-def asr(path, cache, rep):
+def asr(path, cache, rep, tmpdir):
+    """识别服务读不了 32 位浮点 WAV（会挂到超时）：先转 16 位整型再送；60 s 超时，重试 2 次，仍失败返回 None。"""
     key = f"{sha(path)}|{rep}"
     if key not in cache:
-        o = subprocess.run(["curl", "-sS", "-f", "-m", "600", "-X", "POST", ASR_URL, "-H",
-                            f"Authorization: Bearer {os.environ.get('VDN_ASR_KEY', '42model')}",
-                            "-F", f"model={ASR_MODEL}", "-F", "language=en", "-F", f"file=@{path};type=audio/wav"],
-                           capture_output=True, text=True, check=True)
-        cache[key] = json.loads(o.stdout).get("text", "")
+        y, _ = sf.read(path, dtype="float32")
+        p16 = Path(tmpdir) / "asr_pcm16.wav"
+        sf.write(p16, np.clip(y, -1, 1), SR, subtype="PCM_16")
+        for _ in range(3):
+            o = subprocess.run(["curl", "-sS", "-f", "-m", "60", "-X", "POST", ASR_URL, "-H",
+                                f"Authorization: Bearer {os.environ.get('VDN_ASR_KEY', '42model')}",
+                                "-F", f"model={ASR_MODEL}", "-F", "language=en", "-F", f"file=@{p16};type=audio/wav"],
+                               capture_output=True, text=True)
+            if o.returncode == 0:
+                cache[key] = json.loads(o.stdout).get("text", "")
+                break
+        else:
+            return None
     return cache[key]
 
 
@@ -378,45 +387,57 @@ def del_sub(ref, hyp):
 
 
 def cmd_judge(build):
+    """评分先落盘（judge_scores.json，已有就跳过），再做识别（asr_cache.json 逐条续跑）。"""
     fin = [json.loads(l) for l in (bdir(build) / "final.jsonl").read_text().splitlines()]
     cl = {c["id"]: c for c in clips(build)}
     d = adir(build)
     (d / "tail").mkdir(exist_ok=True)
-    out = {}
-    import scoreq
-    sq = scoreq.Scoreq(data_domain="natural", mode="nr")
-    fA = distill()
-    vdn_eval = WT / "target/release/vdn-eval"
-    dns = MAIN / "resources/DNS-Challenge/DNSMOS/DNSMOS/sig_bak_ovr.onnx"
+    sp = bdir(build) / "judge_scores.json"
     t0 = time.perf_counter()
-    for r in fin:
-        y, _ = sf.read(r["file"], dtype="float32")
-        tail = d / "tail" / (Path(r["file"]).stem + f"_{r['id'].split('|')[1]}_tail.wav")
-        sf.write(tail, y[int(WIN_S * SR):], SR, subtype="FLOAT")      # 去掉第一窗（在线闭环第一窗 = 查表起点）
-        o = subprocess.run([str(vdn_eval), "dnsmos", str(dns), r["file"]], capture_output=True, text=True, check=True)
-        out[r["id"]] = {"C": json.loads(o.stdout.strip().splitlines()[-1]),
-                        "B": float(sq.predict(test_path=r["file"], ref_path=None)),
-                        "B_tail": float(sq.predict(test_path=str(tail), ref_path=None)),
-                        "A": fA(y)}
-    print("final scored", f"{time.perf_counter() - t0:.0f}s", flush=True)
-    # 报分半每个候选的 B：算「用 B 挑、用 B 量」的真上界
-    candB = {}
-    for cid, c in cl.items():
-        if c["half"] == "report":
-            for k in CANDS:
-                candB[f"{cid}|{k}"] = float(sq.predict(test_path=str(d / f"cand/{cid}_{k}.wav"), ref_path=None))
-    print("cand B scored", f"{time.perf_counter() - t0:.0f}s", flush=True)
+    if sp.exists():
+        S = json.loads(sp.read_text())
+        out, candB = S["final"], S["candB"]
+    else:
+        import scoreq
+        sq = scoreq.Scoreq(data_domain="natural", mode="nr")
+        fA = distill()
+        vdn_eval = WT / "target/release/vdn-eval"
+        dns = MAIN / "resources/DNS-Challenge/DNSMOS/DNSMOS/sig_bak_ovr.onnx"
+        out = {}
+        for r in fin:
+            y, _ = sf.read(r["file"], dtype="float32")
+            tail = d / "tail" / (Path(r["file"]).stem + f"_{r['id'].split('|')[1]}_tail.wav")
+            sf.write(tail, y[int(WIN_S * SR):], SR, subtype="FLOAT")      # 去掉第一窗（在线闭环第一窗 = 查表起点）
+            o = subprocess.run([str(vdn_eval), "dnsmos", str(dns), r["file"]], capture_output=True, text=True, check=True)
+            out[r["id"]] = {"C": json.loads(o.stdout.strip().splitlines()[-1]),
+                            "B": float(sq.predict(test_path=r["file"], ref_path=None)),
+                            "B_tail": float(sq.predict(test_path=str(tail), ref_path=None)),
+                            "A": fA(y)}
+        print("final scored", f"{time.perf_counter() - t0:.0f}s", flush=True)
+        # 报分半每个候选的 B：算「用 B 挑、用 B 量」的真上界
+        candB = {}
+        for cid, c in cl.items():
+            if c["half"] == "report":
+                for k in CANDS:
+                    candB[f"{cid}|{k}"] = float(sq.predict(test_path=str(d / f"cand/{cid}_{k}.wav"), ref_path=None))
+        print("cand B scored", f"{time.perf_counter() - t0:.0f}s", flush=True)
+        sp.write_text(json.dumps({"final": out, "candB": candB}, indent=0))
     cp = d / "asr_cache.json"
     cache = json.loads(cp.read_text()) if cp.exists() else {}
+    fails = 0
     for r in fin:
         cid = r["id"].split("|")[0]
-        refs = [asr(d / f"cache/{cid}_clean.wav", cache, k) for k in range(ASR_REPEATS)]
-        hyps = [asr(r["file"], cache, k) for k in range(ASR_REPEATS)]
-        stable = len(set(map(lambda t: " ".join(words(t)), refs))) == 1 and len(set(map(lambda t: " ".join(words(t)), hyps))) == 1
-        out[r["id"]]["asr"] = {"del_sub": del_sub(refs[0], hyps[0])[0], "ref_words": len(words(refs[0])), "stable": stable}
+        refs = [asr(d / f"cache/{cid}_clean.wav", cache, k, d) for k in range(ASR_REPEATS)]
+        hyps = [asr(r["file"], cache, k, d) for k in range(ASR_REPEATS)]
         cp.write_text(json.dumps(cache))
-    print("asr done", f"{time.perf_counter() - t0:.0f}s", flush=True)
-    (bdir(build) / "judge.json").write_text(json.dumps({"final": out, "candB": candB}, indent=0))
+        if None in refs or None in hyps:
+            fails += 1
+            out[r["id"]]["asr"] = {"del_sub": 0, "ref_words": 0, "stable": False, "failed": True}
+            continue
+        stable = len({" ".join(words(t)) for t in refs}) == 1 and len({" ".join(words(t)) for t in hyps}) == 1
+        out[r["id"]]["asr"] = {"del_sub": del_sub(refs[0], hyps[0])[0], "ref_words": len(words(refs[0])), "stable": stable}
+    print("asr done", f"{time.perf_counter() - t0:.0f}s", "failed", fails, flush=True)
+    (bdir(build) / "judge.json").write_text(json.dumps({"final": out, "candB": candB, "asr_failed": fails}, indent=0))
 
 
 # ---------------------------------------------------------------- report
