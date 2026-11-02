@@ -37,8 +37,8 @@
 | UTMOSv2 | 论文没给参数量；wav2vec2-base 加 EfficientNetV2-S（谱图当图像） | — | 波形 + 多分辨率谱 | VMC22-main 语句 PCC 0.916、系统 SRCC 0.932，**但带数据泄漏**（训练用到了 BVCC 测试集） | 否（合成语音） | MIT | `resources/UTMOSv2/utmosv2/config/fusion_stage3.py:114,123`【源码】；arXiv 2502.05139 表（Audiobox 论文里的对比）【论文】；2409.09305【论文，只读到摘要】 |
 | TorchAudio-Squim（客观版） | 7.39M | **40.27 GMAC / 5 s ≈ 8 GMAC/s** | 波形 → 1-D 卷积 + 4 个 DPRNN | 只对 PESQ / STOI / SI-SDR 回归，PESQ SRCC 0.963；**主观 MOS 版没报参数和相关性** | 是（DNS2020 + 3 个 GCRN 输出） | BSD（torchaudio）【二手】 | arXiv 2304.01448 Table 1–2【论文】 |
 | Audiobox Aesthetics | 论文没给参数量；WavLM 结构，12 层 768 维 | — | 16 kHz | PQ 轴：VMC22-main 语句 PCC 0.689、系统 SRCC 0.752（DNSMOS 是 0.612 / 0.773） | 否 | 未核 | arXiv 2502.05139 §3 和对比表【论文】 |
-| Uni-VERSA | 论文没给参数量；WavLM-large 冻结，加 3 个 4 层 Transformer | — | 参考音频、文本都可选 | 语句级 MOS：无参考 LCC .77 / SRCC .78；**Fbank 前端比 WavLM 低约 0.05**（.72 vs .77）；跨域 TTS 降到 .60 | 部分 | 未核 | arXiv 2505.20741 Table 2–5【论文】 |
-| AttentiveMOS | **约 86K**（D=16） | 论文没给；目标是内存 <1 MB、延迟 <10 ms | 2 ms 帧直接嵌入，20.48 s | NISQA 集 PCC：P501 0.666、FOR 0.558、LIVETALK 0.359，**明显不如大模型** | 否 | 未核 | arXiv 2410.12675v2 §3、Table 3【论文】 |
+| Uni-VERSA | 论文没给参数量；WavLM-large 冻结，加 3 个 4 层 Transformer | — | 参考音频、文本都可选 | 语句级 MOS：无参考 LCC .77 / SRCC .78；**Fbank 前端比 WavLM 低约 0.05**（.72 vs .77，**仅限多任务联合训练**；只训 MOS 单任务时 Fbank .53/.55 对 WavLM .80/.80，差约 0.27，Table 4【已核改：补】）；跨域 TTS 降到 .60 | 部分 | 未核 | arXiv 2505.20741 Table 2–5【论文】 |
+| AttentiveMOS | **约 86K**（D=16） | 论文没给；目标是内存 <1 MB、延迟 <10 ms | 2 ms 帧（1 ms 重叠）直接嵌入，固定 20.48 s | 【已核改】原写「NISQA 集 PCC：P501 0.666、FOR 0.558、LIVETALK 0.359，明显不如大模型」**在 v1、v2 全文都查不到**（0.666 是 Table 1 里 NISQA 数据集的评分者标准差 σavg）。实际只在 SOMOS（TTS）上评：SOMOS-clean 验证集 PCC 0.449 / SRCC 0.442，SSL-MOS 0.453 / 0.444，**两者相当**（Table 3）；绝对值都低 | 否（只测了 TTS） | 未核 | arXiv 2410.12675v2 §2–3、Table 1、Table 3【论文】 |
 | DistilMOS（层级自蒸馏，2601.13700） | 目标是提高准确率，不是压体积 | — | — | — | — | — | 搜索结果摘要【二手】 |
 
 ### C. URGENT 用哪些无参考指标
@@ -53,7 +53,7 @@ URGENT 2025：DNSMOS、NISQA、UTMOS（`resources/urgent2025_challenge/evaluatio
 | FitHuBERT | 老师的 23.8% | 推理时间是老师的 35.9% | WER 12.1%、PER 13.3% | arXiv 2207.00555【论文，只读到摘要】 |
 | LightHuBERT a_Small | 27M（老师 95M） | 没报 | PR 6.60，ASR 8.33（老师 5.41 / 6.42） | arXiv 2203.15610v2 Table 4【论文】 |
 
-这条路最多只能压到约 23–27M（约 90–100 MB fp32），**不到「几 MB」**。所以 D60 的学生不能走 SSL 路线，得像 DistillMOS 那样从谱特征直接训小网络。
+这条路最多只能压到约 23–27M（约 94–108 MB fp32【已核改：原写 90–100 MB】），**不到「几 MB」**。所以 D60 的学生不能走 SSL 路线，得像 DistillMOS 那样从谱特征直接训小网络。
 
 ## 二、对本项目的含义（全部是假设）
 
