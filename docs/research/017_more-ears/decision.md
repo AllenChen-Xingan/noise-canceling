@@ -105,7 +105,7 @@ S8 要「合成格排名 ≈ 真实 / 人耳排名」，门槛 ≥ 12 个系统�
 | 同一 48 对：作者对 Distill-MOS · DNSMOS | 0.562 [0.31, 0.81] · 0.478 [0.26, 0.73]（DNSMOS 剔 2 对平局）。参照：Distill-MOS 对 CHiME-7 单个听众最低 0.546、p10 0.577（全量配对，不是 48 对抽样） | 同上 · results/crowd_ears.md B |
 | 三台机器彼此一致（同 48 对） | SCOREQ~Distill 0.812 · SCOREQ~DNSMOS 0.783 · Distill~DNSMOS 0.761 | results/author_diagnosis.json（事后诊断，非预注册） |
 | 作者各模型胜负（48 对） | GTCRN 胜 25 负 12 · FastEnhancer 胜 18 负 14 · DPDFNet-2 胜 5 负 22；三台机器平均分都是 DPDFNet-2 最高 | 同上 |
-| 重生成音频是否就是作者听的那份 | 48 段逐段增益 / 响度 / 峰值差 0.0 dB；DNSMOS 重算与 exp003 差 0.0 | results/regen_check.json |
+| 重生成音频是否就是作者听的那份 | 12 段 × 4 个版本共 48 个文件，逐个比增益 / 响度 / 峰值差 0.0 dB；DNSMOS 重算与 exp003 差 0.0 | results/regen_check.json |
 
 **怎么读这一行结果**（强度低，理由按影响排）：
 1. 样本小：48 对只来自 9 屏、3 个模型；区间 0.14–0.64 很宽，上沿已过线

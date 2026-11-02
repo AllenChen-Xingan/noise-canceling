@@ -31,7 +31,7 @@ verifier **V-AUTHOR-VS-CROWD**（QA 层 · 人工层定标用）：
 python3 docs/experiments/exp009-more-ears/fetch_labels.py          # 下标签 → ~/vdn-data/public-mos/，写 data-manifest.json（哈希进仓）
 <主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp009-more-ears/crowd_ears.py   # 第一段，约 3 分钟，不占名额
 <主目录>/_tmp/exp002-venv/bin/python docs/experiments/exp009-more-ears/regen_exp003.py # 重新生成作者听过的音频（要名额）
-<主目录>/_tmp/exp009-venv/bin/python docs/experiments/exp009-more-ears/score_author.py # 第二段（要名额；SCOREQ 首次下载 ONNX 378 MB 到 ~/.cache/scoreq/；48 段 × 4 版本三个评分模型共 41 秒 CPU）
+<主目录>/_tmp/exp009-venv/bin/python docs/experiments/exp009-more-ears/score_author.py # 第二段（要名额；SCOREQ 首次下载 ONNX 378 MB 到 ~/.cache/scoreq/；12 段 × 4 个版本 = 48 个文件（每个约 10.6 秒、16 kHz），三个评分模型合计墙钟 41 秒 CPU）
 <主目录>/_tmp/exp009-venv/bin/python docs/experiments/exp009-more-ears/diagnose_author.py
 # exp009-venv：uv venv --python 3.11；uv pip install scoreq distillmos soundfile numpy onnxruntime librosa pandas requests tqdm torchcodec（torchaudio 新版读音频要 torchcodec）
 ```

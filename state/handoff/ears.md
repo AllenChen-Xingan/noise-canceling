@@ -4,7 +4,7 @@
 - **手上**：找一切办法把「更多人耳」接进评测，做成可验证的东西（issue #42）
 - **交代**：主目录 `_tmp/20261102-b7/ears.md`（续 `_tmp/20261031-b6/ears.md`）
 - **做到哪**（2026-11-02）：b7 收口。第 3 步完成：decision 第 8 节按 D58/D60/D62/D64 重看，E1/E3/E4/E5/E7 划掉写依据，剩 E2（盲听夹大众已评题）· E6（向上游报错）按人能感知的后果改写；第 0/1/2/3/4 节与 D62 冲突处已改
-- **下一步**：等名额（排 benchsynth 后）跑 regen_exp003 + score_author（要建 _tmp/exp009-venv）→ 回填第 6 节 → 对抗自审 → 报收尾
+- **下一步**：第二段已跑完并回填（作者 vs 大众：判「有证据」，强度低）→ 对抗自审 3 视角进行中 → 修完报收尾、开 PR（Closes #42）
 
 ## 改了哪些文件
 | 文件 | 改了什么 |
@@ -40,3 +40,5 @@
 - 回 judgeloop（018）：起点 SCOREQ + 各数据集数字、本机现成评分模型路径（DNSMOS · NISQA；SCOREQ 待名额）
 - 2026-11-02 b7：读交代/common/D56–D65 → 报到 noise-canceling-e3，名额排第二 → 重看第 8 节并改 decision；核第二段输入齐（exp003 build f8c3 答卷、exp004 src 在；exp009-venv 未建）
 - 2026-11-02 回 judgeloop（018）：本机查实 SCOREQ / Distill-MOS 都没装、没权重、速度未测；将装进 _tmp/exp009-venv（排名额）；无新证据推翻「SCOREQ 当老师」
+- 2026-11-02 拿名额：regen 12 段 × 4 版本 = 48 个文件与作者听的那份差 0.0 dB；建 _tmp/exp009-venv（Python 3.11；SCOREQ 权重 378 MB 在 ~/.cache/scoreq；需 torchcodec）；score_author：作者 vs SCOREQ 0.375 [0.14,0.64] < 0.516 → 判有证据、强度低；Distill 0.562 · DNSMOS 0.478；三机互相一致 0.76–0.81；分歧集中在 GTCRN > DPDFNet-2（13/16）；名额已还
+- 踩坑：后台 import 检查与打分同时下载同一 ONNX → 读到半截文件报 INVALID_PROTOBUF；等下载完重跑即可
