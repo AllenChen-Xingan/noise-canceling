@@ -89,8 +89,12 @@ fn baseline_path() -> PathBuf {
 
 /// 读冻结基线。文件不存在 = 还没有基线（空）；存在但格式不对 → 报错，不当成空基线静默放过（第 1 轮 codex #2）。
 fn load_baseline() -> Result<Baseline, String> {
-    let p = baseline_path();
-    match std::fs::read_to_string(&p) {
+    load_baseline_from(&baseline_path())
+}
+
+/// 同 `load_baseline`，路径由调用方给（测试用）。
+fn load_baseline_from(p: &Path) -> Result<Baseline, String> {
+    match std::fs::read_to_string(p) {
         Ok(t) => BaselineFile::parse(&t).map(|b| b.values),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Baseline::new()),
         Err(e) => Err(format!("{}：{e}", p.display())),
@@ -400,5 +404,49 @@ fn main() -> ExitCode {
             eprintln!("vdn-eval 出错：{e}");
             ExitCode::FAILURE
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 冻结基线的读法（第 1 轮 codex #2 的回归测试，第 5 轮 #2 补到真正的读入口上）：
+    /// 只有「文件不存在」算空基线；内容坏了、读不了都报错，不静默取消基线比较。
+    #[test]
+    fn load_baseline_only_missing_file_is_empty() {
+        let dir = std::env::temp_dir().join(format!("vdn-eval-baseline-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        // 不存在 → 空基线
+        let missing = dir.join("missing.json");
+        assert_eq!(load_baseline_from(&missing), Ok(Baseline::new()));
+
+        // 仓里那份 → 读得出、非空
+        let real = load_baseline_from(&baseline_path()).unwrap();
+        assert!(!real.is_empty());
+
+        // 内容损坏：不是 JSON、values 合法但缺元数据、多一个键 → 都报错
+        let good: Value =
+            serde_json::from_str(&std::fs::read_to_string(baseline_path()).unwrap()).unwrap();
+        let mut no_meta = good.clone();
+        no_meta.as_object_mut().unwrap().remove("run_id");
+        let mut extra = good.clone();
+        extra["surprise"] = json!(1);
+        for (tag, text) in [
+            ("broken", "{ not json".to_string()),
+            ("no-meta", no_meta.to_string()),
+            ("extra", extra.to_string()),
+        ] {
+            let f = dir.join(format!("{tag}.json"));
+            std::fs::write(&f, text).unwrap();
+            assert!(load_baseline_from(&f).is_err(), "{tag} 应报错");
+        }
+
+        // 读取失败（路径是目录，不是 NotFound）→ 报错
+        assert!(load_baseline_from(&dir).is_err());
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
