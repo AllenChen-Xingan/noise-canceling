@@ -20,3 +20,8 @@
 ## 行为变化（rs-entry 需知）
 - 模型级送原声改在 Pipeline 用 48 kHz 原声做（原来 Engine 在 16 kHz 做，原声缺 8 kHz 以上）。延迟不变
 - Pipeline 输出遇到 NaN / Inf 一律换原声（原来只在淡化中换）
+
+## 自审后补充（2026-11-02）
+- `PipelineStats` 多两个计数：`stage_faults`（后处理级输出坏值、整 hop 送原声）、`bad_input`（输入 NaN / Inf 按 0 处理的样本数）。用结构体字面量构造 `PipelineStats` 的要补字段（本 worktree 与 rs-entry 里都没有）
+- `FtzGuard::off()`：反向守卫；Engine 用它包住推理
+- `reset()` 不再把 `FrameCtx.now` 的流时间归零（单调）
