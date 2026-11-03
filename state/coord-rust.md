@@ -28,9 +28,9 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | rs-wake：③ Miri（heap）+ loom（release） |
+| 重编译 / 全量测试（1 个） | rs-entry：V7 复测（有唤醒，约 10 分钟） |
 
-排队：① rs-entry V7 复测（有唤醒，约 10 分钟）② rs-wake Workgroup / 优先级复测 ③ powermetrics（人跑 sudo）
+排队：① rs-wake Workgroup / 优先级复测 ② powermetrics（人跑 sudo）。与另一位大总管 noise-canceling-e3 约定：测量开跑前后互发「开始 / 结束」
 
 等人许可的弹窗 / 长时间前台运行：（空）
 
@@ -41,6 +41,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- rs-wake ③：loom（release）2 项过 2.5 s，反向验证（对调读序）会报唤醒丢失；Miri vdn-shm 进程内测试全过、无未定义行为；修 2 处 Miri 暴露的问题
 - rs-entry：V1 判据统一为 judge_v1（相关 ≥ 0.999 且两种欠载都 = 0），加反例测试；启动硬下限定为 lead ≥ 一块 IO（正本 `vdn_control::check_lead`，三处调用；大总管认可，不用 IO + 降噪块，否则挡掉 V7 目标 144）；54 过 1 忽略
 - rs-entry 测试自查：51 过、1 忽略（V5 写成 #[ignore] 测试）；Out 总线重连从 bin 挪进 lib（Supervisor）并补 4 条真共享内存测试；补测揪出测试工具配错（IO 块 480 配 lead 288 必欠载，旧 V1 短测只判相关没发现）→ 已改；大总管加要求：V1 全部断言欠载 0 · Config 启动校验 lead ≥ IO 块 + 降噪块
 - 人定「加测试是默认行为」→ CLAUDE.md 第五节第 6 条 · PR 模板 · common.md 第 16 条 · 记忆；已通知 rs-entry / rs-wake；rs-wake 加 tidy「每个 crate 至少一条测试」
