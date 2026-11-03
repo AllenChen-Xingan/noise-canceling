@@ -69,7 +69,10 @@ unsafe fn vexp(x: float32x4_t) -> float32x4_t {
 unsafe fn sig4<const FAST: bool>(x: float32x4_t) -> float32x4_t {
     unsafe {
         if FAST {
+            // 输入夹到 ±87：x < −87 时 1/(1+e^{−x}) 会落进次正规数（单元测试抓到 6e-39），夹后最小 1.6e-38 仍是正规数；
+            // 被夹的部分真值 < 1.7e-38，绝对差 < 2e-38
             let one = vdupq_n_f32(1.0);
+            let x = vminq_f32(vmaxq_f32(x, vdupq_n_f32(-87.0)), vdupq_n_f32(87.0));
             vdivq_f32(one, vaddq_f32(one, vexp(vnegq_f32(x))))
         } else {
             lanes(x, |v| 1.0 / (1.0 + (-v).exp()))

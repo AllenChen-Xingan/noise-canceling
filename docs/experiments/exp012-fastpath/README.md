@@ -4,9 +4,22 @@
 > 手下 fastpath · issue #58 · 分支 `exp/012-fastpath`。结论与取舍见 `docs/research/020_fastpath/decision.md`；改写的数学依据见 `docs/research/020_fastpath/rewrites.md`。
 > 名字：**原写法** = exp010 的手写版（后端 `native`）；**v2** = 同一结构与权重、算子用 NEON 重写（`native-v2`）；**v2-fast** = v2 + 向量化多项式非线性（`native-v2-fast`）。
 
-## 结果（待第二段计时，`results/20261102-v2/`）
+## 结果（待插电重跑，`results/20261102-v2ac/`）
 
 （计时完成后填）
+
+## 第二段第一次（`results/20261102-v2/`）：中途拔电、系统睡眠，只作电池对照
+
+- ⚠️ 约 20:07 电源被拔（`pmset -g log` 自 20:07:02 起「Using Batt」），20:12:13 因空闲进入系统睡眠，20:54:17 被键盘唤醒。证据：round 2 · v2-fast · 节奏那一条单调时钟 `wall_s` = 95.98 秒（正好 6000 × 16 ms），墙钟窗口 `win_end_unix − win_start_unix` = 2605 秒；macOS 的单调时钟在睡眠时停走。那一条 `max_ms` = 296 ms 的帧开始于 20:12:05，压在进入睡眠的那一刻
+- 不是程序错误。已加的防线：bench / gtcrn-layers / dsp-bench 发现墙钟比单调时钟多走 > 1 秒即判本轮作废（`SleepGuard`，测试 `sleep_guard_flags_wall_clock_jump`）；脚本自己 `caffeinate -dims`，开跑前与每轮前查插电
+- 电池模式下性能核约降到一半频率：hw-peak 性能核 FMA 吞吐 round 1（插电）66.9 → round 2/3（电池）35.4 个/ns，FMA 延迟 0.81 → 1.53 ns；原写法连续跑 0.095 → 0.18–0.22 ms
+- 所以只有 round 1 是插电数据（单轮，不下结论）；round 2/3 只能看同一轮内交替的相对比值
+
+| 后端 | round 1 连续跑（插电） | round 1 节奏 16 ms 平均（插电） | round 2 连续跑（电池） | round 3 连续跑（电池） |
+|---|---|---|---|---|
+| native | 0.0946 ms | 0.511 ms | 0.2245 ms | 0.2019 ms |
+| native-v2 | 0.0380 ms（原写法的 0.40） | 0.185 ms（0.36） | 0.0719 ms（0.32） | 0.0726 ms（0.36） |
+| native-v2-fast | 0.0223 ms（0.24） | 0.130 ms（0.25） | 0.0424 ms（0.19） | 0.0423 ms（0.21） |
 
 ## 第一段：本机峰值与逐层计时（`results/20261102-peak1/`）
 
