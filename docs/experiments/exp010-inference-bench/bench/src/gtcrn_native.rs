@@ -1244,6 +1244,7 @@ pub struct GtcrnNative {
     d4: Vec<f32>,     // [2][129]
     m: Vec<f32>,      // [2][257]
     kind: Kind,
+    prefetch: bool, // 每帧开头把 v2 用到的全部权重预取进 L2（研究 020 / D79）
 }
 
 impl GtcrnNative {
@@ -1288,6 +1289,7 @@ impl GtcrnNative {
             d4: vec![0.0; 2 * F0],
             m: vec![0.0; 2 * BINS],
             kind: Kind::Scalar,
+            prefetch: false,
         })
     }
 
@@ -1318,8 +1320,76 @@ impl GtcrnNative {
         self.kind = k;
     }
 
+    pub fn set_prefetch(&mut self, on: bool) {
+        self.prefetch = on;
+    }
+
+    /// v2 每帧会读到的全部参数数组（转置后的 GRU / 全连接权重、卷积权重、偏置、LN 仿射、ERB 非零段）
+    fn for_each_v2_weight(&self, mut f: impl FnMut(&[f32])) {
+        let mut gru = |g: &Gru, f: &mut dyn FnMut(&[f32])| {
+            f(&g.wit);
+            f(&g.wht);
+            f(&g.bi);
+            f(&g.bh);
+        };
+        for (_, seg) in self.erb.rows.iter().chain(&self.ierb.rows) {
+            f(seg);
+        }
+        for c in [&self.en0, &self.en1] {
+            f(&c.w);
+            f(&c.b);
+        }
+        for b in self.en_gt.iter().chain(&self.de_gt) {
+            for v in [&b.p1.w, &b.p1.b, &b.dw, &b.db, &b.p2.w, &b.p2.b, &b.fc.wt, &b.fc.b] {
+                f(v);
+            }
+            gru(&b.gru, &mut f);
+        }
+        for d in &self.dp {
+            for g in d.intra.iter().chain(&d.inter) {
+                gru(g, &mut f);
+            }
+            for v in [
+                &d.intra_fc.wt,
+                &d.intra_fc.b,
+                &d.inter_fc.wt,
+                &d.inter_fc.b,
+                &d.intra_lnw,
+                &d.intra_lnb,
+                &d.inter_lnw,
+                &d.inter_lnb,
+            ] {
+                f(v);
+            }
+        }
+        for d in [&self.de3, &self.de4] {
+            f(&d.w);
+            f(&d.b);
+        }
+    }
+
+    /// 把权重逐个 64 字节发 L2 预取（不等待；数据到达前后续指令照常执行）
+    #[inline(never)]
+    fn prefetch_weights(&self) {
+        self.for_each_v2_weight(|w| {
+            let (p, n) = (w.as_ptr().cast::<u8>(), std::mem::size_of_val(w));
+            let mut i = 0;
+            while i < n {
+                // SAFETY：只发预取提示，地址在切片内，不读写内存
+                unsafe {
+                    core::arch::asm!("prfm pldl2keep, [{0}]", in(reg) p.add(i), options(nostack, readonly, preserves_flags))
+                };
+                i += 64;
+            }
+        });
+    }
+
     fn infer_impl<K: Kern, P: Probe>(&mut self, re: &mut [f32], im: &mut [f32], p: &mut P) {
         let bins = BINS as u64;
+        if self.prefetch {
+            self.prefetch_weights();
+            p.mark("in", "prefetch", Cost::default);
+        }
         // 特征：mag, re, im
         for k in 0..BINS {
             self.feat0[k] = (re[k] * re[k] + im[k] * im[k] + 1e-12).sqrt();
@@ -1746,6 +1816,29 @@ mod tests {
             let (mut r2, mut i2) = (r1.clone(), i1.clone());
             a.infer(&mut r1, &mut i1);
             b.infer_probed(&mut r2, &mut i2, &mut Collect(Vec::new()));
+            assert!(r1.iter().chain(&i1).zip(r2.iter().chain(&i2)).all(|(x, y)| x.to_bits() == y.to_bits()));
+        }
+    }
+
+    /// 预取枚举的权重 = 模型实际持有的参数（交叉校验）；预取不改输出（逐位相同）
+    #[test]
+    fn prefetch_covers_all_params_and_keeps_output() {
+        let w = Weights::fake(0.02);
+        let (mut a, mut b) = (
+            GtcrnNative::from_weights(&w).unwrap(),
+            GtcrnNative::from_weights(&w).unwrap(),
+        );
+        let mut n = 0;
+        a.for_each_v2_weight(|s| n += s.len());
+        assert_eq!(n, param_count(&a), "预取枚举漏了或多了参数");
+        a.set_kind(Kind::V2Fast);
+        b.set_kind(Kind::V2Fast);
+        b.set_prefetch(true);
+        for f in 0..3 {
+            let (mut r1, mut i1) = (rnd(BINS, 30 + f), rnd(BINS, 40 + f));
+            let (mut r2, mut i2) = (r1.clone(), i1.clone());
+            a.infer(&mut r1, &mut i1);
+            b.infer(&mut r2, &mut i2);
             assert!(r1.iter().chain(&i1).zip(r2.iter().chain(&i2)).all(|(x, y)| x.to_bits() == y.to_bits()));
         }
     }

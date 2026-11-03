@@ -98,8 +98,8 @@ pub fn run(args: &[String], inputs_for: impl Fn(usize) -> Result<Vec<Vec<f32>>, 
     }
     let kind = match variant {
         "native" | "native-fast" => crate::gtcrn_native::Kind::Scalar,
-        "native-v2" => crate::gtcrn_native::Kind::V2,
-        "native-v2-fast" => crate::gtcrn_native::Kind::V2Fast,
+        "native-v2" | "native-v2-pf" => crate::gtcrn_native::Kind::V2,
+        "native-v2-fast" | "native-v2-fast-pf" => crate::gtcrn_native::Kind::V2Fast,
         _ => return Err("--variant 只收 native / native-fast / native-v2 / native-v2-fast（BLAS 版每帧会分配，不在下界分析里）".into()),
     };
     crate::set_thread_qos(qos, 16.0)?;
@@ -107,6 +107,7 @@ pub fn run(args: &[String], inputs_for: impl Fn(usize) -> Result<Vec<Vec<f32>>, 
     crate::gtcrn_native::FAST.store(variant == "native-fast", std::sync::atomic::Ordering::Relaxed);
     let mut net = GtcrnNative::load(std::path::Path::new(&args[0]))?;
     net.set_kind(kind);
+    net.set_prefetch(variant.ends_with("-pf"));
     let inputs = inputs_for(1 + warm + frames)?;
     let mut p = TimerProbe::new(frames);
     let mut x = inputs[0].clone();
