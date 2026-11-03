@@ -38,7 +38,7 @@ $BIN gtcrn-parity "$W" "$G" "$WAV" --vs native --frames 37500 --reset-at 20000 >
 $BIN gtcrn-parity "$W" "$G" "$WAV" --vs tract --frames 6201 >> "$OUT/parity.jsonl"   # 与基准等长
 
 # tract 复用同一个运行状态（已知会算错）：留证据，并把「每帧新开状态」的代价和分配次数单独量出来
-EXP010_TRACT_REUSE=1 $BIN gtcrn-parity "$W" "$G" "$WAV" --vs tract | sed 's/"vs":"tract"/"vs":"tract-reuse-known-wrong"/' >> "$OUT/parity.jsonl"
+EXP010_TRACT_REUSE=1 $BIN gtcrn-parity "$W" "$G" "$WAV" --vs tract --allow-fail | sed 's/"vs":"tract"/"vs":"tract-reuse-known-wrong"/' >> "$OUT/parity.jsonl"
 EXP010_TRACT_REUSE=1 $BIN gtcrn-bench tract "$G" "$WAV" | sed 's/"backend":"tract"/"backend":"tract-reuse-known-wrong"/' >> "$OUT/bench-extra.jsonl"
 
 # 交替跑，且每轮把后端顺序轮换一位，避免发热 / 频率漂移总偏向同一个后端
