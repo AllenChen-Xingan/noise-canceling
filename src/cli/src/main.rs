@@ -545,7 +545,9 @@ fn run(a: RunArgs) -> Result<bool, BoxError> {
     let v = live::judge(&report.input, &report.output, a.mode.passthrough, a.gain_db);
     eprintln!("vdn run --check: {}", v.describe());
     if v.passed() {
-        eprintln!("  机器部分只判电平；听不听得到、断不断续、有没有咔哒声仍由人耳判（有 --record 就回放那个文件）");
+        eprintln!(
+            "  机器部分只判电平；听不听得到、断不断续、有没有咔哒声仍由人耳判（有 --record 就回放那个文件）"
+        );
     }
     Ok(v.passed())
 }

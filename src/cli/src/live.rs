@@ -21,9 +21,7 @@ use vdn_capture::shm::{OutSource, forward_same_bus};
 use vdn_capture::{Forwarder, ForwarderConfig};
 use vdn_denoised::{Processor, Step, Worker, WorkerStats};
 use vdn_hal::HalSource;
-use vdn_io_macos::{
-    Direction, IO_RATE, InputStream, Level, OutputStream, devices, fmt_dbfs,
-};
+use vdn_io_macos::{Direction, IO_RATE, InputStream, Level, OutputStream, devices, fmt_dbfs};
 use vdn_shm::{Bus, RingId};
 
 pub fn list_devices() {
@@ -93,7 +91,11 @@ pub struct Prepared<P> {
 }
 
 /// 建总线、预热、算实时参数（正本 `vdn_denoised::denoise_rt_params`）、往 Processed 推 lead 个零。
-pub fn prepare<P: Processor>(pipeline: P, block: usize, lead: usize) -> Result<Prepared<P>, String> {
+pub fn prepare<P: Processor>(
+    pipeline: P,
+    block: usize,
+    lead: usize,
+) -> Result<Prepared<P>, String> {
     // 块长 / 环余量走 vdn-control 的同一套范围检查
     let cfg = vdn_control::Config {
         block,
@@ -428,7 +430,10 @@ pub fn summary(r: &RunReport) -> String {
         lv(&r.output)
     );
     if r.clipped > 0 {
-        s.push_str(&format!("\n  加增益后被夹住 {} 样本（增益太大）", r.clipped));
+        s.push_str(&format!(
+            "\n  加增益后被夹住 {} 样本（增益太大）",
+            r.clipped
+        ));
     }
     if let Some(n) = r.rec_written {
         s.push_str(&format!(
@@ -493,10 +498,17 @@ impl Verdict {
     pub fn describe(&self) -> String {
         match self {
             Verdict::NoInput => "不过：没收到麦克风数据（设备没开起来？）".into(),
-            Verdict::InputAllZero => "不过：输入全零——疑似没有麦克风权限（系统设置 › 隐私与安全性 › 麦克风）或设备静音".into(),
+            Verdict::InputAllZero => {
+                "不过：输入全零——疑似没有麦克风权限（系统设置 › 隐私与安全性 › 麦克风）或设备静音"
+                    .into()
+            }
             Verdict::OutputMismatch { diff_db } => format!(
                 "不过：输入有声，但输出电平和输入差 {} dB（允许 ±{LEVEL_TOLERANCE_DB}）——链路里丢了声音",
-                if diff_db.is_finite() { format!("{diff_db:+.1}") } else { "−∞".into() }
+                if diff_db.is_finite() {
+                    format!("{diff_db:+.1}")
+                } else {
+                    "−∞".into()
+                }
             ),
             Verdict::Pass { quiet, diff_db } => {
                 let mut s = String::from("过（机器部分）：输入有声");
@@ -599,7 +611,13 @@ mod tests {
         let d = lo.rms_dbfs() - li.rms_dbfs();
         assert!(d.abs() < 0.2, "输出 {lo:?} vs 输入 {li:?}（差 {d:.2} dB）");
         assert!(!lo.all_zero());
-        assert_eq!(judge(&li, &lo, true, 0.0), Verdict::Pass { quiet: false, diff_db: Some(d) });
+        assert_eq!(
+            judge(&li, &lo, true, 0.0),
+            Verdict::Pass {
+                quiet: false,
+                diff_db: Some(d)
+            }
+        );
     }
 
     /// 增益 +12 dB：输出均方根比输入高 12 dB；V5 那样小声的输入（峰值约 −28 dBFS）不会被夹
@@ -657,7 +675,10 @@ mod tests {
         };
         let speech = lvl(0.04, 0.011); // 峰值约 −28 dBFS、均方根约 −39 dBFS（2026-11-02 实测量级）
         let zero = lvl(0.0, 0.0);
-        assert_eq!(judge(&Level::default(), &speech, true, 0.0), Verdict::NoInput);
+        assert_eq!(
+            judge(&Level::default(), &speech, true, 0.0),
+            Verdict::NoInput
+        );
         assert_eq!(judge(&zero, &zero, true, 0.0), Verdict::InputAllZero);
         assert!(matches!(
             judge(&speech, &zero, true, 0.0),
@@ -676,7 +697,10 @@ mod tests {
         // 降噪模式不比电平
         assert_eq!(
             judge(&lvl(0.5, 0.2), &zero, false, 0.0),
-            Verdict::Pass { quiet: false, diff_db: None }
+            Verdict::Pass {
+                quiet: false,
+                diff_db: None
+            }
         );
         assert!(Verdict::InputAllZero.describe().contains("麦克风权限"));
     }
@@ -689,7 +713,10 @@ mod tests {
             .into_iter()
             .map(|s| n.update(s))
             .collect();
-        assert_eq!(fired, [false, true, false, false, false, false, true, false]);
+        assert_eq!(
+            fired,
+            [false, true, false, false, false, false, true, false]
+        );
     }
 
     /// V5（人判）：真麦克风 → 直通 → 耳机 5 秒，同时录下送进耳机的那一路。会开麦、出声，所以默认不跑。

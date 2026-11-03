@@ -187,7 +187,9 @@ fn tiny_measurement_gives_params_the_kernel_accepts() {
     assert!(p.validate().is_ok(), "{p:?}");
     #[cfg(target_os = "macos")]
     {
-        let r = std::thread::spawn(move || promote_current(p)).join().unwrap();
+        let r = std::thread::spawn(move || promote_current(p))
+            .join()
+            .unwrap();
         assert_eq!(r, Ok(()), "{p:?}");
     }
 }
@@ -205,7 +207,9 @@ fn huge_measurement_is_clamped_to_kernel_max_and_period() {
     assert!(q.validate().is_ok(), "{q:?}");
     #[cfg(target_os = "macos")]
     for x in [p, q] {
-        let r = std::thread::spawn(move || promote_current(x)).join().unwrap();
+        let r = std::thread::spawn(move || promote_current(x))
+            .join()
+            .unwrap();
         assert_eq!(r, Ok(()), "{x:?}");
     }
 }
@@ -216,7 +220,10 @@ fn for_block_with_tiny_load_is_valid() {
     let p = RtParams::for_block(96, 48_000, 0.001);
     assert_eq!(p.computation_ns, MIN_COMPUTATION_NS);
     assert!(p.validate().is_ok());
-    assert_eq!(RtParams::for_block(96, 48_000, 0.0).computation_ns, MIN_COMPUTATION_NS);
+    assert_eq!(
+        RtParams::for_block(96, 48_000, 0.0).computation_ns,
+        MIN_COMPUTATION_NS
+    );
 }
 
 /// 夹取不改周期：周期比内核下限还短时不悄悄改，交给校验报错
