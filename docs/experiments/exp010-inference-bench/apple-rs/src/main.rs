@@ -303,6 +303,7 @@ fn bench(o: &Opts) -> Result<(), String> {
     let rust_allocs = (alloc::rust_allocs() - ra0) as f64 / frames as f64;
     let proc_allocs = (alloc::process_allocs() - pa0) as f64 / frames as f64;
     let mean = times.iter().sum::<f64>() / times.len() as f64;
+    let over3 = times.iter().filter(|&&t| t > 3.0).count(); // BE-DEADLINE：单帧 > 3.0 ms（延迟账余量）
     times.sort_by(|a, b| a.total_cmp(b));
     let mean_e = sig / pn.max(1) as f64;
     let min_frame_snr = per_frame
@@ -312,7 +313,7 @@ fn bench(o: &Opts) -> Result<(), String> {
         .fold(f64::INFINITY, f64::min);
     println!(
         "{{\"model\":\"{}\",\"backend\":\"{backend}\",\"artifact\":\"{}\",\"frames\":{frames},\"warmup\":{warmup},\"pace_ms\":{pace},\"qos\":\"{qos}\",\
-\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{mean:.4},\
+\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{mean:.4},\"frames_over_3ms\":{over3},\
 \"ort_env_ms\":0.00,\"compile_ms\":{compile_ms:.2},\"open_ms\":{open_ms:.2},\"first_frame_ms\":{first_ms:.3},\"cpu_over_wall\":{:.3},\
 \"rust_allocs_per_frame\":{rust_allocs:.3},\"process_allocs_per_frame\":{proc_allocs:.3},\"nonfinite_frames\":{nonfinite_frames},\
 \"footprint_before_mb\":{fp0:.2},\"footprint_warm_mb\":{fp1:.2},\"footprint_end_mb\":{fp2:.2},\"parity_frames\":{pn},\"parity_max_abs\":{max_abs:.3e},\"parity_worst_frame\":{worst},\"parity_snr_db\":{:.2},\

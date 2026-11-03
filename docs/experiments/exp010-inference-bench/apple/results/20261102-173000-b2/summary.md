@@ -33,6 +33,24 @@ Core ML GPU / 全部 · GRU 展开 · fp32 另跑了 3 轮，在同一 `bench.js
 5. **多线程编译 BNNS 没有提速**（0.34 vs 0.34），小模型不值得开线程。
 6. **MLX（Python 调）比 ORT 慢约 15 倍，每帧 7–10 万次分配**。Rust 经 mlx-c 的版本还没做（见下），按 D68 这两行不进结论；但 Python 只能解释其中一部分，MLX 每帧建图和 `eval` 的分配大概率仍在【推断】。
 
+## ⚠️ 按实时节奏跑：每帧慢约 5 倍（`deadline_bnns_unrolled.json`）
+
+BNNS Graph · GRU 展开 · fp32，`--pace-ms 16`，37 500 帧（10 分钟），QoS user-interactive：
+
+| 量 | 连续跑（上表） | 实时节奏 |
+|---|---|---|
+| p50 | 0.155 ms | **0.82 ms** |
+| p99.9 | 0.18–0.19 ms | 1.57 ms |
+| max | 0.19–0.25 ms | **11.8 ms**（> 3.0 ms，`BE-DEADLINE` 不过；这一版程序还没数超时帧个数，已补字段 `frames_over_3ms`） |
+| cpu_over_wall | — | **0.048 核**（超 D69 上限 0.02 核） |
+| 每帧分配 · 常驻内存增量 | 0 · 9.0 MB | 0 · 9.0 MB（跑完不涨） |
+
+推断原因：帧间空闲时 CPU 降频，或线程被调度到能效核；QoS user-interactive 不够。**连续跑的数会低估实时开销**，所以 `BE-CPU` 只认实时节奏的数（标准里本来就这么写）。下一步：试实时线程策略（`THREAD_TIME_CONSTRAINT_POLICY` / Audio Workgroup），手写 Rust 与 ORT 也要按实时节奏重测（已告诉 rustbe）。
+
+## DFN3 `_ll` 算力下界（`dfn3ll_probe.json`，Python 调 ORT，只作估算）
+
+官方三张子图取 S = 1、单线程、连续跑：enc 0.120 + erb_dec 0.199 + df_dec 0.292 = **0.61 ms / 10 ms 帧 ≈ 6.1% 核**，是 D69 推理挡线（1.0%）的 6 倍、目标（0.5%）的 12 倍。这还是下界：不含 STFT / ERB / DF，不含实时节奏的 5 倍效应，GRU 没带状态。即使苹果最快后端提速 2.5 倍也约 2.4%。结论【推断】：DFN3 `_ll` 在 D69 预算里跑不动。
+
 ## 没做成 / 绕过的
 
 - **FE-M 转不了 Core ML**：wav2wav 图里的 `torch.view_as_complex`（STFT）coremltools 9.0 不支持。要走 spec2spec 版并在 Rust 做 STFT，还要另做 ORT 转储。FE-M 是否还在候选里待人定（rustbe 待拍板），本轮不做。
