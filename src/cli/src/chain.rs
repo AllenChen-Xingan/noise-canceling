@@ -373,6 +373,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
 /// 但单线程逐块推进：送音推一块 → 降噪把能处理的都处理完 → 虚拟麦（晚 `hal_offset` 起读）取一块。
 /// 不 sleep、不靠真实时钟，所以结果确定，和机器负载、并行跑的别的测试无关。
 /// 测不到的：线程调度、唤醒延迟、处理耗时——那些归 `vdn chain-test`（真实节拍）和 V7（release、10 次 × 10 s）
+#[cfg(test)]
 pub fn run_lockstep<P: Processor>(pipeline: P, o: &ChainOpts) -> Result<ChainRun, String> {
     let Setup {
         mut worker,
