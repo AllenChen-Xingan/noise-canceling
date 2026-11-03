@@ -14,7 +14,6 @@ use std::fs;
 use std::path::Path;
 
 use crate::scan::{has_reason, lex_lines, src_files, strip_comments_keep_strings};
-use crate::tidy::rs_files;
 
 /// 模型名的正本文件（相对 workspace 根）。
 pub const NAMES_FILE: &str = "src/types/src/params.rs";
@@ -32,17 +31,8 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
         ));
         return;
     }
-    let mut all = Vec::new();
-    rs_files(&root.join("src"), &mut all);
-    for f in all {
-        let rel = f
-            .strip_prefix(root)
-            .map(|p| p.display().to_string())
-            .unwrap_or_else(|_| f.display().to_string());
-        if rel == NAMES_FILE || rel.contains("/tests/") {
-            continue;
-        }
-        if let Ok(s) = fs::read_to_string(&f) {
+    for (rel, s) in src_files(root) {
+        if rel != NAMES_FILE && !rel.contains("/tests/") {
             problems.extend(file_problems(&rel, &s, &names));
         }
     }
@@ -145,10 +135,7 @@ pub fn file_problems(rel: &str, src: &str, names: &[String]) -> Vec<String> {
             break;
         }
         let comment = lexed.get(i).map(|(_, c)| c.as_str()).unwrap_or("");
-        if comment
-            .split_once(ALLOW)
-            .is_some_and(|(_, why)| !why.trim().is_empty())
-        {
+        if has_reason(comment, ALLOW) {
             continue;
         }
         for s in strings_in(line) {

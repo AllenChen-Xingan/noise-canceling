@@ -16,10 +16,11 @@
 mod ci;
 mod denycheck;
 mod deps;
-mod lex;
 mod miri;
-mod model_names;
-mod single_source;
+mod model_name;
+mod no_mirror;
+mod param_range;
+mod scan;
 mod tidy;
 mod todo;
 

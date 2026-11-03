@@ -10,7 +10,7 @@
 //! | A/B 档 crate 的源码（整模块 NRT 除外）不出现 `std::fs`、`log::`、`thread::sleep` | R3 |
 //! | 实时块（带 `deny(clippy::disallowed_macros)` 的 impl / mod）里没有非 debug 的 `assert*!` | R4（clippy 禁不了，见根 clippy.toml） |
 //! | `unsafe = true` 的 crate：每个 `unsafe {` / `unsafe impl` 同行或紧邻上方的连续注释里有 `SAFETY:` | R10 |
-//! | 不许有镜像文件、不许在 vdn-types 之外定义同名类型；参数范围不许在描述表之外写成数字字面量 | R-MIRROR · R-PARAM（见 `single_source.rs`） |
+//! | 不许有镜像文件、不许在 vdn-types 之外定义同名类型；参数范围不许在描述表之外写成数字字面量 | R-MIRROR · R-PARAM · R-MODEL（见 `no_mirror.rs` · `param_range.rs` · `model_name.rs`） |
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -330,8 +330,9 @@ pub fn check() -> Result<Tidy, String> {
     }
 
     // 唯一真相源：镜像副本 · 参数范围（CLAUDE.md 第五节第 5 条）
-    crate::single_source::check(&root, &mut t.problems);
-    crate::model_names::check(&root, &mut t.problems);
+    crate::no_mirror::check(&root, &mut t.problems);
+    crate::param_range::check(&root, &mut t.problems);
+    crate::model_name::check(&root, &mut t.problems);
 
     // 根 clippy.toml 只许一份
     let mut all = Vec::new();
