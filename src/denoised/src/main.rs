@@ -33,10 +33,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use clap::Parser;
-use vdn_control::{Config, Mode, ModelChoice};
+use vdn_control::{Config, Mode};
 use vdn_denoised::{
-    Processor, Step, Worker, denoise_bus_config, identity_pipeline, model_kind, model_pipeline,
+    Processor, Step, Worker, denoise_bus_config, identity_pipeline, model_choice, model_kind,
+    model_pipeline,
 };
+use vdn_models::{ModelId, ModelKind};
 use vdn_shm::{OwnedBus, RingId, ShmError};
 
 #[derive(Parser)]
