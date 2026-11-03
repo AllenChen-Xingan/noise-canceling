@@ -221,13 +221,9 @@ mod tests {
     /// 微基准本身算得对：FMA 链的结果与标量公式一致；带宽函数读完整个缓冲（不测速度）
     #[test]
     fn kernels_compute_what_they_claim() {
-        // fma_latency 的迭代：a ← b + a·c
-        let mut a = 1.0f32;
-        for _ in 0..1000 {
-            a = 1e-7f32.mul_add(1.0, 0.0) + a * 0.999_9; // 参照
-        }
-        assert!(a.is_finite() && a > 0.0);
         assert!(fma_latency(1000) > 0.0 && fadd_latency(1000) > 0.0);
+        assert!(fma_chains::<4>(1000) > 0.0);
+        assert!(nl_latency(1000, exp_fast) > 0.0);
         let buf = vec![1.0f32; 4096];
         assert!(read_bw(&buf, 2) > 0.0);
         let mut w = vec![0.0f32; 4096];
