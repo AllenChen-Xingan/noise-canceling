@@ -38,7 +38,14 @@ multiple-versions = "warn"
 wildcards = "deny"
 # 工作区内部的 path 依赖不算通配（publish = false）
 allow-wildcard-paths = true
-# 直接边规则（谁能直接依赖谁）待补：与各 crate 的 metadata.vdn.forbid 保持一致，tidy 校验（规约 §5.4，本批未做）
+# 直接边规则：只许名单里的 crate **直接**依赖它（传递依赖不管，那归 check-deps 的闭包检查）。
+# 一条写一行（xtask tidy 按行解析，并校验与真实依赖、各 crate 的 metadata.vdn.forbid 一致）。
+deny = [
+    # ort（ONNX Runtime）：推理后端；eval 用 DNSMOS（规约 §7.1 第 8 条登记的例外）；speaker / speaker-lab 用声纹模型（speaker 为可选 feature）
+    { crate = "ort", wrappers = ["vdn-backend-ort", "vdn-eval", "vdn-speaker", "vdn-speaker-lab"] },
+    # cpal：只许音频进出层直接用（规约 §4：P3 允许，M1 起换自写 IOProc）
+    { crate = "cpal", wrappers = ["vdn-io-macos"] },
+]
 
 [sources]
 unknown-registry = "deny"

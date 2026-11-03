@@ -351,6 +351,10 @@ pub fn check() -> Result<Tidy, String> {
     }
 
     let meta = metadata()?;
+    // deny.toml 的直接边规则与真实依赖、各 crate 的 forbid 一致（规约 §5.4）
+    if let Ok(deny) = fs::read_to_string(root.join("deny.toml")) {
+        crate::denycheck::check_bans(&meta, &deny, &mut t.problems);
+    }
     for (_, name, manifest, vdn) in meta.members() {
         let dir = Path::new(&manifest)
             .parent()
@@ -407,6 +411,11 @@ pub fn check() -> Result<Tidy, String> {
                     .unwrap_or_else(|_| f.display().to_string());
                 check_safety(&f, &rel, &mut t);
             }
+        }
+        if !crate::denycheck::has_tests(&dir) {
+            t.problems.push(format!(
+                "{name}：一条测试都没有（每个 crate 至少一条；测不了的写 #[ignore = \"原因，人工跑\"] 并附步骤）"
+            ));
         }
         if realtime && blocks == 0 {
             t.problems.push(format!(

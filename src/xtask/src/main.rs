@@ -14,6 +14,7 @@
 #![forbid(unsafe_code)]
 
 mod ci;
+mod denycheck;
 mod deps;
 mod miri;
 mod tidy;
