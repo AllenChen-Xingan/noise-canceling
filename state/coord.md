@@ -3,17 +3,18 @@
 > 只有大总管跟人说话。手下做完、卡住、要名额，只报给大总管。
 > 大总管会话名：`noise-canceling-e3`（2026-11-02 换班；旧名 c4 · 69）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
 
-## 当前大事（2026-11-02）
+## 当前大事（2026-11-02 起）
 
-**把「效果好不好」变成能量的尺子**（意向书真难题第 2 条）。批次 `_tmp/20261102-b7/`。**✅ 2026-11-02 三条线全部合并（#47 #48 #49），窗口全关；下一件大事待人定**
+**推理引擎：降噪模型在 Mac 上用什么跑最快、最稳、最省电**（「轻快」尺子 · D53）。人定「可以先做1」。批次 `_tmp/20261102-b8/`。**✅ 2026-11-02 四条线全部合并（#55 #59 #66），窗口全关；下一件大事待人定（建议「降噪效果」）**
 
 | 手下 | 线 | 管的实体 |
 |---|---|---|
-| benchsynth | 016 评测基准与合成数据标准收口 · #41 | 数据 · 评测器 |
-| ears | 017 多找些人耳反馈收口 · #42 | 评测器 · 模型（评分模型） |
-| judgeloop | 018 本机评分模型 + 调节模型闭环 · #44 | 模型 · 评测器 · 数据 |
+| applebe | 019 苹果引擎（Core ML · BNNS Graph · MLX）+ 总方案 · #45 · ✅ PR #59 已合并 | 推理后端 · 模型 · 评测器 |
+| rustbe | exp010 纯 Rust（手写 GTCRN · tract / candle / burn）+ 基准程序 · #51 · ✅ PR #55 已合并 | 推理后端 · 模型 · 评测器 |
+| fastpath | 020 / exp012 数学上更好 · #58 · ✅ PR #66 已合并 | 推理后端 · 模型 · 评测器 |
+| hygiene | **旁支（人 2026-11-02 点名「也让你来管理，然后修复吧」）** 代码卫生：600 行上限进 tidy · cli 同名类型 · 拆 cli 大文件；第二段等 #57 合并后做采样率只写一处 · 阈值比对 · #62 · `feat/code-hygiene` · `../noise_canceling-hygiene` | xtask · vdn-cli · vdn-types（采样率）· vdn-eval（阈值） |
 
-019 推理引擎（#45）不在本大事内，已记进 `state/backlog.md`。旧的「模型四实体」总入口仍是 `docs/plan/009_model-map.md`。
+上一件大事「把效果好不好变成能量的尺子」✅ 2026-11-02 收口（#47 #48 #49 #50）。
 
 ## 手下
 
@@ -42,8 +43,13 @@
 | benchsynth | **b7 重派（2026-11-02，交代 `_tmp/20261102-b7/benchsynth.md`）· 已报到（noise-canceling-benchsynth-19），完成，PR #47 已合并（cabf3d0，issue #41 关），远端分支已删，窗口已关；worktree `../noise_canceling-benchsynth` 保留待清（手下自己提交并推送了现状页 780eea3，越过「手下不做 git 写」，内容无害，已记）** · 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
 | ears | **b7 重派 · 完成，PR #48 已合并（issue #42 关），远端分支已删，窗口已关；worktree 保留待清；人答卷回来后由大总管放 exp009 results/** · 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已报到（noise-canceling-ears-03）· 实验编号 exp009 |
 | judgeloop | **b7 重派 · 完成，PR #49 已合并（issue #44 关），远端分支已删，窗口已关** · 018 本机评分模型 + 调节模型闭环（D52）· issue #44 · `research/018-ondevice-judge`（worktree `../noise_canceling-judge-loop`） | `_tmp/20261031-b6/judgeloop.md` | 其 worktree | 已报到 |
-| engine | **停（2026-10-31 会话中断），转 backlog** · 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已报到 |
+| engine | **停（2026-10-31 会话中断）→ 2026-11-02 由 b8 applebe / rustbe 接续** · 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已报到 |
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
+| applebe | b8 · 019 苹果引擎 + 总方案 · #45 · `research/019-apple-inference` | `_tmp/20261102-b8/applebe.md` | engine worktree `state/handoff/engine.md` | 完成，PR #59 已合并（issue #45 关），远端分支已删，窗口已关；worktree 保留待清 |
+| rustbe | b8 · exp010 纯 Rust + 基准程序 · #51 · `exp/010-rust-backend` | `_tmp/20261102-b8/rustbe.md` | rustbe worktree `state/handoff/rustbe.md` | 完成，PR #55 已合并（issue #51 关），远端分支已删，窗口已关；worktree 保留待清 |
+| fastpath | b8 · 020 / exp012 数学上更好 · #58 · `exp/012-fastpath` | `_tmp/20261102-b8/fastpath.md` | fastpath worktree `state/handoff/fastpath.md` | 完成，PR #66 已合并（issue #58 关），远端分支已删，窗口已关；剩余 P2 → #67 |
+| hygiene | b8 旁支 · 代码卫生 · #62 · `feat/code-hygiene` | `_tmp/20261102-b8/hygiene.md` | hygiene worktree `state/handoff/hygiene.md` | 已派（2026-11-02 22:0x）；第二段等 99 的 #57 合并后由大总管放行 |
+| hygiene | **归另一位大总管 noise-canceling-8d**（人在 8d 窗口点名；交代误写 e3，已更正）· #62 代码卫生：600 行上限进 CI · cli 同名类型 · 采样率只写一处 · 阈值比对 · `feat/code-hygiene` | `_tmp/20261102-b8/hygiene.md` | hygiene worktree | 不归本账本，进度见 hygiene worktree `state/coord-8d.md` |
 
 ## 规矩
 
@@ -53,17 +59,63 @@
 - 提交由 hook 自动做（人定 2026-10-29，CLAUDE.md 铁律 14）；手下不做 git 写操作
 - **大总管一次只做好一件大事，每个手下只管 2–4 个实体**（人定 2026-11-02，改 2026-10-31 版，见 CLAUDE.md 第五节第 4 条）：线 / 题 / 讨论都挂在当前实体下，其余按实体记进 `state/backlog.md`
 
+- **自审改用 codex 换谱系评审**（人定 2026-11-02「审可以让codex来做」）：手下收尾前用 codex-review skill，连续两轮无 P0/P1 即停，结果落 `docs/reviews/`
+
+- **记决策号前先 `grep -n '^### D' docs/plan/001_decisions-20261029-b1.md | tail -1` 看文件最大号，并向另一位大总管发「占用 Dxx」**（2026-11-02 两次撞号：47 方 D66–D68；主检出 D77 被另一会话先用，我方改 D78）
+
+- **所有代码文件 ≤ 600 行**（人定 2026-11-02，经 8d 转，随 #62 写进 CLAUDE.md 第五节第 7 条；不设基线、不留豁免，含 docs/experiments）：fastpath 合并前把 gtcrn_native.rs 1926 · main.rs 1280 · gtcrn_native/v2.rs 605 拆到 600 以下；#58 合并后通知 8d 扩扫描到 docs/
+
 ## 名额
 
 | 名额 | 当前持有 |
 |---|---|
 | 重编译 / 全量测试 / 跑模型（1 个） | 空 |
 
-排队：无（benchsynth 第②段已转 backlog）
+排队：99 方最终复跑
+
+**跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。加锁文件：mkdir 主目录 `_tmp/heavy.lock`（内写 owner · 开始 · 预计结束，跑完 rmdir），由各自大总管放名额时建、收回时删，手下不碰（47 已确认）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 约 22:40 e3 窗口收工：人「这些东西下一阶段要做的东西，都记下来，后面的窗口可以再定」→ 待拍板第〇·五组 E-1–E-3 · backlog · board 接续点已写；名额空、锁无
+- 2026-11-02 fastpath 收尾：PR #66 合并（默认 native-v4i · codex 3 轮 · 600 行拆分）；剩余 P2 → issue #67；转交「接起来」：产品接入 v4i、src/dsp 重采样多累加器；测速提醒：rt 连续跑会被降级，连续峰值用 --qos ui，长计时 caffeinate + 查电源
+- 2026-11-02 fastpath 600 行拆分完成：gtcrn_native.rs 1926 → 445（+ weights / cost / kern / ops / block / dpgrnn / simd / tests）· main.rs 1280 → 485（+ alloc / nets / util / parity），最大 532；35 测试过、11 个后端对 ORT 指标拆前后一字不差；已 merge main 并删 fields.rs 三条 APPLE_ONLY。下一步结论 + codex
+- 2026-11-02 22:13 fastpath v4short（电池，3 轮，第 2 轮受干扰）：16 ms 节奏每帧平均 v2-fast 0.091–0.135 · **v4i 0.073–0.092 ms**（同轮比 0.62 / 0.93 / 0.80），CPU 0.5–0.7%，0 帧 > 3 ms；ui 整帧 v2-fast 43.7–48.7 → v4i 35.8–36.2 µs（快 17–26%）。逐层：两输出一组卷积 en0 −30% · 深度卷积 4.35 → 2.77 · LN 2.59 → 0.48 / 3.18 → 0.99 · GRU 交错仅 −7%。**AI 定默认候选 v2 → v4i**。600 行拆分进行中
+- 2026-11-02 22:03 fastpath v3short（电池，3 轮有效，负载 2.90）：16 ms 节奏 rt 每帧平均 **ORT 1.77–1.92 ms（CPU 11–12%，2 轮有 > 3 ms 帧 4 / 7 帧）** · v2-fast 0.125–0.130 ms（0.9%，约快 14 倍，0 帧 > 3 ms）· v3 0.130–0.134（没快）。分拆：深度卷积 3.8 → 2.7 µs、LN 2.3 → 0.45 / 2.8 → 0.95 µs 有效；倒数代除法让 GRU 7.7 → 8.8 µs 变慢（假设被推翻）。下一步 v3 改回除法 + GRU 显式交错（v3i）
+- 2026-11-02 22:00 手下 hygiene（#62 代码卫生）归大总管 noise-canceling-8d（人在 8d 窗口点名），交代误写 e3 已更正；已转 99 对齐要点；8d 计时前照旧打招呼
+- 2026-11-02 fastpath v3（按能效核写）：sigmoid/tanh 除法换倒数估计 + 2 次牛顿 · 3×3 深度卷积向量化（原离下界 5.1 倍）· LN / ERB 4 路 NEON 累加（原离下界 10–12 倍）；133.12 dB、最大差 7.6e-6、0 分配、32 条测试过；短计时同场加 ORT
+- 2026-11-02 人定停测：「我觉得不用测了，基本上效果非常好」→ fastpath 停 paced-batt2；随后人改「你可以继续优化，然后schema他们那个可以开始做」→ fastpath 不收尾、继续 A 类优化，机器先给 99；耗电 · 插电节奏组 · 预取整帧标「待产品接入时测」
+- 2026-11-02 fastpath 电池组 v2batt（3 轮全有效）：16 ms 节奏 rt 每帧平均 原 0.50–0.59 · v2 0.18–0.21 · v2-fast 0.14–0.17 ms，均无 > 3 ms 帧；CPU 原 3.2–3.8% · v2 1.2–1.4% · v2-fast 1.0–1.2%；重采样产品 60 µs/帧 → NEON 14 µs（差 2.4e-7）；STFT 7.3 + 4.9 µs；电量 35 min 内显示不变（满电附近不更新）
+- 2026-11-02 人定 D79：优化与测速以能效核为准；先做输出不变的改写，改输出的留到降噪效果大事
+- 2026-11-02 人要测不插电性能（「我其实想测试一下不插电的性能」）→ 电池组与插电组分开跑、分目录
+- 2026-11-02 更正：run_v2.sh「卡住」不是程序错误——20:07 拔电、20:12 空闲睡眠、20:54 唤醒；单调时钟睡眠时停走。round 2/3 是电池数据（性能核乘加吞吐 66.9 → 35.4 /ns），旧目录留作电池对照。fastpath 已加：睡眠检测作废 · wait_due 测试 · 脚本 caffeinate + 每轮查插电 · v2-fast sigmoid 夹 ±87 防次正规数；27 条测试过
+- 2026-11-02 20:55 fastpath run_v2.sh 卡住：round 2 native-v2-fast pace 16 进程跑 43 min（应约 96 s），停在 main.rs:674 sleep → 让其自停、修等待计算、加测试、只补跑缺的；锁延到约 21:30
+- 2026-11-02 fastpath peak1（3 轮 × 6000 帧，插电，负载 5.7 → 1.1）：实时节奏 + rt 手写每帧 0.38–0.55 ms ≈ 能效核 0.59 ms，是连续跑 0.091 ms 的 4–6 倍 → 推断实时节奏下在能效核约 1 GHz（乘加延迟 E 4.4 ns / P 0.77 ns），下界与耗电按能效核算；两项微基准量错待重跑
+- 2026-11-02 19:49 applebe 收尾：PR #59 合并（codex 8 轮 41 条全改，7、8 轮无 P0/P1）；fastpath 编译 + 17 条单元测试过、端到端仍 134.00 dB，开始计时
+- 2026-11-02 applebe：Accelerate 措辞已写；`apple-rs/tests/fields.rs` 以 bench 为唯一真相源比对 JSON 键（抓到 late_* ≠ release_* 同名不同义并改正）；main.rs 4 条 + power_parse 4 条测试通过；codex 第 6 轮在跑。转交：bench 补计时窗字段（win_start_unix / win_end_unix / wall_s），否则手写版耗电不进排名 → 派给「下界分析」手下
+- 2026-11-02 rustbe 收尾：PR #55 合并（0 分配整数证据 6000 帧 · 10 条单元测试 · 形状交叉校验）。AI 定：Accelerate「cblas / vDSP 路线已不采用；BNNS 路线待证实」；JSON 字段交叉校验由 applebe 在 apple-rs 加测试
+- 2026-11-02 19:25 rustbe 报可以收尾（codex 5 轮，P1×7 P2×20 全改，第 4、5 轮无 P0/P1）；缺口：评审后改动只 cargo check → 给 5 min 名额重编 + 小对拍再开 PR。其待拍板：①手写替换 ORT → AI 定「随『接起来』大事做，挡线补齐前不进产品」②FE-M 去留（已在总清单）③报 tract bug → 4-12
+- 2026-11-02 19:01 rustbe rt1（单次 60 s，只看方向）：按节奏手写 p50 ui 0.39 · **rt 0.21** · ui+工作组 0.62 · rt+工作组 0.61 ms（工作组变差，但设备未跑音频 IO）；同为 ui，10 min 那次 0.61 vs 这次 0.39 → 单次波动大于设置间差；native-fast 过对拍（133.4 dB），连续 0.0838 vs 手写 0.0898 ms。名额超时约 8 min（重编 9 min）。issue #53（engine NaN）已转 47
+- 2026-11-02 18:43 人跑 powermetrics 矩阵完成（`apple/results/20261102-183322-rt/`，9 设置 × 60 s，插电）：CPU 功率 native-blas rt 71 mW · native rt 81 · BNNS rt 97 · BNNS + 自建工作组区间 123–138 mW（但每帧 0.80 → 0.2 ms、核 4.8% → 1.4%）· 忙等 4.2 W（证实降频）。空闲基线 111 mW 高于多段 → 背景噪声约 ±30–40 mW，只作相对比较。结论：支持 D74（提速花电），功率最低 = 手写 + Accelerate + time-constraint
+- 2026-11-02 18:31 ⚠️ applebe `impact.sh` 留下 21 个孤儿基准进程（`eval "$CMD" &` 的 `$!` 是子 shell，kill 没杀到程序），18:10–18:31 一直按节奏跑约半个核 → BE-IMPACT 数据作废；人授权由大总管 pkill 清理；脚本已改（exec · kill+wait+kill -0 · trap）。教训：后台起进程的脚本必须 trap 清理并核实退出
+- 2026-11-02 applebe：ECAPA 转不出 Core ML（补了 onnx2torch Clip 后又卡在 coremltools 不支持 prod），记「转不出」；BE-IMPACT 不能下结论：7 次「关」之间离散 10–22%，BNNS rt 慢 5.9%（噪声 10.6%）、手写 rt −0.6%（噪声 22%），都在噪声里 → 测法要改（前台负载不占满核 · 多跑几对 · 取最小值），留下次。暂停让 47 陪人跑真设备小测试（约 2 min），之后人跑 powermetrics
+- 2026-11-02 18:02 rustbe 实时节奏 10 min（37 500 帧，ui，插电）：手写 p50 0.61 ms（连续跑 0.088）· p99.9 0.87 · max 6.95 ms · 6 帧 > 3 ms（BE-DEADLINE 不过）· 3.2% 核 · 0 分配；Accelerate 版 p50 0.44 · max 4.17 · 1 帧 > 3 ms · 2.5% 核（实时节奏下比手写快约 21%，原因未查）。结论：连续跑的帧耗时在产品节奏下不成立
+- 2026-11-02 人答 D69/D74 冲突 → D75：看实际耗电（mW）+ 对其他程序性能的影响（固定负载变慢 ≤ 1% 目标 / 2% 上限），活动监视器 CPU% 只作参考
+- 2026-11-02 47 方决策（其分支，编号已顺延）：D73 最低系统 14.4；D74 降噪线程接受低频（能效核约 1.1 GHz，0.7 ms 计算变约 3 ms；功耗 72 / 77 / 101 mW；time-constraint 默认开、Workgroup 默认不加）。⚠️ D74 与 D69「CPU 1%」口径打架：低频下 CPU% 高、耗电低 → 待问人。编号约定：记决策前看对方最大号、发「占用 Dxx」；我方下一个从 D75 起
+- 2026-11-02 rustbe ①：Accelerate 版逐值一致（134.2 dB）但只快 4.7%（0.0844 vs 0.0886 ms），每帧 11 次分配（Accelerate 内部），过不了零分配；全进程每帧分配：手写 0 · ORT 1557（FE-M 1023）· tract 2247；bench 加了 `--qos rt` 与 `frames_over_3ms`。② 实时节奏长跑到 18:07
+- 2026-11-02 17:42 applebe 归还：苹果引擎最快 = BNNS Graph + GRU 展开，GTCRN p50 0.155 ms（ORT 0.384，快约 2.5 倍）、每帧 0 分配、134 dB；手写 Rust 0.088 仍最快。Core ML CPU fp32 0.39 / 展开 0.21 ms、每帧约 300 次 malloc、所有算子落 CPU、fp16 54 dB 不过；MLX Python 5.7–6.2 ms；FE-M 转不了 Core ML（view_as_complex）；修了 coremltools 分组 ConvTranspose2d 错转。⚠️ **按实时节奏 16 ms/帧跑 10 min：p50 0.82 ms（连续跑 0.155）、max 11.8 ms、4.8% 核，超 D69 上限，BE-DEADLINE 不过**——推断降频或被挪到能效核。DFN3 `_ll` 下界：连续跑三图 p50 0.61 ms / 10 ms ≈ 6.1% 核 → 不做流式重导出（AI 定），盲听用离线处理即可
+- 2026-11-02 人同意：GTCRN 主模型（D33）当假设继续验证 → 下一轮盲听放 DFN3 `_ll`（backlog 人耳）；019 把 DFN3 加进必测，看 1% 预算内跑不跑得动
+- 2026-11-02 17:30 applebe 主基准跑完，在跑 10 min 实时节奏超时帧检查（到约 17:40）。venv 核清：实际下载约 270 MB（exp010-venv 约 200 MB + 新建转换用 exp010-venv-ct 约 73 MB，因 coremltools 9.0 在 py3.13 崩），无单次 > 500 MB；du 982 MB 是 torch 解压后体积
+- 2026-11-02 17:13 rustbe r5b：手写 GTCRN 逐位不变优化后 p50 0.0875 ms（D69 预算 ≤ 0.08 ms，差约 10%）；Python ORT p50 0.40 vs Rust ORT 0.38 ms（Python 慢约 5%，输出逐位相同）；10 min 长跑 133 dB · reset 逐位相同 · FE-M 改写图逐位相同；Accelerate 小矩阵 11 µs vs 手写 21 µs，下一步接进去
+- 2026-11-02 人补「或者说最高2%」→ D69 改：目标 1%、硬上限 2%（AI 理解，待确认）；已转 applebe
+- 2026-11-02 applebe 写 standard.md §6.1 CPU 分摊（合计 1.00%）：降噪推理 0.50 · 认人 0.15 · VAD 0.06 · 场景 0.07 · STFT 与重采样 0.07 · 采集输出 0.05 · 修音 0.05 · 余量 0.05。风险：认人 1.2% 超总线（→ backlog 认人）；手写 GTCRN 0.63% 超 0.50%（019 内看）；FE-M 在 ORT 上约 3.7%，D33 备选要重估（收尾时出题）；四项未量（→ backlog）
+- 2026-11-02 人定 D69「我的底线是1%」→ 整个降噪软件常开 ≤ 0.01 核（AI 理解口径，待人确认）；已转 applebe 改 BE-CPU
+- 2026-11-02 applebe 调研收回（8 代理，各过怀疑派，本机未测）：只有 BNNS Graph 能在推理线程每帧直接调（单线程、预分配后不分配）；Core ML 每次预测新建 ObjC 对象，只能登记豁免，神经引擎 fp16 且 GRU 上不去；MLX 每帧加锁等后台线程，长处是本机微调。补了 GRU 手动展开变体。题 2-8（最低系统版本）已登记，等实测再问
+- 2026-11-02 人问「苹果引擎怎么写的 · 参照标准是啥」→ D68：先写评判标准（applebe，standard.md）· 一切测速从 Rust 调 · Python 数字量出与 Rust 的差（rustbe 测 Python ORT vs Rust ORT）
+- 2026-11-02 16:33 rustbe 基准结束（正式版 r4，16:32:36 开跑，在干扰时段之后，负载 2.25 → 2.04；r1–r3 留作参考）：GTCRN 手写 Rust p50 0.10 ms、最大 0.13–0.28 ms、每帧零分配，比 ORT（p50 0.37–0.38 ms、最大 0.43–1.0 ms）快约 3.7 倍，对拍 SNR 134 dB；tract 跑 GTCRN p50 0.37–0.56 ms、每帧分配 2247 次，不如 ORT；FE-M tract p50 0.58–0.68 ms vs ORT 0.36–0.38 ms，ORT 更快。名额收回转 47
+- 2026-11-02 rustbe：tract 对拍过（GTCRN SNR 130 dB；FE-M 缺 SplitToSequence，等价改写为 Gather 后对原图 110.8 dB）；冒烟 GTCRN p50 tract 0.47 ms / ORT 0.51 ms（非正式）。另一位大总管 noise-canceling-47（tmux vdn-rust，Rust 骨架线 rs-shm / rs-entry）的 miri 占满 1 核 → 已结束；已向 47 提议两边「计时基准前互相打招呼」
+- 2026-11-02 rustbe：手写 GTCRN 编译过、与 ORT 逐值对拍过（37 段，最差 SNR 119.2 dB，最大差 1.6e-4，无一帧差 > 1e-3）；下一步加 tract 后端（吃 ONNX · 支持 GRU · 面向流式），再申请基准名额。applebe 已报到（M5 · macOS 27.0.1 · 插电），起调研 workflow：Core ML · BNNS Graph · MLX · 实时线程可调性与 Rust 绑定，各配怀疑派
 - 2026-11-02 judgeloop 收尾：exp011 三参数自动调无收益（SCOREQ −0.027 [−0.037, −0.016]，41 段 / 10 说话人；上界 +0.008）→ 第一版不做；PR #49 合并；转交两条已登记（3-6 · backlog 下一轮盲听）
 - 2026-11-02 15:55 judgeloop：14:15 电脑睡眠中断回复，空闲约 1.5 h，已催续跑。停在 exp011「留出评分 + 吃字」：奖励打分 · 拼接 · 红线已提交；留出评分因识别读不了 32 位浮点 WAV 超时没落盘 → 改 judge（转 16 位 · 60 s 超时重试 2 次 · 先落盘）续跑，推算约 25 min
 - 2026-11-02 ears 收尾：PR #48；E2 按人「可以」记 D66；E6 登记 4-11
