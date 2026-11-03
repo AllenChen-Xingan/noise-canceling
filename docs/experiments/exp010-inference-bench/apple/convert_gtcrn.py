@@ -32,6 +32,53 @@ from gtcrn import GTCRN  # noqa: E402
 from gtcrn_stream import StreamGTCRN  # noqa: E402
 from modules.convert import convert_to_stream  # noqa: E402
 
+import gtcrn_stream as _gs  # noqa: E402
+
+
+# ── 把缓存的原地切片写回（conv_cache[:, :, :2, :] = …）换成拼接出新张量 ──
+# 原因（2026-11-02 实测）：coremltools 9.0 转原地写回的图，第 0 帧就和 ORT 差 0.77；torch 追踪图本身对 ORT 差 7e-7。
+# 算法不变，只是不再原地改；改完由 apple-rs 对 ORT 转储判逐值一致。
+def _enc_forward(self, x, conv_cache, tra_cache):
+    en_outs = []
+    for i in range(2):
+        x = self.en_convs[i](x)
+        en_outs.append(x)
+    x, c0, t0 = self.en_convs[2](x, conv_cache[:, :, :2, :], tra_cache[0]); en_outs.append(x)
+    x, c1, t1 = self.en_convs[3](x, conv_cache[:, :, 2:6, :], tra_cache[1]); en_outs.append(x)
+    x, c2, t2 = self.en_convs[4](x, conv_cache[:, :, 6:16, :], tra_cache[2]); en_outs.append(x)
+    return x, en_outs, torch.cat([c0, c1, c2], dim=2), torch.stack([t0, t1, t2])
+
+
+def _dec_forward(self, x, en_outs, conv_cache, tra_cache):
+    x, c6, t0 = self.de_convs[0](x + en_outs[4], conv_cache[:, :, 6:16, :], tra_cache[0])
+    x, c2, t1 = self.de_convs[1](x + en_outs[3], conv_cache[:, :, 2:6, :], tra_cache[1])
+    x, c0, t2 = self.de_convs[2](x + en_outs[2], conv_cache[:, :, :2, :], tra_cache[2])
+    for i in range(3, 5):
+        x = self.de_convs[i](x + en_outs[4 - i])
+    return x, torch.cat([c0, c2, c6], dim=2), torch.stack([t0, t1, t2])
+
+
+def _gtcrn_forward(self, spec, conv_cache, tra_cache, inter_cache):
+    spec_ref = spec
+    spec_real = spec[..., 0].permute(0, 2, 1)
+    spec_imag = spec[..., 1].permute(0, 2, 1)
+    spec_mag = torch.sqrt(spec_real ** 2 + spec_imag ** 2 + 1e-12)
+    feat = torch.stack([spec_mag, spec_real, spec_imag], dim=1)
+    feat = self.sfe(self.erb.bm(feat))
+    feat, en_outs, ce, te = self.encoder(feat, conv_cache[0], tra_cache[0])
+    feat, i0 = self.dpgrnn1(feat, inter_cache[0])
+    feat, i1 = self.dpgrnn2(feat, inter_cache[1])
+    m_feat, cd, td = self.decoder(feat, en_outs, conv_cache[1], tra_cache[1])
+    m = self.erb.bs(m_feat)
+    spec_enh = self.mask(m, spec_ref.permute(0, 3, 2, 1)).permute(0, 3, 2, 1)
+    return spec_enh, torch.stack([ce, cd]), torch.stack([te, td]), torch.stack([i0, i1])
+
+
+if os.environ.get("GTCRN_INPLACE") != "1":  # 设 1 可复现原版写法（用来对照）
+    _gs.StreamEncoder.forward = _enc_forward
+    _gs.StreamDecoder.forward = _dec_forward
+    _gs.StreamGTCRN.forward = _gtcrn_forward
+
 base = GTCRN().eval()
 base.load_state_dict(torch.load(f"{src}/onnx_models/model_trained_on_dns3.tar", map_location="cpu")["model"])
 stream = StreamGTCRN().eval()
