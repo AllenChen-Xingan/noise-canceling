@@ -72,3 +72,6 @@
 - 2026-11-03 P3（默认值字面量）收窄为「等于描述表默认值才报」，真仓 6 处（polish params ×4 · scene weights ×1 · speaker-lab run ×1）。8d 定：本 PR 内逐条处理（用默认值的改引用；有意预设写带理由的放行标记），P3 直接红；hygiene 实体临时扩为 xtask · polish · scene · speaker-lab（4 个）
 - 2026-11-03 R-PARAM 迁完：P3 6 处——polish AGC 3 处改引用默认值；polish:100 · speaker-lab:254 · scene/weights.rs:22 保留并写理由（scene 那行是 train.py 生成，已同步改 train.py 生成注释，未重训）；3 crate 30 过前后一致；范围比对 旧 159 新 152，少的 7 处是旧规则误报；xtask 60/0
 - 2026-11-03 发现 tidysyn worktree 里 hook 不触发（hygiene 会话启动目录已删，8d 会话在主目录）→ #71 改动全未提交。8d 补交 b87fe774（27 文件）并推远端备份；授权 hygiene 在本分支自行 add/commit（照 specs/README.md 格式），不许 push/merge。五条规则全迁完：xtask 等 93 过/0 败/1 忽略；tidy 0.563→0.632 s；冷编译 1.59→4.48 s。codex 第 1 轮开跑
+- 2026-11-03 #71 codex 第 1 轮 P1×4 P2×4 属实已修（6aa76575）：测试范围按行列判 · 内联模块 #[path] · 建树错误接进 tidy · R3 别名不跨测试作用域等；xtask 69/0，真仓 tidy 过；第 2 轮在跑
+- 2026-11-03 #71 codex 第 2 轮 P1×3 P2×3 属实已修（c2df8209）：函数体内 #[path] 模块 · 同名别名全候选 · 生产代码 include! 报红；R-MODEL 字节串退步补回；xtask 73/0。hygiene 自报脚本清空 modtree.rs 一次，用 git show 恢复后重做，未丢工作；第 3 轮在跑
+- 2026-11-03 #71 codex 第 3 轮 P1×3 P2×2 属实已修（62502e42）。hygiene 认出「找到一种位置补一种」模式，把模块树展开重写成走遍所有节点的访问器（上下文栈），删旧补丁；重写前后真仓测试范围逐条一致；xtask 77/0；第 4 轮在跑
