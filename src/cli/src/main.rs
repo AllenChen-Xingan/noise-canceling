@@ -788,6 +788,27 @@ fn v7(a: V7Args) -> Result<bool, BoxError> {
 mod tests {
     use super::*;
 
+    /// `--model` 的可选值、默认值都从 `ModelId` 取：每个正本名都认、解析到对应模型；别的写法拒收。
+    #[test]
+    fn model_arg_follows_model_id() {
+        let kind_of = |args: &[&str]| -> Option<ModelKind> {
+            let cli = Cli::try_parse_from(args).ok()?;
+            let Cmd::Denoise(a) = cli.cmd else {
+                return None;
+            };
+            ModelId::parse(&a.model.model).map(ModelKind::from_id)
+        };
+        assert_eq!(
+            kind_of(&["vdn", "denoise", "a.wav", "b.wav"]),
+            Some(ModelKind::from_id(ModelId::default()))
+        );
+        for id in ModelId::ALL {
+            let got = kind_of(&["vdn", "denoise", "a.wav", "b.wav", "--model", id.as_str()]);
+            assert_eq!(got, Some(ModelKind::from_id(id)), "{}", id.as_str());
+        }
+        assert_eq!(kind_of(&["vdn", "denoise", "a.wav", "b.wav", "--model", "nope"]), None);
+    }
+
     /// 命令行默认值与描述表同源；越界按描述表拒收。
     #[test]
     fn safety_args_follow_desc_table() {
