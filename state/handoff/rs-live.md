@@ -3,12 +3,35 @@
 > 大总管：`noise-canceling-47`。交代：`../noise_canceling-skeleton/_tmp/20261102-b8-rust/rs-live.md`。
 > 管的实体：`vdn-io-macos` · `vdn-rt-thread` · `vdn-denoised` · `vdn-cli`
 
-## 手上
-V5「耳机里听不到自己」+ 实时优先级 code 4 的修复与测试补齐。
+## 已收尾（2026-11-02）
+一句话：V5 这条路径用不开设备的测试证明没丢声音（两声道相同、电平差 < 0.2 dB）；嫌疑落在「声音太小 + 骨传导盖住」，
+新加的 `--check --record` 让人回放判。实时优先级 code 4 已修（内核 50 µs 下限）。
 
-## 做到哪
-- 代码写完（未编译：heavy.lock 在，等锁）
-- 下一步：锁消失 → 四个 crate 的 test / clippy / fmt / tidy → 自审 → 报收尾
+**验证【测】**：`cargo test -p vdn-io-macos -p vdn-rt-thread -p vdn-denoised -p vdn-cli` 70 过 · 5 忽略（真设备 / 人工）；
+clippy（--all-targets）0 警告 · fmt · `xtask tidy` · `xtask check-deps` 通过。`--gain-db 25`、录音路径不存在都在开设备前报错（实跑确认）
+
+## 给人的 V5 复测（戴耳机）
+```
+cargo build -p vdn-cli && mkdir -p _tmp/v5
+./target/debug/vdn run --passthrough --check --record _tmp/v5/v5-$(date +%H%M%S).wav
+afplay _tmp/v5/v5-<上面那个时间>.wav        # 用耳机回放
+```
+- 跑的 5 秒里正常说话。文件名带时间，不会覆盖上一次的
+- 算过：① 结束时最后一行是「过（机器部分）」；② 回放里清楚听到自己的声音、不断续、没有咔哒声
+- 如果判定行提示「输入很小声」：再跑一次加 `--gain-db 12`，回放对比
+- 跑的时候耳机里听不出自己是可能的（骨传导的原声先到，22 ms 后的小声副本被盖住）——以回放为准
+- 麦克风单测（有环境声或说话时跑）：`cargo test -p vdn-io-macos --test real_device -- --ignored --nocapture`
+
+## 本次新增的测试
+- vdn-io-macos：`level::tests` 4 条（正弦电平对理论值 · 连续全零跨回调并在有声后清零 · −0 与非有限值 · 空计数）；`pump::tests::pumps_meter_mono_level`、`all_zero_input_flags_silent_after_one_second`；`real_device` 两条加断言（麦克风不全零 · 扬声器送出约 −20 dBFS）
+- vdn-rt-thread：`tiny_measurement_gives_params_the_kernel_accepts`（回归：修前给 30 µs，内核返回 4）· `huge_measurement_is_clamped_to_kernel_max_and_period` · `for_block_with_tiny_load_is_valid` · `period_shorter_than_kernel_min_is_rejected_not_rewritten` · `kernel_raises_small_computation_to_half_constraint`；`invalid_params_are_rejected` 加上下限两例
+- vdn-denoised：`denoise_rt_params_use_period_and_measured_window` 改为与正本比对 + 内核接受
+- vdn-cli：`run_path_without_devices_passes_sine_through_at_same_level` · `run_path_gain_raises_output_level` · `run_path_gain_clips_and_counts` · `gain_range_is_checked` · `record_queue_full_drops_and_counts` · `judge_cases` · `silence_notice_fires_once_per_episode`；`v5_live_passthrough`（忽略，人工）改为带录音与判定
+
+## 自审（三个视角）
+- 实时回调：电平统计只用原子量、单写者、不分配；录音分流用 rtrb `push`，满了丢弃计数不等待；`no_alloc` 测试覆盖两个回调泵（含电平统计）
+- 提示刷屏：一段连续全零只提示一次，有声后再全零满 1 s 才再提示，最多每秒一次（单测）
+- 夹取会不会更易降级：下限把 < 50 µs 抬到 50 µs，原来是整个被内核拒收，现在能提升；内核本来就会抬到 constraint/2（8 ms），声明值不会比实际工作量小。上限只在周期 > 50 ms 时起作用，本项目周期 16 ms 碰不到
 
 ## 查明的事
 1. **输出两个声道都写了**【读源码】：`OutputPump` 经 `fan_out` 复制到每个声道；送音端（Forwarder → Out 环 → HalSource）没有会输出全零的地方
@@ -50,3 +73,4 @@ V5「耳机里听不到自己」+ 实时优先级 code 4 的修复与测试补�
 - 18:1x 报到；读代码定位：输出声道与直通路径无嫌疑；code 4 定位到内核 50 µs 下限
 - 大总管实测麦克风有声；定：不加 AVFoundation、链路测试失败要打印、加 `--record` / `--gain-db`
 - 代码写完，等锁编译
+- 大总管发「可以跑」：四个 crate 测试 / clippy / fmt / tidy / check-deps 全过；收尾
