@@ -6,11 +6,11 @@ Torch version 2.15.0 has not been tested with coremltools. You may run into unex
 Tuple detected at graph output. This will be flattened in the converted model.
 Converting PyTorch Frontend ==> MIL Ops:   0%|          | 0/531 [00:00<?, ? ops/s]
 
-ERROR - converting 'int' op (located at: 'model/91'):
+ERROR - converting 'view_as_complex' op (located at: '613'):
 
-Converting PyTorch Frontend ==> MIL Ops:  10%|▉         | 51/531 [00:00<00:00, 12885.34 ops/s]
+Converting PyTorch Frontend ==> MIL Ops:  85%|████████▌ | 454/531 [00:00<00:00, 9141.03 ops/s]
 Traceback (most recent call last):
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-engine/docs/experiments/exp010-inference-bench/apple/convert_fem.py", line 69, in <module>
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-engine/docs/experiments/exp010-inference-bench/apple/convert_fem.py", line 71, in <module>
     mlm = ct.convert(
         traced,
     ...<4 lines>...
@@ -44,6 +44,8 @@ Traceback (most recent call last):
     return load(*args, **kwargs)
   File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/load.py", line 87, in load
     return _perform_torch_convert(converter, debug)
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/load.py", line 158, in _perform_torch_convert
+    raise e
   File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/load.py", line 150, in _perform_torch_convert
     prog = converter.convert()
   File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/converter.py", line 1392, in convert
@@ -55,13 +57,8 @@ Traceback (most recent call last):
   File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 113, in convert_nodes
     convert_single_node(context, node)
     ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 174, in convert_single_node
-    add_op(context, node)
-    ~~~~~~^^^^^^^^^^^^^^^
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 3066, in _int
-    _cast(context, node, int, "int32")
-    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 3048, in _cast
-    res = mb.const(val=dtype(x.val), name=node.name)
-                       ~~~~~^^^^^^^
-TypeError: only 0-dimensional arrays can be converted to Python scalars
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 143, in convert_single_node
+    raise NotImplementedError(
+        f"PyTorch convert function for op '{op_lookup}' not implemented."
+    )
+NotImplementedError: PyTorch convert function for op 'view_as_complex' not implemented.

@@ -1,70 +1,30 @@
 Torch version 2.15.0 has not been tested with coremltools. You may run into unexpected errors. Torch 2.7.0 is the most recent version that has been tested.
-/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/optimize/torch/palettization/fake_palettize.py:82: SyntaxWarning: invalid escape sequence '\_'
-  n_bits (:obj:`int`): Number of palettization bits. There would be :math:`2^{n\_bits}` unique weights in the ``LUT``.
 /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/torch/jit/_trace.py:1006: FutureWarning: `torch.jit.trace` is deprecated. Please switch to `torch.compile` or `torch.export`.
   warnings.warn(
 /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/torch/jit/_trace.py:1145: FutureWarning: `torch.jit.trace_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
   warnings.warn(
 Model is not in eval mode. Consider calling '.eval()' on your model prior to conversion
 Tuple detected at graph output. This will be flattened in the converted model.
-Converting PyTorch Frontend ==> MIL Ops:   0%|          | 0/866 [00:00<?, ? ops/s]
+Converting PyTorch Frontend ==> MIL Ops:   0%|          | 0/866 [00:00<?, ? ops/s]Converting PyTorch Frontend ==> MIL Ops:  54%|█████▍    | 469/866 [00:00<00:00, 3000.08 ops/s]Converting PyTorch Frontend ==> MIL Ops: 100%|█████████▉| 864/866 [00:00<00:00, 4046.82 ops/s]
+Running MIL frontend_pytorch pipeline:   0%|          | 0/5 [00:00<?, ? passes/s]Running MIL frontend_pytorch pipeline: 100%|██████████| 5/5 [00:00<00:00, 93.66 passes/s]
+Running MIL default pipeline:   0%|          | 0/92 [00:00<?, ? passes/s]Running MIL default pipeline:  12%|█▏        | 11/92 [00:00<00:00, 90.20 passes/s]Running MIL default pipeline:  25%|██▌       | 23/92 [00:00<00:00, 98.70 passes/s]Running MIL default pipeline:  39%|███▉      | 36/92 [00:00<00:00, 111.00 passes/s]Running MIL default pipeline:  52%|█████▏    | 48/92 [00:00<00:00, 59.16 passes/s] Running MIL default pipeline:  65%|██████▌   | 60/92 [00:00<00:00, 68.56 passes/s]Running MIL default pipeline:  77%|███████▋  | 71/92 [00:00<00:00, 77.89 passes/s]Running MIL default pipeline:  91%|█████████▏| 84/92 [00:01<00:00, 88.97 passes/s]Running MIL default pipeline: 100%|██████████| 92/92 [00:01<00:00, 84.24 passes/s]
+Running MIL backend_mlprogram pipeline:   0%|          | 0/12 [00:00<?, ? passes/s]Running MIL backend_mlprogram pipeline: 100%|██████████| 12/12 [00:00<00:00, 133.08 passes/s]
+Model is not in eval mode. Consider calling '.eval()' on your model prior to conversion
+Tuple detected at graph output. This will be flattened in the converted model.
+Converting PyTorch Frontend ==> MIL Ops:   0%|          | 0/866 [00:00<?, ? ops/s]Converting PyTorch Frontend ==> MIL Ops:  58%|█████▊    | 498/866 [00:00<00:00, 4815.93 ops/s]Converting PyTorch Frontend ==> MIL Ops: 100%|█████████▉| 864/866 [00:00<00:00, 5646.10 ops/s]
+Running MIL frontend_pytorch pipeline:   0%|          | 0/5 [00:00<?, ? passes/s]Running MIL frontend_pytorch pipeline: 100%|██████████| 5/5 [00:00<00:00, 93.58 passes/s]
+Running MIL default pipeline:   0%|          | 0/95 [00:00<?, ? passes/s]Running MIL default pipeline:  12%|█▏        | 11/95 [00:00<00:00, 92.14 passes/s]Running MIL default pipeline:  23%|██▎       | 22/95 [00:00<00:00, 101.73 passes/s]Running MIL default pipeline:  36%|███▌      | 34/95 [00:00<00:00, 108.94 passes/s]Running MIL default pipeline:  47%|████▋     | 45/95 [00:00<00:00, 103.34 passes/s]Running MIL default pipeline:  59%|█████▉    | 56/95 [00:00<00:00, 103.83 passes/s]Fatal Python error: PyThreadState_Get: the function must be called with the GIL held, after Python initialization and before Python finalization, but the GIL is released (the current Python thread state is NULL)
+Python runtime state: initialized
 
-ERROR - converting 'int' op (located at: 'm/sfe/73'):
+Thread 0x000000016df5b000 (most recent call first):
+  File "/Users/allenchen/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/threading.py", line 363 in wait
+  File "/Users/allenchen/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/threading.py", line 660 in wait
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/tqdm/_monitor.py", line 69 in run
+  File "/Users/allenchen/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/threading.py", line 1044 in _bootstrap_inner
+  File "/Users/allenchen/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/threading.py", line 1015 in _bootstrap
 
-Converting PyTorch Frontend ==> MIL Ops:   7%|▋         | 58/866 [00:00<00:00, 10806.70 ops/s]
-Traceback (most recent call last):
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-engine/docs/experiments/exp010-inference-bench/apple/convert_gtcrn.py", line 113, in <module>
-    mlm = ct.convert(
-        traced,
-    ...<4 lines>...
-        minimum_deployment_target=ct.target.macOS15,
-    )
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/_converters_entry.py", line 646, in convert
-    mlmodel = mil_convert(
-        model,
-    ...<12 lines>...
-        states=states,
-    )
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/converter.py", line 186, in mil_convert
-    return _mil_convert(
-        model,
-    ...<5 lines>...
-        **kwargs,
-    )
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/converter.py", line 218, in _mil_convert
-    proto, mil_program = mil_convert_to_proto(
-                         ~~~~~~~~~~~~~~~~~~~~^
-                            model,
-                            ^^^^^^
-    ...<3 lines>...
-                            **kwargs
-                            ^^^^^^^^
-                         )
-                         ^
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/converter.py", line 294, in mil_convert_to_proto
-    prog = frontend_converter(model, **kwargs)
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/converter.py", line 106, in __call__
-    return load(*args, **kwargs)
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/load.py", line 87, in load
-    return _perform_torch_convert(converter, debug)
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/load.py", line 150, in _perform_torch_convert
-    prog = converter.convert()
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/converter.py", line 1392, in convert
-    convert_nodes(self.context, self.graph, early_exit=not has_states)
-    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 118, in convert_nodes
-    raise e     # re-raise exception
-    ^^^^^^^
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 113, in convert_nodes
-    convert_single_node(context, node)
-    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 174, in convert_single_node
-    add_op(context, node)
-    ~~~~~~^^^^^^^^^^^^^^^
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 3066, in _int
-    _cast(context, node, int, "int32")
-    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 3048, in _cast
-    res = mb.const(val=dtype(x.val), name=node.name)
-                       ~~~~~^^^^^^^
-TypeError: only 0-dimensional arrays can be converted to Python scalars
+Thread 0x00000001fd013f80 (most recent call first):
+  File "/Users/allenchen/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/copy.py", line 246 in _keep_alive
+  <invalid frame>
+/Users/allenchen/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/multiprocessing/resource_tracker.py:479: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/mp-2prvsp1m'}
+  warnings.warn(

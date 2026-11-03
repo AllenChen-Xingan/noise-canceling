@@ -9,12 +9,20 @@ from coremltools.converters.mil.frontend.torch import ops as _ops
 _orig_cast = _ops._cast
 
 
-def _scalar(dtype):
-    def f(v):
+class _Meta(type):
+    """假类型：isinstance 照原类型判（库里先 isinstance 再调用），调用时先把单元素数组压成标量。bool 不能被继承，所以用元类。"""
+
+    def __instancecheck__(cls, obj):
+        return isinstance(obj, cls.base)
+
+    def __call__(cls, v):
         if isinstance(v, np.ndarray) and v.ndim > 0 and v.size == 1:
             v = v.reshape(())
-        return dtype(v)
-    return f
+        return cls.base(v)
+
+
+def _scalar(dtype):
+    return _Meta(f"_scalar_{dtype.__name__}", (), {"base": dtype})
 
 
 def _cast(context, node, dtype, dtype_name):

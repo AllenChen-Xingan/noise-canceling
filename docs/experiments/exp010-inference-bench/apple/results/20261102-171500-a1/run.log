@@ -6,3 +6,9 @@
 [17:15:12] 转 FE-M
 [17:15:13] ERROR convert_fem
 [17:15:13] 完成 20261102-171500-a1
+[17:15:41] build 20261102-171500-a1 → /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-171500-a1 · 结果 /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-engine/docs/experiments/exp010-inference-bench/apple/results/20261102-171500-a1
+[17:15:41] 转 GTCRN
+[17:15:45] ERROR convert_gtcrn
+[17:15:45] 转 FE-M
+[17:15:46] ERROR convert_fem
+[17:15:46] 完成 20261102-171500-a1
