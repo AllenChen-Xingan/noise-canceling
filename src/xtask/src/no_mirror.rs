@@ -14,6 +14,7 @@
 use std::path::Path;
 
 use quote::ToTokens;
+use syn::ext::IdentExt;
 use syn::visit::Visit;
 use syn::{Fields, Item, Visibility};
 
@@ -40,7 +41,8 @@ fn norm_ty<T: ToTokens>(t: &T) -> String {
     toks.iter()
         .enumerate()
         .filter(|(i, tk)| **tk != "::" && toks.get(i + 1) != Some(&"::"))
-        .map(|(_, tk)| *tk)
+        // `r#X` 与 `X` 等价（codex #71 第 4 轮 P2 #2）
+        .map(|(_, tk)| tk.strip_prefix("r#").unwrap_or(tk))
         .collect::<Vec<_>>()
         .join(" ")
 }
@@ -50,7 +52,10 @@ fn fields_print(f: &Fields) -> (Vec<String>, usize) {
         .iter()
         .enumerate()
         .map(|(i, x)| {
-            let n = x.ident.as_ref().map_or(i.to_string(), ToString::to_string);
+            let n = x
+                .ident
+                .as_ref()
+                .map_or(i.to_string(), |id| id.unraw().to_string());
             format!("{n}:{}", norm_ty(&x.ty))
         })
         .collect();
@@ -69,7 +74,7 @@ pub fn shape(it: &Item) -> Option<(Shape, &syn::Ident, &Visibility)> {
             let print = format!("struct {}", v.join(","));
             Some((
                 Shape {
-                    name: s.ident.to_string(),
+                    name: s.ident.unraw().to_string(),
                     print,
                     fields: n,
                 },
@@ -81,13 +86,19 @@ pub fn shape(it: &Item) -> Option<(Shape, &syn::Ident, &Visibility)> {
             let mut v: Vec<String> = e
                 .variants
                 .iter()
-                .map(|x| format!("{}({})", x.ident, fields_print(&x.fields).0.join(",")))
+                .map(|x| {
+                    format!(
+                        "{}({})",
+                        x.ident.unraw(),
+                        fields_print(&x.fields).0.join(",")
+                    )
+                })
                 .collect();
             v.sort();
             let n = v.len();
             Some((
                 Shape {
-                    name: e.ident.to_string(),
+                    name: e.ident.unraw().to_string(),
                     print: format!("enum {}", v.join(",")),
                     fields: n,
                 },
@@ -125,7 +136,7 @@ pub fn shape(it: &Item) -> Option<(Shape, &syn::Ident, &Visibility)> {
             let n = v.len();
             Some((
                 Shape {
-                    name: t.ident.to_string(),
+                    name: t.ident.unraw().to_string(),
                     print: format!("trait {}", v.join(",")),
                     fields: n,
                 },
@@ -135,7 +146,7 @@ pub fn shape(it: &Item) -> Option<(Shape, &syn::Ident, &Visibility)> {
         }
         Item::Type(t) => Some((
             Shape {
-                name: t.ident.to_string(),
+                name: t.ident.unraw().to_string(),
                 print: String::new(),
                 fields: 0,
             },

@@ -228,21 +228,30 @@ impl Walker<'_, '_> {
         let line = m.span().start().line;
         let plain = path_attr(&m.attrs);
         if let Some((_, items)) = &m.content {
-            // 内联模块自己的 `#[path]` 决定它里面子模块的目录（codex #71 第 1 轮 P1 #2）
-            let dir = match &plain {
+            // 内联模块的子模块目录：`#[path]`（第 1 轮 P1 #2）或默认的模块名，加上 `cfg_attr` 里的每个
+            // path（第 4 轮 P1 #1）。每个可能的目录都展开一遍，宁可多查
+            let mut dirs = vec![match &plain {
                 Some(p) => normalize(&fr.child_dir.join(p)),
                 None => fr.child_dir.join(&name),
-            };
-            let inner = Frame {
-                child_dir: dir,
-                top_level: false,
-                ..fr
-            };
-            self.with(inner, |w| {
-                for it in items {
-                    w.visit_item(it);
+            }];
+            for p in cfg_attr_paths(&m.attrs) {
+                let d = normalize(&fr.child_dir.join(p));
+                if !dirs.contains(&d) {
+                    dirs.push(d);
                 }
-            });
+            }
+            for dir in dirs {
+                let inner = Frame {
+                    child_dir: dir,
+                    top_level: false,
+                    ..fr.clone()
+                };
+                self.with(inner, |w| {
+                    for it in items {
+                        w.visit_item(it);
+                    }
+                });
+            }
             return;
         }
         // 外部模块：所有可能指到的文件都当引用（`#[path]`、`cfg_attr` 里的 path、默认位置），宁可多查

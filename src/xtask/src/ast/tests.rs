@@ -385,12 +385,13 @@ fn modules_and_include_anywhere() {
     done(&r);
 }
 
-/// codex #71 第 3 轮 P1 #2：同一文件以两种目录上下文加载（两种声明顺序），子模块都展开
+/// codex #71 第 3 轮 P1 #2（第 4 轮 P2 #4 重写）：同一文件以两种目录上下文、**同一测试状态**加载，两边的子模块都要展开
+///（旧去重键（文件，是否测试）会跳过第二次，那边的子模块报「找不到」或成孤儿）；两种声明顺序都测
 #[test]
 fn same_file_two_contexts() {
     for lib in [
-        "#[cfg(test)]\nmod a;\n#[path = \"a.rs\"]\nmod b;\n",
-        "#[path = \"a.rs\"]\nmod b;\n#[cfg(test)]\nmod a;\n",
+        "mod a;\n#[path = \"a.rs\"]\nmod b;\n",
+        "#[path = \"a.rs\"]\nmod b;\nmod a;\n",
     ] {
         let (r, s) = tree(
             "twoctx",
@@ -398,20 +399,38 @@ fn same_file_two_contexts() {
                 ("src/lib.rs", lib),
                 ("src/a.rs", "mod child;\n"),
                 ("src/a/child.rs", "fn c() {}\n"),
-                ("src/b/child.rs", "fn c() {}\n"),
+                // `#[path]` 引入的文件按 mod-rs 处理：经 b 加载时它的子模块在文件所在目录
+                ("src/child.rs", "fn c() {}\n"),
             ],
         );
-        assert!(!s.is_test_file("c/src/a.rs"), "{lib}");
-        assert!(
-            !s.is_test_file("c/src/b/child.rs"),
-            "{lib}：生产路径 b 的子模块"
-        );
-        assert!(
-            s.is_test_file("c/src/a/child.rs"),
-            "{lib}：只经测试路径 a 到达"
-        );
+        assert!(s.problems.is_empty(), "{lib}: {:?}", s.problems);
+        assert!(s.orphans.is_empty(), "{lib}: 孤儿 {:?}", s.orphans);
+        assert!(!s.is_test_file("c/src/a/child.rs"));
+        assert!(!s.is_test_file("c/src/child.rs"));
         done(&r);
     }
+}
+
+/// codex #71 第 4 轮 P1 #1：内联模块的 `cfg_attr` path 也展开，生产引用优先
+#[test]
+fn inline_module_cfg_attr_path() {
+    let (r, s) = tree(
+        "inlinecfgattr",
+        &[
+            (
+                "src/lib.rs",
+                "#[cfg_attr(not(test), path = \"other\")]\nmod outer {\n    mod x;\n}\n#[cfg(test)]\n#[path = \"other/x.rs\"]\nmod t;\n",
+            ),
+            ("src/outer/x.rs", "fn a() {}\n"),
+            ("src/other/x.rs", "fn b() {}\n"),
+        ],
+    );
+    assert!(
+        !s.is_test_file("c/src/other/x.rs"),
+        "经 cfg_attr 路径的生产引用"
+    );
+    assert!(!s.is_test_file("c/src/outer/x.rs"));
+    done(&r);
 }
 
 /// codex #71 第 3 轮 P1 #3：`cfg_attr` 里的 path 也当引用（保守）

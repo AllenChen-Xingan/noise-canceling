@@ -149,6 +149,11 @@ pub fn str_literals(file: &syn::File) -> Vec<(modtree::Pos, String)> {
                             modtree::pos(l.span()),
                             String::from_utf8_lossy(&s.value()).into_owned(),
                         )),
+                        // C 字符串也算（`c"fastenhancer-m"`；codex #71 第 4 轮 P2 #5）
+                        syn::Lit::CStr(s) => out.push((
+                            modtree::pos(l.span()),
+                            s.value().to_string_lossy().into_owned(),
+                        )),
                         _ => {}
                     }
                 }

@@ -115,3 +115,13 @@ fn repo_passes() {
     check(&crate::root(), &mut p);
     assert!(p.is_empty(), "{p:#?}");
 }
+
+/// codex #71 第 4 轮 P2 #2：`r#` 名字照样认（同名、改名副本）
+#[test]
+fn raw_identifiers_are_unrawed() {
+    assert_eq!(n("struct r#FrameCtx;\n"), 1);
+    assert_eq!(
+        n("struct F4 { r#rate: u32, seq: u64, conf: r#Confidence }\n"),
+        1
+    );
+}

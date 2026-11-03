@@ -226,23 +226,38 @@ fn ids_of<T: ToTokens>(x: &T) -> BTreeSet<String> {
 }
 
 /// 一条语句里算「同一条」的部分：带块的表达式只取头部。
-fn stmt_context(s: &syn::Stmt) -> BTreeSet<String> {
-    let head = |e: &Expr| -> Option<BTreeSet<String>> {
-        match e {
-            Expr::ForLoop(f) => {
-                let mut a = ids_of(&f.pat);
-                a.extend(ids_of(&f.expr));
-                Some(a)
-            }
-            Expr::If(i) => Some(ids_of(&i.cond)),
-            Expr::While(w) => Some(ids_of(&w.cond)),
-            Expr::Match(m) => Some(ids_of(&m.expr)),
-            Expr::Block(_) | Expr::Loop(_) | Expr::Unsafe(_) => Some(BTreeSet::new()),
-            _ => None,
+/// 一个表达式算「同一条」的部分：带块的只取头部（`let`、常量、分支值里的也一样；codex #71 第 4 轮 P2 #3）。
+fn expr_context(e: &Expr) -> BTreeSet<String> {
+    match e {
+        Expr::ForLoop(f) => {
+            let mut a = ids_of(&f.pat);
+            a.extend(ids_of(&f.expr));
+            a
         }
-    };
+        Expr::If(i) => ids_of(&i.cond),
+        Expr::While(w) => ids_of(&w.cond),
+        Expr::Match(m) => ids_of(&m.expr),
+        Expr::Block(_) | Expr::Loop(_) | Expr::Unsafe(_) | Expr::Closure(_) | Expr::Async(_) => {
+            BTreeSet::new()
+        }
+        _ => ids_of(e),
+    }
+}
+
+/// 一条语句里算「同一条」的部分。
+fn stmt_context(s: &syn::Stmt) -> BTreeSet<String> {
     match s {
-        syn::Stmt::Expr(e, _) => head(e).unwrap_or_else(|| ids_of(e)),
+        syn::Stmt::Expr(e, _) => expr_context(e),
+        syn::Stmt::Local(l) => {
+            let mut a = ids_of(&l.pat);
+            if let Some(init) = &l.init {
+                a.extend(expr_context(&init.expr));
+                if let Some((_, d)) = &init.diverge {
+                    a.extend(expr_context(d));
+                }
+            }
+            a
+        }
         _ => ids_of(s),
     }
 }
@@ -288,7 +303,7 @@ impl<'ast> Visit<'ast> for Finder<'_> {
         {
             self.hits.push((a.body.span(), tok.clone(), false));
         }
-        c.extend(ids_of(&a.body));
+        c.extend(expr_context(&a.body));
         self.ctx.push(c);
         syn::visit::visit_arm(self, a);
         self.ctx.pop();
@@ -310,12 +325,16 @@ impl<'ast> Visit<'ast> for Finder<'_> {
         self.visit_block(&w.body);
     }
     fn visit_item_const(&mut self, c: &'ast syn::ItemConst) {
-        self.ctx.push(ids_of(c));
+        let mut x = expr_context(&c.expr);
+        x.insert(c.ident.unraw().to_string());
+        self.ctx.push(x);
         syn::visit::visit_item_const(self, c);
         self.ctx.pop();
     }
     fn visit_item_static(&mut self, c: &'ast syn::ItemStatic) {
-        self.ctx.push(ids_of(c));
+        let mut x = expr_context(&c.expr);
+        x.insert(c.ident.unraw().to_string());
+        self.ctx.push(x);
         syn::visit::visit_item_static(self, c);
         self.ctx.pop();
     }

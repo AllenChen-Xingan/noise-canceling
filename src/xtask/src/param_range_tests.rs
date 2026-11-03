@@ -198,6 +198,9 @@ fn non_param_ranges_and_values_pass() {
         "/* floor_db.clamp(-60.0, 0.0) */ let x = 1;",
         // for 循环头的范围不把循环体算进同一条语句
         "for i in 0..10 {\n    let a = floor_db;\n}",
+        // let 初始化、常量、分支值里带块的也只算头部（codex #71 第 4 轮 P2 #3）
+        "let _ = for i in 0..10 { let _ = floor_db; };",
+        "let _ = match x { _ => for i in 0..10 { let _ = floor_db; } };",
     ] {
         assert_eq!(n(body), 0, "{body}");
     }
