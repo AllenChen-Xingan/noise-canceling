@@ -15,6 +15,8 @@
 | rs-shm | 共享内存总线 · 实时线程 · 闸门 · 实体：vdn-shm · vdn-rt-thread · xtask · `feat/rust-skeleton-shm`（`../noise_canceling-rs-shm`） | `_tmp/20261102-b8-rust/rs-shm.md` | 其 worktree `state/handoff/rs-shm.md` | 完成，已合入 feat/rust-skeleton（449f40d），窗口已关 |
 | rs-io | 音频进出 · 虚拟麦克风读出端 · 实体：vdn-io-macos · vdn-hal · `feat/rust-skeleton-io`（`../noise_canceling-rs-io`） | `_tmp/20261102-b8-rust/rs-io.md` | 其 worktree `state/handoff/rs-io.md` | 完成，已合入 feat/rust-skeleton（a9d4c83），窗口已关 |
 | rs-entry | 接线 · 实体：vdn-control · vdn-capture · vdn-denoised · vdn-cli · `feat/rust-skeleton-entry`（`../noise_canceling-rs-entry`） | `_tmp/20261102-b8-rust/rs-entry.md` | 其 worktree `state/handoff/rs-entry.md` | 已报到（noise-canceling-rs-entry-c3）· 三家已合进其分支（65e62a9），接线中 |
+| rs-wake | 跨进程唤醒替掉 sleep 轮询 + 唤醒 / 轮询对照实验 + 总线头加 lead / 块长 / 会话 ID / 缺口 + tidy 查 main.rs · 实体：vdn-shm · vdn-rt-thread · xtask · `feat/rust-skeleton-shm`（`../noise_canceling-rs-shm`） | `_tmp/20261102-b8-rust/rs-wake.md` | 其 worktree `state/handoff/rs-wake.md` | 已报到（noise-canceling-rs-shm-86） |
+| rs-core2 | 处理链补齐：Stage 串进 Pipeline（处理图第一步）· 送原声改用 48 kHz · 延迟断言改 Pipeline · FTZ 守卫 · 实体：vdn-types · vdn-dsp · vdn-engine · vdn-models · `feat/rust-skeleton-core`（`../noise_canceling-rs-core`） | `_tmp/20261102-b8-rust/rs-core2.md` | 其 worktree `state/handoff/rs-core2.md` | 已报到（noise-canceling-rs-core-a6） |
 
 ## 规矩
 
@@ -26,15 +28,28 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | 空 |
+| 重编译 / 全量测试（1 个） | rs-entry：release 构建 + V7 基线（0.5 ms 轮询版，约 15 分钟，压力组整机满载） |
 
-排队：（空）
+排队：rs-wake ①唤醒对照实验（约 4 分钟）②装 cargo-deny + deny check（5–8 分钟）③装 nightly Miri + miri test（约 5 分钟），排在 rs-entry 之后，一件一还
 
 等人许可的弹窗 / 长时间前台运行：（空）
 
 ## 进度板
 
 进度（HH:MM）
+- rs-entry 自审：1 P0 + 5 P1 已修（两进程 SIGKILL 重启：相关 1.000000、静音 0）。6 条交大总管 → 定：①Out 环改由送音端自建（rs-entry）②③总线头加 lead · 降噪块长 · 会话 ID · 缺口计数（rs-wake），积压超 lead 丢旧并记缺口（rs-entry）④无缝换设备 → backlog ⑤tidy 查 main.rs → rs-wake；cargo-deny 本批不装 ⑥规约文字收尾时大总管改
+- rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
+- rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
+- 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- 011 人定 A：骨架之后，处理图 + schema 交叉校验合成下一件大事；人定新规矩「唯一真相源 + 交叉校验」→ CLAUDE.md 第五节第 5 条，已通知全部手下
+- 人定 D66（原话「c」）：「超级语法树」两种都要；处理图统一表示排在骨架之后。对照审查子代理在跑（008 / 005 / 009 三样）
+- rs-wake：新签名（头部版本 2 · notify / wait · lead / 降噪块长 / 会话 ID / 缺口 · OwnedBus），vdn-shm 测试全过；BusConfig 多两个字段，rs-entry 要补
+- 人定 2026-11-02（原话「还有手下，装」，大总管理解为装检查工具）：装 cargo-deny 并接进 `xtask ci`；装 nightly + Miri 跑 vdn-shm（及 dsp）→ rs-wake
+- 追加定案：OwnedBus（按总线名文件锁独占建立）收进 vdn-shm（rs-wake），denoised 里那份到时删；Out 总线固定名 `/vdn-out`（Config 可改），不带 pid
+- rs-entry 延迟修复做法：IO 块默认 96 · 预热 + 每块耗时计数 · chain-test 线程提实时优先级 + `--stress N` · `vdn v7` 子命令（可扫 lead）
+- **延迟修复（人定 2026-11-02：「帮我看下，为啥有这么多问题 / 直接修复」）**：诊断 `_tmp/20261102-b8-rust/latency-fix.md`（A IO 块 480 · B sleep 轮询 · C 推理突发与预热 · D debug 构建 · E lead 留 3 块）；判据 V7 = release、10 次 × 10 s、空闲 + 压力、欠载 0、lead ≤ 192（目标 144）。rs-entry 管 A C D E；新起 rs-wake 管 B
+- rs-entry：with_block 接进降噪进程，V1–V4 重跑全过；L_total 直通 2208（46.00 ms）、GTCRN 2976（62.00 ms）；块长 100 启动即报错。新现象：lead = 1 块 + 块长 96 时 6 次里 4 次「处理后欠载」480–1920 样本（用延迟原声补，非静音），块长 480 时 0 次；推断是首次推理预热 + debug 构建，未核实 → backlog
+- 子代理（省 2 ms）：`Pipeline::with_block` 完成，GTCRN 块长 96 时 1536 样本 = 32.00 ms（原 33.98），实测 = 声明；engine 测试 16 条过、clippy 无警告 → 合入骨架（113dd13）与 rs-entry（fd26a1d）
 - rs-entry：**V1–V4 全过**（V1 相关 1.000000、延迟 2303 = L_total、欠载 0；V2 杀降噪 110 ms 切原声、最长静音 0；V3 GTCRN 有声无 NaN、L_total 64 ms；V4 两真进程同 V1，Ctrl-C 后 unlink）。lead = 1 块时欠载 0、GTCRN L_total 44 ms（空闲机器）。修了 denoised 经 capture 带进 cpal。自审中，等 with_block
 - 三家合并后 `xtask ci` 全绿（test 26.5 s；cargo-deny 未装跳过）；骨架分支已合进 rs-entry（65e62a9）
 - rs-core：验收通过（4 crate 测试全过，GTCRN / FE-M 真跑；vdn denoise 改造前后逐字节一致；自审 P0 1 · P1 2 已修）→ 合入、关窗。自报一次 git rm --cached（只涉被删的 session.rs）
@@ -60,6 +75,8 @@
 ## 收尾时大总管要做
 
 - [ ] V6：release 测试 + 全量 `xtask ci`
-- [ ] 改过时说法：根 Cargo.toml 第 1 行注释 · speaker README / Cargo.toml · 规约 §2.2 · §3.7.6（细节见 rs-core 现状页）
+- [ ] 规约 R10 unsafe 白名单加 vdn-dsp（FTZ）
+- [ ] 改过时说法：规约 §2.2 图里 vdn-capture 补 vdn-dsp · vdn-hal · clap · hound ·根 Cargo.toml 第 1 行注释 · speaker README / Cargo.toml · 规约 §2.2 · §3.7.6（细节见 rs-core 现状页）
 - [ ] 新 crate 实体行写进 `.42cog/cog.md`（各现状页有行）
-- [ ] backlog：Ring 拆 Producer / Consumer 句柄；共享内存权限 0600 与 coreaudiod（装驱动那批实测，补 009 待拍板 3）；cargo-deny / Miri 未装；models 不直接依赖 ort 尚无机器检查
+- [ ] **下一件大事**：处理图（D66）+ schema 交叉校验（011），清镜像副本与手写 JSON
+- [ ] backlog：ContentId FNV → sha256；麦克风流无缝重接（回调里无锁换总线，要新依赖）；lead 压到 1 块时块长 96 的欠载（release + 预热核实）；Ring 拆 Producer / Consumer 句柄；共享内存权限 0600 与 coreaudiod（装驱动那批实测，补 009 待拍板 3）；models 不直接依赖 ort 尚无机器检查
