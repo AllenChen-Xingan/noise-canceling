@@ -15,7 +15,10 @@
 //!   两个 bench 都可加 `--qos ui|rt|default`：计时线程的调度等级，默认 ui（QOS_CLASS_USER_INTERACTIVE）；
 //!   rt = THREAD_TIME_CONSTRAINT_POLICY（period = 帧长、computation 1 ms、constraint 3 ms）。
 //!   `--workgroup`：计时线程加入默认输出设备的 IO 工作组（字段 workgroup:true/false）。
-//!   frames_over_3ms：计时帧里单帧 > 3.0 ms 的个数（BE-DEADLINE）。
+//!   frames_over_3ms：计时帧里纯推理 > 3.0 ms 的个数。实时节奏下另报 late_*（醒来迟到）、release_*（计划时刻到完成，
+//!   含迟到）与 release_over_3ms——BE-DEADLINE 应看 release_over_3ms（产品里帧是否赶上截止）。
+//!   open_to_warm_ms：从开始打开到预热完（BE-COLD 直接量）。
+//!   对拍输出 be_parity_pass；不过时退出码非零（--allow-fail 例外，给已知错误的对照用）；非有限指标写 null。
 //!   两个 bench 都可加 `--pace-ms <毫秒>`：按实时节奏每隔这么久喂一帧（测耗电、测睡醒后的帧耗时用；默认 0 = 连续跑）。
 //!   两个 bench 都可加 `--dump-io <前缀>`（此时第 2 个参数须是 onnx）：计时之后另起一个 ORT 会话，从零状态把
 //!   全部 1 + warmup + frames 帧再跑一遍，写 `<前缀>.in.f32` / `<前缀>.ort.f32`（小端 f32，按帧拼接；
@@ -570,6 +573,8 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         x.copy_from_slice(f);
         m.infer(&mut x)?;
     }
+    // BE-COLD 直接量：从开始打开到预热完（codex 第 1 轮 #6）
+    let open_to_warm = t0.elapsed().as_secs_f64() * 1e3;
     let fp_warm = footprint_mb();
     let mut times = Vec::with_capacity(frames);
     let mut nan = 0usize;
@@ -577,10 +582,13 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let pa0 = PROC_ALLOCS.load(Relaxed);
     let c0 = cpu_seconds();
     let w0 = Instant::now();
+    // 实时节奏下另记：醒来迟到 = 实际开始 − 计划时刻；释放到完成 = 完成 − 计划时刻（codex 第 1 轮 #4）
+    let mut late = Vec::with_capacity(if pace > 0.0 { frames } else { 0 });
+    let mut release = Vec::with_capacity(if pace > 0.0 { frames } else { 0 });
     for (n, f) in inputs[warm + 1..].iter().enumerate() {
+        let due = w0 + std::time::Duration::from_secs_f64(n as f64 * pace * 1e-3);
         if pace > 0.0 {
             // 实时节奏：第 n 帧在 w0 + n·pace 时刻开始（睡眠不计入帧耗时）
-            let due = w0 + std::time::Duration::from_secs_f64(n as f64 * pace * 1e-3);
             if let Some(d) = due.checked_duration_since(Instant::now()) {
                 std::thread::sleep(d);
             }
@@ -589,6 +597,10 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         let t = Instant::now();
         m.infer(&mut x)?;
         times.push(t.elapsed().as_secs_f64() * 1e3);
+        if pace > 0.0 {
+            late.push(t.saturating_duration_since(due).as_secs_f64() * 1e3);
+            release.push(Instant::now().saturating_duration_since(due).as_secs_f64() * 1e3);
+        }
         if !x.iter().all(|v| v.is_finite()) {
             nan += 1;
         }
@@ -596,7 +608,16 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let wall = w0.elapsed().as_secs_f64();
     let cpu = cpu_seconds() - c0;
     let allocs = ALLOCS.load(Relaxed) - a0;
-    let over_3ms = times.iter().filter(|t| **t > 3.0).count(); // BE-DEADLINE 用（同 applebe 字段）
+    let over_3ms = times.iter().filter(|t| **t > 3.0).count(); // 纯推理 > 3 ms 的帧（同 applebe 字段）
+    // 释放到完成 > 3 ms 的帧（含醒来迟到），只在实时节奏下有意义；不按节奏跑时为 null
+    let release_over_3ms = if pace > 0.0 { release.iter().filter(|t| **t > 3.0).count().to_string() } else { "null".into() };
+    late.sort_by(|a, b| a.total_cmp(b));
+    release.sort_by(|a, b| a.total_cmp(b));
+    let q = |v: &Vec<f64>, p: f64| if v.is_empty() { "null".to_string() } else { format!("{:.4}", pct(v, p)) };
+    let pace_extra = format!(
+        "\"open_to_warm_ms\":{open_to_warm:.2},\"late_p50_ms\":{},\"late_p999_ms\":{},\"late_max_ms\":{},\"release_p999_ms\":{},\"release_max_ms\":{},\"release_over_3ms\":{release_over_3ms},",
+        q(&late, 0.5), q(&late, 0.999), q(&late, 1.0), q(&release, 0.999), q(&release, 1.0)
+    );
     let proc_allocs = PROC_ALLOCS.load(Relaxed) - pa0;
     let fp_end = footprint_mb();
     times.sort_by(|a, b| a.total_cmp(b));
@@ -610,7 +631,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         )?;
     }
     println!(
-        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"workgroup\":{wg_on},\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan},\"frames_over_3ms\":{over_3ms},\"process_allocs_per_frame\":{},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2}}}",
+        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"workgroup\":{wg_on},\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan},\"frames_over_3ms\":{over_3ms},{pace_extra}\"process_allocs_per_frame\":{},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2}}}",
         model.name(),
         pct(&times, 0.1),
         pct(&times, 0.5),
@@ -681,15 +702,25 @@ fn parity(
         .filter(|(s, _)| *s >= 1e-4 * mean_e)
         .map(|(s, e)| 10.0 * (s / e.max(1e-300)).log10())
         .fold(f64::INFINITY, f64::min);
+    let snr = 10.0 * (sig / err.max(1e-300)).log10();
+    // BE-PARITY（standard.md §2）：没有值差 > 1e-3、没有非有限值，且整段 SNR ≥ 60 dB
+    let pass = first_bad.is_none() && nonfinite == 0 && snr.is_finite() && snr >= 60.0;
     println!(
-        "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"frames\":{},\"max_abs\":{max_abs:.3e},\"worst_frame\":{worst_frame},\"snr_db\":{:.2},\"min_frame_snr_db\":{min_frame_snr:.2},\"nonfinite_values\":{nonfinite},\"first_bad\":\"{:?}\"}}",
+        "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"frames\":{},\"max_abs\":{},\"worst_frame\":{worst_frame},\"snr_db\":{},\"min_frame_snr_db\":{},\"nonfinite_values\":{nonfinite},\"first_bad\":\"{:?}\",\"be_parity_pass\":{pass}}}",
         model.name(),
         inputs.len(),
-        10.0 * (sig / err.max(1e-300)).log10(),
+        if max_abs.is_finite() { format!("{max_abs:.3e}") } else { "null".into() },
+        jnum(snr, 2),
+        jnum(min_frame_snr, 2),
         first_bad
     );
+    // 不过就返回非零退出码，脚本里后续测速不会继续（codex 第 1 轮 #3）；已知错误的对照用 --allow-fail
+    if !pass && !ALLOW_FAIL.load(Relaxed) {
+        return Err(format!("{vs} 没过 BE-PARITY").into());
+    }
     Ok(())
 }
+static ALLOW_FAIL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// reset 检查：`b` 先跑 `k` 帧再 reset，`b2` 新开；两者从第 k 帧起喂同样输入，比输出（应逐位相同）。
 fn reset_check(
@@ -708,25 +739,30 @@ fn reset_check(
     b.reset();
     let mut y = inputs[0].clone();
     let mut max_abs = 0.0f64;
+    let mut bit_diff = 0usize;
     for f in &inputs[k..] {
         x.copy_from_slice(f);
         y.copy_from_slice(f);
         b.infer(&mut x)?;
         b2.infer(&mut y)?;
         for (p, q) in x.iter().zip(&y) {
+            if p.to_bits() != q.to_bits() {
+                bit_diff += 1;
+            }
             let d = (*p as f64 - *q as f64).abs();
-            max_abs = if d.is_nan() {
-                f64::INFINITY
-            } else {
-                max_abs.max(d)
-            };
+            max_abs = if d.is_nan() { f64::INFINITY } else { max_abs.max(d) };
         }
     }
+    // 位模式比较（codex 第 1 轮抽查：差 0 不等于逐位相同）
     println!(
-        "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"check\":\"reset\",\"reset_at\":{k},\"frames_after\":{},\"max_abs_vs_fresh\":{max_abs:.3e}}}",
+        "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"check\":\"reset\",\"reset_at\":{k},\"frames_after\":{},\"max_abs_vs_fresh\":{},\"bitwise_diff_values\":{bit_diff}}}",
         model.name(),
-        inputs.len() - k
+        inputs.len() - k,
+        if max_abs.is_finite() { format!("{max_abs:.3e}") } else { "null".into() },
     );
+    if bit_diff != 0 && !ALLOW_FAIL.load(Relaxed) {
+        return Err("reset 后与新开实例不逐位相同".into());
+    }
     Ok(())
 }
 
@@ -789,6 +825,11 @@ fn dump_io(
     Ok(())
 }
 
+/// JSON 数字：非有限值写 null（codex 第 1 轮 #5）
+fn jnum(v: f64, prec: usize) -> String {
+    if v.is_finite() { format!("{v:.prec$}") } else { "null".into() }
+}
+
 fn arg_str<'a>(args: &'a [String], flag: &str, d: &'a str) -> &'a str {
     args.iter()
         .position(|a| a == flag)
@@ -799,6 +840,7 @@ fn arg_str<'a>(args: &'a [String], flag: &str, d: &'a str) -> &'a str {
 fn main() -> Result<(), Err> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let rest = args.get(1..).unwrap_or(&[]);
+    ALLOW_FAIL.store(rest.iter().any(|a| a == "--allow-fail"), Relaxed);
     match args.first().map(String::as_str) {
         Some("amx-probe") => {
             amx_probe::run();
