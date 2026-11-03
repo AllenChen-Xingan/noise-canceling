@@ -12,7 +12,7 @@
 use std::time::{Duration, Instant};
 
 use vdn_dsp::{DelayLine, OpenCloseEnvelope, OpenCloseParams, db_to_lin};
-use vdn_types::{Basis, LatencyItem, LatencyLedger, Model, ParamSet};
+use vdn_types::{Basis, BypassReason, LatencyItem, LatencyLedger, Model, ParamSet, Status};
 
 /// 三件保命的开关与参数。默认值是 P1 的初值，待 AB 听测与吃字率标定（006 decision 第 3 件）。
 #[derive(Clone, Debug)]
@@ -106,6 +106,17 @@ enum Fault {
     NonFinite,
     Abnormal,
     Deadline,
+}
+
+impl Fault {
+    fn reason(self) -> BypassReason {
+        match self {
+            Fault::Backend => BypassReason::Backend,
+            Fault::NonFinite => BypassReason::NonFinite,
+            Fault::Abnormal => BypassReason::Abnormal,
+            Fault::Deadline => BypassReason::Deadline,
+        }
+    }
 }
 
 pub struct Engine<M: Model> {
@@ -251,9 +262,37 @@ impl<M: Model> Engine<M> {
         self.last_dry = 0.0;
     }
 
-    /// 处理一个 hop。`input.len() == output.len() == hop()`；
-    /// 长度不符时（调用方的 bug）debug 下 panic，release 下原样送原声并计数，不在实时线程上 panic。
+    /// 处理一个 hop（离线 / 16 kHz 直驱用）：故障时在 16 kHz 自己送原声并淡化。
+    /// `input.len() == output.len() == hop()`；长度不符时（调用方的 bug）debug 下 panic，
+    /// release 下原样送原声并计数，不在实时线程上 panic。
     pub fn process(&mut self, input: &[f32], output: &mut [f32]) {
+        let _ = self.run(input, output, true);
+    }
+
+    /// 处理一个 hop（`Pipeline` 用，规约 §3.3 规则 2）：只判故障、管保持期并回报 [`Status`]，
+    /// **不在 16 kHz 做送原声的切换与淡化**——调用方用 48 kHz 原声做。
+    ///
+    /// - `Status::Ok`：`output` = 模型输出（含衰减下限 / 快开慢关的 16 kHz 原声混回）
+    /// - `Status::Bypassed(_)` / `Status::Holding`：`output` = 按模型延迟对齐的 16 kHz 原声，只给升采样器垫底
+    ///   （保证有限、波形连续），调用方应整段换成 48 kHz 原声
+    /// - `fallback` 关时恒为 `Ok`（对拍用，输出 = 模型原样输出）
+    ///
+    /// 推理调用（`Model::process`）在这里面：调用方不要用 FTZ 守卫包住它（R9）。
+    pub fn process_status(&mut self, input: &[f32], output: &mut [f32]) -> Status {
+        self.run(input, output, false)
+    }
+
+    /// 上一个 hop 按模型延迟对齐的 16 kHz 原声（`process` / `process_status` 之后有效）。给后处理级当 `dry`。
+    pub fn aligned_dry(&self) -> &[f32] {
+        &self.dry
+    }
+
+    pub fn config(&self) -> &SafetyConfig {
+        &self.cfg
+    }
+
+    /// `own_bypass`：true = 在 16 kHz 自己做送原声（`process`）；false = 只回报（`process_status`）。
+    fn run(&mut self, input: &[f32], output: &mut [f32], own_bypass: bool) -> Status {
         debug_assert_eq!(input.len(), self.hop);
         debug_assert_eq!(output.len(), self.hop);
         self.stats.hops += 1;
@@ -263,7 +302,7 @@ impl<M: Model> Engine<M> {
             for o in output.iter_mut() {
                 *o = src.next().copied().unwrap_or(0.0);
             }
-            return;
+            return Status::Bypassed(BypassReason::BadLen);
         }
         self.delay.process(input, &mut self.dry);
 
@@ -277,7 +316,7 @@ impl<M: Model> Engine<M> {
                 self.wet.fill(0.0);
             }
             self.mix_out(output);
-            return;
+            return Status::Ok;
         }
 
         if let Some(f) = fault {
@@ -297,6 +336,21 @@ impl<M: Model> Engine<M> {
         let want_bypass = fault.is_some() || self.hold_hops_left > 0;
         if fault.is_none() && self.hold_hops_left > 0 {
             self.hold_hops_left -= 1;
+        }
+        let status = match fault {
+            Some(f) => Status::Bypassed(f.reason()),
+            None if want_bypass => Status::Holding,
+            None => Status::Ok,
+        };
+
+        if !own_bypass {
+            if want_bypass {
+                self.stats.bypass_hops += 1;
+                output.copy_from_slice(&self.dry);
+            } else {
+                self.mix_out(output);
+            }
+            return status;
         }
 
         if want_bypass {
@@ -326,6 +380,11 @@ impl<M: Model> Engine<M> {
         }
         self.last_out = output.last().copied().unwrap_or(0.0);
         self.last_dry = self.dry.last().copied().unwrap_or(0.0);
+        if status == Status::Ok && self.bypass > 0.0 {
+            Status::Crossfading
+        } else {
+            status
+        }
     }
 
     fn classify(&self, backend_err: bool) -> Option<Fault> {
