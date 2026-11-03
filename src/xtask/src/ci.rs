@@ -1,7 +1,7 @@
 //! `cargo run -p xtask -- ci`：本机与 CI 共用的一条闸门（规约 §7 G1–G4、010 第十一节 V6）。
 //!
 //! 依次跑 fmt --check · clippy --workspace --all-targets -D warnings · test --workspace · tidy · check-deps，
-//! 再看本机有没有 cargo-deny：有就跑 `cargo deny check`，没有就跳过（不算失败，打印「未装」）。
+//! 再跑 `cargo deny check`；没装 cargo-deny 算失败（2026-11-02 起不再跳过）。
 //! `--platform linux`：平台无关闸门，排除 macOS 专属 crate（Linux runner 用）；`--platform macos`：只跑平台 crate 的
 //! clippy（aarch64-apple-darwin）与测试（macOS runner 用，规约 §7「CI 费用」）。不给 = 全部（本机默认）。
 //! 每步打印通过 / 失败与耗时；默认跑完全部步骤再汇总，`--fail-fast` 遇到第一步失败就停。任一失败退出码 1。
@@ -38,7 +38,9 @@ fn cargo_deny() -> Outcome {
         .status()
         .is_ok_and(|s| s.success());
     if !installed {
-        return Outcome::Skip("本机未装 cargo-deny");
+        // 人定（2026-11-02）：不再跳过。CI 由 ci.yml 先装；本机装一次即可
+        eprintln!("cargo-deny 未装：先跑 `cargo install cargo-deny --locked`");
+        return Outcome::Fail;
     }
     cargo(&["deny", "check"])
 }
