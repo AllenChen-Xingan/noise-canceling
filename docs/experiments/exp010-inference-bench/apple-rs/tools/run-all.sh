@@ -41,8 +41,10 @@ fi
 
 if has convert; then
   log "转 GTCRN"
-  "$PYCT" "$EXP/apple/convert_gtcrn.py" "$MAIN/resources/gtcrn/stream" "$OUT" > "$RES/convert_gtcrn.stdout" 2> "$RES/convert_gtcrn.stderr" || log "ERROR convert_gtcrn"
-  cp "$OUT/convert.json" "$RES/" 2>/dev/null
+  for v in fp32 unrolled state fp16; do   # 每个变体一个进程：fp16 在 coremltools 原生代码里可能崩
+    "$PYCT" -X faulthandler "$EXP/apple/convert_gtcrn.py" "$MAIN/resources/gtcrn/stream" "$OUT" $v > "$RES/convert_gtcrn_$v.stdout" 2> "$RES/convert_gtcrn_$v.stderr" || log "ERROR convert_gtcrn $v"
+    cp "$OUT/convert_$v.json" "$RES/" 2>/dev/null
+  done
   log "转 FE-M"
   "$PYCT" "$EXP/apple/convert_fem.py" "$MAIN/resources/fastenhancer" "$HOME/vdn-data/models/fastenhancer-dns-v1.0.0/ckpt-full/fastenhancer_m" "$OUT" \
     > "$RES/convert_fem.stdout" 2> "$RES/convert_fem.stderr" || log "ERROR convert_fem"

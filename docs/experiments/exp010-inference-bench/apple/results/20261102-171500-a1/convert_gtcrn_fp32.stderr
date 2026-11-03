@@ -1,0 +1,12 @@
+Torch version 2.15.0 has not been tested with coremltools. You may run into unexpected errors. Torch 2.7.0 is the most recent version that has been tested.
+/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/torch/jit/_trace.py:1006: FutureWarning: `torch.jit.trace` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/torch/jit/_trace.py:1145: FutureWarning: `torch.jit.trace_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Tuple detected at graph output. This will be flattened in the converted model.
+Converting PyTorch Frontend ==> MIL Ops:   0%|          | 0/866 [00:00<?, ? ops/s]Converting PyTorch Frontend ==> MIL Ops:  58%|█████▊    | 502/866 [00:00<00:00, 4896.75 ops/s]Converting PyTorch Frontend ==> MIL Ops: 100%|█████████▉| 864/866 [00:00<00:00, 5838.39 ops/s]
+Running MIL frontend_pytorch pipeline:   0%|          | 0/5 [00:00<?, ? passes/s]Running MIL frontend_pytorch pipeline: 100%|██████████| 5/5 [00:00<00:00, 88.11 passes/s]
+Running MIL default pipeline:   0%|          | 0/92 [00:00<?, ? passes/s]Running MIL default pipeline:  12%|█▏        | 11/92 [00:00<00:00, 91.28 passes/s]Running MIL default pipeline:  25%|██▌       | 23/92 [00:00<00:00, 99.67 passes/s]Running MIL default pipeline:  40%|████      | 37/92 [00:00<00:00, 113.09 passes/s]Running MIL default pipeline:  53%|█████▎    | 49/92 [00:00<00:00, 102.49 passes/s]Running MIL default pipeline:  65%|██████▌   | 60/92 [00:00<00:00, 92.91 passes/s] Running MIL default pipeline:  78%|███████▊  | 72/92 [00:00<00:00, 100.36 passes/s]Running MIL default pipeline:  92%|█████████▏| 85/92 [00:00<00:00, 106.94 passes/s]Running MIL default pipeline: 100%|██████████| 92/92 [00:00<00:00, 104.14 passes/s]
+Running MIL backend_mlprogram pipeline:   0%|          | 0/12 [00:00<?, ? passes/s]Running MIL backend_mlprogram pipeline: 100%|██████████| 12/12 [00:00<00:00, 136.61 passes/s]
+Fatal Python error: Segmentation faultFatal Python error: /Users/allenchen/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/multiprocessing/resource_tracker.py:279: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
