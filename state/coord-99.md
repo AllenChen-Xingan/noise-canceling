@@ -28,3 +28,4 @@
 - 2026-11-02 single 复跑（自报）：xtask ci 全绿，test 372 过 / 0 败 / 5 忽略，含 codex 第 2、3 轮修改；在写 PR 草稿
 - 2026-11-02 single 报收尾：49 文件 +3191 −512；desc.rs 58 条；codex 3 轮（P1 1→0→0），14 条已改；忽略 5 条均旧有人工测试。大总管验收中：亲手重跑 xtask ci（后台）。发现：FE-M 两个名字（vdn-types `fastenhancer_m` vs 命令行 / 配置 / 评测 `fastenhancer-m`），改动前就有 → 第二阶段「模型接口」统一
 - 2026-11-02 schema 复跑（自报）：xtask ci 全过 · vdn-schema --check 一致 · vdn-schema 21 条 · eval ci 同前（回归 13/17 · 能力 1/10 · 探针 5/5）；codex 第 3 轮在跑
+- 2026-11-02 single 验收：大总管亲手 xtask ci 全绿（372 / 0 / 5，与自报一致）；合 origin/main（+152，冲突仅评审索引）后再跑全绿；PR #60 已开，等 CI
