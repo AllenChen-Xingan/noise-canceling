@@ -2,7 +2,7 @@
 
 - **谁跑的**：人用 `sudo bash run.sh` 跑（17:03–17:08）；脚本与分析是手下 rs-wake 写的，大总管 noise-canceling-47 审过脚本
 - **为什么跑**：rs-entry 的 V7 基线里，空闲时推理一块中位约 3.0 ms，后台压力下反而只要 0.64–1.43 ms。推断是空闲时降频或线程上了能效核；人问「提高优先级有什么缺点」，要看耗电
-- **怎么跑**：`../../../../../../noise_canceling-skeleton/_tmp/20261102-b8-rust/power/run.sh`（脚本快照未进仓：它在大总管的 `_tmp/`；本目录的 `meta.txt` 记了二进制 sha256）
+- **怎么跑**：脚本 `noise_canceling-skeleton/_tmp/20261102-b8-rust/power/run.sh`（在大总管的骨架 worktree 的 `_tmp/` 里，未进仓）；本目录的 `meta.txt` 记了二进制 sha256
   - 被测程序 `src/rt-thread/examples/rt_bench.rs`（release，sha256 前 8 位 03d04a68）：每 16 ms 做一块**固定计算量**（代替模型推理）。计算量启动时标定为「约 700 µs」，三档共用（`iters` 见 `meta.txt`）
   - 每档 60 s，同时 `powermetrics --samplers cpu_power -i 1000 -n 60`；先空跑 60 s 记基线
   - 机器：Apple M5（4 性能核 + 6 能效核），macOS 27.0.1，接电源
