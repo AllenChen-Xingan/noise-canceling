@@ -182,28 +182,22 @@ fn text_keys_agree_with_parsers() {
     ));
 }
 
-/// 每个文本参数取描述表的边界外一点：两种文本都拒；边界值收下。
+/// 每个文本参数取描述表的边界外一点：两种格式的 [user] 与 [fine] 小节都拒；边界值都收（codex 第 2 轮 #3）。
 #[test]
 fn out_of_range_values_are_rejected() {
     for f in ParamField::ALL {
         let d = f.desc();
-        for bad in [d.min - 0.5, d.max + 0.5] {
-            let v = bad.to_string();
-            assert!(
-                UserProfile::from_text(&profile(d.key, &v)).is_err(),
-                "{} = {v}",
-                d.key
-            );
-            assert!(
-                SceneTable::from_text(&scene_table(d.key, &v)).is_err(),
-                "{} = {v}",
-                d.key
-            );
-        }
-        for ok in [d.min, d.max] {
-            let v = ok.to_string();
-            UserProfile::from_text(&profile(d.key, &v)).unwrap();
-            SceneTable::from_text(&scene_table(d.key, &v)).unwrap();
+        for fmt in ["vdn-scene-table", "vdn-profile"] {
+            for sec in ["user", "fine"] {
+                for bad in [d.min - 0.5, d.max + 0.5] {
+                    let src = doc(fmt, sec, d.key, &bad.to_string());
+                    assert!(!parses(fmt, &src), "{fmt} [{sec}] {} = {bad}", d.key);
+                }
+                for ok in [d.min, d.max] {
+                    let src = doc(fmt, sec, d.key, &ok.to_string());
+                    assert!(parses(fmt, &src), "{fmt} [{sec}] {} = {ok}", d.key);
+                }
+            }
         }
     }
 }
