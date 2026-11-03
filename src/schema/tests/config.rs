@@ -1,10 +1,8 @@
 //! 交叉校验 · Config：示例过 schema、往返等价、范围与总线名和 `Config::validate` 逐例一致。
 
-use std::path::{Path, PathBuf};
-
 use serde_json::{Value, json};
 use vdn_control::Config;
-use vdn_schema::{DIR, check, eval, export, root, shm, write};
+use vdn_schema::{DIR, root};
 
 mod common;
 use common::*;
@@ -152,7 +150,6 @@ fn bus_name_pattern_agrees_with_validate() {
         );
     }
 }
-
 
 /// 负例：Config 加了字段而 schema 没重新导出 → 检查报 config.schema.json。
 #[test]

@@ -1,11 +1,8 @@
 //! 交叉校验 · 机制（CLAUDE.md 第五节第 5 条）：仓里的 schema 文件与 Rust 正本逐字一致；旧文件、多余文件都报。
 //! 文件过 schema 用 `boon`（另一家实现）校验，不用导出 schema 的同一个库。
 
-use std::path::{Path, PathBuf};
-
-use serde_json::{Value, json};
-use vdn_control::Config;
-use vdn_schema::{DIR, check, eval, export, root, shm, write};
+use serde_json::json;
+use vdn_schema::{DIR, check, export, root};
 
 mod common;
 use common::*;

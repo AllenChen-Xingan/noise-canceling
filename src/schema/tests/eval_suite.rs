@@ -1,10 +1,7 @@
 //! 交叉校验 · 评测清单：清单文件过 schema、往返等价、坏任务 schema 与解析器判定一致。
 
-use std::path::{Path, PathBuf};
-
 use serde_json::{Value, json};
-use vdn_control::Config;
-use vdn_schema::{DIR, check, eval, export, root, shm, write};
+use vdn_schema::{eval, root};
 
 mod common;
 use common::*;

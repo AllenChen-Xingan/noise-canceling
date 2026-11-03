@@ -1,10 +1,7 @@
 //! 交叉校验 · 共享内存头：布局文件 ↔ `offset_of!` / `size_of`；改布局必须升版本，历史只许追加。
 
-use std::path::{Path, PathBuf};
-
 use serde_json::{Value, json};
-use vdn_control::Config;
-use vdn_schema::{DIR, check, eval, export, root, shm, write};
+use vdn_schema::{DIR, root, shm, write};
 
 mod common;
 use common::*;

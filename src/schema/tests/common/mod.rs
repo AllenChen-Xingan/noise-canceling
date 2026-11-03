@@ -38,7 +38,6 @@ pub fn put(root: &Path, file: &str, v: &Value) {
     std::fs::write(root.join(DIR).join(file), vdn_schema::pretty(v)).unwrap();
 }
 
-
 /// 模拟「Rust 加了一个字段、没重新导出」：把当前导出删掉这一个字段当作仓里的旧文件，
 /// 其余（标题、注释、别的字段）都不变，所以报红只能来自这一个字段（第 1 轮 codex #4）。
 pub fn assert_missing_field_is_red(tag: &str, file: &str, pointer: &str, field: &str) {
