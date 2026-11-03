@@ -329,7 +329,7 @@ def cmd_bench(npz, fin, fref, device, use_compile, frames, warmup, parity_n):
     ts = np.sort(np.array(times))
     pct = lambda q: float(ts[min(len(ts) - 1, int(len(ts) * q))])
     print(json.dumps({
-        "model": "gtcrn", "backend": f"mlx-{device}" + ("" if use_compile else "-nocompile"), "frames": frames, "warmup": warmup,
+        "model": "gtcrn", "backend": f"mlx-{device}" + ("" if use_compile else "-nocompile"), "frames": frames, "pace_ms": 0, "warmup": warmup,
         "p50_ms": round(pct(0.5), 4), "p99_ms": round(pct(0.99), 4), "p999_ms": round(pct(0.999), 4),
         "max_ms": round(float(ts[-1]), 4), "mean_ms": round(float(ts.mean()), 4), "open_ms": round(open_ms, 2),
         "first_frame_ms": round(first, 3), "cpu_over_wall": round(cpu / wall, 3),

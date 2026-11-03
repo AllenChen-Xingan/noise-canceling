@@ -184,11 +184,11 @@ int main(int argc, char **argv) {
     char bad[48];
     if (bad_f < 0) snprintf(bad, sizeof bad, "None"); else snprintf(bad, sizeof bad, "Some((%d, %d))", bad_f, bad_k);
     int pn = parity_n < (int)n_frames_in ? parity_n : (int)n_frames_in;
-    printf("{\"model\":\"%s\",\"backend\":\"bnns-graph%s%s\",\"frames\":%d,\"warmup\":%d,\"p50_ms\":%.4f,\"p99_ms\":%.4f,"
+    printf("{\"model\":\"%s\",\"backend\":\"bnns-graph%s%s\",\"frames\":%d,\"pace_ms\":%g,\"warmup\":%d,\"p50_ms\":%.4f,\"p99_ms\":%.4f,"
            "\"p999_ms\":%.4f,\"max_ms\":%.4f,\"mean_ms\":%.4f,\"compile_ms\":%.2f,\"open_ms\":%.2f,\"first_frame_ms\":%.3f,"
            "\"cpu_over_wall\":%.3f,\"process_allocs_per_frame\":%.3f,\"nonfinite_frames\":%d,\"workspace_bytes\":%zu,"
            "\"parity_frames\":%d,\"parity_max_abs\":%.3e,\"parity_worst_frame\":%d,\"parity_snr_db\":%.2f,\"parity_first_bad\":\"%s\"}\n",
-           is_fem ? "fastenhancer_m" : "gtcrn", multi ? "-multi" : "", paced > 0 ? "-paced" : "", frames, warmup, P(0.5),
+           is_fem ? "fastenhancer_m" : "gtcrn", multi ? "-multi" : "", paced > 0 ? "-paced" : "", frames, paced, warmup, P(0.5),
            P(0.99), P(0.999), times[frames - 1], mean, compile_ms, open_ms, first_ms, cpu / wall, allocs, nonfinite, ws_size,
            pn, max_abs, worst, 10 * log10(sig / (err > 1e-300 ? err : 1e-300)), bad);
     return 0;
