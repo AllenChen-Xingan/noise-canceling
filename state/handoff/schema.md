@@ -15,7 +15,9 @@
 - [x] codex 第 2 轮（P1×1 P2×2，全部属实、已改：对照 main 的版本历史守卫 · 总线名只许可见 ASCII · 往返比较整数精确）
 - [x] 全量 CI（第 2 轮改动后）全绿；`vdn-schema --check` 一致；`xtask eval ci` 门禁通过（结果同前）
 - [x] codex 第 3 轮（P1×2 P2×2，全部属实、已改：读不到基线不再放行 · CI 用推送前 / 目标分支作基线 · 整份历史前缀比对 · 整数字段补上下界）；代码已写，等锁解除编译
-- [ ] 锁解除后：重新导出 schema → 全量 CI → codex 第 4 轮
+- [x] 重新导出 schema → 全量 CI 全绿；大总管在 6b276e1 上复跑全绿
+- [x] codex 第 4 轮（无 P0/P1；P2×2 属实已改：测试从完整历史出发 · 假 git 注入读树 / 读文件失败，变异验证会红）；全量 CI 全绿
+- [ ] codex 第 5 轮确认 → 收尾报告 + `state/handoff/schema-pr.md`
 
 ## 技术决定（我定，理由）
 - 导出库 `schemars` 1.2（MIT）：派生自 serde 属性，Rust 类型即正本。加进 control · eval · schema 三个 C / tool 档 crate

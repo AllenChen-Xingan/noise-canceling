@@ -1,7 +1,7 @@
 # 评审 011 · schema 导出机制与第一批 schema（codex · gpt-6-astra · read-only）
 
-> 对象：`git diff bfe6266...HEAD`（分支 `feat/schema-crosscheck`，issue #57；diff 模板，附 `docs/plan/011_schema-crosscheck.md` 与重点文件）。**最新一轮：第 3 轮（2026-11-02）· 总评「修改」· 待第 4 轮**。
-> 累计处理：P1×5、P2×7，逐条回到源码核实，12 条全部属实，全部已改。共享内存版本守卫前后改了三轮：第 1 轮改成代码常量，第 2 轮加 main 基线，第 3 轮补齐基线的读取失败、多提交推送和整份历史。codex 抽查引用时列出的 1 条「不符」也属实，并入第 1 轮 #4 一起改了。新冒出的需要人定的事：没有。
+> 对象：`git diff bfe6266...HEAD`（分支 `feat/schema-crosscheck`，issue #57；diff 模板，附 `docs/plan/011_schema-crosscheck.md` 与重点文件）。**最新一轮：第 4 轮（2026-11-02）· 总评「修改」· 无 P0/P1，待第 5 轮确认**。
+> 累计处理：P1×5、P2×9，逐条回到源码核实，14 条全部属实，全部已改。共享内存版本守卫前后改了三轮：第 1 轮改成代码常量，第 2 轮加 main 基线，第 3 轮补齐基线的读取失败、多提交推送和整份历史。codex 抽查引用时列出的 1 条「不符」也属实，并入第 1 轮 #4 一起改了。新冒出的需要人定的事：没有。
 > 作者：手下 schema。评审期间主目录有计时基准锁（`_tmp/heavy.lock`），codex 只读代码、没有编译；改完的代码等锁解除后再跑全量 CI。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -94,3 +94,30 @@
 ### 是否再审
 
 有 P1 → 锁解除、全量 CI 绿之后开第 4 轮。
+
+第 3 轮改动的验证（实测）：重新导出（布局文件加 `history`、评测清单 schema 整数加上下界），`cargo test -p vdn-schema` 24 条全过，`xtask ci` 全过（含合进来的新 tidy 规则），`vdn-schema --check` 一致。大总管在 6b276e1 上亲手复跑：`xtask ci` 全绿（400 过 / 0 败 / 5 忽略）、`--check` 一致、`eval ci` 门禁通过。
+
+## 第 4 轮（2026-11-02）· 总评「修改」
+
+原文：`_tmp/20261102-schema-review/schema-branch-codex-1.md`（不入库）。gpt-6-astra，effort medium，耗时 71 秒（`result: P0×0 P1×0 P2×2 P3×0`）。
+**对象范围改了**：大总管把 main（含 PR #60）合进本分支后，`bfe6266...HEAD` 会带进 264 个文件，其中大部分是别人的改动。本轮起改审 `origin/main...HEAD`，只有本分支的 41 个文件；大总管已同意。脚本不许同名换对象，所以本轮在脚本里叫 `schema-branch` 第 1 轮。第 3 轮原文照旧加标题行另存为 `round3-previous.md` 传入。一开始误用旧范围起跑，发现后中途停掉，那次没有产出。
+本轮 P0/P1 共 0 条 · 停止线：连续第 1 轮无 P0/P1 · 留作 issue 的 P2：无（两条都改了，大总管定）。
+上一轮处理的验证：#1–#4 codex 抽查确认均已落实（6 条「核实属实」）。
+
+- **P2｜src/schema/tests/crosscheck.rs:215 旧测试写死了只有一个版本**（第 4 轮 #1）
+  - 核实：属实。以后正常追加版本 3 并重新导出后，「改写」样例只剩版本 3，守卫先报「删掉版本 2」，断言「被改写」就失败；追加正例同样漏了版本 2
+  - 处理：改写、删除、追加都从完整 `HISTORY` 复制后改一行；另加一个已发布两个版本的正例
+- **P2｜src/schema/tests/crosscheck.rs:290 读基线失败的测试挡不住回退**（第 4 轮 #2）
+  - 核实：属实。现有负例在 `rev-parse` 一步就返回，没有走到读树 / 读文件；把那两处改回 `Absent`，测试照样过
+  - 处理：调 git 的那一步做成参数（`shm_baseline_with`），`shm_baseline_at` 传真的 git。新测试 `shm_baseline_read_errors_are_unavailable` 用假 git 逐步注入：读树失败、树里有文件但读失败 → Unavailable；树里确实没有 → Absent；读到 → Found。**变异验证**：临时把读树失败改回 `Absent`，这条测试红；改回后绿
+  - 改后实测：`cargo test -p vdn-schema` 25 条全过；`xtask ci` 全过；`--check` 一致；`eval ci` 门禁通过（ref 回归 13/17 · 能力 1/10 · 探针 5/5，与前同）
+
+### 引用抽查
+
+- codex 列的「不符」：无
+- codex 列的「核实属实」：6 条
+- 无法核实：1 条（CI 结果是运行结果）
+
+### 是否再审
+
+本轮无 P0/P1 → 开第 5 轮确认。第 4 轮原文以 `P2` 开头，`file` 把它认成灰度图（PGM 的文件头恰好是 `P2`），只能加标题行另存为 `round4-previous.md` 传入。这样脚本认不出它是同一对象的上一轮，`stop-line` 行会写「连续第 1 轮」；连续两轮由人工按本记录判断。

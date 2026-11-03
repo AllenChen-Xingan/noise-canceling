@@ -11,4 +11,4 @@
 | 010 | 2026-11-02 | [exp010 推理后端基准纯 Rust 一侧](010_exp010-rust-codex.md)（README + bench/src，codex，5 轮，已达停止线） | 采纳 27 / 提出 27（P1×7 P2×20） |
 | 019 | 2026-11-02 | [019 推理后端总方案与判据](019_apple-inference-codex.md)（decision + standard + apple-rs，codex gpt-6-astra，8 轮，已达停止线） | 采纳 41（其中 2 条 P2 列进待办）/ 提出 41 |
 | 011 | 2026-11-02 | [删镜像副本 + 参数描述表 + tidy 新规则](011_types-single-source-codex.md)（`git diff bfe6266`，issue #56，codex，3 轮，已达停止线） | 采纳 14 / 提出 14（P1×1 P2×13） |
-| 011 | 2026-11-02 | [schema 导出机制与第一批 schema](011_schema-crosscheck-codex.md)（diff，codex，3 轮，进行中） | 采纳 12 / 提出 12（P1×5 P2×7） |
+| 011 | 2026-11-02 | [schema 导出机制与第一批 schema](011_schema-crosscheck-codex.md)（diff，codex，4 轮，进行中） | 采纳 14 / 提出 14（P1×5 P2×9） |
