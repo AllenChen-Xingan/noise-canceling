@@ -5,8 +5,8 @@
 ## 合并前必做（大总管定 2026-11-02）
 - [x] applebe 的 019 先合进 main；之后本分支 `git merge main`（85b0015e）
 - [x] `apple-rs/tests/fields.rs` 的 `APPLE_ONLY` 删掉 `win_start_unix` / `win_end_unix` / `wall_s` 三条，`cargo test --test fields` 2 passed（93571f9f）
-- [x] **所有代码文件 ≤ 600 行**：gtcrn_native.rs 1926 → 445（拆 weights / cost / kern / ops / block / dpgrnn / simd / tests）· main.rs 1280 → 485（拆 alloc / nets / util / parity）· v2.rs 605 → 532；最大 532。证据：单元测试 35 个全过；11 个手写后端对 ORT 的最大差与 SNR 拆前拆后一字不差
-- [ ] codex 换谱系评审连续两轮无 P0/P1（进行中，`_tmp/020-reviews/`，记录写 `docs/reviews/020_fastpath-codex.md`）
+- [x] **所有代码文件 ≤ 600 行**：gtcrn_native.rs 1926 → 445（拆 weights / cost / kern / ops / block / dpgrnn / simd / tests）· main.rs 1280 → 485（拆 alloc / nets / util / parity）· v2.rs 605 → 532；最大 553（v3.rs，之后加了测试）。证据：单元测试全过（现 36 个）；11 个手写后端对 ORT 的最大差与 SNR 拆前拆后一字不差
+- [x] codex 换谱系评审：3 轮，第 2、3 轮连续无 P0/P1，满足停止线（`docs/reviews/020_fastpath-codex.md`）；剩 3 件 P2 待开 issue（decision.md「后续」）
 - 推送、开 PR（Closes #58）、合并由大总管做
 
 ## 结论（详见 `docs/research/020_fastpath/decision.md`）
