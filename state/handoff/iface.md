@@ -6,11 +6,17 @@
 ## 做到哪
 - [x] 读交代 · 报到（大总管同意顺序）
 - [x] 读代码，定方案（见下）
-- [ ] 拆 600 行以上的文件：`desc.rs`（930）· `policy.rs`（688）· `src/schema/tests/crosscheck.rs`（870）（大总管 2026-11-02 追加）
+- [x] 拆 `desc.rs`（930）→ `src/types/src/desc/{mod,speaker,polish,scene,engine}.rs`（最大 481 行），对外路径不变
+- [x] 拆 `src/schema/tests/crosscheck.rs`（870）→ `schema_mechanism.rs` · `shm_layout.rs` · `config.rs` · `eval_suite.rs` + `common/mod.rs`（25 条测试一条不少，全过）
+- [x] 拆 `src/xtask/src/single_source.rs`（789，8d 同意归我；人定按规则命名）→ `no_mirror.rs`（R-MIRROR）· `param_range.rs`（R-PARAM，按 `desc/` 目录读描述表）· `scan.rs`（共用扫描）；xtask 28 条测试全过，tidy 通过
+- [ ] 拆 `policy.rs`（688）
+- [ ] 全仓改 `single_source` 的文档引用
 - [ ] 参数描述 → `specs/schema/params.table.json`
-- [ ] 文本格式：我的配置越界拒收（现在只查有限，**不查范围**——先写会红的测试）；仓里文本文件过检查
+- [x] 我的配置越界拒收：先写测试（红）→ `memory.rs` 读值时按描述表 `check`（绿）
+- [ ] 仓里文本文件过检查（示例文件 + 扫描）
 - [ ] 模型接口：`vdn-models` 声明输入输出名与形状 → `specs/schema/models.interface.json`；ONNX 实读比对（`#[ignore]`，本机实跑）
-- [ ] FE-M 名字只留一个
+- [x] FE-M 名字只留一个：正本 `ModelId::as_str` = `fastenhancer-m`，旧写法只在 `ModelId::LEGACY`/`parse`；cli（8d 同意）· denoised · eval 的 system/report 改成从 `ModelId` 取；tidy 新规则 R-MODEL（`src/xtask/src/model_name.rs`）
+- [ ] `ModelChoice`（vdn-control 的 serde 名）↔ `ModelId::NAMES` 比对测试（放 vdn-schema）
 - [ ] 全量 CI · eval ci 对比 · codex 评审 · PR 草稿
 
 ## 方案（我定的技术题，理由）
@@ -20,8 +26,8 @@
 4. **FE-M 名字正本 = `fastenhancer-m`**（连字符）。理由：命令行、配置 JSON、评测结果文件（`baseline-ci.json` 81 个键）、denoised 都用它；下划线写法只出现在 `ModelId::as_str` 一处，仓里没有用它写的场景表 / 会话记录文件。旧写法 `fastenhancer_m` 只在 `ModelId::parse` 一处兼容
 
 ## 转交 / 等大总管
-- `vdn-cli` 的 `ModelArg`（`src/cli/src/main.rs:186-198`）写死了 `"fastenhancer-m"`：想改成从 `ModelId` 取。已报大总管，等回复
-- 「正本以外不许出现新写法」想加进 `xtask tidy`（8d 在改）：已报大总管，等回复
+- cli 已删 `ModelArg`（#62 把它搬到 args.rs，合并冲突由 8d 处理）
+- tidy.rs 只改了调用处 3 行 + 文档表 1 行
 
 ## 待拍板
 （无）
