@@ -98,10 +98,16 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
   | WaveNet-L | 0.021 | 0.063 |
 
   【实测-他人】
-- **单跑吞吐**（表 3，单位是实时的倍数）：TCN-L 上 BNNSGraph 117×，ORT 9×；LSTM-S 上 ORT 108× 对 BNNSGraph 149×。LSTM 的中小模型反而是 RTNeural 领先【实测-他人】。
-- **在混音负载下**（36 条竞争轨，buffer 128）：BNNSGraph 各大模型的 p99 占用都不超过 20%，0 次爆音。RTNeural TCN-L 单跑时 RTF 0.211，放进 Core Audio 回调后 p99 到 158.5%，爆音 355 次（表 5，§4.2）【实测-他人】。
-- **AMX 矩阵协处理器**：用 lldb 采指令流看到，BNNSGraph 和 LibTorch 的热路径用了 AMX，ORT 和 RTNeural 只用 NEON【实测-他人】§4.4。
+- ⚠️ **这张表不是同口径**（怀疑派补）：
+  - ORT 的 TCN 和 WaveNet 在论文实现里是**无状态**的（表 3、表 4 的 † 与 §3.2），ORT 只有 LSTM 那一列是有状态的。
+  - 论文的 BNNSGraph 模型是 **fp16**，其他后端是 fp32；正文没写，出处是配套源码的导出注释【源码-他人】见 `bnns-graph.md:191`。
+  - 论文用 ORT 1.19.2、M3、macOS 26.4（§3）。我们是 ORT 1.31、M5、macOS 27。
+  - 本机 M5 有 SME2（`sysctl hw.optional.arm.FEAT_SME2: 1`）【实测-本机，只读系统参数】。新版 ORT 的 MLAS 可能用 KleidiAI 走 SME2，所以「ORT 只用 NEON」到本机未必成立【推断】见 `bnns-graph.md:193`。
+- **单跑吞吐**（表 3，单位是实时的倍数）：TCN-L 上 BNNSGraph 117×，ORT 9×；LSTM-S 上 ORT 108× 对 BNNSGraph 149×。**反例：LSTM-M 上 ORT 47× 反超 BNNSGraph 21×**（原文漏了，怀疑派补）。LSTM 的中小模型是 RTNeural 领先；论文的解释是循环逐步串行，整块编译帮不上【实测-他人】§4.1。
+- **在混音负载下**（36 条竞争轨，buffer 128）：BNNSGraph 各大模型的 p99 占用都不超过 20%（表 5 最高 17.1%），0 次爆音。多实例时 N = 16 到 27.1%、1 次爆音（表 6）。RTNeural TCN-L 单跑时 RTF 0.211，放进 Core Audio 回调后 p99 到 158.5%，爆音 355 次（表 5，§4.2）【实测-他人】。**ORT 没进负载测试**，所以「BNNSGraph 尾部稳」只是和 RTNeural 比出来的，不是和 ORT。
+- **AMX 矩阵协处理器**：用 lldb 采指令流看到，BNNSGraph 和 LibTorch 的热路径用了 AMX，ORT 和 RTNeural 只用 NEON【实测-他人】§5（原文写 §4.4，怀疑派改）。
 - 论文把 ORT 标为「不是实时安全」，没放进负载测试【实测-他人】表 2。
+- 从表 4 反推：BNNSGraph TCN-L 每次调用约 0.022 × 2.67 ≈ 59 µs（M3，fp16，128 样本）。这给了 BNNSGraph 单次调用开销的一个上界【推断】。
 
 ### 4.2 流式降噪模型上 Core ML
 
