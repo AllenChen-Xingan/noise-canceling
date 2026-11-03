@@ -5,13 +5,13 @@
 
 ## 当前大事（2026-11-02 起）
 
-**推理引擎：降噪模型在 Mac 上用什么跑最快、最稳、最省电**（「轻快」尺子 · D53）。人定「可以先做1」。批次 `_tmp/20261102-b8/`。
+**推理引擎：降噪模型在 Mac 上用什么跑最快、最稳、最省电**（「轻快」尺子 · D53）。人定「可以先做1」。批次 `_tmp/20261102-b8/`。**✅ 2026-11-02 四条线全部合并（#55 #59 #66），窗口全关；下一件大事待人定（建议「降噪效果」）**
 
 | 手下 | 线 | 管的实体 |
 |---|---|---|
 | applebe | 019 苹果引擎（Core ML · BNNS Graph · MLX）+ 总方案 · #45 · ✅ PR #59 已合并 | 推理后端 · 模型 · 评测器 |
 | rustbe | exp010 纯 Rust（手写 GTCRN · tract / candle / burn）+ 基准程序 · #51 · ✅ PR #55 已合并 | 推理后端 · 模型 · 评测器 |
-| fastpath | 020 / exp012 数学上更好：下界分析 · 等价改写 · 算子与 DSP 优化 · 他人做法 · #58 · `../noise_canceling-fastpath` | 推理后端 · 模型 · 评测器 |
+| fastpath | 020 / exp012 数学上更好 · #58 · ✅ PR #66 已合并 | 推理后端 · 模型 · 评测器 |
 | hygiene | **旁支（人 2026-11-02 点名「也让你来管理，然后修复吧」）** 代码卫生：600 行上限进 tidy · cli 同名类型 · 拆 cli 大文件；第二段等 #57 合并后做采样率只写一处 · 阈值比对 · #62 · `feat/code-hygiene` · `../noise_canceling-hygiene` | xtask · vdn-cli · vdn-types（采样率）· vdn-eval（阈值） |
 
 上一件大事「把效果好不好变成能量的尺子」✅ 2026-11-02 收口（#47 #48 #49 #50）。
@@ -47,7 +47,7 @@
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
 | applebe | b8 · 019 苹果引擎 + 总方案 · #45 · `research/019-apple-inference` | `_tmp/20261102-b8/applebe.md` | engine worktree `state/handoff/engine.md` | 完成，PR #59 已合并（issue #45 关），远端分支已删，窗口已关；worktree 保留待清 |
 | rustbe | b8 · exp010 纯 Rust + 基准程序 · #51 · `exp/010-rust-backend` | `_tmp/20261102-b8/rustbe.md` | rustbe worktree `state/handoff/rustbe.md` | 完成，PR #55 已合并（issue #51 关），远端分支已删，窗口已关；worktree 保留待清 |
-| fastpath | b8 · 020 / exp012 数学上更好 · #58 · `exp/012-fastpath` | `_tmp/20261102-b8/fastpath.md` | fastpath worktree `state/handoff/fastpath.md` | 已报到（noise-canceling-fastpath-96）；workflow 6 代理已批 |
+| fastpath | b8 · 020 / exp012 数学上更好 · #58 · `exp/012-fastpath` | `_tmp/20261102-b8/fastpath.md` | fastpath worktree `state/handoff/fastpath.md` | 完成，PR #66 已合并（issue #58 关），远端分支已删，窗口已关；剩余 P2 → #67 |
 | hygiene | b8 旁支 · 代码卫生 · #62 · `feat/code-hygiene` | `_tmp/20261102-b8/hygiene.md` | hygiene worktree `state/handoff/hygiene.md` | 已派（2026-11-02 22:0x）；第二段等 99 的 #57 合并后由大总管放行 |
 | hygiene | **归另一位大总管 noise-canceling-8d**（人在 8d 窗口点名；交代误写 e3，已更正）· #62 代码卫生：600 行上限进 CI · cli 同名类型 · 采样率只写一处 · 阈值比对 · `feat/code-hygiene` | `_tmp/20261102-b8/hygiene.md` | hygiene worktree | 不归本账本，进度见 hygiene worktree `state/coord-8d.md` |
 
@@ -63,6 +63,8 @@
 
 - **记决策号前先 `grep -n '^### D' docs/plan/001_decisions-20261029-b1.md | tail -1` 看文件最大号，并向另一位大总管发「占用 Dxx」**（2026-11-02 两次撞号：47 方 D66–D68；主检出 D77 被另一会话先用，我方改 D78）
 
+- **所有代码文件 ≤ 600 行**（人定 2026-11-02，经 8d 转，随 #62 写进 CLAUDE.md 第五节第 7 条；不设基线、不留豁免，含 docs/experiments）：fastpath 合并前把 gtcrn_native.rs 1926 · main.rs 1280 · gtcrn_native/v2.rs 605 拆到 600 以下；#58 合并后通知 8d 扩扫描到 docs/
+
 ## 名额
 
 | 名额 | 当前持有 |
@@ -76,6 +78,9 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 fastpath 收尾：PR #66 合并（默认 native-v4i · codex 3 轮 · 600 行拆分）；剩余 P2 → issue #67；转交「接起来」：产品接入 v4i、src/dsp 重采样多累加器；测速提醒：rt 连续跑会被降级，连续峰值用 --qos ui，长计时 caffeinate + 查电源
+- 2026-11-02 fastpath 600 行拆分完成：gtcrn_native.rs 1926 → 445（+ weights / cost / kern / ops / block / dpgrnn / simd / tests）· main.rs 1280 → 485（+ alloc / nets / util / parity），最大 532；35 测试过、11 个后端对 ORT 指标拆前后一字不差；已 merge main 并删 fields.rs 三条 APPLE_ONLY。下一步结论 + codex
+- 2026-11-02 22:13 fastpath v4short（电池，3 轮，第 2 轮受干扰）：16 ms 节奏每帧平均 v2-fast 0.091–0.135 · **v4i 0.073–0.092 ms**（同轮比 0.62 / 0.93 / 0.80），CPU 0.5–0.7%，0 帧 > 3 ms；ui 整帧 v2-fast 43.7–48.7 → v4i 35.8–36.2 µs（快 17–26%）。逐层：两输出一组卷积 en0 −30% · 深度卷积 4.35 → 2.77 · LN 2.59 → 0.48 / 3.18 → 0.99 · GRU 交错仅 −7%。**AI 定默认候选 v2 → v4i**。600 行拆分进行中
 - 2026-11-02 22:03 fastpath v3short（电池，3 轮有效，负载 2.90）：16 ms 节奏 rt 每帧平均 **ORT 1.77–1.92 ms（CPU 11–12%，2 轮有 > 3 ms 帧 4 / 7 帧）** · v2-fast 0.125–0.130 ms（0.9%，约快 14 倍，0 帧 > 3 ms）· v3 0.130–0.134（没快）。分拆：深度卷积 3.8 → 2.7 µs、LN 2.3 → 0.45 / 2.8 → 0.95 µs 有效；倒数代除法让 GRU 7.7 → 8.8 µs 变慢（假设被推翻）。下一步 v3 改回除法 + GRU 显式交错（v3i）
 - 2026-11-02 22:00 手下 hygiene（#62 代码卫生）归大总管 noise-canceling-8d（人在 8d 窗口点名），交代误写 e3 已更正；已转 99 对齐要点；8d 计时前照旧打招呼
 - 2026-11-02 fastpath v3（按能效核写）：sigmoid/tanh 除法换倒数估计 + 2 次牛顿 · 3×3 深度卷积向量化（原离下界 5.1 倍）· LN / ERB 4 路 NEON 累加（原离下界 10–12 倍）；133.12 dB、最大差 7.6e-6、0 分配、32 条测试过；短计时同场加 ORT
