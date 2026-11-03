@@ -224,11 +224,11 @@ impl ConvF {
                 let xi = &x[(g * cig + ci) * self.fin..(g * cig + ci + 1) * self.fin];
                 for t in 0..K {
                     let wv = self.w[(o * cig + ci) * K + t];
-                    for (j, a) in yo.iter_mut().enumerate() {
-                        let idx = (j * 2 + t) as isize - 2;
-                        if idx >= 0 && (idx as usize) < self.fin {
-                            *a += wv * xi[idx as usize];
-                        }
+                    // 有效输出区间：0 ≤ 2j + t − 2 < fin。先算好区间，内层不再逐元素判断（加法顺序不变，结果逐位相同）
+                    let jlo = (2usize.saturating_sub(t)).div_ceil(2);
+                    let jhi = (self.fin + 2 - t).div_ceil(2).min(self.fout);
+                    for j in jlo..jhi {
+                        yo[j] += wv * xi[2 * j + t - 2];
                     }
                 }
             }
@@ -310,11 +310,11 @@ impl DeconvF {
                 let yo = &mut y[o * self.fout..(o + 1) * self.fout];
                 for k in 0..K {
                     let wv = self.w[(ic * cog + ol) * K + k];
-                    for (i, &xv) in xi.iter().enumerate() {
-                        let j = (i * 2 + k) as isize - 2;
-                        if j >= 0 && (j as usize) < self.fout {
-                            yo[j as usize] += wv * xv;
-                        }
+                    // 有效输入区间：0 ≤ 2i + k − 2 < fout（同上，只去掉分支）
+                    let ilo = (2usize.saturating_sub(k)).div_ceil(2);
+                    let ihi = (self.fout + 2 - k).div_ceil(2).min(self.fin);
+                    for i in ilo..ihi {
+                        yo[2 * i + k - 2] += wv * xi[i];
                     }
                 }
             }
