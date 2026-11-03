@@ -455,8 +455,9 @@ pub enum Verdict {
 
 /// 直通时输出均方根允许偏离「输入 + 增益」多少 dB
 pub const LEVEL_TOLERANCE_DB: f64 = 3.0;
-/// 输入峰值低于这个就提示「很小声」（2026-11-02 实测：MacBook Air 麦克风说话峰值约 −28 dBFS）
-pub const QUIET_PEAK_DBFS: f64 = -30.0;
+/// 输入峰值低于这个就提示「很小声」。2026-11-02 实测：MacBook Air 麦克风正常说话峰值约 −28 dBFS，
+/// 人戴耳机听不出自己的声音；取 −20 dBFS 让这种情况被提示（经验值，未标定）
+pub const QUIET_PEAK_DBFS: f64 = -20.0;
 
 /// 判定。`passthrough` 时才比对输入 / 输出电平（降噪会改电平）。
 pub fn judge(input: &Level, output: &Level, passthrough: bool, gain_db: f64) -> Verdict {
@@ -518,8 +519,19 @@ mod tests {
     use super::*;
     use vdn_io_macos::pump::{InputPump, OutputPump};
 
-    /// 直通管线 + 定块长 96，块数够跑 `secs` 秒
-    fn drive(gain_db: f64, amp: f32, secs: f64) -> (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>, Level, Level, usize, u64) {
+    struct Driven {
+        x: Vec<f32>,
+        left: Vec<f32>,
+        right: Vec<f32>,
+        rec: Vec<f32>,
+        li: Level,
+        lo: Level,
+        l_total: usize,
+        clipped: u64,
+    }
+
+    /// vdn run 的同一套回调，用假输入 / 假输出驱动：直通管线，`secs` 秒、振幅 `amp` 倍的测试音
+    fn drive(gain_db: f64, amp: f32, secs: f64) -> Driven {
         let block = vdn_control::Config::DEFAULT_BLOCK;
         let lead = vdn_control::Config::DEFAULT_LEAD;
         let mut p = prepare(vdn_denoised::identity_pipeline(None).unwrap(), block, lead).unwrap();
@@ -551,14 +563,33 @@ mod tests {
         while let Ok(s) = rx.pop() {
             rec.push(s);
         }
-        (x, left, right, rec, ih.level(), oh.level(), p.l_total, clipped.load(Ordering::Relaxed))
+        Driven {
+            x,
+            left,
+            right,
+            rec,
+            li: ih.level(),
+            lo: oh.level(),
+            l_total: p.l_total,
+            clipped: clipped.load(Ordering::Relaxed),
+        }
     }
 
     /// V5 的不开设备版：vdn run 的同一套回调（输入泵 → Forwarder → Worker(直通) → Out → 输出泵 2 声道），
     /// 喂正弦，判「两个声道都有声且相同 · 输出 = 输入延迟 L_total · 电平一致 · 录音 = 送进耳机的」
     #[test]
     fn run_path_without_devices_passes_sine_through_at_same_level() {
-        let (x, left, right, rec, li, lo, l_total, clipped) = drive(0.0, 0.05, 2.0);
+        // 振幅 0.25：峰值 0.2（约 −14 dBFS），不触发「很小声」
+        let Driven {
+            x,
+            left,
+            right,
+            rec,
+            li,
+            lo,
+            l_total,
+            clipped,
+        } = drive(0.0, 0.25, 2.0);
         assert_eq!(left, right, "两个声道应完全相同");
         assert_eq!(rec, left, "录音应等于送进耳机的那一路");
         assert_eq!(clipped, 0);
@@ -574,7 +605,13 @@ mod tests {
     /// 增益 +12 dB：输出均方根比输入高 12 dB；V5 那样小声的输入（峰值约 −28 dBFS）不会被夹
     #[test]
     fn run_path_gain_raises_output_level() {
-        let (_x, left, _r, _rec, li, lo, _l, clipped) = drive(12.0, 0.05, 2.0);
+        let Driven {
+            left,
+            li,
+            lo,
+            clipped,
+            ..
+        } = drive(12.0, 0.05, 2.0);
         let d = lo.rms_dbfs() - li.rms_dbfs();
         assert!((d - 12.0).abs() < 0.2, "差 {d:.2} dB");
         assert_eq!(clipped, 0);
@@ -585,7 +622,7 @@ mod tests {
     /// 增益太大会被夹在 ±1，并计数（不会送出超过满刻度的样本）
     #[test]
     fn run_path_gain_clips_and_counts() {
-        let (_x, left, .., clipped) = drive(20.0, 1.0, 0.3);
+        let Driven { left, clipped, .. } = drive(20.0, 1.0, 0.3);
         assert!(left.iter().all(|s| s.abs() <= 1.0));
         assert!(clipped > 0);
     }

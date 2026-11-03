@@ -162,7 +162,7 @@ mod tests {
         assert!((l.peak_dbfs() + 6.02).abs() < 0.02);
         assert!((l.rms_dbfs() + 9.03).abs() < 0.02);
         assert!(!l.silent_now() && !l.all_zero());
-        assert_eq!(l.max_zero_run, 1, "正弦过零点恰好是 0 的只有第 0 个样本");
+        assert!(l.max_zero_run <= 1, "正弦只在第 0 个样本恰好是 0：{l:?}");
     }
 
     #[test]

@@ -521,9 +521,7 @@ fn bench(a: BenchArgs) -> Result<(), BoxError> {
 /// 返回 Ok(false) = `--check` 判不过。
 fn run(a: RunArgs) -> Result<bool, BoxError> {
     let o = live::RunOpts {
-        seconds: a
-            .seconds
-            .or(if a.check { Some(live::CHECK_SECONDS) } else { None }),
+        seconds: a.seconds.or(a.check.then_some(live::CHECK_SECONDS)),
         block: a.block,
         lead: a.lead,
         input_device: a.input_device,
