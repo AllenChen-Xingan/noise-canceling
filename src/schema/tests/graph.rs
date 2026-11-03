@@ -97,7 +97,7 @@ fn committed_session_keys_match_text_format() {
         rate: 48_000,
         ..SessionHeader::default()
     };
-    h.set_graph(&ProcessingGraph::bare(ModelId::Gtcrn));
+    h.set_graph(&ProcessingGraph::bare(ModelId::Gtcrn, ContentId(1)));
     let text = SessionRecord {
         header: h,
         events: Vec::new(),
@@ -119,7 +119,7 @@ fn session_key_since_agrees_with_parser() {
     let doc = committed(SESSION_FILE);
     let full = {
         let mut h = SessionHeader::default();
-        h.set_graph(&ProcessingGraph::bare(ModelId::Gtcrn));
+        h.set_graph(&ProcessingGraph::bare(ModelId::Gtcrn, ContentId(1)));
         SessionRecord {
             header: h,
             events: Vec::new(),
