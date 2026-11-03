@@ -3,34 +3,29 @@
 > 大总管：`noise-canceling-47`。交代：`../noise_canceling-skeleton/_tmp/20261102-b8-rust/rs-entry.md`。
 > 管的实体：`vdn-control` · `vdn-capture` · `vdn-denoised` · `vdn-cli`（可执行 `vdn`）
 
-## 手上
-- 延迟修复 A · C · D · E + V7（大总管 2026-11-02 加派，见 `../noise_canceling-skeleton/_tmp/20261102-b8-rust/latency-fix.md`）
+## 已收尾（2026-11-02）
 
-## 判据结果（2026-11-02，本机 debug 构建，机器判；降噪块长 96，定块长 Pipeline）
+一句话：链路骨架从控制 · 两个进程 · 命令行到链路测试全部接通，V1–V4 · V7 机器判过，V5 待人。
 
-| # | 判据 | 命令 | 结果 |
-|---|---|---|---|
-| V1 | 直通逐样本对齐 | `vdn chain-test --mode passthrough` | **过**：相关 1.000000（线 ≥ 0.999）· 实测延迟 2208 = L_total · 虚拟麦欠载 0 |
-| V2 | 降噪死掉仍出声 | `vdn chain-test --kill-denoiser-at 2` | **过**：110.0 ms 切原声（线 ≤ 150）· 最长静音 0 ms；GTCRN 下同样 110.0 ms |
-| V3 | 真模型出声 | `vdn chain-test --mode denoise --model-path <gtcrn_simple.onnx>` | **过**：均方根 0.1151（线 > 0.01）· 非有限 0 · 长度 240000 / 240000 |
-| V4 | 两个真进程 | 见下 | **过**：相关 1.000000 · 实测延迟 2208 · 读出欠载 0 · 实时提升成功 · 结束后 unlink 成功 |
-| V5 | 真麦克风（人判） | 见「V5 人工步骤」 | 待人做 |
+**最终设置**（正本 `vdn_control::Config`）：IO 块 96 · 降噪块 96 · lead 192（V7 过线值；Workgroup 后复测再压 144）· 心跳超时 100 ms · 降噪总线 `/vdn-bus` · Out 总线 `/vdn-out`
 
-- **延迟分项**（`with_block` 合入后）：
-  - 直通：L_total = 2208 样本（46.00 ms）= Pipeline 768（16.00 ms）+ 环余量 1440（30.00 ms）
-  - GTCRN：L_total = 2976 样本（62.00 ms）= Pipeline 1536（32.00 ms）+ 环余量 1440（30.00 ms）
-  - 合入前（块长 480、`Pipeline::new`）：直通 2303（47.98 ms）· GTCRN 3071（63.98 ms）；V1–V4 当时也全过
-- **加测 lead = 1 块（480，不作过线条件，只计数）**：
-  - 降噪块长 96：直通 3 次「处理后欠载」1728 / 0 / 0 样本；GTCRN 3 次 480 / 480 / 1920 样本（缺的用延迟原声补，不是静音；虚拟麦欠载都是 0）。GTCRN 时 L_total = 2016 样本（42.00 ms）
-  - 降噪块长 480（合入前）：直通、GTCRN 各 3 次全 0
-  - 推断（未核实）：GTCRN 第一次推理慢（预热），10 ms 余量不够；debug 构建、降噪线程空闲时睡 0.5 ms 也有影响
-- 坏块长：`--denoise-block 100` 启动即报错「块长 100 不整除 hop 768」【测】
+| # | 判据 | 结果（最终设置；V1–V4 debug，V7 release） |
+|---|---|---|
+| V1 | 直通逐样本对齐（含欠载 = 0） | **过**：相关 1.000000 · 实测延迟 960 = L_total（Pipeline 768 + lead 192 = 20.00 ms）· 虚拟麦欠载 0 · 处理后欠载 0 |
+| V2 | 降噪死掉仍出声 | **过**：102.0 ms 切原声（线 ≤ 150）· 最长静音 0 ms；GTCRN 下同样 102.0 ms |
+| V3 | 真模型出声 | **过**：均方根 0.2005 · 非有限 0 · 长度 240000 / 240000；GTCRN L_total 1728（36.00 ms）。⚠️ debug 构建下这次有处理后欠载 5280 样本（推理块最长 5.3 ms，用延迟原声补上）——延迟以 V7 的 release 结果为准 |
+| V4 | 两个真进程 | **过**：相关 1.000000 · 实测延迟 960 · 读出欠载 0；另三种起停顺序（送音先起 · SIGKILL 后重启）全段相关 1.000000、静音 0 |
+| V5 | 真麦克风（人判） | **待人做**，步骤见「V5 人工步骤」 |
+| V7 | 延迟（release，10 次 × 10 s，空闲 + 压力） | **过（压线）**：lead 192 空闲 0/10、压力 0/10 欠载，GTCRN L_total 36.00 ms；144 空闲 10/10 有欠载。卡点：空闲时推理块约 2.9 ms（压力 0.6 ms）。明细 `docs/experiments/exp-v7-latency/` |
+
+测试：`cargo test -p vdn-control -p vdn-capture -p vdn-denoised -p vdn-cli` 54 过、1 忽略（V5）· clippy 0 警告 · fmt · `xtask tidy` · `xtask check-deps` 通过【测】
+
 - V3 用的权重：`../noise_canceling/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx`（sha256 前缀 `b4718df6228e7bdf`；本工作区 `resources/` 里没有）
-- V4 命令：
+- V4 命令（最终设置）：
   ```
-  ./target/debug/vdn-denoised --passthrough --bus /vdn-v4b --seconds 9 &
-  ./target/debug/vdn-capture --source sine --sink file _tmp/20261102-rs-entry-v4/out2.wav --bus /vdn-v4b --seconds 5
-  ./target/debug/vdn chain-check _tmp/20261102-rs-entry-v4/out2.wav --l-total 2208
+  ./target/debug/vdn-denoised --passthrough --bus /vdn-fin --seconds 8 &
+  ./target/debug/vdn-capture --source sine --sink file _tmp/20261102-rs-entry-v4/fin.wav --bus /vdn-fin --out-bus /vdn-fin-out --seconds 5
+  ./target/debug/vdn chain-check _tmp/20261102-rs-entry-v4/fin.wav --l-total 960
   ```
 
 ## 延迟修复 · V7 基线（2026-11-02，release，降噪仍是 0.5 ms 轮询、未接唤醒）
@@ -125,7 +120,7 @@
 3. 第一次跑时 macOS 会弹「终端想使用麦克风」，请点「允许」（点了之后要重跑第 2 步）
 4. 5 秒内对着麦克风说话
 
-**算过**：耳机里听到自己的声音，比嘴上晚一点点（链路内约 48 ms，另加设备缓冲），没有断续、没有爆音。
+**算过**：耳机里听到自己的声音，比嘴上晚一点点（`vdn run` 用任意块长管线：链路内 L_total = 863 + 192 = 1055 样本 ≈ 22 ms，另加设备缓冲），没有断续、没有爆音。
 **算不过**：没声音、断断续续、有咔哒声或啸叫。结束时终端会打印「输出欠载 N 样本」，请把那一行发回来。
 
 ## 自审（2026-11-02，三个对抗视角的子代理；报告副本在 `_tmp/20261102-rs-entry-review/`，不入库）
@@ -163,39 +158,44 @@
 
 **负载影响（发现）**：机器 1 分钟负载 23.7 时跑的一次 V3（GTCRN）出现一次降噪停顿 > 100 ms（切原声 1 次、虚拟麦欠载 960 样本），负载降到 16 后重跑全 0。chain-test 的三个线程没提实时优先级，这一项在延迟修复里一起改
 
-## 改了哪些文件
-- 新：`src/control/**` · `src/capture/**` · `src/denoised/**` · `src/cli/src/{chain,live,verify}.rs`
-- 改：`src/cli/src/main.rs`（新子命令 devices · run · chain-test · chain-check）· `src/cli/Cargo.toml`（依赖；forbid 去掉 cpal，留注释）
-- 根 `Cargo.toml`：members 加三项；workspace 依赖加 `vdn-control` · `vdn-capture` · `vdn-denoised` · `serde` · `ctrlc`
+## 改了哪些文件（相对批次起点 `1ab1261`，共 31 个文件，+8064 −5）
+- **新 crate**：`src/control/**`（`Config` · `Cmd` · `check_lead` · `parse_seconds`）· `src/capture/**`（lib：`lib.rs` Forwarder · `feeder.rs` rtrb 交接 · `supervisor.rs` 重连判断 · `shm.rs` 适配与 Out 总线 · `testing.rs`；bin `main.rs`；`tests/realtime_rules.rs`）· `src/denoised/**`（lib：Worker · 管线 / 总线配置 · 命令通道；bin `main.rs`）
+- **改**：`src/cli/src/main.rs`（devices · run · chain-test · chain-check · v7）· 新 `src/cli/src/{chain,live,verify}.rs` · `src/cli/Cargo.toml`（forbid 去掉 cpal，留注释）
+- **根 `Cargo.toml`**：members 加 control · capture · denoised；workspace 依赖加 `vdn-control` · `vdn-capture`（`default-features = false`）· `vdn-denoised` · `serde` · `ctrlc`（`termination`）· `rtrb`
+- **实验结果**（大总管批准写入）：`docs/experiments/exp-v7-latency/`（README + `results/20261102-poll-baseline/` 6 个 · `results/20261102-wake/` 3 个小文件，共约 100 KB，不含音频）
+- 现状页本文件
 
 ## 新 crate 实体行（收尾时由大总管写进 `.42cog/cog.md`）
-- `vdn-control`：配置文件与控制消息 · 人写配置文件、bin 读 · 是 `vdn-capture` / `vdn-denoised` / `vdn` 的输入
-- `vdn-capture`：送音进程（lib `Forwarder` + bin）· 麦克风回调驱动 · 输入原声，输出 Out 环给虚拟麦克风；读 Processed 环与心跳
-- `vdn-denoised`：降噪进程（lib `Worker` + bin）· 建总线 · 输入 Raw 环，输出 Processed 环与心跳；依赖 `Pipeline`
+- `vdn-control`：配置与控制消息的正本（`Config` · `Cmd` · lead 下限 · 秒数解析）· 人写配置文件、bin 读 · 是 `vdn-capture` / `vdn-denoised` / `vdn` 的输入
+- `vdn-capture`：送音进程（lib：`Forwarder` 对齐与送原声 · `Feeder` 音频线程入口 · `Supervisor` 重连 · Out 总线读写；bin）· 麦克风回调驱动 · 输入原声，经降噪总线取处理后的，输出到**自己建的 Out 总线**给虚拟麦克风
+- `vdn-denoised`：降噪进程（lib：`Worker` 处理与跳过积压 · 总线头配置 · 命令通道；bin）· **建降噪总线** · 输入 Raw 环，输出 Processed 环与心跳；依赖 `Pipeline`
 
 ## 设计要点
 - 对齐账只用 `L_total`（总线头里有）：Processed 第 j 个样本在输出时刻 `A(j − L_total) + L_total` 播出。迟到的丢、缺的用延迟原声补、Raw 环满的缺口单独记——降噪慢、卡、死、同进程恢复都逐样本对齐（单测覆盖）
 - 心跳按音频样本计时（4800 样本 = 100 ms），回调里不读系统时钟
 - `vdn-denoised` 不依赖 `vdn-capture`（后者带 cpal）；`Worker` 直接用 `vdn_shm::Bus`，单测用 `Bus::heap`
 
-## 发现（本批不查，大总管记进 backlog，压延迟那批用 release 构建 + 预热核实）
+## 发现（早期，已被延迟修复取代：见「延迟修复 · V7」两节）
 - **现象**：环余量 = 1 块（480 样本，10 ms）且降噪块长 96 时，送音端「处理后欠载」（处理后的声音没按时到，用延迟原声补上；不是静音）
 - **次数**：6 次里 4 次——直通 3 次：1728 / 0 / 0 样本；GTCRN 3 次：480 / 480 / 1920 样本。虚拟麦欠载 6 次都是 0
 - **对照**：降噪块长 480 时同样 6 次全 0；默认环余量 1440 时全 0【测】
 - **推断，未核实**：GTCRN 第一次推理慢（预热）吃掉 10 ms 余量；debug 构建、降噪线程没活时睡 0.5 ms 轮询也有影响
-- 默认环余量保持 1440（大总管定）
+- 当时默认环余量保持 1440（大总管定）；现在是 192
 
-## 已知缺口
-- 环余量 30 ms，预算 3 ms：GTCRN 时 L_total 64 ms > 45 ms 预算（D32）。待实时线程 + 小块后压（大总管定）
-- 降噪进程**换了个进程**重启：新流和旧对齐账对不上，靠「积压超限 → 重新对账」兜底，不保证逐样本对齐；新进程重建同名总线时送音进程要重开总线（本批不做自动重开）
-- 降噪线程没活时睡 0.5 ms 轮询（B 档；后续换跨进程唤醒）
-- `--sink hal`：本批没有插件读 Out，环满后计溢出
+## 已知缺口（当前）
+- **V7 目标 144 没达到**：空闲时推理块约 2.9 ms，压力时 0.6 ms（推断：空闲降频 / 能效核）→ 归 vdn-rt-thread（Audio Workgroup / 提核心频率），之后用 `vdn v7 --leads 96,144,192` 复测
+- 送音端第一次接上降噪进程时延迟跳一次（没有降噪总线时延迟线长度取 lead，不手抄管线延迟）
+- 麦克风流重接要重开设备（大总管定不做，记 backlog）
+- 纠漂移每次丢 / 重复一段（≤ 几块）没做淡化，听感未量化
+- 两进程起停三种顺序没有自动测试（`cargo test` 里拿不到另一个包的可执行文件；判断逻辑已在 `Supervisor` 单测）
+- `--sink hal`：本批没有插件读 Out，读方不在时只计溢出
+- （已解决的旧缺口：环余量 30 ms → 4 ms；0.5 ms 轮询 → 唤醒；重启后送音端不重连 → `Supervisor`）
 
-## 依赖许可
-- `serde` 1（MIT OR Apache-2.0）· `ctrlc` 3（MIT OR Apache-2.0）——与 GPL-3.0 兼容（子代理复核中）
+## 依赖许可（新引入，都与 GPL-3.0 兼容）
+- `serde` 1 · `ctrlc` 3.5（MIT OR Apache-2.0；其传递依赖 nix / dispatch2 / objc2 等为 MIT / Zlib / Apache-2.0，子代理核过）· `rtrb` 0.4.1（MIT OR Apache-2.0，无传递依赖）。cargo-deny 本批不装（大总管定）
 
 ## 待人拍板
-- 无
+- 无新题。要人做的只有 V5（戴耳机听，见上）
 
 ## 流水
 - 2026-11-02 报到；三个零件手下的 worktree 还没有新代码
