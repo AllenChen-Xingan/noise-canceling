@@ -10,8 +10,8 @@ use std::io::{BufWriter, Write};
 use std::time::{Duration, Instant};
 
 use vdn_scene::features::NF;
-use vdn_types::Hysteresis;
 use vdn_scene::{SceneAnalyzer, route, weights};
+use vdn_types::Hysteresis;
 
 const HOP: usize = 256;
 const TICK_HOPS: usize = 31;

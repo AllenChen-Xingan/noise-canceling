@@ -176,4 +176,27 @@ mod tests {
             ToneId(25)
         );
     }
+
+    // 名字的正本是 vdn-types：路由表文本里的模型名、用户层场景名都必须能被它解析回同一个值（大总管 2026-11-02）
+    #[test]
+    fn table_text_names_parse_back_via_vdn_types() {
+        let text = table_text();
+        let mut rows = 0;
+        for line in text.lines().skip(1) {
+            let cols: Vec<&str> = line.split_whitespace().collect();
+            let [id, _name, user, model, tone] = cols[..] else {
+                panic!("列数不对：{line}");
+            };
+            let p = params_for(FineSceneId(id.parse().unwrap()));
+            assert_eq!(ModelId::parse(model), Some(p.model), "模型名 {model}");
+            assert_eq!(
+                UserScene::parse(user),
+                Some(user_of_id(FineSceneId(id.parse().unwrap()))),
+                "场景名 {user}"
+            );
+            assert_eq!(tone.parse::<u8>().unwrap(), p.tone.0);
+            rows += 1;
+        }
+        assert_eq!(rows, 22);
+    }
 }

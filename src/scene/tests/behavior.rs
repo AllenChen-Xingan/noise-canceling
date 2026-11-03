@@ -81,3 +81,10 @@ fn manual_meeting_commits() {
     assert_eq!(j.committed.0, UserScene::Meeting);
     assert_eq!(j.params.tone.0, 6);
 }
+
+/// 标定产物（`weights.rs`，train.py 生成）与正本（`vdn_types::Hysteresis::default()`）必须一致：
+/// 重新标定后只改了一边就红（CLAUDE.md 第五节第 5 条：第二处表示要有机器比对）。
+#[test]
+fn calibrated_hysteresis_matches_vdn_types_default() {
+    assert_eq!(vdn_scene::weights::HYSTERESIS, Hysteresis::default());
+}

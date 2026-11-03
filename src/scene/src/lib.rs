@@ -26,17 +26,16 @@
 #![forbid(unsafe_code)]
 pub mod classify;
 pub mod features;
-
 pub mod route;
 #[rustfmt::skip]
 pub mod weights;
 
 use classify::{NoiseClass, posterior};
 use features::{FeatureExtractor, NF};
+use route::Device;
 use vdn_types::{
     Confidence, FineSceneId, HysteresisGate, ParamSet, SampleClock, SceneLabel, UserScene,
 };
-use route::Device;
 use weights::NC;
 
 /// 缓冲里至少有这么多帧（≈1 s）才把判断交给滞回。
@@ -79,6 +78,8 @@ pub struct SceneAnalyzer {
 
 impl SceneAnalyzer {
     /// `rate` = 喂进来的采样率（目前只支持 16000），`hop` = 每次 `push_hop` 的样本数（256）。
+    /// 本 crate 的 `SampleClock` 按这个 `rate` 计（离线 = 16 kHz 模型样本），滞回换算秒时传同一个 `rate`；
+    /// `vdn-types` 约定流时间按 IO 采样率计，接入实时链路时把 `rate` 设成 IO 采样率、`at` 用 IO 时钟（两者必须同口径，错了确认与停留时长会偏 3 倍）。
     pub fn new(rate: u32, hop: usize) -> Self {
         Self {
             fx: FeatureExtractor::new(rate as f32, hop),
