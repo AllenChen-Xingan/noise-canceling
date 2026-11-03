@@ -2,7 +2,21 @@
 
 use std::path::PathBuf;
 
-use vdn_eval::thresholds::{ALL, Docs, Lines, PENDING, Param, Src, compare_pending, mismatches};
+use vdn_eval::Better;
+use vdn_eval::thresholds::{
+    ALL, Docs, Lines, PENDING, Param, Pend, Src, What, compare_pending, mismatches,
+};
+use vdn_eval::verifiers::info;
+
+/// 真仓库的好坏方向：查 verifiers 登记表
+fn registry_dir(id: &str) -> Option<bool> {
+    info(id).map(|i| i.better == Better::Lower)
+}
+
+/// 测试里造的 verifier 一律「越小越好」
+fn lower(_: &str) -> Option<bool> {
+    Some(true)
+}
 
 fn repo() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -29,7 +43,7 @@ fn table_matches_docs_and_suites_except_pending() {
         rubric: &rub,
         suites: &suites,
     };
-    let found = mismatches(&ALL, &docs);
+    let found = mismatches(&ALL, &docs, &registry_dir);
     let errs = compare_pending(&found, &PENDING);
     assert!(errs.is_empty(), "{errs:#?}\n全部不一致：{found:#?}");
 }
@@ -93,12 +107,12 @@ fn new_mismatch_not_in_pending_is_red() {
         edges_src: Src::Doc012(&["≤ 1 A · ≤ 2 B · ≤ 3 C"]),
         params: &[],
     };
-    let found = mismatches(&[&BAD], &docs(&[]));
+    let found = mismatches(&[&BAD], &docs(&[]), &lower);
     assert_eq!(found.len(), 1, "{found:?}");
     let errs = compare_pending(&found, &[]);
     assert!(errs[0].contains("新的不一致"), "{errs:?}");
     // 登记进待定清单后不红
-    assert!(compare_pending(&found, &[("V-X", "edges")]).is_empty());
+    assert!(compare_pending(&found, &[("V-X", "edges", Pend::Edges(&[1.0, 2.0, 4.0]))]).is_empty());
 }
 
 /// 负例（会红）：待定清单里的条目已经对上了 → 报「移出 PENDING」
@@ -110,9 +124,9 @@ fn fixed_pending_entry_is_red() {
         edges_src: Src::Doc012(&["≤ 1 A · ≤ 2 B · ≤ 3 C"]),
         params: &[],
     };
-    let found = mismatches(&[&OK], &docs(&[]));
+    let found = mismatches(&[&OK], &docs(&[]), &lower);
     assert!(found.is_empty(), "{found:?}");
-    let errs = compare_pending(&found, &[("V-X", "edges")]);
+    let errs = compare_pending(&found, &[("V-X", "edges", Pend::Edges(&[1.0, 2.0, 3.0]))]);
     assert_eq!(errs.len(), 1);
     assert!(errs[0].contains("移出 PENDING"), "{errs:?}");
 }
@@ -131,7 +145,7 @@ fn bad_quote_unregistered_value_and_unsourced_are_mismatches() {
         }],
     };
     let suite = r#"{"tasks":[{"id":"t","graders":[{"v":"V-X","max":-7}]}]}"#;
-    let found = mismatches(&[&L], &docs(&[("ci.json", suite)]));
+    let found = mismatches(&[&L], &docs(&[("ci.json", suite)]), &lower);
     let keys: Vec<_> = found
         .iter()
         .map(|(_, k, w)| (k.as_str(), w.as_str()))
@@ -150,6 +164,62 @@ fn bad_quote_unregistered_value_and_unsourced_are_mismatches() {
         edges_src: Src::Rubric(&["这段话不在文档里 1"]),
         params: &[],
     };
-    let f = mismatches(&[&Q], &docs(&[]));
-    assert!(f[0].2.contains("摘录不在文档里"), "{f:?}");
+    let f = mismatches(&[&Q], &docs(&[]), &lower);
+    assert!(f[0].why.contains("摘录不在文档里"), "{f:?}");
+}
+
+/// 负例（codex 第 2 轮 P1 #1）：已登记的待定项不吞同一参数上的新错误
+#[test]
+fn pending_does_not_swallow_new_value_on_same_param() {
+    const L: Lines = Lines {
+        id: "V-X",
+        edges: &[],
+        edges_src: Src::Design("不分档"),
+        params: &[Param {
+            key: "max",
+            default: None,
+            values: &[(-8.0, Src::None)],
+        }],
+    };
+    let suite = r#"{"tasks":[{"id":"t","graders":[{"v":"V-X","max":999}]}]}"#;
+    let found = mismatches(&[&L], &docs(&[("ci.json", suite)]), &lower);
+    let errs = compare_pending(&found, &[("V-X", "max", Pend::Value(-8.0))]);
+    assert_eq!(errs.len(), 1, "{errs:?}");
+    assert!(errs[0].contains("999"), "{errs:?}");
+}
+
+/// 负例（codex 第 2 轮 P1 #3）：符号反了要报（文档 −6，表里 +6）；分档顺序反了要报
+#[test]
+fn sign_and_order_are_checked() {
+    const SIGN: Lines = Lines {
+        id: "V-X",
+        edges: &[],
+        edges_src: Src::Design("不分档"),
+        params: &[Param {
+            key: "max",
+            default: Some(6.0),
+            values: &[(6.0, Src::Rubric(&["| D | > -6 dB |"]))],
+        }],
+    };
+    let f = mismatches(&[&SIGN], &docs(&[]), &lower);
+    assert!(f.iter().any(|m| m.what == What::Value(6.0)), "{f:?}");
+    const ORDER: Lines = Lines {
+        id: "V-X",
+        edges: &[3.0, 2.0, 1.0],
+        edges_src: Src::Doc012(&["≤ 1 A · ≤ 2 B · ≤ 3 C"]),
+        params: &[],
+    };
+    let f = mismatches(&[&ORDER], &docs(&[]), &lower);
+    assert_eq!(f.len(), 1, "{f:?}");
+    assert_eq!(f[0].what, What::EdgesOrder);
+    // 显式登记的符号转换：文档写损失量 1 / 2 / 3，代码 −1 / −2 / −3（越大越好、降序）
+    const LOSS: Lines = Lines {
+        id: "V-X",
+        edges: &[-1.0, -2.0, -3.0],
+        edges_src: Src::RubricLoss(&["> -6 dB"]),
+        params: &[],
+    };
+    let f = mismatches(&[&LOSS], &docs(&[]), &|_| Some(false));
+    assert_eq!(f.len(), 1, "{f:?}");
+    assert!(matches!(f[0].what, What::Edges(_)), "{f:?}");
 }
