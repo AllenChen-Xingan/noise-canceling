@@ -1,7 +1,7 @@
 # vdn workspace：crate 放 src/<crate>/。依赖方向的正本是各 crate 的 [package.metadata.vdn].forbid（xtask check-deps / cargo deny 检查），图见 specs/rust/architecture.md §2.2
 [workspace]
 resolver = "3"
-members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab", "src/scene", "src/polish", "src/eval", "src/backend-ort", "src/io-macos", "src/hal", "src/shm", "src/rt-thread"]
+members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab", "src/scene", "src/polish", "src/eval", "src/backend-ort", "src/io-macos", "src/hal", "src/shm", "src/rt-thread", "src/control", "src/capture", "src/denoised"]
 
 [workspace.package]
 version = "0.1.0"
@@ -15,6 +15,10 @@ vdn-types = { path = "src/types" }
 vdn-dsp = { path = "src/dsp" }
 vdn-engine = { path = "src/engine" }
 vdn-models = { path = "src/models" }
+vdn-control = { path = "src/control" }
+# 用库的一方不要 bin 专用依赖（设备库 · clap · hound）；vdn-capture 自己的 bin 用默认 feature
+vdn-capture = { path = "src/capture", default-features = false }
+vdn-denoised = { path = "src/denoised" }
 vdn-shm = { path = "src/shm" }
 vdn-rt-thread = { path = "src/rt-thread" }
 vdn-backend-ort = { path = "src/backend-ort" }
@@ -24,6 +28,11 @@ hound = "3.5"
 clap = { version = "4", features = ["derive"] }
 assert_no_alloc = "1.1"
 serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+# termination：SIGTERM / SIGHUP 也走同一个处理（降噪进程退出前要删共享内存名）
+ctrlc = { version = "3.4", features = ["termination"] }
+# 实时线程间的单生产者单消费者队列（009 推荐；MIT OR Apache-2.0）：换总线交接、控制命令
+rtrb = "0.4"
 stats_alloc = "0.1"
 cpal = "0.18.2"
 vdn-io-macos = { path = "src/io-macos" }

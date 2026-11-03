@@ -1,6 +1,6 @@
 [package]
 name = "vdn-cli"
-description = "vdn 命令行：离线降噪、计时"
+description = "vdn 命令行：离线降噪、计时、设备、单进程实时、链路测试"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -18,12 +18,21 @@ hound.workspace = true
 clap.workspace = true
 serde_json.workspace = true
 stats_alloc.workspace = true
+vdn-control.workspace = true
+vdn-capture.workspace = true
+vdn-denoised.workspace = true
+vdn-shm.workspace = true
+vdn-hal.workspace = true
+vdn-io-macos.workspace = true
+vdn-rt-thread.workspace = true
+ctrlc.workspace = true
 
 [lints]
 workspace = true
 
-# 机读正本（specs/rust/architecture.md §5.4）。bin：离线开发工具
+# 机读正本（specs/rust/architecture.md §5.4）。bin：开发期总入口
+# forbid 不含 cpal：`vdn devices` / `vdn run` 是开发期单进程入口，规约 §4 允许 P3 用 cpal（大总管定，2026-11-02）
 [package.metadata.vdn]
 tier = "C"
 unsafe = false
-forbid = ["cpal"]
+forbid = []

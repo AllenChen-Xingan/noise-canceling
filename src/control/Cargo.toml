@@ -1,0 +1,21 @@
+[package]
+name = "vdn-control"
+description = "配置文件与控制消息（serde 只在这里和 bin 里）"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）。边界层，非实时
+[package.metadata.vdn]
+tier = "C"
+unsafe = false
+forbid = ["vdn-engine", "vdn-models", "ort", "cpal"]
