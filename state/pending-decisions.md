@@ -37,7 +37,7 @@
 | 2-5 | 本机最多存什么（只存声纹向量 / 也存特征 / 也存 3 s 音频）· 「已认出你」怎么提示 · 零设置口径 | 只存向量 · 菜单栏状态 + 一键重置 · 逐步生效 | 同建议 | `docs/research/005_pse/decision.md` 末节（剩 5 题） |
 | 2-6 | 软件内「检查更新」算不算云端（算 → 不做，用户自己下载新版） | 算，不做 | 不做 | `docs/research/010_ondevice-adaptation/decision.md` 第五节 |
 | 2-7 | 防叠加降噪：检测输入已被 AirPods / Voice Isolation 处理就减轻处理 + 首次使用提示把会议软件降噪调到最低（与 D42 的耳麦提示不同） | 写进 0.2 | 写进，排期另定 | 015 decision 第〇节 · 设计稿 §8 |
-| 2-8 | 〔**等 exp010 实测再问**：BNNS Graph 不比手写 Rust（GTCRN p50 0.10 ms）快就作废〕降噪要走苹果最快的 BNNS Graph，用户电脑必须 macOS 15+；现定最低 macOS 14.4（47 方 D73 改 D07，人上次只提到 14.4）。A 最低版本抬到 15 · B 保持 14.4，14.x 用手写 Rust、15+ 走 BNNS | 等数 | B：多维护一条后端路径 | 019 `notes/realtime-and-bindings.md` §0（engine worktree） |
+| ~~2-8~~ ✅ D77 | ~~最低系统版本要不要提到 macOS 15~~ → 人答「可以，mac os 提升版本吧」（2026-11-02） | — | — | 019 `notes/realtime-and-bindings.md` §0 |
 
 ## 第三组 · 声音的取舍
 
