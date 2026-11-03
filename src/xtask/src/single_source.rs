@@ -234,9 +234,10 @@ pub fn lex_lines(src: &str) -> Vec<(String, String)> {
                         st = St::Block(1);
                         i += 2;
                     } else if ch == 'r'
-                        && !prev_ident
+                        && (!prev_ident || byte_prefix(&c, i))
                         && matches!(c.get(i + 1), Some('"') | Some('#'))
                     {
+                        // r"…" / r#"…"# / br"…" / br#"…"#
                         let h = c[i + 1..].iter().take_while(|&&x| x == '#').count();
                         if c.get(i + 1 + h) == Some(&'"') {
                             o.push('"');
@@ -276,6 +277,13 @@ pub fn lex_lines(src: &str) -> Vec<(String, String)> {
         out.push((o, cm));
     }
     out
+}
+
+/// `c[i]` 是 `r`，前面是独立的 `b`（`br"…"` 字节原始字符串的前缀）。
+fn byte_prefix(c: &[char], i: usize) -> bool {
+    i >= 1
+        && c[i - 1] == 'b'
+        && (i == 1 || !(c[i - 2].is_alphanumeric() || c[i - 2] == '_'))
 }
 
 fn has_reason(line: &str, marker: &str) -> bool {
