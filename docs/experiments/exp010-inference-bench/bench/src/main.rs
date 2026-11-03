@@ -454,7 +454,7 @@ fn open_net_with(
         // 后缀 -pf：每帧开头预取全部权重进 L2（D79「唤醒时预取权重」）
         (
             ModelId::Gtcrn,
-            k @ ("native-v2" | "native-v2-fast" | "native-v2-pf" | "native-v2-fast-pf" | "native-v3" | "native-v3-pf"),
+            k @ ("native-v2" | "native-v2-fast" | "native-v2-pf" | "native-v2-fast-pf" | "native-v3" | "native-v3-pf" | "native-v3i" | "native-v3i-pf"),
         ) => {
             gtcrn_native::BLAS.store(false, Relaxed);
             let mut n = GtcrnNative::load(path)?;
@@ -1255,7 +1255,7 @@ mod tests {
         let (w, onnx, wav) = (v("EXP010_WEIGHTS"), v("EXP010_GTCRN_ONNX"), v("EXP010_WAV"));
         let audio = read_wav(Path::new(&wav)).unwrap();
         let inputs = frames_for(ModelId::Gtcrn, &audio, audio.len() / HOP, &[]).unwrap();
-        for k in ["native", "native-fast", "native-blas", "native-v2", "native-v2-fast", "native-v2-fast-pf", "native-v3", "native-v3-pf"] {
+        for k in ["native", "native-fast", "native-blas", "native-v2", "native-v2-fast", "native-v2-fast-pf", "native-v3", "native-v3-pf", "native-v3i"] {
             let ort = open_net(ModelId::Gtcrn, "ort", Path::new(&onnx)).unwrap();
             let nat = open_net(ModelId::Gtcrn, k, Path::new(&w)).unwrap();
             parity(ModelId::Gtcrn, k, ort, nat, &inputs).unwrap_or_else(|e| panic!("{k}: {e}"));

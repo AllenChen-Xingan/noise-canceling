@@ -241,6 +241,8 @@ pub enum Kind {
     V2Fast,
     /// 研究 020 第二批（D79，按能效核写）：v2-fast 的算子 + 倒数代替除法 + 深度卷积 / LayerNorm / ERB 向量化
     V3,
+    /// v3 + GRU 显式交错（第 4 条改写）
+    V3i,
 }
 
 impl Kind {
@@ -250,6 +252,7 @@ impl Kind {
             "native-v2" => Some(Kind::V2),
             "native-v2-fast" => Some(Kind::V2Fast),
             "native-v3" => Some(Kind::V3),
+            "native-v3i" => Some(Kind::V3i),
             _ => None,
         }
     }
@@ -1360,7 +1363,8 @@ impl GtcrnNative {
             Kind::Scalar => self.infer_impl::<Scalar, P>(re, im, p),
             Kind::V2 => self.infer_impl::<v2::V2<{ v2::NL_LIBM }>, P>(re, im, p),
             Kind::V2Fast => self.infer_impl::<v2::V2<{ v2::NL_DIV }>, P>(re, im, p),
-            Kind::V3 => self.infer_impl::<v3::V3, P>(re, im, p),
+            Kind::V3 => self.infer_impl::<v3::V3<false>, P>(re, im, p),
+            Kind::V3i => self.infer_impl::<v3::V3<true>, P>(re, im, p),
         }
     }
 
