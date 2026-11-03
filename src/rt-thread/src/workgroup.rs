@@ -209,9 +209,9 @@ impl Member<'_> {
     pub fn finish(&self) -> Result<(), RtError> {
         #[cfg(target_os = "macos")]
         {
+            let wg = self.wi.wg.as_ptr();
             // SAFETY: wg 有效；当前线程是成员；data 头文件要求 NULL。
-            let r =
-                unsafe { os_workgroup_interval_finish(self.wi.wg.as_ptr(), core::ptr::null_mut()) };
+            let r = unsafe { os_workgroup_interval_finish(wg, core::ptr::null_mut()) };
             if r != 0 {
                 return Err(RtError::Kernel {
                     op: "os_workgroup_interval_finish",

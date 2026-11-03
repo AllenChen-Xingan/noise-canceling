@@ -133,8 +133,8 @@ mod tests {
         let hits = super::todo::collect().expect("todo");
         assert!(
             hits.iter()
-                .any(|h| h.krate == "vdn-shm" && h.text.contains("待实现：loom")),
-            "vdn-shm 的 loom 占位测试应被统计到"
+                .any(|h| h.krate == "vdn-rt-thread" && h.text.contains("Unimplemented")),
+            "vdn-rt-thread 的 join_audio_workgroup（返回 Unimplemented）应被统计到（vdn-shm 的 loom 占位已换成真测试）"
         );
         assert!(hits.iter().all(|h| h.krate != "xtask"));
     }
