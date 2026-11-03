@@ -94,10 +94,10 @@
 
 **GTCRN**
 - 能不能跑：能。PyTorch → `mlprogram` 全部算子有转换器（Conv / ConvTranspose / BN / PReLU / GRU / LayerNorm / Unfold / 切片写回）【源码】。
-- 预计瓶颈：调度开销，不是算力。GPU 和神经引擎每调一次 0.1–0.2 ms【实测-他人】，GRU 又上不了神经引擎，`All` 和 `CPUAndNeuralEngine` 预计比 ORT 慢【推断】。`cpuOnly` 能不能比 ORT 的 1554 次 malloc 少、更快，**尚无判据，待测**。
+- 预计瓶颈：调度开销，不是算力。GPU 和神经引擎每调一次 0.1–0.2 ms【实测-他人，非 M5】，GRU 循环又多半上不了神经引擎，`All` 和 `CPUAndNeuralEngine` 预计比 ORT 慢【推断】。`cpuOnly` 也不占先：GRU 被拆成约 268 次循环体、几千次算子调度，ORT 是 4 个融合 GRU 节点【推断】。能不能比 ORT 快，**尚无判据，待测**；先验偏向「不比 ORT 快」【推断】。
 - 实时线程能不能直接调：能调同步接口，但做不到零分配（ObjC 返回对象），要登记豁免；CPU 内部是否开线程不明【存疑】。
-- 要改模型结构吗：`cpuOnly` 不用改。要上神经引擎，就得把 GRU 展开成固定步数的矩阵乘（帧内 GRU 33 步 × 双向 × 2 组 × 2 块），图会变大很多；开销账算下来仍不划算【推断】。不建议做。
-- 逐值一致风险：fp32 + `cpuOnly` 风险低到中，核函数和融合不同，预计 1e-6 量级，要实测【推断】。fp16、神经引擎、有状态版风险高：状态被强制 fp16，跨帧递推带误差【源码 + 推断】。
+- 要改模型结构吗：`cpuOnly` 不用改。要上神经引擎，就得把 GRU 展开成固定步数的矩阵乘（帧内 GRU 33 步 × 双向 × 2 组 × 2 块），图会变大很多；开销账算下来仍不划算【推断】。不建议做。另一个只改导出包装的办法：导出前在 PyTorch 里把 33 步手动展开（Python 循环在 `jit.trace` 时被摊平），去掉 `while_loop`，`cpuOnly` 下也可能更快——值得作为第 4 个 GTCRN 变体测【推断】。
+- 逐值一致风险：fp32 + `cpuOnly` 风险中：GRU 被拆成 `linear` + `sigmoid` + `tanh`，`sigmoid` / `tanh` 的实现与 ORT 不同，误差经 33 步和跨帧递推会累积，量级未知，要实测【推断】。fp16、神经引擎、有状态版风险高：状态被强制 fp16，跨帧递推带误差【源码 + 推断】。
 
 **FE-M**
 - 能不能跑：大概能。GRU、注意力（`scaled_dot_product_attention` 有转换器，`ops.py:10092`）、Conv1d 都有转换器。wav2wav 图里的 STFT 写法没核，建议用 spec2spec 版【存疑】。
