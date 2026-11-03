@@ -8,7 +8,8 @@
       原因：coremltools 把 torch 的 GRU 翻成逐步 while_loop（019 notes/coreml.md），展开后看 Core ML / BNNS 能否整图融合
   convert.json           coremltools / torch 版本、各文件 sha256
 
-用法：python convert_gtcrn.py <resources/gtcrn/stream 目录> <输出目录>
+用法：python convert_gtcrn.py <resources/gtcrn/stream 目录> <输出目录> [fp32|fp16|unrolled|state]
+每个变体单独一个进程跑（fp16 那一步 coremltools 9.0 + torch 2.15 会在原生代码里崩，崩了不连累别的），记录写 convert_<变体>.json。
 名字与 ONNX 一致：输入 mix conv_cache tra_cache inter_cache；输出 enh conv_cache_out tra_cache_out inter_cache_out。
 """
 import hashlib, json, os, sys, types
@@ -17,6 +18,8 @@ import numpy as np
 import torch
 
 src, out = sys.argv[1], sys.argv[2]
+ONLY = sys.argv[3] if len(sys.argv) > 3 else None
+want = lambda v: ONLY is None or ONLY == v
 os.makedirs(out, exist_ok=True)
 sys.path.insert(0, src)
 sys.modules.setdefault("einops", types.SimpleNamespace(rearrange=None))  # 源码 import 了但没用
@@ -94,7 +97,7 @@ ex = tuple(torch.zeros(s) for s in SHAPES.values())
 ex = (torch.randn(SHAPES["mix"]),) + ex[1:]
 
 with torch.no_grad():
-    traced = torch.jit.trace(Explicit(stream), ex, check_trace=False)
+    traced = torch.jit.trace(Explicit(stream).eval(), ex, check_trace=False)
     ref = traced(*ex)
 
 info = {"torch": torch.__version__, "coremltools": ct.__version__, "files": {}}
@@ -112,6 +115,8 @@ def save(mlm, name):
 
 
 for prec, tag in [(ct.precision.FLOAT32, "fp32"), (ct.precision.FLOAT16, "fp16")]:
+    if not want(tag):
+        continue
     mlm = ct.convert(
         traced,
         inputs=[ct.TensorType(name=k, shape=s, dtype=np.float32) for k, s in SHAPES.items()],
@@ -128,24 +133,27 @@ for prec, tag in [(ct.precision.FLOAT32, "fp32"), (ct.precision.FLOAT16, "fp16")
 # GRU 展开版（fp32 显式缓存）：先在 torch 里和原版比一次，确认展开不改输出
 import copy  # noqa: E402
 
-unrolled = unroll_grus(copy.deepcopy(stream)).eval()
-with torch.no_grad():
-    tu = torch.jit.trace(Explicit(unrolled), ex, check_trace=False)
-    info["unrolled_torch_max_abs_vs_orig"] = float((tu(*ex)[0] - ref[0]).abs().max())
-mlu = ct.convert(
-    tu,
-    inputs=[ct.TensorType(name=k, shape=s, dtype=np.float32) for k, s in SHAPES.items()],
-    outputs=[ct.TensorType(name=n, dtype=np.float32) for n in OUTS],
-    convert_to="mlprogram",
-    compute_precision=ct.precision.FLOAT32,
-    minimum_deployment_target=ct.target.macOS15,
-)
-got = mlu.predict({k: v.numpy() for k, v in zip(SHAPES, ex)})
-info["selfcheck_unrolled_fp32_max_abs_vs_torch"] = float(np.abs(got["enh"] - ref[0].numpy()).max())
-save(mlu, "gtcrn_unrolled_fp32.mlpackage")
+if want("unrolled"):
+  unrolled = unroll_grus(copy.deepcopy(stream)).eval()
+  with torch.no_grad():
+      tu = torch.jit.trace(Explicit(unrolled).eval(), ex, check_trace=False)
+      info["unrolled_torch_max_abs_vs_orig"] = float((tu(*ex)[0] - ref[0]).abs().max())
+  mlu = ct.convert(
+      tu,
+      inputs=[ct.TensorType(name=k, shape=s, dtype=np.float32) for k, s in SHAPES.items()],
+      outputs=[ct.TensorType(name=n, dtype=np.float32) for n in OUTS],
+      convert_to="mlprogram",
+      compute_precision=ct.precision.FLOAT32,
+      minimum_deployment_target=ct.target.macOS15,
+  )
+  got = mlu.predict({k: v.numpy() for k, v in zip(SHAPES, ex)})
+  info["selfcheck_unrolled_fp32_max_abs_vs_torch"] = float(np.abs(got["enh"] - ref[0].numpy()).max())
+  save(mlu, "gtcrn_unrolled_fp32.mlpackage")
 
 # 有状态版：缓存作为 register_buffer 留在模型里，每帧只进 mix 出 enh
 try:
+    if not want("state"):
+        raise StopIteration
     class Stateful(torch.nn.Module):
         def __init__(self, m):
             super().__init__()
@@ -176,9 +184,11 @@ try:
         minimum_deployment_target=ct.target.macOS15,
     )
     save(mls, "gtcrn_state_fp16.mlpackage")
+except StopIteration:
+    pass
 except Exception as e:  # 有状态只是加分项，失败照记
     info["stateful_error"] = repr(e)[:500]
 
-with open(os.path.join(out, "convert.json"), "w") as f:
+with open(os.path.join(out, f"convert_{ONLY or 'all'}.json"), "w") as f:
     json.dump(info, f, indent=1, ensure_ascii=False)
 print(json.dumps(info, ensure_ascii=False))
