@@ -52,3 +52,5 @@
 - 2026-11-03 #65 验收（a382b298）：xtask ci 全绿 469/0/7 · schema 一致 · eval ci 门禁过；推送并开 PR #74（Closes #65 #68），等 CI
 - 2026-11-03 PR #74 CI 过，8d 合并（23d0d531），#65 #68 关。合 origin/main 进 #62：6 个冲突（cli/main · denoised/lib · schema/tests/graph · session/tests · xtask main/tidy），交 hygiene 在工作区解、不提交，之后做最后四步
 - 2026-11-03 hygiene 解完 6 个冲突（另暂存 6 个配套文件），合并工作区 clippy 净 · test 500/1/7（tidy_passes：4 条作废基线 + policy_tests 1 处字面量）；8d 提交合并
+- 2026-11-03 8d 在 6c33d026 亲手验收：xtask ci 全绿 491/0/7 · schema 一致 · eval ci 门禁过 · 无超 600 行文件；推送并开 PR #75（Closes #62），等 CI
+- 2026-11-03 PR #75 CI 过；补推账本后合并（merge commit），之后关 hygiene 窗口；#71 实现待人定是否接着做
