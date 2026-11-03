@@ -114,6 +114,7 @@
 - **做法**：「关 / 开」交替 7 对（`apple-rs/tools/impact.sh`）。「开」= 降噪组合按 16 ms 节奏在后台跑，线程设置用 D74 默认（time-constraint 开、不加工作组）。
 - **算**：慢了多少 = 开的中位 ÷ 关的中位 − 1。同时报 7 次「关」之间的离散度，当量测噪声底：噪声底如果大于 1%，结论只能写「≤ 噪声底」。
 - **过线**：≤ 1% 目标、≤ 2% 挡线【已定 · D75】。
+- **第一次实测（2026-11-02，不能下结论）**：`loadgen` 开满 10 个逻辑核、每次约 5.5–8 s，「关 / 开」7 对。BNNS rt：慢 5.9%，但 7 次「关」之间离散 10.6%；手写 rt：−0.6%，离散 22%（`apple/results/20261102-182000-impact-bnns/`、`…-182200-impact-native/`）。信号淹在噪声里，只能写「≤ 噪声底」。原因推断：前台负载占满全部核（含能效核），调度本身的抖动就有 10–20%。**测法要改**：前台负载用「性能核个数」个线程、每对交替 15 次以上、用最小值而不是中位（最小值最接近无干扰时的真实时长）；改完再测。
 
 ### 6.2 选赢家的规则【AI 定，依据 D70；人可改】
 
@@ -143,6 +144,11 @@
 | Metal 手写核 | 无 | 未试：每帧派发约 0.1 ms 的固定开销已大于手写 Rust 整帧（`notes/mlx.md` §2），先由 Core ML GPU / MLX GPU 的实测证实或推翻，再决定写不写 | 同左 |
 | ORT（基线） | rustbe | r4 | r4 |
 | tract（纯 Rust ONNX） | rustbe | r4 | r4 |
+
+**认人声纹 ECAPA-TDNN512**（D 大总管加，2026-11-02）：本机只有 ONNX、没有 PyTorch 权重，所以苹果路只能 ONNX → onnx2torch → Core ML → BNNS。
+- Core ML / BNNS：**转不出来**（build 20261102-181700-ecapa）。onnx2torch 两处（Clip 的 min/max 来自 Constant 节点、省略 min 的 Clip）已在 `apple/ecapa_prep.py` 里补过；再往下 coremltools 9.0 不支持 `prod` 算子。按时间盒停下。要继续，得从 WeSpeaker 的 PyTorch 源码 + 官方 PyTorch 权重重新转，或给 coremltools 补 `prod` 的转换。
+- ORT：现状每次（含 fbank 与打分）约 6 ms，判断回路单项约 1.2% 个核（exp005）。只算 ECAPA 一次的耗时，Python 调 ORT 已在 `ecapa_prep.py` 里写好，但因转换在它之后失败，这次没留下记录。
+- 结论：认人这一项的提速不在苹果引擎上，先从「降频率 / 只在有人声时跑」入手（`§6.1` 风险 1，已转交）。
 - **`BE-OS`**：读头文件的 `API_AVAILABLE` 标注。已知：BNNS Graph、`MLState` 要 macOS 15；`MLComputePlan` 要 14.4（`notes/realtime-and-bindings.md` §0）。D07 定的是 14.2+。冲突已登记为待拍板 2-8，**等实测再问**：如果 BNNS 不比手写 Rust 快，这题作废。
 - **`BE-SWAP`**：记三项——要不要重写代码（手写 Rust 要）· 有没有一条命令的转换脚本（Core ML / BNNS / MLX 要从 PyTorch 重新转，ORT / tract 直接吃 ONNX）· 转换后 `BE-PARITY` 是否过。只记分，不挡。
 - **`BE-TRAIN`**：对 BN/LN 仿射参数（GTCRN 约 4.8 K 个）求一次损失梯度，和 PyTorch autograd 比，相对差 ≤ 1e-3。目前只有 MLX 有自动求导（`notes/mlx.md` §5）。推理后端不会训练不扣分：D52 的本机微调可以单独用一个后端，推理再用别的。
