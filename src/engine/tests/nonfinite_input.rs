@@ -15,7 +15,7 @@ static A: AllocDisabler = AllocDisabler;
 
 const HOP: usize = 256;
 const LAT: usize = 256;
-const SR_IO: u32 = 48_000;
+const SR_IO: u32 = vdn_types::IO_RATE;
 
 fn tone(n: usize) -> Vec<f32> {
     (0..n).map(|i| 0.3 * (i as f32 * 0.05).sin()).collect()

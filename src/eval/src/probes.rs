@@ -122,8 +122,8 @@ mod tests {
 
     #[test]
     fn lowpass_kills_4k() {
-        let sr = 16000.0;
-        let mut x: Vec<f32> = (0..16000)
+        let sr = f64::from(vdn_types::MODEL_RATE);
+        let mut x: Vec<f32> = (0..vdn_types::MODEL_RATE as usize)
             .map(|i| (2.0 * std::f64::consts::PI * 4000.0 * i as f64 / sr).sin() as f32)
             .collect();
         for q in [0.5412, 1.3066] {

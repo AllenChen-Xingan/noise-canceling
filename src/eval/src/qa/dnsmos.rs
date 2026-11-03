@@ -10,7 +10,7 @@ use ort::session::Session;
 use ort::session::builder::{AutoDevicePolicy, GraphOptimizationLevel};
 use ort::value::Tensor;
 
-const SR: usize = 16_000;
+const SR: usize = vdn_types::MODEL_RATE as usize;
 const WIN: usize = 144_160; // 9.01 s
 const HOP: usize = SR;
 

@@ -11,7 +11,7 @@
 use crate::analysis::active_level_db;
 use crate::rng::Rng;
 
-pub const SR: u32 = 16_000;
+pub const SR: u32 = vdn_types::MODEL_RATE;
 
 /// 噪音种类。清单里的名字由 serde 定（小写），格式正本见 `files.rs`。
 #[derive(

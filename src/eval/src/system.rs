@@ -65,7 +65,7 @@ impl Model for RefWiener {
         "ref_wiener"
     }
     fn sample_rate(&self) -> u32 {
-        16_000
+        vdn_types::MODEL_RATE
     }
     fn hop(&self) -> usize {
         Self::HOP
