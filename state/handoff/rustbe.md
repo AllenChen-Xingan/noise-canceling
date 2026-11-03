@@ -27,3 +27,4 @@
 - codex 换谱系评审 5 轮（`docs/reviews/010_exp010-rust-codex.md`）：P1×7、P2×20 全部属实、全部已改；第 4、5 轮连续两轮无 P0/P1，已达停止线
 - ⚠️ 第 1 轮评审之后的 bench 改动（对拍不过时返回非零退出码、新字段、入口校验）只跑过 `cargo check`，没有重编、没有重跑；盘上的二进制是 18:46 编的。新字段要等下次跑基准才会出现在数据里
 - **已收尾**。交付：`docs/experiments/exp010-inference-bench/{README.md,results/,bench/,tools/}`、`docs/reviews/010_exp010-rust-codex.md`
+- 收尾验证（verify1，19:27）：已重编（二进制 19:25:47），9 个用例的退出码全部符合预期；reset 后位模式完全相同；新字段都有输出；BE-COLD 直接量：手写版 18.2 ms、ORT 96.3 ms。缺口已补上
