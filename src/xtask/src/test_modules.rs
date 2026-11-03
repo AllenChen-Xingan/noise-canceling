@@ -111,8 +111,8 @@ mod tests {
         assert_eq!(
             t,
             [
-                d.join("src/tests.rs"),
                 d.join("src/tests/more.rs"),
+                d.join("src/tests.rs"),
                 d.join("src/worker/wt.rs")
             ]
         );
