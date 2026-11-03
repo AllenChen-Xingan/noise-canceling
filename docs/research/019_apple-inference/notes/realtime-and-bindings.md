@@ -182,7 +182,7 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
 
 ### 两个模型共同的
 
-- **最低系统冲突**：BNNSGraph 和 `MLState` 都标了 `macos(15.0)`（`bnns_graph.h` 各函数；`SDK:…/CoreML.framework/Headers/MLState.h:42`），vdn 定的是 macOS 14.2+。要么 14.x 上回落到 ORT，要么把最低系统抬到 15。**这是要人拍板的事**，交大总管登记，本文不定。
+- **最低系统冲突**：BNNSGraph、`MLState`、`specializationStrategy` 都标了 `macos(15.0)`，`MLComputePlan` 标 `macos(14.4)`（`bnns_graph.h` 各函数；`SDK:…/CoreML.framework/Headers/MLState.h:42`；`MLOptimizationHints.h:39`；`MLComputePlan.h:57`），vdn 定的是 macOS 14.2+。要么 14.x 上回落到 ORT，要么把最低系统抬到 15。**这是要人拍板的事**，交大总管登记，本文不定。
 - **后端 trait 要允许每个模型各选各的后端**，和 `our-models.md` 的含义第 2 条一致。
 
 ## 基准要测什么（给 applebe）
@@ -191,12 +191,13 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
 
 ### A. 配置矩阵（每个模型都测；GTCRN 先测）
 
-1. **ORT CPU 基线**：今天的配置（intra = inter = 1，`src/models/src/session.rs:30-45`）。
+1. **ORT CPU 基线**：今天的配置（intra = inter = 1，`src/models/src/session.rs:30-45`）。**必须和其他配置同一时段、同节拍、同帧数、同负载重跑**，不能拿 exp001 / exp004 的旧数当对照（exp004 自注没控负载）。另查 ORT 预编译包有没有 KleidiAI（SME2）内核，见 `bnns-graph.md:261`。
 2. **BNNSGraph C 接口**：
    - 编译：`BNNSGraphCompileFromFile(mlmodelc)`，加 `BNNSGraphCompileOptionsSetTargetSingleThread(true)`；优化偏好分别试性能优先和体积优先。
    - 执行：`BNNSGraphContextMake`；`SetArgumentType` 设为指针；`GetWorkspaceSize` 拿到大小后，用 `aligned_alloc(页大小)` 预分配工作区；输出缓冲由我们提供。
-   - 精度：fp32 和 fp16 各一版。
-   - 如果模型能用流式模式，加测 `BNNSGraphContextMakeStreaming`。
+   - 精度：fp32 和 fp16 各一版。fp32 版转换时必须显式设 `compute_precision=FLOAT32`，转完查 `.mlmodelc` 里的类型确认。
+   - 执行前调 `BNNSGraphContextSetDynamicShapes` 或查形状，确认返回 0（形状全定）；返回 1 / 2 就不满足「不分配」条件（`bnns_graph.h:619-621`）。
+   - 如果模型能用流式模式，加测 `BNNSGraphContextMakeStreaming`（会被迫 fp16，见上文，单独列）。
    - 每个用到的函数都按 `_v2` 符号绑定。
 3. **Core ML**（经 `objc2-core-ml`），做 4 种计算单元：`CPUOnly`、`CPUAndNeuralEngine`、`CPUAndGPU`、`All`。每种再分 2 个变体：
    - 显式缓存的无状态版；
