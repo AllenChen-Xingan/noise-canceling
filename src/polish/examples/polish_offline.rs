@@ -59,7 +59,7 @@ fn main() {
         .iter()
         .position(|x| x == "--ramp")
         .map(|i| a[i + 1].parse::<f32>().unwrap())
-        .unwrap_or(1.0);
+        .unwrap_or(vdn_types::desc::POLISH_RAMP_S.default);
     let mut chain = PolishChain::new(
         N_FFT,
         HOP,

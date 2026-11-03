@@ -132,6 +132,25 @@ fn verdict_from_json(e: &serde_json::Value) -> SpeakerVerdict {
     }
 }
 
+/// 判断回路参数：命令行覆盖默认值，再按描述表（`vdn_types::desc` 的 `judge.*`）校验，越界报错。
+fn judge_params(args: &[String]) -> R<JudgeParams> {
+    let mut jp = JudgeParams::default();
+    if let Some(v) = arg(args, "--win") {
+        jp.window_s = v.parse()?;
+    }
+    if let Some(v) = arg(args, "--judge-hop") {
+        jp.hop_s = v.parse()?;
+    }
+    if let Some(v) = arg(args, "--owner-hi") {
+        jp.owner_hi = v.parse()?;
+    }
+    if let Some(v) = arg(args, "--others-lo") {
+        jp.others_lo = v.parse()?;
+    }
+    jp.validate()?;
+    Ok(jp)
+}
+
 fn gate_params(args: &[String]) -> R<GateParams> {
     let mut p = GateParams::default();
     let f = |name: &str| -> R<Option<f32>> {
@@ -211,19 +230,8 @@ fn cmd_run(args: &[String]) -> R<()> {
     let (dry, wet) = (&dry[..n_hops * HOP], &wet[..n_hops * HOP]);
 
     // 2) 判断回路：喂降噪输出 + 逐帧 VAD（与 VadEnvelopeStage 同一个 VAD 口径），按实测计算时间延后生效
-    let mut jp = JudgeParams::default();
-    if let Some(v) = arg(args, "--win") {
-        jp.window_s = v.parse()?;
-    }
-    if let Some(v) = arg(args, "--judge-hop") {
-        jp.hop_s = v.parse()?;
-    }
-    if let Some(v) = arg(args, "--owner-hi") {
-        jp.owner_hi = v.parse()?;
-    }
-    if let Some(v) = arg(args, "--others-lo") {
-        jp.others_lo = v.parse()?;
-    }
+    // 先校验再建任何部件：声纹模型的窗长与 Judge 用同一个已校验的值（codex 第 2 轮 P2 #1）
+    let jp = judge_params(args)?;
     let mut vad = vdn_speaker::vad::Vad::new();
     let mut vad_probs = Vec::with_capacity(n_hops);
     let mut verdicts = vec![SpeakerVerdict::default(); n_hops + 1];
@@ -604,6 +612,17 @@ mod tests {
         // 小数不截断：20.9 不能悄悄变成 20 再通过
         assert!(gate_params(&sv(&["--confirm", "20.9"])).is_err());
         assert!(gate_params(&sv(&["--confirm", "21"])).is_err());
+    }
+
+    /// 判断回路参数：合法值照用；越界（如 `--win 20`，表上限 10 s）报错，不会一边按 20 s 建模型、一边被夹成 10 s。
+    #[test]
+    fn judge_params_parse_and_reject_by_desc_table() {
+        let p = judge_params(&sv(&["--win", "2", "--owner-hi", "0.5"])).expect("合法参数");
+        assert_eq!((p.window_s, p.owner_hi), (2.0, 0.5));
+        assert_eq!(p.hop_s, JudgeParams::default().hop_s);
+        let e = judge_params(&sv(&["--win", "20"])).unwrap_err();
+        assert!(e.to_string().contains("judge.window_s"), "{e}");
+        assert!(judge_params(&sv(&["--others-lo", "1.5"])).is_err());
     }
 
     #[test]
