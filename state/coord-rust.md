@@ -28,9 +28,9 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | rs-wake：① 唤醒对照实验（约 4 分钟） |
+| 重编译 / 全量测试（1 个） | rs-wake：② 装 cargo-deny + deny check |
 
-排队：rs-wake ② cargo-deny ③ Miri（Workgroup 复测插在 ① 之后）；rs-entry 接唤醒后复测 V7
+排队：rs-wake ③ Miri + loom（release）· Workgroup 复测；rs-entry 接唤醒后复测 V7
 
 等人许可的弹窗 / 长时间前台运行：（空）
 
@@ -41,6 +41,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- rs-wake 对照实验（release，两真进程，每组 4900 块）：推到醒中位 唤醒 4–17 µs · 200 µs 轮询 101–138 µs · 500 µs 轮询 250–331 µs；不提实时优先级三种都有 4.5–11 ms 尖峰，提了后唤醒最长 7–41 µs → 实时优先级是关键。待补：提优先级后轮询最长值、CPU、唤醒次数（为 009 待拍板 1「最低系统 14.4」）。loom debug 5 分钟未跑完，改 release
 - rs-entry V7 基线（release、0.5 ms 轮询）**不过**：lead 96 / 144 空闲 10/10 次欠载；**空闲反而比压力差**（推理块中位约 3.0 ms vs 0.64–1.43 ms），推断降频 / 能效核 → Workgroup 提前做（rs-wake）；空闲加扫 lead 192 起无欠载（仅 3 次）。lead 默认暂定 288（6 ms，GTCRN L_total 38.00 ms）。名额已还；骨架（唤醒）已合进 rs-entry，待它补 BusConfig 新字段
 - 011 人定 A：骨架之后，处理图 + schema 交叉校验合成下一件大事；人定新规矩「唯一真相源 + 交叉校验」→ CLAUDE.md 第五节第 5 条，已通知全部手下
 - 人定 D66（原话「c」）：「超级语法树」两种都要；处理图统一表示排在骨架之后。对照审查子代理在跑（008 / 005 / 009 三样）
