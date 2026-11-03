@@ -9,10 +9,13 @@ use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use vdn_engine::testing::{DelayGain, GAIN, Gain, Identity};
 use vdn_engine::{
     Engine, FaultInjector, FaultKind, FrameCtx, Pipeline, PipelineError, SafetyConfig, Stage,
-    stages,
+    StageChain, stages,
 };
 use vdn_types::graph::test_kind;
-use vdn_types::{Basis, Confidence, Model, ModelError, NodeKind, SpeakerClass, SpeakerVerdict};
+use vdn_types::{
+    Basis, ChainMismatch, Confidence, Model, ModelError, ModelId, NodeKind, ProcessingGraph,
+    SpeakerClass, SpeakerVerdict,
+};
 
 #[cfg(debug_assertions)]
 #[global_allocator]
@@ -349,4 +352,126 @@ fn staged_pipeline_with_faults_does_not_allocate() {
         p.reset();
         let _ = p.last_status();
     });
+}
+
+// ---------- 级串与处理图描述比对（构造期，D72） ----------
+
+fn build<S: StageChain>(
+    kinds: &'static [&'static NodeKind],
+    s: S,
+) -> Result<Pipeline<Identity, S>, PipelineError> {
+    Pipeline::with_stages(Engine::new(Identity, SafetyConfig::off()), SR, None, kinds, s)
+}
+
+fn graph_err<S: StageChain>(kinds: &'static [&'static NodeKind], s: S) -> ChainMismatch {
+    match build(kinds, s) {
+        Err(PipelineError::Graph(m)) => m,
+        Err(e) => panic!("应报描述不一致，实际 {e}"),
+        Ok(_) => panic!("描述不一致却构造成功"),
+    }
+}
+
+/// 同编号、改了名字：有人在实现里手抄了一份种类
+const GAIN_RENAMED: NodeKind = NodeKind {
+    name: "gain2",
+    ..GAIN
+};
+
+/// 运行时延迟与描述不同的级：描述说 0，运行时报 `lat`
+struct Lagging(usize);
+impl Stage for Lagging {
+    fn kind(&self) -> &'static NodeKind {
+        &USE_DRY
+    }
+    fn reset(&mut self) {}
+    fn process(&mut self, _wet: &mut [f32], _dry: &[f32], _ctx: FrameCtx) {}
+    fn latency_samples(&self) -> usize {
+        self.0
+    }
+}
+
+struct Renamed;
+impl Stage for Renamed {
+    fn kind(&self) -> &'static NodeKind {
+        &GAIN_RENAMED
+    }
+    fn reset(&mut self) {}
+    fn process(&mut self, _wet: &mut [f32], _dry: &[f32], _ctx: FrameCtx) {}
+}
+
+#[test]
+fn pipeline_accepts_matching_graph_and_reports_it() {
+    let p = build(&[&GAIN, &USE_DRY], stages![Gain(1.0), UseDry]).unwrap();
+    assert_eq!(p.stage_kinds(), &[&GAIN, &USE_DRY]);
+    let g = p.graph(ModelId::Gtcrn);
+    assert_eq!(g.stages, &[&GAIN, &USE_DRY]);
+    assert!(g.spectral.is_empty());
+    // 不带级的构造对应空描述
+    let plain = Pipeline::new(Engine::new(Identity, SafetyConfig::off()), SR).unwrap();
+    assert!(plain.stage_kinds().is_empty());
+    assert_eq!(
+        plain.graph(ModelId::Gtcrn).content_id(),
+        ProcessingGraph::bare(ModelId::Gtcrn).content_id()
+    );
+}
+
+#[test]
+fn pipeline_rejects_missing_stage() {
+    assert_eq!(
+        graph_err(&[&GAIN, &USE_DRY], stages![Gain(1.0)]),
+        ChainMismatch::Missing {
+            index: 1,
+            expected: "use_dry"
+        }
+    );
+    // 反过来：级串多一级
+    assert!(matches!(
+        graph_err(&[&GAIN], stages![Gain(1.0), UseDry]),
+        ChainMismatch::Extra { index: 1, .. }
+    ));
+}
+
+#[test]
+fn pipeline_rejects_reversed_order() {
+    assert_eq!(
+        graph_err(&[&GAIN, &USE_DRY], stages![UseDry, Gain(1.0)]),
+        ChainMismatch::Kind {
+            index: 0,
+            expected: "gain",
+            actual: "use_dry"
+        }
+    );
+}
+
+#[test]
+fn pipeline_rejects_wrong_name() {
+    assert_eq!(
+        graph_err(&[&GAIN], stages![Renamed]),
+        ChainMismatch::Kind {
+            index: 0,
+            expected: "gain",
+            actual: "gain2"
+        }
+    );
+}
+
+#[test]
+fn pipeline_rejects_latency_different_from_description() {
+    assert_eq!(
+        graph_err(&[&USE_DRY], stages![Lagging(8)]),
+        ChainMismatch::Latency {
+            index: 0,
+            stage: "use_dry",
+            declared: 0,
+            actual: 8
+        }
+    );
+    // 描述与运行时都说有延迟：过了比对，再被「本批只许 0 延迟」拦下
+    assert!(matches!(
+        build(&[&LOOKAHEAD], stages![Lookahead]),
+        Err(PipelineError::StageLatency { samples: 16, .. })
+    ));
+    let e = build(&[&USE_DRY], stages![Lagging(8)]).err().unwrap();
+    assert!(std::error::Error::source(&e).is_some());
+    assert!(e.to_string().contains("use_dry"), "{e}");
 }
