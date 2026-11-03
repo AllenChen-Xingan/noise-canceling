@@ -18,6 +18,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 use serde_json::{Value, json};
+use vdn_eval::files::{BaselineFile, LevelEntry, LevelsFile};
 use vdn_eval::report::{Meta, to_json, to_markdown};
 use vdn_eval::runner::{Baseline, Opts, SuiteResult, baseline_key, run_suite};
 use vdn_eval::suite::{
@@ -313,7 +314,7 @@ fn cmd_calib(args: &[String]) -> Result<(), String> {
             });
         }
         if let Some(d) = sh("date", &["+%Y-%m-%d"]) {
-            lv["updated"] = json!(d);
+            lv.updated = d;
         }
         std::fs::write(
             &path,
