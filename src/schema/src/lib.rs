@@ -269,11 +269,25 @@ pub fn shm_baseline_from(root: &Path, over: Option<&str>) -> Baseline {
             None => return Baseline::Unavailable("HEAD 没有父提交".into()),
         }
     }
-    match git(
+    shm_baseline_at(root, &base)
+}
+
+/// 读指定提交上的布局文件。只有「提交在、它的树里确实没有这份文件」才算 `Absent`；
+/// 提交不存在、读树或读文件出错一律 `Unavailable`（CI 里算红；codex 第 3 轮 #1）。
+pub fn shm_baseline_at(root: &Path, base: &str) -> Baseline {
+    let Some(commit) = git(
         root,
-        &["show", &format!("{base}:{DIR}/{}", shm::LAYOUT_FILE)],
-    ) {
-        Some(t) => Baseline::Found(base, t),
-        None => Baseline::Absent(base),
+        &["rev-parse", "--verify", "--quiet", &format!("{base}^{{commit}}")],
+    ) else {
+        return Baseline::Unavailable(format!("基线提交 {base} 不存在（CI 要 fetch-depth: 0）"));
+    };
+    let path = format!("{DIR}/{}", shm::LAYOUT_FILE);
+    match git(root, &["ls-tree", "--name-only", &commit, "--", &path]) {
+        None => Baseline::Unavailable(format!("读不了 {commit} 的文件树")),
+        Some(listed) if listed.is_empty() => Baseline::Absent(commit),
+        Some(_) => match git(root, &["show", &format!("{commit}:{path}")]) {
+            Some(t) => Baseline::Found(commit, t),
+            None => Baseline::Unavailable(format!("{commit} 上有 {path}，但读不出来")),
+        },
     }
 }
