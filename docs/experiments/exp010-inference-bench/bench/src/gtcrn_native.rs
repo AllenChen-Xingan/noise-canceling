@@ -239,6 +239,8 @@ pub enum Kind {
     Scalar,
     V2,
     V2Fast,
+    /// 研究 020 第二批（D79，按能效核写）：v2-fast 的算子 + 倒数代替除法 + 深度卷积 / LayerNorm / ERB 向量化
+    V3,
 }
 
 trait Kern {
@@ -287,6 +289,7 @@ impl Kern for Scalar {
 }
 
 pub mod v2;
+pub mod v3;
 
 // ───────────────────────── 积木 ─────────────────────────
 
@@ -1334,8 +1337,9 @@ impl GtcrnNative {
     pub fn infer_probed<P: Probe>(&mut self, re: &mut [f32], im: &mut [f32], p: &mut P) {
         match self.kind {
             Kind::Scalar => self.infer_impl::<Scalar, P>(re, im, p),
-            Kind::V2 => self.infer_impl::<v2::V2<false>, P>(re, im, p),
-            Kind::V2Fast => self.infer_impl::<v2::V2<true>, P>(re, im, p),
+            Kind::V2 => self.infer_impl::<v2::V2<{ v2::NL_LIBM }>, P>(re, im, p),
+            Kind::V2Fast => self.infer_impl::<v2::V2<{ v2::NL_DIV }>, P>(re, im, p),
+            Kind::V3 => self.infer_impl::<v3::V3, P>(re, im, p),
         }
     }
 

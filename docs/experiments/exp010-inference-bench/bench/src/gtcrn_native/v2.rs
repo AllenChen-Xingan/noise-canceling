@@ -10,7 +10,7 @@
 //! - GRU：Wi、Wh 预先转置成 [输入][3H]，按输入逐个广播做向量乘加（无横向求和）；
 //!   新状态 h' = n + z·(h − n)（与 (1−z)·n + z·h 相等，少一次乘）
 //! - 全连接：同 GRU，权重转置后按输入广播
-//! - 非线性：`FAST = false` 用 libm（逐道），`FAST = true` 用向量化的 Cephes 式 exp（与标量 exp_fast 同系数）
+//! - 非线性：`NL_LIBM` 用 libm（逐道）；`NL_DIV` 用向量化的 Cephes 式 exp（与标量 exp_fast 同系数）+ 除法；`NL_RCP` 同 exp + 倒数估计与牛顿迭代（v3 用）
 //! 每帧零分配：缓冲都在构造时分配好（`ConvF::ph`、`DeconvF::xp`），其余是栈上定长数组。
 
 use super::*;
