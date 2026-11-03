@@ -39,14 +39,16 @@
 )]
 
 #[cfg(all(feature = "loom", feature = "posix"))]
-compile_error!("feature loom 只能配 --no-default-features（loom 的原子量不能放进 mmap 的共享内存）");
+compile_error!(
+    "feature loom 只能配 --no-default-features（loom 的原子量不能放进 mmap 的共享内存）"
+);
 
 mod bus;
 pub mod layout;
-pub mod sync;
 #[cfg(all(unix, feature = "posix"))]
 mod owned;
 mod region;
+pub mod sync;
 mod wait;
 mod wake;
 

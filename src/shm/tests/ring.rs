@@ -167,6 +167,4 @@ fn drift_full_ring_realigned_by_discard() {
     assert_eq!(r.available(), target);
 }
 
-#[test]
-#[ignore = "待实现：loom 模型检查 SPSC 协议（本批不做）"]
-fn loom_spsc() {}
+// loom 模型检查已在 tests/loom.rs（cargo test -p vdn-shm --no-default-features --features loom --test loom --release）

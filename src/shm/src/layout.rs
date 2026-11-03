@@ -11,8 +11,8 @@
 //! 全部字段都是原子量：另一个进程随时可能在读写，这里不出现普通字段，也就不需要对「对方写了一半」做假设。
 //! 读写索引是单调递增的 u64（每秒 48 000 样本，约 1200 万年才回绕），可用量 = write − read。
 
-use core::mem::{align_of, offset_of, size_of};
 use crate::sync::{AtomicU32, AtomicU64};
+use core::mem::{align_of, offset_of, size_of};
 
 /// 数值读作 ASCII "VDN_SHM1"（按本机小端存，十六进制工具里看到的字节是倒序的）。0 = 创建方还没写完头。
 pub const MAGIC: u64 = 0x5644_4E5F_5348_4D31;
@@ -103,8 +103,17 @@ impl Header {
         let u = || AtomicU64::new(0);
         let w = || AtomicU32::new(0);
         let ring = || RingHdr {
-            prod: ProdLine { write: u(), overflow: u(), wake: w() },
-            cons: ConsLine { read: u(), underrun: u(), wait_fallbacks: u(), gaps: u() },
+            prod: ProdLine {
+                write: u(),
+                overflow: u(),
+                wake: w(),
+            },
+            cons: ConsLine {
+                read: u(),
+                underrun: u(),
+                wait_fallbacks: u(),
+                gaps: u(),
+            },
         };
         Self {
             config: ConfigLine {

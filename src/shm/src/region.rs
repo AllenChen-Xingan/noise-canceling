@@ -3,15 +3,15 @@
 
 #![allow(unsafe_code)] // 白名单 crate（metadata.vdn.unsafe = true）；每个 unsafe 块带 SAFETY
 
-#[cfg(not(feature = "loom"))]
-pub(crate) use real::*;
 #[cfg(feature = "loom")]
 pub(crate) use model::Region;
+#[cfg(not(feature = "loom"))]
+pub(crate) use real::*;
 
 #[cfg(not(feature = "loom"))]
 mod real {
-    use core::ptr::NonNull;
     use crate::sync::AtomicU32;
+    use core::ptr::NonNull;
     use std::alloc::Layout;
 
     use crate::ShmError;
@@ -143,7 +143,8 @@ mod real {
 
         /// 新建（已存在则报 `AlreadyExists`），大小 `len`，权限 0600（只有同一用户能打开；发版前换 Mach 服务交接，009 待人拍板 3）。
         pub(crate) fn create(name: &CString, len: usize) -> Result<Region, ShmError> {
-            let off = libc::off_t::try_from(len).map_err(|_| ShmError::InvalidConfig("区域过大"))?;
+            let off =
+                libc::off_t::try_from(len).map_err(|_| ShmError::InvalidConfig("区域过大"))?;
             // SAFETY: name 是以 NUL 结尾的 C 字符串；shm_open 是可变参数函数，mode 按 c_uint 传。
             let fd = unsafe {
                 libc::shm_open(
@@ -234,7 +235,10 @@ mod model {
 
     impl Region {
         pub(crate) fn heap(len: usize) -> Result<Self, ShmError> {
-            let n = len.checked_sub(HEADER_BYTES).ok_or(ShmError::InvalidConfig("区域小于头部"))? / SLOT_BYTES;
+            let n = len
+                .checked_sub(HEADER_BYTES)
+                .ok_or(ShmError::InvalidConfig("区域小于头部"))?
+                / SLOT_BYTES;
             Ok(Self {
                 header: Box::new(Header::new_zeroed()),
                 slots: (0..n).map(|_| AtomicU32::new(0)).collect(),

@@ -24,10 +24,10 @@ pub(crate) enum Outcome {
 #[cfg(all(target_os = "macos", not(miri), not(feature = "loom")))]
 mod imp {
     use super::Outcome;
-    use core::ffi::c_void;
-    use core::sync::atomic::Ordering::{Acquire, Release};
     use crate::sync::AtomicU32;
+    use core::ffi::c_void;
     use core::sync::atomic::AtomicPtr;
+    use core::sync::atomic::Ordering::{Acquire, Release};
     use std::sync::Once;
 
     /// `int os_sync_wait_on_address_with_timeout(void *addr, uint64_t value, size_t size, uint32_t flags, os_clockid_t clockid, uint64_t timeout_ns)`
