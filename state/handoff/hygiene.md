@@ -6,8 +6,7 @@
 
 1. **单文件 600 行上限进 tidy（R-SIZE）**：`src/xtask/src/file_size.rs`
    - 扫 `src/**/*.rs`（交代原文的范围；不扫 `docs/experiments/` 下的基准程序）。基线 14 条比扫描报告的 16 条少，原因：报告扫的是 #60 之前的旧检出，范围也含 `src/` 之外；以本仓现状为准
-   - 基线正本 `src/xtask/file-size-baseline.txt`（只此一份）。新文件超 600 行 → 红；基线文件变大 → 红；基线条目作废（文件删了或已 ≤ 600）→ 红；变小但仍超线 → 只出注释（并行的线改同一文件时不互相卡红）
-   - 新子命令 `cargo run -p xtask -- size-baseline`：只降不升地收紧基线
+   - 过渡期用过只降不升的基线与 `size-baseline` 子命令；2026-11-03 存量拆完后删掉，R-SIZE 改成硬上限（人定不设基线）
    - 拆完 cli 后基线 14 → 11 条
 2. **cli 的同名不同物**：三个 `Verdict` 意思不同（读源码）——
    - `vdn-eval::Verdict`：评测器三态「过 / 不过 / 不知道」
@@ -38,8 +37,7 @@
 
 ## 剩下（等别的线）
 
-- 99 的 #64 / #65 合并后：merge main，跟着 single_source.rs 改名（no_mirror.rs / param_range.rs）改引用；那时 stages.rs / policy.rs 的 6 处采样率字面量应已改掉
-- 最后一步：R-SIZE 改硬上限，删基线文件、`size-baseline` 子命令、放宽机制
+- ✅ 2026-11-03：#65 已合并（8d 提交合并 f0addc43）；引用改到 no_mirror / param_range / scan；R-SIZE 改硬上限，删了基线文件、`size-baseline` 子命令、放宽机制
 - codex 换谱系评审：第 2 轮进行中（`docs/reviews/062_code-hygiene-codex.md`）
 
 ## 第二段原始待办（已办）

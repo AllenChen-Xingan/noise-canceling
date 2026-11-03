@@ -12,6 +12,7 @@
   - R-PARAM 只按行查，rustfmt 拆行后查不到
   - R-MIRROR 只比名字
   - R-RATE 查不到算出来的值（`3 * 16_000`）
+- **又多一处文本猜测试范围**：#65 新加的 R-MODEL 用 `src/xtask/src/test_scope.rs` 判断「哪些代码属于测试」，同样是文本猜结构，#62 那 9 个绕过点对它多半也成立。这次不动，实现第 1 步建好模块树后一并替换（见八）。
 - **不是重写一切**：只把「要懂 Rust 结构」的判断换成语法树。纯文本就够的规则（`.gitignore`、Cargo 元数据、行数）不动。
 
 ## 二、总体做法
@@ -150,7 +151,7 @@
 
 | # | 写法 | 来源 |
 |---|---|---|
-| P1 | `x.floor_db.clamp(\n    -60.0,\n    0.0,\n)`（rustfmt 拆行） | single_source.rs 文件头边界 |
+| P1 | `x.floor_db.clamp(\n    -60.0,\n    0.0,\n)`（rustfmt 拆行） | param_range.rs 文件头边界（原 single_source.rs，#65 拆名） |
 | P2 | `let r = -60.0..0.0;` 后用 `floor_db` 比 | 同上（只在同一表达式子树内查，这条预期仍查不到，写成 `#[ignore]` 记录限制） |
 | P3 | 非测试代码里 `Polish { floor_db: -12.0, .. }` | AST 报告方向 8「R-PARAM 加查默认值字面量」 |
 | M1 | vdn-types 外 `struct Frame { … }`，结构与正本相同 | R-MIRROR 原规则 |
@@ -199,7 +200,7 @@
 | 步 | 内容 | 验收 |
 |---|---|---|
 | 0 | 等 #62、#65 合并；merge main | — |
-| 1 | `ast/parse.rs` + `ast/modtree.rs` + 测试识别（三.1），负例 T1–T14 | 测试全绿；对真仓列出全部测试文件，人工抽查 |
+| 1 | `ast/parse.rs` + `ast/modtree.rs` + 测试识别（三.1），负例 T1–T14；R-MODEL 的 `test_scope.rs` 改用模块树 | 测试全绿；对真仓列出全部测试文件，人工抽查 |
 | 2 | R-RATE 换实现（三.2），R1–R8 | `tidy --compare` 差异表 |
 | 3 | R3 换实现（三.5），S1–S4；禁用清单改读 clippy.toml | 同上 |
 | 4 | R-PARAM、R-MIRROR 换实现（三.3、三.4），P1–P3、M1–M3 | 同上 |
