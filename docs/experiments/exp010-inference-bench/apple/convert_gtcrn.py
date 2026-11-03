@@ -21,6 +21,8 @@ os.makedirs(out, exist_ok=True)
 sys.path.insert(0, src)
 sys.modules.setdefault("einops", types.SimpleNamespace(rearrange=None))  # 源码 import 了但没用
 import coremltools as ct  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ct_compat  # noqa: E402,F401  coremltools 9.0 × numpy 2.5 补丁
 from gtcrn import GTCRN  # noqa: E402
 from gtcrn_stream import StreamGTCRN  # noqa: E402
 from modules.convert import convert_to_stream  # noqa: E402

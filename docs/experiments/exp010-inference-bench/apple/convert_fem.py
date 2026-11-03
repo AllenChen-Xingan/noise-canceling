@@ -19,6 +19,8 @@ os.chdir(src)  # 上游代码按仓库根目录相对导入
 import importlib.util, types  # noqa: E402
 
 import coremltools as ct  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ct_compat  # noqa: E402,F401  coremltools 9.0 × numpy 2.5 补丁
 
 # 只要 hparams 一个文件：utils/__init__ 会拉进训练用的画图、评测依赖；librosa 只在 mel 滤波器里用到，导出图不走那里
 sys.modules.setdefault("librosa", types.ModuleType("librosa"))
