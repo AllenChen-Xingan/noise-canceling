@@ -42,11 +42,11 @@ fn int_range(format: &str) -> Option<(Value, Value)> {
     let isize_min = i64::try_from(isize::MIN).unwrap_or(i64::MIN);
     let isize_max = i64::try_from(isize::MAX).unwrap_or(i64::MAX);
     Some(match format {
-        "uint8" => (0.into(), u8::MAX.into()),
-        "uint16" => (0.into(), u16::MAX.into()),
-        "uint32" => (0.into(), u32::MAX.into()),
-        "uint64" => (0.into(), u64::MAX.into()),
-        "uint" => (0.into(), usize_max.into()),
+        "uint8" => (0_u64.into(), u8::MAX.into()),
+        "uint16" => (0_u64.into(), u16::MAX.into()),
+        "uint32" => (0_u64.into(), u32::MAX.into()),
+        "uint64" => (0_u64.into(), u64::MAX.into()),
+        "uint" => (0_u64.into(), usize_max.into()),
         "int8" => (i8::MIN.into(), i8::MAX.into()),
         "int16" => (i16::MIN.into(), i16::MAX.into()),
         "int32" => (i32::MIN.into(), i32::MAX.into()),
