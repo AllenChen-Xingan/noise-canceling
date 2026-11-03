@@ -19,6 +19,9 @@
 - D69（人定整机 ≤ 1% 核）已写进 standard.md §6.1：降噪推理分 0.50%，手写 GTCRN 0.63% 也超
 - 口径跟 rustbe r5：qos ui、p10/p90、min_frame_snr、NaN 算坏值
 
+- D70（人定：榨干硬件 · 非常低能耗 · 轻量）已写进 standard.md：新 BE-EXHAUST（§7.1 计算单元矩阵）· BE-MEM（常驻内存 ≤ 10 MB）· BE-SIZE ≤ 5 MB · 耗电按每帧 µJ · §6.2 选赢家规则。apple-rs 已加 footprint 字段
+- **收尾必做**：decision.md 第一节写风险④——手写方案已知部分 CPU 合计 ≥ 1.95%，离整机上限 2% 只剩 0.05%（大总管要求）
+
 ## 下一步
 1. 等「名额给你」→ `apple-rs/tools/run-all.sh`；修编译错（第一次编 apple-rs）
 2. MLX 的 Rust 路（mlx-c）+ §9 Rust↔Python 差

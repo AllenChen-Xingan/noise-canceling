@@ -115,7 +115,7 @@
 ## 7. 体积、系统、换模型、微调：`BE-SIZE` · `BE-OS` · `BE-SWAP` · `BE-TRAIN`
 
 - **`BE-SIZE`**：数安装包里因这个后端多出的字节（动态库 / 静态链接增量 + 模型文件）。系统自带框架（Core ML、Accelerate）记 0。ORT 静态链接的增量要实测（`cargo bloat` 或对比带 / 不带 ort 的二进制大小）；如果 ORT 本身就超 5 MB，这条会让 ORT 方案不过，这是有意的（D70「轻量」）。
-- **`BE-MEM`**：`apple-rs` 用 `proc_pid_rusage(RUSAGE_INFO_V4).ri_phys_footprint` 读三次：加载前、预热后、跑完；字段 `footprint_before_mb` / `footprint_warm_mb` / `footprint_end_mb`。判的是「预热后 − 加载前」。跑完比预热后还涨，说明每帧在泄漏或攒缓存，单列报出。rustbe 的程序还没有这三个字段，已请他们加。
+- **`BE-MEM`**：`apple-rs` 用 `proc_pid_rusage(RUSAGE_INFO_V4).ri_phys_footprint` 读三次：加载前、预热后、跑完；字段 `footprint_before_mb` / `footprint_warm_mb` / `footprint_end_mb`。判的是「预热后 − 加载前」。跑完比预热后还涨，说明每帧在泄漏或攒缓存，单列报出。rustbe 的程序已加同名三个字段（MB = 1024²；「加载前」在输入帧备好之后读，所以输入数据本身约 12.7 MB 不进差值）。
 
 ### 7.1 `BE-EXHAUST`：计算单元矩阵（D70）
 
@@ -123,8 +123,8 @@
 
 | 计算单元 | 怎么调 | GTCRN | FE-M |
 |---|---|---|---|
-| CPU 标量 + NEON（自动向量化 / 手写 SIMD） | 手写 Rust（rustbe） | rustbe r4：p50 0.10 ms | 未试：手写版只有 GTCRN（rustbe 判断工作量） |
-| CPU 矩阵单元（AMX / SME2，经 Accelerate 的 BLAS / BNNS） | Accelerate `cblas_sgemm` 等（rustbe）；BNNS Graph 内部也可能用（未证实，`notes/bnns-graph.md`） | 待测（rustbe） | 待测（rustbe） |
+| CPU 标量 + NEON（自动向量化 / 手写 SIMD） | 手写 Rust（rustbe） | rustbe r4：p50 0.10 ms | 未试，rustbe 原因：「FE-M 是备选模型；ORT 跑它 p50 0.36–0.38 ms，只占它 10 ms 预算的 3.8%，最大值 ≤ 1.03 ms。手写一份工作量估计和 GTCRN 相当（GTCRN 手写版约 800 行），要不要做待人定，已列进 rustbe 的待人拍板」。applebe 注：按 D69 它占 ≈ 3.7% 个核，超整机上限（§6.1 风险 3），这条理由在 D69 之后要重估 |
+| CPU 矩阵单元（AMX / SME2，经 Accelerate 的 BLAS / BNNS） | Accelerate `cblas_sgemm` 等（rustbe）；BNNS Graph 内部也可能用（未证实，`notes/bnns-graph.md`） | rustbe 在做：`amx-probe` 子命令，用 GTCRN 实际的 5 种矩阵形状比手写循环与 `cblas_sgemm`，折算每帧总耗时；待名额 | 待定：看 GTCRN 的探测结果再决定（rustbe） |
 | BNNS Graph（CPU 图执行器） | `apple-rs` bnns（applebe） | 待测 | 待测 |
 | Core ML · CPU | `apple-rs` coreml `--units cpu`（applebe） | 待测（fp32 · fp16 · GRU 展开 · 有状态） | 待测 |
 | Core ML · GPU | `--units gpu` | 待测 | 待测 |
