@@ -44,6 +44,38 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
     }
 }
 
+/// 每一行开头所在的内联模块路径（`mod a { mod b { … } }` 里的行是 `["a", "b"]`）。按代码行（字符串已去掉）数花括号。
+fn inline_prefixes(code: &[String]) -> Vec<Vec<String>> {
+    let mut out = Vec::with_capacity(code.len());
+    let mut depth = 0i64;
+    let mut stack: Vec<(String, i64)> = Vec::new();
+    for line in code {
+        out.push(stack.iter().map(|(n, _)| n.clone()).collect());
+        for (k, ch) in line.char_indices() {
+            match ch {
+                '{' => {
+                    depth += 1;
+                    let before: Vec<&str> = line[..k].split_whitespace().collect();
+                    if let [.., kw, name] = before.as_slice()
+                        && *kw == "mod"
+                        && name.chars().all(|c| c.is_alphanumeric() || c == '_')
+                    {
+                        stack.push((name.to_string(), depth));
+                    }
+                }
+                '}' => {
+                    depth -= 1;
+                    while stack.last().is_some_and(|(_, d)| *d > depth) {
+                        stack.pop();
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    out
+}
+
 /// 这一行只有属性（`#[…]`，可连写几个），没有别的代码。
 fn only_attrs(line: &str) -> bool {
     let mut t = line.trim();
@@ -66,6 +98,7 @@ pub fn test_module_files(files: &[(String, String)]) -> Vec<String> {
         // 字符串里写的伪声明不算（codex 012 第 4 轮 #2）
         let code = code_lines(src);
         let raw = strip_comments_keep_strings(src);
+        let prefixes = inline_prefixes(&code);
         let mut i = 0;
         while i < code.len() {
             if !code[i].contains("#[cfg(test)]") {
@@ -116,11 +149,15 @@ pub fn test_module_files(files: &[(String, String)]) -> Vec<String> {
                 dir.join(p)
             } else {
                 let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-                let base = if ["mod", "lib", "main"].contains(&stem) {
+                let mut base = if ["mod", "lib", "main"].contains(&stem) {
                     dir.to_path_buf()
                 } else {
                     dir.join(stem)
                 };
+                // 声明在内联模块 `mod outer { … }` 里：文件在 outer/ 下（codex 012 第 5 轮 #2）
+                for m in prefixes.get(start).into_iter().flatten() {
+                    base = base.join(m);
+                }
                 let flat_file = base.join(format!("{name}.rs"));
                 if files.iter().any(|(r, _)| Path::new(r) == flat_file) {
                     flat_file
@@ -472,6 +509,13 @@ impl ModelId {
                 "const S: &str = \"#[cfg(test)] mod real;\";\nmod real;\n#[path = \"x_tests.rs\"]\n#[cfg(test)]\nmod tests;\n",
             ),
             f("src/b/src/real.rs", ""),
+            // 第 5 轮 #2：内联模块里声明的测试模块在 outer/ 下，根层同名的生产文件不豁免
+            f(
+                "src/c/src/lib.rs",
+                "mod outer {\n    #[cfg(test)]\n    mod real;\n}\nmod real;\n",
+            ),
+            f("src/c/src/real.rs", ""),
+            f("src/c/src/outer/real.rs", ""),
         ];
         let mut got = test_module_files(&files);
         got.sort();
@@ -481,7 +525,8 @@ impl ModelId {
                 "src/a/src/policy_tests.rs",
                 "src/a/src/session/tests.rs",
                 "src/a/src/t2/mod.rs",
-                "src/b/src/x_tests.rs"
+                "src/b/src/x_tests.rs",
+                "src/c/src/outer/real.rs"
             ]
         );
     }
