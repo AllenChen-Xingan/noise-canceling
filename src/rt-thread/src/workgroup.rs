@@ -49,7 +49,12 @@ unsafe extern "C" {
     // libSystem（os/workgroup_object.h · os/workgroup_interval.h · os/object.h）
     fn os_workgroup_join(wg: *mut c_void, token_out: *mut JoinToken) -> c_int;
     fn os_workgroup_leave(wg: *mut c_void, token: *mut JoinToken);
-    fn os_workgroup_interval_start(wg: *mut c_void, start: u64, deadline: u64, data: *mut c_void) -> c_int;
+    fn os_workgroup_interval_start(
+        wg: *mut c_void,
+        start: u64,
+        deadline: u64,
+        data: *mut c_void,
+    ) -> c_int;
     fn os_workgroup_interval_finish(wg: *mut c_void, data: *mut c_void) -> c_int;
     fn os_release(object: *mut c_void);
 }
@@ -83,9 +88,16 @@ impl WorkInterval {
     pub fn create(name: &str) -> Result<Self, RtError> {
         #[cfg(target_os = "macos")]
         {
-            let cname = std::ffi::CString::new(name).map_err(|_| RtError::InvalidParams("名字含 NUL"))?;
+            let cname =
+                std::ffi::CString::new(name).map_err(|_| RtError::InvalidParams("名字含 NUL"))?;
             // SAFETY: cname 以 NUL 结尾、调用期间有效；attr 头文件要求传 NULL；返回已 retain 的对象或 NULL。
-            let wg = unsafe { AudioWorkIntervalCreate(cname.as_ptr(), OS_CLOCK_MACH_ABSOLUTE_TIME, core::ptr::null_mut()) };
+            let wg = unsafe {
+                AudioWorkIntervalCreate(
+                    cname.as_ptr(),
+                    OS_CLOCK_MACH_ABSOLUTE_TIME,
+                    core::ptr::null_mut(),
+                )
+            };
             NonNull::new(wg)
                 .map(|wg| Self { wg })
                 .ok_or(RtError::Unavailable("AudioWorkIntervalCreate 返回空"))
@@ -102,13 +114,24 @@ impl WorkInterval {
         #[cfg(target_os = "macos")]
         {
             let tb = crate::mach_timebase()?;
-            let mut token = Box::new(JoinToken { sig: 0, opaque: [0; 36] });
+            let mut token = Box::new(JoinToken {
+                sig: 0,
+                opaque: [0; 36],
+            });
             // SAFETY: wg 是 create 拿到的有效对象；token 指向可写的 40 字节（与 SDK 结构同布局），离开前地址不变。
             let r = unsafe { os_workgroup_join(self.wg.as_ptr(), &mut *token) };
             if r != 0 {
-                return Err(RtError::Kernel { op: "os_workgroup_join", code: r });
+                return Err(RtError::Kernel {
+                    op: "os_workgroup_join",
+                    code: r,
+                });
             }
-            Ok(Member { wi: self, token, tb, _not_send: PhantomData })
+            Ok(Member {
+                wi: self,
+                token,
+                tb,
+                _not_send: PhantomData,
+            })
         }
         #[cfg(not(target_os = "macos"))]
         {
@@ -128,7 +151,11 @@ impl Drop for WorkInterval {
 }
 
 /// 实时可调：不分配、不加锁；每次一个非阻塞系统调用（头文件写明 interval_start 实时安全）。
-#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Member<'_> {
     /// 本块开始：开始时间 = 现在，截止期 = 现在 + `deadline_ns`。
     pub fn begin(&self, deadline_ns: u64) -> Result<(), RtError> {
@@ -139,9 +166,19 @@ impl Member<'_> {
             let (numer, denom) = self.tb;
             let add = (u128::from(deadline_ns) * u128::from(denom) / u128::from(numer)) as u64;
             // SAFETY: wg 有效；当前线程是成员（Member 只能在加入的线程上存在）；data 头文件要求 NULL。
-            let r = unsafe { os_workgroup_interval_start(self.wi.wg.as_ptr(), now, now.saturating_add(add), core::ptr::null_mut()) };
+            let r = unsafe {
+                os_workgroup_interval_start(
+                    self.wi.wg.as_ptr(),
+                    now,
+                    now.saturating_add(add),
+                    core::ptr::null_mut(),
+                )
+            };
             if r != 0 {
-                return Err(RtError::Kernel { op: "os_workgroup_interval_start", code: r });
+                return Err(RtError::Kernel {
+                    op: "os_workgroup_interval_start",
+                    code: r,
+                });
             }
             Ok(())
         }
@@ -157,9 +194,13 @@ impl Member<'_> {
         #[cfg(target_os = "macos")]
         {
             // SAFETY: wg 有效；当前线程是成员；data 头文件要求 NULL。
-            let r = unsafe { os_workgroup_interval_finish(self.wi.wg.as_ptr(), core::ptr::null_mut()) };
+            let r =
+                unsafe { os_workgroup_interval_finish(self.wi.wg.as_ptr(), core::ptr::null_mut()) };
             if r != 0 {
-                return Err(RtError::Kernel { op: "os_workgroup_interval_finish", code: r });
+                return Err(RtError::Kernel {
+                    op: "os_workgroup_interval_finish",
+                    code: r,
+                });
             }
             Ok(())
         }
@@ -187,9 +228,14 @@ pub fn set_qos_user_interactive() -> Result<(), RtError> {
     #[cfg(target_os = "macos")]
     {
         // SAFETY: 只改当前线程；相对优先级 0 在合法范围 [-15, 0]。
-        let r = unsafe { libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE, 0) };
+        let r = unsafe {
+            libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE, 0)
+        };
         if r != 0 {
-            return Err(RtError::Kernel { op: "pthread_set_qos_class_self_np", code: r });
+            return Err(RtError::Kernel {
+                op: "pthread_set_qos_class_self_np",
+                code: r,
+            });
         }
         Ok(())
     }

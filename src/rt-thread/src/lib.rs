@@ -3,7 +3,9 @@
 //! - `promote_current(RtParams)`：把**当前线程**设成 Mach time-constraint 策略（`thread_policy_set` +
 //!   `THREAD_TIME_CONSTRAINT_POLICY`），送音回调线程与降噪线程启动时各调一次
 //! - `check_current()`：读回当前线程的策略，启动自检用（失败计数并上报，不静默）
-//! - Audio Workgroup 加入（`os_workgroup_join`）：本批返回 `RtError::Unimplemented`
+//! - `WorkInterval`：降噪进程自建音频工作区间（`AudioWorkIntervalCreate` + `os_workgroup_join`），每块 `begin` / `finish` 报截止期，见 `workgroup.rs`
+//! - `set_qos_user_interactive()`：当前线程 QoS 设成「用户交互」（对照用）
+//! - 加入**设备**的 IO 工作组（`join_audio_workgroup`）：只在送音进程里拿得到，属 vdn-io-macos，本 crate 返回 `Unimplemented`
 //!
 //! 时间参数按纳秒给，内部换成 Mach 绝对时间单位（`mach_timebase_info`；Apple Silicon 上 1 单位 = 125/3 ns）。
 //! 非 macOS 一律返回 `Unsupported`。
@@ -82,6 +84,8 @@ pub enum RtError {
     Unsupported,
     /// 本批未实现
     Unimplemented(&'static str),
+    /// 系统没给出要的对象（如 `AudioWorkIntervalCreate` 返回空）
+    Unavailable(&'static str),
 }
 
 impl core::fmt::Display for RtError {
@@ -91,6 +95,7 @@ impl core::fmt::Display for RtError {
             Self::Kernel { op, code } => write!(f, "{op} 失败（kern_return {code}）"),
             Self::Unsupported => write!(f, "本平台不支持 Mach time-constraint"),
             Self::Unimplemented(what) => write!(f, "待实现：{what}"),
+            Self::Unavailable(what) => write!(f, "系统不可用：{what}"),
         }
     }
 }
@@ -123,9 +128,21 @@ pub fn check_current() -> Result<RtStatus, RtError> {
 }
 
 /// 把当前线程加入音频设备 IO 线程的 workgroup（`os_workgroup_join`，跨进程用 `os_workgroup_copy_port`）。
-/// 本批未实现（009 §一.1：周期不一致时有没有用要实验）。
+/// 设备的 IO 工作组要从 `kAudioDevicePropertyIOThreadOSWorkgroup` 拿，只在开着设备 IOProc 的送音进程里有，属 vdn-io-macos；
+/// 本 crate 不依赖 CoreAudio，所以返回 `Unimplemented`。降噪进程用 [`WorkInterval`]（自建工作区间）。
 pub fn join_audio_workgroup() -> Result<(), RtError> {
-    Err(RtError::Unimplemented("Audio Workgroup 加入"))
+    Err(RtError::Unimplemented(
+        "设备 IO 工作组只在送音进程里拿得到（属 vdn-io-macos）；降噪进程用 WorkInterval",
+    ))
+}
+
+mod workgroup;
+pub use workgroup::{Member, WorkInterval, set_qos_user_interactive};
+
+/// (numer, denom)：1 个 Mach 单位 = numer / denom 纳秒。
+#[cfg(target_os = "macos")]
+pub(crate) fn mach_timebase() -> Result<(u64, u64), RtError> {
+    mach::timebase()
 }
 
 #[cfg(target_os = "macos")]
@@ -139,7 +156,7 @@ mod mach {
     };
 
     /// (numer, denom)：1 个 Mach 单位 = numer / denom 纳秒。
-    fn timebase() -> Result<(u64, u64), RtError> {
+    pub(super) fn timebase() -> Result<(u64, u64), RtError> {
         let mut tb = mach_timebase_info_data_t { numer: 0, denom: 0 };
         // SAFETY: tb 是可写的 mach_timebase_info 结构，函数只写它。
         let kr = unsafe { mach_timebase_info(&mut tb) };
