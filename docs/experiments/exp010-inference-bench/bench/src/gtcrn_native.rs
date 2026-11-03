@@ -1174,7 +1174,6 @@ impl GtcrnNative {
     }
 
     fn from_weights(w: &Weights) -> Result<Self, Err> {
-        let w = w;
         let ew = w.get("erb.erb_fc.weight", ERB_HIGH * (BINS - ERB_LOW))?;
         let iw = w.get("erb.ierb_fc.weight", (BINS - ERB_LOW) * ERB_HIGH)?;
         let gt = |i: usize, dil: usize, de: bool| {
@@ -1499,6 +1498,162 @@ mod tests {
                 "DeconvF {cin}->{cout}/{groups} @{fin}"
             );
         }
+    }
+
+    // ── 研究 020：计算量统计的交叉校验（工作量公式 ⟷ 模型实际持有的数组 / 参照实现的循环次数）──
+
+    fn gru_params(g: &Gru) -> usize {
+        g.wi.len() + g.wh.len() + g.bi.len() + g.bh.len()
+    }
+
+    /// 模型实际持有的参数个数：直接数各结构体里的数组长度（与 `Cost` 公式无关）
+    fn param_count(n: &GtcrnNative) -> usize {
+        let sp = |s: &Sparse| s.rows.iter().map(|(_, g)| g.len()).sum::<usize>();
+        let pt = |p: &Point| p.w.len() + p.b.len();
+        let gt = |b: &GtBlock| {
+            pt(&b.p1) + b.dw.len() + b.db.len() + pt(&b.p2) + gru_params(&b.gru) + b.fc.w.len() + b.fc.b.len()
+        };
+        let dp = |d: &Dp| {
+            d.intra.iter().map(gru_params).sum::<usize>()
+                + d.inter.iter().map(gru_params).sum::<usize>()
+                + d.intra_fc.w.len()
+                + d.intra_fc.b.len()
+                + d.inter_fc.w.len()
+                + d.inter_fc.b.len()
+                + d.intra_lnw.len()
+                + d.intra_lnb.len()
+                + d.inter_lnw.len()
+                + d.inter_lnb.len()
+        };
+        sp(&n.erb)
+            + sp(&n.ierb)
+            + n.en0.w.len()
+            + n.en0.b.len()
+            + n.en1.w.len()
+            + n.en1.b.len()
+            + n.en_gt.iter().chain(&n.de_gt).map(gt).sum::<usize>()
+            + n.dp.iter().map(dp).sum::<usize>()
+            + n.de3.w.len()
+            + n.de3.b.len()
+            + n.de4.w.len()
+            + n.de4.b.len()
+    }
+
+    struct Collect(Vec<(&'static str, &'static str, Cost)>);
+    impl Probe for Collect {
+        fn mark(&mut self, b: &'static str, o: &'static str, c: impl FnOnce() -> Cost) {
+            self.0.push((b, o, c()));
+        }
+    }
+
+    #[test]
+    fn cost_weight_bytes_match_model_params() {
+        let mut net = GtcrnNative::from_weights(&Weights::fake(0.01)).unwrap();
+        let (mut re, mut im) = (rnd(BINS, 7), rnd(BINS, 8));
+        let mut p = Collect(Vec::new());
+        net.infer_probed(&mut re, &mut im, &mut p);
+        let total = p.0.iter().fold(Cost::default(), |a, (_, _, c)| a + c.clone());
+        assert_eq!(total.w_bytes, 4 * param_count(&net) as u64, "Cost 的权重字节 ≠ 模型实际参数");
+        // 段名不重复（下界表按 (blk, op) 对行）
+        let mut names: Vec<_> = p.0.iter().map(|(b, o, _)| (*b, *o)).collect();
+        let n = names.len();
+        names.sort();
+        names.dedup();
+        assert_eq!(names.len(), n, "打点段名重复");
+        // 公开的 GTCRN 约 48k 参数（论文 / 仓库自报 23.67k？以实际持有为准，只查量级）
+        assert!((20_000..100_000).contains(&param_count(&net)), "参数个数 {}", param_count(&net));
+    }
+
+    #[test]
+    fn gru_cost_macs_equal_weight_count() {
+        let w = Weights::fake(0.1);
+        for (i, h) in [(8, 4), (8, 8), (8, 16)] {
+            let g = Gru::load(&w, "g", "", i, h).unwrap();
+            assert_eq!(g.step_cost().macs as usize, g.wi.len() + g.wh.len());
+            assert_eq!(g.step_cost().w_bytes as usize, 4 * gru_params(&g));
+        }
+    }
+
+    /// 卷积 / 转置卷积的乘加次数 = 参照实现里真正做乘加的次数（逐元素判断边界的老写法）
+    #[test]
+    fn conv_cost_macs_equal_reference_loop_count() {
+        for (cin, cout, groups, fin) in [(9, 16, 1, F0), (16, 16, 2, F1), (4, 4, 2, 7)] {
+            let cig = cin / groups;
+            let fout = (fin + 2 * 2 - K) / 2 + 1;
+            let c = ConvF {
+                w: vec![0.0; cout * cig * K],
+                b: vec![0.0; cout],
+                cin,
+                cout,
+                groups,
+                fin,
+                fout,
+                alpha: 0.0,
+                col: Vec::new(),
+            };
+            let mut n = 0u64;
+            for _o in 0..cout {
+                for _ci in 0..cig {
+                    for t in 0..K {
+                        for j in 0..fout {
+                            let idx = (j * 2 + t) as isize - 2;
+                            n += u64::from(idx >= 0 && (idx as usize) < fin);
+                        }
+                    }
+                }
+            }
+            assert_eq!(c.cost().macs, n, "ConvF {cin}->{cout}/{groups} @{fin}");
+        }
+        for (cin, cout, groups, fin) in [(16, 16, 2, F2), (16, 2, 1, F1), (4, 4, 2, 5)] {
+            let cog = cout / groups;
+            let fout = (fin - 1) * 2 - 2 * 2 + K;
+            let d = DeconvF {
+                w: vec![0.0; cin * cog * K],
+                b: vec![0.0; cout],
+                cin,
+                cout,
+                groups,
+                fin,
+                fout,
+                alpha: 0.0,
+                tanh: false,
+            };
+            let mut n = 0u64;
+            for _ic in 0..cin {
+                for _ol in 0..cog {
+                    for k in 0..K {
+                        for i in 0..fin {
+                            let j = (i * 2 + k) as isize - 2;
+                            n += u64::from(j >= 0 && (j as usize) < fout);
+                        }
+                    }
+                }
+            }
+            assert_eq!(d.cost().macs, n, "DeconvF {cin}->{cout}/{groups} @{fin}");
+        }
+    }
+
+    /// 打点不改变输出：infer 与 infer_probed（收集工作量）逐位相同
+    #[test]
+    fn probed_infer_bitwise_equal() {
+        BLAS.store(false, std::sync::atomic::Ordering::Relaxed);
+        let w = Weights::fake(0.02);
+        let (mut a, mut b) = (
+            GtcrnNative::from_weights(&w).unwrap(),
+            GtcrnNative::from_weights(&w).unwrap(),
+        );
+        for f in 0..5 {
+            let (mut r1, mut i1) = (rnd(BINS, 10 + f), rnd(BINS, 20 + f));
+            let (mut r2, mut i2) = (r1.clone(), i1.clone());
+            a.infer(&mut r1, &mut i1);
+            b.infer_probed(&mut r2, &mut i2, &mut Collect(Vec::new()));
+            assert!(r1.iter().chain(&i1).zip(r2.iter().chain(&i2)).all(|(x, y)| x.to_bits() == y.to_bits()));
+        }
+    }
+
+    #[test]
+    fn clog2_values() {
+        assert_eq!([1, 2, 3, 4, 5, 8, 9, 33, 528].map(clog2), [0, 1, 2, 2, 3, 3, 4, 6, 10]);
     }
 
     #[test]
