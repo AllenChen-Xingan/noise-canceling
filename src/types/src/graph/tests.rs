@@ -182,9 +182,9 @@ fn content_id_is_stable() {
     // 规范文本的写法是格式的一部分：改了它，所有旧 ID 都会变，要升 FORMAT
     assert_eq!(
         G.canonical_text(),
-        "vdn-graph = 1\nmodel = gtcrn\n[spectral]\nnode = 6 polish-spectral 1 spectral 0 20,21,22,23,27\n\
-         [stages]\nnode = 4 asym-gate 1 time 0 2,10,11,12,13,14,15,16,17,18,19,20,8,9\n\
-         node = 5 polish-agc 1 time 0 24,25,26,27\n"
+        "vdn-graph = 1\nmodel = gtcrn\n[spectral]\nnode = 6 polish-spectral 1 spectral 0 201,202,203,204,208\n\
+         [stages]\nnode = 4 asym-gate 1 time 0 2,101,102,103,104,105,106,107,108,109,110,111,8,9\n\
+         node = 5 polish-agc 1 time 0 205,206,207,208\n"
     );
 }
 
