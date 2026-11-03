@@ -129,7 +129,7 @@
 | Core ML · CPU | `apple-rs` coreml `--units cpu`（applebe） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：fp32 0.39 ms · 展开 0.21 ms · 每帧约 300 次 malloc；fp16 54 dB 不过；有状态版转不了（coremltools 报错） | 未试：同上（转不了） |
 | Core ML · GPU | `--units gpu` | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：耗时同 CPU；`MLComputePlan` 显示所有算子都落在 CPU，GPU 没被用上 | 未试：同上 |
 | Core ML · 神经引擎 | `--units ane`（只算 fp16） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：所有算子都落在 CPU（`MLComputePlan`），神经引擎没被用上；fp16 54 dB 不过 | 未试：同上 |
-| MLX · CPU / GPU | `.mlxfn` 经 mlx-c（applebe）；Python 版只作对照 | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：Python 调 CPU 5.7–6.2 ms、GPU 6.2 ms，每帧 7–10 万次分配，134.9 dB；**Rust 经 mlx-c 待做** | 未试：GTCRN 上已慢 15 倍，FE-M 不做 MLX 版 |
+| MLX · CPU / GPU | `.mlxfn` 经 mlx-c（applebe）；Python 版只作对照 | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：Python 调 CPU 5.7–6.2 ms、GPU 6.2 ms，每帧 7–10 万次分配，134.9 dB。**Rust 经 mlx-c 不测**，原因：Python 版已比 ORT 慢 15 倍、每帧 7–10 万次分配；MLX 每帧建图 + `eval` 要加锁、等后台线程（`notes/mlx.md` §3），换 Rust 只省掉 Python 解释器那一层，补不回 15 倍，也过不了 `BE-RT-ALLOC`【推断】；另要先在无 Metal 编译器的本机编 mlx-c。大总管同意（2026-11-02） | 未试：GTCRN 上已慢 15 倍，FE-M 不做 MLX 版 |
 | Metal 手写核 | 无 | 未试：每帧派发约 0.1 ms 的固定开销已大于手写 Rust 整帧（`notes/mlx.md` §2），先由 Core ML GPU / MLX GPU 的实测证实或推翻，再决定写不写 | 同左 |
 | ORT（基线） | rustbe | r4 | r4 |
 | tract（纯 Rust ONNX） | rustbe | r4 | r4 |

@@ -337,8 +337,8 @@ fn bench(o: &Opts) -> Result<(), String> {
 \"footprint_before_mb\":{fp0:.2},\"footprint_warm_mb\":{fp1:.2},\"footprint_end_mb\":{fp2:.2},\"parity_frames\":{pn},\"parity_max_abs\":{max_abs:.3e},\"parity_worst_frame\":{worst},\"parity_snr_db\":{:.2},\
 \"parity_min_frame_snr_db\":{min_frame_snr:.2},\"parity_nonfinite_values\":{nonfinite_values},\"parity_first_bad\":\"{first_bad:?}\",\"extra\":{extra}}}",
         kind.name(),
-        _wg.is_some(),
         std::path::Path::new(model_path).file_name().map(|s| s.to_string_lossy()).unwrap_or_default(),
+        _wg.is_some(),
         pct(&times, 0.10),
         pct(&times, 0.50),
         pct(&times, 0.90),
