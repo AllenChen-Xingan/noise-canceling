@@ -53,7 +53,33 @@ info = {"onnx": src, "onnx_sha256": hashlib.sha256(open(src, "rb").read()).hexdi
         "onnxruntime": ort.__version__, "torch": torch.__version__, "coremltools": ct.__version__,
         "ort_python_ms": {"p50": round(float(ts[N // 2]), 3), "max": round(float(ts[-1]), 3)}}
 
-tm = convert(onnx.load(src)).eval()
+def constants_to_initializers(m):
+    """onnx2torch 不收「Clip 的 min/max 来自 Constant 节点」（报 Dynamic value of min/max）。把这些 Constant 节点的值
+    搬成 initializer（同名），图的计算不变。"""
+    from onnx import numpy_helper
+    g = m.graph
+    have = {i.name for i in g.initializer}
+    consts = {}
+    for n in g.node:
+        if n.op_type == "Constant":
+            for at in n.attribute:
+                if at.name == "value":
+                    consts[n.output[0]] = numpy_helper.to_array(at.t)
+    used = {name for n in g.node if n.op_type == "Clip" for name in list(n.input)[1:] if name}
+    moved = 0
+    for name in used:
+        if name in consts and name not in have:
+            g.initializer.append(numpy_helper.from_array(consts[name], name))
+            moved += 1
+    keep = [n for n in g.node if not (n.op_type == "Constant" and n.output[0] in used and n.output[0] in consts)]
+    del g.node[:]
+    g.node.extend(keep)
+    return m, moved
+
+
+om, moved = constants_to_initializers(onnx.load(src))
+info["clip_constants_moved"] = moved
+tm = convert(om).eval()
 with torch.no_grad():
     tr = torch.jit.trace(tm, (torch.from_numpy(x[0]),), check_trace=False)
     d = max(float(np.abs(tr(torch.from_numpy(x[i])).numpy().reshape(-1) - ys[i]).max()) for i in range(5))
