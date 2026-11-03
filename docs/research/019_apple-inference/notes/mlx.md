@@ -57,9 +57,10 @@ MLX **能表达** GTCRN 和 FE-M（GTCRN 已有第三方逐帧移植），也**�
 - GPU 上的 compile 生成 Metal 源码运行时编译，首次调用慢【官方】`compile.rst:43`
 
 **套到 GTCRN 上**【推断】：
-- GTCRN 的帧内 GRU 沿 33 个频点双向扫，共 2 个 DPGRNN 块，组 GRU 再拆 2 组。按 `nn.GRU` 写法，一帧约 2 × 2 × 2 × 33 = 264 个时间步，每步约 6–10 个原语，**每帧上千个小算子**。ORT 里这是几个融合的 `GRU` 节点
+- GTCRN 的帧内 GRU 沿 33 个频点双向扫，共 2 个 DPGRNN 块，组 GRU 再拆 2 组。按 `nn.GRU` 写法，一帧约 2 × 2 × 2 × 33 = 264 个时间步，每步约 12–15 个图节点（见 §1），**每帧约 3000–4000 个小算子**。每步的矩阵很小：帧内 GRNN 隐层 8，分 2 组后每组每方向只有 4（`res:gtcrn/stream/gtcrn_stream.py:171-172,202`）。另有跨帧 GRU 2 块 × 2 组各 1 步，以及 TRA 注意力里的 GRU（`gtcrn_stream.py:82`，缓存 `tra [2,3,1,1,16]` 提示共 6 个）各 1 步，再加约 10 步。ORT 里这些是 `GRU` 节点，时间步循环在 ORT 的 C++ 内核里跑，不经图调度【推断：没打开 ONNX 数节点】
+- 不写内核也能少一半以上：两组、两个方向的权重不同，但可以叠成一次批量 matmul（`mx.matmul` 带批维）或块对角矩阵。这样串行步数从 264 降到 2 块 × 33 = 66 步。数学等价，但累加顺序变了，逐值不一定一致【推断】
 - GPU 路线：每帧至少一次约 0.1 ms 量级的同步，加上千次编码、二三十次命令缓冲提交。今天 ORT CPU p50 约 0.4 ms，**GPU 路线大概率更慢**
-- CPU 路线：上千次 `std::function` 跨线程入队，每次带锁和堆分配，量级上和 ORT 的「每帧 1554 次 malloc」同类甚至更多。没有证据说它更快
+- CPU 路线：每个算子在调用线程上先分配输出缓冲（如 `binary_op_cpu` 里的 `set_binary_op_output_data`），再至少入队 2 次：一次是计算，一次是释放输入引用的空任务（`mlx/backend/cpu/eval.cpp:38-51`）；每 10 次还多入队一次完成通知（`encoder.h` 的 `DISPATCHES_PER_TASK = 10`）。每次入队都加锁、`std::function` 堆分配、`notify_one`，可能唤醒后台线程【源码，本地 main 版核过，v0.32.4 同名文件在 scratchpad 下载核对过结构】。一帧几千个算子就是上万次入队。量级上比 ORT 的「每帧 1554 次 malloc」只多不少。没有证据说它更快【推断】
 - 唯一可能翻盘的写法：用 `mx.fast.metal_kernel` 手写**一个融合整段 GRU 循环的内核**（社区有 mlx-recurrence 这种做法，见 https://origin-devforums.apple.com/forums/profile/paulderr 相关帖，未读到数字），再把其余部分 compile。那时一帧可能只剩几十个派发 + 一次同步，下限仍是那 ~0.1 ms 的同步
 - **逐帧 vs 整段批处理**：批处理时 GRU 跨帧那一维仍要逐帧，但帧内的卷积、频点 GRU 可以按帧批起来，固定开销被摊薄。差距多大**未量化**，要测（见「基准要测什么」）
 
@@ -71,7 +72,7 @@ MLX **能表达** GTCRN 和 FE-M（GTCRN 已有第三方逐帧移植），也**�
 1. **分配**：每个算子建图节点（`shared_ptr`）、每次 eval 建哈希表、每个算子一个 `std::function` 和一个 `unordered_set`（见 §2 的行号）。这些是普通堆分配，和 ORT arena 不同，**没法预热消掉**【源码】
 2. **缓冲区缓存**：Metal 分配器先查缓存，命中就复用；不命中才 `newBuffer` `mlx/backend/metal/allocator.cpp:129-152`。稳态下大多能命中【推断】。v0.32.0 起无 GPU 的 CPU 分配器也有缓存【官方】https://github.com/ml-explore/mlx/releases
 3. **锁**：分配器全局互斥锁 `allocator.cpp:129`；调度器互斥锁 `mlx/scheduler.h:36-50`；每个流的队列锁 `scheduler.cpp:78-91`；取流线程时的读写锁 `scheduler.cpp:148-161`【源码】
-4. **后台线程 + 跨线程等待**：CPU 流的活**不在调用线程上跑**，而在 MLX 自己起的 `std::thread` 上跑 `scheduler.cpp:42-76`。这个线程用默认优先级，MLX 不暴露设置接口【源码；「不暴露」是推断】。我们的推理线程要阻塞等它，形成**优先级反转**：系统一忙，尾部就由这个普通线程的调度决定【推断】。GPU 流则阻塞在 `waitUntilCompleted` 或事件上
+4. **后台线程 + 跨线程等待**：CPU 流的**算术**不在调用线程上跑，而在 MLX 自己起的 `std::thread` 上跑 `scheduler.cpp:42-76`。怀疑派更正：原文写「活不在调用线程上跑」太绝对。实际是各算子的 `eval_cpu`（形状推导、输出缓冲分配）在调用线程上跑，只有计算闭包经 `encoder.dispatch` 交给后台线程【源码】`mlx/backend/cpu/eval.cpp:24-35`、`binary.h`（main 版）。所以分配同时发生在两条线程上。这个线程用默认优先级，MLX 不暴露设置接口【源码；「不暴露」是推断】。我们的推理线程要阻塞等它，形成**优先级反转**：系统一忙，尾部就由这个普通线程的调度决定【推断】。GPU 流则阻塞在 `waitUntilCompleted` 或事件上
 5. **GPU 抖动**：GPU 由窗口服务器、视频会议的渲染、浏览器共用；Metal 计算队列创建时没设优先级 `device.cpp:331`【源码】。GPU 空闲降频后再唤醒、别的应用占 GPU，都会拉长 p99.9 / max【推断，未找到公开测量】
 6. **异常与错误**：错误以 C++ 异常在流线程里存起来、下次同步时抛 `scheduler.cpp:101-114`；mlx-c 把异常转成错误回调 `mlx-c:mlx/c/error.h:15-20`【源码】
 
