@@ -229,6 +229,53 @@ pub trait Probe {
 pub struct NoProbe;
 impl Probe for NoProbe {}
 
+// ───────────────────── 算子写法（研究 020）─────────────────────
+// 模型结构（层的顺序、连接、状态）只在 `infer_impl` / `GtBlock::run` / `Dp::run` 里写一份；
+// 各算子怎么算由 `Kern` 决定：`Scalar` = 原写法（逐位不变），`v2::V2<FAST>` = NEON 重写（研究 020）。
+
+/// 用哪组算子写法（构造后设一次，`infer` 每帧开头按它分派一次）
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Kind {
+    Scalar,
+    V2,
+    V2Fast,
+}
+
+trait Kern {
+    fn point(p: &Point, x: &[f32], y: &mut [f32], f: usize);
+    fn conv(c: &mut ConvF, x: &[f32], y: &mut [f32]);
+    fn deconv(d: &mut DeconvF, x: &[f32], y: &mut [f32]);
+    fn gru(g: &Gru, x: &[f32], h: &mut [f32]);
+    fn linear(l: &Linear, x: &[f32], y: &mut [f32]);
+}
+
+/// 原写法
+struct Scalar;
+impl Kern for Scalar {
+    #[inline(always)]
+    fn point(p: &Point, x: &[f32], y: &mut [f32], f: usize) {
+        p.run(x, y, f)
+    }
+    #[inline(always)]
+    fn conv(c: &mut ConvF, x: &[f32], y: &mut [f32]) {
+        c.run(x, y)
+    }
+    #[inline(always)]
+    fn deconv(d: &mut DeconvF, x: &[f32], y: &mut [f32]) {
+        d.run(x, y)
+    }
+    #[inline(always)]
+    fn gru(g: &Gru, x: &[f32], h: &mut [f32]) {
+        g.step(x, h)
+    }
+    #[inline(always)]
+    fn linear(l: &Linear, x: &[f32], y: &mut [f32]) {
+        l.run(x, y)
+    }
+}
+
+pub mod v2;
+
 // ───────────────────────── 积木 ─────────────────────────
 
 // ── 可选：内联多项式 exp（后端名 native-fast）──
@@ -812,11 +859,11 @@ impl GtBlock {
     }
 
     /// `x`：[16][33] → `y`：[16][33]
-    fn run<P: Probe>(&mut self, x: &[f32], y: &mut [f32], p: &mut P, blk: &'static str) {
+    fn run<K: Kern, P: Probe>(&mut self, x: &[f32], y: &mut [f32], p: &mut P, blk: &'static str) {
         let f = F2;
         // x1 = 前 8 通道 → SFE → 24 通道
         sfe3(&x[..CH * f], CH, f, &mut self.sfe);
-        self.p1.run(&self.sfe, &mut self.h1, f);
+        K::point(&self.p1, &self.sfe, &mut self.h1, f);
         for v in self.h1.iter_mut() {
             *v = prelu(*v, self.a1);
         }
@@ -875,7 +922,7 @@ impl GtBlock {
                 ..Cost::default()
             }
         });
-        self.p2.run(&self.h2, &mut self.h3, f);
+        K::point(&self.p2, &self.h2, &mut self.h3, f);
         p.mark(blk, "point2", || self.p2.cost(f));
         // TRA
         let mut zt = [0.0f32; CH];
@@ -886,9 +933,9 @@ impl GtBlock {
                 .sum::<f32>()
                 / f as f32;
         }
-        self.gru.step(&zt, &mut self.hstate);
+        K::gru(&self.gru, &zt, &mut self.hstate);
         let mut at = [0.0f32; CH];
-        self.fc.run(&self.hstate, &mut at);
+        K::linear(&self.fc, &self.hstate, &mut at);
         // shuffle：y[2c] = h1[c]*at[c]，y[2c+1] = x2[c]
         for c in 0..CH {
             let a = sigmoid(at[c]);
@@ -976,7 +1023,7 @@ impl Dp {
     }
 
     /// 原地：`feat` [16][33]
-    fn run<P: Probe>(&mut self, feat: &mut [f32], p: &mut P, blk: &'static str) {
+    fn run<K: Kern, P: Probe>(&mut self, feat: &mut [f32], p: &mut P, blk: &'static str) {
         // 转成 [F][C]
         for c in 0..C {
             for f in 0..F2 {
@@ -988,12 +1035,12 @@ impl Dp {
             let (fw, bw) = (&self.intra[2 * grp], &self.intra[2 * grp + 1]);
             let mut h = [0.0f32; 4];
             for f in 0..F2 {
-                fw.step(&self.xt[f * C + grp * CH..f * C + grp * CH + CH], &mut h);
+                K::gru(fw, &self.xt[f * C + grp * CH..f * C + grp * CH + CH], &mut h);
                 self.y[f * C + grp * CH..f * C + grp * CH + 4].copy_from_slice(&h);
             }
             let mut h = [0.0f32; 4];
             for f in (0..F2).rev() {
-                bw.step(&self.xt[f * C + grp * CH..f * C + grp * CH + CH], &mut h);
+                K::gru(bw, &self.xt[f * C + grp * CH..f * C + grp * CH + CH], &mut h);
                 self.y[f * C + grp * CH + 4..f * C + grp * CH + 8].copy_from_slice(&h);
             }
         }
@@ -1011,8 +1058,11 @@ impl Dp {
             fc_batch(&self.intra_fc, &self.y, &mut self.z);
         } else {
             for f in 0..F2 {
-                self.intra_fc
-                    .run(&self.y[f * C..(f + 1) * C], &mut self.z[f * C..(f + 1) * C]);
+                K::linear(
+                    &self.intra_fc,
+                    &self.y[f * C..(f + 1) * C],
+                    &mut self.z[f * C..(f + 1) * C],
+                );
             }
         }
         p.mark(blk, "intra_fc", || scale(self.intra_fc.cost(), F2 as u64, 1, 1));
@@ -1022,10 +1072,11 @@ impl Dp {
         for f in 0..F2 {
             for grp in 0..2 {
                 let r = f * C + grp * CH..f * C + grp * CH + CH;
-                self.inter[grp].step(&self.xt[r.clone()], &mut self.cache[r.clone()]);
+                K::gru(&self.inter[grp], &self.xt[r.clone()], &mut self.cache[r.clone()]);
             }
             if !blas() {
-                self.inter_fc.run(
+                K::linear(
+                    &self.inter_fc,
                     &self.cache[f * C..(f + 1) * C],
                     &mut self.z[f * C..(f + 1) * C],
                 );
@@ -1166,6 +1217,7 @@ pub struct GtcrnNative {
     d3: Vec<f32>,     // [16][65]
     d4: Vec<f32>,     // [2][129]
     m: Vec<f32>,      // [2][257]
+    kind: Kind,
 }
 
 impl GtcrnNative {
@@ -1209,6 +1261,7 @@ impl GtcrnNative {
             d3: vec![0.0; C * F1],
             d4: vec![0.0; 2 * F0],
             m: vec![0.0; 2 * BINS],
+            kind: Kind::Scalar,
         })
     }
 
@@ -1228,6 +1281,18 @@ impl GtcrnNative {
 
     /// 同 `infer`，每段计算之后打一次点（研究 020 逐层计时与下界分析）。层的顺序与名字的正本在这里。
     pub fn infer_probed<P: Probe>(&mut self, re: &mut [f32], im: &mut [f32], p: &mut P) {
+        match self.kind {
+            Kind::Scalar => self.infer_impl::<Scalar, P>(re, im, p),
+            Kind::V2 => self.infer_impl::<v2::V2<false>, P>(re, im, p),
+            Kind::V2Fast => self.infer_impl::<v2::V2<true>, P>(re, im, p),
+        }
+    }
+
+    pub fn set_kind(&mut self, k: Kind) {
+        self.kind = k;
+    }
+
+    fn infer_impl<K: Kern, P: Probe>(&mut self, re: &mut [f32], im: &mut [f32], p: &mut P) {
         let bins = BINS as u64;
         // 特征：mag, re, im
         for k in 0..BINS {
@@ -1261,18 +1326,18 @@ impl GtcrnNative {
                 }
         });
         // 编码
-        self.en0.run(&self.feat2, &mut self.e0);
+        K::conv(&mut self.en0, &self.feat2, &mut self.e0);
         p.mark("en0", "conv", || self.en0.cost());
         let [e1, e2, e3, e4] = &mut self.e;
-        self.en1.run(&self.e0, e1);
+        K::conv(&mut self.en1, &self.e0, e1);
         p.mark("en1", "conv", || self.en1.cost());
-        self.en_gt[0].run(e1, e2, p, "en_gt0");
-        self.en_gt[1].run(e2, e3, p, "en_gt1");
-        self.en_gt[2].run(e3, e4, p, "en_gt2");
+        self.en_gt[0].run::<K, P>(e1, e2, p, "en_gt0");
+        self.en_gt[1].run::<K, P>(e2, e3, p, "en_gt1");
+        self.en_gt[2].run::<K, P>(e3, e4, p, "en_gt2");
         // DPGRNN ×2
         self.t0.copy_from_slice(e4);
-        self.dp[0].run(&mut self.t0, p, "dp0");
-        self.dp[1].run(&mut self.t0, p, "dp1");
+        self.dp[0].run::<K, P>(&mut self.t0, p, "dp0");
+        self.dp[1].run::<K, P>(&mut self.t0, p, "dp1");
         // 解码（跳连相加）
         let skip = || Cost {
             other: (C * F2) as u64,
@@ -1282,18 +1347,18 @@ impl GtcrnNative {
         };
         add_into(&mut self.t0, &self.e[3]);
         p.mark("de_gt0", "skip", skip);
-        self.de_gt[0].run(&self.t0, &mut self.t1, p, "de_gt0");
+        self.de_gt[0].run::<K, P>(&self.t0, &mut self.t1, p, "de_gt0");
         add_into(&mut self.t1, &self.e[2]);
         p.mark("de_gt1", "skip", skip);
-        self.de_gt[1].run(&self.t1, &mut self.t0, p, "de_gt1");
+        self.de_gt[1].run::<K, P>(&self.t1, &mut self.t0, p, "de_gt1");
         add_into(&mut self.t0, &self.e[1]);
         p.mark("de_gt2", "skip", skip);
-        self.de_gt[2].run(&self.t0, &mut self.t1, p, "de_gt2");
+        self.de_gt[2].run::<K, P>(&self.t0, &mut self.t1, p, "de_gt2");
         add_into(&mut self.t1, &self.e[0]);
-        self.de3.run(&self.t1, &mut self.d3);
+        K::deconv(&mut self.de3, &self.t1, &mut self.d3);
         p.mark("de3", "skip+deconv", || skip() + self.de3.cost());
         add_into(&mut self.d3, &self.e0);
-        self.de4.run(&self.d3, &mut self.d4);
+        K::deconv(&mut self.de4, &self.d3, &mut self.d4);
         p.mark("de4", "skip+deconv", || {
             let n = (C * F1) as u64;
             self.de4.cost()
