@@ -79,7 +79,7 @@ BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接�
 4. **单线程**：默认多线程，要在编译选项里设 `BNNSGraphCompileOptionsSetTargetSingleThread(opts, true)`（`:192-196`）【官方】。
 5. **优化偏好**：默认是 `Performance`，可以多做编译期工作（`:212-228`）【官方】。
 6. **动态形状**：`BNNSGraphContextSetDynamicShapes` 返回 0 表示形状全确定，1 表示有上界，**返回 2 表示执行时要分配**（`:617-622`）。不能和执行同时调用（`:599`）【官方】。我们的两个模型形状都固定，不需要它【推断】。
-7. **兜底**：如果内部还要分配，可以用 `SetWorkspaceAllocationCallback` 和 `SetOutputAllocationCallback` 换成自己的分配器（`:811-841`、`:843-866`）。可以接到预分配的内存池上【官方】。
+7. **兜底**：如果内部还要分配，可以用 `SetWorkspaceAllocationCallback` 和 `SetOutputAllocationCallback` 换成自己的分配器（`:811-841`、`:843-868`）。可以接到预分配的内存池上【官方】。
 8. **调试开关**：`BNNSGraphContextEnableNanAndInfChecks` 会检查中间张量里的 NaN 和 Inf，头文件注明「Not for use in production code」（`:674-678`）【官方】。
 
 ### 2.3 能不能在音频渲染线程直接调
@@ -118,12 +118,12 @@ BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接�
 
 ### 5.1 C 接口的绑定难度：低
 
-- 头文件只有 4 个，都是纯 C（`H/bnns.h`、`bnns_graph.h`、`bnns_structures.h`、`bnns_constants.h`）。句柄都是 `{void*, size_t}` 小结构体，按值传（`H/bnns_graph.h:48-77`）。`BNNSTensor` 是普通结构体（`H/bnns_structures.h:149-178`）。链接参数是 `-framework Accelerate`【官方】。
+- 头文件只有 4 个，都是纯 C（`H/bnns.h`、`bnns_graph.h`、`bnns_structures.h`、`bnns_constants.h`）。句柄都是 `{void*, size_t}` 小结构体，按值传（`H/bnns_graph.h:48-77`）。`BNNSTensor` 是普通结构体（`H/bnns_structures.h:146-178`）。链接参数是 `-framework Accelerate`【官方】。
 - **坑：符号带版本后缀**。好几个函数用 `__asm__` 改了链接名，比如：
   - `_BNNSGraphCompileFromFile_v2`（`H/bnns_graph.h:308`）
   - `_BNNSGraphContextExecute_v2`（`:740`）
-  - `_BNNSGraphContextGetWorkspaceSize_v2`（`:758`）
-  - `_BNNSGraphContextDestroy_v2`（`:592`）
+  - `_BNNSGraphContextGetWorkspaceSize_v2`（`:759`）
+  - `_BNNSGraphContextDestroy_v2`（`:593`）
 
   27.0 SDK 的 `TBD` 已经删掉了旧的无后缀名，比如 `_BNNSGraphContextExecute`【官方，本机 SDK 比对】。手写 `extern "C"` 时必须照抄 `#[link_name]`。bindgen 能自动带上，下面这个 crate 的生成结果就带着【源码】。
 - **现成 crate**：`apple-accelerate`（docs.rs 上最新 0.4.2）。机器生成的原始绑定里有这些函数：
