@@ -53,7 +53,13 @@ pub fn brace_delta(code: &str) -> i64 {
 /// 文件顶层（花括号深度 0）`#[cfg(test)]` 后面紧跟的 `mod x;` 的模块名。
 /// 注释与字符串里的写法不算（codex 第 2 轮 P1 #2）；内联模块里的声明不认（路径不同，宁可多查）。
 pub fn cfg_test_mod_names(src: &str) -> Vec<String> {
-    let mut out = Vec::new();
+    mod_names(src).0
+}
+
+/// （测试模块名，其他模块名）。其他 = 顶层不带 `#[cfg(test)]` 的 `mod x;`，以及内联模块里的任何 `mod x;`
+/// （路径没解析，按同名保守算生产引用）。
+fn mod_names(src: &str) -> (Vec<String>, Vec<String>) {
+    let (mut test, mut other) = (Vec::new(), Vec::new());
     let mut depth = 0i64;
     let mut prev_cfg_test = false;
     for (code, _) in lex_lines(src) {
@@ -61,16 +67,17 @@ pub fn cfg_test_mod_names(src: &str) -> Vec<String> {
         if t.is_empty() {
             continue;
         }
-        if depth == 0
-            && prev_cfg_test
-            && let Some((name, false)) = mod_decl(t)
-        {
-            out.push(name);
+        if let Some((name, false)) = mod_decl(t) {
+            if depth == 0 && prev_cfg_test {
+                test.push(name);
+            } else {
+                other.push(name);
+            }
         }
         prev_cfg_test = depth == 0 && t == "#[cfg(test)]";
         depth += brace_delta(t);
     }
-    out
+    (test, other)
 }
 
 /// 声明在 `file` 里的子模块放在哪个目录。
@@ -86,24 +93,37 @@ fn child_dir(file: &Path) -> Option<PathBuf> {
 
 /// `files` 里哪些是测试模块（或其子模块）的文件。
 pub fn test_module_files(files: &[PathBuf]) -> Vec<PathBuf> {
-    let mut out: Vec<PathBuf> = Vec::new();
-    for f in files {
-        let Ok(src) = fs::read_to_string(f) else {
-            continue;
-        };
-        let Some(dir) = child_dir(f) else { continue };
-        for name in cfg_test_mod_names(&src) {
-            let flat = dir.join(format!("{name}.rs"));
-            let sub = dir.join(&name);
-            for g in files {
-                if *g == flat || g.starts_with(&sub) {
-                    out.push(g.clone());
-                }
-            }
-        }
-    }
+    // 模块名 → 它能指到的文件：`x.rs` 与 `x/` 下全部
+    let resolve = |dir: &Path, name: &str| -> Vec<PathBuf> {
+        let (flat, sub) = (dir.join(format!("{name}.rs")), dir.join(name));
+        files
+            .iter()
+            .filter(|g| **g == flat || g.starts_with(&sub))
+            .cloned()
+            .collect()
+    };
+    let decls: Vec<(PathBuf, PathBuf, Vec<String>, Vec<String>)> = files
+        .iter()
+        .filter_map(|f| {
+            let src = fs::read_to_string(f).ok()?;
+            let (t, o) = mod_names(&src);
+            Some((f.clone(), child_dir(f)?, t, o))
+        })
+        .collect();
+    let mut out: Vec<PathBuf> = decls
+        .iter()
+        .flat_map(|(_, dir, t, _)| t.iter().flat_map(|n| resolve(dir, n)))
+        .collect();
     out.sort();
     out.dedup();
+    // 生产引用：不在测试清单里的文件用普通 `mod x;` 指到的文件不算测试代码（codex 第 3 轮 P1 #2：
+    // lib.rs 里 `#[cfg(test)] mod worker;`、main.rs 里普通 `mod worker;` 时，worker.rs 照实时代码查）
+    let prod: Vec<PathBuf> = decls
+        .iter()
+        .filter(|(f, ..)| !out.contains(f))
+        .flat_map(|(_, dir, _, o)| o.iter().flat_map(|n| resolve(dir, n)))
+        .collect();
+    out.retain(|f| !prod.contains(f));
     out
 }
 
@@ -168,6 +188,17 @@ mod tests {
             crate::tidy::check_file(f, &f.display().to_string(), realtime, &mut tidy);
         }
         assert!(tidy.problems.is_empty(), "{:#?}", tidy.problems);
+        let _ = fs::remove_dir_all(&d);
+    }
+
+    /// 负例（codex 第 3 轮 P1 #2）：lib.rs 测试引用、main.rs 生产引用同一个文件 → 不当测试代码
+    #[test]
+    fn file_also_used_by_production_entry_is_not_exempt() {
+        let d = tmp("dual");
+        fs::write(d.join("src/lib.rs"), "#[cfg(test)]\nmod worker;\n").unwrap();
+        fs::write(d.join("src/main.rs"), "mod worker;\nfn main() {}\n").unwrap();
+        fs::write(d.join("src/worker.rs"), "fn f() {}\n").unwrap();
+        assert!(test_module_files(&files(&d)).is_empty());
         let _ = fs::remove_dir_all(&d);
     }
 
