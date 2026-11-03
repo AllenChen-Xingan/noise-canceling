@@ -583,20 +583,45 @@
     }
   ],
   "text_formats": {
-    "comment": "场景参数表（vdn-scene-table）与我的配置（vdn-profile）里，[user …] / [fine …] 小节下能写的键。参数键的范围见 params；model 取 models 之一",
-    "headers": [
-      "vdn-scene-table",
-      "vdn-profile"
-    ],
+    "comment": "场景参数表与我的配置里各小节能写的键。\"params\" 指 param_keys 的全部；参数范围见 params；model 取 models 之一",
+    "formats": {
+      "vdn-profile": {
+        "fine": [
+          "model",
+          "tone",
+          "params"
+        ],
+        "top": [
+          "version",
+          "binding"
+        ],
+        "user": [
+          "model",
+          "tone",
+          "params"
+        ]
+      },
+      "vdn-scene-table": {
+        "fine": [
+          "name",
+          "user",
+          "model",
+          "tone",
+          "params"
+        ],
+        "top": [
+          "version"
+        ],
+        "user": [
+          "model",
+          "tone",
+          "params"
+        ]
+      }
+    },
     "models": [
       "gtcrn",
       "fastenhancer-m"
-    ],
-    "other_keys": [
-      "model",
-      "tone",
-      "name",
-      "user"
     ],
     "param_keys": [
       "strength",
