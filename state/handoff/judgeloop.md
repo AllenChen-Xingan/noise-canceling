@@ -35,4 +35,4 @@
 
 ## 转交
 - `state/pending-decisions.md`：请在 010 第五节第 2 题「通话中要不要探索」旁挂上 018 出处（018 建议同为「不试」）
-- 对 `vdn-types` 接口的建议 3 条见 decision.md 第六节之前的「对接口的建议」原稿已并入第三、四节；如需单列请告知
+- 对 `vdn-types` 接口的建议 4 条：decision.md「六之二」（含 `strength` 与下限先后顺序要进规约）
