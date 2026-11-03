@@ -305,7 +305,8 @@ pub fn mirror_problems(rel: &str, src: &str, names: &[String]) -> Vec<String> {
             j -= 1;
             let (c, cm) = &lexed[j];
             let t = c.trim();
-            if !(t.is_empty() || t.starts_with("#[")) {
+            let comment_only = t.is_empty() && !cm.trim().is_empty();
+            if !(comment_only || t.starts_with("#[")) {
                 break;
             }
             ok = has_reason(cm, MIRROR_ALLOW);

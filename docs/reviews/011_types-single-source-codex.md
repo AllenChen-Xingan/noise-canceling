@@ -1,7 +1,7 @@
 # 评审 011 · 删镜像副本 + 参数描述表 + tidy 两条新规则（codex · gpt-6-astra · read-only）
 
-> 对象：`git diff bfe6266`（分支 `feat/types-single-source`，issue #56；本地 `main` 落后，用分支起点作基准）。**最新一轮：第 1 轮（2026-11-02）· 总评「修改」· 待第 2 轮**。
-> 累计处理：P1×1、P2×5 逐条回源码核实，属实 6、驳回 0、无法核实 0（其中 P2 #5 部分采纳）。没有新的要人定的事。
+> 对象：`git diff bfe6266`（分支 `feat/types-single-source`，issue #56；本地 `main` 落后，用分支起点作基准）。**最新一轮：第 2 轮（2026-11-02）· 总评「修改」· 无 P0/P1（连续第 1 轮），待第 3 轮确认**。
+> 累计处理：P1×1、P2×10 逐条回源码核实，属实 11、驳回 0、无法核实 0（第 1 轮 P2 #5 部分采纳）。没有新的要人定的事。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
 
@@ -36,3 +36,30 @@
 ### 是否再审
 
 有 P1 → 改完、编译测试全绿后开第 2 轮，提示词附本记录。
+
+## 第 2 轮（2026-11-02）· 总评「修改」
+
+原文：`_tmp/reviews/diff-bfe6266-codex-2.md`（不入库）。effort medium。第 1 轮输出因开头「P1」被 `file` 误判为位图、隐私扫描拒发，给它加了一行标题后重跑（内容未改）。
+本轮 P0/P1：0 条 · 停止线：连续第 1 轮 · 留作 issue 的 P2：无（本轮 5 条都已改）
+
+上一轮处理的验证：codex 抽查 5 条「核实属实」（`--confirm` 整数解析、`detect_db` 引用表、`ENGINE_MAX_ABS.min = 1`、`ReleaseS` 未错接、`SpectralStage` 位置）。
+
+- **P2｜speaker-lab 先按原始窗长建声纹模型、Judge 再夹值，两边分叉**（第 2 轮 #1）
+  - 核实：属实（`src/speaker-lab/src/main.rs` 原先先 `Embedder::open(… jp.window_s …)` 再 `Judge::new`）
+  - 处理：抽出 `judge_params()`，覆盖默认值后先 `validate()`，越界报错，之后才建任何部件；加测试 `judge_params_parse_and_reject_by_desc_table`（`--win 20` 被拒）
+- **P2｜engine 构造只查三个手写下界，`crossfade_s = 2` 时 engine 与 Pipeline 分叉**（第 2 轮 #2）
+  - 核实：属实
+  - 处理：加 `SafetyConfig::clamped()`（全部数值参数按描述表夹），`Engine::new` 先夹再用；加测试 `engine_clamps_config_by_desc_table`。只加构造期一行，engine 结构不动
+- **P2｜放行标记从原行认，字符串里写标记也能放行**（第 2 轮 #3）
+  - 核实：属实
+  - 处理：词法器改为逐行输出「代码 + 注释」（`lex_lines`），两条规则的放行标记只从注释里认；往上找理由时只走纯注释行与属性行，遇空行停；加两条负例（字符串里的标记）、一条正例（块注释里的理由）
+- **P2｜数字解析漏整数后缀与 `-60.`**（第 2 轮 #4）
+  - 核实：属实
+  - 处理：后缀表补齐 `u8…u128 / i8…i128 / usize / isize`；认无小数位的 `60.`（后面不是 `..` 或方法名）；加负例 `clamp(1u32, 20u32)`、`(1usize..=20usize)`、`clamp(-60., 0.)`，正例 `3.max(confirm_n)`
+- **P2｜polish_offline 的 `--ramp` 默认值手抄 1.0**（第 2 轮 #5）
+  - 核实：属实
+  - 处理：改取 `POLISH_RAMP_S.default`。未加测试：example 里的单测不随 `cargo test` 跑；改后是直接引用正本、没有第二处表示，不需要比对
+
+### 是否再审
+
+本轮无 P0/P1，连续第 1 轮 → 编译测试全绿后开第 3 轮确认。

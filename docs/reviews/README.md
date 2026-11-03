@@ -9,4 +9,4 @@
 | 编号 | 日期 | 评审对象 | 采纳 / 提出 |
 |------|------|---------|------------|
 | 010 | 2026-11-02 | [exp010 推理后端基准纯 Rust 一侧](010_exp010-rust-codex.md)（README + bench/src，codex，5 轮，已达停止线） | 采纳 27 / 提出 27（P1×7 P2×20） |
-| 011 | 2026-11-02 | [删镜像副本 + 参数描述表 + tidy 新规则](011_types-single-source-codex.md)（`git diff bfe6266`，issue #56，codex，进行中） | 采纳 6 / 提出 6（P1×1 P2×5） |
+| 011 | 2026-11-02 | [删镜像副本 + 参数描述表 + tidy 新规则](011_types-single-source-codex.md)（`git diff bfe6266`，issue #56，codex，2 轮，进行中） | 采纳 11 / 提出 11（P1×1 P2×10） |
