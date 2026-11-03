@@ -47,21 +47,21 @@ pub const GTCRN: Interface = Interface {
 pub const FASTENHANCER_M: Interface = Interface {
     inputs: &[
         t("wav_in", &[1, 160]),
-        t("cache_in_0", &[1, 1, 1]),
-        t("cache_in_1", &[1, 1, 1]),
-        t("cache_in_2", &[1, 1, 1]),
-        t("cache_in_3", &[1, 1, 1]),
-        t("cache_in_4", &[1, 1, 1]),
-        t("cache_in_5", &[1, 1, 1]),
+        t("cache_in_0", &[1, 352]),
+        t("cache_in_1", &[1, 352]),
+        t("cache_in_2", &[1, 48, 72]),
+        t("cache_in_3", &[1, 48, 72]),
+        t("cache_in_4", &[1, 48, 72]),
+        t("cache_in_5", &[1, 48, 72]),
     ],
     outputs: &[
         t("wav_out", &[1, 160]),
-        t("cache_out_0", &[1, 1, 1]),
-        t("cache_out_1", &[1, 1, 1]),
-        t("cache_out_2", &[1, 1, 1]),
-        t("cache_out_3", &[1, 1, 1]),
-        t("cache_out_4", &[1, 1, 1]),
-        t("cache_out_5", &[1, 1, 1]),
+        t("cache_out_0", &[1, 352]),
+        t("cache_out_1", &[1, 352]),
+        t("cache_out_2", &[1, 48, 72]),
+        t("cache_out_3", &[1, 48, 72]),
+        t("cache_out_4", &[1, 48, 72]),
+        t("cache_out_5", &[1, 48, 72]),
     ],
 };
 
