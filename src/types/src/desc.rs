@@ -37,6 +37,10 @@ pub enum Unit {
     Amplitude,
     /// 整数个数（以 f32 存，范围内都是精确整数）
     Count,
+    /// 余弦相似度（-1..=1）
+    Similarity,
+    /// 倍数（无量纲，≥ 1 的比值）
+    Factor,
 }
 
 impl Unit {
@@ -50,6 +54,8 @@ impl Unit {
             Unit::DbPerSecond => "dB/s",
             Unit::Amplitude => "amplitude",
             Unit::Count => "count",
+            Unit::Similarity => "cosine",
+            Unit::Factor => "x",
         }
     }
 }
@@ -546,7 +552,7 @@ pub const ENGINE_MAX_ABS: ParamDesc = p(
     501,
     "engine.max_abs",
     Unit::Amplitude,
-    0.0,
+    1.0,
     100.0,
     4.0,
     "输出幅度超过它当状态异常",
@@ -570,8 +576,33 @@ pub const ENGINE_CROSSFADE_S: ParamDesc = p(
     "切回模型的交叉淡化 / 切到原声的接缝衰减时长",
 );
 
+// ───────────── 600–699：speaker 判断回路（`vdn_speaker::judge::JudgeParams`） ─────────────
+
+pub const JUDGE_WINDOW_S: ParamDesc = p(601, "judge.window_s", Unit::Seconds, 0.1, 10.0, 1.5, "判断回路：声纹窗长");
+pub const JUDGE_HOP_S: ParamDesc = p(602, "judge.hop_s", Unit::Seconds, 0.05, 5.0, 0.5, "判断回路：多久判一次");
+pub const JUDGE_MIN_VOICED_FRAC: ParamDesc = p(603, "judge.min_voiced_frac", Unit::Ratio, 0.0, 1.0, 0.3, "窗里有声帧比例低于它 → NoSpeech");
+pub const JUDGE_ENROLL_VOICED_FRAC: ParamDesc = p(604, "judge.enroll_voiced_frac", Unit::Ratio, 0.0, 1.0, 0.6, "有声帧比例至少这么多才喂注册器");
+pub const JUDGE_CONSIST_SIM: ParamDesc = p(605, "judge.consist_sim", Unit::Similarity, -1.0, 1.0, 0.6, "与上一窗相似度至少这么多才算清楚的单人片段");
+pub const JUDGE_OWNER_HI: ParamDesc = p(606, "judge.owner_hi", Unit::Similarity, -1.0, 1.0, 0.45, "与主人相似度高于它 → Target");
+pub const JUDGE_OTHERS_LO: ParamDesc = p(607, "judge.others_lo", Unit::Similarity, -1.0, 1.0, 0.25, "与主人相似度低于它 → Other");
+pub const JUDGE_VAD_THR: ParamDesc = p(608, "judge.vad_thr", Unit::Probability, 0.0, 1.0, 0.5, "判断回路数有声帧用的 VAD 硬门限");
+
+// ───────────── 700–799：speaker 零设置注册（`vdn_speaker::enroll::EnrollParams`） ─────────────
+
+pub const ENROLL_ASSIGN_SIM: ParamDesc = p(701, "enroll.assign_sim", Unit::Similarity, -1.0, 1.0, 0.5, "与最近簇中心相似度至少这么多就并入");
+pub const ENROLL_MAX_CLUSTERS: ParamDesc = p(702, "enroll.max_clusters", Unit::Count, 1.0, 64.0, 8.0, "最多保留几个簇");
+pub const ENROLL_MIN_OWNER_S: ParamDesc = p(703, "enroll.min_owner_s", Unit::Seconds, 0.0, 600.0, 15.0, "主人簇至少累计这么多秒才锁定");
+pub const ENROLL_SINGLE_CLUSTER_MIN_S: ParamDesc = p(704, "enroll.single_cluster_min_s", Unit::Seconds, 0.0, 600.0, 30.0, "只有一个簇时至少累计这么多秒才锁定");
+pub const ENROLL_LOCK_MARGIN: ParamDesc = p(705, "enroll.lock_margin", Unit::Factor, 1.0, 10.0, 1.5, "主人簇得分要比第二名高这么多倍才锁定");
+pub const ENROLL_STABLE_UPDATES: ParamDesc = p(706, "enroll.stable_updates", Unit::Count, 1.0, 100.0, 6.0, "领先者连续保持这么多次更新才锁定");
+pub const ENROLL_MIN_COHESION: ParamDesc = p(707, "enroll.min_cohesion", Unit::Similarity, -1.0, 1.0, 0.6, "簇内聚度至少这么多才可当主人（应高于 assign_sim）");
+pub const ENROLL_RECENCY_HALF_LIFE_S: ParamDesc = p(708, "enroll.recency_half_life_s", Unit::Seconds, 1.0, 86400.0, 300.0, "簇得分的时间衰减半衰期");
+pub const ENROLL_LEVEL_HALVING_DB: ParamDesc = p(709, "enroll.level_halving_db", Unit::Db, 1.0, 60.0, 6.0, "电平每低这么多 dB，近讲系数减半");
+pub const ENROLL_RELOCK_RATIO: ParamDesc = p(710, "enroll.relock_ratio", Unit::Factor, 1.0, 10.0, 2.0, "别的簇得分超过主人这么多倍才改判");
+pub const ENROLL_CENTROID_CAP: ParamDesc = p(711, "enroll.centroid_cap", Unit::Count, 1.0, 10000.0, 200.0, "簇中心按至多这么多个样本平均，之后转指数平均");
+
 /// 全部描述（导出、查重、按编号或键名查找都走它）。加一条 = 写常量 + 加进这里（`all_listed` 测试查漏）。
-pub const ALL: [&ParamDesc; 39] = [
+pub const ALL: [&ParamDesc; 58] = [
     &STRENGTH,
     &FLOOR_DB,
     &OPEN_DB,
@@ -611,6 +642,25 @@ pub const ALL: [&ParamDesc; 39] = [
     &ENGINE_MAX_ABS,
     &ENGINE_RECOVER_HOLD_S,
     &ENGINE_CROSSFADE_S,
+    &JUDGE_WINDOW_S,
+    &JUDGE_HOP_S,
+    &JUDGE_MIN_VOICED_FRAC,
+    &JUDGE_ENROLL_VOICED_FRAC,
+    &JUDGE_CONSIST_SIM,
+    &JUDGE_OWNER_HI,
+    &JUDGE_OTHERS_LO,
+    &JUDGE_VAD_THR,
+    &ENROLL_ASSIGN_SIM,
+    &ENROLL_MAX_CLUSTERS,
+    &ENROLL_MIN_OWNER_S,
+    &ENROLL_SINGLE_CLUSTER_MIN_S,
+    &ENROLL_LOCK_MARGIN,
+    &ENROLL_STABLE_UPDATES,
+    &ENROLL_MIN_COHESION,
+    &ENROLL_RECENCY_HALF_LIFE_S,
+    &ENROLL_LEVEL_HALVING_DB,
+    &ENROLL_RELOCK_RATIO,
+    &ENROLL_CENTROID_CAP,
 ];
 
 pub fn by_id(id: u16) -> Option<&'static ParamDesc> {
