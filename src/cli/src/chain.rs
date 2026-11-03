@@ -401,16 +401,18 @@ pub fn judge_v1(r: &ChainRun) -> Verdict {
     let found = onset(&r.y, 0.05).and_then(|on| {
         best_lag(&r.x, &r.y, on.saturating_sub(600), on + 600, SKIP, 9600).map(|(lag, _)| lag)
     });
-    let pass = corr >= 0.999 && r.hal_underrun_samples == 0;
+    // 欠载 0 是 V1 的一部分（010 第十一节）：直通时处理后的 = 延迟原声，欠载用原声补了相关也看不出来，必须单独判
+    let pass = corr >= 0.999 && r.hal_underrun_samples == 0 && r.fwd.proc_underrun == 0;
     Verdict {
         id: "V1",
         what: "直通链路逐样本对齐",
         pass,
         detail: format!(
-            "相关 {corr:.6}（线 ≥ 0.999）· 实测延迟 {}（应为 {}）· 虚拟麦欠载 {} 样本（线 = 0）",
+            "相关 {corr:.6}（线 ≥ 0.999）· 实测延迟 {}（应为 {}）· 虚拟麦欠载 {} 样本 · 处理后欠载 {} 样本（两项线都 = 0）",
             found.map_or("未找到".to_owned(), |l| l.to_string()),
             r.l_total,
-            r.hal_underrun_samples
+            r.hal_underrun_samples,
+            r.fwd.proc_underrun
         ),
     }
 }
