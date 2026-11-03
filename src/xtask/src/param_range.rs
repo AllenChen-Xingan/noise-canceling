@@ -229,6 +229,9 @@ fn ids_of<T: ToTokens>(x: &T) -> BTreeSet<String> {
 /// 一个表达式算「同一条」的部分：带块的只取头部（`let`、常量、分支值里的也一样；codex #71 第 4 轮 P2 #3）。
 fn expr_context(e: &Expr) -> BTreeSet<String> {
     match e {
+        // 穿透括号与不可见分组（codex #71 第 5 轮 P2 #3）
+        Expr::Paren(p) => expr_context(&p.expr),
+        Expr::Group(g) => expr_context(&g.expr),
         Expr::ForLoop(f) => {
             let mut a = ids_of(&f.pat);
             a.extend(ids_of(&f.expr));

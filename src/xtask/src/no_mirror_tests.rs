@@ -125,3 +125,12 @@ fn raw_identifiers_are_unrawed() {
         1
     );
 }
+
+/// codex #71 第 5 轮 P2 #2：trait 方法名的 `r#` 也去掉
+#[test]
+fn raw_trait_method_names() {
+    assert_eq!(
+        n("trait M4 { fn r#a(&self) -> u8; fn b(&mut self, x: f32); fn c(&self); }\n"),
+        1
+    );
+}

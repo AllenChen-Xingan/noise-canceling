@@ -93,24 +93,34 @@ pub fn path_attr(attrs: &[Attribute]) -> Option<String> {
 
 /// `#[cfg_attr(谓词, …, path = "…")]` 里的路径：只在某些构建里生效，建树时也当成可能的引用（codex #71 第 3 轮 P1 #3）。
 pub fn cfg_attr_paths(attrs: &[Attribute]) -> Vec<String> {
-    let mut out = Vec::new();
-    for a in attrs.iter().filter(|a| a.path().is_ident("cfg_attr")) {
-        let Ok(items) = a
-            .parse_args_with(syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated)
-        else {
-            continue;
-        };
-        for m in items.iter().skip(1) {
-            if let Meta::NameValue(nv) = m
-                && nv.path.is_ident("path")
-                && let syn::Expr::Lit(syn::ExprLit {
-                    lit: syn::Lit::Str(s),
-                    ..
-                }) = &nv.value
-            {
-                out.push(s.value());
+    /// `cfg_attr(谓词, 属性…)` 的属性部分；里面还有 `cfg_attr` 就递归（codex #71 第 5 轮 P1 #1）
+    fn inner(metas: &[Meta], out: &mut Vec<String>) {
+        for m in metas {
+            match m {
+                Meta::NameValue(nv) if nv.path.is_ident("path") => {
+                    if let syn::Expr::Lit(syn::ExprLit {
+                        lit: syn::Lit::Str(s),
+                        ..
+                    }) = &nv.value
+                    {
+                        out.push(s.value());
+                    }
+                }
+                Meta::List(l) if l.path.is_ident("cfg_attr") => {
+                    if let Ok(items) = l.parse_args_with(
+                        syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated,
+                    ) {
+                        let v: Vec<Meta> = items.into_iter().skip(1).collect();
+                        inner(&v, out);
+                    }
+                }
+                _ => {}
             }
         }
+    }
+    let mut out = Vec::new();
+    for a in attrs.iter().filter(|a| a.path().is_ident("cfg_attr")) {
+        inner(std::slice::from_ref(&a.meta), &mut out);
     }
     out
 }

@@ -452,3 +452,21 @@ fn cfg_attr_path_is_a_reference() {
     assert!(!s.is_test_file("c/src/p.rs"));
     done(&r);
 }
+
+/// codex #71 第 5 轮 P1 #1：嵌套 `cfg_attr` 里的 path 也展开
+#[test]
+fn nested_cfg_attr_path() {
+    let (r, s) = tree(
+        "nestedcfgattr",
+        &[
+            (
+                "src/lib.rs",
+                "#[cfg_attr(not(test), cfg_attr(not(test), path = \"other\"))]\nmod outer {\n    mod x;\n}\n#[cfg(test)]\n#[path = \"other/x.rs\"]\nmod t;\n",
+            ),
+            ("src/outer/x.rs", "fn a() {}\n"),
+            ("src/other/x.rs", "fn b() {}\n"),
+        ],
+    );
+    assert!(!s.is_test_file("c/src/other/x.rs"));
+    done(&r);
+}

@@ -124,7 +124,7 @@ pub fn shape(it: &Item) -> Option<(Shape, &syn::Ident, &Visibility)> {
                             .collect();
                         Some(format!(
                             "{}({}){}",
-                            f.sig.ident,
+                            f.sig.ident.unraw(),
                             args.join(","),
                             norm_ty(&f.sig.output)
                         ))
