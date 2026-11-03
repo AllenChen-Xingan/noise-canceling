@@ -23,10 +23,7 @@ use std::path::Path;
 
 use vdn_engine::{Engine, Model, Pipeline, SafetyConfig};
 use vdn_models::{AnyModel, ModelKind};
-use vdn_shm::{Bus, RingId};
-
-mod owned_bus;
-pub use owned_bus::OwnedBus;
+use vdn_shm::{Bus, BusConfig, RingId};
 
 /// IO 采样率（正本在 vdn-control）
 pub use vdn_control::IO_RATE;
@@ -87,6 +84,26 @@ pub fn model_kind(c: vdn_control::ModelChoice) -> ModelKind {
         vdn_control::ModelChoice::Gtcrn => ModelKind::Gtcrn,
         vdn_control::ModelChoice::FastenhancerM => ModelKind::FastEnhancerM,
     }
+}
+
+/// 降噪总线头的配置：总线头里的 L_total / lead / 降噪块长**只从这里写**。
+/// 正本：管线延迟与块长 = `Worker`（来自 `Pipeline`），lead 与容量 = 调用方的 `vdn_control::Config`。
+pub fn denoise_bus_config<P: Processor>(w: &Worker<P>, lead: usize, capacity: usize) -> Result<BusConfig, String> {
+    let u = |v: usize, what: &str| u32::try_from(v).map_err(|_| format!("{what} = {v} 太大"));
+    if capacity <= w.l_total(lead) + 2 * w.block() {
+        return Err(format!(
+            "环容量 {capacity} 太小：至少要 L_total {} + 2 块 = {}",
+            w.l_total(lead),
+            w.l_total(lead) + 2 * w.block()
+        ));
+    }
+    Ok(BusConfig {
+        rate: IO_RATE,
+        capacity_frames: u(capacity, "容量")?,
+        l_total: u(w.l_total(lead), "L_total")?,
+        lead: u(lead, "lead")?,
+        denoise_block: u(w.block(), "降噪块长")?,
+    })
 }
 
 /// 计数器（只增不减）。
@@ -287,42 +304,6 @@ mod tests {
         assert_eq!(bus.heartbeat(), 2);
         assert_eq!(bus.ring(RingId::Processed).available(), 1440 + 960);
         assert_eq!(w.stats().blocks, 2);
-    }
-
-    #[test]
-    fn owned_bus_is_exclusive_and_cleans_up() {
-        let name = format!("/vdn-tob-{}", std::process::id());
-        let cfg = vdn_shm::BusConfig {
-            rate: IO_RATE,
-            capacity_frames: 4096,
-            l_total: 0,
-        };
-        let a = OwnedBus::create(&name, cfg).unwrap();
-        // 第二个建方被拒，第一个的名字还在
-        let e = OwnedBus::create(&name, cfg).err().unwrap();
-        assert!(e.contains("正被"), "{e}");
-        assert!(Bus::open(&name).is_ok());
-        drop(a);
-        assert!(matches!(Bus::open(&name), Err(vdn_shm::ShmError::NotFound)));
-        // 锁已放：可以再建
-        let b = OwnedBus::create(&name, cfg).unwrap();
-        b.unlink().unwrap();
-        b.unlink().unwrap(); // 第二次是空操作
-    }
-
-    #[test]
-    fn owned_bus_clears_stale_name() {
-        let name = format!("/vdn-tst-{}", std::process::id());
-        let cfg = vdn_shm::BusConfig {
-            rate: IO_RATE,
-            capacity_frames: 4096,
-            l_total: 0,
-        };
-        // 模拟异常退出：建了不删
-        drop(Bus::create(&name, cfg).unwrap());
-        let b = OwnedBus::create(&name, cfg).unwrap();
-        drop(b);
-        assert!(matches!(Bus::open(&name), Err(vdn_shm::ShmError::NotFound)));
     }
 
     #[test]
