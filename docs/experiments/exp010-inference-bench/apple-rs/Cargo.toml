@@ -15,7 +15,7 @@ mlx = []   # 需要先用 tools/build-mlx-c.sh 编出 mlx-c（对着 pip 装的 
 [dependencies]
 objc2 = "0.6"
 objc2-foundation = { version = "0.3", features = ["NSArray", "NSDictionary", "NSString", "NSValue", "NSURL", "NSError"] }
-objc2-core-ml = { version = "0.3", features = ["MLModel", "MLModelConfiguration", "MLMultiArray", "MLFeatureProvider", "MLDictionaryFeatureProvider", "MLFeatureValue", "MLPredictionOptions", "MLState", "MLModelDescription", "MLFeatureDescription", "MLMultiArrayConstraint", "MLComputePlan", "objc2-foundation"] }
+objc2-core-ml = { version = "0.3", features = ["MLModel", "MLModelConfiguration", "MLMultiArray", "MLFeatureProvider", "MLDictionaryFeatureProvider", "MLFeatureValue", "MLPredictionOptions", "MLState", "MLModelDescription", "MLFeatureDescription", "MLMultiArrayConstraint", "MLComputePlan"] }
 libc = "0.2"
 
 [profile.release]
