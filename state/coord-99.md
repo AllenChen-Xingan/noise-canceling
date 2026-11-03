@@ -1,0 +1,18 @@
+# 大总管看板 · noise-canceling-99
+
+> 本大总管的账本（e3 的在 `state/coord.md`，不要改它）。大总管检出：`../noise_canceling-coord99`，分支 `chore/coord-20261102-b9`。手下交代在主目录 `_tmp/20261102-b9/`。决策号：记前先看主检出与各分支最大号，并向 e3 发「占用 Dxx」（2026-11-02 主检出最大 D78）。
+
+## 当前大事 · 大总管 noise-canceling-99（2026-11-02 起，与 e3 的推理引擎并行）
+
+**处理图 + schema 交叉校验**（D72 · `docs/plan/011_schema-crosscheck.md` · CLAUDE.md 第五节第 5 条）。人原话「我们现在开始做 schema 以及图的事情吧」。批次 `_tmp/20261102-b9/`，tmux 工作区 `vdn-schema`。
+第一阶段两条线并行；第二阶段「处理图（含会话记录记图版本 · 前端只算一次 D71 · 参数描述导出 schema · 模型接口）」等第一阶段合并后派。
+
+| 手下 | 线 | 管的实体 | 状态 |
+|---|---|---|---|
+| single | 清镜像副本 · 参数只写一处 · #56 · `feat/types-single-source` · `../noise_canceling-single` | vdn-types（参数描述）· vdn-speaker · vdn-polish · vdn-scene | 已报到（noise-canceling-single-68）|
+| schema | schema 导出 + 交叉校验 · #57 · `feat/schema-crosscheck` · `../noise_canceling-schema` | schema 机制 · 共享内存头 · 配置 · 评测任务清单 | 已报到（noise-canceling-schema-1d）|
+
+## 进度板
+
+- 2026-11-02 两人报到。single：三镜像共 341 行，floor_db 21 个文件，先比对分歧，按 polish → speaker → scene 删。schema：新建 tool 档 `vdn-schema`，导出到 `specs/schema/`，先做共享内存头
+- 2026-11-02 应 e3 要求，账本从 `state/coord.md` 挪到本文件，git 写操作改在本检出做
