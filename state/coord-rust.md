@@ -30,7 +30,7 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | rs-entry：V7 复测——**暂停**，等 e3 的 rustbe 基准结束 |
+| 重编译 / 全量测试（1 个） | rs-wake：构建 rt_bench → 人跑 power/run.sh（锁在我方） |
 
 排队：e3 rustbe（16:30–约 16:42）→ 我方 V7（约 10 分钟）→ 我方 rs-wake 优先级复测（约 5 分钟）→ powermetrics（人跑，约 5 分钟）→ e3 applebe（30–40 分钟）
 
@@ -43,6 +43,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- **V7 过（有唤醒，release）**：lead 192 空闲 0/10、压力 0/10 欠载，GTCRN L_total 1728 = 36.00 ms（判据上限）；lead 144 空闲 10/10 欠载。推理块空闲中位 2.9 ms vs 压力 0.6 ms，唤醒没改变卡点（空闲降频，推断）。lead 默认 288 → 192。负载 2.00–7.38（核数 10）
 - rs-wake ③：loom（release）2 项过 2.5 s，反向验证（对调读序）会报唤醒丢失；Miri vdn-shm 进程内测试全过、无未定义行为；修 2 处 Miri 暴露的问题
 - rs-entry：V1 判据统一为 judge_v1（相关 ≥ 0.999 且两种欠载都 = 0），加反例测试；启动硬下限定为 lead ≥ 一块 IO（正本 `vdn_control::check_lead`，三处调用；大总管认可，不用 IO + 降噪块，否则挡掉 V7 目标 144）；54 过 1 忽略
 - rs-entry 测试自查：51 过、1 忽略（V5 写成 #[ignore] 测试）；Out 总线重连从 bin 挪进 lib（Supervisor）并补 4 条真共享内存测试；补测揪出测试工具配错（IO 块 480 配 lead 288 必欠载，旧 V1 短测只判相关没发现）→ 已改；大总管加要求：V1 全部断言欠载 0 · Config 启动校验 lead ≥ IO 块 + 降噪块
