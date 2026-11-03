@@ -210,6 +210,8 @@ fn new_session_id() -> u64 {
     use std::hash::{BuildHasher, Hasher};
     let mut h = std::collections::hash_map::RandomState::new().build_hasher();
     h.write_u32(std::process::id());
+    // Miri 默认隔离、不给真实时钟：只靠 RandomState 的随机种子
+    #[cfg(not(miri))]
     if let Ok(t) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
         h.write_u128(t.as_nanos());
     }

@@ -201,7 +201,10 @@ fn lockstep(a: &Bus, b: &Bus, rounds: u32) {
         }
     });
     // 偶发调度慢（机器忙）可以有几次；丢唤醒会是 1 s 一次，上面已断言为 Ready
-    assert!(slow.load(Ordering::Relaxed) <= rounds / 100, "慢的轮数太多");
+    // Miri 下慢几百倍，计时没意义：只查「没有一次等满 1 s」（上面的 is_ready）
+    if !cfg!(miri) {
+        assert!(slow.load(Ordering::Relaxed) <= rounds / 100, "慢的轮数太多");
+    }
 }
 
 #[test]

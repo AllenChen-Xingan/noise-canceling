@@ -123,6 +123,7 @@ mod tests {
     /// 顺序反（先看可读量）：数据看漏、计数字读到的是新值，睡下去没人再叫醒，要等满 500 ms 超时。
     /// 反向验证（2026-11-02，rs-wake）：把两次读对调后本测试失败；改回后通过。
     #[test]
+    #[cfg_attr(miri, ignore = "依赖真实计时与系统唤醒，Miri 下没有")]
     fn widened_race_window_does_not_lose_wakeup() {
         GAP_US.store(3_000, Relaxed);
         let b = Bus::heap(BusConfig {
