@@ -85,12 +85,39 @@
   - 新依赖 rtrb 0.4.1（MIT OR Apache-2.0，与 GPL-3.0 兼容，无传递依赖）
 - **第 8 条 capture 库去掉 hound / clap**：设备库 · 实时优先级 · clap · hound 改成 `bin` feature（默认开、bin 必需）；用库的一方 `default-features = false`（根 Cargo.toml）→ `cargo tree -p vdn-capture --no-default-features` 普通依赖只剩 rtrb · vdn-control · vdn-dsp · vdn-hal · vdn-shm，闭包里没有 hound / clap / cpal【测】
 
+## 本次新增的测试（CLAUDE.md 第五节第 6 条：每个功能、每次修复都带测试）
+
+清单用途：功能 → 证明它的测试（`cargo test -p vdn-control -p vdn-capture -p vdn-denoised -p vdn-cli`：51 过、1 忽略）。
+
+| 功能 / 修复 | 测试（crate · 名字） |
+|---|---|
+| Forwarder 对齐账（慢 / 卡 / 死 / 恢复 / Raw 溢出 / 积压封顶） | capture · `steady_state_aligned_and_fresh` `slow_denoiser_keeps_alignment` `denoiser_dies_switches_to_raw_within_timeout_without_gap` `recovers_and_fades_back` `raw_overflow_keeps_alignment` `backlog_is_capped` |
+| 切换连续（硬切 + 接缝 + 回滞）· 重新对账不跳 · 降噪太慢计数 | capture · `switching_is_continuous_when_denoiser_dies` `switching_is_continuous_on_stalls_and_recovery` `resync_does_not_jump` `slow_denoiser_is_reported` |
+| 缺口计数 → 送一个窗口原声（带外，无 NaN 记号） | capture · `gap_counter_holds_raw_for_one_window`；denoised · `skip_backlog_keeps_alignment_without_silence`（降噪端零占位 + 送音端窗口，端到端） |
+| 非有限值兜底 | capture · `nonfinite_processed_never_reaches_output`（NaN / ±∞ 各一个，计 3、输出全有限） |
+| 换总线交接（rtrb，不锁、不在音频线程 drop） | capture · `handover_and_retire_without_dropping_in_audio_thread` `retire_queue_full_keeps_old_objects_locally`；`tests/realtime_rules.rs`（源文件无锁字样） |
+| Out 总线重连（送音先起 / 重启换新会话 / 卡住不换 / 交接队列满） | capture · `supervisor::connects_when_denoiser_appears` `switches_to_new_session_after_restart` `same_session_hung_is_not_switched` `queue_full_is_retried`（真 POSIX 共享内存） |
+| `Forwarder::rebind`（换总线原声不断、不静音） | capture · `rebind_to_new_bus_keeps_raw_continuous_and_realigns` |
+| Out 积压封顶 · 纠漂移 ±0.1% × 60 s | capture · `out_backlog_is_capped` · `drift_is_corrected_both_ways` |
+| 实时路径不分配（Forwarder + Worker + notify） | capture · `process_into_does_not_allocate`；denoised · `realtime_paths_do_not_allocate` |
+| rtrb 切模式 | denoised · `mode_switch_over_rtrb_is_applied_between_blocks`；cli · `chain::mode_switch_mid_run`（整条链路，命令执行 1 次、欠载 0、V1 过） |
+| OwnedBus 接入（拒绝同名、不删别人；两条总线都删） | cli · `chain::busy_bus_name_is_refused_without_deleting` `chain::bus_unlinked_after_run` |
+| 预热不影响对齐 · 定块长管线延迟 | denoised · `worker_and_forwarder_align_end_to_end`（含 warm_up）`identity_pipeline_latency` |
+| 交叉校验（总线名规则 · 采样率 / lead / 降噪块长） | denoised · `bus_name_rule_matches_vdn_shm` `io_rate_single_source` |
+| 配置校验（out_bus_name 不能同名 / 不合规 · 秒数） | control · `ranges_checked` `seconds_parser` |
+| V1 / V2 短版（真共享内存三线程） | cli · `chain::v1_short` `chain::v2_short` |
+| **V5 真麦克风（人判）** | cli · `live::v5_live_passthrough`，`#[ignore]`；人工跑：戴耳机，`cargo test -p vdn-cli -- --ignored v5_live_passthrough --nocapture` |
+
+修 bug 时先写会红的测试的几处：`raw_overflow_keeps_alignment`（第一版单个净账错位，先红后绿）· `resync_does_not_jump`（留两块直接播，先红）· 自审复测发现的「新总线占位零被淡入」→ `rebind_..._realigns` 里的静音断言 · `mode_switch_mid_run` 揪出测试工具里 lead 小于 IO 块的配错
+
+没有自动测试的（只有实测记录）：两进程起停三种顺序（要起两个 bin，`cargo test` 里拿不到另一个包的可执行文件；判断逻辑已挪进 `Supervisor` 单测）· `vdn v7` 测量工具本身
+
 ## V5 人工步骤（给大总管转人）
 
 ⚠️ 这一步会开麦克风、从扬声器出声。**请戴耳机**：用外放时麦克风会收到扬声器的声音，可能啸叫。
 
 1. 在仓库根目录跑 `./target/debug/vdn devices`（只列设备，不开麦、不弹框），确认默认输入、输出设备是你想用的
-2. 戴上耳机，跑 `./target/debug/vdn run --passthrough --seconds 5`
+2. 戴上耳机，跑 `./target/debug/vdn run --passthrough --seconds 5`（同一件事也写成了测试：`cargo test -p vdn-cli -- --ignored v5_live_passthrough --nocapture`）
 3. 第一次跑时 macOS 会弹「终端想使用麦克风」，请点「允许」（点了之后要重跑第 2 步）
 4. 5 秒内对着麦克风说话
 
