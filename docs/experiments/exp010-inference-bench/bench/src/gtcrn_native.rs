@@ -951,7 +951,7 @@ impl Dp {
     }
 
     /// 原地：`feat` [16][33]
-    fn run(&mut self, feat: &mut [f32]) {
+    fn run<P: Probe>(&mut self, feat: &mut [f32], p: &mut P, blk: &'static str) {
         // 转成 [F][C]
         for c in 0..C {
             for f in 0..F2 {
@@ -972,6 +972,16 @@ impl Dp {
                 self.y[f * C + grp * CH + 4..f * C + grp * CH + 8].copy_from_slice(&h);
             }
         }
+        p.mark(blk, "intra_gru", || {
+            // 4 个 GRU 各沿频率 33 步；前向、后向、两组互相独立，关键路径 = 33 步串行
+            let s = self.intra[0].step_cost();
+            scale(s, 4 * F2 as u64, F2 as u64)
+                + Cost {
+                    other: 2 * (F2 * C) as u64, // 转置进 + 拷贝状态
+                    io_bytes: 2 * (F2 * C) as u64 * F32B,
+                    ..Cost::default()
+                }
+        });
         if blas() {
             fc_batch(&self.intra_fc, &self.y, &mut self.z);
         } else {
@@ -980,7 +990,9 @@ impl Dp {
                     .run(&self.y[f * C..(f + 1) * C], &mut self.z[f * C..(f + 1) * C]);
             }
         }
+        p.mark(blk, "intra_fc", || scale(self.intra_fc.cost(), F2 as u64, 1));
         layer_norm_add(&mut self.xt, &self.z, &self.intra_lnw, &self.intra_lnb);
+        p.mark(blk, "intra_ln", || ln_cost(F2 * C));
         // inter：沿时间（单步）的分组 GRU，状态逐频点缓存
         for f in 0..F2 {
             for grp in 0..2 {
@@ -998,12 +1010,25 @@ impl Dp {
             // 第 f 行的全连接只依赖 cache[f]，它在上面第 f 步之后就不再变，所以可以挪到循环外一次算完
             fc_batch(&self.inter_fc, &self.cache, &mut self.z);
         }
+        p.mark(blk, "inter_gru+fc", || {
+            // 33 个频点 × 2 组各一步，互相独立：关键路径 = 一步 GRU + 一次全连接
+            scale(self.inter[0].step_cost(), 2 * F2 as u64, 1)
+                + scale(self.inter_fc.cost(), F2 as u64, 1)
+        });
         layer_norm_add(&mut self.xt, &self.z, &self.inter_lnw, &self.inter_lnb);
         for c in 0..C {
             for f in 0..F2 {
                 feat[c * F2 + f] = self.xt[f * C + c];
             }
         }
+        p.mark(blk, "inter_ln+out", || {
+            ln_cost(F2 * C)
+                + Cost {
+                    other: (F2 * C) as u64,
+                    io_bytes: 2 * (F2 * C) as u64 * F32B,
+                    ..Cost::default()
+                }
+        });
     }
 }
 
@@ -1013,6 +1038,32 @@ fn fc_batch(l: &Linear, x: &[f32], z: &mut [f32]) {
         z[f * l.o..(f + 1) * l.o].copy_from_slice(&l.b);
     }
     sgemm_acc(F2, l.o, l.i, x, l.i, &l.w, l.i, true, z, l.o);
+}
+
+/// 工作量乘 `n` 份，关键路径乘 `serial`（串行的份数）
+fn scale(c: Cost, n: u64, serial: u64) -> Cost {
+    Cost {
+        macs: c.macs * n,
+        nonlin: c.nonlin * n,
+        other: c.other * n,
+        w_bytes: c.w_bytes, // 同一份权重反复用，只读一次
+        io_bytes: c.io_bytes * n,
+        chain_fma: c.chain_fma * serial,
+        chain_nl: c.chain_nl * serial,
+    }
+}
+
+/// `layer_norm_add` 的工作量：求均值、求方差（各一次树形归约）、sqrt 与倒数、逐元素仿射加回
+fn ln_cost(n: usize) -> Cost {
+    let m = n as u64;
+    Cost {
+        macs: 2 * m, // 方差平方和 + 仿射
+        other: 2 * m + 2,
+        w_bytes: 2 * m * F32B,
+        io_bytes: 3 * m * F32B,
+        chain_fma: 2 * (clog2(n) + 1) + 2 + 2,
+        ..Cost::default()
+    }
 }
 
 /// x += LN(z)，LN 在整个 (33,16) 上归一化，带逐元素仿射。
