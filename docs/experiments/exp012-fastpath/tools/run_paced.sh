@@ -47,6 +47,8 @@ for r in $(seq 1 "$rounds"); do
   ac_check
   echo "round $r: 节奏下峰值探针" >&2
   "$bin" hw-peak --qos rt --pace-ms 16 --bursts 600 | tag "$r" >> "$out/hwpeak_paced.jsonl"
+  # 验证：连续跑的微基准在 rt（声明每 16 ms 只算 1 ms）下可能被系统降级，L1 读带宽才只有约 30 GB/s；ui 不受此约束
+  "$bin" hw-peak --qos ui --reps 5 | tag "$r" >> "$out/hwpeak_ui.jsonl"
   case $r in
     1) order="native native-v2 native-v2-fast native-v2-fast-pf" ;;
     2) order="native-v2-fast-pf native native-v2 native-v2-fast" ;;

@@ -1326,7 +1326,7 @@ impl GtcrnNative {
 
     /// v2 每帧会读到的全部参数数组（转置后的 GRU / 全连接权重、卷积权重、偏置、LN 仿射、ERB 非零段）
     fn for_each_v2_weight(&self, mut f: impl FnMut(&[f32])) {
-        let mut gru = |g: &Gru, f: &mut dyn FnMut(&[f32])| {
+        let gru = |g: &Gru, f: &mut dyn FnMut(&[f32])| {
             f(&g.wit);
             f(&g.wht);
             f(&g.bi);
