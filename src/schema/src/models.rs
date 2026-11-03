@@ -4,7 +4,7 @@
 //! `tests/interface.rs`（要仓外权重，人工跑）和适配器的 `open`（不一致打不开）。
 
 use serde_json::{Value, json};
-use vdn_models::interface::TensorDecl;
+use vdn_models::interface::{DTYPE, TensorDecl};
 use vdn_models::{Declared, ModelKind};
 
 pub const INTERFACE_FILE: &str = "models.interface.json";
@@ -14,7 +14,7 @@ fn tensors(ts: &[TensorDecl]) -> Value {
         .map(|t| {
             // 穷举解构：TensorDecl 加字段 → 这里编译失败，提醒导出
             let TensorDecl { name, shape } = *t;
-            json!({ "name": name, "shape": shape, "dtype": "f32" })
+            json!({ "name": name, "shape": shape, "dtype": DTYPE })
         })
         .collect()
 }

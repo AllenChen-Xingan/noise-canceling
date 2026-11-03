@@ -4,12 +4,16 @@
 //! - 声明 ↔ schema：`vdn-schema` 导出并逐字比对（CI）
 //! - 文件 ↔ 声明：适配器 `open` 时调 [`check_file`]，不一致不让打开；`tests/interface.rs` 有一条要仓外权重的测试
 //!
-//! 形状照文件原样写：固定维写数，动态维写 `-1`（ONNX 的写法）。全部张量都是 f32。
+//! 形状照文件原样写：固定维写数，动态维写 `-1`（ONNX 的写法）。全部张量都是 [`DTYPE`]（f32），文件里的元素类型也核对。
 
 use ort::session::Session;
+use ort::value::TensorElementType;
 use vdn_backend_ort::{BoxError, ort};
 
-/// 一个张量：名字 + 形状（`-1` = 动态维）。
+/// 全部张量的元素类型（适配器按 f32 预分配、读写）。导出文件的 `dtype` 也取它。
+pub const DTYPE: &str = "f32";
+
+/// 一个张量：名字 + 形状（`-1` = 动态维）。元素类型一律 [`DTYPE`]。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TensorDecl {
     pub name: &'static str,
@@ -71,40 +75,48 @@ pub struct TensorRead {
     pub name: String,
     /// `None` = 不是张量（序列、映射等）
     pub shape: Option<Vec<i64>>,
+    /// 元素类型：f32 写 [`DTYPE`]，别的写 ort 的名字；`None` = 不是张量
+    pub dtype: Option<String>,
+}
+
+fn dtype_name(t: TensorElementType) -> String {
+    if t == TensorElementType::Float32 {
+        DTYPE.to_string()
+    } else {
+        format!("{t:?}")
+    }
 }
 
 /// 读已打开会话的输入输出（构造期，非实时）。
 pub fn read_session(s: &Session) -> (Vec<TensorRead>, Vec<TensorRead>) {
+    let one = |name: &str, t: &ort::value::ValueType| TensorRead {
+        name: name.to_string(),
+        shape: t.tensor_shape().map(|d| d.iter().copied().collect()),
+        dtype: t.tensor_type().map(dtype_name),
+    };
     let ins = s
         .inputs()
         .iter()
-        .map(|i| TensorRead {
-            name: i.name().to_string(),
-            shape: i
-                .dtype()
-                .tensor_shape()
-                .map(|d| d.iter().copied().collect()),
-        })
+        .map(|i| one(i.name(), i.dtype()))
         .collect();
     let outs = s
         .outputs()
         .iter()
-        .map(|o| TensorRead {
-            name: o.name().to_string(),
-            shape: o
-                .dtype()
-                .tensor_shape()
-                .map(|d| d.iter().copied().collect()),
-        })
+        .map(|o| one(o.name(), o.dtype()))
         .collect();
     (ins, outs)
 }
 
+type Row<'a> = (&'a str, Option<&'a [i64]>, Option<&'a str>);
+
 fn diff(side: &str, decl: &[TensorDecl], got: &[TensorRead]) -> Option<String> {
-    let want: Vec<(&str, Option<&[i64]>)> = decl.iter().map(|d| (d.name, Some(d.shape))).collect();
-    let have: Vec<(&str, Option<&[i64]>)> = got
+    let want: Vec<Row> = decl
         .iter()
-        .map(|g| (g.name.as_str(), g.shape.as_deref()))
+        .map(|d| (d.name, Some(d.shape), Some(DTYPE)))
+        .collect();
+    let have: Vec<Row> = got
+        .iter()
+        .map(|g| (g.name.as_str(), g.shape.as_deref(), g.dtype.as_deref()))
         .collect();
     (want != have).then(|| format!("{side}不符：声明 {want:?}，文件 {have:?}"))
 }
@@ -112,9 +124,18 @@ fn diff(side: &str, decl: &[TensorDecl], got: &[TensorRead]) -> Option<String> {
 /// 会话的输入输出与声明逐个比对（名字、顺序、形状）。不一致返回说明。
 pub fn check_session(decl: &Interface, s: &Session) -> Result<(), BoxError> {
     let (ins, outs) = read_session(s);
+    check_read(decl, &ins, &outs)
+}
+
+/// 实读结果与声明逐个比对（名字、顺序、形状、元素类型）。不一致返回说明。
+pub fn check_read(
+    decl: &Interface,
+    ins: &[TensorRead],
+    outs: &[TensorRead],
+) -> Result<(), BoxError> {
     let mut why = Vec::new();
-    why.extend(diff("输入", decl.inputs, &ins));
-    why.extend(diff("输出", decl.outputs, &outs));
+    why.extend(diff("输入", decl.inputs, ins));
+    why.extend(diff("输出", decl.outputs, outs));
     if why.is_empty() {
         Ok(())
     } else {
@@ -147,6 +168,41 @@ mod tests {
             names.sort_unstable();
             names.dedup();
             assert_eq!(names.len(), n, "{k:?} 名字重复");
+        }
+    }
+
+    fn read(ts: &[TensorDecl]) -> Vec<TensorRead> {
+        ts.iter()
+            .map(|t| TensorRead {
+                name: t.name.into(),
+                shape: Some(t.shape.to_vec()),
+                dtype: Some(DTYPE.into()),
+            })
+            .collect()
+    }
+
+    /// 与声明完全相同才过；名字、顺序、形状、元素类型任一不同都拒（codex 第 1 轮 #1：同名同形但不是 f32）。
+    #[test]
+    fn check_read_rejects_any_difference() {
+        for k in ModelKind::ALL {
+            let io = k.interface();
+            let (ins, outs) = (read(io.inputs), read(io.outputs));
+            check_read(&io, &ins, &outs).unwrap();
+            let mut bad = ins.clone();
+            bad[0].dtype = Some(dtype_name(TensorElementType::Float16));
+            assert!(check_read(&io, &bad, &outs).is_err(), "{k:?} 元素类型");
+            let mut bad = outs.clone();
+            bad[1].dtype = None;
+            assert!(check_read(&io, &ins, &bad).is_err(), "{k:?} 不是张量");
+            let mut bad = ins.clone();
+            bad.swap(1, 2);
+            assert!(check_read(&io, &bad, &outs).is_err(), "{k:?} 顺序");
+            let mut bad = ins.clone();
+            bad[0].shape = Some(vec![1, 1]);
+            assert!(check_read(&io, &bad, &outs).is_err(), "{k:?} 形状");
+            let mut bad = outs.clone();
+            bad[0].name = "x".into();
+            assert!(check_read(&io, &ins, &bad).is_err(), "{k:?} 名字");
         }
     }
 
