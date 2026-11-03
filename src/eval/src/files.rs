@@ -175,10 +175,7 @@ fn verifier_ids(schema: &mut schemars::Schema) {
         .iter()
         .map(|i| Value::from(i.id))
         .collect();
-    if let Some(Value::Object(v)) = schema
-        .get_mut("properties")
-        .and_then(|p| p.get_mut("v"))
-    {
+    if let Some(Value::Object(v)) = schema.get_mut("properties").and_then(|p| p.get_mut("v")) {
         v.insert("enum".into(), Value::Array(ids));
     }
 }
@@ -280,6 +277,9 @@ mod tests {
         assert_eq!(sc.noise, NoiseKind::Pink);
         assert_eq!(sc.snr_db, 10.0);
         let o = sc.owner.as_ref().unwrap();
-        assert_eq!((o.level_dbov, o.f0_lo, o.f0_hi, o.tonal), (-26.0, 100.0, 140.0, false));
+        assert_eq!(
+            (o.level_dbov, o.f0_lo, o.f0_hi, o.tonal),
+            (-26.0, 100.0, 140.0, false)
+        );
     }
 }

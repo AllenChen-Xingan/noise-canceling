@@ -217,7 +217,10 @@ fn schema_ranges(schema: &mut schemars::Schema) {
     set("block", json!({ "minimum": lo, "maximum": hi }));
     set("denoise_block", json!({ "minimum": 1, "maximum": hi }));
     let (lo, hi) = Config::HEARTBEAT_RANGE_MS;
-    set("heartbeat_timeout_ms", json!({ "minimum": lo, "maximum": hi }));
+    set(
+        "heartbeat_timeout_ms",
+        json!({ "minimum": lo, "maximum": hi }),
+    );
     set("lead_frames", json!({ "maximum": Config::LEAD_MAX }));
     let bus = json!({ "maxLength": Config::BUS_NAME_MAX, "pattern": bus_name_pattern() });
     set("bus_name", bus.clone());

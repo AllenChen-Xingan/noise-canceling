@@ -59,7 +59,8 @@ fn any_stale_doc_is_reported() {
         std::fs::write(&path, doc.text.replace("\"", "\"x")).unwrap();
         let p = check(&d);
         assert!(
-            p.iter().any(|m| m.contains(doc.file) && m.contains("不一致")),
+            p.iter()
+                .any(|m| m.contains(doc.file) && m.contains("不一致")),
             "{}：{p:#?}",
             doc.file
         );
@@ -114,14 +115,23 @@ fn shm_layout_fields_match_offset_of() {
             .as_u64()
             .unwrap() as usize
     };
-    assert_eq!(at("config.session"), offset_of!(Header, config) + offset_of!(ConfigLine, session));
+    assert_eq!(
+        at("config.session"),
+        offset_of!(Header, config) + offset_of!(ConfigLine, session)
+    );
     assert_eq!(
         at("rings[2].cons.gaps"),
-        offset_of!(Header, rings) + 2 * size_of::<RingHdr>() + offset_of!(RingHdr, cons) + offset_of!(ConsLine, gaps)
+        offset_of!(Header, rings)
+            + 2 * size_of::<RingHdr>()
+            + offset_of!(RingHdr, cons)
+            + offset_of!(ConsLine, gaps)
     );
     assert_eq!(
         at("rings[1].prod.wake"),
-        offset_of!(Header, rings) + size_of::<RingHdr>() + offset_of!(RingHdr, prod) + offset_of!(ProdLine, wake)
+        offset_of!(Header, rings)
+            + size_of::<RingHdr>()
+            + offset_of!(RingHdr, prod)
+            + offset_of!(ProdLine, wake)
     );
 }
 
@@ -147,11 +157,18 @@ fn shm_layout_change_without_version_bump_is_red() {
     let d = temp_root("bump");
     let layout_before = std::fs::read_to_string(d.join(DIR).join(shm::LAYOUT_FILE)).unwrap();
     let bogus: shm::Versions = [(v, "fnv1a64:0000000000000000".to_string())].into();
-    std::fs::write(d.join(DIR).join(shm::VERSIONS_FILE), shm::versions_text(&bogus)).unwrap();
+    std::fs::write(
+        d.join(DIR).join(shm::VERSIONS_FILE),
+        shm::versions_text(&bogus),
+    )
+    .unwrap();
     std::fs::remove_file(d.join(DIR).join(shm::LAYOUT_FILE)).unwrap();
     let e = write(&d).unwrap_err();
     assert!(e.contains("必须升版本"), "{e}");
-    assert!(!d.join(DIR).join(shm::LAYOUT_FILE).exists(), "守卫没过还写了文件");
+    assert!(
+        !d.join(DIR).join(shm::LAYOUT_FILE).exists(),
+        "守卫没过还写了文件"
+    );
     std::fs::write(d.join(DIR).join(shm::LAYOUT_FILE), layout_before).unwrap();
     assert!(check(&d).iter().any(|m| m.contains("必须升版本")));
 }
@@ -183,7 +200,10 @@ fn config_examples() -> Vec<(String, Value)> {
         })
         .collect();
     out.sort_by(|a, b| a.0.cmp(&b.0));
-    assert!(out.len() >= 2, "examples/ 里至少要有 config.default.json 和一份部分配置");
+    assert!(
+        out.len() >= 2,
+        "examples/ 里至少要有 config.default.json 和一份部分配置"
+    );
     out
 }
 
@@ -212,7 +232,11 @@ fn config_roundtrip_semantic() {
             let want = o.get(k).unwrap_or(&def[k]);
             assert_eq!(v, want, "{n}：键 {k}");
         }
-        assert_eq!(o.keys().filter(|k| !w.contains_key(*k)).count(), 0, "{n}：有键写出时丢了");
+        assert_eq!(
+            o.keys().filter(|k| !w.contains_key(*k)).count(),
+            0,
+            "{n}：有键写出时丢了"
+        );
         assert_eq!(Config::from_json(&c.to_json()).unwrap(), c, "{n}");
     }
 }
@@ -261,7 +285,10 @@ fn config_schema_ranges_agree_with_validate() {
     for c in cases {
         let by_schema = validate(&schema, &c).is_ok();
         let by_rust = Config::from_json(&c.to_string()).is_ok();
-        assert_eq!(by_schema, by_rust, "{c}：schema {by_schema} · Rust {by_rust}");
+        assert_eq!(
+            by_schema, by_rust,
+            "{c}：schema {by_schema} · Rust {by_rust}"
+        );
     }
 }
 
@@ -273,14 +300,26 @@ fn bus_name_pattern_agrees_with_validate() {
     let long_ok = format!("/vdn-{}", "a".repeat(Config::BUS_NAME_MAX - 5));
     let long_bad = format!("/vdn-{}", "a".repeat(Config::BUS_NAME_MAX - 4));
     for name in [
-        "/vdn-bus", "/vdn-x", "/vdn-", "/vdn", "vdn-bus", "/other", "/vdn-a/b", "/vdn-a\u{0}b",
-        "/vdn-a b", &long_ok, &long_bad,
+        "/vdn-bus",
+        "/vdn-x",
+        "/vdn-",
+        "/vdn",
+        "vdn-bus",
+        "/other",
+        "/vdn-a/b",
+        "/vdn-a\u{0}b",
+        "/vdn-a b",
+        &long_ok,
+        &long_bad,
     ] {
         let by_rust = vdn_control::validate_bus_name(name).is_ok();
         // 另一个总线名取不会撞的合法值，只测这一个字段
         let c = json!({"bus_name": name, "out_bus_name": "/vdn-zz-other"});
         let by_schema = validate(&schema, &c).is_ok();
-        assert_eq!(by_schema, by_rust, "{name:?}：schema {by_schema} · Rust {by_rust}");
+        assert_eq!(
+            by_schema, by_rust,
+            "{name:?}：schema {by_schema} · Rust {by_rust}"
+        );
     }
 }
 
@@ -342,13 +381,25 @@ fn eval_schema_and_parser_agree_on_bad_tasks() {
         (task(json!({})), true),
         (task(json!({"gradres": []})), false),
         (task(json!({"graders": [{"v": "V-NOPE"}]})), false),
-        (task(json!({"graders": [{"v": "V-NAN", "max": "3"}]})), false),
+        (
+            task(json!({"graders": [{"v": "V-NAN", "max": "3"}]})),
+            false,
+        ),
         (task(json!({"scene": {"noise": "rain"}})), false),
         (task(json!({"scene": {"pause_s": [1]}})), false),
         (task(json!({"set": "smoke"})), false),
-        (task(json!({"real": {"kind": "exp003", "clips": "a", "clip": "b", "extra": 1}})), false),
-        (task(json!({"faults": [{"hop": 3, "kind": "stall"}]})), false),
-        (task(json!({"probe": {"base": "R99", "kind": "mute"}})), true),
+        (
+            task(json!({"real": {"kind": "exp003", "clips": "a", "clip": "b", "extra": 1}})),
+            false,
+        ),
+        (
+            task(json!({"faults": [{"hop": 3, "kind": "stall"}]})),
+            false,
+        ),
+        (
+            task(json!({"probe": {"base": "R99", "kind": "mute"}})),
+            true,
+        ),
     ];
     for (doc, want) in cases {
         let by_schema = validate(&schema, &doc).is_ok();

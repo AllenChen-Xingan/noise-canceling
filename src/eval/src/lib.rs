@@ -33,7 +33,16 @@ use std::fmt;
 /// 定标级别（012 §2.1）。物理量直接 L3；模拟真值指标只在模拟内 L3；感知量没有人耳数据一律 L0。
 /// 级别表里的名字由 serde 定；`as_str` 与它的一致性由 `files_tests` 核对。
 #[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    serde::Serialize,
+    serde::Deserialize,
+    schemars::JsonSchema,
 )]
 pub enum Level {
     L0,

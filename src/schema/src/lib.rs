@@ -93,7 +93,10 @@ pub fn check(root: &Path) -> Vec<String> {
     let docs = export();
     for d in &docs {
         match read(&dir.join(d.file)) {
-            None => problems.push(format!("{DIR}/{} 不存在：跑 `cargo run -p vdn-schema`", d.file)),
+            None => problems.push(format!(
+                "{DIR}/{} 不存在：跑 `cargo run -p vdn-schema`",
+                d.file
+            )),
             Some(t) if t != d.text => problems.push(first_diff(d.file, &t, &d.text)),
             Some(_) => {}
         }
@@ -119,12 +122,8 @@ pub fn check(root: &Path) -> Vec<String> {
         None => problems.push(format!("{DIR}/{} 不存在", shm::VERSIONS_FILE)),
         Some(Err(e)) => problems.push(e),
         Some(Ok(v)) => {
-            if let Err(e) = shm::guard(
-                &v,
-                vdn_shm::layout::VERSION,
-                &shm::fingerprint(&body),
-                true,
-            ) {
+            if let Err(e) = shm::guard(&v, vdn_shm::layout::VERSION, &shm::fingerprint(&body), true)
+            {
                 problems.push(e);
             }
         }

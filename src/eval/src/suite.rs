@@ -48,7 +48,16 @@ pub fn main_root() -> PathBuf {
 
 /// 清单里的名字由 serde 定（小写）；`as_str` 与它的一致性由测试核对。
 #[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    serde::Serialize,
+    serde::Deserialize,
+    schemars::JsonSchema,
 )]
 #[serde(rename_all = "lowercase")]
 pub enum Set {
@@ -175,7 +184,11 @@ fn graders(id: &str, list: Vec<GraderFile>, info_only: bool) -> Result<Vec<Grade
             if info(&g.v).is_none() {
                 return Err(format!("{id}：没有登记的 verifier {}", g.v));
             }
-            let params = g.params.into_iter().map(|(k, v)| (k, Value::from(v))).collect();
+            let params = g
+                .params
+                .into_iter()
+                .map(|(k, v)| (k, Value::from(v)))
+                .collect();
             Ok(Grader {
                 v: g.v,
                 params: Params(params),
@@ -254,8 +267,7 @@ pub fn trial_seed(base: u64, id: &str, trial: usize) -> u64 {
 /// 定标级别表：verifier id → (级别, 依据)。格式正本是 `files::LevelsFile`。
 pub fn parse_levels(text: &str) -> Result<BTreeMap<String, (Level, String)>, String> {
     let f: LevelsFile = serde_json::from_str(text).map_err(|e| format!("levels.json：{e}"))?;
-    Ok(f
-        .verifiers
+    Ok(f.verifiers
         .into_iter()
         .map(|(k, e)| (k, (e.level, e.basis)))
         .collect())

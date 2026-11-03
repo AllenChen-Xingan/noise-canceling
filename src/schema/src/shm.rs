@@ -106,8 +106,12 @@ pub fn parse_versions(text: &str) -> Result<Versions, String> {
         .and_then(Value::as_object)
         .ok_or_else(|| format!("{VERSIONS_FILE} 缺 versions"))?
     {
-        let n: u32 = k.parse().map_err(|_| format!("{VERSIONS_FILE}：版本号 {k:?} 不是整数"))?;
-        let f = f.as_str().ok_or_else(|| format!("{VERSIONS_FILE}：{k} 的指纹不是字符串"))?;
+        let n: u32 = k
+            .parse()
+            .map_err(|_| format!("{VERSIONS_FILE}：版本号 {k:?} 不是整数"))?;
+        let f = f
+            .as_str()
+            .ok_or_else(|| format!("{VERSIONS_FILE}：{k} 的指纹不是字符串"))?;
         out.insert(n, f.to_string());
     }
     Ok(out)

@@ -8,7 +8,9 @@ use crate::analysis::truth_from_clean;
 use crate::synth::Clip;
 
 /// 清单里的名字由 serde 定；`as_str` 与它的一致性由本文件的测试核对。
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum Probe {
     /// 削每个词首 50 ms（置零）

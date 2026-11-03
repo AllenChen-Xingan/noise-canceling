@@ -14,7 +14,9 @@ use crate::rng::Rng;
 pub const SR: u32 = 16_000;
 
 /// 噪音种类。清单里的名字由 serde 定（小写），格式正本见 `files.rs`。
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum NoiseKind {
     None,
@@ -31,7 +33,9 @@ pub enum NoiseKind {
 }
 
 /// 干扰者怎么说话。清单里的名字由 serde 定（snake_case）。
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum InterfMode {
     /// 只在主讲人的停顿里说（轮流）
