@@ -69,7 +69,7 @@ pub struct Config {
     /// 心跳多久不动就切原声（ms）
     pub heartbeat_timeout_ms: u32,
     /// 环余量（48 kHz 样本）：降噪进程开头往 Processed 先推这么多个零，让送音端每块都取得到。
-    /// 链路总延迟 `L_total` = 管线延迟 + 本值（人定默认 1440 = 30 ms，2026-11-02）
+    /// 链路总延迟 `L_total` = 管线延迟 + 本值（默认见 `DEFAULT_LEAD`）
     pub lead_frames: usize,
     /// 降噪进程每次从 Raw 取多少样本跑一次 Pipeline（48 kHz）；须整除模型 hop × 3（GTCRN 768），
     /// 不整除由 vdn-denoised 启动时报错（人定省 2 ms，2026-11-02）
@@ -97,8 +97,9 @@ impl Config {
     /// 2 ms @ 48 kHz（规约提议的 IO 块；480 时环余量至少要盖住 10 ms，人定修延迟 2026-11-02）
     pub const DEFAULT_BLOCK: usize = 96;
     pub const DEFAULT_BUS: &'static str = "/vdn-bus";
-    /// 3 块 × 480 = 30 ms
-    pub const DEFAULT_LEAD: usize = 1440;
+    /// 288 = 6 ms。**暂定，待 Workgroup 后复测**（大总管定 2026-11-02）：release V7 基线里空闲时推理那块约 3 ms，
+    /// 144 / 96 都有处理后欠载，192–384 空闲 3 次无欠载（`docs/experiments/exp-v7-latency/`）
+    pub const DEFAULT_LEAD: usize = 288;
     /// 2 ms @ 48 kHz
     pub const DEFAULT_DENOISE_BLOCK: usize = 96;
     /// 环余量上限（0.5 s）
