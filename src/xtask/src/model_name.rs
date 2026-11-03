@@ -526,6 +526,7 @@ impl ModelId {
                 "src/d/src/lib.rs",
                 "mod outer {\n    #[cfg(test)]\n    #[path = \"t.rs\"]\n    mod tests;\n}\nmod both;\n#[cfg(test)]\n#[path = \"both.rs\"]\nmod again;\n",
             ),
+            f("src/d/src/both.rs", ""),
         ];
         let got = test_module_files(&files);
         assert_eq!(
