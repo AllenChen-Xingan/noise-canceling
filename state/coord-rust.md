@@ -38,8 +38,10 @@
 
 进度（HH:MM）
 - rs-entry 自审：1 P0 + 5 P1 已修（两进程 SIGKILL 重启：相关 1.000000、静音 0）。6 条交大总管 → 定：①Out 环改由送音端自建（rs-entry）②③总线头加 lead · 降噪块长 · 会话 ID · 缺口计数（rs-wake），积压超 lead 丢旧并记缺口（rs-entry）④无缝换设备 → backlog ⑤tidy 查 main.rs → rs-wake；cargo-deny 本批不装 ⑥规约文字收尾时大总管改
+- rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- 011 schema 交叉校验方案（人提，2026-11-02）：待人定时机，默认 A = 骨架之后与处理图合成下一件大事
 - 人定 D66（原话「c」）：「超级语法树」两种都要；处理图统一表示排在骨架之后。对照审查子代理在跑（008 / 005 / 009 三样）
 - rs-wake：新签名（头部版本 2 · notify / wait · lead / 降噪块长 / 会话 ID / 缺口 · OwnedBus），vdn-shm 测试全过；BusConfig 多两个字段，rs-entry 要补
 - 人定 2026-11-02（原话「还有手下，装」，大总管理解为装检查工具）：装 cargo-deny 并接进 `xtask ci`；装 nightly + Miri 跑 vdn-shm（及 dsp）→ rs-wake
