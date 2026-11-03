@@ -5,7 +5,8 @@
       "additionalProperties": false,
       "properties": {
         "dur_s": {
-          "description": "合成场景时长（秒）；缺省 10",
+          "default": 10.0,
+          "description": "合成场景时长（秒）",
           "format": "double",
           "type": [
             "number",
@@ -13,7 +14,8 @@
           ]
         },
         "trials": {
-          "description": "每个任务的试验数；缺省 3",
+          "default": 3,
+          "description": "每个任务的试验数",
           "format": "uint64",
           "minimum": 0,
           "type": [
@@ -92,7 +94,11 @@
       "additionalProperties": false,
       "properties": {
         "f0": {
-          "description": "基频范围（Hz）；缺省 [180, 230]",
+          "default": [
+            180.0,
+            230.0
+          ],
+          "description": "基频范围（Hz）",
           "items": {
             "format": "double",
             "type": "number"
@@ -113,10 +119,10 @@
               "type": "null"
             }
           ],
-          "description": "缺省 alternate"
+          "default": "alternate"
         },
         "sir_db": {
-          "description": "缺省 6",
+          "default": 6.0,
           "format": "double",
           "type": [
             "number",
@@ -301,7 +307,7 @@
       "additionalProperties": false,
       "properties": {
         "dur_s": {
-          "description": "缺省取 defaults.dur_s",
+          "description": "场景时长（秒）；缺省取清单的 defaults.dur_s",
           "format": "double",
           "type": [
             "number",
@@ -324,7 +330,7 @@
               "type": "null"
             }
           ],
-          "description": "缺省 pink"
+          "default": "pink"
         },
         "owner": {
           "anyOf": [
@@ -338,7 +344,8 @@
           "description": "主讲人；缺省或 null = 没有主讲人"
         },
         "owner_start_s": {
-          "description": "缺省 0.5",
+          "default": 0.5,
+          "description": "主讲人开口时刻（秒）",
           "format": "double",
           "type": [
             "number",
@@ -346,7 +353,11 @@
           ]
         },
         "pause_s": {
-          "description": "停顿长度范围（秒）；缺省 [0.4, 1.2]",
+          "default": [
+            0.4,
+            1.2
+          ],
+          "description": "停顿长度范围（秒）",
           "items": {
             "format": "double",
             "type": "number"
@@ -359,7 +370,7 @@
           ]
         },
         "snr_db": {
-          "description": "缺省 10",
+          "default": 10.0,
           "format": "double",
           "type": [
             "number",
@@ -367,7 +378,8 @@
           ]
         },
         "tail_silence_s": {
-          "description": "缺省 0",
+          "default": 0.0,
+          "description": "末尾静音（秒）",
           "format": "double",
           "type": [
             "number",
@@ -401,7 +413,11 @@
       "additionalProperties": false,
       "properties": {
         "f0": {
-          "description": "基频范围（Hz）；缺省 [100, 140]",
+          "default": [
+            100.0,
+            140.0
+          ],
+          "description": "基频范围（Hz）",
           "items": {
             "format": "double",
             "type": "number"
@@ -414,7 +430,8 @@
           ]
         },
         "level_dbov": {
-          "description": "P.56 主动语音电平（dBov）；缺省 −26",
+          "default": -26.0,
+          "description": "P.56 主动语音电平（dBov）",
           "format": "double",
           "type": [
             "number",
@@ -422,7 +439,8 @@
           ]
         },
         "tonal": {
-          "description": "声调语言式的音节内 f0 变化；缺省 false",
+          "default": false,
+          "description": "声调语言式的音节内 f0 变化",
           "type": [
             "boolean",
             "null"
@@ -475,7 +493,7 @@
               "type": "null"
             }
           ],
-          "description": "缺省 en"
+          "default": "en"
         },
         "note": {
           "description": "给读清单的人看的备注，程序不读",
@@ -500,7 +518,7 @@
               "type": "null"
             }
           ],
-          "description": "缺省 both"
+          "default": "both"
         },
         "probe": {
           "anyOf": [
@@ -525,7 +543,8 @@
           "description": "仓外真实片段（QA），按 clips.json 里的 sha256 核对"
         },
         "safety": {
-          "description": "false = 三件保命全关；缺省 true",
+          "default": true,
+          "description": "false = 三件保命全关",
           "type": [
             "boolean",
             "null"
@@ -546,7 +565,7 @@
           "$ref": "#/$defs/Set"
         },
         "trials": {
-          "description": "合成任务 = 种子数；缺省取 defaults.trials",
+          "description": "合成任务 = 种子数；缺省取清单的 defaults.trials",
           "format": "uint64",
           "minimum": 0,
           "type": [
@@ -587,14 +606,16 @@
       ]
     },
     "name": {
-      "description": "清单名；缺省 \"suite\"",
+      "default": "suite",
+      "description": "清单名",
       "type": [
         "string",
         "null"
       ]
     },
     "seed": {
-      "description": "基础种子；缺省 20261031",
+      "default": 20261031,
+      "description": "基础种子",
       "format": "uint64",
       "minimum": 0,
       "type": [

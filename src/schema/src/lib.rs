@@ -107,10 +107,7 @@ pub fn check_with(root: &Path, history: &[(u32, &str)]) -> Vec<String> {
         }
     }
     // 目录里多出来的 json（改名或删了类型后留下的旧文件）也算不一致
-    let known: Vec<&str> = docs
-        .iter()
-        .map(|d| d.file)
-        .collect();
+    let known: Vec<&str> = docs.iter().map(|d| d.file).collect();
     if let Ok(rd) = std::fs::read_dir(&dir) {
         for e in rd.flatten() {
             let name = e.file_name().to_string_lossy().into_owned();

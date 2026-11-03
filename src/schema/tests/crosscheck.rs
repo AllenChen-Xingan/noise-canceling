@@ -170,9 +170,11 @@ fn shm_layout_change_without_version_bump_is_red() {
         "守卫没过还写了文件"
     );
     write(&d).unwrap();
-    assert!(vdn_schema::check_with(&d, &bogus)
-        .iter()
-        .any(|m| m.contains("必须升版本")));
+    assert!(
+        vdn_schema::check_with(&d, &bogus)
+            .iter()
+            .any(|m| m.contains("必须升版本"))
+    );
 }
 
 /// 当前版本正是 HISTORY 的最后一行、指纹相同。
@@ -180,7 +182,10 @@ fn shm_layout_change_without_version_bump_is_red() {
 fn shm_version_registered() {
     assert_eq!(
         shm::HISTORY.last().copied(),
-        Some((vdn_shm::layout::VERSION, shm::fingerprint(&shm::layout_body()).as_str()))
+        Some((
+            vdn_shm::layout::VERSION,
+            shm::fingerprint(&shm::layout_body()).as_str()
+        ))
     );
 }
 
@@ -327,16 +332,17 @@ fn bus_name_pattern_agrees_with_validate() {
 /// 其余（标题、注释、别的字段）都不变，所以报红只能来自这一个字段（第 1 轮 codex #4）。
 fn assert_missing_field_is_red(tag: &str, file: &str, pointer: &str, field: &str) {
     let d = temp_root(tag);
-    let fresh: Value = serde_json::from_str(
-        &std::fs::read_to_string(d.join(DIR).join(file)).unwrap(),
-    )
-    .unwrap();
+    let fresh: Value =
+        serde_json::from_str(&std::fs::read_to_string(d.join(DIR).join(file)).unwrap()).unwrap();
     let mut old = fresh.clone();
     let props = old
         .pointer_mut(pointer)
         .and_then(Value::as_object_mut)
         .unwrap_or_else(|| panic!("{file} 里没有 {pointer}"));
-    assert!(props.remove(field).is_some(), "{file}{pointer} 里没有 {field}");
+    assert!(
+        props.remove(field).is_some(),
+        "{file}{pointer} 里没有 {field}"
+    );
     if let Some(Value::Array(req)) = old
         .pointer_mut(pointer.trim_end_matches("/properties"))
         .and_then(|o| o.get_mut("required"))
@@ -355,7 +361,12 @@ fn assert_missing_field_is_red(tag: &str, file: &str, pointer: &str, field: &str
 /// 负例：Config 加了字段而 schema 没重新导出 → 检查报 config.schema.json。
 #[test]
 fn config_new_field_without_export_is_red() {
-    assert_missing_field_is_red("config", "config.schema.json", "/properties", "denoise_block");
+    assert_missing_field_is_red(
+        "config",
+        "config.schema.json",
+        "/properties",
+        "denoise_block",
+    );
 }
 
 // ───────────── 评测清单 ─────────────
@@ -433,9 +444,19 @@ fn eval_schema_and_parser_agree_on_bad_tasks() {
 /// 负例：清单类型加了字段而 schema 没重新导出 → 检查报出对应文件（三份各一例）。
 #[test]
 fn eval_type_change_without_export_is_red() {
-    assert_missing_field_is_red("eval-suite", eval::SUITE_FILE, "/$defs/TaskFile/properties", "xfail");
+    assert_missing_field_is_red(
+        "eval-suite",
+        eval::SUITE_FILE,
+        "/$defs/TaskFile/properties",
+        "xfail",
+    );
     assert_missing_field_is_red("eval-levels", eval::LEVELS_FILE, "/properties", "updated");
-    assert_missing_field_is_red("eval-baseline", eval::BASELINE_FILE, "/properties", "run_id");
+    assert_missing_field_is_red(
+        "eval-baseline",
+        eval::BASELINE_FILE,
+        "/properties",
+        "run_id",
+    );
 }
 
 /// 往返的比较口径：null 与缺省等价、空数组与缺省等价（serde 写出 `None` 为 null、空 Vec 为 []），
@@ -460,7 +481,11 @@ fn roundtrip<T: serde::de::DeserializeOwned + serde::Serialize>(path: &str, v: &
     assert_eq!(norm(v), norm(&out), "{path}：往返后语义不同");
     // 写出的结果还能读回，再写一次不变
     let t2: T = serde_json::from_value(out.clone()).unwrap();
-    assert_eq!(serde_json::to_value(&t2).unwrap(), out, "{path}：第二次往返变了");
+    assert_eq!(
+        serde_json::to_value(&t2).unwrap(),
+        out,
+        "{path}：第二次往返变了"
+    );
 }
 
 /// 4 份清单文件：反序列化成格式类型再序列化，语义等价（口径见 `norm`）。
@@ -492,7 +517,10 @@ fn eval_writer_outputs_pass_schema() {
     };
     let bv = serde_json::to_value(&b).unwrap();
     validate(&committed(eval::BASELINE_FILE), &bv).unwrap();
-    assert_eq!(BaselineFile::parse(&bv.to_string()).unwrap().values, b.values);
+    assert_eq!(
+        BaselineFile::parse(&bv.to_string()).unwrap().values,
+        b.values
+    );
     let l = LevelsFile {
         doc: "d".into(),
         updated: "2026-11-02".into(),
@@ -505,7 +533,11 @@ fn eval_writer_outputs_pass_schema() {
         )]
         .into(),
     };
-    validate(&committed(eval::LEVELS_FILE), &serde_json::to_value(&l).unwrap()).unwrap();
+    validate(
+        &committed(eval::LEVELS_FILE),
+        &serde_json::to_value(&l).unwrap(),
+    )
+    .unwrap();
     // values 合法、元数据坏 → 报错
     for bad in [
         json!({"values": {"a": 1.0}}),
@@ -513,6 +545,9 @@ fn eval_writer_outputs_pass_schema() {
         json!({"commit": "c", "doc": "d", "run_id": "r", "values": {"a": "1"}}),
     ] {
         assert!(BaselineFile::parse(&bad.to_string()).is_err(), "{bad}");
-        assert!(validate(&committed(eval::BASELINE_FILE), &bad).is_err(), "{bad}");
+        assert!(
+            validate(&committed(eval::BASELINE_FILE), &bad).is_err(),
+            "{bad}"
+        );
     }
 }

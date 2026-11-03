@@ -103,9 +103,7 @@ pub fn guard(history: &[(u32, &str)], version: u32, fp: &str) -> Result<(), Stri
     if history.windows(2).any(|w| w[0].0 >= w[1].0) {
         return Err("shm::HISTORY 的版本号必须严格递增".into());
     }
-    let next = |v: u32| {
-        format!("在 src/schema/src/shm.rs 的 HISTORY 末尾加 ({v}, \"{fp}\")")
-    };
+    let next = |v: u32| format!("在 src/schema/src/shm.rs 的 HISTORY 末尾加 ({v}, \"{fp}\")");
     match history.last() {
         None => Err(format!("shm::HISTORY 是空的：{}", next(version))),
         Some(&(v, f)) if v == version && f == fp => Ok(()),
