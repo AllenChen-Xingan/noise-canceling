@@ -17,7 +17,7 @@ mkdir -p "$OUT" "$DUMP"
   echo "date=$(date '+%F %T %z')"; echo "machine=$(sysctl -n hw.model)"; echo "os=$(sw_vers -productVersion)"
   echo "power=$(pmset -g batt | head -1 | sed "s/.*'\(.*\)'.*/\1/")"; echo "uptime_before: $(uptime)"
   echo "python=$($PY -c 'import sys,onnxruntime,numpy;print(sys.version.split()[0],"ort",onnxruntime.__version__,"numpy",numpy.__version__)')"
-  ps -Ao %cpu,comm -r | head -4
+  ps -Ao %cpu,comm -r | head -4 || true
 } > "$OUT/env.txt"
 # 先转储一次输入与 Rust ORT 输出（这次的计时也记下，不进对比）
 $BIN gtcrn-bench ort "$G" "$WAV" --dump-io "$DUMP/io" > "$OUT/dump-run.json"

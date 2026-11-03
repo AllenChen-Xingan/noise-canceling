@@ -27,7 +27,7 @@ mkdir -p "$OUT"
   echo "git=$(git -C "$HERE" rev-parse --short HEAD)"
   shasum -a 256 "$W.bin" "$G" "$F" "$FT" "$WAV" "$BIN"
   echo "ort=静态链接进 bench 可执行文件（上面那行 sha256 即含 ORT）；crate 版本：$(grep -A1 '^name = "ort"$' "$HERE/bench/Cargo.lock" | tail -1)"
-  ps -Ao %cpu,comm -r | head -4
+  ps -Ao %cpu,comm -r | head -4 || true
 } > "$OUT/env.txt"
 
 $BIN gtcrn-parity "$W" "$G" "$WAV" --vs native >> "$OUT/parity.jsonl"
