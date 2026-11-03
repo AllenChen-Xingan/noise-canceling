@@ -219,7 +219,7 @@ pub fn write_with(root: &Path, history: &[(u32, &str)]) -> Result<Vec<String>, S
     Ok(wrote)
 }
 
-/// 可信基线里的布局文件（git 历史里 main 上那一份）。
+/// 可信基线里的一份导出文件（git 历史里 main 上那一份）。
 pub enum Baseline {
     /// 找到了：基线提交 + 文件全文
     Found(String, String),
@@ -249,19 +249,39 @@ fn git(root: &Path, args: &[&str]) -> Option<String> {
 ///    一次推送多个提交时，不会拿同批里未验证的提交当基线（codex 第 3 轮 #2）
 /// 2. 本机：本分支与 main 的分叉点；就在 main 上时取上一个提交（第一父）
 pub fn shm_baseline(root: &Path) -> Baseline {
-    let over = std::env::var(BASE_ENV).ok();
-    shm_baseline_from(root, over.as_deref().filter(|s| !s.is_empty()))
+    baseline(root, shm::LAYOUT_FILE)
 }
 
 /// 同 `shm_baseline`，基线提交由调用方给（`None` = 按本机规则找）。
 pub fn shm_baseline_from(root: &Path, over: Option<&str>) -> Baseline {
+    baseline_from(root, over, shm::LAYOUT_FILE)
+}
+
+/// 读指定提交上的布局文件（见 [`baseline_at`]）。
+pub fn shm_baseline_at(root: &Path, base: &str) -> Baseline {
+    baseline_at(root, base, shm::LAYOUT_FILE)
+}
+
+/// 同 `shm_baseline_at`，调 git 的那一步由调用方给（见 [`baseline_with`]）。
+pub fn shm_baseline_with(base: &str, git: &dyn Fn(&[&str]) -> Option<String>) -> Baseline {
+    baseline_with(base, shm::LAYOUT_FILE, git)
+}
+
+/// 可信基线上的导出文件 `file`（在 `DIR` 下），基线提交的取法同 [`shm_baseline`]。
+pub fn baseline(root: &Path, file: &str) -> Baseline {
+    let over = std::env::var(BASE_ENV).ok();
+    baseline_from(root, over.as_deref().filter(|s| !s.is_empty()), file)
+}
+
+/// 同 `baseline`，基线提交由调用方给（`None` = 按本机规则找）。
+pub fn baseline_from(root: &Path, over: Option<&str>, file: &str) -> Baseline {
     if let Some(b) = over {
         if b.bytes().all(|c| c == b'0') {
             return Baseline::Unavailable(format!(
                 "{BASE_ENV} 是全零（新建分支的推送没有前一个提交）"
             ));
         }
-        return shm_baseline_at(root, b);
+        return baseline_at(root, b, file);
     }
     let head = git(root, &["rev-parse", "HEAD"]);
     let base = ["origin/main", "main"]
@@ -278,18 +298,18 @@ pub fn shm_baseline_from(root: &Path, over: Option<&str>) -> Baseline {
             None => return Baseline::Unavailable("HEAD 没有父提交".into()),
         }
     }
-    shm_baseline_at(root, &base)
+    baseline_at(root, &base, file)
 }
 
-/// 读指定提交上的布局文件。只有「提交在、它的树里确实没有这份文件」才算 `Absent`；
+/// 读指定提交上的导出文件。只有「提交在、它的树里确实没有这份文件」才算 `Absent`；
 /// 提交不存在、读树或读文件出错一律 `Unavailable`（CI 里算红；codex 第 3 轮 #1）。
-pub fn shm_baseline_at(root: &Path, base: &str) -> Baseline {
-    shm_baseline_with(base, &|args| git(root, args))
+pub fn baseline_at(root: &Path, base: &str, file: &str) -> Baseline {
+    baseline_with(base, file, &|args| git(root, args))
 }
 
-/// 同 `shm_baseline_at`，调 git 的那一步由调用方给（测试用它模拟读树、读文件失败；codex 第 4 轮 #2）。
+/// 同 `baseline_at`，调 git 的那一步由调用方给（测试用它模拟读树、读文件失败；codex 第 4 轮 #2）。
 /// `git` 返回 `None` = 命令失败，`Some(stdout)` = 成功。
-pub fn shm_baseline_with(base: &str, git: &dyn Fn(&[&str]) -> Option<String>) -> Baseline {
+pub fn baseline_with(base: &str, file: &str, git: &dyn Fn(&[&str]) -> Option<String>) -> Baseline {
     let Some(commit) = git(&[
         "rev-parse",
         "--verify",
@@ -298,7 +318,7 @@ pub fn shm_baseline_with(base: &str, git: &dyn Fn(&[&str]) -> Option<String>) ->
     ]) else {
         return Baseline::Unavailable(format!("基线提交 {base} 不存在（CI 要 fetch-depth: 0）"));
     };
-    let path = format!("{DIR}/{}", shm::LAYOUT_FILE);
+    let path = format!("{DIR}/{file}");
     match git(&["ls-tree", "--name-only", &commit, "--", &path]) {
         None => Baseline::Unavailable(format!("读不了 {commit} 的文件树")),
         Some(listed) if listed.is_empty() => Baseline::Absent(commit),
