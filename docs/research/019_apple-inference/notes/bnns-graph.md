@@ -11,13 +11,14 @@
 
 ## 0. 一句话结论
 
-BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接口。它有纯 C 接口，单线程可选，给够工作区就不分配内存，可以从 Rust 直接调。它**只吃 Core ML 编译产物 `.mlmodelc`**（另有一个只能在 Swift 里用的建图接口），所以我们的 ONNX 不能直接喂，要从 PyTorch 源码经 `coremltools` 重新转换。
+BNNS Graph 是苹果在 WWDC 里**明文推荐给实时音频**的推理接口（WWDC25 276）【官方】；说它是「唯一」的，没有出处【推断】。它有纯 C 接口，单线程可选，给够工作区就不分配内存，可以从 Rust 直接调。它**只吃 Core ML 编译产物 `.mlmodelc`**（另有一个只能在 Swift 里用的建图接口），所以我们的 ONNX 不能直接喂，要从 PyTorch 源码经 `coremltools` 重新转换。
 
-对 GTCRN 这种「时间主要花在调度」的小模型，它的收益空间最大【推断】。第三方在 M3 上测过同量级的音频小模型：比 ORT 快约 2–5 倍，尾部也稳【实测-他人，DAFx26】。
+对 GTCRN 这种「时间主要花在调度」的小模型，它**可能**收益大，但有反例（见下）【推断】。第三方在 M3 上单独跑时，大模型比 ORT 快约 1.9–5 倍；可中号 LSTM 反而是 ORT 快约 2 倍；ORT 没进争用测试，「尾部稳」只对 RTNeural 比过；BNNS 一侧还是 fp16【实测-他人，DAFx26 表 3/4/5；fp16 出自 `nab` 源码】。
 
 最大的不确定点有两个：
 1. GRU（含双向）、LayerNorm、Unfold、STFT 这些算子能不能被它编译：苹果没有公开算子表。
-2. fp32 能不能逐值对上：缓存走 Core ML「状态」时，`coremltools` 只允许 fp16。
+2. fp32 能不能逐值对上：缓存走 Core ML「状态」时，`coremltools` 只允许 fp16（出处只有 `nab` 源码里抄的报错原文）。
+3. **GTCRN 的 GRU 很碎**：隐状态每组只有 4（帧内）或 8–16（跨帧），帧内要沿 33 个频点逐步走。DAFx26 里小隐状态的 LSTM 恰恰是 BNNS 的弱项。整图编译省掉的是节点调度，省不掉这几百个串行小步【推断，依据 `res:gtcrn/stream/gtcrn_stream.py:171-172,202,314-315` 与 DAFx26 §4.1】。
 
 ## 1. 它吃什么：模型来源与算子
 
@@ -48,7 +49,7 @@ BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接�
 | PReLU | 有 `prelu(alpha: [Float])` | `SW:5245` |
 | Sigmoid / Tanh / Softmax | 有 | `SW:5226,5232,5254` |
 | Linear / MatMul（自注意力的 qkv 和打分） | 有 `linear`、`matmul` | `SW:5217-5220` |
-| GRU | 有 `gru`，带初始隐状态，输出隐状态 | `SW:14178` |
+| GRU | 有 `gru`，带初始隐状态，输出隐状态（建图接口要 macOS 26，`SW:14175`） | `SW:14178` |
 | **双向 GRU** | **没有**。`Direction` 只有 `forward` 和 `reverse`（`SW:5142-5145`）。只有 LSTM 有现成的双向版 `bidirectionalLSTM`。GTCRN 的帧内双向 GRU 要拆成正、反两个 GRU 再拼接 | `SW:14175-14181` |
 | Unfold | **没有同名算子**。要用切片加拼接，或用固定权重的卷积来模拟 | 函数名全表见 `SW`（`grep "public func"`） |
 | ScatterND / 切片写回 | 有 `scatterND`、`scatter`，还有切片下标 | `SW:15079-15081`、`SW:1420-1424` |
@@ -65,7 +66,7 @@ BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接�
 - 「The main requirements for real-time processing are to avoid any memory allocations or multithreading during the execute phase…」（同上，6:47 一节）【官方】
 - 讲稿里的演示：把 BNNS Graph 放进 Audio Unit 的 C++ DSP 内核里调用，「We want to make sure BNNS doesn't allocate any memory while it's processing the audio data.」【官方】WWDC24 10211，8:00 一节
 - 「We recommend BNNSGraph for audio and other latency-sensitive use cases because it gives you control over allocating memory and multithreading.」【官方】WWDC25 276，3:12，<https://developer.apple.com/videos/play/wwdc2025/276/>
-- 讲稿里说 Core ML 自己也用 BNNS Graph 在 CPU 上跑【官方，WWDC24 10211，据网页摘录，没逐字核对】。
+- ~~讲稿里说 Core ML 自己也用 BNNS Graph 在 CPU 上跑~~ → 讲稿原文是「It accelerates machine learning on the CPU and it's used by Apple's machine learning framework, Core ML.」，主语是 **BNNS**，不是 BNNS Graph。Core ML 的 CPU 路径是否走 BNNS Graph，**没有出处**【官方，WWDC24 10211 讲稿，怀疑派已核对】。
 
 ### 2.2 头文件里的调用约定（`BNNSGraphContextExecute`，`H/bnns_graph.h:697-740`）
 
@@ -80,24 +81,27 @@ BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接�
 5. **优化偏好**：默认是 `Performance`，可以多做编译期工作（`:212-228`）【官方】。
 6. **动态形状**：`BNNSGraphContextSetDynamicShapes` 返回 0 表示形状全确定，1 表示有上界，**返回 2 表示执行时要分配**（`:617-622`）。不能和执行同时调用（`:599`）【官方】。我们的两个模型形状都固定，不需要它【推断】。
 7. **兜底**：如果内部还要分配，可以用 `SetWorkspaceAllocationCallback` 和 `SetOutputAllocationCallback` 换成自己的分配器（`:811-841`、`:843-868`）。可以接到预分配的内存池上【官方】。
-8. **调试开关**：`BNNSGraphContextEnableNanAndInfChecks` 会检查中间张量里的 NaN 和 Inf，头文件注明「Not for use in production code」（`:674-678`）【官方】。
+8. **缺页**【推断】：`aligned_alloc` 拿到的页是懒映射的。头文件只保证「不分配」，没保证「不缺页」。首次触碰工作区、输出缓冲时会缺页进内核，所以预热时要把工作区和全部参数缓冲先写一遍。
+9. **调试开关**：`BNNSGraphContextEnableNanAndInfChecks` 会检查中间张量里的 NaN 和 Inf，头文件注明「Not for use in production code」（`:674-678`）【官方】。
 
 ### 2.3 能不能在音频渲染线程直接调
 
 - 苹果在演示里直接从 Audio Unit 的渲染内核里调 `BNNSGraphContextExecute`【官方，WWDC24 10211】。头文件里**没有「无锁」或「不做系统调用」的原话**。
-- 第三方检查过（DAFx26 §3.3，第 130 页）：用 LLVM 22 的 `-fsanitize=realtime`（RTSan，实时消毒器）跑 100 次 `BNNSGraphContextExecute`，没报违规，也就是没有 malloc、`pthread_mutex_lock` 这类调用。作者自己写了这「不是形式证明」【实测-他人】。探针源码在 `nab:tools/rtsan-bnns-test/test_bnns_rt.cpp`【源码】。
-- 对 vdn 的意思：推理线程是 B 档软实时（`specs/rust/architecture.md:295`）。BNNS Graph 有希望做到**内部也零分配、零锁**，比 ORT「内部分配要登记」更严。不能只信第三方，要本机用 RTSan 和 malloc 计数重测【推断】。
+- 第三方检查过（DAFx26 §3.3，第 130 页）：用 LLVM 22 的 `-fsanitize=realtime`（RTSan，实时消毒器）跑 100 次 `BNNSGraphContextExecute`，没报违规，也就是没有 malloc、`pthread_mutex_lock` 这类调用。作者自己写了这「不是形式证明」【实测-他人】。注意三点：测的是一个「最小的推理循环」，不是他们的 LSTM/TCN 模型；只有 100 次；RTSan 只拦被插桩的 libc 函数，拦不到 BNNS 内部的自旋或缺页【实测-他人 + 推断】。探针源码在 `nab:tools/rtsan-bnns-test/test_bnns_rt.cpp`【源码】。⚠️ `nab` 是 GPL-3.0（`exporters.py:1`），只能读，不能抄进本仓（铁律 3）。
+- 对 vdn 的意思：推理线程是 B 档软实时（`specs/rust/architecture.md:295`）。BNNS Graph 有希望做到**内部也零分配、零锁**，比 ORT「内部分配要登记」更严。不能只信第三方，要本机用 RTSan 和 malloc 计数、拿我们自己的两个模型重测【推断】。
+- 头文件零分配的第 2 条（形状可定界）是**整图**条件：只要图里有一个算子形状推不出上界，就会在执行时分配。GTCRN 的 ScatterND / 切片写回如果被转成动态形状，这条就破【推断】。
 
 ## 3. 有状态 / 流式：缓存怎么传
 
 我们的缓存张量（GTCRN 3 个，FE-M 6 个）有三种接法：
 
 1. **当普通输入、输出传（像现在的 ONNX）**：上一帧的输出缓冲交给下一帧当输入，两份缓冲轮流用。参数类型设为裸指针（`BNNSGraphArgumentTypePointer`，`H/bnns_graph.h:518-525`）。指针每帧可以换，调用方自己管内存。输出放在前、输入放在后，位置用 `BNNSGraphGetArgumentPosition` 查（`H/bnns_graph.h:472-486`、`:712-718`）。这条路**不限精度**，可以全 fp32【推断】。
-2. **当 Core ML 的「状态」（`MLState` 对应物）**：Core ML 的状态张量在 BNNS 里显示成「输入兼输出」（`BNNSGraphArgumentIntentInOut`，原地更新，`H/bnns_graph.h:443-451`）。第三方后端就是这样用的：读意图，给 InOut 参数分配常驻缓冲，复位时清零（`nab:src/backends/BnnsGraphBackend.mm:60-61,117,330-333`）【源码】。**代价**：`coremltools` 转带状态的模型时只允许 fp16 状态。`nab` 的导出代码注释写着报错原文「State only support fp16 dtype」，结果整个模型只能 fp16 跑（`nab:python/neural_audio_bench/export/exporters.py:22-28`）【实测-他人】。
+2. **当 Core ML 的「状态」（`MLState` 对应物）**：Core ML 的状态张量在 BNNS 里显示成「输入兼输出」（`BNNSGraphArgumentIntentInOut`，原地更新，`H/bnns_graph.h:443-451`）。第三方后端就是这样用的：读意图，给 InOut 参数分配常驻缓冲，复位时清零（`nab:src/backends/BnnsGraphBackend.mm:60-61,117,330-333`）【源码】。**代价**：`coremltools` 转带状态的模型时只允许 fp16 状态。`nab` 的导出代码注释写着报错原文「State only support fp16 dtype」，结果整个模型只能 fp16 跑（`nab:python/neural_audio_bench/export/exporters.py:22-28`）【源码-他人，只是注释，不是测量】。`coremltools` 官方「Stateful Models」页**没写**状态必须 fp16，例子用的是 fp16（<https://apple.github.io/coremltools/docs-guides/source/stateful-models.html>，怀疑派已核对）。所以这条限制是不是当前版本的硬限制，待测。
 3. **流式环形缓冲**（`BNNSGraphContextMakeStreaming`，`H/bnns_graph.h:553-586`）：模型函数要带 `BNNSOptions` 属性 `{'StateMode': 'Streaming'}`。BNNS 认出 `output_state = concat(input_state, x)` 这种写法后，自己用环形缓冲管理状态，省掉每帧挪动缓存的拷贝【官方】<https://developer.apple.com/documentation/accelerate/bnnsgraphcontextmakestreaming(_:_:_:_:)>。限制有三条：
    - 开了流式，调用方给的 InOut 指针会被忽略；
    - 所有状态必须按同一步长推进（`H/bnns_graph.h:681-693`，步长接口要 macOS 15.4）；
-   - `coremltools` 怎么写出 `BNNSOptions` 属性，**没查到出处**。
+   - `coremltools` 怎么写出 `BNNSOptions` 属性，**没查到出处**；
+   - 流式只管「inout（即 Core ML `state`）参数」（`H/bnns_graph.h:558-560`）。所以流式也绕不开第 2 种的 fp16 限制【官方 + 推断】。
 
    GTCRN 的卷积缓存在时间轴上推进 1 帧，大概符合这种写法。可是 GTCRN 的跨帧 GRU 隐状态不是 concat 形式，各状态步长不一，所以大概用不了这一档【推断】。
 
@@ -126,7 +130,7 @@ BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接�
   - `_BNNSGraphContextDestroy_v2`（`:593`）
 
   27.0 SDK 的 `TBD` 已经删掉了旧的无后缀名，比如 `_BNNSGraphContextExecute`【官方，本机 SDK 比对】。手写 `extern "C"` 时必须照抄 `#[link_name]`。bindgen 能自动带上，下面这个 crate 的生成结果就带着【源码】。
-- **现成 crate**：`apple-accelerate`（docs.rs 上最新 0.4.2）。机器生成的原始绑定里有这些函数：
+- **现成 crate**：`apple-accelerate`（docs.rs 上最新 0.4.2，怀疑派没打开核对）。机器生成的原始绑定里有这些函数：
   - `BNNSGraphCompileFromFile`，链接名 `"\u{1}_BNNSGraphCompileFromFile_v2"`；
   - `BNNSGraphContextMake`、`BNNSGraphContextMakeStreaming`；
   - `BNNSGraphContextExecute`，链接名 `…_v2`；
@@ -158,14 +162,15 @@ BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接�
 
 ## 6. 公开实测
 
-苹果没有公布任何每帧耗时数字。两场 WWDC 只说「平均至少比旧 BNNS 逐层接口快 2 倍」（WWDC24 10211，1:18 一节）【官方】。
+苹果没有公布任何每帧耗时数字。WWDC24 只说「on average, at least 2x faster than previous BNNS primitives」（WWDC24 10211，1:18 一节）【官方，怀疑派已核对讲稿】。
 
 第三方：DAFx26（Apple **M3** MacBook Air，macOS 26.4，48 kHz 单声道，随机权重）【实测-他人】：
 
 - **测试设置**：
   - 模型：LSTM、TCN、WaveNet 三族，各有小、中、大三档，参数 841 到 9.4 万（表 1）；
   - 对照：RTNeural、LibTorch、ONNX Runtime 1.19.2；
-  - BNNS Graph 设成单线程、动态形状，每个缓冲块调一次。
+  - BNNS Graph 设成单线程、动态形状，每个缓冲块调一次；
+  - **ORT 只进了单独跑的测试，没进争用测试**；而且 ORT 的 TCN、WaveNet 是**无状态**实现（§3.2、表 3 的 †、§5.1 第 7 条），和 BNNS 的有状态版不是同一件活。
 - **单独跑，缓冲 128 样本（截止时间 2.67 ms，表 4）**，下面的「单次」= 实时系数 × 2.67 ms，是我换算的：
 
 | 模型 | BNNS Graph 实时系数 | BNNS Graph 单次 | ORT 实时系数 | ORT 单次 |
@@ -174,21 +179,26 @@ BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接�
 | LSTM-L（3.8 万参数） | 0.053 | 约 0.14 ms | 0.100 | 约 0.27 ms |
 | WaveNet-L | 0.021 | — | 0.063 | — |
 
-  论文另有一处直接写了 ORT 跑 TCN-L 单次 0.31 ms（§4.3.1）。
+  论文另有一处直接写了 ORT 跑 TCN-L 单次 0.31 ms（§4.3.1）。这一行 ORT 是无状态的，见上。
+- **反例：小隐状态的循环网络（表 3，单独跑，各缓冲大小汇总的实时倍数，越大越快）**：
+  - LSTM-S（隐状态 20）：BNNS 149，ORT 108，RTNeural 154；
+  - LSTM-M（隐状态 40）：BNNS **21**，ORT **47**，RTNeural 64。**ORT 比 BNNS 快约 2.2 倍**；
+  - 论文自己的解释：小隐状态下「逐样本循环」避开了图调度开销，矩阵太小，AMX 用不上（§4.1）。
+  - 折算：LSTM-S 在缓冲 128 时，BNNS 一次调用约 18 µs（2.67 ms ÷ 149，我换算的）。这可以粗当作「小图一次调用的固定开销上界」【推断】。
 - **混音争用，36 条轨同时跑系统 Audio Unit（表 5）**：BNNS Graph 三个大模型的 p99 占截止时间 11.4–17.1 %，没有爆音（xrun = 0）。RTNeural 跑 TCN-L，没加争用时 p99 就到了 158.5 %，爆音 355 次。
 - **多实例（表 6）**：16 个 TCN-L 实例同时跑，BNNS Graph 的 p99 是 27.1 %，爆音 1 次。
 - **注意三点**：
-  1. 他们的 BNNS Graph 模型是 **fp16**，其他后端是 fp32。原因是状态只能 fp16（见 §3），所以速度对比偏向 BNNS；
-  2. 芯片是 M3，不是本机的 M5；
-  3. 作者用 lldb 抽样看到 BNNS 用了 AMX 指令，ORT 只用 NEON（§5）。
-- 和我们的对照：GTCRN 有 4.8 万参数，每帧约 0.53 MMAC，和 TCN-L、LSTM-L 同一量级。但 GTCRN 的结构碎得多，有 ERB、双向 GRU 和多处缓存写回。不能直接套用倍数【推断】。
+  1. 他们的 BNNS Graph 模型是 **fp16**，其他后端是 fp32。**这一条论文正文没写**（怀疑派翻过第 128–134 页），出处是 `nab` 导出代码的注释（`exporters.py:22-28`，`compute_precision = ct.precision.FLOAT16`）【源码-他人】。速度对比因此偏向 BNNS；
+  2. 芯片是 M3，系统 macOS 26.4，ORT 1.19.2；本机是 M5、macOS 27、ORT 1.31；
+  3. 作者用 lldb 抽样看到 BNNS 用了 AMX 指令，ORT 只用 NEON（§5）。**这一条到 M5 上不一定成立**：本机 `sysctl hw.optional.arm` 报 `FEAT_SME2: 1`、`FEAT_SME2p1: 1`【实测-本机，只读系统参数】。ORT 的 MLAS 在检测到 SME2 时会换成 KleidiAI 内核（<https://learn.arm.com/learning-paths/mobile-graphics-and-gaming/performance_onnxruntime_kleidiai_sme2/kleidiai_integration/>）【官方-Arm】。我们用的 ORT 预编译包带不带 KleidiAI，没查【推断】。所以「只有 BNNS 能用上矩阵单元」在本机未必对。
+- 和我们的对照：GTCRN 有 4.8 万参数，和 TCN-L、LSTM-L **参数**同量级；但**每次调用的计算量**不同量级。TCN-L 每样本约 9.4 万次乘加，缓冲 128 时每次调用约 12 MMAC；LSTM-L 约 4.9 MMAC 加 128 个串行步；GTCRN 每次调用只有约 0.53 MMAC。论文说 BNNS 的优势随缓冲变大而变大，靠的是摊薄每次调用的开销（§4.1）。GTCRN 每 16 ms 只调一次、每次很小，正是摊不薄的情形。不能套用倍数【推断，乘加数按参数 × 128 粗算】。
 
 ## 对 vdn 的含义
 
 **GTCRN simple**
-- 能不能跑：除双向 GRU、Unfold 外，主干算子在建图接口里都有。走 `.mlmodelc` 能不能编过，**待测**【推断】。STFT 在 Rust 侧做，图里没有 STFT，这是优势。
-- 预计瓶颈：现在每帧有约 1554 次 malloc、376 对 mutex，加上逐节点调度。整图编译、算子融合、零分配正好针对这些。快到 0.1 ms 量级是合理期望【推断，依据 DAFx26 同量级模型约 0.06–0.14 ms】。
-- 实时线程能不能直接调：能，C 接口加预分配工作区、单线程【官方】，第三方 RTSan 也没报违规【实测-他人】。
+- 能不能跑：除双向 GRU、Unfold 外，主干算子在建图接口里都有。走 `.mlmodelc` 能不能编过，**待测**【推断】。STFT 在 Rust 侧做，图里没有 STFT，这是优势。`nn.Unfold` 在 `gtcrn_stream.py:70,74`。
+- 预计瓶颈：现在 ORT 每帧有约 1554 次 malloc、376 对 mutex，加上逐节点调度。整图编译、算子融合、零分配针对这些。可是 BNNS 的下一个瓶颈多半是**串行 GRU 小步**：帧内 2 个 DPGRNN × 2 组 × 2 个方向 × 33 步 ≈ 264 步，隐状态每步只有 4，另有 TRA 和跨帧 GRU 的十几步。DAFx26 里同类情形（LSTM-M）BNNS 输给 ORT。所以**提速幅度未量化**，原笔记「快到 0.1 ms 量级」降为猜测，依据不足【推断】。
+- 实时线程能不能直接调：苹果演示里就这么调【官方】；头文件给了零分配的四个条件，但没承诺无锁、无系统调用、无缺页【官方】；第三方 100 次 RTSan 没报违规【实测-他人】。结论「能」只是**有希望**，要本机拿 GTCRN 复测【推断】。
 - 要改模型结构吗：数学上不用改，但要改导出：
   - 从 PyTorch 重新转换；
   - 三个缓存显式做成输入、输出；
@@ -199,7 +209,7 @@ BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接�
 
 **FastEnhancer-M**
 - 能不能跑：wav2wav 版图里有 STFT（`torch.stft`），建图接口里没有 STFT 或 FFT。应改用官方 spec2spec 版（`fastenhancer_m.spec.onnx` 对应的 PyTorch 导出），STFT 放回 Rust 侧做【推断】。自注意力用 `matmul` 加 `softmax` 能表达【官方，算子表】。
-- 预计瓶颈：每帧约 29 MMAC，偏算力受限。BNNS 能用上 AMX，收益可能大于 GTCRN 的倍数，fp16 再快一档【推断】。
+- 预计瓶颈：每帧约 29 MMAC，偏算力受限。M3 上 BNNS 用了 AMX 而 ORT 没用；但本机 M5 有 SME2，ORT 可能也用得上矩阵单元（见 §6 注意 3）。收益是否大于 GTCRN，未量化。fp16 会更快，但破坏逐值一致。FE-M 里也有 GRU，串行小步的风险同 GTCRN【推断】。
 - 实时线程能不能直接调：同 GTCRN。6 个缓存都要显式做成输入、输出，参数一共 14 个左右【推断】。
 - 要改模型结构吗：要换成 spec2spec 版，`StridedConv1d` 里的 reshape 技巧要确认能转【推断】。
 - 逐值一致：同上。官方说明 FE 只有 wav2wav 版能导 ONNX（`res:fastenhancer/docs/docs/onnx.md:8-10`），所以 spec2spec 路线的对拍基准要重新建【推断】。
@@ -227,11 +237,15 @@ BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接�
 3. **耗时**：
    - 每帧调一次 `BNNSGraphContextExecute`，用 `mach_absolute_time` 计时；
    - 跑 ≥ 10 万帧，报 p50、p99、p99.9、max（µs）；
-   - 和 ORT 同口径（`exp004` 的做法）；
-   - 另跑一组在推理线程上加 CPU 争用的。
+   - 和 ORT 同口径（`exp004` 的做法：`docs/experiments/exp004-p1-rust-parity/README.md` 的 p50 / p99.9 / max 表）。**ORT 要在同一次会话里、同一台机器空载时重测**，交替 3 轮，不拿 exp001/exp004 的旧数（两份的 GTCRN p50 一个 0.40、一个 0.70 ms，负载不同）；
+   - 计时范围写清：只计 `BNNSGraphContextExecute`，还是含 Rust 侧 STFT 和缓存交换。两边要一致；
+   - 另跑一组在推理线程上加 CPU 争用的；
+   - **冷启动**：`BNNSGraphCompileFromFile` 耗时、从磁盘 mmap 已编译图到 `ContextMake` 的耗时、`ContextMake` 后**第一次**执行的耗时、前 100 帧的 max；
+   - **CPU 占用**：稳态每秒的 CPU 时间（`getrusage` 或 `task_info`），和 ORT 同条件比，对照 D31「约 1/5 个核」。
 4. **实时安全**：
-   - 稳态每帧的 malloc、free 次数（malloc 钩子或 `no_alloc` 测试）；
-   - `pthread_mutex` 次数；
+   - 稳态每帧的 malloc、free 次数。⚠️ Rust 的 `no_alloc` 测试只看 Rust 全局分配器，量不到 BNNS 内部（exp004 README 补注）。要用和 `008_rust-architecture/appendix-probes` 同一套 libc 层探针，才能和 ORT 的 1554 次同口径；
+   - `pthread_mutex` 次数（同一套探针）；
+   - 缺页次数：预热后稳态每帧的缺页数（`task_info` 的 `faults`）；
    - RTSan（`-fsanitize=realtime`）包住执行调用跑 ≥ 1 万帧；
    - 关掉预分配工作区再跑一组对照。
 5. **逐值一致**：
@@ -241,7 +255,11 @@ BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接�
 6. **耗电**：
    - 用 `powermetrics` 记 CPU 功耗（mW），条件是单模型实时跑 5 分钟，和 ORT 对比；
    - 顺带看 AMX 有没有用上。看不到 AMX 计数就写「未量化」。
-7. **可选**：
+7. **GRU 串行瓶颈的小实验**：
+   - 只含 GTCRN 一个帧内双向 GRU（隐状态 4、33 步）的小图，BNNS 和 ORT 各跑每帧耗时；
+   - 用来判断 GTCRN 的下限是不是卡在 GRU。
+8. **本机矩阵单元**：查我们的 ORT 预编译包是否带 KleidiAI（看符号表里有没有 `KleidiAI`/`kai_` 前缀），再决定 ORT 对照组算不算「用上了 SME2」。
+9. **可选**：
    - 流式上下文（`ContextMakeStreaming`）在 GTCRN 上能不能用、快多少；
    - `.mlmodelc` 编不过时，用 Swift 建图接口手搭 GTCRN 一层，只看内核耗时。
 
@@ -256,3 +274,38 @@ BNNS Graph 是目前苹果唯一**明文写了实时音频用法**的推理接�
 - **编译耗时与磁盘缓存**：mmap 缓存的产物跨系统升级还能不能用（`_BNNSGraphGetPackageVersion` 暗示有版本号），没查。
 - **WWDC24 里「Core ML 用 BNNS Graph」这句**：只来自网页摘录，没逐字核对。Core ML 的 CPU 路径会不会多一层 `MLMultiArray` 开销，归 Core ML 那份笔记。
 - DAFx26 的数字全部来自 M3 和 fp16，**不是本机实测**。
+- **BNNS 在 M5 上用不用 SME2**：没有出处。苹果没公开 Accelerate 的内核选择。
+- **小隐状态 GRU 在 BNNS 上的单步开销**：只有 DAFx26 的 LSTM 间接证据，没有 GRU 的数。
+
+## 怀疑派核查
+
+> 2026-11-02 · 019 怀疑派代理 · 只读：核对了头文件、Swift 接口、DAFx26 全文（第 128–135 页）、WWDC24 10211 讲稿、`coremltools` 状态文档、`nab` 导出代码、本机 `sysctl`。没装包、没构建、没跑基准。
+
+改了什么：
+1. §0「唯一明文写实时音频的接口」：没有出处 → 降为【推断】，改成「WWDC 明文推荐」。
+2. §0 和 §6「比 ORT 快 2–5 倍、尾部也稳」：只对大模型成立；中号 LSTM 是 ORT 快 2.2 倍；ORT 没进争用测试 → 补反例。
+3. §6 漏写：DAFx26 的 ORT TCN、WaveNet 是无状态实现，TCN-L 那行不是同一件活 → 补上。
+4. §6「BNNS 是 fp16」标成论文出处：论文正文没写，出处是 `nab` 代码注释 → 改出处、改等级。
+5. §3「状态只能 fp16」【实测-他人】：只是代码注释，`coremltools` 官方页没这么写 → 降为【源码-他人】，待测。
+6. §3 流式那档：头文件写明流式只管 Core ML `state` 参数，所以流式也受 fp16 限制 → 补上。
+7. §2.1「Core ML 用 BNNS Graph」：讲稿主语是 BNNS，不是 BNNS Graph → 驳倒，划掉。
+8. §6 和 FE-M「BNNS 用 AMX、ORT 只 NEON」：M3 结论；本机 M5 报 SME2，ORT 的 MLAS 有 SME2 内核路径 → 补反例，标存疑。
+9. §6「GTCRN 和 TCN-L、LSTM-L 同一量级」：参数同量级，每次调用计算量差 10–20 倍 → 驳倒。
+10. GTCRN「快到 0.1 ms 是合理期望」：依据不成立，加上约 264 个串行 GRU 小步的反例 → 降为猜测。
+11. GTCRN「实时线程能直接调」【官方】：头文件只承诺零分配 → 改为「有希望」，分开标等级。
+12. §2.3 RTSan：补「测的是最小循环、不是模型」「只有 100 次」「`nab` 是 GPL-3.0，不能抄」。
+13. §2.2 补缺页风险；§2.3 补「整图形状可定界」这条会被动态切片打破。
+14. 基准清单：补冷启动、CPU 占用、缺页、ORT 同场重测、计时范围、libc 层分配探针（Rust `no_alloc` 量不到）、GRU 小实验、ORT 是否带 KleidiAI。
+
+核对后成立（没改）：
+- 头文件行号与原文：`bnns_graph.h` 的编译、零分配四条件、页对齐、单线程默认多线程、动态形状返回 2 要分配、分配回调、`_v2` 链接名，全部对得上。
+- Swift 接口：`gru` 只有 `forward`/`reverse`，只有 `bidirectionalLSTM`；没有 FFT/STFT/Unfold 算子；建图接口和同步执行要 macOS 26。
+- DAFx26 的表 4、表 5（11.4–17.1 %）、表 6（27.1 %、1 次爆音）、M3 / macOS 26.4 / ORT 1.19.2、RTSan 100 次，都对得上。
+- WWDC24「at least 2x faster」「Swift doesn't guarantee real-time safety」两句对得上。
+
+仍存疑：
+- `coremltools` 当前版本是否仍拒绝 fp32 状态。
+- `.mlmodelc` 路径的算子表；双向 GRU、Unfold、ScatterND 能否编过。
+- BNNS 在 M5 上用不用 SME2；我们的 ORT 预编译包带不带 KleidiAI。
+- 小隐状态 GRU 在 BNNS 上的单步开销，决定 GTCRN 能提速多少。
+- `apple-accelerate` crate 的版本号与内容，怀疑派没打开核对。
