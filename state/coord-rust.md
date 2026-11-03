@@ -43,6 +43,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- e3 占用 D75（人答 D69 与 D74 口径：「我觉得是实际耗电和对性能的影响」）：1% / 2% 管对其他程序的影响，耗电按实测 mW；与 D74 一致 → backlog 加资源判据
 - ⚠️ 决策撞号：主目录分支同日已有 D66–D71（另一位大总管），我方 D66 / D67 / D68 顺延为 **D72 / D73 / D74**，已全仓改；以后记决策前先查主目录分支的最大号
 - e3 转人定 **D71**（原话「我觉得改代码结构吧 / 让复杂度很低，然后所有代码很优雅」）：前端只算一次、各模型共用；同一功能只在一处实现 → 并入下一件大事（处理图 + schema）
 - rs-wake 定口径 A：周期 16 ms，computation = 每 16 ms 窗口总工作量 p99.9 × 1.5（约 4 → 6 ms），constraint 16 ms；B（周期 2 ms）不行：推理块单独 3 ms > 2 ms。发现：读回策略看不到系统内部降级（耗电实验声明 2.1 ms、实际 3.0 ms，读回一直正常、降级 0）→ 降级计数只当下限，直接判据是醒来迟到与处理超时
