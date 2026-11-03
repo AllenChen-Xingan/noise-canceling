@@ -403,7 +403,7 @@ fn bench(o: &Opts) -> Result<(), String> {
 \"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{mean:.4},\"frames_over_3ms\":{over3},\
 \"ort_env_ms\":0.00,\"compile_ms\":{compile_ms:.2},\"open_ms\":{open_ms:.2},\"first_frame_ms\":{first_ms:.3},\"cpu_over_wall\":{:.3},\
 \"rust_allocs_per_frame\":{rust_allocs:.3},\"rust_allocs_total\":{rust_n},\"process_allocs_total\":{proc_total},\"late_frames_over_3ms\":{},\"late_max_ms\":{},\"process_allocs_per_frame\":{proc_allocs},\"win_start_unix\":{win_start:.3},\"win_end_unix\":{win_end:.3},\"wall_s\":{wall:.3},\"nonfinite_frames\":{nonfinite_frames},\
-\"footprint_before_mb\":{fp0:.2},\"footprint_warm_mb\":{fp1:.2},\"footprint_end_mb\":{fp2:.2},\"parity_frames\":{pn},\"parity_max_abs\":{},\"parity_worst_frame\":{worst},\"parity_snr_db\":{:.2},\
+\"footprint_before_mb\":{fp0:.2},\"footprint_warm_mb\":{fp1:.2},\"footprint_end_mb\":{fp2:.2},\"parity_frames\":{pn},\"parity_max_abs\":{},\"parity_worst_frame\":{worst},\"parity_snr_db\":{},\
 \"parity_min_frame_snr_db\":{},\"parity_nonfinite_values\":{nonfinite_values},\"parity_first_bad\":\"{first_bad:?}\",\"extra\":{extra}}}",
         kind.name(),
         std::path::Path::new(model_path).file_name().map(|s| s.to_string_lossy()).unwrap_or_default(),
@@ -418,7 +418,11 @@ fn bench(o: &Opts) -> Result<(), String> {
         pct(&times, 0.999),
         times[times.len() - 1],
         cpu / wall,
-        10.0 * (sig / err.max(1e-300)).log10(),
+        if pace > 0.0 { late_over3.to_string() } else { "null".into() },
+        jnum(late_max, 4),
+        if max_abs.is_finite() { format!("{max_abs:.3e}") } else { "null".into() },
+        jnum(10.0 * (sig / err.max(1e-300)).log10(), 2),
+        jnum(min_frame_snr, 2),
     );
     Ok(())
 }
