@@ -82,7 +82,7 @@ Closes #71
 
 ## 未做 / 已知限制
 
-- **已知绕过写法 4 种，见 #新 issue**（草稿 `state/handoff/tidysyn-bypass-issue.md`）：
+- **已知绕过写法 4 种，见 #76**（草稿 `state/handoff/tidysyn-bypass-issue.md`）：
   - `include!` 经 `use` 改名
   - 跨文件 `pub use` 再导出
   - 范围先赋给变量再在别的语句里用
