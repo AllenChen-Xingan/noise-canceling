@@ -13,7 +13,7 @@
 //!    交错只改「先算谁」，不改任何一个值的运算
 //! 其余算子（逐点卷积、频率卷积、转置卷积、全连接）沿用 v2 的写法。每帧零分配：缓冲都是栈上定长数组。
 
-use super::v2::{self, NL_RCP};
+use super::v2;
 use super::*;
 use core::arch::aarch64::*;
 
@@ -252,6 +252,7 @@ impl<const IL: bool, const NL: u8> Kern for V3<IL, NL> {
 #[cfg(test)]
 mod tests {
     use super::super::tests_support::rnd;
+    use super::super::v2::NL_RCP;
     use super::*;
 
     fn max_diff(a: &[f32], b: &[f32]) -> f32 {
