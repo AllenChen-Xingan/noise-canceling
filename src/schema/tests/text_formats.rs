@@ -95,7 +95,11 @@ fn doc(format: &str, section: &str, key: &str, value: &str) -> String {
             "[fine 3]\nname = a\nuser = cafe\n".into()
         }
         ("vdn-scene-table", "fine") => {
-            let other = if key == "name" { "user = cafe" } else { "name = a" };
+            let other = if key == "name" {
+                "user = cafe"
+            } else {
+                "name = a"
+            };
             format!("[fine 3]\n{other}\n")
         }
         _ => "[fine 3]\n".into(),
@@ -163,10 +167,19 @@ fn text_keys_agree_with_parsers() {
         }
     }
     for m in ModelId::NAMES {
-        assert!(parses("vdn-profile", &doc("vdn-profile", "user", "model", m)));
-        assert!(parses("vdn-scene-table", &doc("vdn-scene-table", "fine", "model", m)));
+        assert!(parses(
+            "vdn-profile",
+            &doc("vdn-profile", "user", "model", m)
+        ));
+        assert!(parses(
+            "vdn-scene-table",
+            &doc("vdn-scene-table", "fine", "model", m)
+        ));
     }
-    assert!(!parses("vdn-profile", &doc("vdn-profile", "user", "model", "nope")));
+    assert!(!parses(
+        "vdn-profile",
+        &doc("vdn-profile", "user", "model", "nope")
+    ));
 }
 
 /// 每个文本参数取描述表的边界外一点：两种文本都拒；边界值收下。

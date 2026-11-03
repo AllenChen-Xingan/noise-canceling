@@ -83,7 +83,9 @@ pub fn watched_names(src: &str) -> Result<Vec<String>, String> {
         .ok_or("找不到 ModelId::as_str")?;
     let variant_after = |s: &str| -> Option<String> {
         let s = s.trim_start();
-        let rest = s.strip_prefix("ModelId::").or_else(|| s.strip_prefix("Self::"))?;
+        let rest = s
+            .strip_prefix("ModelId::")
+            .or_else(|| s.strip_prefix("Self::"))?;
         let v: String = rest
             .chars()
             .take_while(|c| c.is_alphanumeric() || *c == '_')
@@ -109,7 +111,9 @@ pub fn watched_names(src: &str) -> Result<Vec<String>, String> {
                     strings_in(after).into_iter().next()
                 })
             })
-            .ok_or(format!("旧写法 `{old}` 的模型 {variant} 在 as_str 里找不到正本名"))?;
+            .ok_or(format!(
+                "旧写法 `{old}` 的模型 {variant} 在 as_str 里找不到正本名"
+            ))?;
         out.push(old);
         out.push(canon);
     }
@@ -213,7 +217,9 @@ impl ModelId {
     fn watched_names_are_read_from_the_source() {
         assert_eq!(names(), ["fastenhancer-m", "fastenhancer_m"]);
         // 没有旧写法 → 报错（check 据此报红）
-        assert!(watched_names("pub const LEGACY: [(&str, ModelId); 0] = [];\nfn as_str() {}").is_err());
+        assert!(
+            watched_names("pub const LEGACY: [(&str, ModelId); 0] = [];\nfn as_str() {}").is_err()
+        );
     }
 
     /// 多个模型、rustfmt 换行、`Self::` 写法都读得出；旧写法找不到正本名 → 报错（codex 第 1 轮 #3）。
