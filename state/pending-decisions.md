@@ -47,6 +47,7 @@
 | 3-3 | exp005 待拍板（保守 / 激进门控参数等；人耳 v2：保守最自然 7/8、激进标吃字最多） | 见出处 | 见出处 | `docs/experiments/exp005-p2-speaker/README.md` 末节 |
 | 3-4 | exp006 待拍板（路由开换 FE-M 吃字略多、去发闷补过头、修音链与「只加底噪」分不开等；scene 盲听页人还没交答卷） | 先听 scene 页 | 等答卷 | `docs/experiments/exp006-scene-sim/README.md` §6 |
 | 3-5 | 延迟察觉实验（只加固定延迟 +0 / 45 / 75 ms，和一位朋友快速对话） | 装好 BlackHole 后做 | 不做 | `docs/research/006_sota-landscape/decision.md` 末节 |
+| 3-6 | 通话中要不要让软件自己试不同参数（「探索」：同一通话里偶尔换一组参数听效果）；018 实测只调背景下限 · 门控灵敏度 · 湿干比时自动调无收益（SCOREQ −0.027，41 段） | 不试 | 不试 | `docs/research/010_ondevice-adaptation/decision.md` 第五节第 2 题 · `docs/research/018_ondevice-judge/decision.md` |
 
 ## 第四组 · 评测与数据
 
