@@ -11,7 +11,7 @@
 |---|---|---|---|
 | single | 清镜像副本 · 参数只写一处 · #56 · `feat/types-single-source` · `../noise_canceling-single` | vdn-types（参数描述）· vdn-speaker · vdn-polish · vdn-scene | 完成，PR #60 已合并（#56 关），窗口已关；worktree 保留待清 |
 | schema | schema 导出 + 交叉校验 · #57 · `feat/schema-crosscheck` · `../noise_canceling-schema` | schema 机制 · 共享内存头 · 配置 · 评测任务清单 | 完成，PR #63 已合并（#57 关，0604143），窗口已关；worktree 保留待清 |
-| graph | 第二阶段 · 处理图描述 + 与 Pipeline 交叉校验 + 会话记录记图版本 · #64 · `feat/processing-graph` · `../noise_canceling-graph` | 处理图描述 · Pipeline · 会话记录 · 修音链频谱级归属 | 已报到（noise-canceling-graph-2a）|
+| graph | 第二阶段 · 处理图描述 + 与 Pipeline 交叉校验 + 会话记录记图版本 · #64 · `feat/processing-graph` · `../noise_canceling-graph` | 处理图描述 · Pipeline · 会话记录 · 修音链频谱级归属 | 完成，PR #69 已合并（#64 关，ec39fd8），待关窗 |
 | iface | 第二阶段 · 参数描述导出 schema · 模型接口三方一致 · FE-M 名字只留一个 · #65 · `feat/param-model-schema` · `../noise_canceling-iface` | 参数描述导出 · 场景参数表 / 我的配置文本 · 模型接口 | 已报到（noise-canceling-iface-d6）|
 
 ## 进度板
@@ -49,3 +49,4 @@
 - 2026-11-02 graph 实现完成（自报 xtask ci 全绿，eval ci 门禁同前）：types/graph.rs 6 种节点、Stage::name() → kind()；with_stages 加描述参数、5 类不一致返 PipelineError::Graph；会话头加 graph · model、格式号 2（旧格式可读）；schema 加 processing-graph.kinds · session-header.fields + 编号永不复用检查；pipeline.rs · tests/stages.rs 已拆。codex 第 1 轮在跑；问 SpectralStage 归属
 - 2026-11-02 graph 收尾：codex 2 轮（P2×4：3 修 1 转 #68），SpectralStage 定方案（trait 留 polish，种类 POLISH_SPECTRAL 进登记表，挂模型节点 spectral 段）。大总管合 origin/main（+95，冲突仅评审索引）后亲手 ci 全绿（435/0/5）· --check · eval ci 过；PR #69 等远端 CI；开 #68（模型节点缺版本）→ 归 iface，#69 合并后做
 - 2026-11-02 iface 报收尾（自报 xtask ci 428/0/7 · --check · eval ci 同前 · 本机真权重 vdn-models 17 条全过）；codex 3 轮 P1×1 P2×8 全改（012_param-model-schema-codex.md）；hook 提交过一次坏版本 12dd5f82、下一提交已恢复，未推送。等 #69 合并后合 main，再做 #68
+- 2026-11-02 PR #69 合并（ec39fd8），#64 关。大总管合 origin/main 进 iface（4f622582，冲突 schema lib.rs · Cargo.toml · 评审索引，两边都留）；iface 开工 #68
