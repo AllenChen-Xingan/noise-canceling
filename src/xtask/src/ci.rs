@@ -2,8 +2,7 @@
 //!
 //! 依次跑 fmt --check · clippy --workspace --all-targets -D warnings · test --workspace · tidy · check-deps，
 //! 再跑 `cargo deny check`；没装 cargo-deny 算失败（2026-11-02 起不再跳过）。
-//! `--platform linux`：平台无关闸门，排除 macOS 专属 crate（Linux runner 用）；`--platform macos`：只跑平台 crate 的
-//! clippy（aarch64-apple-darwin）与测试（macOS runner 用，规约 §7「CI 费用」）。不给 = 全部（本机默认）。
+//! 本机与 CI 跑同一套全量步骤：CI 只跑 macOS（人定 D76，2026-11-02），不再按平台拆分。
 //! 每步打印通过 / 失败与耗时；默认跑完全部步骤再汇总，`--fail-fast` 遇到第一步失败就停。任一失败退出码 1。
 
 use std::process::{Command, ExitCode, Stdio};
@@ -48,127 +47,36 @@ fn ok(b: bool) -> Outcome {
     if b { Outcome::Pass } else { Outcome::Fail }
 }
 
-/// 只在 macOS 上编得过的 crate（cpal / CoreAudio）：Linux job 排除。还不存在的名字 cargo 只给警告。
-const MACOS_ONLY: &[&str] = &["vdn-io-macos", "vdn-capture"];
-/// macOS job 要跑的平台相关 crate（规约 §7「CI 费用」：clippy aarch64-apple-darwin + 这些的测试）。
-const MACOS_CRATES: &[&str] = &["vdn-io-macos", "vdn-shm", "vdn-rt-thread", "vdn-hal"];
-
 type Step = (&'static str, Box<dyn Fn() -> Outcome>);
 
-fn owned(v: &[&str]) -> Vec<String> {
-    v.iter().map(|s| s.to_string()).collect()
-}
-
-fn cargo_v(args: Vec<String>) -> Outcome {
-    let a: Vec<&str> = args.iter().map(String::as_str).collect();
-    cargo(&a)
-}
-
-fn excludes() -> Vec<String> {
-    MACOS_ONLY
-        .iter()
-        .flat_map(|c| ["--exclude".to_string(), c.to_string()])
-        .collect()
-}
-
-fn packages() -> Vec<String> {
-    MACOS_CRATES
-        .iter()
-        .flat_map(|c| ["-p".to_string(), c.to_string()])
-        .collect()
-}
-
-/// `--platform`：`linux` = 平台无关闸门（排除 macOS 专属 crate）· `macos` = 平台部分 · 不给 = 全部（本机默认）。
-fn steps(platform: &str) -> Vec<Step> {
-    let mut v: Vec<Step> = Vec::new();
-    match platform {
-        "macos" => {
-            v.push((
-                "clippy（aarch64-apple-darwin，平台 crate）",
-                Box::new(|| {
-                    let mut a = owned(&[
-                        "clippy",
-                        "--target",
-                        "aarch64-apple-darwin",
-                        "--all-targets",
-                    ]);
-                    a.extend(packages());
-                    a.extend(owned(&["--", "-D", "warnings"]));
-                    cargo_v(a)
-                }),
-            ));
-            v.push((
-                "test（平台 crate）",
-                Box::new(|| {
-                    let mut a = owned(&["test"]);
-                    a.extend(packages());
-                    cargo_v(a)
-                }),
-            ));
-        }
-        "linux" => {
-            v.push(("fmt", Box::new(|| cargo(&["fmt", "--all", "--check"]))));
-            v.push((
-                "clippy（排除 macOS 专属）",
-                Box::new(|| {
-                    let mut a = owned(&["clippy", "--workspace", "--all-targets"]);
-                    a.extend(excludes());
-                    a.extend(owned(&["--", "-D", "warnings"]));
-                    cargo_v(a)
-                }),
-            ));
-            v.push((
-                "test（排除 macOS 专属）",
-                Box::new(|| {
-                    let mut a = owned(&["test", "--workspace"]);
-                    a.extend(excludes());
-                    cargo_v(a)
-                }),
-            ));
-            v.push(("tidy", Box::new(|| ok(crate::run_tidy()))));
-            v.push(("check-deps", Box::new(|| ok(crate::run_check_deps()))));
-            v.push(("cargo-deny", Box::new(cargo_deny)));
-        }
-        _ => {
-            v.push(("fmt", Box::new(|| cargo(&["fmt", "--all", "--check"]))));
-            v.push((
-                "clippy",
-                Box::new(|| {
-                    cargo(&[
-                        "clippy",
-                        "--workspace",
-                        "--all-targets",
-                        "--",
-                        "-D",
-                        "warnings",
-                    ])
-                }),
-            ));
-            v.push(("test", Box::new(|| cargo(&["test", "--workspace"]))));
-            v.push(("tidy", Box::new(|| ok(crate::run_tidy()))));
-            v.push(("check-deps", Box::new(|| ok(crate::run_check_deps()))));
-            v.push(("cargo-deny", Box::new(cargo_deny)));
-        }
-    }
-    v
+fn steps() -> Vec<Step> {
+    vec![
+        ("fmt", Box::new(|| cargo(&["fmt", "--all", "--check"]))),
+        (
+            "clippy",
+            Box::new(|| {
+                cargo(&[
+                    "clippy",
+                    "--workspace",
+                    "--all-targets",
+                    "--",
+                    "-D",
+                    "warnings",
+                ])
+            }),
+        ),
+        ("test", Box::new(|| cargo(&["test", "--workspace"]))),
+        ("tidy", Box::new(|| ok(crate::run_tidy()))),
+        ("check-deps", Box::new(|| ok(crate::run_check_deps()))),
+        ("cargo-deny", Box::new(cargo_deny)),
+    ]
 }
 
 pub fn run(args: &[String]) -> ExitCode {
     let fail_fast = args.iter().any(|a| a == "--fail-fast");
-    let platform = args
-        .iter()
-        .position(|a| a == "--platform")
-        .and_then(|i| args.get(i + 1))
-        .map(String::as_str)
-        .unwrap_or("all");
-    if !["all", "linux", "macos"].contains(&platform) {
-        eprintln!("ci：--platform 只认 linux / macos（不给 = 全部）");
-        return ExitCode::FAILURE;
-    }
-    println!("== ci：平台 {platform} ==");
     let mut summary = Vec::new();
     let mut failed = false;
-    for (name, f) in steps(platform) {
+    for (name, f) in steps() {
         println!("== ci：{name} ==");
         let t = Instant::now();
         let out = f();

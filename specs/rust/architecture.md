@@ -401,7 +401,7 @@ forbid = ["ort", "hound", "serde", "cpal"]   # 闭包里不许出现的 crate
 | G14 | 人耳 | 盲听页（CLAUDE.md 第五节第 1 条） | 里程碑 | 验证红线 |
 
 - **许可**：`deny.toml` 的 allow 列表以文件为准。原则：只放 GNU 列表上与 GPLv3 兼容的许可（Apache-2.0 只与 GPLv3 兼容、不与 GPLv2 兼容【官】https://www.gnu.org/licenses/license-list.en.html）；列表上查不到的（如 BSD-1-Clause、LLVM-exception）用 per-crate `exceptions` 逐个放行；MPL-2.0 的 Exhibit B cargo-deny 查不出，CI 另 grep；ORT 预编译库与 `.onnx` 权重不在 Cargo 图里，另列资产清单（来源 · 哈希 · 许可）
-- **CI 费用**：核心 crate 不依赖平台，G1–G7、G9 放 Linux；macOS job 只跑 clippy（`aarch64-apple-darwin`）、io-macos 测试与 G8，并用 `paths:` 过滤（私有仓 macOS 分钟数约是 Linux 的 10 倍【官】GitHub Actions 计费文档）
+- **CI 费用**：CI 只跑 macOS（人定 D76，2026-11-02，原话『直接用mac 就好，先在mac上跑通』）；平台无关闸门放 Linux 的做法作废
 
 ### 7.1 eval（`vdn-eval`，`src/eval/`；设计与逐条对照见 `docs/experiments/exp007-eval-suite/README.md`）
 
