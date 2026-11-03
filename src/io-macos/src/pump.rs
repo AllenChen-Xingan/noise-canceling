@@ -86,10 +86,11 @@ impl<F: FnMut(&[f32])> InputPump<F> {
             if n == 0 {
                 continue;
             }
-            if let Some(mono) = scratch.get(..n)
-                && catch_unwind(AssertUnwindSafe(|| cb(mono))).is_err()
-            {
-                health.mark_panicked();
+            if let Some(mono) = scratch.get(..n) {
+                health.meter().observe(mono);
+                if catch_unwind(AssertUnwindSafe(|| cb(mono))).is_err() {
+                    health.mark_panicked();
+                }
             }
         }
     }
@@ -122,6 +123,7 @@ impl<F: FnMut(&mut [f32])> OutputPump<F> {
                     health.mark_panicked();
                     mono.fill(0.0);
                 }
+                health.meter().observe(mono);
                 fan_out(mono, *channels, chunk);
             }
         }
