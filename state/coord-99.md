@@ -19,3 +19,4 @@
 - 2026-11-02 single：9 处分歧，8 处按正本；polish 的 SpectralStage 不是镜像而是扩展 trait → 大总管定 A（留 polish，第二阶段处理图再定是否进 vdn-types）；FE-M 名改 "fastenhancer_m"，要求先全仓查旧名 + 加「route 输出名能被 vdn-types 解析」测试
 - 2026-11-02 ~19:52 e3 基准（约 30 min，heavy.lock），已通知两人停编译测试
 - 2026-11-02 schema：机制定（`specs/schema/<实体>.schema.json` · `cargo run -p vdn-schema [-- --check]` · schemars 派生 / 核心 crate 常量表 + 穷举解构小宏 · boon 只作测试依赖）；共享内存头 · Config · 评测清单 4 份已做完，带正负例测试，暂停期间跑 codex。大总管要求核 cargo-deny 许可 · 宏 ≤30 行 · check-deps；机制已转 single
+- 2026-11-02 single：三镜像已删；vdn-types `desc.rs` 参数描述表 39 条；5 个 crate 改从表取默认与范围；tidy 加 R-MIRROR · R-PARAM；锁期间改的未编译。大总管让它锁期间先跑 codex
