@@ -461,8 +461,7 @@ fn eval_type_change_without_export_is_red() {
     );
 }
 
-/// 往返的比较口径：null 与缺省等价、空数组与缺省等价（serde 写出 `None` 为 null、空 Vec 为 []），
-/// 数字一律按 f64 比（文件里写 3，写出为 3.0）。
+/// 往返的比较口径：null 与缺省等价、空数组与缺省等价（serde 写出 `None` 为 null、空 Vec 为 []）。
 fn norm(v: &Value) -> Value {
     match v {
         Value::Object(m) => Value::Object(
@@ -472,15 +471,47 @@ fn norm(v: &Value) -> Value {
                 .collect(),
         ),
         Value::Array(a) => Value::Array(a.iter().map(norm).collect()),
-        Value::Number(n) => json!(n.as_f64()),
         x => x.clone(),
     }
+}
+
+/// 数字的口径：两边都是整数就精确比（种子是 u64，不能按 f64 比，codex 第 2 轮 #3）；
+/// 有一边是小数（文件写 3、f64 字段写出 3.0）才按 f64 比。
+fn same(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Number(x), Value::Number(y)) => {
+            if x.is_f64() || y.is_f64() {
+                x.as_f64() == y.as_f64()
+            } else {
+                x == y
+            }
+        }
+        (Value::Object(x), Value::Object(y)) => {
+            x.len() == y.len() && x.iter().all(|(k, v)| y.get(k).is_some_and(|w| same(v, w)))
+        }
+        (Value::Array(x), Value::Array(y)) => {
+            x.len() == y.len() && x.iter().zip(y).all(|(v, w)| same(v, w))
+        }
+        _ => a == b,
+    }
+}
+
+#[test]
+fn same_keeps_integers_exact() {
+    assert!(!same(&json!(9_007_199_254_740_992_u64), &json!(9_007_199_254_740_993_u64)));
+    assert!(same(&json!(3), &json!(3.0)));
+    assert!(!same(&json!(3), &json!(3.5)));
+    assert!(same(&norm(&json!({"a": null, "b": [], "c": 1})), &json!({"c": 1})));
+    // 大整数种子往返不丢精度
+    let doc = json!({"seed": 9_007_199_254_740_993_u64, "tasks": []});
+    let t: vdn_eval::files::SuiteFile = serde_json::from_value(doc.clone()).unwrap();
+    assert!(same(&norm(&doc), &norm(&serde_json::to_value(&t).unwrap())));
 }
 
 fn roundtrip<T: serde::de::DeserializeOwned + serde::Serialize>(path: &str, v: &Value) {
     let t: T = serde_json::from_value(v.clone()).unwrap_or_else(|e| panic!("{path}：{e}"));
     let out = serde_json::to_value(&t).unwrap();
-    assert_eq!(norm(v), norm(&out), "{path}：往返后语义不同");
+    assert!(same(&norm(v), &norm(&out)), "{path}：往返后语义不同");
     // 写出的结果还能读回，再写一次不变
     let t2: T = serde_json::from_value(out.clone()).unwrap();
     assert_eq!(
@@ -490,7 +521,7 @@ fn roundtrip<T: serde::de::DeserializeOwned + serde::Serialize>(path: &str, v: &
     );
 }
 
-/// 4 份清单文件：反序列化成格式类型再序列化，语义等价（口径见 `norm`）。
+/// 4 份清单文件：反序列化成格式类型再序列化，语义等价（口径见 `norm` 与 `same`）。
 #[test]
 fn eval_files_roundtrip_semantic() {
     use vdn_eval::files::{BaselineFile, LevelsFile, SuiteFile};
