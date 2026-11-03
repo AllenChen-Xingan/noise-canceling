@@ -61,6 +61,7 @@
 | 4-6 | eval（exp007）：GTCRN 权重（535 KB，MIT）进仓让 CI 跑真模型 · 能力任务何时「毕业」进回归集 · 各 verifier 的建议阈值 · 下轮听测导出音频 + P.835 三量表 | 进仓 · 照 Anthropic 文章「接近 100% 才毕业」· 先用建议值 · 改三量表 | 不进仓（CI 只跑 ref）| `docs/experiments/exp007-eval-suite/README.md` 末尾 |
 | 4-7 | 「背景保留」先怎么定：A 按场景固定（咖啡馆 −12 dB）· B「我的配置」给「背景多 / 少」旋钮，默认 −12 dB · C 等下一轮听测再定 | B + C | A | `docs/experiments/human-prefs/scene-defaults.md` 末节 #1（prefs，PR #43） |
 | 4-9 | 016 合成数据标准的 7 题：下一轮听测覆盖 ≥ 8 个系统（并进 4-3）· Hush / DFN3 是否在 benchsynth 终端批准 · 每格段数 6 → 15–30（阶梯重跑约 5 倍时间）· QA 层改名并加外部清单打分（并进 4-6）· 新 build 换素材池（要下 LibriSpeech 约 6.6 GB）· 标准升 specs/ · 素材分三类 | 见出处 | 不加段数 · 不换池（旧 build 照用但标限制）· 标准留草稿 · 素材分三类 | 016 `docs/research/016_bench-synth/decision.md` 第四节 3–7、9、10（PR #47） |
+| 4-12 | 要不要把 tract 的 bug（复用同一运行状态会算错）用你的 GitHub 账号报给上游 tract 仓库（公开 issue，你的账号名会出现在别人仓库里）；我们已绕开（每帧新开状态） | 见出处 | 不报 | exp010 `README.md` 文末（rustbe worktree，PR 待开） |
 | ~~4-10~~ ✅ D66 | ~~017 E2：每轮盲听夹 4–6 道大众已评题~~ → 人答「可以」（2026-11-02） | — | — | `docs/research/017_more-ears/decision.md` 第 8 节 |
 | ~~4-11~~ ✅ D67 | ~~017 E6：向上游报两处数据错误~~ → 人答「发吧」，已发 urgent2026_challenge_track2 issue #3 · #4（2026-11-02） | — | — | `docs/research/017_more-ears/decision.md` 第 8 节（PR #48） |
 | 4-8 | 下一轮盲听专测「背景保留量」（同段只改下限 −6 / −12 / −20 / −30 dB，4 段 × 4 档约 10 分钟，加问「这段环境本来安静吗」） | 测 | 不测 | 同上 #2 |
