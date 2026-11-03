@@ -1,7 +1,7 @@
 # 评审 062 · 代码卫生：单文件 600 行 · 采样率只写一处 · 评测阈值正本（codex · gpt-6-astra · read-only）
 
-> 对象：`feat/code-hygiene` 相对 main 的 diff（issue #62）。**最新一轮：第 2 轮（2026-11-02）· 总评「修改」· 待第 3 轮**。
-> 累计处理：P1×4、P2×5，逐条回源码核实，属实 9、驳回 0、无法核实 0。
+> 对象：`feat/code-hygiene` 相对 main 的 diff（issue #62）。**最新一轮：第 3 轮（2026-11-02）· 总评「修改」· 待第 4 轮**。
+> 累计处理：P1×6、P2×6，逐条回源码核实，属实 12、驳回 0、无法核实 0。
 > 编号用 issue 号（本线没有 plan 文档）。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -59,3 +59,28 @@
 
 - codex 列的「不符」：无
 - codex 列的「核实属实」：5 条
+
+## 第 3 轮（2026-11-02）· 总评「修改」
+
+- 原文：`_tmp/reviews/hygiene-p1-codex-3.md`（不入库）
+- 对象：`origin/main...HEAD`（第 2 轮修复与 V-SPLVL 分档改为 −1 / −2 / −4 之后；不含之后合进来的 #66）
+- effort medium
+- 本轮 P0/P1：2 条。停止线：未满足
+- 留作 issue 的 P2：无
+
+- **P1｜src/eval/src/thresholds.rs:428 待定匹配没比出错原因**（第 3 轮 #1）
+  - 核实：属实。把 V-TIMBRE 的摘录改成不存在的文本，仍得到同样的 `What::Edges([2,4,6])`，会被待定项放过。
+  - 处理：新增 `Cause`（摘录缺失 · 无出处 · 数对不上 · 顺序 · 未登记 · 默认值缺 · 清单坏），记在每条不一致上；待定项 `Pend` 同时写原因，匹配时原因也要相同。补负例 `same_value_different_cause_is_red`。
+- **P1｜src/xtask/src/test_modules.rs:99 文件被测试引用一次就整份放行**（第 3 轮 #2）
+  - 核实：属实。lib.rs 里 `#[cfg(test)] mod worker;`、main.rs 里普通 `mod worker;` 时，worker.rs 会被当成测试代码。
+  - 处理：再收集「不在测试清单里的文件」的普通 `mod x;` 声明，它们指到的模块文件（`x.rs` / `x/mod.rs`）从测试清单里去掉；内联模块里的 `mod x;` 路径没解析，按同名保守算生产引用。补负例 `file_also_used_by_production_entry_is_not_exempt`。
+  - 自查发现并修掉一个回归：生产引用原来按整棵 `x/` 子目录去排除，会把 `x/` 下面真正的测试子模块也排除掉。改成只指到模块文件本身；正例 `cfg_test_module_files_are_exempt_from_r3` 覆盖。
+- **P2｜src/xtask/src/rate_literal.rs:126 测试模块闭合行整行放行**（第 3 轮 #3）
+  - 核实：属实。`mod tests {} const SR: u32 = 48000;` 会整行放过。
+  - 处理：逐字符划分测试区，测试部分换成空格后再查；同一行闭合之后的代码照查。补负例：同一行闭合后声明常量、同一行闭合后打开生产模块。
+
+### 引用抽查
+
+- codex 列的「不符」：无
+- codex 列的「核实属实」：6 条
+- codex 列的「无法核实」：1 条（rubric C3 原文不在它可读的范围内）。已由 `src/eval/tests/thresholds.rs` 的摘录逐字比对覆盖

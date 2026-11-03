@@ -38,3 +38,4 @@
 - 2026-11-02 8d 亲手验收 a94623aa：xtask ci fmt/clippy/check-deps/cargo-deny 过；test 431 过 / 1 败 / 5 忽略（--no-fail-fast），唯一失败 xtask tidy_passes；tidy 6 处全是 99 名下 stages.rs ×5 · policy.rs ×1 的采样率字面量（预期，等 #64/#65 合并后补）。基线 6 条不报错
 - 2026-11-02 hygiene codex 第 2 轮 P1×3 P2×3 属实已改（待定清单精确到值 · tidy 测试模块认法剥注释 · 阈值比对保号与方向 · R-RATE 放行要理由）；V-SPLVL 量法实为同 rubric C3 → 8d 定改为 4（铁律 5），移出待定
 - 2026-11-02 hygiene：V-SPLVL 改 −1/−2/−4（rubric C3），待定剩 6 处；vdn-eval 全过（比对 7 条）· xtask 45/1（tidy_passes 预期）· eval ci 等级变化 0、门禁不变；codex 第 3 轮在跑
+- 2026-11-02 e3 #66 合并；8d 合 origin/main 进 #62（ebc246a7，冲突仅评审索引两行都留）；docs/experiments 全 ≤600 → 让 hygiene 打开 docs 扫描。顺手修 codex-review 技能 privacy-scan.sh：以 P1/P2 开头的评审被 file 误判为 Netpbm 图片 → 改为字节复查（无 NUL 且合法 UTF-8 才放行），并按扩展名拦 pbm/pgm/ppm/pnm；4 个样例验证
