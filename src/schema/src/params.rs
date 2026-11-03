@@ -4,7 +4,7 @@
 //! 文件还写出两种文本格式（场景参数表 `vdn-scene-table`、我的配置 `vdn-profile`）里能出现的参数键，由 `ParamField` 派生。
 
 use serde_json::{Number, Value, json};
-use vdn_types::desc::{self, ParamDesc, Unit};
+use vdn_types::desc::{self, ParamDesc};
 use vdn_types::{ModelId, ParamField};
 
 pub const TABLE_FILE: &str = "params.table.json";
@@ -42,35 +42,16 @@ fn entry(d: &ParamDesc) -> Value {
     })
 }
 
-/// 全部单位（`Unit::as_str` 的取值）。穷举 match：加单位不登记 → 编译失败。
+/// 表里用到的单位（`Unit::as_str`），按第一次出现的顺序。
 pub fn units() -> Vec<&'static str> {
-    const ALL: [Unit; 10] = [
-        Unit::Ratio,
-        Unit::Probability,
-        Unit::Db,
-        Unit::Dbfs,
-        Unit::Seconds,
-        Unit::DbPerSecond,
-        Unit::Amplitude,
-        Unit::Count,
-        Unit::Similarity,
-        Unit::Factor,
-    ];
-    for u in ALL {
-        match u {
-            Unit::Ratio
-            | Unit::Probability
-            | Unit::Db
-            | Unit::Dbfs
-            | Unit::Seconds
-            | Unit::DbPerSecond
-            | Unit::Amplitude
-            | Unit::Count
-            | Unit::Similarity
-            | Unit::Factor => {}
+    let mut out: Vec<&'static str> = Vec::new();
+    for d in desc::ALL {
+        let u = d.unit.as_str();
+        if !out.contains(&u) {
+            out.push(u);
         }
     }
-    ALL.iter().map(|u| u.as_str()).collect()
+    out
 }
 
 pub fn table_doc() -> Value {
