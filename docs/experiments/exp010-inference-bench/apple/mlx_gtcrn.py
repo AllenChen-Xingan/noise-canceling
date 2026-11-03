@@ -337,6 +337,7 @@ def cmd_bench(npz, fin, fref, device, use_compile, frames, warmup, parity_n):
         "nonfinite_frames": nonfinite, "parity_frames": min(parity_n, n_in), "parity_max_abs": float(f"{maxabs:.3e}"),
         "parity_worst_frame": worst, "parity_snr_db": round(10 * np.log10(sig / max(err, 1e-300)), 2),
         "parity_first_bad": "None" if bad is None else f"Some({bad})", "mlx": mx.__version__,
+        "mlx_enable_tf32": os.environ.get("MLX_ENABLE_TF32"),  # 对拍要设 0，否则 M5 上 fp32 矩阵乘默认降精度（notes/mlx.md）
     }))
 
 
