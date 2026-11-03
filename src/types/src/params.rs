@@ -174,6 +174,17 @@ impl ParamSet {
 
     /// 每个连续字段都有限且在范围内。
     pub fn validate(&self) -> Result<(), ParamError> {
+        // 穷举解构：ParamSet 加了连续字段，必须同时加进 ParamField（及描述表），否则这里编译失败提醒
+        let ParamSet {
+            model: _,
+            tone: _,
+            strength: _,
+            floor_db: _,
+            open_db: _,
+            detect_db: _,
+            release_s: _,
+            hangover_s: _,
+        } = self;
         for f in ParamField::ALL {
             let v = self.get(f);
             let (lo, hi) = f.range();
