@@ -1,6 +1,6 @@
 # 019 · 降噪模型在 Mac 上用什么推理后端（总方案）
 
-> 2026-11-02 · applebe（苹果引擎）汇总 rustbe（纯 Rust）· 状态：**草稿 v2**——同模型 3 视角只读自审一轮后已修订（数字核对 · 结论强度 · 测量口径），待 codex 换谱系评审。
+> 2026-11-02 · applebe（苹果引擎）汇总 rustbe（纯 Rust）· 状态：**草稿 v3**——同模型 3 视角只读自审一轮、codex 第 1 轮（P1×5 · P2×2，全部属实已改，见 `docs/reviews/019_apple-inference-codex.md`）后修订。
 > 判据：`standard.md`（17 个 verifier）。技术线【AI 定；人可改】；人定的：D75 挡线（`BE-IMPACT` ≤ 1% / ≤ 2%）与耗电主排序、D77 最低 macOS 15、D70 榨干硬件 · 低能耗 · 轻量。
 > 数字一律本机实测（Apple M5 · macOS 27.0.1 · 插电），从 Rust 调（D68）；来源路径写在每条后面。**全部只在这一台机器上测过。**
 
@@ -26,10 +26,10 @@
 | `BE-PARITY` | **过**：对 ORT 134.0 dB，无 first_bad | rustbe r4 |
 | `BE-RT-ALLOC` | **过**：每帧 0 次 malloc | rustbe `--count-malloc` |
 | `BE-FRAME`（p99.9 ≤ 1.0 · max ≤ 2.0） | **过**（60 s）：p99.9 0.65 · max 0.66 ms | build 20261102-183322-rt |
-| `BE-DEADLINE`（10 分钟 0 帧 > 3 ms） | **rt 下未测**；ui 下 10 分钟有 6 帧 > 3 ms（不过） | `notes/rustbe-numbers.md` |
+| `BE-DEADLINE`（10 分钟 0 帧**迟到** > 3 ms） | **未测**：rt 下没跑过 10 分钟；ui 下 10 分钟有 6 帧调用耗时 > 3 ms（已不过）；「迟到」口径（含唤醒迟到）是 codex 第 1 轮后才加的 | `notes/rustbe-numbers.md` |
 | `BE-IMPACT` | **未测**（第一批作废） | — |
-| `BE-SIZE` · `BE-MEM` · `BE-RT-SAN` | **未测** | — |
-| `BE-POWER`（主排序） | CPU 功率 81 mW（单次、噪声里；rt 那批没跑 ORT，「不高于 ORT」未判） | build 20261102-183322-rt |
+| `BE-COLD` · `BE-SIZE` · `BE-MEM` · `BE-RT-SAN` | **未测**（`BE-OS`：纯手写无系统要求，过） | — |
+| `BE-POWER`（主排序 + 「不高于 ORT」挡线） | CPU 功率 81 mW（单次、噪声里）；那批没跑 ORT，「不高于 ORT」**未判**；v2 测法已加同场 ORT | build 20261102-183322-rt |
 
 为什么排它：
 - 连续跑最快：p50 0.088 ms，同场 ORT 0.384 ms，约 4.4 倍（build 20261102-173000-b2；按 rustbe r4 的 0.10 / 0.38 算是 3.8 倍）。
@@ -44,7 +44,7 @@
 | 模型 | 建议 | 依据 | 状态 |
 |---|---|---|---|
 | FE-M（备选） | 暂无（继续 ORT） | 转不了 Core ML；手写本轮不做；实时节奏下的耗电没测，说不出必须换后端 | 先补测，再定；是否留在候选里待人定 |
-| DFN3 `_ll`（015 候选） | **不进实时链**；下一轮盲听用离线处理 | 算力下界：三张子图 S=1、单线程、连续跑合计 0.61 ms / 10 ms 帧 ≈ 6.1% 个核（Python 调 ORT，只作估算，`apple/results/20261102-173000-b2/dfn3ll_probe.json`）；再算上实时节奏的 5–7 倍更不可能。流式重导出约 1 天，不做 | 已定（AI，大总管同意） |
+| DFN3 `_ll`（015 候选） | **实时链暂缓（时间盒）**；下一轮盲听用离线处理 | 只有一个算力下界：三张子图 S=1、单线程、连续跑合计 0.61 ms / 10 ms 帧（Python 调 ORT，没有这个模型的 Rust 差值校准，`apple/results/20261102-173000-b2/dfn3ll_probe.json`）。按 D75，CPU% 不挡，这个数**不足以淘汰它**；要淘汰得补它的 Rust 实时测量（耗电 · `BE-IMPACT`），前提是先做流式重导出（约 1 天）。本轮按时间盒不做（codex 第 1 轮 #5） | 暂缓（AI，大总管同意）；离线盲听照做 |
 | 认人 ECAPA-TDNN512 | 不换后端；先降频率（只在有人声时跑等） | 苹果路转不出来：onnx2torch 补两处后，coremltools 不支持 `prod` 算子（build 20261102-181700-ecapa） | 转交大总管 |
 | 场景 MLP · VAD | 不换 | 已是纯 Rust 零分配 | — |
 | 本机评分 / 调节模型（D52） | 推理另定；**本机微调用 MLX** | MLX 唯一有自动求导（`notes/mlx.md` §5），不在实时回路 | 等 018 定结构 |
@@ -79,10 +79,10 @@
 | 手写 + Accelerate · rt | 0.43 ms | 0.52 | 0.56 | 2.6% | 71 mW |
 
 读法（强度：单次、噪声大、自审已核数）：
-1. **慢 5–7 倍是帧间降频**：忙等就快回来，但耗电 31–59 倍。产品里不能忙等。
-2. **自建工作组区间**（`AudioWorkIntervalCreate`，每帧报自己的截止期）能把 BNNS 拉回约 4 倍快，但 CPU 功率高 25–40 mW；只把 time-constraint 的截止报紧没用。提速要花电，所以**没有推翻 D74**（接受低频、工作组默认不加）。以后要压尾部或 `BE-IMPACT`，它是现成的旋钮。
+1. **慢 5–7 倍，推断是帧间降频**【假设】：忙等就快回来，但耗电 31–59 倍。忙等同时也改变了核迁移、缓存热度和睡眠唤醒，现有计时分不开这几个因素；要证实还得记核驻留和频率（`powermetrics` 的 cluster 频率、每核驻留），交替重复（codex 第 1 轮 #7）。产品里不能忙等，这一点不受影响。
+2. **自建工作组区间**（`AudioWorkIntervalCreate`，每帧报自己的截止期）能把 BNNS 拉回约 4 倍快，但 CPU 功率高 25–40 mW（单次，差值和噪声同量级）；只把 time-constraint 的截止报紧没用。「提速要花电」是【假设】，这一批证据**推翻不了 D74**（接受低频、工作组默认不加）。以后要压尾部或 `BE-IMPACT`，它是现成的旋钮。
 3. **纯手写 ui → rt**：p50 不变，最大一帧从 2.69 降到 0.66 ms，支持 D74「time-constraint 默认开」。
-4. **超 3 ms 的帧**：这一批 9 种设置、各 60 s 都是 0。但 `BE-DEADLINE` 要 10 分钟：rt 下还没跑过 10 分钟；ui 下 10 分钟，BNNS 最大 11.8 ms，纯手写 6 帧、Accelerate 版 1 帧超 3 ms（`apple/results/20261102-173000-b2/summary.md`、`notes/rustbe-numbers.md`）。
+4. **超 3 ms 的帧**：这一批 9 种设置、各 60 s，调用耗时 > 3 ms 的都是 0（当时还没有「迟到」口径，唤醒迟到没算进去）。但 `BE-DEADLINE` 要 10 分钟：rt 下还没跑过 10 分钟；ui 下 10 分钟，BNNS 最大 11.8 ms，纯手写 6 帧、Accelerate 版 1 帧超 3 ms（`apple/results/20261102-173000-b2/summary.md`、`notes/rustbe-numbers.md`）。
 
 ## 5. 怎么接进代码（接口建议；结构细节归 Rust 骨架线）
 
@@ -103,6 +103,6 @@
 
 ## 7. 还没做的（需要名额或人）
 
-- **要名额**：`BE-POWER` 重复 3 轮（v2 测法，人跑 sudo，约 30 分钟）· `BE-IMPACT` 重测（v2：性能核个数个线程、15 对、成对差、要超过噪声底）· `BE-DEADLINE` 在 rt 下 10 分钟（纯手写 · 手写 + Accelerate · BNNS）· `BE-SIZE`（ORT 静态库增量）· `BE-MEM`（纯手写版的常驻内存）· `BE-RT-SAN`。
+- **要名额**：`BE-POWER` 重复 3 轮、含同场 ORT（v2 测法，人跑 sudo，约 35 分钟）· `BE-IMPACT` 重测（v2：性能核个数个线程、15 对、成对差、要超过噪声底）· `BE-DEADLINE` 在 rt 下 10 分钟（纯手写 · 手写 + Accelerate · BNNS）· `BE-SIZE`（ORT 静态库增量）· `BE-MEM`（纯手写版的常驻内存）· `BE-RT-SAN`。
 - **自审留下的 P2（不挡这一版）**：逐值一致的「反向对照」（每帧清零缓存时必须判为不一致，用来证明对拍真能抓到缓存出错）· 分配计数器的自检补 calloc / realloc / posix_memalign / 大块分配 / C++ new · Core ML 那约 300 次 malloc 里有没有我们自己包装的份（加一帧「空 autoreleasepool」基线）· `dfn3ll_probe.py` 解包会覆盖已有目录 · FE-M 在 pace 为 0 时 time-constraint 周期取了 16 ms（应 10 ms）。
 - **转交**：认人降频（大总管）· native-blas 的 11 次分配（rustbe）· FE-M 是否留在候选里（人）· engine 送原声分支不检查原声里的 NaN（大总管，审查顺带发现，不属 019）。
