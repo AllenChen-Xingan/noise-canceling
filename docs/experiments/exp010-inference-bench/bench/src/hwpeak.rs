@@ -187,6 +187,10 @@ pub fn run(args: &[String]) -> Result<(), crate::Err> {
     let qos = crate::arg_str(args, "--qos", "rt");
     let reps = crate::arg_usize(args, "--reps", 9).max(3);
     crate::set_thread_qos(qos, 16.0)?;
+    let pace: f64 = crate::arg_str(args, "--pace-ms", "0").parse()?;
+    if pace > 0.0 {
+        return paced(qos, pace, crate::arg_usize(args, "--bursts", 600));
+    }
     // 先空转 200 ms，让频率爬上来
     let t = Instant::now();
     let mut s = 0u64;
@@ -247,6 +251,38 @@ pub fn run(args: &[String]) -> Result<(), crate::Err> {
         wr.join(",")
     );
     Ok(())
+}
+
+/// 按实时节奏量（D79：「快 / 省电」以能效核、16 ms 节奏为准）：每 `pace` ms 醒来一次，像推理那样只忙一小段，
+/// 量这一小段里的 FMA 延迟与吞吐。连续跑的微基准会让频率爬高，量不到产品真实所处的状态。
+/// 每次醒来依次做：依赖链 2000 次 FMA（延迟）→ 16 条链 × 500 次（吞吐）→ 16 KB 读 4 遍（L1 读）→ 再一次依赖链（看忙 ~50 µs 后频率有没有爬升）。
+/// 只用前面已定义的核，不另写一套。
+fn paced(qos: &str, pace: f64, bursts: usize) -> Result<(), crate::Err> {
+    let buf = vec![0.5f32; 4096];
+    let (mut lat0, mut tput, mut rd, mut lat1) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    let slept = crate::SleepGuard::start();
+    let w0 = Instant::now();
+    for n in 0..bursts + 20 {
+        crate::wait_due(w0, n, pace);
+        let a = fma_latency(2000);
+        let b = (500u64 * 16 * 4) as f64 / fma_chains::<16>(500);
+        let c = read_bw(&buf, 4);
+        let d = fma_latency(2000);
+        if n >= 20 {
+            lat0.push(a);
+            tput.push(b);
+            rd.push(c);
+            lat1.push(d);
+        }
+    }
+    println!(
+        "{{\"qos\":\"{qos}\",\"pace_ms\":{pace},\"bursts\":{bursts},\"fma_lat_first_ns\":{},\"fma_tput_lanes_per_ns\":{},\"read16k_gbps\":{},\"fma_lat_after_ns\":{}}}",
+        js(stats(lat0), bursts),
+        js(stats(tput), bursts),
+        js(stats(rd), bursts),
+        js(stats(lat1), bursts)
+    );
+    slept.check()
 }
 
 #[cfg(test)]
