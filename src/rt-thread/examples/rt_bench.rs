@@ -96,40 +96,50 @@ fn run(mode: &str, secs: u64, period: Duration, iters: u64) -> String {
         if mode == "tc_wg" && wi.is_none() {
             setup = "拿不到工作区间，已跳过加入".into();
         }
-        let member = wi.as_ref().and_then(|w| w.join().ok());
-        if mode == "tc_wg" && wi.is_some() && member.is_none() {
-            setup = "加入工作区间失败".into();
-        }
-        let blocks = (Duration::from_secs(secs).as_nanos() / period.as_nanos()) as u64;
-        let mut dur = Vec::with_capacity(blocks as usize);
-        let mut late = Vec::with_capacity(blocks as usize);
-        let mut degraded = 0u32;
-        let mut wg_err = 0u32;
-        let per_sec = (1_000_000_000 / period.as_nanos().max(1)) as u64;
-        let cpu0 = cpu_secs();
-        let start = Instant::now();
-        for i in 0..blocks {
-            let due = start + period * (i as u32 + 1);
-            if let Some(d) = due.checked_duration_since(Instant::now()) {
-                std::thread::sleep(d);
+        // 一块一块地干；member = 工作区间成员（tc_wg 档才有）
+        let lp = |member: Option<&Member<'_>>| {
+            let blocks = (Duration::from_secs(secs).as_nanos() / period.as_nanos()) as u64;
+            let mut dur = Vec::with_capacity(blocks as usize);
+            let mut late = Vec::with_capacity(blocks as usize);
+            let mut degraded = 0u32;
+            let mut wg_err = 0u32;
+            let per_sec = (1_000_000_000 / period.as_nanos().max(1)) as u64;
+            let cpu0 = cpu_secs();
+            let start = Instant::now();
+            for i in 0..blocks {
+                let due = start + period * (i as u32 + 1);
+                if let Some(d) = due.checked_duration_since(Instant::now()) {
+                    std::thread::sleep(d);
+                }
+                let t0 = Instant::now();
+                late.push(t0.saturating_duration_since(due).as_secs_f64() * 1e6);
+                if let Some(m) = &member
+                    && m.begin(period.as_nanos() as u64 / 2).is_err() {
+                        wg_err += 1;
+                    }
+                std::hint::black_box(work(iters));
+                if let Some(m) = &member
+                    && m.finish().is_err() {
+                        wg_err += 1;
+                    }
+                dur.push(t0.elapsed().as_secs_f64() * 1e6);
+                if (mode == "tc" || mode == "tc_wg") && i % per_sec.max(1) == 0
+                    && !check_current().map(|s| s.time_constraint).unwrap_or(false) {
+                        degraded += 1;
+                    }
             }
-            let t0 = Instant::now();
-            late.push(t0.saturating_duration_since(due).as_secs_f64() * 1e6);
-            if let Some(m) = &member
-                && m.begin(period.as_nanos() as u64 / 2).is_err() {
-                    wg_err += 1;
+            (start, dur, late, degraded, wg_err, cpu0)
+        };
+        let (start, mut dur, mut late, degraded, wg_err, cpu0) = match wi.as_ref() {
+            Some(w) => match w.with_member(|m| lp(Some(m))) {
+                Ok(r) => r,
+                Err(e) => {
+                    setup = format!("加入工作区间失败：{e}");
+                    lp(None)
                 }
-            std::hint::black_box(work(iters));
-            if let Some(m) = &member
-                && m.finish().is_err() {
-                    wg_err += 1;
-                }
-            dur.push(t0.elapsed().as_secs_f64() * 1e6);
-            if (mode == "tc" || mode == "tc_wg") && i % per_sec.max(1) == 0
-                && !check_current().map(|s| s.time_constraint).unwrap_or(false) {
-                    degraded += 1;
-                }
-        }
+            },
+            None => lp(None),
+        };
         let wall = start.elapsed().as_secs_f64();
         let cpu = (cpu_secs() - cpu0) / wall * 100.0;
         format!(

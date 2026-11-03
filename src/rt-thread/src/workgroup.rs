@@ -11,14 +11,18 @@
 //! 用法（降噪线程）：
 //! ```text
 //! let wi = WorkInterval::create("vdn-denoise")?;      // 构造期
-//! let member = wi.join()?;                            // 在处理线程上调，之后这条线程是成员
-//! loop {
+//! wi.with_member(|m| loop {                          // 在处理线程上调：进闭包时加入，出闭包（含 panic）时离开
 //!     bus.wait(..);
-//!     member.begin(2_000_000)?;                       // 本块开始，截止期 = 现在 + 2 ms（实时可调）
+//!     m.begin(2_000_000)?;                            // 本块开始，截止期 = 现在 + 2 ms（实时可调）
 //!     处理一块;
-//!     member.finish()?;                               // 本块结束（实时可调）
-//! }
-//! // member drop：离开工作区间（必须在加入的那条线程上，类型保证：成员不能 Send）
+//!     m.finish()?;                                    // 本块结束（实时可调）
+//! })?;
+//! ```
+//!
+//! 为什么是闭包而不是返回一个守卫：头文件（`os/workgroup_object.h` 184–187 行）要求**按加入的逆序离开**，
+//! 且线程退出前没离开是未定义行为。守卫可以被 `mem::forget` 或按错的顺序 drop，安全代码就能违反；
+//! 闭包式由作用域保证：嵌套的 `with_member` 自然逆序离开，成员只借给闭包、拿不走（自审 P1）。
+//! ```text
 //! ```
 
 use core::ffi::{c_char, c_int, c_void};
@@ -35,7 +39,10 @@ struct JoinToken {
 }
 
 // 与 SDK 头文件一致：40 字节、按 4 对齐
-const _: () = assert!(core::mem::size_of::<JoinToken>() == 40);
+#[cfg(target_pointer_width = "64")]
+const _: () = assert!(core::mem::size_of::<JoinToken>() == 40 && core::mem::align_of::<JoinToken>() == 4);
+#[cfg(not(target_pointer_width = "64"))]
+compile_error!("JoinToken 只按 64 位 SDK 布局写（opaque 36 字节）");
 
 #[cfg(target_os = "macos")]
 #[link(name = "AudioToolbox", kind = "framework")]
@@ -72,7 +79,7 @@ unsafe impl Send for WorkInterval {}
 // SAFETY: 同上；&WorkInterval 只用于 join（任意线程可调）。
 unsafe impl Sync for WorkInterval {}
 
-/// 当前线程在工作区间里的成员身份。drop 时离开（同一条线程上，类型不许 Send）。
+/// 当前线程在工作区间里的成员身份。只借给 `WorkInterval::with_member` 的闭包；不能 Send，拿不出闭包。
 pub struct Member<'a> {
     wi: &'a WorkInterval,
     // join 写进来的 token 地址在离开前不能变：放堆上（加入在构造期，分配不在实时路径上）
@@ -109,8 +116,16 @@ impl WorkInterval {
         }
     }
 
-    /// 当前线程加入。同一线程重复加入、或线程已在别的工作组里，系统返回错误（`Kernel { op: "os_workgroup_join" }`）。
-    pub fn join(&self) -> Result<Member<'_>, RtError> {
+    /// 当前线程加入工作区间，在 `f` 里干活，`f` 返回（或 panic）时离开。
+    /// 加入失败返回 `Kernel { op: "os_workgroup_join" }`：头文件写明的有「线程已在另一个不嵌套的工作组里」（EALREADY）
+    /// 与「工作组已取消」（EINVAL）；同一线程对同一工作区间重复加入也报错（本机实测，头文件未写）。
+    pub fn with_member<R>(&self, f: impl FnOnce(&Member<'_>) -> R) -> Result<R, RtError> {
+        let m = self.join()?;
+        Ok(f(&m))
+        // m 在这里 drop → os_workgroup_leave，同一线程、逆序
+    }
+
+    fn join(&self) -> Result<Member<'_>, RtError> {
         #[cfg(target_os = "macos")]
         {
             let tb = crate::mach_timebase()?;
@@ -218,7 +233,6 @@ impl Drop for Member<'_> {
         unsafe {
             os_workgroup_leave(self.wi.wg.as_ptr(), &mut *self.token)
         };
-        let _ = &self.token.sig;
     }
 }
 
