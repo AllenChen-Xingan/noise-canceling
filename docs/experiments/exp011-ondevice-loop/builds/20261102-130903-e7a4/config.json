@@ -1,0 +1,86 @@
+{
+ "cands": {
+  "c0": {
+   "floor_db": -12,
+   "detect_db": 9,
+   "strength": 1.0
+  },
+  "c1": {
+   "floor_db": -6,
+   "open_db": -3,
+   "detect_db": 9,
+   "strength": 1.0
+  },
+  "c2": {
+   "floor_db": -20,
+   "detect_db": 9,
+   "strength": 1.0
+  },
+  "c3": {
+   "floor_db": -12,
+   "detect_db": 6,
+   "strength": 1.0
+  },
+  "c4": {
+   "floor_db": -12,
+   "detect_db": 12,
+   "strength": 1.0
+  },
+  "c5": {
+   "floor_db": -6,
+   "open_db": -3,
+   "detect_db": 9,
+   "strength": 0.8
+  },
+  "c6": {
+   "floor_db": -12,
+   "detect_db": 9,
+   "strength": 0.8
+  },
+  "c7": {
+   "floor_db": -20,
+   "detect_db": 6,
+   "strength": 1.0
+  }
+ },
+ "route": {
+  "quiet": [
+   "gtcrn",
+   1
+  ],
+  "hvac": [
+   "gtcrn",
+   1
+  ],
+  "babble": [
+   "fem",
+   22
+  ],
+  "clatter": [
+   "gtcrn",
+   2
+  ],
+  "neighbor": [
+   "gtcrn",
+   3
+  ],
+  "traffic": [
+   "gtcrn",
+   4
+  ],
+  "music": [
+   "fem",
+   25
+  ]
+ },
+ "win_s": 2.0,
+ "ctx_s": 4.0,
+ "xfade_s": 0.05,
+ "redlines": [
+  "V-NAN",
+  "V-ONSET",
+  "V-SPLVL"
+ ],
+ "ucb_c": 0.1,
+ "note": "以本文件为准；clips.json 的 meta.cands 是选段时的旧版（c1 / c5 没有 open_db）"
+}
