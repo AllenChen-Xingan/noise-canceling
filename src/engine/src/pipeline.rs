@@ -51,7 +51,7 @@ mod rt;
 use vdn_dsp::DelayLine;
 use vdn_dsp::resample::{self, Decimator3, FACTOR, Interpolator3};
 use vdn_types::{
-    Basis, ChainMismatch, ContentId, FrameCtx, LatencyItem, LatencyLedger, Model, ModelId,
+    Basis, ChainMismatch, CheckedGraph, ContentId, FrameCtx, LatencyItem, LatencyLedger, Model, ModelId,
     NodeKind, ProcessingGraph, StageChain, Status, match_chain,
 };
 
@@ -306,12 +306,11 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
         &self,
         model: ModelId,
         artifact: ContentId,
-    ) -> Result<ProcessingGraph, ChainMismatch> {
-        let g = ProcessingGraph {
+    ) -> Result<CheckedGraph, ChainMismatch> {
+        ProcessingGraph {
             stages: self.stage_kinds,
             ..ProcessingGraph::bare(model, artifact)
-        };
-        g.check_model(self.engine.model())?;
-        Ok(g)
+        }
+        .verify(self.engine.model(), &self.stages)
     }
 }

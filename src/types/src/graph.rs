@@ -355,6 +355,20 @@ impl ProcessingGraph {
         ContentId::of(self.canonical_text().as_bytes())
     }
 
+    /// 核对后才能交给会话记录：挂点与名字（[`ProcessingGraph::check`]）· 模型节点 = 正在跑的模型
+    /// （[`ProcessingGraph::check_model`]）· 时域段 = 实际级串（[`match_chain`]）。三项全过才得到 [`CheckedGraph`]。
+    /// 频域段挂在模型适配器里，不在级串上，这里不比（由适配器自己的构造负责）。构造期用。
+    pub fn verify<M: Model + ?Sized, C: StageChain + ?Sized>(
+        self,
+        model: &M,
+        chain: &C,
+    ) -> Result<CheckedGraph, ChainMismatch> {
+        self.check()?;
+        self.check_model(model)?;
+        match_chain(self.stages, chain)?;
+        Ok(CheckedGraph(self))
+    }
+
     /// 模型节点与正在跑的模型比对：图里的模型名（正本 `ModelId::as_str`）必须等于 `Model::name()`。构造期用。
     /// 制品内容 ID 由调用方从同一个权重文件算出（`vdn_models::artifact_id`），这里不重读文件。
     pub fn check_model<M: Model + ?Sized>(&self, m: &M) -> Result<(), ChainMismatch> {
@@ -364,6 +378,27 @@ impl ProcessingGraph {
         } else {
             Err(ChainMismatch::ModelName { expected, actual })
         }
+    }
+}
+
+/// 核对过的处理图：模型节点与正在跑的模型一致、时域段与实际级串一致。只能经 [`ProcessingGraph::verify`]
+/// （或 `Pipeline::graph`）得到；会话记录头只收它，没核对的图进不了记录（#68，codex 012 第 4 轮 #1）。
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CheckedGraph(ProcessingGraph);
+
+impl CheckedGraph {
+    pub fn graph(&self) -> &ProcessingGraph {
+        &self.0
+    }
+
+    pub fn content_id(&self) -> ContentId {
+        self.0.content_id()
+    }
+
+    /// 本 crate 的单测造数据用（不核对）。
+    #[cfg(test)]
+    pub(crate) fn unchecked(g: ProcessingGraph) -> Self {
+        Self(g)
     }
 }
 

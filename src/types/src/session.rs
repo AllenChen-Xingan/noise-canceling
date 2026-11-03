@@ -23,7 +23,7 @@
 
 use core::fmt::Write as _;
 
-use crate::graph::ProcessingGraph;
+use crate::graph::CheckedGraph;
 use crate::params::ModelId;
 use crate::record::DecisionEvent;
 use crate::text::{self, Line, TextError};
@@ -43,10 +43,10 @@ pub struct SessionHeader {
 }
 
 impl SessionHeader {
-    /// 从处理图填 `graph` 与 `model`：两者同出一处，不会对不上。构造期用（会分配）。
-    pub fn set_graph(&mut self, g: &ProcessingGraph) {
+    /// 从核对过的处理图填 `graph` 与 `model`：两者同出一处，不会对不上；没核对的图进不来（#68）。构造期用（会分配）。
+    pub fn set_graph(&mut self, g: &CheckedGraph) {
         self.graph = Some(g.content_id());
-        self.model = Some(g.model);
+        self.model = Some(g.graph().model);
     }
 }
 
