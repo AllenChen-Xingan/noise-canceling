@@ -69,7 +69,7 @@ fn fadd_latency(iters: u64) -> f64 {
 
 /// 标量非线性的依赖延迟：x ← f(x)·k + d，保持在 [-4, 4] 附近
 #[inline(never)]
-fn nl_latency(iters: u64, f: fn(f32) -> f32) -> f64 {
+fn nl_latency<F: Fn(f32) -> f32>(iters: u64, f: F) -> f64 {
     let k = black_box(0.9f32);
     let d = black_box(0.1f32);
     let mut x = black_box(0.3f32);
@@ -83,7 +83,7 @@ fn nl_latency(iters: u64, f: fn(f32) -> f32) -> f64 {
 }
 
 #[inline(never)]
-fn nl_tput(buf: &mut [f32], rounds: usize, f: fn(f32) -> f32) -> f64 {
+fn nl_tput<F: Fn(f32) -> f32>(buf: &mut [f32], rounds: usize, f: F) -> f64 {
     let t = Instant::now();
     for _ in 0..rounds {
         for v in buf.iter_mut() {
@@ -119,6 +119,29 @@ fn read_bw(buf: &[f32], passes: usize) -> f64 {
     (passes * n * 4) as f64 / ns // 字节 / ns = GB/s
 }
 
+/// 对照读核：16 个累加器，每次加载直接累加（无两两相加），查第一版读带宽偏低是不是核的写法问题
+#[inline(never)]
+fn read_bw16(buf: &[f32], passes: usize) -> f64 {
+    let p = buf.as_ptr();
+    let n = buf.len() / 64 * 64;
+    let mut acc = [unsafe { vdupq_n_f32(0.0) }; 16];
+    let t = Instant::now();
+    for _ in 0..passes {
+        let mut i = 0;
+        while i < n {
+            unsafe {
+                for (k, a) in acc.iter_mut().enumerate() {
+                    *a = vaddq_f32(*a, vld1q_f32(p.add(i + 4 * k)));
+                }
+            }
+            i += 64;
+        }
+    }
+    black_box(&acc);
+    let ns = t.elapsed().as_nanos() as f64;
+    (passes * n * 4) as f64 / ns
+}
+
 #[inline(never)]
 fn write_bw(buf: &mut [f32], passes: usize) -> f64 {
     let p = buf.as_mut_ptr();
@@ -141,15 +164,20 @@ fn write_bw(buf: &mut [f32], passes: usize) -> f64 {
     (passes * n * 4) as f64 / ns
 }
 
+// 泛型参数传入，编译器能内联（第一版用函数指针，量到的是调用开销，20261102-peak1 的非线性数作废）
+#[inline(always)]
 fn exp_fast(x: f32) -> f32 {
     crate::gtcrn_native::exp_fast_pub(x)
 }
+#[inline(always)]
 fn sig_fast(x: f32) -> f32 {
     crate::gtcrn_native::sig_fast_pub(x)
 }
+#[inline(always)]
 fn tanh_libm(x: f32) -> f32 {
     x.tanh()
 }
+#[inline(always)]
 fn exp_libm(x: f32) -> f32 {
     x.exp()
 }
@@ -180,24 +208,29 @@ pub fn run(args: &[String]) -> Result<(), crate::Err> {
     chains!(4, 8, 12, 16, 20, 24, 32);
     let fma_lat = stats((0..reps).map(|_| fma_latency(IT * 4)).collect());
     let fadd_lat = stats((0..reps).map(|_| fadd_latency(IT * 4)).collect());
-    let nl = |f: fn(f32) -> f32| stats((0..reps).map(|_| nl_latency(IT, f)).collect());
-    let (e_lat, s_lat, t_lat, el_lat) = (nl(exp_fast), nl(sig_fast), nl(tanh_libm), nl(exp_libm));
+    let e_lat = stats((0..reps).map(|_| nl_latency(IT, exp_fast)).collect());
+    let s_lat = stats((0..reps).map(|_| nl_latency(IT, sig_fast)).collect());
+    let t_lat = stats((0..reps).map(|_| nl_latency(IT, tanh_libm)).collect());
+    let el_lat = stats((0..reps).map(|_| nl_latency(IT, exp_libm)).collect());
     let mut buf = vec![0.5f32; 4096];
     let e_tput = stats((0..reps).map(|_| nl_tput(&mut buf, 500, exp_fast)).collect());
     let el_tput = stats((0..reps).map(|_| nl_tput(&mut buf, 500, exp_libm)).collect());
     let mut rd = Vec::new();
+    let mut rd16 = Vec::new();
     let mut wr = Vec::new();
     for kb in [16usize, 64, 96, 256, 1024, 4096, 8192, 12288, 32768, 65536] {
         let n = kb * 1024 / 4;
         let mut b: Vec<f32> = (0..n).map(|i| (i % 7) as f32).collect();
         let passes = (256 * 1024 * 1024 / (kb * 1024)).max(4);
         let r = stats((0..reps).map(|_| read_bw(&b, passes)).collect());
+        let r16 = stats((0..reps).map(|_| read_bw16(&b, passes)).collect());
+        rd16.push(format!("\"{kb}KB\":{}", js(r16, reps)));
         let w = stats((0..reps).map(|_| write_bw(&mut b, passes)).collect());
         rd.push(format!("\"{kb}KB\":{}", js(r, reps)));
         wr.push(format!("\"{kb}KB\":{}", js(w, reps)));
     }
     println!(
-        "{{\"qos\":\"{qos}\",\"reps\":{reps},\"fma_tput_lanes_per_ns\":{},\"fma_best_chains\":{},\"fma_sweep\":{{{}}},\"fma_lat_ns\":{},\"fadd_lat_ns\":{},\"exp_fast_lat_ns\":{},\"sig_fast_lat_ns\":{},\"tanh_libm_lat_ns\":{},\"exp_libm_lat_ns\":{},\"exp_fast_tput_ns\":{},\"exp_libm_tput_ns\":{},\"read_gbps\":{{{}}},\"write_gbps\":{{{}}}}}",
+        "{{\"qos\":\"{qos}\",\"reps\":{reps},\"fma_tput_lanes_per_ns\":{},\"fma_best_chains\":{},\"fma_sweep\":{{{}}},\"fma_lat_ns\":{},\"fadd_lat_ns\":{},\"exp_fast_lat_ns\":{},\"sig_fast_lat_ns\":{},\"tanh_libm_lat_ns\":{},\"exp_libm_lat_ns\":{},\"exp_fast_tput_ns\":{},\"exp_libm_tput_ns\":{},\"read_gbps\":{{{}}},\"read16_gbps\":{{{}}},\"write_gbps\":{{{}}}}}",
         js(stats(best.2), reps),
         best.0,
         sweep.join(","),
@@ -210,6 +243,7 @@ pub fn run(args: &[String]) -> Result<(), crate::Err> {
         js(e_tput, reps),
         js(el_tput, reps),
         rd.join(","),
+        rd16.join(","),
         wr.join(",")
     );
     Ok(())
