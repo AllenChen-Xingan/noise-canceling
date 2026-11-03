@@ -12,7 +12,6 @@ mod tests;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::Path;
 use std::rc::Rc;
 
@@ -31,24 +30,22 @@ pub struct ParseErr {
 type Parsed = Result<Rc<syn::File>, ParseErr>;
 
 thread_local! {
-    /// 同一次 tidy 里每份源码只解析一次（各条规则共用；按内容的哈希与长度认）。
-    static CACHE: RefCell<HashMap<(u64, usize), Parsed>> =
+    /// 同一次 tidy 里每份源码只解析一次（各条规则共用；按原文认）。
+    static CACHE: RefCell<HashMap<String, Parsed>> =
         RefCell::new(HashMap::new());
 }
 
 /// 解析一份源码（带缓存）。
 pub fn parse_src(src: &str) -> Result<Rc<syn::File>, ParseErr> {
-    let mut h = DefaultHasher::new();
-    src.hash(&mut h);
-    let key = (h.finish(), src.len());
-    if let Some(r) = CACHE.with(|c| c.borrow().get(&key).cloned()) {
+    // 以原文为键：哈希相等不等于源码相等（codex #71 第 1 轮 P2 #8）
+    if let Some(r) = CACHE.with(|c| c.borrow().get(src).cloned()) {
         return r;
     }
     let r = syn::parse_file(src).map(Rc::new).map_err(|e| ParseErr {
         line: e.span().start().line,
         msg: e.to_string(),
     });
-    CACHE.with(|c| c.borrow_mut().insert(key, r.clone()));
+    CACHE.with(|c| c.borrow_mut().insert(src.to_string(), r.clone()));
     r
 }
 
@@ -96,8 +93,8 @@ pub fn path_attr(attrs: &[Attribute]) -> Option<String> {
 
 /// 文件里全部字符串字面量：（起始行，解码后的值）。按 token 走，宏参数、属性里的也算；
 /// 文档注释（`///` 与 `//!`，在语法树里是 `#[doc = "…"]`）不算——它们是注释。
-pub fn str_literals(file: &syn::File) -> Vec<(usize, String)> {
-    fn walk(ts: TokenStream, out: &mut Vec<(usize, String)>) {
+pub fn str_literals(file: &syn::File) -> Vec<(modtree::Pos, String)> {
+    fn walk(ts: TokenStream, out: &mut Vec<(modtree::Pos, String)>) {
         let toks: Vec<TokenTree> = ts.into_iter().collect();
         let mut i = 0;
         while i < toks.len() {
@@ -122,7 +119,7 @@ pub fn str_literals(file: &syn::File) -> Vec<(usize, String)> {
                 TokenTree::Group(g) => walk(g.stream(), out),
                 TokenTree::Literal(l) => {
                     if let syn::Lit::Str(s) = syn::Lit::new(l.clone()) {
-                        out.push((l.span().start().line, s.value()));
+                        out.push((modtree::pos(l.span()), s.value()));
                     }
                 }
                 _ => {}

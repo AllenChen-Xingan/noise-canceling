@@ -55,6 +55,9 @@ fn r5_folded_arithmetic() {
     ] {
         assert!(n(code) >= 1, "{code}");
     }
+    // 整数除法截断（codex #71 第 1 轮 P2 #6）
+    assert!(n("let f = 96001u32 / 2;") >= 1);
+    assert_eq!(n("let g = 96001.0 / 2.0;"), 0, "浮点 48000.5 不是采样率");
     // 含变量、或算出来不是采样率的不算
     for code in ["let a = 3 * n;", "let b = 48 * 100;", "let c = x / 3;"] {
         assert_eq!(n(code), 0, "{code}");

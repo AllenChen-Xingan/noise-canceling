@@ -270,3 +270,65 @@ fn parse_errors_are_reported() {
     assert!(s.problems[0].contains("语法树解析失败"));
     done(&r);
 }
+
+/// codex #71 第 1 轮 P1 #1：同一行里测试项后面的生产代码不算测试（按列判）
+#[test]
+fn same_line_production_after_test_item() {
+    let lib = "#[cfg(test)] fn t() {} fn p() { prod(); }\n";
+    let (r, s) = tree("sameline", &[("src/lib.rs", lib)]);
+    let file = syn::parse_file(lib).unwrap();
+    let ranges = super::modtree::file_test_ranges("c/src/lib.rs", &file);
+    let col = lib.find("prod").unwrap();
+    assert!(!super::modtree::in_ranges(&ranges, (1, col)), "{ranges:?}");
+    assert!(super::modtree::in_ranges(
+        &ranges,
+        (1, lib.find("fn t").unwrap())
+    ));
+    let _ = s;
+    done(&r);
+}
+
+/// codex #71 第 1 轮 P1 #2：内联模块自己的 `#[path]` 决定子模块目录
+#[test]
+fn inline_module_path_attr() {
+    let (r, s) = tree(
+        "inlinepath",
+        &[
+            (
+                "src/main.rs",
+                "#[path = \"other\"]\nmod outer {\n    mod x;\n}\nfn main() {}\n",
+            ),
+            (
+                "src/lib.rs",
+                "#[cfg(test)]\n#[path = \"other/x.rs\"]\nmod x;\n",
+            ),
+            ("src/other/x.rs", "fn f() {}\n"),
+        ],
+    );
+    assert!(s.problems.is_empty(), "{:?}", s.problems);
+    assert!(
+        !s.is_test_file("c/src/other/x.rs"),
+        "生产引用经 #[path] 内联模块到 other/x.rs"
+    );
+    done(&r);
+}
+
+/// codex #71 第 1 轮 P1 #3：建树错误进 tidy 的问题（红），孤儿进注释——测完整入口 `report`
+#[test]
+fn report_surfaces_problems_and_orphans() {
+    let root = std::env::temp_dir().join(format!("xtask-ast-report-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(root.join("src/c/src")).unwrap();
+    fs::write(root.join("src/c/Cargo.toml"), "[package]\nname = \"c\"\n").unwrap();
+    fs::write(root.join("src/c/src/lib.rs"), "mod missing;\n").unwrap();
+    fs::write(root.join("src/c/src/stray.rs"), "fn s() {}\n").unwrap();
+    let (mut p, mut n) = (Vec::new(), Vec::new());
+    super::modtree::report(&root, &mut p, &mut n);
+    assert!(p.iter().any(|x| x.contains("找不到模块 missing")), "{p:?}");
+    assert!(
+        n.iter()
+            .any(|x| x.contains("stray.rs") && x.contains("孤儿")),
+        "{n:?}"
+    );
+    let _ = fs::remove_dir_all(&root);
+}

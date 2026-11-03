@@ -7,7 +7,7 @@
 //! | ② `vdn-types` 之外不许定义与 `vdn-types` 公开类型**同名**的 `struct` / `enum` / `trait` / `type`（宏展开出的不认） | 定义行或紧邻上方连续的注释 / 属性行的注释里写 `tidy: 同名不同物：<理由>` |
 //! | ③ **改了名但结构相同**：字段（或枚举变体、trait 方法）≥ [`MIN_FIELDS`] 个，且名字与类型（去掉路径前缀）和 `vdn-types` 某个公开类型完全一样 | 同上 |
 //!
-//! 结构指纹：结构体按「字段名: 类型」（元组结构体按位置）排序后拼接；枚举按变体名与字段；trait 按方法名。
+//! 结构指纹：结构体按「字段名: 类型」（元组结构体按位置）排序后拼接；枚举按变体名与字段；trait 按方法名与签名。
 //! 类型去掉路径前缀（`vdn_types::Confidence` 与 `Confidence` 算一样）。门槛 3 由大总管 8d 定（012 第九节）：
 //! 再小会把 `struct Pair(f32, f32)` 这类通用小结构误报。
 
@@ -100,7 +100,24 @@ pub fn shape(it: &Item) -> Option<(Shape, &syn::Ident, &Visibility)> {
                 .items
                 .iter()
                 .filter_map(|x| match x {
-                    syn::TraitItem::Fn(f) => Some(f.sig.ident.to_string()),
+                    // 方法名 + 规范化的签名（参数类型与返回类型；codex #71 第 1 轮 P2 #7）
+                    syn::TraitItem::Fn(f) => {
+                        let args: Vec<String> = f
+                            .sig
+                            .inputs
+                            .iter()
+                            .map(|a| match a {
+                                syn::FnArg::Receiver(r) => norm_ty(r),
+                                syn::FnArg::Typed(t) => norm_ty(&t.ty),
+                            })
+                            .collect();
+                        Some(format!(
+                            "{}({}){}",
+                            f.sig.ident,
+                            args.join(","),
+                            norm_ty(&f.sig.output)
+                        ))
+                    }
                     _ => None,
                 })
                 .collect();

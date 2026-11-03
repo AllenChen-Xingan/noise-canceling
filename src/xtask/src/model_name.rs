@@ -16,7 +16,7 @@ use std::path::Path;
 
 use syn::visit::Visit;
 
-use crate::ast::modtree::{self, file_test_ranges};
+use crate::ast::modtree::{self, file_test_ranges, in_ranges};
 use crate::ast::str_literals;
 use crate::scan::{has_reason, lex_lines, src_files};
 
@@ -164,10 +164,11 @@ pub fn file_problems(rel: &str, src: &str, names: &[String]) -> Vec<String> {
     let tests = file_test_ranges(rel, &file);
     let lexed = lex_lines(src);
     let mut out = Vec::new();
-    for (line, s) in str_literals(&file) {
-        if tests.iter().any(|(a, b)| (*a..=*b).contains(&line)) {
+    for (p, s) in str_literals(&file) {
+        if in_ranges(&tests, p) {
             continue;
         }
+        let line = p.0;
         let comment = lexed.get(line - 1).map(|(_, c)| c.as_str()).unwrap_or("");
         if has_reason(comment, ALLOW) {
             continue;

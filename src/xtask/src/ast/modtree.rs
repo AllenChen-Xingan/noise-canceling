@@ -21,6 +21,19 @@ use syn::{ImplItem, Item, TraitItem};
 
 use super::{cfg_is_test, parse_file, path_attr};
 
+/// 源码里的位置：（行从 1 起，列从 0 起）。
+pub type Pos = (usize, usize);
+
+/// 位置落在某个区间里（终点不含）。按列比，同一行里测试项后面的生产代码不算测试（codex #71 第 1 轮 P1 #1）。
+pub fn in_ranges(r: &[(Pos, Pos)], p: Pos) -> bool {
+    r.iter().any(|(a, b)| *a <= p && p < *b)
+}
+
+/// 一个 span 的起点。
+pub fn pos(s: proc_macro2::Span) -> Pos {
+    (s.start().line, s.start().column)
+}
+
 /// 全仓的测试范围。路径都是相对仓库根的规范写法。
 #[derive(Debug, Default)]
 pub struct Scope {
@@ -28,8 +41,8 @@ pub struct Scope {
     test_files: BTreeSet<String>,
     /// 经生产路径到达的文件
     prod_files: BTreeSet<String>,
-    /// 文件里属于测试的行（闭区间，从 1 起）
-    test_ranges: BTreeMap<String, Vec<(usize, usize)>>,
+    /// 文件里属于测试的区间：（起点，终点），位置是（行从 1 起，列从 0 起）
+    test_ranges: BTreeMap<String, Vec<(Pos, Pos)>>,
     /// 任何根都到不了的 `.rs`
     pub orphans: Vec<String>,
     /// 建树时的错误（解析失败、找不到模块文件、`#[path]` 跳出 crate）
@@ -49,7 +62,7 @@ impl Scope {
             || self
                 .test_ranges
                 .get(rel)
-                .is_some_and(|rs| rs.iter().any(|(a, b)| (*a..=*b).contains(&line)))
+                .is_some_and(|rs| rs.iter().any(|(a, b)| (a.0..=b.0).contains(&line)))
     }
 
     /// 只在测试编译的文件（排过序）。
@@ -165,7 +178,7 @@ struct Builder<'a> {
 
 impl Builder<'_> {
     fn range(&mut self, rel: &str, span: proc_macro2::Span) {
-        let r = (span.start().line, span.end().line);
+        let r = (pos(span), (span.end().line, span.end().column));
         self.scope
             .test_ranges
             .entry(rel.to_string())
@@ -246,10 +259,15 @@ impl Builder<'_> {
     fn module(&mut self, m: &syn::ItemMod, cx: &Ctx, test: bool) {
         let name = m.ident.unraw().to_string();
         if let Some((_, items)) = &m.content {
+            // 内联模块自己的 `#[path]` 决定它里面子模块的目录（相对当前模块目录；codex #71 第 1 轮 P1 #2）
+            let dir = match path_attr(&m.attrs) {
+                Some(p) => normalize(&cx.child_dir.join(p)),
+                None => cx.child_dir.join(&name),
+            };
             let inner = Ctx {
                 rel: cx.rel,
                 file_dir: cx.file_dir,
-                child_dir: cx.child_dir.join(&name),
+                child_dir: dir,
                 top_level: false,
                 test,
             };
@@ -402,7 +420,7 @@ fn build_uncached(root: &Path) -> Scope {
 
 /// 单个文件内的测试行区间（不跟 `mod x;` 去别的文件；外部模块声明本身那几行照样算）。
 /// 给只看一个文件的规则用；它们按 [`Scope::is_test_file`] 先跳过整份测试文件。
-pub fn file_test_ranges(rel: &str, file: &syn::File) -> Vec<(usize, usize)> {
+pub fn file_test_ranges(rel: &str, file: &syn::File) -> Vec<(Pos, Pos)> {
     let mut scope = Scope::default();
     let mut b = Builder {
         root: Path::new(""),
@@ -423,4 +441,15 @@ pub fn file_test_ranges(rel: &str, file: &syn::File) -> Vec<(usize, usize)> {
     let mut r = scope.test_ranges.remove(rel).unwrap_or_default();
     r.sort_unstable();
     r
+}
+
+/// 建树的错误进 `problems`（红），孤儿 `.rs` 进 `notes`（012 第九节第 3 条：先只报注释）。tidy 调它（codex #71 第 1 轮 P1 #3）。
+pub fn report(root: &Path, problems: &mut Vec<String>, notes: &mut Vec<String>) {
+    let s = build(root);
+    problems.extend(s.problems.iter().map(|p| format!("{p}（模块树）")));
+    notes.extend(
+        s.orphans
+            .iter()
+            .map(|o| format!("{o}：没有任何模块声明指到它（孤儿 .rs，不参与编译；删掉或声明它）")),
+    );
 }

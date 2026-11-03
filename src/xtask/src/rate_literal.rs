@@ -72,24 +72,63 @@ fn token_hits(ts: TokenStream, out: &mut Vec<Span>) {
     }
 }
 
-fn fold_binary(b: &ExprBinary) -> Option<f64> {
-    let (l, r) = (fold(&b.left)?, fold(&b.right)?);
-    match b.op {
-        BinOp::Add(_) => Some(l + r),
-        BinOp::Sub(_) => Some(l - r),
-        BinOp::Mul(_) => Some(l * r),
-        BinOp::Div(_) if r != 0.0 => Some(l / r),
+/// 折叠出的数：整数按整数算（除法截断，`96001u32 / 2` = 48000），有浮点参与就按浮点算（codex #71 第 1 轮 P2 #6）。
+#[derive(Clone, Copy)]
+enum Num {
+    Int(i128),
+    Float(f64),
+}
+
+impl Num {
+    fn f(self) -> f64 {
+        match self {
+            Num::Int(i) => i as f64,
+            Num::Float(x) => x,
+        }
+    }
+}
+
+fn lit_num(l: &Lit) -> Option<Num> {
+    match l {
+        Lit::Int(i) => i.base10_parse::<i128>().ok().map(Num::Int),
+        Lit::Float(f) => f.base10_parse::<f64>().ok().map(Num::Float),
         _ => None,
     }
 }
 
+fn fold_binary(b: &ExprBinary) -> Option<Num> {
+    let (l, r) = (fold(&b.left)?, fold(&b.right)?);
+    Some(match (l, r) {
+        (Num::Int(a), Num::Int(c)) => Num::Int(match b.op {
+            BinOp::Add(_) => a.checked_add(c)?,
+            BinOp::Sub(_) => a.checked_sub(c)?,
+            BinOp::Mul(_) => a.checked_mul(c)?,
+            BinOp::Div(_) => a.checked_div(c)?,
+            _ => return None,
+        }),
+        _ => {
+            let (a, c) = (l.f(), r.f());
+            Num::Float(match b.op {
+                BinOp::Add(_) => a + c,
+                BinOp::Sub(_) => a - c,
+                BinOp::Mul(_) => a * c,
+                BinOp::Div(_) if c != 0.0 => a / c,
+                _ => return None,
+            })
+        }
+    })
+}
+
 /// 只由字面量组成的算式的值。
-fn fold(e: &Expr) -> Option<f64> {
+fn fold(e: &Expr) -> Option<Num> {
     match e {
-        Expr::Lit(l) => lit_value(&l.lit),
+        Expr::Lit(l) => lit_num(&l.lit),
         Expr::Paren(p) => fold(&p.expr),
         Expr::Group(g) => fold(&g.expr),
-        Expr::Unary(u) if matches!(u.op, UnOp::Neg(_)) => fold(&u.expr).map(|v| -v),
+        Expr::Unary(u) if matches!(u.op, UnOp::Neg(_)) => fold(&u.expr).map(|v| match v {
+            Num::Int(i) => Num::Int(-i),
+            Num::Float(x) => Num::Float(-x),
+        }),
         Expr::Binary(b) => fold_binary(b),
         _ => None,
     }
@@ -101,7 +140,7 @@ struct Folded(Vec<Span>);
 
 impl<'ast> Visit<'ast> for Folded {
     fn visit_expr_binary(&mut self, b: &'ast ExprBinary) {
-        if fold_binary(b).is_some_and(is_rate) {
+        if fold_binary(b).is_some_and(|v| is_rate(v.f())) {
             self.0.push(b.span());
         }
         syn::visit::visit_expr_binary(self, b);

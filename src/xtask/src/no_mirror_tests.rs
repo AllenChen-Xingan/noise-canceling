@@ -9,7 +9,7 @@ fn shapes(src: &str) -> Vec<Shape> {
         .collect()
 }
 
-const TYPES: &str = "pub struct FrameCtx { pub a: u8 }\npub trait Stage: Send {}\npub enum UserScene { A }\n\
+const TYPES: &str = "pub struct FrameCtx { pub a: u8 }\npub trait Stage: Send {}\npub trait Model { fn a(&self) -> u8; fn b(&mut self, x: f32); fn c(&self); }\npub enum UserScene { A }\n\
     pub struct Frame { pub rate: u32, pub seq: u64, pub conf: crate::Confidence }\npub struct Hysteresis { pub x: f32 }\n";
 
 fn n(src: &str) -> usize {
@@ -21,7 +21,14 @@ fn types_shapes_are_read() {
     let names: Vec<String> = shapes(TYPES).into_iter().map(|s| s.name).collect();
     assert_eq!(
         names,
-        ["FrameCtx", "Stage", "UserScene", "Frame", "Hysteresis"]
+        [
+            "FrameCtx",
+            "Stage",
+            "Model",
+            "UserScene",
+            "Frame",
+            "Hysteresis"
+        ]
     );
     assert!(!types_shapes(&crate::root()).unwrap().is_empty());
 }
@@ -57,6 +64,15 @@ fn renamed_copies_are_flagged() {
     );
     // 结构不同
     assert_eq!(n("struct F3 { rate: u32, seq: u64, conf: f32 }\n"), 0);
+    // trait：方法名与签名都一样才算副本（codex #71 第 1 轮 P2 #7）
+    assert_eq!(
+        n("trait M2 { fn a(&self) -> u8; fn b(&mut self, x: f32); fn c(&self); }\n"),
+        1
+    );
+    assert_eq!(
+        n("trait M3 { fn a(&self) -> u16; fn b(&mut self, x: f32); fn c(&self); }\n"),
+        0
+    );
     // 字段太少（门槛 3）
     assert_eq!(n("struct H2 { x: f32 }\n"), 0);
 }

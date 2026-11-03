@@ -19,7 +19,7 @@ use syn::spanned::Spanned;
 use syn::visit::Visit;
 use syn::{Expr, Lit, RangeLimits, UnOp};
 
-use crate::ast::modtree::{self, file_test_ranges};
+use crate::ast::modtree::{self, Pos, file_test_ranges, in_ranges, pos};
 use crate::scan::{has_reason, lex_lines, src_files};
 use crate::tidy::rs_files;
 
@@ -251,7 +251,7 @@ struct Finder<'a> {
     /// 当前「同一条语句」的标识符
     ctx: Vec<BTreeSet<String>>,
     /// 本文件的测试行（默认值字面量在这里不查）
-    test_ranges: &'a [(usize, usize)],
+    test_ranges: &'a [(Pos, Pos)],
     /// （键名末段，描述表默认值）；空 = 不查默认值（整份测试文件）
     defaults: &'a [(String, f64)],
     /// （位置，参数名，是不是默认值字面量）
@@ -319,11 +319,7 @@ impl<'ast> Visit<'ast> for Finder<'_> {
         }
     }
     fn visit_expr_struct(&mut self, s: &'ast syn::ExprStruct) {
-        let line = s.span().start().line;
-        let in_test = self
-            .test_ranges
-            .iter()
-            .any(|(a, b)| (*a..=*b).contains(&line));
+        let in_test = in_ranges(self.test_ranges, pos(s.span()));
         if !in_test {
             for f in &s.fields {
                 if let syn::Member::Named(n) = &f.member

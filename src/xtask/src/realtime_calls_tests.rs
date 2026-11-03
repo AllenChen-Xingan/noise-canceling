@@ -109,3 +109,45 @@ fn banned_list_matches_clippy_toml() {
         );
     }
 }
+
+/// codex #71 第 1 轮 P1 #4：测试模块里的 `use … as std` 不能改写生产代码的路径
+#[test]
+fn test_module_alias_does_not_hide_production_paths() {
+    let src =
+        "fn p() { std::fs::read(x); }\n#[cfg(test)]\nmod tests {\n    use crate::fake as std;\n}\n";
+    assert_eq!(n(src), 1);
+    // 生产代码里把禁用路径改名再藏起来也不行：原始路径照报
+    assert_eq!(
+        n("mod m { use crate::fake as std; fn p() { std::fs::read(x); } }\n"),
+        1
+    );
+}
+
+/// codex #71 第 1 轮 P1 #1：同一行里测试项后面的生产调用照查
+#[test]
+fn same_line_production_after_test_item() {
+    assert_eq!(
+        n("#[cfg(test)] fn t() {} fn p() { std::fs::read(\"x\"); }\n"),
+        1
+    );
+}
+
+/// codex #71 第 1 轮 P2 #5：整份测试文件（`#[cfg(test)] mod helper;` 引入的）不查；生产文件照查
+#[test]
+fn check_file_skips_whole_test_files() {
+    let root = std::env::temp_dir().join(format!("xtask-r3-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("src/c/src")).unwrap();
+    std::fs::write(root.join("src/c/Cargo.toml"), "[package]\nname = \"c\"\n").unwrap();
+    std::fs::write(
+        root.join("src/c/src/lib.rs"),
+        "#[cfg(test)]\nmod helper;\nmod prod;\n",
+    )
+    .unwrap();
+    let body = "fn f() { std::thread::sleep(d); }\n";
+    std::fs::write(root.join("src/c/src/helper.rs"), body).unwrap();
+    std::fs::write(root.join("src/c/src/prod.rs"), body).unwrap();
+    assert!(check_file(&root, "src/c/src/helper.rs", body).is_empty());
+    assert_eq!(check_file(&root, "src/c/src/prod.rs", body).len(), 1);
+    let _ = std::fs::remove_dir_all(&root);
+}

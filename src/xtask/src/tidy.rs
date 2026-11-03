@@ -164,13 +164,8 @@ fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usi
     }
 
     // 2. R3：实时 crate 不做 IO、日志、sleep（按语法树查，见 realtime_calls.rs）
-    match crate::realtime_calls::hits(rel, &src) {
-        Ok(h) => t.problems.extend(
-            h.into_iter()
-                .map(|(l, bad)| format!("{rel}:{l}：实时 crate 里出现 {bad}（R3）")),
-        ),
-        Err(e) => t.problems.push(e),
-    }
+    t.problems
+        .extend(crate::realtime_calls::check_file(&root(), rel, &src));
 
     // 3. R4：实时块里只许 debug_assert*
     let mut i = 0;
@@ -333,6 +328,8 @@ pub fn check() -> Result<Tidy, String> {
     crate::no_mirror::check(&root, &mut t.problems);
     crate::param_range::check(&root, &mut t.problems);
     crate::model_name::check(&root, &mut t.problems);
+    // 模块树：建树错误（红）与孤儿 .rs（注释）
+    crate::ast::modtree::report(&root, &mut t.problems, &mut t.notes);
     // 单文件行数上限（R-SIZE，硬上限 600 行）
     crate::file_size::check(&root, &mut t.problems);
     // 采样率只写一处（R-RATE）
