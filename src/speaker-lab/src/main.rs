@@ -161,6 +161,8 @@ fn gate_params(args: &[String]) -> R<GateParams> {
     if let Some(v) = f("--confirm")? {
         p.confirm_n = v as u32;
     }
+    // 范围的正本是 vdn_types::desc：越界直接报错，不悄悄夹值
+    p.validate()?;
     Ok(p)
 }
 
@@ -576,17 +578,28 @@ mod tests {
             "--confirm",
             "3",
             "--level-close",
-            "-40",
+            "12",
         ]))
         .expect("合法参数");
         assert_eq!(p.floor_db, -18.5);
         assert_eq!(p.confirm_n, 3);
-        assert_eq!(p.level_close_db, Some(-40.0));
+        assert_eq!(p.level_close_db, Some(12.0));
         // 没给的保持默认
         assert_eq!(p.release_s, d.release_s);
         assert_eq!(p.onset_gap_s, d.onset_gap_s);
         assert_eq!(p.onset_jump_db, d.onset_jump_db);
         assert_eq!(p.onset_level_margin_db, d.onset_level_margin_db);
+    }
+
+    /// 越界（按 vdn_types::desc 的范围）报错；报错里带键名。
+    #[test]
+    fn gate_params_rejects_out_of_range_by_desc_table() {
+        let floor_below = format!("{}", vdn_types::desc::FLOOR_DB.min - 1.0);
+        let e = gate_params(&sv(&["--gate-floor", &floor_below])).unwrap_err();
+        assert!(e.to_string().contains("floor_db"), "{e}");
+        let e = gate_params(&sv(&["--level-close", "-40"])).unwrap_err();
+        assert!(e.to_string().contains("gate.level_close_db"), "{e}");
+        assert!(gate_params(&sv(&["--confirm", "0"])).is_err());
     }
 
     #[test]

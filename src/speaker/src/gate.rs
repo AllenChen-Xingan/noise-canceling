@@ -342,16 +342,48 @@ mod tests {
             (&desc::FLOOR_DB, |p| p.floor_db, |p, v| p.floor_db = v),
             (&desc::GATE_ATTACK_S, |p| p.attack_s, |p, v| p.attack_s = v),
             (&desc::GATE_REOPEN_S, |p| p.reopen_s, |p, v| p.reopen_s = v),
-            (&desc::GATE_RELEASE_S, |p| p.release_s, |p, v| p.release_s = v),
-            (&desc::GATE_ONSET_GAP_S, |p| p.onset_gap_s, |p, v| p.onset_gap_s = v),
-            (&desc::GATE_ONSET_JUMP_DB, |p| p.onset_jump_db, |p, v| p.onset_jump_db = v),
-            (&desc::GATE_ONSET_LEVEL_MARGIN_DB, |p| p.onset_level_margin_db, |p, v| p.onset_level_margin_db = v),
-            (&desc::GATE_LEVEL_CLOSE_HOLD_S, |p| p.level_close_hold_s, |p, v| p.level_close_hold_s = v),
-            (&desc::GATE_ONSET_ARM_S, |p| p.onset_arm_s, |p, v| p.onset_arm_s = v),
-            (&desc::GATE_ONSET_REFRACTORY_S, |p| p.onset_refractory_s, |p, v| p.onset_refractory_s = v),
+            (
+                &desc::GATE_RELEASE_S,
+                |p| p.release_s,
+                |p, v| p.release_s = v,
+            ),
+            (
+                &desc::GATE_ONSET_GAP_S,
+                |p| p.onset_gap_s,
+                |p, v| p.onset_gap_s = v,
+            ),
+            (
+                &desc::GATE_ONSET_JUMP_DB,
+                |p| p.onset_jump_db,
+                |p, v| p.onset_jump_db = v,
+            ),
+            (
+                &desc::GATE_ONSET_LEVEL_MARGIN_DB,
+                |p| p.onset_level_margin_db,
+                |p, v| p.onset_level_margin_db = v,
+            ),
+            (
+                &desc::GATE_LEVEL_CLOSE_HOLD_S,
+                |p| p.level_close_hold_s,
+                |p, v| p.level_close_hold_s = v,
+            ),
+            (
+                &desc::GATE_ONSET_ARM_S,
+                |p| p.onset_arm_s,
+                |p, v| p.onset_arm_s = v,
+            ),
+            (
+                &desc::GATE_ONSET_REFRACTORY_S,
+                |p| p.onset_refractory_s,
+                |p, v| p.onset_refractory_s = v,
+            ),
             (&desc::VAD_ON, |p| p.vad_on, |p, v| p.vad_on = v),
             (&desc::VAD_OFF, |p| p.vad_off, |p, v| p.vad_off = v),
-            (&desc::GATE_LEVEL_CLOSE_DB, |p| p.level_close_db.unwrap_or(f32::NAN), |p, v| p.level_close_db = Some(v)),
+            (
+                &desc::GATE_LEVEL_CLOSE_DB,
+                |p| p.level_close_db.unwrap_or(f32::NAN),
+                |p, v| p.level_close_db = Some(v),
+            ),
         ];
         for (dsc, get, set) in fields {
             if !dsc.optional {
@@ -372,14 +404,21 @@ mod tests {
         assert_eq!(p.validate().unwrap_err().desc.id, desc::GATE_CONFIRM_N.id);
         assert_eq!(p.clamped().confirm_n, 1);
         // 接线配置不归描述表管，夹值时原样保留
-        let p = GateParams { sr: 48000.0, clock_rate: 48000.0, ..d };
+        let p = GateParams {
+            sr: 48000.0,
+            clock_rate: 48000.0,
+            ..d
+        };
         assert_eq!((p.clamped().sr, p.clamped().clock_rate), (48000.0, 48000.0));
     }
 
     /// new() 先夹再用：越界的下限不会让增益掉到表的下限之下。
     #[test]
     fn new_clamps_out_of_range_floor() {
-        let g = AsymGate::new(GateParams { floor_db: -500.0, ..GateParams::default() });
+        let g = AsymGate::new(GateParams {
+            floor_db: -500.0,
+            ..GateParams::default()
+        });
         assert_eq!(g.floor, vdn_dsp::db_to_lin(vdn_types::desc::FLOOR_DB.min));
     }
     use vdn_types::{Confidence, SpeakerVerdict};
