@@ -282,3 +282,37 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
 - `objc2-core-ml`：https://docs.rs/objc2-core-ml ；`coreml-native`：https://docs.rs/crate/coreml-native/0.2.0/source/README.md ；`candle-coreml`：https://docs.rs/crate/candle-coreml/latest/source/src/state.rs ；`coremlit`：https://docs.rs/crate/coremlit/latest/source/src/multi_array/mod.rs
 - `apple-accelerate` 0.3.2：https://docs.rs/crate/apple-accelerate/0.3.2/source/src/ffi/bnns.rs ；`mlx-rs`：https://docs.rs/crate/mlx-rs/latest/source
 - DFN3 流式 Core ML：https://huggingface.co/iky1e/DeepFilterNet3-Streaming-CoreML ；DFN3 Core ML：https://huggingface.co/aufklarer/DeepFilterNet3-CoreML ；DPDFNet-8：https://huggingface.co/iky1e/DPDFNet8-48kHz-HR-CoreML ；GTCRN MLX：https://huggingface.co/agentable/gtcrn-simple-mlx ；FluidAudio：https://docs.fluidinference.com/reference/benchmarks
+- 怀疑派补：coremltools 精度：https://apple.github.io/coremltools/docs-guides/source/typed-execution.html ；hollance ANE 清单：https://github.com/hollance/neural-engine/blob/master/docs/unsupported-layers.md ；论坛帖 GRU 上 ANE：https://developer.apple.com/forums/thread/718140
+
+## 怀疑派核查（2026-11-02）
+
+> 做法：逐条打开出处或头文件核对。本机 SDK 头文件（`bnns_graph.h`、`MLModel.h`、`MLPredictionOptions.h`、`MLState.h`、`AUAudioUnit.h`、`AudioWorkInterval.h`、`CoreAudioBaseTypes.h`、`os/workgroup_*.h`）、DAFx26 全文第 128–135 页、arXiv 2606.22283 HTML 全文、WWDC24 10211 讲稿、ORT CoreML EP 文档、MLX `scheduler.h`、仓内 exp004 / 008 / 009 行号。没装包、没跑基准。
+
+**改了什么（共 22 处）**
+- §0：BNNSGraph 从「两头都站得住、不加锁」降为「最有希望、未证实」；补 ANE 不算 fp32、GRU 不上 ANE；最低系统冲突补 `FastPrediction`（15.0）和 `MLComputePlan`（14.4）。
+- §1 BNNSGraph 行：删掉「大概率也够 A 档」（没有证据，A 档也不归推理库）；标明 WWDC24 讲稿没说「不加锁」，DAFx26 的转述比原话重。
+- §1 Core ML 行：「每次新建对象」从【官方】降为签名【官方】+ 行为【推断】。
+- §1 ANE 行：25 µs 是三项合计，不只是 fp16 拷贝；补 ANE 无 fp32、GRU 无 ANE 路径；标明「每帧不过守护进程」是走私有接口看到的。
+- §1 补充：WWDC 示例模型是 bit crusher，不能代表 GRU 网络。
+- §2.1：驳倒「多一帧所以走不通」（见下）；改正延迟账数字的含义。
+- §2.3：最坏帧改按 exp004 各列写，补 p50 0.70 ms（Rust）与「绝对值不能当最坏」的自注。
+- §4.1：补四条不同口径（ORT 卷积类无状态、BNNS 是 fp16、ORT 1.19.2 / M3、本机 SME2）；补 LSTM-M 上 ORT 反超的反例；补表 6 的 N=16；指出 ORT 没进负载测试；AMX 出处节号改为 §5；补每次调用约 59 µs 的上界推算。
+- §4.3：标单作者预印本；派发下限两处数不一致；22 pJ/FLOP 是 M1 Max；M2 数与「只测 M1、M5」矛盾；「供电轨关掉」降为推断。
+- §4.4：补仓内反例（rc.15 默认挂 CoreML 时 GTCRN 编译失败）。
+- GTCRN 含义：ANE「大概率能跑」改为「整图上不了」；对比基准从 0.4 ms 改为 Rust 0.70 ms；「2–13 倍」改为「0.45–13 倍」并写明原因；流式模式不适用的理由改为「GRU 隐状态是整块覆盖」；fp32 风险补「必须显式 FLOAT32，默认 fp16」。
+- FE-M 含义：GRU 是 `while_loop` 不是 MIL `gru`；AMX 优势在 M5 上未必成立；ANE「有机会赢」降为「先验偏不赢」。
+- 基准清单：ORT 同时段重跑；精度与计算单元配对；GTCRN 手动展开 GRU 变体；形状全定检查；跨进程 ANE 争用；分配计数与 008 同口径；CPU 占用按进程算；空闲后第一帧所有后端都测；容差待人定；判定按 verifier 写法。
+
+**驳倒了什么**
+- 「MLX 要多隔一层线程，所以多一帧、超 45 ms、走不通」：anira 多一帧是因为插件回调要同步返回；vdn 推理线程本来就在跨进程环后面，C 档线程可直接写环，不必多一帧。真约束是 C 档线程的尾延迟能否进 3 ms 余量，以及要不要改规约 §4。
+- 「GTCRN 在 ANE 上大概率能跑」：GRU 没有 ANE 路径，fp32 模型整个不上 ANE。
+- 「BNNSGraph 对 ORT 小模型快 2–13 倍」：同一篇论文里 LSTM-M 是 ORT 快；13 倍那组 ORT 无状态、BNNS 是 fp16。
+
+**仍存疑**
+- BNNSGraph 执行时有没有锁、自旋、系统调用：只有头文件「不分配」和 100 次最小循环。
+- Core ML `CPUOnly` 会不会在内部开线程、每帧分配几次：无公开数据。
+- Core ML 公开接口走 ANE 时，用户态怎么等完成（RTSan 看不看得见）：只有私有接口的逆向。
+- M5 的 ANE 派发下限：论文里没找到。
+- `coremltools` 状态张量是否硬性只许 fp16：只有第三方源码注释。
+- 本机 ORT 预编译包是否带 KleidiAI（SME2）：没查。
+- DPDFNet-8 的 6.3 ms、FluidAudio 的 15 s / 2 s、DFN3 流式 Core ML 的 0.264 ms：本轮没重新打开核对。
