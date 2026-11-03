@@ -42,6 +42,9 @@
 - `src/eval/src/files.rs` 3 条：`as_str` 与 serde 名字一致 · `ALL` 列全 · 缺省值不变
 - `src/shm/src/desc.rs` 1 条：字段有序、不重叠、不越界
 
+## PR 正文草稿
+`_tmp/20261102-schema-review/pr-draft.md`（本 worktree，不入库；收尾时填命令结果和评审轮数后发给大总管）
+
 ## 转交
 - **`.github/workflows/ci.yml` 改了一行**：checkout 加 `fetch-depth: 0`（vdn-schema 的测试要对照 main 上的布局文件，codex 第 2 轮 #1）。这是共用文件，合并冲突请大总管处理
 - **总线名规则收窄**（我的实体 vdn-shm / vdn-control，codex 第 2 轮 #2）：前缀之后只许可见 ASCII、不含 `/`，空格和非 ASCII 字符不再许可。大总管让改动方补测试：已给 vdn-denoised 的 `bus_name_rule_matches_vdn_shm` 加 5 个样例（空格、中文、9 个中文、末尾 /、可见符号），只加测试、没改逻辑。PR 正文要写这条行为变化
