@@ -88,6 +88,11 @@ fn read(path: &Path) -> Option<String> {
 
 /// 比对仓里的文件与重新导出的结果；返回问题清单（空 = 一致）。
 pub fn check(root: &Path) -> Vec<String> {
+    check_with(root, shm::HISTORY)
+}
+
+/// 同 `check`，版本历史由调用方给（测试用它模拟「布局变了」）。
+pub fn check_with(root: &Path, history: &[(u32, &str)]) -> Vec<String> {
     let dir = root.join(DIR);
     let mut problems = Vec::new();
     let docs = export();
@@ -116,9 +121,8 @@ pub fn check(root: &Path) -> Vec<String> {
             }
         }
     }
-    let body = shm::layout_body();
     if let Err(e) = shm::guard(
-        shm::HISTORY,
+        history,
         vdn_shm::layout::VERSION,
         &shm::fingerprint(&shm::layout_body()),
     ) {
@@ -142,11 +146,16 @@ pub fn first_diff(file: &str, committed: &str, fresh: &str) -> String {
 
 /// 重新导出并写盘（只写有变化的文件）。返回写了哪些文件。
 pub fn write(root: &Path) -> Result<Vec<String>, String> {
+    write_with(root, shm::HISTORY)
+}
+
+/// 同 `write`，版本历史由调用方给。
+pub fn write_with(root: &Path, history: &[(u32, &str)]) -> Result<Vec<String>, String> {
     let dir = root.join(DIR);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     // 先过版本守卫：布局变了而版本没升（或新版本没登记），一个文件都不写
     shm::guard(
-        shm::HISTORY,
+        history,
         vdn_shm::layout::VERSION,
         &shm::fingerprint(&shm::layout_body()),
     )?;
