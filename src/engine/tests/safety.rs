@@ -199,3 +199,23 @@ fn safety_defaults_follow_desc_table() {
         )
     );
 }
+
+/// 描述表允许的边界值都能进 Engine（`Engine::new` 断言 `max_abs > 0`、时长 ≥ 0；codex 第 1 轮 P2 #4）。
+#[test]
+fn desc_boundary_values_are_accepted_by_engine() {
+    use vdn_types::desc::*;
+    for (max_abs, hold, xf) in [
+        (ENGINE_MAX_ABS.min, ENGINE_RECOVER_HOLD_S.min, ENGINE_CROSSFADE_S.min),
+        (ENGINE_MAX_ABS.max, ENGINE_RECOVER_HOLD_S.max, ENGINE_CROSSFADE_S.max),
+    ] {
+        let cfg = SafetyConfig {
+            max_abs,
+            recover_hold_s: hold,
+            crossfade_s: xf,
+            ..SafetyConfig::default()
+        };
+        let mut e = Engine::new(DelayGain::new(HOP, LAT, 0.5), cfg);
+        let run = offline::run(&mut e, &vec![0.1f32; HOP * 8], 0);
+        assert!(run.output.iter().all(|v| v.is_finite()));
+    }
+}
