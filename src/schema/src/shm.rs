@@ -197,7 +197,7 @@ pub fn guard_baseline(history: &[(u32, &str)], base: &BaseLayout) -> Result<(), 
                     "shm::HISTORY 删掉了 main 上已发布的版本 {bv}：旧行不能删"
                 ));
             }
-            Some(j) if history[j].1 != bf => {
+            Some(j) if history[j].1 != bf.as_str() => {
                 return Err(format!(
                     "shm::HISTORY 里版本 {bv} 的指纹被改写了（main 上是 {bf}，现在写的是 {}）：\
                      已发布的版本只能在末尾追加新版本，不能改旧行——改布局请升 layout::VERSION",

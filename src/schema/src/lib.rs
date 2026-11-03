@@ -36,8 +36,47 @@ pub fn pretty(v: &Value) -> String {
     serde_json::to_string_pretty(v).unwrap_or_default() + "\n"
 }
 
-/// 给派生出的 schema 加「从哪导出、勿手改」的说明。
+/// Rust 整数类型的取值范围，按 schemars 写的 `format` 查（`uint` / `int` 是 usize / isize）。
+fn int_range(format: &str) -> Option<(Value, Value)> {
+    let usize_max = u64::try_from(usize::MAX).unwrap_or(u64::MAX);
+    let isize_min = i64::try_from(isize::MIN).unwrap_or(i64::MIN);
+    let isize_max = i64::try_from(isize::MAX).unwrap_or(i64::MAX);
+    Some(match format {
+        "uint8" => (0.into(), u8::MAX.into()),
+        "uint16" => (0.into(), u16::MAX.into()),
+        "uint32" => (0.into(), u32::MAX.into()),
+        "uint64" => (0.into(), u64::MAX.into()),
+        "uint" => (0.into(), usize_max.into()),
+        "int8" => (i8::MIN.into(), i8::MAX.into()),
+        "int16" => (i16::MIN.into(), i16::MAX.into()),
+        "int32" => (i32::MIN.into(), i32::MAX.into()),
+        "int64" => (i64::MIN.into(), i64::MAX.into()),
+        "int" => (isize_min.into(), isize_max.into()),
+        _ => return None,
+    })
+}
+
+/// 整数字段补上 Rust 类型的上下界（codex 第 3 轮 #4）。
+/// schemars 只写 `format`（如 `uint64`），校验器不按 format 判范围，超出类型的数 schema 会放行、serde 会拒。
+/// 已有的 `minimum` / `maximum`（transform 从常量写入的更窄范围）不动。
+pub fn int_bounds(v: &mut Value) {
+    match v {
+        Value::Object(m) => {
+            let range = m.get("format").and_then(Value::as_str).and_then(int_range);
+            if let Some((lo, hi)) = range {
+                m.entry("minimum").or_insert(lo);
+                m.entry("maximum").or_insert(hi);
+            }
+            m.values_mut().for_each(int_bounds);
+        }
+        Value::Array(a) => a.iter_mut().for_each(int_bounds),
+        _ => {}
+    }
+}
+
+/// 收尾派生出的 schema：补整数范围（`int_bounds`），加「从哪导出、勿手改」的说明。
 pub fn with_comment(mut schema: Value, source: &str) -> Value {
+    int_bounds(&mut schema);
     if let Value::Object(m) = &mut schema {
         m.insert(
             "$comment".into(),
