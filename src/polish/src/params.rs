@@ -91,13 +91,14 @@ impl PolishParams {
             floor_db,
             comfort_db,
             demuffle_max_db,
-            agc: 1.0,
-            agc_target_dbfs: -26.0,
-            agc_range_db: 10.0,
+            // 各场景预设只调前四项，AGC 用默认（R-PARAM：默认值的正本是描述表）
+            agc: desc::POLISH_AGC.default,
+            agc_target_dbfs: desc::POLISH_AGC_TARGET_DBFS.default,
+            agc_range_db: desc::POLISH_AGC_RANGE_DB.default,
         };
         if tone >= 20 {
             return Self {
-                agc: 1.0,
+                agc: 1.0, // tidy: 预设值，不随默认变：开关值，1.0 = 开（≥ 0.5 视为开）；「只开 AGC」的预设必须开，默认改成关也不能跟着变
                 ..Self::OFF
             };
         }

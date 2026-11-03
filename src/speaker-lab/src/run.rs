@@ -251,7 +251,7 @@ pub(crate) fn cmd_run(args: &[String]) -> R<()> {
     let gp_aggr = GateParams {
         floor_db: -20.0,
         confirm_n: 1,
-        release_s: 0.3,
+        release_s: 0.3, // tidy: 预设值，不随默认变：激进版的慢收时长（大总管 2026-10-30 定，见上方注释）；GateParams 对应 gate.release_s（默认 0.5），与 release_s 默认 0.3 只是同名
         ..gp
     };
     let mut gate_a = AsymGate::new(gp_aggr);

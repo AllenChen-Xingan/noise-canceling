@@ -54,3 +54,20 @@
 - 2026-11-03 hygiene 解完 6 个冲突（另暂存 6 个配套文件），合并工作区 clippy 净 · test 500/1/7（tidy_passes：4 条作废基线 + policy_tests 1 处字面量）；8d 提交合并
 - 2026-11-03 8d 在 6c33d026 亲手验收：xtask ci 全绿 491/0/7 · schema 一致 · eval ci 门禁过 · 无超 600 行文件；推送并开 PR #75（Closes #62），等 CI
 - 2026-11-03 PR #75 CI 过；补推账本后合并（merge commit），之后关 hygiene 窗口；#71 实现待人定是否接着做
+
+## 当前事 · #71 tidy 改用 syn 语法树（2026-11-03 起）
+
+人原话：「可以真正用ast工具」「做71」。设计 `docs/plan/012_tidy-syn.md`。worktree `../noise_canceling-tidysyn`，分支 `feat/tidy-syn`（从 main 9f34aec4）。
+
+| 手下 | 线 | 管的实体 | 状态 |
+|---|---|---|---|
+| hygiene（noise-canceling-hygiene-8f） | #71 · `feat/tidy-syn` | xtask（+ ADR 004） | 已派（交代 `_tmp/20261102-b8/tidysyn.md`） |
+
+- 2026-11-03 #62 合并（PR #75，9f34aec4）。人定做 #71。发现 `../noise_canceling-hygiene` 与 `../noise_canceling-iface` 两个 worktree 已被删（原因待查，内容均已合并）。8d 误在主目录 `git switch -c feat/tidy-syn`（cd 失败后接着执行），已切回 `main`@123887b7，另开 `../noise_canceling-tidysyn`。写本账本时又误覆盖了本文件，已 `git checkout` 恢复后追加
+- 2026-11-03 hygiene 报到 #71：先量改前基线（冷/热编译、tidy 运行各 3 次中位数）· 存改前 tidy 全输出与 test_scope 清单作比对基准 · 加 syn 过 cargo-deny；旧 worktree 非它所删
+- 2026-11-03 查旧 worktree 消失：各会话日志无删除记录；消失的两个正好是 8d 用 gh pr merge --delete-branch 合并的 #74（iface）、#75（hygiene）分支所在 worktree → 推断是 gh 删本地分支时连带删除（未复现）。以后合并不加 --delete-branch，远端分支另行删除
+- 2026-11-03 hygiene #71 第 1 步：ast/（mod · modtree · tests）建模块树，test_scope.rs 删，R-MODEL 迁完；syn/proc-macro2/quote 用锁文件已有版本，cargo-deny 过；T1–T14 成测试，xtask 49/0；测试范围 123 文件差异 3 处已解释（1 处是旧规则漏报）；基线 tidy 0.563 s
+- 2026-11-03 比对数字核清（state/handoff/tidysyn-compare.md）：123 = xtask 外 113（111 同 · 2 差已解释）+ xtask 未改 7（全同）+ xtask 改过 3（不可比）；接着迁 R-RATE
+- 2026-11-03 R-RATE、R3 迁完（compare 第 3、4 节）：R-RATE 真仓 4 处一致，新增认十六/八/二进制与字面量算式；R3 按 use 别名还原路径，差异 2 类均解释（denoised/tests.rs 新的更准 · shm/owned.rs 旧漏报 6 行，NRT 模块照旧跳过），修 1 个误报（局部变量 log）；禁用清单 ↔ clippy.toml 加比对；xtask 58/0，tidy 过
+- 2026-11-03 P3（默认值字面量）收窄为「等于描述表默认值才报」，真仓 6 处（polish params ×4 · scene weights ×1 · speaker-lab run ×1）。8d 定：本 PR 内逐条处理（用默认值的改引用；有意预设写带理由的放行标记），P3 直接红；hygiene 实体临时扩为 xtask · polish · scene · speaker-lab（4 个）
+- 2026-11-03 R-PARAM 迁完：P3 6 处——polish AGC 3 处改引用默认值；polish:100 · speaker-lab:254 · scene/weights.rs:22 保留并写理由（scene 那行是 train.py 生成，已同步改 train.py 生成注释，未重训）；3 crate 30 过前后一致；范围比对 旧 159 新 152，少的 7 处是旧规则误报；xtask 60/0

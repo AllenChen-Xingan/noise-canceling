@@ -28,6 +28,10 @@ hound = "3.5"
 clap = { version = "4", features = ["derive"] }
 assert_no_alloc = "1.1"
 serde_json = "1"
+# xtask 用 syn 解析语法树判 tidy 规则（#71）；span-locations 让语法树带行号
+syn = { version = "2.0.119", default-features = false, features = ["full", "visit", "parsing", "printing", "derive"] }
+proc-macro2 = { version = "1.0.107", features = ["span-locations"] }
+quote = "1"
 serde = { version = "1", features = ["derive"] }
 # JSON Schema 导出（MIT）：只在 C 档与 tool 档（control · eval · schema），核心 crate 不用（specs/schema/README.md）
 schemars = "1.2"
@@ -52,3 +56,12 @@ disallowed_methods = "allow"
 disallowed_types = "allow"
 disallowed_macros = "allow"
 undocumented_unsafe_blocks = "deny"
+
+# xtask tidy 用 syn 解析全仓源码（#71）：调试构建里只给解析库开优化，tidy 从约 3.9 s 降到 1 s 以内；
+# 只影响这几个库自己的代码生成，不改别的 crate 的调试体验
+[profile.dev.package.syn]
+opt-level = 3
+[profile.dev.package.proc-macro2]
+opt-level = 3
+[profile.dev.package.quote]
+opt-level = 3

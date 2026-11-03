@@ -125,7 +125,9 @@ def write_weights(build, mean, std, params, bt, clip, hyst):
         f"pub const CLIP_MIN: f32 = {clip:.3};",
         "/// 后验平滑时间常数（秒）",
         f"pub const EMA_S: f32 = {ema};",
-        f"pub const HYSTERESIS: Hysteresis = Hysteresis {{ confirm_s: {confirm}, min_confidence: {minconf}, min_dwell_s: {dwell} }};",
+        # 行尾放行注释：tidy R-PARAM 会把等于描述表默认值的字面量当成第二处表示；这里的值由 --hyst 产出，
+        # 与默认值一致由 src/scene/tests/behavior.rs 比对（#71）
+        f"pub const HYSTERESIS: Hysteresis = Hysteresis {{ confirm_s: {confirm}, min_confidence: {minconf}, min_dwell_s: {dwell} }}; // tidy: 预设值，不随默认变：exp006 train.py --hyst 产出（文件头：别手改）；与描述表默认值一致由 src/scene/tests/behavior.rs 比对",
         "",
     ]
     (ROOT / "src/scene/src/weights.rs").write_text("\n".join(lines))
