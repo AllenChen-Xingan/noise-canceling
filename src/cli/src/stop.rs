@@ -21,7 +21,10 @@ mod tests {
 
     #[test]
     fn sets_every_flag_on_drop() {
-        let (a, b) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicBool::new(false)));
+        let (a, b) = (
+            Arc::new(AtomicBool::new(false)),
+            Arc::new(AtomicBool::new(false)),
+        );
         {
             let _g = StopOnDrop([a.clone(), b.clone()]);
             assert!(!a.load(Ordering::Acquire) && !b.load(Ordering::Acquire));

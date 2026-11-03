@@ -1,7 +1,9 @@
 //! `chain-test` 的判据（V1–V4）与结束时打印的几行：只读 [`ChainRun`]，不跑链路。
 
 use super::{ChainRun, LIMIT_150MS, RATE, SILENCE, SKIP};
-use crate::verify::{best_lag, longest_silence, ms48, nonfinite, onset, pearson_at_lag, rms, test_tone};
+use crate::verify::{
+    best_lag, longest_silence, ms48, nonfinite, onset, pearson_at_lag, rms, test_tone,
+};
 /// 一条判据的结论。
 pub struct ChainVerdict {
     pub id: &'static str,

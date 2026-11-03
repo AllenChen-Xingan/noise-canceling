@@ -29,7 +29,8 @@ use offline_cmd::{bench, denoise};
 
 /// 计数分配器：bench 里量「每 hop 在 Rust 侧分配几次」（ORT C++ 内部的分配绕过它，量不到）。
 #[global_allocator]
-pub(crate) static GLOBAL: &stats_alloc::StatsAlloc<std::alloc::System> = &stats_alloc::INSTRUMENTED_SYSTEM;
+pub(crate) static GLOBAL: &stats_alloc::StatsAlloc<std::alloc::System> =
+    &stats_alloc::INSTRUMENTED_SYSTEM;
 
 fn main() {
     let cli = Cli::parse();

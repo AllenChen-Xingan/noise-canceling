@@ -142,7 +142,11 @@ pub fn write_tightened(root: &Path) -> bool {
     let next = tightened(&scan(root), &baseline);
     match fs::write(&path, render(&next)) {
         Ok(()) => {
-            println!("size-baseline：{} 条（原 {} 条）", next.len(), baseline.len());
+            println!(
+                "size-baseline：{} 条（原 {} 条）",
+                next.len(),
+                baseline.len()
+            );
             true
         }
         Err(e) => {
@@ -206,10 +210,21 @@ mod tests {
     #[test]
     fn tighten_only_lowers() {
         let files = [f("src/a.rs", 650), f("src/b.rs", 900), f("src/c.rs", 500)];
-        let base = [f("src/b.rs", 800), f("src/a.rs", 700), f("src/c.rs", 700), f("src/d.rs", 700)];
-        assert_eq!(tightened(&files, &base), vec![f("src/a.rs", 650), f("src/b.rs", 800)]);
+        let base = [
+            f("src/b.rs", 800),
+            f("src/a.rs", 700),
+            f("src/c.rs", 700),
+            f("src/d.rs", 700),
+        ];
+        assert_eq!(
+            tightened(&files, &base),
+            vec![f("src/a.rs", 650), f("src/b.rs", 800)]
+        );
         let mut p = Vec::new();
-        assert_eq!(parse_baseline(&render(&tightened(&files, &base)), &mut p).len(), 2);
+        assert_eq!(
+            parse_baseline(&render(&tightened(&files, &base)), &mut p).len(),
+            2
+        );
         assert!(p.is_empty());
     }
 

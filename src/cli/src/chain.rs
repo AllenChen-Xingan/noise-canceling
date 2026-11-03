@@ -26,12 +26,12 @@ use crate::verify::test_tone;
 mod judge;
 #[cfg(test)]
 mod lockstep;
-#[cfg(test)]
-pub use lockstep::run_lockstep;
 pub use judge::{
     ChainVerdict, counters_line, judge_file, judge_v1, judge_v2, judge_v3, latency_line,
     timing_line,
 };
+#[cfg(test)]
+pub use lockstep::run_lockstep;
 
 /// 正本在 vdn-control
 const RATE: u32 = vdn_control::IO_RATE;
