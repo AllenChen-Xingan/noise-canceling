@@ -18,8 +18,8 @@ batt_line() { pmset -g batt | sed -n 2p | sed 's/^[[:space:]]*//'; }
 ac_check() {
   local src; src=$(pmset -g batt | head -1)
   case "$POWER_MODE" in
-    ac) echo "$src" | grep -q "AC Power" || { echo "POWER_MODE=ac 但没插电（$src），停下" >&2; exit 2; } ;;
-    battery) echo "$src" | grep -q "Battery Power" || { echo "POWER_MODE=battery 但插着电（$src），停下" >&2; exit 2; } ;;
+    ac) echo "$src" | grep -q "AC Power" || { echo "POWER_MODE=ac 但没插电（${src}），停下" >&2; exit 2; } ;;
+    battery) echo "$src" | grep -q "Battery Power" || { echo "POWER_MODE=battery 但插着电（${src}），停下" >&2; exit 2; } ;;
     *) echo "POWER_MODE 只收 ac / battery" >&2; exit 2 ;;
   esac
 }
@@ -33,8 +33,8 @@ BIN=$REPO/docs/experiments/exp010-inference-bench/bench/target/release/exp010-be
 W=$M/_tmp/20261031-exp010/gtcrn_dns3
 WAV=$M/resources/gtcrn/test_wavs/mix.wav
 OUT=$HERE/results/$ID/power
-[ -x "$BIN" ] || { echo "没有 $BIN，先 cargo build --release"; exit 1; }
-[ -e "$OUT" ] && { echo "已有 $OUT，不覆盖"; exit 1; }
+[ -x "$BIN" ] || { echo "没有 ${BIN}，先 cargo build --release"; exit 1; }
+[ -e "$OUT" ] && { echo "已有 ${OUT}，不覆盖"; exit 1; }
 mkdir -p "$OUT"
 trap 'chown -R "$U" "$HERE/results/$ID"' EXIT
 chown -R "$U" "$HERE/results/$ID"
