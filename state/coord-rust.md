@@ -41,6 +41,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- rs-wake 补数（提优先级后，空闲 / 压力，各 1 次 × 4900 块）：最长醒来 唤醒 40.6 / 7.4 µs · 200 µs 轮询 210.9 / 203.8 µs · 500 µs 轮询 527.0 / 502.8 µs；CPU 唤醒 0.41 / 0.21 % · 200 µs 轮询 1.62 / 1.03 % · 500 µs 轮询 1.30 / 0.48 %；每秒唤醒 约 500 · 3671–7354 · 1548–2902。wait 运行期探测，14.2–14.3 自动退回 200 µs 轮询
 - rs-entry：唤醒接上（wait 替掉 sleep，退回轮询 0 次）· Out 总线 `/vdn-out` 由送音端自建 · OwnedBus 用 vdn-shm 的、旧份已删 · 两进程三种起停顺序（含 SIGKILL 重启）相关 1.000000、延迟 1056、静音 0（debug）· V7 进 `docs/experiments/exp-v7-latency/`。**打回两处**：音频线程 try_lock（违规约 §3.4）→ 改 rtrb 送入 + 回收；NaN 当带内记号 → 改 0 占位 + note_gap + 送音端按心跳过期路径补原声
 - rs-wake 对照实验（release，两真进程，每组 4900 块）：推到醒中位 唤醒 4–17 µs · 200 µs 轮询 101–138 µs · 500 µs 轮询 250–331 µs；不提实时优先级三种都有 4.5–11 ms 尖峰，提了后唤醒最长 7–41 µs → 实时优先级是关键。待补：提优先级后轮询最长值、CPU、唤醒次数（为 009 待拍板 1「最低系统 14.4」）。loom debug 5 分钟未跑完，改 release
 - rs-entry V7 基线（release、0.5 ms 轮询）**不过**：lead 96 / 144 空闲 10/10 次欠载；**空闲反而比压力差**（推理块中位约 3.0 ms vs 0.64–1.43 ms），推断降频 / 能效核 → Workgroup 提前做（rs-wake）；空闲加扫 lead 192 起无欠载（仅 3 次）。lead 默认暂定 288（6 ms，GTCRN L_total 38.00 ms）。名额已还；骨架（唤醒）已合进 rs-entry，待它补 BusConfig 新字段
@@ -73,6 +74,7 @@
 ## 待定清单（攒着等人一次看完）
 
 - [x] Pipeline 省 2 ms 延迟 → **人定 2026-11-02：「可以省」**。做法：新增 `Pipeline::with_block`（块长整除 hop 时输出预填少 95 样本），`new` 不变；派会话内子代理在 `../noise_canceling-rs-core` 做
+- [ ] 最低系统要不要提到 14.4（009 待拍板 1）：建议不提，14.4 以上自动用唤醒、以下退回 200 µs 轮询（多约 0.2 ms、CPU 多约 1.2 个百分点）；默认不提
 - [ ] 两个进程（008 #4）与工程细节（第五组）按建议推进，待人确认 —— 来源 010 第九节
 
 ## 收尾时大总管要做
