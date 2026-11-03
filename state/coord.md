@@ -58,15 +58,16 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | applebe（构建 · ECAPA · BE-IMPACT · 人跑 powermetrics 矩阵），18:12 起约 23 min；锁 `_tmp/heavy.lock` |
+| 重编译 / 全量测试 / 跑模型（1 个） | rustbe（四种线程设置 + native-fast，约 7 min），18:46 起；锁 `_tmp/heavy.lock` |
 
-排队：rustbe（run_rt_probe.sh 四种线程设置 + native-fast 实时节奏 60 s，约 7 min）
+排队：无（本批计时到此为止）
 
 **跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。加锁文件：mkdir 主目录 `_tmp/heavy.lock`（内写 owner · 开始 · 预计结束，跑完 rmdir），由各自大总管放名额时建、收回时删，手下不碰（47 已确认）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 18:43 人跑 powermetrics 矩阵完成（`apple/results/20261102-183322-rt/`，9 设置 × 60 s，插电）：CPU 功率 native-blas rt 71 mW · native rt 81 · BNNS rt 97 · BNNS + 自建工作组区间 123–138 mW（但每帧 0.80 → 0.2 ms、核 4.8% → 1.4%）· 忙等 4.2 W（证实降频）。空闲基线 111 mW 高于多段 → 背景噪声约 ±30–40 mW，只作相对比较。结论：支持 D74（提速花电），功率最低 = 手写 + Accelerate + time-constraint
 - 2026-11-02 18:31 ⚠️ applebe `impact.sh` 留下 21 个孤儿基准进程（`eval "$CMD" &` 的 `$!` 是子 shell，kill 没杀到程序），18:10–18:31 一直按节奏跑约半个核 → BE-IMPACT 数据作废；人授权由大总管 pkill 清理；脚本已改（exec · kill+wait+kill -0 · trap）。教训：后台起进程的脚本必须 trap 清理并核实退出
 - 2026-11-02 applebe：ECAPA 转不出 Core ML（补了 onnx2torch Clip 后又卡在 coremltools 不支持 prod），记「转不出」；BE-IMPACT 不能下结论：7 次「关」之间离散 10–22%，BNNS rt 慢 5.9%（噪声 10.6%）、手写 rt −0.6%（噪声 22%），都在噪声里 → 测法要改（前台负载不占满核 · 多跑几对 · 取最小值），留下次。暂停让 47 陪人跑真设备小测试（约 2 min），之后人跑 powermetrics
 - 2026-11-02 18:02 rustbe 实时节奏 10 min（37 500 帧，ui，插电）：手写 p50 0.61 ms（连续跑 0.088）· p99.9 0.87 · max 6.95 ms · 6 帧 > 3 ms（BE-DEADLINE 不过）· 3.2% 核 · 0 分配；Accelerate 版 p50 0.44 · max 4.17 · 1 帧 > 3 ms · 2.5% 核（实时节奏下比手写快约 21%，原因未查）。结论：连续跑的帧耗时在产品节奏下不成立
