@@ -40,7 +40,7 @@
 1. **API**：macOS 15 起。`-[MLModel newState]` 建状态，状态缓冲由 Core ML 分配并清零；`predictionFromFeatures:usingState:options:error:` 做有状态预测【官方】`H/MLModel+MLState.h:13-78`。读写状态要用 `getMultiArrayForStateNamed:handler:`，**缓冲地址每次调用可能不同**，不能在回调外用【官方】`H/MLState.h:47-56`。
 2. **转换**：PyTorch 用 `register_buffer` 声明缓存，`ct.convert(states=[ct.StateType(...)])`，名字要和 buffer 一致，部署目标要 ≥ iOS 18 / macOS 15【官方】<https://apple.github.io/coremltools/docs-guides/source/stateful-models.html>。
 3. **硬限制：状态只能是 fp16。** 后端写死了检查「Core ML only support fp16 for state」，不是 fp16 就报错【源码】`ct/mil/backend/mil/load.py:736-740`。`torch.export` 路线会自动把 buffer 转成 fp16 并只打警告【源码】`ct/mil/frontend/torch/converter.py:645-650`。状态形状不能可变（`load.py:731-734`）。
-4. **对 GTCRN 的意思**：三个缓存（`conv` · `tra` · `inter`）一旦做成状态，就每帧被截成 fp16。GRU 隐状态和卷积缓存是跨帧递推的，舍入误差会一帧帧带下去【推断】。按 exp004 的口径（最大绝对误差 4.5e-7、对拍 SNR ≥ 124 dB，`docs/experiments/exp004-p1-rust-parity/README.md:7`），fp16 大概率过不了【推断：fp16 有效位约 3.3 位十进制】。
+4. **对 GTCRN 的意思**：三个缓存（`conv` · `tra` · `inter`）一旦做成状态，就每帧被截成 fp16。GRU 隐状态和卷积缓存是跨帧递推的，舍入误差会一帧帧带下去【推断】。exp004 的 4.5e-7、对拍 SNR ≥ 124 dB（`docs/experiments/exp004-p1-rust-parity/README.md:7`）是 **Rust 调 ORT 对 Python 调 ORT**，两边是同一个推理库【源码】。它不能直接当 Core ML 的过线标准；Core ML 对 ORT 要另定容差（按感知指标，如 SI-SDR 差），待人定。fp16 肯定远离 4.5e-7【推断：fp16 有效位约 3.3 位十进制】。
 5. **省下的拷贝不多**：GTCRN 三个缓存一共 2×16×16×33 + 2×3×16 + 2×33×16 = 18 048 个 fp32，约 70 KB【推断，按 `our-models.md` 的形状算】。显式进出时可以用两套预分配缓冲来回交换（见第 4 节），拷贝量为零。苹果说状态的好处是「overhead can become noticeable as the size of the state increases」，例子是 7B 大模型的 KV 缓存，测得 1.6 倍【官方】WWDC24 <https://developer.apple.com/videos/play/wwdc2024/10161/>。我们的缓存小三个数量级，**收益未量化，多半很小**【推断】。
 6. **并发约束**：同一个 `MLState` 上的预测必须串行；预测进行中不许读写状态缓冲【官方】`H/MLState.h:38-40`、`H/MLModel+MLState.h:84`。
 7. **结论**：有状态版只作为对照测一次（看 fp16 状态的误差和省下的时间），**不作为主方案**。
@@ -51,8 +51,8 @@
 2. **神经引擎每调一次的固定开销**【实测-他人，arXiv 2606.22283，M1，私有直连接口，不是 Core ML 公开接口】：
    - 极小图（3×3 卷积 8→8 通道 + ReLU + mean）热循环约 2000 次，每次约 **190 µs**，「About 98 percent」是软件和固件调度，不是计算（§2.3）。
    - 拆开看：用户态绑定和 fp16 拷贝约 25 µs，组请求约 16 µs，固件往返约 130 µs，内核收尾约 10 µs（§2.3 表 2.3）。全文给的下限是每次约 0.23 ms（引言、§9.3）。
-   - 驱动同时只放一个固件命令在途，两个线程同时提交会串行（§2.4）。**别的进程（系统功能）也在用神经引擎时，我们的帧会排队**【推断】。
-   - 空闲 5 s 后的第一次调用约 260 ms，约为稳态 p50 的 123 倍；空闲不到 1 s 也会慢 1.2–1.7 倍（§10.6）。空闲时功耗约 0 mW，有动态断电（§10.4）。
+   - 驱动同时只放一个固件命令在途，两个线程同时提交会串行（§2.4，怀疑派没读到这一节原文，未核）。**别的进程（系统功能）也在用神经引擎时，我们的帧会排队**【推断】。
+   - 空闲 5 s 后的第一次调用约 260 ms，约为稳态 p50 的 123 倍；空闲不到 1 s 也会慢 1.2–1.7 倍（§10.6 表 10.3，**M1**）。按 123 倍反推，那组测量的稳态 p50 约 2 ms，不是上面 190 µs 的极小图，两组数不能混用【推断】。空闲时功耗约 0 mW，有动态断电（§10.4）。
    - 另一份社区测量（M3 Max）拟合出约 119 µs 固定开销【实测-他人】<https://github.com/skyfallsin/ane.cpp>（只看了搜索摘要，没读原文）。
    - M5 上的数字：没查到【存疑】。走 Core ML 公开接口时，还要再加 Core ML 自己的开销，这部分没有公开数字【存疑】。
 3. **GPU 每调一次的开销**：有人测空 kernel 的 `waitUntilCompleted` 在 M2 Max 上约 **0.12 ms**【实测-他人，单一论坛帖】<https://developer.apple.com/forums/thread/767853>。Core ML 走 GPU 时每帧至少付一次这个量级【推断】。
