@@ -1,6 +1,7 @@
 //! 修音链行为测试：关掉时原样透传；下限与舒适噪声补「真空」；平滑压住增益乱跳；AGC 往目标走；限幅不超 −1 dBFS。
 use realfft::num_complex::Complex32;
 use vdn_polish::{Agc, PolishParams, SpectralPolish};
+use vdn_types::MODEL_RATE;
 
 const BINS: usize = 257;
 
@@ -18,7 +19,7 @@ fn noise_spec(seed: &mut u64, amp: f32) -> Vec<Complex32> {
 
 #[test]
 fn off_is_identity() {
-    let mut sp = SpectralPolish::new(512, 256, 16000.0);
+    let mut sp = SpectralPolish::new(512, 256, MODEL_RATE as f32);
     let mut s = 1u64;
     for _ in 0..50 {
         let dry = noise_spec(&mut s, 1.0);
@@ -33,7 +34,7 @@ fn off_is_identity() {
             assert!((a - b).norm() < 1e-5 * (1.0 + b.norm()));
         }
     }
-    let mut agc = Agc::new(256, 16000.0);
+    let mut agc = Agc::new(256, MODEL_RATE as f32);
     let mut x: Vec<f32> = (0..256).map(|i| (i as f32 * 0.05).sin() * 0.1).collect();
     let x0 = x.clone();
     agc.process(&mut x, &PolishParams::OFF, 1.0);
@@ -42,7 +43,7 @@ fn off_is_identity() {
 
 #[test]
 fn floor_and_comfort_fill_the_vacuum() {
-    let mut sp = SpectralPolish::new(512, 256, 16000.0);
+    let mut sp = SpectralPolish::new(512, 256, MODEL_RATE as f32);
     let p = PolishParams {
         floor_db: -20.0,
         comfort_db: -100.0,
@@ -64,7 +65,7 @@ fn floor_and_comfort_fill_the_vacuum() {
         10.0 * ratio.log10()
     );
 
-    let mut sp = SpectralPolish::new(512, 256, 16000.0);
+    let mut sp = SpectralPolish::new(512, 256, MODEL_RATE as f32);
     let p = PolishParams {
         comfort_db: -10.0,
         ..PolishParams::OFF
@@ -85,7 +86,7 @@ fn floor_and_comfort_fill_the_vacuum() {
 fn smoothing_calms_gain_flicker() {
     // 无人声帧里每个频点的增益在 0 与 1 之间乱跳（音乐噪声的来源）；平滑后逐帧增益的变化应明显变小
     let run = |smooth: f32| {
-        let mut sp = SpectralPolish::new(512, 256, 16000.0);
+        let mut sp = SpectralPolish::new(512, 256, MODEL_RATE as f32);
         let p = PolishParams {
             smooth,
             ..PolishParams::OFF
@@ -125,7 +126,7 @@ fn smoothing_calms_gain_flicker() {
 
 #[test]
 fn agc_moves_toward_target_and_limiter_caps() {
-    let mut agc = Agc::new(256, 16000.0);
+    let mut agc = Agc::new(256, MODEL_RATE as f32);
     let p = PolishParams {
         agc: 1.0,
         agc_target_dbfs: -26.0,
@@ -144,7 +145,7 @@ fn agc_moves_toward_target_and_limiter_caps() {
         "增益 {:.2}",
         agc.gain_db()
     );
-    let mut agc = Agc::new(256, 16000.0);
+    let mut agc = Agc::new(256, MODEL_RATE as f32);
     for _ in 0..20 {
         let mut x: Vec<f32> = (0..256)
             .map(|i| if i % 50 == 0 { 3.0 } else { 0.0 })
@@ -159,7 +160,7 @@ fn agc_moves_toward_target_and_limiter_caps() {
 #[test]
 fn silent_start_does_not_kill_noise_tracking() {
     // 设备刚打开送 50 帧全零，之后才有噪音：舒适噪声必须照常出现（第一版卡在 −300 dB）
-    let mut sp = SpectralPolish::new(512, 256, 16000.0);
+    let mut sp = SpectralPolish::new(512, 256, MODEL_RATE as f32);
     let p = PolishParams {
         comfort_db: -10.0,
         ..PolishParams::OFF
@@ -187,7 +188,7 @@ fn silent_start_does_not_kill_noise_tracking() {
 fn smoothing_does_not_increase_isolated_spike_residual() {
     // 无人声时零星的增益尖峰：平滑后残留能量不能比不平滑更多（第一版是峰值保持，反而多 1.3 dB）
     let run = |smooth: f32| {
-        let mut sp = SpectralPolish::new(512, 256, 16000.0);
+        let mut sp = SpectralPolish::new(512, 256, MODEL_RATE as f32);
         let p = PolishParams {
             smooth,
             ..PolishParams::OFF
@@ -220,7 +221,7 @@ fn smoothing_does_not_increase_isolated_spike_residual() {
 
 #[test]
 fn never_louder_than_noisy_and_nan_safe() {
-    let mut sp = SpectralPolish::new(512, 256, 16000.0);
+    let mut sp = SpectralPolish::new(512, 256, MODEL_RATE as f32);
     let p = PolishParams::preset(2);
     let mut s = 9u64;
     for f in 0..300 {
@@ -253,7 +254,7 @@ fn time_only_path_runs_agc_and_ramps() {
     use vdn_polish::PolishChain;
     use vdn_types::FrameCtx;
     // 只走时域（FE-M wav2wav 那一路）：AGC 要用外部 VAD 或能量粗判工作，参数过渡也要推进
-    let mut chain = PolishChain::new(512, 256, 16000.0, PolishParams::OFF);
+    let mut chain = PolishChain::new(512, 256, MODEL_RATE as f32, PolishParams::OFF);
     chain.set_ramp_s(0.5);
     chain.set_target(PolishParams {
         agc: 1.0,
@@ -300,7 +301,7 @@ fn chain_clamps_params_by_desc_table() {
     let mut chain = PolishChain::new(
         512,
         256,
-        16000.0,
+        MODEL_RATE as f32,
         PolishParams {
             smooth: POLISH_SMOOTH.max + 4.0,
             ..PolishParams::DEFAULT

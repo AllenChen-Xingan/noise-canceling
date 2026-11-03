@@ -3,13 +3,14 @@
 
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use vdn_scene::SceneAnalyzer;
+use vdn_types::MODEL_RATE;
 
 #[global_allocator]
 static A: AllocDisabler = AllocDisabler;
 
 #[test]
 fn push_and_judge_do_not_allocate() {
-    let mut sa = SceneAnalyzer::new(16000, 256);
+    let mut sa = SceneAnalyzer::new(MODEL_RATE, 256);
     let x: Vec<f32> = (0..256).map(|i| (i as f32 * 0.03).sin() * 0.1).collect();
     assert_no_alloc(|| {
         for k in 0..400 {
