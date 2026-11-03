@@ -309,6 +309,14 @@ mod tests {
                 assert_eq!(get(&p.clamped()), dsc.clamp(bad), "{}", dsc.key);
             }
         }
+        // 处理图里两种包络节点的参数清单（`vdn_types::graph`）= 本表（能量版另读检测灵敏度；交叉校验，D72）
+        let mut want: Vec<u16> = fields.iter().map(|f| f.0.id).collect();
+        want.sort_unstable();
+        assert_eq!(graph::VAD_ENVELOPE.param_ids(), want);
+        want.push(desc::DETECT_DB.id);
+        want.sort_unstable();
+        assert_eq!(graph::ENERGY_ENVELOPE.param_ids(), want);
+        assert_eq!(graph::FLOOR.param_ids(), [desc::FLOOR_DB.id]);
         let st = VadEnvelopeStage::new(EnvelopeParams { floor_db: 6.0, ..d });
         assert_eq!(st.params().floor_db, desc::FLOOR_DB.max, "new() 先夹再用");
     }

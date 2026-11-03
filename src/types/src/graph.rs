@@ -61,6 +61,16 @@ pub struct NodeKind {
     pub doc: &'static str,
 }
 
+impl NodeKind {
+    /// 参数编号，升序去重（与各 crate 参数表比对用：比集合，不比顺序）。
+    pub fn param_ids(&self) -> Vec<u16> {
+        let mut v: Vec<u16> = self.params.iter().map(|p| p.id).collect();
+        v.sort_unstable();
+        v.dedup();
+        v
+    }
+}
+
 /// 测试里假级的编号下限（`0xF000..`）；登记表里的种类一律小于它。
 pub const TEST_ID_MIN: u16 = 0xF000;
 

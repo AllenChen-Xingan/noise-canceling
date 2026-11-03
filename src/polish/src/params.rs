@@ -196,6 +196,20 @@ mod tests {
         }
     }
 
+    /// 处理图里修音链两个挂点的参数清单（`vdn_types::graph`）与本表 + 过渡时长一致（交叉校验，D72）。
+    #[test]
+    fn graph_kinds_list_the_same_params() {
+        use vdn_types::graph::{POLISH_AGC, POLISH_SPECTRAL};
+        let mut want: Vec<u16> = FIELDS.iter().map(|f| f.0.id).collect();
+        want.push(desc::POLISH_RAMP_S.id);
+        want.sort_unstable();
+        let mut got: Vec<u16> = POLISH_AGC.param_ids();
+        got.extend(POLISH_SPECTRAL.param_ids());
+        got.sort_unstable();
+        got.dedup();
+        assert_eq!(got, want);
+    }
+
     /// 预设表是数据（不是第二份范围），但每个预设都必须落在描述表范围内。
     #[test]
     fn every_preset_is_in_range() {
