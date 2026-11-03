@@ -380,9 +380,9 @@ tract 公开的 0.294 ms 和本机的 0.55 ms（p50）对不上。复用状态�
 sudo bash docs/experiments/exp010-inference-bench/tools/power_run.sh 20261102-p1
 ```
 
-- 跑法：按实时节奏，每个后端各跑 60 秒，同时用 `powermetrics` 采 CPU 功率；另加 60 秒空闲作对照。约 8 分钟
+- 跑法：按实时节奏、rt 线程设置，ORT · 手写版 · FE-M ORT 各跑 60 秒，同时用 `powermetrics` 采 CPU / GPU / 神经引擎功率；每轮另加 60 秒空闲作噪声底；3 轮，每轮轮换顺序。约 13 分钟
 - 结果写进 `results/20261102-p1/power/summary.txt`
-- 每帧耗电 ≈（后端平均功率 − 空闲平均功率）× 帧间隔
+- 每帧耗电 ≈（后端三项合计平均功率 − 同一轮空闲的平均功率）× 帧间隔
 - 〔尚未跑，待人〕
 
 ## 转交（超出 rustbe 范围，报大总管）
