@@ -515,7 +515,11 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     }
     // 加入默认输出设备的 IO 工作组（在调度等级之后、计时之前；令牌留到函数结束）
     let wg_on = args.iter().any(|a| a == "--workgroup");
-    let _wg_token = if wg_on { Some(workgroup::join_output()?) } else { None };
+    let _wg_token = if wg_on {
+        Some(workgroup::join_output()?)
+    } else {
+        None
+    };
     let count_malloc = args.iter().any(|a| a == "--count-malloc");
     if count_malloc {
         install_malloc_counter();

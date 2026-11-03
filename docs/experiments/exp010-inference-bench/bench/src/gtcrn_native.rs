@@ -197,7 +197,11 @@ fn sig_fast(x: f32) -> f32 {
 }
 #[inline]
 fn sigmoid(x: f32) -> f32 {
-    if fast() { 1.0 / (1.0 + exp_fast(-x)) } else { 1.0 / (1.0 + (-x).exp()) }
+    if fast() {
+        1.0 / (1.0 + exp_fast(-x))
+    } else {
+        1.0 / (1.0 + (-x).exp())
+    }
 }
 #[inline]
 fn tanh_(x: f32) -> f32 {
@@ -525,14 +529,14 @@ impl Gru {
         }
         // 开关在循环外读一次，循环体里没有分支，便于向量化
         if fast() {
-        for k in 0..nh {
+            for k in 0..nh {
                 let r = sig_fast(gi[k] + gh[k]);
                 let z = sig_fast(gi[nh + k] + gh[nh + k]);
                 let n = tanh_fast(gi[2 * nh + k] + r * gh[2 * nh + k]);
                 h[k] = (1.0 - z) * n + z * h[k];
             }
         } else {
-        for k in 0..nh {
+            for k in 0..nh {
                 let r = sigmoid(gi[k] + gh[k]);
                 let z = sigmoid(gi[nh + k] + gh[nh + k]);
                 let n = tanh_(gi[2 * nh + k] + r * gh[2 * nh + k]);

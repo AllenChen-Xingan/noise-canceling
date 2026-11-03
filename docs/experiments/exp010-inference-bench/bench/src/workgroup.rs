@@ -37,18 +37,40 @@ pub fn join_output() -> Result<Box<[u64; 8]>, String> {
     let glob = fourcc(b"glob");
     let mut dev: u32 = 0;
     let mut sz = 4u32;
-    let a = PropAddr { selector: fourcc(b"dOut"), scope: glob, element: 0 };
+    let a = PropAddr {
+        selector: fourcc(b"dOut"),
+        scope: glob,
+        element: 0,
+    };
     let st = unsafe {
-        AudioObjectGetPropertyData(SYSTEM_OBJECT, &a, 0, std::ptr::null(), &mut sz, (&mut dev as *mut u32).cast())
+        AudioObjectGetPropertyData(
+            SYSTEM_OBJECT,
+            &a,
+            0,
+            std::ptr::null(),
+            &mut sz,
+            (&mut dev as *mut u32).cast(),
+        )
     };
     if st != 0 {
         return Err(format!("取默认输出设备失败：{st}"));
     }
     let mut wg: *mut c_void = std::ptr::null_mut();
     let mut sz = std::mem::size_of::<*mut c_void>() as u32;
-    let a = PropAddr { selector: fourcc(b"oswg"), scope: glob, element: 0 };
+    let a = PropAddr {
+        selector: fourcc(b"oswg"),
+        scope: glob,
+        element: 0,
+    };
     let st = unsafe {
-        AudioObjectGetPropertyData(dev, &a, 0, std::ptr::null(), &mut sz, (&mut wg as *mut *mut c_void).cast())
+        AudioObjectGetPropertyData(
+            dev,
+            &a,
+            0,
+            std::ptr::null(),
+            &mut sz,
+            (&mut wg as *mut *mut c_void).cast(),
+        )
     };
     if st != 0 || wg.is_null() {
         return Err(format!("取 IO 工作组失败：{st}"));
@@ -56,5 +78,9 @@ pub fn join_output() -> Result<Box<[u64; 8]>, String> {
     // os_workgroup_join_token_s 是 40 字节的不透明结构，给 64 字节
     let mut token = Box::new([0u64; 8]);
     let rc = unsafe { os_workgroup_join(wg, token.as_mut_ptr().cast()) };
-    if rc != 0 { Err(format!("os_workgroup_join 失败：{rc}")) } else { Ok(token) }
+    if rc != 0 {
+        Err(format!("os_workgroup_join 失败：{rc}"))
+    } else {
+        Ok(token)
+    }
 }

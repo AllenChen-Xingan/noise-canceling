@@ -31,5 +31,7 @@ for set in "ui" "rt" "ui --workgroup" "rt --workgroup"; do
   q=${set%% *}; extra=""; [[ $set == *workgroup* ]] && extra="--workgroup"
   $BIN gtcrn-bench native "$W" "$WAV" --frames 3750 --pace-ms 16 --qos "$q" $extra >> "$OUT/paced.jsonl"
 done
+# ③ native-fast 按实时节奏 60 秒（ui），看「指令少」在节奏下是否省得更多
+$BIN gtcrn-bench native-fast "$W" "$WAV" --frames 3750 --pace-ms 16 --qos ui >> "$OUT/paced.jsonl"
 echo "uptime_after: $(uptime)" >> "$OUT/env.txt"
 cat "$OUT/parity.jsonl" "$OUT/bench.jsonl" "$OUT/paced.jsonl"
