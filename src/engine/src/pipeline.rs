@@ -26,7 +26,9 @@
 //! 后处理级（规约 §3.3 · D66「处理图」第一步）：模型之后、升采样之前，按顺序跑一串 [`Stage`](vdn_types::Stage)
 //! （[`StageChain`]，`stages![a, b]`，静态分发、不分配），跑在模型采样率，`dry` 是 Engine 按模型延迟对齐的 16 kHz 原声。
 //! 本批只许 0 延迟的级：构造时有级的 `latency_samples() != 0` 就返回 `PipelineError::StageLatency`（「每级 dry 对齐」做出来前）。
-//! `Pipeline::new` / `with_block` 不带级（`S = ()`），`Pipeline::with_stages` 带级。
+//! `Pipeline::new` / `with_block` 不带级（`S = ()`），`Pipeline::with_stages` 带级，并要一份处理图描述（`vdn_types::graph`）：
+//! 构造时把级串 `describe()` 报的种类 · 顺序 · 延迟与描述逐级比对（`vdn_types::match_chain`），不一致返回
+//! `PipelineError::Graph`。比对只在构造期做，实时 `process` 不多一步。
 //!
 //! 送原声（规约 §3.3 规则 2、§3.6、R11）：两种模式延迟相同（原声走同一个 `L_total` 延迟线）。模型级故障由
 //! `Engine::process_status` 判定并回报 [`Status`]，**Pipeline 用 48 kHz 原声切换与淡化**（不用 16 kHz 原声，否则缺 8 kHz 以上）：
@@ -43,16 +45,19 @@
 //!
 //! 实时路径（`process` / `process_ctx` / `set_mode` / `reset`）不分配、不加锁、不 panic（`tests/pipeline.rs` 证明不分配）。
 
-use core::fmt;
+mod error;
+mod rt;
 
+use vdn_dsp::DelayLine;
 use vdn_dsp::resample::{self, Decimator3, FACTOR, Interpolator3};
-use vdn_dsp::{DelayLine, FtzGuard};
 use vdn_types::{
-    Basis, BypassReason, FrameCtx, LatencyItem, LatencyLedger, Model, ParamSet, SampleClock,
-    StageChain, Status,
+    Basis, FrameCtx, LatencyItem, LatencyLedger, Model, ModelId, NodeKind, ProcessingGraph,
+    StageChain, Status, match_chain,
 };
 
-use crate::engine::{Engine, sanitize_input};
+pub use error::PipelineError;
+
+use crate::engine::Engine;
 
 /// 输出哪一路。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -87,6 +92,8 @@ pub struct PipelineStats {
 pub struct Pipeline<M: Model, S: StageChain = ()> {
     engine: Engine<M>,
     stages: S,
+    /// 构造时比对过的级串描述（处理图的时域段）
+    stage_kinds: &'static [&'static NodeKind],
     io_rate: u32,
     /// 48 kHz hop
     hop_io: usize,
@@ -142,7 +149,7 @@ pub struct Pipeline<M: Model, S: StageChain = ()> {
 impl<M: Model> Pipeline<M> {
     /// `io_rate` 必须是 `engine.sample_rate() × 3`。块长无上限：内部缓冲只按 hop 定，不按块长定。
     pub fn new(engine: Engine<M>, io_rate: u32) -> Result<Self, PipelineError> {
-        Self::with_stages(engine, io_rate, None, ())
+        Self::with_stages(engine, io_rate, None, &[], ())
     }
 
     /// 定块长构造（省延迟）：调用方保证每次 `process` 的块长都是 `block`。`block` 必须 > 0 且整除
@@ -153,18 +160,21 @@ impl<M: Model> Pipeline<M> {
         io_rate: u32,
         block: usize,
     ) -> Result<Self, PipelineError> {
-        Self::with_stages(engine, io_rate, Some(block), ())
+        Self::with_stages(engine, io_rate, Some(block), &[], ())
     }
 }
 
 // 构造：非实时线程（会分配）
 impl<M: Model, S: StageChain> Pipeline<M, S> {
     /// 带后处理级构造：`block` 为 `None` 同 `new`（任意块长），`Some(b)` 同 `with_block`。
-    /// `stages` 按顺序跑在模型之后（`vdn_types::stages![a, b]`）；任一级 `latency_samples() != 0` 返回 `StageLatency`。
+    /// `stages` 按顺序跑在模型之后（`vdn_types::stages![a, b]`）；`stage_kinds` 是它在处理图里的描述（时域段，
+    /// 如 `ProcessingGraph::stages`），逐级比对种类 · 顺序 · 延迟，不一致返回 `Graph`；
+    /// 任一级 `latency_samples() != 0` 返回 `StageLatency`。
     pub fn with_stages(
         engine: Engine<M>,
         io_rate: u32,
         block: Option<usize>,
+        stage_kinds: &'static [&'static NodeKind],
         stages: S,
     ) -> Result<Self, PipelineError> {
         let model_rate = engine.sample_rate();
@@ -174,10 +184,14 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
                 model_rate,
             });
         }
+        match_chain(stage_kinds, &stages).map_err(PipelineError::Graph)?;
         let mut bad = None;
-        stages.describe(&mut |stage, samples| {
+        stages.describe(&mut |kind, samples| {
             if samples != 0 && bad.is_none() {
-                bad = Some(PipelineError::StageLatency { stage, samples });
+                bad = Some(PipelineError::StageLatency {
+                    stage: kind.name,
+                    samples,
+                });
             }
         });
         if let Some(e) = bad {
@@ -233,6 +247,7 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
             stats: PipelineStats::default(),
             engine,
             stages,
+            stage_kinds,
         };
         p.reset();
         Ok(p)
@@ -268,9 +283,9 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
             "模型算法延迟（Model::latency_samples × 3）",
         ));
         let rate = self.io_rate;
-        self.stages.describe(&mut |stage, samples| {
+        self.stages.describe(&mut |kind, samples| {
             l.push(LatencyItem::new(
-                stage,
+                kind.name,
                 (samples * FACTOR) as u32,
                 rate,
                 Basis::Declared,
@@ -278,6 +293,20 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
             ));
         });
         l
+    }
+
+    /// 构造时比对过的级串描述（处理图的时域段）。
+    pub fn stage_kinds(&self) -> &'static [&'static NodeKind] {
+        self.stage_kinds
+    }
+
+    /// 这条 Pipeline 对应的处理图：`model` 由调用方给（Pipeline 只认 `Model` trait，不认模型 ID）；
+    /// 频域段由模型适配器负责，这里留空。会话记录头用它的内容 ID（`SessionHeader::set_graph`）。
+    pub fn graph(&self, model: ModelId) -> ProcessingGraph {
+        ProcessingGraph {
+            stages: self.stage_kinds,
+            ..ProcessingGraph::bare(model)
+        }
     }
 }
 
