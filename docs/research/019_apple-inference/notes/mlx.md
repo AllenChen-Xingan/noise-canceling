@@ -3,6 +3,7 @@
 > 2026-11-02 · 019 调研代理（MLX 题）· 只读：读上游源码与文档、查网，**没装包、没构建、没跑基准**。
 > 等级：【官方】苹果 / ml-explore 文档、头文件、上游仓库，附 URL 或 文件:行 ·【实测-他人】网上别人的测量，附出处，**不是本机实测** ·【源码】我读的上游源码 ·【推断】。
 > 源码行号均指 `ml-explore/mlx` 的 **v0.32.4** 标签（2026-10-14 发布，PyPI 最新也是 0.32.4），写作 `mlx@v0.32.4:路径:行`。
+> 怀疑派抽核：`utils.h:225-228`、`device.cpp:331,537-540,978-995`、`precision.rst` 已对 GitHub 上 v0.32.4 原文逐行核过，对得上。另有一份本地源码 `../noise_canceling/resources/mlx` 是 main 分支（`bd63d38`，版本号 0.32.5），行号与 v0.32.4 不同，引用时别混。
 > 模型事实（算子、形状、调用频率、ORT 现状）全部来自 `docs/research/019_apple-inference/notes/our-models.md`，本文不重复。
 
 ## 0. 一句话结论
@@ -14,8 +15,9 @@ MLX **能表达** GTCRN 和 FE-M（GTCRN 已有第三方逐帧移植），也**�
 | 需要的东西 | MLX 有没有 | 等级与出处 |
 |---|---|---|
 | GRU | 有 `mlx.nn.GRU(input_size, hidden_size, bias)`，输入 `NLD`，**只有单向**，没有 `bidirectional` 参数 | 【官方】https://ml-explore.github.io/mlx/build/html/python/nn/_autosummary/mlx.nn.GRU.html |
-| GRU 怎么算 | **Python 层逐时间步循环**：输入投影一次算完，然后 `for idx in range(x.shape[-2])` 每步做 matmul + sigmoid + tanh + 混合，最后 `mx.stack`。没有融合的 GRU 内核 | 【源码】`mlx@main:python/mlx/nn/layers/recurrent.py`（`GRU.__call__`）|
-| GRU 已知坑 | `hidden=None` 时第一步漏加 `bhn`，与「显式零初值」不等价（issue #3249）。对拍时必须**显式传零隐状态** | 【官方】https://github.com/ml-explore/mlx/issues/3249 |
+| GRU 怎么算 | **Python 层逐时间步循环**：输入投影一次算完，然后 `for idx in range(x.shape[-2])` 每步做 matmul + sigmoid + tanh + 混合，最后 `mx.stack`。数下来每步约 12–15 个图节点（matmul、3 次切片、2 次加、sigmoid、split、乘、加、tanh、`1-z`、2 次乘、加）。没有融合的 GRU 内核 | 【源码】`mlx@main:python/mlx/nn/layers/recurrent.py`（`GRU.__call__`）|
+| GRU 已知坑 | `hidden=None` 时第一步漏加 `bhn`，与「显式零初值」不等价（issue #3249，复现里最大差约 0.106）。**Python 版已修**：PR #3252，2026-03-16 合入；v0.32.4 的 `recurrent.py` 已有 `elif self.bhn is not None: n = n + r * self.bhn`。仍建议对拍时显式传零隐状态 | 【官方】https://github.com/ml-explore/mlx/issues/3249 ；【源码】`mlx@v0.32.4:python/mlx/nn/layers/recurrent.py`（GRU.__call__）|
+| **mlx-rs 的 Gru 有更严重的错** | `mlx-rs/src/nn/recurrent.rs:312-351`（main，最后改动 2026-10-31）：循环体里 `let hidden = match hidden {…}` 是**新绑定**，遮住了参数，下一步仍拿初始隐状态。结果是多步序列**没有递推**，每一步都从初值算。`hidden=None` 时也还漏 `bhn`（#3249 没同步过来）。`Rnn::step`（`:135-146`）同样写法。GTCRN 帧内 GRU 一次 33 步，直接用会算错 | 【源码】https://github.com/oxiglade/mlx-rs/blob/main/mlx-rs/src/nn/recurrent.rs ；「会算错」是读码推断，未运行验证 |
 | GRU 提速诉求 | issue #1500 请求融合 GRUCell，维护者承认 RNN 需要提速；2025-12 以「PyTorch 那边也只是拼现有算子」为由关闭，**上游没有融合 GRU** | 【官方】https://github.com/ml-explore/mlx/issues/1500 |
 | Conv1d / Conv2d | 有 | 【源码】`mlx@v0.32.4:python/mlx/nn/layers/__init__.py:59` |
 | ConvTranspose1d / 2d | 有 | 【源码】`mlx@v0.32.4:python/mlx/nn/layers/convolution_transpose.py:10,86` |
