@@ -34,3 +34,4 @@
 - 2026-11-02 hygiene 第 6 件：7 处阈值不一致或无出处（state/handoff/hygiene-thresholds.md），全是建议值，分档只影响报告等级、复算变化 0 条。8d 定：不新出题，挂 012 拍板 #8；V-TIMBRE/V-SPLVL 保留代码量法；建正本表 + 两条比对测试，待定清单显式、新不一致与已修好都要红
 - 2026-11-02 hygiene 第 6 件完成：thresholds.rs 正本（16 评测器，每数带出处）· 比对测试 5 条 · 待定 7 处（更正：V-INTF 有出处，V-SPLVL 过线 −3 无出处）· eval ci 与改前一致 13/17 · 1/10 · 5/5。下一步拆 verifiers.rs / runner.rs
 - 2026-11-02 hygiene 拆完 verifiers.rs 1168→399（physical/perceptual/sim）· runner.rs 629→424（gate/real）；基线剩 6 条全是 99 的文件；硬上限放最后；docs/experiments 扫描等 #58 合并后打开。8d 开跑全量 xtask ci 验收
+- 2026-11-02 99 知会 #65 带来：denoised/lib.rs +16 行（FE-M 名从 ModelId 取）· policy 拆出 policy_tests.rs（SR 在 :90）· tidy 新规则文件 no_mirror/param_range/scan/model_name · cli 删 ModelArg 加 ModelOpts::kind()。合并 #62 时要搬：denoised 16 行进拆后文件、ModelArg 改动进 args.rs、改名引用、policy_tests SR
