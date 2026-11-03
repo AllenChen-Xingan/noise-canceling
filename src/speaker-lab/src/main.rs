@@ -550,3 +550,75 @@ fn main() {
         std::process::exit(1);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sv(xs: &[&str]) -> Vec<String> {
+        xs.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn arg_returns_value_after_flag_and_none_when_missing_or_dangling() {
+        let a = sv(&["in.wav", "--tag", "_v2", "--wet"]);
+        assert_eq!(arg(&a, "--tag").as_deref(), Some("_v2"));
+        assert_eq!(arg(&a, "--replay"), None);
+        // 旗标在末尾、后面没有值：返回 None，不越界
+        assert_eq!(arg(&a, "--wet"), None);
+    }
+
+    #[test]
+    fn gate_params_overrides_only_given_flags() {
+        let d = GateParams::default();
+        let p = gate_params(&sv(&[
+            "--gate-floor",
+            "-18.5",
+            "--confirm",
+            "3",
+            "--level-close",
+            "-40",
+        ]))
+        .expect("合法参数");
+        assert_eq!(p.floor_db, -18.5);
+        assert_eq!(p.confirm_n, 3);
+        assert_eq!(p.level_close_db, Some(-40.0));
+        // 没给的保持默认
+        assert_eq!(p.release_s, d.release_s);
+        assert_eq!(p.onset_gap_s, d.onset_gap_s);
+        assert_eq!(p.onset_jump_db, d.onset_jump_db);
+        assert_eq!(p.onset_level_margin_db, d.onset_level_margin_db);
+    }
+
+    #[test]
+    fn gate_params_rejects_non_numeric_value() {
+        assert!(gate_params(&sv(&["--release", "slow"])).is_err());
+    }
+
+    #[test]
+    fn verdict_json_round_trips_every_class() {
+        for class in [
+            SpeakerClass::Unknown,
+            SpeakerClass::NoSpeech,
+            SpeakerClass::Target,
+            SpeakerClass::Other,
+        ] {
+            let v = SpeakerVerdict {
+                class,
+                confidence: Confidence::new(0.75),
+                window_start: SampleClock(1024),
+                window_end: SampleClock(9216),
+                owner_level_db: Some(-23.5),
+            };
+            let j = verdict_to_json(&v, 42);
+            assert_eq!(j["at_hop"], 42);
+            assert_eq!(verdict_from_json(&j), v, "{class:?} 往返后应不变");
+        }
+        // owner_level_db 为空时也能往返
+        let v = SpeakerVerdict {
+            owner_level_db: None,
+            ..SpeakerVerdict::default()
+        };
+        assert_eq!(verdict_from_json(&verdict_to_json(&v, 0)), v);
+    }
+}

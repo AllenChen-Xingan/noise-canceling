@@ -44,7 +44,7 @@ P2 离线：VAD 驱动的快开慢关 · Kaldi 兼容 fbank · 声纹（ONNX）�
 
 ## 接入注意（下一批接 engine 时）
 
-1. **ORT Environment 一个进程只许一个**（`ort-2.0.0-rc.15/src/environment.rs:514-516`，取当前环境的函数是 `pub(crate)`）。`vdn-models` 现在自己建一个（`src/models/src/session.rs:12-18`）；`Embedder::open(&env, …)` 已改成由调用方传入。接入时由宿主（或 align 的推理后端层）建一个，vdn-models 也改成接收它
+1. **ORT Environment 一个进程只许一个**（`ort-2.0.0-rc.15/src/environment.rs:514-516`，取当前环境的函数是 `pub(crate)`）。`vdn-models` 现在自己建一个（`src/backend-ort/src/lib.rs:12-18`）；`Embedder::open(&env, …)` 已改成由调用方传入。接入时由宿主（或 align 的推理后端层）建一个，vdn-models 也改成接收它
 2. **时钟**：`SampleClock` 按 IO 采样率计。`GateParams::clock_rate` 设成 IO 采样率；`Judge::push_audio(wet, dry, start)` 的 `start` 传本块首样本的 IO 时钟，`JudgeParams::clock_per_sample` = IO 采样率 / 16000
 3. **VAD 只跑一份**：链上谁先算 earshot 概率就填进 `FrameCtx::voice_prob`，包络和门控都优先读它
 4. **两级下限会叠加**：保守链是「包络（混回原声，下限 −12 dB）→ 门控（× g，下限 −12 dB）」，门控收到底时原声残留约 −24 dB、降噪部分 −12 dB。激进链不混回原声，只有门控下限

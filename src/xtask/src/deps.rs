@@ -93,6 +93,19 @@ impl Meta {
         g
     }
 
+    /// 某包的**直接**依赖包名（普通 · dev · build 都算，与 cargo-deny 的 wrappers 口径一致）。
+    pub fn direct_any(&self, id: &str) -> BTreeSet<String> {
+        let names = self.names();
+        self.json["resolve"]["nodes"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|n| n["id"].as_str() == Some(id))
+            .flat_map(|n| n["deps"].as_array().into_iter().flatten())
+            .filter_map(|d| d["pkg"].as_str().and_then(|p| names.get(p).cloned()))
+            .collect()
+    }
+
     /// 某包普通依赖闭包里的包名（不含自己）。
     pub fn closure(&self, id: &str) -> BTreeSet<String> {
         let g = self.normal_edges();

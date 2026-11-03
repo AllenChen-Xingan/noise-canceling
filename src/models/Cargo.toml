@@ -1,6 +1,6 @@
 [package]
 name = "vdn-models"
-description = "模型适配器：GTCRN、FastEnhancer-M（ort 单线程 CPU）。ONNX Runtime 只在这里出现"
+description = "模型适配器：GTCRN、FastEnhancer-M（ort 单线程 CPU，经 vdn-backend-ort）"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,7 +10,7 @@ publish.workspace = true
 [dependencies]
 vdn-types.workspace = true
 vdn-dsp.workspace = true
-ort.workspace = true
+vdn-backend-ort.workspace = true
 
 [dev-dependencies]
 vdn-engine.workspace = true
@@ -19,7 +19,7 @@ assert_no_alloc.workspace = true
 [lints]
 workspace = true
 
-# 机读正本（specs/rust/architecture.md §5.4）。ort 只许在这里（拆出后端 crate 前）
+# 机读正本（specs/rust/architecture.md §5.4）。ort 只经 vdn-backend-ort 间接进入。「models 不许直接依赖 ort」现在没有机器检查（deny.toml 尚未建立，check-deps 只看闭包），待 cargo-deny wrappers 落地
 [package.metadata.vdn]
 tier = "B"
 unsafe = false
