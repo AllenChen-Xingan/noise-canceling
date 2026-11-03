@@ -16,7 +16,8 @@ vdn-dsp = { path = "src/dsp" }
 vdn-engine = { path = "src/engine" }
 vdn-models = { path = "src/models" }
 vdn-control = { path = "src/control" }
-vdn-capture = { path = "src/capture" }
+# 用库的一方不要 bin 专用依赖（设备库 · clap · hound）；vdn-capture 自己的 bin 用默认 feature
+vdn-capture = { path = "src/capture", default-features = false }
 vdn-denoised = { path = "src/denoised" }
 vdn-shm = { path = "src/shm" }
 vdn-rt-thread = { path = "src/rt-thread" }
