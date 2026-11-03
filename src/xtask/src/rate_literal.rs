@@ -44,8 +44,12 @@ pub fn has_rate_literal(code: &str) -> bool {
         while let Some(off) = code[from..].find(lit) {
             let at = from + off;
             let end = at + lit.len();
-            let before = code[..at].chars().next_back();
-            let ok_before = !before.is_some_and(|c| ident_char(c) || c == '.');
+            // 前面是 `.` 时只有区间 `..` 算数字开头（单个 `.` 是小数或字段访问）
+            let ok_before = match code[..at].chars().next_back() {
+                Some('.') => code[..at].ends_with(".."),
+                Some(c) => !ident_char(c),
+                None => true,
+            };
             let rest = &code[end..];
             let mut tail = rest;
             // 允许 `.0` / `.0_f32` 之类的小数部分（只认全零）
@@ -63,8 +67,10 @@ pub fn has_rate_literal(code: &str) -> bool {
                     sfx.trim_start_matches('_'),
                     "u32" | "u64" | "usize" | "i32" | "i64" | "isize" | "f32" | "f64"
                 );
-            let after = tail[suffix..].chars().next();
-            let ok_after = !after.is_some_and(|c| c.is_ascii_digit() || c == '.');
+            // 后面紧跟 `..`（区间）可以；单个 `.` 接非零小数不算
+            let after = &tail[suffix..];
+            let ok_after = after.starts_with("..")
+                || !after.starts_with(|c: char| c.is_ascii_digit() || c == '.');
             if ok_before && ok_suffix && ok_after {
                 return true;
             }
@@ -144,6 +150,10 @@ mod tests {
             "x * 16_000.0_f32",
             "const SR: usize = 16_000usize;",
             "(a, 48_000)",
+            "for i in 0..16000 {",
+            "x[..48_000 - l]",
+            "(0..=48_000)",
+            "48_000..96_000",
         ] {
             assert!(has_rate_literal(code), "{code}");
         }
@@ -159,6 +169,7 @@ mod tests {
             "let r = IO_RATE;",
             "let n = 4800;",
             "let x = 48000.5;",
+            "let x = a.48000;",
         ] {
             assert!(!has_rate_literal(code), "{code}");
         }
