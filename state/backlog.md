@@ -40,6 +40,8 @@
 
 ## 人耳（评测器）
 
+- [ ] **降噪效果大事的起点**（若 E-1 选 A）：难场景（−5 dB · 6 人 babble · 中文目标 + 英文邻桌，K9）上比 GTCRN · DFN3 `_ll`（离线）· NoNoise-Mac（D77）· DPDFNet-2；合成测试（016 D2 级 + 隔离）+ 盲听夹众人锚点（D66）；看清 GTCRN 差在哪再定训练 / 改进 / 换模型；改输出的提速（fp16 / int8 · 剪枝 · 蒸馏，D79）也在这里评
+
 - [ ] **下一轮盲听**：①多留背景（下限 −6 dB）的两组红线通过率最高、评分模型却最低——评分模型判不了，要人耳（018 exp011 results.md 第 4 节）②夹 4–6 道众人锚点题（D66）③016 4-9 第 3 题「覆盖 ≥ 8 个系统」一起排 ④**放进 DFN3 `_ll`**，检验「GTCRN 够不够好」（人 2026-11-02「好」：GTCRN 第三方评测少，主模型选择当假设继续验证）· 出处 018 · 017 · 016 · D33 · D49
 
 - [ ] **NoNoise-Mac 进评测当对照组**（D77）：先看能否离线跑（CLI / 直接调 DFN3 Core ML），不能就装驱动回录；与本项目同场景比吃字率 · 评分 · 延迟 · 耗电；可选加 MetalVoice、Krisp（只对照不进 CI）· ⚠️ 装第三方驱动要人同意 · 出处 `docs/reviews/outlook-codex-20261102/research.md`
@@ -54,6 +56,8 @@
 - [ ] 016 benchsynth 交代补一条：合成原料可用公开集训练份，与测试份按说话人 / 场次隔离（D63）
 
 ## 仓库与工作区
+
+- [ ] 清理 b8 已合并的 worktree：`../noise_canceling-engine` · `../noise_canceling-rustbe` · `../noise_canceling-fastpath`（及 b7 的三个，见下）
 
 - [ ] **清理**：删已合并的 worktree `../noise_canceling-prefs` · `../noise_canceling-benchsynth`（016，PR #47）· `../noise_canceling-ears`（017，PR #48）· `../noise_canceling-judge-loop`（018，PR #49）· `../noise_canceling-rustbe`（exp010，PR #55）· `../noise_canceling-engine`（019，PR #59）· `../noise_canceling-fastpath`（020，PR #66）；删 `../noise_canceling-dfnhush`（015 已随 PR #40 合并，D61）；本地 main 同步到远端（落后 77）；推送 `chore/coord-20261031-b6`；`_tmp/` 8.3 GB 看哪些能删
 

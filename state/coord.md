@@ -78,6 +78,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 约 22:40 e3 窗口收工：人「这些东西下一阶段要做的东西，都记下来，后面的窗口可以再定」→ 待拍板第〇·五组 E-1–E-3 · backlog · board 接续点已写；名额空、锁无
 - 2026-11-02 fastpath 收尾：PR #66 合并（默认 native-v4i · codex 3 轮 · 600 行拆分）；剩余 P2 → issue #67；转交「接起来」：产品接入 v4i、src/dsp 重采样多累加器；测速提醒：rt 连续跑会被降级，连续峰值用 --qos ui，长计时 caffeinate + 查电源
 - 2026-11-02 fastpath 600 行拆分完成：gtcrn_native.rs 1926 → 445（+ weights / cost / kern / ops / block / dpgrnn / simd / tests）· main.rs 1280 → 485（+ alloc / nets / util / parity），最大 532；35 测试过、11 个后端对 ORT 指标拆前后一字不差；已 merge main 并删 fields.rs 三条 APPLE_ONLY。下一步结论 + codex
 - 2026-11-02 22:13 fastpath v4short（电池，3 轮，第 2 轮受干扰）：16 ms 节奏每帧平均 v2-fast 0.091–0.135 · **v4i 0.073–0.092 ms**（同轮比 0.62 / 0.93 / 0.80），CPU 0.5–0.7%，0 帧 > 3 ms；ui 整帧 v2-fast 43.7–48.7 → v4i 35.8–36.2 µs（快 17–26%）。逐层：两输出一组卷积 en0 −30% · 深度卷积 4.35 → 2.77 · LN 2.59 → 0.48 / 3.18 → 0.99 · GRU 交错仅 −7%。**AI 定默认候选 v2 → v4i**。600 行拆分进行中
