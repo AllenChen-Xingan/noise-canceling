@@ -15,14 +15,16 @@
         clippy::todo
     )
 )]
+pub mod artifact;
 pub mod fastenhancer;
 pub mod gtcrn;
 pub mod interface;
 
 use std::path::{Path, PathBuf};
 
-use vdn_types::{Basis, ContentId, LatencyItem, LatencyLedger};
+use vdn_types::{Basis, LatencyItem, LatencyLedger};
 
+pub use artifact::artifact_id;
 pub use fastenhancer::FastEnhancer;
 pub use gtcrn::Gtcrn;
 pub use interface::{Interface, TensorDecl};
@@ -141,13 +143,6 @@ impl ModelKind {
             ModelKind::FastEnhancerM => AnyModel::FastEnhancer(FastEnhancer::open(path)?),
         })
     }
-}
-
-/// 模型制品内容 ID：权重文件全部字节的 FNV-1a（`ContentId::of`，与 `ParamBlock::model_hash` 同一算法）。
-/// 进处理图的模型节点（`ProcessingGraph::artifact`），同名模型换了权重它就变（#68）。构造期用：会读整个文件。
-pub fn artifact_id(path: &Path) -> Result<ContentId, BoxError> {
-    let bytes = std::fs::read(path).map_err(|e| format!("{}：{e}", path.display()))?;
-    Ok(ContentId::of(&bytes))
 }
 
 /// 运行期可选的模型（rustarch 初审：手写 enum 静态分发，不用 `Box<dyn>`；两个变体不值得上宏）。
