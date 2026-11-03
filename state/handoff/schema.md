@@ -14,14 +14,15 @@
 - [x] 全量 CI（第 1 轮改动后）全绿；`xtask eval ci` 门禁通过
 - [x] codex 第 2 轮（P1×1 P2×2，全部属实、已改：对照 main 的版本历史守卫 · 总线名只许可见 ASCII · 往返比较整数精确）
 - [x] 全量 CI（第 2 轮改动后）全绿；`vdn-schema --check` 一致；`xtask eval ci` 门禁通过（结果同前）
-- [ ] codex 第 3 轮
+- [x] codex 第 3 轮（P1×2 P2×2，全部属实、已改：读不到基线不再放行 · CI 用推送前 / 目标分支作基线 · 整份历史前缀比对 · 整数字段补上下界）；代码已写，等锁解除编译
+- [ ] 锁解除后：重新导出 schema → 全量 CI → codex 第 4 轮
 
 ## 技术决定（我定，理由）
 - 导出库 `schemars` 1.2（MIT）：派生自 serde 属性，Rust 类型即正本。加进 control · eval · schema 三个 C / tool 档 crate
 - 校验库 `boon` 0.6（MIT OR Apache-2.0）：只做 `vdn-schema` 的测试依赖。它和导出器是两家实现，能抓到 schema 与 serde 实际行为不一致
 - 依赖体积（Cargo.lock 新增）：schemars 一侧 6 个 crate（schemars · schemars_derive · serde_derive_internals · dyn-clone · ref-cast · ref-cast-impl）；boon 一侧约 40 个（url / idna / icu 一族 · regex · ahash 等），只在测试构建里。cargo-deny 许可检查通过，没加新许可
 - 共享内存头：核心 crate 不引 serde，字段表在 `src/shm/src/desc.rs`，偏移全由 `offset_of!` 算；小宏穷举解构，漏字段或类型写错就编译失败（已实测两种都编译不过）。`layout.rs` 里手写偏移数字的编译期断言删了，改由导出文件和测试钉住；结构性约束（每行 64 字节、wake 按 4 对齐等）保留
-- 版本守卫：布局指纹（FNV-1a 64）登记在 `src/schema/src/shm.rs` 的常量 `HISTORY`（codex #1 后从 json 文件改来，导出工具不改它）。当前 (版本, 指纹) 必须是最后一行，否则 `write` 一个文件都不写、测试红
+- 版本守卫：布局指纹（FNV-1a 64）登记在 `src/schema/src/shm.rs` 的常量 `HISTORY`（codex #1 后从 json 文件改来，导出工具不改它）。当前 (版本, 指纹) 必须是最后一行，否则 `write` 一个文件都不写、测试红。完整历史也导出进布局文件；测试对照可信基线（CI 由 `VDN_SCHEMA_BASE` 给：push 前的 main / PR 目标分支）上那份文件，要求整份历史是前缀（第 2、3 轮）
 - 缺省值：评测清单的缺省值正本是 `files.rs` 的 `defaults` 常量，解析与 schema 的 `default` 都读它（codex #3）
 - 基线文件存在但格式不对 → `vdn-eval ci` 报错退出，不再当空基线（codex #2）
 - Config 往返的口径（语义等价）：① 原文件写了的键，写出后值相同（按 JSON 值比，不比空白、键顺序）；② 没写的键等于默认值；③ 写出再读回得到同一个 `Config`
@@ -47,7 +48,7 @@
 `_tmp/20261102-schema-review/pr-draft.md`（本 worktree，不入库；收尾时填命令结果和评审轮数后发给大总管）
 
 ## 转交
-- **`.github/workflows/ci.yml` 改了一行**：checkout 加 `fetch-depth: 0`（vdn-schema 的测试要对照 main 上的布局文件，codex 第 2 轮 #1）。这是共用文件，合并冲突请大总管处理
+- **`.github/workflows/ci.yml` 改了两处**：checkout 加 `fetch-depth: 0`（codex 第 2 轮 #1）；rust gate 一步加环境变量 `VDN_SCHEMA_BASE`（push 用推送前的提交，PR 用目标分支；codex 第 3 轮 #2，大总管已同意）。这是共用文件，合并冲突请大总管处理
 - **总线名规则收窄**（我的实体 vdn-shm / vdn-control，codex 第 2 轮 #2）：前缀之后只许可见 ASCII、不含 `/`，空格和非 ASCII 字符不再许可。大总管让改动方补测试：已给 vdn-denoised 的 `bus_name_rule_matches_vdn_shm` 加 5 个样例（空格、中文、9 个中文、末尾 /、可见符号），只加测试、没改逻辑。PR 正文要写这条行为变化
 
 ## 待拍板

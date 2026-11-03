@@ -11,7 +11,7 @@
 
 | 文件 | 正本（Rust） | 管哪些数据文件 | 交叉校验（测试在 `src/schema/tests/crosscheck.rs`） |
 |---|---|---|---|
-| `shm-header.layout.json` | `src/shm/src/layout.rs` 的结构，经 `src/shm/src/desc.rs` 的字段表 | 跨进程的共享内存（给虚拟麦克风 / C 侧对表） | 每个字段的名字 · 偏移 · 大小与 `offset_of!` / `size_of` 逐项比对；版本号 = `layout::VERSION`；布局指纹必须等于 `src/schema/src/shm.rs` 的 `HISTORY` 最后一行——改布局不升版本、或升了不登记，导出拒绝写、测试红（历史故意写在代码里，导出工具不改它）；测试还对照 main 上已提交的布局文件，要求历史只增不改（CI 要 `fetch-depth: 0`） |
+| `shm-header.layout.json` | `src/shm/src/layout.rs` 的结构，经 `src/shm/src/desc.rs` 的字段表 | 跨进程的共享内存（给虚拟麦克风 / C 侧对表） | 每个字段的名字 · 偏移 · 大小与 `offset_of!` / `size_of` 逐项比对；版本号 = `layout::VERSION`；布局指纹必须等于 `src/schema/src/shm.rs` 的 `HISTORY` 最后一行——改布局不升版本、或升了不登记，导出拒绝写、测试红（历史故意写在代码里，导出工具不改它）；完整历史也写进导出文件；测试读可信基线（CI：push 用推送前的提交、PR 用目标分支，经环境变量 `VDN_SCHEMA_BASE` 传入；本机：与 main 的分叉点）上已提交的布局文件，要求它的整份历史原样是 `HISTORY` 的前缀，只许在末尾追加。基线提交不存在或读不出 → CI 红；只有基线的树里确实没有这份文件才跳过（CI 要 `fetch-depth: 0`） |
 | `config.schema.json` | `src/control/src/lib.rs` 的 `Config` | `examples/config.*.json`（以后的用户配置同格式） | 示例过 schema；往返语义等价；范围边界与 `Config::validate` 逐例一致；总线名正则与 `validate_bus_name` 逐例一致（名字只许可见 ASCII，字符数 = 字节数） |
 | `eval-suite.schema.json` | `src/eval/src/files.rs` 的 `SuiteFile`（缺省值正本是同文件的 `defaults` 常量，解析与 schema 的 `default` 都读它） | `src/eval/suite/ci.json` · `qa.json` | 文件过 schema；往返语义等价；坏任务（拼错键、未知 verifier、未知噪音…）schema 与解析器判定一致 |
 | `eval-levels.schema.json` | 同上 `LevelsFile` | `src/eval/suite/levels.json` | 文件过 schema；`calib --write-levels` 序列化同一类型 |
@@ -33,7 +33,8 @@ cargo test -p vdn-schema            # 全部交叉校验
 4. **登记**：在 `src/schema/src/lib.rs` 的 `export()` 里加一行；有数据文件的，在对应模块的 `DATA_FILES` 登记（目录里没登记的 json 测试会报）
 5. **测试**：每份 schema 至少一条正例（仓里文件一致 / 数据文件过 schema）和一条负例（改了 Rust 不重新导出 → 红）。数据格式有第二处表示（文档里的字段表、`as_str` 名字表）就加比对，或删掉第二处改成指针
 6. **校验器**用 `boon`（只在测试里），与导出用的 `schemars` 是两家实现，能抓到「schema 与 serde 实际行为不一致」
-7. 导出文本的键顺序依赖 `serde_json` 不开 `preserve_order`（默认有序 Map）。哪天开了，导出会整体变化、测试会红，届时重导一次即可
+7. **整数字段**：导出时按 schemars 写的 `format`（`uint64` 等）补上 Rust 类型的 `minimum` / `maximum`（`int_bounds`），已有的更窄范围不动。校验器不按 format 判范围，不补的话超出类型的数 schema 放行、serde 拒
+8. 导出文本的键顺序依赖 `serde_json` 不开 `preserve_order`（默认有序 Map）。哪天开了，导出会整体变化、测试会红，届时重导一次即可
 
 ## schema 不管什么
 

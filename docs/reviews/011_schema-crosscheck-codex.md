@@ -1,7 +1,7 @@
 # 评审 011 · schema 导出机制与第一批 schema（codex · gpt-6-astra · read-only）
 
-> 对象：`git diff bfe6266...HEAD`（分支 `feat/schema-crosscheck`，issue #57；diff 模板，附 `docs/plan/011_schema-crosscheck.md` 与重点文件）。**最新一轮：第 2 轮（2026-11-02）· 总评「修改」· 待第 3 轮**。
-> 累计处理：P1×3、P2×5，逐条回到源码核实，8 条全部属实，全部已改。第 1 轮 #1 只改了一半：第 2 轮 #1 指出它仍能被绕过，第 2 轮补全。codex 抽查引用时列出的 1 条「不符」也属实，并入第 1 轮 #4 一起改了。新冒出的需要人定的事：没有。
+> 对象：`git diff bfe6266...HEAD`（分支 `feat/schema-crosscheck`，issue #57；diff 模板，附 `docs/plan/011_schema-crosscheck.md` 与重点文件）。**最新一轮：第 3 轮（2026-11-02）· 总评「修改」· 待第 4 轮**。
+> 累计处理：P1×5、P2×7，逐条回到源码核实，12 条全部属实，全部已改。共享内存版本守卫前后改了三轮：第 1 轮改成代码常量，第 2 轮加 main 基线，第 3 轮补齐基线的读取失败、多提交推送和整份历史。codex 抽查引用时列出的 1 条「不符」也属实，并入第 1 轮 #4 一起改了。新冒出的需要人定的事：没有。
 > 作者：手下 schema。评审期间主目录有计时基准锁（`_tmp/heavy.lock`），codex 只读代码、没有编译；改完的代码等锁解除后再跑全量 CI。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -64,3 +64,33 @@
 有 P1 → 全量 CI 绿之后开第 3 轮。
 
 第 2 轮改动的验证（2026-11-02 锁解除后，实测）：`xtask ci` 全过（fmt · clippy · test · tidy · check-deps · cargo-deny），`vdn-schema --check` 一致，`xtask eval ci` 门禁通过（ref 回归 13/17 · 能力 1/10 · 探针 5/5，与前同）。`same_keeps_integers_exact` 第一次跑红：手写样例没写 `defaults`，往返写出多一个空对象 `{}`，错在样例；样例补上 `defaults` 后转绿，比较口径不变。
+
+## 第 3 轮（2026-11-02）· 总评「修改」
+
+原文：`_tmp/20261102-schema-review/diff-bfe6266-head-codex-3.md`（不入库）。gpt-6-astra，effort medium，耗时 72 秒（`result: P0×0 P1×2 P2×2 P3×0`）。第 2 轮输出同样以 `P1` 开头，照第 2 轮的办法加标题行另存为 `round2-previous.md` 传入；第 2 轮本有 P1，停止线判断不受影响。
+本轮 P0/P1 共 2 条 · 停止线：未满足 · 留作 issue 的 P2：无。
+上一轮处理的验证：#2 总线名、#3 往返比较，codex 抽查确认已落实；#1 版本守卫还有三处口子（本轮 #1–#3）。
+改动期间主目录又有计时基准锁，代码先写好，锁解除后再编译、重新导出、跑全量 CI。
+
+- **P1｜src/schema/src/lib.rs:214 读不到基线被当成「首次引入」**（第 3 轮 #1）
+  - 核实：属实。`git show` 的任何失败（提交不在、读错）都返回 `Absent`，测试只打印提示，CI 里也不红
+  - 处理：新函数 `shm_baseline_at`：先确认基线提交存在，再用 `git ls-tree` 看树里有没有这份文件。只有「提交在、树里确实没有」才算 `Absent`；提交不存在、读树或读文件出错一律 `Unavailable`（CI 里红）。负例 `shm_baseline_failures_are_not_absent`：不存在的提交、全零提交 → Unavailable；仓库第一个提交 → Absent；HEAD → Found
+- **P1｜src/schema/src/lib.rs:204 main 上 push 时基线可能是同批未验证的提交**（第 3 轮 #2）
+  - 核实：属实。一次推两个提交，第一个改布局并改写同版本的 `HISTORY`，CI 只在最后一个提交上跑、取 `HEAD^1`，正好拿到被改过的布局
+  - 处理：`.github/workflows/ci.yml` 的 rust gate 一步加环境变量 `VDN_SCHEMA_BASE`：push 用 `github.event.before`（推送前的 main），PR 用 `github.event.pull_request.base.sha`。`shm_baseline` 先读它，没有才按本机规则（分叉点 / `HEAD^1`）。全零（新建分支推送）算 Unavailable。测试经 `shm_baseline_from` 传入，验证指定的基线优先于本机规则。多提交推送本身没法在单元测试里重演；测试只验证指定的基线优先于本机规则
+- **P2｜src/schema/src/shm.rs:144 「只增不改」只检查了基线那一个版本**（第 3 轮 #3）
+  - 核实：属实。main 到版本 3 后，改写或删掉版本 2 的行仍能通过
+  - 处理：完整历史写进导出的 `shm-header.layout.json`（`history` 数组，来自 `HISTORY`）；main 上那份文件就成了已发布历史的可信记录。`guard_baseline` 要求基线的整份历史原样是当前 `HISTORY` 的前缀：改写报「被改写」，删掉报「删掉」，在已发布行之间插行报「插进」；基线自己的布局指纹不在它的历史里报「自相矛盾」。没有 `history` 的旧格式按只有当前一行算。负例 `shm_history_whole_prefix_is_checked`。README 与现状页的说法同步改了
+- **P2｜specs/schema/eval-suite.schema.json:619 整数字段没有上界**（第 3 轮 #4）
+  - 核实：属实。schemars 对 `u64` 只写 `minimum: 0` 和 `format: uint64`，校验器不按 format 判范围，`seed` 超出 u64 时 schema 放行、serde 拒
+  - 处理：导出时统一补界（`vdn_schema::int_bounds`，在 `with_comment` 里调）：按 `format` 填 Rust 类型的 `minimum` / `maximum`，transform 写入的更窄范围不动。测试 `integer_bounds_agree_with_rust_types`：四份 schema 里每个整数字段都有上下界；`seed` 取 u64::MAX 两边都过，取 1e20、-1 两边都拒
+
+### 引用抽查
+
+- codex 列的「不符」：无
+- codex 列的「核实属实」：5 条
+- 无法核实：1 条（CI 结果是运行结果）
+
+### 是否再审
+
+有 P1 → 锁解除、全量 CI 绿之后开第 4 轮。
