@@ -58,15 +58,16 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | rustbe：release 构建 + tract 对拍 + 基准（约 10 min；已告 applebe 期间不跑重活） |
+| 重编译 / 全量测试 / 跑模型（1 个） | 47 方（V7 等三件），16:34 起 |
 
-排队：47 的延迟基准 V7（约 10 min）→ applebe（装 coremltools · Core ML 四种计算单元 + 有状态版基准，约 30–40 min）→ 47 的优先级复测（约 5 min）+ 耗电（约 5 min，人 sudo）
+排队：47 三件（V7 约 10 min · 优先级复测约 5 min · 耗电约 5 min，人 sudo，空等时 47 会通知让出）→ applebe（约 30–40 min）
 
-**跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。我方建议之后用 mkdir 主目录 `_tmp/heavy.lock`（写 owner · 开始 · 预计结束，跑完 rmdir），待 47 确认
+**跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。加锁文件：mkdir 主目录 `_tmp/heavy.lock`（内写 owner · 开始 · 预计结束，跑完 rmdir），由各自大总管放名额时建、收回时删，手下不碰（47 已确认）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 16:33 rustbe 基准结束（正式版 r4，16:32:36 开跑，在干扰时段之后，负载 2.25 → 2.04；r1–r3 留作参考）：GTCRN 手写 Rust p50 0.10 ms、最大 0.13–0.28 ms、每帧零分配，比 ORT（p50 0.37–0.38 ms、最大 0.43–1.0 ms）快约 3.7 倍，对拍 SNR 134 dB；tract 跑 GTCRN p50 0.37–0.56 ms、每帧分配 2247 次，不如 ORT；FE-M tract p50 0.58–0.68 ms vs ORT 0.36–0.38 ms，ORT 更快。名额收回转 47
 - 2026-11-02 rustbe：tract 对拍过（GTCRN SNR 130 dB；FE-M 缺 SplitToSequence，等价改写为 Gather 后对原图 110.8 dB）；冒烟 GTCRN p50 tract 0.47 ms / ORT 0.51 ms（非正式）。另一位大总管 noise-canceling-47（tmux vdn-rust，Rust 骨架线 rs-shm / rs-entry）的 miri 占满 1 核 → 已结束；已向 47 提议两边「计时基准前互相打招呼」
 - 2026-11-02 rustbe：手写 GTCRN 编译过、与 ORT 逐值对拍过（37 段，最差 SNR 119.2 dB，最大差 1.6e-4，无一帧差 > 1e-3）；下一步加 tract 后端（吃 ONNX · 支持 GRU · 面向流式），再申请基准名额。applebe 已报到（M5 · macOS 27.0.1 · 插电），起调研 workflow：Core ML · BNNS Graph · MLX · 实时线程可调性与 Rust 绑定，各配怀疑派
 - 2026-11-02 judgeloop 收尾：exp011 三参数自动调无收益（SCOREQ −0.027 [−0.037, −0.016]，41 段 / 10 说话人；上界 +0.008）→ 第一版不做；PR #49 合并；转交两条已登记（3-6 · backlog 下一轮盲听）
