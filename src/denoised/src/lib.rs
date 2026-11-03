@@ -121,8 +121,8 @@ pub struct WorkerStats {
     pub over_budget: u64,
     /// 降噪落后时跳过的 Raw 样本数（同时记进 Raw 环的缺口计数）
     pub raw_skipped: u64,
-    /// 插进 Processed 的 NaN 标记样本数
-    pub markers_pushed: u64,
+    /// 插进 Processed 的零占位样本数
+    pub placeholders_pushed: u64,
 }
 
 /// 预热结果（耗时都按单块 `process` 计，ns）。
@@ -145,10 +145,10 @@ pub enum Step {
     Block,
 }
 
-/// 最多同时排队几段「跳过标记」；满了并进最后一段
+/// 最多同时排队几段「跳过占位」；满了并进最后一段
 const MAX_MARKERS: usize = 8;
 
-/// 跳过积压后要插进 Processed 的 NaN 标记：在输出流第 `at` 个样本处插 `count` 个。
+/// 跳过积压后要插进 Processed 的零占位：在输出流第 `at` 个样本处插 `count` 个。
 #[derive(Clone, Copy, Debug, Default)]
 struct Marker {
     at: u64,
@@ -160,8 +160,8 @@ pub struct Worker<P> {
     block: usize,
     inbuf: Vec<f32>,
     outbuf: Vec<f32>,
-    nan_buf: Vec<f32>,
-    /// 已推进 Processed 的样本数（含 prime 的零和 NaN 标记）：输出流的位置
+    zero_buf: Vec<f32>,
+    /// 已推进 Processed 的样本数（含 prime 的零和跳过占位）：输出流的位置
     pushed: u64,
     /// Raw 积压超过这么多就跳过旧的（`None` = 不跳）
     skip_over: Option<usize>,
@@ -179,7 +179,7 @@ impl<P: Processor> Worker<P> {
             block,
             inbuf: vec![0.0; block],
             outbuf: vec![0.0; block],
-            nan_buf: vec![f32::NAN; block],
+            zero_buf: vec![0.0; block],
             pushed: 0,
             skip_over: None,
             markers: [Marker::default(); MAX_MARKERS],
@@ -190,8 +190,9 @@ impl<P: Processor> Worker<P> {
 
     /// 降噪落后时跳过 Raw 积压：可读量超过 `lead + 2 × 降噪块` 就丢掉旧的、只留一块。
     /// 丢掉的那段原声，处理后的反正已经迟到（送音端会按账丢）；跳过让降噪进程直接回到「现在」，不白算。
-    /// 对齐：管线里还在路上的 L_pipe 个输出属于跳过前的声音，所以在输出流「现在 + L_pipe」处插同样多个 NaN 标记，
-    /// 送音端把非有限样本当占位（用延迟原声），账不错位
+    /// 对齐：管线里还在路上的 L_pipe 个输出属于跳过前的声音，所以在输出流「现在 + L_pipe」处插同样多个零占位，账不错位。
+    /// 占位是带外告知的（大总管定，不在声音里做记号）：跳过的长度记进 Raw 环的缺口计数（`note_gap`），
+    /// 送音端看到缺口计数涨了，就把接下来一个 L_total 窗口当心跳过期处理（用延迟原声、淡入淡出），零占位不会被播出
     pub fn skip_backlog_over_lead(mut self, lead: usize) -> Self {
         self.skip_over = Some(lead + 2 * self.block);
         self
@@ -280,20 +281,20 @@ impl<P: Processor> Worker<P> {
         }
     }
 
-    /// 推 `n` 个 NaN 标记（按 nan_buf 分段）
-    fn push_nans(&mut self, processed: &vdn_shm::Ring<'_>, n: u64) {
+    /// 推 `n` 个零占位（按 zero_buf 分段）
+    fn push_placeholders(&mut self, processed: &vdn_shm::Ring<'_>, n: u64) {
         let mut left = n;
         while left > 0 {
-            let k = usize::try_from(left).unwrap_or(usize::MAX).min(self.nan_buf.len());
-            let got = processed.push(self.nan_buf.get(..k).unwrap_or(&[]));
+            let k = usize::try_from(left).unwrap_or(usize::MAX).min(self.zero_buf.len());
+            let got = processed.push(self.zero_buf.get(..k).unwrap_or(&[]));
             self.stats.proc_overflow += (k - got.min(k)) as u64;
             left -= k as u64;
         }
-        self.stats.markers_pushed += n;
+        self.stats.placeholders_pushed += n;
         self.pushed += n;
     }
 
-    /// 推一块处理结果，途中到了标记位置就先插 NaN
+    /// 推一块处理结果，途中到了占位位置就先插零
     fn push_block(&mut self, processed: &vdn_shm::Ring<'_>) {
         let n = self.block;
         let mut i = 0usize;
@@ -312,7 +313,7 @@ impl<P: Processor> Worker<P> {
             self.stats.proc_overflow += (k - got.min(k)) as u64;
             self.pushed += k as u64;
             i += k;
-            self.push_nans(processed, m.count);
+            self.push_placeholders(processed, m.count);
             if let Some(live) = self.markers.get_mut(..self.n_markers) {
                 live.copy_within(1.., 0);
             }
