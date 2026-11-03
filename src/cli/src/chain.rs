@@ -108,10 +108,27 @@ pub fn out_bus_name(bus: &str) -> String {
     format!("{bus}-out")
 }
 
-/// 当前线程提 time-constraint 优先级；失败返回 false（照常跑，计数）。
-fn promote(block: usize, load: f64) -> bool {
+/// 当前线程提 time-constraint 优先级；失败打印一行并返回 false（照常跑，计数）。
+/// 打印是必须的：2026-11-02 直通管线的提升一直失败（code 4），只计数没人看见
+fn promote(who: &str, block: usize, load: f64) -> bool {
     let p = vdn_rt_thread::RtParams::for_block(block as u32, RATE, load);
-    vdn_rt_thread::promote_current(p).is_ok()
+    promote_or_report(who, p)
+}
+
+/// 提升当前线程；失败在标准错误打印「谁 · 参数 · 错误」，返回 false。线程启动时调一次（不在实时循环里）
+pub fn promote_or_report(who: &str, p: vdn_rt_thread::RtParams) -> bool {
+    match vdn_rt_thread::promote_current(p) {
+        Ok(()) => true,
+        Err(e) => {
+            eprintln!(
+                "{who}：实时优先级提升失败（照常运行）：{e} · period {:.3} ms · computation {:.3} ms · constraint {:.3} ms",
+                p.period_ns as f64 / 1e6,
+                p.computation_ns as f64 / 1e6,
+                p.constraint_ns as f64 / 1e6
+            );
+            false
+        }
+    }
 }
 
 /// 任何返回路径（含某个线程 panic、`?` 提前返回）都让降噪线程停下。
@@ -259,7 +276,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         let (dblock, rtf) = (o.denoise_block, rt_failures.clone());
         let rtp = vdn_denoised::denoise_rt_params(&worker, &warmup);
         thread::spawn(move || {
-            if rt && vdn_rt_thread::promote_current(rtp).is_err() {
+            if rt && !promote_or_report("chain-test 降噪线程", rtp) {
                 rtf.fetch_add(1, Ordering::Relaxed);
             }
             let mut consumed = 0u64;
@@ -298,7 +315,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         let x = test_tone(RATE, total, 0);
         let (rt, rtf) = (o.rt, rt_failures.clone());
         thread::spawn(move || {
-            if rt && !promote(block, 0.25) {
+            if rt && !promote("chain-test 送音线程", block, 0.25) {
                 rtf.fetch_add(1, Ordering::Relaxed);
             }
             for (i, xb) in x.chunks(block).enumerate() {
@@ -316,7 +333,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         let bus = hal_bus.clone();
         let (rt, rtf) = (o.rt, rt_failures.clone());
         thread::spawn(move || {
-            if rt && !promote(block, 0.25) {
+            if rt && !promote("chain-test 虚拟麦线程", block, 0.25) {
                 rtf.fetch_add(1, Ordering::Relaxed);
             }
             let mut src =
