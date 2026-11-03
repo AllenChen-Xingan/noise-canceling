@@ -307,6 +307,34 @@ mod tests {
         assert_eq!(w.stats().blocks, 2);
     }
 
+    /// 交叉校验（唯一真相源，CLAUDE.md 第五节第 5 条）：总线名规则的正本在 vdn-shm（`Bus::open` 报 `InvalidName`），
+    /// vdn-control 的 `validate_bus_name` 是给配置文件早报错用的第二处表示，两者对每个样例必须一致
+    #[test]
+    fn bus_name_rule_matches_vdn_shm() {
+        let long = format!("/vdn-{}", "a".repeat(30));
+        for name in [
+            "/vdn-bus", "/vdn-out", "/vdn-chaintest-out", "/vdn-", "/vdn", "/vdnx", "vdn-bus", "/other",
+            "/vdn-a/b", "/vdn-a\0b", &long, "/vdn-ok_1.2",
+        ] {
+            let control_ok = vdn_control::validate_bus_name(name).is_ok();
+            let shm_ok = !matches!(Bus::open(name), Err(vdn_shm::ShmError::InvalidName));
+            assert_eq!(control_ok, shm_ok, "{name:?}：vdn-control {control_ok} · vdn-shm {shm_ok}");
+        }
+    }
+
+    /// 交叉校验：IO 采样率三处（vdn-control 正本 · 总线头 · 降噪总线配置）一致
+    #[test]
+    fn io_rate_single_source() {
+        let w = Worker::new(identity_pipeline(Some(96)).unwrap(), 96);
+        let cfg = denoise_bus_config(&w, 288, 48_000).unwrap();
+        assert_eq!(cfg.rate, vdn_control::IO_RATE);
+        assert_eq!(cfg.lead, 288);
+        assert_eq!(cfg.denoise_block, 96);
+        assert_eq!(cfg.l_total as usize, w.l_total(288));
+        let bus = Bus::heap(cfg).unwrap();
+        assert_eq!(bus.config(), cfg);
+    }
+
     #[test]
     fn prime_stops_when_full() {
         let mut w = Worker::new(Copy0, 480);
