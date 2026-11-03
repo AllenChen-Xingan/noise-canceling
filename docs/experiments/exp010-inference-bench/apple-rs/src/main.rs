@@ -21,6 +21,7 @@
 //! 逐值一致只比前 --parity-frames 帧，算法同 rustbe parity：最大绝对差 · 整段 SNR · 逐帧最小 SNR（只计参考能量
 //! ≥ 平均帧能量 1e-4 的帧）· 非有限值个数 · first_bad（差 > 1e-3 或任一边非有限的第一个位置，下标是帧内平铺下标）。
 //! 计时只包一次 `Backend::run`（含写入输入、读出输出，不含 STFT）。
+//! 按节奏跑时另报「迟到」：每帧做完的时刻 − 该到的时刻（含唤醒迟到），`late_frames_over_3ms` 才是 BE-DEADLINE 的判据。
 
 mod alloc;
 mod bnns;
@@ -284,6 +285,8 @@ fn bench(o: &Opts) -> Result<(), String> {
     let mut saved = vec![0f32; pn * per_out]; // 先存输出，跑完再对拍
     let unix = || std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs_f64()).unwrap_or(0.0);
     let mut win_start = 0.0;
+    // BE-DEADLINE 要含唤醒迟到：按节奏跑时，一帧「做完的时刻 − 该到的时刻」才是这一帧离截止还有多少余量
+    let mut late = Vec::with_capacity(if pace > 0.0 { frames } else { 0 });
     let (mut ra0, mut pa0, mut c0) = (0, 0, 0.0);
     let mut w0 = Instant::now();
     let mut fp1 = f64::NAN;
@@ -320,6 +323,9 @@ fn bench(o: &Opts) -> Result<(), String> {
         let t = Instant::now();
         be.run(x, &mut out)?;
         let dt = t.elapsed().as_secs_f64() * 1e3;
+        if pace > 0.0 && f >= t0w {
+            late.push(w0.elapsed().as_secs_f64() * 1e3 - (f - t0w) as f64 * pace);
+        }
         if let Some(w) = iwg.as_mut() {
             w.end();
         }
@@ -338,12 +344,16 @@ fn bench(o: &Opts) -> Result<(), String> {
     }
     let wall = w0.elapsed().as_secs_f64();
     let win_end = unix();
+    // 计时窗一结束就读 CPU 与分配计数（对拍在后面做，不能算进推理占用）
+    let cpu = cpu_seconds() - c0;
+    let rust_n = alloc::rust_allocs() - ra0;
+    let proc_n = alloc::process_allocs() - pa0;
     for f in 0..pn {
         {
             let out = &saved[f * per_out..(f + 1) * per_out];
             let r = &refo[f * per_out..(f + 1) * per_out];
             let (mut fs, mut fe) = (0.0f64, 0.0f64);
-            for (k, (&p, &q)) in r.iter().zip(&out).enumerate() {
+            for (k, (&p, &q)) in r.iter().zip(out).enumerate() {
                 let bad_val = !p.is_finite() || !q.is_finite();
                 if bad_val {
                     nonfinite_values += 1;
@@ -365,9 +375,11 @@ fn bench(o: &Opts) -> Result<(), String> {
         }
     }
     let fp2 = footprint_mb();
-    let cpu = cpu_seconds() - c0;
-    let rust_allocs = (alloc::rust_allocs() - ra0) as f64 / frames as f64;
-    let proc_allocs = if count_malloc { format!("{:.3}", (alloc::process_allocs() - pa0) as f64 / frames as f64) } else { "null".into() };
+    let rust_allocs = rust_n as f64 / frames as f64;
+    let proc_allocs = if count_malloc { format!("{:.3}", proc_n as f64 / frames as f64) } else { "null".into() };
+    let proc_total = if count_malloc { proc_n.to_string() } else { "null".into() };
+    let late_over3 = late.iter().filter(|&&t| t > 3.0).count();
+    let late_max = late.iter().cloned().fold(f64::NAN, f64::max);
     let mean = times.iter().sum::<f64>() / times.len() as f64;
     let over3 = times.iter().filter(|&&t| t > 3.0).count(); // BE-DEADLINE：单帧 > 3.0 ms（延迟账余量）
     times.sort_by(|a, b| a.total_cmp(b));
@@ -381,7 +393,7 @@ fn bench(o: &Opts) -> Result<(), String> {
         "{{\"model\":\"{}\",\"backend\":\"{backend}\",\"artifact\":\"{}\",\"frames\":{frames},\"warmup\":{warmup},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"thread_policy\":\"{policy}\",\"workgroup\":{},\"spin\":{spin},\"tc_computation_ms\":{},\"tc_constraint_ms\":{},\"interval_wg_deadline_ms\":{iwg_ms},\"interval_wg_errors\":{},\
 \"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{mean:.4},\"frames_over_3ms\":{over3},\
 \"ort_env_ms\":0.00,\"compile_ms\":{compile_ms:.2},\"open_ms\":{open_ms:.2},\"first_frame_ms\":{first_ms:.3},\"cpu_over_wall\":{:.3},\
-\"rust_allocs_per_frame\":{rust_allocs:.3},\"process_allocs_per_frame\":{proc_allocs},\"win_start_unix\":{win_start:.3},\"win_end_unix\":{win_end:.3},\"wall_s\":{wall:.3},\"nonfinite_frames\":{nonfinite_frames},\
+\"rust_allocs_per_frame\":{rust_allocs:.3},\"rust_allocs_total\":{rust_n},\"process_allocs_total\":{proc_total},\"late_frames_over_3ms\":{late_over3},\"late_max_ms\":{late_max:.4},\"process_allocs_per_frame\":{proc_allocs},\"win_start_unix\":{win_start:.3},\"win_end_unix\":{win_end:.3},\"wall_s\":{wall:.3},\"nonfinite_frames\":{nonfinite_frames},\
 \"footprint_before_mb\":{fp0:.2},\"footprint_warm_mb\":{fp1:.2},\"footprint_end_mb\":{fp2:.2},\"parity_frames\":{pn},\"parity_max_abs\":{max_abs:.3e},\"parity_worst_frame\":{worst},\"parity_snr_db\":{:.2},\
 \"parity_min_frame_snr_db\":{min_frame_snr:.2},\"parity_nonfinite_values\":{nonfinite_values},\"parity_first_bad\":\"{first_bad:?}\",\"extra\":{extra}}}",
         kind.name(),
