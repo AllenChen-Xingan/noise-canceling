@@ -12,6 +12,8 @@ use crate::{Bus, RingId, WaitResult, WaitStrategy};
 pub const FALLBACK_POLL: Duration = Duration::from_micros(200);
 /// `wait` 连续几次「可重试的提前返回」之后，这一轮改睡一个轮询间隔（防 EFAULT 一直重复时空转）。
 const MAX_RETRIES: u32 = 3;
+/// 单次系统调用最多睡这么久（防极大 timeout 换算成 Mach 时间时溢出；自审 P2）；到点醒来重新看一眼再睡。
+const MAX_SLICE: Duration = Duration::from_secs(3600);
 
 /// 等待（非实时：会睡、会做系统调用；**只许在非实时线程调**，例如降噪进程的处理线程在空闲时）
 impl Bus {
@@ -51,8 +53,14 @@ impl Bus {
                 WaitStrategy::Poll(iv) => poll(iv.max(Duration::from_micros(1))),
                 WaitStrategy::Wake => {
                     let usable = wake::supported() && !self.wake_broken.load(Relaxed);
-                    let outcome = if usable && retries < MAX_RETRIES {
-                        let ns = u64::try_from(left.as_nanos()).unwrap_or(u64::MAX);
+                    if usable && retries >= MAX_RETRIES {
+                        // 连续几次暂时性错误（EINTR 等）：这一轮睡一个轮询间隔再试，不算退回轮询
+                        retries = 0;
+                        poll(FALLBACK_POLL);
+                        continue;
+                    }
+                    let outcome = if usable {
+                        let ns = u64::try_from(left.min(MAX_SLICE).as_nanos()).unwrap_or(u64::MAX);
                         wake::wait(word, seen, self.shared, ns)
                     } else {
                         Outcome::Failed
@@ -61,10 +69,10 @@ impl Bus {
                         Outcome::Woken | Outcome::TimedOut => retries = 0,
                         Outcome::Retry => retries += 1,
                         Outcome::Failed => {
-                            if usable && retries < MAX_RETRIES {
+                            if usable {
+                                // 不可恢复（EINVAL 等）：本句柄以后都轮询
                                 self.wake_broken.store(true, Relaxed);
                             }
-                            retries = 0;
                             if !fell_back {
                                 fell_back = true;
                                 ring.hdr.cons.wait_fallbacks.fetch_add(1, Relaxed);

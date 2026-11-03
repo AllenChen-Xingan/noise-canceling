@@ -1,4 +1,6 @@
-//! 跨进程「一下叫醒」：macOS 14.4 起的 `os_sync_wait_on_address_with_timeout` / `os_sync_wake_by_address_any`。
+//! 跨进程「一下叫醒」：macOS 14.4 起的 `os_sync_wait_on_address_with_timeout` / `os_sync_wake_by_address_all`。
+//! 叫醒用 `_all` 不用 `_any`：同一环按约定只有一个等待者时两者代价相同；万一有残留的第二个等待者（旧进程、违反约定），
+//! `_any` 可能只叫醒它而漏掉真消费方（自审 P2）。
 //!
 //! 两个函数**运行期**用 `dlsym` 找（`init`，构造期调一次）：直接链接的话，低于 14.4 的系统上整个程序启动就失败
 //! （dyld 找不到符号），没机会退回轮询。找不到就 `supported() == false`，`Bus::wait` 改用轮询。
@@ -36,7 +38,7 @@ mod imp {
         libc::os_clockid_t,
         u64,
     ) -> libc::c_int;
-    /// `int os_sync_wake_by_address_any(void *addr, size_t size, uint32_t flags)`
+    /// `int os_sync_wake_by_address_all(void *addr, size_t size, uint32_t flags)`
     type WakeFn = unsafe extern "C" fn(*mut c_void, libc::size_t, u32) -> libc::c_int;
 
     static WAIT: AtomicPtr<c_void> = AtomicPtr::new(core::ptr::null_mut());
@@ -55,7 +57,7 @@ mod imp {
     pub(crate) fn init() {
         INIT.call_once(|| {
             let wait = sym(c"os_sync_wait_on_address_with_timeout");
-            let wake = sym(c"os_sync_wake_by_address_any");
+            let wake = sym(c"os_sync_wake_by_address_all");
             // 两个都找到才算支持：只有一个时两边都当不支持
             if !wait.is_null() && !wake.is_null() {
                 WAIT.store(wait, Release);
@@ -72,12 +74,20 @@ mod imp {
         FORCE_OFF.store(true, Release);
     }
 
-    fn flags(shared: bool) -> u32 {
-        // WAIT 与 WAKE 的 SHARED 都是 1、NONE 都是 0；两端必须一致（头文件 EINVAL 条款）
+    fn wake_flags(shared: bool) -> u32 {
         if shared {
             libc::OS_SYNC_WAKE_BY_ADDRESS_SHARED
         } else {
             libc::OS_SYNC_WAKE_BY_ADDRESS_NONE
+        }
+    }
+
+    /// 两端必须一致（头文件 EINVAL 条款）：SHARED 的 wait 配 SHARED 的 wake
+    fn wait_flags(shared: bool) -> u32 {
+        if shared {
+            libc::OS_SYNC_WAIT_ON_ADDRESS_SHARED
+        } else {
+            libc::OS_SYNC_WAIT_ON_ADDRESS_NONE
         }
     }
 
@@ -87,12 +97,12 @@ mod imp {
         if f.is_null() {
             return;
         }
-        // SAFETY: f 非空，由 init 里 dlsym("os_sync_wake_by_address_any") 得来，签名与 SDK 头文件
+        // SAFETY: f 非空，由 init 里 dlsym("os_sync_wake_by_address_all") 得来，签名与 SDK 头文件
         // os/os_sync_wait_on_address.h 一致（void*, size_t, uint32_t -> int）；数据指针与函数指针在 Apple 平台同宽。
         let wake: WakeFn = unsafe { core::mem::transmute::<*mut c_void, WakeFn>(f) };
         // SAFETY: addr 来自 &AtomicU32，非空、按 4 对齐、在映射存续期内有效；size = 4 与等待端一致；
         // 系统只把它当作内核等待队列的键，不写这块内存。返回值（0 / -1+ENOENT）不影响正确性，忽略。
-        let _ = unsafe { wake(addr.as_ptr().cast::<c_void>(), 4, flags(shared)) };
+        let _ = unsafe { wake(addr.as_ptr().cast::<c_void>(), 4, wake_flags(shared)) };
     }
 
     /// 非实时：`*addr == expected` 时睡，最多 `timeout_ns`（≥ 1）。
@@ -111,7 +121,7 @@ mod imp {
                 addr.as_ptr().cast::<c_void>(),
                 u64::from(expected),
                 4,
-                flags(shared),
+                wait_flags(shared),
                 libc::OS_CLOCK_MACH_ABSOLUTE_TIME,
                 timeout_ns.max(1),
             )

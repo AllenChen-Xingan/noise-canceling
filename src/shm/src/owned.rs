@@ -2,7 +2,8 @@
 //!
 //! 问题：建方异常退出会留下同名共享内存对象；下一个建方要先删它，但不能删掉**别的活着的建方**正在用的那个。
 //! 做法：每个总线名配一把文件锁（`flock`，进程死了内核自动放锁）。
-//! - 锁文件：`$TMPDIR/vdn-shm<名字里的 / 换成 _>.lock`，例如 `/vdn-out` → `$TMPDIR/vdn-shm_vdn-out.lock`。
+//! - 锁文件：`$TMPDIR/vdn-shm<名字里的 / 换成 _>.lock`，例如 `/vdn-out` → `$TMPDIR/vdn-shm_vdn-out.lock`；
+//!   过渡期另拿一把 rs-entry 旧版用的 `$TMPDIR/vdn-bus-lock_vdn-out`，新旧建方同时跑也互相锁得住
 //!   名字已经过 `/vdn-` 前缀 · ≤ 31 字节 · 不再含 `/` 的检查，所以不会逃出 `$TMPDIR`
 //! - 拿到锁 = 没有活着的建方；这时才删残留、再 `create`
 //! - 拿不到锁：返回 `ShmError::Busy`，什么都不删
@@ -26,38 +27,20 @@ pub struct OwnedBus {
     unlinked: AtomicBool,
     lock_path: PathBuf,
     // 最后 drop：名字删完才放锁
+    _legacy_lock: File,
     _lock: File,
 }
 
 impl OwnedBus {
     /// 拿锁 → 清残留 → 建总线。同名正被别的活着的建方持有时返回 `ShmError::Busy`。
     pub fn create(name: &str, cfg: BusConfig) -> Result<Self, ShmError> {
-        // 先走一遍名字检查（Bus::create 也会查；这里提前，免得用坏名字建锁文件）
-        if let Err(e) = Bus::open(name)
-            && e == ShmError::InvalidName
-        {
-            return Err(e);
-        }
+        // 先查名字（Bus::create 也会查；这里提前，免得用坏名字建锁文件）
+        crate::bus::checked_name(name)?;
         let lock_path = Self::lock_path_for(name);
-        let lock = File::options()
-            .create(true)
-            .truncate(false)
-            .write(true)
-            .open(&lock_path)
-            .map_err(|e| ShmError::Os {
-                op: "open(锁文件)",
-                errno: e.raw_os_error().unwrap_or(0),
-            })?;
-        match lock.try_lock() {
-            Ok(()) => {}
-            Err(TryLockError::WouldBlock) => return Err(ShmError::Busy),
-            Err(TryLockError::Error(e)) => {
-                return Err(ShmError::Os {
-                    op: "flock(锁文件)",
-                    errno: e.raw_os_error().unwrap_or(0),
-                });
-            }
-        }
+        let lock = take_lock(&lock_path)?;
+        // 过渡期：rs-entry 旧版建方锁的是另一个文件；两把都拿到才算没有活着的建方（自审 P1）。
+        // 旧版建方全部换成本类型后删掉这一把
+        let legacy = take_lock(&Self::legacy_lock_path_for(name))?;
         // 有锁 = 没有活着的建方；同名对象只可能是上次异常退出的残留
         let _ = Bus::unlink_name(name);
         let bus = Bus::create(name, cfg)?;
@@ -65,8 +48,14 @@ impl OwnedBus {
             bus,
             unlinked: AtomicBool::new(false),
             lock_path,
+            _legacy_lock: legacy,
             _lock: lock,
         })
+    }
+
+    /// rs-entry 旧版 `denoised::OwnedBus` 用的锁文件（`$TMPDIR/vdn-bus-lock_<名>`）。过渡期两把都拿。
+    pub fn legacy_lock_path_for(name: &str) -> PathBuf {
+        std::env::temp_dir().join(format!("vdn-bus-lock{}", name.replace('/', "_")))
     }
 
     /// 某个名字对应的锁文件路径（不检查名字）。
@@ -90,6 +79,27 @@ impl OwnedBus {
     /// 拿可变引用（例如 `set_wait_strategy`）。
     pub fn bus_mut(&mut self) -> &mut Bus {
         &mut self.bus
+    }
+}
+
+/// 开（必要时新建）锁文件并非阻塞地拿 flock；被别人持有返回 `Busy`。
+fn take_lock(path: &std::path::Path) -> Result<File, ShmError> {
+    let f = File::options()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(path)
+        .map_err(|e| ShmError::Os {
+            op: "open(锁文件)",
+            errno: e.raw_os_error().unwrap_or(0),
+        })?;
+    match f.try_lock() {
+        Ok(()) => Ok(f),
+        Err(TryLockError::WouldBlock) => Err(ShmError::Busy),
+        Err(TryLockError::Error(e)) => Err(ShmError::Os {
+            op: "flock(锁文件)",
+            errno: e.raw_os_error().unwrap_or(0),
+        }),
     }
 }
 
