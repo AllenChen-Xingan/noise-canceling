@@ -65,7 +65,7 @@ impl Model for FastEnhancer {
         vdn_types::ModelId::FastEnhancerM.as_str()
     }
     fn sample_rate(&self) -> u32 {
-        16000
+        vdn_types::MODEL_RATE
     }
     fn hop(&self) -> usize {
         self.hop

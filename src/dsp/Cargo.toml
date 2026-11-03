@@ -11,6 +11,8 @@ publish.workspace = true
 realfft.workspace = true
 
 [dev-dependencies]
+# 测试与示例取采样率正本（R-RATE）；只是 dev 依赖，普通依赖闭包里没有它（forbid 只管普通依赖）
+vdn-types.workspace = true
 assert_no_alloc.workspace = true
 
 [lints]

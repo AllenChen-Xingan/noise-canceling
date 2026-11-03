@@ -11,7 +11,7 @@ use vdn_types::Model;
 #[global_allocator]
 static A: AllocDisabler = AllocDisabler;
 
-const SR: u32 = 48_000;
+const SR: u32 = vdn_types::IO_RATE;
 
 /// 通带内（< 7 kHz）的多正弦，宽带到足以让互相关峰唯一。
 fn multisine(n: usize) -> Vec<f32> {
@@ -74,7 +74,7 @@ fn rejects_non_triple_rate() {
         Pipeline::new(e, 44_100),
         Err(PipelineError::UnsupportedRate {
             io_rate: 44_100,
-            model_rate: 16_000,
+            model_rate: vdn_types::MODEL_RATE,
         })
     ));
 }

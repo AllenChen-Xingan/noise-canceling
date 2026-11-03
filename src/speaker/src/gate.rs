@@ -55,8 +55,8 @@ impl Default for GateParams {
     fn default() -> Self {
         use vdn_types::desc::*;
         Self {
-            sr: 16000.0,
-            clock_rate: 16000.0,
+            sr: vdn_types::MODEL_RATE as f32,
+            clock_rate: vdn_types::MODEL_RATE as f32,
             floor_db: FLOOR_DB.default,
             attack_s: GATE_ATTACK_S.default,
             reopen_s: GATE_REOPEN_S.default,
@@ -429,11 +429,14 @@ mod tests {
         assert_eq!(p.clamped().confirm_n, 1);
         // 接线配置不归描述表管，夹值时原样保留
         let p = GateParams {
-            sr: 48000.0,
-            clock_rate: 48000.0,
+            sr: vdn_types::IO_RATE as f32,
+            clock_rate: vdn_types::IO_RATE as f32,
             ..d
         };
-        assert_eq!((p.clamped().sr, p.clamped().clock_rate), (48000.0, 48000.0));
+        assert_eq!(
+            (p.clamped().sr, p.clamped().clock_rate),
+            (vdn_types::IO_RATE as f32, vdn_types::IO_RATE as f32)
+        );
     }
 
     /// new() 先夹再用：越界的下限不会让增益掉到表的下限之下。
@@ -521,7 +524,7 @@ mod tests {
     #[test]
     fn io_clock_domain() {
         let p = GateParams {
-            clock_rate: 48000.0,
+            clock_rate: vdn_types::IO_RATE as f32,
             ..GateParams::default()
         };
         let mut g = AsymGate::new(p);

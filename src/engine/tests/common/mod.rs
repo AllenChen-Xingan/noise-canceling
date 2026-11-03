@@ -5,7 +5,7 @@
 use vdn_engine::{Pipeline, StageChain};
 use vdn_types::Model;
 
-pub const SR: u32 = 48_000;
+pub const SR: u32 = vdn_types::IO_RATE;
 pub const HOP_IO: usize = 768;
 
 /// 通带内多正弦 + 一个 15 kHz 分量（16 kHz 模型路径过不去，只有 48 kHz 原声里有）。

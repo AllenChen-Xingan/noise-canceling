@@ -45,7 +45,7 @@ fn check_fault_spans(fixed: bool, block: usize) {
     let m = FaultInjector::new(DelayGain::new(256, 256, 0.0), plan);
     let cfg = fallback_only();
     // 保持期 hop 数，算法同 Engine::new
-    let hold = (cfg.recover_hold_s * 16_000.0 / 256.0).ceil() as usize;
+    let hold = (cfg.recover_hold_s * vdn_types::MODEL_RATE as f32 / 256.0).ceil() as usize;
     let (mut p, prefill) = if fixed {
         (
             Pipeline::with_block(Engine::new(m, cfg), SR, block).unwrap(),

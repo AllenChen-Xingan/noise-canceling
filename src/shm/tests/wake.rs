@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use vdn_shm::{Bus, BusConfig, RingId, ShmError, WaitResult, WaitStrategy};
 
 const CFG: BusConfig = BusConfig {
-    rate: 48_000,
+    rate: vdn_types::IO_RATE,
     capacity_frames: 4096,
     l_total: 960,
     lead: 144,

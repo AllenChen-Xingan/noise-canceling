@@ -10,7 +10,7 @@ fn create_join_begin_finish() {
     std::thread::spawn(|| {
         let wi = WorkInterval::create("vdn-test").expect("AudioWorkIntervalCreate");
         // AudioWorkInterval.h 26–27 行：有实时优先级的辅助线程应加入工作组（建议，不是加入的前提）
-        promote_current(RtParams::for_block(96, 48_000, 0.5)).unwrap();
+        promote_current(RtParams::for_block(96, vdn_types::IO_RATE, 0.5)).unwrap();
         wi.with_member(|m| {
             for _ in 0..100 {
                 m.begin(2_000_000).unwrap();

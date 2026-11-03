@@ -79,7 +79,7 @@ HAL 虚拟麦克风驱动：003 定为 C 插件，不进 workspace；009 建议�
    vdn          = engine + models + 后端 + hound + clap
    vdn-denoised = engine + models + 后端 + speaker + shm + rt-thread + control
    vdn-capture  = io-macos + shm + rt-thread + control + dsp + hal（库）；hound · clap 只在 bin feature （不含 engine / models / 后端）
-   vdn-io-macos = 平台库；vdn-shm = 无依赖（posix feature 用 libc）
+   vdn-io-macos = 平台库 + types（只取采样率常量）；vdn-control = types（同上）；vdn-shm = 无依赖（posix feature 用 libc）
 ```
 
 规则（机器检查见 §5 R12）：
@@ -87,6 +87,7 @@ HAL 虚拟麦克风驱动：003 定为 C 插件，不进 workspace；009 建议�
 2. `vdn-engine` 不依赖 `vdn-models` 与后端；把具体模型交给引擎的是 bin（`Engine<AnyModel>`）
 3. `vdn-capture` 的依赖闭包里没有 `vdn-engine`、`vdn-models`、推理库（D03 崩溃隔离）
 4. `vdn-types` 已拆出（2026-10-31，align；比 §2.3 的触发事件提前，因为智能体部件的接口要在 speaker / scene / engine 之间共享）：`vdn-models` 只依赖 `vdn-types` + `vdn-dsp` + ort，**不再依赖 `vdn-engine`**（engine 只在 models 的 dev-dependencies 里供测试用）；`vdn_engine::model` 留一个转出模块兼容旧路径。`vdn-backend-ort` 已拆出（2026-11-02，rs-core）：`vdn-models` 只依赖它，不再直接依赖 ort；`vdn-eval`、`vdn-speaker`（onnx feature）、`vdn-speaker-lab` 仍直接依赖 ort，归后续批次
+5. 采样率只在 `vdn-types::rate` 写一处（2026-11-02，issue #62）：`vdn-io-macos`、`vdn-control` 为此依赖 `vdn-types` 并转出 `IO_RATE`；不依赖 `vdn-types` 的底层 crate（shm · rt-thread · hal · dsp · backend-ort）非测试代码不写采样率字面量，`xtask tidy` R-RATE 机器检查
 
 ### 2.3 什么时候拆（可观察的事件）
 

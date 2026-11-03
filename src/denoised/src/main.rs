@@ -70,8 +70,8 @@ struct Args {
     /// 降噪块长（48 kHz 样本，须整除模型 hop × 3，默认 96）
     #[arg(long)]
     denoise_block: Option<usize>,
-    /// 每个环的容量（样本）
-    #[arg(long, default_value_t = 48_000)]
+    /// 每个环的容量（样本；默认 1 秒）
+    #[arg(long, default_value_t = vdn_control::IO_RATE)]
     capacity: u32,
     /// 跑多少秒后退出；不给就一直跑到 Ctrl-C
     #[arg(long, value_parser = vdn_control::parse_seconds)]

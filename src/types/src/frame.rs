@@ -202,7 +202,10 @@ mod tests {
     #[test]
     fn clock_never_underflows() {
         assert_eq!(SampleClock(5).since(SampleClock(9)), 0);
-        assert_eq!(SampleClock(48_000).seconds(48_000), 1.0);
+        assert_eq!(
+            SampleClock(u64::from(crate::IO_RATE)).seconds(crate::IO_RATE),
+            1.0
+        );
         assert_eq!(SampleClock(1).seconds(0), 0.0);
     }
 }

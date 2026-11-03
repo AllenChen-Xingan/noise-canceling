@@ -338,7 +338,7 @@ fn cmd_dnsmos(args: &[String]) -> Result<bool, String> {
         return Err("用法：vdn-eval dnsmos <模型.onnx> <音频.wav>".into());
     };
     let (x, sr) = vdn_eval::wav::read(Path::new(wav))?;
-    if sr != 16_000 {
+    if sr != vdn_types::MODEL_RATE {
         return Err(format!("只支持 16 kHz，实际 {sr}"));
     }
     let mut d = vdn_eval::qa::dnsmos::Dnsmos::open(Path::new(model)).map_err(|e| e.to_string())?;

@@ -70,12 +70,12 @@ impl ModelKind {
     pub const fn declared(self) -> Declared {
         match self {
             ModelKind::Gtcrn => Declared {
-                sample_rate: 16_000,
+                sample_rate: vdn_types::MODEL_RATE,
                 hop: 256,
                 latency_samples: 256,
             },
             ModelKind::FastEnhancerM => Declared {
-                sample_rate: 16_000,
+                sample_rate: vdn_types::MODEL_RATE,
                 hop: 160,
                 latency_samples: 352,
             },

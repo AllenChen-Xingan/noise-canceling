@@ -128,7 +128,7 @@ mod tests {
     fn widened_race_window_does_not_lose_wakeup() {
         GAP_US.store(3_000, Relaxed);
         let b = Bus::heap(BusConfig {
-            rate: 48_000,
+            rate: vdn_types::IO_RATE,
             capacity_frames: 1024,
             l_total: 0,
             lead: 0,

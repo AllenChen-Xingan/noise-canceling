@@ -77,7 +77,7 @@ fn decode(buf: &[f32; BLOCK]) -> u64 {
 fn promote() -> bool {
     vdn_rt_thread::promote_current(vdn_rt_thread::RtParams::for_block(
         BLOCK as u32,
-        48_000,
+        vdn_types::IO_RATE,
         0.25,
     ))
     .is_ok()
@@ -177,7 +177,7 @@ fn one(mode: &str, secs: u64, rt: bool, with_load: bool) -> String {
     let exe = std::env::current_exe().expect("current_exe");
     let name = format!("/vdn-wb{:x}", std::process::id());
     let cfg = BusConfig {
-        rate: 48_000,
+        rate: vdn_types::IO_RATE,
         capacity_frames: 4096,
         l_total: 0,
         lead: 0,

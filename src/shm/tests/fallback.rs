@@ -9,7 +9,7 @@ use vdn_shm::{Bus, BusConfig, RingId, WaitResult};
 fn falls_back_to_polling_and_counts() {
     Bus::force_wake_error_for_test();
     let b = Bus::heap(BusConfig {
-        rate: 48_000,
+        rate: vdn_types::IO_RATE,
         capacity_frames: 1024,
         l_total: 0,
         lead: 0,

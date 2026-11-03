@@ -124,7 +124,7 @@ mod tests {
 
     fn params() -> OpenCloseParams {
         OpenCloseParams {
-            sr: 16000.0,
+            sr: vdn_types::MODEL_RATE as f32,
             closed: 0.25,
             open: 0.5,
             attack_s: 0.002,

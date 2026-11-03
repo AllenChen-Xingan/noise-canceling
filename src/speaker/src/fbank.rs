@@ -39,7 +39,7 @@ impl FbankConfig {
     /// WeSpeaker（ECAPA / ResNet / CAM++ 的 wespeaker 版）前端：`resources/wespeaker/wespeaker/bin/infer_onnx.py:31-50`。
     pub fn wespeaker() -> Self {
         Self {
-            sample_rate: 16000.0,
+            sample_rate: vdn_types::MODEL_RATE as f32,
             frame_length: 400,
             frame_shift: 160,
             num_mel_bins: 80,
@@ -217,14 +217,18 @@ mod tests {
         let fb = Fbank::new(FbankConfig::wespeaker());
         assert_eq!(fb.num_frames(399), 0);
         assert_eq!(fb.num_frames(400), 1);
-        assert_eq!(fb.num_frames(16000), 98);
+        assert_eq!(fb.num_frames(vdn_types::MODEL_RATE as usize), 98);
     }
 
     #[test]
     fn tone_peaks_in_right_band() {
         let mut fb = Fbank::new(FbankConfig::wespeaker());
         let x: Vec<f32> = (0..1600)
-            .map(|i| 0.1 * (2.0 * std::f32::consts::PI * 1000.0 * i as f32 / 16000.0).sin())
+            .map(|i| {
+                0.1 * (2.0 * std::f32::consts::PI * 1000.0 * i as f32
+                    / vdn_types::MODEL_RATE as f32)
+                    .sin()
+            })
             .collect();
         let nf = fb.num_frames(x.len());
         let mut out = vec![0.0; nf * 80];

@@ -16,10 +16,12 @@
 mod ci;
 mod denycheck;
 mod deps;
+mod file_size;
 mod miri;
 mod model_name;
 mod no_mirror;
 mod param_range;
+mod rate_literal;
 mod scan;
 mod test_scope;
 mod tidy;

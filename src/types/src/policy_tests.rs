@@ -87,7 +87,7 @@ use crate::params::{ModelId, ParamField};
 use crate::scene::SceneName;
 use crate::table::SceneEntry;
 
-const SR: u32 = 48_000;
+const SR: u32 = crate::IO_RATE;
 // 测试用固定参数（不跟默认值走，默认值会随标定变）
 const H: Hysteresis = Hysteresis {
     confirm_s: 2.0,

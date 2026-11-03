@@ -21,6 +21,8 @@ libc = { workspace = true, optional = true }
 loom = { version = "0.7", optional = true }
 
 [dev-dependencies]
+# 测试与示例取采样率正本（R-RATE）；只是 dev 依赖，普通依赖闭包里没有它（forbid 只管普通依赖）
+vdn-types.workspace = true
 assert_no_alloc.workspace = true
 # 只给 examples/wake_bench（对照实验）提实时优先级用；普通依赖里没有它（forbid 只管普通依赖闭包）
 vdn-rt-thread.workspace = true

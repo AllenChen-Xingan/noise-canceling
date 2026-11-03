@@ -5,7 +5,7 @@ use vdn_shm::{Bus, BusConfig, RingId, ShmError};
 
 fn bus(cap: u32) -> Bus {
     Bus::heap(BusConfig {
-        rate: 48_000,
+        rate: vdn_types::IO_RATE,
         capacity_frames: cap,
         l_total: 123,
         lead: 0,
@@ -17,7 +17,7 @@ fn bus(cap: u32) -> Bus {
 #[test]
 fn header_reads_back() {
     let b = bus(8);
-    assert_eq!(b.rate(), 48_000);
+    assert_eq!(b.rate(), vdn_types::IO_RATE);
     assert_eq!(b.l_total(), 123);
     assert_eq!(b.capacity(), 8);
     assert_eq!(b.config().capacity_frames, 8);
@@ -39,7 +39,7 @@ fn bad_config_is_rejected() {
         denoise_block: 0,
     };
     assert!(matches!(
-        Bus::heap(c(48_000, 0)),
+        Bus::heap(c(vdn_types::IO_RATE, 0)),
         Err(ShmError::InvalidConfig(_))
     ));
     assert!(matches!(
@@ -47,7 +47,7 @@ fn bad_config_is_rejected() {
         Err(ShmError::InvalidConfig(_))
     ));
     assert!(matches!(
-        Bus::heap(c(48_000, (1 << 24) + 1)),
+        Bus::heap(c(vdn_types::IO_RATE, (1 << 24) + 1)),
         Err(ShmError::InvalidConfig(_))
     ));
 }

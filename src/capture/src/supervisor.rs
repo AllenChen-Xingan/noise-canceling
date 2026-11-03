@@ -156,8 +156,8 @@ mod tests {
 
     fn den_cfg(l_total: u32) -> BusConfig {
         BusConfig {
-            rate: 48_000,
-            capacity_frames: 48_000,
+            rate: vdn_control::IO_RATE,
+            capacity_frames: vdn_control::IO_RATE,
             l_total,
             lead: 288,
             denoise_block: 96,
@@ -176,7 +176,7 @@ mod tests {
         let out = Arc::new(
             OwnedBus::create(
                 &format!("/vdn-tso{tag}-{}", std::process::id()),
-                out_bus_config(48_000),
+                out_bus_config(vdn_control::IO_RATE),
             )
             .unwrap(),
         );

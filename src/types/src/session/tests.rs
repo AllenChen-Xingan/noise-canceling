@@ -11,7 +11,7 @@ const G: ProcessingGraph = ProcessingGraph {
 
 fn full() -> SessionRecord {
     let mut header = SessionHeader {
-        rate: 48_000,
+        rate: crate::IO_RATE,
         table: (TableVersion(3), ContentId::of(b"t")),
         profile: (ProfileVersion(1), ContentId::of(b"p")),
         ..SessionHeader::default()
@@ -55,7 +55,7 @@ fn format_1_still_reads() {
         e.to_line()
     );
     let r = SessionRecord::from_text(&v1).unwrap();
-    assert_eq!(r.header.rate, 48_000);
+    assert_eq!(r.header.rate, crate::IO_RATE);
     assert_eq!(r.header.graph(), None);
     assert_eq!(r.header.model(), None);
     assert_eq!(r.events, [e]);

@@ -16,14 +16,14 @@ use vdn_types::FrameCtx;
 
 const N_FFT: usize = 512;
 const HOP: usize = 256;
-const SR: f32 = 16000.0;
+const SR: f32 = vdn_types::MODEL_RATE as f32;
 
 fn read(path: &str) -> Vec<f32> {
     let mut r = hound::WavReader::open(path).unwrap_or_else(|e| panic!("读不了 {path}：{e}"));
     let s = r.spec();
     assert_eq!(
         (s.sample_rate, s.channels),
-        (16000, 1),
+        (vdn_types::MODEL_RATE, 1),
         "{path} 要 16 kHz 单声道"
     );
     match s.sample_format {
@@ -130,7 +130,7 @@ fn main() {
     let y = &out[lat..lat + n];
     let spec = hound::WavSpec {
         channels: 1,
-        sample_rate: 16000,
+        sample_rate: vdn_types::MODEL_RATE,
         bits_per_sample: 32,
         sample_format: hound::SampleFormat::Float,
     };

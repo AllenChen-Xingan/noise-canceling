@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 
 use vdn_scene::features::NF;
 use vdn_scene::{SceneAnalyzer, route, weights};
-use vdn_types::Hysteresis;
+use vdn_types::{Hysteresis, MODEL_RATE};
 
 const HOP: usize = 256;
 const TICK_HOPS: usize = 31;
@@ -19,7 +19,7 @@ const TICK_HOPS: usize = 31;
 fn read_wav(path: &str) -> Vec<f32> {
     let mut r = hound::WavReader::open(path).unwrap_or_else(|e| panic!("读不了 {path}：{e}"));
     let spec = r.spec();
-    assert_eq!(spec.sample_rate, 16000, "{path} 不是 16 kHz");
+    assert_eq!(spec.sample_rate, MODEL_RATE, "{path} 不是 16 kHz");
     assert_eq!(spec.channels, 1, "{path} 不是单声道");
     match spec.sample_format {
         hound::SampleFormat::Int => {
@@ -77,7 +77,7 @@ fn main() {
             continue;
         };
         let x = read_wav(path);
-        let mut sa = SceneAnalyzer::new(16000, HOP);
+        let mut sa = SceneAnalyzer::new(MODEL_RATE, HOP);
         sa.set_tuning(h, ema);
         for (k, hop) in x.as_chunks::<HOP>().0.iter().enumerate() {
             let t0 = Instant::now();
@@ -96,7 +96,7 @@ fn main() {
             max_judge = max_judge.max(d);
             n_judge += 1;
             line.clear();
-            let t = ((k + 1) * HOP) as f32 / 16000.0;
+            let t = ((k + 1) * HOP) as f32 / MODEL_RATE as f32;
             route::name(j.committed.1, &mut nm);
             let _ = write!(
                 line,
@@ -130,6 +130,6 @@ fn main() {
         us(t_judge, n_judge),
         max_judge.as_secs_f64() * 1e6,
         // 占一个核的百分比：逐帧耗时 / 16 ms + 判断耗时 / 496 ms
-        100.0 * (us(t_push, n_push) / 16000.0 + us(t_judge, n_judge) / 496000.0),
+        100.0 * (us(t_push, n_push) / 16000.0 + us(t_judge, n_judge) / 496000.0), // tidy: 非采样率：16000 µs = 16 ms 一帧、496000 µs = 496 ms 一次判断，是微秒时长
     );
 }

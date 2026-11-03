@@ -21,7 +21,7 @@ use vdn_types::{
     Basis, IO_BLOCK_009, IO_BLOCK_PROPOSED, LATENCY_BUDGET_MS, LatencyItem, LatencyLedger,
 };
 
-const IO_RATE: u32 = 48_000;
+use vdn_types::IO_RATE;
 
 /// 按声明搭一条 Pipeline（假模型，不加载权重）。`block` = None 走任意块长。
 fn pipeline(kind: ModelKind, block: Option<usize>) -> Pipeline<DelayGain> {

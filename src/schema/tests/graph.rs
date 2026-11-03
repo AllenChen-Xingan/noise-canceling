@@ -94,7 +94,7 @@ fn committed_session_keys_match_text_format() {
     }
     // 全字段的头写出来，键的顺序就是文件里的顺序
     let mut h = SessionHeader::default();
-    h.rate = 48_000;
+    h.rate = vdn_types::IO_RATE;
     h.set_graph(&checked_bare(ModelId::Gtcrn));
     let text = SessionRecord {
         header: h,

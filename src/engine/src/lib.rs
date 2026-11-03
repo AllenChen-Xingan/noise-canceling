@@ -56,7 +56,7 @@ pub mod testing {
             "identity"
         }
         fn sample_rate(&self) -> u32 {
-            16000
+            vdn_types::MODEL_RATE
         }
         fn hop(&self) -> usize {
             256
@@ -96,7 +96,7 @@ pub mod testing {
             "delay_gain"
         }
         fn sample_rate(&self) -> u32 {
-            16000
+            vdn_types::MODEL_RATE
         }
         fn hop(&self) -> usize {
             self.hop

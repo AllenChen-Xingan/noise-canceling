@@ -53,7 +53,7 @@ impl Default for JudgeParams {
     fn default() -> Self {
         use vdn_types::desc::*;
         Self {
-            sr: 16000,
+            sr: vdn_types::MODEL_RATE,
             window_s: JUDGE_WINDOW_S.default,
             hop_s: JUDGE_HOP_S.default,
             min_voiced_frac: JUDGE_MIN_VOICED_FRAC.default,

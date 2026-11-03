@@ -4,14 +4,14 @@
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use realfft::num_complex::Complex32;
 use vdn_polish::{PolishChain, PolishParams};
-use vdn_types::FrameCtx;
+use vdn_types::{FrameCtx, MODEL_RATE};
 
 #[global_allocator]
 static A: AllocDisabler = AllocDisabler;
 
 #[test]
 fn per_frame_paths_do_not_allocate() {
-    let mut chain = PolishChain::new(512, 256, 16000.0, PolishParams::preset(2));
+    let mut chain = PolishChain::new(512, 256, MODEL_RATE as f32, PolishParams::preset(2));
     let dry: Vec<Complex32> = (0..257)
         .map(|k| Complex32::new((k as f32 * 0.37).sin(), (k as f32 * 0.11).cos()))
         .collect();

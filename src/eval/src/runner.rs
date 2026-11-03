@@ -20,6 +20,12 @@ use crate::system::{RunOut, SystemKind, SystemSpec, run};
 use crate::verifiers::{Ctx, Kind, Params, eval, info};
 use crate::{Level, Score, Verdict, wav};
 
+mod gate;
+mod real;
+pub use gate::{Baseline, Gate, baseline_delta, baseline_key};
+use gate::{decide, level_of};
+pub use real::load_real;
+
 /// QA 层的额外评分器（ASR、DNSMOS）。CI 层传 `None`。
 pub trait Extra {
     fn score(
@@ -33,40 +39,11 @@ pub trait Extra {
     ) -> Option<Score>;
 }
 
-/// 冻结基线：(系统, 任务, 试验, verifier) → 数值。
-pub type Baseline = BTreeMap<String, f64>;
-
-pub fn baseline_key(system: &str, task: &str, trial: usize, v: &str) -> String {
-    format!("{system}/{task}/{trial}/{v}")
-}
-
-/// 「比基线差」的容差，按单位〔建议值〕。
-pub fn baseline_delta(unit: &str) -> f64 {
-    match unit {
-        "dB" => 1.0,
-        "×" => 0.2,
-        "比例" => 0.02,
-        "ms" => 8.0,
-        "MOS" => 0.1,
-        "百分点" => 1.0,
-        _ => 0.0,
-    }
-}
-
 pub struct Opts {
     pub ci: bool,
     pub audio_dir: Option<PathBuf>,
     pub baseline: Baseline,
     pub levels: BTreeMap<String, (Level, String)>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Gate {
-    Ok,
-    /// 只报，不计入
-    Info,
-    Warn(String),
-    Block(String),
 }
 
 #[derive(Clone, Debug)]
@@ -157,188 +134,6 @@ impl SuiteResult {
     }
     pub fn gate_ok(&self) -> bool {
         self.blocks().is_empty()
-    }
-}
-
-fn level_of(opts: &Opts, v: &str, synthetic: bool) -> Level {
-    let l = opts
-        .levels
-        .get(v)
-        .map(|e| e.0)
-        .or_else(|| info(v).map(|i| i.default_level))
-        .unwrap_or(Level::L0);
-    // 模拟真值指标只在模拟内 L3（012 §3.4 限定 1）
-    if !synthetic && info(v).is_some_and(|i| i.kind == Kind::Sim) {
-        Level::L0
-    } else {
-        l
-    }
-}
-
-fn decide(
-    set: Set,
-    g: &Grader,
-    level: Level,
-    kind: Kind,
-    score: &Score,
-    base: Option<&Score>,
-    baseline: Option<f64>,
-) -> Gate {
-    if g.info_only {
-        return Gate::Info;
-    }
-    match set {
-        Set::Capability => Gate::Ok,
-        Set::Probe => {
-            let Some(b) = base else {
-                return Gate::Block("探针缺原输出分数".into());
-            };
-            match (score.value, b.value) {
-                (Some(v), Some(bv)) if score.verdict.is_fail() && score.better.worse(v, bv) => {
-                    Gate::Ok
-                }
-                (Some(v), Some(bv)) => Gate::Block(format!(
-                    "劣化版没被抓到：劣化 {v:.2} [{}] vs 原输出 {bv:.2} [{}]",
-                    score.verdict.as_str(),
-                    b.verdict.as_str()
-                )),
-                _ => Gate::Block(format!(
-                    "探针判不了（劣化 {} / 原输出 {}）",
-                    score.verdict.as_str(),
-                    b.verdict.as_str()
-                )),
-            }
-        }
-        Set::Regression => {
-            // 按级别判阻断（模拟真值指标在真实片段上已降为 L0，不能再阻断）
-            let hard = level >= Level::L2;
-            if let (Some(b), Some(v)) = (baseline, score.value)
-                && kind == Kind::Perceptual
-                && score.better.worse_by(v, b, baseline_delta(score.unit))
-            {
-                return Gate::Block(format!(
-                    "比冻结基线差：{v:.2} vs 基线 {b:.2}（容差 {} {}）",
-                    baseline_delta(score.unit),
-                    score.unit
-                ));
-            }
-            match (&score.verdict, hard) {
-                (Verdict::Fail, true) => {
-                    Gate::Block(format!("{} 级不过线：{}", level.as_str(), fmt_val(score)))
-                }
-                (Verdict::Fail, false) => {
-                    Gate::Warn(format!("{} 级只报警：{}", level.as_str(), fmt_val(score)))
-                }
-                (Verdict::Unknown(why), true) => Gate::Warn(format!("判不了：{why}")),
-                _ => Gate::Ok,
-            }
-        }
-    }
-}
-
-fn fmt_val(s: &Score) -> String {
-    match (s.value, s.threshold) {
-        (Some(v), Some(t)) => format!("{v:.2} {}（线 {t}）", s.unit),
-        (Some(v), None) => format!("{v:.2} {}", s.unit),
-        _ => "—".into(),
-    }
-}
-
-/// 读一个真实片段（QA）。
-pub fn load_real(src: &RealSource) -> Result<Clip, String> {
-    let check = |p: &std::path::Path, want: Option<&str>| -> Result<(), String> {
-        if let Some(w) = want {
-            let got = wav::sha256(p)?;
-            if got != w {
-                return Err(format!(
-                    "{} 的 sha256 对不上（清单 {w}，实际 {got}）",
-                    p.display()
-                ));
-            }
-        }
-        Ok(())
-    };
-    let load = |p: &std::path::Path| -> Result<Vec<f32>, String> {
-        let (x, sr) = wav::read(p)?;
-        if sr != SR {
-            return Err(format!("{} 采样率 {sr}，只支持 16 kHz", p.display()));
-        }
-        Ok(x)
-    };
-    match src {
-        RealSource::Exp005 {
-            clips,
-            audio_dir,
-            clip,
-        } => {
-            let cp = resolve(clips).ok_or_else(|| format!("找不到 {clips}（exp005 未合并？）"))?;
-            let dir = resolve(audio_dir).ok_or_else(|| format!("找不到音频目录 {audio_dir}"))?;
-            let j: Value =
-                serde_json::from_str(&std::fs::read_to_string(&cp).map_err(|e| e.to_string())?)
-                    .map_err(|e| e.to_string())?;
-            let c = j["clips"]
-                .as_array()
-                .and_then(|a| a.iter().find(|c| c["id"] == clip.as_str()))
-                .ok_or_else(|| format!("{clips} 里没有 {clip}"))?;
-            let mut tr = BTreeMap::new();
-            for k in ["mix", "owner", "interf", "noise"] {
-                let f = &c["files"][k];
-                let p = dir.join(f["file"].as_str().ok_or("缺文件名")?);
-                check(&p, f["sha256"].as_str())?;
-                tr.insert(k, load(&p)?);
-            }
-            let n = tr.values().map(Vec::len).min().unwrap_or(0);
-            let take = |k: &str| tr.get(k).map(|v| v[..n].to_vec()).unwrap_or_default();
-            let (mix, clean, interf, noise) =
-                (take("mix"), take("owner"), take("interf"), take("noise"));
-            Ok(Clip {
-                sr: SR,
-                truth: Truth {
-                    owner: truth_from_clean(&clean),
-                    interf: truth_from_clean(&interf),
-                },
-                clean,
-                interf,
-                noise,
-                mix,
-                tracks: true,
-            })
-        }
-        RealSource::Exp003 { clips, clip } => {
-            let cp = resolve(clips).ok_or_else(|| format!("找不到 {clips}"))?;
-            let j: Value =
-                serde_json::from_str(&std::fs::read_to_string(&cp).map_err(|e| e.to_string())?)
-                    .map_err(|e| e.to_string())?;
-            let c = j["clips"]
-                .as_array()
-                .and_then(|a| a.iter().find(|c| c["id"] == clip.as_str()))
-                .ok_or_else(|| format!("{clips} 里没有 {clip}"))?;
-            let get = |k: &str, h: &str| -> Result<Vec<f32>, String> {
-                let rel = c[k]
-                    .as_str()
-                    .ok_or_else(|| format!("{clip} 缺 {k}（不是现成片段）"))?;
-                let p = resolve(rel).ok_or_else(|| format!("找不到 {rel}"))?;
-                check(&p, c[h].as_str())?;
-                load(&p)
-            };
-            let mix = get("noisy_src", "noisy_sha256")?;
-            let clean = get("clean_src", "clean_sha256")?;
-            let n = mix.len().min(clean.len());
-            let (mix, clean) = (mix[..n].to_vec(), clean[..n].to_vec());
-            let noise: Vec<f32> = mix.iter().zip(&clean).map(|(a, b)| a - b).collect();
-            Ok(Clip {
-                sr: SR,
-                truth: Truth {
-                    owner: truth_from_clean(&clean),
-                    interf: Vec::new(),
-                },
-                interf: vec![0.0; n],
-                clean,
-                noise,
-                mix,
-                tracks: false,
-            })
-        }
     }
 }
 
