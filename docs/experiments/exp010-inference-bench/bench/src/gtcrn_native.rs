@@ -19,6 +19,35 @@ const LN_EPS: f32 = 1e-8;
 
 pub type Err = Box<dyn std::error::Error + Send + Sync>;
 
+// ── 可选：矩阵乘交给 Accelerate（cblas_sgemm，Apple Silicon 上走 AMX / SME）──
+// 后端名 native-blas。改的是 1×1 卷积、编码器卷积（im2col）、DPGRNN 的全连接；GRU、转置卷积不变。
+// 用全局开关而不是逐层传参：实验期少改结构；开关只在构造时设一次，`infer` 里只读（Relaxed 原子读，无锁）。
+// 求和顺序与手写循环不同，不再逐位相同，靠对拍判。
+pub static BLAS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+#[inline]
+fn blas() -> bool {
+    BLAS.load(std::sync::atomic::Ordering::Relaxed)
+}
+#[link(name = "Accelerate", kind = "framework")]
+unsafe extern "C" {
+    fn cblas_sgemm(
+        order: i32, ta: i32, tb: i32, m: i32, n: i32, k: i32, alpha: f32, a: *const f32, lda: i32,
+        b: *const f32, ldb: i32, beta: f32, c: *mut f32, ldc: i32,
+    );
+}
+/// C[m×n] += A[m×k]·op(B)，行主序；`tb` 为真时 B 按 [n×k] 存（用其转置）。C 事先填好偏置。
+#[allow(clippy::too_many_arguments)]
+#[inline]
+fn sgemm_acc(m: usize, n: usize, k: usize, a: &[f32], lda: usize, b: &[f32], ldb: usize, tb: bool, c: &mut [f32], ldc: usize) {
+    debug_assert!(a.len() >= (m - 1) * lda + k && c.len() >= (m - 1) * ldc + n);
+    unsafe {
+        cblas_sgemm(
+            101, 111, if tb { 112 } else { 111 }, m as i32, n as i32, k as i32, 1.0, a.as_ptr(), lda as i32,
+            b.as_ptr(), ldb as i32, 1.0, c.as_mut_ptr(), ldc as i32,
+        )
+    }
+}
+
 /// 扁平权重表：`<prefix>.bin` + `<prefix>.txt`。
 pub struct Weights {
     data: Vec<f32>,
@@ -155,6 +184,13 @@ impl Point {
     }
 
     fn run(&self, x: &[f32], y: &mut [f32], f: usize) {
+        if blas() {
+            for o in 0..self.cout {
+                y[o * f..(o + 1) * f].fill(self.b[o]);
+            }
+            sgemm_acc(self.cout, f, self.cin, &self.w, self.cin, x, f, false, y, f);
+            return;
+        }
         for o in 0..self.cout {
             let yo = &mut y[o * f..(o + 1) * f];
             yo.fill(self.b[o]);
@@ -178,6 +214,7 @@ struct ConvF {
     fin: usize,
     fout: usize,
     alpha: f32,
+    col: Vec<f32>, // im2col 缓冲 [cig*K][fout]（只 native-blas 用）
 }
 
 const K: usize = 5;
@@ -211,11 +248,39 @@ impl ConvF {
             fin,
             fout,
             alpha: w.scalar(&format!("{p}.act.weight"))?,
+            col: vec![0.0; cig * K * fout],
         })
     }
 
-    fn run(&self, x: &[f32], y: &mut [f32]) {
+    fn run(&mut self, x: &[f32], y: &mut [f32]) {
         let (cig, cog) = (self.cin / self.groups, self.cout / self.groups);
+        if blas() {
+            let fo = self.fout;
+            for g in 0..self.groups {
+                // col[(ci*K + t)][j] = x[g*cig+ci][2j + t − 2]，越界补 0
+                for ci in 0..cig {
+                    let xi = &x[(g * cig + ci) * self.fin..(g * cig + ci + 1) * self.fin];
+                    for t in 0..K {
+                        let row = &mut self.col[(ci * K + t) * fo..(ci * K + t + 1) * fo];
+                        row.fill(0.0);
+                        let jlo = (2usize.saturating_sub(t)).div_ceil(2);
+                        let jhi = (self.fin + 2 - t).div_ceil(2).min(fo);
+                        for j in jlo..jhi {
+                            row[j] = xi[2 * j + t - 2];
+                        }
+                    }
+                }
+                for o in g * cog..(g + 1) * cog {
+                    y[o * fo..(o + 1) * fo].fill(self.b[o]);
+                }
+                let wg = &self.w[g * cog * cig * K..];
+                sgemm_acc(cog, fo, cig * K, wg, cig * K, &self.col, fo, false, &mut y[g * cog * fo..], fo);
+            }
+            for v in y[..self.cout * fo].iter_mut() {
+                *v = prelu(*v, self.alpha);
+            }
+            return;
+        }
         for o in 0..self.cout {
             let g = o / cog;
             let yo = &mut y[o * self.fout..(o + 1) * self.fout];
@@ -643,9 +708,13 @@ impl Dp {
                 self.y[f * C + grp * CH + 4..f * C + grp * CH + 8].copy_from_slice(&h);
             }
         }
-        for f in 0..F2 {
-            self.intra_fc
-                .run(&self.y[f * C..(f + 1) * C], &mut self.z[f * C..(f + 1) * C]);
+        if blas() {
+            fc_batch(&self.intra_fc, &self.y, &mut self.z);
+        } else {
+            for f in 0..F2 {
+                self.intra_fc
+                    .run(&self.y[f * C..(f + 1) * C], &mut self.z[f * C..(f + 1) * C]);
+            }
         }
         layer_norm_add(&mut self.xt, &self.z, &self.intra_lnw, &self.intra_lnb);
         // inter：沿时间（单步）的分组 GRU，状态逐频点缓存
@@ -654,10 +723,16 @@ impl Dp {
                 let r = f * C + grp * CH..f * C + grp * CH + CH;
                 self.inter[grp].step(&self.xt[r.clone()], &mut self.cache[r.clone()]);
             }
-            self.inter_fc.run(
-                &self.cache[f * C..(f + 1) * C],
-                &mut self.z[f * C..(f + 1) * C],
-            );
+            if !blas() {
+                self.inter_fc.run(
+                    &self.cache[f * C..(f + 1) * C],
+                    &mut self.z[f * C..(f + 1) * C],
+                );
+            }
+        }
+        if blas() {
+            // 第 f 行的全连接只依赖 cache[f]，它在上面第 f 步之后就不再变，所以可以挪到循环外一次算完
+            fc_batch(&self.inter_fc, &self.cache, &mut self.z);
         }
         layer_norm_add(&mut self.xt, &self.z, &self.inter_lnw, &self.inter_lnb);
         for c in 0..C {
@@ -666,6 +741,14 @@ impl Dp {
             }
         }
     }
+}
+
+/// Z[33×16] = X[33×16]·Wᵀ + b（逐频点全连接一次做完）
+fn fc_batch(l: &Linear, x: &[f32], z: &mut [f32]) {
+    for f in 0..F2 {
+        z[f * l.o..(f + 1) * l.o].copy_from_slice(&l.b);
+    }
+    sgemm_acc(F2, l.o, l.i, x, l.i, &l.w, l.i, true, z, l.o);
 }
 
 /// x += LN(z)，LN 在整个 (33,16) 上归一化，带逐元素仿射。

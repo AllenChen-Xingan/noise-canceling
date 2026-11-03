@@ -389,7 +389,14 @@ fn open_net_with(
 ) -> Result<Box<dyn Net>, Err> {
     Ok(match (model, kind) {
         (ModelId::Gtcrn, "ort") => Box::new(OrtGtcrn::open(path)?),
-        (ModelId::Gtcrn, "native") => Box::new(GtcrnNative::load(path)?),
+        (ModelId::Gtcrn, "native") => {
+            gtcrn_native::BLAS.store(false, Relaxed);
+            Box::new(GtcrnNative::load(path)?)
+        }
+        (ModelId::Gtcrn, "native-blas") => {
+            gtcrn_native::BLAS.store(true, Relaxed);
+            Box::new(GtcrnNative::load(path)?)
+        }
         (ModelId::Gtcrn, "tract") => Box::new(TractGtcrn::open(path)?),
         (ModelId::Fem, "ort") => Box::new(OrtFem::open(path)?),
         (ModelId::Fem, "tract") => match shapes {
@@ -486,7 +493,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     }
     let audio = read_wav(wav)?;
     // 计时前：ORT 环境初始化 + 读输入形状。native 吃的是权重前缀、不碰 ORT，跳过（它的「打开」本来就不含 ORT）
-    let (shapes, ort_env_ms) = if kind == "native" {
+    let (shapes, ort_env_ms) = if kind.starts_with("native") {
         (Vec::new(), 0.0)
     } else {
         prepare(path)?
@@ -747,7 +754,7 @@ fn main() -> Result<(), Err> {
             let audio = read_wav(wav)?;
             let n = arg_usize(rest, "--frames", audio.len() / HOP);
             let inputs = frames_for(ModelId::Gtcrn, &audio, n, &[])?;
-            let pb = if vs == "native" { wp } else { onnx };
+            let pb = if vs.starts_with("native") { wp } else { onnx };
             parity(
                 ModelId::Gtcrn,
                 vs,
