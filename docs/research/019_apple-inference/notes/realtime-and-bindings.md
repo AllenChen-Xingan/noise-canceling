@@ -130,6 +130,8 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
 ### 4.4 ORT 的 Core ML 执行提供器（CoreML EP）
 
 - 官方文档的 MLProgram 算子表里**没有 GRU、LSTM、ScatterND**；BatchNormalization 只在旧的 NeuralNetwork 格式下列出【官方】https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html 。GTCRN 和 FE-M 都有 GRU，所以图会被切成好几段，每帧在 Core ML 和 ORT CPU 之间来回好几次。**每帧的派发开销只会更多**【推断】。
+- **仓内已有反例**：`ort` rc.15 在 macOS 默认挂 CoreML 时，GTCRN 编译失败，必须设 `PreferCPU`【实测】`docs/research/009_rust-ecosystem/decision.md:72`。009 也已定「CoreML EP 不作默认」（`:75`）。
+- 走 CoreML EP 时，ORT 自己的每帧分配和锁不会消失，还要叠上 Core ML 的【推断】。
 - 其他人的测量：M2 上 RapidOCR 各模型用 CoreML EP 比 CPU 慢 3–14 倍【实测-他人】https://rapidai.github.io/RapidOCRDocs/main/blog/2026/02/28/coreml-vs-cpu-provider-onnxruntime-rapidocr 。
 - 可用选项：`ModelFormat=MLProgram`、`MLComputeUnits`、`RequireStaticInputShapes=1`、`ModelCacheDirectory`、`SpecializationStrategy=FastPrediction`、`ProfileComputePlan=1`（打印每个算子跑在哪个单元）【官方】同上。
 
@@ -152,10 +154,10 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
 
 - **能不能跑**：
   - BNNSGraph：取决于 GRU、帧内双向 GRU、Unfold 能不能经 Core ML 格式编进 BNNSGraph。本文没查到算子覆盖表，属存疑。
-  - Core ML CPU：能。
-  - ANE：大概率能跑，但不划算。M1 上约 0.2 ms 的派发下限，已经是今天 ORT p50（0.4 ms）的一半。
+  - Core ML CPU：能转能跑，但要从 PyTorch 源转（`gtcrn_stream.py`），不是从 ONNX 转【推断】；GRU 会被翻成 `while_loop`，每帧约 268 次循环体【源码 + 推断】见 `coreml.md:22-23`。
+  - ANE：**整图上不了**（怀疑派改，原文写「大概率能跑」）。GRU 没有 ANE 路径，fp32 模型整个不上 ANE（见 §1 ANE 行）。最多是卷积上 ANE、GRU 回 CPU，每帧要切换计算单元几次，每次约 0.2 ms（M1）。今天 Rust ORT 整帧 p50 是 0.70 ms（Python 0.40 ms），光切换开销就可能吃掉大半【推断】。
   - GPU / MLX：能跑（MLX 版已经有人做了），但每帧要提交 GPU，不划算【推断】。
-- **预计瓶颈**：派发和调度开销。BNNSGraph 是预先编译、整图融合、一次调用跑完，正对这个瓶颈。这类小模型上它对 ORT 有 2–13 倍的差距，见 §4.1 表 3、表 4 的 TCN【实测-他人，模型不同】。
+- **预计瓶颈**：派发和调度开销。BNNSGraph 是预先编译、整图融合、一次调用跑完，正对这个瓶颈。但 DAFx26 里它对 ORT 的倍数是 **0.45–13 倍**，不是原文的「2–13 倍」：LSTM-M 上 ORT 反而快一倍多；13 倍那组 ORT 是无状态的；BNNS 一侧是 fp16（§4.1）【实测-他人，模型不同】。整图编译省掉节点调度，省不掉 GRU 沿 33 个频点的串行小步【推断】见 `bnns-graph.md:21`。
 - **推理线程能不能直接调**：
   - BNNSGraph：能。要单线程编译、预分配工作区、输出由我们提供、形状全固定。
   - Core ML CPU：只能在 B 档登记豁免后调。每帧至少新建和释放一个 Objective-C 输出对象，豁免表要按 `CoreML` / `Espresso` / `objc_` 命名空间重写（`architecture.md:368`）。
