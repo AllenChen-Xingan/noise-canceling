@@ -10,10 +10,11 @@
 3. ✅ Pipeline 构造期比对：`with_stages(engine, io, block, &描述, stages)`，不一致返回 `PipelineError::Graph`；实时 `process` 不变
 4. ✅ 参数清单交叉校验：speaker（包络 · 门控）、polish 现有参数表测试里各比一次节点的参数清单
 5. ✅ 拆文件：`src/engine/src/pipeline.rs`（607 行）拆出 `pipeline/error.rs` 与 `pipeline/rt.rs`；`src/engine/tests/stages.rs`（601 行）拆出 `tests/fallback.rs` 与 `tests/common/mod.rs`
-6. ⏳ 会话记录头加处理图内容 ID 与模型 ID（`record.rs` 577 行，要拆出 `session.rs`）
-7. ⏳ schema 导出（`processing-graph.kinds.json` · `session-header.fields.json`），测试放 `src/schema/tests/graph.rs`
-8. ⏳ 规约 §3.3 与 `.42cog/cog.md` 同步
-9. ⏳ 全量 `xtask ci` · `eval ci` 前后对比 · codex-review
+6. ✅ 会话记录：`SessionHeader`/`SessionRecord` 从 `record.rs` 搬到 `src/types/src/session.rs`；头加 `graph`（处理图内容 ID）· `model`，格式 1 → 2；格式 1 照常能读（两项为空）；头部键正本 `HEADER_KEYS`（穷举解构）
+7. ✅ schema 导出：`processing-graph.kinds.json` · `session-header.fields.json`；测试 `src/schema/tests/graph.rs`（8 条），含「编号永不复用」对照 main 基线（`graph::RETIRED`）。基线读取函数加了文件名参数（`baseline*`），原 `shm_baseline*` 保留为包装
+8. ✅ 规约 §3.3 · §3.7.5、`.42cog/cog.md`、`specs/schema/README.md` 已同步
+9. ✅ `xtask ci` 全绿；`eval ci` 与 main（0604143）对比：门禁结论 · 通过数相同，`report.json` 只有一项计时指标（R02 单帧耗时，debug 构建受机器负载影响）不同
+10. ⏳ codex-review
 
 ## 纯技术题，我定了（理由）
 
@@ -27,6 +28,10 @@
 
 - iface：模型节点与 `Model::name()` 的比对（要等模型接口定下来）
 - 以后接频域级的人：模型适配器调用频域级时，在适配器构造处照 `match_chain` 比对 `ProcessingGraph::spectral`
+
+## 顺带发现（不在我范围，报大总管）
+
+- `src/types/src/policy.rs` 688 行、`src/types/src/desc.rs` 930 行，超 600 行上限
 
 ## 待拍板
 
