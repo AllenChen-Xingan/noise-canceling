@@ -298,12 +298,14 @@ fn config_schema_ranges_agree_with_validate() {
 }
 
 /// 总线名：schema 的正则 + 长度 与 `validate_bus_name` 逐例一致。
-/// 口径：schema 的 maxLength 数字符、Rust 数字节；只用 ASCII 名字时两者相同（非 ASCII 时 schema 更宽，Rust 兜底）。
+/// 名字只许可见 ASCII，所以 schema 的 maxLength（数字符）与 Rust 的长度（数字节）是同一个数。
 #[test]
 fn bus_name_pattern_agrees_with_validate() {
     let schema = committed("config.schema.json");
     let long_ok = format!("/vdn-{}", "a".repeat(Config::BUS_NAME_MAX - 5));
     let long_bad = format!("/vdn-{}", "a".repeat(Config::BUS_NAME_MAX - 4));
+    // 14 个字符、32 字节：按字符数会放行，按字节数要拒（codex 第 2 轮 #2）
+    let multi = format!("/vdn-{}", "中".repeat(9));
     for name in [
         "/vdn-bus",
         "/vdn-x",
@@ -313,7 +315,7 @@ fn bus_name_pattern_agrees_with_validate() {
         "/other",
         "/vdn-a/b",
         "/vdn-a\u{0}b",
-        "/vdn-a b",
+        "/vdn-a b", "/vdn-~!", "/vdn-中", &multi,
         &long_ok,
         &long_bad,
     ] {
