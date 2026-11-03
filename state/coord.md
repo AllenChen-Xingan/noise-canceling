@@ -60,13 +60,15 @@
 |---|---|
 | 重编译 / 全量测试 / 跑模型（1 个） | rustbe（Accelerate 版 1.5 min + `--pace-ms 16` 实时节奏 10 min），17:43 起；锁 `_tmp/heavy.lock` |
 
-排队：47 方 18:07–18:37 → applebe（实时线程策略 8 设置 × 60 s + 最好者 10 min，约 18 min，`apple-rs/tools/rt-matrix.sh`）→ rustbe（native 上跑同样的 ①–④ 设置）
+排队：47 方 18:07–18:37 → applebe（实时线程策略 + 认人 ECAPA `ecapa.sh`，约 22 min）→ rustbe（native 上跑同样的 ①–④ 设置）
 
 **跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。加锁文件：mkdir 主目录 `_tmp/heavy.lock`（内写 owner · 开始 · 预计结束，跑完 rmdir），由各自大总管放名额时建、收回时删，手下不碰（47 已确认）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 人答 D69/D74 冲突 → D75：看实际耗电（mW）+ 对其他程序性能的影响（固定负载变慢 ≤ 1% 目标 / 2% 上限），活动监视器 CPU% 只作参考
+- 2026-11-02 47 方决策（其分支，编号已顺延）：D73 最低系统 14.4；D74 降噪线程接受低频（能效核约 1.1 GHz，0.7 ms 计算变约 3 ms；功耗 72 / 77 / 101 mW；time-constraint 默认开、Workgroup 默认不加）。⚠️ D74 与 D69「CPU 1%」口径打架：低频下 CPU% 高、耗电低 → 待问人。编号约定：记决策前看对方最大号、发「占用 Dxx」；我方下一个从 D75 起
 - 2026-11-02 rustbe ①：Accelerate 版逐值一致（134.2 dB）但只快 4.7%（0.0844 vs 0.0886 ms），每帧 11 次分配（Accelerate 内部），过不了零分配；全进程每帧分配：手写 0 · ORT 1557（FE-M 1023）· tract 2247；bench 加了 `--qos rt` 与 `frames_over_3ms`。② 实时节奏长跑到 18:07
 - 2026-11-02 17:42 applebe 归还：苹果引擎最快 = BNNS Graph + GRU 展开，GTCRN p50 0.155 ms（ORT 0.384，快约 2.5 倍）、每帧 0 分配、134 dB；手写 Rust 0.088 仍最快。Core ML CPU fp32 0.39 / 展开 0.21 ms、每帧约 300 次 malloc、所有算子落 CPU、fp16 54 dB 不过；MLX Python 5.7–6.2 ms；FE-M 转不了 Core ML（view_as_complex）；修了 coremltools 分组 ConvTranspose2d 错转。⚠️ **按实时节奏 16 ms/帧跑 10 min：p50 0.82 ms（连续跑 0.155）、max 11.8 ms、4.8% 核，超 D69 上限，BE-DEADLINE 不过**——推断降频或被挪到能效核。DFN3 `_ll` 下界：连续跑三图 p50 0.61 ms / 10 ms ≈ 6.1% 核 → 不做流式重导出（AI 定），盲听用离线处理即可
 - 2026-11-02 人同意：GTCRN 主模型（D33）当假设继续验证 → 下一轮盲听放 DFN3 `_ll`（backlog 人耳）；019 把 DFN3 加进必测，看 1% 预算内跑不跑得动
