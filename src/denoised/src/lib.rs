@@ -158,6 +158,13 @@ pub struct WorkerStats {
     pub raw_skipped: u64,
     /// 执行过的控制命令数
     pub commands: u64,
+    /// 醒来迟到（直接判据之一，不靠读回调度策略）：开始处理时 Raw 里积了多少样本的最大值。
+    /// 准时醒来时 ≈ 一块 IO；多出来的就是迟到的量
+    pub max_raw_backlog: u64,
+    /// 处理超时（直接判据之二）：最近一个工作周期（`period_blocks` 块）的总处理耗时超过周期时长的次数
+    pub over_period: u64,
+    /// 最近一个工作周期总处理耗时的最大值（ns）
+    pub max_period_ns: u64,
     /// 插进 Processed 的零占位样本数
     pub placeholders_pushed: u64,
 }
@@ -222,13 +229,22 @@ pub struct Worker<P> {
     skip_over: Option<usize>,
     markers: [Marker; MAX_MARKERS],
     n_markers: usize,
+    /// 最近一个工作周期里各块的处理耗时（环形，固定大小，不分配）
+    recent: [u64; MAX_PERIOD_BLOCKS],
+    recent_pos: usize,
+    /// 一个工作周期几块（≤ MAX_PERIOD_BLOCKS）
+    period_blocks: usize,
     stats: WorkerStats,
 }
+
+/// 一个工作周期最多算多少块（GTCRN 768 / 96 = 8；留余量）
+const MAX_PERIOD_BLOCKS: usize = 64;
 
 // 构造：非实时
 impl<P: Processor> Worker<P> {
     pub fn new(proc: P, block: usize) -> Self {
         let block = block.max(1);
+        let proc_period = proc.period_samples();
         Self {
             proc,
             block,
@@ -239,6 +255,9 @@ impl<P: Processor> Worker<P> {
             skip_over: None,
             markers: [Marker::default(); MAX_MARKERS],
             n_markers: 0,
+            recent: [0; MAX_PERIOD_BLOCKS],
+            recent_pos: 0,
+            period_blocks: (proc_period / block).clamp(1, MAX_PERIOD_BLOCKS),
             stats: WorkerStats::default(),
         }
     }
@@ -409,6 +428,7 @@ impl<P: Processor> Worker<P> {
     pub fn step(&mut self, bus: &Bus) -> Step {
         let (raw, processed) = (bus.ring(RingId::Raw), bus.ring(RingId::Processed));
         let avail = raw.available();
+        self.stats.max_raw_backlog = self.stats.max_raw_backlog.max(avail as u64);
         if let Some(over) = self.skip_over
             && avail > over
         {
@@ -437,6 +457,16 @@ impl<P: Processor> Worker<P> {
         self.stats.total_process_ns = self.stats.total_process_ns.saturating_add(dt);
         if dt > self.block_ns() {
             self.stats.over_budget += 1;
+        }
+        // 最近一个工作周期的总耗时（滑动）
+        if let Some(slot) = self.recent.get_mut(self.recent_pos) {
+            *slot = dt;
+        }
+        self.recent_pos = (self.recent_pos + 1) % self.period_blocks;
+        let window: u64 = self.recent.get(..self.period_blocks).map_or(0, |w| w.iter().sum());
+        self.stats.max_period_ns = self.stats.max_period_ns.max(window);
+        if window > self.block_ns() * self.period_blocks as u64 {
+            self.stats.over_period += 1;
         }
         self.push_block(&processed);
         self.stats.blocks += 1;
