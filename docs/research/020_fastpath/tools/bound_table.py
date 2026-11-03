@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """研究 020：把本机峰值（hw-peak）与逐层计时（gtcrn-layers）合成「离下界多少倍」表。
 
-用法：bound_table.py <results 目录> [--qos-peak rt|bg] [--layers-qos rt|bg] [--pace 0|16]
+用法：bound_table.py <results 目录> [--qos-peak ui|bg] [--layers-qos ui|rt|bg] [--pace 0|16] [--variant <后端>]
                       [--paced-peak]（D79 能效核口径：常数取 <目录>/hwpeak_paced.jsonl，即按 16 ms 节奏醒来时量的）
                       [--peak-dir <目录>]（峰值文件在另一个结果目录时）
 输入：<目录>/hwpeak.jsonl、<目录>/layers.jsonl（exp012 tools/run_peak_layers.sh 产出）
@@ -50,7 +50,11 @@ def main():
     ]
     if "--paced-peak" in sys.argv:
         pk = [r for r in load(pd / "hwpeak_paced.jsonl") if r["qos"] == qp]
-        cont = [r for r in load(pd / "hwpeak.jsonl") if r["qos"] == "rt"] if (pd / "hwpeak.jsonl").exists() else []
+        # 非线性延迟的换算基准只用 ui 连续跑（rt 连续跑会被系统降级，那组常数作废；exp012 README「口径坑」，codex 020 第 2 轮 #4）
+        ui = pd / "hwpeak_ui.jsonl"
+        if not ui.exists():
+            sys.exit(f"缺 {ui}：节奏模式要用 --qos ui 的连续跑峰值换算非线性延迟（rt 连续跑的常数作废）")
+        cont = [r for r in load(ui) if r["qos"] == "ui"]
         if not pk or not lays:
             sys.exit(f"没有 qos={qp} 的节奏峰值或 qos={ql} pace={pace} variant={variant} 的逐层数据")
         fma_tput = med([r["fma_tput_lanes_per_ns"]["median"] for r in pk])
@@ -58,16 +62,19 @@ def main():
         l1 = med([r["read16k_gbps"]["median"] for r in pk])
         if cont:  # 非线性延迟没在节奏下量：按 FMA 延迟之比从连续跑换算（推断，表头写明）
             nl_lat = med([r["sig_fast_lat_ns"]["median"] for r in cont]) * fma_lat / med([r["fma_lat_ns"]["median"] for r in cont])
-            nl_note = "按 FMA 延迟之比从连续跑换算（推断）"
+            nl_note = "按 FMA 延迟之比从 ui 连续跑换算（推断）"
         else:
-            nl_lat, nl_note = 20 * fma_lat, "无连续跑数据，按 20 个 FMA 延迟估计"
+            sys.exit(f"{ui} 里没有 qos=ui 的行")
         consts = (
             f"本机实测常数（按 {pace} ms 节奏醒来时量，qos={qp}，{len(pk)} 轮 × 每轮 {pk[0]['bursts']} 次醒来，取中位的中位）："
             f"FMA 吞吐 {fma_tput:.1f} 个/ns · FMA 延迟 {fma_lat:.3f} ns · L1 读（16 KB）{l1:.0f} GB/s · sig_fast 延迟 {nl_lat:.2f} ns（{nl_note}）；"
             f"非线性按每个 {NL_LANE_OPS} 次运算计（估计）"
         )
     else:
-        peaks = [r for r in load(pd / "hwpeak.jsonl") if r["qos"] == qp]
+        if qp == "rt":
+            sys.exit("连续跑的峰值不能用 --qos-peak rt（rt 连续跑会被系统降级，常数作废）；用 ui（hwpeak_ui.jsonl）或 bg（能效核）")
+        pf = pd / ("hwpeak_ui.jsonl" if qp == "ui" else "hwpeak.jsonl")
+        peaks = [r for r in load(pf) if r["qos"] == qp]
         if not peaks or not lays:
             sys.exit(f"没有 qos={qp} 的峰值或 qos={ql} pace={pace} variant={variant} 的逐层数据")
         fma_tput = med([r["fma_tput_lanes_per_ns"]["median"] for r in peaks])
