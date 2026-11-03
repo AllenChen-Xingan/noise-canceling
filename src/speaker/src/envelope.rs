@@ -43,15 +43,26 @@ impl EnvelopeParams {
     }
 
     /// 每个可调参数都在描述表范围内（越界拒收）。
+    /// 穷举解构：结构加了字段而这里没登记描述表，编译失败。
     pub fn validate(&self) -> Result<(), vdn_types::RangeError> {
         use vdn_types::desc::*;
-        FLOOR_DB.check(self.floor_db)?;
-        OPEN_DB.check(self.open_db)?;
-        ATTACK_S.check(self.attack_s)?;
-        RELEASE_S.check(self.release_s)?;
-        HANGOVER_S.check(self.hangover_s)?;
-        VAD_ON.check(self.vad_on)?;
-        VAD_OFF.check(self.vad_off)?;
+        let EnvelopeParams {
+            sr: _,
+            floor_db,
+            open_db,
+            attack_s,
+            release_s,
+            hangover_s,
+            vad_on,
+            vad_off,
+        } = *self;
+        FLOOR_DB.check(floor_db)?;
+        OPEN_DB.check(open_db)?;
+        ATTACK_S.check(attack_s)?;
+        RELEASE_S.check(release_s)?;
+        HANGOVER_S.check(hangover_s)?;
+        VAD_ON.check(vad_on)?;
+        VAD_OFF.check(vad_off)?;
         Ok(())
     }
 

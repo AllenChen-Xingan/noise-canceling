@@ -46,14 +46,24 @@ impl PolishParams {
     };
 
     /// 每个字段都在描述表范围内（解析命令行 / 配置时调；越界拒收）。
+    /// 穷举解构：结构加了字段而这里没登记描述表，编译失败。
     pub fn validate(&self) -> Result<(), vdn_types::RangeError> {
-        desc::POLISH_SMOOTH.check(self.smooth)?;
-        desc::POLISH_FLOOR_DB.check(self.floor_db)?;
-        desc::POLISH_COMFORT_DB.check(self.comfort_db)?;
-        desc::POLISH_DEMUFFLE_MAX_DB.check(self.demuffle_max_db)?;
-        desc::POLISH_AGC.check(self.agc)?;
-        desc::POLISH_AGC_TARGET_DBFS.check(self.agc_target_dbfs)?;
-        desc::POLISH_AGC_RANGE_DB.check(self.agc_range_db)?;
+        let PolishParams {
+            smooth,
+            floor_db,
+            comfort_db,
+            demuffle_max_db,
+            agc,
+            agc_target_dbfs,
+            agc_range_db,
+        } = *self;
+        desc::POLISH_SMOOTH.check(smooth)?;
+        desc::POLISH_FLOOR_DB.check(floor_db)?;
+        desc::POLISH_COMFORT_DB.check(comfort_db)?;
+        desc::POLISH_DEMUFFLE_MAX_DB.check(demuffle_max_db)?;
+        desc::POLISH_AGC.check(agc)?;
+        desc::POLISH_AGC_TARGET_DBFS.check(agc_target_dbfs)?;
+        desc::POLISH_AGC_RANGE_DB.check(agc_range_db)?;
         Ok(())
     }
 

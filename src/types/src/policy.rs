@@ -96,9 +96,15 @@ impl Hysteresis {
     /// 每个字段都在描述表的范围内（加载配置、标定扫参时调；越界拒收）。
     pub fn validate(&self) -> Result<(), crate::desc::RangeError> {
         use crate::desc::*;
-        HYST_CONFIRM_S.check(self.confirm_s)?;
-        HYST_MIN_CONFIDENCE.check(self.min_confidence)?;
-        HYST_MIN_DWELL_S.check(self.min_dwell_s)?;
+        // 穷举解构：加了字段而没登记描述表，编译失败
+        let Hysteresis {
+            confirm_s,
+            min_confidence,
+            min_dwell_s,
+        } = *self;
+        HYST_CONFIRM_S.check(confirm_s)?;
+        HYST_MIN_CONFIDENCE.check(min_confidence)?;
+        HYST_MIN_DWELL_S.check(min_dwell_s)?;
         Ok(())
     }
 
@@ -141,10 +147,17 @@ impl Transition {
     /// 每个字段都在描述表的范围内（加载配置时调；越界拒收）。
     pub fn validate(&self) -> Result<(), crate::desc::RangeError> {
         use crate::desc::*;
-        TRANS_GLIDE_S.check(self.glide_s)?;
-        TRANS_MODEL_CROSSFADE_S.check(self.model_crossfade_s)?;
-        TRANS_MAX_DB_PER_S.check(self.max_db_per_s)?;
-        TRANS_MANUAL_RAMP_S.check(self.manual_ramp_s)?;
+        // 穷举解构：加了字段而没登记描述表，编译失败
+        let Transition {
+            glide_s,
+            model_crossfade_s,
+            max_db_per_s,
+            manual_ramp_s,
+        } = *self;
+        TRANS_GLIDE_S.check(glide_s)?;
+        TRANS_MODEL_CROSSFADE_S.check(model_crossfade_s)?;
+        TRANS_MAX_DB_PER_S.check(max_db_per_s)?;
+        TRANS_MANUAL_RAMP_S.check(manual_ramp_s)?;
         Ok(())
     }
 }

@@ -79,22 +79,41 @@ impl Default for GateParams {
 
 impl GateParams {
     /// 每个可调参数都在描述表范围内（解析命令行 / 配置时调；越界拒收）。
+    /// 穷举解构：结构加了字段而这里没登记描述表，编译失败（防漏，照 schema 线 `vdn_shm::desc` 的办法）。
     pub fn validate(&self) -> Result<(), vdn_types::RangeError> {
         use vdn_types::desc::*;
-        FLOOR_DB.check(self.floor_db)?;
-        GATE_ATTACK_S.check(self.attack_s)?;
-        GATE_REOPEN_S.check(self.reopen_s)?;
-        GATE_RELEASE_S.check(self.release_s)?;
-        GATE_ONSET_GAP_S.check(self.onset_gap_s)?;
-        GATE_ONSET_JUMP_DB.check(self.onset_jump_db)?;
-        GATE_CONFIRM_N.check_count(self.confirm_n)?;
-        GATE_ONSET_LEVEL_MARGIN_DB.check(self.onset_level_margin_db)?;
-        GATE_LEVEL_CLOSE_DB.check_opt(self.level_close_db)?;
-        GATE_LEVEL_CLOSE_HOLD_S.check(self.level_close_hold_s)?;
-        GATE_ONSET_ARM_S.check(self.onset_arm_s)?;
-        GATE_ONSET_REFRACTORY_S.check(self.onset_refractory_s)?;
-        VAD_ON.check(self.vad_on)?;
-        VAD_OFF.check(self.vad_off)?;
+        let GateParams {
+            sr: _,
+            clock_rate: _,
+            floor_db,
+            attack_s,
+            reopen_s,
+            release_s,
+            onset_gap_s,
+            onset_jump_db,
+            confirm_n,
+            onset_level_margin_db,
+            level_close_db,
+            level_close_hold_s,
+            onset_arm_s,
+            onset_refractory_s,
+            vad_on,
+            vad_off,
+        } = *self;
+        FLOOR_DB.check(floor_db)?;
+        GATE_ATTACK_S.check(attack_s)?;
+        GATE_REOPEN_S.check(reopen_s)?;
+        GATE_RELEASE_S.check(release_s)?;
+        GATE_ONSET_GAP_S.check(onset_gap_s)?;
+        GATE_ONSET_JUMP_DB.check(onset_jump_db)?;
+        GATE_CONFIRM_N.check_count(confirm_n)?;
+        GATE_ONSET_LEVEL_MARGIN_DB.check(onset_level_margin_db)?;
+        GATE_LEVEL_CLOSE_DB.check_opt(level_close_db)?;
+        GATE_LEVEL_CLOSE_HOLD_S.check(level_close_hold_s)?;
+        GATE_ONSET_ARM_S.check(onset_arm_s)?;
+        GATE_ONSET_REFRACTORY_S.check(onset_refractory_s)?;
+        VAD_ON.check(vad_on)?;
+        VAD_OFF.check(vad_off)?;
         Ok(())
     }
 
