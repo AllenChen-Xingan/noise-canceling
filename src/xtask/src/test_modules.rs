@@ -2,7 +2,7 @@
 //!
 //! 规则（窄，大总管 8d 定 2026-11-02）：文件是 `tests.rs`、`tests/mod.rs` 或 `tests/` 下的子模块，
 //! **并且**它的父模块文件在顶层（花括号深度 0，注释与字符串不算）写了 `#[cfg(test)]` 紧跟 `mod tests;`，
-//! **并且**同目录没有任何不带 `#[cfg(test)]` 的顶层 `tests` 声明（外置、内联、`r#tests` 都算）。其余一律照实时代码查；需要例外的文件，
+//! **并且**同目录的父模块文件里没有别处出现 `mod tests`（带属性、同行、内联、嵌套、`r#tests` 都算，见 [`tests_decls`]）。其余一律照实时代码查；需要例外的文件，
 //! 在文件头写整模块 NRT 标注（`src/capture/src/testing.rs` 的先例）。
 //!
 //! 为什么选窄规则：最初的宽规则认「任何 `#[cfg(test)] mod x;` 引入的文件」，codex 第 2–5 轮
@@ -45,7 +45,22 @@ pub fn mod_decl(code: &str) -> Option<(String, bool)> {
     }
 }
 
-/// 顶层的 `mod tests;` 声明：（带 `#[cfg(test)]` 的有没有，不带的有没有）。
+/// 这行代码里有几处 `mod tests` / `mod r#tests`（不管位置、属性、同行别的项）。
+fn mod_tests_mentions(code: &str) -> usize {
+    let words: Vec<&str> = code
+        .split(|c: char| !(c.is_alphanumeric() || c == '_' || c == '#'))
+        .filter(|w| !w.is_empty())
+        .collect();
+    words
+        .windows(2)
+        .filter(|w| w[0] == "mod" && matches!(w[1], "tests" | "r#tests"))
+        .count()
+}
+
+/// 本文件的 `tests` 声明：（有没有放行理由，有没有别的引用）。
+/// 放行理由只有一种写法：顶层 `#[cfg(test)]` 下一行单独的 `mod tests;`。代码里（注释与字符串已剥掉）
+/// 其他任何位置、任何写法的 `mod tests` 都算「别的引用」，保守取消放行——带属性、和别的项同一行、
+/// 内联、嵌套、`r#tests` 都在内（codex 第 6、7 轮）。顶层 `#[cfg(test)]` 下的内联 `mod tests {` 不算引用。
 fn tests_decls(src: &str) -> (bool, bool) {
     let (mut gated, mut plain) = (false, false);
     let mut depth = 0i64;
@@ -55,17 +70,12 @@ fn tests_decls(src: &str) -> (bool, bool) {
         if t.is_empty() {
             continue;
         }
-        // 带 cfg(test) 的外置 `mod tests;` 才算放行理由；其余任何顶层 `tests` 声明（不带 cfg(test) 的外置或内联）
-        // 都可能让生产代码用到 tests/ 下的文件，保守取消放行（codex 第 6 轮 P1 #1）
-        if depth == 0
-            && let Some((n, inline)) = mod_decl(t)
-            && n == "tests"
-        {
-            match (prev_cfg_test, inline) {
-                (true, false) => gated = true,
-                (true, true) => {}
-                (false, _) => plain = true,
-            }
+        let n = mod_tests_mentions(t);
+        let decl = mod_decl(t).filter(|(name, _)| name == "tests");
+        match decl {
+            Some((_, inline)) if n == 1 && depth == 0 && prev_cfg_test => gated |= !inline,
+            _ if n > 0 => plain = true,
+            _ => {}
         }
         prev_cfg_test = depth == 0 && t == "#[cfg(test)]";
         depth += t.matches('{').count() as i64 - t.matches('}').count() as i64;
@@ -197,6 +207,9 @@ mod tests {
         for main in [
             "mod tests {\n    mod child;\n}\nfn main() {}\n",
             "mod r#tests;\nfn main() {}\n",
+            "#[allow(dead_code)] mod tests;\nfn main() {}\n",
+            "fn main() {} mod tests;\n",
+            "#[allow(dead_code)]\n#[cfg(test)]\nfn x() {}\nmod tests;\nfn main() {}\n",
         ] {
             let d = tmp("dual2");
             fs::write(d.join("src/lib.rs"), "#[cfg(test)]\nmod tests;\n").unwrap();
