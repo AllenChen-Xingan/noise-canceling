@@ -30,8 +30,12 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
         return;
     };
     let keys = desc_keys(&desc);
-    if keys.is_empty() {
-        problems.push(format!("{DESC_FILE} 里一条参数描述都没解析出来（R-PARAM）"));
+    let consts = desc_const_count(&desc);
+    if keys.is_empty() || keys.len() != consts {
+        problems.push(format!(
+            "{DESC_FILE}：解析出 {} 个键名，但有 {consts} 个 ParamDesc 常量；解析失败的条目会让 R-PARAM 漏查（R-PARAM）",
+            keys.len()
+        ));
     }
     let tokens = param_tokens(&keys);
 
@@ -64,8 +68,10 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
 
 /// 描述表里每条的键名：`p(<编号>, "<键名>", …` 的第二个参数（容许 rustfmt 把参数拆到多行）。
 pub fn desc_keys(src: &str) -> Vec<String> {
+    // 先剥掉注释（参数之间夹注释也能解析，codex 第 3 轮 P2 #3）；字符串原样保留，键名在里面
+    let stripped: String = strip_comments_keep_strings(src).join("\n");
     let mut out = Vec::new();
-    let mut rest = src;
+    let mut rest = stripped.as_str();
     while let Some(i) = rest.find("p(") {
         let before_ok = i == 0
             || !rest[..i]
@@ -92,6 +98,66 @@ pub fn desc_keys(src: &str) -> Vec<String> {
         if let Some(end) = a.find('"') {
             out.push(a[..end].to_string());
         }
+    }
+    out
+}
+
+/// 描述表里 `ParamDesc` 常量的个数（`pub const X: ParamDesc`），用来核对 [`desc_keys`] 一条不漏。
+pub fn desc_const_count(src: &str) -> usize {
+    code_lines(src)
+        .iter()
+        .filter(|l| {
+            l.trim_start()
+                .strip_prefix("pub const ")
+                .and_then(|r| r.split_once(':'))
+                .is_some_and(|(_, ty)| ty.trim_start().starts_with("ParamDesc"))
+        })
+        .count()
+}
+
+/// 逐行剥掉 `//` 与 `/* */` 注释，字符串原样保留（给 [`desc_keys`] 用）。
+fn strip_comments_keep_strings(src: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut in_block = 0u32;
+    for line in src.lines() {
+        let c: Vec<char> = line.chars().collect();
+        let mut o = String::new();
+        let mut i = 0;
+        let mut in_str = false;
+        while i < c.len() {
+            if in_block > 0 {
+                if c[i] == '*' && c.get(i + 1) == Some(&'/') {
+                    in_block -= 1;
+                    i += 2;
+                } else if c[i] == '/' && c.get(i + 1) == Some(&'*') {
+                    in_block += 1;
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            } else if in_str {
+                o.push(c[i]);
+                if c[i] == '\\' {
+                    if let Some(&n) = c.get(i + 1) {
+                        o.push(n);
+                    }
+                    i += 2;
+                } else {
+                    in_str = c[i] != '"';
+                    i += 1;
+                }
+            } else if c[i] == '/' && c.get(i + 1) == Some(&'/') {
+                break;
+            } else if c[i] == '/' && c.get(i + 1) == Some(&'*') {
+                in_block = 1;
+                i += 2;
+            } else {
+                in_str = c[i] == '"';
+                o.push(c[i]);
+                i += 1;
+            }
+        }
+        out.push(o);
     }
     out
 }
@@ -422,7 +488,12 @@ fn two_nums_then_close(s: &str, i: usize) -> bool {
     }
     let i = skip_ws(s, e + 1);
     let Some(e) = num_at(s, i) else { return false };
-    s[skip_ws(s, e)..].starts_with(')')
+    let mut e = skip_ws(s, e);
+    // 可选尾逗号：`clamp(-60.0, 0.0,)`
+    if s[e..].starts_with(',') {
+        e = skip_ws(s, e + 1);
+    }
+    s[e..].starts_with(')')
 }
 
 /// 一行代码里有没有数字字面量写的范围。
@@ -546,8 +617,19 @@ mod tests {
     fn real_desc_file_parses() {
         let src = fs::read_to_string(crate::root().join(DESC_FILE)).unwrap();
         let keys = desc_keys(&src);
-        assert!(keys.len() >= 30, "{keys:?}");
+        assert_eq!(keys.len(), desc_const_count(&src), "{keys:?}");
         assert!(keys.iter().any(|k| k == "floor_db"));
+    }
+
+    /// 条目里夹注释也能解析；解析不出时条数对不上（`check` 据此报错）。
+    #[test]
+    fn desc_keys_survive_comments_and_count_mismatch_is_detected() {
+        let src = "pub const A: ParamDesc = p(106, /* 编号说明 */ \"gate.confirm_n\", Unit::Count);\n\
+                   pub const B: ParamDesc = p(\n    2, // 衰减下限\n    \"floor_db\",\n);\n";
+        assert_eq!(desc_keys(src), ["gate.confirm_n", "floor_db"]);
+        assert_eq!(desc_const_count(src), 2);
+        let broken = "pub const A: ParamDesc = make(\"x\");\n";
+        assert_ne!(desc_keys(broken).len(), desc_const_count(broken));
     }
 
     #[test]
@@ -584,6 +666,11 @@ mod tests {
             "    let f = floor_db.clamp(-60., 0.);",
             // 字符串里写放行标记不算放行
             "    let s = \"tidy: 非参数范围：x\"; let f = floor_db.clamp(-60.0, 0.0);",
+            // 尾逗号
+            "    let f = floor_db.clamp(-60.0, 0.0,);",
+            "            ParamField::FloorDb => (-60.0, 0.0,),",
+            // 字节原始字符串里的放行标记不算放行
+            "    let s = br#\"tidy: 非参数范围：x\"#; let f = floor_db.clamp(-60.0, 0.0);",
         ];
         for line in bad {
             assert_eq!(range_problems("x.rs", line, &toks()).len(), 1, "{line}");
@@ -613,6 +700,8 @@ mod tests {
             // 字符串里的负例（测试数据）不是代码
             "        \"    let ok = (-30.0..=0.0).contains(&p.floor_db);\",",
             "    let s = r#\"floor_db.clamp(-60.0, 0.0)\"#;",
+            "    let s = br#\"\" floor_db.clamp(-60.0, 0.0) \"#;",
+            "    let s = br\"floor_db.clamp(-60.0, 0.0)\";",
             // 块注释里的
             "    /* floor_db.clamp(-60.0, 0.0) */ let x = 1;",
             // 生命周期与字符字面量不打乱剥离
