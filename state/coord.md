@@ -58,15 +58,17 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | rustbe（Accelerate 版 1.5 min + `--pace-ms 16` 实时节奏 10 min），17:43 起；锁 `_tmp/heavy.lock` |
+| 重编译 / 全量测试 / 跑模型（1 个） | applebe（构建 · ECAPA · BE-IMPACT · 人跑 powermetrics 矩阵），18:12 起约 23 min；锁 `_tmp/heavy.lock` |
 
-排队：47 方 18:07–18:37 → applebe（实时线程策略 + 认人 ECAPA `ecapa.sh`，约 22 min）→ rustbe（native 上跑同样的 ①–④ 设置）
+排队：rustbe（run_rt_probe.sh 四种线程设置 + native-fast 实时节奏 60 s，约 7 min）
 
 **跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。加锁文件：mkdir 主目录 `_tmp/heavy.lock`（内写 owner · 开始 · 预计结束，跑完 rmdir），由各自大总管放名额时建、收回时删，手下不碰（47 已确认）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 applebe：ECAPA 转不出 Core ML（补了 onnx2torch Clip 后又卡在 coremltools 不支持 prod），记「转不出」；BE-IMPACT 不能下结论：7 次「关」之间离散 10–22%，BNNS rt 慢 5.9%（噪声 10.6%）、手写 rt −0.6%（噪声 22%），都在噪声里 → 测法要改（前台负载不占满核 · 多跑几对 · 取最小值），留下次。暂停让 47 陪人跑真设备小测试（约 2 min），之后人跑 powermetrics
+- 2026-11-02 18:02 rustbe 实时节奏 10 min（37 500 帧，ui，插电）：手写 p50 0.61 ms（连续跑 0.088）· p99.9 0.87 · max 6.95 ms · 6 帧 > 3 ms（BE-DEADLINE 不过）· 3.2% 核 · 0 分配；Accelerate 版 p50 0.44 · max 4.17 · 1 帧 > 3 ms · 2.5% 核（实时节奏下比手写快约 21%，原因未查）。结论：连续跑的帧耗时在产品节奏下不成立
 - 2026-11-02 人答 D69/D74 冲突 → D75：看实际耗电（mW）+ 对其他程序性能的影响（固定负载变慢 ≤ 1% 目标 / 2% 上限），活动监视器 CPU% 只作参考
 - 2026-11-02 47 方决策（其分支，编号已顺延）：D73 最低系统 14.4；D74 降噪线程接受低频（能效核约 1.1 GHz，0.7 ms 计算变约 3 ms；功耗 72 / 77 / 101 mW；time-constraint 默认开、Workgroup 默认不加）。⚠️ D74 与 D69「CPU 1%」口径打架：低频下 CPU% 高、耗电低 → 待问人。编号约定：记决策前看对方最大号、发「占用 Dxx」；我方下一个从 D75 起
 - 2026-11-02 rustbe ①：Accelerate 版逐值一致（134.2 dB）但只快 4.7%（0.0844 vs 0.0886 ms），每帧 11 次分配（Accelerate 内部），过不了零分配；全进程每帧分配：手写 0 · ORT 1557（FE-M 1023）· tract 2247；bench 加了 `--qos rt` 与 `frames_over_3ms`。② 实时节奏长跑到 18:07
