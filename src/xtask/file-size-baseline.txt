@@ -1,13 +1,10 @@
 # R-SIZE 基线（src/xtask/src/file_size.rs）：存量超 600 行的文件，只许变小。
 # 格式：<行数> <相对仓库根的路径>[ # 放宽：<理由>]。新增或调大条目必须写放宽理由；收紧跑 `cargo run -p xtask -- size-baseline`。
-672 src/capture/src/lib.rs
-878 src/denoised/src/lib.rs # 放宽：#57（PR #63）合并带来 870 → 878，不拆别人的文件
 607 src/engine/src/pipeline.rs
 601 src/engine/tests/stages.rs
 629 src/eval/src/runner.rs
 1153 src/eval/src/verifiers.rs
 870 src/schema/tests/crosscheck.rs # 放宽：#57（PR #63）带入的新文件，不拆别人的文件
-659 src/speaker-lab/src/main.rs
 930 src/types/src/desc.rs
 688 src/types/src/policy.rs
 789 src/xtask/src/single_source.rs

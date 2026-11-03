@@ -9,7 +9,7 @@
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
 | hygiene | 600 行上限进 tidy · cli 同名类型 · 拆 cli 大文件；第二段（等 99 的 #57 合并）采样率只写一处 · 阈值比对 · #62 · `feat/code-hygiene` · `../noise_canceling-hygiene` | xtask · vdn-cli · vdn-types（采样率）· vdn-eval（阈值） | 已派（交代 `_tmp/20261102-b8/hygiene.md`） |
-| split | 拆 denoised / capture / speaker-lab 到 ≤600 行 · 同 #62 同 worktree | vdn-denoised · vdn-capture · vdn-speaker-lab | 已派（交代 `_tmp/20261102-b8/split.md`） |
+| split | 拆 denoised / capture / speaker-lab 到 ≤600 行 · 同 #62 同 worktree | vdn-denoised · vdn-capture · vdn-speaker-lab | 完成，窗口已关；43 测试拆前拆后同；交接 `state/handoff/split.md` |
 
 ## 进度板
 
@@ -29,3 +29,4 @@
 - 2026-11-02 e3 基准结束、锁删；两个手下改动进行中，全量验收等两人都报完成再跑
 - 2026-11-02 split 报：三文件已拆完、R-RATE 15 处已改；拆前测试数用导出旧提交对比法补跑
 - 2026-11-02 人定：single_source.rs 拆分时按规则改名（no_mirror.rs · param_range.rs），已转 99 iface
+- 2026-11-02 split 完成：三文件拆到 ≤600（最大 487）· 43 过拆前拆后同 · clippy 净 · R-RATE 15 处；8d 抽查行数与交接后关窗；两件转 hygiene（删 3 条基线 · tidy 认 cfg(test) 模块）
