@@ -80,7 +80,10 @@ pub fn read_session(s: &Session) -> (Vec<TensorRead>, Vec<TensorRead>) {
         .iter()
         .map(|i| TensorRead {
             name: i.name().to_string(),
-            shape: i.dtype().tensor_shape().map(|d| d.iter().copied().collect()),
+            shape: i
+                .dtype()
+                .tensor_shape()
+                .map(|d| d.iter().copied().collect()),
         })
         .collect();
     let outs = s
@@ -88,7 +91,10 @@ pub fn read_session(s: &Session) -> (Vec<TensorRead>, Vec<TensorRead>) {
         .iter()
         .map(|o| TensorRead {
             name: o.name().to_string(),
-            shape: o.dtype().tensor_shape().map(|d| d.iter().copied().collect()),
+            shape: o
+                .dtype()
+                .tensor_shape()
+                .map(|d| d.iter().copied().collect()),
         })
         .collect();
     (ins, outs)

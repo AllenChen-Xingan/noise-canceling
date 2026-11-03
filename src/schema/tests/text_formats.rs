@@ -63,10 +63,7 @@ fn params_change_without_export_is_red() {
     row["max"] = serde_json::json!(6.0);
     put(&d, params::TABLE_FILE, &v);
     let p = check(&d);
-    assert!(
-        p.len() == 1 && p[0].contains(params::TABLE_FILE),
-        "{p:#?}"
-    );
+    assert!(p.len() == 1 && p[0].contains(params::TABLE_FILE), "{p:#?}");
 }
 
 fn profile(key: &str, value: &str) -> String {
@@ -102,7 +99,10 @@ fn text_keys_agree_with_parsers() {
     // 不是文本键的参数（只在代码里用的，如门控的 gate.attack_s）和拼错的键都拒
     for bad in ["gate.attack_s", "floor", "Floor_db", "audio"] {
         assert!(UserProfile::from_text(&profile(bad, "0")).is_err(), "{bad}");
-        assert!(SceneTable::from_text(&scene_table(bad, "0")).is_err(), "{bad}");
+        assert!(
+            SceneTable::from_text(&scene_table(bad, "0")).is_err(),
+            "{bad}"
+        );
     }
     assert!(UserProfile::from_text(&profile("model", "nope")).is_err());
 }
@@ -114,8 +114,16 @@ fn out_of_range_values_are_rejected() {
         let d = f.desc();
         for bad in [d.min - 0.5, d.max + 0.5] {
             let v = bad.to_string();
-            assert!(UserProfile::from_text(&profile(d.key, &v)).is_err(), "{} = {v}", d.key);
-            assert!(SceneTable::from_text(&scene_table(d.key, &v)).is_err(), "{} = {v}", d.key);
+            assert!(
+                UserProfile::from_text(&profile(d.key, &v)).is_err(),
+                "{} = {v}",
+                d.key
+            );
+            assert!(
+                SceneTable::from_text(&scene_table(d.key, &v)).is_err(),
+                "{} = {v}",
+                d.key
+            );
         }
         for ok in [d.min, d.max] {
             let v = ok.to_string();

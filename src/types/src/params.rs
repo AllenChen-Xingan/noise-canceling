@@ -35,10 +35,12 @@ impl ModelId {
 
     /// 正本名或旧写法 → 模型。
     pub fn parse(s: &str) -> Option<Self> {
-        Self::ALL
-            .into_iter()
-            .find(|m| m.as_str() == s)
-            .or_else(|| Self::LEGACY.into_iter().find(|(old, _)| *old == s).map(|(_, m)| m))
+        Self::ALL.into_iter().find(|m| m.as_str() == s).or_else(|| {
+            Self::LEGACY
+                .into_iter()
+                .find(|(old, _)| *old == s)
+                .map(|(_, m)| m)
+        })
     }
 }
 
@@ -373,8 +375,14 @@ mod tests {
     /// FE-M 的两种写法解析到同一个模型；写出只用正本；`NAMES` 与 `ALL` 一一对应；旧写法不与正本撞名。
     #[test]
     fn model_names_single_source() {
-        assert_eq!(ModelId::parse("fastenhancer-m"), Some(ModelId::FastEnhancerM));
-        assert_eq!(ModelId::parse("fastenhancer_m"), Some(ModelId::FastEnhancerM));
+        assert_eq!(
+            ModelId::parse("fastenhancer-m"),
+            Some(ModelId::FastEnhancerM)
+        );
+        assert_eq!(
+            ModelId::parse("fastenhancer_m"),
+            Some(ModelId::FastEnhancerM)
+        );
         assert_eq!(ModelId::FastEnhancerM.as_str(), "fastenhancer-m");
         assert_eq!(ModelId::parse("FastEnhancer-M"), None);
         for (m, n) in ModelId::ALL.into_iter().zip(ModelId::NAMES) {

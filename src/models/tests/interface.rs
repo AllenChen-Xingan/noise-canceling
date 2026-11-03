@@ -24,7 +24,10 @@ fn file_matches_declaration(kind: ModelKind) {
     };
     let s = session::open(&path).expect("打开会话");
     let (ins, outs) = read_session(&s);
-    eprintln!("{kind:?} {}\n  输入 {ins:?}\n  输出 {outs:?}", path.display());
+    eprintln!(
+        "{kind:?} {}\n  输入 {ins:?}\n  输出 {outs:?}",
+        path.display()
+    );
     check_session(&kind.interface(), &s).unwrap_or_else(|e| panic!("{kind:?}：{e}"));
     let m = kind.open(&path).expect("打开模型");
     let d = kind.declared();

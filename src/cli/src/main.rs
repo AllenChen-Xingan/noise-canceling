@@ -18,8 +18,8 @@ mod verify;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use clap::{Args, Parser, Subcommand, ValueEnum};
 use clap::builder::PossibleValuesParser;
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use serde_json::json;
 use vdn_engine::{Engine, FaultInjector, FaultKind, Model, SafetyConfig, offline};
 use vdn_models::{AnyModel, BoxError, ModelId, ModelKind};
@@ -815,7 +815,10 @@ mod tests {
             let got = kind_of(&["vdn", "denoise", "a.wav", "b.wav", "--model", id.as_str()]);
             assert_eq!(got, Some(ModelKind::from_id(id)), "{}", id.as_str());
         }
-        assert_eq!(kind_of(&["vdn", "denoise", "a.wav", "b.wav", "--model", "nope"]), None);
+        assert_eq!(
+            kind_of(&["vdn", "denoise", "a.wav", "b.wav", "--model", "nope"]),
+            None
+        );
     }
 
     /// 命令行默认值与描述表同源；越界按描述表拒收。

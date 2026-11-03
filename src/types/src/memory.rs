@@ -208,10 +208,9 @@ impl UserProfile {
                             let f = ParamField::parse(key).ok_or(text::err(line, "未知的参数"))?;
                             let v: f32 = text::num(line, value)?;
                             // 范围的正本是参数描述表；越界（含非有限）拒收，不悄悄夹值
-                            let v = f
-                                .desc()
-                                .check(v)
-                                .map_err(|_| text::err(line, "数值越界或不是有限数（范围见参数描述表）"))?;
+                            let v = f.desc().check(v).map_err(|_| {
+                                text::err(line, "数值越界或不是有限数（范围见参数描述表）")
+                            })?;
                             o.set(f, Some(v));
                         }
                     },
@@ -314,7 +313,8 @@ mod tests {
                 UserProfile::from_text(&src).unwrap();
             }
         }
-        let old = UserProfile::from_text("vdn-profile = 1\n[user cafe]\nmodel = fastenhancer_m\n").unwrap();
+        let old = UserProfile::from_text("vdn-profile = 1\n[user cafe]\nmodel = fastenhancer_m\n")
+            .unwrap();
         assert!(old.to_text().contains("model = fastenhancer-m\n"));
     }
 

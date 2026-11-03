@@ -10,6 +10,7 @@
 #![forbid(unsafe_code)]
 
 pub mod eval;
+pub mod models;
 pub mod params;
 pub mod shm;
 
@@ -126,6 +127,10 @@ pub fn export() -> Vec<Doc> {
         Doc {
             file: params::TABLE_FILE,
             text: pretty(&params::table_doc()),
+        },
+        Doc {
+            file: models::INTERFACE_FILE,
+            text: pretty(&models::interface_doc()),
         },
     ]
 }

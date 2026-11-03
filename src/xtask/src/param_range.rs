@@ -47,7 +47,10 @@ pub fn read_desc(root: &Path) -> Option<String> {
     let mut files = Vec::new();
     rs_files(&root.join(DESC_DIR), &mut files);
     files.sort();
-    let srcs: Vec<String> = files.iter().filter_map(|p| fs::read_to_string(p).ok()).collect();
+    let srcs: Vec<String> = files
+        .iter()
+        .filter_map(|p| fs::read_to_string(p).ok())
+        .collect();
     (!srcs.is_empty() && srcs.len() == files.len()).then(|| srcs.join("\n"))
 }
 
@@ -99,7 +102,6 @@ pub fn desc_const_count(src: &str) -> usize {
         })
         .count()
 }
-
 
 /// 参数名在代码里的写法：键名末段（`floor_db`）与驼峰形（`FloorDb`，`ParamField` 的变体名）。
 pub fn param_tokens(keys: &[String]) -> Vec<String> {

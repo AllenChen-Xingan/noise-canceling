@@ -336,8 +336,14 @@ mod tests {
                 assert_eq!(k.as_str(), m.id().as_str());
             }
         }
-        assert_eq!(SystemKind::parse("fastenhancer-m"), Some(SystemKind::FastEnhancerM));
-        assert_eq!(SystemKind::parse("fastenhancer_m"), Some(SystemKind::FastEnhancerM));
+        assert_eq!(
+            SystemKind::parse("fastenhancer-m"),
+            Some(SystemKind::FastEnhancerM)
+        );
+        assert_eq!(
+            SystemKind::parse("fastenhancer_m"),
+            Some(SystemKind::FastEnhancerM)
+        );
         assert_eq!(SystemKind::parse("nope"), None);
     }
 
