@@ -30,7 +30,8 @@ fn session_roundtrips_with_graph_and_model() {
     let text = r.to_text();
     assert!(text.starts_with("vdn-session = 2\n"), "{text}");
     assert!(text.contains(&format!("graph = {}\n", G.content_id())));
-    assert!(text.contains("model = fastenhancer_m\n"));
+    let fem = ModelId::FastEnhancerM.as_str();
+    assert!(text.contains(&format!("model = {fem}\n")), "{text}");
     assert_eq!(SessionRecord::from_text(&text).unwrap(), r);
 }
 
@@ -70,13 +71,24 @@ fn format_1_with_new_keys_is_rejected() {
     }
 }
 
+/// 旧写法的模型名（`fastenhancer_m`，2026-11-02 之前写出的会话记录）照常能读，再写出是正本名。
+#[test]
+fn legacy_model_name_still_reads() {
+    let fem = ModelId::FastEnhancerM.as_str();
+    let text = full().to_text().replace(&format!("model = {fem}"), "model = fastenhancer_m");
+    let r = SessionRecord::from_text(&text).unwrap();
+    assert_eq!(r.header.model, Some(ModelId::FastEnhancerM));
+    assert!(r.to_text().contains(&format!("model = {fem}\n")));
+}
+
 #[test]
 fn bad_headers_are_rejected() {
     let ok = full().to_text();
+    let model_line = format!("model = {}", ModelId::FastEnhancerM.as_str());
     let bad = [
         ok.replace("vdn-session = 2", "vdn-session = 3"),
-        ok.replace("model = fastenhancer_m", "model = nope"),
-        ok.replace("model = fastenhancer_m", "model = gtcrn extra"),
+        ok.replace(&model_line, "model = nope"),
+        ok.replace(&model_line, "model = gtcrn extra"),
         ok.replace(&format!("graph = {}", G.content_id()), "graph = xyz"),
         ok.replace("rate = 48000", "rate = 48000 1"),
         ok.replace("rate = 48000", "speed = 1"),
