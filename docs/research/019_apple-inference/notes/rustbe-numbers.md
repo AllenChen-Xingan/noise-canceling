@@ -1,6 +1,6 @@
 # rustbe 基准数字（转记 · 正式版 r4）
 
-> 来源：rustbe 会话消息 2026-11-02。**正本**在 rustbe worktree `docs/experiments/exp010-inference-bench/results/20261102-r4-clean/`（分支 `exp/010-rust-backend`），本页只是转记，合并后改成路径指针。r1–r3 受干扰，作废，不引用。
+> 来源：rustbe 会话消息 2026-11-02。**正本**在 rustbe worktree `docs/experiments/exp010-inference-bench/results/20261102-r4-clean/`（分支 `exp/010-rust-backend`），本页只是转记，合并后改成路径指针。r1–r3 受干扰，只作参考，不进结论（同 rustbe README 的说法）。
 > 条件：M5（Mac17,3）· macOS 27.0.1 (26A434) · 插电 · rustc 1.99.1；16:32:36 开跑，跑前负载 2.25、跑后 2.04。mix.wav；1 冷启动 + 200 预热 + 6000 计时；单线程；3 轮交替，给的是 3 轮范围；单位 ms。所有对拍都没有 first_bad。
 > 「每帧分配」= Rust 分配器次数。手写和 tract 是纯 Rust，等于全进程次数；ORT 的 C++ 内部分配不在内（旁证：每帧 1554 次 malloc，见 `our-models.md` §4）。
 
