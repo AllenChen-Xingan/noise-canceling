@@ -258,6 +258,23 @@ fn bench(o: &Opts) -> Result<(), String> {
     if count_malloc {
         alloc::install_process_hook();
     }
+    // 基准自己的缓冲（帧耗时、留存输出、迟到）先分配并逐页写一遍，再取「加载前」内存基线，
+    // 这样 BE-MEM 只量到后端和模型，不混进基准自己的约 12 MiB（codex 第 3 轮 #1）
+    let total = 1 + warmup + frames;
+    let pn = parity_n.min(n_in).min(total);
+    let mut times: Vec<f64> = Vec::with_capacity(frames);
+    let mut saved = vec![0f32; pn * per_out]; // 先存输出，跑完再对拍
+    let mut late: Vec<f64> = Vec::with_capacity(if pace > 0.0 { frames } else { 0 });
+    for v in [&mut times, &mut late] {
+        v.resize(v.capacity(), 0.0);
+        for i in (0..v.len()).step_by(512) {
+            v[i] = std::hint::black_box(1.0);
+        }
+        v.clear();
+    }
+    for i in (0..saved.len()).step_by(1024) {
+        saved[i] = std::hint::black_box(0.0);
+    }
     let fp0 = footprint_mb();
     let t0 = Instant::now();
     let (mut be, compile_ms, backend, extra): (Box<dyn Backend>, f64, String, String) = match be_name {
@@ -279,22 +296,21 @@ fn bench(o: &Opts) -> Result<(), String> {
     };
     let open_ms = t0.elapsed().as_secs_f64() * 1e3 - compile_ms;
 
-    let total = 1 + warmup + frames;
     let t0w = 1 + warmup;
-    let mut times = Vec::with_capacity(frames);
     let mut out = vec![0f32; per_out];
     let (mut first_ms, mut nonfinite_frames) = (0.0, 0usize);
+    let mut first_warm_ms = 0.0;
+    let mut warmup_ms = 0.0; // BE-COLD：第 0 帧（冷）+ 全部预热帧的总时长，从开始跑第 0 帧算到进入计时窗
     let (mut max_abs, mut sig, mut err) = (0.0f64, 0.0f64, 0.0f64);
     let (mut worst, mut first_bad, mut nonfinite_values) = (0usize, None, 0usize);
-    let pn = parity_n.min(n_in).min(total);
     let mut per_frame = Vec::with_capacity(pn);
-    let mut saved = vec![0f32; pn * per_out]; // 先存输出，跑完再对拍
     let unix = || std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs_f64()).unwrap_or(0.0);
     let mut win_start = 0.0;
     // BE-DEADLINE 要含唤醒迟到：按节奏跑时，一帧「做完的时刻 − 该到的时刻」才是这一帧离截止还有多少余量
-    let mut late = Vec::with_capacity(if pace > 0.0 { frames } else { 0 });
+
     let (mut ra0, mut pa0, mut c0) = (0, 0, 0.0);
     let mut w0 = Instant::now();
+    let tw0 = Instant::now(); // 第 0 帧开始的时刻
     let mut fp1 = f64::NAN;
     for f in 0..total {
         if f == t0w {
@@ -304,6 +320,7 @@ fn bench(o: &Opts) -> Result<(), String> {
             c0 = cpu_seconds();
             w0 = Instant::now();
             win_start = unix();
+            warmup_ms = tw0.elapsed().as_secs_f64() * 1e3;
             if let Some(p) = &ready_file {
                 let _ = std::fs::write(p, b"ready\n"); // 进入计时窗（加载、预热都已过）才发就绪信号
             }
@@ -340,6 +357,9 @@ fn bench(o: &Opts) -> Result<(), String> {
         }
         if f == 0 {
             first_ms = dt;
+        }
+        if f == t0w {
+            first_warm_ms = dt; // BE-COLD：预热后第 1 帧
         }
         if f >= t0w {
             times.push(dt);
@@ -401,7 +421,7 @@ fn bench(o: &Opts) -> Result<(), String> {
     println!(
         "{{\"model\":\"{}\",\"backend\":\"{backend}\",\"artifact\":\"{}\",\"frames\":{frames},\"warmup\":{warmup},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"thread_policy\":\"{policy}\",\"workgroup\":{},\"spin\":{spin},\"tc_computation_ms\":{},\"tc_constraint_ms\":{},\"interval_wg_deadline_ms\":{iwg_ms},\"interval_wg_errors\":{},\
 \"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{mean:.4},\"frames_over_3ms\":{over3},\
-\"ort_env_ms\":0.00,\"compile_ms\":{compile_ms:.2},\"open_ms\":{open_ms:.2},\"first_frame_ms\":{first_ms:.3},\"cpu_over_wall\":{:.3},\
+\"ort_env_ms\":0.00,\"compile_ms\":{compile_ms:.2},\"open_ms\":{open_ms:.2},\"first_frame_ms\":{first_ms:.3},\"warmup_ms\":{warmup_ms:.2},\"first_warm_frame_ms\":{first_warm_ms:.3},\"cpu_over_wall\":{:.3},\
 \"rust_allocs_per_frame\":{rust_allocs:.3},\"rust_allocs_total\":{rust_n},\"process_allocs_total\":{proc_total},\"late_frames_over_3ms\":{},\"late_max_ms\":{},\"process_allocs_per_frame\":{proc_allocs},\"win_start_unix\":{win_start:.3},\"win_end_unix\":{win_end:.3},\"wall_s\":{wall:.3},\"nonfinite_frames\":{nonfinite_frames},\
 \"footprint_before_mb\":{fp0:.2},\"footprint_warm_mb\":{fp1:.2},\"footprint_end_mb\":{fp2:.2},\"parity_frames\":{pn},\"parity_max_abs\":{},\"parity_worst_frame\":{worst},\"parity_snr_db\":{},\
 \"parity_min_frame_snr_db\":{},\"parity_nonfinite_values\":{nonfinite_values},\"parity_first_bad\":\"{first_bad:?}\",\"extra\":{extra}}}",
