@@ -677,6 +677,34 @@ mod tests {
         assert_eq!(quantile(&[10, 20], 0.5), 15);
     }
 
+    /// 直接判据计数：处理慢于周期时长就记「超周期」；Raw 积压越多「醒来迟到」越大
+    #[test]
+    fn overrun_and_backlog_counters() {
+        /// 每块睡 3 ms（> 一块 2 ms），一个周期（2 块）总耗时 6 ms > 4 ms
+        struct Slow;
+        impl Processor for Slow {
+            fn process(&mut self, i: &[f32], o: &mut [f32]) {
+                std::thread::sleep(std::time::Duration::from_millis(3));
+                o.copy_from_slice(i);
+            }
+            fn latency_samples(&self) -> usize {
+                0
+            }
+            fn period_samples(&self) -> usize {
+                192
+            }
+        }
+        let mut w = Worker::new(Slow, 96);
+        let bus = heap(0);
+        bus.ring(RingId::Raw).push(&[0.0; 96 * 5]);
+        while w.step(&bus) == Step::Block {}
+        let s = w.stats();
+        assert_eq!(s.blocks, 5);
+        assert_eq!(s.max_raw_backlog, 480, "第一次开始处理时积了 5 块");
+        assert!(s.over_period >= 4, "{s:?}");
+        assert!(s.max_period_ns >= 6_000_000, "{s:?}");
+    }
+
     #[test]
     fn prime_stops_when_full() {
         let mut w = Worker::new(Copy0, 480);

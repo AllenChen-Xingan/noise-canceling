@@ -244,11 +244,14 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     let s = worker.stats();
     let unlinked = bus.unlink();
     eprintln!(
-        "vdn-denoised: 退出 · 处理 {} 块 · 单块最长 {:.3} ms · 平均 {:.3} ms · 超一块时长 {} 块 · 跳过积压 {} 样本 · Processed 溢出 {} 样本 · Raw 溢出 {} · 实时提升失败 {} · 唤醒 {} · 退回轮询 {} 次 · unlink {}",
+        "vdn-denoised: 退出 · 处理 {} 块 · 单块最长 {:.3} ms · 平均 {:.3} ms · 超一块时长 {} 块 · 每周期总耗时最长 {:.3} ms · 超周期 {} 次 · 醒来时 Raw 最多积 {} 样本 · 跳过积压 {} 样本 · Processed 溢出 {} 样本 · Raw 溢出 {} · 实时提升失败 {} · 唤醒 {} · 退回轮询 {} 次 · unlink {}",
         s.blocks,
         s.max_process_ns as f64 / 1e6,
         s.total_process_ns as f64 / 1e6 / s.blocks.max(1) as f64,
         s.over_budget,
+        s.max_period_ns as f64 / 1e6,
+        s.over_period,
+        s.max_raw_backlog,
         s.raw_skipped,
         s.proc_overflow,
         bus.ring(RingId::Raw).overflows(),

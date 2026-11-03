@@ -514,14 +514,19 @@ pub fn timing_line(r: &ChainRun) -> String {
     let w = &r.worker;
     let block_ms = ms48(r.denoise_block);
     format!(
-        "耗时：预热 {} 块（第一块 {:.3} ms，之后最长 {:.3} ms）· 服务期单块最长 {:.3} ms、平均 {:.4} ms、超一块时长（{:.3} ms）{} 块 · 虚拟麦读相位 {} 样本（{:.2} ms，不在 L_total 里）· 实时提升失败 {} 个线程",
+        "耗时：预热 {} 块（第一块 {:.3} ms，之后最长 {:.3} ms；每周期 {} 块总耗时 p99.9 {:.3} ms）· 服务期单块最长 {:.3} ms、平均 {:.4} ms、超一块时长（{:.3} ms）{} 块 · 每周期总耗时最长 {:.3} ms、超周期时长 {} 次 · 醒来时 Raw 最多积 {} 样本 · 虚拟麦读相位 {} 样本（{:.2} ms，不在 L_total 里）· 实时提升失败 {} 个线程",
         r.warmup.blocks,
         r.warmup.first_ns as f64 / 1e6,
         r.warmup.max_after_first_ns as f64 / 1e6,
+        r.warmup.period_blocks,
+        r.warmup.p999_period_ns as f64 / 1e6,
         w.max_process_ns as f64 / 1e6,
         w.total_process_ns as f64 / 1e6 / w.blocks.max(1) as f64,
         block_ms,
         w.over_budget,
+        w.max_period_ns as f64 / 1e6,
+        w.over_period,
+        w.max_raw_backlog,
         r.hal_offset,
         ms48(r.hal_offset),
         r.rt_failures
