@@ -71,6 +71,19 @@ def constants_to_initializers(m):
         if name in consts and name not in have:
             g.initializer.append(numpy_helper.from_array(consts[name], name))
             moved += 1
+    # Clip 省略了 min（输入名为空串）的：补一个 -3.4e38 的 min，计算不变；max 同理
+    import numpy as _np
+    for n in g.node:
+        if n.op_type == "Clip":
+            ins = list(n.input)
+            for j, fill in ((1, -3.4e38), (2, 3.4e38)):
+                if len(ins) > j and ins[j] == "":
+                    nm = f"{n.name or n.output[0]}_clip{j}"
+                    g.initializer.append(numpy_helper.from_array(_np.array(fill, dtype=_np.float32), nm))
+                    ins[j] = nm
+                    moved += 1
+            del n.input[:]
+            n.input.extend(ins)
     keep = [n for n in g.node if not (n.op_type == "Constant" and n.output[0] in used and n.output[0] in consts)]
     del g.node[:]
     g.node.extend(keep)
