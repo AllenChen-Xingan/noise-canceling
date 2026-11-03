@@ -1,7 +1,7 @@
 # 评审 019 · 推理后端总方案与判据（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/019_apple-inference/decision.md` · `standard.md`，依据含 `docs/experiments/exp010-inference-bench/apple-rs/` 的 `src/{main,alloc,bnns,coreml,rt}.rs` 与 `tools/{power_parse.py,impact.sh,rt-matrix.sh}`。**最新一轮：第 3 轮（2026-11-02）· 总评「修改」· 待第 4 轮**。
-> 累计处理：P1×10、P2×11 逐条回源码核实，属实 21、驳回 0、无法核实 0；引用抽查「不符」1 条（已改）。
+> 对象：`docs/research/019_apple-inference/decision.md` · `standard.md`，依据含 `docs/experiments/exp010-inference-bench/apple-rs/` 的 `src/{main,alloc,bnns,coreml,rt}.rs` 与 `tools/{power_parse.py,impact.sh,rt-matrix.sh}`。**最新一轮：第 4 轮（2026-11-02）· 总评「修改」· 待第 5 轮**。
+> 累计处理：P1×11、P2×16 逐条回源码核实，属实 27、驳回 0、无法核实 0；引用抽查「不符」1 条（已改）。
 > 送 codex 之前已做同模型 3 视角只读自审一轮（数字核对 · 结论强度 · 测量口径），其发现已先改完；那一轮的 P2 留在 `decision.md` §7。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -114,3 +114,34 @@
 ### 是否再审
 
 有 P1 → 改完开第 4 轮。
+
+## 第 4 轮（2026-11-02）· 总评「修改」
+
+原文：`_tmp/codex-019/decision-codex-4.md`（不入库）。effort medium（`result: P0×0 P1×1 P2×5 P3×0`）。日志头 `model: gpt-6-astra` · `sandbox: read-only`。
+上一轮处理的验证：codex 核实属实 7 条（内存基线前移与 `--parity-frames 10` 规定、工作组功耗改为单次观察、DFN3 推论已撤回、`warmup_ms` / `first_warm_frame_ms` 已输出、impact 成对比值与噪声底、power_parse 保守窗口、BNNS 换指针）。
+本轮 P0/P1：1 条 · 停止线：未满足
+
+- **P1｜decision.md:67 零分配被直接推成「可在推理线程直接调」**（第 4 轮 #1）
+  - 核实：属实。`standard.md` §4 要分配、RTSan、跨进程三项都过才算；后两项没测。
+  - 处理：改为「候选接法，未确认」，写明只有分配一项有数，零分配不能证明不加锁、不阻塞。
+- **P2｜decision.md:27 整数判零没落到通过状态**（第 4 轮 #2）
+  - 核实：属实。我读了 rustbe 正本 `results/20261102-blas1/malloc.jsonl`：native 是 `process_allocs_per_frame` 0.000、2000 帧、三位小数，只能说明总数 ≤ 1。
+  - 处理：挡线表改为「转记 0，待核整数」，第 2 节、§4 同步；已请 rustbe 加整数字段并重数。顺带从同一份文件读到 native 常驻内存预热后只涨 1.09 MB，记进方案（单次）。
+- **P2｜decision.md:100 · standard.md:52 延迟账仍写 3 ms 是当前余量**（第 4 轮 #3）
+  - 处理：两处都改为「009 当时是 3.00 ms，D74 已改为 4 ms，以 4 ms 为准；3 ms 只作更严的技术线」。
+- **P2｜standard.md:70「已有编译缓存」不能统一扣掉 compile_ms**（第 4 轮 #4）
+  - 核实：属实。`bnns.rs` 每次打开都调 `BNNSGraphCompileFromFile`，没有读已编译图的分支。
+  - 处理：BNNS 一律按 `compile_ms + open_ms + warmup_ms` 判；只有实测确实跳过的工作才能扣。
+- **P2｜impact.sh:65 不足 15 个有效配对也能判通过**（第 4 轮 #5）
+  - 处理：有效配对 < 15 时判「无效，补测」，不出过不过。
+- **P2｜standard.md:176 Python 相对比较被提前放行**（第 4 轮 #6）
+  - 处理：ORT 那一行改为「未获准」：判法要 p50 和 p99.9 两项都达标，p99.9 的差还没量。
+
+### 引用抽查
+
+- 「不符」：无。「核实属实」：7 条。
+- 无法核实：rustbe 正本（上一轮）→ 本轮在 `_tmp/codex-019/rustbe-malloc.jsonl` 放了副本供第 5 轮核对。
+
+### 是否再审
+
+有 P1 → 改完开第 5 轮。
