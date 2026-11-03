@@ -5,6 +5,7 @@
 #   2. 在仓库根目录跑：sudo bash docs/experiments/exp010-inference-bench/tools/power_run.sh 20261102-p1
 #   3. 跑完约 8 分钟；结果写 results/<build-id>/power/，不覆盖已有目录
 # 额外跑一段「空闲」作对照：同样 60 秒什么都不跑，只采功率。
+# 每帧能耗 ≈（后端平均功率 − 空闲平均功率）× 帧间隔。采样窗 62 秒里约 1–2 秒是打开 / 预热前后的空闲，各后端同样稀释。
 set -euo pipefail
 ID=${1:?build-id}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
@@ -20,6 +21,7 @@ WAV=$M/resources/gtcrn/test_wavs/mix.wav
 OUT=$HERE/results/$ID/power
 [ -e "$OUT" ] && { echo "已有 $OUT，不覆盖"; exit 1; }
 mkdir -p "$OUT"
+trap 'chown -R "$U" "$HERE/results/$ID"' EXIT   # 中途失败也把文件还给普通用户
 { date '+%F %T %z'; sysctl -n hw.model; sw_vers -productVersion; pmset -g batt | head -1; uptime; } > "$OUT/env.txt"
 
 run() { # 名字 · 命令（命令为空 = 空闲对照）
@@ -30,7 +32,7 @@ run() { # 名字 · 命令（命令为空 = 空闲对照）
   if [ $# -gt 0 ]; then sudo -u "$U" "$@" > "$OUT/$name.bench.json"; else sleep 60; fi
   wait $pm
   # 每秒一行「CPU Power: N mW」，取平均
-  awk '/^CPU Power/ {s+=$3; n++} END {printf "%s mean_cpu_mW=%.1f samples=%d\n", "'"$name"'", s/n, n}' "$OUT/$name.powermetrics.txt" | tee -a "$OUT/summary.txt"
+  awk '/^CPU Power: [0-9.]+ mW/ {s+=$3; n++} END {if (n==0) {print "'"$name"' 没解析到 CPU Power 行，见原文" > "/dev/stderr"; exit 1} printf "%s mean_cpu_mW=%.1f samples=%d\n", "'"$name"'", s/n, n}' "$OUT/$name.powermetrics.txt" | tee -a "$OUT/summary.txt"
 }
 
 run idle
@@ -39,5 +41,4 @@ run gtcrn_native "$BIN" gtcrn-bench native "$W" "$WAV" --frames 3750 --pace-ms 1
 run gtcrn_tract  "$BIN" gtcrn-bench tract  "$G" "$WAV" --frames 3750 --pace-ms 16
 run fem_ort      "$BIN" fem-bench ort      "$F" "$WAV" --frames 6000 --pace-ms 10
 run fem_tract    "$BIN" fem-bench tract    "$FT" "$WAV" --frames 6000 --pace-ms 10
-chown -R "$U" "$HERE/results/$ID"
 echo "完成：$OUT/summary.txt"

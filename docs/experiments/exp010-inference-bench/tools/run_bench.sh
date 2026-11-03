@@ -23,24 +23,33 @@ mkdir -p "$OUT"
   echo "power=$(pmset -g batt | head -1 | sed "s/.*'\(.*\)'.*/\1/")"
   echo "rustc=$(rustc --version)"
   echo "load=$(sysctl -n vm.loadavg)"
+  echo "uptime_before: $(uptime)"
   echo "git=$(git -C "$HERE" rev-parse --short HEAD)"
-  shasum -a 256 "$W.bin" "$G" "$F" "$FT" "$WAV" "$BIN"
+  shasum -a 256 "$W.bin" "$G" "$F" "$FT" "$WAV" "$BIN" "$HERE"/bench/target/release/libonnxruntime*.dylib
+  ps -Ao %cpu,comm -r | head -4
 } > "$OUT/env.txt"
 
 $BIN gtcrn-parity "$W" "$G" "$WAV" --vs native >> "$OUT/parity.jsonl"
 $BIN gtcrn-parity "$W" "$G" "$WAV" --vs tract  >> "$OUT/parity.jsonl"
-$BIN fem-parity "$F" "$WAV" --tract-onnx "$FT" >> "$OUT/parity.jsonl"
+$BIN fem-parity "$F" "$WAV" --vs tract --b-onnx "$FT" >> "$OUT/parity.jsonl"
+$BIN fem-parity "$F" "$WAV" --vs ort --b-onnx "$FT" >> "$OUT/parity.jsonl"          # 单独证明改写等价
+$BIN gtcrn-parity "$W" "$G" "$WAV" --vs native --frames 37500 --reset-at 20000 >> "$OUT/parity.jsonl"  # 10 分钟长跑 + reset
+$BIN gtcrn-parity "$W" "$G" "$WAV" --vs tract --frames 6201 >> "$OUT/parity.jsonl"   # 与基准等长
 
-# 交替跑，降低机器状态漂移对某一后端的偏向
+# 交替跑，且每轮把后端顺序轮换一位，避免发热 / 频率漂移总偏向同一个后端
+G3=(ort native tract); F2=(ort tract)
 for r in $(seq 1 "$ROUNDS"); do
-  for k in ort native tract; do
+  o=$(( (r - 1) % 3 )); GO=("${G3[@]:$o}" "${G3[@]:0:$o}")
+  o=$(( (r - 1) % 2 )); FO=("${F2[@]:$o}" "${F2[@]:0:$o}")
+  for k in "${GO[@]}"; do
     a=$G; [ $k = native ] && a=$W
     $BIN gtcrn-bench $k "$a" "$WAV" | sed "s/^{/{\"round\":$r,/" >> "$OUT/bench.jsonl"
   done
-  for k in ort tract; do
+  for k in "${FO[@]}"; do
     a=$F; [ $k = tract ] && a=$FT
     $BIN fem-bench $k "$a" "$WAV" | sed "s/^{/{\"round\":$r,/" >> "$OUT/bench.jsonl"
   done
 done
 echo "load_after=$(sysctl -n vm.loadavg)" >> "$OUT/env.txt"
+echo "uptime_after: $(uptime)" >> "$OUT/env.txt"
 cat "$OUT/parity.jsonl" "$OUT/bench.jsonl"
