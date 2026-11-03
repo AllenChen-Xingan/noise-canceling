@@ -436,6 +436,62 @@ mod tests {
         assert_eq!(bus.config(), cfg);
     }
 
+    /// 输出 = 0.5 × 输入延迟 768（和原声可区分，延迟同直通管线）
+    struct HalfDelay {
+        line: Vec<f32>,
+        pos: usize,
+    }
+    impl Processor for HalfDelay {
+        fn process(&mut self, input: &[f32], output: &mut [f32]) {
+            for (x, y) in input.iter().zip(output.iter_mut()) {
+                *y = 0.5 * std::mem::replace(&mut self.line[self.pos], *x);
+                self.pos = (self.pos + 1) % self.line.len();
+            }
+        }
+        fn latency_samples(&self) -> usize {
+            self.line.len()
+        }
+    }
+
+    /// 降噪停 100 块后恢复：跳过 Raw 积压（零占位 + 缺口计数，带外），送音端在那个窗口送原声；
+    /// 全程不静音、不跳变，恢复后立刻回到「现在」并逐样本对齐（不追 1 s 的积压）
+    #[test]
+    fn skip_backlog_keeps_alignment_without_silence() {
+        let (block, lead) = (96, 288);
+        let mut w = Worker::new(HalfDelay { line: vec![0.0; 768], pos: 0 }, block).skip_backlog_over_lead(lead);
+        let l_total = w.l_total(lead);
+        let bus = heap(l_total);
+        w.prime(&bus, lead);
+        let mut f = Forwarder::new(ForwarderConfig::new(l_total, block));
+        let n = 1500;
+        let x = vdn_capture::testing::test_tone(IO_RATE, n * block, 0);
+        let mut y = vec![0.0f32; x.len()];
+        for (i, (c, yc)) in x.chunks(block).zip(y.chunks_mut(block)).enumerate() {
+            forward_same_bus(&mut f, &bus, c);
+            if !(500..600).contains(&i) {
+                while w.step(&bus) == Step::Block {}
+            }
+            assert_eq!(bus.ring(RingId::Out).pop(yc), c.len());
+        }
+        let s = w.stats();
+        assert!(s.raw_skipped > 0 && s.placeholders_pushed == s.raw_skipped, "{s:?}");
+        assert!(bus.ring(RingId::Raw).gaps() > 0);
+        let fs = f.stats();
+        assert!(fs.gap_holds >= 1, "{fs:?}");
+        assert_eq!(fs.nonfinite, 0);
+        // 不静音（零占位没被播出）、不跳变
+        let quiet = y[l_total..].split(|v| v.abs() >= 1e-3).map(<[f32]>::len).max().unwrap_or(0);
+        assert!(quiet < 50, "最长静音 {quiet} 样本");
+        let jump = y.windows(2).skip(l_total).map(|p| (p[1] - p[0]).abs()).fold(0.0, f32::max);
+        assert!(jump < 0.13, "最大跳变 {jump}");
+        // 停顿结束后不到 0.2 s 就回到处理后的（0.5 倍）并逐样本对齐
+        let back = (600 + 100) * block;
+        for k in back..y.len() {
+            assert!((y[k] - 0.5 * x[k - l_total]).abs() < 1e-4, "k={k}: {} vs {}", y[k], 0.5 * x[k - l_total]);
+        }
+        assert!(f.is_fresh());
+    }
+
     #[test]
     fn prime_stops_when_full() {
         let mut w = Worker::new(Copy0, 480);
