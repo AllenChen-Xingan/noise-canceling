@@ -5,6 +5,7 @@
 //! vdn-denoised [--model gtcrn|fastenhancer-m] [--model-path X.onnx] …
 //! vdn-denoised --config vdn.json
 //! ```
+//! 运行中切模式：往标准输入写一行 `passthrough` / `denoise` / `quit`（控制线程 → rtrb → 降噪线程，不重启）。
 //! 建总线 → 往 Processed 推 lead 个零 → 循环：Raw 够一块就跑 Pipeline → 推 Processed → 心跳。
 //! Ctrl-C / SIGTERM / SIGHUP（或 `--seconds` 到点）干净退出并 unlink 总线；同名总线已有活着的建方时拒绝启动。
 
@@ -208,7 +209,38 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     let deadline = a
         .seconds
         .map(|s| Instant::now() + Duration::from_secs_f64(s));
+    // 控制线程：读标准输入的命令行，经 rtrb 交给本线程（块之间执行）
+    let (mut tx, mut rx) = vdn_denoised::command_channel(16);
+    std::thread::spawn(move || {
+        let mut line = String::new();
+        while std::io::stdin().read_line(&mut line).is_ok_and(|n| n > 0) {
+            let cmd = match line.trim() {
+                "passthrough" | "直通" => {
+                    Some(vdn_control::Cmd::SetMode(vdn_control::Mode::Passthrough))
+                }
+                "denoise" | "降噪" => Some(vdn_control::Cmd::SetMode(vdn_control::Mode::Denoise)),
+                "quit" | "退出" => Some(vdn_control::Cmd::Shutdown),
+                "" => None,
+                other => {
+                    eprintln!(
+                        "vdn-denoised: 不认识的命令 {other:?}（passthrough / denoise / quit）"
+                    );
+                    None
+                }
+            };
+            if let Some(c) = cmd
+                && tx.push(c).is_err()
+            {
+                eprintln!("vdn-denoised: 命令队列满，丢掉 {c:?}");
+            }
+            line.clear();
+        }
+    });
+
     while !stop.load(Ordering::Relaxed) && deadline.is_none_or(|d| Instant::now() < d) {
+        if !worker.apply_commands(&mut rx) {
+            break;
+        }
         // 等送音端推够一块再醒（送音端每推一块 notify 一次）；20 ms 兜底超时，好检查退出标志
         let _ = bus.wait(RingId::Raw, cfg.denoise_block, Duration::from_millis(20));
         while worker.step(&bus) == Step::Block {}

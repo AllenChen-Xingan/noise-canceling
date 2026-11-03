@@ -165,6 +165,9 @@ struct ChainArgs {
     /// 虚拟麦克风比送音端晚多少样本读 Out（默认 1.5 块）
     #[arg(long)]
     hal_offset: Option<usize>,
+    /// 第几秒经控制通道切到直通（测运行中切换不断声）
+    #[arg(long, value_parser = vdn_control::parse_seconds)]
+    switch_mode_at: Option<f64>,
     /// 把输入 / 输出写成 WAV（48 kHz）方便人听：<前缀>-in.wav / <前缀>-out.wav
     #[arg(long)]
     dump: Option<PathBuf>,
@@ -544,6 +547,7 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
         stress: a.stress,
         warmup_blocks: a.warmup_blocks,
         hal_offset: a.hal_offset.unwrap_or(a.block * 3 / 2),
+        switch_at: a.switch_mode_at,
     };
     vdn_control::validate_bus_name(&o.bus_name)?;
     let r = match o.mode {

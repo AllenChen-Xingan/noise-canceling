@@ -57,7 +57,12 @@ pub fn engine_mode(m: vdn_control::Mode) -> vdn_engine::Mode {
 }
 
 /// 控制线程 → 降噪线程的命令队列（规约 §3.4：rtrb，小 `Copy` 命令；降噪线程每块之间取）
-pub fn command_channel(capacity: usize) -> (rtrb::Producer<vdn_control::Cmd>, rtrb::Consumer<vdn_control::Cmd>) {
+pub fn command_channel(
+    capacity: usize,
+) -> (
+    rtrb::Producer<vdn_control::Cmd>,
+    rtrb::Consumer<vdn_control::Cmd>,
+) {
     rtrb::RingBuffer::new(capacity.max(1))
 }
 
@@ -586,7 +591,10 @@ mod tests {
         assert!(tx.push(Cmd::Shutdown).is_ok());
         assert!(!w.apply_commands(&mut rx));
         assert_eq!(w.stats().commands, 3);
-        assert_eq!(engine_mode(Mode::Passthrough), vdn_engine::Mode::Passthrough);
+        assert_eq!(
+            engine_mode(Mode::Passthrough),
+            vdn_engine::Mode::Passthrough
+        );
     }
 
     #[test]

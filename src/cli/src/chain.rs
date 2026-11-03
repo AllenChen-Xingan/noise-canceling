@@ -57,6 +57,8 @@ pub struct ChainOpts {
     pub warmup_blocks: usize,
     /// 虚拟麦克风比送音端晚多少样本读 Out（模拟插件 IO 相位；不在 L_total 里）
     pub hal_offset: usize,
+    /// 第几秒经 rtrb 发「切到直通」命令（测运行中切换）
+    pub switch_at: Option<f64>,
 }
 
 impl ChainOpts {
@@ -76,6 +78,7 @@ impl ChainOpts {
             stress: 0,
             warmup_blocks: 64,
             hal_offset: block * 3 / 2,
+            switch_at: None,
         }
     }
 }
@@ -197,6 +200,9 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         })
         .collect();
 
+    // 控制命令（运行中切模式）：本线程 → rtrb → 降噪线程
+    let (mut cmd_tx, mut cmd_rx) = vdn_denoised::command_channel(8);
+
     // 降噪
     let den = {
         let (bus, stop, cap_pos, killed_at) = (
@@ -217,6 +223,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
                     killed_at.store(cap_pos.load(Ordering::Acquire), Ordering::Release);
                     break;
                 }
+                worker.apply_commands(&mut cmd_rx);
                 // 等收音端推够一块再醒（收音端每推一块 notify 一次）
                 let _ = bus.wait(RingId::Raw, dblock, Duration::from_millis(20));
                 while worker.step(&bus) == Step::Block {
@@ -260,7 +267,8 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
             if rt && !promote(block, 0.25) {
                 rtf.fetch_add(1, Ordering::Relaxed);
             }
-            let mut src = HalSource::new(vdn_capture::shm::OutSource::new(bus).with_drift(hal_target, block));
+            let mut src =
+                HalSource::new(vdn_capture::shm::OutSource::new(bus).with_drift(hal_target, block));
             let mut y = vec![0.0f32; total];
             let (mut ub, mut us) = (0u64, 0u64);
             for (i, yb) in y.chunks_mut(block).enumerate() {
@@ -274,6 +282,10 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         })
     };
 
+    if let Some(t) = o.switch_at {
+        sleep_until(start + Duration::from_secs_f64(t));
+        let _ = cmd_tx.push(vdn_control::Cmd::SetMode(vdn_control::Mode::Passthrough));
+    }
     let (x, fwd) = cap.join().map_err(|_| "收音线程 panic")?;
     let (y, ub, us) = hal.join().map_err(|_| "虚拟麦线程 panic")?;
     stop.store(true, Ordering::Relaxed);
