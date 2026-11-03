@@ -73,17 +73,15 @@ impl NodeKind {
 
 /// 名字只许 `[a-z0-9_-]`、非空（规范文本里不转义、不会和分隔符混在一起）。
 pub const fn valid_name(name: &str) -> bool {
-    let b = name.as_bytes();
-    if b.is_empty() {
+    let mut rest = name.as_bytes();
+    if rest.is_empty() {
         return false;
     }
-    let mut i = 0;
-    while i < b.len() {
-        let c = b[i];
-        if !(c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-' || c == b'_') {
+    while let [c, tail @ ..] = rest {
+        if !(c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-' || *c == b'_') {
             return false;
         }
-        i += 1;
+        rest = tail;
     }
     true
 }
