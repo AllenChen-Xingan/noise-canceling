@@ -14,3 +14,6 @@
 
 - 2026-11-02 22:0x 开 #62、worktree、派 hygiene。第一段避开 #57 在改的 control · denoised · eval · shm · schema
 - 2026-11-02 更正：手下首条消息误写报到给 e3，已改为 8d 并发消息更正；已撤回误加在 e3 `state/coord.md` 的两行
+- 2026-11-02 99 回复：采样率收口、阈值比对都留在 #62；提醒第一段别改 xtask/ci.rs、第二段改 ci.json 后跑 vdn-schema --check；#57 合并时它会通知
+- 2026-11-02 hygiene 已改向 8d 报到；第一段第 1 件（R-SIZE · file_size.rs · 基线 14 条 · 8 条单测）代码写完未编译。e3 确认 hygiene 归 8d，board/backlog 说明行保留
+- 2026-11-02 e3 基准结束、锁已删；通知 hygiene 可跑单 crate 测试（每次编译前看锁）
