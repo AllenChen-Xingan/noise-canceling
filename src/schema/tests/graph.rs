@@ -126,6 +126,7 @@ fn session_key_since_agrees_with_parser() {
         }
         .to_text()
     };
+    let full = full.as_str();
     for v in arr(&doc, "keys") {
         let key = v["key"].as_str().unwrap();
         let since = v["since"].as_u64().unwrap();
@@ -133,14 +134,35 @@ fn session_key_since_agrees_with_parser() {
             .lines()
             .find(|l| l.starts_with(&format!("{key} = ")))
             .unwrap();
-        let at = |f: u64| format!("{} = {f}\n{line}\n[events]\n", SessionRecord::HEADER);
+        // 格式 f 的头 = 该格式里有的所有键各一行（必填键都在），可再额外加上本键
+        let lines_upto = |f: u64| -> Vec<&str> {
+            arr(&doc, "keys")
+                .iter()
+                .filter(|k| k["since"].as_u64().unwrap() <= f)
+                .map(|k| {
+                    let key = k["key"].as_str().unwrap();
+                    full.lines()
+                        .find(|l| l.starts_with(&format!("{key} = ")))
+                        .unwrap()
+                })
+                .collect()
+        };
+        let at = |f: u64, extra: Option<&str>| {
+            let mut ls = lines_upto(f);
+            ls.extend(extra);
+            format!(
+                "{} = {f}\n{}\n[events]\n",
+                SessionRecord::HEADER,
+                ls.join("\n")
+            )
+        };
         assert!(
-            SessionRecord::from_text(&at(since)).is_ok(),
+            SessionRecord::from_text(&at(since, None)).is_ok(),
             "{key} 在格式 {since}"
         );
         if since > 1 {
             assert!(
-                SessionRecord::from_text(&at(since - 1)).is_err(),
+                SessionRecord::from_text(&at(since - 1, Some(line))).is_err(),
                 "{key} 在格式 {}",
                 since - 1
             );

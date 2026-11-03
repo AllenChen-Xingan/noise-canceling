@@ -278,8 +278,14 @@ fn names_cannot_forge_canonical_text() {
     };
     assert_ne!(one.canonical_text(), two.canonical_text());
     assert_ne!(one.content_id(), two.content_id());
-    assert!(one.canonical_text().contains("a%201%20time%200%20%0Anode%20%3D%2061441%20b"));
-    assert!(matches!(one.check(), Err(ChainMismatch::BadName { index: 0, .. })));
+    assert!(
+        one.canonical_text()
+            .contains("a%201%20time%200%20%0Anode%20%3D%2061441%20b")
+    );
+    assert!(matches!(
+        one.check(),
+        Err(ChainMismatch::BadName { index: 0, .. })
+    ));
     assert_eq!(two.check(), Ok(()));
     for bad in ["", "A", "a b", "a\n", "a%", "é"] {
         assert!(!valid_name(bad), "{bad:?}");

@@ -409,7 +409,10 @@ impl fmt::Display for ChainMismatch {
                 "第 {index} 级 {stage}：描述声明延迟 {declared} 个样本，运行时报 {actual} 个"
             ),
             ChainMismatch::BadName { index, stage } => {
-                write!(f, "第 {index} 级的名字 {stage:?} 不合法（只许 a-z 0-9 - _）")
+                write!(
+                    f,
+                    "第 {index} 级的名字 {stage:?} 不合法（只许 a-z 0-9 - _）"
+                )
             }
             ChainMismatch::WrongHook { index, stage, hook } => write!(
                 f,

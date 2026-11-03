@@ -144,7 +144,11 @@ fn required_keys_must_be_present_once() {
         );
         let line = text.lines().find(|l| l.starts_with(&prefix)).unwrap();
         let twice = text.replacen(line, &format!("{line}\n{line}"), 1);
-        assert!(SessionRecord::from_text(&twice).is_err(), "{} 写两次", k.key);
+        assert!(
+            SessionRecord::from_text(&twice).is_err(),
+            "{} 写两次",
+            k.key
+        );
     }
     // 只有格式行的文件不再「读成默认头」
     assert!(SessionRecord::from_text("vdn-session = 2\n").is_err());
