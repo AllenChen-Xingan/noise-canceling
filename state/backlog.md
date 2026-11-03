@@ -18,6 +18,7 @@
 - [ ] ContentId 用 FNV → 规约原写 sha256
 - [ ] RTSan 检查（规约 G8）
 - [ ] 删掉只为非 macOS 存在的分支（`vdn-shm` 的 POSIX 替身与轮询兜底里的非 macOS 部分、`vdn-rt-thread` 的「本平台不支持」分支）——D76 后不再被编译
+- [ ] `.claude/workflows/` 的 vdn-review 不认 args 指定的审查对象（e3 报，给 019 文件它审了 src/）
 - [ ] `vdn-rt-thread` 的 JoinToken 常数照 SDK 头文件抄，缺自动比对（唯一真相源）
 - [ ] Ring 拆 Producer / Consumer 句柄（类型挡住「一端一线程」）
 
