@@ -134,7 +134,8 @@ fn forwarder_with(l_total: usize, block: usize, timeout: usize) -> Forwarder {
 
 fn open_speaker(dev: Option<&str>, out_name: &str, block: usize) -> Result<OutputStream, String> {
     let bus = Arc::new(Bus::open(out_name).map_err(|e| format!("扬声器端打开 Out 总线：{e}"))?);
-    let mut src = HalSource::new(OutSource::new(bus));
+    // 纠漂移：麦克风和扬声器是两个时钟；目标积压 2 块
+    let mut src = HalSource::new(OutSource::new(bus).with_drift(2 * block, block));
     let s = OutputStream::open(dev, IO_RATE, block, move |o: &mut [f32]| {
         let _ = src.render(o);
     })
@@ -275,9 +276,10 @@ fn real_main() -> Result<(), String> {
                 Bus::open(&cfg.out_bus_name).map_err(|e| format!("文件端打开 Out 总线：{e}"))?,
             );
             let offset = Duration::from_secs_f64(a.reader_offset as f64 / f64::from(IO_RATE));
+            let reader_offset = a.reader_offset;
             Some(thread::spawn(move || {
                 promote_io(block, "文件线程");
-                let mut src = HalSource::new(OutSource::new(bus));
+                let mut src = HalSource::new(OutSource::new(bus).with_drift(reader_offset, block));
                 let mut y = vec![0.0f32; n];
                 for (i, yb) in y.chunks_mut(block).enumerate() {
                     // 晚 reader_offset 个样本读，模拟插件 IO 线程

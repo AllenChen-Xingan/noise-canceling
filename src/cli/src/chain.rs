@@ -251,7 +251,8 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         })
     };
 
-    // 虚拟麦克风：晚 hal_offset 个样本开始读
+    // 虚拟麦克风：晚 hal_offset 个样本开始读（同一时钟，纠漂移不该动手；动了说明调度抖动大）
+    let hal_target = o.hal_offset;
     let hal = {
         let bus = hal_bus.clone();
         let (rt, rtf) = (o.rt, rt_failures.clone());
@@ -259,7 +260,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
             if rt && !promote(block, 0.25) {
                 rtf.fetch_add(1, Ordering::Relaxed);
             }
-            let mut src = HalSource::new(vdn_capture::shm::OutSource::new(bus));
+            let mut src = HalSource::new(vdn_capture::shm::OutSource::new(bus).with_drift(hal_target, block));
             let mut y = vec![0.0f32; total];
             let (mut ub, mut us) = (0u64, 0u64);
             for (i, yb) in y.chunks_mut(block).enumerate() {

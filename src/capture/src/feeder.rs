@@ -236,6 +236,10 @@ mod tests {
                 }
             }
             let gaps = out.ring(vdn_shm::RingId::Out).gaps();
+            eprintln!(
+                "{tag}（写方 {producer_ppm:+} ppm）：10–60 s 最大积压 {max_backlog} 样本 · 缺口 {gaps} 样本 · 补块 {} · 读方欠载 {underruns} 次",
+                f.slips_added()
+            );
             // 不纠时 60 s 会漂 ±2880 样本（0.1% × 60 s × 48 kHz）
             assert!(max_backlog <= target + 3 * block, "{tag}：最大积压 {max_backlog}");
             assert!(gaps > 0, "{tag}：没有纠过");
