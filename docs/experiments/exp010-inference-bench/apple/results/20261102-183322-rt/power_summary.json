@@ -1,0 +1,162 @@
+{
+ "idle_mw": {
+  "CPU": 111.3,
+  "GPU": 2.2,
+  "ANE": 0.0
+ },
+ "rows": [
+  {
+   "set": 1,
+   "config": "bnns rt（D74 默认，基线）",
+   "power_mw": {
+    "CPU": 97.3,
+    "GPU": 1.8,
+    "ANE": 0.0
+   },
+   "samples": 116,
+   "delta_mw": -14.3,
+   "uj_per_frame": -228.9,
+   "p50_ms": 0.8023,
+   "p999_ms": 1.3426,
+   "max_ms": 1.4081,
+   "frames_over_3ms": 0,
+   "cpu_over_wall": 0.048
+  },
+  {
+   "set": 2,
+   "config": "bnns rt + 自建区间 3ms",
+   "power_mw": {
+    "CPU": 132.3,
+    "GPU": 2.1,
+    "ANE": 0.0
+   },
+   "samples": 116,
+   "delta_mw": 20.9,
+   "uj_per_frame": 335.0,
+   "p50_ms": 0.2235,
+   "p999_ms": 0.2777,
+   "max_ms": 0.3037,
+   "frames_over_3ms": 0,
+   "cpu_over_wall": 0.015
+  },
+  {
+   "set": 3,
+   "config": "bnns rt + 自建区间 2ms",
+   "power_mw": {
+    "CPU": 122.8,
+    "GPU": 1.8,
+    "ANE": 0.0
+   },
+   "samples": 117,
+   "delta_mw": 11.2,
+   "uj_per_frame": 179.2,
+   "p50_ms": 0.2094,
+   "p999_ms": 0.244,
+   "max_ms": 0.2677,
+   "frames_over_3ms": 0,
+   "cpu_over_wall": 0.014
+  },
+  {
+   "set": 4,
+   "config": "bnns rt + 自建区间 1ms",
+   "power_mw": {
+    "CPU": 137.6,
+    "GPU": 1.8,
+    "ANE": 0.0
+   },
+   "samples": 116,
+   "delta_mw": 25.9,
+   "uj_per_frame": 414.9,
+   "p50_ms": 0.1941,
+   "p999_ms": 0.2253,
+   "max_ms": 0.3305,
+   "frames_over_3ms": 0,
+   "cpu_over_wall": 0.013
+  },
+  {
+   "set": 5,
+   "config": "bnns rt 截止报紧（0.5/1 ms，不加区间）",
+   "power_mw": {
+    "CPU": 123.7,
+    "GPU": 1.9,
+    "ANE": 0.0
+   },
+   "samples": 116,
+   "delta_mw": 12.2,
+   "uj_per_frame": 195.0,
+   "p50_ms": 0.8092,
+   "p999_ms": 1.251,
+   "max_ms": 1.3009,
+   "frames_over_3ms": 0,
+   "cpu_over_wall": 0.048
+  },
+  {
+   "set": 6,
+   "config": "bnns ui 帧间忙等（只排查降频）",
+   "power_mw": {
+    "CPU": 4198.6,
+    "GPU": 2.1,
+    "ANE": 0.0
+   },
+   "samples": 118,
+   "delta_mw": 4087.3,
+   "uj_per_frame": 65396.1,
+   "p50_ms": 0.158,
+   "p999_ms": 0.4224,
+   "max_ms": 0.6103,
+   "frames_over_3ms": 0,
+   "cpu_over_wall": 0.999
+  },
+  {
+   "set": 7,
+   "config": "native rt",
+   "power_mw": {
+    "CPU": 81.0,
+    "GPU": 1.9,
+    "ANE": 0.0
+   },
+   "samples": 116,
+   "delta_mw": -30.5,
+   "uj_per_frame": -487.8,
+   "p50_ms": 0.5973,
+   "p999_ms": 0.6461,
+   "max_ms": 0.6612,
+   "frames_over_3ms": 0,
+   "cpu_over_wall": 0.035
+  },
+  {
+   "set": 8,
+   "config": "native ui",
+   "power_mw": {
+    "CPU": 103.8,
+    "GPU": 1.8,
+    "ANE": 0.0
+   },
+   "samples": 116,
+   "delta_mw": -7.8,
+   "uj_per_frame": -124.7,
+   "p50_ms": 0.6022,
+   "p999_ms": 0.7156,
+   "max_ms": 2.6948,
+   "frames_over_3ms": 0,
+   "cpu_over_wall": 0.035
+  },
+  {
+   "set": 9,
+   "config": "native-blas rt",
+   "power_mw": {
+    "CPU": 71.1,
+    "GPU": 1.7,
+    "ANE": 0.0
+   },
+   "samples": 116,
+   "delta_mw": -40.6,
+   "uj_per_frame": -649.7,
+   "p50_ms": 0.4324,
+   "p999_ms": 0.517,
+   "max_ms": 0.5554,
+   "frames_over_3ms": 0,
+   "cpu_over_wall": 0.026
+  }
+ ]
+}

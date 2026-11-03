@@ -1,0 +1,48 @@
+Torch version 2.15.0 has not been tested with coremltools. You may run into unexpected errors. Torch 2.7.0 is the most recent version that has been tested.
+/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/torch/jit/_trace.py:1006: FutureWarning: `torch.jit.trace` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/torch/jit/_trace.py:1145: FutureWarning: `torch.jit.trace_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Tuple detected at graph output. This will be flattened in the converted model.
+Converting PyTorch Frontend ==> MIL Ops:   0%|          | 0/531 [00:00<?, ? ops/s]
+
+ERROR - converting 'view_as_complex' op (located at: '613'):
+
+Converting PyTorch Frontend ==> MIL Ops:  85%|████████▌ | 454/531 [00:00<00:00, 6005.45 ops/s]
+Traceback (most recent call last):
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-engine/docs/experiments/exp010-inference-bench/apple/convert_fem.py", line 71, in <module>
+    mlm = ct.convert(
+          ^^^^^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/converters/_converters_entry.py", line 646, in convert
+    mlmodel = mil_convert(
+              ^^^^^^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/converters/mil/converter.py", line 186, in mil_convert
+    return _mil_convert(
+           ^^^^^^^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/converters/mil/converter.py", line 218, in _mil_convert
+    proto, mil_program = mil_convert_to_proto(
+                         ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/converters/mil/converter.py", line 294, in mil_convert_to_proto
+    prog = frontend_converter(model, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/converters/mil/converter.py", line 106, in __call__
+    return load(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/converters/mil/frontend/torch/load.py", line 87, in load
+    return _perform_torch_convert(converter, debug)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/converters/mil/frontend/torch/load.py", line 158, in _perform_torch_convert
+    raise e
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/converters/mil/frontend/torch/load.py", line 150, in _perform_torch_convert
+    prog = converter.convert()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/converters/mil/frontend/torch/converter.py", line 1392, in convert
+    convert_nodes(self.context, self.graph, early_exit=not has_states)
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 118, in convert_nodes
+    raise e     # re-raise exception
+    ^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 113, in convert_nodes
+    convert_single_node(context, node)
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/converters/mil/frontend/torch/ops.py", line 143, in convert_single_node
+    raise NotImplementedError(
+NotImplementedError: PyTorch convert function for op 'view_as_complex' not implemented.

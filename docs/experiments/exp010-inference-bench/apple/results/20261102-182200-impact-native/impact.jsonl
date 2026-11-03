@@ -1,0 +1,14 @@
+{"pair":1,"denoise":false,"r":{"loadgen_ms":7335.4,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":1,"denoise":true,"name":"native-rt","r":{"loadgen_ms":7499.7,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":2,"denoise":false,"r":{"loadgen_ms":7464.8,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":2,"denoise":true,"name":"native-rt","r":{"loadgen_ms":7978.0,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":3,"denoise":false,"r":{"loadgen_ms":9169.9,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":3,"denoise":true,"name":"native-rt","r":{"loadgen_ms":9587.4,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":4,"denoise":false,"r":{"loadgen_ms":8723.5,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":4,"denoise":true,"name":"native-rt","r":{"loadgen_ms":9534.3,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":5,"denoise":false,"r":{"loadgen_ms":8131.3,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":5,"denoise":true,"name":"native-rt","r":{"loadgen_ms":8655.1,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":6,"denoise":false,"r":{"loadgen_ms":9059.9,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":6,"denoise":true,"name":"native-rt","r":{"loadgen_ms":8178.1,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":7,"denoise":false,"r":{"loadgen_ms":8227.3,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":7,"denoise":true,"name":"native-rt","r":{"loadgen_ms":8018.6,"threads":10,"passes":8000,"checksum":6211736.990}}
