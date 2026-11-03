@@ -97,7 +97,11 @@ mod tests {
     fn cfg_test_module_files_are_exempt_from_r3() {
         let d = tmp("pos");
         let sleep = "fn f() { std::thread::sleep(std::time::Duration::ZERO); }\n";
-        fs::write(d.join("src/lib.rs"), "mod worker;\n#[cfg(test)]\nmod tests;\n").unwrap();
+        fs::write(
+            d.join("src/lib.rs"),
+            "mod worker;\n#[cfg(test)]\nmod tests;\n",
+        )
+        .unwrap();
         fs::write(d.join("src/tests.rs"), sleep).unwrap();
         fs::write(d.join("src/tests/more.rs"), sleep).unwrap();
         fs::write(d.join("src/worker.rs"), "#[cfg(test)]\nmod wt;\n").unwrap();

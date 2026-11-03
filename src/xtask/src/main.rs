@@ -21,6 +21,7 @@ mod file_size;
 mod miri;
 mod rate_literal;
 mod single_source;
+mod test_modules;
 mod tidy;
 mod todo;
 

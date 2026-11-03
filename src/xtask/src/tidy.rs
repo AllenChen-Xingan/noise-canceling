@@ -62,6 +62,7 @@ fn release_assert_at(s: &str, at: usize) -> bool {
     rest.trim_start().starts_with('!')
 }
 
+#[derive(Default)]
 pub struct Tidy {
     pub problems: Vec<String>,
     pub nrt_allows: usize,
@@ -121,7 +122,7 @@ fn is_nrt_module(lines: &[&str]) -> bool {
     false
 }
 
-fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usize {
+pub(crate) fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usize {
     let Ok(src) = fs::read_to_string(path) else {
         t.problems.push(format!("{rel}：读不了"));
         return 0;
@@ -403,12 +404,14 @@ pub fn check() -> Result<Tidy, String> {
         let mut files = Vec::new();
         rs_files(&dir.join("src"), &mut files);
         let mut blocks = 0;
+        // `#[cfg(test)] mod x;` 引入的文件只在测试编译，不按实时代码查（test_modules.rs）
+        let tests = crate::test_modules::test_module_files(&files);
         for f in files {
             let rel = f
                 .strip_prefix(&root)
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|_| f.display().to_string());
-            blocks += check_file(&f, &rel, realtime, &mut t);
+            blocks += check_file(&f, &rel, realtime && !tests.contains(&f), &mut t);
         }
         if unsafe_crate {
             let mut all_rs = Vec::new();
