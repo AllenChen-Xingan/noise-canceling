@@ -1,7 +1,7 @@
 # 评审 019 · 推理后端总方案与判据（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/019_apple-inference/decision.md` · `standard.md`，依据含 `docs/experiments/exp010-inference-bench/apple-rs/` 的 `src/{main,alloc,bnns,coreml,rt}.rs` 与 `tools/{power_parse.py,impact.sh,rt-matrix.sh}`。**最新一轮：第 6 轮（2026-11-02）· 总评「修改」· 待第 7 轮**。
-> 累计处理：P1×13、P2×22 逐条回源码核实，属实 35、驳回 0、无法核实 0；引用抽查「不符」2 条（已改）。
+> 对象：`docs/research/019_apple-inference/decision.md` · `standard.md`，依据含 `docs/experiments/exp010-inference-bench/apple-rs/` 的 `src/{main,alloc,bnns,coreml,rt}.rs` 与 `tools/{power_parse.py,impact.sh,rt-matrix.sh}`。**最新一轮：第 7 轮（2026-11-02）· 总评「修改」· 连续第 1 轮无 P0/P1，待第 8 轮确认**。
+> 累计处理：P1×13、P2×25 逐条回源码核实，属实 38、驳回 0、无法核实 0；引用抽查「不符」3 条（已改）。
 > 送 codex 之前已做同模型 3 视角只读自审一轮（数字核对 · 结论强度 · 测量口径），其发现已先改完；那一轮的 P2 留在 `decision.md` §7。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -204,3 +204,28 @@
 ### 是否再审
 
 有 P1 → 改完开第 7 轮。
+
+## 第 7 轮（2026-11-02）· 总评「修改」
+
+原文：`_tmp/codex-019/decision-codex-7.md`（不入库）。effort medium（`result: P0×0 P1×0 P2×3 P3×0`）。日志头 `model: gpt-6-astra` · `sandbox: read-only`。依据加了 `apple/bench_coreml.swift`。
+上一轮处理的验证：codex 核实属实 6 条（噪声底已累加三项并有反例测试、§3 按模型分口径、fields.rs 读不到正本即失败、alloc6k 整数 0、手写 rt 0.65 / 0.66 ms、BNNS 每次打开都编译）。
+本轮 P0/P1：0 条 · 停止线：连续第 1 轮无 P0/P1 → 再审一轮确认
+
+- **P2｜standard.md:118 · power_parse.py:105,107 噪声底与排名指标单位不一致**（第 7 轮 #1）
+  - 处理：§6.2 写明换算（µJ / 帧 = mW × `pace_ms`）；`power_parse.py` 改为按每帧耗电中位数排序，并输出 `noise_floor_uj_per_frame`；新增反例测试（A 功率小但帧间隔长、B 功率大但帧间隔短：按功率 A 在前，按每帧耗电 B 在前，断言按后者），通过。
+- **P2｜b2 summary.md:13–15 BNNS 分配仍写「p 0」**（第 7 轮 #2）
+  - 处理：三行改为「p 0.000（整数待验证）」。
+- **P2｜decision.md:55 · standard.md:144 把无设备归属的节点说成「常量类」**（第 7 轮 #3）
+  - 核实：属实。`bench_coreml.swift:112–124` 只记「`deviceUsage` 返回空」，不记算子名。
+  - 处理：三处都改为「设备归属未知（`deviceUsage` 返回空，没记算子名）」。
+
+### 引用抽查
+
+- 「不符」：`decision.md:55`「常量类节点」→ 同上，已改。
+- 「核实属实」：6 条。
+
+本轮之间另做（大总管定）：本 PR 先合，fastpath（`exp/012-fastpath`，#58）后合；`fields.rs` 里三条计时窗字段照留并注明随 #58 删除；`decision.md` 写「手写版耗电待 #58 合并后进排名」。
+
+### 是否再审
+
+连续第 1 轮无 P0/P1 → 开第 8 轮确认。
