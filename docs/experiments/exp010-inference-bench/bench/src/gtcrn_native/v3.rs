@@ -503,6 +503,20 @@ mod tests {
         }
     }
 
+    /// v2 / v3 / v4 不看全局开关：不走 BLAS，TRA 的 sigmoid 固定是 libm（codex 020 第 1 轮 #2）。
+    /// 只查静态性质、不改全局开关，免得和并行的其他测试互相干扰；改开关的整网检查在 main 的端到端测试里
+    #[test]
+    fn v2_v3_v4_ignore_global_switches() {
+        assert!(!<V3<true, { v2::NL_DIV }> as Kern>::use_blas() && !<v2::V2<{ v2::NL_DIV }> as Kern>::use_blas());
+        let mut x = -20.0f32;
+        while x <= 20.0 {
+            let want = 1.0 / (1.0 + (-x).exp());
+            assert_eq!(<V3<true, { v2::NL_DIV }> as Kern>::sig1(x).to_bits(), want.to_bits());
+            assert_eq!(<v2::V2<{ v2::NL_LIBM }> as Kern>::sig1(x).to_bits(), want.to_bits());
+            x += 0.01;
+        }
+    }
+
     /// 整网：v3i（GRU 交错）与 v3 逐位相同（20 帧带状态）
     #[test]
     fn v3i_whole_net_bitwise_equal_v3() {

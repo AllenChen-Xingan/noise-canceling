@@ -478,6 +478,26 @@ mod tests {
             )
             .unwrap_or_else(|e| panic!("{k} reset: {e}"));
         }
+        // 全局开关不影响 v4i（codex 020 第 1 轮 #2）：先开 native-blas-fast 把 BLAS / FAST 都置为真，
+        // 再跑 v4i，与两开关为假时的 v4i 逐位相同
+        let run_all = |n: &mut Box<dyn Net>| {
+            let mut out = Vec::new();
+            for x in &inputs {
+                let mut v = x.clone();
+                n.infer(&mut v).unwrap();
+                out.extend(v);
+            }
+            out
+        };
+        let mut clean = open_net(ModelId::Gtcrn, "native-v4i", Path::new(&w)).unwrap();
+        let ref_out = run_all(&mut clean);
+        let _dirty = open_net(ModelId::Gtcrn, "native-blas-fast", Path::new(&w)).unwrap();
+        assert!(gtcrn_native::BLAS.load(Relaxed) && gtcrn_native::FAST.load(Relaxed));
+        let got = run_all(&mut clean.reset_then(&w));
+        assert!(
+            ref_out.iter().zip(&got).all(|(a, b)| a.to_bits() == b.to_bits()),
+            "全局开关改变了 v4i 的输出"
+        );
         // 手抄形状与 ONNX 一致（OrtGtcrn::open 里也会查，这里单独断言一次）
         check_gtcrn_shapes(&input_shapes(&ort_session(Path::new(&onnx)).unwrap()).unwrap())
             .unwrap();
