@@ -121,7 +121,11 @@ pub fn test_module_files(files: &[PathBuf]) -> Vec<PathBuf> {
     let prod: Vec<PathBuf> = decls
         .iter()
         .filter(|(f, ..)| !out.contains(f))
-        .flat_map(|(_, dir, _, o)| o.iter().flat_map(|n| resolve(dir, n)))
+        // 只指到模块文件本身（`x.rs` / `x/mod.rs`）；它的子模块是不是测试由它自己的声明决定
+        .flat_map(|(_, dir, _, o)| {
+            o.iter()
+                .flat_map(|n| [dir.join(format!("{n}.rs")), dir.join(n).join("mod.rs")])
+        })
         .collect();
     out.retain(|f| !prod.contains(f));
     out
