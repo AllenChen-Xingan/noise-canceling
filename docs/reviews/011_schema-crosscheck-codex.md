@@ -130,7 +130,7 @@
 
 - **P2｜src/eval/src/files.rs:28 整数的写法：schema 收 3.0，serde 不收**（第 5 轮 #1）
   - 核实：属实。JSON Schema 把 `3.0` 算整数；serde 读 `u64` 只收不带小数点的写法。`{"seed": 3.0}` 过 schema、解析报错；Config 的 `block` 同理
-  - 处理：**留作 issue**。方向是 schema 宽、Rust 严，坏数据进不来；要改就得给所有整数字段换反序列化器，这是行为改动，超出本轮。已写进 `specs/schema/README.md`「schema 不管什么」；issue 草稿在 `_tmp/20261102-schema-review/issue-int-float.md`，交大总管开
+  - 处理：**留作 issue**。方向是 schema 宽、Rust 严，坏数据进不来；要改就得给所有整数字段换反序列化器，这是行为改动，超出本轮。已写进 `specs/schema/README.md`「schema 不管什么」；大总管已开 issue #61
 - **P2｜src/schema/tests/crosscheck.rs:858 冻结基线的负例没测到真正的读入口**（第 5 轮 #2）
   - 核实：属实。负例只调 `BaselineFile::parse`；把 `load_baseline` 改回「出错就返回空基线」，测试照样过
   - 处理：`load_baseline` 拆出 `load_baseline_from(路径)`。新测试 `load_baseline_only_missing_file_is_empty`（`src/eval/src/main.rs`），覆盖以下几种情况：

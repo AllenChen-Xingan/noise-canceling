@@ -36,7 +36,7 @@ Closes #57
   - `src/shm/tests/posix.rs`、`src/denoised/src/lib.rs`：总线名加空格、中文、多字节等负例
 - 跑了哪些（命令 + 结果）：〔编译后填〕
 - 测不了的（`#[ignore]` + 人工步骤）：无。对照基线那条测试在本机制第一次合并前会跳过，因为 main 上还没有布局文件，合并后生效
-- 已知差异（留作 issue）：schema 把 `3.0` 算整数，serde 不收；方向是 schema 宽、Rust 严。写在 `specs/schema/README.md`
+- 已知未解决：#61（schema 把 `3.0` 算整数，serde 不收；方向是 schema 宽、Rust 严，写在 `specs/schema/README.md`）
 
 ## 唯一真相源（CLAUDE.md 第五节第 5 条）
 - 本次新增的第二处表示及其校验：
