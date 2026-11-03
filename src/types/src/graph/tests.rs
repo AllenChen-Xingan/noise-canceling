@@ -93,7 +93,7 @@ fn reversed_order_is_rejected() {
 /// 编号相同、名字不同（有人在实现里手写了一份种类）也算不一致。
 #[test]
 fn wrong_name_is_rejected() {
-    static RENAMED: NodeKind = NodeKind {
+    const RENAMED: NodeKind = NodeKind {
         name: "floor2",
         ..FLOOR
     };
@@ -107,7 +107,7 @@ fn wrong_name_is_rejected() {
         })
     );
     // 版本不同同理
-    static BUMPED: NodeKind = NodeKind {
+    const BUMPED: NodeKind = NodeKind {
         version: 2,
         ..FLOOR
     };
@@ -190,19 +190,19 @@ fn content_id_is_stable() {
 
 #[test]
 fn content_id_changes_with_any_part() {
-    static V2: NodeKind = NodeKind {
+    const V2: NodeKind = NodeKind {
         version: 2,
         ..ASYM_GATE
     };
-    static FEWER: NodeKind = NodeKind {
+    const FEWER: NodeKind = NodeKind {
         params: &[&desc::FLOOR_DB],
         ..ASYM_GATE
     };
-    static LAT: NodeKind = NodeKind {
+    const LAT: NodeKind = NodeKind {
         latency_samples: 1,
         ..ASYM_GATE
     };
-    static DOC: NodeKind = NodeKind {
+    const DOC: NodeKind = NodeKind {
         doc: "改了说明",
         ..ASYM_GATE
     };
