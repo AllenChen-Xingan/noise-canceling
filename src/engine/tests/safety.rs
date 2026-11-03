@@ -205,8 +205,16 @@ fn safety_defaults_follow_desc_table() {
 fn desc_boundary_values_are_accepted_by_engine() {
     use vdn_types::desc::*;
     for (max_abs, hold, xf) in [
-        (ENGINE_MAX_ABS.min, ENGINE_RECOVER_HOLD_S.min, ENGINE_CROSSFADE_S.min),
-        (ENGINE_MAX_ABS.max, ENGINE_RECOVER_HOLD_S.max, ENGINE_CROSSFADE_S.max),
+        (
+            ENGINE_MAX_ABS.min,
+            ENGINE_RECOVER_HOLD_S.min,
+            ENGINE_CROSSFADE_S.min,
+        ),
+        (
+            ENGINE_MAX_ABS.max,
+            ENGINE_RECOVER_HOLD_S.max,
+            ENGINE_CROSSFADE_S.max,
+        ),
     ] {
         let cfg = SafetyConfig {
             max_abs,

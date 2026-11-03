@@ -347,9 +347,7 @@ pub fn lex_lines(src: &str) -> Vec<(String, String)> {
 
 /// `c[i]` 是 `r`，前面是独立的 `b`（`br"…"` 字节原始字符串的前缀）。
 fn byte_prefix(c: &[char], i: usize) -> bool {
-    i >= 1
-        && c[i - 1] == 'b'
-        && (i == 1 || !(c[i - 2].is_alphanumeric() || c[i - 2] == '_'))
+    i >= 1 && c[i - 1] == 'b' && (i == 1 || !(c[i - 2].is_alphanumeric() || c[i - 2] == '_'))
 }
 
 fn has_reason(line: &str, marker: &str) -> bool {
@@ -443,7 +441,8 @@ fn num_at(s: &str, i: usize) -> Option<usize> {
 
 /// 数字字面量的类型后缀（长的在前，免得 `u128` 先匹配成 `u1`）。
 const NUM_SUFFIXES: [&str; 14] = [
-    "u128", "i128", "usize", "isize", "f32", "f64", "u16", "u32", "u64", "i16", "i32", "i64", "u8", "i8",
+    "u128", "i128", "usize", "isize", "f32", "f64", "u16", "u32", "u64", "i16", "i32", "i64", "u8",
+    "i8",
 ];
 
 /// `s[..end]` 结尾是不是数字字面量（前面不是标识符字符，免得把 `x.0..` 的元组下标当数字）。
@@ -772,7 +771,11 @@ mod tests {
             "// tidy: 同名不同物：\npub struct Hysteresis {}\n",
             "pub struct Hysteresis {} const S: &str = \"tidy: 同名不同物：假的\";\n",
         ] {
-            assert_eq!(mirror_problems("src/x/src/lib.rs", bad, &names).len(), 1, "{bad}");
+            assert_eq!(
+                mirror_problems("src/x/src/lib.rs", bad, &names).len(),
+                1,
+                "{bad}"
+            );
         }
     }
 
