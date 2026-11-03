@@ -24,6 +24,7 @@
     )
 )]
 
+pub mod feeder;
 pub mod shm;
 pub mod testing;
 

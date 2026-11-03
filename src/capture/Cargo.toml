@@ -18,6 +18,7 @@ vdn-hal.workspace = true
 vdn-io-macos.workspace = true
 vdn-rt-thread.workspace = true
 vdn-control.workspace = true
+rtrb.workspace = true
 clap.workspace = true
 hound.workspace = true
 
