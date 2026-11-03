@@ -14,8 +14,14 @@
 - 2026-11-02 签名发给大总管与 rs-entry：`state/handoff/rs-wake-api.md`
 - 2026-11-02 xtask tidy：crate 根检查从「只查第一个存在的根」改为查全部编译根（lib.rs · main.rs · src/bin/*.rs · src/bin/*/main.rs），加单测；`cargo test -p xtask` 10 过；tidy 过
 
+- 2026-11-02 对照实验程序 `src/shm/examples/wake_bench.rs`：两个真进程（父 = 生产者，实时优先级；子 = 消费者），每 2 ms 推 96 帧，时间戳编进样本；统计延迟 p50/p99/max、系统计的唤醒次数（`proc_pid_rusage` 空闲 + 中断唤醒）、消费者 CPU。debug 冒烟 1 s：唤醒 p50 约 10–18 µs；500 µs 轮询 p99 约 44 ms（debug、1 s，仅冒烟，以 release 表为准）
+- 2026-11-02 发现：macOS 的 `getrusage` 不填上下文切换数（读回 0），改用 `proc_pid_rusage`（libc 有结构体没声明函数，实验程序里自写一行 extern）
+- 2026-11-02 Miri 准备：Miri 下唤醒走「不支持」分支（不调 dlsym）；POSIX / 真实时钟测试标 `cfg_attr(miri, ignore)`；heap 两线程测试 Miri 下 200 块
+- 2026-11-02 xtask 新增 `miri` 子命令（`miri.rs`，默认 vdn-shm，不进 `ci`）；本机尚无 nightly，命令报「先装」并退出 1
+- 2026-11-02 名额排队中（rs-entry 在做 V7 延迟测量）；自审 3 个子代理已派（睡死 · 丢唤醒 · 版本不兼容）
+
 ## 新增依赖
-- 无（libc 已有）
+- 无新外部依赖（libc 已有）。vdn-shm 加 dev-dependency `vdn-rt-thread`（只给实验程序提优先级；check-deps 只看普通依赖，过）
 
 ## 待人拍板
 （实验后填）
