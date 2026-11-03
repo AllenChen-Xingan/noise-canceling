@@ -58,13 +58,16 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | 空 |
+| 重编译 / 全量测试 / 跑模型（1 个） | rustbe：release 构建 + tract 对拍 + 基准（约 10 min；已告 applebe 期间不跑重活） |
 
-排队：无
+排队：47 的延迟基准 V7（约 10 min）→ applebe（装 coremltools · Core ML 四种计算单元 + 有状态版基准，约 30–40 min）→ 47 的优先级复测（约 5 min）+ 耗电（约 5 min，人 sudo）
+
+**跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。我方建议之后用 mkdir 主目录 `_tmp/heavy.lock`（写 owner · 开始 · 预计结束，跑完 rmdir），待 47 确认
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 rustbe：tract 对拍过（GTCRN SNR 130 dB；FE-M 缺 SplitToSequence，等价改写为 Gather 后对原图 110.8 dB）；冒烟 GTCRN p50 tract 0.47 ms / ORT 0.51 ms（非正式）。另一位大总管 noise-canceling-47（tmux vdn-rust，Rust 骨架线 rs-shm / rs-entry）的 miri 占满 1 核 → 已结束；已向 47 提议两边「计时基准前互相打招呼」
 - 2026-11-02 rustbe：手写 GTCRN 编译过、与 ORT 逐值对拍过（37 段，最差 SNR 119.2 dB，最大差 1.6e-4，无一帧差 > 1e-3）；下一步加 tract 后端（吃 ONNX · 支持 GRU · 面向流式），再申请基准名额。applebe 已报到（M5 · macOS 27.0.1 · 插电），起调研 workflow：Core ML · BNNS Graph · MLX · 实时线程可调性与 Rust 绑定，各配怀疑派
 - 2026-11-02 judgeloop 收尾：exp011 三参数自动调无收益（SCOREQ −0.027 [−0.037, −0.016]，41 段 / 10 说话人；上界 +0.008）→ 第一版不做；PR #49 合并；转交两条已登记（3-6 · backlog 下一轮盲听）
 - 2026-11-02 15:55 judgeloop：14:15 电脑睡眠中断回复，空闲约 1.5 h，已催续跑。停在 exp011「留出评分 + 吃字」：奖励打分 · 拼接 · 红线已提交；留出评分因识别读不了 32 位浮点 WAV 超时没落盘 → 改 judge（转 16 位 · 60 s 超时重试 2 次 · 先落盘）续跑，推算约 25 min
