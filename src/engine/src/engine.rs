@@ -62,21 +62,23 @@ pub struct SafetyConfig {
 }
 
 impl Default for SafetyConfig {
+    /// 数值参数的默认值取自参数描述表 `vdn_types::desc`（正本）；开关量（`fallback` · `floor` · `fast_open`）不在表里。
     fn default() -> Self {
+        use vdn_types::desc::*;
         Self {
             fallback: true,
             deadline: None,
-            max_abs: 4.0,
-            recover_hold_s: 0.1,
-            crossfade_s: 0.005,
+            max_abs: ENGINE_MAX_ABS.default,
+            recover_hold_s: ENGINE_RECOVER_HOLD_S.default,
+            crossfade_s: ENGINE_CROSSFADE_S.default,
             floor: true,
-            floor_db: -12.0,
+            floor_db: FLOOR_DB.default,
             fast_open: true,
-            open_db: -6.0,
-            attack_s: 0.002,
-            release_s: 0.3,
-            hangover_s: 0.15,
-            detect_db: 9.0,
+            open_db: OPEN_DB.default,
+            attack_s: ATTACK_S.default,
+            release_s: RELEASE_S.default,
+            hangover_s: HANGOVER_S.default,
+            detect_db: DETECT_DB.default,
         }
     }
 }
