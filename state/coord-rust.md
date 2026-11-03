@@ -32,7 +32,7 @@
 |---|---|
 | 重编译 / 全量测试（1 个） | 空——机器交 e3 跑 applebe（17:10 起约 30–40 分钟），我方期间不编译不跑 |
 
-排队：e3 applebe（约 17:56 结束）→ ① rs-wake debug 编译 + 测试（不计时）② rs-entry 锁步测试连跑 5 次 + 4 忙进程 ③ rs-wake release rt_bench + qos_set（8 档 × 20 s，计时，要建锁）→ 大总管合并 + V6
+排队：e3 applebe（约 17:56 结束）→ ① rs-wake debug 编译 + 测试（不计时）② rs-entry 锁步测试连跑 5 次 + 4 忙进程 → 大总管合并 + V6（qos_set 实验按 D68 取消）
 
 等人许可的弹窗 / 长时间前台运行：（空）
 
@@ -43,6 +43,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- **人定 D68（原话「低频也可以，我觉得就用低频吧」）**：不追性能核 / 提频，取消 qos_set；lead 192 = 4 ms 定为默认；实时优先级默认开、音频工作区间默认不加入
 - rs-wake：耗电结果进 `docs/experiments/exp-v7-latency/results/20261102-power/`（README · meta · bench · 每秒摘要 CSV · 原始输出哈希）；推断工作区间没提频是因为截止期报太宽（8 ms）；下一轮 qos_set 8 档组合（qos / tc / wg / wg@1000），判据块耗时回到约 0.7 ms
 - **耗电（人亲手 sudo 跑，第一次因脚本 locale bug 退出，修后重跑）**：功耗中位 基线 74 · 不提 72 · tc 77 · tc + 工作区间 101 mW（各 60 s 1 次，平均 117–125）；醒来迟到 不提 2.6 / 7.0 ms → tc 0.022 / 0.068 ms；每块计算三档都约 3.02 ms（标定约 0.7 ms），E 簇约 1.1 GHz、P 簇未起 → 优先级治醒得晚、不治算得慢；下一步 QoS user-interactive 小实验（rs-wake）
 - rs-entry 验收**打回**：并行跑时 v1_short、mode_switch_mid_run 失败（单独跑 3/3 过）＝不稳定测试；改为锁步模拟，验收＝连跑 5 次全过且带 4 个忙进程
