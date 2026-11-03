@@ -2,8 +2,9 @@
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 
-use vdn_engine::testing::{DelayGain, Identity};
+use vdn_engine::testing::DelayGain;
 use vdn_engine::{
     Engine, FaultInjector, FaultKind, FrameCtx, Pipeline, SafetyConfig, Stage, Status, stages,
 };

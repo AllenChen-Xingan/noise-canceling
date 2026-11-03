@@ -3,14 +3,13 @@
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use vdn_engine::testing::{DelayGain, GAIN, Gain, Identity};
 use vdn_engine::{
     Engine, FaultInjector, FaultKind, FrameCtx, Pipeline, PipelineError, SafetyConfig, Stage,
-    StageChain, Status, stages,
+    stages,
 };
 use vdn_types::graph::test_kind;
 use vdn_types::{Basis, Confidence, Model, ModelError, NodeKind, SpeakerClass, SpeakerVerdict};
