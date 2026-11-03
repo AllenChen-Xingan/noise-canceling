@@ -1,0 +1,6 @@
+{"round":1,"config":"ecapa coreml-cpu","error":"见 stderr.log"}
+{"round":1,"config":"ecapa bnns","error":"见 stderr.log"}
+{"round":2,"config":"ecapa coreml-cpu","error":"见 stderr.log"}
+{"round":2,"config":"ecapa bnns","error":"见 stderr.log"}
+{"round":3,"config":"ecapa coreml-cpu","error":"见 stderr.log"}
+{"round":3,"config":"ecapa bnns","error":"见 stderr.log"}

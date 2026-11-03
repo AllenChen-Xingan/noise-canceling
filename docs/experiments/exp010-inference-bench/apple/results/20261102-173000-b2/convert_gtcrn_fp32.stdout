@@ -1,0 +1,1 @@
+{"torch": "2.7.0", "coremltools": "9.0", "files": {"gtcrn_fp32.mlpackage": "bd61da5afedbfa7ea493daaf4b240d6c8239b89ba8e4f4d24fcdb8613c99c5b8"}}
