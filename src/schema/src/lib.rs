@@ -100,7 +100,11 @@ pub fn export() -> Vec<Doc> {
     vec![
         Doc {
             file: shm::LAYOUT_FILE,
-            text: pretty(&shm::layout_doc(vdn_shm::layout::VERSION, &body)),
+            text: pretty(&shm::layout_doc(
+                vdn_shm::layout::VERSION,
+                shm::HISTORY,
+                &body,
+            )),
         },
         Doc {
             file: "config.schema.json",
