@@ -584,11 +584,12 @@ fn main() -> Result<(), Err> {
                 .last()
                 .ok_or("wav_in 形状空")?;
             let inputs = frames_for(ModelId::Fem, &audio, audio.len() / hop, onnx)?;
+            let t = Path::new(arg_str(rest, "--tract-onnx", &rest[0]));
             parity(
                 ModelId::Fem,
                 "tract",
                 open_net(ModelId::Fem, "ort", onnx)?,
-                open_net(ModelId::Fem, "tract", onnx)?,
+                open_net(ModelId::Fem, "tract", t)?,
                 &inputs,
             )
         }

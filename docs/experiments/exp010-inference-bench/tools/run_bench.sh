@@ -9,6 +9,8 @@ BIN=$HERE/bench/target/release/exp010-bench
 W=$M/_tmp/20261031-exp010/gtcrn_dns3
 G=$M/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx
 F=$HOME/vdn-data/models/fastenhancer-dns-v1.0.0/fastenhancer_m.onnx
+# tract 不支持 SplitToSequence：用 tools/fem_strip_seq.py 改写成 Gather 的版本（fem-parity 证明输出不变）
+FT=$M/_tmp/20261102-exp010/fastenhancer_m_noseq.onnx
 WAV=$M/resources/gtcrn/test_wavs/mix.wav
 OUT=$HERE/results/$ID
 [ -e "$OUT" ] && { echo "已有 $OUT，不覆盖"; exit 1; }
@@ -22,12 +24,12 @@ mkdir -p "$OUT"
   echo "rustc=$(rustc --version)"
   echo "load=$(sysctl -n vm.loadavg)"
   echo "git=$(git -C "$HERE" rev-parse --short HEAD)"
-  shasum -a 256 "$W.bin" "$G" "$F" "$WAV" "$BIN"
+  shasum -a 256 "$W.bin" "$G" "$F" "$FT" "$WAV" "$BIN"
 } > "$OUT/env.txt"
 
 $BIN gtcrn-parity "$W" "$G" "$WAV" --vs native >> "$OUT/parity.jsonl"
 $BIN gtcrn-parity "$W" "$G" "$WAV" --vs tract  >> "$OUT/parity.jsonl"
-$BIN fem-parity "$F" "$WAV" >> "$OUT/parity.jsonl"
+$BIN fem-parity "$F" "$WAV" --tract-onnx "$FT" >> "$OUT/parity.jsonl"
 
 # 交替跑，降低机器状态漂移对某一后端的偏向
 for r in $(seq 1 "$ROUNDS"); do
@@ -36,7 +38,8 @@ for r in $(seq 1 "$ROUNDS"); do
     $BIN gtcrn-bench $k "$a" "$WAV" | sed "s/^{/{\"round\":$r,/" >> "$OUT/bench.jsonl"
   done
   for k in ort tract; do
-    $BIN fem-bench $k "$F" "$WAV" | sed "s/^{/{\"round\":$r,/" >> "$OUT/bench.jsonl"
+    a=$F; [ $k = tract ] && a=$FT
+    $BIN fem-bench $k "$a" "$WAV" | sed "s/^{/{\"round\":$r,/" >> "$OUT/bench.jsonl"
   done
 done
 echo "load_after=$(sysctl -n vm.loadavg)" >> "$OUT/env.txt"
