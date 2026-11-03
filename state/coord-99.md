@@ -10,7 +10,7 @@
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
 | single | 清镜像副本 · 参数只写一处 · #56 · `feat/types-single-source` · `../noise_canceling-single` | vdn-types（参数描述）· vdn-speaker · vdn-polish · vdn-scene | 完成，PR #60 已合并（#56 关），窗口已关；worktree 保留待清 |
-| schema | schema 导出 + 交叉校验 · #57 · `feat/schema-crosscheck` · `../noise_canceling-schema` | schema 机制 · 共享内存头 · 配置 · 评测任务清单 | 已报到（noise-canceling-schema-1d）|
+| schema | schema 导出 + 交叉校验 · #57 · `feat/schema-crosscheck` · `../noise_canceling-schema` | schema 机制 · 共享内存头 · 配置 · 评测任务清单 | 完成，PR #63 已合并（#57 关，0604143），窗口已关；worktree 保留待清 |
 
 ## 进度板
 
@@ -38,3 +38,4 @@
 - 2026-11-02 schema codex 第 5 轮无 P0/P1（4、5 连续干净，评审结束）；P2：基线读入口测试 → 补；「3.0 算不算整数」schema 宽 Rust 严 → 开 issue #61
 - 2026-11-02 代码卫生线 #62（feat/code-hygiene，会话 8d / 手下 hygiene）与我方对齐：采样率收口 · 阈值比对归 #62；他们第二段（control · eval）等 #57 合并后动 → **#57 合并时发 8d「#57 已合并」**
 - 2026-11-02 schema 收尾（402 / 0 / 5，codex 5 轮 16 条：15 改 1 转 #61；手下自记用过一次 git rm）。大总管在 d32b4e8 亲手 ci / --check / eval ci 全过；PR #63 已开，等远端 CI
+- 2026-11-02 PR #63 合并（0604143），#57 关；已告 8d「#57 已合并」；schema 关窗。**第一阶段完成**
