@@ -140,11 +140,12 @@ fn default_policy_follows_d68() {
 #[test]
 fn from_measured_adds_margin_and_clamps() {
     use vdn_rt_thread::MEASURED_MARGIN;
-    // GTCRN：16 ms 一块，实测 p99.9 约 3.05 ms → computation ≈ 4.58 ms
-    let p = RtParams::from_measured(16_000_000, 3_053_000, MEASURED_MARGIN);
+    // GTCRN：周期报 16 ms；每 16 ms 窗口 = 1 块推理（约 3 ms）+ 7 块轻处理（各约 0.13 ms），总工作量 p99.9 约 4 ms
+    // → computation = 6 ms（不是单块推理的 3.05 ms × 1.5）
+    let p = RtParams::from_measured(16_000_000, 4_000_000, MEASURED_MARGIN);
     assert_eq!(p.period_ns, 16_000_000);
     assert_eq!(p.constraint_ns, 16_000_000);
-    assert_eq!(p.computation_ns, 4_579_500);
+    assert_eq!(p.computation_ns, 6_000_000);
     // 余量小于 1 按 1 算；乘出来超过周期就夹到周期
     assert_eq!(RtParams::from_measured(1_000, 800, 0.5).computation_ns, 800);
     assert_eq!(RtParams::from_measured(1_000, 900, 2.0).computation_ns, 1_000);
