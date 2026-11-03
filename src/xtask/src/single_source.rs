@@ -169,6 +169,12 @@ fn defined_type(line: &str) -> Option<&str> {
 /// 逐行给出「只剩代码」的文本：去掉 `//` 行注释、`/* */` 块注释（可跨行）、字符串与字符字面量（可跨行，含 `r"…"` / `r#"…"#`）。
 /// 字符串换成 `""`，免得测试里写在字符串中的负例被当成代码（codex 第 1 轮 P1 #1）。
 pub fn code_lines(src: &str) -> Vec<String> {
+    lex_lines(src).into_iter().map(|(c, _)| c).collect()
+}
+
+/// 逐行 `(代码, 注释)`：代码同 [`code_lines`]；注释是这一行里 `//` 与 `/* */` 的文字（放行标记只从这里认，
+/// 字符串里写的标记不算，codex 第 2 轮 P2 #3）。
+pub fn lex_lines(src: &str) -> Vec<(String, String)> {
     #[derive(Clone, Copy, PartialEq)]
     enum St {
         Code,
@@ -181,6 +187,7 @@ pub fn code_lines(src: &str) -> Vec<String> {
     for line in src.lines() {
         let c: Vec<char> = line.chars().collect();
         let mut o = String::new();
+        let mut cm = String::new();
         let mut i = 0;
         while i < c.len() {
             match st {
@@ -192,6 +199,7 @@ pub fn code_lines(src: &str) -> Vec<String> {
                         st = St::Block(d + 1);
                         i += 2;
                     } else {
+                        cm.push(c[i]);
                         i += 1;
                     }
                 }
@@ -220,6 +228,7 @@ pub fn code_lines(src: &str) -> Vec<String> {
                     let ch = c[i];
                     let prev_ident = i > 0 && (c[i - 1].is_alphanumeric() || c[i - 1] == '_');
                     if ch == '/' && c.get(i + 1) == Some(&'/') {
+                        cm.extend(&c[i..]);
                         break;
                     } else if ch == '/' && c.get(i + 1) == Some(&'*') {
                         st = St::Block(1);
@@ -264,7 +273,7 @@ pub fn code_lines(src: &str) -> Vec<String> {
                 }
             }
         }
-        out.push(o);
+        out.push((o, cm));
     }
     out
 }
@@ -281,26 +290,25 @@ pub fn mirror_problems(rel: &str, src: &str, names: &[String]) -> Vec<String> {
             "{rel}：镜像文件不许存在，直接依赖 vdn-types（R-MIRROR）"
         ));
     }
-    let lines: Vec<&str> = src.lines().collect();
-    let codes = code_lines(src);
-    for (i, line) in lines.iter().enumerate() {
-        let code = codes.get(i).map_or("", String::as_str);
+    let lexed = lex_lines(src);
+    for (i, (code, comment)) in lexed.iter().enumerate() {
         let Some(name) = defined_type(code) else {
             continue;
         };
         if !names.iter().any(|n| n == name) {
             continue;
         }
-        // 放行：同行，或紧邻上方连续的注释 / 属性行里写了理由
-        let mut ok = has_reason(line, MIRROR_ALLOW);
+        // 放行：同行，或紧邻上方连续的注释 / 属性行的**注释**里写了理由
+        let mut ok = has_reason(comment, MIRROR_ALLOW);
         let mut j = i;
         while !ok && j > 0 {
             j -= 1;
-            let t = lines[j].trim_start();
-            if !(t.starts_with("//") || t.starts_with("#[")) {
+            let (c, cm) = &lexed[j];
+            let t = c.trim();
+            if !(t.is_empty() || t.starts_with("#[")) {
                 break;
             }
-            ok = has_reason(t, MIRROR_ALLOW);
+            ok = has_reason(cm, MIRROR_ALLOW);
         }
         if !ok {
             out.push(format!(
@@ -331,6 +339,13 @@ fn num_at(s: &str, i: usize) -> Option<usize> {
         while b.get(j).is_some_and(|c| c.is_ascii_digit() || *c == b'_') {
             j += 1;
         }
+    } else if b.get(j) == Some(&b'.')
+        && !b
+            .get(j + 1)
+            .is_some_and(|c| *c == b'.' || c.is_ascii_alphabetic() || *c == b'_')
+    {
+        // `60.` 这种无小数位的浮点（后面不是 `..` 范围、也不是方法调用）
+        j += 1;
     }
     // 指数：1e3 / 6e-1 / 6E+1（codex 第 1 轮 P2 #5）
     if matches!(b.get(j), Some(b'e') | Some(b'E')) {
@@ -345,22 +360,23 @@ fn num_at(s: &str, i: usize) -> Option<usize> {
             }
         }
     }
-    for suf in ["f32", "f64"] {
-        if s[j..].starts_with(suf) {
-            j += suf.len();
-        }
+    if let Some(suf) = NUM_SUFFIXES.iter().find(|suf| s[j..].starts_with(**suf)) {
+        j += suf.len();
     }
     Some(j)
 }
+
+/// 数字字面量的类型后缀（长的在前，免得 `u128` 先匹配成 `u1`）。
+const NUM_SUFFIXES: [&str; 14] = [
+    "u128", "i128", "usize", "isize", "f32", "f64", "u16", "u32", "u64", "i16", "i32", "i64", "u8", "i8",
+];
 
 /// `s[..end]` 结尾是不是数字字面量（前面不是标识符字符，免得把 `x.0..` 的元组下标当数字）。
 fn num_ends_at(s: &str, end: usize) -> bool {
     let b = s.as_bytes();
     let mut j = end;
-    for suf in ["f32", "f64"] {
-        if s[..j].ends_with(suf) {
-            j -= suf.len();
-        }
+    if let Some(suf) = NUM_SUFFIXES.iter().find(|suf| s[..j].ends_with(**suf)) {
+        j -= suf.len();
     }
     let stop = j;
     while j > 0 && (b[j - 1].is_ascii_digit() || b[j - 1] == b'.' || b[j - 1] == b'_') {
@@ -480,12 +496,10 @@ fn has_token(code: &str, tok: &str) -> bool {
 
 pub fn range_problems(rel: &str, src: &str, tokens: &[String]) -> Vec<String> {
     let mut out = Vec::new();
-    let codes = code_lines(src);
-    for (i, line) in src.lines().enumerate() {
-        if has_reason(line, RANGE_ALLOW) {
+    for (i, (code, comment)) in lex_lines(src).iter().enumerate() {
+        if has_reason(comment, RANGE_ALLOW) {
             continue;
         }
-        let code = codes.get(i).map_or("", String::as_str);
         if !has_literal_range(code) {
             continue;
         }
@@ -556,6 +570,11 @@ mod tests {
             "    let f = floor_db.clamp(-6e1, 0.0);",
             "    let ok = (-6E+1..=0e0).contains(&floor_db);",
             "    let f = /* 夹一下 */ floor_db.clamp(-60.0, 0.0);",
+            "    let n = confirm_n.clamp(1u32, 20u32);",
+            "    let n = (1usize..=20usize).contains(&confirm_n);",
+            "    let f = floor_db.clamp(-60., 0.);",
+            // 字符串里写放行标记不算放行
+            "    let s = \"tidy: 非参数范围：x\"; let f = floor_db.clamp(-60.0, 0.0);",
         ];
         for line in bad {
             assert_eq!(range_problems("x.rs", line, &toks()).len(), 1, "{line}");
@@ -576,9 +595,10 @@ mod tests {
             "    assert_eq!((c.floor_db, c.detect_db), (-20.0, 12.0));",
             // 注释里的范围
             "    // floor_db 原来写成 -60.0..=0.0，现在在 desc.rs",
-            // 元组下标 / 切片
+            // 元组下标 / 切片 / 整数方法调用
             "    let s = &floor_db_buf[x.0..n];",
             "    for i in 0..floor_db.len() {",
+            "    let n = 3.max(confirm_n);",
             // 放行
             "    let r = (0.0..1.0).contains(&smooth); // tidy: 非参数范围：这是归一化后的插值位置",
             // 字符串里的负例（测试数据）不是代码
@@ -642,15 +662,20 @@ mod tests {
             "// pub struct Stage {}\n",
             "/* pub struct Stage {} */\n",
             "let s = \"pub struct Stage {}\";\n",
+            "/* tidy: 同名不同物：块注释里写理由也算 */\npub struct Hysteresis {}\n",
         ] {
             assert!(
                 mirror_problems("src/x/src/lib.rs", good, &names).is_empty(),
                 "{good}"
             );
         }
-        // 只写标记、不写理由不算
-        let bare = "// tidy: 同名不同物：\npub struct Hysteresis {}\n";
-        assert_eq!(mirror_problems("src/x/src/lib.rs", bare, &names).len(), 1);
+        // 只写标记、不写理由不算；写在字符串里也不算
+        for bad in [
+            "// tidy: 同名不同物：\npub struct Hysteresis {}\n",
+            "pub struct Hysteresis {} const S: &str = \"tidy: 同名不同物：假的\";\n",
+        ] {
+            assert_eq!(mirror_problems("src/x/src/lib.rs", bad, &names).len(), 1, "{bad}");
+        }
     }
 
     /// 整个仓库当前过这两条规则（新加的违规会在这里和 `tidy` 里同时红）。
