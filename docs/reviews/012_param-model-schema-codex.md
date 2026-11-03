@@ -1,7 +1,7 @@
 # 评审 012 · 参数描述导出 · 模型接口三方一致 · FE-M 名字唯一（codex · gpt-6-astra · read-only）
 
-> 对象：`git diff origin/main...HEAD`（分支 `feat/param-model-schema`，issue #65；diff 模板，附 `state/handoff/iface.md` 与重点说明）。**最新一轮：第 3 轮（2026-11-02）· 总评「修改」· 停止线满足（第 2、3 轮连续无 P0/P1），评审结束**。
-> 累计处理：P1×1、P2×8，逐条回到源码核实，9 条全部属实、全部已改，没有留 issue。新冒出的需要人定的事：没有。
+> 对象：`git diff origin/main...HEAD`（分支 `feat/param-model-schema`，issue #65；diff 模板，附 `state/handoff/iface.md` 与重点说明）。**最新一轮：第 4 轮（2026-11-02）· 总评「修改」· 本轮有 P1，待第 5 轮**。第 1–3 轮审 #65 已达停止线；之后合并 main、加做 #68，从第 4 轮起续审。
+> 累计处理：P1×2、P2×11，逐条回到源码核实，13 条全部属实、全部已改，没有留 issue。新冒出的需要人定的事：没有。
 > 作者：手下 iface。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -88,3 +88,32 @@
 ### 是否再审
 
 停止线满足，评审结束。本轮那条 P2 改动小、有负例钉住，没再开第 4 轮。
+
+## 第 4 轮（2026-11-02）· 总评「修改」
+
+对象扩大：大总管把 origin/main（含处理图 #69）合进本分支（4f622582），之后我修了合并后的两处红，又做了 issue #68（模型节点带权重版本）。重点说明见 `_tmp/reviews/012-focus-r4.md`（不入库）。
+原文：`_tmp/reviews/012-param-model-schema-codex-4.md`（不入库）。effort medium，耗时 90 秒（`result: P0×0 P1×1 P2×3 P3×0`）。
+本轮 P0/P1：1 条 · 停止线：未满足 · 留作 issue 的 P2：无。
+
+- **P1｜src/engine/src/pipeline.rs:186 模型名核对能绕过**（第 4 轮 #1）
+  - 核实：属实。`with_stages` 只比级串；拿 FE-M 图的 `stages` 去构造跑 GTCRN 的 Pipeline 能成功，原图还能直接交给 `SessionHeader::set_graph`。只有另调 `Pipeline::graph` 才比模型名
+  - 处理：新类型 `CheckedGraph`（字段私有），只能经 `ProcessingGraph::verify(model, chain)` 得到；`verify` 一次核对挂点与名字、模型节点 = `Model::name()`、时域段 = 实际级串。`Pipeline::graph` 返回 `CheckedGraph`。`SessionHeader::set_graph` 只收 `CheckedGraph`，所以没核对的图在类型上就进不了会话记录。新测试 `foreign_graph_cannot_be_verified_against_running_model`：别的模型的图用正在跑的模型核对报 `ModelName`；级串不同报 `Extra`
+- **P2｜src/xtask/src/model_name.rs:55 字符串里的伪 `mod` 声明会豁免生产文件**（第 4 轮 #2）
+  - 核实：属实。原来在保留字符串的文本里找 `#[cfg(test)]`
+  - 处理：改为在去掉字符串的代码行里定位属性和 `mod`，只从原文取 `#[path]` 的值（且代码里确有 `#[path`）。负例：字符串内容为 `#[cfg(test)] mod real;`，紧接真 `mod real;`，`real.rs` 不进测试名单
+- **P2｜src/xtask/src/model_name.rs:68 `#[path]` 写在 `#[cfg(test)]` 前面时认不出**（第 4 轮 #3）
+  - 核实：属实
+  - 处理：往前收紧挨着的「整行只有属性」的行（`only_attrs`），往后收到 `;` 或 `{`，整项一起解析，不依赖属性顺序。正例：`#[path = "x_tests.rs"]` 在前、`#[cfg(test)]` 在后
+- **P2｜src/xtask/src/scan.rs:306 `\u{6_6}` 这种带下划线的 Unicode 转义仍漏**（第 4 轮 #4）
+  - 核实：属实
+  - 处理：解析前去掉下划线；负例 `"\u{6_6}astenhancer-m"`
+
+### 引用抽查
+
+- codex 列的「不符」：无
+- codex 列的「核实属实」：6 条
+- 无法核实：会话解析器全部兼容路径、全量测试数字。改完后本机重跑：`xtask ci` 全绿（469 过 / 0 败 / 7 忽略）；真权重 vdn-models 18 条全过
+
+### 是否再审
+
+本轮有 P1 → 改完开第 5 轮。
