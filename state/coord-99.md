@@ -11,6 +11,8 @@
 |---|---|---|---|
 | single | 清镜像副本 · 参数只写一处 · #56 · `feat/types-single-source` · `../noise_canceling-single` | vdn-types（参数描述）· vdn-speaker · vdn-polish · vdn-scene | 完成，PR #60 已合并（#56 关），窗口已关；worktree 保留待清 |
 | schema | schema 导出 + 交叉校验 · #57 · `feat/schema-crosscheck` · `../noise_canceling-schema` | schema 机制 · 共享内存头 · 配置 · 评测任务清单 | 完成，PR #63 已合并（#57 关，0604143），窗口已关；worktree 保留待清 |
+| graph | 第二阶段 · 处理图描述 + 与 Pipeline 交叉校验 + 会话记录记图版本 · #64 · `feat/processing-graph` · `../noise_canceling-graph` | 处理图描述 · Pipeline · 会话记录 · 修音链频谱级归属 | 已派 |
+| iface | 第二阶段 · 参数描述导出 schema · 模型接口三方一致 · FE-M 名字只留一个 · #65 · `feat/param-model-schema` · `../noise_canceling-iface` | 参数描述导出 · 场景参数表 / 我的配置文本 · 模型接口 | 已派 |
 
 ## 进度板
 
@@ -39,3 +41,4 @@
 - 2026-11-02 代码卫生线 #62（feat/code-hygiene，会话 8d / 手下 hygiene）与我方对齐：采样率收口 · 阈值比对归 #62；他们第二段（control · eval）等 #57 合并后动 → **#57 合并时发 8d「#57 已合并」**
 - 2026-11-02 schema 收尾（402 / 0 / 5，codex 5 轮 16 条：15 改 1 转 #61；手下自记用过一次 git rm）。大总管在 d32b4e8 亲手 ci / --check / eval ci 全过；PR #63 已开，等远端 CI
 - 2026-11-02 PR #63 合并（0604143），#57 关；已告 8d「#57 已合并」；schema 关窗。**第一阶段完成**
+- 2026-11-02 第二阶段派出：graph（#64）· iface（#65）。发现 main 已有 StageChain + Pipeline::with_stages（Rust 骨架线），图只补描述数据与交叉校验。前端只算一次（D71）不在本阶段，留第三步
