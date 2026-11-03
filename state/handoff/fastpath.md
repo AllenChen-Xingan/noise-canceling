@@ -8,11 +8,14 @@
 
 ## 进度
 - [x] 报到；调研 workflow 已起（3 调研 + 3 怀疑派）
-- [x] bench 补计时窗字段 `win_start_unix` / `win_end_unix` / `wall_s` + 测试 `bench_emits_window_fields`（未编译，等名额）
-- [ ] 逐层打点 + 计算量统计（gtcrn_native.rs）
-- [ ] 本机峰值微基准（hw-peak）
+- [x] bench 补计时窗字段 `win_start_unix` / `win_end_unix` / `wall_s` + 测试 `bench_emits_window_fields`（已编译、测过）
+- [x] 逐层打点 + 计算量统计（gtcrn_native.rs，`infer_probed` + `Cost`；交叉校验测试 4 条）
+- [x] 本机峰值微基准（hw-peak）· 逐层计时（gtcrn-layers）—— 计时中 `results/20261102-peak1/`
+- [x] 调研 workflow 完成（6 代理）：`docs/research/020_fastpath/notes/prior-art-raw.json`
+- [x] 等价改写清单 `docs/research/020_fastpath/rewrites.md`
+- [x] native-v2 / native-v2-fast 代码（`bench/src/gtcrn_native/v2.rs`，未编译，等计时结束）
+- [x] dsp-bench（前后处理计时 + 重采样点积对照，未编译）
 - [ ] 下界表
-- [ ] 等价改写 → native-v2
 - [ ] 结论文档 · codex 评审
 
 ## 转交
