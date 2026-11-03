@@ -19,7 +19,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::single_source::lex_lines;
-use crate::test_modules::{brace_delta, mod_decl, test_module_files};
+use crate::test_modules::{mod_decl, test_module_files};
 use crate::tidy::rs_files;
 
 /// 采样率正本。
@@ -109,7 +109,8 @@ pub fn rate_problems(rel: &str, src: &str, test_file: bool) -> Vec<String> {
     let raw: Vec<&str> = src.lines().collect();
     let mut out = Vec::new();
     let mut depth = 0i64;
-    // 内联测试模块 `#[cfg(test)] mod x { … }`：进入时的深度；闭合后结束放行（codex 第 2 轮 P2 #4）
+    // 内联测试模块 `#[cfg(test)] mod x { … }`：进入时的深度；按字符位置在它闭合处结束放行，
+    // 同一行闭合之后的代码照查（codex 第 2 轮 P2 #4、第 3 轮 P2 #3）
     let mut test_from: Option<i64> = None;
     let mut cfg_test_prev = false;
     for (i, (code, comment)) in lex_lines(src).iter().enumerate() {
@@ -123,15 +124,23 @@ pub fn rate_problems(rel: &str, src: &str, test_file: bool) -> Vec<String> {
         if !t.is_empty() {
             cfg_test_prev = t == "#[cfg(test)]";
         }
-        let in_tests = test_from.is_some();
-        depth += brace_delta(t);
-        if test_from.is_some_and(|d| depth <= d) {
-            test_from = None;
+        // 这一行里不在测试模块中的部分（测试部分换成空格）
+        let mut prod = String::with_capacity(code.len());
+        for c in code.chars() {
+            prod.push(if test_from.is_some() { ' ' } else { c });
+            match c {
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if test_from.is_some_and(|d| depth <= d) {
+                        test_from = None;
+                    }
+                }
+                _ => {}
+            }
         }
-        if low_level && in_tests {
-            continue;
-        }
-        if has_rate_literal(code) && !has_allow_reason(comment) {
+        let checked = if low_level { prod.as_str() } else { code.as_str() };
+        if has_rate_literal(checked) && !has_allow_reason(comment) {
             let line = raw.get(i).map_or("", |l| l.trim());
             out.push(format!(
                 "{rel}:{}：采样率字面量（R-RATE）——改用 vdn_types::IO_RATE / MODEL_RATE（正本 {RATE_FILE}）；不是采样率就在行尾写 `// {ALLOW}<理由>`：{line}",
@@ -249,6 +258,13 @@ mod tests {
         assert!(p[0].contains(":5："), "{p:?}");
         let decl = "#[cfg(test)]\nmod tests;\nfn after() -> u32 { 48_000 }\n";
         assert_eq!(rate_problems("src/shm/src/a.rs", decl, false).len(), 1);
+        // 同一行闭合后再声明的生产项照挡（codex 第 3 轮 P2 #3）
+        let same_line = "#[cfg(test)]\nmod tests { fn g() { let _ = 48_000; } } const SR: u32 = 48000;\n";
+        let p = rate_problems("src/shm/src/a.rs", same_line, false);
+        assert_eq!(p.len(), 1, "{p:?}");
+        // 测试模块里的字面量仍放行，闭合后同一行打开的生产模块不算测试
+        let opens = "#[cfg(test)]\nmod tests {\n    fn g() { let _ = 48_000; }\n} mod prod {\n    const SR: u32 = 48_000;\n}\n";
+        assert_eq!(rate_problems("src/shm/src/a.rs", opens, false).len(), 1);
         // 经 `#[cfg(test)] mod tests;` 引入的测试文件整份放行（只限底层 crate）
         assert!(rate_problems("src/shm/src/tests.rs", "let r = 48_000;\n", true).is_empty());
         assert_eq!(
