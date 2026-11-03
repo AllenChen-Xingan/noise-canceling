@@ -1,7 +1,7 @@
 # 现状页 · 手下 rs-wake（批次 20261102-b8-rust）
 
 - **手上**：vdn-shm · vdn-rt-thread · xtask（大总管 2026-11-02 加派）
-- **做到哪**：已收尾（见文末「已收尾」）；只剩 tidy「每个 crate 至少一条测试」抓到 3 个别人的 crate，待大总管定
+- **做到哪**：已收尾（见文末「已收尾」）
 - **下一步**（按序）：自审修完 → 名额 ① 对照实验 ② cargo-deny ③ Miri → 加派三件：loom 测试 + deny.toml 直接边 + tidy 校验 deny 与 forbid 一致 · rt-thread 加入 Audio Workgroup · CI 拆 Linux + macOS（paths 过滤）
 - **本批不改**：共享内存权限 0600（要真装驱动实测，大总管 2026-11-02 定）
 
@@ -95,7 +95,7 @@
 ## 已收尾（2026-11-02）
 
 **验收（名额 ①，实测）**：`cargo clippy -p vdn-shm -p vdn-rt-thread -p xtask --all-targets -- -D warnings` 过；`cargo test -p vdn-shm -p vdn-rt-thread` 全过；
-`xtask tidy` 只剩 3 条：vdn-backend-ort · vdn-cli · vdn-speaker-lab 没有任何测试（新规则按设计报红，不归我改，待大总管定）。
+`xtask tidy` 只剩 3 条：vdn-backend-ort · vdn-cli · vdn-speaker-lab 没有任何测试（新规则按设计报红；大总管定 A：不加名单，vdn-cli 合并 rs-entry 后有测试，另两个由大总管另派人补，合并后全绿由大总管验）。
 另外实跑过：loom（release，抢占上限 3）· Miri（nightly，进程内测试）· cargo-deny · 对照实验 · 耗电对照（人跑）。
 
 **改了哪些文件**
@@ -124,5 +124,5 @@
 | 耗电结果表 | `docs/.../20261102-power/README.md` | 现状页已删掉抄的表，只留指针 |
 
 **待人拍板**：无新的。（最低系统 14.4 已由 D67 定；耗电与调度默认值已由 D68 定。）
-**交给大总管定的技术事**：① tidy 抓到的 3 个无测试 crate（A 负责人补 · B 临时名单）；② 要不要在 `.cargo/config.toml` 写死 `MACOSX_DEPLOYMENT_TARGET = 14.4`；③ ort 直接边名单要不要收紧到只剩 backend-ort（现在按现状列了 4 个）；④ hound / clap 的直接边（rs-entry 的 vdn-capture 直接用它们）；⑤ 共享内存 0600 权限（本批不改）
+**交给大总管定的技术事**：① （已定 A）；② 要不要在 `.cargo/config.toml` 写死 `MACOSX_DEPLOYMENT_TARGET = 14.4`；③ ort 直接边名单要不要收紧到只剩 backend-ort（现在按现状列了 4 个）；④ hound / clap 的直接边（rs-entry 的 vdn-capture 直接用它们）；⑤ 共享内存 0600 权限（本批不改）
 **本批没做 / 没验证**：`ci.yml` 的 Linux job 没在 GitHub 上真跑过（ort 下载、Linux 下各 crate 能否编译未实测）；rt_bench 的 `qos_set` 按 D68 取消；跨进程加入设备 IO 工作组（属 vdn-io-macos）
