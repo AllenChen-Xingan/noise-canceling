@@ -31,3 +31,4 @@
 - 2026-11-02 人定：single_source.rs 拆分时按规则改名（no_mirror.rs · param_range.rs），已转 99 iface
 - 2026-11-02 split 完成：三文件拆到 ≤600（最大 487）· 43 过拆前拆后同 · clippy 净 · R-RATE 15 处；8d 抽查行数与交接后关窗；两件转 hygiene（删 3 条基线 · tidy 认 cfg(test) 模块）
 - 2026-11-02 hygiene 第 5 件完成：rate.rs · R-RATE · ~115 处改引用（纠正 eval/system.rs 1 处语义错）· 基线剩 8 · test_modules.rs（认 cfg(test) 模块，带负例）；11 crate 274 过 / 4 忽略，tidy_passes 只剩 99 名下 6 处字面量。第 6 件发现 V-TIMBRE 分档 代码 2/4/6 dB vs rubric N4 1.5/3/6 dB → 让它查来历、量后果、报我，不自行改
+- 2026-11-02 hygiene 第 6 件：7 处阈值不一致或无出处（state/handoff/hygiene-thresholds.md），全是建议值，分档只影响报告等级、复算变化 0 条。8d 定：不新出题，挂 012 拍板 #8；V-TIMBRE/V-SPLVL 保留代码量法；建正本表 + 两条比对测试，待定清单显式、新不一致与已修好都要红
