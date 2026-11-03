@@ -79,7 +79,8 @@ static PROC_ALLOCS: AtomicU64 = AtomicU64::new(0);
 const MALLOC_LOG_TYPE_ALLOCATE: u32 = 2;
 // 调用栈采样：STACK_ARMED 为真时，把接下来最多 STACK_N 次分配的返回地址存进静态表（backtrace 不分配；
 // 用 IN_HOOK 防重入）。只给 amx-probe 查「Accelerate 在哪个调用里分配」用。
-pub(crate) static STACK_ARMED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub(crate) static STACK_ARMED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 static IN_HOOK: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 pub(crate) const STACK_N: usize = 4;
 pub(crate) const STACK_DEPTH: usize = 16;
@@ -578,13 +579,14 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let fp_warm = footprint_mb();
     let mut times = Vec::with_capacity(frames);
     let mut nan = 0usize;
+    // 实时节奏下另记：醒来迟到 = 实际开始 − 计划时刻；释放到完成 = 完成 − 计划时刻（codex 第 1 轮 #4）
+    // 所有测量缓冲都在计数起点之前分配好（codex 第 2 轮 #1）
+    let mut late = Vec::with_capacity(if pace > 0.0 { frames } else { 0 });
+    let mut release = Vec::with_capacity(if pace > 0.0 { frames } else { 0 });
     let a0 = ALLOCS.load(Relaxed);
     let pa0 = PROC_ALLOCS.load(Relaxed);
     let c0 = cpu_seconds();
     let w0 = Instant::now();
-    // 实时节奏下另记：醒来迟到 = 实际开始 − 计划时刻；释放到完成 = 完成 − 计划时刻（codex 第 1 轮 #4）
-    let mut late = Vec::with_capacity(if pace > 0.0 { frames } else { 0 });
-    let mut release = Vec::with_capacity(if pace > 0.0 { frames } else { 0 });
     for (n, f) in inputs[warm + 1..].iter().enumerate() {
         let due = w0 + std::time::Duration::from_secs_f64(n as f64 * pace * 1e-3);
         if pace > 0.0 {
@@ -605,20 +607,35 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
             nan += 1;
         }
     }
+    // 循环一结束就截取两种分配计数，之后的排序、格式化不算进去（codex 第 2 轮 #1）
+    let allocs = ALLOCS.load(Relaxed) - a0;
+    let proc_allocs = PROC_ALLOCS.load(Relaxed) - pa0;
     let wall = w0.elapsed().as_secs_f64();
     let cpu = cpu_seconds() - c0;
-    let allocs = ALLOCS.load(Relaxed) - a0;
     let over_3ms = times.iter().filter(|t| **t > 3.0).count(); // 纯推理 > 3 ms 的帧（同 applebe 字段）
     // 释放到完成 > 3 ms 的帧（含醒来迟到），只在实时节奏下有意义；不按节奏跑时为 null
-    let release_over_3ms = if pace > 0.0 { release.iter().filter(|t| **t > 3.0).count().to_string() } else { "null".into() };
+    let release_over_3ms = if pace > 0.0 {
+        release.iter().filter(|t| **t > 3.0).count().to_string()
+    } else {
+        "null".into()
+    };
     late.sort_by(|a, b| a.total_cmp(b));
     release.sort_by(|a, b| a.total_cmp(b));
-    let q = |v: &Vec<f64>, p: f64| if v.is_empty() { "null".to_string() } else { format!("{:.4}", pct(v, p)) };
+    let q = |v: &Vec<f64>, p: f64| {
+        if v.is_empty() {
+            "null".to_string()
+        } else {
+            format!("{:.4}", pct(v, p))
+        }
+    };
     let pace_extra = format!(
         "\"open_to_warm_ms\":{open_to_warm:.2},\"late_p50_ms\":{},\"late_p999_ms\":{},\"late_max_ms\":{},\"release_p999_ms\":{},\"release_max_ms\":{},\"release_over_3ms\":{release_over_3ms},",
-        q(&late, 0.5), q(&late, 0.999), q(&late, 1.0), q(&release, 0.999), q(&release, 1.0)
+        q(&late, 0.5),
+        q(&late, 0.999),
+        q(&late, 1.0),
+        q(&release, 0.999),
+        q(&release, 1.0)
     );
-    let proc_allocs = PROC_ALLOCS.load(Relaxed) - pa0;
     let fp_end = footprint_mb();
     times.sort_by(|a, b| a.total_cmp(b));
     if let Some(i) = args.iter().position(|a| a == "--dump-io") {
@@ -631,7 +648,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         )?;
     }
     println!(
-        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"workgroup\":{wg_on},\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan},\"frames_over_3ms\":{over_3ms},{pace_extra}\"process_allocs_per_frame\":{},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2}}}",
+        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"workgroup\":{wg_on},\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"rust_allocs_total\":{allocs},\"process_allocs_total\":{},\"nonfinite_frames\":{nan},\"frames_over_3ms\":{over_3ms},{pace_extra}\"process_allocs_per_frame\":{},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2}}}",
         model.name(),
         pct(&times, 0.1),
         pct(&times, 0.5),
@@ -642,6 +659,11 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         times.iter().sum::<f64>() / times.len() as f64,
         cpu / wall,
         allocs as f64 / frames as f64,
+        if count_malloc {
+            proc_allocs.to_string()
+        } else {
+            "null".into()
+        },
         if count_malloc {
             format!("{:.3}", proc_allocs as f64 / frames as f64)
         } else {
@@ -709,7 +731,11 @@ fn parity(
         "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"frames\":{},\"max_abs\":{},\"worst_frame\":{worst_frame},\"snr_db\":{},\"min_frame_snr_db\":{},\"nonfinite_values\":{nonfinite},\"first_bad\":\"{:?}\",\"be_parity_pass\":{pass}}}",
         model.name(),
         inputs.len(),
-        if max_abs.is_finite() { format!("{max_abs:.3e}") } else { "null".into() },
+        if max_abs.is_finite() {
+            format!("{max_abs:.3e}")
+        } else {
+            "null".into()
+        },
         jnum(snr, 2),
         jnum(min_frame_snr, 2),
         first_bad
@@ -736,8 +762,12 @@ fn reset_check(
         x.copy_from_slice(f);
         b.infer(&mut x)?;
     }
+    if k >= inputs.len() {
+        return Err(format!("--reset-at {k} ≥ 总帧数 {}，比较区间为空", inputs.len()).into());
+    }
     b.reset();
     let mut y = inputs[0].clone();
+    let mut nonfinite = 0usize;
     let mut max_abs = 0.0f64;
     let mut bit_diff = 0usize;
     for f in &inputs[k..] {
@@ -749,19 +779,30 @@ fn reset_check(
             if p.to_bits() != q.to_bits() {
                 bit_diff += 1;
             }
+            if !p.is_finite() || !q.is_finite() {
+                nonfinite += 1; // 两边一样的 NaN 也不算过（codex 第 2 轮 #4）
+            }
             let d = (*p as f64 - *q as f64).abs();
-            max_abs = if d.is_nan() { f64::INFINITY } else { max_abs.max(d) };
+            max_abs = if d.is_nan() {
+                f64::INFINITY
+            } else {
+                max_abs.max(d)
+            };
         }
     }
     // 位模式比较（codex 第 1 轮抽查：差 0 不等于逐位相同）
     println!(
-        "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"check\":\"reset\",\"reset_at\":{k},\"frames_after\":{},\"max_abs_vs_fresh\":{},\"bitwise_diff_values\":{bit_diff}}}",
+        "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"check\":\"reset\",\"reset_at\":{k},\"frames_after\":{},\"max_abs_vs_fresh\":{},\"bitwise_diff_values\":{bit_diff},\"nonfinite_values\":{nonfinite}}}",
         model.name(),
         inputs.len() - k,
-        if max_abs.is_finite() { format!("{max_abs:.3e}") } else { "null".into() },
+        if max_abs.is_finite() {
+            format!("{max_abs:.3e}")
+        } else {
+            "null".into()
+        },
     );
-    if bit_diff != 0 && !ALLOW_FAIL.load(Relaxed) {
-        return Err("reset 后与新开实例不逐位相同".into());
+    if (bit_diff != 0 || nonfinite != 0) && !ALLOW_FAIL.load(Relaxed) {
+        return Err("reset 后与新开实例不逐位相同，或出现非有限值".into());
     }
     Ok(())
 }
@@ -827,7 +868,11 @@ fn dump_io(
 
 /// JSON 数字：非有限值写 null（codex 第 1 轮 #5）
 fn jnum(v: f64, prec: usize) -> String {
-    if v.is_finite() { format!("{v:.prec$}") } else { "null".into() }
+    if v.is_finite() {
+        format!("{v:.prec$}")
+    } else {
+        "null".into()
+    }
 }
 
 fn arg_str<'a>(args: &'a [String], flag: &str, d: &'a str) -> &'a str {

@@ -60,8 +60,9 @@ impl TractNet {
     /// 跑一帧：输出 0 写进 `out0`，其余输出回灌缓存。
     pub fn step(&mut self, out0: &mut [f32]) -> Result<(), Err> {
         let inputs: TVec<TValue> = self.ins.iter().map(|t| t.clone().into_tvalue()).collect();
-        // 每帧新开一个状态：复用同一个 SimpleState 时，第 1 帧起输出就和 ORT 对不上（实测 SNR 19 dB），
-        // 新开则一致（130 dB）。原因未查清（推断：某个算子的会话状态跨帧保留）。代价实测 p50 +0.02 ms。EXP010_TRACT_REUSE=1 可复现错误的复用版。
+        // 每帧新开一个状态：复用同一个 SimpleState 时，第 1 帧起输出就和 ORT 对不上（实测 SNR 19 dB），新开则一致（130 dB）。
+        // 原因（读源码）：tract 把 ONNX GRU 转成 GruSeq 时 reset_every_turn = false，复用状态时会忽略输入的初始隐状态。
+        // 新开状态的代价没有单独量过（复用版算错，两版计算路径不同，不能拿来比）。EXP010_TRACT_REUSE=1 可复现错误。
         if std::env::var_os("EXP010_TRACT_REUSE").is_none() {
             self.state = self.state.plan().spawn()?;
         }
