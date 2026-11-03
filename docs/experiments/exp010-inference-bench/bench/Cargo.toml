@@ -13,6 +13,7 @@ vdn-dsp = { path = "../../../../src/dsp" }
 ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "download-binaries", "tls-native", "copy-dylibs", "api-31"] }
 hound = "3.5"
 libc = "0.2"
+tract-onnx = "=0.23.9"
 
 [profile.release]
 debug = 1
