@@ -32,7 +32,7 @@
   - 工作区间 API「Swift 不可用，因为这些 API 只用于实时线程，而 Swift 运行时在实时线程上不安全」【官方】`SDK:…/AudioToolbox.framework/Headers/AudioWorkInterval.h:51-53`。
   - 渲染 block 标了 `CA_REALTIME_API`，即 `[[clang::nonblocking]]`【官方】`SDK:…/CoreAudioTypes.framework/Headers/CoreAudioBaseTypes.h:35-49`；`AUAudioUnitImplementation.h:196-203`。
 - **SDK 里没有哪个推理接口标了 `nonblocking`**：在 `Accelerate`、`CoreML`、`Metal`、`os/` 头文件里 grep `nonblocking` / `CA_REALTIME_API`，都是空的【本机 grep】。所以 BNNSGraph 的「不分配」只是文档上的承诺，编译器的函数效应检查替我们查不了。
-- **苹果没有官方说「Core ML 可以在渲染线程调」**。开发者论坛上专门问这件事的帖子（2023-02），0 条回复【实测-他人】https://developer.apple.com/forums/thread/724451 。WWDC24 讲 BNNSGraph 时，苹果给的音频插件示例是：在 AU 的 C++ DSP 内核里直接调 `BNNSGraphContextExecute`，工作区在初始化时用 `aligned_alloc` 页对齐预分配；还要给滑块调参另开一个 context，因为「一个 context 同时只能在一个线程上执行」【官方】https://developer.apple.com/videos/play/wwdc2024/10211/ 。
+- **苹果没有官方说「Core ML 可以在渲染线程调」**。开发者论坛上专门问这件事的帖子（2023-02），0 条回复【实测-他人】https://developer.apple.com/forums/thread/724451 。WWDC24 讲 BNNSGraph 时，苹果给的音频插件示例是：在 AU 的 C++ DSP 内核里直接调 `BNNSGraphContextExecute`，工作区在初始化时用 `aligned_alloc` 页对齐预分配；还要给滑块调参另开一个 context，因为「一个 context 同时只能在一个线程上执行」【官方】https://developer.apple.com/videos/play/wwdc2024/10211/ 。⚠️ 这个示例的模型是一个「bit crusher」（量化失真），不是带 GRU 的网络；它证明的是调用方式，不是我们这类模型的实时性（怀疑派补）。
 
 ## 2. 隔离做法：如果不能直接调
 
@@ -41,7 +41,11 @@
 vdn 的推理本来就不在送音线程上。推理在另一个进程，中间隔着共享内存环（`architecture.md` §3.6；`009 decision.md:22-25`）。所以「单独推理线程 + 无锁环 + 超时送原声」**已经是现成结构**，不用再加一层。要问的只是：推理线程里调的那个库，能不能达到 B 档的要求。
 
 - **超时送原声要靠送音那一侧来兜**。同步调用的 Core ML 或 ANE 不能从中间打断。推理线程卡住时，送音线程读环发现这一帧没到，就送对齐好的原声（R11，`architecture.md:333`）【推断】。
-- **如果一个库连 B 档都过不了**（比如 MLX），就得在推理进程里再隔一层：B 档线程用 `rtrb`（本机 registry 有 0.4.1）把帧交给一个 C 档工作线程，取结果时不等待。代价是**多一帧延迟**：GTCRN 多 16 ms，FE-M 多 10 ms【推断】。第三方测试框架 anira 就是这样做的，论文把它记为「+1 个缓冲」【实测-他人】DAFx26 论文 16 表 2。这会把延迟账从 43.67 / 47.00 ms 推到约 60 ms，超出 45 ms 的预算。**所以这条路实际上走不通**【推断】。
+- **如果一个库连 B 档都过不了**（比如 MLX），就得在推理进程里再隔一层：B 档线程用 `rtrb`（本机 registry 有 0.4.1）把帧交给一个 C 档工作线程，取结果时不等待。原文说代价是**多一帧延迟**（GTCRN 多 16 ms，FE-M 多 10 ms），并据此判「走不通」。**怀疑派反驳，这个推论不成立**【推断】：
+  - anira 的「+1 个缓冲」【实测-他人】DAFx26 表 2，是因为插件的音频回调必须同步返回。vdn 的推理线程本来就**不在**音频回调里，它和送音线程之间已经隔着跨进程环和 3 ms 余量。
+  - 所以 C 档工作线程可以直接把结果写进跨进程环，不必再经 B 档线程转一手，也就不必多一帧。真正的问题是：C 档线程没有 time-constraint 调度保障，它的最坏耗时能不能进 3 ms 余量。
+  - 这等于把「推理线程」整体降成 C 档，和规约 §4 的「推理线程 = B 档」冲突（`architecture.md:291-295`）。这是规约要不要改的事，交大总管，本文不定。
+  - 账的数字也要改：43.67 / 47.00 ms 是两种 IO 块（5.33 / 2.00 ms）的合计，不是两个模型（`our-models.md` §3）。真多一帧时，GTCRN 是约 59.7 / 63.0 ms，FE-M 是约 53.7 / 57.0 ms，都超 45 ms 预算。
 
 ### 2.2 Audio Workgroup（音频工作组）
 
