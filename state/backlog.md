@@ -53,9 +53,12 @@
 
 ## 仓库与工作区
 
-- [ ] **清理**：删已合并的 worktree `../noise_canceling-prefs` · `../noise_canceling-benchsynth`（016，PR #47）· `../noise_canceling-ears`（017，PR #48）· `../noise_canceling-judge-loop`（018，PR #49）· `../noise_canceling-rustbe`（exp010，PR #55）；删 `../noise_canceling-dfnhush`（015 已随 PR #40 合并，D61）；本地 main 同步到远端（落后 77）；推送 `chore/coord-20261031-b6`；`_tmp/` 8.3 GB 看哪些能删
+- [ ] **清理**：删已合并的 worktree `../noise_canceling-prefs` · `../noise_canceling-benchsynth`（016，PR #47）· `../noise_canceling-ears`（017，PR #48）· `../noise_canceling-judge-loop`（018，PR #49）· `../noise_canceling-rustbe`（exp010，PR #55）· `../noise_canceling-engine`（019，PR #59）；删 `../noise_canceling-dfnhush`（015 已随 PR #40 合并，D61）；本地 main 同步到远端（落后 77）；推送 `chore/coord-20261031-b6`；`_tmp/` 8.3 GB 看哪些能删
 
 ## 引擎（engine）
+
+- [ ] **019 待重测（下次名额）**：耗电 3 轮（人 sudo，约 35 min）· BE-IMPACT 新测法 · rt 下 10 min BE-DEADLINE · BE-SIZE / BE-RT-SAN · 出处 019 `decision.md` §7
+- [ ] **apple-rs 与 bench 合成一个共用 crate**（JSON 字段唯一真相源）· 出处 019 §7
 
 - [ ] **手写 GTCRN 接进产品**（随「接起来」大事）：补齐挡线（POWER 同场 · IMPACT · SIZE · RT-SAN · DEADLINE@rt 10 min）+ rustbe 转交 6 件（禁 panic · Model 适配器与 CI 测试 · 输入防护 · 权重校验 · 对 PyTorch 对拍 · 含长静音长跑）· 出处 exp010 README（PR #55）
 

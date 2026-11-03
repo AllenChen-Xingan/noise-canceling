@@ -9,7 +9,7 @@
 
 | 手下 | 线 | 管的实体 |
 |---|---|---|
-| applebe | 019 苹果引擎（Core ML · BNNS Graph · MLX）+ 总方案 · #45 · `../noise_canceling-engine` | 推理后端 · 模型 · 评测器 |
+| applebe | 019 苹果引擎（Core ML · BNNS Graph · MLX）+ 总方案 · #45 · ✅ PR #59 已合并 | 推理后端 · 模型 · 评测器 |
 | rustbe | exp010 纯 Rust（手写 GTCRN · tract / candle / burn）+ 基准程序 · #51 · ✅ PR #55 已合并 | 推理后端 · 模型 · 评测器 |
 | fastpath | 020 / exp012 数学上更好：下界分析 · 等价改写 · 算子与 DSP 优化 · 他人做法 · #58 · `../noise_canceling-fastpath` | 推理后端 · 模型 · 评测器 |
 
@@ -44,9 +44,9 @@
 | judgeloop | **b7 重派 · 完成，PR #49 已合并（issue #44 关），远端分支已删，窗口已关** · 018 本机评分模型 + 调节模型闭环（D52）· issue #44 · `research/018-ondevice-judge`（worktree `../noise_canceling-judge-loop`） | `_tmp/20261031-b6/judgeloop.md` | 其 worktree | 已报到 |
 | engine | **停（2026-10-31 会话中断）→ 2026-11-02 由 b8 applebe / rustbe 接续** · 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已报到 |
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
-| applebe | b8 · 019 苹果引擎 + 总方案 · #45 · `research/019-apple-inference` | `_tmp/20261102-b8/applebe.md` | engine worktree `state/handoff/engine.md` | 已报到（noise-canceling-engine-05）；调研 workflow 8 代理已批 |
+| applebe | b8 · 019 苹果引擎 + 总方案 · #45 · `research/019-apple-inference` | `_tmp/20261102-b8/applebe.md` | engine worktree `state/handoff/engine.md` | 完成，PR #59 已合并（issue #45 关），远端分支已删，窗口已关；worktree 保留待清 |
 | rustbe | b8 · exp010 纯 Rust + 基准程序 · #51 · `exp/010-rust-backend` | `_tmp/20261102-b8/rustbe.md` | rustbe worktree `state/handoff/rustbe.md` | 完成，PR #55 已合并（issue #51 关），远端分支已删，窗口已关；worktree 保留待清 |
-| fastpath | b8 · 020 / exp012 数学上更好 · #58 · `exp/012-fastpath` | `_tmp/20261102-b8/fastpath.md` | fastpath worktree `state/handoff/fastpath.md` | 已派 |
+| fastpath | b8 · 020 / exp012 数学上更好 · #58 · `exp/012-fastpath` | `_tmp/20261102-b8/fastpath.md` | fastpath worktree `state/handoff/fastpath.md` | 已报到（noise-canceling-fastpath-96）；workflow 6 代理已批 |
 
 ## 规矩
 
@@ -64,7 +64,7 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | 空（19:01 起） |
+| 重编译 / 全量测试 / 跑模型（1 个） | fastpath（hw-peak + gtcrn-layers，约 30 min），19:49 起；锁 `_tmp/heavy.lock`；已告 99（47 会话已结束） |
 
 排队：无（本批计时到此为止）
 
@@ -73,6 +73,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 19:49 applebe 收尾：PR #59 合并（codex 8 轮 41 条全改，7、8 轮无 P0/P1）；fastpath 编译 + 17 条单元测试过、端到端仍 134.00 dB，开始计时
 - 2026-11-02 applebe：Accelerate 措辞已写；`apple-rs/tests/fields.rs` 以 bench 为唯一真相源比对 JSON 键（抓到 late_* ≠ release_* 同名不同义并改正）；main.rs 4 条 + power_parse 4 条测试通过；codex 第 6 轮在跑。转交：bench 补计时窗字段（win_start_unix / win_end_unix / wall_s），否则手写版耗电不进排名 → 派给「下界分析」手下
 - 2026-11-02 rustbe 收尾：PR #55 合并（0 分配整数证据 6000 帧 · 10 条单元测试 · 形状交叉校验）。AI 定：Accelerate「cblas / vDSP 路线已不采用；BNNS 路线待证实」；JSON 字段交叉校验由 applebe 在 apple-rs 加测试
 - 2026-11-02 19:25 rustbe 报可以收尾（codex 5 轮，P1×7 P2×20 全改，第 4、5 轮无 P0/P1）；缺口：评审后改动只 cargo check → 给 5 min 名额重编 + 小对拍再开 PR。其待拍板：①手写替换 ORT → AI 定「随『接起来』大事做，挡线补齐前不进产品」②FE-M 去留（已在总清单）③报 tract bug → 4-12
