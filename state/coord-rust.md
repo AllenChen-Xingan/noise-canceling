@@ -41,7 +41,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
-- 011 schema 交叉校验方案（人提，2026-11-02）：待人定时机，默认 A = 骨架之后与处理图合成下一件大事
+- 011 人定 A：骨架之后，处理图 + schema 交叉校验合成下一件大事；人定新规矩「唯一真相源 + 交叉校验」→ CLAUDE.md 第五节第 5 条，已通知全部手下
 - 人定 D66（原话「c」）：「超级语法树」两种都要；处理图统一表示排在骨架之后。对照审查子代理在跑（008 / 005 / 009 三样）
 - rs-wake：新签名（头部版本 2 · notify / wait · lead / 降噪块长 / 会话 ID / 缺口 · OwnedBus），vdn-shm 测试全过；BusConfig 多两个字段，rs-entry 要补
 - 人定 2026-11-02（原话「还有手下，装」，大总管理解为装检查工具）：装 cargo-deny 并接进 `xtask ci`；装 nightly + Miri 跑 vdn-shm（及 dsp）→ rs-wake
@@ -78,4 +78,5 @@
 - [ ] 规约 R10 unsafe 白名单加 vdn-dsp（FTZ）
 - [ ] 改过时说法：规约 §2.2 图里 vdn-capture 补 vdn-dsp · vdn-hal · clap · hound ·根 Cargo.toml 第 1 行注释 · speaker README / Cargo.toml · 规约 §2.2 · §3.7.6（细节见 rs-core 现状页）
 - [ ] 新 crate 实体行写进 `.42cog/cog.md`（各现状页有行）
-- [ ] backlog：处理图完整版（D66）；ContentId FNV → sha256；麦克风流无缝重接（回调里无锁换总线，要新依赖）；lead 压到 1 块时块长 96 的欠载（release + 预热核实）；Ring 拆 Producer / Consumer 句柄；共享内存权限 0600 与 coreaudiod（装驱动那批实测，补 009 待拍板 3）；models 不直接依赖 ort 尚无机器检查
+- [ ] **下一件大事**：处理图（D66）+ schema 交叉校验（011），清镜像副本与手写 JSON
+- [ ] backlog：ContentId FNV → sha256；麦克风流无缝重接（回调里无锁换总线，要新依赖）；lead 压到 1 块时块长 96 的欠载（release + 预热核实）；Ring 拆 Producer / Consumer 句柄；共享内存权限 0600 与 coreaudiod（装驱动那批实测，补 009 待拍板 3）；models 不直接依赖 ort 尚无机器检查
