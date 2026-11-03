@@ -411,21 +411,16 @@ mod tests {
         }
     }
 
-    /// 每个 `pub const X: ParamDesc` 都进了 `ALL`（读本文件源码比对：漏登记就红）。
-    #[test]
-    fn all_listed() {
-        // 描述分在本目录几个文件里，一起扫
-        let src = [
-            include_str!("mod.rs"),
-            include_str!("engine.rs"),
-            include_str!("polish.rs"),
-            include_str!("scene.rs"),
-            include_str!("speaker.rs"),
-        ]
-        .concat();
+    /// 源码里的 `pub const X: ParamDesc` 常量名，以及其中没出现在 `ALL` 那一段里的。
+    fn unlisted(srcs: &str, mod_src: &str) -> (usize, Vec<String>) {
+        let all = mod_src
+            .split_once("pub const ALL")
+            .and_then(|(_, r)| r.split_once("];"))
+            .map_or("", |(a, _)| a);
         let mut n = 0;
-        for line in src.lines() {
-            let Some(rest) = line.strip_prefix("pub const ") else {
+        let mut missing = Vec::new();
+        for line in srcs.lines() {
+            let Some(rest) = line.trim_start().strip_prefix("pub const ") else {
                 continue;
             };
             let Some((name, ty)) = rest.split_once(':') else {
@@ -435,10 +430,43 @@ mod tests {
                 continue;
             }
             n += 1;
-            let entry = format!("    &{name},");
-            assert!(src.contains(&entry), "{name} 没登记进 ALL");
+            if !all.contains(&format!("&{name},")) {
+                missing.push(name.to_string());
+            }
         }
+        (n, missing)
+    }
+
+    /// 每个 `pub const X: ParamDesc` 都进了 `ALL`：扫本目录下**实际存在的全部** `.rs`（新加的描述文件自动在内，
+    /// codex 第 1 轮 #4），漏登记就红。
+    #[test]
+    fn all_listed() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/desc");
+        let mut files: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|x| x == "rs"))
+            .collect();
+        files.sort();
+        assert!(files.len() >= 2, "{files:?}");
+        let srcs: String = files
+            .iter()
+            .map(|p| std::fs::read_to_string(p).unwrap())
+            .collect::<Vec<_>>()
+            .join("\n");
+        let (n, missing) = unlisted(&srcs, include_str!("mod.rs"));
+        assert!(missing.is_empty(), "没登记进 ALL：{missing:?}");
         assert_eq!(n, ALL.len());
+    }
+
+    /// 负例：新文件里的常量没进 `ALL` → 报出来；只在别处（比如注释、别的数组）出现也不算登记。
+    #[test]
+    fn unlisted_detects_missing_entries() {
+        let m = "pub const A: ParamDesc = p(1);\npub const ALL: [&ParamDesc; 1] = [\n    &A,\n];\nconst OTHER: [&ParamDesc; 1] = [&B,];\n";
+        let extra = "pub const B: ParamDesc = p(2);\n";
+        let (n, missing) = unlisted(&format!("{m}{extra}"), m);
+        assert_eq!((n, missing), (2, vec!["B".to_string()]));
     }
 
     #[test]

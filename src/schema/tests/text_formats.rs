@@ -82,7 +82,7 @@ fn sample(key: &str) -> String {
         "name" => "a".into(),
         "user" => "cafe".into(),
         "model" => ModelId::NAMES[0].into(),
-        k => desc::by_key(k).unwrap().default.to_string(),
+        k => desc::by_key(k).map_or("0".into(), |d| d.default.to_string()),
     }
 }
 
