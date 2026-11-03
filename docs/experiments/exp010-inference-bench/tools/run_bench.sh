@@ -55,6 +55,7 @@ for r in $(seq 1 "$ROUNDS"); do
     $BIN fem-bench $k "$a" "$WAV" | sed "s/^{/{\"round\":$r,/" >> "$OUT/bench.jsonl"
   done
 done
+$BIN amx-probe > "$OUT/amx.jsonl"   # 小矩阵：Accelerate（AMX / SME）对手写循环
 echo "load_after=$(sysctl -n vm.loadavg)" >> "$OUT/env.txt"
 echo "uptime_after: $(uptime)" >> "$OUT/env.txt"
 cat "$OUT/parity.jsonl" "$OUT/bench.jsonl" "$OUT/bench-extra.jsonl"
