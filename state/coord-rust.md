@@ -41,6 +41,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- rs-entry 测试自查：51 过、1 忽略（V5 写成 #[ignore] 测试）；Out 总线重连从 bin 挪进 lib（Supervisor）并补 4 条真共享内存测试；补测揪出测试工具配错（IO 块 480 配 lead 288 必欠载，旧 V1 短测只判相关没发现）→ 已改；大总管加要求：V1 全部断言欠载 0 · Config 启动校验 lead ≥ IO 块 + 降噪块
 - 人定「加测试是默认行为」→ CLAUDE.md 第五节第 6 条 · PR 模板 · common.md 第 16 条 · 记忆；已通知 rs-entry / rs-wake；rs-wake 加 tidy「每个 crate 至少一条测试」
 - rs-entry：纠漂移（漂移在 Out 两头；±0.1% 60 s 最大积压 ≤ 480、欠载 0；不纠漂 ±60 ms）· rtrb 运行中切直通（欠载 0、静音 0、相关 1.000000）· capture 库闭包无 hound / clap / cpal；43 测试过
 - 大总管抽查（人问「这些所有东西都做测试了吗」）：骨架 `xtask ci` 6 项全绿（含 cargo-deny）、228 测试 0 失败 3 忽略（2 真设备 + loom）；rs-entry 4 crate 43 测试 0 失败、clippy 无警告；V1 重跑过（相关 1.000000、延迟 1056）。未测：真设备 / V5、HAL 真驱动、V7（未过）、loom、Miri（在跑）、release 测试、RTSan、纠漂移与切模式（未写完）
