@@ -329,7 +329,7 @@ def cmd_bench(npz, fin, fref, device, use_compile, frames, warmup, parity_n):
     cpu = time.process_time() - c0
     allocs = (alloc() - a0) / frames if alloc else None
     ts = np.sort(np.array(times))
-    pct = lambda q: float(ts[min(len(ts) - 1, int(len(ts) * q))])
+    pct = lambda q: float(ts[min(len(ts) - 1, int(round((len(ts) - 1) * q)))])  # 同 rustbe：round((n-1)·p)
     print(json.dumps({
         "model": "gtcrn", "backend": f"mlx-{device}" + ("" if use_compile else "-nocompile"), "frames": frames, "pace_ms": 0, "warmup": warmup,
         "p50_ms": round(pct(0.5), 4), "p99_ms": round(pct(0.99), 4), "p999_ms": round(pct(0.999), 4),

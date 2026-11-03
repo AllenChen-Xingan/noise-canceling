@@ -181,7 +181,8 @@ with torch.no_grad():
     traced = torch.jit.trace(Explicit(stream).eval(), ex, check_trace=False)
     ref = traced(*ex)
 
-info = {"torch": torch.__version__, "coremltools": ct.__version__, "files": {}}
+info = {"torch": torch.__version__, "coremltools": ct.__version__, "files": {},
+        "gtcrn_inplace": os.environ.get("GTCRN_INPLACE") == "1", "split_grouped_convt": True}
 
 
 def save(mlm, name):
