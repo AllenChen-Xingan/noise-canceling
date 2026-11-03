@@ -23,9 +23,6 @@ const APPLE_ONLY: &[(&str, &str)] = &[
     ("warmup_ms", "BE-COLD：冷第 0 帧 + 预热"),
     ("first_warm_frame_ms", "BE-COLD：预热后第 1 帧"),
     // 下面三条：bench 已在 exp/012-fastpath 补齐，随其 PR（#58）删除；那时本测试会把它们判成「过时」并变红，提醒删
-    ("win_start_unix", "耗电只平均计时窗内样本（power_parse.py v2）"),
-    ("win_end_unix", "同上"),
-    ("wall_s", "同上，实测墙钟"),
     ("parity_frames", "苹果侧在同一次运行里对 ORT 转储对拍（rustbe 有单独的 parity 子命令）"),
     ("parity_max_abs", "同上"),
     ("parity_worst_frame", "同上"),

@@ -1,0 +1,238 @@
+{
+  "$comment": "由 `cargo run -p vdn-schema` 从 src/types/src/graph.rs 的 KINDS 导出，勿手改",
+  "example": {
+    "canonical_text": "vdn-graph = 1\nmodel = gtcrn\n[spectral]\nnode = 6 polish-spectral 1 spectral 0 201,202,203,204,208\n[stages]\nnode = 4 asym-gate 1 time 0 2,101,102,103,104,105,106,107,108,109,110,111,8,9\nnode = 5 polish-agc 1 time 0 205,206,207,208\n",
+    "content_id": "60c5c435ba7ffe47",
+    "content_id_algorithm": "FNV-1a 64（vdn_types::ContentId::of），16 位小写十六进制"
+  },
+  "format": 1,
+  "kinds": [
+    {
+      "doc": "快开慢关包络，按人声概率开合",
+      "hook": "time",
+      "id": 1,
+      "latency_samples": 0,
+      "name": "vad-envelope",
+      "params": [
+        {
+          "id": 2,
+          "key": "floor_db"
+        },
+        {
+          "id": 3,
+          "key": "open_db"
+        },
+        {
+          "id": 7,
+          "key": "attack_s"
+        },
+        {
+          "id": 5,
+          "key": "release_s"
+        },
+        {
+          "id": 6,
+          "key": "hangover_s"
+        },
+        {
+          "id": 8,
+          "key": "vad_on"
+        },
+        {
+          "id": 9,
+          "key": "vad_off"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "doc": "快开慢关包络，按能量开合",
+      "hook": "time",
+      "id": 2,
+      "latency_samples": 0,
+      "name": "energy-envelope",
+      "params": [
+        {
+          "id": 2,
+          "key": "floor_db"
+        },
+        {
+          "id": 3,
+          "key": "open_db"
+        },
+        {
+          "id": 7,
+          "key": "attack_s"
+        },
+        {
+          "id": 5,
+          "key": "release_s"
+        },
+        {
+          "id": 6,
+          "key": "hangover_s"
+        },
+        {
+          "id": 8,
+          "key": "vad_on"
+        },
+        {
+          "id": 9,
+          "key": "vad_off"
+        },
+        {
+          "id": 4,
+          "key": "detect_db"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "doc": "衰减下限：原声按下限混回",
+      "hook": "time",
+      "id": 3,
+      "latency_samples": 0,
+      "name": "floor",
+      "params": [
+        {
+          "id": 2,
+          "key": "floor_db"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "doc": "声纹门控：非主人说话时压到下限",
+      "hook": "time",
+      "id": 4,
+      "latency_samples": 0,
+      "name": "asym-gate",
+      "params": [
+        {
+          "id": 2,
+          "key": "floor_db"
+        },
+        {
+          "id": 101,
+          "key": "gate.attack_s"
+        },
+        {
+          "id": 102,
+          "key": "gate.reopen_s"
+        },
+        {
+          "id": 103,
+          "key": "gate.release_s"
+        },
+        {
+          "id": 104,
+          "key": "gate.onset_gap_s"
+        },
+        {
+          "id": 105,
+          "key": "gate.onset_jump_db"
+        },
+        {
+          "id": 106,
+          "key": "gate.confirm_n"
+        },
+        {
+          "id": 107,
+          "key": "gate.onset_level_margin_db"
+        },
+        {
+          "id": 108,
+          "key": "gate.level_close_db"
+        },
+        {
+          "id": 109,
+          "key": "gate.level_close_hold_s"
+        },
+        {
+          "id": 110,
+          "key": "gate.onset_arm_s"
+        },
+        {
+          "id": 111,
+          "key": "gate.onset_refractory_s"
+        },
+        {
+          "id": 8,
+          "key": "vad_on"
+        },
+        {
+          "id": 9,
+          "key": "vad_off"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "doc": "修音链：自动增益",
+      "hook": "time",
+      "id": 5,
+      "latency_samples": 0,
+      "name": "polish-agc",
+      "params": [
+        {
+          "id": 205,
+          "key": "polish.agc"
+        },
+        {
+          "id": 206,
+          "key": "polish.agc_target_dbfs"
+        },
+        {
+          "id": 207,
+          "key": "polish.agc_range_db"
+        },
+        {
+          "id": 208,
+          "key": "polish.ramp_s"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "doc": "修音链：频谱平滑 · 增益下限 · 舒适噪声 · 去发闷",
+      "hook": "spectral",
+      "id": 6,
+      "latency_samples": 0,
+      "name": "polish-spectral",
+      "params": [
+        {
+          "id": 201,
+          "key": "polish.smooth"
+        },
+        {
+          "id": 202,
+          "key": "polish.floor_db"
+        },
+        {
+          "id": 203,
+          "key": "polish.comfort_db"
+        },
+        {
+          "id": 204,
+          "key": "polish.demuffle_max_db"
+        },
+        {
+          "id": 208,
+          "key": "polish.ramp_s"
+        }
+      ],
+      "version": 1
+    }
+  ],
+  "node_fields": [
+    "id",
+    "name",
+    "version",
+    "hook",
+    "latency_samples",
+    "params",
+    "doc"
+  ],
+  "retired_ids": [],
+  "test_id_min": 61440
+}

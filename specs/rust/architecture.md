@@ -157,7 +157,7 @@ impl<M: Model> Pipeline<M> {
 }
 
 pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音链节点，跑在模型采样率
-    fn name(&self) -> &'static str;
+    fn kind(&self) -> &'static NodeKind;      // 节点种类（vdn_types::graph 登记表）；短名 = kind().name
     fn reset(&mut self);
     fn process(&mut self, wet: &mut [f32], dry: &[f32], ctx: FrameCtx);
     fn latency_samples(&self) -> usize { 0 }   // 进延迟账（§3.7.5）
@@ -168,7 +168,10 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 - **送原声用 48 kHz 原声**（Pipeline 的延迟线），不用 16 kHz 的，否则原声缺 8 kHz 以上
 - Engine 仍做模型级故障判定与 16 kHz 混合（p1 现状，离线 P1 直接用）；接入 Pipeline 后，Engine 只回报 `Status`，Pipeline 用 48 kHz 原声完成切换与淡化
 - 所有延迟统一按 **IO 采样率样本**记账：重分块器（最多一个 IO hop）+ 两次重采样 + 模型；**P2 前所有 `Stage` 延迟必须为 0**，有延迟的 Stage 要等引入「每级 dry 对齐」再加
-- 后处理链是固定字段的 struct，按设计稿 §3 的固定顺序静态调用
+- 后处理链是编译期定死类型的级串（`StageChain`，`stages![a, b]`），按固定顺序静态调用；不用运行时图库、不用 `Vec<Box<dyn Stage>>`
+- **处理图只作描述数据**（D72 · `src/types/src/graph.rs`）：一张图 = 模型节点 + 频域段（`SpectralStage`，挂在模型的 STFT 与 iSTFT 之间）+ 时域段（`Stage` 级串）；节点 = 种类（稳定编号 · 名字 · 版本 · 挂点 · 声明延迟 · 读哪些 `desc` 参数），整张图的内容 ID = 规范文本的 FNV-1a。种类正本是登记表 `KINDS`，实现只返回种类（「级 ↔ 种类」只写一处）
+- `Pipeline::with_stages(engine, io, block, &描述, 级串)` 在构造期调 `match_chain`：级数 · 每级种类 · 每级延迟与描述逐级比，不一致返回 `PipelineError::Graph`；实时 `process` 不多一步。不列 Pipeline 固定段（重分块 · 重采样 · 混合）：它们不随配置变。模型节点不在 Pipeline 里比（Pipeline 不认模型 ID），由调用方 `Pipeline::graph(model)` 拼成整图
+- 频域段暂不接 engine：模型适配器调用 `SpectralStage` 时，在适配器构造处同样比对 `ProcessingGraph::spectral`
 - `FrameCtx` 按值传
 - eval 喂 Pipeline（48 kHz WAV）；P1 离线 CLI 直接喂 Engine（16 kHz），二者共用 Engine
 
@@ -260,7 +263,7 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 
 #### 3.7.5 决策日志（`src/types/src/record.rs`）
 - `DecisionEvent`（`Copy`，≤ 64 B）：`SceneObserved`（感知原始输出，未经滞回；细场景分类的回放与回归靠它）· `SceneCommitted` · `ParamsApplied`（带完整 `ParamSet` 与来源 `ParamSource`）· `UserAction`（反馈事件总线：每条带当时的细场景与配置内容 ID；开关、旋钮、撤销、选场景、锁定、手动换模型、反馈「吃字 / 怪声 / 太吵 / 好 / AB 选 A / 选 B」、换设备——不记设备名、带新采样率）· `Bypass` · `Enroll`（声纹注册锁定 / 重锁 / 清空）· `TableChanged` · `ProfileChanged`
-- `SessionRecord { header: { rate, table: (版本, 内容 ID), profile: (版本, 内容 ID) }, events }`：**不含音频**（D19）、只在本机（D39）；文本一行一事件
+- `SessionRecord { header: { rate, table: (版本, 内容 ID), profile: (版本, 内容 ID), graph: Option<处理图内容 ID>, model: Option<ModelId> }, events }`（`src/types/src/session.rs`）：**不含音频**（D19）、只在本机（D39）；文本一行一事件。格式 2 起头部加 `graph` · `model`（`SessionHeader::set_graph` 从同一张图一起填）；格式 1 照常能读、这两项为 `None`。头部键的正本是 `HEADER_KEYS`，导出到 `specs/schema/session-header.fields.json`
 - 实时线程不写日志（R3）：送原声等事件以后经 rtrb 送出，由 C 档汇总成一条
 
 #### 3.7.6 延迟账（`src/types/src/latency.rs`；ADR 005 是正本）

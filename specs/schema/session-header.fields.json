@@ -1,0 +1,48 @@
+{
+  "$comment": "由 `cargo run -p vdn-schema` 从 src/types/src/session.rs 的 HEADER_KEYS 导出，勿手改",
+  "events_section": "events",
+  "format": 2,
+  "header": "vdn-session",
+  "keys": [
+    {
+      "doc": "IO 采样率（Hz），事件时刻的单位",
+      "field": "rate",
+      "key": "rate",
+      "optional": false,
+      "since": 1,
+      "value": "<u32>"
+    },
+    {
+      "doc": "场景参数表",
+      "field": "table",
+      "key": "table",
+      "optional": false,
+      "since": 1,
+      "value": "<u32 版本> <16 位十六进制内容 ID>"
+    },
+    {
+      "doc": "我的配置",
+      "field": "profile",
+      "key": "profile",
+      "optional": false,
+      "since": 1,
+      "value": "<u32 版本> <16 位十六进制内容 ID>"
+    },
+    {
+      "doc": "处理图（ProcessingGraph::content_id）",
+      "field": "graph",
+      "key": "graph",
+      "optional": true,
+      "since": 2,
+      "value": "<16 位十六进制内容 ID>"
+    },
+    {
+      "doc": "模型（ModelId::as_str）",
+      "field": "model",
+      "key": "model",
+      "optional": true,
+      "since": 2,
+      "value": "<模型 ID>"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+{"round":1,"qos":"rt","pace_ms":16,"bursts":600,"fma_lat_first_ns":{"median":1.5420,"min":1.4375,"max":5.7705,"n":600},"fma_tput_lanes_per_ns":{"median":32.0000,"min":9.0344,"max":36.5714,"n":600},"read16k_gbps":{"median":41.3737,"min":6.3424,"max":71.5459,"n":600},"fma_lat_after_ns":{"median":1.5415,"min":1.4580,"max":5.7290,"n":600}}

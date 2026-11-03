@@ -9,7 +9,7 @@
 use vdn_dsp::{OpenCloseEnvelope, OpenCloseParams, db_to_lin, one_pole_coef};
 
 use crate::vad::{Hysteresis, Vad};
-use vdn_types::{FrameCtx, Stage};
+use vdn_types::{FrameCtx, NodeKind, Stage, graph};
 
 #[derive(Clone, Copy, Debug)]
 pub struct EnvelopeParams {
@@ -144,8 +144,8 @@ impl VadEnvelopeStage {
     clippy::disallowed_macros
 )]
 impl Stage for VadEnvelopeStage {
-    fn name(&self) -> &'static str {
-        "vad-envelope"
+    fn kind(&self) -> &'static NodeKind {
+        &graph::VAD_ENVELOPE
     }
 
     fn reset(&mut self) {
@@ -225,8 +225,8 @@ impl EnergyEnvelopeStage {
     clippy::disallowed_macros
 )]
 impl Stage for EnergyEnvelopeStage {
-    fn name(&self) -> &'static str {
-        "energy-envelope"
+    fn kind(&self) -> &'static NodeKind {
+        &graph::ENERGY_ENVELOPE
     }
 
     fn reset(&mut self) {
@@ -266,8 +266,8 @@ impl FloorStage {
     clippy::disallowed_macros
 )]
 impl Stage for FloorStage {
-    fn name(&self) -> &'static str {
-        "floor"
+    fn kind(&self) -> &'static NodeKind {
+        &graph::FLOOR
     }
 
     fn reset(&mut self) {}
@@ -309,6 +309,14 @@ mod tests {
                 assert_eq!(get(&p.clamped()), dsc.clamp(bad), "{}", dsc.key);
             }
         }
+        // 处理图里两种包络节点的参数清单（`vdn_types::graph`）= 本表（能量版另读检测灵敏度；交叉校验，D72）
+        let mut want: Vec<u16> = fields.iter().map(|f| f.0.id).collect();
+        want.sort_unstable();
+        assert_eq!(graph::VAD_ENVELOPE.param_ids(), want);
+        want.push(desc::DETECT_DB.id);
+        want.sort_unstable();
+        assert_eq!(graph::ENERGY_ENVELOPE.param_ids(), want);
+        assert_eq!(graph::FLOOR.param_ids(), [desc::FLOOR_DB.id]);
         let st = VadEnvelopeStage::new(EnvelopeParams { floor_db: 6.0, ..d });
         assert_eq!(st.params().floor_db, desc::FLOOR_DB.max, "new() 先夹再用");
     }
