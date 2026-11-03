@@ -356,6 +356,45 @@ fn rebind_to_new_bus_keeps_raw_continuous_and_realigns() {
     assert!(r.fwd.is_fresh());
 }
 
+/// 缺口计数涨了（降噪进程跳过积压，带外告知）：接下来 L_total + 2 块送原声（淡出），之后淡回；不跳变
+#[test]
+fn gap_counter_holds_raw_for_one_window() {
+    let mut r = rig_01();
+    for _ in 0..100 {
+        r.tick();
+    }
+    assert_eq!(r.fwd.gain(), 1.0);
+    r.hb.add_gap(480);
+    let mut gains = Vec::new();
+    for _ in 0..60 {
+        r.tick();
+        gains.push(r.fwd.gain());
+    }
+    let s = r.fwd.stats();
+    assert_eq!(s.gap_holds, 1);
+    // 窗口里降到 0（原声），窗口过后（L_total + 2 块 + 回滞）回到 1
+    assert!(gains.iter().take(30).any(|g| *g == 0.0), "{gains:?}");
+    assert_eq!(*gains.last().unwrap(), 1.0);
+    let y = r.out.drain_all();
+    assert!(max_jump(&y[LEAD..]) < JUMP_LIMIT);
+}
+
+/// 防御：处理后的样本不是有限值，输出里也不会有，计数
+#[test]
+fn nonfinite_processed_never_reaches_output() {
+    let mut r = rig_01();
+    for _ in 0..50 {
+        r.tick();
+    }
+    r.processed.push(&[f32::NAN, f32::INFINITY, f32::NEG_INFINITY]);
+    for _ in 0..50 {
+        r.tick();
+    }
+    let y = r.out.drain_all();
+    assert!(y.iter().all(|v| v.is_finite()));
+    assert!(r.fwd.stats().nonfinite > 0 || r.fwd.stats().discarded > 0);
+}
+
 #[test]
 fn process_into_does_not_allocate() {
     let mut r = Rig::new();

@@ -534,10 +534,37 @@ mod tests {
     fn bus_unlinked_after_run() {
         let o = opts(0.3, None, "ul");
         run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).unwrap();
-        assert!(matches!(
-            Bus::open(&o.bus_name),
-            Err(vdn_shm::ShmError::NotFound)
-        ));
+        // 两条总线（降噪 + Out）都删了
+        for n in [o.bus_name.clone(), out_bus_name(&o.bus_name)] {
+            assert!(matches!(Bus::open(&n), Err(vdn_shm::ShmError::NotFound)), "{n} 还在");
+        }
+    }
+
+    /// OwnedBus 接入：同名降噪总线正被别人建着时，chain-test 报错退出，不删别人的总线
+    #[test]
+    fn busy_bus_name_is_refused_without_deleting() {
+        let o = opts(0.3, None, "busy");
+        let holder = vdn_shm::OwnedBus::create(
+            &o.bus_name,
+            vdn_capture::shm::out_bus_config(RATE),
+        )
+        .unwrap();
+        let e = run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).err().unwrap();
+        assert!(e.contains("建降噪总线"), "{e}");
+        assert!(Bus::open(&o.bus_name).is_ok(), "别人的总线被删了");
+        drop(holder);
+    }
+
+    /// 运行中切模式（rtrb 控制通道）走完整链路：命令执行了，链路照常对齐、不欠载
+    #[test]
+    fn mode_switch_mid_run() {
+        let mut o = opts(1.2, None, "sw");
+        o.switch_at = Some(0.5);
+        let r = run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).unwrap();
+        assert_eq!(r.worker.commands, 1);
+        assert_eq!(r.fwd.proc_underrun, 0);
+        let v = judge_v1(&r);
+        assert!(v.pass, "{v}");
     }
 
     #[test]

@@ -55,17 +55,24 @@ impl Pop for FakeRing {
 
 /// 假心跳。
 #[derive(Debug, Default)]
-pub struct FakeBeat(pub Cell<u64>);
+pub struct FakeBeat(pub Cell<u64>, pub Cell<u64>);
 
 impl Heartbeat for FakeBeat {
     fn heartbeat(&self) -> u64 {
         self.0.get()
+    }
+    fn gaps(&self) -> u64 {
+        self.1.get()
     }
 }
 
 impl FakeBeat {
     pub fn beat(&self) {
         self.0.set(self.0.get().wrapping_add(1));
+    }
+    /// 模拟降噪进程报「跳过了 n 个 Raw 样本」
+    pub fn add_gap(&self, n: u64) {
+        self.1.set(self.1.get() + n);
     }
 }
 

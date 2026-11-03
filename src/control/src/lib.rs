@@ -293,6 +293,8 @@ mod tests {
             r#"{"bus_name":"/other"}"#,
             r#"{"lead_frames":100000}"#,
             r#"{"denoise_block":0}"#,
+            r#"{"out_bus_name":"/vdn-bus"}"#,
+            r#"{"out_bus_name":"out"}"#,
             r#"{"bus_name":"/vdn-a/b"}"#,
             r#"{"bus_name":"/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
             r#"{"input_device":"  "}"#,
