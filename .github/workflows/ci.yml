@@ -1,23 +1,25 @@
-# 最小闸门：先有闸门，再有检查。检查随项目长（实时安全、延迟基准、评测回归）。
+# 闸门：只跑 macOS（人定 D76，2026-11-02，原话「直接用mac 就好，先在mac上跑通」）。
+# = manifests · `cargo run -p xtask -- ci`（fmt · clippy · test 全 workspace · tidy · check-deps · cargo-deny）· `xtask eval ci`。
+# 工具链由仓库根的 rust-toolchain.toml 决定，runner 自带 rustup 首次调用 cargo 时自动装。
+# 不加 paths 过滤：本 job 是每个 PR 的唯一闸门，可以在仓库设置里设成「必须通过」。
 name: ci
 on:
   pull_request:
   push:
     branches: [main]
 jobs:
-  check:
+  macos:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: manifests
         run: python3 scripts/check-manifests.py
-      - name: rust
-        # 还没有 Cargo workspace 时跳过；建了第一个 crate 就自动生效
-        run: |
-          if [ ! -f Cargo.toml ]; then echo "no Cargo.toml yet, skip"; exit 0; fi
-          cargo fmt --all --check
-          cargo clippy --workspace --all-targets -- -D warnings
-          cargo test --workspace
+      - name: install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - name: rust gate
+        run: cargo run -p xtask -- ci
       - name: eval ci
         # CI 层评测：纯 DSP、确定性、无模型权重；回归集 L3 不过 / 比冻结基线差 / 探针没抓住 → 失败（exp007）
         run: |

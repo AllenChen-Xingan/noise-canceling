@@ -1,0 +1,20 @@
+[package]
+name = "vdn-backend-ort"
+description = "推理后端：ONNX Runtime（ort）会话的打开与张量工具。ort 只经这个 crate 进入核心层"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+ort.workspace = true
+
+[lints]
+workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）。ort 的直接依赖者在核心层只有本 crate（vdn-eval、vdn-speaker 的 ort 是过渡期例外，后续批次迁）
+[package.metadata.vdn]
+tier = "B"
+unsafe = false
+forbid = ["hound", "serde", "serde_json", "cpal", "clap", "vdn-engine", "vdn-models", "vdn-dsp", "coreaudio-rs", "coreaudio-sys", "objc2"]

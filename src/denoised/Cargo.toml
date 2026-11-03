@@ -1,0 +1,36 @@
+[package]
+name = "vdn-denoised"
+description = "降噪进程：建总线 → Raw 够一块就跑 Pipeline → 推 Processed → 心跳"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "vdn-denoised"
+path = "src/main.rs"
+
+[dependencies]
+vdn-engine.workspace = true
+vdn-models.workspace = true
+vdn-shm.workspace = true
+vdn-rt-thread.workspace = true
+vdn-control.workspace = true
+clap.workspace = true
+ctrlc.workspace = true
+rtrb.workspace = true
+
+[dev-dependencies]
+# 只在单测里用 Forwarder 对拍；正式依赖里不能有它（它带设备库，本 crate 禁 cpal）
+vdn-capture.workspace = true
+assert_no_alloc.workspace = true
+
+[lints]
+workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）。降噪线程 B 档；lib 里的 Worker 供 vdn chain-test 复用
+[package.metadata.vdn]
+tier = "B"
+unsafe = false
+forbid = ["cpal"]

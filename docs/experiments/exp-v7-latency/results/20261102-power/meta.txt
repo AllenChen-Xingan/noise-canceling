@@ -1,0 +1,8 @@
+date: 2026-11-02 17:03:50 -0800
+os: 27.0.1 (26A434)
+cpu: Apple M5, P-cores 4, E-cores 6
+power_source: Now drawing from 'AC Power'
+bin: /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-rs-shm/target/release/examples/rt_bench
+bin_sha256: 03d04a6858af7d27b4167c40d7f481a03e370de0adbe3bf39d68477c2cf8492c
+secs_each: 60  period_us: 16000  dry: 0
+iters: 502954 (calibrated ~700 us of work, shared by all settings)

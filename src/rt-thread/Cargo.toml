@@ -1,0 +1,21 @@
+[package]
+name = "vdn-rt-thread"
+description = "把当前线程提成 Mach time-constraint 实时优先级并读回自检；Audio Workgroup 加入本批未实现。不依赖任何 vdn crate"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc.workspace = true
+mach2.workspace = true
+
+[lints]
+workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）。在线程启动时调一次，不在实时回调里调：C 档
+[package.metadata.vdn]
+tier = "C"
+unsafe = true
+forbid = ["vdn-types", "vdn-dsp", "vdn-engine", "vdn-models", "vdn-cli", "vdn-shm", "ort", "hound", "serde", "serde_json", "cpal", "clap"]
