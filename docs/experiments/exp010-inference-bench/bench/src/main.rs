@@ -1,11 +1,14 @@
-//! exp010 推理后端基准：同口径比 ORT CPU（基线）与手写 Rust。
+//! exp010 推理后端基准：同口径比 ORT CPU（基线）、手写 Rust、tract（纯 Rust ONNX 推理）。
 //!
 //! 子命令：
-//!   gtcrn-parity <权重前缀> <onnx> <wav> [--dump <out.f32>]   逐帧对拍增强后频谱（两边吃同一份 STFT 频谱）
-//!   gtcrn-bench  <ort|native> <权重前缀|onnx> <wav> [--frames N] [--warmup N]
-//! 输出一行 JSON（stdout）。
+//!   gtcrn-parity <权重前缀> <onnx> <wav> [--vs native|tract]   逐帧对拍增强后频谱（ORT 对 --vs，默认 native；两边吃同一份 STFT 频谱）
+//!   gtcrn-bench  <ort|native|tract> <权重前缀|onnx> <wav> [--frames N] [--warmup N]
+//!   fem-parity   <onnx> <wav>                                   FastEnhancer-M：ORT 对 tract，逐帧对拍输出波形
+//!   fem-bench    <ort|tract> <onnx> <wav> [--frames N] [--warmup N]
+//! 输出一行 JSON（stdout）。一帧 = 模型的一个 hop（GTCRN 256 样本 / 16 ms，FE-M 160 样本 / 10 ms）。
 
 mod gtcrn_native;
+mod tract_be;
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::path::Path;
@@ -13,6 +16,7 @@ use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 use std::time::Instant;
 
 use gtcrn_native::GtcrnNative;
+use tract_be::TractNet;
 use ort::session::builder::{AutoDevicePolicy, GraphOptimizationLevel};
 use ort::session::{HasSelectedOutputs, OutputSelector, RunOptions, Session};
 use ort::value::Tensor;
