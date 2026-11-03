@@ -23,3 +23,5 @@
 - 2026-11-02 99 报 #57 已合并（PR #63）；8d 把 origin/main 合进 hygiene（601202e，无冲突）；基线 3 处待改（denoised 878 · synth 删 · schema/tests/crosscheck.rs 870 新进）；放行第二段
 - 2026-11-02 人定新规矩「所有代码文件 ≤600 行」，不设基线（写进 hygiene worktree 的 CLAUDE.md 第五节第 7 条 + 记忆）。分工：99 的 #64 拆 pipeline.rs · stages.rs，#65 拆 desc.rs · policy.rs · schema/tests/crosscheck.rs；e3 的 fastpath 在 #58 拆 bench 3 个文件，#58 合并后 #62 扫描扩到 docs/；hygiene 拆 verifiers.rs · runner.rs · single_source.rs；新派 split 拆 denoised · capture · speaker-lab。#62 硬上限等 #64/#65 合并后再合
 - 2026-11-02 派后台分析：AST 做了之后的好处、复杂度对比、扩展方向 → docs/reviews/ast-complexity-20261102/README.md
+- 2026-11-02 99 #65 要改 cli ModelArg（#62 已搬到 args.rs）与 xtask 新文件 model_names.rs：同意；#65 先合，8d 合 main 进 #62 时把改法搬进 args.rs
+- 2026-11-02 split 报到（noise-canceling-hygiene-ad）；single_source.rs 也归 99 iface；hygiene 只拆 eval/verifiers.rs · eval/runner.rs

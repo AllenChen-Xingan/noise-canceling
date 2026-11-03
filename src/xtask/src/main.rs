@@ -19,6 +19,7 @@ mod denycheck;
 mod deps;
 mod file_size;
 mod miri;
+mod rate_literal;
 mod single_source;
 mod tidy;
 mod todo;
