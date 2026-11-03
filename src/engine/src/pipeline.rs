@@ -32,7 +32,12 @@
 //! `Engine::process_status` 判定并回报 [`Status`]，**Pipeline 用 48 kHz 原声切换与淡化**（不用 16 kHz 原声，否则缺 8 kHz 以上）：
 //! 每个 48k hop 的状态随它的升采样输出一起进输出队列，出队时逐样本混合——切到原声用接缝偏移衰减（坏输出不能拿来淡化），
 //! 切回模型用线性交叉淡化，时长都是 `SafetyConfig::crossfade_s`（按 48 kHz 计）。
-//! 状态按 48k hop 对齐，升采样 FIR 的延迟与拖尾（各 48 个样本）让切换点最多早 48 个样本，落在切回的淡化里。
+//! 状态按 48k hop 对齐，升采样 FIR 的延迟与拖尾（各 48 个样本）让切过去的点最多早 96 个样本；切回时把第一个正常 hop 的前
+//! `2 × delay_high` 个样本也标成送原声，淡化从纯模型内容开始。后处理级的输出也查（非有限 / 超 `max_abs`），坏了整 hop 送原声、
+//! 后处理级复位（R11）。输入里的 NaN / Inf 按 0 处理，原声路与接缝偏移都不会被它锁死。
+//!
+//! 已知缺口：衰减下限与快开慢关仍在 Engine 里混 16 kHz 原声（正常降噪时原声成分只到 8 kHz）；等衰减下限移成后处理级时一起改，
+//! 用 48 kHz 原声会把 8 kHz 以上没降过的噪声一起放回来，是听感取舍（待人定）。
 //!
 //! FTZ（R9）：降采样、后处理级、升采样、出队混合各自包在 `vdn_dsp::FtzGuard` 里；`Engine::process_status`（含推理调用）在守卫外。
 //!
@@ -43,7 +48,7 @@ use core::fmt;
 use vdn_dsp::resample::{self, Decimator3, FACTOR, Interpolator3};
 use vdn_dsp::{DelayLine, FtzGuard};
 use vdn_types::{
-    Basis, FrameCtx, LatencyItem, LatencyLedger, Model, ParamSet, SampleClock, StageChain, Status,
+    Basis, BypassReason, FrameCtx, LatencyItem, LatencyLedger, Model, ParamSet, SampleClock, StageChain, Status,
 };
 
 use crate::engine::Engine;
@@ -105,6 +110,10 @@ pub struct PipelineStats {
     pub queue_faults: u64,
     /// `with_block` 构造时，块长不等于 `block` 的调用次数（`new` 构造时恒为 0）
     pub misaligned_blocks: u64,
+    /// 后处理级输出非有限或幅度超 `SafetyConfig::max_abs`、整 hop 改送原声的次数（`fallback` 开时才查）
+    pub stage_faults: u64,
+    /// 输入里非有限（NaN / Inf）、按 0 处理的样本数
+    pub bad_input: u64,
 }
 
 /// `S`：后处理级串，默认 `()`（不带级）。
@@ -141,6 +150,8 @@ pub struct Pipeline<M: Model, S: StageChain = ()> {
     dry_line: DelayLine,
     dry: Vec<f32>,
 
+    /// 上一个入队的 hop 是否送原声（切回时把升采样拖尾也标成送原声）
+    prev_bypass: bool,
     /// 模型级送原声（48 kHz）：原声占比 0..=1、每样本淡化步长、接缝偏移及其衰减、上一个样本的混合结果与原声
     fb_ratio: f32,
     fb_step: f32,
@@ -215,7 +226,8 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
         let latency = prefill
             + 2 * resample::delay_high()
             + (engine.latency_samples() + stages.latency_samples_all()) * FACTOR;
-        let xf = (engine.config().crossfade_s * io_rate as f32).max(1.0);
+        // 淡化时长限在 [0, 1] 秒：Inf / 极大值会让淡化永不收敛，NaN 落到 1 个样本
+        let xf = (engine.config().crossfade_s.clamp(0.0, 1.0) * io_rate as f32).max(1.0);
         let mut p = Self {
             io_rate,
             hop_io,
@@ -236,6 +248,7 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
             q_len: 0,
             dry_line: DelayLine::new(latency),
             dry: vec![0.0; hop_io],
+            prev_bypass: false,
             fb_ratio: 0.0,
             fb_step: 1.0 / xf,
             seam: 0.0,
@@ -346,7 +359,8 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
         self.stages.set_params_all(p);
     }
 
-    /// 最近一个 48k hop 的状态：Engine 回报的 `Ok` / `Bypassed` / `Holding`；Engine 已恢复（`Ok`）但
+    /// 最近一个 48k hop 的状态（**输入侧**：刚攒满、跑完推理的那个 hop，比耳朵听到的早约一个 hop；一次调用跑了几个 hop
+    /// 时只留最后一个——要数次数看 `engine().stats()` 与 `stats().stage_faults`）：Engine 回报的 `Ok` / `Bypassed` / `Holding`；Engine 已恢复（`Ok`）但
     /// Pipeline 还在把 48 kHz 原声淡回模型输出时报 `Crossfading`。
     pub fn last_status(&self) -> Status {
         match self.last_status {
@@ -366,7 +380,8 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
         self.last_mix = 0.0;
         self.last_dry = 0.0;
         self.last_status = Status::Ok;
-        self.clock = 0;
+        self.prev_bypass = false;
+        // clock 不归零：流时间单调，reset 前发出的声纹判决的时间戳不会跑到 now 之后
         self.dec.reset();
         self.int.reset();
         self.acc.fill(0.0);
@@ -417,6 +432,10 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
         let k = x.len();
         if let Some(slot) = self.acc.get_mut(self.acc_len..self.acc_len + k) {
             slot.copy_from_slice(x);
+            for v in slot.iter_mut().filter(|v| !v.is_finite()) {
+                *v = 0.0;
+                self.stats.bad_input += 1;
+            }
         }
         self.acc_len += k;
         self.clock += k as u64;
@@ -432,7 +451,12 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
         let dry = self.dry.get_mut(..k).unwrap_or(&mut []);
         self.dry_line.process(x, dry);
         let flags = self.out_bypass.get(..k).unwrap_or(&[]);
-        for ((o, &d), &bypass) in y.iter_mut().zip(dry.iter()).zip(flags) {
+        for ((o, d), &bypass) in y.iter_mut().zip(dry.iter_mut()).zip(flags) {
+            // 输入的 NaN / Inf 经延迟线到这里，按 0 处理（已在入口计数）
+            if !d.is_finite() {
+                *d = 0.0;
+            }
+            let d = *d;
             // 1. 模型级送原声：按 Engine 回报的状态，用 48 kHz 原声切换（规约 §3.3 规则 2、R11）
             if !o.is_finite() {
                 *o = d;
@@ -441,6 +465,9 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
                 if self.fb_ratio < 1.0 {
                     // 切到原声：坏输出不能拿来淡化，用接缝偏移从上一个输出样本平滑过渡
                     self.seam = self.last_mix - self.last_dry;
+                    if !self.seam.is_finite() {
+                        self.seam = 0.0;
+                    }
                     self.fb_ratio = 1.0;
                 }
                 *o = d + self.seam;
@@ -490,9 +517,8 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
             self.dec.process(&self.acc, &mut self.lo_in);
         }
         // 推理在 FTZ 守卫外（R9：守卫开着等于对 ORT 开 FTZ，DeepFilterNet #713）
-        let status = self.engine.process_status(&self.lo_in, &mut self.lo_out);
-        self.last_status = status;
-        let bypass = matches!(status, Status::Bypassed(_) | Status::Holding);
+        let mut status = self.engine.process_status(&self.lo_in, &mut self.lo_out);
+        let mut bypass = matches!(status, Status::Bypassed(_) | Status::Holding);
         let ctx = FrameCtx {
             now: SampleClock(self.clock.saturating_sub(self.hop_io as u64)),
             ..self.ctx
@@ -501,17 +527,46 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
             let _ftz = FtzGuard::new();
             self.stages
                 .process_all(&mut self.lo_out, self.engine.aligned_dry(), ctx);
+            // 后处理级的输出也按 Engine 的规则查（R11）：坏了整 hop 送原声、复位后处理级；坏值不进升采样器
+            let cfg = self.engine.config();
+            if cfg.fallback && !bypass {
+                let mut peak = 0.0f32;
+                let mut finite = true;
+                for v in &self.lo_out {
+                    finite &= v.is_finite();
+                    peak = peak.max(v.abs());
+                }
+                if !finite || peak > cfg.max_abs {
+                    status = Status::Bypassed(if finite {
+                        BypassReason::Abnormal
+                    } else {
+                        BypassReason::NonFinite
+                    });
+                    bypass = true;
+                    self.stats.stage_faults += 1;
+                    self.lo_out.copy_from_slice(self.engine.aligned_dry());
+                    self.stages.reset_all();
+                }
+            }
             self.int.process(&self.lo_out, &mut self.hi_out);
         }
+        self.last_status = status;
+        // 切回的第一个 hop：前 2 × delay_high 个样本里还有上一 hop 的 16 kHz 垫底（升采样延迟与拖尾），也标成送原声
+        let tail = if self.prev_bypass && !bypass {
+            2 * resample::delay_high()
+        } else {
+            0
+        };
+        self.prev_bypass = bypass;
         // 入队（容量 2 × hop_io ≥ prefill + hop_io，不会溢出）
         let cap = self.q.len();
         let mut w = (self.q_read + self.q_len) % cap;
-        for &v in &self.hi_out {
+        for (j, &v) in self.hi_out.iter().enumerate() {
             if let Some(s) = self.q.get_mut(w) {
                 *s = v;
             }
             if let Some(b) = self.q_bypass.get_mut(w) {
-                *b = bypass;
+                *b = bypass || j < tail;
             }
             w += 1;
             if w == cap {
@@ -521,7 +576,10 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
         let len = self.q_len + self.hop_io;
         debug_assert!(len <= cap, "输出队列溢出");
         if len > cap {
-            self.stats.queue_faults += (len - cap) as u64;
+            // 到不了（见上）；万一溢出，最旧的样本已被覆盖，读指针跟着前移，保持 q 与 q_bypass 顺序一致
+            let over = len - cap;
+            self.stats.queue_faults += over as u64;
+            self.q_read = (self.q_read + over) % cap;
         }
         self.q_len = len.min(cap);
     }
