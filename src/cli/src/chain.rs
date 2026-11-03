@@ -259,7 +259,6 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         let (dblock, rtf) = (o.denoise_block, rt_failures.clone());
         let rtp = vdn_denoised::denoise_rt_params(&worker, &warmup);
         thread::spawn(move || {
-            let _ = dblock;
             if rt && vdn_rt_thread::promote_current(rtp).is_err() {
                 rtf.fetch_add(1, Ordering::Relaxed);
             }

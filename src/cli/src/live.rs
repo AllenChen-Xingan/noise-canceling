@@ -90,7 +90,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<()
         let (bus, stop) = (bus.clone(), stop.clone());
         let block = o.block;
         thread::spawn(move || {
-            if let Err(e) = vdn_rt_promote(block) {
+            if let Err(e) = vdn_rt_thread::promote_current(rtp).map_err(|e| format!("{e:?}")) {
                 eprintln!("vdn run: 降噪线程实时优先级提升失败（照常运行）：{e}");
             }
             while !stop.load(Ordering::Relaxed) {
@@ -158,11 +158,6 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<()
         bus.ring(RingId::Out).underruns()
     );
     Ok(())
-}
-
-fn vdn_rt_promote(block: usize) -> Result<(), String> {
-    let p = vdn_rt_thread::RtParams::for_block(block as u32, IO_RATE, 0.5);
-    vdn_rt_thread::promote_current(p).map_err(|e| format!("{e:?}"))
 }
 
 #[cfg(test)]

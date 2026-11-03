@@ -122,7 +122,11 @@ pub fn model_kind(c: vdn_control::ModelChoice) -> ModelKind {
 /// computation = 预热量到的每周期总耗时 p99.9 × `MEASURED_MARGIN`（夹在周期内）
 pub fn denoise_rt_params<P: Processor>(w: &Worker<P>, wu: &Warmup) -> vdn_rt_thread::RtParams {
     let period_ns = w.block_ns() * wu.period_blocks.max(1) as u64;
-    vdn_rt_thread::RtParams::from_measured(period_ns, wu.p999_period_ns.max(1), vdn_rt_thread::MEASURED_MARGIN)
+    vdn_rt_thread::RtParams::from_measured(
+        period_ns,
+        wu.p999_period_ns.max(1),
+        vdn_rt_thread::MEASURED_MARGIN,
+    )
 }
 
 /// 降噪总线头的配置：总线头里的 L_total / lead / 降噪块长**只从这里写**。
