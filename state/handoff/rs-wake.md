@@ -39,6 +39,14 @@
 - 2026-11-02 名额 ③：loom（release，`LOOM_MAX_PREEMPTIONS=3`）2 项过，2.5 s；debug 不设上限跑 5 分钟没跑完，已停。反向验证：快照读序对调后 loom 报「唤醒丢了」，改回通过（实测）。Miri（nightly 2026-11-01）：进程内测试全过、无未定义行为报告；no_alloc 一项 Miri 下 352 s。Miri 暴露并修了两处：会话 ID 取系统时间（Miri 下不取）· 锁步测试的计时上限（Miri 下不查）
 - 2026-11-02 D67：`wake.rs` 改为直接调 libc 的 `os_sync_*`；测试钩子改为 `force_wake_error_for_test`（模拟系统调用出错）。注意：本仓没设 `MACOSX_DEPLOYMENT_TARGET`，Rust 默认 11.0；低于 14.4 的系统上程序会因找不到符号而启动失败（符合 D67），要不要在 `.cargo/config.toml` 里写死 14.4 由大总管定（不是我的文件）
 
+- 2026-11-02 vdn-rt-thread 加 `WorkInterval`（`workgroup.rs`）：降噪进程属 `AudioWorkInterval.h` 头注释第 3 种情况（实时线程与设备 IO 不同步、在别的进程），用 `AudioWorkIntervalCreate` 自建工作区间，**不需要设备 IOProc**；`join` 返回 `Member`（不能跨线程，drop 时离开），每块 `begin(截止期 ns)` / `finish()`，实时可调。另加 `set_qos_user_interactive()`（对照用）、`RtError::Unavailable`。`join_audio_workgroup`（设备的 IO 工作组）仍返回 Unimplemented，并写明它只在送音进程里拿得到、属 vdn-io-macos。新链接 AudioToolbox 框架（系统自带）
+- 2026-11-02 测试 `tests/workgroup.rs` 4 项过（实测）：建 · 加入 · 100 块 begin/finish · 加入后 time-constraint 仍在 · 错误路径（没 begin 就 finish、连着两次 begin、同一线程重复加入，系统都返回错误，我们原样报出）· QoS
+- 2026-11-02 task 3：提优先级对醒来延迟有影响（对照实验实测）→ 补测试 `promote.rs::promotion_cuts_wakeup_lateness`（`#[ignore]`，依赖机器负载，人工步骤写在注释里）
+- 2026-11-02 实验程序 `src/rt-thread/examples/rt_bench.rs`：固定计算量代替推理（约 700 µs，启动时标定），每 16 ms 一块，四种设置 none / tc / tc_wg / qos；记块耗时 p50 / p99.9 / max、醒来迟到、策略降级次数、工作区间报错数、CPU %。time-constraint 的 computation 取 2.1 ms（块计算量的 3 倍、不超过周期一半）
+- 2026-11-02 耗电脚本 `../noise_canceling-skeleton/_tmp/20261102-b8-rust/power/run.sh`（人用 `sudo bash run.sh` 跑）：基线空跑 + none / tc / tc_wg 各 60 s，powermetrics 每 1 s 采 CPU 功耗；只有 powermetrics 用 root；大总管已审过。等名额构建 rt_bench
+- 2026-11-02 xtask tidy 新规则（代码已写，等名额编译验证）：① 每个 crate 至少一条测试；② deny.toml 直接边规则与真实依赖、forbid 一致（`denycheck.rs`）。deny.toml 补两条直接边：ort 只许 backend-ort · eval · speaker · speaker-lab；cpal 只许 io-macos。注意：审查原话是「ort 只许 vdn-backend-ort」，但 eval（规约 §7.1 第 8 条登记的例外）、speaker、speaker-lab 现在都直接用 ort，我按现状列名单；要不要收紧到只剩后端，归它们的负责人。hound / clap 的直接边本批不加（rs-entry 的 vdn-capture 直接依赖它们，加了合并就红）
+- 2026-11-02 唯一真相源：`tests/layout_doc.rs`（等名额编译验证）——头注释里的字段清单、版本历史由测试与结构比对；偏移由 `offset_of!` 编译期断言钉死
+
 ## 对照实验：跨进程唤醒 vs 周期轮询（实测，2026-11-02）
 
 **测量条件**：本机 macOS 27.0.1，10 核（4 性能核 + 6 能效核）；release；`./target/release/examples/wake_bench all 10`（`src/shm/examples/wake_bench.rs`）。

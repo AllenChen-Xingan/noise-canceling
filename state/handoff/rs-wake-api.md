@@ -1,6 +1,6 @@
 # vdn-shm 新签名（rs-wake，2026-11-02，头部版本 1 → 2）
 
-已编译、`cargo test -p vdn-shm` 全过（自审修完后 30 过 1 忽略）、clippy 无警告、tidy 通过。代码在 `noise_canceling-rs-shm` worktree 的 `src/shm/`。
+这是签名**快照**，正本是源码（`src/shm/src/`）；两者不一致时以源码为准。已编译、`cargo test -p vdn-shm` 全过（自审修完后 30 过 1 忽略）、clippy 无警告、tidy 通过。代码在 `noise_canceling-rs-shm` worktree 的 `src/shm/`。
 
 ## 1. 头部版本 2（两端必须同版本，`open` 遇旧版本报 `ShmError::BadVersion`）
 
