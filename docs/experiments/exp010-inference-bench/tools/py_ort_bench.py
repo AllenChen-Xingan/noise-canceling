@@ -16,8 +16,14 @@ import resource
 import sys
 import time
 
+import ctypes
+
 import numpy as np
 import onnxruntime as ort
+
+# 计时线程调度等级同 Rust bench 默认（--qos ui = QOS_CLASS_USER_INTERACTIVE = 0x21）
+_r = ctypes.CDLL("/usr/lib/libSystem.B.dylib").pthread_set_qos_class_self_np(0x21, 0)
+assert _r == 0, f"设 QoS 失败：{_r}"
 
 onnx, prefix = sys.argv[1], sys.argv[2]
 warm = int(sys.argv[sys.argv.index("--warmup") + 1]) if "--warmup" in sys.argv else 200
@@ -80,7 +86,7 @@ cpu_s = cpu() - c0
 times.sort()
 pct = lambda p: times[min(int(round((len(times) - 1) * p)), len(times) - 1)]  # 同 bench 的 pct()
 print(json.dumps({
-    "model": "gtcrn", "backend": f"python-ort-{ort.__version__}", "frames": frames, "pace_ms": 0,
+    "model": "gtcrn", "backend": f"python-ort-{ort.__version__}", "frames": frames, "pace_ms": 0, "qos": "ui",
     "p50_ms": round(pct(0.5), 4), "p99_ms": round(pct(0.99), 4), "p999_ms": round(pct(0.999), 4),
     "max_ms": round(times[-1], 4), "mean_ms": round(times.mean(), 4), "open_ms": round(t_open, 2),
     "first_frame_ms": round(t_first, 3), "cpu_over_wall": round(cpu_s / wall, 3), "nonfinite_frames": nonfinite,
