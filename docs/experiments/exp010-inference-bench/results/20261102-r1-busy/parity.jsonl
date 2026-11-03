@@ -1,0 +1,3 @@
+{"model":"gtcrn","vs":"native","frames":610,"max_abs":1.097e-5,"worst_frame":479,"snr_db":134.00,"first_bad":"None"}
+{"model":"gtcrn","vs":"tract","frames":610,"max_abs":1.001e-5,"worst_frame":286,"snr_db":130.43,"first_bad":"None"}
+{"model":"fastenhancer_m","vs":"tract","frames":976,"max_abs":4.223e-6,"worst_frame":723,"snr_db":110.79,"first_bad":"None"}
