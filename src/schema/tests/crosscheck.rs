@@ -323,18 +323,39 @@ fn bus_name_pattern_agrees_with_validate() {
     }
 }
 
-/// 负例：Config 加了字段而 schema 没重新导出 → 检查报 config.schema.json（用一个多一个字段的类型模拟「新的 Rust」）。
+/// 模拟「Rust 加了一个字段、没重新导出」：把当前导出删掉这一个字段当作仓里的旧文件，
+/// 其余（标题、注释、别的字段）都不变，所以报红只能来自这一个字段（第 1 轮 codex #4）。
+fn assert_missing_field_is_red(tag: &str, file: &str, pointer: &str, field: &str) {
+    let d = temp_root(tag);
+    let fresh: Value = serde_json::from_str(
+        &std::fs::read_to_string(d.join(DIR).join(file)).unwrap(),
+    )
+    .unwrap();
+    let mut old = fresh.clone();
+    let props = old
+        .pointer_mut(pointer)
+        .and_then(Value::as_object_mut)
+        .unwrap_or_else(|| panic!("{file} 里没有 {pointer}"));
+    assert!(props.remove(field).is_some(), "{file}{pointer} 里没有 {field}");
+    if let Some(Value::Array(req)) = old
+        .pointer_mut(pointer.trim_end_matches("/properties"))
+        .and_then(|o| o.get_mut("required"))
+    {
+        req.retain(|r| r != field);
+    }
+    put(&d, file, &old);
+    let p = check(&d);
+    assert_eq!(p.len(), 1, "只该报这一份：{p:#?}");
+    assert!(p[0].contains(file) && p[0].contains("不一致"), "{p:#?}");
+    // 放回去就绿
+    put(&d, file, &fresh);
+    assert!(check(&d).is_empty());
+}
+
+/// 负例：Config 加了字段而 schema 没重新导出 → 检查报 config.schema.json。
 #[test]
 fn config_new_field_without_export_is_red() {
-    #[derive(schemars::JsonSchema, serde::Deserialize)]
-    #[allow(dead_code)]
-    struct ConfigOld {
-        block: usize,
-    }
-    let d = temp_root("config");
-    let old = vdn_schema::with_comment(schemars::schema_for!(ConfigOld).to_value(), "旧");
-    put(&d, "config.schema.json", &old);
-    assert!(check(&d).iter().any(|m| m.contains("config.schema.json")));
+    assert_missing_field_is_red("config", "config.schema.json", "/properties", "denoise_block");
 }
 
 // ───────────── 评测清单 ─────────────
@@ -409,19 +430,89 @@ fn eval_schema_and_parser_agree_on_bad_tasks() {
     }
 }
 
-/// 负例：清单类型改了而 schema 没重新导出 → 检查报出对应文件。
+/// 负例：清单类型加了字段而 schema 没重新导出 → 检查报出对应文件（三份各一例）。
 #[test]
 fn eval_type_change_without_export_is_red() {
-    #[derive(schemars::JsonSchema)]
-    #[allow(dead_code)]
-    struct SuiteOld {
-        tasks: Vec<String>,
+    assert_missing_field_is_red("eval-suite", eval::SUITE_FILE, "/$defs/TaskFile/properties", "xfail");
+    assert_missing_field_is_red("eval-levels", eval::LEVELS_FILE, "/properties", "updated");
+    assert_missing_field_is_red("eval-baseline", eval::BASELINE_FILE, "/properties", "run_id");
+}
+
+/// 往返的比较口径：null 与缺省等价、空数组与缺省等价（serde 写出 `None` 为 null、空 Vec 为 []），
+/// 数字一律按 f64 比（文件里写 3，写出为 3.0）。
+fn norm(v: &Value) -> Value {
+    match v {
+        Value::Object(m) => Value::Object(
+            m.iter()
+                .filter(|(_, x)| !x.is_null() && x.as_array().is_none_or(|a| !a.is_empty()))
+                .map(|(k, x)| (k.clone(), norm(x)))
+                .collect(),
+        ),
+        Value::Array(a) => Value::Array(a.iter().map(norm).collect()),
+        Value::Number(n) => json!(n.as_f64()),
+        x => x.clone(),
     }
-    let d = temp_root("eval");
-    for f in [eval::SUITE_FILE, eval::LEVELS_FILE, eval::BASELINE_FILE] {
-        let before = std::fs::read_to_string(d.join(DIR).join(f)).unwrap();
-        put(&d, f, &schemars::schema_for!(SuiteOld).to_value());
-        assert!(check(&d).iter().any(|m| m.contains(f)), "{f}");
-        std::fs::write(d.join(DIR).join(f), before).unwrap();
+}
+
+fn roundtrip<T: serde::de::DeserializeOwned + serde::Serialize>(path: &str, v: &Value) {
+    let t: T = serde_json::from_value(v.clone()).unwrap_or_else(|e| panic!("{path}：{e}"));
+    let out = serde_json::to_value(&t).unwrap();
+    assert_eq!(norm(v), norm(&out), "{path}：往返后语义不同");
+    // 写出的结果还能读回，再写一次不变
+    let t2: T = serde_json::from_value(out.clone()).unwrap();
+    assert_eq!(serde_json::to_value(&t2).unwrap(), out, "{path}：第二次往返变了");
+}
+
+/// 4 份清单文件：反序列化成格式类型再序列化，语义等价（口径见 `norm`）。
+#[test]
+fn eval_files_roundtrip_semantic() {
+    use vdn_eval::files::{BaselineFile, LevelsFile, SuiteFile};
+    for (path, schema_file) in eval::DATA_FILES {
+        let v: Value =
+            serde_json::from_str(&std::fs::read_to_string(root().join(path)).unwrap()).unwrap();
+        match schema_file {
+            eval::SUITE_FILE => roundtrip::<SuiteFile>(path, &v),
+            eval::LEVELS_FILE => roundtrip::<LevelsFile>(path, &v),
+            eval::BASELINE_FILE => roundtrip::<BaselineFile>(path, &v),
+            other => panic!("{path}：没写往返的 schema {other}"),
+        }
+    }
+}
+
+/// 两个写入口（`ci --write-baseline`、`calib --write-levels`）序列化的类型，写出来的东西过 schema、能读回；
+/// 基线文件元数据不对时 `BaselineFile::parse` 报错，不当成空基线（第 1 轮 codex #2）。
+#[test]
+fn eval_writer_outputs_pass_schema() {
+    use vdn_eval::files::{BaselineFile, LevelEntry, LevelsFile};
+    let b = BaselineFile {
+        commit: "abc1234-dirty".into(),
+        doc: "d".into(),
+        run_id: "r".into(),
+        values: [("ref/R01/0/V-MUSIC".to_string(), 1.25)].into(),
+    };
+    let bv = serde_json::to_value(&b).unwrap();
+    validate(&committed(eval::BASELINE_FILE), &bv).unwrap();
+    assert_eq!(BaselineFile::parse(&bv.to_string()).unwrap().values, b.values);
+    let l = LevelsFile {
+        doc: "d".into(),
+        updated: "2026-11-02".into(),
+        verifiers: [(
+            "V-NAN".to_string(),
+            LevelEntry {
+                basis: "物理量".into(),
+                level: vdn_eval::Level::L3,
+            },
+        )]
+        .into(),
+    };
+    validate(&committed(eval::LEVELS_FILE), &serde_json::to_value(&l).unwrap()).unwrap();
+    // values 合法、元数据坏 → 报错
+    for bad in [
+        json!({"values": {"a": 1.0}}),
+        json!({"commit": "c", "doc": "d", "run_id": "r", "values": {"a": 1.0}, "extra": 1}),
+        json!({"commit": "c", "doc": "d", "run_id": "r", "values": {"a": "1"}}),
+    ] {
+        assert!(BaselineFile::parse(&bad.to_string()).is_err(), "{bad}");
+        assert!(validate(&committed(eval::BASELINE_FILE), &bad).is_err(), "{bad}");
     }
 }
