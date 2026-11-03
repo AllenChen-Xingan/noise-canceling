@@ -75,13 +75,30 @@ fn every_default_used_in_code_exists() {
     assert!(n >= 16, "只找到 {n} 处查表");
     // 表里有分档的 verifier，调用处必须用表里的那组分档（codex 第 8 轮 P2 #1）；
     // 调用处也不许再写数字数组字面量的分档
+    // 而且必须用在**它自己**的评分函数里：从 `const ID: &str = "V-X"` 到下一个 `const ID` 之间（codex 第 9 轮 P2 #1：
+    // 只查全局出现，两个 verifier 的分档互换也查不出）
     for l in ALL.iter().filter(|l| !l.edges.is_empty()) {
         let name = l.id.trim_start_matches("V-").replace('-', "_");
+        let marker = format!("const ID: &str = \"{}\";", l.id);
+        let start = src
+            .find(&marker)
+            .unwrap_or_else(|| panic!("找不到 {} 的评分函数", l.id));
+        let rest = &src[start + marker.len()..];
+        let body = &rest[..rest.find("const ID: &str").unwrap_or(rest.len())];
         assert!(
-            src.contains(&format!("th::{name}.edges")),
-            "{} 的分档没从表里取",
+            body.contains(&format!("th::{name}.edges")),
+            "{} 的评分函数没用自己的分档 th::{name}.edges",
             l.id
         );
+        for other in ALL.iter().filter(|o| o.id != l.id && !o.edges.is_empty()) {
+            let on = other.id.trim_start_matches("V-").replace('-', "_");
+            assert!(
+                !body.contains(&format!("th::{on}.edges")),
+                "{} 的评分函数用了 {} 的分档",
+                l.id,
+                other.id
+            );
+        }
     }
     let lit = src
         .match_indices("&[")
