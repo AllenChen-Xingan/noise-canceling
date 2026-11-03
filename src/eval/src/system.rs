@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use vdn_dsp::StreamingStft;
 use vdn_engine::testing::DelayGain;
 use vdn_engine::{Engine, EngineStats, FaultInjector, FaultKind, Model, ModelError, SafetyConfig};
-use vdn_models::{AnyModel, ModelKind};
+use vdn_models::{AnyModel, ModelId, ModelKind};
 use vdn_types::latency::{IO_BLOCK_PROPOSED, LATENCY_BUDGET_MS, planned_platform};
 
 /// 参考降噪器（CI 替身）。
@@ -180,17 +180,19 @@ impl SystemKind {
         Some(match s {
             "passthrough" => SystemKind::Passthrough,
             "ref" => SystemKind::Ref,
-            "gtcrn" => SystemKind::Gtcrn,
-            "fastenhancer-m" => SystemKind::FastEnhancerM,
-            _ => return None,
+            _ => match ModelId::parse(s)? {
+                ModelId::Gtcrn => SystemKind::Gtcrn,
+                ModelId::FastEnhancerM => SystemKind::FastEnhancerM,
+            },
         })
     }
+    /// 真模型的名字取自正本 `ModelId::as_str`（结果文件、门禁基线的键都用它）。
     pub fn as_str(self) -> &'static str {
         match self {
             SystemKind::Passthrough => "passthrough",
             SystemKind::Ref => "ref",
-            SystemKind::Gtcrn => "gtcrn",
-            SystemKind::FastEnhancerM => "fastenhancer-m",
+            SystemKind::Gtcrn => ModelId::Gtcrn.as_str(),
+            SystemKind::FastEnhancerM => ModelId::FastEnhancerM.as_str(),
         }
     }
     fn model_kind(self) -> Option<ModelKind> {
