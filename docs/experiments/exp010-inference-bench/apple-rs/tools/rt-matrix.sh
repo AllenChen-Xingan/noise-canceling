@@ -58,6 +58,9 @@ for rnd in $(seq 1 $ROUNDS); do
     pm=$!
     l=$(eval "U $cmd" 2>> "$RES/stderr.log"); rc=$?
     kill "$pm"; wait "$pm" 2>/dev/null; pm=""
+    if [ $rc = 0 ] && ! printf '%s' "$l" | grep -q '"win_start_unix"'; then
+      echo "[$(date +%H:%M:%S)] ⚠️ $n 的输出没有计时窗字段（win_start_unix / wall_s），这一段只展示、不进排名" | tee -a "$RES/run.log"
+    fi
     if [ $rc = 0 ]; then echo "{\"round\":$rnd,\"set\":$i,\"file\":\"$f\",\"config\":\"$n\",\"result\":$l}" >> "$RES/rt.jsonl"; else echo "{\"round\":$rnd,\"set\":$i,\"file\":\"$f\",\"config\":\"$n\",\"error\":\"见 stderr.log\"}" >> "$RES/rt.jsonl"; fi
     sleep 5   # 两段之间让功率回落
   done

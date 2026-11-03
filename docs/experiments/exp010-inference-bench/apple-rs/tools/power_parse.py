@@ -65,9 +65,11 @@ for line in open(os.path.join(res, "rt.jsonl")):
     row = {"round": rnd, "set": r["set"], "config": r["config"]}
     x = r.get("result")
     if x:
-        win = "win_start_unix" in x and x["win_start_unix"] > 0
+        win = "win_start_unix" in x and x["win_start_unix"] > 0 and "wall_s" in x
         p, n, cov_s = avg(ss, x["win_start_unix"], x["win_end_unix"]) if win else avg(ss)
-        wall = x.get("wall_s") or x["frames"] * (x.get("pace_ms") or 16) / 1000
+        wall = x["wall_s"] if win else x["frames"] * (x.get("pace_ms") or 16) / 1000
+        # codex 第 5 轮 #1：没有计时窗或实测墙钟的结果（旧数据、或另一套程序没输出这两个字段）只展示、不进候选排名
+        row["ranked"] = bool(win)
         # 覆盖不足（窗内样本合计 < 80% 墙钟）或缺项，判这一段无效
         if p is None or idle is None or (win and cov_s < 0.8 * wall - 2):
             row.update({"invalid": "缺功率项或采样覆盖不足", "samples": n, "coverage_s": round(cov_s, 1), "wall_s": wall})
@@ -87,8 +89,9 @@ idle_cpu = [v["CPU"] for v in idle_by_round.values() if v]
 noise = (max(idle_cpu) - min(idle_cpu)) if len(idle_cpu) > 1 else None
 by = {}
 for r in rows:
-    if "delta_mw" in r:
+    if "delta_mw" in r and r.get("ranked"):
         by.setdefault(r["config"], []).append(r)
+unranked = sorted({r["config"] for r in rows if "delta_mw" in r and not r.get("ranked")})
 summary = []
 for c, rs in by.items():
     d = [r["delta_mw"] for r in rs]
@@ -98,5 +101,6 @@ for c, rs in by.items():
                     "uj_per_frame_median": round(statistics.median(r["uj_per_frame"] for r in rs), 1),
                     "p50_ms_median": statistics.median(r["p50_ms"] for r in rs)})
 summary.sort(key=lambda s: s["delta_mw_median"])
-print(json.dumps({"idle_cpu_mw_by_round": idle_cpu, "noise_floor_mw": noise, "summary": summary, "rows": rows},
+print(json.dumps({"idle_cpu_mw_by_round": idle_cpu, "noise_floor_mw": noise, "summary": summary,
+                  "unranked_no_window": unranked, "rows": rows},
                  ensure_ascii=False, indent=1))

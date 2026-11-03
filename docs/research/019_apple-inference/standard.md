@@ -136,7 +136,7 @@
 |---|---|---|---|
 | CPU 标量 + NEON（自动向量化 / 手写 SIMD） | 手写 Rust（rustbe） | rustbe r4：p50 0.10 ms | 未试，rustbe 原因：「本轮不做。FE-M 只有连续跑的数（ORT p50 0.38 ms），实时节奏下的耗电和对其他程序的影响都没测，按 D75 现在说不出它必须换后端。先补测 FE-M 在 ORT 上按实时节奏跑的耗电，再决定要不要手写（工作量和 GTCRN 相当）。现在只做主模型 GTCRN。」 |
 | CPU 矩阵单元（AMX / SME2，经 Accelerate 的 BLAS / BNNS） | Accelerate `cblas_sgemm` 等（rustbe）；BNNS Graph 内部也可能用（未证实，`notes/bnns-graph.md`） | rustbe 在做：`amx-probe` 子命令，用 GTCRN 实际的 5 种矩阵形状比手写循环与 `cblas_sgemm`，折算每帧总耗时；待名额 | 待定：看 GTCRN 的探测结果再决定（rustbe） |
-| BNNS Graph（CPU 图执行器） | `apple-rs` bnns（applebe） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：GRU 展开版 p50 0.155 ms · 0 分配 · 133.9 dB；不展开 0.34 ms；多线程编译不提速 | 未试：FE-M 转不了 Core ML（wav2wav 图里的 `view_as_complex` 不支持），要改走 spec2spec 版；FE-M 是否留在候选里待人定 |
+| BNNS Graph（CPU 图执行器） | `apple-rs` bnns（applebe） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：GRU 展开版 p50 0.155 ms · 分配显示 0.000 / 帧（三位小数，待整数验证）· 133.9 dB；不展开 0.34 ms；多线程编译不提速 | 未试：FE-M 转不了 Core ML（wav2wav 图里的 `view_as_complex` 不支持），要改走 spec2spec 版；FE-M 是否留在候选里待人定 |
 | Core ML · CPU | `apple-rs` coreml `--units cpu`（applebe） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：fp32 0.39 ms · 展开 0.21 ms · 每帧约 300 次 malloc；fp16 54 dB 不过；有状态版转不了（coremltools 报错） | 未试：同上（转不了） |
 | Core ML · GPU | `--units gpu` | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：耗时同 CPU；`MLComputePlan` 显示所有算子都落在 CPU，GPU 没被用上 | 未试：同上 |
 | Core ML · 神经引擎 | `--units ane`（只算 fp16） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：所有算子都落在 CPU（`MLComputePlan`），神经引擎没被用上；fp16 54 dB 不过 | 未试：同上 |
