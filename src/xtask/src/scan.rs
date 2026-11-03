@@ -190,3 +190,139 @@ pub fn has_reason(line: &str, marker: &str) -> bool {
     line.split_once(marker)
         .is_some_and(|(_, why)| !why.trim().is_empty())
 }
+
+/// 整个文件里的字符串字面量：(起始行下标, 内容)。跨行字符串、行尾 `\` 续行（去掉换行和下一行开头的空白）、
+/// `r"…"` / `r#"…"#` / `b"…"` 都认；注释、字符字面量（`'"'`）里的引号不算（R-MODEL 用；codex 012 第 2 轮 #2）。
+pub fn string_literals(src: &str) -> Vec<(usize, String)> {
+    let c: Vec<char> = src.chars().collect();
+    let at = |k: usize| c.get(k).copied().unwrap_or('\0');
+    let ident = |ch: char| ch.is_alphanumeric() || ch == '_';
+    let mut out = Vec::new();
+    let (mut i, mut line) = (0usize, 0usize);
+    while i < c.len() {
+        let ch = at(i);
+        if ch == '\n' {
+            line += 1;
+            i += 1;
+        } else if ch == '/' && at(i + 1) == '/' {
+            while i < c.len() && at(i) != '\n' {
+                i += 1;
+            }
+        } else if ch == '/' && at(i + 1) == '*' {
+            let mut depth = 1;
+            i += 2;
+            while i < c.len() && depth > 0 {
+                if at(i) == '/' && at(i + 1) == '*' {
+                    depth += 1;
+                    i += 2;
+                } else if at(i) == '*' && at(i + 1) == '/' {
+                    depth -= 1;
+                    i += 2;
+                } else {
+                    if at(i) == '\n' {
+                        line += 1;
+                    }
+                    i += 1;
+                }
+            }
+        } else if ch == '\'' {
+            // 字符字面量 'x' / '\…'；否则是生命周期 'a
+            if at(i + 1) == '\\' {
+                i += 2;
+                while i < c.len() && at(i) != '\'' {
+                    i += 1;
+                }
+                i += 1;
+            } else if at(i + 2) == '\'' {
+                i += 3;
+            } else {
+                i += 1;
+            }
+        } else if ch == 'r'
+            && (at(i + 1) == '"' || at(i + 1) == '#')
+            && (i == 0 || !ident(at(i - 1)) || (at(i - 1) == 'b' && (i < 2 || !ident(at(i - 2)))))
+        {
+            let mut k = i + 1;
+            let mut hashes = 0;
+            while at(k) == '#' {
+                hashes += 1;
+                k += 1;
+            }
+            if at(k) != '"' {
+                i += 1;
+                continue;
+            }
+            let start = line;
+            let mut s = String::new();
+            k += 1;
+            while k < c.len() {
+                if at(k) == '"' && (1..=hashes).all(|h| at(k + h) == '#') {
+                    k += 1 + hashes;
+                    break;
+                }
+                if at(k) == '\n' {
+                    line += 1;
+                }
+                s.push(at(k));
+                k += 1;
+            }
+            out.push((start, s));
+            i = k;
+        } else if ch == '"' {
+            let start = line;
+            let mut s = String::new();
+            i += 1;
+            while i < c.len() && at(i) != '"' {
+                if at(i) == '\\' {
+                    if at(i + 1) == '\n' {
+                        // 续行：换行和下一行开头的空白都不进字符串
+                        i += 1;
+                        while at(i).is_whitespace() {
+                            if at(i) == '\n' {
+                                line += 1;
+                            }
+                            i += 1;
+                        }
+                        continue;
+                    }
+                    // 转义按 Rust 的意思还原（`\n` 是换行，不是字母 n；codex 第 3 轮 #1）
+                    let (ch, used) = match at(i + 1) {
+                        'n' => ('\n', 2),
+                        't' => ('\t', 2),
+                        'r' => ('\r', 2),
+                        '0' => ('\0', 2),
+                        'x' => {
+                            let hex: String = [at(i + 2), at(i + 3)].iter().collect();
+                            let v = u8::from_str_radix(&hex, 16).unwrap_or(b'?');
+                            (char::from(v), 4)
+                        }
+                        'u' if at(i + 2) == '{' => {
+                            let mut k = i + 3;
+                            let mut hex = String::new();
+                            while k < c.len() && at(k) != '}' {
+                                hex.push(at(k));
+                                k += 1;
+                            }
+                            let v = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32);
+                            (v.unwrap_or('?'), k + 1 - i)
+                        }
+                        other => (other, 2),
+                    };
+                    s.push(ch);
+                    i += used;
+                    continue;
+                }
+                if at(i) == '\n' {
+                    line += 1;
+                }
+                s.push(at(i));
+                i += 1;
+            }
+            out.push((start, s));
+            i += 1;
+        } else {
+            i += 1;
+        }
+    }
+    out
+}
