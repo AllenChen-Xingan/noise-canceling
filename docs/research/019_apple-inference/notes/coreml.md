@@ -138,9 +138,41 @@
 - **Core ML 公开接口自己的每次开销**：只有神经引擎私有接口的数（M1 约 190 µs）和 GPU 空 kernel 的数（M2 Max 约 0.12 ms），没有「Core ML + `cpuOnly` + 极小模型」的公开测量。M5 上的任何数字都没有。
 - **`cpuOnly` 是否开内部线程、内部有没有锁**：头文件没有线程设置，文档没提。
 - **GRU 在 GPU 上能不能跑**：没查到，要 `MLComputePlan` 实测。
-- **PyTorch GRU 的 reset 门写法和 MIL `gru` 是否一致**：iOS 18 加了 `reset_after`，没读 `_add_gru_layer` 用的是哪种，要靠逐值对拍兜底。
+- ~~PyTorch GRU 的 reset 门写法和 MIL `gru` 是否一致~~：已查清，前端不用 `mb.gru`，用 `while_loop` 手写，写法与 PyTorch 一致（见 1.4）。新的存疑：转换器会不会展开定长 `while_loop`；`while_loop` 在 Core ML CPU 上的每步开销。
 - **FE-M wav2wav 图的 STFT 实现**：没读 FastEnhancer 源码，不知道能不能直转；没找到 `istft` 转换器。
 - **arXiv 2606.22283 的身份**：第三方逆向论文，数字在 M1 上测，走私有接口；附录 A 的完整算子表没读。ane.cpp 的 119 µs 只看了搜索摘要。
 - **`objc2-core-ml` 是否包全**了 `MLState`、`outputBackings`、`MLComputePlan`，没核。
 - **fp16 模型在 CPU 上哪些算子真按 fp16 算**：官方只说「a few selected ops, such as convolution」。
 - **苹果官方没有给出神经引擎支持的算子清单**；落点只能靠 `MLComputePlan` 和实测。
+
+## 怀疑派核查（2026-11-02）
+
+> 核对方法：本机 SDK 头文件（macOS 27.0 CommandLineTools）逐行对 · 拉 `coremltools` `main` 的 5 个源文件 grep · WebFetch 读 arXiv 2606.22283 全文、arXiv 2607.10086 HTML、两个苹果论坛帖、WWDC23 讲稿、`typed-execution` 文档、PyPI 历史。没装包，没跑构建。共改 14 处。
+
+**驳倒 / 改掉的**
+- **最大一处**：原文说 GRU 转成 MIL `gru`、要靠 `reset_after` 对齐。实际 `_add_gru_layer` 不用 `mb.gru`，用 `while_loop` 逐步展开（`ct/mil/frontend/torch/ops.py:3507-3593`）。GTCRN 每帧因此约 268 次循环体；`cpuOnly` 不再「多半比 ORT 好」，先验改成「不比 ORT 快」。
+- 「exp004 口径 4.5e-7」是 Rust-ORT 对 Python-ORT，不是对原模型；不能当 Core ML 的过线线，改成待人定容差。
+- 论坛帖 718140 不支持「GRU 上不了神经引擎」（它讲 TF 的 `get_shape` 回落），降级并改述。
+- arXiv 2607.10086 是定性判断，不是测量，由【实测-他人】改为「他人定性判断」，补 URL 和原句。
+- arXiv 2606.22283 的 260 ms 首调是 M1，对应稳态约 2 ms 的模型，不能和 190 µs 混用；补注。论文对 M5 没有每次调用开销，改「没查到」为「核过，没有」。
+- 「ORT 整帧 0.4 ms」只是 Python exp001 口径；Rust exp004 p50 是 0.70 ms，改成 0.4–0.7 ms。
+- 逐值一致基准原写「和 PyTorch fp32 比」，改为先和 ORT 比（同口径），PyTorch 顺带。
+
+**补上的反例 / 遗漏**
+- `initWithDataPointer` 的「不拷贝」只管 `MLMultiArray` 本身，神经引擎路径内部仍有 fp16 拷贝（论文表 2.3）。
+- 现有 `bench_coreml.swift` 三个缺口：没按对象身份核对 `outputBackings`；节拍用 `usleep` 不是 `mach_wait_until`；对拍只比前 610 帧。
+- FE-M wav2wav 版因缺 `istft` 转换器大概率转不过；spec2spec 版对拍前要先在 ORT 上建基准。
+- 基准清单补：GTCRN 手动展开 GRU 的变体、ORT 同节拍同帧数重跑、CPU 占用（`cpu_over_wall`）。
+- 补存疑：加载时是否经 `aned` 等守护进程跨进程；`cpuOnly` 每帧是否全在本进程。
+
+**核过、站得住的**
+- 头文件行号与原句：`MLComputeUnits`、`allowLowPrecisionAccumulationOnGPU`、`MLState` 串行与缓冲地址、`outputBackings` 三条要点、`MLComputePlan`、`FastPrediction` / `reshapeFrequency`、异步接口 macOS 14 起。
+- 状态只许 fp16（`load.py:736-740`）、`torch.export` 自动转 fp16（`converter.py:645-650`）、`slice_update` / `torch_tensor_assign` 分支、`stft` / `scaled_dot_product_attention` 行号。
+- `coremltools` 9.0 是 2025-11-10 最新正式版，9.1.dev1 是 2026-08-03 预发布。WWDC23 两句原话、`typed-execution` 两句原话、M2 Max 0.12 ms 原数。
+- 缓存总量 18 048 个 fp32 算对。
+
+**仍存疑**
+- 定长 `while_loop` 会不会被转换器或 Core ML 运行时展开；每步调度开销多大。
+- arXiv 2606.22283 §2.4「固件命令一次一个在途」没读到原文。
+- ane.cpp 119 µs 只有搜索摘要。
+- 「ONNX 直转已经没有了」的出处是 5.x 时代写的「will be deprecated in coremltools 6」；结论对，但该出处没直接证明「已删除」。
