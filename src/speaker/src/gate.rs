@@ -20,7 +20,7 @@
 use vdn_dsp::{db_to_lin, one_pole_coef};
 
 use crate::vad::{Hysteresis, Vad};
-use vdn_types::{FrameCtx, SampleClock, SpeakerClass, Stage};
+use vdn_types::{FrameCtx, NodeKind, SampleClock, SpeakerClass, Stage};
 
 #[derive(Clone, Copy, Debug)]
 pub struct GateParams {
@@ -211,8 +211,8 @@ impl AsymGate {
     clippy::disallowed_macros
 )]
 impl Stage for AsymGate {
-    fn name(&self) -> &'static str {
-        "asym-gate"
+    fn kind(&self) -> &'static NodeKind {
+        &vdn_types::graph::ASYM_GATE
     }
 
     fn reset(&mut self) {
@@ -417,6 +417,11 @@ mod tests {
         }
         // 可缺省参数：出厂关，None 合法
         assert!(desc::GATE_LEVEL_CLOSE_DB.optional && d.level_close_db.is_none());
+        // 处理图里门控节点的参数清单（`vdn_types::graph::ASYM_GATE`）= 本表 + 整数参数（交叉校验，D72）
+        let mut want: Vec<u16> = fields.iter().map(|f| f.0.id).collect();
+        want.push(desc::GATE_CONFIRM_N.id);
+        want.sort_unstable();
+        assert_eq!(vdn_types::graph::ASYM_GATE.param_ids(), want);
         // 整数参数
         assert_eq!(d.confirm_n, desc::GATE_CONFIRM_N.default_count());
         let p = GateParams { confirm_n: 0, ..d };

@@ -7,6 +7,8 @@
 
 - [ ] **处理图 + schema 交叉校验 + 前端只算一次（D71）**：STFT / fbank / 场景特征每帧只算一次，降噪 · 认人 · 场景 · VAD 共用（规约 §3.1 `SpectrumTap` 已留口）；同一功能只在一处实现；处理链表示成「节点带类型 · 参数 · 版本」的图，会话记录同一套表示；Rust 类型为源头导出 schema、CI 比对；清掉 speaker / polish / scene 的 `vdn-types` 镜像副本（12 处）与手写 JSON；后处理级非有限检查与 Engine classify 规则合成一处；非有限值检查在 Pipeline 与送音端各一处（进程边界，有意）统一口径 · 出处 `docs/plan/011_schema-crosscheck.md` · Rust 骨架审查 `docs/plan/010_rust-skeleton-audit.md`
 
+- [x] **三技能扫描的 4 处新发现（011 未覆盖）** → 去向：#62 `feat/code-hygiene`（手下 hygiene，2026-11-02 派）；镜像副本部分已由 #60 清掉，建议并进这件大事一起做：①采样率常量收进 `vdn-types`（`16000/48000` 散在 37 个文件）②三个 `Verdict` 同名不同物、`StopOnDrop` 两份 ③`eval/suite/ci.json` 阈值手抄自 012，缺比对 ④`xtask tidy` 加 600 行上限 + 基线棘轮（现有 11 个文件超线，最大 `eval/src/verifiers.rs` 1153 行）· 出处 `docs/reviews/three-skills-scan-20261102/README.md`
+
 ## Rust 骨架的遗留（b8-rust 批次）
 
 - [x] ~~空闲时推理块约 3 ms：追性能核 / 提频、压 lead 到 144~~ → 人定 D74 用低频，lead 留 4 ms
@@ -30,9 +32,19 @@
 
 - [ ] **查 Silero VAD 能否纯 Rust、实时线程零分配地跑，能就替换 earshot**（D59，发布阻断）· 出处 `docs/plan/009_model-map.md` 第二节
 
+## 认人（声纹 · 判断回路）
+
+- [ ] **认人减负办法**（目标 1.2% → 0.15%，约 8 倍）：①锁定后降频 0.5 s → 2 s（插话晚约 1.5 s 被压，**要人定**）②只在有人声时判 ③声纹模型换更快后端（已并入 019）④更小声纹 / D47 辅助小模型逐帧判、大模型偶尔确认 ⑤**共用频谱前端（人选，D71，归 47 的 Rust 骨架）**
+- [ ] **⚠️ CPU 超线（D69）**：认人判断回路约 1.2% 核（exp005 README:155，每 0.5 s 一次、每次约 6 ms），D69 整机 ≤ 1%、019 分摊给认人 0.15% → 要降约 8 倍（降频 · 换小模型 · 只在说话段跑等）· 出处 019 `standard.md` §6.1（engine worktree）
+- [ ] **STFT · 重采样 · 采集输出 · 修音 四项 CPU 都没量过**（019 分摊合计 0.17%）
+
 ## 人耳（评测器）
 
-- [ ] **下一轮盲听**：①多留背景（下限 −6 dB）的两组红线通过率最高、评分模型却最低——评分模型判不了，要人耳（018 exp011 results.md 第 4 节）②夹 4–6 道众人锚点题（D66）③016 4-9 第 3 题「覆盖 ≥ 8 个系统」一起排 · 出处 018 · 017 · 016
+- [ ] **降噪效果大事的起点**（若 E-1 选 A）：难场景（−5 dB · 6 人 babble · 中文目标 + 英文邻桌，K9）上比 GTCRN · DFN3 `_ll`（离线）· NoNoise-Mac（D77）· DPDFNet-2；合成测试（016 D2 级 + 隔离）+ 盲听夹众人锚点（D66）；看清 GTCRN 差在哪再定训练 / 改进 / 换模型；改输出的提速（fp16 / int8 · 剪枝 · 蒸馏，D79）也在这里评
+
+- [ ] **下一轮盲听**：①多留背景（下限 −6 dB）的两组红线通过率最高、评分模型却最低——评分模型判不了，要人耳（018 exp011 results.md 第 4 节）②夹 4–6 道众人锚点题（D66）③016 4-9 第 3 题「覆盖 ≥ 8 个系统」一起排 ④**放进 DFN3 `_ll`**，检验「GTCRN 够不够好」（人 2026-11-02「好」：GTCRN 第三方评测少，主模型选择当假设继续验证）· 出处 018 · 017 · 016 · D33 · D49
+
+- [ ] **NoNoise-Mac 进评测当对照组**（D77）：先看能否离线跑（CLI / 直接调 DFN3 Core ML），不能就装驱动回录；与本项目同场景比吃字率 · 评分 · 延迟 · 耗电；可选加 MetalVoice、Krisp（只对照不进 CI）· ⚠️ 装第三方驱动要人同意 · 出处 `docs/reviews/outlook-codex-20261102/research.md`
 
 ## 数据
 
@@ -45,11 +57,23 @@
 
 ## 仓库与工作区
 
-- [ ] **清理**：删已合并的 worktree `../noise_canceling-prefs` · `../noise_canceling-benchsynth`（016，PR #47）· `../noise_canceling-ears`（017，PR #48）· `../noise_canceling-judge-loop`（018，PR #49）；删 `../noise_canceling-dfnhush`（015 已随 PR #40 合并，D61）；本地 main 同步到远端（落后 77）；推送 `chore/coord-20261031-b6`；`_tmp/` 8.3 GB 看哪些能删
+- [ ] 清理 b8 已合并的 worktree：`../noise_canceling-engine` · `../noise_canceling-rustbe` · `../noise_canceling-fastpath`（及 b7 的三个，见下）
+
+- [ ] **清理**：删已合并的 worktree `../noise_canceling-prefs` · `../noise_canceling-benchsynth`（016，PR #47）· `../noise_canceling-ears`（017，PR #48）· `../noise_canceling-judge-loop`（018，PR #49）· `../noise_canceling-rustbe`（exp010，PR #55）· `../noise_canceling-engine`（019，PR #59）· `../noise_canceling-fastpath`（020，PR #66）；删 `../noise_canceling-dfnhush`（015 已随 PR #40 合并，D61）；本地 main 同步到远端（落后 77）；推送 `chore/coord-20261031-b6`；`_tmp/` 8.3 GB 看哪些能删
 
 ## 引擎（engine）
 
-- [ ] **019 推理引擎对比续做**（issue #45 · worktree `../noise_canceling-engine` · 2026-10-31 会话中断，只写了部分笔记）：不在当前大事内，以后单开一件大事（「轻快」那把尺子）
+- [ ] **codex-review 工具问题**：codex 输出以「P1」「P2」开头时，`file` 命令把它误判为 PBM / PGM 图片，第 2 轮起 `--previous` 被隐私扫描拦下；绕法：文件开头加一行 HTML 注释 · 出处 fastpath 收尾报告
+
+- [ ] **019 待重测（下次名额）**：耗电 3 轮（人 sudo，约 35 min）· BE-IMPACT 新测法 · rt 下 10 min BE-DEADLINE · BE-SIZE / BE-RT-SAN · 出处 019 `decision.md` §7
+- [ ] **apple-rs 与 bench 合成一个共用 crate**（JSON 字段唯一真相源）· 出处 019 §7
+
+- [ ] **手写 GTCRN 接进产品**（随「接起来」大事；默认候选改为 **native-v4i**，PR #66；另 src/dsp 重采样点积改多累加器）：补齐挡线（POWER 同场 · IMPACT · SIZE · RT-SAN · DEADLINE@rt 10 min）+ rustbe 转交 6 件（禁 panic · Model 适配器与 CI 测试 · 输入防护 · 权重校验 · 对 PyTorch 对拍 · 含长静音长跑）· 出处 exp010 README（PR #55）
+
+- [ ] **输入 NaN/Inf 时输出 NaN 且 seam 永不恢复**（issue #53，读源码确认、未复现）· 已转 47 的 Rust 骨架线
+- [ ] **vdn-review 工作流不认 args 里的审查对象**（applebe 给 019 文件，它审了 src/）· 已告 47
+
+- [x] → 2026-11-02 换入当前大事（b8 applebe / rustbe）**019 推理引擎对比续做**（issue #45 · worktree `../noise_canceling-engine` · 2026-10-31 会话中断，只写了部分笔记）：不在当前大事内，以后单开一件大事（「轻快」那把尺子）
 
 - [ ] **修 engine 停顿门控误开**（GTCRN 纯噪声停顿门控开 0.99；验收 = R17 由 xfail 转通过）· 出处 board 第四批「下一批建议 ②」
 - [ ] **接入线**：p2 认人 / scene 路由接进 engine · 出处 board 第四批「下一批建议 ①」

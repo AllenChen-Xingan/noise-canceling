@@ -1,11 +1,13 @@
 //! 后处理级（门控、衰减下限、音色链节点），跑在模型采样率（规约 §3.3）。
 
 use crate::frame::FrameCtx;
+use crate::graph::NodeKind;
 use crate::params::ParamSet;
 
 pub trait Stage: Send {
-    /// 短名，进延迟账与决策日志
-    fn name(&self) -> &'static str;
+    /// 本级的节点种类（正本在 [`crate::graph`] 的登记表；短名取 `kind().name`，进延迟账与决策日志）。
+    /// 「级 ↔ 种类」只在这里对应一次：实现里不另写名字字符串
+    fn kind(&self) -> &'static NodeKind;
     /// 状态清回初值；可在实时线程调
     fn reset(&mut self);
     /// 原地处理一个 hop。`wet` 是模型输出，`dry` 是对齐后的原声。不分配、不 panic
@@ -38,8 +40,8 @@ pub trait StageChain: Send {
     fn set_params_all(&mut self, p: &ParamSet);
     /// 各级延迟之和（模型采样率样本）
     fn latency_samples_all(&self) -> usize;
-    /// 按顺序把每级的短名与延迟交给 `f`（建延迟账、写会话记录用；构造期）
-    fn describe(&self, f: &mut dyn FnMut(&'static str, usize));
+    /// 按顺序把每级的种类与运行时延迟交给 `f`（与处理图描述比对、建延迟账用；构造期）
+    fn describe(&self, f: &mut dyn FnMut(&'static NodeKind, usize));
 }
 
 impl StageChain for () {
@@ -50,7 +52,7 @@ impl StageChain for () {
     fn latency_samples_all(&self) -> usize {
         0
     }
-    fn describe(&self, _f: &mut dyn FnMut(&'static str, usize)) {}
+    fn describe(&self, _f: &mut dyn FnMut(&'static NodeKind, usize)) {}
 }
 
 impl<S: Stage, R: StageChain> StageChain for (S, R) {
@@ -70,8 +72,8 @@ impl<S: Stage, R: StageChain> StageChain for (S, R) {
     fn latency_samples_all(&self) -> usize {
         self.0.latency_samples() + self.1.latency_samples_all()
     }
-    fn describe(&self, f: &mut dyn FnMut(&'static str, usize)) {
-        f(self.0.name(), self.0.latency_samples());
+    fn describe(&self, f: &mut dyn FnMut(&'static NodeKind, usize)) {
+        f(self.0.kind(), self.0.latency_samples());
         self.1.describe(f);
     }
 }
@@ -87,9 +89,9 @@ macro_rules! stages {
 mod tests {
     use super::*;
 
-    struct Add(f32, &'static str);
+    struct Add(f32, &'static NodeKind);
     impl Stage for Add {
-        fn name(&self) -> &'static str {
+        fn kind(&self) -> &'static NodeKind {
             self.1
         }
         fn reset(&mut self) {}
@@ -101,14 +103,15 @@ mod tests {
     #[test]
     fn chain_runs_in_order() {
         // (x·2 + 1)·2 + 10，顺序反了结果不同
-        let mut c = crate::stages![Add(1.0, "a"), Add(10.0, "b")];
+        use crate::graph::{ASYM_GATE, FLOOR};
+        let mut c = crate::stages![Add(1.0, &FLOOR), Add(10.0, &ASYM_GATE)];
         let mut w = [1.0f32, 0.0];
         c.process_all(&mut w, &[0.0, 0.0], FrameCtx::default());
         assert_eq!(w, [16.0, 12.0]);
         assert_eq!(<(Add, (Add, ())) as StageChain>::LEN, 2);
         let mut names = Vec::new();
-        c.describe(&mut |n, l| names.push((n, l)));
-        assert_eq!(names, [("a", 0), ("b", 0)]);
+        c.describe(&mut |k, l| names.push((k.name, l)));
+        assert_eq!(names, [("floor", 0), ("asym-gate", 0)]);
         assert_eq!(c.latency_samples_all(), 0);
     }
 
