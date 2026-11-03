@@ -89,9 +89,8 @@ fn baseline_path() -> PathBuf {
 fn load_baseline() -> Baseline {
     std::fs::read_to_string(baseline_path())
         .ok()
-        .and_then(|t| serde_json::from_str::<Value>(&t).ok())
-        .and_then(|v| v.get("values").cloned())
-        .and_then(|v| serde_json::from_value::<BTreeMap<String, f64>>(v).ok())
+        .and_then(|t| serde_json::from_str::<BaselineFile>(&t).ok())
+        .map(|b| b.values)
         .unwrap_or_default()
 }
 
@@ -120,12 +119,12 @@ fn write_baseline(r: &SuiteResult, m: &Meta) -> Result<usize, String> {
         }
     }
     let n = vals.len();
-    let doc = json!({
-        "doc": "CI 层冻结基线：回归集上 L0/L1 感知量的数值。门禁规则：比它差容差以上即阻断（012：L0 只作「不许比基线差」的约束）。有意改变行为时用 `vdn-eval ci --write-baseline` 重写，并在 PR 里说明为什么变。",
-        "commit": m.commit,
-        "run_id": m.run_id,
-        "values": vals,
-    });
+    let doc = BaselineFile {
+        doc: "CI 层冻结基线：回归集上 L0/L1 感知量的数值。门禁规则：比它差容差以上即阻断（012：L0 只作「不许比基线差」的约束）。有意改变行为时用 `vdn-eval ci --write-baseline` 重写，并在 PR 里说明为什么变。".into(),
+        commit: m.commit.clone(),
+        run_id: m.run_id.clone(),
+        values: vals,
+    };
     std::fs::write(
         baseline_path(),
         serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())? + "\n",
@@ -291,15 +290,18 @@ fn cmd_calib(args: &[String]) -> Result<(), String> {
     }
     if flag(args, "--write-levels") {
         let path = repo_root().join("src/eval/suite/levels.json");
-        let mut lv: Value = serde_json::from_str(LEVELS).map_err(|e| e.to_string())?;
+        let mut lv: LevelsFile =
+            serde_json::from_str(LEVELS).map_err(|e| format!("levels.json：{e}"))?;
         for r in c["metrics"].as_array().into_iter().flatten() {
             let id = r["verifier"].as_str().unwrap_or("");
             if info(id).is_none() {
                 continue; // 未登记的指标（ESTOI、SI-SDR、DNSMOS 子项）不进级别表
             }
-            lv["verifiers"][id] = json!({
-                "level": r["level"],
-                "basis": format!(
+            let level = serde_json::from_value(r["level"].clone())
+                .map_err(|e| format!("{id} 的级别不对：{e}"))?;
+            lv.verifiers.insert(id.to_string(), LevelEntry {
+                level,
+                basis: format!(
                     "定标第 {} 轮（{}）：配对 {}、一致率 {:.2} [{:.2}, {:.2}]、片段内 τ {:.2}；{}",
                     c["round"], c["set"].as_str().unwrap_or(""), r["pairs"],
                     r["agreement"].as_f64().unwrap_or(f64::NAN),
