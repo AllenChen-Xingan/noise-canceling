@@ -128,7 +128,11 @@ mod tests {
                 let t = std::time::Instant::now();
                 let r = b.wait(RingId::Raw, 96, Duration::from_millis(500));
                 assert!(r.is_ready(), "{r:?}");
-                assert!(t.elapsed() < Duration::from_millis(100), "{:?}", t.elapsed());
+                assert!(
+                    t.elapsed() < Duration::from_millis(100),
+                    "{:?}",
+                    t.elapsed()
+                );
             });
             b.ring(RingId::Raw).discard(96);
         }
