@@ -1,0 +1,79 @@
+{
+ "build": "20261031-102406-0c67",
+ "systems": {
+  "passthrough": {
+   "family": "C",
+   "desc": "直通（地板）",
+   "weight_sha256": null
+  },
+  "specsub": {
+   "family": "C",
+   "desc": "谱减 α=3、下限 0.02，最小统计噪声估计",
+   "weight_sha256": null
+  },
+  "wiener_dd": {
+   "family": "C",
+   "desc": "判决引导维纳 + 最小统计噪声估计（numpy；思路同 vdn-eval ref，不是同一份代码）",
+   "weight_sha256": null
+  },
+  "mmse_lsa": {
+   "family": "C",
+   "desc": "Ephraim–Malah MMSE 对数谱幅度",
+   "weight_sha256": null
+  },
+  "gtcrn_vctk": {
+   "family": "A'",
+   "desc": "GTCRN VCTK-DEMAND 版（biglinux 导出）",
+   "weight_sha256": "9dce5e90e69b99abeb1fc6863883bcb9859c56ce6508b3a1d4385fc47d90d68b"
+  },
+  "gtcrn": {
+   "family": "A",
+   "desc": "GTCRN DNS3（D33 主模型）",
+   "weight_sha256": "b4718df6228e7bdf1a8a435cf98f838636eb2fd331acabf86ba87c5192ebcb87"
+  },
+  "gtcrn_mix05": {
+   "family": "A",
+   "desc": "GTCRN 湿干比 0.5（参数变体）",
+   "weight_sha256": null
+  },
+  "ulunas": {
+   "family": "A",
+   "desc": "UL-UNAS DNS3（与 GTCRN 同作者同模板）",
+   "weight_sha256": "f2e804d54d6a88f4f82f44d86c9f1cf646db2509bfca935cfbfc5fcd8cbfac3b"
+  },
+  "fe_s": {
+   "family": "A",
+   "desc": "FastEnhancer-S（同训练集）",
+   "weight_sha256": "d7c937d6b475dbe89a6e6a69853b685fe62d629f4c96077559c556ac6f8aaa2d"
+  },
+  "fe_m": {
+   "family": "A",
+   "desc": "FastEnhancer-M（同训练集）",
+   "weight_sha256": "29da81b46ad42758d9f586fb1706902862ec3f0337d6bd49670c5565e42382fb"
+  },
+  "dpdf_base": {
+   "family": "B",
+   "desc": "DPDFNet baseline",
+   "weight_sha256": "371d26182aff0e1e0d31354e24c81f79cd57458f5a7dd003fc10a7ebf64255e0"
+  },
+  "dpdf2": {
+   "family": "B",
+   "desc": "DPDFNet-2（exp003 候选）",
+   "weight_sha256": "4f0ee28935b4a32abecc717d745416976565834d839601acf43031094b4dc94c"
+  },
+  "dpdf8": {
+   "family": "B",
+   "desc": "DPDFNet-8",
+   "weight_sha256": "899d4f23f3ff86edbffa8c537e4bcbdc49da1b4e84e0ef390611e0604a3b26cb"
+  },
+  "oracle_irm": {
+   "family": "O",
+   "desc": "理想比值掩码（用干净轨，作弊天花板）",
+   "weight_sha256": null
+  }
+ },
+ "rank_py_sha256": "e2118611b936115b473d854b3c12d3509ab711a254e4dc09f7f5c83ae60834c6",
+ "rows": 348,
+ "seconds": 6287.2,
+ "errors": 0
+}

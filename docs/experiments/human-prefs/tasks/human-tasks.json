@@ -1,0 +1,1018 @@
+{
+ "name": "human-prefs",
+ "doc": "人耳盲听判过的片段 → 任务。回归 = 人判能用 / 最自然的，不许变差；能力 = 人判不能用 / 吃字 / 别人太吵的，起点应失败（xfail）。证据全是一个人、合成素材、每题一屏，过线值是 verifier 锚点〔建议值〕或已有实测，不是人定的线。human 字段由 make_tasks.py 从 trials.jsonl 生成，别手改。",
+ "seed": 20261031,
+ "defaults": {
+  "trials": 1
+ },
+ "tasks": [
+  {
+   "id": "R63-h-e003-c01-casino5-fem",
+   "set": "regression",
+   "polarity": "both",
+   "origin": "exp003 c01 人耳盲听（exp003/20261030102301-68ab/06-c01, exp003/20261030110755-f8c3/10-c01）",
+   "desc": "赌场 5 dB：FE-M 最清楚 / 最自然、能用、没被勾吃字；另两家勉强且被勾吃字",
+   "real": {
+    "kind": "exp003",
+    "clips": "docs/experiments/exp003-offline-ab/clips.json",
+    "clip": "c01"
+   },
+   "graders": [
+    {
+     "v": "V-EAT-ASR",
+     "max": 1.0
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    },
+    {
+     "v": "V-ONSET",
+     "max": 3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "fastenhancer_m"
+    ],
+    "eval_systems": {
+     "fastenhancer_m": "fastenhancer-m"
+    },
+    "screens": [
+     {
+      "rec_id": "exp003/20261030102301-68ab/06-c01",
+      "session_validity": "unverified",
+      "best": {
+       "clearer": "dpdfnet2",
+       "natural": "dpdfnet2"
+      },
+      "usable": {
+       "dpdfnet2": "ok",
+       "gtcrn": "marginal"
+      },
+      "eaten": [
+       "gtcrn"
+      ],
+      "eaten_none": false,
+      "tags": {
+       "gtcrn": [
+        "metallic",
+        "pumping_bg",
+        "muffled",
+        "vacuum",
+        "clipped_onsets"
+       ]
+      },
+      "note": null,
+      "positions": {
+       "dpdfnet2": "B",
+       "gtcrn": "A"
+      },
+      "audio_out_sha256": {
+       "fastenhancer_m": null
+      },
+      "excerpt_s": null
+     },
+     {
+      "rec_id": "exp003/20261030110755-f8c3/10-c01",
+      "session_validity": "discounted",
+      "best": {
+       "clearer": "fastenhancer_m",
+       "natural": "fastenhancer_m"
+      },
+      "usable": {
+       "dpdfnet2": "marginal",
+       "fastenhancer_m": "ok",
+       "gtcrn": "marginal"
+      },
+      "eaten": [
+       "dpdfnet2",
+       "gtcrn"
+      ],
+      "eaten_none": false,
+      "tags": null,
+      "note": null,
+      "positions": {
+       "dpdfnet2": "A",
+       "fastenhancer_m": "C",
+       "gtcrn": "B"
+      },
+      "audio_out_sha256": {
+       "fastenhancer_m": null
+      },
+      "excerpt_s": null
+     }
+    ],
+    "evidence": "2 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材；exp003 会话打折、有位置偏好）"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp003-offline-ab/clips.json（c01–c03 现成：noisy_sha256 / clean_sha256；c04–c12 合成：make_clips.py，种子 20261030，来源哈希 source_sha256）",
+    "outputs": "docs/experiments/exp003-offline-ab/enhance.py（逐帧流式，同 build 20261030110755-f8c3）",
+    "gap": "被判的那几份输出音频本机已不在、也没记哈希；重跑 enhance.py 得到的输出与人听的是否逐字节相同，未核"
+   }
+  },
+  {
+   "id": "R64-h-e005-c06-owner-cafe-bg",
+   "set": "regression",
+   "polarity": "preserve",
+   "origin": "exp005 c06 人耳盲听（exp005/20261030224448-ab48/03-c06） · 人原话「我觉得这种咖啡馆，其实就是有一点点bg 是不错的」",
+   "desc": "只有主人 + 咖啡馆底噪：保守版最自然、开会选它，人原话要「有一点点 bg」——底噪不许压成死寂",
+   "real": {
+    "kind": "exp005",
+    "clips": "docs/experiments/exp005-p2-speaker/clips.json",
+    "audio_dir": "_tmp/20261031-exp005/src",
+    "clip": "c06"
+   },
+   "graders": [
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    },
+    {
+     "v": "V-ONSET",
+     "max": 3
+    },
+    {
+     "v": "V-SIM-GATE",
+     "max": 0.05,
+     "onset_max": 0.2
+    }
+   ],
+   "info": [
+    {
+     "v": "V-VACUUM"
+    },
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-EAT-ASR"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "personal"
+    ],
+    "eval_systems": {
+     "personal": null
+    },
+    "screens": [
+     {
+      "rec_id": "exp005/20261030224448-ab48/03-c06",
+      "session_validity": "valid",
+      "best": {
+       "natural": "personal",
+       "quietest": "same",
+       "pick": "personal"
+      },
+      "usable": null,
+      "eaten": [],
+      "eaten_none": true,
+      "tags": null,
+      "note": "我觉得这种咖啡馆，其实就是有一点点bg 是不错的",
+      "positions": {
+       "aggressive": "A",
+       "personal": "C",
+       "raw": "B"
+      },
+      "audio_out_sha256": {
+       "personal": "fc6d6523f5e5cd90afee28c3979e4d66aebbc4299fc127c3bd5bd9820191e7a0"
+      },
+      "excerpt_s": [
+       27.5,
+       52.5
+      ]
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材、25 s 节选）",
+    "caveat": "人听的是锁定之后约 25 s 节选（excerpt_s）；vdn-eval 跑整段 80–120 s。被判的保守版 / 激进版是 vdn-speaker-lab 的个性化管线，现在 vdn-eval 的 --system 里没有，接入前只能拿 GTCRN（= raw）跑"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕；「留一点背景」现在没有 verifier 能判（V-VACUUM 只报深压），见 preferences.md 未知项",
+   "repro": {
+    "inputs": "docs/experiments/exp005-p2-speaker/make_clips.py → clips.json（timeline、params、哈希）",
+    "outputs": "cargo build --release -p vdn-speaker-lab；score.py run（参数见 builds/20261030224448-ab48/unblind-key.json 的 cands）",
+    "judged_audio": "builds/20261030224448-ab48/files.json 有被听的每份节选的 sha256（human.screens[].audio_out_sha256）"
+   }
+  },
+  {
+   "id": "R65-h-e005-c04-neighbor-first-keep-bg",
+   "set": "regression",
+   "polarity": "preserve",
+   "origin": "exp005 c04 人耳盲听（exp005/20261030224448-ab48/01-c04） · 人原话「我是喜欢带着一点点背景声的，感觉不错」",
+   "desc": "邻座先说 25 s：保守版最自然、开会选它；人原话「喜欢带着一点点背景声」",
+   "real": {
+    "kind": "exp005",
+    "clips": "docs/experiments/exp005-p2-speaker/clips.json",
+    "audio_dir": "_tmp/20261031-exp005/src",
+    "clip": "c04"
+   },
+   "graders": [
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    },
+    {
+     "v": "V-ONSET",
+     "max": 3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-VACUUM"
+    },
+    {
+     "v": "V-INTF"
+    },
+    {
+     "v": "V-EAT-ASR"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "personal"
+    ],
+    "eval_systems": {
+     "personal": null
+    },
+    "screens": [
+     {
+      "rec_id": "exp005/20261030224448-ab48/01-c04",
+      "session_validity": "valid",
+      "best": {
+       "natural": "personal",
+       "quietest": "same",
+       "pick": "personal"
+      },
+      "usable": null,
+      "eaten": [
+       "aggressive",
+       "raw"
+      ],
+      "eaten_none": true,
+      "tags": null,
+      "note": "我是喜欢带着一点点背景声的，感觉不错",
+      "positions": {
+       "aggressive": "A",
+       "personal": "C",
+       "raw": "B"
+      },
+      "audio_out_sha256": {
+       "personal": "e58b19b6f6118fa591a922e3499f152ce2bdbcb347ab3863939d53d03a5107d4"
+      },
+      "excerpt_s": [
+       74.0,
+       99.0
+      ]
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材、25 s 节选）",
+    "caveat": "人听的是锁定之后约 25 s 节选（excerpt_s）；vdn-eval 跑整段 80–120 s。被判的保守版 / 激进版是 vdn-speaker-lab 的个性化管线，现在 vdn-eval 的 --system 里没有，接入前只能拿 GTCRN（= raw）跑"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp005-p2-speaker/make_clips.py → clips.json（timeline、params、哈希）",
+    "outputs": "cargo build --release -p vdn-speaker-lab；score.py run（参数见 builds/20261030224448-ab48/unblind-key.json 的 cands）",
+    "judged_audio": "builds/20261030224448-ab48/files.json 有被听的每份节选的 sha256（human.screens[].audio_out_sha256）"
+   }
+  },
+  {
+   "id": "R66-h-e005-c02-neighbor-loud-keep-reverb",
+   "set": "regression",
+   "polarity": "preserve",
+   "origin": "exp005 c02 人耳盲听（exp005/20261030224448-ab48/06-c02） · 人原话「我觉得b 不错，因为留下来一点点混响」",
+   "desc": "邻座只轻 3 dB：保守版最自然、开会选它；人原话「留下来一点点混响」；激进版被勾吃字",
+   "real": {
+    "kind": "exp005",
+    "clips": "docs/experiments/exp005-p2-speaker/clips.json",
+    "audio_dir": "_tmp/20261031-exp005/src",
+    "clip": "c02"
+   },
+   "graders": [
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    },
+    {
+     "v": "V-ONSET",
+     "max": 3
+    },
+    {
+     "v": "V-SIM-GATE",
+     "max": 0.05,
+     "onset_max": 0.2
+    }
+   ],
+   "info": [
+    {
+     "v": "V-INTF"
+    },
+    {
+     "v": "V-TIMBRE"
+    },
+    {
+     "v": "V-EAT-ASR"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "personal"
+    ],
+    "eval_systems": {
+     "personal": null
+    },
+    "screens": [
+     {
+      "rec_id": "exp005/20261030224448-ab48/06-c02",
+      "session_validity": "valid",
+      "best": {
+       "natural": "personal",
+       "quietest": "aggressive",
+       "pick": "personal"
+      },
+      "usable": null,
+      "eaten": [
+       "aggressive"
+      ],
+      "eaten_none": false,
+      "tags": null,
+      "note": "我觉得b 不错，因为留下来一点点混响",
+      "positions": {
+       "aggressive": "A",
+       "personal": "B",
+       "raw": "C"
+      },
+      "audio_out_sha256": {
+       "personal": "85e06071f6c56a439b4b7713f0eb5d8ec720cb4b2dd38b7b2050195b1076476b"
+      },
+      "excerpt_s": [
+       51.504,
+       76.504
+      ]
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材、25 s 节选）",
+    "caveat": "人听的是锁定之后约 25 s 节选（excerpt_s）；vdn-eval 跑整段 80–120 s。被判的保守版 / 激进版是 vdn-speaker-lab 的个性化管线，现在 vdn-eval 的 --system 里没有，接入前只能拿 GTCRN（= raw）跑"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp005-p2-speaker/make_clips.py → clips.json（timeline、params、哈希）",
+    "outputs": "cargo build --release -p vdn-speaker-lab；score.py run（参数见 builds/20261030224448-ab48/unblind-key.json 的 cands）",
+    "judged_audio": "builds/20261030224448-ab48/files.json 有被听的每份节选的 sha256（human.screens[].audio_out_sha256）"
+   }
+  },
+  {
+   "id": "R67-h-e005-c01-neighbor-aggr",
+   "set": "regression",
+   "polarity": "suppress",
+   "origin": "exp005 c01 人耳盲听（exp005/20261030224448-ab48/05-c01）",
+   "desc": "邻座轻 6 dB：激进版最自然、开会选它、没被勾吃字（邻座残留实测 −6.5 dB）——压邻座的力度不许比这更弱",
+   "real": {
+    "kind": "exp005",
+    "clips": "docs/experiments/exp005-p2-speaker/clips.json",
+    "audio_dir": "_tmp/20261031-exp005/src",
+    "clip": "c01"
+   },
+   "graders": [
+    {
+     "v": "V-INTF",
+     "max": -6.5
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-ONSET"
+    },
+    {
+     "v": "V-EAT-ASR"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "aggressive"
+    ],
+    "eval_systems": {
+     "aggressive": null
+    },
+    "screens": [
+     {
+      "rec_id": "exp005/20261030224448-ab48/05-c01",
+      "session_validity": "valid",
+      "best": {
+       "natural": "aggressive",
+       "quietest": "same",
+       "pick": "aggressive"
+      },
+      "usable": null,
+      "eaten": [],
+      "eaten_none": true,
+      "tags": null,
+      "note": null,
+      "positions": {
+       "aggressive": "B",
+       "personal": "A",
+       "raw": "C"
+      },
+      "audio_out_sha256": {
+       "aggressive": "f57798701aef5f1801445986e47b8222a39195447f0d351bf93ad0f81e1df484"
+      },
+      "excerpt_s": [
+       54.012,
+       79.012
+      ]
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材、25 s 节选）",
+    "caveat": "人听的是锁定之后约 25 s 节选（excerpt_s）；vdn-eval 跑整段 80–120 s。被判的保守版 / 激进版是 vdn-speaker-lab 的个性化管线，现在 vdn-eval 的 --system 里没有，接入前只能拿 GTCRN（= raw）跑"
+   },
+   "threshold_basis": "V-INTF −6.5 取自 docs/experiments/exp005-p2-speaker/README.md §3 表 1（整段锁定后，非听测节选）（激进版实测；口径不同，接入后用 V-INTF 重量一次再定）",
+   "repro": {
+    "inputs": "docs/experiments/exp005-p2-speaker/make_clips.py → clips.json（timeline、params、哈希）",
+    "outputs": "cargo build --release -p vdn-speaker-lab；score.py run（参数见 builds/20261030224448-ab48/unblind-key.json 的 cands）",
+    "judged_audio": "builds/20261030224448-ab48/files.json 有被听的每份节选的 sha256（human.screens[].audio_out_sha256）"
+   }
+  },
+  {
+   "id": "C70-h-e003-c03-casino-m5",
+   "set": "capability",
+   "polarity": "both",
+   "origin": "exp003 c03 人耳盲听（exp003/20261030110755-f8c3/01-c03）",
+   "desc": "赌场 −5 dB：三家都判不能用、都被勾吃字、最清楚分不出",
+   "real": {
+    "kind": "exp003",
+    "clips": "docs/experiments/exp003-offline-ab/clips.json",
+    "clip": "c03"
+   },
+   "graders": [
+    {
+     "v": "V-EAT-ASR",
+     "max": 1.0
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "dpdfnet2",
+     "gtcrn",
+     "fastenhancer_m"
+    ],
+    "eval_systems": {
+     "dpdfnet2": null,
+     "gtcrn": "gtcrn",
+     "fastenhancer_m": "fastenhancer-m"
+    },
+    "screens": [
+     {
+      "rec_id": "exp003/20261030110755-f8c3/01-c03",
+      "session_validity": "discounted",
+      "best": {
+       "clearer": "same",
+       "natural": "same"
+      },
+      "usable": {
+       "dpdfnet2": "no",
+       "fastenhancer_m": "no",
+       "gtcrn": "no"
+      },
+      "eaten": [
+       "gtcrn",
+       "fastenhancer_m",
+       "dpdfnet2"
+      ],
+      "eaten_none": false,
+      "tags": null,
+      "note": null,
+      "positions": {
+       "dpdfnet2": "C",
+       "fastenhancer_m": "B",
+       "gtcrn": "A"
+      },
+      "audio_out_sha256": {
+       "dpdfnet2": null,
+       "gtcrn": null,
+       "fastenhancer_m": null
+      },
+      "excerpt_s": null
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材；exp003 会话打折、有位置偏好）"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp003-offline-ab/clips.json（c01–c03 现成：noisy_sha256 / clean_sha256；c04–c12 合成：make_clips.py，种子 20261030，来源哈希 source_sha256）",
+    "outputs": "docs/experiments/exp003-offline-ab/enhance.py（逐帧流式，同 build 20261030110755-f8c3）",
+    "gap": "被判的那几份输出音频本机已不在、也没记哈希；重跑 enhance.py 得到的输出与人听的是否逐字节相同，未核"
+   },
+   "xfail": "人耳：三家全「不能用」（exp003 f8c3 第 1 屏）"
+  },
+  {
+   "id": "C77-h-e003-c02-casino-0db",
+   "set": "capability",
+   "polarity": "both",
+   "origin": "exp003 c02 人耳盲听（exp003/20261030102301-68ab/01-c02, exp003/20261030110755-f8c3/13-c02）",
+   "desc": "赌场 0 dB：FE-M 勉强、另两家不能用；三家都被勾吃字",
+   "real": {
+    "kind": "exp003",
+    "clips": "docs/experiments/exp003-offline-ab/clips.json",
+    "clip": "c02"
+   },
+   "graders": [
+    {
+     "v": "V-EAT-ASR",
+     "max": 1.0
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "dpdfnet2",
+     "gtcrn",
+     "fastenhancer_m"
+    ],
+    "eval_systems": {
+     "dpdfnet2": null,
+     "gtcrn": "gtcrn",
+     "fastenhancer_m": "fastenhancer-m"
+    },
+    "screens": [
+     {
+      "rec_id": "exp003/20261030102301-68ab/01-c02",
+      "session_validity": "unverified",
+      "best": {
+       "clearer": "gtcrn",
+       "natural": "gtcrn"
+      },
+      "usable": {
+       "dpdfnet2": "marginal",
+       "gtcrn": "ok"
+      },
+      "eaten": [
+       "dpdfnet2",
+       "gtcrn"
+      ],
+      "eaten_none": false,
+      "tags": {
+       "dpdfnet2": [
+        "pumping_bg",
+        "muffled",
+        "clipped_onsets",
+        "pumping_voice"
+       ],
+       "gtcrn": [
+        "metallic",
+        "clipped_onsets"
+       ]
+      },
+      "note": null,
+      "positions": {
+       "dpdfnet2": "A",
+       "gtcrn": "B"
+      },
+      "audio_out_sha256": {
+       "dpdfnet2": null,
+       "gtcrn": null,
+       "fastenhancer_m": null
+      },
+      "excerpt_s": null
+     },
+     {
+      "rec_id": "exp003/20261030110755-f8c3/13-c02",
+      "session_validity": "discounted",
+      "best": {
+       "clearer": "fastenhancer_m",
+       "natural": "fastenhancer_m"
+      },
+      "usable": {
+       "dpdfnet2": "no",
+       "fastenhancer_m": "marginal",
+       "gtcrn": "no"
+      },
+      "eaten": [
+       "dpdfnet2",
+       "gtcrn",
+       "fastenhancer_m"
+      ],
+      "eaten_none": false,
+      "tags": null,
+      "note": null,
+      "positions": {
+       "dpdfnet2": "A",
+       "fastenhancer_m": "C",
+       "gtcrn": "B"
+      },
+      "audio_out_sha256": {
+       "dpdfnet2": null,
+       "gtcrn": null,
+       "fastenhancer_m": null
+      },
+      "excerpt_s": null
+     }
+    ],
+    "evidence": "2 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材；exp003 会话打折、有位置偏好）"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp003-offline-ab/clips.json（c01–c03 现成：noisy_sha256 / clean_sha256；c04–c12 合成：make_clips.py，种子 20261030，来源哈希 source_sha256）",
+    "outputs": "docs/experiments/exp003-offline-ab/enhance.py（逐帧流式，同 build 20261030110755-f8c3）",
+    "gap": "被判的那几份输出音频本机已不在、也没记哈希；重跑 enhance.py 得到的输出与人听的是否逐字节相同，未核"
+   },
+   "xfail": "人耳：最好的也只「勉强」、全部被勾吃字（exp003 f8c3 第 13 屏）"
+  },
+  {
+   "id": "C78-h-e005-c03-neighbors3-too-loud",
+   "set": "capability",
+   "polarity": "suppress",
+   "origin": "exp005 c03 人耳盲听（exp005/20261030224448-ab48/09-c03） · 人原话「c别人说太吵了」",
+   "desc": "邻桌 3 人：人原话「c（保守版）别人说太吵了」，开会选了只有 GTCRN",
+   "real": {
+    "kind": "exp005",
+    "clips": "docs/experiments/exp005-p2-speaker/clips.json",
+    "audio_dir": "_tmp/20261031-exp005/src",
+    "clip": "c03"
+   },
+   "graders": [
+    {
+     "v": "V-INTF",
+     "max": -10
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-EAT-ASR"
+    },
+    {
+     "v": "V-ONSET"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "personal",
+     "raw",
+     "aggressive"
+    ],
+    "eval_systems": {
+     "personal": null,
+     "raw": "gtcrn",
+     "aggressive": null
+    },
+    "screens": [
+     {
+      "rec_id": "exp005/20261030224448-ab48/09-c03",
+      "session_validity": "valid",
+      "best": {
+       "natural": "personal",
+       "quietest": "same",
+       "pick": "raw"
+      },
+      "usable": null,
+      "eaten": [],
+      "eaten_none": true,
+      "tags": null,
+      "note": "c别人说太吵了",
+      "positions": {
+       "aggressive": "A",
+       "personal": "C",
+       "raw": "B"
+      },
+      "audio_out_sha256": {
+       "personal": "87f08aedabe1ce556f72be06823559a2a51de1277114423095cb847de9bf81e3",
+       "raw": "7984dbfd6032c3182e95e0dbfa84be52ca9056b83687a45b0ebc906f9380fca7",
+       "aggressive": "faa58d5d5131a968dcd5b08c9f91ed9c1cd8069b53d427a68730b6509db4614e"
+      },
+      "excerpt_s": [
+       38.504,
+       63.504
+      ]
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材、25 s 节选）",
+    "caveat": "人听的是锁定之后约 25 s 节选（excerpt_s）；vdn-eval 跑整段 80–120 s。被判的保守版 / 激进版是 vdn-speaker-lab 的个性化管线，现在 vdn-eval 的 --system 里没有，接入前只能拿 GTCRN（= raw）跑"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp005-p2-speaker/make_clips.py → clips.json（timeline、params、哈希）",
+    "outputs": "cargo build --release -p vdn-speaker-lab；score.py run（参数见 builds/20261030224448-ab48/unblind-key.json 的 cands）",
+    "judged_audio": "builds/20261030224448-ab48/files.json 有被听的每份节选的 sha256（human.screens[].audio_out_sha256）"
+   },
+   "xfail": "实测邻座残留 保守 −1.4 / GTCRN −4.3 / 激进 −5.4 dB，都没到 −10（docs/experiments/exp005-p2-speaker/README.md §3 表 1（整段锁定后，非听测节选））"
+  },
+  {
+   "id": "C79-h-e005-c08-neighbors4-nolock",
+   "set": "capability",
+   "polarity": "suppress",
+   "origin": "exp005 c08 人耳盲听（exp005/20261030224448-ab48/07-c08） · 人原话「我觉得b 有点太吵了，别人的声音太吵了，c虽然有点不自然，但是可以开会」",
+   "desc": "邻桌 4 人、认人没锁住：人原话「b（保守版）别人的声音太吵了，c 虽然有点不自然，但是可以开会」",
+   "real": {
+    "kind": "exp005",
+    "clips": "docs/experiments/exp005-p2-speaker/clips.json",
+    "audio_dir": "_tmp/20261031-exp005/src",
+    "clip": "c08"
+   },
+   "graders": [
+    {
+     "v": "V-INTF",
+     "max": -10
+    },
+    {
+     "v": "V-SPLVL",
+     "min": -3
+    }
+   ],
+   "info": [
+    {
+     "v": "V-EAT-ASR"
+    },
+    {
+     "v": "V-DNSMOS"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "personal",
+     "raw"
+    ],
+    "eval_systems": {
+     "personal": null,
+     "raw": "gtcrn"
+    },
+    "screens": [
+     {
+      "rec_id": "exp005/20261030224448-ab48/07-c08",
+      "session_validity": "valid",
+      "best": {
+       "natural": "personal",
+       "quietest": "same",
+       "pick": "raw"
+      },
+      "usable": null,
+      "eaten": [],
+      "eaten_none": true,
+      "tags": null,
+      "note": "我觉得b 有点太吵了，别人的声音太吵了，c虽然有点不自然，但是可以开会",
+      "positions": {
+       "aggressive": "A",
+       "personal": "B",
+       "raw": "C"
+      },
+      "audio_out_sha256": {
+       "personal": "6a393f1f8330718972c555feb4699bb7c01747993dc03a557579b77aadac8224",
+       "raw": "aecb6abe8ad9d76604484e79a2aa101516975ffcec862ff2ae07037512182e78"
+      },
+      "excerpt_s": [
+       27.5,
+       52.5
+      ]
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材、25 s 节选）",
+    "caveat": "人听的是锁定之后约 25 s 节选（excerpt_s）；vdn-eval 跑整段 80–120 s。被判的保守版 / 激进版是 vdn-speaker-lab 的个性化管线，现在 vdn-eval 的 --system 里没有，接入前只能拿 GTCRN（= raw）跑"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp005-p2-speaker/make_clips.py → clips.json（timeline、params、哈希）",
+    "outputs": "cargo build --release -p vdn-speaker-lab；score.py run（参数见 builds/20261030224448-ab48/unblind-key.json 的 cands）",
+    "judged_audio": "builds/20261030224448-ab48/files.json 有被听的每份节选的 sha256（human.screens[].audio_out_sha256）"
+   },
+   "xfail": "c08 认人没锁（exp005 README §2），门控不收；人判保守版太吵"
+  },
+  {
+   "id": "C80-h-e005-c05-neighbor-first-quieter",
+   "set": "capability",
+   "polarity": "suppress",
+   "origin": "exp005 c05 人耳盲听（exp005/20261030224448-ab48/02-c05） · 人原话「这种情况下，其实就是相对更安静比较好，就本来周围就是比较安静的情况，那就比较安静会更好」",
+   "desc": "邻座先说 45 s：人原话「本来周围就是比较安静的情况，那就比较安静会更好」；开会选激进版，但激进版被勾吃字",
+   "real": {
+    "kind": "exp005",
+    "clips": "docs/experiments/exp005-p2-speaker/clips.json",
+    "audio_dir": "_tmp/20261031-exp005/src",
+    "clip": "c05"
+   },
+   "graders": [
+    {
+     "v": "V-INTF",
+     "max": -10
+    },
+    {
+     "v": "V-ONSET",
+     "max": 3
+    },
+    {
+     "v": "V-SIM-GATE",
+     "max": 0.05,
+     "onset_max": 0.2
+    }
+   ],
+   "info": [
+    {
+     "v": "V-NR"
+    },
+    {
+     "v": "V-EAT-ASR"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "aggressive",
+     "personal",
+     "raw"
+    ],
+    "eval_systems": {
+     "aggressive": null,
+     "personal": null,
+     "raw": "gtcrn"
+    },
+    "screens": [
+     {
+      "rec_id": "exp005/20261030224448-ab48/02-c05",
+      "session_validity": "valid",
+      "best": {
+       "natural": "personal",
+       "quietest": "raw",
+       "pick": "aggressive"
+      },
+      "usable": null,
+      "eaten": [
+       "aggressive"
+      ],
+      "eaten_none": false,
+      "tags": null,
+      "note": "这种情况下，其实就是相对更安静比较好，就本来周围就是比较安静的情况，那就比较安静会更好",
+      "positions": {
+       "aggressive": "A",
+       "personal": "B",
+       "raw": "C"
+      },
+      "audio_out_sha256": {
+       "aggressive": "48dcbaea568ec4a64895e0fb1c08ca96ce98e9387034f08154f2f99de2c73c1e",
+       "personal": "841c40578ef1a9f365cd54b5c539895624e2d0a4e32a9ac83be189a567ae37c1",
+       "raw": "2c1af6b9c24ade67333586e5fd43cfdb1c106114be21f623b310b738bb83a814"
+      },
+      "excerpt_s": [
+       81.008,
+       106.008
+      ]
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材、25 s 节选）",
+    "caveat": "人听的是锁定之后约 25 s 节选（excerpt_s）；vdn-eval 跑整段 80–120 s。被判的保守版 / 激进版是 vdn-speaker-lab 的个性化管线，现在 vdn-eval 的 --system 里没有，接入前只能拿 GTCRN（= raw）跑"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp005-p2-speaker/make_clips.py → clips.json（timeline、params、哈希）",
+    "outputs": "cargo build --release -p vdn-speaker-lab；score.py run（参数见 builds/20261030224448-ab48/unblind-key.json 的 cands）",
+    "judged_audio": "builds/20261030224448-ab48/files.json 有被听的每份节选的 sha256（human.screens[].audio_out_sha256）"
+   },
+   "xfail": "实测邻座残留 激进 −8.3 dB 没到 −10；激进版句首 2 s 内误压 13.7%（exp005 README §3）；人勾了激进版吃字"
+  },
+  {
+   "id": "C81-h-e005-c07-no-bg-quieter",
+   "set": "capability",
+   "polarity": "suppress",
+   "origin": "exp005 c07 人耳盲听（exp005/20261030224448-ab48/04-c07） · 人原话「这种还是安静一点比较好」",
+   "desc": "邻座、无底噪：人原话「这种还是安静一点比较好」；开会选激进版，但 GTCRN 与激进版都被勾吃字",
+   "real": {
+    "kind": "exp005",
+    "clips": "docs/experiments/exp005-p2-speaker/clips.json",
+    "audio_dir": "_tmp/20261031-exp005/src",
+    "clip": "c07"
+   },
+   "graders": [
+    {
+     "v": "V-INTF",
+     "max": -10
+    },
+    {
+     "v": "V-ONSET",
+     "max": 3
+    },
+    {
+     "v": "V-SIM-GATE",
+     "max": 0.05,
+     "onset_max": 0.2
+    }
+   ],
+   "info": [
+    {
+     "v": "V-EAT-ASR"
+    }
+   ],
+   "lang": "en",
+   "human": {
+    "judged_systems": [
+     "aggressive",
+     "personal",
+     "raw"
+    ],
+    "eval_systems": {
+     "aggressive": null,
+     "personal": null,
+     "raw": "gtcrn"
+    },
+    "screens": [
+     {
+      "rec_id": "exp005/20261030224448-ab48/04-c07",
+      "session_validity": "valid",
+      "best": {
+       "natural": "personal",
+       "quietest": "raw",
+       "pick": "aggressive"
+      },
+      "usable": null,
+      "eaten": [
+       "raw",
+       "aggressive"
+      ],
+      "eaten_none": false,
+      "tags": null,
+      "note": "这种还是安静一点比较好",
+      "positions": {
+       "aggressive": "B",
+       "personal": "C",
+       "raw": "A"
+      },
+      "audio_out_sha256": {
+       "aggressive": "61bd02d9f4269f086787b2df0f39649d53006a3d699aa5e6a24d73601ddb9986",
+       "personal": "0d2208f14b2e89aa353bbf241280ac9ecb41f3697c3a95367341a0e81159928a",
+       "raw": "aad9f9c65923506aec08301d1eb2debb1245b667905c8914b3ca7d6a51783a6c"
+      },
+      "excerpt_s": [
+       52.0,
+       77.0
+      ]
+     }
+    ],
+    "evidence": "1 屏 · 1 人",
+    "confidence": "很低（一人一屏、合成素材、25 s 节选）",
+    "caveat": "人听的是锁定之后约 25 s 节选（excerpt_s）；vdn-eval 跑整段 80–120 s。被判的保守版 / 激进版是 vdn-speaker-lab 的个性化管线，现在 vdn-eval 的 --system 里没有，接入前只能拿 GTCRN（= raw）跑"
+   },
+   "threshold_basis": "verifier 注册表锚点〔建议值〕",
+   "repro": {
+    "inputs": "docs/experiments/exp005-p2-speaker/make_clips.py → clips.json（timeline、params、哈希）",
+    "outputs": "cargo build --release -p vdn-speaker-lab；score.py run（参数见 builds/20261030224448-ab48/unblind-key.json 的 cands）",
+    "judged_audio": "builds/20261030224448-ab48/files.json 有被听的每份节选的 sha256（human.screens[].audio_out_sha256）"
+   },
+   "xfail": "实测邻座残留 三版都在 −0.4 至 −0.9 dB（门几乎不收，原因 exp005 没查）"
+  }
+ ]
+}

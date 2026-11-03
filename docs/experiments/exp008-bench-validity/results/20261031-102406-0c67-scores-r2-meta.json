@@ -1,0 +1,33 @@
+{
+ "build": "20261031-102406-0c67",
+ "systems": {
+  "rnnoise": {
+   "family": "E",
+   "desc": "RNNoise（nnnoiseless Rust 版，48 k）",
+   "weight_sha256": null,
+   "enh_record": "builds/20261031-102406-0c67/enh/rnnoise.json"
+  },
+  "webrtc_ns6": {
+   "family": "C*",
+   "desc": "WebRTC NS 6 dB 档（参数变体）",
+   "weight_sha256": null,
+   "enh_record": "builds/20261031-102406-0c67/enh/webrtc_ns6.json"
+  },
+  "webrtc_ns18": {
+   "family": "C*",
+   "desc": "WebRTC NS 18 dB 档（sonora-ns；DSP，但噪声估计与增益规则不同于 C 族）",
+   "weight_sha256": null,
+   "enh_record": "builds/20261031-102406-0c67/enh/webrtc_ns18.json"
+  },
+  "mossformer2_48k": {
+   "family": "F",
+   "desc": "MossFormer2_SE_48K（ClearerVoice，非因果，48 k 往返）",
+   "weight_sha256": null,
+   "enh_record": "builds/20261031-102406-0c67/enh/mossformer2_48k.json"
+  }
+ },
+ "rank_py_sha256": "9f430608fecbf492578009673656d876c81a7b4ff8c76cf303f8c0e4e2d6f655",
+ "rows": 348,
+ "seconds": 837.6,
+ "errors": 0
+}

@@ -1,0 +1,166 @@
+{
+ "meta": {
+  "repo": "urgent-challenge/vmc2026-track1-meta",
+  "revision": "ebe09d8891b7dc1f77ddf1772e42bb22de3ef500",
+  "files": {
+   "urgent2024-sqa/test/meta.jsonl": {
+    "bytes": 1276500,
+    "sha256": "7c03c5f902c42901e251b33eaf92c81e7d321997d9915d05f640be18da9d0a0c"
+   },
+   "urgent2024-sqa/test/mos_overall.scp": {
+    "bytes": 512347,
+    "sha256": "676956b7fcebc2a9c6a1a0e7662a0e11c7c4d159129e8c255cd22c81098d00b3"
+   },
+   "urgent2024-sqa/test/utt2system": {
+    "bytes": 717600,
+    "sha256": "f8eb86ae12b6e57a0b77551c87125537659631ee70ec75354c4ec9044e829fd1"
+   },
+   "urgent2024-sqa/test/utt2reference": {
+    "bytes": 710700,
+    "sha256": "a9f120b32b6738519152875a162f8115d726d13f14a1fc567b9f712e54627b41"
+   },
+   "urgent2024-sqa/test/dnsmos_ovrl.scp": {
+    "bytes": 523646,
+    "sha256": "2242c8ea720ab16946a59978423738e4533ac4968f69c2dd8605616b28ad5d06"
+   },
+   "urgent2024-sqa/test/utmos.scp": {
+    "bytes": 523639,
+    "sha256": "03bf8f1fb790d7db0f8b44621ab10c1b80479cab975ac08a8a9944e40bea0739"
+   },
+   "urgent2024-sqa/test/scoreq.scp": {
+    "bytes": 523677,
+    "sha256": "42a4c433d953a9610668373323a6be617017844ec555c213514dcfac42a164bb"
+   },
+   "urgent2024-sqa/test/nisqa_mos.scp": {
+    "bytes": 523655,
+    "sha256": "097db4c036b962df949669b8c4e2497f0d0f82bb07a4b1612e4e5782ed60b2be"
+   },
+   "urgent2024-sqa/test/distill_mos.scp": {
+    "bytes": 522738,
+    "sha256": "5ba20688fef01928792147f9f55523e9b1fc36cb59ab9b7fe39651ab492c6691"
+   },
+   "urgent2025-sqa/test/mos_overall.scp": {
+    "bytes": 1737470,
+    "sha256": "b4717415a9f7aa6fcc589aba83c8ddcc5acaab4df18ecd7b00a41898fadcc3d4"
+   },
+   "urgent2025-sqa/test/utt2system": {
+    "bytes": 2433600,
+    "sha256": "41d7d0bcf6638e82f4dbe60f13108fb2aae81d83c4f9098ad68f3df66e53e501"
+   },
+   "urgent2025-sqa/test/utt2reference": {
+    "bytes": 2410200,
+    "sha256": "9a057b616bb378635aaeff31f036a84d1d734d4eec80991ad6b39ef38ea70e16"
+   },
+   "urgent2025-sqa/test/dnsmos_ovrl.scp": {
+    "bytes": 1775830,
+    "sha256": "f9e0a5fdef47ac24b8b580e34f2bf50f620eba3f500ac5a96665a168cb16c745"
+   },
+   "urgent2025-sqa/test/utmos.scp": {
+    "bytes": 1775825,
+    "sha256": "f06f11caa10005463382f6475126aa95c4aa1d04904be04ca7fc92d5e8099059"
+   },
+   "urgent2025-sqa/test/scoreq.scp": {
+    "bytes": 1775808,
+    "sha256": "8483e41aefa7fcd3880115a3ee6a91c4947dc618c0c504259347f9194b0a1e16"
+   },
+   "urgent2025-sqa/test/nisqa_mos.scp": {
+    "bytes": 1775817,
+    "sha256": "bd02bca83cf1f9b12e893054c663e540554f9a57470a832d33b0d34a128873c2"
+   },
+   "urgent2025-sqa/test/distill_mos.scp": {
+    "bytes": 1775826,
+    "sha256": "2cd1b9606a2de85184e2431de1621f8148163dbb95a9b07a8d99b58b7ee4f5a6"
+   },
+   "tmhint-qi/test/meta.jsonl": {
+    "bytes": 196584,
+    "sha256": "844a32516062c083cf5755e1d89f1d04e71f8c78584ada848858725347feaafa"
+   },
+   "tmhint-qi/test/mos_overall.scp": {
+    "bytes": 75668,
+    "sha256": "b78dd8c1e2b8a441c4c6208487e2df4414fa99dcbe880968bde57cfb64800059"
+   },
+   "tmhint-qi/test/utt2system": {
+    "bytes": 97786,
+    "sha256": "ffbcc57147e44ff1e361df09b3c3d566567f1ceddee4943ce0e036b79fcaccda"
+   },
+   "tmhint-qi/test/utt2reference": {
+    "bytes": 96365,
+    "sha256": "3d87161c822a32f853d4db50d444eaa5c576d1a740e3a4db6eadd0379968f2bd"
+   },
+   "tmhint-qi/test/dnsmos_ovrl.scp": {
+    "bytes": 101585,
+    "sha256": "9b6facd8c4f620dc2a7b54c40e9b3581904fe174b6e1ce801d3059b066b4dd0c"
+   },
+   "tmhint-qi/test/utmos.scp": {
+    "bytes": 101746,
+    "sha256": "67d55edb09c57907840985bee1f166beac738f6aa016a46eafd65aa0fe9b9670"
+   },
+   "tmhint-qi/test/scoreq.scp": {
+    "bytes": 101647,
+    "sha256": "544b612b33d55d0cec98171259d48d8cf47ca9e85a875bca875f5ed3f217b437"
+   },
+   "tmhint-qi/test/nisqa_mos.scp": {
+    "bytes": 101759,
+    "sha256": "8cc05fc6f8558b6434522714f00d55dad110aa7b730cc99b3a4ab8e282415c9d"
+   },
+   "tmhint-qi/test/distill_mos.scp": {
+    "bytes": 101438,
+    "sha256": "a9d36c662c2285fc45b00046a1b3dd1ff0a2ae82cc2883e951687db1240fe433"
+   },
+   "chime-7-udase-eval/test/meta.jsonl": {
+    "bytes": 200105,
+    "sha256": "523342272f3c765c8934d84bb53a42b4073969be265b97a6fa229f3a67ff350c"
+   },
+   "chime-7-udase-eval/test/mos_overall.scp": {
+    "bytes": 17311,
+    "sha256": "77d19d9a00044204862e270401c7c0166691b037d493a6b6c9322e96564526bb"
+   },
+   "chime-7-udase-eval/test/utt2system": {
+    "bytes": 15145,
+    "sha256": "1f68c47ba6e63addeea0caffbf2507dd711308d84df097b1f40348ceea0fe722"
+   },
+   "chime-7-udase-eval/test/utt2reference": {
+    "bytes": 24530,
+    "sha256": "313b511339f4368fddb49f0a13c4f7c41d945d8536aa3ac52051212f2bfe369b"
+   },
+   "chime-7-udase-eval/test/dnsmos_ovrl.scp": {
+    "bytes": 25132,
+    "sha256": "e0be5def1cd115bb810956c27e3bffa0a693311fe265c3514208814036ce3438"
+   },
+   "chime-7-udase-eval/test/utmos.scp": {
+    "bytes": 25233,
+    "sha256": "58592bd5ba969e9b6ae79a892902918f5eecb2727d3016872fafb863f93953f3"
+   },
+   "chime-7-udase-eval/test/scoreq.scp": {
+    "bytes": 25149,
+    "sha256": "e67ad6e449c007ea3088ec3de580943ecf8c809d96a6800aaac72d490e6e61f4"
+   },
+   "chime-7-udase-eval/test/nisqa_mos.scp": {
+    "bytes": 25168,
+    "sha256": "4dc8b54a1bde68e2d8d11b8f37e8d36b0d242dbd946e1abe09586803af01c3f2"
+   },
+   "chime-7-udase-eval/test/distill_mos.scp": {
+    "bytes": 25111,
+    "sha256": "19443792603f9f9ff491e92cddbe94eef49cef4e5f7b4fdb3ccdf2a7666b4f27"
+   }
+  }
+ },
+ "chime7": {
+  "zip": "https://huggingface.co/datasets/urgent-challenge/urgent26_track2_sqa/resolve/main/CHiME-7-UDASE-evaluation-data.zip",
+  "files": {
+   "raw_results_listening_test.csv": {
+    "bytes": 1494380,
+    "sha256": "4b1aa36eebcedca436a72ae644660e7339f67327b8dd9f7cdab4e010dae134d8"
+   },
+   "MOS_results_listening_test.csv": {
+    "bytes": 184832,
+    "sha256": "60fd3889763a96d6b186555ba3a8abaa08365376aa1a226c726a0c0c9f5fa536"
+   }
+  },
+  "zip_bytes": 3491399540,
+  "members": {
+   "MOS_results_listening_test.csv": "listening_test/MOS_results_listening_test.csv",
+   "raw_results_listening_test.csv": "listening_test/raw_results_listening_test.csv"
+  }
+ }
+}

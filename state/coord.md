@@ -1,7 +1,19 @@
 # 大总管看板
 
 > 只有大总管跟人说话。手下做完、卡住、要名额，只报给大总管。
-> 大总管会话名：`noise-canceling-69`（换班后在这里改）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
+> 大总管会话名：`noise-canceling-e3`（2026-11-02 换班；旧名 c4 · 69）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
+
+## 当前大事（2026-11-02）
+
+**把「效果好不好」变成能量的尺子**（意向书真难题第 2 条）。批次 `_tmp/20261102-b7/`。**✅ 2026-11-02 三条线全部合并（#47 #48 #49），窗口全关；下一件大事待人定**
+
+| 手下 | 线 | 管的实体 |
+|---|---|---|
+| benchsynth | 016 评测基准与合成数据标准收口 · #41 | 数据 · 评测器 |
+| ears | 017 多找些人耳反馈收口 · #42 | 评测器 · 模型（评分模型） |
+| judgeloop | 018 本机评分模型 + 调节模型闭环 · #44 | 模型 · 评测器 · 数据 |
+
+019 推理引擎（#45）不在本大事内，已记进 `state/backlog.md`。旧的「模型四实体」总入口仍是 `docs/plan/009_model-map.md`。
 
 ## 手下
 
@@ -25,7 +37,12 @@
 | evalstd | 012 工业级 rubric 与评测的行业标准 · issue #22 · `research/012-eval-standards` | `_tmp/20261031-b4/evalstd.md` | 其 worktree | 完成，PR #27 已合并（issue #22 关），窗口已关；9 题待人拍板 + rubric 修改清单 R1–R14 |
 | rlenv | 013 强化学习环境与分场景训练方案 · issue #25 · `research/013-rl-environment` | `_tmp/20261031-b4/rlenv.md` | 其 worktree | 完成，PR #29 已合并（issue #25 关），窗口已关；9 题待人拍板 |
 | datasets | 014 真实录音公开数据集 · issue #30 · `research/014-real-datasets` | `_tmp/20261031-b4/datasets.md` | 其 worktree | 完成，PR 已合并（issue #30 关），窗口已关；6 题待人拍板 |
-| evalimpl | eval 实现：vdn-eval · CI / QA / 人工三层 · 回归集与能力集 · issue #31 · `feat/eval-verifiers` | `_tmp/20261031-b4/evalimpl.md` | 其 worktree | vdn-eval 写完过 clippy：16 条 CI 层 + 2 条 QA 层 verifier、30 CI 任务 + 11 QA 真实片段、5 探针；排队跑 |
+| evalimpl | eval 实现：vdn-eval · CI / QA / 人工三层 · 回归集与能力集 · issue #31 · `feat/eval-verifiers` | 完成，PR #38 已合并（issue #31 关），窗口已关；CI 每个 PR 跑 eval ci（回归 13/17 · 能力 0/10 · 探针 5/5）；4 题已并入待拍板清单 |
+| prefs | 人耳结果 → eval 任务 · 偏好数据集 · 分场景默认 · `specs/rubric/preferences.md` · issue #37 · `feat/eval-prefs` | `_tmp/20261031-b4/prefs.md` | 其 worktree | 完成，PR #43 已合并（issue #37 关），窗口已关；待拍板 4-7 / 4-8 已并入；worktree `../noise_canceling-prefs` 保留待清 |
+| benchsynth | **b7 重派（2026-11-02，交代 `_tmp/20261102-b7/benchsynth.md`）· 已报到（noise-canceling-benchsynth-19），完成，PR #47 已合并（cabf3d0，issue #41 关），远端分支已删，窗口已关；worktree `../noise_canceling-benchsynth` 保留待清（手下自己提交并推送了现状页 780eea3，越过「手下不做 git 写」，内容无害，已记）** · 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
+| ears | **b7 重派 · 完成，PR #48 已合并（issue #42 关），远端分支已删，窗口已关；worktree 保留待清；人答卷回来后由大总管放 exp009 results/** · 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已报到（noise-canceling-ears-03）· 实验编号 exp009 |
+| judgeloop | **b7 重派 · 完成，PR #49 已合并（issue #44 关），远端分支已删，窗口已关** · 018 本机评分模型 + 调节模型闭环（D52）· issue #44 · `research/018-ondevice-judge`（worktree `../noise_canceling-judge-loop`） | `_tmp/20261031-b6/judgeloop.md` | 其 worktree | 已报到 |
+| engine | **停（2026-10-31 会话中断），转 backlog** · 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已报到 |
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
 
 ## 规矩
@@ -34,23 +51,53 @@
 - 调研必须用 workflow / deep research 做，要非常完整（人定 2026-10-29，原话：「需要用 workflow来做 researrch deep research 来弄，就是这个研究需要非常完整」）
 - 一切走提交 · issue · PR（人定 2026-10-30，CLAUDE.md 铁律 15）：每条线一个分支 + worktree（人 2026-10-30 追加「现在必须开分之 调研分支」）：research/005-pse（Closes #1）· exp/003-offline-ab（Closes #2），各自 PR、CI 过后自己合并
 - 提交由 hook 自动做（人定 2026-10-29，CLAUDE.md 铁律 14）；手下不做 git 写操作
+- **大总管一次只做好一件大事，每个手下只管 2–4 个实体**（人定 2026-11-02，改 2026-10-31 版，见 CLAUDE.md 第五节第 4 条）：线 / 题 / 讨论都挂在当前实体下，其余按实体记进 `state/backlog.md`
 
 ## 名额
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试（1 个） | evalimpl（eval ci --system gtcrn + eval qa，验证 engine 停顿门控问题） |
+| 重编译 / 全量测试 / 跑模型（1 个） | 空 |
 
-排队：（空）
-
-等人许可的弹窗 / 长时间前台运行：（空）
+排队：无（benchsynth 第②段已转 backlog）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 judgeloop 收尾：exp011 三参数自动调无收益（SCOREQ −0.027 [−0.037, −0.016]，41 段 / 10 说话人；上界 +0.008）→ 第一版不做；PR #49 合并；转交两条已登记（3-6 · backlog 下一轮盲听）
+- 2026-11-02 15:55 judgeloop：14:15 电脑睡眠中断回复，空闲约 1.5 h，已催续跑。停在 exp011「留出评分 + 吃字」：奖励打分 · 拼接 · 红线已提交；留出评分因识别读不了 32 位浮点 WAV 超时没落盘 → 改 judge（转 16 位 · 60 s 超时重试 2 次 · 先落盘）续跑，推算约 25 min
+- 2026-11-02 ears 收尾：PR #48；E2 按人「可以」记 D66；E6 登记 4-11
+- 2026-11-02 ears ①② 完成：① `notes/I-why-scorers-pick-dpdfnet.md`（实测 12 段：停顿处背景 DPDFNet-2 −7.8 dB vs GTCRN −5.1 dB；GTCRN 人声音色近原声 0.6 dB；高频、吃字无差）② 2 道众人锚点题 build 20261102132015-ccd3，揭盲表已提交；已查无答案后复制到 `~/Desktop/20261102-vdn-crowd-anchor-listen/`。揭晓时要告诉人：第 1 题两边响度差约 9.5 dB；两题众人都选 Y 是随机分配。答卷 `answers-20261102132015-ccd3.json` 交回给 ears 放 results/
+- 2026-11-02 ears 自审更正：「作者偏离大众」参照线抽样结构与作者答卷不同；换同构参照线后作者 0.40 vs 线 0.389 → 结论由「有证据」改为「边缘，不能说作者偏离」，decision 已改。①② 在做：① 12 段纯信号量 GTCRN vs DPDFNet-2（不跑模型）② 盲听用 URGENT 2026 配对打分集（CC BY 4.0），按行取 2 对，几 MB
+- 2026-11-02 人新提（转 ears，优先于自审）：「我们到底用什么模型 / 为啥评分器选择的都是dfn 的模型，但我选择的是另外的 / 评分器用的这个模型的逻辑是啥 / 帮我找两个大众都弄过的，让我听一下」→ ① 评分器逻辑短文 + GTCRN vs DPDFNet-2 实测差别 ② 2 道大众已评分的盲听题
+- 2026-11-02 benchsynth 收尾：PR #47（Closes #41）；第②段续跑与 LibriSpeech 6.6 GB 下载转 backlog；7 题登记为 4-9
+- 2026-11-02 ears 第二段：作者 vs SCOREQ 一致率 0.375（48 对 · 9 屏，区间 0.14–0.64，事先定的线 0.516）；~~Distill-MOS 0.562；两台评分机器不一致~~（ears 更正：三台评分机器彼此一致 0.76–0.81，作者对三台都偏低 0.375 / 0.562 / 0.478；分歧集中在 GTCRN vs DPDFNet-2，作者 16 次里 13 次选 GTCRN，三台都排 DPDFNet-2 第一；英文 6 段两者各吃 7 词。作者与大众不同 vs 机器在这类片段不准，分不开，要靠 E2），结论强度低。名额转 judgeloop
+- 2026-11-02 judgeloop：r1 / r2 / r5 补完（各经怀疑派核对）；decision.md 与 exp011 设计已写（`docs/research/018_ondevice-judge/decision.md` · `docs/experiments/exp011-ondevice-loop/README.md`）；申请名额跑 exp011 第 1–3 步
+- 2026-11-02 benchsynth 第①段完成（4 系统 × 348 段，838 s，0 错误）：阶梯 12 → 15 系统；交互一致性结论不变——SNR / 噪声 / 邻座干扰三轴两套生成器一致（多数 r 0.5–0.9，p ≤ 0.025），混响轴不一致（r −0.07–0.61，p ≥ 0.13）；新发现 DNSMOS SIG 在邻座干扰轴 r 0.04；已答 judgeloop 三问。名额转 ears
+- 2026-11-02 ears 第 3 步完成：017 待定题 7 → 2（5 题被 D58–D62 答掉，已划并写依据）；剩 E2「每轮盲听多听 4–6 道大众已评题，多约 2–3 分钟」· E6「用人的 GitHub 账号向上游报两处数据错误」，默认都不做，收尾时并入待拍板清单；与 D62 冲突 5 处已改；等名额跑第二段
+- engine workflow 已起（7 代理）：Core ML · BNNS Graph（macOS 15+ 实时音频 CPU 推理，号称零分配）· MLX · 纯 Rust（candle / burn / tract / Accelerate / Metal）· 公开实测 · 五类模型盘点 + 1 核实员；自写 GTCRN Rust 先行
+- judgeloop workflow 已起（7 代理）：R1 评分模型小型化 · R2 评分当奖励 / 在线调参先例 · R3 声音→效果参数与助听器在线偏好学习 · R4 本机微调风险与护栏 · R5 本机盘点 + 2 怀疑派
+- benchsynth 自审改结论：S7「自身稳」被打掉（错配格 τ 也 0.82，无区分力）→ 改交互一致性 S7b：SNR / 噪声 / SIR 轴 A/B 一致（r 0.5–0.9，p ≤ 0.04），混响轴不一致；S8「反向」降为「判不了」；红队 P0：exp008 素材与 exp006 训练段重叠，项目模型上阶梯前要换素材池；D51 合成好坏配对 P1–P7 已写；第二轮 RNNoise / WebRTC 出音频，torch 组在跑（负载 34）；engine 给 exp010、judgeloop 给 exp011
+- 人定 D52（评分模型放到用户电脑上，调节模型取代场景查表，本机微调）· D53（推理必须 Core ML / MLX 或自写 Rust，推翻 009）→ 派 judgeloop（018 #44）· engine（019 #45）
+- ears exp009 第一段：CHiME-7 32 人单人 vs 其余 7 人一致率中位 0.79；DNSMOS vs 单人 0.45；作者的 0.48 说明不了偏好特殊；SCOREQ 可真检验「作者 vs 大众」
+- prefs 收尾验收过（自测 18/18、无绝对路径、无音频）→ PR #43；偏好 K1–K9 均低 / 很低置信；⚠️ `exp006-scene-sim/unblind.py` 全同检验题撞名 bug（选任一槽都判通过）——exp006 答卷到了以 `human-prefs/build_dataset.py` 为准或先修；待拍板 4-7 / 4-8 已并入
+- 人定 D51：评委不按作者微调，只校准作者 vs 大众听感；再用更多合成数据告诉模型什么好 → 已转 ears / benchsynth
+- ears 补检索已派（人追问更多人耳数据）：CPC1/2/3 听写 · DNS5 WAcc 逐条 · SSI/AEC 逐条 P.835/P.804 · speecheval/speechjudge → notes/H-extra-sources.md
+- prefs 恢复：偏好数据集 29 屏 / 219 对、eval 任务 20 个已完成；发现 ① exp005 c06 / c08「激进」与「只有 GTCRN」逐字节相同，c08 开会那 1 票随机、不算数 ② exp006 盲听页 12 屏中 10 屏「路由开」=「路由关」同文件，路由效果只 3 屏可测
+- 巡检：benchsynth、prefs 因电脑休眠中断（API Error），已发消息让其从现状页续做；ears 调研 7/8 完成，D 笔记：免调开源音频 LLM 在噪声维与人相关≈0，闭源成对 70–74% 但为云端
+- ears workflow 已起（8 代理）：A 通话类人评集 · B 增强语音人评集（逐听众评分？）· C 无参考预测器与人相关性 · D 音频 LLM 评委 · E 单人耳朵增效 · F 个体 vs 大众偏差 + 现场最少人数 · G 其他 + 1 完整性批评；之后做 exp009
+- 人（2026-10-31）：「如果只有我一个人的话，我觉得肯定不够……我们必须做到这样」→ 派 ears（017）
+- 人定（2026-10-31）：Hush arm64 预编译 dylib 允许（只作对照）· torch 现在就装（人选，非 AI 建议的「等第一轮」）
+- benchsynth exp008 第一轮（12 系统 + oracle，348 段，6287 s，0 错）：生成器 A/B 排名一致 τ 中位 0.79–0.85（SI-SDR 0.55）→ 合成格自身稳；合成格预测 exp003 人耳配对一致率 0.25–0.38（48 对、3 系统，功效低），直接在 exp003 片段上 0.48–0.56 → 预测人耳尚无证据、可能反向
+- benchsynth 系统阶梯：不装新环境可凑 16 个（5 个族）；名额给第一轮 12 个 + 理想掩码；批准 cargo 小 crate（nnnoiseless / WebRTC NS）与 OpenNC v1、FE VCTK ONNX 小下载；Hush 预编译 dylib、装 torch（约 0.5–1 GB，换架构独立的 FRCRN / MossFormer 等）待人定
+- benchsynth exp008 数据侧（build 20261031-102406-0c67，348 段，A/B 两生成器）：可复现 60/60 · 可控 12/12 · 三轨残差 −149 dB 全过；统计对齐：exp006 合成杯碟不过（LTAS 距离 10.4 dB，线 5.3）· 合成音乐不过（9.0，线 2.5）· babble 临界；稳态噪声无真实参照只到 D0；两坑进标准（float wav 头带时间戳→用样本哈希；电平须在设备链后定，否则 SNR 偏 6.3 dB）
+- 人定（2026-10-31，原话「可以多弄几个来对比」）：exp008 系统阶梯扩到 ≥ 12 个，独立模型为主；非因果 / 大模型可当对照，不进产品；已转 benchsynth
+- benchsynth：MVP 实验编号给 exp008（`docs/experiments/exp008-bench-validity/`）；约束：vdn-eval 任务集编译进去、只有 3 个系统 → 排名效度要 ≥ 8 个系统（8 个时 τ ≥ 0.57 才显著）；MVP 先 Python 数据侧，`--suite` + 系统阶梯写成给实现线的建议
+- benchsynth：四条诊断核实成立；新发现：所有带人耳答卷的片段都是合成（exp003 c01–c03 是 URGENT 2026 现成加法混合，其余与 exp005 全是本地合成），exp007 QA「真实片段」也是这 11 段 → 真实锚为零，效度只能先到「合成 vs 人耳」；workflow wf_4b3f7b2d-afd 已起：6 路调研（URGENT · DNS/P.835 · VB-DEMAND 批评 · 效度方法 · 倒推先例 · 因素自然分布）× 每路 1 怀疑派 = 12 代理
 - align 全量：fmt / clippy 过；test debug 73 · release 71 全过；真权重冒烟（GTCRN · FE-M）debug / release 过；tidy / check-deps 过
 - align 延迟账改逐项硬加：按 009 目标 IO 256 帧 = 47.00 ms（超 D32 2 ms，测试里钉成已知缺口）；提议 IO 96 帧（两模型 hop 公约数）= 43.67 ms → 待人拍板（代价：回调约 2 ms 一次的 CPU 开销、掉帧风险、蓝牙能否支持）
 - 010 ondevice：最值得照搬 ReSound Learning VC（每场景一个偏移量 + 滑动平均 + 停手才算同意 + 不一致降学习率）；接口需求 13 条已给 align；要另开实验：powermetrics 耗电、一周空闲窗口计数；⚠️ 一路检索子代理违规跑了一行只读 python3 -c（已自报）
+- ✅ evalimpl 真模型确认：GTCRN 上纯噪声停顿门控误开 noise_open 0.99；根因 `src/dsp/src/envelope.rs:91-97` + `src/engine/src/engine.rs:355`；已写成回归任务 R17（xfail，留给修复线）；任务 schema `docs/experiments/exp007-eval-suite/task-schema.md`
 - evalimpl 首轮：CI 层 16 条，ref 回归集 pass@3 13/16、pass^3 12/16，能力集 0/10（设计如此）；5 探针全拿低分（P02 / P05 证明 V-NR 单独可被刷）；定标 0 条 ≥ L1（exp003 48 对，最好 Δ(del+sub) 一致率 0.64 [0.41, 0.84]，DNSMOS OVRL 0.48≈抛硬币）；整套 CI 层 35 s；⚠️ 发现：纯噪声停顿里 engine 门控约 50% 时间开着、混回 −6 dB 原声 → 停顿只压约 5 dB（推断是 exp005「都没降噪」的引擎层原因），真模型验证中
 - scene 重跑（AGC τ 4 s）修音链开 vs 关（GTCRN，244 段胜负）：音量起伏 143:97 · 音乐噪声 186:57 · 背景忽有忽无 180:62 · 发闷 163:34；代价 DNSMOS BAK 40:204、OVRL 2.42 → 2.32、ESTOI 0.732 → 0.726；路由开 DNSMOS 61:18 但删除率 2.4% → 4.5%、FE-M 音乐段背景忽有忽无 +10 dB；盲听页生成中
 - scene 第一轮打分（244 段，ASR 92 段）：修音链对数峰度比 1.74 → 1.02（188:55）、背景忽有忽无 9.2 → 6.8 dB（198:43）、发闷（142:56）；AGC 让电平更起伏（96:146）→ 时间常数 0.6 s 改 4 s（120 段对比 4 s 最平），整批重跑中；路由开 DNSMOS 更高（61:18）但删除率 2.4% → 4.5%，交人耳

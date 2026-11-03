@@ -1,0 +1,35 @@
+{
+ "sample_id": "ccr_fileid_20_1348_1397",
+ "audio_a": {
+  "file": "ccr_fileid_20_1348_1397_a.flac",
+  "sha256": "100bcc338f9a3091bf2f5a800240513d8c5c23cf9b6fdc7516accc276c37aba5",
+  "type": "audio/flac"
+ },
+ "audio_b": {
+  "file": "ccr_fileid_20_1348_1397_b.flac",
+  "sha256": "746841c1bb52238d7664239abe20d8db5573a2424e2f77e6d8215a9f27092fe6",
+  "type": "audio/flac"
+ },
+ "utterance_id": "fileid_20",
+ "system_id_a": "1348",
+ "system_id_b": "1397",
+ "team_name_a": "RICK2000",
+ "team_name_b": "GHW",
+ "language": "zho",
+ "speaker_id": "spk_222",
+ "text": "成为国家经济发展的重要方面",
+ "is_simulated": true,
+ "sample_rate": 44100,
+ "duration": 3.9938321995464854,
+ "cmos": -1.571,
+ "listener_scores": [
+  -2,
+  -1,
+  -1,
+  -3,
+  -1,
+  -1,
+  -2
+ ],
+ "row_idx": 8575
+}
