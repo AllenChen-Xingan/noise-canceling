@@ -96,8 +96,8 @@
 ## 收尾时大总管要做
 
 - [ ] V6：rs-entry 合入后，release 测试 + 全量 `xtask ci` + V1–V4 重跑 + V7 复测
-- [ ] 规约 R10 unsafe 白名单加 vdn-dsp（FTZ）；§3.7.6 延迟表改为按代码（44.98 / 39.67 ms），并给这张表加与代码的比对（唯一真相源）
-- [ ] 改过时说法：规约 §2.2 图里 vdn-capture 补 vdn-dsp · vdn-hal · clap · hound ·根 Cargo.toml 第 1 行注释 · speaker README / Cargo.toml · 规约 §2.2 · §3.7.6（细节见 rs-core 现状页）
-- [ ] 新 crate 实体行写进 `.42cog/cog.md`（各现状页有行）
-- [ ] **下一件大事**：处理图（D66）+ schema 交叉校验（011），清镜像副本与手写 JSON；后处理级非有限 / 幅度检查与 Engine classify 规则合成一处
-- [ ] backlog：ContentId FNV → sha256；麦克风流无缝重接（回调里无锁换总线，要新依赖）；lead 压到 1 块时块长 96 的欠载（release + 预热核实）；Ring 拆 Producer / Consumer 句柄；共享内存权限 0600 与 coreaudiod（装驱动那批实测，补 009 待拍板 3）；models 不直接依赖 ort 尚无机器检查
+- [x] 规约 R10 unsafe 白名单加 vdn-dsp（FTZ）；§3.7.6 延迟表改为按代码（44.98 / 39.67 ms），并给这张表加与代码的比对（唯一真相源）
+- [x] 改过时说法：规约 §2.2 图里 vdn-capture 补 vdn-dsp · vdn-hal · clap · hound ·根 Cargo.toml 第 1 行注释 · speaker README / Cargo.toml · 规约 §2.2 · §3.7.6（细节见 rs-core 现状页）
+- [x] 新 crate 实体行写进 `.42cog/cog.md`（各现状页有行）
+- [x] **下一件大事**：处理图（D66）+ schema 交叉校验（011），清镜像副本与手写 JSON；后处理级非有限 / 幅度检查与 Engine classify 规则合成一处
+- [x] backlog：ContentId FNV → sha256；麦克风流无缝重接（回调里无锁换总线，要新依赖）；lead 压到 1 块时块长 96 的欠载（release + 预热核实）；Ring 拆 Producer / Consumer 句柄；共享内存权限 0600 与 coreaudiod（装驱动那批实测，补 009 待拍板 3）；models 不直接依赖 ort 尚无机器检查
