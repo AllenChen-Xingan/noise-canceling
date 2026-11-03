@@ -31,7 +31,7 @@
 ## 第二段：完成（2026-11-02）
 
 - 采样率只写一处：`src/types/src/rate.rs`（IO_RATE / MODEL_RATE）；control、io-macos 转出 IO_RATE（新增依赖 vdn-types，architecture.md §2.2 规则 5）；约 115 处字面量改引用（3 个子代理改 + 我复核，纠正 eval/system.rs 1 处语义）；tidy 新规则 R-RATE（`src/xtask/src/rate_literal.rs`）
-- tidy 认 `#[cfg(test)] mod x;` 引入的文件为测试代码（`src/xtask/src/test_modules.rs`）
+- ~~tidy 认测试模块~~：试了 7 轮评审后放弃（见 `docs/reviews/062_code-hygiene-codex.md` 末节）；R-RATE 改为测试代码也查，shm / rt-thread / dsp 加 vdn-types dev 依赖
 - 评测阈值正本 `src/eval/src/thresholds.rs` + 比对测试 `src/eval/tests/thresholds.rs`；7 处待定见 `state/handoff/hygiene-thresholds.md`
 - 拆文件：verifiers.rs 1168 → 399（+ physical / perceptual / sim）；runner.rs 629 → 424（+ gate / real）
 - R-SIZE 扫描范围收成一处常量 `SCAN_ROOTS`（现只开 `src`；docs/experiments 等 #58 合并后再开）
