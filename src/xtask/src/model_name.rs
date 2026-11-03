@@ -135,59 +135,209 @@ fn bounded_in(hay: &str, needle: &str) -> bool {
 }
 
 /// 正在跳过 `#[cfg(test)]` 管的项：还在属性 / 签名里，或在花括号块里（深度）。
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 enum Skip {
     No,
     Attrs,
     Block(i64),
 }
 
-pub fn file_problems(rel: &str, src: &str, names: &[String]) -> Vec<String> {
-    let mut out = Vec::new();
-    let keep = strip_comments_keep_strings(src);
-    let lexed = lex_lines(src);
-    let code = code_lines(src);
+/// 去掉开头的一个 `#[…]` 属性（按方括号配对；字符串已被替换掉），返回剩下的部分。
+fn strip_attr(t: &str) -> Option<&str> {
+    let rest = t.strip_prefix("#[")?;
+    let mut depth = 1;
+    for (k, ch) in rest.char_indices() {
+        match ch {
+            '[' => depth += 1,
+            ']' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(&rest[k + 1..]);
+                }
+            }
+            _ => {}
+        }
+    }
+    Some("") // 属性跨行：这一行剩下的都是属性
+}
+
+/// 跳过状态下吃进一段代码，返回新状态。
+fn advance(mut skip: Skip, text: &str) -> Skip {
+    let mut t = text.trim();
+    if skip == Skip::Attrs {
+        while let Some(rest) = strip_attr(t) {
+            t = rest.trim();
+        }
+        if t.is_empty() {
+            return Skip::Attrs;
+        }
+    }
+    let mut depth = if let Skip::Block(d) = skip { d } else { 0 };
+    depth += t.matches('{').count() as i64;
+    depth -= t.matches('}').count() as i64;
+    let opened = matches!(skip, Skip::Block(_)) || t.contains('{');
+    skip = if opened && depth > 0 {
+        Skip::Block(depth)
+    } else if !opened && !t.ends_with(';') {
+        Skip::Attrs // 项还没写完（签名跨行）
+    } else {
+        Skip::No
+    };
+    skip
+}
+
+/// 每一行是否在 `#[cfg(test)]` 管的项里（属性本身、后续属性、跨行签名、以 `;` 结尾的项或一个花括号块）。
+/// 属性和项写在同一行（`#[cfg(test)] mod tests;`）也认；项结束后的生产代码照查（codex 第 1 轮 #2、第 2 轮 #1）。
+fn test_lines(code: &[String]) -> Vec<bool> {
+    let mut out = vec![false; code.len()];
     let mut skip = Skip::No;
-    for (i, line) in keep.iter().enumerate() {
-        // `#[cfg(test)]` 管的那一项（后续属性 + 一个以 `;` 结尾的项，或一个花括号块）跳过；
-        // 它后面的生产代码照查（codex 第 1 轮 #2）
-        match skip {
-            Skip::No if line.trim_start().starts_with("#[cfg(test)]") => {
-                skip = Skip::Attrs;
+    for (i, line) in code.iter().enumerate() {
+        let mut text = line.as_str();
+        if skip == Skip::No {
+            let Some(rest) = line.trim_start().strip_prefix("#[cfg(test)]") else {
+                continue;
+            };
+            skip = Skip::Attrs;
+            text = rest;
+        }
+        if let Some(o) = out.get_mut(i) {
+            *o = true;
+        }
+        skip = advance(skip, text);
+    }
+    out
+}
+
+/// 整个文件里的字符串字面量：(起始行下标, 内容)。跨行字符串、行尾 `\` 续行（去掉换行和下一行开头的空白）、
+/// `r"…"` / `r#"…"#` / `b"…"` 都认；注释、字符字面量（`'"'`）里的引号不算（codex 第 2 轮 #2）。
+fn string_literals(src: &str) -> Vec<(usize, String)> {
+    let c: Vec<char> = src.chars().collect();
+    let at = |k: usize| c.get(k).copied().unwrap_or('\0');
+    let ident = |ch: char| ch.is_alphanumeric() || ch == '_';
+    let mut out = Vec::new();
+    let (mut i, mut line) = (0usize, 0usize);
+    while i < c.len() {
+        let ch = at(i);
+        if ch == '\n' {
+            line += 1;
+            i += 1;
+        } else if ch == '/' && at(i + 1) == '/' {
+            while i < c.len() && at(i) != '\n' {
+                i += 1;
+            }
+        } else if ch == '/' && at(i + 1) == '*' {
+            let mut depth = 1;
+            i += 2;
+            while i < c.len() && depth > 0 {
+                if at(i) == '/' && at(i + 1) == '*' {
+                    depth += 1;
+                    i += 2;
+                } else if at(i) == '*' && at(i + 1) == '/' {
+                    depth -= 1;
+                    i += 2;
+                } else {
+                    if at(i) == '\n' {
+                        line += 1;
+                    }
+                    i += 1;
+                }
+            }
+        } else if ch == '\'' {
+            // 字符字面量 'x' / '\…'；否则是生命周期 'a
+            if at(i + 1) == '\\' {
+                i += 2;
+                while i < c.len() && at(i) != '\'' {
+                    i += 1;
+                }
+                i += 1;
+            } else if at(i + 2) == '\'' {
+                i += 3;
+            } else {
+                i += 1;
+            }
+        } else if ch == 'r'
+            && (at(i + 1) == '"' || at(i + 1) == '#')
+            && (i == 0 || !ident(at(i - 1)) || (at(i - 1) == 'b' && (i < 2 || !ident(at(i - 2)))))
+        {
+            let mut k = i + 1;
+            let mut hashes = 0;
+            while at(k) == '#' {
+                hashes += 1;
+                k += 1;
+            }
+            if at(k) != '"' {
+                i += 1;
                 continue;
             }
-            Skip::No => {}
-            Skip::Attrs | Skip::Block(_) => {
-                let code = code.get(i).map(String::as_str).unwrap_or("");
-                let t = code.trim();
-                if matches!(skip, Skip::Attrs) && (t.is_empty() || t.starts_with("#[")) {
+            let start = line;
+            let mut s = String::new();
+            k += 1;
+            while k < c.len() {
+                if at(k) == '"' && (1..=hashes).all(|h| at(k + h) == '#') {
+                    k += 1 + hashes;
+                    break;
+                }
+                if at(k) == '\n' {
+                    line += 1;
+                }
+                s.push(at(k));
+                k += 1;
+            }
+            out.push((start, s));
+            i = k;
+        } else if ch == '"' {
+            let start = line;
+            let mut s = String::new();
+            i += 1;
+            while i < c.len() && at(i) != '"' {
+                if at(i) == '\\' {
+                    if at(i + 1) == '\n' {
+                        // 续行：换行和下一行开头的空白都不进字符串
+                        i += 1;
+                        while at(i).is_whitespace() {
+                            if at(i) == '\n' {
+                                line += 1;
+                            }
+                            i += 1;
+                        }
+                        continue;
+                    }
+                    s.push(at(i + 1));
+                    i += 2;
                     continue;
                 }
-                let mut depth = if let Skip::Block(d) = skip { d } else { 0 };
-                depth += code.matches('{').count() as i64;
-                depth -= code.matches('}').count() as i64;
-                let opened = matches!(skip, Skip::Block(_)) || code.contains('{');
-                skip = if opened && depth > 0 {
-                    Skip::Block(depth)
-                } else if !opened && !t.ends_with(';') {
-                    Skip::Attrs // 项还没写完（签名跨行）
-                } else {
-                    Skip::No
-                };
-                continue;
+                if at(i) == '\n' {
+                    line += 1;
+                }
+                s.push(at(i));
+                i += 1;
             }
+            out.push((start, s));
+            i += 1;
+        } else {
+            i += 1;
+        }
+    }
+    out
+}
+
+pub fn file_problems(rel: &str, src: &str, names: &[String]) -> Vec<String> {
+    let lexed = lex_lines(src);
+    let skipped = test_lines(&code_lines(src));
+    let mut out = Vec::new();
+    for (i, s) in string_literals(src) {
+        if skipped.get(i).copied().unwrap_or(false) {
+            continue;
         }
         let comment = lexed.get(i).map(|(_, c)| c.as_str()).unwrap_or("");
         if has_reason(comment, ALLOW) {
             continue;
         }
-        for s in strings_in(line) {
-            if let Some(n) = names.iter().find(|n| bounded_in(&s, n)) {
-                out.push(format!(
-                    "{rel}:{}：写死了模型名 `{n}`；正本是 {NAMES_FILE} 的 ModelId，改用 ModelId::as_str / NAMES / parse（R-MODEL）",
-                    i + 1
-                ));
-            }
+        if let Some(n) = names.iter().find(|n| bounded_in(&s, n)) {
+            out.push(format!(
+                "{rel}:{}：写死了模型名 `{n}`；正本是 {NAMES_FILE} 的 ModelId，改用 ModelId::as_str / NAMES / parse（R-MODEL）",
+                i + 1
+            ));
         }
     }
     out
@@ -285,11 +435,21 @@ impl ModelId {
             "#[cfg(test)]\n#[allow(dead_code)]\nconst A: &str = \"fastenhancer-m\";\n",
             // 不认的字面量
             "let g = \"gtcrn\";\n",
+            // 同一行的测试项
+            "#[cfg(test)] const A: &str = \"fastenhancer-m\";\nfn f() {}\n",
+            // 注释与生命周期里的引号不开字符串
+            "fn f<'a>(x: &'a str) {} // \"fastenhancer-m\"\n/* \"fastenhancer_m\" */\n",
         ] {
             assert!(file_problems("a.rs", ok, &names()).is_empty(), "{ok}");
         }
-        // `#[cfg(test)]` 管的项之后的生产代码照查（codex 第 1 轮 #2）
+        // `#[cfg(test)]` 管的项之后的生产代码照查（codex 第 1 轮 #2、第 2 轮 #1）；跨行字符串也查（第 2 轮 #2）
         for bad in [
+            "#[cfg(test)] mod tests;\nfn prod() -> &'static str { \"fastenhancer-m\" }\n",
+            "#[cfg(test)] #[path = \"t.rs\"] mod tests;\nconst P: &str = \"fastenhancer_m\";\n",
+            "let s = \"模型：\\\n    fastenhancer-m\";\n",
+            "let s = \"第一行\nfastenhancer-m 第二行\";\n",
+            "let s = r#\"\n\"q\" fastenhancer_m\n\"#;\n",
+            "let q = '\"'; let s = \"fastenhancer-m\";\n",
             "#[cfg(test)]\n#[path = \"t.rs\"]\nmod tests;\nfn prod() -> &'static str { \"fastenhancer-m\" }\n",
             "#[cfg(test)]\nmod t {\n    fn x() { if true { } }\n}\nconst B: &str = \"fastenhancer_m\";\n",
             "#[cfg(test)]\nfn helper(\n    a: u8,\n) {\n}\nconst C: &str = \"fastenhancer-m\";\n",
