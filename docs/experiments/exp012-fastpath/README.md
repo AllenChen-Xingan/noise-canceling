@@ -63,7 +63,7 @@
 | 升采样，NEON 点积对照 | 1.62 µs | 5.0 µs |
 
 - 对照与正本输出最大差 2.4e-7（整段 6000 帧）
-- 能效核节奏下，正本的重采样（约 60 µs/帧）约是 v2-fast 推理（约 0.14–0.17 ms）的 40%；换点积写法省约 46 µs/帧。`src/` 不归本线，已转交
+- 能效核节奏下，正本的重采样约 60 µs/帧，与 v2-fast 推理（约 0.14–0.17 ms）同量级。⚠️ 这组节奏对照每次醒来固定原版先跑，差值约 46 µs 含先后顺序的偏差，**不能全算在点积改写上**（codex 020 第 1 轮 #4）；对照已改成按帧交替，节奏组待复测。连续跑 3 轮的 14.7 → 4.4 µs 受此影响小。`src/` 不归本线，已转交
 
 ## 第二段第一次（`results/20261102-v2/`）：中途拔电、系统睡眠，只作电池对照
 
@@ -112,7 +112,8 @@
 cd docs/experiments/exp010-inference-bench/bench && cargo build --release
 docs/experiments/exp012-fastpath/tools/run_peak_layers.sh <目录名> 3 native   # 第一段
 docs/experiments/exp012-fastpath/tools/run_v2.sh <目录名> 3                    # 第二段
-python3 docs/research/020_fastpath/tools/bound_table.py docs/experiments/exp012-fastpath/results/<目录名> --qos-peak rt --layers-qos rt --pace 0
+# 连续跑下界表（decision.md 第一节的性能核列）：逐层取 ui 连续跑，峰值取 ui（rt 连续跑的常数作废，脚本会拒绝）
+python3 docs/research/020_fastpath/tools/bound_table.py docs/experiments/exp012-fastpath/results/20261102-v4short --qos-peak ui --layers-qos ui --pace 0 --variant native-v4i --peak-dir docs/experiments/exp012-fastpath/results/20261102-paced-batt
 ```
 
 ## 测试
