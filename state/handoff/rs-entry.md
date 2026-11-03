@@ -71,7 +71,19 @@
 | `vdn_control::validate_bus_name`（配置文件早报错） | vdn-shm 的名字规则（`Bus::open` 报 `InvalidName`） | 单测 `bus_name_rule_matches_vdn_shm`（12 个样例逐个比对） |
 | 总线头里的 lead · 降噪块长 · L_total · 采样率 | `vdn_control::Config`（lead）+ `Worker`（管线延迟、块长）；只经 `vdn_denoised::denoise_bus_config` 写 | 单测 `io_rate_single_source`（写进去 = 读回来）；chain-test 每次运行比对送音端读回的 lead / 降噪块长，不一致报错 |
 | chain-test 的采样率常量 | `vdn_control::IO_RATE` | 直接引用（`const RATE = vdn_control::IO_RATE`），不再手写 48000 |
+| 非有限值检查：Pipeline 一处（rs-core2）+ 送音端 `Forwarder` 一处 | — | **有意为之**：跨进程来的数据算不可信输入，送音端兜底（大总管定）；下一件大事统一 |
+| `vdn_control::Mode` ↔ `vdn_engine::Mode` | vdn-engine | 只经 `vdn_denoised::engine_mode` 翻译（穷举 match，引擎加模式时编译即红）；单测 |
 | 送音端「没有降噪总线时」的延迟线长度 | 不设第二处：取配置里的 lead（不手抄管线延迟）；接上后改用总线头的 L_total | —（代价：第一次接上降噪进程时延迟跳一次） |
+
+## 审查清单三条（大总管加派，2026-11-02）
+
+- **第 2 条 纠漂移**：漂移其实发生在 **Out 环**（麦克风时钟 vs 插件 / 扬声器时钟）；Processed 不会漂（降噪进程没有自己的时钟，一个原声出一个处理后的）。两头各管一边：读方 `OutSource::with_drift(目标, 块)`：读完剩下的积压连续 25 次超过「目标 + 2 块」就丢到目标；写方 `Feeder`：推完后积压连续 25 块不到 2 块就把刚推的块再推一次。两种都记 Out 环缺口。已接到扬声器、文件出口和 chain-test 的虚拟麦
+  - 单测（模拟 60 s，时钟差 ±0.1%）【测】：麦克风快 → 10–60 s 最大积压 480 样本（= 目标 + 3 块）、缺口 2592、读方欠载 0；读方快 → 最大积压 96、补块 29 次、缺口 2784、欠载 0。不纠时 60 s 会漂 ±2880 样本（60 ms）
+  - 代价：每次纠是丢 / 重复一段（≤ 几块），没做淡化（未量化听感）
+- **第 7 条 运行中切直通 / 降噪**：控制线程 → rtrb → 降噪线程（`vdn_denoised::command_channel`，`Worker::apply_commands` 块之间执行，`Cmd` 是 vdn-control 的小 Copy 枚举）。vdn-denoised 读标准输入的 `passthrough` / `denoise` / `quit`；chain-test 加 `--switch-mode-at <秒>`
+  - 实测（GTCRN，debug，第 2 s 切直通）【测】：处理后欠载 0、虚拟麦欠载 0、静音 0；切换后那段和输入延迟 L_total 的相关 1.000000（全段 0.906，前 2 s 是降噪后的）
+  - 新依赖 rtrb 0.4.1（MIT OR Apache-2.0，与 GPL-3.0 兼容，无传递依赖）
+- **第 8 条 capture 库去掉 hound / clap**：设备库 · 实时优先级 · clap · hound 改成 `bin` feature（默认开、bin 必需）；用库的一方 `default-features = false`（根 Cargo.toml）→ `cargo tree -p vdn-capture --no-default-features` 普通依赖只剩 rtrb · vdn-control · vdn-dsp · vdn-hal · vdn-shm，闭包里没有 hound / clap / cpal【测】
 
 ## V5 人工步骤（给大总管转人）
 
