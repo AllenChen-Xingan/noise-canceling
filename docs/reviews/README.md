@@ -12,7 +12,7 @@
 | 019 | 2026-11-02 | [019 推理后端总方案与判据](019_apple-inference-codex.md)（decision + standard + apple-rs，codex gpt-6-astra，8 轮，已达停止线） | 采纳 41（其中 2 条 P2 列进待办）/ 提出 41 |
 | 011 | 2026-11-02 | [删镜像副本 + 参数描述表 + tidy 新规则](011_types-single-source-codex.md)（`git diff bfe6266`，issue #56，codex，3 轮，已达停止线） | 采纳 14 / 提出 14（P1×1 P2×13） |
 | 011 | 2026-11-02 | [schema 导出机制与第一批 schema](011_schema-crosscheck-codex.md)（diff，codex，5 轮，停止线满足） | 采纳 15 / 提出 16（P1×5 P2×11；1 条 P2 留作 issue） |
-| 062 | 2026-11-02 | [代码卫生：600 行上限 · 采样率只写一处 · 评测阈值正本](062_code-hygiene-codex.md)（`origin/main...HEAD`，issue #62，codex，进行中） | 第 1 轮：采纳 3 / 提出 3（P1×1 P2×2） |
+| 062 | 2026-11-02 | [代码卫生：600 行上限 · 采样率只写一处 · 评测阈值正本](062_code-hygiene-codex.md)（`origin/main...HEAD`，issue #62，codex，9 轮，已达停止线） | 采纳 21 / 提出 21（P1×11 P2×10；其中测试模块识别相关条目随功能删除作废） |
 | 020 | 2026-11-02 | [研究 020 手写 GTCRN 引擎提速](020_fastpath-codex.md)（decision + rewrites + exp012 README + bench/src，codex gpt-6-astra，3 轮，已达停止线） | 采纳 14 / 提出 14（P1×3 P2×10 + 抽查不符 1；3 件 P2 后续留作 issue） |
 | 011 | 2026-11-02 | [处理图描述 + Pipeline 交叉校验 + 会话记录记图](011_processing-graph-codex.md)（`git diff 0604143...HEAD`，issue #64，codex gpt-6-astra，2 轮，已达停止线） | 采纳 4 / 提出 4（P2×4；1 条留作 issue） |
 | — | 2026-11-02 | 项目难度与机会判断（codex 评审 + 联网调研，`outlook-codex-20261102/`） | 采纳：Mac 非空白、评测方法非首创 → D77 · 待拍板 6-1 |
