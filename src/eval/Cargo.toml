@@ -20,6 +20,9 @@ vdn-models.workspace = true
 ort.workspace = true
 hound.workspace = true
 serde_json.workspace = true
+serde.workspace = true
+# 清单文件格式派生 JSON Schema（specs/schema/eval-*.schema.json，由 vdn-schema 导出）
+schemars.workspace = true
 
 [lints]
 workspace = true

@@ -13,8 +13,9 @@ use crate::rng::Rng;
 
 pub const SR: u32 = 16_000;
 
-/// 噪音种类。
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// 噪音种类。清单里的名字由 serde 定（小写），格式正本见 `files.rs`。
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "lowercase")]
 pub enum NoiseKind {
     None,
     White,
@@ -29,23 +30,9 @@ pub enum NoiseKind {
     Music,
 }
 
-impl NoiseKind {
-    pub fn parse(s: &str) -> Option<NoiseKind> {
-        Some(match s {
-            "none" => NoiseKind::None,
-            "white" => NoiseKind::White,
-            "pink" => NoiseKind::Pink,
-            "hum" => NoiseKind::Hum,
-            "babble" => NoiseKind::Babble,
-            "cafe" => NoiseKind::Cafe,
-            "music" => NoiseKind::Music,
-            _ => return None,
-        })
-    }
-}
-
-/// 干扰者怎么说话。
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// 干扰者怎么说话。清单里的名字由 serde 定（snake_case）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum InterfMode {
     /// 只在主讲人的停顿里说（轮流）
     Alternate,
@@ -53,17 +40,6 @@ pub enum InterfMode {
     Overlap,
     /// 主讲人开口前先说一大段，之后轮流（exp005 c04 `other_first`）
     OtherFirst,
-}
-
-impl InterfMode {
-    pub fn parse(s: &str) -> Option<InterfMode> {
-        Some(match s {
-            "alternate" => InterfMode::Alternate,
-            "overlap" => InterfMode::Overlap,
-            "other_first" => InterfMode::OtherFirst,
-            _ => return None,
-        })
-    }
 }
 
 #[derive(Clone, Debug)]

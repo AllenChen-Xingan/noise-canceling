@@ -16,6 +16,7 @@
 
 pub mod analysis;
 pub mod calib;
+pub mod files;
 pub mod probes;
 pub mod qa;
 pub mod report;
@@ -30,7 +31,10 @@ pub mod wav;
 use std::fmt;
 
 /// 定标级别（012 §2.1）。物理量直接 L3；模拟真值指标只在模拟内 L3；感知量没有人耳数据一律 L0。
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// 级别表里的名字由 serde 定；`as_str` 与它的一致性由 `files_tests` 核对。
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+)]
 pub enum Level {
     L0,
     L1,
@@ -48,15 +52,7 @@ impl Level {
         }
     }
 
-    pub fn parse(s: &str) -> Option<Level> {
-        match s {
-            "L0" => Some(Level::L0),
-            "L1" => Some(Level::L1),
-            "L2" => Some(Level::L2),
-            "L3" => Some(Level::L3),
-            _ => None,
-        }
-    }
+    pub const ALL: [Level; 4] = [Level::L0, Level::L1, Level::L2, Level::L3];
 }
 
 /// 一次判定。

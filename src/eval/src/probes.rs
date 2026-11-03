@@ -7,13 +7,18 @@
 use crate::analysis::truth_from_clean;
 use crate::synth::Clip;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// 清单里的名字由 serde 定；`as_str` 与它的一致性由本文件的测试核对。
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum Probe {
     /// 削每个词首 50 ms（置零）
+    #[serde(rename = "onset_cut_50ms")]
     OnsetCut,
     /// 非语音段 −40 dB
+    #[serde(rename = "nonspeech_minus40")]
     NonSpeechMinus40,
     /// 1 kHz 低通（四阶：两个二阶巴特沃斯级联）
+    #[serde(rename = "lowpass_1k")]
     Lowpass1k,
     /// 什么都不做：输出 = 带噪输入（exp005「所有的都没降噪」）
     Identity,
@@ -22,16 +27,13 @@ pub enum Probe {
 }
 
 impl Probe {
-    pub fn parse(s: &str) -> Option<Probe> {
-        Some(match s {
-            "onset_cut_50ms" => Probe::OnsetCut,
-            "nonspeech_minus40" => Probe::NonSpeechMinus40,
-            "lowpass_1k" => Probe::Lowpass1k,
-            "identity" => Probe::Identity,
-            "mute" => Probe::Mute,
-            _ => return None,
-        })
-    }
+    pub const ALL: [Probe; 5] = [
+        Probe::OnsetCut,
+        Probe::NonSpeechMinus40,
+        Probe::Lowpass1k,
+        Probe::Identity,
+        Probe::Mute,
+    ];
     pub fn as_str(self) -> &'static str {
         match self {
             Probe::OnsetCut => "onset_cut_50ms",
