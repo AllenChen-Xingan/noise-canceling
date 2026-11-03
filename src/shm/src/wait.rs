@@ -17,6 +17,23 @@ const MAX_SLICE: Duration = Duration::from_secs(3600);
 
 /// 等待（非实时：会睡、会做系统调用；**只许在非实时线程调**，例如降噪进程的处理线程在空闲时）
 impl Bus {
+    /// `wait` 每一轮的第一步：先读唤醒计数字，再看可读量（顺序是不丢唤醒的关键，见 `wait` 里的注释）。
+    /// 公开只为让 loom 模型检查同一份代码（tests/loom.rs），平时别用。
+    #[doc(hidden)]
+    pub fn wait_snapshot(&self, id: RingId) -> (u32, usize) {
+        let ring = self.ring(id);
+        let seen = ring.hdr.prod.wake.load(Acquire);
+        #[cfg(test)]
+        tests::gap();
+        (seen, ring.available())
+    }
+
+    /// 唤醒计数字当前值（loom 测试里模拟内核的「比较后再睡」）。
+    #[doc(hidden)]
+    pub fn wake_word(&self, id: RingId) -> u32 {
+        self.ring(id).hdr.prod.wake.load(Acquire)
+    }
+
     /// 等到 `id` 环里至少有 `min_available` 个样本可读，或过了 `timeout`。
     ///
     /// - 数据已经够：立刻返回 `Ready`，不做系统调用
@@ -37,10 +54,7 @@ impl Bus {
         loop {
             // 先读计数字、再看数据：生产方是「先 push 再加计数字」，所以看漏的数据一定伴随计数字已变，
             // 系统调用比较时发现值不同会立刻返回——唤醒不会丢
-            let seen = word.load(Acquire);
-            #[cfg(test)]
-            tests::gap();
-            let available = ring.available();
+            let (seen, available) = self.wait_snapshot(id);
             if available >= want {
                 return WaitResult::Ready { available };
             }

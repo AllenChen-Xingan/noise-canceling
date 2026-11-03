@@ -1,7 +1,8 @@
 //! `Bus`（一块总线）与 `Ring`（其中一个环的视图）。本文件不含 unsafe（系统调用在 `wake.rs` / `region.rs`）。
 
 use core::sync::atomic::Ordering::{Acquire, Relaxed, Release};
-use core::sync::atomic::{AtomicBool, AtomicU32};
+use crate::sync::AtomicU32;
+use core::sync::atomic::AtomicBool;
 #[cfg(all(unix, feature = "posix"))]
 use std::ffi::CString;
 

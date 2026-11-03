@@ -21,12 +21,13 @@ pub(crate) enum Outcome {
     Failed,
 }
 
-#[cfg(all(target_os = "macos", not(miri)))]
+#[cfg(all(target_os = "macos", not(miri), not(feature = "loom")))]
 mod imp {
     use super::Outcome;
     use core::ffi::c_void;
     use core::sync::atomic::Ordering::{Acquire, Release};
-    use core::sync::atomic::{AtomicPtr, AtomicU32};
+    use crate::sync::AtomicU32;
+    use core::sync::atomic::AtomicPtr;
     use std::sync::Once;
 
     /// `int os_sync_wait_on_address_with_timeout(void *addr, uint64_t value, size_t size, uint32_t flags, os_clockid_t clockid, uint64_t timeout_ns)`
@@ -137,11 +138,11 @@ mod imp {
     }
 }
 
-// 非 macOS，以及 Miri 下（Miri 不能调 dlsym / 系统调用）：一律「不支持」，wait 走轮询
-#[cfg(not(all(target_os = "macos", not(miri))))]
+// 非 macOS，以及 Miri / loom 下（不能调 dlsym / 系统调用）：一律「不支持」，wait 走轮询
+#[cfg(not(all(target_os = "macos", not(miri), not(feature = "loom"))))]
 mod imp {
     use super::Outcome;
-    use core::sync::atomic::AtomicU32;
+    use crate::sync::AtomicU32;
 
     pub(crate) fn init() {}
     pub(crate) fn supported() -> bool {
