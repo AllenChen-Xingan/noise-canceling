@@ -54,9 +54,9 @@
    - 驱动同时只放一个固件命令在途，两个线程同时提交会串行（§2.4，怀疑派没读到这一节原文，未核）。**别的进程（系统功能）也在用神经引擎时，我们的帧会排队**【推断】。
    - 空闲 5 s 后的第一次调用约 260 ms，约为稳态 p50 的 123 倍；空闲不到 1 s 也会慢 1.2–1.7 倍（§10.6 表 10.3，**M1**）。按 123 倍反推，那组测量的稳态 p50 约 2 ms，不是上面 190 µs 的极小图，两组数不能混用【推断】。空闲时功耗约 0 mW，有动态断电（§10.4）。
    - 另一份社区测量（M3 Max）拟合出约 119 µs 固定开销【实测-他人】<https://github.com/skyfallsin/ane.cpp>（只看了搜索摘要，没读原文）。
-   - M5 上的数字：没查到【存疑】。走 Core ML 公开接口时，还要再加 Core ML 自己的开销，这部分没有公开数字【存疑】。
-3. **GPU 每调一次的开销**：有人测空 kernel 的 `waitUntilCompleted` 在 M2 Max 上约 **0.12 ms**【实测-他人，单一论坛帖】<https://developer.apple.com/forums/thread/767853>。Core ML 走 GPU 时每帧至少付一次这个量级【推断】。
-4. **实时音频领域的旁证**：一篇 2026 年的 iOS 吉他音箱建模论文说，GPU（Metal）和神经引擎（Core ML）公开接口的「per-block dispatch latency」让它们在 256 样本块下不实用，所以只用 CPU【实测-他人，定性，无数字】arXiv 2607.10086 §3.1。
+   - M5 上的数字：论文在 M5 上只给了压缩加速和形状限制（§7.3、§4.7），没给每次调用开销【实测-他人，怀疑派读全文核过】。走 Core ML 公开接口时，还要再加 Core ML 自己的开销，这部分没有公开数字【存疑】。
+3. **GPU 每调一次的开销**：有人测空 kernel 的 `waitUntilCompleted` 在 M2 Max 上 **0.12 ms**【实测-他人，单一论坛帖，测法源码没贴出】<https://developer.apple.com/forums/thread/767853>。这是 Metal 直调，不是 Core ML；Core ML 走 GPU 时每帧至少付一次这个量级【推断】。
+4. **实时音频领域的旁证**：一篇 2026 年的 iOS 吉他音箱建模论文说，GPU（Metal）和神经引擎（Core ML）公开接口的「per-block dispatch latency」让它们「impractical for the small, per-audio-block workloads of real-time inference at a 256-sample block size」，所以只用 CPU【他人定性判断，无数字，不是测量】<https://arxiv.org/html/2607.10086v1> §3.1。
 5. **怎么看每个算子落在哪**：`MLComputePlan`（macOS 14.4 起）【官方】`H/MLComputePlan.h:57`。
    - `loadContentsOfURL:configuration:completionHandler:` 读 `.mlmodelc` 和配置（`:70-72`）。
    - `computeDeviceUsageForMLProgramOperation:` 给出这个算子「能在哪些单元跑」和「首选哪个」（`:99`；`H/MLComputePlanDeviceUsage.h:22-25`）。
