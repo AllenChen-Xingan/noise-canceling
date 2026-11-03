@@ -274,9 +274,11 @@ mod tests {
 
     #[test]
     fn missing_fields_take_defaults() {
-        let c = Config::from_json(r#"{"mode":"passthrough","block":256}"#).unwrap();
+        // block 取得比默认 lead 小（lead ≥ 一块 IO 的规则）
+        let c = Config::from_json(r#"{"mode":"passthrough","block":128}"#).unwrap();
         assert_eq!(c.mode, Mode::Passthrough);
-        assert_eq!(c.block, 256);
+        assert_eq!(c.block, 128);
+        assert_eq!(c.lead_frames, Config::DEFAULT_LEAD);
         assert_eq!(c.bus_name, Config::DEFAULT_BUS);
         assert_eq!(c.model, ModelChoice::Gtcrn);
     }

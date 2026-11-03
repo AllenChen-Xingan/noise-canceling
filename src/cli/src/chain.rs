@@ -612,9 +612,14 @@ mod tests {
     fn chain_refuses_lead_below_io_block() {
         let mut o = opts(0.3, None, "lead");
         o.lead = 288; // IO 块 480
-        let e = run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).err().unwrap();
+        let e = run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o)
+            .err()
+            .unwrap();
         assert!(e.contains("小于 IO 块长"), "{e}");
-        assert!(matches!(Bus::open(&o.bus_name), Err(vdn_shm::ShmError::NotFound)), "报错前不该建总线");
+        assert!(
+            matches!(Bus::open(&o.bus_name), Err(vdn_shm::ShmError::NotFound)),
+            "报错前不该建总线"
+        );
     }
 
     #[test]
