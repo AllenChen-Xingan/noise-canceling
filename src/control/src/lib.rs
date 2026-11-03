@@ -101,7 +101,7 @@ impl Config {
     pub const DEFAULT_BLOCK: usize = 96;
     pub const DEFAULT_BUS: &'static str = "/vdn-bus";
     pub const DEFAULT_OUT_BUS: &'static str = "/vdn-out";
-    /// 192 = 4 ms：**V7 过线值；Workgroup 后复测再压 144**（大总管定 2026-11-02）。release、有唤醒时
+    /// 192 = 4 ms：**D68：低频运行，V7 过线值**（人定，不追提频；2026-11-02）。release、有唤醒时
     /// 空闲 / 压力各 10 次 × 10 s 无欠载；144 空闲 10/10 有欠载（`docs/experiments/exp-v7-latency/`）
     pub const DEFAULT_LEAD: usize = 192;
     /// 2 ms @ 48 kHz
