@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// 门控类 verifier 容许的拖尾（主讲人停下后多久内门控开着不算误开）。
 pub const GATE_TOLERANCE_S: f64 = 0.2;
 
@@ -54,7 +53,11 @@ pub(super) fn owner_onsets(c: &Ctx) -> Vec<usize> {
     out
 }
 
-pub(super) fn need_sim(c: &Ctx, id: &'static str, unit: &'static str) -> Result<HopTruth, Box<Score>> {
+pub(super) fn need_sim(
+    c: &Ctx,
+    id: &'static str,
+    unit: &'static str,
+) -> Result<HopTruth, Box<Score>> {
     if !c.clip.tracks {
         return Err(Box::new(Score::unknown(
             id,

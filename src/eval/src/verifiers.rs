@@ -20,8 +20,8 @@ mod physical;
 mod sim;
 use perceptual::*;
 use physical::*;
-use sim::*;
 pub use sim::GATE_TOLERANCE_S;
+use sim::*;
 
 /// 类别：决定置信度从哪来（012 §1）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

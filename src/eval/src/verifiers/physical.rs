@@ -172,4 +172,3 @@ pub(super) fn v_switch(c: &Ctx, p: &Params) -> Score {
     )
     .with_extra("switches", points.len() as f64)
 }
-
