@@ -389,5 +389,18 @@ mod tests {
             (o.level_dbov, o.f0_lo, o.f0_hi, o.tonal),
             (-26.0, 100.0, 140.0, false)
         );
+        assert_eq!(sc.tail_silence_s, 0.0);
+        // 干扰者的缺省值（第 1 轮 codex #3：原测试没覆盖）；scene 里不写 owner = 没有主讲人
+        let s = crate::suite::parse_suite(
+            r#"{"tasks":[{"id":"R1","set":"regression","scene":{"interferers":[{}]}}]}"#,
+        )
+        .unwrap();
+        let sc = s.tasks[0].scene.as_ref().unwrap();
+        let i = &sc.interferers[0];
+        assert_eq!(
+            (i.mode, i.sir_db, i.f0_lo, i.f0_hi),
+            (InterfMode::Alternate, 6.0, 180.0, 230.0)
+        );
+        assert!(sc.owner.is_none());
     }
 }

@@ -11,11 +11,10 @@ use vdn_engine::FaultKind;
 use crate::Level;
 use crate::files::defaults as d;
 use crate::files::{
-    FaultFile, FaultFileKind, GraderFile, Lang, LevelsFile, Polarity, SceneFile, SuiteFile,
-    serde_name,
+    FaultFile, FaultFileKind, GraderFile, LevelsFile, SceneFile, SuiteFile, serde_name,
 };
 use crate::probes::Probe;
-use crate::synth::{InterfMode, InterfSpec, NoiseKind, SceneSpec, TalkerSpec};
+use crate::synth::{InterfSpec, SceneSpec, TalkerSpec};
 use crate::verifiers::{Params, info};
 
 pub const CI_SUITE: &str = include_str!("../suite/ci.json");
