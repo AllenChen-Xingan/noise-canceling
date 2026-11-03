@@ -741,6 +741,20 @@ mod tests {
         assert!(s.max_period_ns >= 6_000_000, "{s:?}");
     }
 
+    /// D68 调度参数：周期报一个工作周期（GTCRN 定块 96 的管线 hop 768 = 16 ms，不是 2 ms），
+    /// computation = 每周期总耗时 p99.9 × 1.5，夹在周期内
+    #[test]
+    fn denoise_rt_params_use_period_and_measured_window() {
+        let mut w = Worker::new(identity_pipeline(Some(96)).unwrap(), 96);
+        let wu = w.warm_up(64);
+        let p = denoise_rt_params(&w, &wu);
+        assert_eq!(p.period_ns, 16_000_000);
+        assert_eq!(p.constraint_ns, p.period_ns);
+        assert!(p.computation_ns >= 1 && p.computation_ns <= p.period_ns);
+        let want = (wu.p999_period_ns.max(1) as f64 * vdn_rt_thread::MEASURED_MARGIN) as u64;
+        assert_eq!(p.computation_ns, want.clamp(1, p.period_ns));
+    }
+
     #[test]
     fn rt_check_counts_downgrades() {
         let mut w = Worker::new(Copy0, 96);
