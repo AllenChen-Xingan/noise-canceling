@@ -62,31 +62,31 @@ impl ParamField {
         ParamField::HangoverS,
     ];
 
-    pub fn as_str(self) -> &'static str {
+    /// 这个字段在参数描述表里的那一条（范围、默认值、键名的正本，[`crate::desc`]）。
+    pub const fn desc(self) -> &'static crate::desc::ParamDesc {
         match self {
-            ParamField::Strength => "strength",
-            ParamField::FloorDb => "floor_db",
-            ParamField::OpenDb => "open_db",
-            ParamField::DetectDb => "detect_db",
-            ParamField::ReleaseS => "release_s",
-            ParamField::HangoverS => "hangover_s",
+            ParamField::Strength => &crate::desc::STRENGTH,
+            ParamField::FloorDb => &crate::desc::FLOOR_DB,
+            ParamField::OpenDb => &crate::desc::OPEN_DB,
+            ParamField::DetectDb => &crate::desc::DETECT_DB,
+            ParamField::ReleaseS => &crate::desc::RELEASE_S,
+            ParamField::HangoverS => &crate::desc::HANGOVER_S,
         }
+    }
+
+    /// 文本键名 = 描述表的 `key`。
+    pub fn as_str(self) -> &'static str {
+        self.desc().key
     }
 
     pub fn parse(s: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|f| f.as_str() == s)
     }
 
-    /// 合法范围（闭区间）。越界的参数表 / 配置在加载时拒收，不在实时线程夹值。
+    /// 合法范围（闭区间），取自描述表。越界的参数表 / 配置在加载时拒收，不在实时线程夹值。
     pub fn range(self) -> (f32, f32) {
-        match self {
-            ParamField::Strength => (0.0, 1.0),
-            ParamField::FloorDb => (-60.0, 0.0),
-            ParamField::OpenDb => (-60.0, 0.0),
-            ParamField::DetectDb => (0.0, 40.0),
-            ParamField::ReleaseS => (0.0, 5.0),
-            ParamField::HangoverS => (0.0, 5.0),
-        }
+        let d = self.desc();
+        (d.min, d.max)
     }
 }
 
@@ -112,7 +112,7 @@ impl fmt::Display for ParamError {
 
 impl std::error::Error for ParamError {}
 
-/// 一组参数。默认值 = p1 `SafetyConfig::default()` 的初值（待 AB 听测标定）。
+/// 一组参数。默认值取自参数描述表（[`crate::desc`]，= p1 `SafetyConfig::default()` 的初值，待 AB 听测标定）。
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ParamSet {
     pub model: ModelId,
@@ -141,12 +141,12 @@ impl ParamSet {
     pub const DEFAULT: ParamSet = ParamSet {
         model: ModelId::Gtcrn,
         tone: ToneId(0),
-        strength: 1.0,
-        floor_db: -12.0,
-        open_db: -6.0,
-        detect_db: 9.0,
-        release_s: 0.3,
-        hangover_s: 0.15,
+        strength: crate::desc::STRENGTH.default,
+        floor_db: crate::desc::FLOOR_DB.default,
+        open_db: crate::desc::OPEN_DB.default,
+        detect_db: crate::desc::DETECT_DB.default,
+        release_s: crate::desc::RELEASE_S.default,
+        hangover_s: crate::desc::HANGOVER_S.default,
     };
 
     pub fn get(&self, f: ParamField) -> f32 {
@@ -302,6 +302,27 @@ mod tests {
         assert!(b.accept_rt(4, ContentId::of(b"fe")).is_none(), "模型不符");
         b.params.strength = f32::NAN;
         assert!(b.accept_rt(4, m).is_none(), "非有限值");
+    }
+
+    /// 描述表是正本：每个字段的范围、默认值、键名都和表里那一条相同；取表里的边界外一点造输入，validate 拒收、accept_rt 夹住。
+    #[test]
+    fn fields_follow_desc_table() {
+        use crate::version::ContentId;
+        let m = ContentId::of(b"gtcrn");
+        for f in ParamField::ALL {
+            let d = f.desc();
+            assert_eq!(f.range(), (d.min, d.max));
+            assert_eq!(f.as_str(), d.key);
+            assert_eq!(ParamSet::DEFAULT.get(f), d.default, "{f} 默认值");
+            assert_eq!(crate::desc::by_key(d.key), Some(d));
+            for bad in [d.min - 0.5, d.max + 0.5] {
+                let mut p = ParamSet::DEFAULT;
+                p.set(f, bad);
+                assert_eq!(p.validate().unwrap_err(), ParamError { field: f, value: bad });
+                let b = ParamBlock { seq: 1, model_hash: m, params: p, ..Default::default() };
+                assert_eq!(b.accept_rt(0, m).unwrap().get(f), d.clamp(bad));
+            }
+        }
     }
 
     #[test]

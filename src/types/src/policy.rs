@@ -85,9 +85,30 @@ pub struct Hysteresis {
 impl Default for Hysteresis {
     fn default() -> Self {
         Self {
-            confirm_s: 1.0,
-            min_confidence: 0.4,
-            min_dwell_s: 3.0,
+            confirm_s: crate::desc::HYST_CONFIRM_S.default,
+            min_confidence: crate::desc::HYST_MIN_CONFIDENCE.default,
+            min_dwell_s: crate::desc::HYST_MIN_DWELL_S.default,
+        }
+    }
+}
+
+impl Hysteresis {
+    /// 每个字段都在描述表的范围内（加载配置、标定扫参时调；越界拒收）。
+    pub fn validate(&self) -> Result<(), crate::desc::RangeError> {
+        use crate::desc::*;
+        HYST_CONFIRM_S.check(self.confirm_s)?;
+        HYST_MIN_CONFIDENCE.check(self.min_confidence)?;
+        HYST_MIN_DWELL_S.check(self.min_dwell_s)?;
+        Ok(())
+    }
+
+    /// 夹进描述表的范围（NaN 当默认值）。
+    pub fn clamped(self) -> Self {
+        use crate::desc::*;
+        Self {
+            confirm_s: HYST_CONFIRM_S.clamp(self.confirm_s),
+            min_confidence: HYST_MIN_CONFIDENCE.clamp(self.min_confidence),
+            min_dwell_s: HYST_MIN_DWELL_S.clamp(self.min_dwell_s),
         }
     }
 }
@@ -108,11 +129,23 @@ pub struct Transition {
 impl Default for Transition {
     fn default() -> Self {
         Self {
-            glide_s: 1.0,
-            model_crossfade_s: 0.05,
-            max_db_per_s: 1.0,
-            manual_ramp_s: 0.03,
+            glide_s: crate::desc::TRANS_GLIDE_S.default,
+            model_crossfade_s: crate::desc::TRANS_MODEL_CROSSFADE_S.default,
+            max_db_per_s: crate::desc::TRANS_MAX_DB_PER_S.default,
+            manual_ramp_s: crate::desc::TRANS_MANUAL_RAMP_S.default,
         }
+    }
+}
+
+impl Transition {
+    /// 每个字段都在描述表的范围内（加载配置时调；越界拒收）。
+    pub fn validate(&self) -> Result<(), crate::desc::RangeError> {
+        use crate::desc::*;
+        TRANS_GLIDE_S.check(self.glide_s)?;
+        TRANS_MODEL_CROSSFADE_S.check(self.model_crossfade_s)?;
+        TRANS_MAX_DB_PER_S.check(self.max_db_per_s)?;
+        TRANS_MANUAL_RAMP_S.check(self.manual_ramp_s)?;
+        Ok(())
     }
 }
 
