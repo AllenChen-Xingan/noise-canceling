@@ -120,11 +120,11 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
 
 ### 4.3 ANE 的底层数字（绕开 Core ML 直接调私有接口）
 
-出处：Bryngelson，《Apple Neural Engine: Architecture, Programming, and Performance》，arXiv 2606.22283 v2（2026-10-15）。只在 M1 和 M5 上实测了硅片。https://arxiv.org/abs/2606.22283
+出处：Bryngelson，《Apple Neural Engine: Architecture, Programming, and Performance》，arXiv 2606.22283 v2（2026-10-15）。单作者预印本，未经同行评审，走私有接口逆向。摘要说只在 M1 和 M5 上实测了硅片，但 §10.2 又报了 M2 的数（自相矛盾，怀疑派补）。https://arxiv.org/abs/2606.22283
 
-- 每次派发的下限：M1 约 0.19–0.23 ms，约 98% 是软件和固件开销（§2.3、§9.3）。
-- 空闲功耗约 0 mW，因为供电轨直接关掉（§10.3）。
-- 在派发下限附近，能效掉到约 22 pJ/FLOP；峰值时约 0.37 pJ/FLOP（§10.4，引言）。
+- 每次派发的下限：M1 约 0.19–0.23 ms（§2.3 写 190 µs，§9.3 写 0.23 ms，两处不一致），约 98% 是软件和固件开销。
+- 空闲功耗约 0 mW（§10.3「reads about zero milliwatts at idle」）。「因为供电轨直接关掉」这个原因没核到原句【推断】。
+- 在派发下限附近，能效掉到约 22 pJ/FLOP（这组扫描在 **M1 Max** 上，§10.4）；峰值时约 0.37 pJ/FLOP（引言）。
 - 以上【实测-他人】。走 Core ML 时还要叠上 Core ML 自己的开销，量没有公开【推断】。我抓到的部分里**没有 M5 的派发下限数字**。
 
 ### 4.4 ORT 的 Core ML 执行提供器（CoreML EP）
