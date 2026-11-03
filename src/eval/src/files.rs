@@ -220,3 +220,66 @@ pub fn serde_name<T: Serialize>(v: &T) -> String {
         _ => String::new(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `as_str` 是名字的第二处表示：逐个变体与 serde 的名字比对。
+    #[test]
+    fn as_str_matches_serde_names() {
+        for p in Probe::ALL {
+            assert_eq!(p.as_str(), serde_name(&p));
+        }
+        for l in Level::ALL {
+            assert_eq!(l.as_str(), serde_name(&l));
+        }
+        for s in Set::ALL {
+            assert_eq!(s.as_str(), serde_name(&s));
+        }
+    }
+
+    /// `ALL` 列全了：靠穷举 match（加变体不加进 ALL，这里编译不过）。
+    #[test]
+    fn all_lists_are_exhaustive() {
+        let n = |p: Probe| match p {
+            Probe::OnsetCut
+            | Probe::NonSpeechMinus40
+            | Probe::Lowpass1k
+            | Probe::Identity
+            | Probe::Mute => 5,
+        };
+        assert_eq!(Probe::ALL.len(), n(Probe::Mute));
+        let n = |l: Level| match l {
+            Level::L0 | Level::L1 | Level::L2 | Level::L3 => 4,
+        };
+        assert_eq!(Level::ALL.len(), n(Level::L0));
+        let n = |s: Set| match s {
+            Set::Regression | Set::Capability | Set::Probe => 3,
+        };
+        assert_eq!(Set::ALL.len(), n(Set::Probe));
+    }
+
+    /// 缺省值照旧：只写了必填项的合成任务，补出的场景与改格式前一致。
+    #[test]
+    fn defaults_unchanged() {
+        let s = crate::suite::parse_suite(
+            r#"{"tasks":[{"id":"R1","set":"regression","scene":{"owner":{}}}]}"#,
+        )
+        .unwrap();
+        assert_eq!(s.name, "suite");
+        assert_eq!(s.base_seed, 20_261_031);
+        let t = &s.tasks[0];
+        assert_eq!((t.polarity.as_str(), t.lang.as_str()), ("both", "en"));
+        assert!(t.safety);
+        assert_eq!(t.trials, 3);
+        let sc = t.scene.as_ref().unwrap();
+        assert_eq!(sc.dur_s, 10.0);
+        assert_eq!(sc.owner_start_s, 0.5);
+        assert_eq!(sc.pause_s, (0.4, 1.2));
+        assert_eq!(sc.noise, NoiseKind::Pink);
+        assert_eq!(sc.snr_db, 10.0);
+        let o = sc.owner.as_ref().unwrap();
+        assert_eq!((o.level_dbov, o.f0_lo, o.f0_hi, o.tonal), (-26.0, 100.0, 140.0, false));
+    }
+}
