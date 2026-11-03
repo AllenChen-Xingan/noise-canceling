@@ -12,7 +12,7 @@ static A: AllocDisabler = AllocDisabler;
 
 #[test]
 fn realtime_stages_do_not_allocate() {
-    let mut env = VadEnvelopeStage::new(EnvelopeParams::p1_like(16000.0));
+    let mut env = VadEnvelopeStage::new(EnvelopeParams::p1_like(vdn_types::MODEL_RATE as f32));
     let mut gate = AsymGate::new(GateParams::default());
     // FE-M 的 hop 160 也走一遍（VAD 内部重分块）
     for hop in [256usize, 160] {

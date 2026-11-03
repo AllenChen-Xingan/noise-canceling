@@ -7,7 +7,7 @@
 //! 输入先夹到 [-1, 1]：earshot 在 debug 构建里对越界样本 `debug_assert!`（crates.io 1.2.2 `predict_f32` 里的断言；`resources/earshot` 的 HEAD 已改名 `predict`，本 crate 钉 1.2.2）。
 
 /// earshot 1.2.2 写死的采样率与帧长（`Detector::predict_f32` 文档）
-pub const VAD_SR: u32 = 16_000;
+pub const VAD_SR: u32 = vdn_types::MODEL_RATE;
 pub const VAD_FRAME: usize = 256;
 
 pub struct Vad {

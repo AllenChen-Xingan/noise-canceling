@@ -287,7 +287,7 @@ mod tests {
     #[test]
     fn envelope_params_follow_desc_table() {
         use vdn_types::desc::{self, ParamDesc};
-        let d = EnvelopeParams::p1_like(16000.0);
+        let d = EnvelopeParams::p1_like(vdn_types::MODEL_RATE as f32);
         d.validate().unwrap();
         type Set = fn(&mut EnvelopeParams, f32);
         type Get = fn(&EnvelopeParams) -> f32;
@@ -324,7 +324,7 @@ mod tests {
     #[test]
     fn stationary_noise_stays_closed() {
         // 白噪声（伪随机）不是人声：VAD 版应保持在下限
-        let mut st = VadEnvelopeStage::new(EnvelopeParams::p1_like(16000.0));
+        let mut st = VadEnvelopeStage::new(EnvelopeParams::p1_like(vdn_types::MODEL_RATE as f32));
         let mut seed = 1u32;
         let mut wet = vec![0.0f32; 256];
         let dry = vec![0.0f32; 256];
