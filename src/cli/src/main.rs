@@ -227,16 +227,16 @@ struct DenoiseArgs {
     #[arg(long)]
     no_fast_open: bool,
     /// 衰减下限（dB）：停顿时背景最多降这么多
-    #[arg(long, default_value_t = -12.0, allow_hyphen_values = true)]
+    #[arg(long, default_value_t = vdn_types::desc::FLOOR_DB.default, allow_hyphen_values = true)]
     floor_db: f32,
     /// 有声时的原声混回（dB），须 ≥ floor-db
-    #[arg(long, default_value_t = -6.0, allow_hyphen_values = true)]
+    #[arg(long, default_value_t = vdn_types::desc::OPEN_DB.default, allow_hyphen_values = true)]
     open_db: f32,
     /// 人声停后保持放开多久（ms）
-    #[arg(long, default_value_t = 150.0)]
+    #[arg(long, default_value_t = vdn_types::desc::HANGOVER_S.default * 1e3)]
     hangover_ms: f32,
     /// 收回下限的时间常数（ms）
-    #[arg(long, default_value_t = 300.0)]
+    #[arg(long, default_value_t = vdn_types::desc::RELEASE_S.default * 1e3)]
     release_ms: f32,
     /// 模型每次 process 的截止时间（ms），超时那一帧送原声；默认不设
     #[arg(long)]
@@ -394,6 +394,16 @@ fn percentiles(t: &[Duration]) -> serde_json::Value {
     json!({"n": v.len(), "p50": p(50.0), "p99": p(99.0), "p999": p(99.9), "max": v.last().copied().unwrap_or(f64::NAN)})
 }
 
+/// 命令行给的参数按描述表（`vdn_types::desc`，范围的正本）检查：越界拒收，不悄悄夹值。
+fn check_safety_ranges(cfg: &SafetyConfig) -> Result<(), vdn_types::RangeError> {
+    use vdn_types::desc::*;
+    FLOOR_DB.check(cfg.floor_db)?;
+    OPEN_DB.check(cfg.open_db)?;
+    HANGOVER_S.check(cfg.hangover_s)?;
+    RELEASE_S.check(cfg.release_s)?;
+    Ok(())
+}
+
 fn denoise(a: DenoiseArgs) -> Result<(), BoxError> {
     let x = read_wav(&a.input)?;
     let (model, path) = open_model(&a.m)?;
@@ -411,6 +421,7 @@ fn denoise(a: DenoiseArgs) -> Result<(), BoxError> {
         cfg.hangover_s = a.hangover_ms / 1e3;
         cfg.release_s = a.release_ms / 1e3;
         cfg.deadline = a.deadline_ms.map(|v| Duration::from_secs_f32(v / 1e3));
+        check_safety_ranges(&cfg)?;
         if cfg.open_db < cfg.floor_db {
             return Err("--open-db 必须 ≥ --floor-db".into());
         }
@@ -786,4 +797,32 @@ fn v7(a: V7Args) -> Result<bool, BoxError> {
         std::fs::write(j, serde_json::to_string_pretty(&out)?)?;
     }
     Ok(pass)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 命令行默认值与描述表同源；越界按描述表拒收。
+    #[test]
+    fn safety_args_follow_desc_table() {
+        use vdn_types::desc::*;
+        let cfg = SafetyConfig::default();
+        check_safety_ranges(&cfg).unwrap();
+        let cli = Cli::try_parse_from(["vdn", "denoise", "a.wav", "b.wav"]).unwrap();
+        let Cmd::Denoise(a) = cli.cmd else {
+            panic!("不是 denoise");
+        };
+        assert_eq!((a.floor_db, a.open_db), (FLOOR_DB.default, OPEN_DB.default));
+        assert_eq!(a.hangover_ms / 1e3, HANGOVER_S.default);
+        assert_eq!(a.release_ms / 1e3, RELEASE_S.default);
+        for (d, bad) in [
+            (&FLOOR_DB, SafetyConfig { floor_db: FLOOR_DB.min - 1.0, ..cfg.clone() }),
+            (&OPEN_DB, SafetyConfig { open_db: OPEN_DB.max + 1.0, ..cfg.clone() }),
+            (&HANGOVER_S, SafetyConfig { hangover_s: -0.1, ..cfg.clone() }),
+            (&RELEASE_S, SafetyConfig { release_s: RELEASE_S.max + 1.0, ..cfg.clone() }),
+        ] {
+            assert_eq!(check_safety_ranges(&bad).unwrap_err().desc.id, d.id);
+        }
+    }
 }
