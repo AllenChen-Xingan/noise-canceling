@@ -166,3 +166,46 @@ pub fn write_with(root: &Path, history: &[(u32, &str)]) -> Result<Vec<String>, S
     }
     Ok(wrote)
 }
+
+/// 可信基线里的布局文件（git 历史里 main 上那一份）。
+pub enum Baseline {
+    /// 找到了：基线提交 + 文件全文
+    Found(String, String),
+    /// 基线提交上还没有这份文件（本机制第一次合并前）
+    Absent(String),
+    /// 拿不到基线（不是 git 仓库、没有 main / origin/main）
+    Unavailable(String),
+}
+
+fn git(root: &Path, args: &[&str]) -> Option<String> {
+    let o = std::process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(args)
+        .output()
+        .ok()?;
+    o.status
+        .success()
+        .then(|| String::from_utf8_lossy(&o.stdout).trim().to_string())
+}
+
+/// 基线提交 = 本分支与 main 的分叉点；就在 main 上时（分叉点 = HEAD）取上一个提交（第一父）。
+pub fn shm_baseline(root: &Path) -> Baseline {
+    let head = git(root, &["rev-parse", "HEAD"]);
+    let base = ["origin/main", "main"]
+        .iter()
+        .find_map(|m| git(root, &["merge-base", "HEAD", m]));
+    let Some(mut base) = base else {
+        return Baseline::Unavailable("找不到 main 或 origin/main（CI 要 checkout fetch-depth: 0）".into());
+    };
+    if head.as_deref() == Some(base.as_str()) {
+        match git(root, &["rev-parse", "HEAD^1"]) {
+            Some(p) => base = p,
+            None => return Baseline::Unavailable("HEAD 没有父提交".into()),
+        }
+    }
+    match git(root, &["show", &format!("{base}:{DIR}/{}", shm::LAYOUT_FILE)]) {
+        Some(t) => Baseline::Found(base, t),
+        None => Baseline::Absent(base),
+    }
+}

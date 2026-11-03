@@ -12,6 +12,9 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 要完整历史：vdn-schema 的测试对照 main 上已发布的共享内存布局，检查版本历史只增不改
+          fetch-depth: 0
       - name: manifests
         run: python3 scripts/check-manifests.py
       - name: install cargo-deny

@@ -177,6 +177,45 @@ fn shm_layout_change_without_version_bump_is_red() {
     );
 }
 
+/// 历史只增不改：main 上已发布的 (版本, 指纹) 必须原样留在 HISTORY 里（codex 第 2 轮 #1）。
+/// 拿不到 main 时：CI 里算红（要 fetch-depth: 0），本机只提示。
+#[test]
+fn shm_history_append_only_against_main() {
+    match vdn_schema::shm_baseline(&root()) {
+        vdn_schema::Baseline::Found(base, text) => {
+            let (v, fp) = shm::baseline_entry(&text).unwrap();
+            shm::guard_baseline(shm::HISTORY, (v, &fp))
+                .unwrap_or_else(|e| panic!("对照 {base}：{e}"));
+        }
+        vdn_schema::Baseline::Absent(base) => {
+            eprintln!("注：{base} 上还没有 {}，本次是第一次引入", shm::LAYOUT_FILE);
+        }
+        vdn_schema::Baseline::Unavailable(why) => {
+            assert!(std::env::var_os("CI").is_none(), "CI 里拿不到基线：{why}");
+            eprintln!("注：跳过对照 main（{why}）");
+        }
+    }
+}
+
+/// 负例：把旧版本的指纹改写成新布局（不升版本）、或删掉旧行 → 红；在末尾追加新版本 → 绿。
+#[test]
+fn shm_history_rewrite_is_red() {
+    let fresh = std::fs::read_to_string(root().join(DIR).join(shm::LAYOUT_FILE)).unwrap();
+    let (v, fp) = shm::baseline_entry(&fresh).unwrap();
+    assert_eq!(
+        fp,
+        shm::fingerprint(&shm::layout_body()),
+        "从文件算的指纹应与从 Rust 算的相同"
+    );
+    let rewritten = [(v, "fnv1a64:1111111111111111")];
+    let e = shm::guard_baseline(&rewritten, (v, &fp)).unwrap_err();
+    assert!(e.contains("被改写"), "{e}");
+    let deleted = [(v + 1, "fnv1a64:2222222222222222")];
+    assert!(shm::guard_baseline(&deleted, (v, &fp)).unwrap_err().contains("删掉"));
+    let appended = [(v, fp.as_str()), (v + 1, "fnv1a64:2222222222222222")];
+    assert!(shm::guard_baseline(&appended, (v, &fp)).is_ok());
+}
+
 /// 当前版本正是 HISTORY 的最后一行、指纹相同。
 #[test]
 fn shm_version_registered() {

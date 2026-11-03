@@ -122,3 +122,35 @@ pub fn guard(history: &[(u32, &str)], version: u32, fp: &str) -> Result<(), Stri
         )),
     }
 }
+
+/// 从一份已提交的布局文件（可信基线：main 上的版本）算出它的 (版本, 指纹)。
+pub fn baseline_entry(layout_text: &str) -> Result<(u32, String), String> {
+    let mut v: Value =
+        serde_json::from_str(layout_text).map_err(|e| format!("基线 {LAYOUT_FILE}：{e}"))?;
+    let version = v
+        .get("version")
+        .and_then(Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok())
+        .ok_or_else(|| format!("基线 {LAYOUT_FILE} 缺 version"))?;
+    if let Value::Object(m) = &mut v {
+        m.remove("$comment");
+        m.remove("version");
+    }
+    Ok((version, fingerprint(&v)))
+}
+
+/// 历史只增不改（codex 第 2 轮 #1）：main 上已发布的 (版本, 指纹) 必须原样留在 `history` 里。
+pub fn guard_baseline(history: &[(u32, &str)], base: (u32, &str)) -> Result<(), String> {
+    match history.iter().find(|(v, _)| *v == base.0) {
+        Some((_, f)) if *f == base.1 => Ok(()),
+        Some((v, f)) => Err(format!(
+            "shm::HISTORY 里版本 {v} 的指纹被改写了（main 上的布局是 {}，现在写的是 {f}）：\
+             已发布的版本只能在末尾追加新版本，不能改旧行——改布局请升 layout::VERSION",
+            base.1
+        )),
+        None => Err(format!(
+            "shm::HISTORY 删掉了 main 上已发布的版本 {}：旧行不能删",
+            base.0
+        )),
+    }
+}
