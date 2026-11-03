@@ -85,9 +85,13 @@
   - 新依赖 rtrb 0.4.1（MIT OR Apache-2.0，与 GPL-3.0 兼容，无传递依赖）
 - **第 8 条 capture 库去掉 hound / clap**：设备库 · 实时优先级 · clap · hound 改成 `bin` feature（默认开、bin 必需）；用库的一方 `default-features = false`（根 Cargo.toml）→ `cargo tree -p vdn-capture --no-default-features` 普通依赖只剩 rtrb · vdn-control · vdn-dsp · vdn-hal · vdn-shm，闭包里没有 hound / clap / cpal【测】
 
+## 已定（大总管，2026-11-02）
+- **lead 硬下限 = 一块 IO**（正本 `vdn_control::check_lead`；Config 校验 · chain-test 开跑前 · 送音端读总线头三处调用）。理由：送音端同一回调里取走一块时，降噪端恰好有一整个 IO 周期处理上一块；降噪块长已经在 `Pipeline::with_block` 的延迟里算过。再往上的余量由 V7 实测定。测试：`lead_below_one_io_block_is_rejected` · `chain_refuses_lead_below_io_block`
+- **V1 判据含欠载**：相关 ≥ 0.999 且虚拟麦欠载 = 0 且处理后欠载 = 0（直通时欠载被延迟原声补上，相关看不出来）。测试：`v1_fails_on_underrun_even_with_perfect_correlation`
+
 ## 本次新增的测试（CLAUDE.md 第五节第 6 条：每个功能、每次修复都带测试）
 
-清单用途：功能 → 证明它的测试（`cargo test -p vdn-control -p vdn-capture -p vdn-denoised -p vdn-cli`：51 过、1 忽略）。
+清单用途：功能 → 证明它的测试（`cargo test -p vdn-control -p vdn-capture -p vdn-denoised -p vdn-cli`：54 过、1 忽略）。
 
 | 功能 / 修复 | 测试（crate · 名字） |
 |---|---|
