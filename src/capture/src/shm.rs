@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn out_backlog_is_capped() {
-        let bus = Arc::new(Bus::heap(out_bus_config(48_000)).unwrap());
+        let bus = Arc::new(Bus::heap(out_bus_config(vdn_control::IO_RATE)).unwrap());
         let out = bus.ring(RingId::Out);
         let x: Vec<f32> = (0..20_000).map(|i| i as f32).collect();
         assert_eq!(out.push(&x), 20_000);

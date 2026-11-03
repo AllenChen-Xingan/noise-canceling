@@ -9,7 +9,7 @@ const LEAD: usize = 1440;
 fn sig(n: usize, off: usize) -> Vec<f32> {
     (0..n)
         .map(|i| {
-            let t = (i + off) as f32 / 48_000.0;
+            let t = (i + off) as f32 / vdn_control::IO_RATE as f32;
             0.5 * (2.0 * std::f32::consts::PI * 440.0 * t).sin()
                 + 0.3 * (2.0 * std::f32::consts::PI * 2000.0 * t).sin()
         })

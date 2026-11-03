@@ -146,17 +146,17 @@ mod tests {
     #[test]
     fn handover_and_retire_without_dropping_in_audio_thread() {
         let name = format!("/vdn-tfd-{}", std::process::id());
-        let out = Arc::new(OwnedBus::create(&name, out_bus_config(48_000)).unwrap());
+        let out = Arc::new(OwnedBus::create(&name, out_bus_config(vdn_control::IO_RATE)).unwrap());
         let (mut f, mut ctl) = Feeder::new(
             None,
             Forwarder::new(ForwarderConfig::new(96, 96)),
             out.clone(),
         );
-        let x = crate::testing::test_tone(48_000, 96, 0);
+        let x = crate::testing::test_tone(vdn_control::IO_RATE, 96, 0);
         f.feed(&x);
         assert_eq!(f.switches(), 0);
         // 交一条新总线（L_total 不同 → 带新 Forwarder）
-        let bus = Arc::new(Bus::heap(out_bus_config(48_000)).unwrap());
+        let bus = Arc::new(Bus::heap(out_bus_config(vdn_control::IO_RATE)).unwrap());
         assert!(
             ctl.handover
                 .push(Handover {
@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn retire_queue_full_keeps_old_objects_locally() {
         let name = format!("/vdn-tfq-{}", std::process::id());
-        let out = Arc::new(OwnedBus::create(&name, out_bus_config(48_000)).unwrap());
+        let out = Arc::new(OwnedBus::create(&name, out_bus_config(vdn_control::IO_RATE)).unwrap());
         let (mut f, mut ctl) = Feeder::new(None, Forwarder::new(ForwarderConfig::new(96, 96)), out);
         let x = [0.0f32; 96];
         // 换 12 次、监视线程一直不收：回收队列 8 个满了以后，音频线程停在本地槽位，不再接新的
@@ -208,7 +208,7 @@ mod tests {
         use vdn_hal::{HalSource, RenderStatus};
         for (tag, producer_ppm) in [("fast", 1000i64), ("slow", -1000i64)] {
             let name = format!("/vdn-tdr{tag}-{}", std::process::id());
-            let out = Arc::new(OwnedBus::create(&name, out_bus_config(48_000)).unwrap());
+            let out = Arc::new(OwnedBus::create(&name, out_bus_config(vdn_control::IO_RATE)).unwrap());
             let block = 96usize;
             let target = 2 * block;
             let (mut f, _ctl) = Feeder::new(
@@ -219,14 +219,14 @@ mod tests {
             let mut src = HalSource::new(
                 OutSource::new(Arc::new(Bus::open(&name).unwrap())).with_drift(target, block),
             );
-            let x = crate::testing::test_tone(48_000, block, 0);
+            let x = crate::testing::test_tone(vdn_control::IO_RATE, block, 0);
             let mut y = vec![0.0f32; block];
             // 事件时间以 ns 计：写方周期 = 2 ms / (1 + ppm)，读方周期 = 2 ms
             let base = 2_000_000i64;
             let wp = base * 1_000_000 / (1_000_000 + producer_ppm);
             let (mut tw, mut tr) = (
                 0i64,
-                i64::try_from(target).unwrap() * 1_000_000_000 / 48_000,
+                i64::try_from(target).unwrap() * 1_000_000_000 / i64::from(vdn_control::IO_RATE),
             );
             let end = 60_000_000_000i64;
             let (mut max_backlog, mut underruns) = (0usize, 0u64);

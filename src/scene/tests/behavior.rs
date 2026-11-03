@@ -1,7 +1,8 @@
 //! 场景分析行为测试：滞回按确认时长才切；静音不出 NaN；手动选用户层场景后只在其下属大类里判。
 use vdn_scene::SceneAnalyzer;
 use vdn_types::{
-    Confidence, FineSceneId, Hysteresis, HysteresisGate, MODEL_RATE, SampleClock, SceneLabel, UserScene,
+    Confidence, FineSceneId, Hysteresis, HysteresisGate, MODEL_RATE, SampleClock, SceneLabel,
+    UserScene,
 };
 
 fn label(fine: u16, user: UserScene, conf: f32, t_s: f64) -> SceneLabel {

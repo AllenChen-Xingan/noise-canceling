@@ -83,7 +83,7 @@ fn bus_name_rule_matches_vdn_shm() {
 #[test]
 fn io_rate_single_source() {
     let w = Worker::new(identity_pipeline(Some(96)).unwrap(), 96);
-    let cfg = denoise_bus_config(&w, 288, 48_000).unwrap();
+    let cfg = denoise_bus_config(&w, 288, IO_RATE as usize).unwrap();
     assert_eq!(cfg.rate, vdn_control::IO_RATE);
     assert_eq!(cfg.lead, 288);
     assert_eq!(cfg.denoise_block, 96);
