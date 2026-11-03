@@ -8,8 +8,8 @@
 
 ## 0. 一句话结论
 
-**Core ML 能转也能跑 GTCRN 和 FE-M，但神经引擎和 GPU 对这两个模型基本没用。** 理由有三条。第一，GRU 在神经引擎上没有执行路径，只能回落 CPU，图会被切成几段。第二，神经引擎和 GPU 每调一次都有约 0.1–0.2 ms 的固定开销【实测-他人】，GTCRN 整帧在 ORT 里才 0.4 ms。第三，神经引擎只算 fp16，有状态模型的缓存也只许 fp16，与原模型逐值一致做不到 ORT 的水平（4.5e-7）【推断】。
-**值得测的只有一种配置：`cpuOnly` + `compute_precision=FLOAT32` + 缓存显式进出 + 输入输出全预分配。** 它能不能比 ORT 快、尾部更稳，现在没有任何数字，要 applebe 实测。
+**Core ML 能转也能跑 GTCRN 和 FE-M，但神经引擎和 GPU 对这两个模型基本没用【推断】。** 理由有三条。第一，`coremltools` 把 PyTorch 的 GRU 翻成逐时间步的 `while_loop`，不用 MIL 的 `gru` 算子【源码】；控制流和逐步小矩阵乘大概率留在 CPU，图会被切成几段【推断】。第二，神经引擎和 GPU 每调一次都有约 0.1–0.2 ms 的固定开销【实测-他人，M1 私有接口 / M2 Max 单帖，不是 M5、不是 Core ML 公开接口】，GTCRN 整帧在 ORT 里 0.4–0.7 ms（Python exp001 / Rust exp004 两个口径）。第三，神经引擎只算 fp16，有状态模型的缓存也只许 fp16【源码】，与 ORT 的差会远大于 exp004 里 Rust-ORT 对 Python-ORT 的 4.5e-7【推断】。
+**值得测的只有一种配置：`cpuOnly` + `compute_precision=FLOAT32` + 缓存显式进出 + 输入输出全预分配。** 但它对 GTCRN 也可能比 ORT 慢：ORT 的 GRU 是一个融合算子，Core ML 这边是 8 个 33 步的循环，每帧约 264 次循环体、几千次 MIL 算子调度【推断，按 `gtcrn_stream.py` 结构数】。现在没有任何数字，要 applebe 实测。（怀疑派改，见文末）
 
 ## 1. 转换路线
 
@@ -19,8 +19,9 @@
 4. **GRU 能转**：
    - MIL 的 `gru` 算子只有 `forward` / `reverse` 两个方向，**没有 `bidirectional`**；LSTM 才有【源码】`ct/mil/mil/ops/defs/iOS15/recurrent.py`。
    - PyTorch 前端把双向 GRU 拆成「正向 `gru` + `reverse` → 反向 `gru` → `reverse` → `concat`」【源码】`ct/mil/frontend/torch/ops.py:3640,3732-3770`。多层、`batch_first` 也处理了（`:3729,3778`）。
-   - iOS 18 版 `gru` 多了 `reset_after` 和 `input_bias` 两个参数【源码】`ct/mil/mil/ops/defs/iOS18/recurrent.py`。PyTorch 的 GRU 是「reset 门作用在 `W_hn h + b_hn` 上」的写法，要靠这两个参数才能对上【推断，未核对 `_add_gru_layer` 用的是哪一版】。
-   - **GRU 落在哪个计算单元**：一篇第三方论文逐代测过，`gru` / `lstm` / `rnn` 在 M1 到 M5 的神经引擎上「No path on any family」，建议改成「固定步数展开的图」【实测-他人】arXiv 2606.22283 §4.2 表 4.1 <https://arxiv.org/html/2606.22283v1>。苹果论坛也有人报 GRU 模型上不了神经引擎【实测-他人】<https://developer.apple.com/forums/thread/718140>。GPU 能不能跑 GRU，没查到，要用 `MLComputePlan` 看【存疑】。
+   - iOS 18 版 `gru` 多了 `reset_after` 和 `input_bias` 两个参数【源码】`ct/mil/mil/ops/defs/iOS18/recurrent.py`。**但 PyTorch 前端根本不用 `mb.gru`。** `_add_gru_layer` 的注释写明「Core ML GRU has different definition from Torch, so we cannot use mb.gru, and need to implement it with while loop」【源码】`ct/mil/frontend/torch/ops.py:3507-3512`（2026-11-02 拉的 `main`）。循环体每步是 `gather` · `squeeze` · 6 个 `linear` · `sigmoid` ×2 · `tanh` · 若干 `add/mul/sub`（`:3560-3593`）。reset 门写法因此和 PyTorch 一致，不靠 `reset_after`【源码】。
+   - **这对 GTCRN 的代价**：GTCRN 每个 DPGRNN 的帧内 GRU 是 2 组 × 双向、序列长 33；跨帧 GRU 是 2 组、序列长 1【源码】`res:gtcrn/stream/gtcrn_stream.py:163-203`。两个 DPGRNN 合计每帧 8 个 33 步循环 + 4 个 1 步循环，约 268 次循环体，每次约 15–20 个 MIL 算子【推断】。转换器有没有把定长 `while_loop` 展开的图优化，没查到【存疑】。如果不展开，Core ML 的逐算子调度可能比 ORT 的 1554 次 malloc 更贵【推断】。
+   - **GRU 落在哪个计算单元**：一篇第三方论文说 `gru` / `lstm` / `rnn` 在神经引擎上「No path on any family」，建议改成「unrolled fixed-trip-count graph」【实测-他人 + 逆向，arXiv 2606.22283 §4.2 表 4.1，直接测量只在 M1 和 M5 上，表里的「any family」含静态分析】<https://arxiv.org/html/2606.22283v1>。注意它说的是 MIL `gru` 算子；我们转出来的是 `while_loop` + `linear`，要看的是控制流能不能上神经引擎【推断：大概率不能】。原文引的苹果论坛帖（thread 718140）**不支持**「GRU 上不了神经引擎」：那帖说的是 TF 模型里 `get_shape` 类算子回落，苹果员工建议给全静态形状【官方论坛，非文档】<https://developer.apple.com/forums/thread/718140>。GPU 能不能跑这些循环，没查到，要用 `MLComputePlan` 看【存疑】。
 5. **`ScatterND` 的问题在 Core ML 路线上不存在。** `ScatterND` 是 ONNX 导出时把「缓存按切片原地写回」（`gtcrn_stream.py:261-263,285-287`）翻成的。走 PyTorch 直转时：
    - 部署目标 ≥ iOS 18 / macOS 15，切片赋值翻成 `slice_update`；更低就翻成 `torch_tensor_assign`【源码】`ct/mil/frontend/torch/ops.py:5415-5470`。
    - 对图输入原地写，转换器不收。exp010 的做法是先 `clone()` 再交给流式模型【源码】`convert_gtcrn.py:33-40`。
