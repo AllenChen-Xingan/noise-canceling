@@ -2,3 +2,5 @@
 {"when":"2026-11-02T17:22:33-08:00","model":"Mac17,3","chip":"Apple M5","os":"27.0.1 (26A434)","power":"AC Power","load":"{ 1.39 1.48 1.84 }","phase":"bench-start"}
 {"when":"2026-11-02T17:23:56-08:00","model":"Mac17,3","chip":"Apple M5","os":"27.0.1 (26A434)","power":"AC Power","load":"{ 1.53 1.51 1.81 }","phase":"bench-end"}
 {"when":"2026-11-02T17:23:56-08:00","model":"Mac17,3","chip":"Apple M5","os":"27.0.1 (26A434)","power":"AC Power","load":"{ 1.53 1.51 1.81 }","phase":"end"}
+{"when":"2026-11-02T17:25:25-08:00","model":"Mac17,3","chip":"Apple M5","os":"27.0.1 (26A434)","power":"AC Power","load":"{ 1.60 1.55 1.80 }","phase":"start"}
+{"when":"2026-11-02T17:29:28-08:00","model":"Mac17,3","chip":"Apple M5","os":"27.0.1 (26A434)","power":"AC Power","load":"{ 2.50 2.31 2.09 }","phase":"end"}

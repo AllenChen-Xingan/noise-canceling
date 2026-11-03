@@ -63,3 +63,12 @@ build/libvdn_alloc.dylib
 [17:23:56] round 3 · fem coreml-all fp16
 [17:23:56] round 3 · fem bnns fp32
 [17:23:56] 完成 20261102-173000-b2
+[17:25:25] build 20261102-173000-b2 → /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-173000-b2 · 结果 /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-engine/docs/experiments/exp010-inference-bench/apple/results/20261102-173000-b2
+[17:25:25] MLX：导权重 · 对 torch 自检 · 导 .mlxfn · Python 计时（对照，D68）
+[17:25:28] round 1 · mlx-python cpu
+[17:26:15] round 1 · mlx-python gpu
+[17:26:58] round 2 · mlx-python cpu
+[17:27:36] round 2 · mlx-python gpu
+[17:28:14] round 3 · mlx-python cpu
+[17:28:50] round 3 · mlx-python gpu
+[17:29:28] 完成 20261102-173000-b2
