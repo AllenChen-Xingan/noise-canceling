@@ -1,84 +1,108 @@
 # 019 · 降噪模型在 Mac 上用什么推理后端（总方案）
 
-> 2026-11-02 · applebe（苹果引擎）汇总 rustbe（纯 Rust）· 状态：**草稿**，第 4 节等「实时线程策略」实测补完；对抗自审未做。
-> 判据：`standard.md`（16 个 verifier；技术线【AI 定；人可改】，整机 CPU 两档与最低系统【已定】）。数字一律本机实测（Apple M5 · macOS 27.0.1 · 插电），从 Rust 调（D68）；来源路径写在每条后面。
-> 意图：D53「必须达到最好的效果，最快的效果」· D69 整机 CPU 目标 ≤ 1%、上限 ≤ 2% 个核 · D70「完全榨干硬件的性能，以及非常低能耗……非常清亮（轻量）」。
+> 2026-11-02 · applebe（苹果引擎）汇总 rustbe（纯 Rust）· 状态：**草稿 v2**——同模型 3 视角只读自审一轮后已修订（数字核对 · 结论强度 · 测量口径），待 codex 换谱系评审。
+> 判据：`standard.md`（17 个 verifier）。技术线【AI 定；人可改】；人定的：D75 挡线（`BE-IMPACT` ≤ 1% / ≤ 2%）与耗电主排序、D77 最低 macOS 15、D70 榨干硬件 · 低能耗 · 轻量。
+> 数字一律本机实测（Apple M5 · macOS 27.0.1 · 插电），从 Rust 调（D68）；来源路径写在每条后面。**全部只在这一台机器上测过。**
 
 ## 1. 先看风险（大总管要求放在第一节）
 
-1. **按实时节奏跑，每帧慢约 5 倍。** 苹果最快的组合（BNNS Graph + GRU 展开）连续跑 p50 0.155 ms；按 16 ms 一帧跑 10 分钟，p50 0.82 ms、最大 11.8 ms、占 4.8% 个核（`exp010…/apple/results/20261102-173000-b2/summary.md`）。连续跑的数都低估了实时开销：rustbe 在手写版上复现了同一现象（连续 0.088 ms → 实时节奏 p50 0.61 ms、最大 6.95 ms、10 分钟里 6 帧超 3 ms，`notes/rustbe-numbers.md`），所以这不是苹果引擎特有的。节奏模式下手写 + Accelerate 版（p50 0.44、最大 4.17、1 帧超 3 ms）反比纯手写快约 21%。推断是帧间降频或被挪到能效核；实时线程策略的对照测法已写好（`apple-rs/tools/rt-matrix.sh`），**测完之前，所有「占百分之几个核」都只是下界**。
-2. **CPU 总账已经很紧（D69）。** 用手写 Rust 方案，已经量过的部件合计 ≥ 1.95% 个核（降噪 0.63 · 认人 1.2 · VAD 0.05 · 场景 0.07），离 2% 上限只剩 0.05%；STFT、重采样、采集输出、修音四项还没量（`standard.md` §6.1）。再加上第 1 条的 5 倍效应，现在**任何方案都过不了 D69**，除非实时线程策略能把每帧拉回连续跑的水平。
-3. **认人判断回路单项 ≈ 1.2% 个核**，超上限分摊 4 倍，不归 019（已转交大总管）。
-4. **FE-M 在 ORT 上 ≈ 3.7% 个核**（连续跑），超上限；而且它转不了 Core ML / BNNS（见第 3 节）。它是否还留在候选里，待人定（rustbe 待拍板）。
-
-5. **口径变了（D74 · D75）。** D74 让降噪线程接受低频（停在能效核），所以 CPU% 会变高、耗电却可能更低；D75 据此把挡线从 CPU% 改为「对前台性能的影响」（`BE-IMPACT`，≤ 1% 目标 / ≤ 2% 挡线）和耗电（`BE-POWER`，主排序）。第 1、2 条里的 CPU% 只作参考，过不过以 `BE-IMPACT` 和耗电为准，这两项还没测。
+1. **按实时节奏（每 16 ms 一帧）跑，每帧慢 5–7 倍，原因是帧间降频。** 连续跑：BNNS + GRU 展开 p50 0.155 ms，纯手写 0.088 ms。按节奏跑：BNNS 0.80 ms（rt）/ 0.82 ms（ui），纯手写 0.60–0.61 ms。帧间忙等能把 p50 拉回 0.16 ms，但 CPU 功率 4199 mW，是其他设置的 31–59 倍（`apple/results/20261102-183322-rt/summary.md`、`notes/rustbe-numbers.md`）。**所有连续跑的数都只能比相对快慢，不能当实际开销。**
+2. **CPU% 已远超 D69 的两档，但 D75 已把它降为参考。** 按实时节奏，纯手写 · rt 推理本身就占 3.5% 个核；加上认人 1.2%、VAD 0.05%、场景 0.07%，已知部分合计 ≥ 4.8%（`standard.md` §6.1）。D75 改用「对前台性能的影响」（`BE-IMPACT`）和耗电判，**这两项还没有可用的数**（见第 5 条）。
+3. **认人判断回路单项约 1.2% 个核**（exp005，连续跑口径），不归 019，已转交大总管。苹果引擎帮不上：ECAPA 转不出 Core ML（第 2 节）。
+4. **FE-M 在 ORT 上约 3.7% 个核**（连续跑），转不了 Core ML（图里有 `view_as_complex`），手写本轮不做。是否留在候选里，待人定（rustbe 待拍板）。
+5. **测量本身的强度不够**：
+   - 只有一台机器（M5 · macOS 27）；D77 定的最低 macOS 15、老芯片（M1）都没测。
+   - 耗电只跑了 1 轮 60 s，背景噪声约 ±30–40 mW，比后端之间的差（10–26 mW）还大；空闲基线（111 mW）甚至高于几段运行。所以**只能比相对高低，排名靠不住**。v2 测法（3 轮轮换、每轮各量空闲、只平均计时窗内样本）已写好，待名额（`apple-rs/tools/rt-matrix.sh`、`power_parse.py`）。
+   - `BE-IMPACT` 第一批数据作废：applebe 的脚本留下 21 个孤儿降噪进程，「关」组其实也开着降噪。已修，v2 测法待名额（`apple-rs/tools/impact.sh`）。
+   - 基准程序里的线程设置，不一定等于产品里实际线程的设置。
+   - Core ML 那几行是挂着 malloc 计数钩子计时的（每次分配多一次回调），对它略不利；之后计数与计时已分开（`--count-malloc`）。
 
 ## 2. 结论（每个要上用户电脑的模型用什么后端）
 
-| 模型 | 建议后端 | 为什么 | 状态 |
+**GTCRN（主模型）——暂排第一：纯手写 Rust（`native`），线程 time-constraint 开（D74）。** 这是大总管定的技术默认（2026-11-02；人可改）。按 `standard.md` §6.2，挡线还没测全，所以是「暂排」不是「已定」：
+
+| 挡线 | 纯手写 · rt | 依据 |
+|---|---|---|
+| `BE-PARITY` | **过**：对 ORT 134.0 dB，无 first_bad | rustbe r4 |
+| `BE-RT-ALLOC` | **过**：每帧 0 次 malloc | rustbe `--count-malloc` |
+| `BE-FRAME`（p99.9 ≤ 1.0 · max ≤ 2.0） | **过**（60 s）：p99.9 0.65 · max 0.66 ms | build 20261102-183322-rt |
+| `BE-DEADLINE`（10 分钟 0 帧 > 3 ms） | **rt 下未测**；ui 下 10 分钟有 6 帧 > 3 ms（不过） | `notes/rustbe-numbers.md` |
+| `BE-IMPACT` | **未测**（第一批作废） | — |
+| `BE-SIZE` · `BE-MEM` · `BE-RT-SAN` | **未测** | — |
+| `BE-POWER`（主排序） | CPU 功率 81 mW（单次、噪声里；rt 那批没跑 ORT，「不高于 ORT」未判） | build 20261102-183322-rt |
+
+为什么排它：
+- 连续跑最快：p50 0.088 ms，同场 ORT 0.384 ms，约 4.4 倍（build 20261102-173000-b2；按 rustbe r4 的 0.10 / 0.38 算是 3.8 倍）。
+- 0 分配，能在推理线程直接调；不依赖任何推理库，体积最小（待 `BE-SIZE` 证实）。
+
+**待证实的更省电方案：手写 + Accelerate（`native-blas`）。** 实时节奏下 p50 0.43 ms（比纯手写快 28%；按平均值是 20%），CPU 功率 71 mW（单次、噪声里）。但每帧 11 次 malloc（Accelerate 内部，rustbe 实测），过不了 `BE-RT-ALLOC`。**翻盘条件**（两条都满足才改选它）：① 交替重复 ≥ 3 轮后仍显著更省电（差值大于噪声底）；② 查明那 11 次分配出在哪个调用、能换成不分配的接口（如 `vDSP_mmul` 代替 `cblas_sgemm`，或预分配工作区）——② 已转 rustbe。
+
+**苹果侧备选：BNNS Graph + GRU 展开。** 连续跑 p50 0.155 ms（ORT 的 2.5 倍快），0 分配，133.9 dB。但在 D74 默认（rt）下按节奏跑 p99.9 1.34 ms，**过不了 `BE-FRAME`**（≤ 1.0）；加自建工作组区间后 p99.9 0.23–0.28 ms 能过，代价是 CPU 功率高 25–40 mW。
+
+其他模型：
+
+| 模型 | 建议 | 依据 | 状态 |
 |---|---|---|---|
-| **GTCRN（主模型）** | **已定（AI，大总管 2026-11-02；人可改）：纯手写 Rust**（rustbe 的 `native`，线程 tc 开）。待证实的更省电方案：手写 + Accelerate（`native-blas`）。苹果侧备选：BNNS Graph + GRU 展开 | 连续跑：手写 p50 0.088 ms（ORT 的 4.4 倍快，0 分配，134 dB）；BNNS 展开版 0.155 ms（2.5 倍快，0 分配，134 dB）。实时节奏下：手写 + Accelerate p50 0.43 ms、功率最低。⚠️ 取舍：手写 + Accelerate 每帧 **11 次 malloc**（Accelerate 内部，rustbe `--count-malloc` 实测），过不了 `BE-RT-ALLOC`（0），只能像 ORT 一样登记豁免；纯手写和 BNNS 是 0。选纯手写的理由：10 mW 的差在噪声里，而 `BE-RT-ALLOC` 是挡线，实时线程里每帧 11 次 malloc 有抢锁卡顿的风险。**翻盘条件**（两条都满足才改选 Accelerate 版）：① 交替重复 ≥ 3 轮后，Accelerate 版仍显著更省电；② 查明那 11 次分配出在哪个调用，并能换成不分配的接口（如 `vDSP_mmul` 代替 `cblas_sgemm`，或预分配工作区）——这一条转 rustbe 查 | 纯手写 · rt 81 mW、手写 + Accelerate · rt 71 mW、BNNS · rt 97 mW（单次、噪声边缘，待重复）；`BE-IMPACT` 待重测 |
-| FE-M（备选） | 暂无（继续 ORT） | 转不了 Core ML（图里有 `view_as_complex`）；手写 Rust 本轮不做；ORT 超 D69 上限 | 待人定是否留在候选里 |
-| DFN3 `_ll`（015 候选） | **不进实时链**；下一轮盲听用**离线处理** | 算力下界（三图 S=1、单线程、连续跑）0.61 ms / 10 ms 帧 ≈ 6.1% 个核，是推理挡线 1.0% 的 6 倍；苹果最快后端提速 2.5 倍也约 2.4%（`dfn3ll_probe.json`）。流式重导出（把 GRU 状态做成输入输出）约 1 天，不做【AI 定，大总管同意】 | 已定 |
-| 认人 ECAPA-TDNN512 | 待测（ORT vs BNNS，名额里一起跑，`apple-rs/tools/ecapa.sh`） | 每 0.5 s 一次、约 6 ms（含 fbank 与打分），单项 ≈ 1.2% 个核（exp005），D69 下要降约 4–8 倍 | 待测 |
-| 场景 MLP · VAD | 不换 | 已是纯 Rust 零分配，占用在分摊内（`standard.md` §6.1） | — |
-| 本机评分 / 调节模型（D52） | 推理另定；**本机微调用 MLX** | MLX 唯一有自动求导（`notes/mlx.md` §5），不在实时回路，每帧分配多不要紧 | 等 018 定结构 |
+| FE-M（备选） | 暂无（继续 ORT） | 转不了 Core ML；手写本轮不做 | 待人定是否留在候选里 |
+| DFN3 `_ll`（015 候选） | **不进实时链**；下一轮盲听用离线处理 | 算力下界：三张子图 S=1、单线程、连续跑合计 0.61 ms / 10 ms 帧 ≈ 6.1% 个核（Python 调 ORT，只作估算，`apple/results/20261102-173000-b2/dfn3ll_probe.json`）；再算上实时节奏的 5–7 倍更不可能。流式重导出约 1 天，不做 | 已定（AI，大总管同意） |
+| 认人 ECAPA-TDNN512 | 不换后端；先降频率（只在有人声时跑等） | 苹果路转不出来：onnx2torch 补两处后，coremltools 不支持 `prod` 算子（build 20261102-181700-ecapa） | 转交大总管 |
+| 场景 MLP · VAD | 不换 | 已是纯 Rust 零分配 | — |
+| 本机评分 / 调节模型（D52） | 推理另定；**本机微调用 MLX** | MLX 唯一有自动求导（`notes/mlx.md` §5），不在实时回路 | 等 018 定结构 |
 
 **苹果引擎各条路的判定**（`BE-EXHAUST` 矩阵见 `standard.md` §7.1）：
-- Core ML：所有算子都落在 CPU（`MLComputePlan`，三种计算单元设置都一样），GPU / 神经引擎对 GTCRN 用不上；每帧约 300 次 malloc，过不了 `BE-RT-ALLOC`；fp16 只有 54 dB，过不了 `BE-PARITY`。**不用**。
-- BNNS Graph：见上，**苹果侧唯一可用**。要 macOS 15，在 D77 定的最低系统之内，不再冲突。
-- MLX：Python 调 5.7–6.2 ms（ORT 的 15 倍慢），每帧 7–10 万次分配。**不做实时推理**，只做本机微调。
-- 神经引擎 / GPU：对这么小、带 GRU 的逐帧模型没有收益；Metal 手写核不写（每帧派发的固定开销已大于手写 Rust 整帧，`notes/mlx.md` §2）。
+- **Core ML：不用。** 所有算子都落在 CPU（`MLComputePlan`，cpu / gpu / ane 三种设置都一样），GPU 和神经引擎用不上；每帧约 300 次 malloc；fp16 只有 54 dB，过不了 `BE-PARITY`。
+- **BNNS Graph：苹果侧唯一能用的**（见上）。要 macOS 15，在 D77 之内。
+- **MLX：不做实时推理。** Python 调 5.7–6.2 ms（ORT 的约 15 倍慢），每帧 7–10 万次分配；只做本机微调。
+- **神经引擎 / GPU / Metal 手写核：不做。** 对这么小、带 GRU 的逐帧模型没有收益（每帧派发的固定开销已大于手写整帧，`notes/mlx.md` §2）。
 
 ## 3. 绕过了哪些坑（复现时必看）
 
-- coremltools 9.0 把**分组 ConvTranspose2d（groups=2）转错**：第 0 帧就差 0.77。逐块对拍定位到解码器第 4 层（差 3.46），拆成每组一个再拼接后对 ORT 差 2.4e-7（`apple/convert_gtcrn.py` 的 `SplitConvT`）。**以后任何经 coremltools 的模型都要逐块对拍。**
-- coremltools 在 Python 3.13 / numpy 2.5 上会崩或报错：转换用单独的 3.12 venv（`_tmp/exp010-venv-ct`）加 `apple/ct_compat.py`。
-- GRU 要在 PyTorch 里先手动展开（`UnrolledGRU`）：coremltools 会把 GRU 翻成逐步循环，展开后 BNNS 快 2.2 倍、Core ML 快 1.9 倍，输出不变（对 torch 差 3.6e-7）。
+- **coremltools 9.0 会把 GTCRN 转错**，第 0 帧对 ORT 差 0.77。原因有两层：先把缓存的原地切片写回改成拼接，差到 0.49；再逐块对拍，定位到解码器第 4 层的分组 ConvTranspose2d（groups=2，单块差 3.46），拆成每组一个再拼接后，对 ORT 差 2.4e-7（`apple/convert_gtcrn.py` 的 `SplitConvT` 与原地写回替换）。**以后任何经 coremltools 的模型都要逐块对拍。**
+- coremltools 9.0 在 Python 3.13 / numpy 2.5 上会崩或报错：转换用单独的 3.12 venv（主目录 `_tmp/exp010-venv-ct`）加 `apple/ct_compat.py`（只把单元素数组压成标量，数值不变）。
+- GRU 要在 PyTorch 里先手动展开（`UnrolledGRU`）：coremltools 会把 GRU 翻成逐步循环。展开后 BNNS 快 2.2 倍、Core ML 快 1.9 倍，对 torch 原版差 3.6e-7。
 - 有状态模型（`MLState`）coremltools 转不出来（`No matching select or slice.`）；缓存走显式输入输出。
 
-## 4. 实时线程能不能直接调 · 线程设置 · 耗电
+## 4. 实时线程 · 线程设置 · 耗电
 
-**直接调**：手写 Rust、BNNS Graph 每帧 0 次分配（全进程 malloc 钩子，自检通过），可以在推理线程直接调；RTSan 豁免表还没建（`BE-RT-SAN` 待测）。Core ML 每帧约 300 次 malloc（ORT 1557 次），只能登记豁免，不建议用。
+**能不能直接调**：纯手写、BNNS Graph 每帧 0 次分配（全进程 malloc 钩子，自检通过），可以在推理线程直接调；RTSan 豁免表还没建（`BE-RT-SAN` 待测）。Core ML 每帧约 300 次 malloc（ORT 1557 次，rustbe 实测），只能登记豁免。自建工作组区间的那几段每帧有约 0.012 次 malloc（区间 start / finish 偶发分配，未查是哪一个），严格说也过不了 `BE-RT-ALLOC`。
 
-**线程设置 × 耗电**（人用 sudo 跑，`exp010…/apple/results/20261102-183322-rt/summary.md`；单次 60 s，噪声约 ±30–40 mW）：
+**线程设置 × 耗电**（人用 sudo 跑，只有 powermetrics 是 root；`apple/results/20261102-183322-rt/summary.md`）。⚠️ 单次 60 s；空闲基线 CPU 111 mW，比好几行都高，所以下表给的是**绝对 CPU 功率**，只能比相对高低；差 < 30 mW 的不算有差别：
 
-| 设置 | p50 | max | 核占用 | CPU 功率 |
-|---|---|---|---|---|
-| BNNS · rt（D74 默认） | 0.80 ms | 1.41 | 4.8% | 97 mW |
-| BNNS · rt + 自建工作组区间（截止 1–3 ms） | 0.19–0.22 ms | 0.27–0.33 | 1.3–1.5% | 123–138 mW |
-| BNNS · 帧间忙等（只排查） | 0.16 ms | 0.61 | 99.9% | 4199 mW |
-| 手写 Rust · rt | 0.60 ms | 0.66 | 3.5% | 81 mW |
-| 手写 Rust · ui | 0.60 ms | 2.69 | 3.5% | 104 mW |
-| **手写 + Accelerate · rt** | 0.43 ms | 0.56 | 2.6% | **71 mW** |
+| 设置 | p50 | p99.9 | max | 核占用 | CPU 功率 |
+|---|---|---|---|---|---|
+| BNNS · rt（D74 默认） | 0.80 ms | 1.34 | 1.41 | 4.8% | 97 mW |
+| BNNS · rt + 自建工作组区间（截止 1–3 ms） | 0.19–0.22 ms | 0.23–0.28 | 0.27–0.33 | 1.3–1.5% | 123–138 mW |
+| BNNS · rt，只把截止报紧到 1 ms | 0.81 ms | 1.25 | 1.30 | 4.8% | 124 mW |
+| BNNS · 帧间忙等（只排查） | 0.16 ms | 0.42 | 0.61 | 99.9% | 4199 mW |
+| 纯手写 · rt | 0.60 ms | 0.65 | 0.66 | 3.5% | 81 mW |
+| 纯手写 · ui | 0.60 ms | 0.72 | 2.69 | 3.5% | 104 mW |
+| 手写 + Accelerate · rt | 0.43 ms | 0.52 | 0.56 | 2.6% | 71 mW |
 
-结论（强度：单次、噪声大）：
-1. **「实时节奏慢 5 倍」是帧间降频**：忙等把 p50 拉回连续跑的水平，但耗电是 30–40 倍。产品里不能忙等。
-2. **自建工作组区间（`AudioWorkIntervalCreate` + 每帧 start / finish）能把速度拉回 4 倍、核占用降到约 1.4%，但功率高 25–40 mW。** 提速要花电，所以**没有推翻 D74**（接受低频、工作组默认不加）。如果以后要压 `BE-IMPACT` 或尾部，它是现成的旋钮。
-3. **目前功率最低的是手写 + Accelerate · rt（71 mW）**，其次手写 · rt（81 mW）、BNNS · rt（97 mW）。差值在噪声边缘，`BE-POWER` 要交替重复 3 轮以上才能定排名（`standard.md` 已注明）。Accelerate 版每帧 11 次 malloc，过不了 `BE-RT-ALLOC`，所以默认选纯手写（第 2 节）。
-4. 所有设置 10 分钟 / 60 s 内超 3 ms 的帧都是 0（`BE-DEADLINE` 这一段都过；第 1 条风险里 BNNS 那次 11.8 ms 是在 qos ui 下）。
+读法（强度：单次、噪声大、自审已核数）：
+1. **慢 5–7 倍是帧间降频**：忙等就快回来，但耗电 31–59 倍。产品里不能忙等。
+2. **自建工作组区间**（`AudioWorkIntervalCreate`，每帧报自己的截止期）能把 BNNS 拉回约 4 倍快，但 CPU 功率高 25–40 mW；只把 time-constraint 的截止报紧没用。提速要花电，所以**没有推翻 D74**（接受低频、工作组默认不加）。以后要压尾部或 `BE-IMPACT`，它是现成的旋钮。
+3. **纯手写 ui → rt**：p50 不变，最大一帧从 2.69 降到 0.66 ms，支持 D74「time-constraint 默认开」。
+4. **超 3 ms 的帧**：这一批 9 种设置、各 60 s 都是 0。但 `BE-DEADLINE` 要 10 分钟：rt 下还没跑过 10 分钟；ui 下 10 分钟，BNNS 最大 11.8 ms，纯手写 6 帧、Accelerate 版 1 帧超 3 ms（`apple/results/20261102-173000-b2/summary.md`、`notes/rustbe-numbers.md`）。
 
 ## 5. 怎么接进代码（接口建议；结构细节归 Rust 骨架线）
 
 依据 D71（人定：频谱前端每帧只算一次、各模型共用，代码复杂度低）。下面只写推理后端这一侧要满足什么，crate 怎么拆、谁持有前端，由另一位大总管的 Rust 骨架线定。
 
-1. **后端不做 STFT。** 前端每 hop 算一次频谱（sqrt-Hann 512 / 256，`vdn_dsp::StreamingStft`），GTCRN、修音链频谱节点、场景特征都吃这一份。后端的输入是「已算好的一帧频谱」（GTCRN：re[257] + im[257]），输出是增强后的频谱或掩码。本次所有基准正是这个口径：只计推理调用，不含 STFT（`standard.md` §3）。
-2. **会自带 STFT 的模型要换成频谱进、频谱出的版本。** FE-M 今天用的 wav2wav 图把 STFT / iSTFT 包在图里（`notes/our-models.md` 第 2 行），违背 D71；它恰好也是转不了 Core ML 的原因（`view_as_complex`）。FE-M 若留在候选里，应换官方 spec2spec 版（`fastenhancer_m.spec.onnx`，009 decision:73），由共用前端喂频谱。
-3. **认人不吃这份频谱**：ECAPA 吃的是 80 维 fbank（25 ms 窗、10 ms 移，Kaldi 口径），窗长、移步都和降噪的 STFT 不同，不能直接共用；它在判断线程里自己算 fbank（`src/speaker/src/fbank.rs`）。要不要从共用前端派生 fbank，交 Rust 骨架线判断。
-4. **后端 trait 最小面（建议）**：
-   - 非实时线程：`open(model) -> Self`，并预热；
-   - 实时线程：`run(&mut self, input: &[f32], output: &mut [f32])`，零分配、不加锁；缓存由后端自己持有（A/B 两组换指针，`apple-rs/src/bnns.rs`）；
-   - `reset()`：缓存清零（换模型、静音过长时用）。
-   这和规约里的 `Model` 接口（一个 hop 进、一个 hop 出）的差别只在「进出的是频谱，不是波形」。
-5. **实现落点（建议）**：手写 GTCRN 直接作为一个模型实现，不经推理库；ORT 留给 FE-M / 认人（`vdn-backend-ort`）；BNNS Graph 作苹果侧备选（`vdn-backend-bnns`，C FFI，链接名带 `_v2`）。BNNS 吃 `.mlmodelc`，由 `apple/convert_gtcrn.py` 加 `compile` 子命令生成。
-6. RTSan 豁免表、`no_alloc` 测试要按新后端重建（`notes/our-models.md` 对 vdn 的含义第 5 条）。
+1. **后端不做 STFT。** 前端每 hop 算一次频谱（sqrt-Hann 512 / 256，`vdn_dsp::StreamingStft`），GTCRN、修音链频谱节点、场景特征都吃这一份。后端的输入是「已算好的一帧频谱」（GTCRN：re[257] + im[257]），输出是增强后的频谱。本次所有基准都是这个口径：只计推理调用，不含 STFT（`standard.md` §3）。
+2. **自带 STFT 的模型要换成频谱进、频谱出的版本。** FE-M 今天用的 wav2wav 图把 STFT / iSTFT 包在图里（`notes/our-models.md` 第 2 行），违背 D71，也正是它转不了 Core ML 的原因。FE-M 若留在候选里，应换官方 spec2spec 版（`fastenhancer_m.spec.onnx`），由共用前端喂频谱。
+3. **认人不吃这份频谱**：ECAPA 吃 80 维 fbank（25 ms 窗、10 ms 移），窗长、移步都和降噪的 STFT 不同；它在判断线程里自己算 fbank（`src/speaker/src/fbank.rs`）。要不要从共用前端派生，交 Rust 骨架线判断。
+4. **后端 trait 最小面（建议）**：非实时线程 `open(model) -> Self` 并预热；实时线程 `run(&mut self, input: &[f32], output: &mut [f32])`，零分配、不加锁，缓存由后端自己持有（A/B 两组换指针，见 `apple-rs/src/bnns.rs`）；`reset()` 把缓存清零。和规约里的 `Model` 接口的差别只在「进出的是频谱，不是波形」。
+5. **实现落点（建议）**：纯手写 GTCRN 直接作为一个模型实现，不经推理库；ORT 留给 FE-M / 认人（`vdn-backend-ort`）；BNNS Graph 作苹果侧备选（`vdn-backend-bnns`，C FFI，链接名带 `_v2`，吃 `.mlmodelc`，由 `apple/convert_gtcrn.py` 加 `compile` 子命令生成）。线程设置按 D74：time-constraint 开；工作组区间留作可选旋钮。
+6. RTSan 豁免表、`no_alloc` 测试要按新后端重建。
 
 ## 6. 对延迟账的影响
 
-- 延迟账里没有单列推理耗时，它被「跨进程环余量 3.00 ms」盖住（`docs/research/009_rust-ecosystem/decision.md:62`）。模型带来的 32 ms 是 STFT 窗长决定的算法延迟，换后端改不了。
-- 所以换后端**不减延迟账**；收益在 CPU / 耗电（D69 · D70）和尾部。注意第 1 条风险：实时节奏下 BNNS 最大一帧 11.8 ms，已经超过 3 ms 余量，**按现状会出现送原声的帧**。
-- 最低系统：D77 定为 macOS 15，BNNS Graph / `MLState` / `FastPrediction` 都不再有系统版本冲突（原待拍板 2-8 随之解决）。默认后端仍是纯手写（AI 定）。
+- 延迟账里没有单列推理耗时，它被「跨进程环余量 3.00 ms」盖住（`docs/research/009_rust-ecosystem/decision.md:62`）。模型带来的 32 ms 是 STFT 窗长决定的算法延迟，换后端改不了。所以换后端**不减延迟账**，收益在耗电（D70 · D75）和尾部。
+- 尾部：在 D74 默认（rt）下，60 s 内所有设置的最大一帧都 ≤ 1.41 ms，在 3 ms 余量之内；10 分钟长跑只在 ui 下跑过，那时纯手写有 6 帧、BNNS 至少 1 帧超过 3 ms（会送原声）。rt 下的 10 分钟长跑待测。
+- 最低系统：D77 定为 macOS 15，BNNS Graph / `MLState` 都不再有系统版本冲突（原待拍板 2-8 随之解决）。
 
-## 7. 还没做的
+## 7. 还没做的（需要名额或人）
 
-- 实时线程策略对照（要名额，约 18 分钟）· `BE-POWER` 耗电（要人跑 sudo）· `BE-RT-SAN` · `BE-SIZE` 实测（ORT 静态库增量）· 手写 Rust 与 ORT 按实时节奏重测（rustbe 在跑）· 对抗自审一轮。
+- **要名额**：`BE-POWER` 重复 3 轮（v2 测法，人跑 sudo，约 30 分钟）· `BE-IMPACT` 重测（v2：性能核个数个线程、15 对、成对差、要超过噪声底）· `BE-DEADLINE` 在 rt 下 10 分钟（纯手写 · 手写 + Accelerate · BNNS）· `BE-SIZE`（ORT 静态库增量）· `BE-MEM`（纯手写版的常驻内存）· `BE-RT-SAN`。
+- **自审留下的 P2（不挡这一版）**：逐值一致的「反向对照」（每帧清零缓存时必须判为不一致，用来证明对拍真能抓到缓存出错）· 分配计数器的自检补 calloc / realloc / posix_memalign / 大块分配 / C++ new · Core ML 那约 300 次 malloc 里有没有我们自己包装的份（加一帧「空 autoreleasepool」基线）· `dfn3ll_probe.py` 解包会覆盖已有目录 · FE-M 在 pace 为 0 时 time-constraint 周期取了 16 ms（应 10 ms）。
+- **转交**：认人降频（大总管）· native-blas 的 11 次分配（rustbe）· FE-M 是否留在候选里（人）· engine 送原声分支不检查原声里的 NaN（大总管，审查顺带发现，不属 019）。
