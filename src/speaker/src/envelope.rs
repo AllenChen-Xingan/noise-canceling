@@ -27,17 +27,46 @@ pub struct EnvelopeParams {
 }
 
 impl EnvelopeParams {
-    /// 与 p1 默认对齐（open −6、hangover 150 ms、release 300 ms、下限 −12），只换判据。
+    /// 与 p1（engine `SafetyConfig`）默认对齐，只换判据。数值取自 `vdn_types::desc`，与 engine 同一条描述。
     pub fn p1_like(sr: f32) -> Self {
+        use vdn_types::desc::*;
         Self {
             sr,
-            floor_db: -12.0,
-            open_db: -6.0,
-            attack_s: 0.002,
-            release_s: 0.3,
-            hangover_s: 0.15,
-            vad_on: 0.5,
-            vad_off: 0.35,
+            floor_db: FLOOR_DB.default,
+            open_db: OPEN_DB.default,
+            attack_s: ATTACK_S.default,
+            release_s: RELEASE_S.default,
+            hangover_s: HANGOVER_S.default,
+            vad_on: VAD_ON.default,
+            vad_off: VAD_OFF.default,
+        }
+    }
+
+    /// 每个可调参数都在描述表范围内（越界拒收）。
+    pub fn validate(&self) -> Result<(), vdn_types::RangeError> {
+        use vdn_types::desc::*;
+        FLOOR_DB.check(self.floor_db)?;
+        OPEN_DB.check(self.open_db)?;
+        ATTACK_S.check(self.attack_s)?;
+        RELEASE_S.check(self.release_s)?;
+        HANGOVER_S.check(self.hangover_s)?;
+        VAD_ON.check(self.vad_on)?;
+        VAD_OFF.check(self.vad_off)?;
+        Ok(())
+    }
+
+    /// 夹进描述表范围（NaN 当默认值）；两个包络级的 `new` 先夹再用。
+    pub fn clamped(self) -> Self {
+        use vdn_types::desc::*;
+        Self {
+            sr: self.sr,
+            floor_db: FLOOR_DB.clamp(self.floor_db),
+            open_db: OPEN_DB.clamp(self.open_db),
+            attack_s: ATTACK_S.clamp(self.attack_s),
+            release_s: RELEASE_S.clamp(self.release_s),
+            hangover_s: HANGOVER_S.clamp(self.hangover_s),
+            vad_on: VAD_ON.clamp(self.vad_on),
+            vad_off: VAD_OFF.clamp(self.vad_off),
         }
     }
 }
@@ -59,6 +88,7 @@ pub struct VadEnvelopeStage {
 
 impl VadEnvelopeStage {
     pub fn new(p: EnvelopeParams) -> Self {
+        let p = p.clamped();
         let closed = db_to_lin(p.floor_db);
         let open = db_to_lin(p.open_db).max(closed);
         Self {
@@ -153,6 +183,7 @@ pub struct EnergyEnvelopeStage {
 
 impl EnergyEnvelopeStage {
     pub fn new(p: EnvelopeParams, max_hop: usize) -> Self {
+        let p = p.clamped();
         let closed = db_to_lin(p.floor_db);
         Self {
             env: OpenCloseEnvelope::new(OpenCloseParams {
