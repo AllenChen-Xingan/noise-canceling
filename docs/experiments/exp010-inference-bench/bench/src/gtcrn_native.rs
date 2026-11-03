@@ -312,6 +312,17 @@ impl Point {
         })
     }
 
+    fn cost(&self, f: usize) -> Cost {
+        let (ci, co, f) = (self.cin as u64, self.cout as u64, f as u64);
+        Cost {
+            macs: co * ci * f,
+            w_bytes: (co * ci + co) * F32B,
+            io_bytes: (ci + co) * f * F32B,
+            chain_fma: clog2(self.cin) + 1,
+            ..Cost::default()
+        }
+    }
+
     fn run(&self, x: &[f32], y: &mut [f32], f: usize) {
         if blas() {
             for o in 0..self.cout {
