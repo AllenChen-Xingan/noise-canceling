@@ -575,6 +575,48 @@ mod tests {
         assert!(v.pass, "{v}");
     }
 
+    /// 直通时欠载用延迟原声补上，相关照样 1.0——V1 必须单独判欠载（补测揪出的那类问题）
+    #[test]
+    fn v1_fails_on_underrun_even_with_perfect_correlation() {
+        let l = 2208;
+        let x = test_tone(RATE, 48_000, 0);
+        let mut y = vec![0.0; l];
+        y.extend_from_slice(&x[..48_000 - l]);
+        let mut r = ChainRun {
+            x,
+            y,
+            l_total: l,
+            l_pipe: 768,
+            lead: 1440,
+            denoise_block: 96,
+            fwd: ForwarderStats::default(),
+            hal_underrun_blocks: 0,
+            hal_underrun_samples: 0,
+            killed_at: None,
+            worker: vdn_denoised::WorkerStats::default(),
+            warmup: vdn_denoised::Warmup::default(),
+            hal_offset: 144,
+            rt_failures: 0,
+        };
+        assert!(judge_v1(&r).pass);
+        r.fwd.proc_underrun = 96;
+        let v = judge_v1(&r);
+        assert!(!v.pass, "处理后欠载 96 还判过：{v}");
+        r.fwd.proc_underrun = 0;
+        r.hal_underrun_samples = 1;
+        assert!(!judge_v1(&r).pass);
+    }
+
+    /// lead 小于一块 IO：chain-test 一开始就报错，不跑
+    #[test]
+    fn chain_refuses_lead_below_io_block() {
+        let mut o = opts(0.3, None, "lead");
+        o.lead = 288; // IO 块 480
+        let e = run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).err().unwrap();
+        assert!(e.contains("小于 IO 块长"), "{e}");
+        assert!(matches!(Bus::open(&o.bus_name), Err(vdn_shm::ShmError::NotFound)), "报错前不该建总线");
+    }
+
     #[test]
     fn judge_file_on_synthetic() {
         let x = test_tone(RATE, 48_000, 0);
