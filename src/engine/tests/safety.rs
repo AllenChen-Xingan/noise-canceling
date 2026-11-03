@@ -160,3 +160,42 @@ fn apply_params_maps_policy_output() {
     c.apply_params(&p);
     assert_eq!((c.floor_db, c.detect_db), (-20.0, 12.0));
 }
+
+/// 数值默认值的正本是 `vdn_types::desc`：SafetyConfig 的默认与表逐条相同，且与 ParamSet 的默认一致（同一条描述）。
+#[test]
+fn safety_defaults_follow_desc_table() {
+    use vdn_types::desc::*;
+    let c = SafetyConfig::default();
+    let pairs = [
+        (c.max_abs, &ENGINE_MAX_ABS),
+        (c.recover_hold_s, &ENGINE_RECOVER_HOLD_S),
+        (c.crossfade_s, &ENGINE_CROSSFADE_S),
+        (c.floor_db, &FLOOR_DB),
+        (c.open_db, &OPEN_DB),
+        (c.attack_s, &ATTACK_S),
+        (c.release_s, &RELEASE_S),
+        (c.hangover_s, &HANGOVER_S),
+        (c.detect_db, &DETECT_DB),
+    ];
+    for (v, d) in pairs {
+        assert_eq!(v, d.default, "{}", d.key);
+    }
+    let mut from_set = SafetyConfig::off();
+    from_set.apply_params(&vdn_types::ParamSet::DEFAULT);
+    assert_eq!(
+        (
+            from_set.floor_db,
+            from_set.open_db,
+            from_set.detect_db,
+            from_set.release_s,
+            from_set.hangover_s
+        ),
+        (
+            c.floor_db,
+            c.open_db,
+            c.detect_db,
+            c.release_s,
+            c.hangover_s
+        )
+    );
+}
