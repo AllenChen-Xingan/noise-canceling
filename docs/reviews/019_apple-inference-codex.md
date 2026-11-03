@@ -1,7 +1,7 @@
 # 评审 019 · 推理后端总方案与判据（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/019_apple-inference/decision.md` · `standard.md`，依据含 `docs/experiments/exp010-inference-bench/apple-rs/` 的 `src/{main,alloc,bnns,coreml,rt}.rs` 与 `tools/{power_parse.py,impact.sh,rt-matrix.sh}`。**最新一轮：第 4 轮（2026-11-02）· 总评「修改」· 待第 5 轮**。
-> 累计处理：P1×11、P2×16 逐条回源码核实，属实 27、驳回 0、无法核实 0；引用抽查「不符」1 条（已改）。
+> 对象：`docs/research/019_apple-inference/decision.md` · `standard.md`，依据含 `docs/experiments/exp010-inference-bench/apple-rs/` 的 `src/{main,alloc,bnns,coreml,rt}.rs` 与 `tools/{power_parse.py,impact.sh,rt-matrix.sh}`。**最新一轮：第 5 轮（2026-11-02）· 总评「修改」· 待第 6 轮**。
+> 累计处理：P1×12、P2×19 逐条回源码核实，属实 31、驳回 0、无法核实 0；引用抽查「不符」1 条（已改）。
 > 送 codex 之前已做同模型 3 视角只读自审一轮（数字核对 · 结论强度 · 测量口径），其发现已先改完；那一轮的 P2 留在 `decision.md` §7。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -145,3 +145,34 @@
 ### 是否再审
 
 有 P1 → 改完开第 5 轮。
+
+## 第 5 轮（2026-11-02）· 总评「修改」
+
+原文：`_tmp/codex-019/decision-codex-5.md`（不入库）。effort medium（`result: P0×0 P1×1 P2×3 P3×0`）。日志头 `model: gpt-6-astra` · `sandbox: read-only`。依据加了 rustbe 的 `verify1/cases.jsonl` 与 `blas1/malloc.jsonl` 副本。
+上一轮处理的验证：codex 核实属实 7 条（verify1 里 native 整数 0、撤回「零分配即可直接调」、BNNS 打开即编译已计入、impact 有效配对不足不判过、Python 比较已改「未获准」、延迟账 4 ms、power_parse 保守窗口）。
+本轮 P0/P1：1 条 · 停止线：未满足
+
+- **P1｜power_parse.py:69 缺计时窗的结果仍进耗电排名**（第 5 轮 #1）
+  - 核实：属实。无窗口时退回整段平均（含加载、预热），却按计时帧数折算；rustbe 的 bench 输出确实没有窗口字段。
+  - 处理：没有 `win_start_unix` 或 `wall_s` 的行标 `ranked: false`，只展示、不进 `summary`，另列 `unranked_no_window`；`rt-matrix.sh` 遇到缺窗口字段的输出会在日志里警告。rustbe 的 bench 要加这三个字段，记为转交（rustbe 会话已结束，交大总管）。
+- **P2｜decision.md:40 BNNS 仍写「0 分配」「唯一能用」**（第 5 轮 #2）
+  - 处理：改为「显示 0.000 / 帧，`BE-RT-ALLOC` 待整数验证」，「唯一能用」改为「候选」；`standard.md` §7.1 同步。
+- **P2｜decision.md:91「本次所有基准都不含 STFT」不属实**（第 5 轮 #3）
+  - 处理：限定为只对 GTCRN 成立；FE-M 现在是 wav2wav 端到端口径，换 spec2spec 后要按频谱口径重测。
+- **P2｜standard.md:77 要求每个 CPU 数标「性能核」，与配置、证据冲突**（第 5 轮 #4）
+  - 处理：默认测法改为 D74 的 `--qos rt`；记录实际策略；没观测核驻留的一律标「核类型未知」。
+
+本轮之间另做（大总管定 / 新规则）：
+- 手写 + Accelerate：cblas / vDSP 路线写成「已不采用」（每帧 11 次分配，出处 `cblas_sgemm → APL_sgemm_QR → posix_memalign`），BNNS 路线待证实（大总管定）。
+- `BE-RT-ALLOC` 改引 rustbe `results/20261102-alloc6k/malloc.jsonl`：native 连续 6000 帧 `process_allocs_total` = 0（ORT 9 342 000）。
+- 字段交叉校验（CLAUDE.md 第五节第 5 条）：新增 `apple-rs/tests/fields.rs`，以 rustbe 的 `../bench/src/main.rs` 为唯一真相源比对字段，缺 / 多（未登记）即失败；用真实文件跑通过，往副本里塞假字段会失败。对齐时发现同名不同义：apple-rs 原来的 `late_*` 实为 rustbe 的 `release_*`，已改为 rustbe 的名字与含义，并补 `open_to_warm_ms`。
+- 加测试（CLAUDE.md 第五节第 6 条）：`main.rs` 单元测试 4 条（JSON 非有限值、分位数口径、GTCRN 布局往返、形状一致）；`tests/test_power_parse.py` 4 条（计时窗向内收与基线相减、缺项作废、覆盖不足作废、无窗口不排名）。都已跑过、通过。
+
+### 引用抽查
+
+- 「不符」：无。「核实属实」：7 条。
+- 无法核实：`MLComputePlan` 全落 CPU 的原始 `plan.jsonl` 不在许可清单 → 第 6 轮加进依据。
+
+### 是否再审
+
+有 P1 → 改完开第 6 轮。

@@ -105,4 +105,4 @@
 
 - **要名额**：`BE-POWER` 重复 3 轮、含同场 ORT（v2 测法，人跑 sudo，约 35 分钟）· `BE-IMPACT` 重测（v2：性能核个数个线程、15 对、成对差、要超过噪声底）· `BE-DEADLINE` 在 rt 下 10 分钟（纯手写 · 手写 + Accelerate · BNNS）· `BE-SIZE`（ORT 静态库增量）· `BE-MEM`（纯手写版的常驻内存）· `BE-RT-SAN`。
 - **自审留下的 P2（不挡这一版）**：逐值一致的「反向对照」（每帧清零缓存时必须判为不一致，用来证明对拍真能抓到缓存出错）· 分配计数器的自检补 calloc / realloc / posix_memalign / 大块分配 / C++ new · Core ML 那约 300 次 malloc 里有没有我们自己包装的份（加一帧「空 autoreleasepool」基线）· `dfn3ll_probe.py` 解包会覆盖已有目录 · FE-M 在 pace 为 0 时 time-constraint 周期取了 16 ms（应 10 ms）。
-- **转交**：认人降频（大总管）· native-blas 的 11 次分配（rustbe）· FE-M 是否留在候选里（人）· engine 送原声分支不检查原声里的 NaN（大总管，审查顺带发现，不属 019）。
+- **转交**：rustbe 的 bench 要输出 `win_start_unix` / `win_end_unix` / `wall_s`，它那几行耗电才能进排名（rustbe 会话已结束，交大总管）· apple-rs 与 rustbe bench 合成一个共用 crate（现在靠 `apple-rs/tests/fields.rs` 交叉校验字段，大总管）· 认人降频（大总管）· native-blas 的 11 次分配（rustbe）· FE-M 是否留在候选里（人）· engine 送原声分支不检查原声里的 NaN（大总管，审查顺带发现，不属 019）。
