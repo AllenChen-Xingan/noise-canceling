@@ -536,32 +536,15 @@ fn arg_usize(args: &[String], flag: &str, d: usize) -> usize {
         .unwrap_or(d)
 }
 
-fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
-    let (kind, path, wav) = (&args[0], Path::new(&args[1]), Path::new(&args[2]));
-    let frames = arg_usize(args, "--frames", 6000);
-    let warm = arg_usize(args, "--warmup", 200);
-    let pace: f64 = arg_str(args, "--pace-ms", "0").parse()?;
-    // 入口校验（codex 第 5 轮 #1 #2）：计时帧数 > 0；节奏必须有限、非负，且不超过 10 秒一帧
-    if frames == 0 {
-        return Err("--frames 必须 > 0".into());
-    }
-    let total = frames
-        .checked_add(warm)
-        .and_then(|v| v.checked_add(1))
-        .ok_or("--frames + --warmup 溢出")?;
-    if !pace.is_finite() || !(0.0..=10_000.0).contains(&pace) {
-        return Err(format!("--pace-ms {pace} 无效：要有限、非负、≤ 10000").into());
-    }
-    let qos = arg_str(args, "--qos", "ui");
-    // 计时线程的调度等级：ui = QOS_CLASS_USER_INTERACTIVE（默认，尽量留在性能核；实时音频线程只会更高），
-    // default = 不设。审稿发现不设时 tract 的 p50 在一次运行里分两档。
+/// 计时线程的调度等级：ui = QOS_CLASS_USER_INTERACTIVE（默认，尽量留在性能核；实时音频线程只会更高），
+/// rt = THREAD_TIME_CONSTRAINT_POLICY（period = 帧长、computation 1 ms、constraint 3 ms，可抢占），
+/// bg = QOS_CLASS_BACKGROUND（系统倾向放到能效核，研究 020 量能效核用），default = 不设。
+/// 审稿发现不设时 tract 的 p50 在一次运行里分两档。
+pub(crate) fn set_thread_qos(qos: &str, frame_ms: f64) -> Result<(), Err> {
     if qos == "rt" {
-        // 实时线程策略（THREAD_TIME_CONSTRAINT_POLICY），和 Core Audio IO 线程同类。
-        // 参数按 16 ms 一帧：period = 帧长，computation = 1 ms，constraint = 3 ms（延迟账的余量），可抢占
         let mut tb = libc::mach_timebase_info { numer: 0, denom: 0 };
         unsafe { libc::mach_timebase_info(&mut tb) };
         let ms = |v: f64| (v * 1e6 * tb.denom as f64 / tb.numer as f64) as u32;
-        let frame_ms = if model == ModelId::Gtcrn { 16.0 } else { 10.0 };
         let mut pol = libc::thread_time_constraint_policy {
             period: ms(frame_ms),
             computation: ms(1.0),
@@ -579,16 +562,40 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         if r != 0 {
             return Err(format!("设实时线程策略失败：{r}").into());
         }
-    } else if qos == "ui" {
-        let r = unsafe {
-            libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE, 0)
+    } else if qos == "ui" || qos == "bg" {
+        let class = if qos == "ui" {
+            libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE
+        } else {
+            libc::qos_class_t::QOS_CLASS_BACKGROUND
         };
+        let r = unsafe { libc::pthread_set_qos_class_self_np(class, 0) };
         if r != 0 {
             return Err(format!("设 QoS 失败：{r}").into());
         }
     } else if qos != "default" {
-        return Err("--qos 只收 ui / rt / default".into());
+        return Err("--qos 只收 ui / rt / bg / default".into());
     }
+    Ok(())
+}
+
+fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
+    let (kind, path, wav) = (&args[0], Path::new(&args[1]), Path::new(&args[2]));
+    let frames = arg_usize(args, "--frames", 6000);
+    let warm = arg_usize(args, "--warmup", 200);
+    let pace: f64 = arg_str(args, "--pace-ms", "0").parse()?;
+    // 入口校验（codex 第 5 轮 #1 #2）：计时帧数 > 0；节奏必须有限、非负，且不超过 10 秒一帧
+    if frames == 0 {
+        return Err("--frames 必须 > 0".into());
+    }
+    let total = frames
+        .checked_add(warm)
+        .and_then(|v| v.checked_add(1))
+        .ok_or("--frames + --warmup 溢出")?;
+    if !pace.is_finite() || !(0.0..=10_000.0).contains(&pace) {
+        return Err(format!("--pace-ms {pace} 无效：要有限、非负、≤ 10000").into());
+    }
+    let qos = arg_str(args, "--qos", "ui");
+    set_thread_qos(qos, if model == ModelId::Gtcrn { 16.0 } else { 10.0 })?;
     // 加入默认输出设备的 IO 工作组（在调度等级之后、计时之前；令牌留到函数结束）
     let wg_on = args.iter().any(|a| a == "--workgroup");
     let _wg_token = if wg_on {
