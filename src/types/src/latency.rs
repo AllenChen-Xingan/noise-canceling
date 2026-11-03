@@ -151,7 +151,7 @@ pub const IO_BLOCK_PROPOSED: u32 = 96;
 /// 还没写进代码的平台部分（P3 / P4），按 009 `decision.md` 延迟账「目标上限」一列；`io_block` = 麦克风 IO 块（帧 @48k）。
 /// 全部【推】，P3 脉冲法实测后替换。
 pub fn planned_platform(io_block: u32) -> [LatencyItem; 5] {
-    const IO: u32 = 48_000;
+    const IO: u32 = crate::IO_RATE;
     [
         LatencyItem::new(
             "resample-down",
@@ -195,11 +195,11 @@ mod tests {
         l.push(LatencyItem::new(
             "hop-buffer",
             256,
-            16_000,
+            crate::MODEL_RATE,
             Basis::Declared,
             "",
         ))
-        .push(LatencyItem::new("model", 256, 16_000, Basis::Declared, ""));
+        .push(LatencyItem::new("model", 256, crate::MODEL_RATE, Basis::Declared, ""));
         assert_eq!(l.total_ms(), 32.0);
         assert_eq!(l.budget_ms(), 0.0);
         assert_eq!(l.check(LATENCY_BUDGET_MS), Ok(32.0));

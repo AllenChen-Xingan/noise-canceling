@@ -553,7 +553,7 @@ mod tests {
     fn session_roundtrips() {
         let r = SessionRecord {
             header: SessionHeader {
-                rate: 48_000,
+                rate: crate::IO_RATE,
                 table: (TableVersion(3), ContentId::of(b"t")),
                 profile: (ProfileVersion(1), ContentId::of(b"p")),
             },
