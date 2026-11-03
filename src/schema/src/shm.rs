@@ -70,11 +70,18 @@ pub fn layout_body() -> Value {
     })
 }
 
-/// 导出的完整文件：版本号 + 布局。
-pub fn layout_doc(version: u32, body: &Value) -> Value {
+/// 导出的完整文件：版本号 + 全部版本历史 + 布局。
+///
+/// 历史整份写进文件，main 上那一份就成了「已发布历史」的可信记录：
+/// 之后的 `HISTORY` 必须以它为前缀（codex 第 3 轮 #3）。
+pub fn layout_doc(version: u32, history: &[(u32, &str)], body: &Value) -> Value {
     let mut doc = json!({
-        "$comment": "由 `cargo run -p vdn-schema` 从 src/shm/src/layout.rs（经 src/shm/src/desc.rs）导出，勿手改。改布局必须升 layout::VERSION",
+        "$comment": "由 `cargo run -p vdn-schema` 从 src/shm/src/layout.rs（经 src/shm/src/desc.rs）导出，勿手改。改布局必须升 layout::VERSION，并在 src/schema/src/shm.rs 的 HISTORY 末尾登记",
         "version": version,
+        "history": history
+            .iter()
+            .map(|(v, f)| json!({"version": v, "fingerprint": f}))
+            .collect::<Vec<_>>(),
     });
     if let (Value::Object(d), Value::Object(b)) = (&mut doc, body) {
         d.extend(b.clone());
