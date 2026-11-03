@@ -50,3 +50,4 @@
 - 2026-11-02 graph 收尾：codex 2 轮（P2×4：3 修 1 转 #68），SpectralStage 定方案（trait 留 polish，种类 POLISH_SPECTRAL 进登记表，挂模型节点 spectral 段）。大总管合 origin/main（+95，冲突仅评审索引）后亲手 ci 全绿（435/0/5）· --check · eval ci 过；PR #69 等远端 CI；开 #68（模型节点缺版本）→ 归 iface，#69 合并后做
 - 2026-11-02 iface 报收尾（自报 xtask ci 428/0/7 · --check · eval ci 同前 · 本机真权重 vdn-models 17 条全过）；codex 3 轮 P1×1 P2×8 全改（012_param-model-schema-codex.md）；hook 提交过一次坏版本 12dd5f82、下一提交已恢复，未推送。等 #69 合并后合 main，再做 #68
 - 2026-11-02 PR #69 合并（ec39fd8），#64 关。大总管合 origin/main 进 iface（4f622582，冲突 schema lib.rs · Cargo.toml · 评审索引，两边都留）；iface 开工 #68
+- 2026-11-02 iface 合 main 后 ci 先红 2 处已修（自报）：graph 测试写死旧名 fastenhancer_m → 改从 ModelId 取 + 旧名可读测试；R-MODEL 认不出独立测试文件 → test_module_files；scan.rs 收字符串扫描。#68 开工
