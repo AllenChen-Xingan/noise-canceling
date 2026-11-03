@@ -71,3 +71,4 @@
 - 2026-11-03 R-RATE、R3 迁完（compare 第 3、4 节）：R-RATE 真仓 4 处一致，新增认十六/八/二进制与字面量算式；R3 按 use 别名还原路径，差异 2 类均解释（denoised/tests.rs 新的更准 · shm/owned.rs 旧漏报 6 行，NRT 模块照旧跳过），修 1 个误报（局部变量 log）；禁用清单 ↔ clippy.toml 加比对；xtask 58/0，tidy 过
 - 2026-11-03 P3（默认值字面量）收窄为「等于描述表默认值才报」，真仓 6 处（polish params ×4 · scene weights ×1 · speaker-lab run ×1）。8d 定：本 PR 内逐条处理（用默认值的改引用；有意预设写带理由的放行标记），P3 直接红；hygiene 实体临时扩为 xtask · polish · scene · speaker-lab（4 个）
 - 2026-11-03 R-PARAM 迁完：P3 6 处——polish AGC 3 处改引用默认值；polish:100 · speaker-lab:254 · scene/weights.rs:22 保留并写理由（scene 那行是 train.py 生成，已同步改 train.py 生成注释，未重训）；3 crate 30 过前后一致；范围比对 旧 159 新 152，少的 7 处是旧规则误报；xtask 60/0
+- 2026-11-03 发现 tidysyn worktree 里 hook 不触发（hygiene 会话启动目录已删，8d 会话在主目录）→ #71 改动全未提交。8d 补交 b87fe774（27 文件）并推远端备份；授权 hygiene 在本分支自行 add/commit（照 specs/README.md 格式），不许 push/merge。五条规则全迁完：xtask 等 93 过/0 败/1 忽略；tidy 0.563→0.632 s；冷编译 1.59→4.48 s。codex 第 1 轮开跑
