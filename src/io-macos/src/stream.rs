@@ -16,6 +16,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
+use crate::level::{Level, LevelMeter};
 use crate::pump::{InputPump, OutputPump};
 use crate::{Direction, IoError, RateRange};
 
@@ -31,6 +32,8 @@ pub struct StreamHealth {
     needs_reopen: AtomicBool,
     device_changed: AtomicBool,
     callback_panicked: AtomicBool,
+    /// 回调泵看到的单声道电平（输入：取第 1 声道之后；输出：用户回调写完之后、复制到各声道之前）
+    level: LevelMeter,
 }
 
 #[deny(
@@ -62,6 +65,18 @@ impl StreamHealth {
     /// 用户回调 panic 过；之后不再调用它（输入丢弃、输出静音）。
     pub fn callback_panicked(&self) -> bool {
         self.callback_panicked.load(Ordering::Relaxed)
+    }
+    /// 电平读数（峰值 · 均方根 · 连续全零长度）。
+    pub fn level(&self) -> Level {
+        self.level.snapshot()
+    }
+    /// 现在正连续全零满 1 s。输入流上的意思是「疑似没有麦克风权限或设备静音」
+    /// （系统设置 › 隐私与安全性 › 麦克风）；输出流上只表示一直在放静音
+    pub fn silent_now(&self) -> bool {
+        self.level.snapshot().silent_now()
+    }
+    pub(crate) fn meter(&self) -> &LevelMeter {
+        &self.level
     }
     pub(crate) fn mark_panicked(&self) {
         self.callback_panicked.store(true, Ordering::Relaxed);

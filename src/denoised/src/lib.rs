@@ -750,9 +750,18 @@ mod tests {
         let p = denoise_rt_params(&w, &wu);
         assert_eq!(p.period_ns, 16_000_000);
         assert_eq!(p.constraint_ns, p.period_ns);
-        assert!(p.computation_ns >= 1 && p.computation_ns <= p.period_ns);
-        let want = (wu.p999_period_ns.max(1) as f64 * vdn_rt_thread::MEASURED_MARGIN) as u64;
-        assert_eq!(p.computation_ns, want.clamp(1, p.period_ns));
+        // 规则只在正本 `RtParams::from_measured` 里：这里比对「同样的输入 → 同样的输出」，不抄夹取规则
+        assert_eq!(
+            p,
+            vdn_rt_thread::RtParams::from_measured(
+                p.period_ns,
+                wu.p999_period_ns.max(1),
+                vdn_rt_thread::MEASURED_MARGIN
+            )
+        );
+        // 直通管线实测极小（2026-11-02 `vdn run` code 4 的起因）：给出的参数内核也要接受
+        assert!(p.validate().is_ok(), "{p:?} · 预热 {wu:?}");
+        assert!(p.computation_ns >= vdn_rt_thread::MIN_COMPUTATION_NS);
     }
 
     #[test]

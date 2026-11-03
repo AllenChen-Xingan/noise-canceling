@@ -1,6 +1,9 @@
 //! 起一个线程，提成 time-constraint 后读回参数一致。只改测试线程自己的调度策略，不出声、不弹权限框。
 
-use vdn_rt_thread::{RtError, RtParams, check_current, join_audio_workgroup, promote_current};
+use vdn_rt_thread::{
+    MAX_COMPUTATION_NS, MIN_COMPUTATION_NS, RtError, RtParams, check_current, join_audio_workgroup,
+    promote_current,
+};
 
 #[test]
 fn invalid_params_are_rejected() {
@@ -19,6 +22,15 @@ fn invalid_params_are_rejected() {
     ));
     assert!(matches!(
         promote_current(p(4_000_000, 1_000_000, 5_000_000)),
+        Err(RtError::InvalidParams(_))
+    ));
+    // 内核下限 / 上限之外：先在本 crate 拦下（不到内核那里变成 code 4）
+    assert!(matches!(
+        promote_current(p(16_000_000, MIN_COMPUTATION_NS - 1, 16_000_000)),
+        Err(RtError::InvalidParams(_))
+    ));
+    assert!(matches!(
+        promote_current(p(0, MAX_COMPUTATION_NS + 1, 100_000_000)),
         Err(RtError::InvalidParams(_))
     ));
 }
@@ -147,16 +159,99 @@ fn from_measured_adds_margin_and_clamps() {
     assert_eq!(p.constraint_ns, 16_000_000);
     assert_eq!(p.computation_ns, 6_000_000);
     // 余量小于 1 按 1 算；乘出来超过周期就夹到周期
-    assert_eq!(RtParams::from_measured(1_000, 800, 0.5).computation_ns, 800);
     assert_eq!(
-        RtParams::from_measured(1_000, 900, 2.0).computation_ns,
-        1_000
+        RtParams::from_measured(2_000_000, 800_000, 0.5).computation_ns,
+        800_000
     );
-    // 实测 0 也给出合法参数（computation ≥ 1），能通过 promote 的校验
+    assert_eq!(
+        RtParams::from_measured(2_000_000, 1_500_000, 2.0).computation_ns,
+        2_000_000
+    );
+    // 实测 0 也给出内核接受的参数（computation 抬到 50 µs 下限）
     let z = RtParams::from_measured(2_000_000, 0, MEASURED_MARGIN);
-    assert_eq!(z.computation_ns, 1);
+    assert_eq!(z.computation_ns, MIN_COMPUTATION_NS);
+    assert!(z.validate().is_ok());
     #[cfg(target_os = "macos")]
     std::thread::spawn(move || promote_current(p).unwrap())
         .join()
         .unwrap();
+}
+
+/// 回归（2026-11-02 `vdn run --passthrough` 报 code 4）：直通管线预热每周期只有约 20 µs，
+/// × 1.5 = 30 µs < 内核下限 50 µs。修前 `promote_current` 返回 `Kernel { code: 4 }`
+#[test]
+fn tiny_measurement_gives_params_the_kernel_accepts() {
+    use vdn_rt_thread::MEASURED_MARGIN;
+    let p = RtParams::from_measured(16_000_000, 20_000, MEASURED_MARGIN);
+    assert_eq!(p.computation_ns, MIN_COMPUTATION_NS);
+    assert!(p.validate().is_ok(), "{p:?}");
+    #[cfg(target_os = "macos")]
+    {
+        let r = std::thread::spawn(move || promote_current(p))
+            .join()
+            .unwrap();
+        assert_eq!(r, Ok(()), "{p:?}");
+    }
+}
+
+/// 实测极大（比周期和内核上限 50 ms 都大）：夹到 min(50 ms, 周期)，内核接受
+#[test]
+fn huge_measurement_is_clamped_to_kernel_max_and_period() {
+    // 周期 100 ms，实测 80 ms × 1.5 = 120 ms → 内核上限 50 ms
+    let p = RtParams::from_measured(100_000_000, 80_000_000, 1.5);
+    assert_eq!(p.computation_ns, MAX_COMPUTATION_NS);
+    assert!(p.validate().is_ok(), "{p:?}");
+    // 周期 16 ms，实测 30 ms → 夹到周期
+    let q = RtParams::from_measured(16_000_000, 30_000_000, 1.5);
+    assert_eq!(q.computation_ns, 16_000_000);
+    assert!(q.validate().is_ok(), "{q:?}");
+    #[cfg(target_os = "macos")]
+    for x in [p, q] {
+        let r = std::thread::spawn(move || promote_current(x))
+            .join()
+            .unwrap();
+        assert_eq!(r, Ok(()), "{x:?}");
+    }
+}
+
+/// `for_block` 负载极小也给出合法值（chain-test 的送音 / 读出线程走它）
+#[test]
+fn for_block_with_tiny_load_is_valid() {
+    let p = RtParams::for_block(96, 48_000, 0.001);
+    assert_eq!(p.computation_ns, MIN_COMPUTATION_NS);
+    assert!(p.validate().is_ok());
+    assert_eq!(
+        RtParams::for_block(96, 48_000, 0.0).computation_ns,
+        MIN_COMPUTATION_NS
+    );
+}
+
+/// 夹取不改周期：周期比内核下限还短时不悄悄改，交给校验报错
+#[test]
+fn period_shorter_than_kernel_min_is_rejected_not_rewritten() {
+    let p = RtParams::from_measured(10_000, 5_000, 1.5);
+    assert_eq!((p.period_ns, p.constraint_ns), (10_000, 10_000));
+    assert!(matches!(p.validate(), Err(RtError::InvalidParams(_))));
+    assert!(matches!(promote_current(p), Err(RtError::InvalidParams(_))));
+}
+
+/// 读回：内核会把小于 constraint / 2 的 computation 抬到 constraint / 2（xnu thread_policy.c，读源码）。
+/// 这条测试把这个行为钉住，免得以后读回的数字被误判为「被降级」
+#[cfg(target_os = "macos")]
+#[test]
+fn kernel_raises_small_computation_to_half_constraint() {
+    let want = RtParams::from_measured(16_000_000, 1_000_000, 1.5); // computation 1.5 ms < 8 ms
+    let st = std::thread::spawn(move || {
+        promote_current(want).unwrap();
+        check_current().unwrap()
+    })
+    .join()
+    .unwrap();
+    let got = st.params.unwrap();
+    println!("给 {want:?}，读回 {got:?}");
+    let close = |a: u64, b: u64| a.abs_diff(b) <= 100;
+    assert!(
+        close(got.computation_ns, want.computation_ns) || close(got.computation_ns, 8_000_000),
+        "读回 computation 既不是给的值也不是 constraint/2：{got:?}"
+    );
 }

@@ -21,6 +21,7 @@
     )
 )]
 
+pub mod level;
 pub mod pump;
 pub mod stream;
 
@@ -28,6 +29,7 @@ use std::fmt;
 
 use cpal::traits::{DeviceTrait, HostTrait};
 
+pub use level::{Level, LevelMeter, SILENT_RUN_SAMPLES, dbfs, fmt_dbfs};
 pub use stream::{InputStream, OpenedInfo, OutputStream, StreamHealth};
 
 /// 链路 IO 采样率（Hz）。

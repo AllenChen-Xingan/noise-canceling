@@ -24,8 +24,19 @@
     )
 )]
 
-/// time-constraint 参数（纳秒）。约束：`computation_ns ≤ constraint_ns`，`period_ns` 为 0 或 ≥ `constraint_ns`。
+/// 内核允许的 computation 下限（ns）：xnu `osfmk/kern/sched_rt.c` 的 `min_rt_quantum` = 50 µs。
+/// 低于它 `thread_policy_set` 返回 4（`KERN_INVALID_ARGUMENT`）——2026-11-02 `vdn run --passthrough` 就是栽在这里：
+/// 直通管线每周期实测只有几十微秒，× 1.5 仍低于 50 µs。
+pub const MIN_COMPUTATION_NS: u64 = 50_000;
+/// 内核允许的 computation 上限（ns）：同一文件的 `max_rt_quantum` = 50 ms。
+pub const MAX_COMPUTATION_NS: u64 = 50_000_000;
+
+/// time-constraint 参数（纳秒）。约束（xnu `osfmk/kern/thread_policy.c` 的 `thread_policy_set_internal`，读源码）：
+/// `MIN_COMPUTATION_NS ≤ computation_ns ≤ MAX_COMPUTATION_NS`，`computation_ns ≤ constraint_ns`；
+/// 本 crate 另要求 `period_ns` 为 0 或 ≥ `constraint_ns`。
+/// 内核还会把小于 `constraint / 2` 的 computation **自动抬到** `constraint / 2`（不报错），读回值可能比给的大。
 /// 例：48 kHz、块长 512 → period ≈ 10 666 667 ns；computation 按实测处理耗时给，constraint 一般取 period。
+/// 构造请走 [`RtParams::for_block`] / [`RtParams::from_measured`]：两者都把 computation 夹进内核允许的范围。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RtParams {
     pub period_ns: u64,
@@ -44,13 +55,14 @@ impl RtParams {
         let computation = (period as f64 * load.clamp(0.0, 1.0)) as u64;
         Self {
             period_ns: period,
-            computation_ns: computation,
+            computation_ns: clamp_computation(computation, period),
             constraint_ns: period,
         }
     }
 
     /// 按实测耗时定参数（D68「computation 按实测 p99.9 留余量」）：
-    /// computation = **一个周期窗口内总工作量**的 p99.9 × `margin`（建议 [`MEASURED_MARGIN`]），夹在 [1 ns, 周期] 内；
+    /// computation = **一个周期窗口内总工作量**的 p99.9 × `margin`（建议 [`MEASURED_MARGIN`]），
+    /// 夹在 [[`MIN_COMPUTATION_NS`], min([`MAX_COMPUTATION_NS`], 周期)] 内（实测极小或极大都给出内核接受的值）；
     /// constraint = period。
     ///
     /// 周期按「最长那一块」的节奏报，不按唤醒节奏报（大总管 2026-11-02 二选一，选 A）：
@@ -61,14 +73,22 @@ impl RtParams {
         let comp = (window_p999_ns as f64 * margin.max(1.0)) as u64;
         Self {
             period_ns,
-            computation_ns: comp.clamp(1, period_ns.max(1)),
+            computation_ns: clamp_computation(comp, period_ns),
             constraint_ns: period_ns,
         }
     }
 
-    fn validate(&self) -> Result<(), RtError> {
-        if self.computation_ns == 0 {
-            return Err(RtError::InvalidParams("computation 为 0"));
+    /// 内核会不会接受（不调内核）：与 `promote_current` 的前置检查是同一个函数。
+    pub fn validate(&self) -> Result<(), RtError> {
+        if self.computation_ns < MIN_COMPUTATION_NS {
+            return Err(RtError::InvalidParams(
+                "computation 小于内核下限 50 µs（MIN_COMPUTATION_NS）",
+            ));
+        }
+        if self.computation_ns > MAX_COMPUTATION_NS {
+            return Err(RtError::InvalidParams(
+                "computation 大于内核上限 50 ms（MAX_COMPUTATION_NS）",
+            ));
         }
         if self.computation_ns > self.constraint_ns {
             return Err(RtError::InvalidParams("computation 大于 constraint"));
@@ -78,6 +98,16 @@ impl RtParams {
         }
         Ok(())
     }
+}
+
+/// computation 夹进 [MIN, min(MAX, constraint)]。constraint 比下限还短（周期 < 50 µs，实际不会出现）时给 constraint，
+/// 由 `validate` 报错，不悄悄改周期。
+fn clamp_computation(comp: u64, constraint: u64) -> u64 {
+    let hi = MAX_COMPUTATION_NS.min(constraint);
+    if hi < MIN_COMPUTATION_NS {
+        return hi.max(1);
+    }
+    comp.clamp(MIN_COMPUTATION_NS, hi)
 }
 
 /// 实测 p99.9 之上留的余量倍数（`RtParams::from_measured` 用）。

@@ -4,7 +4,7 @@
 //! vdn denoise in.wav out.wav [--model gtcrn|fastenhancer-m] [--floor-db -12] [--no-safety] …
 //! vdn bench [--model …] --input mix.wav [--warmup 200] [--steps 6000] [--json out.json]
 //! vdn devices                                         # 列设备（不开流）
-//! vdn run --passthrough|--denoise [--seconds N]       # 单进程实时：麦克风 → Pipeline → 扬声器（开麦、出声）
+//! vdn run --passthrough|--denoise [--seconds N] [--check] [--record out.wav] [--gain-db 12]   # 单进程实时：麦克风 → Pipeline → 扬声器（开麦、出声）
 //! vdn chain-test [--mode passthrough|denoise] [--kill-denoiser-at 2]   # 无设备链路测试，按判据给退出码
 //! ```
 //! denoise / bench 只读写 16 kHz 单声道 WAV、不碰音频设备。
@@ -120,6 +120,15 @@ struct RunArgs {
     input_device: Option<String>,
     #[arg(long)]
     output_device: Option<String>,
+    /// 输出增益（dB，−60..=+20，默认 0）：只给 V5 试听用，放大小声的麦克风
+    #[arg(long, default_value_t = 0.0, allow_negative_numbers = true)]
+    gain_db: f64,
+    /// 把送进耳机的那一路同时写进这个 WAV（48 kHz 单声道 32 位浮点），结束后可用耳机回放
+    #[arg(long)]
+    record: Option<PathBuf>,
+    /// V5 机器辅助判据：不给 --seconds 就跑 5 s，结束打印输入 / 输出电平与判定；不过时退出码 1
+    #[arg(long)]
+    check: bool,
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -269,7 +278,11 @@ fn main() {
             live::list_devices();
             Ok(())
         }
-        Cmd::Run(a) => run(a),
+        Cmd::Run(a) => match run(a) {
+            Ok(true) => Ok(()),
+            Ok(false) => std::process::exit(1),
+            Err(e) => Err(e),
+        },
         Cmd::V7(a) => match v7(a) {
             Ok(true) => Ok(()),
             Ok(false) => std::process::exit(1),
@@ -505,25 +518,38 @@ fn bench(a: BenchArgs) -> Result<(), BoxError> {
     Ok(())
 }
 
-fn run(a: RunArgs) -> Result<(), BoxError> {
+/// 返回 Ok(false) = `--check` 判不过。
+fn run(a: RunArgs) -> Result<bool, BoxError> {
     let o = live::RunOpts {
-        seconds: a.seconds,
+        seconds: a.seconds.or(a.check.then_some(live::CHECK_SECONDS)),
         block: a.block,
         lead: a.lead,
         input_device: a.input_device,
         output_device: a.output_device,
+        gain_db: a.gain_db,
+        record: a.record,
     };
-    if a.mode.passthrough {
+    let report = if a.mode.passthrough {
         // 单进程：cpal 回调块长不固定，用任意块长的 Pipeline::new
-        live::run(vdn_denoised::identity_pipeline(None)?, &o)?;
+        live::run(vdn_denoised::identity_pipeline(None)?, &o)?
     } else {
         let kind = ModelKind::from(a.m.model);
         live::run(
             vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref(), None)?,
             &o,
-        )?;
+        )?
+    };
+    if !a.check {
+        return Ok(true);
     }
-    Ok(())
+    let v = live::judge(&report.input, &report.output, a.mode.passthrough, a.gain_db);
+    eprintln!("vdn run --check: {}", v.describe());
+    if v.passed() {
+        eprintln!(
+            "  机器部分只判电平；听不听得到、断不断续、有没有咔哒声仍由人耳判（有 --record 就回放那个文件）"
+        );
+    }
+    Ok(v.passed())
 }
 
 /// 返回 Ok(true) = 全部判据过。
