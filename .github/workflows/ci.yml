@@ -22,6 +22,9 @@ jobs:
         with:
           tool: cargo-deny
       - name: rust gate
+        env:
+          # vdn-schema 对照的可信基线：push 用推送前的 main，PR 用目标分支（一次推多个提交时不拿同批提交当基线）
+          VDN_SCHEMA_BASE: ${{ github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha }}
         run: cargo run -p xtask -- ci
       - name: eval ci
         # CI 层评测：纯 DSP、确定性、无模型权重；回归集 L3 不过 / 比冻结基线差 / 探针没抓住 → 失败（exp007）

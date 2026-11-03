@@ -183,9 +183,8 @@ fn shm_layout_change_without_version_bump_is_red() {
 fn shm_history_append_only_against_main() {
     match vdn_schema::shm_baseline(&root()) {
         vdn_schema::Baseline::Found(base, text) => {
-            let (v, fp) = shm::baseline_entry(&text).unwrap();
-            shm::guard_baseline(shm::HISTORY, (v, &fp))
-                .unwrap_or_else(|e| panic!("对照 {base}：{e}"));
+            let b = shm::baseline_entry(&text).unwrap_or_else(|e| panic!("对照 {base}：{e}"));
+            shm::guard_baseline(shm::HISTORY, &b).unwrap_or_else(|e| panic!("对照 {base}：{e}"));
         }
         vdn_schema::Baseline::Absent(base) => {
             eprintln!("注：{base} 上还没有 {}，本次是第一次引入", shm::LAYOUT_FILE);
