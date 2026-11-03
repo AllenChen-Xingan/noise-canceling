@@ -18,7 +18,7 @@
 3. **`torch.jit.trace` 还是 `torch.export`**：`torch.export` 到 8.2 版时覆盖率才是 `jit.trace` 的 83%【官方】releases 页。**建议用 `jit.trace`**，它最成熟【推断】。exp010 的 `convert_gtcrn.py` 已经按 trace 写了【源码】`docs/experiments/exp010-inference-bench/apple/convert_gtcrn.py:1-40`。
 4. **GRU 能转**：
    - MIL 的 `gru` 算子只有 `forward` / `reverse` 两个方向，**没有 `bidirectional`**；LSTM 才有【源码】`ct/mil/mil/ops/defs/iOS15/recurrent.py`。
-   - PyTorch 前端把双向 GRU 拆成「正向 `gru` + `reverse` → 反向 `gru` → `reverse` → `concat`」【源码】`ct/mil/frontend/torch/ops.py:3640,3732-3770`。多层、`batch_first` 也处理了（`:3729,3777`）。
+   - PyTorch 前端把双向 GRU 拆成「正向 `gru` + `reverse` → 反向 `gru` → `reverse` → `concat`」【源码】`ct/mil/frontend/torch/ops.py:3640,3732-3770`。多层、`batch_first` 也处理了（`:3729,3778`）。
    - iOS 18 版 `gru` 多了 `reset_after` 和 `input_bias` 两个参数【源码】`ct/mil/mil/ops/defs/iOS18/recurrent.py`。PyTorch 的 GRU 是「reset 门作用在 `W_hn h + b_hn` 上」的写法，要靠这两个参数才能对上【推断，未核对 `_add_gru_layer` 用的是哪一版】。
    - **GRU 落在哪个计算单元**：一篇第三方论文逐代测过，`gru` / `lstm` / `rnn` 在 M1 到 M5 的神经引擎上「No path on any family」，建议改成「固定步数展开的图」【实测-他人】arXiv 2606.22283 §4.2 表 4.1 <https://arxiv.org/html/2606.22283v1>。苹果论坛也有人报 GRU 模型上不了神经引擎【实测-他人】<https://developer.apple.com/forums/thread/718140>。GPU 能不能跑 GRU，没查到，要用 `MLComputePlan` 看【存疑】。
 5. **`ScatterND` 的问题在 Core ML 路线上不存在。** `ScatterND` 是 ONNX 导出时把「缓存按切片原地写回」（`gtcrn_stream.py:261-263,285-287`）翻成的。走 PyTorch 直转时：
@@ -39,7 +39,7 @@
 1. **API**：macOS 15 起。`-[MLModel newState]` 建状态，状态缓冲由 Core ML 分配并清零；`predictionFromFeatures:usingState:options:error:` 做有状态预测【官方】`H/MLModel+MLState.h:13-78`。读写状态要用 `getMultiArrayForStateNamed:handler:`，**缓冲地址每次调用可能不同**，不能在回调外用【官方】`H/MLState.h:47-56`。
 2. **转换**：PyTorch 用 `register_buffer` 声明缓存，`ct.convert(states=[ct.StateType(...)])`，名字要和 buffer 一致，部署目标要 ≥ iOS 18 / macOS 15【官方】<https://apple.github.io/coremltools/docs-guides/source/stateful-models.html>。
 3. **硬限制：状态只能是 fp16。** 后端写死了检查「Core ML only support fp16 for state」，不是 fp16 就报错【源码】`ct/mil/backend/mil/load.py:736-740`。`torch.export` 路线会自动把 buffer 转成 fp16 并只打警告【源码】`ct/mil/frontend/torch/converter.py:645-650`。状态形状不能可变（`load.py:731-734`）。
-4. **对 GTCRN 的意思**：三个缓存（`conv` · `tra` · `inter`）一旦做成状态，就每帧被截成 fp16。GRU 隐状态和卷积缓存是跨帧递推的，舍入误差会一帧帧带下去【推断】。按 exp004 的口径（最大绝对误差 4.5e-7、对拍 SNR ≥ 124 dB，`docs/experiments/exp004-p1-rust-proto/README.md:7`），fp16 大概率过不了【推断：fp16 有效位约 3.3 位十进制】。
+4. **对 GTCRN 的意思**：三个缓存（`conv` · `tra` · `inter`）一旦做成状态，就每帧被截成 fp16。GRU 隐状态和卷积缓存是跨帧递推的，舍入误差会一帧帧带下去【推断】。按 exp004 的口径（最大绝对误差 4.5e-7、对拍 SNR ≥ 124 dB，`docs/experiments/exp004-p1-rust-parity/README.md:7`），fp16 大概率过不了【推断：fp16 有效位约 3.3 位十进制】。
 5. **省下的拷贝不多**：GTCRN 三个缓存一共 2×16×16×33 + 2×3×16 + 2×33×16 = 18 048 个 fp32，约 70 KB【推断，按 `our-models.md` 的形状算】。显式进出时可以用两套预分配缓冲来回交换（见第 4 节），拷贝量为零。苹果说状态的好处是「overhead can become noticeable as the size of the state increases」，例子是 7B 大模型的 KV 缓存，测得 1.6 倍【官方】WWDC24 <https://developer.apple.com/videos/play/wwdc2024/10161/>。我们的缓存小三个数量级，**收益未量化，多半很小**【推断】。
 6. **并发约束**：同一个 `MLState` 上的预测必须串行；预测进行中不许读写状态缓冲【官方】`H/MLState.h:38-40`、`H/MLModel+MLState.h:84`。
 7. **结论**：有状态版只作为对照测一次（看 fp16 状态的误差和省下的时间），**不作为主方案**。
