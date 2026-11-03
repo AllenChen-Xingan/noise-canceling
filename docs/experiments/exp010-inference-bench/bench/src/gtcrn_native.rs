@@ -1560,8 +1560,8 @@ mod tests {
         names.sort();
         names.dedup();
         assert_eq!(names.len(), n, "打点段名重复");
-        // 公开的 GTCRN 约 48k 参数（论文 / 仓库自报 23.67k？以实际持有为准，只查量级）
-        assert!((20_000..100_000).contains(&param_count(&net)), "参数个数 {}", param_count(&net));
+        // 只查量级：真权重下实测 23 838 个（BN 已折、ERB 只存非零段）；假权重全非零，ERB 为稠密
+        assert!((20_000..60_000).contains(&param_count(&net)), "参数个数 {}", param_count(&net));
     }
 
     #[test]
