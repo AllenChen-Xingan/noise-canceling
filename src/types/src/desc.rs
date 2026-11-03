@@ -106,7 +106,7 @@ impl std::error::Error for RangeError {}
 )]
 impl ParamDesc {
     /// `(min, max)`
-    pub const fn range(&'static self) -> (f32, f32) {
+    pub const fn range(&self) -> (f32, f32) {
         (self.min, self.max)
     }
 
