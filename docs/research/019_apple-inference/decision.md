@@ -17,7 +17,7 @@
 
 | 模型 | 建议后端 | 为什么 | 状态 |
 |---|---|---|---|
-| **GTCRN（主模型）** | **手写 Rust**（rustbe 的 `gtcrn_native`），苹果侧备选 **BNNS Graph + GRU 展开** | 手写 p50 0.088 ms，比 ORT 快约 4.4 倍，0 分配，134 dB；BNNS 展开版 0.155 ms、快约 2.5 倍，0 分配，134 dB，是苹果引擎里唯一过 `BE-RT-ALLOC` 的。两者都能在推理线程直接调 | 第 1 条风险未解；`BE-POWER` 还没有耗电数（要人跑 sudo），选赢家规则（§6.2）暂按 CPU 排 |
+| **GTCRN（主模型）** | **手写 Rust + Accelerate**（rustbe 的 `native-blas`，线程 tc 开），苹果侧备选 **BNNS Graph + GRU 展开** | 手写 p50 0.088 ms，比 ORT 快约 4.4 倍，0 分配，134 dB；BNNS 展开版 0.155 ms、快约 2.5 倍，0 分配，134 dB，是苹果引擎里唯一过 `BE-RT-ALLOC` 的。两者都能在推理线程直接调 | 按 D75 主排序（耗电）暂排第一：71 mW，BNNS 97 mW（单次、噪声边缘，待重复）；`BE-IMPACT` 待重测 |
 | FE-M（备选） | 暂无（继续 ORT） | 转不了 Core ML（图里有 `view_as_complex`）；手写 Rust 本轮不做；ORT 超 D69 上限 | 待人定是否留在候选里 |
 | DFN3 `_ll`（015 候选） | **不进实时链**；下一轮盲听用**离线处理** | 算力下界（三图 S=1、单线程、连续跑）0.61 ms / 10 ms 帧 ≈ 6.1% 个核，是推理挡线 1.0% 的 6 倍；苹果最快后端提速 2.5 倍也约 2.4%（`dfn3ll_probe.json`）。流式重导出（把 GRU 状态做成输入输出）约 1 天，不做【AI 定，大总管同意】 | 已定 |
 | 认人 ECAPA-TDNN512 | 待测（ORT vs BNNS，名额里一起跑，`apple-rs/tools/ecapa.sh`） | 每 0.5 s 一次、约 6 ms（含 fbank 与打分），单项 ≈ 1.2% 个核（exp005），D69 下要降约 4–8 倍 | 待测 |
@@ -37,11 +37,26 @@
 - GRU 要在 PyTorch 里先手动展开（`UnrolledGRU`）：coremltools 会把 GRU 翻成逐步循环，展开后 BNNS 快 2.2 倍、Core ML 快 1.9 倍，输出不变（对 torch 差 3.6e-7）。
 - 有状态模型（`MLState`）coremltools 转不出来（`No matching select or slice.`）；缓存走显式输入输出。
 
-## 4. 实时线程能不能直接调（待补）
+## 4. 实时线程能不能直接调 · 线程设置 · 耗电
 
-- 手写 Rust、BNNS Graph：每帧 0 次分配（全进程 malloc 钩子，自检通过），可以在推理线程直接调；RTSan 豁免表还没建（`BE-RT-SAN` 待测）。
-- Core ML：每帧约 300 次 malloc，只能像今天的 ORT 一样登记豁免（ORT 本身每帧 1557 次，rustbe `--count-malloc` 实测）。不建议用。
-- **待补**：实时线程策略（`THREAD_TIME_CONSTRAINT_POLICY` · Audio Workgroup · 忙等对照）的实测结果，决定第 1 条风险能不能解。
+**直接调**：手写 Rust、BNNS Graph 每帧 0 次分配（全进程 malloc 钩子，自检通过），可以在推理线程直接调；RTSan 豁免表还没建（`BE-RT-SAN` 待测）。Core ML 每帧约 300 次 malloc（ORT 1557 次），只能登记豁免，不建议用。
+
+**线程设置 × 耗电**（人用 sudo 跑，`exp010…/apple/results/20261102-183322-rt/summary.md`；单次 60 s，噪声约 ±30–40 mW）：
+
+| 设置 | p50 | max | 核占用 | CPU 功率 |
+|---|---|---|---|---|
+| BNNS · rt（D74 默认） | 0.80 ms | 1.41 | 4.8% | 97 mW |
+| BNNS · rt + 自建工作组区间（截止 1–3 ms） | 0.19–0.22 ms | 0.27–0.33 | 1.3–1.5% | 123–138 mW |
+| BNNS · 帧间忙等（只排查） | 0.16 ms | 0.61 | 99.9% | 4199 mW |
+| 手写 Rust · rt | 0.60 ms | 0.66 | 3.5% | 81 mW |
+| 手写 Rust · ui | 0.60 ms | 2.69 | 3.5% | 104 mW |
+| **手写 + Accelerate · rt** | 0.43 ms | 0.56 | 2.6% | **71 mW** |
+
+结论（强度：单次、噪声大）：
+1. **「实时节奏慢 5 倍」是帧间降频**：忙等把 p50 拉回连续跑的水平，但耗电是 30–40 倍。产品里不能忙等。
+2. **自建工作组区间（`AudioWorkIntervalCreate` + 每帧 start / finish）能把速度拉回 4 倍、核占用降到约 1.4%，但功率高 25–40 mW。** 提速要花电，所以**没有推翻 D74**（接受低频、工作组默认不加）。如果以后要压 `BE-IMPACT` 或尾部，它是现成的旋钮。
+3. **目前功率最低的是手写 + Accelerate · rt（71 mW）**，其次手写 · rt（81 mW）、BNNS · rt（97 mW）。差值在噪声边缘，`BE-POWER` 要交替重复 3 轮以上才能定排名（`standard.md` 已注明）。
+4. 所有设置 10 分钟 / 60 s 内超 3 ms 的帧都是 0（`BE-DEADLINE` 这一段都过；第 1 条风险里 BNNS 那次 11.8 ms 是在 qos ui 下）。
 
 ## 5. 怎么接进代码（接口建议；结构细节归 Rust 骨架线）
 
