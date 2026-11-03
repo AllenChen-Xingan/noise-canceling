@@ -27,14 +27,15 @@ MLX **能表达** GTCRN 和 FE-M（GTCRN 已有第三方逐帧移植），也**�
 | ScatterND（缓存写回） | 不需要。MLX 是函数式写法，缓存直接作为新数组返回即可【推断】 | — |
 | STFT 类（FE-M wav2wav 图里有） | 有 `mx.fft`；ORT-MLX 插件也列了 DFT/STFT | 【官方】`onnxruntime-ep-mlx` docs/OP_ARCHITECTURE.md:367 |
 | 自注意力 | 有 `mx.fast.scaled_dot_product_attention` 和 `nn.MultiHeadAttention`【推断，未逐页核】 | — |
+| 神经引擎（ANE） | **用不上**。MLX 只有 CPU 和 GPU 两种设备，不调 ANE。所以 Core ML 走 ANE 可能带来的省电，MLX 拿不到 | 【官方】https://github.com/ml-explore/mlx README（「currently the CPU and the GPU」）|
 | 张量布局 | 卷积是**通道在后**（NHWC / OHWI），从 PyTorch 搬权重要转置 | 【实测-他人】下方 GTCRN 移植说明「ONNX Conv 权重转成 MLX OHWI，分组 ConvTranspose 另做变换」 |
 
 **权重怎么搬**：MLX 用 `safetensors` / `npz` 载权重（`mx.load`）。路线是 PyTorch `state_dict` → 改名 + 转置 → `safetensors`【推断】。GRU 的偏置布局要对齐 PyTorch 的 `b_ih / b_hh`，MLX 把 `bhn` 单列【源码】`recurrent.py` GRU 定义。
 
 **ONNX 导入**：**官方没有**。issue #16「ONNX/Torch 转 MLX」以重复关闭【官方】https://github.com/ml-explore/mlx/issues/16。第三方有三条：
 - `onnx2mlx`（muna-ai）：PyPI 0.0.5，2026-03-12 之后没有新版，算子覆盖未查【官方-第三方】https://pypi.org/project/onnx2mlx/
-- **`agentable/gtcrn-simple-mlx`**：从 sherpa-onnx 的 `gtcrn_simple.onnx`（SHA-256 `e77603ac…b534`）做「只换布局」的确定性转换，179 个张量、208 427 字节 fp32、MIT；自带**逐帧流式 MLX 运行器**，管三类缓存；在 Metal fp32 上对 ONNX 逐帧 oracle 的最大绝对误差 < 5e-5；**没给延迟数字**；整段波形和语料质量没测【实测-他人】https://huggingface.co/agentable/gtcrn-simple-mlx 。它链接的代码仓 `github.com/agentable/model-gtcrn` 我访问是 404（可能私有），实现语言和调用方式未知
-- **`onnxruntime-ep-mlx`**：ONNX Runtime 官方组织下的**插件执行提供者**（Rust 写、直接绑 mlx-c、不经 mlx-rs），要求 ORT ≥ 1.31，MIT。GRU 用「按形状展开」实现（仅 layout=0、默认激活、无 sequence_lens），Conv / ConvTranspose / PRelu / BatchNormalization / LayerNormalization 都在表里，不认的节点留给 ORT CPU。它自己写明小模型解码是「派发受限，CPU 占优」，输出「不逐位一致」。仓库只有 4 星，非常新【官方】https://github.com/onnxruntime/onnxruntime-ep-mlx `docs/OP_ARCHITECTURE.md:69,93-94,554,592-599`；https://docs.rs/crate/onnxruntime-ep-mlx/0.31.0
+- **`agentable/gtcrn-simple-mlx`**：从 sherpa-onnx 的 `gtcrn_simple.onnx`（SHA-256 `e77603ac…b534`）做「只换布局」的确定性转换，179 个张量、208 427 字节 fp32、MIT；自带**逐帧流式 MLX 运行器**，管三类缓存；在 Metal fp32 上对 ONNX 逐帧 oracle 的最大绝对误差 < 5e-5；**没给延迟数字**；整段波形和语料质量没测【实测-他人】https://huggingface.co/agentable/gtcrn-simple-mlx 。⚠️ **它的源文件不是我们那份**：vdn 用的 `res:gtcrn/stream/onnx_models/gtcrn_simple.onnx` 本机 SHA-256 是 `b4718df6…cb87`（怀疑派用 `shasum -a 256` 实算），和它的 `e77603ac…b534` 不同。权重是否相同未核，所以「< 5e-5」是对 sherpa 那份 ONNX 的误差，不是对我们 ORT 输出的误差。页面写运行器是「重放钉死的单帧图」，可能是按 ONNX 图逐节点执行，而不是 `nn.GRU` 写法；TF32 开没开没写。它链接的代码仓 `github.com/agentable/model-gtcrn` 我访问是 404（可能私有），实现语言和调用方式未知
+- **`onnxruntime-ep-mlx`**：ONNX Runtime 官方组织下的**插件执行提供者**（Rust 写、直接绑 mlx-c、不经 mlx-rs），要求 ORT ≥ 1.31，MIT。GRU 用「按形状展开」实现（仅 layout=0、默认激活、无 sequence_lens），Conv / ConvTranspose / PRelu / BatchNormalization / LayerNormalization 都在表里，不认的节点留给 ORT CPU。README 原话是「CPU 回退和小负载可能抵消 GPU 收益」「结果与 CPU 不逐位一致」。仓库只有 4 星，非常新【官方】https://github.com/onnxruntime/onnxruntime-ep-mlx README:49,53；GRU 限制见 `docs/OP_ARCHITECTURE.md:94`；ScatterND 归在 `shape.rs` 的 Gather/scatter 一类（`:594`），具体覆盖未核。怀疑派更正：原文引的 `:592-599` 是模块表，**里面没有「派发受限，CPU 占优」这句话**，已改成 README 原话。另：它在每个融合子图的边界做一次 `mlx_eval`（`OP_ARCHITECTURE.md:52`），被认领的浮点节点默认走 Metal（`:89`）。如果 GTCRN 被不认的节点切成几段，每帧就有几次 GPU 同步加几次 CPU↔GPU 交接【推断】
 
 ## 2. 每帧固定开销
 
@@ -45,7 +46,7 @@ MLX **能表达** GTCRN 和 FE-M（GTCRN 已有第三方逐帧移植），也**�
 - **GPU 流**：每个算子编码进 Metal 命令缓冲，每满 20–50 个算子提交一次（按芯片档位，环境变量可改）`mlx/backend/metal/device.cpp:537-540,631-652`；每个算子开一个 autorelease 池、加一个完成回调 `mlx/backend/metal/eval.cpp:29-69`；同步走 `waitUntilCompleted` `device.cpp:590-595`
 
 **公开量级**（都不是本机）：
-- `mx.eval` 内放 1/2/4/8/16 个空算子，每次 eval 都约 **0.11 ms**：同步本身是主成本，算子个数影响小。M4 Pro · MLX 0.32.2 · macOS 26.6.2【实测-他人】https://github.com/ml-explore/mlx/discussions/4512
+- `mx.eval` 内放 1/2/4/8/16 个空算子，每次 eval 都约 **0.11 ms**：同步本身是主成本，算子个数影响小。M4 Pro · MLX 0.32.2 · macOS 26.6.2【实测-他人】https://github.com/ml-explore/mlx/discussions/4512 。帖子**没写是 CPU 流还是 GPU 流**；因为同帖用了 `mx.fast.metal_kernel`，推断是 GPU【推断】。所以这 0.11 ms 不能套到 CPU 流上
 - Metal 空内核 `waitUntilCompleted` 约 **0.12 ms**（M2 Max），同一帖 CUDA 约 0.001 ms【实测-他人】https://developer.apple.com/forums/thread/767853 （无苹果回复，方法未公开）
 - 同帖 4512：16 个逐元素算子链 0.133 ms/步；手写一个 `mx.fast.metal_kernel` 后 0.0225 ms/步【实测-他人】
 
