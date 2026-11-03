@@ -458,8 +458,8 @@ struct FtzSpyModel {
     calls: Arc<AtomicU64>,
 }
 impl Model for FtzSpyModel {
-    fn kind(&self) -> &'static NodeKind {
-        &FTZ_SPY
+    fn name(&self) -> &'static str {
+        "ftz_spy"
     }
     fn sample_rate(&self) -> u32 {
         16_000
