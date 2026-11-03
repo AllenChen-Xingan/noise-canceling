@@ -232,9 +232,16 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
         }
     });
 
+    let mut next_rt_check = Instant::now();
     while !stop.load(Ordering::Relaxed) && deadline.is_none_or(|d| Instant::now() < d) {
         if !worker.apply_commands(&mut rx) {
             break;
+        }
+        // 每秒读回一次调度策略：读不到或不是 time-constraint 记一次降级（提升本来就关了就不查）
+        if !a.no_rt && Instant::now() >= next_rt_check {
+            let ok = vdn_rt_thread::check_current().is_ok_and(|st| st.time_constraint);
+            worker.note_rt_check(ok);
+            next_rt_check += Duration::from_secs(1);
         }
         // 等送音端推够一块再醒（送音端每推一块 notify 一次）；20 ms 兜底超时，好检查退出标志
         let _ = bus.wait(RingId::Raw, cfg.denoise_block, Duration::from_millis(20));
@@ -244,7 +251,7 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     let s = worker.stats();
     let unlinked = bus.unlink();
     eprintln!(
-        "vdn-denoised: 退出 · 处理 {} 块 · 单块最长 {:.3} ms · 平均 {:.3} ms · 超一块时长 {} 块 · 每周期总耗时最长 {:.3} ms · 超周期 {} 次 · 醒来时 Raw 最多积 {} 样本 · 跳过积压 {} 样本 · Processed 溢出 {} 样本 · Raw 溢出 {} · 实时提升失败 {} · 唤醒 {} · 退回轮询 {} 次 · unlink {}",
+        "vdn-denoised: 退出 · 处理 {} 块 · 单块最长 {:.3} ms · 平均 {:.3} ms · 超一块时长 {} 块 · 每周期总耗时最长 {:.3} ms · 超周期 {} 次 · 醒来时 Raw 最多积 {} 样本（{:.2} ms）· 调度读回 {} 次、降级 {} 次 · 跳过积压 {} 样本 · Processed 溢出 {} 样本 · Raw 溢出 {} · 实时提升失败 {} · 唤醒 {} · 退回轮询 {} 次 · unlink {}",
         s.blocks,
         s.max_process_ns as f64 / 1e6,
         s.total_process_ns as f64 / 1e6 / s.blocks.max(1) as f64,
@@ -252,6 +259,9 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
         s.max_period_ns as f64 / 1e6,
         s.over_period,
         s.max_raw_backlog,
+        s.max_raw_backlog as f64 / 48.0,
+        s.rt_checks,
+        s.rt_downgrades,
         s.raw_skipped,
         s.proc_overflow,
         bus.ring(RingId::Raw).overflows(),

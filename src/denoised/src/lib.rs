@@ -165,6 +165,10 @@ pub struct WorkerStats {
     pub over_period: u64,
     /// 最近一个工作周期总处理耗时的最大值（ns）
     pub max_period_ns: u64,
+    /// 读回调度策略的次数 / 其中「降级」（读回失败或不是 time-constraint）的次数。
+    /// 注意：读回看不到系统内部的降级，所以「醒来迟到」「超周期」才是直接判据
+    pub rt_checks: u64,
+    pub rt_downgrades: u64,
     /// 插进 Processed 的零占位样本数
     pub placeholders_pushed: u64,
 }
@@ -409,6 +413,14 @@ impl<P: Processor> Worker<P> {
         let got = processed.push(rest);
         self.stats.proc_overflow += (rest.len() - got.min(rest.len())) as u64;
         self.pushed += rest.len() as u64;
+    }
+
+    /// 记一次调度策略读回结果（调用方每秒读一次 `vdn_rt_thread::check_current()`，别每块读）
+    pub fn note_rt_check(&mut self, time_constraint: bool) {
+        self.stats.rt_checks += 1;
+        if !time_constraint {
+            self.stats.rt_downgrades += 1;
+        }
     }
 
     /// 把队列里的控制命令都执行掉（块与块之间调）。返回 `false` = 收到 Shutdown
@@ -703,6 +715,15 @@ mod tests {
         assert_eq!(s.max_raw_backlog, 480, "第一次开始处理时积了 5 块");
         assert!(s.over_period >= 4, "{s:?}");
         assert!(s.max_period_ns >= 6_000_000, "{s:?}");
+    }
+
+    #[test]
+    fn rt_check_counts_downgrades() {
+        let mut w = Worker::new(Copy0, 96);
+        w.note_rt_check(true);
+        w.note_rt_check(false);
+        w.note_rt_check(true);
+        assert_eq!((w.stats().rt_checks, w.stats().rt_downgrades), (3, 1));
     }
 
     #[test]

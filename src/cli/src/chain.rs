@@ -260,7 +260,14 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
                 rtf.fetch_add(1, Ordering::Relaxed);
             }
             let mut consumed = 0u64;
+            let mut next_rt_check = Instant::now();
             while !stop.load(Ordering::Relaxed) {
+                // 每秒读回一次调度策略（只在提了优先级时查）
+                if rt && Instant::now() >= next_rt_check {
+                    let ok = vdn_rt_thread::check_current().is_ok_and(|st| st.time_constraint);
+                    worker.note_rt_check(ok);
+                    next_rt_check += Duration::from_secs(1);
+                }
                 if kill_samples.is_some_and(|k| consumed >= k) {
                     killed_at.store(cap_pos.load(Ordering::Acquire), Ordering::Release);
                     break;
@@ -514,7 +521,7 @@ pub fn timing_line(r: &ChainRun) -> String {
     let w = &r.worker;
     let block_ms = ms48(r.denoise_block);
     format!(
-        "耗时：预热 {} 块（第一块 {:.3} ms，之后最长 {:.3} ms；每周期 {} 块总耗时 p99.9 {:.3} ms）· 服务期单块最长 {:.3} ms、平均 {:.4} ms、超一块时长（{:.3} ms）{} 块 · 每周期总耗时最长 {:.3} ms、超周期时长 {} 次 · 醒来时 Raw 最多积 {} 样本 · 虚拟麦读相位 {} 样本（{:.2} ms，不在 L_total 里）· 实时提升失败 {} 个线程",
+        "耗时：预热 {} 块（第一块 {:.3} ms，之后最长 {:.3} ms；每周期 {} 块总耗时 p99.9 {:.3} ms）· 服务期单块最长 {:.3} ms、平均 {:.4} ms、超一块时长（{:.3} ms）{} 块 · 每周期总耗时最长 {:.3} ms、超周期时长 {} 次 · 醒来时 Raw 最多积 {} 样本（{:.2} ms）· 调度读回 {} 次、降级 {} 次 · 虚拟麦读相位 {} 样本（{:.2} ms，不在 L_total 里）· 实时提升失败 {} 个线程",
         r.warmup.blocks,
         r.warmup.first_ns as f64 / 1e6,
         r.warmup.max_after_first_ns as f64 / 1e6,
@@ -527,6 +534,9 @@ pub fn timing_line(r: &ChainRun) -> String {
         w.max_period_ns as f64 / 1e6,
         w.over_period,
         w.max_raw_backlog,
+        ms48(w.max_raw_backlog as usize),
+        w.rt_checks,
+        w.rt_downgrades,
         r.hal_offset,
         ms48(r.hal_offset),
         r.rt_failures

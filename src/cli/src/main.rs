@@ -710,6 +710,8 @@ fn v7(a: V7Args) -> Result<bool, BoxError> {
                     "over_budget_blocks": r.worker.over_budget, "rt_failures": r.rt_failures,
                     "max_period_ms": r.worker.max_period_ns as f64 / 1e6, "over_period": r.worker.over_period,
                     "max_raw_backlog": r.worker.max_raw_backlog,
+                    "max_raw_backlog_ms": r.worker.max_raw_backlog as f64 / 48.0,
+                    "rt_checks": r.worker.rt_checks, "rt_downgrades": r.worker.rt_downgrades,
                     "warmup_p999_period_ms": r.warmup.p999_period_ns as f64 / 1e6,
                     "warmup_first_ms": r.warmup.first_ns as f64 / 1e6,
                 }));
