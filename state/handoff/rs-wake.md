@@ -1,7 +1,7 @@
 # 现状页 · 手下 rs-wake（批次 20261102-b8-rust）
 
 - **手上**：vdn-shm · vdn-rt-thread · xtask（大总管 2026-11-02 加派）
-- **做到哪**：notify / wait · 头部版本 2 · OwnedBus · tidy 补查 bin 根 已完成；下一步对照实验、cargo-deny、Miri
+- **做到哪**：已收尾（见文末「已收尾」）；只剩 tidy「每个 crate 至少一条测试」抓到 3 个别人的 crate，待大总管定
 - **下一步**（按序）：自审修完 → 名额 ① 对照实验 ② cargo-deny ③ Miri → 加派三件：loom 测试 + deny.toml 直接边 + tidy 校验 deny 与 forbid 一致 · rt-thread 加入 Audio Workgroup · CI 拆 Linux + macOS（paths 过滤）
 - **本批不改**：共享内存权限 0600（要真装驱动实测，大总管 2026-11-02 定）
 
@@ -91,3 +91,38 @@
 
 ## 待人拍板
 - （已定）最低系统 14.2 → 14.4：人定 D67（2026-11-02）。已改：系统函数直接链接，去掉按版本退回；只留系统调用出错时的轮询兜底
+
+## 已收尾（2026-11-02）
+
+**验收（名额 ①，实测）**：`cargo clippy -p vdn-shm -p vdn-rt-thread -p xtask --all-targets -- -D warnings` 过；`cargo test -p vdn-shm -p vdn-rt-thread` 全过；
+`xtask tidy` 只剩 3 条：vdn-backend-ort · vdn-cli · vdn-speaker-lab 没有任何测试（新规则按设计报红，不归我改，待大总管定）。
+另外实跑过：loom（release，抢占上限 3）· Miri（nightly，进程内测试）· cargo-deny · 对照实验 · 耗电对照（人跑）。
+
+**改了哪些文件**
+- `src/shm/**`：`layout.rs`（版本 2）· `bus.rs` · 新 `wait.rs` · `wake.rs` · `owned.rs` · `sync.rs` · `region.rs`（loom 版）· `lib.rs` · `Cargo.toml`（feature loom、example 要求 posix、dev 依赖 vdn-rt-thread）· `examples/wake_bench.rs` · 测试见下
+- `src/rt-thread/**`：新 `workgroup.rs` · `lib.rs`（ThreadPolicy · from_measured · MEASURED_MARGIN · Unavailable）· `examples/rt_bench.rs` · 测试见下
+- `src/xtask/**`：`tidy.rs`（查全部编译根 · 每 crate 有测试 · 接 denycheck）· 新 `denycheck.rs` · 新 `miri.rs` · `ci.rs`（--platform · cargo-deny 必跑）· `deps.rs`（direct_any）· `main.rs`
+- `deny.toml`（删 4 个没用到的许可 + 1 个例外；加 ort / cpal 直接边）· `.github/workflows/ci.yml`（Linux）· 新 `.github/workflows/ci-macos.yml`
+- `docs/experiments/exp-v7-latency/results/20261102-power/`（新）· `state/handoff/rs-wake.md` · `state/handoff/rs-wake-api.md`
+- 仓外：`noise_canceling-skeleton/_tmp/20261102-b8-rust/power/run.sh`（大总管的 `_tmp`）
+
+**本次新增的测试**
+- vdn-shm：`tests/wake.rs`（立刻返回 · 超时 · Poll(0) 超时 · 容量钳制 · 两线程 / 两份映射 2 万块不丢唤醒 · 锁步 heap / POSIX · 头部 v2 字段与会话 ID · 缺口计数 · lead / 块长越界 · OwnedBus 忙 / 删名 / 清残留 / 旧锁 / 坏名字）· `tests/fallback.rs`（系统调用出错 → 轮询并计数）· `tests/loom.rs`（SPSC 回绕 · 不丢唤醒，均反向验证过）· `tests/layout_doc.rs`（2 项）· `src/wait.rs` 单元测试（撑大窗口，反向验证过）· `no_alloc.rs` 加 notify / gaps
+- vdn-rt-thread：`tests/workgroup.rs`（6 项：建 / 加入 / begin-finish · 错误路径 · 坏名字 · 嵌套逆序离开 · 多线程共用 · QoS）· `promote.rs` 加 `default_policy_follows_d68` · `from_measured_adds_margin_and_clamps` · `promotion_cuts_wakeup_lateness`（`#[ignore]`，人工步骤在注释里）
+- xtask：`every_crate_root_is_checked` · `parses_one_line_bans` · `crate_without_tests_is_detected`
+
+**新增的第二处表示及其校验**（唯一真相源规矩）
+| 第二处 | 正本 | 怎么校验 |
+|---|---|---|
+| `layout.rs` 头注释里的字段清单 | `layout.rs` 里的 Rust 结构 | `tests/layout_doc.rs`：逐行比字段名与顺序 |
+| `VERSION` 上方的版本历史 | `VERSION` 常量 | `tests/layout_doc.rs`：最后一条编号 = VERSION |
+| 头部各字段偏移 | Rust 结构 | `layout.rs` 编译期 `offset_of!` 断言（改结构不改断言编译不过） |
+| `deny.toml` 的直接边名单 | 各 crate 的真实依赖 + `metadata.vdn.forbid` | xtask tidy（`denycheck.rs`）三条检查；cargo-deny 也查 |
+| `JoinToken` 的大小与对齐 | SDK `os/workgroup_base.h` | 编译期断言 40 字节 / 对齐 4（数字照头文件抄，**不会随 SDK 自动更新**，SDK 变了要人核） |
+| `ThreadPolicy::default()` 的取值 | 决策 D68 | 测试 `default_policy_follows_d68` |
+| `state/handoff/rs-wake-api.md` 的签名 | 源码 | **无自动校验**；文件头已写明「快照，以源码为准」 |
+| 耗电结果表 | `docs/.../20261102-power/README.md` | 现状页已删掉抄的表，只留指针 |
+
+**待人拍板**：无新的。（最低系统 14.4 已由 D67 定；耗电与调度默认值已由 D68 定。）
+**交给大总管定的技术事**：① tidy 抓到的 3 个无测试 crate（A 负责人补 · B 临时名单）；② 要不要在 `.cargo/config.toml` 写死 `MACOSX_DEPLOYMENT_TARGET = 14.4`；③ ort 直接边名单要不要收紧到只剩 backend-ort（现在按现状列了 4 个）；④ hound / clap 的直接边（rs-entry 的 vdn-capture 直接用它们）；⑤ 共享内存 0600 权限（本批不改）
+**本批没做 / 没验证**：`ci.yml` 的 Linux job 没在 GitHub 上真跑过（ort 下载、Linux 下各 crate 能否编译未实测）；rt_bench 的 `qos_set` 按 D68 取消；跨进程加入设备 IO 工作组（属 vdn-io-macos）
