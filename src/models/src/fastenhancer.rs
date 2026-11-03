@@ -91,7 +91,7 @@ impl FastEnhancer {
 )]
 impl Model for FastEnhancer {
     fn name(&self) -> &'static str {
-        "fastenhancer"
+        vdn_types::ModelId::FastEnhancerM.as_str()
     }
     fn sample_rate(&self) -> u32 {
         16000

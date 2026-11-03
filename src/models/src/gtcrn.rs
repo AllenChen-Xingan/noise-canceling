@@ -68,7 +68,7 @@ impl Gtcrn {
 )]
 impl Model for Gtcrn {
     fn name(&self) -> &'static str {
-        "gtcrn"
+        vdn_types::ModelId::Gtcrn.as_str()
     }
     fn sample_rate(&self) -> u32 {
         16000
