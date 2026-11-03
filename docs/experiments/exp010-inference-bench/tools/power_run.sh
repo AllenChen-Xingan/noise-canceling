@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# exp010 耗电：按实时节奏（GTCRN 每 16 ms 一帧、FE-M 每 10 ms 一帧）各跑 60 秒，同时用 powermetrics 采 CPU 功率。
+# exp010 耗电：按实时节奏（GTCRN 每 16 ms 一帧、FE-M 每 10 ms 一帧）各跑 60 秒，同时用 powermetrics 采 CPU / GPU / 神经引擎功率。
+# 口径对齐 standard.md §6：线程设置 rt（D74 默认）、3 轮交替、报三项合计；tract 已知不过挡线，不再测。
 # 要 sudo（powermetrics 只能 root 跑），所以由人来跑：
 #   1. 插电，关掉其他重活（编译、视频、别的基准）
 #   2. 在仓库根目录跑：sudo bash docs/experiments/exp010-inference-bench/tools/power_run.sh 20261102-p1
-#   3. 跑完约 8 分钟；结果写 results/<build-id>/power/，不覆盖已有目录
+#   3. 跑完约 13 分钟（3 轮 × 4 段 × 约 62 秒）；结果写 results/<build-id>/power/，不覆盖已有目录
 # 额外跑一段「空闲」作对照：同样 60 秒什么都不跑，只采功率。
 # 每帧能耗 ≈（后端平均功率 − 空闲平均功率）× 帧间隔。采样窗 62 秒里约 1–2 秒是打开 / 预热前后的空闲，各后端同样稀释。
 set -euo pipefail
@@ -26,19 +27,29 @@ trap 'chown -R "$U" "$HERE/results/$ID"' EXIT   # 中途失败也把文件还给
 
 run() { # 名字 · 命令（命令为空 = 空闲对照）
   local name=$1; shift
-  powermetrics --samplers cpu_power -i 1000 -n 62 > "$OUT/$name.powermetrics.txt" &
+  powermetrics --samplers cpu_power,gpu_power,ane_power -i 1000 -n 62 > "$OUT/$name.powermetrics.txt" &
   local pm=$!
   sleep 1
   if [ $# -gt 0 ]; then sudo -u "$U" "$@" > "$OUT/$name.bench.json"; else sleep 60; fi
   wait $pm
-  # 每秒一行「CPU Power: N mW」，取平均
-  awk '/^CPU Power: [0-9.]+ mW/ {s+=$3; n++} END {if (n==0) {print "'"$name"' 没解析到 CPU Power 行，见原文" > "/dev/stderr"; exit 1} printf "%s mean_cpu_mW=%.1f samples=%d\n", "'"$name"'", s/n, n}' "$OUT/$name.powermetrics.txt" | tee -a "$OUT/summary.txt"
+  # 每秒一行「Combined Power (CPU + GPU + ANE): N mW」，取平均；同时报 CPU 单项
+  awk '/^Combined Power \(CPU \+ GPU \+ ANE\): [0-9.]+ mW/ {t+=$(NF-1); n++} /^CPU Power: [0-9.]+ mW/ {c+=$3; m++} END {if (n==0) {print "'"$name"' 没解析到 Combined Power 行，见原文" > "/dev/stderr"; exit 1} printf "%s mean_combined_mW=%.1f mean_cpu_mW=%.1f samples=%d\n", "'"$name"'", t/n, (m?c/m:-1), n}' "$OUT/$name.powermetrics.txt" | tee -a "$OUT/summary.txt"
 }
 
-run idle
-run gtcrn_ort    "$BIN" gtcrn-bench ort    "$G" "$WAV" --frames 3750 --pace-ms 16
-run gtcrn_native "$BIN" gtcrn-bench native "$W" "$WAV" --frames 3750 --pace-ms 16
-run gtcrn_tract  "$BIN" gtcrn-bench tract  "$G" "$WAV" --frames 3750 --pace-ms 16
-run fem_ort      "$BIN" fem-bench ort      "$F" "$WAV" --frames 6000 --pace-ms 10
-run fem_tract    "$BIN" fem-bench tract    "$FT" "$WAV" --frames 6000 --pace-ms 10
+# 线程设置用 D74 默认（rt = time-constraint，不加工作组）；3 轮交替，每轮轮换顺序，每轮都有一段空闲作噪声底
+for r in 1 2 3; do
+  run idle_r$r
+  case $r in
+    1) order="ort native fem_ort" ;;
+    2) order="native fem_ort ort" ;;
+    3) order="fem_ort ort native" ;;
+  esac
+  for k in $order; do
+    case $k in
+      ort)     run gtcrn_ort_r$r    "$BIN" gtcrn-bench ort    "$G" "$WAV" --frames 3750 --pace-ms 16 --qos rt ;;
+      native)  run gtcrn_native_r$r "$BIN" gtcrn-bench native "$W" "$WAV" --frames 3750 --pace-ms 16 --qos rt ;;
+      fem_ort) run fem_ort_r$r      "$BIN" fem-bench ort      "$F" "$WAV" --frames 6000 --pace-ms 10 --qos rt ;;
+    esac
+  done
+done
 echo "完成：$OUT/summary.txt"
