@@ -18,3 +18,7 @@
 - 新活（D69 / D70）：手写版目标是每帧平均 ≤ 0.08 ms。先做了逐位不变的优化：卷积改成按区间算，去掉分支。旧版可执行文件留在 `target/release/exp010-bench-v0` 作基线
 - 新活（人定）：Rust 对 Python 实测，脚本 `tools/py_ort_bench.py` 和 `tools/run_py_vs_rust.sh`
 - 等名额：sample 定位热点 → r5 全套 → Rust 对 Python → 新旧手写版对比
+- r5b（正式版）：手写版去掉卷积分支后每帧平均 0.088 ms，逐位不变；Rust 对 Python：Python 慢 5–6%，输出逐位相同
+- blas1：Accelerate 版只快 4.7%，而且每帧 malloc 11 次，不采用；全进程 malloc：ORT 每帧 1557 次（FE-M 1023 次），手写版 0 次
+- **paced1：按实时节奏跑，手写版慢约 7 倍**（p50 0.61 ms，最大 6.95 ms，6 帧超过 3 ms，占 0.032 个核），applebe 在 BNNS 上看到同一现象。已报大总管和 applebe
+- 已写好、待名额（排在 applebe 之后）：`tools/run_rt_probe.sh`，测四种线程设置，并测 native-fast（内联 exp / tanh）。改了代码还没编译：native-fast、--workgroup
