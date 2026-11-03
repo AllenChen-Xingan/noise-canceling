@@ -13,10 +13,10 @@
 use std::fs;
 use std::path::Path;
 
-use crate::test_scope::{strings_in, test_lines, test_module_files};
 use crate::scan::{
     code_lines, has_reason, lex_lines, src_files, string_literals, strip_comments_keep_strings,
 };
+use crate::test_scope::{strings_in, test_lines, test_module_files};
 
 /// 模型名的正本文件（相对 workspace 根）。
 pub const NAMES_FILE: &str = "src/types/src/params.rs";
@@ -257,7 +257,6 @@ impl ModelId {
         let no_reason = "let p = \"fastenhancer_m\"; // tidy: 不是模型名：\n";
         assert_eq!(file_problems("a.rs", no_reason, &names()).len(), 1);
     }
-
 
     /// 整个仓库当前过这条规则。
     #[test]

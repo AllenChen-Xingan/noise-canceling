@@ -23,7 +23,8 @@
 - [x] PR 草稿 `state/handoff/iface-pr.md`
 - [x] 大总管合 main（4f622582）后修两处红：会话测试的旧模型名 · R-MODEL 认测试模块文件
 - [x] #68：图加制品内容 ID、格式号升 2、`check_model`、`Pipeline::graph(model, artifact)`、`artifact_id`；CI 全绿（468 过）· eval ci 同前 · 真权重 18 条全过
-- [ ] codex 第 4 轮（看 #68 与合并修复）
+- [x] codex 第 4–7 轮（看 #68 与合并修复）：P1×2（会话头可绕过核对 → `CheckedGraph` + 字段私有；`with_stages` 收整图一半驳回、codex 未再坚持）、P2×8 全改；第 6、7 轮连续无 P0/P1，停止线满足
+- [x] 最终验证：`xtask ci` 全绿（469 过 / 0 败 / 7 忽略）· schema 一致 · `eval ci` 同前 · 真权重 18 条全过
 
 ## 方案（我定的技术题，理由）
 1. **参数描述导出**：`vdn-schema` 新模块 `params.rs`，把 `desc::ALL` 转成 `params.table.json`（不是 JSON Schema，按 README 规矩 1 命名为 `<实体>.<种类>.json`）。导出函数里对 `ParamDesc` 做穷举解构：描述加字段没导出 → 编译失败。浮点按 f32 最短写法写出（`0.002` 不变成 `0.0020000000949…`）。文件还写出「文本格式里能出现的参数键」（= `ParamField::ALL` 的键），由同一张表派生
