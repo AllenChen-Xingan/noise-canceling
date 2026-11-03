@@ -1,7 +1,7 @@
 # 评审 019 · 推理后端总方案与判据（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/019_apple-inference/decision.md` · `standard.md`，依据含 `docs/experiments/exp010-inference-bench/apple-rs/` 的 `src/{main,alloc,bnns,coreml,rt}.rs` 与 `tools/{power_parse.py,impact.sh,rt-matrix.sh}`。**最新一轮：第 1 轮（2026-11-02）· 总评「修改」· 待第 2 轮**。
-> 累计处理：P1×5、P2×2 逐条回源码核实，属实 7、驳回 0、无法核实 0；引用抽查「不符」1 条（已改）。
+> 对象：`docs/research/019_apple-inference/decision.md` · `standard.md`，依据含 `docs/experiments/exp010-inference-bench/apple-rs/` 的 `src/{main,alloc,bnns,coreml,rt}.rs` 与 `tools/{power_parse.py,impact.sh,rt-matrix.sh}`。**最新一轮：第 2 轮（2026-11-02）· 总评「修改」· 待第 3 轮**。
+> 累计处理：P1×9、P2×6 逐条回源码核实，属实 15、驳回 0、无法核实 0；引用抽查「不符」1 条（已改）。
 > 送 codex 之前已做同模型 3 视角只读自审一轮（数字核对 · 结论强度 · 测量口径），其发现已先改完；那一轮的 P2 留在 `decision.md` §7。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -41,4 +41,46 @@
 
 有 P1 → 改完开第 2 轮，提示词附本记录。
 
-（每轮结束都回页首更新「最新一轮」那一行。）
+## 第 2 轮（2026-11-02）· 总评「修改」
+
+原文：`_tmp/codex-019/decision-codex-2.md`（不入库）。effort medium，耗时 102 秒（`result: P0×0 P1×4 P2×4 P3×0`）。日志头：`model: gpt-6-astra` · `sandbox: read-only`。本轮依据加了两份结果 summary 与决策原文摘录（`_tmp/codex-019/decisions-excerpt.md`，摘自主检出 `docs/plan/001_decisions-20261029-b1.md`）。
+第 1 轮的输出文件开头补了一行 Markdown 标题再作 `--previous`：原文以「P1」开头，`file` 把它认成 PBM 位图，脚本当非纯文本拒发；原文另存 `decision-codex-1.orig.md`，内容未改。
+上一轮处理的验证：#1、#3 codex 认为修得不完整（见本轮 #2、#1），其余未再提。
+本轮 P0/P1：4 条 · 停止线：未满足
+
+- **P1｜power_parse.py:43 窗口筛选仍不保守**（第 2 轮 #1）
+  - 核实：属实。时间戳是秒级向下取整，真实结束 ∈ [u, u+1)；上一版没用样本时长 e，也没给结束端留 1 s。
+  - 处理：只收「最早开始 u − e ≥ lo 且最晚结束 u + 1 ≤ hi」的样本。
+- **P1｜impact.sh:36「全程覆盖」仍未证实**（第 2 轮 #2）
+  - 核实：属实。`sleep 4` 后只查存活，模型可能还在加载或预热。
+  - 处理：bench 加 `--ready-file`，进入计时窗（加载、预热都过）时才写就绪文件；impact 等文件出现才起负载（最多 30 s，超时停下），结束时仍查存活。已用 30 帧小跑验证文件会写出。
+- **P1｜decision.md:55 用未校准的 Python 数字淘汰 MLX，违反 D68**（第 2 轮 #3）
+  - 核实：属实。
+  - 处理：MLX 实时推理改为「暂缓（时间盒）」，依据改为执行机制（每帧建图 + `eval` 分配、加锁、等后台线程，读源码）；删掉「换 Rust 补不回 15 倍」；§9 那两行改为「只说明 Python 调 MLX 在这台机上是这个数」。
+- **P1｜standard.md:144 Metal 淘汰依据不成立**（第 2 轮 #4）
+  - 核实：属实。0.1 ms 是异机数据，又和连续跑的 0.088 ms 比；`notes/mlx.md` 里还有融合核约 0.0225 ms / 步的反例。
+  - 处理：Metal 手写核改为「时间盒暂缓、无收益未验证」，写明要在本机测逐帧融合路径；`decision.md` 同步，并把「Core ML 下神经引擎 / GPU 没用上」（实测）和「Metal 没测」分开写。
+- **P2｜standard.md:30 1% / 2% 影响挡线标成人已定，来源不符**（第 2 轮 #5）
+  - 核实：属实。决策摘录写的是「AI 理解，待人确认」，人原话只定了维度。
+  - 处理：`standard.md` 总表、§6.3 与 `decision.md` 页首改为「维度已定 · D75；两个数沿用 D69 两档【AI 理解，待人确认】」。
+- **P2｜decision.md:9 因果修正没同步全篇**（第 2 轮 #6）
+  - 核实：属实。
+  - 处理：`decision.md` 风险 1、`standard.md` §6、`apple/results/20261102-183322-rt/summary.md` 第 2、3 条都改为【假设】；「提速要花电」也改为假设；D74 的「停在能效核约 1.1 GHz」注明是另一条线的实测。
+- **P2｜standard.md:61 整数判零没写进标准**（第 2 轮 #7）
+  - 核实：属实。
+  - 处理：`BE-RT-ALLOC` 改为用 `process_allocs_total == 0` 判，且必须是开了 `--count-malloc` 的那次；null 一律不算过。
+- **P2｜main.rs:382 新字段让默认输出变成非法 JSON**（第 2 轮 #8）
+  - 核实：属实。不按节奏时 `late_max` 是 NaN，直接打出 `NaN`。
+  - 处理：加 `jnum()`，非有限值一律打 `null`；`parity_max_abs`、`parity_snr_db`、`parity_min_frame_snr_db` 也走它；不按节奏时 `late_frames_over_3ms` 为 null。两种模式各跑一次，`json.loads` 都能解析。
+
+另：本轮之间大总管更正决策编号，「最低系统提到 macOS 15」由 D77 改为 **D78**（D77 是另一条「NoNoise-Mac 进评测」），两份文件已全部改号。
+
+### 引用抽查
+
+- codex 列的「不符」：无。
+- codex 列的「核实属实」：6 条（ORT 会话设置、fbank、3 ms 余量、BNNS 换指针、手写 rt 的 0.65 / 0.66 ms、open_ms 已减去 compile_ms）。
+- 无法核实：D74 原文（在另一位大总管的分支上，本次没有给）。
+
+### 是否再审
+
+有 P1 → 改完开第 3 轮。
