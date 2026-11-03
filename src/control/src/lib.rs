@@ -236,7 +236,8 @@ fn schema_ranges(schema: &mut schemars::Schema) {
 
 /// 总线名的正则（给 schema 用）。与 `validate_bus_name` 的一致性由 vdn-schema 的测试逐例比对。
 pub fn bus_name_pattern() -> String {
-    format!("^{}[^/\\u0000]+$", Config::BUS_PREFIX)
+    // 可见 ASCII（0x21–0x7E）去掉 `/`（0x2F）：只有 ASCII，maxLength 数字符 = Rust 数字节
+    format!("^{}[!-.0-~]+$", Config::BUS_PREFIX)
 }
 
 fn hi_block() -> usize {
@@ -266,17 +267,17 @@ pub fn parse_seconds(s: &str) -> Result<f64, String> {
     }
 }
 
-/// 共享内存名：`/vdn-` 开头、后面非空且不再含 `/`、总长 ≤ 31（与 vdn-shm 同一规则）。
+/// 共享内存名：`/vdn-` 开头、后面至少一个字符且只含可见 ASCII（`!`–`~`）、不再含 `/`、总长 ≤ 31 字节（与 vdn-shm 同一规则）。
 pub fn validate_bus_name(name: &str) -> Result<(), ConfigError> {
     let ok = name.len() <= Config::BUS_NAME_MAX
-        && name
-            .strip_prefix(Config::BUS_PREFIX)
-            .is_some_and(|rest| !rest.is_empty() && !rest.contains('/') && !rest.contains('\0'));
+        && name.strip_prefix(Config::BUS_PREFIX).is_some_and(|rest| {
+            !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_graphic() && b != b'/')
+        });
     if ok {
         Ok(())
     } else {
         Err(ConfigError::Invalid(format!(
-            "bus_name = {name:?}：须以 {} 开头、只含一个 /、总长 ≤ {}",
+            "bus_name = {name:?}：须以 {} 开头、后面只用可见 ASCII 且不含 /、总长 ≤ {} 字节",
             Config::BUS_PREFIX,
             Config::BUS_NAME_MAX
         )))
