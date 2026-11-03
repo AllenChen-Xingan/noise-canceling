@@ -139,31 +139,18 @@ impl Header {
 #[cfg(not(target_has_atomic = "64"))]
 compile_error!("vdn-shm 需要无锁的 64 位原子操作");
 
-// 布局钉死：任何一项变了编译就失败，提醒升 VERSION 并通知 HAL / 对端（若驱动是 C，cbindgen 出头文件）。
-// 这些是编译期断言，不在运行期执行。loom 下原子量大小不同，不查（loom 只测协议，不测布局）。
+// 布局的结构性约束（编译期）。每个字段的偏移不在这里手写：由 `desc.rs` 用 `offset_of!` 算出，
+// 导出成 specs/schema/shm-header.layout.json 进仓；改布局不重新导出、或不升 VERSION，vdn-schema 的测试红。
+// loom 下原子量大小不同，不查（loom 只测协议，不测布局）。
 #[cfg(not(feature = "loom"))]
 const _: () = {
+    // 每一行独占一条 64 字节缓存行（生产方 / 消费方不假共享）
     assert!(size_of::<ProdLine>() == 64 && size_of::<ConsLine>() == 64);
-    assert!(size_of::<RingHdr>() == 128);
-    assert!(offset_of!(RingHdr, prod) == 0 && offset_of!(RingHdr, cons) == 64);
-    assert!(offset_of!(ProdLine, write) == 0 && offset_of!(ProdLine, overflow) == 8);
-    assert!(offset_of!(ProdLine, wake) == 16);
-    assert!(offset_of!(ConsLine, read) == 0 && offset_of!(ConsLine, underrun) == 8);
-    assert!(offset_of!(ConsLine, wait_fallbacks) == 16);
-    assert!(offset_of!(ConsLine, gaps) == 24);
-    assert!(size_of::<ConfigLine>() == 64);
+    assert!(size_of::<ConfigLine>() == 64 && size_of::<BeatLine>() == 64);
+    assert!(offset_of!(RingHdr, cons) == 64);
+    // magic 在最前（打开方先读它）；wake 是 4 字节、按 4 对齐（os_sync_wait_on_address 的要求）
     assert!(offset_of!(ConfigLine, magic) == 0);
-    assert!(offset_of!(ConfigLine, version) == 8);
-    assert!(offset_of!(ConfigLine, rate) == 12);
-    assert!(offset_of!(ConfigLine, capacity_frames) == 16);
-    assert!(offset_of!(ConfigLine, l_total) == 20);
-    assert!(offset_of!(ConfigLine, total_bytes) == 24);
-    assert!(offset_of!(ConfigLine, lead) == 32);
-    assert!(offset_of!(ConfigLine, denoise_block) == 36);
-    assert!(offset_of!(ConfigLine, session) == 40);
-    assert!(offset_of!(Header, beat) == 64);
-    assert!(offset_of!(Header, rings) == 128);
-    assert!(HEADER_BYTES == 128 + 3 * 128);
+    assert!(offset_of!(ProdLine, wake).is_multiple_of(4));
     assert!(align_of::<Header>() == 64);
     // 样本槽紧跟头部，对齐到 AtomicU32
     assert!(HEADER_BYTES.is_multiple_of(align_of::<AtomicU32>()));

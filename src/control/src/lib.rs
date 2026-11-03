@@ -27,6 +27,7 @@ pub const IO_RATE: u32 = 48_000;
 
 /// 处理模式。与 `vdn_engine::Mode` 一一对应，由 bin 翻译。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum Mode {
     #[default]
@@ -36,6 +37,7 @@ pub enum Mode {
 
 /// 用哪个模型。与 `vdn_models::ModelKind` 一一对应，由 bin 翻译。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum ModelChoice {
     #[default]
@@ -51,8 +53,13 @@ pub enum Cmd {
 }
 
 /// 配置文件（JSON）。缺的字段取默认值；多出的字段报错（防拼错键名静默失效）。
+///
+/// 导出的 JSON Schema（`specs/schema/config.schema.json`）由本类型派生；取值范围由 `schema_ranges`
+/// 从本文件的常量写进去。schema 只管单个字段，跨字段规则（lead ≥ IO 块、两个总线名不同）只在 `validate` 里。
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(transform = schema_ranges))]
 pub struct Config {
     /// 输入设备名；`None` = 系统默认
     pub input_device: Option<String>,
@@ -197,6 +204,42 @@ impl Config {
     }
 }
 
+/// 把取值范围写进导出的 schema（数字只来自 `Config` 的常量，不在这里另写）。
+#[cfg(feature = "schema")]
+fn schema_ranges(schema: &mut schemars::Schema) {
+    use serde_json::{Value, json};
+    let Some(props) = schema.get_mut("properties").and_then(Value::as_object_mut) else {
+        return;
+    };
+    let mut set = |key: &str, extra: Value| {
+        if let (Some(Value::Object(p)), Value::Object(extra)) = (props.get_mut(key), extra) {
+            p.extend(extra);
+        }
+    };
+    let (lo, hi) = Config::BLOCK_RANGE;
+    set("block", json!({ "minimum": lo, "maximum": hi }));
+    set("denoise_block", json!({ "minimum": 1, "maximum": hi }));
+    let (lo, hi) = Config::HEARTBEAT_RANGE_MS;
+    set(
+        "heartbeat_timeout_ms",
+        json!({ "minimum": lo, "maximum": hi }),
+    );
+    set("lead_frames", json!({ "maximum": Config::LEAD_MAX }));
+    let bus = json!({ "maxLength": Config::BUS_NAME_MAX, "pattern": bus_name_pattern() });
+    set("bus_name", bus.clone());
+    set("out_bus_name", bus);
+    // 设备名：有就不能是空白（`validate` 的同一条规则）
+    let device = json!({ "pattern": "\\S" });
+    set("input_device", device.clone());
+    set("output_device", device);
+}
+
+/// 总线名的正则（给 schema 用）。与 `validate_bus_name` 的一致性由 vdn-schema 的测试逐例比对。
+pub fn bus_name_pattern() -> String {
+    // 可见 ASCII（0x21–0x7E）去掉 `/`（0x2F）：只有 ASCII，maxLength 数字符 = Rust 数字节
+    format!("^{}[!-.0-~]+$", Config::BUS_PREFIX)
+}
+
 fn hi_block() -> usize {
     Config::BLOCK_RANGE.1
 }
@@ -224,17 +267,17 @@ pub fn parse_seconds(s: &str) -> Result<f64, String> {
     }
 }
 
-/// 共享内存名：`/vdn-` 开头、后面非空且不再含 `/`、总长 ≤ 31（与 vdn-shm 同一规则）。
+/// 共享内存名：`/vdn-` 开头、后面至少一个字符且只含可见 ASCII（`!`–`~`）、不再含 `/`、总长 ≤ 31 字节（与 vdn-shm 同一规则）。
 pub fn validate_bus_name(name: &str) -> Result<(), ConfigError> {
     let ok = name.len() <= Config::BUS_NAME_MAX
-        && name
-            .strip_prefix(Config::BUS_PREFIX)
-            .is_some_and(|rest| !rest.is_empty() && !rest.contains('/') && !rest.contains('\0'));
+        && name.strip_prefix(Config::BUS_PREFIX).is_some_and(|rest| {
+            !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_graphic() && b != b'/')
+        });
     if ok {
         Ok(())
     } else {
         Err(ConfigError::Invalid(format!(
-            "bus_name = {name:?}：须以 {} 开头、只含一个 /、总长 ≤ {}",
+            "bus_name = {name:?}：须以 {} 开头、后面只用可见 ASCII 且不含 /、总长 ≤ {} 字节",
             Config::BUS_PREFIX,
             Config::BUS_NAME_MAX
         )))

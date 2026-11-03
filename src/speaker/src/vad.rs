@@ -83,6 +83,7 @@ impl Vad {
 }
 
 /// 概率 → 有声 / 无声的滞回判定：高于 `on` 进入有声，低于 `off` 才退出。
+// tidy: 同名不同物：这是 VAD 概率的施密特触发；vdn_types::Hysteresis 是场景切换的确认 / 停留时长
 #[derive(Clone, Copy, Debug)]
 pub struct Hysteresis {
     pub on: f32,

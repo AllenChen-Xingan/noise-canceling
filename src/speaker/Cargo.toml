@@ -15,6 +15,7 @@ onnx = ["dep:ort"]
 # 离线实验命令行已挪到 src/speaker-lab/（vdn-speaker-lab，tier = tool；2026-10-31 p2fix）
 
 [dependencies]
+vdn-types.workspace = true
 # 本 crate 新引入的依赖
 earshot = "=1.2.2"
 # 以下沿用 workspace 的唯一一份钉

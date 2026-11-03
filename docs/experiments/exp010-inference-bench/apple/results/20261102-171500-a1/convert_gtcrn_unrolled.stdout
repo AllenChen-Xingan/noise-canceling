@@ -1,0 +1,1 @@
+{"torch": "2.15.0", "coremltools": "9.0", "files": {"gtcrn_unrolled_fp32.mlpackage": "2bd93bec40ba124840b5271bff6a29395b017ac3d3fc5090d589bf8904addd3b"}, "unrolled_torch_max_abs_vs_orig": 1.2479722499847412e-07}

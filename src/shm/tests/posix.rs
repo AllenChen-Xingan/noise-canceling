@@ -65,6 +65,11 @@ fn bad_names_are_rejected() {
         "/other-x",
         "/vdn-a/b",
         "/vdn-0123456789012345678901234567",
+        // 只许可见 ASCII（codex 第 2 轮 #2）：空格、NUL、多字节字符都不行
+        "/vdn-a b",
+        "/vdn-a\0b",
+        "/vdn-中",
+        "/vdn-中中中中中中中中中",
     ] {
         assert_eq!(
             Bus::create(n, CFG).err(),

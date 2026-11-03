@@ -196,7 +196,7 @@ impl SpectralPolish {
         }
 
         // 3. 隐含增益与平滑
-        let s = p.smooth.clamp(0.0, 1.0);
+        let s = vdn_types::desc::POLISH_SMOOTH.clamp(p.smooth);
         let alpha = 0.85 * s * (1.0 - sp); // 无人声时最强（s=1 时 τ≈6 帧≈0.1 s）；有人声时 → 0，不拖字头
         for ((d, w), (gs, gt)) in dry
             .iter()

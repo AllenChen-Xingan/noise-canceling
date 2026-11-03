@@ -14,7 +14,6 @@ P2 离线：VAD 驱动的快开慢关 · Kaldi 兼容 fbank · 声纹（ONNX）�
 | `vecmath` | — | 归一化、余弦等向量小工具 |
 | `enroll` | 判断 | 在线聚类 + 「时长 × 近讲」打分 + 稳定才锁 + 可改判 |
 | `judge` | 判断 | 1.5 s 窗 / 0.5 s 一次：挑清楚单人片段喂注册器、对主人打分、发 `SpeakerVerdict` |
-| `types` | — | engine 接口镜像，逐字段照 align 的 `vdn-types` 草案 |
 
 实时级 `latency_samples() = 0`、零前瞻；判断回路只改参数、不碰声音。
 
@@ -49,7 +48,8 @@ P2 离线：VAD 驱动的快开慢关 · Kaldi 兼容 fbank · 声纹（ONNX）�
 3. **VAD 只跑一份**：链上谁先算 earshot 概率就填进 `FrameCtx::voice_prob`，包络和门控都优先读它
 4. **两级下限会叠加**：保守链是「包络（混回原声，下限 −12 dB）→ 门控（× g，下限 −12 dB）」，门控收到底时原声残留约 −24 dB、降噪部分 −12 dB。激进链不混回原声，只有门控下限
 5. 判断回路要两路输入：降噪输出（算声纹）和对齐的原声（量电平；近讲线索与门控同一口径）
-6. 类型镜像 `types.rs` 逐字段照 vdn-types；换成 `use vdn_types::…` 时注意 `EnrollOutcome`（本 crate）≠ `EnrollEvent`（vdn-types 决策日志，`Locked/Relocked/Reset`），需要映射；`Stage::set_params(&ParamSet)` 接入时补
+6. 接口类型（`Stage` · `FrameCtx` · `SpeakerVerdict` · `SampleClock`）直接用 `vdn-types`（2026-11-02 删掉了镜像副本 `types.rs`）。注意 `EnrollOutcome`（本 crate）≠ `EnrollEvent`（vdn-types 决策日志，`Locked/Relocked/Reset`），写决策日志时需要映射；`Stage::set_params(&ParamSet)` 接入 engine 时补
+7. **参数的范围与默认值**的正本是 `vdn_types::desc`（门控 `gate.*`、包络与 engine 共用 `floor_db` 等）。`GateParams` / `EnvelopeParams` 的 `Default` 从表取；`validate()` 越界拒收（命令行用），`clamped()` 夹进范围（`new()` 先夹再用）
 
 ## 发布前（本批不发布）
 

@@ -11,8 +11,8 @@ use std::time::{Duration, Instant};
 
 use vdn_dsp::StreamingStft;
 use vdn_dsp::window::sqrt_hann_periodic;
-use vdn_polish::mirror::FrameCtx;
 use vdn_polish::{PolishChain, PolishParams};
+use vdn_types::FrameCtx;
 
 const N_FFT: usize = 512;
 const HOP: usize = 256;
@@ -59,7 +59,7 @@ fn main() {
         .iter()
         .position(|x| x == "--ramp")
         .map(|i| a[i + 1].parse::<f32>().unwrap())
-        .unwrap_or(1.0);
+        .unwrap_or(vdn_types::desc::POLISH_RAMP_S.default);
     let mut chain = PolishChain::new(
         N_FFT,
         HOP,
@@ -79,6 +79,14 @@ fn main() {
             ..PolishParams::DEFAULT
         }
     });
+    // 范围的正本是 vdn_types::desc：越界直接报错退出，不悄悄夹值
+    if let Some(p) = &fixed {
+        p.validate()
+            .unwrap_or_else(|e| panic!("--params 越界：{e}"));
+    }
+    vdn_types::desc::POLISH_RAMP_S
+        .check(ramp)
+        .unwrap_or_else(|e| panic!("--ramp 越界：{e}"));
     if let Some(p) = fixed {
         chain.set_ramp_s(0.0);
         chain.set_target(p);

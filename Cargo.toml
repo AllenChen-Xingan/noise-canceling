@@ -1,7 +1,7 @@
 # vdn workspace：crate 放 src/<crate>/。依赖方向的正本是各 crate 的 [package.metadata.vdn].forbid（xtask check-deps / cargo deny 检查），图见 specs/rust/architecture.md §2.2
 [workspace]
 resolver = "3"
-members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab", "src/scene", "src/polish", "src/eval", "src/backend-ort", "src/io-macos", "src/hal", "src/shm", "src/rt-thread", "src/control", "src/capture", "src/denoised"]
+members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab", "src/scene", "src/polish", "src/eval", "src/backend-ort", "src/io-macos", "src/hal", "src/shm", "src/rt-thread", "src/control", "src/capture", "src/denoised", "src/schema"]
 
 [workspace.package]
 version = "0.1.0"
@@ -29,6 +29,8 @@ clap = { version = "4", features = ["derive"] }
 assert_no_alloc = "1.1"
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
+# JSON Schema 导出（MIT）：只在 C 档与 tool 档（control · eval · schema），核心 crate 不用（specs/schema/README.md）
+schemars = "1.2"
 # termination：SIGTERM / SIGHUP 也走同一个处理（降噪进程退出前要删共享内存名）
 ctrlc = { version = "3.4", features = ["termination"] }
 # 实时线程间的单生产者单消费者队列（009 推荐；MIT OR Apache-2.0）：换总线交接、控制命令

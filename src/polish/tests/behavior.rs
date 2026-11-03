@@ -251,7 +251,7 @@ fn never_louder_than_noisy_and_nan_safe() {
 #[test]
 fn time_only_path_runs_agc_and_ramps() {
     use vdn_polish::PolishChain;
-    use vdn_polish::mirror::FrameCtx;
+    use vdn_types::FrameCtx;
     // 只走时域（FE-M wav2wav 那一路）：AGC 要用外部 VAD 或能量粗判工作，参数过渡也要推进
     let mut chain = PolishChain::new(512, 256, 16000.0, PolishParams::OFF);
     chain.set_ramp_s(0.5);
@@ -269,6 +269,7 @@ fn time_only_path_runs_agc_and_ramps() {
             &mut x,
             FrameCtx {
                 voice_prob: Some(1.0),
+                ..FrameCtx::default()
             },
         );
     }
@@ -288,4 +289,30 @@ fn agc_only_presets_leave_spectrum_alone() {
         assert_eq!((p.smooth, p.demuffle_max_db), (0.0, 0.0));
         assert!(p.floor_db <= -99.0 && p.comfort_db <= -99.0 && p.agc >= 0.5);
     }
+}
+
+/// 链收参数时按描述表（`vdn_types::desc`）夹值：构造、换目标、过渡时长都不会把越界值带进实时侧。
+#[test]
+fn chain_clamps_params_by_desc_table() {
+    use vdn_polish::PolishChain;
+    use vdn_types::FrameCtx;
+    use vdn_types::desc::{POLISH_FLOOR_DB, POLISH_SMOOTH};
+    let mut chain = PolishChain::new(
+        512,
+        256,
+        16000.0,
+        PolishParams {
+            smooth: POLISH_SMOOTH.max + 4.0,
+            ..PolishParams::DEFAULT
+        },
+    );
+    assert_eq!(chain.current().smooth, POLISH_SMOOTH.max);
+    chain.set_ramp_s(-3.0); // 越界：夹到 0 = 立即切换
+    chain.set_target(PolishParams {
+        floor_db: POLISH_FLOOR_DB.min - 400.0,
+        ..PolishParams::DEFAULT
+    });
+    let mut x = vec![0.0f32; 256];
+    chain.process_time_ctx(&mut x, FrameCtx::default());
+    assert_eq!(chain.current().floor_db, POLISH_FLOOR_DB.min);
 }

@@ -8,6 +8,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+vdn-types.workspace = true
 vdn-speaker = { path = "../speaker", features = ["onnx"] }
 vdn-engine.workspace = true
 vdn-models.workspace = true

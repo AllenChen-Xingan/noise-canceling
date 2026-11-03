@@ -3,7 +3,8 @@
 //! 1. `layout.rs` 头注释里的字段清单（第 0 行 · 第 1 行 · 生产方行 · 消费方行）：字段名与顺序必须和结构一致
 //! 2. `VERSION` 上方的版本历史：最后一条的编号必须等于 `VERSION`
 //!
-//! 偏移量本身由 `layout.rs` 里的编译期 `offset_of!` 断言钉死（改结构不改断言就编译不过）。
+//! 偏移量与大小由 `src/desc.rs`（`offset_of!` 算）导出到 `specs/schema/shm-header.layout.json`，
+//! 由 vdn-schema 的测试逐项比对；改布局不升 `VERSION` 也由那里判红。
 #![cfg(not(feature = "loom"))] // loom 的原子量只能在 loom::model 里用；loom 模式只跑 tests/loom.rs
 
 const SRC: &str = include_str!("../src/layout.rs");

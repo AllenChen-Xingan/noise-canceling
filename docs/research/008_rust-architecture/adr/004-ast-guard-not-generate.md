@@ -35,3 +35,6 @@
 
 ## 一句话
 **AST 这个想法我们这样用：crate 图本身就是那棵「语法树」里的模块边界；再用 AST 和依赖图工具把架构规则写成 CI 红灯；生成代码只在第三次手抄出错时才上。**
+
+## 修订（2026-11-02，D72 · issue #57）
+「要生成就用 xtask 生成、提交、加一致性测试」落成 schema 机制：Rust 类型是正本，工具 crate `vdn-schema` 导出到 `specs/schema/` 并进仓，测试重新导出逐字比对；仍不用 build.rs（`specs/schema/README.md`）。导出放独立的 tool 档 crate 而非 xtask，因为 xtask 约定不依赖任何 vdn crate。

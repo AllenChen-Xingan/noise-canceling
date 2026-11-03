@@ -1,0 +1,8 @@
+{
+ "torch": "2.15.0",
+ "coremltools": "9.0",
+ "files": {
+  "gtcrn_fp16.mlpackage": "43f1ea267ff6e3987574896fcaafc625f41dde4d5e3df3042895fa59e4976d42"
+ },
+ "selfcheck_fp16_max_abs_vs_torch": 0.9071707725524902
+}
