@@ -616,6 +616,21 @@ impl Gru {
         })
     }
 
+    /// 单步的工作量。关键路径只算依赖上一步状态 h 的部分：Wh·h（树形）→ 加 gi → sigmoid(r) →
+    /// r·gh + gi → tanh → (1−z)·n + z·h（2 步）；z 的 sigmoid 与 r 并行，不在路径上。gi = Wi·x 不依赖 h。
+    fn step_cost(&self) -> Cost {
+        let (i, h) = (self.i as u64, self.h as u64);
+        Cost {
+            macs: 3 * h * (i + h),
+            nonlin: 3 * h,
+            other: 4 * h,
+            w_bytes: (3 * h * (i + h) + 6 * h) * F32B,
+            io_bytes: (i + 2 * h) * F32B,
+            chain_fma: clog2(self.h) + 1 + 1 + 1 + 2,
+            chain_nl: 2,
+        }
+    }
+
     /// `x` 长 I，`h` 长 H，原地更新 `h`。
     #[inline]
     fn step(&self, x: &[f32], h: &mut [f32]) {
