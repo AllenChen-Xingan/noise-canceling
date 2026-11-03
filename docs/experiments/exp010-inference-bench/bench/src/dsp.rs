@@ -172,24 +172,44 @@ pub fn run(args: &[String], audio16: &[f32]) -> Result<(), crate::Err> {
             crate::wait_due(w0, f - warm, pace);
         }
         let x = &hi[f * HI..(f + 1) * HI];
-        let mut k = [0u64; S + 1];
-        k[0] = ticks();
-        dec.process(x, &mut lo);
-        k[1] = ticks();
-        fdec.process(x, &mut lo2);
-        k[2] = ticks();
+        // 原版与 NEON 版的先后按帧交替（codex 020 第 1 轮 #4：固定原版在前，醒来后的频率 / 缓存状态会偏向后跑的那个）
+        let vdn_first = f % 2 == 0;
+        let mut d = [0u64; S];
+        let t0 = ticks();
+        if vdn_first {
+            dec.process(x, &mut lo);
+            let t1 = ticks();
+            fdec.process(x, &mut lo2);
+            let t2 = ticks();
+            (d[0], d[1]) = (t1 - t0, t2 - t1);
+        } else {
+            fdec.process(x, &mut lo2);
+            let t1 = ticks();
+            dec.process(x, &mut lo);
+            let t2 = ticks();
+            (d[1], d[0]) = (t1 - t0, t2 - t1);
+        }
+        let t2 = ticks();
         let spec = stft.analyze(&lo);
         std::hint::black_box(&spec);
-        k[3] = ticks();
+        let t3 = ticks();
         stft.synthesize(&mut syn);
-        k[4] = ticks();
-        int.process(&syn, &mut out);
-        k[5] = ticks();
-        fint.process(&syn, &mut out2);
-        k[6] = ticks();
+        let t4 = ticks();
+        (d[2], d[3]) = (t3 - t2, t4 - t3);
+        if vdn_first {
+            int.process(&syn, &mut out);
+            let t5 = ticks();
+            fint.process(&syn, &mut out2);
+            (d[4], d[5]) = (t5 - t4, ticks() - t5);
+        } else {
+            fint.process(&syn, &mut out2);
+            let t5 = ticks();
+            int.process(&syn, &mut out);
+            (d[5], d[4]) = (t5 - t4, ticks() - t5);
+        }
         if f >= warm {
             for s in 0..S {
-                t[(f - warm) * S + s] = (k[s + 1] - k[s]) as u32;
+                t[(f - warm) * S + s] = d[s] as u32;
             }
             for (a, b) in lo.iter().zip(&lo2) {
                 dmax = dmax.max((a - b).abs());

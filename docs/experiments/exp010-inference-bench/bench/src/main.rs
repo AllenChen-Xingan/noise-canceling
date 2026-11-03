@@ -493,7 +493,8 @@ mod tests {
         let ref_out = run_all(&mut clean);
         let _dirty = open_net(ModelId::Gtcrn, "native-blas-fast", Path::new(&w)).unwrap();
         assert!(gtcrn_native::BLAS.load(Relaxed) && gtcrn_native::FAST.load(Relaxed));
-        let got = run_all(&mut clean.reset_then(&w));
+        clean.reset();
+        let got = run_all(&mut clean);
         assert!(
             ref_out.iter().zip(&got).all(|(a, b)| a.to_bits() == b.to_bits()),
             "全局开关改变了 v4i 的输出"
