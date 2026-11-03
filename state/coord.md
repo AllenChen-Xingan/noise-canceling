@@ -10,8 +10,8 @@
 
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
-| single | 清镜像副本 · 参数只写一处 · #56 · `feat/types-single-source` · `../noise_canceling-single` | vdn-types（参数描述）· vdn-speaker · vdn-polish · vdn-scene | 已派 |
-| schema | schema 导出 + 交叉校验 · #57 · `feat/schema-crosscheck` · `../noise_canceling-schema` | schema 机制 · 共享内存头 · 配置 · 评测任务清单 | 已派 |
+| single | 清镜像副本 · 参数只写一处 · #56 · `feat/types-single-source` · `../noise_canceling-single` | vdn-types（参数描述）· vdn-speaker · vdn-polish · vdn-scene | 已报到（noise-canceling-single-68）|
+| schema | schema 导出 + 交叉校验 · #57 · `feat/schema-crosscheck` · `../noise_canceling-schema` | schema 机制 · 共享内存头 · 配置 · 评测任务清单 | 已报到（noise-canceling-schema-1d）|
 
 ## 当前大事 · 大总管 noise-canceling-e3（2026-11-02 起）
 
