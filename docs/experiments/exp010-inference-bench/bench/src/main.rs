@@ -81,6 +81,31 @@ fn spectra(wav: &[f32], frames: usize) -> Vec<([f32; BINS], [f32; BINS])> {
     out
 }
 
+/// ORT 会话：设置同 src/models/src/session.rs（单线程、不自旋、PreferCPU、ORT_ENABLE_ALL）。
+fn ort_session(path: &Path) -> Result<Session, Err> {
+        let b = |e: ort::Error<ort::session::builder::SessionBuilder>| -> Err { e.to_string().into() };
+        static ENV: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
+        if ENV.get().is_none() {
+            let e = ort::init().with_name("exp010").build()?;
+            let _ = ENV.set(e);
+        }
+    let s = Session::builder(ENV.get().ok_or("env")?)?
+        .with_auto_device(AutoDevicePolicy::PreferCPU)
+        .map_err(b)?
+        .with_optimization_level(GraphOptimizationLevel::All)
+        .map_err(b)?
+        .with_intra_threads(1)
+        .map_err(b)?
+        .with_inter_threads(1)
+        .map_err(b)?
+        .with_parallel_execution(false)
+        .map_err(b)?
+        .with_intra_op_spinning(false)
+        .map_err(b)?
+        .commit_from_file(path)?;
+    Ok(s)
+}
+
 // ── ORT 基线（设置同 src/models/src/session.rs：单线程、不自旋、PreferCPU、ORT_ENABLE_ALL） ──
 struct OrtGtcrn {
     session: Session,
@@ -97,26 +122,7 @@ fn zeros(shape: &[usize]) -> Result<Tensor<f32>, Err> {
 
 impl OrtGtcrn {
     fn open(path: &Path) -> Result<Self, Err> {
-        let b = |e: ort::Error<ort::session::builder::SessionBuilder>| -> Err { e.to_string().into() };
-        static ENV: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
-        if ENV.get().is_none() {
-            let e = ort::init().with_name("exp010").build()?;
-            let _ = ENV.set(e);
-        }
-        let session = Session::builder(ENV.get().ok_or("env")?)?
-            .with_auto_device(AutoDevicePolicy::PreferCPU)
-            .map_err(b)?
-            .with_optimization_level(GraphOptimizationLevel::All)
-            .map_err(b)?
-            .with_intra_threads(1)
-            .map_err(b)?
-            .with_inter_threads(1)
-            .map_err(b)?
-            .with_parallel_execution(false)
-            .map_err(b)?
-            .with_intra_op_spinning(false)
-            .map_err(b)?
-            .commit_from_file(path)?;
+        let session = ort_session(path)?;
         let mut sel = OutputSelector::default();
         sel = sel.preallocate(OUT_NAMES[0], zeros(&[1, BINS, 1, 2])?);
         for (name, shape) in OUT_NAMES[1..].iter().zip(CACHE_SHAPES) {
