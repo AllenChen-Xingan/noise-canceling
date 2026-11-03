@@ -77,23 +77,6 @@ impl Probe for TimerProbe {
     }
 }
 
-/// 只收集段表与工作量，不计时
-pub struct CostProbe(pub Vec<Seg>);
-impl Probe for CostProbe {
-    fn mark(&mut self, blk: &'static str, op: &'static str, cost: impl FnOnce() -> Cost) {
-        self.0.push(Seg { blk, op, cost: cost() });
-    }
-}
-
-pub fn costs(net: &mut GtcrnNative) -> Vec<Seg> {
-    let mut re = [0.0f32; 257];
-    let mut im = [0.0f32; 257];
-    let mut p = CostProbe(Vec::new());
-    net.infer_probed(&mut re, &mut im, &mut p);
-    net.reset();
-    p.0
-}
-
 fn cost_json(c: &Cost) -> String {
     format!(
         "\"macs\":{},\"nonlin\":{},\"other\":{},\"w_bytes\":{},\"io_bytes\":{},\"chain_fma\":{},\"chain_nl\":{}",
