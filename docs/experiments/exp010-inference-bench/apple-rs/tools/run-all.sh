@@ -11,6 +11,7 @@ MAIN=/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling
 RUSTBE=/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-rustbe/docs/experiments/exp010-inference-bench/bench
 VENV=$MAIN/_tmp/exp010-venv
 PY=$VENV/bin/python
+PYCT=${PYCT:-$MAIN/_tmp/exp010-venv-ct/bin/python}   # 转换专用：coremltools 9.0 在 Python 3.13 / numpy 2.5 上会崩（GIL 致命错误），用 3.12 + numpy 2.2
 BID=${BID:-$(date +%Y%m%d-%H%M%S)-$(git -C "$HERE" rev-parse --short HEAD)}
 OUT=$MAIN/_tmp/exp010-apple/$BID
 RES=$EXP/apple/results/$BID
@@ -40,10 +41,10 @@ fi
 
 if has convert; then
   log "转 GTCRN"
-  "$PY" "$EXP/apple/convert_gtcrn.py" "$MAIN/resources/gtcrn/stream" "$OUT" > "$RES/convert_gtcrn.stdout" 2> "$RES/convert_gtcrn.stderr" || log "ERROR convert_gtcrn"
+  "$PYCT" "$EXP/apple/convert_gtcrn.py" "$MAIN/resources/gtcrn/stream" "$OUT" > "$RES/convert_gtcrn.stdout" 2> "$RES/convert_gtcrn.stderr" || log "ERROR convert_gtcrn"
   cp "$OUT/convert.json" "$RES/" 2>/dev/null
   log "转 FE-M"
-  "$PY" "$EXP/apple/convert_fem.py" "$MAIN/resources/fastenhancer" "$HOME/vdn-data/models/fastenhancer-dns-v1.0.0/ckpt-full/fastenhancer_m" "$OUT" \
+  "$PYCT" "$EXP/apple/convert_fem.py" "$MAIN/resources/fastenhancer" "$HOME/vdn-data/models/fastenhancer-dns-v1.0.0/ckpt-full/fastenhancer_m" "$OUT" \
     > "$RES/convert_fem.stdout" 2> "$RES/convert_fem.stderr" || log "ERROR convert_fem"
   cp "$OUT/convert_fem.json" "$RES/" 2>/dev/null
 fi

@@ -1,30 +1,19 @@
 Torch version 2.15.0 has not been tested with coremltools. You may run into unexpected errors. Torch 2.7.0 is the most recent version that has been tested.
-/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/torch/jit/_trace.py:1006: FutureWarning: `torch.jit.trace` is deprecated. Please switch to `torch.compile` or `torch.export`.
+/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/coremltools/optimize/torch/palettization/fake_palettize.py:82: SyntaxWarning: invalid escape sequence '\_'
+  n_bits (:obj:`int`): Number of palettization bits. There would be :math:`2^{n\_bits}` unique weights in the ``LUT``.
+/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/torch/jit/_trace.py:1006: FutureWarning: `torch.jit.trace` is deprecated. Please switch to `torch.compile` or `torch.export`.
   warnings.warn(
-/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/torch/jit/_trace.py:1145: FutureWarning: `torch.jit.trace_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/torch/jit/_trace.py:1145: FutureWarning: `torch.jit.trace_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
   warnings.warn(
 Model is not in eval mode. Consider calling '.eval()' on your model prior to conversion
 Tuple detected at graph output. This will be flattened in the converted model.
-Converting PyTorch Frontend ==> MIL Ops:   0%|          | 0/866 [00:00<?, ? ops/s]Converting PyTorch Frontend ==> MIL Ops:  54%|█████▍    | 469/866 [00:00<00:00, 3000.08 ops/s]Converting PyTorch Frontend ==> MIL Ops: 100%|█████████▉| 864/866 [00:00<00:00, 4046.82 ops/s]
-Running MIL frontend_pytorch pipeline:   0%|          | 0/5 [00:00<?, ? passes/s]Running MIL frontend_pytorch pipeline: 100%|██████████| 5/5 [00:00<00:00, 93.66 passes/s]
-Running MIL default pipeline:   0%|          | 0/92 [00:00<?, ? passes/s]Running MIL default pipeline:  12%|█▏        | 11/92 [00:00<00:00, 90.20 passes/s]Running MIL default pipeline:  25%|██▌       | 23/92 [00:00<00:00, 98.70 passes/s]Running MIL default pipeline:  39%|███▉      | 36/92 [00:00<00:00, 111.00 passes/s]Running MIL default pipeline:  52%|█████▏    | 48/92 [00:00<00:00, 59.16 passes/s] Running MIL default pipeline:  65%|██████▌   | 60/92 [00:00<00:00, 68.56 passes/s]Running MIL default pipeline:  77%|███████▋  | 71/92 [00:00<00:00, 77.89 passes/s]Running MIL default pipeline:  91%|█████████▏| 84/92 [00:01<00:00, 88.97 passes/s]Running MIL default pipeline: 100%|██████████| 92/92 [00:01<00:00, 84.24 passes/s]
-Running MIL backend_mlprogram pipeline:   0%|          | 0/12 [00:00<?, ? passes/s]Running MIL backend_mlprogram pipeline: 100%|██████████| 12/12 [00:00<00:00, 133.08 passes/s]
+Converting PyTorch Frontend ==> MIL Ops:   0%|          | 0/866 [00:00<?, ? ops/s]Converting PyTorch Frontend ==> MIL Ops:  48%|████▊     | 416/866 [00:00<00:00, 4075.47 ops/s]Converting PyTorch Frontend ==> MIL Ops: 100%|█████████▉| 864/866 [00:00<00:00, 4808.41 ops/s]
+Running MIL frontend_pytorch pipeline:   0%|          | 0/5 [00:00<?, ? passes/s]Running MIL frontend_pytorch pipeline: 100%|██████████| 5/5 [00:00<00:00, 94.89 passes/s]
+Running MIL default pipeline:   0%|          | 0/92 [00:00<?, ? passes/s]Running MIL default pipeline:  12%|█▏        | 11/92 [00:00<00:00, 96.03 passes/s]Running MIL default pipeline:  24%|██▍       | 22/92 [00:00<00:00, 103.75 passes/s]Running MIL default pipeline:  38%|███▊      | 35/92 [00:00<00:00, 111.98 passes/s]Running MIL default pipeline:  51%|█████     | 47/92 [00:00<00:00, 107.00 passes/s]Running MIL default pipeline:  63%|██████▎   | 58/92 [00:00<00:00, 49.78 passes/s] Running MIL default pipeline:  74%|███████▍  | 68/92 [00:00<00:00, 57.98 passes/s]Running MIL default pipeline:  88%|████████▊ | 81/92 [00:01<00:00, 72.11 passes/s]Running MIL default pipeline: 100%|██████████| 92/92 [00:01<00:00, 77.16 passes/s]
+Running MIL backend_mlprogram pipeline:   0%|          | 0/12 [00:00<?, ? passes/s]Running MIL backend_mlprogram pipeline: 100%|██████████| 12/12 [00:00<00:00, 137.88 passes/s]
 Model is not in eval mode. Consider calling '.eval()' on your model prior to conversion
 Tuple detected at graph output. This will be flattened in the converted model.
-Converting PyTorch Frontend ==> MIL Ops:   0%|          | 0/866 [00:00<?, ? ops/s]Converting PyTorch Frontend ==> MIL Ops:  58%|█████▊    | 498/866 [00:00<00:00, 4815.93 ops/s]Converting PyTorch Frontend ==> MIL Ops: 100%|█████████▉| 864/866 [00:00<00:00, 5646.10 ops/s]
-Running MIL frontend_pytorch pipeline:   0%|          | 0/5 [00:00<?, ? passes/s]Running MIL frontend_pytorch pipeline: 100%|██████████| 5/5 [00:00<00:00, 93.58 passes/s]
-Running MIL default pipeline:   0%|          | 0/95 [00:00<?, ? passes/s]Running MIL default pipeline:  12%|█▏        | 11/95 [00:00<00:00, 92.14 passes/s]Running MIL default pipeline:  23%|██▎       | 22/95 [00:00<00:00, 101.73 passes/s]Running MIL default pipeline:  36%|███▌      | 34/95 [00:00<00:00, 108.94 passes/s]Running MIL default pipeline:  47%|████▋     | 45/95 [00:00<00:00, 103.34 passes/s]Running MIL default pipeline:  59%|█████▉    | 56/95 [00:00<00:00, 103.83 passes/s]Fatal Python error: PyThreadState_Get: the function must be called with the GIL held, after Python initialization and before Python finalization, but the GIL is released (the current Python thread state is NULL)
-Python runtime state: initialized
-
-Thread 0x000000016df5b000 (most recent call first):
-  File "/Users/allenchen/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/threading.py", line 363 in wait
-  File "/Users/allenchen/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/threading.py", line 660 in wait
-  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv/lib/python3.13/site-packages/tqdm/_monitor.py", line 69 in run
-  File "/Users/allenchen/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/threading.py", line 1044 in _bootstrap_inner
-  File "/Users/allenchen/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/threading.py", line 1015 in _bootstrap
-
-Thread 0x00000001fd013f80 (most recent call first):
-  File "/Users/allenchen/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/copy.py", line 246 in _keep_alive
-  <invalid frame>
-/Users/allenchen/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/multiprocessing/resource_tracker.py:479: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/mp-2prvsp1m'}
-  warnings.warn(
+Converting PyTorch Frontend ==> MIL Ops:   0%|          | 0/866 [00:00<?, ? ops/s]Converting PyTorch Frontend ==> MIL Ops:  58%|█████▊    | 498/866 [00:00<00:00, 4874.70 ops/s]Converting PyTorch Frontend ==> MIL Ops: 100%|█████████▉| 864/866 [00:00<00:00, 5688.89 ops/s]
+Running MIL frontend_pytorch pipeline:   0%|          | 0/5 [00:00<?, ? passes/s]Running MIL frontend_pytorch pipeline: 100%|██████████| 5/5 [00:00<00:00, 94.90 passes/s]
+Running MIL default pipeline:   0%|          | 0/95 [00:00<?, ? passes/s]Running MIL default pipeline:  12%|█▏        | 11/95 [00:00<00:00, 94.98 passes/s]Running MIL default pipeline:  24%|██▍       | 23/95 [00:00<00:00, 101.61 passes/s]Running MIL default pipeline:  38%|███▊      | 36/95 [00:00<00:00, 113.01 passes/s]Running MIL default pipeline:  51%|█████     | 48/95 [00:00<00:00, 105.06 passes/s]/Users/allenchen/.local/share/uv/python/cpython-3.12.14-macos-aarch64-none/lib/python3.12/multiprocessing/resource_tracker.py:279: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
