@@ -16,8 +16,8 @@ assert_no_alloc.workspace = true
 [lints]
 workspace = true
 
-# 机读正本（specs/rust/architecture.md §5.4）
+# 机读正本（specs/rust/architecture.md §5.4）。unsafe = true 只为 src/ftz.rs（FTZ 守卫读写浮点控制寄存器，R9 / R10）
 [package.metadata.vdn]
 tier = "B"
-unsafe = false
+unsafe = true
 forbid = ["ort", "hound", "serde", "serde_json", "cpal", "clap", "vdn-engine", "vdn-models", "coreaudio-rs", "coreaudio-sys", "objc2"]

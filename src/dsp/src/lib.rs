@@ -4,8 +4,9 @@
 //! - `new()` 里一次性分配好所有缓冲；每帧调用的方法（`process` / `analyze` / `synthesize` …）不分配、不加锁、不做 I/O，
 //!   由 `tests/` 里的 `assert_no_alloc` 测试证明
 //! - 这里不认识任何模型，也不认识 WAV 文件
+//! - unsafe 只在 [`ftz`] 一个模块（读写浮点控制寄存器，R10 白名单，大总管 2026-11-02 定）；其余模块一律不许
 
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 #![cfg_attr(
     not(test),
     deny(
@@ -19,12 +20,14 @@
 )]
 pub mod delay;
 pub mod envelope;
+pub mod ftz;
 pub mod resample;
 pub mod stft;
 pub mod window;
 
 pub use delay::DelayLine;
 pub use envelope::{OpenCloseEnvelope, OpenCloseParams};
+pub use ftz::FtzGuard;
 pub use resample::{Decimator3, Interpolator3};
 pub use stft::StreamingStft;
 
