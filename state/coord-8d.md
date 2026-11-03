@@ -9,6 +9,7 @@
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
 | hygiene | 600 行上限进 tidy · cli 同名类型 · 拆 cli 大文件；第二段（等 99 的 #57 合并）采样率只写一处 · 阈值比对 · #62 · `feat/code-hygiene` · `../noise_canceling-hygiene` | xtask · vdn-cli · vdn-types（采样率）· vdn-eval（阈值） | 已派（交代 `_tmp/20261102-b8/hygiene.md`） |
+| split | 拆 denoised / capture / speaker-lab 到 ≤600 行 · 同 #62 同 worktree | vdn-denoised · vdn-capture · vdn-speaker-lab | 已派（交代 `_tmp/20261102-b8/split.md`） |
 
 ## 进度板
 
@@ -20,3 +21,5 @@
 - 2026-11-02 hygiene 报第一段完成；8d 抽查：未碰禁区、Verdict 改名 ChainVerdict/LiveVerdict、stop.rs 带 2 测、基线 11 条；8d 亲手跑 xtask ci 中。风险：基线含 #57 在改的文件，第二段先合 main 再核基线
 - 2026-11-02 e3 计时约 7 min（fastpath v4short），8d 验收编译已停；hygiene codex 第 1 轮在跑，基线风险已确认收到
 - 2026-11-02 99 报 #57 已合并（PR #63）；8d 把 origin/main 合进 hygiene（601202e，无冲突）；基线 3 处待改（denoised 878 · synth 删 · schema/tests/crosscheck.rs 870 新进）；放行第二段
+- 2026-11-02 人定新规矩「所有代码文件 ≤600 行」，不设基线（写进 hygiene worktree 的 CLAUDE.md 第五节第 7 条 + 记忆）。分工：99 的 #64 拆 pipeline.rs · stages.rs，#65 拆 desc.rs · policy.rs · schema/tests/crosscheck.rs；e3 的 fastpath 在 #58 拆 bench 3 个文件，#58 合并后 #62 扫描扩到 docs/；hygiene 拆 verifiers.rs · runner.rs · single_source.rs；新派 split 拆 denoised · capture · speaker-lab。#62 硬上限等 #64/#65 合并后再合
+- 2026-11-02 派后台分析：AST 做了之后的好处、复杂度对比、扩展方向 → docs/reviews/ast-complexity-20261102/README.md
