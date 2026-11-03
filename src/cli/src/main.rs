@@ -796,7 +796,7 @@ mod tests {
             let Cmd::Denoise(a) = cli.cmd else {
                 return None;
             };
-            ModelId::parse(&a.model.model).map(ModelKind::from_id)
+            ModelId::parse(&a.m.model).map(ModelKind::from_id)
         };
         assert_eq!(
             kind_of(&["vdn", "denoise", "a.wav", "b.wav"]),
