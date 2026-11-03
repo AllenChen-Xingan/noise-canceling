@@ -13,7 +13,7 @@
 use std::fs;
 use std::path::Path;
 
-use crate::lex::{lex_lines, strip_comments_keep_strings};
+use crate::scan::{has_reason, lex_lines, src_files, strip_comments_keep_strings};
 use crate::tidy::rs_files;
 
 /// 模型名的正本文件（相对 workspace 根）。

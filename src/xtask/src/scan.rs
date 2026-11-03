@@ -1,7 +1,11 @@
-//! Rust 源码的逐行粗分词：分出代码、注释、字符串。tidy 的纯文本规则共用（`single_source.rs` · `model_names.rs`）。
-//! 不依赖任何 vdn crate。
+//! tidy 各条文本规则共用的扫描小工具：逐行分出代码、注释、字符串；列出 `src/` 下的源文件；认放行标记。
+//! 用它的规则：`no_mirror.rs`（R-MIRROR）· `param_range.rs`（R-PARAM）· `model_name.rs`（R-MODEL）。不依赖任何 vdn crate。
 
-/// 逐行剥掉 `//` 与 `/* */` 注释，字符串原样保留（给 `single_source::desc_keys` 与 `model_names` 用：它们要看字符串里的内容）。
+use std::path::Path;
+
+use crate::tidy::rs_files;
+
+/// 逐行剥掉 `//` 与 `/* */` 注释，字符串原样保留（给 `param_range::desc_keys` 与 `model_name` 用：它们要看字符串里的内容）。
 pub fn strip_comments_keep_strings(src: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut in_block = 0u32;
@@ -164,4 +168,25 @@ pub fn lex_lines(src: &str) -> Vec<(String, String)> {
 /// `c[i]` 是 `r`，前面是独立的 `b`（`br"…"` 字节原始字符串的前缀）。
 fn byte_prefix(c: &[char], i: usize) -> bool {
     i >= 1 && c[i - 1] == 'b' && (i == 1 || !(c[i - 2].is_alphanumeric() || c[i - 2] == '_'))
+}
+
+/// `src/` 下全部 `.rs`：(相对 workspace 根的路径, 全文)。读不出的文件跳过。
+pub fn src_files(root: &Path) -> Vec<(String, String)> {
+    let mut all = Vec::new();
+    rs_files(&root.join("src"), &mut all);
+    all.into_iter()
+        .filter_map(|f| {
+            let rel = f
+                .strip_prefix(root)
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|_| f.display().to_string());
+            std::fs::read_to_string(&f).ok().map(|s| (rel, s))
+        })
+        .collect()
+}
+
+/// 放行标记后面写了理由（`tidy: …：<理由>`，理由非空）。
+pub fn has_reason(line: &str, marker: &str) -> bool {
+    line.split_once(marker)
+        .is_some_and(|(_, why)| !why.trim().is_empty())
 }
