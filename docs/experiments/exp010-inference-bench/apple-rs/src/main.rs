@@ -13,6 +13,8 @@
 //!             --workgroup（加入默认输出设备的 IO 工作组）· --spin（帧间忙等代替睡眠：只用来排查降频，不是产品做法）
 //!   compile <模型.mlpackage> <输出.mlmodelc>     Core ML 编译（给 bnns 用）
 //!   selftest                                    检查两种分配计数器真的在数
+//!   loadgen [--threads 0] [--passes 400]        固定前台负载（BE-IMPACT，D75）：每个线程对自己的 4 MB 数组做 passes 遍
+//!                                               乘加（算力 + 缓存 / 内存带宽两头都压）；threads 0 = 全部逻辑核。输出墙钟 ms
 //! 输出一行 JSON（stdout）。
 //!
 //! 同口径：第 0 帧冷启动，接着预热，再计时；输入不够就循环（转储本身已按 mix.wav 循环排好）。
@@ -380,6 +382,34 @@ fn bench(o: &Opts) -> Result<(), String> {
     Ok(())
 }
 
+/// 固定前台负载：量「开着降噪时，用户自己的活慢了多少」（BE-IMPACT）。工作量固定，只看墙钟时间。
+fn loadgen(o: &Opts) -> Result<(), String> {
+    let mut threads: usize = o.num("threads", 0);
+    if threads == 0 {
+        threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(8);
+    }
+    let passes: usize = o.num("passes", 400);
+    let t = Instant::now();
+    let hs: Vec<_> = (0..threads)
+        .map(|k| {
+            std::thread::spawn(move || {
+                let n = 1 << 20; // 每线程 4 MB：超过单核 L1/L2 份额，会和降噪线程抢缓存与带宽
+                let mut a: Vec<f32> = (0..n).map(|i| ((i + k) % 97) as f32 * 1e-3).collect();
+                let b: Vec<f32> = (0..n).map(|i| 1.0 - ((i * 7 + k) % 89) as f32 * 1e-4).collect();
+                for _ in 0..passes {
+                    for (x, y) in a.iter_mut().zip(&b) {
+                        *x = x.mul_add(*y, 1e-3);
+                    }
+                }
+                a.iter().map(|&v| v as f64).sum::<f64>()
+            })
+        })
+        .collect();
+    let chk: f64 = hs.into_iter().map(|h| h.join().unwrap()).sum();
+    println!("{{\"loadgen_ms\":{:.1},\"threads\":{threads},\"passes\":{passes},\"checksum\":{chk:.3}}}", t.elapsed().as_secs_f64() * 1e3);
+    Ok(())
+}
+
 /// 计数器自检：若钩子没生效，所有「每帧 0 次分配」的结论都不可信。
 fn selftest() -> Result<(), String> {
     alloc::install_process_hook();
@@ -422,6 +452,7 @@ fn main() {
             Ok(())
         }),
         Some("selftest") => selftest(),
+        Some("loadgen") => loadgen(&o),
         _ => Err("用法见 src/main.rs 顶部".into()),
     };
     if let Err(e) = r {
