@@ -87,6 +87,8 @@ fn sgemm_acc(
 pub struct Weights {
     data: Vec<f32>,
     index: HashMap<String, (Vec<usize>, usize, usize)>,
+    /// 测试用：任何名字都返回这个常数填满的数组（不读文件）
+    fake: Option<f32>,
 }
 
 impl Weights {
@@ -116,10 +118,26 @@ impl Weights {
         if total != data.len() {
             return Err(format!("txt 记的元素总数 {total} ≠ bin 里的 {}", data.len()).into());
         }
-        Ok(Self { data, index })
+        Ok(Self {
+            data,
+            index,
+            fake: None,
+        })
+    }
+
+    #[cfg(test)]
+    fn fake(v: f32) -> Self {
+        Self {
+            data: Vec::new(),
+            index: HashMap::new(),
+            fake: Some(v),
+        }
     }
 
     fn get(&self, name: &str, numel: usize) -> Result<Vec<f32>, Err> {
+        if let Some(v) = self.fake {
+            return Ok(vec![v; numel]);
+        }
         let (_, off, n) = self
             .index
             .get(name)
@@ -1152,7 +1170,11 @@ pub struct GtcrnNative {
 
 impl GtcrnNative {
     pub fn load(prefix: &Path) -> Result<Self, Err> {
-        let w = Weights::load(prefix)?;
+        Self::from_weights(&Weights::load(prefix)?)
+    }
+
+    fn from_weights(w: &Weights) -> Result<Self, Err> {
+        let w = w;
         let ew = w.get("erb.erb_fc.weight", ERB_HIGH * (BINS - ERB_LOW))?;
         let iw = w.get("erb.ierb_fc.weight", (BINS - ERB_LOW) * ERB_HIGH)?;
         let gt = |i: usize, dil: usize, de: bool| {
