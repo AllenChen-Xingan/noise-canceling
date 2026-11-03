@@ -46,6 +46,7 @@ fn ready_immediately_when_data_is_there() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "依赖真实时钟的超时上限，Miri 的虚拟时钟下不准")]
 fn times_out_and_returns() {
     let b = Bus::heap(CFG).unwrap();
     for (strategy, timeout) in [
@@ -80,7 +81,9 @@ fn times_out_and_returns() {
         let r = b.wait(RingId::Raw, 96, Duration::from_millis(40));
         assert_eq!(r, WaitResult::TimedOut { available: 10 });
     });
-    assert_eq!(b.ring(RingId::Raw).wait_fallbacks(), 0, "本机应支持唤醒");
+    if Bus::wake_supported() {
+        assert_eq!(b.ring(RingId::Raw).wait_fallbacks(), 0);
+    }
 }
 
 #[test]
@@ -134,17 +137,21 @@ fn ping_pong(producer: &Bus, consumer: &Bus, blocks: u32) {
     });
     let m = *max_wait.lock().unwrap();
     assert!(m < Duration::from_millis(500), "最长一次等了 {m:?}");
-    assert_eq!(consumer.ring(RingId::Raw).wait_fallbacks(), 0);
+    if Bus::wake_supported() {
+        assert_eq!(consumer.ring(RingId::Raw).wait_fallbacks(), 0);
+    }
 }
 
 #[test]
 fn no_lost_wakeups_heap_two_threads() {
     let b = Bus::heap(CFG).unwrap();
-    ping_pong(&b, &b, 20_000);
+    // Miri 很慢：只跑 200 块（Miri 下没有唤醒，走 200 µs 轮询那一支）
+    ping_pong(&b, &b, if cfg!(miri) { 200 } else { 20_000 });
 }
 
 #[cfg(all(unix, feature = "posix"))]
 #[test]
+#[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
 fn no_lost_wakeups_posix_two_mappings() {
     let name = unique_name();
     let _c = Cleanup(name.clone());
@@ -155,6 +162,7 @@ fn no_lost_wakeups_posix_two_mappings() {
 
 #[cfg(all(unix, feature = "posix"))]
 #[test]
+#[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
 fn header_v2_fields_and_session() {
     let name = unique_name();
     let _c = Cleanup(name.clone());
@@ -202,6 +210,7 @@ mod owned {
     use vdn_shm::OwnedBus;
 
     #[test]
+    #[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
     fn second_owner_is_busy_and_drop_unlinks() {
         let name = unique_name();
         let _c = Cleanup(name.clone());
@@ -225,6 +234,7 @@ mod owned {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
     fn stale_leftover_is_cleared() {
         let name = unique_name();
         let _c = Cleanup(name.clone());
@@ -236,6 +246,7 @@ mod owned {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
     fn bad_name_creates_no_lock_file() {
         assert_eq!(
             OwnedBus::create("/nope", CFG).err(),

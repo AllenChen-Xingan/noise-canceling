@@ -32,6 +32,7 @@ const CFG: BusConfig = BusConfig {
 };
 
 #[test]
+#[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
 fn create_open_validate_unlink() {
     let name = unique_name();
     let _c = Cleanup(name.clone());
@@ -55,6 +56,7 @@ fn create_open_validate_unlink() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
 fn bad_names_are_rejected() {
     for n in [
         "vdn-x",
@@ -72,6 +74,7 @@ fn bad_names_are_rejected() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
 fn two_threads_100k_blocks_sample_exact() {
     const BLOCKS: u32 = 100_000;
     const BLOCK: usize = 64; // 共 640 万样本 < 2^24，f32 能精确表示每个序号

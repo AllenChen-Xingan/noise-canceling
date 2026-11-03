@@ -2,7 +2,7 @@
 //!
 //! 两个函数**运行期**用 `dlsym` 找（`init`，构造期调一次）：直接链接的话，低于 14.4 的系统上整个程序启动就失败
 //! （dyld 找不到符号），没机会退回轮询。找不到就 `supported() == false`，`Bus::wait` 改用轮询。
-//! 非 macOS 一律不支持。本文件有 unsafe（FFI），每块带 SAFETY。
+//! 非 macOS 与 Miri 下一律不支持。本文件有 unsafe（FFI），每块带 SAFETY。
 
 #![allow(unsafe_code)] // 白名单 crate（metadata.vdn.unsafe = true）；每个 unsafe 块带 SAFETY
 
@@ -19,7 +19,7 @@ pub(crate) enum Outcome {
     Failed,
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(miri)))]
 mod imp {
     use super::Outcome;
     use core::ffi::c_void;
@@ -127,7 +127,8 @@ mod imp {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+// 非 macOS，以及 Miri 下（Miri 不能调 dlsym / 系统调用）：一律「不支持」，wait 走轮询
+#[cfg(not(all(target_os = "macos", not(miri))))]
 mod imp {
     use super::Outcome;
     use core::sync::atomic::AtomicU32;
