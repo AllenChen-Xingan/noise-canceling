@@ -1042,6 +1042,17 @@ mod tests {
         }
     }
 
+    /// 计时窗字段：applebe 的耗电解析（power_parse.py v2）与 apple-rs/tests/fields.rs 依赖这三个键（#58）
+    #[test]
+    fn bench_emits_window_fields() {
+        let src = include_str!("main.rs");
+        for k in ["win_start_unix", "win_end_unix", "wall_s"] {
+            assert!(src.contains(&format!("\\\"{k}\\\":{{")), "bench 输出缺 {k}");
+        }
+        let t = unix_now();
+        assert!(t > 1.7e9 && t < 1e10, "unix_now 应是 Unix 秒：{t}");
+    }
+
     #[test]
     fn jnum_and_pct() {
         assert_eq!(jnum(f64::NAN, 2), "null");
