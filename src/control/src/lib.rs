@@ -20,13 +20,14 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// IO 采样率固定 48 kHz（docs/plan/010 第十节）。
 pub const IO_RATE: u32 = 48_000;
 
 /// 处理模式。与 `vdn_engine::Mode` 一一对应，由 bin 翻译。
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum Mode {
     #[default]
@@ -35,7 +36,7 @@ pub enum Mode {
 }
 
 /// 用哪个模型。与 `vdn_models::ModelKind` 一一对应，由 bin 翻译。
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum ModelChoice {
     #[default]
@@ -51,8 +52,12 @@ pub enum Cmd {
 }
 
 /// 配置文件（JSON）。缺的字段取默认值；多出的字段报错（防拼错键名静默失效）。
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+///
+/// 导出的 JSON Schema（`specs/schema/config.schema.json`）由本类型派生；取值范围由 `schema_ranges`
+/// 从本文件的常量写进去。schema 只管单个字段，跨字段规则（lead ≥ IO 块、两个总线名不同）只在 `validate` 里。
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
+#[schemars(transform = schema_ranges)]
 pub struct Config {
     /// 输入设备名；`None` = 系统默认
     pub input_device: Option<String>,
@@ -195,6 +200,37 @@ impl Config {
         }
         Ok(())
     }
+}
+
+/// 把取值范围写进导出的 schema（数字只来自 `Config` 的常量，不在这里另写）。
+fn schema_ranges(schema: &mut schemars::Schema) {
+    use serde_json::{Value, json};
+    let Some(props) = schema.get_mut("properties").and_then(Value::as_object_mut) else {
+        return;
+    };
+    let mut set = |key: &str, extra: Value| {
+        if let (Some(Value::Object(p)), Value::Object(extra)) = (props.get_mut(key), extra) {
+            p.extend(extra);
+        }
+    };
+    let (lo, hi) = Config::BLOCK_RANGE;
+    set("block", json!({ "minimum": lo, "maximum": hi }));
+    set("denoise_block", json!({ "minimum": 1, "maximum": hi }));
+    let (lo, hi) = Config::HEARTBEAT_RANGE_MS;
+    set("heartbeat_timeout_ms", json!({ "minimum": lo, "maximum": hi }));
+    set("lead_frames", json!({ "maximum": Config::LEAD_MAX }));
+    let bus = json!({ "maxLength": Config::BUS_NAME_MAX, "pattern": bus_name_pattern() });
+    set("bus_name", bus.clone());
+    set("out_bus_name", bus);
+    // 设备名：有就不能是空白（`validate` 的同一条规则）
+    let device = json!({ "pattern": "\\S" });
+    set("input_device", device.clone());
+    set("output_device", device);
+}
+
+/// 总线名的正则（给 schema 用）。与 `validate_bus_name` 的一致性由 vdn-schema 的测试逐例比对。
+pub fn bus_name_pattern() -> String {
+    format!("^{}[^/\\u0000]+$", Config::BUS_PREFIX)
 }
 
 fn hi_block() -> usize {
