@@ -21,7 +21,8 @@
 //! 逐值一致只比前 --parity-frames 帧，算法同 rustbe parity：最大绝对差 · 整段 SNR · 逐帧最小 SNR（只计参考能量
 //! ≥ 平均帧能量 1e-4 的帧）· 非有限值个数 · first_bad（差 > 1e-3 或任一边非有限的第一个位置，下标是帧内平铺下标）。
 //! 计时只包一次 `Backend::run`（含写入输入、读出输出，不含 STFT）。
-//! 按节奏跑时另报「迟到」：每帧做完的时刻 − 该到的时刻（含唤醒迟到），`late_frames_over_3ms` 才是 BE-DEADLINE 的判据。
+//! 按节奏跑时另报（字段名与含义同 rustbe bench，那边是唯一真相源）：`late_*` = 醒来迟到（开始推理的时刻 − 该到的时刻）；
+//! `release_*` = 计划时刻到做完（含迟到）；`release_over_3ms` 才是 BE-DEADLINE 的判据。`open_to_warm_ms` = 从开始打开到预热完。
 
 mod alloc;
 mod bnns;
@@ -265,7 +266,8 @@ fn bench(o: &Opts) -> Result<(), String> {
     let mut times: Vec<f64> = Vec::with_capacity(frames);
     let mut saved = vec![0f32; pn * per_out]; // 先存输出，跑完再对拍
     let mut late: Vec<f64> = Vec::with_capacity(if pace > 0.0 { frames } else { 0 });
-    for v in [&mut times, &mut late] {
+    let mut release: Vec<f64> = Vec::with_capacity(if pace > 0.0 { frames } else { 0 });
+    for v in [&mut times, &mut late, &mut release] {
         v.resize(v.capacity(), 0.0);
         for i in (0..v.len()).step_by(512) {
             v[i] = std::hint::black_box(1.0);
@@ -300,7 +302,8 @@ fn bench(o: &Opts) -> Result<(), String> {
     let mut out = vec![0f32; per_out];
     let (mut first_ms, mut nonfinite_frames) = (0.0, 0usize);
     let mut first_warm_ms = 0.0;
-    let mut warmup_ms = 0.0; // BE-COLD：第 0 帧（冷）+ 全部预热帧的总时长，从开始跑第 0 帧算到进入计时窗
+    let mut warmup_ms = 0.0;
+    let mut open_to_warm_ms = 0.0; // 同 rustbe：从开始打开（含编译）到预热完，BE-COLD 直接量 // BE-COLD：第 0 帧（冷）+ 全部预热帧的总时长，从开始跑第 0 帧算到进入计时窗
     let (mut max_abs, mut sig, mut err) = (0.0f64, 0.0f64, 0.0f64);
     let (mut worst, mut first_bad, mut nonfinite_values) = (0usize, None, 0usize);
     let mut per_frame = Vec::with_capacity(pn);
@@ -321,6 +324,7 @@ fn bench(o: &Opts) -> Result<(), String> {
             w0 = Instant::now();
             win_start = unix();
             warmup_ms = tw0.elapsed().as_secs_f64() * 1e3;
+            open_to_warm_ms = t0.elapsed().as_secs_f64() * 1e3;
             if let Some(p) = &ready_file {
                 let _ = std::fs::write(p, b"ready\n"); // 进入计时窗（加载、预热都已过）才发就绪信号
             }
@@ -347,10 +351,13 @@ fn bench(o: &Opts) -> Result<(), String> {
             w.begin();
         }
         let t = Instant::now();
+        if pace > 0.0 && f >= t0w {
+            late.push(w0.elapsed().as_secs_f64() * 1e3 - (f - t0w) as f64 * pace); // 醒来迟到
+        }
         be.run(x, &mut out)?;
         let dt = t.elapsed().as_secs_f64() * 1e3;
         if pace > 0.0 && f >= t0w {
-            late.push(w0.elapsed().as_secs_f64() * 1e3 - (f - t0w) as f64 * pace);
+            release.push(w0.elapsed().as_secs_f64() * 1e3 - (f - t0w) as f64 * pace); // 计划时刻到做完
         }
         if let Some(w) = iwg.as_mut() {
             w.end();
@@ -407,8 +414,10 @@ fn bench(o: &Opts) -> Result<(), String> {
     let rust_allocs = rust_n as f64 / frames as f64;
     let proc_allocs = if count_malloc { format!("{:.3}", proc_n as f64 / frames as f64) } else { "null".into() };
     let proc_total = if count_malloc { proc_n.to_string() } else { "null".into() };
-    let late_over3 = late.iter().filter(|&&t| t > 3.0).count();
-    let late_max = late.iter().cloned().fold(f64::NAN, f64::max);
+    let release_over3 = release.iter().filter(|&&t| t > 3.0).count();
+    late.sort_by(|a, b| a.total_cmp(b));
+    release.sort_by(|a, b| a.total_cmp(b));
+    let q = |v: &[f64], p: f64| if v.is_empty() { "null".to_string() } else { jnum(pct(v, p), 4) };
     let mean = times.iter().sum::<f64>() / times.len() as f64;
     let over3 = times.iter().filter(|&&t| t > 3.0).count(); // BE-DEADLINE：单帧 > 3.0 ms（延迟账余量）
     times.sort_by(|a, b| a.total_cmp(b));
@@ -422,7 +431,7 @@ fn bench(o: &Opts) -> Result<(), String> {
         "{{\"model\":\"{}\",\"backend\":\"{backend}\",\"artifact\":\"{}\",\"frames\":{frames},\"warmup\":{warmup},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"thread_policy\":\"{policy}\",\"workgroup\":{},\"spin\":{spin},\"tc_computation_ms\":{},\"tc_constraint_ms\":{},\"interval_wg_deadline_ms\":{iwg_ms},\"interval_wg_errors\":{},\
 \"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{mean:.4},\"frames_over_3ms\":{over3},\
 \"ort_env_ms\":0.00,\"compile_ms\":{compile_ms:.2},\"open_ms\":{open_ms:.2},\"first_frame_ms\":{first_ms:.3},\"warmup_ms\":{warmup_ms:.2},\"first_warm_frame_ms\":{first_warm_ms:.3},\"cpu_over_wall\":{:.3},\
-\"rust_allocs_per_frame\":{rust_allocs:.3},\"rust_allocs_total\":{rust_n},\"process_allocs_total\":{proc_total},\"late_frames_over_3ms\":{},\"late_max_ms\":{},\"process_allocs_per_frame\":{proc_allocs},\"win_start_unix\":{win_start:.3},\"win_end_unix\":{win_end:.3},\"wall_s\":{wall:.3},\"nonfinite_frames\":{nonfinite_frames},\
+\"rust_allocs_per_frame\":{rust_allocs:.3},\"rust_allocs_total\":{rust_n},\"process_allocs_total\":{proc_total},\"open_to_warm_ms\":{open_to_warm_ms:.2},\"late_p50_ms\":{},\"late_p999_ms\":{},\"late_max_ms\":{},\"release_p999_ms\":{},\"release_max_ms\":{},\"release_over_3ms\":{},\"process_allocs_per_frame\":{proc_allocs},\"win_start_unix\":{win_start:.3},\"win_end_unix\":{win_end:.3},\"wall_s\":{wall:.3},\"nonfinite_frames\":{nonfinite_frames},\
 \"footprint_before_mb\":{fp0:.2},\"footprint_warm_mb\":{fp1:.2},\"footprint_end_mb\":{fp2:.2},\"parity_frames\":{pn},\"parity_max_abs\":{},\"parity_worst_frame\":{worst},\"parity_snr_db\":{},\
 \"parity_min_frame_snr_db\":{},\"parity_nonfinite_values\":{nonfinite_values},\"parity_first_bad\":\"{first_bad:?}\",\"extra\":{extra}}}",
         kind.name(),
@@ -438,8 +447,12 @@ fn bench(o: &Opts) -> Result<(), String> {
         pct(&times, 0.999),
         times[times.len() - 1],
         cpu / wall,
-        if pace > 0.0 { late_over3.to_string() } else { "null".into() },
-        jnum(late_max, 4),
+        q(&late, 0.5),
+        q(&late, 0.999),
+        q(&late, 1.0),
+        q(&release, 0.999),
+        q(&release, 1.0),
+        if pace > 0.0 { release_over3.to_string() } else { "null".into() },
         if max_abs.is_finite() { format!("{max_abs:.3e}") } else { "null".into() },
         jnum(10.0 * (sig / err.max(1e-300)).log10(), 2),
         jnum(min_frame_snr, 2),
