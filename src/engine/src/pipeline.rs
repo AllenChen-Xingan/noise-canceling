@@ -302,7 +302,11 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
     /// 这条 Pipeline 对应的处理图。模型节点由调用方给：`model` 与 `artifact`（权重的制品内容 ID，
     /// `vdn_models::artifact_id`）；Pipeline 只认 `Model` trait，所以在这里把 `model` 与正在跑的 `Model::name()`
     /// 比对，不符返回错误（#68）。频域段由模型适配器负责，这里留空。会话记录头用它的内容 ID。构造期用。
-    pub fn graph(&self, model: ModelId, artifact: ContentId) -> Result<ProcessingGraph, ChainMismatch> {
+    pub fn graph(
+        &self,
+        model: ModelId,
+        artifact: ContentId,
+    ) -> Result<ProcessingGraph, ChainMismatch> {
         let g = ProcessingGraph {
             stages: self.stage_kinds,
             ..ProcessingGraph::bare(model, artifact)

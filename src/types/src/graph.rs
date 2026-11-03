@@ -442,10 +442,9 @@ impl fmt::Display for ChainMismatch {
                 "第 {index} 级 {stage} 是 {} 挂点的节点，放错了位置",
                 hook.as_str()
             ),
-            ChainMismatch::ModelName { expected, actual } => write!(
-                f,
-                "模型节点是 {expected}，正在跑的模型是 {actual}"
-            ),
+            ChainMismatch::ModelName { expected, actual } => {
+                write!(f, "模型节点是 {expected}，正在跑的模型是 {actual}")
+            }
         }
     }
 }

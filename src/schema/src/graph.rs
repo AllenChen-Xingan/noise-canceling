@@ -4,9 +4,9 @@
 //! `graph::NODE_FIELDS`（穷举解构）；会话头的键是 `vdn_types::session::HEADER_KEYS`（穷举解构）。这里只转成 JSON。
 
 use serde_json::{Value, json};
-use vdn_types::{ContentId, ModelId};
 use vdn_types::graph::{self, NodeKind, ProcessingGraph};
 use vdn_types::session::{HEADER_KEYS, SessionRecord};
+use vdn_types::{ContentId, ModelId};
 
 pub const KINDS_FILE: &str = "processing-graph.kinds.json";
 pub const SESSION_FILE: &str = "session-header.fields.json";

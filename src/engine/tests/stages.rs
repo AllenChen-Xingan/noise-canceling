@@ -13,8 +13,7 @@ use vdn_engine::{
 };
 use vdn_types::graph::test_kind;
 use vdn_types::{
-    Basis, ChainMismatch, Confidence, Model, ModelError, NodeKind,
-    SpeakerClass, SpeakerVerdict,
+    Basis, ChainMismatch, Confidence, Model, ModelError, NodeKind, SpeakerClass, SpeakerVerdict,
 };
 
 #[cfg(debug_assertions)]

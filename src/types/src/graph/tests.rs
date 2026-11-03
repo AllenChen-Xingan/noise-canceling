@@ -352,6 +352,9 @@ fn model_node_must_match_running_model() {
             }
         );
         let msg = e.to_string();
-        assert!(msg.contains(wrong) && msg.contains(ModelId::FastEnhancerM.as_str()), "{msg}");
+        assert!(
+            msg.contains(wrong) && msg.contains(ModelId::FastEnhancerM.as_str()),
+            "{msg}"
+        );
     }
 }

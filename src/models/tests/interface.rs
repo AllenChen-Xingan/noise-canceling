@@ -9,8 +9,8 @@
 
 use vdn_backend_ort as session;
 use vdn_engine::{Engine, Pipeline, SafetyConfig};
-use vdn_models::{ModelKind, artifact_id};
 use vdn_models::interface::{check_session, read_session};
+use vdn_models::{ModelKind, artifact_id};
 use vdn_types::Model;
 
 fn file_matches_declaration(kind: ModelKind) {
@@ -39,9 +39,17 @@ fn file_matches_declaration(kind: ModelKind) {
     assert_eq!(m.name(), kind.id().as_str());
     // 模型节点：真权重算出的制品内容 ID 进图；与正在跑的模型名比对通过（#68）
     let art = artifact_id(&path).expect("读权重");
-    assert_eq!(art, artifact_id(&path).unwrap(), "同一文件两次算出的 ID 应相同");
-    let p = Pipeline::new(Engine::new(m, SafetyConfig::off()), 48_000).expect("48 kHz");
-    let g = p.graph(kind.id(), art).expect("模型节点应与 Model::name() 一致");
+    assert_eq!(
+        art,
+        artifact_id(&path).unwrap(),
+        "同一文件两次算出的 ID 应相同"
+    );
+    // IO 采样率 = 模型采样率 × 重采样倍数（不另写数字）
+    let io_rate = d.sample_rate * vdn_dsp::resample::FACTOR as u32;
+    let p = Pipeline::new(Engine::new(m, SafetyConfig::off()), io_rate).expect("IO 采样率");
+    let g = p
+        .graph(kind.id(), art)
+        .expect("模型节点应与 Model::name() 一致");
     eprintln!("{kind:?} 制品内容 ID {art} · 图 ID {}", g.content_id());
 }
 
@@ -68,6 +76,9 @@ fn artifact_id_follows_file_bytes() {
     std::fs::write(&c, b"weights-v2").unwrap();
     assert_eq!(artifact_id(&a).unwrap(), artifact_id(&b).unwrap());
     assert_ne!(artifact_id(&a).unwrap(), artifact_id(&c).unwrap());
-    assert_eq!(artifact_id(&a).unwrap(), vdn_types::ContentId::of(b"weights-v1"));
+    assert_eq!(
+        artifact_id(&a).unwrap(),
+        vdn_types::ContentId::of(b"weights-v1")
+    );
     assert!(artifact_id(&d.join("missing.onnx")).is_err());
 }
