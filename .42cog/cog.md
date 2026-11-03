@@ -45,7 +45,7 @@
 
 | `xtask`（`src/xtask/`） | 项目规矩的机器检查：`cargo run -p xtask -- tidy` / `-- check-deps`，也随 `cargo test -p xtask` 跑 | AI 写（align，2026-10-31） | 输入：`cargo metadata` 与源码文本；不依赖任何 vdn crate |
 | `vdn-backend-ort`（`src/backend-ort/`，tier B） | 推理后端：单线程 CPU 的 ONNX Runtime 会话、建张量、把输出拷进预分配缓冲（实时块）；`pub use ort` | AI 写（rs-core，2026-11-02，从 vdn-models 拆出） | 输入：`.onnx` 模型文件；被 `vdn-models` 依赖。Core ML / MLX / 手写 Rust 后端以后作兄弟 crate（D53） |
-| `vdn-shm`（`src/shm/`，tier A，unsafe） | 跨进程共享内存总线：头部（版本 2：采样率 · L_total · lead · 降噪块长 · 会话 ID · 心跳 · 计数）+ Raw / Processed / Out 三个单生产者单消费者环；跨进程「一下叫醒」（`os_sync`，macOS 14.4+，D67）；按名字独占建立（`OwnedBus`） | AI 写（rs-shm · rs-wake，2026-11-02） | 降噪进程建降噪总线，送音进程建 Out 总线（`/vdn-out`）；Raw → 降噪进程，Processed → 送音进程，Out → 虚拟麦克风 |
+| `vdn-shm`（`src/shm/`，tier A，unsafe） | 跨进程共享内存总线：头部（版本 2：采样率 · L_total · lead · 降噪块长 · 会话 ID · 心跳 · 计数）+ Raw / Processed / Out 三个单生产者单消费者环；跨进程「一下叫醒」（`os_sync`，macOS 14.4+，D73）；按名字独占建立（`OwnedBus`） | AI 写（rs-shm · rs-wake，2026-11-02） | 降噪进程建降噪总线，送音进程建 Out 总线（`/vdn-out`）；Raw → 降噪进程，Processed → 送音进程，Out → 虚拟麦克风 |
 | `vdn-rt-thread`（`src/rt-thread/`，unsafe） | 把线程提成实时优先级（time-constraint）、读回自检、加入音频工作区间 | AI 写（rs-shm · rs-wake，2026-11-02） | 送音、降噪进程启动时调用；不产出数据 |
 | `vdn-io-macos`（`src/io-macos/`，tier A） | Mac 音频进出：列设备、开麦克风 / 扬声器流（cpal，单声道 f32，48 kHz） | AI 写（rs-io，2026-11-02） | 麦克风 → `vdn-capture`；开发期 Out → 扬声器 |
 | `vdn-hal`（`src/hal/`，tier A，cdylib + rlib，unsafe） | 自有虚拟麦克风（D55）：读出端 `HalSource::render`（从 Out 环取声音，不够补零计欠载）+ 插件外壳（工厂函数暂返回空 = 不加载） | AI 写（rs-io，2026-11-02） | Out 环 → 会议软件；真驱动接口与安装待后续（D05，要人输密码） |

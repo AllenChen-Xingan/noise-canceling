@@ -43,9 +43,11 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- ⚠️ 决策撞号：主目录分支同日已有 D66–D71（另一位大总管），我方 D66 / D67 / D68 顺延为 **D72 / D73 / D74**，已全仓改；以后记决策前先查主目录分支的最大号
+- e3 转人定 **D71**（原话「我觉得改代码结构吧 / 让复杂度很低，然后所有代码很优雅」）：前端只算一次、各模型共用；同一功能只在一处实现 → 并入下一件大事（处理图 + schema）
 - rs-wake 定口径 A：周期 16 ms，computation = 每 16 ms 窗口总工作量 p99.9 × 1.5（约 4 → 6 ms），constraint 16 ms；B（周期 2 ms）不行：推理块单独 3 ms > 2 ms。发现：读回策略看不到系统内部降级（耗电实验声明 2.1 ms、实际 3.0 ms，读回一直正常、降级 0）→ 降级计数只当下限，直接判据是醒来迟到与处理超时
-- D68 落代码：rs-wake 加 `ThreadPolicy::default()`（实时优先级开、工作区间不加）与 `RtParams::from_measured`；大总管打回口径：computation 要盖每周期总工作量（1 推理 + 7 轻块），不是单块 p99.9。rs-entry 接线算本批，顺序：锁步测试 5 次 → 合 rt-thread → 接线 → 复跑
-- **人定 D68（原话「低频也可以，我觉得就用低频吧」）**：不追性能核 / 提频，取消 qos_set；lead 192 = 4 ms 定为默认；实时优先级默认开、音频工作区间默认不加入
+- D74 落代码：rs-wake 加 `ThreadPolicy::default()`（实时优先级开、工作区间不加）与 `RtParams::from_measured`；大总管打回口径：computation 要盖每周期总工作量（1 推理 + 7 轻块），不是单块 p99.9。rs-entry 接线算本批，顺序：锁步测试 5 次 → 合 rt-thread → 接线 → 复跑
+- **人定 D74（原话「低频也可以，我觉得就用低频吧」）**：不追性能核 / 提频，取消 qos_set；lead 192 = 4 ms 定为默认；实时优先级默认开、音频工作区间默认不加入
 - rs-wake：耗电结果进 `docs/experiments/exp-v7-latency/results/20261102-power/`（README · meta · bench · 每秒摘要 CSV · 原始输出哈希）；推断工作区间没提频是因为截止期报太宽（8 ms）；下一轮 qos_set 8 档组合（qos / tc / wg / wg@1000），判据块耗时回到约 0.7 ms
 - **耗电（人亲手 sudo 跑，第一次因脚本 locale bug 退出，修后重跑）**：功耗中位 基线 74 · 不提 72 · tc 77 · tc + 工作区间 101 mW（各 60 s 1 次，平均 117–125）；醒来迟到 不提 2.6 / 7.0 ms → tc 0.022 / 0.068 ms；每块计算三档都约 3.02 ms（标定约 0.7 ms），E 簇约 1.1 GHz、P 簇未起 → 优先级治醒得晚、不治算得慢；下一步 QoS user-interactive 小实验（rs-wake）
 - rs-entry 验收**打回**：并行跑时 v1_short、mode_switch_mid_run 失败（单独跑 3/3 过）＝不稳定测试；改为锁步模拟，验收＝连跑 5 次全过且带 4 个忙进程
@@ -65,7 +67,7 @@
 - rs-wake 对照实验（release，两真进程，每组 4900 块）：推到醒中位 唤醒 4–17 µs · 200 µs 轮询 101–138 µs · 500 µs 轮询 250–331 µs；不提实时优先级三种都有 4.5–11 ms 尖峰，提了后唤醒最长 7–41 µs → 实时优先级是关键。待补：提优先级后轮询最长值、CPU、唤醒次数（为 009 待拍板 1「最低系统 14.4」）。loom debug 5 分钟未跑完，改 release
 - rs-entry V7 基线（release、0.5 ms 轮询）**不过**：lead 96 / 144 空闲 10/10 次欠载；**空闲反而比压力差**（推理块中位约 3.0 ms vs 0.64–1.43 ms），推断降频 / 能效核 → Workgroup 提前做（rs-wake）；空闲加扫 lead 192 起无欠载（仅 3 次）。lead 默认暂定 288（6 ms，GTCRN L_total 38.00 ms）。名额已还；骨架（唤醒）已合进 rs-entry，待它补 BusConfig 新字段
 - 011 人定 A：骨架之后，处理图 + schema 交叉校验合成下一件大事；人定新规矩「唯一真相源 + 交叉校验」→ CLAUDE.md 第五节第 5 条，已通知全部手下
-- 人定 D66（原话「c」）：「超级语法树」两种都要；处理图统一表示排在骨架之后。对照审查子代理在跑（008 / 005 / 009 三样）
+- 人定 D72（原话「c」）：「超级语法树」两种都要；处理图统一表示排在骨架之后。对照审查子代理在跑（008 / 005 / 009 三样）
 - rs-wake：新签名（头部版本 2 · notify / wait · lead / 降噪块长 / 会话 ID / 缺口 · OwnedBus），vdn-shm 测试全过；BusConfig 多两个字段，rs-entry 要补
 - 人定 2026-11-02（原话「还有手下，装」，大总管理解为装检查工具）：装 cargo-deny 并接进 `xtask ci`；装 nightly + Miri 跑 vdn-shm（及 dsp）→ rs-wake
 - 追加定案：OwnedBus（按总线名文件锁独占建立）收进 vdn-shm（rs-wake），denoised 里那份到时删；Out 总线固定名 `/vdn-out`（Config 可改），不带 pid
@@ -93,7 +95,7 @@
 ## 待定清单（攒着等人一次看完）
 
 - [x] Pipeline 省 2 ms 延迟 → **人定 2026-11-02：「可以省」**。做法：新增 `Pipeline::with_block`（块长整除 hop 时输出预填少 95 样本），`new` 不变；派会话内子代理在 `../noise_canceling-rs-core` 做
-- [x] 最低系统提到 14.4 → **人定 D67（原话「可以，提高版本」）**；去掉按版本退回轮询的分支，只留调用失败兜底（rs-wake）
+- [x] 最低系统提到 14.4 → **人定 D73（原话「可以，提高版本」）**；去掉按版本退回轮询的分支，只留调用失败兜底（rs-wake）
 - [ ] 正常降噪时混回的原声要不要带 8 kHz 以上（rs-core2 题）：A 只到 8 kHz（现状，略闷）/ B 用 48 kHz（更亮，但高频嘶声按 −12 dB 放回）；建议 A，等衰减下限移成后处理级后 AB 听测；默认 A
 - [ ] 两个进程（008 #4）与工程细节（第五组）按建议推进，待人确认 —— 来源 010 第九节
 
@@ -103,5 +105,5 @@
 - [x] 规约 R10 unsafe 白名单加 vdn-dsp（FTZ）；§3.7.6 延迟表改为按代码（44.98 / 39.67 ms），并给这张表加与代码的比对（唯一真相源）
 - [x] 改过时说法：规约 §2.2 图里 vdn-capture 补 vdn-dsp · vdn-hal · clap · hound ·根 Cargo.toml 第 1 行注释 · speaker README / Cargo.toml · 规约 §2.2 · §3.7.6（细节见 rs-core 现状页）
 - [x] 新 crate 实体行写进 `.42cog/cog.md`（各现状页有行）
-- [x] **下一件大事**：处理图（D66）+ schema 交叉校验（011），清镜像副本与手写 JSON；后处理级非有限 / 幅度检查与 Engine classify 规则合成一处
+- [x] **下一件大事**：处理图（D72）+ schema 交叉校验（011），清镜像副本与手写 JSON；后处理级非有限 / 幅度检查与 Engine classify 规则合成一处
 - [x] backlog：ContentId FNV → sha256；麦克风流无缝重接（回调里无锁换总线，要新依赖）；lead 压到 1 块时块长 96 的欠载（release + 预热核实）；Ring 拆 Producer / Consumer 句柄；共享内存权限 0600 与 coreaudiod（装驱动那批实测，补 009 待拍板 3）；models 不直接依赖 ort 尚无机器检查
