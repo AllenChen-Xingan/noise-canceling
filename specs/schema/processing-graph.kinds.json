@@ -1,6 +1,10 @@
 {
   "$comment": "由 `cargo run -p vdn-schema` 从 src/types/src/graph.rs 的 KINDS 导出，勿手改",
-  "canonical_text": "vdn-graph = <format>\\nmodel = <模型 ID>\\n[spectral]\\nnode = …\\n[stages]\\nnode = …；node = <id> <name> <version> <hook> <latency_samples> <参数 id,…>；内容 ID = FNV-1a 64",
+  "example": {
+    "canonical_text": "vdn-graph = 1\nmodel = gtcrn\n[spectral]\nnode = 6 polish-spectral 1 spectral 0 201,202,203,204,208\n[stages]\nnode = 4 asym-gate 1 time 0 2,101,102,103,104,105,106,107,108,109,110,111,8,9\nnode = 5 polish-agc 1 time 0 205,206,207,208\n",
+    "content_id": "60c5c435ba7ffe47",
+    "content_id_algorithm": "FNV-1a 64（vdn_types::ContentId::of），16 位小写十六进制"
+  },
   "format": 1,
   "kinds": [
     {

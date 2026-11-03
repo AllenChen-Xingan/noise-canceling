@@ -4,6 +4,7 @@
 //! `graph::NODE_FIELDS`（穷举解构）；会话头的键是 `vdn_types::session::HEADER_KEYS`（穷举解构）。这里只转成 JSON。
 
 use serde_json::{Value, json};
+use vdn_types::ModelId;
 use vdn_types::graph::{self, NodeKind, ProcessingGraph};
 use vdn_types::session::{HEADER_KEYS, SessionRecord};
 
@@ -22,6 +23,21 @@ fn kind_json(k: &NodeKind) -> Value {
     })
 }
 
+/// 规范文本的样例（由代码生成，不手写格式说明）：外部实现可拿它核对自己的写法与哈希。
+pub const EXAMPLE: ProcessingGraph = ProcessingGraph {
+    model: ModelId::Gtcrn,
+    spectral: &[&graph::POLISH_SPECTRAL],
+    stages: &[&graph::ASYM_GATE, &graph::POLISH_AGC],
+};
+
+fn example_json() -> Value {
+    json!({
+        "canonical_text": EXAMPLE.canonical_text(),
+        "content_id": EXAMPLE.content_id().to_string(),
+        "content_id_algorithm": "FNV-1a 64（vdn_types::ContentId::of），16 位小写十六进制",
+    })
+}
+
 /// 节点种类登记表。
 pub fn kinds_doc() -> Value {
     json!({
@@ -29,8 +45,7 @@ pub fn kinds_doc() -> Value {
         "format": ProcessingGraph::FORMAT,
         "node_fields": graph::NODE_FIELDS,
         "test_id_min": graph::TEST_ID_MIN,
-        "canonical_text": "vdn-graph = <format>\\nmodel = <模型 ID>\\n[spectral]\\nnode = …\\n[stages]\\nnode = …；\
-                           node = <id> <name> <version> <hook> <latency_samples> <参数 id,…>；内容 ID = FNV-1a 64",
+        "example": example_json(),
         "kinds": graph::KINDS.iter().map(|k| kind_json(k)).collect::<Vec<_>>(),
     })
 }
