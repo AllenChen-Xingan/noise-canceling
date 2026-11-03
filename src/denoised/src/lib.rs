@@ -32,6 +32,8 @@ pub use vdn_control::IO_RATE;
 pub trait Processor {
     fn process(&mut self, input: &[f32], output: &mut [f32]);
     fn latency_samples(&self) -> usize;
+    /// 运行中切直通 / 降噪（实时可调；两模式延迟相同）。默认不支持（什么都不做）
+    fn set_mode(&mut self, _mode: vdn_control::Mode) {}
 }
 
 impl<M: Model> Processor for Pipeline<M> {
@@ -41,6 +43,22 @@ impl<M: Model> Processor for Pipeline<M> {
     fn latency_samples(&self) -> usize {
         Pipeline::latency_samples(self)
     }
+    fn set_mode(&mut self, mode: vdn_control::Mode) {
+        Pipeline::set_mode(self, engine_mode(mode));
+    }
+}
+
+/// `vdn-control` 的模式 → `vdn-engine` 的模式（两边一一对应；正本是 vdn-engine，这里只翻译）
+pub fn engine_mode(m: vdn_control::Mode) -> vdn_engine::Mode {
+    match m {
+        vdn_control::Mode::Denoise => vdn_engine::Mode::Denoise,
+        vdn_control::Mode::Passthrough => vdn_engine::Mode::Passthrough,
+    }
+}
+
+/// 控制线程 → 降噪线程的命令队列（规约 §3.4：rtrb，小 `Copy` 命令；降噪线程每块之间取）
+pub fn command_channel(capacity: usize) -> (rtrb::Producer<vdn_control::Cmd>, rtrb::Consumer<vdn_control::Cmd>) {
+    rtrb::RingBuffer::new(capacity.max(1))
 }
 
 /// 建管线：`block = Some(b)` 用定块长（`with_block`，每次 `process` 恰好 b 个样本，省延迟）；`None` 任意块长。
@@ -125,6 +143,8 @@ pub struct WorkerStats {
     pub over_budget: u64,
     /// 降噪落后时跳过的 Raw 样本数（同时记进 Raw 环的缺口计数）
     pub raw_skipped: u64,
+    /// 执行过的控制命令数
+    pub commands: u64,
     /// 插进 Processed 的零占位样本数
     pub placeholders_pushed: u64,
 }
@@ -333,6 +353,19 @@ impl<P: Processor> Worker<P> {
         self.pushed += rest.len() as u64;
     }
 
+    /// 把队列里的控制命令都执行掉（块与块之间调）。返回 `false` = 收到 Shutdown
+    pub fn apply_commands(&mut self, rx: &mut rtrb::Consumer<vdn_control::Cmd>) -> bool {
+        let mut keep_going = true;
+        while let Ok(cmd) = rx.pop() {
+            self.stats.commands += 1;
+            match cmd {
+                vdn_control::Cmd::SetMode(m) => self.proc.set_mode(m),
+                vdn_control::Cmd::Shutdown => keep_going = false,
+            }
+        }
+        keep_going
+    }
+
     /// Raw 够一块就处理一块、推 Processed、心跳一次。
     pub fn step(&mut self, bus: &Bus) -> Step {
         let (raw, processed) = (bus.ring(RingId::Raw), bus.ring(RingId::Processed));
@@ -534,6 +567,26 @@ mod tests {
             );
         }
         assert!(f.is_fresh());
+    }
+
+    /// 运行中切模式：命令经 rtrb 送进降噪线程，块之间执行；Pipeline 按一个 hop 淡化，输出连续
+    #[test]
+    fn mode_switch_over_rtrb_is_applied_between_blocks() {
+        use vdn_control::{Cmd, Mode};
+        let mut w = Worker::new(identity_pipeline(Some(96)).unwrap(), 96);
+        let (mut tx, mut rx) = command_channel(8);
+        let bus = heap(w.l_total(288));
+        w.prime(&bus, 288);
+        let x = vdn_capture::testing::test_tone(IO_RATE, 96, 0);
+        assert!(tx.push(Cmd::SetMode(Mode::Passthrough)).is_ok());
+        assert!(tx.push(Cmd::SetMode(Mode::Denoise)).is_ok());
+        assert!(w.apply_commands(&mut rx));
+        bus.ring(RingId::Raw).push(&x);
+        assert_eq!(w.step(&bus), Step::Block);
+        assert!(tx.push(Cmd::Shutdown).is_ok());
+        assert!(!w.apply_commands(&mut rx));
+        assert_eq!(w.stats().commands, 3);
+        assert_eq!(engine_mode(Mode::Passthrough), vdn_engine::Mode::Passthrough);
     }
 
     #[test]
