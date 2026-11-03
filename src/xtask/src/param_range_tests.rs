@@ -102,6 +102,9 @@ fn literal_param_ranges_are_flagged() {
         "if ready {} else if (-60.0..=0.0).contains(&floor_db) {}",
         // r# 前缀（codex #71 第 3 轮 P2 #5）
         "let f = r#floor_db.clamp(-60.0, 0.0);",
+        // 方法名的 r#（codex #71 第 6 轮 P2 #3）
+        "let f = floor_db.r#clamp(-60.0, 0.0);",
+        "let f = floor_db.r#max(-60.0).r#min(0.0);",
         "let s = br#\"tidy: 非参数范围：x\"#; let f = floor_db.clamp(-60.0, 0.0);",
     ] {
         assert_eq!(n(body), 1, "{body}");
@@ -201,6 +204,8 @@ fn non_param_ranges_and_values_pass() {
         // let 初始化、常量、分支值里带块的也只算头部（codex #71 第 4 轮 P2 #3）
         "let _ = for i in 0..10 { let _ = floor_db; };",
         "let _ = (for i in 0..10 { let _ = floor_db; });",
+        "let _ = Some(for i in 0..10 { let _ = floor_db; });",
+        "let _ = (1, for i in 0..10 { let _ = floor_db; });",
         "let _ = match x { _ => for i in 0..10 { let _ = floor_db; } };",
     ] {
         assert_eq!(n(body), 0, "{body}");

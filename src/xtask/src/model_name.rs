@@ -302,6 +302,8 @@ impl ModelId {
             // C 字符串（codex #71 第 4 轮 P2 #5）
             "const C: &core::ffi::CStr = c\"fastenhancer-m\";\n",
             "const D: &core::ffi::CStr = cr#\"fastenhancer_m\"#;\n",
+            // 原始 C 字符串里的引号不能伪造放行注释（codex #71 第 6 轮 P2 #1）
+            "const E: &core::ffi::CStr = cr#\"fastenhancer-m \" // tidy: 不是模型名：假\"#;\n",
         ] {
             assert_eq!(file_problems("a.rs", bad, &names()).len(), 1, "{bad}");
         }

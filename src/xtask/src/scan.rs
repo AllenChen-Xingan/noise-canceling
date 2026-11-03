@@ -112,9 +112,11 @@ pub fn lex_lines(src: &str) -> Vec<(String, String)> {
     out
 }
 
-/// `c[i]` 是 `r`，前面是独立的 `b`（`br"…"` 字节原始字符串的前缀）。
+/// `c[i]` 是 `r`，前面是独立的 `b` 或 `c`（`br"…"` 字节、`cr"…"` C 原始字符串的前缀；codex #71 第 6 轮 P2 #1）。
 fn byte_prefix(c: &[char], i: usize) -> bool {
-    i >= 1 && c[i - 1] == 'b' && (i == 1 || !(c[i - 2].is_alphanumeric() || c[i - 2] == '_'))
+    i >= 1
+        && matches!(c[i - 1], 'b' | 'c')
+        && (i == 1 || !(c[i - 2].is_alphanumeric() || c[i - 2] == '_'))
 }
 
 /// `src/` 下全部 `.rs`：(相对 workspace 根的路径, 全文)。读不出的文件跳过。

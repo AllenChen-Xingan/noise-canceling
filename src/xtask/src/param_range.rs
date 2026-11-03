@@ -188,7 +188,8 @@ pub fn is_literal_range(e: &Expr) -> bool {
                 && matches!(r.limits, RangeLimits::HalfOpen(_) | RangeLimits::Closed(_))
         }
         Expr::MethodCall(m) => {
-            let name = m.method.to_string();
+            // 方法名去掉 `r#`（codex #71 第 6 轮 P2 #3）
+            let name = m.method.unraw().to_string();
             if name == "clamp" {
                 return m.args.len() == 2 && m.args.iter().all(is_num);
             }
@@ -200,7 +201,7 @@ pub fn is_literal_range(e: &Expr) -> bool {
             m.args.len() == 1
                 && m.args.iter().all(is_num)
                 && matches!(&*m.receiver, Expr::MethodCall(r)
-                    if r.method == other && r.args.len() == 1 && r.args.iter().all(is_num))
+                    if r.method.unraw() == other && r.args.len() == 1 && r.args.iter().all(is_num))
         }
         _ => false,
     }
@@ -226,25 +227,27 @@ fn ids_of<T: ToTokens>(x: &T) -> BTreeSet<String> {
 }
 
 /// 一条语句里算「同一条」的部分：带块的表达式只取头部。
-/// 一个表达式算「同一条」的部分：带块的只取头部（`let`、常量、分支值里的也一样；codex #71 第 4 轮 P2 #3）。
+/// 一个表达式算「同一条」的部分：收集标识符，遇到块边界就停（块体、`match` 分支各自另算），
+/// 不管它被包了几层（`Some(for …)`、`(for …)`、元组……；codex #71 第 4–6 轮 P2）。
 fn expr_context(e: &Expr) -> BTreeSet<String> {
-    match e {
-        // 穿透括号与不可见分组（codex #71 第 5 轮 P2 #3）
-        Expr::Paren(p) => expr_context(&p.expr),
-        Expr::Group(g) => expr_context(&g.expr),
-        Expr::ForLoop(f) => {
-            let mut a = ids_of(&f.pat);
-            a.extend(ids_of(&f.expr));
-            a
+    #[derive(Default)]
+    struct Ids(BTreeSet<String>);
+    impl<'ast> Visit<'ast> for Ids {
+        fn visit_ident(&mut self, i: &'ast proc_macro2::Ident) {
+            self.0.insert(i.unraw().to_string());
         }
-        Expr::If(i) => ids_of(&i.cond),
-        Expr::While(w) => ids_of(&w.cond),
-        Expr::Match(m) => ids_of(&m.expr),
-        Expr::Block(_) | Expr::Loop(_) | Expr::Unsafe(_) | Expr::Closure(_) | Expr::Async(_) => {
-            BTreeSet::new()
+        fn visit_block(&mut self, _: &'ast syn::Block) {}
+        fn visit_expr_match(&mut self, m: &'ast syn::ExprMatch) {
+            self.visit_expr(&m.expr);
         }
-        _ => ids_of(e),
+        fn visit_macro(&mut self, m: &'ast syn::Macro) {
+            self.0.extend(ids_of(&m.path));
+            idents(m.tokens.clone(), &mut self.0);
+        }
     }
+    let mut v = Ids::default();
+    v.visit_expr(e);
+    v.0
 }
 
 /// 一条语句里算「同一条」的部分。
