@@ -8,7 +8,7 @@
 //! - 测试模块的子模块（`x/` 目录下的全部文件）也算测试代码
 //!
 //! 边界：`#[path = "…"]` 指定的路径不认；`#[cfg(test)]` 与 `mod` 之间夹了别的属性也不认；
-//! 只认文件顶层的声明，内联模块里的不认；注释与字符串里的写法不算（宁可多查）。
+//! 测试声明只认文件顶层的，内联模块里的不认；生产引用按内联模块路径解析；注释与字符串里的写法不算（宁可多查）。
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -57,26 +57,35 @@ fn cfg_test_mod_names(src: &str) -> Vec<String> {
     mod_names(src).0
 }
 
-/// （测试模块名，其他模块名）。其他 = 顶层不带 `#[cfg(test)]` 的 `mod x;`，以及内联模块里的任何 `mod x;`
-/// （路径没解析，按同名保守算生产引用）。
-fn mod_names(src: &str) -> (Vec<String>, Vec<String>) {
+/// （测试模块名，其他模块的相对路径）。测试 = 顶层 `#[cfg(test)]` 后紧跟的 `mod x;`。
+/// 其他 = 其余所有 `mod x;`，带上外层内联模块的路径（`mod inner { mod child; }` → `inner/child`，
+/// 照 Rust 的模块路径规则，codex 第 5 轮 P1 #1），用来认生产引用。
+fn mod_names(src: &str) -> (Vec<String>, Vec<PathBuf>) {
     let (mut test, mut other) = (Vec::new(), Vec::new());
     let mut depth = 0i64;
     let mut prev_cfg_test = false;
+    // 外层内联模块：（名字，进入前的深度）
+    let mut inline: Vec<(String, i64)> = Vec::new();
     for (code, _) in lex_lines(src) {
         let t = code.trim();
         if t.is_empty() {
             continue;
         }
-        if let Some((name, false)) = mod_decl(t) {
-            if depth == 0 && prev_cfg_test {
-                test.push(name);
-            } else {
-                other.push(name);
+        match mod_decl(t) {
+            Some((name, false)) if depth == 0 && prev_cfg_test => test.push(name),
+            Some((name, false)) => {
+                let mut p: PathBuf = inline.iter().map(|(n, _)| n.as_str()).collect();
+                p.push(name);
+                other.push(p);
             }
+            Some((name, true)) => inline.push((name, depth)),
+            None => {}
         }
         prev_cfg_test = depth == 0 && t == "#[cfg(test)]";
         depth += brace_delta(t);
+        while inline.last().is_some_and(|(_, d)| depth <= *d) {
+            inline.pop();
+        }
     }
     (test, other)
 }
@@ -103,7 +112,7 @@ pub fn test_module_files(files: &[PathBuf]) -> Vec<PathBuf> {
             .cloned()
             .collect()
     };
-    let decls: Vec<(PathBuf, PathBuf, Vec<String>, Vec<String>)> = files
+    let decls: Vec<(PathBuf, PathBuf, Vec<String>, Vec<PathBuf>)> = files
         .iter()
         .filter_map(|f| {
             let src = fs::read_to_string(f).ok()?;
@@ -126,8 +135,10 @@ pub fn test_module_files(files: &[PathBuf]) -> Vec<PathBuf> {
             .filter(|(f, ..)| !out.contains(f))
             // 只指到模块文件本身（`x.rs` / `x/mod.rs`）；它的子模块是不是测试由它自己的声明决定
             .flat_map(|(_, dir, _, o)| {
-                o.iter()
-                    .flat_map(|n| [dir.join(format!("{n}.rs")), dir.join(n).join("mod.rs")])
+                o.iter().flat_map(|rel| {
+                    let full = dir.join(rel);
+                    [full.with_extension("rs"), full.join("mod.rs")]
+                })
             })
             .collect();
         let before = out.len();
@@ -211,6 +222,25 @@ mod tests {
         fs::write(d.join("src/main.rs"), "mod worker;\nfn main() {}\n").unwrap();
         fs::write(d.join("src/worker.rs"), "fn f() {}\n").unwrap();
         assert!(test_module_files(&files(&d)).is_empty());
+        let _ = fs::remove_dir_all(&d);
+    }
+
+    /// 负例（codex 第 5 轮 P1 #1）：生产引用写在内联模块里（`mod inner { mod child; }` → worker/inner/child.rs）
+    /// 也要排除；worker.rs 的测试子模块仍算测试代码
+    #[test]
+    fn production_reference_inside_inline_module_is_excluded() {
+        let d = tmp("inline");
+        fs::create_dir_all(d.join("src/worker/inner")).unwrap();
+        fs::write(d.join("src/lib.rs"), "#[cfg(test)]\nmod worker;\n").unwrap();
+        fs::write(d.join("src/main.rs"), "mod worker;\nfn main() {}\n").unwrap();
+        fs::write(
+            d.join("src/worker.rs"),
+            "mod inner {\n    mod child;\n}\n#[cfg(test)]\nmod wt;\n",
+        )
+        .unwrap();
+        fs::write(d.join("src/worker/inner/child.rs"), "fn f() {}\n").unwrap();
+        fs::write(d.join("src/worker/wt.rs"), "fn t() {}\n").unwrap();
+        assert_eq!(test_module_files(&files(&d)), [d.join("src/worker/wt.rs")]);
         let _ = fs::remove_dir_all(&d);
     }
 
