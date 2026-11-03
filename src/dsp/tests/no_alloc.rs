@@ -16,7 +16,7 @@ fn per_frame_paths_do_not_allocate() {
     let mut stft = StreamingStft::new(n, h, window::sqrt_hann_periodic(n));
     let mut delay = DelayLine::new(256);
     let mut env = OpenCloseEnvelope::new(OpenCloseParams {
-        sr: 16000.0,
+        sr: vdn_types::MODEL_RATE as f32,
         closed: 0.25,
         open: 0.5,
         attack_s: 0.002,

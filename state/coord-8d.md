@@ -42,3 +42,4 @@
 - 2026-11-02 hygiene：R-SIZE 扫 docs/experiments（测试 docs_experiments_are_scanned），docs 最大 590；codex 第 3 轮 P1×2 P2×1 属实已修（待定连原因比 · 生产引用的文件不当测试 · R-RATE 逐字符划测试区）；xtask 47/1（tidy_passes 预期）；codex 第 4 轮在跑
 - 2026-11-02 hygiene codex 第 4、5 轮各 1 条 P1 都在 test_modules.rs（已修）。8d 定：改保守规则——只认 #[cfg(test)] mod tests; 声明的 tests.rs / tests/，其余照查，例外用文件头 NRT 标注；删掉传播与路径跟踪代码，第 6 轮审新逻辑
 - 2026-11-02 hygiene：test_modules.rs 改窄规则 287→195 行，负例 4 + 正例 1；xtask 47 过（tidy_passes 预期）；codex 新第 6 轮审新逻辑
+- 2026-11-02 hygiene codex 第 6、7 轮又 3 处绕过（都在窄规则）。8d 定：整个删掉 test_modules（文本猜模块结构的路线本身漏），改用文件头 NRT 显式标注；R-RATE 评估改为测试代码也必须引用常量，免识别测试区；PR 正文记放弃原因，将来用 syn

@@ -13,7 +13,7 @@ static A: AllocDisabler = AllocDisabler;
 #[test]
 fn realtime_path_does_not_allocate() {
     let bus = Bus::heap(BusConfig {
-        rate: 48_000,
+        rate: vdn_types::IO_RATE,
         capacity_frames: 1024,
         l_total: 0,
         lead: 0,

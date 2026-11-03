@@ -37,7 +37,7 @@ fn invalid_params_are_rejected() {
 
 #[test]
 fn for_block_math() {
-    let p = RtParams::for_block(480, 48_000, 0.5);
+    let p = RtParams::for_block(480, vdn_types::IO_RATE, 0.5);
     assert_eq!(p.period_ns, 10_000_000);
     assert_eq!(p.constraint_ns, 10_000_000);
     assert_eq!(p.computation_ns, 5_000_000);
@@ -54,7 +54,7 @@ fn workgroup_is_unimplemented() {
 #[cfg(target_os = "macos")]
 #[test]
 fn promote_then_read_back() {
-    let want = RtParams::for_block(512, 48_000, 0.5);
+    let want = RtParams::for_block(512, vdn_types::IO_RATE, 0.5);
     let got = std::thread::spawn(move || {
         let before = check_current().unwrap();
         promote_current(want).unwrap();
@@ -114,7 +114,7 @@ fn promotion_cuts_wakeup_lateness() {
     let measure = |rt: bool| {
         std::thread::spawn(move || {
             if rt {
-                promote_current(RtParams::for_block(96, 48_000, 0.25)).unwrap();
+                promote_current(RtParams::for_block(96, vdn_types::IO_RATE, 0.25)).unwrap();
             }
             let period = Duration::from_millis(2);
             let start = Instant::now();
@@ -217,11 +217,11 @@ fn huge_measurement_is_clamped_to_kernel_max_and_period() {
 /// `for_block` 负载极小也给出合法值（chain-test 的送音 / 读出线程走它）
 #[test]
 fn for_block_with_tiny_load_is_valid() {
-    let p = RtParams::for_block(96, 48_000, 0.001);
+    let p = RtParams::for_block(96, vdn_types::IO_RATE, 0.001);
     assert_eq!(p.computation_ns, MIN_COMPUTATION_NS);
     assert!(p.validate().is_ok());
     assert_eq!(
-        RtParams::for_block(96, 48_000, 0.0).computation_ns,
+        RtParams::for_block(96, vdn_types::IO_RATE, 0.0).computation_ns,
         MIN_COMPUTATION_NS
     );
 }

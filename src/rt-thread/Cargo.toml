@@ -11,6 +11,10 @@ publish.workspace = true
 libc.workspace = true
 mach2.workspace = true
 
+[dev-dependencies]
+# 测试与示例取采样率正本（R-RATE）；只是 dev 依赖
+vdn-types.workspace = true
+
 [lints]
 workspace = true
 

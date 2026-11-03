@@ -245,7 +245,7 @@ fn main() {
         return;
     }
     let secs: u64 = a.get(2).and_then(|s| s.parse().ok()).unwrap_or(20);
-    let period = Duration::from_micros(a.get(3).and_then(|s| s.parse().ok()).unwrap_or(16_000));
+    let period = Duration::from_micros(a.get(3).and_then(|s| s.parse().ok()).unwrap_or(16_000)); // tidy: 非采样率：默认周期 16 ms（微秒）
     let iters: u64 = a
         .get(4)
         .and_then(|s| s.parse().ok())

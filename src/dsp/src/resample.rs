@@ -277,7 +277,7 @@ mod tests {
     fn round_trip_keeps_in_band_sine_with_declared_delay() {
         // 440 Hz 与 5 kHz 都在通带里；块长 96（IO 提议块）
         for f in [440.0, 5000.0] {
-            let x = sine(f, 48000.0, 9600);
+            let x = sine(f, vdn_types::IO_RATE as f32, 9600);
             let y = round_trip(&x, 96);
             let lag = 2 * delay_high();
             let err = (2000..9000)
@@ -292,7 +292,7 @@ mod tests {
         // 宽带（多正弦）信号：互相关峰在 2 × delay_high，相邻 ±3 都更小
         let x: Vec<f32> = (0..19200)
             .map(|i| {
-                let t = i as f32 / 48000.0;
+                let t = i as f32 / vdn_types::IO_RATE as f32;
                 [300.0f32, 1234.0, 2717.0, 4100.0, 6300.0]
                     .iter()
                     .map(|f| (2.0 * std::f32::consts::PI * f * t + f * 0.001).sin())
@@ -310,7 +310,7 @@ mod tests {
     #[test]
     fn decimator_rejects_above_new_nyquist() {
         for f in [9000.0, 12000.0, 20000.0] {
-            let x = sine(f, 48000.0, 9600);
+            let x = sine(f, vdn_types::IO_RATE as f32, 9600);
             let mut d = Decimator3::new();
             let mut lo = vec![0.0; x.len() / 3];
             d.process(&x, &mut lo);
@@ -335,7 +335,7 @@ mod tests {
 
     #[test]
     fn chunking_does_not_change_output() {
-        let x = sine(1000.0, 48000.0, 4800);
+        let x = sine(1000.0, vdn_types::IO_RATE as f32, 4800);
         let mut whole = vec![0.0; 1600];
         Decimator3::new().process(&x, &mut whole);
         // 不是 3 的倍数的块长也要一致
@@ -369,7 +369,7 @@ mod tests {
 
     #[test]
     fn reset_returns_to_initial_state() {
-        let x = sine(700.0, 48000.0, 960);
+        let x = sine(700.0, vdn_types::IO_RATE as f32, 960);
         let mut d = Decimator3::new();
         let mut a = vec![0.0; 320];
         d.process(&x, &mut a);

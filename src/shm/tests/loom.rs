@@ -12,7 +12,7 @@ use vdn_shm::{Bus, BusConfig, RingId};
 
 fn bus(cap: u32) -> Bus {
     Bus::heap(BusConfig {
-        rate: 48_000,
+        rate: vdn_types::IO_RATE,
         capacity_frames: cap,
         l_total: 0,
         lead: 0,
