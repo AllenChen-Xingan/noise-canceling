@@ -18,7 +18,8 @@
 - [x] 重新导出 schema → 全量 CI 全绿；大总管在 6b276e1 上复跑全绿
 - [x] codex 第 4 轮（无 P0/P1；P2×2 属实已改：测试从完整历史出发 · 假 git 注入读树 / 读文件失败，变异验证会红）；全量 CI 全绿
 - [x] codex 第 5 轮：无 P0/P1，**停止线满足**（第 4、5 轮连续）。P2×2：#2 补了 `load_baseline` 的回归测试；#1（schema 收 3.0、serde 不收）写进 README、留作 issue #61（大总管已开）
-- [ ] 锁解除后：编译测试第 5 轮补的测试 → 收尾报告 + `state/handoff/schema-pr.md`
+- [x] 最终验证（f0c3f54）：`xtask ci` 全过（402 过 / 0 败 / 5 忽略）· `vdn-schema --check` 一致 · `eval ci` 门禁通过（13/17 · 1/10 · 5/5）
+- [x] 收尾报告已交大总管；PR 正文 `state/handoff/schema-pr.md`。之后本 worktree 不再改文件
 
 ## 技术决定（我定，理由）
 - 导出库 `schemars` 1.2（MIT）：派生自 serde 属性，Rust 类型即正本。加进 control · eval · schema 三个 C / tool 档 crate
@@ -48,7 +49,7 @@
 - `src/shm/src/desc.rs` 1 条：字段有序、不重叠、不越界
 
 ## PR 正文草稿
-`_tmp/20261102-schema-review/pr-draft.md`（本 worktree，不入库；收尾时填命令结果和评审轮数后发给大总管）
+`state/handoff/schema-pr.md`（定稿）
 
 ## 转交
 - **`.github/workflows/ci.yml` 改了两处**：checkout 加 `fetch-depth: 0`（codex 第 2 轮 #1）；rust gate 一步加环境变量 `VDN_SCHEMA_BASE`（push 用推送前的提交，PR 用目标分支；codex 第 3 轮 #2，大总管已同意）。这是共用文件，合并冲突请大总管处理

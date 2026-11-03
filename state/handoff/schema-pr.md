@@ -34,7 +34,11 @@ Closes #57
   - `src/eval/src/files.rs`（3 条）：`as_str` 与 serde 名字一致；`ALL` 列全；缺省值不变（含干扰者）
   - `src/shm/src/desc.rs`（1 条）：字段有序、不重叠、不越界
   - `src/shm/tests/posix.rs`、`src/denoised/src/lib.rs`：总线名加空格、中文、多字节等负例
-- 跑了哪些（命令 + 结果）：〔编译后填〕
+- 跑了哪些（命令 + 结果，2026-11-02 本机 macOS，提交 f0c3f54）：
+  - `cargo run -p xtask -- ci`：fmt · clippy · test · tidy · check-deps · cargo-deny 全过；测试合计 402 过 / 0 败 / 5 忽略
+  - `cargo run -p vdn-schema -- --check`：与 Rust 正本一致
+  - `cargo run -p xtask -- eval ci`：门禁通过；ref 回归 13/17 · 能力 1/10 · 探针 5/5，与改动前相同
+  - 变异验证：把「读树失败」临时改回旧行为，`shm_baseline_read_errors_are_unavailable` 变红；改回后绿
 - 测不了的（`#[ignore]` + 人工步骤）：无。对照基线那条测试在本机制第一次合并前会跳过，因为 main 上还没有布局文件，合并后生效
 - 已知未解决：#61（schema 把 `3.0` 算整数，serde 不收；方向是 schema 宽、Rust 严，写在 `specs/schema/README.md`）
 
