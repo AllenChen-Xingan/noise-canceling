@@ -1,9 +1,10 @@
 use super::*;
-use crate::graph::{ASYM_GATE, FLOOR};
+use crate::graph::{ASYM_GATE, CheckedGraph, FLOOR, ProcessingGraph};
 use crate::record::tests::every_kind;
 
 const G: ProcessingGraph = ProcessingGraph {
     model: ModelId::FastEnhancerM,
+    artifact: ContentId(0x77),
     spectral: &[],
     stages: &[&FLOOR, &ASYM_GATE],
 };
@@ -15,7 +16,7 @@ fn full() -> SessionRecord {
         profile: (ProfileVersion(1), ContentId::of(b"p")),
         ..SessionHeader::default()
     };
-    header.set_graph(&G);
+    header.set_graph(&CheckedGraph::unchecked(G));
     SessionRecord {
         header,
         events: every_kind(),
@@ -25,20 +26,20 @@ fn full() -> SessionRecord {
 #[test]
 fn session_roundtrips_with_graph_and_model() {
     let r = full();
-    assert_eq!(r.header.graph, Some(G.content_id()));
-    assert_eq!(r.header.model, Some(ModelId::FastEnhancerM));
+    assert_eq!(r.header.graph(), Some(G.content_id()));
+    assert_eq!(r.header.model(), Some(ModelId::FastEnhancerM));
     let text = r.to_text();
     assert!(text.starts_with("vdn-session = 2\n"), "{text}");
     assert!(text.contains(&format!("graph = {}\n", G.content_id())));
-    assert!(text.contains("model = fastenhancer_m\n"));
+    let fem = ModelId::FastEnhancerM.as_str();
+    assert!(text.contains(&format!("model = {fem}\n")), "{text}");
     assert_eq!(SessionRecord::from_text(&text).unwrap(), r);
 }
 
 #[test]
 fn session_roundtrips_without_graph() {
     let mut r = full();
-    r.header.graph = None;
-    r.header.model = None;
+    r.header.clear_graph();
     let text = r.to_text();
     assert!(!text.contains("graph =") && !text.contains("model ="));
     assert_eq!(SessionRecord::from_text(&text).unwrap(), r);
@@ -55,8 +56,8 @@ fn format_1_still_reads() {
     );
     let r = SessionRecord::from_text(&v1).unwrap();
     assert_eq!(r.header.rate, crate::IO_RATE);
-    assert_eq!(r.header.graph, None);
-    assert_eq!(r.header.model, None);
+    assert_eq!(r.header.graph(), None);
+    assert_eq!(r.header.model(), None);
     assert_eq!(r.events, [e]);
     // 再写出就是格式 2
     assert!(r.to_text().starts_with("vdn-session = 2\n"));
@@ -70,13 +71,26 @@ fn format_1_with_new_keys_is_rejected() {
     }
 }
 
+/// 旧写法的模型名（`fastenhancer_m`，2026-11-02 之前写出的会话记录）照常能读，再写出是正本名。
+#[test]
+fn legacy_model_name_still_reads() {
+    let fem = ModelId::FastEnhancerM.as_str();
+    let text = full()
+        .to_text()
+        .replace(&format!("model = {fem}"), "model = fastenhancer_m");
+    let r = SessionRecord::from_text(&text).unwrap();
+    assert_eq!(r.header.model(), Some(ModelId::FastEnhancerM));
+    assert!(r.to_text().contains(&format!("model = {fem}\n")));
+}
+
 #[test]
 fn bad_headers_are_rejected() {
     let ok = full().to_text();
+    let model_line = format!("model = {}", ModelId::FastEnhancerM.as_str());
     let bad = [
         ok.replace("vdn-session = 2", "vdn-session = 3"),
-        ok.replace("model = fastenhancer_m", "model = nope"),
-        ok.replace("model = fastenhancer_m", "model = gtcrn extra"),
+        ok.replace(&model_line, "model = nope"),
+        ok.replace(&model_line, "model = gtcrn extra"),
         ok.replace(&format!("graph = {}", G.content_id()), "graph = xyz"),
         ok.replace("rate = 48000", "rate = 48000 1"),
         ok.replace("rate = 48000", "speed = 1"),
@@ -113,15 +127,18 @@ fn header_keys_match_text() {
 #[test]
 fn set_graph_tracks_graph_changes() {
     let mut h = SessionHeader::default();
-    h.set_graph(&G);
-    let a = h.graph;
-    h.set_graph(&ProcessingGraph {
+    h.set_graph(&CheckedGraph::unchecked(G));
+    let a = h.graph();
+    h.set_graph(&CheckedGraph::unchecked(ProcessingGraph {
         stages: &[&FLOOR],
         ..G
-    });
-    assert_ne!(h.graph, a);
-    h.set_graph(&ProcessingGraph::bare(ModelId::Gtcrn));
-    assert_eq!(h.model, Some(ModelId::Gtcrn));
+    }));
+    assert_ne!(h.graph(), a);
+    h.set_graph(&CheckedGraph::unchecked(ProcessingGraph::bare(
+        ModelId::Gtcrn,
+        ContentId::of(b"w"),
+    )));
+    assert_eq!(h.model(), Some(ModelId::Gtcrn));
 }
 
 /// codex 第 1 轮 #2：逐键删除——删必填键必须拒读，删可缺省键照常能读；同一个键写两次拒读。

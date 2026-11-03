@@ -13,8 +13,7 @@ use vdn_engine::{
 };
 use vdn_types::graph::test_kind;
 use vdn_types::{
-    Basis, ChainMismatch, Confidence, Model, ModelError, ModelId, NodeKind, ProcessingGraph,
-    SpeakerClass, SpeakerVerdict,
+    Basis, ChainMismatch, Confidence, Model, ModelError, NodeKind, SpeakerClass, SpeakerVerdict,
 };
 
 #[cfg(debug_assertions)]
@@ -403,22 +402,6 @@ impl Stage for Renamed {
     }
     fn reset(&mut self) {}
     fn process(&mut self, _wet: &mut [f32], _dry: &[f32], _ctx: FrameCtx) {}
-}
-
-#[test]
-fn pipeline_accepts_matching_graph_and_reports_it() {
-    let p = build(&[&GAIN, &USE_DRY], stages![Gain(1.0), UseDry]).unwrap();
-    assert_eq!(p.stage_kinds(), &[&GAIN, &USE_DRY]);
-    let g = p.graph(ModelId::Gtcrn);
-    assert_eq!(g.stages, &[&GAIN, &USE_DRY]);
-    assert!(g.spectral.is_empty());
-    // 不带级的构造对应空描述
-    let plain = Pipeline::new(Engine::new(Identity, SafetyConfig::off()), SR).unwrap();
-    assert!(plain.stage_kinds().is_empty());
-    assert_eq!(
-        plain.graph(ModelId::Gtcrn).content_id(),
-        ProcessingGraph::bare(ModelId::Gtcrn).content_id()
-    );
 }
 
 #[test]

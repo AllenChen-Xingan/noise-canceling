@@ -47,7 +47,7 @@ pub use frame::{
     BypassReason, Confidence, FrameCtx, FrameFeatures, SampleClock, SpeakerClass, SpeakerVerdict,
     Status,
 };
-pub use graph::{ChainMismatch, Hook, NodeKind, ProcessingGraph, match_chain};
+pub use graph::{ChainMismatch, CheckedGraph, Hook, NodeKind, ProcessingGraph, match_chain};
 pub use latency::{
     Basis, IO_BLOCK_009, IO_BLOCK_PROPOSED, LATENCY_BUDGET_MS, LatencyItem, LatencyLedger,
 };

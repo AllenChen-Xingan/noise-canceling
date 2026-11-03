@@ -51,8 +51,8 @@ mod rt;
 use vdn_dsp::DelayLine;
 use vdn_dsp::resample::{self, Decimator3, FACTOR, Interpolator3};
 use vdn_types::{
-    Basis, FrameCtx, LatencyItem, LatencyLedger, Model, ModelId, NodeKind, ProcessingGraph,
-    StageChain, Status, match_chain,
+    Basis, ChainMismatch, CheckedGraph, ContentId, FrameCtx, LatencyItem, LatencyLedger, Model,
+    ModelId, NodeKind, ProcessingGraph, StageChain, Status, match_chain,
 };
 
 pub use error::PipelineError;
@@ -299,12 +299,18 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
         self.stage_kinds
     }
 
-    /// 这条 Pipeline 对应的处理图：`model` 由调用方给（Pipeline 只认 `Model` trait，不认模型 ID）；
-    /// 频域段由模型适配器负责，这里留空。会话记录头用它的内容 ID（`SessionHeader::set_graph`）。
-    pub fn graph(&self, model: ModelId) -> ProcessingGraph {
+    /// 这条 Pipeline 对应的处理图。模型节点由调用方给：`model` 与 `artifact`（权重的制品内容 ID，
+    /// `vdn_models::artifact_id`）；Pipeline 只认 `Model` trait，所以在这里把 `model` 与正在跑的 `Model::name()`
+    /// 比对，不符返回错误（#68）。频域段由模型适配器负责，这里留空。会话记录头用它的内容 ID。构造期用。
+    pub fn graph(
+        &self,
+        model: ModelId,
+        artifact: ContentId,
+    ) -> Result<CheckedGraph, ChainMismatch> {
         ProcessingGraph {
             stages: self.stage_kinds,
-            ..ProcessingGraph::bare(model)
+            ..ProcessingGraph::bare(model, artifact)
         }
+        .verify(self.engine.model(), &self.stages)
     }
 }

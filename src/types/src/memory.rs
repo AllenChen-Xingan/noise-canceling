@@ -207,9 +207,10 @@ impl UserProfile {
                         _ => {
                             let f = ParamField::parse(key).ok_or(text::err(line, "未知的参数"))?;
                             let v: f32 = text::num(line, value)?;
-                            if !v.is_finite() {
-                                return Err(text::err(line, "数值必须有限"));
-                            }
+                            // 范围的正本是参数描述表；越界（含非有限）拒收，不悄悄夹值
+                            let v = f.desc().check(v).map_err(|_| {
+                                text::err(line, "数值越界或不是有限数（范围见参数描述表）")
+                            })?;
                             o.set(f, Some(v));
                         }
                     },
@@ -295,6 +296,26 @@ mod tests {
         assert!(UserProfile::from_text(dup).is_err());
         let nan = "vdn-profile = 1\n[user cafe]\nstrength = NaN\n";
         assert!(UserProfile::from_text(nan).is_err());
+    }
+
+    /// 越界的值按描述表拒收（每个参数取表里的上下界外一点）；边界值本身收下。旧写法的模型名读得进、写出成正本。
+    #[test]
+    fn rejects_out_of_range_values_per_desc_table() {
+        for f in ParamField::ALL {
+            let d = f.desc();
+            for bad in [d.min - 0.5, d.max + 0.5] {
+                let src = format!("vdn-profile = 1\n[user cafe]\n{} = {bad}\n", d.key);
+                let e = UserProfile::from_text(&src).unwrap_err();
+                assert_eq!(e.line, 3, "{} = {bad}", d.key);
+            }
+            for ok in [d.min, d.max] {
+                let src = format!("vdn-profile = 1\n[user cafe]\n{} = {ok}\n", d.key);
+                UserProfile::from_text(&src).unwrap();
+            }
+        }
+        let old = UserProfile::from_text("vdn-profile = 1\n[user cafe]\nmodel = fastenhancer_m\n")
+            .unwrap();
+        assert!(old.to_text().contains("model = fastenhancer-m\n"));
     }
 
     #[test]

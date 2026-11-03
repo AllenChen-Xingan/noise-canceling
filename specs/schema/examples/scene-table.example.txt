@@ -1,0 +1,16 @@
+# 场景参数表示例（格式见 src/types/src/text.rs · table.rs；参数键与范围的正本是参数描述表，导出在 ../params.table.json）。
+# 测试 src/schema/tests/text_formats.rs 逐个解析仓里所有这种文件：越界、未知键、未知模型都会红。
+vdn-scene-table = 1
+version = 1
+[user quiet]
+model = gtcrn
+strength = 1
+floor_db = -12
+[user cafe]
+model = fastenhancer-m
+floor_db = -18
+detect_db = 10
+[fine 7]
+name = cafe+neighbor
+user = cafe
+release_s = 0.5

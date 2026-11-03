@@ -364,3 +364,11 @@ fn realtime_paths_do_not_allocate() {
     assert!(s.resyncs >= 1, "{s:?}");
     assert!(s.cuts >= 1, "{s:?}");
 }
+
+/// 配置的模型名与 `vdn-models` 的模型两头互转不丢；每个模型都有配置名。
+#[test]
+fn model_choice_roundtrips() {
+    for k in ModelKind::ALL {
+        assert_eq!(model_kind(model_choice(k)), k);
+    }
+}

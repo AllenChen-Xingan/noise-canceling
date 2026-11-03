@@ -12,7 +12,7 @@
 //! | `unsafe = true` 的 crate：每个 `unsafe {` / `unsafe impl` 同行或紧邻上方的连续注释里有 `SAFETY:` | R10 |
 //! | `src/**/*.rs` 单文件 ≤ 600 行，存量超标记基线只许变小 | R-SIZE（见 `file_size.rs`） |
 //! | 代码里不写 16000 / 48000 采样率字面量，引用 `vdn_types::{IO_RATE, MODEL_RATE}` | R-RATE（见 `rate_literal.rs`） |
-//! | 不许有镜像文件、不许在 vdn-types 之外定义同名类型；参数范围不许在描述表之外写成数字字面量 | R-MIRROR · R-PARAM（见 `single_source.rs`） |
+//! | 不许有镜像文件、不许在 vdn-types 之外定义同名类型；参数范围不许在描述表之外写成数字字面量 | R-MIRROR · R-PARAM · R-MODEL（见 `no_mirror.rs` · `param_range.rs` · `model_name.rs`） |
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -332,7 +332,9 @@ pub fn check() -> Result<Tidy, String> {
     }
 
     // 唯一真相源：镜像副本 · 参数范围（CLAUDE.md 第五节第 5 条）
-    crate::single_source::check(&root, &mut t.problems);
+    crate::no_mirror::check(&root, &mut t.problems);
+    crate::param_range::check(&root, &mut t.problems);
+    crate::model_name::check(&root, &mut t.problems);
     // 单文件行数上限（R-SIZE，棘轮基线）
     crate::file_size::check(&root, &mut t.problems, &mut t.notes);
     // 采样率只写一处（R-RATE）

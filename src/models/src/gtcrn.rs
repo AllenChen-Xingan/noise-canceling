@@ -2,7 +2,7 @@
 //!
 //! 口径同 exp003 `enhance.py::Gtcrn`：周期 sqrt-Hann 512/256，分析与合成同窗；缓存全零起步、每帧回灌。
 //! 输入 `mix [1,257,1,2]`（实部、虚部交错），输出 `enh` 同形；三个缓存 conv / tra / inter。
-//! 输出用 `OutputSelector::preallocate` 预分配，缓存每帧拷回输入张量。
+//! 输出用 `OutputSelector::preallocate` 预分配，缓存每帧拷回输入张量。张量名字与形状的正本是 `interface::GTCRN`。
 
 use std::path::Path;
 
@@ -14,11 +14,13 @@ use vdn_types::{Model, ModelError};
 
 use vdn_backend_ort::{self as session, BoxError};
 
+use crate::interface::{self, Interface, TensorDecl, check_session, dims};
+
 const N_FFT: usize = 512;
 const HOP: usize = 256;
 const BINS: usize = N_FFT / 2 + 1;
-const CACHE_SHAPES: [&[usize]; 3] = [&[2, 1, 16, 16, 33], &[2, 3, 1, 1, 16], &[2, 1, 33, 16]];
-const OUT_NAMES: [&str; 4] = ["enh", "conv_cache_out", "tra_cache_out", "inter_cache_out"];
+/// 输入输出的声明（名字 · 顺序 · 形状）正本在 `interface::GTCRN`；`mix` 的频点数由测试与 `BINS` 比对。
+const IO: Interface = interface::GTCRN;
 
 pub struct Gtcrn {
     session: Session,
@@ -32,29 +34,24 @@ pub struct Gtcrn {
 impl Gtcrn {
     pub fn open(path: &Path) -> Result<Self, BoxError> {
         let session = session::open(path)?;
-        let names: Vec<&str> = session.inputs().iter().map(|i| i.name()).collect();
-        if names != ["mix", "conv_cache", "tra_cache", "inter_cache"] {
-            return Err(format!("GTCRN 输入不符：{names:?}").into());
-        }
-        // 输出按会话顺序取（outs.values()），名字必须和 OUT_NAMES 逐个对上
-        let out_names: Vec<&str> = session.outputs().iter().map(|o| o.name()).collect();
-        if out_names != OUT_NAMES {
-            return Err(format!("GTCRN 输出不符：{out_names:?}").into());
-        }
+        // 名字、顺序、形状逐个对声明；输出按会话顺序取（outs.values()），顺序错了会悄悄算错
+        check_session(&IO, &session).map_err(|e| format!("GTCRN {e}"))?;
         let mut sel = OutputSelector::default();
-        sel = sel.preallocate(OUT_NAMES[0], session::zeros(&[1, BINS, 1, 2])?);
-        for (name, shape) in OUT_NAMES[1..].iter().zip(CACHE_SHAPES) {
-            sel = sel.preallocate(*name, session::zeros(shape)?);
+        for o in IO.outputs {
+            sel = sel.preallocate(o.name, session::zeros(&dims(o.shape))?);
         }
+        let zeros = |d: Option<&TensorDecl>| -> Result<Tensor<f32>, BoxError> {
+            session::zeros(&dims(d.ok_or("GTCRN 声明缺输入")?.shape))
+        };
         Ok(Self {
             session,
             run: RunOptions::new()?.with_outputs(sel),
             stft: StreamingStft::new(N_FFT, HOP, window::sqrt_hann_periodic(N_FFT)),
-            mix: session::zeros(&[1, BINS, 1, 2])?,
+            mix: zeros(IO.inputs.first())?,
             caches: [
-                session::zeros(CACHE_SHAPES[0])?,
-                session::zeros(CACHE_SHAPES[1])?,
-                session::zeros(CACHE_SHAPES[2])?,
+                zeros(IO.inputs.get(1))?,
+                zeros(IO.inputs.get(2))?,
+                zeros(IO.inputs.get(3))?,
             ],
         })
     }
@@ -68,7 +65,7 @@ impl Gtcrn {
 )]
 impl Model for Gtcrn {
     fn name(&self) -> &'static str {
-        "gtcrn"
+        vdn_types::ModelId::Gtcrn.as_str()
     }
     fn sample_rate(&self) -> u32 {
         vdn_types::MODEL_RATE
@@ -152,5 +149,19 @@ impl Gtcrn {
             session::copy_out(&v, cache.extract_tensor_mut().1).map_err(|_| ModelError::Shape)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ModelKind;
+
+    /// 声明的 `mix` 是一帧复数谱：频点数 = n_fft/2 + 1；hop 与 `ModelKind::declared` 一致。
+    #[test]
+    fn declaration_agrees_with_stft() {
+        let mix = IO.inputs.first().unwrap();
+        assert_eq!(mix.shape, [1, BINS as i64, 1, 2]);
+        assert_eq!(ModelKind::Gtcrn.declared().hop, HOP);
     }
 }

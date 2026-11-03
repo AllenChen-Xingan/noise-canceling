@@ -17,7 +17,7 @@
 use std::fs;
 use std::path::Path;
 
-use crate::single_source::lex_lines;
+use crate::scan::lex_lines;
 use crate::tidy::rs_files;
 
 /// 采样率正本。

@@ -22,7 +22,7 @@ use std::path::Path;
 
 use clap::Parser;
 use serde_json::json;
-use vdn_models::{BoxError, ModelKind};
+use vdn_models::BoxError;
 
 use args::{ChainArgs, ChainCheckArgs, ChainModeArg, Cli, Cmd, RunArgs, V7Args};
 use offline_cmd::{bench, denoise};
@@ -84,7 +84,7 @@ fn run(a: RunArgs) -> Result<bool, BoxError> {
         // 单进程：cpal 回调块长不固定，用任意块长的 Pipeline::new
         live::run(vdn_denoised::identity_pipeline(None)?, &o)?
     } else {
-        let kind = ModelKind::from(a.m.model);
+        let kind = a.m.kind()?;
         live::run(
             vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref(), None)?,
             &o,
@@ -132,7 +132,7 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
             chain::run(vdn_denoised::identity_pipeline(Some(o.denoise_block))?, &o)?
         }
         chain::ChainMode::Denoise => {
-            let kind = ModelKind::from(a.m.model);
+            let kind = a.m.kind()?;
             chain::run(
                 vdn_denoised::model_pipeline(
                     kind,
@@ -227,7 +227,7 @@ fn v7(a: V7Args) -> Result<bool, BoxError> {
     };
     let cores = std::thread::available_parallelism().map_or(4, |n| n.get());
     let stress = a.stress.unwrap_or(cores.saturating_sub(3).max(1));
-    let kind = ModelKind::from(a.m.model);
+    let kind = a.m.kind()?;
     let groups: Vec<(&str, usize)> = if a.idle_only {
         vec![("空闲", 0)]
     } else {

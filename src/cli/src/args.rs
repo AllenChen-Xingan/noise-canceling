@@ -2,8 +2,9 @@
 
 use std::path::PathBuf;
 
+use clap::builder::PossibleValuesParser;
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use vdn_models::ModelKind;
+use vdn_models::{BoxError, ModelId, ModelKind};
 
 #[derive(Parser)]
 #[command(name = "vdn", version, about = "Mac 开源实时语音降噪 · P1 离线原型")]
@@ -160,30 +161,23 @@ pub struct ChainArgs {
     pub dump: Option<PathBuf>,
 }
 
-#[derive(Clone, Copy, ValueEnum)]
-pub enum ModelArg {
-    Gtcrn,
-    #[value(name = "fastenhancer-m")]
-    FastEnhancerM,
-}
-
-impl From<ModelArg> for ModelKind {
-    fn from(m: ModelArg) -> Self {
-        match m {
-            ModelArg::Gtcrn => ModelKind::Gtcrn,
-            ModelArg::FastEnhancerM => ModelKind::FastEnhancerM,
-        }
-    }
-}
-
 #[derive(Args)]
 pub struct ModelOpts {
     /// 用哪个模型
-    #[arg(long, value_enum, default_value = "gtcrn")]
-    pub model: ModelArg,
+    #[arg(long, default_value = ModelId::Gtcrn.as_str(), value_parser = PossibleValuesParser::new(ModelId::NAMES))]
+    pub model: String,
     /// 模型文件；不给就按 环境变量 VDN_GTCRN_ONNX / VDN_FASTENHANCER_ONNX → ~/vdn-data/models/… → ./resources/… 查找
     #[arg(long)]
     pub model_path: Option<PathBuf>,
+}
+
+impl ModelOpts {
+    /// `--model` 已由 clap 限在 `ModelId::NAMES` 里；这里经正本解析成模型。
+    pub fn kind(&self) -> Result<ModelKind, BoxError> {
+        Ok(ModelKind::from_id(
+            ModelId::parse(&self.model).ok_or("未知的模型")?,
+        ))
+    }
 }
 
 #[derive(Args)]
@@ -244,4 +238,33 @@ pub struct BenchArgs {
     /// 结果 JSON
     #[arg(long)]
     pub json: Option<PathBuf>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `--model` 的可选值、默认值都从 `ModelId` 取：每个正本名都认、解析到对应模型；别的写法拒收。
+    #[test]
+    fn model_arg_follows_model_id() {
+        let kind_of = |args: &[&str]| -> Option<ModelKind> {
+            let cli = Cli::try_parse_from(args).ok()?;
+            let Cmd::Denoise(a) = cli.cmd else {
+                return None;
+            };
+            a.m.kind().ok()
+        };
+        assert_eq!(
+            kind_of(&["vdn", "denoise", "a.wav", "b.wav"]),
+            Some(ModelKind::from_id(ModelId::default()))
+        );
+        for id in ModelId::ALL {
+            let got = kind_of(&["vdn", "denoise", "a.wav", "b.wav", "--model", id.as_str()]);
+            assert_eq!(got, Some(ModelKind::from_id(id)), "{}", id.as_str());
+        }
+        assert_eq!(
+            kind_of(&["vdn", "denoise", "a.wav", "b.wav", "--model", "nope"]),
+            None
+        );
+    }
 }

@@ -13,7 +13,11 @@ use vdn_types::{Model, ModelError};
 
 use vdn_backend_ort::{self as session, BoxError};
 
+use crate::interface::{self, Interface, check_session, dims};
+
 const N_FFT: usize = 512;
+/// 输入输出的声明（名字 · 顺序 · 形状）正本在 `interface::FASTENHANCER_M`。
+const IO: Interface = interface::FASTENHANCER_M;
 
 pub struct FastEnhancer {
     session: Session,
@@ -25,58 +29,25 @@ pub struct FastEnhancer {
 
 // 构造：非实时线程
 impl FastEnhancer {
-    #[allow(clippy::indexing_slicing)] // NRT: 构造期一次性读形状；shapes 非空已由上面的 wav_in 检查保证
     pub fn open(path: &Path) -> Result<Self, BoxError> {
         let session = session::open(path)?;
-        let ins = session.inputs();
-        if ins.first().map(|i| i.name()) != Some("wav_in") {
-            return Err("FastEnhancer 第一个输入应是 wav_in".into());
-        }
-        let shapes: Vec<Vec<usize>> = ins
-            .iter()
-            .map(|i| {
-                i.dtype()
-                    .tensor_shape()
-                    .map(|s| s.iter().map(|&d| d.max(1) as usize).collect())
-                    .ok_or("FastEnhancer 输入不是张量")
-            })
-            .collect::<Result<_, _>>()?;
-        let hop = *shapes[0].last().ok_or("wav_in 形状为空")?;
+        // 名字、顺序、形状逐个对声明（输入输出按位置配对：wav_in/wav_out、cache_in_i/cache_out_i；
+        // 形状相同时顺序乱了不会报错，只会悄悄算错）
+        check_session(&IO, &session).map_err(|e| format!("FastEnhancer {e}"))?;
         let mut sel = OutputSelector::default();
-        let outs = session.outputs();
-        if outs.len() != ins.len() {
-            return Err("FastEnhancer 输入输出个数不符".into());
+        for o in IO.outputs {
+            sel = sel.preallocate(o.name, session::zeros(&dims(o.shape))?);
         }
-        // 输入输出按位置配对，名字必须是 wav_in/wav_out、cache_in_i/cache_out_i（形状相同时顺序乱了不会报错，只会悄悄算错）
-        for (i, (a, b)) in ins.iter().zip(outs.iter()).enumerate() {
-            let (want_in, want_out) = if i == 0 {
-                ("wav_in".to_string(), "wav_out".to_string())
-            } else {
-                (
-                    format!("cache_in_{}", i - 1),
-                    format!("cache_out_{}", i - 1),
-                )
-            };
-            if a.name() != want_in || b.name() != want_out {
-                return Err(format!(
-                    "FastEnhancer 第 {i} 对输入输出名不符：{} / {}",
-                    a.name(),
-                    b.name()
-                )
-                .into());
-            }
-        }
-        for (o, shape) in outs.iter().zip(&shapes) {
-            sel = sel.preallocate(o.name(), session::zeros(shape)?);
-        }
-        let caches = shapes[1..]
-            .iter()
-            .map(|s| session::zeros(s))
+        let mut ins = IO.inputs.iter().map(|d| dims(d.shape));
+        let wav = ins.next().ok_or("FastEnhancer 声明缺 wav_in")?;
+        let hop = *wav.last().ok_or("wav_in 形状为空")?;
+        let caches = ins
+            .map(|s| session::zeros(&s))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(Self {
             run: RunOptions::new()?.with_outputs(sel),
             hop,
-            wav_in: session::zeros(&shapes[0])?,
+            wav_in: session::zeros(&wav)?,
             caches,
             session,
         })
@@ -91,7 +62,7 @@ impl FastEnhancer {
 )]
 impl Model for FastEnhancer {
     fn name(&self) -> &'static str {
-        "fastenhancer"
+        vdn_types::ModelId::FastEnhancerM.as_str()
     }
     fn sample_rate(&self) -> u32 {
         vdn_types::MODEL_RATE
@@ -152,5 +123,21 @@ impl FastEnhancer {
             session::copy_out(&v, cache.extract_tensor_mut().1).map_err(|_| ModelError::Shape)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ModelKind;
+
+    /// 声明里 `wav_in` 的长度就是 hop；延迟 = n_fft − hop（官方口径）；与 `ModelKind::declared` 一致。
+    #[test]
+    fn declaration_agrees_with_declared_hop_and_latency() {
+        let d = ModelKind::FastEnhancerM.declared();
+        let wav = IO.inputs.first().unwrap();
+        assert_eq!(wav.name, "wav_in");
+        assert_eq!(*wav.shape.last().unwrap() as usize, d.hop);
+        assert_eq!(N_FFT - d.hop, d.latency_samples);
     }
 }

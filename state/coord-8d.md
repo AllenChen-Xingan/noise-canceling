@@ -48,3 +48,7 @@
 - 2026-11-02 #64 已合并（PR #69）；99 会话离线，iface 仍在做 #65。8d 合 main 进 #62（787eeee6）：冲突 types/lib.rs · record.rs 已解（模块表三方都留，session 新模块），cargo check 全过；tidy 11 处 → 10 处交 hygiene 修（2 条基线删 + 8 处 #64 带入的采样率），policy.rs 1 处等 #65
 - 2026-11-02 hygiene 修完 10 处，tidy 只剩 policy.rs；codex 第 8 轮 0 P0/P1（连续第 1 轮），P2×3 已修（R-SIZE 扩到全部代码类型等）；第 9 轮确认中
 - 2026-11-02 hygiene 报可收尾：codex 9 轮（第 8、9 连续无 P0/P1）· 记录 docs/reviews/062_code-hygiene-codex.md · PR 草稿 state/handoff/hygiene-pr.md · #71 设计 docs/plan/012_tidy-syn.md（215 行）。8d 定 012 第九节三题用默认值。hygiene 待命等 #65
+- 2026-11-03 99、e3 均离线；#65 手下 iface 已完成未推送。人定：8d 接手收尾 #65。8d 合 origin/main 进 feat/param-model-schema（a382b298，冲突仅评审索引）；全量验收中。注：#65 的 test_scope.rs 也是文本猜测试范围，记入 #71 一并换成语法树
+- 2026-11-03 #65 验收（a382b298）：xtask ci 全绿 469/0/7 · schema 一致 · eval ci 门禁过；推送并开 PR #74（Closes #65 #68），等 CI
+- 2026-11-03 PR #74 CI 过，8d 合并（23d0d531），#65 #68 关。合 origin/main 进 #62：6 个冲突（cli/main · denoised/lib · schema/tests/graph · session/tests · xtask main/tidy），交 hygiene 在工作区解、不提交，之后做最后四步
+- 2026-11-03 hygiene 解完 6 个冲突（另暂存 6 个配套文件），合并工作区 clippy 净 · test 500/1/7（tidy_passes：4 条作废基线 + policy_tests 1 处字面量）；8d 提交合并

@@ -1,0 +1,229 @@
+{
+  "$comment": "由 `cargo run -p vdn-schema` 从 src/models/src/lib.rs（ModelKind::declared）与 src/models/src/interface.rs 导出，勿手改。shape 里 -1 = 动态维；与 ONNX 文件的比对见 src/models/tests/interface.rs",
+  "models": [
+    {
+      "hop": 256,
+      "inputs": [
+        {
+          "dtype": "f32",
+          "name": "mix",
+          "shape": [
+            1,
+            257,
+            1,
+            2
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "conv_cache",
+          "shape": [
+            2,
+            1,
+            16,
+            16,
+            33
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "tra_cache",
+          "shape": [
+            2,
+            3,
+            1,
+            1,
+            16
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "inter_cache",
+          "shape": [
+            2,
+            1,
+            33,
+            16
+          ]
+        }
+      ],
+      "latency_samples": 256,
+      "name": "gtcrn",
+      "outputs": [
+        {
+          "dtype": "f32",
+          "name": "enh",
+          "shape": [
+            1,
+            257,
+            1,
+            2
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "conv_cache_out",
+          "shape": [
+            2,
+            1,
+            16,
+            16,
+            33
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "tra_cache_out",
+          "shape": [
+            2,
+            3,
+            1,
+            1,
+            16
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "inter_cache_out",
+          "shape": [
+            2,
+            1,
+            33,
+            16
+          ]
+        }
+      ],
+      "sample_rate": 16000
+    },
+    {
+      "hop": 160,
+      "inputs": [
+        {
+          "dtype": "f32",
+          "name": "wav_in",
+          "shape": [
+            1,
+            160
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "cache_in_0",
+          "shape": [
+            1,
+            352
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "cache_in_1",
+          "shape": [
+            1,
+            352
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "cache_in_2",
+          "shape": [
+            1,
+            48,
+            72
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "cache_in_3",
+          "shape": [
+            1,
+            48,
+            72
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "cache_in_4",
+          "shape": [
+            1,
+            48,
+            72
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "cache_in_5",
+          "shape": [
+            1,
+            48,
+            72
+          ]
+        }
+      ],
+      "latency_samples": 352,
+      "name": "fastenhancer-m",
+      "outputs": [
+        {
+          "dtype": "f32",
+          "name": "wav_out",
+          "shape": [
+            1,
+            160
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "cache_out_0",
+          "shape": [
+            1,
+            352
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "cache_out_1",
+          "shape": [
+            1,
+            352
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "cache_out_2",
+          "shape": [
+            1,
+            48,
+            72
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "cache_out_3",
+          "shape": [
+            1,
+            48,
+            72
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "cache_out_4",
+          "shape": [
+            1,
+            48,
+            72
+          ]
+        },
+        {
+          "dtype": "f32",
+          "name": "cache_out_5",
+          "shape": [
+            1,
+            48,
+            72
+          ]
+        }
+      ],
+      "sample_rate": 16000
+    }
+  ]
+}

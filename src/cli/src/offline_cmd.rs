@@ -5,13 +5,13 @@ use std::time::Duration;
 
 use serde_json::json;
 use vdn_engine::{Engine, FaultInjector, FaultKind, Model, SafetyConfig, offline};
-use vdn_models::{AnyModel, BoxError, ModelKind};
+use vdn_models::{AnyModel, BoxError};
 
 use crate::GLOBAL;
 use crate::args::{BenchArgs, DenoiseArgs, ModelOpts};
 
 pub fn open_model(m: &ModelOpts) -> Result<(AnyModel, PathBuf), BoxError> {
-    let kind = ModelKind::from(m.model);
+    let kind = m.kind()?;
     let path = match &m.model_path {
         Some(p) => p.clone(),
         None => kind
