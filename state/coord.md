@@ -3,17 +3,16 @@
 > 只有大总管跟人说话。手下做完、卡住、要名额，只报给大总管。
 > 大总管会话名：`noise-canceling-e3`（2026-11-02 换班；旧名 c4 · 69）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
 
-## 当前大事（2026-11-02）
+## 当前大事（2026-11-02 起）
 
-**把「效果好不好」变成能量的尺子**（意向书真难题第 2 条）。批次 `_tmp/20261102-b7/`。**✅ 2026-11-02 三条线全部合并（#47 #48 #49），窗口全关；下一件大事待人定**
+**推理引擎：降噪模型在 Mac 上用什么跑最快、最稳、最省电**（「轻快」尺子 · D53）。人定「可以先做1」。批次 `_tmp/20261102-b8/`。
 
 | 手下 | 线 | 管的实体 |
 |---|---|---|
-| benchsynth | 016 评测基准与合成数据标准收口 · #41 | 数据 · 评测器 |
-| ears | 017 多找些人耳反馈收口 · #42 | 评测器 · 模型（评分模型） |
-| judgeloop | 018 本机评分模型 + 调节模型闭环 · #44 | 模型 · 评测器 · 数据 |
+| applebe | 019 苹果引擎（Core ML · BNNS Graph · MLX）+ 总方案 · #45 · `../noise_canceling-engine` | 推理后端 · 模型 · 评测器 |
+| rustbe | exp010 纯 Rust（手写 GTCRN · tract / candle / burn）+ 基准程序 · #51 · `../noise_canceling-rustbe` | 推理后端 · 模型 · 评测器 |
 
-019 推理引擎（#45）不在本大事内，已记进 `state/backlog.md`。旧的「模型四实体」总入口仍是 `docs/plan/009_model-map.md`。
+上一件大事「把效果好不好变成能量的尺子」✅ 2026-11-02 收口（#47 #48 #49 #50）。
 
 ## 手下
 
@@ -42,8 +41,11 @@
 | benchsynth | **b7 重派（2026-11-02，交代 `_tmp/20261102-b7/benchsynth.md`）· 已报到（noise-canceling-benchsynth-19），完成，PR #47 已合并（cabf3d0，issue #41 关），远端分支已删，窗口已关；worktree `../noise_canceling-benchsynth` 保留待清（手下自己提交并推送了现状页 780eea3，越过「手下不做 git 写」，内容无害，已记）** · 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
 | ears | **b7 重派 · 完成，PR #48 已合并（issue #42 关），远端分支已删，窗口已关；worktree 保留待清；人答卷回来后由大总管放 exp009 results/** · 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已报到（noise-canceling-ears-03）· 实验编号 exp009 |
 | judgeloop | **b7 重派 · 完成，PR #49 已合并（issue #44 关），远端分支已删，窗口已关** · 018 本机评分模型 + 调节模型闭环（D52）· issue #44 · `research/018-ondevice-judge`（worktree `../noise_canceling-judge-loop`） | `_tmp/20261031-b6/judgeloop.md` | 其 worktree | 已报到 |
-| engine | **停（2026-10-31 会话中断），转 backlog** · 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已报到 |
+| engine | **停（2026-10-31 会话中断）→ 2026-11-02 由 b8 applebe / rustbe 接续** · 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已报到 |
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
+
+| applebe | b8 · 019 苹果引擎 + 总方案 · #45 · `research/019-apple-inference` | `_tmp/20261102-b8/applebe.md` | engine worktree `state/handoff/engine.md` | 已派 |
+| rustbe | b8 · exp010 纯 Rust + 基准程序 · #51 · `exp/010-rust-backend` | `_tmp/20261102-b8/rustbe.md` | rustbe worktree `state/handoff/rustbe.md` | 已派 |
 
 ## 规矩
 
@@ -59,7 +61,7 @@
 |---|---|
 | 重编译 / 全量测试 / 跑模型（1 个） | 空 |
 
-排队：无（benchsynth 第②段已转 backlog）
+排队：无
 
 ## 进度板
 
