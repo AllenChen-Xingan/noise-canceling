@@ -55,7 +55,7 @@ pub fn config_schema() -> Value {
     with_comment(s.to_value(), "src/control/src/lib.rs 的 Config")
 }
 
-/// 全部导出物（不含版本登记表，它由 `write` 追加维护）。
+/// 全部导出物。
 pub fn export() -> Vec<Doc> {
     let body = shm::layout_body();
     vec![
@@ -105,7 +105,6 @@ pub fn check(root: &Path) -> Vec<String> {
     let known: Vec<&str> = docs
         .iter()
         .map(|d| d.file)
-        .chain([shm::VERSIONS_FILE])
         .collect();
     if let Ok(rd) = std::fs::read_dir(&dir) {
         for e in rd.flatten() {
@@ -118,15 +117,12 @@ pub fn check(root: &Path) -> Vec<String> {
         }
     }
     let body = shm::layout_body();
-    match read(&dir.join(shm::VERSIONS_FILE)).map(|t| shm::parse_versions(&t)) {
-        None => problems.push(format!("{DIR}/{} 不存在", shm::VERSIONS_FILE)),
-        Some(Err(e)) => problems.push(e),
-        Some(Ok(v)) => {
-            if let Err(e) = shm::guard(&v, vdn_shm::layout::VERSION, &shm::fingerprint(&body), true)
-            {
-                problems.push(e);
-            }
-        }
+    if let Err(e) = shm::guard(
+        shm::HISTORY,
+        vdn_shm::layout::VERSION,
+        &shm::fingerprint(&shm::layout_body()),
+    ) {
+        problems.push(e);
     }
     problems
 }
@@ -144,26 +140,16 @@ pub fn first_diff(file: &str, committed: &str, fresh: &str) -> String {
     )
 }
 
-/// 重新导出并写盘；共享内存头的新版本追加进登记表。返回写了哪些文件。
+/// 重新导出并写盘（只写有变化的文件）。返回写了哪些文件。
 pub fn write(root: &Path) -> Result<Vec<String>, String> {
     let dir = root.join(DIR);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    // 先过版本守卫：布局变了而版本没升，一个文件都不写
-    let vpath = dir.join(shm::VERSIONS_FILE);
-    let mut versions = match read(&vpath) {
-        Some(t) => shm::parse_versions(&t)?,
-        None => shm::Versions::new(),
-    };
-    let version = vdn_shm::layout::VERSION;
-    let fp = shm::fingerprint(&shm::layout_body());
-    shm::guard(&versions, version, &fp, false)?;
-    if let Some((&last, _)) = versions.last_key_value()
-        && version < last
-    {
-        return Err(format!(
-            "layout::VERSION = {version} 比已登记的 {last} 小：版本只能往上升"
-        ));
-    }
+    // 先过版本守卫：布局变了而版本没升（或新版本没登记），一个文件都不写
+    shm::guard(
+        shm::HISTORY,
+        vdn_shm::layout::VERSION,
+        &shm::fingerprint(&shm::layout_body()),
+    )?;
     let mut wrote = Vec::new();
     for d in export() {
         let p = dir.join(d.file);
@@ -171,10 +157,6 @@ pub fn write(root: &Path) -> Result<Vec<String>, String> {
             std::fs::write(&p, &d.text).map_err(|e| format!("{}：{e}", p.display()))?;
             wrote.push(d.file.to_string());
         }
-    }
-    if versions.insert(version, fp).is_none() || !vpath.exists() {
-        std::fs::write(&vpath, shm::versions_text(&versions)).map_err(|e| e.to_string())?;
-        wrote.push(shm::VERSIONS_FILE.to_string());
     }
     Ok(wrote)
 }

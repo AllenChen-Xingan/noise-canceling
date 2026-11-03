@@ -1,6 +1,0 @@
-{
-  "$comment": "共享内存头：每个布局版本的指纹（只增不改）。由 `cargo run -p vdn-schema` 追加；同一版本号对应的布局变了，导出与测试都报错，提示升 layout::VERSION",
-  "versions": {
-    "2": "fnv1a64:fbd400fe113ede86"
-  }
-}

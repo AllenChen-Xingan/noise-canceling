@@ -1,6 +1,4 @@
-//! 共享内存头 → `shm-header.layout.json`，以及「改布局必须升版本」的守卫（`shm-header.versions.json`）。
-
-use std::collections::BTreeMap;
+//! 共享内存头 → `shm-header.layout.json`，以及「改布局必须升版本」的守卫（`HISTORY`）。
 
 use serde_json::{Value, json};
 use vdn_shm::RingId;
@@ -8,7 +6,6 @@ use vdn_shm::desc::{self, FieldDesc, Kind, StructDesc};
 use vdn_shm::layout;
 
 pub const LAYOUT_FILE: &str = "shm-header.layout.json";
-pub const VERSIONS_FILE: &str = "shm-header.versions.json";
 
 fn kind_name(k: Kind) -> String {
     match k {
@@ -95,52 +92,35 @@ pub fn fingerprint(body: &Value) -> String {
     format!("fnv1a64:{h:016x}")
 }
 
-/// 版本 → 指纹 的登记表（只增不改）。
-pub type Versions = BTreeMap<u32, String>;
+/// 每个布局版本的指纹（只增不改；版本 1 早于本机制，没有记录）。
+///
+/// 故意写在代码里、不放导出文件：导出工具从不改它，改布局时必须手动在末尾加一行，
+/// 改动在评审里看得见；改写或删掉旧行同样是一处显眼的代码改动（第 1 轮 codex #1）。
+pub const HISTORY: &[(u32, &str)] = &[(2, "fnv1a64:fbd400fe113ede86")];
 
-pub fn parse_versions(text: &str) -> Result<Versions, String> {
-    let v: Value = serde_json::from_str(text).map_err(|e| format!("{VERSIONS_FILE}：{e}"))?;
-    let mut out = Versions::new();
-    for (k, f) in v
-        .get("versions")
-        .and_then(Value::as_object)
-        .ok_or_else(|| format!("{VERSIONS_FILE} 缺 versions"))?
-    {
-        let n: u32 = k
-            .parse()
-            .map_err(|_| format!("{VERSIONS_FILE}：版本号 {k:?} 不是整数"))?;
-        let f = f
-            .as_str()
-            .ok_or_else(|| format!("{VERSIONS_FILE}：{k} 的指纹不是字符串"))?;
-        out.insert(n, f.to_string());
+/// 守卫：`history` 版本号严格递增；当前 (版本, 指纹) 必须正是最后一行。
+pub fn guard(history: &[(u32, &str)], version: u32, fp: &str) -> Result<(), String> {
+    if history.windows(2).any(|w| w[0].0 >= w[1].0) {
+        return Err("shm::HISTORY 的版本号必须严格递增".into());
     }
-    Ok(out)
-}
-
-pub fn versions_text(v: &Versions) -> String {
-    let doc = json!({
-        "$comment": "共享内存头：每个布局版本的指纹（只增不改）。由 `cargo run -p vdn-schema` 追加；同一版本号对应的布局变了，导出与测试都报错，提示升 layout::VERSION",
-        "versions": v.iter().map(|(k, f)| (k.to_string(), json!(f))).collect::<serde_json::Map<_, _>>(),
-    });
-    crate::pretty(&doc)
-}
-
-/// 守卫：当前版本要么没登记过（新版本，导出时追加），要么登记的指纹与当前布局一致。
-/// `require_registered` = true 时（检查模式）没登记也算错。
-pub fn guard(
-    versions: &Versions,
-    version: u32,
-    fp: &str,
-    require_registered: bool,
-) -> Result<(), String> {
-    match versions.get(&version) {
-        Some(f) if f == fp => Ok(()),
-        Some(f) => Err(format!(
-            "共享内存头布局变了（指纹 {f} → {fp}），但 layout::VERSION 还是 {version}：改布局必须升版本（src/shm/src/layout.rs）"
+    let next = |v: u32| {
+        format!("在 src/schema/src/shm.rs 的 HISTORY 末尾加 ({v}, \"{fp}\")")
+    };
+    match history.last() {
+        None => Err(format!("shm::HISTORY 是空的：{}", next(version))),
+        Some(&(v, f)) if v == version && f == fp => Ok(()),
+        Some(&(v, f)) if v == version => Err(format!(
+            "共享内存头布局变了（指纹 {f} → {fp}），但 layout::VERSION 还是 {v}：改布局必须升版本——\
+             把 src/shm/src/layout.rs 的 VERSION 升到 {}，并{}",
+            v + 1,
+            next(v + 1)
         )),
-        None if require_registered => Err(format!(
-            "{VERSIONS_FILE} 里没有版本 {version}：跑 `cargo run -p vdn-schema` 登记"
+        Some(&(v, _)) if version > v => Err(format!(
+            "layout::VERSION = {version} 还没登记：{}",
+            next(version)
         )),
-        None => Ok(()),
+        Some(&(v, _)) => Err(format!(
+            "layout::VERSION = {version} 比已登记的 {v} 小：版本只能往上升"
+        )),
     }
 }
