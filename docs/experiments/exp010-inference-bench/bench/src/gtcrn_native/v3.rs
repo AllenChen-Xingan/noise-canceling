@@ -188,6 +188,104 @@ fn gru_rows_v3<const NL: u8>(g: &Gru, xs: &[f32], hs: &mut [f32], stride: usize,
     }
 }
 
+/// 频率卷积，两个输出通道一组（第 5 条改写，v4 起）：同一组输入通道的两相读一次、喂两个输出的累加器，
+/// 每次加载配两次 FMA（v2 是一次加载一次 FMA，按实测 en0 约 14 次乘加 / ns，推断卡在加载上）。
+/// 每个输出的式子与 v2 相同（同样的项、同样的顺序），所以与 v2 逐位相同（单元测试）
+#[inline(always)]
+unsafe fn conv_chunk2<const N: usize, const Z: usize>(
+    ph: *const f32,
+    pl: usize,
+    w: [*const f32; 2],
+    cig: usize,
+    b: [f32; 2],
+    v0: usize,
+    out: [*mut f32; 2],
+) {
+    unsafe {
+        let mut a0 = [vdupq_n_f32(b[0]); N];
+        let mut a1 = [vdupq_n_f32(b[1]); N];
+        for ci in 0..cig {
+            let e = ph.add(ci * 2 * pl + v0 * 4);
+            let o = e.add(pl);
+            let (w0, w1) = (w[0].add(ci * K), w[1].add(ci * K));
+            for t in 0..K {
+                let src = if t % 2 == 0 { e } else { o }.add(t / 2);
+                let (s0, s1) = (*w0.add(t), *w1.add(t));
+                for v in 0..N {
+                    let x = vld1q_f32(src.add(4 * v));
+                    a0[v] = vfmaq_n_f32(a0[v], x, s0);
+                    a1[v] = vfmaq_n_f32(a1[v], x, s1);
+                }
+            }
+        }
+        for v in 0..N {
+            vst1q_f32(out[0].add(4 * (v0 + v)), a0[v]);
+            vst1q_f32(out[1].add(4 * (v0 + v)), a1[v]);
+        }
+    }
+}
+
+macro_rules! by_n2 {
+    ($n:expr, $($a:expr),*) => {
+        match $n {
+            1 => conv_chunk2::<1, 0>($($a),*),
+            2 => conv_chunk2::<2, 0>($($a),*),
+            3 => conv_chunk2::<3, 0>($($a),*),
+            4 => conv_chunk2::<4, 0>($($a),*),
+            5 => conv_chunk2::<5, 0>($($a),*),
+            6 => conv_chunk2::<6, 0>($($a),*),
+            7 => conv_chunk2::<7, 0>($($a),*),
+            8 => conv_chunk2::<8, 0>($($a),*),
+            9 => conv_chunk2::<9, 0>($($a),*),
+            _ => unreachable!(),
+        }
+    };
+}
+
+fn conv_v4(c: &mut ConvF, x: &[f32], y: &mut [f32]) {
+    let (cig, cog) = (c.cin / c.groups, c.cout / c.groups);
+    let pl = v2::conv_phase_len(c.fout);
+    let nv = c.fout.div_ceil(4);
+    if cog % 2 != 0 || nv > 17 {
+        return v2::conv_v2(c, x, y);
+    }
+    assert!(x.len() >= c.cin * c.fin && y.len() >= c.cout * c.fout);
+    assert!(c.ph.len() >= c.cin * 2 * pl && c.w.len() >= c.cout * cig * K);
+    for ci in 0..c.cin {
+        let xi = &x[ci * c.fin..(ci + 1) * c.fin];
+        let (e, o) = c.ph[ci * 2 * pl..(ci + 1) * 2 * pl].split_at_mut(pl);
+        for m in 0..pl {
+            let at = |p: usize| if (2..c.fin + 2).contains(&p) { xi[p - 2] } else { 0.0 };
+            e[m] = at(2 * m);
+            o[m] = at(2 * m + 1);
+        }
+    }
+    let mut t0 = [0.0f32; 68];
+    let mut t1 = [0.0f32; 68];
+    for o in (0..c.cout).step_by(2) {
+        let g = o / cog;
+        let ph = c.ph[g * cig * 2 * pl..].as_ptr();
+        let w = [c.w[o * cig * K..].as_ptr(), c.w[(o + 1) * cig * K..].as_ptr()];
+        let b = [c.b[o], c.b[o + 1]];
+        let mut v0 = 0;
+        while v0 < nv {
+            // 两个输出各 N 个累加器：N ≤ 9 → 最多 18 个，加 1 个加载，放得进 32 个寄存器
+            let n = (nv - v0).min(9);
+            unsafe { by_n2!(n, ph, pl, w, cig, b, v0, [t0.as_mut_ptr(), t1.as_mut_ptr()]) };
+            v0 += n;
+        }
+        for (k, t) in [&mut t0, &mut t1].into_iter().enumerate() {
+            unsafe {
+                for v in 0..nv {
+                    let p = t.as_mut_ptr().add(4 * v);
+                    vst1q_f32(p, v2::prelu4(vld1q_f32(p), c.alpha));
+                }
+            }
+            y[(o + k) * c.fout..(o + k + 1) * c.fout].copy_from_slice(&t[..c.fout]);
+        }
+    }
+}
+
 fn sparse_v3(s: &Sparse, x: &[f32], y: &mut [f32]) {
     for (yv, (st, seg)) in y.iter_mut().zip(&s.rows) {
         *yv = crate::dsp::dot_neon(seg, &x[*st..*st + seg.len()]);
@@ -201,7 +299,8 @@ impl<const IL: bool, const NL: u8> Kern for V3<IL, NL> {
     }
     #[inline(always)]
     fn conv(c: &mut ConvF, x: &[f32], y: &mut [f32]) {
-        v2::conv_v2(c, x, y)
+        // v3（NL_RCP）保持实测时的写法；v4 起两个输出通道一组
+        if NL == v2::NL_DIV { conv_v4(c, x, y) } else { v2::conv_v2(c, x, y) }
     }
     #[inline(always)]
     fn deconv(d: &mut DeconvF, x: &[f32], y: &mut [f32]) {
@@ -368,6 +467,32 @@ mod tests {
         }
         gru_rows_v3::<NL_RCP>(&g, &xs, &mut h2, 16, 33);
         assert!(h1.iter().zip(&h2).all(|(x, y)| x.to_bits() == y.to_bits()), "gru_rows 与逐行不同");
+    }
+
+    /// v4 的频率卷积（两输出一组）与 v2 逐位相同
+    #[test]
+    fn conv_v4_bitwise_equal_v2() {
+        for (cin, cout, groups, fin) in [(9, 16, 1, F0), (16, 16, 2, F1), (4, 4, 2, 7)] {
+            let cig = cin / groups;
+            let fout = (fin + 2 * 2 - K) / 2 + 1;
+            let mut c = ConvF {
+                w: rnd(cout * cig * K, 1),
+                b: rnd(cout, 2),
+                cin,
+                cout,
+                groups,
+                fin,
+                fout,
+                alpha: 0.25,
+                col: Vec::new(),
+                ph: vec![0.0; cin * 2 * v2::conv_phase_len(fout)],
+            };
+            let x = rnd(cin * fin, 3);
+            let (mut y1, mut y2) = (vec![0.0; cout * fout], vec![0.0; cout * fout]);
+            v2::conv_v2(&mut c, &x, &mut y1);
+            conv_v4(&mut c, &x, &mut y2);
+            assert!(y1.iter().zip(&y2).all(|(a, b)| a.to_bits() == b.to_bits()), "ConvF {cin}->{cout}/{groups} @{fin}");
+        }
     }
 
     /// 整网：v3i（GRU 交错）与 v3 逐位相同（20 帧带状态）
