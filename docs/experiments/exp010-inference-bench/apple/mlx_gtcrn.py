@@ -5,6 +5,8 @@
       用 torch 建 StreamGTCRN（DNS3 权重，与 gtcrn_simple.onnx 同源），把 state_dict 存成 npz。要 torch。
   check  <resources/gtcrn/stream 目录> <weights.npz> [--frames 50]
       同一串随机输入，逐帧比 MLX 版和 torch 版（缓存一路往下走），报最大绝对差。要 torch。
+  export-mlxfn <weights.npz> <out.mlxfn>
+      把一帧前向（4 进 4 出，形状同 ONNX）导成 MLX 的 .mlxfn 图，给 Rust 经 mlx-c 载入（apple-rs 的 mlx 后端）。
   bench  <weights.npz> <in.f32> <ort.f32> [--device cpu|gpu] [--no-compile] [--frames N] [--warmup N] [--parity-frames N]
       同 rustbe bench 口径：1 冷启动 + 预热 + 计时；对拍前 610 帧对 ORT 转储；一行 JSON。
       计时包住：numpy → mx.array、调用、mx.eval、取回 numpy（实时线程真要做的全部）。
@@ -341,6 +343,14 @@ def cmd_bench(npz, fin, fref, device, use_compile, frames, warmup, parity_n):
     }))
 
 
+def cmd_export_mlxfn(npz, out):
+    import mlx.core as mx
+    fwd = make_forward(load_weights(npz))
+    ex = [mx.zeros((1, BINS, 1, 2))] + [mx.zeros(s) for s in SHAPES.values()]
+    mx.export_function(out, fwd, *ex)
+    print(json.dumps({"mlxfn": out, "mlx": mx.__version__}))
+
+
 def main():
     a = sys.argv[1:]
     opt = {}
@@ -356,6 +366,8 @@ def main():
     cmd = pos[0]
     if cmd == "export":
         cmd_export(pos[1], pos[2])
+    elif cmd == "export-mlxfn":
+        cmd_export_mlxfn(pos[1], pos[2])
     elif cmd == "check":
         cmd_check(pos[1], pos[2], int(opt.get("frames", 50)))
     elif cmd == "bench":
