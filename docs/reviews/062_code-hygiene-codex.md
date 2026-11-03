@@ -1,7 +1,7 @@
 # 评审 062 · 代码卫生：单文件 600 行 · 采样率只写一处 · 评测阈值正本（codex · gpt-6-astra · read-only）
 
-> 对象：`feat/code-hygiene` 相对 main 的 diff（issue #62）。**最新一轮：第 4 轮（2026-11-02）· 总评「修改」· 待第 5 轮**。
-> 累计处理：P1×7、P2×6，逐条回源码核实，属实 13、驳回 0、无法核实 0。
+> 对象：`feat/code-hygiene` 相对 main 的 diff（issue #62）。**最新一轮：第 5 轮（2026-11-02）· 总评「修改」· 待第 6 轮**。
+> 累计处理：P1×8、P2×6，逐条回源码核实，属实 14、驳回 0、无法核实 0。
 > 编号用 issue 号（本线没有 plan 文档）。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -101,3 +101,20 @@
 
 - codex 列的「不符」：1 条（本记录第 3 轮 #2 的处理说明没写到传递引用），即本轮 #1，已修
 - codex 列的「核实属实」：4 条
+
+## 第 5 轮（2026-11-02）· 总评「修改」
+
+- 原文：`_tmp/reviews/hygiene-p1-codex-5.md`（不入库）
+- 对象：`origin/main...HEAD`（第 4 轮修复之后）
+- effort medium
+- 本轮 P0/P1：1 条。停止线：未满足
+- 留作 issue 的 P2：无
+
+- **P1｜src/xtask/src/test_modules.rs:130 内联模块里的生产引用路径拼错**（第 5 轮 #1）
+  - 核实：属实。worker.rs 里 `mod inner { mod child; }` 指到的是 `worker/inner/child.rs`，原来只按名字拼成 `worker/child.rs`，真文件漏掉了。第 3 轮记录里「按同名保守算」的说法不成立（codex 抽查列为不符）。
+  - 处理：`mod_names` 跟踪外层内联模块的路径，生产引用按 Rust 的模块路径规则解析成 `inner/child.rs` 或 `inner/child/mod.rs`。补负例 `production_reference_inside_inline_module_is_excluded`，并验证 worker.rs 的测试子模块仍算测试代码。
+
+### 引用抽查
+
+- codex 列的「不符」：1 条（第 3 轮处理说明「按同名保守算」），即本轮 #1，已修
+- codex 列的「核实属实」：5 条
