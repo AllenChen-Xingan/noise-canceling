@@ -392,7 +392,7 @@ fn nonfinite_processed_never_reaches_output() {
     }
     let y = r.out.drain_all();
     assert!(y.iter().all(|v| v.is_finite()));
-    assert!(r.fwd.stats().nonfinite > 0 || r.fwd.stats().discarded > 0);
+    assert_eq!(r.fwd.stats().nonfinite, 3, "{:?}", r.fwd.stats());
 }
 
 #[test]

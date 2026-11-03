@@ -496,7 +496,9 @@ mod tests {
         let mut o = ChainOpts::new(&format!("/vdn-t{tag}-{}", std::process::id()));
         o.seconds = seconds;
         o.kill_at = kill_at;
+        // 测试用大块（debug、不提优先级时调度抖动大）；环余量必须盖住一块 IO + 一块降噪，所以配 3 块
         o.block = 480;
+        o.lead = 1440;
         o.hal_offset = 720;
         o.warmup_blocks = 8;
         o.rt = false;
@@ -513,7 +515,8 @@ mod tests {
         .unwrap();
         let v = judge_v1(&r);
         assert!(v.pass, "{v}");
-        assert_eq!(r.l_total, 768 + vdn_control::Config::DEFAULT_LEAD);
+        assert_eq!(r.l_total, 768 + 1440);
+        assert_eq!(r.fwd.proc_underrun, 0);
     }
 
     /// V2 的短版：0.5 s 处让降噪线程退出
