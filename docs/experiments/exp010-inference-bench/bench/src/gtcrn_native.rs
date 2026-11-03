@@ -273,6 +273,19 @@ trait Kern {
     fn sparse(s: &Sparse, x: &[f32], y: &mut [f32]) {
         s.run(x, y)
     }
+    /// 4 条互相独立的 GRU 各走一步（沿频率 GRU：2 组 × 正 / 反向）。默认逐条调 `gru`
+    fn gru4(gs: [&Gru; 4], xs: [&[f32]; 4], hs: &mut [[f32; 4]; 4]) {
+        for ((g, x), h) in gs.into_iter().zip(xs).zip(hs.iter_mut()) {
+            Self::gru(g, x, h);
+        }
+    }
+    /// 同一个 GRU 在 n 行上各走一步，行间互相独立（沿时间 GRU：33 个频点）。
+    /// 第 r 行的输入在 `xs[r·stride ..]`、状态在 `hs[r·stride ..]`。默认逐行调 `gru`
+    fn gru_rows(g: &Gru, xs: &[f32], hs: &mut [f32], stride: usize, n: usize) {
+        for r in 0..n {
+            Self::gru(g, &xs[r * stride..r * stride + g.i], &mut hs[r * stride..r * stride + g.h]);
+        }
+    }
 }
 
 /// 原写法
@@ -1095,17 +1108,14 @@ impl Dp {
         // intra：沿频率的双向分组 GRU，初值 0。4 条链（2 组 × 正 / 反向）互相独立，
         // 每一步把 4 条一起推进（研究 020：交错让乱序执行同时跑几条依赖链；每条链内的运算与顺序不变）
         let mut hs = [[0.0f32; 4]; 4]; // [grp*2 + dir]
+        let gs = [&self.intra[0], &self.intra[1], &self.intra[2], &self.intra[3]];
         for st in 0..F2 {
+            let (ff, fb) = (st, F2 - 1 - st);
+            let xr = |f: usize, grp: usize| &self.xt[f * C + grp * CH..f * C + grp * CH + CH];
+            K::gru4(gs, [xr(ff, 0), xr(fb, 0), xr(ff, 1), xr(fb, 1)], &mut hs);
             for grp in 0..2 {
-                let (fw, bw) = (&self.intra[2 * grp], &self.intra[2 * grp + 1]);
-                let (ff, fb) = (st, F2 - 1 - st);
-                let [hf, hb] = &mut hs[2 * grp..2 * grp + 2] else {
-                    unreachable!()
-                };
-                K::gru(fw, &self.xt[ff * C + grp * CH..ff * C + grp * CH + CH], hf);
-                K::gru(bw, &self.xt[fb * C + grp * CH..fb * C + grp * CH + CH], hb);
-                self.y[ff * C + grp * CH..ff * C + grp * CH + 4].copy_from_slice(hf);
-                self.y[fb * C + grp * CH + 4..fb * C + grp * CH + 8].copy_from_slice(hb);
+                self.y[ff * C + grp * CH..ff * C + grp * CH + 4].copy_from_slice(&hs[2 * grp]);
+                self.y[fb * C + grp * CH + 4..fb * C + grp * CH + 8].copy_from_slice(&hs[2 * grp + 1]);
             }
         }
         p.mark(blk, "intra_gru", || {
@@ -1132,12 +1142,11 @@ impl Dp {
         p.mark(blk, "intra_fc", || scale(self.intra_fc.cost(), F2 as u64, 1, 1));
         K::ln_add(&mut self.xt, &self.z, &self.intra_lnw, &self.intra_lnb);
         p.mark(blk, "intra_ln", || ln_cost(F2 * C));
-        // inter：沿时间（单步）的分组 GRU，状态逐频点缓存
+        // inter：沿时间（单步）的分组 GRU，状态逐频点缓存；33 个频点 × 2 组互相独立（每个单步的运算与顺序不变）
+        for grp in 0..2 {
+            K::gru_rows(&self.inter[grp], &self.xt[grp * CH..], &mut self.cache[grp * CH..], C, F2);
+        }
         for f in 0..F2 {
-            for grp in 0..2 {
-                let r = f * C + grp * CH..f * C + grp * CH + CH;
-                K::gru(&self.inter[grp], &self.xt[r.clone()], &mut self.cache[r.clone()]);
-            }
             if !blas() {
                 K::linear(
                     &self.inter_fc,
