@@ -32,10 +32,12 @@ echo "{\"when\":\"$(date -Iseconds)\",\"load\":\"$(sysctl -n vm.loadavg)\",\"pow
 $LG > /dev/null   # 预热一次，不计
 for k in $(seq 1 $PAIRS); do
   l=$($LG); echo "{\"pair\":$k,\"denoise\":false,\"r\":$l}" >> "$RES/impact.jsonl"
-  eval "exec $CMD --frames 1500" > "$RES/denoise_$k.json" 2>> "$RES/stderr.log" &   # exec：$! 就是基准程序；1500 帧 = 24 s 上限，万一成孤儿也会自己结束
-  dn=$!; KIDS+=("$dn"); sleep 3   # 等降噪进入稳态
+  eval "exec $CMD --warmup 20 --frames 100000" > "$RES/denoise_$k.json" 2>> "$RES/stderr.log" &   # exec：$! 就是基准程序；跑到被 kill 为止（codex 第 1 轮 #1：封顶 1500 帧会在负载结束前退出）。成孤儿时 bench 发现父进程没了会自己退出
+  dn=$!; KIDS+=("$dn"); sleep 4   # 等降噪加载完并过了 20 帧预热，进入按节奏的稳态
   kill -0 "$dn" 2>/dev/null || { echo "降噪进程没起来（见 stderr.log）"; exit 1; }
-  l=$($LG); echo "{\"pair\":$k,\"denoise\":true,\"name\":\"$NAME\",\"r\":$l}" >> "$RES/impact.jsonl"
+  l=$($LG)
+  alive=true; kill -0 "$dn" 2>/dev/null || alive=false   # 负载跑完时降噪必须还活着，否则这一对没全程覆盖，作废
+  echo "{\"pair\":$k,\"denoise\":true,\"covered\":$alive,\"name\":\"$NAME\",\"r\":$l}" >> "$RES/impact.jsonl"
   kill "$dn"; wait "$dn" 2>/dev/null
   if kill -0 "$dn" 2>/dev/null; then echo "降噪进程 $dn 没退出，停下"; exit 1; fi
   KIDS=()
@@ -45,7 +47,8 @@ python3 - "$RES" <<'PY'
 import json, statistics, sys
 rows = [json.loads(l) for l in open(sys.argv[1] + "/impact.jsonl")]
 off = {r["pair"]: r["r"]["loadgen_ms"] for r in rows if not r["denoise"]}
-on = {r["pair"]: r["r"]["loadgen_ms"] for r in rows if r["denoise"]}
+on = {r["pair"]: r["r"]["loadgen_ms"] for r in rows if r["denoise"] and r.get("covered", True)}
+void = [r["pair"] for r in rows if r["denoise"] and not r.get("covered", True)]
 pairs = sorted(set(off) & set(on))
 rel = [on[k] / off[k] - 1 for k in pairs]            # 成对差（同一对里先关后开）
 offv = [off[k] for k in pairs]
@@ -56,7 +59,7 @@ if abs(med) <= noise:
     verdict = f"≤ 噪声底（{noise*100:.2f}%），判不了"
 else:
     verdict = "过目标" if med <= 0.01 else ("过挡线" if med <= 0.02 else "不过")
-out = {"pairs": len(pairs), "slowdown_paired_median_pct": round(med * 100, 2), "slowdown_min_ratio_pct": round(best * 100, 2),
+out = {"pairs": len(pairs), "void_pairs_not_covered": void, "slowdown_paired_median_pct": round(med * 100, 2), "slowdown_min_ratio_pct": round(best * 100, 2),
        "noise_floor_pct": round(noise * 100, 2), "verdict": verdict}
 json.dump(out, open(sys.argv[1] + "/impact_summary.json", "w"), ensure_ascii=False)
 print(json.dumps(out, ensure_ascii=False))

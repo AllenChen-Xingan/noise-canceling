@@ -40,6 +40,7 @@ if [ -n "$NATIVE" ]; then   # 手写 Rust（rustbe 的二进制）同场：只�
   SETS+=("native rt|$NATIVE gtcrn-bench native $NWEIGHTS $NWAV --pace-ms 16 --frames 3750 --qos rt")
   SETS+=("native ui|$NATIVE gtcrn-bench native $NWEIGHTS $NWAV --pace-ms 16 --frames 3750 --qos ui")
   SETS+=("native-blas rt|$NATIVE gtcrn-bench native-blas $NWEIGHTS $NWAV --pace-ms 16 --frames 3750 --qos rt")
+  SETS+=("ort rt（基线，判「不高于 ORT」）|$NATIVE gtcrn-bench ort ${GT_ONNX:-/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx} $NWAV --pace-ms 16 --frames 3750 --qos rt")
 fi
 echo "{\"when\":\"$(date -Iseconds)\",\"load\":\"$(sysctl -n vm.loadavg)\",\"power\":\"$(pmset -g batt | head -1)\",\"native_bin_sha256\":\"$( [ -n "$NATIVE" ] && shasum -a 256 "$NATIVE" | cut -c1-64)\"}" >> "$RES/machine.jsonl"
 N=${#SETS[@]}
