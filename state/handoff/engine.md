@@ -30,6 +30,10 @@
 - D71（共用频谱前端）写进 decision §5；D73（最低 14.4）、D74（tc 默认开、工作组默认不加）、D75（挡线改成「对性能的影响」+ 耗电主排序，CPU% 降参考）写进 standard / decision
 - 新加：ECAPA 进 BE-EXHAUST（`apple-rs/tools/ecapa.sh`，ONNX→onnx2torch→Core ML）· BE-IMPACT（`loadgen` + `tools/impact.sh`）· 自建工作组区间 `--interval-wg`（`tools/rt-matrix.sh`，要人 sudo，命令见 `tools/HUMAN-RUN-power.md`）
 
+- 18:12 名额：ECAPA 转不出（onnx2torch 补了两处后，coremltools 不支持 `prod`）；BE-IMPACT 两次结果**作废**
+- ⚠️ 事故（applebe 的错）：`impact.sh` 旧版 `eval "$CMD" &` 只杀子 shell，留下 21 个孤儿降噪进程（约半核），已修（exec + kill/wait 核实 + trap）。教训：后台起进程一律 `exec`，结束必须 `kill -0` 核实；大总管请人清理，applebe 未动这些进程
+- 18:2x 人跑 powermetrics 推迟到清理之后
+
 ## 下一步
 1. 名额（18:37 起约 22 分钟）：cargo build → ecapa.sh → impact.sh（bnns rt · native rt）→ 叫大总管转人跑 sudo rt-matrix
 2. §9 Rust↔Python 差表（rustbe 有 ORT 5% 数；MLX 只有 Python）
