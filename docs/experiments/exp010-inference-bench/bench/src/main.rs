@@ -5,6 +5,10 @@
 //!   gtcrn-bench  <ort|native|tract> <权重前缀|onnx> <wav> [--frames N] [--warmup N]
 //!   fem-parity   <onnx> <wav>                                   FastEnhancer-M：ORT 对 tract，逐帧对拍输出波形
 //!   fem-bench    <ort|tract> <onnx> <wav> [--frames N] [--warmup N]
+//!   两个 bench 都可加 `--dump-io <前缀>`（此时第 2 个参数须是 onnx）：计时之后另起一个 ORT 会话，从零状态把
+//!   全部 1 + warmup + frames 帧再跑一遍，写 `<前缀>.in.f32` / `<前缀>.ort.f32`（小端 f32，按帧拼接；
+//!   GTCRN 每帧 re[257] 再 im[257]，FE-M 每帧 160 个样本）和 `<前缀>.json`（帧数、每帧长度、wav 路径与 sha256）。
+//!   给非 Rust 的测量程序（applebe 的 Swift / Python）吃同一份输入、对同一份 ORT 输出。
 //! 输出一行 JSON（stdout）。一帧 = 模型的一个 hop（GTCRN 256 样本 / 16 ms，FE-M 160 样本 / 10 ms）。
 
 mod gtcrn_native;
@@ -16,10 +20,10 @@ use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 use std::time::Instant;
 
 use gtcrn_native::GtcrnNative;
-use tract_be::TractNet;
 use ort::session::builder::{AutoDevicePolicy, GraphOptimizationLevel};
 use ort::session::{HasSelectedOutputs, OutputSelector, RunOptions, Session};
 use ort::value::Tensor;
+use tract_be::TractNet;
 use vdn_dsp::{StreamingStft, window};
 
 type Err = Box<dyn std::error::Error + Send + Sync>;
@@ -57,7 +61,9 @@ fn read_wav(p: &Path) -> Result<Vec<f32>, Err> {
         hound::SampleFormat::Float => r.samples::<f32>().collect::<Result<_, _>>()?,
         hound::SampleFormat::Int => {
             let m = (1u64 << (s.bits_per_sample - 1)) as f32;
-            r.samples::<i32>().map(|v| v.map(|v| v as f32 / m)).collect::<Result<_, _>>()?
+            r.samples::<i32>()
+                .map(|v| v.map(|v| v as f32 / m))
+                .collect::<Result<_, _>>()?
         }
     })
 }
@@ -83,12 +89,12 @@ fn spectra(wav: &[f32], frames: usize) -> Vec<([f32; BINS], [f32; BINS])> {
 
 /// ORT 会话：设置同 src/models/src/session.rs（单线程、不自旋、PreferCPU、ORT_ENABLE_ALL）。
 fn ort_session(path: &Path) -> Result<Session, Err> {
-        let b = |e: ort::Error<ort::session::builder::SessionBuilder>| -> Err { e.to_string().into() };
-        static ENV: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
-        if ENV.get().is_none() {
-            let e = ort::init().with_name("exp010").build()?;
-            let _ = ENV.set(e);
-        }
+    let b = |e: ort::Error<ort::session::builder::SessionBuilder>| -> Err { e.to_string().into() };
+    static ENV: std::sync::OnceLock<ort::environment::Environment> = std::sync::OnceLock::new();
+    if ENV.get().is_none() {
+        let e = ort::init().with_name("exp010").build()?;
+        let _ = ENV.set(e);
+    }
     let s = Session::builder(ENV.get().ok_or("env")?)?
         .with_auto_device(AutoDevicePolicy::PreferCPU)
         .map_err(b)?
@@ -117,7 +123,10 @@ const CACHE_SHAPES: [&[usize]; 3] = [&[2, 1, 16, 16, 33], &[2, 3, 1, 1, 16], &[2
 const OUT_NAMES: [&str; 4] = ["enh", "conv_cache_out", "tra_cache_out", "inter_cache_out"];
 
 fn zeros(shape: &[usize]) -> Result<Tensor<f32>, Err> {
-    Ok(Tensor::from_array((shape.to_vec(), vec![0.0f32; shape.iter().product()]))?)
+    Ok(Tensor::from_array((
+        shape.to_vec(),
+        vec![0.0f32; shape.iter().product()],
+    ))?)
 }
 
 impl OrtGtcrn {
@@ -132,7 +141,11 @@ impl OrtGtcrn {
             session,
             run: RunOptions::new()?.with_outputs(sel),
             mix: zeros(&[1, BINS, 1, 2])?,
-            caches: [zeros(CACHE_SHAPES[0])?, zeros(CACHE_SHAPES[1])?, zeros(CACHE_SHAPES[2])?],
+            caches: [
+                zeros(CACHE_SHAPES[0])?,
+                zeros(CACHE_SHAPES[1])?,
+                zeros(CACHE_SHAPES[2])?,
+            ],
         })
     }
 
@@ -145,7 +158,9 @@ impl OrtGtcrn {
             }
         }
         let [c0, c1, c2] = &self.caches;
-        let outs = self.session.run_with_options(ort::inputs![&self.mix, c0, c1, c2], &self.run)?;
+        let outs = self
+            .session
+            .run_with_options(ort::inputs![&self.mix, c0, c1, c2], &self.run)?;
         let mut vals = outs.values();
         let v0 = vals.next().ok_or("无输出")?;
         let (_, enh) = v0.try_extract_tensor::<f32>()?;
@@ -190,7 +205,10 @@ impl TractGtcrn {
     fn open(path: &Path) -> Result<Self, Err> {
         let mut shapes = vec![vec![1, BINS, 1, 2]];
         shapes.extend(CACHE_SHAPES.iter().map(|s| s.to_vec()));
-        Ok(Self { net: TractNet::open(path, &shapes)?, out: vec![0.0; 2 * BINS] })
+        Ok(Self {
+            net: TractNet::open(path, &shapes)?,
+            out: vec![0.0; 2 * BINS],
+        })
     }
 }
 impl Net for TractGtcrn {
@@ -241,21 +259,35 @@ impl OrtFem {
         for (o, s) in session.outputs().iter().zip(&shapes) {
             sel = sel.preallocate(o.name(), zeros(s)?);
         }
-        let ins = shapes.iter().map(|s| zeros(s)).collect::<Result<Vec<_>, _>>()?;
-        Ok(Self { run: RunOptions::new()?.with_outputs(sel), ins, session })
+        let ins = shapes
+            .iter()
+            .map(|s| zeros(s))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Self {
+            run: RunOptions::new()?.with_outputs(sel),
+            ins,
+            session,
+        })
     }
 }
 impl Net for OrtFem {
     fn infer(&mut self, x: &mut [f32]) -> Result<(), Err> {
         self.ins[0].extract_tensor_mut().1.copy_from_slice(x);
-        let [a, b, c, d, e, f, g] = self.ins.as_slice() else { return Err("输入个数".into()) };
-        let outs = self.session.run_with_options(ort::inputs![a, b, c, d, e, f, g], &self.run)?;
+        let [a, b, c, d, e, f, g] = self.ins.as_slice() else {
+            return Err("输入个数".into());
+        };
+        let outs = self
+            .session
+            .run_with_options(ort::inputs![a, b, c, d, e, f, g], &self.run)?;
         let mut vals = outs.values();
         let v0 = vals.next().ok_or("无输出")?;
         x.copy_from_slice(v0.try_extract_tensor::<f32>()?.1);
         for cache in self.ins[1..].iter_mut() {
             let v = vals.next().ok_or("无缓存输出")?;
-            cache.extract_tensor_mut().1.copy_from_slice(v.try_extract_tensor::<f32>()?.1);
+            cache
+                .extract_tensor_mut()
+                .1
+                .copy_from_slice(v.try_extract_tensor::<f32>()?.1);
         }
         Ok(())
     }
@@ -269,7 +301,10 @@ impl TractFem {
     fn open(path: &Path) -> Result<Self, Err> {
         let shapes = input_shapes(&ort_session(path)?)?; // 只借 ORT 读形状，会话随即丢掉
         let hop = *shapes[0].last().ok_or("wav_in 形状空")?;
-        Ok(Self { net: TractNet::open(path, &shapes)?, out: vec![0.0; hop] })
+        Ok(Self {
+            net: TractNet::open(path, &shapes)?,
+            out: vec![0.0; hop],
+        })
     }
 }
 impl Net for TractFem {
@@ -307,16 +342,25 @@ fn open_net(model: ModelId, kind: &str, path: &Path) -> Result<Box<dyn Net>, Err
 }
 
 /// 逐帧输入：GTCRN 是同一个 STFT 的 [re|im]；FE-M 是逐 hop 的波形。超出音频长度就循环。
-fn frames_for(model: ModelId, audio: &[f32], frames: usize, onnx_or_any: &Path) -> Result<Vec<Vec<f32>>, Err> {
+fn frames_for(
+    model: ModelId,
+    audio: &[f32],
+    frames: usize,
+    onnx_or_any: &Path,
+) -> Result<Vec<Vec<f32>>, Err> {
     Ok(match model {
         ModelId::Gtcrn => spectra(audio, frames)
             .into_iter()
             .map(|(re, im)| re.iter().chain(im.iter()).copied().collect())
             .collect(),
         ModelId::Fem => {
-            let hop = *input_shapes(&ort_session(onnx_or_any)?)?[0].last().ok_or("wav_in 形状空")?;
+            let hop = *input_shapes(&ort_session(onnx_or_any)?)?[0]
+                .last()
+                .ok_or("wav_in 形状空")?;
             let n = audio.len() / hop;
-            (0..frames).map(|i| audio[(i % n) * hop..(i % n + 1) * hop].to_vec()).collect()
+            (0..frames)
+                .map(|i| audio[(i % n) * hop..(i % n + 1) * hop].to_vec())
+                .collect()
         }
     })
 }
@@ -334,7 +378,11 @@ fn pct(sorted: &[f64], p: f64) -> f64 {
 }
 
 fn arg_usize(args: &[String], flag: &str, d: usize) -> usize {
-    args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).and_then(|v| v.parse().ok()).unwrap_or(d)
+    args.iter()
+        .position(|a| a == flag)
+        .and_then(|i| args.get(i + 1))
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(d)
 }
 
 fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
@@ -374,6 +422,15 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let cpu = cpu_seconds() - c0;
     let allocs = ALLOCS.load(Relaxed) - a0;
     times.sort_by(|a, b| a.total_cmp(b));
+    if let Some(i) = args.iter().position(|a| a == "--dump-io") {
+        dump_io(
+            model,
+            path,
+            wav,
+            &inputs,
+            args.get(i + 1).ok_or("--dump-io 缺前缀")?,
+        )?;
+    }
     println!(
         "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"p50_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan}}}",
         model.name(),
@@ -389,7 +446,13 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
 }
 
 /// 逐帧对拍：参考 `a`（ORT）对 `b`，同一份输入，比整帧输出。
-fn parity(model: ModelId, vs: &str, mut a: Box<dyn Net>, mut b: Box<dyn Net>, inputs: &[Vec<f32>]) -> Result<(), Err> {
+fn parity(
+    model: ModelId,
+    vs: &str,
+    mut a: Box<dyn Net>,
+    mut b: Box<dyn Net>,
+    inputs: &[Vec<f32>],
+) -> Result<(), Err> {
     let (mut max_abs, mut sig, mut err) = (0.0f64, 0.0f64, 0.0f64);
     let mut worst_frame = 0;
     let mut first_bad = None;
@@ -423,8 +486,70 @@ fn parity(model: ModelId, vs: &str, mut a: Box<dyn Net>, mut b: Box<dyn Net>, in
     Ok(())
 }
 
+fn dump_io(
+    model: ModelId,
+    onnx: &Path,
+    wav: &Path,
+    inputs: &[Vec<f32>],
+    prefix: &str,
+) -> Result<(), Err> {
+    use std::io::Write;
+    let mut net = open_net(model, "ort", onnx)?;
+    let mut fi = std::io::BufWriter::new(std::fs::File::create(format!("{prefix}.in.f32"))?);
+    let mut fo = std::io::BufWriter::new(std::fs::File::create(format!("{prefix}.ort.f32"))?);
+    let mut x = inputs[0].clone();
+    for f in inputs {
+        x.copy_from_slice(f);
+        for v in &x {
+            fi.write_all(&v.to_le_bytes())?;
+        }
+        net.infer(&mut x)?;
+        for v in &x {
+            fo.write_all(&v.to_le_bytes())?;
+        }
+    }
+    let sha = std::process::Command::new("shasum")
+        .args(["-a", "256"])
+        .arg(wav)
+        .output()?;
+    let sha = String::from_utf8_lossy(&sha.stdout)
+        .split_whitespace()
+        .next()
+        .unwrap_or("")
+        .to_string();
+    let onnx_sha = std::process::Command::new("shasum")
+        .args(["-a", "256"])
+        .arg(onnx)
+        .output()?;
+    let onnx_sha = String::from_utf8_lossy(&onnx_sha.stdout)
+        .split_whitespace()
+        .next()
+        .unwrap_or("")
+        .to_string();
+    std::fs::write(
+        format!("{prefix}.json"),
+        format!(
+            "{{\"model\":\"{}\",\"frames_total\":{},\"frame_len\":{},\"layout\":\"{}\",\"note\":\"第 0 帧是冷启动帧，接着 warmup 帧，再接计时帧；ORT 从零状态顺序跑\",\"wav\":\"{}\",\"wav_sha256\":\"{sha}\",\"onnx\":\"{}\",\"onnx_sha256\":\"{onnx_sha}\"}}\n",
+            model.name(),
+            inputs.len(),
+            inputs[0].len(),
+            if model == ModelId::Gtcrn {
+                "re[257] then im[257]"
+            } else {
+                "wav hop samples"
+            },
+            wav.display(),
+            onnx.display()
+        ),
+    )?;
+    Ok(())
+}
+
 fn arg_str<'a>(args: &'a [String], flag: &str, d: &'a str) -> &'a str {
-    args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).map_or(d, String::as_str)
+    args.iter()
+        .position(|a| a == flag)
+        .and_then(|i| args.get(i + 1))
+        .map_or(d, String::as_str)
 }
 
 fn main() -> Result<(), Err> {
@@ -435,19 +560,37 @@ fn main() -> Result<(), Err> {
         Some("fem-bench") => bench(ModelId::Fem, rest),
         Some("gtcrn-parity") => {
             // 帧数 = 音频长度 / hop（不循环），与旧版一致
-            let (wp, onnx, wav) = (Path::new(&rest[0]), Path::new(&rest[1]), Path::new(&rest[2]));
+            let (wp, onnx, wav) = (
+                Path::new(&rest[0]),
+                Path::new(&rest[1]),
+                Path::new(&rest[2]),
+            );
             let vs = arg_str(rest, "--vs", "native");
             let audio = read_wav(wav)?;
             let inputs = frames_for(ModelId::Gtcrn, &audio, audio.len() / HOP, onnx)?;
             let b = open_net(ModelId::Gtcrn, vs, if vs == "native" { wp } else { onnx })?;
-            parity(ModelId::Gtcrn, vs, open_net(ModelId::Gtcrn, "ort", onnx)?, b, &inputs)
+            parity(
+                ModelId::Gtcrn,
+                vs,
+                open_net(ModelId::Gtcrn, "ort", onnx)?,
+                b,
+                &inputs,
+            )
         }
         Some("fem-parity") => {
             let (onnx, wav) = (Path::new(&rest[0]), Path::new(&rest[1]));
             let audio = read_wav(wav)?;
-            let hop = *input_shapes(&ort_session(onnx)?)?[0].last().ok_or("wav_in 形状空")?;
+            let hop = *input_shapes(&ort_session(onnx)?)?[0]
+                .last()
+                .ok_or("wav_in 形状空")?;
             let inputs = frames_for(ModelId::Fem, &audio, audio.len() / hop, onnx)?;
-            parity(ModelId::Fem, "tract", open_net(ModelId::Fem, "ort", onnx)?, open_net(ModelId::Fem, "tract", onnx)?, &inputs)
+            parity(
+                ModelId::Fem,
+                "tract",
+                open_net(ModelId::Fem, "ort", onnx)?,
+                open_net(ModelId::Fem, "tract", onnx)?,
+                &inputs,
+            )
         }
         _ => Err("用法见 src/main.rs 顶部".into()),
     }

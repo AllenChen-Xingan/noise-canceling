@@ -23,7 +23,10 @@ impl TractNet {
         }
         let plan = m.into_optimized()?.into_runnable()?;
         let state = plan.spawn()?;
-        let ins = shapes.iter().map(|s| Tensor::zero::<f32>(s)).collect::<Result<Vec<_>, _>>()?;
+        let ins = shapes
+            .iter()
+            .map(|s| Tensor::zero::<f32>(s))
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(Self { state, ins })
     }
 
@@ -41,7 +44,8 @@ impl TractNet {
         }
         out0.copy_from_slice(outs[0].as_slice::<f32>()?);
         for (dst, src) in self.ins[1..].iter_mut().zip(&outs[1..]) {
-            dst.as_slice_mut::<f32>()?.copy_from_slice(src.as_slice::<f32>()?);
+            dst.as_slice_mut::<f32>()?
+                .copy_from_slice(src.as_slice::<f32>()?);
         }
         Ok(())
     }

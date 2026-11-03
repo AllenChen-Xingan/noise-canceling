@@ -39,14 +39,20 @@ impl Weights {
             if p.len() != 4 {
                 return Err(format!("坏行：{line}").into());
             }
-            let shape = p[1].split(',').map(str::parse).collect::<Result<Vec<usize>, _>>()?;
+            let shape = p[1]
+                .split(',')
+                .map(str::parse)
+                .collect::<Result<Vec<usize>, _>>()?;
             index.insert(p[0].to_string(), (shape, p[2].parse()?, p[3].parse()?));
         }
         Ok(Self { data, index })
     }
 
     fn get(&self, name: &str, numel: usize) -> Result<Vec<f32>, Err> {
-        let (_, off, n) = self.index.get(name).ok_or_else(|| format!("缺权重 {name}"))?;
+        let (_, off, n) = self
+            .index
+            .get(name)
+            .ok_or_else(|| format!("缺权重 {name}"))?;
         if *n != numel {
             return Err(format!("{name} 个数 {n} ≠ 期望 {numel}").into());
         }
@@ -63,8 +69,17 @@ impl Weights {
         let b = self.get(&format!("{p}.bias"), c)?;
         let m = self.get(&format!("{p}.running_mean"), c)?;
         let v = self.get(&format!("{p}.running_var"), c)?;
-        let scale: Vec<f32> = g.iter().zip(&v).map(|(g, v)| g / (v + BN_EPS).sqrt()).collect();
-        let shift = b.iter().zip(&m).zip(&scale).map(|((b, m), s)| b - m * s).collect();
+        let scale: Vec<f32> = g
+            .iter()
+            .zip(&v)
+            .map(|(g, v)| g / (v + BN_EPS).sqrt())
+            .collect();
+        let shift = b
+            .iter()
+            .zip(&m)
+            .zip(&scale)
+            .map(|((b, m), s)| b - m * s)
+            .collect();
         Ok((scale, shift))
     }
 }
@@ -91,12 +106,23 @@ struct Point {
 
 impl Point {
     /// `transposed`：ConvTranspose 的权重是 `[in][out]`，转成 `[out][in]`。
-    fn load(w: &Weights, p: &str, cin: usize, cout: usize, transposed: bool, bn: Option<&str>) -> Result<Self, Err> {
+    fn load(
+        w: &Weights,
+        p: &str,
+        cin: usize,
+        cout: usize,
+        transposed: bool,
+        bn: Option<&str>,
+    ) -> Result<Self, Err> {
         let raw = w.get(&format!("{p}.weight"), cin * cout)?;
         let mut ww = vec![0.0; cin * cout];
         for o in 0..cout {
             for i in 0..cin {
-                ww[o * cin + i] = if transposed { raw[i * cout + o] } else { raw[o * cin + i] };
+                ww[o * cin + i] = if transposed {
+                    raw[i * cout + o]
+                } else {
+                    raw[o * cin + i]
+                };
             }
         }
         let mut b = w.get(&format!("{p}.bias"), cout)?;
@@ -109,7 +135,12 @@ impl Point {
                 b[o] = b[o] * s[o] + t[o];
             }
         }
-        Ok(Self { w: ww, b, cin, cout })
+        Ok(Self {
+            w: ww,
+            b,
+            cin,
+            cout,
+        })
     }
 
     fn run(&self, x: &[f32], y: &mut [f32], f: usize) {
@@ -141,7 +172,14 @@ struct ConvF {
 const K: usize = 5;
 
 impl ConvF {
-    fn load(w: &Weights, p: &str, cin: usize, cout: usize, groups: usize, fin: usize) -> Result<Self, Err> {
+    fn load(
+        w: &Weights,
+        p: &str,
+        cin: usize,
+        cout: usize,
+        groups: usize,
+        fin: usize,
+    ) -> Result<Self, Err> {
         let cig = cin / groups;
         let mut ww = w.get(&format!("{p}.conv.weight"), cout * cig * K)?;
         let mut b = w.get(&format!("{p}.conv.bias"), cout)?;
@@ -153,7 +191,16 @@ impl ConvF {
             b[o] = b[o] * s[o] + t[o];
         }
         let fout = (fin + 2 * 2 - K) / 2 + 1;
-        Ok(Self { w: ww, b, cin, cout, groups, fin, fout, alpha: w.scalar(&format!("{p}.act.weight"))? })
+        Ok(Self {
+            w: ww,
+            b,
+            cin,
+            cout,
+            groups,
+            fin,
+            fout,
+            alpha: w.scalar(&format!("{p}.act.weight"))?,
+        })
     }
 
     fn run(&self, x: &[f32], y: &mut [f32]) {
@@ -195,7 +242,15 @@ struct DeconvF {
 }
 
 impl DeconvF {
-    fn load(w: &Weights, p: &str, cin: usize, cout: usize, groups: usize, fin: usize, tanh: bool) -> Result<Self, Err> {
+    fn load(
+        w: &Weights,
+        p: &str,
+        cin: usize,
+        cout: usize,
+        groups: usize,
+        fin: usize,
+        tanh: bool,
+    ) -> Result<Self, Err> {
         let cog = cout / groups;
         let mut ww = w.get(&format!("{p}.conv.weight"), cin * cog * K)?;
         let mut b = w.get(&format!("{p}.conv.bias"), cout)?;
@@ -213,8 +268,22 @@ impl DeconvF {
             b[o] = b[o] * s[o] + t[o];
         }
         let fout = (fin - 1) * 2 - 2 * 2 + K;
-        let alpha = if tanh { 0.0 } else { w.scalar(&format!("{p}.act.weight"))? };
-        Ok(Self { w: ww, b, cin, cout, groups, fin, fout, alpha, tanh })
+        let alpha = if tanh {
+            0.0
+        } else {
+            w.scalar(&format!("{p}.act.weight"))?
+        };
+        Ok(Self {
+            w: ww,
+            b,
+            cin,
+            cout,
+            groups,
+            fin,
+            fout,
+            alpha,
+            tanh,
+        })
     }
 
     fn run(&self, x: &[f32], y: &mut [f32]) {
@@ -240,7 +309,11 @@ impl DeconvF {
             }
         }
         for v in y[..self.cout * self.fout].iter_mut() {
-            *v = if self.tanh { v.tanh() } else { prelu(*v, self.alpha) };
+            *v = if self.tanh {
+                v.tanh()
+            } else {
+                prelu(*v, self.alpha)
+            };
         }
     }
 }
@@ -306,7 +379,12 @@ struct Linear {
 
 impl Linear {
     fn load(w: &Weights, p: &str, i: usize, o: usize) -> Result<Self, Err> {
-        Ok(Self { w: w.get(&format!("{p}.weight"), o * i)?, b: w.get(&format!("{p}.bias"), o)?, i, o })
+        Ok(Self {
+            w: w.get(&format!("{p}.weight"), o * i)?,
+            b: w.get(&format!("{p}.bias"), o)?,
+            i,
+            o,
+        })
     }
     #[inline]
     fn run(&self, x: &[f32], y: &mut [f32]) {
@@ -359,12 +437,26 @@ impl GtBlock {
             db[c] = db[c] * s[c] + t[c];
         }
         Ok(Self {
-            p1: Point::load(w, &format!("{p}.point_conv1"), 3 * CH, C, deconv, Some(&format!("{p}.point_bn1")))?,
+            p1: Point::load(
+                w,
+                &format!("{p}.point_conv1"),
+                3 * CH,
+                C,
+                deconv,
+                Some(&format!("{p}.point_bn1")),
+            )?,
             a1: w.scalar(&format!("{p}.point_act.weight"))?,
             dw,
             db,
             a2: w.scalar(&format!("{p}.depth_act.weight"))?,
-            p2: Point::load(w, &format!("{p}.point_conv2"), C, CH, deconv, Some(&format!("{p}.point_bn2")))?,
+            p2: Point::load(
+                w,
+                &format!("{p}.point_conv2"),
+                C,
+                CH,
+                deconv,
+                Some(&format!("{p}.point_bn2")),
+            )?,
             gru: Gru::load(w, &format!("{p}.tra.att_gru"), "", CH, 2 * CH)?,
             fc: Linear::load(w, &format!("{p}.tra.att_fc"), 2 * CH, CH)?,
             dil,
@@ -432,7 +524,11 @@ impl GtBlock {
         // TRA
         let mut zt = [0.0f32; CH];
         for c in 0..CH {
-            zt[c] = self.h3[c * f..(c + 1) * f].iter().map(|v| v * v).sum::<f32>() / f as f32;
+            zt[c] = self.h3[c * f..(c + 1) * f]
+                .iter()
+                .map(|v| v * v)
+                .sum::<f32>()
+                / f as f32;
         }
         self.gru.step(&zt, &mut self.hstate);
         let mut at = [0.0f32; CH];
@@ -456,7 +552,11 @@ fn sfe3(x: &[f32], c: usize, f: usize, y: &mut [f32]) {
             let yo = &mut y[(ci * 3 + j) * f..(ci * 3 + j + 1) * f];
             for k in 0..f {
                 let idx = k as isize + j as isize - 1;
-                yo[k] = if idx >= 0 && (idx as usize) < f { xi[idx as usize] } else { 0.0 };
+                yo[k] = if idx >= 0 && (idx as usize) < f {
+                    xi[idx as usize]
+                } else {
+                    0.0
+                };
             }
         }
     }
@@ -530,7 +630,8 @@ impl Dp {
             }
         }
         for f in 0..F2 {
-            self.intra_fc.run(&self.y[f * C..(f + 1) * C], &mut self.z[f * C..(f + 1) * C]);
+            self.intra_fc
+                .run(&self.y[f * C..(f + 1) * C], &mut self.z[f * C..(f + 1) * C]);
         }
         layer_norm_add(&mut self.xt, &self.z, &self.intra_lnw, &self.intra_lnb);
         // inter：沿时间（单步）的分组 GRU，状态逐频点缓存
@@ -539,7 +640,10 @@ impl Dp {
                 let r = f * C + grp * CH..f * C + grp * CH + CH;
                 self.inter[grp].step(&self.xt[r.clone()], &mut self.cache[r.clone()]);
             }
-            self.inter_fc.run(&self.cache[f * C..(f + 1) * C], &mut self.z[f * C..(f + 1) * C]);
+            self.inter_fc.run(
+                &self.cache[f * C..(f + 1) * C],
+                &mut self.z[f * C..(f + 1) * C],
+            );
         }
         layer_norm_add(&mut self.xt, &self.z, &self.inter_lnw, &self.inter_lnb);
         for c in 0..C {
@@ -603,16 +707,16 @@ pub struct GtcrnNative {
     de_gt: [GtBlock; 3],
     de3: DeconvF,
     de4: DeconvF,
-    feat0: Vec<f32>, // [3][257]
-    feat1: Vec<f32>, // [3][129]
-    feat2: Vec<f32>, // [9][129]
-    e0: Vec<f32>,    // [16][65]
+    feat0: Vec<f32>,  // [3][257]
+    feat1: Vec<f32>,  // [3][129]
+    feat2: Vec<f32>,  // [9][129]
+    e0: Vec<f32>,     // [16][65]
     e: [Vec<f32>; 4], // e[0]=en_outs[1] [16][33]，e[1..4]=en_outs[2..5]
-    t0: Vec<f32>,    // [16][33]
-    t1: Vec<f32>,    // [16][33]
-    d3: Vec<f32>,    // [16][65]
-    d4: Vec<f32>,    // [2][129]
-    m: Vec<f32>,     // [2][257]
+    t0: Vec<f32>,     // [16][33]
+    t1: Vec<f32>,     // [16][33]
+    d3: Vec<f32>,     // [16][65]
+    d4: Vec<f32>,     // [2][129]
+    m: Vec<f32>,      // [2][257]
 }
 
 impl GtcrnNative {
@@ -621,7 +725,11 @@ impl GtcrnNative {
         let ew = w.get("erb.erb_fc.weight", ERB_HIGH * (BINS - ERB_LOW))?;
         let iw = w.get("erb.ierb_fc.weight", (BINS - ERB_LOW) * ERB_HIGH)?;
         let gt = |i: usize, dil: usize, de: bool| {
-            let p = if de { format!("decoder.de_convs.{i}") } else { format!("encoder.en_convs.{i}") };
+            let p = if de {
+                format!("decoder.de_convs.{i}")
+            } else {
+                format!("encoder.en_convs.{i}")
+            };
             GtBlock::load(&w, &p, dil, de)
         };
         Ok(Self {
@@ -638,7 +746,12 @@ impl GtcrnNative {
             feat1: vec![0.0; 3 * F0],
             feat2: vec![0.0; 9 * F0],
             e0: vec![0.0; C * F1],
-            e: [vec![0.0; C * F2], vec![0.0; C * F2], vec![0.0; C * F2], vec![0.0; C * F2]],
+            e: [
+                vec![0.0; C * F2],
+                vec![0.0; C * F2],
+                vec![0.0; C * F2],
+                vec![0.0; C * F2],
+            ],
             t0: vec![0.0; C * F2],
             t1: vec![0.0; C * F2],
             d3: vec![0.0; C * F1],
@@ -666,7 +779,10 @@ impl GtcrnNative {
         }
         // ERB 压缩
         for c in 0..3 {
-            let (src, dst) = (&self.feat0[c * BINS..(c + 1) * BINS], &mut self.feat1[c * F0..(c + 1) * F0]);
+            let (src, dst) = (
+                &self.feat0[c * BINS..(c + 1) * BINS],
+                &mut self.feat1[c * F0..(c + 1) * F0],
+            );
             dst[..ERB_LOW].copy_from_slice(&src[..ERB_LOW]);
             self.erb.run(&src[ERB_LOW..], &mut dst[ERB_LOW..]);
         }
@@ -695,7 +811,10 @@ impl GtcrnNative {
         self.de4.run(&self.d3, &mut self.d4);
         // ERB 还原
         for c in 0..2 {
-            let (src, dst) = (&self.d4[c * F0..(c + 1) * F0], &mut self.m[c * BINS..(c + 1) * BINS]);
+            let (src, dst) = (
+                &self.d4[c * F0..(c + 1) * F0],
+                &mut self.m[c * BINS..(c + 1) * BINS],
+            );
             dst[..ERB_LOW].copy_from_slice(&src[..ERB_LOW]);
             self.ierb.run(&src[ERB_LOW..], &mut dst[ERB_LOW..]);
         }
