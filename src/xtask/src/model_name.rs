@@ -50,25 +50,57 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
 pub fn test_module_files(files: &[(String, String)]) -> Vec<String> {
     let mut out = Vec::new();
     for (rel, src) in files {
-        let flat = strip_comments_keep_strings(src).join("\n");
-        let mut rest = flat.as_str();
-        while let Some(at) = rest.find("#[cfg(test)]") {
-            rest = &rest[at + "#[cfg(test)]".len()..];
-            // 这一项到第一个 `;` 或 `{` 为止；`{` 在前 = 内联模块或别的项，不涉及文件
-            let end = rest.find([';', '{']).unwrap_or(rest.len());
-            if rest[end..].starts_with('{') {
+        // 代码行（字符串换成 ""）定位属性和 `mod`，原文行（保留字符串）取 `#[path]` 的值：
+        // 字符串里写的伪声明不算（codex 012 第 4 轮 #2）
+        let code = code_lines(src);
+        let raw = strip_comments_keep_strings(src);
+        let mut i = 0;
+        while i < code.len() {
+            if !code[i].contains("#[cfg(test)]") {
+                i += 1;
                 continue;
             }
-            let item = &rest[..end];
-            let Some(name) = item.split_whitespace().skip_while(|w| *w != "mod").nth(1) else {
+            // 这一项的全部属性：往前收紧挨着的属性行（`#[path]` 写在 cfg 前面也认，第 4 轮 #3），往后收到 `;` 或 `{`
+            let mut start = i;
+            while start > 0 && code[start - 1].trim_start().starts_with("#[") {
+                start -= 1;
+            }
+            let mut end = i;
+            while end + 1 < code.len() && !code[end].contains([';', '{']) {
+                end += 1;
+            }
+            i = end + 1;
+            let item_code = code[start..=end].join(" ");
+            let item_raw = raw
+                .get(start..=end)
+                .map(|r| r.join(" "))
+                .unwrap_or_default();
+            let after_cfg = item_code.split_once("#[cfg(test)]").map_or("", |(_, r)| r);
+            if after_cfg
+                .find('{')
+                .is_some_and(|b| after_cfg.find(';').is_none_or(|s| b < s))
+            {
+                continue; // 内联模块或别的项，不涉及文件
+            }
+            let Some(name) = item_code
+                .split_whitespace()
+                .skip_while(|w| *w != "mod")
+                .nth(1)
+                .map(|n| n.trim_end_matches(';'))
+            else {
                 continue;
             };
             let path = Path::new(rel);
             let dir = path.parent().unwrap_or(Path::new(""));
-            let file = if let Some(p) = item
-                .split_once("#[path")
-                .and_then(|(_, r)| strings_in(r).into_iter().next())
-            {
+            let explicit = item_code
+                .contains("#[path")
+                .then(|| {
+                    item_raw
+                        .split_once("#[path")
+                        .and_then(|(_, r)| strings_in(r).into_iter().next())
+                })
+                .flatten();
+            let file = if let Some(p) = explicit {
                 dir.join(p)
             } else {
                 let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
@@ -391,6 +423,7 @@ impl ModelId {
             "let s = \"\\nfastenhancer-m\";\n",
             "let s = \"\\tfastenhancer_m\\t\";\n",
             "let s = \"\\u{66}astenhancer-m\";\n",
+            "let s = \"\\u{6_6}astenhancer-m\";\n",
             "#[cfg(test)]\n#[path = \"t.rs\"]\nmod tests;\nfn prod() -> &'static str { \"fastenhancer-m\" }\n",
             "#[cfg(test)]\nmod t {\n    fn x() { if true { } }\n}\nconst B: &str = \"fastenhancer_m\";\n",
             "#[cfg(test)]\nfn helper(\n    a: u8,\n) {\n}\nconst C: &str = \"fastenhancer-m\";\n",
@@ -421,6 +454,12 @@ impl ModelId {
                 "#[cfg(test)] mod t2;\n#[cfg(test)]\nmod inline { }\n",
             ),
             f("src/a/src/t2/mod.rs", ""),
+            // 第 4 轮 #2：字符串里的伪声明不算；第 4 轮 #3：#[path] 写在 cfg 前面也认
+            f(
+                "src/b/src/lib.rs",
+                "const S: &str = \"#[cfg(test)] mod real;\";\nmod real;\n#[path = \"x_tests.rs\"]\n#[cfg(test)]\nmod tests;\n",
+            ),
+            f("src/b/src/real.rs", ""),
         ];
         let mut got = test_module_files(&files);
         got.sort();
@@ -429,7 +468,8 @@ impl ModelId {
             [
                 "src/a/src/policy_tests.rs",
                 "src/a/src/session/tests.rs",
-                "src/a/src/t2/mod.rs"
+                "src/a/src/t2/mod.rs",
+                "src/b/src/x_tests.rs"
             ]
         );
     }

@@ -303,6 +303,8 @@ pub fn string_literals(src: &str) -> Vec<(usize, String)> {
                                 hex.push(at(k));
                                 k += 1;
                             }
+                            // Rust 允许在 \u{…} 的数字里写下划线（第 4 轮 #4）
+                            let hex: String = hex.chars().filter(|c| *c != '_').collect();
                             let v = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32);
                             (v.unwrap_or('?'), k + 1 - i)
                         }
