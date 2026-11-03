@@ -5,7 +5,7 @@
 ## 做到哪
 - [x] 读交代 · 报到；机制已报大总管（文件命名 + 导出命令）
 - [x] 机制：`vdn-schema` crate（tool 档，`src/schema/`）· `cargo run -p vdn-schema [-- --check]` · 逐字比对测试（随 `cargo test`）
-- [x] 共享内存头：`vdn_shm::desc` 字段表 → `shm-header.layout.json`；版本登记表 `shm-header.versions.json`（改布局不升版本 → 红）
+- [x] 共享内存头：`vdn_shm::desc` 字段表 → `shm-header.layout.json`；版本历史 `src/schema/src/shm.rs` 的 `HISTORY`，并对照 main 上的布局文件（改布局不升版本 → 红）
 - [x] Config：`config.schema.json`；示例 `specs/schema/examples/config.*.json`；往返测试；范围与总线名逐例比对
 - [x] 评测清单：`vdn_eval::files` 类型成为格式正本（解析器与两个写入口都用它）；3 份 schema；4 份文件过 schema；`task-schema.md` 改成指针
 - [x] 规约 ADR 004 表 · ADR 004 修订注 · cog.md 一行 · specs/README.md 子目录表
@@ -13,7 +13,8 @@
 - [x] codex 第 1 轮（P1×2 P2×3，全部属实、全部已改，记录 `docs/reviews/011_schema-crosscheck-codex.md`）
 - [x] 全量 CI（第 1 轮改动后）全绿；`xtask eval ci` 门禁通过
 - [x] codex 第 2 轮（P1×1 P2×2，全部属实、已改：对照 main 的版本历史守卫 · 总线名只许可见 ASCII · 往返比较整数精确）
-- [ ] 锁解除后：全量 CI → codex 第 3 轮
+- [x] 全量 CI（第 2 轮改动后）全绿；`vdn-schema --check` 一致；`xtask eval ci` 门禁通过（结果同前）
+- [ ] codex 第 3 轮
 
 ## 技术决定（我定，理由）
 - 导出库 `schemars` 1.2（MIT）：派生自 serde 属性，Rust 类型即正本。加进 control · eval · schema 三个 C / tool 档 crate
@@ -38,7 +39,7 @@
 - 改：`Cargo.toml` · `Cargo.lock` · `src/shm/src/{lib,layout}.rs` · `src/shm/tests/layout_doc.rs` · `src/control/{Cargo.toml,src/lib.rs}` · `src/eval/{Cargo.toml,src/lib.rs,src/suite.rs,src/main.rs,src/synth.rs,src/probes.rs}` · `specs/rust/architecture.md`（§6 表一行）· `specs/README.md` · `.42cog/cog.md`（一行）· `docs/research/008_rust-architecture/adr/004-ast-guard-not-generate.md`（修订注）· `docs/experiments/exp007-eval-suite/task-schema.md`
 
 ## 加了哪些测试
-- `src/schema/tests/crosscheck.rs` 16 条：仓里文件一致 · 任一导出过期报红 · 孤儿文件报红 · 共享内存头逐项比对 + 3 个锚点直接用 `offset_of!` · 改布局不升版本报红（含 write 拒写）· 版本已登记 · Config 示例过 schema · 往返 · 默认示例 = `Config::default()` · 范围边界 20 例与 `validate` 一致 · 总线名 11 例与 `validate_bus_name` 一致 · Config 加字段不导出报红 · 4 份清单过 schema · suite 目录 json 全登记 · 坏任务 10 例 schema 与解析器判定一致 · 清单类型改了不导出报红
+- `src/schema/tests/crosscheck.rs` 21 条：仓里文件一致 · 任一导出过期报红 · 孤儿文件报红 · 共享内存头逐项比对 + 3 个锚点直接用 `offset_of!` · 改布局不升版本报红（含 write 拒写）· 版本已登记 · Config 示例过 schema · 往返 · 默认示例 = `Config::default()` · 范围边界 20 例与 `validate` 一致 · 总线名 11 例与 `validate_bus_name` 一致 · Config 加字段不导出报红 · 4 份清单过 schema · suite 目录 json 全登记 · 坏任务 10 例 schema 与解析器判定一致 · 清单类型改了不导出报红
 - `src/eval/src/files.rs` 3 条：`as_str` 与 serde 名字一致 · `ALL` 列全 · 缺省值不变
 - `src/shm/src/desc.rs` 1 条：字段有序、不重叠、不越界
 

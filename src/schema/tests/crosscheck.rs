@@ -555,7 +555,7 @@ fn same_keeps_integers_exact() {
         &json!({"c": 1})
     ));
     // 大整数种子往返不丢精度
-    let doc = json!({"seed": 9_007_199_254_740_993_u64, "tasks": []});
+    let doc = json!({"seed": 9_007_199_254_740_993_u64, "defaults": {"trials": 3}, "tasks": []});
     let t: vdn_eval::files::SuiteFile = serde_json::from_value(doc.clone()).unwrap();
     assert!(same(&norm(&doc), &norm(&serde_json::to_value(&t).unwrap())));
 }

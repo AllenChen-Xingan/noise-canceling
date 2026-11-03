@@ -62,3 +62,5 @@
 ### 是否再审
 
 有 P1 → 全量 CI 绿之后开第 3 轮。
+
+第 2 轮改动的验证（2026-11-02 锁解除后，实测）：`xtask ci` 全过（fmt · clippy · test · tidy · check-deps · cargo-deny），`vdn-schema --check` 一致，`xtask eval ci` 门禁通过（ref 回归 13/17 · 能力 1/10 · 探针 5/5，与前同）。`same_keeps_integers_exact` 第一次跑红：手写样例没写 `defaults`，往返写出多一个空对象 `{}`，错在样例；样例补上 `defaults` 后转绿，比较口径不变。
