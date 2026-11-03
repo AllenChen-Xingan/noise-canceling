@@ -348,3 +348,37 @@ impl<E: EmbedSource> Judge<E> {
         Some(self.last)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 描述表是正本：默认值逐条同表；越界 validate 拒收（报的是那一条）、clamped 夹到边界。
+    #[test]
+    fn judge_params_follow_desc_table() {
+        use vdn_types::desc::{self, ParamDesc};
+        let d = JudgeParams::default();
+        d.validate().unwrap();
+        type Set = fn(&mut JudgeParams, f32);
+        type Get = fn(&JudgeParams) -> f32;
+        let fields: [(&ParamDesc, Get, Set); 8] = [
+            (&desc::JUDGE_WINDOW_S, |p| p.window_s, |p, v| p.window_s = v),
+            (&desc::JUDGE_HOP_S, |p| p.hop_s, |p, v| p.hop_s = v),
+            (&desc::JUDGE_MIN_VOICED_FRAC, |p| p.min_voiced_frac, |p, v| p.min_voiced_frac = v),
+            (&desc::JUDGE_ENROLL_VOICED_FRAC, |p| p.enroll_voiced_frac, |p, v| p.enroll_voiced_frac = v),
+            (&desc::JUDGE_CONSIST_SIM, |p| p.consist_sim, |p, v| p.consist_sim = v),
+            (&desc::JUDGE_OWNER_HI, |p| p.owner_hi, |p, v| p.owner_hi = v),
+            (&desc::JUDGE_OTHERS_LO, |p| p.others_lo, |p, v| p.others_lo = v),
+            (&desc::JUDGE_VAD_THR, |p| p.vad_thr, |p, v| p.vad_thr = v),
+        ];
+        for (dsc, get, set) in fields {
+            assert_eq!(get(&d), dsc.default, "{} 默认值", dsc.key);
+            for bad in [dsc.min - 0.5, dsc.max + 0.5] {
+                let mut p = d;
+                set(&mut p, bad);
+                assert_eq!(p.validate().unwrap_err().desc.id, dsc.id, "{}", dsc.key);
+                assert_eq!(get(&p.clamped()), dsc.clamp(bad), "{}", dsc.key);
+            }
+        }
+    }
+}

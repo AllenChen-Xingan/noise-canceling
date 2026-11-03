@@ -376,6 +376,45 @@ impl Enroller {
 mod tests {
     use super::*;
 
+    /// 描述表是正本：默认值逐条同表；越界 validate 拒收（报的是那一条）、clamped 夹到边界。
+    #[test]
+    fn enroll_params_follow_desc_table() {
+        use vdn_types::desc::{self, ParamDesc};
+        let d = EnrollParams::default();
+        d.validate().unwrap();
+        type Set = fn(&mut EnrollParams, f32);
+        type Get = fn(&EnrollParams) -> f32;
+        let fields: [(&ParamDesc, Get, Set); 9] = [
+            (&desc::ENROLL_ASSIGN_SIM, |p| p.assign_sim, |p, v| p.assign_sim = v),
+            (&desc::ENROLL_MIN_OWNER_S, |p| p.min_owner_s, |p, v| p.min_owner_s = v),
+            (&desc::ENROLL_SINGLE_CLUSTER_MIN_S, |p| p.single_cluster_min_s, |p, v| p.single_cluster_min_s = v),
+            (&desc::ENROLL_LOCK_MARGIN, |p| p.lock_margin, |p, v| p.lock_margin = v),
+            (&desc::ENROLL_MIN_COHESION, |p| p.min_cohesion, |p, v| p.min_cohesion = v),
+            (&desc::ENROLL_RECENCY_HALF_LIFE_S, |p| p.recency_half_life_s, |p, v| p.recency_half_life_s = v),
+            (&desc::ENROLL_LEVEL_HALVING_DB, |p| p.level_halving_db, |p, v| p.level_halving_db = v),
+            (&desc::ENROLL_RELOCK_RATIO, |p| p.relock_ratio, |p, v| p.relock_ratio = v),
+            (&desc::ENROLL_CENTROID_CAP, |p| p.centroid_cap, |p, v| p.centroid_cap = v),
+        ];
+        for (dsc, get, set) in fields {
+            assert_eq!(get(&d), dsc.default, "{} 默认值", dsc.key);
+            for bad in [dsc.min - 0.5, dsc.max + 0.5] {
+                let mut p = d;
+                set(&mut p, bad);
+                assert_eq!(p.validate().unwrap_err().desc.id, dsc.id, "{}", dsc.key);
+                assert_eq!(get(&p.clamped()), dsc.clamp(bad), "{}", dsc.key);
+            }
+        }
+        // 两个整数参数
+        assert_eq!(d.max_clusters as u32, desc::ENROLL_MAX_CLUSTERS.default_count());
+        assert_eq!(d.stable_updates, desc::ENROLL_STABLE_UPDATES.default_count());
+        let p = EnrollParams { max_clusters: 0, ..d };
+        assert_eq!(p.validate().unwrap_err().desc.id, desc::ENROLL_MAX_CLUSTERS.id);
+        assert_eq!(p.clamped().max_clusters, 1);
+        let p = EnrollParams { stable_updates: 1000, ..d };
+        assert_eq!(p.validate().unwrap_err().desc.id, desc::ENROLL_STABLE_UPDATES.id);
+        assert_eq!(p.clamped().stable_updates, 100);
+    }
+
     fn unit(dim: usize, k: usize, jitter: f32, seed: &mut u32) -> Vec<f32> {
         let mut v = vec![0.0; dim];
         v[k] = 1.0;
