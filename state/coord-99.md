@@ -9,7 +9,7 @@
 
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
-| single | 清镜像副本 · 参数只写一处 · #56 · `feat/types-single-source` · `../noise_canceling-single` | vdn-types（参数描述）· vdn-speaker · vdn-polish · vdn-scene | 完成，PR #60 已合并（#56 关），待关窗 |
+| single | 清镜像副本 · 参数只写一处 · #56 · `feat/types-single-source` · `../noise_canceling-single` | vdn-types（参数描述）· vdn-speaker · vdn-polish · vdn-scene | 完成，PR #60 已合并（#56 关），窗口已关；worktree 保留待清 |
 | schema | schema 导出 + 交叉校验 · #57 · `feat/schema-crosscheck` · `../noise_canceling-schema` | schema 机制 · 共享内存头 · 配置 · 评测任务清单 | 已报到（noise-canceling-schema-1d）|
 
 ## 进度板
