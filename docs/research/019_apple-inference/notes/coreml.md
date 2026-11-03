@@ -101,10 +101,10 @@
 
 **FE-M**
 - 能不能跑：大概能。GRU、注意力（`scaled_dot_product_attention` 有转换器，`ops.py:10092`）、Conv1d 都有转换器。wav2wav 图里的 STFT 写法没核，建议用 spec2spec 版【存疑】。
-- 预计瓶颈：每帧约 29 MMAC，更接近算力受限，是三家里最可能吃到神经引擎红利的【推断】。但 GRU 照样回落 CPU，图会被切开，每帧多付至少一次 0.1–0.2 ms，ORT 整帧才 0.67 ms【推断】。净收益要测。
+- 预计瓶颈：每帧约 29 MMAC，更接近算力受限，是三家里最可能吃到神经引擎红利的【推断】。但 GRU 照样是 `while_loop` 留在 CPU，图会被切开，每帧多付至少两次单元切换（进出神经引擎），每次 0.1–0.2 ms，ORT 整帧才 0.67 ms【推断】。另外 wav2wav 图要 STFT / iSTFT，没找到 `istft` 转换器，**直接用 wav2wav 版大概率转不过去**【源码 + 推断】。净收益要测。
 - 实时线程能不能直接调：同 GTCRN。7 进 7 出用两套缓冲交换，可以做到每帧不新建 `MLMultiArray`【推断】。
 - 要改模型结构吗：`cpuOnly` / `CPUAndGPU` 不用。要整图上神经引擎，得展开 GRU【推断】。
-- 逐值一致风险：同 GTCRN。exp004 里 FE-M 的 Rust 和 Python 是逐样本相同（差 0），换 Core ML 后一定会有非零差，验收要改成按容差判【推断】。
+- 逐值一致风险：同 GTCRN。exp004 里 FE-M 的 Rust 和 Python 是逐样本相同（差 0），那是同一个 ORT 对同一个 ORT；换 Core ML 后一定会有非零差，验收要改成按容差判，容差待人定【推断】。spec2spec 版和 ORT 跑的 wav2wav 版不是同一张图，对拍前要先在 ORT 上跑 spec2spec 版作基准【推断】。
 
 **共通**
 - 后端 trait 要允许每个模型各选各的后端（`our-models.md` 对 vdn 的含义第 2 条），Core ML 后端可能只对 FE-M 有意义【推断】。
@@ -115,7 +115,7 @@
 用途：判断 Core ML 哪种配置值得进后端候选。所有数在本机 Apple M5 · macOS 27.0.1 上测，模型和 exp004 用同一份权重。
 
 1. **转出 6 个模型**（exp010 `convert_gtcrn.py` 已有前 3 个的 GTCRN 版）：
-   - GTCRN：`fp32` 显式缓存 · `fp16` 显式缓存 · `fp16` 有状态版。
+   - GTCRN：`fp32` 显式缓存 · `fp16` 显式缓存 · `fp16` 有状态版 · `fp32` 显式缓存 + 导出前手动展开 GRU（去掉 `while_loop`）。转完用 MIL 文本数 `while_loop` 个数和总算子数。
    - FE-M（优先 spec2spec 版）：`fp32` 显式缓存 · `fp16` 显式缓存 · 有状态版（如果能转）。
    - 每个都记 `coremltools` 版本、`torch` 版本、部署目标、`sha256`，按第五节第 1 条进 `docs/experiments/exp010-inference-bench/builds/<build-id>/`。
 2. **算子落点**：每个模型 × 四档计算单元，用 `MLComputePlan` 导出每个算子的 `preferredComputeDevice` 和 `weight`，数单元切换次数。重点看 GRU 在 `CPUAndGPU` 下落在哪。
