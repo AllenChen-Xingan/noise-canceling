@@ -13,7 +13,7 @@
 //! 引擎按池内最大补齐（规约 §3.5），所以开了路由，GTCRN 场景也要多付 6 ms。路由本身在判断回路，不加延迟。
 
 use crate::classify::NoiseClass;
-use crate::mirror::{FineSceneId, ModelId, ParamSet, ToneId, UserScene};
+use vdn_types::{FineSceneId, ModelId, ParamSet, ToneId, UserScene};
 
 pub const N_DEVICE: u16 = 3;
 pub const MEETING: FineSceneId = FineSceneId(22);

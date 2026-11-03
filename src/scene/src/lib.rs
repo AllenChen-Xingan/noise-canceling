@@ -26,14 +26,14 @@
 #![forbid(unsafe_code)]
 pub mod classify;
 pub mod features;
-pub mod mirror;
+
 pub mod route;
 #[rustfmt::skip]
 pub mod weights;
 
 use classify::{NoiseClass, posterior};
 use features::{FeatureExtractor, NF};
-use mirror::{
+use vdn_types::{
     Confidence, FineSceneId, HysteresisGate, ParamSet, SampleClock, SceneLabel, UserScene,
 };
 use route::Device;
@@ -99,7 +99,7 @@ impl SceneAnalyzer {
     }
 
     /// 改滞回参数与后验平滑时间常数（标定扫参用）。
-    pub fn set_tuning(&mut self, h: mirror::Hysteresis, ema_s: f32) {
+    pub fn set_tuning(&mut self, h: vdn_types::Hysteresis, ema_s: f32) {
         self.gate = HysteresisGate::new(h);
         self.ema_s = ema_s;
     }

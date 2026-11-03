@@ -108,7 +108,7 @@ def write_weights(build, mean, std, params, bt, clip, hyst):
         f"//! 训练数据：exp006 build `{build}` 的 train 组；评测见该 build 的 `eval_report.json`。",
         "#![allow(clippy::excessive_precision, clippy::approx_constant)]",
         "use crate::features::NF;",
-        "use crate::mirror::Hysteresis;",
+        "use vdn_types::Hysteresis;",
         "",
         f"pub const NC: usize = {len(CLASSES)};",
         f"pub const NH: usize = {NH};",
