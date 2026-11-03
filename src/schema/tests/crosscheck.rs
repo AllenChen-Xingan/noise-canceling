@@ -211,18 +211,30 @@ fn shm_history_rewrite_is_red() {
         .map(|(v, f)| (*v, f.to_string()))
         .collect();
     assert_eq!(b.history, own, "文件里的历史应与 HISTORY 相同");
-    let (v, fp) = (b.version, b.fingerprint.clone());
-    let rewritten = [(v, "fnv1a64:1111111111111111")];
+    // 改写、删除、追加都从完整历史出发改一行：以后正常追加了版本 3、4…，这条测试照样成立（codex 第 4 轮 #1）
+    let full: Vec<(u32, &str)> = shm::HISTORY.to_vec();
+    let last = full.len() - 1;
+    let mut rewritten = full.clone();
+    rewritten[last].1 = "fnv1a64:1111111111111111";
     let e = shm::guard_baseline(&rewritten, &b).unwrap_err();
     assert!(e.contains("被改写"), "{e}");
-    let deleted = [(v + 1, "fnv1a64:2222222222222222")];
-    assert!(
-        shm::guard_baseline(&deleted, &b)
-            .unwrap_err()
-            .contains("删掉")
-    );
-    let appended = [(v, fp.as_str()), (v + 1, "fnv1a64:2222222222222222")];
+    let mut deleted = full.clone();
+    deleted.remove(0);
+    deleted.push((full[last].0 + 1, "fnv1a64:2222222222222222"));
+    let e = shm::guard_baseline(&deleted, &b).unwrap_err();
+    assert!(e.contains("删掉"), "{e}");
+    let mut appended = full.clone();
+    appended.push((full[last].0 + 1, "fnv1a64:2222222222222222"));
     assert!(shm::guard_baseline(&appended, &b).is_ok());
+    assert!(shm::guard_baseline(&full, &b).is_ok());
+    // 已发布两个版本的基线：原样保留并追加 → 绿
+    let two = shm::BaseLayout {
+        version: 3,
+        fingerprint: "fnv1a64:b3".into(),
+        history: vec![(2, "fnv1a64:a2".into()), (3, "fnv1a64:b3".into())],
+    };
+    let ok = [(2, "fnv1a64:a2"), (3, "fnv1a64:b3"), (4, "fnv1a64:c4")];
+    assert!(shm::guard_baseline(&ok, &two).is_ok());
 }
 
 /// 整份历史只增不改（codex 第 3 轮 #3）：main 已发布到版本 3 时，改写或删掉更早的版本 2 也红。
@@ -282,6 +294,53 @@ fn git_out(args: &[&str]) -> Option<String> {
     o.status
         .success()
         .then(|| String::from_utf8_lossy(&o.stdout).trim().to_string())
+}
+
+/// 读基线：提交在、但读树或读文件失败 → Unavailable，不算 Absent（codex 第 4 轮 #2）。
+/// 用假的 git 逐步注入结果，不依赖本机仓库。
+#[test]
+fn shm_baseline_read_errors_are_unavailable() {
+    use vdn_schema::Baseline;
+    let sha = "1111111111111111111111111111111111111111";
+    // ls_tree / show：None = 命令失败
+    let fake = |ls_tree: Option<&'static str>, show: Option<&'static str>| {
+        move |args: &[&str]| -> Option<String> {
+            match args[0] {
+                "rev-parse" => Some(sha.to_string()),
+                "ls-tree" => ls_tree.map(str::to_string),
+                "show" => show.map(str::to_string),
+                other => panic!("没料到的 git 子命令 {other}"),
+            }
+        }
+    };
+    let path = format!("{DIR}/{}", shm::LAYOUT_FILE);
+    let listed: &'static str = Box::leak(path.into_boxed_str());
+    let cases: [(Option<&'static str>, Option<&'static str>, &str); 4] = [
+        (None, None, "Unavailable"),         // 读树失败
+        (Some(listed), None, "Unavailable"), // 树里有文件，读文件失败
+        (Some(""), None, "Absent"),          // 树里确实没有
+        (Some(listed), Some("{}"), "Found"), // 读到了
+    ];
+    for (ls, show, want) in cases {
+        let got = match vdn_schema::shm_baseline_with("base", &fake(ls, show)) {
+            Baseline::Found(c, _) => {
+                assert_eq!(c, sha);
+                "Found"
+            }
+            Baseline::Absent(c) => {
+                assert_eq!(c, sha);
+                "Absent"
+            }
+            Baseline::Unavailable(_) => "Unavailable",
+        };
+        assert_eq!(got, want, "ls-tree = {ls:?}，show = {show:?}");
+    }
+    // 提交不存在
+    let none = |_: &[&str]| -> Option<String> { None };
+    assert!(matches!(
+        vdn_schema::shm_baseline_with("base", &none),
+        Baseline::Unavailable(_)
+    ));
 }
 
 /// 读基线：提交不存在 → Unavailable（不当成「首次引入」放行）；提交在、树里没有文件 → Absent；
