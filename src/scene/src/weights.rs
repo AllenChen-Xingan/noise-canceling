@@ -19,4 +19,4 @@ pub const BT_HF_P90_MAX: f32 = -12.7;
 pub const CLIP_MIN: f32 = -4.0;
 /// 后验平滑时间常数（秒）
 pub const EMA_S: f32 = 0.5;
-pub const HYSTERESIS: Hysteresis = Hysteresis { confirm_s: 1.0, min_confidence: 0.4, min_dwell_s: 3.0 };
+pub const HYSTERESIS: Hysteresis = Hysteresis { confirm_s: 1.0, min_confidence: 0.4, min_dwell_s: 3.0 }; // tidy: 预设值，不随默认变：exp006 train.py --hyst 产出（文件头：别手改）；与描述表默认值一致由 src/scene/tests/behavior.rs 比对

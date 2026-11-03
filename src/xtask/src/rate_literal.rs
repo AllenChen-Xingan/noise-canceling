@@ -1,21 +1,27 @@
-//! tidy 的「采样率只写一处」（R-RATE；CLAUDE.md 第五节第 5 条；issue #62）。
+//! tidy 的「采样率只写一处」（R-RATE；CLAUDE.md 第五节第 5 条；issue #62；#71 起按语法树查）。
 //!
 //! | 规则 | 查什么 | 放行 |
 //! |---|---|---|
-//! | R-RATE | `src/**/*.rs` 的代码里（注释、字符串不算）不许出现 `16000` / `16_000` / `48000` / `48_000` 字面量（可带 `.0` 与类型后缀）；**测试与示例也一样**，一律引用 `vdn_types::{IO_RATE, MODEL_RATE}` | 见下 |
+//! | R-RATE | `src/**/*.rs` 的代码里数值等于 16000 或 48000 的字面量（任何写法：`48_000u16`、`0xBB80`、`48000.0_f32`……，宏参数、属性里的也算），以及**两边都是字面量**、算出来等于它们的算式（`3 * 16_000`、`48 * 1000`、`144_000 / 3`）；**测试与示例也一样**，一律引用 `vdn_types::{IO_RATE, MODEL_RATE}` | 见下 |
 //!
 //! 放行只有两种：
 //! - [`RATE_FILE`]：正本本身
-//! - 单行：行尾注释写 `tidy: 非采样率：<理由>`（数值恰好相同、含义不是采样率时；理由不能空）
+//! - 单行：字面量所在行的行尾注释写 `tidy: 非采样率：<理由>`（数值恰好相同、含义不是采样率时；理由不能空）
 //!
-//! 为什么测试代码也查（大总管 8d 定，2026-11-02）：要放行测试代码就得用文本猜「哪段是测试」，
-//! codex 连续几轮挑出绕过点（同一行闭合、`mod tests;` 声明等）。测试改用常量没有坏处；不依赖 `vdn-types` 的
-//! 底层 crate（shm、rt-thread、dsp）把它加成 dev 依赖即可（forbid 只管普通依赖闭包，shm 已有先例）。
+//! 为什么测试代码也查（大总管 8d 定，2026-11-02）：测试改用常量没有坏处；不依赖 `vdn-types` 的底层 crate
+//!（shm、rt-thread、dsp）把它加成 dev 依赖即可。
 //!
-//! 边界（写明，免得以为查全了）：只认这四种写法；`48 * 1000`、`3 * 16_000` 这类算出来的查不到。
+//! 边界（写明，免得以为查全了）：算式只折叠字面量（`+ - * /`、括号、负号），不追变量与常量；
+//! 宏参数里的算式不折叠（宏没展开，只认里面的单个字面量）；注释、字符串、文档注释不算。
 
 use std::fs;
 use std::path::Path;
+
+use proc_macro2::{Span, TokenStream, TokenTree};
+use quote::ToTokens;
+use syn::spanned::Spanned;
+use syn::visit::Visit;
+use syn::{BinOp, Expr, ExprBinary, Lit, UnOp};
 
 use crate::scan::lex_lines;
 use crate::tidy::rs_files;
@@ -23,64 +29,135 @@ use crate::tidy::rs_files;
 /// 采样率正本。
 pub const RATE_FILE: &str = "src/types/src/rate.rs";
 const ALLOW: &str = "tidy: 非采样率：";
-const RATES: [&str; 4] = ["16000", "16_000", "48000", "48_000"];
+const RATES: [f64; 2] = [16000.0, 48000.0]; // tidy: 非采样率：本规则要认的两个数本身
 
-fn ident_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '_'
+fn is_rate(v: f64) -> bool {
+    RATES.iter().any(|r| (v - r).abs() < 1e-9)
 }
 
-/// 一行代码里有没有采样率字面量（前后不能紧挨标识符字符或数字、小数点后的数字，免得把 `160000`、`x48000` 当成它）。
-pub fn has_rate_literal(code: &str) -> bool {
-    for lit in RATES {
-        let mut from = 0;
-        while let Some(off) = code[from..].find(lit) {
-            let at = from + off;
-            let end = at + lit.len();
-            // 前面是 `.` 时只有区间 `..` 算数字开头（单个 `.` 是小数或字段访问）
-            let ok_before = match code[..at].chars().next_back() {
-                Some('.') => code[..at].ends_with(".."),
-                Some(c) => !ident_char(c),
-                None => true,
-            };
-            let rest = &code[end..];
-            let mut tail = rest;
-            // 允许 `.0` / `.0_f32` 之类的小数部分（只认全零）
-            if let Some(t) = tail.strip_prefix('.') {
-                let zeros = t.len() - t.trim_start_matches(['0', '_']).len();
-                if zeros > 0 {
-                    tail = &t[zeros..];
-                }
+/// 字面量的数值（整数、浮点；别的字面量 → None）。
+fn lit_value(l: &Lit) -> Option<f64> {
+    match l {
+        Lit::Int(i) => i.base10_parse::<u128>().ok().map(|v| v as f64),
+        Lit::Float(f) => f.base10_parse::<f64>().ok(),
+        _ => None,
+    }
+}
+
+/// token 里所有数值字面量（含宏参数、属性里的）；文档注释跳过。
+fn token_hits(ts: TokenStream, out: &mut Vec<Span>) {
+    let toks: Vec<TokenTree> = ts.into_iter().collect();
+    let mut i = 0;
+    while i < toks.len() {
+        if let TokenTree::Punct(p) = &toks[i]
+            && p.as_char() == '#'
+        {
+            let bang = matches!(toks.get(i + 1), Some(TokenTree::Punct(q)) if q.as_char() == '!');
+            let j = i + 1 + usize::from(bang);
+            if let Some(TokenTree::Group(g)) = toks.get(j)
+                && matches!(g.stream().into_iter().next(), Some(TokenTree::Ident(id)) if id == "doc")
+            {
+                i = j + 1;
+                continue;
             }
-            // 允许类型后缀
-            let suffix = tail.len() - tail.trim_start_matches(ident_char).len();
-            let sfx = &tail[..suffix];
-            let ok_suffix = sfx.is_empty()
-                || matches!(
-                    sfx.trim_start_matches('_'),
-                    "u16"
-                        | "u32"
-                        | "u64"
-                        | "u128"
-                        | "usize"
-                        | "i16"
-                        | "i32"
-                        | "i64"
-                        | "i128"
-                        | "isize"
-                        | "f32"
-                        | "f64"
-                );
-            // 后面紧跟 `..`（区间）可以；单个 `.` 接非零小数不算
-            let after = &tail[suffix..];
-            let ok_after = after.starts_with("..")
-                || !after.starts_with(|c: char| c.is_ascii_digit() || c == '.');
-            if ok_before && ok_suffix && ok_after {
-                return true;
+        }
+        match &toks[i] {
+            TokenTree::Group(g) => token_hits(g.stream(), out),
+            TokenTree::Literal(l) if lit_value(&Lit::new(l.clone())).is_some_and(is_rate) => {
+                out.push(l.span());
             }
-            from = end;
+            _ => {}
+        }
+        i += 1;
+    }
+}
+
+/// 折叠出的数：整数按整数算（除法截断，`96001u32 / 2` = 48000），有浮点参与就按浮点算（codex #71 第 1 轮 P2 #6）。
+#[derive(Clone, Copy)]
+enum Num {
+    Int(i128),
+    Float(f64),
+}
+
+impl Num {
+    fn f(self) -> f64 {
+        match self {
+            Num::Int(i) => i as f64,
+            Num::Float(x) => x,
         }
     }
-    false
+}
+
+fn lit_num(l: &Lit) -> Option<Num> {
+    match l {
+        Lit::Int(i) => i.base10_parse::<i128>().ok().map(Num::Int),
+        Lit::Float(f) => f.base10_parse::<f64>().ok().map(Num::Float),
+        _ => None,
+    }
+}
+
+fn fold_binary(b: &ExprBinary) -> Option<Num> {
+    let (l, r) = (fold(&b.left)?, fold(&b.right)?);
+    Some(match (l, r) {
+        (Num::Int(a), Num::Int(c)) => Num::Int(match b.op {
+            BinOp::Add(_) => a.checked_add(c)?,
+            BinOp::Sub(_) => a.checked_sub(c)?,
+            BinOp::Mul(_) => a.checked_mul(c)?,
+            BinOp::Div(_) => a.checked_div(c)?,
+            _ => return None,
+        }),
+        _ => {
+            let (a, c) = (l.f(), r.f());
+            Num::Float(match b.op {
+                BinOp::Add(_) => a + c,
+                BinOp::Sub(_) => a - c,
+                BinOp::Mul(_) => a * c,
+                BinOp::Div(_) if c != 0.0 => a / c,
+                _ => return None,
+            })
+        }
+    })
+}
+
+/// 只由字面量组成的算式的值。
+fn fold(e: &Expr) -> Option<Num> {
+    match e {
+        Expr::Lit(l) => lit_num(&l.lit),
+        Expr::Paren(p) => fold(&p.expr),
+        Expr::Group(g) => fold(&g.expr),
+        Expr::Unary(u) if matches!(u.op, UnOp::Neg(_)) => fold(&u.expr).map(|v| match v {
+            Num::Int(i) => Num::Int(-i),
+            Num::Float(x) => Num::Float(-x),
+        }),
+        Expr::Binary(b) => fold_binary(b),
+        _ => None,
+    }
+}
+
+/// 算出来是采样率的算式。
+#[derive(Default)]
+struct Folded(Vec<Span>);
+
+impl<'ast> Visit<'ast> for Folded {
+    fn visit_expr_binary(&mut self, b: &'ast ExprBinary) {
+        if fold_binary(b).is_some_and(|v| is_rate(v.f())) {
+            self.0.push(b.span());
+        }
+        syn::visit::visit_expr_binary(self, b);
+    }
+}
+
+/// 一个文件里命中的行（从 1 起，去重排序）。
+pub fn rate_lines(file: &syn::File) -> Vec<usize> {
+    let mut spans = Vec::new();
+    token_hits(file.to_token_stream(), &mut spans);
+    let mut f = Folded::default();
+    f.visit_file(file);
+    spans.extend(f.0);
+    let mut lines: Vec<usize> = spans.iter().map(|s| s.start().line).collect();
+    lines.sort_unstable();
+    lines.dedup();
+    lines
 }
 
 /// 放行标记后面有没有写理由。
@@ -90,23 +167,32 @@ fn has_allow_reason(comment: &str) -> bool {
         .is_some_and(|(_, r)| !r.trim().is_empty())
 }
 
-/// 一个文件的问题。
+/// 一个文件的问题。文件解析不了也报（不静默跳过）。
 pub fn rate_problems(rel: &str, src: &str) -> Vec<String> {
     if rel == RATE_FILE {
         return Vec::new();
     }
-    let raw: Vec<&str> = src.lines().collect();
-    let mut out = Vec::new();
-    for (i, (code, comment)) in lex_lines(src).iter().enumerate() {
-        if has_rate_literal(code) && !has_allow_reason(comment) {
-            let line = raw.get(i).map_or("", |l| l.trim());
-            out.push(format!(
-                "{rel}:{}：采样率字面量（R-RATE）——改用 vdn_types::IO_RATE / MODEL_RATE（正本 {RATE_FILE}）；不是采样率就在行尾写 `// {ALLOW}<理由>`：{line}",
-                i + 1
-            ));
+    let file = match crate::ast::parse_src(src) {
+        Ok(f) => f,
+        Err(e) => {
+            return vec![format!(
+                "{rel}:{}：语法树解析失败：{}（R-RATE）",
+                e.line, e.msg
+            )];
         }
-    }
-    out
+    };
+    let raw: Vec<&str> = src.lines().collect();
+    let lexed = lex_lines(src);
+    rate_lines(&file)
+        .into_iter()
+        .filter(|l| !lexed.get(l - 1).is_some_and(|(_, c)| has_allow_reason(c)))
+        .map(|l| {
+            let text = raw.get(l - 1).map_or("", |s| s.trim());
+            format!(
+                "{rel}:{l}：采样率字面量（R-RATE）——改用 vdn_types::IO_RATE / MODEL_RATE（正本 {RATE_FILE}）；不是采样率就在行尾写 `// {ALLOW}<理由>`：{text}"
+            )
+        })
+        .collect()
 }
 
 pub fn check(root: &Path, problems: &mut Vec<String>) {
@@ -127,86 +213,5 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn literal_forms_are_caught() {
-        for code in [
-            "let r = 48_000;",
-            "let r = 16000u32;",
-            "f(48000.0)",
-            "x * 16_000.0_f32",
-            "const SR: usize = 16_000usize;",
-            "(a, 48_000)",
-            "for i in 0..16000 {",
-            "x[..48_000 - l]",
-            "(0..=48_000)",
-            "48_000..96_000",
-            // 合法整数后缀都认（codex 第 8 轮 P2 #3）
-            "48000u16",
-            "16000i16",
-            "48_000u128",
-            "16_000_i128",
-        ] {
-            assert!(has_rate_literal(code), "{code}");
-        }
-    }
-
-    #[test]
-    fn other_numbers_pass() {
-        for code in [
-            "let n = 160000;",
-            "let n = 48_0000;",
-            "let x = 1.48000;",
-            "let id = v48000;",
-            "let r = IO_RATE;",
-            "let n = 4800;",
-            "let x = 48000.5;",
-            "let x = a.48000;",
-        ] {
-            assert!(!has_rate_literal(code), "{code}");
-        }
-    }
-
-    #[test]
-    fn comments_and_strings_do_not_count() {
-        let src = "// 48_000 Hz\nlet s = \"16000\";\n/* 48000 */\n";
-        assert!(rate_problems("src/eval/src/a.rs", src).is_empty());
-    }
-
-    #[test]
-    fn allow_marker_needs_reason_text() {
-        let ok = "let n = 48_000; // tidy: 非采样率：一分钟的毫秒数之类\n";
-        assert!(rate_problems("src/eval/src/a.rs", ok).is_empty());
-        let bad = "let n = 48_000; // 非采样率\n";
-        assert_eq!(rate_problems("src/eval/src/a.rs", bad).len(), 1);
-    }
-
-    #[test]
-    fn rate_file_itself_is_allowed() {
-        assert!(rate_problems(RATE_FILE, "pub const IO_RATE: u32 = 48_000;\n").is_empty());
-    }
-
-    /// 负例（会红）：测试代码、示例、底层 crate、内联测试模块里的字面量一律照挡（不再识别测试区）
-    #[test]
-    fn test_code_is_checked_too() {
-        let src = "fn f() -> u32 { 48_000 }\n#[cfg(test)]\nmod tests {\n    fn g() { let _ = 48_000; }\n}\n";
-        assert_eq!(rate_problems("src/shm/src/wait.rs", src).len(), 2);
-        for rel in [
-            "src/shm/tests/ring.rs",
-            "src/dsp/examples/x.rs",
-            "src/eval/tests/a.rs",
-            "src/shm/src/tests.rs",
-        ] {
-            assert_eq!(rate_problems(rel, "let r = 48_000;\n").len(), 1, "{rel}");
-        }
-    }
-
-    /// 负例（codex 第 2 轮 P2 #5）：放行标记后面没写理由不算放行
-    #[test]
-    fn empty_allow_reason_is_flagged() {
-        let src = "let n = 48_000; // tidy: 非采样率：\nlet m = 48_000; // tidy: 非采样率：   \n";
-        assert_eq!(rate_problems("src/eval/src/a.rs", src).len(), 2);
-    }
-}
+#[path = "rate_literal_tests.rs"]
+mod tests;

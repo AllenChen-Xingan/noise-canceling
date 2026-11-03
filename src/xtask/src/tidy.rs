@@ -7,7 +7,7 @@
 //! | `unsafe = false` 的 crate 根有 `#![forbid(unsafe_code)]` | R10 |
 //! | A/B 档 crate 根有 panic 类 lint（unwrap/expect/panic/indexing），且至少一个实时块升了禁用清单 | R4 · §5.3 |
 //! | 放行禁用清单 / panic 类 lint 的 `allow` 必须带 `// NRT: <理由>` | §5.3 |
-//! | A/B 档 crate 的源码（整模块 NRT 除外）不出现 `std::fs`、`log::`、`thread::sleep` | R3 |
+//! | A/B 档 crate 的源码（整模块 NRT、测试代码除外）不出现 `std::fs`、`log::`、`thread::sleep`（按语法树、还原 use 别名） | R3（见 `realtime_calls.rs`） |
 //! | 实时块（带 `deny(clippy::disallowed_macros)` 的 impl / mod）里没有非 debug 的 `assert*!` | R4（clippy 禁不了，见根 clippy.toml） |
 //! | `unsafe = true` 的 crate：每个 `unsafe {` / `unsafe impl` 同行或紧邻上方的连续注释里有 `SAFETY:` | R10 |
 //! | `src/` 与 `docs/experiments/` 下的代码文件 ≤ 600 行，不设基线 | R-SIZE（见 `file_size.rs`） |
@@ -163,16 +163,9 @@ fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usi
         return 0;
     }
 
-    // 2. R3：实时 crate 不做 IO、日志、sleep
-    for (i, l) in lines.iter().enumerate().take(test_from) {
-        let c = code_of(l);
-        for bad in ["std::fs", "log::", "thread::sleep"] {
-            if c.contains(bad) {
-                t.problems
-                    .push(format!("{rel}:{}：实时 crate 里出现 {bad}（R3）", i + 1));
-            }
-        }
-    }
+    // 2. R3：实时 crate 不做 IO、日志、sleep（按语法树查，见 realtime_calls.rs）
+    t.problems
+        .extend(crate::realtime_calls::check_file(&root(), rel, &src));
 
     // 3. R4：实时块里只许 debug_assert*
     let mut i = 0;
@@ -335,6 +328,8 @@ pub fn check() -> Result<Tidy, String> {
     crate::no_mirror::check(&root, &mut t.problems);
     crate::param_range::check(&root, &mut t.problems);
     crate::model_name::check(&root, &mut t.problems);
+    // 模块树：建树错误（红）与孤儿 .rs（注释）
+    crate::ast::modtree::report(&root, &mut t.problems, &mut t.notes);
     // 单文件行数上限（R-SIZE，硬上限 600 行）
     crate::file_size::check(&root, &mut t.problems);
     // 采样率只写一处（R-RATE）
