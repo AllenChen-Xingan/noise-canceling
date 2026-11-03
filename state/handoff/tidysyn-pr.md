@@ -65,10 +65,10 @@ Closes #71
 
 - **新增的测试**：
   - 012 的负例全部做成测试：测试识别 T1–T14、R-RATE R1–R8、R-PARAM P1–P3（P2 是已知限制，写成 `#[ignore]` 记录）、R-MIRROR M1–M3、R3 S1–S4
-  - codex 7 轮评审里每条问题各补负例
+  - codex 8 轮评审里修了的每条问题各补负例
   - 禁用清单与 `clippy.toml` 的比对测试
 - **跑了哪些**（本机实测）：
-  - `cargo test -p xtask`：81 过 / 0 败 / 1 忽略（P2 已知限制）
+  - `cargo test -p xtask`：83 过 / 0 败 / 1 忽略（P2 已知限制）
   - `cargo test -p xtask -p vdn-polish -p vdn-scene -p vdn-speaker-lab`：全过
   - fmt、clippy `-D warnings`、`cargo deny check`、`xtask check-deps`、`xtask tidy`：通过
   - 全量 `xtask ci`：由大总管跑
@@ -82,12 +82,22 @@ Closes #71
 
 ## 未做 / 已知限制
 
-- 范围先赋给不带参数名的变量、在别的语句里再用：R-PARAM 查不到（012 P2，写成 `#[ignore]` 测试记录）
-- 宏展开出的代码、跨文件 `pub use` 再导出、`cfg(any(test, …))` 求值（一律按生产算）：syn 判不了，各规则文件头写明
+- **已知绕过写法 4 种，见 #新 issue**（草稿 `state/handoff/tidysyn-bypass-issue.md`）：
+  - `include!` 经 `use` 改名
+  - 跨文件 `pub use` 再导出
+  - 范围先赋给变量再在别的语句里用
+  - 宏展开出的代码
+- `cfg(any(test, …))` 一律按生产代码算，宁可多查
 - R-RATE 不扫 `docs/experiments/` 下的独立实验程序（它们不依赖 vdn-types）
 
 ## 评审
 
-codex 换谱系评审，结果见 `docs/reviews/071_tidy-syn-codex.md`。
+codex 换谱系评审 8 轮，记录在 `docs/reviews/071_tidy-syn-codex.md`：
+- 共提出 37 条（P1×14 · P2×23），全部属实；修了 36 条，1 条按人定记入后续 issue
+- **没满足「连续两轮无 P0/P1」的停止线**：P1 依次为 4、3、3、1、1、0、1、1，第 3 轮起多是「又一种等价写法能绕过」
+- **人定（2026-11-03，大总管 8d 转）有底线地先合**：
+  - 等价写法的绕过记入新 issue
+  - 比旧规则退步、真实代码上的误报必须修完（第 8 轮的 P1 两样都不是）
+- 评审期间模块树的展开改成通用访问器（第 3 轮），不再按位置逐个补
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

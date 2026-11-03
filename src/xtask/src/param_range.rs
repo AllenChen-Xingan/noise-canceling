@@ -363,7 +363,8 @@ impl<'ast> Visit<'ast> for Finder<'_> {
     }
     fn visit_expr(&mut self, e: &'ast Expr) {
         if is_literal_range(e)
-            && let Some(tok) = self.tok_in(&ids_of(e))
+            // 范围本身（如接收者是块）也按块边界收集（codex #71 第 8 轮 P2 #2）
+            && let Some(tok) = self.tok_in(&expr_context(e))
         {
             self.hits.push((e.span(), tok, false));
         }
@@ -387,7 +388,8 @@ impl<'ast> Visit<'ast> for Finder<'_> {
                     && let Some((k, _)) = self
                         .defaults
                         .iter()
-                        .find(|(k, d)| n.unraw() == k && (d - v).abs() < 1e-6)
+                        // 按参数的数值类型 f32 严格相等（codex #71 第 8 轮 P2 #3）
+                        .find(|(k, d)| n.unraw() == k && (*d as f32) == (v as f32))
                 {
                     self.hits.push((f.span(), k.clone(), true));
                 }

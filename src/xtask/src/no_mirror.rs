@@ -122,11 +122,30 @@ pub fn shape(it: &Item) -> Option<(Shape, &syn::Ident, &Visibility)> {
                                 syn::FnArg::Typed(t) => norm_ty(&t.ty),
                             })
                             .collect();
+                        // 签名的修饰（const / async / unsafe / ABI）、泛型与约束也算（codex #71 第 8 轮 P2 #4）
+                        let sig = &f.sig;
                         Some(format!(
-                            "{}({}){}",
-                            f.sig.ident.unraw(),
+                            "{}{}{}{} {}<{}>({}){}",
+                            if sig.constness.is_some() {
+                                "const "
+                            } else {
+                                ""
+                            },
+                            if sig.asyncness.is_some() {
+                                "async "
+                            } else {
+                                ""
+                            },
+                            if sig.unsafety.is_some() {
+                                "unsafe "
+                            } else {
+                                ""
+                            },
+                            norm_ty(&sig.abi),
+                            sig.ident.unraw(),
+                            norm_ty(&sig.generics),
                             args.join(","),
-                            norm_ty(&f.sig.output)
+                            norm_ty(&sig.output)
                         ))
                     }
                     _ => None,

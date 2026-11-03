@@ -137,6 +137,11 @@ fn p3_default_literals_in_production() {
     assert_eq!(n("let p = Polish { smooth: 0.5, floor_db: -20.0 };"), 1);
     assert_eq!(n("let p = Polish { r#smooth: 0.5 };"), 1, "r# 字段名也认");
     assert_eq!(
+        n("let p = Polish { smooth: 0.5000005 };"),
+        0,
+        "接近但不等于默认值的预设不报"
+    );
+    assert_eq!(
         n("let p = Polish { floor_db: -20.0, smooth: 0.3 };"),
         0,
         "预设值不报"
@@ -206,6 +211,9 @@ fn non_param_ranges_and_values_pass() {
         "let _ = (for i in 0..10 { let _ = floor_db; });",
         "let _ = Some(for i in 0..10 { let _ = floor_db; });",
         "let _ = (1, for i in 0..10 { let _ = floor_db; });",
+        // 范围的接收者是块（codex #71 第 8 轮 P2 #2）
+        "let a = ({ let _ = floor_db; 1.0f32 }).clamp(0.0, 1.0);",
+        "let b = ({ let _ = floor_db; 1.0f32 }).max(0.0).min(1.0);",
         // 条件、守卫、宏参数里的块也是边界（codex #71 第 7 轮 P2 #2）
         "if (0..10).contains(&{ let _ = floor_db; 1 }) {}",
         "while (0..10).contains(&{ let _ = floor_db; 1 }) {}",

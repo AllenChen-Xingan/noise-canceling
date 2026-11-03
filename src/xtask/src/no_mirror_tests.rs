@@ -134,3 +134,16 @@ fn raw_trait_method_names() {
         1
     );
 }
+
+/// codex #71 第 8 轮 P2 #4：签名修饰不同（async）就不算副本
+#[test]
+fn trait_signature_modifiers_matter() {
+    assert_eq!(
+        n("trait M5 { async fn a(&self) -> u8; fn b(&mut self, x: f32); fn c(&self); }\n"),
+        0
+    );
+    assert_eq!(
+        n("trait M6 { fn a<T>(&self) -> u8; fn b(&mut self, x: f32); fn c(&self); }\n"),
+        0
+    );
+}
