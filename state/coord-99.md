@@ -26,3 +26,4 @@
 - 2026-11-02 schema codex 第 2 轮 P1×1 P2×2 已改：布局版本对照 main 只增不改（ci.yml 加 fetch-depth: 0，合并冲突大总管处理）· 总线名收窄为可见 ASCII 无 /（行为变化，进 PR 正文）· 往返整数精确比较；denoised 非 ASCII 负例测试派给 schema 补
 - 2026-11-02 e3 基准作废（拔电睡眠），锁删；两人复跑
 - 2026-11-02 single 复跑（自报）：xtask ci 全绿，test 372 过 / 0 败 / 5 忽略，含 codex 第 2、3 轮修改；在写 PR 草稿
+- 2026-11-02 single 报收尾：49 文件 +3191 −512；desc.rs 58 条；codex 3 轮（P1 1→0→0），14 条已改；忽略 5 条均旧有人工测试。大总管验收中：亲手重跑 xtask ci（后台）。发现：FE-M 两个名字（vdn-types `fastenhancer_m` vs 命令行 / 配置 / 评测 `fastenhancer-m`），改动前就有 → 第二阶段「模型接口」统一
