@@ -1,11 +1,12 @@
 // exp010 · Core ML 逐帧基准（GTCRN），输出一行 JSON，字段同 rustbe 的 bench。
 //
 // 用法：
-//   bench_coreml bench <模型 .mlpackage|.mlmodelc> <cpu|gpu|ane|all> <in.f32> <ort.f32> [--frames N] [--warmup N] [--state]
+//   bench_coreml bench <模型 .mlpackage|.mlmodelc> <cpu|gpu|ane|all> <in.f32> <ort.f32> [--frames N] [--warmup N] [--parity-frames N] [--state]
 //   bench_coreml plan  <模型 .mlpackage|.mlmodelc> <cpu|gpu|ane|all>      每个算子落在哪个计算单元（MLComputePlan）
 //
 // in.f32 / ort.f32：每帧 514 个小端 f32（re[257] 再 im[257]），来自 rustbe bench 的 --dump-io。
-// 输入不够 N 帧就循环用（缓存照常往下走，与 rustbe bench 一致）；逐值一致只比第一遍。
+// 同 rustbe 口径：第 0 帧是冷启动帧，接着预热帧（默认 200），再计时帧（默认 6000）；转储本身已按 mix.wav 循环排好。
+// 逐值一致只比前 --parity-frames 帧（默认 610 = 整段 mix.wav 不循环），算法同 rustbe parity：最大绝对差、整段 SNR、首个差 > 1e-3 的位置。
 // 实时做法：输入输出 MLMultiArray 全部预分配（outputBackings），两组缓存来回交换，每帧只 memcpy 频谱。
 import CoreML
 import Foundation
@@ -49,7 +50,7 @@ func compiledURL(_ p: String) throws -> (URL, Double) {
 func arr(_ shape: [Int], _ dt: MLMultiArrayDataType) throws -> MLMultiArray {
     let a = try MLMultiArray(shape: shape.map { NSNumber(value: $0) }, dataType: dt)
     // 清零
-    a.withUnsafeMutableBytes { p, _ in memset(p.baseAddress!, 0, p.count) }
+    _ = a.withUnsafeMutableBytes { p, _ in memset(p.baseAddress!, 0, p.count) }
     return a
 }
 
@@ -114,12 +115,13 @@ func cmdPlan(_ a: [String]) async throws {
 }
 
 func cmdBench(_ a: [String]) throws {
-    var frames = 10000, warmup = 200, stateful = false
+    var frames = 6000, warmup = 200, parityN = 610, stateful = false
     var i = 4
     while i < a.count {
         switch a[i] {
         case "--frames": frames = Int(a[i + 1])!; i += 2
         case "--warmup": warmup = Int(a[i + 1])!; i += 2
+        case "--parity-frames": parityN = Int(a[i + 1])!; i += 2
         case "--state": stateful = true; i += 1
         default: die("不认识 \(a[i])")
         }
@@ -175,10 +177,12 @@ func cmdBench(_ a: [String]) throws {
     times.reserveCapacity(frames)
     var firstMs = 0.0, nonfinite = 0
     var maxAbs = 0.0, sig = 0.0, err = 0.0, worst = 0
+    var firstBad = "None"
     var a0: UInt64 = 0, c0 = 0.0, w0 = 0.0
-    let total = warmup + frames
+    let total = 1 + warmup + frames
+    let t0w = 1 + warmup
     for f in 0..<total {
-        if f == warmup { a0 = vdn_alloc_count(); c0 = cpuSeconds(); w0 = nowMs() }
+        if f == t0w { a0 = vdn_alloc_count(); c0 = cpuSeconds(); w0 = nowMs() }
         let k = f % nIn
         input.withUnsafeBufferPointer { writeMix(mix, $0.baseAddress! + k * PER) }
         let p = stateful ? 0 : f & 1
@@ -192,14 +196,15 @@ func cmdBench(_ a: [String]) throws {
         let dt = nowMs() - t
         if f == 0 { firstMs = dt }
         out.withUnsafeMutableBufferPointer { readEnh(enhOut, $0.baseAddress!) }
-        if f >= warmup { times.append(dt) }
-        if !out.allSatisfy({ $0.isFinite }) && f >= warmup { nonfinite += 1 }
-        if f < nIn {  // 逐值一致：第一遍，从第 0 帧起（缓存从零开始，和 ORT 转储同起点）
+        if f >= t0w { times.append(dt) }
+        if !out.allSatisfy({ $0.isFinite }) && f >= t0w { nonfinite += 1 }
+        if f < min(parityN, nIn) {  // 逐值一致：从第 0 帧起（缓存从零开始，和 ORT 转储同起点）
             for j in 0..<PER {
                 let x = Double(ref[f * PER + j]), y = Double(out[j])
                 let d = abs(x - y)
                 sig += x * x; err += d * d
                 if d > maxAbs { maxAbs = d; worst = f }
+                if d > 1e-3 && firstBad == "None" { firstBad = "Some((\(f), \(j % BINS)))" }
             }
         }
     }
@@ -211,7 +216,7 @@ func cmdBench(_ a: [String]) throws {
     let snr = 10 * log10(sig / max(err, 1e-300))
     let backend = "coreml-\(a[1])" + (stateful ? "-state" : "") + (mixDT == .float16 ? "-fp16io" : "")
     let f4 = { (x: Double) in String(format: "%.4f", x) }
-    print("{\"model\":\"gtcrn\",\"backend\":\"\(backend)\",\"artifact\":\"\(URL(fileURLWithPath: a[0]).lastPathComponent)\",\"frames\":\(frames),\"warmup\":\(warmup),\"p50_ms\":\(f4(pct(times, 0.5))),\"p99_ms\":\(f4(pct(times, 0.99))),\"p999_ms\":\(f4(pct(times, 0.999))),\"max_ms\":\(f4(times.last!)),\"mean_ms\":\(f4(mean)),\"compile_ms\":\(String(format: "%.2f", compileMs)),\"open_ms\":\(String(format: "%.2f", openMs)),\"first_frame_ms\":\(String(format: "%.3f", firstMs)),\"cpu_over_wall\":\(String(format: "%.3f", cpu / wall)),\"allocs_per_frame\":\(String(format: "%.3f", allocs)),\"nonfinite_frames\":\(nonfinite),\"parity_frames\":\(min(nIn, total)),\"parity_max_abs\":\(String(format: "%.3e", maxAbs)),\"parity_worst_frame\":\(worst),\"parity_snr_db\":\(String(format: "%.2f", snr))}")
+    print("{\"model\":\"gtcrn\",\"backend\":\"\(backend)\",\"artifact\":\"\(URL(fileURLWithPath: a[0]).lastPathComponent)\",\"frames\":\(frames),\"warmup\":\(warmup),\"p50_ms\":\(f4(pct(times, 0.5))),\"p99_ms\":\(f4(pct(times, 0.99))),\"p999_ms\":\(f4(pct(times, 0.999))),\"max_ms\":\(f4(times.last!)),\"mean_ms\":\(f4(mean)),\"compile_ms\":\(String(format: "%.2f", compileMs)),\"open_ms\":\(String(format: "%.2f", openMs)),\"first_frame_ms\":\(String(format: "%.3f", firstMs)),\"cpu_over_wall\":\(String(format: "%.3f", cpu / wall)),\"process_allocs_per_frame\":\(String(format: "%.3f", allocs)),\"nonfinite_frames\":\(nonfinite),\"parity_frames\":\(min(parityN, nIn, total)),\"parity_max_abs\":\(String(format: "%.3e", maxAbs)),\"parity_worst_frame\":\(worst),\"parity_snr_db\":\(String(format: "%.2f", snr)),\"parity_first_bad\":\"\(firstBad)\"}")
 }
 
 let argv = Array(CommandLine.arguments.dropFirst())
