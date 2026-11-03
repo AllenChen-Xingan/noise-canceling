@@ -416,6 +416,36 @@ fn ftz_wraps_stages_but_not_inference() {
     );
 }
 
+/// 调用方线程自己开着 FTZ（宿主、外层守卫）时，推理仍在 FTZ 关着时跑，返回后调用方的状态原样恢复。
+#[test]
+fn inference_runs_without_ftz_even_if_caller_enabled_it() {
+    let (m_on, m_calls) = (
+        Arc::new(AtomicBool::new(false)),
+        Arc::new(AtomicU64::new(0)),
+    );
+    let model = FtzSpyModel {
+        seen_on: m_on.clone(),
+        calls: m_calls.clone(),
+    };
+    let mut p = Pipeline::new(Engine::new(model, SafetyConfig::default()), SR).unwrap();
+    let x = signal(10 * HOP_IO, 0.0);
+    let mut y = vec![0.0f32; x.len()];
+    {
+        let _caller = vdn_dsp::FtzGuard::new();
+        p.process(&x, &mut y);
+        assert_eq!(
+            vdn_dsp::ftz::active(),
+            vdn_dsp::ftz::SUPPORTED,
+            "调用方的 FTZ 应原样恢复"
+        );
+    }
+    assert_eq!(m_calls.load(Ordering::Relaxed), 10);
+    assert!(
+        !m_on.load(Ordering::Relaxed),
+        "调用方开着 FTZ 时推理跟着开了（违反 R9）"
+    );
+}
+
 #[cfg(debug_assertions)]
 #[test]
 fn staged_pipeline_with_faults_does_not_allocate() {

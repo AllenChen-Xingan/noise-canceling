@@ -307,7 +307,11 @@ impl<M: Model> Engine<M> {
         self.delay.process(input, &mut self.dry);
 
         let t0 = Instant::now();
-        let res = self.model.process(input, &mut self.wet);
+        let res = {
+            // 推理一律在 FTZ 关着时跑（R9）：调用方线程自己开着 FTZ 也不跟着开（DeepFilterNet #713）
+            let _no_ftz = vdn_dsp::FtzGuard::off();
+            self.model.process(input, &mut self.wet)
+        };
         self.last_model_time = t0.elapsed();
 
         let fault = self.classify(res.is_err());

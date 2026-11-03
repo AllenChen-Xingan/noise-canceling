@@ -17,7 +17,10 @@ use core::marker::PhantomData;
 /// 本平台能否真的开 FTZ（false 时守卫是空操作）。
 pub const SUPPORTED: bool = imp::SUPPORTED;
 
-/// 进作用域开 FTZ / DAZ，出作用域恢复进来前的状态（可嵌套）。只作用于当前线程，所以不能跨线程送（`!Send`）。
+/// 进作用域开（`new`）或关（`off`）FTZ / DAZ，出作用域把这几位恢复成进来前的样子（可嵌套）。
+/// 只作用于当前线程，所以不能跨线程送（`!Send`）。
+///
+/// 嵌套时必须按后进先出的顺序释放，不得 `mem::forget`：否则出作用域后 FTZ 可能停在开着的状态。
 #[must_use = "守卫一 drop 就恢复，绑到一个变量上：let _ftz = FtzGuard::new();"]
 pub struct FtzGuard {
     prev: imp::Reg,
@@ -43,6 +46,21 @@ impl FtzGuard {
             _thread_bound: PhantomData,
         }
     }
+
+    /// 关 FTZ（反向守卫）。包住推理调用（R9）：调用方线程自己可能已开着 FTZ（宿主、别的守卫），推理不能跟着开。
+    /// 已经关着时只读一次寄存器、不写。
+    #[inline]
+    pub fn off() -> Self {
+        let prev = imp::read();
+        let want = prev & !imp::MASK;
+        if want != prev {
+            imp::write(want);
+        }
+        Self {
+            prev,
+            _thread_bound: PhantomData,
+        }
+    }
 }
 
 impl Default for FtzGuard {
@@ -54,8 +72,11 @@ impl Default for FtzGuard {
 impl Drop for FtzGuard {
     #[inline]
     fn drop(&mut self) {
-        if imp::read() != self.prev {
-            imp::write(self.prev);
+        // 只恢复 FTZ / DAZ 这几位，其余位（舍入模式等）保持当前值
+        let cur = imp::read();
+        let want = (cur & !imp::MASK) | (self.prev & imp::MASK);
+        if want != cur {
+            imp::write(want);
         }
     }
 }
@@ -85,8 +106,9 @@ mod imp {
 
     #[inline]
     pub fn write(v: Reg) {
-        // SAFETY: 写 FPCR 只改当前线程的浮点模式；v 来自 read() 的值或只多置了 FZ 位，其余位原样写回。
-        // 不给 nomem：让编译器把它当作有内存副作用，不把前后的缓冲读写挪过它
+        // SAFETY: 写 FPCR 只改当前线程的浮点模式；v 来自 read() 的值，只改了 FZ 位，其余位原样写回。
+        // 不给 nomem：让编译器把它当作有内存副作用，不把前后的缓冲读写和不透明调用挪过它。
+        // LLVM 假设默认浮点环境：只在寄存器里的浮点运算理论上可能被挪过 asm、常量折叠也不受影响——后果只是数值不同，不涉及内存安全
         unsafe {
             core::arch::asm!("msr fpcr, {}", in(reg) v, options(nostack, preserves_flags));
         }
@@ -112,7 +134,8 @@ mod imp {
 
     #[inline]
     pub fn write(v: Reg) {
-        // SAFETY: ldmxcsr 从 v 读 MXCSR；v 来自 read() 的值或只多置了 FTZ/DAZ 位，保留位原样，不会触发 #GP
+        // SAFETY: ldmxcsr 从 v 读 MXCSR；v 来自 read() 的值，只改了 FTZ/DAZ 位，保留位原样，不会触发 #GP。
+        // 同 aarch64：浮点运算相对 asm 的位置只影响数值，不涉及内存安全
         unsafe {
             core::arch::asm!("ldmxcsr [{}]", in(reg) &raw const v, options(nostack, readonly, preserves_flags));
         }
@@ -170,6 +193,19 @@ mod tests {
         }
         // 内层恢复到「外层已开」的状态，不是关掉
         assert_eq!(active(), SUPPORTED);
+        drop(outer);
+        assert!(!active());
+    }
+
+    #[test]
+    fn off_guard_clears_inside_and_restores() {
+        let outer = FtzGuard::new();
+        {
+            let _off = FtzGuard::off();
+            assert!(!active());
+            assert!(subnormal().is_subnormal(), "反向守卫内不冲");
+        }
+        assert_eq!(active(), SUPPORTED, "出反向守卫应恢复成开着");
         drop(outer);
         assert!(!active());
     }
