@@ -38,7 +38,7 @@ impl WaitResult { fn available(self) -> usize; fn is_ready(self) -> bool }
 
 pub enum WaitStrategy { Wake /* 默认 */, Poll(Duration) }
 pub fn Bus::set_wait_strategy(&mut self, s: WaitStrategy);
-pub fn Bus::wake_supported() -> bool;       // 本机能否用唤醒（macOS 14.4+）
+pub fn Bus::wake_supported() -> bool;       // 本构建有没有唤醒（macOS + feature posix 为 true）
 pub const FALLBACK_POLL: Duration;          // 200 µs
 ```
 
@@ -46,7 +46,7 @@ pub const FALLBACK_POLL: Duration;          // 200 µs
 - 数据够 `min_available` 立刻返回 `Ready`；不够就睡，生产方 `notify` 一下就醒；被叫醒但数据仍不够会接着睡
 - 一定在 `timeout` 后不久返回（生产方崩了也只是 `TimedOut`）；`timeout = 0` 只看一眼
 - `min_available` 大于容量按容量算
-- 系统低于 14.4 或调用出错：自动改 200 µs 轮询，`wait_fallbacks` 加 1。系统函数是运行期 `dlsym` 找的，所以在 14.2 上程序照样能启动
+- 最低系统 macOS 14.4（人定 D67），系统函数直接链接；系统调用返回不可恢复的错时，自动改 200 µs 轮询，`wait_fallbacks` 加 1。Linux / Miri / loom 下没有唤醒，一律轮询
 - **配对要求**：生产方每次 push（或一批 push）之后必须调 `notify(同一个环)`，否则消费方只能等到超时
 
 ### 接线建议（rs-entry）

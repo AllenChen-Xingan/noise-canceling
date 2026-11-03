@@ -33,6 +33,12 @@
 ## 新增依赖
 - 无新外部依赖（libc 已有）。vdn-shm 加 dev-dependency `vdn-rt-thread`（只给实验程序提优先级；check-deps 只看普通依赖，过）
 
+## 流水（续）
+- 2026-11-02 名额 ①：对照实验（结果见下节）；名额已还
+- 2026-11-02 名额 ②：cargo-deny 0.20.2 装到 `~/.cargo/bin`；`cargo deny check` 通过（advisories · bans · licenses · sources ok）。警告只剩重复版本：thiserror / thiserror-impl / syn / jni-sys 各两个版本，都经 cpal 进来（不处理，大总管定）。按大总管：删掉 deny.toml 里没用到的 4 个许可（GPL-3.0 · CC0-1.0 · BSL-1.0 · MPL-2.0）与 1 个例外（assert_no_alloc），复跑仍通过。`xtask ci`：没装 cargo-deny 改为失败；ci.yml 的 Linux job 先用 `taiki-e/install-action` 装它
+- 2026-11-02 名额 ③：loom（release，`LOOM_MAX_PREEMPTIONS=3`）2 项过，2.5 s；debug 不设上限跑 5 分钟没跑完，已停。反向验证：快照读序对调后 loom 报「唤醒丢了」，改回通过（实测）。Miri（nightly 2026-11-01）：进程内测试全过、无未定义行为报告；no_alloc 一项 Miri 下 352 s。Miri 暴露并修了两处：会话 ID 取系统时间（Miri 下不取）· 锁步测试的计时上限（Miri 下不查）
+- 2026-11-02 D67：`wake.rs` 改为直接调 libc 的 `os_sync_*`；测试钩子改为 `force_wake_error_for_test`（模拟系统调用出错）。注意：本仓没设 `MACOSX_DEPLOYMENT_TARGET`，Rust 默认 11.0；低于 14.4 的系统上程序会因找不到符号而启动失败（符合 D67），要不要在 `.cargo/config.toml` 里写死 14.4 由大总管定（不是我的文件）
+
 ## 对照实验：跨进程唤醒 vs 周期轮询（实测，2026-11-02）
 
 **测量条件**：本机 macOS 27.0.1，10 核（4 性能核 + 6 能效核）；release；`./target/release/examples/wake_bench all 10`（`src/shm/examples/wake_bench.rs`）。
@@ -64,7 +70,4 @@
 - 都在 1 ms 以内：按 009 待人拍板 1 的规则（「差不到 1 ms、耗电差不明显就选 B」）应选 B。但本实现在运行期找系统函数：14.4 以上自动用唤醒，14.2–14.3 自动退回 200 µs 轮询，所以**不提最低系统版本也能在新系统上拿到唤醒**
 
 ## 待人拍板
-| 题 | 选项 | 你能感知的后果 | 建议 | 不回的默认 |
-|---|---|---|---|---|
-| 最低系统版本要不要从 macOS 14.2 提到 14.4（009 待人拍板 1） | A 提到 14.4 · B 留在 14.2 | A：14.2–14.3 的用户装不上。B：这些用户的降噪进程用 200 µs 轮询，对方晚约 0.1 ms 听到你（实测中位数差），降噪进程 CPU 多约 1 个百分点；14.4 以上的用户不受影响 | **B**：差距远小于 1 ms，且新系统自动用唤醒 | B |
-
+- （已定）最低系统 14.2 → 14.4：人定 D67（2026-11-02）。已改：系统函数直接链接，去掉按版本退回；只留系统调用出错时的轮询兜底

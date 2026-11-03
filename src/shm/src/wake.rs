@@ -112,7 +112,7 @@ mod imp {
     }
 }
 
-// 非 macOS、关了 feature posix（没有 libc）、Miri / loom 下（不能调 dlsym / 系统调用）：一律「不支持」，wait 走轮询
+// 非 macOS、关了 feature posix（没有 libc）、Miri / loom 下（没有这两个系统调用）：一律「不支持」，wait 走轮询
 #[cfg(not(all(
     target_os = "macos",
     feature = "posix",
