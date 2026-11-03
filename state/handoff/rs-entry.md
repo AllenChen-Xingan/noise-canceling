@@ -1,0 +1,227 @@
+# 现状页 · 手下 rs-entry（批次 20261102-b8-rust）
+
+> 大总管：`noise-canceling-47`。交代：`../noise_canceling-skeleton/_tmp/20261102-b8-rust/rs-entry.md`。
+> 管的实体：`vdn-control` · `vdn-capture` · `vdn-denoised` · `vdn-cli`（可执行 `vdn`）
+
+## 已收尾（2026-11-02 18:07；打回的不稳定测试已修、压力下 5 次验收过；D68 调度接线完成）
+
+一句话：链路骨架从控制 · 两个进程 · 命令行到链路测试全部接通，V1–V4 · V7 机器判过，V5 待人。
+
+**最终设置**（正本 `vdn_control::Config`）：IO 块 96 · 降噪块 96 · lead 192（D68：低频运行，V7 过线值；人定不追提频，这就是定值）· 心跳超时 100 ms · 降噪总线 `/vdn-bus` · Out 总线 `/vdn-out`
+
+| # | 判据 | 结果（最终设置；V1–V4 debug，V7 release） |
+|---|---|---|
+| V1 | 直通逐样本对齐（含欠载 = 0） | **过**：相关 1.000000 · 实测延迟 960 = L_total（Pipeline 768 + lead 192 = 20.00 ms）· 虚拟麦欠载 0 · 处理后欠载 0 |
+| V2 | 降噪死掉仍出声 | **过**：102.0 ms 切原声（线 ≤ 150）· 最长静音 0 ms；GTCRN 下同样 102.0 ms |
+| V3 | 真模型出声 | **过**：均方根 0.2005 · 非有限 0 · 长度 240000 / 240000；GTCRN L_total 1728（36.00 ms）。⚠️ debug 构建下这次有处理后欠载 5280 样本（推理块最长 5.3 ms，用延迟原声补上）——延迟以 V7 的 release 结果为准 |
+| V4 | 两个真进程 | **过**：相关 1.000000 · 实测延迟 960 · 读出欠载 0；另三种起停顺序（送音先起 · SIGKILL 后重启）全段相关 1.000000、静音 0 |
+| V5 | 真麦克风（人判） | **待人做**，步骤见「V5 人工步骤」 |
+| V7 | 延迟（release，10 次 × 10 s，空闲 + 压力） | **过（压线）**：lead 192 空闲 0/10、压力 0/10 欠载，GTCRN L_total 36.00 ms；144 空闲 10/10 有欠载。卡点：空闲时推理块约 2.9 ms（压力 0.6 ms）。明细 `docs/experiments/exp-v7-latency/` |
+
+测试：`cargo test -p vdn-control -p vdn-capture -p vdn-denoised -p vdn-cli` 58 过、2 忽略（V5、真实节拍版）；4 个忙进程并跑下连跑 5 次全过（57 条时）· clippy 0 警告 · fmt · `xtask tidy` · `xtask check-deps` 通过【测】
+
+- V3 用的权重：`../noise_canceling/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx`（sha256 前缀 `b4718df6228e7bdf`；本工作区 `resources/` 里没有）
+- V4 命令（最终设置）：
+  ```
+  ./target/debug/vdn-denoised --passthrough --bus /vdn-fin --seconds 8 &
+  ./target/debug/vdn-capture --source sine --sink file _tmp/20261102-rs-entry-v4/fin.wav --bus /vdn-fin --out-bus /vdn-fin-out --seconds 5
+  ./target/debug/vdn chain-check _tmp/20261102-rs-entry-v4/fin.wav --l-total 960
+  ```
+
+## 延迟修复 · V7 基线（2026-11-02，release，降噪仍是 0.5 ms 轮询、未接唤醒）
+
+做了什么：IO 块默认 480 → 96（A）· 降噪进程启动预热 64 块 + 每块耗时计数（C）· 全部在 release 下量（D）· chain-test 三个线程提 time-constraint 优先级 · `vdn v7` 子命令（N 次 × T 秒，空闲 + 压力两组，可扫 lead）
+
+| lead | 组 | 有欠载的次数 | 处理后欠载合计 | 虚拟麦欠载 | 单块最长（中位 / 最大） | 平均每块 |
+|---|---|---|---|---|---|---|
+| 96（2 ms） | 空闲 | 10 / 10 | 222 432 样本 | 0 | 3.09 / 3.29 ms | 0.18 ms |
+| 96 | 压力（7 个忙线程） | 1 / 10 | 864 | 0 | 1.43 / 2.17 ms | 0.10 ms |
+| 144（3 ms） | 空闲 | 10 / 10 | 100 368 | 0 | 2.97 / 3.10 ms | 0.17 ms |
+| 144 | 压力 | 0 / 10 | 0 | 0 | 0.64 / 0.81 ms | 0.05 ms |
+
+- 正式跑 10 次 × 10 s；开始时 1 分钟负载 10.68（核数 10，有外部负载），结束 7.88
+- 空闲加扫（3 次 × 10 s，负载 6.66 → 2.97）：lead 192 / 240 / 288 / 384 全部无欠载。只有 3 次，不作 V7 结论
+- 更早的粗扫（3 次 × 5 s，负载 8.99 → 12.53）：96–480 全部无欠载——负载高时 CPU 频率高，反而干净
+- **结论（实测）**：V7 不过。最小无欠载 lead：空闲下约 192（4 ms，3 次），压力下 144（10 次）
+- **卡在哪（推断，未核实）**：空闲时每块处理慢约 2–3 倍（平均 0.18 vs 0.05 ms，推理那块 3.1 vs 0.8 ms），像是 CPU 降频或降噪线程落到能效核。对应审查清单第 5 条（推理线程没加入 Audio Workgroup、不提核心频率），归 vdn-rt-thread。轮询和余量不是主因
+- 结果文件（不入库）：`_tmp/20261102-rs-entry-v7/{sweep-poll,v7-poll,idle-sweep-poll}.{json,txt}`
+- 复测命令：`./target/release/vdn v7 --model-path <gtcrn_simple.onnx> --leads 96,144,192 --runs 10 --seconds 10 --json <路径>`
+
+## 延迟修复 · 接线（2026-11-02，唤醒合入之后）
+
+清单用途：每条写「做了什么 → 怎么证明」。
+
+- **唤醒（B，rs-wake 的接口）**：送音端推完 Raw 就 `notify`；降噪进程 / chain-test / `vdn run` 改 `bus.wait(Raw, 降噪块, 20 ms)`，删掉 0.5 ms 轮询 → 本机「唤醒 可用 · 退回轮询 0 次」【测】
+- **OwnedBus**：改用 `vdn_shm::OwnedBus`，denoised 里那份已删（同一段代码只留一份）
+- **Out 总线拆分**：送音端自己建 `/vdn-out`（`Config.out_bus_name`）；插件 / 扬声器 / 文件都按名字连它。没有降噪总线就送延迟原声、后台 100 ms 重试；会话 ID 变了就换 → 两进程三种起停顺序（降噪先起 · 送音先起 2 s 后才起降噪 · 第 3 s SIGKILL 再起新的）文件全段相关 1.000000、延迟 1056、读出欠载 0、静音 0【测，debug】
+- **降噪落后时跳过 Raw 积压**：可读量 > lead + 2 块就丢旧的只留一块（`Ring::discard`，O(1)），记 `note_gap`；在输出流「现在 + L_pipe」处推等长零占位，账不错位 → 单测：降噪停 100 块后恢复，不静音、跳变 < 0.13、0.2 s 内回到处理后的并逐样本对齐【测】
+
+### 已修（大总管指出的两条规约红线，2026-11-02）
+1. **音频线程不许 `try_lock`（§3.4）**：换总线改成 rtrb 交接（`vdn_capture::feeder`）：监视线程建好新总线 → 交接队列 → 音频线程在块边界接手 → 旧对象经回收队列送回监视线程释放；回收队列满就留在本地槽位、这块不接新的 → 单测 2 条（交接 / 回收满）；新增文本检查测试 `src/capture/tests/realtime_rules.rs`：capture 全部源文件没有 `Mutex` · `RwLock` · `Condvar` · `try_lock` · `.lock(` · `parking_lot` · `mpsc`
+2. **不在声音里用 NaN 做记号**：跳过积压的占位改成零，告知走带外（Raw 环缺口计数）；送音端看到缺口计数涨了，就把接下来 L_total + 2 块当心跳过期（淡到原声、回滞后淡回），零占位不会播出。另加防御：处理后的样本不是有限值就当没有（计数 `nonfinite`，单测里 = 0）
+
+### 新增的第二处表示及其校验（CLAUDE.md 第五节第 5 条）
+| 第二处 | 正本 | 校验 |
+|---|---|---|
+| `vdn_control::validate_bus_name`（配置文件早报错） | vdn-shm 的名字规则（`Bus::open` 报 `InvalidName`） | 单测 `bus_name_rule_matches_vdn_shm`（12 个样例逐个比对） |
+| 总线头里的 lead · 降噪块长 · L_total · 采样率 | `vdn_control::Config`（lead）+ `Worker`（管线延迟、块长）；只经 `vdn_denoised::denoise_bus_config` 写 | 单测 `io_rate_single_source`（写进去 = 读回来）；chain-test 每次运行比对送音端读回的 lead / 降噪块长，不一致报错 |
+| chain-test 的采样率常量 | `vdn_control::IO_RATE` | 直接引用（`const RATE = vdn_control::IO_RATE`），不再手写 48000 |
+| 非有限值检查：Pipeline 一处（rs-core2）+ 送音端 `Forwarder` 一处 | — | **有意为之**：跨进程来的数据算不可信输入，送音端兜底（大总管定）；下一件大事统一 |
+| `vdn_control::Mode` ↔ `vdn_engine::Mode` | vdn-engine | 只经 `vdn_denoised::engine_mode` 翻译（穷举 match，引擎加模式时编译即红）；单测 |
+| 送音端「没有降噪总线时」的延迟线长度 | 不设第二处：取配置里的 lead（不手抄管线延迟）；接上后改用总线头的 L_total | —（代价：第一次接上降噪进程时延迟跳一次） |
+
+## 审查清单三条（大总管加派，2026-11-02）
+
+- **第 2 条 纠漂移**：漂移其实发生在 **Out 环**（麦克风时钟 vs 插件 / 扬声器时钟）；Processed 不会漂（降噪进程没有自己的时钟，一个原声出一个处理后的）。两头各管一边：读方 `OutSource::with_drift(目标, 块)`：读完剩下的积压连续 25 次超过「目标 + 2 块」就丢到目标；写方 `Feeder`：推完后积压连续 25 块不到 2 块就把刚推的块再推一次。两种都记 Out 环缺口。已接到扬声器、文件出口和 chain-test 的虚拟麦
+  - 单测（模拟 60 s，时钟差 ±0.1%）【测】：麦克风快 → 10–60 s 最大积压 480 样本（= 目标 + 3 块）、缺口 2592、读方欠载 0；读方快 → 最大积压 96、补块 29 次、缺口 2784、欠载 0。不纠时 60 s 会漂 ±2880 样本（60 ms）
+  - 代价：每次纠是丢 / 重复一段（≤ 几块），没做淡化（未量化听感）
+- **第 7 条 运行中切直通 / 降噪**：控制线程 → rtrb → 降噪线程（`vdn_denoised::command_channel`，`Worker::apply_commands` 块之间执行，`Cmd` 是 vdn-control 的小 Copy 枚举）。vdn-denoised 读标准输入的 `passthrough` / `denoise` / `quit`；chain-test 加 `--switch-mode-at <秒>`
+  - 实测（GTCRN，debug，第 2 s 切直通）【测】：处理后欠载 0、虚拟麦欠载 0、静音 0；切换后那段和输入延迟 L_total 的相关 1.000000（全段 0.906，前 2 s 是降噪后的）
+  - 新依赖 rtrb 0.4.1（MIT OR Apache-2.0，与 GPL-3.0 兼容，无传递依赖）
+- **第 8 条 capture 库去掉 hound / clap**：设备库 · 实时优先级 · clap · hound 改成 `bin` feature（默认开、bin 必需）；用库的一方 `default-features = false`（根 Cargo.toml）→ `cargo tree -p vdn-capture --no-default-features` 普通依赖只剩 rtrb · vdn-control · vdn-dsp · vdn-hal · vdn-shm，闭包里没有 hound / clap / cpal【测】
+
+## 打回修（大总管验收，2026-11-02）：不稳定测试
+- **现象**：并行跑四个 crate 的测试时 `chain::v1_short` · `chain::mode_switch_mid_run` 偶尔不过（单独跑都过）。原因：它们按真实节拍（三线程 + sleep）跑，抢不到 CPU 就欠载，被「V1 含欠载 = 0」判不过——测试本身不稳定，不是链路坏了
+- **改法（选的是「锁步模拟」+「真实节拍标 #[ignore]」，没用 static 锁）**：
+  - 新 `chain::run_lockstep`：和 `run` 共用同一段搭建（`setup`：Worker 预热 · 两条总线 · 交叉校验 · prime）和同一套 Forwarder / Worker / HalSource / 命令通道，单线程逐块推进（送音推一块 → 降噪处理完 → 虚拟麦取一块），不 sleep、不读真实时钟，结果确定
+  - 单元测试全改用它，并改回真默认值（IO 块 96 · lead 192）：`v1_short` · `v2_short` · `mode_switch_mid_run` · `bus_unlinked_after_run` · `busy_bus_name_is_refused_without_deleting` · `chain_refuses_lead_below_io_block`
+  - 真实节拍只留一条 `realtime_v1_v2`，`#[ignore]`，串行人工跑：`cargo test -p vdn-cli -- --ignored realtime_ --test-threads=1`
+  - **为什么不用 static 锁串行**：锁只能让同一个测试二进制里的测试排队；机器上别的进程照样抢 CPU（验收条件本身就是并跑 4 个 `yes`），真实节拍的测试还是会时红时绿。真实节拍是 `vdn chain-test` 和 V7 该判的事
+- **验收（2026-11-02 18:05）**：4 个 `yes > /dev/null` 并跑，四个 crate 测试连跑 5 次，每次 **57 过 · 0 失败 · 2 忽略**（V5、`realtime_v1_v2`），退出码都是 0；负载 5.32 → 5.58（10 核）。编译、clippy 0 警告【测】。输出 `_tmp/20261102-rs-entry-flaky/run{1..5}.txt`
+- 同批顺带加的（D68 调度接线里不依赖合并的部分）：预热量每周期总耗时 p99.9 · 醒来迟到（Raw 积压，附 ms）· 超周期次数 · 每秒读回调度策略、降级计数；测试 `warmup_measures_per_period_work` `overrun_and_backlog_counters` `rt_check_counts_downgrades`。**已接（合入 62d78ab 后）**：降噪线程（vdn-denoised · chain-test · vdn run）按 `ThreadPolicy::default()` 提升，参数 `vdn_denoised::denoise_rt_params` = `from_measured(16 ms, 预热每周期 p99.9, MEASURED_MARGIN)`；送音端的 IO 线程仍按块长（不是降噪线程）。实测启动日志：period 16.000 ms · computation 2.436 ms（p99.9 1.624 ms × 1.5）；V1 过（醒来时 Raw 最多积 96 样本 = 2.00 ms、超周期 0 次、调度读回 6 次降级 0）· V2 过（102 ms）。测试 `denoise_rt_params_use_period_and_measured_window`
+
+## 已定（大总管，2026-11-02）
+- **lead 硬下限 = 一块 IO**（正本 `vdn_control::check_lead`；Config 校验 · chain-test 开跑前 · 送音端读总线头三处调用）。理由：送音端同一回调里取走一块时，降噪端恰好有一整个 IO 周期处理上一块；降噪块长已经在 `Pipeline::with_block` 的延迟里算过。再往上的余量由 V7 实测定。测试：`lead_below_one_io_block_is_rejected` · `chain_refuses_lead_below_io_block`
+- **V1 判据含欠载**：相关 ≥ 0.999 且虚拟麦欠载 = 0 且处理后欠载 = 0（直通时欠载被延迟原声补上，相关看不出来）。测试：`v1_fails_on_underrun_even_with_perfect_correlation`
+
+## 本次新增的测试（CLAUDE.md 第五节第 6 条：每个功能、每次修复都带测试）
+
+清单用途：功能 → 证明它的测试（`cargo test -p vdn-control -p vdn-capture -p vdn-denoised -p vdn-cli`：54 过、1 忽略）。
+
+| 功能 / 修复 | 测试（crate · 名字） |
+|---|---|
+| Forwarder 对齐账（慢 / 卡 / 死 / 恢复 / Raw 溢出 / 积压封顶） | capture · `steady_state_aligned_and_fresh` `slow_denoiser_keeps_alignment` `denoiser_dies_switches_to_raw_within_timeout_without_gap` `recovers_and_fades_back` `raw_overflow_keeps_alignment` `backlog_is_capped` |
+| 切换连续（硬切 + 接缝 + 回滞）· 重新对账不跳 · 降噪太慢计数 | capture · `switching_is_continuous_when_denoiser_dies` `switching_is_continuous_on_stalls_and_recovery` `resync_does_not_jump` `slow_denoiser_is_reported` |
+| 缺口计数 → 送一个窗口原声（带外，无 NaN 记号） | capture · `gap_counter_holds_raw_for_one_window`；denoised · `skip_backlog_keeps_alignment_without_silence`（降噪端零占位 + 送音端窗口，端到端） |
+| 非有限值兜底 | capture · `nonfinite_processed_never_reaches_output`（NaN / ±∞ 各一个，计 3、输出全有限） |
+| 换总线交接（rtrb，不锁、不在音频线程 drop） | capture · `handover_and_retire_without_dropping_in_audio_thread` `retire_queue_full_keeps_old_objects_locally`；`tests/realtime_rules.rs`（源文件无锁字样） |
+| Out 总线重连（送音先起 / 重启换新会话 / 卡住不换 / 交接队列满） | capture · `supervisor::connects_when_denoiser_appears` `switches_to_new_session_after_restart` `same_session_hung_is_not_switched` `queue_full_is_retried`（真 POSIX 共享内存） |
+| `Forwarder::rebind`（换总线原声不断、不静音） | capture · `rebind_to_new_bus_keeps_raw_continuous_and_realigns` |
+| Out 积压封顶 · 纠漂移 ±0.1% × 60 s | capture · `out_backlog_is_capped` · `drift_is_corrected_both_ways` |
+| 实时路径不分配（Forwarder + Worker + notify） | capture · `process_into_does_not_allocate`；denoised · `realtime_paths_do_not_allocate` |
+| rtrb 切模式 | denoised · `mode_switch_over_rtrb_is_applied_between_blocks`；cli · `chain::mode_switch_mid_run`（整条链路，命令执行 1 次、欠载 0、V1 过） |
+| OwnedBus 接入（拒绝同名、不删别人；两条总线都删） | cli · `chain::busy_bus_name_is_refused_without_deleting` `chain::bus_unlinked_after_run` |
+| 预热不影响对齐 · 定块长管线延迟 | denoised · `worker_and_forwarder_align_end_to_end`（含 warm_up）`identity_pipeline_latency` |
+| 交叉校验（总线名规则 · 采样率 / lead / 降噪块长） | denoised · `bus_name_rule_matches_vdn_shm` `io_rate_single_source` |
+| 配置校验（out_bus_name 不能同名 / 不合规 · 秒数） | control · `ranges_checked` `seconds_parser` |
+| V1 / V2 短版（真共享内存三线程） | cli · `chain::v1_short` `chain::v2_short` |
+| **V5 真麦克风（人判）** | cli · `live::v5_live_passthrough`，`#[ignore]`；人工跑：戴耳机，`cargo test -p vdn-cli -- --ignored v5_live_passthrough --nocapture` |
+
+修 bug 时先写会红的测试的几处：`raw_overflow_keeps_alignment`（第一版单个净账错位，先红后绿）· `resync_does_not_jump`（留两块直接播，先红）· 自审复测发现的「新总线占位零被淡入」→ `rebind_..._realigns` 里的静音断言 · `mode_switch_mid_run` 揪出测试工具里 lead 小于 IO 块的配错
+
+没有自动测试的（只有实测记录）：两进程起停三种顺序（要起两个 bin，`cargo test` 里拿不到另一个包的可执行文件；判断逻辑已挪进 `Supervisor` 单测）· `vdn v7` 测量工具本身
+
+## V5 人工步骤（给大总管转人）
+
+⚠️ 这一步会开麦克风、从扬声器出声。**请戴耳机**：用外放时麦克风会收到扬声器的声音，可能啸叫。
+
+1. 在仓库根目录跑 `./target/debug/vdn devices`（只列设备，不开麦、不弹框），确认默认输入、输出设备是你想用的
+2. 戴上耳机，跑 `./target/debug/vdn run --passthrough --seconds 5`（同一件事也写成了测试：`cargo test -p vdn-cli -- --ignored v5_live_passthrough --nocapture`）
+3. 第一次跑时 macOS 会弹「终端想使用麦克风」，请点「允许」（点了之后要重跑第 2 步）
+4. 5 秒内对着麦克风说话
+
+**算过**：耳机里听到自己的声音，比嘴上晚一点点（`vdn run` 用任意块长管线：链路内 L_total = 863 + 192 = 1055 样本 ≈ 22 ms，另加设备缓冲），没有断续、没有爆音。
+**算不过**：没声音、断断续续、有咔哒声或啸叫。结束时终端会打印「输出欠载 N 样本」，请把那一行发回来。
+
+## 自审（2026-11-02，三个对抗视角的子代理；报告副本在 `_tmp/20261102-rs-entry-review/`，不入库）
+
+清单用途：每条写「问题 → 怎么处理 → 怎么证明」。
+
+| 视角 | 级别 | 问题 | 处理 | 证明【测】 |
+|---|---|---|---|---|
+| 故障 | P0 | 降噪进程重启后送音端不重连（插件若按名字开总线 → 静音） | 送音端监视循环：心跳停 ≥ 1 s 且同名能开到心跳不同的总线 → 换过去；正弦路径 `Forwarder::rebind` 保留延迟线，原声不断；麦克风 / 扬声器流重开（有一小段断，未量化） | 两进程：第 3 s SIGKILL 降噪 A，第 4.5 s 起 B；10 s 文件全段相关 1.000000、静音 0 ms、欠载 0 |
+| 故障 | P1 | 处理后 ↔ 原声 全是 1 样本内硬切 | 缺样本时硬切 + 接缝偏移（规约 R11）；回滞：连续 `fade` 个准时样本才淡回 | 新单测（假降噪 = 0.1 × 原声）：死掉 / 卡 50 ms / 断续停 三种场景相邻样本跳变 < 0.13 |
+| 故障 | P1 | 长期偏慢时一直送原声、计数看不出 | 新计数 `slow_episodes`（心跳在动但连续缺 > 超时） | 单测：吞吐 2/3 时 `slow_episodes ≥ 1`、`stale_switches = 0` |
+| 故障 | P2 | 重新对账后留下的两块直接满权重播 | 全丢 + 强制硬切 + 回滞淡回 | 单测 `resync_does_not_jump` |
+| 故障 | P2 | Out 环没有积压上限 | `OutSource` 读前丢掉超过 200 ms 的旧积压，计数 | 单测 `out_backlog_is_capped` |
+| 故障 | — | （复测发现）新总线开头的占位零被当成声音淡入 → 重接时 25 ms 静音 | 推进序号 < 0 的处理后样本标成占位，照用原声 | 同上两进程测试静音 0 ms |
+| 残留 | P1 ×2 | 同名第二个建方会删掉别人在用的总线（启动时 / 退出时） | `OwnedBus`：每个名字一把文件锁（`File::try_lock`，SIGKILL 也放锁），拿到锁才清残留、才建；Drop 删名字一次 | 同名起两个：第二个报「正被占用」退出码 1，第一个仍可接；单测 2 条 |
+| 残留 | P2 | SIGTERM / SIGHUP 不删名字 | ctrlc 开 `termination`；先装处理再建总线 | `kill -TERM` 后总线已删 |
+| 残留 | P2 | `--seconds -1` 等在建总线后 panic | `vdn_control::parse_seconds`（有限、0–1e6），所有秒数参数都走它 | 单测 |
+| 残留 | P2 | chain-test 被 Ctrl-C 打断后名字永远残留（带 pid） | 默认名固定 `/vdn-chaintest`，下次拿到锁时清掉 | — |
+| 规则 | P1 | tidy 红：两个 bin 里有 sleep | bin 整文件标 NRT（理由写在 allow 里）；`OwnedBus` 挪进 NRT 模块 | `xtask tidy` 通过 |
+| 规则 | P2 | bin 根没有 panic 类 deny | 两个 `main.rs` 加同样的 `cfg_attr(not(test), deny(...))` | clippy 0 警告 |
+| 规则 | P2 | 丢弃迟到样本逐个读 | `Pop::discard`，真环转调 O(1) 的 `Ring::discard` | — |
+| 规则 | P2 | 不分配测试只覆盖空环 | 新单测：真进程内总线 + 定块长管线，走 正常 → 降噪停（Raw 溢出、过期）→ 恢复 → 重新对账，Forwarder + Worker 都在 `assert_no_alloc` 里；先确认守卫会因 10 字节分配 abort | 通过 |
+| 规则 | P2 | `vdn run` 不查容量、不看 prime 返回值 | 加检查，块长 / 余量走 `Config::validate` | — |
+| 规则 | P3 | `copy_within` 靠不变式 · shm 适配没挂 deny · 正弦每块分配 · `IO_RATE` 三份 | 切片写法 · 挂 deny · `fill_tone` 就地写 · denoised 改 `pub use vdn_control::IO_RATE` | — |
+
+**没修、要大总管定的（涉及接口约定或别人的 crate）**：
+1. **Out 环放在降噪进程建的总线上**：降噪进程一重启，插件那头就换了总线。建议 Out 环改由送音端自己建一块共享内存，插件只连它（P0 的根因；本批靠送音端重接兜住）
+2. **降噪落后时不跳过 Raw 积压**：建议积压超 lead 就丢旧的、并在总线头记缺口（要改 vdn-shm 头布局）
+3. **总线头里没有 lead / 降噪块长 / 代号**：送音端没法校验「lead ≥ 送音块 + 降噪块」，换总线时只能靠「心跳不同」判断是另一条（两条心跳都是 0 的边角情况判不出）
+4. **麦克风流重接要重开设备**：会断一小段；要无缝得在回调里无锁换总线（ArcSwap 类，新依赖）
+5. tidy 只查 `lib.rs` 不查 `main.rs` 的 crate 根；cargo-deny 本机没跑过（xtask / CI，大总管的）
+6. 规约 §2.2 图里 `vdn-capture` 的依赖要补 `vdn-dsp` · `vdn-hal` · `clap` · `hound`（规约不归我改）
+
+**留着的小问题**：送音端等总线最多 10 s 就退出（没有总线就没有 Out 环可写，和第 1 条一起改）；心跳超时实际比配置多最多一块（V2 实测 110 ms，在 150 ms 线内）
+
+**负载影响（发现）**：机器 1 分钟负载 23.7 时跑的一次 V3（GTCRN）出现一次降噪停顿 > 100 ms（切原声 1 次、虚拟麦欠载 960 样本），负载降到 16 后重跑全 0。chain-test 的三个线程没提实时优先级，这一项在延迟修复里一起改
+
+## 改了哪些文件（相对批次起点 `1ab1261`，共 31 个文件，+8064 −5）
+- **新 crate**：`src/control/**`（`Config` · `Cmd` · `check_lead` · `parse_seconds`）· `src/capture/**`（lib：`lib.rs` Forwarder · `feeder.rs` rtrb 交接 · `supervisor.rs` 重连判断 · `shm.rs` 适配与 Out 总线 · `testing.rs`；bin `main.rs`；`tests/realtime_rules.rs`）· `src/denoised/**`（lib：Worker · 管线 / 总线配置 · 命令通道；bin `main.rs`）
+- **改**：`src/cli/src/main.rs`（devices · run · chain-test · chain-check · v7）· 新 `src/cli/src/{chain,live,verify}.rs` · `src/cli/Cargo.toml`（forbid 去掉 cpal，留注释）
+- **根 `Cargo.toml`**：members 加 control · capture · denoised；workspace 依赖加 `vdn-control` · `vdn-capture`（`default-features = false`）· `vdn-denoised` · `serde` · `ctrlc`（`termination`）· `rtrb`
+- **实验结果**（大总管批准写入）：`docs/experiments/exp-v7-latency/`（README + `results/20261102-poll-baseline/` 6 个 · `results/20261102-wake/` 3 个小文件，共约 100 KB，不含音频）
+- 现状页本文件
+
+## 新 crate 实体行（收尾时由大总管写进 `.42cog/cog.md`）
+- `vdn-control`：配置与控制消息的正本（`Config` · `Cmd` · lead 下限 · 秒数解析）· 人写配置文件、bin 读 · 是 `vdn-capture` / `vdn-denoised` / `vdn` 的输入
+- `vdn-capture`：送音进程（lib：`Forwarder` 对齐与送原声 · `Feeder` 音频线程入口 · `Supervisor` 重连 · Out 总线读写；bin）· 麦克风回调驱动 · 输入原声，经降噪总线取处理后的，输出到**自己建的 Out 总线**给虚拟麦克风
+- `vdn-denoised`：降噪进程（lib：`Worker` 处理与跳过积压 · 总线头配置 · 命令通道；bin）· **建降噪总线** · 输入 Raw 环，输出 Processed 环与心跳；依赖 `Pipeline`
+
+## 设计要点
+- 对齐账只用 `L_total`（总线头里有）：Processed 第 j 个样本在输出时刻 `A(j − L_total) + L_total` 播出。迟到的丢、缺的用延迟原声补、Raw 环满的缺口单独记——降噪慢、卡、死、同进程恢复都逐样本对齐（单测覆盖）
+- 心跳按音频样本计时（4800 样本 = 100 ms），回调里不读系统时钟
+- `vdn-denoised` 不依赖 `vdn-capture`（后者带 cpal）；`Worker` 直接用 `vdn_shm::Bus`，单测用 `Bus::heap`
+
+## 发现（早期，已被延迟修复取代：见「延迟修复 · V7」两节）
+- **现象**：环余量 = 1 块（480 样本，10 ms）且降噪块长 96 时，送音端「处理后欠载」（处理后的声音没按时到，用延迟原声补上；不是静音）
+- **次数**：6 次里 4 次——直通 3 次：1728 / 0 / 0 样本；GTCRN 3 次：480 / 480 / 1920 样本。虚拟麦欠载 6 次都是 0
+- **对照**：降噪块长 480 时同样 6 次全 0；默认环余量 1440 时全 0【测】
+- **推断，未核实**：GTCRN 第一次推理慢（预热）吃掉 10 ms 余量；debug 构建、降噪线程没活时睡 0.5 ms 轮询也有影响
+- 当时默认环余量保持 1440（大总管定）；现在是 192
+
+## 已知缺口（当前）
+- **V7 目标 144 没达到，人定接受（D68：低频运行，不追提频）**：空闲时推理块约 2.9 ms，压力时 0.6 ms（推断：空闲降频 / 能效核）。lead 192（4 ms）为定值
+- 送音端第一次接上降噪进程时延迟跳一次（没有降噪总线时延迟线长度取 lead，不手抄管线延迟）
+- 麦克风流重接要重开设备（大总管定不做，记 backlog）
+- 纠漂移每次丢 / 重复一段（≤ 几块）没做淡化，听感未量化
+- 两进程起停三种顺序没有自动测试（`cargo test` 里拿不到另一个包的可执行文件；判断逻辑已在 `Supervisor` 单测）
+- `--sink hal`：本批没有插件读 Out，读方不在时只计溢出
+- （已解决的旧缺口：环余量 30 ms → 4 ms；0.5 ms 轮询 → 唤醒；重启后送音端不重连 → `Supervisor`）
+
+## 依赖许可（新引入，都与 GPL-3.0 兼容）
+- `serde` 1 · `ctrlc` 3.5（MIT OR Apache-2.0；其传递依赖 nix / dispatch2 / objc2 等为 MIT / Zlib / Apache-2.0，子代理核过）· `rtrb` 0.4.1（MIT OR Apache-2.0，无传递依赖）。cargo-deny 本批不装（大总管定）
+
+## 待人拍板
+- 无新题。要人做的只有 V5（戴耳机听，见上）
+
+## 流水
+- 2026-11-02 报到；三个零件手下的 worktree 还没有新代码
+- 2026-11-02 收到三家签名；lead 定为参数、默认 1440（大总管）
+- 2026-11-02 `Forwarder` 第一版「单个净账」在 Raw 溢出 + 处理后缺失同时发生时错位（单测红）→ 改成按输出时刻逐样本记账 + 缺口表，转绿
+- 2026-11-02 大总管合入三家零件（65e62a9）；接线：capture 的 shm/hal 适配、两个 bin、vdn devices / run / chain-test / chain-check
+- 2026-11-02 check-deps 报 vdn-denoised 闭包有 cpal（经 vdn-capture）→ Worker 改直接用 Bus，capture 改 dev 依赖，复跑通过
+- 2026-11-02 V1–V4 过；lead = 1 块加测 6 次欠载 0；Ctrl-C 退出后总线已删【测】
+- 2026-11-02 大总管合入 `Pipeline::with_block`（fd26a1d）；`Config.denoise_block` 默认 96，vdn-denoised 与 chain-test 用定块长，`vdn run` 仍用 `Pipeline::new`；V1–V4 重跑全过
+- 2026-11-02 4 个 crate 27 个单测过（含 1.2 s 版 V1 / V2 真共享内存测试），clippy 0 警告，fmt 过
+- 2026-11-02 自审三路（故障 · 残留 · 规则）：1 个 P0、5 个 P1 全修（重连、硬切、名字锁、tidy 等），报告副本在 `_tmp/20261102-rs-entry-review/`
+- 2026-11-02 延迟修复：IO 块 96 · 预热 · release 测量 · `vdn v7`；V7 基线（轮询）不过，卡点空闲降频（推断）
+- 2026-11-02 接唤醒、Out 总线拆分、跳过积压（零占位 + 缺口计数）、rtrb 交接；按大总管指出的两条红线改掉 try_lock 和 NaN 记号
+- 2026-11-02 审查三条：纠漂移（Out 两头）· rtrb 切模式 · capture 库去掉 hound / clap
+- 2026-11-02 测试自查补齐（54 过、1 忽略）；lead 下限 = 一块 IO（大总管定）；V1 判据含欠载
+- 2026-11-02 V7 复测（有唤醒，release）过：lead 192 空闲 / 压力各 0/10 欠载；lead 默认改 192（大总管定）；最终 V1–V4 复跑全过
+- 2026-11-02 **已收尾**
+- 2026-11-02 验收打回不稳定测试 → 锁步模拟 + 真实节拍标 #[ignore]；4 个忙进程下连跑 5 次全过
+- 2026-11-02 D68：lead 192 定值；降噪线程按实测每周期耗时提升（from_measured），读回降级 / 醒来迟到 / 超周期计数；58 过、2 忽略。**已收尾**

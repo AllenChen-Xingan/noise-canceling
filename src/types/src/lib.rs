@@ -56,6 +56,6 @@ pub use record::{
     DecisionEvent, EnrollEvent, FeedbackKind, SessionHeader, SessionRecord, UserAction,
 };
 pub use scene::{FineSceneId, SceneLabel, SceneName, UserScene};
-pub use stage::Stage;
+pub use stage::{Stage, StageChain};
 pub use table::{SceneEntry, SceneTable, TableError};
 pub use version::{ConfigBinding, ContentId, ProfileVersion, TableVersion};

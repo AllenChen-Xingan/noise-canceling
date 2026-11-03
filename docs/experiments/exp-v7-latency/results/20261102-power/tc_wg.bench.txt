@@ -1,0 +1,2 @@
+# 计算量 502954 次 · 周期 16000 µs · 每种 60 s
+RESULT mode=tc_wg n=3750 dur_p50=3026 dur_p999=3087 dur_max=3102 late_p50=21 late_max=55 degraded=0 wg_err=0 cpu_pct=17.59 setup=ok
