@@ -36,3 +36,4 @@
 - 2026-11-02 e3 基准结束；人说「schema他们那个可以开始做」（经 e3 转）。大总管在 6b276e1 亲手验收：xtask ci 全绿（400 / 0 / 5）· vdn-schema --check 一致 · eval ci 通过。codex 第 4 轮 P2×2（测试写死单版本 · 基线读失败测试挡不住回退）→ 定：都改，再跑第 5 轮
 - 2026-11-02 schema 改完第 4 轮两条 P2（2e41218e，自报）：vdn-schema 25 条 · 变异验证新测试能红 · xtask ci / --check / eval ci 全过；codex 第 5 轮在跑
 - 2026-11-02 schema codex 第 5 轮无 P0/P1（4、5 连续干净，评审结束）；P2：基线读入口测试 → 补；「3.0 算不算整数」schema 宽 Rust 严 → 开 issue #61
+- 2026-11-02 代码卫生线 #62（feat/code-hygiene，会话 8d / 手下 hygiene）与我方对齐：采样率收口 · 阈值比对归 #62；他们第二段（control · eval）等 #57 合并后动 → **#57 合并时发 8d「#57 已合并」**
