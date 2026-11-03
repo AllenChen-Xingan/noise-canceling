@@ -1,7 +1,7 @@
 # 评审 012 · 参数描述导出 · 模型接口三方一致 · FE-M 名字唯一（codex · gpt-6-astra · read-only）
 
-> 对象：`git diff origin/main...HEAD`（分支 `feat/param-model-schema`，issue #65；diff 模板，附 `state/handoff/iface.md` 与重点说明）。**最新一轮：第 4 轮（2026-11-02）· 总评「修改」· 本轮有 P1，待第 5 轮**。第 1–3 轮审 #65 已达停止线；之后合并 main、加做 #68，从第 4 轮起续审。
-> 累计处理：P1×2、P2×11，逐条回到源码核实，13 条全部属实、全部已改，没有留 issue。新冒出的需要人定的事：没有。
+> 对象：`git diff origin/main...HEAD`（分支 `feat/param-model-schema`，issue #65；diff 模板，附 `state/handoff/iface.md` 与重点说明）。**最新一轮：第 5 轮（2026-11-02）· 总评「修改」· 本轮有 P1（部分接受），待第 6 轮**。第 1–3 轮审 #65 已达停止线；之后合并 main、加做 #68，从第 4 轮起续审。
+> 累计处理：P1×3、P2×12，逐条回到源码核实，15 条全部属实；14 条全改，第 5 轮 #1 部分接受（理由见该轮）。没有留 issue。新冒出的需要人定的事：没有。
 > 作者：手下 iface。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -97,7 +97,7 @@
 
 - **P1｜src/engine/src/pipeline.rs:186 模型名核对能绕过**（第 4 轮 #1）
   - 核实：属实。`with_stages` 只比级串；拿 FE-M 图的 `stages` 去构造跑 GTCRN 的 Pipeline 能成功，原图还能直接交给 `SessionHeader::set_graph`。只有另调 `Pipeline::graph` 才比模型名
-  - 处理：新类型 `CheckedGraph`（字段私有），只能经 `ProcessingGraph::verify(model, chain)` 得到；`verify` 一次核对挂点与名字、模型节点 = `Model::name()`、时域段 = 实际级串。`Pipeline::graph` 返回 `CheckedGraph`。`SessionHeader::set_graph` 只收 `CheckedGraph`，所以没核对的图在类型上就进不了会话记录。新测试 `foreign_graph_cannot_be_verified_against_running_model`：别的模型的图用正在跑的模型核对报 `ModelName`；级串不同报 `Extra`
+  - 处理：新类型 `CheckedGraph`（字段私有），只能经 `ProcessingGraph::verify(model, chain)` 得到；`verify` 一次核对挂点与名字、模型节点 = `Model::name()`、时域段 = 实际级串。`Pipeline::graph` 返回 `CheckedGraph`。`SessionHeader::set_graph` 只收 `CheckedGraph`。~~所以没核对的图在类型上就进不了会话记录~~——**这句当时说过头了**：会话头的 `graph` / `model` 仍是公开字段，可直接赋值；第 5 轮 #1 指出后改为私有。新测试 `foreign_graph_cannot_be_verified_against_running_model`：别的模型的图用正在跑的模型核对报 `ModelName`；级串不同报 `Extra`
 - **P2｜src/xtask/src/model_name.rs:55 字符串里的伪 `mod` 声明会豁免生产文件**（第 4 轮 #2）
   - 核实：属实。原来在保留字符串的文本里找 `#[cfg(test)]`
   - 处理：改为在去掉字符串的代码行里定位属性和 `mod`，只从原文取 `#[path]` 的值（且代码里确有 `#[path`）。负例：字符串内容为 `#[cfg(test)] mod real;`，紧接真 `mod real;`，`real.rs` 不进测试名单
@@ -117,3 +117,30 @@
 ### 是否再审
 
 本轮有 P1 → 改完开第 5 轮。
+
+## 第 5 轮（2026-11-02）· 总评「修改」
+
+原文：`_tmp/reviews/012-param-model-schema-codex-5.md`（不入库）。effort medium，耗时 45 秒（`result: P0×0 P1×1 P2×1 P3×0`）。
+本轮 P0/P1：1 条 · 停止线：未满足 · 留作 issue 的 P2：无。
+
+- **P1｜src/types/src/session.rs:40 第 4 轮 #1 的绕过还没封住**（第 5 轮 #1，含抽查「不符」一条）
+  - 核实：前一半属实，后一半部分接受
+  - 前一半「会话头的 `graph` / `model` 是公开字段，能直接赋值再写出」：属实。处理：两个字段改私有，只能经 `set_graph(&CheckedGraph)` 或读文件（历史记录照常能读）填；读用 `graph()` / `model()`，清空用 `clear_graph()`。仓里没有别处直接写这两个字段
+  - 后一半「`Pipeline::with_stages` 只查级串，应改收整张图并在构造时比模型名」：部分接受，不改。理由：
+    1. `with_stages` 只收时域段的种类，构造出的 Pipeline 不声称自己是哪张图、跑的哪个模型；它报出的图只能经 `Pipeline::graph(model, artifact)` 拿到，这一步要求模型名一致
+    2. 进会话记录（#68 要防的就是「记录里的图和实际不符」）现在只有 `CheckedGraph` 一条路，类型上绕不过
+    3. 改成收整张图，引擎里十几处用 `Identity` 等替身模型的测试都会被模型名比对挡住，要另造一套假模型名，改动面大、收益只是把同一次比对提前
+    - #68 原文「模型节点名与 `Model::name()` 不一致 → 构造期报错」：图的构造（`verify` / `Pipeline::graph`）就在构造期、非实时，满足
+- **P2｜src/xtask/src/model_name.rs:118 外层内联模块里声明的测试模块，路径解析错了**（第 5 轮 #2）
+  - 核实：属实。`mod outer { #[cfg(test)] mod real; }` 的文件是 `outer/real.rs`，原来按根层 `real.rs` 豁免
+  - 处理：新函数 `inline_prefixes` 按代码行（字符串已去掉）数花括号，记下每行所在的内联模块路径，解析时拼上。负例：内外同名，根层的 `real.rs` 不豁免
+
+### 引用抽查
+
+- codex 列的「不符」：1 条（第 4 轮 #1 的处理结论说过头），已在第 4 轮记录里划掉并注明
+- codex 列的「核实属实」：5 条
+- 无法核实：全量测试数字。改完后本机重跑 `xtask ci` 全绿（469 过 / 0 败 / 7 忽略）
+
+### 是否再审
+
+本轮有 P1（前一半已改，后一半第一次驳回）→ 开第 6 轮，让 codex 看驳回理由。同一条若第二次被驳回，就停下交大总管 / 人裁决。
