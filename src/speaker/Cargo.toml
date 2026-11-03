@@ -10,7 +10,7 @@ publish.workspace = true
 [features]
 # 默认什么都不带：核心只依赖 dsp + earshot + realfft（规约 §2.2 规则 1）
 default = []
-# 声纹模型（ort）。过渡期例外：拆出推理后端 crate 后移走（同 vdn-models 的 ort 例外）
+# 声纹模型（ort）。过渡期例外：拆出推理后端 crate 后移走（vdn-models 已改走 vdn-backend-ort，本 crate 的 ort 例外待后续批次移走）
 onnx = ["dep:ort"]
 # 离线实验命令行已挪到 src/speaker-lab/（vdn-speaker-lab，tier = tool；2026-10-31 p2fix）
 

@@ -9,6 +9,7 @@
 //! | 放行禁用清单 / panic 类 lint 的 `allow` 必须带 `// NRT: <理由>` | §5.3 |
 //! | A/B 档 crate 的源码（整模块 NRT 除外）不出现 `std::fs`、`log::`、`thread::sleep` | R3 |
 //! | 实时块（带 `deny(clippy::disallowed_macros)` 的 impl / mod）里没有非 debug 的 `assert*!` | R4（clippy 禁不了，见根 clippy.toml） |
+//! | `unsafe = true` 的 crate：每个 `unsafe {` / `unsafe impl` 同行或紧邻上方的连续注释里有 `SAFETY:` | R10 |
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -64,7 +65,7 @@ pub struct Tidy {
     pub notes: Vec<String>,
 }
 
-fn rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
+pub(crate) fn rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(rd) = fs::read_dir(dir) else { return };
     let mut entries: Vec<PathBuf> = rd.filter_map(|e| e.ok().map(|e| e.path())).collect();
     entries.sort();
@@ -241,6 +242,78 @@ fn check_file(path: &Path, rel: &str, realtime_crate: bool, t: &mut Tidy) -> usi
     rt_blocks
 }
 
+/// 这一行代码里有没有 unsafe 块或 unsafe impl（`unsafe fn` / `unsafe extern` 声明不算）。
+fn opens_unsafe(code: &str) -> bool {
+    code.match_indices("unsafe").any(|(k, _)| {
+        let before_ok = !code[..k].ends_with(|c: char| c.is_alphanumeric() || c == '_');
+        let rest = code[k + "unsafe".len()..].trim_start();
+        before_ok && (rest.starts_with('{') || rest.starts_with("impl"))
+    })
+}
+
+/// R10：unsafe 白名单 crate 里每个 unsafe 块 / impl 要有 SAFETY 说明——同一行，或紧邻上方连续的 `//` 注释行里。
+fn check_safety(path: &Path, rel: &str, t: &mut Tidy) {
+    let Ok(src) = fs::read_to_string(path) else {
+        return;
+    };
+    let lines: Vec<&str> = src.lines().collect();
+    for (i, l) in lines.iter().enumerate() {
+        if !opens_unsafe(code_of(l)) || l.contains("SAFETY:") {
+            continue;
+        }
+        let documented = lines[..i]
+            .iter()
+            .rev()
+            .take_while(|p| p.trim_start().starts_with("//"))
+            .any(|p| p.contains("SAFETY:"));
+        if !documented {
+            t.problems.push(format!(
+                "{rel}:{}：unsafe 块缺「// SAFETY:」说明（同行或紧邻上方注释，R10）",
+                i + 1
+            ));
+        }
+    }
+}
+
+/// crate 的全部编译根：`src/lib.rs` · `src/main.rs` · `src/bin/*.rs` · `src/bin/*/main.rs`（存在的才列）。
+fn crate_roots(dir: &Path) -> Vec<PathBuf> {
+    let mut v: Vec<PathBuf> = ["src/lib.rs", "src/main.rs"]
+        .iter()
+        .map(|f| dir.join(f))
+        .filter(|p| p.exists())
+        .collect();
+    if let Ok(rd) = fs::read_dir(dir.join("src/bin")) {
+        let mut bins: Vec<PathBuf> = rd
+            .flatten()
+            .map(|e| e.path())
+            .filter_map(|p| {
+                if p.is_dir() {
+                    Some(p.join("main.rs")).filter(|m| m.exists())
+                } else {
+                    (p.extension().is_some_and(|e| e == "rs")).then_some(p)
+                }
+            })
+            .collect();
+        bins.sort();
+        v.extend(bins);
+    }
+    v
+}
+
+/// 一个编译根的检查：R10 forbid 头（unsafe = false 时）· A/B 档的 panic 类 lint。
+fn check_root(name: &str, rel: &str, src: &str, unsafe_crate: bool, realtime: bool, t: &mut Tidy) {
+    if !unsafe_crate && !src.contains("#![forbid(unsafe_code)]") {
+        t.problems.push(format!(
+            "{name}（{rel}）：unsafe = false 但 crate 根没有 #![forbid(unsafe_code)]（R10）"
+        ));
+    }
+    if realtime && !PANIC_LINTS.iter().all(|l| src.contains(l)) {
+        t.problems.push(format!(
+            "{name}（{rel}）：A/B 档 crate 根缺 panic 类 lint（unwrap/expect/panic/indexing，§5.3）"
+        ));
+    }
+}
+
 pub fn check() -> Result<Tidy, String> {
     let root = root();
     let mut t = Tidy {
@@ -278,6 +351,10 @@ pub fn check() -> Result<Tidy, String> {
     }
 
     let meta = metadata()?;
+    // deny.toml 的直接边规则与真实依赖、各 crate 的 forbid 一致（规约 §5.4）
+    if let Ok(deny) = fs::read_to_string(root.join("deny.toml")) {
+        crate::denycheck::check_bans(&meta, &deny, &mut t.problems);
+    }
     for (_, name, manifest, vdn) in meta.members() {
         let dir = Path::new(&manifest)
             .parent()
@@ -298,28 +375,20 @@ pub fn check() -> Result<Tidy, String> {
             t.problems
                 .push(format!("{name}：metadata.vdn.forbid 必须是数组"));
         }
-        let crate_root = ["src/lib.rs", "src/main.rs"]
-            .iter()
-            .map(|f| dir.join(f))
-            .find(|p| p.exists());
-        let root_src = crate_root
-            .as_ref()
-            .and_then(|p| fs::read_to_string(p).ok())
-            .unwrap_or_default();
-        match vdn["unsafe"].as_bool() {
-            Some(false) if !root_src.contains("#![forbid(unsafe_code)]") => t.problems.push(
-                format!("{name}：unsafe = false 但 crate 根没有 #![forbid(unsafe_code)]（R10）"),
-            ),
-            Some(_) => {}
-            None => t
-                .problems
-                .push(format!("{name}：metadata.vdn.unsafe 必须是 true/false")),
+        if vdn["unsafe"].as_bool().is_none() {
+            t.problems
+                .push(format!("{name}：metadata.vdn.unsafe 必须是 true/false"));
         }
+        let unsafe_crate = vdn["unsafe"].as_bool() == Some(true);
         let realtime = tier == "A" || tier == "B";
-        if realtime && !PANIC_LINTS.iter().all(|l| root_src.contains(l)) {
-            t.problems.push(format!(
-                "{name}：A/B 档 crate 根缺 panic 类 lint（unwrap/expect/panic/indexing，§5.3）"
-            ));
+        // 每个编译根都查（lib.rs、main.rs、src/bin/*.rs、src/bin/*/main.rs）：只查第一个会漏掉 bin（rs-entry 发现）
+        for root_file in crate_roots(&dir) {
+            let rel = root_file
+                .strip_prefix(&root)
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|_| root_file.display().to_string());
+            let root_src = fs::read_to_string(&root_file).unwrap_or_default();
+            check_root(&name, &rel, &root_src, unsafe_crate, realtime, &mut t);
         }
         let mut files = Vec::new();
         rs_files(&dir.join("src"), &mut files);
@@ -330,6 +399,23 @@ pub fn check() -> Result<Tidy, String> {
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|_| f.display().to_string());
             blocks += check_file(&f, &rel, realtime, &mut t);
+        }
+        if unsafe_crate {
+            let mut all_rs = Vec::new();
+            rs_files(&dir.join("src"), &mut all_rs);
+            rs_files(&dir.join("tests"), &mut all_rs);
+            for f in all_rs {
+                let rel = f
+                    .strip_prefix(&root)
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_else(|_| f.display().to_string());
+                check_safety(&f, &rel, &mut t);
+            }
+        }
+        if !crate::denycheck::has_tests(&dir) {
+            t.problems.push(format!(
+                "{name}：一条测试都没有（每个 crate 至少一条；测不了的写 #[ignore = \"原因，人工跑\"] 并附步骤）"
+            ));
         }
         if realtime && blocks == 0 {
             t.problems.push(format!(
@@ -343,6 +429,32 @@ pub fn check() -> Result<Tidy, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_crate_root_is_checked() {
+        let d = std::env::temp_dir().join(format!("vdn-tidy-roots-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&d);
+        fs::create_dir_all(d.join("src/bin/tool")).unwrap();
+        fs::write(d.join("src/lib.rs"), "#![forbid(unsafe_code)]\n").unwrap();
+        fs::write(d.join("src/main.rs"), "fn main() {}\n").unwrap();
+        fs::write(d.join("src/bin/extra.rs"), "fn main() {}\n").unwrap();
+        fs::write(d.join("src/bin/tool/main.rs"), "fn main() {}\n").unwrap();
+        let roots = crate_roots(&d);
+        assert_eq!(roots.len(), 4, "{roots:?}");
+        let mut t = Tidy {
+            problems: Vec::new(),
+            nrt_allows: 0,
+            notes: Vec::new(),
+        };
+        for r in &roots {
+            let src = fs::read_to_string(r).unwrap();
+            check_root("x", &r.display().to_string(), &src, false, false, &mut t);
+        }
+        // lib.rs 有 forbid，其余 3 个 bin 根都没有：3 条
+        assert_eq!(t.problems.len(), 3, "{:?}", t.problems);
+        assert!(t.problems.iter().any(|p| p.contains("main.rs")));
+        let _ = fs::remove_dir_all(&d);
+    }
 
     fn run(src: &str, realtime: bool) -> Tidy {
         let dir = std::env::temp_dir().join(format!("vdn-tidy-{}", std::process::id()));
@@ -419,6 +531,43 @@ mod tests {
             true,
         );
         assert_eq!(t.problems.len(), 1, "{:?}", t.problems);
+    }
+
+    fn safety(src: &str) -> Vec<String> {
+        let dir = std::env::temp_dir().join(format!("vdn-tidy-safety-{}", std::process::id()));
+        let _ = fs::create_dir_all(&dir);
+        let p = dir.join(format!("{}.rs", src.len()));
+        fs::write(&p, src).unwrap();
+        let mut t = Tidy {
+            problems: Vec::new(),
+            nrt_allows: 0,
+            notes: Vec::new(),
+        };
+        check_safety(&p, "x/src/a.rs", &mut t);
+        let _ = fs::remove_file(&p);
+        t.problems
+    }
+
+    #[test]
+    fn unsafe_without_safety_comment_is_flagged() {
+        assert_eq!(safety("fn f() { let x = unsafe { g() }; }\n").len(), 1);
+        assert_eq!(safety("unsafe impl Send for X {}\n").len(), 1);
+        assert!(safety("// SAFETY: 理由\nlet x = unsafe { g() };\n").is_empty());
+        assert!(safety("let x = unsafe { g() }; // SAFETY: 理由\n").is_empty());
+        assert!(
+            safety("// SAFETY: 第一行\n// 第二行\nunsafe impl Sync for X {}\n").is_empty(),
+            "紧邻上方连续注释算数"
+        );
+        assert_eq!(
+            safety("// SAFETY: 太远\nlet a = 1;\nlet x = unsafe { g() };\n").len(),
+            1,
+            "中间隔了代码不算"
+        );
+        assert!(
+            safety("unsafe fn f() {}\nunsafe extern \"C\" {}\n").is_empty(),
+            "声明不算块"
+        );
+        assert!(safety("let not_unsafe = 1; my_unsafe {\n").is_empty());
     }
 
     #[test]

@@ -8,10 +8,11 @@ use std::path::Path;
 
 use ort::session::{HasSelectedOutputs, OutputSelector, RunOptions, Session};
 use ort::value::Tensor;
+use vdn_backend_ort::ort;
 use vdn_dsp::{StreamingStft, window};
 use vdn_types::{Model, ModelError};
 
-use crate::session::{self, BoxError};
+use vdn_backend_ort::{self as session, BoxError};
 
 const N_FFT: usize = 512;
 const HOP: usize = 256;
@@ -148,14 +149,7 @@ impl Gtcrn {
         }
         for cache in self.caches.iter_mut() {
             let v = vals.next().ok_or(ModelError::Shape)?;
-            let (_, src) = v
-                .try_extract_tensor::<f32>()
-                .map_err(|_| ModelError::Shape)?;
-            let dst = cache.extract_tensor_mut().1;
-            if src.len() != dst.len() {
-                return Err(ModelError::Shape);
-            }
-            dst.copy_from_slice(src);
+            session::copy_out(&v, cache.extract_tensor_mut().1).map_err(|_| ModelError::Shape)?;
         }
         Ok(())
     }

@@ -1,0 +1,8 @@
+{"model":"gtcrn","vs":"native","frames":610,"max_abs":1.097e-5,"worst_frame":479,"snr_db":134.00,"min_frame_snr_db":99.21,"nonfinite_values":0,"first_bad":"None"}
+{"model":"gtcrn","vs":"tract","frames":610,"max_abs":1.001e-5,"worst_frame":286,"snr_db":130.43,"min_frame_snr_db":101.85,"nonfinite_values":0,"first_bad":"None"}
+{"model":"fastenhancer_m","vs":"tract:fastenhancer_m_noseq.onnx","frames":976,"max_abs":4.223e-6,"worst_frame":723,"snr_db":110.79,"min_frame_snr_db":64.87,"nonfinite_values":0,"first_bad":"None"}
+{"model":"fastenhancer_m","vs":"ort:fastenhancer_m_noseq.onnx","frames":976,"max_abs":0.000e0,"worst_frame":0,"snr_db":3028.28,"min_frame_snr_db":2958.45,"nonfinite_values":0,"first_bad":"None"}
+{"model":"gtcrn","vs":"native","frames":37500,"max_abs":1.907e-5,"worst_frame":37323,"snr_db":133.14,"min_frame_snr_db":94.22,"nonfinite_values":0,"first_bad":"None"}
+{"model":"gtcrn","vs":"native","check":"reset","reset_at":20000,"frames_after":17500,"max_abs_vs_fresh":0.000e0}
+{"model":"gtcrn","vs":"tract","frames":6201,"max_abs":4.005e-5,"worst_frame":4075,"snr_db":122.19,"min_frame_snr_db":87.65,"nonfinite_values":0,"first_bad":"None"}
+{"model":"gtcrn","vs":"tract-reuse-known-wrong","frames":610,"max_abs":8.241e0,"worst_frame":373,"snr_db":19.39,"min_frame_snr_db":-21.99,"nonfinite_values":0,"first_bad":"Some((1, 0))"}

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  vdn 虚拟麦克风 HAL 插件的 Info.plist 模板（Contents/Info.plist）。
+  本批只是模板：不组装 .driver 包、不安装进 /Library/Audio/Plug-Ins/HAL/（D05，要人输密码，另约时间）。
+  工厂 UUID 与 src/factory.rs 的 FACTORY_UUID 一致；类型 UUID 是 Apple 的 kAudioServerPlugInTypeUUID。
+  src/factory.rs 的单测会检查这两张表，改这里要同步改那里。
+  将来接共享内存安全交接时，还要加 AudioServerPlugIn_MachServices（009 待人拍板 3）。
+-->
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>VdnVirtualMic</string>
+	<key>CFBundleIdentifier</key>
+	<string>org.vdn.hal.VdnVirtualMic</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>VdnVirtualMic</string>
+	<key>CFBundlePackageType</key>
+	<string>BNDL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.2</string>
+	<key>CFPlugInFactories</key>
+	<dict>
+		<key>74085B86-80AC-46AB-88B0-331E157E7A4F</key>
+		<string>VdnHalFactory</string>
+	</dict>
+	<key>CFPlugInTypes</key>
+	<dict>
+		<key>443ABAB8-E7B3-491A-B985-BEB9187030DB</key>
+		<array>
+			<string>74085B86-80AC-46AB-88B0-331E157E7A4F</string>
+		</array>
+	</dict>
+</dict>
+</plist>
