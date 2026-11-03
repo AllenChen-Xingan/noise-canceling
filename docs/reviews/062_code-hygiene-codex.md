@@ -1,7 +1,7 @@
 # 评审 062 · 代码卫生：单文件 600 行 · 采样率只写一处 · 评测阈值正本（codex · gpt-6-astra · read-only）
 
-> 对象：`feat/code-hygiene` 相对 main 的 diff（issue #62）。**最新一轮：第 1 轮（2026-11-02）· 总评「修改」· 待第 2 轮**。
-> 累计处理：P1×1、P2×2，逐条回源码核实，属实 3、驳回 0、无法核实 0。
+> 对象：`feat/code-hygiene` 相对 main 的 diff（issue #62）。**最新一轮：第 2 轮（2026-11-02）· 总评「修改」· 待第 3 轮**。
+> 累计处理：P1×4、P2×5，逐条回源码核实，属实 9、驳回 0、无法核实 0。
 > 编号用 issue 号（本线没有 plan 文档）。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -22,6 +22,38 @@
 - **P2｜src/xtask/src/file_size.rs:116 扫描失败被当成文件不存在**（第 1 轮 #3）
   - 核实：属实。原来用 `.ok()?` 吞掉读错误，`rs_files` 也吞掉读目录错误。
   - 处理：R-SIZE 用自己的 `walk`，读错误照实报。`size-baseline` 遇到任何错误都不写回。补了测试 `scan_reports_missing_src`。
+
+### 引用抽查
+
+- codex 列的「不符」：无
+- codex 列的「核实属实」：5 条
+
+## 第 2 轮（2026-11-02）· 总评「修改」
+
+- 原文：`_tmp/reviews/hygiene-p1-codex-2.md`（不入库）
+- 对象：`origin/main...HEAD`（含第二段：采样率、R-RATE、test_modules、阈值正本、拆 verifiers / runner）
+- effort medium，耗时 71 秒
+- 本轮 P0/P1：3 条。停止线：未满足
+- 留作 issue 的 P2：无
+
+- **P1｜src/eval/src/thresholds.rs:421 待定项吞掉同一参数上的新错误**（第 2 轮 #1）
+  - 核实：属实。原来按 `(id, key)` 比，清单里给 V-NR 加一个 `max = 999` 也会被已有的 V-NR max 待定项放过。
+  - 处理：待定项精确到「那组分档」或「那个数」（`Pend::Edges(&[…])` / `Pend::Value(x)`）。不一致按种类区分：分档数值、分档顺序、取值、清单格式。待定从 7 条拆成 8 条（V-NR 的 −8、−10 各一条）。补负例 `pending_does_not_swallow_new_value_on_same_param`。
+- **P1｜src/xtask/src/test_modules.rs:24 注释里的模块声明也能放过生产文件；内联模块作用域没认**（第 2 轮 #2）
+  - 核实：属实。原来逐行看纯文本。
+  - 处理：先用 `lex_lines` 剥掉注释与字符串，只认花括号深度 0 的 `#[cfg(test)]` + `mod x;`；内联模块里的声明不认（宁可多查）。补负例：块注释、字符串、内联模块各一种。
+- **P1｜src/eval/src/thresholds.rs:315 校验丢了正负号和档位顺序**（第 2 轮 #3）
+  - 核实：属实。`same` 比绝对值，分档只比集合。
+  - 处理：数字带符号提取、带符号比较。文档写损失量、代码记负 dB 的那处，用新出处类型 `Src::RubricLoss` 显式登记取负。分档按 verifiers 登记表的好坏方向检查严格单调。补负例 `sign_and_order_are_checked`。
+- **P2｜src/xtask/src/rate_literal.rs:103 测试放行一直延伸到文件末尾**（第 2 轮 #4）
+  - 核实：属实。`mod tests;` 声明也会开放行区；内联测试模块闭合后也继续放行。
+  - 处理：按花括号深度认内联测试模块的边界；`mod x;` 引入的文件改用 `test_modules` 整份认（只限底层 crate）。补负例 `exemption_ends_with_test_module`。
+- **P2｜src/xtask/src/rate_literal.rs:112 空理由也能放行**（第 2 轮 #5）
+  - 核实：属实。
+  - 处理：标记后必须有非空理由。补负例 `empty_allow_reason_is_flagged`。
+- **P2｜src/eval/src/thresholds.rs:102 V-SPLVL 的量法说明写错**（第 2 轮 #6）
+  - 核实：属实。代码按主讲人有声帧做投影能量损失，`verifiers.rs` 登记写明「不用 P.56」。
+  - 处理：改正注释。这样 V-SPLVL 和 rubric C3 的口径其实很接近（差在投影去噪），「量法不同」的保留理由对 V-SPLVL 不成立。已同步改 `state/handoff/hygiene-thresholds.md`，并报告大总管。
 
 ### 引用抽查
 
