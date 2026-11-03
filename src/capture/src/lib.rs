@@ -26,6 +26,7 @@
 
 pub mod feeder;
 pub mod shm;
+pub mod supervisor;
 pub mod testing;
 
 use vdn_dsp::DelayLine;
