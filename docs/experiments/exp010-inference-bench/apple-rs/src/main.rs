@@ -144,6 +144,11 @@ fn footprint_mb() -> f64 {
     if rc != 0 { f64::NAN } else { ri.ri_phys_footprint as f64 / 1048576.0 }
 }
 
+/// 非有限值（NaN / ±inf）打成 JSON 的 null，避免整行变成非法 JSON（codex 第 2 轮 #8）
+fn jnum(x: f64, prec: usize) -> String {
+    if x.is_finite() { format!("{x:.prec$}") } else { "null".into() }
+}
+
 /// 同 rustbe：下标 = round((n-1)·p)
 fn pct(sorted: &[f64], p: f64) -> f64 {
     let i = ((sorted.len() as f64 - 1.0) * p).round() as usize;
@@ -237,6 +242,7 @@ fn bench(o: &Opts) -> Result<(), String> {
     }
     let _wg = if o.flags.contains_key("workgroup") { Some(rt::join_output_workgroup()?) } else { None };
     let spin = o.flags.contains_key("spin");
+    let ready_file = o.flags.get("ready-file").cloned(); // impact.sh 等它出现才起前台负载（codex 第 2 轮 #2）
     let iwg_ms: f64 = o.num("interval-wg", 0.0);
     let mut iwg = if iwg_ms > 0.0 { Some(rt::IntervalWg::create_and_join(iwg_ms)?) } else { None };
 
@@ -298,6 +304,9 @@ fn bench(o: &Opts) -> Result<(), String> {
             c0 = cpu_seconds();
             w0 = Instant::now();
             win_start = unix();
+            if let Some(p) = &ready_file {
+                let _ = std::fs::write(p, b"ready\n"); // 进入计时窗（加载、预热都已过）才发就绪信号
+            }
         }
         // 父进程没了（脚本被 SIGKILL）就自己退出，不当孤儿一直跑
         if f % 64 == 0 && unsafe { libc::getppid() } == 1 {
@@ -393,9 +402,9 @@ fn bench(o: &Opts) -> Result<(), String> {
         "{{\"model\":\"{}\",\"backend\":\"{backend}\",\"artifact\":\"{}\",\"frames\":{frames},\"warmup\":{warmup},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"thread_policy\":\"{policy}\",\"workgroup\":{},\"spin\":{spin},\"tc_computation_ms\":{},\"tc_constraint_ms\":{},\"interval_wg_deadline_ms\":{iwg_ms},\"interval_wg_errors\":{},\
 \"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{mean:.4},\"frames_over_3ms\":{over3},\
 \"ort_env_ms\":0.00,\"compile_ms\":{compile_ms:.2},\"open_ms\":{open_ms:.2},\"first_frame_ms\":{first_ms:.3},\"cpu_over_wall\":{:.3},\
-\"rust_allocs_per_frame\":{rust_allocs:.3},\"rust_allocs_total\":{rust_n},\"process_allocs_total\":{proc_total},\"late_frames_over_3ms\":{late_over3},\"late_max_ms\":{late_max:.4},\"process_allocs_per_frame\":{proc_allocs},\"win_start_unix\":{win_start:.3},\"win_end_unix\":{win_end:.3},\"wall_s\":{wall:.3},\"nonfinite_frames\":{nonfinite_frames},\
-\"footprint_before_mb\":{fp0:.2},\"footprint_warm_mb\":{fp1:.2},\"footprint_end_mb\":{fp2:.2},\"parity_frames\":{pn},\"parity_max_abs\":{max_abs:.3e},\"parity_worst_frame\":{worst},\"parity_snr_db\":{:.2},\
-\"parity_min_frame_snr_db\":{min_frame_snr:.2},\"parity_nonfinite_values\":{nonfinite_values},\"parity_first_bad\":\"{first_bad:?}\",\"extra\":{extra}}}",
+\"rust_allocs_per_frame\":{rust_allocs:.3},\"rust_allocs_total\":{rust_n},\"process_allocs_total\":{proc_total},\"late_frames_over_3ms\":{},\"late_max_ms\":{},\"process_allocs_per_frame\":{proc_allocs},\"win_start_unix\":{win_start:.3},\"win_end_unix\":{win_end:.3},\"wall_s\":{wall:.3},\"nonfinite_frames\":{nonfinite_frames},\
+\"footprint_before_mb\":{fp0:.2},\"footprint_warm_mb\":{fp1:.2},\"footprint_end_mb\":{fp2:.2},\"parity_frames\":{pn},\"parity_max_abs\":{},\"parity_worst_frame\":{worst},\"parity_snr_db\":{:.2},\
+\"parity_min_frame_snr_db\":{},\"parity_nonfinite_values\":{nonfinite_values},\"parity_first_bad\":\"{first_bad:?}\",\"extra\":{extra}}}",
         kind.name(),
         std::path::Path::new(model_path).file_name().map(|s| s.to_string_lossy()).unwrap_or_default(),
         _wg.is_some(),
