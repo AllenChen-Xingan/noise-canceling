@@ -21,7 +21,16 @@ impl TractNet {
         for (i, s) in shapes.iter().enumerate() {
             m.set_input_fact(i, f32::fact(s).into())?;
         }
-        let plan = m.into_optimized()?.into_runnable()?;
+        let opt = m.into_optimized()?;
+        if std::env::var_os("EXP010_DEBUG").is_some() {
+            for (k, o) in opt.output_outlets()?.iter().enumerate() {
+                eprintln!("tract out {k}: {} {:?}", opt.node(o.node).name, opt.outlet_fact(*o)?);
+            }
+            for (k, o) in opt.input_outlets()?.iter().enumerate() {
+                eprintln!("tract in {k}: {} {:?}", opt.node(o.node).name, opt.outlet_fact(*o)?);
+            }
+        }
+        let plan = opt.into_runnable()?;
         let state = plan.spawn()?;
         let ins = shapes
             .iter()
