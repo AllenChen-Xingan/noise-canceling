@@ -9,4 +9,4 @@
 | 编号 | 日期 | 评审对象 | 采纳 / 提出 |
 |------|------|---------|------------|
 | 010 | 2026-11-02 | [exp010 推理后端基准纯 Rust 一侧](010_exp010-rust-codex.md)（README + bench/src，codex，5 轮，已达停止线） | 采纳 27 / 提出 27（P1×7 P2×20） |
-| 019 | 2026-11-02 | 推理后端总方案与判据（`docs/research/019_apple-inference/{decision,standard}.md` + `apple-rs/`）· codex gpt-6-astra · 8 轮 | 属实 41 · 驳回 0 · 剩 P2×2 进待办 | [019_apple-inference-codex.md](019_apple-inference-codex.md) |
+| 019 | 2026-11-02 | [019 推理后端总方案与判据](019_apple-inference-codex.md)（decision + standard + apple-rs，codex gpt-6-astra，8 轮，已达停止线） | 采纳 41（其中 2 条 P2 列进待办）/ 提出 41 |

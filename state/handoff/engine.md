@@ -1,6 +1,14 @@
 # 现状页 · 手下 applebe（原名 engine）· 分支 research/019-apple-inference · issue #45 · 实验 exp010
 
-## 批次 20261102-b8（当前）
+## 状态：已收尾（2026-11-02，待大总管推送 / 开 PR，正文写 Closes #45）
+
+- 交付：`docs/research/019_apple-inference/{decision.md, standard.md, notes/}` · `docs/experiments/exp010-inference-bench/{apple/, apple-rs/}` · 评审记录 `docs/reviews/019_apple-inference-codex.md`
+- 评审：同模型 3 视角只读自审 1 轮 + codex 8 轮（第 7、8 轮连续无 P0/P1，满足停止线）；属实 41、驳回 0；剩 P2×2 列进 decision §7
+- 测试：`cargo test --release`（单元 4 + 字段交叉校验 2）· `python3 -m unittest tests/test_power_parse.py`（6）· `exp010-apple selftest`
+- 结论一句：GTCRN 暂排第一 = 纯手写 Rust（连续 0.088 ms，ORT 0.384 ms 的约 4.4 倍快；整数 0 分配）；苹果侧最快 = BNNS + GRU 展开（0.155 ms，约 2.5 倍）；耗电只有单次、噪声里的数（手写 · rt 81 mW、BNNS · rt 97 mW，未同场 ORT），待 #58 合并与 3 轮重测
+- 合并顺序（大总管定）：本 PR 先合；fastpath #58 合并时删 `apple-rs/tests/fields.rs` APPLE_ONLY 里的三条计时窗字段
+
+## 批次 20261102-b8（过程记录）
 - 2026-11-02 报到大总管 noise-canceling-e3，计划获同意
 - 管的实体：推理后端（苹果）· 模型（降噪）· 评测器（帧耗时 · 逐值一致）
 - 机器：Apple M5 · macOS 27.0.1 · 插电
