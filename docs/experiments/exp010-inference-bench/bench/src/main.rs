@@ -10,6 +10,8 @@
 //!                （--vs ort --b-onnx 改写图 = 单独证明改写等价；旧参数 --tract-onnx 等同 --b-onnx）
 //!   fem-bench    <ort|tract> <onnx> <wav> [--frames N] [--warmup N]
 //!   常驻内存：footprint_before_mb（加载前）/ footprint_warm_mb（预热完）/ footprint_end_mb（跑完），读 ri_phys_footprint。
+//!   两个 bench 都可加 `--count-malloc`：挂 malloc_logger 数全进程 malloc（process_allocs_per_frame；不加时为 null）。
+//!   这个钩子会拖慢分配，所以计数和计时分开跑。
 //!   两个 bench 都可加 `--qos ui|default`：计时线程的调度等级，默认 ui（QOS_CLASS_USER_INTERACTIVE）。
 //!   两个 bench 都可加 `--pace-ms <毫秒>`：按实时节奏每隔这么久喂一帧（测耗电、测睡醒后的帧耗时用；默认 0 = 连续跑）。
 //!   两个 bench 都可加 `--dump-io <前缀>`（此时第 2 个参数须是 onnx）：计时之后另起一个 ORT 会话，从零状态把
@@ -59,6 +61,23 @@ unsafe impl GlobalAlloc for Counting {
 }
 #[global_allocator]
 static A: Counting = Counting;
+
+// ── 全进程 malloc 计数（含 C / C++ / 系统框架）：挂 libmalloc 的 malloc_logger 钩子 ──
+// 只在 `--count-malloc` 时挂上；钩子会让每次 malloc 多走一次回调，计时会略偏慢，所以和计时分开跑。
+type MallocLogger = unsafe extern "C" fn(u32, usize, usize, usize, usize, u32);
+unsafe extern "C" {
+    static mut malloc_logger: Option<MallocLogger>;
+}
+static PROC_ALLOCS: AtomicU64 = AtomicU64::new(0);
+const MALLOC_LOG_TYPE_ALLOCATE: u32 = 2;
+unsafe extern "C" fn count_malloc(ty: u32, _: usize, _: usize, _: usize, _: usize, _: u32) {
+    if ty & MALLOC_LOG_TYPE_ALLOCATE != 0 {
+        PROC_ALLOCS.fetch_add(1, Relaxed);
+    }
+}
+fn install_malloc_counter() {
+    unsafe { malloc_logger = Some(count_malloc) };
+}
 
 const N_FFT: usize = 512;
 const HOP: usize = 256;
@@ -461,6 +480,10 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     } else if qos != "default" {
         return Err("--qos 只收 ui / default".into());
     }
+    let count_malloc = args.iter().any(|a| a == "--count-malloc");
+    if count_malloc {
+        install_malloc_counter();
+    }
     let audio = read_wav(wav)?;
     // 计时前：ORT 环境初始化 + 读输入形状。native 吃的是权重前缀、不碰 ORT，跳过（它的「打开」本来就不含 ORT）
     let (shapes, ort_env_ms) = if kind == "native" {
@@ -486,6 +509,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let mut times = Vec::with_capacity(frames);
     let mut nan = 0usize;
     let a0 = ALLOCS.load(Relaxed);
+    let pa0 = PROC_ALLOCS.load(Relaxed);
     let c0 = cpu_seconds();
     let w0 = Instant::now();
     for (n, f) in inputs[warm + 1..].iter().enumerate() {
@@ -507,6 +531,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let wall = w0.elapsed().as_secs_f64();
     let cpu = cpu_seconds() - c0;
     let allocs = ALLOCS.load(Relaxed) - a0;
+    let proc_allocs = PROC_ALLOCS.load(Relaxed) - pa0;
     let fp_end = footprint_mb();
     times.sort_by(|a, b| a.total_cmp(b));
     if let Some(i) = args.iter().position(|a| a == "--dump-io") {
@@ -519,7 +544,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         )?;
     }
     println!(
-        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2}}}",
+        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan},\"process_allocs_per_frame\":{},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2}}}",
         model.name(),
         pct(&times, 0.1),
         pct(&times, 0.5),
@@ -530,6 +555,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         times.iter().sum::<f64>() / times.len() as f64,
         cpu / wall,
         allocs as f64 / frames as f64,
+        if count_malloc { format!("{:.3}", proc_allocs as f64 / frames as f64) } else { "null".into() },
     );
     Ok(())
 }
