@@ -1,11 +1,14 @@
 //! `Bus`（一块总线）与 `Ring`（其中一个环的视图）。本文件不含 unsafe（系统调用在 `wake.rs` / `region.rs`）。
 
+use crate::sync::AtomicU32;
+use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering::{Acquire, Relaxed, Release};
-use core::sync::atomic::{AtomicBool, AtomicU32};
 #[cfg(all(unix, feature = "posix"))]
 use std::ffi::CString;
 
-use crate::layout::{self, Header, MAGIC, RINGS, RingHdr, VERSION};
+#[cfg(all(unix, feature = "posix"))]
+use crate::layout::Header;
+use crate::layout::{self, MAGIC, RINGS, RingHdr, VERSION};
 use crate::region::Region;
 use crate::wake;
 use crate::{BusConfig, RingId, ShmError, WaitStrategy};
@@ -27,7 +30,7 @@ pub struct Bus {
 
 /// 名字规则：`/vdn-` 开头，总长 ≤ 31 字节（macOS PSHMNAMLEN），之后不再有 `/`，不含 NUL。
 #[cfg(all(unix, feature = "posix"))]
-fn checked_name(name: &str) -> Result<CString, ShmError> {
+pub(crate) fn checked_name(name: &str) -> Result<CString, ShmError> {
     let ok = name.starts_with("/vdn-")
         && name.len() > "/vdn-".len()
         && name.len() <= 31
@@ -161,17 +164,17 @@ impl Bus {
         self.strategy
     }
 
-    /// 本进程能不能用跨进程唤醒（macOS 14.4+ 且找到了系统函数）。不能时 `wait` 用 200 µs 轮询。
+    /// 本构建有没有跨进程唤醒：macOS（最低 14.4，D67）且开了 feature `posix` 时为 true；Linux · Miri · loom 下为 false，`wait` 用 200 µs 轮询。
     pub fn wake_supported() -> bool {
         wake::init();
         wake::supported()
     }
 
-    /// 只给测试用：让本进程假装系统不支持唤醒（验证退回轮询那条路）。全进程生效、不可撤销。
+    /// 只给测试用：让本进程的唤醒系统调用都当作「返回了不可恢复的错」（验证退回轮询那条路）。全进程生效、不可撤销。
     #[doc(hidden)]
-    pub fn force_wake_unsupported_for_test() {
+    pub fn force_wake_error_for_test() {
         wake::init();
-        wake::force_unsupported();
+        wake::force_error();
     }
 
     fn wrap(region: Region, cap: usize, shared: bool) -> Self {
@@ -207,6 +210,8 @@ fn new_session_id() -> u64 {
     use std::hash::{BuildHasher, Hasher};
     let mut h = std::collections::hash_map::RandomState::new().build_hasher();
     h.write_u32(std::process::id());
+    // Miri 默认隔离、不给真实时钟：只靠 RandomState 的随机种子
+    #[cfg(not(miri))]
     if let Ok(t) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
         h.write_u128(t.as_nanos());
     }
@@ -277,8 +282,17 @@ impl Bus {
         Ring { hdr, slots }
     }
 
-    /// 生产方：push 完调一次，叫醒在 `wait(id, ..)` 上睡着的消费方。
-    /// 实时可调（规约 §4 A 档唯一例外）：一次原子加 + 至多一次非阻塞系统调用（`os_sync_wake_by_address_any`），
+    /// 生产方：`push` 再 `notify` 的合写（顺序不会写反）。返回写进去的样本数。
+    pub fn push_notify(&self, id: RingId, src: &[f32]) -> usize {
+        let n = self.ring(id).push(src);
+        self.notify(id);
+        n
+    }
+
+    /// 生产方：push 完调一次，叫醒在 `wait(id, ..)` 上睡着的消费方。**必须在 push 之后调**（先 notify 后 push 会丢唤醒，
+    /// 消费方要等到超时）；嫌麻烦用 `push_notify`。
+    /// 实时可调（规约 §4 A 档唯一例外）：一次原子加 + 至多一次非阻塞系统调用（`os_sync_wake_by_address_all`；同一环按约定只有一个等待者，叫醒全部与叫醒一个代价相同，
+    /// 但残留的第二个等待者也不会让真消费方漏醒），
     /// 不分配、不加锁、不阻塞；没人在等时系统立刻返回。系统不支持时只做原子加。
     pub fn notify(&self, id: RingId) {
         let w = &self.ring(id).hdr.prod.wake;

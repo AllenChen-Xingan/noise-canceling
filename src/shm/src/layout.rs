@@ -11,8 +11,10 @@
 //! 全部字段都是原子量：另一个进程随时可能在读写，这里不出现普通字段，也就不需要对「对方写了一半」做假设。
 //! 读写索引是单调递增的 u64（每秒 48 000 样本，约 1200 万年才回绕），可用量 = write − read。
 
-use core::mem::{align_of, offset_of, size_of};
-use core::sync::atomic::{AtomicU32, AtomicU64};
+use crate::sync::{AtomicU32, AtomicU64};
+use core::mem::size_of;
+#[cfg(not(feature = "loom"))]
+use core::mem::{align_of, offset_of};
 
 /// 数值读作 ASCII "VDN_SHM1"（按本机小端存，十六进制工具里看到的字节是倒序的）。0 = 创建方还没写完头。
 pub const MAGIC: u64 = 0x5644_4E5F_5348_4D31;
@@ -85,7 +87,8 @@ pub struct Header {
 }
 
 pub const HEADER_BYTES: usize = size_of::<Header>();
-pub const SLOT_BYTES: usize = size_of::<AtomicU32>();
+/// 每个样本槽 4 字节（u32 位模式）。写死而不用 `size_of::<AtomicU32>()`：loom 下原子量更大，但字节布局约定不变
+pub const SLOT_BYTES: usize = 4;
 
 /// 整块大小；容量非法（0 或超上限）时返回 None。
 pub const fn total_bytes(capacity_frames: u32) -> Option<usize> {
@@ -95,12 +98,50 @@ pub const fn total_bytes(capacity_frames: u32) -> Option<usize> {
     Some(HEADER_BYTES + RINGS * capacity_frames as usize * SLOT_BYTES)
 }
 
+/// loom 下没有「一块全零内存就是合法头部」这回事：逐字段 new。
+#[cfg(feature = "loom")]
+impl Header {
+    pub fn new_zeroed() -> Self {
+        let u = || AtomicU64::new(0);
+        let w = || AtomicU32::new(0);
+        let ring = || RingHdr {
+            prod: ProdLine {
+                write: u(),
+                overflow: u(),
+                wake: w(),
+            },
+            cons: ConsLine {
+                read: u(),
+                underrun: u(),
+                wait_fallbacks: u(),
+                gaps: u(),
+            },
+        };
+        Self {
+            config: ConfigLine {
+                magic: u(),
+                version: w(),
+                rate: w(),
+                capacity_frames: w(),
+                l_total: w(),
+                total_bytes: u(),
+                lead: w(),
+                denoise_block: w(),
+                session: u(),
+            },
+            beat: BeatLine { heartbeat: u() },
+            rings: [ring(), ring(), ring()],
+        }
+    }
+}
+
 // 跨进程要求 64 位原子操作无锁（arm64 / x86_64 都满足）
 #[cfg(not(target_has_atomic = "64"))]
 compile_error!("vdn-shm 需要无锁的 64 位原子操作");
 
 // 布局钉死：任何一项变了编译就失败，提醒升 VERSION 并通知 HAL / 对端（若驱动是 C，cbindgen 出头文件）。
-// 这些是编译期断言，不在运行期执行。
+// 这些是编译期断言，不在运行期执行。loom 下原子量大小不同，不查（loom 只测协议，不测布局）。
+#[cfg(not(feature = "loom"))]
 const _: () = {
     assert!(size_of::<ProdLine>() == 64 && size_of::<ConsLine>() == 64);
     assert!(size_of::<RingHdr>() == 128);

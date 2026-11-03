@@ -106,3 +106,54 @@ mod per_frame {
 }
 
 pub use per_frame::copy_out;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn open_missing_file_returns_error_without_panic() {
+        let p = Path::new("/nonexistent/vdn-backend-ort-test/no-such-model.onnx");
+        let Err(err) = open(p) else {
+            panic!("不存在的文件必须返回错误");
+        };
+        assert!(
+            err.to_string().contains("no-such-model.onnx"),
+            "错误信息应带上文件路径：{err}"
+        );
+    }
+
+    #[test]
+    fn zeros_has_requested_shape_and_all_zero_data() {
+        let t = zeros(&[1, 3, 4]).expect("建张量");
+        let (shape, data) = t.extract_tensor();
+        assert_eq!(&**shape, &[1i64, 3, 4]);
+        assert_eq!(data.len(), 12);
+        assert!(data.iter().all(|&v| v == 0.0));
+    }
+
+    #[test]
+    fn copy_out_copies_when_len_matches_and_leaves_dst_untouched_otherwise() {
+        let src = ort::value::Tensor::from_array((vec![2usize, 2], vec![1.0f32, 2.0, 3.0, 4.0]))
+            .expect("建张量")
+            .into_dyn();
+        let mut dst = [0.0f32; 4];
+        assert_eq!(copy_out(&src, &mut dst), Ok(()));
+        assert_eq!(dst, [1.0, 2.0, 3.0, 4.0]);
+
+        // 长度不符：返回 Len，且不写 dst
+        let mut short = [9.0f32; 3];
+        assert_eq!(copy_out(&src, &mut short), Err(CopyError::Len));
+        assert_eq!(short, [9.0; 3]);
+    }
+
+    #[test]
+    fn copy_out_rejects_non_f32_tensor() {
+        let src = ort::value::Tensor::from_array((vec![2usize], vec![1i64, 2]))
+            .expect("建张量")
+            .into_dyn();
+        let mut dst = [7.0f32; 2];
+        assert_eq!(copy_out(&src, &mut dst), Err(CopyError::Type));
+        assert_eq!(dst, [7.0; 2]);
+    }
+}

@@ -3,6 +3,23 @@
 > 大总管一次只做好一件大事，每个手下只管 2–4 个实体（CLAUDE.md 第五节第 4 条）。不属于当前大事的事按**实体**分组记在这里；换入某个实体时把它下面的事一起取走，打勾写去向，**不删**。
 > 要人拍板的题不放这里，放 `state/pending-decisions.md`。
 
+## 处理链的统一表示（下一件大事，D72 · 011）
+
+- [ ] **处理图 + schema 交叉校验 + 前端只算一次（D71）**：STFT / fbank / 场景特征每帧只算一次，降噪 · 认人 · 场景 · VAD 共用（规约 §3.1 `SpectrumTap` 已留口）；同一功能只在一处实现；处理链表示成「节点带类型 · 参数 · 版本」的图，会话记录同一套表示；Rust 类型为源头导出 schema、CI 比对；清掉 speaker / polish / scene 的 `vdn-types` 镜像副本（12 处）与手写 JSON；后处理级非有限检查与 Engine classify 规则合成一处；非有限值检查在 Pipeline 与送音端各一处（进程边界，有意）统一口径 · 出处 `docs/plan/011_schema-crosscheck.md` · Rust 骨架审查 `docs/plan/010_rust-skeleton-audit.md`
+
+## Rust 骨架的遗留（b8-rust 批次）
+
+- [x] ~~空闲时推理块约 3 ms：追性能核 / 提频、压 lead 到 144~~ → 人定 D74 用低频，lead 留 4 ms
+- [ ] **资源判据按 D75 改**（e3 转人定：「我觉得是实际耗电和对性能的影响」）：链路 verifier 加「功耗 mW（powermetrics，人输密码或免密规则）+ 对其他程序性能的影响」，CPU% 只作参考；现有数据在 `docs/experiments/exp-v7-latency/results/20261102-power/`
+- [ ] 共享内存权限 0600 与 coreaudiod 下的虚拟麦克风能否打开（装驱动那批实测；补 009 待拍板 3）
+- [ ] 虚拟麦克风真驱动接口 + 安装（D05，要人输密码、断音几秒）；构建部署目标 14.4（D73）
+- [ ] 麦克风流无缝重接（回调里换设备，不断声）
+- [ ] `vdn-eval` / `vdn-speaker` / `vdn-speaker-lab` 改走推理后端，不再直接依赖 ort
+- [ ] ContentId 用 FNV → 规约原写 sha256
+- [ ] RTSan 检查（规约 G8）
+- [ ] `vdn-rt-thread` 的 JoinToken 常数照 SDK 头文件抄，缺自动比对（唯一真相源）
+- [ ] Ring 拆 Producer / Consumer 句柄（类型挡住「一端一线程」）
+
 ## 虚拟麦克风（HAL 插件）
 
 - [ ] **dev-4 实时管线 + Rust 虚拟麦克风**：第一步是 D05 空插件加载与崩溃实验（D54 · D55）；要人输密码、断音几秒 · 出处 `docs/plan/001_decisions-20261029-b1.md` D54 / D55

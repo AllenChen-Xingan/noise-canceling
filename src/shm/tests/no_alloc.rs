@@ -1,4 +1,6 @@
 //! 实时路径（ring · push · pop · discard · beat · 计数器）零分配。
+#![cfg(not(feature = "loom"))]
+// loom 的原子量只能在 loom::model 里用；loom 模式只跑 tests/loom.rs
 // assert_no_alloc 的 AllocDisabler 只在 debug_assertions 下存在：release 测试跳过这个文件
 #![cfg(debug_assertions)]
 

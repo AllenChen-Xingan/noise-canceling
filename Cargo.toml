@@ -1,4 +1,4 @@
-# vdn workspace：crate 放 src/<crate>/。依赖方向见 specs/rust/architecture.md §2.2：types ← dsp ← engine；models → types + dsp；cli → engine + models；xtask 不依赖任何 vdn crate
+# vdn workspace：crate 放 src/<crate>/。依赖方向的正本是各 crate 的 [package.metadata.vdn].forbid（xtask check-deps / cargo deny 检查），图见 specs/rust/architecture.md §2.2
 [workspace]
 resolver = "3"
 members = ["src/dsp", "src/engine", "src/models", "src/cli", "src/types", "src/xtask", "src/speaker", "src/speaker-lab", "src/scene", "src/polish", "src/eval", "src/backend-ort", "src/io-macos", "src/hal", "src/shm", "src/rt-thread", "src/control", "src/capture", "src/denoised"]

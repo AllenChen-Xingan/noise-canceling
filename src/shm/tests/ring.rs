@@ -1,4 +1,5 @@
 //! 进程内 heap 版：顺序 · 回绕 · 满 · 空 · 计数器 · 头部。Miri 也跑这个文件（本机暂无 Miri，见现状页）。
+#![cfg(not(feature = "loom"))] // loom 的原子量只能在 loom::model 里用；loom 模式只跑 tests/loom.rs
 
 use vdn_shm::{Bus, BusConfig, RingId, ShmError};
 
@@ -167,6 +168,4 @@ fn drift_full_ring_realigned_by_discard() {
     assert_eq!(r.available(), target);
 }
 
-#[test]
-#[ignore = "待实现：loom 模型检查 SPSC 协议（本批不做）"]
-fn loom_spsc() {}
+// loom 模型检查已在 tests/loom.rs（cargo test -p vdn-shm --no-default-features --features loom --test loom --release）

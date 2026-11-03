@@ -3,7 +3,10 @@
 //! - `promote_current(RtParams)`：把**当前线程**设成 Mach time-constraint 策略（`thread_policy_set` +
 //!   `THREAD_TIME_CONSTRAINT_POLICY`），送音回调线程与降噪线程启动时各调一次
 //! - `check_current()`：读回当前线程的策略，启动自检用（失败计数并上报，不静默）
-//! - Audio Workgroup 加入（`os_workgroup_join`）：本批返回 `RtError::Unimplemented`
+//! - `ThreadPolicy::default()`：降噪线程的默认策略（D68：实时优先级开、工作区间不加入）；`RtParams::from_measured`：computation = 每个周期窗口总工作量的 p99.9 × 1.5
+//! - `WorkInterval`：降噪进程自建音频工作区间（`AudioWorkIntervalCreate` + `os_workgroup_join`），每块 `begin` / `finish` 报截止期，见 `workgroup.rs`
+//! - `set_qos_user_interactive()`：当前线程 QoS 设成「用户交互」（对照用）
+//! - 加入**设备**的 IO 工作组（`join_audio_workgroup`）：只在送音进程里拿得到，属 vdn-io-macos，本 crate 返回 `Unimplemented`
 //!
 //! 时间参数按纳秒给，内部换成 Mach 绝对时间单位（`mach_timebase_info`；Apple Silicon 上 1 单位 = 125/3 ns）。
 //! 非 macOS 一律返回 `Unsupported`。
@@ -46,6 +49,23 @@ impl RtParams {
         }
     }
 
+    /// 按实测耗时定参数（D68「computation 按实测 p99.9 留余量」）：
+    /// computation = **一个周期窗口内总工作量**的 p99.9 × `margin`（建议 [`MEASURED_MARGIN`]），夹在 [1 ns, 周期] 内；
+    /// constraint = period。
+    ///
+    /// 周期按「最长那一块」的节奏报，不按唤醒节奏报（大总管 2026-11-02 二选一，选 A）：
+    /// 降噪线程每 2 ms 醒一次，但每 16 ms 里有 1 块推理（约 3 ms）+ 7 块轻处理（各约 0.13 ms）。
+    /// - 报 16 ms：`window_p999_ns` 取每 16 ms 窗口总耗时的 p99.9（约 4 ms）→ computation ≈ 6 ms，余量真是 1.5 倍
+    /// - 不报 2 ms：推理那一块单独就超过 2 ms 的周期，computation 最多夹到 2 ms，每 16 ms 必超一次，更容易被系统降级
+    pub fn from_measured(period_ns: u64, window_p999_ns: u64, margin: f64) -> Self {
+        let comp = (window_p999_ns as f64 * margin.max(1.0)) as u64;
+        Self {
+            period_ns,
+            computation_ns: comp.clamp(1, period_ns.max(1)),
+            constraint_ns: period_ns,
+        }
+    }
+
     fn validate(&self) -> Result<(), RtError> {
         if self.computation_ns == 0 {
             return Err(RtError::InvalidParams("computation 为 0"));
@@ -60,10 +80,38 @@ impl RtParams {
     }
 }
 
+/// 实测 p99.9 之上留的余量倍数（`RtParams::from_measured` 用）。
+/// 取 1.5：2026-11-02 耗电对照里，同一块计算 p99.9 比 p50 只多 1–6 %，max 比 p99.9 多 0.1–5 %；
+/// 1.5 倍盖得住偶发慢块，又小于周期（GTCRN：每 16 ms 窗口总工作量约 4 ms → computation 约 6 ms）。
+pub const MEASURED_MARGIN: f64 = 1.5;
+
+/// 降噪处理线程的默认调度策略（人定 D68，2026-11-02）：
+/// - `time_constraint = true`：实时优先级默认开。实测把醒来迟到中位从 2.6 ms 降到 22 µs，看不出额外耗电
+/// - `work_interval = false`：音频工作区间默认**不**加入，保留开关。实测功耗中位多约 27 mW、没有提速（截止期宽时系统不提频）
+///
+/// 依据：`docs/experiments/exp-v7-latency/results/20261102-power/README.md`（单次实测）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ThreadPolicy {
+    pub time_constraint: bool,
+    pub work_interval: bool,
+}
+
+impl Default for ThreadPolicy {
+    fn default() -> Self {
+        Self {
+            time_constraint: true,
+            work_interval: false,
+        }
+    }
+}
+
 /// 读回的线程状态。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RtStatus {
-    /// 当前线程是否处在 time-constraint 策略
+    /// 当前线程是否处在 time-constraint 策略。
+    /// 注意：这是**读回声明的策略**，未必看得到系统内部的临时降级——2026-11-02 耗电对照里声明 computation 2.1 ms、
+    /// 实际每块 3.0 ms，每秒读回 60 次都还是 time-constraint（推断：降级不反映在读回值上，或系统容忍了；未核实）。
+    /// 所以「降级计数」只能当下限看，醒来迟到与处理超时才是直接判据
     pub time_constraint: bool,
     /// 读回的参数（纳秒，由 Mach 单位换回，可能差 1 个单位的取整）
     pub params: Option<RtParams>,
@@ -82,6 +130,8 @@ pub enum RtError {
     Unsupported,
     /// 本批未实现
     Unimplemented(&'static str),
+    /// 系统没给出要的对象（如 `AudioWorkIntervalCreate` 返回空）
+    Unavailable(&'static str),
 }
 
 impl core::fmt::Display for RtError {
@@ -91,6 +141,7 @@ impl core::fmt::Display for RtError {
             Self::Kernel { op, code } => write!(f, "{op} 失败（kern_return {code}）"),
             Self::Unsupported => write!(f, "本平台不支持 Mach time-constraint"),
             Self::Unimplemented(what) => write!(f, "待实现：{what}"),
+            Self::Unavailable(what) => write!(f, "系统不可用：{what}"),
         }
     }
 }
@@ -123,9 +174,21 @@ pub fn check_current() -> Result<RtStatus, RtError> {
 }
 
 /// 把当前线程加入音频设备 IO 线程的 workgroup（`os_workgroup_join`，跨进程用 `os_workgroup_copy_port`）。
-/// 本批未实现（009 §一.1：周期不一致时有没有用要实验）。
+/// 设备的 IO 工作组要从 `kAudioDevicePropertyIOThreadOSWorkgroup` 拿，只在开着设备 IOProc 的送音进程里有，属 vdn-io-macos；
+/// 本 crate 不依赖 CoreAudio，所以返回 `Unimplemented`。降噪进程用 [`WorkInterval`]（自建工作区间）。
 pub fn join_audio_workgroup() -> Result<(), RtError> {
-    Err(RtError::Unimplemented("Audio Workgroup 加入"))
+    Err(RtError::Unimplemented(
+        "设备 IO 工作组只在送音进程里拿得到（属 vdn-io-macos）；降噪进程用 WorkInterval",
+    ))
+}
+
+mod workgroup;
+pub use workgroup::{Member, WorkInterval, set_qos_user_interactive};
+
+/// (numer, denom)：1 个 Mach 单位 = numer / denom 纳秒。
+#[cfg(target_os = "macos")]
+pub(crate) fn mach_timebase() -> Result<(u64, u64), RtError> {
+    mach::timebase()
 }
 
 #[cfg(target_os = "macos")]
@@ -139,7 +202,7 @@ mod mach {
     };
 
     /// (numer, denom)：1 个 Mach 单位 = numer / denom 纳秒。
-    fn timebase() -> Result<(u64, u64), RtError> {
+    pub(super) fn timebase() -> Result<(u64, u64), RtError> {
         let mut tb = mach_timebase_info_data_t { numer: 0, denom: 0 };
         // SAFETY: tb 是可写的 mach_timebase_info 结构，函数只写它。
         let kr = unsafe { mach_timebase_info(&mut tb) };

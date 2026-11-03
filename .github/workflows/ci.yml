@@ -1,19 +1,25 @@
-# 闸门：本机与 CI 共用一条命令 `cargo run -p xtask -- ci`（fmt · clippy · test · tidy · check-deps；cargo-deny 装了才跑）。
-# 本批全在 macOS 上跑；按规约 §7「CI 费用」把核心 crate 拆到 Linux、macOS 只跑平台部分，后续批次做。
+# 闸门（平台无关部分，Linux）：`cargo run -p xtask -- ci --platform linux`
+# = fmt · clippy · test（排除 macOS 专属 crate）· tidy · check-deps · cargo-deny。
+# 平台相关部分（clippy aarch64-apple-darwin、io-macos / shm / rt-thread / hal 测试）在 ci-macos.yml，按路径触发。
+# 依据：规约 §7「CI 费用」——私有仓 macOS 分钟数约是 Linux 的 10 倍。本机不带 --platform 跑全部。
 name: ci
 on:
   pull_request:
   push:
     branches: [main]
 jobs:
-  check:
-    runs-on: macos-15
+  linux:
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: manifests
         run: python3 scripts/check-manifests.py
-      - name: rust gate
-        run: cargo run -p xtask -- ci
+      - name: install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - name: rust gate (linux)
+        run: cargo run -p xtask -- ci --platform linux
       - name: eval ci
         # CI 层评测：纯 DSP、确定性、无模型权重；回归集 L3 不过 / 比冻结基线差 / 探针没抓住 → 失败（exp007）
         run: |
