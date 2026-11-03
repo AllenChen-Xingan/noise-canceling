@@ -238,7 +238,7 @@ pub fn code_lines(src: &str) -> Vec<String> {
                     } else if ch == '\'' {
                         // 字符字面量 'x' / '\n'；否则是生命周期，原样保留
                         if c.get(i + 1) == Some(&'\\') {
-                            let end = c[i + 2..].iter().position(|&x| x == '\'').map_or(c.len(), |k| i + 3 + k);
+                            let end = c.get(i + 3..).and_then(|t| t.iter().position(|&x| x == '\'')).map_or(c.len(), |k| i + 4 + k);
                             o.push_str("' '");
                             i = end;
                         } else if c.get(i + 2) == Some(&'\'') {
@@ -568,6 +568,7 @@ mod tests {
             "    /* floor_db.clamp(-60.0, 0.0) */ let x = 1;",
             // 生命周期与字符字面量不打乱剥离
             "    fn f<'a>(x: &'a str) -> char { let _ = floor_db; '\"' }",
+            "    let q = ['\\'', '\\\\', '\"']; let s = \"floor_db.clamp(-60.0, 0.0)\";",
         ];
         for line in good {
             assert!(range_problems("x.rs", line, &toks()).is_empty(), "{line}");
