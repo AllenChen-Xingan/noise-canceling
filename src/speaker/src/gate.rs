@@ -51,25 +51,72 @@ pub struct GateParams {
 }
 
 impl Default for GateParams {
+    /// 可调参数的默认值取自 `vdn_types::desc`（正本）；`sr` / `clock_rate` 是接线配置，不是可调参数。
     fn default() -> Self {
+        use vdn_types::desc::*;
         Self {
             sr: 16000.0,
             clock_rate: 16000.0,
-            floor_db: -12.0,
-            attack_s: 0.005,
-            reopen_s: 0.05,
-            release_s: 0.5,
-            onset_gap_s: 0.3,
-            onset_jump_db: 8.0,
+            floor_db: FLOOR_DB.default,
+            attack_s: GATE_ATTACK_S.default,
+            reopen_s: GATE_REOPEN_S.default,
+            release_s: GATE_RELEASE_S.default,
+            onset_gap_s: GATE_ONSET_GAP_S.default,
+            onset_jump_db: GATE_ONSET_JUMP_DB.default,
             // 1 次确认在 exp005 上多压约 0.4 dB，但 c02（邻座近）句首误压 2.5% → 11.4%；按「宁可漏噪音也不吃字」取 2
-            confirm_n: 2,
-            onset_level_margin_db: 3.0,
+            confirm_n: GATE_CONFIRM_N.default_count(),
+            onset_level_margin_db: GATE_ONSET_LEVEL_MARGIN_DB.default,
+            // 可缺省参数：出厂关
             level_close_db: None,
-            level_close_hold_s: 0.3,
-            onset_arm_s: 0.1,
-            onset_refractory_s: 0.3,
-            vad_on: 0.5,
-            vad_off: 0.35,
+            level_close_hold_s: GATE_LEVEL_CLOSE_HOLD_S.default,
+            onset_arm_s: GATE_ONSET_ARM_S.default,
+            onset_refractory_s: GATE_ONSET_REFRACTORY_S.default,
+            vad_on: VAD_ON.default,
+            vad_off: VAD_OFF.default,
+        }
+    }
+}
+
+impl GateParams {
+    /// 每个可调参数都在描述表范围内（解析命令行 / 配置时调；越界拒收）。
+    pub fn validate(&self) -> Result<(), vdn_types::RangeError> {
+        use vdn_types::desc::*;
+        FLOOR_DB.check(self.floor_db)?;
+        GATE_ATTACK_S.check(self.attack_s)?;
+        GATE_REOPEN_S.check(self.reopen_s)?;
+        GATE_RELEASE_S.check(self.release_s)?;
+        GATE_ONSET_GAP_S.check(self.onset_gap_s)?;
+        GATE_ONSET_JUMP_DB.check(self.onset_jump_db)?;
+        GATE_CONFIRM_N.check_count(self.confirm_n)?;
+        GATE_ONSET_LEVEL_MARGIN_DB.check(self.onset_level_margin_db)?;
+        GATE_LEVEL_CLOSE_DB.check_opt(self.level_close_db)?;
+        GATE_LEVEL_CLOSE_HOLD_S.check(self.level_close_hold_s)?;
+        GATE_ONSET_ARM_S.check(self.onset_arm_s)?;
+        GATE_ONSET_REFRACTORY_S.check(self.onset_refractory_s)?;
+        VAD_ON.check(self.vad_on)?;
+        VAD_OFF.check(self.vad_off)?;
+        Ok(())
+    }
+
+    /// 夹进描述表范围（NaN 当默认值）。[`AsymGate::new`] 先夹再用，状态里不会出现越界参数。
+    pub fn clamped(self) -> Self {
+        use vdn_types::desc::*;
+        Self {
+            floor_db: FLOOR_DB.clamp(self.floor_db),
+            attack_s: GATE_ATTACK_S.clamp(self.attack_s),
+            reopen_s: GATE_REOPEN_S.clamp(self.reopen_s),
+            release_s: GATE_RELEASE_S.clamp(self.release_s),
+            onset_gap_s: GATE_ONSET_GAP_S.clamp(self.onset_gap_s),
+            onset_jump_db: GATE_ONSET_JUMP_DB.clamp(self.onset_jump_db),
+            confirm_n: GATE_CONFIRM_N.clamp_count(self.confirm_n),
+            onset_level_margin_db: GATE_ONSET_LEVEL_MARGIN_DB.clamp(self.onset_level_margin_db),
+            level_close_db: GATE_LEVEL_CLOSE_DB.clamp_opt(self.level_close_db),
+            level_close_hold_s: GATE_LEVEL_CLOSE_HOLD_S.clamp(self.level_close_hold_s),
+            onset_arm_s: GATE_ONSET_ARM_S.clamp(self.onset_arm_s),
+            onset_refractory_s: GATE_ONSET_REFRACTORY_S.clamp(self.onset_refractory_s),
+            vad_on: VAD_ON.clamp(self.vad_on),
+            vad_off: VAD_OFF.clamp(self.vad_off),
+            ..self
         }
     }
 }
@@ -99,7 +146,9 @@ pub struct AsymGate {
 }
 
 impl AsymGate {
+    /// 参数先按描述表夹进范围（[`GateParams::clamped`]）；要拒收越界值，调用方先调 [`GateParams::validate`]。
     pub fn new(p: GateParams) -> Self {
+        let p = p.clamped();
         Self {
             vad: Vad::new(),
             hyst: Hysteresis::new(p.vad_on, p.vad_off),
