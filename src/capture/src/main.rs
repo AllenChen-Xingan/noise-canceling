@@ -104,6 +104,18 @@ struct Args {
     /// 心跳停了多少秒后，开始看同名总线是不是换了一条（降噪进程重启后会建新的）
     #[arg(long, default_value_t = 1.0, value_parser = vdn_control::parse_seconds)]
     reconnect_after: f64,
+    /// `--sink file` 的读方比送音端晚多少样本读 Out（模拟插件 IO 相位；不在 L_total 里）。
+    /// 读方晚得不够、被调度拖过头时会补零，文件就错位了
+    #[arg(long, default_value_t = 480)]
+    reader_offset: usize,
+}
+
+/// 模拟 IO 线程（正弦入口、文件出口）提 time-constraint 优先级；失败只告警
+fn promote_io(block: usize, what: &str) {
+    let p = vdn_rt_thread::RtParams::for_block(block as u32, IO_RATE, 0.25);
+    if let Err(e) = vdn_rt_thread::promote_current(p) {
+        eprintln!("vdn-capture: {what}实时优先级提升失败（照常运行）：{e:?}");
+    }
 }
 
 fn main() {
@@ -257,6 +269,7 @@ fn real_main() -> Result<(), String> {
             let n = total.unwrap_or(usize::MAX / 2);
             let mut feeder = feeder;
             Some(thread::spawn(move || -> ForwarderStats {
+                promote_io(block, "正弦线程");
                 let mut buf = vec![0.0f32; block];
                 let (mut off, mut i) = (0usize, 0u32);
                 while off < n && !feeder.link.stop.load(Ordering::Relaxed) {
@@ -310,12 +323,14 @@ fn real_main() -> Result<(), String> {
             let bus = Arc::new(
                 Bus::open(&cfg.out_bus_name).map_err(|e| format!("文件端打开 Out 总线：{e}"))?,
             );
+            let offset = Duration::from_secs_f64(a.reader_offset as f64 / f64::from(IO_RATE));
             Some(thread::spawn(move || {
+                promote_io(block, "文件线程");
                 let mut src = HalSource::new(OutSource::new(bus));
                 let mut y = vec![0.0f32; n];
                 for (i, yb) in y.chunks_mut(block).enumerate() {
-                    // 晚 1.5 块读，模拟插件 IO 线程
-                    sleep_until(start + block_dur * i as u32 + block_dur * 3 / 2);
+                    // 晚 reader_offset 个样本读，模拟插件 IO 线程
+                    sleep_until(start + block_dur * i as u32 + offset);
                     let _: RenderStatus = src.render(yb);
                 }
                 (y, src.counters().underrun_samples())
