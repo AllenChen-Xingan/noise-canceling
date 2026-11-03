@@ -211,14 +211,23 @@ mod tests {
             let out = Arc::new(OwnedBus::create(&name, out_bus_config(48_000)).unwrap());
             let block = 96usize;
             let target = 2 * block;
-            let (mut f, _ctl) = Feeder::new(None, Forwarder::new(ForwarderConfig::new(96, block)), out.clone());
-            let mut src = HalSource::new(OutSource::new(Arc::new(Bus::open(&name).unwrap())).with_drift(target, block));
+            let (mut f, _ctl) = Feeder::new(
+                None,
+                Forwarder::new(ForwarderConfig::new(96, block)),
+                out.clone(),
+            );
+            let mut src = HalSource::new(
+                OutSource::new(Arc::new(Bus::open(&name).unwrap())).with_drift(target, block),
+            );
             let x = crate::testing::test_tone(48_000, block, 0);
             let mut y = vec![0.0f32; block];
             // 事件时间以 ns 计：写方周期 = 2 ms / (1 + ppm)，读方周期 = 2 ms
             let base = 2_000_000i64;
             let wp = base * 1_000_000 / (1_000_000 + producer_ppm);
-            let (mut tw, mut tr) = (0i64, i64::try_from(target).unwrap() * 1_000_000_000 / 48_000);
+            let (mut tw, mut tr) = (
+                0i64,
+                i64::try_from(target).unwrap() * 1_000_000_000 / 48_000,
+            );
             let end = 60_000_000_000i64;
             let (mut max_backlog, mut underruns) = (0usize, 0u64);
             while tr < end {
@@ -241,7 +250,10 @@ mod tests {
                 f.slips_added()
             );
             // 不纠时 60 s 会漂 ±2880 样本（0.1% × 60 s × 48 kHz）
-            assert!(max_backlog <= target + 3 * block, "{tag}：最大积压 {max_backlog}");
+            assert!(
+                max_backlog <= target + 3 * block,
+                "{tag}：最大积压 {max_backlog}"
+            );
             assert!(gaps > 0, "{tag}：没有纠过");
             if producer_ppm < 0 {
                 assert!(f.slips_added() > 0, "{tag}：读方快，应补过块");
