@@ -45,7 +45,7 @@ static int cmpd(const void *a, const void *b) {
     double x = *(const double *)a, y = *(const double *)b;
     return x < y ? -1 : x > y;
 }
-static void on_msg(BNNSGraphMessageLevel lv, const char *msg, const char *loc, void *ctx) {
+static void on_msg(BNNSGraphMessageLevel lv, const char *msg, const char *loc, bnns_user_message_data_t *ctx) {
     (void)ctx;
     fprintf(stderr, "[bnns %u] %s %s\n", lv, msg, loc ? loc : "");
 }
