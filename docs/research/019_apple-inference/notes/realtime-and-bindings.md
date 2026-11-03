@@ -223,6 +223,7 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
 - 两种负载各测一次：
   - 空载；
   - 有负载：多核 CPU 压力，同时开一个用 ANE 的系统功能，如实时字幕；能不能开、开哪个由 applebe 定。
+  - ANE 配置另加一项：**另一个进程**同时跑一个 ANE 模型，量 vdn 每帧被延后多少（arXiv 只测了同进程两线程）。
 - 双跑：两个模型同时跑（换模型淡化期，`architecture.md:222`）。
 
 ### C. 测哪些量
@@ -235,13 +236,15 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
 3. **实时违规**：
    - RTSan 不停模式，去重后每个唯一栈记函数名；
    - 加一个故意 `malloc` 的负例，证明拦截在起作用；
-   - 另外数每帧的 `malloc` / `free` 次数、`pthread_mutex_lock` 次数、`objc_autoreleasePoolPush` 次数。
+   - 另外数每帧的 `malloc` / `free` 次数、`pthread_mutex_lock` 次数、`objc_autoreleasePoolPush` 次数。用和 008 探针同一个方法（RTSan raw 逐次报告，`appendix-probes/README.md:43`），或 exp010 的 `alloc_hook`，这样才能和 ORT 的 1554 / 376 同口径比；记下栈顶函数名，给新豁免表用。
+   - RTSan 只能证「看到违规」，不能证「没有违规」：它不拦 `objc_*`、`mach_*`、`os_sync_*`（见 §5）。
 4. **RTSan 看不到的东西**：
    - 每帧的自愿和非自愿上下文切换次数（`thread_info` / `getrusage` 前后差）；
    - Instruments System Trace 里推理线程有没有阻塞在 Mach 消息或 IOKit 上。
 5. **耗电**：
    - 用 `sudo powermetrics --samplers cpu_power,gpu_power,ane_power`，按节拍跑 5 分钟取平均 mW，减去同条件下不推理的基线；
-   - 另记推理线程的 CPU 占用（核的比例），对照 D31 的「约 1/5 个核」。
+   - 另记推理线程的 CPU 占用（核的比例），对照 D31 的「约 1/5 个核」。用 `thread_info` 的用户态 + 内核态时间除以墙钟；注意 Core ML 和 BNNSGraph 多线程模式会在别的线程上算，要按**进程**总 CPU 时间算，不能只看推理线程。
+   - `powermetrics` 的分项是系统级的，要在同一台机器上关掉其他会话后测。
 6. **逐值一致**：
    - 和 ORT CPU 同一段输入逐帧比：最大绝对误差、均方误差；
    - 长跑 10 分钟看误差有没有随时间变大（GRU 状态漂移）；
