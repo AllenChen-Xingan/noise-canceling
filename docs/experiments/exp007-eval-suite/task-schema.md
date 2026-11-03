@@ -1,6 +1,6 @@
 # vdn-eval 任务清单格式（schema）
 
-解析器正本：`src/eval/src/suite.rs` 的 `parse_suite`；现有清单：`src/eval/suite/ci.json`（CI 层）、`src/eval/suite/qa.json`（QA 层）。新清单照同一格式写，**人判任务放 `docs/experiments/human-prefs/`**，接入时由 vdn-eval 读取（加载入口待接，不改现有两份）。
+格式正本：`src/eval/src/files.rs`；跨任务规则与缺省值：`src/eval/src/suite.rs` 的 `parse_suite`；现有清单：`src/eval/suite/ci.json`（CI 层）、`src/eval/suite/qa.json`（QA 层）。新清单照同一格式写，**人判任务放 `docs/experiments/human-prefs/`**，接入时由 vdn-eval 读取（加载入口待接，不改现有两份）。
 
 ## 格式正本在哪
 
