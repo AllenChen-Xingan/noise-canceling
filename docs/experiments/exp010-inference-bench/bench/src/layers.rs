@@ -1,4 +1,4 @@
-//! 研究 020：手写 GTCRN 逐层计时 + 每层工作量（子命令 `gtcrn-layers`）。
+//! 研究 020：手写 GTCRN（原写法与 v2）逐层计时 + 每层工作量（子命令 `gtcrn-layers`）。
 //!
 //! 计时用 ARM 通用计时器 `cntvct_el0`（本机 24 MHz，一格约 41.7 ns）。单层只有零点几到几微秒，
 //! 一格的量化误差靠几千帧取平均消掉（各层起点与计时器相位无关），所以报**平均值**为主，中位只作参考。
@@ -96,13 +96,17 @@ pub fn run(args: &[String], inputs_for: impl Fn(usize) -> Result<Vec<Vec<f32>>, 
     if frames == 0 || !pace.is_finite() || !(0.0..=10_000.0).contains(&pace) {
         return Err("--frames 要 > 0，--pace-ms 要在 0..=10000".into());
     }
-    if !matches!(variant, "native" | "native-fast") {
-        return Err("--variant 只收 native / native-fast（BLAS 版每帧会分配，不在下界分析里）".into());
-    }
+    let kind = match variant {
+        "native" | "native-fast" => crate::gtcrn_native::Kind::Scalar,
+        "native-v2" => crate::gtcrn_native::Kind::V2,
+        "native-v2-fast" => crate::gtcrn_native::Kind::V2Fast,
+        _ => return Err("--variant 只收 native / native-fast / native-v2 / native-v2-fast（BLAS 版每帧会分配，不在下界分析里）".into()),
+    };
     crate::set_thread_qos(qos, 16.0)?;
     crate::gtcrn_native::BLAS.store(false, std::sync::atomic::Ordering::Relaxed);
     crate::gtcrn_native::FAST.store(variant == "native-fast", std::sync::atomic::Ordering::Relaxed);
     let mut net = GtcrnNative::load(std::path::Path::new(&args[0]))?;
+    net.set_kind(kind);
     let inputs = inputs_for(1 + warm + frames)?;
     let mut p = TimerProbe::new(frames);
     let mut x = inputs[0].clone();

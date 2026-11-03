@@ -1431,12 +1431,9 @@ fn add_into(x: &mut [f32], y: &[f32]) {
 }
 
 #[cfg(test)]
-mod tests {
-    //! 不需要权重的单元测试。要权重的端到端对拍在 main.rs 的 tests 里（#[ignore]）。
-    use super::*;
-
+mod tests_support {
     /// 确定性伪随机（不引依赖）
-    fn rnd(n: usize, seed: u32) -> Vec<f32> {
+    pub fn rnd(n: usize, seed: u32) -> Vec<f32> {
         let mut s = seed.wrapping_mul(2_654_435_761).max(1);
         (0..n)
             .map(|_| {
@@ -1447,6 +1444,13 @@ mod tests {
             })
             .collect()
     }
+}
+
+#[cfg(test)]
+mod tests {
+    //! 不需要权重的单元测试。要权重的端到端对拍在 main.rs 的 tests 里（#[ignore]）。
+    use super::tests_support::rnd;
+    use super::*;
 
     #[test]
     fn exp_fast_close_to_libm() {

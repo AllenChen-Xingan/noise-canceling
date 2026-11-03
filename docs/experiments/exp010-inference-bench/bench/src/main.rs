@@ -446,6 +446,17 @@ fn open_net_with(
             gtcrn_native::FAST.store(k.contains("fast"), Relaxed);
             Box::new(GtcrnNative::load(path)?)
         }
+        // 研究 020：同一份权重与结构，算子换成 NEON 重写（v2 不读 BLAS / FAST 两个全局开关；BLAS 关掉以免 DPGRNN 走 sgemm）
+        (ModelId::Gtcrn, k @ ("native-v2" | "native-v2-fast")) => {
+            gtcrn_native::BLAS.store(false, Relaxed);
+            let mut n = GtcrnNative::load(path)?;
+            n.set_kind(if k.ends_with("fast") {
+                gtcrn_native::Kind::V2Fast
+            } else {
+                gtcrn_native::Kind::V2
+            });
+            Box::new(n)
+        }
         (ModelId::Gtcrn, "tract") => Box::new(TractGtcrn::open(path)?),
         (ModelId::Fem, "ort") => Box::new(OrtFem::open(path)?),
         (ModelId::Fem, "tract") => match shapes {
@@ -1177,7 +1188,7 @@ mod tests {
         let (w, onnx, wav) = (v("EXP010_WEIGHTS"), v("EXP010_GTCRN_ONNX"), v("EXP010_WAV"));
         let audio = read_wav(Path::new(&wav)).unwrap();
         let inputs = frames_for(ModelId::Gtcrn, &audio, audio.len() / HOP, &[]).unwrap();
-        for k in ["native", "native-fast", "native-blas"] {
+        for k in ["native", "native-fast", "native-blas", "native-v2", "native-v2-fast"] {
             let ort = open_net(ModelId::Gtcrn, "ort", Path::new(&onnx)).unwrap();
             let nat = open_net(ModelId::Gtcrn, k, Path::new(&w)).unwrap();
             parity(ModelId::Gtcrn, k, ort, nat, &inputs).unwrap_or_else(|e| panic!("{k}: {e}"));
