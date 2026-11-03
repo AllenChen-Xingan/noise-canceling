@@ -520,6 +520,14 @@ impl<P: Processor> Worker<P> {
 mod tests {
     use super::*;
     use vdn_capture::shm::forward_same_bus;
+
+    /// 配置的模型名与 `vdn-models` 的模型两头互转不丢；每个模型都有配置名。
+    #[test]
+    fn model_choice_roundtrips() {
+        for k in ModelKind::ALL {
+            assert_eq!(model_kind(model_choice(k)), k);
+        }
+    }
     use vdn_capture::{Forwarder, ForwarderConfig};
 
     /// 输出 = 输入、延迟 0
