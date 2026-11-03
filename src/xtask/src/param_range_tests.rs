@@ -100,6 +100,8 @@ fn literal_param_ranges_are_flagged() {
         "assert!((-60.0..=0.0).contains(&floor_db));",
         // else if 的条件单独算（codex #71 第 2 轮 P2 #4）
         "if ready {} else if (-60.0..=0.0).contains(&floor_db) {}",
+        // r# 前缀（codex #71 第 3 轮 P2 #5）
+        "let f = r#floor_db.clamp(-60.0, 0.0);",
         "let s = br#\"tidy: 非参数范围：x\"#; let f = floor_db.clamp(-60.0, 0.0);",
     ] {
         assert_eq!(n(body), 1, "{body}");
@@ -130,6 +132,7 @@ fn p2_range_in_other_statement() {
 #[test]
 fn p3_default_literals_in_production() {
     assert_eq!(n("let p = Polish { smooth: 0.5, floor_db: -20.0 };"), 1);
+    assert_eq!(n("let p = Polish { r#smooth: 0.5 };"), 1, "r# 字段名也认");
     assert_eq!(
         n("let p = Polish { floor_db: -20.0, smooth: 0.3 };"),
         0,

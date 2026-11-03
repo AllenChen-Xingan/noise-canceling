@@ -15,6 +15,7 @@ use std::rc::Rc;
 
 use proc_macro2::{Span, TokenStream, TokenTree};
 use quote::ToTokens;
+use syn::ext::IdentExt;
 use syn::spanned::Spanned;
 use syn::visit::Visit;
 use syn::{Expr, Lit, RangeLimits, UnOp};
@@ -208,8 +209,9 @@ pub fn is_literal_range(e: &Expr) -> bool {
 fn idents(ts: TokenStream, out: &mut BTreeSet<String>) {
     for t in ts {
         match t {
+            // 去掉 `r#`：`r#floor_db` 与 `floor_db` 等价（codex #71 第 3 轮 P2 #5）
             TokenTree::Ident(i) => {
-                out.insert(i.to_string());
+                out.insert(i.unraw().to_string());
             }
             TokenTree::Group(g) => idents(g.stream(), out),
             _ => {}
@@ -343,7 +345,7 @@ impl<'ast> Visit<'ast> for Finder<'_> {
                     && let Some((k, _)) = self
                         .defaults
                         .iter()
-                        .find(|(k, d)| n == k && (d - v).abs() < 1e-6)
+                        .find(|(k, d)| n.unraw() == k && (d - v).abs() < 1e-6)
                 {
                     self.hits.push((f.span(), k.clone(), true));
                 }

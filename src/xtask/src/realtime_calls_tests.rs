@@ -170,3 +170,13 @@ fn raw_identifiers_are_unrawed() {
         2
     );
 }
+
+/// codex #71 第 3 轮 P2 #4：同一文件里的别名链（两层）也还原；循环别名不卡死
+#[test]
+fn alias_chains_are_followed() {
+    assert_eq!(
+        n("use std::thread as a;\nuse a as b;\nfn f() { b::sleep(d); }\n"),
+        1
+    );
+    assert_eq!(n("use a as b;\nuse b as a;\nfn f() { a::x(); }\n"), 0);
+}

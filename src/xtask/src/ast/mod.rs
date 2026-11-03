@@ -91,6 +91,30 @@ pub fn path_attr(attrs: &[Attribute]) -> Option<String> {
     })
 }
 
+/// `#[cfg_attr(谓词, …, path = "…")]` 里的路径：只在某些构建里生效，建树时也当成可能的引用（codex #71 第 3 轮 P1 #3）。
+pub fn cfg_attr_paths(attrs: &[Attribute]) -> Vec<String> {
+    let mut out = Vec::new();
+    for a in attrs.iter().filter(|a| a.path().is_ident("cfg_attr")) {
+        let Ok(items) = a
+            .parse_args_with(syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated)
+        else {
+            continue;
+        };
+        for m in items.iter().skip(1) {
+            if let Meta::NameValue(nv) = m
+                && nv.path.is_ident("path")
+                && let syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(s),
+                    ..
+                }) = &nv.value
+            {
+                out.push(s.value());
+            }
+        }
+    }
+    out
+}
+
 /// 文件里全部字符串字面量：（起始行，解码后的值）。按 token 走，宏参数、属性里的也算；
 /// 文档注释（`///` 与 `//!`，在语法树里是 `#[doc = "…"]`）不算——它们是注释。
 pub fn str_literals(file: &syn::File) -> Vec<(modtree::Pos, String)> {

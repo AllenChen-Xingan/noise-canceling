@@ -365,3 +365,71 @@ fn production_include_is_an_error() {
     assert!(s.problems.iter().all(|p| p.contains("include!")));
     done(&r);
 }
+
+/// codex #71 第 3 轮 P1 #1：常量初始化块、trait 默认方法里的模块与 include! 也走到
+#[test]
+fn modules_and_include_anywhere() {
+    let (r, s) = tree(
+        "anywhere",
+        &[
+            (
+                "src/lib.rs",
+                "#[cfg(test)]\nmod shared;\nconst _: () = {\n    #[path = \"shared.rs\"]\n    mod p;\n};\ntrait T {\n    fn d() {\n        include!(\"x.rs\");\n    }\n}\n",
+            ),
+            ("src/shared.rs", "fn s() {}\n"),
+        ],
+    );
+    assert!(!s.is_test_file("c/src/shared.rs"));
+    assert_eq!(s.problems.len(), 1, "{:?}", s.problems);
+    assert!(s.problems[0].contains("include!"));
+    done(&r);
+}
+
+/// codex #71 第 3 轮 P1 #2：同一文件以两种目录上下文加载（两种声明顺序），子模块都展开
+#[test]
+fn same_file_two_contexts() {
+    for lib in [
+        "#[cfg(test)]\nmod a;\n#[path = \"a.rs\"]\nmod b;\n",
+        "#[path = \"a.rs\"]\nmod b;\n#[cfg(test)]\nmod a;\n",
+    ] {
+        let (r, s) = tree(
+            "twoctx",
+            &[
+                ("src/lib.rs", lib),
+                ("src/a.rs", "mod child;\n"),
+                ("src/a/child.rs", "fn c() {}\n"),
+                ("src/b/child.rs", "fn c() {}\n"),
+            ],
+        );
+        assert!(!s.is_test_file("c/src/a.rs"), "{lib}");
+        assert!(
+            !s.is_test_file("c/src/b/child.rs"),
+            "{lib}：生产路径 b 的子模块"
+        );
+        assert!(
+            s.is_test_file("c/src/a/child.rs"),
+            "{lib}：只经测试路径 a 到达"
+        );
+        done(&r);
+    }
+}
+
+/// codex #71 第 3 轮 P1 #3：`cfg_attr` 里的 path 也当引用（保守）
+#[test]
+fn cfg_attr_path_is_a_reference() {
+    let (r, s) = tree(
+        "cfgattr",
+        &[
+            (
+                "src/lib.rs",
+                "#[cfg(test)]\nmod shared;\n#[cfg_attr(not(test), path = \"shared.rs\")]\nmod p;\n",
+            ),
+            ("src/shared.rs", "fn s() {}\n"),
+            ("src/p.rs", "fn p() {}\n"),
+        ],
+    );
+    assert!(s.problems.is_empty(), "{:?}", s.problems);
+    assert!(!s.is_test_file("c/src/shared.rs"));
+    assert!(!s.is_test_file("c/src/p.rs"));
+    done(&r);
+}

@@ -127,29 +127,47 @@ pub fn hits(rel: &str, src: &str) -> Result<Vec<(usize, &'static str)>, String> 
         .iter()
         .filter(|(a, _, p)| !a.is_empty() && !in_ranges(&tests, *p))
         .collect();
+    // 别名链递归还原（`use std::thread as a; use a as b;` 里的 `b::sleep`），最多 8 层防循环（codex #71 第 3 轮 P2 #4）。
+    // 同名别名可能在不同作用域指向不同路径：不解析作用域，所有候选都展开（第 2 轮 P1 #2）
+    let expand = |segs: &[String]| -> Vec<Vec<String>> {
+        let mut all = vec![segs.to_vec()];
+        let mut frontier = vec![segs.to_vec()];
+        for _ in 0..8 {
+            let mut next = Vec::new();
+            for s in &frontier {
+                for (_, f, _) in aliases.iter().filter(|(a, ..)| *a == s[0]) {
+                    let full: Vec<String> =
+                        f.iter().cloned().chain(s[1..].iter().cloned()).collect();
+                    if !all.contains(&full) {
+                        all.push(full.clone());
+                        next.push(full);
+                    }
+                }
+            }
+            if next.is_empty() {
+                break;
+            }
+            frontier = next;
+        }
+        all
+    };
     let mut out: Vec<(Pos, &'static str)> = Vec::new();
     for (_, full, p) in &uses.0 {
-        if let Some(b) = banned(full) {
+        if let Some(b) = expand(full).iter().find_map(|f| banned(f)) {
             out.push((*p, b));
         }
     }
     let mut seqs = Vec::new();
     path_seqs(file.to_token_stream(), &mut seqs);
     for (p, segs) in seqs {
-        if segs.len() > 1
-            && let Some(b) = banned(&segs)
-        {
+        // 没经过别名还原的单个标识符不是路径（局部变量 `log`、字段 `fs`……）：只看还原出来的
+        let hit = expand(&segs)
+            .iter()
+            .enumerate()
+            .filter(|(k, f)| *k > 0 || f.len() > 1)
+            .find_map(|(_, f)| banned(f));
+        if let Some(b) = hit {
             out.push((p, b));
-            continue;
-        }
-        // 没经过别名还原的单个标识符不是路径（局部变量 `log`、字段 `fs`……）。
-        // 同名别名可能在不同作用域指向不同路径：不解析作用域，所有候选里有一个命中就报（codex #71 第 2 轮 P1 #2）
-        for (_, f, _) in aliases.iter().filter(|(a, ..)| *a == segs[0]) {
-            let full: Vec<String> = f.iter().cloned().chain(segs[1..].iter().cloned()).collect();
-            if let Some(b) = banned(&full) {
-                out.push((p, b));
-                break;
-            }
         }
     }
     let mut lines: Vec<(usize, &'static str)> = out

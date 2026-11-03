@@ -19,7 +19,7 @@ use syn::spanned::Spanned;
 use syn::visit::Visit;
 use syn::{ImplItem, Item, TraitItem};
 
-use super::{cfg_is_test, parse_file, path_attr};
+use super::{cfg_attr_paths, cfg_is_test, parse_file, path_attr};
 
 /// 源码里的位置：（行从 1 起，列从 0 起）。
 pub type Pos = (usize, usize);
@@ -143,42 +143,16 @@ fn leading_attrs(ts: proc_macro2::TokenStream) -> Vec<syn::Attribute> {
     syn::parse::Parser::parse2(p, ts).unwrap_or_default()
 }
 
-/// 生产函数体里：带测试属性的语句（`#[cfg(test)] tests::gap();` 这类）、块里声明的模块、`include!`。
-#[derive(Default)]
-struct BodyScan<'ast> {
-    tests: Vec<proc_macro2::Span>,
-    mods: Vec<&'ast syn::ItemMod>,
-    includes: Vec<proc_macro2::Span>,
-}
-
-impl<'ast> Visit<'ast> for BodyScan<'ast> {
-    fn visit_stmt(&mut self, s: &'ast syn::Stmt) {
-        if cfg_is_test(&leading_attrs(s.to_token_stream())) {
-            self.tests.push(s.span());
-        } else {
-            syn::visit::visit_stmt(self, s);
-        }
-    }
-    fn visit_item_mod(&mut self, m: &'ast syn::ItemMod) {
-        // 块里的模块由 Builder 接着展开（codex #71 第 2 轮 P1 #1）
-        self.mods.push(m);
-    }
-    fn visit_macro(&mut self, m: &'ast syn::Macro) {
-        if m.path.is_ident("include") {
-            self.includes.push(m.span());
-        }
-    }
-}
-
-/// 展开时的位置。
-struct Ctx<'a> {
-    rel: &'a str,
-    /// 本文件所在目录（顶层 `#[path]` 相对它）
-    file_dir: &'a Path,
+/// 走一个文件时所在的位置。
+#[derive(Clone)]
+struct Frame {
     /// 这里声明的子模块放在哪（内联模块里的 `#[path]` 也相对它）
     child_dir: PathBuf,
+    /// 在文件顶层（顶层 `#[path]` 相对文件目录）
     top_level: bool,
     test: bool,
+    /// 在函数、常量、impl 这类块里（块里的外部模块只有带 `#[path]` 才合法，基准目录两种都算）
+    in_block: bool,
 }
 
 struct Builder<'a> {
@@ -186,7 +160,207 @@ struct Builder<'a> {
     crate_dir: PathBuf,
     scope: &'a mut Scope,
     queue: Vec<(PathBuf, PathBuf, bool)>,
-    seen: BTreeSet<(PathBuf, bool)>,
+    /// （文件，是否测试，子模块目录）：同一文件以不同目录上下文加载要各展开一次（codex #71 第 3 轮 P1 #2）
+    seen: BTreeSet<(PathBuf, bool, PathBuf)>,
+}
+
+/// 一个文件的语法树访问器：走遍**每个**节点（条目、impl / trait 的项、函数与常量的块、语句），
+/// 不再按位置一处处枚举（codex #71 第 2、3 轮 P1 #1）。
+struct Walker<'b, 'a> {
+    b: &'b mut Builder<'a>,
+    rel: String,
+    file_dir: PathBuf,
+    stack: Vec<Frame>,
+}
+
+fn item_attrs(it: &Item) -> &[syn::Attribute] {
+    match it {
+        Item::Const(i) => &i.attrs,
+        Item::Enum(i) => &i.attrs,
+        Item::ExternCrate(i) => &i.attrs,
+        Item::Fn(i) => &i.attrs,
+        Item::ForeignMod(i) => &i.attrs,
+        Item::Impl(i) => &i.attrs,
+        Item::Macro(i) => &i.attrs,
+        Item::Mod(i) => &i.attrs,
+        Item::Static(i) => &i.attrs,
+        Item::Struct(i) => &i.attrs,
+        Item::Trait(i) => &i.attrs,
+        Item::TraitAlias(i) => &i.attrs,
+        Item::Type(i) => &i.attrs,
+        Item::Union(i) => &i.attrs,
+        Item::Use(i) => &i.attrs,
+        _ => &[],
+    }
+}
+
+impl Walker<'_, '_> {
+    fn cur(&self) -> Frame {
+        self.stack.last().cloned().unwrap_or(Frame {
+            child_dir: PathBuf::new(),
+            top_level: true,
+            test: false,
+            in_block: false,
+        })
+    }
+
+    /// 进入一个节点：带测试属性就记区间；返回进去后的位置。
+    fn enter(&mut self, test_attr: bool, span: proc_macro2::Span, block: bool) -> Frame {
+        let cur = self.cur();
+        if test_attr && !cur.test {
+            self.b.range(&self.rel, span);
+        }
+        Frame {
+            test: cur.test || test_attr,
+            in_block: cur.in_block || block,
+            ..cur
+        }
+    }
+
+    fn with<F: FnOnce(&mut Self)>(&mut self, f: Frame, go: F) {
+        self.stack.push(f);
+        go(self);
+        self.stack.pop();
+    }
+
+    fn module(&mut self, m: &syn::ItemMod, fr: Frame) {
+        let name = m.ident.unraw().to_string();
+        let line = m.span().start().line;
+        let plain = path_attr(&m.attrs);
+        if let Some((_, items)) = &m.content {
+            // 内联模块自己的 `#[path]` 决定它里面子模块的目录（codex #71 第 1 轮 P1 #2）
+            let dir = match &plain {
+                Some(p) => normalize(&fr.child_dir.join(p)),
+                None => fr.child_dir.join(&name),
+            };
+            let inner = Frame {
+                child_dir: dir,
+                top_level: false,
+                ..fr
+            };
+            self.with(inner, |w| {
+                for it in items {
+                    w.visit_item(it);
+                }
+            });
+            return;
+        }
+        // 外部模块：所有可能指到的文件都当引用（`#[path]`、`cfg_attr` 里的 path、默认位置），宁可多查
+        let bases: Vec<PathBuf> = if fr.in_block {
+            vec![self.file_dir.clone(), fr.child_dir.clone()]
+        } else if fr.top_level {
+            vec![self.file_dir.clone()]
+        } else {
+            vec![fr.child_dir.clone()]
+        };
+        let mut cands: Vec<(PathBuf, PathBuf)> = Vec::new();
+        let paths: Vec<String> = plain
+            .iter()
+            .cloned()
+            .chain(cfg_attr_paths(&m.attrs))
+            .collect();
+        for p in &paths {
+            for base in &bases {
+                let t = normalize(&base.join(p));
+                let c = t.parent().map(Path::to_path_buf).unwrap_or_default();
+                cands.push((t, c));
+            }
+        }
+        if plain.is_none() && !fr.in_block {
+            let flat = fr.child_dir.join(format!("{name}.rs"));
+            let nested = fr.child_dir.join(&name).join("mod.rs");
+            if flat.is_file() && nested.is_file() {
+                self.b.scope.problems.push(format!(
+                    "{}:{line}：模块 {name} 同时有 {name}.rs 与 {name}/mod.rs（编译器也会拒绝）",
+                    self.rel
+                ));
+                return;
+            }
+            let t = if nested.is_file() { nested } else { flat };
+            cands.push((t, fr.child_dir.join(&name)));
+        }
+        let (mut hit, mut escaped) = (false, false);
+        for (t, c) in cands {
+            if !t.starts_with(&self.b.crate_dir) {
+                self.b.scope.problems.push(format!(
+                    "{}:{line}：模块 {name} 的文件 {} 跳出了 crate 目录",
+                    self.rel,
+                    t.display()
+                ));
+                escaped = true;
+                continue;
+            }
+            if t.is_file() {
+                self.b.queue.push((t, c, fr.test));
+                hit = true;
+            }
+        }
+        // 带别的 cfg（平台、feature）的声明，文件可能本就不存在于这次构建：只在没有任何 cfg 时报红
+        if !hit
+            && !escaped
+            && !m.attrs.iter().any(|a| a.path().is_ident("cfg"))
+            && (!fr.in_block || plain.is_some())
+        {
+            self.b.scope.problems.push(format!(
+                "{}:{line}：找不到模块 {name} 的文件（{}）",
+                self.rel,
+                if paths.is_empty() {
+                    format!("{name}.rs 或 {name}/mod.rs")
+                } else {
+                    paths.join(" / ")
+                }
+            ));
+        }
+    }
+}
+
+impl<'ast> Visit<'ast> for Walker<'_, '_> {
+    fn visit_item(&mut self, it: &'ast Item) {
+        let test = cfg_is_test(item_attrs(it));
+        let block = !matches!(it, Item::Mod(_));
+        let fr = self.enter(test, it.span(), block);
+        if let Item::Mod(m) = it {
+            self.module(m, fr);
+            return;
+        }
+        self.with(fr, |w| syn::visit::visit_item(w, it));
+    }
+    fn visit_impl_item(&mut self, ii: &'ast ImplItem) {
+        let a = match ii {
+            ImplItem::Const(x) => &x.attrs[..],
+            ImplItem::Fn(x) => &x.attrs[..],
+            ImplItem::Type(x) => &x.attrs[..],
+            ImplItem::Macro(x) => &x.attrs[..],
+            _ => &[],
+        };
+        let fr = self.enter(cfg_is_test(a), ii.span(), true);
+        self.with(fr, |w| syn::visit::visit_impl_item(w, ii));
+    }
+    fn visit_trait_item(&mut self, ti: &'ast TraitItem) {
+        let a = match ti {
+            TraitItem::Const(x) => &x.attrs[..],
+            TraitItem::Fn(x) => &x.attrs[..],
+            TraitItem::Type(x) => &x.attrs[..],
+            TraitItem::Macro(x) => &x.attrs[..],
+            _ => &[],
+        };
+        let fr = self.enter(cfg_is_test(a), ti.span(), true);
+        self.with(fr, |w| syn::visit::visit_trait_item(w, ti));
+    }
+    fn visit_stmt(&mut self, s: &'ast syn::Stmt) {
+        let test = cfg_is_test(&leading_attrs(s.to_token_stream()));
+        let fr = self.enter(test, s.span(), true);
+        self.with(fr, |w| syn::visit::visit_stmt(w, s));
+    }
+    fn visit_macro(&mut self, m: &'ast syn::Macro) {
+        if m.path.is_ident("include") && !self.cur().test {
+            self.b.scope.problems.push(format!(
+                "{}:{}：生产代码里用了 include!，引入的代码不在模块树里，tidy 查不到（012 第四节）",
+                self.rel,
+                m.span().start().line
+            ));
+        }
+    }
 }
 
 impl Builder<'_> {
@@ -199,188 +373,27 @@ impl Builder<'_> {
             .push(r);
     }
 
-    fn include_problem(&mut self, rel: &str, sp: proc_macro2::Span) {
-        self.scope.problems.push(format!(
-            "{rel}:{}：生产代码里用了 include!，引入的代码不在模块树里，tidy 查不到（012 第四节）",
-            sp.start().line
-        ));
-    }
-
-    fn body(&mut self, cx: &Ctx, b: &syn::Block) {
-        let mut v = BodyScan::default();
-        v.visit_block(b);
-        for sp in v.tests {
-            self.range(cx.rel, sp);
-        }
-        for sp in v.includes {
-            self.include_problem(cx.rel, sp);
-        }
-        for m in v.mods {
-            self.block_module(m, cx);
-        }
-    }
-
-    /// 函数体里的模块：内联的照常展开；外部的只有带 `#[path]` 才合法，基准目录按两种可能
-    ///（文件目录、模块目录）都当成引用，宁可多查。
-    fn block_module(&mut self, m: &syn::ItemMod, cx: &Ctx) {
-        let test = cx.test || cfg_is_test(&m.attrs);
-        if m.content.is_some() {
-            self.module(m, cx, test);
-            return;
-        }
-        let Some(p) = path_attr(&m.attrs) else { return };
-        let mut hit = false;
-        for base in [cx.file_dir.to_path_buf(), cx.child_dir.clone()] {
-            let t = normalize(&base.join(&p));
-            if t.is_file() && t.starts_with(&self.crate_dir) {
-                let c = t.parent().map(Path::to_path_buf).unwrap_or_default();
-                self.queue.push((t, c, test));
-                hit = true;
-            }
-        }
-        if !hit {
-            self.scope.problems.push(format!(
-                "{}:{}：找不到函数体里模块 {} 的文件 {p}",
-                cx.rel,
-                m.span().start().line,
-                m.ident
-            ));
-        }
-    }
-
-    fn items(&mut self, items: &[Item], cx: &Ctx) {
-        for it in items {
-            let attrs: &[syn::Attribute] = match it {
-                Item::Const(i) => &i.attrs,
-                Item::Enum(i) => &i.attrs,
-                Item::ExternCrate(i) => &i.attrs,
-                Item::Fn(i) => &i.attrs,
-                Item::ForeignMod(i) => &i.attrs,
-                Item::Impl(i) => &i.attrs,
-                Item::Macro(i) => &i.attrs,
-                Item::Mod(i) => &i.attrs,
-                Item::Static(i) => &i.attrs,
-                Item::Struct(i) => &i.attrs,
-                Item::Trait(i) => &i.attrs,
-                Item::TraitAlias(i) => &i.attrs,
-                Item::Type(i) => &i.attrs,
-                Item::Union(i) => &i.attrs,
-                Item::Use(i) => &i.attrs,
-                _ => &[],
-            };
-            let test = cfg_is_test(attrs);
-            if test && !cx.test {
-                self.range(cx.rel, it.span());
-            }
-            match it {
-                Item::Mod(m) => self.module(m, cx, cx.test || test),
-                Item::Fn(f) if !cx.test && !test => self.body(cx, &f.block),
-                Item::Macro(m) if !cx.test && !test && m.mac.path.is_ident("include") => {
-                    self.include_problem(cx.rel, m.span());
-                }
-                Item::Impl(i) if !cx.test && !test => {
-                    for ii in &i.items {
-                        let a = match ii {
-                            ImplItem::Const(x) => &x.attrs,
-                            ImplItem::Fn(x) => &x.attrs,
-                            ImplItem::Type(x) => &x.attrs,
-                            ImplItem::Macro(x) => &x.attrs,
-                            _ => continue,
-                        };
-                        if cfg_is_test(a) {
-                            self.range(cx.rel, ii.span());
-                        } else if let ImplItem::Fn(f) = ii {
-                            self.body(cx, &f.block);
-                        }
-                    }
-                }
-                Item::Trait(t) if !cx.test && !test => {
-                    for ti in &t.items {
-                        let a = match ti {
-                            TraitItem::Const(x) => &x.attrs,
-                            TraitItem::Fn(x) => &x.attrs,
-                            TraitItem::Type(x) => &x.attrs,
-                            TraitItem::Macro(x) => &x.attrs,
-                            _ => continue,
-                        };
-                        if cfg_is_test(a) {
-                            self.range(cx.rel, ti.span());
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-
-    fn module(&mut self, m: &syn::ItemMod, cx: &Ctx, test: bool) {
-        let name = m.ident.unraw().to_string();
-        if let Some((_, items)) = &m.content {
-            // 内联模块自己的 `#[path]` 决定它里面子模块的目录（相对当前模块目录；codex #71 第 1 轮 P1 #2）
-            let dir = match path_attr(&m.attrs) {
-                Some(p) => normalize(&cx.child_dir.join(p)),
-                None => cx.child_dir.join(&name),
-            };
-            let inner = Ctx {
-                rel: cx.rel,
-                file_dir: cx.file_dir,
-                child_dir: dir,
-                top_level: false,
+    /// 走一个文件的全部条目。
+    fn walk(&mut self, rel: &str, file_dir: &Path, child_dir: PathBuf, test: bool, f: &syn::File) {
+        let mut w = Walker {
+            b: self,
+            rel: rel.to_string(),
+            file_dir: file_dir.to_path_buf(),
+            stack: vec![Frame {
+                child_dir,
+                top_level: true,
                 test,
-            };
-            self.items(items, &inner);
-            return;
-        }
-        let line = m.span().start().line;
-        let (target, child) = if let Some(p) = path_attr(&m.attrs) {
-            let base = if cx.top_level {
-                cx.file_dir
-            } else {
-                &cx.child_dir
-            };
-            let t = normalize(&base.join(p));
-            let c = t.parent().map(Path::to_path_buf).unwrap_or_default();
-            (t, c)
-        } else {
-            let flat = cx.child_dir.join(format!("{name}.rs"));
-            let nested = cx.child_dir.join(&name).join("mod.rs");
-            match (flat.is_file(), nested.is_file()) {
-                (true, true) => {
-                    self.scope.problems.push(format!(
-                        "{}:{line}：模块 {name} 同时有 {name}.rs 与 {name}/mod.rs（编译器也会拒绝）",
-                        cx.rel
-                    ));
-                    return;
-                }
-                (false, true) => (nested, cx.child_dir.join(&name)),
-                _ => (flat, cx.child_dir.join(&name)),
-            }
+                in_block: false,
+            }],
         };
-        if !target.starts_with(&self.crate_dir) {
-            self.scope.problems.push(format!(
-                "{}:{line}：模块 {name} 的文件 {} 跳出了 crate 目录",
-                cx.rel,
-                target.display()
-            ));
-            return;
+        for it in &f.items {
+            w.visit_item(it);
         }
-        if !target.is_file() {
-            // 带别的 cfg（平台、feature）的声明，文件可能本就不存在于这次构建：只在没有任何 cfg 时报红
-            if !m.attrs.iter().any(|a| a.path().is_ident("cfg")) {
-                self.scope.problems.push(format!(
-                    "{}:{line}：找不到模块 {name} 的文件 {}",
-                    cx.rel,
-                    rel_of(self.root, &target)
-                ));
-            }
-            return;
-        }
-        self.queue.push((target, child, test));
     }
 
     fn run(&mut self) {
         while let Some((file, child_dir, test)) = self.queue.pop() {
-            if !self.seen.insert((file.clone(), test)) {
+            if !self.seen.insert((file.clone(), test, child_dir.clone())) {
                 continue;
             }
             let rel = rel_of(self.root, &file);
@@ -398,14 +411,7 @@ impl Builder<'_> {
                 self.scope.prod_files.insert(rel.clone());
             }
             let file_dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
-            let cx = Ctx {
-                rel: &rel,
-                file_dir: &file_dir,
-                child_dir,
-                top_level: true,
-                test,
-            };
-            self.items(&parsed.items, &cx);
+            self.walk(&rel, &file_dir, child_dir, test, &parsed);
         }
     }
 }
@@ -486,15 +492,7 @@ pub fn file_test_ranges(rel: &str, file: &syn::File) -> Vec<(Pos, Pos)> {
         queue: Vec::new(),
         seen: BTreeSet::new(),
     };
-    let none = PathBuf::new();
-    let cx = Ctx {
-        rel,
-        file_dir: &none,
-        child_dir: PathBuf::new(),
-        top_level: true,
-        test: false,
-    };
-    b.items(&file.items, &cx);
+    b.walk(rel, Path::new(""), PathBuf::new(), false, file);
     let mut r = scope.test_ranges.remove(rel).unwrap_or_default();
     r.sort_unstable();
     r
