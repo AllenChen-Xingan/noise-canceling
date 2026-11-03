@@ -47,13 +47,17 @@ fn session_roundtrips_without_graph() {
 /// 格式 1（加 graph / model 之前写的文件）照常能读，新字段为 None。
 #[test]
 fn format_1_still_reads() {
-    let v1 = "vdn-session = 1\nrate = 48000\ntable = 3 0000000000000001\nprofile = 1 0000000000000002\n\
-              [events]\ne = 0 user on 0 0000000000000003\n";
-    let r = SessionRecord::from_text(v1).unwrap();
+    let e = every_kind()[0];
+    let v1 = format!(
+        "vdn-session = 1\nrate = 48000\ntable = 3 0000000000000001\nprofile = 1 0000000000000002\n\
+         [events]\ne = {}\n",
+        e.to_line()
+    );
+    let r = SessionRecord::from_text(&v1).unwrap();
     assert_eq!(r.header.rate, 48_000);
     assert_eq!(r.header.graph, None);
     assert_eq!(r.header.model, None);
-    assert_eq!(r.events.len(), 1);
+    assert_eq!(r.events, [e]);
     // 再写出就是格式 2
     assert!(r.to_text().starts_with("vdn-session = 2\n"));
 }
