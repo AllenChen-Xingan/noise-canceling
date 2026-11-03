@@ -18,6 +18,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 use serde_json::{Value, json};
+use vdn_eval::files::{BaselineFile, LevelEntry, LevelsFile};
 use vdn_eval::report::{Meta, to_json, to_markdown};
 use vdn_eval::runner::{Baseline, Opts, SuiteResult, baseline_key, run_suite};
 use vdn_eval::suite::{
@@ -86,13 +87,18 @@ fn baseline_path() -> PathBuf {
     repo_root().join("src/eval/suite/baseline-ci.json")
 }
 
-fn load_baseline() -> Baseline {
-    std::fs::read_to_string(baseline_path())
-        .ok()
-        .and_then(|t| serde_json::from_str::<Value>(&t).ok())
-        .and_then(|v| v.get("values").cloned())
-        .and_then(|v| serde_json::from_value::<BTreeMap<String, f64>>(v).ok())
-        .unwrap_or_default()
+/// 读冻结基线。文件不存在 = 还没有基线（空）；存在但格式不对 → 报错，不当成空基线静默放过（第 1 轮 codex #2）。
+fn load_baseline() -> Result<Baseline, String> {
+    load_baseline_from(&baseline_path())
+}
+
+/// 同 `load_baseline`，路径由调用方给（测试用）。
+fn load_baseline_from(p: &Path) -> Result<Baseline, String> {
+    match std::fs::read_to_string(p) {
+        Ok(t) => BaselineFile::parse(&t).map(|b| b.values),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Baseline::new()),
+        Err(e) => Err(format!("{}：{e}", p.display())),
+    }
 }
 
 fn write_baseline(r: &SuiteResult, m: &Meta) -> Result<usize, String> {
@@ -120,12 +126,12 @@ fn write_baseline(r: &SuiteResult, m: &Meta) -> Result<usize, String> {
         }
     }
     let n = vals.len();
-    let doc = json!({
-        "doc": "CI 层冻结基线：回归集上 L0/L1 感知量的数值。门禁规则：比它差容差以上即阻断（012：L0 只作「不许比基线差」的约束）。有意改变行为时用 `vdn-eval ci --write-baseline` 重写，并在 PR 里说明为什么变。",
-        "commit": m.commit,
-        "run_id": m.run_id,
-        "values": vals,
-    });
+    let doc = BaselineFile {
+        doc: "CI 层冻结基线：回归集上 L0/L1 感知量的数值。门禁规则：比它差容差以上即阻断（012：L0 只作「不许比基线差」的约束）。有意改变行为时用 `vdn-eval ci --write-baseline` 重写，并在 PR 里说明为什么变。".into(),
+        commit: m.commit.clone(),
+        run_id: m.run_id.clone(),
+        values: vals,
+    };
     std::fs::write(
         baseline_path(),
         serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())? + "\n",
@@ -220,7 +226,7 @@ fn cmd_eval(args: &[String], layer: &'static str) -> Result<bool, String> {
         baseline: if flag(args, "--write-baseline") {
             Baseline::new()
         } else {
-            load_baseline()
+            load_baseline()?
         },
         levels: levels.clone(),
     };
@@ -291,15 +297,18 @@ fn cmd_calib(args: &[String]) -> Result<(), String> {
     }
     if flag(args, "--write-levels") {
         let path = repo_root().join("src/eval/suite/levels.json");
-        let mut lv: Value = serde_json::from_str(LEVELS).map_err(|e| e.to_string())?;
+        let mut lv: LevelsFile =
+            serde_json::from_str(LEVELS).map_err(|e| format!("levels.json：{e}"))?;
         for r in c["metrics"].as_array().into_iter().flatten() {
             let id = r["verifier"].as_str().unwrap_or("");
             if info(id).is_none() {
                 continue; // 未登记的指标（ESTOI、SI-SDR、DNSMOS 子项）不进级别表
             }
-            lv["verifiers"][id] = json!({
-                "level": r["level"],
-                "basis": format!(
+            let level = serde_json::from_value(r["level"].clone())
+                .map_err(|e| format!("{id} 的级别不对：{e}"))?;
+            lv.verifiers.insert(id.to_string(), LevelEntry {
+                level,
+                basis: format!(
                     "定标第 {} 轮（{}）：配对 {}、一致率 {:.2} [{:.2}, {:.2}]、片段内 τ {:.2}；{}",
                     c["round"], c["set"].as_str().unwrap_or(""), r["pairs"],
                     r["agreement"].as_f64().unwrap_or(f64::NAN),
@@ -311,7 +320,7 @@ fn cmd_calib(args: &[String]) -> Result<(), String> {
             });
         }
         if let Some(d) = sh("date", &["+%Y-%m-%d"]) {
-            lv["updated"] = json!(d);
+            lv.updated = d;
         }
         std::fs::write(
             &path,
@@ -395,5 +404,49 @@ fn main() -> ExitCode {
             eprintln!("vdn-eval 出错：{e}");
             ExitCode::FAILURE
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 冻结基线的读法（第 1 轮 codex #2 的回归测试，第 5 轮 #2 补到真正的读入口上）：
+    /// 只有「文件不存在」算空基线；内容坏了、读不了都报错，不静默取消基线比较。
+    #[test]
+    fn load_baseline_only_missing_file_is_empty() {
+        let dir = std::env::temp_dir().join(format!("vdn-eval-baseline-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        // 不存在 → 空基线
+        let missing = dir.join("missing.json");
+        assert_eq!(load_baseline_from(&missing), Ok(Baseline::new()));
+
+        // 仓里那份 → 读得出、非空
+        let real = load_baseline_from(&baseline_path()).unwrap();
+        assert!(!real.is_empty());
+
+        // 内容损坏：不是 JSON、values 合法但缺元数据、多一个键 → 都报错
+        let good: Value =
+            serde_json::from_str(&std::fs::read_to_string(baseline_path()).unwrap()).unwrap();
+        let mut no_meta = good.clone();
+        no_meta.as_object_mut().unwrap().remove("run_id");
+        let mut extra = good.clone();
+        extra["surprise"] = json!(1);
+        for (tag, text) in [
+            ("broken", "{ not json".to_string()),
+            ("no-meta", no_meta.to_string()),
+            ("extra", extra.to_string()),
+        ] {
+            let f = dir.join(format!("{tag}.json"));
+            std::fs::write(&f, text).unwrap();
+            assert!(load_baseline_from(&f).is_err(), "{tag} 应报错");
+        }
+
+        // 读取失败（路径是目录，不是 NotFound）→ 报错
+        assert!(load_baseline_from(&dir).is_err());
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

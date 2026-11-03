@@ -369,7 +369,7 @@ forbid = ["ort", "hound", "serde", "cpal"]   # 闭包里不许出现的 crate
 | 用 | 不用（或暂缓，写明触发条件） |
 |---|---|
 | crate / module / trait / 可见性做结构拆分（§2） | 自写 derive 宏：参数超过约 10 个，或手抄参数表第三次出错时再上 |
-| clippy 禁用清单 + restriction lint（§5.3） | build.rs 生成代码：要生成就用 xtask 生成、提交、加一致性测试 |
+| clippy 禁用清单 + restriction lint（§5.3） | build.rs 生成代码。改用 schema：Rust 类型是正本，由工具 crate `vdn-schema` 导出到 `specs/schema/`、提交进仓，测试重新导出逐字比对（`specs/schema/README.md`） |
 | cargo-deny bans + xtask check-deps（§5.4） | dylint 自定义 lint：同一类违规漏网第三次再上 |
 | xtask tidy（文本 / 轻语法，随 `cargo test` 跑） | ast-grep 规则：tidy 文本检查漏网时上，规则先配正例负例 |
 | rtsan-standalone 的 `#[nonblocking]` 标实时入口（不自造标记） | 从 ONNX 元数据生成模型接口：手写形状 + 加载期校验 |

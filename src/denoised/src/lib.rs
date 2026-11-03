@@ -556,6 +556,8 @@ mod tests {
     #[test]
     fn bus_name_rule_matches_vdn_shm() {
         let long = format!("/vdn-{}", "a".repeat(30));
+        // 14 个字符、32 字节
+        let multi = format!("/vdn-{}", "中".repeat(9));
         for name in [
             "/vdn-bus",
             "/vdn-out",
@@ -569,6 +571,12 @@ mod tests {
             "/vdn-a\0b",
             &long,
             "/vdn-ok_1.2",
+            // 名字只许可见 ASCII（vdn-shm 收窄，codex 第 2 轮 #2）：空格、中文、多字节超 31 字节、再含 / 都拒；可见符号放行
+            "/vdn-a b",
+            "/vdn-中",
+            &multi,
+            "/vdn-x/",
+            "/vdn-~!",
         ] {
             let control_ok = vdn_control::validate_bus_name(name).is_ok();
             let shm_ok = !matches!(Bus::open(name), Err(vdn_shm::ShmError::InvalidName));
