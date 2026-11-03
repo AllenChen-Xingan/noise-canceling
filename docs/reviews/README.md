@@ -14,4 +14,5 @@
 | 011 | 2026-11-02 | [schema 导出机制与第一批 schema](011_schema-crosscheck-codex.md)（diff，codex，5 轮，停止线满足） | 采纳 15 / 提出 16（P1×5 P2×11；1 条 P2 留作 issue） |
 | 020 | 2026-11-02 | [研究 020 手写 GTCRN 引擎提速](020_fastpath-codex.md)（decision + rewrites + exp012 README + bench/src，codex gpt-6-astra，3 轮，已达停止线） | 采纳 14 / 提出 14（P1×3 P2×10 + 抽查不符 1；3 件 P2 后续留作 issue） |
 | 011 | 2026-11-02 | [处理图描述 + Pipeline 交叉校验 + 会话记录记图](011_processing-graph-codex.md)（`git diff 0604143...HEAD`，issue #64，codex gpt-6-astra，2 轮，已达停止线） | 采纳 4 / 提出 4（P2×4；1 条留作 issue） |
+| 012 | 2026-11-02 | [参数描述导出 · 模型接口三方一致 · FE-M 名字唯一 · 模型节点带权重版本](012_param-model-schema-codex.md)（diff，codex，7 轮，停止线满足） | 采纳 18 / 提出 19（P1×3 P2×16；另 1 条 P1 部分接受；无 issue） |
 | — | 2026-11-02 | 项目难度与机会判断（codex 评审 + 联网调研，`outlook-codex-20261102/`） | 采纳：Mac 非空白、评测方法非首创 → D77 · 待拍板 6-1 |

@@ -1,0 +1,647 @@
+{
+  "$comment": "由 `cargo run -p vdn-schema` 从 src/types/src/desc/（参数描述表）导出，勿手改。区间是闭区间；optional = 使用方是 Option，出厂缺省",
+  "params": [
+    {
+      "default": 1.0,
+      "doc": "降噪强度：输出 = 原声 + strength·(降噪 − 原声)",
+      "id": 1,
+      "key": "strength",
+      "max": 1.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "ratio"
+    },
+    {
+      "default": -12.0,
+      "doc": "衰减下限：停顿时混回原声的比例",
+      "id": 2,
+      "key": "floor_db",
+      "max": 0.0,
+      "min": -60.0,
+      "optional": false,
+      "unit": "dB"
+    },
+    {
+      "default": -6.0,
+      "doc": "有声时混回原声的比例",
+      "id": 3,
+      "key": "open_db",
+      "max": 0.0,
+      "min": -60.0,
+      "optional": false,
+      "unit": "dB"
+    },
+    {
+      "default": 9.0,
+      "doc": "高出底噪多少判为有声",
+      "id": 4,
+      "key": "detect_db",
+      "max": 40.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "dB"
+    },
+    {
+      "default": 0.3,
+      "doc": "人声停后回到下限的时间常数",
+      "id": 5,
+      "key": "release_s",
+      "max": 5.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.15,
+      "doc": "人声停后保持放开多久",
+      "id": 6,
+      "key": "hangover_s",
+      "max": 5.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.002,
+      "doc": "快开的时间常数",
+      "id": 7,
+      "key": "attack_s",
+      "max": 0.5,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.5,
+      "doc": "VAD 概率高于它转有声",
+      "id": 8,
+      "key": "vad_on",
+      "max": 1.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "probability"
+    },
+    {
+      "default": 0.35,
+      "doc": "VAD 概率低于它转无声",
+      "id": 9,
+      "key": "vad_off",
+      "max": 1.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "probability"
+    },
+    {
+      "default": 0.005,
+      "doc": "门控：新人声起始时放开的时间常数",
+      "id": 101,
+      "key": "gate.attack_s",
+      "max": 0.5,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.05,
+      "doc": "门控：Target / Unknown 判决后回到全开的时间常数",
+      "id": 102,
+      "key": "gate.reopen_s",
+      "max": 2.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.5,
+      "doc": "门控：确认是别人后慢收到下限的时间常数",
+      "id": 103,
+      "key": "gate.release_s",
+      "max": 5.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.3,
+      "doc": "门控：停顿至少这么久后转有声才算新起始",
+      "id": 104,
+      "key": "gate.onset_gap_s",
+      "max": 5.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 8.0,
+      "doc": "门控：短时电平比近 1 s 均值高这么多算起始",
+      "id": 105,
+      "key": "gate.onset_jump_db",
+      "max": 40.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "dB"
+    },
+    {
+      "default": 2.0,
+      "doc": "门控：要几份作数的 Other 判决才慢收",
+      "id": 106,
+      "key": "gate.confirm_n",
+      "max": 20.0,
+      "min": 1.0,
+      "optional": false,
+      "unit": "count"
+    },
+    {
+      "default": 3.0,
+      "doc": "门控：起始电平须 ≥ 主人电平 − 它；设很大 = 任何起始都放开",
+      "id": 107,
+      "key": "gate.onset_level_margin_db",
+      "max": 240.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "dB"
+    },
+    {
+      "default": 10.0,
+      "doc": "门控快路径：有人声但比主人电平低这么多，持续一段就先慢收",
+      "id": 108,
+      "key": "gate.level_close_db",
+      "max": 60.0,
+      "min": 0.0,
+      "optional": true,
+      "unit": "dB"
+    },
+    {
+      "default": 0.3,
+      "doc": "门控快路径：轻人声要持续多久",
+      "id": 109,
+      "key": "gate.level_close_hold_s",
+      "max": 5.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.1,
+      "doc": "门控：停顿后转有声起，起始判据保持有效的时长",
+      "id": 110,
+      "key": "gate.onset_arm_s",
+      "max": 2.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.3,
+      "doc": "门控：电平跳起型起始的不应期",
+      "id": 111,
+      "key": "gate.onset_refractory_s",
+      "max": 5.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.6,
+      "doc": "频谱平滑强度（治金属声 / 音乐噪声）",
+      "id": 201,
+      "key": "polish.smooth",
+      "max": 1.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "ratio"
+    },
+    {
+      "default": -24.0,
+      "doc": "频谱增益下限；-100 = 不设下限",
+      "id": 202,
+      "key": "polish.floor_db",
+      "max": 0.0,
+      "min": -100.0,
+      "optional": false,
+      "unit": "dB"
+    },
+    {
+      "default": -10.0,
+      "doc": "舒适噪声电平（相对稳态底噪）；-100 = 关",
+      "id": 203,
+      "key": "polish.comfort_db",
+      "max": 0.0,
+      "min": -100.0,
+      "optional": false,
+      "unit": "dB"
+    },
+    {
+      "default": 4.0,
+      "doc": "去发闷的最大补偿；0 = 关",
+      "id": 204,
+      "key": "polish.demuffle_max_db",
+      "max": 12.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "dB"
+    },
+    {
+      "default": 1.0,
+      "doc": "AGC 开关（≥ 0.5 视为开，f32 便于插值）",
+      "id": 205,
+      "key": "polish.agc",
+      "max": 1.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "ratio"
+    },
+    {
+      "default": -26.0,
+      "doc": "AGC 目标语音电平",
+      "id": 206,
+      "key": "polish.agc_target_dbfs",
+      "max": 0.0,
+      "min": -60.0,
+      "optional": false,
+      "unit": "dBFS"
+    },
+    {
+      "default": 10.0,
+      "doc": "AGC 最大增益 / 最大衰减（对称）",
+      "id": 207,
+      "key": "polish.agc_range_db",
+      "max": 30.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "dB"
+    },
+    {
+      "default": 1.0,
+      "doc": "修音链换参数的线性过渡时长",
+      "id": 208,
+      "key": "polish.ramp_s",
+      "max": 30.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 1.0,
+      "doc": "新场景要连续被判中这么久才换",
+      "id": 301,
+      "key": "hysteresis.confirm_s",
+      "max": 30.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.4,
+      "doc": "低于这个置信度的判断不计入确认",
+      "id": 302,
+      "key": "hysteresis.min_confidence",
+      "max": 1.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "probability"
+    },
+    {
+      "default": 3.0,
+      "doc": "换过一次后至少停留这么久",
+      "id": 303,
+      "key": "hysteresis.min_dwell_s",
+      "max": 60.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.5,
+      "doc": "场景后验的平滑时间常数",
+      "id": 304,
+      "key": "scene.ema_s",
+      "max": 10.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 1.0,
+      "doc": "连续参数的一阶平滑时间常数",
+      "id": 401,
+      "key": "transition.glide_s",
+      "max": 10.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.05,
+      "doc": "换模型的交叉淡化时长",
+      "id": 402,
+      "key": "transition.model_crossfade_s",
+      "max": 1.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 1.0,
+      "doc": "dB 类字段每秒最多变多少",
+      "id": 403,
+      "key": "transition.max_db_per_s",
+      "max": 120.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "dB/s"
+    },
+    {
+      "default": 0.03,
+      "doc": "用户手动改动的最短斜坡",
+      "id": 404,
+      "key": "transition.manual_ramp_s",
+      "max": 0.5,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 4.0,
+      "doc": "输出幅度超过它当状态异常",
+      "id": 501,
+      "key": "engine.max_abs",
+      "max": 100.0,
+      "min": 1.0,
+      "optional": false,
+      "unit": "amplitude"
+    },
+    {
+      "default": 0.1,
+      "doc": "状态类故障复位后继续送原声多久",
+      "id": 502,
+      "key": "engine.recover_hold_s",
+      "max": 5.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.005,
+      "doc": "切回模型的交叉淡化 / 切到原声的接缝衰减时长",
+      "id": 503,
+      "key": "engine.crossfade_s",
+      "max": 1.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 1.5,
+      "doc": "判断回路：声纹窗长",
+      "id": 601,
+      "key": "judge.window_s",
+      "max": 10.0,
+      "min": 0.1,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.5,
+      "doc": "判断回路：多久判一次",
+      "id": 602,
+      "key": "judge.hop_s",
+      "max": 5.0,
+      "min": 0.05,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 0.3,
+      "doc": "窗里有声帧比例低于它 → NoSpeech",
+      "id": 603,
+      "key": "judge.min_voiced_frac",
+      "max": 1.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "ratio"
+    },
+    {
+      "default": 0.6,
+      "doc": "有声帧比例至少这么多才喂注册器",
+      "id": 604,
+      "key": "judge.enroll_voiced_frac",
+      "max": 1.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "ratio"
+    },
+    {
+      "default": 0.6,
+      "doc": "与上一窗相似度至少这么多才算清楚的单人片段",
+      "id": 605,
+      "key": "judge.consist_sim",
+      "max": 1.0,
+      "min": -1.0,
+      "optional": false,
+      "unit": "cosine"
+    },
+    {
+      "default": 0.45,
+      "doc": "与主人相似度高于它 → Target",
+      "id": 606,
+      "key": "judge.owner_hi",
+      "max": 1.0,
+      "min": -1.0,
+      "optional": false,
+      "unit": "cosine"
+    },
+    {
+      "default": 0.25,
+      "doc": "与主人相似度低于它 → Other",
+      "id": 607,
+      "key": "judge.others_lo",
+      "max": 1.0,
+      "min": -1.0,
+      "optional": false,
+      "unit": "cosine"
+    },
+    {
+      "default": 0.5,
+      "doc": "判断回路数有声帧用的 VAD 硬门限",
+      "id": 608,
+      "key": "judge.vad_thr",
+      "max": 1.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "probability"
+    },
+    {
+      "default": 0.5,
+      "doc": "与最近簇中心相似度至少这么多就并入",
+      "id": 701,
+      "key": "enroll.assign_sim",
+      "max": 1.0,
+      "min": -1.0,
+      "optional": false,
+      "unit": "cosine"
+    },
+    {
+      "default": 8.0,
+      "doc": "最多保留几个簇",
+      "id": 702,
+      "key": "enroll.max_clusters",
+      "max": 64.0,
+      "min": 1.0,
+      "optional": false,
+      "unit": "count"
+    },
+    {
+      "default": 15.0,
+      "doc": "主人簇至少累计这么多秒才锁定",
+      "id": 703,
+      "key": "enroll.min_owner_s",
+      "max": 600.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 30.0,
+      "doc": "只有一个簇时至少累计这么多秒才锁定",
+      "id": 704,
+      "key": "enroll.single_cluster_min_s",
+      "max": 600.0,
+      "min": 0.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 1.5,
+      "doc": "主人簇得分要比第二名高这么多倍才锁定",
+      "id": 705,
+      "key": "enroll.lock_margin",
+      "max": 10.0,
+      "min": 1.0,
+      "optional": false,
+      "unit": "x"
+    },
+    {
+      "default": 6.0,
+      "doc": "领先者连续保持这么多次更新才锁定",
+      "id": 706,
+      "key": "enroll.stable_updates",
+      "max": 100.0,
+      "min": 1.0,
+      "optional": false,
+      "unit": "count"
+    },
+    {
+      "default": 0.6,
+      "doc": "簇内聚度至少这么多才可当主人（应高于 assign_sim）",
+      "id": 707,
+      "key": "enroll.min_cohesion",
+      "max": 1.0,
+      "min": -1.0,
+      "optional": false,
+      "unit": "cosine"
+    },
+    {
+      "default": 300.0,
+      "doc": "簇得分的时间衰减半衰期",
+      "id": 708,
+      "key": "enroll.recency_half_life_s",
+      "max": 86400.0,
+      "min": 1.0,
+      "optional": false,
+      "unit": "s"
+    },
+    {
+      "default": 6.0,
+      "doc": "电平每低这么多 dB，近讲系数减半",
+      "id": 709,
+      "key": "enroll.level_halving_db",
+      "max": 60.0,
+      "min": 1.0,
+      "optional": false,
+      "unit": "dB"
+    },
+    {
+      "default": 2.0,
+      "doc": "别的簇得分超过主人这么多倍才改判",
+      "id": 710,
+      "key": "enroll.relock_ratio",
+      "max": 10.0,
+      "min": 1.0,
+      "optional": false,
+      "unit": "x"
+    },
+    {
+      "default": 200.0,
+      "doc": "簇中心按至多这么多个样本平均，之后转指数平均",
+      "id": 711,
+      "key": "enroll.centroid_cap",
+      "max": 10000.0,
+      "min": 1.0,
+      "optional": false,
+      "unit": "count"
+    }
+  ],
+  "text_formats": {
+    "comment": "场景参数表与我的配置里各小节能写的键。\"params\" 指 param_keys 的全部；参数范围见 params；model 取 models 之一",
+    "formats": {
+      "vdn-profile": {
+        "fine": [
+          "model",
+          "tone",
+          "params"
+        ],
+        "top": [
+          "version",
+          "binding"
+        ],
+        "user": [
+          "model",
+          "tone",
+          "params"
+        ]
+      },
+      "vdn-scene-table": {
+        "fine": [
+          "name",
+          "user",
+          "model",
+          "tone",
+          "params"
+        ],
+        "top": [
+          "version"
+        ],
+        "user": [
+          "model",
+          "tone",
+          "params"
+        ]
+      }
+    },
+    "models": [
+      "gtcrn",
+      "fastenhancer-m"
+    ],
+    "param_keys": [
+      "strength",
+      "floor_db",
+      "open_db",
+      "detect_db",
+      "release_s",
+      "hangover_s"
+    ]
+  },
+  "units": [
+    "ratio",
+    "dB",
+    "s",
+    "probability",
+    "count",
+    "dBFS",
+    "dB/s",
+    "amplitude",
+    "cosine",
+    "x"
+  ]
+}

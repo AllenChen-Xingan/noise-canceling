@@ -9,7 +9,7 @@
 
 ## 现有文件
 
-| 文件 | 正本（Rust） | 管哪些数据文件 | 交叉校验（测试在 `src/schema/tests/crosscheck.rs`） |
+| 文件 | 正本（Rust） | 管哪些数据文件 | 交叉校验（测试在 `src/schema/tests/`，按实体一个文件：`schema_mechanism.rs` · `shm_layout.rs` · `config.rs` · `eval_suite.rs` · `text_formats.rs` · `models.rs`） |
 |---|---|---|---|
 | `shm-header.layout.json` | `src/shm/src/layout.rs` 的结构，经 `src/shm/src/desc.rs` 的字段表 | 跨进程的共享内存（给虚拟麦克风 / C 侧对表） | 每个字段的名字 · 偏移 · 大小与 `offset_of!` / `size_of` 逐项比对；版本号 = `layout::VERSION`；布局指纹必须等于 `src/schema/src/shm.rs` 的 `HISTORY` 最后一行——改布局不升版本、或升了不登记，导出拒绝写、测试红（历史故意写在代码里，导出工具不改它）；完整历史也写进导出文件；测试读可信基线（CI：push 用推送前的提交、PR 用目标分支，经环境变量 `VDN_SCHEMA_BASE` 传入；本机：与 main 的分叉点）上已提交的布局文件，要求它的整份历史原样是 `HISTORY` 的前缀，只许在末尾追加。基线提交不存在或读不出 → CI 红；只有基线的树里确实没有这份文件才跳过（CI 要 `fetch-depth: 0`） |
 | `config.schema.json` | `src/control/src/lib.rs` 的 `Config` | `examples/config.*.json`（以后的用户配置同格式） | 示例过 schema；往返语义等价；范围边界与 `Config::validate` 逐例一致；总线名正则与 `validate_bus_name` 逐例一致（名字只许可见 ASCII，字符数 = 字节数） |
@@ -18,6 +18,8 @@
 | `processing-graph.kinds.json` | `src/types/src/graph.rs` 的 `KINDS`（节点字段表 `NODE_FIELDS` 穷举解构） | 无（处理图是代码常量；会话记录头记它的内容 ID） | 逐条等于登记表（编号 · 名字 · 版本 · 挂点 · 延迟 · 参数编号与键名等于 `desc` 正本）；节点对象的键 = `NODE_FIELDS`；样例的内容 ID 只靠文件里的规范文本可复算；**编号永不复用**：对照可信基线（同共享内存那一行的取法）上已提交的这份文件，编号对应的名字不许改、版本不许降、版本没升时挂点 · 延迟 · 参数必须原样、删掉的编号必须进 `graph::RETIRED`（测试在 `src/schema/tests/graph.rs`） |
 | `session-header.fields.json` | `src/types/src/session.rs` 的 `HEADER_KEYS`（穷举解构 `SessionHeader`） | 会话记录文本（`SessionRecord::to_text`） | 键与 `to_text` 实际写出的键逐个一致（含顺序）；每个键的 `since` 与解析器一致：该格式能读、更早的格式拒读（测试在 `src/schema/tests/graph.rs`） |
 | `eval-baseline.schema.json` | 同上 `BaselineFile` | `src/eval/suite/baseline-ci.json` | 文件过 schema；`ci --write-baseline` 序列化同一类型 |
+| `params.table.json` | `src/types/src/desc/` 的参数描述表（`desc::ALL`，经 `src/schema/src/params.rs` 穷举解构导出）；文本格式能用的键由 `ParamField` 派生，模型名由 `ModelId::NAMES` 派生 | 场景参数表（`vdn-scene-table`）· 我的配置（`vdn-profile`）文本，示例 `examples/*.example.txt` | 每条与描述表逐字段相同（数值按 f32 比）；改表不导出报红；列出的键两个解析器都认、没列出的都拒；每个参数边界外一点两种文本都拒；仓里已跟踪的所有这两种文本文件逐个解析通过 |
+| `models.interface.json` | `src/models/src/lib.rs` 的 `ModelKind::declared()`（采样率 · hop · 延迟）与 `src/models/src/interface.rs`（输入输出名字 · 顺序 · 形状） | 仓外的 ONNX 权重 | 声明 ↔ 文件逐项相同（CI）；改声明不导出报红。ONNX 实读 ↔ 声明：适配器 `open` 时比对（不一致打不开），另有 `src/models/tests/interface.rs`（`#[ignore]`，要仓外权重，人工步骤见文件头） |
 
 ## 命令
 

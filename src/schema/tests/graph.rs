@@ -93,11 +93,9 @@ fn committed_session_keys_match_text_format() {
         assert_eq!(v["optional"], k.optional);
     }
     // 全字段的头写出来，键的顺序就是文件里的顺序
-    let mut h = SessionHeader {
-        rate: 48_000,
-        ..SessionHeader::default()
-    };
-    h.set_graph(&ProcessingGraph::bare(ModelId::Gtcrn));
+    let mut h = SessionHeader::default();
+    h.rate = 48_000;
+    h.set_graph(&checked_bare(ModelId::Gtcrn));
     let text = SessionRecord {
         header: h,
         events: Vec::new(),
@@ -119,7 +117,7 @@ fn session_key_since_agrees_with_parser() {
     let doc = committed(SESSION_FILE);
     let full = {
         let mut h = SessionHeader::default();
-        h.set_graph(&ProcessingGraph::bare(ModelId::Gtcrn));
+        h.set_graph(&checked_bare(ModelId::Gtcrn));
         SessionRecord {
             header: h,
             events: Vec::new(),
@@ -246,4 +244,31 @@ fn kinds_guard_catches_reuse_and_silent_changes() {
     // 新种类用了基线里别的编号的名字
     let e = edit(&|v| v["kinds"][0]["id"] = 998.into()).unwrap_err();
     assert!(e.contains("别的编号"), "{e}");
+}
+
+/// 只报名字的假模型：造一张核对过的、只有模型节点的图（会话头只收核对过的图）。
+struct Named(&'static str);
+impl vdn_types::Model for Named {
+    fn name(&self) -> &'static str {
+        self.0
+    }
+    fn sample_rate(&self) -> u32 {
+        0
+    }
+    fn hop(&self) -> usize {
+        1
+    }
+    fn latency_samples(&self) -> usize {
+        0
+    }
+    fn reset(&mut self) {}
+    fn process(&mut self, _i: &[f32], _o: &mut [f32]) -> Result<(), vdn_types::ModelError> {
+        Ok(())
+    }
+}
+
+fn checked_bare(id: ModelId) -> vdn_types::CheckedGraph {
+    ProcessingGraph::bare(id, ContentId(1))
+        .verify(&Named(id.as_str()), &vdn_types::stages![])
+        .unwrap()
 }

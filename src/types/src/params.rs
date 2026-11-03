@@ -17,15 +17,30 @@ pub enum ModelId {
 impl ModelId {
     pub const ALL: [ModelId; 2] = [ModelId::Gtcrn, ModelId::FastEnhancerM];
 
-    pub fn as_str(self) -> &'static str {
+    /// 模型名的**正本**（命令行、配置 JSON、场景参数表、会话记录、评测结果文件都用它）。
+    /// 别处一律从这里取，不手写；`xtask tidy` 的 R-MODEL 查别处有没有写死。
+    pub const fn as_str(self) -> &'static str {
         match self {
             ModelId::Gtcrn => "gtcrn",
-            ModelId::FastEnhancerM => "fastenhancer_m",
+            ModelId::FastEnhancerM => "fastenhancer-m",
         }
     }
 
+    /// 全部正本名（`ALL` 的顺序）：命令行的可选值、schema 的枚举从这里取。
+    pub const NAMES: [&'static str; 2] = [ModelId::Gtcrn.as_str(), ModelId::FastEnhancerM.as_str()];
+
+    /// 旧写法 → 模型。只为读 2026-11-02 之前写出的文本（场景参数表 / 我的配置 / 会话记录）；写出一律用正本。
+    /// 兼容只在这一处（[`ModelId::parse`]），别处不许认旧写法。
+    pub const LEGACY: [(&'static str, ModelId); 1] = [("fastenhancer_m", ModelId::FastEnhancerM)];
+
+    /// 正本名或旧写法 → 模型。
     pub fn parse(s: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|m| m.as_str() == s)
+        Self::ALL.into_iter().find(|m| m.as_str() == s).or_else(|| {
+            Self::LEGACY
+                .into_iter()
+                .find(|(old, _)| *old == s)
+                .map(|(_, m)| m)
+        })
     }
 }
 
@@ -354,6 +369,28 @@ mod tests {
         }
         for m in ModelId::ALL {
             assert_eq!(ModelId::parse(m.as_str()), Some(m));
+        }
+    }
+
+    /// FE-M 的两种写法解析到同一个模型；写出只用正本；`NAMES` 与 `ALL` 一一对应；旧写法不与正本撞名。
+    #[test]
+    fn model_names_single_source() {
+        assert_eq!(
+            ModelId::parse("fastenhancer-m"),
+            Some(ModelId::FastEnhancerM)
+        );
+        assert_eq!(
+            ModelId::parse("fastenhancer_m"),
+            Some(ModelId::FastEnhancerM)
+        );
+        assert_eq!(ModelId::FastEnhancerM.as_str(), "fastenhancer-m");
+        assert_eq!(ModelId::parse("FastEnhancer-M"), None);
+        for (m, n) in ModelId::ALL.into_iter().zip(ModelId::NAMES) {
+            assert_eq!(m.as_str(), n);
+        }
+        for (old, m) in ModelId::LEGACY {
+            assert!(!ModelId::NAMES.contains(&old), "{old} 既是正本又是旧写法");
+            assert_ne!(old, m.as_str());
         }
     }
 }

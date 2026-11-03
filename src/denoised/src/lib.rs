@@ -117,6 +117,14 @@ pub fn model_kind(c: vdn_control::ModelChoice) -> ModelKind {
     }
 }
 
+/// [`model_kind`] 的反方向（命令行 `--model` 覆盖配置时用）。两边都穷举，加模型不改这里编译失败。
+pub fn model_choice(k: ModelKind) -> vdn_control::ModelChoice {
+    match k {
+        ModelKind::Gtcrn => vdn_control::ModelChoice::Gtcrn,
+        ModelKind::FastEnhancerM => vdn_control::ModelChoice::FastenhancerM,
+    }
+}
+
 /// 降噪线程的实时调度参数（D68，规则正本 `vdn_rt_thread::RtParams::from_measured`）：
 /// 周期 = 一个工作周期（GTCRN 768 样本 = 16 ms，按推理节奏报、不按 2 ms 唤醒节奏报），
 /// computation = 预热量到的每周期总耗时 p99.9 × `MEASURED_MARGIN`（夹在周期内）
@@ -512,6 +520,14 @@ impl<P: Processor> Worker<P> {
 mod tests {
     use super::*;
     use vdn_capture::shm::forward_same_bus;
+
+    /// 配置的模型名与 `vdn-models` 的模型两头互转不丢；每个模型都有配置名。
+    #[test]
+    fn model_choice_roundtrips() {
+        for k in ModelKind::ALL {
+            assert_eq!(model_kind(model_choice(k)), k);
+        }
+    }
     use vdn_capture::{Forwarder, ForwarderConfig};
 
     /// 输出 = 输入、延迟 0

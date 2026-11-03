@@ -236,7 +236,10 @@ pub fn to_markdown(
     }
     let _ = writeln!(
         s,
-        "\n`ref` = 真 Engine（三件保命）+ 参考降噪器（维纳，CI 替身，**不是产品模型**）；`gtcrn` / `fastenhancer-m` = 真模型。\n"
+        "\n`ref` = 真 Engine（三件保命）+ 参考降噪器（维纳，CI 替身，**不是产品模型**）；{} = 真模型。\n",
+        vdn_models::ModelId::NAMES
+            .map(|n| format!("`{n}`"))
+            .join(" / ")
     );
 
     let _ = writeln!(s, "## 汇总（回归 / 能力 / 探针分开）\n");

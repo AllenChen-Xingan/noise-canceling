@@ -4,9 +4,9 @@
 //! `graph::NODE_FIELDS`（穷举解构）；会话头的键是 `vdn_types::session::HEADER_KEYS`（穷举解构）。这里只转成 JSON。
 
 use serde_json::{Value, json};
-use vdn_types::ModelId;
 use vdn_types::graph::{self, NodeKind, ProcessingGraph};
 use vdn_types::session::{HEADER_KEYS, SessionRecord};
+use vdn_types::{ContentId, ModelId};
 
 pub const KINDS_FILE: &str = "processing-graph.kinds.json";
 pub const SESSION_FILE: &str = "session-header.fields.json";
@@ -26,6 +26,8 @@ fn kind_json(k: &NodeKind) -> Value {
 /// 规范文本的样例（由代码生成，不手写格式说明）：外部实现可拿它核对自己的写法与哈希。
 pub const EXAMPLE: ProcessingGraph = ProcessingGraph {
     model: ModelId::Gtcrn,
+    // 样例的制品内容 ID 是个固定的假值（真值由 vdn_models::artifact_id 从权重文件算）
+    artifact: ContentId(0x0123_4567_89ab_cdef),
     spectral: &[&graph::POLISH_SPECTRAL],
     stages: &[&graph::ASYM_GATE, &graph::POLISH_AGC],
 };

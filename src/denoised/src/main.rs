@@ -33,10 +33,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use clap::Parser;
-use vdn_control::{Config, Mode, ModelChoice};
+use vdn_control::{Config, Mode};
 use vdn_denoised::{
-    Processor, Step, Worker, denoise_bus_config, identity_pipeline, model_kind, model_pipeline,
+    Processor, Step, Worker, denoise_bus_config, identity_pipeline, model_choice, model_kind,
+    model_pipeline,
 };
+use vdn_models::{ModelId, ModelKind};
 use vdn_shm::{OwnedBus, RingId, ShmError};
 
 #[derive(Parser)]
@@ -52,7 +54,7 @@ struct Args {
     /// 直通：不加载模型（testing::Identity）
     #[arg(long)]
     passthrough: bool,
-    #[arg(long, value_parser = ["gtcrn", "fastenhancer-m"])]
+    #[arg(long, value_parser = clap::builder::PossibleValuesParser::new(ModelId::NAMES))]
     model: Option<String>,
     #[arg(long)]
     model_path: Option<PathBuf>,
@@ -99,11 +101,8 @@ fn real_main() -> Result<(), String> {
         cfg.mode = Mode::Passthrough;
     }
     if let Some(m) = &a.model {
-        cfg.model = if m == "gtcrn" {
-            ModelChoice::Gtcrn
-        } else {
-            ModelChoice::FastenhancerM
-        };
+        let id = ModelId::parse(m).ok_or("未知的模型")?;
+        cfg.model = model_choice(ModelKind::from_id(id));
     }
     if let Some(p) = &a.model_path {
         cfg.model_path = Some(p.clone());

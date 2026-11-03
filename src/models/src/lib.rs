@@ -15,16 +15,22 @@
         clippy::todo
     )
 )]
+pub mod artifact;
 pub mod fastenhancer;
 pub mod gtcrn;
+pub mod interface;
 
 use std::path::{Path, PathBuf};
 
-use vdn_types::{Basis, LatencyItem, LatencyLedger, ModelId};
+use vdn_types::{Basis, LatencyItem, LatencyLedger};
 
+pub use artifact::artifact_id;
 pub use fastenhancer::FastEnhancer;
 pub use gtcrn::Gtcrn;
+pub use interface::{Interface, TensorDecl};
 pub use vdn_backend_ort::BoxError;
+/// 模型名的正本在这里（`ModelId::as_str` / `NAMES` / `parse`）；再导出给只依赖本 crate 的 bin 用。
+pub use vdn_types::ModelId;
 
 /// 可选的模型。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -76,6 +82,14 @@ impl ModelKind {
         }
     }
 
+    /// 声明的输入输出张量（名字、顺序、形状）。打开文件时按它核对；导出到 `specs/schema/models.interface.json`。
+    pub const fn interface(self) -> Interface {
+        match self {
+            ModelKind::Gtcrn => interface::GTCRN,
+            ModelKind::FastEnhancerM => interface::FASTENHANCER_M,
+        }
+    }
+
     /// 本模型在延迟账上的两项：攒满一个 hop + 算法延迟（与 `Engine::latency_ledger` 同口径）。
     pub fn latency_ledger(self) -> LatencyLedger {
         let d = self.declared();
@@ -107,8 +121,8 @@ impl ModelKind {
             ),
             ModelKind::FastEnhancerM => (
                 "VDN_FASTENHANCER_ONNX",
-                "vdn-data/models/fastenhancer-dns-v1.0.0/fastenhancer_m.onnx",
-                "resources/weights/fastenhancer/fastenhancer_m.onnx",
+                "vdn-data/models/fastenhancer-dns-v1.0.0/fastenhancer_m.onnx", // tidy: 不是模型名：上游权重文件名
+                "resources/weights/fastenhancer/fastenhancer_m.onnx", // tidy: 不是模型名：上游权重文件名
             ),
         };
         let mut candidates = Vec::new();

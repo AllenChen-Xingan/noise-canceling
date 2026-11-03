@@ -1,0 +1,10 @@
+# 我的配置示例（格式见 src/types/src/memory.rs；参数键与范围的正本是参数描述表，导出在 ../params.table.json）。
+# 只存参数，不存音频。测试 src/schema/tests/text_formats.rs 逐个解析仓里所有这种文件。
+vdn-profile = 1
+version = 2
+[user cafe]
+floor_db = -20
+strength = 0.8
+[fine 7]
+model = fastenhancer-m
+hangover_s = 0.2

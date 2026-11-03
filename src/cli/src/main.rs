@@ -18,10 +18,11 @@ mod verify;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use clap::builder::PossibleValuesParser;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use serde_json::json;
 use vdn_engine::{Engine, FaultInjector, FaultKind, Model, SafetyConfig, offline};
-use vdn_models::{AnyModel, BoxError, ModelKind};
+use vdn_models::{AnyModel, BoxError, ModelId, ModelKind};
 
 /// 计数分配器：bench 里量「每 hop 在 Rust 侧分配几次」（ORT C++ 内部的分配绕过它，量不到）。
 #[global_allocator]
@@ -182,30 +183,23 @@ struct ChainArgs {
     dump: Option<PathBuf>,
 }
 
-#[derive(Clone, Copy, ValueEnum)]
-enum ModelArg {
-    Gtcrn,
-    #[value(name = "fastenhancer-m")]
-    FastEnhancerM,
-}
-
-impl From<ModelArg> for ModelKind {
-    fn from(m: ModelArg) -> Self {
-        match m {
-            ModelArg::Gtcrn => ModelKind::Gtcrn,
-            ModelArg::FastEnhancerM => ModelKind::FastEnhancerM,
-        }
-    }
-}
-
 #[derive(Args)]
 struct ModelOpts {
     /// 用哪个模型
-    #[arg(long, value_enum, default_value = "gtcrn")]
-    model: ModelArg,
+    #[arg(long, default_value = ModelId::Gtcrn.as_str(), value_parser = PossibleValuesParser::new(ModelId::NAMES))]
+    model: String,
     /// 模型文件；不给就按 环境变量 VDN_GTCRN_ONNX / VDN_FASTENHANCER_ONNX → ~/vdn-data/models/… → ./resources/… 查找
     #[arg(long)]
     model_path: Option<PathBuf>,
+}
+
+impl ModelOpts {
+    /// `--model` 已由 clap 限在 `ModelId::NAMES` 里；这里经正本解析成模型。
+    fn kind(&self) -> Result<ModelKind, BoxError> {
+        Ok(ModelKind::from_id(
+            ModelId::parse(&self.model).ok_or("未知的模型")?,
+        ))
+    }
 }
 
 #[derive(Args)]
@@ -306,7 +300,7 @@ fn main() {
 }
 
 fn open_model(m: &ModelOpts) -> Result<(AnyModel, PathBuf), BoxError> {
-    let kind = ModelKind::from(m.model);
+    let kind = m.kind()?;
     let path = match &m.model_path {
         Some(p) => p.clone(),
         None => kind
@@ -544,7 +538,7 @@ fn run(a: RunArgs) -> Result<bool, BoxError> {
         // 单进程：cpal 回调块长不固定，用任意块长的 Pipeline::new
         live::run(vdn_denoised::identity_pipeline(None)?, &o)?
     } else {
-        let kind = ModelKind::from(a.m.model);
+        let kind = a.m.kind()?;
         live::run(
             vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref(), None)?,
             &o,
@@ -592,7 +586,7 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
             chain::run(vdn_denoised::identity_pipeline(Some(o.denoise_block))?, &o)?
         }
         chain::ChainMode::Denoise => {
-            let kind = ModelKind::from(a.m.model);
+            let kind = a.m.kind()?;
             chain::run(
                 vdn_denoised::model_pipeline(
                     kind,
@@ -683,7 +677,7 @@ fn v7(a: V7Args) -> Result<bool, BoxError> {
     };
     let cores = std::thread::available_parallelism().map_or(4, |n| n.get());
     let stress = a.stress.unwrap_or(cores.saturating_sub(3).max(1));
-    let kind = ModelKind::from(a.m.model);
+    let kind = a.m.kind()?;
     let groups: Vec<(&str, usize)> = if a.idle_only {
         vec![("空闲", 0)]
     } else {
@@ -802,6 +796,30 @@ fn v7(a: V7Args) -> Result<bool, BoxError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `--model` 的可选值、默认值都从 `ModelId` 取：每个正本名都认、解析到对应模型；别的写法拒收。
+    #[test]
+    fn model_arg_follows_model_id() {
+        let kind_of = |args: &[&str]| -> Option<ModelKind> {
+            let cli = Cli::try_parse_from(args).ok()?;
+            let Cmd::Denoise(a) = cli.cmd else {
+                return None;
+            };
+            a.m.kind().ok()
+        };
+        assert_eq!(
+            kind_of(&["vdn", "denoise", "a.wav", "b.wav"]),
+            Some(ModelKind::from_id(ModelId::default()))
+        );
+        for id in ModelId::ALL {
+            let got = kind_of(&["vdn", "denoise", "a.wav", "b.wav", "--model", id.as_str()]);
+            assert_eq!(got, Some(ModelKind::from_id(id)), "{}", id.as_str());
+        }
+        assert_eq!(
+            kind_of(&["vdn", "denoise", "a.wav", "b.wav", "--model", "nope"]),
+            None
+        );
+    }
 
     /// 命令行默认值与描述表同源；越界按描述表拒收。
     #[test]

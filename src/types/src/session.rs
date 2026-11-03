@@ -23,7 +23,7 @@
 
 use core::fmt::Write as _;
 
-use crate::graph::ProcessingGraph;
+use crate::graph::CheckedGraph;
 use crate::params::ModelId;
 use crate::record::DecisionEvent;
 use crate::text::{self, Line, TextError};
@@ -36,17 +36,34 @@ pub struct SessionHeader {
     pub rate: u32,
     pub table: (TableVersion, ContentId),
     pub profile: (ProfileVersion, ContentId),
-    /// 处理图的内容 ID（`ProcessingGraph::content_id`）；`None` = 没记（格式 1 或调用方没接处理图）
-    pub graph: Option<ContentId>,
-    /// 模型 ID（与 `graph` 里的模型节点同一个；用 [`SessionHeader::set_graph`] 一起填）
-    pub model: Option<ModelId>,
+    /// 处理图的内容 ID（`ProcessingGraph::content_id`）；`None` = 没记（格式 1 或调用方没接处理图）。
+    /// 私有：只能经 [`SessionHeader::set_graph`]（收核对过的图）或读文件（历史记录）填，不能手填（#68，codex 012 第 5 轮 #1）
+    graph: Option<ContentId>,
+    /// 模型 ID（与 `graph` 里的模型节点同一个；和 `graph` 一起填）
+    model: Option<ModelId>,
 }
 
 impl SessionHeader {
-    /// 从处理图填 `graph` 与 `model`：两者同出一处，不会对不上。构造期用（会分配）。
-    pub fn set_graph(&mut self, g: &ProcessingGraph) {
+    /// 从核对过的处理图填 `graph` 与 `model`：两者同出一处，不会对不上；没核对的图进不来（#68）。构造期用（会分配）。
+    pub fn set_graph(&mut self, g: &CheckedGraph) {
         self.graph = Some(g.content_id());
-        self.model = Some(g.model);
+        self.model = Some(g.graph().model);
+    }
+
+    /// 处理图的内容 ID；`None` = 没记。
+    pub fn graph(&self) -> Option<ContentId> {
+        self.graph
+    }
+
+    /// 模型 ID；`None` = 没记。
+    pub fn model(&self) -> Option<ModelId> {
+        self.model
+    }
+
+    /// 不记处理图（两者一起清）。
+    pub fn clear_graph(&mut self) {
+        self.graph = None;
+        self.model = None;
     }
 }
 

@@ -11,6 +11,9 @@
 //!   「级名 ↔ 种类」的对应只写在这一处
 //! - **参数**：节点只引用 [`crate::desc`] 里的条目，不另抄范围；参数值不进图（值归场景参数表 / 我的配置，各有版本）
 //! - **图的身份**：[`ProcessingGraph::content_id`] = 规范文本的 FNV-1a（[`ContentId`]）；会话记录头记它
+//! - **模型节点**：模型 ID（名字正本是 `ModelId::as_str`）+ 模型制品内容 ID（权重文件字节的 FNV-1a，
+//!   与 `ParamBlock::model_hash` 同一算法；由 `vdn_models::artifact_id` 读文件算出）。只换权重、模型名不变，
+//!   图 ID 也会变（issue #68）。构造期用 [`ProcessingGraph::check_model`] 把模型节点与正在跑的 `Model::name()` 比对
 //!
 //! 不列 Pipeline 的固定段（重分块 · 降采样 · 升采样 · 混合）：它们不随配置变，没有可选项；
 //! 改固定段是改程序本身，不是换一张图。
@@ -22,6 +25,7 @@ use core::fmt;
 use core::fmt::Write as _;
 
 use crate::desc::{self, ParamDesc};
+use crate::model::Model;
 use crate::params::ModelId;
 use crate::stage::StageChain;
 use crate::version::ContentId;
@@ -274,6 +278,8 @@ pub fn kind_by_id(id: u16) -> Option<&'static NodeKind> {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ProcessingGraph {
     pub model: ModelId,
+    /// 模型制品内容 ID（权重文件字节的 FNV-1a）；同名模型换了权重，它变，图 ID 跟着变
+    pub artifact: ContentId,
     /// 挂在模型节点里的频域级，按调用顺序
     pub spectral: &'static [&'static NodeKind],
     /// 模型之后的时域级，按顺序（= `Pipeline` 的级串）
@@ -281,14 +287,16 @@ pub struct ProcessingGraph {
 }
 
 impl ProcessingGraph {
-    /// 规范文本的格式号（文本本身的写法变了才加；内容 ID 随之全变）
-    pub const FORMAT: u32 = 1;
+    /// 规范文本的格式号（文本本身的写法变了才加；内容 ID 随之全变）。
+    /// 2（2026-11-02，#68）：模型节点后加一行 `artifact = <模型制品内容 ID>`
+    pub const FORMAT: u32 = 2;
     const HEADER: &'static str = "vdn-graph";
 
-    /// 只有模型、不带任何级的图。
-    pub const fn bare(model: ModelId) -> Self {
+    /// 只有模型节点、不带任何级的图。
+    pub const fn bare(model: ModelId, artifact: ContentId) -> Self {
         Self {
             model,
+            artifact,
             spectral: &[],
             stages: &[],
         }
@@ -323,6 +331,7 @@ impl ProcessingGraph {
         let mut s = String::new();
         let _ = writeln!(s, "{} = {}", Self::HEADER, Self::FORMAT);
         let _ = writeln!(s, "model = {}", self.model.as_str());
+        let _ = writeln!(s, "artifact = {}", self.artifact);
         for (section, list) in [("spectral", self.spectral), ("stages", self.stages)] {
             let _ = writeln!(s, "[{section}]");
             for k in list {
@@ -344,6 +353,52 @@ impl ProcessingGraph {
 
     pub fn content_id(&self) -> ContentId {
         ContentId::of(self.canonical_text().as_bytes())
+    }
+
+    /// 核对后才能交给会话记录：挂点与名字（[`ProcessingGraph::check`]）· 模型节点 = 正在跑的模型
+    /// （[`ProcessingGraph::check_model`]）· 时域段 = 实际级串（[`match_chain`]）。三项全过才得到 [`CheckedGraph`]。
+    /// 频域段挂在模型适配器里，不在级串上，这里不比（由适配器自己的构造负责）。构造期用。
+    pub fn verify<M: Model + ?Sized, C: StageChain + ?Sized>(
+        self,
+        model: &M,
+        chain: &C,
+    ) -> Result<CheckedGraph, ChainMismatch> {
+        self.check()?;
+        self.check_model(model)?;
+        match_chain(self.stages, chain)?;
+        Ok(CheckedGraph(self))
+    }
+
+    /// 模型节点与正在跑的模型比对：图里的模型名（正本 `ModelId::as_str`）必须等于 `Model::name()`。构造期用。
+    /// 制品内容 ID 由调用方从同一个权重文件算出（`vdn_models::artifact_id`），这里不重读文件。
+    pub fn check_model<M: Model + ?Sized>(&self, m: &M) -> Result<(), ChainMismatch> {
+        let (expected, actual) = (self.model.as_str(), m.name());
+        if expected == actual {
+            Ok(())
+        } else {
+            Err(ChainMismatch::ModelName { expected, actual })
+        }
+    }
+}
+
+/// 核对过的处理图：模型节点与正在跑的模型一致、时域段与实际级串一致。只能经 [`ProcessingGraph::verify`]
+/// （或 `Pipeline::graph`）得到；会话记录头只收它，没核对的图进不了记录（#68，codex 012 第 4 轮 #1）。
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CheckedGraph(ProcessingGraph);
+
+impl CheckedGraph {
+    pub fn graph(&self) -> &ProcessingGraph {
+        &self.0
+    }
+
+    pub fn content_id(&self) -> ContentId {
+        self.0.content_id()
+    }
+
+    /// 本 crate 的单测造数据用（不核对）。
+    #[cfg(test)]
+    pub(crate) fn unchecked(g: ProcessingGraph) -> Self {
+        Self(g)
     }
 }
 
@@ -377,6 +432,11 @@ pub enum ChainMismatch {
         index: usize,
         stage: &'static str,
         hook: Hook,
+    },
+    /// 模型节点的名字与正在跑的模型（`Model::name()`）不同
+    ModelName {
+        expected: &'static str,
+        actual: &'static str,
     },
 }
 
@@ -417,6 +477,9 @@ impl fmt::Display for ChainMismatch {
                 "第 {index} 级 {stage} 是 {} 挂点的节点，放错了位置",
                 hook.as_str()
             ),
+            ChainMismatch::ModelName { expected, actual } => {
+                write!(f, "模型节点是 {expected}，正在跑的模型是 {actual}")
+            }
         }
     }
 }

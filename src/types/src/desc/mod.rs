@@ -18,6 +18,17 @@
 
 use core::fmt;
 
+// 各组参数分文件写（每个代码文件 ≤ 600 行）；对外一律经本模块 `vdn_types::desc::X` 取，登记都在下面的 `ALL`
+mod engine;
+mod polish;
+mod scene;
+mod speaker;
+
+pub use engine::*;
+pub use polish::*;
+pub use scene::*;
+pub use speaker::*;
+
 /// 单位（导出 schema 时原样写出 [`Unit::as_str`]）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Unit {
@@ -285,474 +296,6 @@ pub const VAD_OFF: ParamDesc = p(
     "VAD 概率低于它转无声",
 );
 
-// ───────────── 100–199：speaker 不对称门控（`vdn_speaker::gate::GateParams`） ─────────────
-
-pub const GATE_ATTACK_S: ParamDesc = p(
-    101,
-    "gate.attack_s",
-    Unit::Seconds,
-    0.0,
-    0.5,
-    0.005,
-    "门控：新人声起始时放开的时间常数",
-);
-pub const GATE_REOPEN_S: ParamDesc = p(
-    102,
-    "gate.reopen_s",
-    Unit::Seconds,
-    0.0,
-    2.0,
-    0.05,
-    "门控：Target / Unknown 判决后回到全开的时间常数",
-);
-pub const GATE_RELEASE_S: ParamDesc = p(
-    103,
-    "gate.release_s",
-    Unit::Seconds,
-    0.0,
-    5.0,
-    0.5,
-    "门控：确认是别人后慢收到下限的时间常数",
-);
-pub const GATE_ONSET_GAP_S: ParamDesc = p(
-    104,
-    "gate.onset_gap_s",
-    Unit::Seconds,
-    0.0,
-    5.0,
-    0.3,
-    "门控：停顿至少这么久后转有声才算新起始",
-);
-pub const GATE_ONSET_JUMP_DB: ParamDesc = p(
-    105,
-    "gate.onset_jump_db",
-    Unit::Db,
-    0.0,
-    40.0,
-    8.0,
-    "门控：短时电平比近 1 s 均值高这么多算起始",
-);
-pub const GATE_CONFIRM_N: ParamDesc = p(
-    106,
-    "gate.confirm_n",
-    Unit::Count,
-    1.0,
-    20.0,
-    2.0,
-    "门控：要几份作数的 Other 判决才慢收",
-);
-pub const GATE_ONSET_LEVEL_MARGIN_DB: ParamDesc = p(
-    107,
-    "gate.onset_level_margin_db",
-    Unit::Db,
-    0.0,
-    240.0,
-    3.0,
-    "门控：起始电平须 ≥ 主人电平 − 它；设很大 = 任何起始都放开",
-);
-/// 可缺省：出厂关（偏离 003 §2.3，待拍板项，exp005）
-pub const GATE_LEVEL_CLOSE_DB: ParamDesc = ParamDesc {
-    optional: true,
-    ..p(
-        108,
-        "gate.level_close_db",
-        Unit::Db,
-        0.0,
-        60.0,
-        10.0,
-        "门控快路径：有人声但比主人电平低这么多，持续一段就先慢收",
-    )
-};
-pub const GATE_LEVEL_CLOSE_HOLD_S: ParamDesc = p(
-    109,
-    "gate.level_close_hold_s",
-    Unit::Seconds,
-    0.0,
-    5.0,
-    0.3,
-    "门控快路径：轻人声要持续多久",
-);
-pub const GATE_ONSET_ARM_S: ParamDesc = p(
-    110,
-    "gate.onset_arm_s",
-    Unit::Seconds,
-    0.0,
-    2.0,
-    0.1,
-    "门控：停顿后转有声起，起始判据保持有效的时长",
-);
-pub const GATE_ONSET_REFRACTORY_S: ParamDesc = p(
-    111,
-    "gate.onset_refractory_s",
-    Unit::Seconds,
-    0.0,
-    5.0,
-    0.3,
-    "门控：电平跳起型起始的不应期",
-);
-
-// ───────────── 200–299：修音链（`vdn_polish::PolishParams` · `PolishChain`） ─────────────
-
-pub const POLISH_SMOOTH: ParamDesc = p(
-    201,
-    "polish.smooth",
-    Unit::Ratio,
-    0.0,
-    1.0,
-    0.6,
-    "频谱平滑强度（治金属声 / 音乐噪声）",
-);
-/// 修音链频谱增益下限；与 [`FLOOR_DB`]（门控衰减下限）不是一回事。`min` = 关
-pub const POLISH_FLOOR_DB: ParamDesc = p(
-    202,
-    "polish.floor_db",
-    Unit::Db,
-    -100.0,
-    0.0,
-    -24.0,
-    "频谱增益下限；-100 = 不设下限",
-);
-pub const POLISH_COMFORT_DB: ParamDesc = p(
-    203,
-    "polish.comfort_db",
-    Unit::Db,
-    -100.0,
-    0.0,
-    -10.0,
-    "舒适噪声电平（相对稳态底噪）；-100 = 关",
-);
-pub const POLISH_DEMUFFLE_MAX_DB: ParamDesc = p(
-    204,
-    "polish.demuffle_max_db",
-    Unit::Db,
-    0.0,
-    12.0,
-    4.0,
-    "去发闷的最大补偿；0 = 关",
-);
-pub const POLISH_AGC: ParamDesc = p(
-    205,
-    "polish.agc",
-    Unit::Ratio,
-    0.0,
-    1.0,
-    1.0,
-    "AGC 开关（≥ 0.5 视为开，f32 便于插值）",
-);
-pub const POLISH_AGC_TARGET_DBFS: ParamDesc = p(
-    206,
-    "polish.agc_target_dbfs",
-    Unit::Dbfs,
-    -60.0,
-    0.0,
-    -26.0,
-    "AGC 目标语音电平",
-);
-pub const POLISH_AGC_RANGE_DB: ParamDesc = p(
-    207,
-    "polish.agc_range_db",
-    Unit::Db,
-    0.0,
-    30.0,
-    10.0,
-    "AGC 最大增益 / 最大衰减（对称）",
-);
-pub const POLISH_RAMP_S: ParamDesc = p(
-    208,
-    "polish.ramp_s",
-    Unit::Seconds,
-    0.0,
-    30.0,
-    1.0,
-    "修音链换参数的线性过渡时长",
-);
-
-// ───────────── 300–399：场景判断（`Hysteresis` · `vdn_scene::SceneAnalyzer`） ─────────────
-// 默认值 = exp006 held-out 标定结果；`vdn_scene::weights` 里训练脚本写出的同一组数由测试比对
-
-pub const HYST_CONFIRM_S: ParamDesc = p(
-    301,
-    "hysteresis.confirm_s",
-    Unit::Seconds,
-    0.0,
-    30.0,
-    1.0,
-    "新场景要连续被判中这么久才换",
-);
-pub const HYST_MIN_CONFIDENCE: ParamDesc = p(
-    302,
-    "hysteresis.min_confidence",
-    Unit::Probability,
-    0.0,
-    1.0,
-    0.4,
-    "低于这个置信度的判断不计入确认",
-);
-pub const HYST_MIN_DWELL_S: ParamDesc = p(
-    303,
-    "hysteresis.min_dwell_s",
-    Unit::Seconds,
-    0.0,
-    60.0,
-    3.0,
-    "换过一次后至少停留这么久",
-);
-pub const SCENE_EMA_S: ParamDesc = p(
-    304,
-    "scene.ema_s",
-    Unit::Seconds,
-    0.0,
-    10.0,
-    0.5,
-    "场景后验的平滑时间常数",
-);
-
-// ───────────── 400–499：平滑过渡（`Transition`） ─────────────
-
-pub const TRANS_GLIDE_S: ParamDesc = p(
-    401,
-    "transition.glide_s",
-    Unit::Seconds,
-    0.0,
-    10.0,
-    1.0,
-    "连续参数的一阶平滑时间常数",
-);
-pub const TRANS_MODEL_CROSSFADE_S: ParamDesc = p(
-    402,
-    "transition.model_crossfade_s",
-    Unit::Seconds,
-    0.0,
-    1.0,
-    0.05,
-    "换模型的交叉淡化时长",
-);
-pub const TRANS_MAX_DB_PER_S: ParamDesc = p(
-    403,
-    "transition.max_db_per_s",
-    Unit::DbPerSecond,
-    0.0,
-    120.0,
-    1.0,
-    "dB 类字段每秒最多变多少",
-);
-pub const TRANS_MANUAL_RAMP_S: ParamDesc = p(
-    404,
-    "transition.manual_ramp_s",
-    Unit::Seconds,
-    0.0,
-    0.5,
-    0.03,
-    "用户手动改动的最短斜坡",
-);
-
-// ───────────── 500–599：engine 保命（`vdn_engine::SafetyConfig`，只引用，结构不动） ─────────────
-
-pub const ENGINE_MAX_ABS: ParamDesc = p(
-    501,
-    "engine.max_abs",
-    Unit::Amplitude,
-    1.0,
-    100.0,
-    4.0,
-    "输出幅度超过它当状态异常",
-);
-pub const ENGINE_RECOVER_HOLD_S: ParamDesc = p(
-    502,
-    "engine.recover_hold_s",
-    Unit::Seconds,
-    0.0,
-    5.0,
-    0.1,
-    "状态类故障复位后继续送原声多久",
-);
-pub const ENGINE_CROSSFADE_S: ParamDesc = p(
-    503,
-    "engine.crossfade_s",
-    Unit::Seconds,
-    0.0,
-    1.0,
-    0.005,
-    "切回模型的交叉淡化 / 切到原声的接缝衰减时长",
-);
-
-// ───────────── 600–699：speaker 判断回路（`vdn_speaker::judge::JudgeParams`） ─────────────
-
-pub const JUDGE_WINDOW_S: ParamDesc = p(
-    601,
-    "judge.window_s",
-    Unit::Seconds,
-    0.1,
-    10.0,
-    1.5,
-    "判断回路：声纹窗长",
-);
-pub const JUDGE_HOP_S: ParamDesc = p(
-    602,
-    "judge.hop_s",
-    Unit::Seconds,
-    0.05,
-    5.0,
-    0.5,
-    "判断回路：多久判一次",
-);
-pub const JUDGE_MIN_VOICED_FRAC: ParamDesc = p(
-    603,
-    "judge.min_voiced_frac",
-    Unit::Ratio,
-    0.0,
-    1.0,
-    0.3,
-    "窗里有声帧比例低于它 → NoSpeech",
-);
-pub const JUDGE_ENROLL_VOICED_FRAC: ParamDesc = p(
-    604,
-    "judge.enroll_voiced_frac",
-    Unit::Ratio,
-    0.0,
-    1.0,
-    0.6,
-    "有声帧比例至少这么多才喂注册器",
-);
-pub const JUDGE_CONSIST_SIM: ParamDesc = p(
-    605,
-    "judge.consist_sim",
-    Unit::Similarity,
-    -1.0,
-    1.0,
-    0.6,
-    "与上一窗相似度至少这么多才算清楚的单人片段",
-);
-pub const JUDGE_OWNER_HI: ParamDesc = p(
-    606,
-    "judge.owner_hi",
-    Unit::Similarity,
-    -1.0,
-    1.0,
-    0.45,
-    "与主人相似度高于它 → Target",
-);
-pub const JUDGE_OTHERS_LO: ParamDesc = p(
-    607,
-    "judge.others_lo",
-    Unit::Similarity,
-    -1.0,
-    1.0,
-    0.25,
-    "与主人相似度低于它 → Other",
-);
-pub const JUDGE_VAD_THR: ParamDesc = p(
-    608,
-    "judge.vad_thr",
-    Unit::Probability,
-    0.0,
-    1.0,
-    0.5,
-    "判断回路数有声帧用的 VAD 硬门限",
-);
-
-// ───────────── 700–799：speaker 零设置注册（`vdn_speaker::enroll::EnrollParams`） ─────────────
-
-pub const ENROLL_ASSIGN_SIM: ParamDesc = p(
-    701,
-    "enroll.assign_sim",
-    Unit::Similarity,
-    -1.0,
-    1.0,
-    0.5,
-    "与最近簇中心相似度至少这么多就并入",
-);
-pub const ENROLL_MAX_CLUSTERS: ParamDesc = p(
-    702,
-    "enroll.max_clusters",
-    Unit::Count,
-    1.0,
-    64.0,
-    8.0,
-    "最多保留几个簇",
-);
-pub const ENROLL_MIN_OWNER_S: ParamDesc = p(
-    703,
-    "enroll.min_owner_s",
-    Unit::Seconds,
-    0.0,
-    600.0,
-    15.0,
-    "主人簇至少累计这么多秒才锁定",
-);
-pub const ENROLL_SINGLE_CLUSTER_MIN_S: ParamDesc = p(
-    704,
-    "enroll.single_cluster_min_s",
-    Unit::Seconds,
-    0.0,
-    600.0,
-    30.0,
-    "只有一个簇时至少累计这么多秒才锁定",
-);
-pub const ENROLL_LOCK_MARGIN: ParamDesc = p(
-    705,
-    "enroll.lock_margin",
-    Unit::Factor,
-    1.0,
-    10.0,
-    1.5,
-    "主人簇得分要比第二名高这么多倍才锁定",
-);
-pub const ENROLL_STABLE_UPDATES: ParamDesc = p(
-    706,
-    "enroll.stable_updates",
-    Unit::Count,
-    1.0,
-    100.0,
-    6.0,
-    "领先者连续保持这么多次更新才锁定",
-);
-pub const ENROLL_MIN_COHESION: ParamDesc = p(
-    707,
-    "enroll.min_cohesion",
-    Unit::Similarity,
-    -1.0,
-    1.0,
-    0.6,
-    "簇内聚度至少这么多才可当主人（应高于 assign_sim）",
-);
-pub const ENROLL_RECENCY_HALF_LIFE_S: ParamDesc = p(
-    708,
-    "enroll.recency_half_life_s",
-    Unit::Seconds,
-    1.0,
-    86400.0,
-    300.0,
-    "簇得分的时间衰减半衰期",
-);
-pub const ENROLL_LEVEL_HALVING_DB: ParamDesc = p(
-    709,
-    "enroll.level_halving_db",
-    Unit::Db,
-    1.0,
-    60.0,
-    6.0,
-    "电平每低这么多 dB，近讲系数减半",
-);
-pub const ENROLL_RELOCK_RATIO: ParamDesc = p(
-    710,
-    "enroll.relock_ratio",
-    Unit::Factor,
-    1.0,
-    10.0,
-    2.0,
-    "别的簇得分超过主人这么多倍才改判",
-);
-pub const ENROLL_CENTROID_CAP: ParamDesc = p(
-    711,
-    "enroll.centroid_cap",
-    Unit::Count,
-    1.0,
-    10000.0,
-    200.0,
-    "簇中心按至多这么多个样本平均，之后转指数平均",
-);
-
 /// 全部描述（导出、查重、按编号或键名查找都走它）。加一条 = 写常量 + 加进这里（`all_listed` 测试查漏）。
 pub const ALL: [&ParamDesc; 58] = [
     &STRENGTH,
@@ -868,13 +411,16 @@ mod tests {
         }
     }
 
-    /// 每个 `pub const X: ParamDesc` 都进了 `ALL`（读本文件源码比对：漏登记就红）。
-    #[test]
-    fn all_listed() {
-        let src = include_str!("desc.rs");
+    /// 源码里的 `pub const X: ParamDesc` 常量名，以及其中没出现在 `ALL` 那一段里的。
+    fn unlisted(srcs: &str, mod_src: &str) -> (usize, Vec<String>) {
+        let all = mod_src
+            .split_once("pub const ALL")
+            .and_then(|(_, r)| r.split_once("];"))
+            .map_or("", |(a, _)| a);
         let mut n = 0;
-        for line in src.lines() {
-            let Some(rest) = line.strip_prefix("pub const ") else {
+        let mut missing = Vec::new();
+        for line in srcs.lines() {
+            let Some(rest) = line.trim_start().strip_prefix("pub const ") else {
                 continue;
             };
             let Some((name, ty)) = rest.split_once(':') else {
@@ -884,10 +430,43 @@ mod tests {
                 continue;
             }
             n += 1;
-            let entry = format!("    &{name},");
-            assert!(src.contains(&entry), "{name} 没登记进 ALL");
+            if !all.contains(&format!("&{name},")) {
+                missing.push(name.to_string());
+            }
         }
+        (n, missing)
+    }
+
+    /// 每个 `pub const X: ParamDesc` 都进了 `ALL`：扫本目录下**实际存在的全部** `.rs`（新加的描述文件自动在内，
+    /// codex 第 1 轮 #4），漏登记就红。
+    #[test]
+    fn all_listed() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/desc");
+        let mut files: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|x| x == "rs"))
+            .collect();
+        files.sort();
+        assert!(files.len() >= 2, "{files:?}");
+        let srcs: String = files
+            .iter()
+            .map(|p| std::fs::read_to_string(p).unwrap())
+            .collect::<Vec<_>>()
+            .join("\n");
+        let (n, missing) = unlisted(&srcs, include_str!("mod.rs"));
+        assert!(missing.is_empty(), "没登记进 ALL：{missing:?}");
         assert_eq!(n, ALL.len());
+    }
+
+    /// 负例：新文件里的常量没进 `ALL` → 报出来；只在别处（比如注释、别的数组）出现也不算登记。
+    #[test]
+    fn unlisted_detects_missing_entries() {
+        let m = "pub const A: ParamDesc = p(1);\npub const ALL: [&ParamDesc; 1] = [\n    &A,\n];\nconst OTHER: [&ParamDesc; 1] = [&B,];\n";
+        let extra = "pub const B: ParamDesc = p(2);\n";
+        let (n, missing) = unlisted(&format!("{m}{extra}"), m);
+        assert_eq!((n, missing), (2, vec!["B".to_string()]));
     }
 
     #[test]
