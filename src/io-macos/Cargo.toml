@@ -8,6 +8,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+vdn-types.workspace = true
 cpal.workspace = true
 
 [dev-dependencies]

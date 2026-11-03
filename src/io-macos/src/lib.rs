@@ -32,8 +32,8 @@ use cpal::traits::{DeviceTrait, HostTrait};
 pub use level::{Level, LevelMeter, SILENT_RUN_SAMPLES, dbfs, fmt_dbfs};
 pub use stream::{InputStream, OpenedInfo, OutputStream, StreamHealth};
 
-/// 链路 IO 采样率（Hz）。
-pub const IO_RATE: u32 = 48_000;
+/// 链路 IO 采样率（Hz）。正本在 `vdn_types::rate`，这里只转出，下游路径不变。
+pub use vdn_types::IO_RATE;
 
 /// 设备方向。一个既能收又能放的设备在 [`devices`] 里出现两次，一个方向一行。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

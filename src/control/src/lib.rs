@@ -22,8 +22,8 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-/// IO 采样率固定 48 kHz（docs/plan/010 第十节）。
-pub const IO_RATE: u32 = 48_000;
+/// 链路 IO 采样率（Hz）。正本在 `vdn_types::rate`，这里只转出，下游路径不变。
+pub use vdn_types::IO_RATE;
 
 /// 处理模式。与 `vdn_engine::Mode` 一一对应，由 bin 翻译。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]

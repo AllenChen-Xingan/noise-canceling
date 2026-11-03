@@ -8,6 +8,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+vdn-types.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 # 只给 vdn-schema 导出 schema 用（feature schema），产品 bin 不带
