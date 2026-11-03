@@ -151,3 +151,17 @@ impl Gtcrn {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ModelKind;
+
+    /// 声明的 `mix` 是一帧复数谱：频点数 = n_fft/2 + 1；hop 与 `ModelKind::declared` 一致。
+    #[test]
+    fn declaration_agrees_with_stft() {
+        let mix = IO.inputs.first().unwrap();
+        assert_eq!(mix.shape, [1, BINS as i64, 1, 2]);
+        assert_eq!(ModelKind::Gtcrn.declared().hop, HOP);
+    }
+}

@@ -120,3 +120,32 @@ pub fn check_session(decl: &Interface, s: &Session) -> Result<(), BoxError> {
 pub fn dims(shape: &[i64]) -> Vec<usize> {
     shape.iter().map(|&d| d.max(1) as usize).collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ModelKind;
+
+    /// 每个模型：输入输出一样多、按位置配对的形状相同（状态进出同形）、名字不重复、没有空形状。
+    #[test]
+    fn declarations_are_well_formed() {
+        for k in ModelKind::ALL {
+            let io = k.interface();
+            assert_eq!(io.inputs.len(), io.outputs.len(), "{k:?}");
+            for (a, b) in io.inputs.iter().zip(io.outputs) {
+                assert_eq!(a.shape, b.shape, "{k:?} {} / {}", a.name, b.name);
+                assert!(!a.shape.is_empty() && a.shape.iter().all(|&d| d >= 1 || d == -1));
+            }
+            let mut names: Vec<&str> = io.inputs.iter().chain(io.outputs).map(|t| t.name).collect();
+            let n = names.len();
+            names.sort_unstable();
+            names.dedup();
+            assert_eq!(names.len(), n, "{k:?} 名字重复");
+        }
+    }
+
+    #[test]
+    fn dims_maps_dynamic_to_one() {
+        assert_eq!(dims(&[1, -1, 3]), [1, 1, 3]);
+    }
+}
