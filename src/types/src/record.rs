@@ -13,7 +13,7 @@ use crate::frame::{BypassReason, Confidence, SampleClock};
 use crate::params::{ModelId, ParamField, ParamSet, ToneId};
 use crate::policy::{ParamSource, UserSceneChoice};
 use crate::scene::{FineSceneId, UserScene};
-use crate::text::{self, Line, TextError};
+use crate::text::{self, TextError};
 use crate::version::{ContentId, ProfileVersion, TableVersion};
 
 /// 人的反馈（进化回路的燃料，005 第三节 B 第 1 步）。
