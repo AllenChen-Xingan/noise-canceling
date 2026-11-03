@@ -163,19 +163,19 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
   - Core ML CPU：只能在 B 档登记豁免后调。每帧至少新建和释放一个 Objective-C 输出对象，豁免表要按 `CoreML` / `Espresso` / `objc_` 命名空间重写（`architecture.md:368`）。
   - ANE：不建议，理由见 §1、§2.3。
 - **要不要改模型结构**：
-  - 缓存要做成显式输入输出，或者 Core ML 的 `state`。BNNSGraph 的流式模式能把 `state` 放进内部环形缓冲，省掉每帧拷贝缓存【官方】`bnns_graph.h:555-587`。但它「不支持不同状态推进量不同的模型」（`:689-690`）。GTCRN 的卷积缓存和 GRU 隐状态推进方式不同，所以多半只能用普通模式加显式缓存【推断】。
+  - 缓存要做成显式输入输出，或者 Core ML 的 `state`。BNNSGraph 的流式模式能把 `state` 放进内部环形缓冲，省掉每帧拷贝缓存【官方】`bnns_graph.h:555-587`。但它「不支持不同状态推进量不同的模型」（`:689-690`，这句写在动态形状的 `SetStreamingAdvanceCount` 下，该函数要 macOS 15.4）。更根本的是：流式模式是给「沿时间轴滑动」的 `slice_update` 状态用的环形缓冲；GRU 隐状态每帧是整块覆盖，不是滑动，本来就不适用【推断，依据 `bnns_graph.h:555-587`】。另外 Core ML 的 `state` 在 `coremltools` 里多半只许 fp16（`bnns-graph.md:99`，待测），走流式就破坏 fp32 对拍。所以多半只能用普通模式加显式缓存【推断】。
   - ScatterND 来自切片原地写回，转 Core ML 时要在 PyTorch 侧改成 concat / slice【推断】。
   - BN/LN 要做成图输入的约束（`architecture.md:252`）照样适用。Core ML 和 BNNS 编译时也会折叠常量【推断】。
 - **逐值一致的风险**：
-  - BNNSGraph / Core ML CPU 用 fp32：风险低，但融合会改变求和顺序，要量最大绝对误差，不能指望比特一致【推断】。
+  - BNNSGraph / Core ML CPU 用 fp32：**前提是转换时显式设 `compute_precision=FLOAT32`**；`coremltools` 转 ML Program 默认是 fp16【官方】typed-execution 文档。满足前提时风险中低：融合改求和顺序，GRU 被拆成 `linear`+`sigmoid`+`tanh` 后激活函数实现也和 ORT 不同，误差经 33 步和跨帧递推累积，量级未知【推断】。不能指望比特一致，也不能拿 exp004 的 4.5e-7（ORT 对 ORT）当过线标准（`coreml.md:43`）。
   - ANE 只有 fp16：GRU 隐状态逐帧累积误差，长时间跑会漂。必须做 10 分钟以上的长跑对拍【推断】。
 
 ### FastEnhancer-M（每 10 ms 一帧，每帧约 29 MMAC，更接近算力受限）
 
 - **能不能跑**：
   - wav2wav 版的图里有 STFT 类算子，在 Core ML、BNNSGraph、ANE 上的支持都未知。建议改用官方的 spec2spec 版（`fastenhancer_m.spec.onnx`），STFT 放到 Rust 里做（`our-models.md` 表第 2 行）【推断】。
-  - 自注意力、Conv1d、GRU 在 Core ML 的 MIL 格式里都有对应算子【推断，未核 coremltools 文档】。
-- **预计瓶颈**：矩阵乘。BNNSGraph 用 AMX，ORT 只用 NEON（§4.1），这里的收益空间比 GTCRN 大。ANE 的约 0.2 ms 下限相对今天的 0.67 ms 也不算大，ANE 有机会赢，但尾延迟和空闲后第一帧的风险同 GTCRN【推断】。
+  - 自注意力、Conv1d 有转换器；GRU 能转，但同样被翻成 `while_loop`，不用 MIL 的 `gru` 算子【源码】见 `coreml.md:22,103`（怀疑派改，原文写「都有对应算子」）。
+- **预计瓶颈**：矩阵乘。M3 上 BNNSGraph 用了 AMX、ORT 只用 NEON（§4.1），但本机 M5 有 SME2，ORT 可能也用得上矩阵单元，收益空间未量化【推断】。ANE 的约 0.2 ms 下限相对今天的 0.67 ms 不算小；而且 GRU 留在 CPU，图会被切开，每帧至少进出 ANE 两次。所以「ANE 有机会赢」只是可能，先验偏不赢【推断】。尾延迟和空闲后第一帧的风险同 GTCRN。
 - **推理线程能不能直接调**：同 GTCRN。另外，7 进 7 出的 Core ML 调用每帧要包 7 个 `MLMultiArray`。输入可以预先建好、指向固定缓冲；输出对象每帧新建【推断】。
 - **要不要改模型结构**：换成 spec2spec 版；6 个缓存做显式输入输出。注意力的序列长度要固定，BNNSGraph 才不会在执行时分配（`bnns_graph.h:619-621`：返回 2 表示形状无界、执行时要分配）。
 - **逐值一致的风险**：fp32 低。fp16（ANE，或 BNNS 的 fp16 选项）下 softmax 和 GRU 都有溢出或漂移风险；WWDC24 也提到 16 位累加器会溢出出 inf【官方】WWDC24 10211【推断：对 FE-M 的影响】。
