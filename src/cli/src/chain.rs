@@ -16,9 +16,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use vdn_capture::{Forwarder, ForwarderConfig, ForwarderStats};
-use vdn_denoised::{OwnedBus, Processor, Step, Worker};
+use vdn_denoised::{Processor, Step, Worker};
 use vdn_hal::{HalSource, RenderStatus};
-use vdn_shm::{Bus, BusConfig};
+use vdn_shm::{Bus, OwnedBus, RingId};
 
 use crate::verify::{
     best_lag, longest_silence, ms48, nonfinite, onset, pearson_at_lag, rms, test_tone,
@@ -99,6 +99,11 @@ pub struct ChainRun {
     pub rt_failures: u32,
 }
 
+/// Out 总线名：降噪总线名 + `-out`（如 /vdn-chaintest → /vdn-chaintest-out）
+pub fn out_bus_name(bus: &str) -> String {
+    format!("{bus}-out")
+}
+
 /// 当前线程提 time-constraint 优先级；失败返回 false（照常跑，计数）。
 fn promote(block: usize, load: f64) -> bool {
     let p = vdn_rt_thread::RtParams::for_block(block as u32, RATE, load);
@@ -128,16 +133,27 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
     let l_pipe = worker.processor().latency_samples();
     let l_total = l_pipe + o.lead;
 
-    // 降噪方建总线：拿到名字的锁才建（不会删掉别人在用的同名总线），守卫在任何返回路径上删名字（只删一次）
-    let cfg = BusConfig {
-        rate: RATE,
-        capacity_frames: RATE, // 1 s
-        l_total: u32::try_from(l_total).map_err(|_| "L_total 太大")?,
-    };
-    let den_bus = Arc::new(OwnedBus::create(&o.bus_name, cfg)?);
-    // 收音方与虚拟麦克风方各自 open（走真跨进程那条路）
-    let cap_bus = Arc::new(Bus::open(&o.bus_name).map_err(|e| format!("收音端打开总线：{e}"))?);
-    let hal_bus = Arc::new(Bus::open(&o.bus_name).map_err(|e| format!("虚拟麦端打开总线：{e}"))?);
+    // 两条总线，和两个真进程时一样：
+    // - 降噪总线（Raw / Processed / 心跳）：降噪方建；收音方 open
+    // - Out 总线：收音方自己建；虚拟麦克风方 open。降噪进程重启不影响它
+    // 都用 OwnedBus：拿到名字的锁才建（不删别人在用的同名总线），任何返回路径上删名字一次
+    let den_cfg = vdn_denoised::denoise_bus_config(&worker, o.lead, RATE as usize)?;
+    let den_bus = Arc::new(OwnedBus::create(&o.bus_name, den_cfg).map_err(|e| format!("建降噪总线 {}：{e}", o.bus_name))?);
+    let out_name = out_bus_name(&o.bus_name);
+    let out_bus = Arc::new(
+        OwnedBus::create(&out_name, vdn_capture::shm::out_bus_config(RATE))
+            .map_err(|e| format!("建 Out 总线 {out_name}：{e}"))?,
+    );
+    let cap_bus = Arc::new(Bus::open(&o.bus_name).map_err(|e| format!("收音端打开降噪总线：{e}"))?);
+    let hal_bus = Arc::new(Bus::open(&out_name).map_err(|e| format!("虚拟麦端打开 Out 总线：{e}"))?);
+    // 交叉校验：收音端从总线头读回的 lead / 降噪块长 = 降噪端的设置（正本是 o.lead 与 Worker）
+    let back = cap_bus.config();
+    if back.lead as usize != o.lead || back.denoise_block as usize != o.denoise_block {
+        return Err(format!(
+            "总线头 lead {} / 降噪块长 {} 和设置 {} / {} 不一致",
+            back.lead, back.denoise_block, o.lead, o.denoise_block
+        ));
+    }
     if cap_bus.l_total() as usize != l_total {
         return Err(format!(
             "总线头 L_total = {}，应为 {l_total}",
@@ -196,9 +212,13 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
                     killed_at.store(cap_pos.load(Ordering::Acquire), Ordering::Release);
                     break;
                 }
-                match worker.step(&bus) {
-                    Step::Block => consumed += worker.block() as u64,
-                    Step::Idle => thread::sleep(Duration::from_micros(500)),
+                // 等收音端推够一块再醒（收音端每推一块 notify 一次）
+                let _ = bus.wait(RingId::Raw, dblock, Duration::from_millis(20));
+                while worker.step(&bus) == Step::Block {
+                    consumed += worker.block() as u64;
+                    if kill_samples.is_some_and(|k| consumed >= k) {
+                        break;
+                    }
                 }
             }
             worker.stats()
@@ -207,7 +227,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
 
     // 收音
     let cap = {
-        let (bus, cap_pos) = (cap_bus.clone(), cap_pos.clone());
+        let (bus, out, cap_pos) = (cap_bus.clone(), out_bus.clone(), cap_pos.clone());
         let mut fcfg = ForwarderConfig::new(l_total, block);
         fcfg.timeout = o.heartbeat_timeout;
         let mut fwd = Forwarder::new(fcfg);
@@ -219,7 +239,7 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
             }
             for (i, xb) in x.chunks(block).enumerate() {
                 sleep_until(start + block_dur * i as u32);
-                vdn_capture::shm::forward_same_bus(&mut fwd, &bus, xb);
+                vdn_capture::shm::forward(&mut fwd, Some(&bus), &out, xb);
                 cap_pos.store(fwd.stats().samples, Ordering::Release);
             }
             (x, fwd.stats())
@@ -256,8 +276,10 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         let _ = s.join();
     }
     let k = killed_at.load(Ordering::Acquire);
-    den_bus.unlink().map_err(|e| format!("unlink：{e}"))?;
+    den_bus.unlink().map_err(|e| format!("unlink 降噪总线：{e}"))?;
+    out_bus.unlink().map_err(|e| format!("unlink Out 总线：{e}"))?;
     drop(den_bus);
+    drop(out_bus);
     Ok(ChainRun {
         x,
         y,
@@ -467,7 +489,7 @@ mod tests {
         .unwrap();
         let v = judge_v1(&r);
         assert!(v.pass, "{v}");
-        assert_eq!(r.l_total, 768 + 1440);
+        assert_eq!(r.l_total, 768 + vdn_control::Config::DEFAULT_LEAD);
     }
 
     /// V2 的短版：0.5 s 处让降噪线程退出
