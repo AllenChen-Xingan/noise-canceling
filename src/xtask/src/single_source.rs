@@ -24,7 +24,9 @@ const RANGE_ALLOW: &str = "tidy: 非参数范围：";
 
 pub fn check(root: &Path, problems: &mut Vec<String>) {
     let Ok(desc) = fs::read_to_string(root.join(DESC_FILE)) else {
-        problems.push(format!("{DESC_FILE} 不存在：参数描述表是参数范围的正本（R-PARAM）"));
+        problems.push(format!(
+            "{DESC_FILE} 不存在：参数描述表是参数范围的正本（R-PARAM）"
+        ));
         return;
     };
     let keys = desc_keys(&desc);
@@ -205,7 +207,8 @@ pub fn code_lines(src: &str) -> Vec<String> {
                     }
                 }
                 St::Raw(h) => {
-                    if c[i] == '"' && c[i + 1..].iter().take(h).filter(|&&x| x == '#').count() == h {
+                    if c[i] == '"' && c[i + 1..].iter().take(h).filter(|&&x| x == '#').count() == h
+                    {
                         o.push('"');
                         st = St::Code;
                         i += 1 + h;
@@ -221,7 +224,10 @@ pub fn code_lines(src: &str) -> Vec<String> {
                     } else if ch == '/' && c.get(i + 1) == Some(&'*') {
                         st = St::Block(1);
                         i += 2;
-                    } else if ch == 'r' && !prev_ident && matches!(c.get(i + 1), Some('"') | Some('#')) {
+                    } else if ch == 'r'
+                        && !prev_ident
+                        && matches!(c.get(i + 1), Some('"') | Some('#'))
+                    {
                         let h = c[i + 1..].iter().take_while(|&&x| x == '#').count();
                         if c.get(i + 1 + h) == Some(&'"') {
                             o.push('"');
@@ -238,7 +244,10 @@ pub fn code_lines(src: &str) -> Vec<String> {
                     } else if ch == '\'' {
                         // 字符字面量 'x' / '\n'；否则是生命周期，原样保留
                         if c.get(i + 1) == Some(&'\\') {
-                            let end = c.get(i + 3..).and_then(|t| t.iter().position(|&x| x == '\'')).map_or(c.len(), |k| i + 4 + k);
+                            let end = c
+                                .get(i + 3..)
+                                .and_then(|t| t.iter().position(|&x| x == '\''))
+                                .map_or(c.len(), |k| i + 4 + k);
                             o.push_str("' '");
                             i = end;
                         } else if c.get(i + 2) == Some(&'\'') {
@@ -495,7 +504,11 @@ mod tests {
     use super::*;
 
     fn toks() -> Vec<String> {
-        param_tokens(&["floor_db".into(), "polish.smooth".into(), "gate.confirm_n".into()])
+        param_tokens(&[
+            "floor_db".into(),
+            "polish.smooth".into(),
+            "gate.confirm_n".into(),
+        ])
     }
 
     #[test]
@@ -517,7 +530,14 @@ mod tests {
     #[test]
     fn tokens_include_short_and_camel_forms() {
         let t = toks();
-        for want in ["floor_db", "FloorDb", "smooth", "Smooth", "confirm_n", "ConfirmN"] {
+        for want in [
+            "floor_db",
+            "FloorDb",
+            "smooth",
+            "Smooth",
+            "confirm_n",
+            "ConfirmN",
+        ] {
             assert!(t.iter().any(|x| x == want), "{want}");
         }
     }
@@ -588,16 +608,26 @@ mod tests {
     // ── R-MIRROR ──
     #[test]
     fn mirror_file_and_same_name_types_are_flagged() {
-        let names = types_names(["pub struct FrameCtx {\n}\npub trait Stage: Send {}\npub enum UserScene {}\n"].into_iter());
+        let names = types_names(
+            ["pub struct FrameCtx {\n}\npub trait Stage: Send {}\npub enum UserScene {}\n"]
+                .into_iter(),
+        );
         assert_eq!(names, ["FrameCtx", "Stage", "UserScene"]);
-        assert_eq!(mirror_problems("src/polish/src/mirror.rs", "", &names).len(), 1);
+        assert_eq!(
+            mirror_problems("src/polish/src/mirror.rs", "", &names).len(),
+            1
+        );
         for bad in [
             "pub struct FrameCtx {\n",
             "pub(crate) trait Stage: Send {}\n",
             "#[derive(Clone)]\nenum UserScene { A }\n",
             "pub type FrameCtx = u8;\n",
         ] {
-            assert_eq!(mirror_problems("src/x/src/lib.rs", bad, &names).len(), 1, "{bad}");
+            assert_eq!(
+                mirror_problems("src/x/src/lib.rs", bad, &names).len(),
+                1,
+                "{bad}"
+            );
         }
     }
 
@@ -613,7 +643,10 @@ mod tests {
             "/* pub struct Stage {} */\n",
             "let s = \"pub struct Stage {}\";\n",
         ] {
-            assert!(mirror_problems("src/x/src/lib.rs", good, &names).is_empty(), "{good}");
+            assert!(
+                mirror_problems("src/x/src/lib.rs", good, &names).is_empty(),
+                "{good}"
+            );
         }
         // 只写标记、不写理由不算
         let bare = "// tidy: 同名不同物：\npub struct Hysteresis {}\n";

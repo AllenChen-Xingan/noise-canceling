@@ -364,11 +364,27 @@ mod tests {
         let fields: [(&ParamDesc, Get, Set); 8] = [
             (&desc::JUDGE_WINDOW_S, |p| p.window_s, |p, v| p.window_s = v),
             (&desc::JUDGE_HOP_S, |p| p.hop_s, |p, v| p.hop_s = v),
-            (&desc::JUDGE_MIN_VOICED_FRAC, |p| p.min_voiced_frac, |p, v| p.min_voiced_frac = v),
-            (&desc::JUDGE_ENROLL_VOICED_FRAC, |p| p.enroll_voiced_frac, |p, v| p.enroll_voiced_frac = v),
-            (&desc::JUDGE_CONSIST_SIM, |p| p.consist_sim, |p, v| p.consist_sim = v),
+            (
+                &desc::JUDGE_MIN_VOICED_FRAC,
+                |p| p.min_voiced_frac,
+                |p, v| p.min_voiced_frac = v,
+            ),
+            (
+                &desc::JUDGE_ENROLL_VOICED_FRAC,
+                |p| p.enroll_voiced_frac,
+                |p, v| p.enroll_voiced_frac = v,
+            ),
+            (
+                &desc::JUDGE_CONSIST_SIM,
+                |p| p.consist_sim,
+                |p, v| p.consist_sim = v,
+            ),
             (&desc::JUDGE_OWNER_HI, |p| p.owner_hi, |p, v| p.owner_hi = v),
-            (&desc::JUDGE_OTHERS_LO, |p| p.others_lo, |p, v| p.others_lo = v),
+            (
+                &desc::JUDGE_OTHERS_LO,
+                |p| p.others_lo,
+                |p, v| p.others_lo = v,
+            ),
             (&desc::JUDGE_VAD_THR, |p| p.vad_thr, |p, v| p.vad_thr = v),
         ];
         for (dsc, get, set) in fields {

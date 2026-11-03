@@ -385,15 +385,51 @@ mod tests {
         type Set = fn(&mut EnrollParams, f32);
         type Get = fn(&EnrollParams) -> f32;
         let fields: [(&ParamDesc, Get, Set); 9] = [
-            (&desc::ENROLL_ASSIGN_SIM, |p| p.assign_sim, |p, v| p.assign_sim = v),
-            (&desc::ENROLL_MIN_OWNER_S, |p| p.min_owner_s, |p, v| p.min_owner_s = v),
-            (&desc::ENROLL_SINGLE_CLUSTER_MIN_S, |p| p.single_cluster_min_s, |p, v| p.single_cluster_min_s = v),
-            (&desc::ENROLL_LOCK_MARGIN, |p| p.lock_margin, |p, v| p.lock_margin = v),
-            (&desc::ENROLL_MIN_COHESION, |p| p.min_cohesion, |p, v| p.min_cohesion = v),
-            (&desc::ENROLL_RECENCY_HALF_LIFE_S, |p| p.recency_half_life_s, |p, v| p.recency_half_life_s = v),
-            (&desc::ENROLL_LEVEL_HALVING_DB, |p| p.level_halving_db, |p, v| p.level_halving_db = v),
-            (&desc::ENROLL_RELOCK_RATIO, |p| p.relock_ratio, |p, v| p.relock_ratio = v),
-            (&desc::ENROLL_CENTROID_CAP, |p| p.centroid_cap, |p, v| p.centroid_cap = v),
+            (
+                &desc::ENROLL_ASSIGN_SIM,
+                |p| p.assign_sim,
+                |p, v| p.assign_sim = v,
+            ),
+            (
+                &desc::ENROLL_MIN_OWNER_S,
+                |p| p.min_owner_s,
+                |p, v| p.min_owner_s = v,
+            ),
+            (
+                &desc::ENROLL_SINGLE_CLUSTER_MIN_S,
+                |p| p.single_cluster_min_s,
+                |p, v| p.single_cluster_min_s = v,
+            ),
+            (
+                &desc::ENROLL_LOCK_MARGIN,
+                |p| p.lock_margin,
+                |p, v| p.lock_margin = v,
+            ),
+            (
+                &desc::ENROLL_MIN_COHESION,
+                |p| p.min_cohesion,
+                |p, v| p.min_cohesion = v,
+            ),
+            (
+                &desc::ENROLL_RECENCY_HALF_LIFE_S,
+                |p| p.recency_half_life_s,
+                |p, v| p.recency_half_life_s = v,
+            ),
+            (
+                &desc::ENROLL_LEVEL_HALVING_DB,
+                |p| p.level_halving_db,
+                |p, v| p.level_halving_db = v,
+            ),
+            (
+                &desc::ENROLL_RELOCK_RATIO,
+                |p| p.relock_ratio,
+                |p, v| p.relock_ratio = v,
+            ),
+            (
+                &desc::ENROLL_CENTROID_CAP,
+                |p| p.centroid_cap,
+                |p, v| p.centroid_cap = v,
+            ),
         ];
         for (dsc, get, set) in fields {
             assert_eq!(get(&d), dsc.default, "{} 默认值", dsc.key);
@@ -405,13 +441,31 @@ mod tests {
             }
         }
         // 两个整数参数
-        assert_eq!(d.max_clusters as u32, desc::ENROLL_MAX_CLUSTERS.default_count());
-        assert_eq!(d.stable_updates, desc::ENROLL_STABLE_UPDATES.default_count());
-        let p = EnrollParams { max_clusters: 0, ..d };
-        assert_eq!(p.validate().unwrap_err().desc.id, desc::ENROLL_MAX_CLUSTERS.id);
+        assert_eq!(
+            d.max_clusters as u32,
+            desc::ENROLL_MAX_CLUSTERS.default_count()
+        );
+        assert_eq!(
+            d.stable_updates,
+            desc::ENROLL_STABLE_UPDATES.default_count()
+        );
+        let p = EnrollParams {
+            max_clusters: 0,
+            ..d
+        };
+        assert_eq!(
+            p.validate().unwrap_err().desc.id,
+            desc::ENROLL_MAX_CLUSTERS.id
+        );
         assert_eq!(p.clamped().max_clusters, 1);
-        let p = EnrollParams { stable_updates: 1000, ..d };
-        assert_eq!(p.validate().unwrap_err().desc.id, desc::ENROLL_STABLE_UPDATES.id);
+        let p = EnrollParams {
+            stable_updates: 1000,
+            ..d
+        };
+        assert_eq!(
+            p.validate().unwrap_err().desc.id,
+            desc::ENROLL_STABLE_UPDATES.id
+        );
         assert_eq!(p.clamped().stable_updates, 100);
     }
 
