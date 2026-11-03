@@ -75,9 +75,10 @@ impl Hist {
             self.pos = 0;
         }
     }
+    /// 最近 n 个样本，旧 → 新（push 之后 pos 指向最旧的那个）
     #[inline(always)]
     fn window(&self) -> &[f32] {
-        &self.buf[self.pos + 1..self.pos + 1 + self.n].as_ref()[..0].as_ref().get(..0).map_or(&self.buf[self.pos..self.pos + self.n], |_| &self.buf[self.pos..self.pos + self.n])
+        &self.buf[self.pos..self.pos + self.n]
     }
 }
 

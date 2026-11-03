@@ -27,10 +27,14 @@
 //!   gtcrn-layers <权重前缀> <wav> [--frames N] [--warmup N] [--qos rt|ui|bg] [--pace-ms X] [--variant native|native-fast]
 //!                研究 020：手写版逐层计时（cntvct 打点）+ 每层工作量（乘加、非线性、字节、关键路径），见 src/layers.rs
 //!   hw-peak [--qos rt|ui|bg] [--reps N]  研究 020：本机 NEON 乘加吞吐 / 延迟、非线性延迟、各级缓存读写带宽，见 src/hwpeak.rs
+//!   dsp-bench <wav16k> [--frames N] [--qos rt|ui|bg] [--pace-ms X]
+//!                研究 020：前后处理（vdn-dsp 的 48↔16 kHz 重采样、STFT / iSTFT）每帧计时，对照「只改点积求和方式」的 NEON 版，见 src/dsp.rs
+//!   gtcrn-bench 的后端另有 native-v2 / native-v2-fast（研究 020：同一结构与权重，算子换 NEON 重写，见 src/gtcrn_native/v2.rs）
 //!   amx-probe                                                   小矩阵上 Accelerate（AMX / SME）对手写循环，形状取自 GTCRN
 //! 输出一行 JSON（stdout）。一帧 = 模型的一个 hop（GTCRN 256 样本 / 16 ms，FE-M 160 样本 / 10 ms）。
 
 mod amx_probe;
+mod dsp;
 mod gtcrn_native;
 mod hwpeak;
 mod layers;
@@ -989,6 +993,10 @@ fn main() -> Result<(), Err> {
         }
         Some("gtcrn-bench") => bench(ModelId::Gtcrn, rest),
         Some("hw-peak") => hwpeak::run(rest),
+        Some("dsp-bench") => {
+            let audio = read_wav(Path::new(rest.first().ok_or("缺 wav")?))?;
+            dsp::run(rest, &audio)
+        }
         Some("gtcrn-layers") => {
             let audio = read_wav(Path::new(rest.get(1).ok_or("缺 wav")?))?;
             layers::run(rest, |n| frames_for(ModelId::Gtcrn, &audio, n, &[]))
