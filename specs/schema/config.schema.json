@@ -1,0 +1,108 @@
+{
+  "$comment": "由 `cargo run -p vdn-schema` 从 src/control/src/lib.rs 的 Config 导出，勿手改",
+  "$defs": {
+    "Mode": {
+      "description": "处理模式。与 `vdn_engine::Mode` 一一对应，由 bin 翻译。",
+      "enum": [
+        "denoise",
+        "passthrough"
+      ],
+      "type": "string"
+    },
+    "ModelChoice": {
+      "description": "用哪个模型。与 `vdn_models::ModelKind` 一一对应，由 bin 翻译。",
+      "enum": [
+        "gtcrn",
+        "fastenhancer-m"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "配置文件（JSON）。缺的字段取默认值；多出的字段报错（防拼错键名静默失效）。\n\n导出的 JSON Schema（`specs/schema/config.schema.json`）由本类型派生；取值范围由 `schema_ranges`\n从本文件的常量写进去。schema 只管单个字段，跨字段规则（lead ≥ IO 块、两个总线名不同）只在 `validate` 里。",
+  "properties": {
+    "block": {
+      "default": 96,
+      "description": "块长（48 kHz 样本数）",
+      "format": "uint",
+      "maximum": 4800,
+      "minimum": 32,
+      "type": "integer"
+    },
+    "bus_name": {
+      "default": "/vdn-bus",
+      "description": "降噪总线名（降噪进程建；Raw / Processed / 心跳）。规则见 `validate_bus_name`",
+      "maxLength": 31,
+      "pattern": "^/vdn-[^/\\u0000]+$",
+      "type": "string"
+    },
+    "denoise_block": {
+      "default": 96,
+      "description": "降噪进程每次从 Raw 取多少样本跑一次 Pipeline（48 kHz）；须整除模型 hop × 3（GTCRN 768），\n不整除由 vdn-denoised 启动时报错（人定省 2 ms，2026-11-02）",
+      "format": "uint",
+      "maximum": 4800,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "heartbeat_timeout_ms": {
+      "default": 100,
+      "description": "心跳多久不动就切原声（ms）",
+      "format": "uint32",
+      "maximum": 2000,
+      "minimum": 10,
+      "type": "integer"
+    },
+    "input_device": {
+      "default": null,
+      "description": "输入设备名；`None` = 系统默认",
+      "pattern": "\\S",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "lead_frames": {
+      "default": 192,
+      "description": "环余量（48 kHz 样本）：降噪进程开头往 Processed 先推这么多个零，让送音端每块都取得到。\n链路总延迟 `L_total` = 管线延迟 + 本值（默认见 `DEFAULT_LEAD`）",
+      "format": "uint",
+      "maximum": 24000,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "mode": {
+      "$ref": "#/$defs/Mode",
+      "default": "denoise"
+    },
+    "model": {
+      "$ref": "#/$defs/ModelChoice",
+      "default": "gtcrn"
+    },
+    "model_path": {
+      "default": null,
+      "description": "模型文件；`None` = 按 vdn-models 的默认路径查找",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "out_bus_name": {
+      "default": "/vdn-out",
+      "description": "Out 总线名（送音进程建，只用 Out 环；虚拟麦克风插件按这个名字连）",
+      "maxLength": 31,
+      "pattern": "^/vdn-[^/\\u0000]+$",
+      "type": "string"
+    },
+    "output_device": {
+      "default": null,
+      "description": "输出设备名；`None` = 系统默认",
+      "pattern": "\\S",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "title": "Config",
+  "type": "object"
+}
