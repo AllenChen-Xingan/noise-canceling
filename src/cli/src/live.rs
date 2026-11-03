@@ -13,7 +13,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -28,7 +28,7 @@ use crate::stop::StopOnDrop;
 
 mod check;
 mod tap;
-pub use check::{LEVEL_TOLERANCE_DB, LiveVerdict, QUIET_PEAK_DBFS, SilenceNotice, judge};
+pub use check::{SilenceNotice, judge};
 pub use tap::OutputTap;
 
 pub fn list_devices() {
@@ -359,6 +359,7 @@ pub fn summary(r: &RunReport) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::check::LiveVerdict;
     use super::*;
     use vdn_io_macos::pump::{InputPump, OutputPump};
 

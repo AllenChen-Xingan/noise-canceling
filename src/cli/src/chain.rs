@@ -27,8 +27,7 @@ mod judge;
 #[cfg(test)]
 mod lockstep;
 pub use judge::{
-    ChainVerdict, counters_line, judge_file, judge_v1, judge_v2, judge_v3, latency_line,
-    timing_line,
+    counters_line, judge_file, judge_v1, judge_v2, judge_v3, latency_line, timing_line,
 };
 #[cfg(test)]
 pub use lockstep::run_lockstep;
