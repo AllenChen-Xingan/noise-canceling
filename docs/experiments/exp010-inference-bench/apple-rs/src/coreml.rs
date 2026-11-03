@@ -89,12 +89,10 @@ impl CoreMl {
         let url = NSURL::fileURLWithPath(&NSString::from_str(&compiled));
         let model = unsafe { MLModel::modelWithContentsOfURL_configuration_error(&url, &cfg) }.map_err(|e| format!("加载失败：{e:?}"))?;
 
-        let per = kind.per_frame();
-        let io_shape = kind.io_shape();
-        let mut xin = vec![0f32; per].into_boxed_slice();
-        let mut yout = vec![0f32; per].into_boxed_slice();
-        let a_in = wrap(&mut xin, &io_shape)?;
-        let a_out = wrap(&mut yout, &io_shape)?;
+        let mut xin = vec![0f32; kind.in_len()].into_boxed_slice();
+        let mut yout = vec![0f32; kind.out_len()].into_boxed_slice();
+        let a_in = wrap(&mut xin, &kind.in_shape())?;
+        let a_out = wrap(&mut yout, &kind.out_shape())?;
         let v_in = unsafe { MLFeatureValue::featureValueWithMultiArray(&a_in) };
         let mut arrays = vec![a_in.clone(), a_out.clone()];
         let mut caches: Vec<Box<[f32]>> = Vec::new();

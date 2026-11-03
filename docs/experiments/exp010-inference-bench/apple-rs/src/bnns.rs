@@ -100,9 +100,9 @@ impl Bnns {
                 let p = BNNSGraphGetArgumentPosition(graph, ptr::null(), c.as_ptr());
                 if p == usize::MAX { Err(format!("图里没有参数 {s}（有：{names:?}）")) } else { Ok(p) }
             };
-            let per = kind.per_frame();
+            let (per, per_out) = (kind.in_len(), kind.out_len());
             let mut xin = vec![0f32; per];
-            let mut yout = vec![0f32; per];
+            let mut yout = vec![0f32; per_out];
             let (cin, cout) = kind.cache_names();
             // 两组缓存：caches[2*i] 是 A 组，caches[2*i+1] 是 B 组
             let mut caches: Vec<Vec<f32>> = cache_sizes.iter().flat_map(|&s| [vec![0f32; s], vec![0f32; s]]).collect();
@@ -110,7 +110,7 @@ impl Bnns {
             let (pi, po) = (pos(kind.input_name())?, pos(kind.output_name())?);
             for k in 0..2 {
                 args[k][pi] = Arg { data_ptr: xin.as_mut_ptr().cast(), data_ptr_size: per * 4 };
-                args[k][po] = Arg { data_ptr: yout.as_mut_ptr().cast(), data_ptr_size: per * 4 };
+                args[k][po] = Arg { data_ptr: yout.as_mut_ptr().cast(), data_ptr_size: per_out * 4 };
                 for i in 0..cin.len() {
                     let (a, b) = (pos(&cin[i])?, pos(&cout[i])?);
                     let sz = cache_sizes[i] * 4;

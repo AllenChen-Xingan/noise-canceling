@@ -34,6 +34,8 @@ const BINS: usize = 257;
 pub enum ModelKind {
     Gtcrn,
     Fem,
+    /// 认人声纹 WeSpeaker ECAPA-TDNN512：一次一个 1.5 s 窗（148×80 fbank）→ 192 维，无缓存
+    Ecapa,
 }
 
 impl ModelKind {
@@ -41,31 +43,41 @@ impl ModelKind {
         match self {
             Self::Gtcrn => "gtcrn",
             Self::Fem => "fastenhancer_m",
+            Self::Ecapa => "ecapa_tdnn512",
         }
     }
-    /// 转储里每帧的 f32 个数
-    pub fn per_frame(self) -> usize {
-        match self {
-            Self::Gtcrn => 2 * BINS,
-            Self::Fem => 160,
-        }
+    /// 转储里每帧（ECAPA 是每个窗）输入的 f32 个数
+    pub fn in_len(self) -> usize {
+        self.in_shape().iter().product()
     }
-    pub fn io_shape(self) -> Vec<usize> {
+    pub fn out_len(self) -> usize {
+        self.out_shape().iter().product()
+    }
+    pub fn in_shape(self) -> Vec<usize> {
         match self {
             Self::Gtcrn => vec![1, BINS, 1, 2],
             Self::Fem => vec![1, 160],
+            Self::Ecapa => vec![1, 148, 80],
+        }
+    }
+    pub fn out_shape(self) -> Vec<usize> {
+        match self {
+            Self::Ecapa => vec![1, 192],
+            k => k.in_shape(),
         }
     }
     pub fn input_name(self) -> &'static str {
         match self {
             Self::Gtcrn => "mix",
             Self::Fem => "wav_in",
+            Self::Ecapa => "feats",
         }
     }
     pub fn output_name(self) -> &'static str {
         match self {
             Self::Gtcrn => "enh",
             Self::Fem => "wav_out",
+            Self::Ecapa => "embs",
         }
     }
     pub fn cache_names(self) -> (Vec<String>, Vec<String>) {
@@ -75,6 +87,7 @@ impl ModelKind {
                 (n.iter().map(|s| s.to_string()).collect(), n.iter().map(|s| format!("{s}_out")).collect())
             }
             Self::Fem => ((0..6).map(|i| format!("cache_in_{i}")).collect(), (0..6).map(|i| format!("cache_out_{i}")).collect()),
+            Self::Ecapa => (vec![], vec![]),
         }
     }
     /// 转储布局 → 模型输入布局。GTCRN：re[257] 再 im[257] → [1,257,1,2] 交错。
@@ -86,7 +99,7 @@ impl ModelKind {
                     dst[2 * k + 1] = src[BINS + k];
                 }
             }
-            Self::Fem => dst.copy_from_slice(src),
+            Self::Fem | Self::Ecapa => dst.copy_from_slice(src),
         }
     }
     pub fn unpack_output(self, src: &[f32], dst: &mut [f32]) {
@@ -97,7 +110,7 @@ impl ModelKind {
                     dst[BINS + k] = src[2 * k + 1];
                 }
             }
-            Self::Fem => dst.copy_from_slice(src),
+            Self::Fem | Self::Ecapa => dst.copy_from_slice(src),
         }
     }
 }
@@ -168,6 +181,7 @@ impl Opts {
 fn cache_shapes(kind: ModelKind, fem_json: &str) -> Result<Vec<Vec<usize>>, String> {
     match kind {
         ModelKind::Gtcrn => Ok(vec![vec![2, 1, 16, 16, 33], vec![2, 3, 1, 1, 16], vec![2, 1, 33, 16]]),
+        ModelKind::Ecapa => Ok(vec![]),
         ModelKind::Fem => {
             let j: serde_json::Value =
                 serde_json::from_str(&std::fs::read_to_string(fem_json).map_err(|e| format!("FE-M 要 --fem-json：{e}"))?)
@@ -189,7 +203,8 @@ fn bench(o: &Opts) -> Result<(), String> {
     let kind = match o.get("model", "").as_str() {
         "gtcrn" => ModelKind::Gtcrn,
         "fem" => ModelKind::Fem,
-        _ => return Err("--model gtcrn|fem".into()),
+        "ecapa" => ModelKind::Ecapa,
+        _ => return Err("--model gtcrn|fem|ecapa".into()),
     };
     let frames: usize = o.num("frames", 6000);
     let warmup: usize = o.num("warmup", 200);
@@ -215,10 +230,10 @@ fn bench(o: &Opts) -> Result<(), String> {
     let _wg = if o.flags.contains_key("workgroup") { Some(rt::join_output_workgroup()?) } else { None };
     let spin = o.flags.contains_key("spin");
 
-    let per = kind.per_frame();
+    let (per, per_out) = (kind.in_len(), kind.out_len());
     let input = read_f32(&format!("{prefix}.in.f32"))?;
     let refo = read_f32(&format!("{prefix}.ort.f32"))?;
-    if input.is_empty() || input.len() != refo.len() || input.len() % per != 0 {
+    if input.is_empty() || input.len() % per != 0 || refo.len() != input.len() / per * per_out {
         return Err("in/ort 帧数不对".into());
     }
     let n_in = input.len() / per;
@@ -249,7 +264,7 @@ fn bench(o: &Opts) -> Result<(), String> {
     let total = 1 + warmup + frames;
     let t0w = 1 + warmup;
     let mut times = Vec::with_capacity(frames);
-    let mut out = vec![0f32; per];
+    let mut out = vec![0f32; per_out];
     let (mut first_ms, mut nonfinite_frames) = (0.0, 0usize);
     let (mut max_abs, mut sig, mut err) = (0.0f64, 0.0f64, 0.0f64);
     let (mut worst, mut first_bad, mut nonfinite_values) = (0usize, None, 0usize);
@@ -293,7 +308,7 @@ fn bench(o: &Opts) -> Result<(), String> {
             }
         }
         if f < pn {
-            let r = &refo[f * per..(f + 1) * per];
+            let r = &refo[f * per_out..(f + 1) * per_out];
             let (mut fs, mut fe) = (0.0f64, 0.0f64);
             for (k, (&p, &q)) in r.iter().zip(&out).enumerate() {
                 let bad_val = !p.is_finite() || !q.is_finite();
