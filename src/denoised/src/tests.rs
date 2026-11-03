@@ -1,4 +1,5 @@
 //! vdn-denoised 单测：Worker 的对齐、跳过积压、命令、预热、调度参数与不分配。
+#![allow(clippy::disallowed_methods, clippy::disallowed_types)] // NRT: 单测模块，只在 cargo test 编译，不进实时路径
 
 use super::*;
 use crate::worker::quantile;
