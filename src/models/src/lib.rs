@@ -25,6 +25,8 @@ use vdn_types::{Basis, LatencyItem, LatencyLedger, ModelId};
 pub use fastenhancer::FastEnhancer;
 pub use gtcrn::Gtcrn;
 pub use vdn_backend_ort::BoxError;
+/// 模型名的正本在这里（`ModelId::as_str` / `NAMES` / `parse`）；再导出给只依赖本 crate 的 bin 用。
+pub use vdn_types::ModelId;
 
 /// 可选的模型。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -107,8 +109,8 @@ impl ModelKind {
             ),
             ModelKind::FastEnhancerM => (
                 "VDN_FASTENHANCER_ONNX",
-                "vdn-data/models/fastenhancer-dns-v1.0.0/fastenhancer_m.onnx",
-                "resources/weights/fastenhancer/fastenhancer_m.onnx",
+                "vdn-data/models/fastenhancer-dns-v1.0.0/fastenhancer_m.onnx", // tidy: 不是模型名：上游权重文件名
+                "resources/weights/fastenhancer/fastenhancer_m.onnx", // tidy: 不是模型名：上游权重文件名
             ),
         };
         let mut candidates = Vec::new();

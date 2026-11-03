@@ -19,9 +19,10 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::builder::PossibleValuesParser;
 use serde_json::json;
 use vdn_engine::{Engine, FaultInjector, FaultKind, Model, SafetyConfig, offline};
-use vdn_models::{AnyModel, BoxError, ModelKind};
+use vdn_models::{AnyModel, BoxError, ModelId, ModelKind};
 
 /// 计数分配器：bench 里量「每 hop 在 Rust 侧分配几次」（ORT C++ 内部的分配绕过它，量不到）。
 #[global_allocator]
@@ -182,27 +183,11 @@ struct ChainArgs {
     dump: Option<PathBuf>,
 }
 
-#[derive(Clone, Copy, ValueEnum)]
-enum ModelArg {
-    Gtcrn,
-    #[value(name = "fastenhancer-m")]
-    FastEnhancerM,
-}
-
-impl From<ModelArg> for ModelKind {
-    fn from(m: ModelArg) -> Self {
-        match m {
-            ModelArg::Gtcrn => ModelKind::Gtcrn,
-            ModelArg::FastEnhancerM => ModelKind::FastEnhancerM,
-        }
-    }
-}
-
 #[derive(Args)]
 struct ModelOpts {
     /// 用哪个模型
-    #[arg(long, value_enum, default_value = "gtcrn")]
-    model: ModelArg,
+    #[arg(long, default_value = ModelId::Gtcrn.as_str(), value_parser = PossibleValuesParser::new(ModelId::NAMES))]
+    model: String,
     /// 模型文件；不给就按 环境变量 VDN_GTCRN_ONNX / VDN_FASTENHANCER_ONNX → ~/vdn-data/models/… → ./resources/… 查找
     #[arg(long)]
     model_path: Option<PathBuf>,
@@ -306,7 +291,7 @@ fn main() {
 }
 
 fn open_model(m: &ModelOpts) -> Result<(AnyModel, PathBuf), BoxError> {
-    let kind = ModelKind::from(m.model);
+    let kind = ModelKind::from_id(ModelId::parse(&m.model).ok_or("未知的模型")?);
     let path = match &m.model_path {
         Some(p) => p.clone(),
         None => kind
