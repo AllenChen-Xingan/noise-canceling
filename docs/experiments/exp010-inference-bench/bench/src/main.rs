@@ -1,10 +1,15 @@
 //! exp010 推理后端基准：同口径比 ORT CPU（基线）、手写 Rust、tract（纯 Rust ONNX 推理）。
 //!
 //! 子命令：
-//!   gtcrn-parity <权重前缀> <onnx> <wav> [--vs native|tract]   逐帧对拍增强后频谱（ORT 对 --vs，默认 native；两边吃同一份 STFT 频谱）
+//!   gtcrn-parity <权重前缀> <onnx> <wav> [--vs native|tract] [--frames N] [--reset-at K]
+//!                逐帧对拍增强后频谱（ORT 对 --vs，默认 native；两边吃同一份 STFT 频谱）；--frames 循环音频跑长；
+//!                --reset-at：被测一侧跑 K 帧后 reset，对比新开实例（只 native 实现了 reset）
 //!   gtcrn-bench  <ort|native|tract> <权重前缀|onnx> <wav> [--frames N] [--warmup N]
-//!   fem-parity   <onnx> <wav> [--tract-onnx <改写后的 onnx>]    FastEnhancer-M：ORT 跑 <onnx> 对 tract 跑改写图（默认同一份），逐帧对拍输出波形
+//!   fem-parity   <onnx> <wav> [--vs tract|ort] [--b-onnx <被测侧的 onnx>] [--frames N]
+//!                FastEnhancer-M：ORT 跑 <onnx> 对 --vs 跑 --b-onnx（默认同一份），逐帧对拍输出波形
+//!                （--vs ort --b-onnx 改写图 = 单独证明改写等价；旧参数 --tract-onnx 等同 --b-onnx）
 //!   fem-bench    <ort|tract> <onnx> <wav> [--frames N] [--warmup N]
+//!   两个 bench 都可加 `--qos ui|default`：计时线程的调度等级，默认 ui（QOS_CLASS_USER_INTERACTIVE）。
 //!   两个 bench 都可加 `--pace-ms <毫秒>`：按实时节奏每隔这么久喂一帧（测耗电、测睡醒后的帧耗时用；默认 0 = 连续跑）。
 //!   两个 bench 都可加 `--dump-io <前缀>`（此时第 2 个参数须是 onnx）：计时之后另起一个 ORT 会话，从零状态把
 //!   全部 1 + warmup + frames 帧再跑一遍，写 `<前缀>.in.f32` / `<前缀>.ort.f32`（小端 f32，按帧拼接；
@@ -185,6 +190,8 @@ impl OrtGtcrn {
 /// 一帧原地推理：`x` 进、`x` 出。GTCRN 的一帧是 [re 257 | im 257]，FE-M 的一帧是 160 个样本。
 trait Net {
     fn infer(&mut self, x: &mut [f32]) -> Result<(), Err>;
+    /// 清回零状态。只有手写版实现了（`--reset-at` 检查用）。
+    fn reset(&mut self) {}
 }
 
 impl Net for OrtGtcrn {
@@ -198,6 +205,9 @@ impl Net for GtcrnNative {
         let (re, im) = x.split_at_mut(BINS);
         GtcrnNative::infer(self, re, im);
         Ok(())
+    }
+    fn reset(&mut self) {
+        GtcrnNative::reset(self);
     }
 }
 
@@ -349,7 +359,12 @@ fn open_net(model: ModelId, kind: &str, path: &Path) -> Result<Box<dyn Net>, Err
     open_net_with(model, kind, path, None)
 }
 
-fn open_net_with(model: ModelId, kind: &str, path: &Path, shapes: Option<&[Vec<usize>]>) -> Result<Box<dyn Net>, Err> {
+fn open_net_with(
+    model: ModelId,
+    kind: &str,
+    path: &Path,
+    shapes: Option<&[Vec<usize>]>,
+) -> Result<Box<dyn Net>, Err> {
     Ok(match (model, kind) {
         (ModelId::Gtcrn, "ort") => Box::new(OrtGtcrn::open(path)?),
         (ModelId::Gtcrn, "native") => Box::new(GtcrnNative::load(path)?),
@@ -376,7 +391,10 @@ fn frames_for(
             .map(|(re, im)| re.iter().chain(im.iter()).copied().collect())
             .collect(),
         ModelId::Fem => {
-            let hop = *shapes.first().and_then(|s| s.last()).ok_or("FE-M 需要输入形状")?;
+            let hop = *shapes
+                .first()
+                .and_then(|s| s.last())
+                .ok_or("FE-M 需要输入形状")?;
             let n = audio.len() / hop;
             (0..frames)
                 .map(|i| audio[(i % n) * hop..(i % n + 1) * hop].to_vec())
@@ -414,7 +432,9 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     // 计时线程的调度等级：ui = QOS_CLASS_USER_INTERACTIVE（默认，尽量留在性能核；实时音频线程只会更高），
     // default = 不设。审稿发现不设时 tract 的 p50 在一次运行里分两档。
     if qos == "ui" {
-        let r = unsafe { libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE, 0) };
+        let r = unsafe {
+            libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE, 0)
+        };
         if r != 0 {
             return Err(format!("设 QoS 失败：{r}").into());
         }
@@ -422,8 +442,12 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         return Err("--qos 只收 ui / default".into());
     }
     let audio = read_wav(wav)?;
-    // 计时前：ORT 环境初始化 + 读输入形状（native 吃权重前缀，没有 onnx，用同目录约定之外的 GTCRN 常量形状）
-    let (shapes, ort_env_ms) = if kind == "native" { (Vec::new(), 0.0) } else { prepare(path)? };
+    // 计时前：ORT 环境初始化 + 读输入形状。native 吃的是权重前缀、不碰 ORT，跳过（它的「打开」本来就不含 ORT）
+    let (shapes, ort_env_ms) = if kind == "native" {
+        (Vec::new(), 0.0)
+    } else {
+        prepare(path)?
+    };
     let inputs = frames_for(model, &audio, frames + warm + 1, &shapes)?;
     let mut x = inputs[0].clone();
     // 冷启动：打开 + 第一帧
@@ -488,6 +512,10 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
 }
 
 /// 逐帧对拍：参考 `a`（ORT）对 `b`，同一份输入，比整帧输出。
+/// 逐帧对拍：参考 `a`（ORT）对 `b`，同一份输入，比整帧输出。
+/// `first_bad`：第一个「差 > 1e-3 或任一边非有限」的位置（NaN 也算坏，审稿 P2-1）。
+/// `min_frame_snr_db`：逐帧 SNR 的最小值，只统计参考能量 ≥ 全段平均帧能量 1e-4 的帧，专看安静段（整段 SNR 被响帧主导）。
+/// `reset_at`：若给出，在第 k 帧前对 `b` 调 reset，再拿一个新开的 `b2` 从第 k 帧起同喂，报两者最大差（应为 0）。
 fn parity(
     model: ModelId,
     vs: &str,
@@ -498,6 +526,8 @@ fn parity(
     let (mut max_abs, mut sig, mut err) = (0.0f64, 0.0f64, 0.0f64);
     let mut worst_frame = 0;
     let mut first_bad = None;
+    let mut nonfinite = 0usize;
+    let mut per_frame = Vec::with_capacity(inputs.len()); // (ref 能量, 差能量)
     let mut xa = inputs[0].clone();
     let mut xb = inputs[0].clone();
     for (f, x) in inputs.iter().enumerate() {
@@ -505,25 +535,78 @@ fn parity(
         xb.copy_from_slice(x);
         a.infer(&mut xa)?;
         b.infer(&mut xb)?;
+        let (mut fs, mut fe) = (0.0f64, 0.0f64);
         for (k, (&p, &q)) in xa.iter().zip(&xb).enumerate() {
+            let bad_val = !p.is_finite() || !q.is_finite();
+            if bad_val {
+                nonfinite += 1;
+            }
             let d = (p as f64 - q as f64).abs();
-            sig += (p as f64).powi(2);
-            err += d * d;
+            fs += (p as f64).powi(2);
+            fe += d * d;
             if d > max_abs {
                 max_abs = d;
                 worst_frame = f;
             }
-            if d > 1e-3 && first_bad.is_none() {
+            if (bad_val || !(d <= 1e-3)) && first_bad.is_none() {
                 first_bad = Some((f, k));
             }
         }
+        sig += fs;
+        err += fe;
+        per_frame.push((fs, fe));
     }
+    let mean_e = sig / inputs.len() as f64;
+    let min_frame_snr = per_frame
+        .iter()
+        .filter(|(s, _)| *s >= 1e-4 * mean_e)
+        .map(|(s, e)| 10.0 * (s / e.max(1e-300)).log10())
+        .fold(f64::INFINITY, f64::min);
     println!(
-        "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"frames\":{},\"max_abs\":{max_abs:.3e},\"worst_frame\":{worst_frame},\"snr_db\":{:.2},\"first_bad\":\"{:?}\"}}",
+        "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"frames\":{},\"max_abs\":{max_abs:.3e},\"worst_frame\":{worst_frame},\"snr_db\":{:.2},\"min_frame_snr_db\":{min_frame_snr:.2},\"nonfinite_values\":{nonfinite},\"first_bad\":\"{:?}\"}}",
         model.name(),
         inputs.len(),
         10.0 * (sig / err.max(1e-300)).log10(),
         first_bad
+    );
+    Ok(())
+}
+
+/// reset 检查：`b` 先跑 `k` 帧再 reset，`b2` 新开；两者从第 k 帧起喂同样输入，比输出（应逐位相同）。
+fn reset_check(
+    model: ModelId,
+    vs: &str,
+    b: &mut dyn Net,
+    b2: &mut dyn Net,
+    inputs: &[Vec<f32>],
+    k: usize,
+) -> Result<(), Err> {
+    let mut x = inputs[0].clone();
+    for f in &inputs[..k] {
+        x.copy_from_slice(f);
+        b.infer(&mut x)?;
+    }
+    b.reset();
+    let mut y = inputs[0].clone();
+    let mut max_abs = 0.0f64;
+    for f in &inputs[k..] {
+        x.copy_from_slice(f);
+        y.copy_from_slice(f);
+        b.infer(&mut x)?;
+        b2.infer(&mut y)?;
+        for (p, q) in x.iter().zip(&y) {
+            let d = (*p as f64 - *q as f64).abs();
+            max_abs = if d.is_nan() {
+                f64::INFINITY
+            } else {
+                max_abs.max(d)
+            };
+        }
+    }
+    println!(
+        "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"check\":\"reset\",\"reset_at\":{k},\"frames_after\":{},\"max_abs_vs_fresh\":{max_abs:.3e}}}",
+        model.name(),
+        inputs.len() - k
     );
     Ok(())
 }
@@ -601,7 +684,7 @@ fn main() -> Result<(), Err> {
         Some("gtcrn-bench") => bench(ModelId::Gtcrn, rest),
         Some("fem-bench") => bench(ModelId::Fem, rest),
         Some("gtcrn-parity") => {
-            // 帧数 = 音频长度 / hop（不循环），与旧版一致
+            // 帧数默认 = 音频长度 / hop（不循环）；--frames N 时循环音频（STFT 不重置），查长时间跑会不会漂
             let (wp, onnx, wav) = (
                 Path::new(&rest[0]),
                 Path::new(&rest[1]),
@@ -609,29 +692,49 @@ fn main() -> Result<(), Err> {
             );
             let vs = arg_str(rest, "--vs", "native");
             let audio = read_wav(wav)?;
-            let inputs = frames_for(ModelId::Gtcrn, &audio, audio.len() / HOP, onnx)?;
-            let b = open_net(ModelId::Gtcrn, vs, if vs == "native" { wp } else { onnx })?;
+            let n = arg_usize(rest, "--frames", audio.len() / HOP);
+            let inputs = frames_for(ModelId::Gtcrn, &audio, n, &[])?;
+            let pb = if vs == "native" { wp } else { onnx };
             parity(
                 ModelId::Gtcrn,
                 vs,
                 open_net(ModelId::Gtcrn, "ort", onnx)?,
-                b,
+                open_net(ModelId::Gtcrn, vs, pb)?,
                 &inputs,
-            )
+            )?;
+            if let Some(i) = rest.iter().position(|a| a == "--reset-at") {
+                let k: usize = rest.get(i + 1).ok_or("--reset-at 缺帧号")?.parse()?;
+                let (mut b, mut b2) = (
+                    open_net(ModelId::Gtcrn, vs, pb)?,
+                    open_net(ModelId::Gtcrn, vs, pb)?,
+                );
+                reset_check(ModelId::Gtcrn, vs, b.as_mut(), b2.as_mut(), &inputs, k)?;
+            }
+            Ok(())
         }
         Some("fem-parity") => {
+            // --vs tract（默认）| ort；--b-onnx 给被测一侧用的图（如改写图），默认同 <onnx>
             let (onnx, wav) = (Path::new(&rest[0]), Path::new(&rest[1]));
+            let vs = arg_str(rest, "--vs", "tract");
+            let bo = Path::new(arg_str(
+                rest,
+                "--b-onnx",
+                arg_str(rest, "--tract-onnx", &rest[0]),
+            ));
             let audio = read_wav(wav)?;
-            let hop = *input_shapes(&ort_session(onnx)?)?[0]
-                .last()
-                .ok_or("wav_in 形状空")?;
-            let inputs = frames_for(ModelId::Fem, &audio, audio.len() / hop, onnx)?;
-            let t = Path::new(arg_str(rest, "--tract-onnx", &rest[0]));
+            let shapes = input_shapes(&ort_session(onnx)?)?;
+            let hop = *shapes[0].last().ok_or("wav_in 形状空")?;
+            let n = arg_usize(rest, "--frames", audio.len() / hop);
+            let inputs = frames_for(ModelId::Fem, &audio, n, &shapes)?;
+            let label = format!(
+                "{vs}:{}",
+                bo.file_name().and_then(|s| s.to_str()).unwrap_or("?")
+            );
             parity(
                 ModelId::Fem,
-                "tract",
+                &label,
                 open_net(ModelId::Fem, "ort", onnx)?,
-                open_net(ModelId::Fem, "tract", t)?,
+                open_net_with(ModelId::Fem, vs, bo, Some(&shapes))?,
                 &inputs,
             )
         }
