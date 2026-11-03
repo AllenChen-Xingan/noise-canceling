@@ -5,7 +5,10 @@
 - 管的实体：推理后端（苹果）· 模型（降噪）· 评测器（帧耗时 · 逐值一致）
 - 机器：Apple M5 · macOS 27.0.1 · 插电
 - 起调研 workflow wf_60470c8a-e59（4 调研 + 4 怀疑派），notes 写 `docs/research/019_apple-inference/notes/{coreml,bnns-graph,mlx,realtime-and-bindings}.md`
-- 等调研期间：写测量程序 `docs/experiments/exp010-inference-bench/apple/`（不跑；跑要名额）
+- 测量程序已写（未跑）：`docs/experiments/exp010-inference-bench/apple/` —— `convert_gtcrn.py` · `convert_fem.py` · `bench_coreml.swift`（GTCRN / FE-M 通用，四种计算单元 + 有状态 + 实时节奏模式）· `power.sh`（要 sudo，人跑）
+- 口径已与 rustbe 对齐：转储 `--dump-io`；1 冷启动 + 200 预热 + 6000 计时；对拍前 610 帧；分配字段叫 `process_allocs_per_frame`
+- FE-M 本地 PyTorch 权重是半截下载（4.6 MB，应 59.8 MB）；已重下到 `~/vdn-data/models/fastenhancer-dns-v1.0.0/ckpt-full/`，sha256 6f25dd9e…ffe0b 与官方一致，旧文件未动
+- 16:2x 大总管通知 rustbe 占名额，applebe 暂停编译 / 推理，已排队
 - rustbe 同步：手写 GTCRN 已与 ORT 逐值对拍（37 段，最大差 1.6e-4），正在加 tract
 
 ## 下一步
