@@ -34,9 +34,10 @@ use std::time::{Duration, Instant};
 use clap::Parser;
 use vdn_control::{Config, Mode, ModelChoice};
 use vdn_denoised::{
-    IO_RATE, OwnedBus, Processor, Step, Worker, identity_pipeline, model_kind, model_pipeline,
+    IO_RATE, Processor, Step, Worker, denoise_bus_config, identity_pipeline, model_kind,
+    model_pipeline,
 };
-use vdn_shm::{BusConfig, RingId};
+use vdn_shm::{OwnedBus, RingId, ShmError};
 
 #[derive(Parser)]
 #[command(
@@ -148,13 +149,7 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     );
     let l_pipe = worker.processor().latency_samples();
     let l_total = worker.l_total(cfg.lead_frames);
-    if a.capacity as usize <= l_total + 2 * cfg.denoise_block {
-        return Err(format!(
-            "--capacity {} 太小：至少要 L_total + 2 块 = {}",
-            a.capacity,
-            l_total + 2 * cfg.denoise_block
-        ));
-    }
+    let bus_cfg = denoise_bus_config(&worker, cfg.lead_frames, a.capacity as usize)?;
 
     if cfg.lead_frames < cfg.block + cfg.denoise_block {
         eprintln!(
@@ -173,14 +168,13 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
 
     // 拿到这个名字的锁才建（同名第二个降噪进程直接报错，不删别人在用的总线）；
     // 之后任何返回路径（含出错、panic 展开）都由守卫删名字
-    let bus = OwnedBus::create(
-        &cfg.bus_name,
-        BusConfig {
-            rate: IO_RATE,
-            capacity_frames: a.capacity,
-            l_total: u32::try_from(l_total).map_err(|_| "L_total 太大")?,
-        },
-    )?;
+    let bus = OwnedBus::create(&cfg.bus_name, bus_cfg).map_err(|e| match e {
+        ShmError::Busy => format!(
+            "总线 {} 正被另一个降噪进程（或 chain-test）使用；换个 --bus 名字，或先停掉它",
+            cfg.bus_name
+        ),
+        e => format!("建总线 {}：{e}", cfg.bus_name),
+    })?;
     let primed = worker.prime(&bus, cfg.lead_frames);
     if primed != cfg.lead_frames {
         return Err(format!(
@@ -214,10 +208,9 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
         .seconds
         .map(|s| Instant::now() + Duration::from_secs_f64(s));
     while !stop.load(Ordering::Relaxed) && deadline.is_none_or(|d| Instant::now() < d) {
-        if worker.step(&bus) == Step::Idle {
-            // B 档：没活就让出 0.5 ms（后续批次换 os_sync_wait 唤醒）
-            std::thread::sleep(Duration::from_micros(500));
-        }
+        // 等送音端推够一块再醒（送音端每推一块 notify 一次）；20 ms 兜底超时，好检查退出标志
+        let _ = bus.wait(RingId::Raw, cfg.denoise_block, Duration::from_millis(20));
+        while worker.step(&bus) == Step::Block {}
     }
 
     let s = worker.stats();

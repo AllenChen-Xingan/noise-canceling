@@ -269,7 +269,6 @@ mod tests {
     use super::*;
     use vdn_capture::shm::forward_same_bus;
     use vdn_capture::{Forwarder, ForwarderConfig};
-    use vdn_shm::BusConfig;
 
     /// 输出 = 输入、延迟 0
     struct Copy0;
@@ -287,6 +286,8 @@ mod tests {
             rate: IO_RATE,
             capacity_frames: 1 << 14,
             l_total: l_total as u32,
+            lead: 0,
+            denoise_block: 96,
         })
         .unwrap()
     }
