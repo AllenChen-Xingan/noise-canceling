@@ -670,6 +670,10 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
             "null".into()
         },
     );
+    // 有非有限输出：结果已打印（nonfinite_frames 字段可见），但这一轮性能作废，返回错误让脚本停下（codex 第 3 轮 #5）
+    if nan > 0 {
+        return Err(format!("{nan} 帧输出含非有限值，本轮性能结果无效").into());
+    }
     Ok(())
 }
 
@@ -757,13 +761,14 @@ fn reset_check(
     inputs: &[Vec<f32>],
     k: usize,
 ) -> Result<(), Err> {
+    // 先查区间，再切片（codex 第 3 轮 #3）
+    if inputs.is_empty() || k == 0 || k >= inputs.len() {
+        return Err(format!("--reset-at {k} 不在 1..{} 之内，比较区间为空", inputs.len()).into());
+    }
     let mut x = inputs[0].clone();
     for f in &inputs[..k] {
         x.copy_from_slice(f);
         b.infer(&mut x)?;
-    }
-    if k >= inputs.len() {
-        return Err(format!("--reset-at {k} ≥ 总帧数 {}，比较区间为空", inputs.len()).into());
     }
     b.reset();
     let mut y = inputs[0].clone();
