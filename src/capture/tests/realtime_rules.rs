@@ -35,5 +35,9 @@ fn no_locks_in_capture_sources() {
         }
     }
     assert!(files >= 5, "只找到 {files} 个源文件，路径不对？");
-    assert!(hits.is_empty(), "音频线程代码里不许有锁：\n{}", hits.join("\n"));
+    assert!(
+        hits.is_empty(),
+        "音频线程代码里不许有锁：\n{}",
+        hits.join("\n")
+    );
 }

@@ -66,8 +66,12 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<()
     let l_pipe = worker.processor().latency_samples();
     let l_total = worker.l_total(o.lead);
     let bus = Arc::new(
-        Bus::heap(vdn_denoised::denoise_bus_config(&worker, o.lead, IO_RATE as usize)?)
-            .map_err(|e| e.to_string())?,
+        Bus::heap(vdn_denoised::denoise_bus_config(
+            &worker,
+            o.lead,
+            IO_RATE as usize,
+        )?)
+        .map_err(|e| e.to_string())?,
     );
     if worker.prime(&bus, o.lead) != o.lead {
         return Err("Processed 环放不下 lead 个零".into());

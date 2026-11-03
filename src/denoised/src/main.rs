@@ -137,7 +137,8 @@ fn real_main() -> Result<(), String> {
 }
 
 fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String> {
-    let mut worker = Worker::new(pipeline, cfg.denoise_block).skip_backlog_over_lead(cfg.lead_frames);
+    let mut worker =
+        Worker::new(pipeline, cfg.denoise_block).skip_backlog_over_lead(cfg.lead_frames);
     let w = worker.warm_up(a.warmup_blocks);
     eprintln!(
         "vdn-denoised: 预热 {} 块 · 第一块 {:.3} ms · 之后最长 {:.3} ms · 平均 {:.3} ms（一块音频 {:.3} ms）",
@@ -225,7 +226,11 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
         s.proc_overflow,
         bus.ring(RingId::Raw).overflows(),
         rt_failures,
-        if vdn_shm::Bus::wake_supported() { "可用" } else { "不可用（本机系统低于 14.4，走轮询）" },
+        if vdn_shm::Bus::wake_supported() {
+            "可用"
+        } else {
+            "不可用（本机系统低于 14.4，走轮询）"
+        },
         bus.ring(RingId::Raw).wait_fallbacks(),
         if unlinked.is_ok() { "成功" } else { "失败" }
     );

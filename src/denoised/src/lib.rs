@@ -88,7 +88,11 @@ pub fn model_kind(c: vdn_control::ModelChoice) -> ModelKind {
 
 /// 降噪总线头的配置：总线头里的 L_total / lead / 降噪块长**只从这里写**。
 /// 正本：管线延迟与块长 = `Worker`（来自 `Pipeline`），lead 与容量 = 调用方的 `vdn_control::Config`。
-pub fn denoise_bus_config<P: Processor>(w: &Worker<P>, lead: usize, capacity: usize) -> Result<BusConfig, String> {
+pub fn denoise_bus_config<P: Processor>(
+    w: &Worker<P>,
+    lead: usize,
+    capacity: usize,
+) -> Result<BusConfig, String> {
     let u = |v: usize, what: &str| u32::try_from(v).map_err(|_| format!("{what} = {v} 太大"));
     if capacity <= w.l_total(lead) + 2 * w.block() {
         return Err(format!(
@@ -285,7 +289,9 @@ impl<P: Processor> Worker<P> {
     fn push_placeholders(&mut self, processed: &vdn_shm::Ring<'_>, n: u64) {
         let mut left = n;
         while left > 0 {
-            let k = usize::try_from(left).unwrap_or(usize::MAX).min(self.zero_buf.len());
+            let k = usize::try_from(left)
+                .unwrap_or(usize::MAX)
+                .min(self.zero_buf.len());
             let got = processed.push(self.zero_buf.get(..k).unwrap_or(&[]));
             self.stats.proc_overflow += (k - got.min(k)) as u64;
             left -= k as u64;
@@ -308,7 +314,9 @@ impl<P: Processor> Worker<P> {
                 break;
             }
             // 先推到标记位置
-            let k = usize::try_from(m.at.saturating_sub(pos)).unwrap_or(0).min(n - i);
+            let k = usize::try_from(m.at.saturating_sub(pos))
+                .unwrap_or(0)
+                .min(n - i);
             let got = processed.push(self.outbuf.get(i..i + k).unwrap_or(&[]));
             self.stats.proc_overflow += (k - got.min(k)) as u64;
             self.pushed += k as u64;
@@ -414,12 +422,25 @@ mod tests {
     fn bus_name_rule_matches_vdn_shm() {
         let long = format!("/vdn-{}", "a".repeat(30));
         for name in [
-            "/vdn-bus", "/vdn-out", "/vdn-chaintest-out", "/vdn-", "/vdn", "/vdnx", "vdn-bus", "/other",
-            "/vdn-a/b", "/vdn-a\0b", &long, "/vdn-ok_1.2",
+            "/vdn-bus",
+            "/vdn-out",
+            "/vdn-chaintest-out",
+            "/vdn-",
+            "/vdn",
+            "/vdnx",
+            "vdn-bus",
+            "/other",
+            "/vdn-a/b",
+            "/vdn-a\0b",
+            &long,
+            "/vdn-ok_1.2",
         ] {
             let control_ok = vdn_control::validate_bus_name(name).is_ok();
             let shm_ok = !matches!(Bus::open(name), Err(vdn_shm::ShmError::InvalidName));
-            assert_eq!(control_ok, shm_ok, "{name:?}：vdn-control {control_ok} · vdn-shm {shm_ok}");
+            assert_eq!(
+                control_ok, shm_ok,
+                "{name:?}：vdn-control {control_ok} · vdn-shm {shm_ok}"
+            );
         }
     }
 
@@ -458,7 +479,14 @@ mod tests {
     #[test]
     fn skip_backlog_keeps_alignment_without_silence() {
         let (block, lead) = (96, 288);
-        let mut w = Worker::new(HalfDelay { line: vec![0.0; 768], pos: 0 }, block).skip_backlog_over_lead(lead);
+        let mut w = Worker::new(
+            HalfDelay {
+                line: vec![0.0; 768],
+                pos: 0,
+            },
+            block,
+        )
+        .skip_backlog_over_lead(lead);
         let l_total = w.l_total(lead);
         let bus = heap(l_total);
         w.prime(&bus, lead);
@@ -474,20 +502,36 @@ mod tests {
             assert_eq!(bus.ring(RingId::Out).pop(yc), c.len());
         }
         let s = w.stats();
-        assert!(s.raw_skipped > 0 && s.placeholders_pushed == s.raw_skipped, "{s:?}");
+        assert!(
+            s.raw_skipped > 0 && s.placeholders_pushed == s.raw_skipped,
+            "{s:?}"
+        );
         assert!(bus.ring(RingId::Raw).gaps() > 0);
         let fs = f.stats();
         assert!(fs.gap_holds >= 1, "{fs:?}");
         assert_eq!(fs.nonfinite, 0);
         // 不静音（零占位没被播出）、不跳变
-        let quiet = y[l_total..].split(|v| v.abs() >= 1e-3).map(<[f32]>::len).max().unwrap_or(0);
+        let quiet = y[l_total..]
+            .split(|v| v.abs() >= 1e-3)
+            .map(<[f32]>::len)
+            .max()
+            .unwrap_or(0);
         assert!(quiet < 50, "最长静音 {quiet} 样本");
-        let jump = y.windows(2).skip(l_total).map(|p| (p[1] - p[0]).abs()).fold(0.0, f32::max);
+        let jump = y
+            .windows(2)
+            .skip(l_total)
+            .map(|p| (p[1] - p[0]).abs())
+            .fold(0.0, f32::max);
         assert!(jump < 0.13, "最大跳变 {jump}");
         // 停顿结束后不到 0.2 s 就回到处理后的（0.5 倍）并逐样本对齐
         let back = (600 + 100) * block;
         for k in back..y.len() {
-            assert!((y[k] - 0.5 * x[k - l_total]).abs() < 1e-4, "k={k}: {} vs {}", y[k], 0.5 * x[k - l_total]);
+            assert!(
+                (y[k] - 0.5 * x[k - l_total]).abs() < 1e-4,
+                "k={k}: {} vs {}",
+                y[k],
+                0.5 * x[k - l_total]
+            );
         }
         assert!(f.is_fresh());
     }

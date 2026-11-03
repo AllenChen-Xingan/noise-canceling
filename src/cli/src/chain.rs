@@ -139,14 +139,18 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
     // - Out 总线：收音方自己建；虚拟麦克风方 open。降噪进程重启不影响它
     // 都用 OwnedBus：拿到名字的锁才建（不删别人在用的同名总线），任何返回路径上删名字一次
     let den_cfg = vdn_denoised::denoise_bus_config(&worker, o.lead, RATE as usize)?;
-    let den_bus = Arc::new(OwnedBus::create(&o.bus_name, den_cfg).map_err(|e| format!("建降噪总线 {}：{e}", o.bus_name))?);
+    let den_bus = Arc::new(
+        OwnedBus::create(&o.bus_name, den_cfg)
+            .map_err(|e| format!("建降噪总线 {}：{e}", o.bus_name))?,
+    );
     let out_name = out_bus_name(&o.bus_name);
     let out_bus = Arc::new(
         OwnedBus::create(&out_name, vdn_capture::shm::out_bus_config(RATE))
             .map_err(|e| format!("建 Out 总线 {out_name}：{e}"))?,
     );
     let cap_bus = Arc::new(Bus::open(&o.bus_name).map_err(|e| format!("收音端打开降噪总线：{e}"))?);
-    let hal_bus = Arc::new(Bus::open(&out_name).map_err(|e| format!("虚拟麦端打开 Out 总线：{e}"))?);
+    let hal_bus =
+        Arc::new(Bus::open(&out_name).map_err(|e| format!("虚拟麦端打开 Out 总线：{e}"))?);
     // 交叉校验：收音端从总线头读回的 lead / 降噪块长 = 降噪端的设置（正本是 o.lead 与 Worker）
     let back = cap_bus.config();
     if back.lead as usize != o.lead || back.denoise_block as usize != o.denoise_block {
@@ -277,8 +281,12 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
         let _ = s.join();
     }
     let k = killed_at.load(Ordering::Acquire);
-    den_bus.unlink().map_err(|e| format!("unlink 降噪总线：{e}"))?;
-    out_bus.unlink().map_err(|e| format!("unlink Out 总线：{e}"))?;
+    den_bus
+        .unlink()
+        .map_err(|e| format!("unlink 降噪总线：{e}"))?;
+    out_bus
+        .unlink()
+        .map_err(|e| format!("unlink Out 总线：{e}"))?;
     drop(den_bus);
     drop(out_bus);
     Ok(ChainRun {
