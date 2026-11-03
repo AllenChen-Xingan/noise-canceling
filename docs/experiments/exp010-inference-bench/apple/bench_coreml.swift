@@ -1,10 +1,10 @@
-// exp010 · Core ML 逐帧基准（GTCRN），输出一行 JSON，字段同 rustbe 的 bench。
+// exp010 · Core ML 逐帧基准（GTCRN · FE-M，按输入名自动认），输出一行 JSON，字段同 rustbe 的 bench。
 //
 // 用法：
 //   bench_coreml bench <模型 .mlpackage|.mlmodelc> <cpu|gpu|ane|all> <in.f32> <ort.f32> [--frames N] [--warmup N] [--parity-frames N] [--state] [--paced-ms 16]
 //   bench_coreml plan  <模型 .mlpackage|.mlmodelc> <cpu|gpu|ane|all>      每个算子落在哪个计算单元（MLComputePlan）
 //
-// in.f32 / ort.f32：每帧 514 个小端 f32（re[257] 再 im[257]），来自 rustbe bench 的 --dump-io。
+// in.f32 / ort.f32：来自 rustbe bench 的 --dump-io。GTCRN 每帧 514 个小端 f32（re[257] 再 im[257]）；FE-M 每帧 160 个样本。
 // 同 rustbe 口径：第 0 帧是冷启动帧，接着预热帧（默认 200），再计时帧（默认 6000）；转储本身已按 mix.wav 循环排好。
 // 逐值一致只比前 --parity-frames 帧（默认 610 = 整段 mix.wav 不循环），算法同 rustbe parity：最大绝对差、整段 SNR、首个差 > 1e-3 的位置。
 // 实时做法：输入输出 MLMultiArray 全部预分配（outputBackings），两组缓存来回交换，每帧只 memcpy 频谱。
@@ -12,7 +12,6 @@ import CoreML
 import Foundation
 
 let BINS = 257
-let PER = 2 * BINS
 
 func die(_ s: String) -> Never { FileHandle.standardError.write((s + "\n").data(using: .utf8)!); exit(2) }
 
@@ -65,6 +64,23 @@ func writeMix(_ a: MLMultiArray, _ src: UnsafePointer<Float>) {
         a.withUnsafeMutableBufferPointer(ofType: Float16.self) { p, _ in
             for k in 0..<BINS { p[k * s1] = Float16(src[k]); p[k * s1 + s3] = Float16(src[BINS + k]) }
         }
+    }
+}
+// FE-M：[1,160] 波形
+func writeWav(_ a: MLMultiArray, _ src: UnsafePointer<Float>) {
+    let s = a.strides[1].intValue
+    if a.dataType == .float32 {
+        a.withUnsafeMutableBufferPointer(ofType: Float.self) { p, _ in for k in 0..<160 { p[k * s] = src[k] } }
+    } else {
+        a.withUnsafeMutableBufferPointer(ofType: Float16.self) { p, _ in for k in 0..<160 { p[k * s] = Float16(src[k]) } }
+    }
+}
+func readWav(_ a: MLMultiArray, _ dst: UnsafeMutablePointer<Float>) {
+    let s = a.strides[1].intValue
+    if a.dataType == .float32 {
+        a.withUnsafeBufferPointer(ofType: Float.self) { p in for k in 0..<160 { dst[k] = p[k * s] } }
+    } else {
+        a.withUnsafeBufferPointer(ofType: Float16.self) { p in for k in 0..<160 { dst[k] = Float(p[k * s]) } }
     }
 }
 func readEnh(_ a: MLMultiArray, _ dst: UnsafeMutablePointer<Float>) {
@@ -128,8 +144,6 @@ func cmdBench(_ a: [String]) throws {
         }
     }
     let input = readF32(a[2]), ref = readF32(a[3])
-    let nIn = input.count / PER
-    guard nIn > 0, ref.count == input.count else { die("in/ort 帧数不对") }
 
     vdn_alloc_hook_install()
     let t0 = nowMs()
@@ -140,19 +154,26 @@ func cmdBench(_ a: [String]) throws {
     let openMs = nowMs() - t0
 
     let desc = model.modelDescription
-    let mixDT = desc.inputDescriptionsByName["mix"]!.multiArrayConstraint!.dataType
-    let mix = try arr([1, BINS, 1, 2], mixDT)
-    let enhOut = try arr([1, BINS, 1, 2], desc.outputDescriptionsByName["enh"]!.multiArrayConstraint!.dataType)
+    let isFem = desc.inputDescriptionsByName["wav_in"] != nil
+    let inName = isFem ? "wav_in" : "mix", outName = isFem ? "wav_out" : "enh"
+    let ioShape = isFem ? [1, 160] : [1, BINS, 1, 2]
+    let PER = isFem ? 160 : 2 * BINS
+    let nIn = input.count / PER
+    guard nIn > 0, ref.count == input.count, input.count % PER == 0 else { die("in/ort 帧数不对") }
+    let mixDT = desc.inputDescriptionsByName[inName]!.multiArrayConstraint!.dataType
+    let mix = try arr(ioShape, mixDT)
+    let enhOut = try arr(ioShape, desc.outputDescriptionsByName[outName]!.multiArrayConstraint!.dataType)
 
-    // 显式缓存：两组 A/B 交替（A 进 B 出，下一帧 B 进 A 出），零拷贝
-    let cacheNames = ["conv_cache", "tra_cache", "inter_cache"]
+    // 显式缓存：两组 A/B 交替（A 进 B 出，下一帧 B 进 A 出），零拷贝。缓存从零开始，同 ORT 转储
+    let cacheNames = isFem ? (0..<6).map { "cache_in_\($0)" } : ["conv_cache", "tra_cache", "inter_cache"]
+    let outNameOf = { (n: String) in isFem ? n.replacingOccurrences(of: "cache_in_", with: "cache_out_") : n + "_out" }
     var provs: [MLFeatureProvider] = []
     var opts: [MLPredictionOptions] = []
     var state: MLState? = nil
     if stateful {
         state = model.makeState()
-        provs = [try MLDictionaryFeatureProvider(dictionary: ["mix": mix])]
-        let o = MLPredictionOptions(); o.outputBackings = ["enh": enhOut]; opts = [o]
+        provs = [try MLDictionaryFeatureProvider(dictionary: [inName: mix])]
+        let o = MLPredictionOptions(); o.outputBackings = [outName: enhOut]; opts = [o]
     } else {
         var sets: [[String: MLMultiArray]] = [[:], [:]]
         for n in cacheNames {
@@ -162,12 +183,12 @@ func cmdBench(_ a: [String]) throws {
             sets[1][n] = try arr(shape, c.dataType)
         }
         for k in 0..<2 {
-            var d: [String: Any] = ["mix": mix]
+            var d: [String: Any] = [inName: mix]
             for n in cacheNames { d[n] = sets[k][n]! }
             provs.append(try MLDictionaryFeatureProvider(dictionary: d))
             let o = MLPredictionOptions()
-            var ob: [String: Any] = ["enh": enhOut]
-            for n in cacheNames { ob[n + "_out"] = sets[1 - k][n]! }
+            var ob: [String: Any] = [outName: enhOut]
+            for n in cacheNames { ob[outNameOf(n)] = sets[1 - k][n]! }
             o.outputBackings = ob
             opts.append(o)
         }
@@ -190,7 +211,7 @@ func cmdBench(_ a: [String]) throws {
             if wait > 0 { usleep(useconds_t(wait * 1000)) }
         }
         let k = f % nIn
-        input.withUnsafeBufferPointer { writeMix(mix, $0.baseAddress! + k * PER) }
+        input.withUnsafeBufferPointer { isFem ? writeWav(mix, $0.baseAddress! + k * PER) : writeMix(mix, $0.baseAddress! + k * PER) }
         let p = stateful ? 0 : f & 1
         let t = nowMs()
         try autoreleasepool {
@@ -201,7 +222,7 @@ func cmdBench(_ a: [String]) throws {
         }
         let dt = nowMs() - t
         if f == 0 { firstMs = dt }
-        out.withUnsafeMutableBufferPointer { readEnh(enhOut, $0.baseAddress!) }
+        out.withUnsafeMutableBufferPointer { isFem ? readWav(enhOut, $0.baseAddress!) : readEnh(enhOut, $0.baseAddress!) }
         if f >= t0w { times.append(dt) }
         if !out.allSatisfy({ $0.isFinite }) && f >= t0w { nonfinite += 1 }
         if f < min(parityN, nIn) {  // 逐值一致：从第 0 帧起（缓存从零开始，和 ORT 转储同起点）
@@ -210,7 +231,7 @@ func cmdBench(_ a: [String]) throws {
                 let d = abs(x - y)
                 sig += x * x; err += d * d
                 if d > maxAbs { maxAbs = d; worst = f }
-                if d > 1e-3 && firstBad == "None" { firstBad = "Some((\(f), \(j % BINS)))" }
+                if d > 1e-3 && firstBad == "None" { firstBad = "Some((\(f), \(isFem ? j : j % BINS)))" }
             }
         }
     }
@@ -222,7 +243,7 @@ func cmdBench(_ a: [String]) throws {
     let snr = 10 * log10(sig / max(err, 1e-300))
     let backend = "coreml-\(a[1])" + (stateful ? "-state" : "") + (pacedMs > 0 ? "-paced" : "") + (mixDT == .float16 ? "-fp16io" : "")
     let f4 = { (x: Double) in String(format: "%.4f", x) }
-    print("{\"model\":\"gtcrn\",\"backend\":\"\(backend)\",\"artifact\":\"\(URL(fileURLWithPath: a[0]).lastPathComponent)\",\"frames\":\(frames),\"warmup\":\(warmup),\"p50_ms\":\(f4(pct(times, 0.5))),\"p99_ms\":\(f4(pct(times, 0.99))),\"p999_ms\":\(f4(pct(times, 0.999))),\"max_ms\":\(f4(times.last!)),\"mean_ms\":\(f4(mean)),\"compile_ms\":\(String(format: "%.2f", compileMs)),\"open_ms\":\(String(format: "%.2f", openMs)),\"first_frame_ms\":\(String(format: "%.3f", firstMs)),\"cpu_over_wall\":\(String(format: "%.3f", cpu / wall)),\"process_allocs_per_frame\":\(String(format: "%.3f", allocs)),\"nonfinite_frames\":\(nonfinite),\"parity_frames\":\(min(parityN, nIn, total)),\"parity_max_abs\":\(String(format: "%.3e", maxAbs)),\"parity_worst_frame\":\(worst),\"parity_snr_db\":\(String(format: "%.2f", snr)),\"parity_first_bad\":\"\(firstBad)\"}")
+    print("{\"model\":\"\(isFem ? "fastenhancer_m" : "gtcrn")\",\"backend\":\"\(backend)\",\"artifact\":\"\(URL(fileURLWithPath: a[0]).lastPathComponent)\",\"frames\":\(frames),\"warmup\":\(warmup),\"p50_ms\":\(f4(pct(times, 0.5))),\"p99_ms\":\(f4(pct(times, 0.99))),\"p999_ms\":\(f4(pct(times, 0.999))),\"max_ms\":\(f4(times.last!)),\"mean_ms\":\(f4(mean)),\"compile_ms\":\(String(format: "%.2f", compileMs)),\"open_ms\":\(String(format: "%.2f", openMs)),\"first_frame_ms\":\(String(format: "%.3f", firstMs)),\"cpu_over_wall\":\(String(format: "%.3f", cpu / wall)),\"process_allocs_per_frame\":\(String(format: "%.3f", allocs)),\"nonfinite_frames\":\(nonfinite),\"parity_frames\":\(min(parityN, nIn, total)),\"parity_max_abs\":\(String(format: "%.3e", maxAbs)),\"parity_worst_frame\":\(worst),\"parity_snr_db\":\(String(format: "%.2f", snr)),\"parity_first_bad\":\"\(firstBad)\"}")
 }
 
 let argv = Array(CommandLine.arguments.dropFirst())
