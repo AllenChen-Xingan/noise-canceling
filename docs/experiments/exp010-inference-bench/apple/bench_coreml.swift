@@ -1,7 +1,7 @@
 // exp010 · Core ML 逐帧基准（GTCRN），输出一行 JSON，字段同 rustbe 的 bench。
 //
 // 用法：
-//   bench_coreml bench <模型 .mlpackage|.mlmodelc> <cpu|gpu|ane|all> <in.f32> <ort.f32> [--frames N] [--warmup N] [--parity-frames N] [--state]
+//   bench_coreml bench <模型 .mlpackage|.mlmodelc> <cpu|gpu|ane|all> <in.f32> <ort.f32> [--frames N] [--warmup N] [--parity-frames N] [--state] [--paced-ms 16]
 //   bench_coreml plan  <模型 .mlpackage|.mlmodelc> <cpu|gpu|ane|all>      每个算子落在哪个计算单元（MLComputePlan）
 //
 // in.f32 / ort.f32：每帧 514 个小端 f32（re[257] 再 im[257]），来自 rustbe bench 的 --dump-io。
@@ -115,7 +115,7 @@ func cmdPlan(_ a: [String]) async throws {
 }
 
 func cmdBench(_ a: [String]) throws {
-    var frames = 6000, warmup = 200, parityN = 610, stateful = false
+    var frames = 6000, warmup = 200, parityN = 610, stateful = false, pacedMs = 0.0
     var i = 4
     while i < a.count {
         switch a[i] {
@@ -123,6 +123,7 @@ func cmdBench(_ a: [String]) throws {
         case "--warmup": warmup = Int(a[i + 1])!; i += 2
         case "--parity-frames": parityN = Int(a[i + 1])!; i += 2
         case "--state": stateful = true; i += 1
+        case "--paced-ms": pacedMs = Double(a[i + 1])!; i += 2  // 按实时节奏每 N ms 一帧（测耗电用）
         default: die("不认识 \(a[i])")
         }
     }
@@ -183,6 +184,11 @@ func cmdBench(_ a: [String]) throws {
     let t0w = 1 + warmup
     for f in 0..<total {
         if f == t0w { a0 = vdn_alloc_count(); c0 = cpuSeconds(); w0 = nowMs() }
+        if pacedMs > 0 && f >= t0w {
+            let due = w0 + Double(f - t0w) * pacedMs
+            let wait = due - nowMs()
+            if wait > 0 { usleep(useconds_t(wait * 1000)) }
+        }
         let k = f % nIn
         input.withUnsafeBufferPointer { writeMix(mix, $0.baseAddress! + k * PER) }
         let p = stateful ? 0 : f & 1
@@ -214,7 +220,7 @@ func cmdBench(_ a: [String]) throws {
     let mean = times.reduce(0, +) / Double(times.count)
     times.sort()
     let snr = 10 * log10(sig / max(err, 1e-300))
-    let backend = "coreml-\(a[1])" + (stateful ? "-state" : "") + (mixDT == .float16 ? "-fp16io" : "")
+    let backend = "coreml-\(a[1])" + (stateful ? "-state" : "") + (pacedMs > 0 ? "-paced" : "") + (mixDT == .float16 ? "-fp16io" : "")
     let f4 = { (x: Double) in String(format: "%.4f", x) }
     print("{\"model\":\"gtcrn\",\"backend\":\"\(backend)\",\"artifact\":\"\(URL(fileURLWithPath: a[0]).lastPathComponent)\",\"frames\":\(frames),\"warmup\":\(warmup),\"p50_ms\":\(f4(pct(times, 0.5))),\"p99_ms\":\(f4(pct(times, 0.99))),\"p999_ms\":\(f4(pct(times, 0.999))),\"max_ms\":\(f4(times.last!)),\"mean_ms\":\(f4(mean)),\"compile_ms\":\(String(format: "%.2f", compileMs)),\"open_ms\":\(String(format: "%.2f", openMs)),\"first_frame_ms\":\(String(format: "%.3f", firstMs)),\"cpu_over_wall\":\(String(format: "%.3f", cpu / wall)),\"process_allocs_per_frame\":\(String(format: "%.3f", allocs)),\"nonfinite_frames\":\(nonfinite),\"parity_frames\":\(min(parityN, nIn, total)),\"parity_max_abs\":\(String(format: "%.3e", maxAbs)),\"parity_worst_frame\":\(worst),\"parity_snr_db\":\(String(format: "%.2f", snr)),\"parity_first_bad\":\"\(firstBad)\"}")
 }
