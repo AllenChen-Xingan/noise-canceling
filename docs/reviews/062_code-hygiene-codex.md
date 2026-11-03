@@ -1,7 +1,7 @@
 # 评审 062 · 代码卫生：单文件 600 行 · 采样率只写一处 · 评测阈值正本（codex · gpt-6-astra · read-only）
 
-> 对象：`feat/code-hygiene` 相对 main 的 diff（issue #62）。**最新一轮：第 5 轮（2026-11-02）· 总评「修改」· 待第 6 轮**。
-> 累计处理：P1×8、P2×6，逐条回源码核实，属实 14、驳回 0、无法核实 0。
+> 对象：`feat/code-hygiene` 相对 main 的 diff（issue #62）。**最新一轮：第 6 轮（2026-11-02）· 总评「修改」· 待第 7 轮**。
+> 累计处理：P1×10、P2×6，逐条回源码核实，属实 16、驳回 0、无法核实 0。
 > 编号用 issue 号（本线没有 plan 文档）。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -127,3 +127,24 @@
 - 删掉：生产引用排除、反复排除到不再变化、内联模块路径跟踪
 - `test_modules.rs` 287 → 195 行
 - 负例：名字不是 tests 的 `#[cfg(test)] mod helper;` 照查；没有 cfg(test) 的 `mod tests;` 照查；注释 / 字符串 / 内联模块里的写法、另一个入口的普通引用，都不放行
+
+## 第 6 轮（2026-11-02）· 总评「修改」（审窄规则）
+
+- 原文：`_tmp/reviews/hygiene-p1-codex-6.md`（不入库）
+- 对象：`origin/main...HEAD`（test_modules 改成窄规则之后）
+- effort medium
+- 本轮 P0/P1：2 条。停止线：未满足
+- 留作 issue 的 P2：无
+
+- **P1｜src/xtask/src/test_modules.rs:96 另一个入口用内联 `mod tests { mod child; }` 普通引用时仍放行**（第 6 轮 #1）
+  - 核实：属实。原来只把不带 cfg(test) 的外置 `mod tests;` 算普通引用。
+  - 处理：同目录任何不带 `#[cfg(test)]` 的顶层 `tests` 声明（外置或内联）都取消放行。不解析路径，只是更保守。
+- **P1｜src/xtask/src/test_modules.rs:29 `mod r#tests;` 没被认出**（第 6 轮 #2）
+  - 核实：属实。
+  - 处理：`mod_decl` 把 `r#name` 归一成 `name`。
+- 两条合补负例（`fake_or_shared_declarations_are_checked` 里加两种双入口写法）。`test_modules.rs` 195 → 216 行。
+
+### 引用抽查
+
+- codex 列的「不符」：无
+- codex 列的「核实属实」：5 条
