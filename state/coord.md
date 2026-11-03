@@ -58,15 +58,17 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | applebe（装 venv · 转模型 · apple-rs · Core ML / BNNS / MLX 从 Rust 测），17:14 起约 40 min；锁 `_tmp/heavy.lock` |
+| 重编译 / 全量测试 / 跑模型（1 个） | rustbe（Accelerate 版 1.5 min + `--pace-ms 16` 实时节奏 10 min），17:43 起；锁 `_tmp/heavy.lock` |
 
-排队：rustbe（Accelerate 小矩阵接进手写 GTCRN 后复测，待申请）
+排队：applebe（实时线程策略：THREAD_TIME_CONSTRAINT_POLICY / Audio Workgroup，能否把每帧拉回连续跑档）
 
 **跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。加锁文件：mkdir 主目录 `_tmp/heavy.lock`（内写 owner · 开始 · 预计结束，跑完 rmdir），由各自大总管放名额时建、收回时删，手下不碰（47 已确认）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 17:42 applebe 归还：苹果引擎最快 = BNNS Graph + GRU 展开，GTCRN p50 0.155 ms（ORT 0.384，快约 2.5 倍）、每帧 0 分配、134 dB；手写 Rust 0.088 仍最快。Core ML CPU fp32 0.39 / 展开 0.21 ms、每帧约 300 次 malloc、所有算子落 CPU、fp16 54 dB 不过；MLX Python 5.7–6.2 ms；FE-M 转不了 Core ML（view_as_complex）；修了 coremltools 分组 ConvTranspose2d 错转。⚠️ **按实时节奏 16 ms/帧跑 10 min：p50 0.82 ms（连续跑 0.155）、max 11.8 ms、4.8% 核，超 D69 上限，BE-DEADLINE 不过**——推断降频或被挪到能效核。DFN3 `_ll` 下界：连续跑三图 p50 0.61 ms / 10 ms ≈ 6.1% 核 → 不做流式重导出（AI 定），盲听用离线处理即可
+- 2026-11-02 人同意：GTCRN 主模型（D33）当假设继续验证 → 下一轮盲听放 DFN3 `_ll`（backlog 人耳）；019 把 DFN3 加进必测，看 1% 预算内跑不跑得动
 - 2026-11-02 17:30 applebe 主基准跑完，在跑 10 min 实时节奏超时帧检查（到约 17:40）。venv 核清：实际下载约 270 MB（exp010-venv 约 200 MB + 新建转换用 exp010-venv-ct 约 73 MB，因 coremltools 9.0 在 py3.13 崩），无单次 > 500 MB；du 982 MB 是 torch 解压后体积
 - 2026-11-02 17:13 rustbe r5b：手写 GTCRN 逐位不变优化后 p50 0.0875 ms（D69 预算 ≤ 0.08 ms，差约 10%）；Python ORT p50 0.40 vs Rust ORT 0.38 ms（Python 慢约 5%，输出逐位相同）；10 min 长跑 133 dB · reset 逐位相同 · FE-M 改写图逐位相同；Accelerate 小矩阵 11 µs vs 手写 21 µs，下一步接进去
 - 2026-11-02 人补「或者说最高2%」→ D69 改：目标 1%、硬上限 2%（AI 理解，待确认）；已转 applebe
