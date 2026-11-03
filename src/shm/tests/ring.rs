@@ -1,4 +1,5 @@
 //! 进程内 heap 版：顺序 · 回绕 · 满 · 空 · 计数器 · 头部。Miri 也跑这个文件（本机暂无 Miri，见现状页）。
+#![cfg(not(feature = "loom"))] // loom 的原子量只能在 loom::model 里用；loom 模式只跑 tests/loom.rs
 
 use vdn_shm::{Bus, BusConfig, RingId, ShmError};
 

@@ -1,4 +1,5 @@
 //! 唤醒：`notify` / `wait`（heap 版与真 POSIX 共享内存两份映射）· 新头部字段 · `OwnedBus`。
+#![cfg(not(feature = "loom"))] // loom 的原子量只能在 loom::model 里用；loom 模式只跑 tests/loom.rs
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{Duration, Instant};

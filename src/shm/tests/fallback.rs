@@ -1,5 +1,6 @@
 //! 系统不支持唤醒（低于 macOS 14.4）时：`wait` 退回 200 µs 轮询，照样不丢数据、能超时，并计 `wait_fallbacks`。
 //! 单独一个测试二进制：`force_wake_unsupported_for_test` 对全进程生效。
+#![cfg(not(feature = "loom"))] // loom 的原子量只能在 loom::model 里用；loom 模式只跑 tests/loom.rs
 
 use std::time::{Duration, Instant};
 use vdn_shm::{Bus, BusConfig, RingId, WaitResult};

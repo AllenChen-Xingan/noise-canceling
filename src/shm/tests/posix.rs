@@ -1,4 +1,5 @@
 //! 真 POSIX 共享内存：两个线程各自映射同一个对象（create 一份、open 一份），各推各取 10 万块，逐样本一致。
+#![cfg(not(feature = "loom"))] // loom 的原子量只能在 loom::model 里用；loom 模式只跑 tests/loom.rs
 #![cfg(all(unix, feature = "posix"))]
 
 use std::sync::atomic::{AtomicU32, Ordering};
