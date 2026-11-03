@@ -386,7 +386,8 @@ fn nonfinite_processed_never_reaches_output() {
     for _ in 0..50 {
         r.tick();
     }
-    r.processed.push(&[f32::NAN, f32::INFINITY, f32::NEG_INFINITY]);
+    r.processed
+        .push(&[f32::NAN, f32::INFINITY, f32::NEG_INFINITY]);
     for _ in 0..50 {
         r.tick();
     }

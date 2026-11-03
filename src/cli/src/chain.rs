@@ -539,7 +539,10 @@ mod tests {
         run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).unwrap();
         // 两条总线（降噪 + Out）都删了
         for n in [o.bus_name.clone(), out_bus_name(&o.bus_name)] {
-            assert!(matches!(Bus::open(&n), Err(vdn_shm::ShmError::NotFound)), "{n} 还在");
+            assert!(
+                matches!(Bus::open(&n), Err(vdn_shm::ShmError::NotFound)),
+                "{n} 还在"
+            );
         }
     }
 
@@ -547,12 +550,11 @@ mod tests {
     #[test]
     fn busy_bus_name_is_refused_without_deleting() {
         let o = opts(0.3, None, "busy");
-        let holder = vdn_shm::OwnedBus::create(
-            &o.bus_name,
-            vdn_capture::shm::out_bus_config(RATE),
-        )
-        .unwrap();
-        let e = run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).err().unwrap();
+        let holder =
+            vdn_shm::OwnedBus::create(&o.bus_name, vdn_capture::shm::out_bus_config(RATE)).unwrap();
+        let e = run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o)
+            .err()
+            .unwrap();
         assert!(e.contains("建降噪总线"), "{e}");
         assert!(Bus::open(&o.bus_name).is_ok(), "别人的总线被删了");
         drop(holder);
