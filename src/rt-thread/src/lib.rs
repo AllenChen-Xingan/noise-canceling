@@ -82,7 +82,7 @@ impl RtParams {
 
 /// 实测 p99.9 之上留的余量倍数（`RtParams::from_measured` 用）。
 /// 取 1.5：2026-11-02 耗电对照里，同一块计算 p99.9 比 p50 只多 1–6 %，max 比 p99.9 多 0.1–5 %；
-/// 1.5 倍盖得住偶发慢块，又远小于周期（GTCRN 16 ms 一块、实测约 3 ms）。
+/// 1.5 倍盖得住偶发慢块，又小于周期（GTCRN：每 16 ms 窗口总工作量约 4 ms → computation 约 6 ms）。
 pub const MEASURED_MARGIN: f64 = 1.5;
 
 /// 降噪处理线程的默认调度策略（人定 D68，2026-11-02）：

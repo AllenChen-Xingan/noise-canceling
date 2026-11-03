@@ -47,7 +47,10 @@
 - 2026-11-02 xtask tidy 新规则（代码已写，等名额编译验证）：① 每个 crate 至少一条测试；② deny.toml 直接边规则与真实依赖、forbid 一致（`denycheck.rs`）。deny.toml 补两条直接边：ort 只许 backend-ort · eval · speaker · speaker-lab；cpal 只许 io-macos。注意：审查原话是「ort 只许 vdn-backend-ort」，但 eval（规约 §7.1 第 8 条登记的例外）、speaker、speaker-lab 现在都直接用 ort，我按现状列名单；要不要收紧到只剩后端，归它们的负责人。hound / clap 的直接边本批不加（rs-entry 的 vdn-capture 直接依赖它们，加了合并就红）
 - 2026-11-02 唯一真相源：`tests/layout_doc.rs`（等名额编译验证）——头注释里的字段清单、版本历史由测试与结构比对；偏移由 `offset_of!` 编译期断言钉死
 
-## 对照实验：跨进程唤醒 vs 周期轮询（实测，2026-11-02）
+- 2026-11-02 D68 落进 vdn-rt-thread：`ThreadPolicy::default()`（实时优先级开、工作区间不加入，开关都在）· `RtParams::from_measured(周期, 窗口总耗时 p99.9, MEASURED_MARGIN = 1.5)`。周期按 16 ms 报（大总管二选一定 A）：computation 要盖住每 16 ms 窗口的总工作量（1 块推理约 3 ms + 7 块轻处理），约 4 ms → 6 ms；不按 2 ms 报，因为推理那一块单独就超过 2 ms。测试 `default_policy_follows_d68` · `from_measured_adds_margin_and_clamps`（未编译）
+- 2026-11-02 发现（推断，未核实）：读回策略可能看不到系统内部的降级——耗电对照里声明 computation 2.1 ms、实际每块 3.0 ms，每秒读回仍是 time-constraint、降级计数 0。所以降级计数只当下限，直接判据是醒来迟到与处理超时（已写进 `RtStatus::time_constraint` 文档；rs-entry 写进 chain-test / V7 输出说明）
+- 2026-11-02 `qos_set` 实验按 D68 取消，未跑；rt_bench 留作 example（ci 只编译不运行）
+ vs 周期轮询（实测，2026-11-02）
 
 **测量条件**：本机 macOS 27.0.1，10 核（4 性能核 + 6 能效核）；release；`./target/release/examples/wake_bench all 10`（`src/shm/examples/wake_bench.rs`）。
 两个真进程走真 POSIX 共享内存：父进程 = 生产者（提成实时优先级，模拟送音回调），每 2 ms 推 96 帧，推之前取时间戳编进样本；`wake` 时推完 `notify`。
