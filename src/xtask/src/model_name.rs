@@ -302,8 +302,31 @@ fn string_literals(src: &str) -> Vec<(usize, String)> {
                         }
                         continue;
                     }
-                    s.push(at(i + 1));
-                    i += 2;
+                    // 转义按 Rust 的意思还原（`\n` 是换行，不是字母 n；codex 第 3 轮 #1）
+                    let (ch, used) = match at(i + 1) {
+                        'n' => ('\n', 2),
+                        't' => ('\t', 2),
+                        'r' => ('\r', 2),
+                        '0' => ('\0', 2),
+                        'x' => {
+                            let hex: String = [at(i + 2), at(i + 3)].iter().collect();
+                            let v = u8::from_str_radix(&hex, 16).unwrap_or(b'?');
+                            (char::from(v), 4)
+                        }
+                        'u' if at(i + 2) == '{' => {
+                            let mut k = i + 3;
+                            let mut hex = String::new();
+                            while k < c.len() && at(k) != '}' {
+                                hex.push(at(k));
+                                k += 1;
+                            }
+                            let v = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32);
+                            (v.unwrap_or('?'), k + 1 - i)
+                        }
+                        other => (other, 2),
+                    };
+                    s.push(ch);
+                    i += used;
                     continue;
                 }
                 if at(i) == '\n' {
@@ -450,6 +473,10 @@ impl ModelId {
             "let s = \"第一行\nfastenhancer-m 第二行\";\n",
             "let s = r#\"\n\"q\" fastenhancer_m\n\"#;\n",
             "let q = '\"'; let s = \"fastenhancer-m\";\n",
+            // 转义紧挨着名字：\n \t \u{…} 还原成真字符后再判边界（codex 第 3 轮 #1）
+            "let s = \"\\nfastenhancer-m\";\n",
+            "let s = \"\\tfastenhancer_m\\t\";\n",
+            "let s = \"\\u{66}astenhancer-m\";\n",
             "#[cfg(test)]\n#[path = \"t.rs\"]\nmod tests;\nfn prod() -> &'static str { \"fastenhancer-m\" }\n",
             "#[cfg(test)]\nmod t {\n    fn x() { if true { } }\n}\nconst B: &str = \"fastenhancer_m\";\n",
             "#[cfg(test)]\nfn helper(\n    a: u8,\n) {\n}\nconst C: &str = \"fastenhancer-m\";\n",
