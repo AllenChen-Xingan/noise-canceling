@@ -119,6 +119,10 @@ pub struct WorkerStats {
     pub total_process_ns: u64,
     /// 处理耗时超过一块音频时长的块数
     pub over_budget: u64,
+    /// 降噪落后时跳过的 Raw 样本数（同时记进 Raw 环的缺口计数）
+    pub raw_skipped: u64,
+    /// 插进 Processed 的 NaN 标记样本数
+    pub markers_pushed: u64,
 }
 
 /// 预热结果（耗时都按单块 `process` 计，ns）。
@@ -141,11 +145,28 @@ pub enum Step {
     Block,
 }
 
+/// 最多同时排队几段「跳过标记」；满了并进最后一段
+const MAX_MARKERS: usize = 8;
+
+/// 跳过积压后要插进 Processed 的 NaN 标记：在输出流第 `at` 个样本处插 `count` 个。
+#[derive(Clone, Copy, Debug, Default)]
+struct Marker {
+    at: u64,
+    count: u64,
+}
+
 pub struct Worker<P> {
     proc: P,
     block: usize,
     inbuf: Vec<f32>,
     outbuf: Vec<f32>,
+    nan_buf: Vec<f32>,
+    /// 已推进 Processed 的样本数（含 prime 的零和 NaN 标记）：输出流的位置
+    pushed: u64,
+    /// Raw 积压超过这么多就跳过旧的（`None` = 不跳）
+    skip_over: Option<usize>,
+    markers: [Marker; MAX_MARKERS],
+    n_markers: usize,
     stats: WorkerStats,
 }
 
@@ -158,8 +179,22 @@ impl<P: Processor> Worker<P> {
             block,
             inbuf: vec![0.0; block],
             outbuf: vec![0.0; block],
+            nan_buf: vec![f32::NAN; block],
+            pushed: 0,
+            skip_over: None,
+            markers: [Marker::default(); MAX_MARKERS],
+            n_markers: 0,
             stats: WorkerStats::default(),
         }
+    }
+
+    /// 降噪落后时跳过 Raw 积压：可读量超过 `lead + 2 × 降噪块` 就丢掉旧的、只留一块。
+    /// 丢掉的那段原声，处理后的反正已经迟到（送音端会按账丢）；跳过让降噪进程直接回到「现在」，不白算。
+    /// 对齐：管线里还在路上的 L_pipe 个输出属于跳过前的声音，所以在输出流「现在 + L_pipe」处插同样多个 NaN 标记，
+    /// 送音端把非有限样本当占位（用延迟原声），账不错位
+    pub fn skip_backlog_over_lead(mut self, lead: usize) -> Self {
+        self.skip_over = Some(lead + 2 * self.block);
+        self
     }
 
     /// 链路总延迟 = 管线延迟 + 环余量。
@@ -232,12 +267,78 @@ impl<P: Processor> Worker<P> {
                 break;
             }
         }
+        self.pushed += (lead - left) as u64;
         lead - left
+    }
+
+    fn add_marker(&mut self, at: u64, count: u64) {
+        if let Some(m) = self.markers.get_mut(self.n_markers) {
+            *m = Marker { at, count };
+            self.n_markers += 1;
+        } else if let Some(last) = self.markers.last_mut() {
+            last.count += count;
+        }
+    }
+
+    /// 推 `n` 个 NaN 标记（按 nan_buf 分段）
+    fn push_nans(&mut self, processed: &vdn_shm::Ring<'_>, n: u64) {
+        let mut left = n;
+        while left > 0 {
+            let k = usize::try_from(left).unwrap_or(usize::MAX).min(self.nan_buf.len());
+            let got = processed.push(self.nan_buf.get(..k).unwrap_or(&[]));
+            self.stats.proc_overflow += (k - got.min(k)) as u64;
+            left -= k as u64;
+        }
+        self.stats.markers_pushed += n;
+        self.pushed += n;
+    }
+
+    /// 推一块处理结果，途中到了标记位置就先插 NaN
+    fn push_block(&mut self, processed: &vdn_shm::Ring<'_>) {
+        let n = self.block;
+        let mut i = 0usize;
+        while self.n_markers > 0 {
+            let Some(m) = self.markers.first().copied() else {
+                break;
+            };
+            let pos = self.pushed;
+            let end_of_block = pos + (n - i) as u64;
+            if m.at > end_of_block {
+                break;
+            }
+            // 先推到标记位置
+            let k = usize::try_from(m.at.saturating_sub(pos)).unwrap_or(0).min(n - i);
+            let got = processed.push(self.outbuf.get(i..i + k).unwrap_or(&[]));
+            self.stats.proc_overflow += (k - got.min(k)) as u64;
+            self.pushed += k as u64;
+            i += k;
+            self.push_nans(processed, m.count);
+            if let Some(live) = self.markers.get_mut(..self.n_markers) {
+                live.copy_within(1.., 0);
+            }
+            self.n_markers -= 1;
+        }
+        let rest = self.outbuf.get(i..).unwrap_or(&[]);
+        let got = processed.push(rest);
+        self.stats.proc_overflow += (rest.len() - got.min(rest.len())) as u64;
+        self.pushed += rest.len() as u64;
     }
 
     /// Raw 够一块就处理一块、推 Processed、心跳一次。
     pub fn step(&mut self, bus: &Bus) -> Step {
         let (raw, processed) = (bus.ring(RingId::Raw), bus.ring(RingId::Processed));
+        let avail = raw.available();
+        if let Some(over) = self.skip_over
+            && avail > over
+        {
+            let d = raw.discard(avail - self.block);
+            if d > 0 {
+                raw.note_gap(d);
+                self.stats.raw_skipped += d as u64;
+                let at = self.pushed + self.proc.latency_samples() as u64;
+                self.add_marker(at, d as u64);
+            }
+        }
         if raw.available() < self.block {
             return Step::Idle;
         }
@@ -256,8 +357,7 @@ impl<P: Processor> Worker<P> {
         if dt > self.block_ns() {
             self.stats.over_budget += 1;
         }
-        let pushed = processed.push(&self.outbuf);
-        self.stats.proc_overflow += (self.block - pushed.min(self.block)) as u64;
+        self.push_block(&processed);
         self.stats.blocks += 1;
         bus.beat();
         Step::Block
