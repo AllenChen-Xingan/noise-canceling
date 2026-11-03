@@ -1,9 +1,6 @@
 # R-SIZE 基线（src/xtask/src/file_size.rs）：存量超 600 行的文件，只许变小。
 # 格式：<行数> <相对仓库根的路径>。不要手工调大；收紧跑 `cargo run -p xtask -- size-baseline`。
 672 src/capture/src/lib.rs
-825 src/cli/src/chain.rs
-750 src/cli/src/live.rs
-852 src/cli/src/main.rs
 870 src/denoised/src/lib.rs
 607 src/engine/src/pipeline.rs
 601 src/engine/tests/stages.rs
