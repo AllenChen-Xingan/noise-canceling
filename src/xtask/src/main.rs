@@ -21,6 +21,7 @@ mod model_name;
 mod no_mirror;
 mod param_range;
 mod scan;
+mod test_scope;
 mod tidy;
 mod todo;
 
