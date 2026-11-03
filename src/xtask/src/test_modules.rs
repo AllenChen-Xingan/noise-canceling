@@ -2,7 +2,7 @@
 //!
 //! 规则（窄，大总管 8d 定 2026-11-02）：文件是 `tests.rs`、`tests/mod.rs` 或 `tests/` 下的子模块，
 //! **并且**它的父模块文件在顶层（花括号深度 0，注释与字符串不算）写了 `#[cfg(test)]` 紧跟 `mod tests;`，
-//! **并且**同目录没有别的文件用普通 `mod tests;` 引用它。其余一律照实时代码查；需要例外的文件，
+//! **并且**同目录没有任何不带 `#[cfg(test)]` 的顶层 `tests` 声明（外置、内联、`r#tests` 都算）。其余一律照实时代码查；需要例外的文件，
 //! 在文件头写整模块 NRT 标注（`src/capture/src/testing.rs` 的先例）。
 //!
 //! 为什么选窄规则：最初的宽规则认「任何 `#[cfg(test)] mod x;` 引入的文件」，codex 第 2–5 轮
@@ -25,7 +25,10 @@ pub fn mod_decl(code: &str) -> Option<(String, bool)> {
         .or_else(|| t.strip_prefix("pub(super) "))
         .or_else(|| t.strip_prefix("pub "))
         .unwrap_or(t)
-        .strip_prefix("mod ")?;
+        .strip_prefix("mod ")?
+        .trim_start();
+    // 原始标识符 `r#tests` 按 `tests` 认（codex 第 6 轮 P1 #2）
+    let rest = rest.strip_prefix("r#").unwrap_or(rest);
     let name: String = rest
         .chars()
         .take_while(|c| c.is_alphanumeric() || *c == '_')
@@ -52,11 +55,16 @@ fn tests_decls(src: &str) -> (bool, bool) {
         if t.is_empty() {
             continue;
         }
-        if depth == 0 && mod_decl(t).is_some_and(|(n, inline)| n == "tests" && !inline) {
-            if prev_cfg_test {
-                gated = true;
-            } else {
-                plain = true;
+        // 带 cfg(test) 的外置 `mod tests;` 才算放行理由；其余任何顶层 `tests` 声明（不带 cfg(test) 的外置或内联）
+        // 都可能让生产代码用到 tests/ 下的文件，保守取消放行（codex 第 6 轮 P1 #1）
+        if depth == 0
+            && let Some((n, inline)) = mod_decl(t)
+            && n == "tests"
+        {
+            match (prev_cfg_test, inline) {
+                (true, false) => gated = true,
+                (true, true) => {}
+                (false, _) => plain = true,
             }
         }
         prev_cfg_test = depth == 0 && t == "#[cfg(test)]";
@@ -183,6 +191,19 @@ mod tests {
             fs::write(d.join("src/lib.rs"), lib).unwrap();
             fs::write(d.join("src/tests.rs"), SLEEP).unwrap();
             assert!(test_module_files(&files(&d)).is_empty(), "{lib}");
+            let _ = fs::remove_dir_all(&d);
+        }
+        // 另一个入口用内联 `mod tests { mod child; }` 或原始标识符 `mod r#tests;` 普通引用（codex 第 6 轮）
+        for main in [
+            "mod tests {\n    mod child;\n}\nfn main() {}\n",
+            "mod r#tests;\nfn main() {}\n",
+        ] {
+            let d = tmp("dual2");
+            fs::write(d.join("src/lib.rs"), "#[cfg(test)]\nmod tests;\n").unwrap();
+            fs::write(d.join("src/main.rs"), main).unwrap();
+            fs::write(d.join("src/tests.rs"), SLEEP).unwrap();
+            fs::write(d.join("src/tests/child.rs"), SLEEP).unwrap();
+            assert!(test_module_files(&files(&d)).is_empty(), "{main}");
             let _ = fs::remove_dir_all(&d);
         }
         let d = tmp("dual");
