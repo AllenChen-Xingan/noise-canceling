@@ -25,6 +25,7 @@
     )
 )]
 
+pub mod desc;
 pub mod frame;
 pub mod latency;
 pub mod memory;
@@ -38,6 +39,7 @@ pub mod table;
 pub mod text;
 pub mod version;
 
+pub use desc::{ParamDesc, RangeError, Unit};
 pub use frame::{
     BypassReason, Confidence, FrameCtx, FrameFeatures, SampleClock, SpeakerClass, SpeakerVerdict,
     Status,

@@ -259,7 +259,7 @@ pub const ENGINE_RECOVER_HOLD_S: ParamDesc = p(502, "engine.recover_hold_s", Uni
 pub const ENGINE_CROSSFADE_S: ParamDesc = p(503, "engine.crossfade_s", Unit::Seconds, 0.0, 1.0, 0.005, "切回模型的交叉淡化 / 切到原声的接缝衰减时长");
 
 /// 全部描述（导出、查重、按编号或键名查找都走它）。加一条 = 写常量 + 加进这里（`all_listed` 测试查漏）。
-pub const ALL: [&ParamDesc; 42] = [
+pub const ALL: [&ParamDesc; 39] = [
     &STRENGTH,
     &FLOOR_DB,
     &OPEN_DB,
@@ -299,10 +299,6 @@ pub const ALL: [&ParamDesc; 42] = [
     &ENGINE_MAX_ABS,
     &ENGINE_RECOVER_HOLD_S,
     &ENGINE_CROSSFADE_S,
-    // 留位：ALL 长度与常量个数由测试核对
-    &STRENGTH,
-    &STRENGTH,
-    &STRENGTH,
 ];
 
 pub fn by_id(id: u16) -> Option<&'static ParamDesc> {
@@ -311,4 +307,96 @@ pub fn by_id(id: u16) -> Option<&'static ParamDesc> {
 
 pub fn by_key(key: &str) -> Option<&'static ParamDesc> {
     ALL.into_iter().find(|d| d.key == key)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_entry_is_well_formed() {
+        for d in ALL {
+            assert!(d.min.is_finite() && d.max.is_finite() && d.default.is_finite(), "{}", d.key);
+            assert!(d.min <= d.default && d.default <= d.max, "{} 默认值不在范围内", d.key);
+            assert!(!d.key.is_empty() && !d.doc.is_empty(), "{}", d.id);
+            assert!(
+                d.key.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '.'),
+                "{} 键名只许小写字母、数字、下划线、点",
+                d.key
+            );
+            if d.unit == Unit::Count {
+                assert!(d.min.fract() == 0.0 && d.max.fract() == 0.0 && d.default.fract() == 0.0, "{}", d.key);
+            }
+        }
+    }
+
+    #[test]
+    fn ids_and_keys_are_unique() {
+        for (i, a) in ALL.iter().enumerate() {
+            for b in &ALL[i + 1..] {
+                assert_ne!(a.id, b.id, "编号重复：{} / {}", a.key, b.key);
+                assert_ne!(a.key, b.key, "键名重复：{}", a.key);
+            }
+        }
+    }
+
+    /// 每个 `pub const X: ParamDesc` 都进了 `ALL`（读本文件源码比对：漏登记就红）。
+    #[test]
+    fn all_listed() {
+        let src = include_str!("desc.rs");
+        let mut n = 0;
+        for line in src.lines() {
+            let Some(rest) = line.strip_prefix("pub const ") else {
+                continue;
+            };
+            let Some((name, ty)) = rest.split_once(':') else {
+                continue;
+            };
+            if !ty.trim_start().starts_with("ParamDesc") {
+                continue;
+            }
+            n += 1;
+            let entry = format!("    &{name},");
+            assert!(src.contains(&entry), "{name} 没登记进 ALL");
+        }
+        assert_eq!(n, ALL.len());
+    }
+
+    #[test]
+    fn lookups_roundtrip() {
+        for d in ALL {
+            assert_eq!(by_id(d.id), Some(d));
+            assert_eq!(by_key(d.key), Some(d));
+        }
+        assert!(by_id(0).is_none() && by_key("nope").is_none());
+    }
+
+    #[test]
+    fn check_and_clamp_follow_the_table() {
+        for d in ALL {
+            assert_eq!(d.check(d.default), Ok(d.default));
+            assert_eq!(d.check(d.min), Ok(d.min));
+            assert_eq!(d.check(d.max), Ok(d.max));
+            let below = d.min - 1.0;
+            let above = d.max + 1.0;
+            assert_eq!(d.check(below).unwrap_err().value, below, "{}", d.key);
+            assert!(d.check(above).is_err(), "{}", d.key);
+            assert!(d.check(f32::NAN).is_err() && d.check(f32::INFINITY).is_err());
+            assert_eq!(d.clamp(below), d.min);
+            assert_eq!(d.clamp(above), d.max);
+            assert_eq!(d.clamp(f32::NAN), d.default);
+            assert_eq!(d.check_opt(None), Ok(None));
+            assert!(d.check_opt(Some(above)).is_err());
+        }
+        assert_eq!(GATE_CONFIRM_N.default_count(), 2);
+        assert_eq!(GATE_CONFIRM_N.clamp_count(0), 1);
+        assert_eq!(GATE_CONFIRM_N.clamp_count(99), 20);
+        assert!(GATE_CONFIRM_N.check_count(0).is_err());
+    }
+
+    #[test]
+    fn error_names_key_range_and_unit() {
+        let e = FLOOR_DB.check(3.0).unwrap_err();
+        assert_eq!(e.to_string(), "floor_db = 3 不在 [-60, 0]（dB）");
+    }
 }
