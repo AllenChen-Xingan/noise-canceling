@@ -62,19 +62,21 @@
    - `computeDeviceUsageForMLProgramOperation:` 给出这个算子「能在哪些单元跑」和「首选哪个」（`:99`；`H/MLComputePlanDeviceUsage.h:22-25`）。
    - `estimatedCostOfMLProgramOperation:` 只给一个 0–1 的 `weight`，是这个算子占整图工作量的比例，**不是时间**（`:87`；`H/MLComputePlanCost.h:24-25`）。
    - `MLModel.availableComputeDevices` 列出本机有哪些单元，神经引擎能读核数 `totalCoreCount`【官方】`H/MLModel+MLComputeDevice.h:26`、`H/MLNeuralEngineComputeDevice.h:24`。
-6. **对 GTCRN 的推断**：GRU 回落 CPU，卷积可能上神经引擎。一帧里有编码器卷积 → 2 个 DPGRNN（每个含帧内双向 GRU 和跨帧 GRU）→ 解码器卷积，单元切换至少 2–4 次【推断，按 `gtcrn_stream.py:202-206,335-343` 的结构数】。每次切换按 0.1–0.2 ms 算，**光开销就超过 ORT 整帧 0.4 ms**【推断】。
+6. **对 GTCRN 的推断**：GRU 循环留在 CPU，卷积可能上神经引擎。一帧里有编码器卷积 → 2 个 DPGRNN（每个含帧内双向 GRU、`linear`、LayerNorm 和跨帧 GRU）→ 解码器卷积，单元切换至少 2–4 次，循环之间夹着的 `linear` / LayerNorm 若被排到神经引擎还会更多【推断，按 `gtcrn_stream.py:163-206,335-343` 的结构数】。每次切换按 0.1–0.2 ms 算（M1 / M2 Max 的数，M5 未知），**光开销就可能超过 ORT 整帧 0.4–0.7 ms**【推断】。
 
 ## 4. 预测调用本身
 
 1. **同步预测不是线程安全的**：「Since the synchronous prediction API is not thread safe, the app has to ensure that predictions are run serially on the model.」异步接口是线程安全的【官方】WWDC23 <https://developer.apple.com/videos/play/wwdc2023/10049/>。异步接口 macOS 14 起（`H/MLModel.h:87-101`），走完成回调，**不适合实时线程**（回调在别的线程，要等）【推断】。实时线程用同步接口，一个模型实例只给推理线程用。
 2. **输入零拷贝**：`initWithDataPointer:shape:dataType:strides:deallocator:error:`「reference the existing buffer as the storage without copy」【官方】`H/MLMultiArray.h:126-153`。还可以用 IOSurface 的 `CVPixelBuffer` 包成 `MLMultiArray`，只限 fp16 或 int8，说能省一次拷贝（`:155-179`）。
+   - **反例**：「without copy」只说 `MLMultiArray` 本身不拷；推理时 Core ML 内部还会不会再拷、转 dtype，头文件没说。神经引擎路径上，arXiv 2606.22283 表 2.3 的 25 µs 里就含「fp16 copies」【实测-他人，M1 私有接口】。fp32 输入喂 fp16 模型时，每帧至少有一次内部转换拷贝【推断】。
 3. **输出预分配**：`MLPredictionOptions.outputBackings`，macOS 11 起【官方】`H/MLPredictionOptions.h:25-89`。要点：
    - 框架**可以不用**你给的缓冲：名字没给、模型不支持、批量模式时会自己分配。要「compare … by object identity」才知道用没用（`:35-40`）。
    - 建议页对齐地址（`:63-74`）。
    - 输出缓冲要通过 `isAllowedValue:`，不然报错（`:82-86`）。
-4. **缓存来回交换**：两套缓冲 A、B。第 n 帧输入 A、`outputBackings` 指向 B；第 n+1 帧反过来。事先建好两个输入 `MLFeatureProvider` 和两个 `MLPredictionOptions`，每帧只往频谱缓冲里写数【推断】。exp010 的 `bench_coreml.swift` 已经这样写【源码】`docs/experiments/exp010-inference-bench/apple/bench_coreml.swift:10,154-193`。
+4. **缓存来回交换**：两套缓冲 A、B。第 n 帧输入 A、`outputBackings` 指向 B；第 n+1 帧反过来。事先建好两个输入 `MLFeatureProvider` 和两个 `MLPredictionOptions`，每帧只往频谱缓冲里写数【推断】。exp010 的 `bench_coreml.swift` 已经这样写【源码】`docs/experiments/exp010-inference-bench/apple/bench_coreml.swift:10,154-193`。但它**没有**按对象身份核对 `outputBackings` 有没有被用上（只读回 `enhOut`，`:216-223`）；如果框架另分配了输出，缓存交换会悄悄失效、读到旧值，逐值对拍会先报错【源码 + 推断】。
 5. **做不到 Rust 侧零分配**：每次 `prediction` 都返回一个新的 `id<MLFeatureProvider>`，是 ObjC 对象，必有分配和自动释放池【推断】。所以按规约，这算「第三方库内部分配」，要按函数名登记进 RTSan 豁免（`specs/rust/architecture.md:295,368`）。每帧调用要包一层 `@autoreleasepool`（Rust 里用 `objc2::rc::autoreleasepool`），不然对象攒到线程结束才释放【推断】。
 6. **线程数没法设**：`MLModelConfiguration` 里没有 CPU 线程数选项，整个 CoreML 头文件里也没有任何线程相关的设置【官方，头文件里查无】。Core ML 的 CPU 路径会不会在内部开工作线程（GCD），不知道【存疑】。如果开了，推理就会依赖非实时优先级的线程，尾部风险大。**这是 `cpuOnly` 方案最大的未知数。**
+   - **补一条未知**：模型编译和加载会不会走系统守护进程（如 `aned`）的跨进程调用，头文件没说【存疑】。加载本来就在非实时线程做，影响的是冷启动和系统更新后的重编译；每帧预测在神经引擎路径上是用户态经内核驱动到固件（arXiv 2606.22283 表 2.3），不是跨进程【实测-他人 + 逆向，M1】。`cpuOnly` 每帧是否完全在本进程，没查到【存疑】。
 7. **Rust 怎么调**：
    - `objc2-core-ml` 0.3.2（2025-10-04），Zlib / Apache-2.0 / MIT【官方】<https://docs.rs/crate/objc2-core-ml/latest>。有没有包全 `MLState`、`outputBackings`、`MLComputePlan`，没核【存疑】。
    - 另一条路：`ort` 的 CoreML EP，不用自己转模型。但它的算子表里没有 GRU 和 `ScatterND`，图会被切碎；`ort` rc.15 在 macOS 默认挂 CoreML 时 GTCRN 编译失败【实测】`docs/research/009_rust-ecosystem/decision.md:72,75`。这条路不推荐。
