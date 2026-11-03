@@ -112,17 +112,18 @@ MLX **能表达** GTCRN 和 FE-M（GTCRN 已有第三方逐帧移植），也**�
 ## 对 vdn 的含义
 
 **GTCRN simple**
-- 能不能跑：能。已有第三方逐帧移植，对拍误差 < 5e-5【实测-他人】
+- 能不能跑：能。已有第三方逐帧移植，对拍误差 < 5e-5【实测-他人】。但它对的是 sherpa 那份 ONNX，和我们那份哈希不同（§1），对我们的 ORT 输出是多少**未知**
 - 预计瓶颈：**调度与同步**。帧内双向 GRU 被拆成上千个小算子；GPU 每帧还要付约 0.1 ms 量级的同步【推断】
 - 实时线程能不能直接调：**不能**。eval 内有普通堆分配、多把锁、阻塞等 MLX 自己的默认优先级线程或 GPU（§3）【源码 + 推断】
 - 要不要改模型结构：用 `nn.GRU` 不用改，但会慢。想快就要手写融合 GRU 的 Metal 内核，或把帧内 GRU 改写成别的形式（会改变数值）【推断】
-- 逐值一致风险：中。要关 TF32 和 Winograd，GRU 要显式零初值（#3249），双向要自己拼【官方 + 推断】
+- 逐值一致风险：中。GPU 上要关 TF32 和 Winograd；Python 版 GRU 的 #3249 已修，但仍建议显式零初值；双向要自己拼。**Rust 侧不能用 mlx-rs 的 `Gru`**（不递推隐状态，§1）【官方 + 源码 + 推断】
 - 一句话：**不推荐当 GTCRN 的实时后端；可以当 GTCRN 的本机微调后端**【推断】
 
 **FastEnhancer-M**
 - 能不能跑：能，算子都有（StridedConv1d、ConvTranspose1d、BN、GRU、注意力、FFT）。没有现成移植，需要从 PyTorch 源码重写并搬权重【推断】
 - 预计瓶颈：算力占比比 GTCRN 高，GPU 矩阵单元有收益空间；但每 10 ms 的同步固定成本仍在，且 FE-M 每帧只有约 29 MMAC，GPU 难以吃满【推断】
 - 实时线程能不能直接调：同 GTCRN，不能
+- 省电：MLX 不用 ANE（§1）。FE-M 如果要省电，ANE 只能走 Core ML，MLX 这条路没有【官方 + 推断】
 - 要不要改模型结构：wav2wav 图里的 STFT 要用 `mx.fft` 重写；或改用 spec2spec 版，STFT 留在 Rust【推断】
 - 逐值一致风险：高于 GTCRN。注意力和大矩阵乘最容易受 TF32 影响【官方 + 推断】
 
@@ -133,7 +134,7 @@ MLX **能表达** GTCRN 和 FE-M（GTCRN 已有第三方逐帧移植），也**�
 > 目的：用本机数字确认或推翻 §2–§3 的推断。全部在 M5 · macOS 27.0.1 上测，接电源与电池各一遍。
 
 **被测对象**（同一份权重）：
-1. GTCRN：Python MLX 版（可借 `agentable/gtcrn-simple-mlx` 的权重与运行器做起点，先核许可和代码）+ Rust `mlx-sys` 调 `.mlxfn` 版
+1. GTCRN：Python MLX 版（可借 `agentable/gtcrn-simple-mlx` 的运行器做起点，先核许可和代码；**权重必须从我们那份 `gtcrn_simple.onnx`（SHA-256 `b4718df6…cb87`）重新转**，不能用它那份 `e77603ac…`，否则不是同一份权重）+ Rust `mlx-sys` 调 `.mlxfn` 版。Rust 侧 GRU 自己写，别用 mlx-rs `nn::Gru`
 2. FE-M：先只做 Python MLX 版，结论好再做 Rust 版
 3. 对照：现有 ORT CPU 单线程；以及 `onnxruntime-ep-mlx` 插件（`ONNXRUNTIME_EP_MLX_CLAIM_DEBUG=1` 先看哪些节点被认领）
 
@@ -146,11 +147,17 @@ MLX **能表达** GTCRN 和 FE-M（GTCRN 已有第三方逐帧移植），也**�
 - 环境：`MLX_MAX_OPS_PER_BUFFER` 默认 / 调大（看提交次数的影响）
 - 线程：推理线程设成实时时间约束（`thread_policy_set` TIME_CONSTRAINT）/ 默认
 
+**口径要求**（怀疑派补）：
+- **尾部数字只认 Rust 版**。Python 版的每帧时间含解释器和 GIL，只能用来对拍和看 p50 的上限，p99.9 / max 不进结论
+- Rust 版要用和 ORT 基准同一套计时框架（exp010 的那套），同一段输入、同一帧数、同一台机、同一电源状态
+- 从**非主线程**调用：MLX 的流是线程局部的，`enqueue` 只在主线程查错（`scheduler.cpp` 的 `is_main_thread()`），我们的推理线程不是主线程，要测这种调法能不能跑、出错能不能报上来
+
 **测哪些量**：
 - 每帧墙钟时间：p50 / p99 / p99.9 / max，≥ 10 万帧（GTCRN 约 27 分钟音频）。前 100 帧单列（预热、编译）
 - 有干扰时的尾部：同时放全屏视频或跑一个 GPU 负载，再测 p99.9 / max
 - 每帧分配次数与字节（malloc 计数插桩）、每帧加锁次数、每帧线程切换次数，按函数名列前 10（给 RTSan 豁免表用）
 - MLX 起了几个线程、各自优先级 / QoS
+- 每帧 CPU 时间：调用线程与 MLX 后台线程**分开**统计（`thread_info` 或 `proc_pidinfo` 按线程取），加起来和 ORT 单线程比。只看墙钟会漏掉后台线程的开销
 - GPU 侧：`MTLCommandBuffer` 的 `gpuStartTime / gpuEndTime`，算出 GPU 真算的时间和「提交到完成」的差
 - 耗电：`powermetrics` 的 CPU / GPU 功耗（mW），每种配置跑 5 分钟取均值，和 ORT CPU 单线程对比（D31）
 - 逐值一致：对 ORT 输出逐帧最大绝对误差、10 s 带状态连续跑后的误差、输出缓存的误差；TF32 开 / 关各一遍
@@ -164,10 +171,31 @@ MLX **能表达** GTCRN 和 FE-M（GTCRN 已有第三方逐帧移植），也**�
 - FE-M 里 GRU 沿哪一维扫、每帧多少时间步，没读到 `model.py` 对应行
 - MLX 流线程的优先级 / QoS 能否从外部改（比如 `pthread` 层面找到线程再设），没查
 - `new_thread_unsafe_stream`（`mlx/stream.h:43`）是否能让 CPU 活在调用线程上同步执行、绕开后台线程：我读到它仍然经 `StreamThread`，但没把调用链读完，**存疑**
-- M5 的 GPU 代数是否 ≥ 17（即 NAX 是否一定启用），没核
+- M5 的 GPU 代数：怀疑派从 `ioreg` 读到 `AGXAcceleratorG17G`，按源码条件 NAX 会启用；没运行 MLX 确认
+- mlx-rs `Gru` 不递推的问题：只读了代码，没跑；上游有没有人报过没查
+- `agentable` 那份 GTCRN 权重和我们那份是否逐值相同：哈希不同，没拆开比
 - `ort` crate 2.0.0-rc.15 能不能加载 ORT 插件 EP，没查
 - `onnxruntime-ep-mlx` 对 GTCRN 里 ScatterND、Unfold 生成的算子、分组 ConvTranspose 是否都认领，没逐个核；它很新（4 星），稳定性未知
 - `onnx2mlx` 的算子覆盖与维护状态没查（PyPI 页面没加载出来，只拿到元数据）
 - MLX 在 GPU 空闲降频后再唤醒的延迟，没找到公开测量
 - MLX 的 nn 文档关于 `freeze` / `value_and_grad` 的页面我没逐页打开，等级按源码目录推定
 - 苹果 Metal 头文件里计算队列优先级相关接口，本次没查本机 SDK
+
+## 怀疑派核查（2026-11-02）
+
+> 做法：逐条打开 URL、对 GitHub 上 v0.32.4 原文和本机 SDK 头文件核行号。没装包、没构建、没跑基准。
+- 核对：v0.32.4 的 `utils.h:225-228`（TF32 默认 1）、`device.cpp:331,537-540,978-995`、`precision.rst` 原文都对得上；讨论帖 4512、issue #1500 的转述对得上
+- 驳倒：#3249 写成「现存坑」→ 已在 2026-03-16 修好（PR #3252），v0.32.4 Python 版没这个错
+- 新增反例（最重要）：mlx-rs 的 `Gru::step` 循环里重新绑定 `hidden`，隐状态不递推，GTCRN 帧内 33 步会算错；`hidden=None` 也还漏 `bhn`
+- 驳倒：`agentable` 移植被当成「同一份权重」→ 它的源 ONNX 哈希 `e77603ac…` ≠ 我们的 `b4718df6…`，误差 < 5e-5 不能套到我们身上
+- 驳倒：`onnxruntime-ep-mlx` 的「派发受限，CPU 占优」引文在所引行号里不存在，改为 README:49,53 原话
+- 降级：讨论帖 4512 的 0.11 ms 没写是 CPU 还是 GPU 流，补「推断是 GPU，不能套到 CPU 流」
+- 更正：CPU 流不是全部在后台线程，`eval_cpu`（含输出分配）在调用线程，算术在后台线程；每算子至少 2 次入队
+- 更正：每步 GRU 约 12–15 个节点（原写 6–10），每帧约 3000–4000 个算子；补上 TRA 里的 6 个单步 GRU
+- 补充：两组、两个方向可以叠成批量 matmul，串行步数 264 → 66，不用写内核
+- 补充：MLX 不用 ANE，省电上拿不到 Core ML 走 ANE 的那份
+- 补充：Metal 计算队列的优先级不是 MLX 没设，是本机 SDK 27.0 公开接口就没有（只有 IO 队列有）
+- 补核：本机 GPU 为 `AGXAcceleratorG17G`，NAX 条件满足，GPU 对拍必须关 TF32；CPU 流不受 TF32 影响但也不会和 MLAS 逐位一致
+- 基准补口径：尾部只认 Rust 版、用 exp010 同一套计时、分线程统计 CPU 时间、从非主线程调用、权重从我们那份 ONNX 重转
+- 仍存疑：`ort` crate 能否注册插件 EP；`onnxruntime-ep-mlx` 对 GTCRN 每帧切成几段；MLX 后台线程的 QoS 能否从外部改；GPU 降频唤醒延迟；`new_thread_unsafe_stream` 的完整调用链
+
