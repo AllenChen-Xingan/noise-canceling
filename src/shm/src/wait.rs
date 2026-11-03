@@ -38,6 +38,8 @@ impl Bus {
             // 先读计数字、再看数据：生产方是「先 push 再加计数字」，所以看漏的数据一定伴随计数字已变，
             // 系统调用比较时发现值不同会立刻返回——唤醒不会丢
             let seen = word.load(Acquire);
+            #[cfg(test)]
+            tests::gap();
             let available = ring.available();
             if available >= want {
                 return WaitResult::Ready { available };
@@ -83,5 +85,53 @@ impl Bus {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::BusConfig;
+    use core::sync::atomic::AtomicU64;
+
+    /// 单元测试专用：在「读计数字」与「看可读量」之间停这么多微秒，把丢唤醒的窗口撑大到必然命中。
+    static GAP_US: AtomicU64 = AtomicU64::new(0);
+
+    pub(super) fn gap() {
+        let g = GAP_US.load(Relaxed);
+        if g > 0 {
+            std::thread::sleep(Duration::from_micros(g));
+        }
+    }
+
+    /// 消费方读完计数字后停 3 ms；生产方在第 1 ms 推 + notify。
+    /// 顺序对（先读计数字）：看可读量时数据已在，立刻 Ready。
+    /// 顺序反（先看可读量）：数据看漏、计数字读到的是新值，睡下去没人再叫醒，要等满 500 ms 超时。
+    /// 反向验证（2026-11-02，rs-wake）：把两次读对调后本测试失败；改回后通过。
+    #[test]
+    fn widened_race_window_does_not_lose_wakeup() {
+        GAP_US.store(3_000, Relaxed);
+        let b = Bus::heap(BusConfig {
+            rate: 48_000,
+            capacity_frames: 1024,
+            l_total: 0,
+            lead: 0,
+            denoise_block: 0,
+        })
+        .unwrap();
+        for _ in 0..5 {
+            std::thread::scope(|s| {
+                s.spawn(|| {
+                    std::thread::sleep(Duration::from_millis(1));
+                    b.push_notify(RingId::Raw, &[0.0; 96]);
+                });
+                let t = std::time::Instant::now();
+                let r = b.wait(RingId::Raw, 96, Duration::from_millis(500));
+                assert!(r.is_ready(), "{r:?}");
+                assert!(t.elapsed() < Duration::from_millis(100), "{:?}", t.elapsed());
+            });
+            b.ring(RingId::Raw).discard(96);
+        }
+        GAP_US.store(0, Relaxed);
     }
 }

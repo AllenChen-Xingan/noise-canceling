@@ -162,7 +162,8 @@ fn no_lost_wakeups_posix_two_mappings() {
 
 /// 一来一回锁步：生产方推一块 + notify，然后等消费方在 Processed 环上回一个应答，才推下一块。
 /// 每一次 wait 前对方都还没推，所以消费方一定真睡下去；任何一次唤醒丢了，那次 wait 就要等满 1 s 超时。
-/// （手工反向验证过：把 wait 里「先读计数字、再看可读量」对调后，本测试会失败。）
+/// 注意：两次读之间的窗口很窄，「读序写反」这类错本测试未必抓得到（反向验证时没抓到）；
+/// 那一类由 `src/wait.rs` 里撑大窗口的单元测试确定地抓。
 fn lockstep(a: &Bus, b: &Bus, rounds: u32) {
     let slow = AtomicU32::new(0);
     std::thread::scope(|s| {
