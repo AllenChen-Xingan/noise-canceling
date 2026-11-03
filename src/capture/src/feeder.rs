@@ -62,7 +62,11 @@ impl Feeder {
 }
 
 // 实时（A 档）
-#[deny(clippy::disallowed_methods, clippy::disallowed_types, clippy::disallowed_macros)]
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 impl Feeder {
     pub fn forwarder(&self) -> &Forwarder {
         &self.fwd
@@ -113,7 +117,11 @@ mod tests {
     fn handover_and_retire_without_dropping_in_audio_thread() {
         let name = format!("/vdn-tfd-{}", std::process::id());
         let out = Arc::new(OwnedBus::create(&name, out_bus_config(48_000)).unwrap());
-        let (mut f, mut ctl) = Feeder::new(None, Forwarder::new(ForwarderConfig::new(96, 96)), out.clone());
+        let (mut f, mut ctl) = Feeder::new(
+            None,
+            Forwarder::new(ForwarderConfig::new(96, 96)),
+            out.clone(),
+        );
         let x = crate::testing::test_tone(48_000, 96, 0);
         f.feed(&x);
         assert_eq!(f.switches(), 0);
@@ -147,7 +155,10 @@ mod tests {
         let x = [0.0f32; 96];
         // 换 12 次、监视线程一直不收：回收队列 8 个满了以后，音频线程停在本地槽位，不再接新的
         for _ in 0..12 {
-            let _ = ctl.handover.push(Handover { bus: None, fwd: None });
+            let _ = ctl.handover.push(Handover {
+                bus: None,
+                fwd: None,
+            });
             f.feed(&x);
         }
         assert_eq!(f.switches(), 9, "8 个进队列 + 1 个留在本地");

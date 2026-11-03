@@ -11,12 +11,12 @@
 //! - **降噪总线**（`--bus`，默认 `/vdn-bus`）：降噪进程建。没有它时照常送延迟原声，后台每 100 ms 重试；
 //!   出现了、或换了一条（会话 ID 变了）就把新总线交给音频线程（不重开设备）
 //!
-//! 交给音频线程用 `Mutex::try_lock`：拿不到就下一块再试，从不阻塞；换下来的旧总线 / 旧 Forwarder
-//! 由音频线程放回槽里，监视线程负责释放（音频线程里不 drop 堆对象，R7）。
+//! 交给音频线程经 rtrb（`vdn_capture::feeder`）：音频线程在块边界接手，换下来的旧总线 / 旧 Forwarder
+//! 经回收 rtrb 送回监视线程释放（音频线程里不加锁、不 drop 堆对象，R2 / R7）。
 
 #![forbid(unsafe_code)]
 #![allow(
-    clippy::disallowed_methods, // NRT: 进程编排（建总线、开设备、正弦节拍、写文件、监视循环）；音频回调只调 Feeder::feed（try_lock 不阻塞）+ lib 里带 deny 的 forward / HalSource::render
+    clippy::disallowed_methods, // NRT: 进程编排（建总线、开设备、正弦节拍、写文件、监视循环）；音频回调只调 lib 里带 deny 的 Feeder::feed / HalSource::render
     clippy::disallowed_types,
     clippy::disallowed_macros
 )]
@@ -33,13 +33,14 @@
 )]
 
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use clap::{Parser, ValueEnum};
-use vdn_capture::shm::{OutSource, forward, out_bus_config};
+use vdn_capture::feeder::{Feeder, Handover};
+use vdn_capture::shm::{OutSource, out_bus_config};
 use vdn_capture::testing::fill_tone;
 use vdn_capture::{Forwarder, ForwarderConfig, ForwarderStats};
 use vdn_control::{Config, IO_RATE};
@@ -125,51 +126,6 @@ fn main() {
     }
 }
 
-/// 监视线程交给音频线程的东西（换总线时）；音频线程拿走后把旧的放回来。
-struct Handover {
-    bus: Option<Arc<Bus>>,
-    /// `None` = L_total 没变，音频线程在原 Forwarder 上 `rebind` 即可（延迟线不断）
-    fwd: Option<Forwarder>,
-    taken: bool,
-}
-
-struct Link {
-    epoch: AtomicU64,
-    slot: Mutex<Option<Handover>>,
-    stop: AtomicBool,
-}
-
-/// 音频线程（麦克风回调或正弦线程）持有：一块原声进，推进 Out 总线。
-struct Feeder {
-    epoch: u64,
-    bus: Option<Arc<Bus>>,
-    fwd: Forwarder,
-    out: Arc<OwnedBus>,
-    link: Arc<Link>,
-}
-
-impl Feeder {
-    fn feed(&mut self, x: &[f32]) {
-        let e = self.link.epoch.load(Ordering::Acquire);
-        if e != self.epoch
-            && let Ok(mut slot) = self.link.slot.try_lock()
-        {
-            if let Some(h) = slot.as_mut()
-                && !h.taken
-            {
-                core::mem::swap(&mut self.bus, &mut h.bus);
-                match h.fwd.as_mut() {
-                    Some(f) => core::mem::swap(&mut self.fwd, f),
-                    None => self.fwd.rebind(),
-                }
-                h.taken = true;
-            }
-            self.epoch = e;
-        }
-        forward(&mut self.fwd, self.bus.as_deref(), &self.out, x);
-    }
-}
-
 fn forwarder_with(l_total: usize, block: usize, timeout: usize) -> Forwarder {
     let mut c = ForwarderConfig::new(l_total, block);
     c.timeout = timeout;
@@ -245,18 +201,12 @@ fn real_main() -> Result<(), String> {
     }
     eprintln!("vdn-capture: Out 总线 {} 已建", cfg.out_bus_name);
 
-    let link = Arc::new(Link {
-        epoch: AtomicU64::new(0),
-        slot: Mutex::new(None),
-        stop: AtomicBool::new(false),
-    });
-    let feeder = Feeder {
-        epoch: 0,
-        bus: first.clone(),
-        fwd: forwarder_with(l_total0, block, timeout),
-        out: out.clone(),
-        link: link.clone(),
-    };
+    let stop = Arc::new(AtomicBool::new(false));
+    let (feeder, mut ctl) = Feeder::new(
+        first.clone(),
+        forwarder_with(l_total0, block, timeout),
+        out.clone(),
+    );
 
     let start = Instant::now() + Duration::from_millis(20);
     let block_dur = Duration::from_secs_f64(block as f64 / f64::from(IO_RATE));
@@ -268,11 +218,12 @@ fn real_main() -> Result<(), String> {
         Source::Sine => {
             let n = total.unwrap_or(usize::MAX / 2);
             let mut feeder = feeder;
+            let stop = stop.clone();
             Some(thread::spawn(move || -> ForwarderStats {
                 promote_io(block, "正弦线程");
                 let mut buf = vec![0.0f32; block];
                 let (mut off, mut i) = (0usize, 0u32);
-                while off < n && !feeder.link.stop.load(Ordering::Relaxed) {
+                while off < n && !stop.load(Ordering::Relaxed) {
                     sleep_until(start + block_dur * i);
                     let k = block.min(n - off);
                     let x = buf.get_mut(..k).unwrap_or(&mut []);
@@ -281,7 +232,7 @@ fn real_main() -> Result<(), String> {
                     off += k;
                     i += 1;
                 }
-                feeder.fwd.stats()
+                feeder.forwarder().stats()
             }))
         }
         Source::Mic => {
@@ -353,10 +304,8 @@ fn real_main() -> Result<(), String> {
             break;
         }
         // 收回音频线程换下来的旧对象（在这里释放）
-        if let Ok(mut slot) = link.slot.lock()
-            && slot.as_ref().is_some_and(|h| h.taken)
-        {
-            drop(slot.take());
+        while let Ok(old) = ctl.retired.pop() {
+            drop(old);
         }
         if let Some(b) = &cur {
             let hb = b.heartbeat();
@@ -397,21 +346,23 @@ fn real_main() -> Result<(), String> {
             }
         );
         let fwd = (l_new != cur_l_total).then(|| forwarder_with(l_new, block, timeout));
-        if let Ok(mut slot) = link.slot.lock() {
-            // 上一次的还没被拿走就直接替换（旧的在这里释放）
-            *slot = Some(Handover {
+        if ctl
+            .handover
+            .push(Handover {
                 bus: Some(new.clone()),
                 fwd,
-                taken: false,
-            });
+            })
+            .is_err()
+        {
+            eprintln!("vdn-capture: 交接队列满（音频线程没在跑？），下一轮再试");
+            continue;
         }
-        link.epoch.fetch_add(1, Ordering::AcqRel);
         cur = Some(new);
         cur_l_total = l_new;
         (last_beat, beat_at) = (cur.as_ref().map_or(0, |b| b.heartbeat()), Instant::now());
         switches += 1;
     }
-    link.stop.store(true, Ordering::Relaxed);
+    stop.store(true, Ordering::Relaxed);
     drop(_mic);
     drop(_speaker);
 
