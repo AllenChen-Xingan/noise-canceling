@@ -128,8 +128,9 @@
 5. **分配和锁**：用 exp010 的 `alloc_hook` 数每帧 malloc 次数和锁次数，和 ORT 的 1554 / 376 比。记下栈顶函数名（给 RTSan 豁免表用）。
 6. **线程**：推理期间用 `ps -M` 或 Instruments 的 System Trace 看 Core ML 有没有开工作线程，记线程数和优先级。`cpuOnly` 下尤其要看。
 7. **耗电**：`sudo powermetrics --samplers cpu_power,gpu_power,ane_power -i 1000` 跑 5 分钟，记 CPU / GPU / ANE 三项平均 mW，和 ORT CPU 单线程同条件对比（D31）。
-8. **逐值一致**：12 段 exp004 测试音频，整段流式跑完，和 PyTorch fp32 原模型比最大绝对误差、对拍 SNR、SI-SDR 差，用 exp004 的同一个脚本口径。fp16 和有状态版要看误差是否随帧数增长（画每 100 帧的最大误差）。
+8. **逐值一致**：12 段 exp004 测试音频，整段流式跑完，**和 ORT CPU 输出比**（同口径要求），再顺带和 PyTorch fp32 比一次。报最大绝对误差、对拍 SNR、SI-SDR 差，用 exp004 的同一个脚本口径。现有 bench 只比前 610 帧（`bench_coreml.swift:8`），要改成整段 12 段。fp16 和有状态版要看误差是否随帧数增长（画每 100 帧的最大误差）。过线容差由人定，不沿用 4.5e-7。
 9. **冷启动**：删缓存后第一次加载耗时 · 第二次加载耗时 · 首帧耗时，四档计算单元各测。
+11. **CPU 占用**：每档报「CPU 时间 / 墙钟时间」（bench 已有 `cpu_over_wall`），和 ORT 单线程同节拍比；`cpuOnly` 下大于 1 就说明内部开了线程。
 10. **抗干扰**：`All` / `CPUAndNeuralEngine` 档下，同时开一个占用神经引擎的系统功能（如实时字幕），看 p99.9 / max 变多少。
 
 ## 未查 / 存疑
