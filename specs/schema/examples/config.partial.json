@@ -1,0 +1,7 @@
+{
+  "input_device": "MacBook Pro Microphone",
+  "block": 480,
+  "lead_frames": 480,
+  "model": "fastenhancer-m",
+  "heartbeat_timeout_ms": 200
+}

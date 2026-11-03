@@ -1,0 +1,34 @@
+{
+  "$comment": "由 `cargo run -p vdn-schema` 从 src/eval/src/files.rs 的 BaselineFile 导出，勿手改",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "CI 层冻结基线（`baseline-ci.json`）。只由 `vdn-eval ci --write-baseline` 写。",
+  "properties": {
+    "commit": {
+      "description": "写基线时的提交（可带 -dirty）",
+      "type": "string"
+    },
+    "doc": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "values": {
+      "additionalProperties": {
+        "format": "double",
+        "type": "number"
+      },
+      "description": "键：系统/任务 id/试验号/verifier id",
+      "type": "object"
+    }
+  },
+  "required": [
+    "commit",
+    "doc",
+    "run_id",
+    "values"
+  ],
+  "title": "BaselineFile",
+  "type": "object"
+}

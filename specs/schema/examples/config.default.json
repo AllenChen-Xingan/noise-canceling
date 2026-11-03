@@ -1,0 +1,13 @@
+{
+  "input_device": null,
+  "output_device": null,
+  "block": 96,
+  "mode": "denoise",
+  "model": "gtcrn",
+  "model_path": null,
+  "bus_name": "/vdn-bus",
+  "out_bus_name": "/vdn-out",
+  "heartbeat_timeout_ms": 100,
+  "lead_frames": 192,
+  "denoise_block": 96
+}

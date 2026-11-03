@@ -1,0 +1,34 @@
+[package]
+name = "vdn-schema"
+description = "schema 导出与一致性检查：Rust 类型是正本，导出到 specs/schema/ 并进仓；测试重新导出、逐字比对，不一致即红（specs/schema/README.md）"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "vdn-schema"
+path = "src/main.rs"
+
+[dependencies]
+vdn-shm = { workspace = true, default-features = false }
+vdn-control = { workspace = true, features = ["schema"] }
+vdn-eval = { path = "../eval" }
+schemars.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+# JSON Schema 校验（draft 2020-12；MIT OR Apache-2.0）。只在测试里用：拿另一家实现核对「文件过 schema」，
+# 也能抓到 schemars 写出的 schema 与 serde 实际行为不一致
+boon = "0.6"
+serde = { workspace = true }
+
+[lints]
+workspace = true
+
+# 机读正本（specs/rust/architecture.md §5.4）。开发工具，不进产品 bin
+[package.metadata.vdn]
+tier = "tool"
+unsafe = false
+forbid = ["cpal", "coreaudio-rs", "coreaudio-sys", "objc2"]

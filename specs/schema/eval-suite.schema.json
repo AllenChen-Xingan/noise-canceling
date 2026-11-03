@@ -1,0 +1,642 @@
+{
+  "$comment": "由 `cargo run -p vdn-schema` 从 src/eval/src/files.rs 的 SuiteFile 导出，勿手改",
+  "$defs": {
+    "Defaults": {
+      "additionalProperties": false,
+      "properties": {
+        "dur_s": {
+          "default": 10.0,
+          "description": "合成场景时长（秒）",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "trials": {
+          "default": 3,
+          "description": "每个任务的试验数",
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "FaultFile": {
+      "additionalProperties": false,
+      "properties": {
+        "hop": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/$defs/FaultFileKind"
+        }
+      },
+      "required": [
+        "hop",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "FaultFileKind": {
+      "description": "CI 不注入 stall：会 sleep、计时不稳。",
+      "enum": [
+        "nan",
+        "error",
+        "explode"
+      ],
+      "type": "string"
+    },
+    "GraderFile": {
+      "additionalProperties": {
+        "format": "double",
+        "type": "number"
+      },
+      "description": "一个评分器：`v` 是 verifier id（`verifiers::REGISTRY`），其余键是它的数值参数（`max` / `min` 与各自的参数）。",
+      "properties": {
+        "v": {
+          "enum": [
+            "V-LAT",
+            "V-FRAME",
+            "V-NAN",
+            "V-MUTE",
+            "V-SWITCH",
+            "V-BGSTAB",
+            "V-ONSET",
+            "V-NR",
+            "V-INTF",
+            "V-SPLVL",
+            "V-MUSIC",
+            "V-VACUUM",
+            "V-TIMBRE",
+            "V-SIM-GATE",
+            "V-SIM-FA",
+            "V-SIM-SWLAT",
+            "V-SIM-QUIET",
+            "V-EAT-ASR",
+            "V-DNSMOS"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "v"
+      ],
+      "type": "object"
+    },
+    "InterfFile": {
+      "additionalProperties": false,
+      "properties": {
+        "f0": {
+          "default": [
+            180.0,
+            230.0
+          ],
+          "description": "基频范围（Hz）",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InterfMode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "alternate"
+        },
+        "sir_db": {
+          "default": 6.0,
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "InterfMode": {
+      "description": "干扰者怎么说话。清单里的名字由 serde 定（snake_case）。",
+      "oneOf": [
+        {
+          "const": "alternate",
+          "description": "只在主讲人的停顿里说（轮流）",
+          "type": "string"
+        },
+        {
+          "const": "overlap",
+          "description": "自顾自说，和主讲人重叠",
+          "type": "string"
+        },
+        {
+          "const": "other_first",
+          "description": "主讲人开口前先说一大段，之后轮流（exp005 c04 `other_first`）",
+          "type": "string"
+        }
+      ]
+    },
+    "Lang": {
+      "description": "ASR 分词用的语言。",
+      "enum": [
+        "en",
+        "zh"
+      ],
+      "type": "string"
+    },
+    "NoiseKind": {
+      "description": "噪音种类。清单里的名字由 serde 定（小写），格式正本见 `files.rs`。",
+      "oneOf": [
+        {
+          "enum": [
+            "none",
+            "white",
+            "pink"
+          ],
+          "type": "string"
+        },
+        {
+          "const": "hum",
+          "description": "风扇 / 空调：低频为主的平稳噪声 + 100 Hz 嗡声",
+          "type": "string"
+        },
+        {
+          "const": "babble",
+          "description": "一大片人：6 个合成说话人叠加",
+          "type": "string"
+        },
+        {
+          "const": "cafe",
+          "description": "咖啡馆：粉噪 + 杯碟碰撞（衰减正弦，泊松到达）",
+          "type": "string"
+        },
+        {
+          "const": "music",
+          "description": "背景音乐：和弦序列",
+          "type": "string"
+        }
+      ]
+    },
+    "Polarity": {
+      "description": "该压的 · 不该压的 · 两面 · 保命与物理量。",
+      "enum": [
+        "suppress",
+        "preserve",
+        "both",
+        "robust"
+      ],
+      "type": "string"
+    },
+    "Probe": {
+      "description": "清单里的名字由 serde 定；`as_str` 与它的一致性由本文件的测试核对。",
+      "oneOf": [
+        {
+          "const": "onset_cut_50ms",
+          "description": "削每个词首 50 ms（置零）",
+          "type": "string"
+        },
+        {
+          "const": "nonspeech_minus40",
+          "description": "非语音段 −40 dB",
+          "type": "string"
+        },
+        {
+          "const": "lowpass_1k",
+          "description": "1 kHz 低通（四阶：两个二阶巴特沃斯级联）",
+          "type": "string"
+        },
+        {
+          "const": "identity",
+          "description": "什么都不做：输出 = 带噪输入（exp005「所有的都没降噪」）",
+          "type": "string"
+        },
+        {
+          "const": "mute",
+          "description": "全部静音：输出 = 0（刷 V-NR 的极端做法）",
+          "type": "string"
+        }
+      ]
+    },
+    "ProbeFile": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "description": "基础任务 id（必须是本清单里的合成场景任务）",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/Probe"
+        }
+      },
+      "required": [
+        "base",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "RealSource": {
+      "description": "真实片段的来源（QA）。清单里写成 `{\"kind\": \"exp005\", …}`，格式由 serde 定。",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "exp005 三轨素材：`clips` 是 clips.json 的仓内路径，`audio_dir` 是主目录下的音频目录",
+          "properties": {
+            "audio_dir": {
+              "type": "string"
+            },
+            "clip": {
+              "type": "string"
+            },
+            "clips": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "exp005",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "clips",
+            "audio_dir",
+            "clip"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "exp003 现成的 noisy + clean（`resources/` 下）",
+          "properties": {
+            "clip": {
+              "type": "string"
+            },
+            "clips": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "exp003",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "clips",
+            "clip"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "SceneFile": {
+      "additionalProperties": false,
+      "properties": {
+        "dur_s": {
+          "description": "场景时长（秒）；缺省取清单的 defaults.dur_s",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "interferers": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/InterfFile"
+          },
+          "type": "array"
+        },
+        "noise": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NoiseKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "pink"
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TalkerFile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "主讲人；缺省或 null = 没有主讲人"
+        },
+        "owner_start_s": {
+          "default": 0.5,
+          "description": "主讲人开口时刻（秒）",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pause_s": {
+          "default": [
+            0.4,
+            1.2
+          ],
+          "description": "停顿长度范围（秒）",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "snr_db": {
+          "default": 10.0,
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "tail_silence_s": {
+          "default": 0.0,
+          "description": "末尾静音（秒）",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Set": {
+      "description": "清单里的名字由 serde 定（小写）；`as_str` 与它的一致性由测试核对。",
+      "oneOf": [
+        {
+          "const": "regression",
+          "description": "回归集：已经做好的不许退步，应接近 100% 通过",
+          "type": "string"
+        },
+        {
+          "const": "capability",
+          "description": "能力集：攻坚场景，起点通过率低，给爬坡空间；不阻断 CI",
+          "type": "string"
+        },
+        {
+          "const": "probe",
+          "description": "防作弊探针：verifier 的自测",
+          "type": "string"
+        }
+      ]
+    },
+    "TalkerFile": {
+      "additionalProperties": false,
+      "properties": {
+        "f0": {
+          "default": [
+            100.0,
+            140.0
+          ],
+          "description": "基频范围（Hz）",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "level_dbov": {
+          "default": -26.0,
+          "description": "P.56 主动语音电平（dBov）",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "tonal": {
+          "default": false,
+          "description": "声调语言式的音节内 f0 变化",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "TaskFile": {
+      "additionalProperties": false,
+      "properties": {
+        "desc": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "faults": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FaultFile"
+          },
+          "type": "array"
+        },
+        "graders": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GraderFile"
+          },
+          "type": "array"
+        },
+        "id": {
+          "description": "全清单唯一。惯例 R 回归 / C 能力 / P 探针 / Q 真实片段 + 两位号 + slug",
+          "type": "string"
+        },
+        "info": {
+          "default": [],
+          "description": "同 graders，但只报，不计通过与门禁",
+          "items": {
+            "$ref": "#/$defs/GraderFile"
+          },
+          "type": "array"
+        },
+        "lang": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Lang"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "en"
+        },
+        "note": {
+          "description": "给读清单的人看的备注，程序不读",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "origin": {
+          "description": "取自哪次真实失败（实验号 + 片段 + 人原话或标签）；测试要求非空",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "polarity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Polarity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "both"
+        },
+        "probe": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProbeFile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "只在 set = probe 用"
+        },
+        "real": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RealSource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "仓外真实片段（QA），按 clips.json 里的 sha256 核对"
+        },
+        "safety": {
+          "default": true,
+          "description": "false = 三件保命全关",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "scene": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SceneFile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "合成场景（CI）。scene · real · probe 至少一个"
+        },
+        "set": {
+          "$ref": "#/$defs/Set"
+        },
+        "trials": {
+          "description": "合成任务 = 种子数；缺省取清单的 defaults.trials",
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "xfail": {
+          "description": "已知失败（原因 / 代码位置 / issue）：阻断降为报警；全过时提示转正",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "set"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "任务清单（`ci.json`、`qa.json`）。",
+  "properties": {
+    "defaults": {
+      "$ref": "#/$defs/Defaults",
+      "default": {
+        "dur_s": null,
+        "trials": null
+      }
+    },
+    "doc": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "name": {
+      "default": "suite",
+      "description": "清单名",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "seed": {
+      "default": 20261031,
+      "description": "基础种子",
+      "format": "uint64",
+      "maximum": 18446744073709551615,
+      "minimum": 0,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "tasks": {
+      "items": {
+        "$ref": "#/$defs/TaskFile"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "tasks"
+  ],
+  "title": "SuiteFile",
+  "type": "object"
+}
