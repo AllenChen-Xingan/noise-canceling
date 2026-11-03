@@ -230,7 +230,6 @@ mod model {
     pub(crate) struct Region {
         header: Box<Header>,
         slots: Box<[AtomicU32]>,
-        len: usize,
     }
 
     impl Region {
@@ -242,12 +241,7 @@ mod model {
             Ok(Self {
                 header: Box::new(Header::new_zeroed()),
                 slots: (0..n).map(|_| AtomicU32::new(0)).collect(),
-                len,
             })
-        }
-
-        pub(crate) fn len(&self) -> usize {
-            self.len
         }
 
         pub(crate) fn header(&self) -> &Header {

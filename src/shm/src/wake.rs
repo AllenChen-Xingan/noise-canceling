@@ -9,6 +9,11 @@
 #![allow(unsafe_code)] // 白名单 crate（metadata.vdn.unsafe = true）；每个 unsafe 块带 SAFETY
 
 /// 一次等待的结果。
+// 不支持的平台（Linux · Miri · loom）只构造 Failed，其余变体只有 macOS 真实现用到
+#[cfg_attr(
+    not(all(target_os = "macos", not(miri), not(feature = "loom"))),
+    allow(dead_code)
+)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Outcome {
     /// 被叫醒，或进去时值已经变了（立刻返回）

@@ -6,7 +6,9 @@ use core::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 #[cfg(all(unix, feature = "posix"))]
 use std::ffi::CString;
 
-use crate::layout::{self, Header, MAGIC, RINGS, RingHdr, VERSION};
+#[cfg(all(unix, feature = "posix"))]
+use crate::layout::Header;
+use crate::layout::{self, MAGIC, RINGS, RingHdr, VERSION};
 use crate::region::Region;
 use crate::wake;
 use crate::{BusConfig, RingId, ShmError, WaitStrategy};
