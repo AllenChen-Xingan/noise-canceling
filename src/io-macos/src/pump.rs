@@ -236,6 +236,41 @@ mod tests {
     }
 
     #[test]
+    fn pumps_meter_mono_level() {
+        // 输入：立体声，第 1 声道 0.5、第 2 声道 1.0 → 只量第 1 声道
+        let mut inp = InputPump::new(4, 2, |_m: &[f32]| {});
+        let h = inp.health();
+        let data: Vec<f32> = (0..10).flat_map(|_| [0.5, 1.0]).collect();
+        inp.on_data(&data);
+        let l = h.level();
+        assert_eq!((l.samples, l.peak), (10, 0.5));
+        // 输出：用户回调写 −0.25，量的是写进去的（复制到 3 个声道前，按单声道计）
+        let mut out = OutputPump::new(4, 3, |m: &mut [f32]| m.fill(-0.25));
+        let h = out.health();
+        let mut buf = [0.0f32; 3 * 6];
+        out.on_data(&mut buf);
+        let l = h.level();
+        assert_eq!((l.samples, l.peak), (6, 0.25));
+        assert!((l.rms - 0.25).abs() < 1e-9);
+    }
+
+    /// 没有麦克风权限时 macOS 送全零（推断）：输入泵连续 1 s 全零 → `silent_now`
+    #[test]
+    fn all_zero_input_flags_silent_after_one_second() {
+        let mut inp = InputPump::new(96, 1, |_m: &[f32]| {});
+        let h = inp.health();
+        let z = vec![0.0f32; 4800];
+        for _ in 0..9 {
+            inp.on_data(&z);
+        }
+        assert!(!h.silent_now(), "0.9 s 还不报");
+        inp.on_data(&z);
+        assert!(h.silent_now() && h.level().all_zero());
+        inp.on_data(&[0.01]);
+        assert!(!h.silent_now(), "有声音就解除");
+    }
+
+    #[test]
     fn callback_panic_is_caught_then_silenced() {
         let mut calls = 0;
         let mut pump = OutputPump::new(2, 1, |m: &mut [f32]| {
