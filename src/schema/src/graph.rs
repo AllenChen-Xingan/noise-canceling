@@ -59,6 +59,14 @@ pub fn guard_kinds(old: &Value) -> Result<(), String> {
     let now = kinds_doc();
     let field = |k: &Value, f: &str| k.get(f).cloned().unwrap_or(Value::Null);
     let olds = old["kinds"].as_array().ok_or("基线种类表没有 kinds")?;
+    for k in graph::KINDS {
+        let reused = olds
+            .iter()
+            .any(|o| o["name"] == k.name && o["id"].as_u64() != Some(u64::from(k.id)));
+        if reused {
+            return Err(format!("名字 {} 在基线里属于别的编号", k.name));
+        }
+    }
     for o in olds {
         let id = o["id"].as_u64().ok_or("基线种类缺编号")?;
         let name = field(o, "name");
@@ -95,14 +103,6 @@ pub fn guard_kinds(old: &Value) -> Result<(), String> {
             .any(|x| Some(u64::from(*x)) == r.as_u64())
         {
             return Err(format!("退役编号 {r} 不许撤回"));
-        }
-    }
-    for k in graph::KINDS {
-        let reused = olds
-            .iter()
-            .any(|o| o["name"] == k.name && o["id"].as_u64() != Some(u64::from(k.id)));
-        if reused {
-            return Err(format!("名字 {} 在基线里属于别的编号", k.name));
         }
     }
     Ok(())

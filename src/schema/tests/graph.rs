@@ -222,5 +222,6 @@ fn kinds_guard_catches_reuse_and_silent_changes() {
     // 基线已退役的编号被撤回
     assert!(edit(&|v| v["retired_ids"] = Value::Array(vec![999.into()])).is_err());
     // 新种类用了基线里别的编号的名字
-    assert!(edit(&|v| v["kinds"][0]["id"] = 998.into()).is_err());
+    let e = edit(&|v| v["kinds"][0]["id"] = 998.into()).unwrap_err();
+    assert!(e.contains("别的编号"), "{e}");
 }
