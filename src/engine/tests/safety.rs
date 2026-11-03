@@ -160,3 +160,89 @@ fn apply_params_maps_policy_output() {
     c.apply_params(&p);
     assert_eq!((c.floor_db, c.detect_db), (-20.0, 12.0));
 }
+
+/// 数值默认值的正本是 `vdn_types::desc`：SafetyConfig 的默认与表逐条相同，且与 ParamSet 的默认一致（同一条描述）。
+#[test]
+fn safety_defaults_follow_desc_table() {
+    use vdn_types::desc::*;
+    let c = SafetyConfig::default();
+    let pairs = [
+        (c.max_abs, &ENGINE_MAX_ABS),
+        (c.recover_hold_s, &ENGINE_RECOVER_HOLD_S),
+        (c.crossfade_s, &ENGINE_CROSSFADE_S),
+        (c.floor_db, &FLOOR_DB),
+        (c.open_db, &OPEN_DB),
+        (c.attack_s, &ATTACK_S),
+        (c.release_s, &RELEASE_S),
+        (c.hangover_s, &HANGOVER_S),
+        (c.detect_db, &DETECT_DB),
+    ];
+    for (v, d) in pairs {
+        assert_eq!(v, d.default, "{}", d.key);
+    }
+    let mut from_set = SafetyConfig::off();
+    from_set.apply_params(&vdn_types::ParamSet::DEFAULT);
+    assert_eq!(
+        (
+            from_set.floor_db,
+            from_set.open_db,
+            from_set.detect_db,
+            from_set.release_s,
+            from_set.hangover_s
+        ),
+        (
+            c.floor_db,
+            c.open_db,
+            c.detect_db,
+            c.release_s,
+            c.hangover_s
+        )
+    );
+}
+
+/// 描述表允许的边界值都能进 Engine（`Engine::new` 断言 `max_abs > 0`、时长 ≥ 0；codex 第 1 轮 P2 #4）。
+#[test]
+fn desc_boundary_values_are_accepted_by_engine() {
+    use vdn_types::desc::*;
+    for (max_abs, hold, xf) in [
+        (
+            ENGINE_MAX_ABS.min,
+            ENGINE_RECOVER_HOLD_S.min,
+            ENGINE_CROSSFADE_S.min,
+        ),
+        (
+            ENGINE_MAX_ABS.max,
+            ENGINE_RECOVER_HOLD_S.max,
+            ENGINE_CROSSFADE_S.max,
+        ),
+    ] {
+        let cfg = SafetyConfig {
+            max_abs,
+            recover_hold_s: hold,
+            crossfade_s: xf,
+            ..SafetyConfig::default()
+        };
+        let mut e = Engine::new(DelayGain::new(HOP, LAT, 0.5), cfg);
+        let run = offline::run(&mut e, &vec![0.1f32; HOP * 8], 0);
+        assert!(run.output.iter().all(|v| v.is_finite()));
+    }
+}
+
+/// 越界配置进 Engine 时按描述表夹值：Engine 自己与 Pipeline 读到的 `config()` 是同一个值（codex 第 2 轮 P2 #2）。
+#[test]
+fn engine_clamps_config_by_desc_table() {
+    use vdn_types::desc::*;
+    let cfg = SafetyConfig {
+        crossfade_s: ENGINE_CROSSFADE_S.max + 1.0,
+        max_abs: ENGINE_MAX_ABS.min - 0.5,
+        floor_db: FLOOR_DB.min - 10.0,
+        release_s: f32::NAN,
+        ..SafetyConfig::default()
+    };
+    let e = Engine::new(DelayGain::new(HOP, LAT, 0.5), cfg);
+    let c = e.config();
+    assert_eq!(c.crossfade_s, ENGINE_CROSSFADE_S.max);
+    assert_eq!(c.max_abs, ENGINE_MAX_ABS.min);
+    assert_eq!(c.floor_db, FLOOR_DB.min);
+    assert_eq!(c.release_s, RELEASE_S.default);
+}

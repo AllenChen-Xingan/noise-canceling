@@ -228,7 +228,9 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
             + 2 * resample::delay_high()
             + (engine.latency_samples() + stages.latency_samples_all()) * FACTOR;
         // 淡化时长限在 [0, 1] 秒：Inf / 极大值会让淡化永不收敛，NaN 落到 1 个样本
-        let xf = (engine.config().crossfade_s.clamp(0.0, 1.0) * io_rate as f32).max(1.0);
+        let xf = (vdn_types::desc::ENGINE_CROSSFADE_S.clamp(engine.config().crossfade_s)
+            * io_rate as f32)
+            .max(1.0);
         let mut p = Self {
             io_rate,
             hop_io,

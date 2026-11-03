@@ -33,20 +33,74 @@ pub struct EnrollParams {
 }
 
 impl Default for EnrollParams {
+    /// 默认值取自 `vdn_types::desc`（`enroll.*`）。
     fn default() -> Self {
+        use vdn_types::desc::*;
         Self {
-            assign_sim: 0.5,
-            max_clusters: 8,
-            min_owner_s: 15.0,
-            single_cluster_min_s: 30.0,
-            lock_margin: 1.5,
-            stable_updates: 6,
+            assign_sim: ENROLL_ASSIGN_SIM.default,
+            max_clusters: ENROLL_MAX_CLUSTERS.default_count() as usize,
+            min_owner_s: ENROLL_MIN_OWNER_S.default,
+            single_cluster_min_s: ENROLL_SINGLE_CLUSTER_MIN_S.default,
+            lock_margin: ENROLL_LOCK_MARGIN.default,
+            stable_updates: ENROLL_STABLE_UPDATES.default_count(),
             // 必须高于并入阈 assign_sim，否则形同虚设（自审 P2-3）
-            min_cohesion: 0.6,
-            recency_half_life_s: 300.0,
-            level_halving_db: 6.0,
-            relock_ratio: 2.0,
-            centroid_cap: 200.0,
+            min_cohesion: ENROLL_MIN_COHESION.default,
+            recency_half_life_s: ENROLL_RECENCY_HALF_LIFE_S.default,
+            level_halving_db: ENROLL_LEVEL_HALVING_DB.default,
+            relock_ratio: ENROLL_RELOCK_RATIO.default,
+            centroid_cap: ENROLL_CENTROID_CAP.default,
+        }
+    }
+}
+
+impl EnrollParams {
+    /// 每个参数都在描述表范围内（越界拒收）。穷举解构：加了字段没登记描述表，编译失败。
+    pub fn validate(&self) -> Result<(), vdn_types::RangeError> {
+        use vdn_types::desc::*;
+        let EnrollParams {
+            assign_sim,
+            max_clusters,
+            min_owner_s,
+            single_cluster_min_s,
+            lock_margin,
+            stable_updates,
+            min_cohesion,
+            recency_half_life_s,
+            level_halving_db,
+            relock_ratio,
+            centroid_cap,
+        } = *self;
+        ENROLL_ASSIGN_SIM.check(assign_sim)?;
+        ENROLL_MAX_CLUSTERS.check_count(u32::try_from(max_clusters).unwrap_or(u32::MAX))?;
+        ENROLL_MIN_OWNER_S.check(min_owner_s)?;
+        ENROLL_SINGLE_CLUSTER_MIN_S.check(single_cluster_min_s)?;
+        ENROLL_LOCK_MARGIN.check(lock_margin)?;
+        ENROLL_STABLE_UPDATES.check_count(stable_updates)?;
+        ENROLL_MIN_COHESION.check(min_cohesion)?;
+        ENROLL_RECENCY_HALF_LIFE_S.check(recency_half_life_s)?;
+        ENROLL_LEVEL_HALVING_DB.check(level_halving_db)?;
+        ENROLL_RELOCK_RATIO.check(relock_ratio)?;
+        ENROLL_CENTROID_CAP.check(centroid_cap)?;
+        Ok(())
+    }
+
+    /// 夹进描述表范围（NaN 当默认值）；[`Enroller::new`] 先夹再用。
+    pub fn clamped(self) -> Self {
+        use vdn_types::desc::*;
+        Self {
+            assign_sim: ENROLL_ASSIGN_SIM.clamp(self.assign_sim),
+            max_clusters: ENROLL_MAX_CLUSTERS
+                .clamp_count(u32::try_from(self.max_clusters).unwrap_or(u32::MAX))
+                as usize,
+            min_owner_s: ENROLL_MIN_OWNER_S.clamp(self.min_owner_s),
+            single_cluster_min_s: ENROLL_SINGLE_CLUSTER_MIN_S.clamp(self.single_cluster_min_s),
+            lock_margin: ENROLL_LOCK_MARGIN.clamp(self.lock_margin),
+            stable_updates: ENROLL_STABLE_UPDATES.clamp_count(self.stable_updates),
+            min_cohesion: ENROLL_MIN_COHESION.clamp(self.min_cohesion),
+            recency_half_life_s: ENROLL_RECENCY_HALF_LIFE_S.clamp(self.recency_half_life_s),
+            level_halving_db: ENROLL_LEVEL_HALVING_DB.clamp(self.level_halving_db),
+            relock_ratio: ENROLL_RELOCK_RATIO.clamp(self.relock_ratio),
+            centroid_cap: ENROLL_CENTROID_CAP.clamp(self.centroid_cap),
         }
     }
 }
@@ -94,6 +148,7 @@ pub struct Enroller {
 
 impl Enroller {
     pub fn new(p: EnrollParams) -> Self {
+        let p = p.clamped();
         Self {
             p,
             clusters: Vec::new(),
@@ -320,6 +375,99 @@ impl Enroller {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 描述表是正本：默认值逐条同表；越界 validate 拒收（报的是那一条）、clamped 夹到边界。
+    #[test]
+    fn enroll_params_follow_desc_table() {
+        use vdn_types::desc::{self, ParamDesc};
+        let d = EnrollParams::default();
+        d.validate().unwrap();
+        type Set = fn(&mut EnrollParams, f32);
+        type Get = fn(&EnrollParams) -> f32;
+        let fields: [(&ParamDesc, Get, Set); 9] = [
+            (
+                &desc::ENROLL_ASSIGN_SIM,
+                |p| p.assign_sim,
+                |p, v| p.assign_sim = v,
+            ),
+            (
+                &desc::ENROLL_MIN_OWNER_S,
+                |p| p.min_owner_s,
+                |p, v| p.min_owner_s = v,
+            ),
+            (
+                &desc::ENROLL_SINGLE_CLUSTER_MIN_S,
+                |p| p.single_cluster_min_s,
+                |p, v| p.single_cluster_min_s = v,
+            ),
+            (
+                &desc::ENROLL_LOCK_MARGIN,
+                |p| p.lock_margin,
+                |p, v| p.lock_margin = v,
+            ),
+            (
+                &desc::ENROLL_MIN_COHESION,
+                |p| p.min_cohesion,
+                |p, v| p.min_cohesion = v,
+            ),
+            (
+                &desc::ENROLL_RECENCY_HALF_LIFE_S,
+                |p| p.recency_half_life_s,
+                |p, v| p.recency_half_life_s = v,
+            ),
+            (
+                &desc::ENROLL_LEVEL_HALVING_DB,
+                |p| p.level_halving_db,
+                |p, v| p.level_halving_db = v,
+            ),
+            (
+                &desc::ENROLL_RELOCK_RATIO,
+                |p| p.relock_ratio,
+                |p, v| p.relock_ratio = v,
+            ),
+            (
+                &desc::ENROLL_CENTROID_CAP,
+                |p| p.centroid_cap,
+                |p, v| p.centroid_cap = v,
+            ),
+        ];
+        for (dsc, get, set) in fields {
+            assert_eq!(get(&d), dsc.default, "{} 默认值", dsc.key);
+            for bad in [dsc.min - 0.5, dsc.max + 0.5] {
+                let mut p = d;
+                set(&mut p, bad);
+                assert_eq!(p.validate().unwrap_err().desc.id, dsc.id, "{}", dsc.key);
+                assert_eq!(get(&p.clamped()), dsc.clamp(bad), "{}", dsc.key);
+            }
+        }
+        // 两个整数参数
+        assert_eq!(
+            d.max_clusters as u32,
+            desc::ENROLL_MAX_CLUSTERS.default_count()
+        );
+        assert_eq!(
+            d.stable_updates,
+            desc::ENROLL_STABLE_UPDATES.default_count()
+        );
+        let p = EnrollParams {
+            max_clusters: 0,
+            ..d
+        };
+        assert_eq!(
+            p.validate().unwrap_err().desc.id,
+            desc::ENROLL_MAX_CLUSTERS.id
+        );
+        assert_eq!(p.clamped().max_clusters, 1);
+        let p = EnrollParams {
+            stable_updates: 1000,
+            ..d
+        };
+        assert_eq!(
+            p.validate().unwrap_err().desc.id,
+            desc::ENROLL_STABLE_UPDATES.id
+        );
+        assert_eq!(p.clamped().stable_updates, 100);
+    }
 
     fn unit(dim: usize, k: usize, jitter: f32, seed: &mut u32) -> Vec<f32> {
         let mut v = vec![0.0; dim];
