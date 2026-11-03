@@ -163,8 +163,8 @@ try:
         ts = torch.jit.trace(Stateful(stream).eval(), (ex[0],), check_trace=False)
     mls = ct.convert(
         ts,
-        inputs=[ct.TensorType(name="mix", shape=SHAPES["mix"], dtype=np.float16)],
-        outputs=[ct.TensorType(name="enh", dtype=np.float16)],
+        inputs=[ct.TensorType(name="mix", shape=SHAPES["mix"], dtype=np.float32)],  # 进出口 fp32，内部和状态 fp16
+        outputs=[ct.TensorType(name="enh", dtype=np.float32)],
         states=[
             ct.StateType(wrapped_type=ct.TensorType(shape=SHAPES[k + "_cache"], dtype=np.float16), name=k + "_state")
             for k in ("conv", "tra", "inter")

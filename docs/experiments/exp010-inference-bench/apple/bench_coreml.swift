@@ -38,7 +38,7 @@ func cpuSeconds() -> Double {
     getrusage(RUSAGE_SELF, &r)
     return Double(r.ru_utime.tv_sec + r.ru_stime.tv_sec) + Double(r.ru_utime.tv_usec + r.ru_stime.tv_usec) / 1e6
 }
-func pct(_ v: [Double], _ q: Double) -> Double { v[min(v.count - 1, Int((Double(v.count) * q).rounded(.down)))] }
+func pct(_ v: [Double], _ q: Double) -> Double { v[min(v.count - 1, Int((Double(v.count - 1) * q).rounded()))] }  // 同 rustbe
 
 func compiledURL(_ p: String) throws -> (URL, Double) {
     let u = URL(fileURLWithPath: p)
@@ -145,6 +145,8 @@ func cmdBench(_ a: [String]) throws {
         default: die("不认识 \(a[i])")
         }
     }
+    // 同 rustbe：计时线程设 QOS_CLASS_USER_INTERACTIVE
+    pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0)
     let input = readF32(a[2]), ref = readF32(a[3])
 
     vdn_alloc_hook_install()
@@ -245,7 +247,7 @@ func cmdBench(_ a: [String]) throws {
     let snr = 10 * log10(sig / max(err, 1e-300))
     let backend = "coreml-\(a[1])" + (stateful ? "-state" : "") + (mixDT == .float16 ? "-fp16io" : "")
     let f4 = { (x: Double) in String(format: "%.4f", x) }
-    print("{\"model\":\"\(isFem ? "fastenhancer_m" : "gtcrn")\",\"backend\":\"\(backend)\",\"artifact\":\"\(URL(fileURLWithPath: a[0]).lastPathComponent)\",\"frames\":\(frames),\"pace_ms\":\(pacedMs),\"warmup\":\(warmup),\"p50_ms\":\(f4(pct(times, 0.5))),\"p99_ms\":\(f4(pct(times, 0.99))),\"p999_ms\":\(f4(pct(times, 0.999))),\"max_ms\":\(f4(times.last!)),\"mean_ms\":\(f4(mean)),\"compile_ms\":\(String(format: "%.2f", compileMs)),\"open_ms\":\(String(format: "%.2f", openMs)),\"first_frame_ms\":\(String(format: "%.3f", firstMs)),\"cpu_over_wall\":\(String(format: "%.3f", cpu / wall)),\"process_allocs_per_frame\":\(String(format: "%.3f", allocs)),\"nonfinite_frames\":\(nonfinite),\"parity_frames\":\(min(parityN, nIn, total)),\"parity_max_abs\":\(String(format: "%.3e", maxAbs)),\"parity_worst_frame\":\(worst),\"parity_snr_db\":\(String(format: "%.2f", snr)),\"parity_first_bad\":\"\(firstBad)\"}")
+    print("{\"model\":\"\(isFem ? "fastenhancer_m" : "gtcrn")\",\"backend\":\"\(backend)\",\"artifact\":\"\(URL(fileURLWithPath: a[0]).lastPathComponent)\",\"frames\":\(frames),\"pace_ms\":\(pacedMs),\"qos\":\"ui\",\"p10_ms\":\(f4(pct(times, 0.1))),\"p90_ms\":\(f4(pct(times, 0.9))),\"warmup\":\(warmup),\"p50_ms\":\(f4(pct(times, 0.5))),\"p99_ms\":\(f4(pct(times, 0.99))),\"p999_ms\":\(f4(pct(times, 0.999))),\"max_ms\":\(f4(times.last!)),\"mean_ms\":\(f4(mean)),\"compile_ms\":\(String(format: "%.2f", compileMs)),\"open_ms\":\(String(format: "%.2f", openMs)),\"first_frame_ms\":\(String(format: "%.3f", firstMs)),\"cpu_over_wall\":\(String(format: "%.3f", cpu / wall)),\"process_allocs_per_frame\":\(String(format: "%.3f", allocs)),\"nonfinite_frames\":\(nonfinite),\"parity_frames\":\(min(parityN, nIn, total)),\"parity_max_abs\":\(String(format: "%.3e", maxAbs)),\"parity_worst_frame\":\(worst),\"parity_snr_db\":\(String(format: "%.2f", snr)),\"parity_first_bad\":\"\(firstBad)\"}")
 }
 
 let argv = Array(CommandLine.arguments.dropFirst())
