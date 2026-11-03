@@ -24,6 +24,13 @@ use vdn_hal::HalSource;
 use vdn_io_macos::{Direction, IO_RATE, InputStream, Level, OutputStream, devices, fmt_dbfs};
 use vdn_shm::{Bus, RingId};
 
+use crate::stop::StopOnDrop;
+
+mod check;
+mod tap;
+pub use check::{LEVEL_TOLERANCE_DB, LiveVerdict, QUIET_PEAK_DBFS, SilenceNotice, judge};
+pub use tap::OutputTap;
+
 pub fn list_devices() {
     let all = devices();
     if all.is_empty() {
@@ -132,68 +139,6 @@ pub fn prepare<P: Processor>(
 pub fn input_callback(bus: Arc<Bus>, l_total: usize, block: usize) -> impl FnMut(&[f32]) + Send {
     let mut fwd = Forwarder::new(ForwarderConfig::new(l_total, block));
     move |m: &[f32]| forward_same_bus(&mut fwd, &bus, m)
-}
-
-/// 输出端的增益与录音分流（实时线程上用）。
-pub struct OutputTap {
-    gain: f32,
-    rec: Option<rtrb::Producer<f32>>,
-    /// 录音队列满了丢掉的样本数
-    rec_dropped: Arc<AtomicU64>,
-    /// 加增益后超过 ±1、被夹住的样本数
-    clipped: Arc<AtomicU64>,
-}
-
-impl OutputTap {
-    pub fn new(gain: f32, rec: Option<rtrb::Producer<f32>>) -> Self {
-        Self {
-            gain,
-            rec,
-            rec_dropped: Arc::new(AtomicU64::new(0)),
-            clipped: Arc::new(AtomicU64::new(0)),
-        }
-    }
-    pub fn rec_dropped(&self) -> Arc<AtomicU64> {
-        self.rec_dropped.clone()
-    }
-    pub fn clipped(&self) -> Arc<AtomicU64> {
-        self.clipped.clone()
-    }
-}
-
-#[deny(
-    clippy::disallowed_methods,
-    clippy::disallowed_types,
-    clippy::disallowed_macros
-)]
-impl OutputTap {
-    /// 加增益（夹在 ±1 内并计数），再把这块送进录音队列（满了丢、计数，不等）。不分配、不加锁。
-    pub fn apply(&mut self, out: &mut [f32]) {
-        if self.gain != 1.0 {
-            let mut clipped = 0u64;
-            for s in out.iter_mut() {
-                let v = *s * self.gain;
-                if v.abs() > 1.0 {
-                    clipped += 1;
-                }
-                *s = v.clamp(-1.0, 1.0);
-            }
-            if clipped > 0 {
-                self.clipped.fetch_add(clipped, Ordering::Relaxed);
-            }
-        }
-        if let Some(p) = self.rec.as_mut() {
-            let mut lost = 0u64;
-            for &s in out.iter() {
-                if p.push(s).is_err() {
-                    lost += 1;
-                }
-            }
-            if lost > 0 {
-                self.rec_dropped.fetch_add(lost, Ordering::Relaxed);
-            }
-        }
-    }
 }
 
 /// 输出回调（扬声器的实时线程）：读 Out → 增益 → 录音分流。拿到的块已清零（OutputPump 保证）。
@@ -376,39 +321,6 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<Ru
     Ok(r)
 }
 
-/// 离开作用域时把几个停止标志都置位。
-struct StopOnDrop([Arc<AtomicBool>; 2]);
-impl Drop for StopOnDrop {
-    fn drop(&mut self) {
-        for f in &self.0 {
-            f.store(true, Ordering::Release);
-        }
-    }
-}
-
-/// 「输入全零」提示的节流：进入全零时提示一次；有声音之后再全零满 1 s 才会再提示（所以最多每秒一次，不刷屏）。
-#[derive(Debug, Default)]
-pub struct SilenceNotice {
-    shown: bool,
-}
-
-impl SilenceNotice {
-    /// 返回 true = 这次该打印提示。
-    pub fn update(&mut self, silent_now: bool) -> bool {
-        match (silent_now, self.shown) {
-            (true, false) => {
-                self.shown = true;
-                true
-            }
-            (false, true) => {
-                self.shown = false;
-                false
-            }
-            _ => false,
-        }
-    }
-}
-
 /// 结束时的一段汇总（电平 + 计数）。
 pub fn summary(r: &RunReport) -> String {
     let lv = |l: &Level| {
@@ -443,87 +355,6 @@ pub fn summary(r: &RunReport) -> String {
         ));
     }
     s
-}
-
-/// `--check` 的判定（机器辅助 V5；最终仍由人耳判）。
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Verdict {
-    /// 一个麦克风样本都没收到
-    NoInput,
-    /// 收到的全是 0：疑似没有麦克风权限或设备静音
-    InputAllZero,
-    /// 直通时输出电平和「输入 + 增益」差太多（dB）：链路里丢了声音
-    OutputMismatch { diff_db: f64 },
-    /// 输入有声、（直通时）输出电平对得上。`quiet` = 输入峰值低于 [`QUIET_PEAK_DBFS`]，耳机里可能听不出来
-    Pass { quiet: bool, diff_db: Option<f64> },
-}
-
-/// 直通时输出均方根允许偏离「输入 + 增益」多少 dB
-pub const LEVEL_TOLERANCE_DB: f64 = 3.0;
-/// 输入峰值低于这个就提示「很小声」。2026-11-02 实测：MacBook Air 麦克风正常说话峰值约 −28 dBFS，
-/// 人戴耳机听不出自己的声音；取 −20 dBFS 让这种情况被提示（经验值，未标定）
-pub const QUIET_PEAK_DBFS: f64 = -20.0;
-
-/// 判定。`passthrough` 时才比对输入 / 输出电平（降噪会改电平）。
-pub fn judge(input: &Level, output: &Level, passthrough: bool, gain_db: f64) -> Verdict {
-    if input.samples == 0 {
-        return Verdict::NoInput;
-    }
-    if input.all_zero() {
-        return Verdict::InputAllZero;
-    }
-    let quiet = input.peak_dbfs() < QUIET_PEAK_DBFS;
-    if !passthrough {
-        return Verdict::Pass {
-            quiet,
-            diff_db: None,
-        };
-    }
-    let diff = output.rms_dbfs() - input.rms_dbfs() - gain_db;
-    // 输出全零时 diff = −∞，也落在这里
-    if !diff.is_finite() || diff.abs() > LEVEL_TOLERANCE_DB {
-        return Verdict::OutputMismatch { diff_db: diff };
-    }
-    Verdict::Pass {
-        quiet,
-        diff_db: Some(diff),
-    }
-}
-
-impl Verdict {
-    pub fn passed(&self) -> bool {
-        matches!(self, Verdict::Pass { .. })
-    }
-    /// 给人看的一行
-    pub fn describe(&self) -> String {
-        match self {
-            Verdict::NoInput => "不过：没收到麦克风数据（设备没开起来？）".into(),
-            Verdict::InputAllZero => {
-                "不过：输入全零——疑似没有麦克风权限（系统设置 › 隐私与安全性 › 麦克风）或设备静音"
-                    .into()
-            }
-            Verdict::OutputMismatch { diff_db } => format!(
-                "不过：输入有声，但输出电平和输入差 {} dB（允许 ±{LEVEL_TOLERANCE_DB}）——链路里丢了声音",
-                if diff_db.is_finite() {
-                    format!("{diff_db:+.1}")
-                } else {
-                    "−∞".into()
-                }
-            ),
-            Verdict::Pass { quiet, diff_db } => {
-                let mut s = String::from("过（机器部分）：输入有声");
-                if let Some(d) = diff_db {
-                    s.push_str(&format!(" · 输出电平与输入一致（差 {d:+.1} dB）"));
-                }
-                if *quiet {
-                    s.push_str(&format!(
-                        " · ⚠️ 输入很小声（峰值低于 {QUIET_PEAK_DBFS} dBFS），耳机里可能听不出来：加 --gain-db 12 或回放 --record 的文件"
-                    ));
-                }
-                s
-            }
-        }
-    }
 }
 
 #[cfg(test)]
@@ -654,70 +485,6 @@ mod tests {
         assert!(gain_linear(f64::NAN).is_err());
     }
 
-    /// 录音队列满了：不阻塞、丢掉并计数
-    #[test]
-    fn record_queue_full_drops_and_counts() {
-        let (tx, _rx) = rtrb::RingBuffer::new(10);
-        let mut tap = OutputTap::new(1.0, Some(tx));
-        let d = tap.rec_dropped();
-        tap.apply(&mut [0.1; 25]);
-        assert_eq!(d.load(Ordering::Relaxed), 15);
-    }
-
-    /// 输出电平和输入对不上（例如输出全零）→ 判不过
-    #[test]
-    fn judge_cases() {
-        let lvl = |peak: f32, rms: f64| Level {
-            samples: 48_000,
-            peak,
-            rms,
-            ..Level::default()
-        };
-        let speech = lvl(0.04, 0.011); // 峰值约 −28 dBFS、均方根约 −39 dBFS（2026-11-02 实测量级）
-        let zero = lvl(0.0, 0.0);
-        assert_eq!(
-            judge(&Level::default(), &speech, true, 0.0),
-            Verdict::NoInput
-        );
-        assert_eq!(judge(&zero, &zero, true, 0.0), Verdict::InputAllZero);
-        assert!(matches!(
-            judge(&speech, &zero, true, 0.0),
-            Verdict::OutputMismatch { diff_db } if diff_db == f64::NEG_INFINITY
-        ));
-        // 输出低 6 dB：超出 ±3 dB
-        assert!(matches!(
-            judge(&speech, &lvl(0.02, 0.0055), true, 0.0),
-            Verdict::OutputMismatch { .. }
-        ));
-        // 小声但通：过，带「很小声」提示
-        assert!(matches!(
-            judge(&speech, &speech, true, 0.0),
-            Verdict::Pass { quiet: true, .. }
-        ));
-        // 降噪模式不比电平
-        assert_eq!(
-            judge(&lvl(0.5, 0.2), &zero, false, 0.0),
-            Verdict::Pass {
-                quiet: false,
-                diff_db: None
-            }
-        );
-        assert!(Verdict::InputAllZero.describe().contains("麦克风权限"));
-    }
-
-    /// 「输入全零」提示不刷屏：一段连续全零只提示一次，有声后再全零才再提示
-    #[test]
-    fn silence_notice_fires_once_per_episode() {
-        let mut n = SilenceNotice::default();
-        let fired: Vec<bool> = [false, true, true, true, false, false, true, true]
-            .into_iter()
-            .map(|s| n.update(s))
-            .collect();
-        assert_eq!(
-            fired,
-            [false, true, false, false, false, false, true, false]
-        );
-    }
 
     /// V5（人判）：真麦克风 → 直通 → 耳机 5 秒，同时录下送进耳机的那一路。会开麦、出声，所以默认不跑。
     ///
