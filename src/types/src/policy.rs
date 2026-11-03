@@ -386,6 +386,87 @@ impl Policy for TablePolicy {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 滞回与平滑的默认值、范围取自描述表；取表的边界外一点造输入，validate 拒收、clamped 夹住。
+    #[test]
+    fn hysteresis_and_transition_follow_desc_table() {
+        use crate::desc::*;
+        let h = Hysteresis::default();
+        assert_eq!(
+            (h.confirm_s, h.min_confidence, h.min_dwell_s),
+            (
+                HYST_CONFIRM_S.default,
+                HYST_MIN_CONFIDENCE.default,
+                HYST_MIN_DWELL_S.default
+            )
+        );
+        h.validate().unwrap();
+        let bad = Hysteresis {
+            min_confidence: HYST_MIN_CONFIDENCE.max + 0.1,
+            ..h
+        };
+        assert_eq!(bad.validate().unwrap_err().desc.id, HYST_MIN_CONFIDENCE.id);
+        assert_eq!(bad.clamped().min_confidence, HYST_MIN_CONFIDENCE.max);
+        let bad = Hysteresis {
+            confirm_s: HYST_CONFIRM_S.min - 1.0,
+            ..h
+        };
+        assert_eq!(bad.validate().unwrap_err().desc.id, HYST_CONFIRM_S.id);
+        let bad = Hysteresis {
+            min_dwell_s: HYST_MIN_DWELL_S.max + 1.0,
+            ..h
+        };
+        assert_eq!(bad.validate().unwrap_err().desc.id, HYST_MIN_DWELL_S.id);
+
+        let t = Transition::default();
+        assert_eq!(
+            (
+                t.glide_s,
+                t.model_crossfade_s,
+                t.max_db_per_s,
+                t.manual_ramp_s
+            ),
+            (
+                TRANS_GLIDE_S.default,
+                TRANS_MODEL_CROSSFADE_S.default,
+                TRANS_MAX_DB_PER_S.default,
+                TRANS_MANUAL_RAMP_S.default
+            )
+        );
+        t.validate().unwrap();
+        for (d, bad) in [
+            (
+                &TRANS_GLIDE_S,
+                Transition {
+                    glide_s: TRANS_GLIDE_S.max + 1.0,
+                    ..t
+                },
+            ),
+            (
+                &TRANS_MODEL_CROSSFADE_S,
+                Transition {
+                    model_crossfade_s: -0.1,
+                    ..t
+                },
+            ),
+            (
+                &TRANS_MAX_DB_PER_S,
+                Transition {
+                    max_db_per_s: TRANS_MAX_DB_PER_S.max + 1.0,
+                    ..t
+                },
+            ),
+            (
+                &TRANS_MANUAL_RAMP_S,
+                Transition {
+                    manual_ramp_s: f32::NAN,
+                    ..t
+                },
+            ),
+        ] {
+            assert_eq!(bad.validate().unwrap_err().desc.id, d.id);
+        }
+    }
     use crate::frame::Confidence;
     use crate::params::{ModelId, ParamField};
     use crate::scene::SceneName;

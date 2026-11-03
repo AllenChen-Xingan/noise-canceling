@@ -189,74 +189,386 @@ const fn p(
 // ───────────── 1–99：ParamSet 的连续字段，及与之同义、多处共用的参数 ─────────────
 
 /// 降噪强度（湿干比，D36 给用户的旋钮）：1 = 全量
-pub const STRENGTH: ParamDesc = p(1, "strength", Unit::Ratio, 0.0, 1.0, 1.0, "降噪强度：输出 = 原声 + strength·(降噪 − 原声)");
+pub const STRENGTH: ParamDesc = p(
+    1,
+    "strength",
+    Unit::Ratio,
+    0.0,
+    1.0,
+    1.0,
+    "降噪强度：输出 = 原声 + strength·(降噪 − 原声)",
+);
 /// 衰减下限：停顿时背景最多压到这里（即「背景保留」）
-pub const FLOOR_DB: ParamDesc = p(2, "floor_db", Unit::Db, -60.0, 0.0, -12.0, "衰减下限：停顿时混回原声的比例");
+pub const FLOOR_DB: ParamDesc = p(
+    2,
+    "floor_db",
+    Unit::Db,
+    -60.0,
+    0.0,
+    -12.0,
+    "衰减下限：停顿时混回原声的比例",
+);
 /// 有声时混回原声的比例（快开）
-pub const OPEN_DB: ParamDesc = p(3, "open_db", Unit::Db, -60.0, 0.0, -6.0, "有声时混回原声的比例");
+pub const OPEN_DB: ParamDesc = p(
+    3,
+    "open_db",
+    Unit::Db,
+    -60.0,
+    0.0,
+    -6.0,
+    "有声时混回原声的比例",
+);
 /// 门控灵敏度：高出底噪多少判为有声
-pub const DETECT_DB: ParamDesc = p(4, "detect_db", Unit::Db, 0.0, 40.0, 9.0, "高出底噪多少判为有声");
+pub const DETECT_DB: ParamDesc = p(
+    4,
+    "detect_db",
+    Unit::Db,
+    0.0,
+    40.0,
+    9.0,
+    "高出底噪多少判为有声",
+);
 /// 人声停后回到下限的时间常数（慢关）
-pub const RELEASE_S: ParamDesc = p(5, "release_s", Unit::Seconds, 0.0, 5.0, 0.3, "人声停后回到下限的时间常数");
+pub const RELEASE_S: ParamDesc = p(
+    5,
+    "release_s",
+    Unit::Seconds,
+    0.0,
+    5.0,
+    0.3,
+    "人声停后回到下限的时间常数",
+);
 /// 人声停后先保持多久
-pub const HANGOVER_S: ParamDesc = p(6, "hangover_s", Unit::Seconds, 0.0, 5.0, 0.15, "人声停后保持放开多久");
+pub const HANGOVER_S: ParamDesc = p(
+    6,
+    "hangover_s",
+    Unit::Seconds,
+    0.0,
+    5.0,
+    0.15,
+    "人声停后保持放开多久",
+);
 /// 快开的时间常数（engine 的能量包络、speaker 的 VAD 包络共用）
-pub const ATTACK_S: ParamDesc = p(7, "attack_s", Unit::Seconds, 0.0, 0.5, 0.002, "快开的时间常数");
+pub const ATTACK_S: ParamDesc = p(
+    7,
+    "attack_s",
+    Unit::Seconds,
+    0.0,
+    0.5,
+    0.002,
+    "快开的时间常数",
+);
 /// VAD 概率滞回：高于它转有声
-pub const VAD_ON: ParamDesc = p(8, "vad_on", Unit::Probability, 0.0, 1.0, 0.5, "VAD 概率高于它转有声");
+pub const VAD_ON: ParamDesc = p(
+    8,
+    "vad_on",
+    Unit::Probability,
+    0.0,
+    1.0,
+    0.5,
+    "VAD 概率高于它转有声",
+);
 /// VAD 概率滞回：低于它转无声（应 ≤ `vad_on`）
-pub const VAD_OFF: ParamDesc = p(9, "vad_off", Unit::Probability, 0.0, 1.0, 0.35, "VAD 概率低于它转无声");
+pub const VAD_OFF: ParamDesc = p(
+    9,
+    "vad_off",
+    Unit::Probability,
+    0.0,
+    1.0,
+    0.35,
+    "VAD 概率低于它转无声",
+);
 
 // ───────────── 100–199：speaker 不对称门控（`vdn_speaker::gate::GateParams`） ─────────────
 
-pub const GATE_ATTACK_S: ParamDesc = p(101, "gate.attack_s", Unit::Seconds, 0.0, 0.5, 0.005, "门控：新人声起始时放开的时间常数");
-pub const GATE_REOPEN_S: ParamDesc = p(102, "gate.reopen_s", Unit::Seconds, 0.0, 2.0, 0.05, "门控：Target / Unknown 判决后回到全开的时间常数");
-pub const GATE_RELEASE_S: ParamDesc = p(103, "gate.release_s", Unit::Seconds, 0.0, 5.0, 0.5, "门控：确认是别人后慢收到下限的时间常数");
-pub const GATE_ONSET_GAP_S: ParamDesc = p(104, "gate.onset_gap_s", Unit::Seconds, 0.0, 5.0, 0.3, "门控：停顿至少这么久后转有声才算新起始");
-pub const GATE_ONSET_JUMP_DB: ParamDesc = p(105, "gate.onset_jump_db", Unit::Db, 0.0, 40.0, 8.0, "门控：短时电平比近 1 s 均值高这么多算起始");
-pub const GATE_CONFIRM_N: ParamDesc = p(106, "gate.confirm_n", Unit::Count, 1.0, 20.0, 2.0, "门控：要几份作数的 Other 判决才慢收");
-pub const GATE_ONSET_LEVEL_MARGIN_DB: ParamDesc = p(107, "gate.onset_level_margin_db", Unit::Db, 0.0, 240.0, 3.0, "门控：起始电平须 ≥ 主人电平 − 它；设很大 = 任何起始都放开");
+pub const GATE_ATTACK_S: ParamDesc = p(
+    101,
+    "gate.attack_s",
+    Unit::Seconds,
+    0.0,
+    0.5,
+    0.005,
+    "门控：新人声起始时放开的时间常数",
+);
+pub const GATE_REOPEN_S: ParamDesc = p(
+    102,
+    "gate.reopen_s",
+    Unit::Seconds,
+    0.0,
+    2.0,
+    0.05,
+    "门控：Target / Unknown 判决后回到全开的时间常数",
+);
+pub const GATE_RELEASE_S: ParamDesc = p(
+    103,
+    "gate.release_s",
+    Unit::Seconds,
+    0.0,
+    5.0,
+    0.5,
+    "门控：确认是别人后慢收到下限的时间常数",
+);
+pub const GATE_ONSET_GAP_S: ParamDesc = p(
+    104,
+    "gate.onset_gap_s",
+    Unit::Seconds,
+    0.0,
+    5.0,
+    0.3,
+    "门控：停顿至少这么久后转有声才算新起始",
+);
+pub const GATE_ONSET_JUMP_DB: ParamDesc = p(
+    105,
+    "gate.onset_jump_db",
+    Unit::Db,
+    0.0,
+    40.0,
+    8.0,
+    "门控：短时电平比近 1 s 均值高这么多算起始",
+);
+pub const GATE_CONFIRM_N: ParamDesc = p(
+    106,
+    "gate.confirm_n",
+    Unit::Count,
+    1.0,
+    20.0,
+    2.0,
+    "门控：要几份作数的 Other 判决才慢收",
+);
+pub const GATE_ONSET_LEVEL_MARGIN_DB: ParamDesc = p(
+    107,
+    "gate.onset_level_margin_db",
+    Unit::Db,
+    0.0,
+    240.0,
+    3.0,
+    "门控：起始电平须 ≥ 主人电平 − 它；设很大 = 任何起始都放开",
+);
 /// 可缺省：出厂关（偏离 003 §2.3，待拍板项，exp005）
 pub const GATE_LEVEL_CLOSE_DB: ParamDesc = ParamDesc {
     optional: true,
-    ..p(108, "gate.level_close_db", Unit::Db, 0.0, 60.0, 10.0, "门控快路径：有人声但比主人电平低这么多，持续一段就先慢收")
+    ..p(
+        108,
+        "gate.level_close_db",
+        Unit::Db,
+        0.0,
+        60.0,
+        10.0,
+        "门控快路径：有人声但比主人电平低这么多，持续一段就先慢收",
+    )
 };
-pub const GATE_LEVEL_CLOSE_HOLD_S: ParamDesc = p(109, "gate.level_close_hold_s", Unit::Seconds, 0.0, 5.0, 0.3, "门控快路径：轻人声要持续多久");
-pub const GATE_ONSET_ARM_S: ParamDesc = p(110, "gate.onset_arm_s", Unit::Seconds, 0.0, 2.0, 0.1, "门控：停顿后转有声起，起始判据保持有效的时长");
-pub const GATE_ONSET_REFRACTORY_S: ParamDesc = p(111, "gate.onset_refractory_s", Unit::Seconds, 0.0, 5.0, 0.3, "门控：电平跳起型起始的不应期");
+pub const GATE_LEVEL_CLOSE_HOLD_S: ParamDesc = p(
+    109,
+    "gate.level_close_hold_s",
+    Unit::Seconds,
+    0.0,
+    5.0,
+    0.3,
+    "门控快路径：轻人声要持续多久",
+);
+pub const GATE_ONSET_ARM_S: ParamDesc = p(
+    110,
+    "gate.onset_arm_s",
+    Unit::Seconds,
+    0.0,
+    2.0,
+    0.1,
+    "门控：停顿后转有声起，起始判据保持有效的时长",
+);
+pub const GATE_ONSET_REFRACTORY_S: ParamDesc = p(
+    111,
+    "gate.onset_refractory_s",
+    Unit::Seconds,
+    0.0,
+    5.0,
+    0.3,
+    "门控：电平跳起型起始的不应期",
+);
 
 // ───────────── 200–299：修音链（`vdn_polish::PolishParams` · `PolishChain`） ─────────────
 
-pub const POLISH_SMOOTH: ParamDesc = p(201, "polish.smooth", Unit::Ratio, 0.0, 1.0, 0.6, "频谱平滑强度（治金属声 / 音乐噪声）");
+pub const POLISH_SMOOTH: ParamDesc = p(
+    201,
+    "polish.smooth",
+    Unit::Ratio,
+    0.0,
+    1.0,
+    0.6,
+    "频谱平滑强度（治金属声 / 音乐噪声）",
+);
 /// 修音链频谱增益下限；与 [`FLOOR_DB`]（门控衰减下限）不是一回事。`min` = 关
-pub const POLISH_FLOOR_DB: ParamDesc = p(202, "polish.floor_db", Unit::Db, -100.0, 0.0, -24.0, "频谱增益下限；-100 = 不设下限");
-pub const POLISH_COMFORT_DB: ParamDesc = p(203, "polish.comfort_db", Unit::Db, -100.0, 0.0, -10.0, "舒适噪声电平（相对稳态底噪）；-100 = 关");
-pub const POLISH_DEMUFFLE_MAX_DB: ParamDesc = p(204, "polish.demuffle_max_db", Unit::Db, 0.0, 12.0, 4.0, "去发闷的最大补偿；0 = 关");
-pub const POLISH_AGC: ParamDesc = p(205, "polish.agc", Unit::Ratio, 0.0, 1.0, 1.0, "AGC 开关（≥ 0.5 视为开，f32 便于插值）");
-pub const POLISH_AGC_TARGET_DBFS: ParamDesc = p(206, "polish.agc_target_dbfs", Unit::Dbfs, -60.0, 0.0, -26.0, "AGC 目标语音电平");
-pub const POLISH_AGC_RANGE_DB: ParamDesc = p(207, "polish.agc_range_db", Unit::Db, 0.0, 30.0, 10.0, "AGC 最大增益 / 最大衰减（对称）");
-pub const POLISH_RAMP_S: ParamDesc = p(208, "polish.ramp_s", Unit::Seconds, 0.0, 30.0, 1.0, "修音链换参数的线性过渡时长");
+pub const POLISH_FLOOR_DB: ParamDesc = p(
+    202,
+    "polish.floor_db",
+    Unit::Db,
+    -100.0,
+    0.0,
+    -24.0,
+    "频谱增益下限；-100 = 不设下限",
+);
+pub const POLISH_COMFORT_DB: ParamDesc = p(
+    203,
+    "polish.comfort_db",
+    Unit::Db,
+    -100.0,
+    0.0,
+    -10.0,
+    "舒适噪声电平（相对稳态底噪）；-100 = 关",
+);
+pub const POLISH_DEMUFFLE_MAX_DB: ParamDesc = p(
+    204,
+    "polish.demuffle_max_db",
+    Unit::Db,
+    0.0,
+    12.0,
+    4.0,
+    "去发闷的最大补偿；0 = 关",
+);
+pub const POLISH_AGC: ParamDesc = p(
+    205,
+    "polish.agc",
+    Unit::Ratio,
+    0.0,
+    1.0,
+    1.0,
+    "AGC 开关（≥ 0.5 视为开，f32 便于插值）",
+);
+pub const POLISH_AGC_TARGET_DBFS: ParamDesc = p(
+    206,
+    "polish.agc_target_dbfs",
+    Unit::Dbfs,
+    -60.0,
+    0.0,
+    -26.0,
+    "AGC 目标语音电平",
+);
+pub const POLISH_AGC_RANGE_DB: ParamDesc = p(
+    207,
+    "polish.agc_range_db",
+    Unit::Db,
+    0.0,
+    30.0,
+    10.0,
+    "AGC 最大增益 / 最大衰减（对称）",
+);
+pub const POLISH_RAMP_S: ParamDesc = p(
+    208,
+    "polish.ramp_s",
+    Unit::Seconds,
+    0.0,
+    30.0,
+    1.0,
+    "修音链换参数的线性过渡时长",
+);
 
 // ───────────── 300–399：场景判断（`Hysteresis` · `vdn_scene::SceneAnalyzer`） ─────────────
 // 默认值 = exp006 held-out 标定结果；`vdn_scene::weights` 里训练脚本写出的同一组数由测试比对
 
-pub const HYST_CONFIRM_S: ParamDesc = p(301, "hysteresis.confirm_s", Unit::Seconds, 0.0, 30.0, 1.0, "新场景要连续被判中这么久才换");
-pub const HYST_MIN_CONFIDENCE: ParamDesc = p(302, "hysteresis.min_confidence", Unit::Probability, 0.0, 1.0, 0.4, "低于这个置信度的判断不计入确认");
-pub const HYST_MIN_DWELL_S: ParamDesc = p(303, "hysteresis.min_dwell_s", Unit::Seconds, 0.0, 60.0, 3.0, "换过一次后至少停留这么久");
-pub const SCENE_EMA_S: ParamDesc = p(304, "scene.ema_s", Unit::Seconds, 0.0, 10.0, 0.5, "场景后验的平滑时间常数");
+pub const HYST_CONFIRM_S: ParamDesc = p(
+    301,
+    "hysteresis.confirm_s",
+    Unit::Seconds,
+    0.0,
+    30.0,
+    1.0,
+    "新场景要连续被判中这么久才换",
+);
+pub const HYST_MIN_CONFIDENCE: ParamDesc = p(
+    302,
+    "hysteresis.min_confidence",
+    Unit::Probability,
+    0.0,
+    1.0,
+    0.4,
+    "低于这个置信度的判断不计入确认",
+);
+pub const HYST_MIN_DWELL_S: ParamDesc = p(
+    303,
+    "hysteresis.min_dwell_s",
+    Unit::Seconds,
+    0.0,
+    60.0,
+    3.0,
+    "换过一次后至少停留这么久",
+);
+pub const SCENE_EMA_S: ParamDesc = p(
+    304,
+    "scene.ema_s",
+    Unit::Seconds,
+    0.0,
+    10.0,
+    0.5,
+    "场景后验的平滑时间常数",
+);
 
 // ───────────── 400–499：平滑过渡（`Transition`） ─────────────
 
-pub const TRANS_GLIDE_S: ParamDesc = p(401, "transition.glide_s", Unit::Seconds, 0.0, 10.0, 1.0, "连续参数的一阶平滑时间常数");
-pub const TRANS_MODEL_CROSSFADE_S: ParamDesc = p(402, "transition.model_crossfade_s", Unit::Seconds, 0.0, 1.0, 0.05, "换模型的交叉淡化时长");
-pub const TRANS_MAX_DB_PER_S: ParamDesc = p(403, "transition.max_db_per_s", Unit::DbPerSecond, 0.0, 120.0, 1.0, "dB 类字段每秒最多变多少");
-pub const TRANS_MANUAL_RAMP_S: ParamDesc = p(404, "transition.manual_ramp_s", Unit::Seconds, 0.0, 0.5, 0.03, "用户手动改动的最短斜坡");
+pub const TRANS_GLIDE_S: ParamDesc = p(
+    401,
+    "transition.glide_s",
+    Unit::Seconds,
+    0.0,
+    10.0,
+    1.0,
+    "连续参数的一阶平滑时间常数",
+);
+pub const TRANS_MODEL_CROSSFADE_S: ParamDesc = p(
+    402,
+    "transition.model_crossfade_s",
+    Unit::Seconds,
+    0.0,
+    1.0,
+    0.05,
+    "换模型的交叉淡化时长",
+);
+pub const TRANS_MAX_DB_PER_S: ParamDesc = p(
+    403,
+    "transition.max_db_per_s",
+    Unit::DbPerSecond,
+    0.0,
+    120.0,
+    1.0,
+    "dB 类字段每秒最多变多少",
+);
+pub const TRANS_MANUAL_RAMP_S: ParamDesc = p(
+    404,
+    "transition.manual_ramp_s",
+    Unit::Seconds,
+    0.0,
+    0.5,
+    0.03,
+    "用户手动改动的最短斜坡",
+);
 
 // ───────────── 500–599：engine 保命（`vdn_engine::SafetyConfig`，只引用，结构不动） ─────────────
 
-pub const ENGINE_MAX_ABS: ParamDesc = p(501, "engine.max_abs", Unit::Amplitude, 0.0, 100.0, 4.0, "输出幅度超过它当状态异常");
-pub const ENGINE_RECOVER_HOLD_S: ParamDesc = p(502, "engine.recover_hold_s", Unit::Seconds, 0.0, 5.0, 0.1, "状态类故障复位后继续送原声多久");
-pub const ENGINE_CROSSFADE_S: ParamDesc = p(503, "engine.crossfade_s", Unit::Seconds, 0.0, 1.0, 0.005, "切回模型的交叉淡化 / 切到原声的接缝衰减时长");
+pub const ENGINE_MAX_ABS: ParamDesc = p(
+    501,
+    "engine.max_abs",
+    Unit::Amplitude,
+    0.0,
+    100.0,
+    4.0,
+    "输出幅度超过它当状态异常",
+);
+pub const ENGINE_RECOVER_HOLD_S: ParamDesc = p(
+    502,
+    "engine.recover_hold_s",
+    Unit::Seconds,
+    0.0,
+    5.0,
+    0.1,
+    "状态类故障复位后继续送原声多久",
+);
+pub const ENGINE_CROSSFADE_S: ParamDesc = p(
+    503,
+    "engine.crossfade_s",
+    Unit::Seconds,
+    0.0,
+    1.0,
+    0.005,
+    "切回模型的交叉淡化 / 切到原声的接缝衰减时长",
+);
 
 /// 全部描述（导出、查重、按编号或键名查找都走它）。加一条 = 写常量 + 加进这里（`all_listed` 测试查漏）。
 pub const ALL: [&ParamDesc; 39] = [
@@ -316,16 +628,30 @@ mod tests {
     #[test]
     fn every_entry_is_well_formed() {
         for d in ALL {
-            assert!(d.min.is_finite() && d.max.is_finite() && d.default.is_finite(), "{}", d.key);
-            assert!(d.min <= d.default && d.default <= d.max, "{} 默认值不在范围内", d.key);
+            assert!(
+                d.min.is_finite() && d.max.is_finite() && d.default.is_finite(),
+                "{}",
+                d.key
+            );
+            assert!(
+                d.min <= d.default && d.default <= d.max,
+                "{} 默认值不在范围内",
+                d.key
+            );
             assert!(!d.key.is_empty() && !d.doc.is_empty(), "{}", d.id);
             assert!(
-                d.key.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '.'),
+                d.key
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '.'),
                 "{} 键名只许小写字母、数字、下划线、点",
                 d.key
             );
             if d.unit == Unit::Count {
-                assert!(d.min.fract() == 0.0 && d.max.fract() == 0.0 && d.default.fract() == 0.0, "{}", d.key);
+                assert!(
+                    d.min.fract() == 0.0 && d.max.fract() == 0.0 && d.default.fract() == 0.0,
+                    "{}",
+                    d.key
+                );
             }
         }
     }

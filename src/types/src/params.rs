@@ -318,8 +318,19 @@ mod tests {
             for bad in [d.min - 0.5, d.max + 0.5] {
                 let mut p = ParamSet::DEFAULT;
                 p.set(f, bad);
-                assert_eq!(p.validate().unwrap_err(), ParamError { field: f, value: bad });
-                let b = ParamBlock { seq: 1, model_hash: m, params: p, ..Default::default() };
+                assert_eq!(
+                    p.validate().unwrap_err(),
+                    ParamError {
+                        field: f,
+                        value: bad
+                    }
+                );
+                let b = ParamBlock {
+                    seq: 1,
+                    model_hash: m,
+                    params: p,
+                    ..Default::default()
+                };
                 assert_eq!(b.accept_rt(0, m).unwrap().get(f), d.clamp(bad));
             }
         }
