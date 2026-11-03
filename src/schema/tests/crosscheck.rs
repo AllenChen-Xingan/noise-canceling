@@ -145,42 +145,42 @@ fn shm_layout_change_without_version_bump_is_red() {
     let fp2 = shm::fingerprint(&moved);
     assert_ne!(fp, fp2);
     let v = vdn_shm::layout::VERSION;
-    let reg: shm::Versions = [(v, fp.clone())].into();
-    let e = shm::guard(&reg, v, &fp2, true).unwrap_err();
+    let hist = [(v, fp.as_str())];
+    // 布局变了、版本没升
+    let e = shm::guard(&hist, v, &fp2).unwrap_err();
     assert!(e.contains("必须升版本"), "{e}");
-    // 升了版本就放行（新版本由导出追加登记）
-    assert!(shm::guard(&reg, v + 1, &fp2, false).is_ok());
-    // 检查模式下新版本没登记也算红
-    assert!(shm::guard(&reg, v + 1, &fp2, true).is_err());
+    // 升了版本、但没在 HISTORY 登记：也红（导出工具不会替你登记）
+    let e = shm::guard(&hist, v + 1, &fp2).unwrap_err();
+    assert!(e.contains("还没登记"), "{e}");
+    // 升了版本且登记了：放行
+    assert!(shm::guard(&[(v, fp.as_str()), (v + 1, fp2.as_str())], v + 1, &fp2).is_ok());
+    // 版本往回降、历史乱序、空历史：红
+    assert!(shm::guard(&hist, v - 1, &fp).is_err());
+    assert!(shm::guard(&[(v + 1, "a"), (v, fp.as_str())], v, &fp).is_err());
+    assert!(shm::guard(&[], v, &fp).is_err());
 
-    // 端到端：登记表里当前版本的指纹与当前布局不同 → write 拒绝、check 报错、布局文件不被改
+    // 端到端：历史与当前布局不符 → write 一个文件都不写、check 报错
     let d = temp_root("bump");
-    let layout_before = std::fs::read_to_string(d.join(DIR).join(shm::LAYOUT_FILE)).unwrap();
-    let bogus: shm::Versions = [(v, "fnv1a64:0000000000000000".to_string())].into();
-    std::fs::write(
-        d.join(DIR).join(shm::VERSIONS_FILE),
-        shm::versions_text(&bogus),
-    )
-    .unwrap();
+    let bogus = [(v, "fnv1a64:0000000000000000")];
     std::fs::remove_file(d.join(DIR).join(shm::LAYOUT_FILE)).unwrap();
-    let e = write(&d).unwrap_err();
+    let e = vdn_schema::write_with(&d, &bogus).unwrap_err();
     assert!(e.contains("必须升版本"), "{e}");
     assert!(
         !d.join(DIR).join(shm::LAYOUT_FILE).exists(),
         "守卫没过还写了文件"
     );
-    std::fs::write(d.join(DIR).join(shm::LAYOUT_FILE), layout_before).unwrap();
-    assert!(check(&d).iter().any(|m| m.contains("必须升版本")));
+    write(&d).unwrap();
+    assert!(vdn_schema::check_with(&d, &bogus)
+        .iter()
+        .any(|m| m.contains("必须升版本")));
 }
 
-/// 版本登记表与仓里布局：当前版本已登记、指纹相同。
+/// 当前版本正是 HISTORY 的最后一行、指纹相同。
 #[test]
 fn shm_version_registered() {
-    let t = std::fs::read_to_string(root().join(DIR).join(shm::VERSIONS_FILE)).unwrap();
-    let v = shm::parse_versions(&t).unwrap();
     assert_eq!(
-        v.get(&vdn_shm::layout::VERSION),
-        Some(&shm::fingerprint(&shm::layout_body()))
+        shm::HISTORY.last().copied(),
+        Some((vdn_shm::layout::VERSION, shm::fingerprint(&shm::layout_body()).as_str()))
     );
 }
 
