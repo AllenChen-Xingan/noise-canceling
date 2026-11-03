@@ -20,7 +20,7 @@ pub mod model;
 pub mod offline;
 pub mod pipeline;
 
-pub use engine::{Engine, EngineStats, SafetyConfig};
+pub use engine::{Engine, EngineStats, SafetyConfig, sanitize_input};
 pub use fault::{FaultInjector, FaultKind};
 pub use pipeline::{Mode, Pipeline, PipelineError, PipelineStats};
 pub use vdn_types::{FrameCtx, Model, ModelError, Stage, StageChain, Status, stages};

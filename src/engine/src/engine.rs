@@ -7,12 +7,34 @@
 //! 2. **衰减下限**：`out = (1 - m)·降噪 + m·原声`，停顿时 `m = 10^(floor_db/20)`，背景最多降 `-floor_db` dB
 //! 3. **快开慢关**：有声时 `m` 立刻升到 `10^(open_db/20)`，人声停了先保持 `hangover`，再按 `release` 慢慢回到下限
 //!
+//! 输入里的 NaN / ±Inf 在入口按 0 处理并计数（[`sanitize_input`]，issue #53），不算模型故障。
+//!
 //! `process` 不分配、不加锁、不做 I/O（`tests/no_alloc.rs` 证明）。
 
 use std::time::{Duration, Instant};
 
 use vdn_dsp::{DelayLine, OpenCloseEnvelope, OpenCloseParams, db_to_lin};
 use vdn_types::{Basis, BypassReason, LatencyItem, LatencyLedger, Model, ParamSet, Status};
+
+/// 输入里的非有限样本（NaN / ±Inf）就地换成 0，返回换了几个（issue #53）。
+///
+/// 唯一正本：`Engine`（16 kHz 入口）与 `Pipeline`（48 kHz 入口）都只调它，不各写一份。
+/// 换成 0 而不是送原声：坏的就是原声本身；0 让模型、原声延迟线、接缝偏移都只见有限值，坏样本过去后自然恢复。
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
+pub fn sanitize_input(buf: &mut [f32]) -> u64 {
+    let mut n = 0;
+    for v in buf.iter_mut() {
+        if !v.is_finite() {
+            *v = 0.0;
+            n += 1;
+        }
+    }
+    n
+}
 
 /// 三件保命的开关与参数。默认值是 P1 的初值，待 AB 听测与吃字率标定（006 decision 第 3 件）。
 #[derive(Clone, Debug)]
@@ -98,6 +120,8 @@ pub struct EngineStats {
     pub bad_len: u64,
     /// 判为有声（含 hangover）的 hop 数
     pub voiced_hops: u64,
+    /// 输入里非有限（NaN / Inf）、按 0 处理的样本数（[`sanitize_input`]）
+    pub bad_input: u64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -124,6 +148,8 @@ pub struct Engine<M: Model> {
     cfg: SafetyConfig,
     hop: usize,
     delay: DelayLine,
+    /// 本 hop 输入的副本，非有限样本已清 0（模型与原声延迟线都只读它）
+    inp: Vec<f32>,
     dry: Vec<f32>,
     wet: Vec<f32>,
     mix: Vec<f32>,
@@ -171,6 +197,7 @@ impl<M: Model> Engine<M> {
         let hold_hops = (cfg.recover_hold_s * sr / hop as f32).ceil() as u32;
         Self {
             delay: DelayLine::new(model.latency_samples()),
+            inp: vec![0.0; hop],
             dry: vec![0.0; hop],
             wet: vec![0.0; hop],
             mix: vec![floor_lin; hop],
@@ -302,15 +329,18 @@ impl<M: Model> Engine<M> {
             for o in output.iter_mut() {
                 *o = src.next().copied().unwrap_or(0.0);
             }
+            self.stats.bad_input += sanitize_input(output);
             return Status::Bypassed(BypassReason::BadLen);
         }
-        self.delay.process(input, &mut self.dry);
+        self.inp.copy_from_slice(input);
+        self.stats.bad_input += sanitize_input(&mut self.inp);
+        self.delay.process(&self.inp, &mut self.dry);
 
         let t0 = Instant::now();
         let res = {
             // 推理一律在 FTZ 关着时跑（R9）：调用方线程自己开着 FTZ 也不跟着开（DeepFilterNet #713）
             let _no_ftz = vdn_dsp::FtzGuard::off();
-            self.model.process(input, &mut self.wet)
+            self.model.process(&self.inp, &mut self.wet)
         };
         self.last_model_time = t0.elapsed();
 
@@ -386,8 +416,12 @@ impl<M: Model> Engine<M> {
                 }
             }
         }
-        self.last_out = output.last().copied().unwrap_or(0.0);
+        // 接缝只收有限值：dry 已有限；output 只在保命全关、模型出坏值时非有限，那时按「无接缝」记
         self.last_dry = self.dry.last().copied().unwrap_or(0.0);
+        self.last_out = match output.last() {
+            Some(&v) if v.is_finite() => v,
+            _ => self.last_dry,
+        };
         if status == Status::Ok && self.bypass > 0.0 {
             Status::Crossfading
         } else {

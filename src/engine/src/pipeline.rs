@@ -52,7 +52,7 @@ use vdn_types::{
     StageChain, Status,
 };
 
-use crate::engine::Engine;
+use crate::engine::{Engine, sanitize_input};
 
 /// 输出哪一路。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -431,12 +431,10 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
     /// `x.len() == y.len() <= hop_io - acc_len`。
     fn step(&mut self, x: &[f32], y: &mut [f32]) {
         let k = x.len();
-        if let Some(slot) = self.acc.get_mut(self.acc_len..self.acc_len + k) {
+        let start = self.acc_len;
+        if let Some(slot) = self.acc.get_mut(start..start + k) {
             slot.copy_from_slice(x);
-            for v in slot.iter_mut().filter(|v| !v.is_finite()) {
-                *v = 0.0;
-                self.stats.bad_input += 1;
-            }
+            self.stats.bad_input += sanitize_input(slot);
         }
         self.acc_len += k;
         self.clock += k as u64;
@@ -450,13 +448,11 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
         let target = self.fade_target();
         let full = self.hop_io;
         let dry = self.dry.get_mut(..k).unwrap_or(&mut []);
-        self.dry_line.process(x, dry);
+        // 原声路读入口已清 0 的那段（run_hop 只读 acc，不改它）
+        let clean = self.acc.get(start..start + k).unwrap_or(&[]);
+        self.dry_line.process(clean, dry);
         let flags = self.out_bypass.get(..k).unwrap_or(&[]);
-        for ((o, d), &bypass) in y.iter_mut().zip(dry.iter_mut()).zip(flags) {
-            // 输入的 NaN / Inf 经延迟线到这里，按 0 处理（已在入口计数）
-            if !d.is_finite() {
-                *d = 0.0;
-            }
+        for ((o, d), &bypass) in y.iter_mut().zip(dry.iter()).zip(flags) {
             let d = *d;
             // 1. 模型级送原声：按 Engine 回报的状态，用 48 kHz 原声切换（规约 §3.3 规则 2、R11）
             if !o.is_finite() {
