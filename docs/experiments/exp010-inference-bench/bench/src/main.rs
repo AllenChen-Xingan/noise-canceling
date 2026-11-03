@@ -536,6 +536,40 @@ fn unix_now() -> f64 {
         .map_or(0.0, |d| d.as_secs_f64())
 }
 
+/// 节奏等待：第 n 帧的计划时刻 = w0 + n·pace；还没到就睡到那一刻，已过就不睡。返回计划时刻。
+pub(crate) fn wait_due(w0: Instant, n: usize, pace_ms: f64) -> Instant {
+    let due = w0 + std::time::Duration::from_secs_f64(n as f64 * pace_ms * 1e-3);
+    if let Some(d) = due.checked_duration_since(Instant::now()) {
+        std::thread::sleep(d);
+    }
+    due
+}
+
+/// 系统睡眠检测（exp012 20261102-v2 踩坑：拔电后空闲睡眠 42 分钟，单调时钟停走，进程看着像卡在 sleep 里）。
+/// macOS 的单调时钟（Instant）在系统睡眠时不走，墙钟走；两者之差 > 1 秒就判这一轮作废。
+pub(crate) struct SleepGuard {
+    unix0: f64,
+    mono0: Instant,
+}
+impl SleepGuard {
+    pub(crate) fn start() -> Self {
+        Self {
+            unix0: unix_now(),
+            mono0: Instant::now(),
+        }
+    }
+    pub(crate) fn gap_s(&self) -> f64 {
+        (unix_now() - self.unix0) - self.mono0.elapsed().as_secs_f64()
+    }
+    pub(crate) fn check(&self) -> Result<(), Err> {
+        let g = self.gap_s();
+        if g > 1.0 {
+            return Err(format!("计时期间系统睡眠了约 {g:.1} 秒（墙钟比单调时钟多走），本轮作废").into());
+        }
+        Ok(())
+    }
+}
+
 fn cpu_seconds() -> f64 {
     let mut u: libc::rusage = unsafe { std::mem::zeroed() };
     unsafe { libc::getrusage(libc::RUSAGE_SELF, &mut u) };
@@ -665,15 +699,11 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let pa0 = PROC_ALLOCS.load(Relaxed);
     let c0 = cpu_seconds();
     let win_start = unix_now();
+    let slept = SleepGuard::start();
     let w0 = Instant::now();
     for (n, f) in inputs[warm + 1..].iter().enumerate() {
-        let due = w0 + std::time::Duration::from_secs_f64(n as f64 * pace * 1e-3);
-        if pace > 0.0 {
-            // 实时节奏：第 n 帧在 w0 + n·pace 时刻开始（睡眠不计入帧耗时）
-            if let Some(d) = due.checked_duration_since(Instant::now()) {
-                std::thread::sleep(d);
-            }
-        }
+        // 实时节奏：第 n 帧在 w0 + n·pace 时刻开始（睡眠不计入帧耗时）；连续跑时计划时刻 = w0，不睡
+        let due = wait_due(w0, n, pace);
         x.copy_from_slice(f);
         let t = Instant::now();
         m.infer(&mut x)?;
@@ -754,7 +784,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     if nan > 0 {
         return Err(format!("{nan} 帧输出含非有限值，本轮性能结果无效").into());
     }
-    Ok(())
+    slept.check()
 }
 
 /// 逐帧对拍：参考 `a`（ORT）对 `b`，同一份输入，比整帧输出。
@@ -1087,6 +1117,34 @@ mod tests {
         }
         let t = unix_now();
         assert!(t > 1.7e9 && t < 1e10, "unix_now 应是 Unix 秒：{t}");
+    }
+
+    /// 节奏等待：按 2 ms 节奏跑 20 帧，总时长在 [38 ms, 20 × 2 × 1.2 + 10 ms] 之内（大总管要的回归测试）
+    #[test]
+    fn wait_due_keeps_pace() {
+        let w0 = Instant::now();
+        for n in 0..20 {
+            wait_due(w0, n, 2.0);
+        }
+        let ms = w0.elapsed().as_secs_f64() * 1e3;
+        assert!((38.0..=58.0).contains(&ms), "20 帧 × 2 ms 用了 {ms:.1} ms");
+        // 连续跑（pace 0）不睡
+        let t = Instant::now();
+        for n in 0..1000 {
+            wait_due(t, n, 0.0);
+        }
+        assert!(t.elapsed().as_millis() < 5);
+    }
+
+    #[test]
+    fn sleep_guard_flags_wall_clock_jump() {
+        let g = SleepGuard::start();
+        assert!(g.check().is_ok() && g.gap_s().abs() < 0.5);
+        let jumped = SleepGuard {
+            unix0: g.unix0 - 5.0, // 假装墙钟多走了 5 秒
+            mono0: g.mono0,
+        };
+        assert!(jumped.check().is_err());
     }
 
     #[test]

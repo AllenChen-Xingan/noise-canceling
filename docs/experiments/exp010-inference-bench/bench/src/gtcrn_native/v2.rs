@@ -537,6 +537,30 @@ mod tests {
         }
     }
 
+    /// v2-fast 的非线性在极端输入上不出非有限值、不出次正规数（次正规数在 ARM 上不慢，但会让下一层带着它算；
+    /// 这条查 20261102-v2 那帧 296 ms 是否与它有关——结论是那帧压在系统睡眠上，这里作防线）
+    #[test]
+    fn fast_nonlin_no_subnormal_or_nonfinite() {
+        let xs = [-1e30f32, -1e4, -100.0, -88.0, -87.0, -20.0, -1e-30, 0.0, 1e-30, 1e-7, 20.0, 87.0, 88.0, 100.0, 1e4, 1e30];
+        for &x in &xs {
+            let out = unsafe {
+                let v = vdupq_n_f32(x);
+                let mut a = [0.0f32; 3];
+                for (k, r) in [vexp(v), sig4::<true>(v), tanh4::<true>(v)].into_iter().enumerate() {
+                    let mut b = [0.0f32; 4];
+                    vst1q_f32(b.as_mut_ptr(), r);
+                    a[k] = b[0];
+                }
+                a
+            };
+            for (k, y) in out.iter().enumerate() {
+                assert!(y.is_finite(), "x = {x}，第 {k} 个函数得 {y}");
+                assert!(*y == 0.0 || y.is_normal(), "x = {x}，第 {k} 个函数得次正规数 {y:e}");
+            }
+            assert!((0.0..=1.0).contains(&out[1]) && (-1.0..=1.0).contains(&out[2]), "x = {x}：{out:?}");
+        }
+    }
+
     #[test]
     fn vexp_close_to_libm() {
         let mut worst = 0.0f32;

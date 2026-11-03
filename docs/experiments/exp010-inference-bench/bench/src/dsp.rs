@@ -165,13 +165,11 @@ pub fn run(args: &[String], audio16: &[f32]) -> Result<(), crate::Err> {
     const S: usize = 6;
     let mut t = vec![0u32; frames * S];
     let (mut dmax, mut umax) = (0.0f32, 0.0f32);
+    let slept = crate::SleepGuard::start();
     let w0 = std::time::Instant::now();
     for f in 0..total {
-        if pace > 0.0 && f >= warm {
-            let due = w0 + std::time::Duration::from_secs_f64((f - warm) as f64 * pace * 1e-3);
-            if let Some(d) = due.checked_duration_since(std::time::Instant::now()) {
-                std::thread::sleep(d);
-            }
+        if f >= warm {
+            crate::wait_due(w0, f - warm, pace);
         }
         let x = &hi[f * HI..(f + 1) * HI];
         let mut k = [0u64; S + 1];
@@ -220,7 +218,7 @@ pub fn run(args: &[String], audio16: &[f32]) -> Result<(), crate::Err> {
         HI * PT,
         segs.join(",")
     );
-    Ok(())
+    slept.check()
 }
 
 #[cfg(test)]

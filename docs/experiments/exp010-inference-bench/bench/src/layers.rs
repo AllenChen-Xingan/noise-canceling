@@ -123,14 +123,10 @@ pub fn run(args: &[String], inputs_for: impl Fn(usize) -> Result<Vec<Vec<f32>>, 
         let (re, im) = x.split_at_mut(257);
         net.infer_probed(re, im, &mut nop);
     }
+    let slept = crate::SleepGuard::start();
     let w0 = std::time::Instant::now();
     for (k, f) in inputs[warm + 1..].iter().enumerate() {
-        if pace > 0.0 {
-            let due = w0 + std::time::Duration::from_secs_f64(k as f64 * pace * 1e-3);
-            if let Some(d) = due.checked_duration_since(std::time::Instant::now()) {
-                std::thread::sleep(d);
-            }
-        }
+        crate::wait_due(w0, k, pace);
         x.copy_from_slice(f);
         let (re, im) = x.split_at_mut(257);
         p.begin();
@@ -166,5 +162,5 @@ pub fn run(args: &[String], inputs_for: impl Fn(usize) -> Result<Vec<Vec<f32>>, 
         cost_json(&total),
         per_seg.join(",")
     );
-    Ok(())
+    slept.check()
 }
