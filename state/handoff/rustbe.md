@@ -22,3 +22,8 @@
 - blas1：Accelerate 版只快 4.7%，而且每帧 malloc 11 次，不采用；全进程 malloc：ORT 每帧 1557 次（FE-M 1023 次），手写版 0 次
 - **paced1：按实时节奏跑，手写版慢约 7 倍**（p50 0.61 ms，最大 6.95 ms，6 帧超过 3 ms，占 0.032 个核），applebe 在 BNNS 上看到同一现象。已报大总管和 applebe
 - 已写好、待名额（排在 applebe 之后）：`tools/run_rt_probe.sh`，测四种线程设置，并测 native-fast（内联 exp / tanh）。改了代码还没编译：native-fast、--workgroup
+- blas1 → malloc1：Accelerate 那 11 次 malloc 出在 `cblas_sgemm → APL_sgemm_QR → posix_memalign`（每调用一次申请一块工作区）；`vDSP_mmul` 同样会分配。不采用
+- rt1：实时节奏下，rt 线程策略最好（p50 0.21 ms，0.020 核）；加入工作组反而变差；native-fast 过 BE-PARITY，连续跑快 6.7%。每种设置只跑了一次 60 秒，波动比设置之间的差还大，需要重复测
+- codex 换谱系评审 5 轮（`docs/reviews/010_exp010-rust-codex.md`）：P1×7、P2×20 全部属实、全部已改；第 4、5 轮连续两轮无 P0/P1，已达停止线
+- ⚠️ 第 1 轮评审之后的 bench 改动（对拍不过时返回非零退出码、新字段、入口校验）只跑过 `cargo check`，没有重编、没有重跑；盘上的二进制是 18:46 编的。新字段要等下次跑基准才会出现在数据里
+- **已收尾**。交付：`docs/experiments/exp010-inference-bench/{README.md,results/,bench/,tools/}`、`docs/reviews/010_exp010-rust-codex.md`
