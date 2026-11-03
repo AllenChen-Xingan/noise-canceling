@@ -1,0 +1,5 @@
+# 构建产物与转出的模型都可重建，不进库（CLAUDE.md 第五节第 2 条）
+/build/
+*.mlpackage/
+*.mlmodelc/
+*.o

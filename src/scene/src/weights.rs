@@ -2,7 +2,7 @@
 //! 训练数据：exp006 build `20261030214530-44df` 的 train 组；评测见该 build 的 `eval_report.json`。
 #![allow(clippy::excessive_precision, clippy::approx_constant)]
 use crate::features::NF;
-use crate::mirror::Hysteresis;
+use vdn_types::Hysteresis;
 
 pub const NC: usize = 7;
 pub const NH: usize = 24;

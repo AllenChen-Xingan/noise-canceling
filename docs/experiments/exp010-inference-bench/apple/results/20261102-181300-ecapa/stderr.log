@@ -1,0 +1,11 @@
+出错：加载失败：NSError { code: 0, localizedDescription: "The model is not found at URL: file:///Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-181300-ecapa/ecapa_fp32.mlmodelc", domain: "com.apple.CoreML", userInfo: {"NSLocalizedDescription": <__NSCFString: 0x1031f1da0>}, .. }
+[bnns 8] path '/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-181300-ecapa/ecapa_fp32.mlmodelc' does not exist 
+出错：BNNSGraphCompileFromFile 失败（看上面的 [bnns] 日志）
+出错：加载失败：NSError { code: 0, localizedDescription: "The model is not found at URL: file:///Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-181300-ecapa/ecapa_fp32.mlmodelc", domain: "com.apple.CoreML", userInfo: {"NSLocalizedDescription": <__NSCFString: 0x1006bdda0>}, .. }
+[bnns 8] path '/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-181300-ecapa/ecapa_fp32.mlmodelc' does not exist 
+出错：BNNSGraphCompileFromFile 失败（看上面的 [bnns] 日志）
+出错：加载失败：NSError { code: 0, localizedDescription: "The model is not found at URL: file:///Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-181300-ecapa/ecapa_fp32.mlmodelc", domain: "com.apple.CoreML", userInfo: {"NSLocalizedDescription": <__NSCFString: 0x100f19da0>}, .. }
+[bnns 8] path '/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-181300-ecapa/ecapa_fp32.mlmodelc' does not exist 
+出错：BNNSGraphCompileFromFile 失败（看上面的 [bnns] 日志）
+[bnns 8] path '/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-181300-ecapa/ecapa_fp32.mlmodelc' does not exist 
+出错：BNNSGraphCompileFromFile 失败（看上面的 [bnns] 日志）

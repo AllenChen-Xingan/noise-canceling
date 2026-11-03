@@ -23,8 +23,7 @@ use vdn_speaker::envelope::{EnergyEnvelopeStage, EnvelopeParams, FloorStage, Vad
 use vdn_speaker::fbank::FbankConfig;
 use vdn_speaker::gate::{AsymGate, GateParams};
 use vdn_speaker::judge::{Judge, JudgeParams};
-use vdn_speaker::types::{Confidence, SampleClock};
-use vdn_speaker::{FrameCtx, SpeakerClass, SpeakerVerdict, Stage};
+use vdn_types::{Confidence, FrameCtx, SampleClock, SpeakerClass, SpeakerVerdict, Stage};
 
 type R<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -133,6 +132,25 @@ fn verdict_from_json(e: &serde_json::Value) -> SpeakerVerdict {
     }
 }
 
+/// 判断回路参数：命令行覆盖默认值，再按描述表（`vdn_types::desc` 的 `judge.*`）校验，越界报错。
+fn judge_params(args: &[String]) -> R<JudgeParams> {
+    let mut jp = JudgeParams::default();
+    if let Some(v) = arg(args, "--win") {
+        jp.window_s = v.parse()?;
+    }
+    if let Some(v) = arg(args, "--judge-hop") {
+        jp.hop_s = v.parse()?;
+    }
+    if let Some(v) = arg(args, "--owner-hi") {
+        jp.owner_hi = v.parse()?;
+    }
+    if let Some(v) = arg(args, "--others-lo") {
+        jp.others_lo = v.parse()?;
+    }
+    jp.validate()?;
+    Ok(jp)
+}
+
 fn gate_params(args: &[String]) -> R<GateParams> {
     let mut p = GateParams::default();
     let f = |name: &str| -> R<Option<f32>> {
@@ -159,9 +177,12 @@ fn gate_params(args: &[String]) -> R<GateParams> {
     if let Some(v) = f("--level-close")? {
         p.level_close_db = Some(v);
     }
-    if let Some(v) = f("--confirm")? {
-        p.confirm_n = v as u32;
+    // 整数参数直接按 u32 解析：`--confirm 20.9` 报错，不截断成 20 再过范围检查
+    if let Some(v) = arg(args, "--confirm") {
+        p.confirm_n = v.parse()?;
     }
+    // 范围的正本是 vdn_types::desc：越界直接报错，不悄悄夹值
+    p.validate()?;
     Ok(p)
 }
 
@@ -209,19 +230,8 @@ fn cmd_run(args: &[String]) -> R<()> {
     let (dry, wet) = (&dry[..n_hops * HOP], &wet[..n_hops * HOP]);
 
     // 2) 判断回路：喂降噪输出 + 逐帧 VAD（与 VadEnvelopeStage 同一个 VAD 口径），按实测计算时间延后生效
-    let mut jp = JudgeParams::default();
-    if let Some(v) = arg(args, "--win") {
-        jp.window_s = v.parse()?;
-    }
-    if let Some(v) = arg(args, "--judge-hop") {
-        jp.hop_s = v.parse()?;
-    }
-    if let Some(v) = arg(args, "--owner-hi") {
-        jp.owner_hi = v.parse()?;
-    }
-    if let Some(v) = arg(args, "--others-lo") {
-        jp.others_lo = v.parse()?;
-    }
+    // 先校验再建任何部件：声纹模型的窗长与 Judge 用同一个已校验的值（codex 第 2 轮 P2 #1）
+    let jp = judge_params(args)?;
     let mut vad = vdn_speaker::vad::Vad::new();
     let mut vad_probs = Vec::with_capacity(n_hops);
     let mut verdicts = vec![SpeakerVerdict::default(); n_hops + 1];
@@ -577,17 +587,42 @@ mod tests {
             "--confirm",
             "3",
             "--level-close",
-            "-40",
+            "12",
         ]))
         .expect("合法参数");
         assert_eq!(p.floor_db, -18.5);
         assert_eq!(p.confirm_n, 3);
-        assert_eq!(p.level_close_db, Some(-40.0));
+        assert_eq!(p.level_close_db, Some(12.0));
         // 没给的保持默认
         assert_eq!(p.release_s, d.release_s);
         assert_eq!(p.onset_gap_s, d.onset_gap_s);
         assert_eq!(p.onset_jump_db, d.onset_jump_db);
         assert_eq!(p.onset_level_margin_db, d.onset_level_margin_db);
+    }
+
+    /// 越界（按 vdn_types::desc 的范围）报错；报错里带键名。
+    #[test]
+    fn gate_params_rejects_out_of_range_by_desc_table() {
+        let floor_below = format!("{}", vdn_types::desc::FLOOR_DB.min - 1.0);
+        let e = gate_params(&sv(&["--gate-floor", &floor_below])).unwrap_err();
+        assert!(e.to_string().contains("floor_db"), "{e}");
+        let e = gate_params(&sv(&["--level-close", "-40"])).unwrap_err();
+        assert!(e.to_string().contains("gate.level_close_db"), "{e}");
+        assert!(gate_params(&sv(&["--confirm", "0"])).is_err());
+        // 小数不截断：20.9 不能悄悄变成 20 再通过
+        assert!(gate_params(&sv(&["--confirm", "20.9"])).is_err());
+        assert!(gate_params(&sv(&["--confirm", "21"])).is_err());
+    }
+
+    /// 判断回路参数：合法值照用；越界（如 `--win 20`，表上限 10 s）报错，不会一边按 20 s 建模型、一边被夹成 10 s。
+    #[test]
+    fn judge_params_parse_and_reject_by_desc_table() {
+        let p = judge_params(&sv(&["--win", "2", "--owner-hi", "0.5"])).expect("合法参数");
+        assert_eq!((p.window_s, p.owner_hi), (2.0, 0.5));
+        assert_eq!(p.hop_s, JudgeParams::default().hop_s);
+        let e = judge_params(&sv(&["--win", "20"])).unwrap_err();
+        assert!(e.to_string().contains("judge.window_s"), "{e}");
+        assert!(judge_params(&sv(&["--others-lo", "1.5"])).is_err());
     }
 
     #[test]

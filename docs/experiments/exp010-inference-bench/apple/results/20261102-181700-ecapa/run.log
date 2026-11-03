@@ -1,0 +1,5 @@
+Using Python 3.12.14 environment at: /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct
+Checked 2 packages in 1ms
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.01s
+ERROR prep
+出错：编译失败：NSError { code: 3, localizedDescription: "Model does not exist at file:///Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-181700-ecapa/ecapa_fp32.mlpackage", domain: "com.apple.CoreML", userInfo: {"NSLocalizedDescription": <__NSCFString: 0x7bdac88240>}, .. }

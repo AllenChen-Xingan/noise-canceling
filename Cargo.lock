@@ -1876,6 +1876,7 @@ dependencies = [
  "vdn-models",
  "vdn-rt-thread",
  "vdn-shm",
+ "vdn-types",
 ]
 
 [[package]]
@@ -1969,6 +1970,7 @@ dependencies = [
  "hound",
  "realfft",
  "vdn-dsp",
+ "vdn-types",
 ]
 
 [[package]]
@@ -1988,6 +1990,7 @@ dependencies = [
  "realfft",
  "vdn-dsp",
  "vdn-polish",
+ "vdn-types",
 ]
 
 [[package]]
@@ -2022,6 +2025,7 @@ dependencies = [
  "ort",
  "realfft",
  "vdn-dsp",
+ "vdn-types",
 ]
 
 [[package]]
@@ -2034,6 +2038,7 @@ dependencies = [
  "vdn-engine",
  "vdn-models",
  "vdn-speaker",
+ "vdn-types",
 ]
 
 [[package]]

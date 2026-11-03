@@ -1,0 +1,9 @@
+{"model":"gtcrn_fp32.mlpackage","units":"cpu","ops_by_device":{"cpu":322,"none":1785},"cost_by_device":{"cpu":1.0000,"none":0.0000}}
+{"model":"gtcrn_fp32.mlpackage","units":"gpu","ops_by_device":{"cpu":322,"none":1785},"cost_by_device":{"cpu":1.0000,"none":0.0000}}
+{"model":"gtcrn_fp32.mlpackage","units":"ane","ops_by_device":{"cpu":322,"none":1785},"cost_by_device":{"cpu":1.0000,"none":0.0000}}
+{"model":"gtcrn_unrolled_fp32.mlpackage","units":"cpu","ops_by_device":{"cpu":5477,"none":6956},"cost_by_device":{"cpu":1.0000,"none":0.0000}}
+{"model":"gtcrn_unrolled_fp32.mlpackage","units":"gpu","ops_by_device":{"cpu":5477,"none":6956},"cost_by_device":{"cpu":1.0000,"none":0.0000}}
+{"model":"gtcrn_unrolled_fp32.mlpackage","units":"ane","ops_by_device":{"cpu":5477,"none":6956},"cost_by_device":{"cpu":1.0000,"none":0.0000}}
+{"model":"gtcrn_fp16.mlpackage","units":"cpu","ops_by_device":{"cpu":358,"none":1796},"cost_by_device":{"cpu":1.0000,"none":0.0000}}
+{"model":"gtcrn_fp16.mlpackage","units":"gpu","ops_by_device":{"cpu":358,"none":1796},"cost_by_device":{"cpu":1.0000,"none":0.0000}}
+{"model":"gtcrn_fp16.mlpackage","units":"ane","ops_by_device":{"cpu":358,"none":1796},"cost_by_device":{"cpu":1.0000,"none":0.0000}}
