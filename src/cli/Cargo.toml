@@ -26,6 +26,7 @@ vdn-hal.workspace = true
 vdn-io-macos.workspace = true
 vdn-rt-thread.workspace = true
 ctrlc.workspace = true
+rtrb.workspace = true
 
 [lints]
 workspace = true
