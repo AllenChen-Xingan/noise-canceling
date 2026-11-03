@@ -99,10 +99,16 @@ impl SceneAnalyzer {
         }
     }
 
-    /// 改滞回参数与后验平滑时间常数（标定扫参用）。
+    /// 改滞回参数与后验平滑时间常数（标定扫参用）。两者都按描述表（`vdn_types::desc`）夹进范围；
+    /// 要拒收越界值，调用方先调 `Hysteresis::validate` / `SCENE_EMA_S.check`。
     pub fn set_tuning(&mut self, h: vdn_types::Hysteresis, ema_s: f32) {
-        self.gate = HysteresisGate::new(h);
-        self.ema_s = ema_s;
+        self.gate = HysteresisGate::new(h.clamped());
+        self.ema_s = vdn_types::desc::SCENE_EMA_S.clamp(ema_s);
+    }
+
+    /// 当前的滞回参数与后验平滑时间常数。
+    pub fn tuning(&self) -> (vdn_types::Hysteresis, f32) {
+        (self.gate.params, self.ema_s)
     }
 
     /// 手动选用户层场景（`None` = 自动）。

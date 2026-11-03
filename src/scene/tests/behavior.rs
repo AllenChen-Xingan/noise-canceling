@@ -88,3 +88,28 @@ fn manual_meeting_commits() {
 fn calibrated_hysteresis_matches_vdn_types_default() {
     assert_eq!(vdn_scene::weights::HYSTERESIS, Hysteresis::default());
 }
+
+/// 后验平滑时间常数同理：训练脚本写出的值 = 描述表默认值。
+#[test]
+fn calibrated_ema_matches_desc_default() {
+    assert_eq!(
+        vdn_scene::weights::EMA_S,
+        vdn_types::desc::SCENE_EMA_S.default
+    );
+}
+
+/// 调参入口按描述表夹值：越界的滞回与平滑常数进不了状态。
+#[test]
+fn set_tuning_clamps_by_desc_table() {
+    use vdn_types::desc::{HYST_MIN_CONFIDENCE, SCENE_EMA_S};
+    let mut sa = SceneAnalyzer::new(16000, 256);
+    let bad = Hysteresis {
+        min_confidence: HYST_MIN_CONFIDENCE.max + 1.0,
+        ..Hysteresis::default()
+    };
+    assert!(bad.validate().is_err());
+    sa.set_tuning(bad, SCENE_EMA_S.min - 1.0);
+    let (h, ema) = sa.tuning();
+    assert_eq!(h.min_confidence, HYST_MIN_CONFIDENCE.max);
+    assert_eq!(ema, SCENE_EMA_S.min);
+}
