@@ -17,6 +17,7 @@
 - [ ] `vdn-eval` / `vdn-speaker` / `vdn-speaker-lab` 改走推理后端，不再直接依赖 ort
 - [ ] ContentId 用 FNV → 规约原写 sha256
 - [ ] RTSan 检查（规约 G8）
+- [ ] `vdn-rt-thread` 的 JoinToken 常数照 SDK 头文件抄，缺自动比对（唯一真相源）
 - [ ] Ring 拆 Producer / Consumer 句柄（类型挡住「一端一线程」）
 
 ## 虚拟麦克风（HAL 插件）

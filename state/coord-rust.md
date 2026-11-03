@@ -15,7 +15,7 @@
 | rs-shm | 共享内存总线 · 实时线程 · 闸门 · 实体：vdn-shm · vdn-rt-thread · xtask · `feat/rust-skeleton-shm`（`../noise_canceling-rs-shm`） | `_tmp/20261102-b8-rust/rs-shm.md` | 其 worktree `state/handoff/rs-shm.md` | 完成，已合入 feat/rust-skeleton（449f40d），窗口已关 |
 | rs-io | 音频进出 · 虚拟麦克风读出端 · 实体：vdn-io-macos · vdn-hal · `feat/rust-skeleton-io`（`../noise_canceling-rs-io`） | `_tmp/20261102-b8-rust/rs-io.md` | 其 worktree `state/handoff/rs-io.md` | 完成，已合入 feat/rust-skeleton（a9d4c83），窗口已关 |
 | rs-entry | 接线 · 实体：vdn-control · vdn-capture · vdn-denoised · vdn-cli · `feat/rust-skeleton-entry`（`../noise_canceling-rs-entry`） | `_tmp/20261102-b8-rust/rs-entry.md` | 其 worktree `state/handoff/rs-entry.md` | 已报到（noise-canceling-rs-entry-c3）· 三家已合进其分支（65e62a9），接线中 |
-| rs-wake | 跨进程唤醒替掉 sleep 轮询 + 唤醒 / 轮询对照实验 + 总线头加 lead / 块长 / 会话 ID / 缺口 + tidy 查 main.rs · 实体：vdn-shm · vdn-rt-thread · xtask · `feat/rust-skeleton-shm`（`../noise_canceling-rs-shm`） | `_tmp/20261102-b8-rust/rs-wake.md` | 其 worktree `state/handoff/rs-wake.md` | 已报到（noise-canceling-rs-shm-86） |
+| rs-wake | 跨进程唤醒替掉 sleep 轮询 + 唤醒 / 轮询对照实验 + 总线头加 lead / 块长 / 会话 ID / 缺口 + tidy 查 main.rs · 实体：vdn-shm · vdn-rt-thread · xtask · `feat/rust-skeleton-shm`（`../noise_canceling-rs-shm`） | `_tmp/20261102-b8-rust/rs-wake.md` | 其 worktree `state/handoff/rs-wake.md` | 完成，已合入 feat/rust-skeleton（91c7887），窗口已关 |
 | rs-core2 | 处理链补齐：Stage 串进 Pipeline（处理图第一步）· 送原声改用 48 kHz · 延迟断言改 Pipeline · FTZ 守卫 · 实体：vdn-types · vdn-dsp · vdn-engine · vdn-models · `feat/rust-skeleton-core`（`../noise_canceling-rs-core`） | `_tmp/20261102-b8-rust/rs-core2.md` | 其 worktree `state/handoff/rs-core2.md` | 完成，已合入 feat/rust-skeleton（77f46e6），窗口已关 |
 
 ## 规矩
@@ -43,6 +43,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- rs-wake 验收：shm + rt-thread 44 测试过（大总管重跑）、clippy 无警告 → 合入、关窗。tidy「每 crate 至少一条测试」抓到 backend-ort / cli / speaker-lab 无测试 → 大总管定 A（补测试，不开名单）：cli 随 rs-entry 合入；另两个派子代理补。无自动校验的第二处：JoinToken 常数照 SDK 头抄（backlog）；CI Linux job 未在 GitHub 真跑
 - e3 占用 D75（人答 D69 与 D74 口径：「我觉得是实际耗电和对性能的影响」）：1% / 2% 管对其他程序的影响，耗电按实测 mW；与 D74 一致 → backlog 加资源判据
 - ⚠️ 决策撞号：主目录分支同日已有 D66–D71（另一位大总管），我方 D66 / D67 / D68 顺延为 **D72 / D73 / D74**，已全仓改；以后记决策前先查主目录分支的最大号
 - e3 转人定 **D71**（原话「我觉得改代码结构吧 / 让复杂度很低，然后所有代码很优雅」）：前端只算一次、各模型共用；同一功能只在一处实现 → 并入下一件大事（处理图 + schema）
