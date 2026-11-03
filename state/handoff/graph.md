@@ -14,7 +14,8 @@
 7. ✅ schema 导出：`processing-graph.kinds.json` · `session-header.fields.json`；测试 `src/schema/tests/graph.rs`（8 条），含「编号永不复用」对照 main 基线（`graph::RETIRED`）。基线读取函数加了文件名参数（`baseline*`），原 `shm_baseline*` 保留为包装
 8. ✅ 规约 §3.3 · §3.7.5、`.42cog/cog.md`、`specs/schema/README.md` 已同步
 9. ✅ `xtask ci` 全绿；`eval ci` 与 main（0604143）对比：门禁结论 · 通过数相同，`report.json` 只有一项计时指标（R02 单帧耗时，debug 构建受机器负载影响）不同
-10. ⏳ codex-review
+10. ✅ codex-review 两轮（`docs/reviews/011_processing-graph-codex.md`）：第 1 轮 3 条 P2 已修；第 2 轮无 P0/P1，达到停止线；剩 1 条 P2 待开 issue（见转交）
+11. ✅ PR 草稿：`state/handoff/graph-pr.md`
 
 ## 纯技术题，我定了（理由）
 
@@ -27,6 +28,7 @@
 ## 转交
 
 - iface：模型节点与 `Model::name()` 的比对（要等模型接口定下来）
+- iface（请大总管开 issue，codex 第 2 轮 #1，P2）：模型节点缺版本。同名模型换权重，图的内容 ID 不变。建议模型节点加「模型制品内容 ID」写进规范文本，格式号升到 2，并加测试「只换模型版本，图 ID 必须变」
 - 以后接频域级的人：模型适配器调用频域级时，在适配器构造处照 `match_chain` 比对 `ProcessingGraph::spectral`
 
 ## 顺带发现（不在我范围，报大总管）

@@ -37,6 +37,7 @@
   - 现状：只有一个实现，还没有调用方（engine 不做 STFT）
   - 以后：模型适配器开始调用频域级时，在适配器构造处照 `match_chain` 比对 `spectral` 段，届时再看要不要搬
 - 模型节点与 `Model::name()` 的比对交给 iface 线：Pipeline 不认模型 ID，图由调用方用 `Pipeline::graph(model)` 拼成
+- 模型节点缺版本（codex 第 2 轮 #1，P2，待开 issue）：同名模型换权重，图的内容 ID 不变；归 iface
 
 ## 关联 issue
 Closes #64
@@ -62,6 +63,6 @@ Closes #64
   - `processing-graph.kinds.json` ↔ `graph::KINDS`：逐字比对（通用测试）+ 逐条内容比对 + 对照 main 基线的编号守卫
   - `session-header.fields.json` ↔ `HEADER_KEYS` ↔ `to_text` / `from_text`：键与顺序、`since` 与解析器行为都比
   - `HEADER_KEYS` ↔ `SessionHeader`、`NODE_FIELDS` ↔ `NodeKind`：穷举解构，漏字段编译失败
-- 换谱系评审：`docs/reviews/011_processing-graph-codex.md`
+- 换谱系评审：`docs/reviews/011_processing-graph-codex.md`（2 轮，已达停止线；剩 1 条 P2 待开 issue）
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
