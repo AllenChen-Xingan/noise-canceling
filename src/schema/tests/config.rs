@@ -161,3 +161,27 @@ fn config_new_field_without_export_is_red() {
         "denoise_block",
     );
 }
+
+/// 配置里的模型名（serde 的写法、schema 的枚举、默认值）与正本 `ModelId::NAMES` 一致，顺序也一致。
+/// `ModelChoice` 是 vdn-control 里的第二处表示（它不依赖 vdn-types），由这条测试钉住。
+#[test]
+fn config_model_names_follow_model_id() {
+    use vdn_control::ModelChoice;
+    use vdn_types::ModelId;
+    let s = committed("config.schema.json");
+    let en: Vec<&str> = s["$defs"]["ModelChoice"]["enum"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap())
+        .collect();
+    assert_eq!(en, ModelId::NAMES);
+    for id in ModelId::ALL {
+        let c: ModelChoice = serde_json::from_value(json!(id.as_str())).unwrap();
+        assert_eq!(serde_json::to_value(c).unwrap(), json!(id.as_str()));
+    }
+    assert_eq!(
+        serde_json::to_value(ModelChoice::default()).unwrap(),
+        json!(ModelId::default().as_str())
+    );
+}
