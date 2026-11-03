@@ -113,6 +113,8 @@ pub fn forward(fwd: &mut crate::Forwarder, bus: Option<&Bus>, out: &Bus, input: 
         Some(b) => {
             let (mut raw, mut processed) = (b.ring(RingId::Raw), b.ring(RingId::Processed));
             fwd.process(input, &mut raw, &mut processed, &mut o, b);
+            // 原声已推进 Raw：叫醒降噪进程（一次非阻塞系统调用，规约 §4 A 档唯一例外）
+            b.notify(RingId::Raw);
         }
         None => fwd.process(input, &mut crate::NullRing, &mut crate::NullRing, &mut o, &crate::NoBeat),
     }
@@ -131,24 +133,28 @@ pub fn forward_same_bus(fwd: &mut crate::Forwarder, bus: &Bus, input: &[f32]) {
         bus.ring(RingId::Out),
     );
     fwd.process(input, &mut raw, &mut processed, &mut out, bus);
+    bus.notify(RingId::Raw);
+}
+
+/// 送音端自己建的 Out 总线的配置：只用 Out 环，L_total / lead / 降噪块长无意义（填 0）。
+pub fn out_bus_config(capacity: u32) -> vdn_shm::BusConfig {
+    vdn_shm::BusConfig {
+        rate: vdn_control::IO_RATE,
+        capacity_frames: capacity,
+        l_total: 0,
+        lead: 0,
+        denoise_block: 0,
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use vdn_hal::SampleSource;
-    use vdn_shm::BusConfig;
 
     #[test]
     fn out_backlog_is_capped() {
-        let bus = Arc::new(
-            Bus::heap(BusConfig {
-                rate: 48_000,
-                capacity_frames: 48_000,
-                l_total: 0,
-            })
-            .unwrap(),
-        );
+        let bus = Arc::new(Bus::heap(out_bus_config(48_000)).unwrap());
         let out = bus.ring(RingId::Out);
         let x: Vec<f32> = (0..20_000).map(|i| i as f32).collect();
         assert_eq!(out.push(&x), 20_000);
