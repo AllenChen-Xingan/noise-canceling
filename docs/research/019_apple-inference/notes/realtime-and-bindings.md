@@ -232,7 +232,7 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
 2. **启动和恢复**：
    - 冷加载时间（含编译）和热加载时间（有缓存）；
    - 第 1 帧和前 100 帧的耗时；
-   - **空闲 1 s / 5 s / 30 s 后的第一帧**（arXiv 那篇在 M1 上测到 5 s 空闲后约 260 ms）。
+   - **空闲 1 s / 5 s / 30 s 后的第一帧**（arXiv 那篇在 M1 上测到 5 s 空闲后约 260 ms）。所有配置都测，包括 ORT 和 BNNSGraph：CPU 也有缓存变冷和降频【推断】。
 3. **实时违规**：
    - RTSan 不停模式，去重后每个唯一栈记函数名；
    - 加一个故意 `malloc` 的负例，证明拦截在起作用；
@@ -249,12 +249,15 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
    - 和 ORT CPU 同一段输入逐帧比：最大绝对误差、均方误差；
    - 长跑 10 分钟看误差有没有随时间变大（GRU 状态漂移）；
    - fp16 和 ANE 配置必须测。
+   - 容差没有现成标准：exp004 的 4.5e-7 是 ORT 对 ORT，不适用于换引擎。过线值要另定（例如按 SI-SDR 差或感知指标），**待人定**，交大总管登记。
+8. **每个配置的判定**按第五节第 3 条写：verifier 名 · 数值 · 样本量 · 是否过线。没有过线值的项只写「尚无判据，待测」。
 7. **实际跑在哪**：`MLComputePlan` 或 ORT 的 `ProfileComputePlan` 的输出。配置写 ANE 不等于真跑在 ANE。
 
 ## 未查 / 存疑
 
 - **BNNSGraph 支持哪些算子**：GRU（尤其是帧内双向 GRU）、Unfold、ConvTranspose2d 能不能编进 BNNSGraph，没查到官方算子表。WWDC25 276 只点名了卷积、矩阵乘、归约、gather / scatter、pad、reshape、transpose，**没提 GRU / LSTM**【官方】https://developer.apple.com/videos/play/wwdc2025/276/ 。DAFx 论文跑通了 LSTM，所以循环层至少部分能用【实测-他人】。
-- **`BNNSGraphContextExecute` 内部有没有锁**：头文件和 WWDC 都只说「不分配」，没说不加锁。DAFx 的 RTSan 0 违规间接支持「不加锁」，但样本只有 100 次。
+- **`BNNSGraphContextExecute` 内部有没有锁**：头文件和 WWDC24 讲稿都只说「不分配」（WWDC 还说「不开多线程」），没说不加锁（怀疑派核对过讲稿）。DAFx26 写「Apple states … acquires no locks」，比原话重。DAFx 的 RTSan 0 违规间接支持「不加锁」，但只是最小循环、100 次，而且 RTSan 拦不到自旋和 `os_sync_*`。
+- **Core ML `CPUOnly` 会不会开内部线程**：没有官方开关【存疑】。如果会，推理线程每帧要等别的线程，这属于阻塞等待。
 - **Core ML CPU 路径每帧到底分配多少次、加几把锁**：没有公开数据，只能实测。
 - **ANE 等待完成用的是哪种机制**（Mach 端口、IOKit 异步回调还是信号量）：arXiv 那篇说完成靠中断，我没读到用户态怎么等。这决定 RTSan 能不能看到它。
 - **M5 的 ANE 派发下限**：arXiv 那篇说测过 M5 的硅片，但我读到的部分没有 M5 的派发下限数字。§9.3 没有完整读到。
