@@ -787,7 +787,7 @@ impl GtBlock {
     }
 
     /// `x`：[16][33] → `y`：[16][33]
-    fn run(&mut self, x: &[f32], y: &mut [f32]) {
+    fn run<P: Probe>(&mut self, x: &[f32], y: &mut [f32], p: &mut P, blk: &'static str) {
         let f = F2;
         // x1 = 前 8 通道 → SFE → 24 通道
         sfe3(&x[..CH * f], CH, f, &mut self.sfe);
@@ -795,6 +795,15 @@ impl GtBlock {
         for v in self.h1.iter_mut() {
             *v = prelu(*v, self.a1);
         }
+        p.mark(blk, "sfe+point1", || {
+            let act = (C * f) as u64;
+            self.p1.cost(f)
+                + Cost {
+                    other: (3 * CH * f) as u64 + act, // SFE 拷贝 + PReLU
+                    chain_fma: 1,
+                    ..Cost::default()
+                }
+        });
         // 流式深度卷积：inp 的时间下标 0..=2d，2d 是当前帧；kt 取 inp[kt*d]
         let len = 2 * self.dil;
         let frame = C * f;
@@ -830,7 +839,19 @@ impl GtBlock {
         for v in self.h2.iter_mut() {
             *v = prelu(*v, self.a2);
         }
+        p.mark(blk, "depthwise", || {
+            let act = (C * f) as u64;
+            Cost {
+                macs: (C * 3 * (3 * f - 2)) as u64,
+                other: act * 2, // PReLU + 写环形缓存
+                w_bytes: (C * 10) as u64 * F32B,
+                io_bytes: act * 5 * F32B, // 读 3 帧 + 写输出 + 写环形缓存
+                chain_fma: clog2(9) + 2,
+                ..Cost::default()
+            }
+        });
         self.p2.run(&self.h2, &mut self.h3, f);
+        p.mark(blk, "point2", || self.p2.cost(f));
         // TRA
         let mut zt = [0.0f32; CH];
         for c in 0..CH {
@@ -851,6 +872,18 @@ impl GtBlock {
             }
             y[(2 * c + 1) * f..(2 * c + 2) * f].copy_from_slice(&x[(CH + c) * f..(CH + c + 1) * f]);
         }
+        p.mark(blk, "tra+shuffle", || {
+            let e = Cost {
+                macs: (CH * f) as u64, // 能量
+                nonlin: CH as u64,     // sigmoid
+                other: (C * f) as u64, // 乘注意力 + 拷贝
+                io_bytes: (CH * f + 2 * C * f) as u64 * F32B,
+                chain_fma: clog2(f) + 1 + 1, // 能量归约 + 乘注意力
+                chain_nl: 1,
+                ..Cost::default()
+            };
+            e + self.gru.step_cost() + self.fc.cost()
+        });
     }
 }
 
