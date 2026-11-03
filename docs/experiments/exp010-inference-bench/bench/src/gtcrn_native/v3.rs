@@ -17,8 +17,10 @@ use super::v2::{self, NL_RCP};
 use super::*;
 use core::arch::aarch64::*;
 
-/// `IL`：GRU 是否显式交错（第 4 条改写；后端 native-v3i）。不交错时（native-v3）gru4 / gru_rows 走默认的逐条调用
-pub struct V3<const IL: bool>;
+/// `IL`：GRU 是否显式交错（第 4 条改写）；`NL`：非线性算法（v2::NL_*）。
+/// 后端：native-v3 = <false, NL_RCP> · native-v3i = <true, NL_RCP> · native-v4 = <false, NL_DIV> · native-v4i = <true, NL_DIV>。
+/// 实测（20261102-v3short）：NL_RCP 让两个 GRU 各慢约 1.1 µs（倒数 + 2 次牛顿是 5 条依赖指令，比一条除法还长），所以 v4 改回 NL_DIV
+pub struct V3<const IL: bool, const NL: u8>;
 
 /// 深度卷积 + PReLU，结果写 h2（环形缓存的更新在 GtBlock::run 里，两种写法共用）
 fn depthwise_v3(b: &mut GtBlock) {
@@ -95,7 +97,7 @@ fn ln_add_v3(x: &mut [f32], z: &[f32], w: &[f32], b: &[f32]) {
 /// 与 `v2::gru_step` 是同一个式子；循环把 r 放在最内层，展开后 R 条链的指令交替排列。
 /// SAFETY：调用方保证 xs[r] 至少 I 个、hs[r] 指向至少 H 个可写且互不重叠的 f32
 #[inline(always)]
-unsafe fn gru_multi<const H: usize, const NG: usize, const I: usize, const R: usize>(
+unsafe fn gru_multi<const H: usize, const NG: usize, const I: usize, const R: usize, const NL: u8>(
     gs: [&Gru; R],
     xs: [*const f32; R],
     hs: [*mut f32; R],
@@ -129,9 +131,9 @@ unsafe fn gru_multi<const H: usize, const NG: usize, const I: usize, const R: us
         let q = H / 4;
         for c in 0..q {
             for r in 0..R {
-                let rr = v2::sig4::<NL_RCP>(vaddq_f32(gi[r][c], gh[r][c]));
-                let z = v2::sig4::<NL_RCP>(vaddq_f32(gi[r][q + c], gh[r][q + c]));
-                let n = v2::tanh4::<NL_RCP>(vfmaq_f32(gi[r][2 * q + c], rr, gh[r][2 * q + c]));
+                let rr = v2::sig4::<NL>(vaddq_f32(gi[r][c], gh[r][c]));
+                let z = v2::sig4::<NL>(vaddq_f32(gi[r][q + c], gh[r][q + c]));
+                let n = v2::tanh4::<NL>(vfmaq_f32(gi[r][2 * q + c], rr, gh[r][2 * q + c]));
                 let hp = hs[r].add(4 * c);
                 vst1q_f32(hp, vfmaq_f32(n, z, vsubq_f32(vld1q_f32(hp), n)));
             }
@@ -143,16 +145,16 @@ fn gru_ok(g: &Gru, i: usize, h: usize) -> bool {
     g.i == i && g.h == h && g.wit.len() >= i * 3 * h && g.wht.len() >= h * 3 * h && g.bi.len() >= 3 * h && g.bh.len() >= 3 * h
 }
 
-fn gru4_v3(gs: [&Gru; 4], xs: [&[f32]; 4], hs: &mut [[f32; 4]; 4]) {
+fn gru4_v3<const NL: u8>(gs: [&Gru; 4], xs: [&[f32]; 4], hs: &mut [[f32; 4]; 4]) {
     if !gs.iter().all(|g| gru_ok(g, 8, 4)) || !xs.iter().all(|x| x.len() >= 8) {
         for ((g, x), h) in gs.into_iter().zip(xs).zip(hs.iter_mut()) {
-            <V3<false> as Kern>::gru(g, x, h);
+            <v2::V2<NL> as Kern>::gru(g, x, h);
         }
         return;
     }
     let [h0, h1, h2, h3] = hs;
     unsafe {
-        gru_multi::<4, 3, 8, 4>(
+        gru_multi::<4, 3, 8, 4, NL>(
             gs,
             [xs[0].as_ptr(), xs[1].as_ptr(), xs[2].as_ptr(), xs[3].as_ptr()],
             [h0.as_mut_ptr(), h1.as_mut_ptr(), h2.as_mut_ptr(), h3.as_mut_ptr()],
@@ -160,11 +162,11 @@ fn gru4_v3(gs: [&Gru; 4], xs: [&[f32]; 4], hs: &mut [[f32; 4]; 4]) {
     }
 }
 
-fn gru_rows_v3(g: &Gru, xs: &[f32], hs: &mut [f32], stride: usize, n: usize) {
+fn gru_rows_v3<const NL: u8>(g: &Gru, xs: &[f32], hs: &mut [f32], stride: usize, n: usize) {
     let need = |len: usize| if n == 0 { 0 } else { (n - 1) * stride + len };
     if !gru_ok(g, 8, 8) || stride < 8 || xs.len() < need(8) || hs.len() < need(8) {
         for r in 0..n {
-            <V3<false> as Kern>::gru(g, &xs[r * stride..r * stride + g.i], &mut hs[r * stride..r * stride + g.h]);
+            <v2::V2<NL> as Kern>::gru(g, &xs[r * stride..r * stride + g.i], &mut hs[r * stride..r * stride + g.h]);
         }
         return;
     }
@@ -173,7 +175,7 @@ fn gru_rows_v3(g: &Gru, xs: &[f32], hs: &mut [f32], stride: usize, n: usize) {
     unsafe {
         // stride ≥ 8 = H，相邻两行的状态不重叠
         while r + 2 <= n {
-            gru_multi::<8, 6, 8, 2>(
+            gru_multi::<8, 6, 8, 2, NL>(
                 [g, g],
                 [px.add(r * stride), px.add((r + 1) * stride)],
                 [ph.add(r * stride), ph.add((r + 1) * stride)],
@@ -181,7 +183,7 @@ fn gru_rows_v3(g: &Gru, xs: &[f32], hs: &mut [f32], stride: usize, n: usize) {
             r += 2;
         }
         if r < n {
-            gru_multi::<8, 6, 8, 1>([g], [px.add(r * stride)], [ph.add(r * stride)]);
+            gru_multi::<8, 6, 8, 1, NL>([g], [px.add(r * stride)], [ph.add(r * stride)]);
         }
     }
 }
@@ -192,7 +194,7 @@ fn sparse_v3(s: &Sparse, x: &[f32], y: &mut [f32]) {
     }
 }
 
-impl<const IL: bool> Kern for V3<IL> {
+impl<const IL: bool, const NL: u8> Kern for V3<IL, NL> {
     #[inline(always)]
     fn point(p: &Point, x: &[f32], y: &mut [f32], f: usize) {
         v2::point_v2(p, x, y, f)
@@ -203,15 +205,15 @@ impl<const IL: bool> Kern for V3<IL> {
     }
     #[inline(always)]
     fn deconv(d: &mut DeconvF, x: &[f32], y: &mut [f32]) {
-        v2::deconv_v2::<NL_RCP>(d, x, y)
+        v2::deconv_v2::<NL>(d, x, y)
     }
     #[inline(always)]
     fn gru(g: &Gru, x: &[f32], h: &mut [f32]) {
-        <v2::V2<NL_RCP> as Kern>::gru(g, x, h)
+        <v2::V2<NL> as Kern>::gru(g, x, h)
     }
     #[inline(always)]
     fn linear(l: &Linear, x: &[f32], y: &mut [f32]) {
-        <v2::V2<NL_RCP> as Kern>::linear(l, x, y)
+        <v2::V2<NL> as Kern>::linear(l, x, y)
     }
     #[inline(always)]
     fn depthwise(b: &mut GtBlock) {
@@ -228,7 +230,7 @@ impl<const IL: bool> Kern for V3<IL> {
     #[inline(always)]
     fn gru4(gs: [&Gru; 4], xs: [&[f32]; 4], hs: &mut [[f32; 4]; 4]) {
         if IL {
-            gru4_v3(gs, xs, hs)
+            gru4_v3::<NL>(gs, xs, hs)
         } else {
             for ((g, x), h) in gs.into_iter().zip(xs).zip(hs.iter_mut()) {
                 Self::gru(g, x, h);
@@ -238,7 +240,7 @@ impl<const IL: bool> Kern for V3<IL> {
     #[inline(always)]
     fn gru_rows(g: &Gru, xs: &[f32], hs: &mut [f32], stride: usize, n: usize) {
         if IL {
-            gru_rows_v3(g, xs, hs, stride, n)
+            gru_rows_v3::<NL>(g, xs, hs, stride, n)
         } else {
             for r in 0..n {
                 Self::gru(g, &xs[r * stride..r * stride + g.i], &mut hs[r * stride..r * stride + g.h]);
@@ -350,9 +352,9 @@ mod tests {
             let gr = [&gs[0], &gs[1], &gs[2], &gs[3]];
             let xr = [&xs[0][..], &xs[1][..], &xs[2][..], &xs[3][..]];
             for k in 0..4 {
-                <V3<false> as Kern>::gru(gr[k], xr[k], &mut a[k]);
+                <v2::V2<NL_RCP> as Kern>::gru(gr[k], xr[k], &mut a[k]);
             }
-            gru4_v3(gr, xr, &mut b);
+            gru4_v3::<NL_RCP>(gr, xr, &mut b);
         }
         assert!(a.iter().flatten().zip(b.iter().flatten()).all(|(x, y)| x.to_bits() == y.to_bits()), "{a:?} vs {b:?}");
         // 行版：33 行（奇数，走尾巴），stride 16
@@ -361,9 +363,9 @@ mod tests {
         let h0 = rnd(33 * 16, 302);
         let (mut h1, mut h2) = (h0.clone(), h0.clone());
         for r in 0..33 {
-            <V3<false> as Kern>::gru(&g, &xs[r * 16..r * 16 + 8], &mut h1[r * 16..r * 16 + 8]);
+            <v2::V2<NL_RCP> as Kern>::gru(&g, &xs[r * 16..r * 16 + 8], &mut h1[r * 16..r * 16 + 8]);
         }
-        gru_rows_v3(&g, &xs, &mut h2, 16, 33);
+        gru_rows_v3::<NL_RCP>(&g, &xs, &mut h2, 16, 33);
         assert!(h1.iter().zip(&h2).all(|(x, y)| x.to_bits() == y.to_bits()), "gru_rows 与逐行不同");
     }
 

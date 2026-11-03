@@ -243,6 +243,10 @@ pub enum Kind {
     V3,
     /// v3 + GRU 显式交错（第 4 条改写）
     V3i,
+    /// v3 的深度卷积 / LN / ERB 向量化，非线性改回除法（v3 的倒数版实测更慢）
+    V4,
+    /// v4 + GRU 显式交错
+    V4i,
 }
 
 impl Kind {
@@ -253,6 +257,8 @@ impl Kind {
             "native-v2-fast" => Some(Kind::V2Fast),
             "native-v3" => Some(Kind::V3),
             "native-v3i" => Some(Kind::V3i),
+            "native-v4" => Some(Kind::V4),
+            "native-v4i" => Some(Kind::V4i),
             _ => None,
         }
     }
@@ -1363,8 +1369,10 @@ impl GtcrnNative {
             Kind::Scalar => self.infer_impl::<Scalar, P>(re, im, p),
             Kind::V2 => self.infer_impl::<v2::V2<{ v2::NL_LIBM }>, P>(re, im, p),
             Kind::V2Fast => self.infer_impl::<v2::V2<{ v2::NL_DIV }>, P>(re, im, p),
-            Kind::V3 => self.infer_impl::<v3::V3<false>, P>(re, im, p),
-            Kind::V3i => self.infer_impl::<v3::V3<true>, P>(re, im, p),
+            Kind::V3 => self.infer_impl::<v3::V3<false, { v2::NL_RCP }>, P>(re, im, p),
+            Kind::V3i => self.infer_impl::<v3::V3<true, { v2::NL_RCP }>, P>(re, im, p),
+            Kind::V4 => self.infer_impl::<v3::V3<false, { v2::NL_DIV }>, P>(re, im, p),
+            Kind::V4i => self.infer_impl::<v3::V3<true, { v2::NL_DIV }>, P>(re, im, p),
         }
     }
 
