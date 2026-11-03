@@ -34,11 +34,15 @@ fn table_matches_docs_and_suites_except_pending() {
     assert!(errs.is_empty(), "{errs:#?}\n全部不一致：{found:#?}");
 }
 
-/// verifiers.rs 里用到的 `th::X.def("key")` 在表里都有默认值（否则会拿到 NaN）；
+/// verifiers.rs 及其子模块里用到的 `th::X.def("key")` 在表里都有默认值（否则会拿到 NaN）；
 /// 调用处也不许再写数字的默认阈值或分档
 #[test]
 fn every_default_used_in_code_exists() {
-    let src = read("src/eval/src/verifiers.rs");
+    // verifiers.rs 与它的子模块（physical / perceptual / sim）
+    let mut src = read("src/eval/src/verifiers.rs");
+    for m in ["physical", "perceptual", "sim"] {
+        src.push_str(&read(&format!("src/eval/src/verifiers/{m}.rs")));
+    }
     let mut n = 0;
     for (i, _) in src.match_indices(".def(\"") {
         let head = &src[..i];

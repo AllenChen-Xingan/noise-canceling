@@ -53,11 +53,7 @@ fn owner_onsets(c: &Ctx) -> Vec<usize> {
     out
 }
 
-fn need_sim(
-    c: &Ctx,
-    id: &'static str,
-    unit: &'static str,
-) -> Result<HopTruth, Box<Score>> {
+fn need_sim(c: &Ctx, id: &'static str, unit: &'static str) -> Result<HopTruth, Box<Score>> {
     if !c.clip.tracks {
         return Err(Box::new(Score::unknown(
             id,
