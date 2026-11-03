@@ -9,7 +9,8 @@
 use realfft::num_complex::Complex32;
 
 use crate::agc::Agc;
-use crate::mirror::{FrameCtx, SpectralStage, Stage};
+use crate::spectral_stage::SpectralStage;
+use vdn_types::{FrameCtx, Stage};
 use crate::params::PolishParams;
 use crate::spectral::SpectralPolish;
 

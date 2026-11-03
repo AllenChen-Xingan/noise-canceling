@@ -251,7 +251,7 @@ fn never_louder_than_noisy_and_nan_safe() {
 #[test]
 fn time_only_path_runs_agc_and_ramps() {
     use vdn_polish::PolishChain;
-    use vdn_polish::mirror::FrameCtx;
+    use vdn_types::FrameCtx;
     // 只走时域（FE-M wav2wav 那一路）：AGC 要用外部 VAD 或能量粗判工作，参数过渡也要推进
     let mut chain = PolishChain::new(512, 256, 16000.0, PolishParams::OFF);
     chain.set_ramp_s(0.5);
@@ -269,6 +269,7 @@ fn time_only_path_runs_agc_and_ramps() {
             &mut x,
             FrameCtx {
                 voice_prob: Some(1.0),
+                ..FrameCtx::default()
             },
         );
     }
