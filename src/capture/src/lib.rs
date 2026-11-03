@@ -212,6 +212,8 @@ pub struct Forwarder {
     raw_delayed: Vec<f32>,
     proc_buf: Vec<f32>,
     out_buf: Vec<f32>,
+    /// 最近一次推进 Out 的块长（`last_output` 用）
+    last_n: usize,
     /// 这一块里每个位置有没有取到处理后的样本
     have: Vec<u8>,
     /// 处理后声音的权重（0 = 全原声，1 = 全处理后）
@@ -264,6 +266,7 @@ impl Forwarder {
             raw_delayed: vec![0.0; max_block],
             proc_buf: vec![0.0; max_block],
             out_buf: vec![0.0; max_block],
+            last_n: 0,
             have: vec![MISSING; max_block],
             gain: 0.0,
             step: 1.0 / cfg.fade.max(1) as f32,
@@ -312,6 +315,11 @@ impl Forwarder {
         self.gain
     }
 
+    /// 最近一次 `process` 推进 Out 的最后一块（纠漂移时补一块用）
+    pub fn last_output(&self) -> &[f32] {
+        self.out_buf.get(..self.last_n).unwrap_or(&[])
+    }
+
     /// 换到一条新总线（降噪进程重启后建的，`L_total` 不变）：保留本地延迟线和时间轴（原声不断），
     /// 只把对齐账清零——新总线 Processed 的第 0 个样本对应「从现在起推进 Raw 的第 −L_total 个」。
     /// 立刻切原声，等新心跳和回滞再淡回。`L_total` 变了不能用它，要新建 `Forwarder`。
@@ -353,6 +361,7 @@ impl Forwarder {
                 self.stats.out_overflow += (n - pushed.min(n)) as u64;
             }
             self.out_buf = buf;
+            self.last_n = n;
         }
     }
 
