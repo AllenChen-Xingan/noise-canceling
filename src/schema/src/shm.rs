@@ -130,34 +130,87 @@ pub fn guard(history: &[(u32, &str)], version: u32, fp: &str) -> Result<(), Stri
     }
 }
 
-/// 从一份已提交的布局文件（可信基线：main 上的版本）算出它的 (版本, 指纹)。
-pub fn baseline_entry(layout_text: &str) -> Result<(u32, String), String> {
-    let mut v: Value =
-        serde_json::from_str(layout_text).map_err(|e| format!("基线 {LAYOUT_FILE}：{e}"))?;
-    let version = v
-        .get("version")
-        .and_then(Value::as_u64)
-        .and_then(|n| u32::try_from(n).ok())
-        .ok_or_else(|| format!("基线 {LAYOUT_FILE} 缺 version"))?;
+/// 可信基线（main 上已提交的布局文件）里读出的东西。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BaseLayout {
+    /// 文件里的版本号
+    pub version: u32,
+    /// 按文件里的布局重新算的指纹（不信文件里自报的指纹）
+    pub fingerprint: String,
+    /// 文件里登记的全部版本历史；早于「历史进文件」的旧格式没有这一项，按只有当前一行算
+    pub history: Vec<(u32, String)>,
+}
+
+/// 从一份已提交的布局文件解析出基线。
+pub fn baseline_entry(layout_text: &str) -> Result<BaseLayout, String> {
+    let bad = |what: &str| format!("基线 {LAYOUT_FILE}：{what}");
+    let mut v: Value = serde_json::from_str(layout_text).map_err(|e| bad(&e.to_string()))?;
+    let as_u32 = |x: Option<&Value>| {
+        x.and_then(Value::as_u64)
+            .and_then(|n| u32::try_from(n).ok())
+    };
+    let version = as_u32(v.get("version")).ok_or_else(|| bad("缺 version"))?;
+    let history = match v.get("history") {
+        None => None,
+        Some(Value::Array(rows)) => Some(
+            rows.iter()
+                .map(|r| {
+                    let ver = as_u32(r.get("version"));
+                    let fp = r.get("fingerprint").and_then(Value::as_str);
+                    ver.zip(fp)
+                        .map(|(a, b)| (a, b.to_string()))
+                        .ok_or_else(|| bad("history 有一行缺 version 或 fingerprint"))
+                })
+                .collect::<Result<Vec<_>, _>>()?,
+        ),
+        Some(_) => return Err(bad("history 不是数组")),
+    };
     if let Value::Object(m) = &mut v {
         m.remove("$comment");
         m.remove("version");
+        m.remove("history");
     }
-    Ok((version, fingerprint(&v)))
+    let fingerprint = fingerprint(&v);
+    let history = history.unwrap_or_else(|| vec![(version, fingerprint.clone())]);
+    Ok(BaseLayout {
+        version,
+        fingerprint,
+        history,
+    })
 }
 
-/// 历史只增不改（codex 第 2 轮 #1）：main 上已发布的 (版本, 指纹) 必须原样留在 `history` 里。
-pub fn guard_baseline(history: &[(u32, &str)], base: (u32, &str)) -> Result<(), String> {
-    match history.iter().find(|(v, _)| *v == base.0) {
-        Some((_, f)) if *f == base.1 => Ok(()),
-        Some((v, f)) => Err(format!(
-            "shm::HISTORY 里版本 {v} 的指纹被改写了（main 上的布局是 {}，现在写的是 {f}）：\
-             已发布的版本只能在末尾追加新版本，不能改旧行——改布局请升 layout::VERSION",
-            base.1
-        )),
-        None => Err(format!(
-            "shm::HISTORY 删掉了 main 上已发布的版本 {}：旧行不能删",
-            base.0
-        )),
+/// 历史只增不改（codex 第 2 轮 #1、第 3 轮 #3）：
+/// main 上已发布的整份历史必须原样是 `history` 的前缀，新版本只能追加在后面；
+/// 基线自身的 (版本, 指纹) 也必须在它自己的历史里（文件没被手改过）。
+pub fn guard_baseline(history: &[(u32, &str)], base: &BaseLayout) -> Result<(), String> {
+    let me = (base.version, base.fingerprint.as_str());
+    if !base.history.iter().any(|(v, f)| (*v, f.as_str()) == me) {
+        return Err(format!(
+            "基线 {LAYOUT_FILE} 自相矛盾：按布局算的 (版本 {}, {}) 不在它登记的历史里",
+            me.0, me.1
+        ));
     }
+    for (i, (bv, bf)) in base.history.iter().enumerate() {
+        match history.iter().position(|(v, _)| v == bv) {
+            None => {
+                return Err(format!(
+                    "shm::HISTORY 删掉了 main 上已发布的版本 {bv}：旧行不能删"
+                ));
+            }
+            Some(j) if history[j].1 != bf => {
+                return Err(format!(
+                    "shm::HISTORY 里版本 {bv} 的指纹被改写了（main 上是 {bf}，现在写的是 {}）：\
+                     已发布的版本只能在末尾追加新版本，不能改旧行——改布局请升 layout::VERSION",
+                    history[j].1
+                ));
+            }
+            Some(j) if j != i => {
+                return Err(format!(
+                    "shm::HISTORY 里版本 {bv} 前面插进了别的行：新版本只能追加在末尾"
+                ));
+            }
+            Some(_) => {}
+        }
+    }
+    Ok(())
 }
