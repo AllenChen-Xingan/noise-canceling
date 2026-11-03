@@ -64,15 +64,17 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | fastpath（hw-peak + gtcrn-layers，约 30 min），19:49 起；锁 `_tmp/heavy.lock`；已告 99（47 会话已结束） |
+| 重编译 / 全量测试 / 跑模型（1 个） | fastpath（run_v2.sh，约 32 min）；锁 `_tmp/heavy.lock` |
 
-排队：无（本批计时到此为止）
+排队：99 方两次复跑测试（fastpath 结束后）
 
 **跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。加锁文件：mkdir 主目录 `_tmp/heavy.lock`（内写 owner · 开始 · 预计结束，跑完 rmdir），由各自大总管放名额时建、收回时删，手下不碰（47 已确认）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 20:55 fastpath run_v2.sh 卡住：round 2 native-v2-fast pace 16 进程跑 43 min（应约 96 s），停在 main.rs:674 sleep → 让其自停、修等待计算、加测试、只补跑缺的；锁延到约 21:30
+- 2026-11-02 fastpath peak1（3 轮 × 6000 帧，插电，负载 5.7 → 1.1）：实时节奏 + rt 手写每帧 0.38–0.55 ms ≈ 能效核 0.59 ms，是连续跑 0.091 ms 的 4–6 倍 → 推断实时节奏下在能效核约 1 GHz（乘加延迟 E 4.4 ns / P 0.77 ns），下界与耗电按能效核算；两项微基准量错待重跑
 - 2026-11-02 19:49 applebe 收尾：PR #59 合并（codex 8 轮 41 条全改，7、8 轮无 P0/P1）；fastpath 编译 + 17 条单元测试过、端到端仍 134.00 dB，开始计时
 - 2026-11-02 applebe：Accelerate 措辞已写；`apple-rs/tests/fields.rs` 以 bench 为唯一真相源比对 JSON 键（抓到 late_* ≠ release_* 同名不同义并改正）；main.rs 4 条 + power_parse 4 条测试通过；codex 第 6 轮在跑。转交：bench 补计时窗字段（win_start_unix / win_end_unix / wall_s），否则手写版耗电不进排名 → 派给「下界分析」手下
 - 2026-11-02 rustbe 收尾：PR #55 合并（0 分配整数证据 6000 帧 · 10 条单元测试 · 形状交叉校验）。AI 定：Accelerate「cblas / vDSP 路线已不采用；BNNS 路线待证实」；JSON 字段交叉校验由 applebe 在 apple-rs 加测试
