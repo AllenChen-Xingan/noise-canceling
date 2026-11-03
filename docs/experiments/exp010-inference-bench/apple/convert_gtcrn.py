@@ -20,6 +20,8 @@ import torch
 src, out = sys.argv[1], sys.argv[2]
 ONLY = sys.argv[3] if len(sys.argv) > 3 else None
 want = lambda v: ONLY is None or ONLY == v
+# coremltools 的 Python 侧 predict 在本机偶发段错误（2026-11-02 实测）；逐值一致由 apple-rs 对 ORT 转储判，这里默认不跑
+SELFCHECK = os.environ.get("CT_SELFCHECK") == "1"
 os.makedirs(out, exist_ok=True)
 sys.path.insert(0, src)
 sys.modules.setdefault("einops", types.SimpleNamespace(rearrange=None))  # 源码 import 了但没用
@@ -126,8 +128,9 @@ for prec, tag in [(ct.precision.FLOAT32, "fp32"), (ct.precision.FLOAT16, "fp16")
         minimum_deployment_target=ct.target.macOS15,
     )
     # 转换端自检：CPU 上和 torch 比一次（不是逐值一致验收，验收走 bench 对 ORT 输出）
-    got = mlm.predict({k: v.numpy() for k, v in zip(SHAPES, ex)})
-    info[f"selfcheck_{tag}_max_abs_vs_torch"] = float(np.abs(got["enh"] - ref[0].numpy()).max())
+    if SELFCHECK:
+        got = mlm.predict({k: v.numpy() for k, v in zip(SHAPES, ex)})
+        info[f"selfcheck_{tag}_max_abs_vs_torch"] = float(np.abs(got["enh"] - ref[0].numpy()).max())
     save(mlm, f"gtcrn_{tag}.mlpackage")
 
 # GRU 展开版（fp32 显式缓存）：先在 torch 里和原版比一次，确认展开不改输出
@@ -146,8 +149,9 @@ if want("unrolled"):
       compute_precision=ct.precision.FLOAT32,
       minimum_deployment_target=ct.target.macOS15,
   )
-  got = mlu.predict({k: v.numpy() for k, v in zip(SHAPES, ex)})
-  info["selfcheck_unrolled_fp32_max_abs_vs_torch"] = float(np.abs(got["enh"] - ref[0].numpy()).max())
+  if SELFCHECK:
+      got = mlu.predict({k: v.numpy() for k, v in zip(SHAPES, ex)})
+      info["selfcheck_unrolled_fp32_max_abs_vs_torch"] = float(np.abs(got["enh"] - ref[0].numpy()).max())
   save(mlu, "gtcrn_unrolled_fp32.mlpackage")
 
 # 有状态版：缓存作为 register_buffer 留在模型里，每帧只进 mix 出 enh
