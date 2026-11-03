@@ -9,6 +9,7 @@ use serde_json::Value;
 use vdn_engine::FaultKind;
 
 use crate::Level;
+use crate::files::defaults as d;
 use crate::files::{
     FaultFile, FaultFileKind, GraderFile, Lang, LevelsFile, Polarity, SceneFile, SuiteFile,
     serde_name,
@@ -129,28 +130,29 @@ pub struct Suite {
     pub tasks: Vec<Task>,
 }
 
-fn pair(v: Option<[f64; 2]>, d: (f64, f64)) -> (f64, f64) {
-    v.map_or(d, |[a, b]| (a, b))
+fn pair(v: Option<[f64; 2]>, dflt: [f64; 2]) -> (f64, f64) {
+    let [a, b] = v.unwrap_or(dflt);
+    (a, b)
 }
 
 fn scene(v: SceneFile, dur_default: f64) -> SceneSpec {
     let owner = v.owner.map(|o| {
-        let (f0_lo, f0_hi) = pair(o.f0, (100.0, 140.0));
+        let (f0_lo, f0_hi) = pair(o.f0, d::OWNER_F0);
         TalkerSpec {
-            level_dbov: o.level_dbov.unwrap_or(-26.0),
+            level_dbov: o.level_dbov.unwrap_or(d::LEVEL_DBOV),
             f0_lo,
             f0_hi,
-            tonal: o.tonal.unwrap_or(false),
+            tonal: o.tonal.unwrap_or(d::TONAL),
         }
     });
     let interferers = v
         .interferers
         .into_iter()
         .map(|i| {
-            let (f0_lo, f0_hi) = pair(i.f0, (180.0, 230.0));
+            let (f0_lo, f0_hi) = pair(i.f0, d::INTERF_F0);
             InterfSpec {
-                mode: i.mode.unwrap_or(InterfMode::Alternate),
-                sir_db: i.sir_db.unwrap_or(6.0),
+                mode: i.mode.unwrap_or(d::INTERF_MODE),
+                sir_db: i.sir_db.unwrap_or(d::SIR_DB),
                 f0_lo,
                 f0_hi,
             }
@@ -160,12 +162,12 @@ fn scene(v: SceneFile, dur_default: f64) -> SceneSpec {
         dur_s: v.dur_s.unwrap_or(dur_default),
         seed: 0,
         owner,
-        owner_start_s: v.owner_start_s.unwrap_or(0.5),
-        pause_s: pair(v.pause_s, (0.4, 1.2)),
+        owner_start_s: v.owner_start_s.unwrap_or(d::OWNER_START_S),
+        pause_s: pair(v.pause_s, d::PAUSE_S),
         interferers,
-        noise: v.noise.unwrap_or(NoiseKind::Pink),
-        snr_db: v.snr_db.unwrap_or(10.0),
-        tail_silence_s: v.tail_silence_s.unwrap_or(0.0),
+        noise: v.noise.unwrap_or(d::NOISE),
+        snr_db: v.snr_db.unwrap_or(d::SNR_DB),
+        tail_silence_s: v.tail_silence_s.unwrap_or(d::TAIL_SILENCE_S),
     }
 }
 
@@ -201,8 +203,8 @@ fn graders(id: &str, list: Vec<GraderFile>, info_only: bool) -> Result<Vec<Grade
 /// 读任务清单。格式正本是 `files::SuiteFile`（未知的键报错）；缺省值在这里补；跨任务的规则（id 唯一、探针的基础任务存在）也在这里查。
 pub fn parse_suite(text: &str) -> Result<Suite, String> {
     let root: SuiteFile = serde_json::from_str(text).map_err(|e| format!("清单格式不对：{e}"))?;
-    let dur_default = root.defaults.dur_s.unwrap_or(10.0);
-    let trials_default = root.defaults.trials.unwrap_or(3) as usize;
+    let dur_default = root.defaults.dur_s.unwrap_or(d::DUR_S);
+    let trials_default = root.defaults.trials.unwrap_or(d::TRIALS) as usize;
     let mut tasks = Vec::new();
     for t in root.tasks {
         let id = t.id;
@@ -217,13 +219,13 @@ pub fn parse_suite(text: &str) -> Result<Suite, String> {
         }
         tasks.push(Task {
             set: t.set,
-            polarity: serde_name(&t.polarity.unwrap_or(Polarity::Both)),
+            polarity: serde_name(&t.polarity.unwrap_or(d::POLARITY)),
             origin: t.origin.unwrap_or_default(),
             desc: t.desc.unwrap_or_default(),
             scene: t.scene.map(|sc| scene(sc, dur_default)),
             real: t.real,
-            lang: serde_name(&t.lang.unwrap_or(Lang::En)),
-            safety: t.safety.unwrap_or(true),
+            lang: serde_name(&t.lang.unwrap_or(d::LANG)),
+            safety: t.safety.unwrap_or(d::SAFETY),
             faults: t.faults.iter().map(fault).collect(),
             graders: gs,
             trials: t.trials.map_or(trials_default, |v| v as usize),
@@ -248,8 +250,8 @@ pub fn parse_suite(text: &str) -> Result<Suite, String> {
         return Err("任务 id 有重复".into());
     }
     Ok(Suite {
-        name: root.name.unwrap_or_else(|| "suite".into()),
-        base_seed: root.seed.unwrap_or(20_261_031),
+        name: root.name.unwrap_or_else(|| d::NAME.into()),
+        base_seed: root.seed.unwrap_or(d::SEED),
         tasks,
     })
 }

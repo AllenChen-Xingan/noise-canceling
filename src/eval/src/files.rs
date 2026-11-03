@@ -19,11 +19,12 @@ use crate::synth::{InterfMode, NoiseKind};
 /// 任务清单（`ci.json`、`qa.json`）。
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+#[schemars(transform = schema_defaults_suite)]
 pub struct SuiteFile {
-    /// 清单名；缺省 "suite"
+    /// 清单名
     pub name: Option<String>,
     pub doc: Option<String>,
-    /// 基础种子；缺省 20261031
+    /// 基础种子
     pub seed: Option<u64>,
     #[serde(default)]
     pub defaults: Defaults,
@@ -32,10 +33,11 @@ pub struct SuiteFile {
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+#[schemars(transform = schema_defaults_defaults)]
 pub struct Defaults {
-    /// 合成场景时长（秒）；缺省 10
+    /// 合成场景时长（秒）
     pub dur_s: Option<f64>,
-    /// 每个任务的试验数；缺省 3
+    /// 每个任务的试验数
     pub trials: Option<u64>,
 }
 
@@ -59,11 +61,11 @@ pub enum Lang {
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+#[schemars(transform = schema_defaults_task)]
 pub struct TaskFile {
     /// 全清单唯一。惯例 R 回归 / C 能力 / P 探针 / Q 真实片段 + 两位号 + slug
     pub id: String,
     pub set: Set,
-    /// 缺省 both
     pub polarity: Option<Polarity>,
     /// 取自哪次真实失败（实验号 + 片段 + 人原话或标签）；测试要求非空
     pub origin: Option<String>,
@@ -81,13 +83,12 @@ pub struct TaskFile {
     /// 同 graders，但只报，不计通过与门禁
     #[serde(default)]
     pub info: Vec<GraderFile>,
-    /// 合成任务 = 种子数；缺省取 defaults.trials
+    /// 合成任务 = 种子数；缺省取清单的 defaults.trials
     pub trials: Option<u64>,
-    /// false = 三件保命全关；缺省 true
+    /// false = 三件保命全关
     pub safety: Option<bool>,
     #[serde(default)]
     pub faults: Vec<FaultFile>,
-    /// 缺省 en
     pub lang: Option<Lang>,
     /// 已知失败（原因 / 代码位置 / issue）：阻断降为报警；全过时提示转正
     pub xfail: Option<String>,
@@ -95,44 +96,43 @@ pub struct TaskFile {
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+#[schemars(transform = schema_defaults_scene)]
 pub struct SceneFile {
     /// 主讲人；缺省或 null = 没有主讲人
     pub owner: Option<TalkerFile>,
-    /// 缺省 0.5
+    /// 主讲人开口时刻（秒）
     pub owner_start_s: Option<f64>,
-    /// 停顿长度范围（秒）；缺省 [0.4, 1.2]
+    /// 停顿长度范围（秒）
     pub pause_s: Option<[f64; 2]>,
     #[serde(default)]
     pub interferers: Vec<InterfFile>,
-    /// 缺省 pink
     pub noise: Option<NoiseKind>,
-    /// 缺省 10
     pub snr_db: Option<f64>,
-    /// 缺省取 defaults.dur_s
+    /// 场景时长（秒）；缺省取清单的 defaults.dur_s
     pub dur_s: Option<f64>,
-    /// 缺省 0
+    /// 末尾静音（秒）
     pub tail_silence_s: Option<f64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+#[schemars(transform = schema_defaults_talker)]
 pub struct TalkerFile {
-    /// P.56 主动语音电平（dBov）；缺省 −26
+    /// P.56 主动语音电平（dBov）
     pub level_dbov: Option<f64>,
-    /// 基频范围（Hz）；缺省 [100, 140]
+    /// 基频范围（Hz）
     pub f0: Option<[f64; 2]>,
-    /// 声调语言式的音节内 f0 变化；缺省 false
+    /// 声调语言式的音节内 f0 变化
     pub tonal: Option<bool>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+#[schemars(transform = schema_defaults_interf)]
 pub struct InterfFile {
-    /// 缺省 alternate
     pub mode: Option<InterfMode>,
-    /// 缺省 6
     pub sir_db: Option<f64>,
-    /// 基频范围（Hz）；缺省 [180, 230]
+    /// 基频范围（Hz）
     pub f0: Option<[f64; 2]>,
 }
 
@@ -178,6 +178,107 @@ fn verifier_ids(schema: &mut schemars::Schema) {
     if let Some(Value::Object(v)) = schema.get_mut("properties").and_then(|p| p.get_mut("v")) {
         v.insert("enum".into(), Value::Array(ids));
     }
+}
+
+/// 缺省值的正本：`suite.rs` 补缺省值、导出 schema 的 `default` 都读这里（第 1 轮 codex #3）。
+pub mod defaults {
+    use super::{Lang, Polarity};
+    use crate::synth::{InterfMode, NoiseKind};
+
+    pub const NAME: &str = "suite";
+    pub const SEED: u64 = 20_261_031;
+    pub const DUR_S: f64 = 10.0;
+    pub const TRIALS: u64 = 3;
+    pub const POLARITY: Polarity = Polarity::Both;
+    pub const SAFETY: bool = true;
+    pub const LANG: Lang = Lang::En;
+    pub const OWNER_START_S: f64 = 0.5;
+    pub const PAUSE_S: [f64; 2] = [0.4, 1.2];
+    pub const NOISE: NoiseKind = NoiseKind::Pink;
+    pub const SNR_DB: f64 = 10.0;
+    pub const TAIL_SILENCE_S: f64 = 0.0;
+    pub const LEVEL_DBOV: f64 = -26.0;
+    pub const OWNER_F0: [f64; 2] = [100.0, 140.0];
+    pub const TONAL: bool = false;
+    pub const INTERF_MODE: InterfMode = InterfMode::Alternate;
+    pub const SIR_DB: f64 = 6.0;
+    pub const INTERF_F0: [f64; 2] = [180.0, 230.0];
+}
+
+/// 往 schema 的 `properties.<键>` 里写 `default`。
+fn put_defaults(schema: &mut schemars::Schema, pairs: &[(&str, Value)]) {
+    let Some(Value::Object(props)) = schema.get_mut("properties") else {
+        return;
+    };
+    for (k, v) in pairs {
+        if let Some(Value::Object(p)) = props.get_mut(*k) {
+            p.insert("default".into(), v.clone());
+        }
+    }
+}
+
+fn j<T: Serialize>(v: T) -> Value {
+    serde_json::to_value(v).unwrap_or(Value::Null)
+}
+
+fn schema_defaults_suite(s: &mut schemars::Schema) {
+    use defaults as d;
+    put_defaults(s, &[("name", j(d::NAME)), ("seed", j(d::SEED))]);
+}
+
+fn schema_defaults_defaults(s: &mut schemars::Schema) {
+    use defaults as d;
+    put_defaults(s, &[("dur_s", j(d::DUR_S)), ("trials", j(d::TRIALS))]);
+}
+
+fn schema_defaults_task(s: &mut schemars::Schema) {
+    use defaults as d;
+    put_defaults(
+        s,
+        &[
+            ("polarity", j(d::POLARITY)),
+            ("safety", j(d::SAFETY)),
+            ("lang", j(d::LANG)),
+        ],
+    );
+}
+
+fn schema_defaults_scene(s: &mut schemars::Schema) {
+    use defaults as d;
+    put_defaults(
+        s,
+        &[
+            ("owner_start_s", j(d::OWNER_START_S)),
+            ("pause_s", j(d::PAUSE_S)),
+            ("noise", j(d::NOISE)),
+            ("snr_db", j(d::SNR_DB)),
+            ("tail_silence_s", j(d::TAIL_SILENCE_S)),
+        ],
+    );
+}
+
+fn schema_defaults_talker(s: &mut schemars::Schema) {
+    use defaults as d;
+    put_defaults(
+        s,
+        &[
+            ("level_dbov", j(d::LEVEL_DBOV)),
+            ("f0", j(d::OWNER_F0)),
+            ("tonal", j(d::TONAL)),
+        ],
+    );
+}
+
+fn schema_defaults_interf(s: &mut schemars::Schema) {
+    use defaults as d;
+    put_defaults(
+        s,
+        &[
+            ("mode", j(d::INTERF_MODE)),
+            ("sir_db", j(d::SIR_DB)),
+            ("f0", j(d::INTERF_F0)),
+        ],
+    );
 }
 
 /// 定标级别表（`levels.json`）。只由 `vdn-eval calib --write-levels` 改。
