@@ -30,3 +30,5 @@
 - 2026-11-02 schema 复跑（自报）：xtask ci 全过 · vdn-schema --check 一致 · vdn-schema 21 条 · eval ci 同前（回归 13/17 · 能力 1/10 · 探针 5/5）；codex 第 3 轮在跑
 - 2026-11-02 single 验收：大总管亲手 xtask ci 全绿（372 / 0 / 5，与自报一致）；合 origin/main（+152，冲突仅评审索引）后再跑全绿；PR #60 已开，等 CI
 - 2026-11-02 PR #60 CI 过，已合并（b2902db），#56 关，远端分支已删；通知 single 收尾、schema 等大总管合 main
+- 2026-11-02 schema codex 第 3 轮 P1×2 P2×2 属实待改（基线读不到不放行 · push 基线用 before · 版本历史前缀比对 · 整数上界）；大总管合 origin/main 进 schema 分支（d157caf，冲突仅评审索引）
+- 2026-11-02 ~21:30 e3 电池组基准约 35 min，之后插电组约 32 min；schema 只改文件
