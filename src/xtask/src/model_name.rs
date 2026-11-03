@@ -44,6 +44,18 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
     }
 }
 
+/// 这一行只有属性（`#[…]`，可连写几个），没有别的代码。
+fn only_attrs(line: &str) -> bool {
+    let mut t = line.trim();
+    if !t.starts_with("#[") {
+        return false;
+    }
+    while let Some(r) = strip_attr(t) {
+        t = r.trim();
+    }
+    t.is_empty()
+}
+
 /// 由 `#[cfg(test)] mod x;`（可带 `#[path = "…"]`）引入的测试模块文件（相对路径）。
 /// 按 Rust 的规则找文件：`mod.rs` / `lib.rs` / `main.rs` 里声明的在同目录，别的文件 `foo.rs` 里声明的在 `foo/` 下；
 /// `#[path]` 相对声明它的文件所在目录。
@@ -62,7 +74,7 @@ pub fn test_module_files(files: &[(String, String)]) -> Vec<String> {
             }
             // 这一项的全部属性：往前收紧挨着的属性行（`#[path]` 写在 cfg 前面也认，第 4 轮 #3），往后收到 `;` 或 `{`
             let mut start = i;
-            while start > 0 && code[start - 1].trim_start().starts_with("#[") {
+            while start > 0 && only_attrs(&code[start - 1]) {
                 start -= 1;
             }
             let mut end = i;
