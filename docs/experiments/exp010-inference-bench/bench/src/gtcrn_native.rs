@@ -685,6 +685,17 @@ impl Linear {
             o,
         })
     }
+    fn cost(&self) -> Cost {
+        let (i, o) = (self.i as u64, self.o as u64);
+        Cost {
+            macs: o * i,
+            w_bytes: (o * i + o) * F32B,
+            io_bytes: (i + o) * F32B,
+            chain_fma: clog2(self.i) + 1,
+            ..Cost::default()
+        }
+    }
+
     #[inline]
     fn run(&self, x: &[f32], y: &mut [f32]) {
         for k in 0..self.o {
