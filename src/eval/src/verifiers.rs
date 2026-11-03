@@ -12,6 +12,7 @@ use crate::analysis::{
 };
 use crate::synth::Clip;
 use crate::system::{BUDGET_MS, RunOut};
+use crate::thresholds as th;
 use crate::{Better, Level, Score, Verdict, db10};
 
 /// 类别：决定置信度从哪来（012 §1）。
@@ -422,7 +423,7 @@ fn v_frame(c: &Ctx, p: &Params) -> Score {
         max,
         "×周期",
         Better::Lower,
-        Some(p.f_or("max", 0.5)),
+        Some(p.f_or("max", th::FRAME.def("max"))),
         &[],
     )
     .with_extra("p999", quantile(&t, 0.999));
@@ -463,7 +464,7 @@ fn v_mute(c: &Ctx, p: &Params) -> Score {
     while start > 0 && x[start - 1] == 0.0 {
         start -= 1;
     }
-    let settle = (p.f_or("settle_s", 0.3) * c.clip.sr as f64) as usize;
+    let settle = (p.f_or("settle_s", th::MUTE.def("settle_s")) * c.clip.sr as f64) as usize;
     let from = start + settle;
     if x.len() < from + c.clip.sr as usize / 4 {
         return Score::unknown(
@@ -490,7 +491,7 @@ fn v_mute(c: &Ctx, p: &Params) -> Score {
         v,
         "dBFS",
         Better::Lower,
-        Some(p.f_or("max_dbfs", -90.3)),
+        Some(p.f_or("max_dbfs", th::MUTE.def("max_dbfs"))),
         &[],
     )
     .with_extra("silence_s", (x.len() - start) as f64 / c.clip.sr as f64)
@@ -533,7 +534,7 @@ fn v_switch(c: &Ctx, p: &Params) -> Score {
         worst / refd,
         "×",
         Better::Lower,
-        Some(p.f_or("max", 2.0)),
+        Some(p.f_or("max", th::SWITCH.def("max"))),
         &[],
     )
     .with_extra("switches", points.len() as f64)
@@ -568,7 +569,7 @@ fn v_bgstab(c: &Ctx, p: &Params) -> Score {
     let q = quiet_frames(c, 5);
     let a = frame_power(c.out, MASK_FRAME);
     let b = frame_power(nout, MASK_FRAME);
-    let start = (p.f_or("from_s", 0.0) * 100.0) as usize;
+    let start = (p.f_or("from_s", th::BGSTAB.def("from_s")) * 100.0) as usize;
     let d: Vec<Option<f64>> = (0..q.len().min(a.len()).min(b.len()))
         .map(|f| (q[f] && f >= start && b[f] > 1e-14).then(|| db10(a[f]) - db10(b[f])))
         .collect();
@@ -591,8 +592,8 @@ fn v_bgstab(c: &Ctx, p: &Params) -> Score {
         worst.abs(),
         "dB",
         Better::Lower,
-        Some(p.f_or("max", 10.0)),
-        &[3.0, 6.0, 10.0],
+        Some(p.f_or("max", th::BGSTAB.def("max"))),
+        th::BGSTAB.edges,
     )
     .with_extra("signed_db", worst)
     .with_extra("frames", n as f64)
@@ -658,8 +659,8 @@ fn v_onset(c: &Ctx, p: &Params) -> Score {
         excess,
         "dB",
         Better::Lower,
-        Some(p.f_or("max", 3.0)),
-        &[1.0, 2.0, 3.0],
+        Some(p.f_or("max", th::ONSET.def("max"))),
+        th::ONSET.edges,
     )
     .with_extra("onsets", per.len() as f64)
     .with_extra("p90_onset_loss_db", quantile(&per, 0.9))
@@ -751,8 +752,8 @@ fn v_splvl(c: &Ctx, p: &Params) -> Score {
         d,
         "dB",
         Better::Higher,
-        Some(p.f_or("min", -3.0)),
-        &[-1.0, -2.0, -3.0],
+        Some(p.f_or("min", th::SPLVL.def("min"))),
+        th::SPLVL.edges,
     )
 }
 
@@ -832,8 +833,8 @@ fn v_music(c: &Ctx, p: &Params) -> Score {
         ko / ki,
         "×",
         Better::Lower,
-        Some(p.f_or("max", 2.0)),
-        &[1.2, 1.5, 2.0],
+        Some(p.f_or("max", th::MUSIC.def("max"))),
+        th::MUSIC.edges,
     )
     .with_extra("kurt_in", ki)
     .with_extra("kurt_out", ko)
@@ -845,7 +846,7 @@ fn v_vacuum(c: &Ctx, p: &Params) -> Score {
     let Some((t, _)) = tnlr(c) else {
         return Score::unknown(ID, "dB", Better::Higher, "纯噪声帧不足 0.5 s");
     };
-    Score::judged(ID, t, "dB", Better::Higher, Some(p.f_or("min", -40.0)), &[])
+    Score::judged(ID, t, "dB", Better::Higher, Some(p.f_or("min", th::VACUUM.def("min"))), &[])
 }
 
 fn v_timbre(c: &Ctx, p: &Params) -> Score {
@@ -909,8 +910,8 @@ fn v_timbre(c: &Ctx, p: &Params) -> Score {
         worst.abs(),
         "dB",
         Better::Lower,
-        Some(p.f_or("max", 6.0)),
-        &[2.0, 4.0, 6.0],
+        Some(p.f_or("max", th::TIMBRE.def("max"))),
+        th::TIMBRE.edges,
     )
     .with_extra("dev_0_1k", dev[0])
     .with_extra("dev_1_2k", dev[1])
@@ -1030,13 +1031,13 @@ fn v_sim_gate(c: &Ctx, p: &Params) -> Score {
         miss,
         "比例",
         Better::Lower,
-        Some(p.f_or("max", 0.05)),
+        Some(p.f_or("max", th::SIM_GATE.def("max"))),
         &[],
     )
     .with_extra("onset_miss", onset_miss)
     .with_extra("noise_open", noise_open)
     .with_extra("owner_hops", act.len() as f64);
-    let omax = p.f_or("onset_max", 0.2);
+    let omax = p.f_or("onset_max", th::SIM_GATE.def("onset_max"));
     if s.verdict.is_pass() && onset_miss > omax {
         s.verdict = Verdict::Fail;
         s.note = format!(
@@ -1061,7 +1062,7 @@ fn v_sim_fa(c: &Ctx, p: &Params) -> Score {
         return Score::unknown(ID, "比例", Better::Lower, "只有干扰者说话的 hop 不足 20 个");
     }
     let fa = only.iter().filter(|&&h| t.gate[h]).count() as f64 / only.len() as f64;
-    Score::judged(ID, fa, "比例", Better::Lower, Some(p.f_or("max", 0.1)), &[])
+    Score::judged(ID, fa, "比例", Better::Lower, Some(p.f_or("max", th::SIM_FA.def("max"))), &[])
         .with_extra("interf_only_hops", only.len() as f64)
 }
 
@@ -1083,7 +1084,7 @@ fn v_sim_quiet(c: &Ctx, p: &Params) -> Score {
         open,
         "比例",
         Better::Lower,
-        Some(p.f_or("max", 0.1)),
+        Some(p.f_or("max", th::SIM_QUIET.def("max"))),
         &[],
     )
     .with_extra("quiet_hops", quiet.len() as f64)
@@ -1124,7 +1125,7 @@ fn v_sim_swlat(c: &Ctx, p: &Params) -> Score {
         quantile(&lats, 0.9),
         "ms",
         Better::Lower,
-        Some(p.f_or("max", 32.0)),
+        Some(p.f_or("max", th::SIM_SWLAT.def("max"))),
         &[],
     )
     .with_extra("onsets", lats.len() as f64)

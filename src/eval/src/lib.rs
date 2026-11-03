@@ -25,6 +25,7 @@ pub mod runner;
 pub mod suite;
 pub mod synth;
 pub mod system;
+pub mod thresholds;
 pub mod verifiers;
 pub mod wav;
 
