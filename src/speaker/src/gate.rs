@@ -20,7 +20,7 @@
 use vdn_dsp::{db_to_lin, one_pole_coef};
 
 use crate::vad::{Hysteresis, Vad};
-use vdn_types::{FrameCtx, SampleClock, SpeakerClass, Stage};
+use vdn_types::{FrameCtx, NodeKind, SampleClock, SpeakerClass, Stage};
 
 #[derive(Clone, Copy, Debug)]
 pub struct GateParams {
@@ -211,8 +211,8 @@ impl AsymGate {
     clippy::disallowed_macros
 )]
 impl Stage for AsymGate {
-    fn name(&self) -> &'static str {
-        "asym-gate"
+    fn kind(&self) -> &'static NodeKind {
+        &vdn_types::graph::ASYM_GATE
     }
 
     fn reset(&mut self) {

@@ -144,8 +144,8 @@ impl VadEnvelopeStage {
     clippy::disallowed_macros
 )]
 impl Stage for VadEnvelopeStage {
-    fn name(&self) -> &'static str {
-        "vad-envelope"
+    fn kind(&self) -> &'static NodeKind {
+        &graph::VAD_ENVELOPE
     }
 
     fn reset(&mut self) {
@@ -225,8 +225,8 @@ impl EnergyEnvelopeStage {
     clippy::disallowed_macros
 )]
 impl Stage for EnergyEnvelopeStage {
-    fn name(&self) -> &'static str {
-        "energy-envelope"
+    fn kind(&self) -> &'static NodeKind {
+        &graph::ENERGY_ENVELOPE
     }
 
     fn reset(&mut self) {
@@ -266,8 +266,8 @@ impl FloorStage {
     clippy::disallowed_macros
 )]
 impl Stage for FloorStage {
-    fn name(&self) -> &'static str {
-        "floor"
+    fn kind(&self) -> &'static NodeKind {
+        &graph::FLOOR
     }
 
     fn reset(&mut self) {}

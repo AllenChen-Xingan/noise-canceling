@@ -133,8 +133,8 @@ impl PolishChain {
 }
 
 impl SpectralStage for PolishChain {
-    fn name(&self) -> &'static str {
-        "polish-spectral"
+    fn kind(&self) -> &'static NodeKind {
+        &vdn_types::graph::POLISH_SPECTRAL
     }
     fn reset(&mut self) {
         PolishChain::reset(self);
@@ -148,8 +148,8 @@ impl SpectralStage for PolishChain {
 /// 注意：同一个实例同时实现两个 trait，engine 接入时要把它当「一个节点、两个挂点」，不能当两个独立节点各放一份；
 /// 两个 trait 的 `reset` 都是整链重置。
 impl Stage for PolishChain {
-    fn name(&self) -> &'static str {
-        "polish-agc"
+    fn kind(&self) -> &'static NodeKind {
+        &vdn_types::graph::POLISH_AGC
     }
     fn reset(&mut self) {
         PolishChain::reset(self);
