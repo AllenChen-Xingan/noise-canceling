@@ -243,7 +243,7 @@ pub struct FloorStage {
 impl FloorStage {
     pub fn new(floor_db: f32) -> Self {
         Self {
-            m: db_to_lin(floor_db),
+            m: db_to_lin(vdn_types::desc::FLOOR_DB.clamp(floor_db)),
         }
     }
 }
@@ -271,6 +271,36 @@ impl Stage for FloorStage {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 包络与 engine 共用描述表里同一组条目：默认值同表；越界 validate 拒收、clamped 夹到边界。
+    #[test]
+    fn envelope_params_follow_desc_table() {
+        use vdn_types::desc::{self, ParamDesc};
+        let d = EnvelopeParams::p1_like(16000.0);
+        d.validate().unwrap();
+        type Set = fn(&mut EnvelopeParams, f32);
+        type Get = fn(&EnvelopeParams) -> f32;
+        let fields: [(&ParamDesc, Get, Set); 7] = [
+            (&desc::FLOOR_DB, |p| p.floor_db, |p, v| p.floor_db = v),
+            (&desc::OPEN_DB, |p| p.open_db, |p, v| p.open_db = v),
+            (&desc::ATTACK_S, |p| p.attack_s, |p, v| p.attack_s = v),
+            (&desc::RELEASE_S, |p| p.release_s, |p, v| p.release_s = v),
+            (&desc::HANGOVER_S, |p| p.hangover_s, |p, v| p.hangover_s = v),
+            (&desc::VAD_ON, |p| p.vad_on, |p, v| p.vad_on = v),
+            (&desc::VAD_OFF, |p| p.vad_off, |p, v| p.vad_off = v),
+        ];
+        for (dsc, get, set) in fields {
+            assert_eq!(get(&d), dsc.default, "{} 默认值", dsc.key);
+            for bad in [dsc.min - 0.5, dsc.max + 0.5] {
+                let mut p = d;
+                set(&mut p, bad);
+                assert_eq!(p.validate().unwrap_err().desc.id, dsc.id, "{}", dsc.key);
+                assert_eq!(get(&p.clamped()), dsc.clamp(bad), "{}", dsc.key);
+            }
+        }
+        let st = VadEnvelopeStage::new(EnvelopeParams { floor_db: 6.0, ..d });
+        assert_eq!(st.params().floor_db, desc::FLOOR_DB.max, "new() 先夹再用");
+    }
     use vdn_types::SpeakerVerdict;
 
     fn ctx() -> FrameCtx {
