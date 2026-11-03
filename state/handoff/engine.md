@@ -22,10 +22,15 @@
 - D70（人定：榨干硬件 · 非常低能耗 · 轻量）已写进 standard.md：新 BE-EXHAUST（§7.1 计算单元矩阵）· BE-MEM（常驻内存 ≤ 10 MB）· BE-SIZE ≤ 5 MB · 耗电按每帧 µJ · §6.2 选赢家规则。apple-rs 已加 footprint 字段
 - **收尾必做**：decision.md 第一节写风险④——手写方案已知部分 CPU 合计 ≥ 1.95%，离整机上限 2% 只剩 0.05%（大总管要求）
 
+- 17:14–17:40 名额：build 20261102-173000-b2 跑完（`apple/results/20261102-173000-b2/summary.md`）。苹果最快 = BNNS + GRU 展开 0.155 ms（ORT 0.384，手写 0.088），0 分配，134 dB；Core ML 全落 CPU、300 malloc/帧、fp16 不过；MLX Python 5.7 ms；FE-M 转不了（view_as_complex）；修了 coremltools 分组 ConvTranspose 错转
+- ⚠️ 实时节奏（16 ms）10 分钟：BNNS p50 0.82 ms、max 11.8 ms、4.8% 核 → 连续跑低估约 5 倍；已写 `apple-rs/tools/rt-matrix.sh`（QoS / rt 策略 / 工作组 / 忙等对照），等名额（47 方 18:00–18:30 之后）
+- DFN3 `_ll` 下界 6.1% 核 → 不做流式重导出，盲听用离线（大总管同意）；MLX 走 Rust 那格写「不测」+原因
+- `decision.md` 草稿已写，第 4 节等实时策略结果
+
 ## 下一步
-1. 等「名额给你」→ `apple-rs/tools/run-all.sh`；修编译错（第一次编 apple-rs）
-2. MLX 的 Rust 路（mlx-c）+ §9 Rust↔Python 差
-3. 写 `decision.md`，对抗自审一轮
+1. 等名额 → `apple-rs/tools/rt-matrix.sh <build 目录>`，再 10 分钟跑最好设置
+2. §9 Rust↔Python 差表（rustbe 有 ORT 5% 数；MLX 只有 Python）
+3. 补 decision.md 第 4 节 → 对抗自审一轮 → PR（Closes #45）
 
 ## 转交
 - （已报大总管）D69 整机 ≤ 0.01 核：认人判断回路 ≈ 1.2% 核，单项超总线，需降约 8 倍到 0.15%（不归 019）
