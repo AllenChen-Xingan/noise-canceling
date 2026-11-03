@@ -56,9 +56,13 @@ pub trait Pop {
     }
 }
 
-/// 读心跳：降噪进程每处理一块 +1。
+/// 读降噪进程的状态（经总线头，带外）：心跳每处理一块 +1；缺口计数 = 它因落后跳过的 Raw 样本数。
 pub trait Heartbeat {
     fn heartbeat(&self) -> u64;
+    /// 降噪进程跳过 Raw 积压的累计样本数。涨了 = 接下来一个 L_total 窗口里会有零占位，送音端改送原声
+    fn gaps(&self) -> u64 {
+        0
+    }
 }
 
 impl<T: Push + ?Sized> Push for &mut T {
@@ -80,6 +84,9 @@ impl<T: Pop + ?Sized> Pop for &mut T {
 impl<T: Heartbeat + ?Sized> Heartbeat for &T {
     fn heartbeat(&self) -> u64 {
         (**self).heartbeat()
+    }
+    fn gaps(&self) -> u64 {
+        (**self).gaps()
     }
 }
 
@@ -169,6 +176,10 @@ pub struct ForwarderStats {
     pub cuts: u64,
     /// 「降噪太慢」次数：心跳在动、但处理后的连续缺了超过心跳超时那么久（心跳过期计数看不到这种情况）
     pub slow_episodes: u64,
+    /// 降噪进程报了跳过积压（缺口计数涨了）、送音端改送一个 L_total 窗口原声的次数
+    pub gap_holds: u64,
+    /// 处理后的样本不是有限值、换成原声的个数（防御：不该出现）
+    pub nonfinite: u64,
     /// 最近一次 新鲜 → 过期 发生在第几个样本（`samples` 计）
     pub last_stale_at: Option<u64>,
 }
@@ -217,6 +228,10 @@ pub struct Forwarder {
     last_r: f32,
     /// 下一个样本强制按硬切处理（重新对账之后）
     pending_cut: bool,
+    /// 上次看到的降噪进程缺口计数；`None` = 还没看过（第一次只记基准）
+    last_gaps: Option<u64>,
+    /// 还要送多少个样本的原声（缺口计数涨了之后的一个 L_total 窗口）
+    gap_hold: usize,
     last_beat: Option<u64>,
     since_beat: usize,
     fresh: bool,
@@ -259,6 +274,8 @@ impl Forwarder {
             last_y: 0.0,
             last_r: 0.0,
             pending_cut: false,
+            last_gaps: None,
+            gap_hold: 0,
             last_beat: None,
             since_beat: 0,
             fresh: false,
@@ -471,6 +488,14 @@ impl Forwarder {
             }
         }
 
+        // 3b. 降噪进程跳过了积压（带外：缺口计数）：接下来一个 L_total 窗口里有零占位，这段送原声
+        let g = hb.gaps();
+        if self.last_gaps.is_some_and(|last| g > last) {
+            self.gap_hold = self.cfg.l_total + 2 * self.cfg.max_block;
+            self.stats.gap_holds += 1;
+        }
+        self.last_gaps = Some(g);
+
         // 4. 按对齐账取处理后的
         let end = t0 + n as i64;
         let mut t = t0;
@@ -570,10 +595,27 @@ impl Forwarder {
                 self.ok_run = 0;
                 self.stats.cuts += 1;
             }
-            let target = if self.fresh && self.ok_run >= fade {
+            let held = self.gap_hold > 0;
+            if held {
+                self.gap_hold -= 1;
+                self.ok_run = 0;
+            }
+            let target = if self.fresh && !held && self.ok_run >= fade {
                 1.0
             } else {
                 0.0
+            };
+            // 防御：处理后的不是有限值就当没有（只用原声）
+            let p = if p.is_finite() {
+                p
+            } else {
+                self.stats.nonfinite += 1;
+                if self.gain > 0.0 && !cut {
+                    cut = true;
+                    self.gain = 0.0;
+                    self.stats.cuts += 1;
+                }
+                r
             };
             if self.gain < target {
                 self.gain = (self.gain + self.step).min(1.0);

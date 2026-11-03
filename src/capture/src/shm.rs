@@ -47,6 +47,9 @@ impl Heartbeat for Bus {
     fn heartbeat(&self) -> u64 {
         Bus::heartbeat(self)
     }
+    fn gaps(&self) -> u64 {
+        self.ring(RingId::Raw).gaps()
+    }
 }
 
 /// Out 环的消费端，给 `HalSource` 用（开发期也给扬声器输出回调、文件写出线程用）。
