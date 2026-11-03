@@ -105,6 +105,7 @@ pub fn ms48(samples: usize) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vdn_types::IO_RATE;
 
     fn delayed(x: &[f32], d: usize) -> Vec<f32> {
         let mut y = vec![0.0; d];
@@ -114,7 +115,7 @@ mod tests {
 
     #[test]
     fn pearson_exact_delay_is_one_and_gain_invariant() {
-        let x = test_tone(48_000, 9600, 0);
+        let x = test_tone(IO_RATE, 9600, 0);
         let y: Vec<f32> = delayed(&x, 2303).iter().map(|v| v * 0.3).collect();
         let r = pearson_at_lag(&x, &y, 2303, 480).unwrap();
         assert!(r > 0.999_999, "{r}");
@@ -130,7 +131,7 @@ mod tests {
 
     #[test]
     fn onset_plus_xcorr_find_delay() {
-        let x = test_tone(48_000, 24_000, 0);
+        let x = test_tone(IO_RATE, IO_RATE as usize / 2, 0);
         let d = 2303;
         let y = delayed(&x, d);
         let on = onset(&y, 0.05).unwrap();
@@ -142,7 +143,7 @@ mod tests {
 
     #[test]
     fn silence_runs() {
-        let mut y = test_tone(48_000, 4800, 0);
+        let mut y = test_tone(IO_RATE, 4800, 0);
         for v in &mut y[1000..1500] {
             *v = 0.0;
         }
@@ -150,7 +151,7 @@ mod tests {
         assert_eq!(s, 1000);
         assert!((500..510).contains(&n), "{n}");
         // 正弦本身过零只有零星几个样本
-        let (_, n2) = longest_silence(&test_tone(48_000, 48_000, 0), 1e-3, 0);
+        let (_, n2) = longest_silence(&test_tone(IO_RATE, IO_RATE as usize, 0), 1e-3, 0);
         assert!(n2 < 5, "{n2}");
         assert_eq!(longest_silence(&[1.0; 4], 1e-3, 0), (0, 0));
     }

@@ -149,14 +149,14 @@ mod tests {
     fn sine_level_matches_theory() {
         // 振幅 0.5 的正弦：峰值 0.5（−6.02 dBFS），均方根 0.5/√2（−9.03 dBFS）
         let m = LevelMeter::default();
-        let x: Vec<f32> = (0..48_000)
-            .map(|i| 0.5 * (2.0 * std::f32::consts::PI * 1000.0 * i as f32 / 48_000.0).sin())
+        let x: Vec<f32> = (0..crate::IO_RATE)
+            .map(|i| 0.5 * (2.0 * std::f32::consts::PI * 1000.0 * i as f32 / crate::IO_RATE as f32).sin())
             .collect();
         for c in x.chunks(96) {
             m.observe(c);
         }
         let l = m.snapshot();
-        assert_eq!(l.samples, 48_000);
+        assert_eq!(l.samples, u64::from(crate::IO_RATE));
         assert!((l.peak - 0.5).abs() < 1e-3, "{l:?}");
         assert!((l.rms - 0.5 / 2f64.sqrt()).abs() < 1e-3, "{l:?}");
         assert!((l.peak_dbfs() + 6.02).abs() < 0.02);

@@ -21,7 +21,7 @@ use crate::pump::{InputPump, OutputPump};
 use crate::{Direction, IoError, RateRange};
 
 /// 块长上限（帧）：1 秒 @ 48 kHz。超过说明调用方传错了。
-pub const MAX_BLOCK: usize = 48_000;
+pub const MAX_BLOCK: usize = crate::IO_RATE as usize;
 
 /// 流的健康计数：错误回调与回调泵写，任何线程读。全部是原子量：cpal 有时在实时线程上调错误回调。
 #[derive(Debug, Default)]
@@ -409,6 +409,7 @@ pub fn choose_channels(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::IO_RATE;
 
     #[test]
     fn health_latches_by_error_kind() {
@@ -426,11 +427,11 @@ mod tests {
 
     #[test]
     fn validate_rejects_bad_params() {
-        assert!(validate(48_000, 480).is_ok());
+        assert!(validate(IO_RATE, 480).is_ok());
         assert!(matches!(validate(0, 480), Err(IoError::InvalidParam(_))));
-        assert!(matches!(validate(48_000, 0), Err(IoError::InvalidParam(_))));
+        assert!(matches!(validate(IO_RATE, 0), Err(IoError::InvalidParam(_))));
         assert!(matches!(
-            validate(48_000, MAX_BLOCK + 1),
+            validate(IO_RATE, MAX_BLOCK + 1),
             Err(IoError::InvalidParam(_))
         ));
     }
@@ -474,8 +475,8 @@ mod tests {
                 channels: 2,
             },
             RateRange {
-                min: 48_000,
-                max: 48_000,
+                min: IO_RATE,
+                max: IO_RATE,
                 channels: 1,
             },
             RateRange {
@@ -484,22 +485,22 @@ mod tests {
                 channels: 2,
             },
         ];
-        assert_eq!(choose_channels(&sup, 48_000, Some(2)), Some(2));
-        assert_eq!(choose_channels(&sup, 48_000, Some(6)), Some(1));
-        assert_eq!(choose_channels(&sup, 48_000, None), Some(1));
+        assert_eq!(choose_channels(&sup, IO_RATE, Some(2)), Some(2));
+        assert_eq!(choose_channels(&sup, IO_RATE, Some(6)), Some(1));
+        assert_eq!(choose_channels(&sup, IO_RATE, None), Some(1));
         let only44 = [RateRange {
             min: 44_100,
             max: 44_100,
             channels: 2,
         }];
-        assert_eq!(choose_channels(&only44, 48_000, Some(2)), None);
+        assert_eq!(choose_channels(&only44, IO_RATE, Some(2)), None);
     }
 
     #[test]
     fn unsupported_rate_error_lists_what_device_supports() {
         let e = IoError::UnsupportedRate {
             device: "某麦克风".into(),
-            wanted: 48_000,
+            wanted: IO_RATE,
             supported: vec![RateRange {
                 min: 44_100,
                 max: 44_100,

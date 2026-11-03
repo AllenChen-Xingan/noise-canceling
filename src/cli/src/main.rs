@@ -181,7 +181,7 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
 fn write_wav48(path: &Path, y: &[f32]) -> Result<(), BoxError> {
     let spec = hound::WavSpec {
         channels: 1,
-        sample_rate: 48_000,
+        sample_rate: vdn_types::IO_RATE,
         bits_per_sample: 32,
         sample_format: hound::SampleFormat::Float,
     };
@@ -197,13 +197,13 @@ fn chain_check(a: ChainCheckArgs) -> Result<bool, BoxError> {
     let mut r = hound::WavReader::open(&a.wav)?;
     let spec = r.spec();
     if spec.channels != 1
-        || spec.sample_rate != 48_000
+        || spec.sample_rate != vdn_types::IO_RATE
         || spec.sample_format != hound::SampleFormat::Float
     {
         return Err(format!("{}：只收 48 kHz 单声道 32 位浮点", a.wav.display()).into());
     }
     let y = r.samples::<f32>().collect::<Result<Vec<_>, _>>()?;
-    let v = chain::judge_file(&y, a.l_total, (a.from * 48_000.0) as usize);
+    let v = chain::judge_file(&y, a.l_total, (a.from * f64::from(vdn_types::IO_RATE)) as usize);
     println!("{} · 文件 {}（{} 样本）", v, a.wav.display(), y.len());
     Ok(v.pass)
 }

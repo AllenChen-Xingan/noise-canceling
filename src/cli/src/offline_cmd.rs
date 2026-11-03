@@ -24,7 +24,7 @@ pub fn open_model(m: &ModelOpts) -> Result<(AnyModel, PathBuf), BoxError> {
 pub fn read_wav(path: &Path) -> Result<Vec<f32>, BoxError> {
     let mut r = hound::WavReader::open(path)?;
     let spec = r.spec();
-    if spec.channels != 1 || spec.sample_rate != 16000 {
+    if spec.channels != 1 || spec.sample_rate != vdn_types::MODEL_RATE {
         return Err(format!(
             "{}：只收 16 kHz 单声道（这份是 {} Hz、{} 声道）",
             path.display(),
@@ -48,7 +48,7 @@ pub fn read_wav(path: &Path) -> Result<Vec<f32>, BoxError> {
 pub fn write_wav(path: &Path, y: &[f32]) -> Result<(), BoxError> {
     let spec = hound::WavSpec {
         channels: 1,
-        sample_rate: 16000,
+        sample_rate: vdn_types::MODEL_RATE,
         bits_per_sample: 32,
         sample_format: hound::SampleFormat::Float,
     };

@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn judge_cases() {
         let lvl = |peak: f32, rms: f64| Level {
-            samples: 48_000,
+            samples: u64::from(vdn_io_macos::IO_RATE),
             peak,
             rms,
             ..Level::default()

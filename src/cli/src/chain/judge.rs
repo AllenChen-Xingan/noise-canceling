@@ -191,9 +191,9 @@ mod tests {
     #[test]
     fn v1_fails_on_underrun_even_with_perfect_correlation() {
         let l = 2208;
-        let x = test_tone(RATE, 48_000, 0);
+        let x = test_tone(RATE, RATE as usize, 0);
         let mut y = vec![0.0; l];
-        y.extend_from_slice(&x[..48_000 - l]);
+        y.extend_from_slice(&x[..RATE as usize - l]);
         let mut r = ChainRun {
             x,
             y,
@@ -221,9 +221,9 @@ mod tests {
 
     #[test]
     fn judge_file_on_synthetic() {
-        let x = test_tone(RATE, 48_000, 0);
+        let x = test_tone(RATE, RATE as usize, 0);
         let mut y = vec![0.0; 2303];
-        y.extend_from_slice(&x[..48_000 - 2303]);
+        y.extend_from_slice(&x[..RATE as usize - 2303]);
         assert!(judge_file(&y, 2303, 0).pass);
         assert!(!judge_file(&y, 2303 + 300, 0).pass);
     }
