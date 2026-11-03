@@ -12,7 +12,9 @@
 //!   常驻内存：footprint_before_mb（加载前）/ footprint_warm_mb（预热完）/ footprint_end_mb（跑完），读 ri_phys_footprint。
 //!   两个 bench 都可加 `--count-malloc`：挂 malloc_logger 数全进程 malloc（process_allocs_per_frame；不加时为 null）。
 //!   这个钩子会拖慢分配，所以计数和计时分开跑。
-//!   两个 bench 都可加 `--qos ui|default`：计时线程的调度等级，默认 ui（QOS_CLASS_USER_INTERACTIVE）。
+//!   两个 bench 都可加 `--qos ui|rt|default`：计时线程的调度等级，默认 ui（QOS_CLASS_USER_INTERACTIVE）；
+//!   rt = THREAD_TIME_CONSTRAINT_POLICY（period = 帧长、computation 1 ms、constraint 3 ms）。
+//!   frames_over_3ms：计时帧里单帧 > 3.0 ms 的个数（BE-DEADLINE）。
 //!   两个 bench 都可加 `--pace-ms <毫秒>`：按实时节奏每隔这么久喂一帧（测耗电、测睡醒后的帧耗时用；默认 0 = 连续跑）。
 //!   两个 bench 都可加 `--dump-io <前缀>`（此时第 2 个参数须是 onnx）：计时之后另起一个 ORT 会话，从零状态把
 //!   全部 1 + warmup + frames 帧再跑一遍，写 `<前缀>.in.f32` / `<前缀>.ort.f32`（小端 f32，按帧拼接；
@@ -477,7 +479,31 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let qos = arg_str(args, "--qos", "ui");
     // 计时线程的调度等级：ui = QOS_CLASS_USER_INTERACTIVE（默认，尽量留在性能核；实时音频线程只会更高），
     // default = 不设。审稿发现不设时 tract 的 p50 在一次运行里分两档。
-    if qos == "ui" {
+    if qos == "rt" {
+        // 实时线程策略（THREAD_TIME_CONSTRAINT_POLICY），和 Core Audio IO 线程同类。
+        // 参数按 16 ms 一帧：period = 帧长，computation = 1 ms，constraint = 3 ms（延迟账的余量），可抢占
+        let mut tb = libc::mach_timebase_info { numer: 0, denom: 0 };
+        unsafe { libc::mach_timebase_info(&mut tb) };
+        let ms = |v: f64| (v * 1e6 * tb.denom as f64 / tb.numer as f64) as u32;
+        let frame_ms = if model == ModelId::Gtcrn { 16.0 } else { 10.0 };
+        let mut pol = libc::thread_time_constraint_policy {
+            period: ms(frame_ms),
+            computation: ms(1.0),
+            constraint: ms(3.0),
+            preemptible: 1,
+        };
+        let r = unsafe {
+            libc::thread_policy_set(
+                libc::pthread_mach_thread_np(libc::pthread_self()),
+                libc::THREAD_TIME_CONSTRAINT_POLICY as _,
+                (&mut pol as *mut libc::thread_time_constraint_policy).cast(),
+                libc::THREAD_TIME_CONSTRAINT_POLICY_COUNT,
+            )
+        };
+        if r != 0 {
+            return Err(format!("设实时线程策略失败：{r}").into());
+        }
+    } else if qos == "ui" {
         let r = unsafe {
             libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE, 0)
         };
@@ -485,7 +511,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
             return Err(format!("设 QoS 失败：{r}").into());
         }
     } else if qos != "default" {
-        return Err("--qos 只收 ui / default".into());
+        return Err("--qos 只收 ui / rt / default".into());
     }
     let count_malloc = args.iter().any(|a| a == "--count-malloc");
     if count_malloc {
@@ -538,6 +564,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let wall = w0.elapsed().as_secs_f64();
     let cpu = cpu_seconds() - c0;
     let allocs = ALLOCS.load(Relaxed) - a0;
+    let over_3ms = times.iter().filter(|t| **t > 3.0).count(); // BE-DEADLINE 用（同 applebe 字段）
     let proc_allocs = PROC_ALLOCS.load(Relaxed) - pa0;
     let fp_end = footprint_mb();
     times.sort_by(|a, b| a.total_cmp(b));
@@ -551,7 +578,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         )?;
     }
     println!(
-        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan},\"process_allocs_per_frame\":{},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2}}}",
+        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan},\"frames_over_3ms\":{over_3ms},\"process_allocs_per_frame\":{},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2}}}",
         model.name(),
         pct(&times, 0.1),
         pct(&times, 0.5),
@@ -562,7 +589,11 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         times.iter().sum::<f64>() / times.len() as f64,
         cpu / wall,
         allocs as f64 / frames as f64,
-        if count_malloc { format!("{:.3}", proc_allocs as f64 / frames as f64) } else { "null".into() },
+        if count_malloc {
+            format!("{:.3}", proc_allocs as f64 / frames as f64)
+        } else {
+            "null".into()
+        },
     );
     Ok(())
 }

@@ -7,8 +7,20 @@ use std::time::Instant;
 #[link(name = "Accelerate", kind = "framework")]
 unsafe extern "C" {
     fn cblas_sgemm(
-        order: i32, ta: i32, tb: i32, m: i32, n: i32, k: i32, alpha: f32, a: *const f32, lda: i32,
-        b: *const f32, ldb: i32, beta: f32, c: *mut f32, ldc: i32,
+        order: i32,
+        ta: i32,
+        tb: i32,
+        m: i32,
+        n: i32,
+        k: i32,
+        alpha: f32,
+        a: *const f32,
+        lda: i32,
+        b: *const f32,
+        ldb: i32,
+        beta: f32,
+        c: *mut f32,
+        ldc: i32,
     );
 }
 const ROW_MAJOR: i32 = 101;
@@ -39,8 +51,12 @@ pub fn run() {
     ];
     let reps = 200_000;
     for (name, m, n, k, per_frame) in shapes {
-        let a: Vec<f32> = (0..m * k).map(|i| ((i * 7919) % 101) as f32 / 101.0 - 0.5).collect();
-        let b: Vec<f32> = (0..k * n).map(|i| ((i * 104_729) % 97) as f32 / 97.0 - 0.5).collect();
+        let a: Vec<f32> = (0..m * k)
+            .map(|i| ((i * 7919) % 101) as f32 / 101.0 - 0.5)
+            .collect();
+        let b: Vec<f32> = (0..k * n)
+            .map(|i| ((i * 104_729) % 97) as f32 / 97.0 - 0.5)
+            .collect();
         let mut c1 = vec![0.0f32; m * n];
         let mut c2 = vec![0.0f32; m * n];
         let mut time = |f: &mut dyn FnMut()| {
@@ -60,13 +76,29 @@ pub fn run() {
         let ns_blas = time(&mut || {
             unsafe {
                 cblas_sgemm(
-                    ROW_MAJOR, NO_TRANS, NO_TRANS, m as i32, n as i32, k as i32, 1.0,
-                    std::hint::black_box(a.as_ptr()), k as i32, b.as_ptr(), n as i32, 0.0, c2.as_mut_ptr(), n as i32,
+                    ROW_MAJOR,
+                    NO_TRANS,
+                    NO_TRANS,
+                    m as i32,
+                    n as i32,
+                    k as i32,
+                    1.0,
+                    std::hint::black_box(a.as_ptr()),
+                    k as i32,
+                    b.as_ptr(),
+                    n as i32,
+                    0.0,
+                    c2.as_mut_ptr(),
+                    n as i32,
                 )
             };
             std::hint::black_box(&c2);
         });
-        let max_diff = c1.iter().zip(&c2).map(|(x, y)| (x - y).abs()).fold(0.0f32, f32::max);
+        let max_diff = c1
+            .iter()
+            .zip(&c2)
+            .map(|(x, y)| (x - y).abs())
+            .fold(0.0f32, f32::max);
         println!(
             "{{\"probe\":\"amx\",\"shape\":\"{name}\",\"m\":{m},\"n\":{n},\"k\":{k},\"per_frame\":{per_frame},\"hand_ns\":{ns_hand:.1},\"accelerate_ns\":{ns_blas:.1},\"per_frame_hand_us\":{:.2},\"per_frame_accelerate_us\":{:.2},\"max_abs_diff\":{max_diff:.2e}}}",
             ns_hand * per_frame as f64 / 1e3,
