@@ -1,7 +1,7 @@
 # 评审 062 · 代码卫生：单文件 600 行 · 采样率只写一处 · 评测阈值正本（codex · gpt-6-astra · read-only）
 
-> 对象：`feat/code-hygiene` 相对 main 的 diff（issue #62）。**最新一轮：第 3 轮（2026-11-02）· 总评「修改」· 待第 4 轮**。
-> 累计处理：P1×6、P2×6，逐条回源码核实，属实 12、驳回 0、无法核实 0。
+> 对象：`feat/code-hygiene` 相对 main 的 diff（issue #62）。**最新一轮：第 4 轮（2026-11-02）· 总评「修改」· 待第 5 轮**。
+> 累计处理：P1×7、P2×6，逐条回源码核实，属实 13、驳回 0、无法核实 0。
 > 编号用 issue 号（本线没有 plan 文档）。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -84,3 +84,20 @@
 - codex 列的「不符」：无
 - codex 列的「核实属实」：6 条
 - codex 列的「无法核实」：1 条（rubric C3 原文不在它可读的范围内）。已由 `src/eval/tests/thresholds.rs` 的摘录逐字比对覆盖
+
+## 第 4 轮（2026-11-02）· 总评「修改」
+
+- 原文：`_tmp/reviews/hygiene-p1-codex-4.md`（不入库）
+- 对象：`origin/main...HEAD`（第 3 轮修复之后，含 docs/experiments 扫描）
+- effort medium
+- 本轮 P0/P1：1 条。停止线：未满足
+- 留作 issue 的 P2：无
+
+- **P1｜src/xtask/src/test_modules.rs:124 生产引用的排除没有往下传递**（第 4 轮 #1）
+  - 核实：属实。worker.rs 被移出测试清单后，它普通引用的 `worker/child.rs` 还留在清单里。
+  - 处理：生产引用的排除反复做，直到清单不再变化；真正带 `#[cfg(test)]` 的子模块照样保留。补负例 `production_exclusion_is_transitive`（三级引用，加一层孙模块）。
+
+### 引用抽查
+
+- codex 列的「不符」：1 条（本记录第 3 轮 #2 的处理说明没写到传递引用），即本轮 #1，已修
+- codex 列的「核实属实」：4 条
