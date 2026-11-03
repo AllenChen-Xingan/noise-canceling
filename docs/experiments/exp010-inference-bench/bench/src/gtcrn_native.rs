@@ -45,6 +45,13 @@ impl Weights {
                 .collect::<Result<Vec<usize>, _>>()?;
             index.insert(p[0].to_string(), (shape, p[2].parse()?, p[3].parse()?));
         }
+        if bin.len() % 4 != 0 {
+            return Err(format!("权重 bin 长 {} 不是 4 的倍数", bin.len()).into());
+        }
+        let total: usize = index.values().map(|(_, _, n)| *n).sum();
+        if total != data.len() {
+            return Err(format!("txt 记的元素总数 {total} ≠ bin 里的 {}", data.len()).into());
+        }
         Ok(Self { data, index })
     }
 
@@ -56,7 +63,11 @@ impl Weights {
         if *n != numel {
             return Err(format!("{name} 个数 {n} ≠ 期望 {numel}").into());
         }
-        Ok(self.data[*off..*off + *n].to_vec())
+        // txt 与 bin 对不上时返回错误，不 panic（自审 P2-5）
+        self.data
+            .get(*off..*off + *n)
+            .map(<[f32]>::to_vec)
+            .ok_or_else(|| format!("{name} 越界：偏移 {off} + {n} > {}", self.data.len()).into())
     }
 
     fn scalar(&self, name: &str) -> Result<f32, Err> {
@@ -332,6 +343,9 @@ const MAX_G: usize = 48;
 
 impl Gru {
     fn load(w: &Weights, p: &str, sfx: &str, i: usize, h: usize) -> Result<Self, Err> {
+        if 3 * h > MAX_G {
+            return Err(format!("{p}: 3H = {} 超过栈缓冲 MAX_G = {MAX_G}", 3 * h).into());
+        }
         Ok(Self {
             wi: w.get(&format!("{p}.weight_ih_l0{sfx}"), 3 * h * i)?,
             wh: w.get(&format!("{p}.weight_hh_l0{sfx}"), 3 * h * h)?,

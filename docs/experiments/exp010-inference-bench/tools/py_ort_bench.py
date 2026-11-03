@@ -79,7 +79,7 @@ for k in range(n):
     err += float(np.sum(d * d))
     if d.max() > max_abs:
         max_abs, worst = float(d.max()), k
-    if first_bad is None and d.max() > 1e-3:
+    if first_bad is None and (not np.all(np.isfinite(y)) or not d.max() <= 1e-3):  # NaN 也算坏
         first_bad = (k, int(d.argmax()))
 wall = time.perf_counter() - w0
 cpu_s = cpu() - c0
@@ -87,7 +87,7 @@ times.sort()
 pct = lambda p: times[min(int(round((len(times) - 1) * p)), len(times) - 1)]  # 同 bench 的 pct()
 print(json.dumps({
     "model": "gtcrn", "backend": f"python-ort-{ort.__version__}", "frames": frames, "pace_ms": 0, "qos": "ui",
-    "p50_ms": round(pct(0.5), 4), "p99_ms": round(pct(0.99), 4), "p999_ms": round(pct(0.999), 4),
+    "p10_ms": round(pct(0.1), 4), "p50_ms": round(pct(0.5), 4), "p90_ms": round(pct(0.9), 4), "p99_ms": round(pct(0.99), 4), "p999_ms": round(pct(0.999), 4),
     "max_ms": round(times[-1], 4), "mean_ms": round(times.mean(), 4), "open_ms": round(t_open, 2),
     "first_frame_ms": round(t_first, 3), "cpu_over_wall": round(cpu_s / wall, 3), "nonfinite_frames": nonfinite,
     "vs_rust_ort": {"max_abs": max_abs, "worst_frame": worst,
