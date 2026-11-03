@@ -2,7 +2,8 @@
 
 - **手上**：vdn-shm · vdn-rt-thread · xtask（大总管 2026-11-02 加派）
 - **做到哪**：notify / wait · 头部版本 2 · OwnedBus · tidy 补查 bin 根 已完成；下一步对照实验、cargo-deny、Miri
-- **下一步**：申请名额 → 装 cargo-deny 并跑 → 装 Miri 并跑 → release 对照实验 → 自审
+- **下一步**（按序）：自审修完 → 名额 ① 对照实验 ② cargo-deny ③ Miri → 加派三件：loom 测试 + deny.toml 直接边 + tidy 校验 deny 与 forbid 一致 · rt-thread 加入 Audio Workgroup · CI 拆 Linux + macOS（paths 过滤）
+- **本批不改**：共享内存权限 0600（要真装驱动实测，大总管 2026-11-02 定）
 
 ## 流水
 - 2026-11-02 报到；读交代、common、latency-fix、009 decision、rs-shm 现状页、规约 §4–§5
