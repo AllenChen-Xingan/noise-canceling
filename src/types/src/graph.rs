@@ -439,6 +439,10 @@ pub fn match_chain<C: StageChain + ?Sized>(
                 index,
                 actual: actual.name,
             }),
+            Some(&want) if !valid_name(want.name) => Some(ChainMismatch::BadName {
+                index,
+                stage: want.name,
+            }),
             Some(&want) if want.hook != Hook::Time => Some(ChainMismatch::WrongHook {
                 index,
                 stage: want.name,

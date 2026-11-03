@@ -19,6 +19,7 @@
 //! 旧格式（graph 线定 2026-11-02）：**格式 1 照常能读**，读进来 `graph` / `model` 是 `None`（当时没记）；
 //! 格式 1 的文件里出现这两个键算坏文件（那时还没有这两个键）。写出一律用最新格式。
 //! 格式 2 里两个键仍可缺省：没接处理图的调用方（离线工具）不必编一个假 ID。
+//! `rate` · `table` · `profile` 两个格式里都必填：缺了、或任一头部键写两次，算坏文件（codex 第 1 轮 #2）。
 
 use core::fmt::Write as _;
 
@@ -121,6 +122,8 @@ impl SessionRecord {
         let mut r = SessionRecord::default();
         let mut format = 0;
         let mut in_events = false;
+        // 每个头部键出现过没有（与 HEADER_KEYS 同序）：必填键缺了、同一个键写两次都算坏文件
+        let mut seen = [false; HEADER_KEYS.len()];
         text::parse(src, |line, l| {
             match l {
                 Line::Kv { key, value } if format == 0 => {
@@ -136,9 +139,16 @@ impl SessionRecord {
                     r.events.push(DecisionEvent::from_line(line, value)?)
                 }
                 Line::Kv { key, value } if !in_events => {
-                    let since = HEADER_KEYS.iter().find(|k| k.key == key).map(|k| k.since);
+                    let at = HEADER_KEYS.iter().position(|k| k.key == key);
+                    let since = at.and_then(|i| HEADER_KEYS.get(i)).map(|k| k.since);
                     if since.is_none_or(|v| v > format) {
                         return Err(text::err(line, "未知的键（或这个格式号还没有这个键）"));
+                    }
+                    if let Some(s) = at.and_then(|i| seen.get_mut(i)) {
+                        if *s {
+                            return Err(text::err(line, "这个键写了两次"));
+                        }
+                        *s = true;
                     }
                     let mut it = value.split_whitespace();
                     let mut tok = || it.next().ok_or(text::err(line, "值不全"));
@@ -169,6 +179,12 @@ impl SessionRecord {
         })?;
         if format == 0 {
             return Err(text::err(0, "空文件"));
+        }
+        // 必填键（该格式里有、且不可缺省）一个都不能少
+        for (k, s) in HEADER_KEYS.iter().zip(seen) {
+            if !s && !k.optional && k.since <= format {
+                return Err(text::err(0, "缺少必填的头部键"));
+            }
         }
         Ok(r)
     }

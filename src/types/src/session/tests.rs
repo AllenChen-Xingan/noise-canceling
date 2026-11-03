@@ -123,3 +123,29 @@ fn set_graph_tracks_graph_changes() {
     h.set_graph(&ProcessingGraph::bare(ModelId::Gtcrn));
     assert_eq!(h.model, Some(ModelId::Gtcrn));
 }
+
+/// codex 第 1 轮 #2：逐键删除——删必填键必须拒读，删可缺省键照常能读；同一个键写两次拒读。
+#[test]
+fn required_keys_must_be_present_once() {
+    let text = full().to_text();
+    for k in HEADER_KEYS {
+        let prefix = format!("{} = ", k.key);
+        let without: String = text
+            .lines()
+            .filter(|l| !l.starts_with(&prefix))
+            .map(|l| format!("{l}\n"))
+            .collect();
+        assert_ne!(without, text, "{} 应在全字段文本里", k.key);
+        assert_eq!(
+            SessionRecord::from_text(&without).is_ok(),
+            k.optional,
+            "删掉 {}",
+            k.key
+        );
+        let line = text.lines().find(|l| l.starts_with(&prefix)).unwrap();
+        let twice = text.replacen(line, &format!("{line}\n{line}"), 1);
+        assert!(SessionRecord::from_text(&twice).is_err(), "{} 写两次", k.key);
+    }
+    // 只有格式行的文件不再「读成默认头」
+    assert!(SessionRecord::from_text("vdn-session = 2\n").is_err());
+}
