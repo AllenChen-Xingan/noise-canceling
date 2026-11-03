@@ -8,6 +8,7 @@
 > - 人要求从安仁书院（阳志平帖子）提炼交叉校验、降复杂度的做法做成通用技能；放在仓库外 `2-aartifacts/skills/`，已软链进 `~/.claude/skills/`
 > - `single-source-truth`（找镜像副本 + schema 哈希章）· `complexity-budget`（600 行棘轮 + 七个动作）· `verify-first`（verifiers.toml 统一跑 + 收尾元反思）
 > - 在本仓库试跑：找出 6 个已知镜像类型（`mirror.rs` 等）；11 个源文件超 600 行；均未改本仓库代码
+> - 扫描报告 `docs/reviews/three-skills-scan-20261102/README.md`：7 处可优化，3 处已在 011，4 处新发现记进 `state/backlog.md`「处理链的统一表示」下
 
 > ## 🔍 项目难度与竞品 · codex 评审 + 联网调研（2026-11-02）
 > - 人问「这个项目难度多大、做好了谁会感兴趣」；大总管判断写在人桌面，codex 评审 P1×3 P2×2、联网调研可靠度 3/5，存档 `docs/reviews/outlook-codex-20261102/`

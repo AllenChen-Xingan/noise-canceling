@@ -12,6 +12,7 @@
 | applebe | 019 苹果引擎（Core ML · BNNS Graph · MLX）+ 总方案 · #45 · ✅ PR #59 已合并 | 推理后端 · 模型 · 评测器 |
 | rustbe | exp010 纯 Rust（手写 GTCRN · tract / candle / burn）+ 基准程序 · #51 · ✅ PR #55 已合并 | 推理后端 · 模型 · 评测器 |
 | fastpath | 020 / exp012 数学上更好：下界分析 · 等价改写 · 算子与 DSP 优化 · 他人做法 · #58 · `../noise_canceling-fastpath` | 推理后端 · 模型 · 评测器 |
+| hygiene | **旁支（人 2026-11-02 点名「也让你来管理，然后修复吧」）** 代码卫生：600 行上限进 tidy · cli 同名类型 · 拆 cli 大文件；第二段等 #57 合并后做采样率只写一处 · 阈值比对 · #62 · `feat/code-hygiene` · `../noise_canceling-hygiene` | xtask · vdn-cli · vdn-types（采样率）· vdn-eval（阈值） |
 
 上一件大事「把效果好不好变成能量的尺子」✅ 2026-11-02 收口（#47 #48 #49 #50）。
 
@@ -47,6 +48,8 @@
 | applebe | b8 · 019 苹果引擎 + 总方案 · #45 · `research/019-apple-inference` | `_tmp/20261102-b8/applebe.md` | engine worktree `state/handoff/engine.md` | 完成，PR #59 已合并（issue #45 关），远端分支已删，窗口已关；worktree 保留待清 |
 | rustbe | b8 · exp010 纯 Rust + 基准程序 · #51 · `exp/010-rust-backend` | `_tmp/20261102-b8/rustbe.md` | rustbe worktree `state/handoff/rustbe.md` | 完成，PR #55 已合并（issue #51 关），远端分支已删，窗口已关；worktree 保留待清 |
 | fastpath | b8 · 020 / exp012 数学上更好 · #58 · `exp/012-fastpath` | `_tmp/20261102-b8/fastpath.md` | fastpath worktree `state/handoff/fastpath.md` | 已报到（noise-canceling-fastpath-96）；workflow 6 代理已批 |
+| hygiene | b8 旁支 · 代码卫生 · #62 · `feat/code-hygiene` | `_tmp/20261102-b8/hygiene.md` | hygiene worktree `state/handoff/hygiene.md` | 已派（2026-11-02 22:0x）；第二段等 99 的 #57 合并后由大总管放行 |
+| hygiene | b8（另一会话 22:00 代派，挂 e3 名下）· #62 代码卫生：600 行上限进 CI · cli 同名类型 · 采样率只写一处 · 阈值比对 · `feat/code-hygiene` | `_tmp/20261102-b8/hygiene.md` | hygiene worktree | 已报到（noise-canceling-hygiene-8f）；动 vdn-types 前与 99 的 #56 对齐 |
 
 ## 规矩
 
@@ -73,6 +76,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 22:00 另一会话代派手下 hygiene（#62，人原话「另外这几个，也让你来管理，然后修复吧」）挂 e3 名下；不属当前大事（推理引擎），待人确认归属；已提醒与 99 #56 在 vdn-types 上重叠
 - 2026-11-02 fastpath v3（按能效核写）：sigmoid/tanh 除法换倒数估计 + 2 次牛顿 · 3×3 深度卷积向量化（原离下界 5.1 倍）· LN / ERB 4 路 NEON 累加（原离下界 10–12 倍）；133.12 dB、最大差 7.6e-6、0 分配、32 条测试过；短计时同场加 ORT
 - 2026-11-02 人定停测：「我觉得不用测了，基本上效果非常好」→ fastpath 停 paced-batt2；随后人改「你可以继续优化，然后schema他们那个可以开始做」→ fastpath 不收尾、继续 A 类优化，机器先给 99；耗电 · 插电节奏组 · 预取整帧标「待产品接入时测」
 - 2026-11-02 fastpath 电池组 v2batt（3 轮全有效）：16 ms 节奏 rt 每帧平均 原 0.50–0.59 · v2 0.18–0.21 · v2-fast 0.14–0.17 ms，均无 > 3 ms 帧；CPU 原 3.2–3.8% · v2 1.2–1.4% · v2-fast 1.0–1.2%；重采样产品 60 µs/帧 → NEON 14 µs（差 2.4e-7）；STFT 7.3 + 4.9 µs；电量 35 min 内显示不变（满电附近不更新）

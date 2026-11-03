@@ -7,6 +7,8 @@
 
 - [ ] **处理图 + schema 交叉校验 + 前端只算一次（D71）**：STFT / fbank / 场景特征每帧只算一次，降噪 · 认人 · 场景 · VAD 共用（规约 §3.1 `SpectrumTap` 已留口）；同一功能只在一处实现；处理链表示成「节点带类型 · 参数 · 版本」的图，会话记录同一套表示；Rust 类型为源头导出 schema、CI 比对；清掉 speaker / polish / scene 的 `vdn-types` 镜像副本（12 处）与手写 JSON；后处理级非有限检查与 Engine classify 规则合成一处；非有限值检查在 Pipeline 与送音端各一处（进程边界，有意）统一口径 · 出处 `docs/plan/011_schema-crosscheck.md` · Rust 骨架审查 `docs/plan/010_rust-skeleton-audit.md`
 
+- [x] **三技能扫描的 4 处新发现（011 未覆盖）** → 去向：#62 `feat/code-hygiene`（手下 hygiene，2026-11-02 派）；镜像副本部分已由 #60 清掉，建议并进这件大事一起做：①采样率常量收进 `vdn-types`（`16000/48000` 散在 37 个文件）②三个 `Verdict` 同名不同物、`StopOnDrop` 两份 ③`eval/suite/ci.json` 阈值手抄自 012，缺比对 ④`xtask tidy` 加 600 行上限 + 基线棘轮（现有 11 个文件超线，最大 `eval/src/verifiers.rs` 1153 行）· 出处 `docs/reviews/three-skills-scan-20261102/README.md`
+
 ## Rust 骨架的遗留（b8-rust 批次）
 
 - [x] ~~空闲时推理块约 3 ms：追性能核 / 提频、压 lead 到 144~~ → 人定 D74 用低频，lead 留 4 ms
