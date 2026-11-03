@@ -51,7 +51,7 @@ use parity::*;
 use util::*;
 
 use std::path::Path;
-use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+use std::sync::atomic::Ordering::Relaxed;
 use std::time::Instant;
 
 use gtcrn_native::GtcrnNative;
