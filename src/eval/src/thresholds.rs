@@ -431,12 +431,14 @@ pub fn mismatches(
                     l.id,
                     "edges",
                     What::EdgesOrder,
+                    Cause::Order,
                     format!("分档 {:?} 顺序不对", l.edges),
                 ),
                 None => push(
                     l.id,
                     "edges",
                     What::EdgesOrder,
+                    Cause::Order,
                     "登记表里查不到好坏方向".into(),
                 ),
             }
@@ -444,8 +446,8 @@ pub fn mismatches(
         // 分档：摘录里的数（带符号）与边界作为集合相等
         let edges = What::Edges(l.edges.to_vec());
         match quoted_numbers(l.edges_src, d) {
-            Err(e) => push(l.id, "edges", edges, e),
-            Ok(None) => push(l.id, "edges", edges, "分档没有出处".into()),
+            Err(e) => push(l.id, "edges", edges, Cause::QuoteMissing, e),
+            Ok(None) => push(l.id, "edges", edges, Cause::NoSource, "分档没有出处".into()),
             Ok(Some(n)) if !matches!(l.edges_src, Src::Design(_)) => {
                 let all_in = l.edges.iter().all(|e| n.iter().any(|x| same(*x, *e)));
                 let back = n.iter().all(|x| l.edges.iter().any(|e| same(*x, *e)));
@@ -454,6 +456,7 @@ pub fn mismatches(
                         l.id,
                         "edges",
                         edges,
+                        Cause::Differ,
                         format!("代码 {:?} ↔ 文档 {n:?}", l.edges),
                     );
                 }
@@ -469,13 +472,14 @@ pub fn mismatches(
                     l.id,
                     p.key,
                     What::Value(dv),
+                    Cause::DefaultMissing,
                     format!("默认值 {dv} 没登记在取值里"),
                 );
             }
             for (v, s) in p.values {
                 match quoted_numbers(*s, d) {
-                    Err(e) => push(l.id, p.key, What::Value(*v), e),
-                    Ok(None) => push(l.id, p.key, What::Value(*v), format!("{v} 没有出处")),
+                    Err(e) => push(l.id, p.key, What::Value(*v), Cause::QuoteMissing, e),
+                    Ok(None) => push(l.id, p.key, What::Value(*v), Cause::NoSource, format!("{v} 没有出处")),
                     Ok(Some(n))
                         if !matches!(s, Src::Design(_)) && !n.iter().any(|x| same(*x, *v)) =>
                     {
@@ -483,6 +487,7 @@ pub fn mismatches(
                             l.id,
                             p.key,
                             What::Value(*v),
+                            Cause::Differ,
                             format!("{v} 不在摘录的数 {n:?} 里"),
                         );
                     }
@@ -494,7 +499,7 @@ pub fn mismatches(
     // 清单：每个阈值都要在表里登记
     for (name, text) in d.suites {
         let Ok(v) = serde_json::from_str::<Value>(text) else {
-            push(name, "-", What::Suite, "清单不是合法 JSON".into());
+            push(name, "-", What::Suite, Cause::BadSuite, "清单不是合法 JSON".into());
             continue;
         };
         let tasks = v["tasks"].as_array().cloned().unwrap_or_default();
@@ -511,7 +516,7 @@ pub fn mismatches(
                         });
                         if !ok {
                             let why = format!("{name} 任务 {} 的 {k} = {x} 没登记在表里", t["id"]);
-                            push(id, k, What::Value(x), why);
+                            push(id, k, What::Value(x), Cause::Unregistered, why);
                         }
                     }
                 }
@@ -525,10 +530,10 @@ fn pend_matches(m: &Mismatch, (id, key, p): &(&str, &str, Pend)) -> bool {
     m.id == *id
         && m.key == *key
         && match (&m.what, p) {
-            (What::Edges(a), Pend::Edges(b)) => {
-                a.len() == b.len() && a.iter().zip(*b).all(|(x, y)| same(*x, *y))
+            (What::Edges(a), Pend::Edges(b, c)) => {
+                m.cause == *c && a.len() == b.len() && a.iter().zip(*b).all(|(x, y)| same(*x, *y))
             }
-            (What::Value(a), Pend::Value(b)) => same(*a, *b),
+            (What::Value(a), Pend::Value(b, c)) => m.cause == *c && same(*a, *b),
             _ => false,
         }
 }

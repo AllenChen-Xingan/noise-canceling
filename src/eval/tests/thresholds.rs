@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use vdn_eval::Better;
 use vdn_eval::thresholds::{
-    ALL, Docs, Lines, PENDING, Param, Pend, Src, What, compare_pending, mismatches,
+    ALL, Cause, Docs, Lines, PENDING, Param, Pend, Src, What, compare_pending, mismatches,
 };
 use vdn_eval::verifiers::info;
 
@@ -112,7 +112,7 @@ fn new_mismatch_not_in_pending_is_red() {
     let errs = compare_pending(&found, &[]);
     assert!(errs[0].contains("新的不一致"), "{errs:?}");
     // 登记进待定清单后不红
-    assert!(compare_pending(&found, &[("V-X", "edges", Pend::Edges(&[1.0, 2.0, 4.0]))]).is_empty());
+    assert!(compare_pending(&found, &[("V-X", "edges", Pend::Edges(&[1.0, 2.0, 4.0], Cause::Differ))]).is_empty());
 }
 
 /// 负例（会红）：待定清单里的条目已经对上了 → 报「移出 PENDING」
@@ -126,7 +126,7 @@ fn fixed_pending_entry_is_red() {
     };
     let found = mismatches(&[&OK], &docs(&[]), &lower);
     assert!(found.is_empty(), "{found:?}");
-    let errs = compare_pending(&found, &[("V-X", "edges", Pend::Edges(&[1.0, 2.0, 3.0]))]);
+    let errs = compare_pending(&found, &[("V-X", "edges", Pend::Edges(&[1.0, 2.0, 3.0], Cause::Differ))]);
     assert_eq!(errs.len(), 1);
     assert!(errs[0].contains("移出 PENDING"), "{errs:?}");
 }
@@ -183,7 +183,7 @@ fn pending_does_not_swallow_new_value_on_same_param() {
     };
     let suite = r#"{"tasks":[{"id":"t","graders":[{"v":"V-X","max":999}]}]}"#;
     let found = mismatches(&[&L], &docs(&[("ci.json", suite)]), &lower);
-    let errs = compare_pending(&found, &[("V-X", "max", Pend::Value(-8.0))]);
+    let errs = compare_pending(&found, &[("V-X", "max", Pend::Value(-8.0, Cause::NoSource))]);
     assert_eq!(errs.len(), 1, "{errs:?}");
     assert!(errs[0].contains("999"), "{errs:?}");
 }
@@ -222,4 +222,23 @@ fn sign_and_order_are_checked() {
     let f = mismatches(&[&LOSS], &docs(&[]), &|_| Some(false));
     assert_eq!(f.len(), 1, "{f:?}");
     assert!(matches!(f[0].what, What::Edges(_)), "{f:?}");
+}
+
+/// 负例（codex 第 3 轮 P1 #1）：同一组分档、同一个数，原因变了（数对不上 → 摘录不在文档里）也要红
+#[test]
+fn same_value_different_cause_is_red() {
+    const BROKEN: Lines = Lines {
+        id: "V-X",
+        edges: &[1.0, 2.0, 4.0],
+        edges_src: Src::Doc012(&["这段摘录已经不在文档里"]),
+        params: &[],
+    };
+    let found = mismatches(&[&BROKEN], &docs(&[]), &lower);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].cause, Cause::QuoteMissing);
+    let errs = compare_pending(
+        &found,
+        &[("V-X", "edges", Pend::Edges(&[1.0, 2.0, 4.0], Cause::Differ))],
+    );
+    assert_eq!(errs.len(), 2, "新原因要报、旧待定项要提示移出：{errs:?}");
 }
