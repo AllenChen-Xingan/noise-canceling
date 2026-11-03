@@ -1,6 +1,6 @@
 # PR 草稿 · iface（issue #65）
 
-标题：参数描述导出 schema · 模型接口三方一致 · FE-M 名字只留一个（#65）
+标题：参数描述导出 schema · 模型接口三方一致 · FE-M 名字只留一个 · 模型节点带权重版本（#65 #68）
 
 ---
 
@@ -21,7 +21,12 @@
    - cli、denoised、eval 的 system / report，以及两个适配器的 `Model::name()`，都改成从 `ModelId` 取。FE 适配器原来自报 `fastenhancer`，也统一了。
    - xtask tidy 新规则 R-MODEL（`src/xtask/src/model_name.rs`）：正本文件之外，字符串里写死这些名字就红。
    - 已提交的历史结果文件不改写。
-5. **拆分了哪些文件**（每个代码文件 ≤ 600 行，人定）：
+5. **模型节点带权重版本**（#68）：
+   - `ProcessingGraph` 加 `artifact`（模型制品内容 ID = 权重文件字节的 FNV-1a，`vdn_models::artifact_id` 算）。规范文本格式号 1 → 2，模型节点后多一行 `artifact = …`。只换权重、模型名不变，图 ID 也会变。
+   - `ProcessingGraph::check_model` 把模型节点和正在跑的 `Model::name()` 比对。`Pipeline::graph(model, artifact)` 在构造期调用它，名字不符就返回错误。
+   - 内容 ID 沿用 FNV-1a，没换成 sha256（积压项，本 PR 不动）。
+6. **合并 main（#69 处理图）后的修复**：会话记录测试改为从正本取模型名，另加一条测试：旧写法的记录能读。R-MODEL 现在认得 `#[cfg(test)] mod x;` 引入的测试文件。
+7. **拆分了哪些文件**（每个代码文件 ≤ 600 行，人定）：
    - `src/types/src/desc.rs`（930）→ `desc/{mod,speaker,polish,scene,engine}.rs`（最大 481）。对外路径 `vdn_types::desc::X` 不变；「全部登记进 ALL」的检查仍在 `mod.rs` 一处。
    - `src/types/src/policy.rs`（688）→ `policy.rs`（401）+ `policy_tests.rs`（289）
    - `src/schema/tests/crosscheck.rs`（870）→ `schema_mechanism.rs` · `shm_layout.rs` · `config.rs` · `eval_suite.rs` + `common/mod.rs`，新增 `text_formats.rs` · `models.rs`
@@ -29,21 +34,24 @@
 
 ## 关联 issue
 Closes #65
+Closes #68
 
 ## 测试（必填，CLAUDE.md 第五节第 6 条）
 - 新增的测试：
   - vdn-types：`memory::rejects_out_of_range_values_per_desc_table`（先红后绿）· `params::model_names_single_source`
   - vdn-schema：`tests/text_formats.rs` 5 条（表与描述表逐字段一致 · 改表不导出报红 · 键与解析器一致 · 越界拒收 · 仓里文本文件全过）· `tests/models.rs` 2 条（声明 ↔ 导出文件 · 改声明不导出报红）· `tests/config.rs::config_model_names_follow_model_id`
   - vdn-models：`interface::tests` 3 条（含 `check_read_rejects_any_difference`：元素类型 · 顺序 · 形状 · 名字任一不同都拒） · `gtcrn::tests::declaration_agrees_with_stft` · `fastenhancer::tests::declaration_agrees_with_declared_hop_and_latency` · `tests/interface.rs` 2 条（要权重，`#[ignore]`）
-  - xtask：`model_name::tests` 6 条（R-MODEL：读正本名的各种写法 · 写死名字的负例 · 测试项与跨行 / 转义字符串 · 整仓通过）
+  - #68：`graph::tests::artifact_change_alone_changes_graph_id` · `graph::tests::model_node_must_match_running_model` · `vdn-engine` 的 `tests/graph_model.rs` 3 条（报出的图 · 只换权重图 ID 变 · 名字不符报错）· `vdn-models` 的 `artifact_id_follows_file_bytes`，以及真权重端到端 1 条（`#[ignore]`）
+  - 合并修复：`session::tests::legacy_model_name_still_reads` · `model_name::tests::test_module_files_are_resolved`
+  - xtask：`model_name::tests` 7 条（R-MODEL：读正本名的各种写法 · 写死名字的负例 · 测试项与跨行 / 转义字符串 · 整仓通过）
   - vdn-types：`desc::tests::unlisted_detects_missing_entries`（描述表漏登记 ALL 的负例）
   - vdn-cli：`model_arg_follows_model_id` · vdn-denoised：`model_choice_roundtrips` · vdn-eval：`system_names_follow_model_id`
   - 搬移的测试一条不少：crosscheck 25 条 → 4 个文件共 25 条；xtask 原 R-MIRROR / R-PARAM 测试全保留
 - 跑了哪些（命令 + 结果）：
-  - `cargo run -p xtask -- ci`：全绿（fmt · clippy · test 428 过 / 0 败 / 7 忽略 · tidy · check-deps · cargo-deny）
+  - `cargo run -p xtask -- ci`：全绿（fmt · clippy · test 468 过 / 0 败 / 7 忽略 · tidy · check-deps · cargo-deny）。468 条是合并 main 后的数
   - `cargo run -p vdn-schema -- --check`：与 Rust 正本一致
   - `cargo run -p xtask -- eval ci`：与改动前相同（ref：回归 13/17 · 能力 1/10 · 探针 5/5，门禁通过）
-  - 本机真权重：`VDN_REQUIRE_MODELS=1 cargo test -p vdn-models -- --include-ignored`，17 条全过（含接口比对 2 条 · 冒烟 4 条 · 不分配 1 条）
+  - 本机真权重：`VDN_REQUIRE_MODELS=1 cargo test -p vdn-models -- --include-ignored`，18 条全过（含接口比对 2 条 · 冒烟 4 条 · 不分配 1 条）
 - 测不了的（`#[ignore]` + 人工步骤）：`src/models/tests/interface.rs` 两条要仓外权重，人工步骤见该文件头
 
 ## 唯一真相源（CLAUDE.md 第五节第 5 条）
@@ -53,6 +61,7 @@ Closes #65
   - `src/models/src/interface.rs`（声明）↔ ONNX 文件：适配器 `open` 时比对 + `tests/interface.rs`（`#[ignore]`）
   - `vdn_control::ModelChoice` 的 serde 名（vdn-control 不依赖 vdn-types）↔ `ModelId::NAMES`：`tests/config.rs`
   - `specs/schema/examples/*.example.txt` ← 两个文本解析器：`text_formats.rs` 逐个解析
+  - 处理图的模型节点（`ProcessingGraph::model`）↔ 正在跑的 `Model::name()`：`Pipeline::graph` 构造期比对 + 测试
 
 ## 换谱系评审
 codex 3 轮（`docs/reviews/012_param-model-schema-codex.md`）：P1×1 · P2×8，全部属实、全部已改；第 2、3 轮连续无 P0/P1，停止线满足；没有留 issue。
