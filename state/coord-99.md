@@ -11,7 +11,7 @@
 |---|---|---|---|
 | single | 清镜像副本 · 参数只写一处 · #56 · `feat/types-single-source` · `../noise_canceling-single` | vdn-types（参数描述）· vdn-speaker · vdn-polish · vdn-scene | 完成，PR #60 已合并（#56 关），窗口已关；worktree 保留待清 |
 | schema | schema 导出 + 交叉校验 · #57 · `feat/schema-crosscheck` · `../noise_canceling-schema` | schema 机制 · 共享内存头 · 配置 · 评测任务清单 | 完成，PR #63 已合并（#57 关，0604143），窗口已关；worktree 保留待清 |
-| graph | 第二阶段 · 处理图描述 + 与 Pipeline 交叉校验 + 会话记录记图版本 · #64 · `feat/processing-graph` · `../noise_canceling-graph` | 处理图描述 · Pipeline · 会话记录 · 修音链频谱级归属 | 完成，PR #69 已合并（#64 关，ec39fd8），待关窗 |
+| graph | 第二阶段 · 处理图描述 + 与 Pipeline 交叉校验 + 会话记录记图版本 · #64 · `feat/processing-graph` · `../noise_canceling-graph` | 处理图描述 · Pipeline · 会话记录 · 修音链频谱级归属 | 完成，PR #69 已合并（#64 关，ec39fd8），窗口已关；worktree 保留待清 |
 | iface | 第二阶段 · 参数描述导出 schema · 模型接口三方一致 · FE-M 名字只留一个 · #65 · `feat/param-model-schema` · `../noise_canceling-iface` | 参数描述导出 · 场景参数表 / 我的配置文本 · 模型接口 | 已报到（noise-canceling-iface-d6）|
 
 ## 进度板
