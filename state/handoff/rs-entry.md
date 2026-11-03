@@ -3,7 +3,7 @@
 > 大总管：`noise-canceling-47`。交代：`../noise_canceling-skeleton/_tmp/20261102-b8-rust/rs-entry.md`。
 > 管的实体：`vdn-control` · `vdn-capture` · `vdn-denoised` · `vdn-cli`（可执行 `vdn`）
 
-## 已收尾（2026-11-02；验收打回的不稳定测试已修、5 次验收过，见「打回修」；D68 调度接线差最后一行，等合并）
+## 已收尾（2026-11-02 18:07；打回的不稳定测试已修、压力下 5 次验收过；D68 调度接线完成）
 
 一句话：链路骨架从控制 · 两个进程 · 命令行到链路测试全部接通，V1–V4 · V7 机器判过，V5 待人。
 
@@ -18,7 +18,7 @@
 | V5 | 真麦克风（人判） | **待人做**，步骤见「V5 人工步骤」 |
 | V7 | 延迟（release，10 次 × 10 s，空闲 + 压力） | **过（压线）**：lead 192 空闲 0/10、压力 0/10 欠载，GTCRN L_total 36.00 ms；144 空闲 10/10 有欠载。卡点：空闲时推理块约 2.9 ms（压力 0.6 ms）。明细 `docs/experiments/exp-v7-latency/` |
 
-测试：`cargo test -p vdn-control -p vdn-capture -p vdn-denoised -p vdn-cli` 57 过、2 忽略（V5、真实节拍版）；4 个忙进程并跑下连跑 5 次全过· clippy 0 警告 · fmt · `xtask tidy` · `xtask check-deps` 通过【测】
+测试：`cargo test -p vdn-control -p vdn-capture -p vdn-denoised -p vdn-cli` 58 过、2 忽略（V5、真实节拍版）；4 个忙进程并跑下连跑 5 次全过（57 条时）· clippy 0 警告 · fmt · `xtask tidy` · `xtask check-deps` 通过【测】
 
 - V3 用的权重：`../noise_canceling/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx`（sha256 前缀 `b4718df6228e7bdf`；本工作区 `resources/` 里没有）
 - V4 命令（最终设置）：
@@ -88,7 +88,7 @@
   - 真实节拍只留一条 `realtime_v1_v2`，`#[ignore]`，串行人工跑：`cargo test -p vdn-cli -- --ignored realtime_ --test-threads=1`
   - **为什么不用 static 锁串行**：锁只能让同一个测试二进制里的测试排队；机器上别的进程照样抢 CPU（验收条件本身就是并跑 4 个 `yes`），真实节拍的测试还是会时红时绿。真实节拍是 `vdn chain-test` 和 V7 该判的事
 - **验收（2026-11-02 18:05）**：4 个 `yes > /dev/null` 并跑，四个 crate 测试连跑 5 次，每次 **57 过 · 0 失败 · 2 忽略**（V5、`realtime_v1_v2`），退出码都是 0；负载 5.32 → 5.58（10 核）。编译、clippy 0 警告【测】。输出 `_tmp/20261102-rs-entry-flaky/run{1..5}.txt`
-- 同批顺带加的（D68 调度接线里不依赖合并的部分）：预热量每周期总耗时 p99.9 · 醒来迟到（Raw 积压，附 ms）· 超周期次数 · 每秒读回调度策略、降级计数；测试 `warmup_measures_per_period_work` `overrun_and_backlog_counters` `rt_check_counts_downgrades`。剩最后一行等 rs-wake 的 vdn-rt-thread 合入：提升从 `for_block` 换成 `from_measured(16 ms, 每周期 p99.9, MEASURED_MARGIN)`
+- 同批顺带加的（D68 调度接线里不依赖合并的部分）：预热量每周期总耗时 p99.9 · 醒来迟到（Raw 积压，附 ms）· 超周期次数 · 每秒读回调度策略、降级计数；测试 `warmup_measures_per_period_work` `overrun_and_backlog_counters` `rt_check_counts_downgrades`。**已接（合入 62d78ab 后）**：降噪线程（vdn-denoised · chain-test · vdn run）按 `ThreadPolicy::default()` 提升，参数 `vdn_denoised::denoise_rt_params` = `from_measured(16 ms, 预热每周期 p99.9, MEASURED_MARGIN)`；送音端的 IO 线程仍按块长（不是降噪线程）。实测启动日志：period 16.000 ms · computation 2.436 ms（p99.9 1.624 ms × 1.5）；V1 过（醒来时 Raw 最多积 96 样本 = 2.00 ms、超周期 0 次、调度读回 6 次降级 0）· V2 过（102 ms）。测试 `denoise_rt_params_use_period_and_measured_window`
 
 ## 已定（大总管，2026-11-02）
 - **lead 硬下限 = 一块 IO**（正本 `vdn_control::check_lead`；Config 校验 · chain-test 开跑前 · 送音端读总线头三处调用）。理由：送音端同一回调里取走一块时，降噪端恰好有一整个 IO 周期处理上一块；降噪块长已经在 `Pipeline::with_block` 的延迟里算过。再往上的余量由 V7 实测定。测试：`lead_below_one_io_block_is_rejected` · `chain_refuses_lead_below_io_block`
@@ -223,3 +223,5 @@
 - 2026-11-02 测试自查补齐（54 过、1 忽略）；lead 下限 = 一块 IO（大总管定）；V1 判据含欠载
 - 2026-11-02 V7 复测（有唤醒，release）过：lead 192 空闲 / 压力各 0/10 欠载；lead 默认改 192（大总管定）；最终 V1–V4 复跑全过
 - 2026-11-02 **已收尾**
+- 2026-11-02 验收打回不稳定测试 → 锁步模拟 + 真实节拍标 #[ignore]；4 个忙进程下连跑 5 次全过
+- 2026-11-02 D68：lead 192 定值；降噪线程按实测每周期耗时提升（from_measured），读回降级 / 醒来迟到 / 超周期计数；58 过、2 忽略。**已收尾**
