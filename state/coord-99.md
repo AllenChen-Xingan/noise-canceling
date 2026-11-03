@@ -22,3 +22,5 @@
 - 2026-11-02 single：三镜像已删；vdn-types `desc.rs` 参数描述表 39 条；5 个 crate 改从表取默认与范围；tidy 加 R-MIRROR · R-PARAM；锁期间改的未编译。大总管让它锁期间先跑 codex
 - 2026-11-02 schema 编译测试结束（自报）：vdn-schema --check 一致 · xtask ci 6 步全过 · 交叉校验 18 条 · eval ci 回归 13/17 同前；schemars 改为 vdn-control 可选特性；codex 第 1 轮 P1×2 P2×3 已改（docs/reviews/011_schema-crosscheck-codex.md），第 2 轮在跑。等 single 跑完再通知 e3
 - 2026-11-02 single 编译测试结束（自报）：xtask ci 全绿；新 tidy 规则首跑抓到 polish AGC 私有字段 floor_db 撞名 → 改 noise_floor_db；codex 第 1 轮 P1×1 P2×5 已改，第 2 轮在跑。已通知 e3「编译结束」
+- 2026-11-02 ~20:5x e3 第二段基准（约 32 min）；两人停编译
+- 2026-11-02 schema codex 第 2 轮 P1×1 P2×2 已改：布局版本对照 main 只增不改（ci.yml 加 fetch-depth: 0，合并冲突大总管处理）· 总线名收窄为可见 ASCII 无 /（行为变化，进 PR 正文）· 往返整数精确比较；denoised 非 ASCII 负例测试派给 schema 补
