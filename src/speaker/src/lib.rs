@@ -26,11 +26,8 @@ pub mod envelope;
 pub mod fbank;
 pub mod gate;
 pub mod judge;
-
 pub mod vad;
 
 #[cfg(feature = "onnx")]
 pub mod embed;
 pub mod vecmath;
-
-

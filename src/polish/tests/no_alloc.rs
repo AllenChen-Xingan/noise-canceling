@@ -3,8 +3,8 @@
 
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use realfft::num_complex::Complex32;
-use vdn_types::FrameCtx;
 use vdn_polish::{PolishChain, PolishParams};
+use vdn_types::FrameCtx;
 
 #[global_allocator]
 static A: AllocDisabler = AllocDisabler;

@@ -29,9 +29,9 @@
 )]
 pub mod agc;
 pub mod chain;
-pub mod spectral_stage;
 pub mod params;
 pub mod spectral;
+pub mod spectral_stage;
 
 pub use agc::Agc;
 pub use chain::PolishChain;

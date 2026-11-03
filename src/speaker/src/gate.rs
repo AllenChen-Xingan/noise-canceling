@@ -19,8 +19,8 @@
 
 use vdn_dsp::{db_to_lin, one_pole_coef};
 
-use vdn_types::{FrameCtx, SampleClock, SpeakerClass, Stage};
 use crate::vad::{Hysteresis, Vad};
+use vdn_types::{FrameCtx, SampleClock, SpeakerClass, Stage};
 
 #[derive(Clone, Copy, Debug)]
 pub struct GateParams {

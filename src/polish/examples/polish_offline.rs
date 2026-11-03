@@ -11,8 +11,8 @@ use std::time::{Duration, Instant};
 
 use vdn_dsp::StreamingStft;
 use vdn_dsp::window::sqrt_hann_periodic;
-use vdn_types::FrameCtx;
 use vdn_polish::{PolishChain, PolishParams};
+use vdn_types::FrameCtx;
 
 const N_FFT: usize = 512;
 const HOP: usize = 256;

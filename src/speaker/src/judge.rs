@@ -15,9 +15,9 @@
 use std::time::{Duration, Instant};
 
 use crate::enroll::{EnrollOutcome, Enroller};
-use vdn_types::{Confidence, SampleClock, SpeakerClass, SpeakerVerdict};
 use crate::vad::VAD_FRAME;
 use crate::vecmath::{BoxError, all_finite, cosine};
+use vdn_types::{Confidence, SampleClock, SpeakerClass, SpeakerVerdict};
 
 /// 声纹来源（真模型或测试用的假模型）。
 pub trait EmbedSource {

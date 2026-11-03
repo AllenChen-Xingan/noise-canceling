@@ -8,8 +8,8 @@
 
 use vdn_dsp::{OpenCloseEnvelope, OpenCloseParams, db_to_lin, one_pole_coef};
 
-use vdn_types::{FrameCtx, Stage};
 use crate::vad::{Hysteresis, Vad};
+use vdn_types::{FrameCtx, Stage};
 
 #[derive(Clone, Copy, Debug)]
 pub struct EnvelopeParams {

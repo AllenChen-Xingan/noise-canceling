@@ -1661,6 +1661,7 @@ dependencies = [
  "ort",
  "realfft",
  "vdn-dsp",
+ "vdn-types",
 ]
 
 [[package]]
@@ -1673,6 +1674,7 @@ dependencies = [
  "vdn-engine",
  "vdn-models",
  "vdn-speaker",
+ "vdn-types",
 ]
 
 [[package]]
