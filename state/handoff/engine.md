@@ -16,6 +16,7 @@
 - D68 加活：`standard.md` 初稿已交（13 个 verifier，技术线标「AI 定；人可改」）；§8 成熟产品参照子代理在查；§9 Rust↔Python 差待测
 - 正式测速从 Rust 调：新 crate `docs/experiments/exp010-inference-bench/apple-rs/`（Core ML · BNNS · 分配计数自检；MLX 走 mlx-c 载 `.mlxfn`，因本机无 Metal 编译器，mlx-c 对着 pip 的 libmlx 编，未写完）
 - 一键脚本 `apple-rs/tools/run-all.sh`：建 venv → 转模型 → 用 rustbe 二进制写转储 → 构建自检 → 3 轮交替基准（含 ORT 与手写版同场）→ MLX Python 对照 → MLComputePlan。产物按 build id 写新目录
+- D69（人定整机 ≤ 1% 核）已写进 standard.md §6.1：降噪推理分 0.50%，手写 GTCRN 0.63% 也超
 - 口径跟 rustbe r5：qos ui、p10/p90、min_frame_snr、NaN 算坏值
 
 ## 下一步
@@ -24,7 +25,9 @@
 3. 写 `decision.md`，对抗自审一轮
 
 ## 转交
-（无）
+- （已报大总管）D69 整机 ≤ 0.01 核：认人判断回路 ≈ 1.2% 核，单项超总线，需降约 8 倍到 0.15%（不归 019）
+- （已报大总管）FE-M 在 ORT 上 ≈ 3.7% 核，要快 7 倍以上才进线，D33 备选地位待重估
+- （已报大总管）STFT / 重采样 / 采集输出 / 修音的 CPU 都没量过
 
 ## 批次 20261031-b6（旧）
 - workflow wf_502b2e03-c65 中断，只写出 `notes/our-models.md`
