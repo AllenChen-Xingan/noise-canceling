@@ -60,13 +60,15 @@
 |---|---|
 | 重编译 / 全量测试 / 跑模型（1 个） | 47 方（V7 等三件），16:34 起 |
 
-排队：47 三件（V7 约 10 min · 优先级复测约 5 min · 耗电约 5 min，人 sudo，空等时 47 会通知让出）→ applebe（约 30–40 min）
+排队：47 三件（进行中）→ rustbe（Python ORT vs Rust ORT 交替 3 轮 + 自审补跑，约 3 min，短活先跑）→ applebe（apple-rs 构建 + Core ML / BNNS / MLX 从 Rust 测，约 30–40 min）
 
 **跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。加锁文件：mkdir 主目录 `_tmp/heavy.lock`（内写 owner · 开始 · 预计结束，跑完 rmdir），由各自大总管放名额时建、收回时删，手下不碰（47 已确认）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 人定 D69「我的底线是1%」→ 整个降噪软件常开 ≤ 0.01 核（AI 理解口径，待人确认）；已转 applebe 改 BE-CPU
+- 2026-11-02 applebe 调研收回（8 代理，各过怀疑派，本机未测）：只有 BNNS Graph 能在推理线程每帧直接调（单线程、预分配后不分配）；Core ML 每次预测新建 ObjC 对象，只能登记豁免，神经引擎 fp16 且 GRU 上不去；MLX 每帧加锁等后台线程，长处是本机微调。补了 GRU 手动展开变体。题 2-8（最低系统版本）已登记，等实测再问
 - 2026-11-02 人问「苹果引擎怎么写的 · 参照标准是啥」→ D68：先写评判标准（applebe，standard.md）· 一切测速从 Rust 调 · Python 数字量出与 Rust 的差（rustbe 测 Python ORT vs Rust ORT）
 - 2026-11-02 16:33 rustbe 基准结束（正式版 r4，16:32:36 开跑，在干扰时段之后，负载 2.25 → 2.04；r1–r3 留作参考）：GTCRN 手写 Rust p50 0.10 ms、最大 0.13–0.28 ms、每帧零分配，比 ORT（p50 0.37–0.38 ms、最大 0.43–1.0 ms）快约 3.7 倍，对拍 SNR 134 dB；tract 跑 GTCRN p50 0.37–0.56 ms、每帧分配 2247 次，不如 ORT；FE-M tract p50 0.58–0.68 ms vs ORT 0.36–0.38 ms，ORT 更快。名额收回转 47
 - 2026-11-02 rustbe：tract 对拍过（GTCRN SNR 130 dB；FE-M 缺 SplitToSequence，等价改写为 Gather 后对原图 110.8 dB）；冒烟 GTCRN p50 tract 0.47 ms / ORT 0.51 ms（非正式）。另一位大总管 noise-canceling-47（tmux vdn-rust，Rust 骨架线 rs-shm / rs-entry）的 miri 占满 1 核 → 已结束；已向 47 提议两边「计时基准前互相打招呼」
