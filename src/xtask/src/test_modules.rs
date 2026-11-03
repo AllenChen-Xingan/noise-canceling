@@ -118,17 +118,24 @@ pub fn test_module_files(files: &[PathBuf]) -> Vec<PathBuf> {
     out.sort();
     out.dedup();
     // 生产引用：不在测试清单里的文件用普通 `mod x;` 指到的文件不算测试代码（codex 第 3 轮 P1 #2：
-    // lib.rs 里 `#[cfg(test)] mod worker;`、main.rs 里普通 `mod worker;` 时，worker.rs 照实时代码查）
-    let prod: Vec<PathBuf> = decls
-        .iter()
-        .filter(|(f, ..)| !out.contains(f))
-        // 只指到模块文件本身（`x.rs` / `x/mod.rs`）；它的子模块是不是测试由它自己的声明决定
-        .flat_map(|(_, dir, _, o)| {
-            o.iter()
-                .flat_map(|n| [dir.join(format!("{n}.rs")), dir.join(n).join("mod.rs")])
-        })
-        .collect();
-    out.retain(|f| !prod.contains(f));
+    // lib.rs 里 `#[cfg(test)] mod worker;`、main.rs 里普通 `mod worker;` 时，worker.rs 照实时代码查）。
+    // 排除要传递：worker.rs 移出清单后，它普通引用的子模块也跟着移出，反复做到清单不再变（第 4 轮 P1 #1）
+    loop {
+        let prod: Vec<PathBuf> = decls
+            .iter()
+            .filter(|(f, ..)| !out.contains(f))
+            // 只指到模块文件本身（`x.rs` / `x/mod.rs`）；它的子模块是不是测试由它自己的声明决定
+            .flat_map(|(_, dir, _, o)| {
+                o.iter()
+                    .flat_map(|n| [dir.join(format!("{n}.rs")), dir.join(n).join("mod.rs")])
+            })
+            .collect();
+        let before = out.len();
+        out.retain(|f| !prod.contains(f));
+        if out.len() == before {
+            break;
+        }
+    }
     out
 }
 
@@ -204,6 +211,27 @@ mod tests {
         fs::write(d.join("src/main.rs"), "mod worker;\nfn main() {}\n").unwrap();
         fs::write(d.join("src/worker.rs"), "fn f() {}\n").unwrap();
         assert!(test_module_files(&files(&d)).is_empty());
+        let _ = fs::remove_dir_all(&d);
+    }
+
+    /// 负例（codex 第 4 轮 P1 #1）：三级引用——生产引用的 worker.rs 再普通引用 child，child 也不当测试代码；
+    /// worker.rs 里真正带 `#[cfg(test)]` 的子模块仍算测试代码
+    #[test]
+    fn production_exclusion_is_transitive() {
+        let d = tmp("trans");
+        fs::write(d.join("src/lib.rs"), "#[cfg(test)]\nmod worker;\n").unwrap();
+        fs::write(d.join("src/main.rs"), "mod worker;\nfn main() {}\n").unwrap();
+        fs::write(
+            d.join("src/worker.rs"),
+            "mod child;\n#[cfg(test)]\nmod wt;\n",
+        )
+        .unwrap();
+        fs::write(d.join("src/worker/child.rs"), "fn f() {}\n").unwrap();
+        fs::create_dir_all(d.join("src/worker/child")).unwrap();
+        fs::write(d.join("src/worker/child/deep.rs"), "fn g() {}\n").unwrap();
+        fs::write(d.join("src/worker/child.rs"), "mod deep;\n").unwrap();
+        fs::write(d.join("src/worker/wt.rs"), "fn t() {}\n").unwrap();
+        assert_eq!(test_module_files(&files(&d)), [d.join("src/worker/wt.rs")]);
         let _ = fs::remove_dir_all(&d);
     }
 
