@@ -10,3 +10,7 @@
 - 坑：tract 不支持 FE-M 图里的 SplitToSequence；`tools/fem_strip_seq.py` 把 8 处等价换成 Gather，对 ORT 原图 SNR 110.8 dB。改写后的图放主目录 `_tmp/20261102-exp010/`
 - 建了 `_tmp/exp010-venv`（只装 onnx、numpy）
 - 等待：rs-shm 那边在跑 cargo miri，占一个核，已报大总管；等它结束再跑正式基准（`tools/run_bench.sh <build-id>`）
+- 基准：r1 有 miri 并行；r2、r3 和别处 16:31–16:32 的编译重叠，都只作参考；**r4 为正式版**（16:32:36 开跑，负载 2.25 → 2.04）。名额已归还
+- r4 结论：GTCRN 手写版 p50 0.10 ms，ORT 0.38 ms，手写版约快 3.7 倍，每帧零分配；tract 赢不了 ORT（GTCRN 和 FE-M 都是），每帧分配上千次。正式数字已发给 applebe
+- bench 加了 `--pace-ms`（按实时节奏喂帧）；`tools/power_run.sh` 测耗电，要 sudo，待交人跑
+- 自审：派了 3 个对抗视角（测量口径与代码 · 手写版能否上线 · 报告与写作），等回报

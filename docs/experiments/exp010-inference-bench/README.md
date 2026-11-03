@@ -120,7 +120,7 @@ sudo bash ../tools/power_run.sh <build-id>       # 耗电（要 sudo，由人跑
 - `results/20261102-r2-clean/`、`results/20261102-r3-clean/`：和别处一次 release 编译重叠（16:31–16:32），r2 第 2 轮 ORT 的最大值到了 62.9 ms
 - 各版的 `env.txt` 里都写了原因。手写版在每一版里都是最快的
 - exp004 量的 ORT p50 是 0.70 ms，本轮是 0.38 ms。原因有两个，没拆开量：
-  - exp004 计的是整个 `process` 调用（含 STFT），本轮只计推理那一次
+  - exp004 计的是整个 `process` 调用（含 STFT 和 iSTFT，读源码 `src/cli/src/main.rs:305`），本轮只计推理那一次
   - 两次的机器状态不同
 
 ## 耗电
