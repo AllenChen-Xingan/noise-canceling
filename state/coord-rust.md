@@ -43,6 +43,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- rs-wake 定口径 A：周期 16 ms，computation = 每 16 ms 窗口总工作量 p99.9 × 1.5（约 4 → 6 ms），constraint 16 ms；B（周期 2 ms）不行：推理块单独 3 ms > 2 ms。发现：读回策略看不到系统内部降级（耗电实验声明 2.1 ms、实际 3.0 ms，读回一直正常、降级 0）→ 降级计数只当下限，直接判据是醒来迟到与处理超时
 - D68 落代码：rs-wake 加 `ThreadPolicy::default()`（实时优先级开、工作区间不加）与 `RtParams::from_measured`；大总管打回口径：computation 要盖每周期总工作量（1 推理 + 7 轻块），不是单块 p99.9。rs-entry 接线算本批，顺序：锁步测试 5 次 → 合 rt-thread → 接线 → 复跑
 - **人定 D68（原话「低频也可以，我觉得就用低频吧」）**：不追性能核 / 提频，取消 qos_set；lead 192 = 4 ms 定为默认；实时优先级默认开、音频工作区间默认不加入
 - rs-wake：耗电结果进 `docs/experiments/exp-v7-latency/results/20261102-power/`（README · meta · bench · 每秒摘要 CSV · 原始输出哈希）；推断工作区间没提频是因为截止期报太宽（8 ms）；下一轮 qos_set 8 档组合（qos / tc / wg / wg@1000），判据块耗时回到约 0.7 ms
