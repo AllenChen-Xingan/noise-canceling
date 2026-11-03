@@ -43,3 +43,4 @@
 - 2026-11-02 PR #63 合并（0604143），#57 关；已告 8d「#57 已合并」；schema 关窗。**第一阶段完成**
 - 2026-11-02 第二阶段派出：graph（#64）· iface（#65）。发现 main 已有 StageChain + Pipeline::with_stages（Rust 骨架线），图只补描述数据与交叉校验。前端只算一次（D71）不在本阶段，留第三步
 - 2026-11-02 人定新规（经 8d 转，随 #62 进 CLAUDE.md 第五节第 7 条）：代码文件 ≤600 行、无基线无豁免。分工：graph 拆 pipeline.rs · engine/tests/stages.rs；iface 拆 desc.rs · policy.rs · schema/tests/crosscheck.rs；denoised/lib.rs 归 8d；#62 硬上限等 #64 #65 合并后再合（合时告 8d）
+- 2026-11-02 iface：FE-M 正本定 `fastenhancer-m`，旧写法只在 ModelId::parse 兼容。8d 同意：cli 改 main.rs（#62 合 main 时搬进 args.rs，**合后 8d 请我看 diff**）· FE-M 名规则放新文件 xtask/src/model_names.rs。待 8d 回：single_source.rs（789 行）整个归 iface
