@@ -11,7 +11,9 @@
 - [x] 规约 ADR 004 表 · ADR 004 修订注 · cog.md 一行 · specs/README.md 子目录表
 - [x] 全量 CI（`xtask ci`）全绿；`xtask eval ci` 门禁通过（ref：回归 13/17、能力 1/10、探针 5/5）
 - [x] codex 第 1 轮（P1×2 P2×3，全部属实、全部已改，记录 `docs/reviews/011_schema-crosscheck-codex.md`）
-- [ ] 锁解除后：重新导出 schema → 全量 CI → codex 第 2 轮
+- [x] 全量 CI（第 1 轮改动后）全绿；`xtask eval ci` 门禁通过
+- [x] codex 第 2 轮（P1×1 P2×2，全部属实、已改：对照 main 的版本历史守卫 · 总线名只许可见 ASCII · 往返比较整数精确）
+- [ ] 锁解除后：全量 CI → codex 第 3 轮
 
 ## 技术决定（我定，理由）
 - 导出库 `schemars` 1.2（MIT）：派生自 serde 属性，Rust 类型即正本。加进 control · eval · schema 三个 C / tool 档 crate
@@ -41,7 +43,8 @@
 - `src/shm/src/desc.rs` 1 条：字段有序、不重叠、不越界
 
 ## 转交
-（暂无）
+- **`.github/workflows/ci.yml` 改了一行**：checkout 加 `fetch-depth: 0`（vdn-schema 的测试要对照 main 上的布局文件，codex 第 2 轮 #1）。这是共用文件，合并冲突请大总管处理
+- **总线名规则收窄**（我的实体 vdn-shm / vdn-control，codex 第 2 轮 #2）：前缀之后只许可见 ASCII、不含 `/`，空格和非 ASCII 字符不再许可。vdn-denoised 的 `bus_name_rule_matches_vdn_shm` 测试样例全是 ASCII，仍过；建议它的负责人加一个非 ASCII 样例（不归我改）
 
 ## 待拍板
 （暂无，全是技术题，已自定）
