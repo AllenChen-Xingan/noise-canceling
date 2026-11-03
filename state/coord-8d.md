@@ -27,3 +27,4 @@
 - 2026-11-02 split 报到（noise-canceling-hygiene-ad）；single_source.rs 也归 99 iface；hygiene 只拆 eval/verifiers.rs · eval/runner.rs
 - 2026-11-02 R-RATE 分工：hygiene 改其余 crate（跳过 99 名下 6 个文件）；split 改 capture/denoised/speaker-lab 15 处；99 名下文件的字面量等 #64/#65 合并后，由 hygiene 在 #62 合 main 时改（rate.rs 在 #62 才有）
 - 2026-11-02 e3 基准结束、锁删；两个手下改动进行中，全量验收等两人都报完成再跑
+- 2026-11-02 split 报：三文件已拆完、R-RATE 15 处已改；拆前测试数用导出旧提交对比法补跑

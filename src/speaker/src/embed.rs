@@ -86,7 +86,7 @@ impl Embedder {
         let nf = e.fbank.num_frames(max_samples);
         e.feats = vec![0.0; nf * fbank.num_mel_bins];
         // 用一段 1 s 的低电平正弦探出输出维度，顺带预热
-        let probe: Vec<f32> = (0..16000).map(|i| 0.01 * (i as f32 * 0.07).sin()).collect();
+        let probe: Vec<f32> = (0..vdn_types::MODEL_RATE).map(|i| 0.01 * (i as f32 * 0.07).sin()).collect();
         e.dim = e.embed(&probe)?.len();
         Ok(e)
     }

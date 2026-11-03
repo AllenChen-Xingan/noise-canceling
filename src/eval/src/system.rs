@@ -330,7 +330,7 @@ mod tests {
     #[test]
     fn passthrough_with_safety_off_is_identity() {
         let mut r = crate::rng::Rng::new(1);
-        let x: Vec<f32> = (0..16000).map(|_| 0.1 * r.normal() as f32).collect();
+        let x: Vec<f32> = (0..vdn_types::MODEL_RATE).map(|_| 0.1 * r.normal() as f32).collect();
         let s = SystemSpec {
             safety: false,
             ..spec(SystemKind::Passthrough)
@@ -342,14 +342,14 @@ mod tests {
     #[test]
     fn ref_wiener_attenuates_stationary_noise() {
         let mut r = crate::rng::Rng::new(2);
-        let x: Vec<f32> = (0..48000).map(|_| 0.05 * r.normal() as f32).collect();
+        let x: Vec<f32> = (0..vdn_types::IO_RATE).map(|_| 0.05 * r.normal() as f32).collect();
         let s = SystemSpec {
             safety: false,
             ..spec(SystemKind::Ref)
         };
         let o = run(&s, &x).unwrap();
         let p = |v: &[f32]| v.iter().map(|a| (*a as f64).powi(2)).sum::<f64>();
-        let att = 10.0 * (p(&o.out[16000..]) / p(&x[16000..])).log10();
+        let att = 10.0 * (p(&o.out[vdn_types::MODEL_RATE as usize..]) / p(&x[vdn_types::MODEL_RATE as usize..])).log10();
         assert!(att < -15.0, "参考降噪器对白噪声只压了 {att:.1} dB");
     }
 

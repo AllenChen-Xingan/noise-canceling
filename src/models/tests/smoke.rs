@@ -22,7 +22,7 @@ fn run(kind: ModelKind) {
         (m.sample_rate(), m.hop(), m.latency_samples()),
         (d.sample_rate, hop, latency)
     );
-    let x: Vec<f32> = (0..16000)
+    let x: Vec<f32> = (0..vdn_types::MODEL_RATE)
         .map(|i| 0.1 * (i as f32 * 0.07).sin() + 0.01 * ((i * 7919 % 101) as f32 / 50.0 - 1.0))
         .collect();
     // 开着「出事送原声」才会给故障计数
@@ -67,7 +67,7 @@ fn run_pipeline(kind: ModelKind) {
         p.latency_samples(),
         d.hop * 3 - 1 + 2 * vdn_dsp::resample::delay_high() + d.latency_samples * 3
     );
-    let x: Vec<f32> = (0..48_000)
+    let x: Vec<f32> = (0..vdn_types::IO_RATE)
         .map(|i| 0.1 * (i as f32 * 0.02).sin() + 0.01 * ((i * 7919 % 101) as f32 / 50.0 - 1.0))
         .collect();
     let mut y = vec![0.0; x.len()];
