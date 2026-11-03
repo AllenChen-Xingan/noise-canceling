@@ -1,0 +1,747 @@
+[
+ {
+  "key": "v2:f35e4dbf91222a65d7c53e371dfaa8e5936002b32a4b5e418c3534c4b5663b3b",
+  "result": {
+   "techniques": [
+    {
+     "name": "vDSP_DFT_zrop 实数 FFT（512 点，预建 setup）",
+     "source": "macOS SDK vecLib.framework/Headers/vDSP.h：vDSP_DFT_zrop_CreateSetup / vDSP_DFT_Execute（约 7041–7160 行注释）；实测程序 /private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-fastpath/105e8ac0-6c35-426e-807a-43d6903f643c/scratchpad/probe/p.c",
+     "what": "建 setup 时分配旋转因子；执行时把 512 个实数按偶/奇下标拆成两条 256 长数组（分离复数格式）做 256 点复数 FFT 加后处理。正变换结果放大 2 倍；第 0 频点放 Or[0]，奈奎斯特频点（第 256）塞进 Oi[0]；逆变换不缩放。正、逆两个 setup 可以通过 Previous 参数共享旋转因子；多个线程可以同时执行，但不能同时 create/destroy。",
+     "applies_to": "STFT / iSTFT 的 512 点实数 FFT。需要把交错复数和分离复数互转，并把 Oi[0] 拆成第 256 个频点，这样才能凑出 257 个频点。",
+     "expected_gain": "实测（本机 M5，本次探针，各跑 10 万次，跑 2 遍）：正变换每次 142–203 ns，逆变换（含 2 次 vDSP_vsmul 缩放）每次 163–195 ns。占每帧 0.088 ms 的约 0.4%。和 realfft 对比未测，所以不能说更快。",
+     "numerics": "误差有界，不是逐位相同。和 realfft 的蝶形顺序不同，差异在 float 舍入量级（推断）。缩放约定不同（正变换 ×2），必须统一。",
+     "rt_safe": "实测：执行时每次 malloc 0 次（malloc_logger 钩子，10 万次共 0 次）。setup 必须在实时线程外建好。头文件没有写加锁。"
+    },
+    {
+     "name": "realfft / RustFFT：带预分配 scratch 的实数 FFT",
+     "source": "HEnquist/realfft 44f36c4 src/lib.rs：RealToComplexEven::process_with_scratch、ComplexToRealEven::process_with_scratch；ejmahler/RustFFT 26a8ae7 src/neon/neon_planner.rs（Radix4 递推，256 = 16 × 4²）",
+     "what": "把 N 个实数当成 N/2 个复数，做 N/2 点复数 FFT，再用一张预算的旋转因子表合成正频谱：第 0 和第 N/2 频点直接由和与差得到。这一步后处理是标量写法的复数运算。aarch64 上运行时检测 NEON，256 点走 NeonRadix4（底为 16 点蝶形，k=2）。process() 每次调用都用 make_scratch_vec 分配；process_with_scratch 不分配，但会把 input 当工作区改掉。逆变换会把第 0 和最后一个频点的虚部强制清零，并返回 FftError::InputValues；这个错误只是枚举值，只有格式化输出时才分配。",
+     "applies_to": "STFT / iSTFT 512 点。如果现在用的是 process()，要改成 process_with_scratch，scratch 在初始化时分配。",
+     "expected_gain": "未测。从源码推断：主体 256 点复数 FFT 有 NEON 实现，后处理约 128 次标量复数乘加，量级应和 vDSP 相近（假设）。",
+     "numerics": "和自己的旧版逐位相同（同一个库）。换成 vDSP 后误差有界。",
+     "rt_safe": "process_with_scratch 加上预分配的 output 和 scratch：每帧不分配、不加锁（读源码）。process()：每帧分配 1 次。"
+    },
+    {
+     "name": "vForce 批量 tanh / exp（vvtanhf / vvexpf）",
+     "source": "macOS SDK vecLib.framework/Headers/vForce.h（文件头注释、vvexpf 第 193 行、vvtanhf 第 830 行）；huggingface/candle cfcbd71 candle-core/src/accelerate.rs vs_tanh / vs_exp（accelerate 特性下的一元算子就走这两个函数）；本次探针 p.c",
+     "what": "对整条 float 数组做向量化超越函数。头文件明说：非规格化数（denormal）可能当 0 处理；结果会随芯片微架构和系统版本变化；对很小的向量建议改用 simd.h。",
+     "applies_to": "把多个独立元素攒成一批再调一次：沿时间的 GRU（33 个频点 × 3 个门）、逐点卷积后的激活、最后的 tanh（2×129）。不适合沿频率的双向 GRU：它有 33 步串行依赖，每步只有 H=4，每次调用固定开销约 20 ns，比算本身还贵（推断）。sigmoid 可以写成 1/(1+exp(-x))，或用 0.5·tanh(0.5x)+0.5。",
+     "expected_gain": "实测（本机 M5）：528 个元素 vvtanhf 270–290 ns（约 0.53 ns/个），vvexpf 约 167 ns（约 0.32 ns/个）；16 个元素 vvtanhf 约 24 ns（约 1.5 ns/个，固定开销明显）。和手写 NEON 多项式比没测。sigmoid/tanh/exp 占 23%，约 20 µs；如果现在是标量 libm，大批量能省多少只能推断，要实测。",
+     "numerics": "改变结果（误差有界）：苹果不承诺逐位结果，换系统或换芯片都可能变；非规格化数可能被冲成 0。所以不能做逐位一致的金标准。",
+     "rt_safe": "实测每次调用 malloc 0 次；没有锁也没有系统调用（读头文件，未见相关说明；推断）。"
+    },
+    {
+     "name": "Accelerate cblas_sgemm / vDSP_mmul 用在小形状上",
+     "source": "SDK cblas_new.h、vDSP.h 第 2484 行 vDSP_mmul、thread_api.h BLASSetThreading；本次探针 p.c；项目 docs/experiments/exp010-inference-bench/README.md 第 236–242 行（调用链 cblas_sgemm → APL_sgemm → APL_sgemm_QR → posix_memalign）",
+     "what": "标准 BLAS 矩阵乘。没有让调用方传入工作区的参数。BLASSetThreading 只能选单线程或多线程，按线程生效。",
+     "applies_to": "逐点卷积 16×24×33、8×16×33，以及 33 个频点上的全连接，但每帧都会分配，过不了实时线程不分配这条要求。",
+     "expected_gain": "实测（本机，16×24 乘 24×33）：cblas_sgemm 334–351 ns，切成单线程后 349–353 ns，vDSP_mmul 296–371 ns。朴素三重循环 C（clang -O3 -mcpu=native 自动向量化）318–325 ns。也就是说在这个形状上 Accelerate 不比编译器自动向量化快。",
+     "numerics": "误差有界（求和顺序不同）。",
+     "rt_safe": "实测：每次调用 malloc 1 次，切成单线程也照样 1 次，不能进实时线程。"
+    },
+    {
+     "name": "BNNS Graph（从 CoreML 模型编译，预分配工作区，可选单线程，流式状态）",
+     "source": "SDK vecLib.framework/Headers/BNNS/bnns_graph.h：BNNSGraphCompileOptionsSetTargetSingleThread（第 192 行）、BNNSGraphContextMakeStreaming（第 555–585 行）、BNNSGraphContextExecute（第 695–739 行）、BNNSGraphContextGetWorkspaceSize、BNNSGraphContextSetWorkspaceAllocationCallback；bnns.h 旧 BNNSFilter* 层接口标 __API_DEPRECATED(\"Use BNNSGraph* APIs\", macos(…,15.0))；WWDC24 讲座 10211",
+     "what": "把 .mlmodelc 编译成 BNNS 图，可指定单线程执行，并取得工作区大小。头文件写明：执行时满足 4 个条件就不分配内存——工作区非空（必须页对齐）、所有形状都能事先定界、不传新形状、输出缓冲由调用方提供。如果模型用 StateMode=Streaming 编译，所有 inout 状态（CoreML 的 state）由内部环形缓冲管理，每帧自动前移。同一个 context 同时只能给一个线程用。",
+     "applies_to": "理论上可以承接整个 GTCRN 图（卷积、GRU、LayerNorm），流式缓存可以交给 Streaming 状态。前提是先把模型转成 CoreML。旧的逐层 BNNS 接口（有 LSTM，没查到 GRU）从 macOS 15 起已弃用。",
+     "expected_gain": "未测，也没查到小模型的官方数字。WWDC24 只说它面向实时音频，保证不分配、单线程。会不会比手写 NEON 快：未查到，推断不确定，要实测。",
+     "numerics": "改变结果（误差有界）：算子实现和融合方式由苹果决定，跨系统版本可能变。",
+     "rt_safe": "按头文件：给页对齐工作区并预先提供输出后，执行时不分配；单线程选项避免线程同步。没查到关于锁的说明。"
+    },
+    {
+     "name": "SME / SME2 矩阵单元（M4 实测，M5 未查到）",
+     "source": "tzakharko/m4-sme-exploration reports/01-sme-overview.md；Remke & Breuer《Hello SME!》arXiv 2409.18779 表 I、第 III–IV 节",
+     "what": "每个核簇共用一个 SME 单元（4 个性能核共用一个大单元，6 个能效核共用一个小单元）。要先用 smstart 进入流式模式。FP32 外积（FMOPA）单个性能核约 2009 GFLOPS，能效核约 357 GFLOPS。流式模式下普通 SVE FMLA 只有约 31 GFLOPS；用 ZA 作累加器的 FMLA 约 250 GFLOPS；单个性能核的 NEON FMLA 约 113 GFLOPS。",
+     "applies_to": "逐点卷积、全连接这类矩阵乘（每次约 1.3 万次乘加）。矩阵乘之间夹着逐元素运算和串行 GRU，每次都要进出流式模式，还要通过 ZA 搬运数据（推断）。GRU 的串行部分用不上。",
+     "expected_gain": "对方实测只有大矩阵（M=N≤512，K=512）和峰值数据，没有 M、N、K≤64 的数字，也没有 smstart/smstop 的开销数字。项目 exp010 的旁证：实时节奏下 Accelerate 版快约 21%，推断和矩阵单元受降频影响小有关，未验证。对 GTCRN 的小形状是否划算：未查到，推断收益不确定。",
+     "numerics": "误差有界（累加顺序不同）。",
+     "rt_safe": "指令本身不分配。核簇内共用，会和其他进程争用（读文档）。Rust 稳定版目前没有 SME 内建函数或流式函数属性，要写汇编（推断，未核实）。"
+    },
+    {
+     "name": "gemm crate（sarah-ek）的 aarch64 微核与小矩阵路径",
+     "source": "sarah-ek/gemm 86102c5：gemm-common/src/gemm.rs gemm_basic_generic（第 314–490 行）、L2_SLAB thread_local（第 59 行）、DEFAULT_RHS_PACKING_THRESHOLD=2（aarch64，第 113 行）；gemm-f32/src/microkernel.rs mod neon（x1x1…x4x4）与 mod amx（experimental-apple-amx 特性）",
+     "what": "NEON 微核把输出分成寄存器块：最大 4 个 q 寄存器 × 4 条 lane = 16 行，乘以 4 列，用 vfmaq / vfmaq_laneq 按 lane 广播乘加。aarch64 上只要 m > 2×MR 就打包右矩阵。k≤2 走 gevv，n≤1 或 m≤1 走 gemv。m、n≤64 时跳过参数搜索。另有实验性 AMX 微核（苹果未公开的指令），要单独打开特性。",
+     "applies_to": "不能直接进实时线程。可以借鉴它的寄存器分块，手写逐点卷积：16 行输出正好是 4 个 q 寄存器，33 列按 4 列一块；33 个频点上的全连接同理。",
+     "expected_gain": "未测。推断：手写同样的 16×4 寄存器块，又不打包、不分配，应不慢于它（假设）。",
+     "numerics": "误差有界（求和顺序变了）。",
+     "rt_safe": "读源码：每次调用都分配，因为第 490 行无条件执行 alloc::vec![false; mc/MR]；需要打包时还会再分配 MemBuffer；每个线程第一次调用时惰性分配一块 L2 大小的 L2_SLAB。不能进实时线程。"
+    },
+    {
+     "name": "candle CPU 后端（含 accelerate 特性）",
+     "source": "huggingface/candle cfcbd71：candle-core/src/cpu_backend/mod.rs MatMul（第 1445–1500 行 gemm 路径，第 1533 行起 accelerate 路径）、Im2Col1D（第 1083 行）；candle-nn/src/rnn.rs impl RNN for GRU::step（第 363–382 行）；candle-core/src/utils.rs get_num_threads",
+     "what": "每个算子都新建一个 Vec 作输出。矩阵乘默认走 gemm crate 加 rayon 多线程；打开 accelerate 特性后走 cblas sgemm，tanh/exp 走 vvtanhf/vvexpf。一维卷积用 im2col。GRU 单步拆成约 12 个张量运算，每个都分配输出。",
+     "applies_to": "不能用于 GTCRN 的实时推理，只能作参考或离线对拍。",
+     "expected_gain": "未测。推断明显更慢：每帧有上百次分配和线程池调度（假设）。",
+     "numerics": "误差有界。",
+     "rt_safe": "每个算子都分配；默认还有 rayon 线程池同步。不能进实时线程。"
+    },
+    {
+     "name": "rubato 同步 FFT 重采样（Fft，整数比 48↔16 kHz）",
+     "source": "HEnquist/rubato eb91908（v5.0.1）：src/synchro.rs FftResampler::new / resample_unit（第 97–190 行）、Fft::new（按约 256 帧自动选子块数）、output_delay（第 692 行，返回 fft_size_out/2）；README「Real-time considerations」",
+     "what": "重叠相加法：每个子块 fft_size_in 个输入补零到 2 倍长度，做实数 FFT；乘上预先算好的加窗 sinc 低通的频谱（默认窗为 BlackmanHarris2）；截断或补零到 fft_size_out+1 个频点；做 2×fft_size_out 点逆 FFT，再和上一块的尾巴相加。比例由 gcd 决定，48k:16k = 3:1。",
+     "applies_to": "48→16 kHz 输入重采样和 16→48 kHz 输出重采样。代价是要攒满一个子块才能出数据，并有 fft_size_out/2 个输出帧的延迟。",
+     "expected_gain": "未测。README 自称比 sinc 方案快得多、质量和异步 sinc 相当（对方说法，没给数字）。延迟按源码推算：子块 768→256 时延迟 128 个输出帧，在 16 kHz 下是 8 ms，另加攒块的等待。",
+     "numerics": "改变结果（和现在的重采样器不同，误差有界）。",
+     "rt_safe": "按 README：用 process_into_buffer 加预建实例和缓冲时不分配、不阻塞；log 特性不能开。我没逐行核对。"
+    },
+    {
+     "name": "rubato 异步 sinc 重采样的 NEON 点积 / 多相 FIR 思路",
+     "source": "rubato eb91908 src/sinc_interpolator/sinc_interpolator_neon.rs（4 路 vfmaq_f32 累加器，每轮 16 个样本）；src/asynchro_sinc.rs（插值方式 Nearest/Linear/Quadratic/Cubic，默认过采样 128、Cubic）；k2-fsa/sherpa-onnx 935e5de sherpa-onnx/csrc/resample.cc LinearResample::SetIndexesAndWeights（按 gcd 预算每个输出相位的权重表）",
+     "what": "每个输出样本等于输入窗口和 sinc 表的点积，NEON 用 4 个累加器隐藏 FMA 延迟。sherpa-onnx 的做法是按 gcd 把输出分成若干相位，每个相位预先算好一组加窗 sinc 权重（截止频率为奈奎斯特的 0.99，宽 6 个过零点）。48→16 时只有 1 个相位，就是先低通再隔 3 取 1；16→48 时有 3 个相位。",
+     "applies_to": "48↔16 kHz 重采样。整数比的最优写法（推断）：直接用多相 FIR，每个输出只做一次点积，不需要 Cubic 的 4 次点积再插值。rubato 用 Nearest 插值时，48→16 的相位恰好为整数，所以是精确的；16→48 的相位 1/3、2/3 在过采样 128 下会被量化（推断）。",
+     "expected_gain": "未测。推断：多相 FIR 的计算量约为 taps × 输出点数，是 Cubic 异步 sinc 的约 1/4。",
+     "numerics": "改变结果（滤波器不同，误差有界）。",
+     "rt_safe": "rubato 的 process_into_buffer 不分配（按 README）。sherpa-onnx 的 Resample 每次调用都会 resize 输出 vector（读源码），不能照搬。"
+    },
+    {
+     "name": "sherpa-onnx 流式 GTCRN 降噪的线程与内存设置（反面参考）",
+     "source": "k2-fsa/sherpa-onnx 935e5de：sherpa-onnx/csrc/session.cc GetSessionOptionsImpl（第 210–300 行）；offline-speech-denoiser-model-config.h（num_threads 默认 1）；online-speech-denoiser-stft-impl.h StreamingDft（第 50–117 行）、Run、CreateResamplerIfNeeded；online-speech-denoiser-gtcrn-impl.h",
+     "what": "ORT 会话的 intra 和 inter 线程数都设成 num_threads（降噪默认 1）；内存池（EnableCpuMemArena）和内存规划（EnableMemPattern）可以通过 provider 字符串关掉；还可以透传 mlas.* 配置项，例如关掉 KleidiAI。流式 STFT 用的不是 FFT：StreamingDft 用预算的 double 型 cos/sin 表直接做 O(N²) 的 DFT，512 点每帧约 26 万次乘加，正、逆各一次。每帧会新建 vector 和 Ort::Value，重采样用的是 Kaldi 式的 LinearResample。",
+     "applies_to": "没有可直接照搬的提速做法。能借鉴的只有两点：单线程配置；多相重采样预先算权重表。",
+     "expected_gain": "不适用。项目已实测 ORT 每帧 malloc 1023–1557 次（exp010 README）。",
+     "numerics": "不适用。",
+     "rt_safe": "每帧分配（读源码：std::vector、CreateTensor、resampler 输出 resize），不能进实时线程。"
+    }
+   ],
+   "not_found": [
+    "BNNS / BNNS Graph 是否支持 GRU 层，以及 CoreML 转换出的 GRU 在 BNNS Graph 里能不能零分配地跑：头文件里旧接口只看到 LSTM，没查到 GRU；BNNS Graph 支持哪些算子没查到",
+    "BNNS Graph 对小模型的官方耗时数字：未查到",
+    "Accelerate 的 cblas_sgemm、vDSP_mmul、BNNS 是否以及何时走 AMX/SME：没有官方文档",
+    "M4/M5 上 smstart/smstop 进出流式模式的开销，以及 M、N、K≤64 时 SME 对 NEON 的实测：两份可信来源都没有。M5 的 SME 数据完全未查到",
+    "vDSP_desamp（抽取 FIR）是否分配、速度如何：只看到函数声明，没实测",
+    "vDSP 512 点 FFT 和 realfft 在同一台机器上的速度对比：只测了 vDSP（142–203 ns），realfft 没测",
+    "rubato Fft 在 48↔16 kHz、每块 768/256 时的实际耗时：没测",
+    "Rust 稳定版的 SME 内建函数或 streaming 属性支持状态：没核实"
+   ]
+  }
+ },
+ {
+  "key": "v2:b2fecf36e41e733e036655b58c61e881c8619b9df0500ba431ff4e5a97da24f3",
+  "result": {
+   "techniques": [
+    {
+     "name": "GRU 三门权重堆叠，两次矩阵-向量乘完成一步（reset-after 形式）",
+     "source": "xiph/rnnoise@70f1d25 src/nnet.c compute_generic_gru；导出端 torch/weight-exchange/wexchange/c_export/common.py print_gru_layer（把 PyTorch 的 r,z,n 换成 z,r,h 顺序）",
+     "what": "输入权重 W 存成一个 3N×I 矩阵、循环权重 U 存成一个 3N×N 矩阵（含各自偏置）。每步只做两次 matvec：zrh=W·x+b_i，recur=U·h+b_h；前 2N 相加后一次性对 2N 个元素做 sigmoid；候选门 h~ 的预激活 = zrh[2N..] + r ⊙ recur[2N..]（重置门乘在已加偏置的循环乘积上，即 PyTorch / ONNX linear_before_reset=1 的公式）；再 tanh N 个；最后 h=z⊙h_prev+(1−z)⊙h~。中间缓冲是栈上定长数组。",
+     "applies_to": "GTCRN 全部 GRU：TRA（I=8,H=16 → 3H=48 行）、DPGRNN 沿频率双向（I=8,H=4 → 12 行）、沿时间（I=8,H=8 → 24 行）。若我们现在是「先逐门算再逐元素」，可改为一次 3H 行乘 + 一次 2H 连续 sigmoid",
+     "expected_gain": "未量化。推断：每步从 6 次小 matvec 降到 2 次，激活从 3 次调用降到 2 次；对 H=4、I=8 这种极小形状，调用与循环开销占比高，合并收益相对更大。对方没有给出实测数",
+     "numerics": "与 PyTorch GRU 同一公式；只改求和顺序时误差有界（float 舍入级，约 1e-7 相对）",
+     "rt_safe": "零分配：缓冲为栈上定长数组（MAX_RNN_NEURONS_ALL=1024）；无锁、无系统调用"
+    },
+    {
+     "name": "列主序 matvec，16 行输出常驻寄存器（sgemv16x1 / sgemv8x1）",
+     "source": "xiph/rnnoise@70f1d25 src/vec_neon.h sgemv16x1、sgemv8x1、sgemv（按 rows 是否为 16/8 的倍数分派，否则走标量）",
+     "what": "权重按列存（weights[j*col_stride+i]）。对每 16 个输出行，用 4 个 q 寄存器累加；对每个输入 j 广播 x[j]（vld1q_dup），连续读 16 个权重做 4 条 FMA。输出 16 行全程留在寄存器，最后一次写回。8 行版本用 2 个累加器。行数不是 8 的倍数时退回标量双循环。",
+     "applies_to": "TRA GRU 3H=48（16 的倍数，直接适用）；沿时间 GRU 3H=24（8 的倍数）；DPGRNN 沿频率 3H=12——不是 8 的倍数，按 RNNoise 规则会掉进标量路径，建议把权重补零到 16 行；全连接 16×16、逐点卷积 16 行输出也可用同一写法（把 33 频点当外循环）",
+     "expected_gain": "未量化（对方无实测）。推断：比依赖自动向量化的行主序点积少了水平求和（行主序每行要 faddp 归约）",
+     "numerics": "与标量写法相比只是加法顺序不同，误差有界（float 舍入级）",
+     "rt_safe": "零分配，无锁"
+    },
+    {
+     "name": "RNNoise 的 tanh / sigmoid 有理近似（NEON，倒数估计）",
+     "source": "xiph/rnnoise@70f1d25 src/vec_neon.h tanh4_approx、sigmoid4_approx、exp4_approx；标量版 src/vec.h tanh_approx、lpcnet_exp2；src/nnet_arch.h compute_activation_（HIGH_ACCURACY 宏可切回精确 libm）",
+     "what": "tanh(x) ≈ x·(N0+N1x²+N2x⁴)/(D0+D1x²+D2x⁴)，再夹到 [−1,1]；sigmoid 用同形式另一组系数 + 0.5，夹到 [0,1]。NEON 版用 vrecpeq_f32（倒数估计，不做牛顿迭代）代替除法。exp 用 2^x：x·log2e 拆整数部分和小数部分，小数部分 3 次多项式，整数部分左移 23 位直接拼进指数位。不足 4 个的尾巴走标量 exp 公式。",
+     "applies_to": "GTCRN 中所有 sigmoid / tanh（GRU 门、TRA 注意力、末端 tanh 掩码），占约 23% 时间",
+     "expected_gain": "未量化（对方无实测）。推断：每 4 个元素约 8 条 FMA/乘 + 1 条 recpe，无分支、无 libm 调用",
+     "numerics": "改变结果。我用 Python 双精度按其系数实测（−12..12，步长 1e-4）：用精确除法时 tanh 最大绝对误差 6.0e-5，sigmoid 3.0e-5；模拟只用约 9 位精度的倒数估计时 tanh 误差约 2e-3。NEON 版实际误差在这两者之间，未在 M5 上实测",
+     "rt_safe": "零分配，无锁"
+    },
+    {
+     "name": "tract 的 tanh / sigmoid 高精度有理近似汇编核",
+     "source": "sonos/tract@251c471 linalg/arm64/arm64simd/arm64simd_sigmoid_f32_4n.S.j2、arm64simd_tanh_f32_4n.S.j2；标量参考与精度说明 linalg/src/generic/sigmoid.rs ssigmoid、tanh.rs stanh",
+     "what": "输入先夹到 [−14.5,14.5]（sigmoid）或 [−7.5,7.5]（tanh）；分子是 x 的 13 次奇多项式（x² 上 Horner 7 项），分母是 6 次偶多项式（4 项），用真除法 fdiv。汇编主循环一次处理 16 个元素（4 个 q 寄存器交错），隐藏 FMA 延迟。注释写明：误差为几个 ulp，饱和端返回 1−4.8e-7 而不是 1；夹紧值是专门选的，保证结果不越出 [0,1] / [−1,1]。",
+     "applies_to": "同上，GTCRN 全部 sigmoid / tanh。若要保持与 PyTorch 参考近乎逐位一致、又要向量化，这组比 RNNoise 那组更合适",
+     "expected_gain": "未量化（对方无单独实测）。推断：每元素约 11 条 FMA + 1 次除法，比 libm expf 调用便宜；一次 16 个元素让 FMA 流水线吃满",
+     "numerics": "误差有界：注释称几个 ulp（相对误差约 1e-7 量级），饱和端偏差 ≤6.1e-7",
+     "rt_safe": "零分配，无锁；原地处理调用方给的切片"
+    },
+    {
+     "name": "GRU 单元融合后处理（GruEpilogue / gru_cell_rows）",
+     "source": "sonos/tract@251c471 core/src/ops/gru_cell.rs GruEpilogue、gru_cell_rows；ONNX 导入端 onnx/src/ops/rec/gru.rs GRU::wire_body",
+     "what": "输入两个已含偏置的 [rows, 3H] 预激活 xh、rh（门序 z,r,h）。一遍完成：前 2H 相加，对连续 2H 一次 sigmoid；h~ 预激活 = xh[2H..]+r⊙rh[2H..]，tanh；新状态写成 h = h~ + z⊙(h_prev − h~)（一条 FMA，比 z⊙h+(1−z)⊙h~ 少一次乘和一次减）。xh 原地当累加器，不另开门缓冲。",
+     "applies_to": "GTCRN 全部 GRU 的逐元素部分；尤其沿时间 GRU：33 个频点互相独立，可把它们当 rows=33 一次跑完",
+     "expected_gain": "未量化。推断：每步每个隐单元省 1 次乘、1 次减；更主要是把门的逐元素操作合成一次遍历，减少读写",
+     "numerics": "误差有界：注释明说和分解写法「求和结合顺序不同，按舍入不同」；h~+z(h−h~) 与 z h+(1−z)h~ 在数学上相等，float 下差 1–2 ulp",
+     "rt_safe": "gru_cell_rows 本身零分配；但 tract 的 eval_t 外壳每次调用会 Tensor::uninitialized 和 clone，属分配——借鉴时只借 gru_cell_rows 的写法"
+    },
+    {
+     "name": "整段序列一次算输入投影、循环权重只打包一次（GruSeq）",
+     "source": "sonos/tract@251c471 core/src/ops/gru_seq.rs GruSeq::eval_with、常量 MAX_UNPROJECTED_HIDDEN=64",
+     "what": "X·Wᵀ 不依赖循环状态，所以对整段序列一次 GEMM 算出 [T×batch, 3H]，W 侧偏置也在这里一次加上；串行循环里只剩 h·Uᵀ。U 在模型生命周期内打包一次；每步状态的打包缓冲按 (H, batch) 预建、原地重填；rh 结果按步长直接写进 [batch,3H] 布局，不做转置拷贝。反向方向用 chunk=−1 倒着遍历同一缓冲。",
+     "applies_to": "DPGRNN 沿频率双向 GRU（33 步串行）：把 33 个频点的输入投影 [33×8]·[8×12] 每个方向一次算完，串行链上只剩 4×12 的循环 matvec + 逐元素，关键路径缩短约一半乘法量；沿时间 GRU：33 个频点当 batch，每步循环部分是一次 [33×8]·[8×24]；TRA GRU 只有 1 步，不受益",
+     "expected_gain": "未量化（对方无实测）。推断：DPGRNN 沿频率每步的乘法量从 (8+4)×12 降到 4×12；输入投影变成能被 16×4 / 8×8 微核吃满的批量乘",
+     "numerics": "误差有界（只改求和顺序）；注释称与它替代的 Scan 写法逐位相同，因为用同一套核",
+     "rt_safe": "思路本身零分配。tract 实现每次调用会分配（Tensor::zero rh/h_next、Array3::zeros y、to_owned 偏置、x 转置拷贝），不能原样进实时线程"
+    },
+    {
+     "name": "NEON 小矩阵乘微核：A 打包成条带，16×4 / 8×8 / 24×4 寄存器分块，后处理融合",
+     "source": "sonos/tract@251c471 linalg/arm64/arm64simd/arm64simd_mmm_f32_16x4_core.S.j2（及 8x8、24x4、12x8、32x3）；选核 linalg/src/arm64/mod.rs neon_mmm_f32；融合后处理枚举 linalg/src/frame/mmm/fuse.rs FusedKerSpec",
+     "what": "16×4 核：A 每次读 16 个元素（4 个 q），B 读 4 个元素（1 个 q），用「按通道广播的 FMA」（fmla v.4s, a, b.s[i]）做 16 条 FMA，累加器 v16–v31 共 16 个 q 寄存器装 16×4 输出块。A、B 事先打包成连续条带。存回前可在寄存器里融合：每行加偏置（PerRowAdd）、每行乘（PerRowMul）、标量 min/max（ReLU / 夹紧）、LeakyRelu（单个标量斜率）、残差相加（AddUnicast）。默认规则：n<8 用 16×4，否则 8×8。",
+     "applies_to": "逐点卷积 16×24·[24×33]（m=16,k=24,n=33）、8×16·[16×33]；全连接 16×16 在 33 频点（视为 [16×16]·[16×33]）；编码卷积用 im2col 后也可（9→16 通道 k=5：[16×45]·[45×65]）；偏置 / BN 折叠项可用 PerRowAdd 融合。PReLU 每通道斜率不同——未查到对应的融合项（只有单标量 LeakyRelu），要么拆成 PerRowMul 配合正负分支自写，要么单独一遍",
+     "expected_gain": "推断自对方实测拟合的 M4 代价模型（linalg/src/arm64/apple_m4_linear.rs，我按其公式代入）：m16 k24 n33 用 16×4 预测 0.50 µs，8×8 0.63 µs；m8 k16 n33 用 8×8 0.37 µs。我们是 M5，数值只作量级参考",
+     "numerics": "与标量相比只改累加顺序，误差有界（float 舍入级）",
+     "rt_safe": "微核本身零分配；但 MatMatMul::run 每次调用 allocate_scratch_space（Box 分配），只有 run_with_scratch_space 复用预建 scratch 时才零分配；TLS scratch 首次会扩容"
+    },
+    {
+     "name": "小形状上避开 SME / AMX（它们有微秒级固定开销）",
+     "source": "sonos/tract@251c471 linalg/src/arm64/apple_m4_linear.rs（M4 实测拟合系数，2026-07-17 生成）、linalg/src/frame/mmm/cost_model.rs LinearCostModel::predicted、linalg/src/arm64/sme.rs sme_preferred、mod.rs apple_chip",
+     "what": "代价模型 = 每次乘加系数 × 补齐后工作量 + 每块系数 × 块数 + 固定常数。M4 上 sme_mmm_f32_32x32 的固定常数约 4.0 µs、apple_amx_mmm_f32_32x32 约 1.4 µs + 每块 1.4 µs，NEON 核固定常数 0–2.5 µs 量级更小。SME 核每次调用要 smstart/smstop 进出流式模式，会清掉 V0–V31。注意：apple_chip() 只认 M1–M4；M5 不在表里时，per-chip 模型不生效，f32 n>1 的乘会落到 SME 层，默认选 sme_mmm_f32_32x32。",
+     "applies_to": "所有 GTCRN 矩阵乘都是几十×几十的小形状——应全部走 NEON；若以后用 tract / 任何会自动选 SME 的库，在 M5 上要确认没选到 SME。也解释了 Accelerate cblas_sgemm 在这些形状上不划算的一个可能原因（推断，Accelerate 内部未查）",
+     "expected_gain": "按 M4 模型代入（推断）：m16 k24 n33：NEON 16×4 0.50 µs，AMX 2.90 µs，SME 4.64 µs；m48 k8 n33：NEON 24×4 0.66 µs，SME 5.21 µs。即在我们的形状上 SME/AMX 慢 6–9 倍",
+     "numerics": "不涉及（选核问题）",
+     "rt_safe": "SME 进出流式模式无分配，但会改变寄存器状态；NEON 路径无此问题"
+    },
+    {
+     "name": "步长 2 的深度卷积：用解交织读取 + 抽头外循环",
+     "source": "sonos/tract@251c471 linalg/src/arm64/arm64simd/depthwise.rs depthwise_w_f32、vectorised、wide、load4",
+     "what": "沿输出连续的轴做深度卷积：每个输出点 = 偏置 + Σ taps[t]·input[offsets[t]+i·stride]。步长 2 时，4 个相邻输出的输入用 vuzp1q_f32 从两次 128 位读取里取偶数位（步长 3/4 用 vld3q/vld4q 取第 0 路）。抽头 ≤4 且步长 1–3 时抽头数编译期固定；更多抽头时抽头放外循环、最多 64 个输出点放内循环，得到 16 个独立 FMA 链，每个抽头的广播只付一次。末尾按 32/16/4 收尾，保证不越界读。",
+     "applies_to": "编码卷积沿频率 k=5 stride 2（每个输入通道对每个输出通道的那一行就是一个步长 2 的 5 抽头 1-D 卷积，可按输出通道累加）；转置卷积 k=5 stride 2 可拆成奇偶两相（相位分解，推断）各自变成步长 1 的 2–3 抽头卷积；深度卷积 3×3（时间 3 帧 × 频率 3 点，33 频点）可看成 9 个抽头、步长 1",
+     "expected_gain": "未量化（对方无实测）。推断：省去 im2col 拷贝；33/65 点的行长足够填满 4–16 个向量",
+     "numerics": "只改累加顺序，误差有界",
+     "rt_safe": "零分配（抽头与偏移放在栈数组里），无锁"
+    },
+    {
+     "name": "int8 权重 + sdot 点积 + 块稀疏（RNNoise 的量化路径）",
+     "source": "xiph/rnnoise@70f1d25 src/vec_neon.h cgemv8x4、sparse_cgemv8x4、vdotprod；src/nnet_arch.h compute_linear_；导出端 torch/weight-exchange/wexchange/c_export/common.py quantize_weight、compute_scaling、print_sparse_weight、extract_diagonal",
+     "what": "权重量化为 int8，每个输出行一个缩放（取 max(|w|最大/127, 行内绝对值和/129)，后者保证无 dotprod 时 int16 两两相加不溢出）；输入实时量化为 round(x·127) 的 int8（默认输入在 [−1,1]，如 tanh 后的 GRU 状态）；按 8 行×4 列成块排布，用 sdot（vdotq_s32）一次做 16 个乘加；稀疏版只存非零 8×4 块并带列索引；稀疏的 GRU 循环矩阵把对角线拆出来单独用浮点乘。",
+     "applies_to": "理论上可用于 GRU 循环乘（状态在 [−1,1]）。但 GTCRN 的卷积 / 全连接输入不受 [−1,1] 约束，要重新做量化标定；权重总量很小，内存带宽不是瓶颈",
+     "expected_gain": "未量化（对方无实测）。推断：sdot 每条指令 16 个乘加，对比 f32 FMA 每条 4 个；但我们的矩阵太小，固定开销（输入量化）可能吃掉大半收益",
+     "numerics": "改变结果（int8 量化误差；需重新评估降噪效果，属于要人听测的范围）",
+     "rt_safe": "零分配：量化后的输入放在栈数组 x_int[MAX_INPUTS/4]；无锁"
+    },
+    {
+     "name": "按能量 / 信噪比跳过网络（省电）",
+     "source": "xiph/rnnoise@70f1d25 src/denoise.c rnn_compute_frame_features（总带能量 E<0.04 返回 silence）与 rnnoise_process_frame（silence 时不调 compute_rnn）；Rikorose/DeepFilterNet@d375b2d libDF/src/tract.rs DfTract::process（rms<1e-7 连续超过 5 帧直接输出 0）、apply_stages（按网络估计的局部信噪比决定跳过 ERB 解码器或 DF 解码器）",
+     "what": "RNNoise：一帧总能量低于阈值就不跑网络，也不更新 GRU 状态，直接合成。libDF：输入近乎全零超过 5 帧就整帧填零并返回；另外编码器估出 lsnr，低于下限只给零掩码，高于上限完全不处理，中间只跑第一阶段。",
+     "applies_to": "GTCRN 整个网络（不是某个算子）：静音帧跳过可直接省 CPU。注意 GTCRN 有 GRU 状态和卷积历史缓冲，跳过时状态如何处理需要定（冻结 / 清零）",
+     "expected_gain": "未量化。推断：节省比例 ≈ 静音帧占比；通话中静音常占相当比例，但没有实测",
+     "numerics": "改变结果（跳过帧的输出与状态都不同；需 verifier 和听测确认）",
+     "rt_safe": "零分配、无锁"
+    },
+    {
+     "name": "ERB 做成连续不重叠的带，按带长求平均（不做稠密矩阵乘）",
+     "source": "Rikorose/DeepFilterNet@d375b2d libDF/src/lib.rs erb_fb、compute_band_corr、band_compr、apply_interp_band_gain",
+     "what": "ERB 滤波器组只存每个带的频点数（Vec<usize>），带连续、不重叠；压缩 = 每带求和乘 1/带长，展开 = 每个频点乘所属带的增益。总计算量 O(频点数)。",
+     "applies_to": "GTCRN 的 ERB 是 64×192 矩阵（低频直通 + 三角形滤波，带之间有重叠），不能原样套用；但同一思路可用：矩阵按行只存非零区间（起点 + 长度 + 系数），把 12288 次乘加降到非零个数",
+     "expected_gain": "未量化。推断：三角滤波每行非零约为相邻两带宽度之和，非零总数约为 2×192 ≈ 400 量级，比稠密 12288 少约 30 倍（需按实际矩阵统计非零数确认）",
+     "numerics": "若只跳过零元素且保持求和顺序，逐位相同；改顺序则误差有界",
+     "rt_safe": "零分配"
+    },
+    {
+     "name": "实数 FFT + 预建 scratch（libDF 的 STFT / iSTFT）",
+     "source": "Rikorose/DeepFilterNet@d375b2d libDF/src/lib.rs DFState::new、frame_analysis、frame_synthesis",
+     "what": "用 realfft 规划 512 点正 / 逆实数 FFT，scratch 在构造时 make_scratch_vec 预建，每帧 process_with_scratch；窗归一化只在分析端乘一次（wnorm）；分析历史用 rotate_left 移位，合成端重叠相加。",
+     "applies_to": "我们的 STFT / iSTFT（512 点，跳 256）。可借鉴：预建 scratch、归一化折进窗、只在一侧归一化",
+     "expected_gain": "未量化",
+     "numerics": "与常规写法等价，误差有界",
+     "rt_safe": "不安全：frame_analysis 每帧调 make_input_vec、frame_synthesis 每帧调 make_output_vec，都是 Vec 分配；process_frame 还分配 freq_mem。借鉴时要把这两个缓冲放进状态结构"
+    },
+    {
+     "name": "libDF 喂 tract 的方式：脉冲化模型（pulse=1）+ SimpleState",
+     "source": "Rikorose/DeepFilterNet@d375b2d libDF/src/tract.rs init_encoder_impl（PulsedModel::new(&m, s, 1) → into_typed → into_optimized）、DfTract::new（SimpleState::new(into_runnable)）、process_raw",
+     "what": "ONNX 模型以符号时间长度 S 导入，tract-pulse 把它改写成每次喂 1 帧的流式模型，卷积的历史帧和 GRU 状态由 tract 内部的 Delay / 状态保管；编码器、ERB 解码器、DF 解码器分成三个模型，各自 SimpleState。",
+     "applies_to": "不建议用于我们：我们已手写流式推理，这一层能借鉴的只有「把时间轴卷积历史当作环形状态」的思路",
+     "expected_gain": "无（对我们是负收益的可能更大，见实时性一栏）",
+     "numerics": "不涉及",
+     "rt_safe": "不安全：每帧 tvec!、TValue clone、permute_axes、Tensor::zero、rolling 缓冲 push_back(spec_buf.clone()) 都会分配"
+    },
+    {
+     "name": "卷积历史用整块拷贝移位 + 3×3 手工展开靠编译器向量化",
+     "source": "xiph/rnnoise@70f1d25 src/nnet_arch.h compute_conv2d_、conv2d_3x3_float、conv2d_float；src/nnet.c compute_generic_conv1d",
+     "what": "每帧把历史 mem 和新帧拷进栈上 in_buf，算完再把后 (ktime−1) 帧拷回 mem；3×3 情形把 9 个抽头手工展开成一条表达式，注释说明不写 intrinsics、依赖 gcc 自动向量化；偏置与激活在卷积后单独一遍。",
+     "applies_to": "GTCRN 深度卷积 3×3（时间带膨胀）。展开写法可直接借鉴；但历史缓冲每帧拷贝，且膨胀卷积的历史更长，用环形索引代替拷贝更好（推断）",
+     "expected_gain": "未量化（对方无实测）",
+     "numerics": "逐位相同（只是写法）或误差有界（若编译器改变求和顺序）",
+     "rt_safe": "零分配（栈数组 in_buf[8192]）；但每帧有 memcpy"
+    }
+   ],
+   "not_found": [
+    "RNNoise 新版里没有 GRU 专用的手写 NEON 核：GRU 由通用 compute_linear（sgemv16x1/8x1 或 int8 cgemv8x4）+ 通用激活拼成，未查到门矩阵与激活融合的汇编",
+    "三个项目的源码里都没有找到针对 Apple M5 的实测数字；tract 的代价模型只覆盖 M1 与 M4（apple_chip 只匹配 M1–M4），M5 无数据",
+    "tract 的融合后处理里未查到「每通道不同斜率」的 PReLU 融合项（只有单标量 LeakyRelu）",
+    "未查到 tract / RNNoise 对 DPGRNN 这类「沿频率的串行 GRU」做专门的跨步流水或多方向并行的写法（tract 的双向是正反两次 GruSeq）",
+    "libDF 的 Rust 代码里没有手写 SIMD 核：前后处理是标量迭代器，推理全交给 tract",
+    "libDF 未做到每帧零分配（STFT 每帧 make_input_vec/make_output_vec，喂 tract 时每帧 clone / Tensor::zero）",
+    "RNNoise 的 FFT 是复数 kiss_fft 处理实数信号（未用实数 FFT 技巧），对我们不是可借鉴的提速点",
+    "tract 的 linalg 里未查到 48↔16 kHz 重采样相关的核",
+    "三方都没有公开 tanh/sigmoid 近似在 M 系列上的耗时实测；RNNoise 近似的误差数字是我用其系数在 Python 双精度下自算的，不是对方给的"
+   ]
+  }
+ },
+ {
+  "key": "v2:39f61af2445a63b0509706c1fdf1c3b035b9b4bc6a1aadae0bb5fc7a594fdd87",
+  "result": {
+   "techniques": [
+    {
+     "name": "外积式寄存器分块（权重广播 × 激活行向量），适配通道在前布局的 1×1 卷积",
+     "source": "XNNPACK @ d1d59d4b05f51c14103119d4985834ff6867c8c1：src/f32-gemm/gen/f32-gemm-4x16-minmax-aarch64-neonfma-lane-ld128.c 的 xnn_f32_gemm_minmax_ukernel_4x16__aarch64_neonfma_lane_ld128，以及 6x8 版本；llama.cpp @ 2cbca389f515df455412dafa07e2b1359cc72a6d：ggml/src/ggml-cpu/simd-gemm.h 的 simd_gemm_ukernel<RM,RN> 和 simd_gemm",
+     "what": "数学上：C[m][n] 的一块 RM×(RN·4) 一直放在寄存器里，按 k 逐步累加。每个 k 步取一行 B（连续的 4×RN 个 float，B 按 K×N 行优先存），再把 A[m][k] 广播出去，对每个累加器做一次 vfmaq，不需要横向归约。XNNPACK 的 lane-ld128 写法一次 ld128 读进 A 一行里 4 个连续的 k，再用 vfmaq_lane_f32 取第 0–3 道，所以 k 方向一次展开 4 步。ggml 在 NEON 上固定 RM=4、RN=4 个向量（4×16），源码注释说用 16 个累加器 + 4 个 B 向量 + 1 个广播，共 25/32 个寄存器。ggml 这个版本不打包 A 和 B，直接按行优先读。尾列：AVX 走掩码，NEON 走标量循环。",
+     "applies_to": "1×1 逐点卷积（16×24·[24][33] 做 6 次，8×16·[16][33] 做 6 次）可以直接用，布局正好对上：A=权重 W[co][ci]（行优先，lane 方式每次读 4 个 ci），B=激活 X[ci][f]（频率连续），C=Y[co][f]。建议把频率维从 33 补零到 36（9 个向量），不走 ggml 的标量尾列。全连接 16×16 × 33 频点同样能用。分组卷积（16→16 分 2 组）的每组也能这样算。编码卷积和转置卷积按 ci×k 展开后，也能用同一个核（见 stride-2 那条）。",
+     "expected_gain": "未量化（对方仓库没给这种形状的实测）。推断：16×24×33 = 12,672 次乘加，补到 36 列后是 3,456 条 4 宽 FMA；8×16×33 补齐后是 1,152 条。12 次调用合计约 2.8 万条 FMA。假设 M5 每周期能发 4 条 FMA（这个数我没在源码里看到），约 7,000 周期，也就是 4.5 GHz 下约 1.5 µs，占每帧 88 µs 的几个百分点。实际收益取决于现在的自动向量化代码离这个下限有多远，需要实测。",
+     "numerics": "误差有界：如果每个输出仍按 ci=0..K-1 顺序累加，并且现有代码也用融合乘加，就和现在逐位相同。Rust 默认不会把 mul+add 合成 FMA，所以改成 vfmaq 后每步舍入少一次，差别在每步 0.5 ULP 以内。XNNPACK 先拿偏置初始化累加器；如果现在是最后才加偏置，求和顺序会变，误差同样有界。",
+     "rt_safe": "不分配、不加锁、无系统调用：两种核都只收预分配的指针（XNNPACK 微核签名只有 a/w/c 指针和步长）。ggml 的 simd_gemm 是 static inline 纯计算。"
+    },
+    {
+     "name": "权重预打包：[偏置 nr 个][K][nr] 连续块",
+     "source": "XNNPACK @ d1d59d4：src/x32-packw/gen/x32-packw-x8-gemm-goi-scalar-int-u4.c（xnn_x32_packw_gemm_goi_ukernel_x8__scalar_int_u4）；src/configs/gemm-config.c 里每个配置都设 pack_gemm_goi / pack_gemm_gio",
+     "what": "内存布局上：把输出通道按 nr（8 或 16）分块。每块先放 nr 个偏置（没有偏置就补 0），再放 K 行、每行 nr 个权重。微核里先连续 vld1q 读出偏置作为累加器初值，之后每个 k 步连续读 nr 个权重，整个核只顺序走一遍权重流，地址可预测。打包只在建图时做一次。",
+     "applies_to": "如果 1×1 卷积和全连接改用 XNNPACK 的方向（M=频点 33、N=输出通道 16，按 nr=8 或 16 分块），就要这种打包，同时激活要换成频率在前的 [f][ci] 布局。如果保持现在的通道在前布局、用上一条的「权重广播」方向，权重行优先就已经连续，不需要这种打包，只需把偏置放在每个 co 前面。GRU 的 W_ih / W_hh 可以按 [K][3H] 转置预存，让门的向量连续（见 GRU 那条）。",
+     "expected_gain": "未量化。依据是推断：每帧的权重总共几十 KB，远小于 128 KB 的 L1D，所以打包的收益主要来自访存顺序连续、少算地址，不在缓存命中率上。",
+     "numerics": "逐位相同：打包只重排数据，不改计算。",
+     "rt_safe": "打包在初始化时做一次；每帧不分配、不加锁。"
+    },
+    {
+     "name": "微核尺寸选择：代价公式 + 恰好匹配的 mr；Mac 上的默认微核",
+     "source": "XNNPACK @ d1d59d4：src/operator-utils.c 的 calculate_microkernel_cost 和 xnn_get_heuristic_mr_gemm；src/configs/gemm-config.c 中 XNN_ARCH_ARM64 分支（约第 847–1045 行）",
+     "what": "代价公式：cost = ceil(M/mr) × (3·(mr+nr) + mr·nr)。源码注释说，读取的权重按实验数据取 3 倍，以偏向计算密度高的大块。如果 M ≤ 最大 mr 且恰好有 mr=M 的核，就直接用它。在 Mac/iOS（XNN_PLATFORM_MAC/IOS）上不按微架构挑核，固定用 1x8 ld128_acc4 和 6x8 ld128 两个汇编核（mr=6、nr=8）；不开汇编时用 6x8 lane_ld128 的 C 核。Oryon / Cortex-X4 用 4x16 lane_ld128，X3 / V2 用 8x8 ld128_2，其他默认 7x8。",
+     "applies_to": "可以拿这个公式给 1×1 卷积、全连接挑块：比较 4×16、8×8、6×8、8×12（对应 co × f）在 M=16 或 8、N=36 上的代价。比如 co=16 时 mr=8（两块）和 mr=4（四块），代价可以直接算出来比较。",
+     "expected_gain": "未量化。这只是挑块的规则，不直接带来收益。苹果芯片走 6x8 是 XNNPACK 的固定选择，源码里没有附 Apple M 系列的实测数字。",
+     "numerics": "逐位相同：只是选核；但不同块大小如果改变累加顺序，误差有界。",
+     "rt_safe": "选择在初始化时做；每帧无影响。"
+    },
+    {
+     "name": "多累加器拆链（acc2 / acc4）与树形归约",
+     "source": "XNNPACK @ d1d59d4：src/f32-gemm/1x8-aarch64-neonfma-ld128-acc4.S.in（1x8 ld128_acc4，Mac 上 M=1 时默认用它）；src/f32-dwconv2d-chw/gen/*-acc2/acc3/acc4.c；llama.cpp @ 2cbca38：ggml-cpu/vec.cpp ggml_vec_dot_f32（NEON 上 GGML_F32_STEP=16、EPR=4，即 4 个 4 宽累加器）+ simd-mappings.h GGML_F32x4_REDUCE（两两相加的树形归约，最后 vaddvq）",
+     "what": "指令上：一个输出只有一个累加器时，K 步 FMA 会串成一条依赖链，速度受 FMA 延迟限制。拆成 2 或 4 个独立累加器交错累加，最后再合并，FMA 就能流水起来。ggml 的点积用 4 组累加器，结尾做树形相加，再 vaddvq 横向求和。",
+     "applies_to": "最直接的是 DPGRNN 沿频率的双向 GRU（I=8、H=4，33 步串行）：每步的门只有 3H=12 个值，也就是 3 个向量。如果 W·x + U·h 按 k 顺序累加，3 个累加器各有一条 12 步长的依赖链。拆成 acc2，再把 x 部分和 h 部分分开累加，链就短了。M=1 的 TRA GRU（3H=48，12 个向量累加器）本身已经够独立，不需要拆。LayerNorm 和 33×16 的均值、方差求和也能用 4 累加器。",
+     "expected_gain": "未量化。推断：33 步串行的 GRU 是延迟受限，链长减半，单步关键路径大约也减半。FMA 延迟数字这次没在源码里查到，需要实测。",
+     "numerics": "改变求和顺序，误差有界（每次重排的相对误差在 K·ε 量级），不再逐位相同，需要用参考输出比对确认。",
+     "rt_safe": "不分配、不加锁。"
+    },
+    {
+     "name": "通道在前（CHW）的 3×3 深度卷积：vext 取左右邻、掩码收尾、零行指针补边",
+     "source": "XNNPACK @ d1d59d4：src/f32-dwconv2d-chw/gen/f32-dwconv2d-chw-3x3p1-minmax-aarch64-neonfma-2x4.c（xnn_f32_dwconv2d_chw_ukernel_3x3p1__aarch64_neonfma_2x4）；ARM64 默认选 3x4（src/configs/dwconv2d-chw-config.c 第 111 行起）",
+     "what": "布局：每个通道一张 H×W 平面，W 连续。权重 10 个 float（偏置 + 9 个抽头），常驻 3 个寄存器（4+4+2）。沿宽方向每次算 4 个输出：手里留着上一块、当前块和下一块，用 vextq_f32(prev,cur,3) 得到左邻、vextq_f32(cur,next,1) 得到右邻，不重复做非对齐读取。9 次 vfmaq_lane。最后 1–4 个元素用 mask_table 生成掩码，vandq 清零越界部分。上边界和下边界用一个全零行的指针（zero）代替。一次算 1–6 行输出（1x4…6x4），多行共享读进来的输入行。还有 acc2/3/4 变体，把 9 个抽头拆进多个累加器。",
+     "applies_to": "直接适用于 GTCRN 的 3×3 深度卷积（16 通道 × 33 频点，做 6 次）：宽 = 频率 33（9 个向量，最后一个用掩码），高 = 时间。流式时每帧只出 1 行，对应 1x4 变体，三条输入行的指针直接指向时间环形缓冲里按膨胀率取到的那三帧，不必拷贝。频率方向 pad 1 正好对应 vext 从零向量起步，以及尾部掩码。",
+     "expected_gain": "未量化。推断：16×33×9 = 4,752 次乘加，约 1,300 条 FMA（补到 36 列）；如果现在是标量或者每个抽头都查边界，压缩空间较大。占每帧比例取决于现在的实测，需要剖析。",
+     "numerics": "9 个抽头按固定顺序做 FMA，偏置作初值。顺序和现在一致、且现在也用 FMA 时逐位相同；否则误差有界。用 accN 变体会改变顺序，误差有界。",
+     "rt_safe": "不分配、不加锁；mask_table 是函数内的 static const。"
+    },
+    {
+     "name": "通道在后（NHWC）的深度卷积 + 间接指针数组",
+     "source": "XNNPACK @ d1d59d4：src/f32-dwconv/gen/f32-dwconv-9p8c-minmax-neonfma.c（xnn_f32_dwconv_minmax_ukernel_9p8c__neonfma；ARM64 上 3×3 走 9p8c，src/configs/dwconv-config.c 第 315 行）；对照 llama.cpp @ 2cbca38 ggml-cpu/ops.cpp ggml_compute_forward_conv_2d_dw_cwhn",
+     "what": "在通道方向向量化（每次 8 个通道）。输入用 9 个指针（input[0..8]）给出每个抽头对应的像素，补边的位置指向公共的 zero 缓冲，核里不做边界判断。权重按 [偏置 8][9 个抽头 × 8] 打包。ggml 的 CWHN 版本同样在通道方向向量化，但每个抽头都用 if 判断越界后 continue，也不打包。",
+     "applies_to": "如果深度卷积的激活改成 [f][c]（16 通道 = 4 个向量），可以用这个；时间方向的膨胀可以通过指针数组指向环形缓冲里的历史帧来实现，零拷贝。和上一条比：现在的布局是通道在前，用 CHW 那条更顺；这条在激活本来就是 [f][c] 时才划算。",
+     "expected_gain": "未量化，推断和上一条同量级。",
+     "numerics": "同上：按固定抽头顺序 FMA，误差有界或逐位相同。",
+     "rt_safe": "间接指针数组可以在初始化时建好，每帧只改环形缓冲的下标；不分配、不加锁。"
+    },
+    {
+     "name": "步长 2 的频率卷积：vld2q 拆奇偶 + vext 移位",
+     "source": "XNNPACK @ d1d59d4：src/f32-dwconv2d-chw/gen/f32-dwconv2d-chw-5x5s2p2-minmax-aarch64-neonfma-1x4.c（ARM64 上 3x3s2 默认用 2x4_acc2）",
+     "what": "指令上：用 vld2q_f32 一次读 8 个输入，拆成偶数位和奇数位两个向量。步长 2 时，输出 j 需要的 x[2j+k] 按 k 的奇偶落在偶向量或奇向量里，再用 vextq 和上一块拼接，就得到 k=±1、±2 的移位版本。5 个抽头都不需要做按步长取的标量读取。",
+     "applies_to": "编码卷积 k=5、stride 2（9→16，129→65；16→16 分 2 组，65→33）：先对每个输入通道 ci，用 vld2q + vext 生成 5 个移位后的输入向量（共 ci×5 行，相当于临时的 im2col 行），再用第一条的外积核乘 W[co][ci·5+k]。这条源码里是深度卷积，用到普通（分组）卷积是我的推断。",
+     "expected_gain": "未量化（推断）：省掉按步长 2 的离散读取；乘加总量不变，约 16×9×5×65 + 16×8×5×33 次每帧。",
+     "numerics": "只改取数方式；乘加顺序不变时逐位相同，否则误差有界。",
+     "rt_safe": "如果移位后的输入写进临时行，就要预先分配一块固定的暂存区（几 KB）；每帧不分配。"
+    },
+    {
+     "name": "转置卷积拆成子卷积（多相分解）",
+     "source": "XNNPACK @ d1d59d4：src/operators/deconvolution-nhwc.c 的 is_subconv2d 与 xnn_microkernel_type_subconv2d 路径",
+     "what": "数学上：步长 s > 1、无膨胀、核宽 ≥ s 时，XNNPACK 不用插零再卷积，而是把转置卷积拆成 s 个普通的子卷积，每个子卷积只算一个输出相位，所以不做「乘 0」。然后每个子卷积走 igemm 微核。",
+     "applies_to": "转置卷积 k=5、stride 2（16→16 分 2 组，33→65；16→2，65→129，接 tanh）：偶数输出用 3 个抽头，奇数输出用 2 个抽头。两个相位各用一次外积核，写回时交错（vst2q 或按步长写）。如果现在的实现是插零或者遍历全部 k 再判断，可以直接省掉这部分。",
+     "expected_gain": "推断：和插零写法比，乘加量约减半（5 个抽头里每个输出只有 2–3 个有效）；如果现在已经跳过无效抽头，收益只在分支和取数上。未实测。",
+     "numerics": "去掉的只是乘以 0 的项。剩余项求和顺序不变时逐位相同（加 +0 不改变结果，只有 -0.0 的符号可能不同）。",
+     "rt_safe": "XNNPACK 在建算子时分配 subconvolution_buffer，属于初始化；自己实现时相位表在初始化时建好，每帧不分配。"
+    },
+    {
+     "name": "偏置作累加器初值 + 写回前融合激活（min/max）",
+     "source": "XNNPACK @ d1d59d4：所有 f32-gemm 微核（例如 4x16 lane_ld128：先 vld1q_f32(w) 读偏置，结尾做 vmin/vmax 后写回）；dwconv2d-chw 同样在写回前做 vmaxq/vminq",
+     "what": "偏置在打包时放在每块最前面，核一开始就用偏置初始化累加器，省掉一次额外的加法。写回前在寄存器里做截断（min/max）。激活不必再单独扫一遍内存。",
+     "applies_to": "BN 已经折进卷积，偏置正好用作初值。PReLU 可以在外积核写回前，用 vbsl/vmul 在寄存器里做（XNNPACK 的 GEMM 只融合 min/max，融合 PReLU 是我的推断）。转置卷积末尾的 tanh、GRU 门的 sigmoid 也可以在写回前调用向量化近似（见下面几条）。",
+     "expected_gain": "未量化。推断：每层少一遍 [16][33] 的读写（约 2 KB），每帧十几层，主要省掉访存和循环开销。",
+     "numerics": "偏置从最后一步挪到第一步：求和顺序变了，误差有界；激活融合本身逐位相同。",
+     "rt_safe": "不分配、不加锁。"
+    },
+    {
+     "name": "tanh 的 9/8 次有理逼近（XNNPACK 在 ARM64 上的默认 tanh）",
+     "source": "XNNPACK @ d1d59d4：src/f32-vtanh/rational-9-8.c.in（生成 xnn_f32_vtanh_ukernel__neon_rational_9_8_div_u16）；选择逻辑见 src/configs/unary-elementwise-config.c init_f32_tanh_config_impl；误差判据见 test/unary-ops.h struct TanH",
+     "what": "先把 x 截到 ±7.9807181358（有 FMA 时，从这个点起逼近值就是 ±1）。令 x2 = x·x。分子是奇多项式 x·(1 + α3x² + α5x⁴ + α7x⁶ + α9x⁸)：4 次 FMA + 1 次乘。分母是偶多项式 1 + β2x² + … + β8x⁸：4 次 FMA。最后做一次 vdivq；NR 变体用 vrecpe 加牛顿迭代代替除法。系数在模板里写明。一次处理 16 个数（4 个向量），没有查表、没有分支。",
+     "applies_to": "转置卷积输出的 tanh（2×129 个点）、各 GRU 的候选状态 tanh（TRA 每步 16 个，DPGRNN 沿频率 33 步 × 4，沿时间 33 × 8），以及 sigmoid（如果用 sigmoid(x)=0.5·tanh(x/2)+0.5 来换算，这个恒等式不是在这两个库里看到的，是推断）。",
+     "expected_gain": "未量化。推断：每 4 个数约 12 条向量指令 + 1 次除法；如果现在是标量 libm tanhf，按指令数估计能快几倍。sigmoid、tanh、exp 合计占约 23%，这是主要的可压缩项之一。需要实测。",
+     "numerics": "误差有界：XNNPACK 测试判据是 TolMixed(y, 1·ε, 4·ε)，即绝对误差 ≤ 1 个 FLT_EPSILON 或相对误差 ≤ 4 ULP 取较大者。结果和 libm 不逐位相同。",
+     "rt_safe": "不分配、不加锁；系数是编译期常量。"
+    },
+    {
+     "name": "sigmoid：64 项表 + 2 次多项式 + 牛顿倒数（XNNPACK 在 ARM64 上的默认 sigmoid），以及无表的 5 次多项式版",
+     "source": "XNNPACK @ d1d59d4：src/f32-vsigmoid/neon-lut64-p2.c.in（默认 xnn_f32_vsigmoid_ukernel__neonfma_rr1_lut64_p2_nr2recps_u16）；src/f32-vsigmoid/neon-p5.c.in（p5 系数）；误差判据见 test/unary-ops.h struct Sigmoid",
+     "what": "令 z=|x|。用魔数 0x1.8p17 做一次 FMA，把 -z·log2e 舍入到 1/64 的倍数 n；n 的低 6 位作下标，查表 xnn_table_exp2minus_k_over_64（64 项，256 字节），其余位左移 17 位加到表项的指数上，得到 s = 2^n。用一个 ln2 常数做一次 FMA 求余项 t（rr1）。e^-t 用 2 次多项式 1 - t + c2·t²（c2=0x1.FFFF0Ap-2）近似，得到 y = e^-z ≈ s - s·p。f = y/(1+y)，倒数用 vrecpeq 加 2 次 vrecpsq 牛顿迭代，不用 fdiv。x>0 时取 1-f；z 超过 0x1.5D589Ep+6 时直接置 0。查表需要每个向量 4 次标量 lane 读。p5 变体不查表，用 5 次多项式，系数 c1–c5 写在 neon-p5.c.in 第 35–39 行；还有用 vdivq 的 aarch64 div 变体。",
+     "applies_to": "所有 GRU 的更新门和重置门（TRA：每步 32 个 × 6 次；DPGRNN 频率向：33 步 × 8 个 × 4 × 2；时间向：33 × 16 × 2 × 2），以及 TRA 注意力输出的 sigmoid。GRU 每步只有 8–32 个门值，适合用 u4/u8 的小批量版本，或者把 33 个独立频点的时间向 GRU 的门攒成一批再算。",
+     "expected_gain": "未量化。推断：每 4 个数约 20 条向量指令，加 4 次表读，无除法；比标量 1/(1+expf(-x)) 快几倍。具体倍数需要实测。",
+     "numerics": "误差有界：测试判据是 TolMixed(y, ε, ε)，即绝对 1·FLT_EPSILON 或相对 1·ε 取较大，大约 1–2 ULP。和标量 expf 写法不逐位相同。",
+     "rt_safe": "不分配、不加锁；表是静态常量（256 字节，常驻 L1）。"
+    },
+    {
+     "name": "exp：3/2 次有理逼近（XNNPACK）和 5 次多项式（ggml 改写自 ARM optimized-routines）",
+     "source": "XNNPACK @ d1d59d4：src/f32-vexp/rational-3-2.c.in（ARM64 默认 xnn_f32_vexp_ukernel__neon_rational_3_2_div_u16），判据 test/unary-ops.h struct Exp；llama.cpp @ 2cbca38：ggml/src/ggml-cpu/vec.h ggml_v_expf（NEON 版，约第 1150 行）",
+     "what": "XNNPACK：z' = x·log2e，截到 [-127,128]；拆成整数 z 和余项 r；2^z 由 (z + 2^23 + 127) 左移 23 位直接拼出指数；2^r - 1 ≈ (α1r + α2r² + α3r³)/(1 + β1r + β2r²)，做一次除法后加 1，再乘 2^z。ggml：n = round(x·log2e)，用魔数 0x1.8p23 舍入；ln2 拆成高低两段（0x1.62e4p-1 和 0x1.7f7d1cp-20），做两次 FMS 求余项 b；5 次多项式；2^n 由移位后加到 1.0 的位模式上得到。只有 |n|>126 时才进入特殊缩放分支（用 vpaddd 一次判断 4 个数），常见路径无分支。注释写明最大误差 1.45358 + 0.5 ULP，超过 88.38 变成无穷，低于 -103.97 变成 0。",
+     "applies_to": "如果 sigmoid 想用 1/(1+exp(-x)) 的写法（ggml 的 ggml_v_silu 就是 v_expf + vdivq）；或者模型里有其他 exp（例如 softmax、软阈值）。ERB、LayerNorm 不需要。",
+     "expected_gain": "未量化。推断：每 4 个数约 15 条向量指令，比标量 expf 快几倍。",
+     "numerics": "误差有界：XNNPACK 判据 TolMixed(y, 2ε, 6ε)，测试区间 [-10,10]；ggml 注释写最大 1.45358+0.5 ULP。和 libm 不逐位相同。",
+     "rt_safe": "不分配、不加锁。"
+    },
+    {
+     "name": "点积式小 GEMM（tinyBLAS：K 方向向量累加 + 结尾横向求和）——对本项目不推荐",
+     "source": "llama.cpp @ 2cbca38：ggml/src/ggml-cpu/llamafile/sgemm.cpp class tinyBLAS 的 matmul / mnpack / gemm_bloc；NEON f32 实例 tinyBLAS<4, float32x4_t, …>",
+     "what": "A 和 B 都按 K 连续存（A 行优先、B 转置后行优先）。每个输出 C[i][j] 一个向量累加器，沿 K 每次 4 个做 FMA，最后对每个输出做一次 hsum（vaddvq）。32 个寄存器的平台块是 4×6（RM=4 行、RN 由 BLOCK_SIZE 选），要求 k%4==0，m 必须是 4 的倍数，否则返回 false 退回通用路径。外层还用线程池分块并做 barrier。",
+     "applies_to": "不适合 GTCRN 的 1×1 卷积：K 只有 24、16、8，每个输出累加 2–6 步后就要做一次横向归约。例如 16×33=528 个输出，就有 528 次 vaddvq，开销和乘加本身同量级。并且它面向多线程，每次调用都有 barrier。外积式（第一条）在这些形状上更合适（推断）。可以借鉴的只有一点：K 很长的单个点积（例如 ERB 64×192 如果按稠密矩阵向量积算）用 4 个累加器 + 一次归约。",
+     "expected_gain": "推断为负或持平；对方没有给小形状的实测。",
+     "numerics": "求和顺序变成「按 4 分组再横向相加」，误差有界。",
+     "rt_safe": "核本身不分配；但 ggml 的调用框架有线程池 barrier（ggml_barrier）和原子计数（ggml_threadpool_chunk_add），不能直接放进实时线程。"
+    },
+    {
+     "name": "SME2 矩阵单元路径（KleidiAI pf32 32×32）",
+     "source": "XNNPACK @ d1d59d4：src/configs/gemm-config.c 的 init_pf32_gemm_config（XNN_ENABLE_KLEIDIAI 且 arch_flags 含 sme2 时用 xnn_pf32_gemm_minmax_ukernel_32x32__neonsme2）；src/subgraph.c 约第 4096、4332 行：全连接或卷积满足条件时，插入左矩阵打包节点（pack_lh），改走 pfp32",
+     "what": "在有 SME2 的芯片上，XNNPACK 会把 f32 全连接和卷积改走 KleidiAI 的 32×32 外积核：左矩阵先单独打包（pack_lh），右矩阵按 kai 格式预打包。本机 sysctl 实测 hw.optional.arm.FEAT_SME=1、FEAT_SME2=1。",
+     "applies_to": "理论上能用于 1×1 卷积和全连接，但块大小是 32×32，而我们的问题只有 16×33 或 8×33，大部分格子浪费。每次调用还要打包左矩阵，还要进出 streaming 模式。推断不划算，优先级低。",
+     "expected_gain": "未查到小形状的实测；推断在这些形状上不如 NEON 外积核。",
+     "numerics": "累加顺序由 SME 外积决定，误差有界。",
+     "rt_safe": "pack_lh 需要工作区（XNNPACK 在 reshape 时分配）；核本身每帧不分配。streaming 模式的切换开销未量化。"
+    }
+   ],
+   "not_found": [
+    "两个库都没有 GRU / RNN 专用核：XNNPACK 仓库里没有名字含 gru、lstm、rnn 的文件（git ls-tree 检索为空）；ggml-cpu 源码里检索 gru、lstm 也为空。「先算门再逐元素」怎么融合、33 步串行依赖怎么拆，在这两个库里都没有现成做法。",
+    "ggml 的 tanh 和 sigmoid 没有向量化：vec.h 里 ggml_vec_tanh_f32 是逐个调用 tanhf，ggml_vec_sigmoid_f32 是逐个 1/(1+expf(-x))，只有 silu 和 gelu_quick 用了 ggml_v_expf。GELU 查表（ggml_table_gelu_f16，64K 项、128 KB）只在 f16 路径和定义了 GGML_GELU_FP16 时才用，我们用不上。",
+    "没查到两个库在 M≤16、K≤24、N≈33 形状上的实测数字，也没查到 Apple M 系列（M5）的实测；XNNPACK 在 Mac 上固定用 6x8 / 1x8，源码里没写依据。",
+    "适合 ERB 这种带状稀疏矩阵（64×192，每个频带的频点连续）的专用核：XNNPACK 的 f32-spmm（ARM64 默认 32x1 pipelined）是在空间维（像素）上向量化、按「非零值 + 输入偏移差」编码，每帧只有很少几列时用不上。",
+    "LayerNorm：ggml 的 norm_f32 是 ggml_vec_sum_f32 加 ggml_vec_cvar_f32 两遍扫描；XNNPACK 这次没看到专门的 LayerNorm 微核（没有深入检索 normalization.c）。",
+    "Apple M5 的 FMA 延迟和吞吐，以及 vdivq / vrecpe 的周期数：两个库的源码里都没写，上面的周期估算只是假设。",
+    "PReLU 融进 GEMM 写回：XNNPACK 的 GEMM 只融合 min/max；它另有 f32-vlrelu 和 prelu 微核，但这次没读。"
+   ]
+  }
+ },
+ {
+  "key": "v2:177ae68abeffed316f143c409c26288211cb1e65c5f19ee23d97c50c11ed8eb6",
+  "result": {
+   "checked": [
+    {
+     "name": "vDSP_DFT_zrop 实数 FFT（512 点，预建 setup）",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "头文件和探针 p.c 都在（读文件核实）。但 FFT 每帧只有正、逆各 1 次，实测约 0.15–0.2 µs，只占每帧 0.088 ms 的约 0.4%。项目已经用 realfft（根目录 Cargo.toml 第 25 行）。换成 vDSP 要改缩放约定，要拆打包的奈奎斯特频点，还会失去逐位对拍，代价比收益大。",
+     "corrected_gain": "每帧最多省约 0.1–0.2 µs（≤0.3%），且要以 realfft 同机实测为前提；未量化前按约 0 计"
+    },
+    {
+     "name": "realfft / RustFFT：带预分配 scratch 的实数 FFT",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "realfft 44f36c4 中，process() 每次调用都走 make_scratch_vec（第 312、399、543 行），process_with_scratch 存在（读源码核实）。这一条只是实时安全上的检查项（看是否用了 process()），不是提速手段。",
+     "corrected_gain": "速度约 0；如果现有代码调用 process()，改掉后每帧少 2 次 malloc"
+    },
+    {
+     "name": "vForce 批量 tanh / exp（vvtanhf / vvexpf）",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "vForce.h 第 193 行和第 830 行核实；文件头第 31–42 行确实写了非规格化数和小向量建议用 simd.h。但调研者的对比基准错了：项目里已经有标量多项式 exp_fast / tanh_fast / sig_fast（gtcrn_native.rs 第 255–282 行），基准不是 libm。528 个元素 0.53 ns/个，和手写 NEON 多项式（每 4 个元素约十几条 FMA）相比很可能不占优。它还引入一次外部调用，以及跨系统版本会变的结果。逐元素激活和门计算融合在一起时，vForce 会打断融合，需要额外读写一遍缓冲。",
+     "corrected_gain": "未量化；相对现有 exp_fast，收益可能为 0 甚至为负，要和手写 NEON 多项式同机对比"
+    },
+    {
+     "name": "Accelerate cblas_sgemm / vDSP_mmul 用在小形状上",
+     "source_verified": "verified",
+     "applicability": "not_applicable",
+     "reason": "exp010 README 第 236–242 行核实：每帧 malloc 11 次，整网只快约 4 µs。调研者自己的探针也显示 Accelerate 不比 clang 自动向量化快。结论正确：不能用。",
+     "corrected_gain": "不适用（每帧分配 11 次，过不了实时线程不分配这条要求）"
+    },
+    {
+     "name": "BNNS Graph（从 CoreML 模型编译，预分配工作区，可选单线程，流式状态）",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "bnns_graph.h 第 194 行（不是 192 行）有 SetTargetSingleThread，第 582 行有 MakeStreaming，第 725–727 行要求工作区页对齐、传 NULL 时自己分配，第 812 行起是分配回调，均核实。有两处出处小错：弃用标注在 bnns_structures.h 第 221 行起，不在 bnns.h；旧接口确实只有 LSTM、没有 GRU。整网才 0.088 ms，图执行本身的调度开销（未知）可能就占不小比例。GTCRN 有 33 步串行的双向 GRU，转成 CoreML 后能否零分配也没有验证。",
+     "corrected_gain": "未量化；需要先把模型转成 CoreML，再实测单帧耗时和分配次数"
+    },
+    {
+     "name": "SME / SME2 矩阵单元（M4 实测，M5 未查到）",
+     "source_verified": "not_found_in_source",
+     "applicability": "not_applicable",
+     "reason": "外部报告我没有克隆核实。即使引用的数字准确，那也是大矩阵的峰值。每次逐点卷积只有约 1.3 万次乘加，用 NEON（约 113 GFLOPS）算只要约 0.1–0.2 µs，进出流式模式加 ZA 搬运的固定开销很可能与之同量级。Rust 稳定版没有 SME 内建函数，只能写汇编。对 GTCRN 不划算。",
+     "corrected_gain": "未量化，推断为约 0 或负"
+    },
+    {
+     "name": "gemm crate（sarah-ek）的 aarch64 微核与小矩阵路径",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "86102c5 核实以下几处：第 490 行 vec![false; mc/MR] 在小矩阵路径外无条件执行；第 113 行 aarch64 阈值为 2；第 351 行 m、n≤64 时跳过参数搜索；NEON 微核 x4x4 为 16 行 × 4 列。L2_SLAB 在第 60 行，不是第 59 行（小错）。crate 本身不能用；借鉴 16×4 寄存器块是合理的，但收益属于下面『手写 NEON 微核』那一项，不能算这个 crate 的收益。",
+     "corrected_gain": "crate 本身不适用；寄存器分块思路的收益未量化"
+    },
+    {
+     "name": "candle CPU 后端（含 accelerate 特性）",
+     "source_verified": "not_found_in_source",
+     "applicability": "not_applicable",
+     "reason": "没有克隆核实。每个算子都分配输出，这是公认事实，结论（不能用）不受影响。",
+     "corrected_gain": "不适用"
+    },
+    {
+     "name": "rubato 同步 FFT 重采样（Fft，整数比 48↔16 kHz）",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "eb91908 核实：output_delay 在第 692 行，返回 fft_size_out/2；resample_unit 在第 143 行；默认窗为 BlackmanHarris2。对 3:1 整数比、每帧只有 768/256 个样本的情况，FFT 重叠相加要多做一对 FFT，还要攒块，会增加延迟。短 FIR 的多相直接卷积更简单、延迟可控。",
+     "corrected_gain": "未量化；在本场景下可能不比多相 FIR 快，而且多出约 8 ms 延迟（按源码推算），对实时不利"
+    },
+    {
+     "name": "rubato 异步 sinc 重采样的 NEON 点积 / 多相 FIR 思路",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "sinc_interpolator_neon.rs 核实：4 个 vfmaq 累加器，每轮 16 个样本。sherpa-onnx 部分没有克隆核实。整数比改用多相 FIR 是对的，但重采样不在 0.088 ms 推理之内，只影响前后处理。",
+     "corrected_gain": "只影响前后处理（未量化），对推理 0.088 ms 无影响"
+    },
+    {
+     "name": "sherpa-onnx 流式 GTCRN 降噪的线程与内存设置（反面参考）",
+     "source_verified": "not_found_in_source",
+     "applicability": "not_applicable",
+     "reason": "没有克隆核实。ORT 每帧 malloc 1023–1557 次这一条在 exp010 README 中有记录。这一项本身就是反面参考。",
+     "corrected_gain": "不适用"
+    }
+   ],
+   "missed": [
+    "手写 NEON 逐点卷积微核：输出 16 行正好放进 4 个 q 寄存器；33 列按 4 列一块，共 8 块，余 1 列；权重常驻寄存器（16×24 个 f32，即 96 个 q 寄存器，放不下，所以按 K 分段），用 vfmaq_laneq 广播。不打包、不分配。这是对 1×1 卷积和全连接最直接的提速路径。exp010 实测小矩阵合计约 12 µs，可作上限参考",
+    "融合算子：卷积 + 偏置 + PReLU 一次写回；GRU 的输入投影和门激活融合。减少中间缓冲读写，这些缓冲全在 L1，主要省的是 load/store 和循环开销",
+    "把沿频率的双向 GRU（33 步串行，H=4）的正向、反向两条链，以及 4 个块之间互相独立的部分，交错放进同一个循环，用独立链填满 FMA 延迟（约 4 拍）。串行依赖链是延迟瓶颈，靠交错能提高指令级并行",
+    "沿时间的 GRU 33 个频点互相独立：改成以频点为向量维度（SoA，4 或 8 个频点一组），一次算多个频点的门，激活用 NEON 多项式 exp 批量计算（项目已有标量 exp_fast，可直接改成 4 路 NEON 版）",
+    "GRU 内部 H=4/8 时的寄存器常驻：W_hh 只有 3×4×4 或 3×8×8，可以整块放进寄存器，33 步循环内不重新 load 权重",
+    "深度卷积 3×3 与转置卷积按频点方向用 NEON（4 频点一组）展开，处理好 pad 边界，避免逐元素 if 分支；转置卷积 stride 2 拆成奇、偶两组输出的普通卷积，省掉一半乘零",
+    "编译选项：target-cpu=native 或 apple-m4，加 -C opt-level=3、lto、codegen-units=1，并检查热点循环是否真被向量化（cargo asm），这是成本最低的一步",
+    "省电角度：调研者没谈。实时音频线程设 QoS / workgroup（os_workgroup，音频设备的 workgroup 加入），让调度把它放在合适的核上，避免被频繁迁移或在能效核上超时；比单纯算得快更影响功耗与尾延迟",
+    "降 FTZ 风险：在实时线程开 FPCR.FZ（flush-to-zero），防止 GRU 状态衰减到非规格化数时变慢（项目 p99.9 尾部有 0.109–0.146 ms，可以排查一下）"
+   ]
+  }
+ },
+ {
+  "key": "v2:e82802bbe874f2ad987a9252a611ea1cbcda2bc8813216a1fafee15b1123f4b1",
+  "result": {
+   "checked": [
+    {
+     "name": "外积式寄存器分块（权重广播 × 激活行向量），用于 1×1 卷积",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "实测读源码：XNNPACK d1d59d4 有 4x16 和 6x8 lane_ld128 两个文件。ggml 2cbca38 的 simd-gemm.h 里 NEON 用 RM=4、RN=4，注释写「16+4+1 = 25/32」。B 按 K×N 行优先、不打包，NEON 尾列走标量循环。描述准确。有一处没写：ggml 的累加器是从 C 读出来的（C += A·B），所以偏置要先填进 C。用到项目上：Point::run 现在是 o→i→f 三层循环，输出行 yo（33 个 float）每次 i 都要从内存读写一遍，没留在寄存器里。改成「2 行 co × 9 个向量（36 列）= 18 个累加器」或 4×(4+4+1) 块，就能去掉这些读写。方向对，但 1×1 卷积和全连接合计只有约 7.6 万次乘加，全帧约 50 万次。",
+     "corrected_gain": "推断：1×1 卷积计算下限约 1.5–2 µs/帧（2.8 万条 4 宽 FMA，按 4 条/周期、4.4 GHz）。假设现在这部分慢 2–4 倍，可省约 3–6 µs/帧，即 88 µs 的 3–7%。未实测"
+    },
+    {
+     "name": "权重预打包 [偏置 nr][K][nr]",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "实测读源码：x32-packw-x8-gemm-goi-scalar-int-u4.c 存在，gemm-config.c 每个配置都设了 pack_gemm_goi/gio。按项目现在「通道在前 + 权重广播」的方向，W[co][ci] 已经是连续行优先，打包只省地址计算。调研者自己也这么说，判断成立。值得做的只有一件：GRU 的 Wh 转置成 [H][3H] 存（见「漏掉」）。",
+     "corrected_gain": "1×1 卷积这边接近 0，未量化"
+    },
+    {
+     "name": "微核尺寸选择：代价公式 + 恰好匹配的 mr；Mac 默认微核",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "实测读源码：operator-utils.c:87-89 的公式是 ceil(M/mr)·(3(mr+nr)+mr·nr)，与描述一字不差。M≤max_mr 且有 mr=M 的核时直接用它。Mac/iOS 分支：开汇编时用 1x8 ld128_acc4 和 6x8 ld128，不开汇编时用 1x8/6x8 lane_ld128。Oryon/X4 用 4x16，X3/V2 用 8x8 ld128_2，默认分支有 1x8/4x8/7x8，都核对属实。「权重按实验取 3 倍」这句注释我没逐字核到，但公式里确有系数 3。项目的形状是固定的：M=16 或 8，N=36。几种块大小直接各跑一遍对比就行，套启发式公式没有意义。",
+     "corrected_gain": "0（只是选块的规则）"
+    },
+    {
+     "name": "多累加器拆链（acc2/acc4）与树形归约，用于 DPGRNN 沿频率 GRU",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "实测读源码：1x8-aarch64-neonfma-ld128-acc4.S.in 存在。ggml 在 NEON 上 GGML_F32_STEP=16、EPR=4，属实。但把它用到这个 GRU 上，诊断错了。Gru::step 每步都重算 gi=Wi·x（I=8），可 gi 不依赖 h，根本不在串行链上。真正在链上的只有 Wh·h，K=H=4，再拆累加器几乎没有收益。延迟的大头是 sigmoid→tanh→更新这条链，以及 intra_gru 把 4 条互相独立的 33 步链（前向/后向 × 2 组）一条接一条顺序跑。正确的做法是把 gi 提到循环外，再把 4 条链交错推进（见「漏掉」）。LayerNorm 用 4 个累加器可以做，但它只有 528 个元素。",
+     "corrected_gain": "拆累加器本身：约 0，未量化。真正的收益在「提出 gi + 交错 4 条链」，见「漏掉」"
+    },
+    {
+     "name": "CHW 3×3 深度卷积：vext 取邻、掩码收尾、零行指针",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "实测读源码：3x3p1 2x4 文件里有 16 处 vextq_f32，有 mask_table[7] 和 zero 指针。ARM64 默认是 3x4（dwconv2d-chw-config.c）。1x4 变体也存在。项目现状：GT 块的深度卷积内层循环每个 j 都判断 j>0 和 j+1<f，这些分支会挡住自动向量化，所以这条有现实意义。更省事的做法是在环形缓冲里给每行留左右各 1 个 0，这样不用掩码也能去掉分支。",
+     "corrected_gain": "推断：6 次合计 2.85 万次乘加，计算下限约 2 µs。如果现在因为分支没有向量化，可省约 3–8 µs/帧。未实测，先看剖析里 dw 的占比"
+    },
+    {
+     "name": "NHWC 深度卷积 + 间接指针数组",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "实测读源码：dwconv-config.c 里 ARM64 的 3×3 走 9p8c。ggml 的 CWHN 版每个抽头用 if 判越界，属实。项目的深度卷积前后都是通道在前，要改成 [f][c] 就得来回转置，16 通道只有 4 个向量，换布局的成本可能吃掉收益。调研者自己也这么判断。",
+     "corrected_gain": "未量化，可能为负（要加转置）"
+    },
+    {
+     "name": "步长 2 的频率卷积：vld2q 拆奇偶 + vext 移位",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "实测读源码：5x5s2p2 1x4 文件里有 10 处 vld2q。ARM64 的 5x5s2 默认是 1x4_acc2，3x3s2 默认是 2x4_acc2，属实。项目现状：ConvF 和转置卷积都写成散射形式 yo[2i+k-2] += w·x[i]，写出步长是 2，自动向量化做不好。编码卷积 9→16 一次约 4.7 万次乘加，是单个最大的算子。先把输入拆成奇偶两份连续数组，再按输出收集（y[j] = Σ w_k·x[2j+k-2]），5 个抽头就都是连续读加 FMA。调研者把它说成在 im2col 之后再走外积核，也行，但多一份暂存。",
+     "corrected_gain": "推断：编码器两层合计约 6.8 万次乘加。从散射写改成连续 FMA 后，可省约 5–10 µs/帧。未实测"
+    },
+    {
+     "name": "转置卷积拆成子卷积（多相分解）",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "实测读源码：is_subconv2d 的条件是 stride>1、无膨胀、stride≤kernel，还要求没有 XNN_FLAG_INLINE_LHS_PACKING。最后这个条件调研者漏写了，影响不大。收益描述错了：项目的转置卷积已经用 ilo/ihi 只算有效抽头，没有插零，所以「乘加量约减半」不成立。多相分解真正的价值是：偶数输出和奇数输出各自连续累加，最后用 vzip/vst2q 交错写回，把步长 2 的散射写变成可以向量化的连续写。",
+     "corrected_gain": "乘加量：0（现在已经跳过无效抽头）。向量化收益推断约 3–6 µs/帧，未实测"
+    },
+    {
+     "name": "偏置作累加器初值 + 写回前融合激活",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "源码属实。项目的 Point/ConvF 已经先用偏置填满输出（fill(b[o])），等于已经拿偏置作初值，这一半收益已拿到。剩下的只有把 PReLU 和 tanh 挪进写回前，省掉一遍 [16][33] 的扫描。这一遍约 2 KB，全在 L1 里。",
+     "corrected_gain": "推断每帧不到 1–2 µs，未量化"
+    },
+    {
+     "name": "tanh 的 9/8 次有理逼近",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "实测读源码：ARM64 上 f32 tanh 默认是 neon_rational_9_8_div_u16，截断点是 ±7.9807181358。测试判据 TolMixed(eps, 4eps)，属实。调研者漏看了项目现状：项目已有内联的 exp_fast（Cephes 多项式）和 tanh_fast = 1−2/(e^{2x}+1)。「约 23%」是 libm 后端的剖析数据，开了 fast 之后这一块已经缩小，「比 libm 快几倍」的比较基准不对。和现在的 tanh_fast 比：有理逼近不需要 exp 的位操作和 round，指令更少，而且没有小 x 的相消误差。在 GRU 串行链上，延迟比吞吐更重要，vdivq 的延迟较高（具体周期数未知），可以考虑 vrecpe+1 次牛顿。",
+     "corrected_gain": "未量化。先测 fast 后端下非线性还占多少，再估。和现有 exp_fast 版比，推断最多再省几 µs/帧"
+    },
+    {
+     "name": "sigmoid：lut64 + p2 + 牛顿倒数；无表的 p5 版",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "实测读源码：ARM64 默认 neonfma_rr1_lut64_p2_nr2recps_u16，魔数 0x1.8p17、c2、截断点都核对一致。p5 的系数在 neon-p5.c.in 第 35–39 行，属实。有一处说错：判据 TolMixed(y, eps, eps) 的绝对项是 1.19e-7，所以输出很小时（如 sigmoid(-10)≈4.5e-5），允许误差是很多个 ULP，不是「约 1–2 ULP」。适用性：查表那步要把下标搬到通用寄存器、按道读表再搬回，增加延迟。GRU 串行链每步只有 8 个门值，延迟敏感，这时无表的 p5 或 0.5+0.5·tanh(x/2) 更合适。项目已有 sig_fast，和它比收益有限。",
+     "corrected_gain": "未量化；相对现有 sig_fast，推断很小"
+    },
+    {
+     "name": "exp：3/2 有理逼近（XNNPACK）和 5 次多项式（ggml）",
+     "source_verified": "verified",
+     "applicability": "not_applicable",
+     "reason": "实测读源码：ARM64 默认 neon_rational_3_2_div_u16，判据 TolMixed(2eps, 6eps)，区间 [-10,10]。ggml vec.h 的 NEON ggml_v_expf 在约 1150 行，注释「1.45358 plus 0.5 ulps」，ln2 拆成两段，都属实。但 GTCRN 里单独的 exp 只出现在 sigmoid/tanh 里，这两个直接换成上面的专用逼近更好。项目也已经有 exp_fast。",
+     "corrected_gain": "0"
+    },
+    {
+     "name": "点积式小 GEMM（tinyBLAS）——不推荐",
+     "source_verified": "verified",
+     "applicability": "not_applicable",
+     "reason": "实测读源码：sgemm.cpp 里不满足条件时 return false 退回通用路径；有 m%4/m%8/m%16 的分支、GGML_ASSERT(m % (RM*BM) == 0)，还有 ggml_barrier。描述大体准确。我同意不适用。",
+     "corrected_gain": "0 或为负"
+    },
+    {
+     "name": "SME2 矩阵单元路径（KleidiAI pf32 32×32）",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "实测读源码：gemm-config.c:539 起是 init_pf32_gemm_config，用到 xnn_pf32_gemm_minmax_ukernel_32x32__neonsme2，属实。补一点调研者没说的：Apple 的 SVL=512 位时，一块 f32 ZA 子块是 16×16，co=16 正好占满，16×36 的输出用 3 块子块。所以「大部分格子浪费」只对 KleidiAI 的 32×32 核成立，对手写 SME 不成立。但仍然不划算，原因有四：每次调用都要 smstart/smstop 切换模式，开销未量化；Rust 稳定版没有 SME 内建函数，只能写汇编；SME 单元在一个核簇里共享，实时线程的延迟难保证；功耗未知。",
+     "corrected_gain": "未量化；推断在每帧 12 次小矩阵上不如 NEON"
+    }
+   ],
+   "missed": [
+    "GRU 输入投影移出串行循环（实测读项目源码 gtcrn_native.rs:661）：Gru::step 每步都在串行链里重算 gi=Wi·x+bi。沿频率的 GRU 应先把 33 步的 gi 一次算成 [33][8]·[8][12] 的小 GEMM，链上只剩 Wh·h（K=4）、门和更新。",
+    "交错推进互相独立的串行链（实测读源码 gtcrn_native.rs:986-998）：intra_gru 现在把 4 条 33 步链（前向/后向 × 2 组）一条接一条跑，关键路径是 4×33 步。把 4 条链放进同一个循环一起推进，4 个 h 正好各占一个 4 宽寄存器，或拼成 16 宽的门向量一起算非线性，关键路径降到 33 步。推断沿频率 GRU 部分能快 2–3 倍，未实测。",
+    "H=4/8 的 Wh·h 用按道 FMA：把 Wh 转置成 [H][3H] 存，h 放在一个寄存器里。每个门向量做 H 次 vfmaq_laneq_f32，不需要横向求和，比现在的「每门一个标量点积」短。",
+    "沿时间的 GRU 按频点批量化（实测读源码 gtcrn_native.rs:1018-1023）：现在 33 频点 × 2 组 = 66 个独立单步逐个用标量算。改成按频点做 SoA，门的计算和 sigmoid/tanh 每次处理 4 个频点，Wi·x 和 Wh·h 也就变成 [66][8]·[8][24] 的批量 GEMM。",
+    "深度卷积去分支（实测读源码 gtcrn_native.rs:840-850）：内层每个 j 都判断 j>0、j+1<f。可以在环形缓冲每行左右各留 1 个 0，变成 35 列，3 个抽头都是无分支的连续 FMA，比照搬 vext/掩码更省事。",
+    "步长 2 的卷积和转置卷积都改成按输出收集，或拆奇偶：现在两者都是 yo[2i+k-2] += … 的散射写（步长 2 存储）。先把输入拆成奇偶两份连续数组，或让偶数/奇数输出各自连续累加、最后用 vzip 交错，就能连续向量化。编码器 9→16 是单个最大的算子（约 4.7 万次乘加）。",
+    "固定形状用常量泛型（const generics）：项目里形状全是编译期已知（16/24/8/33）。把 cin/cout/f 改成常量泛型或常量，编译器就能完全展开、把累加器留在寄存器里，可能不手写内建函数也能拿到大部分寄存器分块的收益。",
+    "先在 fast 后端下重新剖析：「非线性约占 23%」来自 libm 后端（源码注释写着 profile_native.txt）。项目已有 exp_fast/tanh_fast/sig_fast，先量一下 fast 后端的各算子占比，再按占比排上面各项的优先级。按 GTCRN 每帧约 50 万次乘加、88 µs 算，约 1.4 次乘加/周期，峰值约 16 次/周期，说明瓶颈在访存、分支和串行延迟，不在算力。",
+    "省电角度：每帧计算 88 µs，只占 16 ms 的 0.55%。先把计算做快，再把推理线程放到能效核上，或者干脆跑完就休眠（race-to-idle），按每瓦表现量一次。这和本组 GEMM 技巧无关，但它决定了「更快」能换来多少「更省电」。未实测。"
+   ]
+  }
+ },
+ {
+  "key": "v2:ef6c89db3790c92166feabbe6a40ac7c0c548fbc15f8498829930862e1d1acad",
+  "result": {
+   "checked": [
+    {
+     "name": "GRU 三门权重堆叠，两次矩阵-向量乘完成一步（reset-after 形式）",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "读源码核实：rnnoise@70f1d25 src/nnet.c:65-94 compute_generic_gru 与描述一致（两次 compute_linear，2N 一次 sigmoid，h += recur[2N+i]*r[i]，栈上 zrh/recur 各 3*1024）；common.py:328 print_gru_layer 确把 PyTorch r,z,n 换成 z,r,n。公式与 PyTorch GRU 相同。对 H=4/8 的极小形状，合并调用确实划算，且是后面『输入投影整段先算』『多链交错』的前提，所以值得做。但单靠它收益有限：真正的瓶颈是频率方向 33 步串行的延迟，不是调用次数。",
+     "corrected_gain": "未量化。推断：单独做只省循环和调用开销，估计占整帧 <5%；要和『输入投影先算』『4 条链交错』一起做才有可观收益"
+    },
+    {
+     "name": "列主序 matvec，16 行输出常驻寄存器（sgemv16x1 / sgemv8x1）",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "读源码核实：vec_neon.h:209/253/288 与描述一致，行数不是 8 的倍数时走标量。对 TRA（48 行）、时间方向 GRU（24 行）直接适用。频率方向 GRU 是 12 行，调研者建议补零到 16，会白算 33%；不如手写 12×1（3 个 q 寄存器）或用多链交错（见漏项）。逐点卷积和全连接的 N=33 维应改用 GEMM 微核，不要逐列做 matvec。",
+     "corrected_gain": "未量化。推断：只影响 GRU 的 matvec 部分；频率方向 GRU 的 K 只有 4（输入投影先算后），每步 12×4 的 matvec 本来就小，收益主要来自去掉水平求和"
+    },
+    {
+     "name": "RNNoise 的 tanh / sigmoid 有理近似（NEON，倒数估计）",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "读源码核实：vec_neon.h:87-125 系数和 vrecpeq_f32（不做牛顿迭代）一致。我用纯 Python 重算了『精确除法』的误差：tanh 6.0e-5、sigmoid 3.0e-5，与调研者一致。问题在于 vrecpe 只有约 8 位精度，tanh 误差会到 1e-3 量级，而频率方向 GRU 要连续迭代 33 步、共 4 个块，误差会累积，结果和 PyTorch 参考对不上。如果要用，至少加一步 vrecpsq_f32 牛顿迭代（多 2 条指令）。否则用下一条 tract 的高精度版更稳。",
+     "corrected_gain": "未量化。推断：和 tract 版速度同量级（每 4 个元素约 8 条 FMA 加 1 次倒数）；精度差 2 到 3 个数量级；改变结果，需 verifier 加听测"
+    },
+    {
+     "name": "tract 的 tanh / sigmoid 高精度有理近似汇编核",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "读源码核实：sigmoid 夹到 ±14.5，tanh 夹到 ±7.5；分子 13 次奇多项式，分母 6 次偶多项式；用 fdiv 真除法；主循环一次 16 个元素；注释写了『a few ulps』和饱和端 1−4.8e-7 / ±(1−6.1e-7)，都对得上（generic/sigmoid.rs、tanh.rs、*_4n.S.j2 第 127-131 行）。激活占整帧 23%（约 20 µs），这是最大的单项可省时间。注意：频率方向 GRU 每步只有 8 个 sigmoid 和 4 个 tanh，吃不满一次 16 个元素的主循环，这部分受延迟限制；时间方向 GRU 要先把 33 个频点的门排成连续一段，才能吃满。",
+     "corrected_gain": "推断（未实测）：我估每帧约 7000 次超越函数（TRA 约 300 次，频率方向 GRU 约 3200 次，时间方向 GRU 约 3200 次，掩码约 260 次）。20 µs ÷ 7000 ≈ 2.9 ns/次，相当于标量 libm。向量化后吞吐约 0.3–0.5 ns/次，但串行链受延迟限制。估计 20 µs 降到 5–8 µs，约省整帧 12–17%。需在 M5 上实测"
+    },
+    {
+     "name": "GRU 单元融合后处理（GruEpilogue / gru_cell_rows）",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "读源码核实：core/src/ops/gru_cell.rs:69-105，状态更新写法是 cand + z*(h_prev − cand)。小纠正：和 z*h+(1−z)*h~ 相比只省 1 次乘（两种写法都有 1 次减），不是『省 1 次乘和 1 次减』。另一处说错：gru_cell_rows 是逐行循环，每行只对 2H 个元素（H=8 时是 16 个）调一次 sigmoid，并没有『把 33 个频点当 rows 一次跑完』的向量化效果。要吃满 SIMD，得把布局改成按门排列 [3H][33]，见漏项。",
+     "corrected_gain": "未量化。推断：逐元素部分本身省得不多，每个隐单元省 1 次乘；主要价值在于少一次读写遍历"
+    },
+    {
+     "name": "整段序列一次算输入投影、循环权重只打包一次（GruSeq）",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "读源码核实：gru_seq.rs 第 14 行有 MAX_UNPROJECTED_HIDDEN=64；chunk=−1 表示反向；第 200-201 行每次调用 Tensor::zero，第 146/149/160 行有 to_owned，确实会分配。对频率方向 GRU 有效：33 个频点的输入在这一帧开始时就全部已知，可以一次算 [33×8]·[8×12]，串行链上每步只剩 4×12 的循环乘。这是本组里对关键路径最有用的一条。时间方向 GRU 在流式里每帧只走 1 步，所谓『整段』就是 33 个频点当 batch，本来就互相独立。",
+     "corrected_gain": "推断：串行链上每步的乘加从 (8+4)×12=144 次降到 48 次（降 3 倍，不是『约一半』）。算整帧未量化"
+    },
+    {
+     "name": "NEON 小矩阵乘微核：A 打包成条带，16×4 / 8×8 / 24×4 寄存器分块，后处理融合",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "核实：16x4/8x8/24x4 核文件都在；fuse.rs 有 PerRowAdd、PerRowMul、LeakyRelu、AddUnicast、ScalarMin/Max；mod.rs:107 的 run 每次调用 allocate_scratch_space。我按 cost_model.rs:31 的公式和 apple_m4_linear.rs 的系数重算，数字一致：m16k24n33 用 16×4 是 0.50 µs，m8k16n33 用 8×8 是 0.37 µs。对我们来说，权重 A 可以在加载模型时打包一次；特征 B 本来就是 [K][33] 按行连续，16×4 核按 4 列一组直接读就行，不用打包。真正要处理的是 N=33 的尾巴：33=32+1。",
+     "corrected_gain": "推断：按 M4 模型，全部稠密乘加起来约 7 µs 封顶：逐点卷积 6×0.50+6×0.37=5.2 µs，全连接 4×0.42≈1.7 µs。能省多少 = 现在这些算子的耗时减 7 µs，现在的耗时未测。M5 上数字未知"
+    },
+    {
+     "name": "小形状上避开 SME / AMX（它们有微秒级固定开销）",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "核实：mod.rs:140 的 apple_chip 只匹配 M1–M4，M5 上 per-chip 代价模型不生效；sme.rs:198-201 对 f32、n>1 直接选 sme_mmm_f32_32x32。补充：sme2 那一层（precedence 5）对 n=1 会选 sme_mmv_f32_64x1，所以 matvec 在 M5 上也会掉进 SME。另外 SME 要在编译时打开 tract_sme 这个 cfg 才生效。我重算的 AMX 和 SME 数字和调研者一致。不过我们本来就不用 SME，这条只是一道护栏，不带来新的加速。",
+     "corrected_gain": "对现状收益为 0（只是护栏）。按 M4 模型推断：如果误用，单次乘慢 6–9 倍"
+    },
+    {
+     "name": "步长 2 的深度卷积：用解交织读取 + 抽头外循环",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "核实：depthwise.rs 里 vuzp1q（步长 2）、抽头 ≤4 时编译期固定、64/32/16/4 分段收尾都对。但这个核把『偏置 + Σ』直接写进输出，不做累加。编码卷积是稠密卷积（9→16 和分组的 16→16），套用它要调 144 次以上，还要额外累加。更好的做法：先把输入按奇偶拆成两相，再当作 [16×45]·[45×65] 的隐式 im2col 乘法，交给上面的 GEMM 微核。对深度卷积 3×3（9 抽头，长度 33）可以直接借鉴，但 33 点只能走 32 个向量 + 1 个标量。",
+     "corrected_gain": "未量化。推断：深度卷积每次只有 16×33×9≈4.8k 次乘加，6 次合计约 29k 次，占整帧乘加（约 53 万次，按 GTCRN 33 MMAC/s ÷ 62.5 帧算）约 5%"
+    },
+    {
+     "name": "int8 权重 + sdot 点积 + 块稀疏（RNNoise 的量化路径）",
+     "source_verified": "verified",
+     "applicability": "not_applicable",
+     "reason": "代码都在（cgemv8x4、vdotprod、compute_scaling），但有一处描述错：第二个缩放项是『相邻两列输入权重之和的最大绝对值 /129』（weight[0::2]+weight[1::2]），不是『行内绝对值和』。对我们：GRU 的 K 只有 4/8/16，输入每步都要重新量化，固定开销吃掉 sdot 的收益；稠密乘本来只占约 7 µs；还要改变数值、重新听测。不划算。",
+     "corrected_gain": "推断：接近 0 或为负；改变结果"
+    },
+    {
+     "name": "按能量 / 信噪比跳过网络（省电）",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "核实：RNNoise denoise.c:389 是 E<0.04，而且输入按 int16 幅度计，所以这个门限只在近乎数字静音时才触发。libDF tract.rs:516-524 的变量叫 rms，实际算的是均方值（没开方），门限 1e-7（约 −70 dBFS），要连续超过 5 帧才跳过，同样只抓数字静音。调研者说『通话中静音常占相当比例』，这个推断不成立：自然停顿里有房间底噪，远高于这两个门限。按 lsnr 跳过阶段要靠编码器先算出 lsnr，GTCRN 没有这个输出，不适用。另外 GTCRN 的卷积历史和 GRU 状态在跳帧时怎么处理还没定，会有恢复瞬态。",
+     "corrected_gain": "只在麦克风静音或输入为数字零时省 100%；正常说话间隙基本不触发。按真实通话算，未量化，推断很小"
+    },
+    {
+     "name": "ERB 做成连续不重叠的带，按带长求平均（不做稠密矩阵乘）",
+     "source_verified": "verified",
+     "applicability": "worth_trying",
+     "reason": "核实：lib.rs:68 erb_fb 返回每个带的宽度 Vec<usize>。调研者已指出 GTCRN 的带是重叠三角形，不能原样套用，改成『每行只存非零区间』是对的。注意要同时改压缩（64×192）和还原（192×64）两个矩阵。逐位一致性：只跳过零元素、按原顺序相加时结果一致。实现简单，无风险。",
+     "corrected_gain": "推断：每个高频点最多属于 2 个带，非零约 384 个/矩阵；两个矩阵合计约 2.46 万次乘加降到约 770 次，约占整帧乘加的 4–5%。时间上未量化"
+    },
+    {
+     "name": "实数 FFT + 预建 scratch（libDF 的 STFT / iSTFT）",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "核实：lib.rs:121-122 预建了 scratch，但 360 行和 397 行每帧都有 make_input_vec / make_output_vec 分配，和调研者说的一致。我们本来就该零分配；可借鉴的只有『归一化折进窗』。不是提速点。",
+     "corrected_gain": "未量化，推断接近 0；主要价值是实时安全"
+    },
+    {
+     "name": "libDF 喂 tract 的方式：脉冲化模型（pulse=1）+ SimpleState",
+     "source_verified": "verified",
+     "applicability": "not_applicable",
+     "reason": "核实：tract.rs:260-262 SimpleState::new。我们已经手写流式推理，这条不适用，和调研者的结论一致。",
+     "corrected_gain": "无"
+    },
+    {
+     "name": "卷积历史用整块拷贝移位 + 3×3 手工展开靠编译器向量化",
+     "source_verified": "verified",
+     "applicability": "marginal",
+     "reason": "核实：nnet_arch.h:195 conv2d_3x3_float，225-239 行 compute_conv2d_ 用 in_buf 和 RNN_COPY 移位。对我们：时间方向膨胀到 5 时，历史只有 2×5=10 帧 × 16×33 个浮点，约 21 KB，在 L1 里拷一遍很便宜。环形索引能省一点，但会让内层地址计算变复杂。",
+     "corrected_gain": "推断：每帧的拷贝 <1 µs 量级，未实测"
+    }
+   ],
+   "missed": [
+    "多链交错（最重要）：频率方向 GRU 每块有 4 条互相独立的 33 步链（2 组 × 正反 2 个方向），两块合计 8 条。H=4 正好放进一个 q 寄存器。可以用 vfmaq_laneq_f32 让 4 条链在同一个循环里交错推进，每步 4×3×4=48 条独立 FMA，把串行链的 FMA 延迟和激活延迟藏起来。调研者把 tract 的『正反两次 GruSeq』当作唯一写法，这是关键路径上最大的漏项。推断：关键路径从 8×33 步串行降到 2×33 步，未实测",
+    "时间方向 GRU 改成按门排列 [3H][33]：33 个频点互相独立。这样循环乘就是 [24×8]·[8×33] 这一个 GEMM，正好用 24×4 / 8×8 微核；sigmoid 可以对 2H×33=528 个连续元素一次算完。tract 的 gru_cell_rows 是逐行循环，每行只有 16 个元素，吃不满 SIMD",
+    "频点维补齐到 4 的倍数：33→36、65→68、129→132。所有内层循环都没有标量尾巴，补的位置填零，并保证不会被读进有效输出。这是 0 风险的改动，对每个算子都有效",
+    "激活融合进 matvec 或 GEMM 的后处理：在寄存器里直接加偏置、算 sigmoid/tanh，省一次存回和读出。PReLU 也一样：每通道斜率可以用 vbslq 加每行斜率向量做成融合项（tract 没有这个融合项，我们可以自己写）",
+    "sigmoid 由 tanh 导出：sigmoid(x)=0.5+0.5·tanh(x/2)。只维护一个高精度核，减少代码和校验面，也方便单一真相源",
+    "省电：实时线程加入 macOS 音频工作组（os_workgroup / AudioWorkgroup），并测一下『跑在性能核上尽快跑完再空闲』和『跑在能效核上』哪个功耗低。每帧 0.088 ms，只占 16 ms 帧长的 0.55%，这时调度和核选择对功耗的影响很可能大于再省几微秒。调研者没提",
+    "FP16 计算：M 系列 NEON 支持 8 路 fp16 FMLA，吞吐约是 f32 的 2 倍（tract 有 arm64fp16 核）。会改变数值，要过 verifier 加听测，属于『值得试，需人判』",
+    "先测清楚耗时再动手：重算的代价模型显示，全部稠密乘在 NEON 上合计只要约 7 µs，激活约 20 µs，剩下约 60 µs 的去向不明（可能在串行 GRU、LayerNorm、深度卷积、重采样、FFT 里）。应该先给每个算子打点，按实测排序，再决定做哪一条",
+    "FFT 用 Accelerate 的 vDSP_fft_zrip：setup 在初始化时建一次，之后每帧调用不分配内存，对 512 点实数 FFT 很快。（本组没覆盖前后处理的这一块）"
+   ]
+  }
+ }
+]
