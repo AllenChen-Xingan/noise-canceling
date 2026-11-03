@@ -16,7 +16,7 @@
 | rs-io | 音频进出 · 虚拟麦克风读出端 · 实体：vdn-io-macos · vdn-hal · `feat/rust-skeleton-io`（`../noise_canceling-rs-io`） | `_tmp/20261102-b8-rust/rs-io.md` | 其 worktree `state/handoff/rs-io.md` | 完成，已合入 feat/rust-skeleton（a9d4c83），窗口已关 |
 | rs-entry | 接线 · 实体：vdn-control · vdn-capture · vdn-denoised · vdn-cli · `feat/rust-skeleton-entry`（`../noise_canceling-rs-entry`） | `_tmp/20261102-b8-rust/rs-entry.md` | 其 worktree `state/handoff/rs-entry.md` | 已报到（noise-canceling-rs-entry-c3）· 三家已合进其分支（65e62a9），接线中 |
 | rs-wake | 跨进程唤醒替掉 sleep 轮询 + 唤醒 / 轮询对照实验 + 总线头加 lead / 块长 / 会话 ID / 缺口 + tidy 查 main.rs · 实体：vdn-shm · vdn-rt-thread · xtask · `feat/rust-skeleton-shm`（`../noise_canceling-rs-shm`） | `_tmp/20261102-b8-rust/rs-wake.md` | 其 worktree `state/handoff/rs-wake.md` | 已报到（noise-canceling-rs-shm-86） |
-| rs-core2 | 处理链补齐：Stage 串进 Pipeline（处理图第一步）· 送原声改用 48 kHz · 延迟断言改 Pipeline · FTZ 守卫 · 实体：vdn-types · vdn-dsp · vdn-engine · vdn-models · `feat/rust-skeleton-core`（`../noise_canceling-rs-core`） | `_tmp/20261102-b8-rust/rs-core2.md` | 其 worktree `state/handoff/rs-core2.md` | 已报到（noise-canceling-rs-core-a6） |
+| rs-core2 | 处理链补齐：Stage 串进 Pipeline（处理图第一步）· 送原声改用 48 kHz · 延迟断言改 Pipeline · FTZ 守卫 · 实体：vdn-types · vdn-dsp · vdn-engine · vdn-models · `feat/rust-skeleton-core`（`../noise_canceling-rs-core`） | `_tmp/20261102-b8-rust/rs-core2.md` | 其 worktree `state/handoff/rs-core2.md` | 完成，已合入 feat/rust-skeleton（77f46e6），窗口已关 |
 
 ## 规矩
 
@@ -41,6 +41,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- rs-core2：验收通过（4 crate 115 条测试、clippy、tidy 大总管重跑；vdn denoise 4 场景含故障注入字节一致；3 次变异检查测试会红；自审无 P0 / P1）→ 合入、关窗。延迟账按代码：009 目标 44.98 ms，96 帧块 39.67 ms
 - rs-wake：cargo-deny 0.20.2 已装，`cargo deny check` 四项全 ok（警告：cpal 带来的重复版本；deny.toml 未用许可 4 个、例外 1 个 → 删）；xtask ci 改为没装就失败，CI 要先装
 - rs-wake 补数（提优先级后，空闲 / 压力，各 1 次 × 4900 块）：最长醒来 唤醒 40.6 / 7.4 µs · 200 µs 轮询 210.9 / 203.8 µs · 500 µs 轮询 527.0 / 502.8 µs；CPU 唤醒 0.41 / 0.21 % · 200 µs 轮询 1.62 / 1.03 % · 500 µs 轮询 1.30 / 0.48 %；每秒唤醒 约 500 · 3671–7354 · 1548–2902。wait 运行期探测，14.2–14.3 自动退回 200 µs 轮询
 - rs-entry：唤醒接上（wait 替掉 sleep，退回轮询 0 次）· Out 总线 `/vdn-out` 由送音端自建 · OwnedBus 用 vdn-shm 的、旧份已删 · 两进程三种起停顺序（含 SIGKILL 重启）相关 1.000000、延迟 1056、静音 0（debug）· V7 进 `docs/experiments/exp-v7-latency/`。**打回两处**：音频线程 try_lock（违规约 §3.4）→ 改 rtrb 送入 + 回收；NaN 当带内记号 → 改 0 占位 + note_gap + 送音端按心跳过期路径补原声
@@ -76,13 +77,14 @@
 
 - [x] Pipeline 省 2 ms 延迟 → **人定 2026-11-02：「可以省」**。做法：新增 `Pipeline::with_block`（块长整除 hop 时输出预填少 95 样本），`new` 不变；派会话内子代理在 `../noise_canceling-rs-core` 做
 - [x] 最低系统提到 14.4 → **人定 D67（原话「可以，提高版本」）**；去掉按版本退回轮询的分支，只留调用失败兜底（rs-wake）
+- [ ] 正常降噪时混回的原声要不要带 8 kHz 以上（rs-core2 题）：A 只到 8 kHz（现状，略闷）/ B 用 48 kHz（更亮，但高频嘶声按 −12 dB 放回）；建议 A，等衰减下限移成后处理级后 AB 听测；默认 A
 - [ ] 两个进程（008 #4）与工程细节（第五组）按建议推进，待人确认 —— 来源 010 第九节
 
 ## 收尾时大总管要做
 
 - [ ] V6：release 测试 + 全量 `xtask ci`
-- [ ] 规约 R10 unsafe 白名单加 vdn-dsp（FTZ）
+- [ ] 规约 R10 unsafe 白名单加 vdn-dsp（FTZ）；§3.7.6 延迟表改为按代码（44.98 / 39.67 ms），并给这张表加与代码的比对（唯一真相源）
 - [ ] 改过时说法：规约 §2.2 图里 vdn-capture 补 vdn-dsp · vdn-hal · clap · hound ·根 Cargo.toml 第 1 行注释 · speaker README / Cargo.toml · 规约 §2.2 · §3.7.6（细节见 rs-core 现状页）
 - [ ] 新 crate 实体行写进 `.42cog/cog.md`（各现状页有行）
-- [ ] **下一件大事**：处理图（D66）+ schema 交叉校验（011），清镜像副本与手写 JSON
+- [ ] **下一件大事**：处理图（D66）+ schema 交叉校验（011），清镜像副本与手写 JSON；后处理级非有限 / 幅度检查与 Engine classify 规则合成一处
 - [ ] backlog：ContentId FNV → sha256；麦克风流无缝重接（回调里无锁换总线，要新依赖）；lead 压到 1 块时块长 96 的欠载（release + 预热核实）；Ring 拆 Producer / Consumer 句柄；共享内存权限 0600 与 coreaudiod（装驱动那批实测，补 009 待拍板 3）；models 不直接依赖 ort 尚无机器检查
