@@ -17,7 +17,7 @@
 //!   `--workgroup`：计时线程加入默认输出设备的 IO 工作组（字段 workgroup:true/false）。
 //!   frames_over_3ms：计时帧里纯推理 > 3.0 ms 的个数。实时节奏下另报 late_*（醒来迟到）、release_*（计划时刻到完成，
 //!   含迟到）与 release_over_3ms——BE-DEADLINE 应看 release_over_3ms（产品里帧是否赶上截止）。
-//!   open_to_warm_ms：从开始打开到预热完（BE-COLD 直接量）。
+//!   open_to_warm_ms：从开始打开到预热完（BE-COLD 直接量）。`--ready-file <路径>`：预热完写这个文件（耗电脚本用）。
 //!   对拍输出 be_parity_pass；不过时退出码非零（--allow-fail 例外，给已知错误的对照用）；非有限指标写 null。
 //!   两个 bench 都可加 `--pace-ms <毫秒>`：按实时节奏每隔这么久喂一帧（测耗电、测睡醒后的帧耗时用；默认 0 = 连续跑）。
 //!   两个 bench 都可加 `--dump-io <前缀>`（此时第 2 个参数须是 onnx）：计时之后另起一个 ORT 会话，从零状态把
@@ -445,6 +445,22 @@ fn frames_for(
     frames: usize,
     shapes: &[Vec<usize>],
 ) -> Result<Vec<Vec<f32>>, Err> {
+    // 音频至少一个 hop、帧数 > 0，否则 spectra / 循环取模会除零或越界（codex 第 4 轮 #2）
+    let hop = if model == ModelId::Gtcrn {
+        HOP
+    } else {
+        *shapes
+            .first()
+            .and_then(|s| s.last())
+            .ok_or("FE-M 需要输入形状")?
+    };
+    if frames == 0 || audio.len() < hop {
+        return Err(format!(
+            "帧数 {frames} 为 0，或音频 {} 个样本短于一个 hop（{hop}）",
+            audio.len()
+        )
+        .into());
+    }
     Ok(match model {
         ModelId::Gtcrn => spectra(audio, frames)
             .into_iter()
@@ -577,6 +593,10 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     // BE-COLD 直接量：从开始打开到预热完（codex 第 1 轮 #6）
     let open_to_warm = t0.elapsed().as_secs_f64() * 1e3;
     let fp_warm = footprint_mb();
+    // 预热完发就绪信号（耗电脚本据此只采稳态窗口，codex 第 4 轮 #4）
+    if let Some(i) = args.iter().position(|a| a == "--ready-file") {
+        std::fs::write(args.get(i + 1).ok_or("--ready-file 缺路径")?, b"ready\n")?;
+    }
     let mut times = Vec::with_capacity(frames);
     let mut nan = 0usize;
     // 实时节奏下另记：醒来迟到 = 实际开始 − 计划时刻；释放到完成 = 完成 − 计划时刻（codex 第 1 轮 #4）
@@ -689,6 +709,9 @@ fn parity(
     mut b: Box<dyn Net>,
     inputs: &[Vec<f32>],
 ) -> Result<(), Err> {
+    if inputs.is_empty() {
+        return Err("对拍输入为空（音频短于一个 hop，或 --frames 0）".into());
+    }
     let (mut max_abs, mut sig, mut err) = (0.0f64, 0.0f64, 0.0f64);
     let mut worst_frame = 0;
     let mut first_bad = None;
@@ -728,11 +751,23 @@ fn parity(
         .filter(|(s, _)| *s >= 1e-4 * mean_e)
         .map(|(s, e)| 10.0 * (s / e.max(1e-300)).log10())
         .fold(f64::INFINITY, f64::min);
-    let snr = 10.0 * (sig / err.max(1e-300)).log10();
-    // BE-PARITY（standard.md §2）：没有值差 > 1e-3、没有非有限值，且整段 SNR ≥ 60 dB
-    let pass = first_bad.is_none() && nonfinite == 0 && snr.is_finite() && snr >= 60.0;
+    // 参考全零（全静音）时 SNR 没有定义：两边都为零就算通过，SNR 写 null（codex 第 4 轮 #1）
+    let zero_ref = sig == 0.0;
+    let snr = if zero_ref {
+        f64::NAN
+    } else {
+        10.0 * (sig / err.max(1e-300)).log10()
+    };
+    // BE-PARITY（standard.md §2）：没有值差 > 1e-3、没有非有限值，且整段 SNR ≥ 60 dB（参考全零时改判「差全为 0」）
+    let pass = first_bad.is_none()
+        && nonfinite == 0
+        && if zero_ref {
+            err == 0.0
+        } else {
+            snr.is_finite() && snr >= 60.0
+        };
     println!(
-        "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"frames\":{},\"max_abs\":{},\"worst_frame\":{worst_frame},\"snr_db\":{},\"min_frame_snr_db\":{},\"nonfinite_values\":{nonfinite},\"first_bad\":\"{:?}\",\"be_parity_pass\":{pass}}}",
+        "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"frames\":{},\"max_abs\":{},\"worst_frame\":{worst_frame},\"snr_db\":{},\"min_frame_snr_db\":{},\"nonfinite_values\":{nonfinite},\"first_bad\":\"{:?}\",\"zero_reference\":{zero_ref},\"be_parity_pass\":{pass}}}",
         model.name(),
         inputs.len(),
         if max_abs.is_finite() {
