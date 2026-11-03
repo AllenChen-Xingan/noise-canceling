@@ -193,6 +193,15 @@ struct ModelOpts {
     model_path: Option<PathBuf>,
 }
 
+impl ModelOpts {
+    /// `--model` 已由 clap 限在 `ModelId::NAMES` 里；这里经正本解析成模型。
+    fn kind(&self) -> Result<ModelKind, BoxError> {
+        Ok(ModelKind::from_id(
+            ModelId::parse(&self.model).ok_or("未知的模型")?,
+        ))
+    }
+}
+
 #[derive(Args)]
 struct DenoiseArgs {
     input: PathBuf,
@@ -291,7 +300,7 @@ fn main() {
 }
 
 fn open_model(m: &ModelOpts) -> Result<(AnyModel, PathBuf), BoxError> {
-    let kind = ModelKind::from_id(ModelId::parse(&m.model).ok_or("未知的模型")?);
+    let kind = m.kind()?;
     let path = match &m.model_path {
         Some(p) => p.clone(),
         None => kind
@@ -529,7 +538,7 @@ fn run(a: RunArgs) -> Result<bool, BoxError> {
         // 单进程：cpal 回调块长不固定，用任意块长的 Pipeline::new
         live::run(vdn_denoised::identity_pipeline(None)?, &o)?
     } else {
-        let kind = ModelKind::from(a.m.model);
+        let kind = a.m.kind()?;
         live::run(
             vdn_denoised::model_pipeline(kind, a.m.model_path.as_deref(), None)?,
             &o,
@@ -577,7 +586,7 @@ fn chain_test(a: ChainArgs) -> Result<bool, BoxError> {
             chain::run(vdn_denoised::identity_pipeline(Some(o.denoise_block))?, &o)?
         }
         chain::ChainMode::Denoise => {
-            let kind = ModelKind::from(a.m.model);
+            let kind = a.m.kind()?;
             chain::run(
                 vdn_denoised::model_pipeline(
                     kind,
@@ -668,7 +677,7 @@ fn v7(a: V7Args) -> Result<bool, BoxError> {
     };
     let cores = std::thread::available_parallelism().map_or(4, |n| n.get());
     let stress = a.stress.unwrap_or(cores.saturating_sub(3).max(1));
-    let kind = ModelKind::from(a.m.model);
+    let kind = a.m.kind()?;
     let groups: Vec<(&str, usize)> = if a.idle_only {
         vec![("空闲", 0)]
     } else {
@@ -796,7 +805,7 @@ mod tests {
             let Cmd::Denoise(a) = cli.cmd else {
                 return None;
             };
-            ModelId::parse(&a.m.model).map(ModelKind::from_id)
+            a.m.kind().ok()
         };
         assert_eq!(
             kind_of(&["vdn", "denoise", "a.wav", "b.wav"]),
