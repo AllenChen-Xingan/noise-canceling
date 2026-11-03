@@ -10,9 +10,19 @@
 # 每帧能耗 ≈（后端三项合计平均功率 − 同一轮空闲的平均功率）× 16 ms。
 # bench 输出里有 win_start_unix / win_end_unix（计时窗），可再按窗口精确截取样本（applebe 的 power_parse.py v2 口径）。
 set -euo pipefail
-# 防系统睡眠 + 必须插电（20261102-v2 踩坑：拔电后空闲睡眠 42 分钟，电池模式下性能核降到约一半频率）
+# 防系统睡眠 + 电源模式（20261102-v2 踩坑：拔电后空闲睡眠 42 分钟，电池模式下性能核降到约一半频率）
+# POWER_MODE=ac（默认）：必须插电；POWER_MODE=battery：必须用电池（测用户不插电的场景，人定 2026-11-02）
 if [ -z "${VDN_CAFFEINATED:-}" ]; then exec env VDN_CAFFEINATED=1 caffeinate -dims bash "$0" "$@"; fi
-ac_check() { pmset -g batt | head -1 | grep -q "AC Power" || { echo "没插电（$(pmset -g batt | head -1)），停下：插电后重跑" >&2; exit 2; }; }
+POWER_MODE="${POWER_MODE:-ac}"
+batt_line() { pmset -g batt | sed -n 2p | sed 's/^[[:space:]]*//'; }
+ac_check() {
+  local src; src=$(pmset -g batt | head -1)
+  case "$POWER_MODE" in
+    ac) echo "$src" | grep -q "AC Power" || { echo "POWER_MODE=ac 但没插电（$src），停下" >&2; exit 2; } ;;
+    battery) echo "$src" | grep -q "Battery Power" || { echo "POWER_MODE=battery 但插着电（$src），停下" >&2; exit 2; } ;;
+    *) echo "POWER_MODE 只收 ac / battery" >&2; exit 2 ;;
+  esac
+}
 ac_check
 ID=${1:?结果目录名}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
@@ -32,6 +42,7 @@ chown -R "$U" "$HERE/results/$ID"
   date '+%F %T %z'; sysctl -n machdep.cpu.brand_string; sw_vers -productVersion; pmset -g batt | head -1
   echo "load: $(sysctl -n vm.loadavg)"; echo "git: $(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo ?)"
   echo "bin_sha256: $(shasum -a 256 "$BIN" | cut -d' ' -f1)"
+  echo "power_mode: $POWER_MODE"; echo "battery_start: $(batt_line)"
 } > "$OUT/env.txt"
 
 run() { # 名字 · 命令（命令为空 = 空闲对照）
@@ -63,4 +74,5 @@ for r in 1 2 3; do
   done
 done
 echo "load_end: $(sysctl -n vm.loadavg)" >> "$OUT/env.txt"
+echo "battery_end: $(batt_line)" >> "$OUT/env.txt"
 echo "完成：$OUT/summary.txt"

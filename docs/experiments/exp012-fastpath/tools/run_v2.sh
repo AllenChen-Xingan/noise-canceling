@@ -4,9 +4,19 @@
 # 用法：run_v2.sh <结果目录名> [轮数=3]
 # 前提：已拿到重活名额、主目录 _tmp/heavy.lock 由大总管建好；bench 已 cargo build --release。
 set -euo pipefail
-# 防系统睡眠 + 必须插电（20261102-v2 踩坑：拔电后空闲睡眠 42 分钟，电池模式下性能核降到约一半频率）
+# 防系统睡眠 + 电源模式（20261102-v2 踩坑：拔电后空闲睡眠 42 分钟，电池模式下性能核降到约一半频率）
+# POWER_MODE=ac（默认）：必须插电；POWER_MODE=battery：必须用电池（测用户不插电的场景，人定 2026-11-02）
 if [ -z "${VDN_CAFFEINATED:-}" ]; then exec env VDN_CAFFEINATED=1 caffeinate -dims bash "$0" "$@"; fi
-ac_check() { pmset -g batt | head -1 | grep -q "AC Power" || { echo "没插电（$(pmset -g batt | head -1)），停下：插电后重跑" >&2; exit 2; }; }
+POWER_MODE="${POWER_MODE:-ac}"
+batt_line() { pmset -g batt | sed -n 2p | sed 's/^[[:space:]]*//'; }
+ac_check() {
+  local src; src=$(pmset -g batt | head -1)
+  case "$POWER_MODE" in
+    ac) echo "$src" | grep -q "AC Power" || { echo "POWER_MODE=ac 但没插电（$src），停下" >&2; exit 2; } ;;
+    battery) echo "$src" | grep -q "Battery Power" || { echo "POWER_MODE=battery 但插着电（$src），停下" >&2; exit 2; } ;;
+    *) echo "POWER_MODE 只收 ac / battery" >&2; exit 2 ;;
+  esac
+}
 ac_check
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/../../../.." && pwd)"
@@ -30,6 +40,7 @@ V="native native-v2 native-v2-fast"
   echo "git: $(git -C "$repo" rev-parse --short HEAD)"
   echo "bin_sha256: $(shasum -a 256 "$bin" | cut -d' ' -f1)"
   echo "heavy_lock: $(cat "$main_dir/_tmp/heavy.lock/owner" 2>/dev/null || echo 无)"
+  echo "power_mode: $POWER_MODE"; echo "battery_start: $(batt_line)"
 } > "$out/env.txt"
 tag() { sed "s/^{/{\"round\":$1,/"; }
 
@@ -47,8 +58,9 @@ for r in $(seq 1 "$rounds"); do
   for v in $V; do
     "$bin" gtcrn-bench "$v" "$w" "$wav" --frames 6000 --warmup 200 --qos rt --pace-ms 16 | tag "$r" >> "$out/bench.jsonl"
   done
-  echo "load_r$r: $(sysctl -n vm.loadavg)" >> "$out/env.txt"
+  echo "load_r$r: $(sysctl -n vm.loadavg) · $(batt_line)" >> "$out/env.txt"
 done
 "$bin" dsp-bench "$wav" --frames 6000 --warmup 200 --qos rt --pace-ms 16 | tag 1 >> "$out/dsp.jsonl"
 echo "load_end: $(sysctl -n vm.loadavg)" >> "$out/env.txt"
+echo "battery_end: $(batt_line)" >> "$out/env.txt"
 echo "done → $out" >&2
