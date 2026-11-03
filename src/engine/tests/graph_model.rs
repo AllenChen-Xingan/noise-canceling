@@ -37,7 +37,8 @@ fn pipeline_reports_graph_with_model_node() {
     let id = ModelId::Gtcrn;
     let eng = Engine::new(Named(id.as_str()), SafetyConfig::off());
     let p = Pipeline::with_stages(eng, SR, None, &[&GAIN], stages![Gain(1.0)]).unwrap();
-    let g = p.graph(id, W1).unwrap();
+    let checked = p.graph(id, W1).unwrap();
+    let g = checked.graph();
     assert_eq!(g.stages, &[&GAIN]);
     assert!(g.spectral.is_empty());
     assert_eq!((g.model, g.artifact), (id, W1));
@@ -57,7 +58,7 @@ fn only_artifact_changes_graph_id() {
     let p = Pipeline::new(Engine::new(Named(id.as_str()), SafetyConfig::off()), SR).unwrap();
     let a = p.graph(id, W1).unwrap();
     let b = p.graph(id, W2).unwrap();
-    assert_eq!(a.model, b.model);
+    assert_eq!(a.graph().model, b.graph().model);
     assert_ne!(a.content_id(), b.content_id());
 }
 
@@ -80,4 +81,32 @@ fn model_name_mismatch_is_rejected() {
     )
     .unwrap();
     assert!(p.graph(ModelId::FastEnhancerM, W1).is_err());
+}
+
+/// codex 012 第 4 轮 #1：别的模型的图，只拿它的级串去构造 Pipeline 能成功；但要进会话记录必须先核对，
+/// 用正在跑的模型核对就报错（会话头只收 `CheckedGraph`，没核对的图在类型上就进不来）。
+#[test]
+fn foreign_graph_cannot_be_verified_against_running_model() {
+    const FEM_GRAPH: ProcessingGraph = ProcessingGraph {
+        stages: &[&GAIN],
+        ..ProcessingGraph::bare(ModelId::FastEnhancerM, W1)
+    };
+    let running = Named(ModelId::Gtcrn.as_str());
+    let p = Pipeline::with_stages(
+        Engine::new(running, SafetyConfig::off()),
+        SR,
+        None,
+        FEM_GRAPH.stages,
+        stages![Gain(1.0)],
+    )
+    .unwrap();
+    assert!(matches!(
+        FEM_GRAPH.verify(p.engine().model(), &stages![Gain(1.0)]),
+        Err(ChainMismatch::ModelName { .. })
+    ));
+    // 级串不同也拒
+    assert!(matches!(
+        ProcessingGraph::bare(ModelId::Gtcrn, W1).verify(p.engine().model(), &stages![Gain(1.0)]),
+        Err(ChainMismatch::Extra { .. })
+    ));
 }

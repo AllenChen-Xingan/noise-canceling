@@ -1,5 +1,5 @@
 use super::*;
-use crate::graph::{ASYM_GATE, FLOOR};
+use crate::graph::{ASYM_GATE, CheckedGraph, FLOOR, ProcessingGraph};
 use crate::record::tests::every_kind;
 
 const G: ProcessingGraph = ProcessingGraph {
@@ -16,7 +16,7 @@ fn full() -> SessionRecord {
         profile: (ProfileVersion(1), ContentId::of(b"p")),
         ..SessionHeader::default()
     };
-    header.set_graph(&G);
+    header.set_graph(&CheckedGraph::unchecked(G));
     SessionRecord {
         header,
         events: every_kind(),
@@ -128,14 +128,17 @@ fn header_keys_match_text() {
 #[test]
 fn set_graph_tracks_graph_changes() {
     let mut h = SessionHeader::default();
-    h.set_graph(&G);
+    h.set_graph(&CheckedGraph::unchecked(G));
     let a = h.graph;
-    h.set_graph(&ProcessingGraph {
+    h.set_graph(&CheckedGraph::unchecked(ProcessingGraph {
         stages: &[&FLOOR],
         ..G
-    });
+    }));
     assert_ne!(h.graph, a);
-    h.set_graph(&ProcessingGraph::bare(ModelId::Gtcrn, ContentId::of(b"w")));
+    h.set_graph(&CheckedGraph::unchecked(ProcessingGraph::bare(
+        ModelId::Gtcrn,
+        ContentId::of(b"w"),
+    )));
     assert_eq!(h.model, Some(ModelId::Gtcrn));
 }
 

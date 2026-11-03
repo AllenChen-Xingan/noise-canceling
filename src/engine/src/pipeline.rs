@@ -51,8 +51,8 @@ mod rt;
 use vdn_dsp::DelayLine;
 use vdn_dsp::resample::{self, Decimator3, FACTOR, Interpolator3};
 use vdn_types::{
-    Basis, ChainMismatch, CheckedGraph, ContentId, FrameCtx, LatencyItem, LatencyLedger, Model, ModelId,
-    NodeKind, ProcessingGraph, StageChain, Status, match_chain,
+    Basis, ChainMismatch, CheckedGraph, ContentId, FrameCtx, LatencyItem, LatencyLedger, Model,
+    ModelId, NodeKind, ProcessingGraph, StageChain, Status, match_chain,
 };
 
 pub use error::PipelineError;
