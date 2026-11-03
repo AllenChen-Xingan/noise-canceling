@@ -2,36 +2,26 @@
 //!
 //! | 规则 | 查什么 | 放行 |
 //! |---|---|---|
-//! | R-RATE | `src/**/*.rs` 的代码里（注释、字符串不算）不许出现 `16000` / `16_000` / `48000` / `48_000` 字面量（可带 `.0` 与类型后缀）；一律引用 `vdn_types::{IO_RATE, MODEL_RATE}` | 见下 |
+//! | R-RATE | `src/**/*.rs` 的代码里（注释、字符串不算）不许出现 `16000` / `16_000` / `48000` / `48_000` 字面量（可带 `.0` 与类型后缀）；**测试与示例也一样**，一律引用 `vdn_types::{IO_RATE, MODEL_RATE}` | 见下 |
 //!
-//! 放行清单（要窄，每条有理由）：
+//! 放行只有两种：
 //! - [`RATE_FILE`]：正本本身
-//! - [`LOW_LEVEL`] 里的底层 crate 的**测试代码**（`tests/`、`examples/` 目录；内联的 `#[cfg(test)] mod x { … }` 到它闭合为止；
-//!   经 `#[cfg(test)] mod x;` 引入的整个文件，见 `test_modules.rs`）：
-//!   这些 crate 不依赖 `vdn-types`（shm、rt-thread 是 forbid 写死的），测试里造信号要写采样率。
-//!   它们的非测试代码照样挡——要用采样率就改成参数传入（大总管定，2026-11-02）
-//! - 单行：行尾注释写 `tidy: 非采样率：<理由>`（数值恰好相同、含义不是采样率时）
+//! - 单行：行尾注释写 `tidy: 非采样率：<理由>`（数值恰好相同、含义不是采样率时；理由不能空）
 //!
-//! 边界（写明，免得以为查全了）：只认这四种写法；`48 * 1000`、`3 * 16_000` 这类算出来的查不到；
-//! 内联测试模块按花括号深度认边界（代码已剥掉注释与字符串）；放行标记后必须写理由。
+//! 为什么测试代码也查（大总管 8d 定，2026-11-02）：要放行测试代码就得用文本猜「哪段是测试」，
+//! codex 连续几轮挑出绕过点（同一行闭合、`mod tests;` 声明等）。测试改用常量没有坏处；不依赖 `vdn-types` 的
+//! 底层 crate（shm、rt-thread、dsp）把它加成 dev 依赖即可（forbid 只管普通依赖闭包，shm 已有先例）。
+//!
+//! 边界（写明，免得以为查全了）：只认这四种写法；`48 * 1000`、`3 * 16_000` 这类算出来的查不到。
 
 use std::fs;
 use std::path::Path;
 
 use crate::single_source::lex_lines;
-use crate::test_modules::{mod_decl, test_module_files};
 use crate::tidy::rs_files;
 
 /// 采样率正本。
 pub const RATE_FILE: &str = "src/types/src/rate.rs";
-/// 不依赖 `vdn-types` 的底层 crate 目录（测试代码放行）。
-pub const LOW_LEVEL: [&str; 5] = [
-    "src/shm/",
-    "src/rt-thread/",
-    "src/hal/",
-    "src/dsp/",
-    "src/backend-ort/",
-];
 const ALLOW: &str = "tidy: 非采样率：";
 const RATES: [&str; 4] = ["16000", "16_000", "48000", "48_000"];
 
@@ -82,14 +72,6 @@ pub fn has_rate_literal(code: &str) -> bool {
     false
 }
 
-/// 这个文件是不是底层 crate 的测试目录 / 示例目录。
-fn low_level_test_file(rel: &str) -> bool {
-    LOW_LEVEL.iter().any(|c| {
-        rel.strip_prefix(c)
-            .is_some_and(|r| r.starts_with("tests/") || r.starts_with("examples/"))
-    })
-}
-
 /// 放行标记后面有没有写理由。
 fn has_allow_reason(comment: &str) -> bool {
     comment
@@ -97,54 +79,15 @@ fn has_allow_reason(comment: &str) -> bool {
         .is_some_and(|(_, r)| !r.trim().is_empty())
 }
 
-/// 一个文件的问题。`test_file` = 这个文件经 `#[cfg(test)] mod x;` 引入（只在测试编译）。
-pub fn rate_problems(rel: &str, src: &str, test_file: bool) -> Vec<String> {
-    if rel == RATE_FILE || low_level_test_file(rel) {
-        return Vec::new();
-    }
-    let low_level = LOW_LEVEL.iter().any(|c| rel.starts_with(c));
-    if low_level && test_file {
+/// 一个文件的问题。
+pub fn rate_problems(rel: &str, src: &str) -> Vec<String> {
+    if rel == RATE_FILE {
         return Vec::new();
     }
     let raw: Vec<&str> = src.lines().collect();
     let mut out = Vec::new();
-    let mut depth = 0i64;
-    // 内联测试模块 `#[cfg(test)] mod x { … }`：进入时的深度；按字符位置在它闭合处结束放行，
-    // 同一行闭合之后的代码照查（codex 第 2 轮 P2 #4、第 3 轮 P2 #3）
-    let mut test_from: Option<i64> = None;
-    let mut cfg_test_prev = false;
     for (i, (code, comment)) in lex_lines(src).iter().enumerate() {
-        let t = code.trim();
-        if test_from.is_none()
-            && cfg_test_prev
-            && let Some((_, true)) = mod_decl(t)
-        {
-            test_from = Some(depth);
-        }
-        if !t.is_empty() {
-            cfg_test_prev = t == "#[cfg(test)]";
-        }
-        // 这一行里不在测试模块中的部分（测试部分换成空格）
-        let mut prod = String::with_capacity(code.len());
-        for c in code.chars() {
-            prod.push(if test_from.is_some() { ' ' } else { c });
-            match c {
-                '{' => depth += 1,
-                '}' => {
-                    depth -= 1;
-                    if test_from.is_some_and(|d| depth <= d) {
-                        test_from = None;
-                    }
-                }
-                _ => {}
-            }
-        }
-        let checked = if low_level {
-            prod.as_str()
-        } else {
-            code.as_str()
-        };
-        if has_rate_literal(checked) && !has_allow_reason(comment) {
+        if has_rate_literal(code) && !has_allow_reason(comment) {
             let line = raw.get(i).map_or("", |l| l.trim());
             out.push(format!(
                 "{rel}:{}：采样率字面量（R-RATE）——改用 vdn_types::IO_RATE / MODEL_RATE（正本 {RATE_FILE}）；不是采样率就在行尾写 `// {ALLOW}<理由>`：{line}",
@@ -161,13 +104,12 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
     }
     let mut all = Vec::new();
     rs_files(&root.join("src"), &mut all);
-    let tests = test_module_files(&all);
     for f in &all {
         let Ok(rel) = f.strip_prefix(root).map(|p| p.display().to_string()) else {
             continue;
         };
         match fs::read_to_string(f) {
-            Ok(src) => problems.extend(rate_problems(&rel, &src, tests.contains(f))),
+            Ok(src) => problems.extend(rate_problems(&rel, &src)),
             Err(e) => problems.push(format!("读 {rel}：{e}（R-RATE）")),
         }
     }
@@ -214,67 +156,36 @@ mod tests {
     #[test]
     fn comments_and_strings_do_not_count() {
         let src = "// 48_000 Hz\nlet s = \"16000\";\n/* 48000 */\n";
-        assert!(rate_problems("src/eval/src/a.rs", src, false).is_empty());
+        assert!(rate_problems("src/eval/src/a.rs", src).is_empty());
     }
 
     #[test]
     fn allow_marker_needs_reason_text() {
         let ok = "let n = 48_000; // tidy: 非采样率：一分钟的毫秒数之类\n";
-        assert!(rate_problems("src/eval/src/a.rs", ok, false).is_empty());
+        assert!(rate_problems("src/eval/src/a.rs", ok).is_empty());
         let bad = "let n = 48_000; // 非采样率\n";
-        assert_eq!(rate_problems("src/eval/src/a.rs", bad, false).len(), 1);
+        assert_eq!(rate_problems("src/eval/src/a.rs", bad).len(), 1);
     }
 
     #[test]
     fn rate_file_itself_is_allowed() {
-        assert!(rate_problems(RATE_FILE, "pub const IO_RATE: u32 = 48_000;\n", false).is_empty());
+        assert!(rate_problems(RATE_FILE, "pub const IO_RATE: u32 = 48_000;\n").is_empty());
     }
 
-    /// 底层 crate：测试代码放行，非测试代码照挡；别的 crate 测试也挡
+    /// 负例（会红）：测试代码、示例、底层 crate、内联测试模块里的字面量一律照挡（不再识别测试区）
     #[test]
-    fn low_level_tests_only() {
+    fn test_code_is_checked_too() {
         let src = "fn f() -> u32 { 48_000 }\n#[cfg(test)]\nmod tests {\n    fn g() { let _ = 48_000; }\n}\n";
-        let p = rate_problems("src/shm/src/wait.rs", src, false);
-        assert_eq!(p.len(), 1, "{p:?}");
-        assert!(p[0].contains(":1："));
-        assert!(rate_problems("src/shm/tests/ring.rs", "let r = 48_000;\n", false).is_empty());
-        assert!(rate_problems("src/dsp/examples/x.rs", "let r = 48_000;\n", false).is_empty());
-        assert_eq!(rate_problems("src/eval/src/a.rs", src, false).len(), 2);
-        assert_eq!(
-            rate_problems("src/eval/tests/a.rs", "let r = 48_000;\n", false).len(),
-            1
-        );
+        assert_eq!(rate_problems("src/shm/src/wait.rs", src).len(), 2);
+        for rel in ["src/shm/tests/ring.rs", "src/dsp/examples/x.rs", "src/eval/tests/a.rs", "src/shm/src/tests.rs"] {
+            assert_eq!(rate_problems(rel, "let r = 48_000;\n").len(), 1, "{rel}");
+        }
     }
 
     /// 负例（codex 第 2 轮 P2 #5）：放行标记后面没写理由不算放行
     #[test]
     fn empty_allow_reason_is_flagged() {
         let src = "let n = 48_000; // tidy: 非采样率：\nlet m = 48_000; // tidy: 非采样率：   \n";
-        assert_eq!(rate_problems("src/eval/src/a.rs", src, false).len(), 2);
-    }
-
-    /// 负例（codex 第 2 轮 P2 #4）：底层 crate 里测试模块闭合后的生产代码照挡；`mod tests;` 声明不开放行区
-    #[test]
-    fn exemption_ends_with_test_module() {
-        let src = "#[cfg(test)]\nmod tests {\n    fn g() { let _ = 48_000; }\n}\nfn after() -> u32 { 48_000 }\n";
-        let p = rate_problems("src/shm/src/a.rs", src, false);
-        assert_eq!(p.len(), 1, "{p:?}");
-        assert!(p[0].contains(":5："), "{p:?}");
-        let decl = "#[cfg(test)]\nmod tests;\nfn after() -> u32 { 48_000 }\n";
-        assert_eq!(rate_problems("src/shm/src/a.rs", decl, false).len(), 1);
-        // 同一行闭合后再声明的生产项照挡（codex 第 3 轮 P2 #3）
-        let same_line =
-            "#[cfg(test)]\nmod tests { fn g() { let _ = 48_000; } } const SR: u32 = 48000;\n";
-        let p = rate_problems("src/shm/src/a.rs", same_line, false);
-        assert_eq!(p.len(), 1, "{p:?}");
-        // 测试模块里的字面量仍放行，闭合后同一行打开的生产模块不算测试
-        let opens = "#[cfg(test)]\nmod tests {\n    fn g() { let _ = 48_000; }\n} mod prod {\n    const SR: u32 = 48_000;\n}\n";
-        assert_eq!(rate_problems("src/shm/src/a.rs", opens, false).len(), 1);
-        // 经 `#[cfg(test)] mod tests;` 引入的测试文件整份放行（只限底层 crate）
-        assert!(rate_problems("src/shm/src/tests.rs", "let r = 48_000;\n", true).is_empty());
-        assert_eq!(
-            rate_problems("src/eval/src/tests.rs", "let r = 48_000;\n", true).len(),
-            1
-        );
+        assert_eq!(rate_problems("src/eval/src/a.rs", src).len(), 2);
     }
 }
