@@ -30,8 +30,10 @@ pub struct PolishChain {
 }
 
 impl PolishChain {
+    /// `initial` 先按描述表夹进范围（[`PolishParams::clamped`]）。
     pub fn new(n_fft: usize, hop: usize, sr: f32, initial: PolishParams) -> Self {
         let fps = sr / hop as f32;
+        let initial = initial.clamped();
         Self {
             spectral: SpectralPolish::new(n_fft, hop, sr),
             agc: Agc::new(hop, sr),
@@ -40,20 +42,22 @@ impl PolishChain {
             cur: initial,
             t: 1.0,
             step: 1.0,
-            ramp_s: 1.0,
+            ramp_s: vdn_types::desc::POLISH_RAMP_S.default,
             fps,
             last_vp: None,
             spec_ran: false,
         }
     }
 
-    /// 参数过渡时长（秒），默认 1 s。
+    /// 参数过渡时长（秒），默认与范围见 `vdn_types::desc::POLISH_RAMP_S`；越界夹住。
     pub fn set_ramp_s(&mut self, s: f32) {
-        self.ramp_s = s.max(0.0);
+        self.ramp_s = vdn_types::desc::POLISH_RAMP_S.clamp(s);
     }
 
     /// 送一组新目标参数（判断回路调用，实时侧只是记下来，下一帧开始过渡）。
+    /// 参数先按描述表夹进范围，实时侧不会见到越界值。
     pub fn set_target(&mut self, p: PolishParams) {
+        let p = p.clamped();
         if p == self.to {
             return;
         }

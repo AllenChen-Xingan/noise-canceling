@@ -79,6 +79,14 @@ fn main() {
             ..PolishParams::DEFAULT
         }
     });
+    // 范围的正本是 vdn_types::desc：越界直接报错退出，不悄悄夹值
+    if let Some(p) = &fixed {
+        p.validate()
+            .unwrap_or_else(|e| panic!("--params 越界：{e}"));
+    }
+    vdn_types::desc::POLISH_RAMP_S
+        .check(ramp)
+        .unwrap_or_else(|e| panic!("--ramp 越界：{e}"));
     if let Some(p) = fixed {
         chain.set_ramp_s(0.0);
         chain.set_target(p);
