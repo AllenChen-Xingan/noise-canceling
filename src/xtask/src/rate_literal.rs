@@ -177,7 +177,12 @@ mod tests {
     fn test_code_is_checked_too() {
         let src = "fn f() -> u32 { 48_000 }\n#[cfg(test)]\nmod tests {\n    fn g() { let _ = 48_000; }\n}\n";
         assert_eq!(rate_problems("src/shm/src/wait.rs", src).len(), 2);
-        for rel in ["src/shm/tests/ring.rs", "src/dsp/examples/x.rs", "src/eval/tests/a.rs", "src/shm/src/tests.rs"] {
+        for rel in [
+            "src/shm/tests/ring.rs",
+            "src/dsp/examples/x.rs",
+            "src/eval/tests/a.rs",
+            "src/shm/src/tests.rs",
+        ] {
             assert_eq!(rate_problems(rel, "let r = 48_000;\n").len(), 1, "{rel}");
         }
     }

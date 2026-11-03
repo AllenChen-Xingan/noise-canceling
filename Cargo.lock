@@ -1911,6 +1911,7 @@ version = "0.1.0"
 dependencies = [
  "assert_no_alloc",
  "realfft",
+ "vdn-types",
 ]
 
 [[package]]
@@ -1981,6 +1982,7 @@ version = "0.1.0"
 dependencies = [
  "libc",
  "mach2",
+ "vdn-types",
 ]
 
 [[package]]
@@ -2016,6 +2018,7 @@ dependencies = [
  "libc",
  "loom",
  "vdn-rt-thread",
+ "vdn-types",
 ]
 
 [[package]]
