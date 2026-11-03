@@ -26,8 +26,8 @@ fn full() -> SessionRecord {
 #[test]
 fn session_roundtrips_with_graph_and_model() {
     let r = full();
-    assert_eq!(r.header.graph, Some(G.content_id()));
-    assert_eq!(r.header.model, Some(ModelId::FastEnhancerM));
+    assert_eq!(r.header.graph(), Some(G.content_id()));
+    assert_eq!(r.header.model(), Some(ModelId::FastEnhancerM));
     let text = r.to_text();
     assert!(text.starts_with("vdn-session = 2\n"), "{text}");
     assert!(text.contains(&format!("graph = {}\n", G.content_id())));
@@ -39,8 +39,7 @@ fn session_roundtrips_with_graph_and_model() {
 #[test]
 fn session_roundtrips_without_graph() {
     let mut r = full();
-    r.header.graph = None;
-    r.header.model = None;
+    r.header.clear_graph();
     let text = r.to_text();
     assert!(!text.contains("graph =") && !text.contains("model ="));
     assert_eq!(SessionRecord::from_text(&text).unwrap(), r);
@@ -57,8 +56,8 @@ fn format_1_still_reads() {
     );
     let r = SessionRecord::from_text(&v1).unwrap();
     assert_eq!(r.header.rate, 48_000);
-    assert_eq!(r.header.graph, None);
-    assert_eq!(r.header.model, None);
+    assert_eq!(r.header.graph(), None);
+    assert_eq!(r.header.model(), None);
     assert_eq!(r.events, [e]);
     // 再写出就是格式 2
     assert!(r.to_text().starts_with("vdn-session = 2\n"));
@@ -80,7 +79,7 @@ fn legacy_model_name_still_reads() {
         .to_text()
         .replace(&format!("model = {fem}"), "model = fastenhancer_m");
     let r = SessionRecord::from_text(&text).unwrap();
-    assert_eq!(r.header.model, Some(ModelId::FastEnhancerM));
+    assert_eq!(r.header.model(), Some(ModelId::FastEnhancerM));
     assert!(r.to_text().contains(&format!("model = {fem}\n")));
 }
 
@@ -129,17 +128,17 @@ fn header_keys_match_text() {
 fn set_graph_tracks_graph_changes() {
     let mut h = SessionHeader::default();
     h.set_graph(&CheckedGraph::unchecked(G));
-    let a = h.graph;
+    let a = h.graph();
     h.set_graph(&CheckedGraph::unchecked(ProcessingGraph {
         stages: &[&FLOOR],
         ..G
     }));
-    assert_ne!(h.graph, a);
+    assert_ne!(h.graph(), a);
     h.set_graph(&CheckedGraph::unchecked(ProcessingGraph::bare(
         ModelId::Gtcrn,
         ContentId::of(b"w"),
     )));
-    assert_eq!(h.model, Some(ModelId::Gtcrn));
+    assert_eq!(h.model(), Some(ModelId::Gtcrn));
 }
 
 /// codex 第 1 轮 #2：逐键删除——删必填键必须拒读，删可缺省键照常能读；同一个键写两次拒读。
