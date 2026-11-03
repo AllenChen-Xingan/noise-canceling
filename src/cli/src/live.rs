@@ -444,7 +444,7 @@ mod tests {
         assert!(!lo.all_zero());
         assert_eq!(
             judge(&li, &lo, true, 0.0),
-            Verdict::Pass {
+            LiveVerdict::Pass {
                 quiet: false,
                 diff_db: Some(d)
             }
@@ -484,7 +484,6 @@ mod tests {
         assert!(gain_linear(-61.0).is_err());
         assert!(gain_linear(f64::NAN).is_err());
     }
-
 
     /// V5（人判）：真麦克风 → 直通 → 耳机 5 秒，同时录下送进耳机的那一路。会开麦、出声，所以默认不跑。
     ///
