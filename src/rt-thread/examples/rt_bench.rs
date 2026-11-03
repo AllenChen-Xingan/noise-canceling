@@ -181,7 +181,11 @@ struct Flags {
 impl Flags {
     fn parse(mode: &str, period: Duration) -> Self {
         let mode = if mode == "tc_wg" { "tc+wg" } else { mode };
-        let mut f = Flags { qos: false, tc: false, wg: None };
+        let mut f = Flags {
+            qos: false,
+            tc: false,
+            wg: None,
+        };
         for t in mode.split('+') {
             match t {
                 "qos" => f.qos = true,
@@ -253,7 +257,16 @@ fn main() {
     // all = 上一轮的四档；qos = 本轮（QoS 单独 / 加 tc / 加 tc + 工作区间，工作区间分宽截止期与 1 ms 紧截止期）
     let modes: Vec<&str> = match mode.as_str() {
         "all" => vec!["none", "tc", "tc+wg", "qos"],
-        "qos_set" => vec!["none", "qos", "tc", "qos+tc", "tc+wg", "tc+wg@1000", "qos+tc+wg", "qos+tc+wg@1000"],
+        "qos_set" => vec![
+            "none",
+            "qos",
+            "tc",
+            "qos+tc",
+            "tc+wg",
+            "tc+wg@1000",
+            "qos+tc+wg",
+            "qos+tc+wg@1000",
+        ],
         _ => vec![mode.as_str()],
     };
     let table = modes.len() > 1;

@@ -148,10 +148,15 @@ fn from_measured_adds_margin_and_clamps() {
     assert_eq!(p.computation_ns, 6_000_000);
     // 余量小于 1 按 1 算；乘出来超过周期就夹到周期
     assert_eq!(RtParams::from_measured(1_000, 800, 0.5).computation_ns, 800);
-    assert_eq!(RtParams::from_measured(1_000, 900, 2.0).computation_ns, 1_000);
+    assert_eq!(
+        RtParams::from_measured(1_000, 900, 2.0).computation_ns,
+        1_000
+    );
     // 实测 0 也给出合法参数（computation ≥ 1），能通过 promote 的校验
     let z = RtParams::from_measured(2_000_000, 0, MEASURED_MARGIN);
     assert_eq!(z.computation_ns, 1);
     #[cfg(target_os = "macos")]
-    std::thread::spawn(move || promote_current(p).unwrap()).join().unwrap();
+    std::thread::spawn(move || promote_current(p).unwrap())
+        .join()
+        .unwrap();
 }

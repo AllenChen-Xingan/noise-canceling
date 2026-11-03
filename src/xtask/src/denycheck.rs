@@ -37,7 +37,10 @@ pub fn parse_bans(toml: &str) -> Vec<Ban> {
             let krate = quoted(after_crate).into_iter().next()?;
             let w = l.split("wrappers =").nth(1)?;
             let list = w.split('[').nth(1)?.split(']').next()?;
-            Some(Ban { krate, wrappers: quoted(list) })
+            Some(Ban {
+                krate,
+                wrappers: quoted(list),
+            })
         })
         .collect()
 }
@@ -48,7 +51,10 @@ pub fn check_bans(meta: &Meta, deny_toml: &str, problems: &mut Vec<String>) {
     for ban in parse_bans(deny_toml) {
         for w in &ban.wrappers {
             if !names.contains(w.as_str()) {
-                problems.push(format!("deny.toml：{} 的名单里有 {w}，但它不是本仓 crate", ban.krate));
+                problems.push(format!(
+                    "deny.toml：{} 的名单里有 {w}，但它不是本仓 crate",
+                    ban.krate
+                ));
             }
         }
         for (id, name, _, vdn) in &members {
@@ -76,7 +82,10 @@ pub fn check_bans(meta: &Meta, deny_toml: &str, problems: &mut Vec<String>) {
 /// crate 目录里有没有测试。
 pub fn has_tests(dir: &Path) -> bool {
     let tests_dir = fs::read_dir(dir.join("tests"))
-        .map(|rd| rd.flatten().any(|e| e.path().extension().is_some_and(|x| x == "rs")))
+        .map(|rd| {
+            rd.flatten()
+                .any(|e| e.path().extension().is_some_and(|x| x == "rs"))
+        })
         .unwrap_or(false);
     if tests_dir {
         return true;
@@ -106,8 +115,14 @@ deny = [
         assert_eq!(
             parse_bans(t),
             vec![
-                Ban { krate: "ort".into(), wrappers: vec!["vdn-backend-ort".into(), "vdn-eval".into()] },
-                Ban { krate: "cpal".into(), wrappers: vec!["vdn-io-macos".into()] },
+                Ban {
+                    krate: "ort".into(),
+                    wrappers: vec!["vdn-backend-ort".into(), "vdn-eval".into()]
+                },
+                Ban {
+                    krate: "cpal".into(),
+                    wrappers: vec!["vdn-io-macos".into()]
+                },
             ]
         );
     }

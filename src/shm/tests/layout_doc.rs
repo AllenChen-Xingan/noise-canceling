@@ -11,7 +11,10 @@ const SRC: &str = include_str!("../src/layout.rs");
 /// `pub struct Name { pub a: T, pub b: T }` → [a, b]（按源码顺序）
 fn struct_fields(name: &str) -> Vec<String> {
     let head = format!("pub struct {name} {{");
-    let start = SRC.find(&head).unwrap_or_else(|| panic!("layout.rs 里没有 {name}")) + head.len();
+    let start = SRC
+        .find(&head)
+        .unwrap_or_else(|| panic!("layout.rs 里没有 {name}"))
+        + head.len();
     let body = &SRC[start..start + SRC[start..].find('}').unwrap()];
     body.lines()
         .map(str::trim)
@@ -38,10 +41,26 @@ fn doc_fields(marker: &str, end: char) -> Vec<String> {
 
 #[test]
 fn doc_field_lists_match_structs() {
-    assert_eq!(doc_fields("第 0 行：", '（'), struct_fields("ConfigLine"), "配置行");
-    assert_eq!(doc_fields("第 1 行：", ' '), struct_fields("BeatLine"), "心跳行");
-    assert_eq!(doc_fields("生产方一行（", '）'), struct_fields("ProdLine"), "生产方行");
-    assert_eq!(doc_fields("消费方一行（", '）'), struct_fields("ConsLine"), "消费方行");
+    assert_eq!(
+        doc_fields("第 0 行：", '（'),
+        struct_fields("ConfigLine"),
+        "配置行"
+    );
+    assert_eq!(
+        doc_fields("第 1 行：", ' '),
+        struct_fields("BeatLine"),
+        "心跳行"
+    );
+    assert_eq!(
+        doc_fields("生产方一行（", '）'),
+        struct_fields("ProdLine"),
+        "生产方行"
+    );
+    assert_eq!(
+        doc_fields("消费方一行（", '）'),
+        struct_fields("ConsLine"),
+        "消费方行"
+    );
 }
 
 #[test]
@@ -55,5 +74,9 @@ fn version_history_ends_at_current_version() {
         .filter_map(|l| l.split('：').next()?.parse::<u32>().ok())
         .next()
         .expect("VERSION 上方没有版本历史");
-    assert_eq!(last, vdn_shm::layout::VERSION, "版本历史最后一条 ≠ VERSION：升版本时两处一起改");
+    assert_eq!(
+        last,
+        vdn_shm::layout::VERSION,
+        "版本历史最后一条 ≠ VERSION：升版本时两处一起改"
+    );
 }
