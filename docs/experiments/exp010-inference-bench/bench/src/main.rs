@@ -521,6 +521,17 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let frames = arg_usize(args, "--frames", 6000);
     let warm = arg_usize(args, "--warmup", 200);
     let pace: f64 = arg_str(args, "--pace-ms", "0").parse()?;
+    // 入口校验（codex 第 5 轮 #1 #2）：计时帧数 > 0；节奏必须有限、非负，且不超过 10 秒一帧
+    if frames == 0 {
+        return Err("--frames 必须 > 0".into());
+    }
+    let total = frames
+        .checked_add(warm)
+        .and_then(|v| v.checked_add(1))
+        .ok_or("--frames + --warmup 溢出")?;
+    if !pace.is_finite() || !(0.0..=10_000.0).contains(&pace) {
+        return Err(format!("--pace-ms {pace} 无效：要有限、非负、≤ 10000").into());
+    }
     let qos = arg_str(args, "--qos", "ui");
     // 计时线程的调度等级：ui = QOS_CLASS_USER_INTERACTIVE（默认，尽量留在性能核；实时音频线程只会更高），
     // default = 不设。审稿发现不设时 tract 的 p50 在一次运行里分两档。
@@ -576,7 +587,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     } else {
         prepare(path)?
     };
-    let inputs = frames_for(model, &audio, frames + warm + 1, &shapes)?;
+    let inputs = frames_for(model, &audio, total, &shapes)?;
     let mut x = inputs[0].clone();
     let fp_before = footprint_mb(); // 加载前（输入帧、ORT 环境已在内存里）
     // 冷启动：打开 + 第一帧
