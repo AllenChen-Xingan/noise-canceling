@@ -1,0 +1,12 @@
+# exp008 对照用：stdin 读 f32le（48 kHz，±1 量级）→ RNNoise（nnnoiseless，只调用）→ stdout 写 f32le。
+# 构建：CARGO_TARGET_DIR=<MAIN>/_tmp/exp008-cargo cargo build --release
+[package]
+name = "exp008-rnnoise-raw"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+nnnoiseless = { path = "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/nnnoiseless", default-features = false }

@@ -1,0 +1,3657 @@
+{
+ "eval_build": "20261031-102406-0c67",
+ "train_truth": "../exp006-scene-sim/builds/20261030235558-fed2/truth.jsonl",
+ "train_split": "test",
+ "n_train": 280,
+ "n_train_speakers": 20,
+ "train_synth_fns": [
+  "MapleLeafRag",
+  "synth_dishes",
+  "synth_hvac",
+  "synth_keyboard",
+  "synth_music",
+  "synth_room",
+  "talkersx1",
+  "talkersx2",
+  "talkersx3"
+ ],
+ "summary": {
+  "A": {
+   "n": 174,
+   "n_hit": 174,
+   "by_kind": {
+    "speaker": 174,
+    "synth_fn": 24,
+    "neighbor": 54
+   }
+  },
+  "B": {
+   "n": 174,
+   "n_hit": 23,
+   "by_kind": {
+    "demand_time": 11,
+    "synth_fn": 12
+   }
+  }
+ },
+ "n_unknown_babble": 36,
+ "pass": false,
+ "rows": [
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 0,
+   "level": -5.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 0,
+   "level": 0.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 0,
+   "level": 5.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 0,
+   "level": 10.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 0,
+   "level": 20.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 1,
+   "level": -5.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 1,
+   "level": 0.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 1,
+   "level": 5.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 1,
+   "level": 10.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 1,
+   "level": 20.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 2,
+   "level": -5.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 2,
+   "level": 0.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 2,
+   "level": 5.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 2,
+   "level": 10.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 2,
+   "level": 20.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 3,
+   "level": -5.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 3,
+   "level": 0.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 3,
+   "level": 5.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 3,
+   "level": 10.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 3,
+   "level": 20.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 4,
+   "level": -5.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 4,
+   "level": 0.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 4,
+   "level": 5.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 4,
+   "level": 10.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 4,
+   "level": 20.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 5,
+   "level": -5.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 5,
+   "level": 0.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 5,
+   "level": 5.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 5,
+   "level": 10.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "A",
+   "clip": 5,
+   "level": 20.0,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 0,
+   "level": -5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 0,
+   "level": 0.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 0,
+   "level": 5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 0,
+   "level": 10.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 0,
+   "level": 20.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 1,
+   "level": -5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 1,
+   "level": 0.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 1,
+   "level": 5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 1,
+   "level": 10.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 1,
+   "level": 20.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 2,
+   "level": -5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 2,
+   "level": 0.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 2,
+   "level": 5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 2,
+   "level": 10.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 2,
+   "level": 20.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 3,
+   "level": -5.0,
+   "hits": [
+    "demand_time"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 3,
+   "level": 0.0,
+   "hits": [
+    "demand_time"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 3,
+   "level": 5.0,
+   "hits": [
+    "demand_time"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 3,
+   "level": 10.0,
+   "hits": [
+    "demand_time"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 3,
+   "level": 20.0,
+   "hits": [
+    "demand_time"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 4,
+   "level": -5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 4,
+   "level": 0.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 4,
+   "level": 5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 4,
+   "level": 10.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 4,
+   "level": 20.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 5,
+   "level": -5.0,
+   "hits": [
+    "demand_time"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 5,
+   "level": 0.0,
+   "hits": [
+    "demand_time"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 5,
+   "level": 5.0,
+   "hits": [
+    "demand_time"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 5,
+   "level": 10.0,
+   "hits": [
+    "demand_time"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SNR",
+   "gen": "B",
+   "clip": 5,
+   "level": 20.0,
+   "hits": [
+    "demand_time"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 0,
+   "level": "stationary",
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 0,
+   "level": "cafe",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 0,
+   "level": "babble",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 0,
+   "level": "clatter",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 0,
+   "level": "traffic",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 0,
+   "level": "music",
+   "hits": [
+    "speaker",
+    "synth_fn:synth_music"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 1,
+   "level": "stationary",
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 1,
+   "level": "cafe",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 1,
+   "level": "babble",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 1,
+   "level": "clatter",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 1,
+   "level": "traffic",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 1,
+   "level": "music",
+   "hits": [
+    "speaker",
+    "synth_fn:synth_music"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 2,
+   "level": "stationary",
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 2,
+   "level": "cafe",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 2,
+   "level": "babble",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 2,
+   "level": "clatter",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 2,
+   "level": "traffic",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 2,
+   "level": "music",
+   "hits": [
+    "speaker",
+    "synth_fn:synth_music"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 3,
+   "level": "stationary",
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 3,
+   "level": "cafe",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 3,
+   "level": "babble",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 3,
+   "level": "clatter",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 3,
+   "level": "traffic",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 3,
+   "level": "music",
+   "hits": [
+    "speaker",
+    "synth_fn:synth_music"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 4,
+   "level": "stationary",
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 4,
+   "level": "cafe",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 4,
+   "level": "babble",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 4,
+   "level": "clatter",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 4,
+   "level": "traffic",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 4,
+   "level": "music",
+   "hits": [
+    "speaker",
+    "synth_fn:synth_music"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 5,
+   "level": "stationary",
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 5,
+   "level": "cafe",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 5,
+   "level": "babble",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 5,
+   "level": "clatter",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 5,
+   "level": "traffic",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "A",
+   "clip": 5,
+   "level": "music",
+   "hits": [
+    "speaker",
+    "synth_fn:synth_music"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 0,
+   "level": "stationary",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 0,
+   "level": "cafe",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 0,
+   "level": "babble",
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 0,
+   "level": "clatter",
+   "hits": [
+    "synth_fn:synth_dishes"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 0,
+   "level": "traffic",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 0,
+   "level": "music",
+   "hits": [
+    "synth_fn:MapleLeafRag"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 1,
+   "level": "stationary",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 1,
+   "level": "cafe",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 1,
+   "level": "babble",
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 1,
+   "level": "clatter",
+   "hits": [
+    "synth_fn:synth_dishes"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 1,
+   "level": "traffic",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 1,
+   "level": "music",
+   "hits": [
+    "synth_fn:MapleLeafRag"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 2,
+   "level": "stationary",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 2,
+   "level": "cafe",
+   "hits": [
+    "demand_time"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 2,
+   "level": "babble",
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 2,
+   "level": "clatter",
+   "hits": [
+    "synth_fn:synth_dishes"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 2,
+   "level": "traffic",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 2,
+   "level": "music",
+   "hits": [
+    "synth_fn:MapleLeafRag"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 3,
+   "level": "stationary",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 3,
+   "level": "cafe",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 3,
+   "level": "babble",
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 3,
+   "level": "clatter",
+   "hits": [
+    "synth_fn:synth_dishes"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 3,
+   "level": "traffic",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 3,
+   "level": "music",
+   "hits": [
+    "synth_fn:MapleLeafRag"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 4,
+   "level": "stationary",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 4,
+   "level": "cafe",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 4,
+   "level": "babble",
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 4,
+   "level": "clatter",
+   "hits": [
+    "synth_fn:synth_dishes"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 4,
+   "level": "traffic",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 4,
+   "level": "music",
+   "hits": [
+    "synth_fn:MapleLeafRag"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 5,
+   "level": "stationary",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 5,
+   "level": "cafe",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 5,
+   "level": "babble",
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 5,
+   "level": "clatter",
+   "hits": [
+    "synth_fn:synth_dishes"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 5,
+   "level": "traffic",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-NOISE",
+   "gen": "B",
+   "clip": 5,
+   "level": "music",
+   "hits": [
+    "synth_fn:MapleLeafRag"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 0,
+   "level": "car",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 0,
+   "level": "office",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 0,
+   "level": "cafe",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 0,
+   "level": "hall",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 1,
+   "level": "car",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 1,
+   "level": "office",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 1,
+   "level": "cafe",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 1,
+   "level": "hall",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 2,
+   "level": "car",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 2,
+   "level": "office",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 2,
+   "level": "cafe",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 2,
+   "level": "hall",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 3,
+   "level": "car",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 3,
+   "level": "office",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 3,
+   "level": "cafe",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 3,
+   "level": "hall",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 4,
+   "level": "car",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 4,
+   "level": "office",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 4,
+   "level": "cafe",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 4,
+   "level": "hall",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 5,
+   "level": "car",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 5,
+   "level": "office",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 5,
+   "level": "cafe",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "A",
+   "clip": 5,
+   "level": "hall",
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 0,
+   "level": "car",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 0,
+   "level": "office",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 0,
+   "level": "cafe",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 0,
+   "level": "hall",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 1,
+   "level": "car",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 1,
+   "level": "office",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 1,
+   "level": "cafe",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 1,
+   "level": "hall",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 2,
+   "level": "car",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 2,
+   "level": "office",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 2,
+   "level": "cafe",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 2,
+   "level": "hall",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 3,
+   "level": "car",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 3,
+   "level": "office",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 3,
+   "level": "cafe",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 3,
+   "level": "hall",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 4,
+   "level": "car",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 4,
+   "level": "office",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 4,
+   "level": "cafe",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 4,
+   "level": "hall",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 5,
+   "level": "car",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 5,
+   "level": "office",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 5,
+   "level": "cafe",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-RT60",
+   "gen": "B",
+   "clip": 5,
+   "level": "hall",
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 0,
+   "level": null,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 0,
+   "level": 20.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 0,
+   "level": 10.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 0,
+   "level": 5.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 0,
+   "level": 0.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 0,
+   "level": -6.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 1,
+   "level": null,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 1,
+   "level": 20.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 1,
+   "level": 10.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 1,
+   "level": 5.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 1,
+   "level": 0.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 1,
+   "level": -6.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 2,
+   "level": null,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 2,
+   "level": 20.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 2,
+   "level": 10.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 2,
+   "level": 5.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 2,
+   "level": 0.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 2,
+   "level": -6.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 3,
+   "level": null,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 3,
+   "level": 20.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 3,
+   "level": 10.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 3,
+   "level": 5.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 3,
+   "level": 0.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 3,
+   "level": -6.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 4,
+   "level": null,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 4,
+   "level": 20.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 4,
+   "level": 10.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 4,
+   "level": 5.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 4,
+   "level": 0.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 4,
+   "level": -6.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 5,
+   "level": null,
+   "hits": [
+    "speaker"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 5,
+   "level": 20.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 5,
+   "level": 10.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 5,
+   "level": 5.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 5,
+   "level": 0.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "A",
+   "clip": 5,
+   "level": -6.0,
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 0,
+   "level": null,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 0,
+   "level": 20.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 0,
+   "level": 10.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 0,
+   "level": 5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 0,
+   "level": 0.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 0,
+   "level": -6.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 1,
+   "level": null,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 1,
+   "level": 20.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 1,
+   "level": 10.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 1,
+   "level": 5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 1,
+   "level": 0.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 1,
+   "level": -6.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 2,
+   "level": null,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 2,
+   "level": 20.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 2,
+   "level": 10.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 2,
+   "level": 5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 2,
+   "level": 0.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 2,
+   "level": -6.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 3,
+   "level": null,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 3,
+   "level": 20.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 3,
+   "level": 10.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 3,
+   "level": 5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 3,
+   "level": 0.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 3,
+   "level": -6.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 4,
+   "level": null,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 4,
+   "level": 20.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 4,
+   "level": 10.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 4,
+   "level": 5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 4,
+   "level": 0.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 4,
+   "level": -6.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 5,
+   "level": null,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 5,
+   "level": 20.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 5,
+   "level": 10.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 5,
+   "level": 5.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 5,
+   "level": 0.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "S-SIR",
+   "gen": "B",
+   "clip": 5,
+   "level": -6.0,
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 0,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 0,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 0,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 0,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 1,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 1,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 1,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 1,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 2,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 2,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 2,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 2,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 3,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 3,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 3,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 3,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 4,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 4,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 4,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 4,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 5,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 5,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "hits": [
+    "speaker",
+    "synth_fn:synth_hvac"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 5,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "A",
+   "clip": 5,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "hits": [
+    "speaker"
+   ],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 0,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 0,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 0,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 0,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 1,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 1,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 1,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 1,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 2,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 2,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 2,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 2,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 3,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 3,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 3,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 3,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 4,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 4,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 4,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 4,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 5,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "stationary"
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 5,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "stationary"
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 5,
+   "level": {
+    "snr_db": 0.0,
+    "noise": "babble"
+   },
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SNRxNOISE",
+   "gen": "B",
+   "clip": 5,
+   "level": {
+    "snr_db": 10.0,
+    "noise": "babble"
+   },
+   "hits": [],
+   "unknown": [
+    "babble_speakers"
+   ]
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 0,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 0,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 0,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 0,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 1,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 1,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 1,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 1,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 2,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 2,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 2,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 2,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 3,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 3,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 3,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 3,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 4,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 4,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 4,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 4,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 5,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 5,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 5,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "A",
+   "clip": 5,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "hits": [
+    "speaker",
+    "neighbor"
+   ],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 0,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 0,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 0,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 0,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 1,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 1,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 1,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 1,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 2,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 2,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 2,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 2,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 3,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 3,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 3,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 3,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 4,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 4,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 4,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 4,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 5,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 5.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 5,
+   "level": {
+    "sir_db": 10.0,
+    "snr_db": 20.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 5,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 5.0
+   },
+   "hits": [],
+   "unknown": []
+  },
+  {
+   "cell": "M-SIRxSNR",
+   "gen": "B",
+   "clip": 5,
+   "level": {
+    "sir_db": 0.0,
+    "snr_db": 20.0
+   },
+   "hits": [],
+   "unknown": []
+  }
+ ]
+}

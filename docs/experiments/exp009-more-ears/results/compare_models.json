@@ -1,0 +1,598 @@
+{
+ "per_clip": {
+  "c01": {
+   "desc": "赌场环境（人声 + 机器声），SNR 5 dB",
+   "lang": "en",
+   "noisy": {
+    "pause_vs_noisy_db": 0.0,
+    "contrast_db": 13.58,
+    "si_sdr_db": 5.77,
+    "hf_ratio_db": 2.56,
+    "lf_ratio_db": -0.55,
+    "lsd_speech_db": 14.93,
+    "n_speech_frames": 579,
+    "n_pause_frames": 2
+   },
+   "dpdfnet2": {
+    "pause_vs_noisy_db": -30.31,
+    "contrast_db": 42.82,
+    "si_sdr_db": 14.53,
+    "hf_ratio_db": -0.8,
+    "lf_ratio_db": 0.01,
+    "lsd_speech_db": 11.72,
+    "n_speech_frames": 579,
+    "n_pause_frames": 2
+   },
+   "gtcrn": {
+    "pause_vs_noisy_db": -15.04,
+    "contrast_db": 27.21,
+    "si_sdr_db": 11.55,
+    "hf_ratio_db": -0.62,
+    "lf_ratio_db": 0.22,
+    "lsd_speech_db": 11.25,
+    "n_speech_frames": 579,
+    "n_pause_frames": 2
+   },
+   "fastenhancer_m": {
+    "pause_vs_noisy_db": -25.11,
+    "contrast_db": 37.59,
+    "si_sdr_db": 14.11,
+    "hf_ratio_db": -0.78,
+    "lf_ratio_db": 0.2,
+    "lsd_speech_db": 16.7,
+    "n_speech_frames": 579,
+    "n_pause_frames": 2
+   }
+  },
+  "c02": {
+   "desc": "赌场环境（人声 + 机器声），SNR 0 dB",
+   "lang": "en",
+   "noisy": {
+    "pause_vs_noisy_db": 0.0,
+    "contrast_db": 5.06,
+    "si_sdr_db": 0.2,
+    "hf_ratio_db": 3.99,
+    "lf_ratio_db": -1.38,
+    "lsd_speech_db": 18.58,
+    "n_speech_frames": 541,
+    "n_pause_frames": 30
+   },
+   "dpdfnet2": {
+    "pause_vs_noisy_db": -36.61,
+    "contrast_db": 38.89,
+    "si_sdr_db": 10.83,
+    "hf_ratio_db": -1.38,
+    "lf_ratio_db": -0.01,
+    "lsd_speech_db": 13.19,
+    "n_speech_frames": 541,
+    "n_pause_frames": 30
+   },
+   "gtcrn": {
+    "pause_vs_noisy_db": -16.64,
+    "contrast_db": 16.06,
+    "si_sdr_db": 6.17,
+    "hf_ratio_db": -0.74,
+    "lf_ratio_db": 1.17,
+    "lsd_speech_db": 12.53,
+    "n_speech_frames": 541,
+    "n_pause_frames": 30
+   },
+   "fastenhancer_m": {
+    "pause_vs_noisy_db": -19.69,
+    "contrast_db": 21.89,
+    "si_sdr_db": 9.32,
+    "hf_ratio_db": -1.71,
+    "lf_ratio_db": 0.56,
+    "lsd_speech_db": 20.19,
+    "n_speech_frames": 541,
+    "n_pause_frames": 30
+   }
+  },
+  "c03": {
+   "desc": "赌场环境（人声 + 机器声），SNR −5 dB",
+   "lang": "en",
+   "noisy": {
+    "pause_vs_noisy_db": null,
+    "contrast_db": null,
+    "si_sdr_db": -4.83,
+    "hf_ratio_db": 7.02,
+    "lf_ratio_db": -3.68,
+    "lsd_speech_db": 21.37,
+    "n_speech_frames": 665,
+    "n_pause_frames": 0
+   },
+   "dpdfnet2": {
+    "pause_vs_noisy_db": null,
+    "contrast_db": null,
+    "si_sdr_db": 4.83,
+    "hf_ratio_db": -1.65,
+    "lf_ratio_db": 0.44,
+    "lsd_speech_db": 19.61,
+    "n_speech_frames": 665,
+    "n_pause_frames": 0
+   },
+   "gtcrn": {
+    "pause_vs_noisy_db": null,
+    "contrast_db": null,
+    "si_sdr_db": 1.82,
+    "hf_ratio_db": 1.2,
+    "lf_ratio_db": 2.25,
+    "lsd_speech_db": 12.74,
+    "n_speech_frames": 665,
+    "n_pause_frames": 0
+   },
+   "fastenhancer_m": {
+    "pause_vs_noisy_db": null,
+    "contrast_db": null,
+    "si_sdr_db": 3.73,
+    "hf_ratio_db": -3.53,
+    "lf_ratio_db": 1.67,
+    "lsd_speech_db": 26.85,
+    "n_speech_frames": 665,
+    "n_pause_frames": 0
+   }
+  },
+  "c04": {
+   "desc": "邻座一人说话 + 咖啡馆露台底噪，SNR 5 dB",
+   "lang": "en",
+   "noisy": {
+    "pause_vs_noisy_db": 0.0,
+    "contrast_db": 6.91,
+    "si_sdr_db": 4.38,
+    "hf_ratio_db": 0.96,
+    "lf_ratio_db": 0.06,
+    "lsd_speech_db": 12.55,
+    "n_speech_frames": 423,
+    "n_pause_frames": 122
+   },
+   "dpdfnet2": {
+    "pause_vs_noisy_db": -1.01,
+    "contrast_db": 4.63,
+    "si_sdr_db": 2.46,
+    "hf_ratio_db": 1.28,
+    "lf_ratio_db": 0.38,
+    "lsd_speech_db": 12.8,
+    "n_speech_frames": 423,
+    "n_pause_frames": 122
+   },
+   "gtcrn": {
+    "pause_vs_noisy_db": -1.11,
+    "contrast_db": 7.12,
+    "si_sdr_db": 4.79,
+    "hf_ratio_db": -0.76,
+    "lf_ratio_db": -0.21,
+    "lsd_speech_db": 11.86,
+    "n_speech_frames": 423,
+    "n_pause_frames": 122
+   },
+   "fastenhancer_m": {
+    "pause_vs_noisy_db": -1.2,
+    "contrast_db": 5.63,
+    "si_sdr_db": 2.25,
+    "hf_ratio_db": -0.52,
+    "lf_ratio_db": -1.71,
+    "lsd_speech_db": 14.87,
+    "n_speech_frames": 423,
+    "n_pause_frames": 122
+   }
+  },
+  "c05": {
+   "desc": "邻座一人说话 + 咖啡馆露台底噪，SNR 0 dB",
+   "lang": "en",
+   "noisy": {
+    "pause_vs_noisy_db": 0.0,
+    "contrast_db": 3.26,
+    "si_sdr_db": -0.72,
+    "hf_ratio_db": 6.92,
+    "lf_ratio_db": -0.75,
+    "lsd_speech_db": 15.32,
+    "n_speech_frames": 495,
+    "n_pause_frames": 91
+   },
+   "dpdfnet2": {
+    "pause_vs_noisy_db": -2.43,
+    "contrast_db": 1.96,
+    "si_sdr_db": -3.13,
+    "hf_ratio_db": 7.43,
+    "lf_ratio_db": -3.32,
+    "lsd_speech_db": 15.47,
+    "n_speech_frames": 495,
+    "n_pause_frames": 91
+   },
+   "gtcrn": {
+    "pause_vs_noisy_db": -1.02,
+    "contrast_db": 3.04,
+    "si_sdr_db": -1.41,
+    "hf_ratio_db": 7.21,
+    "lf_ratio_db": -2.04,
+    "lsd_speech_db": 15.33,
+    "n_speech_frames": 495,
+    "n_pause_frames": 91
+   },
+   "fastenhancer_m": {
+    "pause_vs_noisy_db": -0.77,
+    "contrast_db": 1.55,
+    "si_sdr_db": -3.72,
+    "hf_ratio_db": 7.74,
+    "lf_ratio_db": -1.68,
+    "lsd_speech_db": 15.76,
+    "n_speech_frames": 495,
+    "n_pause_frames": 91
+   }
+  },
+  "c06": {
+   "desc": "邻桌 3 人说话 + 食堂底噪，SNR 0 dB",
+   "lang": "en",
+   "noisy": {
+    "pause_vs_noisy_db": 0.0,
+    "contrast_db": 2.96,
+    "si_sdr_db": -0.73,
+    "hf_ratio_db": -2.38,
+    "lf_ratio_db": 8.79,
+    "lsd_speech_db": 11.05,
+    "n_speech_frames": 406,
+    "n_pause_frames": 92
+   },
+   "dpdfnet2": {
+    "pause_vs_noisy_db": -5.94,
+    "contrast_db": 4.9,
+    "si_sdr_db": 4.73,
+    "hf_ratio_db": -0.15,
+    "lf_ratio_db": 1.03,
+    "lsd_speech_db": 10.99,
+    "n_speech_frames": 406,
+    "n_pause_frames": 92
+   },
+   "gtcrn": {
+    "pause_vs_noisy_db": -4.47,
+    "contrast_db": 2.49,
+    "si_sdr_db": 2.47,
+    "hf_ratio_db": -0.76,
+    "lf_ratio_db": 4.58,
+    "lsd_speech_db": 9.8,
+    "n_speech_frames": 406,
+    "n_pause_frames": 92
+   },
+   "fastenhancer_m": {
+    "pause_vs_noisy_db": -3.4,
+    "contrast_db": 2.5,
+    "si_sdr_db": 2.66,
+    "hf_ratio_db": -0.64,
+    "lf_ratio_db": 4.31,
+    "lsd_speech_db": 11.57,
+    "n_speech_frames": 406,
+    "n_pause_frames": 92
+   }
+  },
+  "c07": {
+   "desc": "邻桌 6 人说话 + 咖啡馆露台底噪，SNR −5 dB",
+   "lang": "en",
+   "noisy": {
+    "pause_vs_noisy_db": 0.0,
+    "contrast_db": 0.99,
+    "si_sdr_db": -5.58,
+    "hf_ratio_db": -3.25,
+    "lf_ratio_db": 0.95,
+    "lsd_speech_db": 18.23,
+    "n_speech_frames": 531,
+    "n_pause_frames": 91
+   },
+   "dpdfnet2": {
+    "pause_vs_noisy_db": -9.22,
+    "contrast_db": 0.55,
+    "si_sdr_db": -0.87,
+    "hf_ratio_db": 0.28,
+    "lf_ratio_db": -1.1,
+    "lsd_speech_db": 15.75,
+    "n_speech_frames": 531,
+    "n_pause_frames": 91
+   },
+   "gtcrn": {
+    "pause_vs_noisy_db": -8.46,
+    "contrast_db": -3.61,
+    "si_sdr_db": -6.1,
+    "hf_ratio_db": -5.9,
+    "lf_ratio_db": -1.06,
+    "lsd_speech_db": 17.04,
+    "n_speech_frames": 531,
+    "n_pause_frames": 91
+   },
+   "fastenhancer_m": {
+    "pause_vs_noisy_db": -8.71,
+    "contrast_db": 0.86,
+    "si_sdr_db": -3.03,
+    "hf_ratio_db": -2.53,
+    "lf_ratio_db": 1.62,
+    "lsd_speech_db": 17.25,
+    "n_speech_frames": 531,
+    "n_pause_frames": 91
+   }
+  },
+  "c08": {
+   "desc": "邻桌 4 人说话 + 食堂底噪，SNR 10 dB",
+   "lang": "en",
+   "noisy": {
+    "pause_vs_noisy_db": 0.0,
+    "contrast_db": 11.47,
+    "si_sdr_db": 9.32,
+    "hf_ratio_db": -0.07,
+    "lf_ratio_db": 0.73,
+    "lsd_speech_db": 8.36,
+    "n_speech_frames": 453,
+    "n_pause_frames": 130
+   },
+   "dpdfnet2": {
+    "pause_vs_noisy_db": -7.79,
+    "contrast_db": 18.56,
+    "si_sdr_db": 12.49,
+    "hf_ratio_db": -1.06,
+    "lf_ratio_db": -0.87,
+    "lsd_speech_db": 8.59,
+    "n_speech_frames": 453,
+    "n_pause_frames": 130
+   },
+   "gtcrn": {
+    "pause_vs_noisy_db": -3.94,
+    "contrast_db": 12.1,
+    "si_sdr_db": 7.85,
+    "hf_ratio_db": -1.06,
+    "lf_ratio_db": -0.83,
+    "lsd_speech_db": 9.94,
+    "n_speech_frames": 453,
+    "n_pause_frames": 130
+   },
+   "fastenhancer_m": {
+    "pause_vs_noisy_db": -8.75,
+    "contrast_db": 19.68,
+    "si_sdr_db": 13.67,
+    "hf_ratio_db": -1.58,
+    "lf_ratio_db": 0.17,
+    "lsd_speech_db": 9.47,
+    "n_speech_frames": 453,
+    "n_pause_frames": 130
+   }
+  },
+  "c09": {
+   "desc": "厨房杯碟水声（非人声），SNR 0 dB",
+   "lang": "en",
+   "noisy": {
+    "pause_vs_noisy_db": 0.0,
+    "contrast_db": -2.24,
+    "si_sdr_db": -0.76,
+    "hf_ratio_db": 7.88,
+    "lf_ratio_db": 2.05,
+    "lsd_speech_db": 17.2,
+    "n_speech_frames": 402,
+    "n_pause_frames": 94
+   },
+   "dpdfnet2": {
+    "pause_vs_noisy_db": -75.76,
+    "contrast_db": 71.7,
+    "si_sdr_db": 23.35,
+    "hf_ratio_db": -2.49,
+    "lf_ratio_db": 0.03,
+    "lsd_speech_db": 12.88,
+    "n_speech_frames": 402,
+    "n_pause_frames": 94
+   },
+   "gtcrn": {
+    "pause_vs_noisy_db": -8.05,
+    "contrast_db": 5.5,
+    "si_sdr_db": 1.99,
+    "hf_ratio_db": -4.96,
+    "lf_ratio_db": 2.03,
+    "lsd_speech_db": 13.31,
+    "n_speech_frames": 402,
+    "n_pause_frames": 94
+   },
+   "fastenhancer_m": {
+    "pause_vs_noisy_db": -7.39,
+    "contrast_db": 3.4,
+    "si_sdr_db": 7.3,
+    "hf_ratio_db": -3.61,
+    "lf_ratio_db": 0.19,
+    "lsd_speech_db": 22.14,
+    "n_speech_frames": 402,
+    "n_pause_frames": 94
+   }
+  },
+  "c10": {
+   "desc": "背景钢琴曲（拉格泰姆），SNR 5 dB",
+   "lang": "en",
+   "noisy": {
+    "pause_vs_noisy_db": 0.0,
+    "contrast_db": 7.18,
+    "si_sdr_db": 4.38,
+    "hf_ratio_db": -0.79,
+    "lf_ratio_db": -0.67,
+    "lsd_speech_db": 11.96,
+    "n_speech_frames": 477,
+    "n_pause_frames": 104
+   },
+   "dpdfnet2": {
+    "pause_vs_noisy_db": -61.34,
+    "contrast_db": 67.31,
+    "si_sdr_db": 15.18,
+    "hf_ratio_db": -0.34,
+    "lf_ratio_db": 0.14,
+    "lsd_speech_db": 10.89,
+    "n_speech_frames": 477,
+    "n_pause_frames": 104
+   },
+   "gtcrn": {
+    "pause_vs_noisy_db": -29.46,
+    "contrast_db": 33.82,
+    "si_sdr_db": 11.09,
+    "hf_ratio_db": 0.8,
+    "lf_ratio_db": 0.32,
+    "lsd_speech_db": 10.11,
+    "n_speech_frames": 477,
+    "n_pause_frames": 104
+   },
+   "fastenhancer_m": {
+    "pause_vs_noisy_db": -61.29,
+    "contrast_db": 67.11,
+    "si_sdr_db": 14.94,
+    "hf_ratio_db": 0.04,
+    "lf_ratio_db": 0.12,
+    "lsd_speech_db": 11.82,
+    "n_speech_frames": 477,
+    "n_pause_frames": 104
+   }
+  },
+  "c11": {
+   "desc": "中文 · 邻桌 3 人（英文）说话 + 食堂底噪，SNR 0 dB",
+   "lang": "zh",
+   "noisy": {
+    "pause_vs_noisy_db": 0.0,
+    "contrast_db": 2.29,
+    "si_sdr_db": -0.61,
+    "hf_ratio_db": 5.32,
+    "lf_ratio_db": -1.24,
+    "lsd_speech_db": 27.48,
+    "n_speech_frames": 520,
+    "n_pause_frames": 145
+   },
+   "dpdfnet2": {
+    "pause_vs_noisy_db": -4.22,
+    "contrast_db": -1.09,
+    "si_sdr_db": -2.87,
+    "hf_ratio_db": 2.97,
+    "lf_ratio_db": -0.06,
+    "lsd_speech_db": 22.06,
+    "n_speech_frames": 520,
+    "n_pause_frames": 145
+   },
+   "gtcrn": {
+    "pause_vs_noisy_db": -5.08,
+    "contrast_db": 0.49,
+    "si_sdr_db": -0.91,
+    "hf_ratio_db": 3.38,
+    "lf_ratio_db": -0.98,
+    "lsd_speech_db": 23.33,
+    "n_speech_frames": 520,
+    "n_pause_frames": 145
+   },
+   "fastenhancer_m": {
+    "pause_vs_noisy_db": -6.78,
+    "contrast_db": 4.72,
+    "si_sdr_db": 0.04,
+    "hf_ratio_db": -3.44,
+    "lf_ratio_db": 0.13,
+    "lsd_speech_db": 24.48,
+    "n_speech_frames": 520,
+    "n_pause_frames": 145
+   }
+  },
+  "c12": {
+   "desc": "中文 · 邻座一人（英文）说话 + 咖啡馆露台底噪，SNR 5 dB",
+   "lang": "zh",
+   "noisy": {
+    "pause_vs_noisy_db": 0.0,
+    "contrast_db": 8.67,
+    "si_sdr_db": 4.44,
+    "hf_ratio_db": -0.37,
+    "lf_ratio_db": 0.38,
+    "lsd_speech_db": 17.39,
+    "n_speech_frames": 371,
+    "n_pause_frames": 102
+   },
+   "dpdfnet2": {
+    "pause_vs_noisy_db": -1.01,
+    "contrast_db": 4.7,
+    "si_sdr_db": -1.97,
+    "hf_ratio_db": -1.61,
+    "lf_ratio_db": 1.26,
+    "lsd_speech_db": 17.83,
+    "n_speech_frames": 371,
+    "n_pause_frames": 102
+   },
+   "gtcrn": {
+    "pause_vs_noisy_db": -0.85,
+    "contrast_db": 9.23,
+    "si_sdr_db": 4.91,
+    "hf_ratio_db": -0.82,
+    "lf_ratio_db": 0.09,
+    "lsd_speech_db": 14.27,
+    "n_speech_frames": 371,
+    "n_pause_frames": 102
+   },
+   "fastenhancer_m": {
+    "pause_vs_noisy_db": -0.66,
+    "contrast_db": 5.94,
+    "si_sdr_db": -2.32,
+    "hf_ratio_db": 0.29,
+    "lf_ratio_db": 0.02,
+    "lsd_speech_db": 24.27,
+    "n_speech_frames": 371,
+    "n_pause_frames": 102
+   }
+  }
+ },
+ "median": {
+  "noisy": {
+   "pause_vs_noisy_db": 0.0,
+   "contrast_db": 5.06,
+   "si_sdr_db": -0.2,
+   "hf_ratio_db": 1.76,
+   "lf_ratio_db": -0.25,
+   "lsd_speech_db": 16.26
+  },
+  "dpdfnet2": {
+   "pause_vs_noisy_db": -7.79,
+   "contrast_db": 4.9,
+   "si_sdr_db": 4.78,
+   "hf_ratio_db": -0.57,
+   "lf_ratio_db": 0.02,
+   "lsd_speech_db": 13.04
+  },
+  "gtcrn": {
+   "pause_vs_noisy_db": -5.08,
+   "contrast_db": 7.12,
+   "si_sdr_db": 3.63,
+   "hf_ratio_db": -0.75,
+   "lf_ratio_db": 0.15,
+   "lsd_speech_db": 12.63
+  },
+  "fastenhancer_m": {
+   "pause_vs_noisy_db": -7.39,
+   "contrast_db": 5.63,
+   "si_sdr_db": 3.2,
+   "hf_ratio_db": -1.18,
+   "lf_ratio_db": 0.18,
+   "lsd_speech_db": 16.98
+  }
+ },
+ "gtcrn_minus_dpdfnet2": {
+  "pause_vs_noisy_db": {
+   "median": 1.47,
+   "n_gtcrn_higher": 9,
+   "n": 11
+  },
+  "contrast_db": {
+   "median": -4.16,
+   "n_gtcrn_higher": 4,
+   "n": 11
+  },
+  "si_sdr_db": {
+   "median": -2.99,
+   "n_gtcrn_higher": 4,
+   "n": 12
+  },
+  "hf_ratio_db": {
+   "median": 0.09,
+   "n_gtcrn_higher": 6,
+   "n": 12
+  },
+  "lf_ratio_db": {
+   "median": 0.2,
+   "n_gtcrn_higher": 9,
+   "n": 12
+  },
+  "lsd_speech_db": {
+   "median": -0.57,
+   "n_gtcrn_higher": 4,
+   "n": 12
+  }
+ }
+}

@@ -5,7 +5,7 @@
 
 ## 当前大事（2026-11-02）
 
-**把「效果好不好」变成能量的尺子**（意向书真难题第 2 条）。批次 `_tmp/20261102-b7/`。
+**把「效果好不好」变成能量的尺子**（意向书真难题第 2 条）。批次 `_tmp/20261102-b7/`。**✅ 2026-11-02 三条线全部合并（#47 #48 #49），窗口全关；下一件大事待人定**
 
 | 手下 | 线 | 管的实体 |
 |---|---|---|
@@ -39,9 +39,9 @@
 | datasets | 014 真实录音公开数据集 · issue #30 · `research/014-real-datasets` | `_tmp/20261031-b4/datasets.md` | 其 worktree | 完成，PR 已合并（issue #30 关），窗口已关；6 题待人拍板 |
 | evalimpl | eval 实现：vdn-eval · CI / QA / 人工三层 · 回归集与能力集 · issue #31 · `feat/eval-verifiers` | 完成，PR #38 已合并（issue #31 关），窗口已关；CI 每个 PR 跑 eval ci（回归 13/17 · 能力 0/10 · 探针 5/5）；4 题已并入待拍板清单 |
 | prefs | 人耳结果 → eval 任务 · 偏好数据集 · 分场景默认 · `specs/rubric/preferences.md` · issue #37 · `feat/eval-prefs` | `_tmp/20261031-b4/prefs.md` | 其 worktree | 完成，PR #43 已合并（issue #37 关），窗口已关；待拍板 4-7 / 4-8 已并入；worktree `../noise_canceling-prefs` 保留待清 |
-| benchsynth | **b7 重派（2026-11-02，交代 `_tmp/20261102-b7/benchsynth.md`）· 已报到（noise-canceling-benchsynth-19），持名额第①段** · 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
-| ears | **b7 重派 · 已报到（noise-canceling-ears-08）** · 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已报到（noise-canceling-ears-03）· 实验编号 exp009 |
-| judgeloop | **b7 重派 · 已报到（noise-canceling-judge-loop-21），补调研 r1/r2/r5 已批** · 018 本机评分模型 + 调节模型闭环（D52）· issue #44 · `research/018-ondevice-judge`（worktree `../noise_canceling-judge-loop`） | `_tmp/20261031-b6/judgeloop.md` | 其 worktree | 已报到 |
+| benchsynth | **b7 重派（2026-11-02，交代 `_tmp/20261102-b7/benchsynth.md`）· 已报到（noise-canceling-benchsynth-19），完成，PR #47 已合并（cabf3d0，issue #41 关），远端分支已删，窗口已关；worktree `../noise_canceling-benchsynth` 保留待清（手下自己提交并推送了现状页 780eea3，越过「手下不做 git 写」，内容无害，已记）** · 016 评测基准 + 合成数据标准（按评测集倒推合成数据，D50）· issue #41 · `research/016-bench-synth`（worktree `../noise_canceling-benchsynth`） | `_tmp/20261031-b6/benchsynth.md` | 其 worktree `state/handoff/benchsynth.md` | 已报到（noise-canceling-benchsynth-49）|
+| ears | **b7 重派 · 完成，PR #48 已合并（issue #42 关），远端分支已删，窗口已关；worktree 保留待清；人答卷回来后由大总管放 exp009 results/** · 017 覆盖更多人耳反馈（公开人评数据集 · MOS 预测器 · 音频 LLM 评委 · 作者听测提效 · 少量现场真人）· issue #42 · `research/017-more-ears`（worktree `../noise_canceling-ears`） | `_tmp/20261031-b6/ears.md` | 其 worktree `state/handoff/ears.md` | 已报到（noise-canceling-ears-03）· 实验编号 exp009 |
+| judgeloop | **b7 重派 · 完成，PR #49 已合并（issue #44 关），远端分支已删，窗口已关** · 018 本机评分模型 + 调节模型闭环（D52）· issue #44 · `research/018-ondevice-judge`（worktree `../noise_canceling-judge-loop`） | `_tmp/20261031-b6/judgeloop.md` | 其 worktree | 已报到 |
 | engine | **停（2026-10-31 会话中断），转 backlog** · 019 推理引擎 Core ML / MLX / 自写 Rust 对比（D53）· issue #45 · `research/019-apple-inference`（worktree `../noise_canceling-engine`） | `_tmp/20261031-b6/engine.md` | 其 worktree | 已报到 |
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
 
@@ -57,13 +57,24 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | benchsynth 第①段：4 个已出音频的系统打分（rank.py --tag r2） |
+| 重编译 / 全量测试 / 跑模型（1 个） | 空 |
 
-排队：ears（第二段 regen_exp003 + score_author，约 400 MB 下载，已申请）→ benchsynth 第②段（续跑 FRCRN · MossFormerGAN · URGENT-BSRNN · GMAP-SE 再打分）→ judgeloop（exp011）
+排队：无（benchsynth 第②段已转 backlog）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 judgeloop 收尾：exp011 三参数自动调无收益（SCOREQ −0.027 [−0.037, −0.016]，41 段 / 10 说话人；上界 +0.008）→ 第一版不做；PR #49 合并；转交两条已登记（3-6 · backlog 下一轮盲听）
+- 2026-11-02 15:55 judgeloop：14:15 电脑睡眠中断回复，空闲约 1.5 h，已催续跑。停在 exp011「留出评分 + 吃字」：奖励打分 · 拼接 · 红线已提交；留出评分因识别读不了 32 位浮点 WAV 超时没落盘 → 改 judge（转 16 位 · 60 s 超时重试 2 次 · 先落盘）续跑，推算约 25 min
+- 2026-11-02 ears 收尾：PR #48；E2 按人「可以」记 D66；E6 登记 4-11
+- 2026-11-02 ears ①② 完成：① `notes/I-why-scorers-pick-dpdfnet.md`（实测 12 段：停顿处背景 DPDFNet-2 −7.8 dB vs GTCRN −5.1 dB；GTCRN 人声音色近原声 0.6 dB；高频、吃字无差）② 2 道众人锚点题 build 20261102132015-ccd3，揭盲表已提交；已查无答案后复制到 `~/Desktop/20261102-vdn-crowd-anchor-listen/`。揭晓时要告诉人：第 1 题两边响度差约 9.5 dB；两题众人都选 Y 是随机分配。答卷 `answers-20261102132015-ccd3.json` 交回给 ears 放 results/
+- 2026-11-02 ears 自审更正：「作者偏离大众」参照线抽样结构与作者答卷不同；换同构参照线后作者 0.40 vs 线 0.389 → 结论由「有证据」改为「边缘，不能说作者偏离」，decision 已改。①② 在做：① 12 段纯信号量 GTCRN vs DPDFNet-2（不跑模型）② 盲听用 URGENT 2026 配对打分集（CC BY 4.0），按行取 2 对，几 MB
+- 2026-11-02 人新提（转 ears，优先于自审）：「我们到底用什么模型 / 为啥评分器选择的都是dfn 的模型，但我选择的是另外的 / 评分器用的这个模型的逻辑是啥 / 帮我找两个大众都弄过的，让我听一下」→ ① 评分器逻辑短文 + GTCRN vs DPDFNet-2 实测差别 ② 2 道大众已评分的盲听题
+- 2026-11-02 benchsynth 收尾：PR #47（Closes #41）；第②段续跑与 LibriSpeech 6.6 GB 下载转 backlog；7 题登记为 4-9
+- 2026-11-02 ears 第二段：作者 vs SCOREQ 一致率 0.375（48 对 · 9 屏，区间 0.14–0.64，事先定的线 0.516）；~~Distill-MOS 0.562；两台评分机器不一致~~（ears 更正：三台评分机器彼此一致 0.76–0.81，作者对三台都偏低 0.375 / 0.562 / 0.478；分歧集中在 GTCRN vs DPDFNet-2，作者 16 次里 13 次选 GTCRN，三台都排 DPDFNet-2 第一；英文 6 段两者各吃 7 词。作者与大众不同 vs 机器在这类片段不准，分不开，要靠 E2），结论强度低。名额转 judgeloop
+- 2026-11-02 judgeloop：r1 / r2 / r5 补完（各经怀疑派核对）；decision.md 与 exp011 设计已写（`docs/research/018_ondevice-judge/decision.md` · `docs/experiments/exp011-ondevice-loop/README.md`）；申请名额跑 exp011 第 1–3 步
+- 2026-11-02 benchsynth 第①段完成（4 系统 × 348 段，838 s，0 错误）：阶梯 12 → 15 系统；交互一致性结论不变——SNR / 噪声 / 邻座干扰三轴两套生成器一致（多数 r 0.5–0.9，p ≤ 0.025），混响轴不一致（r −0.07–0.61，p ≥ 0.13）；新发现 DNSMOS SIG 在邻座干扰轴 r 0.04；已答 judgeloop 三问。名额转 ears
+- 2026-11-02 ears 第 3 步完成：017 待定题 7 → 2（5 题被 D58–D62 答掉，已划并写依据）；剩 E2「每轮盲听多听 4–6 道大众已评题，多约 2–3 分钟」· E6「用人的 GitHub 账号向上游报两处数据错误」，默认都不做，收尾时并入待拍板清单；与 D62 冲突 5 处已改；等名额跑第二段
 - engine workflow 已起（7 代理）：Core ML · BNNS Graph（macOS 15+ 实时音频 CPU 推理，号称零分配）· MLX · 纯 Rust（candle / burn / tract / Accelerate / Metal）· 公开实测 · 五类模型盘点 + 1 核实员；自写 GTCRN Rust 先行
 - judgeloop workflow 已起（7 代理）：R1 评分模型小型化 · R2 评分当奖励 / 在线调参先例 · R3 声音→效果参数与助听器在线偏好学习 · R4 本机微调风险与护栏 · R5 本机盘点 + 2 怀疑派
 - benchsynth 自审改结论：S7「自身稳」被打掉（错配格 τ 也 0.82，无区分力）→ 改交互一致性 S7b：SNR / 噪声 / SIR 轴 A/B 一致（r 0.5–0.9，p ≤ 0.04），混响轴不一致；S8「反向」降为「判不了」；红队 P0：exp008 素材与 exp006 训练段重叠，项目模型上阶梯前要换素材池；D51 合成好坏配对 P1–P7 已写；第二轮 RNNoise / WebRTC 出音频，torch 组在跑（负载 34）；engine 给 exp010、judgeloop 给 exp011
