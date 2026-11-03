@@ -52,7 +52,8 @@ pub fn brace_delta(code: &str) -> i64 {
 
 /// 文件顶层（花括号深度 0）`#[cfg(test)]` 后面紧跟的 `mod x;` 的模块名。
 /// 注释与字符串里的写法不算（codex 第 2 轮 P1 #2）；内联模块里的声明不认（路径不同，宁可多查）。
-pub fn cfg_test_mod_names(src: &str) -> Vec<String> {
+#[cfg(test)]
+fn cfg_test_mod_names(src: &str) -> Vec<String> {
     mod_names(src).0
 }
 

@@ -28,8 +28,8 @@ pub const MAX_LINES: usize = 600;
 /// 基线正本（相对 workspace 根）。
 pub const BASELINE_FILE: &str = "src/xtask/file-size-baseline.txt";
 /// R-SIZE 扫描的目录（相对仓库根），唯一一处。CLAUDE.md 第五节第 7 条的范围是 `src/` 与 `docs/experiments/`；
-/// `docs/experiments/` 等 #58（exp010 bench 拆文件）合并后再加进来（大总管 8d 定，2026-11-02）。
-pub const SCAN_ROOTS: [&str; 1] = ["src"];
+/// `docs/experiments/` 在 #66（fastpath，含 exp010 bench 拆文件）合并后打开（大总管 8d 定，2026-11-02）。
+pub const SCAN_ROOTS: [&str; 2] = ["src", "docs/experiments"];
 /// 放宽理由的标记（写在基线条目行尾）。
 pub const WIDEN_MARK: &str = "# 放宽：";
 
@@ -51,7 +51,7 @@ pub struct Entry {
 
 /// 路径写法是否规范：`src/` 开头，不含 `./` `..` `\`、不以 `/` 结尾。
 fn canonical_path(p: &str) -> bool {
-    p.starts_with("src/")
+    SCAN_ROOTS.iter().any(|r| p.starts_with(&format!("{r}/")))
         && !p.contains('\\')
         && !p.ends_with('/')
         && p.split('/')
@@ -487,6 +487,22 @@ mod tests {
         let mut p = Vec::new();
         assert_eq!(parse_baseline(&render(&t), &mut p), t);
         assert!(p.is_empty());
+    }
+
+    /// docs/experiments 下的代码也扫：601 行 → 红（CLAUDE.md 第五节第 7 条）
+    #[test]
+    fn docs_experiments_are_scanned() {
+        let d = std::env::temp_dir().join(format!("xtask-size-docs-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&d);
+        fs::create_dir_all(d.join("src")).unwrap();
+        fs::create_dir_all(d.join("docs/experiments/e1/src")).unwrap();
+        fs::write(d.join("docs/experiments/e1/src/big.rs"), "//\n".repeat(601)).unwrap();
+        fs::write(d.join("docs/experiments/e1/src/ok.rs"), "//\n".repeat(600)).unwrap();
+        let files = scan(&d).unwrap();
+        let (p, _) = size_problems(&files, &[]);
+        assert_eq!(p.len(), 1, "{p:?}");
+        assert!(p[0].contains("docs/experiments/e1/src/big.rs"), "{p:?}");
+        let _ = fs::remove_dir_all(&d);
     }
 
     /// 读不了的目录报错，不当成「没有文件」
