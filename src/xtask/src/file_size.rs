@@ -511,8 +511,15 @@ mod tests {
         let files = scan(&d).unwrap();
         let (p, _) = size_problems(&files, &[]);
         assert_eq!(p.len(), 2, "{p:?}");
-        assert!(p.iter().any(|x| x.contains("docs/experiments/e1/src/big.rs")), "{p:?}");
-        assert!(p.iter().any(|x| x.contains("docs/experiments/e1/run.py")), "{p:?}");
+        assert!(
+            p.iter()
+                .any(|x| x.contains("docs/experiments/e1/src/big.rs")),
+            "{p:?}"
+        );
+        assert!(
+            p.iter().any(|x| x.contains("docs/experiments/e1/run.py")),
+            "{p:?}"
+        );
         let _ = fs::remove_dir_all(&d);
     }
 

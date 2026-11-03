@@ -57,7 +57,18 @@ pub fn has_rate_literal(code: &str) -> bool {
             let ok_suffix = sfx.is_empty()
                 || matches!(
                     sfx.trim_start_matches('_'),
-                    "u16" | "u32" | "u64" | "u128" | "usize" | "i16" | "i32" | "i64" | "i128" | "isize" | "f32" | "f64"
+                    "u16"
+                        | "u32"
+                        | "u64"
+                        | "u128"
+                        | "usize"
+                        | "i16"
+                        | "i32"
+                        | "i64"
+                        | "i128"
+                        | "isize"
+                        | "f32"
+                        | "f64"
                 );
             // 后面紧跟 `..`（区间）可以；单个 `.` 接非零小数不算
             let after = &tail[suffix..];

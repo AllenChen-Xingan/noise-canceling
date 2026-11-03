@@ -45,3 +45,4 @@
 - 2026-11-02 hygiene codex 第 6、7 轮又 3 处绕过（都在窄规则）。8d 定：整个删掉 test_modules（文本猜模块结构的路线本身漏），改用文件头 NRT 显式标注；R-RATE 评估改为测试代码也必须引用常量，免识别测试区；PR 正文记放弃原因，将来用 syn
 - 2026-11-02 hygiene：删 test_modules.rs，R3 复原；R-RATE 不再识别测试区（rate_literal 281→191），shm/rt-thread/dsp 加 vdn-types dev 依赖，25 处测试字面量改常量；codex 新一轮审全 diff
 - 2026-11-02 人定「可以真正用ast工具」→ 开 #71（tidy 改用 syn 语法树判规则）；ADR 004 触发条件已满足（同类漏网 7 轮）；hygiene 先写设计，#62 + #65 合并后再写代码
+- 2026-11-02 #64 已合并（PR #69）；99 会话离线，iface 仍在做 #65。8d 合 main 进 #62（787eeee6）：冲突 types/lib.rs · record.rs 已解（模块表三方都留，session 新模块），cargo check 全过；tidy 11 处 → 10 处交 hygiene 修（2 条基线删 + 8 处 #64 带入的采样率），policy.rs 1 处等 #65
