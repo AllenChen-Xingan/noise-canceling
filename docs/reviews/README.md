@@ -9,3 +9,4 @@
 | 编号 | 日期 | 评审对象 | 采纳 / 提出 |
 |------|------|---------|------------|
 | 010 | 2026-11-02 | [exp010 推理后端基准纯 Rust 一侧](010_exp010-rust-codex.md)（README + bench/src，codex，5 轮，已达停止线） | 采纳 27 / 提出 27（P1×7 P2×20） |
+| 011 | 2026-11-02 | [schema 导出机制与第一批 schema](011_schema-crosscheck-codex.md)（diff，codex，进行中） | 采纳 5 / 提出 5（P1×2 P2×3） |
