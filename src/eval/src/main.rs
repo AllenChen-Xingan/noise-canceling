@@ -87,12 +87,14 @@ fn baseline_path() -> PathBuf {
     repo_root().join("src/eval/suite/baseline-ci.json")
 }
 
-fn load_baseline() -> Baseline {
-    std::fs::read_to_string(baseline_path())
-        .ok()
-        .and_then(|t| serde_json::from_str::<BaselineFile>(&t).ok())
-        .map(|b| b.values)
-        .unwrap_or_default()
+/// 读冻结基线。文件不存在 = 还没有基线（空）；存在但格式不对 → 报错，不当成空基线静默放过（第 1 轮 codex #2）。
+fn load_baseline() -> Result<Baseline, String> {
+    let p = baseline_path();
+    match std::fs::read_to_string(&p) {
+        Ok(t) => BaselineFile::parse(&t).map(|b| b.values),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Baseline::new()),
+        Err(e) => Err(format!("{}：{e}", p.display())),
+    }
 }
 
 fn write_baseline(r: &SuiteResult, m: &Meta) -> Result<usize, String> {
@@ -220,7 +222,7 @@ fn cmd_eval(args: &[String], layer: &'static str) -> Result<bool, String> {
         baseline: if flag(args, "--write-baseline") {
             Baseline::new()
         } else {
-            load_baseline()
+            load_baseline()?
         },
         levels: levels.clone(),
     };

@@ -210,6 +210,13 @@ pub struct BaselineFile {
     pub values: BTreeMap<String, f64>,
 }
 
+impl BaselineFile {
+    /// 读基线文件；格式不对（缺键、多键、值不是数）就报错。
+    pub fn parse(text: &str) -> Result<Self, String> {
+        serde_json::from_str(text).map_err(|e| format!("baseline-ci.json 格式不对：{e}"))
+    }
+}
+
 /// serde 给枚举变体写的名字（运行时要字符串的地方用它，不另写一份名字表）。
 pub fn serde_name<T: Serialize>(v: &T) -> String {
     match serde_json::to_value(v) {
