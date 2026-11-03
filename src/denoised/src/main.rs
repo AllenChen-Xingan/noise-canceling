@@ -153,12 +153,7 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     let l_total = worker.l_total(cfg.lead_frames);
     let bus_cfg = denoise_bus_config(&worker, cfg.lead_frames, a.capacity as usize)?;
 
-    if cfg.lead_frames < cfg.block + cfg.denoise_block {
-        eprintln!(
-            "vdn-denoised: 警告：环余量 {} < 送音块长 {} + 降噪块长 {}，送音端会经常取不到处理后的（用原声补）",
-            cfg.lead_frames, cfg.block, cfg.denoise_block
-        );
-    }
+    // lead ≥ 一块 IO 已在 cfg.validate()（vdn_control::check_lead）里查过
 
     // 先装信号处理（Ctrl-C / SIGTERM / SIGHUP）再建总线：之间收到信号也能走正常退出、删名字
     let stop = Arc::new(AtomicBool::new(false));

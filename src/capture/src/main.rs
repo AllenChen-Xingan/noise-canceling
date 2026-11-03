@@ -360,15 +360,10 @@ fn real_main() -> Result<(), String> {
     Ok(())
 }
 
-/// 读降噪总线头核对：lead 至少要盖住一块 IO + 一块降噪，不然送音端会经常取不到处理后的。只告警。
+/// 读降噪总线头核对 lead（规则正本 `vdn_control::check_lead`）。降噪进程是另一边配的，这里只告警、照常送音
 fn check_header(b: &Bus, cfg: &Config) {
-    let c = b.config();
-    let need = cfg.block + c.denoise_block as usize;
-    if (c.lead as usize) < need {
-        eprintln!(
-            "vdn-capture: 警告：降噪总线的 lead {} < IO 块 {} + 降噪块 {} = {need}，会经常用原声补",
-            c.lead, cfg.block, c.denoise_block
-        );
+    if let Err(e) = vdn_control::check_lead(b.config().lead as usize, cfg.block) {
+        eprintln!("vdn-capture: 警告：降噪总线头里的设置和本进程对不上：{e}（会经常用原声补）");
     }
 }
 

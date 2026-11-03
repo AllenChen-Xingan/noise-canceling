@@ -167,6 +167,7 @@ impl Config {
                 hi_block()
             )));
         }
+        check_lead(self.lead_frames, self.block)?;
         if self.lead_frames > Self::LEAD_MAX {
             return Err(ConfigError::Invalid(format!(
                 "lead_frames = {}，须 ≤ {}",
@@ -198,6 +199,19 @@ impl Config {
 
 fn hi_block() -> usize {
     Config::BLOCK_RANGE.1
+}
+
+/// 环余量的下限（正本；Config 校验、chain-test、送音端读总线头都调它）：**至少一块 IO**。
+/// 送音端每个回调「推一块原声、立刻取一块处理后的」，lead 少于一块时每块的后段都取不到，必欠载
+/// （实测：IO 块 480 配 lead 288，每块都用原声补）。不要求再加一块降噪：V7 基线里 IO 块 96、降噪块 96、
+/// lead 96 / 144 在压力组 9/10、10/10 次无欠载，空闲时欠载的原因是处理变慢，不是这条线
+pub fn check_lead(lead: usize, io_block: usize) -> Result<(), ConfigError> {
+    if lead < io_block {
+        return Err(ConfigError::Invalid(format!(
+            "lead_frames = {lead} 小于 IO 块长 {io_block}：送音端每块都会取不到处理后的；lead 至少要 {io_block}"
+        )));
+    }
+    Ok(())
 }
 
 /// 命令行里的秒数：有限、≥ 0、≤ 1 000 000（`Duration::from_secs_f64` 遇负数 / NaN 会 panic）。给 clap 的 `value_parser` 用。
@@ -304,6 +318,21 @@ mod tests {
                 "{bad}"
             );
         }
+    }
+
+    /// lead 小于一块 IO 在配置这一层就挡住（以前要等测出欠载才发现）
+    #[test]
+    fn lead_below_one_io_block_is_rejected() {
+        let e = Config::from_json(r#"{"block":480,"lead_frames":288}"#);
+        assert!(
+            matches!(&e, Err(ConfigError::Invalid(m)) if m.contains("小于 IO 块长")),
+            "{e:?}"
+        );
+        assert!(Config::from_json(r#"{"lead_frames":64}"#).is_err());
+        // 刚好一块可以；默认值满足
+        assert!(Config::from_json(r#"{"block":96,"lead_frames":96}"#).is_ok());
+        let d = Config::default();
+        assert!(check_lead(d.lead_frames, d.block).is_ok());
     }
 
     #[test]

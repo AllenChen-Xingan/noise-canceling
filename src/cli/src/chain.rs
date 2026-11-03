@@ -131,6 +131,7 @@ fn sleep_until(t: Instant) {
 
 pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<ChainRun, String> {
     let block = o.block;
+    vdn_control::check_lead(o.lead, block).map_err(|e| e.to_string())?;
     let total = ((o.seconds * f64::from(RATE)) as usize).div_ceil(block) * block;
     let mut worker = Worker::new(pipeline, o.denoise_block).skip_backlog_over_lead(o.lead);
     let warmup = worker.warm_up(o.warmup_blocks);
