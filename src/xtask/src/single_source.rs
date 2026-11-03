@@ -3,7 +3,7 @@
 //! | 规则 | 查什么 | 放行写法 |
 //! |---|---|---|
 //! | R-MIRROR | ① `src/` 下不许有名叫 `mirror.rs` 的文件；② `vdn-types` 之外的代码不许定义与 `vdn-types` 公开类型**同名**的 `struct` / `enum` / `trait` / `type`（镜像副本的特征） | 定义行或紧邻上方的注释里写 `tidy: 同名不同物：<理由>` |
-//! | R-PARAM | 参数描述表（`src/types/src/desc.rs`）之外，一行代码里既出现某个参数名（键名末段，如 `floor_db`，或它的驼峰形 `FloorDb`），又出现数字字面量写的范围：`a..b` / `a..=b` · `clamp(a, b)` · `.max(a).min(b)` / `.min(a).max(b)` · `=> (a, b)` | 行尾写 `// tidy: 非参数范围：<理由>` |
+//! | R-PARAM | 参数描述表（`src/types/src/desc/` 目录）之外，一行代码里既出现某个参数名（键名末段，如 `floor_db`，或它的驼峰形 `FloorDb`），又出现数字字面量写的范围：`a..b` / `a..=b` · `clamp(a, b)` · `.max(a).min(b)` / `.min(a).max(b)` · `=> (a, b)` | 行尾写 `// tidy: 非参数范围：<理由>` |
 //!
 //! 能做到的严格度与边界（写明，免得以为查全了）：
 //! - 只按**行**查：被 rustfmt 拆成多行的 `x.clamp(\n -60.0,\n 0.0)`、或范围先赋给一个名字不带参数名的变量再用，查不到
@@ -17,16 +17,16 @@ use std::path::Path;
 use crate::lex::{code_lines, lex_lines, strip_comments_keep_strings};
 use crate::tidy::rs_files;
 
-/// 描述表正本的位置（相对 workspace 根）。
-pub const DESC_FILE: &str = "src/types/src/desc.rs";
+/// 描述表正本所在目录（相对 workspace 根）：`mod.rs` 加按参数所属分的几个文件。
+pub const DESC_DIR: &str = "src/types/src/desc/";
 const TYPES_SRC: &str = "src/types/src";
 const MIRROR_ALLOW: &str = "tidy: 同名不同物：";
 const RANGE_ALLOW: &str = "tidy: 非参数范围：";
 
 pub fn check(root: &Path, problems: &mut Vec<String>) {
-    let Ok(desc) = fs::read_to_string(root.join(DESC_FILE)) else {
+    let Some(desc) = read_desc(root) else {
         problems.push(format!(
-            "{DESC_FILE} 不存在：参数描述表是参数范围的正本（R-PARAM）"
+            "{DESC_DIR} 不存在或没有 .rs：参数描述表是参数范围的正本（R-PARAM）"
         ));
         return;
     };
@@ -34,7 +34,7 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
     let consts = desc_const_count(&desc);
     if keys.is_empty() || keys.len() != consts {
         problems.push(format!(
-            "{DESC_FILE}：解析出 {} 个键名，但有 {consts} 个 ParamDesc 常量；解析失败的条目会让 R-PARAM 漏查（R-PARAM）",
+            "{DESC_DIR}：解析出 {} 个键名，但有 {consts} 个 ParamDesc 常量；解析失败的条目会让 R-PARAM 漏查（R-PARAM）",
             keys.len()
         ));
     }
@@ -61,10 +61,19 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
         if !rel.starts_with(TYPES_SRC) {
             problems.extend(mirror_problems(&rel, &src, &names));
         }
-        if rel != DESC_FILE {
+        if !rel.starts_with(DESC_DIR) {
             problems.extend(range_problems(&rel, &src, &tokens));
         }
     }
+}
+
+/// 描述表目录下全部 `.rs` 按文件名排序拼起来；目录不存在或一个文件都没有 → `None`。
+pub fn read_desc(root: &Path) -> Option<String> {
+    let mut files = Vec::new();
+    rs_files(&root.join(DESC_DIR), &mut files);
+    files.sort();
+    let srcs: Vec<String> = files.iter().filter_map(|p| fs::read_to_string(p).ok()).collect();
+    (!srcs.is_empty() && srcs.len() == files.len()).then(|| srcs.join("\n"))
 }
 
 /// 描述表里每条的键名：`p(<编号>, "<键名>", …` 的第二个参数（容许 rustfmt 把参数拆到多行）。
@@ -422,7 +431,7 @@ pub fn range_problems(rel: &str, src: &str, tokens: &[String]) -> Vec<String> {
         }
         if let Some(tok) = tokens.iter().find(|t| has_token(code, t)) {
             out.push(format!(
-                "{rel}:{}：参数 `{tok}` 的范围写成了数字字面量；范围的正本是 {DESC_FILE}，改用 vdn_types::desc 的 check / clamp / min / max（R-PARAM）",
+                "{rel}:{}：参数 `{tok}` 的范围写成了数字字面量；范围的正本是 {DESC_DIR}，改用 vdn_types::desc 的 check / clamp / min / max（R-PARAM）",
                 i + 1
             ));
         }
@@ -431,197 +440,5 @@ pub fn range_problems(rel: &str, src: &str, tokens: &[String]) -> Vec<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn toks() -> Vec<String> {
-        param_tokens(&[
-            "floor_db".into(),
-            "polish.smooth".into(),
-            "gate.confirm_n".into(),
-        ])
-    }
-
-    #[test]
-    fn desc_keys_are_parsed_even_when_split_by_rustfmt() {
-        let src = "pub const A: ParamDesc = p(1, \"floor_db\", Unit::Db, -60.0, 0.0, -12.0, \"x\");\n\
-                   pub const B: ParamDesc = p(\n    202,\n    \"polish.floor_db\",\n    Unit::Db,\n);\n\
-                   const fn p(id: u16, key: &'static str) {}\n";
-        assert_eq!(desc_keys(src), ["floor_db", "polish.floor_db"]);
-    }
-
-    #[test]
-    fn real_desc_file_parses() {
-        let src = fs::read_to_string(crate::root().join(DESC_FILE)).unwrap();
-        let keys = desc_keys(&src);
-        assert_eq!(keys.len(), desc_const_count(&src), "{keys:?}");
-        assert!(keys.iter().any(|k| k == "floor_db"));
-    }
-
-    /// 条目里夹注释也能解析；解析不出时条数对不上（`check` 据此报错）。
-    #[test]
-    fn desc_keys_survive_comments_and_count_mismatch_is_detected() {
-        let src = "pub const A: ParamDesc = p(106, /* 编号说明 */ \"gate.confirm_n\", Unit::Count);\n\
-                   pub const B: ParamDesc = p(\n    2, // 衰减下限\n    \"floor_db\",\n);\n";
-        assert_eq!(desc_keys(src), ["gate.confirm_n", "floor_db"]);
-        assert_eq!(desc_const_count(src), 2);
-        let broken = "pub const A: ParamDesc = make(\"x\");\n";
-        assert_ne!(desc_keys(broken).len(), desc_const_count(broken));
-    }
-
-    #[test]
-    fn tokens_include_short_and_camel_forms() {
-        let t = toks();
-        for want in [
-            "floor_db",
-            "FloorDb",
-            "smooth",
-            "Smooth",
-            "confirm_n",
-            "ConfirmN",
-        ] {
-            assert!(t.iter().any(|x| x == want), "{want}");
-        }
-    }
-
-    // ── R-PARAM 负例（该报）──
-    #[test]
-    fn literal_param_ranges_are_flagged() {
-        let bad = [
-            "        let ok = (-30.0..=0.0).contains(&p.floor_db);",
-            "    if !(-60.0..0.0).contains(&floor_db) {",
-            "    self.smooth = s.smooth.clamp(0.0, 1.0);",
-            "    let f = floor_db.max(-60.0).min(0.0);",
-            "    let n = confirm_n.min(20).max(1);",
-            "            ParamField::FloorDb => (-60.0, 0.0),",
-            "    let f = floor_db.clamp(-60f32, 0f32);",
-            "    let f = floor_db.clamp(-6e1, 0.0);",
-            "    let ok = (-6E+1..=0e0).contains(&floor_db);",
-            "    let f = /* 夹一下 */ floor_db.clamp(-60.0, 0.0);",
-            "    let n = confirm_n.clamp(1u32, 20u32);",
-            "    let n = (1usize..=20usize).contains(&confirm_n);",
-            "    let f = floor_db.clamp(-60., 0.);",
-            // 字符串里写放行标记不算放行
-            "    let s = \"tidy: 非参数范围：x\"; let f = floor_db.clamp(-60.0, 0.0);",
-            // 尾逗号
-            "    let f = floor_db.clamp(-60.0, 0.0,);",
-            "            ParamField::FloorDb => (-60.0, 0.0,),",
-            // 字节原始字符串里的放行标记不算放行
-            "    let s = br#\"tidy: 非参数范围：x\"#; let f = floor_db.clamp(-60.0, 0.0);",
-        ];
-        for line in bad {
-            assert_eq!(range_problems("x.rs", line, &toks()).len(), 1, "{line}");
-        }
-    }
-
-    // ── R-PARAM 正例（不该报）──
-    #[test]
-    fn non_param_ranges_and_values_pass() {
-        let good = [
-            // 范围来自描述表
-            "    let f = FLOOR_DB.clamp(p.floor_db);",
-            // 不是参数的范围
-            "    } else if (1500.0..2000.0).contains(&f) {",
-            "    let a = alpha.clamp(0.0, 1.0);",
-            // 参数的单个值（默认值 / 测试输入），不是范围
-            "        floor_db: -12.0,",
-            "    assert_eq!((c.floor_db, c.detect_db), (-20.0, 12.0));",
-            // 注释里的范围
-            "    // floor_db 原来写成 -60.0..=0.0，现在在 desc.rs",
-            // 元组下标 / 切片 / 整数方法调用
-            "    let s = &floor_db_buf[x.0..n];",
-            "    for i in 0..floor_db.len() {",
-            "    let n = 3.max(confirm_n);",
-            // 放行
-            "    let r = (0.0..1.0).contains(&smooth); // tidy: 非参数范围：这是归一化后的插值位置",
-            // 字符串里的负例（测试数据）不是代码
-            "        \"    let ok = (-30.0..=0.0).contains(&p.floor_db);\",",
-            "    let s = r#\"floor_db.clamp(-60.0, 0.0)\"#;",
-            "    let s = br#\"\" floor_db.clamp(-60.0, 0.0) \"#;",
-            "    let s = br\"floor_db.clamp(-60.0, 0.0)\";",
-            // 块注释里的
-            "    /* floor_db.clamp(-60.0, 0.0) */ let x = 1;",
-            // 生命周期与字符字面量不打乱剥离
-            "    fn f<'a>(x: &'a str) -> char { let _ = floor_db; '\"' }",
-            "    let q = ['\\'', '\\\\', '\"']; let s = \"floor_db.clamp(-60.0, 0.0)\";",
-        ];
-        for line in good {
-            assert!(range_problems("x.rs", line, &toks()).is_empty(), "{line}");
-        }
-    }
-
-    #[test]
-    fn code_lines_strip_strings_and_comments_across_lines() {
-        let src = "let a = \"x\n\\\n  floor_db.clamp(-60.0, 0.0)\";\n/* 开始\nfloor_db.clamp(-60.0, 0.0)\n结束 */ let b = 1;\nlet c = r#\"\na \"q\" floor_db\n\"#;\n";
-        let c = code_lines(src);
-        assert!(c.iter().all(|l| !l.contains("floor_db")), "{c:#?}");
-        assert!(c.iter().any(|l| l.contains("let b = 1;")));
-        assert!(c.iter().any(|l| l.contains("let c = \"")));
-        assert!(range_problems("x.rs", src, &toks()).is_empty());
-    }
-
-    // ── R-MIRROR ──
-    #[test]
-    fn mirror_file_and_same_name_types_are_flagged() {
-        let names = types_names(
-            ["pub struct FrameCtx {\n}\npub trait Stage: Send {}\npub enum UserScene {}\n"]
-                .into_iter(),
-        );
-        assert_eq!(names, ["FrameCtx", "Stage", "UserScene"]);
-        assert_eq!(
-            mirror_problems("src/polish/src/mirror.rs", "", &names).len(),
-            1
-        );
-        for bad in [
-            "pub struct FrameCtx {\n",
-            "pub(crate) trait Stage: Send {}\n",
-            "#[derive(Clone)]\nenum UserScene { A }\n",
-            "pub type FrameCtx = u8;\n",
-        ] {
-            assert_eq!(
-                mirror_problems("src/x/src/lib.rs", bad, &names).len(),
-                1,
-                "{bad}"
-            );
-        }
-    }
-
-    #[test]
-    fn distinct_names_and_reasoned_same_names_pass() {
-        let names = vec!["Hysteresis".to_string(), "Stage".to_string()];
-        for good in [
-            "pub struct VadHysteresis {}\n",
-            "use vdn_types::Stage;\nimpl Stage for X {}\n",
-            "/// VAD 概率的滞回\n// tidy: 同名不同物：这是 VAD 概率滞回，vdn-types 的是场景滞回\n#[derive(Clone, Copy)]\npub struct Hysteresis {}\n",
-            "pub struct Hysteresis {} // tidy: 同名不同物：VAD 概率滞回\n",
-            "// pub struct Stage {}\n",
-            "/* pub struct Stage {} */\n",
-            "let s = \"pub struct Stage {}\";\n",
-            "/* tidy: 同名不同物：块注释里写理由也算 */\npub struct Hysteresis {}\n",
-        ] {
-            assert!(
-                mirror_problems("src/x/src/lib.rs", good, &names).is_empty(),
-                "{good}"
-            );
-        }
-        // 只写标记、不写理由不算；写在字符串里也不算
-        for bad in [
-            "// tidy: 同名不同物：\npub struct Hysteresis {}\n",
-            "pub struct Hysteresis {} const S: &str = \"tidy: 同名不同物：假的\";\n",
-        ] {
-            assert_eq!(
-                mirror_problems("src/x/src/lib.rs", bad, &names).len(),
-                1,
-                "{bad}"
-            );
-        }
-    }
-
-    /// 整个仓库当前过这两条规则（新加的违规会在这里和 `tidy` 里同时红）。
-    #[test]
-    fn repo_passes() {
-        let mut p = Vec::new();
-        check(&crate::root(), &mut p);
-        assert!(p.is_empty(), "{p:#?}");
-    }
-}
+#[path = "single_source_tests.rs"]
+mod tests;
