@@ -16,3 +16,4 @@
 
 - 2026-11-02 两人报到。single：三镜像共 341 行，floor_db 21 个文件，先比对分歧，按 polish → speaker → scene 删。schema：新建 tool 档 `vdn-schema`，导出到 `specs/schema/`，先做共享内存头
 - 2026-11-02 应 e3 要求，账本从 `state/coord.md` 挪到本文件，git 写操作改在本检出做
+- 2026-11-02 single：9 处分歧，8 处按正本；polish 的 SpectralStage 不是镜像而是扩展 trait → 大总管定 A（留 polish，第二阶段处理图再定是否进 vdn-types）；FE-M 名改 "fastenhancer_m"，要求先全仓查旧名 + 加「route 输出名能被 vdn-types 解析」测试
