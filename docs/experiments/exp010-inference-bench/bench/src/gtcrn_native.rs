@@ -392,6 +392,27 @@ impl ConvF {
         })
     }
 
+    /// 只数有效抽头（越界补 0 的不算），与 `run` 的循环区间相同
+    fn cost(&self) -> Cost {
+        let cig = self.cin / self.groups;
+        let taps: usize = (0..K)
+            .map(|t| {
+                let jlo = (2usize.saturating_sub(t)).div_ceil(2);
+                let jhi = (self.fin + 2 - t).div_ceil(2).min(self.fout);
+                jhi.saturating_sub(jlo)
+            })
+            .sum();
+        let (ci, co) = (self.cin as u64, self.cout as u64);
+        Cost {
+            macs: co * (cig * taps) as u64,
+            other: co * self.fout as u64,
+            w_bytes: (co * (cig * K) as u64 + co) * F32B,
+            io_bytes: (ci * self.fin as u64 + co * self.fout as u64) * F32B,
+            chain_fma: clog2(cig * K) + 2, // 归约 + PReLU
+            ..Cost::default()
+        }
+    }
+
     fn run(&mut self, x: &[f32], y: &mut [f32]) {
         let (cig, cog) = (self.cin / self.groups, self.cout / self.groups);
         if blas() {
