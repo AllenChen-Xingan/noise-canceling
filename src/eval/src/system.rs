@@ -321,6 +321,26 @@ pub const BUDGET_MS: f64 = LATENCY_BUDGET_MS;
 mod tests {
     use super::*;
 
+    /// 真模型系统的名字 = 它的模型的正本名；两种 FE-M 写法解析到同一个系统；名字往返不丢。
+    #[test]
+    fn system_names_follow_model_id() {
+        let all = [
+            SystemKind::Passthrough,
+            SystemKind::Ref,
+            SystemKind::Gtcrn,
+            SystemKind::FastEnhancerM,
+        ];
+        for k in all {
+            assert_eq!(SystemKind::parse(k.as_str()), Some(k));
+            if let Some(m) = k.model_kind() {
+                assert_eq!(k.as_str(), m.id().as_str());
+            }
+        }
+        assert_eq!(SystemKind::parse("fastenhancer-m"), Some(SystemKind::FastEnhancerM));
+        assert_eq!(SystemKind::parse("fastenhancer_m"), Some(SystemKind::FastEnhancerM));
+        assert_eq!(SystemKind::parse("nope"), None);
+    }
+
     fn spec(kind: SystemKind) -> SystemSpec {
         SystemSpec {
             kind,
