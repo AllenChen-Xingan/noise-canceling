@@ -112,7 +112,7 @@ mod tests {
         assert_eq!(p.onset_gap_s, d.onset_gap_s);
         assert_eq!(p.onset_jump_db, d.onset_jump_db);
         assert_eq!(p.onset_level_margin_db, d.onset_level_margin_db);
-
+    }
 
     /// 越界（按 vdn_types::desc 的范围）报错；报错里带键名。
     #[test]
@@ -126,7 +126,7 @@ mod tests {
         // 小数不截断：20.9 不能悄悄变成 20 再通过
         assert!(gate_params(&sv(&["--confirm", "20.9"])).is_err());
         assert!(gate_params(&sv(&["--confirm", "21"])).is_err());
-
+    }
 
     /// 判断回路参数：合法值照用；越界（如 `--win 20`，表上限 10 s）报错，不会一边按 20 s 建模型、一边被夹成 10 s。
     #[test]
@@ -137,9 +137,10 @@ mod tests {
         let e = judge_params(&sv(&["--win", "20"])).unwrap_err();
         assert!(e.to_string().contains("judge.window_s"), "{e}");
         assert!(judge_params(&sv(&["--others-lo", "1.5"])).is_err());
-
+    }
 
     #[test]
     fn gate_params_rejects_non_numeric_value() {
         assert!(gate_params(&sv(&["--release", "slow"])).is_err());
+    }
 }

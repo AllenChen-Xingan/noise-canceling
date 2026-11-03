@@ -2,9 +2,9 @@
 
 use super::*;
 use crate::worker::quantile;
-use vdn_shm::{Bus, BusConfig, RingId};
 use vdn_capture::shm::forward_same_bus;
 use vdn_capture::{Forwarder, ForwarderConfig};
+use vdn_shm::{Bus, BusConfig, RingId};
 
 /// 输出 = 输入、延迟 0
 struct Copy0;

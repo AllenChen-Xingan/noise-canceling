@@ -208,7 +208,8 @@ mod tests {
         use vdn_hal::{HalSource, RenderStatus};
         for (tag, producer_ppm) in [("fast", 1000i64), ("slow", -1000i64)] {
             let name = format!("/vdn-tdr{tag}-{}", std::process::id());
-            let out = Arc::new(OwnedBus::create(&name, out_bus_config(vdn_control::IO_RATE)).unwrap());
+            let out =
+                Arc::new(OwnedBus::create(&name, out_bus_config(vdn_control::IO_RATE)).unwrap());
             let block = 96usize;
             let target = 2 * block;
             let (mut f, _ctl) = Feeder::new(

@@ -37,7 +37,6 @@ pub(crate) fn verdict_from_json(e: &serde_json::Value) -> SpeakerVerdict {
 mod tests {
     use super::*;
 
-
     #[test]
     fn verdict_json_round_trips_every_class() {
         for class in [
