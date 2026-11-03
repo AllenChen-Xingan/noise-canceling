@@ -196,7 +196,9 @@ pub fn shm_baseline(root: &Path) -> Baseline {
         .iter()
         .find_map(|m| git(root, &["merge-base", "HEAD", m]));
     let Some(mut base) = base else {
-        return Baseline::Unavailable("找不到 main 或 origin/main（CI 要 checkout fetch-depth: 0）".into());
+        return Baseline::Unavailable(
+            "找不到 main 或 origin/main（CI 要 checkout fetch-depth: 0）".into(),
+        );
     };
     if head.as_deref() == Some(base.as_str()) {
         match git(root, &["rev-parse", "HEAD^1"]) {
@@ -204,7 +206,10 @@ pub fn shm_baseline(root: &Path) -> Baseline {
             None => return Baseline::Unavailable("HEAD 没有父提交".into()),
         }
     }
-    match git(root, &["show", &format!("{base}:{DIR}/{}", shm::LAYOUT_FILE)]) {
+    match git(
+        root,
+        &["show", &format!("{base}:{DIR}/{}", shm::LAYOUT_FILE)],
+    ) {
         Some(t) => Baseline::Found(base, t),
         None => Baseline::Absent(base),
     }

@@ -33,9 +33,9 @@ pub struct Bus {
 #[cfg(all(unix, feature = "posix"))]
 pub(crate) fn checked_name(name: &str) -> Result<CString, ShmError> {
     let ok = name.len() <= 31
-        && name
-            .strip_prefix("/vdn-")
-            .is_some_and(|rest| !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_graphic() && b != b'/'));
+        && name.strip_prefix("/vdn-").is_some_and(|rest| {
+            !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_graphic() && b != b'/')
+        });
     if !ok {
         return Err(ShmError::InvalidName);
     }

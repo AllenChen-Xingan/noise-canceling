@@ -34,7 +34,7 @@
       "default": "/vdn-bus",
       "description": "降噪总线名（降噪进程建；Raw / Processed / 心跳）。规则见 `validate_bus_name`",
       "maxLength": 31,
-      "pattern": "^/vdn-[^/\\u0000]+$",
+      "pattern": "^/vdn-[!-.0-~]+$",
       "type": "string"
     },
     "denoise_block": {
@@ -90,7 +90,7 @@
       "default": "/vdn-out",
       "description": "Out 总线名（送音进程建，只用 Out 环；虚拟麦克风插件按这个名字连）",
       "maxLength": 31,
-      "pattern": "^/vdn-[^/\\u0000]+$",
+      "pattern": "^/vdn-[!-.0-~]+$",
       "type": "string"
     },
     "output_device": {

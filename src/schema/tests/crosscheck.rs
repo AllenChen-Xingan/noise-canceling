@@ -211,7 +211,11 @@ fn shm_history_rewrite_is_red() {
     let e = shm::guard_baseline(&rewritten, (v, &fp)).unwrap_err();
     assert!(e.contains("被改写"), "{e}");
     let deleted = [(v + 1, "fnv1a64:2222222222222222")];
-    assert!(shm::guard_baseline(&deleted, (v, &fp)).unwrap_err().contains("删掉"));
+    assert!(
+        shm::guard_baseline(&deleted, (v, &fp))
+            .unwrap_err()
+            .contains("删掉")
+    );
     let appended = [(v, fp.as_str()), (v + 1, "fnv1a64:2222222222222222")];
     assert!(shm::guard_baseline(&appended, (v, &fp)).is_ok());
 }
@@ -354,7 +358,10 @@ fn bus_name_pattern_agrees_with_validate() {
         "/other",
         "/vdn-a/b",
         "/vdn-a\u{0}b",
-        "/vdn-a b", "/vdn-~!", "/vdn-中", &multi,
+        "/vdn-a b",
+        "/vdn-~!",
+        "/vdn-中",
+        &multi,
         &long_ok,
         &long_bad,
     ] {
@@ -537,10 +544,16 @@ fn same(a: &Value, b: &Value) -> bool {
 
 #[test]
 fn same_keeps_integers_exact() {
-    assert!(!same(&json!(9_007_199_254_740_992_u64), &json!(9_007_199_254_740_993_u64)));
+    assert!(!same(
+        &json!(9_007_199_254_740_992_u64),
+        &json!(9_007_199_254_740_993_u64)
+    ));
     assert!(same(&json!(3), &json!(3.0)));
     assert!(!same(&json!(3), &json!(3.5)));
-    assert!(same(&norm(&json!({"a": null, "b": [], "c": 1})), &json!({"c": 1})));
+    assert!(same(
+        &norm(&json!({"a": null, "b": [], "c": 1})),
+        &json!({"c": 1})
+    ));
     // 大整数种子往返不丢精度
     let doc = json!({"seed": 9_007_199_254_740_993_u64, "tasks": []});
     let t: vdn_eval::files::SuiteFile = serde_json::from_value(doc.clone()).unwrap();
