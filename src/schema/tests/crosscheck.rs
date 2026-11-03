@@ -585,6 +585,62 @@ fn eval_schema_and_parser_agree_on_bad_tasks() {
     }
 }
 
+/// 整数范围（codex 第 3 轮 #4）：每个整数字段都有上下界；超出 Rust 类型的数 schema 与解析器都拒。
+#[test]
+fn integer_bounds_agree_with_rust_types() {
+    fn walk(path: &str, v: &Value, bad: &mut Vec<String>) {
+        match v {
+            Value::Object(m) => {
+                let int_format = m
+                    .get("format")
+                    .and_then(Value::as_str)
+                    .is_some_and(|f| f.starts_with("int") || f.starts_with("uint"));
+                if int_format && !(m.contains_key("minimum") && m.contains_key("maximum")) {
+                    bad.push(path.to_string());
+                }
+                for (k, x) in m {
+                    walk(&format!("{path}/{k}"), x, bad);
+                }
+            }
+            Value::Array(a) => {
+                for (i, x) in a.iter().enumerate() {
+                    walk(&format!("{path}/{i}"), x, bad);
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut bad = Vec::new();
+    for f in [
+        "config.schema.json",
+        eval::SUITE_FILE,
+        eval::LEVELS_FILE,
+        eval::BASELINE_FILE,
+    ] {
+        walk(f, &committed(f), &mut bad);
+    }
+    assert!(bad.is_empty(), "整数字段缺上下界：{bad:#?}");
+
+    let schema = committed(eval::SUITE_FILE);
+    let task = r#"{"id": "R99", "set": "regression", "origin": "测试",
+        "scene": {"noise": "pink"}, "graders": [{"v": "V-NAN"}]}"#;
+    let cases = [
+        ("18446744073709551615", true), // u64::MAX
+        ("100000000000000000000", false), // 1e20，超出 u64
+        ("-1", false),
+    ];
+    for (seed, want) in cases {
+        let text = format!(r#"{{"seed": {seed}, "tasks": [{task}]}}"#);
+        let doc: Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(validate(&schema, &doc).is_ok(), want, "schema：seed = {seed}");
+        assert_eq!(
+            vdn_eval::suite::parse_suite(&text).is_ok(),
+            want,
+            "解析器：seed = {seed}"
+        );
+    }
+}
+
 /// 负例：清单类型加了字段而 schema 没重新导出 → 检查报出对应文件（三份各一例）。
 #[test]
 fn eval_type_change_without_export_is_red() {
