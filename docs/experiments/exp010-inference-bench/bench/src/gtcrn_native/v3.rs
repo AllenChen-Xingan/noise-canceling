@@ -367,6 +367,22 @@ mod tests {
         assert!(h1.iter().zip(&h2).all(|(x, y)| x.to_bits() == y.to_bits()), "gru_rows 与逐行不同");
     }
 
+    /// 整网：v3i（GRU 交错）与 v3 逐位相同（20 帧带状态）
+    #[test]
+    fn v3i_whole_net_bitwise_equal_v3() {
+        let w = Weights::fake(0.03);
+        let (mut a, mut b) = (GtcrnNative::from_weights(&w).unwrap(), GtcrnNative::from_weights(&w).unwrap());
+        a.set_kind(Kind::V3);
+        b.set_kind(Kind::V3i);
+        for f in 0..20 {
+            let (mut r1, mut i1) = (rnd(BINS, 90 + f), rnd(BINS, 110 + f));
+            let (mut r2, mut i2) = (r1.clone(), i1.clone());
+            a.infer(&mut r1, &mut i1);
+            b.infer(&mut r2, &mut i2);
+            assert!(r1.iter().chain(&i1).zip(r2.iter().chain(&i2)).all(|(x, y)| x.to_bits() == y.to_bits()), "第 {f} 帧不同");
+        }
+    }
+
     /// 整网：v3 对 v2-fast（同一组假权重、同一串输入，跑 20 帧带状态），差有界
     #[test]
     fn v3_whole_net_close_to_v2_fast() {
