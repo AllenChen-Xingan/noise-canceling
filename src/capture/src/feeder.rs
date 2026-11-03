@@ -38,7 +38,14 @@ pub struct Feeder {
     /// 回收队列满时先留在这里，下一块再送
     pending: Option<Retired>,
     switches: u64,
+    /// 纠漂移（写方一侧）：Out 积压连续多少块低于一块
+    low_run: usize,
+    /// 补过几块（读方时钟比麦克风快，Out 快读空了）
+    slips_added: u64,
 }
+
+/// 纠漂移：积压连续偏离这么多块（≈ 50 ms @ 96）才动手，免得抖一下就补 / 丢
+pub const DRIFT_PATIENCE: usize = 25;
 
 // 构造：非实时
 impl Feeder {
@@ -55,6 +62,8 @@ impl Feeder {
                 back,
                 pending: None,
                 switches: 0,
+                low_run: 0,
+                slips_added: 0,
             },
             Control { handover, retired },
         )
@@ -74,6 +83,10 @@ impl Feeder {
     /// 接手过几次新总线
     pub fn switches(&self) -> u64 {
         self.switches
+    }
+    /// 纠漂移补过几块
+    pub fn slips_added(&self) -> u64 {
+        self.slips_added
     }
 
     pub fn feed(&mut self, x: &[f32]) {
@@ -103,6 +116,22 @@ impl Feeder {
             }
         }
         forward(&mut self.fwd, self.bus.as_deref(), &self.out, x);
+
+        // 纠漂移（写方一侧）：读方时钟比麦克风快时 Out 会慢慢读空。积压连续 DRIFT_PATIENCE 块不到一块，
+        // 就把刚推的这块再推一次（重复 1 块，记 Out 环缺口）。积压过多那一侧由读方 `OutSource` 丢
+        let out = self.out.ring(vdn_shm::RingId::Out);
+        if out.available() < x.len() {
+            self.low_run += 1;
+        } else {
+            self.low_run = 0;
+        }
+        if self.low_run >= DRIFT_PATIENCE {
+            let last = self.fwd.last_output();
+            let n = out.push(last);
+            out.note_gap(n);
+            self.slips_added += 1;
+            self.low_run = 0;
+        }
     }
 }
 
@@ -168,5 +197,51 @@ mod tests {
             f.feed(&x);
         }
         assert!(f.switches() > 9);
+    }
+
+    /// 两个设备时钟差 ±0.1%（麦克风快 / 读方快），模拟 60 s：Out 积压（= 用户侧多出的延迟）不漂，
+    /// 始终在 [0, 目标 + 3 块] 里；补 / 丢都记了缺口
+    #[test]
+    fn drift_is_corrected_both_ways() {
+        use crate::shm::OutSource;
+        use vdn_hal::{HalSource, RenderStatus};
+        for (tag, producer_ppm) in [("fast", 1000i64), ("slow", -1000i64)] {
+            let name = format!("/vdn-tdr{tag}-{}", std::process::id());
+            let out = Arc::new(OwnedBus::create(&name, out_bus_config(48_000)).unwrap());
+            let block = 96usize;
+            let target = 2 * block;
+            let (mut f, _ctl) = Feeder::new(None, Forwarder::new(ForwarderConfig::new(96, block)), out.clone());
+            let mut src = HalSource::new(OutSource::new(Arc::new(Bus::open(&name).unwrap())).with_drift(target, block));
+            let x = crate::testing::test_tone(48_000, block, 0);
+            let mut y = vec![0.0f32; block];
+            // 事件时间以 ns 计：写方周期 = 2 ms / (1 + ppm)，读方周期 = 2 ms
+            let base = 2_000_000i64;
+            let wp = base * 1_000_000 / (1_000_000 + producer_ppm);
+            let (mut tw, mut tr) = (0i64, i64::try_from(target).unwrap() * 1_000_000_000 / 48_000);
+            let end = 60_000_000_000i64;
+            let (mut max_backlog, mut underruns) = (0usize, 0u64);
+            while tr < end {
+                if tw <= tr {
+                    f.feed(&x);
+                    tw += wp;
+                } else {
+                    if let RenderStatus::Underrun { .. } = src.render(&mut y) {
+                        underruns += 1;
+                    }
+                    if tr > 10_000_000_000 {
+                        max_backlog = max_backlog.max(out.ring(vdn_shm::RingId::Out).available());
+                    }
+                    tr += base;
+                }
+            }
+            let gaps = out.ring(vdn_shm::RingId::Out).gaps();
+            // 不纠时 60 s 会漂 ±2880 样本（0.1% × 60 s × 48 kHz）
+            assert!(max_backlog <= target + 3 * block, "{tag}：最大积压 {max_backlog}");
+            assert!(gaps > 0, "{tag}：没有纠过");
+            if producer_ppm < 0 {
+                assert!(f.slips_added() > 0, "{tag}：读方快，应补过块");
+                assert!(underruns < 30, "{tag}：欠载 {underruns} 次");
+            }
+        }
     }
 }

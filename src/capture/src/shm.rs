@@ -60,6 +60,9 @@ pub struct OutSource {
     bus: Arc<Bus>,
     max_backlog: usize,
     dropped: Arc<AtomicU64>,
+    /// 纠漂移（读方一侧）：目标积压（样本）与块长；`None` = 不纠，只按 `max_backlog` 封顶
+    drift: Option<(usize, usize)>,
+    high_run: usize,
 }
 
 impl OutSource {
@@ -74,7 +77,15 @@ impl OutSource {
             bus,
             max_backlog,
             dropped: Arc::new(AtomicU64::new(0)),
+            drift: None,
+            high_run: 0,
         }
+    }
+    /// 打开纠漂移（读方一侧）：读完后剩下的积压连续 `DRIFT_PATIENCE` 次超过 `target + 2 × block`，
+    /// 就丢到只剩 `target`（记 Out 环缺口）。麦克风时钟比读方快时积压会慢慢涨，这里把它拉回来
+    pub fn with_drift(mut self, target: usize, block: usize) -> Self {
+        self.drift = Some((target, block.max(1)));
+        self
     }
     /// 因积压超限丢掉的样本数（可在别的线程读）
     pub fn dropped(&self) -> Arc<AtomicU64> {
@@ -96,7 +107,22 @@ impl vdn_hal::SampleSource for OutSource {
             let d = ring.discard(avail - limit);
             self.dropped.fetch_add(d as u64, Ordering::Relaxed);
         }
-        ring.pop(out)
+        let got = ring.pop(out);
+        if let Some((target, block)) = self.drift {
+            let left = ring.available();
+            if left > target + 2 * block {
+                self.high_run += 1;
+            } else {
+                self.high_run = 0;
+            }
+            if self.high_run >= crate::feeder::DRIFT_PATIENCE {
+                let d = ring.discard(left - target);
+                ring.note_gap(d);
+                self.dropped.fetch_add(d as u64, Ordering::Relaxed);
+                self.high_run = 0;
+            }
+        }
+        got
     }
     fn note_underrun(&mut self, missing: usize) {
         self.bus.ring(RingId::Out).note_underrun(missing);
