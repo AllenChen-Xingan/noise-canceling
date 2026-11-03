@@ -66,14 +66,6 @@ fn params_change_without_export_is_red() {
     assert!(p.len() == 1 && p[0].contains(params::TABLE_FILE), "{p:#?}");
 }
 
-fn profile(key: &str, value: &str) -> String {
-    format!("vdn-profile = 1\n[user cafe]\n{key} = {value}\n")
-}
-
-fn scene_table(key: &str, value: &str) -> String {
-    format!("vdn-scene-table = 1\n[fine 3]\nname = a\nuser = cafe\n{key} = {value}\n")
-}
-
 /// 一个键的合法取值（造输入用）。
 fn sample(key: &str) -> String {
     match key {
