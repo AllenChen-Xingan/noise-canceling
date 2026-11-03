@@ -9,7 +9,7 @@
 use std::fs;
 use std::path::Path;
 
-use crate::scan::{code_lines, has_reason, lex_lines, src_files};
+use crate::scan::{has_reason, lex_lines, src_files};
 use crate::tidy::rs_files;
 
 const TYPES_SRC: &str = "src/types/src";

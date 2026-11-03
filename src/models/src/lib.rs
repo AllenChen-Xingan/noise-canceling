@@ -20,7 +20,7 @@ pub mod gtcrn;
 
 use std::path::{Path, PathBuf};
 
-use vdn_types::{Basis, LatencyItem, LatencyLedger, ModelId};
+use vdn_types::{Basis, LatencyItem, LatencyLedger};
 
 pub use fastenhancer::FastEnhancer;
 pub use gtcrn::Gtcrn;

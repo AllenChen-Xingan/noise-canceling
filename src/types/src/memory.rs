@@ -297,6 +297,25 @@ mod tests {
         assert!(UserProfile::from_text(nan).is_err());
     }
 
+    /// 越界的值按描述表拒收（每个参数取表里的上下界外一点）；边界值本身收下。旧写法的模型名读得进、写出成正本。
+    #[test]
+    fn rejects_out_of_range_values_per_desc_table() {
+        for f in ParamField::ALL {
+            let d = f.desc();
+            for bad in [d.min - 0.5, d.max + 0.5] {
+                let src = format!("vdn-profile = 1\n[user cafe]\n{} = {bad}\n", d.key);
+                let e = UserProfile::from_text(&src).unwrap_err();
+                assert_eq!(e.line, 3, "{} = {bad}", d.key);
+            }
+            for ok in [d.min, d.max] {
+                let src = format!("vdn-profile = 1\n[user cafe]\n{} = {ok}\n", d.key);
+                UserProfile::from_text(&src).unwrap();
+            }
+        }
+        let old = UserProfile::from_text("vdn-profile = 1\n[user cafe]\nmodel = fastenhancer_m\n").unwrap();
+        assert!(old.to_text().contains("model = fastenhancer-m\n"));
+    }
+
     #[test]
     fn empty_override_removes_entry() {
         let mut prof = UserProfile::default();
