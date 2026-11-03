@@ -538,3 +538,53 @@ fn main() {
         std::process::exit(2);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn jnum_never_emits_invalid_json() {
+        assert_eq!(jnum(1.23456, 2), "1.23");
+        assert_eq!(jnum(f64::NAN, 2), "null");
+        assert_eq!(jnum(f64::INFINITY, 2), "null");
+        assert_eq!(jnum(f64::NEG_INFINITY, 2), "null");
+    }
+
+    #[test]
+    fn pct_matches_rustbe_rule() {
+        // 同 rustbe：下标 = round((n-1)·p)
+        let v: Vec<f64> = (0..11).map(|i| i as f64).collect();
+        assert_eq!(pct(&v, 0.5), 5.0);
+        assert_eq!(pct(&v, 0.999), 10.0);
+        assert_eq!(pct(&v, 0.0), 0.0);
+        assert_eq!(pct(&[7.0], 0.99), 7.0);
+    }
+
+    #[test]
+    fn gtcrn_pack_unpack_roundtrip() {
+        // 转储布局 re[257] + im[257] ⟷ 模型布局 [1,257,1,2] 交错
+        let k = ModelKind::Gtcrn;
+        let src: Vec<f32> = (0..k.in_len()).map(|i| i as f32).collect();
+        let mut packed = vec![0f32; k.in_len()];
+        k.pack_input(&src, &mut packed);
+        assert_eq!(packed[0], src[0]); // bin 0 实部
+        assert_eq!(packed[1], src[BINS]); // bin 0 虚部
+        assert_eq!(packed[2 * 5 + 1], src[BINS + 5]);
+        let mut back = vec![0f32; k.out_len()];
+        k.unpack_output(&packed, &mut back);
+        assert_eq!(back, src);
+    }
+
+    #[test]
+    fn shapes_are_consistent() {
+        for k in [ModelKind::Gtcrn, ModelKind::Fem, ModelKind::Ecapa] {
+            assert_eq!(k.in_len(), k.in_shape().iter().product::<usize>());
+            assert_eq!(k.out_len(), k.out_shape().iter().product::<usize>());
+            let (a, b) = k.cache_names();
+            assert_eq!(a.len(), b.len());
+        }
+        assert_eq!(ModelKind::Gtcrn.in_len(), 514);
+        assert_eq!(ModelKind::Ecapa.out_len(), 192);
+    }
+}
