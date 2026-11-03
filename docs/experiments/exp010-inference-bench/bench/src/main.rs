@@ -40,6 +40,10 @@ unsafe impl GlobalAlloc for Counting {
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
         unsafe { System.dealloc(p, l) }
     }
+    unsafe fn alloc_zeroed(&self, l: Layout) -> *mut u8 {
+        ALLOCS.fetch_add(1, Relaxed);
+        unsafe { System.alloc_zeroed(l) }
+    }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
         ALLOCS.fetch_add(1, Relaxed);
         unsafe { System.realloc(p, l, n) }
@@ -299,8 +303,9 @@ struct TractFem {
     out: Vec<f32>,
 }
 impl TractFem {
-    fn open(path: &Path) -> Result<Self, Err> {
-        let shapes = input_shapes(&ort_session(path)?)?; // 只借 ORT 读形状，会话随即丢掉
+    /// `shapes` 由调用方在计时前读好（不把 ORT 建会话算进 tract 的打开时间）。
+    fn open(path: &Path, shapes: &[Vec<usize>]) -> Result<Self, Err> {
+        let shapes = shapes.to_vec();
         let hop = *shapes[0].last().ok_or("wav_in 形状空")?;
         Ok(Self {
             net: TractNet::open(path, &shapes)?,
@@ -331,13 +336,29 @@ impl ModelId {
     }
 }
 
+/// 计时前的准备：初始化 ORT 环境，并用一个 ORT 会话读出输入形状（会话随即丢掉）。
+/// 对所有后端、两个模型都做，这样「打开」一律不含 ORT 环境初始化，模型文件也都已在页缓存里。
+fn prepare(path_onnx: &Path) -> Result<(Vec<Vec<usize>>, f64), Err> {
+    let t = Instant::now();
+    let s = ort_session(path_onnx)?;
+    let ms = t.elapsed().as_secs_f64() * 1e3;
+    Ok((input_shapes(&s)?, ms))
+}
+
 fn open_net(model: ModelId, kind: &str, path: &Path) -> Result<Box<dyn Net>, Err> {
+    open_net_with(model, kind, path, None)
+}
+
+fn open_net_with(model: ModelId, kind: &str, path: &Path, shapes: Option<&[Vec<usize>]>) -> Result<Box<dyn Net>, Err> {
     Ok(match (model, kind) {
         (ModelId::Gtcrn, "ort") => Box::new(OrtGtcrn::open(path)?),
         (ModelId::Gtcrn, "native") => Box::new(GtcrnNative::load(path)?),
         (ModelId::Gtcrn, "tract") => Box::new(TractGtcrn::open(path)?),
         (ModelId::Fem, "ort") => Box::new(OrtFem::open(path)?),
-        (ModelId::Fem, "tract") => Box::new(TractFem::open(path)?),
+        (ModelId::Fem, "tract") => match shapes {
+            Some(s) => Box::new(TractFem::open(path, s)?),
+            None => Box::new(TractFem::open(path, &input_shapes(&ort_session(path)?)?)?),
+        },
         _ => return Err(format!("{} 没有后端 {kind}", model.name()).into()),
     })
 }
@@ -347,7 +368,7 @@ fn frames_for(
     model: ModelId,
     audio: &[f32],
     frames: usize,
-    onnx_or_any: &Path,
+    shapes: &[Vec<usize>],
 ) -> Result<Vec<Vec<f32>>, Err> {
     Ok(match model {
         ModelId::Gtcrn => spectra(audio, frames)
@@ -355,9 +376,7 @@ fn frames_for(
             .map(|(re, im)| re.iter().chain(im.iter()).copied().collect())
             .collect(),
         ModelId::Fem => {
-            let hop = *input_shapes(&ort_session(onnx_or_any)?)?[0]
-                .last()
-                .ok_or("wav_in 形状空")?;
+            let hop = *shapes.first().and_then(|s| s.last()).ok_or("FE-M 需要输入形状")?;
             let n = audio.len() / hop;
             (0..frames)
                 .map(|i| audio[(i % n) * hop..(i % n + 1) * hop].to_vec())
@@ -391,13 +410,25 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let frames = arg_usize(args, "--frames", 6000);
     let warm = arg_usize(args, "--warmup", 200);
     let pace: f64 = arg_str(args, "--pace-ms", "0").parse()?;
+    let qos = arg_str(args, "--qos", "ui");
+    // 计时线程的调度等级：ui = QOS_CLASS_USER_INTERACTIVE（默认，尽量留在性能核；实时音频线程只会更高），
+    // default = 不设。审稿发现不设时 tract 的 p50 在一次运行里分两档。
+    if qos == "ui" {
+        let r = unsafe { libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE, 0) };
+        if r != 0 {
+            return Err(format!("设 QoS 失败：{r}").into());
+        }
+    } else if qos != "default" {
+        return Err("--qos 只收 ui / default".into());
+    }
     let audio = read_wav(wav)?;
-    // FE-M 的帧形状要从 ONNX 读；GTCRN 不用 path
-    let inputs = frames_for(model, &audio, frames + warm + 1, path)?;
+    // 计时前：ORT 环境初始化 + 读输入形状（native 吃权重前缀，没有 onnx，用同目录约定之外的 GTCRN 常量形状）
+    let (shapes, ort_env_ms) = if kind == "native" { (Vec::new(), 0.0) } else { prepare(path)? };
+    let inputs = frames_for(model, &audio, frames + warm + 1, &shapes)?;
     let mut x = inputs[0].clone();
     // 冷启动：打开 + 第一帧
     let t0 = Instant::now();
-    let mut m = open_net(model, kind, path)?;
+    let mut m = open_net_with(model, kind, path, Some(&shapes))?;
     let t_open = t0.elapsed().as_secs_f64() * 1e3;
     let t1 = Instant::now();
     m.infer(&mut x)?;
@@ -441,9 +472,11 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         )?;
     }
     println!(
-        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"p50_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan}}}",
+        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan}}}",
         model.name(),
+        pct(&times, 0.1),
         pct(&times, 0.5),
+        pct(&times, 0.9),
         pct(&times, 0.99),
         pct(&times, 0.999),
         times[times.len() - 1],
