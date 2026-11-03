@@ -627,31 +627,48 @@ pub fn judge_file(y: &[f32], l_total: usize, from: usize) -> Verdict {
 mod tests {
     use super::*;
 
+    /// 单元测试一律用锁步模拟（`run_lockstep`）：确定、不受机器负载和并行测试影响，所以能用真默认值
+    /// （IO 块 96 · lead 192 · 降噪块 96）。真实节拍只在下面一条 #[ignore] 测试和 `vdn chain-test` / V7 里跑
     fn opts(seconds: f64, kill_at: Option<f64>, tag: &str) -> ChainOpts {
         let mut o = ChainOpts::new(&format!("/vdn-t{tag}-{}", std::process::id()));
         o.seconds = seconds;
         o.kill_at = kill_at;
-        // 测试用大块（debug、不提优先级时调度抖动大）；环余量必须盖住一块 IO + 一块降噪，所以配 3 块
-        o.block = 480;
-        o.lead = 1440;
-        o.hal_offset = 720;
         o.warmup_blocks = 8;
         o.rt = false;
         o
     }
 
-    /// V1 的短版（1.2 s）：真共享内存、三线程
+    /// V1 的短版（1.2 s，锁步）：真共享内存两条总线、真 Forwarder / Worker / HalSource
     #[test]
     fn v1_short() {
-        let r = run(
+        let r = run_lockstep(
             vdn_denoised::identity_pipeline(Some(96)).unwrap(),
             &opts(1.2, None, "v1"),
         )
         .unwrap();
         let v = judge_v1(&r);
         assert!(v.pass, "{v}");
-        assert_eq!(r.l_total, 768 + 1440);
+        assert_eq!(r.l_total, 768 + vdn_control::Config::DEFAULT_LEAD);
         assert_eq!(r.fwd.proc_underrun, 0);
+    }
+
+    /// 真实节拍版（三线程 + sleep 节拍）：抢 CPU 时会欠载，不进默认测试（会时红时绿）。
+    /// 串行人工跑：`cargo test -p vdn-cli -- --ignored realtime_ --test-threads=1`；正式判据用 `vdn chain-test` / V7
+    #[test]
+    #[ignore = "真实节拍，依赖机器负载；串行人工跑，正式判据归 vdn chain-test / V7"]
+    fn realtime_v1_v2() {
+        let mut o = opts(1.2, None, "rt1");
+        o.block = 480;
+        o.lead = 1440;
+        o.hal_offset = 720;
+        let r = run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).unwrap();
+        assert!(judge_v1(&r).pass, "{}", judge_v1(&r));
+        let mut o = opts(1.2, Some(0.5), "rt2");
+        o.block = 480;
+        o.lead = 1440;
+        o.hal_offset = 720;
+        let r = run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).unwrap();
+        assert!(judge_v2(&r).pass, "{}", judge_v2(&r));
     }
 
     /// V2 的短版：0.5 s 处让降噪线程退出
@@ -671,7 +688,7 @@ mod tests {
     #[test]
     fn bus_unlinked_after_run() {
         let o = opts(0.3, None, "ul");
-        run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).unwrap();
+        run_lockstep(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).unwrap();
         // 两条总线（降噪 + Out）都删了
         for n in [o.bus_name.clone(), out_bus_name(&o.bus_name)] {
             assert!(
@@ -687,7 +704,7 @@ mod tests {
         let o = opts(0.3, None, "busy");
         let holder =
             vdn_shm::OwnedBus::create(&o.bus_name, vdn_capture::shm::out_bus_config(RATE)).unwrap();
-        let e = run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o)
+        let e = run_lockstep(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o)
             .err()
             .unwrap();
         assert!(e.contains("建降噪总线"), "{e}");
@@ -700,7 +717,7 @@ mod tests {
     fn mode_switch_mid_run() {
         let mut o = opts(1.2, None, "sw");
         o.switch_at = Some(0.5);
-        let r = run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).unwrap();
+        let r = run_lockstep(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o).unwrap();
         assert_eq!(r.worker.commands, 1);
         assert_eq!(r.fwd.proc_underrun, 0);
         let v = judge_v1(&r);
@@ -743,8 +760,9 @@ mod tests {
     #[test]
     fn chain_refuses_lead_below_io_block() {
         let mut o = opts(0.3, None, "lead");
-        o.lead = 288; // IO 块 480
-        let e = run(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o)
+        o.block = 480;
+        o.lead = 288; // 小于 IO 块 480
+        let e = run_lockstep(vdn_denoised::identity_pipeline(Some(96)).unwrap(), &o)
             .err()
             .unwrap();
         assert!(e.contains("小于 IO 块长"), "{e}");
