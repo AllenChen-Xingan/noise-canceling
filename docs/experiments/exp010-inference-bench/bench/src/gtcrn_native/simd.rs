@@ -18,7 +18,7 @@ unsafe fn lanes(x: float32x4_t, f: impl Fn(f32) -> f32) -> float32x4_t {
 
 /// exp：n = round(x·log2e)，r = x − n·ln2（ln2 拆两段），p(r) 用 Cephes expf 系数，结果 = 2^n · p
 #[inline(always)]
-pub(super) unsafe fn vexp(x: float32x4_t) -> float32x4_t {
+pub(crate) unsafe fn vexp(x: float32x4_t) -> float32x4_t {
     unsafe {
         let x = vminq_f32(vmaxq_f32(x, vdupq_n_f32(-87.0)), vdupq_n_f32(88.0));
         let n = vrndnq_f32(vmulq_n_f32(x, std::f32::consts::LOG2_E));
@@ -37,7 +37,7 @@ pub(super) unsafe fn vexp(x: float32x4_t) -> float32x4_t {
 }
 
 #[inline(always)]
-pub(super) unsafe fn sig4<const NL: u8>(x: float32x4_t) -> float32x4_t {
+pub(crate) unsafe fn sig4<const NL: u8>(x: float32x4_t) -> float32x4_t {
     unsafe {
         if NL == NL_RCP {
             let one = vdupq_n_f32(1.0);
@@ -56,7 +56,7 @@ pub(super) unsafe fn sig4<const NL: u8>(x: float32x4_t) -> float32x4_t {
 }
 
 #[inline(always)]
-pub(super) unsafe fn tanh4<const NL: u8>(x: float32x4_t) -> float32x4_t {
+pub(crate) unsafe fn tanh4<const NL: u8>(x: float32x4_t) -> float32x4_t {
     unsafe {
         if NL == NL_RCP {
             let one = vdupq_n_f32(1.0);
@@ -74,6 +74,6 @@ pub(super) unsafe fn tanh4<const NL: u8>(x: float32x4_t) -> float32x4_t {
 }
 
 #[inline(always)]
-pub(super) unsafe fn prelu4(x: float32x4_t, a: f32) -> float32x4_t {
+pub(crate) unsafe fn prelu4(x: float32x4_t, a: f32) -> float32x4_t {
     unsafe { vbslq_f32(vcgeq_f32(x, vdupq_n_f32(0.0)), x, vmulq_n_f32(x, a)) }
 }
