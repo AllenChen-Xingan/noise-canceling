@@ -3,17 +3,7 @@
 > 只有大总管跟人说话。手下做完、卡住、要名额，只报给大总管。
 > 大总管会话名：`noise-canceling-e3`（2026-11-02 换班；旧名 c4 · 69）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
 
-## 当前大事 · 大总管 noise-canceling-99（2026-11-02 起，另一件，与 e3 并行）
-
-**处理图 + schema 交叉校验**（D72 · `docs/plan/011_schema-crosscheck.md` · CLAUDE.md 第五节第 5 条）。人原话「我们现在开始做 schema 以及图的事情吧」。批次 `_tmp/20261102-b9/`，tmux 工作区 `vdn-schema`。
-第一阶段两条线并行；第二阶段「处理图（含会话记录记图版本 · 前端只算一次 D71 · 参数描述导出 schema · 模型接口）」等第一阶段合并后派。
-
-| 手下 | 线 | 管的实体 | 状态 |
-|---|---|---|---|
-| single | 清镜像副本 · 参数只写一处 · #56 · `feat/types-single-source` · `../noise_canceling-single` | vdn-types（参数描述）· vdn-speaker · vdn-polish · vdn-scene | 已报到（noise-canceling-single-68）|
-| schema | schema 导出 + 交叉校验 · #57 · `feat/schema-crosscheck` · `../noise_canceling-schema` | schema 机制 · 共享内存头 · 配置 · 评测任务清单 | 已报到（noise-canceling-schema-1d）|
-
-## 当前大事 · 大总管 noise-canceling-e3（2026-11-02 起）
+## 当前大事（2026-11-02 起）
 
 **推理引擎：降噪模型在 Mac 上用什么跑最快、最稳、最省电**（「轻快」尺子 · D53）。人定「可以先做1」。批次 `_tmp/20261102-b8/`。
 
