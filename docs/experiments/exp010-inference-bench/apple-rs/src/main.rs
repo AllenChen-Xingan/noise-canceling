@@ -6,7 +6,7 @@
 //!       转储前缀：rustbe `--dump-io` 写出的 `<前缀>.in.f32` / `<前缀>.ort.f32`
 //!       选项：--units cpu|gpu|ane|all（coreml）· --state（coreml 有状态版）· --multi（bnns 多线程编译，对照用）
 //!             --fem-json <convert_fem.json>（fem 的缓存形状）· --frames 6000 · --warmup 200 · --parity-frames 610
-//!             --pace-ms 0 · --qos ui|default
+//!             --pace-ms 0 · --qos ui|default|rt · --count-malloc（只计数时加；计时的那次别加）
 //!             --thread-policy none|tc（tc = THREAD_TIME_CONSTRAINT_POLICY，周期取 pace-ms 或 16，计算 1 ms，截止 3 ms）
 //!             --tc-computation 1 · --tc-constraint 3（毫秒，tc 策略的计算量与截止）
 //!             --interval-wg <截止 ms>（自建工作组区间，每帧 start/finish，报自己的截止期；D74 之后的重点）
@@ -159,7 +159,7 @@ impl Opts {
         let mut i = 0;
         while i < a.len() {
             if let Some(f) = a[i].strip_prefix("--") {
-                if matches!(f, "state" | "multi" | "workgroup" | "spin") {
+                if matches!(f, "state" | "multi" | "workgroup" | "spin" | "count-malloc") {
                     flags.insert(f.to_string(), "1".to_string());
                     i += 1;
                 } else {
@@ -212,7 +212,10 @@ fn bench(o: &Opts) -> Result<(), String> {
     };
     let frames: usize = o.num("frames", 6000);
     let warmup: usize = o.num("warmup", 200);
-    let parity_n: usize = o.num("parity-frames", 610);
+    // 逐值一致默认比转储里的全部帧（转储本身就是 ORT 从零状态顺序跑的全部 1 + 预热 + 计时帧）；输出先存下，跑完再比，帧间不做额外运算
+    let parity_n: usize = o.num("parity-frames", usize::MAX);
+    // 分配计数会给每次 malloc 多加一次回调，拖慢分配多的后端（Core ML）；同 rustbe，计数和计时分开跑
+    let count_malloc = o.flags.contains_key("count-malloc");
     let pace: f64 = o.num("pace-ms", 0.0);
     let qos = o.get("qos", "ui");
     if qos == "ui" {
@@ -245,7 +248,9 @@ fn bench(o: &Opts) -> Result<(), String> {
     let n_in = input.len() / per;
     let shapes = cache_shapes(kind, &o.get("fem-json", ""))?;
 
-    alloc::install_process_hook();
+    if count_malloc {
+        alloc::install_process_hook();
+    }
     let fp0 = footprint_mb();
     let t0 = Instant::now();
     let (mut be, compile_ms, backend, extra): (Box<dyn Backend>, f64, String, String) = match be_name {
@@ -276,6 +281,9 @@ fn bench(o: &Opts) -> Result<(), String> {
     let (mut worst, mut first_bad, mut nonfinite_values) = (0usize, None, 0usize);
     let pn = parity_n.min(n_in).min(total);
     let mut per_frame = Vec::with_capacity(pn);
+    let mut saved = vec![0f32; pn * per_out]; // 先存输出，跑完再对拍
+    let unix = || std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs_f64()).unwrap_or(0.0);
+    let mut win_start = 0.0;
     let (mut ra0, mut pa0, mut c0) = (0, 0, 0.0);
     let mut w0 = Instant::now();
     let mut fp1 = f64::NAN;
@@ -286,6 +294,11 @@ fn bench(o: &Opts) -> Result<(), String> {
             pa0 = alloc::process_allocs();
             c0 = cpu_seconds();
             w0 = Instant::now();
+            win_start = unix();
+        }
+        // 父进程没了（脚本被 SIGKILL）就自己退出，不当孤儿一直跑
+        if f % 64 == 0 && unsafe { libc::getppid() } == 1 {
+            return Err("父进程已退出，停止".into());
         }
         if pace > 0.0 && f >= t0w {
             let due = (f - t0w) as f64 * pace;
@@ -320,6 +333,14 @@ fn bench(o: &Opts) -> Result<(), String> {
             }
         }
         if f < pn {
+            saved[f * per_out..(f + 1) * per_out].copy_from_slice(&out);
+        }
+    }
+    let wall = w0.elapsed().as_secs_f64();
+    let win_end = unix();
+    for f in 0..pn {
+        {
+            let out = &saved[f * per_out..(f + 1) * per_out];
             let r = &refo[f * per_out..(f + 1) * per_out];
             let (mut fs, mut fe) = (0.0f64, 0.0f64);
             for (k, (&p, &q)) in r.iter().zip(&out).enumerate() {
@@ -343,11 +364,10 @@ fn bench(o: &Opts) -> Result<(), String> {
             per_frame.push((fs, fe));
         }
     }
-    let wall = w0.elapsed().as_secs_f64();
     let fp2 = footprint_mb();
     let cpu = cpu_seconds() - c0;
     let rust_allocs = (alloc::rust_allocs() - ra0) as f64 / frames as f64;
-    let proc_allocs = (alloc::process_allocs() - pa0) as f64 / frames as f64;
+    let proc_allocs = if count_malloc { format!("{:.3}", (alloc::process_allocs() - pa0) as f64 / frames as f64) } else { "null".into() };
     let mean = times.iter().sum::<f64>() / times.len() as f64;
     let over3 = times.iter().filter(|&&t| t > 3.0).count(); // BE-DEADLINE：单帧 > 3.0 ms（延迟账余量）
     times.sort_by(|a, b| a.total_cmp(b));
@@ -361,7 +381,7 @@ fn bench(o: &Opts) -> Result<(), String> {
         "{{\"model\":\"{}\",\"backend\":\"{backend}\",\"artifact\":\"{}\",\"frames\":{frames},\"warmup\":{warmup},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"thread_policy\":\"{policy}\",\"workgroup\":{},\"spin\":{spin},\"tc_computation_ms\":{},\"tc_constraint_ms\":{},\"interval_wg_deadline_ms\":{iwg_ms},\"interval_wg_errors\":{},\
 \"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{mean:.4},\"frames_over_3ms\":{over3},\
 \"ort_env_ms\":0.00,\"compile_ms\":{compile_ms:.2},\"open_ms\":{open_ms:.2},\"first_frame_ms\":{first_ms:.3},\"cpu_over_wall\":{:.3},\
-\"rust_allocs_per_frame\":{rust_allocs:.3},\"process_allocs_per_frame\":{proc_allocs:.3},\"nonfinite_frames\":{nonfinite_frames},\
+\"rust_allocs_per_frame\":{rust_allocs:.3},\"process_allocs_per_frame\":{proc_allocs},\"win_start_unix\":{win_start:.3},\"win_end_unix\":{win_end:.3},\"wall_s\":{wall:.3},\"nonfinite_frames\":{nonfinite_frames},\
 \"footprint_before_mb\":{fp0:.2},\"footprint_warm_mb\":{fp1:.2},\"footprint_end_mb\":{fp2:.2},\"parity_frames\":{pn},\"parity_max_abs\":{max_abs:.3e},\"parity_worst_frame\":{worst},\"parity_snr_db\":{:.2},\
 \"parity_min_frame_snr_db\":{min_frame_snr:.2},\"parity_nonfinite_values\":{nonfinite_values},\"parity_first_bad\":\"{first_bad:?}\",\"extra\":{extra}}}",
         kind.name(),
