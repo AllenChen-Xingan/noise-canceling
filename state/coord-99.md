@@ -47,3 +47,4 @@
 - 2026-11-02 人定（经 8d 转，「需要」）：xtask 规则一条一个文件、按查什么命名；single_source.rs → no_mirror.rs · param_range.rs（+ scan.rs），FE-M 规则同理；已转 iface
 - 2026-11-02 iface 四件 + 拆文件做完（自报 xtask ci 425/0/7 · --check · eval ci 同前；本机真权重 ONNX 实读 2 条过）；修 bug：我的配置读入不查范围（先红后绿）；codex 第 1 轮在跑。已把会撞 #62 的改动清单告 8d
 - 2026-11-02 graph 实现完成（自报 xtask ci 全绿，eval ci 门禁同前）：types/graph.rs 6 种节点、Stage::name() → kind()；with_stages 加描述参数、5 类不一致返 PipelineError::Graph；会话头加 graph · model、格式号 2（旧格式可读）；schema 加 processing-graph.kinds · session-header.fields + 编号永不复用检查；pipeline.rs · tests/stages.rs 已拆。codex 第 1 轮在跑；问 SpectralStage 归属
+- 2026-11-02 graph 收尾：codex 2 轮（P2×4：3 修 1 转 #68），SpectralStage 定方案（trait 留 polish，种类 POLISH_SPECTRAL 进登记表，挂模型节点 spectral 段）。大总管合 origin/main（+95，冲突仅评审索引）后亲手 ci 全绿（435/0/5）· --check · eval ci 过；PR #69 等远端 CI；开 #68（模型节点缺版本）→ 归 iface，#69 合并后做
