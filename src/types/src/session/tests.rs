@@ -75,7 +75,9 @@ fn format_1_with_new_keys_is_rejected() {
 #[test]
 fn legacy_model_name_still_reads() {
     let fem = ModelId::FastEnhancerM.as_str();
-    let text = full().to_text().replace(&format!("model = {fem}"), "model = fastenhancer_m");
+    let text = full()
+        .to_text()
+        .replace(&format!("model = {fem}"), "model = fastenhancer_m");
     let r = SessionRecord::from_text(&text).unwrap();
     assert_eq!(r.header.model, Some(ModelId::FastEnhancerM));
     assert!(r.to_text().contains(&format!("model = {fem}\n")));

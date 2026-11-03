@@ -6,7 +6,7 @@
 //!
 //! | 查什么 | 不查 | 放行写法 |
 //! |---|---|---|
-//! | 字符串字面量里出现上述写法（前后不是字母、数字、`_`、`-`） | 正本文件本身；`tests/` 目录；`#[cfg(test)]` 管的那一项（单测要拿字面量造输入；它后面的代码照查）；注释 | 同一行注释写 `tidy: 不是模型名：<理由>`（如权重文件名） |
+//! | 字符串字面量里出现上述写法（前后不是字母、数字、`_`、`-`） | 正本文件本身；`tests/` 目录；`#[cfg(test)]` 管的那一项（单测要拿字面量造输入；它后面的代码照查），以及经 `#[cfg(test)] mod x;` 引入的测试文件；注释 | 同一行注释写 `tidy: 不是模型名：<理由>`（如权重文件名） |
 //!
 //! 只查有过旧写法的模型：其他模型名（如 `gtcrn`）也是路径的一段，逐个查噪声太大；一旦给它登记旧写法，就自动进来。
 
@@ -33,11 +33,59 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
             return;
         }
     };
-    for (rel, s) in src_files(root) {
-        if rel != NAMES_FILE && !rel.contains("/tests/") {
-            problems.extend(file_problems(&rel, &s, &names));
+    let files = src_files(root);
+    let test_files = test_module_files(&files);
+    for (rel, s) in &files {
+        if rel != NAMES_FILE && !rel.contains("/tests/") && !test_files.contains(rel) {
+            problems.extend(file_problems(rel, s, &names));
         }
     }
+}
+
+/// 由 `#[cfg(test)] mod x;`（可带 `#[path = "…"]`）引入的测试模块文件（相对路径）。
+/// 按 Rust 的规则找文件：`mod.rs` / `lib.rs` / `main.rs` 里声明的在同目录，别的文件 `foo.rs` 里声明的在 `foo/` 下；
+/// `#[path]` 相对声明它的文件所在目录。
+pub fn test_module_files(files: &[(String, String)]) -> Vec<String> {
+    let mut out = Vec::new();
+    for (rel, src) in files {
+        let flat = strip_comments_keep_strings(src).join("\n");
+        let mut rest = flat.as_str();
+        while let Some(at) = rest.find("#[cfg(test)]") {
+            rest = &rest[at + "#[cfg(test)]".len()..];
+            // 这一项到第一个 `;` 或 `{` 为止；`{` 在前 = 内联模块或别的项，不涉及文件
+            let end = rest.find([';', '{']).unwrap_or(rest.len());
+            if rest[end..].starts_with('{') {
+                continue;
+            }
+            let item = &rest[..end];
+            let Some(name) = item.split_whitespace().skip_while(|w| *w != "mod").nth(1) else {
+                continue;
+            };
+            let path = Path::new(rel);
+            let dir = path.parent().unwrap_or(Path::new(""));
+            let file = if let Some(p) = item
+                .split_once("#[path")
+                .and_then(|(_, r)| strings_in(r).into_iter().next())
+            {
+                dir.join(p)
+            } else {
+                let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+                let base = if ["mod", "lib", "main"].contains(&stem) {
+                    dir.to_path_buf()
+                } else {
+                    dir.join(stem)
+                };
+                let flat_file = base.join(format!("{name}.rs"));
+                if files.iter().any(|(r, _)| Path::new(r) == flat_file) {
+                    flat_file
+                } else {
+                    base.join(name).join("mod.rs")
+                }
+            };
+            out.push(file.display().to_string());
+        }
+    }
+    out
 }
 
 /// 一行里所有字符串字面量的内容（不含引号）。注释已先剥掉。
@@ -486,6 +534,38 @@ impl ModelId {
         // 放行要写理由
         let no_reason = "let p = \"fastenhancer_m\"; // tidy: 不是模型名：\n";
         assert_eq!(file_problems("a.rs", no_reason, &names()).len(), 1);
+    }
+
+    /// `#[cfg(test)] mod x;` 引入的文件按 Rust 规则找到；内联测试模块、非测试模块不算。
+    #[test]
+    fn test_module_files_are_resolved() {
+        let f = |rel: &str, src: &str| (rel.to_string(), src.to_string());
+        let files = [
+            f(
+                "src/a/src/session.rs",
+                "#[cfg(test)]\nmod tests;\nmod real;\n",
+            ),
+            f("src/a/src/session/tests.rs", ""),
+            f(
+                "src/a/src/policy.rs",
+                "#[cfg(test)]\n#[path = \"policy_tests.rs\"]\nmod tests;\n",
+            ),
+            f(
+                "src/a/src/lib.rs",
+                "#[cfg(test)] mod t2;\n#[cfg(test)]\nmod inline { }\n",
+            ),
+            f("src/a/src/t2/mod.rs", ""),
+        ];
+        let mut got = test_module_files(&files);
+        got.sort();
+        assert_eq!(
+            got,
+            [
+                "src/a/src/policy_tests.rs",
+                "src/a/src/session/tests.rs",
+                "src/a/src/t2/mod.rs"
+            ]
+        );
     }
 
     /// 整个仓库当前过这条规则。
