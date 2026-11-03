@@ -427,6 +427,7 @@ struct ConvF {
     fout: usize,
     alpha: f32,
     col: Vec<f32>, // im2col 缓冲 [cig*K][fout]（只 native-blas 用）
+    ph: Vec<f32>,  // v2：每个输入通道的偶 / 奇两相（补零），[cin][2][v2::conv_phase_len(fout)]
 }
 
 const K: usize = 5;
@@ -461,6 +462,7 @@ impl ConvF {
             fout,
             alpha: w.scalar(&format!("{p}.act.weight"))?,
             col: vec![0.0; cig * K * fout],
+            ph: vec![0.0; cin * 2 * v2::conv_phase_len(fout)],
         })
     }
 
@@ -559,6 +561,7 @@ struct DeconvF {
     fout: usize,
     alpha: f32,
     tanh: bool,
+    xp: Vec<f32>, // v2：输入两端各补一个 0，[cin][v2::deconv_pad_len(fin)]
 }
 
 impl DeconvF {
@@ -603,6 +606,7 @@ impl DeconvF {
             fout,
             alpha,
             tanh,
+            xp: vec![0.0; cin * v2::deconv_pad_len(fin)],
         })
     }
 
@@ -669,6 +673,19 @@ struct Gru {
     bh: Vec<f32>,
     i: usize,
     h: usize,
+    wit: Vec<f32>, // [I][3H]：Wi 的转置（v2 按道广播乘加用）
+    wht: Vec<f32>, // [H][3H]
+}
+
+/// [rows][cols] → [cols][rows]
+fn transpose(w: &[f32], rows: usize, cols: usize) -> Vec<f32> {
+    let mut t = vec![0.0; rows * cols];
+    for r in 0..rows {
+        for c in 0..cols {
+            t[c * rows + r] = w[r * cols + c];
+        }
+    }
+    t
 }
 
 const MAX_G: usize = 48;
@@ -678,9 +695,13 @@ impl Gru {
         if 3 * h > MAX_G {
             return Err(format!("{p}: 3H = {} 超过栈缓冲 MAX_G = {MAX_G}", 3 * h).into());
         }
+        let wi = w.get(&format!("{p}.weight_ih_l0{sfx}"), 3 * h * i)?;
+        let wh = w.get(&format!("{p}.weight_hh_l0{sfx}"), 3 * h * h)?;
         Ok(Self {
-            wi: w.get(&format!("{p}.weight_ih_l0{sfx}"), 3 * h * i)?,
-            wh: w.get(&format!("{p}.weight_hh_l0{sfx}"), 3 * h * h)?,
+            wit: transpose(&wi, 3 * h, i),
+            wht: transpose(&wh, 3 * h, h),
+            wi,
+            wh,
             bi: w.get(&format!("{p}.bias_ih_l0{sfx}"), 3 * h)?,
             bh: w.get(&format!("{p}.bias_hh_l0{sfx}"), 3 * h)?,
             i,
@@ -746,12 +767,15 @@ struct Linear {
     b: Vec<f32>,
     i: usize,
     o: usize,
+    wt: Vec<f32>, // [I][O]：转置（v2 用）
 }
 
 impl Linear {
     fn load(w: &Weights, p: &str, i: usize, o: usize) -> Result<Self, Err> {
+        let ww = w.get(&format!("{p}.weight"), o * i)?;
         Ok(Self {
-            w: w.get(&format!("{p}.weight"), o * i)?,
+            wt: transpose(&ww, o, i),
+            w: ww,
             b: w.get(&format!("{p}.bias"), o)?,
             i,
             o,
@@ -1521,6 +1545,7 @@ mod tests {
                 fout,
                 alpha: 0.25,
                 col: vec![0.0; cig * K * fout],
+                ph: vec![0.0; cin * 2 * v2::conv_phase_len(fout)],
             };
             let x = rnd(cin * fin, 3);
             let (mut y1, mut y2) = (vec![0.0; cout * fout], vec![0.0; cout * fout]);
@@ -1553,6 +1578,7 @@ mod tests {
                 fout,
                 alpha: 0.1,
                 tanh,
+                xp: vec![0.0; cin * v2::deconv_pad_len(fin)],
             };
             let x = rnd(cin * fin, 6);
             let (mut y1, mut y2) = (vec![0.0; cout * fout], vec![0.0; cout * fout]);
@@ -1655,6 +1681,7 @@ mod tests {
                 fout,
                 alpha: 0.0,
                 col: Vec::new(),
+                ph: Vec::new(),
             };
             let mut n = 0u64;
             for _o in 0..cout {
@@ -1682,6 +1709,7 @@ mod tests {
                 fout,
                 alpha: 0.0,
                 tanh: false,
+                xp: Vec::new(),
             };
             let mut n = 0u64;
             for _ic in 0..cin {
