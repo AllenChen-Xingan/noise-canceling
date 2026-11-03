@@ -23,6 +23,10 @@ unsafe extern "C" {
         ldc: i32,
     );
 }
+unsafe extern "C" {
+    // vDSP：C[M×N] = A[M×P]·B[P×N]，行主序，步长 1
+    fn vDSP_mmul(a: *const f32, ia: isize, b: *const f32, ib: isize, c: *mut f32, ic: isize, m: usize, n: usize, p: usize);
+}
 const ROW_MAJOR: i32 = 101;
 const NO_TRANS: i32 = 111;
 
@@ -40,7 +44,39 @@ fn hand(a: &[f32], b: &[f32], c: &mut [f32], m: usize, n: usize, k: usize) {
     }
 }
 
+/// 调一次 f，返回这一次里全进程 malloc 的次数（malloc_logger 钩子）
+fn allocs_of(f: &mut dyn FnMut()) -> u64 {
+    let a = crate::proc_allocs();
+    f();
+    crate::proc_allocs() - a
+}
+
+fn print_stacks() {
+    use std::sync::atomic::Ordering::Relaxed;
+    let n = (crate::STACK_COUNT.load(Relaxed) as usize).min(crate::STACK_N);
+    for i in 0..n {
+        let st = unsafe { (*std::ptr::addr_of!(crate::STACKS))[i] };
+        let mut names = Vec::new();
+        for &pc in st.iter().take_while(|p| **p != 0) {
+            let mut info: libc::Dl_info = unsafe { std::mem::zeroed() };
+            let name = if unsafe { libc::dladdr(pc as *const _, &mut info) } != 0 && !info.dli_sname.is_null() {
+                unsafe { std::ffi::CStr::from_ptr(info.dli_sname) }.to_string_lossy().into_owned()
+            } else {
+                format!("{pc:#x}")
+            };
+            let lib = if info.dli_fname.is_null() {
+                String::new()
+            } else {
+                unsafe { std::ffi::CStr::from_ptr(info.dli_fname) }.to_string_lossy().rsplit('/').next().unwrap_or("").to_string()
+            };
+            names.push(format!("{name}@{lib}").replace('"', "'"));
+        }
+        println!("{{\"probe\":\"sgemm_malloc_stack\",\"i\":{i},\"frames\":{:?}}}", names);
+    }
+}
+
 pub fn run() {
+    crate::install_malloc_counter();
     // (名字, M, N, K, 每帧调用次数)
     let shapes: [(&str, usize, usize, usize, usize); 5] = [
         ("point_conv1 24→16 @33", 16, 33, 24, 6),
@@ -94,15 +130,35 @@ pub fn run() {
             };
             std::hint::black_box(&c2);
         });
+        let mut c3 = vec![0.0f32; m * n];
+        let ns_vdsp = time(&mut || {
+            unsafe { vDSP_mmul(std::hint::black_box(a.as_ptr()), 1, b.as_ptr(), 1, c3.as_mut_ptr(), 1, m, n, k) };
+            std::hint::black_box(&c3);
+        });
+        let al_hand = allocs_of(&mut || hand(&a, &b, &mut c1, m, n, k));
+        let al_sgemm = allocs_of(&mut || unsafe {
+            cblas_sgemm(ROW_MAJOR, NO_TRANS, NO_TRANS, m as i32, n as i32, k as i32, 1.0, a.as_ptr(), k as i32, b.as_ptr(), n as i32, 0.0, c2.as_mut_ptr(), n as i32)
+        });
+        let al_vdsp = allocs_of(&mut || unsafe { vDSP_mmul(a.as_ptr(), 1, b.as_ptr(), 1, c3.as_mut_ptr(), 1, m, n, k) });
+        if al_sgemm > 0 && crate::STACK_COUNT.load(std::sync::atomic::Ordering::Relaxed) == 0 {
+            crate::STACK_ARMED.store(true, std::sync::atomic::Ordering::Relaxed);
+            unsafe {
+                cblas_sgemm(ROW_MAJOR, NO_TRANS, NO_TRANS, m as i32, n as i32, k as i32, 1.0, a.as_ptr(), k as i32, b.as_ptr(), n as i32, 0.0, c2.as_mut_ptr(), n as i32)
+            };
+            crate::STACK_ARMED.store(false, std::sync::atomic::Ordering::Relaxed);
+        }
+        let vdsp_diff = c1.iter().zip(&c3).map(|(x, y)| (x - y).abs()).fold(0.0f32, f32::max);
         let max_diff = c1
             .iter()
             .zip(&c2)
             .map(|(x, y)| (x - y).abs())
             .fold(0.0f32, f32::max);
         println!(
-            "{{\"probe\":\"amx\",\"shape\":\"{name}\",\"m\":{m},\"n\":{n},\"k\":{k},\"per_frame\":{per_frame},\"hand_ns\":{ns_hand:.1},\"accelerate_ns\":{ns_blas:.1},\"per_frame_hand_us\":{:.2},\"per_frame_accelerate_us\":{:.2},\"max_abs_diff\":{max_diff:.2e}}}",
+            "{{\"probe\":\"amx\",\"shape\":\"{name}\",\"m\":{m},\"n\":{n},\"k\":{k},\"per_frame\":{per_frame},\"hand_ns\":{ns_hand:.1},\"accelerate_ns\":{ns_blas:.1},\"per_frame_hand_us\":{:.2},\"per_frame_accelerate_us\":{:.2},\"max_abs_diff\":{max_diff:.2e},\"vdsp_ns\":{ns_vdsp:.1},\"per_frame_vdsp_us\":{:.2},\"vdsp_max_abs_diff\":{vdsp_diff:.2e},\"allocs_per_call_hand\":{al_hand},\"allocs_per_call_sgemm\":{al_sgemm},\"allocs_per_call_vdsp\":{al_vdsp}}}",
             ns_hand * per_frame as f64 / 1e3,
-            ns_blas * per_frame as f64 / 1e3
+            ns_blas * per_frame as f64 / 1e3,
+            ns_vdsp * per_frame as f64 / 1e3
         );
     }
+    print_stacks();
 }
