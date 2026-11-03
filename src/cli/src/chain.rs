@@ -671,10 +671,10 @@ mod tests {
         assert!(judge_v2(&r).pass, "{}", judge_v2(&r));
     }
 
-    /// V2 的短版：0.5 s 处让降噪线程退出
+    /// V2 的短版（锁步）：0.5 s 处让降噪端停下（不再处理、不再心跳）
     #[test]
     fn v2_short() {
-        let r = run(
+        let r = run_lockstep(
             vdn_denoised::identity_pipeline(Some(96)).unwrap(),
             &opts(1.2, Some(0.5), "v2"),
         )

@@ -3,7 +3,7 @@
 > 大总管：`noise-canceling-47`。交代：`../noise_canceling-skeleton/_tmp/20261102-b8-rust/rs-entry.md`。
 > 管的实体：`vdn-control` · `vdn-capture` · `vdn-denoised` · `vdn-cli`（可执行 `vdn`）
 
-## 已收尾（2026-11-02）
+## 已收尾（2026-11-02；验收打回一处不稳定测试，正在修，见「打回修」）
 
 一句话：链路骨架从控制 · 两个进程 · 命令行到链路测试全部接通，V1–V4 · V7 机器判过，V5 待人。
 
@@ -79,6 +79,15 @@
   - 实测（GTCRN，debug，第 2 s 切直通）【测】：处理后欠载 0、虚拟麦欠载 0、静音 0；切换后那段和输入延迟 L_total 的相关 1.000000（全段 0.906，前 2 s 是降噪后的）
   - 新依赖 rtrb 0.4.1（MIT OR Apache-2.0，与 GPL-3.0 兼容，无传递依赖）
 - **第 8 条 capture 库去掉 hound / clap**：设备库 · 实时优先级 · clap · hound 改成 `bin` feature（默认开、bin 必需）；用库的一方 `default-features = false`（根 Cargo.toml）→ `cargo tree -p vdn-capture --no-default-features` 普通依赖只剩 rtrb · vdn-control · vdn-dsp · vdn-hal · vdn-shm，闭包里没有 hound / clap / cpal【测】
+
+## 打回修（大总管验收，2026-11-02）：不稳定测试
+- **现象**：并行跑四个 crate 的测试时 `chain::v1_short` · `chain::mode_switch_mid_run` 偶尔不过（单独跑都过）。原因：它们按真实节拍（三线程 + sleep）跑，抢不到 CPU 就欠载，被「V1 含欠载 = 0」判不过——测试本身不稳定，不是链路坏了
+- **改法（选的是「锁步模拟」+「真实节拍标 #[ignore]」，没用 static 锁）**：
+  - 新 `chain::run_lockstep`：和 `run` 共用同一段搭建（`setup`：Worker 预热 · 两条总线 · 交叉校验 · prime）和同一套 Forwarder / Worker / HalSource / 命令通道，单线程逐块推进（送音推一块 → 降噪处理完 → 虚拟麦取一块），不 sleep、不读真实时钟，结果确定
+  - 单元测试全改用它，并改回真默认值（IO 块 96 · lead 192）：`v1_short` · `v2_short` · `mode_switch_mid_run` · `bus_unlinked_after_run` · `busy_bus_name_is_refused_without_deleting` · `chain_refuses_lead_below_io_block`
+  - 真实节拍只留一条 `realtime_v1_v2`，`#[ignore]`，串行人工跑：`cargo test -p vdn-cli -- --ignored realtime_ --test-threads=1`
+  - **为什么不用 static 锁串行**：锁只能让同一个测试二进制里的测试排队；机器上别的进程照样抢 CPU（验收条件本身就是并跑 4 个 `yes`），真实节拍的测试还是会时红时绿。真实节拍是 `vdn chain-test` 和 V7 该判的事
+- **状态**：代码已写，**还没编译、没跑**（大总管约定：e3 跑 applebe 期间不编译不跑），等「可以跑」后连跑 5 次（并跑 4 个 `yes > /dev/null`）
 
 ## 已定（大总管，2026-11-02）
 - **lead 硬下限 = 一块 IO**（正本 `vdn_control::check_lead`；Config 校验 · chain-test 开跑前 · 送音端读总线头三处调用）。理由：送音端同一回调里取走一块时，降噪端恰好有一整个 IO 周期处理上一块；降噪块长已经在 `Pipeline::with_block` 的延迟里算过。再往上的余量由 V7 实测定。测试：`lead_below_one_io_block_is_rejected` · `chain_refuses_lead_below_io_block`
