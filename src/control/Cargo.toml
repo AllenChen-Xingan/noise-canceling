@@ -10,7 +10,11 @@ publish.workspace = true
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
-schemars.workspace = true
+# 只给 vdn-schema 导出 schema 用（feature schema），产品 bin 不带
+schemars = { workspace = true, optional = true }
+
+[features]
+schema = ["dep:schemars"]
 
 [lints]
 workspace = true

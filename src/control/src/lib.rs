@@ -20,14 +20,14 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// IO 采样率固定 48 kHz（docs/plan/010 第十节）。
 pub const IO_RATE: u32 = 48_000;
 
 /// 处理模式。与 `vdn_engine::Mode` 一一对应，由 bin 翻译。
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum Mode {
     #[default]
@@ -36,7 +36,8 @@ pub enum Mode {
 }
 
 /// 用哪个模型。与 `vdn_models::ModelKind` 一一对应，由 bin 翻译。
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum ModelChoice {
     #[default]
@@ -55,9 +56,10 @@ pub enum Cmd {
 ///
 /// 导出的 JSON Schema（`specs/schema/config.schema.json`）由本类型派生；取值范围由 `schema_ranges`
 /// 从本文件的常量写进去。schema 只管单个字段，跨字段规则（lead ≥ IO 块、两个总线名不同）只在 `validate` 里。
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
-#[schemars(transform = schema_ranges)]
+#[cfg_attr(feature = "schema", schemars(transform = schema_ranges))]
 pub struct Config {
     /// 输入设备名；`None` = 系统默认
     pub input_device: Option<String>,
@@ -203,6 +205,7 @@ impl Config {
 }
 
 /// 把取值范围写进导出的 schema（数字只来自 `Config` 的常量，不在这里另写）。
+#[cfg(feature = "schema")]
 fn schema_ranges(schema: &mut schemars::Schema) {
     use serde_json::{Value, json};
     let Some(props) = schema.get_mut("properties").and_then(Value::as_object_mut) else {

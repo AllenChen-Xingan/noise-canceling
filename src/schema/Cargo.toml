@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 vdn-shm = { workspace = true, default-features = false }
-vdn-control.workspace = true
+vdn-control = { workspace = true, features = ["schema"] }
 vdn-eval = { path = "../eval" }
 schemars.workspace = true
 serde_json.workspace = true
