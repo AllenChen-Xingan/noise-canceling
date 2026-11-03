@@ -3,7 +3,7 @@
 //! 子命令：
 //!   gtcrn-parity <权重前缀> <onnx> <wav> [--vs native|tract]   逐帧对拍增强后频谱（ORT 对 --vs，默认 native；两边吃同一份 STFT 频谱）
 //!   gtcrn-bench  <ort|native|tract> <权重前缀|onnx> <wav> [--frames N] [--warmup N]
-//!   fem-parity   <onnx> <wav>                                   FastEnhancer-M：ORT 对 tract，逐帧对拍输出波形
+//!   fem-parity   <onnx> <wav> [--tract-onnx <改写后的 onnx>]    FastEnhancer-M：ORT 跑 <onnx> 对 tract 跑改写图（默认同一份），逐帧对拍输出波形
 //!   fem-bench    <ort|tract> <onnx> <wav> [--frames N] [--warmup N]
 //!   两个 bench 都可加 `--dump-io <前缀>`（此时第 2 个参数须是 onnx）：计时之后另起一个 ORT 会话，从零状态把
 //!   全部 1 + warmup + frames 帧再跑一遍，写 `<前缀>.in.f32` / `<前缀>.ort.f32`（小端 f32，按帧拼接；

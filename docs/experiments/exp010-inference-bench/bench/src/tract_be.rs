@@ -28,10 +28,18 @@ impl TractNet {
         };
         if std::env::var_os("EXP010_DEBUG").is_some() {
             for (k, o) in opt.output_outlets()?.iter().enumerate() {
-                eprintln!("tract out {k}: {} {:?}", opt.node(o.node).name, opt.outlet_fact(*o)?);
+                eprintln!(
+                    "tract out {k}: {} {:?}",
+                    opt.node(o.node).name,
+                    opt.outlet_fact(*o)?
+                );
             }
             for (k, o) in opt.input_outlets()?.iter().enumerate() {
-                eprintln!("tract in {k}: {} {:?}", opt.node(o.node).name, opt.outlet_fact(*o)?);
+                eprintln!(
+                    "tract in {k}: {} {:?}",
+                    opt.node(o.node).name,
+                    opt.outlet_fact(*o)?
+                );
             }
         }
         let plan = opt.into_runnable()?;
