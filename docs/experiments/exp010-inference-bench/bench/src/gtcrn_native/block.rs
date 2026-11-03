@@ -171,7 +171,7 @@ impl GtBlock {
         K::linear(&self.fc, &self.hstate, &mut at);
         // shuffle：y[2c] = h1[c]*at[c]，y[2c+1] = x2[c]
         for c in 0..CH {
-            let a = sigmoid(at[c]);
+            let a = K::sig1(at[c]);
             for j in 0..f {
                 y[(2 * c) * f + j] = self.h3[c * f + j] * a;
             }

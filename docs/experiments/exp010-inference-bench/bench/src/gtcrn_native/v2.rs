@@ -228,7 +228,7 @@ pub(super) fn deconv_v2<const NL: u8>(d: &mut DeconvF, x: &[f32], y: &mut [f32])
 /// f = 33 专用：每次 2 个输出通道，8 个向量 + 1 个标量尾
 pub(super) fn point_v2(p: &Point, x: &[f32], y: &mut [f32], f: usize) {
     if f != F2 || p.cout % 2 != 0 {
-        return p.run(x, y, f);
+        return p.run_plain(x, y, f);
     }
     let ci = p.cin;
     assert!(x.len() >= ci * f && y.len() >= p.cout * f && p.w.len() >= p.cout * ci);
@@ -322,6 +322,14 @@ pub(super) unsafe fn linear_v<const OV: usize>(l: &Linear, x: &[f32], y: &mut [f
 }
 
 impl<const NL: u8> Kern for V2<NL> {
+    #[inline(always)]
+    fn sig1(x: f32) -> f32 {
+        1.0 / (1.0 + (-x).exp())
+    }
+    #[inline(always)]
+    fn use_blas() -> bool {
+        false
+    }
     #[inline(always)]
     fn point(p: &Point, x: &[f32], y: &mut [f32], f: usize) {
         point_v2(p, x, y, f)

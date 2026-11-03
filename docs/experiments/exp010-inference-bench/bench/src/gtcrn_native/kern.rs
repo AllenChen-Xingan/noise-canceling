@@ -51,6 +51,15 @@ pub(crate) trait Kern {
     fn ln_add(x: &mut [f32], z: &[f32], w: &[f32], b: &[f32]) {
         layer_norm_add(x, z, w, b)
     }
+    /// TRA 注意力里的标量 sigmoid。原写法读全局开关 FAST（native-fast）；v2 / v3 / v4 固定用 libm，
+    /// 不受同一进程里先后开的其他后端影响（codex 020 第 1 轮 #2）
+    fn sig1(x: f32) -> f32 {
+        sigmoid(x)
+    }
+    /// DPGRNN 的全连接是否交给 Accelerate（native-blas）。原写法读全局开关 BLAS；v2 / v3 / v4 固定不走
+    fn use_blas() -> bool {
+        blas()
+    }
     /// ERB 稀疏矩阵乘
     fn sparse(s: &Sparse, x: &[f32], y: &mut [f32]) {
         s.run(x, y)

@@ -294,6 +294,14 @@ fn sparse_v3(s: &Sparse, x: &[f32], y: &mut [f32]) {
 
 impl<const IL: bool, const NL: u8> Kern for V3<IL, NL> {
     #[inline(always)]
+    fn sig1(x: f32) -> f32 {
+        1.0 / (1.0 + (-x).exp())
+    }
+    #[inline(always)]
+    fn use_blas() -> bool {
+        false
+    }
+    #[inline(always)]
     fn point(p: &Point, x: &[f32], y: &mut [f32], f: usize) {
         v2::point_v2(p, x, y, f)
     }

@@ -78,7 +78,7 @@ impl Dp {
                     ..Cost::default()
                 }
         });
-        if blas() {
+        if K::use_blas() {
             fc_batch(&self.intra_fc, &self.y, &mut self.z);
         } else {
             for f in 0..F2 {
@@ -97,7 +97,7 @@ impl Dp {
             K::gru_rows(&self.inter[grp], &self.xt[grp * CH..], &mut self.cache[grp * CH..], C, F2);
         }
         for f in 0..F2 {
-            if !blas() {
+            if !K::use_blas() {
                 K::linear(
                     &self.inter_fc,
                     &self.cache[f * C..(f + 1) * C],
@@ -105,7 +105,7 @@ impl Dp {
                 );
             }
         }
-        if blas() {
+        if K::use_blas() {
             // 第 f 行的全连接只依赖 cache[f]，它在上面第 f 步之后就不再变，所以可以挪到循环外一次算完
             fc_batch(&self.inter_fc, &self.cache, &mut self.z);
         }

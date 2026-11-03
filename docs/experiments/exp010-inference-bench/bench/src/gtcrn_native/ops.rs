@@ -129,6 +129,11 @@ impl Point {
             sgemm_acc(self.cout, f, self.cin, &self.w, self.cin, x, f, false, y, f);
             return;
         }
+        self.run_plain(x, y, f);
+    }
+
+    /// 手写循环版（不看 BLAS 开关；v2 / v3 的退路用它，codex 020 第 1 轮 #2）
+    pub(crate) fn run_plain(&self, x: &[f32], y: &mut [f32], f: usize) {
         for o in 0..self.cout {
             let yo = &mut y[o * f..(o + 1) * f];
             yo.fill(self.b[o]);
