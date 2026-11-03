@@ -32,8 +32,12 @@ echo "{\"when\":\"$(date -Iseconds)\",\"load\":\"$(sysctl -n vm.loadavg)\",\"pow
 $LG > /dev/null   # 预热一次，不计
 for k in $(seq 1 $PAIRS); do
   l=$($LG); echo "{\"pair\":$k,\"denoise\":false,\"r\":$l}" >> "$RES/impact.jsonl"
-  eval "exec $CMD --warmup 20 --frames 100000" > "$RES/denoise_$k.json" 2>> "$RES/stderr.log" &   # exec：$! 就是基准程序；跑到被 kill 为止（codex 第 1 轮 #1：封顶 1500 帧会在负载结束前退出）。成孤儿时 bench 发现父进程没了会自己退出
-  dn=$!; KIDS+=("$dn"); sleep 4   # 等降噪加载完并过了 20 帧预热，进入按节奏的稳态
+  RF="$RES/ready_$k.flag"; rm -f "$RF"
+  eval "exec $CMD --warmup 20 --frames 100000 --ready-file $RF" > "$RES/denoise_$k.json" 2>> "$RES/stderr.log" &   # exec：$! 就是基准程序；跑到被 kill 为止（codex 第 1 轮 #1：封顶 1500 帧会在负载结束前退出）。成孤儿时 bench 发现父进程没了会自己退出
+  dn=$!; KIDS+=("$dn")
+  # 等降噪发「就绪」（加载、20 帧预热都过了、进了按节奏的计时窗）才起负载（codex 第 2 轮 #2），最多等 30 s
+  for _ in $(seq 1 300); do [ -e "$RF" ] && break; kill -0 "$dn" 2>/dev/null || break; sleep 0.1; done
+  [ -e "$RF" ] || { echo "降噪 30 s 内没就绪（见 stderr.log），停下"; exit 1; }
   kill -0 "$dn" 2>/dev/null || { echo "降噪进程没起来（见 stderr.log）"; exit 1; }
   l=$($LG)
   alive=true; kill -0 "$dn" 2>/dev/null || alive=false   # 负载跑完时降噪必须还活着，否则这一对没全程覆盖，作废

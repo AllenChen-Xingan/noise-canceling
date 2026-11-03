@@ -40,7 +40,9 @@ def samples(path):
 def avg(ss, lo=None, hi=None):
     """计时窗内的加权平均。codex 第 1 轮 #3：向内收——样本时间戳是秒级、标在样本结束时，
     所以只收 u - 1 ≥ lo 且 u ≤ hi 的样本（整个样本都落在窗内）；按样本时长加权；缺功率项的样本整段作废，不当 0。"""
-    sel = [(e, v) for u, e, v in ss if (lo is None or u - 1 >= lo) and (hi is None or u <= hi)]
+    # 时间戳 u 是秒级（向下取整）、标在样本结束处，真实结束时刻 ∈ [u, u+1)，样本覆盖 [结束 − e, 结束]。
+    # 保守起止（codex 第 2 轮 #1）：最早可能的开始 = u − e ≥ lo，最晚可能的结束 = u + 1 ≤ hi，两条都满足才算整个落在窗内
+    sel = [(e, v) for u, e, v in ss if (lo is None or u - e / 1000 >= lo) and (hi is None or u + 1 <= hi)]
     if not sel or any(None in v.values() for _, v in sel):
         return None, len(sel), 0.0
     tot = sum(e for e, _ in sel)
