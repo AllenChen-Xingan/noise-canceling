@@ -18,7 +18,7 @@ use vdn_capture::{Forwarder, ForwarderConfig};
 use vdn_denoised::{Processor, Step, Worker};
 use vdn_hal::HalSource;
 use vdn_io_macos::{Direction, IO_RATE, InputStream, OutputStream, devices};
-use vdn_shm::{Bus, BusConfig, RingId};
+use vdn_shm::{Bus, RingId};
 
 pub fn list_devices() {
     let all = devices();
@@ -65,20 +65,9 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<()
     let mut worker = Worker::new(pipeline, o.block);
     let l_pipe = worker.processor().latency_samples();
     let l_total = worker.l_total(o.lead);
-    let capacity = IO_RATE;
-    if capacity as usize <= l_total + 2 * o.block {
-        return Err(format!(
-            "环容量 {capacity} 太小：L_total {l_total} + 2 块要 {}；请减小 --lead 或 --block",
-            l_total + 2 * o.block
-        ));
-    }
     let bus = Arc::new(
-        Bus::heap(BusConfig {
-            rate: IO_RATE,
-            capacity_frames: capacity,
-            l_total: u32::try_from(l_total).map_err(|_| "L_total 太大")?,
-        })
-        .map_err(|e| e.to_string())?,
+        Bus::heap(vdn_denoised::denoise_bus_config(&worker, o.lead, IO_RATE as usize)?)
+            .map_err(|e| e.to_string())?,
     );
     if worker.prime(&bus, o.lead) != o.lead {
         return Err("Processed 环放不下 lead 个零".into());
@@ -99,9 +88,8 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<()
                 eprintln!("vdn run: 降噪线程实时优先级提升失败（照常运行）：{e}");
             }
             while !stop.load(Ordering::Relaxed) {
-                if worker.step(&bus) == Step::Idle {
-                    thread::sleep(Duration::from_micros(500));
-                }
+                let _ = bus.wait(RingId::Raw, block, Duration::from_millis(20));
+                while worker.step(&bus) == Step::Block {}
             }
             worker.stats()
         })

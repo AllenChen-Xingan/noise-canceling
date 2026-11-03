@@ -24,7 +24,8 @@ use crate::verify::{
     best_lag, longest_silence, ms48, nonfinite, onset, pearson_at_lag, rms, test_tone,
 };
 
-const RATE: u32 = 48_000;
+/// 正本在 vdn-control
+const RATE: u32 = vdn_control::IO_RATE;
 /// 判相关前跳过的样本（淡入与重采样起振）
 const SKIP: usize = 4800;
 /// 静音阈值（−60 dBFS）
