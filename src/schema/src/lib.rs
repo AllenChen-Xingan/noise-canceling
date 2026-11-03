@@ -277,7 +277,12 @@ pub fn shm_baseline_from(root: &Path, over: Option<&str>) -> Baseline {
 pub fn shm_baseline_at(root: &Path, base: &str) -> Baseline {
     let Some(commit) = git(
         root,
-        &["rev-parse", "--verify", "--quiet", &format!("{base}^{{commit}}")],
+        &[
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            &format!("{base}^{{commit}}"),
+        ],
     ) else {
         return Baseline::Unavailable(format!("基线提交 {base} 不存在（CI 要 fetch-depth: 0）"));
     };

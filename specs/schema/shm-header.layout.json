@@ -1,5 +1,5 @@
 {
-  "$comment": "由 `cargo run -p vdn-schema` 从 src/shm/src/layout.rs（经 src/shm/src/desc.rs）导出，勿手改。改布局必须升 layout::VERSION",
+  "$comment": "由 `cargo run -p vdn-schema` 从 src/shm/src/layout.rs（经 src/shm/src/desc.rs）导出，勿手改。改布局必须升 layout::VERSION，并在 src/schema/src/shm.rs 的 HISTORY 末尾登记",
   "endian": "little",
   "flat": [
     {
@@ -190,6 +190,12 @@
     }
   ],
   "header_bytes": 512,
+  "history": [
+    {
+      "fingerprint": "fnv1a64:fbd400fe113ede86",
+      "version": 2
+    }
+  ],
   "magic": "0x56444e5f53484d31",
   "max_capacity_frames": 16777216,
   "rings": [

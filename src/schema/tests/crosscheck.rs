@@ -206,14 +206,21 @@ fn shm_history_rewrite_is_red() {
         shm::fingerprint(&shm::layout_body()),
         "从文件算的指纹应与从 Rust 算的相同"
     );
-    let own: Vec<(u32, String)> = shm::HISTORY.iter().map(|(v, f)| (*v, f.to_string())).collect();
+    let own: Vec<(u32, String)> = shm::HISTORY
+        .iter()
+        .map(|(v, f)| (*v, f.to_string()))
+        .collect();
     assert_eq!(b.history, own, "文件里的历史应与 HISTORY 相同");
     let (v, fp) = (b.version, b.fingerprint.clone());
     let rewritten = [(v, "fnv1a64:1111111111111111")];
     let e = shm::guard_baseline(&rewritten, &b).unwrap_err();
     assert!(e.contains("被改写"), "{e}");
     let deleted = [(v + 1, "fnv1a64:2222222222222222")];
-    assert!(shm::guard_baseline(&deleted, &b).unwrap_err().contains("删掉"));
+    assert!(
+        shm::guard_baseline(&deleted, &b)
+            .unwrap_err()
+            .contains("删掉")
+    );
     let appended = [(v, fp.as_str()), (v + 1, "fnv1a64:2222222222222222")];
     assert!(shm::guard_baseline(&appended, &b).is_ok());
 }
@@ -250,7 +257,11 @@ fn shm_history_whole_prefix_is_checked() {
         fingerprint: s("fnv1a64:zz"),
         ..base.clone()
     };
-    assert!(shm::guard_baseline(&ok, &broken).unwrap_err().contains("自相矛盾"));
+    assert!(
+        shm::guard_baseline(&ok, &broken)
+            .unwrap_err()
+            .contains("自相矛盾")
+    );
     // 旧格式文件（没有 history）：按只有当前一行算
     let mut old: Value = serde_json::from_str(
         &std::fs::read_to_string(root().join(DIR).join(shm::LAYOUT_FILE)).unwrap(),
@@ -308,7 +319,13 @@ fn shm_baseline_failures_are_not_absent() {
         vdn_schema::Baseline::Absent(_)
     ));
     // 本分支已提交了这份文件
-    if git_out(&["ls-files", "--error-unmatch", &format!("{DIR}/{}", shm::LAYOUT_FILE)]).is_some() {
+    if git_out(&[
+        "ls-files",
+        "--error-unmatch",
+        &format!("{DIR}/{}", shm::LAYOUT_FILE),
+    ])
+    .is_some()
+    {
         assert!(matches!(
             vdn_schema::shm_baseline_at(&r, "HEAD"),
             vdn_schema::Baseline::Found(..)
@@ -625,14 +642,18 @@ fn integer_bounds_agree_with_rust_types() {
     let task = r#"{"id": "R99", "set": "regression", "origin": "测试",
         "scene": {"noise": "pink"}, "graders": [{"v": "V-NAN"}]}"#;
     let cases = [
-        ("18446744073709551615", true), // u64::MAX
+        ("18446744073709551615", true),   // u64::MAX
         ("100000000000000000000", false), // 1e20，超出 u64
         ("-1", false),
     ];
     for (seed, want) in cases {
         let text = format!(r#"{{"seed": {seed}, "tasks": [{task}]}}"#);
         let doc: Value = serde_json::from_str(&text).unwrap();
-        assert_eq!(validate(&schema, &doc).is_ok(), want, "schema：seed = {seed}");
+        assert_eq!(
+            validate(&schema, &doc).is_ok(),
+            want,
+            "schema：seed = {seed}"
+        );
         assert_eq!(
             vdn_eval::suite::parse_suite(&text).is_ok(),
             want,

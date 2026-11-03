@@ -17,6 +17,7 @@
           "default": 3,
           "description": "每个任务的试验数",
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": [
             "integer",
@@ -31,6 +32,7 @@
       "properties": {
         "hop": {
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
         },
@@ -567,6 +569,7 @@
         "trials": {
           "description": "合成任务 = 种子数；缺省取清单的 defaults.trials",
           "format": "uint64",
+          "maximum": 18446744073709551615,
           "minimum": 0,
           "type": [
             "integer",
@@ -617,6 +620,7 @@
       "default": 20261031,
       "description": "基础种子",
       "format": "uint64",
+      "maximum": 18446744073709551615,
       "minimum": 0,
       "type": [
         "integer",
