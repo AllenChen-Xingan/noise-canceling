@@ -13,13 +13,13 @@ BN="$BIN bench bnns $O/gtcrn_unrolled_fp32.mlmodelc $O/gtcrn --model gtcrn --pac
 CM="$BIN bench coreml $O/gtcrn_unrolled_fp32.mlmodelc $O/gtcrn --model gtcrn --units cpu --pace-ms 16"
 SETS=(
   "bnns ui|$BN"
-  "bnns ui+tc|$BN --thread-policy tc"
+  "bnns rt|$BN --qos rt"
   "bnns ui+workgroup|$BN --workgroup"
-  "bnns ui+tc+workgroup|$BN --thread-policy tc --workgroup"
+  "bnns rt+workgroup|$BN --qos rt --workgroup"
   "bnns default-qos|$BN --qos default"
   "bnns ui+spin（只排查）|$BN --spin"
   "coreml-cpu ui|$CM"
-  "coreml-cpu ui+tc|$CM --thread-policy tc"
+  "coreml-cpu rt|$CM --qos rt"
 )
 echo "{\"when\":\"$(date -Iseconds)\",\"load\":\"$(sysctl -n vm.loadavg)\",\"power\":\"$(pmset -g batt | head -1)\"}" >> "$RES/machine.jsonl"
 if [ -z "$BEST" ]; then

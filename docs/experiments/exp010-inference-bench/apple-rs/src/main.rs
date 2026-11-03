@@ -201,11 +201,12 @@ fn bench(o: &Opts) -> Result<(), String> {
         if rc != 0 {
             return Err(format!("设 QoS 失败 rc={rc}"));
         }
-    } else if qos != "default" {
-        return Err("--qos 只收 ui / default".into());
+    } else if qos != "default" && qos != "rt" {
+        return Err("--qos 只收 ui / default / rt".into());
     }
 
-    let policy = o.get("thread-policy", "none");
+    // 同 rustbe：`--qos rt` = THREAD_TIME_CONSTRAINT_POLICY（period = 帧长，computation 1 ms，constraint 3 ms，preemptible 1）
+    let policy = if qos == "rt" { "tc".to_string() } else { o.get("thread-policy", "none") };
     match policy.as_str() {
         "none" => {}
         "tc" => rt::time_constraint(if pace > 0.0 { pace } else { 16.0 }, 1.0, 3.0)?,

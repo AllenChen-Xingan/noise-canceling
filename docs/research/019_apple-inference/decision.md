@@ -37,7 +37,7 @@
 ## 4. 实时线程能不能直接调（待补）
 
 - 手写 Rust、BNNS Graph：每帧 0 次分配（全进程 malloc 钩子，自检通过），可以在推理线程直接调；RTSan 豁免表还没建（`BE-RT-SAN` 待测）。
-- Core ML：每帧约 300 次 malloc，只能像今天的 ORT 一样登记豁免。不建议用。
+- Core ML：每帧约 300 次 malloc，只能像今天的 ORT 一样登记豁免（ORT 本身每帧 1557 次，rustbe `--count-malloc` 实测）。不建议用。
 - **待补**：实时线程策略（`THREAD_TIME_CONSTRAINT_POLICY` · Audio Workgroup · 忙等对照）的实测结果，决定第 1 条风险能不能解。
 
 ## 5. 怎么接进代码（`vdn-models` / 后端 trait）
