@@ -32,7 +32,8 @@ impl TractNet {
 
     /// 输入 0 的可写视图（本帧数据）。
     pub fn input0(&mut self) -> &mut [f32] {
-        self.ins[0].as_slice_mut::<f32>().expect("f32")
+        // 安全：ins 全部由 Tensor::zero::<f32> 构造，类型必为 f32、内存连续
+        unsafe { self.ins[0].as_slice_mut_unchecked::<f32>() }
     }
 
     /// 跑一帧：输出 0 写进 `out0`，其余输出回灌缓存。
@@ -42,10 +43,11 @@ impl TractNet {
         if outs.len() != self.ins.len() {
             return Err("tract 输出个数 ≠ 输入个数".into());
         }
-        out0.copy_from_slice(outs[0].as_slice::<f32>()?);
+        out0.copy_from_slice(outs[0].try_as_plain_ram()?.as_slice::<f32>()?);
         for (dst, src) in self.ins[1..].iter_mut().zip(&outs[1..]) {
-            dst.as_slice_mut::<f32>()?
-                .copy_from_slice(src.as_slice::<f32>()?);
+            // 安全：同上，dst 是 f32 张量
+            unsafe { dst.as_slice_mut_unchecked::<f32>() }
+                .copy_from_slice(src.try_as_plain_ram()?.as_slice::<f32>()?);
         }
         Ok(())
     }
