@@ -129,7 +129,7 @@ fn sleep_until(t: Instant) {
 pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<ChainRun, String> {
     let block = o.block;
     let total = ((o.seconds * f64::from(RATE)) as usize).div_ceil(block) * block;
-    let mut worker = Worker::new(pipeline, o.denoise_block);
+    let mut worker = Worker::new(pipeline, o.denoise_block).skip_backlog_over_lead(o.lead);
     let warmup = worker.warm_up(o.warmup_blocks);
     let l_pipe = worker.processor().latency_samples();
     let l_total = l_pipe + o.lead;
@@ -338,7 +338,7 @@ pub fn latency_line(r: &ChainRun) -> String {
 pub fn counters_line(r: &ChainRun) -> String {
     let f = &r.fwd;
     format!(
-        "计数：虚拟麦欠载 {} 块 / {} 样本 · 处理后欠载 {} 样本 · 硬切 {} · Raw 溢出 {} · Out 溢出 {} · 丢弃 {} · 重新对账 {} · 切原声 {} 次 · 降噪太慢 {} 次 · 降噪块数 {}",
+        "计数：虚拟麦欠载 {} 块 / {} 样本 · 处理后欠载 {} 样本 · 硬切 {} · Raw 溢出 {} · Out 溢出 {} · 丢弃 {} · 重新对账 {} · 切原声 {} 次 · 降噪太慢 {} 次 · 跳过积压 {} 样本（送原声窗口 {} 次）· 降噪块数 {}",
         r.hal_underrun_blocks,
         r.hal_underrun_samples,
         f.proc_underrun,
@@ -349,6 +349,8 @@ pub fn counters_line(r: &ChainRun) -> String {
         f.resyncs,
         f.stale_switches,
         f.slow_episodes,
+        r.worker.raw_skipped,
+        f.gap_holds,
         r.worker.blocks
     )
 }

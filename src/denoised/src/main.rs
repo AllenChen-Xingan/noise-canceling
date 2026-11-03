@@ -137,7 +137,7 @@ fn real_main() -> Result<(), String> {
 }
 
 fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String> {
-    let mut worker = Worker::new(pipeline, cfg.denoise_block);
+    let mut worker = Worker::new(pipeline, cfg.denoise_block).skip_backlog_over_lead(cfg.lead_frames);
     let w = worker.warm_up(a.warmup_blocks);
     eprintln!(
         "vdn-denoised: 预热 {} 块 · 第一块 {:.3} ms · 之后最长 {:.3} ms · 平均 {:.3} ms（一块音频 {:.3} ms）",
@@ -216,11 +216,12 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
     let s = worker.stats();
     let unlinked = bus.unlink();
     eprintln!(
-        "vdn-denoised: 退出 · 处理 {} 块 · 单块最长 {:.3} ms · 平均 {:.3} ms · 超一块时长 {} 块 · Processed 溢出 {} 样本 · Raw 溢出 {} · 实时提升失败 {} · 唤醒 {} · 退回轮询 {} 次 · unlink {}",
+        "vdn-denoised: 退出 · 处理 {} 块 · 单块最长 {:.3} ms · 平均 {:.3} ms · 超一块时长 {} 块 · 跳过积压 {} 样本 · Processed 溢出 {} 样本 · Raw 溢出 {} · 实时提升失败 {} · 唤醒 {} · 退回轮询 {} 次 · unlink {}",
         s.blocks,
         s.max_process_ns as f64 / 1e6,
         s.total_process_ns as f64 / 1e6 / s.blocks.max(1) as f64,
         s.over_budget,
+        s.raw_skipped,
         s.proc_overflow,
         bus.ring(RingId::Raw).overflows(),
         rt_failures,
