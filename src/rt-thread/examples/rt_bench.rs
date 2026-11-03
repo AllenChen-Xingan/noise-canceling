@@ -84,16 +84,14 @@ fn run(mode: &str, secs: u64, period: Duration, iters: u64) -> String {
         };
         let mut setup = String::from("ok");
         let wi = if mode == "tc_wg" { WorkInterval::create("vdn-rt-bench").ok() } else { None };
-        if mode == "tc" || mode == "tc_wg" {
-            if let Err(e) = promote_current(params) {
+        if (mode == "tc" || mode == "tc_wg")
+            && let Err(e) = promote_current(params) {
                 setup = format!("promote 失败：{e}");
             }
-        }
-        if mode == "qos" {
-            if let Err(e) = set_qos_user_interactive() {
+        if mode == "qos"
+            && let Err(e) = set_qos_user_interactive() {
                 setup = format!("qos 失败：{e}");
             }
-        }
         if mode == "tc_wg" && wi.is_none() {
             setup = "拿不到工作区间，已跳过加入".into();
         }
@@ -116,23 +114,20 @@ fn run(mode: &str, secs: u64, period: Duration, iters: u64) -> String {
             }
             let t0 = Instant::now();
             late.push(t0.saturating_duration_since(due).as_secs_f64() * 1e6);
-            if let Some(m) = &member {
-                if m.begin(period.as_nanos() as u64 / 2).is_err() {
+            if let Some(m) = &member
+                && m.begin(period.as_nanos() as u64 / 2).is_err() {
                     wg_err += 1;
                 }
-            }
             std::hint::black_box(work(iters));
-            if let Some(m) = &member {
-                if m.finish().is_err() {
+            if let Some(m) = &member
+                && m.finish().is_err() {
                     wg_err += 1;
                 }
-            }
             dur.push(t0.elapsed().as_secs_f64() * 1e6);
-            if (mode == "tc" || mode == "tc_wg") && i % per_sec.max(1) == 0 {
-                if !check_current().map(|s| s.time_constraint).unwrap_or(false) {
+            if (mode == "tc" || mode == "tc_wg") && i % per_sec.max(1) == 0
+                && !check_current().map(|s| s.time_constraint).unwrap_or(false) {
                     degraded += 1;
                 }
-            }
         }
         let wall = start.elapsed().as_secs_f64();
         let cpu = (cpu_secs() - cpu0) / wall * 100.0;
