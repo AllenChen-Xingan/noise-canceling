@@ -291,6 +291,22 @@ impl<'ast> Visit<'ast> for Finder<'_> {
         syn::visit::visit_arm(self, a);
         self.ctx.pop();
     }
+    /// 每个条件（含 `else if` 的）单独算一条，不沿用第一个条件（codex #71 第 2 轮 P2 #4）
+    fn visit_expr_if(&mut self, i: &'ast syn::ExprIf) {
+        self.ctx.push(ids_of(&i.cond));
+        self.visit_expr(&i.cond);
+        self.ctx.pop();
+        self.visit_block(&i.then_branch);
+        if let Some((_, e)) = &i.else_branch {
+            self.visit_expr(e);
+        }
+    }
+    fn visit_expr_while(&mut self, w: &'ast syn::ExprWhile) {
+        self.ctx.push(ids_of(&w.cond));
+        self.visit_expr(&w.cond);
+        self.ctx.pop();
+        self.visit_block(&w.body);
+    }
     fn visit_item_const(&mut self, c: &'ast syn::ItemConst) {
         self.ctx.push(ids_of(c));
         syn::visit::visit_item_const(self, c);

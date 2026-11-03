@@ -151,3 +151,22 @@ fn check_file_skips_whole_test_files() {
     assert_eq!(check_file(&root, "src/c/src/prod.rs", body).len(), 1);
     let _ = std::fs::remove_dir_all(&root);
 }
+
+/// codex #71 第 2 轮 P1 #2：同名别名在不同作用域指向不同路径，任一候选命中就报
+#[test]
+fn same_alias_in_different_scopes() {
+    assert_eq!(
+        n("mod a { use std::io as t; }\nuse std::thread as t;\nfn f() { t::sleep(d); }\n"),
+        1
+    );
+}
+
+/// codex #71 第 2 轮 P2 #6：`r#std::fs` 与 `std::fs` 等价
+#[test]
+fn raw_identifiers_are_unrawed() {
+    assert_eq!(n("fn f() { r#std::fs::read(\"x\"); }\n"), 1);
+    assert_eq!(
+        n("use r#std::r#thread::r#sleep as nap;\nfn f() { nap(d); }\n"),
+        2
+    );
+}

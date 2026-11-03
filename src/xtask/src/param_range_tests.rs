@@ -98,6 +98,8 @@ fn literal_param_ranges_are_flagged() {
         "let f = floor_db.clamp(-60.0, 0.0,);",
         // 宏参数里的（旧规则按行能查到，新规则解析宏参数后照查）
         "assert!((-60.0..=0.0).contains(&floor_db));",
+        // else if 的条件单独算（codex #71 第 2 轮 P2 #4）
+        "if ready {} else if (-60.0..=0.0).contains(&floor_db) {}",
         "let s = br#\"tidy: 非参数范围：x\"#; let f = floor_db.clamp(-60.0, 0.0);",
     ] {
         assert_eq!(n(body), 1, "{body}");

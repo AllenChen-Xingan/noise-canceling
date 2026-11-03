@@ -118,8 +118,14 @@ pub fn str_literals(file: &syn::File) -> Vec<(modtree::Pos, String)> {
             match &toks[i] {
                 TokenTree::Group(g) => walk(g.stream(), out),
                 TokenTree::Literal(l) => {
-                    if let syn::Lit::Str(s) = syn::Lit::new(l.clone()) {
-                        out.push((modtree::pos(l.span()), s.value()));
+                    // 字节字符串也算（`b"fastenhancer-m"`；codex #71 第 2 轮 P2 #5）
+                    match syn::Lit::new(l.clone()) {
+                        syn::Lit::Str(s) => out.push((modtree::pos(l.span()), s.value())),
+                        syn::Lit::ByteStr(s) => out.push((
+                            modtree::pos(l.span()),
+                            String::from_utf8_lossy(&s.value()).into_owned(),
+                        )),
+                        _ => {}
                     }
                 }
                 _ => {}

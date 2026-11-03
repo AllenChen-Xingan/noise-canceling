@@ -332,3 +332,36 @@ fn report_surfaces_problems_and_orphans() {
     );
     let _ = fs::remove_dir_all(&root);
 }
+
+/// codex #71 第 2 轮 P1 #1：函数体里带 `#[path]` 的模块也是生产引用
+#[test]
+fn block_module_with_path_is_production() {
+    let (r, s) = tree(
+        "blockmod",
+        &[
+            (
+                "src/lib.rs",
+                "#[cfg(test)]\nmod shared;\nfn f() {\n    #[path = \"shared.rs\"]\n    mod p;\n}\n",
+            ),
+            ("src/shared.rs", "fn s() {}\n"),
+        ],
+    );
+    assert!(s.problems.is_empty(), "{:?}", s.problems);
+    assert!(!s.is_test_file("c/src/shared.rs"));
+    done(&r);
+}
+
+/// codex #71 第 2 轮 P1 #3：生产代码里的 `include!` 报红；测试代码里的不报
+#[test]
+fn production_include_is_an_error() {
+    let (r, s) = tree(
+        "include",
+        &[(
+            "src/lib.rs",
+            "include!(\"gen.rs\");\nfn f() { include!(\"x.rs\"); }\n#[cfg(test)]\nmod t {\n    include!(\"y.rs\");\n}\n",
+        )],
+    );
+    assert_eq!(s.problems.len(), 2, "{:?}", s.problems);
+    assert!(s.problems.iter().all(|p| p.contains("include!")));
+    done(&r);
+}

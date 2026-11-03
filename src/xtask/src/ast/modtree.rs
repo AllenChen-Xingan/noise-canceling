@@ -143,16 +143,29 @@ fn leading_attrs(ts: proc_macro2::TokenStream) -> Vec<syn::Attribute> {
     syn::parse::Parser::parse2(p, ts).unwrap_or_default()
 }
 
-/// 生产函数体里带测试属性的语句（`#[cfg(test)] tests::gap();` 这类）。
+/// 生产函数体里：带测试属性的语句（`#[cfg(test)] tests::gap();` 这类）、块里声明的模块、`include!`。
 #[derive(Default)]
-struct TestStmts(Vec<proc_macro2::Span>);
+struct BodyScan<'ast> {
+    tests: Vec<proc_macro2::Span>,
+    mods: Vec<&'ast syn::ItemMod>,
+    includes: Vec<proc_macro2::Span>,
+}
 
-impl<'ast> Visit<'ast> for TestStmts {
+impl<'ast> Visit<'ast> for BodyScan<'ast> {
     fn visit_stmt(&mut self, s: &'ast syn::Stmt) {
         if cfg_is_test(&leading_attrs(s.to_token_stream())) {
-            self.0.push(s.span());
+            self.tests.push(s.span());
         } else {
             syn::visit::visit_stmt(self, s);
+        }
+    }
+    fn visit_item_mod(&mut self, m: &'ast syn::ItemMod) {
+        // 块里的模块由 Builder 接着展开（codex #71 第 2 轮 P1 #1）
+        self.mods.push(m);
+    }
+    fn visit_macro(&mut self, m: &'ast syn::Macro) {
+        if m.path.is_ident("include") {
+            self.includes.push(m.span());
         }
     }
 }
@@ -186,11 +199,52 @@ impl Builder<'_> {
             .push(r);
     }
 
-    fn body(&mut self, rel: &str, b: &syn::Block) {
-        let mut v = TestStmts::default();
+    fn include_problem(&mut self, rel: &str, sp: proc_macro2::Span) {
+        self.scope.problems.push(format!(
+            "{rel}:{}：生产代码里用了 include!，引入的代码不在模块树里，tidy 查不到（012 第四节）",
+            sp.start().line
+        ));
+    }
+
+    fn body(&mut self, cx: &Ctx, b: &syn::Block) {
+        let mut v = BodyScan::default();
         v.visit_block(b);
-        for sp in v.0 {
-            self.range(rel, sp);
+        for sp in v.tests {
+            self.range(cx.rel, sp);
+        }
+        for sp in v.includes {
+            self.include_problem(cx.rel, sp);
+        }
+        for m in v.mods {
+            self.block_module(m, cx);
+        }
+    }
+
+    /// 函数体里的模块：内联的照常展开；外部的只有带 `#[path]` 才合法，基准目录按两种可能
+    ///（文件目录、模块目录）都当成引用，宁可多查。
+    fn block_module(&mut self, m: &syn::ItemMod, cx: &Ctx) {
+        let test = cx.test || cfg_is_test(&m.attrs);
+        if m.content.is_some() {
+            self.module(m, cx, test);
+            return;
+        }
+        let Some(p) = path_attr(&m.attrs) else { return };
+        let mut hit = false;
+        for base in [cx.file_dir.to_path_buf(), cx.child_dir.clone()] {
+            let t = normalize(&base.join(&p));
+            if t.is_file() && t.starts_with(&self.crate_dir) {
+                let c = t.parent().map(Path::to_path_buf).unwrap_or_default();
+                self.queue.push((t, c, test));
+                hit = true;
+            }
+        }
+        if !hit {
+            self.scope.problems.push(format!(
+                "{}:{}：找不到函数体里模块 {} 的文件 {p}",
+                cx.rel,
+                m.span().start().line,
+                m.ident
+            ));
         }
     }
 
@@ -220,7 +274,10 @@ impl Builder<'_> {
             }
             match it {
                 Item::Mod(m) => self.module(m, cx, cx.test || test),
-                Item::Fn(f) if !cx.test && !test => self.body(cx.rel, &f.block),
+                Item::Fn(f) if !cx.test && !test => self.body(cx, &f.block),
+                Item::Macro(m) if !cx.test && !test && m.mac.path.is_ident("include") => {
+                    self.include_problem(cx.rel, m.span());
+                }
                 Item::Impl(i) if !cx.test && !test => {
                     for ii in &i.items {
                         let a = match ii {
@@ -233,7 +290,7 @@ impl Builder<'_> {
                         if cfg_is_test(a) {
                             self.range(cx.rel, ii.span());
                         } else if let ImplItem::Fn(f) = ii {
-                            self.body(cx.rel, &f.block);
+                            self.body(cx, &f.block);
                         }
                     }
                 }

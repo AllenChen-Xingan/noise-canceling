@@ -297,6 +297,8 @@ impl ModelId {
             "#[cfg(test)]\n#[path = \"t.rs\"]\nmod tests;\nfn prod() -> &'static str { \"fastenhancer-m\" }\n",
             "#[cfg(test)]\nmod t {\n    fn x() { if true { } }\n}\nconst B: &str = \"fastenhancer_m\";\n",
             "#[cfg(test)]\nfn helper(\n    a: u8,\n) {\n}\nconst C: &str = \"fastenhancer-m\";\n",
+            // 字节字符串（codex #71 第 2 轮 P2 #5）
+            "const B: &[u8] = b\"fastenhancer-m\";\n",
         ] {
             assert_eq!(file_problems("a.rs", bad, &names()).len(), 1, "{bad}");
         }

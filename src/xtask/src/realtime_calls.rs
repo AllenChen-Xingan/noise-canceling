@@ -10,6 +10,7 @@
 
 use proc_macro2::{Spacing, TokenStream, TokenTree};
 use quote::ToTokens;
+use syn::ext::IdentExt;
 use syn::visit::Visit;
 use syn::{UseTree, spanned::Spanned};
 
@@ -27,12 +28,12 @@ fn use_paths(t: &UseTree, prefix: &mut Vec<String>, out: &mut Vec<(String, Vec<S
     let line = pos(t.span());
     match t {
         UseTree::Path(p) => {
-            prefix.push(p.ident.to_string());
+            prefix.push(p.ident.unraw().to_string());
             use_paths(&p.tree, prefix, out);
             prefix.pop();
         }
         UseTree::Name(n) => {
-            let name = n.ident.to_string();
+            let name = n.ident.unraw().to_string();
             let mut full = prefix.clone();
             if name != "self" {
                 full.push(name.clone());
@@ -47,9 +48,9 @@ fn use_paths(t: &UseTree, prefix: &mut Vec<String>, out: &mut Vec<(String, Vec<S
         UseTree::Rename(r) => {
             let mut full = prefix.clone();
             if r.ident != "self" {
-                full.push(r.ident.to_string());
+                full.push(r.ident.unraw().to_string());
             }
-            out.push((r.rename.to_string(), full, line));
+            out.push((r.rename.unraw().to_string(), full, line));
         }
         UseTree::Glob(_) => out.push((String::new(), prefix.clone(), line)),
         UseTree::Group(g) => {
@@ -86,13 +87,14 @@ fn path_seqs(ts: TokenStream, out: &mut Vec<(Pos, Vec<String>)>) {
             }
             TokenTree::Ident(id) => {
                 let line = pos(id.span());
-                let mut segs = vec![id.to_string()];
+                // 各段去掉 `r#`：`r#std::fs` 与 `std::fs` 等价（codex #71 第 2 轮 P2 #6）
+                let mut segs = vec![id.unraw().to_string()];
                 let mut j = i + 1;
                 while is_colon2(j) {
                     let Some(TokenTree::Ident(next)) = toks.get(j + 2) else {
                         break;
                     };
-                    segs.push(next.to_string());
+                    segs.push(next.unraw().to_string());
                     j += 3;
                 }
                 out.push((line, segs));
@@ -140,11 +142,13 @@ pub fn hits(rel: &str, src: &str) -> Result<Vec<(usize, &'static str)>, String> 
             out.push((p, b));
             continue;
         }
-        // 没经过别名还原的单个标识符不是路径（局部变量 `log`、字段 `fs`……）
-        if let Some((_, f, _)) = aliases.iter().find(|(a, ..)| *a == segs[0]) {
+        // 没经过别名还原的单个标识符不是路径（局部变量 `log`、字段 `fs`……）。
+        // 同名别名可能在不同作用域指向不同路径：不解析作用域，所有候选里有一个命中就报（codex #71 第 2 轮 P1 #2）
+        for (_, f, _) in aliases.iter().filter(|(a, ..)| *a == segs[0]) {
             let full: Vec<String> = f.iter().cloned().chain(segs[1..].iter().cloned()).collect();
             if let Some(b) = banned(&full) {
                 out.push((p, b));
+                break;
             }
         }
     }
