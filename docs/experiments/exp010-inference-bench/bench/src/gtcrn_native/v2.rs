@@ -16,8 +16,23 @@
 use super::*;
 use core::arch::aarch64::*;
 
-/// 一组 NEON 算子写法；`FAST` 选非线性的算法
-pub struct V2<const FAST: bool>;
+/// 一组 NEON 算子写法；`NL` 选非线性的算法：
+/// `NL_LIBM`（后端 native-v2）· `NL_DIV`（native-v2-fast：多项式 exp + 除法）· `NL_RCP`（v3：多项式 exp + 倒数估计与 2 次牛顿迭代）
+pub struct V2<const NL: u8>;
+pub const NL_LIBM: u8 = 0;
+pub const NL_DIV: u8 = 1;
+pub const NL_RCP: u8 = 2;
+
+/// 1/d：倒数估计（约 8 位）+ 2 次牛顿迭代 r ← r·(2 − d·r)，相对误差约 1e-7 量级（单元测试量）。
+/// 除法在能效核上不流水、延迟长（D79「按能效核特点写」），换成 3 条流水的乘法类指令
+#[inline(always)]
+pub(super) unsafe fn vrecip(d: float32x4_t) -> float32x4_t {
+    unsafe {
+        let r = vrecpeq_f32(d);
+        let r = vmulq_f32(r, vrecpsq_f32(d, r));
+        vmulq_f32(r, vrecpsq_f32(d, r))
+    }
+}
 
 /// 频率卷积每相的长度：输出按 4 补齐，再加抽头偏移（最多 +2）与余量
 pub fn conv_phase_len(fout: usize) -> usize {
@@ -47,7 +62,7 @@ unsafe fn lanes(x: float32x4_t, f: impl Fn(f32) -> f32) -> float32x4_t {
 
 /// exp：n = round(x·log2e)，r = x − n·ln2（ln2 拆两段），p(r) 用 Cephes expf 系数，结果 = 2^n · p
 #[inline(always)]
-unsafe fn vexp(x: float32x4_t) -> float32x4_t {
+pub(super) unsafe fn vexp(x: float32x4_t) -> float32x4_t {
     unsafe {
         let x = vminq_f32(vmaxq_f32(x, vdupq_n_f32(-87.0)), vdupq_n_f32(88.0));
         let n = vrndnq_f32(vmulq_n_f32(x, std::f32::consts::LOG2_E));
@@ -66,9 +81,13 @@ unsafe fn vexp(x: float32x4_t) -> float32x4_t {
 }
 
 #[inline(always)]
-unsafe fn sig4<const FAST: bool>(x: float32x4_t) -> float32x4_t {
+pub(super) unsafe fn sig4<const NL: u8>(x: float32x4_t) -> float32x4_t {
     unsafe {
-        if FAST {
+        if NL == NL_RCP {
+            let one = vdupq_n_f32(1.0);
+            let x = vminq_f32(vmaxq_f32(x, vdupq_n_f32(-87.0)), vdupq_n_f32(87.0));
+            vrecip(vaddq_f32(one, vexp(vnegq_f32(x))))
+        } else if NL == NL_DIV {
             // 输入夹到 ±87：x < −87 时 1/(1+e^{−x}) 会落进次正规数（单元测试抓到 6e-39），夹后最小 1.6e-38 仍是正规数；
             // 被夹的部分真值 < 1.7e-38，绝对差 < 2e-38
             let one = vdupq_n_f32(1.0);
@@ -81,9 +100,13 @@ unsafe fn sig4<const FAST: bool>(x: float32x4_t) -> float32x4_t {
 }
 
 #[inline(always)]
-unsafe fn tanh4<const FAST: bool>(x: float32x4_t) -> float32x4_t {
+pub(super) unsafe fn tanh4<const NL: u8>(x: float32x4_t) -> float32x4_t {
     unsafe {
-        if FAST {
+        if NL == NL_RCP {
+            let one = vdupq_n_f32(1.0);
+            let e = vexp(vaddq_f32(x, x));
+            vfmsq_f32(one, vdupq_n_f32(2.0), vrecip(vaddq_f32(e, one)))
+        } else if NL == NL_DIV {
             // tanh(x) = 1 − 2 / (e^{2x} + 1)
             let one = vdupq_n_f32(1.0);
             let e = vexp(vaddq_f32(x, x));
@@ -95,7 +118,7 @@ unsafe fn tanh4<const FAST: bool>(x: float32x4_t) -> float32x4_t {
 }
 
 #[inline(always)]
-unsafe fn prelu4(x: float32x4_t, a: f32) -> float32x4_t {
+pub(super) unsafe fn prelu4(x: float32x4_t, a: f32) -> float32x4_t {
     unsafe { vbslq_f32(vcgeq_f32(x, vdupq_n_f32(0.0)), x, vmulq_n_f32(x, a)) }
 }
 
@@ -150,7 +173,7 @@ unsafe fn conv_chunk<const N: usize, const Z: usize>(
     }
 }
 
-fn conv_v2(c: &mut ConvF, x: &[f32], y: &mut [f32]) {
+pub(super) fn conv_v2(c: &mut ConvF, x: &[f32], y: &mut [f32]) {
     let (cig, cog) = (c.cin / c.groups, c.cout / c.groups);
     let pl = conv_phase_len(c.fout);
     let nv = c.fout.div_ceil(4);
@@ -226,7 +249,7 @@ unsafe fn deconv_chunk<const N: usize, const Z: usize>(
     }
 }
 
-fn deconv_v2<const FAST: bool>(d: &mut DeconvF, x: &[f32], y: &mut [f32]) {
+pub(super) fn deconv_v2<const NL: u8>(d: &mut DeconvF, x: &[f32], y: &mut [f32]) {
     let (cig, cog) = (d.cin / d.groups, d.cout / d.groups);
     let dl = deconv_pad_len(d.fin);
     let nv = d.fin.div_ceil(4);
@@ -259,7 +282,7 @@ fn deconv_v2<const FAST: bool>(d: &mut DeconvF, x: &[f32], y: &mut [f32]) {
                 for t in [te.as_mut_ptr(), to.as_mut_ptr()] {
                     let p = t.add(4 * v);
                     let a = vld1q_f32(p);
-                    vst1q_f32(p, if d.tanh { tanh4::<FAST>(a) } else { prelu4(a, d.alpha) });
+                    vst1q_f32(p, if d.tanh { tanh4::<NL>(a) } else { prelu4(a, d.alpha) });
                 }
             }
         }
@@ -276,7 +299,7 @@ fn deconv_v2<const FAST: bool>(d: &mut DeconvF, x: &[f32], y: &mut [f32]) {
 // ───────────── 逐点卷积 ─────────────
 
 /// f = 33 专用：每次 2 个输出通道，8 个向量 + 1 个标量尾
-fn point_v2(p: &Point, x: &[f32], y: &mut [f32], f: usize) {
+pub(super) fn point_v2(p: &Point, x: &[f32], y: &mut [f32], f: usize) {
     if f != F2 || p.cout % 2 != 0 {
         return p.run(x, y, f);
     }
@@ -318,7 +341,7 @@ fn point_v2(p: &Point, x: &[f32], y: &mut [f32], f: usize) {
 
 /// H 个隐单元，NG = 3H/4 个门向量
 #[inline(always)]
-unsafe fn gru_step<const H: usize, const NG: usize, const FAST: bool>(g: &Gru, x: &[f32], h: &mut [f32]) {
+pub(super) unsafe fn gru_step<const H: usize, const NG: usize, const NL: u8>(g: &Gru, x: &[f32], h: &mut [f32]) {
     const { assert!(NG * 4 == 3 * H) };
     assert!(x.len() >= g.i && h.len() >= H && g.wit.len() >= g.i * 3 * H && g.wht.len() >= H * 3 * H);
     unsafe {
@@ -342,9 +365,9 @@ unsafe fn gru_step<const H: usize, const NG: usize, const FAST: bool>(g: &Gru, x
         }
         let q = H / 4;
         for c in 0..q {
-            let r = sig4::<FAST>(vaddq_f32(gi[c], gh[c]));
-            let z = sig4::<FAST>(vaddq_f32(gi[q + c], gh[q + c]));
-            let n = tanh4::<FAST>(vfmaq_f32(gi[2 * q + c], r, gh[2 * q + c]));
+            let r = sig4::<NL>(vaddq_f32(gi[c], gh[c]));
+            let z = sig4::<NL>(vaddq_f32(gi[q + c], gh[q + c]));
+            let n = tanh4::<NL>(vfmaq_f32(gi[2 * q + c], r, gh[2 * q + c]));
             let hp = h.as_mut_ptr().add(4 * c);
             vst1q_f32(hp, vfmaq_f32(n, z, vsubq_f32(vld1q_f32(hp), n)));
         }
@@ -352,7 +375,7 @@ unsafe fn gru_step<const H: usize, const NG: usize, const FAST: bool>(g: &Gru, x
 }
 
 #[inline(always)]
-unsafe fn linear_v<const OV: usize>(l: &Linear, x: &[f32], y: &mut [f32]) {
+pub(super) unsafe fn linear_v<const OV: usize>(l: &Linear, x: &[f32], y: &mut [f32]) {
     assert!(l.o == 4 * OV && x.len() >= l.i && y.len() >= l.o && l.wt.len() >= l.i * l.o);
     unsafe {
         let mut acc = [vdupq_n_f32(0.0); OV];
@@ -371,7 +394,7 @@ unsafe fn linear_v<const OV: usize>(l: &Linear, x: &[f32], y: &mut [f32]) {
     }
 }
 
-impl<const FAST: bool> Kern for V2<FAST> {
+impl<const NL: u8> Kern for V2<NL> {
     #[inline(always)]
     fn point(p: &Point, x: &[f32], y: &mut [f32], f: usize) {
         point_v2(p, x, y, f)
@@ -382,15 +405,15 @@ impl<const FAST: bool> Kern for V2<FAST> {
     }
     #[inline(always)]
     fn deconv(d: &mut DeconvF, x: &[f32], y: &mut [f32]) {
-        deconv_v2::<FAST>(d, x, y)
+        deconv_v2::<NL>(d, x, y)
     }
     #[inline(always)]
     fn gru(g: &Gru, x: &[f32], h: &mut [f32]) {
         unsafe {
             match g.h {
-                4 => gru_step::<4, 3, FAST>(g, x, h),
-                8 => gru_step::<8, 6, FAST>(g, x, h),
-                16 => gru_step::<16, 12, FAST>(g, x, h),
+                4 => gru_step::<4, 3, NL>(g, x, h),
+                8 => gru_step::<8, 6, NL>(g, x, h),
+                16 => gru_step::<16, 12, NL>(g, x, h),
                 _ => g.step(x, h),
             }
         }
@@ -467,8 +490,8 @@ mod tests {
             let (mut y1, mut y2, mut y3) = (vec![0.0; cout * fout], vec![0.0; cout * fout], vec![0.0; cout * fout]);
             FAST.store(false, std::sync::atomic::Ordering::Relaxed);
             d.run(&x, &mut y1);
-            deconv_v2::<false>(&mut d, &x, &mut y2);
-            deconv_v2::<true>(&mut d, &x, &mut y3);
+            deconv_v2::<NL_LIBM>(&mut d, &x, &mut y2);
+            deconv_v2::<NL_DIV>(&mut d, &x, &mut y3);
             let (d2, d3) = (max_diff(&y1, &y2), max_diff(&y1, &y3));
             assert!(d2 < 1e-5 && d3 < 1e-5, "DeconvF {cin}->{cout}/{groups} @{fin}: {d2} {d3}");
         }
@@ -506,16 +529,16 @@ mod tests {
                 unsafe {
                     match h {
                         4 => {
-                            gru_step::<4, 3, false>(&g, &x, &mut b);
-                            gru_step::<4, 3, true>(&g, &x, &mut c)
+                            gru_step::<4, 3, NL_LIBM>(&g, &x, &mut b);
+                            gru_step::<4, 3, NL_DIV>(&g, &x, &mut c)
                         }
                         8 => {
-                            gru_step::<8, 6, false>(&g, &x, &mut b);
-                            gru_step::<8, 6, true>(&g, &x, &mut c)
+                            gru_step::<8, 6, NL_LIBM>(&g, &x, &mut b);
+                            gru_step::<8, 6, NL_DIV>(&g, &x, &mut c)
                         }
                         _ => {
-                            gru_step::<16, 12, false>(&g, &x, &mut b);
-                            gru_step::<16, 12, true>(&g, &x, &mut c)
+                            gru_step::<16, 12, NL_LIBM>(&g, &x, &mut b);
+                            gru_step::<16, 12, NL_DIV>(&g, &x, &mut c)
                         }
                     }
                 }
@@ -549,7 +572,7 @@ mod tests {
             let out = unsafe {
                 let v = vdupq_n_f32(x);
                 let mut a = [0.0f32; 3];
-                for (k, r) in [vexp(v), sig4::<true>(v), tanh4::<true>(v)].into_iter().enumerate() {
+                for (k, r) in [vexp(v), sig4::<NL_DIV>(v), tanh4::<NL_DIV>(v)].into_iter().enumerate() {
                     let mut b = [0.0f32; 4];
                     vst1q_f32(b.as_mut_ptr(), r);
                     a[k] = b[0];
