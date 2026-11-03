@@ -164,6 +164,102 @@ fn defined_type(line: &str) -> Option<&str> {
     None
 }
 
+/// 逐行给出「只剩代码」的文本：去掉 `//` 行注释、`/* */` 块注释（可跨行）、字符串与字符字面量（可跨行，含 `r"…"` / `r#"…"#`）。
+/// 字符串换成 `""`，免得测试里写在字符串中的负例被当成代码（codex 第 1 轮 P1 #1）。
+pub fn code_lines(src: &str) -> Vec<String> {
+    #[derive(Clone, Copy, PartialEq)]
+    enum St {
+        Code,
+        Block(u32),
+        Str,
+        Raw(usize),
+    }
+    let mut st = St::Code;
+    let mut out = Vec::new();
+    for line in src.lines() {
+        let c: Vec<char> = line.chars().collect();
+        let mut o = String::new();
+        let mut i = 0;
+        while i < c.len() {
+            match st {
+                St::Block(d) => {
+                    if c[i] == '*' && c.get(i + 1) == Some(&'/') {
+                        st = if d <= 1 { St::Code } else { St::Block(d - 1) };
+                        i += 2;
+                    } else if c[i] == '/' && c.get(i + 1) == Some(&'*') {
+                        st = St::Block(d + 1);
+                        i += 2;
+                    } else {
+                        i += 1;
+                    }
+                }
+                St::Str => {
+                    if c[i] == '\\' {
+                        i += 2;
+                    } else if c[i] == '"' {
+                        o.push('"');
+                        st = St::Code;
+                        i += 1;
+                    } else {
+                        i += 1;
+                    }
+                }
+                St::Raw(h) => {
+                    if c[i] == '"' && c[i + 1..].iter().take(h).filter(|&&x| x == '#').count() == h {
+                        o.push('"');
+                        st = St::Code;
+                        i += 1 + h;
+                    } else {
+                        i += 1;
+                    }
+                }
+                St::Code => {
+                    let ch = c[i];
+                    let prev_ident = i > 0 && (c[i - 1].is_alphanumeric() || c[i - 1] == '_');
+                    if ch == '/' && c.get(i + 1) == Some(&'/') {
+                        break;
+                    } else if ch == '/' && c.get(i + 1) == Some(&'*') {
+                        st = St::Block(1);
+                        i += 2;
+                    } else if ch == 'r' && !prev_ident && matches!(c.get(i + 1), Some('"') | Some('#')) {
+                        let h = c[i + 1..].iter().take_while(|&&x| x == '#').count();
+                        if c.get(i + 1 + h) == Some(&'"') {
+                            o.push('"');
+                            st = St::Raw(h);
+                            i += 2 + h;
+                        } else {
+                            o.push(ch);
+                            i += 1;
+                        }
+                    } else if ch == '"' {
+                        o.push('"');
+                        st = St::Str;
+                        i += 1;
+                    } else if ch == '\'' {
+                        // 字符字面量 'x' / '\n'；否则是生命周期，原样保留
+                        if c.get(i + 1) == Some(&'\\') {
+                            let end = c[i + 2..].iter().position(|&x| x == '\'').map_or(c.len(), |k| i + 3 + k);
+                            o.push_str("' '");
+                            i = end;
+                        } else if c.get(i + 2) == Some(&'\'') {
+                            o.push_str("' '");
+                            i += 3;
+                        } else {
+                            o.push(ch);
+                            i += 1;
+                        }
+                    } else {
+                        o.push(ch);
+                        i += 1;
+                    }
+                }
+            }
+        }
+        out.push(o);
+    }
+    out
+}
+
 fn has_reason(line: &str, marker: &str) -> bool {
     line.split_once(marker)
         .is_some_and(|(_, why)| !why.trim().is_empty())
@@ -177,8 +273,9 @@ pub fn mirror_problems(rel: &str, src: &str, names: &[String]) -> Vec<String> {
         ));
     }
     let lines: Vec<&str> = src.lines().collect();
+    let codes = code_lines(src);
     for (i, line) in lines.iter().enumerate() {
-        let code = line.split_once("//").map_or(*line, |(c, _)| c);
+        let code = codes.get(i).map_or("", String::as_str);
         let Some(name) = defined_type(code) else {
             continue;
         };
@@ -226,6 +323,19 @@ fn num_at(s: &str, i: usize) -> Option<usize> {
             j += 1;
         }
     }
+    // 指数：1e3 / 6e-1 / 6E+1（codex 第 1 轮 P2 #5）
+    if matches!(b.get(j), Some(b'e') | Some(b'E')) {
+        let mut k = j + 1;
+        if matches!(b.get(k), Some(b'+') | Some(b'-')) {
+            k += 1;
+        }
+        if b.get(k).is_some_and(u8::is_ascii_digit) {
+            j = k;
+            while b.get(j).is_some_and(|c| c.is_ascii_digit() || *c == b'_') {
+                j += 1;
+            }
+        }
+    }
     for suf in ["f32", "f64"] {
         if s[j..].starts_with(suf) {
             j += suf.len();
@@ -246,6 +356,17 @@ fn num_ends_at(s: &str, end: usize) -> bool {
     let stop = j;
     while j > 0 && (b[j - 1].is_ascii_digit() || b[j - 1] == b'.' || b[j - 1] == b'_') {
         j -= 1;
+    }
+    // 指数：…e3 / …e-1，再往前接着走尾数
+    let mut k = j;
+    if k > 0 && matches!(b[k - 1], b'+' | b'-') {
+        k -= 1;
+    }
+    if j < stop && k > 1 && matches!(b[k - 1], b'e' | b'E') && b[k - 2].is_ascii_digit() {
+        j = k - 1;
+        while j > 0 && (b[j - 1].is_ascii_digit() || b[j - 1] == b'.' || b[j - 1] == b'_') {
+            j -= 1;
+        }
     }
     if j == stop || !b[j].is_ascii_digit() {
         return false;
@@ -350,11 +471,12 @@ fn has_token(code: &str, tok: &str) -> bool {
 
 pub fn range_problems(rel: &str, src: &str, tokens: &[String]) -> Vec<String> {
     let mut out = Vec::new();
+    let codes = code_lines(src);
     for (i, line) in src.lines().enumerate() {
         if has_reason(line, RANGE_ALLOW) {
             continue;
         }
-        let code = line.split_once("//").map_or(line, |(c, _)| c);
+        let code = codes.get(i).map_or("", String::as_str);
         if !has_literal_range(code) {
             continue;
         }
@@ -411,6 +533,9 @@ mod tests {
             "    let n = confirm_n.min(20).max(1);",
             "            ParamField::FloorDb => (-60.0, 0.0),",
             "    let f = floor_db.clamp(-60f32, 0f32);",
+            "    let f = floor_db.clamp(-6e1, 0.0);",
+            "    let ok = (-6E+1..=0e0).contains(&floor_db);",
+            "    let f = /* 夹一下 */ floor_db.clamp(-60.0, 0.0);",
         ];
         for line in bad {
             assert_eq!(range_problems("x.rs", line, &toks()).len(), 1, "{line}");
@@ -436,10 +561,27 @@ mod tests {
             "    for i in 0..floor_db.len() {",
             // 放行
             "    let r = (0.0..1.0).contains(&smooth); // tidy: 非参数范围：这是归一化后的插值位置",
+            // 字符串里的负例（测试数据）不是代码
+            "        \"    let ok = (-30.0..=0.0).contains(&p.floor_db);\",",
+            "    let s = r#\"floor_db.clamp(-60.0, 0.0)\"#;",
+            // 块注释里的
+            "    /* floor_db.clamp(-60.0, 0.0) */ let x = 1;",
+            // 生命周期与字符字面量不打乱剥离
+            "    fn f<'a>(x: &'a str) -> char { let _ = floor_db; '\"' }",
         ];
         for line in good {
             assert!(range_problems("x.rs", line, &toks()).is_empty(), "{line}");
         }
+    }
+
+    #[test]
+    fn code_lines_strip_strings_and_comments_across_lines() {
+        let src = "let a = \"x\n\\\n  floor_db.clamp(-60.0, 0.0)\";\n/* 开始\nfloor_db.clamp(-60.0, 0.0)\n结束 */ let b = 1;\nlet c = r#\"\na \"q\" floor_db\n\"#;\n";
+        let c = code_lines(src);
+        assert!(c.iter().all(|l| !l.contains("floor_db")), "{c:#?}");
+        assert!(c.iter().any(|l| l.contains("let b = 1;")));
+        assert!(c.iter().any(|l| l.contains("let c = \"")));
+        assert!(range_problems("x.rs", src, &toks()).is_empty());
     }
 
     // ── R-MIRROR ──
@@ -467,6 +609,8 @@ mod tests {
             "/// VAD 概率的滞回\n// tidy: 同名不同物：这是 VAD 概率滞回，vdn-types 的是场景滞回\n#[derive(Clone, Copy)]\npub struct Hysteresis {}\n",
             "pub struct Hysteresis {} // tidy: 同名不同物：VAD 概率滞回\n",
             "// pub struct Stage {}\n",
+            "/* pub struct Stage {} */\n",
+            "let s = \"pub struct Stage {}\";\n",
         ] {
             assert!(mirror_problems("src/x/src/lib.rs", good, &names).is_empty(), "{good}");
         }
