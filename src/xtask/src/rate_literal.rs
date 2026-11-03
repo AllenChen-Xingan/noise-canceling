@@ -18,6 +18,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::single_source::lex_lines;
+use crate::test_modules::{brace_delta, mod_decl, test_module_files};
 use crate::tidy::rs_files;
 
 /// 采样率正本。
@@ -88,28 +89,48 @@ fn low_level_test_file(rel: &str) -> bool {
     })
 }
 
-/// 一个文件的问题。
-pub fn rate_problems(rel: &str, src: &str) -> Vec<String> {
+/// 放行标记后面有没有写理由。
+fn has_allow_reason(comment: &str) -> bool {
+    comment
+        .split_once(ALLOW)
+        .is_some_and(|(_, r)| !r.trim().is_empty())
+}
+
+/// 一个文件的问题。`test_file` = 这个文件经 `#[cfg(test)] mod x;` 引入（只在测试编译）。
+pub fn rate_problems(rel: &str, src: &str, test_file: bool) -> Vec<String> {
     if rel == RATE_FILE || low_level_test_file(rel) {
         return Vec::new();
     }
     let low_level = LOW_LEVEL.iter().any(|c| rel.starts_with(c));
+    if low_level && test_file {
+        return Vec::new();
+    }
     let raw: Vec<&str> = src.lines().collect();
     let mut out = Vec::new();
-    let mut in_tests = false;
+    let mut depth = 0i64;
+    // 内联测试模块 `#[cfg(test)] mod x { … }`：进入时的深度；闭合后结束放行（codex 第 2 轮 P2 #4）
+    let mut test_from: Option<i64> = None;
     let mut cfg_test_prev = false;
     for (i, (code, comment)) in lex_lines(src).iter().enumerate() {
         let t = code.trim();
-        if cfg_test_prev && (t.starts_with("mod ") || t.starts_with("pub mod ")) {
-            in_tests = true;
+        if test_from.is_none()
+            && cfg_test_prev
+            && let Some((_, true)) = mod_decl(t)
+        {
+            test_from = Some(depth);
         }
         if !t.is_empty() {
             cfg_test_prev = t == "#[cfg(test)]";
         }
+        let in_tests = test_from.is_some();
+        depth += brace_delta(t);
+        if test_from.is_some_and(|d| depth <= d) {
+            test_from = None;
+        }
         if low_level && in_tests {
             continue;
         }
-        if has_rate_literal(code) && !comment.contains(ALLOW) {
+        if has_rate_literal(code) && !has_allow_reason(comment) {
             let line = raw.get(i).map_or("", |l| l.trim());
             out.push(format!(
                 "{rel}:{}：采样率字面量（R-RATE）——改用 vdn_types::IO_RATE / MODEL_RATE（正本 {RATE_FILE}）；不是采样率就在行尾写 `// {ALLOW}<理由>`：{line}",
@@ -126,12 +147,13 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
     }
     let mut all = Vec::new();
     rs_files(&root.join("src"), &mut all);
-    for f in all {
+    let tests = test_module_files(&all);
+    for f in &all {
         let Ok(rel) = f.strip_prefix(root).map(|p| p.display().to_string()) else {
             continue;
         };
-        match fs::read_to_string(&f) {
-            Ok(src) => problems.extend(rate_problems(&rel, &src)),
+        match fs::read_to_string(f) {
+            Ok(src) => problems.extend(rate_problems(&rel, &src, tests.contains(f))),
             Err(e) => problems.push(format!("读 {rel}：{e}（R-RATE）")),
         }
     }
@@ -178,35 +200,56 @@ mod tests {
     #[test]
     fn comments_and_strings_do_not_count() {
         let src = "// 48_000 Hz\nlet s = \"16000\";\n/* 48000 */\n";
-        assert!(rate_problems("src/eval/src/a.rs", src).is_empty());
+        assert!(rate_problems("src/eval/src/a.rs", src, false).is_empty());
     }
 
     #[test]
     fn allow_marker_needs_reason_text() {
         let ok = "let n = 48_000; // tidy: 非采样率：一分钟的毫秒数之类\n";
-        assert!(rate_problems("src/eval/src/a.rs", ok).is_empty());
+        assert!(rate_problems("src/eval/src/a.rs", ok, false).is_empty());
         let bad = "let n = 48_000; // 非采样率\n";
-        assert_eq!(rate_problems("src/eval/src/a.rs", bad).len(), 1);
+        assert_eq!(rate_problems("src/eval/src/a.rs", bad, false).len(), 1);
     }
 
     #[test]
     fn rate_file_itself_is_allowed() {
-        assert!(rate_problems(RATE_FILE, "pub const IO_RATE: u32 = 48_000;\n").is_empty());
+        assert!(rate_problems(RATE_FILE, "pub const IO_RATE: u32 = 48_000;\n", false).is_empty());
     }
 
     /// 底层 crate：测试代码放行，非测试代码照挡；别的 crate 测试也挡
     #[test]
     fn low_level_tests_only() {
         let src = "fn f() -> u32 { 48_000 }\n#[cfg(test)]\nmod tests {\n    fn g() { let _ = 48_000; }\n}\n";
-        let p = rate_problems("src/shm/src/wait.rs", src);
+        let p = rate_problems("src/shm/src/wait.rs", src, false);
         assert_eq!(p.len(), 1, "{p:?}");
         assert!(p[0].contains(":1："));
-        assert!(rate_problems("src/shm/tests/ring.rs", "let r = 48_000;\n").is_empty());
-        assert!(rate_problems("src/dsp/examples/x.rs", "let r = 48_000;\n").is_empty());
-        assert_eq!(rate_problems("src/eval/src/a.rs", src).len(), 2);
+        assert!(rate_problems("src/shm/tests/ring.rs", "let r = 48_000;\n", false).is_empty());
+        assert!(rate_problems("src/dsp/examples/x.rs", "let r = 48_000;\n", false).is_empty());
+        assert_eq!(rate_problems("src/eval/src/a.rs", src, false).len(), 2);
         assert_eq!(
-            rate_problems("src/eval/tests/a.rs", "let r = 48_000;\n").len(),
+            rate_problems("src/eval/tests/a.rs", "let r = 48_000;\n", false).len(),
             1
         );
+    }
+
+    /// 负例（codex 第 2 轮 P2 #5）：放行标记后面没写理由不算放行
+    #[test]
+    fn empty_allow_reason_is_flagged() {
+        let src = "let n = 48_000; // tidy: 非采样率：\nlet m = 48_000; // tidy: 非采样率：   \n";
+        assert_eq!(rate_problems("src/eval/src/a.rs", src, false).len(), 2);
+    }
+
+    /// 负例（codex 第 2 轮 P2 #4）：底层 crate 里测试模块闭合后的生产代码照挡；`mod tests;` 声明不开放行区
+    #[test]
+    fn exemption_ends_with_test_module() {
+        let src = "#[cfg(test)]\nmod tests {\n    fn g() { let _ = 48_000; }\n}\nfn after() -> u32 { 48_000 }\n";
+        let p = rate_problems("src/shm/src/a.rs", src, false);
+        assert_eq!(p.len(), 1, "{p:?}");
+        assert!(p[0].contains(":5："), "{p:?}");
+        let decl = "#[cfg(test)]\nmod tests;\nfn after() -> u32 { 48_000 }\n";
+        assert_eq!(rate_problems("src/shm/src/a.rs", decl, false).len(), 1);
+        // 经 `#[cfg(test)] mod tests;` 引入的测试文件整份放行（只限底层 crate）
+        assert!(rate_problems("src/shm/src/tests.rs", "let r = 48_000;\n", true).is_empty());
+        assert_eq!(rate_problems("src/eval/src/tests.rs", "let r = 48_000;\n", true).len(), 1);
     }
 }

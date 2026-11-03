@@ -7,31 +7,70 @@
 //!   取 `x.rs` 或 `x/mod.rs`
 //! - 测试模块的子模块（`x/` 目录下的全部文件）也算测试代码
 //!
-//! 边界：`#[path = "…"]` 指定的路径不认；`#[cfg(test)]` 与 `mod` 之间夹了别的属性也不认（宁可多查）。
+//! 边界：`#[path = "…"]` 指定的路径不认；`#[cfg(test)]` 与 `mod` 之间夹了别的属性也不认；
+//! 只认文件顶层的声明，内联模块里的不认；注释与字符串里的写法不算（宁可多查）。
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// `#[cfg(test)]` 后面紧跟的 `mod x;` 的模块名。
-pub fn cfg_test_mod_names(src: &str) -> Vec<String> {
-    let lines: Vec<&str> = src
-        .lines()
-        .map(str::trim)
-        .filter(|l| !l.is_empty())
+use crate::single_source::lex_lines;
+
+/// 一行代码（已剥掉注释与字符串）是不是 `mod x;` / `mod x {` 声明；返回模块名与是否内联。
+pub fn mod_decl(code: &str) -> Option<(String, bool)> {
+    let t = code.trim();
+    let rest = t
+        .strip_prefix("pub(crate) ")
+        .or_else(|| t.strip_prefix("pub(super) "))
+        .or_else(|| t.strip_prefix("pub "))
+        .unwrap_or(t)
+        .strip_prefix("mod ")?;
+    let name: String = rest
+        .chars()
+        .take_while(|c| c.is_alphanumeric() || *c == '_')
         .collect();
-    lines
-        .windows(2)
-        .filter(|w| w[0] == "#[cfg(test)]")
-        .filter_map(|w| {
-            let rest = w[1]
-                .strip_prefix("pub(crate) ")
-                .or_else(|| w[1].strip_prefix("pub "))
-                .unwrap_or(w[1]);
-            let name = rest.strip_prefix("mod ")?.strip_suffix(';')?.trim();
-            (!name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_'))
-                .then(|| name.to_string())
-        })
-        .collect()
+    let after = rest[name.len()..].trim_start();
+    if name.is_empty() {
+        return None;
+    }
+    if after.starts_with(';') {
+        Some((name, false))
+    } else if after.starts_with('{') {
+        Some((name, true))
+    } else {
+        None
+    }
+}
+
+/// 花括号净增量（代码已剥掉注释、字符串与字符字面量）。
+pub fn brace_delta(code: &str) -> i64 {
+    code.chars().fold(0, |d, c| match c {
+        '{' => d + 1,
+        '}' => d - 1,
+        _ => d,
+    })
+}
+
+/// 文件顶层（花括号深度 0）`#[cfg(test)]` 后面紧跟的 `mod x;` 的模块名。
+/// 注释与字符串里的写法不算（codex 第 2 轮 P1 #2）；内联模块里的声明不认（路径不同，宁可多查）。
+pub fn cfg_test_mod_names(src: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut depth = 0i64;
+    let mut prev_cfg_test = false;
+    for (code, _) in lex_lines(src) {
+        let t = code.trim();
+        if t.is_empty() {
+            continue;
+        }
+        if depth == 0
+            && prev_cfg_test
+            && let Some((name, false)) = mod_decl(t)
+        {
+            out.push(name);
+        }
+        prev_cfg_test = depth == 0 && t == "#[cfg(test)]";
+        depth += brace_delta(t);
+    }
+    out
 }
 
 /// 声明在 `file` 里的子模块放在哪个目录。
@@ -76,6 +115,9 @@ mod tests {
     fn names_after_cfg_test() {
         let src = "mod a;\n#[cfg(test)]\nmod tests;\n#[cfg(test)]\n\npub(crate) mod helpers;\n#[cfg(test)]\nmod inline {\n}\n";
         assert_eq!(cfg_test_mod_names(src), ["tests", "helpers"]);
+        // 注释、字符串里的写法不算；内联模块里的声明不算
+        let fake = "/*\n#[cfg(test)]\nmod worker;\n*/\nconst S: &str = \"\n#[cfg(test)]\nmod worker2;\n\";\nmod outer {\n    #[cfg(test)]\n    mod inner;\n}\n";
+        assert!(cfg_test_mod_names(fake).is_empty(), "{:?}", cfg_test_mod_names(fake));
     }
 
     fn tmp(tag: &str) -> PathBuf {
