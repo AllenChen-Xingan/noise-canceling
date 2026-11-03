@@ -331,6 +331,7 @@ pub fn check() -> Result<Tidy, String> {
 
     // 唯一真相源：镜像副本 · 参数范围（CLAUDE.md 第五节第 5 条）
     crate::single_source::check(&root, &mut t.problems);
+    crate::model_names::check(&root, &mut t.problems);
 
     // 根 clippy.toml 只许一份
     let mut all = Vec::new();

@@ -16,7 +16,9 @@
 mod ci;
 mod denycheck;
 mod deps;
+mod lex;
 mod miri;
+mod model_names;
 mod single_source;
 mod tidy;
 mod todo;
