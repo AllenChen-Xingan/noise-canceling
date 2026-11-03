@@ -52,6 +52,27 @@
 - 结果文件（不入库）：`_tmp/20261102-rs-entry-v7/{sweep-poll,v7-poll,idle-sweep-poll}.{json,txt}`
 - 复测命令：`./target/release/vdn v7 --model-path <gtcrn_simple.onnx> --leads 96,144,192 --runs 10 --seconds 10 --json <路径>`
 
+## 延迟修复 · 接线（2026-11-02，唤醒合入之后）
+
+清单用途：每条写「做了什么 → 怎么证明」。
+
+- **唤醒（B，rs-wake 的接口）**：送音端推完 Raw 就 `notify`；降噪进程 / chain-test / `vdn run` 改 `bus.wait(Raw, 降噪块, 20 ms)`，删掉 0.5 ms 轮询 → 本机「唤醒 可用 · 退回轮询 0 次」【测】
+- **OwnedBus**：改用 `vdn_shm::OwnedBus`，denoised 里那份已删（同一段代码只留一份）
+- **Out 总线拆分**：送音端自己建 `/vdn-out`（`Config.out_bus_name`）；插件 / 扬声器 / 文件都按名字连它。没有降噪总线就送延迟原声、后台 100 ms 重试；会话 ID 变了就换 → 两进程三种起停顺序（降噪先起 · 送音先起 2 s 后才起降噪 · 第 3 s SIGKILL 再起新的）文件全段相关 1.000000、延迟 1056、读出欠载 0、静音 0【测，debug】
+- **降噪落后时跳过 Raw 积压**：可读量 > lead + 2 块就丢旧的只留一块（`Ring::discard`，O(1)），记 `note_gap`；在输出流「现在 + L_pipe」处推等长零占位，账不错位 → 单测：降噪停 100 块后恢复，不静音、跳变 < 0.13、0.2 s 内回到处理后的并逐样本对齐【测】
+
+### 已修（大总管指出的两条规约红线，2026-11-02）
+1. **音频线程不许 `try_lock`（§3.4）**：换总线改成 rtrb 交接（`vdn_capture::feeder`）：监视线程建好新总线 → 交接队列 → 音频线程在块边界接手 → 旧对象经回收队列送回监视线程释放；回收队列满就留在本地槽位、这块不接新的 → 单测 2 条（交接 / 回收满）；新增文本检查测试 `src/capture/tests/realtime_rules.rs`：capture 全部源文件没有 `Mutex` · `RwLock` · `Condvar` · `try_lock` · `.lock(` · `parking_lot` · `mpsc`
+2. **不在声音里用 NaN 做记号**：跳过积压的占位改成零，告知走带外（Raw 环缺口计数）；送音端看到缺口计数涨了，就把接下来 L_total + 2 块当心跳过期（淡到原声、回滞后淡回），零占位不会播出。另加防御：处理后的样本不是有限值就当没有（计数 `nonfinite`，单测里 = 0）
+
+### 新增的第二处表示及其校验（CLAUDE.md 第五节第 5 条）
+| 第二处 | 正本 | 校验 |
+|---|---|---|
+| `vdn_control::validate_bus_name`（配置文件早报错） | vdn-shm 的名字规则（`Bus::open` 报 `InvalidName`） | 单测 `bus_name_rule_matches_vdn_shm`（12 个样例逐个比对） |
+| 总线头里的 lead · 降噪块长 · L_total · 采样率 | `vdn_control::Config`（lead）+ `Worker`（管线延迟、块长）；只经 `vdn_denoised::denoise_bus_config` 写 | 单测 `io_rate_single_source`（写进去 = 读回来）；chain-test 每次运行比对送音端读回的 lead / 降噪块长，不一致报错 |
+| chain-test 的采样率常量 | `vdn_control::IO_RATE` | 直接引用（`const RATE = vdn_control::IO_RATE`），不再手写 48000 |
+| 送音端「没有降噪总线时」的延迟线长度 | 不设第二处：取配置里的 lead（不手抄管线延迟）；接上后改用总线头的 L_total | —（代价：第一次接上降噪进程时延迟跳一次） |
+
 ## V5 人工步骤（给大总管转人）
 
 ⚠️ 这一步会开麦克风、从扬声器出声。**请戴耳机**：用外放时麦克风会收到扬声器的声音，可能啸叫。

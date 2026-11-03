@@ -649,8 +649,7 @@ fn v7(a: V7Args) -> Result<bool, BoxError> {
         vec![("空闲", 0), ("压力", stress)]
     };
     println!(
-        "V7：{} · {} 次 × {} s · IO 块 {} · 降噪块 {} · 核数 {cores} · 压力组忙线程 {stress} · release 构建：{}",
-        format!("{kind:?}"),
+        "V7：{kind:?} · {} 次 × {} s · IO 块 {} · 降噪块 {} · 核数 {cores} · 压力组忙线程 {stress} · release 构建：{}",
         a.runs,
         a.seconds,
         a.block,
