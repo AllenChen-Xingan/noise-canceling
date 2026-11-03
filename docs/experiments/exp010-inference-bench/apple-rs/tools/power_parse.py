@@ -102,8 +102,13 @@ for c, rs in by.items():
                     "delta_mw_range": [min(d), max(d)], "cpu_mw_median": round(statistics.median(a), 1),
                     "uj_per_frame_median": round(statistics.median(r["uj_per_frame"] for r in rs), 1),
                     "p50_ms_median": statistics.median(r["p50_ms"] for r in rs)})
-summary.sort(key=lambda s: s["delta_mw_median"])
+summary.sort(key=lambda s: s["uj_per_frame_median"])  # 按每帧耗电排（BE-POWER 判的是 µJ / 帧，不是功率；codex 第 7 轮 #1）
+paces = sorted({r.get("pace_ms") or 16 for line in open(os.path.join(res, "rt.jsonl"))
+                for r in [json.loads(line).get("result") or {}] if r})
+# 噪声底换成每帧耗电：µJ / 帧 = mW × 帧间隔 ms；节奏不止一种时按最大的帧间隔算（最保守）
+noise_uj = round(noise * max(paces), 1) if noise is not None and paces else None
 print(json.dumps({"idle_cpu_mw_by_round": idle_cpu, "idle_total_mw_by_round": [round(x, 1) for x in idle_tot],
-                  "noise_floor_mw": noise, "noise_floor_basis": "CPU+GPU+ANE 空闲总功率的轮间极差", "summary": summary,
+                  "noise_floor_mw": noise, "noise_floor_uj_per_frame": noise_uj,
+                  "noise_floor_basis": "CPU+GPU+ANE 空闲总功率的轮间极差；每帧口径 = mW × pace_ms", "summary": summary,
                   "unranked_no_window": unranked, "rows": rows},
                  ensure_ascii=False, indent=1))

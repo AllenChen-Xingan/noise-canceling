@@ -82,6 +82,22 @@ class PowerParse(unittest.TestCase):
                               {"round": 2, "set": 1, "file": "r2_1", "config": "x", "result": res(t0 + 600)}])
         self.assertEqual(out["noise_floor_mw"], 40)
 
+    def test_rank_by_energy_not_power(self):
+        # A：功率增量 50 mW、每 16 ms 一帧 → 800 µJ/帧；B：60 mW、每 10 ms 一帧 → 600 µJ/帧。
+        # 按功率排 A 在前，按每帧耗电排 B 在前；必须按每帧耗电（codex 第 7 轮 #1）
+        t0 = 1_800_000_000
+        idle = "".join(block(t0 + i, 100) for i in range(5))
+        def res(lo, pace, frames):
+            return {"frames": frames, "pace_ms": pace, "p50_ms": 0.1, "p999_ms": 0.2, "max_ms": 0.3, "cpu_over_wall": 0.01,
+                    "win_start_unix": lo, "win_end_unix": lo + 10, "wall_s": 10.0}
+        run_a = "".join(block(t0 + 101 + i, 150) for i in range(8))
+        run_b = "".join(block(t0 + 201 + i, 160) for i in range(8))
+        out = self.run_parse({"idle_1.txt": idle, "r1_1.txt": run_a, "r1_2.txt": run_b},
+                             [{"round": 1, "set": 1, "file": "r1_1", "config": "A", "result": res(t0 + 100, 16, 625)},
+                              {"round": 1, "set": 2, "file": "r1_2", "config": "B", "result": res(t0 + 200, 10, 1000)}])
+        self.assertEqual([x["config"] for x in out["summary"]], ["B", "A"])
+        self.assertAlmostEqual(out["summary"][0]["uj_per_frame_median"], 600, places=0)
+
     def test_no_window_is_shown_not_ranked(self):
         t0 = 1_800_000_000
         idle = "".join(block(t0 + i, 100) for i in range(5))

@@ -115,7 +115,7 @@
 
 1. 先过挡线（= 总表里「挡上用户电脑」「挡合并」「挡默认后端」的全部）：`BE-PARITY` · `BE-FRAME` · `BE-DEADLINE` · `BE-IMPACT`（≤ 2%）· `BE-COLD` · `BE-POWER` 的「不高于 ORT」（要同场 ORT 基线）· `BE-SIZE` · `BE-MEM` · `BE-OS` · `BE-RT-SAN` · `BE-RT-ALLOC`（= 0，大总管 2026-11-02 定）。不过的不进排名。**有挡线还没测的，只能「暂排」，方案里写明缺哪几条。**
 2. 过线的按**每帧耗电**从低到高排。
-3. 每帧耗电相差不到 10%、**或差值小于噪声底（多轮空闲基线的离散）** 的算并列，再按 `BE-IMPACT`（越低越好）、再按 p99.9（越低越好）排。
+3. 每帧耗电相差不到 10%、**或差值小于噪声底** 的算并列。噪声底 = 各轮空闲时 CPU + GPU + 神经引擎总功率的极差（mW），换成每帧耗电时乘以帧间隔：µJ / 帧 = mW × `pace_ms`（`power_parse.py` 输出 `noise_floor_uj_per_frame`，codex 第 7 轮 #1）。并列的再按 `BE-IMPACT`（越低越好）、再按 p99.9（越低越好）排。
 4. 还没有耗电数字（人还没跑 sudo）时，只能按 `BE-IMPACT` 暂排，再不行按 `cpu_over_wall`，并在方案里写「暂排，待耗电数」。
 
 ### 6.3 `BE-IMPACT`：对性能的影响（D75）
@@ -141,7 +141,7 @@
 | CPU 矩阵单元（AMX / SME2，经 Accelerate 的 BLAS / BNNS） | Accelerate `cblas_sgemm` 等（rustbe）；BNNS Graph 内部也可能用（未证实，`notes/bnns-graph.md`） | rustbe 在做：`amx-probe` 子命令，用 GTCRN 实际的 5 种矩阵形状比手写循环与 `cblas_sgemm`，折算每帧总耗时；待名额 | 待定：看 GTCRN 的探测结果再决定（rustbe） |
 | BNNS Graph（CPU 图执行器） | `apple-rs` bnns（applebe） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：GRU 展开版 p50 0.155 ms · 分配显示 0.000 / 帧（三位小数，待整数验证）· 133.9 dB；不展开 0.34 ms；多线程编译不提速 | 未试：FE-M 转不了 Core ML（wav2wav 图里的 `view_as_complex` 不支持），要改走 spec2spec 版；FE-M 是否留在候选里待人定 |
 | Core ML · CPU | `apple-rs` coreml `--units cpu`（applebe） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：fp32 0.39 ms · 展开 0.21 ms · 每帧约 300 次 malloc；fp16 54 dB 不过；有状态版转不了（coremltools 报错） | 未试：同上（转不了） |
-| Core ML · GPU | `--units gpu` | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：耗时同 CPU；`MLComputePlan` 显示被指派了设备的算子全部在 CPU（322 个），GPU 没被用上；另有 1785 个没有设备归属的常量类节点 | 未试：同上 |
+| Core ML · GPU | `--units gpu` | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：耗时同 CPU；`MLComputePlan` 显示被指派了设备的算子全部在 CPU（322 个），GPU 没被用上；另有 1785 个设备归属未知的节点（`deviceUsage` 返回空，没记算子名） | 未试：同上 |
 | Core ML · 神经引擎 | `--units ane`（只算 fp16） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：被指派了设备的算子全部在 CPU（`MLComputePlan`），神经引擎没被用上；fp16 54 dB 不过 | 未试：同上 |
 | MLX · CPU / GPU | `.mlxfn` 经 mlx-c（applebe）；Python 版只作对照 | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：Python 调 CPU 5.7–6.2 ms、GPU 6.2 ms，每帧 7–10 万次分配，134.9 dB。**Rust 经 mlx-c 暂缓（时间盒）**。依据是**执行机制**，不是速度：MLX 每帧建图 + `eval` 要分配、加锁、等它自己的默认优先级后台线程（`notes/mlx.md` §3，读源码），这和推理线程「零分配、不阻塞」的规约冲突。速度结论（Python 5.7 ms）没有同模型 Rust 对照，按 D68 **不能**用来淘汰它；Python 的分配次数也不是 Rust 实测（codex 第 2 轮 #3）。要做，得先在本机（无 Metal 编译器）编 mlx-c。大总管同意（2026-11-02） | 未试：同上，暂缓 |
 | Metal 手写核 | 无 | 未试，**时间盒暂缓**、无收益**未验证**。原先的理由不成立（codex 第 2 轮 #4）：「每帧派发约 0.1 ms」是别人在别的机器上测的，又拿去和连续跑的手写 0.088 ms 比；实时节奏下手写是 0.60 ms，而 `notes/mlx.md` 里还有融合核约 0.0225 ms / 步的反例。要判，得在本机测一条逐帧融合的 Metal 路径 | 同左 |
