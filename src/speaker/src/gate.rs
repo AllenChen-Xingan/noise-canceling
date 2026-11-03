@@ -19,7 +19,7 @@
 
 use vdn_dsp::{db_to_lin, one_pole_coef};
 
-use crate::types::{FrameCtx, SampleClock, SpeakerClass, Stage};
+use vdn_types::{FrameCtx, SampleClock, SpeakerClass, Stage};
 use crate::vad::{Hysteresis, Vad};
 
 #[derive(Clone, Copy, Debug)]
@@ -280,7 +280,7 @@ impl Stage for AsymGate {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Confidence, SpeakerVerdict};
+    use vdn_types::{Confidence, SpeakerVerdict};
 
     fn verdict(class: SpeakerClass, end: u64) -> SpeakerVerdict {
         SpeakerVerdict {

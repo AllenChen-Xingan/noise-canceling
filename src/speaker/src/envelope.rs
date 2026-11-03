@@ -8,7 +8,7 @@
 
 use vdn_dsp::{OpenCloseEnvelope, OpenCloseParams, db_to_lin, one_pole_coef};
 
-use crate::types::{FrameCtx, Stage};
+use vdn_types::{FrameCtx, Stage};
 use crate::vad::{Hysteresis, Vad};
 
 #[derive(Clone, Copy, Debug)]
@@ -240,7 +240,7 @@ impl Stage for FloorStage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::SpeakerVerdict;
+    use vdn_types::SpeakerVerdict;
 
     fn ctx() -> FrameCtx {
         FrameCtx {

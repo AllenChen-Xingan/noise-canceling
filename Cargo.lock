@@ -1620,6 +1620,7 @@ dependencies = [
  "hound",
  "realfft",
  "vdn-dsp",
+ "vdn-types",
 ]
 
 [[package]]

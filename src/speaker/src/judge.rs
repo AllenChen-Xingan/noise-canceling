@@ -15,7 +15,7 @@
 use std::time::{Duration, Instant};
 
 use crate::enroll::{EnrollOutcome, Enroller};
-use crate::types::{Confidence, SampleClock, SpeakerClass, SpeakerVerdict};
+use vdn_types::{Confidence, SampleClock, SpeakerClass, SpeakerVerdict};
 use crate::vad::VAD_FRAME;
 use crate::vecmath::{BoxError, all_finite, cosine};
 

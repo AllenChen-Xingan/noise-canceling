@@ -5,8 +5,7 @@
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use vdn_speaker::envelope::{EnvelopeParams, VadEnvelopeStage};
 use vdn_speaker::gate::{AsymGate, GateParams};
-use vdn_speaker::types::{SampleClock, SpeakerClass, SpeakerVerdict};
-use vdn_speaker::{FrameCtx, Stage};
+use vdn_types::{FrameCtx, SampleClock, SpeakerClass, SpeakerVerdict, Stage};
 
 #[global_allocator]
 static A: AllocDisabler = AllocDisabler;

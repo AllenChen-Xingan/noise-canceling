@@ -23,8 +23,7 @@ use vdn_speaker::envelope::{EnergyEnvelopeStage, EnvelopeParams, FloorStage, Vad
 use vdn_speaker::fbank::FbankConfig;
 use vdn_speaker::gate::{AsymGate, GateParams};
 use vdn_speaker::judge::{Judge, JudgeParams};
-use vdn_speaker::types::{Confidence, SampleClock};
-use vdn_speaker::{FrameCtx, SpeakerClass, SpeakerVerdict, Stage};
+use vdn_types::{Confidence, FrameCtx, SampleClock, SpeakerClass, SpeakerVerdict, Stage};
 
 type R<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
