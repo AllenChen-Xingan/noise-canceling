@@ -18,7 +18,9 @@
 #![allow(clippy::disallowed_methods, clippy::disallowed_macros)] // NRT: 离线实验程序
 
 use std::time::{Duration, Instant};
-use vdn_rt_thread::{RtParams, WorkInterval, check_current, promote_current, set_qos_user_interactive};
+use vdn_rt_thread::{
+    RtParams, WorkInterval, check_current, promote_current, set_qos_user_interactive,
+};
 
 fn work(iters: u64) -> u64 {
     let mut x = 0x9E37_79B9_7F4A_7C15u64;
@@ -65,7 +67,9 @@ fn cpu_secs() -> f64 {
 
 fn pct(v: &mut [f64], p: f64) -> f64 {
     v.sort_by(f64::total_cmp);
-    v.get(((v.len() as f64 - 1.0) * p).round() as usize).copied().unwrap_or(f64::NAN)
+    v.get(((v.len() as f64 - 1.0) * p).round() as usize)
+        .copied()
+        .unwrap_or(f64::NAN)
 }
 
 fn run(mode: &str, secs: u64, period: Duration, iters: u64) -> String {
@@ -148,7 +152,9 @@ fn run(mode: &str, secs: u64, period: Duration, iters: u64) -> String {
 }
 
 fn field<'a>(l: &'a str, k: &str) -> &'a str {
-    l.split_whitespace().find_map(|t| t.strip_prefix(k).and_then(|r| r.strip_prefix('='))).unwrap_or("?")
+    l.split_whitespace()
+        .find_map(|t| t.strip_prefix(k).and_then(|r| r.strip_prefix('=')))
+        .unwrap_or("?")
 }
 
 fn main() {
@@ -156,11 +162,23 @@ fn main() {
     let mode = a.get(1).cloned().unwrap_or_else(|| "all".into());
     let secs: u64 = a.get(2).and_then(|s| s.parse().ok()).unwrap_or(20);
     let period = Duration::from_micros(a.get(3).and_then(|s| s.parse().ok()).unwrap_or(16_000));
-    let iters: u64 = a.get(4).and_then(|s| s.parse().ok()).unwrap_or_else(|| calibrate(Duration::from_micros(700)));
-    println!("# 计算量 {iters} 次 · 周期 {} µs · 每种 {secs} s", period.as_micros());
-    let modes: Vec<&str> = if mode == "all" { vec!["none", "tc", "tc_wg", "qos"] } else { vec![mode.as_str()] };
+    let iters: u64 = a
+        .get(4)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or_else(|| calibrate(Duration::from_micros(700)));
+    println!(
+        "# 计算量 {iters} 次 · 周期 {} µs · 每种 {secs} s",
+        period.as_micros()
+    );
+    let modes: Vec<&str> = if mode == "all" {
+        vec!["none", "tc", "tc_wg", "qos"]
+    } else {
+        vec![mode.as_str()]
+    };
     if mode == "all" {
-        println!("| 设置 | 块数 | 块耗时 p50 µs | p99.9 µs | max µs | 醒来迟到 p50 µs | max µs | 降级次数 | 工作区间报错 | CPU % | 备注 |");
+        println!(
+            "| 设置 | 块数 | 块耗时 p50 µs | p99.9 µs | max µs | 醒来迟到 p50 µs | max µs | 降级次数 | 工作区间报错 | CPU % | 备注 |"
+        );
         println!("|---|---|---|---|---|---|---|---|---|---|---|");
     }
     for m in modes {
