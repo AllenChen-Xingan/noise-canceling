@@ -198,7 +198,10 @@ fn quantile(sorted: &[u64], q: f64) -> u64 {
     };
     let pos = q.clamp(0.0, 1.0) * last as f64;
     let (lo, hi) = (pos.floor() as usize, pos.ceil() as usize);
-    let (a, b) = (sorted.get(lo).copied().unwrap_or(0), sorted.get(hi).copied().unwrap_or(0));
+    let (a, b) = (
+        sorted.get(lo).copied().unwrap_or(0),
+        sorted.get(hi).copied().unwrap_or(0),
+    );
     a + ((b.saturating_sub(a)) as f64 * (pos - lo as f64)) as u64
 }
 
@@ -322,7 +325,10 @@ impl<P: Processor> Worker<P> {
         w.mean_ns = total / blocks.max(1) as u64;
         // 每个工作周期的总耗时：在去掉第一块后的序列上滑动求和（窗口 = 一个周期的块数）
         w.period_blocks = (self.proc.period_samples() / self.block).max(1);
-        let mut sums: Vec<u64> = times.windows(w.period_blocks).map(|win| win.iter().sum()).collect();
+        let mut sums: Vec<u64> = times
+            .windows(w.period_blocks)
+            .map(|win| win.iter().sum())
+            .collect();
         sums.sort_unstable();
         w.p999_period_ns = quantile(&sums, 0.999);
         w.max_period_ns = sums.last().copied().unwrap_or(0);
@@ -475,7 +481,10 @@ impl<P: Processor> Worker<P> {
             *slot = dt;
         }
         self.recent_pos = (self.recent_pos + 1) % self.period_blocks;
-        let window: u64 = self.recent.get(..self.period_blocks).map_or(0, |w| w.iter().sum());
+        let window: u64 = self
+            .recent
+            .get(..self.period_blocks)
+            .map_or(0, |w| w.iter().sum());
         self.stats.max_period_ns = self.stats.max_period_ns.max(window);
         if window > self.block_ns() * self.period_blocks as u64 {
             self.stats.over_period += 1;
@@ -680,7 +689,10 @@ mod tests {
         let wu = w.warm_up(64);
         assert_eq!(wu.period_blocks, 8);
         assert!(wu.max_period_ns >= wu.p999_period_ns);
-        assert!(wu.max_period_ns >= wu.max_after_first_ns, "一个周期的总和不小于其中最长的一块");
+        assert!(
+            wu.max_period_ns >= wu.max_after_first_ns,
+            "一个周期的总和不小于其中最长的一块"
+        );
         // 没有周期概念的处理器按单块算
         let mut w0 = Worker::new(Copy0, 96);
         assert_eq!(w0.warm_up(16).period_blocks, 1);

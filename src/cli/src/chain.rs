@@ -389,7 +389,9 @@ pub fn run_lockstep<P: Processor>(pipeline: P, o: &ChainOpts) -> Result<ChainRun
     let mut fcfg = ForwarderConfig::new(l_total, block);
     fcfg.timeout = o.heartbeat_timeout;
     let mut fwd = Forwarder::new(fcfg);
-    let mut src = HalSource::new(vdn_capture::shm::OutSource::new(hal_bus.clone()).with_drift(o.hal_offset, block));
+    let mut src = HalSource::new(
+        vdn_capture::shm::OutSource::new(hal_bus.clone()).with_drift(o.hal_offset, block),
+    );
     let (mut cmd_tx, mut cmd_rx) = vdn_denoised::command_channel(8);
     let x = test_tone(RATE, total, 0);
     let mut y = vec![0.0f32; total];
@@ -440,8 +442,12 @@ pub fn run_lockstep<P: Processor>(pipeline: P, o: &ChainOpts) -> Result<ChainRun
         }
     }
     drop(src);
-    den_bus.unlink().map_err(|e| format!("unlink 降噪总线：{e}"))?;
-    out_bus.unlink().map_err(|e| format!("unlink Out 总线：{e}"))?;
+    den_bus
+        .unlink()
+        .map_err(|e| format!("unlink 降噪总线：{e}"))?;
+    out_bus
+        .unlink()
+        .map_err(|e| format!("unlink Out 总线：{e}"))?;
     Ok(ChainRun {
         x,
         y,
