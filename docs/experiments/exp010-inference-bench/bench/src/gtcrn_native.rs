@@ -87,6 +87,7 @@ mod cost;
 mod dpgrnn;
 mod kern;
 mod ops;
+mod simd;
 #[cfg(test)]
 mod tests;
 pub mod v2;
