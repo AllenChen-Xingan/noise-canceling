@@ -8,7 +8,7 @@ PARSER = os.path.join(HERE, "..", "tools", "power_parse.py")
 TZ = timezone(timedelta(hours=-8))
 
 
-def block(t, cpu, elapsed=500.0, gpu=2, ane=0, drop=None):
+def block(t, cpu, elapsed=1000.0, gpu=2, ane=0, drop=None):  # 每秒一个样本、各 1 s，覆盖率才够（解析器要求 ≥ 80% 墙钟）
     ts = datetime.fromtimestamp(t, TZ).strftime("%a %b %d %H:%M:%S %Y %z")
     lines = [f"*** Sampled system activity ({ts}) ({elapsed:.2f}ms elapsed) ***"]
     for k, v in (("CPU", cpu), ("GPU", gpu), ("ANE", ane)):
@@ -55,6 +55,17 @@ class PowerParse(unittest.TestCase):
                              [{"round": 1, "set": 1, "file": "r1_1", "config": "x", "result": res}])
         self.assertIn("invalid", out["rows"][0])
         self.assertEqual(out["summary"], [])
+
+    def test_low_coverage_invalidates(self):
+        # 每秒一个样本、每个只有 0.5 s：窗内样本合计只有墙钟的一半，判无效
+        t0 = 1_800_000_000
+        idle = "".join(block(t0 + i, 100) for i in range(5))
+        run = "".join(block(t0 + 101 + i, 150, elapsed=500.0) for i in range(8))
+        res = {"frames": 600, "pace_ms": 16, "p50_ms": 0.1, "p999_ms": 0.2, "max_ms": 0.3, "cpu_over_wall": 0.01,
+               "win_start_unix": t0 + 100, "win_end_unix": t0 + 110, "wall_s": 10.0}
+        out = self.run_parse({"idle_1.txt": idle, "r1_1.txt": run},
+                             [{"round": 1, "set": 1, "file": "r1_1", "config": "x", "result": res}])
+        self.assertIn("invalid", out["rows"][0])
 
     def test_no_window_is_shown_not_ranked(self):
         t0 = 1_800_000_000
