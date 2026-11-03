@@ -38,4 +38,6 @@ cargo test -p vdn-schema            # 全部交叉校验
 
 ## schema 不管什么
 
+已知的一处单字段差异（codex 第 5 轮 #1，留作 issue）：JSON Schema 把 `3.0` 算整数，serde 读 `u64` / `u32` 只收不带小数点的写法，所以 `{"seed": 3.0}` 过 schema、解析时报错。方向是 schema 宽、Rust 严，不会让坏数据混进来；只是用户手写配置时，schema 判「过」不保证能读。
+
 schema 只管单个字段的格式与范围。跨字段规则（如 `lead_frames ≥ block`、两个总线名不同、探针的基础任务存在、任务 id 唯一）只在 Rust 的校验函数里，schema 判「过」不等于能用。

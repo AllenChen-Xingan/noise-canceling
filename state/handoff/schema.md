@@ -17,7 +17,8 @@
 - [x] codex 第 3 轮（P1×2 P2×2，全部属实、已改：读不到基线不再放行 · CI 用推送前 / 目标分支作基线 · 整份历史前缀比对 · 整数字段补上下界）；代码已写，等锁解除编译
 - [x] 重新导出 schema → 全量 CI 全绿；大总管在 6b276e1 上复跑全绿
 - [x] codex 第 4 轮（无 P0/P1；P2×2 属实已改：测试从完整历史出发 · 假 git 注入读树 / 读文件失败，变异验证会红）；全量 CI 全绿
-- [ ] codex 第 5 轮确认 → 收尾报告 + `state/handoff/schema-pr.md`
+- [x] codex 第 5 轮：无 P0/P1，**停止线满足**（第 4、5 轮连续）。P2×2：#2 补了 `load_baseline` 的回归测试；#1（schema 收 3.0、serde 不收）写进 README、留作 issue（草稿 `_tmp/20261102-schema-review/issue-int-float.md`）
+- [ ] 锁解除后：编译测试第 5 轮补的测试 → 收尾报告 + `state/handoff/schema-pr.md`
 
 ## 技术决定（我定，理由）
 - 导出库 `schemars` 1.2（MIT）：派生自 serde 属性，Rust 类型即正本。加进 control · eval · schema 三个 C / tool 档 crate

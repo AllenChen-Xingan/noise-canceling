@@ -1,7 +1,7 @@
 # 评审 011 · schema 导出机制与第一批 schema（codex · gpt-6-astra · read-only）
 
-> 对象：`git diff bfe6266...HEAD`（分支 `feat/schema-crosscheck`，issue #57；diff 模板，附 `docs/plan/011_schema-crosscheck.md` 与重点文件）。**最新一轮：第 4 轮（2026-11-02）· 总评「修改」· 无 P0/P1，待第 5 轮确认**。
-> 累计处理：P1×5、P2×9，逐条回到源码核实，14 条全部属实，全部已改。共享内存版本守卫前后改了三轮：第 1 轮改成代码常量，第 2 轮加 main 基线，第 3 轮补齐基线的读取失败、多提交推送和整份历史。codex 抽查引用时列出的 1 条「不符」也属实，并入第 1 轮 #4 一起改了。新冒出的需要人定的事：没有。
+> 对象：`git diff bfe6266...HEAD`（分支 `feat/schema-crosscheck`，issue #57；diff 模板，附 `docs/plan/011_schema-crosscheck.md` 与重点文件）。**最新一轮：第 5 轮（2026-11-02）· 总评「修改」· 停止线满足（第 4、5 轮连续无 P0/P1），评审结束**。
+> 累计处理：P1×5、P2×11，逐条回到源码核实，16 条全部属实；15 条已改，1 条（第 5 轮 #1）写进 README、留作 issue。共享内存版本守卫前后改了三轮：第 1 轮改成代码常量，第 2 轮加 main 基线，第 3 轮补齐基线的读取失败、多提交推送和整份历史。codex 抽查引用时列出的 1 条「不符」也属实，并入第 1 轮 #4 一起改了。新冒出的需要人定的事：没有。
 > 作者：手下 schema。评审期间主目录有计时基准锁（`_tmp/heavy.lock`），codex 只读代码、没有编译；改完的代码等锁解除后再跑全量 CI。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -121,3 +121,30 @@
 ### 是否再审
 
 本轮无 P0/P1 → 开第 5 轮确认。第 4 轮原文以 `P2` 开头，`file` 把它认成灰度图（PGM 的文件头恰好是 `P2`），只能加标题行另存为 `round4-previous.md` 传入。这样脚本认不出它是同一对象的上一轮，`stop-line` 行会写「连续第 1 轮」；连续两轮由人工按本记录判断。
+
+## 第 5 轮（2026-11-02）· 总评「修改」
+
+原文：`_tmp/20261102-schema-review/schema-branch-codex-2.md`（不入库）。gpt-6-astra，effort medium，耗时 49 秒（`result: P0×0 P1×0 P2×2 P3×0`）。对象 `origin/main...HEAD`，第 4 轮原文以 `round4-previous.md` 传入。
+本轮 P0/P1 共 0 条 · **停止线：满足**（人工判断：第 4 轮、第 5 轮都没有 P0/P1；脚本的 `stop-line` 行写「连续第 1 轮」，原因见第 4 轮「是否再审」）· 留作 issue 的 P2：1 条（#1）。
+上一轮处理的验证：#1、#2 codex 抽查确认已落实；生产入口仍走真 git。
+
+- **P2｜src/eval/src/files.rs:28 整数的写法：schema 收 3.0，serde 不收**（第 5 轮 #1）
+  - 核实：属实。JSON Schema 把 `3.0` 算整数；serde 读 `u64` 只收不带小数点的写法。`{"seed": 3.0}` 过 schema、解析报错；Config 的 `block` 同理
+  - 处理：**留作 issue**。方向是 schema 宽、Rust 严，坏数据进不来；要改就得给所有整数字段换反序列化器，这是行为改动，超出本轮。已写进 `specs/schema/README.md`「schema 不管什么」；issue 草稿在 `_tmp/20261102-schema-review/issue-int-float.md`，交大总管开
+- **P2｜src/schema/tests/crosscheck.rs:858 冻结基线的负例没测到真正的读入口**（第 5 轮 #2）
+  - 核实：属实。负例只调 `BaselineFile::parse`；把 `load_baseline` 改回「出错就返回空基线」，测试照样过
+  - 处理：`load_baseline` 拆出 `load_baseline_from(路径)`。新测试 `load_baseline_only_missing_file_is_empty`（`src/eval/src/main.rs`），覆盖以下几种情况：
+    - 文件不存在：返回空基线
+    - 仓里那份基线：能读出来，且不为空
+    - 内容不是 JSON、缺元数据、多一个键：都报错
+    - 读取失败（路径是目录）：报错
+
+### 引用抽查
+
+- codex 列的「不符」：无
+- codex 列的「核实属实」：5 条
+- 无法核实：1 条（CI 与变异实测是运行结果）
+
+### 结论
+
+停止线满足，评审结束。最后一轮的改动只补测试、加一个读入口参数，不再送审。全量 CI 结果记在现状页。
