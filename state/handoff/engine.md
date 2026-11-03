@@ -27,8 +27,11 @@
 - DFN3 `_ll` 下界 6.1% 核 → 不做流式重导出，盲听用离线（大总管同意）；MLX 走 Rust 那格写「不测」+原因
 - `decision.md` 草稿已写，第 4 节等实时策略结果
 
+- D71（共用频谱前端）写进 decision §5；D73（最低 14.4）、D74（tc 默认开、工作组默认不加）、D75（挡线改成「对性能的影响」+ 耗电主排序，CPU% 降参考）写进 standard / decision
+- 新加：ECAPA 进 BE-EXHAUST（`apple-rs/tools/ecapa.sh`，ONNX→onnx2torch→Core ML）· BE-IMPACT（`loadgen` + `tools/impact.sh`）· 自建工作组区间 `--interval-wg`（`tools/rt-matrix.sh`，要人 sudo，命令见 `tools/HUMAN-RUN-power.md`）
+
 ## 下一步
-1. 等名额 → `apple-rs/tools/rt-matrix.sh <build 目录>`，再 10 分钟跑最好设置
+1. 名额（18:37 起约 22 分钟）：cargo build → ecapa.sh → impact.sh（bnns rt · native rt）→ 叫大总管转人跑 sudo rt-matrix
 2. §9 Rust↔Python 差表（rustbe 有 ORT 5% 数；MLX 只有 Python）
 3. 补 decision.md 第 4 节 → 对抗自审一轮 → PR（Closes #45）
 
