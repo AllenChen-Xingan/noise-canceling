@@ -162,3 +162,32 @@ fn vdn_rt_promote(block: usize) -> Result<(), String> {
     let p = vdn_rt_thread::RtParams::for_block(block as u32, IO_RATE, 0.5);
     vdn_rt_thread::promote_current(p).map_err(|e| format!("{e:?}"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// V5（人判）：真麦克风 → 直通 → 扬声器 5 秒。会开麦、出声、首次弹麦克风权限框，所以默认不跑。
+    ///
+    /// 人工步骤：
+    /// 1. 戴耳机（外放会啸叫）
+    /// 2. `cargo test -p vdn-cli -- --ignored v5_live_passthrough --nocapture`
+    ///    （或 `./target/debug/vdn run --passthrough --seconds 5`）
+    /// 3. 第一次会弹「终端想使用麦克风」，点允许后重跑
+    /// 4. 5 秒内说话
+    ///
+    /// 算过：耳机里听到自己的声音、晚一点点（链路内 L_total ≈ 22 ms，另加设备缓冲）、不断续、没有咔哒声。
+    /// 机器只判「跑完不报错」；听感由人判，结果回报大总管
+    #[test]
+    #[ignore = "开麦克风、扬声器出声：人工跑，戴耳机（步骤见文档注释）"]
+    fn v5_live_passthrough() {
+        let o = RunOpts {
+            seconds: Some(5.0),
+            block: vdn_control::Config::DEFAULT_BLOCK,
+            lead: vdn_control::Config::DEFAULT_LEAD,
+            input_device: None,
+            output_device: None,
+        };
+        run(vdn_denoised::identity_pipeline(None).unwrap(), &o).unwrap();
+    }
+}

@@ -620,6 +620,9 @@ mod tests {
         // IO 块 480，降噪块 96（定块长管线）
         let (block, lead, dblock) = (480, 1440, 96);
         let mut w = Worker::new(identity_pipeline(Some(dblock)).unwrap(), dblock);
+        // 预热不影响对齐（输出丢掉、之前的输入等于零）
+        let wu = w.warm_up(16);
+        assert_eq!(wu.blocks, 16);
         let l_total = w.l_total(lead);
         let bus = heap(l_total);
         w.prime(&bus, lead);
