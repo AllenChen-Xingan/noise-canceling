@@ -20,7 +20,7 @@
 
 use std::time::{Duration, Instant};
 use vdn_rt_thread::{
-    RtParams, WorkInterval, check_current, promote_current, set_qos_user_interactive,
+    Member, RtParams, WorkInterval, check_current, promote_current, set_qos_user_interactive,
 };
 
 fn work(iters: u64) -> u64 {

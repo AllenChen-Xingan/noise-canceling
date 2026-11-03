@@ -34,19 +34,28 @@ fn errors_are_reported_not_silent() {
             // 没 begin 就 finish（workgroup_interval.h 写明的错误）
             assert!(matches!(
                 m.finish(),
-                Err(RtError::Kernel { op: "os_workgroup_interval_finish", .. })
+                Err(RtError::Kernel {
+                    op: "os_workgroup_interval_finish",
+                    ..
+                })
             ));
             // 连着两次 begin（workgroup_interval.h 写明的错误）
             m.begin(2_000_000).unwrap();
             assert!(matches!(
                 m.begin(2_000_000),
-                Err(RtError::Kernel { op: "os_workgroup_interval_start", .. })
+                Err(RtError::Kernel {
+                    op: "os_workgroup_interval_start",
+                    ..
+                })
             ));
             m.finish().unwrap();
             // 同一线程再加入同一个工作区间：本机实测报错（头文件没写这一条）
             assert!(matches!(
                 wi.with_member(|_| ()),
-                Err(RtError::Kernel { op: "os_workgroup_join", .. })
+                Err(RtError::Kernel {
+                    op: "os_workgroup_join",
+                    ..
+                })
             ));
         })
         .unwrap();
@@ -75,7 +84,16 @@ fn nested_intervals_leave_in_reverse_order() {
                 mb.begin(1_000_000).unwrap();
                 mb.finish().unwrap();
             });
-            assert!(inner.is_ok() || matches!(inner, Err(RtError::Kernel { op: "os_workgroup_join", .. })));
+            assert!(
+                inner.is_ok()
+                    || matches!(
+                        inner,
+                        Err(RtError::Kernel {
+                            op: "os_workgroup_join",
+                            ..
+                        })
+                    )
+            );
             ma.begin(1_000_000).unwrap();
             ma.finish().unwrap();
         })
@@ -93,7 +111,10 @@ fn shared_across_threads() {
     let wi = WorkInterval::create("vdn-test-shared").unwrap();
     std::thread::scope(|s| {
         for _ in 0..3 {
-            s.spawn(|| wi.with_member(|m| m.begin(1_000_000).is_ok() && m.finish().is_ok()).unwrap());
+            s.spawn(|| {
+                wi.with_member(|m| m.begin(1_000_000).is_ok() && m.finish().is_ok())
+                    .unwrap()
+            });
         }
     });
 }

@@ -40,7 +40,8 @@ struct JoinToken {
 
 // 与 SDK 头文件一致：40 字节、按 4 对齐
 #[cfg(target_pointer_width = "64")]
-const _: () = assert!(core::mem::size_of::<JoinToken>() == 40 && core::mem::align_of::<JoinToken>() == 4);
+const _: () =
+    assert!(core::mem::size_of::<JoinToken>() == 40 && core::mem::align_of::<JoinToken>() == 4);
 #[cfg(not(target_pointer_width = "64"))]
 compile_error!("JoinToken 只按 64 位 SDK 布局写（opaque 36 字节）");
 
