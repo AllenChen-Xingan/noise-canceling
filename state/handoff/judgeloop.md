@@ -1,12 +1,12 @@
 # 现状页 · judgeloop（018 本机评分 + 调节模型闭环）
 
 - 分支：`research/018-ondevice-judge` · issue #44 · 大总管：noise-canceling-e3（批次 20261102-b7）
-- 状态：进行中
+- 状态：**已收尾**（2026-11-02），待大总管推送、开 PR（Closes #44）
 
 ## 做到哪
-- 调研 r1–r5 全部写完并经怀疑派核对；`docs/research/018_ondevice-judge/decision.md` 已写（建议，待人定 2 题）
-- exp011 设计 `docs/experiments/exp011-ondevice-loop/README.md`；驱动 `driver/`（Rust，未编译）+ `exp011.py`；选段 build `20261102-130903-e7a4`（84 段，调参 43 / 报分 41）
-- 等名额（e3：第 1–3 步排第二）；第 4 步等 ears 装 DistillMOS / SCOREQ
+- 交付：`docs/research/018_ondevice-judge/decision.md`（方案，建议待人定）· `notes/r1–r5`（r1 r2 r5 经怀疑派核对，r3 r4 未核）· `docs/experiments/exp011-ondevice-loop/`（README 第 2 版设计 · results.md · driver · exp011.py · builds/20261102-130903-e7a4）
+- 结论：只调下限 / 门控灵敏度 / 湿干比时，按声音逐窗自动调比调好的固定参数略差（SCOREQ −0.027 [−0.037, −0.016]），上界 +0.008 → 不先做这 3 个参数；评分模型要从 378 MB 蒸到 ≤ 5 MB（DistillMOS 先例），推算可行未实测
+- 下一步（不在本批）：对模型选择 / 修音预设 / 认人门控做同样的离线模拟；「留多少背景」评分模型与红线方向相反，要人耳盲听
 
 ## 流水
 - 2026-10-31 读交代 · common · CLAUDE.md · intent/cog · pending · D51–D53；向 c4 报到
@@ -31,3 +31,8 @@
 - 2026-11-02 三视角对抗自审（设计 · 代码 · 证据）→ exp011 改第 2 版设计（主比较 = 在线 vs 调好的固定参数；加按场景调好的表、部分反馈在线闭环、三种事后最优；选择只用调参半；三档判读）并在出结果前提交；decision.md 按证据强度重写
 - 2026-11-02 坑：本机语音识别服务（42model）收 32 位浮点 WAV 会挂到超时，转 16 位整型后 1 秒一条 → exp011.py 已改；电脑睡眠中断过一次 → 长任务用 caffeinate 包
 - 2026-11-02 exp011 调参半结果：安全集合 c0 c1 c2 c3 c5 c6 c7（c4 门控更迟钝被排除）；调好的固定参数 = c0（即默认）
+- 2026-11-02 exp011 跑完（结果见 results.md）；decision.md 第六节填入；名额归还 e3
+
+## 转交
+- `state/pending-decisions.md`：请在 010 第五节第 2 题「通话中要不要探索」旁挂上 018 出处（018 建议同为「不试」）
+- 对 `vdn-types` 接口的建议 3 条见 decision.md 第六节之前的「对接口的建议」原稿已并入第三、四节；如需单列请告知
