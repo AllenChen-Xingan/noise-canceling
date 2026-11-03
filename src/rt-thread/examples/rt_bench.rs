@@ -11,7 +11,8 @@
 //! cargo build --release -p vdn-rt-thread --example rt_bench
 //! ./target/release/examples/rt_bench <none|tc|tc_wg|qos> [秒=20] [周期 µs=16000] [计算量=自动]
 //! ./target/release/examples/rt_bench all [秒=20]           # 四档：none · tc · tc+wg · qos
-//! ./target/release/examples/rt_bench qos_set [秒=20]       # QoS 那一轮：8 档，含 1 ms 紧截止期
+//! ./target/release/examples/rt_bench qos_set [秒=20]       # QoS 那一轮：8 档，含 1 ms 紧截止期（D68 定不追性能核后取消，未跑；保留备查）
+//! 本程序是手动实验，不进 ci（examples 只编译、不运行）
 //! 单档设置可组合：qos · tc · wg · wg@<截止期 µs>，用 + 连，如 qos+tc+wg@1000
 //! ./target/release/examples/rt_bench calibrate        # 只打印标定出的计算量
 //! ```

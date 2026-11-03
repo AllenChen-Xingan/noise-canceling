@@ -3,6 +3,7 @@
 //! - `promote_current(RtParams)`：把**当前线程**设成 Mach time-constraint 策略（`thread_policy_set` +
 //!   `THREAD_TIME_CONSTRAINT_POLICY`），送音回调线程与降噪线程启动时各调一次
 //! - `check_current()`：读回当前线程的策略，启动自检用（失败计数并上报，不静默）
+//! - `ThreadPolicy::default()`：降噪线程的默认策略（D68：实时优先级开、工作区间不加入）；`RtParams::from_measured`：按实测 p99.9 × 1.5 定 computation
 //! - `WorkInterval`：降噪进程自建音频工作区间（`AudioWorkIntervalCreate` + `os_workgroup_join`），每块 `begin` / `finish` 报截止期，见 `workgroup.rs`
 //! - `set_qos_user_interactive()`：当前线程 QoS 设成「用户交互」（对照用）
 //! - 加入**设备**的 IO 工作组（`join_audio_workgroup`）：只在送音进程里拿得到，属 vdn-io-macos，本 crate 返回 `Unimplemented`
@@ -48,6 +49,17 @@ impl RtParams {
         }
     }
 
+    /// 按实测耗时定参数（D68「computation 按实测 p99.9 留余量」）：
+    /// computation = 实测每块 p99.9 × `margin`（建议 [`MEASURED_MARGIN`]），夹在 [1 ns, 周期] 内；constraint = period = 块时长。
+    pub fn from_measured(period_ns: u64, p999_ns: u64, margin: f64) -> Self {
+        let comp = (p999_ns as f64 * margin.max(1.0)) as u64;
+        Self {
+            period_ns,
+            computation_ns: comp.clamp(1, period_ns.max(1)),
+            constraint_ns: period_ns,
+        }
+    }
+
     fn validate(&self) -> Result<(), RtError> {
         if self.computation_ns == 0 {
             return Err(RtError::InvalidParams("computation 为 0"));
@@ -59,6 +71,31 @@ impl RtParams {
             return Err(RtError::InvalidParams("period 小于 constraint"));
         }
         Ok(())
+    }
+}
+
+/// 实测 p99.9 之上留的余量倍数（`RtParams::from_measured` 用）。
+/// 取 1.5：2026-11-02 耗电对照里，同一块计算 p99.9 比 p50 只多 1–6 %，max 比 p99.9 多 0.1–5 %；
+/// 1.5 倍盖得住偶发慢块，又远小于周期（GTCRN 16 ms 一块、实测约 3 ms）。
+pub const MEASURED_MARGIN: f64 = 1.5;
+
+/// 降噪处理线程的默认调度策略（人定 D68，2026-11-02）：
+/// - `time_constraint = true`：实时优先级默认开。实测把醒来迟到中位从 2.6 ms 降到 22 µs，看不出额外耗电
+/// - `work_interval = false`：音频工作区间默认**不**加入，保留开关。实测功耗中位多约 27 mW、没有提速（截止期宽时系统不提频）
+///
+/// 依据：`docs/experiments/exp-v7-latency/results/20261102-power/README.md`（单次实测）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ThreadPolicy {
+    pub time_constraint: bool,
+    pub work_interval: bool,
+}
+
+impl Default for ThreadPolicy {
+    fn default() -> Self {
+        Self {
+            time_constraint: true,
+            work_interval: false,
+        }
     }
 }
 
