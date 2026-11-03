@@ -187,6 +187,16 @@ struct OrtGtcrn {
 const CACHE_SHAPES: [&[usize]; 3] = [&[2, 1, 16, 16, 33], &[2, 3, 1, 1, 16], &[2, 1, 33, 16]];
 const OUT_NAMES: [&str; 4] = ["enh", "conv_cache_out", "tra_cache_out", "inter_cache_out"];
 
+/// GTCRN 的手抄形状（mix + CACHE_SHAPES）必须和 ONNX 文件读出的一致，不一致就报错
+fn check_gtcrn_shapes(onnx: &[Vec<usize>]) -> Result<(), Err> {
+    let mut want = vec![vec![1, BINS, 1, 2]];
+    want.extend(CACHE_SHAPES.iter().map(|s| s.to_vec()));
+    if onnx != want.as_slice() {
+        return Err(format!("GTCRN 输入形状和 ONNX 不一致：手抄 {want:?}，ONNX {onnx:?}").into());
+    }
+    Ok(())
+}
+
 fn zeros(shape: &[usize]) -> Result<Tensor<f32>, Err> {
     Ok(Tensor::from_array((
         shape.to_vec(),
@@ -197,6 +207,7 @@ fn zeros(shape: &[usize]) -> Result<Tensor<f32>, Err> {
 impl OrtGtcrn {
     fn open(path: &Path) -> Result<Self, Err> {
         let session = ort_session(path)?;
+        check_gtcrn_shapes(&input_shapes(&session)?)?;
         let mut sel = OutputSelector::default();
         sel = sel.preallocate(OUT_NAMES[0], zeros(&[1, BINS, 1, 2])?);
         for (name, shape) in OUT_NAMES[1..].iter().zip(CACHE_SHAPES) {
@@ -273,6 +284,8 @@ struct TractGtcrn {
 }
 impl TractGtcrn {
     fn open(path: &Path) -> Result<Self, Err> {
+        // 和 ONNX 里的输入形状交叉校验（CLAUDE.md 第五节第 5 条）：正本是 ONNX 文件，CACHE_SHAPES 是手抄的第二处
+        check_gtcrn_shapes(&input_shapes(&ort_session(path)?)?)?;
         let mut shapes = vec![vec![1, BINS, 1, 2]];
         shapes.extend(CACHE_SHAPES.iter().map(|s| s.to_vec()));
         Ok(Self {
@@ -1000,5 +1013,153 @@ fn main() -> Result<(), Err> {
             )
         }
         _ => Err("用法见 src/main.rs 顶部".into()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 恒等或输出 NaN 的假模型，用来测对拍和 reset 检查本身
+    struct Fake {
+        nan: bool,
+    }
+    impl Net for Fake {
+        fn infer(&mut self, x: &mut [f32]) -> Result<(), Err> {
+            if self.nan {
+                x.fill(f32::NAN);
+            }
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn jnum_and_pct() {
+        assert_eq!(jnum(f64::NAN, 2), "null");
+        assert_eq!(jnum(f64::NEG_INFINITY, 2), "null");
+        assert_eq!(jnum(1.234, 2), "1.23");
+        let v: Vec<f64> = (0..11).map(|i| i as f64).collect();
+        assert_eq!((pct(&v, 0.0), pct(&v, 0.5), pct(&v, 1.0)), (0.0, 5.0, 10.0));
+    }
+
+    #[test]
+    fn frames_for_rejects_empty_and_short() {
+        let audio = vec![0.1f32; HOP * 3];
+        assert!(frames_for(ModelId::Gtcrn, &audio, 0, &[]).is_err());
+        assert!(frames_for(ModelId::Gtcrn, &audio[..HOP - 1], 5, &[]).is_err());
+        assert_eq!(frames_for(ModelId::Gtcrn, &audio, 5, &[]).unwrap().len(), 5);
+        assert!(
+            frames_for(ModelId::Fem, &audio, 5, &[]).is_err(),
+            "FE-M 没给形状要报错"
+        );
+    }
+
+    #[test]
+    fn parity_identical_passes_nan_fails_silence_passes() {
+        let inputs: Vec<Vec<f32>> = (0..4).map(|i| vec![i as f32 + 1.0; 8]).collect();
+        assert!(
+            parity(
+                ModelId::Gtcrn,
+                "t",
+                Box::new(Fake { nan: false }),
+                Box::new(Fake { nan: false }),
+                &inputs
+            )
+            .is_ok()
+        );
+        assert!(
+            parity(
+                ModelId::Gtcrn,
+                "t",
+                Box::new(Fake { nan: false }),
+                Box::new(Fake { nan: true }),
+                &inputs
+            )
+            .is_err()
+        );
+        let silent = vec![vec![0.0f32; 8]; 4];
+        assert!(
+            parity(
+                ModelId::Gtcrn,
+                "t",
+                Box::new(Fake { nan: false }),
+                Box::new(Fake { nan: false }),
+                &silent
+            )
+            .is_ok(),
+            "全静音且两边一致要通过"
+        );
+        assert!(
+            parity(
+                ModelId::Gtcrn,
+                "t",
+                Box::new(Fake { nan: false }),
+                Box::new(Fake { nan: false }),
+                &[]
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn reset_check_bounds_and_nan() {
+        let inputs: Vec<Vec<f32>> = (0..4).map(|i| vec![i as f32; 8]).collect();
+        let (mut a, mut b) = (Fake { nan: false }, Fake { nan: false });
+        assert!(reset_check(ModelId::Gtcrn, "t", &mut a, &mut b, &inputs, 2).is_ok());
+        assert!(
+            reset_check(ModelId::Gtcrn, "t", &mut a, &mut b, &inputs, 4).is_err(),
+            "区间为空要报错"
+        );
+        assert!(reset_check(ModelId::Gtcrn, "t", &mut a, &mut b, &inputs, 0).is_err());
+        let (mut c, mut d) = (Fake { nan: true }, Fake { nan: true });
+        assert!(
+            reset_check(ModelId::Gtcrn, "t", &mut c, &mut d, &inputs, 2).is_err(),
+            "两边一样的 NaN 也不能过"
+        );
+    }
+
+    #[test]
+    fn gtcrn_shape_check() {
+        let mut ok = vec![vec![1, BINS, 1, 2]];
+        ok.extend(CACHE_SHAPES.iter().map(|s| s.to_vec()));
+        assert!(check_gtcrn_shapes(&ok).is_ok());
+        ok[1][0] = 3;
+        assert!(check_gtcrn_shapes(&ok).is_err());
+    }
+
+    /// 端到端：手写版（含三个变体）对 ORT 逐值一致 + reset。需要仓外的权重与模型，CI 上没有，人工跑：
+    ///   EXP010_WEIGHTS=<主目录>/_tmp/20261031-exp010/gtcrn_dns3 \
+    ///   EXP010_GTCRN_ONNX=<主目录>/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx \
+    ///   EXP010_WAV=<主目录>/resources/gtcrn/test_wavs/mix.wav \
+    ///   cargo test --release -- --ignored --test-threads 1
+    /// （--test-threads 1：native 变体靠全局开关切换，不能并行）
+    #[test]
+    #[ignore = "需要仓外的 GTCRN 权重、ONNX 和 wav，人工跑（见注释）"]
+    fn native_variants_match_ort() {
+        let v = |k: &str| std::env::var(k).unwrap_or_else(|_| panic!("要设 {k}"));
+        let (w, onnx, wav) = (v("EXP010_WEIGHTS"), v("EXP010_GTCRN_ONNX"), v("EXP010_WAV"));
+        let audio = read_wav(Path::new(&wav)).unwrap();
+        let inputs = frames_for(ModelId::Gtcrn, &audio, audio.len() / HOP, &[]).unwrap();
+        for k in ["native", "native-fast", "native-blas"] {
+            let ort = open_net(ModelId::Gtcrn, "ort", Path::new(&onnx)).unwrap();
+            let nat = open_net(ModelId::Gtcrn, k, Path::new(&w)).unwrap();
+            parity(ModelId::Gtcrn, k, ort, nat, &inputs).unwrap_or_else(|e| panic!("{k}: {e}"));
+            let (mut a, mut b) = (
+                open_net(ModelId::Gtcrn, k, Path::new(&w)).unwrap(),
+                open_net(ModelId::Gtcrn, k, Path::new(&w)).unwrap(),
+            );
+            reset_check(
+                ModelId::Gtcrn,
+                k,
+                a.as_mut(),
+                b.as_mut(),
+                &inputs,
+                inputs.len() / 2,
+            )
+            .unwrap_or_else(|e| panic!("{k} reset: {e}"));
+        }
+        // 手抄形状与 ONNX 一致（OrtGtcrn::open 里也会查，这里单独断言一次）
+        check_gtcrn_shapes(&input_shapes(&ort_session(Path::new(&onnx)).unwrap()).unwrap())
+            .unwrap();
     }
 }

@@ -1028,3 +1028,181 @@ fn add_into(x: &mut [f32], y: &[f32]) {
         *a += b;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    //! 不需要权重的单元测试。要权重的端到端对拍在 main.rs 的 tests 里（#[ignore]）。
+    use super::*;
+
+    /// 确定性伪随机（不引依赖）
+    fn rnd(n: usize, seed: u32) -> Vec<f32> {
+        let mut s = seed.wrapping_mul(2_654_435_761).max(1);
+        (0..n)
+            .map(|_| {
+                s ^= s << 13;
+                s ^= s >> 17;
+                s ^= s << 5;
+                (s as f32 / u32::MAX as f32) * 2.0 - 1.0
+            })
+            .collect()
+    }
+
+    #[test]
+    fn exp_fast_close_to_libm() {
+        let mut worst = 0.0f32;
+        let mut x = -80.0f32;
+        while x <= 80.0 {
+            let rel = ((exp_fast(x) - x.exp()) / x.exp()).abs();
+            worst = worst.max(rel);
+            x += 0.01;
+        }
+        assert!(worst < 1e-6, "exp_fast 最大相对误差 {worst}");
+    }
+
+    #[test]
+    fn tanh_sigmoid_fast_close_to_libm() {
+        let (mut wt, mut ws) = (0.0f32, 0.0f32);
+        let mut x = -20.0f32;
+        while x <= 20.0 {
+            wt = wt.max((tanh_fast(x) - x.tanh()).abs());
+            ws = ws.max((sig_fast(x) - 1.0 / (1.0 + (-x).exp())).abs());
+            x += 0.001;
+        }
+        assert!(
+            wt < 1e-6 && ws < 1e-6,
+            "tanh 最大绝对误差 {wt}，sigmoid {ws}"
+        );
+        assert!(
+            exp_fast(-1000.0).is_finite() && exp_fast(1000.0).is_finite(),
+            "越界输入要被钳住"
+        );
+    }
+
+    /// 原来逐元素判断边界的写法，作参照
+    fn conv_ref(c: &ConvF, x: &[f32], y: &mut [f32]) {
+        let (cig, cog) = (c.cin / c.groups, c.cout / c.groups);
+        for o in 0..c.cout {
+            let g = o / cog;
+            let yo = &mut y[o * c.fout..(o + 1) * c.fout];
+            yo.fill(c.b[o]);
+            for ci in 0..cig {
+                let xi = &x[(g * cig + ci) * c.fin..(g * cig + ci + 1) * c.fin];
+                for t in 0..K {
+                    let wv = c.w[(o * cig + ci) * K + t];
+                    for (j, a) in yo.iter_mut().enumerate() {
+                        let idx = (j * 2 + t) as isize - 2;
+                        if idx >= 0 && (idx as usize) < c.fin {
+                            *a += wv * xi[idx as usize];
+                        }
+                    }
+                }
+            }
+            for v in yo.iter_mut() {
+                *v = prelu(*v, c.alpha);
+            }
+        }
+    }
+
+    fn deconv_ref(d: &DeconvF, x: &[f32], y: &mut [f32]) {
+        let (cig, cog) = (d.cin / d.groups, d.cout / d.groups);
+        for o in 0..d.cout {
+            y[o * d.fout..(o + 1) * d.fout].fill(d.b[o]);
+        }
+        for ic in 0..d.cin {
+            let g = ic / cig;
+            let xi = &x[ic * d.fin..(ic + 1) * d.fin];
+            for ol in 0..cog {
+                let o = g * cog + ol;
+                let yo = &mut y[o * d.fout..(o + 1) * d.fout];
+                for k in 0..K {
+                    let wv = d.w[(ic * cog + ol) * K + k];
+                    for (i, &xv) in xi.iter().enumerate() {
+                        let j = (i * 2 + k) as isize - 2;
+                        if j >= 0 && (j as usize) < d.fout {
+                            yo[j as usize] += wv * xv;
+                        }
+                    }
+                }
+            }
+        }
+        for v in y[..d.cout * d.fout].iter_mut() {
+            *v = if d.tanh { v.tanh() } else { prelu(*v, d.alpha) };
+        }
+    }
+
+    /// 去分支后的卷积与原写法逐位相同（GTCRN 实际用到的三种尺寸）
+    #[test]
+    fn conv_branch_free_bitwise_equal() {
+        for (cin, cout, groups, fin) in [(9, 16, 1, F0), (16, 16, 2, F1), (4, 4, 2, 7)] {
+            let cig = cin / groups;
+            let fout = (fin + 2 * 2 - K) / 2 + 1;
+            let mut c = ConvF {
+                w: rnd(cout * cig * K, 1),
+                b: rnd(cout, 2),
+                cin,
+                cout,
+                groups,
+                fin,
+                fout,
+                alpha: 0.25,
+                col: vec![0.0; cig * K * fout],
+            };
+            let x = rnd(cin * fin, 3);
+            let (mut y1, mut y2) = (vec![0.0; cout * fout], vec![0.0; cout * fout]);
+            conv_ref(&c, &x, &mut y1);
+            BLAS.store(false, std::sync::atomic::Ordering::Relaxed);
+            c.run(&x, &mut y2);
+            assert!(
+                y1.iter().zip(&y2).all(|(a, b)| a.to_bits() == b.to_bits()),
+                "ConvF {cin}->{cout}/{groups} @{fin}"
+            );
+        }
+    }
+
+    #[test]
+    fn deconv_branch_free_bitwise_equal() {
+        for (cin, cout, groups, fin, tanh) in [
+            (16, 16, 2, F2, false),
+            (16, 2, 1, F1, true),
+            (4, 4, 2, 5, false),
+        ] {
+            let cog = cout / groups;
+            let fout = (fin - 1) * 2 - 2 * 2 + K;
+            let d = DeconvF {
+                w: rnd(cin * cog * K, 4),
+                b: rnd(cout, 5),
+                cin,
+                cout,
+                groups,
+                fin,
+                fout,
+                alpha: 0.1,
+                tanh,
+            };
+            let x = rnd(cin * fin, 6);
+            let (mut y1, mut y2) = (vec![0.0; cout * fout], vec![0.0; cout * fout]);
+            deconv_ref(&d, &x, &mut y1);
+            d.run(&x, &mut y2);
+            assert!(
+                y1.iter().zip(&y2).all(|(a, b)| a.to_bits() == b.to_bits()),
+                "DeconvF {cin}->{cout}/{groups} @{fin}"
+            );
+        }
+    }
+
+    #[test]
+    fn weights_reject_mismatch() {
+        let dir = std::env::temp_dir().join(format!("exp010-w-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let p = dir.join("w");
+        std::fs::write(p.with_extension("bin"), [0u8; 8]).unwrap(); // 2 个 f32
+        std::fs::write(p.with_extension("txt"), "a 3 0 3\n").unwrap(); // 声称 3 个
+        assert!(Weights::load(&p).is_err(), "总数对不上要报错");
+        std::fs::write(p.with_extension("txt"), "a 2 0 2\n").unwrap();
+        let w = Weights::load(&p).unwrap();
+        assert!(w.get("a", 3).is_err() && w.get("b", 2).is_err() && w.get("a", 2).is_ok());
+        std::fs::write(p.with_extension("bin"), [0u8; 7]).unwrap();
+        assert!(Weights::load(&p).is_err(), "bin 长度不是 4 的倍数要报错");
+        std::fs::remove_dir_all(&dir).ok();
+    }
+}
