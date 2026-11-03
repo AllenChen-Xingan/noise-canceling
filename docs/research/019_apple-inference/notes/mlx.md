@@ -72,8 +72,8 @@ MLX **能表达** GTCRN 和 FE-M（GTCRN 已有第三方逐帧移植），也**�
 1. **分配**：每个算子建图节点（`shared_ptr`）、每次 eval 建哈希表、每个算子一个 `std::function` 和一个 `unordered_set`（见 §2 的行号）。这些是普通堆分配，和 ORT arena 不同，**没法预热消掉**【源码】
 2. **缓冲区缓存**：Metal 分配器先查缓存，命中就复用；不命中才 `newBuffer` `mlx/backend/metal/allocator.cpp:129-152`。稳态下大多能命中【推断】。v0.32.0 起无 GPU 的 CPU 分配器也有缓存【官方】https://github.com/ml-explore/mlx/releases
 3. **锁**：分配器全局互斥锁 `allocator.cpp:129`；调度器互斥锁 `mlx/scheduler.h:36-50`；每个流的队列锁 `scheduler.cpp:78-91`；取流线程时的读写锁 `scheduler.cpp:148-161`【源码】
-4. **后台线程 + 跨线程等待**：CPU 流的**算术**不在调用线程上跑，而在 MLX 自己起的 `std::thread` 上跑 `scheduler.cpp:42-76`。怀疑派更正：原文写「活不在调用线程上跑」太绝对。实际是各算子的 `eval_cpu`（形状推导、输出缓冲分配）在调用线程上跑，只有计算闭包经 `encoder.dispatch` 交给后台线程【源码】`mlx/backend/cpu/eval.cpp:24-35`、`binary.h`（main 版）。所以分配同时发生在两条线程上。这个线程用默认优先级，MLX 不暴露设置接口【源码；「不暴露」是推断】。我们的推理线程要阻塞等它，形成**优先级反转**：系统一忙，尾部就由这个普通线程的调度决定【推断】。GPU 流则阻塞在 `waitUntilCompleted` 或事件上
-5. **GPU 抖动**：GPU 由窗口服务器、视频会议的渲染、浏览器共用；Metal 计算队列创建时没设优先级 `device.cpp:331`【源码】。GPU 空闲降频后再唤醒、别的应用占 GPU，都会拉长 p99.9 / max【推断，未找到公开测量】
+4. **后台线程 + 跨线程等待**：CPU 流的**算术**不在调用线程上跑，而在 MLX 自己起的 `std::thread` 上跑 `scheduler.cpp:42-76`。怀疑派更正：原文写「活不在调用线程上跑」太绝对。实际是各算子的 `eval_cpu`（形状推导、输出缓冲分配）在调用线程上跑，只有计算闭包经 `encoder.dispatch` 交给后台线程【源码】`mlx/backend/cpu/eval.cpp:24-35`、`binary.h`（main 版）。所以分配同时发生在两条线程上。这个线程用默认优先级，MLX 不暴露设置接口【源码；「不暴露」是推断】。我们的推理线程要阻塞等它，形成**优先级反转**：系统一忙，尾部就由这个普通线程的调度决定【推断】。补充：等待用的是 `promise/future` 和条件变量，这类等待没有「持有者」，内核无从做优先级继承；把我们自己的线程设成实时，也带不动 MLX 的后台线程【推断】。GPU 流则阻塞在 `waitUntilCompleted` 或事件上
+5. **GPU 抖动**：GPU 由窗口服务器、视频会议的渲染、浏览器共用；Metal 计算队列创建时没设优先级 `device.cpp:331`【源码】。更准确地说是**公开接口就没有**：本机 SDK 27.0 的 `MTLCommandQueue.h` 只有 `label`、`device`、`maxCommandBufferCount`、`logState` 等属性，没有优先级；只有 `MTLIOCommandQueue`（文件读写队列）有 `MTLIOPriority`（`MTLIOCommandQueue.h:20-23,144`）【官方，本机头文件】。所以换任何走 Metal 计算的引擎，都没法让降噪的 GPU 活插队【推断】。GPU 空闲降频后再唤醒、别的应用占 GPU，都会拉长 p99.9 / max【推断，未找到公开测量】
 6. **异常与错误**：错误以 C++ 异常在流线程里存起来、下次同步时抛 `scheduler.cpp:101-114`；mlx-c 把异常转成错误回调 `mlx-c:mlx/c/error.h:15-20`【源码】
 
 **能不能直接调**：音频 IO 回调里绝对不行。B 档推理线程里调，也违反「不阻塞等低优先级线程」这条精神，规约现在没写这条，要大总管 / 人定是否算违规【推断】。若要用，只能让推理跑在「判断回路」那种准实时线程上，或者整个推理线程允许偶发超时送原声（规约 §4 已有超时送原声）。
@@ -84,7 +84,7 @@ MLX **能表达** GTCRN 和 FE-M（GTCRN 已有第三方逐帧移植），也**�
 - **mlx-rs**：仓库已迁到 `oxiglade/mlx-rs`（旧名 oxideai），386 星，2026-11-02 当天还有提交，**很活跃**。crates.io 最新 `mlx-rs 0.33.0`（2026-10-28）、`mlx-sys 0.7.0`。README 写「积极开发中」，并警告 grad 闭包捕获外部数组「可能段错误」【官方】https://github.com/oxiglade/mlx-rs ；crates.io API
   - 版本跟随：`mlx-sys` 把 mlx-c 作为子模块（提交 `a341b49`），mlx-c 的 CMake 钉的是 **MLX v0.32.2** `mlx-c@a341b49:CMakeLists.txt:38`【源码】，比上游最新 0.32.4 落后两个补丁版
   - 构建方式：`mlx-sys/build.rs` 用 cmake 从源码编 mlx-c 和 MLX【源码】`mlx-sys/build.rs:1-3,111`。构建机要有 Xcode 的 Metal 工具链；用户机要能找到 `mlx.metallib`【推断】
-  - 已有模块：`nn/` 下有 `recurrent.rs`（Rnn / Gru / Lstm，Gru 同样是 `for index in 0..x.dim(-2)` 逐步循环，`recurrent.rs:231,312`）、`convolution_transpose.rs`（1d/2d/3d）、`normalization.rs`（LayerNorm / BatchNorm 等）、`activation.rs`（Prelu `:632`）；`transforms/` 下有 `compile`、`grad`、`value_and_grad`；还有 `optimizers`【源码】
+  - 已有模块：`nn/` 下有 `recurrent.rs`（Rnn / Gru / Lstm，Gru 同样是 `for index in 0..x.dim(-2)` 逐步循环，`recurrent.rs:231,312`）。⚠️ **Gru / Rnn 的循环不递推隐状态**（见 §1 表「mlx-rs 的 Gru」），不能直接用，要自己写或先给上游提修复、`convolution_transpose.rs`（1d/2d/3d）、`normalization.rs`（LayerNorm / BatchNorm 等）、`activation.rs`（Prelu `:632`）；`transforms/` 下有 `compile`、`grad`、`value_and_grad`；还有 `optimizers`【源码】
   - `.mlxfn` 导入有没有安全封装：未查到；`mlx-sys` 是 bindgen 全量绑定，裸调可行【推断】
 - **mlx-swift**：官方 Swift 绑定，最新 0.33.0（2026-10-27）【官方】https://github.com/ml-explore/mlx-swift/releases 。走 Swift 薄壳再 C ABI 给 Rust，比直接 mlx-c 多一层，没看到好处【推断】
 - **建议**：若要测，Rust 侧用 `mlx-sys`（即 mlx-c）裸调最直接；模型结构在 Python MLX 里写、对拍、`export_function` 成 `.mlxfn`，Rust 侧 `mlx_imported_function_apply`。或者直接测 `onnxruntime-ep-mlx`，因为它保留 `ort` crate 和现有 ONNX 文件（我们的 ort 2.0.0-rc.15 内含 ORT 1.31，正好满足 ≥ 1.31；`ort` crate 能否注册插件 EP **未查**）【推断】
