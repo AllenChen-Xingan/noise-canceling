@@ -361,6 +361,10 @@ impl<M: Model> Engine<M> {
             if self.bypass < 1.0 {
                 // 切到原声：接缝偏移，从上一个输出样本平滑过渡
                 self.seam = self.last_out - self.last_dry;
+                if !self.seam.is_finite() {
+                    // 输入里有 NaN / Inf 时别让接缝锁死成 NaN
+                    self.seam = 0.0;
+                }
                 self.bypass = 1.0;
             }
             self.stats.bypass_hops += 1;

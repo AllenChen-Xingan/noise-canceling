@@ -48,7 +48,8 @@ use core::fmt;
 use vdn_dsp::resample::{self, Decimator3, FACTOR, Interpolator3};
 use vdn_dsp::{DelayLine, FtzGuard};
 use vdn_types::{
-    Basis, BypassReason, FrameCtx, LatencyItem, LatencyLedger, Model, ParamSet, SampleClock, StageChain, Status,
+    Basis, BypassReason, FrameCtx, LatencyItem, LatencyLedger, Model, ParamSet, SampleClock,
+    StageChain, Status,
 };
 
 use crate::engine::Engine;
