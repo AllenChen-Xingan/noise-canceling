@@ -1,7 +1,7 @@
 # 评审 012 · 参数描述导出 · 模型接口三方一致 · FE-M 名字唯一（codex · gpt-6-astra · read-only）
 
-> 对象：`git diff origin/main...HEAD`（分支 `feat/param-model-schema`，issue #65；diff 模板，附 `state/handoff/iface.md` 与重点说明）。**最新一轮：第 2 轮（2026-11-02）· 总评「修改」· 本轮无 P0/P1（连续第 1 轮），待第 3 轮确认**。
-> 累计处理：P1×1、P2×7，逐条回到源码核实，8 条全部属实、全部已改。新冒出的需要人定的事：没有。
+> 对象：`git diff origin/main...HEAD`（分支 `feat/param-model-schema`，issue #65；diff 模板，附 `state/handoff/iface.md` 与重点说明）。**最新一轮：第 3 轮（2026-11-02）· 总评「修改」· 停止线满足（第 2、3 轮连续无 P0/P1），评审结束**。
+> 累计处理：P1×1、P2×8，逐条回到源码核实，9 条全部属实、全部已改，没有留 issue。新冒出的需要人定的事：没有。
 > 作者：手下 iface。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -66,3 +66,25 @@
 ### 是否再审
 
 本轮无 P0/P1，但只连续 1 轮 → 开第 3 轮确认。
+
+## 第 3 轮（2026-11-02）· 总评「修改」
+
+原文：`_tmp/reviews/012-param-model-schema-codex-3.md`（不入库）。effort medium，耗时 65 秒（`result: P0×0 P1×0 P2×1 P3×0`）。
+本轮 P0/P1：0 条 · 停止线：**满足**（脚本 `stop-line:` 行：本轮与上一轮都无 P0/P1）· 留作 issue 的 P2：无（这 1 条已改）。
+发出前同样在第 2 轮原文开头加了一行标题（以「P2」开头被 `file` 误判成图片）。
+
+上一轮处理的验证结果：codex 抽查 9 条「核实属实」，确认第 2 轮 #1、#2、#3 都已修好，也确认搬移的测试一条没丢（crosscheck 25 条、policy 9 条、原 single_source 10 条、描述表 58 条内容不变）。
+
+- **P2｜src/xtask/src/model_name.rs:305 普通转义让 R-MODEL 漏查**（第 3 轮 #1）
+  - 核实：属实。`"\nfastenhancer-m"` 被取成 `nfastenhancer-m`，名字前面紧挨字母 n，边界判断放行；`\t` 同理
+  - 处理：字符串词法里按 Rust 的意思还原转义（`\n` `\t` `\r` `\0` `\xNN` `\u{…}`），再判边界。新负例 3 条：`\n`、`\t` 紧挨名字，以及用 `\u{66}` 拼出的名字
+
+### 引用抽查
+
+- codex 列的「不符」：无
+- codex 列的「核实属实」：9 条
+- 无法核实：`table.rs` 的全部路径、全量测试数字。改完后本机重跑：`xtask ci` 全绿（428 过 / 0 败 / 7 忽略）；`vdn-schema --check` 一致；`eval ci` 与改动前相同；真权重下 vdn-models 17 条全过
+
+### 是否再审
+
+停止线满足，评审结束。本轮那条 P2 改动小、有负例钉住，没再开第 4 轮。

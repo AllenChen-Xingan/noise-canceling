@@ -18,7 +18,10 @@
 - [x] FE-M 名字只留一个：正本 `ModelId::as_str` = `fastenhancer-m`，旧写法只在 `ModelId::LEGACY`/`parse`；cli（8d 同意）· denoised · eval 的 system/report 改成从 `ModelId` 取；tidy 新规则 R-MODEL（`src/xtask/src/model_name.rs`）
 - [x] `ModelChoice` ↔ `ModelId::NAMES` 比对测试（`src/schema/tests/config.rs`）
 - [x] 全量 CI 全绿（425 过 / 0 败 / 7 忽略）· `vdn-schema --check` 一致 · `eval ci` 同改动前（13/17 · 1/10 · 5/5，门禁通过）
-- [ ] codex 评审 · PR 草稿
+- [x] codex 评审 3 轮（P1×1 P2×8，全部属实、全部已改；第 2、3 轮连续无 P0/P1，停止线满足）→ `docs/reviews/012_param-model-schema-codex.md`
+- [x] 最终验证：`xtask ci` 全绿（428 过 / 0 败 / 7 忽略）· `vdn-schema --check` 一致 · `eval ci` 同改动前 · 真权重 vdn-models 17 条全过
+- [x] PR 草稿 `state/handoff/iface-pr.md`
+- [ ] 等大总管合 main（graph #69）后做 issue #68「模型节点缺版本」，并进本 PR
 
 ## 方案（我定的技术题，理由）
 1. **参数描述导出**：`vdn-schema` 新模块 `params.rs`，把 `desc::ALL` 转成 `params.table.json`（不是 JSON Schema，按 README 规矩 1 命名为 `<实体>.<种类>.json`）。导出函数里对 `ParamDesc` 做穷举解构：描述加字段没导出 → 编译失败。浮点按 f32 最短写法写出（`0.002` 不变成 `0.0020000000949…`）。文件还写出「文本格式里能出现的参数键」（= `ParamField::ALL` 的键），由同一张表派生

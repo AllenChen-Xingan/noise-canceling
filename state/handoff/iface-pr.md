@@ -34,15 +34,16 @@ Closes #65
 - 新增的测试：
   - vdn-types：`memory::rejects_out_of_range_values_per_desc_table`（先红后绿）· `params::model_names_single_source`
   - vdn-schema：`tests/text_formats.rs` 5 条（表与描述表逐字段一致 · 改表不导出报红 · 键与解析器一致 · 越界拒收 · 仓里文本文件全过）· `tests/models.rs` 2 条（声明 ↔ 导出文件 · 改声明不导出报红）· `tests/config.rs::config_model_names_follow_model_id`
-  - vdn-models：`interface::tests` 2 条 · `gtcrn::tests::declaration_agrees_with_stft` · `fastenhancer::tests::declaration_agrees_with_declared_hop_and_latency` · `tests/interface.rs` 2 条（要权重，`#[ignore]`）
-  - xtask：`model_name::tests` 5 条（R-MODEL 正例、负例、整仓通过）
+  - vdn-models：`interface::tests` 3 条（含 `check_read_rejects_any_difference`：元素类型 · 顺序 · 形状 · 名字任一不同都拒） · `gtcrn::tests::declaration_agrees_with_stft` · `fastenhancer::tests::declaration_agrees_with_declared_hop_and_latency` · `tests/interface.rs` 2 条（要权重，`#[ignore]`）
+  - xtask：`model_name::tests` 6 条（R-MODEL：读正本名的各种写法 · 写死名字的负例 · 测试项与跨行 / 转义字符串 · 整仓通过）
+  - vdn-types：`desc::tests::unlisted_detects_missing_entries`（描述表漏登记 ALL 的负例）
   - vdn-cli：`model_arg_follows_model_id` · vdn-denoised：`model_choice_roundtrips` · vdn-eval：`system_names_follow_model_id`
   - 搬移的测试一条不少：crosscheck 25 条 → 4 个文件共 25 条；xtask 原 R-MIRROR / R-PARAM 测试全保留
 - 跑了哪些（命令 + 结果）：
-  - `cargo run -p xtask -- ci`：全绿（fmt · clippy · test 425 过 / 0 败 / 7 忽略 · tidy · check-deps · cargo-deny）
+  - `cargo run -p xtask -- ci`：全绿（fmt · clippy · test 428 过 / 0 败 / 7 忽略 · tidy · check-deps · cargo-deny）
   - `cargo run -p vdn-schema -- --check`：与 Rust 正本一致
   - `cargo run -p xtask -- eval ci`：与改动前相同（ref：回归 13/17 · 能力 1/10 · 探针 5/5，门禁通过）
-  - 本机真权重：`VDN_REQUIRE_MODELS=1 cargo test -p vdn-models -- --include-ignored`，全过（接口比对 2 条 · 冒烟 4 条 · 不分配 1 条）
+  - 本机真权重：`VDN_REQUIRE_MODELS=1 cargo test -p vdn-models -- --include-ignored`，17 条全过（含接口比对 2 条 · 冒烟 4 条 · 不分配 1 条）
 - 测不了的（`#[ignore]` + 人工步骤）：`src/models/tests/interface.rs` 两条要仓外权重，人工步骤见该文件头
 
 ## 唯一真相源（CLAUDE.md 第五节第 5 条）
@@ -53,6 +54,7 @@ Closes #65
   - `vdn_control::ModelChoice` 的 serde 名（vdn-control 不依赖 vdn-types）↔ `ModelId::NAMES`：`tests/config.rs`
   - `specs/schema/examples/*.example.txt` ← 两个文本解析器：`text_formats.rs` 逐个解析
 
-<!-- codex 评审：见 docs/reviews/012_param-model-schema-codex.md（收尾时补轮次结果） -->
+## 换谱系评审
+codex 3 轮（`docs/reviews/012_param-model-schema-codex.md`）：P1×1 · P2×8，全部属实、全部已改；第 2、3 轮连续无 P0/P1，停止线满足；没有留 issue。
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
