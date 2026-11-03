@@ -23,11 +23,25 @@ pub mod pipeline;
 pub use engine::{Engine, EngineStats, SafetyConfig};
 pub use fault::{FaultInjector, FaultKind};
 pub use pipeline::{Mode, Pipeline, PipelineError, PipelineStats};
-pub use vdn_types::{FrameCtx, Model, ModelError, Stage};
+pub use vdn_types::{FrameCtx, Model, ModelError, Stage, StageChain, Status, stages};
 
-/// 测试与示例用的假模型。
+/// 测试与示例用的假模型与最简单的后处理级。
 pub mod testing {
-    use vdn_types::{Model, ModelError};
+    use vdn_types::{FrameCtx, Model, ModelError, Stage};
+
+    /// 最简单的后处理级：`wet *= gain`，0 延迟、无状态。
+    #[derive(Clone, Copy, Debug)]
+    pub struct Gain(pub f32);
+
+    impl Stage for Gain {
+        fn name(&self) -> &'static str {
+            "gain"
+        }
+        fn reset(&mut self) {}
+        fn process(&mut self, wet: &mut [f32], _dry: &[f32], _ctx: FrameCtx) {
+            wet.iter_mut().for_each(|v| *v *= self.0);
+        }
+    }
 
     /// 输出 = 输入：16 kHz、hop 256、延迟 0。没有模型权重时用它跑通整条链路（`vdn-denoised --passthrough`、`chain-test`）。
     #[derive(Clone, Copy, Debug, Default)]
