@@ -1,0 +1,15 @@
+# 手写 GTCRN（卷积去分支后）· macOS sample 4 秒 · 2026-11-02 17:11 · 60000 帧连续跑 · 按栈顶函数计样本数
+Sort by top of stack, same collapsed (when >= 5):
+        NtB5_5ConvF3run  (in exp010-bench)        393
+        NtB5_3Gru4step  (in exp010-bench)        354
+        tanhf  (in libsystem_m.dylib)        312
+        NtB4_5Point3run  (in exp010-bench)        202
+        NtB5_7DeconvF3run  (in exp010-bench)        179
+        NtB5_2Dp3run  (in exp010-bench)        168
+        expf  (in libsystem_m.dylib)        71
+        NtB5_7GtBlock3run  (in exp010-bench)        53
+        DYLD-STUB$$expf  (in exp010-bench)        29
+        11GtcrnNativeNtB5_3Net5infer  (in exp010-bench)        28
+        DYLD-STUB$$tanhf  (in exp010-bench)        13
+        _platform_memmove  (in libsystem_platform.dylib)        11
+
