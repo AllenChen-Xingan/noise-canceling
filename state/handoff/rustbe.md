@@ -14,3 +14,7 @@
 - r4 结论：GTCRN 手写版 p50 0.10 ms，ORT 0.38 ms，手写版约快 3.7 倍，每帧零分配；tract 赢不了 ORT（GTCRN 和 FE-M 都是），每帧分配上千次。正式数字已发给 applebe
 - bench 加了 `--pace-ms`（按实时节奏喂帧）；`tools/power_run.sh` 测耗电，要 sudo，待交人跑
 - 自审：派了 3 个对抗视角（测量口径与代码 · 手写版能否上线 · 报告与写作），等回报
+- 三份自审都回了，都没有 P0。已修：tract FE-M 打开时间混进 ORT 建会话；ORT 环境初始化单列为 `ort_env_ms`；对拍时 NaN 被漏判；新增 `min_frame_snr_db`；计时线程设 QoS USER_INTERACTIVE；新增 p10 / p90；每轮轮换后端顺序；耗电脚本加 trap；新增「ORT 跑改写图」对拍、10 分钟长跑对拍、reset 检查、tract 复用状态的证据；权重加载越界改为返回错误，并加了 MAX_G 检查。新口径已和 applebe 对齐
+- 新活（D69 / D70）：手写版目标是每帧平均 ≤ 0.08 ms。先做了逐位不变的优化：卷积改成按区间算，去掉分支。旧版可执行文件留在 `target/release/exp010-bench-v0` 作基线
+- 新活（人定）：Rust 对 Python 实测，脚本 `tools/py_ort_bench.py` 和 `tools/run_py_vs_rust.sh`
+- 等名额：sample 定位热点 → r5 全套 → Rust 对 Python → 新旧手写版对比

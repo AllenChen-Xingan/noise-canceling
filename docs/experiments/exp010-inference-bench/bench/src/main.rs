@@ -9,6 +9,7 @@
 //!                FastEnhancer-M：ORT 跑 <onnx> 对 --vs 跑 --b-onnx（默认同一份），逐帧对拍输出波形
 //!                （--vs ort --b-onnx 改写图 = 单独证明改写等价；旧参数 --tract-onnx 等同 --b-onnx）
 //!   fem-bench    <ort|tract> <onnx> <wav> [--frames N] [--warmup N]
+//!   常驻内存：footprint_before_mb（加载前）/ footprint_warm_mb（预热完）/ footprint_end_mb（跑完），读 ri_phys_footprint。
 //!   两个 bench 都可加 `--qos ui|default`：计时线程的调度等级，默认 ui（QOS_CLASS_USER_INTERACTIVE）。
 //!   两个 bench 都可加 `--pace-ms <毫秒>`：按实时节奏每隔这么久喂一帧（测耗电、测睡醒后的帧耗时用；默认 0 = 连续跑）。
 //!   两个 bench 都可加 `--dump-io <前缀>`（此时第 2 个参数须是 onnx）：计时之后另起一个 ORT 会话，从零状态把
@@ -403,6 +404,23 @@ fn frames_for(
     })
 }
 
+/// 常驻内存（MB）：`ri_phys_footprint`，即活动监视器「内存」列（与 applebe 的 BE-MEM 同口径）。
+fn footprint_mb() -> f64 {
+    let mut u: libc::rusage_info_v4 = unsafe { std::mem::zeroed() };
+    let r = unsafe {
+        libc::proc_pid_rusage(
+            libc::getpid(),
+            libc::RUSAGE_INFO_V4,
+            (&mut u as *mut libc::rusage_info_v4).cast(),
+        )
+    };
+    if r != 0 {
+        f64::NAN
+    } else {
+        u.ri_phys_footprint as f64 / (1024.0 * 1024.0)
+    }
+}
+
 fn cpu_seconds() -> f64 {
     let mut u: libc::rusage = unsafe { std::mem::zeroed() };
     unsafe { libc::getrusage(libc::RUSAGE_SELF, &mut u) };
@@ -450,6 +468,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     };
     let inputs = frames_for(model, &audio, frames + warm + 1, &shapes)?;
     let mut x = inputs[0].clone();
+    let fp_before = footprint_mb(); // 加载前（输入帧、ORT 环境已在内存里）
     // 冷启动：打开 + 第一帧
     let t0 = Instant::now();
     let mut m = open_net_with(model, kind, path, Some(&shapes))?;
@@ -461,6 +480,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         x.copy_from_slice(f);
         m.infer(&mut x)?;
     }
+    let fp_warm = footprint_mb();
     let mut times = Vec::with_capacity(frames);
     let mut nan = 0usize;
     let a0 = ALLOCS.load(Relaxed);
@@ -485,6 +505,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let wall = w0.elapsed().as_secs_f64();
     let cpu = cpu_seconds() - c0;
     let allocs = ALLOCS.load(Relaxed) - a0;
+    let fp_end = footprint_mb();
     times.sort_by(|a, b| a.total_cmp(b));
     if let Some(i) = args.iter().position(|a| a == "--dump-io") {
         dump_io(
@@ -496,7 +517,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         )?;
     }
     println!(
-        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan}}}",
+        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2}}}",
         model.name(),
         pct(&times, 0.1),
         pct(&times, 0.5),
