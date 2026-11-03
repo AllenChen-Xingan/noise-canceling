@@ -35,10 +35,11 @@
 - 拆文件：verifiers.rs 1168 → 399（+ physical / perceptual / sim）；runner.rs 629 → 424（+ gate / real）
 - R-SIZE 扫描范围收成一处常量 `SCAN_ROOTS`（现只开 `src`；docs/experiments 等 #58 合并后再开）
 
-## 剩下（等别的线）
+## 收尾（2026-11-03）
 
-- ✅ 2026-11-03：#65 已合并（8d 提交合并 f0addc43）；引用改到 no_mirror / param_range / scan；R-SIZE 改硬上限，删了基线文件、`size-baseline` 子命令、放宽机制
-- codex 换谱系评审：第 2 轮进行中（`docs/reviews/062_code-hygiene-codex.md`）
+- #62 已合并（PR #75）：R-SIZE 改成硬上限，删了基线、`size-baseline` 子命令和放宽机制；引用跟着 #65 改了名；最后的采样率字面量也已改；`xtask ci` 全绿
+- codex 换谱系评审 9 轮，第 8、9 轮连续无 P0/P1：`docs/reviews/062_code-hygiene-codex.md`
+- 后续 #71（tidy 改用 syn 语法树）已合并（PR #77），现状页见 `state/handoff/tidysyn.md`
 
 ## 第二段原始待办（已办）
 
