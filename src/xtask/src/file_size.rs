@@ -30,6 +30,9 @@ pub const BASELINE_FILE: &str = "src/xtask/file-size-baseline.txt";
 /// R-SIZE 扫描的目录（相对仓库根），唯一一处。CLAUDE.md 第五节第 7 条的范围是 `src/` 与 `docs/experiments/`；
 /// `docs/experiments/` 在 #66（fastpath，含 exp010 bench 拆文件）合并后打开（大总管 8d 定，2026-11-02）。
 pub const SCAN_ROOTS: [&str; 2] = ["src", "docs/experiments"];
+/// 算「代码文件」的扩展名（CLAUDE.md 第五节第 7 条「`.rs` 等」；codex 第 8 轮 P2 #2）。
+/// 加新语言时加在这里；2026-11-02 仓里这几类都没有超 600 行的文件。
+pub const CODE_EXTS: [&str; 10] = ["rs", "py", "sh", "js", "ts", "swift", "c", "h", "m", "mm"];
 /// 放宽理由的标记（写在基线条目行尾）。
 pub const WIDEN_MARK: &str = "# 放宽：";
 
@@ -212,14 +215,18 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
     for p in entries {
         if p.is_dir() {
             walk(&p, out)?;
-        } else if p.extension().is_some_and(|e| e == "rs") {
+        } else if p
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| CODE_EXTS.contains(&e))
+        {
             out.push(p);
         }
     }
     Ok(())
 }
 
-/// [`SCAN_ROOTS`] 下全部 `.rs` 的（相对路径，行数）；任何文件读不了都报错。
+/// [`SCAN_ROOTS`] 下全部代码文件（[`CODE_EXTS`]）的（相对路径，行数）；任何文件读不了都报错。
 pub fn scan(root: &Path) -> Result<Vec<Sized>, String> {
     let mut all = Vec::new();
     for r in SCAN_ROOTS {
@@ -498,10 +505,14 @@ mod tests {
         fs::create_dir_all(d.join("docs/experiments/e1/src")).unwrap();
         fs::write(d.join("docs/experiments/e1/src/big.rs"), "//\n".repeat(601)).unwrap();
         fs::write(d.join("docs/experiments/e1/src/ok.rs"), "//\n".repeat(600)).unwrap();
+        // 非 Rust 的代码文件也算（codex 第 8 轮 P2 #2）；不是代码的文本文件不算
+        fs::write(d.join("docs/experiments/e1/run.py"), "#\n".repeat(601)).unwrap();
+        fs::write(d.join("docs/experiments/e1/notes.md"), "x\n".repeat(900)).unwrap();
         let files = scan(&d).unwrap();
         let (p, _) = size_problems(&files, &[]);
-        assert_eq!(p.len(), 1, "{p:?}");
-        assert!(p[0].contains("docs/experiments/e1/src/big.rs"), "{p:?}");
+        assert_eq!(p.len(), 2, "{p:?}");
+        assert!(p.iter().any(|x| x.contains("docs/experiments/e1/src/big.rs")), "{p:?}");
+        assert!(p.iter().any(|x| x.contains("docs/experiments/e1/run.py")), "{p:?}");
         let _ = fs::remove_dir_all(&d);
     }
 

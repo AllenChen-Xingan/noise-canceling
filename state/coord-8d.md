@@ -43,3 +43,5 @@
 - 2026-11-02 hygiene codex 第 4、5 轮各 1 条 P1 都在 test_modules.rs（已修）。8d 定：改保守规则——只认 #[cfg(test)] mod tests; 声明的 tests.rs / tests/，其余照查，例外用文件头 NRT 标注；删掉传播与路径跟踪代码，第 6 轮审新逻辑
 - 2026-11-02 hygiene：test_modules.rs 改窄规则 287→195 行，负例 4 + 正例 1；xtask 47 过（tidy_passes 预期）；codex 新第 6 轮审新逻辑
 - 2026-11-02 hygiene codex 第 6、7 轮又 3 处绕过（都在窄规则）。8d 定：整个删掉 test_modules（文本猜模块结构的路线本身漏），改用文件头 NRT 显式标注；R-RATE 评估改为测试代码也必须引用常量，免识别测试区；PR 正文记放弃原因，将来用 syn
+- 2026-11-02 hygiene：删 test_modules.rs，R3 复原；R-RATE 不再识别测试区（rate_literal 281→191），shm/rt-thread/dsp 加 vdn-types dev 依赖，25 处测试字面量改常量；codex 新一轮审全 diff
+- 2026-11-02 人定「可以真正用ast工具」→ 开 #71（tidy 改用 syn 语法树判规则）；ADR 004 触发条件已满足（同类漏网 7 轮）；hygiene 先写设计，#62 + #65 合并后再写代码

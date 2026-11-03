@@ -73,6 +73,21 @@ fn every_default_used_in_code_exists() {
         n += 1;
     }
     assert!(n >= 16, "只找到 {n} 处查表");
+    // 表里有分档的 verifier，调用处必须用表里的那组分档（codex 第 8 轮 P2 #1）；
+    // 调用处也不许再写数字数组字面量的分档
+    for l in ALL.iter().filter(|l| !l.edges.is_empty()) {
+        let name = l.id.trim_start_matches("V-").replace('-', "_");
+        assert!(src.contains(&format!("th::{name}.edges")), "{} 的分档没从表里取", l.id);
+    }
+    let lit = src
+        .match_indices("&[")
+        .filter(|(i, _)| {
+            src[i + 2..]
+                .trim_start()
+                .starts_with(|c: char| c.is_ascii_digit() || c == '-')
+        })
+        .count();
+    assert_eq!(lit, 0, "verifiers 里还有数字数组字面量（分档应从 thresholds 表取）");
     for bad in [
         "f_or(\"max\", 0",
         "f_or(\"max\", 1",
