@@ -8,12 +8,13 @@
 - [x] 删 polish 镜像（`SpectralStage` 按方案 A 留在 polish，改名 `spectral_stage.rs`）
 - [x] 删 speaker 镜像（speaker-lab 一并改用 `vdn-types`）
 - [x] 删 scene 镜像（训练脚本 train.py 生成的 import 一并改）；加测试：路由表名字经 `vdn-types` 解析回来 · 标定滞回 = 正本默认
-- [x] 参数描述表 `src/types/src/desc.rs`（39 条）；`ParamField` · `ParamSet` · `Hysteresis` · `Transition` 改从表取
+- [x] 参数描述表 `src/types/src/desc.rs`（39 条；codex 第 1 轮后补 speaker 判断回路 8 条 + 注册器 11 条，共 58 条）；`ParamField` · `ParamSet` · `Hysteresis` · `Transition` 改从表取
 - [x] speaker（`GateParams` · `EnvelopeParams` · `FloorStage`）· polish（`PolishParams` · `PolishChain`）· scene（`set_tuning`）· engine（`SafetyConfig::default`、Pipeline 淡化时长夹值）· cli（默认值与越界检查）改从表取；各自带「同表 + 越界拒收 / 夹住」单测；`validate()` 都穷举解构防漏字段
 - [x] `xtask tidy` 新规则 R-MIRROR · R-PARAM（`src/xtask/src/single_source.rs`，含正负例测试与「整仓通过」测试）；speaker 的 VAD `Hysteresis` 写了同名放行理由
 - [x] 改 `.42cog/cog.md`（types · speaker · polish · scene 四行）、`src/speaker/README.md`
-- [ ] ⏸ 基准锁期间停编译：xtask 新规则、穷举解构改动**尚未编译**；锁消失后跑 `cargo test --workspace` + `cargo run -p xtask -- ci`
-- [ ] codex 评审
+- [x] 编译测试（锁空档，2026-11-02 约 20:2x）：`cargo run -p xtask -- ci` 全绿（含 `test --workspace`）。首跑被新 tidy 规则抓到 polish AGC 的私有底噪变量 `floor_db`（撞参数名），改名 `noise_floor_db`，行为不变
+- [x] codex 第 1 轮：P1×1 P2×5 全部属实已改（记录 `docs/reviews/011_types-single-source-codex.md`）
+- [ ] codex 第 2 轮（进行中）；之后新加的 engine 边界测试待下个空档编译
 
 ## 镜像 ↔ 正本分歧（读源码比对，2026-11-02）
 
@@ -32,7 +33,7 @@
 | 9 | polish | `SpectralStage`（频域后处理 trait）+ `Complex32` 再导出 | 有 | **没有** | ⚠️ 正本缺类型，已报大总管，定方案 A：它不是镜像而是 polish 自己的草案扩展 trait，留在 polish，搬到 `spectral_stage.rs` |
 
 ## 下一步
-等主目录 `_tmp/heavy.lock` 消失 → 编译、全量测试、xtask ci → codex 评审 → 收尾报告。
+codex 第 2 轮 → 改 → 下个编译空档复跑 `xtask ci` → 收尾报告。
 
 ## 技术决定（我定的，理由）
 - **描述表的范围是 AI 按物理意义 + 现有取值定的**（默认值全部沿用原初值，行为不变）；写在 `desc.rs` 头注释「范围待标定」
