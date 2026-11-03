@@ -219,3 +219,22 @@ fn desc_boundary_values_are_accepted_by_engine() {
         assert!(run.output.iter().all(|v| v.is_finite()));
     }
 }
+
+/// 越界配置进 Engine 时按描述表夹值：Engine 自己与 Pipeline 读到的 `config()` 是同一个值（codex 第 2 轮 P2 #2）。
+#[test]
+fn engine_clamps_config_by_desc_table() {
+    use vdn_types::desc::*;
+    let cfg = SafetyConfig {
+        crossfade_s: ENGINE_CROSSFADE_S.max + 1.0,
+        max_abs: ENGINE_MAX_ABS.min - 0.5,
+        floor_db: FLOOR_DB.min - 10.0,
+        release_s: f32::NAN,
+        ..SafetyConfig::default()
+    };
+    let e = Engine::new(DelayGain::new(HOP, LAT, 0.5), cfg);
+    let c = e.config();
+    assert_eq!(c.crossfade_s, ENGINE_CROSSFADE_S.max);
+    assert_eq!(c.max_abs, ENGINE_MAX_ABS.min);
+    assert_eq!(c.floor_db, FLOOR_DB.min);
+    assert_eq!(c.release_s, RELEASE_S.default);
+}
