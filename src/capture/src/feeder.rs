@@ -117,10 +117,11 @@ impl Feeder {
         }
         forward(&mut self.fwd, self.bus.as_deref(), &self.out, x);
 
-        // 纠漂移（写方一侧）：读方时钟比麦克风快时 Out 会慢慢读空。积压连续 DRIFT_PATIENCE 块不到一块，
-        // 就把刚推的这块再推一次（重复 1 块，记 Out 环缺口）。积压过多那一侧由读方 `OutSource` 丢
+        // 纠漂移（写方一侧）：读方时钟比麦克风快时 Out 会慢慢读空。刚推完的积压连续 DRIFT_PATIENCE 块
+        // 不到两块（= 推之前已不到一块），就把刚推的这块再推一次（重复 1 块，记 Out 环缺口）。
+        // 积压过多那一侧由读方 `OutSource` 丢
         let out = self.out.ring(vdn_shm::RingId::Out);
-        if out.available() < x.len() {
+        if out.available() < 2 * x.len() {
             self.low_run += 1;
         } else {
             self.low_run = 0;
