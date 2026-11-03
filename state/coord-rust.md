@@ -41,6 +41,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- rs-entry：两处红线已修（换总线改 rtrb 交接 + 回收；NaN 记号删，改零占位 + note_gap + 送音端按心跳过期补原声）；新增文本检查：capture 源文件无锁；新依赖 rtrb 0.4（MIT OR Apache-2.0）；41 测试过、两进程三种起停全过
 - 人同意跑 powermetrics（原话「可以直接跑 power matrics」）→ rs-wake 写 `_tmp/20261102-b8-rust/power/run.sh`（三种优先级设置 × 60 s + 基线），大总管审后由人 `sudo bash` 跑
 - rs-core2：验收通过（4 crate 115 条测试、clippy、tidy 大总管重跑；vdn denoise 4 场景含故障注入字节一致；3 次变异检查测试会红；自审无 P0 / P1）→ 合入、关窗。延迟账按代码：009 目标 44.98 ms，96 帧块 39.67 ms
 - rs-wake：cargo-deny 0.20.2 已装，`cargo deny check` 四项全 ok（警告：cpal 带来的重复版本；deny.toml 未用许可 4 个、例外 1 个 → 删）；xtask ci 改为没装就失败，CI 要先装
