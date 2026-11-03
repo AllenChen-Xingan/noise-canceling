@@ -6,12 +6,13 @@ use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
-use vdn_engine::testing::{DelayGain, Gain, Identity};
+use vdn_engine::testing::{DelayGain, GAIN, Gain, Identity};
 use vdn_engine::{
     Engine, FaultInjector, FaultKind, FrameCtx, Pipeline, PipelineError, SafetyConfig, Stage,
     StageChain, Status, stages,
 };
-use vdn_types::{Basis, Confidence, Model, ModelError, SpeakerClass, SpeakerVerdict};
+use vdn_types::graph::test_kind;
+use vdn_types::{Basis, Confidence, Model, ModelError, NodeKind, SpeakerClass, SpeakerVerdict};
 
 #[cfg(debug_assertions)]
 #[global_allocator]
@@ -19,6 +20,12 @@ static A: AllocDisabler = AllocDisabler;
 
 const SR: u32 = 48_000;
 const HOP_IO: usize = 768;
+
+const LOOKAHEAD: NodeKind = test_kind(0xF101, "lookahead", 16);
+const USE_DRY: NodeKind = test_kind(0xF102, "use_dry", 0);
+const CTX_PROBE: NodeKind = test_kind(0xF103, "ctx_probe", 0);
+const BAD: NodeKind = test_kind(0xF104, "bad", 0);
+const FTZ_SPY: NodeKind = test_kind(0xF105, "ftz_spy", 0);
 
 /// 通带内多正弦 + 一个 15 kHz 分量（16 kHz 模型路径过不去，只有 48 kHz 原声里有）。
 fn signal(n: usize, hf: f32) -> Vec<f32> {
@@ -97,6 +104,7 @@ fn gain_stages_scale_wet_in_order_and_keep_latency() {
         Engine::new(Identity, SafetyConfig::off()),
         SR,
         None,
+        &[&GAIN, &GAIN],
         stages![Gain(0.5), Gain(0.5)],
     )
     .unwrap();
@@ -114,7 +122,7 @@ fn empty_stage_chain_is_bit_identical_to_new() {
     let mk = || Engine::new(DelayGain::new(256, 256, 0.6), SafetyConfig::default());
     let a = run(&mut Pipeline::new(mk(), SR).unwrap(), &x, 96);
     let b = run(
-        &mut Pipeline::with_stages(mk(), SR, None, stages![]).unwrap(),
+        &mut Pipeline::with_stages(mk(), SR, None, &[], stages![]).unwrap(),
         &x,
         96,
     );
@@ -127,6 +135,7 @@ fn stage_with_latency_is_rejected() {
         Engine::new(Identity, SafetyConfig::off()),
         SR,
         Some(96),
+        &[&GAIN, &LOOKAHEAD],
         stages![Gain(1.0), Lookahead],
     );
     assert!(matches!(
@@ -144,6 +153,7 @@ fn ledger_lists_stages_and_sums_to_latency() {
         Engine::new(DelayGain::new(256, 256, 1.0), SafetyConfig::default()),
         SR,
         Some(96),
+        &[&GAIN, &USE_DRY],
         stages![Gain(1.0), UseDry],
     )
     .unwrap();
@@ -166,6 +176,7 @@ fn stage_dry_is_aligned_with_declared_latency() {
         Engine::new(DelayGain::new(256, 256, 0.0), SafetyConfig::off()),
         SR,
         Some(96),
+        &[&USE_DRY],
         stages![UseDry],
     )
     .unwrap();
@@ -192,6 +203,7 @@ fn stages_get_pipeline_clock_and_caller_ctx() {
         Engine::new(Identity, SafetyConfig::off()),
         SR,
         None,
+        &[&CTX_PROBE],
         stages![probe],
     )
     .unwrap();
@@ -394,6 +406,7 @@ fn bad_stage_output_switches_to_dry_and_resets_stages() {
             Engine::new(DelayGain::new(256, 256, 0.0), fallback_only()),
             SR,
             Some(96),
+            &[&BAD],
             stages![stage],
         )
         .unwrap();
@@ -521,6 +534,7 @@ fn ftz_wraps_stages_but_not_inference() {
         Engine::new(model, SafetyConfig::default()),
         SR,
         None,
+        &[&FTZ_SPY],
         stages![stage],
     )
     .unwrap();
@@ -585,6 +599,7 @@ fn staged_pipeline_with_faults_does_not_allocate() {
         Engine::new(m, SafetyConfig::default()),
         SR,
         Some(96),
+        &[&GAIN, &USE_DRY, &GAIN],
         stages![Gain(0.9), UseDry, Gain(1.1)],
     )
     .unwrap();
