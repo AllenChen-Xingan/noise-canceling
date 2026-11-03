@@ -68,3 +68,53 @@ pub fn join_output_workgroup() -> Result<Box<[u64; 8]>, String> {
         if rc != 0 { Err(format!("os_workgroup_join 失败 {rc}")) } else { Ok(token) }
     }
 }
+
+// ── 自建工作组区间（AudioWorkIntervalCreate，macOS 11+）──
+// 用途：自己报每帧的截止时间。D74 的实测里「加入设备工作组不提速」，推测是截止期报得太宽（报 8 ms、实际 3 ms）；
+// 这里由我们每帧 `start(now, now + deadline)` / `finish`，看截止期报紧（1–2 ms）后系统会不会提频、每帧是否更省电。
+// 头文件：AudioToolbox/AudioWorkInterval.h:88；os/workgroup_interval.h:95,148；os/clock.h:15（OS_CLOCK_MACH_ABSOLUTE_TIME = 32）
+#[link(name = "AudioToolbox", kind = "framework")]
+unsafe extern "C" {
+    fn AudioWorkIntervalCreate(name: *const std::ffi::c_char, clock: u32, attr: *const c_void) -> *mut c_void;
+}
+unsafe extern "C" {
+    fn os_workgroup_interval_start(wg: *mut c_void, start: u64, deadline: u64, data: *mut c_void) -> i32;
+    fn os_workgroup_interval_finish(wg: *mut c_void, data: *mut c_void) -> i32;
+    fn mach_absolute_time() -> u64;
+}
+
+pub struct IntervalWg {
+    wg: *mut c_void,
+    _token: Box<[u64; 8]>,
+    deadline_ticks: u64,
+    pub errors: u64,
+}
+
+impl IntervalWg {
+    pub fn create_and_join(deadline_ms: f64) -> Result<Self, String> {
+        unsafe {
+            let wg = AudioWorkIntervalCreate(c"vdn-denoise".as_ptr(), 32, std::ptr::null());
+            if wg.is_null() {
+                return Err("AudioWorkIntervalCreate 失败".into());
+            }
+            let mut token = Box::new([0u64; 8]);
+            let rc = os_workgroup_join(wg, token.as_mut_ptr().cast());
+            if rc != 0 {
+                return Err(format!("os_workgroup_join（自建区间）失败 {rc}"));
+            }
+            Ok(Self { wg, _token: token, deadline_ticks: ms_to_abs(deadline_ms) as u64, errors: 0 })
+        }
+    }
+    /// 一帧开始：报「从现在起 deadline 之内要做完」
+    pub fn begin(&mut self) {
+        let now = unsafe { mach_absolute_time() };
+        if unsafe { os_workgroup_interval_start(self.wg, now, now + self.deadline_ticks, std::ptr::null_mut()) } != 0 {
+            self.errors += 1;
+        }
+    }
+    pub fn end(&mut self) {
+        if unsafe { os_workgroup_interval_finish(self.wg, std::ptr::null_mut()) } != 0 {
+            self.errors += 1;
+        }
+    }
+}

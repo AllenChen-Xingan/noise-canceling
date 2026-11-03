@@ -8,6 +8,8 @@
 //!             --fem-json <convert_fem.json>（fem 的缓存形状）· --frames 6000 · --warmup 200 · --parity-frames 610
 //!             --pace-ms 0 · --qos ui|default
 //!             --thread-policy none|tc（tc = THREAD_TIME_CONSTRAINT_POLICY，周期取 pace-ms 或 16，计算 1 ms，截止 3 ms）
+//!             --tc-computation 1 · --tc-constraint 3（毫秒，tc 策略的计算量与截止）
+//!             --interval-wg <截止 ms>（自建工作组区间，每帧 start/finish，报自己的截止期；D74 之后的重点）
 //!             --workgroup（加入默认输出设备的 IO 工作组）· --spin（帧间忙等代替睡眠：只用来排查降频，不是产品做法）
 //!   compile <模型.mlpackage> <输出.mlmodelc>     Core ML 编译（给 bnns 用）
 //!   selftest                                    检查两种分配计数器真的在数
@@ -224,11 +226,13 @@ fn bench(o: &Opts) -> Result<(), String> {
     let policy = if qos == "rt" { "tc".to_string() } else { o.get("thread-policy", "none") };
     match policy.as_str() {
         "none" => {}
-        "tc" => rt::time_constraint(if pace > 0.0 { pace } else { 16.0 }, 1.0, 3.0)?,
+        "tc" => rt::time_constraint(if pace > 0.0 { pace } else { 16.0 }, o.num("tc-computation", 1.0), o.num("tc-constraint", 3.0))?,
         _ => return Err("--thread-policy 只收 none / tc".into()),
     }
     let _wg = if o.flags.contains_key("workgroup") { Some(rt::join_output_workgroup()?) } else { None };
     let spin = o.flags.contains_key("spin");
+    let iwg_ms: f64 = o.num("interval-wg", 0.0);
+    let mut iwg = if iwg_ms > 0.0 { Some(rt::IntervalWg::create_and_join(iwg_ms)?) } else { None };
 
     let (per, per_out) = (kind.in_len(), kind.out_len());
     let input = read_f32(&format!("{prefix}.in.f32"))?;
@@ -295,9 +299,15 @@ fn bench(o: &Opts) -> Result<(), String> {
             }
         }
         let x = &input[(f % n_in) * per..(f % n_in + 1) * per];
+        if let Some(w) = iwg.as_mut() {
+            w.begin();
+        }
         let t = Instant::now();
         be.run(x, &mut out)?;
         let dt = t.elapsed().as_secs_f64() * 1e3;
+        if let Some(w) = iwg.as_mut() {
+            w.end();
+        }
         if f == 0 {
             first_ms = dt;
         }
@@ -346,7 +356,7 @@ fn bench(o: &Opts) -> Result<(), String> {
         .map(|(s, e)| 10.0 * (s / e.max(1e-300)).log10())
         .fold(f64::INFINITY, f64::min);
     println!(
-        "{{\"model\":\"{}\",\"backend\":\"{backend}\",\"artifact\":\"{}\",\"frames\":{frames},\"warmup\":{warmup},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"thread_policy\":\"{policy}\",\"workgroup\":{},\"spin\":{spin},\
+        "{{\"model\":\"{}\",\"backend\":\"{backend}\",\"artifact\":\"{}\",\"frames\":{frames},\"warmup\":{warmup},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"thread_policy\":\"{policy}\",\"workgroup\":{},\"spin\":{spin},\"tc_computation_ms\":{},\"tc_constraint_ms\":{},\"interval_wg_deadline_ms\":{iwg_ms},\"interval_wg_errors\":{},\
 \"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{mean:.4},\"frames_over_3ms\":{over3},\
 \"ort_env_ms\":0.00,\"compile_ms\":{compile_ms:.2},\"open_ms\":{open_ms:.2},\"first_frame_ms\":{first_ms:.3},\"cpu_over_wall\":{:.3},\
 \"rust_allocs_per_frame\":{rust_allocs:.3},\"process_allocs_per_frame\":{proc_allocs:.3},\"nonfinite_frames\":{nonfinite_frames},\
@@ -355,6 +365,9 @@ fn bench(o: &Opts) -> Result<(), String> {
         kind.name(),
         std::path::Path::new(model_path).file_name().map(|s| s.to_string_lossy()).unwrap_or_default(),
         _wg.is_some(),
+        if policy == "tc" { o.num("tc-computation", 1.0) } else { 0.0 },
+        if policy == "tc" { o.num("tc-constraint", 3.0) } else { 0.0 },
+        iwg.as_ref().map(|w| w.errors).unwrap_or(0),
         pct(&times, 0.10),
         pct(&times, 0.50),
         pct(&times, 0.90),
