@@ -5,6 +5,7 @@
 //!   gtcrn-bench  <ort|native|tract> <权重前缀|onnx> <wav> [--frames N] [--warmup N]
 //!   fem-parity   <onnx> <wav> [--tract-onnx <改写后的 onnx>]    FastEnhancer-M：ORT 跑 <onnx> 对 tract 跑改写图（默认同一份），逐帧对拍输出波形
 //!   fem-bench    <ort|tract> <onnx> <wav> [--frames N] [--warmup N]
+//!   两个 bench 都可加 `--pace-ms <毫秒>`：按实时节奏每隔这么久喂一帧（测耗电、测睡醒后的帧耗时用；默认 0 = 连续跑）。
 //!   两个 bench 都可加 `--dump-io <前缀>`（此时第 2 个参数须是 onnx）：计时之后另起一个 ORT 会话，从零状态把
 //!   全部 1 + warmup + frames 帧再跑一遍，写 `<前缀>.in.f32` / `<前缀>.ort.f32`（小端 f32，按帧拼接；
 //!   GTCRN 每帧 re[257] 再 im[257]，FE-M 每帧 160 个样本）和 `<前缀>.json`（帧数、每帧长度、wav 路径与 sha256）。
@@ -389,6 +390,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let (kind, path, wav) = (&args[0], Path::new(&args[1]), Path::new(&args[2]));
     let frames = arg_usize(args, "--frames", 6000);
     let warm = arg_usize(args, "--warmup", 200);
+    let pace: f64 = arg_str(args, "--pace-ms", "0").parse()?;
     let audio = read_wav(wav)?;
     // FE-M 的帧形状要从 ONNX 读；GTCRN 不用 path
     let inputs = frames_for(model, &audio, frames + warm + 1, path)?;
@@ -409,7 +411,14 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let a0 = ALLOCS.load(Relaxed);
     let c0 = cpu_seconds();
     let w0 = Instant::now();
-    for f in &inputs[warm + 1..] {
+    for (n, f) in inputs[warm + 1..].iter().enumerate() {
+        if pace > 0.0 {
+            // 实时节奏：第 n 帧在 w0 + n·pace 时刻开始（睡眠不计入帧耗时）
+            let due = w0 + std::time::Duration::from_secs_f64(n as f64 * pace * 1e-3);
+            if let Some(d) = due.checked_duration_since(Instant::now()) {
+                std::thread::sleep(d);
+            }
+        }
         x.copy_from_slice(f);
         let t = Instant::now();
         m.infer(&mut x)?;
@@ -432,7 +441,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         )?;
     }
     println!(
-        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"p50_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan}}}",
+        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"p50_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan}}}",
         model.name(),
         pct(&times, 0.5),
         pct(&times, 0.99),
