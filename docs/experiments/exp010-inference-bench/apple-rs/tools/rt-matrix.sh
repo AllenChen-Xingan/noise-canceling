@@ -11,6 +11,8 @@ set -u
 [ "$(id -u)" = 0 ] || { echo "要 sudo：powermetrics 需要 root"; exit 1; }
 [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ] || { echo "要从普通账号用 sudo 启动（SUDO_USER 为空）：基准程序必须以人的账号跑"; exit 1; }
 U() { sudo -u "$SUDO_USER" "$@"; }   # 以人的账号执行
+pm=""
+trap '[ -n "$pm" ] && kill "$pm" 2>/dev/null; [ -n "$pm" ] && wait "$pm" 2>/dev/null' EXIT INT TERM HUP   # 中途停下也不留下 powermetrics
 HERE=$(cd "$(dirname "$0")/.." && pwd); EXP=$(cd "$HERE/.." && pwd)
 O=$1; NATIVE=${2:-}; NWEIGHTS=${3:-}; NWAV=${4:-}
 BID=${BID:-$(date +%Y%m%d-%H%M%S)-rt}
@@ -43,7 +45,7 @@ for c in "${SETS[@]}"; do
   powermetrics -i 500 --samplers cpu_power,gpu_power,ane_power > "$RES/power/$i.txt" 2>/dev/null &   # 只有这一步是 root
   pm=$!
   l=$(eval "U $cmd" 2>> "$RES/stderr.log"); rc=$?
-  kill $pm; wait $pm 2>/dev/null
+  kill "$pm"; wait "$pm" 2>/dev/null; pm=""
   if [ $rc = 0 ]; then echo "{\"set\":$i,\"config\":\"$n\",\"result\":$l}" >> "$RES/rt.jsonl"; else echo "{\"set\":$i,\"config\":\"$n\",\"error\":\"见 stderr.log\"}" >> "$RES/rt.jsonl"; fi
   sleep 5   # 两段之间让功率回落
 done
