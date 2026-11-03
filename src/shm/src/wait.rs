@@ -8,7 +8,7 @@ use core::time::Duration;
 use crate::wake::{self, Outcome};
 use crate::{Bus, RingId, WaitResult, WaitStrategy};
 
-/// 系统不支持唤醒或调用出错时，`wait` 退回的轮询间隔。
+/// 唤醒系统调用出错（或本构建没有唤醒）时，`wait` 退回的轮询间隔。
 pub const FALLBACK_POLL: Duration = Duration::from_micros(200);
 /// `wait` 连续几次「可重试的提前返回」之后，这一轮改睡一个轮询间隔（防 EFAULT 一直重复时空转）。
 const MAX_RETRIES: u32 = 3;
@@ -38,7 +38,8 @@ impl Bus {
     ///
     /// - 数据已经够：立刻返回 `Ready`，不做系统调用
     /// - 不够：`WaitStrategy::Wake` 下睡在该环的唤醒计数字上，生产方 `notify` 一下就醒；
-    ///   系统不支持（低于 macOS 14.4）或调用出错，改用 200 µs 间隔轮询，并给该环的 `wait_fallbacks` 加 1（每次调用最多 1）
+    ///   系统调用返回不可恢复的错（EINVAL 等），本句柄改用 200 µs 间隔轮询，并给该环的 `wait_fallbacks` 加 1（每次调用最多 1）；
+    ///   没有唤醒的构建（Linux · Miri · loom）也走轮询并计数
     /// - `WaitStrategy::Poll(间隔)`：按给定间隔轮询（对照实验用；不计 `wait_fallbacks`）
     /// - `min_available` 大于环容量时按容量算（否则永远等不到）；为 0 时立刻返回
     /// - 一定在 `timeout` 之后不久返回（不会永远睡死）：生产方崩了也只是超时。`timeout` 为 0 = 只看一眼

@@ -164,17 +164,17 @@ impl Bus {
         self.strategy
     }
 
-    /// 本进程能不能用跨进程唤醒（macOS 14.4+ 且找到了系统函数）。不能时 `wait` 用 200 µs 轮询。
+    /// 本构建有没有跨进程唤醒：macOS（最低 14.4，D67）且开了 feature `posix` 时为 true；Linux · Miri · loom 下为 false，`wait` 用 200 µs 轮询。
     pub fn wake_supported() -> bool {
         wake::init();
         wake::supported()
     }
 
-    /// 只给测试用：让本进程假装系统不支持唤醒（验证退回轮询那条路）。全进程生效、不可撤销。
+    /// 只给测试用：让本进程的唤醒系统调用都当作「返回了不可恢复的错」（验证退回轮询那条路）。全进程生效、不可撤销。
     #[doc(hidden)]
-    pub fn force_wake_unsupported_for_test() {
+    pub fn force_wake_error_for_test() {
         wake::init();
-        wake::force_unsupported();
+        wake::force_error();
     }
 
     fn wrap(region: Region, cap: usize, shared: bool) -> Self {

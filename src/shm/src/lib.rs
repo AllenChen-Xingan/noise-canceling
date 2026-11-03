@@ -22,7 +22,7 @@
 //! 唤醒（头部版本 2 起）：
 //! - 生产方 push 完调 `Bus::notify(id)`：实时可调，一次原子加 + 一次非阻塞系统调用（规约 §4 A 档唯一例外）
 //! - 消费方在**非实时线程**调 `Bus::wait(id, 至少几个样本, 超时)`：数据够了立刻返回，不够就睡到被叫醒或超时
-//! - 低于 macOS 14.4（没有 `os_sync_wait_on_address`）或调用出错：`wait` 自动改 200 µs 轮询，并计 `wait_fallbacks`
+//! - 最低 macOS 14.4（D67），系统函数直接链接；系统调用出错时 `wait` 自动改 200 µs 轮询，并计 `wait_fallbacks`
 //!
 //! 建总线的一方用 `OwnedBus::create`（每个名字一把文件锁，拿到锁才清残留；Drop 时删一次名字）。
 
@@ -60,7 +60,7 @@ pub use wait::FALLBACK_POLL;
 /// `Bus::wait` 怎么等（每个进程自己选，不进共享内存）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WaitStrategy {
-    /// 睡在唤醒计数字上，生产方 `notify` 一下就醒（默认）；系统不支持时自动退回 200 µs 轮询
+    /// 睡在唤醒计数字上，生产方 `notify` 一下就醒（默认）；系统调用出错时自动退回 200 µs 轮询
     Wake,
     /// 按固定间隔 sleep 后看一眼（对照实验、或明确不想用唤醒时）
     Poll(core::time::Duration),
