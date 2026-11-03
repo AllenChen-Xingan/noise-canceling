@@ -216,9 +216,12 @@ pub enum Baseline {
     Found(String, String),
     /// 基线提交上还没有这份文件（本机制第一次合并前）
     Absent(String),
-    /// 拿不到基线（不是 git 仓库、没有 main / origin/main）
+    /// 拿不到基线（不是 git 仓库、没有 main / origin/main、基线提交不存在、读文件出错）
     Unavailable(String),
 }
+
+/// CI 传入的可信基线提交（push：推送前的 main；PR：目标分支）。见 `.github/workflows/ci.yml`。
+pub const BASE_ENV: &str = "VDN_SCHEMA_BASE";
 
 fn git(root: &Path, args: &[&str]) -> Option<String> {
     let o = std::process::Command::new("git")
@@ -232,8 +235,25 @@ fn git(root: &Path, args: &[&str]) -> Option<String> {
         .then(|| String::from_utf8_lossy(&o.stdout).trim().to_string())
 }
 
-/// 基线提交 = 本分支与 main 的分叉点；就在 main 上时（分叉点 = HEAD）取上一个提交（第一父）。
+/// 可信基线里的布局文件。基线提交按顺序取：
+/// 1. 环境变量 `VDN_SCHEMA_BASE`（CI 设：push 用推送前的提交，PR 用目标分支的提交）——
+///    一次推送多个提交时，不会拿同批里未验证的提交当基线（codex 第 3 轮 #2）
+/// 2. 本机：本分支与 main 的分叉点；就在 main 上时取上一个提交（第一父）
 pub fn shm_baseline(root: &Path) -> Baseline {
+    let over = std::env::var(BASE_ENV).ok();
+    shm_baseline_from(root, over.as_deref().filter(|s| !s.is_empty()))
+}
+
+/// 同 `shm_baseline`，基线提交由调用方给（`None` = 按本机规则找）。
+pub fn shm_baseline_from(root: &Path, over: Option<&str>) -> Baseline {
+    if let Some(b) = over {
+        if b.bytes().all(|c| c == b'0') {
+            return Baseline::Unavailable(format!(
+                "{BASE_ENV} 是全零（新建分支的推送没有前一个提交）"
+            ));
+        }
+        return shm_baseline_at(root, b);
+    }
     let head = git(root, &["rev-parse", "HEAD"]);
     let base = ["origin/main", "main"]
         .iter()
