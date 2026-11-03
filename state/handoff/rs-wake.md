@@ -19,7 +19,16 @@
 - 2026-11-02 发现：macOS 的 `getrusage` 不填上下文切换数（读回 0），改用 `proc_pid_rusage`（libc 有结构体没声明函数，实验程序里自写一行 extern）
 - 2026-11-02 Miri 准备：Miri 下唤醒走「不支持」分支（不调 dlsym）；POSIX / 真实时钟测试标 `cfg_attr(miri, ignore)`；heap 两线程测试 Miri 下 200 块
 - 2026-11-02 xtask 新增 `miri` 子命令（`miri.rs`，默认 vdn-shm，不进 `ci`）；本机尚无 nightly，命令报「先装」并退出 1
-- 2026-11-02 名额排队中（rs-entry 在做 V7 延迟测量）；自审 3 个子代理已派（睡死 · 丢唤醒 · 版本不兼容）
+- 2026-11-02 名额排队中（rs-entry 在做 V7 延迟测量）
+- 2026-11-02 自审（3 个子代理，只读）：睡死 · 丢唤醒 · 版本不兼容三视角均无 P0。已修：
+  - P1 新旧建方锁文件不同、互相锁不住，可能删掉对方的总线 → `OwnedBus` 过渡期两把锁都拿，加测试 `legacy_owner_lock_is_respected`
+  - P2 唤醒改用 `os_sync_wake_by_address_all`（单等待者时代价相同；残留的第二个等待者不会让真消费方漏醒）
+  - P2 单次系统调用最多睡 1 小时（防极大超时换算溢出后忙等）
+  - P2 锁步 ping-pong 测试（`lockstep_heap` / `lockstep_posix_two_mappings`）；**反向验证**：把读序对调后它没抓到（窗口太窄），于是加单元测试 `wait::tests::widened_race_window_does_not_lose_wakeup`（只在单元测试里在两次读之间停 3 ms），对调后失败、改回通过——实测
+  - P3 连续 3 次暂时性错误（EINTR 等）只睡一次、不计 `wait_fallbacks` · 等待端改用 `WAIT_*` 常量 · 名字检查改为不映射别人的总线 · 新增 `Bus::push_notify` · 补 `Poll(0)` 超时测试
+  - 未改：多个等待者只是约定（单消费者），文档写明
+- 2026-11-02 `cargo test -p vdn-shm` 30 过 1 忽略（loom 占位）；clippy 无警告；tidy 过
+- 2026-11-02 xtask ci 加 `--platform linux|macos`（不给 = 全部，本机用法不变）：linux 排除 vdn-io-macos / vdn-capture；macos 只跑 io-macos · shm · rt-thread · hal 的 clippy（aarch64-apple-darwin）与测试
 
 ## 新增依赖
 - 无新外部依赖（libc 已有）。vdn-shm 加 dev-dependency `vdn-rt-thread`（只给实验程序提优先级；check-deps 只看普通依赖，过）
