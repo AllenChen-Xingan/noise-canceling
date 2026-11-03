@@ -243,6 +243,18 @@ pub enum Kind {
     V3,
 }
 
+impl Kind {
+    /// 后端名 → 写法（后缀 -pf 是预取开关，不影响写法）。名字的正本在这里，bench 与 gtcrn-layers 都从这里取
+    pub fn from_backend(k: &str) -> Option<Kind> {
+        match k.strip_suffix("-pf").unwrap_or(k) {
+            "native-v2" => Some(Kind::V2),
+            "native-v2-fast" => Some(Kind::V2Fast),
+            "native-v3" => Some(Kind::V3),
+            _ => None,
+        }
+    }
+}
+
 trait Kern {
     fn point(p: &Point, x: &[f32], y: &mut [f32], f: usize);
     fn conv(c: &mut ConvF, x: &[f32], y: &mut [f32]);

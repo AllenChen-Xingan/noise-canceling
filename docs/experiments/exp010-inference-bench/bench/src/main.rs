@@ -29,7 +29,7 @@
 //!   hw-peak [--qos rt|ui|bg] [--reps N]  研究 020：本机 NEON 乘加吞吐 / 延迟、非线性延迟、各级缓存读写带宽，见 src/hwpeak.rs
 //!   dsp-bench <wav16k> [--frames N] [--qos rt|ui|bg] [--pace-ms X]
 //!                研究 020：前后处理（vdn-dsp 的 48↔16 kHz 重采样、STFT / iSTFT）每帧计时，对照「只改点积求和方式」的 NEON 版，见 src/dsp.rs
-//!   gtcrn-bench 的后端另有 native-v2 / native-v2-fast（研究 020：同一结构与权重，算子换 NEON 重写，见 src/gtcrn_native/v2.rs）
+//!   gtcrn-bench 的后端另有 native-v3（研究 020 第二批，按能效核写，见 src/gtcrn_native/v3.rs）；后缀 -pf = 每帧预取权重；以及 native-v2 / native-v2-fast（研究 020：同一结构与权重，算子换 NEON 重写，见 src/gtcrn_native/v2.rs）
 //!   amx-probe                                                   小矩阵上 Accelerate（AMX / SME）对手写循环，形状取自 GTCRN
 //! 输出一行 JSON（stdout）。一帧 = 模型的一个 hop（GTCRN 256 样本 / 16 ms，FE-M 160 样本 / 10 ms）。
 
@@ -452,14 +452,13 @@ fn open_net_with(
         }
         // 研究 020：同一份权重与结构，算子换成 NEON 重写（v2 不读 BLAS / FAST 两个全局开关；BLAS 关掉以免 DPGRNN 走 sgemm）
         // 后缀 -pf：每帧开头预取全部权重进 L2（D79「唤醒时预取权重」）
-        (ModelId::Gtcrn, k @ ("native-v2" | "native-v2-fast" | "native-v2-pf" | "native-v2-fast-pf")) => {
+        (
+            ModelId::Gtcrn,
+            k @ ("native-v2" | "native-v2-fast" | "native-v2-pf" | "native-v2-fast-pf" | "native-v3" | "native-v3-pf"),
+        ) => {
             gtcrn_native::BLAS.store(false, Relaxed);
             let mut n = GtcrnNative::load(path)?;
-            n.set_kind(if k.contains("fast") {
-                gtcrn_native::Kind::V2Fast
-            } else {
-                gtcrn_native::Kind::V2
-            });
+            n.set_kind(gtcrn_native::Kind::from_backend(k).ok_or("未知后端")?);
             n.set_prefetch(k.ends_with("-pf"));
             Box::new(n)
         }
@@ -1256,7 +1255,7 @@ mod tests {
         let (w, onnx, wav) = (v("EXP010_WEIGHTS"), v("EXP010_GTCRN_ONNX"), v("EXP010_WAV"));
         let audio = read_wav(Path::new(&wav)).unwrap();
         let inputs = frames_for(ModelId::Gtcrn, &audio, audio.len() / HOP, &[]).unwrap();
-        for k in ["native", "native-fast", "native-blas", "native-v2", "native-v2-fast", "native-v2-fast-pf"] {
+        for k in ["native", "native-fast", "native-blas", "native-v2", "native-v2-fast", "native-v2-fast-pf", "native-v3", "native-v3-pf"] {
             let ort = open_net(ModelId::Gtcrn, "ort", Path::new(&onnx)).unwrap();
             let nat = open_net(ModelId::Gtcrn, k, Path::new(&w)).unwrap();
             parity(ModelId::Gtcrn, k, ort, nat, &inputs).unwrap_or_else(|e| panic!("{k}: {e}"));

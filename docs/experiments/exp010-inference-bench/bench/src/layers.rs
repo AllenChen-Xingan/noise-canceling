@@ -96,11 +96,11 @@ pub fn run(args: &[String], inputs_for: impl Fn(usize) -> Result<Vec<Vec<f32>>, 
     if frames == 0 || !pace.is_finite() || !(0.0..=10_000.0).contains(&pace) {
         return Err("--frames 要 > 0，--pace-ms 要在 0..=10000".into());
     }
-    let kind = match variant {
-        "native" | "native-fast" => crate::gtcrn_native::Kind::Scalar,
-        "native-v2" | "native-v2-pf" => crate::gtcrn_native::Kind::V2,
-        "native-v2-fast" | "native-v2-fast-pf" => crate::gtcrn_native::Kind::V2Fast,
-        _ => return Err("--variant 只收 native / native-fast / native-v2 / native-v2-fast（BLAS 版每帧会分配，不在下界分析里）".into()),
+    let kind = if matches!(variant, "native" | "native-fast") {
+        crate::gtcrn_native::Kind::Scalar
+    } else {
+        crate::gtcrn_native::Kind::from_backend(variant)
+            .ok_or("--variant 只收 native / native-fast / native-v2[-fast][-pf] / native-v3[-pf]（BLAS 版每帧会分配，不在下界分析里）")?
     };
     crate::set_thread_qos(qos, 16.0)?;
     crate::gtcrn_native::BLAS.store(false, std::sync::atomic::Ordering::Relaxed);
