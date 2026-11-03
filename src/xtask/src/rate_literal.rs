@@ -251,6 +251,9 @@ mod tests {
         assert_eq!(rate_problems("src/shm/src/a.rs", decl, false).len(), 1);
         // 经 `#[cfg(test)] mod tests;` 引入的测试文件整份放行（只限底层 crate）
         assert!(rate_problems("src/shm/src/tests.rs", "let r = 48_000;\n", true).is_empty());
-        assert_eq!(rate_problems("src/eval/src/tests.rs", "let r = 48_000;\n", true).len(), 1);
+        assert_eq!(
+            rate_problems("src/eval/src/tests.rs", "let r = 48_000;\n", true).len(),
+            1
+        );
     }
 }

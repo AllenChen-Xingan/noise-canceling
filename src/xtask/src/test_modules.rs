@@ -117,7 +117,11 @@ mod tests {
         assert_eq!(cfg_test_mod_names(src), ["tests", "helpers"]);
         // 注释、字符串里的写法不算；内联模块里的声明不算
         let fake = "/*\n#[cfg(test)]\nmod worker;\n*/\nconst S: &str = \"\n#[cfg(test)]\nmod worker2;\n\";\nmod outer {\n    #[cfg(test)]\n    mod inner;\n}\n";
-        assert!(cfg_test_mod_names(fake).is_empty(), "{:?}", cfg_test_mod_names(fake));
+        assert!(
+            cfg_test_mod_names(fake).is_empty(),
+            "{:?}",
+            cfg_test_mod_names(fake)
+        );
     }
 
     fn tmp(tag: &str) -> PathBuf {

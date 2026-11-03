@@ -36,3 +36,4 @@
 - 2026-11-02 hygiene 拆完 verifiers.rs 1168→399（physical/perceptual/sim）· runner.rs 629→424（gate/real）；基线剩 6 条全是 99 的文件；硬上限放最后；docs/experiments 扫描等 #58 合并后打开。8d 开跑全量 xtask ci 验收
 - 2026-11-02 99 知会 #65 带来：denoised/lib.rs +16 行（FE-M 名从 ModelId 取）· policy 拆出 policy_tests.rs（SR 在 :90）· tidy 新规则文件 no_mirror/param_range/scan/model_name · cli 删 ModelArg 加 ModelOpts::kind()。合并 #62 时要搬：denoised 16 行进拆后文件、ModelArg 改动进 args.rs、改名引用、policy_tests SR
 - 2026-11-02 8d 亲手验收 a94623aa：xtask ci fmt/clippy/check-deps/cargo-deny 过；test 431 过 / 1 败 / 5 忽略（--no-fail-fast），唯一失败 xtask tidy_passes；tidy 6 处全是 99 名下 stages.rs ×5 · policy.rs ×1 的采样率字面量（预期，等 #64/#65 合并后补）。基线 6 条不报错
+- 2026-11-02 hygiene codex 第 2 轮 P1×3 P2×3 属实已改（待定清单精确到值 · tidy 测试模块认法剥注释 · 阈值比对保号与方向 · R-RATE 放行要理由）；V-SPLVL 量法实为同 rubric C3 → 8d 定改为 4（铁律 5），移出待定
