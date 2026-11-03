@@ -7,6 +7,8 @@
 //!       选项：--units cpu|gpu|ane|all（coreml）· --state（coreml 有状态版）· --multi（bnns 多线程编译，对照用）
 //!             --fem-json <convert_fem.json>（fem 的缓存形状）· --frames 6000 · --warmup 200 · --parity-frames 610
 //!             --pace-ms 0 · --qos ui|default
+//!             --thread-policy none|tc（tc = THREAD_TIME_CONSTRAINT_POLICY，周期取 pace-ms 或 16，计算 1 ms，截止 3 ms）
+//!             --workgroup（加入默认输出设备的 IO 工作组）· --spin（帧间忙等代替睡眠：只用来排查降频，不是产品做法）
 //!   compile <模型.mlpackage> <输出.mlmodelc>     Core ML 编译（给 bnns 用）
 //!   selftest                                    检查两种分配计数器真的在数
 //! 输出一行 JSON（stdout）。
@@ -19,6 +21,7 @@
 mod alloc;
 mod bnns;
 mod coreml;
+mod rt;
 
 use std::time::Instant;
 
@@ -139,7 +142,7 @@ impl Opts {
         let mut i = 0;
         while i < a.len() {
             if let Some(f) = a[i].strip_prefix("--") {
-                if matches!(f, "state" | "multi") {
+                if matches!(f, "state" | "multi" | "workgroup" | "spin") {
                     flags.insert(f.to_string(), "1".to_string());
                     i += 1;
                 } else {
@@ -202,6 +205,15 @@ fn bench(o: &Opts) -> Result<(), String> {
         return Err("--qos 只收 ui / default".into());
     }
 
+    let policy = o.get("thread-policy", "none");
+    match policy.as_str() {
+        "none" => {}
+        "tc" => rt::time_constraint(if pace > 0.0 { pace } else { 16.0 }, 1.0, 3.0)?,
+        _ => return Err("--thread-policy 只收 none / tc".into()),
+    }
+    let _wg = if o.flags.contains_key("workgroup") { Some(rt::join_output_workgroup()?) } else { None };
+    let spin = o.flags.contains_key("spin");
+
     let per = kind.per_frame();
     let input = read_f32(&format!("{prefix}.in.f32"))?;
     let refo = read_f32(&format!("{prefix}.ort.f32"))?;
@@ -257,7 +269,13 @@ fn bench(o: &Opts) -> Result<(), String> {
             let due = (f - t0w) as f64 * pace;
             let now = w0.elapsed().as_secs_f64() * 1e3;
             if due > now {
-                std::thread::sleep(std::time::Duration::from_secs_f64((due - now) / 1e3));
+                if spin {
+                    while w0.elapsed().as_secs_f64() * 1e3 < due {
+                        std::hint::spin_loop();
+                    }
+                } else {
+                    std::thread::sleep(std::time::Duration::from_secs_f64((due - now) / 1e3));
+                }
             }
         }
         let x = &input[(f % n_in) * per..(f % n_in + 1) * per];
@@ -312,13 +330,14 @@ fn bench(o: &Opts) -> Result<(), String> {
         .map(|(s, e)| 10.0 * (s / e.max(1e-300)).log10())
         .fold(f64::INFINITY, f64::min);
     println!(
-        "{{\"model\":\"{}\",\"backend\":\"{backend}\",\"artifact\":\"{}\",\"frames\":{frames},\"warmup\":{warmup},\"pace_ms\":{pace},\"qos\":\"{qos}\",\
+        "{{\"model\":\"{}\",\"backend\":\"{backend}\",\"artifact\":\"{}\",\"frames\":{frames},\"warmup\":{warmup},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"thread_policy\":\"{policy}\",\"workgroup\":{},\"spin\":{spin},\
 \"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{mean:.4},\"frames_over_3ms\":{over3},\
 \"ort_env_ms\":0.00,\"compile_ms\":{compile_ms:.2},\"open_ms\":{open_ms:.2},\"first_frame_ms\":{first_ms:.3},\"cpu_over_wall\":{:.3},\
 \"rust_allocs_per_frame\":{rust_allocs:.3},\"process_allocs_per_frame\":{proc_allocs:.3},\"nonfinite_frames\":{nonfinite_frames},\
 \"footprint_before_mb\":{fp0:.2},\"footprint_warm_mb\":{fp1:.2},\"footprint_end_mb\":{fp2:.2},\"parity_frames\":{pn},\"parity_max_abs\":{max_abs:.3e},\"parity_worst_frame\":{worst},\"parity_snr_db\":{:.2},\
 \"parity_min_frame_snr_db\":{min_frame_snr:.2},\"parity_nonfinite_values\":{nonfinite_values},\"parity_first_bad\":\"{first_bad:?}\",\"extra\":{extra}}}",
         kind.name(),
+        _wg.is_some(),
         std::path::Path::new(model_path).file_name().map(|s| s.to_string_lossy()).unwrap_or_default(),
         pct(&times, 0.10),
         pct(&times, 0.50),
