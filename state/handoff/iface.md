@@ -38,3 +38,21 @@
 
 ## 待拍板
 （无）
+
+## 收尾报告（#65 + #68，2026-11-02；发给 noise-canceling-99 时它已不在线，留在这里）
+
+- **结论**：#68 做完并进本 PR（正文 `Closes #65` · `Closes #68`）。codex 第 6、7 轮连续无 P0/P1，停止线满足。之后本 worktree 不再改文件，等大总管推送、开 PR
+- **验证**（当前 HEAD，亲手跑）：
+  - `xtask ci` 全绿：469 过 / 0 败 / 7 忽略
+  - `vdn-schema --check` 一致
+  - `eval ci` 同改动前（13/17 · 1/10 · 5/5），门禁通过
+  - 真权重 vdn-models 18 条全过（含端到端：权重的制品 ID 进图、模型名比对通过）
+- **#68 做了什么**：
+  - 模型节点加权重的制品内容 ID（FNV-1a），规范文本格式号 1→2
+  - `ProcessingGraph::verify` 核对模型名、级串、挂点，全过才得到 `CheckedGraph`；`Pipeline::graph(model, artifact)` 返回它
+  - 会话头的 `graph` / `model` 改私有，只能经 `set_graph(&CheckedGraph)` 或读文件填
+  - 沿用 FNV，不是 sha256（PR 正文已提）
+- **要大总管知道的**：
+  - codex 第 5 轮 P1 只接受一半：没把 `Pipeline::with_stages` 改成收整张图，理由见评审记录第 5 轮。第 6、7 轮 codex 都写了「没有新证据支持重复报告」。如果要更严，请定
+  - 接口变了：`ProcessingGraph::bare(model, artifact)`；`SessionHeader` 改用 `graph()` / `model()` / `clear_graph()` 读写
+  - 拆文件：判断「哪些代码属于测试」的部分从 `model_name.rs` 挪进 `src/xtask/src/test_scope.rs`；本线新写和改过的文件都 ≤ 600 行
