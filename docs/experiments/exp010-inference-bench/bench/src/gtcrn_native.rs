@@ -247,6 +247,13 @@ fn tanh_fast(x: f32) -> f32 {
 fn sig_fast(x: f32) -> f32 {
     1.0 / (1.0 + exp_fast(-x))
 }
+/// 给 hw-peak 量延迟用（与推理里用的是同一个函数）
+pub fn exp_fast_pub(x: f32) -> f32 {
+    exp_fast(x)
+}
+pub fn sig_fast_pub(x: f32) -> f32 {
+    sig_fast(x)
+}
 #[inline]
 fn sigmoid(x: f32) -> f32 {
     if fast() {

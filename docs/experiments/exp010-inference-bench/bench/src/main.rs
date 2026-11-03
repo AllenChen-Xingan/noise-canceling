@@ -24,11 +24,16 @@
 //!   全部 1 + warmup + frames 帧再跑一遍，写 `<前缀>.in.f32` / `<前缀>.ort.f32`（小端 f32，按帧拼接；
 //!   GTCRN 每帧 re[257] 再 im[257]，FE-M 每帧 160 个样本）和 `<前缀>.json`（帧数、每帧长度、wav 路径与 sha256）。
 //!   给非 Rust 的测量程序（applebe 的 Swift / Python）吃同一份输入、对同一份 ORT 输出。
+//!   gtcrn-layers <权重前缀> <wav> [--frames N] [--warmup N] [--qos rt|ui|bg] [--pace-ms X] [--variant native|native-fast]
+//!                研究 020：手写版逐层计时（cntvct 打点）+ 每层工作量（乘加、非线性、字节、关键路径），见 src/layers.rs
+//!   hw-peak [--qos rt|ui|bg] [--reps N]  研究 020：本机 NEON 乘加吞吐 / 延迟、非线性延迟、各级缓存读写带宽，见 src/hwpeak.rs
 //!   amx-probe                                                   小矩阵上 Accelerate（AMX / SME）对手写循环，形状取自 GTCRN
 //! 输出一行 JSON（stdout）。一帧 = 模型的一个 hop（GTCRN 256 样本 / 16 ms，FE-M 160 样本 / 10 ms）。
 
 mod amx_probe;
 mod gtcrn_native;
+mod hwpeak;
+mod layers;
 mod tract_be;
 mod workgroup;
 
@@ -972,6 +977,11 @@ fn main() -> Result<(), Err> {
             Ok(())
         }
         Some("gtcrn-bench") => bench(ModelId::Gtcrn, rest),
+        Some("hw-peak") => hwpeak::run(rest),
+        Some("gtcrn-layers") => {
+            let audio = read_wav(Path::new(rest.get(1).ok_or("缺 wav")?))?;
+            layers::run(rest, |n| frames_for(ModelId::Gtcrn, &audio, n, &[]))
+        }
         Some("fem-bench") => bench(ModelId::Fem, rest),
         Some("gtcrn-parity") => {
             // 帧数默认 = 音频长度 / hop（不循环）；--frames N 时循环音频（STFT 不重置），查长时间跑会不会漂
