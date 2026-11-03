@@ -88,87 +88,92 @@ fn only_attrs(line: &str) -> bool {
     t.is_empty()
 }
 
-/// 由 `#[cfg(test)] mod x;`（可带 `#[path = "…"]`）引入的测试模块文件（相对路径）。
+/// 只被测试引用的模块文件（相对路径）：经 `#[cfg(test)] mod x;`（可带 `#[path = "…"]`）引入、且没有任何生产代码的
+/// `mod` 声明指向它（同一文件既做生产又做测试就照查，codex 012 第 6 轮 #2）。
 /// 按 Rust 的规则找文件：`mod.rs` / `lib.rs` / `main.rs` 里声明的在同目录，别的文件 `foo.rs` 里声明的在 `foo/` 下；
-/// `#[path]` 相对声明它的文件所在目录。
+/// 声明在内联模块 `mod outer { … }` 里的再拼上 `outer/`；`#[path]` 在文件顶层相对所在目录，在内联模块里相对上述模块目录
+///（第 6 轮 #1）。
 pub fn test_module_files(files: &[(String, String)]) -> Vec<String> {
-    let mut out = Vec::new();
+    let mut test = Vec::new();
+    let mut prod = Vec::new();
     for (rel, src) in files {
         // 代码行（字符串换成 ""）定位属性和 `mod`，原文行（保留字符串）取 `#[path]` 的值：
-        // 字符串里写的伪声明不算（codex 012 第 4 轮 #2）
+        // 字符串里写的伪声明不算（第 4 轮 #2）
         let code = code_lines(src);
         let raw = strip_comments_keep_strings(src);
         let prefixes = inline_prefixes(&code);
-        let mut i = 0;
-        while i < code.len() {
-            if !code[i].contains("#[cfg(test)]") {
-                i += 1;
+        for (i, line) in code.iter().enumerate() {
+            // 这一行里的 `mod 名字;`（外部模块声明）
+            let Some(at) = line.find("mod ") else {
+                continue;
+            };
+            if at > 0
+                && line[..at]
+                    .chars()
+                    .next_back()
+                    .is_some_and(|c| c.is_alphanumeric() || c == '_')
+            {
                 continue;
             }
-            // 这一项的全部属性：往前收紧挨着的属性行（`#[path]` 写在 cfg 前面也认，第 4 轮 #3），往后收到 `;` 或 `{`
+            let after = &line[at + 4..];
+            let name: String = after
+                .trim_start()
+                .chars()
+                .take_while(|c| c.is_alphanumeric() || *c == '_')
+                .collect();
+            let rest = after.trim_start()[name.len()..].trim_start();
+            if name.is_empty() || !rest.starts_with(';') {
+                continue; // 内联模块 `mod x {` 或别的写法
+            }
+            // 它的属性：本行 `mod` 之前的部分 + 往上紧挨着的「整行只有属性」的行（不依赖属性顺序，第 4 轮 #3）
             let mut start = i;
             while start > 0 && only_attrs(&code[start - 1]) {
                 start -= 1;
             }
-            let mut end = i;
-            while end + 1 < code.len() && !code[end].contains([';', '{']) {
-                end += 1;
-            }
-            i = end + 1;
-            let item_code = code[start..=end].join(" ");
-            let item_raw = raw
-                .get(start..=end)
-                .map(|r| r.join(" "))
-                .unwrap_or_default();
-            let after_cfg = item_code.split_once("#[cfg(test)]").map_or("", |(_, r)| r);
-            if after_cfg
-                .find('{')
-                .is_some_and(|b| after_cfg.find(';').is_none_or(|s| b < s))
-            {
-                continue; // 内联模块或别的项，不涉及文件
-            }
-            let Some(name) = item_code
-                .split_whitespace()
-                .skip_while(|w| *w != "mod")
-                .nth(1)
-                .map(|n| n.trim_end_matches(';'))
-            else {
-                continue;
-            };
+            let mut attrs_code = code[start..i].join(" ");
+            attrs_code.push_str(&line[..at]);
+            let attrs_raw = raw.get(start..=i).map(|r| r.join(" ")).unwrap_or_default();
+            let is_test = attrs_code.contains("#[cfg(test)]");
             let path = Path::new(rel);
             let dir = path.parent().unwrap_or(Path::new(""));
-            let explicit = item_code
+            let inline = prefixes.get(i).cloned().unwrap_or_default();
+            let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+            let mut base = if ["mod", "lib", "main"].contains(&stem) {
+                dir.to_path_buf()
+            } else {
+                dir.join(stem)
+            };
+            for m in &inline {
+                base = base.join(m);
+            }
+            let explicit = attrs_code
                 .contains("#[path")
                 .then(|| {
-                    item_raw
+                    attrs_raw
                         .split_once("#[path")
                         .and_then(|(_, r)| strings_in(r).into_iter().next())
                 })
                 .flatten();
-            let file = if let Some(p) = explicit {
-                dir.join(p)
-            } else {
-                let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-                let mut base = if ["mod", "lib", "main"].contains(&stem) {
-                    dir.to_path_buf()
-                } else {
-                    dir.join(stem)
-                };
-                // 声明在内联模块 `mod outer { … }` 里：文件在 outer/ 下（codex 012 第 5 轮 #2）
-                for m in prefixes.get(start).into_iter().flatten() {
-                    base = base.join(m);
-                }
-                let flat_file = base.join(format!("{name}.rs"));
-                if files.iter().any(|(r, _)| Path::new(r) == flat_file) {
-                    flat_file
-                } else {
-                    base.join(name).join("mod.rs")
+            let file = match explicit {
+                Some(p) if inline.is_empty() => dir.join(p),
+                Some(p) => base.join(p),
+                None => {
+                    let flat_file = base.join(format!("{name}.rs"));
+                    if files.iter().any(|(r, _)| Path::new(r) == flat_file) {
+                        flat_file
+                    } else {
+                        base.join(&name).join("mod.rs")
+                    }
                 }
             };
-            out.push(file.display().to_string());
+            let f = file.display().to_string();
+            if is_test { test.push(f) } else { prod.push(f) }
         }
     }
-    out
+    test.retain(|f| !prod.contains(f));
+    test.sort();
+    test.dedup();
+    test
 }
 
 /// 一行里所有字符串字面量的内容（不含引号）。注释已先剥掉。
@@ -516,9 +521,13 @@ impl ModelId {
             ),
             f("src/c/src/real.rs", ""),
             f("src/c/src/outer/real.rs", ""),
+            // 第 6 轮 #1：内联模块里的 #[path] 按 outer/ 解析；第 6 轮 #2：生产也引用的文件不豁免
+            f(
+                "src/d/src/lib.rs",
+                "mod outer {\n    #[cfg(test)]\n    #[path = \"t.rs\"]\n    mod tests;\n}\nmod both;\n#[cfg(test)]\n#[path = \"both.rs\"]\nmod again;\n",
+            ),
         ];
-        let mut got = test_module_files(&files);
-        got.sort();
+        let got = test_module_files(&files);
         assert_eq!(
             got,
             [
@@ -526,7 +535,8 @@ impl ModelId {
                 "src/a/src/session/tests.rs",
                 "src/a/src/t2/mod.rs",
                 "src/b/src/x_tests.rs",
-                "src/c/src/outer/real.rs"
+                "src/c/src/outer/real.rs",
+                "src/d/src/outer/t.rs"
             ]
         );
     }
