@@ -149,7 +149,10 @@ fn ledger_lists_stages_and_sums_to_latency() {
     .unwrap();
     let l = p.latency_ledger();
     let names: Vec<_> = l.items().iter().map(|i| i.component).collect();
-    assert_eq!(names, ["rebuffer", "resample", "delay_gain", "gain", "use_dry"]);
+    assert_eq!(
+        names,
+        ["rebuffer", "resample", "delay_gain", "gain", "use_dry"]
+    );
     assert!(l.items().iter().all(|i| i.basis == Basis::Declared));
     let ms = p.latency_samples() as f64 / f64::from(SR) * 1000.0;
     assert!((l.total_ms() - ms).abs() < 1e-9);
@@ -280,7 +283,11 @@ fn faults_switch_to_aligned_48k_dry_with_high_band() {
         // 15 kHz 分量还在：16 kHz 原声没有它，这条证明用的是 48 kHz 原声
         let hf_in: f64 = energy(&x[inner.start - l..inner.end - l]);
         let hf_out: f64 = energy(&y[inner.clone()]);
-        assert!((hf_out / hf_in - 1.0).abs() < 1e-3, "能量比 {}", hf_out / hf_in);
+        assert!(
+            (hf_out / hf_in - 1.0).abs() < 1e-3,
+            "能量比 {}",
+            hf_out / hf_in
+        );
     }
     // 送原声区间之外（留出淡化）输出接近 0（模型输出全零）
     let quiet = spans[0].end + 2 * HOP_IO..spans[1].start - HOP_IO;
@@ -368,8 +375,14 @@ impl Stage for FtzSpyStage {
 
 #[test]
 fn ftz_wraps_stages_but_not_inference() {
-    let (m_on, m_calls) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicU64::new(0)));
-    let (s_off, s_calls) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicU64::new(0)));
+    let (m_on, m_calls) = (
+        Arc::new(AtomicBool::new(false)),
+        Arc::new(AtomicU64::new(0)),
+    );
+    let (s_off, s_calls) = (
+        Arc::new(AtomicBool::new(false)),
+        Arc::new(AtomicU64::new(0)),
+    );
     let model = FtzSpyModel {
         seen_on: m_on.clone(),
         calls: m_calls.clone(),
@@ -378,19 +391,29 @@ fn ftz_wraps_stages_but_not_inference() {
         seen_off: s_off.clone(),
         calls: s_calls.clone(),
     };
-    let mut p =
-        Pipeline::with_stages(Engine::new(model, SafetyConfig::default()), SR, None, stages![stage])
-            .unwrap();
+    let mut p = Pipeline::with_stages(
+        Engine::new(model, SafetyConfig::default()),
+        SR,
+        None,
+        stages![stage],
+    )
+    .unwrap();
     assert!(!vdn_dsp::ftz::active());
     let x = signal(20 * HOP_IO, 0.0);
     let _ = run(&mut p, &x, 100);
     assert_eq!(m_calls.load(Ordering::Relaxed), 20);
     assert_eq!(s_calls.load(Ordering::Relaxed), 20);
-    assert!(!m_on.load(Ordering::Relaxed), "推理调用时 FTZ 开着（违反 R9）");
+    assert!(
+        !m_on.load(Ordering::Relaxed),
+        "推理调用时 FTZ 开着（违反 R9）"
+    );
     if vdn_dsp::ftz::SUPPORTED {
         assert!(!s_off.load(Ordering::Relaxed), "后处理级没在 FTZ 守卫里");
     }
-    assert!(!vdn_dsp::ftz::active(), "process 返回后应恢复调用方的浮点模式");
+    assert!(
+        !vdn_dsp::ftz::active(),
+        "process 返回后应恢复调用方的浮点模式"
+    );
 }
 
 #[cfg(debug_assertions)]

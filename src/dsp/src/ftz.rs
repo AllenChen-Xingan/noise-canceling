@@ -179,6 +179,9 @@ mod tests {
         let _g = FtzGuard::new();
         let x = black_box(1.5f32) * black_box(2.0);
         assert_eq!(x, 3.0);
-        assert_eq!(black_box(f32::MIN_POSITIVE) * black_box(1.0), f32::MIN_POSITIVE);
+        assert_eq!(
+            black_box(f32::MIN_POSITIVE) * black_box(1.0),
+            f32::MIN_POSITIVE
+        );
     }
 }

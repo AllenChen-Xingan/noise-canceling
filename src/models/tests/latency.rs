@@ -30,7 +30,11 @@ fn pipeline(kind: ModelKind, block: Option<usize>) -> Pipeline<DelayGain> {
         DelayGain::new(d.hop, d.latency_samples, 1.0),
         SafetyConfig::default(),
     );
-    assert_eq!(e.sample_rate(), d.sample_rate, "DelayGain 的采样率要与声明一致");
+    assert_eq!(
+        e.sample_rate(),
+        d.sample_rate,
+        "DelayGain 的采样率要与声明一致"
+    );
     match block {
         Some(b) => Pipeline::with_block(e, IO_RATE, b).unwrap(),
         None => Pipeline::new(e, IO_RATE).unwrap(),
@@ -88,7 +92,10 @@ fn every_routed_model_fits_with_proposed_io_block() {
         let p = pipeline(k, Some(IO_BLOCK_PROPOSED as usize));
         let l = full(&p, IO_BLOCK_PROPOSED);
         // 合计 = Pipeline 声明 + 平台预算（逐项硬加）
-        let platform_ms: f64 = platform(IO_BLOCK_PROPOSED).iter().map(LatencyItem::ms).sum();
+        let platform_ms: f64 = platform(IO_BLOCK_PROPOSED)
+            .iter()
+            .map(LatencyItem::ms)
+            .sum();
         assert!((l.total_ms() - (ms(p.latency_samples()) + platform_ms)).abs() < 1e-9);
         if let Err(t) = l.check(LATENCY_BUDGET_MS) {
             panic!(
