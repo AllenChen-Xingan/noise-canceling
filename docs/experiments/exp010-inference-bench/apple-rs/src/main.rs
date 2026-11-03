@@ -1,1 +1,371 @@
-fn main(){}
+//! exp010 · 苹果引擎基准（从 Rust 调用，D68）。口径与字段同 rustbe 的 `bench/src/main.rs`（正本在它顶部注释）。
+//!
+//! 子命令：
+//!   bench <coreml|bnns> <模型> <转储前缀> --model gtcrn|fem [选项]
+//!       模型：coreml 吃 .mlpackage 或 .mlmodelc；bnns 吃 .mlmodelc（用 `compile` 子命令编出来）
+//!       转储前缀：rustbe `--dump-io` 写出的 `<前缀>.in.f32` / `<前缀>.ort.f32`
+//!       选项：--units cpu|gpu|ane|all（coreml）· --state（coreml 有状态版）· --multi（bnns 多线程编译，对照用）
+//!             --fem-json <convert_fem.json>（fem 的缓存形状）· --frames 6000 · --warmup 200 · --parity-frames 610
+//!             --pace-ms 0 · --qos ui|default
+//!   compile <模型.mlpackage> <输出.mlmodelc>     Core ML 编译（给 bnns 用）
+//!   selftest                                    检查两种分配计数器真的在数
+//! 输出一行 JSON（stdout）。
+//!
+//! 同口径：第 0 帧冷启动，接着预热，再计时；输入不够就循环（转储本身已按 mix.wav 循环排好）。
+//! 逐值一致只比前 --parity-frames 帧，算法同 rustbe parity：最大绝对差 · 整段 SNR · 逐帧最小 SNR（只计参考能量
+//! ≥ 平均帧能量 1e-4 的帧）· 非有限值个数 · first_bad（差 > 1e-3 或任一边非有限的第一个位置，下标是帧内平铺下标）。
+//! 计时只包一次 `Backend::run`（含写入输入、读出输出，不含 STFT）。
+
+mod alloc;
+mod bnns;
+mod coreml;
+
+use std::time::Instant;
+
+#[global_allocator]
+static A: alloc::Counting = alloc::Counting;
+
+const BINS: usize = 257;
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum ModelKind {
+    Gtcrn,
+    Fem,
+}
+
+impl ModelKind {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Gtcrn => "gtcrn",
+            Self::Fem => "fastenhancer_m",
+        }
+    }
+    /// 转储里每帧的 f32 个数
+    pub fn per_frame(self) -> usize {
+        match self {
+            Self::Gtcrn => 2 * BINS,
+            Self::Fem => 160,
+        }
+    }
+    pub fn io_shape(self) -> Vec<usize> {
+        match self {
+            Self::Gtcrn => vec![1, BINS, 1, 2],
+            Self::Fem => vec![1, 160],
+        }
+    }
+    pub fn input_name(self) -> &'static str {
+        match self {
+            Self::Gtcrn => "mix",
+            Self::Fem => "wav_in",
+        }
+    }
+    pub fn output_name(self) -> &'static str {
+        match self {
+            Self::Gtcrn => "enh",
+            Self::Fem => "wav_out",
+        }
+    }
+    pub fn cache_names(self) -> (Vec<String>, Vec<String>) {
+        match self {
+            Self::Gtcrn => {
+                let n = ["conv_cache", "tra_cache", "inter_cache"];
+                (n.iter().map(|s| s.to_string()).collect(), n.iter().map(|s| format!("{s}_out")).collect())
+            }
+            Self::Fem => ((0..6).map(|i| format!("cache_in_{i}")).collect(), (0..6).map(|i| format!("cache_out_{i}")).collect()),
+        }
+    }
+    /// 转储布局 → 模型输入布局。GTCRN：re[257] 再 im[257] → [1,257,1,2] 交错。
+    pub fn pack_input(self, src: &[f32], dst: &mut [f32]) {
+        match self {
+            Self::Gtcrn => {
+                for k in 0..BINS {
+                    dst[2 * k] = src[k];
+                    dst[2 * k + 1] = src[BINS + k];
+                }
+            }
+            Self::Fem => dst.copy_from_slice(src),
+        }
+    }
+    pub fn unpack_output(self, src: &[f32], dst: &mut [f32]) {
+        match self {
+            Self::Gtcrn => {
+                for k in 0..BINS {
+                    dst[k] = src[2 * k];
+                    dst[BINS + k] = src[2 * k + 1];
+                }
+            }
+            Self::Fem => dst.copy_from_slice(src),
+        }
+    }
+}
+
+/// 一个后端跑一帧：input / output 都是转储布局。实现必须在热路径上不经 Rust 分配器（由 rust_allocs 字段核对）。
+pub trait Backend {
+    fn run(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), String>;
+}
+
+fn read_f32(p: &str) -> Result<Vec<f32>, String> {
+    let b = std::fs::read(p).map_err(|e| format!("读不到 {p}：{e}"))?;
+    Ok(b.chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect())
+}
+
+fn cpu_seconds() -> f64 {
+    let mut u: libc::rusage = unsafe { std::mem::zeroed() };
+    unsafe { libc::getrusage(libc::RUSAGE_SELF, &mut u) };
+    let t = |v: libc::timeval| v.tv_sec as f64 + v.tv_usec as f64 / 1e6;
+    t(u.ru_utime) + t(u.ru_stime)
+}
+
+/// 同 rustbe：下标 = round((n-1)·p)
+fn pct(sorted: &[f64], p: f64) -> f64 {
+    let i = ((sorted.len() as f64 - 1.0) * p).round() as usize;
+    sorted[i.min(sorted.len() - 1)]
+}
+
+struct Opts {
+    pos: Vec<String>,
+    flags: std::collections::HashMap<String, String>,
+}
+impl Opts {
+    fn parse(a: &[String]) -> Self {
+        let (mut pos, mut flags) = (Vec::new(), std::collections::HashMap::new());
+        let mut i = 0;
+        while i < a.len() {
+            if let Some(f) = a[i].strip_prefix("--") {
+                if matches!(f, "state" | "multi") {
+                    flags.insert(f.to_string(), "1".to_string());
+                    i += 1;
+                } else {
+                    flags.insert(f.to_string(), a.get(i + 1).cloned().unwrap_or_default());
+                    i += 2;
+                }
+            } else {
+                pos.push(a[i].clone());
+                i += 1;
+            }
+        }
+        Self { pos, flags }
+    }
+    fn get(&self, k: &str, d: &str) -> String {
+        self.flags.get(k).cloned().unwrap_or_else(|| d.to_string())
+    }
+    fn num<T: std::str::FromStr>(&self, k: &str, d: T) -> T {
+        self.flags.get(k).and_then(|v| v.parse().ok()).unwrap_or(d)
+    }
+}
+
+/// 缓存形状：GTCRN 固定；FE-M 从 convert_fem.json 的 shapes 读。
+fn cache_shapes(kind: ModelKind, fem_json: &str) -> Result<Vec<Vec<usize>>, String> {
+    match kind {
+        ModelKind::Gtcrn => Ok(vec![vec![2, 1, 16, 16, 33], vec![2, 3, 1, 1, 16], vec![2, 1, 33, 16]]),
+        ModelKind::Fem => {
+            let j: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(fem_json).map_err(|e| format!("FE-M 要 --fem-json：{e}"))?)
+                    .map_err(|e| e.to_string())?;
+            (0..6)
+                .map(|i| {
+                    j["shapes"][format!("cache_in_{i}")]
+                        .as_array()
+                        .map(|a| a.iter().map(|v| v.as_u64().unwrap() as usize).collect())
+                        .ok_or(format!("convert_fem.json 里没有 cache_in_{i}"))
+                })
+                .collect()
+        }
+    }
+}
+
+fn bench(o: &Opts) -> Result<(), String> {
+    let (be_name, model_path, prefix) = (o.pos[1].as_str(), o.pos[2].as_str(), o.pos[3].as_str());
+    let kind = match o.get("model", "").as_str() {
+        "gtcrn" => ModelKind::Gtcrn,
+        "fem" => ModelKind::Fem,
+        _ => return Err("--model gtcrn|fem".into()),
+    };
+    let frames: usize = o.num("frames", 6000);
+    let warmup: usize = o.num("warmup", 200);
+    let parity_n: usize = o.num("parity-frames", 610);
+    let pace: f64 = o.num("pace-ms", 0.0);
+    let qos = o.get("qos", "ui");
+    if qos == "ui" {
+        let rc = unsafe { libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE, 0) };
+        if rc != 0 {
+            return Err(format!("设 QoS 失败 rc={rc}"));
+        }
+    } else if qos != "default" {
+        return Err("--qos 只收 ui / default".into());
+    }
+
+    let per = kind.per_frame();
+    let input = read_f32(&format!("{prefix}.in.f32"))?;
+    let refo = read_f32(&format!("{prefix}.ort.f32"))?;
+    if input.is_empty() || input.len() != refo.len() || input.len() % per != 0 {
+        return Err("in/ort 帧数不对".into());
+    }
+    let n_in = input.len() / per;
+    let shapes = cache_shapes(kind, &o.get("fem-json", ""))?;
+
+    alloc::install_process_hook();
+    let t0 = Instant::now();
+    let (mut be, compile_ms, backend, extra): (Box<dyn Backend>, f64, String, String) = match be_name {
+        "coreml" => {
+            let unit = o.get("units", "cpu");
+            let st = o.flags.contains_key("state");
+            let m = coreml::CoreMl::open(model_path, &unit, kind, &shapes, st)?;
+            let c = m.compile_ms;
+            (Box::new(m), c, format!("coreml-{unit}{}", if st { "-state" } else { "" }), "{}".into())
+        }
+        "bnns" => {
+            let multi = o.flags.contains_key("multi");
+            let sizes: Vec<usize> = shapes.iter().map(|s| s.iter().product()).collect();
+            let m = bnns::Bnns::open(model_path, kind, &sizes, !multi)?;
+            let (c, info) = (m.compile_ms, m.info.clone());
+            (Box::new(m), c, format!("bnns-graph{}", if multi { "-multi" } else { "" }), info)
+        }
+        _ => return Err("后端只收 coreml / bnns（mlx 见 README）".into()),
+    };
+    let open_ms = t0.elapsed().as_secs_f64() * 1e3 - compile_ms;
+
+    let total = 1 + warmup + frames;
+    let t0w = 1 + warmup;
+    let mut times = Vec::with_capacity(frames);
+    let mut out = vec![0f32; per];
+    let (mut first_ms, mut nonfinite_frames) = (0.0, 0usize);
+    let (mut max_abs, mut sig, mut err) = (0.0f64, 0.0f64, 0.0f64);
+    let (mut worst, mut first_bad, mut nonfinite_values) = (0usize, None, 0usize);
+    let pn = parity_n.min(n_in).min(total);
+    let mut per_frame = Vec::with_capacity(pn);
+    let (mut ra0, mut pa0, mut c0) = (0, 0, 0.0);
+    let mut w0 = Instant::now();
+    for f in 0..total {
+        if f == t0w {
+            ra0 = alloc::rust_allocs();
+            pa0 = alloc::process_allocs();
+            c0 = cpu_seconds();
+            w0 = Instant::now();
+        }
+        if pace > 0.0 && f >= t0w {
+            let due = (f - t0w) as f64 * pace;
+            let now = w0.elapsed().as_secs_f64() * 1e3;
+            if due > now {
+                std::thread::sleep(std::time::Duration::from_secs_f64((due - now) / 1e3));
+            }
+        }
+        let x = &input[(f % n_in) * per..(f % n_in + 1) * per];
+        let t = Instant::now();
+        be.run(x, &mut out)?;
+        let dt = t.elapsed().as_secs_f64() * 1e3;
+        if f == 0 {
+            first_ms = dt;
+        }
+        if f >= t0w {
+            times.push(dt);
+            if !out.iter().all(|v| v.is_finite()) {
+                nonfinite_frames += 1;
+            }
+        }
+        if f < pn {
+            let r = &refo[f * per..(f + 1) * per];
+            let (mut fs, mut fe) = (0.0f64, 0.0f64);
+            for (k, (&p, &q)) in r.iter().zip(&out).enumerate() {
+                let bad_val = !p.is_finite() || !q.is_finite();
+                if bad_val {
+                    nonfinite_values += 1;
+                }
+                let d = (p as f64 - q as f64).abs();
+                fs += (p as f64).powi(2);
+                fe += d * d;
+                if d > max_abs || d.is_nan() {
+                    max_abs = if d.is_nan() { f64::NAN } else { d };
+                    worst = f;
+                }
+                if (bad_val || !(d <= 1e-3)) && first_bad.is_none() {
+                    first_bad = Some((f, k));
+                }
+            }
+            sig += fs;
+            err += fe;
+            per_frame.push((fs, fe));
+        }
+    }
+    let wall = w0.elapsed().as_secs_f64();
+    let cpu = cpu_seconds() - c0;
+    let rust_allocs = (alloc::rust_allocs() - ra0) as f64 / frames as f64;
+    let proc_allocs = (alloc::process_allocs() - pa0) as f64 / frames as f64;
+    let mean = times.iter().sum::<f64>() / times.len() as f64;
+    times.sort_by(|a, b| a.total_cmp(b));
+    let mean_e = sig / pn.max(1) as f64;
+    let min_frame_snr = per_frame
+        .iter()
+        .filter(|(s, _)| *s >= 1e-4 * mean_e)
+        .map(|(s, e)| 10.0 * (s / e.max(1e-300)).log10())
+        .fold(f64::INFINITY, f64::min);
+    println!(
+        "{{\"model\":\"{}\",\"backend\":\"{backend}\",\"artifact\":\"{}\",\"frames\":{frames},\"warmup\":{warmup},\"pace_ms\":{pace},\"qos\":\"{qos}\",\
+\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{mean:.4},\
+\"ort_env_ms\":0.00,\"compile_ms\":{compile_ms:.2},\"open_ms\":{open_ms:.2},\"first_frame_ms\":{first_ms:.3},\"cpu_over_wall\":{:.3},\
+\"rust_allocs_per_frame\":{rust_allocs:.3},\"process_allocs_per_frame\":{proc_allocs:.3},\"nonfinite_frames\":{nonfinite_frames},\
+\"parity_frames\":{pn},\"parity_max_abs\":{max_abs:.3e},\"parity_worst_frame\":{worst},\"parity_snr_db\":{:.2},\
+\"parity_min_frame_snr_db\":{min_frame_snr:.2},\"parity_nonfinite_values\":{nonfinite_values},\"parity_first_bad\":\"{first_bad:?}\",\"extra\":{extra}}}",
+        kind.name(),
+        std::path::Path::new(model_path).file_name().map(|s| s.to_string_lossy()).unwrap_or_default(),
+        pct(&times, 0.10),
+        pct(&times, 0.50),
+        pct(&times, 0.90),
+        pct(&times, 0.99),
+        pct(&times, 0.999),
+        times[times.len() - 1],
+        cpu / wall,
+        10.0 * (sig / err.max(1e-300)).log10(),
+    );
+    Ok(())
+}
+
+/// 计数器自检：若钩子没生效，所有「每帧 0 次分配」的结论都不可信。
+fn selftest() -> Result<(), String> {
+    alloc::install_process_hook();
+    let (r0, p0) = (alloc::rust_allocs(), alloc::process_allocs());
+    for _ in 0..1000 {
+        let p = unsafe { libc::malloc(64) };
+        std::hint::black_box(p);
+        unsafe { libc::free(p) };
+    }
+    let p1 = alloc::process_allocs();
+    let v: Vec<Box<u64>> = (0..1000).map(Box::new).collect();
+    std::hint::black_box(&v);
+    let (r2, p2) = (alloc::rust_allocs(), alloc::process_allocs());
+    let ok = p1 - p0 >= 1000 && r2 - r0 >= 1000 && p2 - p1 >= 1000;
+    println!(
+        "{{\"selftest\":\"{}\",\"libc_malloc_seen_by_process_hook\":{},\"rust_allocs_seen\":{},\"rust_allocs_seen_by_process_hook\":{}}}",
+        if ok { "pass" } else { "FAIL" },
+        p1 - p0,
+        r2 - r0,
+        p2 - p1
+    );
+    if ok { Ok(()) } else { Err("分配计数器自检失败".into()) }
+}
+
+fn main() {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let o = Opts::parse(&args);
+    let r = match o.pos.first().map(String::as_str) {
+        Some("bench") if o.pos.len() >= 4 => bench(&o),
+        Some("compile") if o.pos.len() >= 3 => coreml::compile(&o.pos[1]).and_then(|(p, ms)| {
+            let dst = std::path::Path::new(&o.pos[2]);
+            if dst.exists() {
+                return Err(format!("{} 已存在，不覆盖（换个 build 目录）", dst.display()));
+            }
+            let st = std::process::Command::new("cp").arg("-R").arg(&p).arg(dst).status().map_err(|e| e.to_string())?;
+            if !st.success() {
+                return Err("复制编译产物失败".into());
+            }
+            println!("{{\"compiled\":\"{}\",\"compile_ms\":{ms:.2}}}", dst.display());
+            Ok(())
+        }),
+        Some("selftest") => selftest(),
+        _ => Err("用法见 src/main.rs 顶部".into()),
+    };
+    if let Err(e) = r {
+        eprintln!("出错：{e}");
+        std::process::exit(2);
+    }
+}
