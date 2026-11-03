@@ -25,3 +25,42 @@
 [17:17:36] 转 FE-M
 [17:17:37] ERROR convert_fem
 [17:17:37] 完成 20261102-171500-a1
+[17:18:26] build 20261102-171500-a1 → /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-171500-a1 · 结果 /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-engine/docs/experiments/exp010-inference-bench/apple/results/20261102-171500-a1
+[17:18:26] 用 rustbe 的程序写转储（不重编它，只用现成二进制）
+[17:18:36] cargo build apple-rs
+    Updating crates.io index
+     Locking 11 packages to highest Rust 1.99.1 compatible versions
+      Adding itoa v1.0.18
+      Adding memchr v2.8.3
+      Adding proc-macro2 v1.0.107
+      Adding quote v1.0.47
+      Adding serde v1.0.229
+      Adding serde_core v1.0.229
+      Adding serde_derive v1.0.229
+      Adding serde_json v1.0.154
+      Adding syn v3.0.9
+      Adding unicode-ident v1.0.27
+      Adding zmij v1.0.23
+   Compiling objc2 v0.6.5
+   Compiling objc2-encode v4.1.0
+   Compiling bitflags v2.13.2
+   Compiling libc v0.2.191
+   Compiling zmij v1.0.23
+   Compiling serde_core v1.0.229
+   Compiling serde_json v1.0.154
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling objc2-core-foundation v0.3.2
+   Compiling block2 v0.6.2
+   Compiling objc2-foundation v0.3.2
+   Compiling objc2-image-io v0.3.2
+   Compiling objc2-core-video v0.3.2
+   Compiling objc2-core-graphics v0.3.2
+   Compiling objc2-metal v0.3.2
+   Compiling objc2-core-ml v0.3.2
+   Compiling exp010-apple v0.1.0 (/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-engine/docs/experiments/exp010-inference-bench/apple-rs)
+    Finished `release` profile [optimized + debuginfo] target(s) in 6.41s
+build/bench_coreml
+build/bench_bnns
+build/libvdn_alloc.dylib
+[17:18:46] 完成 20261102-171500-a1
