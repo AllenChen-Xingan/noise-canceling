@@ -64,8 +64,10 @@ pub struct Config {
     pub model: ModelChoice,
     /// 模型文件；`None` = 按 vdn-models 的默认路径查找
     pub model_path: Option<PathBuf>,
-    /// POSIX 共享内存名：以 `/` 开头，macOS 上总长 ≤ 31
+    /// 降噪总线名（降噪进程建；Raw / Processed / 心跳）。规则见 `validate_bus_name`
     pub bus_name: String,
+    /// Out 总线名（送音进程建，只用 Out 环；虚拟麦克风插件按这个名字连）
+    pub out_bus_name: String,
     /// 心跳多久不动就切原声（ms）
     pub heartbeat_timeout_ms: u32,
     /// 环余量（48 kHz 样本）：降噪进程开头往 Processed 先推这么多个零，让送音端每块都取得到。
@@ -86,6 +88,7 @@ impl Default for Config {
             model: ModelChoice::Gtcrn,
             model_path: None,
             bus_name: Self::DEFAULT_BUS.to_owned(),
+            out_bus_name: Self::DEFAULT_OUT_BUS.to_owned(),
             heartbeat_timeout_ms: Self::DEFAULT_HEARTBEAT_MS,
             lead_frames: Self::DEFAULT_LEAD,
             denoise_block: Self::DEFAULT_DENOISE_BLOCK,
@@ -97,6 +100,7 @@ impl Config {
     /// 2 ms @ 48 kHz（规约提议的 IO 块；480 时环余量至少要盖住 10 ms，人定修延迟 2026-11-02）
     pub const DEFAULT_BLOCK: usize = 96;
     pub const DEFAULT_BUS: &'static str = "/vdn-bus";
+    pub const DEFAULT_OUT_BUS: &'static str = "/vdn-out";
     /// 288 = 6 ms。**暂定，待 Workgroup 后复测**（大总管定 2026-11-02）：release V7 基线里空闲时推理那块约 3 ms，
     /// 144 / 96 都有处理后欠载，192–384 空闲 3 次无欠载（`docs/experiments/exp-v7-latency/`）
     pub const DEFAULT_LEAD: usize = 288;
@@ -171,6 +175,10 @@ impl Config {
             )));
         }
         validate_bus_name(&self.bus_name)?;
+        validate_bus_name(&self.out_bus_name)?;
+        if self.bus_name == self.out_bus_name {
+            return Err(ConfigError::Invalid(format!("bus_name 和 out_bus_name 不能相同（{}）", self.bus_name)));
+        }
         for (k, v) in [
             ("input_device", &self.input_device),
             ("output_device", &self.output_device),
