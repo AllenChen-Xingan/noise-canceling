@@ -10,7 +10,8 @@
 | 手下 | 线 | 管的实体 |
 |---|---|---|
 | applebe | 019 苹果引擎（Core ML · BNNS Graph · MLX）+ 总方案 · #45 · `../noise_canceling-engine` | 推理后端 · 模型 · 评测器 |
-| rustbe | exp010 纯 Rust（手写 GTCRN · tract / candle / burn）+ 基准程序 · #51 · `../noise_canceling-rustbe` | 推理后端 · 模型 · 评测器 |
+| rustbe | exp010 纯 Rust（手写 GTCRN · tract / candle / burn）+ 基准程序 · #51 · ✅ PR #55 已合并 | 推理后端 · 模型 · 评测器 |
+| fastpath | 020 / exp012 数学上更好：下界分析 · 等价改写 · 算子与 DSP 优化 · 他人做法 · #58 · `../noise_canceling-fastpath` | 推理后端 · 模型 · 评测器 |
 
 上一件大事「把效果好不好变成能量的尺子」✅ 2026-11-02 收口（#47 #48 #49 #50）。
 
@@ -45,6 +46,7 @@
 | p2fix | 让 vdn-speaker 过架构闸门（拆出离线实验工具 crate · 改 tier） | `_tmp/20261031-b4/p2fix.md` | p2 worktree | 完成（tidy / check-deps 全绿），随 PR #32 合并，窗口已关 |
 | applebe | b8 · 019 苹果引擎 + 总方案 · #45 · `research/019-apple-inference` | `_tmp/20261102-b8/applebe.md` | engine worktree `state/handoff/engine.md` | 已报到（noise-canceling-engine-05）；调研 workflow 8 代理已批 |
 | rustbe | b8 · exp010 纯 Rust + 基准程序 · #51 · `exp/010-rust-backend` | `_tmp/20261102-b8/rustbe.md` | rustbe worktree `state/handoff/rustbe.md` | 完成，PR #55 已合并（issue #51 关），远端分支已删，窗口已关；worktree 保留待清 |
+| fastpath | b8 · 020 / exp012 数学上更好 · #58 · `exp/012-fastpath` | `_tmp/20261102-b8/fastpath.md` | fastpath worktree `state/handoff/fastpath.md` | 已派 |
 
 ## 规矩
 
