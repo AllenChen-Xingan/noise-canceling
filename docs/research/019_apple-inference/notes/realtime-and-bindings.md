@@ -7,8 +7,8 @@
 
 ## 0. 一句话结论
 
-**四个苹果引擎里，只有 BNNSGraph（`Accelerate` 里的 CPU 图执行器）在官方承诺和第三方 RTSan 实测两头都站得住：预分配工作区、单线程编译后，执行这一步不分配、不加锁。** Core ML 每次预测都要新建 Objective-C 对象，只能当 B 档「登记豁免」用，和今天的 ORT 同一个待遇。Core ML 走神经引擎（ANE）时，每次调用要阻塞等硬件中断，有约 0.2 ms 的固定下限（M1 数据）。MLX 每次 `eval` 都要过 `std::function`、互斥锁、条件变量。Metal 每帧要提交命令缓冲再等 GPU。这三条路都不该直接放在推理线程的每帧路径上。
-**最大的硬冲突**：BNNSGraph 和 Core ML 的 `MLState` 都要求 macOS 15+，而人定的最低系统是 macOS 14.2+（D07，`docs/plan/001_decisions-20261029-b1.md:55`）。
+**四个苹果引擎里，BNNSGraph（`Accelerate` 里的 CPU 图执行器）最有希望直接放进推理线程，但还没被证实。** 头文件只承诺「满足四个条件就不分配」，没承诺不加锁、不做系统调用【官方】`bnns_graph.h:705-711`。第三方的 RTSan 检查只跑了一个最小循环 100 次【实测-他人】DAFx26 §3.3。所以它是「待本机用 GTCRN 复测」，不是「已站得住」（怀疑派改）。Core ML 每次预测都要新建 Objective-C 对象，只能当 B 档「登记豁免」用，和今天的 ORT 同一个待遇。Core ML 走神经引擎（ANE）时，每次调用要阻塞等硬件中断，有约 0.2 ms 的固定下限（M1、私有接口数据）。**而且 ANE 对我们两个模型基本用不上**：ANE 不算 fp32，GRU 在 ANE 上没有执行路径（见 §1 ANE 行）。MLX 每次 `eval` 都要过 `std::function`、互斥锁、条件变量。Metal 每帧要提交命令缓冲再等 GPU。这三条路都不该直接放在推理线程的每帧路径上。
+**最大的硬冲突**：BNNSGraph、Core ML 的 `MLState`、`FastPrediction` 优化提示都要求 macOS 15+，`MLComputePlan` 要 14.4+；而人定的最低系统是 macOS 14.2+（D07，`docs/plan/001_decisions-20261029-b1.md:55`）【官方】`bnns_graph.h` 各函数；`MLState.h:42`；`MLOptimizationHints.h:39`；`MLComputePlan.h:57`。
 
 ## 1. 每个引擎在推理线程上会做什么
 
@@ -16,7 +16,7 @@
 
 | 引擎 · 每帧入口 | 分配 | 锁 / 阻塞等待 | Objective-C 运行时 | 跨进程 | 判定 |
 |---|---|---|---|---|---|
-| **BNNSGraph** · `BNNSGraphContextExecute` | 满足四条件就**不分配**：传了工作区、图里所有形状可定界、不传新形状、输出由调用方提供【官方】`SDK:…/vecLib.framework/Headers/BNNS/bnns_graph.h:705-711` | 头文件没写锁。WWDC24 的说法是「执行阶段不分配、不开多线程」【官方】WWDC24 10211。默认多线程，要 `BNNSGraphCompileOptionsSetTargetSingleThread(true)`【官方】`bnns_graph.h:192-195` | 纯 C 接口，不碰 | 否（纯 CPU）【推断】 | **能直接调**（B 档，大概率也够 A 档的标准，见 §5） |
+| **BNNSGraph** · `BNNSGraphContextExecute` | 满足四条件就**不分配**：传了工作区、图里所有形状可定界、不传新形状、输出由调用方提供【官方】`SDK:…/vecLib.framework/Headers/BNNS/bnns_graph.h:705-711` | 头文件没写锁。WWDC24 的原话是「实时处理的主要要求是执行阶段不分配、不开多线程」，**也没说不加锁**【官方】WWDC24 10211（怀疑派核对过讲稿）。DAFx26 写「Apple states … acquires no locks」并引 WWDC24，这句比原讲稿说得重【实测-他人，转述有误】。默认多线程，要 `BNNSGraphCompileOptionsSetTargetSingleThread(true)`【官方】`bnns_graph.h:192-195` | 纯 C 接口，不碰 | 否（纯 CPU）【推断】 | **有希望直接调**（B 档）。A 档不评：送音线程本来就不碰推理库（见文首）；「够 A 档」没有证据（怀疑派删） |
 | **Core ML** · `-[MLModel predictionFromFeatures:options:error:]` | **每次都分配**：返回值是新的 `id<MLFeatureProvider>`（objc2 里是 `Retained<…>`）【官方】`SDK:…/CoreML.framework/Headers/MLModel.h:76-78`；docs.rs `objc2-core-ml` 0.3.2 `MLModel`。`outputBackings` 只是「建议」，框架可以不用、自己再分配一块【官方】`MLPredictionOptions.h:26-39` | 未公开。走 ANE 时要等中断，见下一行 | **碰**：消息发送、引用计数；无参数版本的 `error` 是 `NSError * __autoreleasing *`【官方】`MLModel.h:67`，出错时对象进自动释放池 | CPU / GPU 在本进程内【推断】；ANE 见下一行 | **只能登记豁免**（B 档），不能进 A 档 |
 | **Core ML → ANE**（`MLComputeUnitsCPUAndNeuralEngine` / `All`） | 同上，另有输入输出 fp16 拷贝（M1 约 25 µs）【实测-他人】arXiv 2606.22283 §2.3 表 2.3 | **阻塞等硬件**：提交后完成走中断，每次推理约两次中断；驱动全系统**同时只放一条固件命令**，两个线程同时提交会排队（实测 1.04 倍）【实测-他人】同文 §2.2-2.4 | 同上 | **每帧不过守护进程**：`aned` 只管编译、加载、实例化；每次推理由客户端直接调内核驱动（`IOConnectCallAsyncMethod` 2 号选择子）【实测-他人，反编译】同文 §5.1、§5.2.2。本机有 `/usr/libexec/aned`、`aneuserd`【本机 ls】 | **不建议每帧直接调**：固定下限 + 全系统共享队列，尾延迟受别的进程左右【推断】 |
 | **MLX** · `mlx::core::eval` | 惰性图：每帧要新建数组节点；任务以 `std::function<void()>` 入队，这一步会分配【源码】`mlx/scheduler.h`（`enqueue(Stream, std::function<void()>)`） | 有 `std::mutex`、`std::shared_mutex`、`std::condition_variable`，`wait_for_one` 里 `completion_cv.wait`【源码】`https://github.com/ml-explore/mlx/blob/main/mlx/scheduler.h` | Metal 后端会碰（命令缓冲是 Objective-C 对象）【推断】 | 否 | **不能直接调** |
