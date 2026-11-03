@@ -14,7 +14,10 @@
 - [x] 改 `.42cog/cog.md`（types · speaker · polish · scene 四行）、`src/speaker/README.md`
 - [x] 编译测试（锁空档，2026-11-02 约 20:2x）：`cargo run -p xtask -- ci` 全绿（含 `test --workspace`）。首跑被新 tidy 规则抓到 polish AGC 的私有底噪变量 `floor_db`（撞参数名），改名 `noise_floor_db`，行为不变
 - [x] codex 第 1 轮：P1×1 P2×5 全部属实已改（记录 `docs/reviews/011_types-single-source-codex.md`）
-- [ ] codex 第 2 轮（进行中）；之后新加的 engine 边界测试待下个空档编译
+- [x] codex 第 2 轮：P0×0 P1×0 P2×5，全部属实已改
+- [x] codex 第 3 轮：P0×0 P1×0 P2×3，全部属实已改；**连续两轮无 P0/P1，已达停止线**
+- [x] 复跑编译测试（锁空档，2026-11-02）：`cargo fmt --all` + `cargo run -p xtask -- ci` 全绿；测试 372 过 · 0 败 · 5 忽略（都是本分支之前就有的人工跑测试，本分支没加 `#[ignore]`）
+- [x] PR 正文草稿 `state/handoff/single-pr.md`
 
 ## 镜像 ↔ 正本分歧（读源码比对，2026-11-02）
 
@@ -33,7 +36,7 @@
 | 9 | polish | `SpectralStage`（频域后处理 trait）+ `Complex32` 再导出 | 有 | **没有** | ⚠️ 正本缺类型，已报大总管，定方案 A：它不是镜像而是 polish 自己的草案扩展 trait，留在 polish，搬到 `spectral_stage.rs` |
 
 ## 下一步
-codex 第 2 轮 → 改 → 下个编译空档复跑 `xtask ci` → 收尾报告。
+收尾报告已发大总管；等验收。不做 git 写操作。
 
 ## 技术决定（我定的，理由）
 - **描述表的范围是 AI 按物理意义 + 现有取值定的**（默认值全部沿用原初值，行为不变）；写在 `desc.rs` 头注释「范围待标定」

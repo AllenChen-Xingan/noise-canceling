@@ -29,7 +29,7 @@ Closes #56
   - cli：`safety_args_follow_desc_table`
   - xtask：R-MIRROR / R-PARAM 正例、负例、词法剥离、描述表解析、整仓通过（`repo_passes`）
   - 每条「同表」测试都是：默认值逐字段等于表 → 取表的边界外一点造输入 → `validate` 报的是那一条 → `clamped` 夹到边界
-- 跑了哪些（命令 + 结果）：`cargo run -p xtask -- ci`（fmt · clippy -D warnings · test --workspace · tidy · check-deps · cargo-deny）：<收尾时填最后一次结果>
+- 跑了哪些（命令 + 结果）：`cargo run -p xtask -- ci`（fmt · clippy -D warnings · test --workspace · tidy · check-deps · cargo-deny）：2026-11-02 全绿（`cargo fmt --all` 后跑；测试 372 过 · 0 败 · 5 忽略〔均为已有的人工跑测试〕；含 codex 第 2、3 轮修改）
 - 测不了的：无
 
 ## 唯一真相源（CLAUDE.md 第五节第 5 条）
