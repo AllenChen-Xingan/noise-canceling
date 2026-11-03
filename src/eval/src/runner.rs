@@ -22,8 +22,8 @@ use crate::{Level, Score, Verdict, wav};
 
 mod gate;
 mod real;
-use gate::{decide, fmt_val, level_of};
 pub use gate::{Baseline, Gate, baseline_delta, baseline_key};
+use gate::{decide, level_of};
 pub use real::load_real;
 
 /// QA 层的额外评分器（ASR、DNSMOS）。CI 层传 `None`。

@@ -107,7 +107,7 @@ pub(super) fn decide(
     }
 }
 
-pub(super) fn fmt_val(s: &Score) -> String {
+fn fmt_val(s: &Score) -> String {
     match (s.value, s.threshold) {
         (Some(v), Some(t)) => format!("{v:.2} {}（线 {t}）", s.unit),
         (Some(v), None) => format!("{v:.2} {}", s.unit),
