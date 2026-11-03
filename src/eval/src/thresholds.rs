@@ -19,6 +19,8 @@ pub enum Src {
     Doc012(&'static [&'static str]),
     /// rubric denoise.md 的原文摘录
     Rubric(&'static [&'static str]),
+    /// rubric 原文摘录，但文档写的是损失量（正数），代码记成负的 dB：比对前把文档的数取负（显式登记的符号转换）
+    RubricLoss(&'static [&'static str]),
     /// 设计值：文档没给数字，理由写在这里（物理量、模拟真值、任务里写明的有意放宽）
     Design(&'static str),
     /// 没有出处：只能出现在 [`PENDING`] 里
@@ -99,11 +101,12 @@ pub const ONSET: Lines = Lines {
     )],
 };
 
-/// 量法与 rubric C3 不同：代码按 P.56 主动语音电平差（012 的定义），C3 按有声帧能量损失
+/// 量法与 rubric C3 接近：代码按主讲人有声帧把输出投影到干净参考上算能量损失（`verifiers.rs` 登记：不用 P.56），
+/// C3 按参考有声帧能量损失；差在投影去噪。C/D 线代码 −3 dB、C3 −4 dB
 pub const SPLVL: Lines = Lines {
     id: "V-SPLVL",
     edges: &[-1.0, -2.0, -3.0],
-    edges_src: Src::Rubric(&["损失 > 4 dB", "损失 > 2 dB", "损失 ≤ 1 dB"]),
+    edges_src: Src::RubricLoss(&["损失 > 4 dB", "损失 > 2 dB", "损失 ≤ 1 dB"]),
     params: &[p("min", Some(-3.0), &[(-3.0, Src::None)])],
 };
 
@@ -260,23 +263,53 @@ pub const ALL: [&Lines; 16] = [
     &SWITCH, &SIM_GATE, &SIM_FA, &SIM_QUIET, &SIM_SWLAT,
 ];
 
-/// 待定清单：已知不一致或没有出处的条目 `(verifier, "edges" 或参数名)`。全部是建议值，挂 012 拍板 #8 · D44。
-pub const PENDING: [(&str, &str); 7] = [
+/// 待定清单里一条的具体内容：精确到那组分档或那个数，免得同一参数上新出的错误被吞掉（codex 第 2 轮 P1 #1）。
+#[derive(Clone, Copy, Debug)]
+pub enum Pend {
+    /// 代码里这组分档与文档对不上
+    Edges(&'static [f64]),
+    /// 这个取值没有出处
+    Value(f64),
+}
+
+/// 待定清单：已知不一致或没有出处的条目。全部是建议值，挂 012 拍板 #8 · D44。
+pub const PENDING: [(&str, &str, Pend); 8] = [
     // 量法与 rubric N4 不同，数也不同（代码 2 / 4 / 6，N4 1.5 / 3 / 6）
-    ("V-TIMBRE", "edges"),
-    // 量法与 rubric C3 不同；C/D 线代码 3、C3 4
-    ("V-SPLVL", "edges"),
+    ("V-TIMBRE", "edges", Pend::Edges(&[2.0, 4.0, 6.0])),
+    // C/D 线代码 −3、C3 −4
+    ("V-SPLVL", "edges", Pend::Edges(&[-1.0, -2.0, -3.0])),
     // 过线值 −3 dB 没有出处
-    ("V-SPLVL", "min"),
+    ("V-SPLVL", "min", Pend::Value(-3.0)),
     // 只有 3 dB 有出处，1 / 2 dB 没有
-    ("V-ONSET", "edges"),
+    ("V-ONSET", "edges", Pend::Edges(&[1.0, 2.0, 3.0])),
     // −8 / −10 dB 没有出处（−6 / −20 是 rubric C2 档线）
-    ("V-NR", "max"),
-    // 0.05 没有出处
-    ("V-SIM-GATE", "max"),
-    // 0.2 没有出处
-    ("V-SIM-GATE", "onset_max"),
+    ("V-NR", "max", Pend::Value(-8.0)),
+    ("V-NR", "max", Pend::Value(-10.0)),
+    // 门控误关 0.05、词首 0.2 没有出处
+    ("V-SIM-GATE", "max", Pend::Value(0.05)),
+    ("V-SIM-GATE", "onset_max", Pend::Value(0.2)),
 ];
+
+/// 一处不一致。
+#[derive(Clone, Debug, PartialEq)]
+pub enum What {
+    /// 分档的数与文档对不上（附代码里的分档）
+    Edges(Vec<f64>),
+    /// 分档顺序不对（`Lower` 应升序、`Higher` 应降序），或登记表里查不到方向
+    EdgesOrder,
+    /// 某个取值没有出处、摘录不对、或清单里出现了表里没登记的值
+    Value(f64),
+    /// 清单不是合法 JSON
+    Suite,
+}
+
+#[derive(Clone, Debug)]
+pub struct Mismatch {
+    pub id: String,
+    pub key: String,
+    pub what: What,
+    pub why: String,
+}
 
 /// 比对时用的三份文本。
 pub struct Docs<'a> {
@@ -294,32 +327,43 @@ fn norm(s: &str) -> String {
         .join(" ")
 }
 
-/// 文本里的数（取绝对值）。
+/// 文本里的数，带正负号：`-` 紧贴数字、且前面不是字母数字时算负号（`V-1` 不算）。
 fn numbers(s: &str) -> Vec<f64> {
+    let cs: Vec<char> = s.chars().collect();
     let mut out = Vec::new();
-    let mut cur = String::new();
-    for c in s.chars().chain(std::iter::once(' ')) {
-        if c.is_ascii_digit() || (c == '.' && !cur.is_empty()) {
-            cur.push(c);
-        } else if !cur.is_empty() {
-            if let Ok(v) = cur.trim_end_matches('.').parse::<f64>() {
-                out.push(v);
+    let mut i = 0;
+    while i < cs.len() {
+        let neg = cs[i] == '-'
+            && cs.get(i + 1).is_some_and(char::is_ascii_digit)
+            && !(i > 0 && cs[i - 1].is_alphanumeric());
+        let start = if neg { i + 1 } else { i };
+        if cs.get(start).is_some_and(char::is_ascii_digit) && !(start > 0 && !neg && cs[start - 1].is_ascii_digit()) {
+            let mut j = start;
+            while j < cs.len() && (cs[j].is_ascii_digit() || (cs[j] == '.' && cs.get(j + 1).is_some_and(char::is_ascii_digit))) {
+                j += 1;
             }
-            cur.clear();
+            let t: String = cs[start..j].iter().collect();
+            if let Ok(v) = t.parse::<f64>() {
+                out.push(if neg { -v } else { v });
+            }
+            i = j;
+        } else {
+            i += 1;
         }
     }
     out
 }
 
 fn same(a: f64, b: f64) -> bool {
-    (a.abs() - b.abs()).abs() < 1e-9
+    (a - b).abs() < 1e-9
 }
 
-/// 摘录都在文档里吗；返回摘录里的数（绝对值）。摘录不在文档里 → `Err(哪段)`。
+/// 摘录都在文档里吗；返回摘录里的数（带符号，`RubricLoss` 取负）。摘录不在文档里 → `Err(哪段)`。
 fn quoted_numbers(src: Src, d: &Docs) -> Result<Option<Vec<f64>>, String> {
-    let (doc, quotes) = match src {
-        Src::Doc012(q) => (d.doc012, q),
-        Src::Rubric(q) => (d.rubric, q),
+    let (doc, quotes, sign) = match src {
+        Src::Doc012(q) => (d.doc012, q, 1.0),
+        Src::Rubric(q) => (d.rubric, q, 1.0),
+        Src::RubricLoss(q) => (d.rubric, q, -1.0),
         Src::Design(_) => return Ok(Some(Vec::new())),
         Src::None => return Ok(None),
     };
@@ -329,49 +373,68 @@ fn quoted_numbers(src: Src, d: &Docs) -> Result<Option<Vec<f64>>, String> {
         if !nd.contains(&norm(q)) {
             return Err(format!("摘录不在文档里：{q}"));
         }
-        nums.extend(numbers(&norm(q)));
+        nums.extend(numbers(&norm(q)).into_iter().map(|x| x * sign));
     }
     Ok(Some(nums))
 }
 
-/// 找出全部不一致：`(verifier, "edges" 或参数名, 说明)`。
-pub fn mismatches(table: &[&Lines], d: &Docs) -> Vec<(String, String, String)> {
+/// 分档顺序对不对：`lower` 时严格升序，否则严格降序。
+fn ordered(edges: &[f64], lower: bool) -> bool {
+    edges
+        .windows(2)
+        .all(|w| if lower { w[0] < w[1] } else { w[0] > w[1] })
+}
+
+/// 找出全部不一致。`lower_is_better(id)` 给分档方向（真仓库用 verifiers 登记表；测试可注入）。
+pub fn mismatches(
+    table: &[&Lines],
+    d: &Docs,
+    lower_is_better: &dyn Fn(&str) -> Option<bool>,
+) -> Vec<Mismatch> {
     let mut out = Vec::new();
-    let mut push = |id: &str, key: &str, why: String| {
-        out.push((id.to_string(), key.to_string(), why));
+    let mut push = |id: &str, key: &str, what: What, why: String| {
+        out.push(Mismatch {
+            id: id.to_string(),
+            key: key.to_string(),
+            what,
+            why,
+        });
     };
     for l in table {
-        // 分档：摘录里的数与边界作为集合相等
+        if !l.edges.is_empty() {
+            match lower_is_better(l.id) {
+                Some(lower) if ordered(l.edges, lower) => {}
+                Some(_) => push(l.id, "edges", What::EdgesOrder, format!("分档 {:?} 顺序不对", l.edges)),
+                None => push(l.id, "edges", What::EdgesOrder, "登记表里查不到好坏方向".into()),
+            }
+        }
+        // 分档：摘录里的数（带符号）与边界作为集合相等
+        let edges = What::Edges(l.edges.to_vec());
         match quoted_numbers(l.edges_src, d) {
-            Err(e) => push(l.id, "edges", e),
-            Ok(None) => push(l.id, "edges", "分档没有出处".into()),
+            Err(e) => push(l.id, "edges", edges, e),
+            Ok(None) => push(l.id, "edges", edges, "分档没有出处".into()),
             Ok(Some(n)) if !matches!(l.edges_src, Src::Design(_)) => {
                 let all_in = l.edges.iter().all(|e| n.iter().any(|x| same(*x, *e)));
                 let back = n.iter().all(|x| l.edges.iter().any(|e| same(*x, *e)));
                 if !(all_in && back) {
-                    push(l.id, "edges", format!("代码 {:?} ↔ 文档 {n:?}", l.edges));
+                    push(l.id, "edges", edges, format!("代码 {:?} ↔ 文档 {n:?}", l.edges));
                 }
             }
             Ok(Some(_)) => {}
         }
-        // 参数：每个取值的数要出现在它的摘录里
+        // 参数：每个取值（带符号）要出现在它的摘录里
         for p in l.params {
             if let Some(dv) = p.default
-                && !p
-                    .values
-                    .iter()
-                    .any(|(v, _)| same(*v, dv) && v.signum() == dv.signum())
+                && !p.values.iter().any(|(v, _)| same(*v, dv))
             {
-                push(l.id, p.key, format!("默认值 {dv} 没登记在取值里"));
+                push(l.id, p.key, What::Value(dv), format!("默认值 {dv} 没登记在取值里"));
             }
             for (v, s) in p.values {
                 match quoted_numbers(*s, d) {
-                    Err(e) => push(l.id, p.key, e),
-                    Ok(None) => push(l.id, p.key, format!("{v} 没有出处")),
-                    Ok(Some(n))
-                        if !matches!(s, Src::Design(_)) && !n.iter().any(|x| same(*x, *v)) =>
-                    {
-                        push(l.id, p.key, format!("{v} 不在摘录的数 {n:?} 里"));
+                    Err(e) => push(l.id, p.key, What::Value(*v), e),
+                    Ok(None) => push(l.id, p.key, What::Value(*v), format!("{v} 没有出处")),
+                    Ok(Some(n)) if !matches!(s, Src::Design(_)) && !n.iter().any(|x| same(*x, *v)) => {
+                        push(l.id, p.key, What::Value(*v), format!("{v} 不在摘录的数 {n:?} 里"));
                     }
                     Ok(Some(_)) => {}
                 }
@@ -381,7 +444,7 @@ pub fn mismatches(table: &[&Lines], d: &Docs) -> Vec<(String, String, String)> {
     // 清单：每个阈值都要在表里登记
     for (name, text) in d.suites {
         let Ok(v) = serde_json::from_str::<Value>(text) else {
-            push(name, "-", "清单不是合法 JSON".into());
+            push(name, "-", What::Suite, "清单不是合法 JSON".into());
             continue;
         };
         let tasks = v["tasks"].as_array().cloned().unwrap_or_default();
@@ -392,16 +455,13 @@ pub fn mismatches(table: &[&Lines], d: &Docs) -> Vec<(String, String, String)> {
                     for (k, val) in g.as_object().into_iter().flatten() {
                         let Some(x) = val.as_f64() else { continue };
                         let ok = table.iter().find(|l| l.id == id).is_some_and(|l| {
-                            l.params.iter().any(|p| {
-                                p.key == k && p.values.iter().any(|(v, _)| (v - x).abs() < 1e-9)
-                            })
+                            l.params
+                                .iter()
+                                .any(|p| p.key == k && p.values.iter().any(|(v, _)| same(*v, x)))
                         });
                         if !ok {
-                            push(
-                                id,
-                                k,
-                                format!("{name} 任务 {} 的 {k} = {x} 没登记在表里", t["id"]),
-                            );
+                            let why = format!("{name} 任务 {} 的 {k} = {x} 没登记在表里", t["id"]);
+                            push(id, k, What::Value(x), why);
                         }
                     }
                 }
@@ -411,22 +471,27 @@ pub fn mismatches(table: &[&Lines], d: &Docs) -> Vec<(String, String, String)> {
     out
 }
 
+fn pend_matches(m: &Mismatch, (id, key, p): &(&str, &str, Pend)) -> bool {
+    m.id == *id
+        && m.key == *key
+        && match (&m.what, p) {
+            (What::Edges(a), Pend::Edges(b)) => a.len() == b.len() && a.iter().zip(*b).all(|(x, y)| same(*x, *y)),
+            (What::Value(a), Pend::Value(b)) => same(*a, *b),
+            _ => false,
+        }
+}
+
 /// 找到的不一致 ↔ 待定清单：多出的（新不一致）与少了的（已修好，要移出清单）都报。
-pub fn compare_pending(
-    found: &[(String, String, String)],
-    pending: &[(&str, &str)],
-) -> Vec<String> {
+pub fn compare_pending(found: &[Mismatch], pending: &[(&str, &str, Pend)]) -> Vec<String> {
     let mut errs = Vec::new();
-    for (id, key, why) in found {
-        if !pending.iter().any(|(pi, pk)| pi == id && pk == key) {
-            errs.push(format!("新的不一致（不在待定清单里）：{id} · {key}：{why}"));
+    for m in found {
+        if !pending.iter().any(|p| pend_matches(m, p)) {
+            errs.push(format!("新的不一致（不在待定清单里）：{} · {}：{}", m.id, m.key, m.why));
         }
     }
-    for (pi, pk) in pending {
-        if !found.iter().any(|(id, key, _)| id == pi && key == pk) {
-            errs.push(format!(
-                "待定清单里的 {pi} · {pk} 已经对上了：把它移出 PENDING"
-            ));
+    for p in pending {
+        if !found.iter().any(|m| pend_matches(m, p)) {
+            errs.push(format!("待定清单里的 {} · {} · {:?} 已经对上了：把它移出 PENDING", p.0, p.1, p.2));
         }
     }
     errs
