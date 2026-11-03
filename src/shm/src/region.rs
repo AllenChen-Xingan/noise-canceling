@@ -53,6 +53,7 @@ mod real {
             })
         }
 
+        #[cfg_attr(not(all(unix, feature = "posix")), allow(dead_code))] // 只有 open 的校验用
         pub(crate) fn len(&self) -> usize {
             self.len
         }

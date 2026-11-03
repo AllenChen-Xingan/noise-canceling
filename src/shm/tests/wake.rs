@@ -13,6 +13,7 @@ const CFG: BusConfig = BusConfig {
     denoise_block: 96,
 };
 
+#[cfg(all(unix, feature = "posix"))]
 fn unique_name() -> String {
     static N: AtomicU32 = AtomicU32::new(0);
     let t = std::time::SystemTime::now()
@@ -23,7 +24,9 @@ fn unique_name() -> String {
     format!("/vdn-w{:x}-{n}-{:x}", std::process::id(), t & 0xffff)
 }
 
+#[cfg(all(unix, feature = "posix"))]
 struct Cleanup(String);
+#[cfg(all(unix, feature = "posix"))]
 impl Drop for Cleanup {
     fn drop(&mut self) {
         let _ = Bus::unlink_name(&self.0);
