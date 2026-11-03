@@ -230,24 +230,35 @@ fn ids_of<T: ToTokens>(x: &T) -> BTreeSet<String> {
 /// 一个表达式算「同一条」的部分：收集标识符，遇到块边界就停（块体、`match` 分支各自另算），
 /// 不管它被包了几层（`Some(for …)`、`(for …)`、元组……；codex #71 第 4–6 轮 P2）。
 fn expr_context(e: &Expr) -> BTreeSet<String> {
-    #[derive(Default)]
-    struct Ids(BTreeSet<String>);
-    impl<'ast> Visit<'ast> for Ids {
-        fn visit_ident(&mut self, i: &'ast proc_macro2::Ident) {
-            self.0.insert(i.unraw().to_string());
-        }
-        fn visit_block(&mut self, _: &'ast syn::Block) {}
-        fn visit_expr_match(&mut self, m: &'ast syn::ExprMatch) {
-            self.visit_expr(&m.expr);
-        }
-        fn visit_macro(&mut self, m: &'ast syn::Macro) {
-            self.0.extend(ids_of(&m.path));
-            idents(m.tokens.clone(), &mut self.0);
-        }
-    }
     let mut v = Ids::default();
     v.visit_expr(e);
     v.0
+}
+
+/// 收集标识符、遇到块边界就停的访问器（[`expr_context`] 与语句级宏共用）。
+#[derive(Default)]
+struct Ids(BTreeSet<String>);
+impl<'ast> Visit<'ast> for Ids {
+    fn visit_ident(&mut self, i: &'ast proc_macro2::Ident) {
+        self.0.insert(i.unraw().to_string());
+    }
+    fn visit_block(&mut self, _: &'ast syn::Block) {}
+    fn visit_expr_match(&mut self, m: &'ast syn::ExprMatch) {
+        self.visit_expr(&m.expr);
+    }
+    fn visit_macro(&mut self, m: &'ast syn::Macro) {
+        self.0.extend(ids_of(&m.path));
+        // 宏参数能解析成表达式就照同样的块边界收集；解析不了才退回收集全部 token（codex #71 第 7 轮 P2 #2）
+        let p = syn::punctuated::Punctuated::<Expr, syn::Token![,]>::parse_terminated;
+        match syn::parse::Parser::parse2(p, m.tokens.clone()) {
+            Ok(args) => {
+                for e in &args {
+                    self.visit_expr(e);
+                }
+            }
+            Err(_) => idents(m.tokens.clone(), &mut self.0),
+        }
+    }
 }
 
 /// 一条语句里算「同一条」的部分。
@@ -263,6 +274,12 @@ fn stmt_context(s: &syn::Stmt) -> BTreeSet<String> {
                 }
             }
             a
+        }
+        // 语句级的宏（`assert!(…);`）也按块边界收集（codex #71 第 7 轮 P2 #2）
+        syn::Stmt::Macro(m) => {
+            let mut v = Ids::default();
+            v.visit_macro(&m.mac);
+            v.0
         }
         _ => ids_of(s),
     }
@@ -299,7 +316,7 @@ impl<'ast> Visit<'ast> for Finder<'_> {
     fn visit_arm(&mut self, a: &'ast syn::Arm) {
         let mut c = ids_of(&a.pat);
         if let Some((_, g)) = &a.guard {
-            c.extend(ids_of(g));
+            c.extend(expr_context(g));
         }
         // 分支值 `=> (a, b)`
         if let Expr::Tuple(t) = &*a.body
@@ -316,7 +333,7 @@ impl<'ast> Visit<'ast> for Finder<'_> {
     }
     /// 每个条件（含 `else if` 的）单独算一条，不沿用第一个条件（codex #71 第 2 轮 P2 #4）
     fn visit_expr_if(&mut self, i: &'ast syn::ExprIf) {
-        self.ctx.push(ids_of(&i.cond));
+        self.ctx.push(expr_context(&i.cond));
         self.visit_expr(&i.cond);
         self.ctx.pop();
         self.visit_block(&i.then_branch);
@@ -325,7 +342,7 @@ impl<'ast> Visit<'ast> for Finder<'_> {
         }
     }
     fn visit_expr_while(&mut self, w: &'ast syn::ExprWhile) {
-        self.ctx.push(ids_of(&w.cond));
+        self.ctx.push(expr_context(&w.cond));
         self.visit_expr(&w.cond);
         self.ctx.pop();
         self.visit_block(&w.body);

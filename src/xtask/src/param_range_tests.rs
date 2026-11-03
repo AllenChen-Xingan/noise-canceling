@@ -206,6 +206,11 @@ fn non_param_ranges_and_values_pass() {
         "let _ = (for i in 0..10 { let _ = floor_db; });",
         "let _ = Some(for i in 0..10 { let _ = floor_db; });",
         "let _ = (1, for i in 0..10 { let _ = floor_db; });",
+        // 条件、守卫、宏参数里的块也是边界（codex #71 第 7 轮 P2 #2）
+        "if (0..10).contains(&{ let _ = floor_db; 1 }) {}",
+        "while (0..10).contains(&{ let _ = floor_db; 1 }) {}",
+        "match x { y if (0..10).contains(&{ let _ = floor_db; 1 }) => {} _ => {} }",
+        "assert!((0..10).contains(&{ let _ = floor_db; 1 }));",
         "let _ = match x { _ => for i in 0..10 { let _ = floor_db; } };",
     ] {
         assert_eq!(n(body), 0, "{body}");

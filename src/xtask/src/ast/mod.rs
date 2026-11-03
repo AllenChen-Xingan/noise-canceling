@@ -125,10 +125,10 @@ pub fn cfg_attr_paths(attrs: &[Attribute]) -> Vec<String> {
     out
 }
 
-/// 文件里全部字符串字面量：（起始行，解码后的值）。按 token 走，宏参数、属性里的也算；
+/// 文件里全部字符串字面量：（起点，结束行，解码后的值）。跨行字符串的放行注释只能写在结束行，所以带上它。按 token 走，宏参数、属性里的也算；
 /// 文档注释（`///` 与 `//!`，在语法树里是 `#[doc = "…"]`）不算——它们是注释。
-pub fn str_literals(file: &syn::File) -> Vec<(modtree::Pos, String)> {
-    fn walk(ts: TokenStream, out: &mut Vec<(modtree::Pos, String)>) {
+pub fn str_literals(file: &syn::File) -> Vec<(modtree::Pos, usize, String)> {
+    fn walk(ts: TokenStream, out: &mut Vec<(modtree::Pos, usize, String)>) {
         let toks: Vec<TokenTree> = ts.into_iter().collect();
         let mut i = 0;
         while i < toks.len() {
@@ -154,14 +154,18 @@ pub fn str_literals(file: &syn::File) -> Vec<(modtree::Pos, String)> {
                 TokenTree::Literal(l) => {
                     // 字节字符串也算（`b"fastenhancer-m"`；codex #71 第 2 轮 P2 #5）
                     match syn::Lit::new(l.clone()) {
-                        syn::Lit::Str(s) => out.push((modtree::pos(l.span()), s.value())),
+                        syn::Lit::Str(s) => {
+                            out.push((modtree::pos(l.span()), l.span().end().line, s.value()))
+                        }
                         syn::Lit::ByteStr(s) => out.push((
                             modtree::pos(l.span()),
+                            l.span().end().line,
                             String::from_utf8_lossy(&s.value()).into_owned(),
                         )),
                         // C 字符串也算（`c"fastenhancer-m"`；codex #71 第 4 轮 P2 #5）
                         syn::Lit::CStr(s) => out.push((
                             modtree::pos(l.span()),
+                            l.span().end().line,
                             s.value().to_string_lossy().into_owned(),
                         )),
                         _ => {}

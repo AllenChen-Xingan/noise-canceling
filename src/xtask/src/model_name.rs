@@ -164,13 +164,14 @@ pub fn file_problems(rel: &str, src: &str, names: &[String]) -> Vec<String> {
     let tests = file_test_ranges(rel, &file);
     let lexed = lex_lines(src);
     let mut out = Vec::new();
-    for (p, s) in str_literals(&file) {
+    for (p, end, s) in str_literals(&file) {
         if in_ranges(&tests, p) {
             continue;
         }
         let line = p.0;
-        let comment = lexed.get(line - 1).map(|(_, c)| c.as_str()).unwrap_or("");
-        if has_reason(comment, ALLOW) {
+        // 放行注释写在起始行或结束行都认（跨行字符串只能写在结束行；codex #71 第 7 轮 P2 #3）
+        let allowed = |l: usize| lexed.get(l - 1).is_some_and(|(_, c)| has_reason(c, ALLOW));
+        if allowed(line) || allowed(end) {
             continue;
         }
         if let Some(n) = names.iter().find(|n| bounded_in(&s, n)) {
@@ -269,6 +270,9 @@ impl ModelId {
             "const P: &str = \"fastenhancer-m2\";\nconst Q: &str = \"x_fastenhancer_m\";\n",
             // 放行
             "const P: &str = \"w/fastenhancer_m.onnx\"; // tidy: 不是模型名：权重文件名\n",
+            // 跨行字符串的放行写在结束行（codex #71 第 7 轮 P2 #3）
+            "const P: &str = \"w/\n  fastenhancer_m.onnx\"; // tidy: 不是模型名：权重路径\n",
+            "const R: &str = r#\"w/\n  fastenhancer_m.onnx\"#; // tidy: 不是模型名：权重路径\n",
             // 单测模块不查
             "fn f() {}\n#[cfg(test)]\nmod t {\n    const A: &str = \"fastenhancer-m\";\n}\n",
             "#[cfg(test)]\n#[allow(dead_code)]\nconst A: &str = \"fastenhancer-m\";\n",

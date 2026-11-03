@@ -362,7 +362,13 @@ impl<'ast> Visit<'ast> for Walker<'_, '_> {
         self.with(fr, |w| syn::visit::visit_stmt(w, s));
     }
     fn visit_macro(&mut self, m: &'ast syn::Macro) {
-        if m.path.is_ident("include") && !self.cur().test {
+        // 路径最后一段是 include 就算：`std::include!`、`core::include!`、`r#include!`（codex #71 第 7 轮 P1 #1）
+        if m.path
+            .segments
+            .last()
+            .is_some_and(|s| s.ident.unraw() == "include")
+            && !self.cur().test
+        {
             self.b.scope.problems.push(format!(
                 "{}:{}：生产代码里用了 include!，引入的代码不在模块树里，tidy 查不到（012 第四节）",
                 self.rel,

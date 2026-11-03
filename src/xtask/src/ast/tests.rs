@@ -470,3 +470,21 @@ fn nested_cfg_attr_path() {
     assert!(!s.is_test_file("c/src/other/x.rs"));
     done(&r);
 }
+
+/// codex #71 第 7 轮 P1 #1：限定路径、原始标识符写的 include! 也认；生产 include + 测试模块引用同一文件不能把它判成测试
+#[test]
+fn qualified_include_is_an_error() {
+    let (r, s) = tree(
+        "qualinclude",
+        &[
+            (
+                "src/lib.rs",
+                "std::include!(\"shared.rs\");\n#[cfg(test)]\n#[path = \"shared.rs\"]\nmod t;\nfn f() { core::include!(\"a.rs\"); r#include!(\"b.rs\"); }\n",
+            ),
+            ("src/shared.rs", "fn s() {}\n"),
+        ],
+    );
+    assert_eq!(s.problems.len(), 3, "{:?}", s.problems);
+    assert!(s.problems.iter().all(|p| p.contains("include!")));
+    done(&r);
+}
