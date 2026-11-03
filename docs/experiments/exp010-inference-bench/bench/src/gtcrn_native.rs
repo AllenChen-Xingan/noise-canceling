@@ -161,9 +161,43 @@ impl Weights {
 
 // ───────────────────────── 积木 ─────────────────────────
 
+// ── 可选：内联多项式 exp（后端名 native-fast）──
+// 系统 libm 的 expf / tanhf 占手写版约 23% 时间（profile_native.txt），且是外部调用、挡住向量化。
+// 这里用 2^n · p(r) 的经典做法：n = round(x·log2e)，r = x − n·ln2（ln2 拆两段减小舍入），p 为 6 阶泰勒/极小化多项式，
+// 在 |r| ≤ ln2/2 上相对误差约 2e-7（推断，同 Cephes expf 的阶数）。结果不再与 libm 逐位相同，靠对拍判。
+pub static FAST: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+#[inline]
+fn fast() -> bool {
+    FAST.load(std::sync::atomic::Ordering::Relaxed)
+}
+#[inline(always)]
+fn exp_fast(x: f32) -> f32 {
+    let x = x.clamp(-87.0, 88.0);
+    let n = (x * std::f32::consts::LOG2_E).round();
+    let r = x - n * 0.693_359_4 - n * -2.121_944_4e-4; // ln2 = 0.693359375 − 2.12194440e-4
+    // Cephes expf 系数
+    let p = 1.987_569_1e-4_f32;
+    let p = p * r + 1.398_199_9e-3;
+    let p = p * r + 8.333_452e-3;
+    let p = p * r + 4.166_579_6e-2;
+    let p = p * r + 1.666_666_5e-1;
+    let p = p * r + 5.000_000_1e-1;
+    let y = p * r * r + r + 1.0;
+    f32::from_bits(((n as i32 + 127) as u32) << 23) * y
+}
+#[inline(always)]
+fn tanh_fast(x: f32) -> f32 {
+    // tanh(x) = 1 − 2 / (e^{2x} + 1)；x 很小时有相消，绝对误差约 1e-7 级（相对 tanh 的取值 ±1 可忽略）
+    1.0 - 2.0 / (exp_fast(2.0 * x) + 1.0)
+}
+
 #[inline]
 fn sigmoid(x: f32) -> f32 {
-    1.0 / (1.0 + (-x).exp())
+    if fast() { 1.0 / (1.0 + exp_fast(-x)) } else { 1.0 / (1.0 + (-x).exp()) }
+}
+#[inline]
+fn tanh_(x: f32) -> f32 {
+    if fast() { tanh_fast(x) } else { x.tanh() }
 }
 
 #[inline]
@@ -432,7 +466,7 @@ impl DeconvF {
         }
         for v in y[..self.cout * self.fout].iter_mut() {
             *v = if self.tanh {
-                v.tanh()
+                tanh_(*v)
             } else {
                 prelu(*v, self.alpha)
             };
@@ -488,7 +522,7 @@ impl Gru {
         for k in 0..nh {
             let r = sigmoid(gi[k] + gh[k]);
             let z = sigmoid(gi[nh + k] + gh[nh + k]);
-            let n = (gi[2 * nh + k] + r * gh[2 * nh + k]).tanh();
+            let n = tanh_(gi[2 * nh + k] + r * gh[2 * nh + k]);
             h[k] = (1.0 - z) * n + z * h[k];
         }
     }

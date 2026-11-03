@@ -391,12 +391,10 @@ fn open_net_with(
 ) -> Result<Box<dyn Net>, Err> {
     Ok(match (model, kind) {
         (ModelId::Gtcrn, "ort") => Box::new(OrtGtcrn::open(path)?),
-        (ModelId::Gtcrn, "native") => {
-            gtcrn_native::BLAS.store(false, Relaxed);
-            Box::new(GtcrnNative::load(path)?)
-        }
-        (ModelId::Gtcrn, "native-blas") => {
-            gtcrn_native::BLAS.store(true, Relaxed);
+        (ModelId::Gtcrn, k @ ("native" | "native-blas" | "native-fast" | "native-blas-fast")) => {
+            // 两个全局开关只在构造时设；同一进程里先后开两个不同 native 变体时，以后开的为准（对拍、基准都只开一种）
+            gtcrn_native::BLAS.store(k.contains("blas"), Relaxed);
+            gtcrn_native::FAST.store(k.contains("fast"), Relaxed);
             Box::new(GtcrnNative::load(path)?)
         }
         (ModelId::Gtcrn, "tract") => Box::new(TractGtcrn::open(path)?),
