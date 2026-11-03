@@ -86,7 +86,9 @@ for line in open(os.path.join(res, "rt.jsonl")):
     rows.append(row)
 
 idle_cpu = [v["CPU"] for v in idle_by_round.values() if v]
-noise = (max(idle_cpu) - min(idle_cpu)) if len(idle_cpu) > 1 else None
+# 噪声底和排序指标同口径：CPU + GPU + 神经引擎的总空闲功率在各轮之间的离散（codex 第 6 轮 #1）
+idle_tot = [sum(v[k] for k in ("CPU", "GPU", "ANE")) for v in idle_by_round.values() if v]
+noise = (max(idle_tot) - min(idle_tot)) if len(idle_tot) > 1 else None
 by = {}
 for r in rows:
     if "delta_mw" in r and r.get("ranked"):
@@ -101,6 +103,7 @@ for c, rs in by.items():
                     "uj_per_frame_median": round(statistics.median(r["uj_per_frame"] for r in rs), 1),
                     "p50_ms_median": statistics.median(r["p50_ms"] for r in rs)})
 summary.sort(key=lambda s: s["delta_mw_median"])
-print(json.dumps({"idle_cpu_mw_by_round": idle_cpu, "noise_floor_mw": noise, "summary": summary,
+print(json.dumps({"idle_cpu_mw_by_round": idle_cpu, "idle_total_mw_by_round": [round(x, 1) for x in idle_tot],
+                  "noise_floor_mw": noise, "noise_floor_basis": "CPU+GPU+ANE 空闲总功率的轮间极差", "summary": summary,
                   "unranked_no_window": unranked, "rows": rows},
                  ensure_ascii=False, indent=1))

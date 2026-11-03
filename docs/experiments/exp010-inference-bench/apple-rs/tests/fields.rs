@@ -4,7 +4,7 @@
 //! 规则：
 //! - rustbe 有、apple-rs 没有 → 失败（缺）
 //! - apple-rs 有、rustbe 没有、又不在下面的「苹果侧专有」清单里 → 失败（多）。清单里每个字段都写了为什么只有这边有
-//! - 真相源文件不存在 → 跳过并打印提示（例如还没 merge main 时）；`EXP010_BENCH_MAIN` 可指到别的路径
+//! - 真相源文件不存在或读不了 → **失败**（不许没比对也显示通过）；`EXP010_BENCH_MAIN` 可指到别的路径
 //! 长远：两边合成一个共用 crate，就不用再比（已转交大总管）。
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -74,10 +74,10 @@ fn println_block(src: &str, anchor: &str) -> Option<String> {
 fn bench_fields_match_rustbe() {
     let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let truth = std::env::var("EXP010_BENCH_MAIN").map(PathBuf::from).unwrap_or_else(|_| here.join("../bench/src/main.rs"));
-    let Ok(rb) = std::fs::read_to_string(&truth) else {
-        eprintln!("跳过：找不到真相源 {}（还没 merge main？或用 EXP010_BENCH_MAIN 指路径）", truth.display());
-        return;
-    };
+    // 读不到真相源就失败，不许「没比对也显示通过」（codex 第 6 轮 #4；CLAUDE.md 第五节第 5 条：无检查不许合并）
+    let rb = std::fs::read_to_string(&truth).unwrap_or_else(|e| {
+        panic!("读不到真相源 {}：{e}。还没 merge main？或用 EXP010_BENCH_MAIN 指到 rustbe 的 bench/src/main.rs", truth.display())
+    });
     // rustbe：bench 那条输出 + 按节奏时拼进去的 pace_extra
     let mut want = BTreeSet::new();
     for anchor in ["\\\"backend\\\":\\\"{kind}\\\"", "\\\"open_to_warm_ms\\\""] {

@@ -67,6 +67,21 @@ class PowerParse(unittest.TestCase):
                              [{"round": 1, "set": 1, "file": "r1_1", "config": "x", "result": res}])
         self.assertIn("invalid", out["rows"][0])
 
+    def test_noise_floor_counts_gpu_and_ane(self):
+        # 两轮空闲：CPU 一样，GPU 差 40 mW → 噪声底必须是 40，不能因为只看 CPU 报 0（codex 第 6 轮 #1）
+        t0 = 1_800_000_000
+        idle1 = "".join(block(t0 + i, 100, gpu=2) for i in range(5))
+        idle2 = "".join(block(t0 + 500 + i, 100, gpu=42) for i in range(5))
+        def res(lo):
+            return {"frames": 600, "pace_ms": 16, "p50_ms": 0.1, "p999_ms": 0.2, "max_ms": 0.3, "cpu_over_wall": 0.01,
+                    "win_start_unix": lo, "win_end_unix": lo + 10, "wall_s": 10.0}
+        run1 = "".join(block(t0 + 101 + i, 150) for i in range(8))
+        run2 = "".join(block(t0 + 601 + i, 150) for i in range(8))
+        out = self.run_parse({"idle_1.txt": idle1, "idle_2.txt": idle2, "r1_1.txt": run1, "r2_1.txt": run2},
+                             [{"round": 1, "set": 1, "file": "r1_1", "config": "x", "result": res(t0 + 100)},
+                              {"round": 2, "set": 1, "file": "r2_1", "config": "x", "result": res(t0 + 600)}])
+        self.assertEqual(out["noise_floor_mw"], 40)
+
     def test_no_window_is_shown_not_ranked(self):
         t0 = 1_800_000_000
         idle = "".join(block(t0 + i, 100) for i in range(5))
