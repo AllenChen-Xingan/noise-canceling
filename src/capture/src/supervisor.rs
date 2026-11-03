@@ -34,7 +34,11 @@ pub enum Event {
 impl std::fmt::Debug for Event {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Switched { bus, replaced, new_forwarder } => write!(
+            Self::Switched {
+                bus,
+                replaced,
+                new_forwarder,
+            } => write!(
                 f,
                 "Switched {{ session: {:016x}, replaced: {replaced}, new_forwarder: {new_forwarder} }}",
                 bus.session_id()
@@ -104,7 +108,12 @@ impl Supervisor {
             }
         }
         let new = Bus::open(&self.name).ok()?;
-        if self.cur.as_ref().is_some_and(|b| b.session_id() == new.session_id()) || new.rate() != vdn_control::IO_RATE {
+        if self
+            .cur
+            .as_ref()
+            .is_some_and(|b| b.session_id() == new.session_id())
+            || new.rate() != vdn_control::IO_RATE
+        {
             return None;
         }
         let new = Arc::new(new);
@@ -164,8 +173,18 @@ mod tests {
     }
 
     fn rig(tag: &str, first: Option<Arc<Bus>>, l_total: usize) -> Rig {
-        let out = Arc::new(OwnedBus::create(&format!("/vdn-tso{tag}-{}", std::process::id()), out_bus_config(48_000)).unwrap());
-        let (feeder, ctl) = Feeder::new(first.clone(), Forwarder::new(ForwarderConfig::new(l_total, 96)), out.clone());
+        let out = Arc::new(
+            OwnedBus::create(
+                &format!("/vdn-tso{tag}-{}", std::process::id()),
+                out_bus_config(48_000),
+            )
+            .unwrap(),
+        );
+        let (feeder, ctl) = Feeder::new(
+            first.clone(),
+            Forwarder::new(ForwarderConfig::new(l_total, 96)),
+            out.clone(),
+        );
         let t0 = Instant::now();
         let name = format!("/vdn-tsv{tag}-{}", std::process::id());
         let sup = Supervisor::new(&name, first, l_total, 96, 4800, Duration::from_secs(1), t0);
@@ -192,7 +211,14 @@ mod tests {
         let den = OwnedBus::create(&name("a"), den_cfg(1056)).unwrap();
         let ev = r.sup.poll(&mut r.ctl, r.t0 + Duration::from_millis(100));
         assert!(
-            matches!(ev, Some(Event::Switched { replaced: false, new_forwarder: true, .. })),
+            matches!(
+                ev,
+                Some(Event::Switched {
+                    replaced: false,
+                    new_forwarder: true,
+                    ..
+                })
+            ),
             "{ev:?}"
         );
         r.feeder.feed(&X);
@@ -200,7 +226,11 @@ mod tests {
         assert_eq!(r.feeder.forwarder().config().l_total, 1056);
         assert_eq!(den.ring(RingId::Raw).available(), 96);
         // 旧 Forwarder 回到监视线程，下一次 poll 里释放
-        assert!(r.sup.poll(&mut r.ctl, r.t0 + Duration::from_millis(200)).is_none());
+        assert!(
+            r.sup
+                .poll(&mut r.ctl, r.t0 + Duration::from_millis(200))
+                .is_none()
+        );
     }
 
     /// 降噪进程重启（旧的被杀、新的建了同名总线）：心跳停够 1 s 后换过去；L_total 不变 → rebind（延迟线不断）
@@ -210,12 +240,23 @@ mod tests {
         let first = Arc::new(Bus::open(&name("b")).unwrap());
         let mut r = rig("b", Some(first), 1056);
         // 心跳不动但没到 1 s：不动
-        assert!(r.sup.poll(&mut r.ctl, r.t0 + Duration::from_millis(500)).is_none());
+        assert!(
+            r.sup
+                .poll(&mut r.ctl, r.t0 + Duration::from_millis(500))
+                .is_none()
+        );
         drop(a); // 旧降噪进程退出（名字已删，送音端手上的映射还在）
         let b = OwnedBus::create(&name("b"), den_cfg(1056)).unwrap();
         let ev = r.sup.poll(&mut r.ctl, r.t0 + Duration::from_millis(1500));
         assert!(
-            matches!(ev, Some(Event::Switched { replaced: true, new_forwarder: false, .. })),
+            matches!(
+                ev,
+                Some(Event::Switched {
+                    replaced: true,
+                    new_forwarder: false,
+                    ..
+                })
+            ),
             "{ev:?}"
         );
         r.feeder.feed(&X);
@@ -229,7 +270,11 @@ mod tests {
         let _a = OwnedBus::create(&name("c"), den_cfg(1056)).unwrap();
         let first = Arc::new(Bus::open(&name("c")).unwrap());
         let mut r = rig("c", Some(first), 1056);
-        assert!(r.sup.poll(&mut r.ctl, r.t0 + Duration::from_secs(5)).is_none());
+        assert!(
+            r.sup
+                .poll(&mut r.ctl, r.t0 + Duration::from_secs(5))
+                .is_none()
+        );
         assert_eq!(r.sup.switches(), 0);
     }
 
@@ -240,13 +285,22 @@ mod tests {
         let _den = OwnedBus::create(&name("d"), den_cfg(1056)).unwrap();
         // 音频线程一直不 feed：队列 4 个
         for _ in 0..4 {
-            let _ = r.ctl.handover.push(Handover { bus: None, fwd: None });
+            let _ = r.ctl.handover.push(Handover {
+                bus: None,
+                fwd: None,
+            });
         }
-        assert!(matches!(r.sup.poll(&mut r.ctl, r.t0), Some(Event::QueueFull)));
+        assert!(matches!(
+            r.sup.poll(&mut r.ctl, r.t0),
+            Some(Event::QueueFull)
+        ));
         assert!(r.sup.current().is_none());
         for _ in 0..4 {
             r.feeder.feed(&X);
         }
-        assert!(matches!(r.sup.poll(&mut r.ctl, r.t0), Some(Event::Switched { .. })));
+        assert!(matches!(
+            r.sup.poll(&mut r.ctl, r.t0),
+            Some(Event::Switched { .. })
+        ));
     }
 }

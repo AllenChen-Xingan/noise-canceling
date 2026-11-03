@@ -39,8 +39,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use clap::{Parser, ValueEnum};
-use vdn_capture::feeder::{Feeder, Handover};
+use vdn_capture::feeder::Feeder;
 use vdn_capture::shm::{OutSource, out_bus_config};
+use vdn_capture::supervisor::{Event, Supervisor};
 use vdn_capture::testing::fill_tone;
 use vdn_capture::{Forwarder, ForwarderConfig, ForwarderStats};
 use vdn_control::{Config, IO_RATE};
@@ -291,13 +292,17 @@ fn real_main() -> Result<(), String> {
         }
     };
 
-    // 监视循环
+    // 监视循环（判断逻辑在 lib 的 Supervisor，有单测）
     let until = seconds.map(|s| start + Duration::from_secs_f64(s));
-    let reconnect_after = Duration::from_secs_f64(a.reconnect_after);
-    let mut cur = first;
-    let mut cur_l_total = l_total0;
-    let (mut last_beat, mut beat_at) = (cur.as_ref().map_or(0, |b| b.heartbeat()), Instant::now());
-    let mut switches = 0u32;
+    let mut sup = Supervisor::new(
+        &cfg.bus_name,
+        first,
+        l_total0,
+        block,
+        timeout,
+        Duration::from_secs_f64(a.reconnect_after),
+        Instant::now(),
+    );
     loop {
         thread::sleep(Duration::from_millis(100));
         if until.is_some_and(|u| Instant::now() >= u)
@@ -305,65 +310,33 @@ fn real_main() -> Result<(), String> {
         {
             break;
         }
-        // 收回音频线程换下来的旧对象（在这里释放）
-        while let Ok(old) = ctl.retired.pop() {
-            drop(old);
-        }
-        if let Some(b) = &cur {
-            let hb = b.heartbeat();
-            if hb != last_beat {
-                (last_beat, beat_at) = (hb, Instant::now());
-                continue;
+        match sup.poll(&mut ctl, Instant::now()) {
+            Some(Event::Switched {
+                bus,
+                replaced,
+                new_forwarder,
+            }) => {
+                check_header(&bus, &cfg);
+                eprintln!(
+                    "vdn-capture: {}降噪总线（会话 {:016x}）· L_total {}{}",
+                    if replaced { "换到新的" } else { "接上" },
+                    bus.session_id(),
+                    bus.l_total(),
+                    if new_forwarder {
+                        "（变了，换新 Forwarder，会有一次接缝）"
+                    } else {
+                        "（不变，延迟线接着用）"
+                    }
+                );
             }
-            if beat_at.elapsed() < reconnect_after {
-                continue;
+            Some(Event::QueueFull) => {
+                eprintln!("vdn-capture: 交接队列满（音频线程没在跑？），下一轮再试")
             }
+            None => {}
         }
-        // 没有降噪总线，或心跳停太久：看同名的是不是一条新的（会话 ID 不同）
-        let Ok(new) = Bus::open(&cfg.bus_name) else {
-            continue;
-        };
-        if cur
-            .as_ref()
-            .is_some_and(|b| b.session_id() == new.session_id())
-            || new.rate() != IO_RATE
-        {
-            continue;
-        }
-        check_header(&new, &cfg);
-        let new = Arc::new(new);
-        let l_new = new.l_total() as usize;
-        eprintln!(
-            "vdn-capture: {}降噪总线（会话 {:016x}）· L_total {l_new}{}",
-            if cur.is_some() {
-                "换到新的"
-            } else {
-                "接上"
-            },
-            new.session_id(),
-            if l_new == cur_l_total {
-                "（不变，延迟线接着用）"
-            } else {
-                "（变了，换新 Forwarder，会有一次接缝）"
-            }
-        );
-        let fwd = (l_new != cur_l_total).then(|| forwarder_with(l_new, block, timeout));
-        if ctl
-            .handover
-            .push(Handover {
-                bus: Some(new.clone()),
-                fwd,
-            })
-            .is_err()
-        {
-            eprintln!("vdn-capture: 交接队列满（音频线程没在跑？），下一轮再试");
-            continue;
-        }
-        cur = Some(new);
-        cur_l_total = l_new;
-        (last_beat, beat_at) = (cur.as_ref().map_or(0, |b| b.heartbeat()), Instant::now());
-        switches += 1;
     }
+    let cur = sup.current().cloned();
+    let switches = sup.switches();
     stop.store(true, Ordering::Relaxed);
     drop(_mic);
     drop(_speaker);
