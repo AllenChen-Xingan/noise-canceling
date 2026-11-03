@@ -17,7 +17,7 @@
 
 | 模型 | 建议后端 | 为什么 | 状态 |
 |---|---|---|---|
-| **GTCRN（主模型）** | **手写 Rust + Accelerate**（rustbe 的 `native-blas`，线程 tc 开），苹果侧备选 **BNNS Graph + GRU 展开** | 手写 p50 0.088 ms，比 ORT 快约 4.4 倍，0 分配，134 dB；BNNS 展开版 0.155 ms、快约 2.5 倍，0 分配，134 dB，是苹果引擎里唯一过 `BE-RT-ALLOC` 的。两者都能在推理线程直接调 | 按 D75 主排序（耗电）暂排第一：71 mW，BNNS 97 mW（单次、噪声边缘，待重复）；`BE-IMPACT` 待重测 |
+| **GTCRN（主模型）** | **已定（AI，大总管 2026-11-02；人可改）：纯手写 Rust**（rustbe 的 `native`，线程 tc 开）。待证实的更省电方案：手写 + Accelerate（`native-blas`）。苹果侧备选：BNNS Graph + GRU 展开 | 连续跑：手写 p50 0.088 ms（ORT 的 4.4 倍快，0 分配，134 dB）；BNNS 展开版 0.155 ms（2.5 倍快，0 分配，134 dB）。实时节奏下：手写 + Accelerate p50 0.43 ms、功率最低。⚠️ 取舍：手写 + Accelerate 每帧 **11 次 malloc**（Accelerate 内部，rustbe `--count-malloc` 实测），过不了 `BE-RT-ALLOC`（0），只能像 ORT 一样登记豁免；纯手写和 BNNS 是 0。选纯手写的理由：10 mW 的差在噪声里，而 `BE-RT-ALLOC` 是挡线，实时线程里每帧 11 次 malloc 有抢锁卡顿的风险。**翻盘条件**（两条都满足才改选 Accelerate 版）：① 交替重复 ≥ 3 轮后，Accelerate 版仍显著更省电；② 查明那 11 次分配出在哪个调用，并能换成不分配的接口（如 `vDSP_mmul` 代替 `cblas_sgemm`，或预分配工作区）——这一条转 rustbe 查 | 纯手写 · rt 81 mW、手写 + Accelerate · rt 71 mW、BNNS · rt 97 mW（单次、噪声边缘，待重复）；`BE-IMPACT` 待重测 |
 | FE-M（备选） | 暂无（继续 ORT） | 转不了 Core ML（图里有 `view_as_complex`）；手写 Rust 本轮不做；ORT 超 D69 上限 | 待人定是否留在候选里 |
 | DFN3 `_ll`（015 候选） | **不进实时链**；下一轮盲听用**离线处理** | 算力下界（三图 S=1、单线程、连续跑）0.61 ms / 10 ms 帧 ≈ 6.1% 个核，是推理挡线 1.0% 的 6 倍；苹果最快后端提速 2.5 倍也约 2.4%（`dfn3ll_probe.json`）。流式重导出（把 GRU 状态做成输入输出）约 1 天，不做【AI 定，大总管同意】 | 已定 |
 | 认人 ECAPA-TDNN512 | 待测（ORT vs BNNS，名额里一起跑，`apple-rs/tools/ecapa.sh`） | 每 0.5 s 一次、约 6 ms（含 fbank 与打分），单项 ≈ 1.2% 个核（exp005），D69 下要降约 4–8 倍 | 待测 |
@@ -26,7 +26,7 @@
 
 **苹果引擎各条路的判定**（`BE-EXHAUST` 矩阵见 `standard.md` §7.1）：
 - Core ML：所有算子都落在 CPU（`MLComputePlan`，三种计算单元设置都一样），GPU / 神经引擎对 GTCRN 用不上；每帧约 300 次 malloc，过不了 `BE-RT-ALLOC`；fp16 只有 54 dB，过不了 `BE-PARITY`。**不用**。
-- BNNS Graph：见上，**苹果侧唯一可用**。代价：要 macOS 15，而最低系统已定为 14.4（D73）——`BE-OS` 冲突，待拍板 2-8，见第 6 节。
+- BNNS Graph：见上，**苹果侧唯一可用**。要 macOS 15，在 D77 定的最低系统之内，不再冲突。
 - MLX：Python 调 5.7–6.2 ms（ORT 的 15 倍慢），每帧 7–10 万次分配。**不做实时推理**，只做本机微调。
 - 神经引擎 / GPU：对这么小、带 GRU 的逐帧模型没有收益；Metal 手写核不写（每帧派发的固定开销已大于手写 Rust 整帧，`notes/mlx.md` §2）。
 
@@ -55,7 +55,7 @@
 结论（强度：单次、噪声大）：
 1. **「实时节奏慢 5 倍」是帧间降频**：忙等把 p50 拉回连续跑的水平，但耗电是 30–40 倍。产品里不能忙等。
 2. **自建工作组区间（`AudioWorkIntervalCreate` + 每帧 start / finish）能把速度拉回 4 倍、核占用降到约 1.4%，但功率高 25–40 mW。** 提速要花电，所以**没有推翻 D74**（接受低频、工作组默认不加）。如果以后要压 `BE-IMPACT` 或尾部，它是现成的旋钮。
-3. **目前功率最低的是手写 + Accelerate · rt（71 mW）**，其次手写 · rt（81 mW）、BNNS · rt（97 mW）。差值在噪声边缘，`BE-POWER` 要交替重复 3 轮以上才能定排名（`standard.md` 已注明）。
+3. **目前功率最低的是手写 + Accelerate · rt（71 mW）**，其次手写 · rt（81 mW）、BNNS · rt（97 mW）。差值在噪声边缘，`BE-POWER` 要交替重复 3 轮以上才能定排名（`standard.md` 已注明）。Accelerate 版每帧 11 次 malloc，过不了 `BE-RT-ALLOC`，所以默认选纯手写（第 2 节）。
 4. 所有设置 10 分钟 / 60 s 内超 3 ms 的帧都是 0（`BE-DEADLINE` 这一段都过；第 1 条风险里 BNNS 那次 11.8 ms 是在 qos ui 下）。
 
 ## 5. 怎么接进代码（接口建议；结构细节归 Rust 骨架线）
@@ -77,7 +77,7 @@
 
 - 延迟账里没有单列推理耗时，它被「跨进程环余量 3.00 ms」盖住（`docs/research/009_rust-ecosystem/decision.md:62`）。模型带来的 32 ms 是 STFT 窗长决定的算法延迟，换后端改不了。
 - 所以换后端**不减延迟账**；收益在 CPU / 耗电（D69 · D70）和尾部。注意第 1 条风险：实时节奏下 BNNS 最大一帧 11.8 ms，已经超过 3 ms 余量，**按现状会出现送原声的帧**。
-- 最低系统（待拍板 2-8）：只有选 BNNS 才需要 macOS 15。如果手写 Rust 是主路径，这题可以作废（手写版没有系统版本要求）。
+- 最低系统：D77 定为 macOS 15，BNNS Graph / `MLState` / `FastPrediction` 都不再有系统版本冲突（原待拍板 2-8 随之解决）。默认后端仍是纯手写（AI 定）。
 
 ## 7. 还没做的
 
