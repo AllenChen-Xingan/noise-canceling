@@ -23,6 +23,7 @@ OUT=$HERE/results/$ID/power
 [ -e "$OUT" ] && { echo "已有 $OUT，不覆盖"; exit 1; }
 mkdir -p "$OUT"
 trap 'chown -R "$U" "$HERE/results/$ID"' EXIT   # 中途失败也把文件还给普通用户
+chown -R "$U" "$HERE/results/$ID"   # bench 以普通用户身份运行，要能在这里写就绪文件
 { date '+%F %T %z'; sysctl -n hw.model; sw_vers -productVersion; pmset -g batt | head -1; uptime; } > "$OUT/env.txt"
 
 run() { # 名字 · 命令（命令为空 = 空闲对照）
