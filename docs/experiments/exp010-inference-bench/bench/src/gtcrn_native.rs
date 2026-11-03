@@ -534,6 +534,29 @@ impl DeconvF {
         })
     }
 
+    fn cost(&self) -> Cost {
+        let (cig, cog) = (self.cin / self.groups, self.cout / self.groups);
+        let taps: usize = (0..K)
+            .map(|k| {
+                let ilo = (2usize.saturating_sub(k)).div_ceil(2);
+                let ihi = (self.fout + 2 - k).div_ceil(2).min(self.fin);
+                ihi.saturating_sub(ilo)
+            })
+            .sum();
+        let (ci, co, fo) = (self.cin as u64, self.cout as u64, self.fout as u64);
+        let act = co * fo;
+        Cost {
+            macs: ci * (cog * taps) as u64,
+            nonlin: if self.tanh { act } else { 0 },
+            other: if self.tanh { 0 } else { act },
+            w_bytes: (ci * (cog * K) as u64 + co) * F32B,
+            io_bytes: (ci * self.fin as u64 + act) * F32B,
+            // stride 2、k 5：每个输出点最多收 3 个抽头 × 每组输入通道
+            chain_fma: clog2(cig * 3) + 1 + u64::from(!self.tanh),
+            chain_nl: u64::from(self.tanh),
+        }
+    }
+
     fn run(&self, x: &[f32], y: &mut [f32]) {
         let (cig, cog) = (self.cin / self.groups, self.cout / self.groups);
         for o in 0..self.cout {
