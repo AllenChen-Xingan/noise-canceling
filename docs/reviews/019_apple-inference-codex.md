@@ -1,7 +1,7 @@
 # 评审 019 · 推理后端总方案与判据（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/019_apple-inference/decision.md` · `standard.md`，依据含 `docs/experiments/exp010-inference-bench/apple-rs/` 的 `src/{main,alloc,bnns,coreml,rt}.rs` 与 `tools/{power_parse.py,impact.sh,rt-matrix.sh}`。**最新一轮：第 2 轮（2026-11-02）· 总评「修改」· 待第 3 轮**。
-> 累计处理：P1×9、P2×6 逐条回源码核实，属实 15、驳回 0、无法核实 0；引用抽查「不符」1 条（已改）。
+> 对象：`docs/research/019_apple-inference/decision.md` · `standard.md`，依据含 `docs/experiments/exp010-inference-bench/apple-rs/` 的 `src/{main,alloc,bnns,coreml,rt}.rs` 与 `tools/{power_parse.py,impact.sh,rt-matrix.sh}`。**最新一轮：第 3 轮（2026-11-02）· 总评「修改」· 待第 4 轮**。
+> 累计处理：P1×10、P2×11 逐条回源码核实，属实 21、驳回 0、无法核实 0；引用抽查「不符」1 条（已改）。
 > 送 codex 之前已做同模型 3 视角只读自审一轮（数字核对 · 结论强度 · 测量口径），其发现已先改完；那一轮的 P2 留在 `decision.md` §7。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -84,3 +84,33 @@
 ### 是否再审
 
 有 P1 → 改完开第 3 轮。
+
+## 第 3 轮（2026-11-02）· 总评「修改」
+
+原文：`_tmp/codex-019/decision-codex-3.md`（不入库）。effort medium（`result: P0×0 P1×1 P2×5 P3×0`）。日志头 `model: gpt-6-astra` · `sandbox: read-only`。依据里的决策摘录重摘过，含 D74 原文与 D78 改号。
+上一轮处理的验证：codex 核实属实 power_parse 的保守窗口（:45）、impact 的就绪文件与存活检查（:39–43）、非有限值打 null（main.rs:421–425）。
+本轮 P0/P1：1 条 · 停止线：未满足
+
+- **P1｜main.rs:291 BE-MEM 混进基准自己的输出留存**（第 3 轮 #1）
+  - 核实：属实。实测：全量对拍时「预热后 − 加载前」= +21.5 MB，`--parity-frames 10` 时 +9.4 MB；差的 12 MB 就是留存输出缓冲。先分配再逐页写一遍也没能让它进基线。
+  - 处理：缓冲改为在取基线前分配并逐页写非零值（保留）；`standard.md` 规定量 `BE-MEM` 必须单独跑一次、加 `--parity-frames 10`，并写明原因和这两个实测数。
+- **P2｜decision.md:40 工作组「多耗电」仍写成确定代价**（第 3 轮 #2）
+  - 处理：改为「那一次高 25–40 mW，单次观察、与噪声同量级，要等交替重复测」。
+- **P2｜b2 summary.md:52 已撤回的 DFN3 淘汰论证仍在被引用的依据里**（第 3 轮 #3）
+  - 处理：原句划掉，注明「推论已撤回」及原因，指向 decision 的「实时链暂缓」。
+- **P2｜standard.md:55 截止挡线用的是过时的延迟账**（第 3 轮 #4）
+  - 核实：属实。D74 原文：缓冲余量 lead 192 样本 = 4 ms。
+  - 处理：`BE-DEADLINE` 写明产品余量是 4 ms，3 ms 是更严的技术线、不是产品截止时间；`decision.md` §6 同步，并注明「超 3 ms」与「超 4 ms（真会送原声）」那批没分开统计。
+- **P2｜standard.md:70 BE-COLD 要的字段没实现**（第 3 轮 #5）
+  - 处理：bench 加 `warmup_ms`（冷第 0 帧 + 全部预热）与 `first_warm_frame_ms`（预热后第 1 帧）；`standard.md` 写明用哪几个字段相加判首次启动与已有缓存两种情形。实测一次：BNNS 展开版 `compile_ms` 202 · `open_ms` 0.05 · `warmup_ms` 32 · 冷首帧 0.20 · 热首帧 0.16 ms。
+- **P2｜standard.md:120 BE-IMPACT 有互不等价的几种判法**（第 3 轮 #6）
+  - 处理：§6.3 改成唯一口径（= `impact.sh` v2：性能核个数个线程、8000 遍、15 对、成对比值中位数、噪声底 = 「关」的相对标准差），旧的两种口径明写作废。
+
+### 引用抽查
+
+- 「不符」：无。「核实属实」：7 条。
+- 无法核实：rustbe 那边「每帧 0 次分配」的整数总数（正本在 rustbe worktree）→ `decision.md` 挡线表改为「转记，待对 rustbe 正本核整数」。
+
+### 是否再审
+
+有 P1 → 改完开第 4 轮。
