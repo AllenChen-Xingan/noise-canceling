@@ -24,7 +24,7 @@
 | 挡线 | 纯手写 · rt | 依据 |
 |---|---|---|
 | `BE-PARITY` | **过**：对 ORT 134.0 dB，无 first_bad | rustbe r4 |
-| `BE-RT-ALLOC` | **转记 0，待核整数**：rustbe 正本 `results/20261102-blas1/malloc.jsonl` 里 `process_allocs_per_frame` = 0.000（2000 帧，三位小数），只能说明总数 ≤ 1，判不了 `process_allocs_total == 0`；已请 rustbe 补整数字段 | rustbe |
+| `BE-RT-ALLOC` | **过（整数 0，样本偏短）**：rustbe `results/20261102-verify1/cases.jsonl` 的 `bench_short_paced_rt`，按实时节奏、rt、300 帧，`process_allocs_total` = 0、`rust_allocs_total` = 0（同例 ORT 300 帧共 467 100 次，合每帧 1557）。300 帧偏短，rustbe 下次补 6000 帧的整数计数。`blas1` 里的 0.000 只能说明 ≤ 1 次，不引 | rustbe |
 | `BE-FRAME`（p99.9 ≤ 1.0 · max ≤ 2.0） | **过**（60 s）：p99.9 0.65 · max 0.66 ms | build 20261102-183322-rt |
 | `BE-DEADLINE`（10 分钟 0 帧**迟到** > 3 ms） | **未测**：rt 下没跑过 10 分钟；ui 下 10 分钟有 6 帧调用耗时 > 3 ms（已不过）；「迟到」口径（含唤醒迟到）是 codex 第 1 轮后才加的 | `notes/rustbe-numbers.md` |
 | `BE-IMPACT` | **未测**（第一批作废） | — |
@@ -33,7 +33,7 @@
 
 为什么排它：
 - 连续跑最快：p50 0.088 ms，同场 ORT 0.384 ms，约 4.4 倍（build 20261102-173000-b2；按 rustbe r4 的 0.10 / 0.38 算是 3.8 倍）。
-- 转记每帧 0 次分配（待核整数）；不依赖任何推理库，体积最小（待 `BE-SIZE` 证实）；常驻内存预热后只涨 1.09 MB（rustbe 同一份 `malloc.jsonl`，单次）。
+- 每帧 0 次分配（整数，300 帧，见上表）；不依赖任何推理库，体积最小（待 `BE-SIZE` 证实）；常驻内存预热后只涨 0.61–1.09 MB（rustbe `verify1` 与 `blas1`，各一次）。
 
 **待证实的更省电方案：手写 + Accelerate（`native-blas`）。** 实时节奏下 p50 0.43 ms（比纯手写快 28%；按平均值是 20%），CPU 功率 71 mW（单次、噪声里）。但每帧 11 次 malloc（Accelerate 内部，rustbe 实测），过不了 `BE-RT-ALLOC`。**翻盘条件**（两条都满足才改选它）：① 交替重复 ≥ 3 轮后仍显著更省电（差值大于噪声底）；② 查明那 11 次分配出在哪个调用、能换成不分配的接口（如 `vDSP_mmul` 代替 `cblas_sgemm`，或预分配工作区）——② 已转 rustbe。
 
@@ -64,7 +64,7 @@
 
 ## 4. 实时线程 · 线程设置 · 耗电
 
-**能不能直接调（候选接法，未确认）**：按 `standard.md` §4，要分配（`BE-RT-ALLOC`）、RTSan（`BE-RT-SAN`）、跨进程（`BE-RT-XPROC`）三项都过才能确认「可以在推理线程直接调」。现在只有分配这一项有数：BNNS Graph 每帧 0 次（applebe 全进程钩子，自检通过；旧 build 只有三位小数，整数待重测），纯手写转记 0（待核整数）。RTSan、跨进程都还没测，零分配不能证明不加锁、不阻塞（codex 第 4 轮 #1）。Core ML 每帧约 300 次 malloc（ORT 1557 次，rustbe 实测），只能登记豁免。自建工作组区间的那几段每帧有约 0.012 次 malloc（区间 start / finish 偶发分配，未查是哪一个），严格说也过不了 `BE-RT-ALLOC`。
+**能不能直接调（候选接法，未确认）**：按 `standard.md` §4，要分配（`BE-RT-ALLOC`）、RTSan（`BE-RT-SAN`）、跨进程（`BE-RT-XPROC`）三项都过才能确认「可以在推理线程直接调」。现在只有分配这一项有数：BNNS Graph 每帧 0 次（applebe 全进程钩子，自检通过；旧 build 只有三位小数，整数待重测），纯手写整数 0（rustbe `verify1`，300 帧，偏短）。RTSan、跨进程都还没测，零分配不能证明不加锁、不阻塞（codex 第 4 轮 #1）。Core ML 每帧约 300 次 malloc（ORT 1557 次，rustbe 实测），只能登记豁免。自建工作组区间的那几段每帧有约 0.012 次 malloc（区间 start / finish 偶发分配，未查是哪一个），严格说也过不了 `BE-RT-ALLOC`。
 
 **线程设置 × 耗电**（人用 sudo 跑，只有 powermetrics 是 root；`apple/results/20261102-183322-rt/summary.md`）。⚠️ 单次 60 s；空闲基线 CPU 111 mW，比好几行都高，所以下表给的是**绝对 CPU 功率**，只能比相对高低；差 < 30 mW 的不算有差别：
 

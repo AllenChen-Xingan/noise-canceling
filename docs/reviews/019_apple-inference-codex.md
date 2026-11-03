@@ -126,7 +126,7 @@
   - 处理：改为「候选接法，未确认」，写明只有分配一项有数，零分配不能证明不加锁、不阻塞。
 - **P2｜decision.md:27 整数判零没落到通过状态**（第 4 轮 #2）
   - 核实：属实。我读了 rustbe 正本 `results/20261102-blas1/malloc.jsonl`：native 是 `process_allocs_per_frame` 0.000、2000 帧、三位小数，只能说明总数 ≤ 1。
-  - 处理：挡线表改为「转记 0，待核整数」，第 2 节、§4 同步；已请 rustbe 加整数字段并重数。顺带从同一份文件读到 native 常驻内存预热后只涨 1.09 MB，记进方案（单次）。
+  - 处理：先改为「转记 0，待核整数」；随后 rustbe 指出整数字段早已加上，`results/20261102-verify1/cases.jsonl` 的 `bench_short_paced_rt`（rt、按节奏、300 帧）里 native `process_allocs_total` = 0、ORT 300 帧共 467 100 次。挡线表改为「过（整数 0，样本偏短）」，引 verify1、不引 blas1；第 2 节、§4 同步；副本 `_tmp/codex-019/rustbe-verify1-cases.jsonl` 供第 5 轮核对。顺带从同一份文件读到 native 常驻内存预热后只涨 1.09 MB，记进方案（单次）。
 - **P2｜decision.md:100 · standard.md:52 延迟账仍写 3 ms 是当前余量**（第 4 轮 #3）
   - 处理：两处都改为「009 当时是 3.00 ms，D74 已改为 4 ms，以 4 ms 为准；3 ms 只作更严的技术线」。
 - **P2｜standard.md:70「已有编译缓存」不能统一扣掉 compile_ms**（第 4 轮 #4）
