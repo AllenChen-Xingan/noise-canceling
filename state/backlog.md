@@ -63,6 +63,8 @@
 
 ## 引擎（engine）
 
+- [ ] **开会负载下的测速与耗电**（E-5）：会议软件 + 摄像头 ± 屏幕共享时，v4i 按 16 ms 节奏的最坏帧 · 超时帧 · 功耗增量 · 会议软件自身是否变卡；进 / 出会议启停（StopIO 后 CPU 回 0）· 参照 DAFx26 争用测试
+
 - [ ] **codex-review 工具问题**：codex 输出以「P1」「P2」开头时，`file` 命令把它误判为 PBM / PGM 图片，第 2 轮起 `--previous` 被隐私扫描拦下；绕法：文件开头加一行 HTML 注释 · 出处 fastpath 收尾报告
 
 - [ ] **019 待重测（下次名额）**：耗电 3 轮（人 sudo，约 35 min）· BE-IMPACT 新测法 · rt 下 10 min BE-DEADLINE · BE-SIZE / BE-RT-SAN · 出处 019 `decision.md` §7
