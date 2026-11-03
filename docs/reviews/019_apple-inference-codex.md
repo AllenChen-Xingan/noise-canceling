@@ -1,7 +1,7 @@
 # 评审 019 · 推理后端总方案与判据（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/019_apple-inference/decision.md` · `standard.md`，依据含 `docs/experiments/exp010-inference-bench/apple-rs/` 的 `src/{main,alloc,bnns,coreml,rt}.rs` 与 `tools/{power_parse.py,impact.sh,rt-matrix.sh}`。**最新一轮：第 7 轮（2026-11-02）· 总评「修改」· 连续第 1 轮无 P0/P1，待第 8 轮确认**。
-> 累计处理：P1×13、P2×25 逐条回源码核实，属实 38、驳回 0、无法核实 0；引用抽查「不符」3 条（已改）。
+> 对象：`docs/research/019_apple-inference/decision.md` · `standard.md`，依据含 `docs/experiments/exp010-inference-bench/apple-rs/` 的 `src/{main,alloc,bnns,coreml,rt}.rs` 与 `tools/{power_parse.py,impact.sh,rt-matrix.sh}`。**最新一轮：第 8 轮（2026-11-02）· 总评「修改」· 已达停止线（第 7、8 轮连续无 P0/P1）**。
+> 累计处理：P1×13、P2×28 逐条回源码核实，属实 41、驳回 0、无法核实 0；引用抽查「不符」4 条（已改）。剩余 P2×2 列进 `decision.md` §7 待办。
 > 送 codex 之前已做同模型 3 视角只读自审一轮（数字核对 · 结论强度 · 测量口径），其发现已先改完；那一轮的 P2 留在 `decision.md` §7。
 
 ## 第 1 轮（2026-11-02）· 总评「修改」
@@ -229,3 +229,27 @@
 ### 是否再审
 
 连续第 1 轮无 P0/P1 → 开第 8 轮确认。
+
+## 第 8 轮（2026-11-02）· 总评「修改」
+
+原文：`_tmp/codex-019/decision-codex-8.md`（不入库）。effort medium（`result: P0×0 P1×0 P2×3 P3×0`）。日志头 `model: gpt-6-astra` · `sandbox: read-only`。
+上一轮处理的验证：codex 核实属实 3 条（按每帧耗电排序并换算噪声底、b2 表三行改为 0.000（整数待验证）、三处删掉「常量」归因），另 3 条依据核实属实。
+本轮 P0/P1：0 条 · 停止线：**满足**（本轮与第 7 轮都无 P0/P1；脚本 `stop-line:` 行确认）· 留作待办的 P2：#1、#2 → `decision.md` §7
+
+- **P2｜power_parse.py:94 有效轮数不足仍进排名，并列规则没落实**（第 8 轮 #1）
+  - 核实：属实。
+  - 处理：不改（停止线已满足；只影响下一次耗电重测），列进 `decision.md` §7「下次耗电重测前修」。
+- **P2｜rt-matrix.sh:52 忙等诊断固定紧挨手写 · rt**（第 8 轮 #2）
+  - 核实：属实（10 组 3 轮，起点 1 / 2 / 3，第 6 组忙等总在第 7 组前）。
+  - 处理：同上，列进 §7。
+- **P2｜decision.md:55「全部落在 CPU / 用不上」强于证据**（第 8 轮 #3）
+  - 核实：属实。`bench_coreml.swift:114` 读的是计算计划的 `preferred`，不是运行时执行记录。
+  - 处理：顺手改了：decision / standard / b2 summary 三处都改为「计算计划首选 CPU，不是运行时执行记录」；Core ML 不用的另两条独立理由（每帧约 300 次分配、fp16 逐值一致不过）不受影响。
+
+### 引用抽查
+
+- 「不符」：`decision.md:55` → 同 #3，已改。「核实属实」：6 条。
+
+### 是否再审
+
+停。第 7、8 轮连续无 P0/P1。剩余 P2 两条列进 `decision.md` §7。

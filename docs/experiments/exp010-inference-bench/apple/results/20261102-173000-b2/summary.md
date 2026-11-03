@@ -28,7 +28,7 @@ Core ML GPU / 全部 · GRU 展开 · fp32 另跑了 3 轮，在同一 `bench.js
 
 1. **苹果引擎里最快的是 BNNS Graph + GRU 展开**：p50 约 0.155 ms，是 ORT 的约 2.5 倍快（0.384 ÷ 0.155），每帧分配显示 0.000（三位小数，整数待验证），与 ORT 逐值一致。仍比手写 Rust（0.088 ms）慢约 1.8 倍。
 2. **GRU 展开是关键**：同一个 BNNS，不展开 0.34 ms，展开 0.155 ms；Core ML CPU 不展开 0.39 ms，展开 0.21 ms。印证调研说的「coremltools 把 GRU 翻成逐步循环」（`notes/coreml.md`）。
-3. **Core ML 的 GPU / 神经引擎对 GTCRN 没用**：三种设置下，被指派了计算设备的算子全部落在 CPU（`MLComputePlan`；fp32 版 322 个在 CPU、0 个在 GPU / 神经引擎，另有 1785 个没有设备归属——`deviceUsage` 返回空，设备归属未知；采集代码只记「返回空」，没记它们是什么算子，见 `apple/bench_coreml.swift:112–124`）（`plan.jsonl`）；所以 GPU / 神经引擎几行的耗时和 CPU 一样。fp16 版逐值一致不过（54 dB < 60 dB），且第 0 帧第 0 个值就差 > 1e-3。
+3. **Core ML 的 GPU / 神经引擎对 GTCRN 没用**：三种设置下，计算计划（`MLComputePlan` 的首选设备 `preferred`）里有设备的算子全部首选 CPU（fp32 版 322 个首选 CPU、0 个首选 GPU / 神经引擎，另有 1785 个没有设备归属——`deviceUsage` 返回空，设备归属未知；采集代码只记「返回空」，没记它们是什么算子，见 `apple/bench_coreml.swift:112–124`）。这是计划，不是运行时执行记录；运行时实际落在哪个设备没有抓轨迹（`plan.jsonl`）；所以 GPU / 神经引擎几行的耗时和 CPU 一样。fp16 版逐值一致不过（54 dB < 60 dB），且第 0 帧第 0 个值就差 > 1e-3。
 4. **Core ML 每帧全进程 malloc 约 300 次**，过不了 `BE-RT-ALLOC`（0）；BNNS Graph 显示 0.000 / 帧（三位小数，整数待验证），与苹果说法和调研一致。
 5. **多线程编译 BNNS 没有提速**（0.34 vs 0.34），小模型不值得开线程。
 6. **MLX（Python 调）比 ORT 慢约 15 倍，每帧 7–10 万次分配**。Rust 经 mlx-c 的版本还没做（见下），按 D68 这两行不进结论；但 Python 只能解释其中一部分，MLX 每帧建图和 `eval` 的分配大概率仍在【推断】。

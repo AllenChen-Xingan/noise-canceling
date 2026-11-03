@@ -1,6 +1,6 @@
 # 019 · 降噪模型在 Mac 上用什么推理后端（总方案）
 
-> 2026-11-02 · applebe（苹果引擎）汇总 rustbe（纯 Rust）· 状态：**草稿 v4**——同模型 3 视角只读自审一轮、codex 三轮（全部属实已改，见 `docs/reviews/019_apple-inference-codex.md`）后修订。
+> 2026-11-02 · applebe（苹果引擎）汇总 rustbe（纯 Rust）· 状态：**v5（评审收敛）**——同模型 3 视角只读自审一轮、codex 8 轮（第 7、8 轮连续无 P0/P1，满足停止线；全部发现逐条核实属实、已改或列为待办，见 `docs/reviews/019_apple-inference-codex.md`）。
 > 判据：`standard.md`（17 个 verifier）。技术线【AI 定；人可改】；人定的：D75 判什么（对前台性能的影响 + 耗电主排序；`BE-IMPACT` 的 1% / 2% 两个数是 AI 对 D75 的理解，待人确认）、D78 最低 macOS 15（原误记为 D77）、D70 榨干硬件 · 低能耗 · 轻量。
 > 数字一律本机实测（Apple M5 · macOS 27.0.1 · 插电），从 Rust 调（D68）；来源路径写在每条后面。**全部只在这一台机器上测过。**
 
@@ -52,10 +52,10 @@
 | 本机评分 / 调节模型（D52） | 推理另定；**本机微调用 MLX** | MLX 唯一有自动求导（`notes/mlx.md` §5），不在实时回路 | 等 018 定结构 |
 
 **苹果引擎各条路的判定**（`BE-EXHAUST` 矩阵见 `standard.md` §7.1）：
-- **Core ML：不用。** cpu / gpu / ane 三种设置下，被指派了计算设备的算子全部落在 CPU（`MLComputePlan`；fp32 版 322 个在 CPU、0 个在 GPU / 神经引擎，另有 1785 个没有设备归属——`deviceUsage` 返回空，设备归属未知；采集代码只记「返回空」，没记它们是什么算子，见 `apple/bench_coreml.swift:112–124`），GPU 和神经引擎用不上；每帧约 300 次 malloc；fp16 只有 54 dB，过不了 `BE-PARITY`。
+- **Core ML：不用。** cpu / gpu / ane 三种设置下，计算计划（`MLComputePlan` 的首选设备 `preferred`）里有设备的算子全部首选 CPU（fp32 版 322 个首选 CPU、0 个首选 GPU / 神经引擎，另有 1785 个没有设备归属——`deviceUsage` 返回空，设备归属未知；采集代码只记「返回空」，没记它们是什么算子，见 `apple/bench_coreml.swift:112–124`）。这是计划，不是运行时执行记录；运行时实际落在哪个设备没有抓轨迹，按计划 GPU 和神经引擎都没被选上；每帧约 300 次 malloc；fp16 只有 54 dB，过不了 `BE-PARITY`。
 - **BNNS Graph：苹果侧的候选**（见上；`BE-FRAME` 在 rt 下不过、`BE-RT-ALLOC` 待整数验证）。要 macOS 15，在 D78 之内。
 - **MLX：实时推理暂缓（时间盒），本机微调用它。** 暂缓的依据是执行机制：每帧建图 + `eval` 要分配、加锁、等后台线程（`notes/mlx.md` §3，读源码），和推理线程的规约冲突。Python 调 5.7–6.2 ms 没有同模型 Rust 对照，按 D68 不能当淘汰理由（codex 第 2 轮 #3）。
-- **神经引擎 / GPU（经 Core ML）：没用上。** 被指派了设备的算子全部落在 CPU（`MLComputePlan`，实测；另有一批设备归属未知的节点，见上）。**Metal 手写核：时间盒暂缓，无收益未验证**——原先「派发开销大于手写整帧」的比较不成立（异机数据，又和连续跑比），要判得在本机测一条逐帧融合的 Metal 路径（codex 第 2 轮 #4）。
+- **神经引擎 / GPU（经 Core ML）：没用上。** 计算计划首选 CPU（`MLComputePlan`，不是运行时执行记录；另有一批设备归属未知的节点，见上）。**Metal 手写核：时间盒暂缓，无收益未验证**——原先「派发开销大于手写整帧」的比较不成立（异机数据，又和连续跑比），要判得在本机测一条逐帧融合的 Metal 路径（codex 第 2 轮 #4）。
 
 ## 3. 绕过了哪些坑（复现时必看）
 
@@ -106,5 +106,6 @@
 ## 7. 还没做的（需要名额或人）
 
 - **要名额**：`BE-POWER` 重复 3 轮、含同场 ORT（v2 测法，人跑 sudo，约 35 分钟）· `BE-IMPACT` 重测（v2：性能核个数个线程、15 对、成对差、要超过噪声底）· `BE-DEADLINE` 在 rt 下 10 分钟（纯手写 · 手写 + Accelerate · BNNS）· `BE-SIZE`（ORT 静态库增量）· `BE-MEM`（纯手写版的常驻内存）· `BE-RT-SAN`。
+- **codex 第 8 轮留下的 P2（停止线已满足，下次耗电重测前修）**：① `power_parse.py` 有效轮数不足 3 轮的设置仍会进排名，且还没落实「差 < 10% 或低于噪声底算并列」——要分开「数值汇总」与「有效排名」，补失败轮与噪声内差异的测试；② `rt-matrix.sh` 的忙等诊断（约 4.2 W）每轮都紧挨在手写 · rt 前面，热状态可能影响它——忙等移出排名批次，其余组合用平衡顺序，测前验证基线已恢复。
 - **自审留下的 P2（不挡这一版）**：逐值一致的「反向对照」（每帧清零缓存时必须判为不一致，用来证明对拍真能抓到缓存出错）· 分配计数器的自检补 calloc / realloc / posix_memalign / 大块分配 / C++ new · Core ML 那约 300 次 malloc 里有没有我们自己包装的份（加一帧「空 autoreleasepool」基线）· `dfn3ll_probe.py` 解包会覆盖已有目录 · FE-M 在 pace 为 0 时 time-constraint 周期取了 16 ms（应 10 ms）。
 - **转交**：rustbe 的 bench 计时窗字段已在 `exp/012-fastpath` 补齐，待 #58 合并（合并时删 `apple-rs/tests/fields.rs` 的 APPLE_ONLY 里那三条）· apple-rs 与 rustbe bench 合成一个共用 crate（现在靠 `apple-rs/tests/fields.rs` 交叉校验字段，大总管）· 认人降频（大总管）· native-blas 的 11 次分配（rustbe）· FE-M 是否留在候选里（人）· engine 送原声分支不检查原声里的 NaN（大总管，审查顺带发现，不属 019）。
