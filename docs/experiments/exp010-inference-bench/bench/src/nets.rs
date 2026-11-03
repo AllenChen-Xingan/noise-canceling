@@ -393,5 +393,3 @@ pub(crate) fn frames_for(
         }
     })
 }
-
-/// 常驻内存（MB）：`ri_phys_footprint`，即活动监视器「内存」列（与 applebe 的 BE-MEM 同口径）。

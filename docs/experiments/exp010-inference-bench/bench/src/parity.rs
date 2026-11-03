@@ -90,7 +90,7 @@ pub(crate) fn parity(
     }
     Ok(())
 }
-static ALLOW_FAIL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub(crate) static ALLOW_FAIL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// reset 检查：`b` 先跑 `k` 帧再 reset，`b2` 新开；两者从第 k 帧起喂同样输入，比输出（应逐位相同）。
 pub(crate) fn reset_check(

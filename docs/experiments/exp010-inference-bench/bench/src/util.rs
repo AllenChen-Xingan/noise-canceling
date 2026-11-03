@@ -2,6 +2,7 @@
 
 use crate::*;
 
+/// 常驻内存（MB）：`ri_phys_footprint`，即活动监视器「内存」列（与 applebe 的 BE-MEM 同口径）。
 pub(crate) fn footprint_mb() -> f64 {
     let mut u: libc::rusage_info_v4 = unsafe { std::mem::zeroed() };
     let r = unsafe {
