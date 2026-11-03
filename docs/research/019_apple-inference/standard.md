@@ -15,7 +15,7 @@
 
 ## 1. 总表
 
-下表列出 14 个 verifier，「挡」一列说它挡什么（挡合并 = CI 层，挡上用户电脑 = QA 层）。
+下表列出 16 个 verifier，「挡」一列说它挡什么（挡合并 = CI 层，挡上用户电脑 = QA 层）。
 
 | id | 维度 | 判什么 | 过线 | 状态 | 挡 |
 |---|---|---|---|---|---|
@@ -28,9 +28,11 @@
 | `BE-RT-XPROC` | 实时线程安全 · 跨进程 | 推理线程每帧发出的 mach 消息 | = 0 | 【AI 定，依据规约 A/B 档「不阻塞」（§4）；人可改】 | 决定接法 |
 | `BE-COLD` | 冷启动 | 打开 + 预热耗时；第 1 帧 | 打开 + 200 帧预热 ≤ 500 ms；预热后第 1 帧 ≤ max 线 | 【AI 定，依据「换模式半秒内生效」（§5）；人可改】 | 挡上用户电脑 |
 | `BE-CPU` | CPU | 按实时节奏跑时降噪模型推理占几个核 | **挡线**：推理 ≤ 0.010 核（整机硬上限 0.02 核的一半）；**目标**（记分，过不过都报）：推理 ≤ 0.005 核（整机目标 0.01 核的一半）；且不高于 ORT | 整机目标 0.01 核、硬上限 0.02 核【已定 · D69】；推理各分一半【AI 定，依据 §6.1；人可改】 | 挡上用户电脑（按上限） |
-| `BE-POWER` | 耗电 | 按实时节奏跑 60 s 的封装功率增量 | 不高于 ORT | 【AI 定，依据 D31（§6）；人可改】 | 挡上用户电脑（要人跑 sudo） |
-| `BE-SIZE` | 体积 | 安装包里新增的字节数（库 + 模型文件） | 不高于 ORT 方案 | 【AI 定，依据：换后端不该让安装包变大（§7）；人可改】 | 挡上用户电脑 |
+| `BE-POWER` | 耗电 | **每帧耗电**（µJ / 帧）= 按实时节奏跑时 CPU + GPU + 神经引擎功率增量 × 时长 ÷ 帧数 | 不高于 ORT；选赢家时排第一（§6.2） | 【AI 定，依据 D31、D70「非常低能耗」；人可改】 | 挡上用户电脑（要人跑 sudo） |
+| `BE-SIZE` | 体积 | 安装包里因这个后端和模型多出的字节（库 + 模型文件） | 每个降噪模型连同它的后端 ≤ 5 MB；且不高于 ORT 方案 | 【AI 定，依据 D70「轻量」、D60 评分模型 ≤ 5 MB 的先例（§7）；人可改】 | 挡上用户电脑 |
+| `BE-MEM` | 常驻内存 | 加载并预热后，进程常驻内存（`phys_footprint`，活动监视器「内存」列）增量 | 每个降噪模型连同后端 ≤ 10 MB | 【AI 定，依据 D70「轻量」；模型文件只有 0.5–2 MB；NVIDIA 约 215 MiB 显存是反例（§8）；人可改】 | 挡上用户电脑 |
 | `BE-OS` | 最低系统 | 后端要求的最低 macOS | ≤ 14.2 | 【已定】D07。⚠️ 与 BNNS Graph / `MLState`（要 15）冲突，见待拍板 2-8 | 挡上用户电脑 |
+| `BE-EXHAUST` | 榨干硬件 | 每个模型在每个可用计算单元上都试过 | 第 7.1 节矩阵每格都有一行结果，或写明没试的原因 | 【已定 · D70】 | 挡收尾：有空格不能写方案 |
 | `BE-SWAP` | 换模型难度 | 换一个新模型要做什么 | 一条命令重转 + `BE-PARITY` 过 | 【AI 定（§7）；人可改】 | 只记分，不挡 |
 | `BE-TRAIN` | 本机微调能力 | 能否对 BN/LN 仿射参数求梯度 | 梯度与 PyTorch 相对差 ≤ 1e-3 | 【AI 定，依据 D52（§7）；人可改】 | 只记分，不挡（推理后端可以不会训练） |
 
@@ -101,11 +103,36 @@
 3. **FE-M 在 ORT 上 ≈ 3.7%：超上限 3.7 倍**，要快约 3.7 倍才进上限、7.4 倍才进目标；D33 的「同接口备选」可能要按这条重估。
 4. STFT、重采样、采集输出、修音四项还没测过（目标合计 0.17%，上限 0.34%）。
 - **注意**：神经引擎和 GPU 的工作不算进 `cpu_over_wall`，所以凡是用到它们的组合，必须看 `BE-POWER`。
-- **`BE-POWER`**：`powermetrics -i 500 --samplers cpu_power,gpu_power,ane_power`，先空闲 30 s 取基线，再按实时节奏跑 60 s，报 CPU / GPU / 神经引擎三项功率的增量（mW）。要 sudo，由人跑：rustbe 的 `tools/power_run.sh`、applebe 的 `apple/power.sh`，两者口径要一致（合并前对一次）。
+- **`BE-POWER`**：`powermetrics -i 500 --samplers cpu_power,gpu_power,ane_power`，先空闲 30 s 取基线，再按实时节奏跑 60 s，报 CPU / GPU / 神经引擎三项功率的增量（mW）。**判的是每帧耗电**：µJ / 帧 = (三项增量之和，mW) × 时长 (s) ÷ 帧数 × 1000。理由（D70，人原话「必须我们有办法完全榨干硬件的性能，以及非常低能耗」）：快而费电不算赢——GPU / 神经引擎可能每帧更快，但唤醒它们的固定功耗可能更高，只有每帧耗电能把两者放在同一把尺子上。要 sudo，由人跑：rustbe 的 `tools/power_run.sh`、applebe 的 `apple/power.sh`，两者口径要一致（合并前对一次）。
+
+### 6.2 选赢家的规则【AI 定，依据 D70；人可改】
+
+1. 先过挡线：`BE-PARITY` · `BE-FRAME` · `BE-DEADLINE` · `BE-CPU`（上限）· `BE-SIZE` · `BE-MEM` · `BE-RT-SAN`。不过的不进排名。
+2. 过线的按**每帧耗电**从低到高排。
+3. 每帧耗电相差不到 10% 的算并列，再按 `cpu_over_wall`（越低越好）、再按 p99.9（越低越好）排。
+4. 还没有耗电数字（人还没跑 sudo）时，只能按 `cpu_over_wall` 暂排，并在方案里写「暂排，待耗电数」。
 
 ## 7. 体积、系统、换模型、微调：`BE-SIZE` · `BE-OS` · `BE-SWAP` · `BE-TRAIN`
 
-- **`BE-SIZE`**：数安装包里因这个后端多出的字节（动态库 / 静态链接增量 + 模型文件）。系统自带框架（Core ML、Accelerate）记 0。ORT 静态链接的增量要实测（`cargo bloat` 或对比带 / 不带 ort 的二进制大小）。
+- **`BE-SIZE`**：数安装包里因这个后端多出的字节（动态库 / 静态链接增量 + 模型文件）。系统自带框架（Core ML、Accelerate）记 0。ORT 静态链接的增量要实测（`cargo bloat` 或对比带 / 不带 ort 的二进制大小）；如果 ORT 本身就超 5 MB，这条会让 ORT 方案不过，这是有意的（D70「轻量」）。
+- **`BE-MEM`**：`apple-rs` 用 `proc_pid_rusage(RUSAGE_INFO_V4).ri_phys_footprint` 读三次：加载前、预热后、跑完；字段 `footprint_before_mb` / `footprint_warm_mb` / `footprint_end_mb`。判的是「预热后 − 加载前」。跑完比预热后还涨，说明每帧在泄漏或攒缓存，单列报出。rustbe 的程序还没有这三个字段，已请他们加。
+
+### 7.1 `BE-EXHAUST`：计算单元矩阵（D70）
+
+用途：证明每个模型的每条硬件路都试过，没有「没试就说不行」。每格写结果文件里的那一行（build id + 组合名），或写没试的原因。谁负责那一格，写在括号里。
+
+| 计算单元 | 怎么调 | GTCRN | FE-M |
+|---|---|---|---|
+| CPU 标量 + NEON（自动向量化 / 手写 SIMD） | 手写 Rust（rustbe） | rustbe r4：p50 0.10 ms | 未试：手写版只有 GTCRN（rustbe 判断工作量） |
+| CPU 矩阵单元（AMX / SME2，经 Accelerate 的 BLAS / BNNS） | Accelerate `cblas_sgemm` 等（rustbe）；BNNS Graph 内部也可能用（未证实，`notes/bnns-graph.md`） | 待测（rustbe） | 待测（rustbe） |
+| BNNS Graph（CPU 图执行器） | `apple-rs` bnns（applebe） | 待测 | 待测 |
+| Core ML · CPU | `apple-rs` coreml `--units cpu`（applebe） | 待测（fp32 · fp16 · GRU 展开 · 有状态） | 待测 |
+| Core ML · GPU | `--units gpu` | 待测 | 待测 |
+| Core ML · 神经引擎 | `--units ane`（只算 fp16，预计过不了 `BE-PARITY`，照测，用来看耗电） | 待测 | 待测 |
+| MLX · CPU / GPU | `.mlxfn` 经 mlx-c（applebe）；Python 版只作对照 | 待测 | 未试：FE-M 没有 MLX 版，先看 GTCRN 结果再定 |
+| Metal 手写核 | 无 | 未试：每帧派发约 0.1 ms 的固定开销已大于手写 Rust 整帧（`notes/mlx.md` §2），先由 Core ML GPU / MLX GPU 的实测证实或推翻，再决定写不写 | 同左 |
+| ORT（基线） | rustbe | r4 | r4 |
+| tract（纯 Rust ONNX） | rustbe | r4 | r4 |
 - **`BE-OS`**：读头文件的 `API_AVAILABLE` 标注。已知：BNNS Graph、`MLState` 要 macOS 15；`MLComputePlan` 要 14.4（`notes/realtime-and-bindings.md` §0）。D07 定的是 14.2+。冲突已登记为待拍板 2-8，**等实测再问**：如果 BNNS 不比手写 Rust 快，这题作废。
 - **`BE-SWAP`**：记三项——要不要重写代码（手写 Rust 要）· 有没有一条命令的转换脚本（Core ML / BNNS / MLX 要从 PyTorch 重新转，ORT / tract 直接吃 ONNX）· 转换后 `BE-PARITY` 是否过。只记分，不挡。
 - **`BE-TRAIN`**：对 BN/LN 仿射参数（GTCRN 约 4.8 K 个）求一次损失梯度，和 PyTorch autograd 比，相对差 ≤ 1e-3。目前只有 MLX 有自动求导（`notes/mlx.md` §5）。推理后端不会训练不扣分：D52 的本机微调可以单独用一个后端，推理再用别的。
