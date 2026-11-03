@@ -30,8 +30,9 @@ SETS=(
 if [ -n "$NATIVE" ]; then   # 手写 Rust（rustbe 的二进制）同场：只有它支持的开关
   SETS+=("native rt|$NATIVE gtcrn-bench native $NWEIGHTS $NWAV --pace-ms 16 --frames 3750 --qos rt")
   SETS+=("native ui|$NATIVE gtcrn-bench native $NWEIGHTS $NWAV --pace-ms 16 --frames 3750 --qos ui")
+  SETS+=("native-blas rt|$NATIVE gtcrn-bench native-blas $NWEIGHTS $NWAV --pace-ms 16 --frames 3750 --qos rt")
 fi
-echo "{\"when\":\"$(date -Iseconds)\",\"load\":\"$(sysctl -n vm.loadavg)\",\"power\":\"$(pmset -g batt | head -1)\"}" >> "$RES/machine.jsonl"
+echo "{\"when\":\"$(date -Iseconds)\",\"load\":\"$(sysctl -n vm.loadavg)\",\"power\":\"$(pmset -g batt | head -1)\",\"native_bin_sha256\":\"$( [ -n "$NATIVE" ] && shasum -a 256 "$NATIVE" | cut -c1-64)\"}" >> "$RES/machine.jsonl"
 echo "[$(date +%H:%M:%S)] 空闲基线 30 s" | tee -a "$RES/run.log"
 powermetrics -i 500 -n 60 --samplers cpu_power,gpu_power,ane_power > "$RES/power/idle.txt" 2>/dev/null
 i=0
