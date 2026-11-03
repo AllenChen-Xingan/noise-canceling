@@ -10,7 +10,7 @@
 //! | A/B 档 crate 的源码（整模块 NRT 除外）不出现 `std::fs`、`log::`、`thread::sleep` | R3 |
 //! | 实时块（带 `deny(clippy::disallowed_macros)` 的 impl / mod）里没有非 debug 的 `assert*!` | R4（clippy 禁不了，见根 clippy.toml） |
 //! | `unsafe = true` 的 crate：每个 `unsafe {` / `unsafe impl` 同行或紧邻上方的连续注释里有 `SAFETY:` | R10 |
-//! | `src/**/*.rs` 单文件 ≤ 600 行，存量超标记基线只许变小 | R-SIZE（见 `file_size.rs`） |
+//! | `src/` 与 `docs/experiments/` 下的代码文件 ≤ 600 行，不设基线 | R-SIZE（见 `file_size.rs`） |
 //! | 代码里不写 16000 / 48000 采样率字面量，引用 `vdn_types::{IO_RATE, MODEL_RATE}` | R-RATE（见 `rate_literal.rs`） |
 //! | 不许有镜像文件、不许在 vdn-types 之外定义同名类型；参数范围不许在描述表之外写成数字字面量 | R-MIRROR · R-PARAM · R-MODEL（见 `no_mirror.rs` · `param_range.rs` · `model_name.rs`） |
 
@@ -335,8 +335,8 @@ pub fn check() -> Result<Tidy, String> {
     crate::no_mirror::check(&root, &mut t.problems);
     crate::param_range::check(&root, &mut t.problems);
     crate::model_name::check(&root, &mut t.problems);
-    // 单文件行数上限（R-SIZE，棘轮基线）
-    crate::file_size::check(&root, &mut t.problems, &mut t.notes);
+    // 单文件行数上限（R-SIZE，硬上限 600 行）
+    crate::file_size::check(&root, &mut t.problems);
     // 采样率只写一处（R-RATE）
     crate::rate_literal::check(&root, &mut t.problems);
 

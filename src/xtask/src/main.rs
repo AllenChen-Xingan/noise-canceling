@@ -7,7 +7,6 @@
 //!
 //! - `cargo run -p xtask -- ci [--fail-fast]`：一条闸门——fmt · clippy · test · tidy · check-deps（· cargo-deny，装了才跑），见 `ci.rs`
 //! - `cargo run -p xtask -- miri [crate…]`：nightly Miri 跑无锁结构测试（默认 vdn-shm；慢，不进 `ci`），见 `miri.rs`
-//! - `cargo run -p xtask -- size-baseline`：按现状只降不升地收紧单文件行数基线（R-SIZE），见 `file_size.rs`
 //! - `cargo run -p xtask -- todo`：按 crate 列出 `#[ignore = "待实现…"]` 与 `Unimplemented`
 //!
 //! tidy 与 check-deps 都随 `cargo test -p xtask` 跑（照 rust-analyzer：架构规则即测试）。不依赖任何 vdn crate。
@@ -119,10 +118,9 @@ fn main() -> ExitCode {
         "miri" => miri::run(&args[1..]),
         "check-deps" => exit(run_check_deps()),
         "tidy" => exit(run_tidy()),
-        "size-baseline" => exit(file_size::write_tightened(&root())),
         _ => {
             eprintln!(
-                "用法：cargo run -p xtask -- <ci [--fail-fast] | todo | check-deps | tidy | size-baseline | miri [crate…] | eval ci|qa>"
+                "用法：cargo run -p xtask -- <ci [--fail-fast] | todo | check-deps | tidy | miri [crate…] | eval ci|qa>"
             );
             ExitCode::FAILURE
         }
