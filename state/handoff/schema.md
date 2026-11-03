@@ -23,6 +23,12 @@
 - 评测清单改成 `deny_unknown_fields`：多出的键报错（原来静默忽略）。任务里的 `note` 收进类型。`pause_s` / `f0` 不是两个数的数组时，原来静默取默认值，现在报错
 - 枚举名字只由 serde 定：删了 `NoiseKind::parse` · `InterfMode::parse` · `Probe::parse` · `Level::parse` · `Set::parse`；保留的 `as_str` 由测试与 serde 名字逐个比对
 
+## 大总管要核的三件（2026-11-02，读 cargo tree / 源码，未编译）
+1. 许可与依赖范围：`cargo deny check` 在锁建立前全过（licenses ok，没加新许可）。`cargo tree -e normal -i boon` 为空，boon 只在 vdn-schema 的 dev 依赖里
+2. 宏：`describe!` 16 行，没有 `#[macro_export]`，不导出，符合规约 §6「≤30 行、不导出」
+3. 核心 crate：types · dsp · engine · models · shm · speaker 的 forbid 都含 `serde`。schemars 依赖 serde，闭包检查同样挡住它；check-deps 通过
+- 顺带改了一处（锁解除后待编译验证）：schemars 原经 vdn-control 进了 vdn-capture · vdn-denoised · vdn 三个产品程序的依赖。现改为 vdn-control 的可选特性 `schema`，只有 vdn-schema 打开
+
 ## 改了哪些文件
 - 新：`src/schema/`（Cargo.toml · src/lib.rs · src/shm.rs · src/eval.rs · src/main.rs · tests/crosscheck.rs）· `src/shm/src/desc.rs` · `src/eval/src/files.rs` · `specs/schema/`（README + 6 份导出 + examples/2 份）
 - 改：`Cargo.toml` · `Cargo.lock` · `src/shm/src/{lib,layout}.rs` · `src/shm/tests/layout_doc.rs` · `src/control/{Cargo.toml,src/lib.rs}` · `src/eval/{Cargo.toml,src/lib.rs,src/suite.rs,src/main.rs,src/synth.rs,src/probes.rs}` · `specs/rust/architecture.md`（§6 表一行）· `specs/README.md` · `.42cog/cog.md`（一行）· `docs/research/008_rust-architecture/adr/004-ast-guard-not-generate.md`（修订注）· `docs/experiments/exp007-eval-suite/task-schema.md`
