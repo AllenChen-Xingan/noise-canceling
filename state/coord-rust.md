@@ -44,6 +44,7 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- e3 的耗电矩阵（人跑，18:43，单次 60 s、背景噪声约 ±30 mW）：自建 Audio Workgroup 区间（截止 1–3 ms）把 BNNS 每帧 0.80 → 0.2 ms，但 CPU 功率多 25–40 mW；最省的是手写 + Accelerate + time-constraint（71 mW）→ 与 D74 一致，未推翻
 - **真设备（人在场，2026-11-02 18:1x）**：麦克风测试过（0.5 s 24000 帧）· 扬声器嘀声人听到 · **V5 人耳没听到自己的声音**（机器判溢出 0 欠载 0）；`vdn run` 实时优先级提升失败 code 4。人确认 Ghostty 有麦克风权限；录 3 s：ffmpeg mean −38.9 / max −28.1 dB，vdn-capture −39.5 / −29.4 dB → 收音路径有声。推断：小声副本被骨传导掩盖。人要「各种测试帮我补」→ 新起 rs-live：`vdn run --check / --record / --gain-db`、不开设备的路径测试、全零检测、RtParams 夹到 50 µs–50 ms（code 4 根因：直通实测 < 50 µs）、提升失败要打印；内核把 computation < constraint/2 抬到 constraint/2（D74 实际 8 / 16 ms）
 - PR #52 开（Closes #46）；CI：macOS 过、Linux 败（只为 Linux 的分支编译不过）。人问「为啥要跑 Linux」→ **人定 D76**（原话「直接用mac 就好，先在mac上跑通」）：CI 只跑 macOS；子代理合 workflow、改规约 §7；非 macOS 分支 → backlog
 - rs-entry 压力验收过：4 个忙进程下四 crate 测试连跑 5 次，每次 57 过 0 失败 2 忽略；骨架合进 rs-entry（62d78ab），接 from_measured 最后一行
