@@ -27,7 +27,7 @@ pub struct Agc {
     lim_gain: f32,
     lim_release: f32,
     a_level: f32,
-    floor_db: f32,
+    noise_floor_db: f32,
     have_floor: bool,
 }
 
@@ -44,7 +44,7 @@ impl Agc {
             lim_gain: 1.0,
             lim_release: 1.0 - (-1.0 / (0.06 * sub_rate)).exp(),
             a_level: 1.0 - (-1.0 / (LEVEL_TAU_S * fps)).exp(),
-            floor_db: -100.0,
+            noise_floor_db: -100.0,
             have_floor: false,
         }
     }
@@ -54,7 +54,7 @@ impl Agc {
         self.have_level = false;
         self.gain_db = 0.0;
         self.lim_gain = 1.0;
-        self.floor_db = -100.0;
+        self.noise_floor_db = -100.0;
         self.have_floor = false;
     }
 
@@ -67,14 +67,14 @@ impl Agc {
         }
         let e = 10.0 * ms.log10();
         if !self.have_floor {
-            self.floor_db = e;
+            self.noise_floor_db = e;
             self.have_floor = true;
-        } else if e < self.floor_db {
-            self.floor_db += 0.3 * (e - self.floor_db);
+        } else if e < self.noise_floor_db {
+            self.noise_floor_db += 0.3 * (e - self.noise_floor_db);
         } else {
-            self.floor_db = (self.floor_db + 3.0 / self.fps).min(e);
+            self.noise_floor_db = (self.noise_floor_db + 3.0 / self.fps).min(e);
         }
-        ((e - self.floor_db - 4.0) / 8.0).clamp(0.0, 1.0)
+        ((e - self.noise_floor_db - 4.0) / 8.0).clamp(0.0, 1.0)
     }
 
     /// 当前 AGC 增益（dB，不含限幅）。

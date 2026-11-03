@@ -9,8 +9,8 @@
 use core::fmt::Write as _;
 
 use crate::params::{ModelId, ParamField, ParamSet, ToneId};
-use crate::record::SessionRecord;
 use crate::scene::{FineSceneId, UserScene};
+use crate::session::SessionRecord;
 use crate::text::{self, Line, TextError};
 use crate::version::{ConfigBinding, ContentId, ProfileVersion};
 

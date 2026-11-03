@@ -8,8 +8,8 @@
 
 use vdn_dsp::{OpenCloseEnvelope, OpenCloseParams, db_to_lin, one_pole_coef};
 
-use crate::types::{FrameCtx, Stage};
 use crate::vad::{Hysteresis, Vad};
+use vdn_types::{FrameCtx, NodeKind, Stage, graph};
 
 #[derive(Clone, Copy, Debug)]
 pub struct EnvelopeParams {
@@ -27,17 +27,57 @@ pub struct EnvelopeParams {
 }
 
 impl EnvelopeParams {
-    /// 与 p1 默认对齐（open −6、hangover 150 ms、release 300 ms、下限 −12），只换判据。
+    /// 与 p1（engine `SafetyConfig`）默认对齐，只换判据。数值取自 `vdn_types::desc`，与 engine 同一条描述。
     pub fn p1_like(sr: f32) -> Self {
+        use vdn_types::desc::*;
         Self {
             sr,
-            floor_db: -12.0,
-            open_db: -6.0,
-            attack_s: 0.002,
-            release_s: 0.3,
-            hangover_s: 0.15,
-            vad_on: 0.5,
-            vad_off: 0.35,
+            floor_db: FLOOR_DB.default,
+            open_db: OPEN_DB.default,
+            attack_s: ATTACK_S.default,
+            release_s: RELEASE_S.default,
+            hangover_s: HANGOVER_S.default,
+            vad_on: VAD_ON.default,
+            vad_off: VAD_OFF.default,
+        }
+    }
+
+    /// 每个可调参数都在描述表范围内（越界拒收）。
+    /// 穷举解构：结构加了字段而这里没登记描述表，编译失败。
+    pub fn validate(&self) -> Result<(), vdn_types::RangeError> {
+        use vdn_types::desc::*;
+        let EnvelopeParams {
+            sr: _,
+            floor_db,
+            open_db,
+            attack_s,
+            release_s,
+            hangover_s,
+            vad_on,
+            vad_off,
+        } = *self;
+        FLOOR_DB.check(floor_db)?;
+        OPEN_DB.check(open_db)?;
+        ATTACK_S.check(attack_s)?;
+        RELEASE_S.check(release_s)?;
+        HANGOVER_S.check(hangover_s)?;
+        VAD_ON.check(vad_on)?;
+        VAD_OFF.check(vad_off)?;
+        Ok(())
+    }
+
+    /// 夹进描述表范围（NaN 当默认值）；两个包络级的 `new` 先夹再用。
+    pub fn clamped(self) -> Self {
+        use vdn_types::desc::*;
+        Self {
+            sr: self.sr,
+            floor_db: FLOOR_DB.clamp(self.floor_db),
+            open_db: OPEN_DB.clamp(self.open_db),
+            attack_s: ATTACK_S.clamp(self.attack_s),
+            release_s: RELEASE_S.clamp(self.release_s),
+            hangover_s: HANGOVER_S.clamp(self.hangover_s),
+            vad_on: VAD_ON.clamp(self.vad_on),
+            vad_off: VAD_OFF.clamp(self.vad_off),
         }
     }
 }
@@ -59,6 +99,7 @@ pub struct VadEnvelopeStage {
 
 impl VadEnvelopeStage {
     pub fn new(p: EnvelopeParams) -> Self {
+        let p = p.clamped();
         let closed = db_to_lin(p.floor_db);
         let open = db_to_lin(p.open_db).max(closed);
         Self {
@@ -103,8 +144,8 @@ impl VadEnvelopeStage {
     clippy::disallowed_macros
 )]
 impl Stage for VadEnvelopeStage {
-    fn name(&self) -> &'static str {
-        "vad-envelope"
+    fn kind(&self) -> &'static NodeKind {
+        &graph::VAD_ENVELOPE
     }
 
     fn reset(&mut self) {
@@ -153,6 +194,7 @@ pub struct EnergyEnvelopeStage {
 
 impl EnergyEnvelopeStage {
     pub fn new(p: EnvelopeParams, max_hop: usize) -> Self {
+        let p = p.clamped();
         let closed = db_to_lin(p.floor_db);
         Self {
             env: OpenCloseEnvelope::new(OpenCloseParams {
@@ -162,8 +204,8 @@ impl EnergyEnvelopeStage {
                 attack_s: p.attack_s,
                 release_s: p.release_s,
                 hangover_s: p.hangover_s,
-                // 以下三项 = exp004 默认（`src/engine/src/engine.rs`）
-                detect_db: 9.0,
+                // 判据灵敏度与 engine 同一条描述；以下两项 = exp004 默认（`src/engine/src/engine.rs`）
+                detect_db: vdn_types::desc::DETECT_DB.default,
                 abs_min_db: -70.0,
                 noise_rise_db_per_s: 6.0,
             }),
@@ -183,8 +225,8 @@ impl EnergyEnvelopeStage {
     clippy::disallowed_macros
 )]
 impl Stage for EnergyEnvelopeStage {
-    fn name(&self) -> &'static str {
-        "energy-envelope"
+    fn kind(&self) -> &'static NodeKind {
+        &graph::ENERGY_ENVELOPE
     }
 
     fn reset(&mut self) {
@@ -212,7 +254,7 @@ pub struct FloorStage {
 impl FloorStage {
     pub fn new(floor_db: f32) -> Self {
         Self {
-            m: db_to_lin(floor_db),
+            m: db_to_lin(vdn_types::desc::FLOOR_DB.clamp(floor_db)),
         }
     }
 }
@@ -224,8 +266,8 @@ impl FloorStage {
     clippy::disallowed_macros
 )]
 impl Stage for FloorStage {
-    fn name(&self) -> &'static str {
-        "floor"
+    fn kind(&self) -> &'static NodeKind {
+        &graph::FLOOR
     }
 
     fn reset(&mut self) {}
@@ -240,7 +282,45 @@ impl Stage for FloorStage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::SpeakerVerdict;
+
+    /// 包络与 engine 共用描述表里同一组条目：默认值同表；越界 validate 拒收、clamped 夹到边界。
+    #[test]
+    fn envelope_params_follow_desc_table() {
+        use vdn_types::desc::{self, ParamDesc};
+        let d = EnvelopeParams::p1_like(16000.0);
+        d.validate().unwrap();
+        type Set = fn(&mut EnvelopeParams, f32);
+        type Get = fn(&EnvelopeParams) -> f32;
+        let fields: [(&ParamDesc, Get, Set); 7] = [
+            (&desc::FLOOR_DB, |p| p.floor_db, |p, v| p.floor_db = v),
+            (&desc::OPEN_DB, |p| p.open_db, |p, v| p.open_db = v),
+            (&desc::ATTACK_S, |p| p.attack_s, |p, v| p.attack_s = v),
+            (&desc::RELEASE_S, |p| p.release_s, |p, v| p.release_s = v),
+            (&desc::HANGOVER_S, |p| p.hangover_s, |p, v| p.hangover_s = v),
+            (&desc::VAD_ON, |p| p.vad_on, |p, v| p.vad_on = v),
+            (&desc::VAD_OFF, |p| p.vad_off, |p, v| p.vad_off = v),
+        ];
+        for (dsc, get, set) in fields {
+            assert_eq!(get(&d), dsc.default, "{} 默认值", dsc.key);
+            for bad in [dsc.min - 0.5, dsc.max + 0.5] {
+                let mut p = d;
+                set(&mut p, bad);
+                assert_eq!(p.validate().unwrap_err().desc.id, dsc.id, "{}", dsc.key);
+                assert_eq!(get(&p.clamped()), dsc.clamp(bad), "{}", dsc.key);
+            }
+        }
+        // 处理图里两种包络节点的参数清单（`vdn_types::graph`）= 本表（能量版另读检测灵敏度；交叉校验，D72）
+        let mut want: Vec<u16> = fields.iter().map(|f| f.0.id).collect();
+        want.sort_unstable();
+        assert_eq!(graph::VAD_ENVELOPE.param_ids(), want);
+        want.push(desc::DETECT_DB.id);
+        want.sort_unstable();
+        assert_eq!(graph::ENERGY_ENVELOPE.param_ids(), want);
+        assert_eq!(graph::FLOOR.param_ids(), [desc::FLOOR_DB.id]);
+        let st = VadEnvelopeStage::new(EnvelopeParams { floor_db: 6.0, ..d });
+        assert_eq!(st.params().floor_db, desc::FLOOR_DB.max, "new() 先夹再用");
+    }
+    use vdn_types::SpeakerVerdict;
 
     fn ctx() -> FrameCtx {
         FrameCtx {

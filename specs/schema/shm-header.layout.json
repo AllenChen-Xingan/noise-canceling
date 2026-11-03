@@ -1,0 +1,385 @@
+{
+  "$comment": "由 `cargo run -p vdn-schema` 从 src/shm/src/layout.rs（经 src/shm/src/desc.rs）导出，勿手改。改布局必须升 layout::VERSION，并在 src/schema/src/shm.rs 的 HISTORY 末尾登记",
+  "endian": "little",
+  "flat": [
+    {
+      "offset": 0,
+      "path": "config.magic",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 8,
+      "path": "config.version",
+      "size": 4,
+      "type": "u32"
+    },
+    {
+      "offset": 12,
+      "path": "config.rate",
+      "size": 4,
+      "type": "u32"
+    },
+    {
+      "offset": 16,
+      "path": "config.capacity_frames",
+      "size": 4,
+      "type": "u32"
+    },
+    {
+      "offset": 20,
+      "path": "config.l_total",
+      "size": 4,
+      "type": "u32"
+    },
+    {
+      "offset": 24,
+      "path": "config.total_bytes",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 32,
+      "path": "config.lead",
+      "size": 4,
+      "type": "u32"
+    },
+    {
+      "offset": 36,
+      "path": "config.denoise_block",
+      "size": 4,
+      "type": "u32"
+    },
+    {
+      "offset": 40,
+      "path": "config.session",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 64,
+      "path": "beat.heartbeat",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 128,
+      "path": "rings[0].prod.write",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 136,
+      "path": "rings[0].prod.overflow",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 144,
+      "path": "rings[0].prod.wake",
+      "size": 4,
+      "type": "u32"
+    },
+    {
+      "offset": 192,
+      "path": "rings[0].cons.read",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 200,
+      "path": "rings[0].cons.underrun",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 208,
+      "path": "rings[0].cons.wait_fallbacks",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 216,
+      "path": "rings[0].cons.gaps",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 256,
+      "path": "rings[1].prod.write",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 264,
+      "path": "rings[1].prod.overflow",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 272,
+      "path": "rings[1].prod.wake",
+      "size": 4,
+      "type": "u32"
+    },
+    {
+      "offset": 320,
+      "path": "rings[1].cons.read",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 328,
+      "path": "rings[1].cons.underrun",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 336,
+      "path": "rings[1].cons.wait_fallbacks",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 344,
+      "path": "rings[1].cons.gaps",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 384,
+      "path": "rings[2].prod.write",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 392,
+      "path": "rings[2].prod.overflow",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 400,
+      "path": "rings[2].prod.wake",
+      "size": 4,
+      "type": "u32"
+    },
+    {
+      "offset": 448,
+      "path": "rings[2].cons.read",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 456,
+      "path": "rings[2].cons.underrun",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 464,
+      "path": "rings[2].cons.wait_fallbacks",
+      "size": 8,
+      "type": "u64"
+    },
+    {
+      "offset": 472,
+      "path": "rings[2].cons.gaps",
+      "size": 8,
+      "type": "u64"
+    }
+  ],
+  "header_bytes": 512,
+  "history": [
+    {
+      "fingerprint": "fnv1a64:fbd400fe113ede86",
+      "version": 2
+    }
+  ],
+  "magic": "0x56444e5f53484d31",
+  "max_capacity_frames": 16777216,
+  "rings": [
+    "Raw",
+    "Processed",
+    "Out"
+  ],
+  "slot_bytes": 4,
+  "slot_type": "u32（f32::to_bits）",
+  "structs": [
+    {
+      "align": 64,
+      "fields": [
+        {
+          "name": "magic",
+          "offset": 0,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "version",
+          "offset": 8,
+          "size": 4,
+          "type": "u32"
+        },
+        {
+          "name": "rate",
+          "offset": 12,
+          "size": 4,
+          "type": "u32"
+        },
+        {
+          "name": "capacity_frames",
+          "offset": 16,
+          "size": 4,
+          "type": "u32"
+        },
+        {
+          "name": "l_total",
+          "offset": 20,
+          "size": 4,
+          "type": "u32"
+        },
+        {
+          "name": "total_bytes",
+          "offset": 24,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "lead",
+          "offset": 32,
+          "size": 4,
+          "type": "u32"
+        },
+        {
+          "name": "denoise_block",
+          "offset": 36,
+          "size": 4,
+          "type": "u32"
+        },
+        {
+          "name": "session",
+          "offset": 40,
+          "size": 8,
+          "type": "u64"
+        }
+      ],
+      "name": "ConfigLine",
+      "size": 64
+    },
+    {
+      "align": 64,
+      "fields": [
+        {
+          "name": "heartbeat",
+          "offset": 0,
+          "size": 8,
+          "type": "u64"
+        }
+      ],
+      "name": "BeatLine",
+      "size": 64
+    },
+    {
+      "align": 64,
+      "fields": [
+        {
+          "name": "write",
+          "offset": 0,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "overflow",
+          "offset": 8,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "wake",
+          "offset": 16,
+          "size": 4,
+          "type": "u32"
+        }
+      ],
+      "name": "ProdLine",
+      "size": 64
+    },
+    {
+      "align": 64,
+      "fields": [
+        {
+          "name": "read",
+          "offset": 0,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "underrun",
+          "offset": 8,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "wait_fallbacks",
+          "offset": 16,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "gaps",
+          "offset": 24,
+          "size": 8,
+          "type": "u64"
+        }
+      ],
+      "name": "ConsLine",
+      "size": 64
+    },
+    {
+      "align": 64,
+      "fields": [
+        {
+          "name": "prod",
+          "offset": 0,
+          "size": 64,
+          "type": "ProdLine"
+        },
+        {
+          "name": "cons",
+          "offset": 64,
+          "size": 64,
+          "type": "ConsLine"
+        }
+      ],
+      "name": "RingHdr",
+      "size": 128
+    },
+    {
+      "align": 64,
+      "fields": [
+        {
+          "name": "config",
+          "offset": 0,
+          "size": 64,
+          "type": "ConfigLine"
+        },
+        {
+          "name": "beat",
+          "offset": 64,
+          "size": 64,
+          "type": "BeatLine"
+        },
+        {
+          "name": "rings",
+          "offset": 128,
+          "size": 384,
+          "type": "RingHdr[3]"
+        }
+      ],
+      "name": "Header",
+      "size": 512
+    }
+  ],
+  "version": 2
+}

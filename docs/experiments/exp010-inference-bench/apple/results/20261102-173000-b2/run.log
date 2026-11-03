@@ -1,0 +1,74 @@
+[17:22:00] build 20261102-173000-b2 → /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-173000-b2 · 结果 /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-engine/docs/experiments/exp010-inference-bench/apple/results/20261102-173000-b2
+[17:22:00] 转 GTCRN
+[17:22:20] 转 FE-M
+[17:22:21] ERROR convert_fem
+[17:22:21] 用 rustbe 的程序写转储（不重编它，只用现成二进制）
+[17:22:30] cargo build apple-rs
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.01s
+build/bench_coreml
+build/bench_bnns
+build/libvdn_alloc.dylib
+[17:22:33] round 1 · gtcrn ort
+[17:22:35] round 1 · gtcrn native
+[17:22:36] round 1 · gtcrn coreml-cpu fp32
+[17:22:38] round 1 · gtcrn coreml-gpu fp32
+[17:22:41] round 1 · gtcrn coreml-ane fp16
+[17:22:44] round 1 · gtcrn coreml-all fp16
+[17:22:47] round 1 · gtcrn coreml-cpu fp16
+[17:22:49] round 1 · gtcrn coreml-cpu state-fp16
+[17:22:49] round 1 · gtcrn coreml-cpu unrolled-fp32
+[17:22:52] round 1 · gtcrn bnns fp32
+[17:22:55] round 1 · gtcrn bnns unrolled-fp32
+[17:22:56] round 1 · gtcrn bnns-multi fp32
+[17:22:58] round 1 · fem ort
+[17:23:00] round 1 · fem coreml-cpu fp32
+[17:23:00] round 1 · fem coreml-gpu fp32
+[17:23:00] round 1 · fem coreml-ane fp16
+[17:23:00] round 1 · fem coreml-all fp16
+[17:23:00] round 1 · fem bnns fp32
+[17:23:00] round 2 · gtcrn ort
+[17:23:03] round 2 · gtcrn native
+[17:23:03] round 2 · gtcrn coreml-cpu fp32
+[17:23:06] round 2 · gtcrn coreml-gpu fp32
+[17:23:09] round 2 · gtcrn coreml-ane fp16
+[17:23:11] round 2 · gtcrn coreml-all fp16
+[17:23:14] round 2 · gtcrn coreml-cpu fp16
+[17:23:17] round 2 · gtcrn coreml-cpu state-fp16
+[17:23:17] round 2 · gtcrn coreml-cpu unrolled-fp32
+[17:23:20] round 2 · gtcrn bnns fp32
+[17:23:22] round 2 · gtcrn bnns unrolled-fp32
+[17:23:23] round 2 · gtcrn bnns-multi fp32
+[17:23:26] round 2 · fem ort
+[17:23:28] round 2 · fem coreml-cpu fp32
+[17:23:28] round 2 · fem coreml-gpu fp32
+[17:23:28] round 2 · fem coreml-ane fp16
+[17:23:28] round 2 · fem coreml-all fp16
+[17:23:28] round 2 · fem bnns fp32
+[17:23:28] round 3 · gtcrn ort
+[17:23:30] round 3 · gtcrn native
+[17:23:31] round 3 · gtcrn coreml-cpu fp32
+[17:23:34] round 3 · gtcrn coreml-gpu fp32
+[17:23:36] round 3 · gtcrn coreml-ane fp16
+[17:23:39] round 3 · gtcrn coreml-all fp16
+[17:23:42] round 3 · gtcrn coreml-cpu fp16
+[17:23:45] round 3 · gtcrn coreml-cpu state-fp16
+[17:23:45] round 3 · gtcrn coreml-cpu unrolled-fp32
+[17:23:48] round 3 · gtcrn bnns fp32
+[17:23:50] round 3 · gtcrn bnns unrolled-fp32
+[17:23:51] round 3 · gtcrn bnns-multi fp32
+[17:23:53] round 3 · fem ort
+[17:23:56] round 3 · fem coreml-cpu fp32
+[17:23:56] round 3 · fem coreml-gpu fp32
+[17:23:56] round 3 · fem coreml-ane fp16
+[17:23:56] round 3 · fem coreml-all fp16
+[17:23:56] round 3 · fem bnns fp32
+[17:23:56] 完成 20261102-173000-b2
+[17:25:25] build 20261102-173000-b2 → /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-apple/20261102-173000-b2 · 结果 /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-engine/docs/experiments/exp010-inference-bench/apple/results/20261102-173000-b2
+[17:25:25] MLX：导权重 · 对 torch 自检 · 导 .mlxfn · Python 计时（对照，D68）
+[17:25:28] round 1 · mlx-python cpu
+[17:26:15] round 1 · mlx-python gpu
+[17:26:58] round 2 · mlx-python cpu
+[17:27:36] round 2 · mlx-python gpu
+[17:28:14] round 3 · mlx-python cpu
+[17:28:50] round 3 · mlx-python gpu
+[17:29:28] 完成 20261102-173000-b2

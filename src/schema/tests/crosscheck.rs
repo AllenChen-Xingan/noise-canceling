@@ -1,0 +1,870 @@
+//! 交叉校验（CLAUDE.md 第五节第 5 条）：Rust 类型 ↔ 仓里的 schema 文件 ↔ 仓里的数据文件。
+//!
+//! 每份 schema 都有正例（仓里的文件一致）和负例（改了 Rust 不重新导出 → 检查报错）。
+//! 文件过 schema 用 `boon`（另一家实现）校验，不用导出 schema 的同一个库。
+
+use std::path::{Path, PathBuf};
+
+use serde_json::{Value, json};
+use vdn_control::Config;
+use vdn_schema::{DIR, check, eval, export, root, shm, write};
+
+fn committed(file: &str) -> Value {
+    let p = root().join(DIR).join(file);
+    let t = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}：{e}", p.display()));
+    serde_json::from_str(&t).unwrap()
+}
+
+/// 用仓里的 schema 校验一份 JSON；返回 Err(原因)。
+fn validate(schema: &Value, inst: &Value) -> Result<(), String> {
+    let mut schemas = boon::Schemas::new();
+    let mut c = boon::Compiler::new();
+    c.add_resource("file:///schema.json", schema.clone())
+        .map_err(|e| e.to_string())?;
+    let idx = c
+        .compile("file:///schema.json", &mut schemas)
+        .map_err(|e| e.to_string())?;
+    schemas.validate(inst, idx).map_err(|e| e.to_string())
+}
+
+/// 临时仓库根：只放 `specs/schema/`，由当前 Rust 正本导出。
+fn temp_root(tag: &str) -> PathBuf {
+    let d = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("schema-{tag}"));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    write(&d).unwrap();
+    assert!(check(&d).is_empty(), "{:#?}", check(&d));
+    d
+}
+
+fn put(root: &Path, file: &str, v: &Value) {
+    std::fs::write(root.join(DIR).join(file), vdn_schema::pretty(v)).unwrap();
+}
+
+// ───────────── 机制 ─────────────
+
+/// 正例：仓里的 schema 文件与 Rust 正本逐字一致。红了就跑 `cargo run -p vdn-schema` 并提交。
+#[test]
+fn committed_schemas_match_rust() {
+    let p = check(&root());
+    assert!(p.is_empty(), "{p:#?}");
+}
+
+/// 负例：任何一份导出物与仓里不同（= 改了 Rust 没重新导出），检查都报出这份文件。
+#[test]
+fn any_stale_doc_is_reported() {
+    let d = temp_root("stale");
+    for doc in export() {
+        let path = d.join(DIR).join(doc.file);
+        std::fs::write(&path, doc.text.replace("\"", "\"x")).unwrap();
+        let p = check(&d);
+        assert!(
+            p.iter()
+                .any(|m| m.contains(doc.file) && m.contains("不一致")),
+            "{}：{p:#?}",
+            doc.file
+        );
+        std::fs::write(&path, &doc.text).unwrap();
+    }
+    assert!(check(&d).is_empty());
+}
+
+/// 负例：目录里多一份没人导出的 json（类型删了 / 改名留下的旧文件）也报。
+#[test]
+fn orphan_file_is_reported() {
+    let d = temp_root("orphan");
+    put(&d, "old.schema.json", &json!({}));
+    assert!(check(&d).iter().any(|m| m.contains("old.schema.json")));
+}
+
+// ───────────── 共享内存头 ─────────────
+
+/// 逐项比对：仓里布局文件的每个结构、每个字段（名 · 偏移 · 大小）都等于 `offset_of!` / `size_of` 算出的值。
+#[test]
+fn shm_layout_fields_match_offset_of() {
+    let doc = committed(shm::LAYOUT_FILE);
+    assert_eq!(
+        doc["version"],
+        json!(vdn_shm::layout::VERSION),
+        "版本号与 layout::VERSION 不同"
+    );
+    assert_eq!(doc["header_bytes"], json!(vdn_shm::layout::HEADER_BYTES));
+    assert_eq!(doc["slot_bytes"], json!(vdn_shm::layout::SLOT_BYTES));
+    let structs = doc["structs"].as_array().unwrap();
+    assert_eq!(structs.len(), vdn_shm::desc::STRUCTS.len());
+    for (s, j) in vdn_shm::desc::STRUCTS.iter().zip(structs) {
+        assert_eq!(j["name"], json!(s.name));
+        assert_eq!(j["size"], json!(s.size), "{} 大小", s.name);
+        assert_eq!(j["align"], json!(s.align), "{} 对齐", s.name);
+        let fs = j["fields"].as_array().unwrap();
+        assert_eq!(fs.len(), s.fields.len(), "{} 字段数", s.name);
+        for (f, jf) in s.fields.iter().zip(fs) {
+            assert_eq!(jf["name"], json!(f.name), "{} 字段顺序", s.name);
+            assert_eq!(jf["offset"], json!(f.offset), "{}.{} 偏移", s.name, f.name);
+            assert_eq!(jf["size"], json!(f.size), "{}.{} 大小", s.name, f.name);
+        }
+    }
+    // 展开表的几个锚点直接用 offset_of! 再算一遍（不经 desc）
+    use core::mem::{offset_of, size_of};
+    use vdn_shm::layout::{ConfigLine, ConsLine, Header, ProdLine, RingHdr};
+    let flat = doc["flat"].as_array().unwrap();
+    let at = |path: &str| {
+        flat.iter()
+            .find(|f| f["path"] == path)
+            .unwrap_or_else(|| panic!("flat 里没有 {path}"))["offset"]
+            .as_u64()
+            .unwrap() as usize
+    };
+    assert_eq!(
+        at("config.session"),
+        offset_of!(Header, config) + offset_of!(ConfigLine, session)
+    );
+    assert_eq!(
+        at("rings[2].cons.gaps"),
+        offset_of!(Header, rings)
+            + 2 * size_of::<RingHdr>()
+            + offset_of!(RingHdr, cons)
+            + offset_of!(ConsLine, gaps)
+    );
+    assert_eq!(
+        at("rings[1].prod.wake"),
+        offset_of!(Header, rings)
+            + size_of::<RingHdr>()
+            + offset_of!(RingHdr, prod)
+            + offset_of!(ProdLine, wake)
+    );
+}
+
+/// 负例：布局变了（这里把一个偏移挪 8 字节模拟）而版本号没升 → 守卫报错，`write` 一个文件都不写。
+#[test]
+fn shm_layout_change_without_version_bump_is_red() {
+    let body = shm::layout_body();
+    let fp = shm::fingerprint(&body);
+    let mut moved = body.clone();
+    moved["flat"][1]["offset"] = json!(16);
+    let fp2 = shm::fingerprint(&moved);
+    assert_ne!(fp, fp2);
+    let v = vdn_shm::layout::VERSION;
+    let hist = [(v, fp.as_str())];
+    // 布局变了、版本没升
+    let e = shm::guard(&hist, v, &fp2).unwrap_err();
+    assert!(e.contains("必须升版本"), "{e}");
+    // 升了版本、但没在 HISTORY 登记：也红（导出工具不会替你登记）
+    let e = shm::guard(&hist, v + 1, &fp2).unwrap_err();
+    assert!(e.contains("还没登记"), "{e}");
+    // 升了版本且登记了：放行
+    assert!(shm::guard(&[(v, fp.as_str()), (v + 1, fp2.as_str())], v + 1, &fp2).is_ok());
+    // 版本往回降、历史乱序、空历史：红
+    assert!(shm::guard(&hist, v - 1, &fp).is_err());
+    assert!(shm::guard(&[(v + 1, "a"), (v, fp.as_str())], v, &fp).is_err());
+    assert!(shm::guard(&[], v, &fp).is_err());
+
+    // 端到端：历史与当前布局不符 → write 一个文件都不写、check 报错
+    let d = temp_root("bump");
+    let bogus = [(v, "fnv1a64:0000000000000000")];
+    std::fs::remove_file(d.join(DIR).join(shm::LAYOUT_FILE)).unwrap();
+    let e = vdn_schema::write_with(&d, &bogus).unwrap_err();
+    assert!(e.contains("必须升版本"), "{e}");
+    assert!(
+        !d.join(DIR).join(shm::LAYOUT_FILE).exists(),
+        "守卫没过还写了文件"
+    );
+    write(&d).unwrap();
+    assert!(
+        vdn_schema::check_with(&d, &bogus)
+            .iter()
+            .any(|m| m.contains("必须升版本"))
+    );
+}
+
+/// 历史只增不改：main 上已发布的 (版本, 指纹) 必须原样留在 HISTORY 里（codex 第 2 轮 #1）。
+/// 拿不到 main 时：CI 里算红（要 fetch-depth: 0），本机只提示。
+#[test]
+fn shm_history_append_only_against_main() {
+    match vdn_schema::shm_baseline(&root()) {
+        vdn_schema::Baseline::Found(base, text) => {
+            let b = shm::baseline_entry(&text).unwrap_or_else(|e| panic!("对照 {base}：{e}"));
+            shm::guard_baseline(shm::HISTORY, &b).unwrap_or_else(|e| panic!("对照 {base}：{e}"));
+        }
+        vdn_schema::Baseline::Absent(base) => {
+            eprintln!("注：{base} 上还没有 {}，本次是第一次引入", shm::LAYOUT_FILE);
+        }
+        vdn_schema::Baseline::Unavailable(why) => {
+            assert!(std::env::var_os("CI").is_none(), "CI 里拿不到基线：{why}");
+            eprintln!("注：跳过对照 main（{why}）");
+        }
+    }
+}
+
+/// 负例：把旧版本的指纹改写成新布局（不升版本）、或删掉旧行 → 红；在末尾追加新版本 → 绿。
+#[test]
+fn shm_history_rewrite_is_red() {
+    let fresh = std::fs::read_to_string(root().join(DIR).join(shm::LAYOUT_FILE)).unwrap();
+    let b = shm::baseline_entry(&fresh).unwrap();
+    assert_eq!(
+        b.fingerprint,
+        shm::fingerprint(&shm::layout_body()),
+        "从文件算的指纹应与从 Rust 算的相同"
+    );
+    let own: Vec<(u32, String)> = shm::HISTORY
+        .iter()
+        .map(|(v, f)| (*v, f.to_string()))
+        .collect();
+    assert_eq!(b.history, own, "文件里的历史应与 HISTORY 相同");
+    // 改写、删除、追加都从完整历史出发改一行：以后正常追加了版本 3、4…，这条测试照样成立（codex 第 4 轮 #1）
+    let full: Vec<(u32, &str)> = shm::HISTORY.to_vec();
+    let last = full.len() - 1;
+    let mut rewritten = full.clone();
+    rewritten[last].1 = "fnv1a64:1111111111111111";
+    let e = shm::guard_baseline(&rewritten, &b).unwrap_err();
+    assert!(e.contains("被改写"), "{e}");
+    let mut deleted = full.clone();
+    deleted.remove(0);
+    deleted.push((full[last].0 + 1, "fnv1a64:2222222222222222"));
+    let e = shm::guard_baseline(&deleted, &b).unwrap_err();
+    assert!(e.contains("删掉"), "{e}");
+    let mut appended = full.clone();
+    appended.push((full[last].0 + 1, "fnv1a64:2222222222222222"));
+    assert!(shm::guard_baseline(&appended, &b).is_ok());
+    assert!(shm::guard_baseline(&full, &b).is_ok());
+    // 已发布两个版本的基线：原样保留并追加 → 绿
+    let two = shm::BaseLayout {
+        version: 3,
+        fingerprint: "fnv1a64:b3".into(),
+        history: vec![(2, "fnv1a64:a2".into()), (3, "fnv1a64:b3".into())],
+    };
+    let ok = [(2, "fnv1a64:a2"), (3, "fnv1a64:b3"), (4, "fnv1a64:c4")];
+    assert!(shm::guard_baseline(&ok, &two).is_ok());
+}
+
+/// 整份历史只增不改（codex 第 3 轮 #3）：main 已发布到版本 3 时，改写或删掉更早的版本 2 也红。
+#[test]
+fn shm_history_whole_prefix_is_checked() {
+    let s = |x: &str| x.to_string();
+    let base = shm::BaseLayout {
+        version: 3,
+        fingerprint: s("fnv1a64:b3"),
+        history: vec![(2, s("fnv1a64:a2")), (3, s("fnv1a64:b3"))],
+    };
+    let ok = [(2, "fnv1a64:a2"), (3, "fnv1a64:b3"), (4, "fnv1a64:c4")];
+    assert!(shm::guard_baseline(&ok, &base).is_ok());
+    assert!(shm::guard_baseline(&ok[..2], &base).is_ok());
+    let old_rewritten = [(2, "fnv1a64:xx"), (3, "fnv1a64:b3"), (4, "fnv1a64:c4")];
+    let e = shm::guard_baseline(&old_rewritten, &base).unwrap_err();
+    assert!(e.contains("版本 2") && e.contains("被改写"), "{e}");
+    let old_deleted = [(3, "fnv1a64:b3"), (4, "fnv1a64:c4")];
+    let e = shm::guard_baseline(&old_deleted, &base).unwrap_err();
+    assert!(e.contains("删掉"), "{e}");
+    // 在已发布的行之间插一行：版本号仍递增，但位置变了
+    let base1 = shm::BaseLayout {
+        version: 3,
+        fingerprint: s("fnv1a64:b3"),
+        history: vec![(1, s("fnv1a64:z1")), (3, s("fnv1a64:b3"))],
+    };
+    let inserted = [(1, "fnv1a64:z1"), (2, "fnv1a64:a2"), (3, "fnv1a64:b3")];
+    let e = shm::guard_baseline(&inserted, &base1).unwrap_err();
+    assert!(e.contains("插进"), "{e}");
+    // 基线文件自相矛盾（布局指纹不在它自己的历史里）：红
+    let broken = shm::BaseLayout {
+        fingerprint: s("fnv1a64:zz"),
+        ..base.clone()
+    };
+    assert!(
+        shm::guard_baseline(&ok, &broken)
+            .unwrap_err()
+            .contains("自相矛盾")
+    );
+    // 旧格式文件（没有 history）：按只有当前一行算
+    let mut old: Value = serde_json::from_str(
+        &std::fs::read_to_string(root().join(DIR).join(shm::LAYOUT_FILE)).unwrap(),
+    )
+    .unwrap();
+    old.as_object_mut().unwrap().remove("history");
+    let b = shm::baseline_entry(&old.to_string()).unwrap();
+    assert_eq!(b.history, vec![(b.version, b.fingerprint.clone())]);
+}
+
+fn git_out(args: &[&str]) -> Option<String> {
+    let o = std::process::Command::new("git")
+        .arg("-C")
+        .arg(root())
+        .args(args)
+        .output()
+        .ok()?;
+    o.status
+        .success()
+        .then(|| String::from_utf8_lossy(&o.stdout).trim().to_string())
+}
+
+/// 读基线：提交在、但读树或读文件失败 → Unavailable，不算 Absent（codex 第 4 轮 #2）。
+/// 用假的 git 逐步注入结果，不依赖本机仓库。
+#[test]
+fn shm_baseline_read_errors_are_unavailable() {
+    use vdn_schema::Baseline;
+    let sha = "1111111111111111111111111111111111111111";
+    // ls_tree / show：None = 命令失败
+    let fake = |ls_tree: Option<&'static str>, show: Option<&'static str>| {
+        move |args: &[&str]| -> Option<String> {
+            match args[0] {
+                "rev-parse" => Some(sha.to_string()),
+                "ls-tree" => ls_tree.map(str::to_string),
+                "show" => show.map(str::to_string),
+                other => panic!("没料到的 git 子命令 {other}"),
+            }
+        }
+    };
+    let path = format!("{DIR}/{}", shm::LAYOUT_FILE);
+    let listed: &'static str = Box::leak(path.into_boxed_str());
+    let cases: [(Option<&'static str>, Option<&'static str>, &str); 4] = [
+        (None, None, "Unavailable"),         // 读树失败
+        (Some(listed), None, "Unavailable"), // 树里有文件，读文件失败
+        (Some(""), None, "Absent"),          // 树里确实没有
+        (Some(listed), Some("{}"), "Found"), // 读到了
+    ];
+    for (ls, show, want) in cases {
+        let got = match vdn_schema::shm_baseline_with("base", &fake(ls, show)) {
+            Baseline::Found(c, _) => {
+                assert_eq!(c, sha);
+                "Found"
+            }
+            Baseline::Absent(c) => {
+                assert_eq!(c, sha);
+                "Absent"
+            }
+            Baseline::Unavailable(_) => "Unavailable",
+        };
+        assert_eq!(got, want, "ls-tree = {ls:?}，show = {show:?}");
+    }
+    // 提交不存在
+    let none = |_: &[&str]| -> Option<String> { None };
+    assert!(matches!(
+        vdn_schema::shm_baseline_with("base", &none),
+        Baseline::Unavailable(_)
+    ));
+}
+
+/// 读基线：提交不存在 → Unavailable（不当成「首次引入」放行）；提交在、树里没有文件 → Absent；
+/// 有文件 → Found。环境变量给的全零提交 → Unavailable（codex 第 3 轮 #1、#2）。
+#[test]
+fn shm_baseline_failures_are_not_absent() {
+    let r = root();
+    let Some(first) = git_out(&["rev-list", "--max-parents=0", "HEAD"]) else {
+        assert!(std::env::var_os("CI").is_none(), "CI 里不是 git 仓库");
+        eprintln!("注：不是 git 仓库，跳过");
+        return;
+    };
+    let first = first.lines().next().unwrap().to_string();
+    let missing = "0123456789abcdef0123456789abcdef01234567";
+    assert!(matches!(
+        vdn_schema::shm_baseline_at(&r, missing),
+        vdn_schema::Baseline::Unavailable(_)
+    ));
+    assert!(matches!(
+        vdn_schema::shm_baseline_from(&r, Some(missing)),
+        vdn_schema::Baseline::Unavailable(_)
+    ));
+    assert!(matches!(
+        vdn_schema::shm_baseline_from(&r, Some("0000000000000000000000000000000000000000")),
+        vdn_schema::Baseline::Unavailable(_)
+    ));
+    // 仓库的第一个提交早于本机制，树里没有这份文件
+    assert!(matches!(
+        vdn_schema::shm_baseline_at(&r, &first),
+        vdn_schema::Baseline::Absent(_)
+    ));
+    // 环境变量指定的基线优先于本机规则（多提交推送时用推送前的提交）
+    assert!(matches!(
+        vdn_schema::shm_baseline_from(&r, Some(&first)),
+        vdn_schema::Baseline::Absent(_)
+    ));
+    // 本分支已提交了这份文件
+    if git_out(&[
+        "ls-files",
+        "--error-unmatch",
+        &format!("{DIR}/{}", shm::LAYOUT_FILE),
+    ])
+    .is_some()
+    {
+        assert!(matches!(
+            vdn_schema::shm_baseline_at(&r, "HEAD"),
+            vdn_schema::Baseline::Found(..)
+        ));
+    }
+}
+
+/// 当前版本正是 HISTORY 的最后一行、指纹相同。
+#[test]
+fn shm_version_registered() {
+    assert_eq!(
+        shm::HISTORY.last().copied(),
+        Some((
+            vdn_shm::layout::VERSION,
+            shm::fingerprint(&shm::layout_body()).as_str()
+        ))
+    );
+}
+
+// ───────────── Config ─────────────
+
+fn config_examples() -> Vec<(String, Value)> {
+    let d = root().join(DIR).join("examples");
+    let mut out: Vec<(String, Value)> = std::fs::read_dir(&d)
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| n.starts_with("config.") && n.ends_with(".json"))
+        .map(|n| {
+            let t = std::fs::read_to_string(d.join(&n)).unwrap();
+            let v = serde_json::from_str(&t).unwrap_or_else(|e| panic!("{n}：{e}"));
+            (n, v)
+        })
+        .collect();
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    assert!(
+        out.len() >= 2,
+        "examples/ 里至少要有 config.default.json 和一份部分配置"
+    );
+    out
+}
+
+/// 仓里所有 Config 示例都过 schema，也都被 `Config::from_json` 接受。
+#[test]
+fn config_examples_pass_schema_and_parse() {
+    let schema = committed("config.schema.json");
+    for (n, v) in config_examples() {
+        validate(&schema, &v).unwrap_or_else(|e| panic!("{n} 不过 schema：{e}"));
+        Config::from_json(&v.to_string()).unwrap_or_else(|e| panic!("{n}：{e}"));
+    }
+}
+
+/// 往返（口径：语义等价）：读进来再写出去，
+/// ① 原文件里写了的每个键，写出后值相同（数字按 JSON 数值比，不比空白和键顺序）；
+/// ② 原文件没写的键，写出后等于 `Config::default()` 的值；
+/// ③ 写出的文本再读一次，得到同一个 `Config`。
+#[test]
+fn config_roundtrip_semantic() {
+    let def = serde_json::to_value(Config::default()).unwrap();
+    for (n, orig) in config_examples() {
+        let c = Config::from_json(&orig.to_string()).unwrap();
+        let out: Value = serde_json::from_str(&c.to_json()).unwrap();
+        let (o, w) = (orig.as_object().unwrap(), out.as_object().unwrap());
+        for (k, v) in w {
+            let want = o.get(k).unwrap_or(&def[k]);
+            assert_eq!(v, want, "{n}：键 {k}");
+        }
+        assert_eq!(
+            o.keys().filter(|k| !w.contains_key(*k)).count(),
+            0,
+            "{n}：有键写出时丢了"
+        );
+        assert_eq!(Config::from_json(&c.to_json()).unwrap(), c, "{n}");
+    }
+}
+
+/// 默认值示例必须与 `Config::default()` 一致（示例是第二处表示）。
+#[test]
+fn config_default_example_is_default() {
+    let v: Value = config_examples()
+        .into_iter()
+        .find(|(n, _)| n == "config.default.json")
+        .unwrap()
+        .1;
+    assert_eq!(v, serde_json::to_value(Config::default()).unwrap());
+}
+
+/// 单字段的范围：schema 的判定与 `Config::validate` 在边界上逐例一致（范围数字只写在 Config 的常量里）。
+#[test]
+fn config_schema_ranges_agree_with_validate() {
+    let schema = committed("config.schema.json");
+    let (blo, bhi) = Config::BLOCK_RANGE;
+    let (hlo, hhi) = Config::HEARTBEAT_RANGE_MS;
+    let lmax = Config::LEAD_MAX;
+    // lead 取得够大，避开「lead ≥ IO 块」这条跨字段规则
+    let cases = [
+        json!({"block": blo - 1, "lead_frames": bhi}),
+        json!({"block": blo, "lead_frames": bhi}),
+        json!({"block": bhi, "lead_frames": bhi}),
+        json!({"block": bhi + 1, "lead_frames": bhi + 1}),
+        json!({"heartbeat_timeout_ms": hlo - 1}),
+        json!({"heartbeat_timeout_ms": hlo}),
+        json!({"heartbeat_timeout_ms": hhi}),
+        json!({"heartbeat_timeout_ms": hhi + 1}),
+        json!({"denoise_block": 0}),
+        json!({"denoise_block": 1}),
+        json!({"denoise_block": bhi}),
+        json!({"denoise_block": bhi + 1}),
+        json!({"lead_frames": lmax}),
+        json!({"lead_frames": lmax + 1}),
+        json!({"input_device": "  "}),
+        json!({"input_device": "x"}),
+        json!({"output_device": ""}),
+        json!({"mode": "bypass"}),
+        json!({"model": "gtcrn"}),
+        json!({"blok": 96}),
+    ];
+    for c in cases {
+        let by_schema = validate(&schema, &c).is_ok();
+        let by_rust = Config::from_json(&c.to_string()).is_ok();
+        assert_eq!(
+            by_schema, by_rust,
+            "{c}：schema {by_schema} · Rust {by_rust}"
+        );
+    }
+}
+
+/// 总线名：schema 的正则 + 长度 与 `validate_bus_name` 逐例一致。
+/// 名字只许可见 ASCII，所以 schema 的 maxLength（数字符）与 Rust 的长度（数字节）是同一个数。
+#[test]
+fn bus_name_pattern_agrees_with_validate() {
+    let schema = committed("config.schema.json");
+    let long_ok = format!("/vdn-{}", "a".repeat(Config::BUS_NAME_MAX - 5));
+    let long_bad = format!("/vdn-{}", "a".repeat(Config::BUS_NAME_MAX - 4));
+    // 14 个字符、32 字节：按字符数会放行，按字节数要拒（codex 第 2 轮 #2）
+    let multi = format!("/vdn-{}", "中".repeat(9));
+    for name in [
+        "/vdn-bus",
+        "/vdn-x",
+        "/vdn-",
+        "/vdn",
+        "vdn-bus",
+        "/other",
+        "/vdn-a/b",
+        "/vdn-a\u{0}b",
+        "/vdn-a b",
+        "/vdn-~!",
+        "/vdn-中",
+        &multi,
+        &long_ok,
+        &long_bad,
+    ] {
+        let by_rust = vdn_control::validate_bus_name(name).is_ok();
+        // 另一个总线名取不会撞的合法值，只测这一个字段
+        let c = json!({"bus_name": name, "out_bus_name": "/vdn-zz-other"});
+        let by_schema = validate(&schema, &c).is_ok();
+        assert_eq!(
+            by_schema, by_rust,
+            "{name:?}：schema {by_schema} · Rust {by_rust}"
+        );
+    }
+}
+
+/// 模拟「Rust 加了一个字段、没重新导出」：把当前导出删掉这一个字段当作仓里的旧文件，
+/// 其余（标题、注释、别的字段）都不变，所以报红只能来自这一个字段（第 1 轮 codex #4）。
+fn assert_missing_field_is_red(tag: &str, file: &str, pointer: &str, field: &str) {
+    let d = temp_root(tag);
+    let fresh: Value =
+        serde_json::from_str(&std::fs::read_to_string(d.join(DIR).join(file)).unwrap()).unwrap();
+    let mut old = fresh.clone();
+    let props = old
+        .pointer_mut(pointer)
+        .and_then(Value::as_object_mut)
+        .unwrap_or_else(|| panic!("{file} 里没有 {pointer}"));
+    assert!(
+        props.remove(field).is_some(),
+        "{file}{pointer} 里没有 {field}"
+    );
+    if let Some(Value::Array(req)) = old
+        .pointer_mut(pointer.trim_end_matches("/properties"))
+        .and_then(|o| o.get_mut("required"))
+    {
+        req.retain(|r| r != field);
+    }
+    put(&d, file, &old);
+    let p = check(&d);
+    assert_eq!(p.len(), 1, "只该报这一份：{p:#?}");
+    assert!(p[0].contains(file) && p[0].contains("不一致"), "{p:#?}");
+    // 放回去就绿
+    put(&d, file, &fresh);
+    assert!(check(&d).is_empty());
+}
+
+/// 负例：Config 加了字段而 schema 没重新导出 → 检查报 config.schema.json。
+#[test]
+fn config_new_field_without_export_is_red() {
+    assert_missing_field_is_red(
+        "config",
+        "config.schema.json",
+        "/properties",
+        "denoise_block",
+    );
+}
+
+// ───────────── 评测清单 ─────────────
+
+/// 4 份清单文件全部过各自的 schema。
+#[test]
+fn eval_suite_files_pass_schema() {
+    for (path, schema_file) in eval::DATA_FILES {
+        let schema = committed(schema_file);
+        let t = std::fs::read_to_string(root().join(path)).unwrap();
+        let v: Value = serde_json::from_str(&t).unwrap();
+        validate(&schema, &v).unwrap_or_else(|e| panic!("{path} 不过 {schema_file}：{e}"));
+    }
+}
+
+/// `suite/` 下的每份 json 都登记在 DATA_FILES 里（新加清单不会漏掉校验）。
+#[test]
+fn eval_data_files_registered() {
+    let d = root().join("src/eval/suite");
+    for e in std::fs::read_dir(&d).unwrap().flatten() {
+        let n = format!("src/eval/suite/{}", e.file_name().to_string_lossy());
+        if n.ends_with(".json") {
+            assert!(
+                eval::DATA_FILES.iter().any(|(p, _)| *p == n),
+                "{n} 没登记在 vdn_schema::eval::DATA_FILES"
+            );
+        }
+    }
+}
+
+/// schema 与解析器对坏文件的判定一致：拼错键名、未知 verifier、未知噪音、多余的 kind 字段。
+#[test]
+fn eval_schema_and_parser_agree_on_bad_tasks() {
+    let schema = committed(eval::SUITE_FILE);
+    let task = |extra: Value| {
+        let mut t = json!({"id": "R99", "set": "regression", "origin": "测试",
+            "scene": {"noise": "pink"}, "graders": [{"v": "V-NAN"}]});
+        for (k, v) in extra.as_object().unwrap() {
+            t[k] = v.clone();
+        }
+        json!({"tasks": [t]})
+    };
+    let cases = [
+        (task(json!({})), true),
+        (task(json!({"gradres": []})), false),
+        (task(json!({"graders": [{"v": "V-NOPE"}]})), false),
+        (
+            task(json!({"graders": [{"v": "V-NAN", "max": "3"}]})),
+            false,
+        ),
+        (task(json!({"scene": {"noise": "rain"}})), false),
+        (task(json!({"scene": {"pause_s": [1]}})), false),
+        (task(json!({"set": "smoke"})), false),
+        (
+            task(json!({"real": {"kind": "exp003", "clips": "a", "clip": "b", "extra": 1}})),
+            false,
+        ),
+        (
+            task(json!({"faults": [{"hop": 3, "kind": "stall"}]})),
+            false,
+        ),
+        (
+            task(json!({"probe": {"base": "R99", "kind": "mute"}})),
+            true,
+        ),
+    ];
+    for (doc, want) in cases {
+        let by_schema = validate(&schema, &doc).is_ok();
+        let by_rust = vdn_eval::suite::parse_suite(&doc.to_string()).is_ok();
+        assert_eq!(by_schema, want, "schema：{doc}");
+        assert_eq!(by_rust, want, "解析器：{doc}");
+    }
+}
+
+/// 整数范围（codex 第 3 轮 #4）：每个整数字段都有上下界；超出 Rust 类型的数 schema 与解析器都拒。
+#[test]
+fn integer_bounds_agree_with_rust_types() {
+    fn walk(path: &str, v: &Value, bad: &mut Vec<String>) {
+        match v {
+            Value::Object(m) => {
+                let int_format = m
+                    .get("format")
+                    .and_then(Value::as_str)
+                    .is_some_and(|f| f.starts_with("int") || f.starts_with("uint"));
+                if int_format && !(m.contains_key("minimum") && m.contains_key("maximum")) {
+                    bad.push(path.to_string());
+                }
+                for (k, x) in m {
+                    walk(&format!("{path}/{k}"), x, bad);
+                }
+            }
+            Value::Array(a) => {
+                for (i, x) in a.iter().enumerate() {
+                    walk(&format!("{path}/{i}"), x, bad);
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut bad = Vec::new();
+    for f in [
+        "config.schema.json",
+        eval::SUITE_FILE,
+        eval::LEVELS_FILE,
+        eval::BASELINE_FILE,
+    ] {
+        walk(f, &committed(f), &mut bad);
+    }
+    assert!(bad.is_empty(), "整数字段缺上下界：{bad:#?}");
+
+    let schema = committed(eval::SUITE_FILE);
+    let task = r#"{"id": "R99", "set": "regression", "origin": "测试",
+        "scene": {"noise": "pink"}, "graders": [{"v": "V-NAN"}]}"#;
+    let cases = [
+        ("18446744073709551615", true),   // u64::MAX
+        ("100000000000000000000", false), // 1e20，超出 u64
+        ("-1", false),
+    ];
+    for (seed, want) in cases {
+        let text = format!(r#"{{"seed": {seed}, "tasks": [{task}]}}"#);
+        let doc: Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(
+            validate(&schema, &doc).is_ok(),
+            want,
+            "schema：seed = {seed}"
+        );
+        assert_eq!(
+            vdn_eval::suite::parse_suite(&text).is_ok(),
+            want,
+            "解析器：seed = {seed}"
+        );
+    }
+}
+
+/// 负例：清单类型加了字段而 schema 没重新导出 → 检查报出对应文件（三份各一例）。
+#[test]
+fn eval_type_change_without_export_is_red() {
+    assert_missing_field_is_red(
+        "eval-suite",
+        eval::SUITE_FILE,
+        "/$defs/TaskFile/properties",
+        "xfail",
+    );
+    assert_missing_field_is_red("eval-levels", eval::LEVELS_FILE, "/properties", "updated");
+    assert_missing_field_is_red(
+        "eval-baseline",
+        eval::BASELINE_FILE,
+        "/properties",
+        "run_id",
+    );
+}
+
+/// 往返的比较口径：null 与缺省等价、空数组与缺省等价（serde 写出 `None` 为 null、空 Vec 为 []）。
+fn norm(v: &Value) -> Value {
+    match v {
+        Value::Object(m) => Value::Object(
+            m.iter()
+                .filter(|(_, x)| !x.is_null() && x.as_array().is_none_or(|a| !a.is_empty()))
+                .map(|(k, x)| (k.clone(), norm(x)))
+                .collect(),
+        ),
+        Value::Array(a) => Value::Array(a.iter().map(norm).collect()),
+        x => x.clone(),
+    }
+}
+
+/// 数字的口径：两边都是整数就精确比（种子是 u64，不能按 f64 比，codex 第 2 轮 #3）；
+/// 有一边是小数（文件写 3、f64 字段写出 3.0）才按 f64 比。
+fn same(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Number(x), Value::Number(y)) => {
+            if x.is_f64() || y.is_f64() {
+                x.as_f64() == y.as_f64()
+            } else {
+                x == y
+            }
+        }
+        (Value::Object(x), Value::Object(y)) => {
+            x.len() == y.len() && x.iter().all(|(k, v)| y.get(k).is_some_and(|w| same(v, w)))
+        }
+        (Value::Array(x), Value::Array(y)) => {
+            x.len() == y.len() && x.iter().zip(y).all(|(v, w)| same(v, w))
+        }
+        _ => a == b,
+    }
+}
+
+#[test]
+fn same_keeps_integers_exact() {
+    assert!(!same(
+        &json!(9_007_199_254_740_992_u64),
+        &json!(9_007_199_254_740_993_u64)
+    ));
+    assert!(same(&json!(3), &json!(3.0)));
+    assert!(!same(&json!(3), &json!(3.5)));
+    assert!(same(
+        &norm(&json!({"a": null, "b": [], "c": 1})),
+        &json!({"c": 1})
+    ));
+    // 大整数种子往返不丢精度
+    let doc = json!({"seed": 9_007_199_254_740_993_u64, "defaults": {"trials": 3}, "tasks": []});
+    let t: vdn_eval::files::SuiteFile = serde_json::from_value(doc.clone()).unwrap();
+    assert!(same(&norm(&doc), &norm(&serde_json::to_value(&t).unwrap())));
+}
+
+fn roundtrip<T: serde::de::DeserializeOwned + serde::Serialize>(path: &str, v: &Value) {
+    let t: T = serde_json::from_value(v.clone()).unwrap_or_else(|e| panic!("{path}：{e}"));
+    let out = serde_json::to_value(&t).unwrap();
+    assert!(same(&norm(v), &norm(&out)), "{path}：往返后语义不同");
+    // 写出的结果还能读回，再写一次不变
+    let t2: T = serde_json::from_value(out.clone()).unwrap();
+    assert_eq!(
+        serde_json::to_value(&t2).unwrap(),
+        out,
+        "{path}：第二次往返变了"
+    );
+}
+
+/// 4 份清单文件：反序列化成格式类型再序列化，语义等价（口径见 `norm` 与 `same`）。
+#[test]
+fn eval_files_roundtrip_semantic() {
+    use vdn_eval::files::{BaselineFile, LevelsFile, SuiteFile};
+    for (path, schema_file) in eval::DATA_FILES {
+        let v: Value =
+            serde_json::from_str(&std::fs::read_to_string(root().join(path)).unwrap()).unwrap();
+        match schema_file {
+            eval::SUITE_FILE => roundtrip::<SuiteFile>(path, &v),
+            eval::LEVELS_FILE => roundtrip::<LevelsFile>(path, &v),
+            eval::BASELINE_FILE => roundtrip::<BaselineFile>(path, &v),
+            other => panic!("{path}：没写往返的 schema {other}"),
+        }
+    }
+}
+
+/// 两个写入口（`ci --write-baseline`、`calib --write-levels`）序列化的类型，写出来的东西过 schema、能读回；
+/// 基线文件元数据不对时 `BaselineFile::parse` 报错，不当成空基线（第 1 轮 codex #2）。
+#[test]
+fn eval_writer_outputs_pass_schema() {
+    use vdn_eval::files::{BaselineFile, LevelEntry, LevelsFile};
+    let b = BaselineFile {
+        commit: "abc1234-dirty".into(),
+        doc: "d".into(),
+        run_id: "r".into(),
+        values: [("ref/R01/0/V-MUSIC".to_string(), 1.25)].into(),
+    };
+    let bv = serde_json::to_value(&b).unwrap();
+    validate(&committed(eval::BASELINE_FILE), &bv).unwrap();
+    assert_eq!(
+        BaselineFile::parse(&bv.to_string()).unwrap().values,
+        b.values
+    );
+    let l = LevelsFile {
+        doc: "d".into(),
+        updated: "2026-11-02".into(),
+        verifiers: [(
+            "V-NAN".to_string(),
+            LevelEntry {
+                basis: "物理量".into(),
+                level: vdn_eval::Level::L3,
+            },
+        )]
+        .into(),
+    };
+    validate(
+        &committed(eval::LEVELS_FILE),
+        &serde_json::to_value(&l).unwrap(),
+    )
+    .unwrap();
+    // values 合法、元数据坏 → 报错
+    for bad in [
+        json!({"values": {"a": 1.0}}),
+        json!({"commit": "c", "doc": "d", "run_id": "r", "values": {"a": 1.0}, "extra": 1}),
+        json!({"commit": "c", "doc": "d", "run_id": "r", "values": {"a": "1"}}),
+    ] {
+        assert!(BaselineFile::parse(&bad.to_string()).is_err(), "{bad}");
+        assert!(
+            validate(&committed(eval::BASELINE_FILE), &bad).is_err(),
+            "{bad}"
+        );
+    }
+}

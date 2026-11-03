@@ -10,8 +10,8 @@ use std::io::{BufWriter, Write};
 use std::time::{Duration, Instant};
 
 use vdn_scene::features::NF;
-use vdn_scene::mirror::Hysteresis;
 use vdn_scene::{SceneAnalyzer, route, weights};
+use vdn_types::Hysteresis;
 
 const HOP: usize = 256;
 const TICK_HOPS: usize = 31;
@@ -58,6 +58,11 @@ fn main() {
         }
         i += 2;
     }
+    // 范围的正本是 vdn_types::desc：越界直接报错退出，不悄悄夹值
+    h.validate().unwrap_or_else(|e| panic!("滞回参数越界：{e}"));
+    vdn_types::desc::SCENE_EMA_S
+        .check(ema)
+        .unwrap_or_else(|e| panic!("--ema 越界：{e}"));
     let out = std::io::stdout();
     let mut out = BufWriter::new(out.lock());
     let (mut t_push, mut n_push, mut t_judge, mut n_judge) =

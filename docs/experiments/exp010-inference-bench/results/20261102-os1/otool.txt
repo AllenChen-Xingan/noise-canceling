@@ -1,0 +1,18 @@
+# bench 二进制的最低系统（otool -l，2026-11-02 19:22）
+a5547aec7b5c168228f5d0fc18760fb6e98f810fc6d25236ff6d014b50edccd3  /Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-rustbe/docs/experiments/exp010-inference-bench/bench/target/release/exp010-bench
+      cmd LC_BUILD_VERSION
+  cmdsize 32
+ platform 1
+    minos 11.0
+      sdk 27.0
+# 链接的动态库（otool -L）
+/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-rustbe/docs/experiments/exp010-inference-bench/bench/target/release/exp010-bench:
+	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate (compatibility version 1.0.0, current version 4.0.0)
+	/System/Library/Frameworks/CoreAudio.framework/Versions/A/CoreAudio (compatibility version 1.0.0, current version 1.0.0)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2200.27.0)
+	/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 5027.0.69)
+	/System/Library/Frameworks/CoreML.framework/Versions/A/CoreML (compatibility version 1.0.0, current version 1.0.0)
+	/usr/lib/libiconv.2.dylib (compatibility version 7.0.0, current version 7.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.0.0)
+	/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5027.0.69)
+	/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)

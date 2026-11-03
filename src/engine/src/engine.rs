@@ -62,26 +62,46 @@ pub struct SafetyConfig {
 }
 
 impl Default for SafetyConfig {
+    /// 数值参数的默认值取自参数描述表 `vdn_types::desc`（正本）；开关量（`fallback` · `floor` · `fast_open`）不在表里。
     fn default() -> Self {
+        use vdn_types::desc::*;
         Self {
             fallback: true,
             deadline: None,
-            max_abs: 4.0,
-            recover_hold_s: 0.1,
-            crossfade_s: 0.005,
+            max_abs: ENGINE_MAX_ABS.default,
+            recover_hold_s: ENGINE_RECOVER_HOLD_S.default,
+            crossfade_s: ENGINE_CROSSFADE_S.default,
             floor: true,
-            floor_db: -12.0,
+            floor_db: FLOOR_DB.default,
             fast_open: true,
-            open_db: -6.0,
-            attack_s: 0.002,
-            release_s: 0.3,
-            hangover_s: 0.15,
-            detect_db: 9.0,
+            open_db: OPEN_DB.default,
+            attack_s: ATTACK_S.default,
+            release_s: RELEASE_S.default,
+            hangover_s: HANGOVER_S.default,
+            detect_db: DETECT_DB.default,
         }
     }
 }
 
 impl SafetyConfig {
+    /// 数值参数夹进描述表（`vdn_types::desc`）的范围，NaN 当默认值。[`Engine::new`] 先夹再用，
+    /// 引擎与 Pipeline 看到的是同一个值（codex 第 2 轮 P2 #2）。开关量与 `deadline` 不动。
+    pub fn clamped(self) -> Self {
+        use vdn_types::desc::*;
+        Self {
+            max_abs: ENGINE_MAX_ABS.clamp(self.max_abs),
+            recover_hold_s: ENGINE_RECOVER_HOLD_S.clamp(self.recover_hold_s),
+            crossfade_s: ENGINE_CROSSFADE_S.clamp(self.crossfade_s),
+            floor_db: FLOOR_DB.clamp(self.floor_db),
+            open_db: OPEN_DB.clamp(self.open_db),
+            attack_s: ATTACK_S.clamp(self.attack_s),
+            release_s: RELEASE_S.clamp(self.release_s),
+            hangover_s: HANGOVER_S.clamp(self.hangover_s),
+            detect_db: DETECT_DB.clamp(self.detect_db),
+            ..self
+        }
+    }
+
     /// 三件全关：输出 = 模型原样输出（对拍用）。
     pub fn off() -> Self {
         Self {
@@ -171,6 +191,7 @@ pub struct Engine<M: Model> {
 // 构造：非实时线程（会分配）
 impl<M: Model> Engine<M> {
     pub fn new(model: M, cfg: SafetyConfig) -> Self {
+        let cfg = cfg.clamped();
         let hop = model.hop();
         let sr = model.sample_rate() as f32;
         assert!(hop > 0 && sr > 0.0, "模型的 hop 与采样率必须为正");

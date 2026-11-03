@@ -1,0 +1,14 @@
+{"pair":1,"denoise":false,"r":{"loadgen_ms":5226.1,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":1,"denoise":true,"name":"bnns-rt","r":{"loadgen_ms":5416.6,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":2,"denoise":false,"r":{"loadgen_ms":5225.5,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":2,"denoise":true,"name":"bnns-rt","r":{"loadgen_ms":5386.9,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":3,"denoise":false,"r":{"loadgen_ms":5804.0,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":3,"denoise":true,"name":"bnns-rt","r":{"loadgen_ms":5848.3,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":4,"denoise":false,"r":{"loadgen_ms":5256.8,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":4,"denoise":true,"name":"bnns-rt","r":{"loadgen_ms":5664.1,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":5,"denoise":false,"r":{"loadgen_ms":5521.6,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":5,"denoise":true,"name":"bnns-rt","r":{"loadgen_ms":6154.2,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":6,"denoise":false,"r":{"loadgen_ms":5811.1,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":6,"denoise":true,"name":"bnns-rt","r":{"loadgen_ms":5862.2,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":7,"denoise":false,"r":{"loadgen_ms":5684.3,"threads":10,"passes":8000,"checksum":6211736.990}}
+{"pair":7,"denoise":true,"name":"bnns-rt","r":{"loadgen_ms":5913.4,"threads":10,"passes":8000,"checksum":6211736.990}}

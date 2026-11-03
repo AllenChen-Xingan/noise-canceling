@@ -12,6 +12,7 @@ name = "vdn"
 path = "src/main.rs"
 
 [dependencies]
+vdn-types.workspace = true
 vdn-engine.workspace = true
 vdn-models.workspace = true
 hound.workspace = true

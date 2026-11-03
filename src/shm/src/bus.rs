@@ -28,13 +28,14 @@ pub struct Bus {
     name: Option<CString>,
 }
 
-/// 名字规则：`/vdn-` 开头，总长 ≤ 31 字节（macOS PSHMNAMLEN），之后不再有 `/`，不含 NUL。
+/// 名字规则：`/vdn-` 开头，总长 ≤ 31 字节（macOS PSHMNAMLEN）；之后至少一个字符，只许可见 ASCII（`!`–`~`）且不含 `/`。
+/// 只许 ASCII，是为了让「≤ 31 字节」与 JSON Schema 的 maxLength（数字符）一致（codex 第 2 轮 #2）。
 #[cfg(all(unix, feature = "posix"))]
 pub(crate) fn checked_name(name: &str) -> Result<CString, ShmError> {
-    let ok = name.starts_with("/vdn-")
-        && name.len() > "/vdn-".len()
-        && name.len() <= 31
-        && !name.get(1..).is_some_and(|s| s.contains('/'));
+    let ok = name.len() <= 31
+        && name.strip_prefix("/vdn-").is_some_and(|rest| {
+            !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_graphic() && b != b'/')
+        });
     if !ok {
         return Err(ShmError::InvalidName);
     }

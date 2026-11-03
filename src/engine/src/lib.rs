@@ -27,15 +27,19 @@ pub use vdn_types::{FrameCtx, Model, ModelError, Stage, StageChain, Status, stag
 
 /// 测试与示例用的假模型与最简单的后处理级。
 pub mod testing {
-    use vdn_types::{FrameCtx, Model, ModelError, Stage};
+    use vdn_types::graph::test_kind;
+    use vdn_types::{FrameCtx, Model, ModelError, NodeKind, Stage};
+
+    /// [`Gain`] 的节点种类（测试编号段）。
+    pub const GAIN: NodeKind = test_kind(0xF001, "gain", 0);
 
     /// 最简单的后处理级：`wet *= gain`，0 延迟、无状态。
     #[derive(Clone, Copy, Debug)]
     pub struct Gain(pub f32);
 
     impl Stage for Gain {
-        fn name(&self) -> &'static str {
-            "gain"
+        fn kind(&self) -> &'static NodeKind {
+            &GAIN
         }
         fn reset(&mut self) {}
         fn process(&mut self, wet: &mut [f32], _dry: &[f32], _ctx: FrameCtx) {

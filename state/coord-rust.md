@@ -49,7 +49,7 @@
 - rs-live 验收：四 crate 70 过 5 忽略（大总管重跑）、clippy 无警告 → 合入（8dcbc72）、关窗
 - PR #52 CI（只 macOS）过，1 分 22 秒
 - e3 转 issue #53：引擎输入 NaN 后 seam 变 NaN 永不清，输出一直 NaN 到 reset；骨架分支已部分防护，派子代理先写会红测试再修（等锁），随 PR #52 关
-- e3 占用 D77：人定最低系统提到 **macOS 15**（改 D73，原话「可以，mac os 提升版本吧」；起因 019 的 BNNS Graph / MLState 要 15+）。对骨架：os_sync 一定可用，轮询只剩调用失败兜底；CI runner macos-15 对上
+- e3 占用 D78（原误记 D77，与「NoNoise-Mac 加进评测」撞号，2026-11-02 改号）：人定最低系统提到 **macOS 15**（改 D73，原话「可以，mac os 提升版本吧」；起因 019 的 BNNS Graph / MLState 要 15+）。对骨架：os_sync 一定可用，轮询只剩调用失败兜底；CI runner macos-15 对上
 - e3 的耗电矩阵（人跑，18:43，单次 60 s、背景噪声约 ±30 mW）：自建 Audio Workgroup 区间（截止 1–3 ms）把 BNNS 每帧 0.80 → 0.2 ms，但 CPU 功率多 25–40 mW；最省的是手写 + Accelerate + time-constraint（71 mW）→ 与 D74 一致，未推翻
 - **真设备（人在场，2026-11-02 18:1x）**：麦克风测试过（0.5 s 24000 帧）· 扬声器嘀声人听到 · **V5 人耳没听到自己的声音**（机器判溢出 0 欠载 0）；`vdn run` 实时优先级提升失败 code 4。人确认 Ghostty 有麦克风权限；录 3 s：ffmpeg mean −38.9 / max −28.1 dB，vdn-capture −39.5 / −29.4 dB → 收音路径有声。推断：小声副本被骨传导掩盖。人要「各种测试帮我补」→ 新起 rs-live：`vdn run --check / --record / --gain-db`、不开设备的路径测试、全零检测、RtParams 夹到 50 µs–50 ms（code 4 根因：直通实测 < 50 µs）、提升失败要打印；内核把 computation < constraint/2 抬到 constraint/2（D74 实际 8 / 16 ms）
 - PR #52 开（Closes #46）；CI：macOS 过、Linux 败（只为 Linux 的分支编译不过）。人问「为啥要跑 Linux」→ **人定 D76**（原话「直接用mac 就好，先在mac上跑通」）：CI 只跑 macOS；子代理合 workflow、改规约 §7；非 macOS 分支 → backlog

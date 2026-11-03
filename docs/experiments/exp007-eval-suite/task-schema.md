@@ -1,46 +1,20 @@
 # vdn-eval 任务清单格式（schema）
 
-解析器正本：`src/eval/src/suite.rs` 的 `parse_suite`；现有清单：`src/eval/suite/ci.json`（CI 层）、`src/eval/suite/qa.json`（QA 层）。新清单照同一格式写，**人判任务放 `docs/experiments/human-prefs/`**，接入时由 vdn-eval 读取（加载入口待接，不改现有两份）。
+格式正本：`src/eval/src/files.rs`；跨任务规则与缺省值：`src/eval/src/suite.rs` 的 `parse_suite`；现有清单：`src/eval/suite/ci.json`（CI 层）、`src/eval/suite/qa.json`（QA 层）。新清单照同一格式写，**人判任务放 `docs/experiments/human-prefs/`**，接入时由 vdn-eval 读取（加载入口待接，不改现有两份）。
 
-## 顶层
+## 格式正本在哪
 
-```json
-{ "name": "exp007-ci", "doc": "一句说明", "seed": 20261031,
-  "defaults": { "dur_s": 10, "trials": 3 },
-  "tasks": [ … ] }
-```
+本文不再手写字段表（手写的一份会和代码走散）。字段、取值、缺省值以这两处为准：
 
-## 任务字段
+- **Rust 类型（正本）**：`src/eval/src/files.rs` 的 `SuiteFile` · `TaskFile` · `SceneFile` 等，每个字段的注释写了取值与缺省值
+- **导出的 JSON Schema**：`specs/schema/eval-suite.schema.json`（由 `cargo run -p vdn-schema` 导出，测试逐字比对；`ci.json` / `qa.json` 必须过它）。编辑器里给清单加 `"$schema"` 不行（多出的键会报错），可在编辑器设置里把这份 schema 关联到 `src/eval/suite/*.json`
 
-| 字段 | 必填 | 取值 | 说明 |
-|---|---|---|---|
-| `id` | ✓ | 字符串，全清单唯一 | 惯例 `R`回归 / `C`能力 / `P`探针 / `Q`真实片段 + 两位号 + slug |
-| `set` | ✓ | `regression` · `capability` · `probe` | 门禁规则见 `src/eval/src/runner.rs` 头注释 |
-| `polarity` |  | `suppress` · `preserve` · `both` · `robust` | 该压的 / 不该压的（正反两面） |
-| `origin` | ✓（测试强制） | 字符串 | 取自哪次真实失败：实验号 + 片段 + 人原话或标签 |
-| `desc` |  | 字符串 | 一句话 |
-| `scene` | 三选一 | 对象，见下 | 合成场景（CI） |
-| `real` | 三选一 | `{kind:"exp005", clips, audio_dir, clip}` 或 `{kind:"exp003", clips, clip}` | 仓外真实片段，按 clips.json 里的 sha256 核对 |
-| `probe` | 三选一 | `{base:"<任务 id>", kind}`；kind ∈ `onset_cut_50ms` · `nonspeech_minus40` · `lowpass_1k` · `identity` · `mute` | 只在 `set: probe` 用 |
-| `graders` | ✓ | `[{ "v": "<verifier id>", <参数>… }]` | 参数名：`max` / `min`（过线值）及各 verifier 自己的（如 V-SIM-GATE 的 `onset_max`、V-BGSTAB 的 `from_s`、V-MUTE 的 `max_dbfs` `settle_s`） |
-| `info` |  | 同 graders | 只报，不计通过与门禁 |
-| `trials` |  | 整数 | 合成任务 = 种子数；真实片段固定 1 |
-| `safety` |  | bool，默认 true | false = 三件保命全关 |
-| `faults` |  | `[{hop, kind}]`，kind ∈ `nan` · `error` · `explode` | 故障注入 |
-| `lang` |  | `en` · `zh` | ASR 分词 |
-| `xfail` |  | 字符串（原因 / 代码位置 / issue） | 已知失败：阻断降为报警；全过时提示转正 |
-
-verifier id 必须在 `src/eval/src/verifiers.rs` 的 `REGISTRY` 里（`cargo run -p vdn-eval -- list` 列出），否则解析失败。
-
-## scene
-
-```json
-{ "owner": { "level_dbov": -26, "f0": [100, 140], "tonal": false },   // null = 没有主讲人
-  "owner_start_s": 0.5, "pause_s": [0.4, 1.2],
-  "interferers": [ { "mode": "alternate|overlap|other_first", "sir_db": 6, "f0": [180, 230] } ],
-  "noise": "none|white|pink|hum|babble|cafe|music", "snr_db": 10,
-  "dur_s": 10, "tail_silence_s": 0 }
-```
+要点（详情看上面两处）：
+- 多出的键一律报错，防拼错键名静默失效；给人看的备注写在任务的 `note` 里
+- `id` 全清单唯一，惯例 `R` 回归 / `C` 能力 / `P` 探针 / `Q` 真实片段 + 两位号 + slug
+- `scene` · `real` · `probe` 至少一个；`probe` 只在 `set: probe` 用，基础任务必须是本清单里的合成场景
+- `graders[].v` 必须在 `src/eval/src/verifiers.rs` 的 `REGISTRY` 里（schema 里是同一份枚举，`cargo run -p vdn-eval -- list` 列出）；其余键是数值参数
+- 门禁规则见 `src/eval/src/runner.rs` 头注释
 
 ## 人判结果怎么接（建议，给 prefs）
 

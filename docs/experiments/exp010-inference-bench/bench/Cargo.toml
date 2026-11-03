@@ -1,0 +1,19 @@
+# exp010 推理后端基准（独立小工程，不进根 workspace）
+[package]
+name = "exp010-bench"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+[workspace]
+
+[dependencies]
+vdn-dsp = { path = "../../../../src/dsp" }
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "download-binaries", "tls-native", "copy-dylibs", "api-31"] }
+hound = "3.5"
+libc = "0.2"
+tract-onnx = "=0.23.9"
+
+[profile.release]
+debug = 1

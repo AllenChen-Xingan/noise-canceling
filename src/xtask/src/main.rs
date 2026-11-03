@@ -17,6 +17,7 @@ mod ci;
 mod denycheck;
 mod deps;
 mod miri;
+mod single_source;
 mod tidy;
 mod todo;
 

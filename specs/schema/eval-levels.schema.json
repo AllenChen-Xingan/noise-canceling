@@ -1,0 +1,57 @@
+{
+  "$comment": "由 `cargo run -p vdn-schema` 从 src/eval/src/files.rs 的 LevelsFile 导出，勿手改",
+  "$defs": {
+    "Level": {
+      "description": "定标级别（012 §2.1）。物理量直接 L3；模拟真值指标只在模拟内 L3；感知量没有人耳数据一律 L0。\n级别表里的名字由 serde 定；`as_str` 与它的一致性由 `files_tests` 核对。",
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3"
+      ],
+      "type": "string"
+    },
+    "LevelEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "basis": {
+          "type": "string"
+        },
+        "level": {
+          "$ref": "#/$defs/Level"
+        }
+      },
+      "required": [
+        "basis",
+        "level"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "定标级别表（`levels.json`）。只由 `vdn-eval calib --write-levels` 改。",
+  "properties": {
+    "doc": {
+      "type": "string"
+    },
+    "updated": {
+      "description": "最后一次回写的日期（YYYY-MM-DD）",
+      "type": "string"
+    },
+    "verifiers": {
+      "additionalProperties": {
+        "$ref": "#/$defs/LevelEntry"
+      },
+      "description": "verifier id → 级别与依据",
+      "type": "object"
+    }
+  },
+  "required": [
+    "doc",
+    "updated",
+    "verifiers"
+  ],
+  "title": "LevelsFile",
+  "type": "object"
+}

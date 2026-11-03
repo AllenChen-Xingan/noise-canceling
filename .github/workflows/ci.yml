@@ -12,6 +12,9 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 要完整历史：vdn-schema 的测试对照 main 上已发布的共享内存布局，检查版本历史只增不改
+          fetch-depth: 0
       - name: manifests
         run: python3 scripts/check-manifests.py
       - name: install cargo-deny
@@ -19,6 +22,9 @@ jobs:
         with:
           tool: cargo-deny
       - name: rust gate
+        env:
+          # vdn-schema 对照的可信基线：push 用推送前的 main，PR 用目标分支（一次推多个提交时不拿同批提交当基线）
+          VDN_SCHEMA_BASE: ${{ github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha }}
         run: cargo run -p xtask -- ci
       - name: eval ci
         # CI 层评测：纯 DSP、确定性、无模型权重；回归集 L3 不过 / 比冻结基线差 / 探针没抓住 → 失败（exp007）

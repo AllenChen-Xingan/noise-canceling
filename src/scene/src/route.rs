@@ -13,7 +13,7 @@
 //! 引擎按池内最大补齐（规约 §3.5），所以开了路由，GTCRN 场景也要多付 6 ms。路由本身在判断回路，不加延迟。
 
 use crate::classify::NoiseClass;
-use crate::mirror::{FineSceneId, ModelId, ParamSet, ToneId, UserScene};
+use vdn_types::{FineSceneId, ModelId, ParamSet, ToneId, UserScene};
 
 pub const N_DEVICE: u16 = 3;
 pub const MEETING: FineSceneId = FineSceneId(22);
@@ -175,5 +175,28 @@ mod tests {
             params_for(fine_id(NoiseClass::Music, Device::BtNarrow)).tone,
             ToneId(25)
         );
+    }
+
+    // 名字的正本是 vdn-types：路由表文本里的模型名、用户层场景名都必须能被它解析回同一个值（大总管 2026-11-02）
+    #[test]
+    fn table_text_names_parse_back_via_vdn_types() {
+        let text = table_text();
+        let mut rows = 0;
+        for line in text.lines().skip(1) {
+            let cols: Vec<&str> = line.split_whitespace().collect();
+            let [id, _name, user, model, tone] = cols[..] else {
+                panic!("列数不对：{line}");
+            };
+            let p = params_for(FineSceneId(id.parse().unwrap()));
+            assert_eq!(ModelId::parse(model), Some(p.model), "模型名 {model}");
+            assert_eq!(
+                UserScene::parse(user),
+                Some(user_of_id(FineSceneId(id.parse().unwrap()))),
+                "场景名 {user}"
+            );
+            assert_eq!(tone.parse::<u8>().unwrap(), p.tone.0);
+            rows += 1;
+        }
+        assert_eq!(rows, 22);
     }
 }

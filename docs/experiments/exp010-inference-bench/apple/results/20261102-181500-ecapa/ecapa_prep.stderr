@@ -1,0 +1,32 @@
+Torch version 2.15.0 has not been tested with coremltools. You may run into unexpected errors. Torch 2.7.0 is the most recent version that has been tested.
+Traceback (most recent call last):
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/onnx2torch/utils/common.py", line 60, in get_const_value
+    node, _ = graph.value_as_node_output(name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/onnx2torch/onnx_graph.py", line 97, in value_as_node_output
+    return self._node_output_values[value_name]
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+KeyError: ''
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/onnx2torch/node_converters/clip.py", line 58, in _
+    max_val = float(get_const_value(max_name, graph)) if max_name is not None else None
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/onnx2torch/utils/common.py", line 62, in get_const_value
+    raise KeyError(f'Tensor "{name}" is not found in constant values') from exc
+KeyError: 'Tensor "" is not found in constant values'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-engine/docs/experiments/exp010-inference-bench/apple/ecapa_prep.py", line 82, in <module>
+    tm = convert(om).eval()
+         ^^^^^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/onnx2torch/converter.py", line 110, in convert
+    torch_module, onnx_mapping = converter(onnx_node, onnx_graph)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/_tmp/exp010-venv-ct/lib/python3.12/site-packages/onnx2torch/node_converters/clip.py", line 60, in _
+    raise NotImplementedError('Dynamic value of min/max is not implemented') from exc
+NotImplementedError: Dynamic value of min/max is not implemented

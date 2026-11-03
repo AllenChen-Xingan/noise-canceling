@@ -3,8 +3,8 @@
 
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use realfft::num_complex::Complex32;
-use vdn_polish::mirror::FrameCtx;
 use vdn_polish::{PolishChain, PolishParams};
+use vdn_types::FrameCtx;
 
 #[global_allocator]
 static A: AllocDisabler = AllocDisabler;
@@ -30,6 +30,7 @@ fn per_frame_paths_do_not_allocate() {
                 &dry,
                 FrameCtx {
                     voice_prob: Some((i % 3) as f32 * 0.5),
+                    ..FrameCtx::default()
                 },
             );
             chain.process_time(&mut hop);

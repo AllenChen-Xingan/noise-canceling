@@ -26,17 +26,16 @@
 #![forbid(unsafe_code)]
 pub mod classify;
 pub mod features;
-pub mod mirror;
 pub mod route;
 #[rustfmt::skip]
 pub mod weights;
 
 use classify::{NoiseClass, posterior};
 use features::{FeatureExtractor, NF};
-use mirror::{
+use route::Device;
+use vdn_types::{
     Confidence, FineSceneId, HysteresisGate, ParamSet, SampleClock, SceneLabel, UserScene,
 };
-use route::Device;
 use weights::NC;
 
 /// 缓冲里至少有这么多帧（≈1 s）才把判断交给滞回。
@@ -79,6 +78,8 @@ pub struct SceneAnalyzer {
 
 impl SceneAnalyzer {
     /// `rate` = 喂进来的采样率（目前只支持 16000），`hop` = 每次 `push_hop` 的样本数（256）。
+    /// 本 crate 的 `SampleClock` 按这个 `rate` 计（离线 = 16 kHz 模型样本），滞回换算秒时传同一个 `rate`；
+    /// `vdn-types` 约定流时间按 IO 采样率计，接入实时链路时把 `rate` 设成 IO 采样率、`at` 用 IO 时钟（两者必须同口径，错了确认与停留时长会偏 3 倍）。
     pub fn new(rate: u32, hop: usize) -> Self {
         Self {
             fx: FeatureExtractor::new(rate as f32, hop),
@@ -98,10 +99,16 @@ impl SceneAnalyzer {
         }
     }
 
-    /// 改滞回参数与后验平滑时间常数（标定扫参用）。
-    pub fn set_tuning(&mut self, h: mirror::Hysteresis, ema_s: f32) {
-        self.gate = HysteresisGate::new(h);
-        self.ema_s = ema_s;
+    /// 改滞回参数与后验平滑时间常数（标定扫参用）。两者都按描述表（`vdn_types::desc`）夹进范围；
+    /// 要拒收越界值，调用方先调 `Hysteresis::validate` / `SCENE_EMA_S.check`。
+    pub fn set_tuning(&mut self, h: vdn_types::Hysteresis, ema_s: f32) {
+        self.gate = HysteresisGate::new(h.clamped());
+        self.ema_s = vdn_types::desc::SCENE_EMA_S.clamp(ema_s);
+    }
+
+    /// 当前的滞回参数与后验平滑时间常数。
+    pub fn tuning(&self) -> (vdn_types::Hysteresis, f32) {
+        (self.gate.params, self.ema_s)
     }
 
     /// 手动选用户层场景（`None` = 自动）。

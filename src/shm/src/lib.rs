@@ -44,6 +44,8 @@ compile_error!(
 );
 
 mod bus;
+#[cfg(not(feature = "loom"))]
+pub mod desc;
 pub mod layout;
 #[cfg(all(unix, feature = "posix"))]
 mod owned;
@@ -121,7 +123,7 @@ impl RingId {
 /// 构造期错误（实时路径不返回错误）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ShmError {
-    /// 名字必须以 `/vdn-` 开头、总长 ≤ 31 字节（macOS PSHMNAMLEN）、不含其他 `/` 与 NUL
+    /// 名字必须以 `/vdn-` 开头、总长 ≤ 31 字节（macOS PSHMNAMLEN）、之后只含可见 ASCII 且不含 `/`
     InvalidName,
     /// 配置非法（容量为 0 或超上限、采样率为 0 等）
     InvalidConfig(&'static str),
@@ -160,7 +162,7 @@ impl core::fmt::Display for ShmError {
         match self {
             Self::InvalidName => write!(
                 f,
-                "共享内存名字须以 /vdn- 开头、≤31 字节、不含其他 / 与 NUL"
+                "共享内存名字须以 /vdn- 开头、≤31 字节、之后只用可见 ASCII 且不含 /"
             ),
             Self::InvalidConfig(why) => write!(f, "总线配置非法：{why}"),
             Self::AlreadyExists => write!(f, "同名共享内存已存在"),

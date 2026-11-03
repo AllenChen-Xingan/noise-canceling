@@ -19,8 +19,8 @@
 
 use vdn_dsp::{db_to_lin, one_pole_coef};
 
-use crate::types::{FrameCtx, SampleClock, SpeakerClass, Stage};
 use crate::vad::{Hysteresis, Vad};
+use vdn_types::{FrameCtx, NodeKind, SampleClock, SpeakerClass, Stage};
 
 #[derive(Clone, Copy, Debug)]
 pub struct GateParams {
@@ -51,25 +51,91 @@ pub struct GateParams {
 }
 
 impl Default for GateParams {
+    /// 可调参数的默认值取自 `vdn_types::desc`（正本）；`sr` / `clock_rate` 是接线配置，不是可调参数。
     fn default() -> Self {
+        use vdn_types::desc::*;
         Self {
             sr: 16000.0,
             clock_rate: 16000.0,
-            floor_db: -12.0,
-            attack_s: 0.005,
-            reopen_s: 0.05,
-            release_s: 0.5,
-            onset_gap_s: 0.3,
-            onset_jump_db: 8.0,
+            floor_db: FLOOR_DB.default,
+            attack_s: GATE_ATTACK_S.default,
+            reopen_s: GATE_REOPEN_S.default,
+            release_s: GATE_RELEASE_S.default,
+            onset_gap_s: GATE_ONSET_GAP_S.default,
+            onset_jump_db: GATE_ONSET_JUMP_DB.default,
             // 1 次确认在 exp005 上多压约 0.4 dB，但 c02（邻座近）句首误压 2.5% → 11.4%；按「宁可漏噪音也不吃字」取 2
-            confirm_n: 2,
-            onset_level_margin_db: 3.0,
+            confirm_n: GATE_CONFIRM_N.default_count(),
+            onset_level_margin_db: GATE_ONSET_LEVEL_MARGIN_DB.default,
+            // 可缺省参数：出厂关
             level_close_db: None,
-            level_close_hold_s: 0.3,
-            onset_arm_s: 0.1,
-            onset_refractory_s: 0.3,
-            vad_on: 0.5,
-            vad_off: 0.35,
+            level_close_hold_s: GATE_LEVEL_CLOSE_HOLD_S.default,
+            onset_arm_s: GATE_ONSET_ARM_S.default,
+            onset_refractory_s: GATE_ONSET_REFRACTORY_S.default,
+            vad_on: VAD_ON.default,
+            vad_off: VAD_OFF.default,
+        }
+    }
+}
+
+impl GateParams {
+    /// 每个可调参数都在描述表范围内（解析命令行 / 配置时调；越界拒收）。
+    /// 穷举解构：结构加了字段而这里没登记描述表，编译失败（防漏，照 schema 线 `vdn_shm::desc` 的办法）。
+    pub fn validate(&self) -> Result<(), vdn_types::RangeError> {
+        use vdn_types::desc::*;
+        let GateParams {
+            sr: _,
+            clock_rate: _,
+            floor_db,
+            attack_s,
+            reopen_s,
+            release_s,
+            onset_gap_s,
+            onset_jump_db,
+            confirm_n,
+            onset_level_margin_db,
+            level_close_db,
+            level_close_hold_s,
+            onset_arm_s,
+            onset_refractory_s,
+            vad_on,
+            vad_off,
+        } = *self;
+        FLOOR_DB.check(floor_db)?;
+        GATE_ATTACK_S.check(attack_s)?;
+        GATE_REOPEN_S.check(reopen_s)?;
+        GATE_RELEASE_S.check(release_s)?;
+        GATE_ONSET_GAP_S.check(onset_gap_s)?;
+        GATE_ONSET_JUMP_DB.check(onset_jump_db)?;
+        GATE_CONFIRM_N.check_count(confirm_n)?;
+        GATE_ONSET_LEVEL_MARGIN_DB.check(onset_level_margin_db)?;
+        GATE_LEVEL_CLOSE_DB.check_opt(level_close_db)?;
+        GATE_LEVEL_CLOSE_HOLD_S.check(level_close_hold_s)?;
+        GATE_ONSET_ARM_S.check(onset_arm_s)?;
+        GATE_ONSET_REFRACTORY_S.check(onset_refractory_s)?;
+        VAD_ON.check(vad_on)?;
+        VAD_OFF.check(vad_off)?;
+        Ok(())
+    }
+
+    /// 夹进描述表范围（NaN 当默认值）。[`AsymGate::new`] 先夹再用，状态里不会出现越界参数。
+    pub fn clamped(self) -> Self {
+        use vdn_types::desc::*;
+        Self {
+            floor_db: FLOOR_DB.clamp(self.floor_db),
+            attack_s: GATE_ATTACK_S.clamp(self.attack_s),
+            reopen_s: GATE_REOPEN_S.clamp(self.reopen_s),
+            release_s: GATE_RELEASE_S.clamp(self.release_s),
+            onset_gap_s: GATE_ONSET_GAP_S.clamp(self.onset_gap_s),
+            onset_jump_db: GATE_ONSET_JUMP_DB.clamp(self.onset_jump_db),
+            confirm_n: GATE_CONFIRM_N.clamp_count(self.confirm_n),
+            onset_level_margin_db: GATE_ONSET_LEVEL_MARGIN_DB.clamp(self.onset_level_margin_db),
+            level_close_db: GATE_LEVEL_CLOSE_DB.clamp_opt(self.level_close_db),
+            level_close_hold_s: GATE_LEVEL_CLOSE_HOLD_S.clamp(self.level_close_hold_s),
+            onset_arm_s: GATE_ONSET_ARM_S.clamp(self.onset_arm_s),
+            onset_refractory_s: GATE_ONSET_REFRACTORY_S.clamp(self.onset_refractory_s),
+            vad_on: VAD_ON.clamp(self.vad_on),
+            vad_off: VAD_OFF.clamp(self.vad_off),
+            ..self
         }
     }
 }
@@ -99,7 +165,9 @@ pub struct AsymGate {
 }
 
 impl AsymGate {
+    /// 参数先按描述表夹进范围（[`GateParams::clamped`]）；要拒收越界值，调用方先调 [`GateParams::validate`]。
     pub fn new(p: GateParams) -> Self {
+        let p = p.clamped();
         Self {
             vad: Vad::new(),
             hyst: Hysteresis::new(p.vad_on, p.vad_off),
@@ -143,8 +211,8 @@ impl AsymGate {
     clippy::disallowed_macros
 )]
 impl Stage for AsymGate {
-    fn name(&self) -> &'static str {
-        "asym-gate"
+    fn kind(&self) -> &'static NodeKind {
+        &vdn_types::graph::ASYM_GATE
     }
 
     fn reset(&mut self) {
@@ -280,7 +348,104 @@ impl Stage for AsymGate {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Confidence, SpeakerVerdict};
+
+    /// 描述表是正本：默认值逐条同表；取表的边界外一点造输入，validate 拒收（报的是那一条）、clamped 夹到边界。
+    #[test]
+    fn gate_params_follow_desc_table() {
+        use vdn_types::desc::{self, ParamDesc};
+        let d = GateParams::default();
+        d.validate().unwrap();
+        type Set = fn(&mut GateParams, f32);
+        type Get = fn(&GateParams) -> f32;
+        let fields: [(&ParamDesc, Get, Set); 13] = [
+            (&desc::FLOOR_DB, |p| p.floor_db, |p, v| p.floor_db = v),
+            (&desc::GATE_ATTACK_S, |p| p.attack_s, |p, v| p.attack_s = v),
+            (&desc::GATE_REOPEN_S, |p| p.reopen_s, |p, v| p.reopen_s = v),
+            (
+                &desc::GATE_RELEASE_S,
+                |p| p.release_s,
+                |p, v| p.release_s = v,
+            ),
+            (
+                &desc::GATE_ONSET_GAP_S,
+                |p| p.onset_gap_s,
+                |p, v| p.onset_gap_s = v,
+            ),
+            (
+                &desc::GATE_ONSET_JUMP_DB,
+                |p| p.onset_jump_db,
+                |p, v| p.onset_jump_db = v,
+            ),
+            (
+                &desc::GATE_ONSET_LEVEL_MARGIN_DB,
+                |p| p.onset_level_margin_db,
+                |p, v| p.onset_level_margin_db = v,
+            ),
+            (
+                &desc::GATE_LEVEL_CLOSE_HOLD_S,
+                |p| p.level_close_hold_s,
+                |p, v| p.level_close_hold_s = v,
+            ),
+            (
+                &desc::GATE_ONSET_ARM_S,
+                |p| p.onset_arm_s,
+                |p, v| p.onset_arm_s = v,
+            ),
+            (
+                &desc::GATE_ONSET_REFRACTORY_S,
+                |p| p.onset_refractory_s,
+                |p, v| p.onset_refractory_s = v,
+            ),
+            (&desc::VAD_ON, |p| p.vad_on, |p, v| p.vad_on = v),
+            (&desc::VAD_OFF, |p| p.vad_off, |p, v| p.vad_off = v),
+            (
+                &desc::GATE_LEVEL_CLOSE_DB,
+                |p| p.level_close_db.unwrap_or(f32::NAN),
+                |p, v| p.level_close_db = Some(v),
+            ),
+        ];
+        for (dsc, get, set) in fields {
+            if !dsc.optional {
+                assert_eq!(get(&d), dsc.default, "{} 默认值", dsc.key);
+            }
+            for bad in [dsc.min - 0.5, dsc.max + 0.5] {
+                let mut p = d;
+                set(&mut p, bad);
+                assert_eq!(p.validate().unwrap_err().desc.id, dsc.id, "{}", dsc.key);
+                assert_eq!(get(&p.clamped()), dsc.clamp(bad), "{}", dsc.key);
+            }
+        }
+        // 可缺省参数：出厂关，None 合法
+        assert!(desc::GATE_LEVEL_CLOSE_DB.optional && d.level_close_db.is_none());
+        // 处理图里门控节点的参数清单（`vdn_types::graph::ASYM_GATE`）= 本表 + 整数参数（交叉校验，D72）
+        let mut want: Vec<u16> = fields.iter().map(|f| f.0.id).collect();
+        want.push(desc::GATE_CONFIRM_N.id);
+        want.sort_unstable();
+        assert_eq!(vdn_types::graph::ASYM_GATE.param_ids(), want);
+        // 整数参数
+        assert_eq!(d.confirm_n, desc::GATE_CONFIRM_N.default_count());
+        let p = GateParams { confirm_n: 0, ..d };
+        assert_eq!(p.validate().unwrap_err().desc.id, desc::GATE_CONFIRM_N.id);
+        assert_eq!(p.clamped().confirm_n, 1);
+        // 接线配置不归描述表管，夹值时原样保留
+        let p = GateParams {
+            sr: 48000.0,
+            clock_rate: 48000.0,
+            ..d
+        };
+        assert_eq!((p.clamped().sr, p.clamped().clock_rate), (48000.0, 48000.0));
+    }
+
+    /// new() 先夹再用：越界的下限不会让增益掉到表的下限之下。
+    #[test]
+    fn new_clamps_out_of_range_floor() {
+        let g = AsymGate::new(GateParams {
+            floor_db: -500.0,
+            ..GateParams::default()
+        });
+        assert_eq!(g.floor, vdn_dsp::db_to_lin(vdn_types::desc::FLOOR_DB.min));
+    }
+    use vdn_types::{Confidence, SpeakerVerdict};
 
     fn verdict(class: SpeakerClass, end: u64) -> SpeakerVerdict {
         SpeakerVerdict {
