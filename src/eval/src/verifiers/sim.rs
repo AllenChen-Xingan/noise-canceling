@@ -5,7 +5,7 @@ use super::*;
 /// 门控类 verifier 容许的拖尾（主讲人停下后多久内门控开着不算误开）。
 pub const GATE_TOLERANCE_S: f64 = 0.2;
 
-pub(super) struct HopTruth {
+struct HopTruth {
     owner: Vec<bool>,
     interf: Vec<bool>,
     /// 主讲人 ±GATE_TOLERANCE_S 内有声
@@ -14,7 +14,7 @@ pub(super) struct HopTruth {
     hop: usize,
 }
 
-pub(super) fn hop_truth(c: &Ctx, r: &RunOut) -> HopTruth {
+fn hop_truth(c: &Ctx, r: &RunOut) -> HopTruth {
     let hop = r.hop;
     let n = c.clip.len() / hop;
     let cover = |ivs: &[(usize, usize)], pad: usize| -> Vec<bool> {
@@ -40,7 +40,7 @@ pub(super) fn hop_truth(c: &Ctx, r: &RunOut) -> HopTruth {
 }
 
 /// 主讲人「开口」：静默 ≥ 300 ms 后的音节起点（样本）。
-pub(super) fn owner_onsets(c: &Ctx) -> Vec<usize> {
+fn owner_onsets(c: &Ctx) -> Vec<usize> {
     let gap = (0.3 * c.clip.sr as f64) as usize;
     let mut out = Vec::new();
     let mut last: Option<usize> = None;
@@ -53,7 +53,7 @@ pub(super) fn owner_onsets(c: &Ctx) -> Vec<usize> {
     out
 }
 
-pub(super) fn need_sim(
+fn need_sim(
     c: &Ctx,
     id: &'static str,
     unit: &'static str,

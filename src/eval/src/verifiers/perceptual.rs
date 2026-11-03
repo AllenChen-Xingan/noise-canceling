@@ -3,7 +3,7 @@
 use super::*;
 
 /// 主讲人与干扰者都不在（扩 `guard_frames` 帧）的帧。
-pub(super) fn quiet_frames(c: &Ctx, guard_frames: usize) -> Vec<bool> {
+fn quiet_frames(c: &Ctx, guard_frames: usize) -> Vec<bool> {
     let nf = c.masks.noise_only.len();
     let mut q = c.masks.noise_only.clone();
     for f in 0..nf {
@@ -63,7 +63,7 @@ pub(super) fn v_bgstab(c: &Ctx, p: &Params) -> Score {
 
 /// 输出投影到干净参考上的能量 ⟨o, c⟩² / ‖c‖²：只留下与参考相关的部分，不受不相关的残留噪声影响
 ///（怀疑派自审 P1：停顿帧估的残留噪声比说话时小约 6 dB——门控开着时混回的原声更多——扣不干净会把人声损失藏掉）。
-pub(super) fn proj_energy(o: &[f32], c: &[f32]) -> (f64, f64) {
+fn proj_energy(o: &[f32], c: &[f32]) -> (f64, f64) {
     let (mut oc, mut cc) = (0.0f64, 0.0f64);
     for (a, b) in o.iter().zip(c) {
         oc += *a as f64 * *b as f64;
@@ -129,7 +129,7 @@ pub(super) fn v_onset(c: &Ctx, p: &Params) -> Score {
     .with_extra("voiced_loss_db", avg)
 }
 
-pub(super) fn tnlr(c: &Ctx) -> Option<(f64, usize)> {
+fn tnlr(c: &Ctx) -> Option<(f64, usize)> {
     let (po, n) = power_over(c.out, &c.masks.noise_only)?;
     let (pi, _) = power_over(&c.clip.mix, &c.masks.noise_only)?;
     (n >= 50 && pi > 1e-14).then(|| (db10(po) - db10(pi), n))
@@ -219,7 +219,7 @@ pub(super) fn v_splvl(c: &Ctx, p: &Params) -> Score {
     )
 }
 
-pub(super) fn noise_spec_frames(c: &Ctx, sg: &Spectrogram) -> Vec<usize> {
+fn noise_spec_frames(c: &Ctx, sg: &Spectrogram) -> Vec<usize> {
     let q = &c.masks.noise_only;
     (0..sg.frames.len())
         .filter(|&k| {
