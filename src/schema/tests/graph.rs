@@ -161,3 +161,66 @@ fn session_change_without_export_is_red() {
     v["format"] = Value::from(SessionRecord::FORMAT + 1);
     assert_ne!(pretty(&v), committed_text);
 }
+
+// ───────────── 编号永不复用：对照 main 上已提交的种类表 ─────────────
+
+/// 拿不到 main 时：CI 里算红（要 fetch-depth: 0），本机只提示；main 上还没有这份文件（首次引入）跳过。
+#[test]
+fn kinds_never_reuse_ids_against_main() {
+    match vdn_schema::baseline(&root(), KINDS_FILE) {
+        vdn_schema::Baseline::Found(base, text) => {
+            let old: Value = serde_json::from_str(&text).unwrap();
+            vdn_schema::graph::guard_kinds(&old).unwrap_or_else(|e| panic!("对照 {base}：{e}"));
+        }
+        vdn_schema::Baseline::Absent(base) => {
+            eprintln!("注：{base} 上还没有 {KINDS_FILE}，本次是第一次引入");
+        }
+        vdn_schema::Baseline::Unavailable(why) => {
+            assert!(std::env::var_os("CI").is_none(), "CI 里拿不到基线：{why}");
+            eprintln!("注：跳过对照 main（{why}）");
+        }
+    }
+}
+
+/// 负例：用当前表造出「基线」，再改一处，守卫必须红；原样则绿。
+#[test]
+fn kinds_guard_catches_reuse_and_silent_changes() {
+    use vdn_schema::graph::guard_kinds;
+    let now = kinds_doc();
+    assert_eq!(guard_kinds(&now), Ok(()));
+    let edit = |f: &dyn Fn(&mut Value)| {
+        let mut v = now.clone();
+        f(&mut v);
+        guard_kinds(&v)
+    };
+    // 基线里同编号叫别的名字 = 现在改了名
+    assert!(edit(&|v| v["kinds"][0]["name"] = "old-name".into()).is_err());
+    // 基线版本更高 = 现在倒退
+    assert!(edit(&|v| v["kinds"][0]["version"] = 99.into()).is_err());
+    // 同版本、基线的参数 / 延迟 / 挂点不同 = 现在改了行为没升版本
+    assert!(edit(&|v| v["kinds"][0]["params"] = Value::Array(vec![])).is_err());
+    assert!(edit(&|v| v["kinds"][0]["latency_samples"] = 7.into()).is_err());
+    assert!(edit(&|v| v["kinds"][0]["hook"] = "spectral".into()).is_err());
+    // 基线版本更低、内容不同 = 正常升级
+    assert_eq!(
+        edit(&|v| {
+            v["kinds"][0]["version"] = 0.into();
+            v["kinds"][0]["params"] = Value::Array(vec![]);
+        }),
+        Ok(())
+    );
+    // 基线里有、现在没有、也没退役 = 删了没登记
+    assert!(
+        edit(&|v| {
+            let mut k = v["kinds"][0].clone();
+            k["id"] = 999.into();
+            k["name"] = "gone".into();
+            v["kinds"].as_array_mut().unwrap().push(k);
+        })
+        .is_err()
+    );
+    // 基线已退役的编号被撤回
+    assert!(edit(&|v| v["retired_ids"] = Value::Array(vec![999.into()])).is_err());
+    // 新种类用了基线里别的编号的名字
+    assert!(edit(&|v| v["kinds"][0]["id"] = 998.into()).is_err());
+}

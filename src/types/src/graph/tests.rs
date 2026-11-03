@@ -49,6 +49,9 @@ fn registry_is_well_formed() {
         assert_eq!(ids.len(), a.params.len(), "{} 参数重复", a.name);
     }
     assert_eq!(kind_by_id(TEST_ID_MIN), None);
+    for id in RETIRED {
+        assert_eq!(kind_by_id(id), None, "退役编号 {id} 被复用");
+    }
 }
 
 #[test]

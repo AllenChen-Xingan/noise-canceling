@@ -235,6 +235,10 @@ pub const fn test_kind(id: u16, name: &'static str, latency_samples: usize) -> N
     }
 }
 
+/// 删掉的种类的编号（永不复用）。删一种 = 从 `KINDS` 拿掉 + 编号加进这里；
+/// `vdn-schema` 的测试对照 main 上已提交的种类表把关（编号的名字不许改、行为变了必须升版本、删了必须进这里）。
+pub const RETIRED: [u16; 0] = [];
+
 pub fn kind_by_id(id: u16) -> Option<&'static NodeKind> {
     KINDS.into_iter().find(|k| k.id == id)
 }

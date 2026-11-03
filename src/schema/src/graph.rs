@@ -45,9 +45,67 @@ pub fn kinds_doc() -> Value {
         "format": ProcessingGraph::FORMAT,
         "node_fields": graph::NODE_FIELDS,
         "test_id_min": graph::TEST_ID_MIN,
+        "retired_ids": graph::RETIRED,
         "example": example_json(),
         "kinds": graph::KINDS.iter().map(|k| kind_json(k)).collect::<Vec<_>>(),
     })
+}
+
+/// 对照基线（main 上已提交的种类表）把关「编号永不复用」：
+/// - 基线里的每个编号：还在登记表里 → 名字不变、版本不降；版本没升时内容（挂点 · 延迟 · 参数）必须原样
+/// - 不在登记表里 → 必须在 `RETIRED`；基线已退役的编号仍须退役
+/// - 新种类不许用基线里别的编号用过的名字
+pub fn guard_kinds(old: &Value) -> Result<(), String> {
+    let now = kinds_doc();
+    let field = |k: &Value, f: &str| k.get(f).cloned().unwrap_or(Value::Null);
+    let olds = old["kinds"].as_array().ok_or("基线种类表没有 kinds")?;
+    for o in olds {
+        let id = o["id"].as_u64().ok_or("基线种类缺编号")?;
+        let name = field(o, "name");
+        let cur = now["kinds"]
+            .as_array()
+            .and_then(|a| a.iter().find(|k| k["id"].as_u64() == Some(id)));
+        let Some(cur) = cur else {
+            if !graph::RETIRED.iter().any(|r| u64::from(*r) == id) {
+                return Err(format!("种类 {id}（{name}）删了但没登记进 RETIRED"));
+            }
+            continue;
+        };
+        if field(cur, "name") != name {
+            return Err(format!(
+                "种类 {id} 的名字从 {name} 改成了 {}（编号与名字一一对应）",
+                cur["name"]
+            ));
+        }
+        let (ov, cv) = (o["version"].as_u64(), cur["version"].as_u64());
+        if cv < ov {
+            return Err(format!("种类 {id}（{name}）的版本倒退了"));
+        }
+        if cv == ov {
+            for f in ["hook", "latency_samples", "params"] {
+                if field(cur, f) != field(o, f) {
+                    return Err(format!("种类 {id}（{name}）改了 {f} 却没升版本"));
+                }
+            }
+        }
+    }
+    for r in old["retired_ids"].as_array().into_iter().flatten() {
+        if !graph::RETIRED
+            .iter()
+            .any(|x| Some(u64::from(*x)) == r.as_u64())
+        {
+            return Err(format!("退役编号 {r} 不许撤回"));
+        }
+    }
+    for k in graph::KINDS {
+        let reused = olds
+            .iter()
+            .any(|o| o["name"] == k.name && o["id"].as_u64() != Some(u64::from(k.id)));
+        if reused {
+            return Err(format!("名字 {} 在基线里属于别的编号", k.name));
+        }
+    }
+    Ok(())
 }
 
 /// 会话记录头的键。
