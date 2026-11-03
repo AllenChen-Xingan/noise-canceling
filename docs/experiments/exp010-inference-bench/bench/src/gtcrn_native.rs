@@ -1054,18 +1054,20 @@ impl Dp {
                 self.xt[f * C + c] = feat[c * F2 + f];
             }
         }
-        // intra：沿频率的双向分组 GRU，初值 0
-        for grp in 0..2 {
-            let (fw, bw) = (&self.intra[2 * grp], &self.intra[2 * grp + 1]);
-            let mut h = [0.0f32; 4];
-            for f in 0..F2 {
-                K::gru(fw, &self.xt[f * C + grp * CH..f * C + grp * CH + CH], &mut h);
-                self.y[f * C + grp * CH..f * C + grp * CH + 4].copy_from_slice(&h);
-            }
-            let mut h = [0.0f32; 4];
-            for f in (0..F2).rev() {
-                K::gru(bw, &self.xt[f * C + grp * CH..f * C + grp * CH + CH], &mut h);
-                self.y[f * C + grp * CH + 4..f * C + grp * CH + 8].copy_from_slice(&h);
+        // intra：沿频率的双向分组 GRU，初值 0。4 条链（2 组 × 正 / 反向）互相独立，
+        // 每一步把 4 条一起推进（研究 020：交错让乱序执行同时跑几条依赖链；每条链内的运算与顺序不变）
+        let mut hs = [[0.0f32; 4]; 4]; // [grp*2 + dir]
+        for st in 0..F2 {
+            for grp in 0..2 {
+                let (fw, bw) = (&self.intra[2 * grp], &self.intra[2 * grp + 1]);
+                let (ff, fb) = (st, F2 - 1 - st);
+                let [hf, hb] = &mut hs[2 * grp..2 * grp + 2] else {
+                    unreachable!()
+                };
+                K::gru(fw, &self.xt[ff * C + grp * CH..ff * C + grp * CH + CH], hf);
+                K::gru(bw, &self.xt[fb * C + grp * CH..fb * C + grp * CH + CH], hb);
+                self.y[ff * C + grp * CH..ff * C + grp * CH + 4].copy_from_slice(hf);
+                self.y[fb * C + grp * CH + 4..fb * C + grp * CH + 8].copy_from_slice(hb);
             }
         }
         p.mark(blk, "intra_gru", || {
