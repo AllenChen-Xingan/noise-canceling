@@ -1,13 +1,13 @@
-//! 系统不支持唤醒（低于 macOS 14.4）时：`wait` 退回 200 µs 轮询，照样不丢数据、能超时，并计 `wait_fallbacks`。
-//! 单独一个测试二进制：`force_wake_unsupported_for_test` 对全进程生效。
+//! 唤醒系统调用返回不可恢复的错时：`wait` 退回 200 µs 轮询，照样不丢数据、能超时，并计 `wait_fallbacks`。
+//! 单独一个测试二进制：`force_wake_error_for_test` 对全进程生效。
+#![cfg(not(feature = "loom"))] // loom 的原子量只能在 loom::model 里用；loom 模式只跑 tests/loom.rs
 
 use std::time::{Duration, Instant};
 use vdn_shm::{Bus, BusConfig, RingId, WaitResult};
 
 #[test]
 fn falls_back_to_polling_and_counts() {
-    Bus::force_wake_unsupported_for_test();
-    assert!(!Bus::wake_supported());
+    Bus::force_wake_error_for_test();
     let b = Bus::heap(BusConfig {
         rate: 48_000,
         capacity_frames: 1024,
@@ -31,7 +31,7 @@ fn falls_back_to_polling_and_counts() {
         s.spawn(|| {
             std::thread::sleep(Duration::from_millis(5));
             b.ring(RingId::Raw).push(&[1.0; 96]);
-            b.notify(RingId::Raw); // 不支持时只做原子加，不出错
+            b.notify(RingId::Raw); // 唤醒照常调，不出错
         });
         let r = b.wait(RingId::Raw, 96, Duration::from_secs(2));
         assert_eq!(r, WaitResult::Ready { available: 96 });

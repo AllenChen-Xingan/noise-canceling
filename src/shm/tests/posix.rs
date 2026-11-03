@@ -1,4 +1,5 @@
 //! 真 POSIX 共享内存：两个线程各自映射同一个对象（create 一份、open 一份），各推各取 10 万块，逐样本一致。
+#![cfg(not(feature = "loom"))] // loom 的原子量只能在 loom::model 里用；loom 模式只跑 tests/loom.rs
 #![cfg(all(unix, feature = "posix"))]
 
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -32,6 +33,7 @@ const CFG: BusConfig = BusConfig {
 };
 
 #[test]
+#[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
 fn create_open_validate_unlink() {
     let name = unique_name();
     let _c = Cleanup(name.clone());
@@ -55,6 +57,7 @@ fn create_open_validate_unlink() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
 fn bad_names_are_rejected() {
     for n in [
         "vdn-x",
@@ -72,6 +75,7 @@ fn bad_names_are_rejected() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
 fn two_threads_100k_blocks_sample_exact() {
     const BLOCKS: u32 = 100_000;
     const BLOCK: usize = 64; // 共 640 万样本 < 2^24，f32 能精确表示每个序号

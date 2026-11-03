@@ -1,4 +1,5 @@
 //! 唤醒：`notify` / `wait`（heap 版与真 POSIX 共享内存两份映射）· 新头部字段 · `OwnedBus`。
+#![cfg(not(feature = "loom"))] // loom 的原子量只能在 loom::model 里用；loom 模式只跑 tests/loom.rs
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{Duration, Instant};
@@ -12,6 +13,7 @@ const CFG: BusConfig = BusConfig {
     denoise_block: 96,
 };
 
+#[cfg(all(unix, feature = "posix"))]
 fn unique_name() -> String {
     static N: AtomicU32 = AtomicU32::new(0);
     let t = std::time::SystemTime::now()
@@ -22,7 +24,9 @@ fn unique_name() -> String {
     format!("/vdn-w{:x}-{n}-{:x}", std::process::id(), t & 0xffff)
 }
 
+#[cfg(all(unix, feature = "posix"))]
 struct Cleanup(String);
+#[cfg(all(unix, feature = "posix"))]
 impl Drop for Cleanup {
     fn drop(&mut self) {
         let _ = Bus::unlink_name(&self.0);
@@ -46,6 +50,7 @@ fn ready_immediately_when_data_is_there() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "依赖真实时钟的超时上限，Miri 的虚拟时钟下不准")]
 fn times_out_and_returns() {
     let b = Bus::heap(CFG).unwrap();
     for (strategy, timeout) in [
@@ -80,7 +85,9 @@ fn times_out_and_returns() {
         let r = b.wait(RingId::Raw, 96, Duration::from_millis(40));
         assert_eq!(r, WaitResult::TimedOut { available: 10 });
     });
-    assert_eq!(b.ring(RingId::Raw).wait_fallbacks(), 0, "本机应支持唤醒");
+    if Bus::wake_supported() {
+        assert_eq!(b.ring(RingId::Raw).wait_fallbacks(), 0);
+    }
 }
 
 #[test]
@@ -134,17 +141,21 @@ fn ping_pong(producer: &Bus, consumer: &Bus, blocks: u32) {
     });
     let m = *max_wait.lock().unwrap();
     assert!(m < Duration::from_millis(500), "最长一次等了 {m:?}");
-    assert_eq!(consumer.ring(RingId::Raw).wait_fallbacks(), 0);
+    if Bus::wake_supported() {
+        assert_eq!(consumer.ring(RingId::Raw).wait_fallbacks(), 0);
+    }
 }
 
 #[test]
 fn no_lost_wakeups_heap_two_threads() {
     let b = Bus::heap(CFG).unwrap();
-    ping_pong(&b, &b, 20_000);
+    // Miri 很慢：只跑 200 块（Miri 下没有唤醒，走 200 µs 轮询那一支）
+    ping_pong(&b, &b, if cfg!(miri) { 200 } else { 20_000 });
 }
 
 #[cfg(all(unix, feature = "posix"))]
 #[test]
+#[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
 fn no_lost_wakeups_posix_two_mappings() {
     let name = unique_name();
     let _c = Cleanup(name.clone());
@@ -153,8 +164,83 @@ fn no_lost_wakeups_posix_two_mappings() {
     ping_pong(&p, &c, 20_000);
 }
 
+/// 一来一回锁步：生产方推一块 + notify，然后等消费方在 Processed 环上回一个应答，才推下一块。
+/// 每一次 wait 前对方都还没推，所以消费方一定真睡下去；任何一次唤醒丢了，那次 wait 就要等满 1 s 超时。
+/// 注意：两次读之间的窗口很窄，「读序写反」这类错本测试未必抓得到（反向验证时没抓到）；
+/// 那一类由 `src/wait.rs` 里撑大窗口的单元测试确定地抓。
+fn lockstep(a: &Bus, b: &Bus, rounds: u32) {
+    let slow = AtomicU32::new(0);
+    std::thread::scope(|s| {
+        s.spawn(|| {
+            let mut x = [0.0f32; 96];
+            for i in 0..rounds {
+                x[0] = i as f32;
+                assert_eq!(a.push_notify(RingId::Raw, &x), 96);
+                let t = Instant::now();
+                let w = a.wait(RingId::Processed, 1, Duration::from_secs(1));
+                assert!(w.is_ready(), "第 {i} 轮应答的唤醒丢了");
+                if t.elapsed() > Duration::from_millis(100) {
+                    slow.fetch_add(1, Ordering::Relaxed);
+                }
+                let mut ack = [0.0f32; 1];
+                assert_eq!(a.ring(RingId::Processed).pop(&mut ack), 1);
+                assert_eq!(ack[0], i as f32);
+            }
+        });
+        let mut x = [0.0f32; 96];
+        for i in 0..rounds {
+            let t = Instant::now();
+            let w = b.wait(RingId::Raw, 96, Duration::from_secs(1));
+            assert!(w.is_ready(), "第 {i} 块的唤醒丢了");
+            if t.elapsed() > Duration::from_millis(100) {
+                slow.fetch_add(1, Ordering::Relaxed);
+            }
+            assert_eq!(b.ring(RingId::Raw).pop(&mut x), 96);
+            assert_eq!(x[0], i as f32);
+            b.push_notify(RingId::Processed, &[i as f32]);
+        }
+    });
+    // 偶发调度慢（机器忙）可以有几次；丢唤醒会是 1 s 一次，上面已断言为 Ready
+    // Miri 下慢几百倍，计时没意义：只查「没有一次等满 1 s」（上面的 is_ready）
+    if !cfg!(miri) {
+        assert!(slow.load(Ordering::Relaxed) <= rounds / 100, "慢的轮数太多");
+    }
+}
+
+#[test]
+fn lockstep_heap() {
+    let b = Bus::heap(CFG).unwrap();
+    lockstep(&b, &b, if cfg!(miri) { 50 } else { 5_000 });
+}
+
 #[cfg(all(unix, feature = "posix"))]
 #[test]
+#[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
+fn lockstep_posix_two_mappings() {
+    let name = unique_name();
+    let _c = Cleanup(name.clone());
+    let p = Bus::create(&name, CFG).unwrap();
+    let c = Bus::open(&name).unwrap();
+    lockstep(&p, &c, 5_000);
+}
+
+#[test]
+#[cfg_attr(miri, ignore = "依赖真实时钟的超时上限，Miri 的虚拟时钟下不准")]
+fn poll_zero_interval_still_times_out() {
+    let mut b = Bus::heap(CFG).unwrap();
+    b.set_wait_strategy(WaitStrategy::Poll(Duration::ZERO));
+    let t = Instant::now();
+    assert!(!b.wait(RingId::Raw, 1, Duration::from_millis(20)).is_ready());
+    let el = t.elapsed();
+    assert!(
+        el >= Duration::from_millis(20) && el < Duration::from_millis(220),
+        "{el:?}"
+    );
+}
+
+#[cfg(all(unix, feature = "posix"))]
+#[test]
+#[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
 fn header_v2_fields_and_session() {
     let name = unique_name();
     let _c = Cleanup(name.clone());
@@ -202,6 +288,7 @@ mod owned {
     use vdn_shm::OwnedBus;
 
     #[test]
+    #[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
     fn second_owner_is_busy_and_drop_unlinks() {
         let name = unique_name();
         let _c = Cleanup(name.clone());
@@ -225,6 +312,28 @@ mod owned {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
+    fn legacy_owner_lock_is_respected() {
+        // 模拟 rs-entry 旧版建方：只拿旧锁文件
+        let name = unique_name();
+        let _c = Cleanup(name.clone());
+        let old = std::fs::File::options()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(OwnedBus::legacy_lock_path_for(&name))
+            .unwrap();
+        old.try_lock().unwrap();
+        let held = Bus::create(&name, CFG).unwrap();
+        assert_eq!(OwnedBus::create(&name, CFG).err(), Some(ShmError::Busy));
+        assert!(Bus::open(&name).is_ok(), "旧建方的总线没被删");
+        drop(old);
+        drop(held);
+        assert!(OwnedBus::create(&name, CFG).is_ok(), "旧锁放了就能建");
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
     fn stale_leftover_is_cleared() {
         let name = unique_name();
         let _c = Cleanup(name.clone());
@@ -236,6 +345,7 @@ mod owned {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "Miri 不支持 shm_open / mmap")]
     fn bad_name_creates_no_lock_file() {
         assert_eq!(
             OwnedBus::create("/nope", CFG).err(),
