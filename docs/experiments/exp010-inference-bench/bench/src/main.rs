@@ -16,8 +16,10 @@
 //!   全部 1 + warmup + frames 帧再跑一遍，写 `<前缀>.in.f32` / `<前缀>.ort.f32`（小端 f32，按帧拼接；
 //!   GTCRN 每帧 re[257] 再 im[257]，FE-M 每帧 160 个样本）和 `<前缀>.json`（帧数、每帧长度、wav 路径与 sha256）。
 //!   给非 Rust 的测量程序（applebe 的 Swift / Python）吃同一份输入、对同一份 ORT 输出。
+//!   amx-probe                                                   小矩阵上 Accelerate（AMX / SME）对手写循环，形状取自 GTCRN
 //! 输出一行 JSON（stdout）。一帧 = 模型的一个 hop（GTCRN 256 样本 / 16 ms，FE-M 160 样本 / 10 ms）。
 
+mod amx_probe;
 mod gtcrn_native;
 mod tract_be;
 
@@ -702,6 +704,10 @@ fn main() -> Result<(), Err> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let rest = args.get(1..).unwrap_or(&[]);
     match args.first().map(String::as_str) {
+        Some("amx-probe") => {
+            amx_probe::run();
+            Ok(())
+        }
         Some("gtcrn-bench") => bench(ModelId::Gtcrn, rest),
         Some("fem-bench") => bench(ModelId::Fem, rest),
         Some("gtcrn-parity") => {
