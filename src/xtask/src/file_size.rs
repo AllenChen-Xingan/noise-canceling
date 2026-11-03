@@ -121,8 +121,15 @@ mod tests {
         fs::write(d.join("docs/experiments/e1/notes.md"), "x\n".repeat(900)).unwrap();
         let p = size_problems(&scan(&d).unwrap());
         assert_eq!(p.len(), 2, "{p:?}");
-        assert!(p.iter().any(|x| x.contains("docs/experiments/e1/src/big.rs")), "{p:?}");
-        assert!(p.iter().any(|x| x.contains("docs/experiments/e1/run.py")), "{p:?}");
+        assert!(
+            p.iter()
+                .any(|x| x.contains("docs/experiments/e1/src/big.rs")),
+            "{p:?}"
+        );
+        assert!(
+            p.iter().any(|x| x.contains("docs/experiments/e1/run.py")),
+            "{p:?}"
+        );
         let _ = fs::remove_dir_all(&d);
     }
 
