@@ -200,23 +200,120 @@ fn shm_history_append_only_against_main() {
 #[test]
 fn shm_history_rewrite_is_red() {
     let fresh = std::fs::read_to_string(root().join(DIR).join(shm::LAYOUT_FILE)).unwrap();
-    let (v, fp) = shm::baseline_entry(&fresh).unwrap();
+    let b = shm::baseline_entry(&fresh).unwrap();
     assert_eq!(
-        fp,
+        b.fingerprint,
         shm::fingerprint(&shm::layout_body()),
         "从文件算的指纹应与从 Rust 算的相同"
     );
+    let own: Vec<(u32, String)> = shm::HISTORY.iter().map(|(v, f)| (*v, f.to_string())).collect();
+    assert_eq!(b.history, own, "文件里的历史应与 HISTORY 相同");
+    let (v, fp) = (b.version, b.fingerprint.clone());
     let rewritten = [(v, "fnv1a64:1111111111111111")];
-    let e = shm::guard_baseline(&rewritten, (v, &fp)).unwrap_err();
+    let e = shm::guard_baseline(&rewritten, &b).unwrap_err();
     assert!(e.contains("被改写"), "{e}");
     let deleted = [(v + 1, "fnv1a64:2222222222222222")];
-    assert!(
-        shm::guard_baseline(&deleted, (v, &fp))
-            .unwrap_err()
-            .contains("删掉")
-    );
+    assert!(shm::guard_baseline(&deleted, &b).unwrap_err().contains("删掉"));
     let appended = [(v, fp.as_str()), (v + 1, "fnv1a64:2222222222222222")];
-    assert!(shm::guard_baseline(&appended, (v, &fp)).is_ok());
+    assert!(shm::guard_baseline(&appended, &b).is_ok());
+}
+
+/// 整份历史只增不改（codex 第 3 轮 #3）：main 已发布到版本 3 时，改写或删掉更早的版本 2 也红。
+#[test]
+fn shm_history_whole_prefix_is_checked() {
+    let s = |x: &str| x.to_string();
+    let base = shm::BaseLayout {
+        version: 3,
+        fingerprint: s("fnv1a64:b3"),
+        history: vec![(2, s("fnv1a64:a2")), (3, s("fnv1a64:b3"))],
+    };
+    let ok = [(2, "fnv1a64:a2"), (3, "fnv1a64:b3"), (4, "fnv1a64:c4")];
+    assert!(shm::guard_baseline(&ok, &base).is_ok());
+    assert!(shm::guard_baseline(&ok[..2], &base).is_ok());
+    let old_rewritten = [(2, "fnv1a64:xx"), (3, "fnv1a64:b3"), (4, "fnv1a64:c4")];
+    let e = shm::guard_baseline(&old_rewritten, &base).unwrap_err();
+    assert!(e.contains("版本 2") && e.contains("被改写"), "{e}");
+    let old_deleted = [(3, "fnv1a64:b3"), (4, "fnv1a64:c4")];
+    let e = shm::guard_baseline(&old_deleted, &base).unwrap_err();
+    assert!(e.contains("删掉"), "{e}");
+    // 在已发布的行之间插一行：版本号仍递增，但位置变了
+    let base1 = shm::BaseLayout {
+        version: 3,
+        fingerprint: s("fnv1a64:b3"),
+        history: vec![(1, s("fnv1a64:z1")), (3, s("fnv1a64:b3"))],
+    };
+    let inserted = [(1, "fnv1a64:z1"), (2, "fnv1a64:a2"), (3, "fnv1a64:b3")];
+    let e = shm::guard_baseline(&inserted, &base1).unwrap_err();
+    assert!(e.contains("插进"), "{e}");
+    // 基线文件自相矛盾（布局指纹不在它自己的历史里）：红
+    let broken = shm::BaseLayout {
+        fingerprint: s("fnv1a64:zz"),
+        ..base.clone()
+    };
+    assert!(shm::guard_baseline(&ok, &broken).unwrap_err().contains("自相矛盾"));
+    // 旧格式文件（没有 history）：按只有当前一行算
+    let mut old: Value = serde_json::from_str(
+        &std::fs::read_to_string(root().join(DIR).join(shm::LAYOUT_FILE)).unwrap(),
+    )
+    .unwrap();
+    old.as_object_mut().unwrap().remove("history");
+    let b = shm::baseline_entry(&old.to_string()).unwrap();
+    assert_eq!(b.history, vec![(b.version, b.fingerprint.clone())]);
+}
+
+fn git_out(args: &[&str]) -> Option<String> {
+    let o = std::process::Command::new("git")
+        .arg("-C")
+        .arg(root())
+        .args(args)
+        .output()
+        .ok()?;
+    o.status
+        .success()
+        .then(|| String::from_utf8_lossy(&o.stdout).trim().to_string())
+}
+
+/// 读基线：提交不存在 → Unavailable（不当成「首次引入」放行）；提交在、树里没有文件 → Absent；
+/// 有文件 → Found。环境变量给的全零提交 → Unavailable（codex 第 3 轮 #1、#2）。
+#[test]
+fn shm_baseline_failures_are_not_absent() {
+    let r = root();
+    let Some(first) = git_out(&["rev-list", "--max-parents=0", "HEAD"]) else {
+        assert!(std::env::var_os("CI").is_none(), "CI 里不是 git 仓库");
+        eprintln!("注：不是 git 仓库，跳过");
+        return;
+    };
+    let first = first.lines().next().unwrap().to_string();
+    let missing = "0123456789abcdef0123456789abcdef01234567";
+    assert!(matches!(
+        vdn_schema::shm_baseline_at(&r, missing),
+        vdn_schema::Baseline::Unavailable(_)
+    ));
+    assert!(matches!(
+        vdn_schema::shm_baseline_from(&r, Some(missing)),
+        vdn_schema::Baseline::Unavailable(_)
+    ));
+    assert!(matches!(
+        vdn_schema::shm_baseline_from(&r, Some("0000000000000000000000000000000000000000")),
+        vdn_schema::Baseline::Unavailable(_)
+    ));
+    // 仓库的第一个提交早于本机制，树里没有这份文件
+    assert!(matches!(
+        vdn_schema::shm_baseline_at(&r, &first),
+        vdn_schema::Baseline::Absent(_)
+    ));
+    // 环境变量指定的基线优先于本机规则（多提交推送时用推送前的提交）
+    assert!(matches!(
+        vdn_schema::shm_baseline_from(&r, Some(&first)),
+        vdn_schema::Baseline::Absent(_)
+    ));
+    // 本分支已提交了这份文件
+    if git_out(&["ls-files", "--error-unmatch", &format!("{DIR}/{}", shm::LAYOUT_FILE)]).is_some() {
+        assert!(matches!(
+            vdn_schema::shm_baseline_at(&r, "HEAD"),
+            vdn_schema::Baseline::Found(..)
+        ));
+    }
 }
 
 /// 当前版本正是 HISTORY 的最后一行、指纹相同。
