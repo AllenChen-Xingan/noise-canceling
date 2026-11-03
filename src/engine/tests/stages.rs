@@ -74,7 +74,7 @@ impl Stage for CtxProbe {
 
 #[test]
 fn gain_stages_scale_wet_in_order_and_keep_latency() {
-    let x = signal(48_000, 0.0);
+    let x = signal(SR as usize, 0.0);
     let mut plain = Pipeline::new(Engine::new(Identity, SafetyConfig::off()), SR).unwrap();
     let mut staged = Pipeline::with_stages(
         Engine::new(Identity, SafetyConfig::off()),
@@ -147,7 +147,7 @@ fn ledger_lists_stages_and_sums_to_latency() {
 /// 模型输出全零，后处理级把 wet 换成 Engine 给的 16 kHz 对齐原声：输出应是延迟 `latency_samples()` 的输入（通带内）。
 #[test]
 fn stage_dry_is_aligned_with_declared_latency() {
-    let x = signal(48_000, 0.0);
+    let x = signal(SR as usize, 0.0);
     let mut p = Pipeline::with_stages(
         Engine::new(DelayGain::new(256, 256, 0.0), SafetyConfig::off()),
         SR,
@@ -214,7 +214,7 @@ impl Model for FtzSpyModel {
         "ftz_spy"
     }
     fn sample_rate(&self) -> u32 {
-        16_000
+        vdn_types::MODEL_RATE
     }
     fn hop(&self) -> usize {
         256
