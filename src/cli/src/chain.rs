@@ -254,9 +254,13 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &ChainOpts) -> Result<
             killed_at.clone(),
         );
         let kill_samples = o.kill_at.map(|s| (s * f64::from(RATE)) as u64);
-        let (rt, dblock, rtf) = (o.rt, o.denoise_block, rt_failures.clone());
+        // 调度按 D68：time-constraint 开，参数按预热实测（每周期总耗时 p99.9 × 余量）
+        let rt = o.rt && vdn_rt_thread::ThreadPolicy::default().time_constraint;
+        let (dblock, rtf) = (o.denoise_block, rt_failures.clone());
+        let rtp = vdn_denoised::denoise_rt_params(&worker, &warmup);
         thread::spawn(move || {
-            if rt && !promote(dblock, 0.75) {
+            let _ = dblock;
+            if rt && vdn_rt_thread::promote_current(rtp).is_err() {
                 rtf.fetch_add(1, Ordering::Relaxed);
             }
             let mut consumed = 0u64;

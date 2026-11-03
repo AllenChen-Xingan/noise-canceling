@@ -63,6 +63,8 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<()
     };
     cfg.validate().map_err(|e| e.to_string())?;
     let mut worker = Worker::new(pipeline, o.block);
+    let warmup = worker.warm_up(64);
+    let rtp = vdn_denoised::denoise_rt_params(&worker, &warmup);
     let l_pipe = worker.processor().latency_samples();
     let l_total = worker.l_total(o.lead);
     let bus = Arc::new(

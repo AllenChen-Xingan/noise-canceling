@@ -117,6 +117,14 @@ pub fn model_kind(c: vdn_control::ModelChoice) -> ModelKind {
     }
 }
 
+/// 降噪线程的实时调度参数（D68，规则正本 `vdn_rt_thread::RtParams::from_measured`）：
+/// 周期 = 一个工作周期（GTCRN 768 样本 = 16 ms，按推理节奏报、不按 2 ms 唤醒节奏报），
+/// computation = 预热量到的每周期总耗时 p99.9 × `MEASURED_MARGIN`（夹在周期内）
+pub fn denoise_rt_params<P: Processor>(w: &Worker<P>, wu: &Warmup) -> vdn_rt_thread::RtParams {
+    let period_ns = w.block_ns() * wu.period_blocks.max(1) as u64;
+    vdn_rt_thread::RtParams::from_measured(period_ns, wu.p999_period_ns.max(1), vdn_rt_thread::MEASURED_MARGIN)
+}
+
 /// 降噪总线头的配置：总线头里的 L_total / lead / 降噪块长**只从这里写**。
 /// 正本：管线延迟与块长 = `Worker`（来自 `Pipeline`），lead 与容量 = 调用方的 `vdn_control::Config`。
 pub fn denoise_bus_config<P: Processor>(

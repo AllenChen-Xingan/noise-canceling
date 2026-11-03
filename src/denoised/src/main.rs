@@ -191,10 +191,19 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
         cfg.lead_frames
     );
 
-    // 处理线程 = 本线程；提升失败只记数、不退出
+    // 处理线程 = 本线程。调度按 D68 默认（time-constraint 开，参数按预热实测）；提升失败只记数、不退出
     let mut rt_failures = 0u32;
-    if !a.no_rt {
-        let p = vdn_rt_thread::RtParams::for_block(cfg.denoise_block as u32, IO_RATE, 0.5);
+    let policy = vdn_rt_thread::ThreadPolicy::default();
+    if !a.no_rt && policy.time_constraint {
+        let p = vdn_denoised::denoise_rt_params(&worker, &w);
+        eprintln!(
+            "vdn-denoised: 实时调度 period {:.3} ms · computation {:.3} ms（每周期 {} 块总耗时 p99.9 {:.3} ms × {}）",
+            p.period_ns as f64 / 1e6,
+            p.computation_ns as f64 / 1e6,
+            w.period_blocks,
+            w.p999_period_ns as f64 / 1e6,
+            vdn_rt_thread::MEASURED_MARGIN
+        );
         if let Err(e) = vdn_rt_thread::promote_current(p) {
             rt_failures += 1;
             eprintln!("vdn-denoised: 实时优先级提升失败（照常运行）：{e:?}");
@@ -238,7 +247,7 @@ fn serve<P: Processor>(pipeline: P, cfg: &Config, a: &Args) -> Result<(), String
             break;
         }
         // 每秒读回一次调度策略：读不到或不是 time-constraint 记一次降级（提升本来就关了就不查）
-        if !a.no_rt && Instant::now() >= next_rt_check {
+        if !a.no_rt && policy.time_constraint && Instant::now() >= next_rt_check {
             let ok = vdn_rt_thread::check_current().is_ok_and(|st| st.time_constraint);
             worker.note_rt_check(ok);
             next_rt_check += Duration::from_secs(1);
