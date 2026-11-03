@@ -44,6 +44,9 @@
 - rs-core2：Pipeline 挂后处理级签名定（`Pipeline<M, S = ()>` · `with_stages` · `stages!` · `process_ctx` · `last_status`；new / with_block 不变）；送原声已改 48 kHz；在做故障注入 / 延迟断言 / 对拍
 - rs-core2：FTZ 守卫自写（arm64 FPCR 用 asm），vdn-dsp 进 unsafe 白名单，unsafe 只在 ftz 模块；Miri 与其他平台下空操作（大总管定，不引 no_denormals）
 - 对照审查（子代理，只读）：`docs/plan/010_rust-skeleton-audit.md`。守规矩那半沿用较全；处理图没有；009 大方向沿用。8 条偏离分派：①最小一步（Stage 串进 Pipeline）+⑤FTZ +⑥送原声 48k / 延迟断言 → 新起 rs-core2；②纠漂移 +⑦rtrb 实时切模式 +⑧capture 依赖 → rs-entry；③loom / deny 直接边 +⑤Workgroup +⑧CI 拆 Linux → rs-wake；②后半 0600 权限 → 等装驱动实测；ContentId 用 FNV → backlog
+- **V5 过（19:04）**：`vdn run --passthrough --check --record` 机器过（输入峰值 −14.5 dBFS，输出同值，溢出 / 欠载 0）；人用耳机回放「没有，很清楚」→ `docs/experiments/v5-live/results/20261102.md`
+- rs-live 验收：四 crate 70 过 5 忽略（大总管重跑）、clippy 无警告 → 合入（8dcbc72）、关窗
+- PR #52 CI（只 macOS）过，1 分 22 秒
 - e3 转 issue #53：引擎输入 NaN 后 seam 变 NaN 永不清，输出一直 NaN 到 reset；骨架分支已部分防护，派子代理先写会红测试再修（等锁），随 PR #52 关
 - e3 占用 D77：人定最低系统提到 **macOS 15**（改 D73，原话「可以，mac os 提升版本吧」；起因 019 的 BNNS Graph / MLState 要 15+）。对骨架：os_sync 一定可用，轮询只剩调用失败兜底；CI runner macos-15 对上
 - e3 的耗电矩阵（人跑，18:43，单次 60 s、背景噪声约 ±30 mW）：自建 Audio Workgroup 区间（截止 1–3 ms）把 BNNS 每帧 0.80 → 0.2 ms，但 CPU 功率多 25–40 mW；最省的是手写 + Accelerate + time-constraint（71 mW）→ 与 D74 一致，未推翻
