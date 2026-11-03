@@ -112,7 +112,13 @@ fn new_mismatch_not_in_pending_is_red() {
     let errs = compare_pending(&found, &[]);
     assert!(errs[0].contains("新的不一致"), "{errs:?}");
     // 登记进待定清单后不红
-    assert!(compare_pending(&found, &[("V-X", "edges", Pend::Edges(&[1.0, 2.0, 4.0], Cause::Differ))]).is_empty());
+    assert!(
+        compare_pending(
+            &found,
+            &[("V-X", "edges", Pend::Edges(&[1.0, 2.0, 4.0], Cause::Differ))]
+        )
+        .is_empty()
+    );
 }
 
 /// 负例（会红）：待定清单里的条目已经对上了 → 报「移出 PENDING」
@@ -126,7 +132,10 @@ fn fixed_pending_entry_is_red() {
     };
     let found = mismatches(&[&OK], &docs(&[]), &lower);
     assert!(found.is_empty(), "{found:?}");
-    let errs = compare_pending(&found, &[("V-X", "edges", Pend::Edges(&[1.0, 2.0, 3.0], Cause::Differ))]);
+    let errs = compare_pending(
+        &found,
+        &[("V-X", "edges", Pend::Edges(&[1.0, 2.0, 3.0], Cause::Differ))],
+    );
     assert_eq!(errs.len(), 1);
     assert!(errs[0].contains("移出 PENDING"), "{errs:?}");
 }
@@ -183,7 +192,10 @@ fn pending_does_not_swallow_new_value_on_same_param() {
     };
     let suite = r#"{"tasks":[{"id":"t","graders":[{"v":"V-X","max":999}]}]}"#;
     let found = mismatches(&[&L], &docs(&[("ci.json", suite)]), &lower);
-    let errs = compare_pending(&found, &[("V-X", "max", Pend::Value(-8.0, Cause::NoSource))]);
+    let errs = compare_pending(
+        &found,
+        &[("V-X", "max", Pend::Value(-8.0, Cause::NoSource))],
+    );
     assert_eq!(errs.len(), 1, "{errs:?}");
     assert!(errs[0].contains("999"), "{errs:?}");
 }

@@ -139,7 +139,11 @@ pub fn rate_problems(rel: &str, src: &str, test_file: bool) -> Vec<String> {
                 _ => {}
             }
         }
-        let checked = if low_level { prod.as_str() } else { code.as_str() };
+        let checked = if low_level {
+            prod.as_str()
+        } else {
+            code.as_str()
+        };
         if has_rate_literal(checked) && !has_allow_reason(comment) {
             let line = raw.get(i).map_or("", |l| l.trim());
             out.push(format!(
@@ -259,7 +263,8 @@ mod tests {
         let decl = "#[cfg(test)]\nmod tests;\nfn after() -> u32 { 48_000 }\n";
         assert_eq!(rate_problems("src/shm/src/a.rs", decl, false).len(), 1);
         // 同一行闭合后再声明的生产项照挡（codex 第 3 轮 P2 #3）
-        let same_line = "#[cfg(test)]\nmod tests { fn g() { let _ = 48_000; } } const SR: u32 = 48000;\n";
+        let same_line =
+            "#[cfg(test)]\nmod tests { fn g() { let _ = 48_000; } } const SR: u32 = 48000;\n";
         let p = rate_problems("src/shm/src/a.rs", same_line, false);
         assert_eq!(p.len(), 1, "{p:?}");
         // 测试模块里的字面量仍放行，闭合后同一行打开的生产模块不算测试

@@ -293,11 +293,19 @@ pub enum Pend {
 /// 待定清单：已知不一致或没有出处的条目。全部是建议值，挂 012 拍板 #8 · D44。
 pub const PENDING: [(&str, &str, Pend); 7] = [
     // 量法与 rubric N4 不同，数也不同（代码 2 / 4 / 6，N4 1.5 / 3 / 6）
-    ("V-TIMBRE", "edges", Pend::Edges(&[2.0, 4.0, 6.0], Cause::Differ)),
+    (
+        "V-TIMBRE",
+        "edges",
+        Pend::Edges(&[2.0, 4.0, 6.0], Cause::Differ),
+    ),
     // 过线值 −3 dB 没有出处
     ("V-SPLVL", "min", Pend::Value(-3.0, Cause::NoSource)),
     // 只有 3 dB 有出处，1 / 2 dB 没有
-    ("V-ONSET", "edges", Pend::Edges(&[1.0, 2.0, 3.0], Cause::Differ)),
+    (
+        "V-ONSET",
+        "edges",
+        Pend::Edges(&[1.0, 2.0, 3.0], Cause::Differ),
+    ),
     // −8 / −10 dB 没有出处（−6 / −20 是 rubric C2 档线）
     ("V-NR", "max", Pend::Value(-8.0, Cause::NoSource)),
     ("V-NR", "max", Pend::Value(-10.0, Cause::NoSource)),
@@ -479,7 +487,13 @@ pub fn mismatches(
             for (v, s) in p.values {
                 match quoted_numbers(*s, d) {
                     Err(e) => push(l.id, p.key, What::Value(*v), Cause::QuoteMissing, e),
-                    Ok(None) => push(l.id, p.key, What::Value(*v), Cause::NoSource, format!("{v} 没有出处")),
+                    Ok(None) => push(
+                        l.id,
+                        p.key,
+                        What::Value(*v),
+                        Cause::NoSource,
+                        format!("{v} 没有出处"),
+                    ),
                     Ok(Some(n))
                         if !matches!(s, Src::Design(_)) && !n.iter().any(|x| same(*x, *v)) =>
                     {
@@ -499,7 +513,13 @@ pub fn mismatches(
     // 清单：每个阈值都要在表里登记
     for (name, text) in d.suites {
         let Ok(v) = serde_json::from_str::<Value>(text) else {
-            push(name, "-", What::Suite, Cause::BadSuite, "清单不是合法 JSON".into());
+            push(
+                name,
+                "-",
+                What::Suite,
+                Cause::BadSuite,
+                "清单不是合法 JSON".into(),
+            );
             continue;
         };
         let tasks = v["tasks"].as_array().cloned().unwrap_or_default();
