@@ -116,7 +116,13 @@ pub fn forward(fwd: &mut crate::Forwarder, bus: Option<&Bus>, out: &Bus, input: 
             // 原声已推进 Raw：叫醒降噪进程（一次非阻塞系统调用，规约 §4 A 档唯一例外）
             b.notify(RingId::Raw);
         }
-        None => fwd.process(input, &mut crate::NullRing, &mut crate::NullRing, &mut o, &crate::NoBeat),
+        None => fwd.process(
+            input,
+            &mut crate::NullRing,
+            &mut crate::NullRing,
+            &mut o,
+            &crate::NoBeat,
+        ),
     }
 }
 

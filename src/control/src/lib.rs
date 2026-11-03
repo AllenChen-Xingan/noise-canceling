@@ -177,7 +177,10 @@ impl Config {
         validate_bus_name(&self.bus_name)?;
         validate_bus_name(&self.out_bus_name)?;
         if self.bus_name == self.out_bus_name {
-            return Err(ConfigError::Invalid(format!("bus_name 和 out_bus_name 不能相同（{}）", self.bus_name)));
+            return Err(ConfigError::Invalid(format!(
+                "bus_name 和 out_bus_name 不能相同（{}）",
+                self.bus_name
+            )));
         }
         for (k, v) in [
             ("input_device", &self.input_device),

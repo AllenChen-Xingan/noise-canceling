@@ -213,7 +213,9 @@ fn real_main() -> Result<(), String> {
     let first = Bus::open(&cfg.bus_name).ok().map(Arc::new);
     let l_total0 = first
         .as_ref()
-        .map_or(a.l_total_hint.unwrap_or(cfg.lead_frames), |b| b.l_total() as usize);
+        .map_or(a.l_total_hint.unwrap_or(cfg.lead_frames), |b| {
+            b.l_total() as usize
+        });
     match &first {
         Some(b) => {
             check_header(b, &cfg);
@@ -271,9 +273,14 @@ fn real_main() -> Result<(), String> {
         }
         Source::Mic => {
             let mut feeder = feeder;
-            let s = InputStream::open(cfg.input_device.as_deref(), IO_RATE, block, move |m: &[f32]| {
-                feeder.feed(m);
-            })
+            let s = InputStream::open(
+                cfg.input_device.as_deref(),
+                IO_RATE,
+                block,
+                move |m: &[f32]| {
+                    feeder.feed(m);
+                },
+            )
             .map_err(|e| format!("开麦克风：{e}"))?;
             eprintln!("vdn-capture: 麦克风 {:?}", s.info());
             _mic = Some(s);
@@ -285,16 +292,24 @@ fn real_main() -> Result<(), String> {
     let mut _speaker = None;
     let file = match a.sink {
         Sink::Hal => {
-            eprintln!("vdn-capture: Out 总线留给虚拟麦克风插件读（本批插件未装，读方不在时只计溢出）");
+            eprintln!(
+                "vdn-capture: Out 总线留给虚拟麦克风插件读（本批插件未装，读方不在时只计溢出）"
+            );
             None
         }
         Sink::Speaker => {
-            _speaker = Some(open_speaker(cfg.output_device.as_deref(), &cfg.out_bus_name, block)?);
+            _speaker = Some(open_speaker(
+                cfg.output_device.as_deref(),
+                &cfg.out_bus_name,
+                block,
+            )?);
             None
         }
         Sink::File => {
             let n = total.unwrap_or(0);
-            let bus = Arc::new(Bus::open(&cfg.out_bus_name).map_err(|e| format!("文件端打开 Out 总线：{e}"))?);
+            let bus = Arc::new(
+                Bus::open(&cfg.out_bus_name).map_err(|e| format!("文件端打开 Out 总线：{e}"))?,
+            );
             Some(thread::spawn(move || {
                 let mut src = HalSource::new(OutSource::new(bus));
                 let mut y = vec![0.0f32; n];
@@ -317,7 +332,9 @@ fn real_main() -> Result<(), String> {
     let mut switches = 0u32;
     loop {
         thread::sleep(Duration::from_millis(100));
-        if until.is_some_and(|u| Instant::now() >= u) || sine.as_ref().is_some_and(|t| t.is_finished()) {
+        if until.is_some_and(|u| Instant::now() >= u)
+            || sine.as_ref().is_some_and(|t| t.is_finished())
+        {
             break;
         }
         // 收回音频线程换下来的旧对象（在这里释放）
@@ -340,7 +357,11 @@ fn real_main() -> Result<(), String> {
         let Ok(new) = Bus::open(&cfg.bus_name) else {
             continue;
         };
-        if cur.as_ref().is_some_and(|b| b.session_id() == new.session_id()) || new.rate() != IO_RATE {
+        if cur
+            .as_ref()
+            .is_some_and(|b| b.session_id() == new.session_id())
+            || new.rate() != IO_RATE
+        {
             continue;
         }
         check_header(&new, &cfg);
@@ -348,9 +369,17 @@ fn real_main() -> Result<(), String> {
         let l_new = new.l_total() as usize;
         eprintln!(
             "vdn-capture: {}降噪总线（会话 {:016x}）· L_total {l_new}{}",
-            if cur.is_some() { "换到新的" } else { "接上" },
+            if cur.is_some() {
+                "换到新的"
+            } else {
+                "接上"
+            },
             new.session_id(),
-            if l_new == cur_l_total { "（不变，延迟线接着用）" } else { "（变了，换新 Forwarder，会有一次接缝）" }
+            if l_new == cur_l_total {
+                "（不变，延迟线接着用）"
+            } else {
+                "（变了，换新 Forwarder，会有一次接缝）"
+            }
         );
         let fwd = (l_new != cur_l_total).then(|| forwarder_with(l_new, block, timeout));
         if let Ok(mut slot) = link.slot.lock() {
@@ -412,7 +441,8 @@ fn write_wav(path: Option<&std::path::Path>, y: &[f32]) -> Result<(), String> {
         bits_per_sample: 32,
         sample_format: hound::SampleFormat::Float,
     };
-    let mut w = hound::WavWriter::create(path, spec).map_err(|e| format!("{}：{e}", path.display()))?;
+    let mut w =
+        hound::WavWriter::create(path, spec).map_err(|e| format!("{}：{e}", path.display()))?;
     for &v in y {
         w.write_sample(v).map_err(|e| e.to_string())?;
     }
