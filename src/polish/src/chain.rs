@@ -12,7 +12,7 @@ use crate::agc::Agc;
 use crate::params::PolishParams;
 use crate::spectral::SpectralPolish;
 use crate::spectral_stage::SpectralStage;
-use vdn_types::{FrameCtx, Stage};
+use vdn_types::{FrameCtx, NodeKind, Stage};
 
 pub struct PolishChain {
     spectral: SpectralPolish,

@@ -211,6 +211,20 @@ pub const KINDS: [&NodeKind; 6] = [
     &POLISH_SPECTRAL,
 ];
 
+/// 测试里假级的种类：编号须 `>= TEST_ID_MIN`（编译期查），时域挂点、版本 1、不读参数。不进登记表。
+pub const fn test_kind(id: u16, name: &'static str, latency_samples: usize) -> NodeKind {
+    assert!(id >= TEST_ID_MIN, "测试种类的编号须 >= TEST_ID_MIN");
+    NodeKind {
+        id,
+        name,
+        version: 1,
+        hook: Hook::Time,
+        latency_samples,
+        params: &[],
+        doc: "测试用假级",
+    }
+}
+
 pub fn kind_by_id(id: u16) -> Option<&'static NodeKind> {
     KINDS.into_iter().find(|k| k.id == id)
 }

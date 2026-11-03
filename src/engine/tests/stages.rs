@@ -50,8 +50,8 @@ fn energy(v: &[f32]) -> f64 {
 /// 有延迟的级：构造时应被拒绝。
 struct Lookahead;
 impl Stage for Lookahead {
-    fn name(&self) -> &'static str {
-        "lookahead"
+    fn kind(&self) -> &'static NodeKind {
+        &LOOKAHEAD
     }
     fn reset(&mut self) {}
     fn process(&mut self, _wet: &mut [f32], _dry: &[f32], _ctx: FrameCtx) {}
@@ -63,8 +63,8 @@ impl Stage for Lookahead {
 /// wet := dry（证明后处理级拿到的 dry 与 wet 对齐）。
 struct UseDry;
 impl Stage for UseDry {
-    fn name(&self) -> &'static str {
-        "use_dry"
+    fn kind(&self) -> &'static NodeKind {
+        &USE_DRY
     }
     fn reset(&mut self) {}
     fn process(&mut self, wet: &mut [f32], dry: &[f32], _ctx: FrameCtx) {
@@ -78,8 +78,8 @@ struct CtxProbe {
     target: Arc<AtomicBool>,
 }
 impl Stage for CtxProbe {
-    fn name(&self) -> &'static str {
-        "ctx_probe"
+    fn kind(&self) -> &'static NodeKind {
+        &CTX_PROBE
     }
     fn reset(&mut self) {}
     fn process(&mut self, _wet: &mut [f32], _dry: &[f32], ctx: FrameCtx) {
@@ -363,8 +363,8 @@ struct BadStage {
     resets: Arc<AtomicU64>,
 }
 impl Stage for BadStage {
-    fn name(&self) -> &'static str {
-        "bad"
+    fn kind(&self) -> &'static NodeKind {
+        &BAD
     }
     fn reset(&mut self) {
         self.resets.fetch_add(1, Ordering::Relaxed);
@@ -458,8 +458,8 @@ struct FtzSpyModel {
     calls: Arc<AtomicU64>,
 }
 impl Model for FtzSpyModel {
-    fn name(&self) -> &'static str {
-        "ftz_spy"
+    fn kind(&self) -> &'static NodeKind {
+        &FTZ_SPY
     }
     fn sample_rate(&self) -> u32 {
         16_000
@@ -487,8 +487,8 @@ struct FtzSpyStage {
     calls: Arc<AtomicU64>,
 }
 impl Stage for FtzSpyStage {
-    fn name(&self) -> &'static str {
-        "ftz_spy"
+    fn kind(&self) -> &'static NodeKind {
+        &FTZ_SPY
     }
     fn reset(&mut self) {}
     fn process(&mut self, _wet: &mut [f32], _dry: &[f32], _ctx: FrameCtx) {
