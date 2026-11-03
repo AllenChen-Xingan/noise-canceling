@@ -27,6 +27,9 @@ use std::process::Command;
 pub const MAX_LINES: usize = 600;
 /// 基线正本（相对 workspace 根）。
 pub const BASELINE_FILE: &str = "src/xtask/file-size-baseline.txt";
+/// R-SIZE 扫描的目录（相对仓库根），唯一一处。CLAUDE.md 第五节第 7 条的范围是 `src/` 与 `docs/experiments/`；
+/// `docs/experiments/` 等 #58（exp010 bench 拆文件）合并后再加进来（大总管 8d 定，2026-11-02）。
+pub const SCAN_ROOTS: [&str; 1] = ["src"];
 /// 放宽理由的标记（写在基线条目行尾）。
 pub const WIDEN_MARK: &str = "# 放宽：";
 
@@ -216,10 +219,12 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
     Ok(())
 }
 
-/// `src/**/*.rs` 的（相对路径，行数）；任何文件读不了都报错。
+/// [`SCAN_ROOTS`] 下全部 `.rs` 的（相对路径，行数）；任何文件读不了都报错。
 pub fn scan(root: &Path) -> Result<Vec<Sized>, String> {
     let mut all = Vec::new();
-    walk(&root.join("src"), &mut all)?;
+    for r in SCAN_ROOTS {
+        walk(&root.join(r), &mut all)?;
+    }
     all.into_iter()
         .map(|f| {
             let rel = f
