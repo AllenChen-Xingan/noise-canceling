@@ -101,9 +101,9 @@ impl Config {
     pub const DEFAULT_BLOCK: usize = 96;
     pub const DEFAULT_BUS: &'static str = "/vdn-bus";
     pub const DEFAULT_OUT_BUS: &'static str = "/vdn-out";
-    /// 288 = 6 ms。**暂定，待 Workgroup 后复测**（大总管定 2026-11-02）：release V7 基线里空闲时推理那块约 3 ms，
-    /// 144 / 96 都有处理后欠载，192–384 空闲 3 次无欠载（`docs/experiments/exp-v7-latency/`）
-    pub const DEFAULT_LEAD: usize = 288;
+    /// 192 = 4 ms：**V7 过线值；Workgroup 后复测再压 144**（大总管定 2026-11-02）。release、有唤醒时
+    /// 空闲 / 压力各 10 次 × 10 s 无欠载；144 空闲 10/10 有欠载（`docs/experiments/exp-v7-latency/`）
+    pub const DEFAULT_LEAD: usize = 192;
     /// 2 ms @ 48 kHz
     pub const DEFAULT_DENOISE_BLOCK: usize = 96;
     /// 环余量上限（0.5 s）
