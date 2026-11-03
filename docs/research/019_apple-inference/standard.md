@@ -108,5 +108,5 @@
 
 ## 11. 结果写在哪
 
-- 每次跑：一行 JSON，追加到 `docs/experiments/exp010-inference-bench/results/apple_<日期>-<build-id>.jsonl`，每行带机器状态。
+- 每次跑：`apple-rs/tools/run-all.sh` 一次一个 build id，结果写 `docs/experiments/exp010-inference-bench/apple/results/<build-id>/`（`bench.jsonl` 每行一个组合一轮 · `machine.jsonl` 机器状态 · 转换记录与哈希）；大文件在主目录 `_tmp/exp010-apple/<build-id>/`，仓里只留路径和 sha256。
 - 判定表：`docs/research/019_apple-inference/decision.md` 里每个组合一行：每个 verifier 的分数 · 是否过线 · 线的状态（已定 / 建议）。

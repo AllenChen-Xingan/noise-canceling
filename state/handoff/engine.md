@@ -11,9 +11,17 @@
 - 16:2x 大总管通知 rustbe 占名额，applebe 暂停编译 / 推理，已排队
 - rustbe 同步：手写 GTCRN 已与 ORT 逐值对拍（37 段，最大差 1.6e-4），正在加 tract
 
+- 调研 workflow 收回（8 代理，4 份 notes 各过怀疑派）。要点：只有 BNNS Graph 可在推理线程每帧直接调；Core ML 把 GRU 翻成逐步循环（约 268 次/帧），神经引擎只算 fp16；MLX 每帧加锁等后台线程
+- 待拍板已交大总管登记为 2-8（BNNS / MLState 要 macOS 15，D07 定 14.2+；等实测再问）
+- D68 加活：`standard.md` 初稿已交（13 个 verifier，技术线标「AI 定；人可改」）；§8 成熟产品参照子代理在查；§9 Rust↔Python 差待测
+- 正式测速从 Rust 调：新 crate `docs/experiments/exp010-inference-bench/apple-rs/`（Core ML · BNNS · 分配计数自检；MLX 走 mlx-c 载 `.mlxfn`，因本机无 Metal 编译器，mlx-c 对着 pip 的 libmlx 编，未写完）
+- 一键脚本 `apple-rs/tools/run-all.sh`：建 venv → 转模型 → 用 rustbe 二进制写转储 → 构建自检 → 3 轮交替基准（含 ORT 与手写版同场）→ MLX Python 对照 → MLComputePlan。产物按 build id 写新目录
+- 口径跟 rustbe r5：qos ui、p10/p90、min_frame_snr、NaN 算坏值
+
 ## 下一步
-1. 调研收回 → 申请名额：装 `_tmp/exp010-venv/`（coremltools · mlx）+ 跑基准
-2. 写 `decision.md`，对抗自审一轮
+1. 等「名额给你」→ `apple-rs/tools/run-all.sh`；修编译错（第一次编 apple-rs）
+2. MLX 的 Rust 路（mlx-c）+ §9 Rust↔Python 差
+3. 写 `decision.md`，对抗自审一轮
 
 ## 转交
 （无）
