@@ -975,7 +975,7 @@ impl Dp {
         p.mark(blk, "intra_gru", || {
             // 4 个 GRU 各沿频率 33 步；前向、后向、两组互相独立，关键路径 = 33 步串行
             let s = self.intra[0].step_cost();
-            scale(s, 4 * F2 as u64, F2 as u64)
+            scale(s, 4 * F2 as u64, F2 as u64, 4)
                 + Cost {
                     other: 2 * (F2 * C) as u64, // 转置进 + 拷贝状态
                     io_bytes: 2 * (F2 * C) as u64 * F32B,
@@ -990,7 +990,7 @@ impl Dp {
                     .run(&self.y[f * C..(f + 1) * C], &mut self.z[f * C..(f + 1) * C]);
             }
         }
-        p.mark(blk, "intra_fc", || scale(self.intra_fc.cost(), F2 as u64, 1));
+        p.mark(blk, "intra_fc", || scale(self.intra_fc.cost(), F2 as u64, 1, 1));
         layer_norm_add(&mut self.xt, &self.z, &self.intra_lnw, &self.intra_lnb);
         p.mark(blk, "intra_ln", || ln_cost(F2 * C));
         // inter：沿时间（单步）的分组 GRU，状态逐频点缓存
@@ -1012,8 +1012,8 @@ impl Dp {
         }
         p.mark(blk, "inter_gru+fc", || {
             // 33 个频点 × 2 组各一步，互相独立：关键路径 = 一步 GRU + 一次全连接
-            scale(self.inter[0].step_cost(), 2 * F2 as u64, 1)
-                + scale(self.inter_fc.cost(), F2 as u64, 1)
+            scale(self.inter[0].step_cost(), 2 * F2 as u64, 1, 2)
+                + scale(self.inter_fc.cost(), F2 as u64, 1, 1)
         });
         layer_norm_add(&mut self.xt, &self.z, &self.inter_lnw, &self.inter_lnb);
         for c in 0..C {
@@ -1040,13 +1040,13 @@ fn fc_batch(l: &Linear, x: &[f32], z: &mut [f32]) {
     sgemm_acc(F2, l.o, l.i, x, l.i, &l.w, l.i, true, z, l.o);
 }
 
-/// 工作量乘 `n` 份，关键路径乘 `serial`（串行的份数）
-fn scale(c: Cost, n: u64, serial: u64) -> Cost {
+/// 工作量乘 `n` 份，关键路径乘 `serial`（串行的份数），权重有 `wsets` 套（同一套反复用只读一次）
+fn scale(c: Cost, n: u64, serial: u64, wsets: u64) -> Cost {
     Cost {
         macs: c.macs * n,
         nonlin: c.nonlin * n,
         other: c.other * n,
-        w_bytes: c.w_bytes, // 同一份权重反复用，只读一次
+        w_bytes: c.w_bytes * wsets,
         io_bytes: c.io_bytes * n,
         chain_fma: c.chain_fma * serial,
         chain_nl: c.chain_nl * serial,
@@ -1095,6 +1095,18 @@ impl Sparse {
         }
         Self { rows: out }
     }
+    fn cost(&self) -> Cost {
+        let nz: usize = self.rows.iter().map(|(_, seg)| seg.len()).sum();
+        let longest = self.rows.iter().map(|(_, seg)| seg.len()).max().unwrap_or(1);
+        Cost {
+            macs: nz as u64,
+            w_bytes: nz as u64 * F32B,
+            io_bytes: (nz + self.rows.len()) as u64 * F32B, // 输入按非零段读
+            chain_fma: clog2(longest) + 1,
+            ..Cost::default()
+        }
+    }
+
     #[inline]
     fn run(&self, x: &[f32], y: &mut [f32]) {
         for (yv, (s, seg)) in y.iter_mut().zip(&self.rows) {
@@ -1183,12 +1195,25 @@ impl GtcrnNative {
 
     /// 一帧：`re`/`im` 各 257 → 原地写成增强后的频谱。
     pub fn infer(&mut self, re: &mut [f32], im: &mut [f32]) {
+        self.infer_probed(re, im, &mut NoProbe);
+    }
+
+    /// 同 `infer`，每段计算之后打一次点（研究 020 逐层计时与下界分析）。层的顺序与名字的正本在这里。
+    pub fn infer_probed<P: Probe>(&mut self, re: &mut [f32], im: &mut [f32], p: &mut P) {
+        let bins = BINS as u64;
         // 特征：mag, re, im
         for k in 0..BINS {
             self.feat0[k] = (re[k] * re[k] + im[k] * im[k] + 1e-12).sqrt();
             self.feat0[BINS + k] = re[k];
             self.feat0[2 * BINS + k] = im[k];
         }
+        p.mark("in", "feat", || Cost {
+            macs: 2 * bins,
+            other: 3 * bins, // sqrt + 2 次拷贝
+            io_bytes: 5 * bins * F32B,
+            chain_fma: 2 + 2, // 平方和 + sqrt（按 2 步计）
+            ..Cost::default()
+        });
         // ERB 压缩
         for c in 0..3 {
             let (src, dst) = (
@@ -1199,28 +1224,58 @@ impl GtcrnNative {
             self.erb.run(&src[ERB_LOW..], &mut dst[ERB_LOW..]);
         }
         sfe3(&self.feat1, 3, F0, &mut self.feat2);
+        p.mark("in", "erb+sfe", || {
+            scale(self.erb.cost(), 3, 1, 1)
+                + Cost {
+                    other: (3 * ERB_LOW + 9 * F0) as u64,
+                    io_bytes: (3 * ERB_LOW * 2 + 3 * F0 + 9 * F0) as u64 * F32B,
+                    ..Cost::default()
+                }
+        });
         // 编码
         self.en0.run(&self.feat2, &mut self.e0);
+        p.mark("en0", "conv", || self.en0.cost());
         let [e1, e2, e3, e4] = &mut self.e;
         self.en1.run(&self.e0, e1);
-        self.en_gt[0].run(e1, e2);
-        self.en_gt[1].run(e2, e3);
-        self.en_gt[2].run(e3, e4);
+        p.mark("en1", "conv", || self.en1.cost());
+        self.en_gt[0].run(e1, e2, p, "en_gt0");
+        self.en_gt[1].run(e2, e3, p, "en_gt1");
+        self.en_gt[2].run(e3, e4, p, "en_gt2");
         // DPGRNN ×2
         self.t0.copy_from_slice(e4);
-        self.dp[0].run(&mut self.t0);
-        self.dp[1].run(&mut self.t0);
+        self.dp[0].run(&mut self.t0, p, "dp0");
+        self.dp[1].run(&mut self.t0, p, "dp1");
         // 解码（跳连相加）
+        let skip = || Cost {
+            other: (C * F2) as u64,
+            io_bytes: 3 * (C * F2) as u64 * F32B,
+            chain_fma: 1,
+            ..Cost::default()
+        };
         add_into(&mut self.t0, &self.e[3]);
-        self.de_gt[0].run(&self.t0, &mut self.t1);
+        p.mark("de_gt0", "skip", skip);
+        self.de_gt[0].run(&self.t0, &mut self.t1, p, "de_gt0");
         add_into(&mut self.t1, &self.e[2]);
-        self.de_gt[1].run(&self.t1, &mut self.t0);
+        p.mark("de_gt1", "skip", skip);
+        self.de_gt[1].run(&self.t1, &mut self.t0, p, "de_gt1");
         add_into(&mut self.t0, &self.e[1]);
-        self.de_gt[2].run(&self.t0, &mut self.t1);
+        p.mark("de_gt2", "skip", skip);
+        self.de_gt[2].run(&self.t0, &mut self.t1, p, "de_gt2");
         add_into(&mut self.t1, &self.e[0]);
         self.de3.run(&self.t1, &mut self.d3);
+        p.mark("de3", "skip+deconv", || skip() + self.de3.cost());
         add_into(&mut self.d3, &self.e0);
         self.de4.run(&self.d3, &mut self.d4);
+        p.mark("de4", "skip+deconv", || {
+            let n = (C * F1) as u64;
+            self.de4.cost()
+                + Cost {
+                    other: n,
+                    io_bytes: 3 * n * F32B,
+                    chain_fma: 1,
+                    ..Cost::default()
+                }
+        });
         // ERB 还原
         for c in 0..2 {
             let (src, dst) = (
@@ -1237,6 +1292,16 @@ impl GtcrnNative {
             re[k] = r * m0 - i * m1;
             im[k] = i * m0 + r * m1;
         }
+        p.mark("out", "ierb+mask", || {
+            scale(self.ierb.cost(), 2, 1, 1)
+                + Cost {
+                    macs: 4 * bins,
+                    other: (2 * ERB_LOW) as u64,
+                    io_bytes: (2 * ERB_LOW * 2 + 6 * BINS) as u64 * F32B,
+                    chain_fma: 2,
+                    ..Cost::default()
+                }
+        });
     }
 }
 
