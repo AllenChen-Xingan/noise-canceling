@@ -162,28 +162,163 @@ impl OrtGtcrn {
     }
 }
 
-enum Backend {
-    Ort(Box<OrtGtcrn>),
-    Native(Box<GtcrnNative>),
+/// 一帧原地推理：`x` 进、`x` 出。GTCRN 的一帧是 [re 257 | im 257]，FE-M 的一帧是 160 个样本。
+trait Net {
+    fn infer(&mut self, x: &mut [f32]) -> Result<(), Err>;
 }
-impl Backend {
-    fn open(kind: &str, path: &Path) -> Result<Self, Err> {
-        Ok(match kind {
-            "ort" => Backend::Ort(Box::new(OrtGtcrn::open(path)?)),
-            "native" => Backend::Native(Box::new(GtcrnNative::load(path)?)),
-            _ => return Err(format!("未知后端 {kind}").into()),
-        })
+
+impl Net for OrtGtcrn {
+    fn infer(&mut self, x: &mut [f32]) -> Result<(), Err> {
+        let (re, im) = x.split_at_mut(BINS);
+        OrtGtcrn::infer(self, re, im)
     }
-    #[inline]
-    fn infer(&mut self, re: &mut [f32], im: &mut [f32]) -> Result<(), Err> {
+}
+impl Net for GtcrnNative {
+    fn infer(&mut self, x: &mut [f32]) -> Result<(), Err> {
+        let (re, im) = x.split_at_mut(BINS);
+        GtcrnNative::infer(self, re, im);
+        Ok(())
+    }
+}
+
+/// tract 跑 GTCRN：输入 mix 是 [1,257,1,2]（re、im 交错），其余三个缓存，形状同 ORT。
+struct TractGtcrn {
+    net: TractNet,
+    out: Vec<f32>,
+}
+impl TractGtcrn {
+    fn open(path: &Path) -> Result<Self, Err> {
+        let mut shapes = vec![vec![1, BINS, 1, 2]];
+        shapes.extend(CACHE_SHAPES.iter().map(|s| s.to_vec()));
+        Ok(Self { net: TractNet::open(path, &shapes)?, out: vec![0.0; 2 * BINS] })
+    }
+}
+impl Net for TractGtcrn {
+    fn infer(&mut self, x: &mut [f32]) -> Result<(), Err> {
+        let m = self.net.input0();
+        for k in 0..BINS {
+            m[2 * k] = x[k];
+            m[2 * k + 1] = x[BINS + k];
+        }
+        self.net.step(&mut self.out)?;
+        for k in 0..BINS {
+            x[k] = self.out[2 * k];
+            x[BINS + k] = self.out[2 * k + 1];
+        }
+        Ok(())
+    }
+}
+
+/// 读 ONNX 输入形状（动态维取 1），给 FE-M 两个后端共用。
+fn input_shapes(session: &Session) -> Result<Vec<Vec<usize>>, Err> {
+    session
+        .inputs()
+        .iter()
+        .map(|i| {
+            i.dtype()
+                .tensor_shape()
+                .map(|s| s.iter().map(|&d| d.max(1) as usize).collect())
+                .ok_or_else(|| -> Err { "输入不是张量".into() })
+        })
+        .collect()
+}
+
+/// FastEnhancer-M（官方 onnx-dns-v1.0.0 wav2wav 版）ORT 基线，口径同 src/models/src/fastenhancer.rs：
+/// wav_in + 6 个缓存，输出按位置回灌。
+struct OrtFem {
+    session: Session,
+    run: RunOptions<HasSelectedOutputs>,
+    ins: Vec<Tensor<f32>>,
+}
+impl OrtFem {
+    fn open(path: &Path) -> Result<Self, Err> {
+        let session = ort_session(path)?;
+        let shapes = input_shapes(&session)?;
+        if shapes.len() != 7 || session.outputs().len() != 7 {
+            return Err("FE-M 应有 7 个输入 7 个输出".into());
+        }
+        let mut sel = OutputSelector::default();
+        for (o, s) in session.outputs().iter().zip(&shapes) {
+            sel = sel.preallocate(o.name(), zeros(s)?);
+        }
+        let ins = shapes.iter().map(|s| zeros(s)).collect::<Result<Vec<_>, _>>()?;
+        Ok(Self { run: RunOptions::new()?.with_outputs(sel), ins, session })
+    }
+}
+impl Net for OrtFem {
+    fn infer(&mut self, x: &mut [f32]) -> Result<(), Err> {
+        self.ins[0].extract_tensor_mut().1.copy_from_slice(x);
+        let [a, b, c, d, e, f, g] = self.ins.as_slice() else { return Err("输入个数".into()) };
+        let outs = self.session.run_with_options(ort::inputs![a, b, c, d, e, f, g], &self.run)?;
+        let mut vals = outs.values();
+        let v0 = vals.next().ok_or("无输出")?;
+        x.copy_from_slice(v0.try_extract_tensor::<f32>()?.1);
+        for cache in self.ins[1..].iter_mut() {
+            let v = vals.next().ok_or("无缓存输出")?;
+            cache.extract_tensor_mut().1.copy_from_slice(v.try_extract_tensor::<f32>()?.1);
+        }
+        Ok(())
+    }
+}
+
+struct TractFem {
+    net: TractNet,
+    out: Vec<f32>,
+}
+impl TractFem {
+    fn open(path: &Path) -> Result<Self, Err> {
+        let shapes = input_shapes(&ort_session(path)?)?; // 只借 ORT 读形状，会话随即丢掉
+        let hop = *shapes[0].last().ok_or("wav_in 形状空")?;
+        Ok(Self { net: TractNet::open(path, &shapes)?, out: vec![0.0; hop] })
+    }
+}
+impl Net for TractFem {
+    fn infer(&mut self, x: &mut [f32]) -> Result<(), Err> {
+        self.net.input0().copy_from_slice(x);
+        self.net.step(&mut self.out)?;
+        x.copy_from_slice(&self.out);
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum ModelId {
+    Gtcrn,
+    Fem,
+}
+impl ModelId {
+    fn name(self) -> &'static str {
         match self {
-            Backend::Ort(m) => m.infer(re, im),
-            Backend::Native(m) => {
-                m.infer(re, im);
-                Ok(())
-            }
+            ModelId::Gtcrn => "gtcrn",
+            ModelId::Fem => "fastenhancer_m",
         }
     }
+}
+
+fn open_net(model: ModelId, kind: &str, path: &Path) -> Result<Box<dyn Net>, Err> {
+    Ok(match (model, kind) {
+        (ModelId::Gtcrn, "ort") => Box::new(OrtGtcrn::open(path)?),
+        (ModelId::Gtcrn, "native") => Box::new(GtcrnNative::load(path)?),
+        (ModelId::Gtcrn, "tract") => Box::new(TractGtcrn::open(path)?),
+        (ModelId::Fem, "ort") => Box::new(OrtFem::open(path)?),
+        (ModelId::Fem, "tract") => Box::new(TractFem::open(path)?),
+        _ => return Err(format!("{} 没有后端 {kind}", model.name()).into()),
+    })
+}
+
+/// 逐帧输入：GTCRN 是同一个 STFT 的 [re|im]；FE-M 是逐 hop 的波形。超出音频长度就循环。
+fn frames_for(model: ModelId, audio: &[f32], frames: usize, onnx_or_any: &Path) -> Result<Vec<Vec<f32>>, Err> {
+    Ok(match model {
+        ModelId::Gtcrn => spectra(audio, frames)
+            .into_iter()
+            .map(|(re, im)| re.iter().chain(im.iter()).copied().collect())
+            .collect(),
+        ModelId::Fem => {
+            let hop = *input_shapes(&ort_session(onnx_or_any)?)?[0].last().ok_or("wav_in 形状空")?;
+            let n = audio.len() / hop;
+            (0..frames).map(|i| audio[(i % n) * hop..(i % n + 1) * hop].to_vec()).collect()
+        }
+    })
 }
 
 fn cpu_seconds() -> f64 {
@@ -202,35 +337,36 @@ fn arg_usize(args: &[String], flag: &str, d: usize) -> usize {
     args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).and_then(|v| v.parse().ok()).unwrap_or(d)
 }
 
-fn bench(args: &[String]) -> Result<(), Err> {
-    let (kind, model, wav) = (&args[0], Path::new(&args[1]), Path::new(&args[2]));
+fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
+    let (kind, path, wav) = (&args[0], Path::new(&args[1]), Path::new(&args[2]));
     let frames = arg_usize(args, "--frames", 6000);
     let warm = arg_usize(args, "--warmup", 200);
     let audio = read_wav(wav)?;
-    let specs = spectra(&audio, frames + warm + 1);
+    // FE-M 的帧形状要从 ONNX 读；GTCRN 不用 path
+    let inputs = frames_for(model, &audio, frames + warm + 1, path)?;
+    let mut x = inputs[0].clone();
     // 冷启动：打开 + 第一帧
     let t0 = Instant::now();
-    let mut m = Backend::open(kind, model)?;
+    let mut m = open_net(model, kind, path)?;
     let t_open = t0.elapsed().as_secs_f64() * 1e3;
-    let (mut re, mut im) = specs[0];
     let t1 = Instant::now();
-    m.infer(&mut re, &mut im)?;
+    m.infer(&mut x)?;
     let t_first = t1.elapsed().as_secs_f64() * 1e3;
-    for (r, i) in &specs[1..=warm] {
-        let (mut re, mut im) = (*r, *i);
-        m.infer(&mut re, &mut im)?;
+    for f in &inputs[1..=warm] {
+        x.copy_from_slice(f);
+        m.infer(&mut x)?;
     }
     let mut times = Vec::with_capacity(frames);
     let mut nan = 0usize;
     let a0 = ALLOCS.load(Relaxed);
     let c0 = cpu_seconds();
     let w0 = Instant::now();
-    for (r, i) in &specs[warm + 1..] {
-        let (mut re, mut im) = (*r, *i);
+    for f in &inputs[warm + 1..] {
+        x.copy_from_slice(f);
         let t = Instant::now();
-        m.infer(&mut re, &mut im)?;
+        m.infer(&mut x)?;
         times.push(t.elapsed().as_secs_f64() * 1e3);
-        if !re.iter().chain(im.iter()).all(|v| v.is_finite()) {
+        if !x.iter().all(|v| v.is_finite()) {
             nan += 1;
         }
     }
@@ -239,7 +375,8 @@ fn bench(args: &[String]) -> Result<(), Err> {
     let allocs = ALLOCS.load(Relaxed) - a0;
     times.sort_by(|a, b| a.total_cmp(b));
     println!(
-        "{{\"model\":\"gtcrn\",\"backend\":\"{kind}\",\"frames\":{frames},\"p50_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan}}}",
+        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"p50_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan}}}",
+        model.name(),
         pct(&times, 0.5),
         pct(&times, 0.99),
         pct(&times, 0.999),
@@ -251,49 +388,67 @@ fn bench(args: &[String]) -> Result<(), Err> {
     Ok(())
 }
 
-fn parity(args: &[String]) -> Result<(), Err> {
-    let (wp, onnx, wav) = (Path::new(&args[0]), Path::new(&args[1]), Path::new(&args[2]));
-    let audio = read_wav(wav)?;
-    let n = audio.len() / HOP;
-    let specs = spectra(&audio, n);
-    let mut a = OrtGtcrn::open(onnx)?;
-    let mut b = GtcrnNative::load(wp)?;
+/// 逐帧对拍：参考 `a`（ORT）对 `b`，同一份输入，比整帧输出。
+fn parity(model: ModelId, vs: &str, mut a: Box<dyn Net>, mut b: Box<dyn Net>, inputs: &[Vec<f32>]) -> Result<(), Err> {
     let (mut max_abs, mut sig, mut err) = (0.0f64, 0.0f64, 0.0f64);
     let mut worst_frame = 0;
     let mut first_bad = None;
-    for (f, (r, i)) in specs.iter().enumerate() {
-        let (mut ra, mut ia) = (*r, *i);
-        let (mut rb, mut ib) = (*r, *i);
-        a.infer(&mut ra, &mut ia)?;
-        b.infer(&mut rb, &mut ib);
-        for k in 0..BINS {
-            for (x, y) in [(ra[k], rb[k]), (ia[k], ib[k])] {
-                let d = (x as f64 - y as f64).abs();
-                sig += (x as f64).powi(2);
-                err += d * d;
-                if d > max_abs {
-                    max_abs = d;
-                    worst_frame = f;
-                }
-                if d > 1e-3 && first_bad.is_none() {
-                    first_bad = Some((f, k));
-                }
+    let mut xa = inputs[0].clone();
+    let mut xb = inputs[0].clone();
+    for (f, x) in inputs.iter().enumerate() {
+        xa.copy_from_slice(x);
+        xb.copy_from_slice(x);
+        a.infer(&mut xa)?;
+        b.infer(&mut xb)?;
+        for (k, (&p, &q)) in xa.iter().zip(&xb).enumerate() {
+            let d = (p as f64 - q as f64).abs();
+            sig += (p as f64).powi(2);
+            err += d * d;
+            if d > max_abs {
+                max_abs = d;
+                worst_frame = f;
+            }
+            if d > 1e-3 && first_bad.is_none() {
+                first_bad = Some((f, k));
             }
         }
     }
     println!(
-        "{{\"model\":\"gtcrn\",\"frames\":{n},\"max_abs\":{max_abs:.3e},\"worst_frame\":{worst_frame},\"snr_db\":{:.2},\"first_bad\":\"{:?}\"}}",
+        "{{\"model\":\"{}\",\"vs\":\"{vs}\",\"frames\":{},\"max_abs\":{max_abs:.3e},\"worst_frame\":{worst_frame},\"snr_db\":{:.2},\"first_bad\":\"{:?}\"}}",
+        model.name(),
+        inputs.len(),
         10.0 * (sig / err.max(1e-300)).log10(),
         first_bad
     );
     Ok(())
 }
 
+fn arg_str<'a>(args: &'a [String], flag: &str, d: &'a str) -> &'a str {
+    args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).map_or(d, String::as_str)
+}
+
 fn main() -> Result<(), Err> {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    let rest = args.get(1..).unwrap_or(&[]);
     match args.first().map(String::as_str) {
-        Some("gtcrn-bench") => bench(&args[1..]),
-        Some("gtcrn-parity") => parity(&args[1..]),
+        Some("gtcrn-bench") => bench(ModelId::Gtcrn, rest),
+        Some("fem-bench") => bench(ModelId::Fem, rest),
+        Some("gtcrn-parity") => {
+            // 帧数 = 音频长度 / hop（不循环），与旧版一致
+            let (wp, onnx, wav) = (Path::new(&rest[0]), Path::new(&rest[1]), Path::new(&rest[2]));
+            let vs = arg_str(rest, "--vs", "native");
+            let audio = read_wav(wav)?;
+            let inputs = frames_for(ModelId::Gtcrn, &audio, audio.len() / HOP, onnx)?;
+            let b = open_net(ModelId::Gtcrn, vs, if vs == "native" { wp } else { onnx })?;
+            parity(ModelId::Gtcrn, vs, open_net(ModelId::Gtcrn, "ort", onnx)?, b, &inputs)
+        }
+        Some("fem-parity") => {
+            let (onnx, wav) = (Path::new(&rest[0]), Path::new(&rest[1]));
+            let audio = read_wav(wav)?;
+            let hop = *input_shapes(&ort_session(onnx)?)?[0].last().ok_or("wav_in 形状空")?;
+            let inputs = frames_for(ModelId::Fem, &audio, audio.len() / hop, onnx)?;
+            parity(ModelId::Fem, "tract", open_net(ModelId::Fem, "ort", onnx)?, open_net(ModelId::Fem, "tract", onnx)?, &inputs)
+        }
         _ => Err("用法见 src/main.rs 顶部".into()),
     }
 }
