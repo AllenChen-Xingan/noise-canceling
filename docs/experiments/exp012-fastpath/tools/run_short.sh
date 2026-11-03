@@ -27,6 +27,7 @@ main_dir="${VDN_MAIN:-/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_cancel
 bin="$repo/docs/experiments/exp010-inference-bench/bench/target/release/exp010-bench"
 w="$main_dir/_tmp/20261031-exp010/gtcrn_dns3"
 wav="$main_dir/resources/gtcrn/test_wavs/mix.wav"
+onnx="$main_dir/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx"   # ort 吃 onnx，手写版吃权重前缀
 id="${1:?结果目录名}"
 V="${2:?变体列表}"
 rounds="${3:-3}"
@@ -52,12 +53,14 @@ for r in $(seq 1 "${rounds}"); do
   ac_check
   # 每轮把变体顺序轮转一位，抵消时间漂移
   set -- ${V}
-  for _ in $(seq 2 "${r}"); do set -- "${@:2}" "$1"; done
+  for ((i = 1; i < r; i++)); do set -- "${@:2}" "$1"; done
   for v in "$@"; do
     echo "round ${r}: ${v} 16 ms 节奏" >&2
-    "${bin}" gtcrn-bench "${v}" "${w}" "${wav}" --frames "${nf}" --warmup 200 --qos rt --pace-ms 16 | tag "${r}" >> "${out}/bench.jsonl"
+    m="${w}"; [ "${v}" = ort ] && m="${onnx}"
+    "${bin}" gtcrn-bench "${v}" "${m}" "${wav}" --frames "${nf}" --warmup 200 --qos rt --pace-ms 16 | tag "${r}" >> "${out}/bench.jsonl"
   done
   for v in "$@"; do
+    [ "${v}" = ort ] && continue   # ORT 没有逐层打点
     "${bin}" gtcrn-layers "${w}" "${wav}" --frames 6000 --warmup 200 --qos ui --pace-ms 0 --variant "${v}" | tag "${r}" >> "${out}/layers.jsonl"
   done
   echo "load_r${r}: $(sysctl -n vm.loadavg) · $(batt_line)" >> "${out}/env.txt"
