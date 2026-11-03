@@ -14,7 +14,6 @@ use crate::root;
 enum Outcome {
     Pass,
     Fail,
-    Skip(&'static str),
 }
 
 fn cargo(args: &[&str]) -> Outcome {
@@ -180,7 +179,6 @@ pub fn run(args: &[String]) -> ExitCode {
                 failed = true;
                 format!("失败  {name}（{secs:.1} s）")
             }
-            Outcome::Skip(why) => format!("跳过  {name}（{why}）"),
         };
         println!("{line}");
         summary.push(line);
