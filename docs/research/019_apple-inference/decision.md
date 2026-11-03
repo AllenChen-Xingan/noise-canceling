@@ -18,7 +18,8 @@
 | **GTCRN（主模型）** | **手写 Rust**（rustbe 的 `gtcrn_native`），苹果侧备选 **BNNS Graph + GRU 展开** | 手写 p50 0.088 ms，比 ORT 快约 4.4 倍，0 分配，134 dB；BNNS 展开版 0.155 ms、快约 2.5 倍，0 分配，134 dB，是苹果引擎里唯一过 `BE-RT-ALLOC` 的。两者都能在推理线程直接调 | 第 1 条风险未解；`BE-POWER` 还没有耗电数（要人跑 sudo），选赢家规则（§6.2）暂按 CPU 排 |
 | FE-M（备选） | 暂无（继续 ORT） | 转不了 Core ML（图里有 `view_as_complex`）；手写 Rust 本轮不做；ORT 超 D69 上限 | 待人定是否留在候选里 |
 | DFN3 `_ll`（015 候选） | **不进实时链**；下一轮盲听用**离线处理** | 算力下界（三图 S=1、单线程、连续跑）0.61 ms / 10 ms 帧 ≈ 6.1% 个核，是推理挡线 1.0% 的 6 倍；苹果最快后端提速 2.5 倍也约 2.4%（`dfn3ll_probe.json`）。流式重导出（把 GRU 状态做成输入输出）约 1 天，不做【AI 定，大总管同意】 | 已定 |
-| 认人 ECAPA · 场景 MLP · VAD | 不换 | 不在 019 范围；场景、VAD 已是纯 Rust 零分配（`notes/our-models.md`） | — |
+| 认人 ECAPA-TDNN512 | 待测（ORT vs BNNS，名额里一起跑，`apple-rs/tools/ecapa.sh`） | 每 0.5 s 一次、约 6 ms（含 fbank 与打分），单项 ≈ 1.2% 个核（exp005），D69 下要降约 4–8 倍 | 待测 |
+| 场景 MLP · VAD | 不换 | 已是纯 Rust 零分配，占用在分摊内（`standard.md` §6.1） | — |
 | 本机评分 / 调节模型（D52） | 推理另定；**本机微调用 MLX** | MLX 唯一有自动求导（`notes/mlx.md` §5），不在实时回路，每帧分配多不要紧 | 等 018 定结构 |
 
 **苹果引擎各条路的判定**（`BE-EXHAUST` 矩阵见 `standard.md` §7.1）：
@@ -40,13 +41,20 @@
 - Core ML：每帧约 300 次 malloc，只能像今天的 ORT 一样登记豁免（ORT 本身每帧 1557 次，rustbe `--count-malloc` 实测）。不建议用。
 - **待补**：实时线程策略（`THREAD_TIME_CONSTRAINT_POLICY` · Audio Workgroup · 忙等对照）的实测结果，决定第 1 条风险能不能解。
 
-## 5. 怎么接进代码（`vdn-models` / 后端 trait）
+## 5. 怎么接进代码（接口建议；结构细节归 Rust 骨架线）
 
-规约要求第一次接第二个后端时拆 `vdn-backend-*`（`specs/rust/architecture.md:99`）。建议：
-1. **手写 GTCRN 不算「后端」**，直接作为 `vdn-models` 里的一个模型实现（`AnyModel` 多一个变体），不经推理库；这样 GTCRN 主路径完全不依赖 ort。
-2. 拆 `vdn-backend-ort`（FE-M、认人继续用）和 `vdn-backend-bnns`（苹果侧备选；C FFI 写法见 `apple-rs/src/bnns.rs`，链接名带 `_v2`）。后端 trait 最小面：非实时线程 `open(path) → Self` 并预热；实时线程 `run(&mut self, input, output)`，要求零分配；缓存由后端持有（A/B 两组换指针）。
-3. 模型文件：BNNS 吃 `.mlmodelc`，由 `convert_gtcrn.py` → `compile` 子命令生成；随安装包带编译后的目录（几百 KB），或首次启动编译并缓存（`BNNSGraphCompileOptionsSetOutputPath`）。
-4. RTSan 豁免表、`no_alloc` 测试要按新后端重建（`notes/our-models.md` §对 vdn 的含义第 5 条）。
+依据 D71（人定：频谱前端每帧只算一次、各模型共用，代码复杂度低）。下面只写推理后端这一侧要满足什么，crate 怎么拆、谁持有前端，由另一位大总管的 Rust 骨架线定。
+
+1. **后端不做 STFT。** 前端每 hop 算一次频谱（sqrt-Hann 512 / 256，`vdn_dsp::StreamingStft`），GTCRN、修音链频谱节点、场景特征都吃这一份。后端的输入是「已算好的一帧频谱」（GTCRN：re[257] + im[257]），输出是增强后的频谱或掩码。本次所有基准正是这个口径：只计推理调用，不含 STFT（`standard.md` §3）。
+2. **会自带 STFT 的模型要换成频谱进、频谱出的版本。** FE-M 今天用的 wav2wav 图把 STFT / iSTFT 包在图里（`notes/our-models.md` 第 2 行），违背 D71；它恰好也是转不了 Core ML 的原因（`view_as_complex`）。FE-M 若留在候选里，应换官方 spec2spec 版（`fastenhancer_m.spec.onnx`，009 decision:73），由共用前端喂频谱。
+3. **认人不吃这份频谱**：ECAPA 吃的是 80 维 fbank（25 ms 窗、10 ms 移，Kaldi 口径），窗长、移步都和降噪的 STFT 不同，不能直接共用；它在判断线程里自己算 fbank（`src/speaker/src/fbank.rs`）。要不要从共用前端派生 fbank，交 Rust 骨架线判断。
+4. **后端 trait 最小面（建议）**：
+   - 非实时线程：`open(model) -> Self`，并预热；
+   - 实时线程：`run(&mut self, input: &[f32], output: &mut [f32])`，零分配、不加锁；缓存由后端自己持有（A/B 两组换指针，`apple-rs/src/bnns.rs`）；
+   - `reset()`：缓存清零（换模型、静音过长时用）。
+   这和规约里的 `Model` 接口（一个 hop 进、一个 hop 出）的差别只在「进出的是频谱，不是波形」。
+5. **实现落点（建议）**：手写 GTCRN 直接作为一个模型实现，不经推理库；ORT 留给 FE-M / 认人（`vdn-backend-ort`）；BNNS Graph 作苹果侧备选（`vdn-backend-bnns`，C FFI，链接名带 `_v2`）。BNNS 吃 `.mlmodelc`，由 `apple/convert_gtcrn.py` 加 `compile` 子命令生成。
+6. RTSan 豁免表、`no_alloc` 测试要按新后端重建（`notes/our-models.md` 对 vdn 的含义第 5 条）。
 
 ## 6. 对延迟账的影响
 
