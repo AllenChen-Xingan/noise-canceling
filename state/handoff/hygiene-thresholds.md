@@ -93,4 +93,5 @@ V-TIMBRE 两边的量法：
 
 - 不新出题。V-TIMBRE、V-SPLVL 保留代码的量法和数字（V-SPLVL 的「量法不同」理由已被 codex 第 2 轮更正，见上），标「建议值，量法与 rubric 不同，待定标」；其余标「建议值，未定标」。全部挂 012 拍板 #8 · D44
 - 正本：`src/eval/src/thresholds.rs`（`PENDING` 是待定清单）；比对测试：`src/eval/tests/thresholds.rs`
-- 待定 7 处（清单里 8 条，V-NR 的 −8、−10 各一条）：V-TIMBRE 分档 · V-SPLVL 分档 · V-SPLVL 过线值 −3 · V-ONSET 分档 · V-NR max（−8 / −10）· V-SIM-GATE max（0.05）· V-SIM-GATE onset_max（0.2）
+- **V-SPLVL 分档已改**：codex 第 2 轮查出量法描述错（代码不是 P.56，而是有声帧投影能量损失，与 rubric C3 口径接近），据此按铁律 5 把 C/D 线从 −3 改为 −4，分档 = −1 / −2 / −4，出处 rubric C3 原文（大总管 8d 定）。改后 `xtask eval ci`：V-SPLVL 48 条等级变化 0 条；门禁、回归 13/17、能力 1/10、探针 5/5 不变（只有 ref）
+- 待定 6 处（清单里 7 条，V-NR 的 −8、−10 各一条）：V-TIMBRE 分档 · V-SPLVL 过线值 −3 · V-ONSET 分档 · V-NR max（−8 / −10）· V-SIM-GATE max（0.05）· V-SIM-GATE onset_max（0.2）

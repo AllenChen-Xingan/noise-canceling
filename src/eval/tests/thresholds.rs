@@ -148,7 +148,7 @@ fn bad_quote_unregistered_value_and_unsourced_are_mismatches() {
     let found = mismatches(&[&L], &docs(&[("ci.json", suite)]), &lower);
     let keys: Vec<_> = found
         .iter()
-        .map(|(_, k, w)| (k.as_str(), w.as_str()))
+        .map(|m| (m.key.as_str(), m.why.as_str()))
         .collect();
     assert!(
         keys.iter().any(|(_, w)| w.contains("-8 没有出处")),
