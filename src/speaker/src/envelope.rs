@@ -204,8 +204,8 @@ impl EnergyEnvelopeStage {
                 attack_s: p.attack_s,
                 release_s: p.release_s,
                 hangover_s: p.hangover_s,
-                // 以下三项 = exp004 默认（`src/engine/src/engine.rs`）
-                detect_db: 9.0,
+                // 判据灵敏度与 engine 同一条描述；以下两项 = exp004 默认（`src/engine/src/engine.rs`）
+                detect_db: vdn_types::desc::DETECT_DB.default,
                 abs_min_db: -70.0,
                 noise_rise_db_per_s: 6.0,
             }),

@@ -158,8 +158,9 @@ fn gate_params(args: &[String]) -> R<GateParams> {
     if let Some(v) = f("--level-close")? {
         p.level_close_db = Some(v);
     }
-    if let Some(v) = f("--confirm")? {
-        p.confirm_n = v as u32;
+    // 整数参数直接按 u32 解析：`--confirm 20.9` 报错，不截断成 20 再过范围检查
+    if let Some(v) = arg(args, "--confirm") {
+        p.confirm_n = v.parse()?;
     }
     // 范围的正本是 vdn_types::desc：越界直接报错，不悄悄夹值
     p.validate()?;
@@ -600,6 +601,9 @@ mod tests {
         let e = gate_params(&sv(&["--level-close", "-40"])).unwrap_err();
         assert!(e.to_string().contains("gate.level_close_db"), "{e}");
         assert!(gate_params(&sv(&["--confirm", "0"])).is_err());
+        // 小数不截断：20.9 不能悄悄变成 20 再通过
+        assert!(gate_params(&sv(&["--confirm", "20.9"])).is_err());
+        assert!(gate_params(&sv(&["--confirm", "21"])).is_err());
     }
 
     #[test]

@@ -49,18 +49,64 @@ pub struct JudgeParams {
 }
 
 impl Default for JudgeParams {
+    /// 可调参数的默认值取自 `vdn_types::desc`（`judge.*`）；`sr` / `clock_per_sample` 是接线配置。
     fn default() -> Self {
+        use vdn_types::desc::*;
         Self {
             sr: 16000,
-            window_s: 1.5,
-            hop_s: 0.5,
-            min_voiced_frac: 0.3,
-            enroll_voiced_frac: 0.6,
-            consist_sim: 0.6,
-            owner_hi: 0.45,
-            others_lo: 0.25,
-            vad_thr: 0.5,
+            window_s: JUDGE_WINDOW_S.default,
+            hop_s: JUDGE_HOP_S.default,
+            min_voiced_frac: JUDGE_MIN_VOICED_FRAC.default,
+            enroll_voiced_frac: JUDGE_ENROLL_VOICED_FRAC.default,
+            consist_sim: JUDGE_CONSIST_SIM.default,
+            owner_hi: JUDGE_OWNER_HI.default,
+            others_lo: JUDGE_OTHERS_LO.default,
+            vad_thr: JUDGE_VAD_THR.default,
             clock_per_sample: 1,
+        }
+    }
+}
+
+impl JudgeParams {
+    /// 每个可调参数都在描述表范围内（越界拒收）。穷举解构：加了字段没登记描述表，编译失败。
+    pub fn validate(&self) -> Result<(), vdn_types::RangeError> {
+        use vdn_types::desc::*;
+        let JudgeParams {
+            sr: _,
+            window_s,
+            hop_s,
+            min_voiced_frac,
+            enroll_voiced_frac,
+            consist_sim,
+            owner_hi,
+            others_lo,
+            vad_thr,
+            clock_per_sample: _,
+        } = *self;
+        JUDGE_WINDOW_S.check(window_s)?;
+        JUDGE_HOP_S.check(hop_s)?;
+        JUDGE_MIN_VOICED_FRAC.check(min_voiced_frac)?;
+        JUDGE_ENROLL_VOICED_FRAC.check(enroll_voiced_frac)?;
+        JUDGE_CONSIST_SIM.check(consist_sim)?;
+        JUDGE_OWNER_HI.check(owner_hi)?;
+        JUDGE_OTHERS_LO.check(others_lo)?;
+        JUDGE_VAD_THR.check(vad_thr)?;
+        Ok(())
+    }
+
+    /// 夹进描述表范围（NaN 当默认值）；[`Judge::new`] 先夹再用。
+    pub fn clamped(self) -> Self {
+        use vdn_types::desc::*;
+        Self {
+            window_s: JUDGE_WINDOW_S.clamp(self.window_s),
+            hop_s: JUDGE_HOP_S.clamp(self.hop_s),
+            min_voiced_frac: JUDGE_MIN_VOICED_FRAC.clamp(self.min_voiced_frac),
+            enroll_voiced_frac: JUDGE_ENROLL_VOICED_FRAC.clamp(self.enroll_voiced_frac),
+            consist_sim: JUDGE_CONSIST_SIM.clamp(self.consist_sim),
+            owner_hi: JUDGE_OWNER_HI.clamp(self.owner_hi),
+            others_lo: JUDGE_OTHERS_LO.clamp(self.others_lo),
+            vad_thr: JUDGE_VAD_THR.clamp(self.vad_thr),
+            ..self
         }
     }
 }
@@ -110,6 +156,7 @@ pub struct Judge<E: EmbedSource> {
 
 impl<E: EmbedSource> Judge<E> {
     pub fn new(p: JudgeParams, emb: E, enroller: Enroller) -> Self {
+        let p = p.clamped();
         let wn = (p.window_s * p.sr as f32) as usize;
         let vn = wn / VAD_FRAME;
         Self {
