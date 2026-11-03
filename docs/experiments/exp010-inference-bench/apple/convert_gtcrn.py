@@ -79,10 +79,42 @@ if os.environ.get("GTCRN_INPLACE") != "1":  # 设 1 可复现原版写法（用�
     _gs.StreamDecoder.forward = _dec_forward
     _gs.StreamGTCRN.forward = _gtcrn_forward
 
+class SplitConvT(torch.nn.Module):
+    """分组 ConvTranspose2d → 每组一个不分组的 ConvTranspose2d，再在通道上拼起来。数学上等价。
+    原因（2026-11-02 实测，逐块对拍）：coremltools 9.0 转 groups=2 的 ConvTranspose2d（解码器第 4 层）差 3.46，其余各块都 ≤ 1.2e-5。"""
+
+    def __init__(self, ct_):
+        super().__init__()
+        g = ct_.groups
+        ig, og = ct_.in_channels // g, ct_.out_channels // g
+        self.ig = ig
+        self.parts = torch.nn.ModuleList()
+        for k in range(g):
+            m = torch.nn.ConvTranspose2d(ig, og, ct_.kernel_size, ct_.stride, ct_.padding, ct_.output_padding,
+                                         groups=1, bias=ct_.bias is not None, dilation=ct_.dilation)
+            m.weight.data.copy_(ct_.weight.data[k * ig:(k + 1) * ig])
+            if ct_.bias is not None:
+                m.bias.data.copy_(ct_.bias.data[k * og:(k + 1) * og])
+            self.parts.append(m)
+
+    def forward(self, x):
+        return torch.cat([m(x[:, k * self.ig:(k + 1) * self.ig]) for k, m in enumerate(self.parts)], dim=1)
+
+
+def split_grouped_convt(m):
+    for name, child in list(m.named_children()):
+        if isinstance(child, torch.nn.ConvTranspose2d) and child.groups > 1:
+            setattr(m, name, SplitConvT(child))
+        else:
+            split_grouped_convt(child)
+    return m
+
+
 base = GTCRN().eval()
 base.load_state_dict(torch.load(f"{src}/onnx_models/model_trained_on_dns3.tar", map_location="cpu")["model"])
 stream = StreamGTCRN().eval()
 convert_to_stream(stream, base)
+split_grouped_convt(stream)
 
 
 class Explicit(torch.nn.Module):
