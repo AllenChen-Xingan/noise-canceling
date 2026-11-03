@@ -3,6 +3,8 @@
 // 用法：
 //   bench_coreml bench <模型 .mlpackage|.mlmodelc> <cpu|gpu|ane|all> <in.f32> <ort.f32> [--frames N] [--warmup N] [--parity-frames N] [--state] [--paced-ms 16]
 //   bench_coreml plan  <模型 .mlpackage|.mlmodelc> <cpu|gpu|ane|all>      每个算子落在哪个计算单元（MLComputePlan）
+//   bench_coreml compile <模型 .mlpackage> <输出 .mlmodelc>               编译成 mlmodelc（给 bench_bnns 用）
+// 注意：outputBackings 若被 Core ML 忽略，我们读的 enh 缓冲不会更新、缓存不会往下走，逐值一致会直接失败，所以对拍同时是这项的检查。
 //
 // in.f32 / ort.f32：来自 rustbe bench 的 --dump-io。GTCRN 每帧 514 个小端 f32（re[257] 再 im[257]）；FE-M 每帧 160 个样本。
 // 同 rustbe 口径：第 0 帧是冷启动帧，接着预热帧（默认 200），再计时帧（默认 6000）；转储本身已按 mix.wav 循环排好。
@@ -250,6 +252,12 @@ let argv = Array(CommandLine.arguments.dropFirst())
 do {
     switch argv.first {
     case "bench": try cmdBench(Array(argv.dropFirst()))
+    case "compile":
+        let (u, ms) = try compiledURL(argv[1])
+        let dst = URL(fileURLWithPath: argv[2])
+        try? FileManager.default.removeItem(at: dst)
+        try FileManager.default.copyItem(at: u, to: dst)
+        print("{\"compiled\":\"\(dst.path)\",\"compile_ms\":\(String(format: "%.2f", ms))}")
     case "plan":
         let sem = DispatchSemaphore(value: 0)
         var e: Error? = nil
