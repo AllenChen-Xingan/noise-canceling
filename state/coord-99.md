@@ -34,3 +34,4 @@
 - 2026-11-02 ~21:30 e3 电池组基准约 35 min，之后插电组约 32 min；schema 只改文件
 - 2026-11-02 ~22:05 schema 在空档里跑完（自报）：重新导出（布局加 history · 整数上下界）· vdn-schema 24 条 · xtask ci 全过（含新 tidy 规则）· --check 一致；codex 第 4 轮在跑。已通知 e3 开插电组；大总管验收复跑排在插电组后
 - 2026-11-02 e3 基准结束；人说「schema他们那个可以开始做」（经 e3 转）。大总管在 6b276e1 亲手验收：xtask ci 全绿（400 / 0 / 5）· vdn-schema --check 一致 · eval ci 通过。codex 第 4 轮 P2×2（测试写死单版本 · 基线读失败测试挡不住回退）→ 定：都改，再跑第 5 轮
+- 2026-11-02 schema 改完第 4 轮两条 P2（2e41218e，自报）：vdn-schema 25 条 · 变异验证新测试能红 · xtask ci / --check / eval ci 全过；codex 第 5 轮在跑
