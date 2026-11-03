@@ -2,9 +2,7 @@
 
 use std::path::PathBuf;
 
-use vdn_eval::thresholds::{
-    ALL, Docs, Lines, PENDING, Param, Src, compare_pending, mismatches,
-};
+use vdn_eval::thresholds::{ALL, Docs, Lines, PENDING, Param, Src, compare_pending, mismatches};
 
 fn repo() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -21,7 +19,10 @@ fn table_matches_docs_and_suites_except_pending() {
         read("docs/research/012_eval-standards/verifiers.md"),
         read("specs/rubric/denoise.md"),
     );
-    let (ci, qa) = (read("src/eval/suite/ci.json"), read("src/eval/suite/qa.json"));
+    let (ci, qa) = (
+        read("src/eval/suite/ci.json"),
+        read("src/eval/suite/qa.json"),
+    );
     let suites = [("ci.json", ci.as_str()), ("qa.json", qa.as_str())];
     let docs = Docs {
         doc012: &d012,
@@ -54,8 +55,17 @@ fn every_default_used_in_code_exists() {
         n += 1;
     }
     assert!(n >= 16, "只找到 {n} 处查表");
-    for bad in ["f_or(\"max\", 0", "f_or(\"max\", 1", "f_or(\"max\", 2", "f_or(\"max\", 3", "f_or(\"min\", -"] {
-        assert!(!src.contains(bad), "verifiers.rs 里还有写死的默认阈值：{bad}");
+    for bad in [
+        "f_or(\"max\", 0",
+        "f_or(\"max\", 1",
+        "f_or(\"max\", 2",
+        "f_or(\"max\", 3",
+        "f_or(\"min\", -",
+    ] {
+        assert!(
+            !src.contains(bad),
+            "verifiers.rs 里还有写死的默认阈值：{bad}"
+        );
     }
 }
 
@@ -118,9 +128,18 @@ fn bad_quote_unregistered_value_and_unsourced_are_mismatches() {
     };
     let suite = r#"{"tasks":[{"id":"t","graders":[{"v":"V-X","max":-7}]}]}"#;
     let found = mismatches(&[&L], &docs(&[("ci.json", suite)]));
-    let keys: Vec<_> = found.iter().map(|(_, k, w)| (k.as_str(), w.as_str())).collect();
-    assert!(keys.iter().any(|(_, w)| w.contains("-8 没有出处")), "{keys:?}");
-    assert!(keys.iter().any(|(_, w)| w.contains("没登记在表里")), "{keys:?}");
+    let keys: Vec<_> = found
+        .iter()
+        .map(|(_, k, w)| (k.as_str(), w.as_str()))
+        .collect();
+    assert!(
+        keys.iter().any(|(_, w)| w.contains("-8 没有出处")),
+        "{keys:?}"
+    );
+    assert!(
+        keys.iter().any(|(_, w)| w.contains("没登记在表里")),
+        "{keys:?}"
+    );
     const Q: Lines = Lines {
         id: "V-Y",
         edges: &[1.0],

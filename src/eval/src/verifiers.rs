@@ -846,7 +846,14 @@ fn v_vacuum(c: &Ctx, p: &Params) -> Score {
     let Some((t, _)) = tnlr(c) else {
         return Score::unknown(ID, "dB", Better::Higher, "纯噪声帧不足 0.5 s");
     };
-    Score::judged(ID, t, "dB", Better::Higher, Some(p.f_or("min", th::VACUUM.def("min"))), &[])
+    Score::judged(
+        ID,
+        t,
+        "dB",
+        Better::Higher,
+        Some(p.f_or("min", th::VACUUM.def("min"))),
+        &[],
+    )
 }
 
 fn v_timbre(c: &Ctx, p: &Params) -> Score {
@@ -1062,8 +1069,15 @@ fn v_sim_fa(c: &Ctx, p: &Params) -> Score {
         return Score::unknown(ID, "比例", Better::Lower, "只有干扰者说话的 hop 不足 20 个");
     }
     let fa = only.iter().filter(|&&h| t.gate[h]).count() as f64 / only.len() as f64;
-    Score::judged(ID, fa, "比例", Better::Lower, Some(p.f_or("max", th::SIM_FA.def("max"))), &[])
-        .with_extra("interf_only_hops", only.len() as f64)
+    Score::judged(
+        ID,
+        fa,
+        "比例",
+        Better::Lower,
+        Some(p.f_or("max", th::SIM_FA.def("max"))),
+        &[],
+    )
+    .with_extra("interf_only_hops", only.len() as f64)
 }
 
 fn v_sim_quiet(c: &Ctx, p: &Params) -> Score {

@@ -72,7 +72,11 @@ pub const BGSTAB: Lines = Lines {
     edges: &[3.0, 6.0, 10.0],
     edges_src: Src::Doc012(&["≤ 3 / 6 / 10 dB 为 A / B / C"]),
     params: &[
-        p("max", Some(10.0), &[(10.0, Src::Doc012(&["**> 10 dB → D**"]))]),
+        p(
+            "max",
+            Some(10.0),
+            &[(10.0, Src::Doc012(&["**> 10 dB → D**"]))],
+        ),
         p(
             "from_s",
             Some(0.0),
@@ -88,7 +92,11 @@ pub const ONSET: Lines = Lines {
     id: "V-ONSET",
     edges: &[1.0, 2.0, 3.0],
     edges_src: Src::Doc012(&["> 3 dB → 「吞字头」"]),
-    params: &[p("max", Some(3.0), &[(3.0, Src::Doc012(&["> 3 dB → 「吞字头」"]))])],
+    params: &[p(
+        "max",
+        Some(3.0),
+        &[(3.0, Src::Doc012(&["> 3 dB → 「吞字头」"]))],
+    )],
 };
 
 /// 量法与 rubric C3 不同：代码按 P.56 主动语音电平差（012 的定义），C3 按有声帧能量损失
@@ -103,7 +111,11 @@ pub const MUSIC: Lines = Lines {
     id: "V-MUSIC",
     edges: &[1.2, 1.5, 2.0],
     edges_src: Src::Doc012(&["峰度比 ≤ 1.2 A · ≤ 1.5 B · ≤ 2 C · > 2 D"]),
-    params: &[p("max", Some(2.0), &[(2.0, Src::Doc012(&["≤ 2 C · > 2 D"]))])],
+    params: &[p(
+        "max",
+        Some(2.0),
+        &[(2.0, Src::Doc012(&["≤ 2 C · > 2 D"]))],
+    )],
 };
 
 /// 量法与 rubric N4 不同：代码 100–1k / 1–2k / 2–4k / 4–7.9k Hz、512 点跳 256；N4 100–300 / 300–500 / 2–5k / 5–8k Hz、1024 点跳 512
@@ -111,7 +123,11 @@ pub const TIMBRE: Lines = Lines {
     id: "V-TIMBRE",
     edges: &[2.0, 4.0, 6.0],
     edges_src: Src::Rubric(&["D > 6 · C ≤ 6 · B ≤ 3 · A ≤ 1.5"]),
-    params: &[p("max", Some(6.0), &[(6.0, Src::Rubric(&["D > 6 · C ≤ 6"]))])],
+    params: &[p(
+        "max",
+        Some(6.0),
+        &[(6.0, Src::Rubric(&["D > 6 · C ≤ 6"]))],
+    )],
 };
 
 pub const NR: Lines = Lines {
@@ -197,7 +213,10 @@ pub const SIM_GATE: Lines = Lines {
             Some(0.05),
             &[
                 (0.05, Src::None),
-                (0.4, Src::Design("R01 / R03 的 note：放宽的护栏线，严格线在能力集 C10")),
+                (
+                    0.4,
+                    Src::Design("R01 / R03 的 note：放宽的护栏线，严格线在能力集 C10"),
+                ),
             ],
         ),
         p(
@@ -205,7 +224,10 @@ pub const SIM_GATE: Lines = Lines {
             Some(0.2),
             &[
                 (0.2, Src::None),
-                (0.5, Src::Design("R01 / R03 的 note：放宽的护栏线，严格线在能力集 C10")),
+                (
+                    0.5,
+                    Src::Design("R01 / R03 的 note：放宽的护栏线，严格线在能力集 C10"),
+                ),
             ],
         ),
     ],
@@ -234,8 +256,8 @@ pub const SIM_SWLAT: Lines = Lines {
 
 /// 表里全部 verifier。
 pub const ALL: [&Lines; 16] = [
-    &BGSTAB, &ONSET, &SPLVL, &MUSIC, &TIMBRE, &NR, &INTF, &VACUUM, &EAT_ASR, &FRAME, &MUTE, &SWITCH,
-    &SIM_GATE, &SIM_FA, &SIM_QUIET, &SIM_SWLAT,
+    &BGSTAB, &ONSET, &SPLVL, &MUSIC, &TIMBRE, &NR, &INTF, &VACUUM, &EAT_ASR, &FRAME, &MUTE,
+    &SWITCH, &SIM_GATE, &SIM_FA, &SIM_QUIET, &SIM_SWLAT,
 ];
 
 /// 待定清单：已知不一致或没有出处的条目 `(verifier, "edges" 或参数名)`。全部是建议值，挂 012 拍板 #8 · D44。
@@ -335,7 +357,10 @@ pub fn mismatches(table: &[&Lines], d: &Docs) -> Vec<(String, String, String)> {
         // 参数：每个取值的数要出现在它的摘录里
         for p in l.params {
             if let Some(dv) = p.default
-                && !p.values.iter().any(|(v, _)| same(*v, dv) && v.signum() == dv.signum())
+                && !p
+                    .values
+                    .iter()
+                    .any(|(v, _)| same(*v, dv) && v.signum() == dv.signum())
             {
                 push(l.id, p.key, format!("默认值 {dv} 没登记在取值里"));
             }
@@ -343,7 +368,9 @@ pub fn mismatches(table: &[&Lines], d: &Docs) -> Vec<(String, String, String)> {
                 match quoted_numbers(*s, d) {
                     Err(e) => push(l.id, p.key, e),
                     Ok(None) => push(l.id, p.key, format!("{v} 没有出处")),
-                    Ok(Some(n)) if !matches!(s, Src::Design(_)) && !n.iter().any(|x| same(*x, *v)) => {
+                    Ok(Some(n))
+                        if !matches!(s, Src::Design(_)) && !n.iter().any(|x| same(*x, *v)) =>
+                    {
                         push(l.id, p.key, format!("{v} 不在摘录的数 {n:?} 里"));
                     }
                     Ok(Some(_)) => {}
@@ -370,7 +397,11 @@ pub fn mismatches(table: &[&Lines], d: &Docs) -> Vec<(String, String, String)> {
                             })
                         });
                         if !ok {
-                            push(id, k, format!("{name} 任务 {} 的 {k} = {x} 没登记在表里", t["id"]));
+                            push(
+                                id,
+                                k,
+                                format!("{name} 任务 {} 的 {k} = {x} 没登记在表里", t["id"]),
+                            );
                         }
                     }
                 }
@@ -381,7 +412,10 @@ pub fn mismatches(table: &[&Lines], d: &Docs) -> Vec<(String, String, String)> {
 }
 
 /// 找到的不一致 ↔ 待定清单：多出的（新不一致）与少了的（已修好，要移出清单）都报。
-pub fn compare_pending(found: &[(String, String, String)], pending: &[(&str, &str)]) -> Vec<String> {
+pub fn compare_pending(
+    found: &[(String, String, String)],
+    pending: &[(&str, &str)],
+) -> Vec<String> {
     let mut errs = Vec::new();
     for (id, key, why) in found {
         if !pending.iter().any(|(pi, pk)| pi == id && pk == key) {
@@ -390,7 +424,9 @@ pub fn compare_pending(found: &[(String, String, String)], pending: &[(&str, &st
     }
     for (pi, pk) in pending {
         if !found.iter().any(|(id, key, _)| id == pi && key == pk) {
-            errs.push(format!("待定清单里的 {pi} · {pk} 已经对上了：把它移出 PENDING"));
+            errs.push(format!(
+                "待定清单里的 {pi} · {pk} 已经对上了：把它移出 PENDING"
+            ));
         }
     }
     errs
