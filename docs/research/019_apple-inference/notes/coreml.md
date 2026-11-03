@@ -121,9 +121,9 @@
 2. **算子落点**：每个模型 × 四档计算单元，用 `MLComputePlan` 导出每个算子的 `preferredComputeDevice` 和 `weight`，数单元切换次数。重点看 GRU 在 `CPUAndGPU` 下落在哪。
 3. **每帧耗时**：组合 = 模型 × 计算单元（`cpuOnly` · `CPUAndGPU` · `CPUAndNeuralEngine` · `All`）× 是否 `FastPrediction`。
    - 接口：同步 `predictionFromFeatures:options:error:`（有状态版用 `usingState:`），输入 `initWithDataPointer` 页对齐，输出 `outputBackings`，两套缓存交换，每帧包 `@autoreleasepool`。
-   - 节奏：按真实节拍调（GTCRN 每 16 ms、FE-M 每 10 ms 一次，用 `mach_wait_until`），不要死循环连调——死循环测不到神经引擎和 CPU 降频后的唤醒代价。另测一组死循环作对照。
-   - 量：预热 500 帧后测 ≥ 30 000 帧（GTCRN 约 8 分钟），报 p50 / p99 / p99.9 / max。
-   - 每帧都核对 `outputBackings` 有没有被用上（对象身份比较），统计没用上的帧数。
+   - 节奏：按真实节拍调（GTCRN 每 16 ms、FE-M 每 10 ms 一次，用 `mach_wait_until`），不要死循环连调——死循环测不到神经引擎和 CPU 降频后的唤醒代价。另测一组死循环作对照。⚠️ 现有 `bench_coreml.swift:207-210` 用的是 `usleep`，要改，或在结果里注明。
+   - 量：预热 500 帧后测 ≥ 30 000 帧（GTCRN 约 8 分钟），报 p50 / p99 / p99.9 / max。ORT 要在同一台机、同一节拍、同帧数下重跑一遍作基准，不拿 exp004 的旧数（exp004 是 6000 帧、死循环）。
+   - 每帧都核对 `outputBackings` 有没有被用上（对象身份比较），统计没用上的帧数。现有 bench 没做这一项，要补。
 4. **空闲后首调**：停调 0.1 / 0.5 / 1 / 5 s 后第一帧的耗时，每档重复 50 次。决定门控时能不能停调。
 5. **分配和锁**：用 exp010 的 `alloc_hook` 数每帧 malloc 次数和锁次数，和 ORT 的 1554 / 376 比。记下栈顶函数名（给 RTSan 豁免表用）。
 6. **线程**：推理期间用 `ps -M` 或 Instruments 的 System Trace 看 Core ML 有没有开工作线程，记线程数和优先级。`cpuOnly` 下尤其要看。
