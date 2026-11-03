@@ -116,6 +116,13 @@ fn cpu_seconds() -> f64 {
     t(u.ru_utime) + t(u.ru_stime)
 }
 
+/// 进程常驻内存（phys_footprint，活动监视器「内存」一列的同一个量），单位 MB。
+fn footprint_mb() -> f64 {
+    let mut ri: libc::rusage_info_v4 = unsafe { std::mem::zeroed() };
+    let rc = unsafe { libc::proc_pid_rusage(libc::getpid(), libc::RUSAGE_INFO_V4, (&mut ri as *mut libc::rusage_info_v4).cast()) };
+    if rc != 0 { f64::NAN } else { ri.ri_phys_footprint as f64 / 1048576.0 }
+}
+
 /// 同 rustbe：下标 = round((n-1)·p)
 fn pct(sorted: &[f64], p: f64) -> f64 {
     let i = ((sorted.len() as f64 - 1.0) * p).round() as usize;
@@ -205,6 +212,7 @@ fn bench(o: &Opts) -> Result<(), String> {
     let shapes = cache_shapes(kind, &o.get("fem-json", ""))?;
 
     alloc::install_process_hook();
+    let fp0 = footprint_mb();
     let t0 = Instant::now();
     let (mut be, compile_ms, backend, extra): (Box<dyn Backend>, f64, String, String) = match be_name {
         "coreml" => {
@@ -236,8 +244,10 @@ fn bench(o: &Opts) -> Result<(), String> {
     let mut per_frame = Vec::with_capacity(pn);
     let (mut ra0, mut pa0, mut c0) = (0, 0, 0.0);
     let mut w0 = Instant::now();
+    let mut fp1 = f64::NAN;
     for f in 0..total {
         if f == t0w {
+            fp1 = footprint_mb();
             ra0 = alloc::rust_allocs();
             pa0 = alloc::process_allocs();
             c0 = cpu_seconds();
@@ -288,6 +298,7 @@ fn bench(o: &Opts) -> Result<(), String> {
         }
     }
     let wall = w0.elapsed().as_secs_f64();
+    let fp2 = footprint_mb();
     let cpu = cpu_seconds() - c0;
     let rust_allocs = (alloc::rust_allocs() - ra0) as f64 / frames as f64;
     let proc_allocs = (alloc::process_allocs() - pa0) as f64 / frames as f64;
@@ -304,7 +315,7 @@ fn bench(o: &Opts) -> Result<(), String> {
 \"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{mean:.4},\
 \"ort_env_ms\":0.00,\"compile_ms\":{compile_ms:.2},\"open_ms\":{open_ms:.2},\"first_frame_ms\":{first_ms:.3},\"cpu_over_wall\":{:.3},\
 \"rust_allocs_per_frame\":{rust_allocs:.3},\"process_allocs_per_frame\":{proc_allocs:.3},\"nonfinite_frames\":{nonfinite_frames},\
-\"parity_frames\":{pn},\"parity_max_abs\":{max_abs:.3e},\"parity_worst_frame\":{worst},\"parity_snr_db\":{:.2},\
+\"footprint_before_mb\":{fp0:.2},\"footprint_warm_mb\":{fp1:.2},\"footprint_end_mb\":{fp2:.2},\"parity_frames\":{pn},\"parity_max_abs\":{max_abs:.3e},\"parity_worst_frame\":{worst},\"parity_snr_db\":{:.2},\
 \"parity_min_frame_snr_db\":{min_frame_snr:.2},\"parity_nonfinite_values\":{nonfinite_values},\"parity_first_bad\":\"{first_bad:?}\",\"extra\":{extra}}}",
         kind.name(),
         std::path::Path::new(model_path).file_name().map(|s| s.to_string_lossy()).unwrap_or_default(),
