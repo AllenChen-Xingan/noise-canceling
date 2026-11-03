@@ -37,3 +37,4 @@
 - 2026-11-02 schema 改完第 4 轮两条 P2（2e41218e，自报）：vdn-schema 25 条 · 变异验证新测试能红 · xtask ci / --check / eval ci 全过；codex 第 5 轮在跑
 - 2026-11-02 schema codex 第 5 轮无 P0/P1（4、5 连续干净，评审结束）；P2：基线读入口测试 → 补；「3.0 算不算整数」schema 宽 Rust 严 → 开 issue #61
 - 2026-11-02 代码卫生线 #62（feat/code-hygiene，会话 8d / 手下 hygiene）与我方对齐：采样率收口 · 阈值比对归 #62；他们第二段（control · eval）等 #57 合并后动 → **#57 合并时发 8d「#57 已合并」**
+- 2026-11-02 schema 收尾（402 / 0 / 5，codex 5 轮 16 条：15 改 1 转 #61；手下自记用过一次 git rm）。大总管在 d32b4e8 亲手 ci / --check / eval ci 全过；PR #63 已开，等远端 CI
