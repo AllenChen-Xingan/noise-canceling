@@ -9,6 +9,10 @@ use serde_json::Value;
 use vdn_engine::FaultKind;
 
 use crate::Level;
+use crate::files::{
+    FaultFile, FaultFileKind, GraderFile, Lang, LevelsFile, Polarity, SceneFile, SuiteFile,
+    serde_name,
+};
 use crate::probes::Probe;
 use crate::synth::{InterfMode, InterfSpec, NoiseKind, SceneSpec, TalkerSpec};
 use crate::verifiers::{Params, info};
@@ -42,7 +46,11 @@ pub fn main_root() -> PathBuf {
     root
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// 清单里的名字由 serde 定（小写）；`as_str` 与它的一致性由测试核对。
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+)]
+#[serde(rename_all = "lowercase")]
 pub enum Set {
     /// 回归集：已经做好的不许退步，应接近 100% 通过
     Regression,
@@ -53,14 +61,7 @@ pub enum Set {
 }
 
 impl Set {
-    pub fn parse(s: &str) -> Option<Set> {
-        Some(match s {
-            "regression" => Set::Regression,
-            "capability" => Set::Capability,
-            "probe" => Set::Probe,
-            _ => return None,
-        })
-    }
+    pub const ALL: [Set; 3] = [Set::Regression, Set::Capability, Set::Probe];
     pub fn as_str(self) -> &'static str {
         match self {
             Set::Regression => "regression",
@@ -78,8 +79,9 @@ pub struct Grader {
     pub info_only: bool,
 }
 
-/// 真实片段的来源（QA）。
-#[derive(Clone, Debug)]
+/// 真实片段的来源（QA）。清单里写成 `{"kind": "exp005", …}`，格式由 serde 定。
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[serde(tag = "kind", rename_all = "lowercase", deny_unknown_fields)]
 pub enum RealSource {
     /// exp005 三轨素材：`clips` 是 clips.json 的仓内路径，`audio_dir` 是主目录下的音频目录
     Exp005 {
@@ -118,172 +120,103 @@ pub struct Suite {
     pub tasks: Vec<Task>,
 }
 
-fn f(v: &Value, k: &str) -> Option<f64> {
-    v.get(k).and_then(Value::as_f64)
+fn pair(v: Option<[f64; 2]>, d: (f64, f64)) -> (f64, f64) {
+    v.map_or(d, |[a, b]| (a, b))
 }
 
-fn s<'a>(v: &'a Value, k: &str) -> Option<&'a str> {
-    v.get(k).and_then(Value::as_str)
-}
-
-fn pair(v: &Value, k: &str, d: (f64, f64)) -> (f64, f64) {
-    match v.get(k).and_then(Value::as_array) {
-        Some(a) if a.len() == 2 => (a[0].as_f64().unwrap_or(d.0), a[1].as_f64().unwrap_or(d.1)),
-        _ => d,
-    }
-}
-
-fn parse_scene(v: &Value, dur_default: f64) -> Result<SceneSpec, String> {
-    let owner = match v.get("owner") {
-        Some(o) if !o.is_null() => {
-            let (lo, hi) = pair(o, "f0", (100.0, 140.0));
-            Some(TalkerSpec {
-                level_dbov: f(o, "level_dbov").unwrap_or(-26.0),
-                f0_lo: lo,
-                f0_hi: hi,
-                tonal: o.get("tonal").and_then(Value::as_bool).unwrap_or(false),
-            })
+fn scene(v: SceneFile, dur_default: f64) -> SceneSpec {
+    let owner = v.owner.map(|o| {
+        let (f0_lo, f0_hi) = pair(o.f0, (100.0, 140.0));
+        TalkerSpec {
+            level_dbov: o.level_dbov.unwrap_or(-26.0),
+            f0_lo,
+            f0_hi,
+            tonal: o.tonal.unwrap_or(false),
         }
-        _ => None,
-    };
-    let mut interferers = Vec::new();
-    for i in v
-        .get("interferers")
-        .and_then(Value::as_array)
+    });
+    let interferers = v
+        .interferers
         .into_iter()
-        .flatten()
-    {
-        let mode = s(i, "mode").unwrap_or("alternate");
-        let (lo, hi) = pair(i, "f0", (180.0, 230.0));
-        interferers.push(InterfSpec {
-            mode: InterfMode::parse(mode).ok_or_else(|| format!("未知干扰模式 {mode}"))?,
-            sir_db: f(i, "sir_db").unwrap_or(6.0),
-            f0_lo: lo,
-            f0_hi: hi,
-        });
-    }
-    let noise = s(v, "noise").unwrap_or("pink");
-    Ok(SceneSpec {
-        dur_s: f(v, "dur_s").unwrap_or(dur_default),
+        .map(|i| {
+            let (f0_lo, f0_hi) = pair(i.f0, (180.0, 230.0));
+            InterfSpec {
+                mode: i.mode.unwrap_or(InterfMode::Alternate),
+                sir_db: i.sir_db.unwrap_or(6.0),
+                f0_lo,
+                f0_hi,
+            }
+        })
+        .collect();
+    SceneSpec {
+        dur_s: v.dur_s.unwrap_or(dur_default),
         seed: 0,
         owner,
-        owner_start_s: f(v, "owner_start_s").unwrap_or(0.5),
-        pause_s: pair(v, "pause_s", (0.4, 1.2)),
+        owner_start_s: v.owner_start_s.unwrap_or(0.5),
+        pause_s: pair(v.pause_s, (0.4, 1.2)),
         interferers,
-        noise: NoiseKind::parse(noise).ok_or_else(|| format!("未知噪音 {noise}"))?,
-        snr_db: f(v, "snr_db").unwrap_or(10.0),
-        tail_silence_s: f(v, "tail_silence_s").unwrap_or(0.0),
-    })
+        noise: v.noise.unwrap_or(NoiseKind::Pink),
+        snr_db: v.snr_db.unwrap_or(10.0),
+        tail_silence_s: v.tail_silence_s.unwrap_or(0.0),
+    }
 }
 
-fn parse_fault(v: &Value) -> Result<(u64, FaultKind), String> {
-    let hop = v.get("hop").and_then(Value::as_u64).ok_or("故障缺 hop")?;
-    let kind = match s(v, "kind") {
-        Some("nan") => FaultKind::Nan,
-        Some("error") => FaultKind::Error,
-        Some("explode") => FaultKind::Explode,
-        k => {
-            return Err(format!(
-                "未知故障 {k:?}（CI 不注入 stall：会 sleep、计时不稳）"
-            ));
-        }
+fn fault(f: &FaultFile) -> (u64, FaultKind) {
+    let kind = match f.kind {
+        FaultFileKind::Nan => FaultKind::Nan,
+        FaultFileKind::Error => FaultKind::Error,
+        FaultFileKind::Explode => FaultKind::Explode,
     };
-    Ok((hop, kind))
+    (f.hop, kind)
 }
 
+fn graders(id: &str, list: Vec<GraderFile>, info_only: bool) -> Result<Vec<Grader>, String> {
+    list.into_iter()
+        .map(|g| {
+            if info(&g.v).is_none() {
+                return Err(format!("{id}：没有登记的 verifier {}", g.v));
+            }
+            let params = g.params.into_iter().map(|(k, v)| (k, Value::from(v))).collect();
+            Ok(Grader {
+                v: g.v,
+                params: Params(params),
+                info_only,
+            })
+        })
+        .collect()
+}
+
+/// 读任务清单。格式正本是 `files::SuiteFile`（未知的键报错）；缺省值在这里补；跨任务的规则（id 唯一、探针的基础任务存在）也在这里查。
 pub fn parse_suite(text: &str) -> Result<Suite, String> {
-    let root: Value = serde_json::from_str(text).map_err(|e| format!("清单不是合法 JSON：{e}"))?;
-    let defaults = root.get("defaults").cloned().unwrap_or(Value::Null);
-    let dur_default = f(&defaults, "dur_s").unwrap_or(10.0);
-    let trials_default = defaults.get("trials").and_then(Value::as_u64).unwrap_or(3) as usize;
+    let root: SuiteFile = serde_json::from_str(text).map_err(|e| format!("清单格式不对：{e}"))?;
+    let dur_default = root.defaults.dur_s.unwrap_or(10.0);
+    let trials_default = root.defaults.trials.unwrap_or(3) as usize;
     let mut tasks = Vec::new();
-    for t in root
-        .get("tasks")
-        .and_then(Value::as_array)
-        .ok_or("清单缺 tasks")?
-    {
-        let id = s(t, "id").ok_or("任务缺 id")?.to_string();
-        let set_s = s(t, "set").unwrap_or("");
-        let set = Set::parse(set_s).ok_or_else(|| format!("{id}：未知 set {set_s}"))?;
-        let mut graders = Vec::new();
-        for (key, info_only) in [("graders", false), ("info", true)] {
-            for g in t.get(key).and_then(Value::as_array).into_iter().flatten() {
-                let v = s(g, "v").ok_or_else(|| format!("{id}：grader 缺 v"))?;
-                if info(v).is_none() {
-                    return Err(format!("{id}：没有登记的 verifier {v}"));
-                }
-                let mut params = g.as_object().cloned().unwrap_or_default();
-                params.remove("v");
-                graders.push(Grader {
-                    v: v.to_string(),
-                    params: Params(params),
-                    info_only,
-                });
-            }
-        }
-        let scene = match t.get("scene") {
-            Some(sc) => Some(parse_scene(sc, dur_default).map_err(|e| format!("{id}：{e}"))?),
-            None => None,
-        };
-        let real = match t.get("real") {
-            Some(r) => Some(match s(r, "kind") {
-                Some("exp005") => RealSource::Exp005 {
-                    clips: s(r, "clips").ok_or("exp005 缺 clips")?.into(),
-                    audio_dir: s(r, "audio_dir").ok_or("exp005 缺 audio_dir")?.into(),
-                    clip: s(r, "clip").ok_or("exp005 缺 clip")?.into(),
-                },
-                Some("exp003") => RealSource::Exp003 {
-                    clips: s(r, "clips").ok_or("exp003 缺 clips")?.into(),
-                    clip: s(r, "clip").ok_or("exp003 缺 clip")?.into(),
-                },
-                k => return Err(format!("{id}：未知真实来源 {k:?}")),
-            }),
-            None => None,
-        };
-        let probe = match t.get("probe") {
-            Some(p) => {
-                let base = s(p, "base").ok_or_else(|| format!("{id}：探针缺 base"))?;
-                let kind = s(p, "kind").unwrap_or("");
-                Some((
-                    base.to_string(),
-                    Probe::parse(kind).ok_or_else(|| format!("{id}：未知探针 {kind}"))?,
-                ))
-            }
-            None => None,
-        };
-        if set == Set::Probe && probe.is_none() {
+    for t in root.tasks {
+        let id = t.id;
+        let mut gs = graders(&id, t.graders, false)?;
+        gs.extend(graders(&id, t.info, true)?);
+        let probe = t.probe.map(|p| (p.base, p.kind));
+        if t.set == Set::Probe && probe.is_none() {
             return Err(format!("{id}：probe 集的任务要写 probe"));
         }
-        if probe.is_none() && scene.is_none() && real.is_none() {
+        if probe.is_none() && t.scene.is_none() && t.real.is_none() {
             return Err(format!("{id}：既没有 scene 也没有 real"));
         }
-        let mut faults = Vec::new();
-        for fv in t
-            .get("faults")
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-        {
-            faults.push(parse_fault(fv).map_err(|e| format!("{id}：{e}"))?);
-        }
         tasks.push(Task {
-            id: id.clone(),
-            set,
-            polarity: s(t, "polarity").unwrap_or("both").into(),
-            origin: s(t, "origin").unwrap_or("").into(),
-            desc: s(t, "desc").unwrap_or("").into(),
-            scene,
-            real,
-            lang: s(t, "lang").unwrap_or("en").into(),
-            safety: t.get("safety").and_then(Value::as_bool).unwrap_or(true),
-            faults,
-            graders,
-            trials: t
-                .get("trials")
-                .and_then(Value::as_u64)
-                .map_or(trials_default, |v| v as usize),
+            set: t.set,
+            polarity: serde_name(&t.polarity.unwrap_or(Polarity::Both)),
+            origin: t.origin.unwrap_or_default(),
+            desc: t.desc.unwrap_or_default(),
+            scene: t.scene.map(|sc| scene(sc, dur_default)),
+            real: t.real,
+            lang: serde_name(&t.lang.unwrap_or(Lang::En)),
+            safety: t.safety.unwrap_or(true),
+            faults: t.faults.iter().map(fault).collect(),
+            graders: gs,
+            trials: t.trials.map_or(trials_default, |v| v as usize),
             probe,
-            xfail: s(t, "xfail").map(String::from),
+            xfail: t.xfail,
+            id,
         });
     }
     // 探针的基础任务必须存在
@@ -302,11 +235,8 @@ pub fn parse_suite(text: &str) -> Result<Suite, String> {
         return Err("任务 id 有重复".into());
     }
     Ok(Suite {
-        name: s(&root, "name").unwrap_or("suite").into(),
-        base_seed: root
-            .get("seed")
-            .and_then(Value::as_u64)
-            .unwrap_or(20_261_031),
+        name: root.name.unwrap_or_else(|| "suite".into()),
+        base_seed: root.seed.unwrap_or(20_261_031),
         tasks,
     })
 }
@@ -321,21 +251,14 @@ pub fn trial_seed(base: u64, id: &str, trial: usize) -> u64 {
     h ^ base ^ ((trial as u64 + 1).wrapping_mul(0x9E37_79B9_7F4A_7C15))
 }
 
-/// 定标级别表：verifier id → (级别, 依据)。
+/// 定标级别表：verifier id → (级别, 依据)。格式正本是 `files::LevelsFile`。
 pub fn parse_levels(text: &str) -> Result<BTreeMap<String, (Level, String)>, String> {
-    let v: Value = serde_json::from_str(text).map_err(|e| format!("levels.json：{e}"))?;
-    let mut out = BTreeMap::new();
-    for (k, e) in v
-        .get("verifiers")
-        .and_then(Value::as_object)
-        .ok_or("levels.json 缺 verifiers")?
-    {
-        let l = s(e, "level")
-            .and_then(Level::parse)
-            .ok_or_else(|| format!("{k}：级别不对"))?;
-        out.insert(k.clone(), (l, s(e, "basis").unwrap_or("").to_string()));
-    }
-    Ok(out)
+    let f: LevelsFile = serde_json::from_str(text).map_err(|e| format!("levels.json：{e}"))?;
+    Ok(f
+        .verifiers
+        .into_iter()
+        .map(|(k, e)| (k, (e.level, e.basis)))
+        .collect())
 }
 
 /// 解析路径：先仓库根，再主目录，再同级的 p2 worktree（exp005 未合并前）。
