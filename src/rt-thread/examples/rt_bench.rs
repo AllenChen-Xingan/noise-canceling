@@ -11,6 +11,7 @@
 //! cargo build --release -p vdn-rt-thread --example rt_bench
 //! ./target/release/examples/rt_bench <none|tc|tc_wg|qos> [秒=20] [周期 µs=16000] [计算量=自动]
 //! ./target/release/examples/rt_bench all [秒=20]
+//! ./target/release/examples/rt_bench calibrate        # 只打印标定出的计算量
 //! ```
 //! 计算量默认 = 启动时在本线程上标定「约 700 µs 的活」（标定前先把本线程提成 QoS 用户交互、空转 200 ms 热身），
 //! 四种设置用**同一个**计算量。输出一行 `RESULT ...`，`all` 时打印 Markdown 表。
@@ -155,6 +156,11 @@ fn field<'a>(l: &'a str, k: &str) -> &'a str {
 fn main() {
     let a: Vec<String> = std::env::args().collect();
     let mode = a.get(1).cloned().unwrap_or_else(|| "all".into());
+    if mode == "calibrate" {
+        // 只打印标定出的计算量（给 power/run.sh 用：几种设置分开跑时用同一个数）
+        println!("{}", calibrate(Duration::from_micros(700)));
+        return;
+    }
     let secs: u64 = a.get(2).and_then(|s| s.parse().ok()).unwrap_or(20);
     let period = Duration::from_micros(a.get(3).and_then(|s| s.parse().ok()).unwrap_or(16_000));
     let iters: u64 = a
