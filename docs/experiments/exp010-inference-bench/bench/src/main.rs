@@ -14,6 +14,7 @@
 //!   这个钩子会拖慢分配，所以计数和计时分开跑。
 //!   两个 bench 都可加 `--qos ui|rt|default`：计时线程的调度等级，默认 ui（QOS_CLASS_USER_INTERACTIVE）；
 //!   rt = THREAD_TIME_CONSTRAINT_POLICY（period = 帧长、computation 1 ms、constraint 3 ms）。
+//!   `--workgroup`：计时线程加入默认输出设备的 IO 工作组（字段 workgroup:true/false）。
 //!   frames_over_3ms：计时帧里单帧 > 3.0 ms 的个数（BE-DEADLINE）。
 //!   两个 bench 都可加 `--pace-ms <毫秒>`：按实时节奏每隔这么久喂一帧（测耗电、测睡醒后的帧耗时用；默认 0 = 连续跑）。
 //!   两个 bench 都可加 `--dump-io <前缀>`（此时第 2 个参数须是 onnx）：计时之后另起一个 ORT 会话，从零状态把
@@ -26,6 +27,7 @@
 mod amx_probe;
 mod gtcrn_native;
 mod tract_be;
+mod workgroup;
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::path::Path;
@@ -511,6 +513,9 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     } else if qos != "default" {
         return Err("--qos 只收 ui / rt / default".into());
     }
+    // 加入默认输出设备的 IO 工作组（在调度等级之后、计时之前；令牌留到函数结束）
+    let wg_on = args.iter().any(|a| a == "--workgroup");
+    let _wg_token = if wg_on { Some(workgroup::join_output()?) } else { None };
     let count_malloc = args.iter().any(|a| a == "--count-malloc");
     if count_malloc {
         install_malloc_counter();
@@ -576,7 +581,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         )?;
     }
     println!(
-        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan},\"frames_over_3ms\":{over_3ms},\"process_allocs_per_frame\":{},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2}}}",
+        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"workgroup\":{wg_on},\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"nonfinite_frames\":{nan},\"frames_over_3ms\":{over_3ms},\"process_allocs_per_frame\":{},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2}}}",
         model.name(),
         pct(&times, 0.1),
         pct(&times, 0.5),
