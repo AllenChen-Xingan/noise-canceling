@@ -509,6 +509,13 @@ fn footprint_mb() -> f64 {
     }
 }
 
+/// 墙钟 Unix 秒（耗电脚本按计时窗截取 powermetrics 样本用；applebe 的 power_parse.py v2 口径）
+fn unix_now() -> f64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0.0, |d| d.as_secs_f64())
+}
+
 fn cpu_seconds() -> f64 {
     let mut u: libc::rusage = unsafe { std::mem::zeroed() };
     unsafe { libc::getrusage(libc::RUSAGE_SELF, &mut u) };
@@ -630,6 +637,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let a0 = ALLOCS.load(Relaxed);
     let pa0 = PROC_ALLOCS.load(Relaxed);
     let c0 = cpu_seconds();
+    let win_start = unix_now();
     let w0 = Instant::now();
     for (n, f) in inputs[warm + 1..].iter().enumerate() {
         let due = w0 + std::time::Duration::from_secs_f64(n as f64 * pace * 1e-3);
@@ -655,6 +663,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
     let allocs = ALLOCS.load(Relaxed) - a0;
     let proc_allocs = PROC_ALLOCS.load(Relaxed) - pa0;
     let wall = w0.elapsed().as_secs_f64();
+    let win_end = unix_now();
     let cpu = cpu_seconds() - c0;
     let over_3ms = times.iter().filter(|t| **t > 3.0).count(); // 纯推理 > 3 ms 的帧（同 applebe 字段）
     // 释放到完成 > 3 ms 的帧（含醒来迟到），只在实时节奏下有意义；不按节奏跑时为 null
@@ -692,7 +701,7 @@ fn bench(model: ModelId, args: &[String]) -> Result<(), Err> {
         )?;
     }
     println!(
-        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"workgroup\":{wg_on},\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"rust_allocs_total\":{allocs},\"process_allocs_total\":{},\"nonfinite_frames\":{nan},\"frames_over_3ms\":{over_3ms},{pace_extra}\"process_allocs_per_frame\":{},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2}}}",
+        "{{\"model\":\"{}\",\"backend\":\"{kind}\",\"frames\":{frames},\"pace_ms\":{pace},\"qos\":\"{qos}\",\"workgroup\":{wg_on},\"p10_ms\":{:.4},\"p50_ms\":{:.4},\"p90_ms\":{:.4},\"p99_ms\":{:.4},\"p999_ms\":{:.4},\"max_ms\":{:.4},\"mean_ms\":{:.4},\"ort_env_ms\":{ort_env_ms:.2},\"open_ms\":{t_open:.2},\"first_frame_ms\":{t_first:.3},\"cpu_over_wall\":{:.3},\"rust_allocs_per_frame\":{:.3},\"rust_allocs_total\":{allocs},\"process_allocs_total\":{},\"nonfinite_frames\":{nan},\"frames_over_3ms\":{over_3ms},{pace_extra}\"process_allocs_per_frame\":{},\"footprint_before_mb\":{fp_before:.2},\"footprint_warm_mb\":{fp_warm:.2},\"footprint_end_mb\":{fp_end:.2},\"win_start_unix\":{win_start:.3},\"win_end_unix\":{win_end:.3},\"wall_s\":{wall:.3}}}",
         model.name(),
         pct(&times, 0.1),
         pct(&times, 0.5),
