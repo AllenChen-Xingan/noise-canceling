@@ -30,11 +30,6 @@ impl TractNet {
             for (k, o) in opt.output_outlets()?.iter().enumerate() {
                 eprintln!("tract out {k}: {} {:?}", opt.node(o.node).name, opt.outlet_fact(*o)?);
             }
-            for n in opt.nodes() {
-                if n.op().state(&Default::default()).map(|s| s.is_some()).unwrap_or(false) {
-                    eprintln!("tract 有状态算子: {} {}", n.name, n.op().name());
-                }
-            }
             for (k, o) in opt.input_outlets()?.iter().enumerate() {
                 eprintln!("tract in {k}: {} {:?}", opt.node(o.node).name, opt.outlet_fact(*o)?);
             }
@@ -58,7 +53,7 @@ impl TractNet {
     pub fn step(&mut self, out0: &mut [f32]) -> Result<(), Err> {
         let inputs: TVec<TValue> = self.ins.iter().map(|t| t.clone().into_tvalue()).collect();
         // 每帧新开一个状态：复用同一个 SimpleState 时，第 1 帧起输出就和 ORT 对不上（实测 SNR 19 dB），
-        // 新开则一致（130 dB）。代价实测 p50 +0.02 ms。EXP010_TRACT_REUSE=1 可复现错误的复用版。
+        // 新开则一致（130 dB）。原因未查清（推断：某个算子的会话状态跨帧保留）。代价实测 p50 +0.02 ms。EXP010_TRACT_REUSE=1 可复现错误的复用版。
         if std::env::var_os("EXP010_TRACT_REUSE").is_none() {
             self.state = self.state.plan().spawn()?;
         }
