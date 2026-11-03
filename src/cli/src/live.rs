@@ -566,9 +566,9 @@ mod tests {
             while p.worker.step(&p.bus) == Step::Block {}
             let o = &mut buf[..2 * c.len()];
             outp.on_data(o);
-            for f in o.chunks_exact(2) {
-                left.push(f[0]);
-                right.push(f[1]);
+            for &[l, r] in o.as_chunks::<2>().0 {
+                left.push(l);
+                right.push(r);
             }
         }
         let mut rec = Vec::new();
