@@ -293,6 +293,8 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<Ru
     };
     let (rec_dropped, clipped) = (tap.rec_dropped(), tap.clipped());
 
+    // 开设备失败（`?` 提前返回）时也让降噪线程和录音线程停下
+    let _guard = StopOnDrop([stop.clone(), rec_stop.clone()]);
     let den = {
         let (bus, stop) = (bus.clone(), stop.clone());
         let block = o.block;
@@ -370,6 +372,16 @@ pub fn run<P: Processor + Send + 'static>(pipeline: P, o: &RunOpts) -> Result<Ru
     };
     eprintln!("{}", summary(&r));
     Ok(r)
+}
+
+/// 离开作用域时把几个停止标志都置位。
+struct StopOnDrop([Arc<AtomicBool>; 2]);
+impl Drop for StopOnDrop {
+    fn drop(&mut self) {
+        for f in &self.0 {
+            f.store(true, Ordering::Release);
+        }
+    }
 }
 
 /// 「输入全零」提示的节流：进入全零时提示一次；有声音之后再全零满 1 s 才会再提示（所以最多每秒一次，不刷屏）。
@@ -562,7 +574,7 @@ mod tests {
     /// 增益 +12 dB：输出均方根比输入高 12 dB；V5 那样小声的输入（峰值约 −28 dBFS）不会被夹
     #[test]
     fn run_path_gain_raises_output_level() {
-        let (_x, left, _r, _rec, li, lo, _l, clipped) = drive(12.0, 0.05, 1.0);
+        let (_x, left, _r, _rec, li, lo, _l, clipped) = drive(12.0, 0.05, 2.0);
         let d = lo.rms_dbfs() - li.rms_dbfs();
         assert!((d - 12.0).abs() < 0.2, "差 {d:.2} dB");
         assert_eq!(clipped, 0);
@@ -573,9 +585,8 @@ mod tests {
     /// 增益太大会被夹在 ±1，并计数（不会送出超过满刻度的样本）
     #[test]
     fn run_path_gain_clips_and_counts() {
-        let (_x, left, ..) = drive(20.0, 1.0, 0.3);
+        let (_x, left, .., clipped) = drive(20.0, 1.0, 0.3);
         assert!(left.iter().all(|s| s.abs() <= 1.0));
-        let (.., clipped) = drive(20.0, 1.0, 0.3);
         assert!(clipped > 0);
     }
 
