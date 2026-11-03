@@ -1,0 +1,22 @@
+# exp010 苹果引擎基准（Rust 调用 · D68），独立小工程，不进根 workspace
+[package]
+name = "exp010-apple"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+[workspace]
+
+[features]
+default = []
+mlx = []   # 需要先用 tools/build-mlx-c.sh 编出 mlx-c（对着 pip 装的 libmlx），见 README
+
+[dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSArray", "NSDictionary", "NSString", "NSValue", "NSURL", "NSError"] }
+objc2-core-ml = { version = "0.3", features = ["MLModel", "MLModelConfiguration", "MLMultiArray", "MLFeatureProvider", "MLDictionaryFeatureProvider", "MLFeatureValue", "MLPredictionOptions", "MLState", "MLModelDescription", "MLFeatureDescription", "MLMultiArrayConstraint", "MLComputePlan", "objc2-foundation"] }
+libc = "0.2"
+
+[profile.release]
+debug = 1
