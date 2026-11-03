@@ -13,3 +13,4 @@
 | 011 | 2026-11-02 | [删镜像副本 + 参数描述表 + tidy 新规则](011_types-single-source-codex.md)（`git diff bfe6266`，issue #56，codex，3 轮，已达停止线） | 采纳 14 / 提出 14（P1×1 P2×13） |
 | 011 | 2026-11-02 | [schema 导出机制与第一批 schema](011_schema-crosscheck-codex.md)（diff，codex，5 轮，停止线满足） | 采纳 15 / 提出 16（P1×5 P2×11；1 条 P2 留作 issue） |
 | 020 | 2026-11-02 | [研究 020 手写 GTCRN 引擎提速](020_fastpath-codex.md)（decision + rewrites + exp012 README + bench/src，codex gpt-6-astra，3 轮，已达停止线） | 采纳 14 / 提出 14（P1×3 P2×10 + 抽查不符 1；3 件 P2 后续留作 issue） |
+| 011 | 2026-11-02 | [处理图描述 + Pipeline 交叉校验 + 会话记录记图](011_processing-graph-codex.md)（`git diff 0604143...HEAD`，issue #64，codex gpt-6-astra，2 轮，已达停止线） | 采纳 4 / 提出 4（P2×4；1 条留作 issue） |

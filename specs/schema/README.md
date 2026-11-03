@@ -15,6 +15,8 @@
 | `config.schema.json` | `src/control/src/lib.rs` 的 `Config` | `examples/config.*.json`（以后的用户配置同格式） | 示例过 schema；往返语义等价；范围边界与 `Config::validate` 逐例一致；总线名正则与 `validate_bus_name` 逐例一致（名字只许可见 ASCII，字符数 = 字节数） |
 | `eval-suite.schema.json` | `src/eval/src/files.rs` 的 `SuiteFile`（缺省值正本是同文件的 `defaults` 常量，解析与 schema 的 `default` 都读它） | `src/eval/suite/ci.json` · `qa.json` | 文件过 schema；往返语义等价；坏任务（拼错键、未知 verifier、未知噪音…）schema 与解析器判定一致 |
 | `eval-levels.schema.json` | 同上 `LevelsFile` | `src/eval/suite/levels.json` | 文件过 schema；`calib --write-levels` 序列化同一类型 |
+| `processing-graph.kinds.json` | `src/types/src/graph.rs` 的 `KINDS`（节点字段表 `NODE_FIELDS` 穷举解构） | 无（处理图是代码常量；会话记录头记它的内容 ID） | 逐条等于登记表（编号 · 名字 · 版本 · 挂点 · 延迟 · 参数编号与键名等于 `desc` 正本）；节点对象的键 = `NODE_FIELDS`；样例的内容 ID 只靠文件里的规范文本可复算；**编号永不复用**：对照可信基线（同共享内存那一行的取法）上已提交的这份文件，编号对应的名字不许改、版本不许降、版本没升时挂点 · 延迟 · 参数必须原样、删掉的编号必须进 `graph::RETIRED`（测试在 `src/schema/tests/graph.rs`） |
+| `session-header.fields.json` | `src/types/src/session.rs` 的 `HEADER_KEYS`（穷举解构 `SessionHeader`） | 会话记录文本（`SessionRecord::to_text`） | 键与 `to_text` 实际写出的键逐个一致（含顺序）；每个键的 `since` 与解析器一致：该格式能读、更早的格式拒读（测试在 `src/schema/tests/graph.rs`） |
 | `eval-baseline.schema.json` | 同上 `BaselineFile` | `src/eval/suite/baseline-ci.json` | 文件过 schema；`ci --write-baseline` 序列化同一类型 |
 
 ## 命令

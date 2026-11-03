@@ -2004,6 +2004,7 @@ dependencies = [
  "vdn-control",
  "vdn-eval",
  "vdn-shm",
+ "vdn-types",
 ]
 
 [[package]]

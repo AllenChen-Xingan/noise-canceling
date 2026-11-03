@@ -196,6 +196,43 @@ mod tests {
         }
     }
 
+    /// 处理图里修音链两个挂点的参数清单（`vdn_types::graph`），逐个挂点与本表比对（交叉校验，D72；codex 第 1 轮 #3）：
+    /// 频域挂点 = `spectral.rs` 读的四项 + 过渡时长；AGC 挂点 = 本表其余各项（`agc.rs` 读）+ 过渡时长。
+    /// 只比并集会放过「两份清单互换」「共享的过渡时长只挂了一边」。
+    #[test]
+    fn graph_kinds_list_the_same_params() {
+        use vdn_types::graph::{POLISH_AGC, POLISH_SPECTRAL};
+        const SPECTRAL: [&ParamDesc; 4] = [
+            &desc::POLISH_SMOOTH,
+            &desc::POLISH_FLOOR_DB,
+            &desc::POLISH_COMFORT_DB,
+            &desc::POLISH_DEMUFFLE_MAX_DB,
+        ];
+        let sorted = |mut v: Vec<u16>| {
+            v.sort_unstable();
+            v
+        };
+        let ids = |f: &dyn Fn(&ParamDesc) -> bool| {
+            sorted(
+                FIELDS
+                    .iter()
+                    .filter(|x| f(x.0))
+                    .map(|x| x.0.id)
+                    .chain([desc::POLISH_RAMP_S.id])
+                    .collect(),
+            )
+        };
+        let in_spectral = |d: &ParamDesc| SPECTRAL.iter().any(|s| s.id == d.id);
+        // 频域那几项都在本表里
+        assert!(
+            SPECTRAL
+                .iter()
+                .all(|s| FIELDS.iter().any(|x| x.0.id == s.id))
+        );
+        assert_eq!(POLISH_SPECTRAL.param_ids(), ids(&in_spectral));
+        assert_eq!(POLISH_AGC.param_ids(), ids(&|d| !in_spectral(d)));
+    }
+
     /// 预设表是数据（不是第二份范围），但每个预设都必须落在描述表范围内。
     #[test]
     fn every_preset_is_in_range() {
