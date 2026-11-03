@@ -27,12 +27,12 @@
 | `BE-RT-SAN` | 实时线程安全 · 锁与系统调用 | RTSan 报的唯一栈 | 0 个新栈（对豁免表） | 【已定】规约 §5.5 | 挡合并 |
 | `BE-RT-XPROC` | 实时线程安全 · 跨进程 | 推理线程每帧发出的 mach 消息 | = 0 | 【AI 定，依据规约 A/B 档「不阻塞」（§4）；人可改】 | 决定接法 |
 | `BE-COLD` | 冷启动 | 打开 + 预热耗时；第 1 帧 | 打开 + 200 帧预热 ≤ 500 ms；预热后第 1 帧 ≤ max 线 | 【AI 定，依据「换模式半秒内生效」（§5）；人可改】 | 挡上用户电脑 |
-| `BE-IMPACT` | 对性能的影响 | 开着降噪（按实时节奏、实际调度、D74 默认线程设置）时，固定前台负载慢了多少 | **目标 ≤ 1%，挡线 ≤ 2%** | 【已定 · D75】（人原话「我觉得是实际耗电和对性能的影响」）；负载与测法【AI 定，§6.3；人可改】 | 挡上用户电脑 |
+| `BE-IMPACT` | 对性能的影响 | 开着降噪（按实时节奏、实际调度、D74 默认线程设置）时，固定前台负载慢了多少 | **目标 ≤ 1%，挡线 ≤ 2%** | 维度【已定 · D75】（人原话「我觉得是实际耗电和对性能的影响」）；1% / 2% 两个数沿用 D69 的两档，是大总管对 D75 的理解【AI 理解，待人确认】（codex 第 2 轮 #5）；负载与测法【AI 定，§6.3；人可改】 | 挡上用户电脑 |
 | `BE-CPU` | CPU（参考） | 按实时节奏、实际调度下测的 CPU 占用（活动监视器口径） | 不挡，只报；整机 1% / 2% 两档作参照 | D69 的口径已被 D75 改：CPU% 降为参考 | 不挡 |
 | `BE-POWER` | 耗电 | **每帧耗电**（µJ / 帧）与平均功率增量（mW）= 按实时节奏跑时 CPU + GPU + 神经引擎功率减去空闲 | 不高于 ORT；**选赢家的主排序依据**（§6.2） | 主排序【已定 · D75】；「不高于 ORT」【AI 定；人可改】。⚠️ **第一次实测（build 20261102-183322-rt）是单次 60 s、背景噪声约 ±30–40 mW，需重复**：至少交替 3 轮、关掉多余会话，才能定差 < 30 mW 的排名 | 挡上用户电脑（要人跑 sudo） |
 | `BE-SIZE` | 体积 | 安装包里因这个后端和模型多出的字节（库 + 模型文件） | 每个降噪模型连同它的后端 ≤ 5 MB；且不高于 ORT 方案 | 【AI 定，依据 D70「轻量」、D60 评分模型 ≤ 5 MB 的先例（§7）；人可改】 | 挡上用户电脑 |
 | `BE-MEM` | 常驻内存 | 加载并预热后，进程常驻内存（`phys_footprint`，活动监视器「内存」列）增量 | 每个降噪模型连同后端 ≤ 10 MB | 【AI 定，依据 D70「轻量」；模型文件只有 0.5–2 MB；NVIDIA 约 215 MiB 显存是反例（§8）；人可改】 | 挡上用户电脑 |
-| `BE-OS` | 最低系统 | 后端要求的最低 macOS | ≤ macOS 15 | 【已定 · D77】（人原话「可以，mac os 提升版本吧」；经 D07 14.2 → D73 14.4 → D77 15）。BNNS Graph、`MLState`、`MLComputePlan` 都在线内，不再冲突 | 挡上用户电脑 |
+| `BE-OS` | 最低系统 | 后端要求的最低 macOS | ≤ macOS 15 | 【已定 · D78】（人原话「可以，mac os 提升版本吧」；经 D07 14.2 → D73 14.4 → D78 15；大总管 2026-11-02 改号，原误记为 D77）。BNNS Graph、`MLState`、`MLComputePlan` 都在线内，不再冲突 | 挡上用户电脑 |
 | `BE-EXHAUST` | 榨干硬件 | 每个模型在每个可用计算单元上都试过 | 第 7.1 节矩阵每格都有一行结果，或写明没试的原因 | 【已定 · D70】 | 挡收尾：有空格不能写方案 |
 | `BE-SWAP` | 换模型难度 | 换一个新模型要做什么 | 一条命令重转 + `BE-PARITY` 过 | 【AI 定（§7）；人可改】 | 只记分，不挡 |
 | `BE-TRAIN` | 本机微调能力 | 能否对 BN/LN 仿射参数求梯度 | 梯度与 PyTorch 相对差 ≤ 1e-3 | 【AI 定，依据 D52（§7）；人可改】 | 只记分，不挡（推理后端可以不会训练） |
@@ -58,7 +58,7 @@
 
 这三条决定后端的**接法**：三条都过 → 可以在推理线程每帧直接调；有不过的 → 像今天的 ORT 一样登记豁免，或者挪到别的线程，再看 `BE-FRAME` 的尾部。
 
-- **`BE-RT-ALLOC`**：用 libmalloc 的 `malloc_logger` 钩子数全进程分配（`apple/alloc_hook.c`，Instruments 用的同一个钩子）。只数计时段，除以帧数，字段 `process_allocs_per_frame`。注意：
+- **`BE-RT-ALLOC`**：用 libmalloc 的 `malloc_logger` 钩子数全进程分配（`apple/alloc_hook.c`，Instruments 用的同一个钩子）。只数计时段。**判 0 用整数** `process_allocs_total == 0`，而且必须是开了计数钩子（`--count-malloc`）的那一次；`process_allocs_per_frame` 只保留三位小数，6000 帧里 1 次分配会显示 0.000，不能用来判；字段为 null（没开钩子）一律不算过（codex 第 2 轮 #7）。注意：
   - 这个数和 rustbe 的 `rust_allocs_per_frame`（只数 Rust 分配器）不是同一个量，两个名字不混用。
   - 别的进程（神经引擎守护进程 `aned` 等）里的分配看不到，所以要和 `BE-RT-XPROC` 一起看。
   - 规约 B 档只要求「我们的 Rust 代码零分配」，ORT 内部分配允许登记（`specs/rust/architecture.md` §4）。对第三方后端也要求 0，是为了区分「能直接调」和「只能登记」【AI 定；人可改】。
@@ -120,7 +120,7 @@
 - **前台负载**：`apple-rs` 的 `loadgen`，开满全部逻辑核，每核对自己的 4 MB 数组做 400 遍乘加（`mul_add`），工作量固定，只看墙钟。选它而不是 `cargo build` 的理由【AI 定；人可改】：① 可重复——不读写磁盘、不联网、不受增量编译缓存影响；② 同时压算力和缓存 / 内存带宽，降噪线程抢核、抢缓存都会让它变慢；③ 开满所有核，是用户「电脑正忙」时最容易感到卡的情形。
 - **做法**：「关 / 开」交替 7 对（`apple-rs/tools/impact.sh`）。「开」= 降噪组合按 16 ms 节奏在后台跑，线程设置用 D74 默认（time-constraint 开、不加工作组）。
 - **算**：慢了多少 = 开的中位 ÷ 关的中位 − 1。同时报 7 次「关」之间的离散度，当量测噪声底：噪声底如果大于 1%，结论只能写「≤ 噪声底」。
-- **过线**：≤ 1% 目标、≤ 2% 挡线【已定 · D75】。
+- **过线**：≤ 1% 目标、≤ 2% 挡线。维度【已定 · D75】，两个数沿用 D69 的两档【AI 理解，待人确认】。
 - **第一次实测（2026-11-02）——⚠️ 作废**：`impact.sh` 旧版留下 21 个孤儿降噪进程一直在跑（后台 `eval … &` 只杀了子 shell），「关」组其实也开着降噪，下面的数不能用，脚本已修。原记录照留：`loadgen` 开满 10 个逻辑核、每次约 5.5–8 s，「关 / 开」7 对。BNNS rt：慢 5.9%，但 7 次「关」之间离散 10.6%；手写 rt：−0.6%，离散 22%（`apple/results/20261102-182000-impact-bnns/`、`…-182200-impact-native/`）。信号淹在噪声里，只能写「≤ 噪声底」。原因推断：前台负载占满全部核（含能效核），调度本身的抖动就有 10–20%。**测法要改**：前台负载用「性能核个数」个线程、每对交替 15 次以上、用最小值而不是中位（最小值最接近无干扰时的真实时长）；改完再测。
 
 ## 7. 体积、系统、换模型、微调：`BE-SIZE` · `BE-OS` · `BE-SWAP` · `BE-TRAIN`
@@ -140,8 +140,8 @@
 | Core ML · CPU | `apple-rs` coreml `--units cpu`（applebe） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：fp32 0.39 ms · 展开 0.21 ms · 每帧约 300 次 malloc；fp16 54 dB 不过；有状态版转不了（coremltools 报错） | 未试：同上（转不了） |
 | Core ML · GPU | `--units gpu` | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：耗时同 CPU；`MLComputePlan` 显示所有算子都落在 CPU，GPU 没被用上 | 未试：同上 |
 | Core ML · 神经引擎 | `--units ane`（只算 fp16） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：所有算子都落在 CPU（`MLComputePlan`），神经引擎没被用上；fp16 54 dB 不过 | 未试：同上 |
-| MLX · CPU / GPU | `.mlxfn` 经 mlx-c（applebe）；Python 版只作对照 | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：Python 调 CPU 5.7–6.2 ms、GPU 6.2 ms，每帧 7–10 万次分配，134.9 dB。**Rust 经 mlx-c 不测**，原因：Python 版已比 ORT 慢 15 倍、每帧 7–10 万次分配；MLX 每帧建图 + `eval` 要加锁、等后台线程（`notes/mlx.md` §3），换 Rust 只省掉 Python 解释器那一层，补不回 15 倍，也过不了 `BE-RT-ALLOC`【推断】；另要先在无 Metal 编译器的本机编 mlx-c。大总管同意（2026-11-02） | 未试：GTCRN 上已慢 15 倍，FE-M 不做 MLX 版 |
-| Metal 手写核 | 无 | 未试：每帧派发约 0.1 ms 的固定开销已大于手写 Rust 整帧（`notes/mlx.md` §2），先由 Core ML GPU / MLX GPU 的实测证实或推翻，再决定写不写 | 同左 |
+| MLX · CPU / GPU | `.mlxfn` 经 mlx-c（applebe）；Python 版只作对照 | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：Python 调 CPU 5.7–6.2 ms、GPU 6.2 ms，每帧 7–10 万次分配，134.9 dB。**Rust 经 mlx-c 暂缓（时间盒）**。依据是**执行机制**，不是速度：MLX 每帧建图 + `eval` 要分配、加锁、等它自己的默认优先级后台线程（`notes/mlx.md` §3，读源码），这和推理线程「零分配、不阻塞」的规约冲突。速度结论（Python 5.7 ms）没有同模型 Rust 对照，按 D68 **不能**用来淘汰它；Python 的分配次数也不是 Rust 实测（codex 第 2 轮 #3）。要做，得先在本机（无 Metal 编译器）编 mlx-c。大总管同意（2026-11-02） | 未试：同上，暂缓 |
+| Metal 手写核 | 无 | 未试，**时间盒暂缓**、无收益**未验证**。原先的理由不成立（codex 第 2 轮 #4）：「每帧派发约 0.1 ms」是别人在别的机器上测的，又拿去和连续跑的手写 0.088 ms 比；实时节奏下手写是 0.60 ms，而 `notes/mlx.md` 里还有融合核约 0.0225 ms / 步的反例。要判，得在本机测一条逐帧融合的 Metal 路径 | 同左 |
 | ORT（基线） | rustbe | r4 | r4 |
 | tract（纯 Rust ONNX） | rustbe | r4 | r4 |
 
@@ -149,7 +149,7 @@
 - Core ML / BNNS：**转不出来**（build 20261102-181700-ecapa）。onnx2torch 两处（Clip 的 min/max 来自 Constant 节点、省略 min 的 Clip）已在 `apple/ecapa_prep.py` 里补过；再往下 coremltools 9.0 不支持 `prod` 算子。按时间盒停下。要继续，得从 WeSpeaker 的 PyTorch 源码 + 官方 PyTorch 权重重新转，或给 coremltools 补 `prod` 的转换。
 - ORT：现状每次（含 fbank 与打分）约 6 ms，判断回路单项约 1.2% 个核（exp005）。只算 ECAPA 一次的耗时，Python 调 ORT 已在 `ecapa_prep.py` 里写好，但因转换在它之后失败，这次没留下记录。
 - 结论：认人这一项的提速不在苹果引擎上，先从「降频率 / 只在有人声时跑」入手（`§6.1` 风险 1，已转交）。
-- **`BE-OS`**：读头文件的 `API_AVAILABLE` 标注。BNNS Graph、`MLState` 要 macOS 15，`MLComputePlan` 要 14.4（`notes/realtime-and-bindings.md` §0），都在 D77 定的 macOS 15 之内。原来的冲突（待拍板 2-8）随 D77 解决。
+- **`BE-OS`**：读头文件的 `API_AVAILABLE` 标注。BNNS Graph、`MLState` 要 macOS 15，`MLComputePlan` 要 14.4（`notes/realtime-and-bindings.md` §0），都在 D78 定的 macOS 15 之内。原来的冲突（待拍板 2-8）随 D78 解决。
 - **`BE-SWAP`**：记三项——要不要重写代码（手写 Rust 要）· 有没有一条命令的转换脚本（Core ML / BNNS / MLX 要从 PyTorch 重新转，ORT / tract 直接吃 ONNX）· 转换后 `BE-PARITY` 是否过。只记分，不挡。
 - **`BE-TRAIN`**：对 BN/LN 仿射参数（GTCRN 约 4.8 K 个）求一次损失梯度，和 PyTorch autograd 比，相对差 ≤ 1e-3。目前只有 MLX 有自动求导（`notes/mlx.md` §5）。推理后端不会训练不扣分：D52 的本机微调可以单独用一个后端，推理再用别的。
 
@@ -174,7 +174,7 @@
 | 模型 | 后端 | Rust p50 / p99.9 / max | Python p50 / p99.9 / max | 差 | Python 数能不能用 |
 |---|---|---|---|---|---|
 | GTCRN | ORT 1.31 CPU | rustbe 同场：p50 0.38 | rustbe 同场：p50 0.40；输出与 Rust 调逐位相同（rustbe 实测，经大总管 2026-11-02 消息转来；正本在 rustbe worktree 结果目录，合并后改成路径） | p50 慢约 5% | **能用**于同一后端的相对比较（差 ≤ 10%）；绝对数仍用 Rust 的。p99.9 / max 的差 rustbe 未报，尾部不用 Python 数 |
-| GTCRN | MLX CPU | 不测（原因见 §7.1 MLX 那一格） | 5.70–6.20 / 7.52–8.52 / 10.3–11.2（build 20261102-173000-b2） | 量不出 | **不能用**作绝对数；它只证明「MLX 连 Python 版都比 ORT 慢 15 倍」，换 Rust 补不回这个量级【推断】 |
+| GTCRN | MLX CPU | 不测（原因见 §7.1 MLX 那一格） | 5.70–6.20 / 7.52–8.52 / 10.3–11.2（build 20261102-173000-b2） | 量不出 | **不能用**作绝对数；它只说明「Python 调 MLX 在这台机上是这个数」；换 Rust 能快多少没量过（codex 第 2 轮 #3） |
 | GTCRN | MLX GPU | 不测（同上） | 6.18–6.20 / 7.39–9.00 / 9.49–11.9（同上） | 量不出 | 同上 |
 
 **判法**【AI 定，依据：GIL 与垃圾回收主要伤尾部；人可改】：Python 与 Rust 的 p50 差 ≤ 10%，且 p99.9 差 ≤ 20%，才允许在 Python 里做「同一后端、不同配置」的相对比较；绝对数一律用 Rust 的。Python 的尾部还受 GIL 和垃圾回收影响，所以 max 永远不用 Python 的【推断】。
