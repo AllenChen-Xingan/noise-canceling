@@ -21,7 +21,11 @@ impl TractNet {
         for (i, s) in shapes.iter().enumerate() {
             m.set_input_fact(i, f32::fact(s).into())?;
         }
-        let opt = m.into_optimized()?;
+        let opt = if std::env::var_os("EXP010_TRACT_DECLUTTER").is_some() {
+            m.into_typed()?.into_decluttered()?
+        } else {
+            m.into_optimized()?
+        };
         if std::env::var_os("EXP010_DEBUG").is_some() {
             for (k, o) in opt.output_outlets()?.iter().enumerate() {
                 eprintln!("tract out {k}: {} {:?}", opt.node(o.node).name, opt.outlet_fact(*o)?);
@@ -48,7 +52,12 @@ impl TractNet {
     /// 跑一帧：输出 0 写进 `out0`，其余输出回灌缓存。
     pub fn step(&mut self, out0: &mut [f32]) -> Result<(), Err> {
         let inputs: TVec<TValue> = self.ins.iter().map(|t| t.clone().into_tvalue()).collect();
-        let outs = self.state.run(inputs)?;
+        let outs = if std::env::var_os("EXP010_TRACT_FRESH").is_some() {
+            let plan = self.state.plan().clone();
+            plan.run(inputs)?
+        } else {
+            self.state.run(inputs)?
+        };
         if outs.len() != self.ins.len() {
             return Err("tract 输出个数 ≠ 输入个数".into());
         }
