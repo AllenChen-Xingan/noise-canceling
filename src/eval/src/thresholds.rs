@@ -264,29 +264,46 @@ pub const ALL: [&Lines; 16] = [
     &SWITCH, &SIM_GATE, &SIM_FA, &SIM_QUIET, &SIM_SWLAT,
 ];
 
-/// 待定清单里一条的具体内容：精确到那组分档或那个数，免得同一参数上新出的错误被吞掉（codex 第 2 轮 P1 #1）。
+/// 不一致的原因（codex 第 3 轮 P1 #1：待定项要连原因一起对上，免得数值差异掩盖新的出处错误）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Cause {
+    /// 摘录在文档里找不到
+    QuoteMissing,
+    /// 没有出处（`Src::None`）
+    NoSource,
+    /// 摘录在，但数对不上
+    Differ,
+    /// 分档顺序不对，或登记表里查不到好坏方向
+    Order,
+    /// 清单里出现了表里没登记的值
+    Unregistered,
+    /// 默认值没登记在取值里
+    DefaultMissing,
+    /// 清单不是合法 JSON
+    BadSuite,
+}
+
+/// 待定清单里一条的具体内容：精确到那组分档或那个数，以及原因。
 #[derive(Clone, Copy, Debug)]
 pub enum Pend {
-    /// 代码里这组分档与文档对不上
-    Edges(&'static [f64]),
-    /// 这个取值没有出处
-    Value(f64),
+    Edges(&'static [f64], Cause),
+    Value(f64, Cause),
 }
 
 /// 待定清单：已知不一致或没有出处的条目。全部是建议值，挂 012 拍板 #8 · D44。
 pub const PENDING: [(&str, &str, Pend); 7] = [
     // 量法与 rubric N4 不同，数也不同（代码 2 / 4 / 6，N4 1.5 / 3 / 6）
-    ("V-TIMBRE", "edges", Pend::Edges(&[2.0, 4.0, 6.0])),
+    ("V-TIMBRE", "edges", Pend::Edges(&[2.0, 4.0, 6.0], Cause::Differ)),
     // 过线值 −3 dB 没有出处
-    ("V-SPLVL", "min", Pend::Value(-3.0)),
+    ("V-SPLVL", "min", Pend::Value(-3.0, Cause::NoSource)),
     // 只有 3 dB 有出处，1 / 2 dB 没有
-    ("V-ONSET", "edges", Pend::Edges(&[1.0, 2.0, 3.0])),
+    ("V-ONSET", "edges", Pend::Edges(&[1.0, 2.0, 3.0], Cause::Differ)),
     // −8 / −10 dB 没有出处（−6 / −20 是 rubric C2 档线）
-    ("V-NR", "max", Pend::Value(-8.0)),
-    ("V-NR", "max", Pend::Value(-10.0)),
+    ("V-NR", "max", Pend::Value(-8.0, Cause::NoSource)),
+    ("V-NR", "max", Pend::Value(-10.0, Cause::NoSource)),
     // 门控误关 0.05、词首 0.2 没有出处
-    ("V-SIM-GATE", "max", Pend::Value(0.05)),
-    ("V-SIM-GATE", "onset_max", Pend::Value(0.2)),
+    ("V-SIM-GATE", "max", Pend::Value(0.05, Cause::NoSource)),
+    ("V-SIM-GATE", "onset_max", Pend::Value(0.2, Cause::NoSource)),
 ];
 
 /// 一处不一致。
@@ -307,6 +324,7 @@ pub struct Mismatch {
     pub id: String,
     pub key: String,
     pub what: What,
+    pub cause: Cause,
     pub why: String,
 }
 
@@ -396,11 +414,12 @@ pub fn mismatches(
     lower_is_better: &dyn Fn(&str) -> Option<bool>,
 ) -> Vec<Mismatch> {
     let mut out = Vec::new();
-    let mut push = |id: &str, key: &str, what: What, why: String| {
+    let mut push = |id: &str, key: &str, what: What, cause: Cause, why: String| {
         out.push(Mismatch {
             id: id.to_string(),
             key: key.to_string(),
             what,
+            cause,
             why,
         });
     };
