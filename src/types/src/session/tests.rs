@@ -4,6 +4,7 @@ use crate::record::tests::every_kind;
 
 const G: ProcessingGraph = ProcessingGraph {
     model: ModelId::FastEnhancerM,
+    artifact: ContentId(0x77),
     spectral: &[],
     stages: &[&FLOOR, &ASYM_GATE],
 };
@@ -134,7 +135,7 @@ fn set_graph_tracks_graph_changes() {
         ..G
     });
     assert_ne!(h.graph, a);
-    h.set_graph(&ProcessingGraph::bare(ModelId::Gtcrn));
+    h.set_graph(&ProcessingGraph::bare(ModelId::Gtcrn, ContentId::of(b"w")));
     assert_eq!(h.model, Some(ModelId::Gtcrn));
 }
 

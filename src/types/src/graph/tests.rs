@@ -149,18 +149,19 @@ fn spectral_kind_in_time_chain_is_rejected() {
     ));
     let g = ProcessingGraph {
         stages: &[&POLISH_SPECTRAL],
-        ..ProcessingGraph::bare(ModelId::Gtcrn)
+        ..ProcessingGraph::bare(ModelId::Gtcrn, W1)
     };
     assert!(g.check().is_err());
     let g = ProcessingGraph {
         spectral: &[&POLISH_AGC],
-        ..ProcessingGraph::bare(ModelId::Gtcrn)
+        ..ProcessingGraph::bare(ModelId::Gtcrn, W1)
     };
     assert!(g.check().is_err());
     let g = ProcessingGraph {
         spectral: &[&POLISH_SPECTRAL],
         stages: &[&POLISH_AGC],
         model: ModelId::Gtcrn,
+        artifact: W1,
     };
     assert_eq!(g.check(), Ok(()));
 }
@@ -176,8 +177,13 @@ fn mismatch_messages_name_the_stage() {
     assert!(s.contains("floor") && s.contains("asym-gate"), "{s}");
 }
 
+/// 两份不同的「权重」（模型制品内容 ID）
+const W1: ContentId = ContentId(0x1111);
+const W2: ContentId = ContentId(0x2222);
+
 const G: ProcessingGraph = ProcessingGraph {
     model: ModelId::Gtcrn,
+    artifact: W1,
     spectral: &[&POLISH_SPECTRAL],
     stages: &[&ASYM_GATE, &POLISH_AGC],
 };
@@ -190,7 +196,7 @@ fn content_id_is_stable() {
     // 规范文本的写法是格式的一部分：改了它，所有旧 ID 都会变，要升 FORMAT
     assert_eq!(
         G.canonical_text(),
-        "vdn-graph = 1\nmodel = gtcrn\n[spectral]\nnode = 6 polish-spectral 1 spectral 0 201,202,203,204,208\n\
+        "vdn-graph = 2\nmodel = gtcrn\nartifact = 0000000000001111\n[spectral]\nnode = 6 polish-spectral 1 spectral 0 201,202,203,204,208\n\
          [stages]\nnode = 4 asym-gate 1 time 0 2,101,102,103,104,105,106,107,108,109,110,111,8,9\n\
          node = 5 polish-agc 1 time 0 205,206,207,208\n"
     );
@@ -220,6 +226,8 @@ fn content_id_changes_with_any_part() {
             model: ModelId::FastEnhancerM,
             ..G
         },
+        // 只换模型版本（权重）、模型名不变（#68）
+        ProcessingGraph { artifact: W2, ..G },
         ProcessingGraph {
             stages: &[&V2, &POLISH_AGC],
             ..G
@@ -270,11 +278,11 @@ fn names_cannot_forge_canonical_text() {
     };
     let two = ProcessingGraph {
         stages: &[&A, &B],
-        ..ProcessingGraph::bare(ModelId::Gtcrn)
+        ..ProcessingGraph::bare(ModelId::Gtcrn, W1)
     };
     let one = ProcessingGraph {
         stages: &[&FORGED],
-        ..ProcessingGraph::bare(ModelId::Gtcrn)
+        ..ProcessingGraph::bare(ModelId::Gtcrn, W1)
     };
     assert_ne!(one.canonical_text(), two.canonical_text());
     assert_ne!(one.content_id(), two.content_id());
@@ -291,4 +299,59 @@ fn names_cannot_forge_canonical_text() {
         assert!(!valid_name(bad), "{bad:?}");
     }
     assert!(valid_name("asym-gate") && valid_name("ftz_spy") && valid_name("v2"));
+}
+
+/// #68：只换模型版本（同名模型换了权重），图 ID 必须变；规范文本里写出制品 ID。
+#[test]
+fn artifact_change_alone_changes_graph_id() {
+    let a = ProcessingGraph::bare(ModelId::FastEnhancerM, W1);
+    let b = ProcessingGraph::bare(ModelId::FastEnhancerM, W2);
+    assert_eq!(a.model, b.model);
+    assert_ne!(a.content_id(), b.content_id());
+    assert!(a.canonical_text().contains(&format!("artifact = {W1}\n")));
+    assert!(b.canonical_text().contains(&format!("artifact = {W2}\n")));
+}
+
+/// 只报名字的假模型。
+struct Named(&'static str);
+impl crate::model::Model for Named {
+    fn name(&self) -> &'static str {
+        self.0
+    }
+    fn sample_rate(&self) -> u32 {
+        0
+    }
+    fn hop(&self) -> usize {
+        1
+    }
+    fn latency_samples(&self) -> usize {
+        0
+    }
+    fn reset(&mut self) {}
+    fn process(&mut self, _i: &[f32], _o: &mut [f32]) -> Result<(), crate::model::ModelError> {
+        Ok(())
+    }
+}
+
+/// #68：模型节点名与 `Model::name()` 不一致 → 报错，错误里写出两边的名字；一致就过。
+#[test]
+fn model_node_must_match_running_model() {
+    for id in ModelId::ALL {
+        let g = ProcessingGraph::bare(id, W1);
+        assert_eq!(g.check_model(&Named(id.as_str())), Ok(()));
+    }
+    let g = ProcessingGraph::bare(ModelId::FastEnhancerM, W1);
+    // 旧写法、别的模型都算不符（名字只认正本）
+    for wrong in ["gtcrn", "fastenhancer_m", "fastenhancer"] {
+        let e = g.check_model(&Named(wrong)).unwrap_err();
+        assert_eq!(
+            e,
+            ChainMismatch::ModelName {
+                expected: ModelId::FastEnhancerM.as_str(),
+                actual: wrong
+            }
+        );
+        let msg = e.to_string();
+        assert!(msg.contains(wrong) && msg.contains(ModelId::FastEnhancerM.as_str()), "{msg}");
+    }
 }
