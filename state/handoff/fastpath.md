@@ -15,7 +15,16 @@
 - [x] 等价改写清单 `docs/research/020_fastpath/rewrites.md`
 - [x] native-v2 / native-v2-fast 代码（`bench/src/gtcrn_native/v2.rs`，未编译，等计时结束）
 - [x] dsp-bench（前后处理计时 + 重采样点积对照，未编译）
-- [ ] 下界表
+- [x] 第一段计时 `results/20261102-peak1/`（负载 5.7 开跑，两项微基准作废，已注明）
+- [x] v2 / v2-fast：BE-PARITY 过（134.99 / 132.72 dB）· 每帧 0 分配 · 单元测试 27 个
+- [x] 第二段第一次 `results/20261102-v2/`：中途拔电 + 系统睡眠 42 分钟，只作电池对照（README 已写）；已加睡眠检测与插电检查
+- [ ] **等人插电** → 大总管建锁 → `run_v2.sh 20261102-v2ac`（约 32 分钟）
+- [ ] 下界表（bound_table.py）
+- [ ] 耗电：`sudo bash docs/experiments/exp012-fastpath/tools/power_v2.sh 20261102-pw1`（人跑，约 13 分钟）
+- [ ] decision.md · codex 评审 · PR
+
+## 经验
+- 长计时一律 `caffeinate -dims` 且查插电：拔电后系统空闲睡眠，单调时钟停走，进程像「卡在 sleep」；电池模式性能核约降半频
 - [ ] 结论文档 · codex 评审
 
 ## 转交
