@@ -34,4 +34,3 @@ pub fn run<M: Model, S: StageChain>(p: &mut Pipeline<M, S>, x: &[f32], block: us
 pub fn energy(v: &[f32]) -> f64 {
     v.iter().map(|s| f64::from(*s).powi(2)).sum()
 }
-

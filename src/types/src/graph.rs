@@ -313,7 +313,10 @@ impl ProcessingGraph {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChainMismatch {
     /// 描述里有、级串里没有（级串少了）
-    Missing { index: usize, expected: &'static str },
+    Missing {
+        index: usize,
+        expected: &'static str,
+    },
     /// 级串里有、描述里没有（级串多了）
     Extra { index: usize, actual: &'static str },
     /// 同一位置种类不同（顺序反、名字错、版本不同都落在这）

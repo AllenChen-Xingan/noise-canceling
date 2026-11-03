@@ -36,7 +36,12 @@ fn registry_is_well_formed() {
         assert_eq!(kind_by_id(a.id), Some(*a));
         // 参数只引用 desc 的正本：同编号的条目必须就是 desc 表里那一条（不许另抄一份改了范围）
         for p in a.params {
-            assert_eq!(desc::by_id(p.id), Some(*p), "{} 引用了不在 desc::ALL 的参数", a.name);
+            assert_eq!(
+                desc::by_id(p.id),
+                Some(*p),
+                "{} 引用了不在 desc::ALL 的参数",
+                a.name
+            );
         }
         let mut ids: Vec<u16> = a.params.iter().map(|p| p.id).collect();
         ids.sort_unstable();

@@ -100,7 +100,11 @@ fn header_keys_match_text() {
     let keys: Vec<&str> = HEADER_KEYS.iter().map(|k| k.key).collect();
     assert_eq!(written, keys);
     for k in HEADER_KEYS {
-        assert!(k.since >= 1 && k.since <= SessionRecord::FORMAT, "{}", k.key);
+        assert!(
+            k.since >= 1 && k.since <= SessionRecord::FORMAT,
+            "{}",
+            k.key
+        );
         // 后加的键必须可缺省，否则旧文件读不进来
         assert!(k.since == 1 || k.optional, "{}", k.key);
     }
@@ -111,7 +115,10 @@ fn set_graph_tracks_graph_changes() {
     let mut h = SessionHeader::default();
     h.set_graph(&G);
     let a = h.graph;
-    h.set_graph(&ProcessingGraph { stages: &[&FLOOR], ..G });
+    h.set_graph(&ProcessingGraph {
+        stages: &[&FLOOR],
+        ..G
+    });
     assert_ne!(h.graph, a);
     h.set_graph(&ProcessingGraph::bare(ModelId::Gtcrn));
     assert_eq!(h.model, Some(ModelId::Gtcrn));

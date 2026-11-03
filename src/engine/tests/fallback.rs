@@ -17,7 +17,6 @@ use common::{HOP_IO, SR, energy, run, signal};
 
 const BAD: NodeKind = test_kind(0xF104, "bad", 0);
 
-
 /// 只开「出事送原声」：衰减下限、快开慢关都关，模型输出全零 → 正常时输出 ≈ 0，送原声时 = 48 kHz 原声。
 fn fallback_only() -> SafetyConfig {
     SafetyConfig {
@@ -252,4 +251,3 @@ fn nan_input_does_not_lock_output() {
         .sum();
     assert!(err < 1e-3 * energy(&x[tail]), "尾段没恢复：{err}");
 }
-

@@ -57,11 +57,9 @@ pub use policy::{
     Decision, Hysteresis, HysteresisGate, ParamSource, Policy, PolicyInput, TablePolicy,
     Transition, UserControl, UserSceneChoice, resolve_params,
 };
-pub use record::{
-    DecisionEvent, EnrollEvent, FeedbackKind, UserAction,
-};
-pub use session::{HeaderKey, SessionHeader, SessionRecord};
+pub use record::{DecisionEvent, EnrollEvent, FeedbackKind, UserAction};
 pub use scene::{FineSceneId, SceneLabel, SceneName, UserScene};
+pub use session::{HeaderKey, SessionHeader, SessionRecord};
 pub use stage::{Stage, StageChain};
 pub use table::{SceneEntry, SceneTable, TableError};
 pub use version::{ConfigBinding, ContentId, ProfileVersion, TableVersion};

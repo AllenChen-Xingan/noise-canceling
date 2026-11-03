@@ -360,7 +360,13 @@ fn build<S: StageChain>(
     kinds: &'static [&'static NodeKind],
     s: S,
 ) -> Result<Pipeline<Identity, S>, PipelineError> {
-    Pipeline::with_stages(Engine::new(Identity, SafetyConfig::off()), SR, None, kinds, s)
+    Pipeline::with_stages(
+        Engine::new(Identity, SafetyConfig::off()),
+        SR,
+        None,
+        kinds,
+        s,
+    )
 }
 
 fn graph_err<S: StageChain>(kinds: &'static [&'static NodeKind], s: S) -> ChainMismatch {

@@ -69,7 +69,6 @@ pub enum Mode {
     Passthrough,
 }
 
-
 /// 计数。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PipelineStats {
@@ -309,4 +308,3 @@ impl<M: Model, S: StageChain> Pipeline<M, S> {
         }
     }
 }
-

@@ -68,7 +68,11 @@ fn committed_example_hash_recomputes() {
 #[test]
 fn kind_change_without_export_is_red() {
     let committed_text = std::fs::read_to_string(root().join(DIR).join(KINDS_FILE)).unwrap();
-    assert_eq!(pretty(&kinds_doc()), committed_text, "先跑 `cargo run -p vdn-schema`");
+    assert_eq!(
+        pretty(&kinds_doc()),
+        committed_text,
+        "先跑 `cargo run -p vdn-schema`"
+    );
     let mut v = kinds_doc();
     v["kinds"][0]["version"] = Value::from(KINDS[0].version + 1);
     assert_ne!(pretty(&v), committed_text);
@@ -130,7 +134,10 @@ fn session_key_since_agrees_with_parser() {
             .find(|l| l.starts_with(&format!("{key} = ")))
             .unwrap();
         let at = |f: u64| format!("{} = {f}\n{line}\n[events]\n", SessionRecord::HEADER);
-        assert!(SessionRecord::from_text(&at(since)).is_ok(), "{key} 在格式 {since}");
+        assert!(
+            SessionRecord::from_text(&at(since)).is_ok(),
+            "{key} 在格式 {since}"
+        );
         if since > 1 {
             assert!(
                 SessionRecord::from_text(&at(since - 1)).is_err(),
@@ -145,7 +152,11 @@ fn session_key_since_agrees_with_parser() {
 #[test]
 fn session_change_without_export_is_red() {
     let committed_text = std::fs::read_to_string(root().join(DIR).join(SESSION_FILE)).unwrap();
-    assert_eq!(pretty(&session_doc()), committed_text, "先跑 `cargo run -p vdn-schema`");
+    assert_eq!(
+        pretty(&session_doc()),
+        committed_text,
+        "先跑 `cargo run -p vdn-schema`"
+    );
     let mut v = session_doc();
     v["format"] = Value::from(SessionRecord::FORMAT + 1);
     assert_ne!(pretty(&v), committed_text);
