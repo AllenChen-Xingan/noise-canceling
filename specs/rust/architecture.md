@@ -78,7 +78,7 @@ HAL 虚拟麦克风驱动：003 定为 C 插件，不进 workspace；009 建议�
    vdn-eval     = engine + models + 后端 + hound + serde
    vdn          = engine + models + 后端 + hound + clap
    vdn-denoised = engine + models + 后端 + speaker + shm + rt-thread + control
-   vdn-capture  = io-macos + shm + rt-thread + control      （不含 engine / models / 后端）
+   vdn-capture  = io-macos + shm + rt-thread + control + dsp + hal（库）；hound · clap 只在 bin feature （不含 engine / models / 后端）
    vdn-io-macos = 平台库；vdn-shm = 无依赖（posix feature 用 libc）
 ```
 
@@ -86,7 +86,7 @@ HAL 虚拟麦克风驱动：003 定为 C 插件，不进 workspace；009 建议�
 1. 分界线以上（核心）不依赖分界线以下的任何 crate，也不依赖平台库、推理库、serde、hound
 2. `vdn-engine` 不依赖 `vdn-models` 与后端；把具体模型交给引擎的是 bin（`Engine<AnyModel>`）
 3. `vdn-capture` 的依赖闭包里没有 `vdn-engine`、`vdn-models`、推理库（D03 崩溃隔离）
-4. `vdn-types` 已拆出（2026-10-31，align；比 §2.3 的触发事件提前，因为智能体部件的接口要在 speaker / scene / engine 之间共享）：`vdn-models` 只依赖 `vdn-types` + `vdn-dsp` + ort，**不再依赖 `vdn-engine`**（engine 只在 models 的 dev-dependencies 里供测试用）；`vdn_engine::model` 留一个转出模块兼容旧路径。P1 的 `vdn-models` 直接依赖 ort，拆后端后改依赖后端
+4. `vdn-types` 已拆出（2026-10-31，align；比 §2.3 的触发事件提前，因为智能体部件的接口要在 speaker / scene / engine 之间共享）：`vdn-models` 只依赖 `vdn-types` + `vdn-dsp` + ort，**不再依赖 `vdn-engine`**（engine 只在 models 的 dev-dependencies 里供测试用）；`vdn_engine::model` 留一个转出模块兼容旧路径。`vdn-backend-ort` 已拆出（2026-11-02，rs-core）：`vdn-models` 只依赖它，不再直接依赖 ort；`vdn-eval`、`vdn-speaker`（onnx feature）、`vdn-speaker-lab` 仍直接依赖 ort，归后续批次
 
 ### 2.3 什么时候拆（可观察的事件）
 
@@ -268,20 +268,8 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 - 判断回路与学习回路不进账
 - 路由池里只放同延迟档的模型：`vdn-models::ModelKind::declared()` 声明 hop 与延迟，`tests/smoke.rs` 打开真模型核对
 - **逐项硬加，不认「两段等待重叠」的推断**（align 自审：「IO 缓冲并入攒 hop」要求 IO 块整除模型 hop，FE-M 的 hop 是 480 帧 @48k，256 不整除，不成立）
-- **当前账（2026-10-31）**：
-
-| 项 | ms | 依据 |
-|---|---|---|
-| 攒满一个模型 hop（GTCRN 256 / FE-M 160 样本 @16 kHz） | 16.00 / 10.00 | 代码声明 |
-| 模型算法延迟（GTCRN 256 / FE-M 352 样本） | 16.00 / 22.00 | 代码声明 |
-| 重采样 48→16 + 16→48 | 4.00 | 规划预算 |
-| 麦克风 IO 块：009 目标 256 帧 / **提议 96 帧** @48k | 5.33 / **2.00** | 规划预算 |
-| 跨进程环余量 | 3.00 | 规划预算 |
-| HAL 传输余量 128 帧 | 2.67 | 规划预算 |
-| **合计** | **009 目标 47.00（超 2 ms）· 提议 43.67** | 预算 45 |
-
-  - 模型部分两个模型都是 32 ms（= STFT 窗长 512 样本），池内同延迟
-  - 提议 IO 块 96 帧（`vdn_types::IO_BLOCK_PROPOSED`）：两模型 hop（768 / 480 帧 @48k）的最大公约数，回调与两种 hop 都对齐。代价：每秒约 500 次回调，多唤醒、多一点 CPU 与 xrun 风险，设备 / 蓝牙不一定给这么小的块【推】。P3 实测（`decision.md` E-lat）后定；做不到走 ⟨拍板 6⟩
+- **当前账：正本在代码，本规约不抄数字**（CLAUDE.md 第五节第 5 条唯一真相源；2026-11-02 起）。正本 = `Pipeline::latency_ledger()`（代码声明的部分：重分块 · 重采样 · 模型）+ `vdn_types::latency::planned_platform()`（平台部分的规划预算，去掉其中的重采样项，避免重复记）；`cargo test -p vdn-models --test latency -- --nocapture` 打印当前账。旧表（2026-10-31，009 目标 47.00 ms · 提议 43.67 ms）作废：重采样代码声明 2.00 ms 而非规划 4.00 ms
+  - 链路实测见 `docs/experiments/exp-v7-latency/`（判据 V7，release，空闲 + 压力）
   - 测试 `src/models/tests/latency.rs`：提议块下每个模型 ≤ 45 ms、池内同延迟；009 原目标 47 ms 钉成**已知缺口**（断言超预算），任何一项变了都会红
   - 对外口径：「代码里的部分 32 ms；平台部分未实测，按 009 目标合计 47 ms、按提议参数 43.67 ms」
 
@@ -329,7 +317,7 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 | R7 | 实时线程不 drop 堆对象 | RTSan 拦 `free` · 计数分配器计 dealloc · 回收队列满的单测 |
 | R8 | 实时线程有 time-constraint 优先级并加入 Audio Workgroup | 启动自检读回线程策略、检查 `os_workgroup_join` 返回码；失败计数并上报，不静默 |
 | R9 | FTZ 守卫只包住 DSP 段，**不包推理调用** | 单测：守卫内非正规数被冲成 0、守卫外不冲；`Model::process` 的推理调用在守卫外（009 §一.2：intra=1 时 FTZ 会作用到 ORT，DeepFilterNet #713） |
-| R10 | unsafe 只在白名单 crate | workspace `unsafe_code = "deny"`；非白名单 crate 的 `lib.rs` 写 `#![forbid(unsafe_code)]`（workspace 设 forbid 再局部 allow 会报 E0453）· `undocumented_unsafe_blocks = "deny"` · tidy 查 forbid 头。白名单 = `metadata.vdn.unsafe = true` 的 crate |
+| R10 | unsafe 只在白名单 crate | workspace `unsafe_code = "deny"`；非白名单 crate 的 `lib.rs` 写 `#![forbid(unsafe_code)]`（workspace 设 forbid 再局部 allow 会报 E0453）· `undocumented_unsafe_blocks = "deny"` · tidy 查 forbid 头。白名单 = `metadata.vdn.unsafe = true` 的 crate（2026-11-02：`vdn-shm` · `vdn-rt-thread` · `vdn-hal` · `vdn-dsp`（只在 `ftz` 模块，FTZ 守卫要写 FPCR））|
 | R11 | 实时路径出错 = 返回 `Status` + 送原声（NaN / 异常帧不能拿来做交叉淡化：硬切原声，用接缝偏移衰减保持波形连续——p1 `Engine` 已这样做） | `#[must_use] Status` · 故障注入：超时 / NaN → 输出等于对齐原声（带淡化） |
 | R12 | 依赖方向（§2.2） | cargo-deny 管直接边 · check-deps 管闭包；规则都从 `metadata.vdn.forbid` 读 |
 | R13 | 延迟有账 | `LatencyLedger`（§3.7.6）· `src/models/tests/latency.rs` 断言 ≤ 45 ms、池内同延迟；接入 Pipeline 后改断言 `Pipeline::latency_samples()`；P3 脉冲法实测（延迟账正本 ADR 005） |
