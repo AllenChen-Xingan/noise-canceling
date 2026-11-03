@@ -134,7 +134,7 @@
 
 | 计算单元 | 怎么调 | GTCRN | FE-M |
 |---|---|---|---|
-| CPU 标量 + NEON（自动向量化 / 手写 SIMD） | 手写 Rust（rustbe） | rustbe r4：p50 0.10 ms | 未试，rustbe 原因：「本轮不做。FE-M 在 ORT 上约占 3.7% 个核（p50 0.37 ms / 每帧 10 ms），超过 D69 的 2% 上限，所以 FE-M 只要还在候选里，就必须换更快的后端，手写 Rust 是候选之一。工作量估计和 GTCRN 相当（约 800 行）。FE-M 还要不要留在候选里，待人定，已列进 rustbe 的待人拍板；不回的话默认先不做，只做主模型 GTCRN」 |
+| CPU 标量 + NEON（自动向量化 / 手写 SIMD） | 手写 Rust（rustbe） | rustbe r4：p50 0.10 ms | 未试，rustbe 原因：「本轮不做。FE-M 只有连续跑的数（ORT p50 0.38 ms），实时节奏下的耗电和对其他程序的影响都没测，按 D75 现在说不出它必须换后端。先补测 FE-M 在 ORT 上按实时节奏跑的耗电，再决定要不要手写（工作量和 GTCRN 相当）。现在只做主模型 GTCRN。」 |
 | CPU 矩阵单元（AMX / SME2，经 Accelerate 的 BLAS / BNNS） | Accelerate `cblas_sgemm` 等（rustbe）；BNNS Graph 内部也可能用（未证实，`notes/bnns-graph.md`） | rustbe 在做：`amx-probe` 子命令，用 GTCRN 实际的 5 种矩阵形状比手写循环与 `cblas_sgemm`，折算每帧总耗时；待名额 | 待定：看 GTCRN 的探测结果再决定（rustbe） |
 | BNNS Graph（CPU 图执行器） | `apple-rs` bnns（applebe） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：GRU 展开版 p50 0.155 ms · 0 分配 · 133.9 dB；不展开 0.34 ms；多线程编译不提速 | 未试：FE-M 转不了 Core ML（wav2wav 图里的 `view_as_complex` 不支持），要改走 spec2spec 版；FE-M 是否留在候选里待人定 |
 | Core ML · CPU | `apple-rs` coreml `--units cpu`（applebe） | build 20261102-173000-b2（`apple/results/20261102-173000-b2/summary.md`）：fp32 0.39 ms · 展开 0.21 ms · 每帧约 300 次 malloc；fp16 54 dB 不过；有状态版转不了（coremltools 报错） | 未试：同上（转不了） |
