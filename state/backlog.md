@@ -38,6 +38,9 @@
 
 ## 引擎（engine）
 
+- [ ] **输入 NaN/Inf 时输出 NaN 且 seam 永不恢复**（issue #53，读源码确认、未复现）· 已转 47 的 Rust 骨架线
+- [ ] **vdn-review 工作流不认 args 里的审查对象**（applebe 给 019 文件，它审了 src/）· 已告 47
+
 - [x] → 2026-11-02 换入当前大事（b8 applebe / rustbe）**019 推理引擎对比续做**（issue #45 · worktree `../noise_canceling-engine` · 2026-10-31 会话中断，只写了部分笔记）：不在当前大事内，以后单开一件大事（「轻快」那把尺子）
 
 - [ ] **修 engine 停顿门控误开**（GTCRN 纯噪声停顿门控开 0.99；验收 = R17 由 xfail 转通过）· 出处 board 第四批「下一批建议 ②」
