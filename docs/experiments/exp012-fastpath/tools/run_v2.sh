@@ -12,12 +12,18 @@ batt_line() { pmset -g batt | sed -n 2p | sed 's/^[[:space:]]*//'; }
 ac_check() {
   local src; src=$(pmset -g batt | head -1)
   case "$POWER_MODE" in
-    ac) echo "$src" | grep -q "AC Power" || { echo "POWER_MODE=ac 但没插电（$src），停下" >&2; exit 2; } ;;
-    battery) echo "$src" | grep -q "Battery Power" || { echo "POWER_MODE=battery 但插着电（$src），停下" >&2; exit 2; } ;;
+    ac) echo "$src" | grep -q "AC Power" || { echo "POWER_MODE=ac 但没插电（${src}），停下" >&2; exit 2; } ;;
+    battery) echo "$src" | grep -q "Battery Power" || { echo "POWER_MODE=battery 但插着电（${src}），停下" >&2; exit 2; } ;;
     *) echo "POWER_MODE 只收 ac / battery" >&2; exit 2 ;;
   esac
 }
 ac_check
+# 开跑前等负载降下来（大总管要求：1 分钟负载 < 3，每 15 秒查一次，最多 5 分钟）
+load1() { sysctl -n vm.loadavg | awk '{print $2}'; }
+for _ in $(seq 1 20); do
+  awk -v l="$(load1)" 'BEGIN{exit !(l < 3)}' && break
+  echo "等负载降下来：1 分钟负载 $(load1)" >&2; sleep 15
+done
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/../../../.." && pwd)"
 main_dir="${VDN_MAIN:-/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling}"
@@ -36,7 +42,7 @@ V="native native-v2 native-v2-fast"
   echo "machine: $(sysctl -n machdep.cpu.brand_string) · P 核 $(sysctl -n hw.perflevel0.physicalcpu) · E 核 $(sysctl -n hw.perflevel1.physicalcpu)"
   echo "os: macOS $(sw_vers -productVersion) ($(sw_vers -buildVersion))"
   echo "power: $(pmset -g batt | head -1)"
-  echo "load: $(sysctl -n vm.loadavg)"
+  echo "load_at_start: $(sysctl -n vm.loadavg)"
   echo "git: $(git -C "$repo" rev-parse --short HEAD)"
   echo "bin_sha256: $(shasum -a 256 "$bin" | cut -d' ' -f1)"
   echo "heavy_lock: $(cat "$main_dir/_tmp/heavy.lock/owner" 2>/dev/null || echo 无)"
