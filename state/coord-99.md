@@ -21,3 +21,4 @@
 - 2026-11-02 schema：机制定（`specs/schema/<实体>.schema.json` · `cargo run -p vdn-schema [-- --check]` · schemars 派生 / 核心 crate 常量表 + 穷举解构小宏 · boon 只作测试依赖）；共享内存头 · Config · 评测清单 4 份已做完，带正负例测试，暂停期间跑 codex。大总管要求核 cargo-deny 许可 · 宏 ≤30 行 · check-deps；机制已转 single
 - 2026-11-02 single：三镜像已删；vdn-types `desc.rs` 参数描述表 39 条；5 个 crate 改从表取默认与范围；tidy 加 R-MIRROR · R-PARAM；锁期间改的未编译。大总管让它锁期间先跑 codex
 - 2026-11-02 schema 编译测试结束（自报）：vdn-schema --check 一致 · xtask ci 6 步全过 · 交叉校验 18 条 · eval ci 回归 13/17 同前；schemars 改为 vdn-control 可选特性；codex 第 1 轮 P1×2 P2×3 已改（docs/reviews/011_schema-crosscheck-codex.md），第 2 轮在跑。等 single 跑完再通知 e3
+- 2026-11-02 single 编译测试结束（自报）：xtask ci 全绿；新 tidy 规则首跑抓到 polish AGC 私有字段 floor_db 撞名 → 改 noise_floor_db；codex 第 1 轮 P1×1 P2×5 已改，第 2 轮在跑。已通知 e3「编译结束」
