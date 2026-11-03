@@ -16,8 +16,17 @@ src, ckdir, out = sys.argv[1], sys.argv[2], sys.argv[3]
 os.makedirs(out, exist_ok=True)
 sys.path.insert(0, src)
 os.chdir(src)  # 上游代码按仓库根目录相对导入
+import importlib.util, types  # noqa: E402
+
 import coremltools as ct  # noqa: E402
-from utils import get_hparams  # noqa: E402
+
+# 只要 hparams 一个文件：utils/__init__ 会拉进训练用的画图、评测依赖；librosa 只在 mel 滤波器里用到，导出图不走那里
+sys.modules.setdefault("librosa", types.ModuleType("librosa"))
+sys.modules.setdefault("librosa.filters", types.SimpleNamespace(mel=None))
+_spec = importlib.util.spec_from_file_location("fe_hparams", os.path.join(src, "utils", "hparams.py"))
+_hp = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_hp)
+get_hparams = _hp.get_hparams
 
 hps = get_hparams(os.path.join(ckdir, "config.yaml"))
 mod = importlib.import_module(f"models.{hps.model}.model")
