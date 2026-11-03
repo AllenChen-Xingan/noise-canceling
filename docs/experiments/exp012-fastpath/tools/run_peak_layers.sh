@@ -3,6 +3,10 @@
 # 用法：run_peak_layers.sh <结果目录名> [轮数=3] [变体=native]
 # 前提：已拿到重活名额、主目录 _tmp/heavy.lock 由大总管建好；bench 已 cargo build --release。
 set -euo pipefail
+# 防系统睡眠 + 必须插电（20261102-v2 踩坑：拔电后空闲睡眠 42 分钟，电池模式下性能核降到约一半频率）
+if [ -z "${VDN_CAFFEINATED:-}" ]; then exec env VDN_CAFFEINATED=1 caffeinate -dims bash "$0" "$@"; fi
+ac_check() { pmset -g batt | head -1 | grep -q "AC Power" || { echo "没插电（$(pmset -g batt | head -1)），停下：插电后重跑" >&2; exit 2; }; }
+ac_check
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/../../../.." && pwd)"
 main_dir="${VDN_MAIN:-/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling}"
@@ -28,6 +32,7 @@ mkdir -p "$out"
 } > "$out/env.txt"
 
 for r in $(seq 1 "$rounds"); do
+  ac_check
   for q in rt bg; do
     echo "round $r hw-peak $q" >&2
     "$bin" hw-peak --qos "$q" --reps 9 | sed "s/^{/{\"round\":$r,/" >> "$out/hwpeak.jsonl"

@@ -10,6 +10,10 @@
 # 每帧能耗 ≈（后端三项合计平均功率 − 同一轮空闲的平均功率）× 16 ms。
 # bench 输出里有 win_start_unix / win_end_unix（计时窗），可再按窗口精确截取样本（applebe 的 power_parse.py v2 口径）。
 set -euo pipefail
+# 防系统睡眠 + 必须插电（20261102-v2 踩坑：拔电后空闲睡眠 42 分钟，电池模式下性能核降到约一半频率）
+if [ -z "${VDN_CAFFEINATED:-}" ]; then exec env VDN_CAFFEINATED=1 caffeinate -dims bash "$0" "$@"; fi
+ac_check() { pmset -g batt | head -1 | grep -q "AC Power" || { echo "没插电（$(pmset -g batt | head -1)），停下：插电后重跑" >&2; exit 2; }; }
+ac_check
 ID=${1:?结果目录名}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 REPO=$(cd "$HERE/../../.." && pwd)
@@ -47,6 +51,7 @@ run() { # 名字 · 命令（命令为空 = 空闲对照）
 }
 
 for r in 1 2 3; do
+  ac_check
   run idle_r$r
   case $r in
     1) order="native native-v2 native-v2-fast" ;;
