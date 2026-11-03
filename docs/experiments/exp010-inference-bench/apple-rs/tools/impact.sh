@@ -6,6 +6,15 @@
 # 用法：tools/impact.sh <降噪命令（不含 --frames）> [名字]
 #   例：tools/impact.sh "target/release/exp010-apple bench bnns <dir>/gtcrn_unrolled_fp32.mlmodelc <dir>/gtcrn --model gtcrn --pace-ms 16 --qos rt" bnns-rt
 set -u
+# ⚠️ 2026-11-02 事故：旧版用 `eval "$CMD" &`，$! 是后台子 shell 的进程号，kill 只杀了子 shell，基准程序成了孤儿（父进程 1）
+# 一直按节奏跑，21 个，合计约半个核；那一批 BE-IMPACT 数据作废。现在：后台用 `exec` 让 $! 就是基准程序本身，
+# 每对结束 kill + wait 并核实已退出；脚本无论怎么退出都由 trap 清理自己起的进程。
+KIDS=()
+cleanup() {
+  for p in "${KIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null; done
+  for p in "${KIDS[@]:-}"; do [ -n "$p" ] && wait "$p" 2>/dev/null; done
+}
+trap cleanup EXIT INT TERM HUP
 HERE=$(cd "$(dirname "$0")/.." && pwd); EXP=$(cd "$HERE/.." && pwd)
 CMD=$1; NAME=${2:-denoise}
 BID=${BID:-$(date +%Y%m%d-%H%M%S)-impact}
@@ -16,10 +25,14 @@ echo "{\"when\":\"$(date -Iseconds)\",\"load\":\"$(sysctl -n vm.loadavg)\",\"pow
 "$BIN" loadgen --passes $PASSES > /dev/null   # 预热一次，不计
 for k in 1 2 3 4 5 6 7; do
   l=$("$BIN" loadgen --passes $PASSES); echo "{\"pair\":$k,\"denoise\":false,\"r\":$l}" >> "$RES/impact.jsonl"
-  eval "$CMD --frames 100000" > "$RES/denoise_$k.json" 2>> "$RES/stderr.log" &
-  dn=$!; sleep 3   # 等降噪进入稳态
+  eval "exec $CMD --frames 100000" > "$RES/denoise_$k.json" 2>> "$RES/stderr.log" &   # exec：$! 就是基准程序
+  dn=$!; KIDS+=("$dn"); sleep 3   # 等降噪进入稳态
+  kill -0 "$dn" 2>/dev/null || { echo "降噪进程没起来（见 stderr.log）"; exit 1; }
   l=$("$BIN" loadgen --passes $PASSES); echo "{\"pair\":$k,\"denoise\":true,\"name\":\"$NAME\",\"r\":$l}" >> "$RES/impact.jsonl"
-  kill $dn; wait $dn 2>/dev/null; sleep 2
+  kill "$dn"; wait "$dn" 2>/dev/null
+  if kill -0 "$dn" 2>/dev/null; then echo "降噪进程 $dn 没退出，停下"; exit 1; fi
+  KIDS=()
+  sleep 2
 done
 python3 - "$RES" <<'PY'
 import json, statistics, sys
