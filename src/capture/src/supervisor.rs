@@ -18,7 +18,6 @@ use crate::feeder::{Control, Handover};
 use crate::{Forwarder, ForwarderConfig};
 
 /// 一次 `poll` 发生了什么（给 bin 打日志、给测试断言）
-#[derive(Debug)]
 pub enum Event {
     /// 接上 / 换到一条降噪总线
     Switched {
@@ -30,6 +29,19 @@ pub enum Event {
     },
     /// 交接队列满（音频线程没在跑？），下一次再试
     QueueFull,
+}
+
+impl std::fmt::Debug for Event {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Switched { bus, replaced, new_forwarder } => write!(
+                f,
+                "Switched {{ session: {:016x}, replaced: {replaced}, new_forwarder: {new_forwarder} }}",
+                bus.session_id()
+            ),
+            Self::QueueFull => write!(f, "QueueFull"),
+        }
+    }
 }
 
 pub struct Supervisor {
