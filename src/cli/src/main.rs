@@ -817,10 +817,34 @@ mod tests {
         assert_eq!(a.hangover_ms / 1e3, HANGOVER_S.default);
         assert_eq!(a.release_ms / 1e3, RELEASE_S.default);
         for (d, bad) in [
-            (&FLOOR_DB, SafetyConfig { floor_db: FLOOR_DB.min - 1.0, ..cfg.clone() }),
-            (&OPEN_DB, SafetyConfig { open_db: OPEN_DB.max + 1.0, ..cfg.clone() }),
-            (&HANGOVER_S, SafetyConfig { hangover_s: -0.1, ..cfg.clone() }),
-            (&RELEASE_S, SafetyConfig { release_s: RELEASE_S.max + 1.0, ..cfg.clone() }),
+            (
+                &FLOOR_DB,
+                SafetyConfig {
+                    floor_db: FLOOR_DB.min - 1.0,
+                    ..cfg.clone()
+                },
+            ),
+            (
+                &OPEN_DB,
+                SafetyConfig {
+                    open_db: OPEN_DB.max + 1.0,
+                    ..cfg.clone()
+                },
+            ),
+            (
+                &HANGOVER_S,
+                SafetyConfig {
+                    hangover_s: -0.1,
+                    ..cfg.clone()
+                },
+            ),
+            (
+                &RELEASE_S,
+                SafetyConfig {
+                    release_s: RELEASE_S.max + 1.0,
+                    ..cfg.clone()
+                },
+            ),
         ] {
             assert_eq!(check_safety_ranges(&bad).unwrap_err().desc.id, d.id);
         }

@@ -1530,6 +1530,7 @@ dependencies = [
  "vdn-models",
  "vdn-rt-thread",
  "vdn-shm",
+ "vdn-types",
 ]
 
 [[package]]
