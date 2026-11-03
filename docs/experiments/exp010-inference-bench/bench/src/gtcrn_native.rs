@@ -247,6 +247,18 @@ trait Kern {
     fn deconv(d: &mut DeconvF, x: &[f32], y: &mut [f32]);
     fn gru(g: &Gru, x: &[f32], h: &mut [f32]);
     fn linear(l: &Linear, x: &[f32], y: &mut [f32]);
+    /// GT 块的深度卷积 + PReLU（读 h1 与环形缓存，写 h2）
+    fn depthwise(b: &mut GtBlock) {
+        b.depthwise_scalar()
+    }
+    /// x += LN(z)（DPGRNN）
+    fn ln_add(x: &mut [f32], z: &[f32], w: &[f32], b: &[f32]) {
+        layer_norm_add(x, z, w, b)
+    }
+    /// ERB 稀疏矩阵乘
+    fn sparse(s: &Sparse, x: &[f32], y: &mut [f32]) {
+        s.run(x, y)
+    }
 }
 
 /// 原写法
@@ -882,6 +894,46 @@ impl GtBlock {
         self.hstate = [0.0; 16];
     }
 
+    /// 深度卷积第 c 通道、时间抽头 kt 的输入行：inp 的时间下标 0..=2d，2d 是当前帧（h1），其余在环形缓存里
+    #[inline(always)]
+    fn dw_src(&self, c: usize, kt: usize) -> &[f32] {
+        let (f, len, frame) = (F2, 2 * self.dil, C * F2);
+        let ti = kt * self.dil;
+        if ti == len {
+            &self.h1[c * f..(c + 1) * f]
+        } else {
+            let slot = (self.head + ti) % len;
+            &self.ring[slot * frame + c * f..slot * frame + (c + 1) * f]
+        }
+    }
+
+    /// 原写法：h2 = PReLU(db + Σ_kt Σ_j' w·src)，频率补 1
+    fn depthwise_scalar(&mut self) {
+        let f = F2;
+        for c in 0..C {
+            let mut out = [0.0f32; F2];
+            out.fill(self.db[c]);
+            for kt in 0..3 {
+                let src = self.dw_src(c, kt);
+                let w = &self.dw[c * 9 + kt * 3..c * 9 + kt * 3 + 3];
+                for j in 0..f {
+                    let mut a = w[1] * src[j];
+                    if j > 0 {
+                        a += w[0] * src[j - 1];
+                    }
+                    if j + 1 < f {
+                        a += w[2] * src[j + 1];
+                    }
+                    out[j] += a;
+                }
+            }
+            self.h2[c * f..(c + 1) * f].copy_from_slice(&out);
+        }
+        for v in self.h2.iter_mut() {
+            *v = prelu(*v, self.a2);
+        }
+    }
+
     /// `x`：[16][33] → `y`：[16][33]
     fn run<K: Kern, P: Probe>(&mut self, x: &[f32], y: &mut [f32], p: &mut P, blk: &'static str) {
         let f = F2;
@@ -900,41 +952,12 @@ impl GtBlock {
                     ..Cost::default()
                 }
         });
-        // 流式深度卷积：inp 的时间下标 0..=2d，2d 是当前帧；kt 取 inp[kt*d]
-        let len = 2 * self.dil;
-        let frame = C * f;
-        for c in 0..C {
-            let out = &mut self.h2[c * f..(c + 1) * f];
-            out.fill(self.db[c]);
-            for kt in 0..3 {
-                let ti = kt * self.dil;
-                let src: &[f32] = if ti == len {
-                    &self.h1[c * f..(c + 1) * f]
-                } else {
-                    let slot = (self.head + ti) % len;
-                    &self.ring[slot * frame + c * f..slot * frame + (c + 1) * f]
-                };
-                let w = &self.dw[c * 9 + kt * 3..c * 9 + kt * 3 + 3];
-                // 频率 pad 1
-                for j in 0..f {
-                    let mut a = w[1] * src[j];
-                    if j > 0 {
-                        a += w[0] * src[j - 1];
-                    }
-                    if j + 1 < f {
-                        a += w[2] * src[j + 1];
-                    }
-                    out[j] += a;
-                }
-            }
-        }
-        // 当前帧写进最旧的槽位
+        // 流式深度卷积 + PReLU（算子写法可换）；之后把当前帧写进环形缓存（结构，两种写法共用）
+        K::depthwise(self);
+        let (len, frame) = (2 * self.dil, C * f);
         let slot = self.head;
         self.ring[slot * frame..(slot + 1) * frame].copy_from_slice(&self.h1);
         self.head = (self.head + 1) % len;
-        for v in self.h2.iter_mut() {
-            *v = prelu(*v, self.a2);
-        }
         p.mark(blk, "depthwise", || {
             let act = (C * f) as u64;
             Cost {
@@ -1092,7 +1115,7 @@ impl Dp {
             }
         }
         p.mark(blk, "intra_fc", || scale(self.intra_fc.cost(), F2 as u64, 1, 1));
-        layer_norm_add(&mut self.xt, &self.z, &self.intra_lnw, &self.intra_lnb);
+        K::ln_add(&mut self.xt, &self.z, &self.intra_lnw, &self.intra_lnb);
         p.mark(blk, "intra_ln", || ln_cost(F2 * C));
         // inter：沿时间（单步）的分组 GRU，状态逐频点缓存
         for f in 0..F2 {
@@ -1117,7 +1140,7 @@ impl Dp {
             scale(self.inter[0].step_cost(), 2 * F2 as u64, 1, 2)
                 + scale(self.inter_fc.cost(), F2 as u64, 1, 1)
         });
-        layer_norm_add(&mut self.xt, &self.z, &self.inter_lnw, &self.inter_lnb);
+        K::ln_add(&mut self.xt, &self.z, &self.inter_lnw, &self.inter_lnb);
         for c in 0..C {
             for f in 0..F2 {
                 feat[c * F2 + f] = self.xt[f * C + c];
@@ -1410,7 +1433,7 @@ impl GtcrnNative {
                 &mut self.feat1[c * F0..(c + 1) * F0],
             );
             dst[..ERB_LOW].copy_from_slice(&src[..ERB_LOW]);
-            self.erb.run(&src[ERB_LOW..], &mut dst[ERB_LOW..]);
+            K::sparse(&self.erb, &src[ERB_LOW..], &mut dst[ERB_LOW..]);
         }
         sfe3(&self.feat1, 3, F0, &mut self.feat2);
         p.mark("in", "erb+sfe", || {
@@ -1472,7 +1495,7 @@ impl GtcrnNative {
                 &mut self.m[c * BINS..(c + 1) * BINS],
             );
             dst[..ERB_LOW].copy_from_slice(&src[..ERB_LOW]);
-            self.ierb.run(&src[ERB_LOW..], &mut dst[ERB_LOW..]);
+            K::sparse(&self.ierb, &src[ERB_LOW..], &mut dst[ERB_LOW..]);
         }
         // 复数比值掩码
         for k in 0..BINS {
