@@ -24,7 +24,7 @@
 | 挡线 | 纯手写 · rt | 依据 |
 |---|---|---|
 | `BE-PARITY` | **过**：对 ORT 134.0 dB，无 first_bad | rustbe r4 |
-| `BE-RT-ALLOC` | **过**（转记）：rustbe `--count-malloc` 报每帧 0 次；按新规则要看整数总数 `process_allocs_total == 0`，待对 rustbe 正本 `results/20261102-blas1/malloc.jsonl` 核整数 | rustbe |
+| `BE-RT-ALLOC` | **转记 0，待核整数**：rustbe 正本 `results/20261102-blas1/malloc.jsonl` 里 `process_allocs_per_frame` = 0.000（2000 帧，三位小数），只能说明总数 ≤ 1，判不了 `process_allocs_total == 0`；已请 rustbe 补整数字段 | rustbe |
 | `BE-FRAME`（p99.9 ≤ 1.0 · max ≤ 2.0） | **过**（60 s）：p99.9 0.65 · max 0.66 ms | build 20261102-183322-rt |
 | `BE-DEADLINE`（10 分钟 0 帧**迟到** > 3 ms） | **未测**：rt 下没跑过 10 分钟；ui 下 10 分钟有 6 帧调用耗时 > 3 ms（已不过）；「迟到」口径（含唤醒迟到）是 codex 第 1 轮后才加的 | `notes/rustbe-numbers.md` |
 | `BE-IMPACT` | **未测**（第一批作废） | — |
@@ -33,7 +33,7 @@
 
 为什么排它：
 - 连续跑最快：p50 0.088 ms，同场 ORT 0.384 ms，约 4.4 倍（build 20261102-173000-b2；按 rustbe r4 的 0.10 / 0.38 算是 3.8 倍）。
-- 0 分配，能在推理线程直接调；不依赖任何推理库，体积最小（待 `BE-SIZE` 证实）。
+- 转记每帧 0 次分配（待核整数）；不依赖任何推理库，体积最小（待 `BE-SIZE` 证实）；常驻内存预热后只涨 1.09 MB（rustbe 同一份 `malloc.jsonl`，单次）。
 
 **待证实的更省电方案：手写 + Accelerate（`native-blas`）。** 实时节奏下 p50 0.43 ms（比纯手写快 28%；按平均值是 20%），CPU 功率 71 mW（单次、噪声里）。但每帧 11 次 malloc（Accelerate 内部，rustbe 实测），过不了 `BE-RT-ALLOC`。**翻盘条件**（两条都满足才改选它）：① 交替重复 ≥ 3 轮后仍显著更省电（差值大于噪声底）；② 查明那 11 次分配出在哪个调用、能换成不分配的接口（如 `vDSP_mmul` 代替 `cblas_sgemm`，或预分配工作区）——② 已转 rustbe。
 
@@ -64,7 +64,7 @@
 
 ## 4. 实时线程 · 线程设置 · 耗电
 
-**能不能直接调**：纯手写、BNNS Graph 每帧 0 次分配（全进程 malloc 钩子，自检通过），可以在推理线程直接调；RTSan 豁免表还没建（`BE-RT-SAN` 待测）。Core ML 每帧约 300 次 malloc（ORT 1557 次，rustbe 实测），只能登记豁免。自建工作组区间的那几段每帧有约 0.012 次 malloc（区间 start / finish 偶发分配，未查是哪一个），严格说也过不了 `BE-RT-ALLOC`。
+**能不能直接调（候选接法，未确认）**：按 `standard.md` §4，要分配（`BE-RT-ALLOC`）、RTSan（`BE-RT-SAN`）、跨进程（`BE-RT-XPROC`）三项都过才能确认「可以在推理线程直接调」。现在只有分配这一项有数：BNNS Graph 每帧 0 次（applebe 全进程钩子，自检通过；旧 build 只有三位小数，整数待重测），纯手写转记 0（待核整数）。RTSan、跨进程都还没测，零分配不能证明不加锁、不阻塞（codex 第 4 轮 #1）。Core ML 每帧约 300 次 malloc（ORT 1557 次，rustbe 实测），只能登记豁免。自建工作组区间的那几段每帧有约 0.012 次 malloc（区间 start / finish 偶发分配，未查是哪一个），严格说也过不了 `BE-RT-ALLOC`。
 
 **线程设置 × 耗电**（人用 sudo 跑，只有 powermetrics 是 root；`apple/results/20261102-183322-rt/summary.md`）。⚠️ 单次 60 s；空闲基线 CPU 111 mW，比好几行都高，所以下表给的是**绝对 CPU 功率**，只能比相对高低；差 < 30 mW 的不算有差别：
 
@@ -97,7 +97,7 @@
 
 ## 6. 对延迟账的影响
 
-- 延迟账里没有单列推理耗时，它被「跨进程环余量 3.00 ms」盖住（`docs/research/009_rust-ecosystem/decision.md:62`）。模型带来的 32 ms 是 STFT 窗长决定的算法延迟，换后端改不了。所以换后端**不减延迟账**，收益在耗电（D70 · D75）和尾部。
+- 延迟账里没有单列推理耗时。009 当时把它算进「跨进程环余量 3.00 ms」（`docs/research/009_rust-ecosystem/decision.md:62`）；**D74 已把产品的缓冲余量改为 4 ms**（lead 192 样本），现在以 4 ms 为准，3 ms 只作 `BE-DEADLINE` 里更严的技术线。模型带来的 32 ms 是 STFT 窗长决定的算法延迟，换后端改不了。所以换后端**不减延迟账**，收益在耗电（D70 · D75）和尾部。
 - 尾部：产品的缓冲余量按 D74 是 4 ms（`BE-DEADLINE` 取 3 ms 作更严的技术线）。在 D74 默认（rt）下，60 s 内所有设置的最大调用耗时都 ≤ 1.41 ms；10 分钟长跑只在 ui 下跑过，那时纯手写有 6 帧、BNNS 至少 1 帧调用耗时超过 3 ms（是否超过 4 ms、会不会送原声没分开统计）。rt 下、按「迟到」口径的 10 分钟长跑待测。
 - 最低系统：D78 定为 macOS 15，BNNS Graph / `MLState` 都不再有系统版本冲突（原待拍板 2-8 随之解决）。
 

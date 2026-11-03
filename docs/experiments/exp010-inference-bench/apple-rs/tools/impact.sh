@@ -59,7 +59,9 @@ offv = [off[k] for k in pairs]
 noise = statistics.pstdev(offv) / statistics.mean(offv)  # 「关」之间的相对离散 = 噪声底
 med = statistics.median(rel)
 best = min(on.values()) / min(off.values()) - 1          # 最小值之比：最接近无干扰时的真实时长
-if abs(med) <= noise:
+if len(pairs) < 15:
+    verdict = f"无效：有效配对只有 {len(pairs)} 对（要 15 对），补测"   # codex 第 4 轮 #5
+elif abs(med) <= noise:
     verdict = f"≤ 噪声底（{noise*100:.2f}%），判不了"
 else:
     verdict = "过目标" if med <= 0.01 else ("过挡线" if med <= 0.02 else "不过")

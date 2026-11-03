@@ -49,7 +49,7 @@
 ## 3. 每帧耗时与尾部：`BE-FRAME` · `BE-FASTER`
 
 - **怎么测**：只计「一次推理调用」（含输入写入和输出读出，不含 STFT）。计时器用 `mach_absolute_time` / `Instant`。
-- **`BE-FRAME` 过线的依据**：延迟账里没有单列推理耗时。它被「跨进程环余量 3.00 ms」盖住，009 对这一项的定义是「盖住最坏推理耗时 + 唤醒抖动」（`docs/research/009_rust-ecosystem/decision.md:62`）。所以 max ≤ 2.0 ms 给唤醒抖动留 1 ms；p99.9 ≤ 1.0 ms 是今天 ORT 的水平（0.42–0.59 ms，r4）再放一倍【推断】。
+- **`BE-FRAME` 过线的依据**：延迟账里没有单列推理耗时。009 当时把它算进「跨进程环余量 3.00 ms」，定义是「盖住最坏推理耗时 + 唤醒抖动」（`docs/research/009_rust-ecosystem/decision.md:62`）；D74 已把产品的缓冲余量改为 4 ms。这里仍按 3 ms 算，是**更严的技术线**，不是产品余量：max ≤ 2.0 ms 给唤醒抖动留 1 ms；p99.9 ≤ 1.0 ms 是今天 ORT 的水平（0.42–0.59 ms，r4）再放一倍【推断】。
 - **`BE-FASTER` 的规则**：3 轮交替跑，各取 p50 和 p99.9。只有「本后端最慢一轮」比「ORT 最快一轮」还快，才写「更快」，并写倍数（ORT p50 中值 ÷ 本后端 p50 中值）。轮间范围有重叠就写「持平」。
 - **FE-M 的预算**是每 10 ms 一帧，同一条线也适用（线是绝对毫秒，不是占预算比例）。
 - **`BE-DEADLINE`**：6000 帧只有约 96 s，看不到罕见的长尾。按实时节奏（`pace_ms`）跑 10 分钟（GTCRN 37 500 帧），数**迟到**超过 3.0 ms 的帧：迟到 = 一帧做完的时刻 − 该到的时刻，把唤醒迟到也算进去（codex 第 1 轮 #2：只数推理调用耗时，醒晚了几毫秒也会报 0）。3.0 ms 原是延迟账里「跨进程环余量 3.00 ms」（009 decision:62，要盖住最坏推理耗时 + 唤醒抖动）；D74 已把产品的缓冲余量定为 4 ms，3 ms 留作更严的技术线。过线是 0 帧。迟到 > 4 ms 的帧在产品里才会真的赶不上、送原声。早期 build（2026-11-02 19:00 前）只有 `frames_over_3ms`（调用耗时），不能用来判这一条。
@@ -67,7 +67,7 @@
 
 ## 5. 冷启动：`BE-COLD`
 
-- **怎么测**：`compile_ms`（mlpackage → mlmodelc 或 mlmodelc → BNNS 图，一次性准备，单列）· `open_ms`（加载，**不含** `compile_ms`）· 200 帧预热的总时长 · 预热后第 1 帧耗时。字段：`compile_ms` · `open_ms` · `warmup_ms`（第 0 帧冷启动 + 全部预热帧的总时长，从开始跑第 0 帧算到进入计时窗）· `first_frame_ms`（冷的第 0 帧）· `first_warm_frame_ms`（预热后第 1 帧）。判 `BE-COLD` 时用 `compile_ms + open_ms + warmup_ms`（首次启动，已含冷首帧）和 `open_ms + warmup_ms`（已有编译缓存）两个数；`first_warm_frame_ms` 对 `BE-FRAME` 的 max 线（codex 第 3 轮 #5；2026-11-02 20:00 前的 build 没有后两个字段）。
+- **怎么测**：`compile_ms`（mlpackage → mlmodelc 或 mlmodelc → BNNS 图，一次性准备，单列）· `open_ms`（加载，**不含** `compile_ms`）· 200 帧预热的总时长 · 预热后第 1 帧耗时。字段：`compile_ms` · `open_ms` · `warmup_ms`（第 0 帧冷启动 + 全部预热帧的总时长，从开始跑第 0 帧算到进入计时窗）· `first_frame_ms`（冷的第 0 帧）· `first_warm_frame_ms`（预热后第 1 帧）。判 `BE-COLD` 时用 `compile_ms + open_ms + warmup_ms`（首次启动，已含冷首帧）和「已有编译缓存」两种情形。**已有编译缓存的耗时只能扣掉实测确实跳过的工作**：BNNS 现在每次打开都调 `BNNSGraphCompileFromFile`（`bnns.rs` 的 `open`，计入 `compile_ms`），没有实现「读已编译图」的分支，所以 BNNS 一律按 `compile_ms + open_ms + warmup_ms` 判；Core ML 的 `.mlmodelc` 已编好时 `compile_ms` = 0，实测即可（codex 第 4 轮 #4）；`first_warm_frame_ms` 对 `BE-FRAME` 的 max 线（codex 第 3 轮 #5；2026-11-02 20:00 前的 build 没有后两个字段）。
 - **为什么要看**：换模型时，新 Pipeline 在非实时线程建好、预热后再送进实时线程（规约 §3.5），所以冷启动不进实时线程，但决定「用户换模式后多久生效」和「开机多久能用」。500 ms 按「人按下开关后半秒内生效」定【AI 定；人可改】。
 - 神经引擎有「空闲约 5 s 后第一帧约 260 ms」的他人实测（`notes/realtime-and-bindings.md`），所以对用神经引擎的组合，还要测「停 10 s 再来一帧」的耗时。
 
@@ -173,7 +173,7 @@
 
 | 模型 | 后端 | Rust p50 / p99.9 / max | Python p50 / p99.9 / max | 差 | Python 数能不能用 |
 |---|---|---|---|---|---|
-| GTCRN | ORT 1.31 CPU | rustbe 同场：p50 0.38 | rustbe 同场：p50 0.40；输出与 Rust 调逐位相同（rustbe 实测，经大总管 2026-11-02 消息转来；正本在 rustbe worktree 结果目录，合并后改成路径） | p50 慢约 5% | **能用**于同一后端的相对比较（差 ≤ 10%）；绝对数仍用 Rust 的。p99.9 / max 的差 rustbe 未报，尾部不用 Python 数 |
+| GTCRN | ORT 1.31 CPU | rustbe 同场：p50 0.38 | rustbe 同场：p50 0.40；输出与 Rust 调逐位相同（rustbe 实测，经大总管 2026-11-02 消息转来；正本在 rustbe worktree 结果目录，合并后改成路径） | p50 慢约 5% | **未获准**：下面的判法要 p50 和 p99.9 两项都达标，p99.9 的差还没量（codex 第 4 轮 #6）。在补上尾部对照前，Python 数一律不进结论 |
 | GTCRN | MLX CPU | 不测（原因见 §7.1 MLX 那一格） | 5.70–6.20 / 7.52–8.52 / 10.3–11.2（build 20261102-173000-b2） | 量不出 | **不能用**作绝对数；它只说明「Python 调 MLX 在这台机上是这个数」；换 Rust 能快多少没量过（codex 第 2 轮 #3） |
 | GTCRN | MLX GPU | 不测（同上） | 6.18–6.20 / 7.39–9.00 / 9.49–11.9（同上） | 量不出 | 同上 |
 
