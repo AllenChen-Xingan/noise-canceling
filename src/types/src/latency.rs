@@ -199,7 +199,13 @@ mod tests {
             Basis::Declared,
             "",
         ))
-        .push(LatencyItem::new("model", 256, crate::MODEL_RATE, Basis::Declared, ""));
+        .push(LatencyItem::new(
+            "model",
+            256,
+            crate::MODEL_RATE,
+            Basis::Declared,
+            "",
+        ));
         assert_eq!(l.total_ms(), 32.0);
         assert_eq!(l.budget_ms(), 0.0);
         assert_eq!(l.check(LATENCY_BUDGET_MS), Ok(32.0));

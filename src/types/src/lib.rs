@@ -50,12 +50,12 @@ pub use latency::{
 };
 pub use memory::{Learner, Overrides, SceneKey, UserProfile};
 pub use model::{Model, ModelError, SpectrumTap};
-pub use rate::{IO_RATE, MODEL_RATE};
 pub use params::{ModelId, ParamBlock, ParamError, ParamField, ParamSet, ToneId};
 pub use policy::{
     Decision, Hysteresis, HysteresisGate, ParamSource, Policy, PolicyInput, TablePolicy,
     Transition, UserControl, UserSceneChoice, resolve_params,
 };
+pub use rate::{IO_RATE, MODEL_RATE};
 pub use record::{
     DecisionEvent, EnrollEvent, FeedbackKind, SessionHeader, SessionRecord, UserAction,
 };

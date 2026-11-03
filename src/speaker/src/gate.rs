@@ -428,7 +428,10 @@ mod tests {
             clock_rate: vdn_types::IO_RATE as f32,
             ..d
         };
-        assert_eq!((p.clamped().sr, p.clamped().clock_rate), (vdn_types::IO_RATE as f32, vdn_types::IO_RATE as f32));
+        assert_eq!(
+            (p.clamped().sr, p.clamped().clock_rate),
+            (vdn_types::IO_RATE as f32, vdn_types::IO_RATE as f32)
+        );
     }
 
     /// new() 先夹再用：越界的下限不会让增益掉到表的下限之下。

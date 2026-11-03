@@ -204,6 +204,9 @@ mod tests {
         assert!(rate_problems("src/shm/tests/ring.rs", "let r = 48_000;\n").is_empty());
         assert!(rate_problems("src/dsp/examples/x.rs", "let r = 48_000;\n").is_empty());
         assert_eq!(rate_problems("src/eval/src/a.rs", src).len(), 2);
-        assert_eq!(rate_problems("src/eval/tests/a.rs", "let r = 48_000;\n").len(), 1);
+        assert_eq!(
+            rate_problems("src/eval/tests/a.rs", "let r = 48_000;\n").len(),
+            1
+        );
     }
 }

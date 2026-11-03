@@ -429,7 +429,10 @@ mod tests {
     fn validate_rejects_bad_params() {
         assert!(validate(IO_RATE, 480).is_ok());
         assert!(matches!(validate(0, 480), Err(IoError::InvalidParam(_))));
-        assert!(matches!(validate(IO_RATE, 0), Err(IoError::InvalidParam(_))));
+        assert!(matches!(
+            validate(IO_RATE, 0),
+            Err(IoError::InvalidParam(_))
+        ));
         assert!(matches!(
             validate(IO_RATE, MAX_BLOCK + 1),
             Err(IoError::InvalidParam(_))

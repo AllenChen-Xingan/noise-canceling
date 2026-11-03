@@ -51,7 +51,8 @@ fn canonical_path(p: &str) -> bool {
     p.starts_with("src/")
         && !p.contains('\\')
         && !p.ends_with('/')
-        && p.split('/').all(|seg| !seg.is_empty() && seg != "." && seg != "..")
+        && p.split('/')
+            .all(|seg| !seg.is_empty() && seg != "." && seg != "..")
 }
 
 /// 解析基线；格式错、路径不规范、路径重复的行记进 `problems`（重复时两条都不采信，免得结果依赖顺序）。
@@ -99,7 +100,11 @@ pub fn parse_baseline(text: &str, problems: &mut Vec<String>) -> Vec<Entry> {
             dup.push(p);
             continue;
         }
-        out.push(Entry { path: p, max: n, reason });
+        out.push(Entry {
+            path: p,
+            max: n,
+            reason,
+        });
     }
     out.retain(|e| !dup.contains(&e.path));
     out
@@ -257,7 +262,12 @@ fn base_baseline(root: &Path) -> Result<Option<String>, String> {
         }
         None => "origin/main".to_string(),
     };
-    if git(root, &["rev-parse", "--verify", "-q", &format!("{rref}^{{commit}}")]).is_none() {
+    if git(
+        root,
+        &["rev-parse", "--verify", "-q", &format!("{rref}^{{commit}}")],
+    )
+    .is_none()
+    {
         return Err(format!("取不到目标分支 {rref}，没法核对基线有没有被放宽"));
     }
     Ok(git(root, &["show", &format!("{rref}:{BASELINE_FILE}")]))
@@ -408,7 +418,10 @@ mod tests {
     /// 重复路径两种顺序都报错，且两条都不采信（结果不依赖顺序）
     #[test]
     fn duplicate_baseline_paths_are_flagged_in_any_order() {
-        for text in ["900 src/a.rs\n700 src/a.rs\n", "700 src/a.rs\n900 src/a.rs\n"] {
+        for text in [
+            "900 src/a.rs\n700 src/a.rs\n",
+            "700 src/a.rs\n900 src/a.rs\n",
+        ] {
             let mut p = Vec::new();
             let b = parse_baseline(text, &mut p);
             assert_eq!(p.len(), 1, "{text:?} → {p:?}");
@@ -420,7 +433,13 @@ mod tests {
 
     #[test]
     fn non_canonical_paths_are_flagged() {
-        for bad in ["./src/a.rs", "src/../src/a.rs", "src\\a.rs", "lib/a.rs", "src//a.rs"] {
+        for bad in [
+            "./src/a.rs",
+            "src/../src/a.rs",
+            "src\\a.rs",
+            "lib/a.rs",
+            "src//a.rs",
+        ] {
             let mut p = Vec::new();
             let b = parse_baseline(&format!("700 {bad}\n"), &mut p);
             assert!(b.is_empty() && p.len() == 1, "{bad} → {p:?}");

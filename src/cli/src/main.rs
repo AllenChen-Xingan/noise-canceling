@@ -203,7 +203,11 @@ fn chain_check(a: ChainCheckArgs) -> Result<bool, BoxError> {
         return Err(format!("{}：只收 48 kHz 单声道 32 位浮点", a.wav.display()).into());
     }
     let y = r.samples::<f32>().collect::<Result<Vec<_>, _>>()?;
-    let v = chain::judge_file(&y, a.l_total, (a.from * f64::from(vdn_types::IO_RATE)) as usize);
+    let v = chain::judge_file(
+        &y,
+        a.l_total,
+        (a.from * f64::from(vdn_types::IO_RATE)) as usize,
+    );
     println!("{} · 文件 {}（{} 样本）", v, a.wav.display(), y.len());
     Ok(v.pass)
 }

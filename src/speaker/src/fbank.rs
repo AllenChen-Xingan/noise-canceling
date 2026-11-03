@@ -224,7 +224,11 @@ mod tests {
     fn tone_peaks_in_right_band() {
         let mut fb = Fbank::new(FbankConfig::wespeaker());
         let x: Vec<f32> = (0..1600)
-            .map(|i| 0.1 * (2.0 * std::f32::consts::PI * 1000.0 * i as f32 / vdn_types::MODEL_RATE as f32).sin())
+            .map(|i| {
+                0.1 * (2.0 * std::f32::consts::PI * 1000.0 * i as f32
+                    / vdn_types::MODEL_RATE as f32)
+                    .sin()
+            })
             .collect();
         let nf = fb.num_frames(x.len());
         let mut out = vec![0.0; nf * 80];

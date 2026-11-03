@@ -269,7 +269,10 @@ mod tests {
         // 连续正弦：活动 100%，主动电平 = RMS 电平 = 20log10(A/√2)
         let a = 0.1f32;
         let x: Vec<f32> = (0..32000)
-            .map(|i| a * (2.0 * std::f32::consts::PI * 440.0 * i as f32 / vdn_types::MODEL_RATE as f32).sin())
+            .map(|i| {
+                a * (2.0 * std::f32::consts::PI * 440.0 * i as f32 / vdn_types::MODEL_RATE as f32)
+                    .sin()
+            })
             .collect();
         let (lvl, act) = active_level(&x, vdn_types::MODEL_RATE).unwrap();
         let want = 20.0 * (a as f64 / 2f64.sqrt()).log10();
@@ -282,7 +285,10 @@ mod tests {
         // 一半正弦一半静音：主动电平不变（≈ 连续时），活动约一半
         let a = 0.1f32;
         let mut x: Vec<f32> = (0..32000)
-            .map(|i| a * (2.0 * std::f32::consts::PI * 440.0 * i as f32 / vdn_types::MODEL_RATE as f32).sin())
+            .map(|i| {
+                a * (2.0 * std::f32::consts::PI * 440.0 * i as f32 / vdn_types::MODEL_RATE as f32)
+                    .sin()
+            })
             .collect();
         x.extend(std::iter::repeat_n(0.0, 32000));
         let (lvl, act) = active_level(&x, vdn_types::MODEL_RATE).unwrap();

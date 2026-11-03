@@ -61,8 +61,9 @@ fn run_pipeline(kind: ModelKind) {
     };
     let d = kind.declared();
     let m = kind.open(&path).expect("打开模型");
-    let mut p = vdn_engine::Pipeline::new(Engine::new(m, SafetyConfig::default()), vdn_types::IO_RATE)
-        .expect("48 kHz 应可用");
+    let mut p =
+        vdn_engine::Pipeline::new(Engine::new(m, SafetyConfig::default()), vdn_types::IO_RATE)
+            .expect("48 kHz 应可用");
     assert_eq!(
         p.latency_samples(),
         d.hop * 3 - 1 + 2 * vdn_dsp::resample::delay_high() + d.latency_samples * 3
