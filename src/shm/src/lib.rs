@@ -44,6 +44,8 @@ compile_error!(
 );
 
 mod bus;
+#[cfg(not(feature = "loom"))]
+pub mod desc;
 pub mod layout;
 #[cfg(all(unix, feature = "posix"))]
 mod owned;
