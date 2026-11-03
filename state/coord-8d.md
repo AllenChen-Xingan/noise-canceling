@@ -40,3 +40,4 @@
 - 2026-11-02 hygiene：V-SPLVL 改 −1/−2/−4（rubric C3），待定剩 6 处；vdn-eval 全过（比对 7 条）· xtask 45/1（tidy_passes 预期）· eval ci 等级变化 0、门禁不变；codex 第 3 轮在跑
 - 2026-11-02 e3 #66 合并；8d 合 origin/main 进 #62（ebc246a7，冲突仅评审索引两行都留）；docs/experiments 全 ≤600 → 让 hygiene 打开 docs 扫描。顺手修 codex-review 技能 privacy-scan.sh：以 P1/P2 开头的评审被 file 误判为 Netpbm 图片 → 改为字节复查（无 NUL 且合法 UTF-8 才放行），并按扩展名拦 pbm/pgm/ppm/pnm；4 个样例验证
 - 2026-11-02 hygiene：R-SIZE 扫 docs/experiments（测试 docs_experiments_are_scanned），docs 最大 590；codex 第 3 轮 P1×2 P2×1 属实已修（待定连原因比 · 生产引用的文件不当测试 · R-RATE 逐字符划测试区）；xtask 47/1（tidy_passes 预期）；codex 第 4 轮在跑
+- 2026-11-02 hygiene codex 第 4、5 轮各 1 条 P1 都在 test_modules.rs（已修）。8d 定：改保守规则——只认 #[cfg(test)] mod tests; 声明的 tests.rs / tests/，其余照查，例外用文件头 NRT 标注；删掉传播与路径跟踪代码，第 6 轮审新逻辑
