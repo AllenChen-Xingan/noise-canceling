@@ -34,6 +34,9 @@ for r in $(seq 1 "$rounds"); do
   done
 done
 for r in $(seq 1 "$rounds"); do
+  # 连续跑（帧间不睡）：纯计算口径，可与 exp010 的 0.088 ms 对照
+  "$bin" gtcrn-layers "$w" "$wav" --frames 6000 --warmup 200 --qos rt --pace-ms 0 --variant "$variant" \
+    | sed "s/^{/{\"round\":$r,/" >> "$out/layers.jsonl"
   for q in rt bg; do
     echo "round $r gtcrn-layers $q paced" >&2
     "$bin" gtcrn-layers "$w" "$wav" --frames 6000 --warmup 200 --qos "$q" --pace-ms 16 --variant "$variant" \
