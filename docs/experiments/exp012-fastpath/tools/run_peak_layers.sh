@@ -24,7 +24,7 @@ mkdir -p "$out"
   echo "load: $(sysctl -n vm.loadavg)"
   echo "git: $(git -C "$repo" rev-parse --short HEAD)"
   echo "bin_sha256: $(shasum -a 256 "$bin" | cut -d' ' -f1)"
-  echo "heavy_lock: $(cat "$main_dir/_tmp/heavy.lock" 2>/dev/null || echo 无)"
+  echo "heavy_lock: $(cat "$main_dir/_tmp/heavy.lock/owner" 2>/dev/null || echo 无)"
 } > "$out/env.txt"
 
 for r in $(seq 1 "$rounds"); do
