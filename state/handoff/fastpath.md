@@ -5,6 +5,7 @@
 ## 合并前必做（大总管定 2026-11-02）
 - [ ] applebe 的 019 先合进 main；之后本分支 `git merge main`
 - [ ] 在 `docs/experiments/exp010-inference-bench/apple-rs/tests/fields.rs` 的 `APPLE_ONLY` 里删掉 `win_start_unix` / `win_end_unix` / `wall_s` 三条，跑该测试转绿
+- [ ] **所有代码文件 ≤ 600 行**（人定，随 #62 写进 CLAUDE.md 第五节第 7 条，不设基线、不留豁免）：拆 `bench/src/gtcrn_native.rs`（1926）· `bench/src/main.rs`（1280）· `bench/src/gtcrn_native/v2.rs`（605）。按职责拆，输出逐位不变（单元测试 + 对拍证明）；`apple-rs/tests/fields.rs` 读 `bench/src/main.rs` 的输出格式串当真相源——拆后若 bench 的 println 移到别的文件，那边的路径一并改（或告诉 applebe）
 
 ## 进度
 - [x] 报到；调研 workflow 已起（3 调研 + 3 怀疑派）
