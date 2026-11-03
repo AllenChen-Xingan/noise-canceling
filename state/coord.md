@@ -58,15 +58,17 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | 47 方（V7 等三件），16:34 起 |
+| 重编译 / 全量测试 / 跑模型（1 个） | applebe（装 venv · 转模型 · apple-rs · Core ML / BNNS / MLX 从 Rust 测），17:14 起约 40 min；锁 `_tmp/heavy.lock` |
 
-排队：47 三件（进行中）→ rustbe（Python ORT vs Rust ORT 交替 3 轮 + 自审补跑，约 3 min，短活先跑）→ applebe（apple-rs 构建 + Core ML / BNNS / MLX 从 Rust 测，约 30–40 min）
+排队：rustbe（Accelerate 小矩阵接进手写 GTCRN 后复测，待申请）
 
 **跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。加锁文件：mkdir 主目录 `_tmp/heavy.lock`（内写 owner · 开始 · 预计结束，跑完 rmdir），由各自大总管放名额时建、收回时删，手下不碰（47 已确认）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 17:30 applebe 主基准跑完，在跑 10 min 实时节奏超时帧检查（到约 17:40）。venv 核清：实际下载约 270 MB（exp010-venv 约 200 MB + 新建转换用 exp010-venv-ct 约 73 MB，因 coremltools 9.0 在 py3.13 崩），无单次 > 500 MB；du 982 MB 是 torch 解压后体积
+- 2026-11-02 17:13 rustbe r5b：手写 GTCRN 逐位不变优化后 p50 0.0875 ms（D69 预算 ≤ 0.08 ms，差约 10%）；Python ORT p50 0.40 vs Rust ORT 0.38 ms（Python 慢约 5%，输出逐位相同）；10 min 长跑 133 dB · reset 逐位相同 · FE-M 改写图逐位相同；Accelerate 小矩阵 11 µs vs 手写 21 µs，下一步接进去
 - 2026-11-02 人补「或者说最高2%」→ D69 改：目标 1%、硬上限 2%（AI 理解，待确认）；已转 applebe
 - 2026-11-02 applebe 写 standard.md §6.1 CPU 分摊（合计 1.00%）：降噪推理 0.50 · 认人 0.15 · VAD 0.06 · 场景 0.07 · STFT 与重采样 0.07 · 采集输出 0.05 · 修音 0.05 · 余量 0.05。风险：认人 1.2% 超总线（→ backlog 认人）；手写 GTCRN 0.63% 超 0.50%（019 内看）；FE-M 在 ORT 上约 3.7%，D33 备选要重估（收尾时出题）；四项未量（→ backlog）
 - 2026-11-02 人定 D69「我的底线是1%」→ 整个降噪软件常开 ≤ 0.01 核（AI 理解口径，待人确认）；已转 applebe 改 BE-CPU
