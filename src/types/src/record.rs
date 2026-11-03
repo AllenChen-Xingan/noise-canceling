@@ -5,6 +5,7 @@
 //! 以后经 rtrb 送出来再记，实时线程本身不写日志（R3）。
 //!
 //! 文本形态：头部若干 `键 = 值`，然后 `[events]` 小节，一行一个 `e = <时刻> <种类> <参数…>`（空格分隔、按位置）。
+//! 一场会话的整体（头 + 事件）在 [`crate::session`]。
 
 use core::fmt::Write as _;
 
@@ -380,94 +381,12 @@ fn parse_bypass(s: &str) -> Option<BypassReason> {
     .find(|r| bypass_str(*r) == s)
 }
 
-/// 会话头：当时用的是哪份表、哪份配置、什么采样率。不记设备名、不记时间以外的任何身份信息。
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct SessionHeader {
-    /// IO 采样率（事件时刻的单位）
-    pub rate: u32,
-    pub table: (TableVersion, ContentId),
-    pub profile: (ProfileVersion, ContentId),
-}
-
-/// 一场会话的记录。
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct SessionRecord {
-    pub header: SessionHeader,
-    pub events: Vec<DecisionEvent>,
-}
-
-impl SessionRecord {
-    pub const FORMAT: u32 = 1;
-    const HEADER: &'static str = "vdn-session";
-
-    pub fn to_text(&self) -> String {
-        let h = &self.header;
-        let mut s = String::new();
-        let _ = writeln!(s, "{} = {}", Self::HEADER, Self::FORMAT);
-        let _ = writeln!(s, "rate = {}", h.rate);
-        let _ = writeln!(s, "table = {} {}", h.table.0.0, h.table.1);
-        let _ = writeln!(s, "profile = {} {}", h.profile.0.0, h.profile.1);
-        s.push_str("[events]\n");
-        for e in &self.events {
-            let _ = writeln!(s, "e = {}", e.to_line());
-        }
-        s
-    }
-
-    pub fn from_text(src: &str) -> Result<Self, TextError> {
-        let mut r = SessionRecord::default();
-        let mut seen_header = false;
-        let mut in_events = false;
-        text::parse(src, |line, l| {
-            match l {
-                Line::Kv { key, value } if !seen_header => {
-                    let f: u32 = text::num(line, value)?;
-                    if key != Self::HEADER || f == 0 || f > Self::FORMAT {
-                        return Err(text::err(line, "不是会话记录，或格式号比本程序新"));
-                    }
-                    seen_header = true;
-                }
-                Line::Section { kind: "events", .. } if seen_header => in_events = true,
-                Line::Section { .. } => return Err(text::err(line, "未知的小节")),
-                Line::Kv { key: "e", value } if in_events => {
-                    r.events.push(DecisionEvent::from_line(line, value)?)
-                }
-                Line::Kv { key, value } if !in_events => {
-                    let mut it = value.split_whitespace();
-                    let mut tok = || it.next().ok_or(text::err(line, "值不全"));
-                    match key {
-                        "rate" => r.header.rate = text::num(line, tok()?)?,
-                        "table" => {
-                            r.header.table = (
-                                TableVersion(text::num(line, tok()?)?),
-                                ContentId::parse(tok()?).ok_or(text::err(line, "内容 ID 不对"))?,
-                            )
-                        }
-                        "profile" => {
-                            r.header.profile = (
-                                ProfileVersion(text::num(line, tok()?)?),
-                                ContentId::parse(tok()?).ok_or(text::err(line, "内容 ID 不对"))?,
-                            )
-                        }
-                        _ => return Err(text::err(line, "未知的键")),
-                    }
-                }
-                Line::Kv { .. } => return Err(text::err(line, "未知的键")),
-            }
-            Ok(())
-        })?;
-        if !seen_header {
-            return Err(text::err(0, "空文件"));
-        }
-        Ok(r)
-    }
-}
-
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
-    fn every_kind() -> Vec<DecisionEvent> {
+    /// 每种事件各一条（会话记录往返测试也用，`session.rs`）
+    pub(crate) fn every_kind() -> Vec<DecisionEvent> {
         let at = SampleClock(96_000);
         let p = ParamSet {
             floor_db: -18.5,
@@ -547,19 +466,6 @@ mod tests {
             let line = e.to_line();
             assert_eq!(DecisionEvent::from_line(1, &line).unwrap(), e, "{line}");
         }
-    }
-
-    #[test]
-    fn session_roundtrips() {
-        let r = SessionRecord {
-            header: SessionHeader {
-                rate: 48_000,
-                table: (TableVersion(3), ContentId::of(b"t")),
-                profile: (ProfileVersion(1), ContentId::of(b"p")),
-            },
-            events: every_kind(),
-        };
-        assert_eq!(SessionRecord::from_text(&r.to_text()).unwrap(), r);
     }
 
     #[test]
