@@ -3,7 +3,17 @@
 > 只有大总管跟人说话。手下做完、卡住、要名额，只报给大总管。
 > 大总管会话名：`noise-canceling-e3`（2026-11-02 换班；旧名 c4 · 69）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
 
-## 当前大事（2026-11-02 起）
+## 当前大事 · 大总管 noise-canceling-99（2026-11-02 起，另一件，与 e3 并行）
+
+**处理图 + schema 交叉校验**（D72 · `docs/plan/011_schema-crosscheck.md` · CLAUDE.md 第五节第 5 条）。人原话「我们现在开始做 schema 以及图的事情吧」。批次 `_tmp/20261102-b9/`，tmux 工作区 `vdn-schema`。
+第一阶段两条线并行；第二阶段「处理图（含会话记录记图版本 · 前端只算一次 D71 · 参数描述导出 schema · 模型接口）」等第一阶段合并后派。
+
+| 手下 | 线 | 管的实体 | 状态 |
+|---|---|---|---|
+| single | 清镜像副本 · 参数只写一处 · #56 · `feat/types-single-source` · `../noise_canceling-single` | vdn-types（参数描述）· vdn-speaker · vdn-polish · vdn-scene | 已派 |
+| schema | schema 导出 + 交叉校验 · #57 · `feat/schema-crosscheck` · `../noise_canceling-schema` | schema 机制 · 共享内存头 · 配置 · 评测任务清单 | 已派 |
+
+## 当前大事 · 大总管 noise-canceling-e3（2026-11-02 起）
 
 **推理引擎：降噪模型在 Mac 上用什么跑最快、最稳、最省电**（「轻快」尺子 · D53）。人定「可以先做1」。批次 `_tmp/20261102-b8/`。
 
@@ -71,6 +81,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-02 applebe：Accelerate 措辞已写；`apple-rs/tests/fields.rs` 以 bench 为唯一真相源比对 JSON 键（抓到 late_* ≠ release_* 同名不同义并改正）；main.rs 4 条 + power_parse 4 条测试通过；codex 第 6 轮在跑。转交：bench 补计时窗字段（win_start_unix / win_end_unix / wall_s），否则手写版耗电不进排名 → 派给「下界分析」手下
 - 2026-11-02 rustbe 收尾：PR #55 合并（0 分配整数证据 6000 帧 · 10 条单元测试 · 形状交叉校验）。AI 定：Accelerate「cblas / vDSP 路线已不采用；BNNS 路线待证实」；JSON 字段交叉校验由 applebe 在 apple-rs 加测试
 - 2026-11-02 19:25 rustbe 报可以收尾（codex 5 轮，P1×7 P2×20 全改，第 4、5 轮无 P0/P1）；缺口：评审后改动只 cargo check → 给 5 min 名额重编 + 小对拍再开 PR。其待拍板：①手写替换 ORT → AI 定「随『接起来』大事做，挡线补齐前不进产品」②FE-M 去留（已在总清单）③报 tract bug → 4-12
 - 2026-11-02 19:01 rustbe rt1（单次 60 s，只看方向）：按节奏手写 p50 ui 0.39 · **rt 0.21** · ui+工作组 0.62 · rt+工作组 0.61 ms（工作组变差，但设备未跑音频 IO）；同为 ui，10 min 那次 0.61 vs 这次 0.39 → 单次波动大于设置间差；native-fast 过对拍（133.4 dB），连续 0.0838 vs 手写 0.0898 ms。名额超时约 8 min（重编 9 min）。issue #53（engine NaN）已转 47
