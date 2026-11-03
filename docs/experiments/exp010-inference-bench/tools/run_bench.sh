@@ -37,6 +37,10 @@ $BIN fem-parity "$F" "$WAV" --vs ort --b-onnx "$FT" >> "$OUT/parity.jsonl"      
 $BIN gtcrn-parity "$W" "$G" "$WAV" --vs native --frames 37500 --reset-at 20000 >> "$OUT/parity.jsonl"  # 10 分钟长跑 + reset
 $BIN gtcrn-parity "$W" "$G" "$WAV" --vs tract --frames 6201 >> "$OUT/parity.jsonl"   # 与基准等长
 
+# tract 复用同一个运行状态（已知会算错）：留证据，并把「每帧新开状态」的代价和分配次数单独量出来
+EXP010_TRACT_REUSE=1 $BIN gtcrn-parity "$W" "$G" "$WAV" --vs tract | sed 's/"vs":"tract"/"vs":"tract-reuse-known-wrong"/' >> "$OUT/parity.jsonl"
+EXP010_TRACT_REUSE=1 $BIN gtcrn-bench tract "$G" "$WAV" | sed 's/"backend":"tract"/"backend":"tract-reuse-known-wrong"/' >> "$OUT/bench-extra.jsonl"
+
 # 交替跑，且每轮把后端顺序轮换一位，避免发热 / 频率漂移总偏向同一个后端
 G3=(ort native tract); F2=(ort tract)
 for r in $(seq 1 "$ROUNDS"); do
@@ -53,4 +57,4 @@ for r in $(seq 1 "$ROUNDS"); do
 done
 echo "load_after=$(sysctl -n vm.loadavg)" >> "$OUT/env.txt"
 echo "uptime_after: $(uptime)" >> "$OUT/env.txt"
-cat "$OUT/parity.jsonl" "$OUT/bench.jsonl"
+cat "$OUT/parity.jsonl" "$OUT/bench.jsonl" "$OUT/bench-extra.jsonl"
