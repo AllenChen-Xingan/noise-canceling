@@ -74,37 +74,99 @@ fn scene_table(key: &str, value: &str) -> String {
     format!("vdn-scene-table = 1\n[fine 3]\nname = a\nuser = cafe\n{key} = {value}\n")
 }
 
-/// 文件列出的参数键 = `ParamField` 的键 = 两个解析器都认的键；模型名 = `ModelId::NAMES`；没列出的键都拒。
+/// 一个键的合法取值（造输入用）。
+fn sample(key: &str) -> String {
+    match key {
+        "version" | "tone" => "1".into(),
+        "binding" => vdn_types::ConfigBinding::default().to_value(),
+        "name" => "a".into(),
+        "user" => "cafe".into(),
+        "model" => ModelId::NAMES[0].into(),
+        k => desc::by_key(k).unwrap().default.to_string(),
+    }
+}
+
+/// 某格式某小节里放一行 `key = value` 的完整文本（[fine] 在场景表里必须有 name / user，这两行先写上）。
+fn doc(format: &str, section: &str, key: &str, value: &str) -> String {
+    let body = match (format, section) {
+        (_, "top") => String::new(),
+        (_, "user") => "[user cafe]\n".into(),
+        ("vdn-scene-table", "fine") if key != "name" && key != "user" => {
+            "[fine 3]\nname = a\nuser = cafe\n".into()
+        }
+        ("vdn-scene-table", "fine") => {
+            let other = if key == "name" { "user = cafe" } else { "name = a" };
+            format!("[fine 3]\n{other}\n")
+        }
+        _ => "[fine 3]\n".into(),
+    };
+    format!("{format} = 1\n{body}{key} = {value}\n")
+}
+
+fn parses(format: &str, src: &str) -> bool {
+    match format {
+        "vdn-scene-table" => SceneTable::from_text(src).is_ok(),
+        "vdn-profile" => UserProfile::from_text(src).is_ok(),
+        f => panic!("未知格式 {f}"),
+    }
+}
+
+/// 各格式各小节列出的键都认；任何别处列出、这里没列的键都拒（codex 第 1 轮 #5）；
+/// 参数键 = `ParamField` 的键，模型名 = `ModelId::NAMES`；拼错的键、代码里才用的参数都拒。
 #[test]
 fn text_keys_agree_with_parsers() {
     let t = table();
     let tf = &t["text_formats"];
-    let keys = strs(&tf["param_keys"]);
+    let params = strs(&tf["param_keys"]);
     let want: Vec<&str> = ParamField::ALL.iter().map(|f| f.as_str()).collect();
-    assert_eq!(keys, want);
+    assert_eq!(params, want);
     assert_eq!(strs(&tf["models"]), ModelId::NAMES);
-    assert_eq!(strs(&tf["headers"]), ["vdn-scene-table", "vdn-profile"]);
-    for k in &keys {
-        let d = desc::by_key(k).unwrap();
-        let v = d.default.to_string();
-        UserProfile::from_text(&profile(k, &v)).unwrap_or_else(|e| panic!("{k}：{e}"));
-        SceneTable::from_text(&scene_table(k, &v)).unwrap_or_else(|e| panic!("{k}：{e}"));
+    let formats = tf["formats"].as_object().unwrap();
+    assert_eq!(
+        formats.keys().map(String::as_str).collect::<Vec<_>>(),
+        ["vdn-profile", "vdn-scene-table"]
+    );
+    let expand = |v: &Value| -> Vec<String> {
+        strs(v)
+            .into_iter()
+            .flat_map(|k| {
+                if k == "params" {
+                    params.iter().map(|p| p.to_string()).collect()
+                } else {
+                    vec![k.to_string()]
+                }
+            })
+            .collect()
+    };
+    // 所有格式所有小节出现过的键 + 几个不该认的
+    let mut universe: Vec<String> = Vec::new();
+    for f in formats.values() {
+        for v in f.as_object().unwrap().values() {
+            universe.extend(expand(v));
+        }
+    }
+    universe.extend(["gate.attack_s", "floor", "Floor_db", "audio"].map(String::from));
+    universe.sort();
+    universe.dedup();
+    for (fname, secs) in formats {
+        let secs = secs.as_object().unwrap();
+        assert_eq!(
+            secs.keys().map(String::as_str).collect::<Vec<_>>(),
+            ["fine", "top", "user"]
+        );
+        for (sec, keys) in secs {
+            let ok = expand(keys);
+            for k in &universe {
+                let got = parses(fname, &doc(fname, sec, k, &sample(k)));
+                assert_eq!(got, ok.contains(k), "{fname} [{sec}] {k}");
+            }
+        }
     }
     for m in ModelId::NAMES {
-        UserProfile::from_text(&profile("model", m)).unwrap();
-        SceneTable::from_text(&scene_table("model", m)).unwrap();
+        assert!(parses("vdn-profile", &doc("vdn-profile", "user", "model", m)));
+        assert!(parses("vdn-scene-table", &doc("vdn-scene-table", "fine", "model", m)));
     }
-    UserProfile::from_text(&profile("tone", "1")).unwrap();
-    SceneTable::from_text(&scene_table("tone", "1")).unwrap();
-    // 不是文本键的参数（只在代码里用的，如门控的 gate.attack_s）和拼错的键都拒
-    for bad in ["gate.attack_s", "floor", "Floor_db", "audio"] {
-        assert!(UserProfile::from_text(&profile(bad, "0")).is_err(), "{bad}");
-        assert!(
-            SceneTable::from_text(&scene_table(bad, "0")).is_err(),
-            "{bad}"
-        );
-    }
-    assert!(UserProfile::from_text(&profile("model", "nope")).is_err());
+    assert!(!parses("vdn-profile", &doc("vdn-profile", "user", "model", "nope")));
 }
 
 /// 每个文本参数取描述表的边界外一点：两种文本都拒；边界值收下。
