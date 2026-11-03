@@ -28,7 +28,7 @@ fn registry_is_well_formed() {
         assert!(a.version > 0, "{} 版本从 1 起", a.name);
         // 规约 §3.3：「每级 dry 对齐」做出来之前，级延迟必须为 0
         assert_eq!(a.latency_samples, 0, "{}", a.name);
-        assert!(!a.name.is_empty() && !a.name.contains(char::is_whitespace));
+        assert!(valid_name(a.name), "{} 名字不合法", a.name);
         for b in KINDS.iter().skip(i + 1) {
             assert_ne!(a.id, b.id, "编号重复：{} / {}", a.name, b.name);
             assert_ne!(a.name, b.name, "名字重复");
@@ -257,4 +257,32 @@ fn content_id_changes_with_any_part() {
         ..G
     };
     assert_eq!(doc_only.content_id(), base);
+}
+
+/// codex 第 1 轮 #1：名字里带换行和空格，曾能伪造出与另一张图相同的规范文本。
+#[test]
+fn names_cannot_forge_canonical_text() {
+    const A: NodeKind = test_kind(0xF000, "a", 0);
+    const B: NodeKind = test_kind(0xF001, "b", 0);
+    const FORGED: NodeKind = NodeKind {
+        name: "a 1 time 0 \nnode = 61441 b",
+        ..A
+    };
+    let two = ProcessingGraph {
+        stages: &[&A, &B],
+        ..ProcessingGraph::bare(ModelId::Gtcrn)
+    };
+    let one = ProcessingGraph {
+        stages: &[&FORGED],
+        ..ProcessingGraph::bare(ModelId::Gtcrn)
+    };
+    assert_ne!(one.canonical_text(), two.canonical_text());
+    assert_ne!(one.content_id(), two.content_id());
+    assert!(one.canonical_text().contains("a%201%20time%200%20%0Anode%20%3D%2061441%20b"));
+    assert!(matches!(one.check(), Err(ChainMismatch::BadName { index: 0, .. })));
+    assert_eq!(two.check(), Ok(()));
+    for bad in ["", "A", "a b", "a\n", "a%", "é"] {
+        assert!(!valid_name(bad), "{bad:?}");
+    }
+    assert!(valid_name("asym-gate") && valid_name("ftz_spy") && valid_name("v2"));
 }

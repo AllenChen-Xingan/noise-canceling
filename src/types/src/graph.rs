@@ -71,6 +71,34 @@ impl NodeKind {
     }
 }
 
+/// 名字只许 `[a-z0-9_-]`、非空（规范文本里不转义、不会和分隔符混在一起）。
+pub const fn valid_name(name: &str) -> bool {
+    let b = name.as_bytes();
+    if b.is_empty() {
+        return false;
+    }
+    let mut i = 0;
+    while i < b.len() {
+        let c = b[i];
+        if !(c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-' || c == b'_') {
+            return false;
+        }
+        i += 1;
+    }
+    true
+}
+
+/// 规范文本里写名字：合法字符原样，其余字节一律 `%XX`（`%` 自己也转义），所以任何名字都不会造出分隔符。
+fn write_name(s: &mut String, name: &str) {
+    for b in name.bytes() {
+        if b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'_' {
+            s.push(char::from(b));
+        } else {
+            let _ = write!(s, "%{b:02X}");
+        }
+    }
+}
+
 /// 测试里假级的编号下限（`0xF000..`）；登记表里的种类一律小于它。
 pub const TEST_ID_MIN: u16 = 0xF000;
 
@@ -224,6 +252,7 @@ pub const KINDS: [&NodeKind; 6] = [
 /// 测试里假级的种类：编号须 `>= TEST_ID_MIN`（编译期查），时域挂点、版本 1、不读参数。不进登记表。
 pub const fn test_kind(id: u16, name: &'static str, latency_samples: usize) -> NodeKind {
     assert!(id >= TEST_ID_MIN, "测试种类的编号须 >= TEST_ID_MIN");
+    assert!(valid_name(name), "名字只许 [a-z0-9_-]");
     NodeKind {
         id,
         name,
@@ -267,10 +296,16 @@ impl ProcessingGraph {
         }
     }
 
-    /// 挂点对不对：`spectral` 里只能是频域级，`stages` 里只能是时域级。
+    /// 挂点对不对：`spectral` 里只能是频域级，`stages` 里只能是时域级；名字合法（[`valid_name`]）。
     pub fn check(&self) -> Result<(), ChainMismatch> {
         for (list, hook) in [(self.spectral, Hook::Spectral), (self.stages, Hook::Time)] {
             for (index, k) in list.iter().enumerate() {
+                if !valid_name(k.name) {
+                    return Err(ChainMismatch::BadName {
+                        index,
+                        stage: k.name,
+                    });
+                }
                 if k.hook != hook {
                     return Err(ChainMismatch::WrongHook {
                         index,
@@ -284,6 +319,7 @@ impl ProcessingGraph {
     }
 
     /// 规范文本：内容 ID 就是它的哈希。一行一个节点：`<编号> <名字> <版本> <挂点> <延迟> <参数编号,…>`。
+    /// 名字里 `[a-z0-9_-]` 以外的字节写成 `%XX`（合法名字原样），其余字段都是数字或固定词，所以文本无歧义。
     /// 不含 `doc`（改说明不算换图）。构造期用（会分配）。
     pub fn canonical_text(&self) -> String {
         let mut s = String::new();
@@ -293,11 +329,11 @@ impl ProcessingGraph {
             let _ = writeln!(s, "[{section}]");
             for k in list {
                 let params: Vec<String> = k.params.iter().map(|p| p.id.to_string()).collect();
+                let _ = write!(s, "node = {} ", k.id);
+                write_name(&mut s, k.name);
                 let _ = writeln!(
                     s,
-                    "node = {} {} {} {} {} {}",
-                    k.id,
-                    k.name,
+                    " {} {} {} {}",
                     k.version,
                     k.hook.as_str(),
                     k.latency_samples,
@@ -336,6 +372,8 @@ pub enum ChainMismatch {
         declared: usize,
         actual: usize,
     },
+    /// 名字含 `[a-z0-9_-]` 以外的字符或为空
+    BadName { index: usize, stage: &'static str },
     /// 时域位置放了频域级，或反过来
     WrongHook {
         index: usize,
@@ -370,6 +408,9 @@ impl fmt::Display for ChainMismatch {
                 f,
                 "第 {index} 级 {stage}：描述声明延迟 {declared} 个样本，运行时报 {actual} 个"
             ),
+            ChainMismatch::BadName { index, stage } => {
+                write!(f, "第 {index} 级的名字 {stage:?} 不合法（只许 a-z 0-9 - _）")
+            }
             ChainMismatch::WrongHook { index, stage, hook } => write!(
                 f,
                 "第 {index} 级 {stage} 是 {} 挂点的节点，放错了位置",
