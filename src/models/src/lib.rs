@@ -17,6 +17,7 @@
 )]
 pub mod fastenhancer;
 pub mod gtcrn;
+pub mod interface;
 
 use std::path::{Path, PathBuf};
 
@@ -24,6 +25,7 @@ use vdn_types::{Basis, LatencyItem, LatencyLedger};
 
 pub use fastenhancer::FastEnhancer;
 pub use gtcrn::Gtcrn;
+pub use interface::{Interface, TensorDecl};
 pub use vdn_backend_ort::BoxError;
 /// 模型名的正本在这里（`ModelId::as_str` / `NAMES` / `parse`）；再导出给只依赖本 crate 的 bin 用。
 pub use vdn_types::ModelId;
@@ -75,6 +77,14 @@ impl ModelKind {
                 hop: 160,
                 latency_samples: 352,
             },
+        }
+    }
+
+    /// 声明的输入输出张量（名字、顺序、形状）。打开文件时按它核对；导出到 `specs/schema/models.interface.json`。
+    pub const fn interface(self) -> Interface {
+        match self {
+            ModelKind::Gtcrn => interface::GTCRN,
+            ModelKind::FastEnhancerM => interface::FASTENHANCER_M,
         }
     }
 
