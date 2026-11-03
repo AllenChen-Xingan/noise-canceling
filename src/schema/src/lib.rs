@@ -10,6 +10,7 @@
 #![forbid(unsafe_code)]
 
 pub mod eval;
+pub mod graph;
 pub mod shm;
 
 use std::path::{Path, PathBuf};
@@ -121,6 +122,14 @@ pub fn export() -> Vec<Doc> {
         Doc {
             file: eval::BASELINE_FILE,
             text: pretty(&eval::baseline_schema()),
+        },
+        Doc {
+            file: graph::KINDS_FILE,
+            text: pretty(&graph::kinds_doc()),
+        },
+        Doc {
+            file: graph::SESSION_FILE,
+            text: pretty(&graph::session_doc()),
         },
     ]
 }
