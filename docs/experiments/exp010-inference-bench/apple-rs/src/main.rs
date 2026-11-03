@@ -273,7 +273,7 @@ fn bench(o: &Opts) -> Result<(), String> {
         v.clear();
     }
     for i in (0..saved.len()).step_by(1024) {
-        saved[i] = std::hint::black_box(0.0);
+        saved[i] = std::hint::black_box(1.0); // 写非零值：写 0 到按需清零的页上可能不会真的调页；这些位置之后都会被覆盖
     }
     let fp0 = footprint_mb();
     let t0 = Instant::now();

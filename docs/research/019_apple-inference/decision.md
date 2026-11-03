@@ -1,6 +1,6 @@
 # 019 · 降噪模型在 Mac 上用什么推理后端（总方案）
 
-> 2026-11-02 · applebe（苹果引擎）汇总 rustbe（纯 Rust）· 状态：**草稿 v3**——同模型 3 视角只读自审一轮、codex 第 1 轮（P1×5 · P2×2，全部属实已改，见 `docs/reviews/019_apple-inference-codex.md`）后修订。
+> 2026-11-02 · applebe（苹果引擎）汇总 rustbe（纯 Rust）· 状态：**草稿 v4**——同模型 3 视角只读自审一轮、codex 三轮（全部属实已改，见 `docs/reviews/019_apple-inference-codex.md`）后修订。
 > 判据：`standard.md`（17 个 verifier）。技术线【AI 定；人可改】；人定的：D75 判什么（对前台性能的影响 + 耗电主排序；`BE-IMPACT` 的 1% / 2% 两个数是 AI 对 D75 的理解，待人确认）、D78 最低 macOS 15（原误记为 D77）、D70 榨干硬件 · 低能耗 · 轻量。
 > 数字一律本机实测（Apple M5 · macOS 27.0.1 · 插电），从 Rust 调（D68）；来源路径写在每条后面。**全部只在这一台机器上测过。**
 
@@ -24,7 +24,7 @@
 | 挡线 | 纯手写 · rt | 依据 |
 |---|---|---|
 | `BE-PARITY` | **过**：对 ORT 134.0 dB，无 first_bad | rustbe r4 |
-| `BE-RT-ALLOC` | **过**：每帧 0 次 malloc | rustbe `--count-malloc` |
+| `BE-RT-ALLOC` | **过**（转记）：rustbe `--count-malloc` 报每帧 0 次；按新规则要看整数总数 `process_allocs_total == 0`，待对 rustbe 正本 `results/20261102-blas1/malloc.jsonl` 核整数 | rustbe |
 | `BE-FRAME`（p99.9 ≤ 1.0 · max ≤ 2.0） | **过**（60 s）：p99.9 0.65 · max 0.66 ms | build 20261102-183322-rt |
 | `BE-DEADLINE`（10 分钟 0 帧**迟到** > 3 ms） | **未测**：rt 下没跑过 10 分钟；ui 下 10 分钟有 6 帧调用耗时 > 3 ms（已不过）；「迟到」口径（含唤醒迟到）是 codex 第 1 轮后才加的 | `notes/rustbe-numbers.md` |
 | `BE-IMPACT` | **未测**（第一批作废） | — |
@@ -37,7 +37,7 @@
 
 **待证实的更省电方案：手写 + Accelerate（`native-blas`）。** 实时节奏下 p50 0.43 ms（比纯手写快 28%；按平均值是 20%），CPU 功率 71 mW（单次、噪声里）。但每帧 11 次 malloc（Accelerate 内部，rustbe 实测），过不了 `BE-RT-ALLOC`。**翻盘条件**（两条都满足才改选它）：① 交替重复 ≥ 3 轮后仍显著更省电（差值大于噪声底）；② 查明那 11 次分配出在哪个调用、能换成不分配的接口（如 `vDSP_mmul` 代替 `cblas_sgemm`，或预分配工作区）——② 已转 rustbe。
 
-**苹果侧备选：BNNS Graph + GRU 展开。** 连续跑 p50 0.155 ms（ORT 的 2.5 倍快），0 分配，133.9 dB。但在 D74 默认（rt）下按节奏跑 p99.9 1.34 ms，**过不了 `BE-FRAME`**（≤ 1.0）；加自建工作组区间后 p99.9 0.23–0.28 ms 能过，代价是 CPU 功率高 25–40 mW。
+**苹果侧备选：BNNS Graph + GRU 展开。** 连续跑 p50 0.155 ms（ORT 的 2.5 倍快），0 分配，133.9 dB。但在 D74 默认（rt）下按节奏跑 p99.9 1.34 ms，**过不了 `BE-FRAME`**（≤ 1.0）；加自建工作组区间后 p99.9 0.23–0.28 ms 能过；那一次 CPU 功率高 25–40 mW，但只是单次观察、差值与噪声同量级，省不省电要等交替重复测（codex 第 3 轮 #2）。
 
 其他模型：
 
@@ -98,7 +98,7 @@
 ## 6. 对延迟账的影响
 
 - 延迟账里没有单列推理耗时，它被「跨进程环余量 3.00 ms」盖住（`docs/research/009_rust-ecosystem/decision.md:62`）。模型带来的 32 ms 是 STFT 窗长决定的算法延迟，换后端改不了。所以换后端**不减延迟账**，收益在耗电（D70 · D75）和尾部。
-- 尾部：在 D74 默认（rt）下，60 s 内所有设置的最大一帧都 ≤ 1.41 ms，在 3 ms 余量之内；10 分钟长跑只在 ui 下跑过，那时纯手写有 6 帧、BNNS 至少 1 帧超过 3 ms（会送原声）。rt 下的 10 分钟长跑待测。
+- 尾部：产品的缓冲余量按 D74 是 4 ms（`BE-DEADLINE` 取 3 ms 作更严的技术线）。在 D74 默认（rt）下，60 s 内所有设置的最大调用耗时都 ≤ 1.41 ms；10 分钟长跑只在 ui 下跑过，那时纯手写有 6 帧、BNNS 至少 1 帧调用耗时超过 3 ms（是否超过 4 ms、会不会送原声没分开统计）。rt 下、按「迟到」口径的 10 分钟长跑待测。
 - 最低系统：D78 定为 macOS 15，BNNS Graph / `MLState` 都不再有系统版本冲突（原待拍板 2-8 随之解决）。
 
 ## 7. 还没做的（需要名额或人）
