@@ -202,13 +202,16 @@ vdn 的推理本来就不在送音线程上。推理在另一个进程，中间�
 3. **Core ML**（经 `objc2-core-ml`），做 4 种计算单元：`CPUOnly`、`CPUAndNeuralEngine`、`CPUAndGPU`、`All`。每种再分 2 个变体：
    - 显式缓存的无状态版；
    - `MLState` 有状态版（macOS 15+）。
+   - ⚠️ 模型精度和计算单元要配对：fp32 模型配 `CPUAndNeuralEngine` 等于只跑 CPU（ANE 不收 fp32），测了也没意义。ANE 两档只用 fp16 模型测；`CPUOnly` 用 fp32 模型测（怀疑派补）。
+   - GTCRN 另加一个「导出前手动展开 GRU」的变体，去掉 `while_loop`（`coreml.md:99,118`）。
 
    通用设置：
    - 输入 `MLMultiArray` 用 `initWithDataPointer` 指向固定缓冲，`MLDictionaryFeatureProvider` 只建一次；
    - 设 `outputBackings`，并按对象身份检查框架有没有真用它（`MLPredictionOptions.h:38-49`）；
-   - `MLOptimizationHints.specializationStrategy` 设 `FastPrediction`；
+   - `MLOptimizationHints.specializationStrategy` 设 `FastPrediction`（macOS 15+）；
    - 每帧外面包一层 `autoreleasepool`；
-   - 用 `MLComputePlan` 记录每个算子实际跑在哪个单元。
+   - 用 `MLComputePlan` 记录每个算子实际跑在哪个单元（macOS 14.4+），数每帧单元切换次数；
+   - 用同步接口，一个模型实例只给推理线程用（同步接口不是线程安全的，`coreml.md:69`）。
 4. **MLX**：编译过的函数，每帧 `eval`，CPU 流和 GPU 流各一次。只作对照。
 5. **ORT CoreML EP**：`ModelFormat=MLProgram`、`RequireStaticInputShapes=1`、`ProfileComputePlan=1`，记录图被切成几段。
 
