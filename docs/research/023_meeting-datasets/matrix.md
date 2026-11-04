@@ -14,9 +14,9 @@
 
 | 场景键 | Mac | 其他笔记本 | 台式 | 手机平板 | 麦阵终端 | 近讲参考 |
 |---|---|---|---|---|---|---|
-| `meeting-room` | 🟥 | DNS1 dev SurfaceBook 44 条（未查到许可）。ACE Chromebook 档只是**合成原料**（实测 RIR + 现场噪声，语音要自己卷积相加），不算真实录音锚 | 🟥 | DAPS confroom（iPad / iPhone 回放，有参考，CC BY-NC → 只评测）· DDS（iPad 回放，有参考，只评测） | NOTSOFAR-1（会议约 31.5 h，转写，CC BY → 训练可）· AMI（约 100 h，训练可）· ICSI（约 72 h，训练可）· AliMeeting（118.75 h，CC BY-SA → 只评测）· AISHELL-4（120 h，只评测）· MISP-Meeting（125 h，讯飞办公本内置 8 麦，非商用 → 只评测）· ConferencingSpeech 2021（>200 条，需注册） | AMI · ICSI · AliMeeting · NOTSOFAR（仅 train / dev）· MISP-Meeting |
+| `meeting-room` | 🟥 | DNS1 dev SurfaceBook 44 条（未查到许可）。ACE Chromebook 档只是**合成原料**（实测 RIR + 现场噪声，语音要自己卷积相加），不算真实录音锚 | 🟥 | DAPS confroom（iPad / iPhone 回放，有参考，CC BY-NC → 只评测）· DDS（iPad 回放，有参考，只评测） | NOTSOFAR-1（会议约 31.5 h，转写，CC BY → 训练可）· AMI（约 100 h，训练可）· ICSI（约 72 h，训练可）· AliMeeting（118.75 h，CC BY-SA → 训练可（D64））· AISHELL-4（120 h，CC BY-SA → 训练可（D64））· MISP-Meeting（125 h，讯飞办公本内置 8 麦，非商用 → 只评测）· ConferencingSpeech 2021（>200 条，需注册） | AMI · ICSI · AliMeeting · NOTSOFAR（仅 train / dev）· MISP-Meeting |
 | `open-office` | DR-VCTK MacBook Air（回放，有参考；CC BY，但 End-user Licence 未读，按 D65 核清前只评测；年份未知） | DNS 2021 盲测文件名带 laptop 约 330 条（地点与家混，许可未查到）· MS AEC 真实录音（Windows PC，无逐条标签） | DNS4 盲测 `desktop` 221 条（台式与笔记本分不开，地点只按噪声字段） | DAPS office · DR-VCTK iPhone / iPad（回放） | 🟥（ARTE、DEMAND OOFFICE、TUT 2017 office 只有背景，无主说话人） | 🟥 |
-| `home-family` | DNS 2021 两届盲测自填 mac 约 31 条（与 open-office 混，未核实） | DNS 2021 盲测 laptop 段（同上） | DNS5 dev（笔记本或台式，无逐条区分） | AISHELL-DMASH（手机 / 平板 + 近讲同步，签协议） | CHiME-5/6（约 50 h，晚餐聚会，禁背景电视，CC BY-SA → 只评测）· DiPCo（5.3 h，CDLA → 训练可）· MISP2021（中文电视房，许可未查到）· VoiceHome-2（法语，只评测） | CHiME-6 双耳 · DiPCo · MISP2021 · DMASH |
+| `home-family` | DNS 2021 两届盲测自填 mac 约 31 条（与 open-office 混，未核实） | DNS 2021 盲测 laptop 段（同上） | DNS5 dev（笔记本或台式，无逐条区分） | AISHELL-DMASH（手机 / 平板 + 近讲同步，签协议） | CHiME-5/6（约 50 h，晚餐聚会，禁背景电视，CC BY-SA → 训练可（D64））· DiPCo（5.3 h，CDLA → 训练可）· MISP2021（中文电视房，许可未查到）· VoiceHome-2（法语，只评测） | CHiME-6 双耳 · DiPCo · MISP2021 · DMASH |
 | `home-quiet` | 🟥 | Speech Commands v2（网页众包，笔记本 / 台式 / 手机混，无设备字段；单词 1 s，CC BY → 训练可） | 🟥 | MagicData-RAMC（手机两人对话 180 h，标笑声，只评测；卡上地点为家中，是否安静未写）· AISHELL-2（iOS 1000 h 朗读，只评测）· DAPS livingroom（回放） | 🟥（VOiCES 是回放重录，用录音棚麦与摆在房间里的领夹，不归此列；CC BY → 训练可） | 🟥 |
 | `phone-booth` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
 | `cowork` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
@@ -28,7 +28,7 @@
 | `rail-air-cabin` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
 | `street-outdoor` | 🟥 | 🟥 | 🟥 | CHiME-3/4 PED / STR（平板，LDC → 不可）· TAU 街道（只有背景）· NISQA-LIVETALK | QUT STREET · DEMAND STRAFFIC（只有背景） | CHiME-3/4 ch0（LDC） |
 | `hotel-room` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
-| `library-classroom` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥（ACE 报告厅只是合成原料） | ASCEND（安静教室，领夹，中英夹杂对话，CC BY-SA → 只评测） |
+| `library-classroom` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥（ACE 报告厅只是合成原料） | ASCEND（安静教室，领夹，中英夹杂对话，CC BY-SA → 训练可（D64）） |
 
 **要签协议、未逐段核的**：Ego4D（头戴相机麦，卡上场景键含 `street-outdoor` · `transit-hub` · `cafe` · `home-family` · `car-passenger`，部分有转写；哪些片段有主说话人未逐段核）。
 

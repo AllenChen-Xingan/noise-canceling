@@ -25,7 +25,7 @@
 | 2 | NISQA_TEST_LIVETALK | `cafe` · `car-passenger` · `transit-hub` · `street-outdoor` × `non-laptop-phone` | 4 个公共地点的真人真机通话，每条有人评分（MOS），能用来校准无参考打分；德语 | CC BY 4.0（仅研究）→ 只评测 | 232 条 × 6–12 s ≈ 35 min【推断：232 × 9 s】；但只随 NISQA 全集整包发布，`NISQA_Corpus.zip` 约 15.9 GB【官方文档】，能否单取未查到 |
 | 3 | SIG 挑战 2023 真实测试集 | 无地点标签 × PC / 手机 | 500 条真实发送端录音（PC / 手机），部分有转写；逐条人评分未公开，**不能**拿来复现论文里的相关数字，只能当无标签真实样本 | 未查到 → 按只评测 | 约 414 MB【官方文档：GitHub 文件大小合计】 |
 | 4 | EasyCom | `canteen` | 真人对话 + 回放餐厅噪声，有头戴参考 + 转写；直接下载，不用签协议（ECHI 要签） | CC BY-NC 4.0 → 只评测 | 5 h 18 min；GB 未查到 |
-| 5 | AISHELL-5 Eval1 | `car-passenger`（中文） | 中文车内真人对话，有转写 | CC BY-SA 4.0 → 只评测 | 3.3 h；约 1.7 GB【补充卡】 |
+| 5 | AISHELL-5 Eval1 | `car-passenger`（中文） | 中文车内真人对话，有转写 | CC BY-SA 4.0 → 训练可（D64） | 3.3 h；约 1.7 GB【补充卡】 |
 | 6 | AMI 测试集（阵列混合 + 头戴混合两路） | `meeting-room`（英文） | 会议室里许可最干净（CC BY，可训练），有头戴参考 + 时间戳转写 | CC BY 4.0 → 训练可 | 约 9 h【推断：AMI 标准测试集 16 场】；GB 未查到 |
 
 **合计**：已知大小的 1 + 3 号约 1.2 GB；5 号 AISHELL-5 Eval1 包约 1.7 GB【补充卡】；2 号若不能单取要按整包 15.9 GB 算；4、6 号大小未查到。不含 2 号整包时估计 < 10 GB【推断：按 16 kHz 单声道、约 18 h 折算约 2 GB，多通道再乘通道数】，含整包则约 20–25 GB。下载前要先逐份核大小。
@@ -45,7 +45,7 @@
 | `bus-metro-cabin` | 🟥 | 唯一的真人集 CHiME-3 BUS 要 LDC 付费 → 合成（TAU / DEMAND 背景） |
 | `car-passenger` | LIVETALK · AISHELL-5 | — |
 | `street-outdoor` | LIVETALK | 有主说话人的只有手机通话；笔记本的 → 自录 |
-| `library-classroom` | 🟥 | ASCEND（安静教室，领夹）可选，CC BY-SA |
+| `library-classroom` | 🟥 | ASCEND（安静教室，领夹）可选，CC BY-SA → 训练可（D64） |
 | `phone-booth` · `cowork` · `rail-air-cabin` · `hotel-room` | 🟥 | 本轮没找到也没专门查；先合成 |
 
 ## 四、刻意没选的
