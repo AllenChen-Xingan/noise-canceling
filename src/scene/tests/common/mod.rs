@@ -4,7 +4,7 @@
 use vdn_scene::{Judgement, SceneAnalyzer};
 use vdn_types::{ContentId, MODEL_RATE};
 
-pub const HOP: usize = 256;
+pub const HOP: usize = vdn_types::FRONTEND.hop;
 /// 约 0.5 s 判断一次（同 `examples/scene_offline.rs`）
 pub const TICK_HOPS: usize = 31;
 

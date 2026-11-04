@@ -29,11 +29,11 @@ fn run(m: &mut Gtcrn, x: &[f32], borrow: bool) -> Vec<(f64, f64)> {
     let mut sa = SceneAnalyzer::new(MODEL_RATE, FRONTEND.hop);
     let mut out = vec![0.0f32; FRONTEND.hop];
     let mut t = Vec::with_capacity(HOPS);
+    let spec = m.spectrum_spec();
     for h in x.chunks(FRONTEND.hop) {
         let t0 = Instant::now();
         m.process(h, &mut out).expect("GTCRN 推理");
         let t1 = Instant::now();
-        let spec = m.spectrum_spec();
         match (borrow, m.input_power()) {
             (true, Some(p)) => sa.push_hop_with_power(h, &spec, p),
             _ => sa.push_hop(h),

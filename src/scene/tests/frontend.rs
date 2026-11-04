@@ -145,3 +145,27 @@ fn wrong_length_power_falls_back_to_self_compute() {
     let fb = common::run(&x, |sa, h| sa.push_hop_with_power(h, &FRONTEND, &short));
     assert_eq!(common::digest(&own), common::digest(&fb));
 }
+
+/// 借出方口径不是正本（频点数同为 257，但帧移 128）：不吃这份谱，退回自算，结果与自算相同。
+/// 没有口径比对时，长度检查会放行这份谱，35 维特征会悄悄算错。
+#[test]
+fn mismatched_spec_falls_back_to_self_compute() {
+    let x = common::signal();
+    let own = common::run(&x, |sa, h| sa.push_hop(h));
+    let other = vdn_types::StftSpec {
+        hop: FRONTEND.hop / 2,
+        ..FRONTEND
+    };
+    assert_eq!(other.bins(), FRONTEND.bins());
+    let mut fe = StreamingStft::from_spec(&FRONTEND);
+    let mut pow = vec![0.0f32; FRONTEND.bins()];
+    let mut own_ffts = 0;
+    let fb = common::run(&x, |sa, h| {
+        power_into(fe.analyze(h), &mut pow);
+        pow.iter_mut().for_each(|p| *p *= 4.0); // 内容故意改掉：若被吃进去，摘要一定不同
+        sa.push_hop_with_power(h, &other, &pow);
+        own_ffts = sa.own_fft_count();
+    });
+    assert_eq!(common::digest(&own), common::digest(&fb));
+    assert_eq!(own_ffts, (x.len() / HOP) as u64, "口径不对时应每帧自算");
+}
