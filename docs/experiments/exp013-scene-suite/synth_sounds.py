@@ -162,13 +162,12 @@ def cabin(rng, n):
         x = x / np.std(x) + 0.05 * _tones(n, [f, 2 * f], [1, 0.5], rng.uniform(0, 6, 2), jitter=0.003, rng=rng)
     else:
         x = _filt(_colored(rng, n, -5.5), "lowpass", _u(rng, 1500, 3000))
-        t = np.arange(n) / SR
         joint = np.zeros(n)
         period = _u(rng, 0.6, 1.2)
         for k in np.arange(_u(rng, 0, period), n / SR, period):  # 钢轨接缝的「咔哒」
             i = int(k * SR)
             joint[i : i + 400] += np.exp(-np.arange(min(400, n - i)) / 80)
-        x = x / np.std(x) + 0.8 * _filt(joint * rng.standard_normal(n), "lowpass", 600) + 0 * t
+        x = x / np.std(x) + 0.8 * _filt(joint * rng.standard_normal(n), "lowpass", 600)
     return x * _slow_env(rng, n, 0.3, 1.5), {"kind": kind}
 
 
@@ -217,7 +216,7 @@ def turn_signal(rng):
     dur = _u(rng, 3.0, 6.0)
     x = np.zeros(int(dur * SR))
     click = _filt(rng.standard_normal(300) * np.exp(-np.arange(300) / 40), "bandpass", (800, 4000))
-    for k, t in enumerate(np.arange(0, dur - 0.1, 1 / rate)):
+    for t in np.arange(0, dur - 0.1, 1 / rate):
         for off, a in ((0.0, 1.0), (0.5 / rate, 0.7)):  # 「嘀—嗒」两声
             i = int((t + off) * SR)
             if i + 300 < len(x):
