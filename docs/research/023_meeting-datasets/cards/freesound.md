@@ -2,7 +2,7 @@
 
 - **名称**：Freesound 协作音频库（Freesound）
 - **链接**：https://freesound.org/
-- **许可**：逐条由上传者选：CC0 / CC BY / CC BY-NC（另有旧的 Sampling+）→ 结论：按条判断——CC0、CC BY 条目训练可；CC BY-NC、Sampling+ 条目只评测【官方文档：FAQ】
+- **许可**：逐条由上传者选：Creative Commons 0 / Attribution / Attribution Noncommercial（旧条目另有已停用的 Sampling+）→ 结论：只评测（整库混有 NC 条目，按最严算；单独挑出的 CC0、CC BY 条目可训练，需逐条记录）【官方文档：FAQ】
 - **大小**：未查到（整库规模官方 FAQ 未给）
 - **场景键**：cafe, open-office, home, car, transit, street, meeting-room（均需按关键词与标签检索，非系统采集）
 - **设备键**：unknown（上传者自填，常见手机、录音笔、双耳麦；不规范）
@@ -18,3 +18,4 @@
 ## 备注
 - FSD50K（014 外）是 Freesound 的标注子集，每条许可沿用原条目；本轮未单独开卡。
 - 许可要逐条记录（ID + 许可 + 作者），CC BY 需署名。
+- 怀疑派复核：许可行补成模板要求的单一结论（整库只评测，单挑 CC0 / CC BY 可训练）；三种许可名、下载要登录、批量走 Data Packs Portal 已在 FAQ 核实；整库条数 FAQ 未给，维持「未查到」。
