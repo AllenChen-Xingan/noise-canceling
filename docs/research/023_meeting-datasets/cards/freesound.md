@@ -4,7 +4,7 @@
 - **链接**：https://freesound.org/
 - **许可**：逐条由上传者选：Creative Commons 0 / Attribution / Attribution Noncommercial（旧条目另有已停用的 Sampling+）→ 结论：只评测（整库混有 NC 条目，按最严算；单独挑出的 CC0、CC BY 条目可训练，需逐条记录）【官方文档：FAQ】
 - **大小**：未查到（整库规模官方 FAQ 未给）
-- **场景键**：cafe, open-office, home, car, transit, street, meeting-room（均需按关键词与标签检索，非系统采集）
+- **场景键**：cafe, open-office, home-family, car-passenger, transit-hub, street-outdoor, meeting-room（均需按关键词与标签检索，非系统采集）
 - **设备键**：unknown（上传者自填，常见手机、录音笔、双耳麦；不规范）
 - **笔记本段**：可能有零星条目在描述里写「recorded with laptop mic」，但无统一设备字段，不能可靠按设备筛【推断】
 - **干净参考**：没有

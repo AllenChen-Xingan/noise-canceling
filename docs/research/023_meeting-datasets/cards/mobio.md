@@ -5,7 +5,7 @@
 - **许可**：Zenodo 访问条件原句「Access to the dataset is based on an End-User License Agreement. The use of the dataset is strictly restricted to non-commercial research.」→ 结论：只评测（且需签 EULA）【官方文档】
 - **大小**：150 人（99 男 51 女）× 12 个 session（Phase I 每次 21 问、Phase II 每次 11 问）；小时数、GB 未查到【官方文档】
 - **场景键**：other（6 个站点、5 个国家，2008-08 至 2010-07；具体环境未写，论文题名称「challenging conditions」）
-- **设备键**：laptop-other（官方原句「the laptop computer was a standard 2008 MacBook」，是 MacBook 产品线，不是 Air 也不是 Pro）, phone（NOKIA N93i）
+- **设备键**：mac-intel-builtin（官方原句「the laptop computer was a standard 2008 MacBook」，是 MacBook 产品线，不是 Air 也不是 Pro）, phone（NOKIA N93i）
 - **笔记本段**：有，但量小。笔记本只录了第一个 session 的一部分；官方原句「The laptop was only used to capture part of the first session」。能否按设备筛：bob.db.mobio 的 PyPI 说明称「the number of protocols has increased, considering the additional data recorded using laptops, which has led to 8 protocols」，即有用笔记本数据的协议；具体协议名未读到【官方文档】
 - **干净参考**：没有
 - **转写**：未查到（Idiap 数据页与 Zenodo 记录都没提转写；朗读段文本固定，可自行对照）【官方文档】

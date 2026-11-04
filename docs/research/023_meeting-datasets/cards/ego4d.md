@@ -4,7 +4,7 @@
 - **链接**：https://ego4d-data.org/docs/start-here/
 - **许可**：Ego4D License Agreement（自定义协议）。已读官网草案 https://ego4d-data.org/pdfs/Ego4D-Licenses-Draft.pdf：非独占、不可转让；允许用于学术研究与商业 / 非商业产品开发，由此做出的模型与技术可商用；数据本身不得出现在任何程序、数据集或产品里（不可再分发）。文件名带 Draft，签署时的正式版未读 → 结论：只评测（自定义协议口径）【官方文档：草案】
 - **大小**：全集 3,025 h（v1 论文）/ 3,670 h（后续版本）视频；AV / Social 子集时长未查到【论文】
-- **场景键**：home, cafe, street, car, transit, other（全球 74 个地点的日常生活，场景标签粗；地点覆盖为推断，来自论文概述）
+- **场景键**：home-family, cafe, street-outdoor, car-passenger, transit-hub, other（全球 74 个地点的日常生活，场景标签粗；地点覆盖为推断，来自论文概述）
 - **设备键**：unknown（头戴相机如 GoPro、Vuzix Blade 等，音频为相机自带麦；设备键表里没有「头戴相机」一类；推断）
 - **笔记本段**：没有（第一人称头戴相机）
 - **干净参考**：没有

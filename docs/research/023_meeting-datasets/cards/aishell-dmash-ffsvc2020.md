@@ -4,8 +4,8 @@
 - **链接**：https://ffsvc.github.io/dataset
 - **许可**：未见标准许可；Zenodo 申请条件原文含「I'll not modify, transfer, redistribute or sell the challenge data without the Beijing Shell Shell Technology」，且未经授权不得商用 → 结论：只评测【官方文档】
 - **大小**：未查到总时长与 GB；FFSVC 2020 训练 120 人、开发 35 人、每个任务评测 80 人；每人每次到访 300+ 句【论文 §2】（第三方 hyper.ai 称 511 人、30,000 h，数字可疑，未采信【论坛 / 博客，个人说法】）
-- **场景键**：home（两间真实智能家居房间；第一次到访有电扇 + 电视或办公室底噪，第二次安静，第三次只有电扇）
-- **设备键**：phone, tablet, array, close-talk, unknown（每组里「one microphone」型号未写，原卡记作 studio 无出处）
+- **场景键**：home-family（两间真实智能家居房间；第一次到访有电扇 + 电视或办公室底噪，第二次安静，第三次只有电扇）
+- **设备键**：phone, tablet, mic-array, close-talk, unknown（每组里「one microphone」型号未写，原卡记作 studio 无出处）
 - **笔记本段**：没有笔记本。每个房间 7 个位置各放一组设备：iPhone、安卓手机、iPad、一支麦克风、5 cm 半径圆阵；另有 1 支近讲麦。挑战集只取近讲麦 + 25 cm 处 iPhone + 3 个圆阵；supplement 补了手机与平板通道。通道 / 位置可由文件命名区分【论文 §2.1–2.2；官方文档】
 - **干净参考**：有（近讲麦与各设备同步并行录）
 - **转写**：部分（每次到访前 30 句为固定文本「你好米雅」，接下来 60 句为「你好米雅」+ 随机文本，其余为文本无关句【论文 §2.1】；是否随包发转写未查到）

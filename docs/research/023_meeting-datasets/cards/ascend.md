@@ -4,7 +4,7 @@
 - **链接**：https://huggingface.co/datasets/CAiRE/ASCEND
 - **许可**：Creative Common Attribution Share-Alike 4.0 International (CC-BY-SA 4.0)（HF 数据卡原文）→ 结论：只评测【官方文档】
 - **大小**：10.62 h · 12,314 句（train 9,869 / validation 1,130 / test 1,315）· 26 场对话 · 23 人【官方文档 · 论文 摘要、§1】；GB 未查到
-- **场景键**：other（香港一间安静教室）
+- **场景键**：library-classroom（香港一间安静教室）
 - **设备键**：close-talk（每人一支 RODE SmartLav+ 领夹麦，夹在衣领上）
 - **笔记本段**：没有。全部用领夹麦录，每人一路单声道 16 kHz WAV；无笔记本、无手机【论文 §3.1】
 - **干净参考**：没有（发布的就是领夹近讲本身，论文称「clean speech」；无远场通道可配对）

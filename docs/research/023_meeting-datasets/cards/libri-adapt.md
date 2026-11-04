@@ -5,7 +5,7 @@
 - **许可**：README 原句「The dataset is released under CC BY 4.0 license.」→ 结论：训练可【官方文档】；但 Rain / Wind / Laughter 三种噪声取自 ESC-50 再回放重录，ESC-50 仓库原句「available under the terms of the Creative Commons Attribution Non-Commercial license」（CC BY-NC 3.0），含噪声的三档是否受 NC 约束未查到，稳妥只把 Clean 档算训练可【官方文档】【推断】
 - **大小**：72 个域（6 麦 × 3 口音 × 4 噪声档），每个域训练 28,540 条 / 100.6 h + 测试 2,600 条 / 5.4 h，合计 7,200 h【论文 §3、摘要】；下载包 en-us 54.4 GB（4×12 GB + 6.4 GB）、en-in 18.6 GB、en-gb 19.5 GB、noise 24 MB，合计约 92.5 GB【官方文档：README】【推断：加总】
 - **场景键**：other（论文原句「in a quiet room」，监听音箱距麦 15 cm；噪声 Rain / Wind / Laughter 取自 ESC-50，在 6 支麦上回放重录后按 20 dB 信噪比与语音相加）
-- **设备键**：phone（Google Nexus 6，3 通道）, array（Matrix Voice、ReSpeaker，各 7 通道）, desktop（PlayStation Eye 4 通道、USB 麦）, studio（Shure MV5）
+- **设备键**：phone（Google Nexus 6，3 通道）, mic-array（Matrix Voice、ReSpeaker，各 7 通道）, desktop（PlayStation Eye 4 通道、USB 麦）, studio（Shure MV5）
 - **笔记本段**：没有。Shure MV5 以 MacBook Pro 作主机，但录的是外接 Shure，不是 Mac 内置麦；按设备分目录可筛【官方文档】【论文】
 - **干净参考**：有（LibriSpeech 原音，回放重录，需自行对齐）【推断】
 - **转写**：有（LibriSpeech 文本）

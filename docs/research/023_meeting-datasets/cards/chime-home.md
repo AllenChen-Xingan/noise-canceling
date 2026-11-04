@@ -4,7 +4,7 @@
 - **链接**：https://archive.org/details/chime-home
 - **许可**：archive.org 许可字段「Attribution-Noncommercial-Share Alike 3.0」（CC BY-NC-SA 3.0）→ 结论：只评测【官方文档】
 - **大小**：409.2 min ≈ 6.8 h（DCASE 数据目录；DCASE 2016 任务页引论文「based on 6.8 hours of domestic environment audio recordings」）；chime_home.tar.gz 3.9 GB；4 s 片段共 6137 段（数据目录写 6138 个文件），其中高一致性标注段开发 1946 + 评测 816 = 2762 段【官方文档】
-- **场景键**：home
+- **场景键**：home-family
 - **设备键**：unknown
 - **笔记本段**：未查到（DCASE 目录只写「Uncontrolled」，设备未写；DCASE 2016 任务页引的 CHiME 语料摘要提到人头躯干模拟器在家中录背景，是否即本集来源未写明）；无逐条设备标签
 - **干净参考**：没有

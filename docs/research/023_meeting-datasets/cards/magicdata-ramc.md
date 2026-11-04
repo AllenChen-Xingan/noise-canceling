@@ -4,7 +4,7 @@
 - **链接**：https://www.openslr.org/123/
 - **许可**：Attribution-NonCommercial-NoDerivatives 4.0 International Public License (CC BY-NC-ND 4.0) → 结论：只评测【官方文档】
 - **大小**：180 h · 351 场对话 · 219,325 段 · 663 人；train 149.65 h / dev 9.89 h / test 20.64 h；MagicData-RAMC.tar.gz 15 GB【官方文档 · 论文 表 2】
-- **场景键**：home
+- **场景键**：home-quiet
 - **设备键**：phone
 - **笔记本段**：没有。全部用手机录（安卓与 iPhone 约 1:1）；论文与官网都没说有逐条设备标签，能否按安卓 / iPhone 筛出来未查到【论文 §2.1】
 - **干净参考**：没有（只有手机通道本身；录音环境安静，底噪 < 40 dBA，可近似当作「较干净的手机近讲」，但不是参考信号）
