@@ -1,7 +1,7 @@
 # 评审 · exp015 认人耗时估算与计时命令（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/experiments/exp015-speaker-shared-spectrum/README.md`（依据：`src/speaker-lab/src/bench.rs`、`state/handoff/fespk.md`、`src/speaker/src/{fbank,embed,judge}.rs`）。**最新一轮：第 1 轮（2026-11-04）· 总评「修改」· 待第 2 轮**。
-> 累计处理：P1×1、P2×4 逐条回源码核实，属实 5、驳回 0。没有新的要人定的事。
+> 对象：`docs/experiments/exp015-speaker-shared-spectrum/README.md`（依据：`src/speaker-lab/src/bench.rs`、`state/handoff/fespk.md`、`src/speaker/src/{fbank,embed,judge}.rs`）。**最新一轮：第 2 轮（2026-11-04）· 总评「修改」· 无 P0/P1，连续第 1 轮，待第 3 轮确认**。
+> 累计处理：P1×1、P2×6 逐条回源码核实，属实 7、驳回 0。没有新的要人定的事。
 > 编号：本记录按交代的文件名规则 `docs/reviews/exp015-*.md` 命名；`docs/reviews/README.md` 不在本线可写范围，索引那一行由大总管加。
 
 ## 第 1 轮（2026-11-04）· 总评「修改」
@@ -34,3 +34,27 @@
 ### 是否再审
 
 有 P1，改完开第 2 轮。
+
+## 第 2 轮（2026-11-04）· 总评「修改」
+
+原文：`_tmp/exp015-reviews/readme-codex-2.md`（不入库）。effort medium。第一次提交时隐私扫描把第 1 轮输出误判为非纯文本（文件以「P1 #」开头，已知问题），在文件头加一行标题后重跑。
+本轮 P0/P1：0 条 · 停止线：连续第 1 轮 · 留作 issue 的 P2：无（2 条都已改）
+
+上一轮处理的验证：#1、#2、#5 已落实；#3、#4 有缺口，即下面两条。
+
+- **P2｜README:74 合成注册负载不能称为「上限」**（第 2 轮 #1）
+  - 核实：属实。锁定后真实回路算两次余弦（上一窗 + 主人），bench 只算一次；电平影响注册器的得分、淘汰和锁定分支，固定电平改变状态轨迹，不保证成本更高
+  - 处理：bench 改为两次余弦都算；README 与 bench 注释删掉「上限」，改为「只是这条合成轨迹的测量」
+- **P2｜bench.rs:114 交替顺序仍与窗绑定**（第 2 轮 #2）
+  - 核实：属实。c01 有 158 个窗（偶数），`i = r × 158 + k` 的奇偶恒等于 `k` 的奇偶，同一窗每遍都是同一种顺序
+  - 处理：`fbank_first(rep, k) = (rep + k) % 2 == 0`，同一窗相邻两遍顺序相反；默认遍数 5 → 6，每窗两种顺序各占一半。测试改为 `order_alternates_and_flips_per_rep`（158 个窗逐个断言相邻两遍相反、6 遍对半）。README、`src/speaker-lab/README.md` 同步
+
+### 引用抽查
+
+- 「不符」：README「合成负载是上限」——已改（同 #1）
+- 「核实属实」：7 条（含 exp005 6 ms 基线、对拍数字、子命令接线）
+- 无法核实：模型大小与网络结构——README 已补文件字节数与上游定义位置（`resources/` 不进仓，codex 读不到）；fecore 的 `FRONTEND` 与借谱接口在 fecore 的 worktree，不在本分支
+
+### 是否再审
+
+本轮无 P0/P1，连续第 1 轮，再审一轮确认。

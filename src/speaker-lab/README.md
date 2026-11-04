@@ -15,7 +15,7 @@ vdn-speaker-lab run   <noisy.wav> <out_dir> --wet <wet.wav> [--speaker-onnx ecap
 vdn-speaker-lab envelope <noisy.wav> <wet.wav> <out_prefix>
 vdn-speaker-lab fbank <in.wav> <out.f32>
 vdn-speaker-lab embed <in.wav>
-vdn-speaker-lab bench-split <in.wav> [--reps 5] [--win 1.5] [--judge-hop 0.5] [--speaker-onnx ecapa.onnx]
+vdn-speaker-lab bench-split <in.wav> [--reps 6] [--win 1.5] [--judge-hop 0.5] [--speaker-onnx ecapa.onnx]
 ```
 
 `run` 一次出 `raw / floor / energy / vad / personal / aggressive` 六个版本和一份 `log.json`（判断回路每次判决、注册事件、逐 hop 增益与耗时）。目标文件已存在时拒绝覆盖，除非换 `--tag` 或加 `--overwrite`；`--replay` 必须带 `--tag`。
