@@ -1,6 +1,7 @@
-# exp013 · 片段清单格式（v1.1 · 2026-11-03 · 已与 scorecard 对齐）
+# exp013 · 片段清单格式（v1.2 · 2026-11-03 · 已与 scorecard 对齐）
 
 > v0 → v1（scorecard 回复）：正本改为 Rust 类型导出的 schema；`audio` 加 `noise` / `interf` 两条汇总轨；`hash.wav_sha256` 改为逐轨对象。
+> v1.1 → v1.2（第三版 build，实测 RIR）：`targets[].src` 与 `sounds[].src` 里多了 `rir`（`{kind: "rir", dataset, room, file, ch, t60_s, drr_meas_db, direct_gain_db}`）；`chain.room`（`room_id` · `dataset` · `paired` · `room_t60_s` · `bed_cls` 等）；`chain.room_dims_m` 去掉。都在自由对象里，不改 schema。
 > v1 → v1.1：`hash` 定为 `{samples, wav_sha256}` 两个逐轨对象（同 scorecard schema）；另加 4 个字段，已请 scorecard 加进 Rust 类型：`targets[].src` · `measured.snr_all_db` · `measured.owner_level_dbfs` · `sounds[].direction_db`。
 
 > 用途：场景测试集每段一条记录，`vdn-eval` 与成绩单按它读音频、按场景和声音分组出分。

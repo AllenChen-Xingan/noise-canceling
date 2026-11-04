@@ -141,4 +141,11 @@
 7. **T60 实测**在主说话人 RIR 去掉直达窗后量（近距离时直达声会把衰减曲线前段拉陡）；大房间实测比名义低 5–40%，因为高频尾巴衰减更快（0.8 × T60）
 8. **会议室**按大总管转达的建议：照样出、标「全留」（`polarity = preserve_all`，`owner` = 所有要留的人之和），题仍在现状页等人定
 9. **测试跑法**：系统 `python3` 没有 numpy，用项目已有的 venv：`<主目录>/_tmp/exp002-venv/bin/python -m unittest discover -s docs/experiments/exp013-scene-suite/tests`
+10. **第三版起「一段 = 一个房间」**（人试听第一版后指出人声与底噪混响不一致，方案 `reverb-plan.md`，人选下载档 A）：
+    - 房间改用实测 RIR（`rirs.py`），本线自写的模拟房间（`rooms.make_rir`）只留给单元测试。T60 不再抽，取所用 IR 的实测值
+    - 约 37% 的段人声与底噪同房间：ACE 的 7 个房间（开放办公、联合办公、电话亭、书房、酒店、会议室、教室、候车厅的一部分）、McVAMPIRE 车内。其余用 MIT 的实测 IR 配 DEMAND，按 `scenes.json` 的 `bed_t60` 约束 T60（暂定 ×[0.8, 1.25]）
+    - 直达声取第一个到达的强峰（≥ 最大值的一半），不取全段最大值：MIT 列车 IR 里早期反射比直达还强
+    - 实测 IR 的收发距离（ACE 0.85–3.4 m、MIT 约 1.5 m【推断】）与主说话人 0.5 m 不同：只按反平方律调直达部分，尾巴不动，增益限 −12 到 +18 dB。车内用 McVAMPIRE 的真实几何（离座位最近的车顶麦，0.32–0.47 m），不调
+    - `reverb_check.py` 逐段查同房间 / T60，`build.py` 不过就停；测试带 6 个负对照
+    - DEMAND 的 SCAFE 是户外露台，原来混在「咖啡馆底噪」里；第三版拆成 `bed-cafeteria`（PCAFETER）与 `bed-terrace`（SCAFE）
 
