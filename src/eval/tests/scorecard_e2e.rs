@@ -202,7 +202,7 @@ fn repo_scene_suite_parses_and_expands() {
     let (path, root) = match std::env::var("VDN_SCENES_SUITE") {
         Ok(p) => {
             let p = PathBuf::from(p);
-            let root = p.ancestors().nth(3).unwrap().to_path_buf();
+            let root = p.ancestors().nth(4).unwrap().to_path_buf();
             (p, root)
         }
         Err(_) => {

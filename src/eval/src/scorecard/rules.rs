@@ -246,12 +246,15 @@ fn drags(items: &[ItemCell], rows: &[&ClipRow]) -> Vec<Drag> {
                 gap,
             });
         }
-        per.sort_by(|a, b| {
-            b.gap
-                .unwrap_or(f64::NEG_INFINITY)
-                .total_cmp(&a.gap.unwrap_or(f64::NEG_INFINITY))
-        });
-        out.extend(per.into_iter().take(3));
+        // 只列真拖后腿的（有这类声音的段更差，gap > 0），按差距从大到小取 3 个；
+        // 分不出组的（样本不够）最多再列 2 个，提醒「这类声音没法判」
+        let (mut hit, short): (Vec<Drag>, Vec<Drag>) = per
+            .into_iter()
+            .filter(|d| d.gap.is_none_or(|g| g > 0.0))
+            .partition(|d| d.gap.is_some());
+        hit.sort_by(|a, b| b.gap.unwrap_or(0.0).total_cmp(&a.gap.unwrap_or(0.0)));
+        out.extend(hit.into_iter().take(3));
+        out.extend(short.into_iter().take(2));
     }
     out
 }
@@ -439,6 +442,8 @@ mod tests {
         // 每段都有的声音分不出组 → 样本不够
         let bed = c.drags.iter().find(|d| d.cls == "bed-cafe").unwrap();
         assert!(bed.gap.is_none());
+        // 有这类声音反而更好的（gap < 0）不列
+        assert!(c.drags.iter().all(|d| d.gap.is_none_or(|g| g > 0.0)));
         // 只有 2 段有：样本不够，不下结论
         let c2 = &summarize(&rows[1..])[0];
         assert!(
