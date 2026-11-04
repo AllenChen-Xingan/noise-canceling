@@ -73,10 +73,13 @@ def p56_level_db(x, sr=SR):
         diff.append(a - t)
     act_db, diff = np.array(act_db), np.array(diff)
     m = 15.9
-    ok = np.flatnonzero(diff >= m)
-    if ok.size == 0:
+    # 门限从低往高扫，取第一次「活动电平 − 门限」跌破 15.9 dB 的位置；更高门限处活动样本太少、差值会重新变大，不能取
+    below = np.flatnonzero(diff < m)
+    if below.size == 0:
+        return float(act_db[-1])
+    if below[0] == 0:
         return float(act_db[0])
-    j = ok[-1]
+    j = below[0] - 1
     if j + 1 < len(diff) and np.isfinite(diff[j + 1]):
         # 在相邻两个门限间按差值线性插值
         w = (diff[j] - m) / max(diff[j] - diff[j + 1], EPS)
