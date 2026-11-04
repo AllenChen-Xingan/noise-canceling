@@ -1,6 +1,7 @@
 //! GTCRN simple（`resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx`，MIT）适配器。
 //!
-//! 口径同 exp003 `enhance.py::Gtcrn`：周期 sqrt-Hann 512/256，分析与合成同窗；缓存全零起步、每帧回灌。
+//! 口径同 exp003 `enhance.py::Gtcrn`：周期 sqrt-Hann 512/256（正本 `vdn_types::FRONTEND`），分析与合成同窗；缓存全零起步、每帧回灌。
+//! 实现 [`SpectrumTap`]：推理前把本帧带噪输入的功率谱借出去，场景特征不再另算 FFT（013）。
 //! 输入 `mix [1,257,1,2]`（实部、虚部交错），输出 `enh` 同形；三个缓存 conv / tra / inter。
 //! 输出用 `OutputSelector::preallocate` 预分配，缓存每帧拷回输入张量。张量名字与形状的正本是 `interface::GTCRN`。
 
@@ -9,16 +10,15 @@ use std::path::Path;
 use ort::session::{HasSelectedOutputs, OutputSelector, RunOptions, Session};
 use ort::value::Tensor;
 use vdn_backend_ort::ort;
-use vdn_dsp::{StreamingStft, window};
-use vdn_types::{Model, ModelError};
+use vdn_dsp::{StreamingStft, power_into};
+use vdn_types::{FRONTEND, Model, ModelError, SpectrumTap, StftSpec};
 
 use vdn_backend_ort::{self as session, BoxError};
 
 use crate::interface::{self, Interface, TensorDecl, check_session, dims};
 
-const N_FFT: usize = 512;
-const HOP: usize = 256;
-const BINS: usize = N_FFT / 2 + 1;
+const HOP: usize = FRONTEND.hop;
+const BINS: usize = FRONTEND.bins();
 /// 输入输出的声明（名字 · 顺序 · 形状）正本在 `interface::GTCRN`；`mix` 的频点数由测试与 `BINS` 比对。
 const IO: Interface = interface::GTCRN;
 
@@ -26,6 +26,10 @@ pub struct Gtcrn {
     session: Session,
     run: RunOptions<HasSelectedOutputs>,
     stft: StreamingStft,
+    /// 本帧带噪输入的功率谱（推理前算，借给场景特征）
+    power: Vec<f32>,
+    /// `power` 是否对应最近一次 `process`
+    have_power: bool,
     mix: Tensor<f32>,
     caches: [Tensor<f32>; 3],
 }
@@ -46,7 +50,9 @@ impl Gtcrn {
         Ok(Self {
             session,
             run: RunOptions::new()?.with_outputs(sel),
-            stft: StreamingStft::new(N_FFT, HOP, window::sqrt_hann_periodic(N_FFT)),
+            stft: StreamingStft::from_spec(&FRONTEND),
+            power: vec![0.0; BINS],
+            have_power: false,
             mix: zeros(IO.inputs.first())?,
             caches: [
                 zeros(IO.inputs.get(1))?,
@@ -78,6 +84,7 @@ impl Model for Gtcrn {
     }
     fn reset(&mut self) {
         self.stft.reset();
+        self.have_power = false;
         for c in &mut self.caches {
             c.extract_tensor_mut().1.fill(0.0);
         }
@@ -87,6 +94,7 @@ impl Model for Gtcrn {
         if input.len() != HOP || output.len() != HOP {
             // 调用方的 bug：不静默产出错音频（align 自审 P1）
             output.fill(0.0);
+            self.have_power = false;
             return Err(ModelError::Shape);
         }
         let r = self.infer(input);
@@ -113,6 +121,9 @@ impl Gtcrn {
     /// 分析一帧 → 推理 → 把增强后的频谱写回 STFT、缓存拷回输入。不做合成。
     fn infer(&mut self, input: &[f32]) -> Result<(), ModelError> {
         let spec = self.stft.analyze(input);
+        // 推理会把这块谱改写成输出谱，借出的功率谱必须在这之前算
+        power_into(spec, &mut self.power);
+        self.have_power = true;
         {
             let (_, m) = self.mix.extract_tensor_mut();
             if m.len() != 2 * spec.len() {
@@ -152,12 +163,27 @@ impl Gtcrn {
     }
 }
 
+// 实时（specs/rust/architecture.md §5.3）
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
+impl SpectrumTap for Gtcrn {
+    fn spectrum_spec(&self) -> StftSpec {
+        FRONTEND
+    }
+    fn input_power(&self) -> Option<&[f32]> {
+        self.have_power.then_some(self.power.as_slice())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ModelKind;
 
-    /// 声明的 `mix` 是一帧复数谱：频点数 = n_fft/2 + 1；hop 与 `ModelKind::declared` 一致。
+    /// 声明的 `mix` 是一帧复数谱：频点数 = 正本 `FRONTEND.bins()`；hop 与 `ModelKind::declared` 一致。
     #[test]
     fn declaration_agrees_with_stft() {
         let mix = IO.inputs.first().unwrap();
