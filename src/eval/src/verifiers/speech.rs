@@ -321,3 +321,19 @@ mod tests {
         ));
     }
 }
+#[cfg(test)]
+mod scratch {
+    use super::*;
+    use crate::probes::Probe;
+    use crate::synth::{NoiseKind, SceneSpec, TalkerSpec, render};
+    #[test]
+    fn print_estoi() {
+        for snr in [10.0, 20.0, 25.0, 30.0] {
+            let c = render(&SceneSpec { dur_s: 10.0, seed: 7, owner: Some(TalkerSpec { level_dbov: -26.0, f0_lo: 100.0, f0_hi: 140.0, tonal: false }), owner_start_s: 0.5, pause_s: (0.4, 1.2), interferers: Vec::new(), noise: NoiseKind::Pink, snr_db: snr, tail_silence_s: 0.0 });
+            let g: Vec<f32> = c.clean.iter().zip(&c.noise).map(|(s, n)| s + 0.03 * n).collect();
+            let lp = Probe::Lowpass1k.apply(&c, &g);
+            let lpm = Probe::Lowpass1k.apply(&c, &c.mix);
+            eprintln!("snr {snr}: mix {:.3} good {:.3} lp(good) {:.3} lp(mix) {:.3}", estoi(&c.clean,&c.mix,c.sr).unwrap(), estoi(&c.clean,&g,c.sr).unwrap(), estoi(&c.clean,&lp,c.sr).unwrap(), estoi(&c.clean,&lpm,c.sr).unwrap());
+        }
+    }
+}
