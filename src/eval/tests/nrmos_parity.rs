@@ -26,7 +26,11 @@ fn clean(n: usize) -> Vec<f64> {
     (0..n)
         .map(|i| {
             let t = i as f64 / SR as f64;
-            let on = if ((t * 2.5) as i64) % 2 == 0 { 1.0 } else { 0.0 };
+            let on = if ((t * 2.5) as i64) % 2 == 0 {
+                1.0
+            } else {
+                0.0
+            };
             let f0 = 120.0 * (1.0 + 0.08 * (2.0 * std::f64::consts::PI * 0.7 * t).sin());
             let v: f64 = (1..25)
                 .map(|k| (2.0 * std::f64::consts::PI * k as f64 * f0 * t).sin() / k as f64)
@@ -55,8 +59,10 @@ fn signal(n: usize, a: f64, seed: u64) -> Vec<f32> {
 
 fn fixture() -> serde_json::Value {
     let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/nrmos-upstream.json");
-    serde_json::from_str(&std::fs::read_to_string(p).expect("缺参考值：先跑 tools/gen_nrmos_ref.py"))
-        .unwrap()
+    serde_json::from_str(
+        &std::fs::read_to_string(p).expect("缺参考值：先跑 tools/gen_nrmos_ref.py"),
+    )
+    .unwrap()
 }
 
 fn score_all(kind: Kind, wavs: &[PathBuf]) -> Vec<f64> {
@@ -71,7 +77,11 @@ fn score_all(kind: Kind, wavs: &[PathBuf]) -> Vec<f64> {
     assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
     String::from_utf8_lossy(&o.stdout)
         .lines()
-        .map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap()["mos"].as_f64().unwrap())
+        .map(|l| {
+            serde_json::from_str::<serde_json::Value>(l).unwrap()["mos"]
+                .as_f64()
+                .unwrap()
+        })
         .collect()
 }
 

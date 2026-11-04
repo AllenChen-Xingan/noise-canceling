@@ -298,7 +298,8 @@ impl SceneClip {
             }
             let c: SceneClip =
                 serde_json::from_str(line).map_err(|e| format!("第 {} 行：{e}", i + 1))?;
-            c.check().map_err(|e| format!("第 {} 行（{}）：{e}", i + 1, c.id))?;
+            c.check()
+                .map_err(|e| format!("第 {} 行（{}）：{e}", i + 1, c.id))?;
             out.push(c);
         }
         let mut ids: Vec<&str> = out.iter().map(|c| c.id.as_str()).collect();
@@ -318,7 +319,9 @@ impl SceneClip {
         inst.sort_unstable();
         let stems: Vec<&str> = self.audio.stems.keys().map(String::as_str).collect();
         if inst != stems {
-            return Err(format!("sounds 的实例 {inst:?} ≠ audio.stems 的键 {stems:?}"));
+            return Err(format!(
+                "sounds 的实例 {inst:?} ≠ audio.stems 的键 {stems:?}"
+            ));
         }
         for t in [&self.hash.samples, &self.hash.wav_sha256] {
             if t.stems.keys().map(String::as_str).collect::<Vec<_>>() != stems {
@@ -338,7 +341,10 @@ impl SceneClip {
             }
         }
         if self.polarity == ClipPolarity::Suppress && self.targets.len() != 1 {
-            return Err(format!("suppress 段要 1 个 target，实际 {}", self.targets.len()));
+            return Err(format!(
+                "suppress 段要 1 个 target，实际 {}",
+                self.targets.len()
+            ));
         }
         Ok(())
     }

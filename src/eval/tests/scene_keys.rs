@@ -8,7 +8,9 @@ use vdn_eval::files::serde_name;
 use vdn_eval::scene::{DeviceKey, MicMode, SceneKey};
 
 fn read(rel: &str) -> String {
-    let p = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..").join(rel);
+    let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(rel);
     std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("读不到正本 {}：{e}", p.display()))
 }
 
@@ -23,7 +25,9 @@ fn backtick_keys(text: &str) -> BTreeSet<String> {
 
 /// `## 一、` 到 `## 二、` 之间（devices.md 第一节）。
 fn section<'a>(text: &'a str, from: &str, to: &str) -> &'a str {
-    let a = text.find(from).unwrap_or_else(|| panic!("找不到小节 {from}"));
+    let a = text
+        .find(from)
+        .unwrap_or_else(|| panic!("找不到小节 {from}"));
     let rest = &text[a..];
     let b = rest.find(to).unwrap_or(rest.len());
     &rest[..b]
@@ -87,7 +91,30 @@ fn all_lists_are_exhaustive() {
         MicMode::Standard | MicMode::VoiceIsolation | MicMode::WideSpectrum | MicMode::Unknown => 4,
     };
     assert_eq!(MicMode::ALL.len(), n(MicMode::Unknown));
-    // 设备键 21 个：穷举在 scene.rs 的 serde 枚举里，ALL 与原表的比对已经证明不多不少
+    let n = |d: DeviceKey| match d {
+        DeviceKey::MbaBuiltin
+        | DeviceKey::MbpBuiltin
+        | DeviceKey::MacIntelBuiltin
+        | DeviceKey::ImacBuiltin
+        | DeviceKey::StudioDisplay
+        | DeviceKey::AirpodsHfp
+        | DeviceKey::BtHfpGeneric
+        | DeviceKey::UsbHeadset
+        | DeviceKey::ExternalMic
+        | DeviceKey::IphoneContinuity
+        | DeviceKey::MacUnknown
+        | DeviceKey::LaptopUnknown
+        | DeviceKey::NonLaptop
+        | DeviceKey::NonLaptopPhone
+        | DeviceKey::NonLaptopTablet
+        | DeviceKey::NonLaptopDesktop
+        | DeviceKey::NonLaptopConfDevice
+        | DeviceKey::NonLaptopMicArray
+        | DeviceKey::NonLaptopCloseTalk
+        | DeviceKey::NonLaptopStudio
+        | DeviceKey::NonLaptopUnknown => 21,
+    };
+    assert_eq!(DeviceKey::ALL.len(), n(DeviceKey::NonLaptop));
     let set: BTreeSet<_> = DeviceKey::ALL.iter().collect();
     assert_eq!(set.len(), DeviceKey::ALL.len());
 }

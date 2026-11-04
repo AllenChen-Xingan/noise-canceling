@@ -300,7 +300,8 @@ pub struct LevelEntry {
 }
 
 /// 补进级别表的新项的依据（`calib --write-levels` 写）。
-pub const NEW_ENTRY_BASIS: &str = "新登记，未定标：取登记表的默认级别（感知量 L0、物理量 L3，012 §2.1）";
+pub const NEW_ENTRY_BASIS: &str =
+    "新登记，未定标：取登记表的默认级别（感知量 L0、物理量 L3，012 §2.1）";
 
 impl LevelsFile {
     /// 把 `registry`（id, 默认级别）里表上还没有的项补上，已有条目一个字不动。返回补了哪些。
