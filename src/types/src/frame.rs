@@ -102,7 +102,7 @@ pub struct FrameCtx {
 }
 
 /// 实时 → 判断回路的每帧特征包（ondevice 需求 ③，字段由 scene 线定稿 2026-10-31）：每 hop 一个，经 rtrb 送出，
-/// **满了丢弃并计数**，实时侧绝不等（约 5 µs/hop）。谱特征取自**带噪输入**、与 GTCRN STFT 同口径（512 点 sqrt-Hann、hop 256）：
+/// **满了丢弃并计数**，实时侧绝不等（约 5 µs/hop）。谱特征取自**带噪输入**、口径是正本 [`crate::FRONTEND`]（与 GTCRN 的 STFT 同一份）：
 /// 有 [`crate::SpectrumTap`] 就复用，FE-M 这类拿不到谱的由特征通道自己做一次 FFT——只喂判断，不进音频路径、不加延迟。
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct FrameFeatures {

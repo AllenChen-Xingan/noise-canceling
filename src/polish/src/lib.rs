@@ -9,7 +9,7 @@
 //!
 //! **零前瞻**：所有节点只用当前帧与过去帧。频谱节点不自带 STFT——它吃的是模型适配器已经算好的
 //! 带噪频谱与降噪后频谱（`specs/rust/architecture.md` §3.1「共用一次 STFT 以后用扩展 trait 补」，扩展 trait 见 [`spectral_stage`]，时域 `Stage` 用 `vdn-types`）。
-//! GTCRN 的适配器本来就做 512/256 周期 sqrt-Hann STFT，挂上去不加延迟；FastEnhancer-M 现用 wav2wav 图（STFT 在图里），
+//! GTCRN 的适配器本来就按正本 `vdn_types::FRONTEND` 做 STFT，挂上去不加延迟；FastEnhancer-M 现用 wav2wav 图（STFT 在图里），
 //! 拿不到频谱，要么换非 wav2wav 导出、要么只用时域节点（[`Agc`]）——见 exp006 README「缺口」。
 //! 若某个模型只能另做一次 STFT 才用得上频谱节点，那次 STFT 会多 `n_fft - hop` 个样本（512/256 时 16 ms），必须记进延迟账。
 //!
