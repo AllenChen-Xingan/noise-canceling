@@ -52,7 +52,7 @@ pub struct SpectralPolish {
 }
 
 impl SpectralPolish {
-    /// `n_fft` / `hop` / `sr` 必须与喂进来的频谱一致（GTCRN：512 / 256 / 16000）。
+    /// `n_fft` / `hop` / `sr` 必须与喂进来的频谱一致（GTCRN 用的是正本 `vdn_types::FRONTEND`：512 / 256 / 16 kHz）。
     pub fn new(n_fft: usize, hop: usize, sr: f32) -> Self {
         let bins = n_fft / 2 + 1;
         let fps = sr / hop as f32;

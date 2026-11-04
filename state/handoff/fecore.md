@@ -9,6 +9,13 @@
 - 2026-11-04 盘点完（读源码，未构建），见下表
 - 2026-11-04 大总管与 fespk 先后告知：认人不接共享频谱 → 借谱接口不提供「输出谱」，只服务场景特征与修音
 - 2026-11-04 写设计稿 `docs/plan/013_frontend-once.md`，发大总管待点头
+- 2026-11-04 大总管点头；修音频域级槽不做（`SpectralStage` 留在 polish）；dsp → types 依赖边核对允许（规约 §2.2 图里本来就有，check-deps 只查禁用清单）
+- 2026-11-04 写完代码与测试（**未编译、未跑**，等名额）：
+  - 正本 `src/types/src/frontend.rs`（`FRONTEND`）；`SpectrumTap` 改为 `spectrum_spec()` + `input_power()`
+  - `vdn-dsp`：`StreamingStft::from_spec / feed / forward_count`、`power_into`、`window::for_spec`
+  - GTCRN 实现 `SpectrumTap`；场景加 `push_hop_with_power`，自算入口改用 `StreamingStft`；离线例子改引用正本
+  - 测试：`scene/tests/{golden,frontend}.rs` · `models/tests/{golden,tap}.rs` · `polish/tests/borrowed_spectrum.rs` · dsp / scene / models 的 no_alloc 各加一条
+- 基准怎么生成：草稿目录里的 `bless.sh` 把 `990e7843`（本分支改动前）原样导出，只放两份对拍测试，在那里生成基准再拷回 `tests/fixtures/`。所以基准不受本分支任何改动影响
 
 ## 盘点：每处 FFT / STFT（读源码，未实测）
 
@@ -31,4 +38,4 @@
 
 ## 转交
 
-（暂无）
+- `specs/rust/architecture.md:225` 还写着 `SpectrumTap::last_magnitude`，应改为 `input_power`（该文件不在我可写范围，请大总管处理或授权）

@@ -16,7 +16,7 @@ fn input() -> Vec<f32> {
 }
 
 /// 真 GTCRN 借出的功率谱 == 另起一个同口径 STFT 自算的功率谱（逐位）：场景借谱与自算等价的前提在真模型上也成立。
-/// 推理出错时借出的谱仍是本帧输入的（取自推理前）。
+/// 还没处理过帧、输入长度不对、复位之后都借不出谱。
 #[test]
 fn gtcrn_tap_equals_self_compute() {
     let Some(path) = ModelKind::Gtcrn.default_path() else {
