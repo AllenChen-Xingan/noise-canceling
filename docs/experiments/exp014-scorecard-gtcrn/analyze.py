@@ -370,13 +370,14 @@ def fails_per_clip(rows: list[dict], system: str) -> list[tuple[str, list[str]]]
     return sorted(out, key=lambda t: -len(t[1]))
 
 
-def gap_vs_base(rows: list[dict], system: str, base: str) -> list[str]:
+def gap_vs_base(rows: list[dict], system: str, base: str, card: dict | None = None) -> list[str]:
     """表 6：每项「被测系统 − 原声直通」的均值差（同一批段，配对），看模型把这项拉好还是拉坏。"""
     items = [v for v in items_of(rows) if v not in REPORT_ONLY]
+    better = better_map(card or {})
     out = ["| 项 | 好的方向 | 配对段数 | 均值差（模型 − 原声直通） |", "|---|---|---|---|"]
     for v in items:
         ds = paired_diffs(rows, system, base, v)
-        out.append(f"| {v} | {better_of(rows, v)} | {len(ds)} | {fmt(mean(ds))} |")
+        out.append(f"| {v} | {better.get(v, '?')} | {len(ds)} | {fmt(mean(ds))} |")
     return out
 
 
@@ -447,7 +448,7 @@ def build(run: Path, manifest_path: Path, system: str = "gtcrn", base: str = "pa
     L += ["## 2. 每项在多少个组合里不过（组合 = 场景 × 档 × 设备）", ""]
     L += item_counts(rows, card, systems) + [""]
     L += [f"## 3. {system}：模型 − 原声直通（同一批段配对）", ""]
-    L += gap_vs_base(rows, system, base) + [""]
+    L += gap_vs_base(rows, system, base, card) + [""]
     L += [f"### 3b. 每个场景 × 档的配对差值（{system} − {base}，两种设备合并，括号里是段数）", ""]
     L += scene_gap(rows, system, base) + [""]
     L += ["### 3c. 按场景合并字数的吃字率（过关线 ≤ 1 个百分点，是按段判的；这里合并只作参考）", ""]
