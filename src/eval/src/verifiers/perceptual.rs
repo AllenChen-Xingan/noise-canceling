@@ -63,7 +63,7 @@ pub(super) fn v_bgstab(c: &Ctx, p: &Params) -> Score {
 
 /// 输出投影到干净参考上的能量 ⟨o, c⟩² / ‖c‖²：只留下与参考相关的部分，不受不相关的残留噪声影响
 ///（怀疑派自审 P1：停顿帧估的残留噪声比说话时小约 6 dB——门控开着时混回的原声更多——扣不干净会把人声损失藏掉）。
-fn proj_energy(o: &[f32], c: &[f32]) -> (f64, f64) {
+pub(super) fn proj_energy(o: &[f32], c: &[f32]) -> (f64, f64) {
     let (mut oc, mut cc) = (0.0f64, 0.0f64);
     for (a, b) in o.iter().zip(c) {
         oc += *a as f64 * *b as f64;

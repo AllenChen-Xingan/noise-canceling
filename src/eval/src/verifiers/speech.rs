@@ -64,7 +64,7 @@ fn band_levels(c: &Ctx, x: &[f32]) -> Vec<Vec<f64>> {
 
 pub(super) fn v_weak(c: &Ctx, p: &Params) -> Score {
     const ID: &str = "V-WEAK";
-    if !c.clip.tracks && c.clip.clean.iter().all(|v| *v == 0.0) {
+    if c.clip.clean.iter().all(|v| *v == 0.0) {
         return Score::unknown(ID, "dB", Better::Lower, "没有干净参考");
     }
     let lc = band_levels(c, &c.clip.clean);

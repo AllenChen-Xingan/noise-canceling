@@ -15,11 +15,14 @@ use crate::system::{BUDGET_MS, RunOut};
 use crate::thresholds as th;
 use crate::{Better, Level, Score, Verdict, db10};
 
+pub mod estoi;
 mod perceptual;
 mod physical;
 mod sim;
+mod speech;
 use perceptual::*;
 use physical::*;
+use speech::*;
 pub use sim::GATE_TOLERANCE_S;
 use sim::*;
 
@@ -373,6 +376,10 @@ pub fn eval(id: &str, c: &Ctx, p: &Params) -> Score {
         "V-SIM-FA" => v_sim_fa(c, p),
         "V-SIM-SWLAT" => v_sim_swlat(c, p),
         "V-SIM-QUIET" => v_sim_quiet(c, p),
+        "V-WEAK" => v_weak(c, p),
+        "V-PUMPV" => v_pumpv(c, p),
+        "V-CLICK" => v_click(c, p),
+        "V-ESTOI" => v_estoi(c, p),
         _ => Score::unknown("V-?", "", Better::Lower, format!("CI 层没有 verifier {id}")),
     }
 }
