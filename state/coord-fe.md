@@ -26,6 +26,7 @@
 - 2026-11-04 #96 CI 红（fmt · clippy · tidy 采样率字面量，都在 bench.rs）：fespk 只跑了单 crate 测试、大总管验收也没跑 xtask ci。子代理修复，xtask ci 6 项全绿（大总管借名额约 10 min）。**教训：验收一律亲手跑 xtask ci，不只跑单 crate 测试**
 - 2026-11-04 **人改定 D82**：「都要做，认人也要做，所有频谱计算都放在一个地方，这个不是省力的问题」；选「同一处代码，各自切法」。exp015 README 已加说明。已告 fecore（模块设计要容纳不同分帧）
 - **第二段（待派）**：认人 fbank · 评测器 FFT（`src/eval/src/verifiers/estoi.rs` · `speech.rs`，eval 归 5-app-5e 在用，派前先商量）· 离线例子，收进统一模块；基于 fecore 分支
+- 2026-11-04 人：「不能走ort，ort太慢了」（针对认人声纹模型 ECAPA512 走 ORT）；人定「先记下，以后再定」→ 已记 `state/backlog.md`「推理后端：去掉 ORT」
 
 ## 待人拍板（本大事）
 

@@ -83,3 +83,7 @@
 ## 待拍板清单
 
 - [ ] **待拍板清单瘦身**：约 35 题按实体重新分组，过时的（BlackHole 相关）划掉 · 出处 `state/pending-decisions.md`
+
+## 推理后端：去掉 ORT（人 2026-11-04「不能走ort，ort太慢了」；人定「先记下，以后再定」，大总管 a2 记）
+
+- [ ] **ORT 整个退出**：① 降噪 GTCRN 手写版 `native-v4i` 从 exp010 / exp012 接进 `src/`，替掉 `backend-ort`（推理引擎大事已定 ORT 退出正式方案，每帧 1557 次分配）② **认人声纹模型 ECAPA512**（WeSpeaker，约 620 万参数，`src/speaker/src/embed.rs`）现走 ORT，一次推理约 2.9 ms（exp015 实测）——候选：手写 Rust（照 GTCRN 路子）· BNNS · Core ML（判断线程不在声音通路上，Core ML 可考虑），测了再定 ③ `vdn-eval` / `vdn-speaker` / `vdn-speaker-lab` 改走推理后端、不直连 ort（与「Rust 骨架的遗留」节同一条）· 判据：输出与 ORT 对拍 · 每次推理耗时 · 0 分配 · 认人等错率不变 · 出处 exp015 README（PR #96）· D68–D79
