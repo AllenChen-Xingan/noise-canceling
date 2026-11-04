@@ -56,5 +56,8 @@ python3 -m unittest discover -s docs/experiments/exp014-scorecard-gtcrn/tests
 | `driver/` | 跑成绩单 + 导出逐段分数 |
 | `analyze.py` · `tests/` | 从逐段分数出对照表（分设备、分同房间、与原声直通配对比较、人耳候选） |
 | `runs/<run-id>/` | `scorecard.md` · `scorecard.json` · `clips.jsonl`（逐段分数，不含音频）· `analysis.md` |
-| `findings.md` | 结论与建议的优化方向 |
-| `listen.md` | 人耳片段清单（音频在主目录 `_tmp/exp014/listen/<run-id>/`，不进仓） |
+| `findings.md` | 结论与建议的优化方向（含「评分项自检」一节） |
+| `make_listen.py` · `listen/` | 人耳片段：`picks-<run-id>.json` 是挑段清单；`listen/<run-id>/` 放 `listen.md`（给人的说明，无答案）、`listen-key.md` 与 `unblind-key.json`（答案，只在仓里）。音频在主目录 `_tmp/exp014/listen/<run-id>/`，不进仓，那里只有 `NN-A.wav` / `NN-B.wav` 和 `listen.md` |
+
+`driver/target/`（编译产物，约 291 MB）收尾时已删，重跑前在 `driver/` 下 `cargo build --release`（约 10 秒，复用依赖缓存时）。
+评审：`docs/reviews/014_scorecard-gtcrn-codex.md`（codex 3 轮，已达停止线）。
