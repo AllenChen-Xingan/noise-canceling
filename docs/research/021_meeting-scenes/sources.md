@@ -85,7 +85,7 @@
 | 编号 | 名称 | 链接 | 来源类型 | 核对 | 用在哪 / 注意 |
 |---|---|---|---|---|---|
 | S57 | Caros 等 2023（SWAA 月度调查），arXiv 2303.06186 | https://arxiv.org/pdf/2303.06186 | 论文 | ✓ | 美国 N=27,364（2021-11 至 2022-06），按**工作工时**：雇主场所 44.4% · 家 29.1% · 客户处 10.6% · 亲友家 5.3% · 共享办公 5.3% · 公共场所 5.3%（含咖啡馆、图书馆、社区中心）。数值只在图 1(a) 里。**是工作地点，不是开会地点** |
-| S58 | Buffer State of Remote Work 2023 | https://buffer.com/state-of-remote-work/2023 | 官方文档（厂商调查） | ✓ | 全球 N=3,000 远程工作者：主要地点家 82% · 办公室 9% · 共享办公 5% · 咖啡馆 2%；在家：独立办公空间 37% · 卧室 21% · 客厅 20% · 换来换去 14% |
+| S58 | Buffer State of Remote Work 2023 | https://buffer.com/state-of-remote-work/2023 | 官方文档（厂商调查） | ✓ | 全球 N=3,000 远程工作者：主要地点家 82% · 办公室 9% · 共享办公 5% · 咖啡馆 2%；工作房间：独立办公空间 37% · 卧室 21% · 客厅 20% · 换来换去 14%，**分母是全部受访者**（含偶尔远程 17%、根本不在家工作 2%），不是在家工作者内部的比例 |
 | S59 | Puglisi 等 2021，Frontiers in Built Environment | https://www.frontiersin.org/journals/built-environment/articles/10.3389/fbuil.2021.688484/full | 论文 | ✓ | 意大利 N=1,934（2020-05）：独立房间 54.6% · 共用房间 43.1%；25% 认为成年人发出的声音是主噪声源；受访者偏大学与研究机构 |
 | S60 | FinanceBuzz 远程工作调查 | https://financebuzz.com/survey-remote-work-lifestyle | 媒体自办调查 | ✓ | N=500（2020-03 至 04）：视频会议被打断——宠物 47% · 快递员 39% · 伴侣 32% · 孩子 21%；「过去一年在哪工作过」口径会放大偶发地点，样本疑似偏 |
 | S61 | Dimensional Research for Cisco Webex 2020 | https://www.cisco.com/c/dam/en/us/products/collateral/collaboration-endpoints/global-workforce-survey.pdf | 官方文档（厂商委托） | ✓ | 全球 N=1,569：在家开会最常用收音设备——笔记本 42%（麦与扬声器合计）；自己这边有背景噪声 32% |
