@@ -10,23 +10,22 @@
 use std::sync::Arc;
 
 use realfft::num_complex::Complex;
-use realfft::num_traits::Zero;
 use realfft::{FftNum, RealFftPlanner, RealToComplex};
 
 /// FFT 的样本类型（f32 / f64）。
 pub trait Sample: FftNum {
     /// 从 f64 转过来（窗表先 f64 算再转）。
-    fn from_f64(v: f64) -> Self;
+    fn of_f64(v: f64) -> Self;
 }
 
 impl Sample for f32 {
-    fn from_f64(v: f64) -> Self {
+    fn of_f64(v: f64) -> Self {
         v as f32
     }
 }
 
 impl Sample for f64 {
-    fn from_f64(v: f64) -> Self {
+    fn of_f64(v: f64) -> Self {
         v
     }
 }

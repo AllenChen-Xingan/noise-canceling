@@ -33,7 +33,7 @@ pub fn coef(window: Window, i: usize, n: usize) -> f64 {
 
 /// 长度 `n` 的整张窗。
 pub fn table<T: Sample>(window: Window, n: usize) -> Vec<T> {
-    (0..n).map(|i| T::from_f64(coef(window, i, n))).collect()
+    (0..n).map(|i| T::of_f64(coef(window, i, n))).collect()
 }
 
 /// 按口径造窗：长度 `win_len`（不是 `n_fft`；补零在 FFT 那一步做）。
