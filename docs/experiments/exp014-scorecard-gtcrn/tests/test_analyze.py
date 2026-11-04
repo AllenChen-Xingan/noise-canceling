@@ -105,6 +105,14 @@ class TestAnalyze(unittest.TestCase):
         self.assertTrue(t[2].startswith("| cafe | 3 | 3 | -8.00 / -4.00 |"))
         self.assertEqual(len(A.paired_within(rs[:10], man, "gtcrn", "passthrough")), 2)  # 不同房间只剩 2 段
 
+    def test_by_device_t60_counts(self):
+        man = {"a": {"measured": {"t60_s": 0.2}}, "b": {"measured": {"t60_s": 1.2}}}
+        rs = [row("a", "p", device="mba-builtin", scores=[sc("V-PUMPV", 5, "fail", 1)]),
+              row("b", "p", device="external-mic", scores=[sc("V-PUMPV", 0.5, "pass", 1)])]
+        t = A.by_device_t60(rs, man, ("V-PUMPV",), ["p"])
+        self.assertEqual(t[-1], "| V-PUMPV | p | 1/1 | 0/1 | 1/1 | 0/0 | 0/0 | 0/1 |")
+        self.assertEqual(A.t60_bin(0.6), "0.6–1")
+
     def test_build_end_to_end(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)

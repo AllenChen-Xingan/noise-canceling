@@ -456,6 +456,8 @@ def build(run: Path, manifest_path: Path, system: str = "gtcrn", base: str = "pa
     L += eat_pooled(rows, systems) + [""]
     L += ["### 3d. 按实测信噪比分档：不过段 / 判得了的段", ""]
     L += by_snr(rows, man, ("V-PUMPV", "V-TIMBRE", "V-ONSET", "V-SIM-GATE", "V-SPLVL", "V-EAT-ASR", "V-NR"), systems) + [""]
+    L += ["### 3d2. 按设备与混响长短：不过段 / 判得了的段", ""]
+    L += by_device_t60(rows, man, ("V-PUMPV", "V-TIMBRE"), systems) + [""]
     L += ["### 3e. 门控漏开分布（V-SIM-GATE）", ""]
     L += gate_stats(rows, systems) + [""]
     L += [f"### 3f. 拖后腿的声音跨场景汇总（{system}；成绩单第五节的分组结果，相关不是因果）", ""]
