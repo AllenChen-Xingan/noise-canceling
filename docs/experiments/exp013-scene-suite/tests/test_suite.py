@@ -145,7 +145,7 @@ class SmallBuild(unittest.TestCase):
         rng = np.random.default_rng(0)
         for name, fn in ss.CONTINUOUS.items():
             x, _ = fn(rng, 12 * dsp.SR)
-            crest = 20 * np.log10(np.max(np.abs(x)) / dsp.rms(x))
+            crest = 20 * np.log10(np.max(np.abs(x))) - dsp.gated_level_db(x)  # 对活动段电平（咖啡机中间有静音）
             self.assertLess(crest, 20.0, name)
 
     def test_no_leak(self):
