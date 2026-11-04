@@ -1,6 +1,6 @@
 //! 离线跑修音链：读对齐好的带噪原声 `dry` 与模型输出 `wet`（16 kHz 单声道），过 `PolishChain`，写结果。
 //!
-//! 频谱节点要吃「模型自己的 STFT」。离线这里对 dry、wet 各做一次 512/256 周期 sqrt-Hann STFT（与 GTCRN 适配器同口径），
+//! 频谱节点要吃「模型自己的 STFT」。离线这里对 dry、wet 各做一次 512/256 周期 sqrt-Hann STFT（口径正本 `vdn_types::FRONTEND`，与 GTCRN 适配器相同），
 //! 在同一帧网格上处理后合成——这是对「挂在模型 STFT 上」的模拟。这次额外的 STFT 让离线输出晚 256 样本，
 //! 写文件前平移掉；**实时接入时它不存在**（频谱来自模型适配器），所以不进延迟账。
 //!
@@ -10,12 +10,11 @@
 use std::time::{Duration, Instant};
 
 use vdn_dsp::StreamingStft;
-use vdn_dsp::window::sqrt_hann_periodic;
 use vdn_polish::{PolishChain, PolishParams};
-use vdn_types::FrameCtx;
+use vdn_types::{FRONTEND, FrameCtx};
 
-const N_FFT: usize = 512;
-const HOP: usize = 256;
+const N_FFT: usize = FRONTEND.n_fft;
+const HOP: usize = FRONTEND.hop;
 const SR: f32 = vdn_types::MODEL_RATE as f32;
 
 fn read(path: &str) -> Vec<f32> {
@@ -91,8 +90,8 @@ fn main() {
         chain.set_ramp_s(0.0);
         chain.set_target(p);
     }
-    let mut sd = StreamingStft::new(N_FFT, HOP, sqrt_hann_periodic(N_FFT));
-    let mut sw = StreamingStft::new(N_FFT, HOP, sqrt_hann_periodic(N_FFT));
+    let mut sd = StreamingStft::from_spec(&FRONTEND);
+    let mut sw = StreamingStft::from_spec(&FRONTEND);
     let lat = sw.latency_samples();
     let total = n + lat + HOP;
     let mut pad_d = dry[..n].to_vec();
@@ -100,7 +99,7 @@ fn main() {
     pad_d.resize(total.div_ceil(HOP) * HOP, 0.0);
     pad_w.resize(total.div_ceil(HOP) * HOP, 0.0);
     let mut out = vec![0.0f32; pad_w.len()];
-    let mut dry_spec = vec![realfft::num_complex::Complex32::new(0.0, 0.0); N_FFT / 2 + 1];
+    let mut dry_spec = vec![realfft::num_complex::Complex32::new(0.0, 0.0); FRONTEND.bins()];
     let mut ti = 0;
     let (mut t_spec, mut t_time, mut hops) = (Duration::ZERO, Duration::ZERO, 0u64);
     for (k, (d, w)) in pad_d
