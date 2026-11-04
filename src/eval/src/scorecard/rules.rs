@@ -370,15 +370,26 @@ pub fn summarize(rows: &[ClipRow], missing: &[Missing]) -> Vec<SceneCard> {
         .collect()
 }
 
+impl SceneCard {
+    /// 不过的项（不含只报不判的）；听感不过算一项，记作「听感」（codex 第 3 轮 P2 #3）。
+    pub fn failed_items(&self) -> Vec<&'static str> {
+        let mut v: Vec<&'static str> = self
+            .items
+            .iter()
+            .filter(|i| i.status == CardStatus::Fail && !i.report_only)
+            .map(|i| i.v)
+            .collect();
+        if self.listen.status == Some(CardStatus::Fail) {
+            v.push("听感");
+        }
+        v
+    }
+}
+
 /// 最差的几个场景（下标）：不过在前；同为不过时否决项多的在前，再按不过项数。
 pub fn worst(cards: &[SceneCard]) -> Vec<usize> {
     let mut idx: Vec<usize> = (0..cards.len()).collect();
-    let fails = |c: &SceneCard| {
-        c.items
-            .iter()
-            .filter(|i| i.status == CardStatus::Fail && !i.report_only)
-            .count()
-    };
+    let fails = |c: &SceneCard| c.failed_items().len();
     idx.sort_by_key(|&i| {
         let c = &cards[i];
         (

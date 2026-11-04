@@ -207,3 +207,30 @@ fn worst_orders_fail_before_unknown_and_skips_pass() {
     assert_eq!(cards[w[0]].scene, MeetingPlace::Canteen);
     assert_eq!(cards[w[1]].scene, MeetingPlace::HomeQuiet);
 }
+
+#[test]
+fn listen_failure_counts_in_ranking_and_summary() {
+    // 两个场景否决项、普通项都一样；只有一个听感不过 → 它排在前面，摘要里写「听感」
+    let mut a = row("a", &[], 5.0, 0.1, 0.1);
+    a.scene = MeetingPlace::Cafe;
+    let mut b = row("b", &[], 5.0, -0.2, -0.3);
+    b.scene = MeetingPlace::Canteen;
+    let cards = summarize(&[a, b], &[]);
+    let w = worst(&cards);
+    assert_eq!(cards[w[0]].scene, MeetingPlace::Canteen);
+    assert!(cards[w[0]].failed_items().contains(&"听感"));
+    // 只有听感不过的场景：摘要不能写「没有不过的项」
+    let only = summarize(&[row("c", &[], 1.0, -0.2, -0.3)], &[]);
+    let card = crate::scorecard::card::Card {
+        worst: worst(&only),
+        cards: only,
+        missing: Vec::new(),
+        clips: 1,
+    };
+    let md = card.to_markdown("t");
+    assert!(md.contains("不过的项 听感"), "{md}");
+    assert!(
+        md.contains("| V-NRMOS-SCOREQ | 0 / 1 / 0"),
+        "Markdown 要有模型明细：{md}"
+    );
+}

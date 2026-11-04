@@ -47,6 +47,11 @@ pub struct Missing {
 
 /// 读一段：核 wav 哈希（混合 · 干净参考 · 噪音 · 干扰四条）；四条长度都必须等于清单的 `dur_samples`。
 pub fn load_scene_clip(c: &SceneClip, root: &Path) -> Result<Clip, String> {
+    // 成绩单几乎每项都要干净参考：清单说没有，就整段不打分（记进 Missing → 场景最多待测），
+    // 不拿 owner 轨硬当参考（codex 第 3 轮 P1 #1）
+    if !c.has_clean_ref {
+        return Err("清单标明没有干净参考（has_clean_ref = false），成绩单不打分".into());
+    }
     let get = |rel: &str, want: &str| -> Result<Vec<f32>, String> {
         let p = root.join(rel);
         let got = wav::sha256(&p)?;

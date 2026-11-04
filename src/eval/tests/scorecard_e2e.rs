@@ -236,6 +236,38 @@ fn task_without_clips_still_appears() {
     assert!(card.to_markdown("t").contains("没跑成的"));
 }
 
+/// 清单标明没有干净参考：整段不打分、进「没跑成的」（codex 第 3 轮 P1 #1）。
+#[test]
+fn clip_without_clean_ref_is_not_scored() {
+    let (root, suite_text) = setup("noref");
+    let jl = root.join("clips.jsonl");
+    let t = std::fs::read_to_string(&jl).unwrap();
+    let mut lines: Vec<Value> = t
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    lines[0]["has_clean_ref"] = json!(false);
+    std::fs::write(
+        &jl,
+        lines
+            .iter()
+            .map(Value::to_string)
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n",
+    )
+    .unwrap();
+    let suite = parse_suite(&suite_text).unwrap();
+    let (rows, missing) =
+        vdn_eval::scorecard::run(&suite, &[SystemKind::Ref], &opts(), None, Some(&root));
+    assert_eq!(rows.len(), 5);
+    assert!(
+        missing
+            .iter()
+            .any(|m| m.what == "cafe-c00" && m.why.contains("has_clean_ref"))
+    );
+}
+
 /// 进仓的样例行（`tests/fixtures/scene-clip-example.jsonl`，vdn-schema 的 schema 测试也用它）能被解析器读。
 #[test]
 fn committed_example_line_parses() {

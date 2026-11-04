@@ -54,12 +54,7 @@ impl Card {
         }
         for &i in &self.worst {
             let c = &self.cards[i];
-            let bad: Vec<&str> = c
-                .items
-                .iter()
-                .filter(|x| x.status == CardStatus::Fail && !x.report_only)
-                .map(|x| x.v)
-                .collect();
+            let bad = c.failed_items();
             s += &format!(
                 "- **{}** · {}：{}{}\n",
                 key(c),
@@ -119,6 +114,26 @@ impl Card {
                 l.mean_distill.map_or("—".into(), |x| format!("{x:+.3}")),
                 l.status.map_or("待测", CardStatus::zh)
             );
+            // 两个评分模型各自的明细（只给人看，不单独决定场景）
+            if !l.models.is_empty() {
+                s += "| 评分模型 | 过 / 不过 / 待测（段） | Δ 均值 | 最差（段） |\n|---|---|---|---|\n";
+                for m in &l.models {
+                    let f = |v: Option<f64>| v.map_or("—".into(), |x| format!("{x:+.3}"));
+                    s += &format!(
+                        "| {} | {} / {} / {} | {} | {}{} |\n",
+                        m.v,
+                        m.pass,
+                        m.fail,
+                        m.unknown,
+                        f(m.mean),
+                        f(m.worst),
+                        m.worst_clip
+                            .as_ref()
+                            .map_or(String::new(), |w| format!("（{w}）"))
+                    );
+                }
+                s += "\n";
+            }
             if !l.to_human.is_empty() {
                 s += "送人耳：\n";
                 for (clip, why) in &l.to_human {
