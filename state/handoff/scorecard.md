@@ -97,6 +97,8 @@
 
 ## 转交（范围外，留给大总管）
 
+- `vdn-eval ci` / `qa` / `calib --record` 的报告用 `std::fs::write` 写，同一输出目录跑第二次会覆盖（旧代码，不在本分支改动里；codex 第 6 轮按类归并时发现）。成绩单已改成只新建（`scorecard::card::write_new`），可照这个改
+
 - scenesuite 合并进本分支后：`src/schema/src/eval.rs` 的 `DATA_FILES` 加 `("src/eval/suite/scenes.json", SUITE_FILE)` 一行（否则 `eval_data_files_registered` 红）；`repo_scene_suite_parses_and_expands` 测试那时才真正生效
 - scenes.json 只有 `mba-builtin` 的 30 条任务，240 段 `external-mic` 片段没有任务展开
 - 按语种（`lang`）分组比较还没做（旧 G4 中文组的替代），`scorecard.md` 第七节已写
