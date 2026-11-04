@@ -19,3 +19,4 @@
 - 每个地点只有 5 min，录于 2012–2013 年雷恩；量小但地点覆盖全，适合当「地点 → 噪声谱」的对照样本。
 - Zenodo 描述写「15 recordings」，文件列表却有 18 个前缀（含 DWASHING、NFIELD、NRIVER 等），以 PDF 为准（6 类 × 3）。
 - TCAR 阵列在副驾胸口高度，其余在 1.4 m 三脚架上。
+- 怀疑派复核：无改动。已读 DEMAND.pdf 原文：license 节写 CC BY-SA 3.0 Unported，1.4 m 三脚架、TCAR 在副驾胸口高度、每段剪成 300 s、阵列接笔记本存盘均属实；Zenodo Rights 字段确为 CC BY 4.0，冲突属实。

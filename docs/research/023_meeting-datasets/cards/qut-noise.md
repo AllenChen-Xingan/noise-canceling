@@ -18,3 +18,4 @@
 ## 备注
 - 「家里有孩子和电视」这种声音，本路只在 QUT-NOISE HOME-LIVINGB 和 CHiME-Home 里找到成段真实录音。
 - 每段会话标了坏段（麦故障）位置，可以避开。
+- 怀疑派复核：无改动。已读 README（CC-BY-SA；代码 BSD 式）与 Interspeech 2010 论文 §2.1–2.2：20 段 ≥30 min、合计 >10 h、Zoom H2 后置麦对 48 kHz、CAFE / HOME-LIVINGB / CAR「no radio or speech noise」均属实；zip 大小与 README 一致。
