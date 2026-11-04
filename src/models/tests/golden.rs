@@ -1,4 +1,4 @@
-//! GTCRN 对拍（013 第 8 节第 1 条；成绩单重跑靠它可比）：固定 3 s 输入逐 hop 过真模型，
+//! GTCRN 对拍（013 第 8 节第 1 条；成绩单重跑靠它可比）：固定约 3 s 输入（截到整 hop）逐 hop 过真模型，
 //! 输出 f32 逐位压成一个内容 ID，与改 `gtcrn.rs` **之前**生成的基准比。红了 = GTCRN 数值行为变了（红线），先停下报。
 //!
 //! 基准 `tests/fixtures/gtcrn_golden.txt` 一行：`<输出内容 ID> <样本数> <权重内容 ID> <平台>`。
@@ -53,8 +53,10 @@ fn gtcrn_output_matches_golden() {
     };
     let weights = artifact_id(&path).expect("读权重");
     let mut m = Gtcrn::open(&path).expect("打开 GTCRN");
-    let x = input();
     let hop = m.hop();
+    // 截到整 hop：哈希里的每个点都真过了模型（不留没处理的尾巴）
+    let mut x = input();
+    x.truncate(x.len() / hop * hop);
     let mut y = vec![0.0f32; x.len()];
     for (xi, yi) in x.chunks_exact(hop).zip(y.chunks_exact_mut(hop)) {
         m.process(xi, yi).expect("GTCRN 处理");
