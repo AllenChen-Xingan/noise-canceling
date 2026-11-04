@@ -4,6 +4,9 @@
 //! - 每喂一个 hop 输出一个 hop；输出比输入晚 `n_fft - hop` 个样本
 //!
 //! 输入缓冲初始为全零，所以第一次调用分析的是「`n_fft - hop` 个零 + 第一个 hop」。
+//!
+//! 全链路共用的口径是 `vdn_types::FRONTEND`，用 [`StreamingStft::from_spec`] 建；功率谱一律用 [`power_into`] 算
+//! （GTCRN 借出与场景自算是同一段代码，逐位相同靠构造保证，`docs/plan/013_frontend-once.md`）。
 
 use std::sync::Arc;
 
@@ -22,6 +25,8 @@ pub struct StreamingStft {
     scratch_inv: Vec<Complex32>,
     fwd: Arc<dyn RealToComplex<f32>>,
     inv: Arc<dyn ComplexToReal<f32>>,
+    /// 正向 FFT 做过几次（测试用：证明每帧只算一次）
+    forward: u64,
 }
 
 // 构造：非实时线程（会分配、会 assert）
@@ -45,7 +50,13 @@ impl StreamingStft {
             scratch_inv: inv.make_scratch_vec(),
             fwd,
             inv,
+            forward: 0,
         }
+    }
+
+    /// 按口径正本建（窗由 [`crate::window::for_spec`] 造）。
+    pub fn from_spec(spec: &vdn_types::StftSpec) -> Self {
+        Self::new(spec.n_fft, spec.hop, crate::window::for_spec(spec))
     }
 }
 
@@ -80,9 +91,14 @@ impl StreamingStft {
         self.ola.fill(0.0);
     }
 
-    /// 喂一个 hop 的新样本，返回这一帧的频谱（可原地改写，再调 [`Self::synthesize`]）。
+    /// 正向 FFT 累计次数（`reset` 不清零）。
+    pub fn forward_count(&self) -> u64 {
+        self.forward
+    }
+
+    /// 只把一个 hop 推进输入缓冲、不做 FFT（借别人的谱时让自己的缓冲保持同步，切回自算时第一帧不吃旧数据）。
     /// `hop_in.len()` 应等于 `hop()`（调用方的 bug：debug 下 panic；release 下不足的补零、多的丢掉）。
-    pub fn analyze(&mut self, hop_in: &[f32]) -> &mut [Complex32] {
+    pub fn feed(&mut self, hop_in: &[f32]) {
         debug_assert_eq!(hop_in.len(), self.hop);
         self.input.copy_within(self.hop.., 0);
         let tail = self.n_fft - self.hop;
@@ -90,6 +106,13 @@ impl StreamingStft {
         for d in self.input.iter_mut().skip(tail) {
             *d = src.next().copied().unwrap_or(0.0);
         }
+    }
+
+    /// 喂一个 hop 的新样本，返回这一帧的频谱（可原地改写，再调 [`Self::synthesize`]）。
+    /// `hop_in.len()` 同 [`Self::feed`]。
+    pub fn analyze(&mut self, hop_in: &[f32]) -> &mut [Complex32] {
+        self.feed(hop_in);
+        self.forward += 1;
         for ((t, x), w) in self.time.iter_mut().zip(&self.input).zip(&self.win) {
             *t = x * w;
         }
@@ -150,6 +173,19 @@ impl StreamingStft {
     }
 }
 
+/// 功率谱 `re² + im²`（不归一、不加下限）写进 `out`；两边长度不同时只写较短的那段。
+/// 全 workspace 只在这里写这个公式（GTCRN 借出、场景自算都调它）。实时可调，不分配。
+#[deny(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
+pub fn power_into(spec: &[Complex32], out: &mut [f32]) {
+    for (p, c) in out.iter_mut().zip(spec) {
+        *p = c.re * c.re + c.im * c.im;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -171,6 +207,50 @@ mod tests {
         let lat = s.latency_samples();
         for i in lat..x.len() {
             assert!((y[i] - x[i - lat]).abs() < 1e-5, "i={i}");
+        }
+    }
+
+    /// `from_spec(FRONTEND)` 与手写 512 / 256 / sqrt-Hann 逐位相同；计数每次 `analyze` 加 1、`feed` 不加。
+    #[test]
+    fn from_spec_matches_manual_and_counts() {
+        let spec = vdn_types::FRONTEND;
+        let mut a = StreamingStft::from_spec(&spec);
+        let mut b = StreamingStft::new(512, 256, sqrt_hann_periodic(512));
+        assert_eq!((a.n_fft(), a.hop(), a.bins()), (512, 256, spec.bins()));
+        let x: Vec<f32> = (0..256 * 6).map(|i| ((i as f32) * 0.021).sin()).collect();
+        for h in x.chunks(256) {
+            let sa: Vec<Complex32> = a.analyze(h).to_vec();
+            assert_eq!(sa, b.analyze(h).to_vec());
+        }
+        assert_eq!(a.forward_count(), 6);
+        a.feed(&x[..256]);
+        assert_eq!(a.forward_count(), 6);
+    }
+
+    /// `feed` 之后再 `analyze` = 一直 `analyze`（缓冲同步）。
+    #[test]
+    fn feed_keeps_buffer_in_sync() {
+        let mut a = StreamingStft::from_spec(&vdn_types::FRONTEND);
+        let mut b = StreamingStft::from_spec(&vdn_types::FRONTEND);
+        let x: Vec<f32> = (0..256 * 5).map(|i| ((i as f32) * 0.037).cos()).collect();
+        let hops: Vec<&[f32]> = x.chunks(256).collect();
+        for h in &hops[..4] {
+            a.feed(h);
+            b.analyze(h);
+        }
+        assert_eq!(a.analyze(hops[4]).to_vec(), b.analyze(hops[4]).to_vec());
+    }
+
+    /// `power_into` 与 `norm_sqr` 逐位相同（场景旧代码用的是 `norm_sqr`）。
+    #[test]
+    fn power_matches_norm_sqr() {
+        let spec: Vec<Complex32> = (0..257)
+            .map(|k| Complex32::new((k as f32 * 0.3).sin() * 1e3, (k as f32 * 0.7).cos() * 1e-3))
+            .collect();
+        let mut p = vec![0.0; 257];
+        power_into(&spec, &mut p);
+        for (a, c) in p.iter().zip(&spec) {
+            assert_eq!(a.to_bits(), c.norm_sqr().to_bits());
         }
     }
 }

@@ -38,7 +38,8 @@ pub trait SpectrumTap: Model {
     /// 借出的谱的口径；调用方在构造期与自己要的口径比对（一般是 [`crate::FRONTEND`]）
     fn spectrum_spec(&self) -> crate::StftSpec;
     /// 最近一次 `process` 输入帧的功率谱 `re² + im²`（不归一、不加下限），长度 = `spectrum_spec().bins()`；
-    /// 取自推理**之前**。还没处理过帧、或上一帧出错时为 `None`。实时线程可调，不分配
+    /// 取自推理**之前**，所以推理出错时它仍有效。还没处理过帧、或最近一次 `process` 因输入长度不对没做分析时为 `None`。
+    /// 实时线程可调，不分配
     fn input_power(&self) -> Option<&[f32]>;
 }
 
