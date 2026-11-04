@@ -13,7 +13,10 @@ sys.path.insert(0, str(HERE))
 
 import check_cards as cc  # noqa: E402
 
-FIELDS, SCENES, DEVICES = cc.parse_template((HERE / "card-template.md").read_text(encoding="utf-8"))
+FIELDS = cc.parse_fields((HERE / "card-template.md").read_text(encoding="utf-8"))
+# 用固定键表测逻辑，不依赖 021 / 022 正本的当前内容
+SCENES = {"cafe", "meeting-room", "home-family", "other"}
+DEVICES = {"mba-builtin", "laptop-unknown", "non-laptop-phone", "non-laptop-close-talk"}
 
 GOOD = """# 示例集
 
@@ -45,12 +48,26 @@ class TemplateTest(unittest.TestCase):
     def test_template_parses(self):
         self.assertEqual(len(FIELDS), 14)
         self.assertEqual(FIELDS[0], "名称")
-        self.assertIn("cafe", SCENES)
-        self.assertIn("mba-builtin", DEVICES)
 
     def test_broken_template_raises(self):
         with self.assertRaises(ValueError):
-            cc.parse_template("# 空模板\n")
+            cc.parse_fields("# 空模板\n")
+
+
+class KeySourceTest(unittest.TestCase):
+    def test_parse_keys_first_column_only(self):
+        text = "| 键 | 说明 |\n|---|---|\n| `cafe` | 咖啡馆，见 `canteen` |\n| `other` | 兜底 |\n正文 `x`\n"
+        self.assertEqual(cc.parse_keys(text), {"cafe", "other"})
+
+    def test_parse_keys_empty_raises(self):
+        with self.assertRaises(ValueError):
+            cc.parse_keys("没有表\n")
+
+    def test_real_sources_resolve(self):
+        """021 / 022 正本能找到并读出键（合并前在旁边的 worktree，合并后在本仓）。"""
+        _, scenes, devices = cc.load_schema()
+        self.assertIn("meeting-room", scenes)
+        self.assertIn("mba-builtin", devices)
 
 
 class CardTest(unittest.TestCase):

@@ -227,7 +227,7 @@
 #### ①消费设备
 
 - **场景键**：home-family, open-office, other（文件名噪声字段：狗叫、打字、婴儿哭、风扇等；无地点字段）
-- **设备键**：laptop-unknown（含 6 条自填 `macbook`，型号与是否内置麦未核，不能归 `mba-builtin` / `mbp-builtin`）, non-laptop-close-talk, non-laptop-desktop（webcam）, non-laptop-phone, non-laptop-unknown
+- **设备键**：mac-unknown（6 条自填 `macbook`，型号与是否内置麦未核）, laptop-unknown, non-laptop-close-talk, non-laptop-desktop（webcam）, non-laptop-phone, non-laptop-unknown
 - **笔记本段**：有，可粗筛。T1 blind（合集 `noisy_blind_testset_v2_challenge_withSNR_16k/`，700 条 = 真实 650 + 合成唱歌 50（女 40、男 5、合唱 5））文件名里含 `laptop` 192 条、`macbook` 6 条、`headset` 97、`webcam` 41、`surface` 24、手机类 25。设备字段是众包者自由填写，写法不统一（如 `Win_laptop_mic`、`laptopmic`、`builtinmicrophone`，甚至有未替换的占位符 `your_device_type`），只能用正则粗筛，不可靠【实测：文件名】
 - **转写**：没有
 - **语体**：文件名分 english / nonenglish / emotional（emotional 102 条；`laughter` 34 条）；附和无标注【实测：文件名】
@@ -238,7 +238,7 @@
 #### ①消费设备
 
 - **场景键**：home-family, open-office, other
-- **设备键**：laptop-unknown（含自填 `macbook` 12、`mac` 12、情绪集 `Macbookpro` 1，型号与是否内置麦未核）, non-laptop-close-talk, non-laptop-desktop, non-laptop-phone, non-laptop-unknown
+- **设备键**：mac-unknown（自填 `macbook` 12、`mac` 12、情绪集 `Macbookpro` 1，型号与是否内置麦未核）, laptop-unknown, non-laptop-close-talk, non-laptop-desktop, non-laptop-phone, non-laptop-unknown
 - **笔记本段**：有，可粗筛。V3 blind（600 条 = 真实 440 + 非真实 160）文件名含 `laptop` 137 条、`macbook` 12 条（同一众包者 `A1RK5KQQ320OH4`，英语男声，打字 / 风扇 / 厨房 / 洗碗机等，near / far 都有）、`mac` 12 条（同一人 `XMQ6Y5VEXRUU`，钢琴背景 far）、`headset` 124、`surface` 46。同包的情绪集 600 条（怀疑派重数，见文末）：`laptop` 252（不分大小写）、手机类 142、`headset` 114、`Macbookpro` 1；鼠标点击集 99 条：手机类 30、`headset` 29、`laptop` 10【实测：文件名】
 - **转写**：没有
 - **语体**：情绪集 600 条（文件名标 sad / angry / crying / yelling / happy / laughter；`laugh` 不分大小写 100 条）；V3 另有 musical（乐器背景）78 条；附和无标注【实测：文件名】

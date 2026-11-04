@@ -1,15 +1,10 @@
-# 数据卡模板（023 · check_cards.py 按此校验）
+# 数据卡模板（023 · check_cards.py 按此校验字段）
 
 > 每份数据集一张卡，文件名 `cards/<英文小写-连字符>.md`。14 个必填字段，格式固定为 `- **字段**：值`，字段名一字不改、顺序不变。查不到写「未查到」，不许空着。
-> 场景键、设备键抄自 021 / 022 的 v0 草稿，正本在那两处；两边改了，本节随之改，`check_cards.py` 只认本节。
+> 场景键、设备键只认 021 / 022 两份正本，见下节。
 
-## 暂定场景键
-> 正本：worktree `noise_canceling-scenes` 的 `docs/research/021_meeting-scenes/catalog.md`（v1，2026-11-03）。`other` 只用于数据卡，不算开会场景、不进覆盖表。
-`home-quiet` 书房 / 卧室 · `home-family` 家里客厅（家人 / 电视 / 小孩 / 宠物）· `open-office` 开放工位 · `phone-booth` 电话亭 / 专注舱 · `meeting-room` 会议室 · `cowork` 共享办公 · `cafe` 咖啡馆 · `canteen` 餐厅 / 食堂 · `transit-hub` 机场 / 车站候车厅 · `car-passenger` 车内乘客 · `rail-air-cabin` 高铁 / 飞机客舱 · `street-outdoor` 街边 / 户外 · `hotel-room` 酒店房间 · `library-classroom` 教室 / 图书馆 · `bus-metro-cabin` 公交 / 地铁 / 电车车厢· `other` 录音棚 / 实验室 / 采访间 / 未标
-
-## 暂定设备键
-> 正本：worktree `noise_canceling-macmic` 的 `docs/research/022_mac-mic/devices.md`（v1，2026-11-03）。
-`mba-builtin` MacBook Air 内置麦 · `mbp-builtin` MacBook Pro 内置麦 · `mac-intel-builtin` 2020 前 Intel Mac 内置麦 · `imac-builtin` · `studio-display` · `airpods-hfp` · `bt-hfp-generic` · `usb-headset` · `external-mic` · `iphone-continuity` · `laptop-unknown` 笔记本、型号未写 · `non-laptop` 不是笔记本（父类）· `mac-unknown` Mac 笔记本、型号未知、是否内置麦未核· `non-laptop-phone` 手机 · `non-laptop-tablet` 平板 · `non-laptop-desktop` 台式机 / 摄像头麦 · `non-laptop-conf-device` 会议终端 · `non-laptop-mic-array` 研究用麦阵 · `non-laptop-close-talk` 近讲 / 领夹 / 头戴参考麦 · `non-laptop-studio` 录音棚麦 · `non-laptop-unknown` 设备未写（以上 8 个为 non-laptop 子键）
+## 场景键与设备键
+不在这里抄。场景键正本：`docs/research/021_meeting-scenes/catalog.md` 键表第一列；设备键正本：`docs/research/022_mac-mic/devices.md` 键表第一列（合并进 main 前在 worktree `noise_canceling-scenes` / `noise_canceling-macmic`）。`check_cards.py` 直接读这两处。`other` 只给数据卡用，不算开会场景。
 
 ## 卡片格式
 

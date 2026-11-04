@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """检查 023 数据卡字段是否齐全、合规。
 
-正本：card-template.md（字段名、顺序、场景键、设备键都从它读，不在本脚本里另抄一份）。
+正本：字段名与顺序读 card-template.md；场景键读 021 `catalog.md`、设备键读 022 `devices.md`
+（两表第一列反引号里的键）。本脚本和模板都不另抄键。
+合并进 main 前，021 / 022 在旁边的 worktree 里，脚本会去那里找；两处都找不到就报错退出。
 用法：python3 check_cards.py [卡片目录]，默认同目录下 cards/。有错退出码 1。
 """
 from __future__ import annotations
@@ -15,25 +17,45 @@ TEMPLATE = HERE / "card-template.md"
 
 FIELD_RE = re.compile(r"^- \*\*(?P<name>[^*]+)\*\*：(?P<value>.*)$")
 LICENSE_VERDICTS = ("训练可", "只评测", "不可", "未查到")
-KEY_RE = re.compile(r"`([a-z0-9-]+)`")
+ROW_KEY_RE = re.compile(r"^\|\s*`([a-z0-9-]+)`\s*\|", re.M)
+RESEARCH = HERE.parent
+KEY_SOURCES = {  # 名称 → (仓内路径, 合并前所在的 worktree 名)
+    "场景键": ("021_meeting-scenes/catalog.md", "noise_canceling-scenes"),
+    "设备键": ("022_mac-mic/devices.md", "noise_canceling-macmic"),
+}
 
 
-def parse_template(text: str) -> tuple[list[str], set[str], set[str]]:
-    """从模板读出：字段顺序、场景键集合、设备键集合。"""
-    sections: dict[str, str] = {}
-    current = None
-    for line in text.splitlines():
-        if line.startswith("## "):
-            current = line[3:].strip()
-            sections[current] = ""
-        elif current:
-            sections[current] += line + "\n"
-    scenes = set(KEY_RE.findall(sections.get("暂定场景键", "")))
-    devices = set(KEY_RE.findall(sections.get("暂定设备键", "")))
-    block = sections.get("卡片格式", "")
+def parse_fields(text: str) -> list[str]:
+    """从模板「## 卡片格式」一节读字段顺序。"""
+    block = text.split("## 卡片格式", 1)[-1] if "## 卡片格式" in text else ""
     fields = [m.group("name") for m in map(FIELD_RE.match, block.splitlines()) if m]
-    if not fields or not scenes or not devices:
-        raise ValueError("card-template.md 缺字段表、场景键或设备键")
+    if not fields:
+        raise ValueError("card-template.md 缺「卡片格式」字段表")
+    return fields
+
+
+def parse_keys(text: str) -> set[str]:
+    """读正本表格第一列反引号里的键。"""
+    keys = set(ROW_KEY_RE.findall(text))
+    if not keys:
+        raise ValueError("键表里没读到任何 | `键` | 行")
+    return keys
+
+
+def find_key_source(name: str) -> Path:
+    """先找本仓 docs/research/ 下的正本；合并前退到旁边的 worktree。"""
+    rel, worktree = KEY_SOURCES[name]
+    repo = RESEARCH.parent.parent
+    for cand in (RESEARCH / rel, repo.parent / worktree / "docs" / "research" / rel):
+        if cand.exists():
+            return cand
+    raise FileNotFoundError(f"找不到{name}正本 {rel}")
+
+
+def load_schema() -> tuple[list[str], set[str], set[str]]:
+    fields = parse_fields(TEMPLATE.read_text(encoding="utf-8"))
+    scenes = parse_keys(find_key_source("场景键").read_text(encoding="utf-8"))
+    devices = parse_keys(find_key_source("设备键").read_text(encoding="utf-8"))
     return fields, scenes, devices
 
 
@@ -103,7 +125,7 @@ def check_addendum(text: str, scenes: set[str], devices: set[str]) -> list[str]:
 
 def main(argv: list[str]) -> int:
     card_dir = Path(argv[1]) if len(argv) > 1 else HERE / "cards"
-    fields, scenes, devices = parse_template(TEMPLATE.read_text(encoding="utf-8"))
+    fields, scenes, devices = load_schema()
     cards = sorted(p for p in card_dir.glob("*.md") if p.name != "README.md")
     bad = 0
     for p in cards:
