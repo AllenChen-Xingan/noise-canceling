@@ -207,6 +207,19 @@
 | ref | 480 | 0.036 | 0.136 | 0.056 | 0.250 | 210 | 186 | 24 |
 | gtcrn | 480 | 0.025 | 0.077 | 0.133 | 0.361 | 193 | 108 | 85 |
 
+### 3f. 拖后腿的声音跨场景汇总（gtcrn；成绩单第五节的分组结果，相关不是因果）
+
+| 项 | 声音（拖累 > 0 的组合数 · 拖累中位数） |
+|---|---|
+| V-EAT-ASR | `talker` 9/51 · +2.46 · `bed-ace` 7/51 · +0.79 · `footsteps` 5/51 · +3.49 · `bed-room` 4/51 · +1.08 · `brake` 3/51 · +5.29 |
+| V-SPLVL | `bed-ace` 4/22 · +0.52 · `talker` 4/22 · +0.25 · `babble` 3/22 · +1.47 · `bed-restaurant` 3/22 · +0.24 · `door-chime` 2/22 · +0.55 |
+| V-ONSET | `talker` 6/47 · +0.92 · `keyboard` 4/47 · +1.42 · `nav-voice` 3/47 · +2.98 · `music` 3/47 · +1.98 · `bed-restaurant` 3/47 · +1.92 |
+| V-PUMPV | `talker` 12/60 · +0.98 · `bed-ace` 9/60 · +0.99 · `footsteps` 8/60 · +1.13 · `bed-restaurant` 4/60 · +4.21 · `keyboard` 4/60 · +1.59 |
+| V-NRMOS-SCOREQ | — |
+| V-MUSIC | `talker` 5/24 · +0.20 · `bed-ace` 4/24 · +0.56 · `fan` 4/24 · +0.39 · `nav-voice` 2/24 · +0.98 · `fridge-hum` 2/24 · +0.47 |
+| V-NR | `bed-ace` 11/52 · +0.72 · `babble` 6/52 · +1.33 · `bed-cafeteria` 4/52 · +0.59 · `brake` 4/52 · +0.49 · `footsteps` 4/52 · +0.36 |
+| V-INTF | `bed-office` 1/40 · +0.44 · `dishes` 1/40 · +0.27 |
+
 ## 4. Air 内置麦 vs 外接麦（gtcrn，全部场景合并）
 
 | 项 | Air 均值 | 外接均值 | 差（Air − 外接） | Air 不过段 | 外接不过段 |
