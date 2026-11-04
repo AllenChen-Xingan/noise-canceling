@@ -26,7 +26,7 @@
    - 评测集 REAL-T（AISHELL-4、AliMeeting、AMI、DipCo、CHiME6 真实会议），许可未写；组织方统一打分，12 队
    - 发现：只用合成训练不如真实适配，前 3 名都用了真实录音；因果基线在 14 个系统里排第 11、14；在线第一 CARTSE 细节未查到
    - 都要单独注册语音
-4. **SonicAGI SwiftNet-Lookahead**（2607.11083）：有界前瞻 + 因果迭代分离，总延迟 96 ms（超 75 ms）；无发布；在线赛道约 2–3 名
+4. **SonicAGI SwiftNet-Lookahead**（2607.11083）：有界前瞻 + 因果迭代分离，总延迟 96 ms（超 75 ms，也超 D32 的 45 ms）；无发布；在线赛道约 2–3 名
 5. **WeSep 新版**（2607.27436，Interspeech 2026）：因果 BSRNN 理论延迟 32 ms、可导 ONNX（搜索摘要）；新版「将公开」
 6. **TargetVoice**（Meeami，Interspeech 2025 展示）：20 ms 窗 10 ms 跳，自称延迟 10 ms；抽取块约 12 MB、6 GMAC；声纹编码器约 10 MB；专有；需 ≥ 3 s 注册
 7. **Contrastive KD 声纹在线细化**（Serre 等，2601.16235）：15 万参数小编码器在线细化声纹、跟踪变化（见笔记 05）

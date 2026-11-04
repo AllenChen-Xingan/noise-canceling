@@ -4,7 +4,7 @@
 > ⚠️ pse 回源更正（2026-11-04）：下文 Alkove「会中自动学声纹：约 6 s、下次静音生效」**未证实**——模型卡、仓库 README、Pipecat 文档都写的是「由应用提供 192 维声纹（alkove-timbre 从 ≥ 1.5 s 语音算出），运行中可换」。CARTSE 的 TER 报告内为 0.699（下文 0.592 是子代理转述的修正后榜单，未核）。以 `sources.md` 为准。
 
 ## 结论
-截至 2026-11-04，纸面上同时满足「因果 · 附加延迟 ≤ 75 ms · 每 10 ms ≤ 2 ms · 许可与 GPL-3.0 兼容」的开源权重候选有 1 个：**Alkove Focus（`alkove-focus-1-preview`，Apache-2.0）**。数字全是厂商自测，无论文、无第三方复测；训练数据未公开；无负 SIR 分档数字；预览版，权重与接口可能改。VoxLock 效果更好但算力超标。其余缺开源权重、太慢、或要多麦 / 视频。
+截至 2026-11-04，纸面上同时满足「因果 · 附加延迟 ≤ 75 ms（子代理用的旧口径；本项目现为 D32 ≤ 45 ms） · 每 10 ms ≤ 2 ms · 许可与 GPL-3.0 兼容」的开源权重候选有 1 个：**Alkove Focus（`alkove-focus-1-preview`，Apache-2.0）**。数字全是厂商自测，无论文、无第三方复测；训练数据未公开；无负 SIR 分档数字；预览版，权重与接口可能改。VoxLock 效果更好但算力超标。其余缺开源权重、太慢、或要多麦 / 视频。
 
 ## A. 开源、有权重
 1. **Alkove Focus** https://github.com/alkove-ai/alkove · https://huggingface.co/alkove-ai/alkove-focus-1-preview（原表 `bench/results/focus.json`）
