@@ -4,7 +4,7 @@
 - **手上**：exp015（#95）认人能不能吃共享频谱 · 认人每次 6 ms 花在哪
 - **管的实体**：认人前端（fbank）· 声纹模型（只评）· 认人判断回路
 - **交代**：主目录 `_tmp/20261104-b13/fespk.md`
-- **下一步**：名额放开 → 申请名额 → `bench-split` 实测 c01 / c06 → 填 README 实测表 → 自审 + codex 评审 → 报「可以收尾」
+- **下一步**：名额放开 → 申请名额 → 编译 + 跑 bench-split 单元测试 → `bench-split` 实测 c01 / c06 → 填 README 实测表 → 结论若变再审一轮 → 报「可以收尾」
 
 ## 做了什么（按时间）
 
@@ -13,10 +13,13 @@
 - 接口需求发 fecore（只要降噪后输出功率谱，标低优先）→ 大总管定「认人不接共享频谱，本线收窄」→ 已撤回，fecore 确认
 - 加计时命令 `vdn-speaker-lab bench-split`（`src/speaker-lab/src/bench.rs` + 4 条单元测试）；尚未编译（名额未放开）
 - 写 `docs/experiments/exp015-speaker-shared-spectrum/README.md`：耗时估算表 · 三方案对比 · 要省 8 倍的办法
+- codex 换谱系评审 3 轮（P1×1、P2×7，全部属实、全部已改），第 2、3 轮无 P0/P1，已达停止线：`docs/reviews/exp015-speaker-shared-spectrum-codex.md`。索引 `docs/reviews/README.md` 不在我的可写范围，请大总管加一行
+- bench.rs 按评审改：真实窗预热、按「遍 + 窗」交替顺序、有符号差值、两次余弦、默认 6 遍
 
 ## 改了哪些文件
 
-- 新增 `src/speaker-lab/src/bench.rs`（176 行）
+- 新增 `src/speaker-lab/src/bench.rs`（237 行，6 条单元测试）
+- 新增 `docs/reviews/exp015-speaker-shared-spectrum-codex.md`
 - 改 `src/speaker-lab/src/main.rs`（注册子命令）· `src/speaker-lab/README.md`（用法一行 + 一段说明）
 - 新增 `docs/experiments/exp015-speaker-shared-spectrum/README.md`
 - 本页
