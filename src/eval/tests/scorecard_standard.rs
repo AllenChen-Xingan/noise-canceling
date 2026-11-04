@@ -50,6 +50,30 @@ fn first_number(s: &str) -> Option<f64> {
     None
 }
 
+/// 文本里全部的数（带负号），按出现顺序。
+fn all_numbers(s: &str) -> Vec<f64> {
+    let mut out = Vec::new();
+    let mut rest = s.replace('−', "-");
+    while let Some(x) = first_number(&rest) {
+        out.push(x);
+        // 跳过这个数本身
+        let t = format!("{}", x.abs());
+        let at = rest.find(&t).map_or(rest.len(), |i| i + t.len());
+        rest = rest[at..].to_string();
+    }
+    out
+}
+
+/// 任务必须给的参数（成绩单标准里写的），按顺序；没有就是空。
+fn explicit_params(v: &str) -> Vec<f64> {
+    VETO.iter()
+        .chain(&COMMON)
+        .chain(Group::ALL.iter().flat_map(|g| g.extra()))
+        .find(|i| i.v == v && !i.params.is_empty())
+        .map(|i| i.params.iter().map(|(_, x)| *x).collect())
+        .unwrap_or_default()
+}
+
 #[test]
 fn scene_group_table_matches_code() {
     let t = doc();
@@ -134,12 +158,24 @@ fn item_table_matches_code() {
             let in_doc = used.split(['·', ' ']).any(|w| w.trim() == g.as_str());
             assert_eq!(in_doc, in_code, "{v} 的「用在」与 {} 类不一致", g.as_str());
         }
-        let want = effective(v).unwrap_or_else(|| panic!("{v} 在代码里查不到过关线"));
-        let got = first_number(line).unwrap_or_else(|| panic!("{v} 的过关线格里没有数"));
-        assert!(
-            (got - want).abs() < 1e-9,
-            "{v}：scorecard.md 写 {got}，代码用 {want}"
-        );
+        // 过关线格里的全部数 = 任务给的全部参数（按顺序）；没给参数的 = 代码实际用的那一个
+        let got = all_numbers(line);
+        let mut want = explicit_params(v);
+        if want.is_empty() {
+            want.push(effective(v).unwrap_or_else(|| panic!("{v} 在代码里查不到过关线")));
+        }
+        assert_eq!(got.len(), want.len(), "{v}：过关线格 {line:?} 里的数 {got:?} ↔ 代码 {want:?}");
+        for (g, w) in got.iter().zip(&want) {
+            assert!((g - w).abs() < 1e-9, "{v}：scorecard.md 写 {g}，代码用 {w}");
+        }
+        // 不等号方向与登记表的好坏方向一致：越小越好写 ≤，越大越好写 ≥
+        let better = vdn_eval::verifiers::info(v).unwrap().better;
+        if line.contains('≤') {
+            assert_eq!(better, vdn_eval::Better::Lower, "{v} 写了 ≤ 但越大越好");
+        }
+        if line.contains('≥') {
+            assert_eq!(better, vdn_eval::Better::Higher, "{v} 写了 ≥ 但越小越好");
+        }
     }
 }
 

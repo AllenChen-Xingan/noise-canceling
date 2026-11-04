@@ -185,7 +185,7 @@ fn hash_mismatch_is_skipped_not_scored() {
     // 缺段的场景不能判「过」
     let card = Card::build(&rows, skipped);
     assert_eq!(card.cards[0].missing.len(), 1);
-    assert_ne!(card.cards[0].status, Status::Pass);
+    assert_ne!(card.cards[0].status, CardStatus::Pass);
 }
 
 /// 轨长与清单 dur_samples 不符：报错、不截短（codex 第 1 轮 P1 #2）。
@@ -232,7 +232,7 @@ fn task_without_clips_still_appears() {
     assert!(rows.is_empty());
     let card = Card::build(&rows, missing);
     assert_eq!(card.cards.len(), 1);
-    assert_eq!(card.cards[0].status, Status::Unknown);
+    assert_eq!(card.cards[0].status, CardStatus::Unknown);
     assert!(card.to_markdown("t").contains("没跑成的"));
 }
 
