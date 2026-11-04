@@ -18,6 +18,7 @@ FIELDS = [
 ]
 AUDIO_KEYS = ["mix", "owner", "owner_dry", "stems", "floor", "noise", "interf"]
 SOUND_FIELDS = ["inst", "cls", "group", "is_speech", "iv", "level_dbfs", "rel_db", "dist_m", "azimuth_deg", "src", "license"]
+SOUND_OPTIONAL = ["direction_db"]
 
 
 def doc_fields(section):
@@ -50,8 +51,6 @@ def record(meta, lab, audio_paths, hashes, n, sr, other_device):
     }
 
 
-# 已请 scorecard 加进 Rust 类型、schema 还没有的字段（2026-11-03 发出）。schema 有了就自动按 schema 查，这里的豁免不再生效
-PENDING = {"Target": {"src"}, "Measured": {"snr_all_db", "owner_level_dbfs"}, "Sound": {"direction_db"}}
 TYPES = {"string": str, "integer": int, "boolean": bool, "object": dict, "array": list, "number": (int, float)}
 
 
@@ -92,8 +91,7 @@ def _walk(node, val, path, errs, defs, name=None):
             if k in props:
                 _walk(props[k], v, f"{path}.{k}", errs, defs)
             elif extra is False:
-                if k not in PENDING.get(name, set()):
-                    errs.append(f"{path}.{k} 多出")
+                errs.append(f"{path}.{k} 多出")
             elif isinstance(extra, dict):
                 _walk(extra, v, f"{path}.{k}", errs, defs)
     if isinstance(val, list):

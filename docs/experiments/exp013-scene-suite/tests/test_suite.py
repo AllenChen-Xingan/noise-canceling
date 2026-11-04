@@ -163,7 +163,7 @@ class SmallBuild(unittest.TestCase):
 
     def test_manifest_fields(self):
         self.assertEqual(manifest.FIELDS, manifest.doc_fields("一、"))
-        self.assertEqual(manifest.SOUND_FIELDS, manifest.doc_fields("二、"))
+        self.assertEqual(manifest.SOUND_FIELDS + manifest.SOUND_OPTIONAL, manifest.doc_fields("二、"))
         for r in self.recs:
             self.assertEqual(manifest.validate(r), [], r["id"])
             for k in ("mix", "owner", "noise", "interf"):
