@@ -311,12 +311,8 @@ def paired_table(rows: list[dict], manifest: dict, system: str) -> list[str]:
     for v in items:
         my = mean([(score(r, v) or {}).get("value") for r in yes])
         mn = mean([(score(r, v) or {}).get("value") for r in no])
-        fy = sum(1 for r in yes if (score(r, v) or {}).get("verdict") == "fail")
-        fn = sum(1 for r in no if (score(r, v) or {}).get("verdict") == "fail")
         d = None if my is None or mn is None else my - mn
-        py = f"{fy}/{len(yes)}" if yes else "—"
-        pn = f"{fn}/{len(no)}" if no else "—"
-        out.append(f"| {v} | {fmt(my)} | {fmt(mn)} | {fmt(d)} | {py} | {pn} |")
+        out.append(f"| {v} | {fmt(my)} | {fmt(mn)} | {fmt(d)} | {fail_ratio(yes, v)} | {fail_ratio(no, v)} |")
     return out
 
 
