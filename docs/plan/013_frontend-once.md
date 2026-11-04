@@ -54,7 +54,7 @@ pub trait SpectrumTap: Model {
 - 新增 `push_hop_with_power(x, spec, power)`：吃现成功率谱；`x` 仍要（削波是时域算的）。`spec` 是借出方的口径（`spectrum_spec()`），不等于 `FRONTEND` 或长度不对就退回自算（自审 P2，`docs/reviews/013_frontend-once-selfreview.md`）
 - 两个入口只差「功率从哪来」：各一行填 `self.pow`，之后同一段 `finish_frame` 算 35 维要用的帧量
 - 借谱时也把 `x` 推进自算缓冲（`StreamingStft::feed`），换到 FE-M 时第一帧不吃旧数据
-- 只差一处：`x` 不足一个 hop 时，旧代码只移 `len` 个样本，`StreamingStft` 移一整个 hop 并补零。实时路径每次都是整 hop，不受影响；测试只喂整 hop
+- 不整齐长度：旧代码按 `min(len, hop)` 移位、不补零。为保持逐位不变，`StreamingStft` 加 `feed_partial` / `analyze_partial`，场景自算走它们；借谱入口遇到 `x` 不是整 hop 就退回自算（codex 第 1 轮 P1 #1：「短输入改了数值行为」）。有对拍：`scene/tests/golden.rs::ragged_hops_match_golden`
 - 逆 FFT（功率谱 → 自相关求谐波度）省不掉，留着
 - `SceneAnalyzer` 同样加 `push_hop_with_power`
 
@@ -68,8 +68,8 @@ pub trait SpectrumTap: Model {
 
 ## 8. 测试
 
-1. **GTCRN 对拍**：固定 2 s 输入，输出 f32 逐位的哈希写进 `src/models/tests/fixtures/`。顺序：先在**没改过**的 `gtcrn.rs` 上生成哈希（名额放开后），再改 GTCRN。没模型文件时同 `smoke.rs` 跳过（设 `VDN_REQUIRE_MODELS` 不许跳）
-2. 场景：借谱 vs 自算，35 维最大绝对差 ≤ 1e-5（预期 0）；场景判断逐帧相同。谱源用 `StreamingStft` + `power_into`（与 GTCRN 同一段代码），CI 上能跑；另有一条对「改前的场景实现」的对拍：旧 `push_hop` 的计算原样留在测试里当参照（只在测试里，不进库）
+1. **GTCRN 对拍**：固定约 3 s 输入（截到整 hop，每个点都真过模型；codex 第 1 轮 P2 #4），输出 f32 逐位的哈希写进 `src/models/tests/fixtures/`。顺序：先在**没改过**的 `gtcrn.rs` 上生成哈希（名额放开后），再改 GTCRN。没模型文件时同 `smoke.rs` 跳过（设 `VDN_REQUIRE_MODELS` 不许跳）
+2. 场景：借谱 vs 自算，35 维最大绝对差 ≤ 1e-5（预期 0）；场景判断逐帧相同。谱源用 `StreamingStft` + `power_into`（与 GTCRN 同一段代码），CI 上能跑。「改前的场景实现」的参照是两份基准：整 hop 一份、不整齐长度一份，都在改前的提交上生成。原稿说「把旧实现抄进测试」，没有这样做，因为那是一份 300 多行的副本。基准带平台标签：别的平台上跳过；CI 是 macos-15（arm），和生成基准的平台相同，所以 CI 上真比（codex 第 1 轮 P2 #3）
 3. 计数：一个 `StreamingStft` 当模型前端 + 场景借谱 + 测试里手动接修音，每帧正向 FFT 总数恰好 1（前端 `forward_count` 增 1、场景自算 0）；有模型文件时对真 GTCRN 再测一次
 4. 修音（测试里手动接）：dry 用前端借出的那份 vs 另起一个 `StreamingStft` 自算的 dry，`PolishChain` 输出逐位相同
 5. 0 分配：`assert_no_alloc` 包住 `power_into`、`feed`、场景借谱入口、GTCRN 借谱
