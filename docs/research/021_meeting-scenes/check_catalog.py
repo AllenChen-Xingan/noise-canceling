@@ -11,7 +11,7 @@
 - K6 覆盖矩阵：coverage.md 矩阵的行键 = 主表的键去掉 `other`，每个地点恰好一行；每行「空格数」等于该行 ○ 的个数；
   矩阵行不许以反引号键开头
 - K7 矩阵汇总数只有一个正本（矩阵本身）：coverage.md「空格总数 N 个」与 decision.md「有 N 个格子」= 全表 ○ 之和；
-  coverage.md「一个 ● 都没有的因素有 N 个」= 没有任何 ● 的因素列数
+  coverage.md「一个 ● 都没有的因素有 N 个」与 decision.md「真正覆盖的因素有 N 个」= 没有任何 ● 的因素列数
 
 用法：python3 docs/research/021_meeting-scenes/check_catalog.py [目录]
 全过退出 0，有问题逐条打印并退出 1。
@@ -127,6 +127,7 @@ CLAIMS = (  # (文件, 句式, 取哪个统计量)
     ("coverage.md", r"空格总数 (\d+) 个", 0),
     ("coverage.md", r"一个 ● 都没有的因素有 (\d+) 个", 1),
     ("decision.md", r"有 (\d+) 个格子关键", 0),
+    ("decision.md", r"真正覆盖的因素有 (\d+) 个", 1),
 )
 
 

@@ -166,6 +166,14 @@ class Claims(unittest.TestCase):
         self.assertIn("K7", codes(cc.check_claims({**self.texts, "coverage.md": bad})))
 
 
+    def test_no_full_count_drift_in_decision(self):
+        # 只改 decision 里的「无 ● 因素数」（第 4 轮 codex #4）
+        _, no_full = cc.matrix_stats(COV)
+        bad = DEC.replace(f"真正覆盖的因素有 {no_full} 个", f"真正覆盖的因素有 {no_full + 1} 个")
+        self.assertNotEqual(bad, DEC)
+        self.assertIn("K7", codes(cc.check_claims({**self.texts, "decision.md": bad})))
+
+
 class Cli(unittest.TestCase):
     def test_exit_code_on_broken_copy(self):
         with tempfile.TemporaryDirectory() as d:

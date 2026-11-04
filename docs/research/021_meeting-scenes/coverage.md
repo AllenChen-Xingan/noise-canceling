@@ -15,6 +15,7 @@
    - F7 是**主讲人**到麦的距离（016 F7），exp008 固定 0.5 m（`cells.py` 第 39、170 行）；ci / qa 不设距离【仓内】
    - **邻座**距离不是 F7，算进 F4：exp008 的邻座固定 1.5 m（`cells.py` 第 178 行）【仓内】
    - exp008 整条 S-SIR 轴的底噪是咖啡馆（`cells.py` 第 39、45 行）【仓内】
+   - 「实测」含摘要与二手转述，按 `sources.md` 的核对列；同一地点有几个来源时，任一来源的实测范围含某档即记 ●，并在格里写明来源
 4. 同一条任务可以同时算进几个地点（例如六人 babble 的 C04 / C05 同时算咖啡馆和食堂），`catalog.md` 主表的计数按同一映射。
 
 只靠粉噪 / 白噪任务撑着的格子记 ◐，不记 ●。
@@ -43,11 +44,11 @@
 | meeting-room | · | ◐ | · | ○ 近处几人都要留 | ○ 多人交叠 | ◐ 只有目标值 0.5–0.7 s，档位有 0.7 s | ○ 近处几人 0.5–2 m | · | ○ 椅子、笑声 | 4 |
 | cowork | ○ 无专属素材 | ◐ | · | ○ 陌生人说话 | · | · | · | · | ○ 咖啡机、走动 | 3 |
 | cafe | ● exp008 DEMAND 真实咖啡馆 | ● R08 5 dB、C07 0 dB | ○ 声级与 SNR 未联动 | ● exp008 S-SIR 六档，底噪是咖啡馆 | ◐ | ○ 实测典型值未查到 | · | · | ◐ 合成杯碟未过统计对齐 | 2 |
-| canteen | ◐ 合成 babble、赌场片段 | ● −5 dB C05 | ○ 61–73 dBA 未联动 | ○ 同桌多人 | · | ○ 实测 1.04–1.08 s 不在档位上 | · | · | ◐ | 3 |
+| canteen | ◐ 合成 babble、赌场片段 | ● −5 dB C05 | ○ 61–73 dBA 未联动 | ○ 同桌多人 | · | ● 丹麦食堂 0.8–2.5 s（二手）含 1.3 s 档 [S43]；天津 1.04–1.08 s 不在档上 [S40] | · | · | ◐ | 3 |
 | transit-hub | ○ 广播 | ○ | · | · | · | ○ 典型值未查到；只有一座火车站实测 8.6–10 s [S44] | · | · | ○ 广播、行李箱 | 4 |
 | car-passenger | ◐ exp008 traffic 是车外 | ○ 约 5.6 dB | · | ○ 司机、导航 | · | ◐ exp008 有 0.08 s 档 | · | · | ○ 转向灯 | 3 |
 | bus-metro-cabin | ◐ exp008 TBUS 1 段 | ○ | · | ○ 乘客 | · | · | · | · | ○ 报站广播 | 3 |
-| rail-air-cabin | ○ 舱噪 | ○ 约 −2 dB [S31] | ○ 77–79 dB 环境下的 Lombard | ○ 邻座 0.4 m | · | · | · | · | ○ 广播 82–88 dB(A) | 5 |
+| rail-air-cabin | ○ 舱噪 | ○ 听者处约 −2 dB，麦处未知 [S31] | ○ 77–79 dB 环境下的 Lombard | ○ 邻座离得近，麦处 SIR 未知 | · | · | · | · | ○ 广播 82–88 dB(A) | 5 |
 | street-outdoor | ◐ exp008 traffic | ○ | · | · | · | · | · | · | ○ 喇叭、风噪（缺 F17） | 2 |
 | hotel-room | ◐ 只有抽象稳态 | ◐ 只有粉噪任务 | · | · | · | ○ | · | · | ○ 走廊、空调启停 | 2 |
 | library-classroom | · | ◐ 只有粉噪任务 | · | ○ 旁人轻声交谈 | · | ● 阅览室实测 1.3 s [S53]，档位有 1.3 s | · | ◐ R03 轻声，粉噪 | ○ 翻书、键盘 | 2 |
@@ -65,7 +66,7 @@
 | 第 1 批 | open-office | 雇主场所 44.4% 工时 [S57]；邻座已有 11 条，但缺键盘、电话铃，邻座距离只有一档 | F15 键盘与电话铃；F4 邻座距离多档（exp008 固定 1.5 m）；F6 开放办公混响 |
 | 第 2 批 | meeting-room | 也在 44.4% 里；方向和「只留我」相反，要先定产品支不支持（见 `decision.md` 待拍板第 1 题） | F4 / F5 / F7 多人都要留 |
 | 第 2 批 | canteen · cafe | 各约 5.3% 以内；exp003 同类片段全「不能用」【仓内】；缺声级与 SNR 联动 | F3 联动；F6 约 1 s 加 babble；F4 同桌多人 |
-| 第 3 批 | rail-air-cabin · transit-hub | 占比未查到；客舱 SNR 约 −2 dB [S31]；候车厅混响典型值未查到，只有一座火车站实测 8.6–10 s [S44]；空格多 | F2 负 SNR；F6 加一档长混响作压力测试（依据只有一座车站）；F15 广播 |
+| 第 3 批 | rail-air-cabin · transit-hub | 占比未查到；客舱听者处 SNR 约 −2 dB、麦处未知 [S31]；候车厅混响典型值未查到，只有一座火车站实测 8.6–10 s [S44]；空格多 | F2 负 SNR；F6 加一档长混响作压力测试（依据只有一座车站）；F15 广播 |
 | 第 3 批 | car-passenger · bus-metro-cabin · street-outdoor | 占比未查到；中等难度；street 要先有 F17 风噪 | F1 真实车内 / 车厢噪声；F15 |
 | 第 4 批 | home-quiet · hotel-room · phone-booth · library-classroom · cowork | 安静类，难在不做坏事，现有抽象稳态任务大体管住；cowork 缺素材但占比小 | F15 轻突发；F6 小空间早期反射 |
 
@@ -78,10 +79,11 @@
 | quiet | home-quiet · phone-booth · hotel-room · library-classroom ·（home-family 勉强） | home-family 的电视、小孩、宠物和「安静」完全相反，塞不进来 |
 | cafe | cafe · canteen ·（cowork 勉强） | canteen 声级与混响都高一档 |
 | commute | transit-hub · car-passenger · bus-metro-cabin · street-outdoor ·（rail-air-cabin） | 室内长混响（transit-hub）和车内短混响放在一类 |
-| meeting | meeting-room ·（open-office、cowork 勉强） | open-office 要「只留我」，meeting-room 要「留所有人」，方向相反 |
+| meeting | meeting-room | 已有明确定义：一屋子人共用一台电脑，保留近处所有人声、只压远处噪音，暂时只能手选（`scene.rs` 第 13–14 行）【仓内】。贴合 meeting-room，不该再归别的地点 |
+| 无贴合 | open-office ·（cowork 勉强归 cafe） | 开放工位要只留主讲人、压邻座，5 类里没有专门的一类 |
 | music | 无对应地点 | music 是一种噪声，不是地点 |
 
-提议（建议，待人定）：用户层至少要能分出「家里有人」和「近处多人都要留」两种，即在 quiet 之外加一个家里有人的类，并把 meeting 拆成「开放工位只留我」和「会议室留所有人」。具体是否改、改成几类，见 `decision.md` 待拍板第 2 题。
+提议（建议，待人定）：meeting 保持现有定义不动；在 quiet 之外加一个「家里有人」的类；开放工位要不要单独成类另议。具体是否改、改成几类，见 `decision.md` 待拍板第 2 题。
 
 ### 5.2 噪音 7 类（`src/scene/src/classify.rs`：Quiet · Hvac · Babble · Neighbor · Clatter · Traffic · Music）
 
