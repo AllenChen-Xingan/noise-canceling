@@ -12,9 +12,11 @@
 - 2026-11-03 · 写设备键表草稿 v0 · 发 scenes、mtgdata、大总管
 - 2026-11-03 · 写调研计划 `docs/research/022_mac-mic/plan.md`（4 路 + 4 怀疑派）· 已报大总管，等批
 - 2026-11-03 · 设备键草稿已发 scenes、mtgdata；收到 scenes 14 个场景键（正本在 scenes worktree 的 catalog.md）
-
 - 2026-11-03 · 大总管批计划，补三点（Air 单列、嘈杂环境录音抱怨、可执行模拟步骤）· 已写进提示，workflow 已起
 - 2026-11-03 · 设备键 v1：应 mtgdata 加 mac-unknown 与 non-laptop 8 个子键 · 已通知 mtgdata、scenes；scenes 场景键升 v1（加 bus-metro-cabin、other）
+
+- 2026-11-03 · mtgdata 报设备键 v1 已改完（44 新卡 + 33 张 014 卡），其模板抄了键副本 · 已建议它改为从 devices.md 读键；我收尾时出键表检查脚本
+- 2026-11-03 · mtgdata 的 check_cards.py 已改为直接读 devices.md 第一列（20 条测试过）· 已在 devices.md 抬头注明表格式约束
 
 ## 待人拍板
 （暂无）
