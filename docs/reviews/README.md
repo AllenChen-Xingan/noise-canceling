@@ -23,4 +23,4 @@
 | 023 | 2026-11-03 | [开会场景真实录音数据集调研：结论层与卡片检查脚本](023_meeting-datasets-codex.md)（decision · matrix · pick · sources · check_cards.py，issue #82，codex gpt-6-astra，5 轮，已达停止线） | 采纳 30 / 提出 30（P1×10 P2×20；无 issue） |
 | 087 | 2026-11-03 | [场景成绩单 + 新评分项 + 评分模型接入](087_scorecard-codex.md)（`origin/main...HEAD`，issue #87，codex gpt-6-astra，8 轮，已达停止线） | 采纳 17 / 提出 17（P1×8 P2×9；无 issue） |
 | 013 | 2026-11-03 | [exp013 场景测试集：生成器 · 设备链 · 实测房间](013_scene-suite-codex.md)（exp013 目录 + scenes.json，issue #86，codex gpt-6-astra，4 轮，已达停止线） | 采纳 13 / 提出 15（P1×4 P2×11；2 条 P2 留作 issue） |
-| 015 | 2026-11-04 | [exp015 认人耗时估算与计时命令](exp015-speaker-shared-spectrum-codex.md)（exp015 README + speaker-lab bench.rs，issue #95，codex gpt-6-astra，3 轮，已达停止线） | 采纳 8 / 提出 8（P1×1 P2×7；无 issue） |
+| 015 | 2026-11-04 | [exp015 认人耗时估算与计时命令](exp015-speaker-shared-spectrum-codex.md)（exp015 README + speaker-lab bench.rs，issue #95，codex gpt-6-astra，4 轮，已达停止线） | 采纳 10 / 提出 10（P1×1 P2×9；无 issue） |

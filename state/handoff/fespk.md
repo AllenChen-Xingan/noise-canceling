@@ -1,10 +1,10 @@
 # 现状页 · fespk（批次 20261104-b13）
 
-- **状态**：实测已完成、过线；等第 4 轮 codex 后报收尾
+- **状态**：已收尾（2026-11-04），等大总管验收
 - **手上**：exp015（#95）认人能不能吃共享频谱 · 认人每次 6 ms 花在哪
 - **管的实体**：认人前端（fbank）· 声纹模型（只评）· 认人判断回路
 - **交代**：主目录 `_tmp/20261104-b13/fespk.md`
-- **下一步**：数字变了，再审一轮 codex → 报「可以收尾」
+- **下一步**：大总管验收；推送、开 PR（Closes #95）由大总管做
 
 ## 做了什么（按时间）
 
@@ -13,7 +13,7 @@
 - 接口需求发 fecore（只要降噪后输出功率谱，标低优先）→ 大总管定「认人不接共享频谱，本线收窄」→ 已撤回，fecore 确认
 - 加计时命令 `vdn-speaker-lab bench-split`（`src/speaker-lab/src/bench.rs` + 4 条单元测试）；尚未编译（名额未放开）
 - 写 `docs/experiments/exp015-speaker-shared-spectrum/README.md`：耗时估算表 · 三方案对比 · 要省 8 倍的办法（实测后改为 4–8 倍）
-- codex 换谱系评审 3 轮（P1×1、P2×7，全部属实、全部已改），第 2、3 轮无 P0/P1，已达停止线：`docs/reviews/exp015-speaker-shared-spectrum-codex.md`。索引 `docs/reviews/README.md` 不在我的可写范围，请大总管加一行
+- codex 换谱系评审 4 轮（P1×1、P2×9，全部属实、全部已改；第 4 轮在实测数字填入后），第 2、3、4 轮无 P0/P1，已达停止线：`docs/reviews/exp015-speaker-shared-spectrum-codex.md`。索引 `docs/reviews/README.md` 不在我的可写范围，请大总管加一行
 - 名额（大总管给）：`cargo build --release -p vdn-speaker-lab` 过；`cargo test -p vdn-speaker-lab` 11 条全过（bench 5 条）；`bench-split` c01、c06 各 158 窗 × 6 遍，插电 + caffeinate。算频谱占一次声纹计算 5.19% / 5.22%，< 10%，过线。名额已归还
 - 发现：一次声纹计算实测约 3.05 ms，只有 exp005 记的 6 ms 的一半；原因待查，按大总管要求不在本线查，记入转交
 - 大总管授权：主目录 `_tmp/20261031-exp005/out-r2/` 只读（实测素材用 `c01.wet.wav`、`c06.wet.wav`）；`docs/reviews/README.md` 追加了一行索引（015）
