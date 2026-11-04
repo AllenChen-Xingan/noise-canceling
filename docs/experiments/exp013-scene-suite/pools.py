@@ -25,8 +25,21 @@ MUSIC = DATA / "music/Scott_Joplin_-_Maple_Leaf_Rag.ogg"
 ZH = [DATA / "zh/zh_popobing_landxia.ogg", DATA / "zh/zh_braille_commusic.ogg"]
 ZH_LICENSE = "CC-BY-SA-4.0"
 
-EXP006_DEMAND = {"PCAFETER", "PRESTO", "SCAFE", "DKITCHEN", "STRAFFIC", "TBUS"}
-EXP006_TRAIN_FRAC = 0.6
+
+
+def _exp006_rules():
+    """exp006 的切分规则从它自己的 recipes.json 读（正本），不手抄：用过哪些 DEMAND 环境、train 占前多少比例。"""
+    r = json.loads((HERE.parent / "exp006-scene-sim/recipes.json").read_text())
+    envs = set()
+    for srcs in r["noise_sources"].values():
+        for s in srcs:
+            if s.get("kind") == "demand":
+                envs.add(s["env"])
+            envs |= {b for b in s.get("bed", []) if not b.startswith("synth")}
+    return envs, float(r["demand_split"]["train_frac"])
+
+
+EXP006_DEMAND, EXP006_TRAIN_FRAC = _exp006_rules()
 
 
 @lru_cache(maxsize=1)

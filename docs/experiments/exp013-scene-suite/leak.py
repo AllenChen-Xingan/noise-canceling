@@ -19,10 +19,15 @@ EXP006 = HERE.parent / "exp006-scene-sim"
 DEMAND_RE = re.compile(r"DEMAND/(\w+)/ch(\d+)@([\d.]+)s")
 
 
-def exp006_train():
+def exp006_rows(splits=("train",)):
     rows = []
     for f in sorted((EXP006 / "builds").glob("*/truth.jsonl")):
-        rows += [r for r in map(json.loads, f.read_text().splitlines()) if r.get("split") == "train"]
+        rows += [r for r in map(json.loads, f.read_text().splitlines()) if r.get("split") in splits]
+    return rows
+
+
+def exp006_train():
+    rows = exp006_rows(("train",))
     spk = {r["target_spk"] for r in rows if r.get("target_spk")} | pools.libri()["exp006_train"]
     ivs = {}
     for r in rows:
@@ -52,6 +57,8 @@ def used(records):
             esc.add(src["file"])
         elif k in ("commons-zh", "music"):
             other.append((src["file"], src["start"], src["len"]))
+        elif k not in ("babble", "events"):
+            raise ValueError(f"leak.used 不认识素材类型 {k!r}：先在这里登记它怎么查，再用")
         for key in ("talkers", "items"):
             for s in src.get(key, []):
                 walk(s)
@@ -88,7 +95,25 @@ def check(records):
         "against": "exp006 全部 build 的 train 段", "train_rows": tr["rows"],
         "speakers": len(u["speakers"] & tr["speakers"]), "demand": sum(1 for h in hits if h.startswith("DEMAND")),
         "synth_fn": len(u["fns"] & tr["fns"]), "hits": hits[:50], "ok": not hits,
+        "synth_fn_note": "按函数名比；真正的保证是本目录代码不 import exp006 sim.py（tests 里 test_no_exp006_import）",
+        "exp006_eval_overlap": eval_overlap(u),
     }
+
+
+def eval_overlap(u):
+    """只报告、不判不过：与 exp006 test / seq 段（评测份，曾用来选场景分类器的滞回参数）的重叠。
+    本集与它同池（LibriSpeech 奇数位、DEMAND 后 40%），所以 exp006 场景分类器不能在本集上评（README 第四节）。"""
+    rows = exp006_rows(("test", "seq"))
+    spk = {r["target_spk"] for r in rows if r.get("target_spk")}
+    ivs = {}
+    for r in rows:
+        m = DEMAND_RE.search(r.get("noise") or "")
+        if m:
+            t = float(m.group(3))
+            ivs.setdefault((m.group(1), int(m.group(2))), []).append((t, t + float(r.get("dur_s", 10.0))))
+    dem = sum(1 for env, ch, st, ln, sr in u["demand"]
+              if any(st / sr < tb and ta < (st + ln) / sr for ta, tb in ivs.get((env, ch), [])))
+    return {"rows": len(rows), "speakers": len(u["speakers"] & spk), "demand_segments": dem}
 
 
 def exclude_table(records):
@@ -99,5 +124,7 @@ def exclude_table(records):
         "librispeech_speakers": sorted(u["speakers"]),
         "demand_segments": [{"env": e, "ch": c, "start": s, "len": n, "sr": sr} for e, c, s, n, sr in sorted(set(u["demand"]))],
         "esc50_files": sorted(u["esc50"]),
-        "other_segments": [{"file": f, "start": s, "len": n} for f, s, n in sorted(set(u["other"]))],
+        "synth_fns": sorted(u["fns"]),
+        "other_segments": [{"file": f, "start": s, "len": n, "sr": 16000, "_说明": "重采样到 16 kHz 后的样本号"}
+                           for f, s, n in sorted(set(u["other"]))],
     }
