@@ -424,18 +424,16 @@ def gate_stats(rows: list[dict], systems: list[str]) -> list[str]:
     return out
 
 
-def better_of(rows: list[dict], v: str) -> str:
-    """从一段的分数、过线值和判定推出方向：过且分数 > 过线 → 越大越好；不过且分数 > 过线 → 越小越好。"""
-    for r in rows:
-        s = score(r, v)
-        if not s or s["value"] is None or s["threshold"] is None or s["value"] == s["threshold"]:
-            continue
-        above = s["value"] > s["threshold"]
-        if s["verdict"] == "pass":
-            return "越大越好" if above else "越小越好"
-        if s["verdict"] == "fail":
-            return "越小越好" if above else "越大越好"
-    return "?"
+def better_map(card: dict) -> dict[str, str]:
+    """每项的方向，直接取成绩单里评分项写明的 `better`（higher / lower）。不从判定反推：
+    有的项带附加规则（如 V-SIM-GATE 的字头漏开），主分数达标也会判不过，反推会推错（codex 第 2 轮 #4）。"""
+    out: dict[str, str] = {}
+    for s in card.get("scenes", []):
+        for i in s.get("items", []) + (s.get("listen") or {}).get("models", []):
+            b = {"higher": "越大越好", "lower": "越小越好"}.get(i.get("better"))
+            if b and out.setdefault(i["v"], b) != b:
+                raise ValueError(f"{i['v']} 在成绩单里方向不一致")
+    return out
 
 
 def build(run: Path, manifest_path: Path, system: str = "gtcrn", base: str = "passthrough") -> str:
