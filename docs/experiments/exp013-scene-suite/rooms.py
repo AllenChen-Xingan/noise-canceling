@@ -22,8 +22,9 @@ class Rir:
     rest: np.ndarray  # 其余（早期反射 + 尾巴）
     t60: float  # 名义 T60
     dist_m: float  # 实际源—麦距离
-    azimuth_deg: float
+    azimuth_deg: float  # 实际方位（声源被夹回房间后重算）
     dims: tuple
+    delay: int  # 直达声到达的样本号
 
     @property
     def full(self):
@@ -43,7 +44,10 @@ def _place(dims, dist, az_deg, src_h):
     horiz = np.sqrt(max(dist**2 - (src_h - MIC_H) ** 2, 0.01))
     src = mic + np.array([horiz * np.sin(a), horiz * np.cos(a), src_h - MIC_H])
     src = np.clip(src, [0.1, 0.1, 0.1], [L - 0.1, W - 0.1, H - 0.1])
-    return mic, src
+    # 被夹回房间后方位会变：按实际位置重算（0° = 正前方 +y，顺时针为正），左右对称故只取水平角
+    d = src - mic
+    az = float(np.rad2deg(np.arctan2(d[0], d[1])))
+    return mic, src, az
 
 
 def _images(dims, src, order):
@@ -69,10 +73,10 @@ def _images(dims, src, order):
     return out
 
 
-def make_rir(rng, dims, t60, dist, az_deg, src_h=1.2, window_ms=2.5, order=2):
+def make_rir(rng, dims, t60, dist, az_deg, src_h=1.2, window_ms=None, order=2):
     """合成一条 RIR。返回 Rir（直达部分与其余分开）。"""
     dims = tuple(float(d) for d in dims)
-    mic, src = _place(dims, dist, az_deg, src_h)
+    mic, src, az_real = _place(dims, dist, az_deg, src_h)
     d0 = float(np.linalg.norm(src - mic))
     n0 = int(round(d0 / C * SR))
     if t60 < 0.03:  # 户外：直达 + 地面反射
@@ -110,13 +114,17 @@ def make_rir(rng, dims, t60, dist, az_deg, src_h=1.2, window_ms=2.5, order=2):
         tail[:ramp] *= np.linspace(0, 1, ramp)
         tail *= np.sqrt(tail_e / max(np.sum(tail * tail), 1e-20))
         h[t_start:] += tail
+    if window_ms is None:  # 直达窗长的正本在 device_chain.json（022 第 2 步）
+        from device_chain import P as _CP
+
+        window_ms = _CP["step2_direction"]["direct_window_ms"]
     w = int(round(window_ms * 1e-3 * SR))
     direct = np.zeros_like(h)
     lo_i, hi_i = max(0, n0 - w), min(len(h), n0 + w + 1)
     direct[lo_i:hi_i] = h[lo_i:hi_i]
     rest = h - direct
     scale = d0  # 归一到直达幅度 1
-    return Rir(direct * scale, rest * scale, float(t60), d0, float(az_deg), dims)
+    return Rir(direct * scale, rest * scale, float(t60), d0, az_real, dims, n0)
 
 
 def drr_db(r: Rir):

@@ -117,6 +117,7 @@ def make_clip(scene, tier, idx, device):
     x_dry, osrc = tracks.owner_track(rng_mat, n, lang, SCENES["lead_silence_s"], gap)
     owner, orir, _ = sc.point(x_dry, owner_dist, 0.0)
     L_o = gated_level_db(owner)
+    L_owner = L_o  # 主说话人自己的电平；「全留」时 L_o 会改成所有人之和，owner_dry 只含主说话人
     targets = [{"spk": osrc["spk"], "dist_m": orir.dist_m, "azimuth_deg": 0.0, "src": osrc, "x": owner}]
     polarity = S.get("polarity", "suppress")
     if polarity == "preserve_all":
@@ -171,6 +172,8 @@ def make_clip(scene, tier, idx, device):
         if c["directional"]:
             y, r, att = sc.point(x, dist, az, continuous=c["group"] in STEADY_GROUPS)
             add(cls, y, s, r.dist_m, r.azimuth_deg, att)
+        elif c.get("bypass_direction"):  # 麦口独立噪声（风噪）：不经波束的扩散场衰减，只过频响
+            add(cls, sc.ch.response(x), s)
         else:
             y = sc.diffuse(x, dist=dist if src_def["kind"] == "speech" else None)
             add(cls, y, s)
@@ -184,7 +187,7 @@ def make_clip(scene, tier, idx, device):
     bed = steady[0]
     for s in steady[1:]:
         s["rel_bed_db"] = _u(rng_mat, SCENES["pattern_rel_db"])
-        s["x"] = _scale_to(s["x"], _power_db(bed["x"]) + s["rel_bed_db"], gated_level_db)
+        s["x"] = _scale_to(s["x"], _power_db(bed["x"]) + s["rel_bed_db"], _power_db)  # 两边都按整段功率（间歇声如空调启停也一致）
     floor = sc.ch.floor(n, L_o, rng_dev)
     p_target = 10 ** ((L_o - nominal["snr_db"]) / 10)
     p_floor = float(np.mean(floor**2))
@@ -229,11 +232,13 @@ def make_clip(scene, tier, idx, device):
         for s in sounds:
             s["x"] = s["x"] * head
     mix, clipped = sc.ch.clip(mix_lin)
-    dry_gain = gain * 10 ** ((L_o - gated_level_db(x_dry)) / 20)  # 干轨与链后主说话人同电平
-    arrays = {"mix": mix, "owner": owner_ref, "owner_dry": x_dry * dry_gain * head, "floor": floor, "noise": noise, "interf": interf,
+    dry_gain = gain * 10 ** ((L_owner - gated_level_db(x_dry)) / 20)  # 干轨与链后主说话人同电平
+    # 干轨按直达声到达时刻后移，和 owner / mix 对齐（最小相位 FIR 的几个样本延迟不补）
+    dry = np.concatenate([np.zeros(orir.delay), x_dry])[:n] * dry_gain * head
+    arrays = {"mix": mix, "owner": owner_ref, "owner_dry": dry, "floor": floor, "noise": noise, "interf": interf,
               "stems": {s["inst"]: s["x"] for s in sounds}}
     meta = {"scene": scene, "tier": tier, "idx": idx, "device": device, "seed": seed, "lang": lang, "polarity": polarity,
             "nominal": nominal, "targets": targets, "sounds": sounds, "chain": {**sc.ch.params, "floor_clamped": bool(floor_clamped),
-            "room_dims_m": list(sc.dims), "headroom_db": round(20 * np.log10(head), 3)}, "additive": not clipped, "owner_rir": orir,
+            "room_dims_m": list(sc.dims), "headroom_db": round(20 * np.log10(head), 3), "owner_dry_delay_samples": int(orir.delay)}, "additive": not clipped, "owner_rir": orir,
             "bed": bed_cls}
     return arrays, meta
