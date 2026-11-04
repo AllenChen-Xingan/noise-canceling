@@ -68,7 +68,7 @@
 | LibriSpeech · LibriTTS-R · MLS · AMI · NOTSOFAR-1 · Emilia-YODAS | CC BY 4.0 | 可（署名） |
 | Common Voice | CC0 | 可 |
 | VoxCeleb1/2 | CC BY 4.0（另有同条件再分发条款，部分目录标 BY-SA，**冲突待核**） | 待核 |
-| AliMeeting · REAL-T | CC BY-SA 4.0 | 评测可；训练后权重是否要 SA 不确定 |
+| AliMeeting · REAL-T | CC BY-SA 4.0 | 可（D64：权重按 CC BY-SA 4.0 发布并署名）；REAL-T 留作评测 |
 | CHiME-6 | OpenSLR 标 BY-SA，Sheffield 分商用 / 非商用，**冲突** | 先只评测 |
 | Emilia（主体）· MISP · WSJ0 | NC / LDC | 不可 |
 
