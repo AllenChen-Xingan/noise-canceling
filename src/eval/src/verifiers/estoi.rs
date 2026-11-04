@@ -8,7 +8,8 @@
 use vdn_dsp::FrameFft;
 use vdn_types::{StftSpec, Window};
 
-const FS: usize = 10_000;
+/// ESTOI 内部采样率（输入先重采样到它）。
+pub const FS: usize = 10_000;
 const N_FRAME: usize = 256;
 const HOP: usize = N_FRAME / 2;
 const NFFT: usize = 512;
