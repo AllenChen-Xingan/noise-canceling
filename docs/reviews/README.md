@@ -26,3 +26,4 @@
 | 015 | 2026-11-04 | [exp015 认人耗时估算与计时命令](exp015-speaker-shared-spectrum-codex.md)（exp015 README + speaker-lab bench.rs，issue #95，codex gpt-6-astra，4 轮，已达停止线） | 采纳 10 / 提出 10（P1×1 P2×9；无 issue） |
 | 094 | 2026-11-04 | [每帧只算一次频谱：参数正本 · 借谱接口 · 场景 / 修音共用](013_frontend-once-codex.md)（`990e7843...HEAD`，issue #94，codex gpt-6-astra，3 轮，已达停止线；另有多视角自审 `013_frontend-once-selfreview.md`） | 采纳 8 / 提出 8（P1×1 P2×7；无 issue） |
 | 024 | 2026-11-04 | [个性化降噪（先认人再提取）调研结论](024_pse-landscape-codex.md)（decision · sources · notes/01–05，issue #98，codex gpt-6-astra，4 轮，已达停止线） | 采纳 20 / 提出 20（P1×6 P2×14；无 issue） |
+| 102 | 2026-11-04 | [统一频谱模块支持 Kaldi 分帧 · 认人 fbank 改调 · R-FFT 规则](102_frontend-speaker-codex.md)（`d23bfe66..HEAD`，issue #102，codex gpt-6-astra，2 轮，已达停止线） | 采纳 2 / 提出 3（P2×3；驳回 1；无 issue） |

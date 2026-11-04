@@ -17,6 +17,7 @@ mod ast;
 mod ci;
 mod denycheck;
 mod deps;
+mod fft_site;
 mod file_size;
 mod miri;
 mod model_name;

@@ -8,7 +8,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [features]
-# 默认什么都不带：核心只依赖 dsp + earshot + realfft（规约 §2.2 规则 1）
+# 默认什么都不带：核心只依赖 dsp + earshot（规约 §2.2 规则 1；频谱计算一律调 vdn-dsp，#102 起不再直接依赖 realfft）
 default = []
 # 声纹模型（ort）。过渡期例外：拆出推理后端 crate 后移走（vdn-models 已改走 vdn-backend-ort，本 crate 的 ort 例外待后续批次移走）
 onnx = ["dep:ort"]
@@ -19,7 +19,6 @@ vdn-types.workspace = true
 # 本 crate 新引入的依赖
 earshot = "=1.2.2"
 # 以下沿用 workspace 的唯一一份钉
-realfft.workspace = true
 vdn-dsp.workspace = true
 ort = { workspace = true, optional = true }
 
