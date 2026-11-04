@@ -204,6 +204,41 @@ def by_snr(rows: list[dict], manifest: dict, items: tuple[str, ...], systems: li
     return out
 
 
+T60_EDGES = (0.3, 0.6, 1.0)
+
+
+def t60_bin(x: float) -> str:
+    lo = None
+    for e in T60_EDGES:
+        if x < e:
+            return f"< {e:g}" if lo is None else f"{lo:g}–{e:g}"
+        lo = e
+    return f"≥ {T60_EDGES[-1]:g}"
+
+
+def by_device_t60(rows: list[dict], manifest: dict, items: tuple[str, ...], systems: list[str]) -> list[str]:
+    """表：按设备和混响长短（实测 T60）分，每项不过段 / 判得了的段。用来查「不过是不是设备链或混响造成的」。"""
+    devs = ("mba-builtin", "external-mic")
+    bins = [t60_bin(e - 0.01) for e in T60_EDGES] + [t60_bin(T60_EDGES[-1])]
+    out = ["| 项 | 系统 | " + " | ".join(devs) + " | " + " | ".join(f"T60 {b} s" for b in bins) + " |",
+           "|---|---|" + "---|" * (len(devs) + len(bins))]
+    for v in items:
+        for sy in systems:
+            n = {k: [0, 0] for k in (*devs, *bins)}
+            for r in rows:
+                s = score(r, v)
+                t60 = (((manifest.get(r["clip"]) or {}).get("measured")) or {}).get("t60_s")
+                if r["system"] != sy or not s or s["verdict"] == "unknown":
+                    continue
+                keys = [r["device"]] + ([t60_bin(t60)] if t60 is not None else [])
+                for k in keys:
+                    if k in n:
+                        n[k][0] += s["verdict"] == "fail"
+                        n[k][1] += 1
+            out.append(f"| {v} | {sy} | " + " | ".join(f"{a}/{t}" for a, t in n.values()) + " |")
+    return out
+
+
 def device_table(rows: list[dict], system: str) -> list[str]:
     """表 3：Air 内置麦 − 外接麦，每项均值差（全部场景合并，再按场景类列最差项）。"""
     items = [v for v in items_of(rows) if v not in REPORT_ONLY]
