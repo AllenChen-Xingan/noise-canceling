@@ -93,20 +93,113 @@ def scene_table(rows: list[dict], card: dict, system: str, base: str) -> list[st
     return out
 
 
+def combo_verdict(rows: list[dict], v: str) -> str:
+    """一组段在一项上的判定：任一段不过 → fail；否则有一段过 → pass；全判不了 → unknown（scorecard 第四节第 1 条）。"""
+    vs = [(score(r, v) or {}).get("verdict") for r in rows]
+    if "fail" in vs:
+        return "fail"
+    return "pass" if "pass" in vs else "unknown"
+
+
 def item_counts(rows: list[dict], card: dict, systems: list[str]) -> list[str]:
-    """表 2：每项在多少个「场景 × 档 × 设备」组合里不过，按系统分列。"""
+    """表 2：每项在多少个「场景 × 档 × 设备」组合里 不过 / 不知道 / 过，按系统分列。"""
     items = items_of(rows)
     g = group(rows, "scene", "tier", "device", "system")
     combos = sorted({k[:3] for k in g})
-    out = ["| 项 | " + " | ".join(f"{s} 不过组合数" for s in systems) + " |",
+    out = [f"每格：不过 / 不知道 / 过（共 {len(combos)} 个组合）。「不知道」= 该组合里每段都判不了（如没有旁人说话）", "",
+           "| 项 | " + " | ".join(systems) + " |",
            "|---|" + "---|" * len(systems)]
     for v in items:
         cells = []
         for sy in systems:
-            n = sum(1 for c in combos if v in fail_items(g.get((*c, sy), []), [v]))
-            cells.append(f"{n} / {len(combos)}")
+            n = defaultdict(int)
+            for c in combos:
+                n[combo_verdict(g.get((*c, sy), []), v)] += 1
+            cells.append(f"{n['fail']} / {n['unknown']} / {n['pass']}")
         tag = "（只报不判）" if v in REPORT_ONLY else ""
         out.append(f"| {v}{tag} | " + " | ".join(cells) + " |")
+    return out
+
+
+# 每场景配对差值表列哪几项（够看清「压噪」与「不做坏事」两类）
+GAP_ITEMS = ("V-NR", "V-INTF", "V-EAT-ASR", "V-SPLVL", "V-ONSET", "V-PUMPV", "V-NRMOS-SCOREQ", "V-NRMOS-DISTILL")
+
+
+def paired_diffs(rows: list[dict], system: str, base: str, v: str) -> list[float]:
+    b = {r["clip"]: r for r in rows if r["system"] == base}
+    out = []
+    for r in rows:
+        if r["system"] != system or r["clip"] not in b:
+            continue
+        s, t = score(r, v), score(b[r["clip"]], v)
+        if s and t and s["value"] is not None and t["value"] is not None:
+            out.append(s["value"] - t["value"])
+    return out
+
+
+def scene_gap(rows: list[dict], system: str, base: str) -> list[str]:
+    """表：每场景 × 档（两种设备合并），每项「模型 − 原声直通」配对均值差；括号里是配对段数。"""
+    g = group(rows, "scene", "tier")
+    out = ["| 场景 | 档 | " + " | ".join(GAP_ITEMS) + " |", "|---|---|" + "---|" * len(GAP_ITEMS)]
+    for sc, ti in sorted(g):
+        cells = []
+        for v in GAP_ITEMS:
+            d = paired_diffs(g[(sc, ti)], system, base, v)
+            cells.append(f"{fmt(mean(d))} ({len(d)})" if d else "—")
+        out.append(f"| {sc} | {ti} | " + " | ".join(cells) + " |")
+    return out
+
+
+def eat_pooled(rows: list[dict], systems: list[str]) -> list[str]:
+    """表：按场景 × 档合并字数后的吃字率（Σ 每段多吃的百分点 × 参考字数 ÷ Σ 参考字数），对照 1 个百分点线。"""
+    g = group(rows, "scene", "tier")
+    out = ["| 场景 | 档 | 参考字数 | " + " | ".join(f"{s} 合并吃字（百分点）" for s in systems) + " |",
+           "|---|---|---|" + "---|" * len(systems)]
+    for sc, ti in sorted(g):
+        cells, words = [], None
+        for sy in systems:
+            num = den = 0.0
+            for r in g[(sc, ti)]:
+                s = score(r, "V-EAT-ASR")
+                if r["system"] != sy or not s or s["value"] is None:
+                    continue
+                n = (s.get("extra") or {}).get("ref_len") or 0
+                num += s["value"] * n
+                den += n
+            words = den if words is None else words
+            cells.append(f"{num / den:+.2f}" if den else "—")
+        out.append(f"| {sc} | {ti} | {int(words or 0)} | " + " | ".join(cells) + " |")
+    return out
+
+
+SNR_EDGES = (0.0, 5.0, 10.0, 15.0, 20.0)
+
+
+def snr_bin(x: float) -> str:
+    lo = None
+    for e in SNR_EDGES:
+        if x < e:
+            return f"< {e:g}" if lo is None else f"{lo:g}–{e:g}"
+        lo = e
+    return f"≥ {SNR_EDGES[-1]:g}"
+
+
+def by_snr(rows: list[dict], manifest: dict, items: tuple[str, ...], systems: list[str]) -> list[str]:
+    """表：按实测信噪比（含突发声，snr_all_db）分档，每项不过段 / 判得了的段。"""
+    bins = [snr_bin(e - 0.1) for e in SNR_EDGES] + [snr_bin(SNR_EDGES[-1])]
+    out = ["| 项 | 系统 | " + " | ".join(f"SNR {b} dB" for b in bins) + " |", "|---|---|" + "---|" * len(bins)]
+    for v in items:
+        for sy in systems:
+            n = {b: [0, 0] for b in bins}
+            for r in rows:
+                s = score(r, v)
+                m = manifest.get(r["clip"])
+                if r["system"] != sy or not s or not m or s["verdict"] == "unknown":
+                    continue
+                b = snr_bin(m["measured"]["snr_all_db"])
+                n[b][0] += s["verdict"] == "fail"
+                n[b][1] += 1
+            out.append(f"| {v} | {sy} | " + " | ".join(f"{a}/{t}" for a, t in n.values()) + " |")
     return out
 
 
