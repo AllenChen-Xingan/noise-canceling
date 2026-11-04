@@ -1,7 +1,7 @@
 # 评审 023 · 开会场景真实录音数据集调研的结论层与卡片检查脚本（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/023_meeting-datasets/` 的 `decision.md` · `matrix.md` · `pick.md` · `sources.md` · `card-template.md` · `check_cards.py` · `test_check_cards.py`；依据：44 张新卡、`cards-014-addendum.md`、014 卡片索引、交代文件。**最新一轮：第 3 轮（2026-11-03）· 总评「修改」· 待第 4 轮**。
-> 累计处理：P1×10、P2×12 逐条回卡片 / 决策正本核实，属实 22、驳回 0。新出的要人定的事：无（已有 4 题见 `decision.md` 第四节）。
+> 对象：`docs/research/023_meeting-datasets/` 的 `decision.md` · `matrix.md` · `pick.md` · `sources.md` · `card-template.md` · `check_cards.py` · `test_check_cards.py`；依据：44 张新卡、`cards-014-addendum.md`、014 卡片索引、交代文件。**最新一轮：第 4 轮（2026-11-03）· 总评「修改」· 连续第 1 轮无 P0/P1，待第 5 轮确认**。
+> 累计处理：P1×10、P2×16 逐条回卡片 / 决策正本核实，属实 26、驳回 0。新出的要人定的事：无（已有 4 题见 `decision.md` 第四节）。
 
 ## 第 1 轮（2026-11-03）· 总评「修改」
 
@@ -109,3 +109,25 @@
 
 ### 是否再审
 本轮有 P1 → 开第 4 轮。第 4 轮同时覆盖大总管授权的 014 卡索引改动（5 行结论 + 页首一句）。
+
+## 第 4 轮（2026-11-03）· 总评「修改」
+
+原文：主目录 `_tmp/20261103-b10/mtgdata/reviews/decision-codex-4.md`（不入库）。effort medium。第一次启动因多加了一个评审对象被脚本拒绝（对象身份变了），改把 014 卡索引放进依据文件、在评审重点里点名审它，重跑。
+上一轮处理的验证：codex 确认 5 项已落实；014 卡索引 5 行 SA 改判「未见漏改或多改」。
+本轮 P0/P1：0 条 · 停止线：连续第 1 轮无 P0/P1 · 留作 issue 的 P2：无
+
+- **P2｜pick.md:43 等处仍有「没有 / 只有 / 仍要自录」残留**（第 4 轮 #1）
+  - 核实：属实 · 处理：pick `cafe` 行、decision 第 4 题选项 B、matrix 第二节 `cafe` / `canteen` 行改为「尚未确认可筛的笔记本子集」+ 建议
+- **P2｜matrix.md:18 把全集数量当地点子集数量**（第 4 轮 #2）
+  - 核实：属实（SurfaceBook 44 是 DNS1 内部集全集；AISHELL-2 含录音棚；3D-Speaker 笔记本段语种分布未统计）
+  - 处理：三处分别注明「全集数 · 子集未知」；decision 第一节第 2、4 条与 pick 第四节同步
+- **P2｜matrix.md:25 ECHI 近讲漏「仅 train」**（第 4 轮 #3）
+  - 核实：属实（补充卡 ECHI 节）· 处理：matrix 与 decision 第三节注明近讲只在 train，评测要按 D63 切测试份
+- **P2｜matrix.md:14 主表没有「设备未知」列，WenetSpeech 会议段消失**（第 4 轮 #4）
+  - 核实：属实 · 处理：主表下加「有地点、但设备未知的」一节：WenetSpeech TEST_MEETING、CANDOR、VoxCeleb、Ego4D
+
+### 引用抽查
+- 「不符」1 条（ECHI）：已改（#3）· 「核实属实」6 条（含 014 索引改判）· 无法核实：同前
+
+### 是否再审
+连续第 1 轮无 P0/P1 → 再审一轮确认。
