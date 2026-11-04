@@ -192,3 +192,31 @@ pub trait SpectrumTap: Model {
 | `src/eval/src/analysis.rs:163` | 声谱图把 sqrt-Hann 在 f32 里平方当窗（交代 3 处之外多出的 1 处）。与 `HannPeriodic` 不逐位相同，要么加窗种类、要么接受分数变化 | 待定 |
 
 清完前两处后删 R-FFT 白名单对应两条（规则会提醒）。
+
+## 13. 第三段 · 评测器（#104，手下 fe3，2026-11-04）
+
+> 范围：评测器 4 处频谱计算改调统一模块，**只换计算，不改评分**（评分逻辑、阈值、口径一律不动）。评测器归另一位大总管，它同意的条件是单独 PR、成绩单级逐位对拍。
+
+**4 处怎么换**（读源码）
+
+| 位置 | 改成 | 窗 | 精度 | 为什么逐位不变 |
+|---|---|---|---|---|
+| `verifiers/speech.rs` `band_levels`（V-WEAK） | `FrameFft<f64>`：`win_len` = 0.125·sr，`n_fft` = 下一个 2 的幂，`hop` = 窗长一半；只对主讲人帧取帧 | `HannPeriodic` | f64 | 窗公式运算顺序同原式；原式 `w·(x as f64)` 与统一模块 `(x as f64)·w` 是乘法交换；帧数 `s + win ≤ n` 就是 `snip_edges` |
+| `verifiers/estoi.rs` | 手写窗删掉，改 `window::table(HannNumpyInner, 256)`（静音帧去除、重叠相加也用它）；`tob` 改 `FrameFft<f64>` 256 / 512 / 128，帧号仍按 pystoi 口径自己数 | `HannNumpyInner` | f64 | 原式 i = 1..n 与 `coef` 的 i+1 同序 |
+| `system.rs` 参考降噪器 | `StreamingStft::from_spec(&FRONTEND)`，`N_FFT` / `HOP` 取自 `FRONTEND` | `SqrtHannPeriodic` | f32 | 同一张窗表。**正本变了，参考降噪器跟着变，这是有意的**：它声明与 GTCRN 同口径 |
+| `analysis.rs` 声谱图 | `StreamingStft::new(n, hop, window::table(SqrtHannPeriodicSquared, n))` | 新值 `SqrtHannPeriodicSquared` | f32 | 新窗值照原写法：sqrt-Hann 先转 f32、再在 f32 里平方。`HannPeriodic` 是 f64 算完才转，末位不同，不能代用 |
+
+**新窗值**：`vdn_types::Window::SqrtHannPeriodicSquared`。公式仍只在 `vdn_dsp::window`：`coef` 给 f64 值，`table` 对它先转样本类型再平方（窗表里唯一「先转再算」的一种，测试写明）。不加这个值，评测器就得留一段手写窗变换，不算「只一处」。
+
+**「只一处」的机器检查**：R-FFT 白名单从 3 条缩到 1 条，只剩场景求自相关的逆 FFT。
+
+**测试**
+
+| 判据（测试名） | 比什么 | 阈值 |
+|---|---|---|
+| `eval/tests/spectrum_golden.rs::eval_spectra_match_golden` | 2 段合成咖啡馆片段上：声谱图（512/256 · 1024/256）· ESTOI（16 kHz 与 10 kHz 两条路）· 参考降噪器输出与门控 · 全部 verifier 的分数 / 阈值 / 判定 / 附加量 / 备注（V-FRAME 量耗时，不比），各压一个内容 ID，vs 改前 | 逐位 |
+| `dsp/src/window_tests.rs::sqrt_hann_squared_matches_spectrogram_original` | 新窗值 vs 声谱图原写法，6 种长度；并证明它与 `HannPeriodic` 末位不同 | 逐位 |
+| `xtask` `fft_site_tests.rs` | 白名单只剩 1 条后：清空 / 删文件仍报红；评测器文件里任何 FFT 计划都红 | — |
+| 成绩单级（人工跑，不进仓） | cafe 常见档 Air 内置麦 10 段 × passthrough · ref · gtcrn，不带 `--qa`，`vdn-eval scorecard` 的 `scorecard.json` 去掉 `meta`（run_id · commit · suite 路径）后 vs 改前 | 逐字 |
+
+基准在 `f2782cf4` 的原样源码上生成（`git archive` 导出、单独 target 目录、`VDN_BLESS=1`）；对拍测试文件改前改后逐字相同，只用公开接口。
