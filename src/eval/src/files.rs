@@ -353,7 +353,7 @@ mod tests {
             | Probe::Lowpass1k
             | Probe::Identity
             | Probe::Mute
-            | Probe::WeakMinus10
+            | Probe::WeakDrop
             | Probe::GainWobble
             | Probe::Clicks5
             | Probe::Noise0db => 9,

@@ -315,8 +315,8 @@ mod tests {
     }
 
     #[test]
-    fn weak_catches_weak_minus10() {
-        must_catch("V-WEAK", Probe::WeakMinus10);
+    fn weak_catches_weak_drop() {
+        must_catch("V-WEAK", Probe::WeakDrop);
     }
 
     #[test]
