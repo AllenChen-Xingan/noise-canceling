@@ -181,6 +181,17 @@ class CliTest(unittest.TestCase):
             self.assertEqual(r.returncode, 1)
             self.assertIn("bad.md", r.stdout)
 
+    def test_bad_card_dir_exit_2(self):
+        with tempfile.TemporaryDirectory() as d:
+            keys = make_research(Path(d) / "keys")
+            run = lambda target: subprocess.run(
+                [sys.executable, str(HERE / "check_cards.py"), "--research", str(keys), target],
+                capture_output=True, text=True)
+            self.assertEqual(run(str(Path(d) / "nope")).returncode, 2)  # 不存在
+            empty = Path(d) / "empty"
+            empty.mkdir()
+            self.assertEqual(run(str(empty)).returncode, 2)  # 空目录
+
     def test_missing_keys_exit_2(self):
         with tempfile.TemporaryDirectory() as d:
             env = {k: v for k, v in os.environ.items() if k != cc.KEYS_ENV}

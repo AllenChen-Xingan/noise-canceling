@@ -8,7 +8,7 @@ VDN_KEYS_DIR 显式指过去：值是一个或多个 docs/research 目录，用 
 没找到、也没指，就报错退出。
 用法：python3 check_cards.py [--research <docs/research 目录>] [卡片目录]
 卡片目录默认同目录下 cards/；--research 替换「本仓库 docs/research」（测试用）。
-退出码：0 合格 · 1 卡片有问题 · 2 找不到正本或正本读不出键。
+退出码：0 合格 · 1 卡片有问题 · 2 找不到正本、正本读不出键、卡片目录不存在或为空。
 """
 from __future__ import annotations
 
@@ -146,7 +146,13 @@ def main(argv: list[str]) -> int:
     except (FileNotFoundError, ValueError) as e:
         print(f"错误：{e}")
         return 2
+    if not card_dir.is_dir():
+        print(f"错误：卡片目录不存在或不是目录：{card_dir}")
+        return 2
     cards = sorted(p for p in card_dir.glob("*.md") if p.name != "README.md")
+    if not cards:
+        print(f"错误：{card_dir} 里没有卡片")
+        return 2
     bad = 0
     for p in cards:
         errs = check_card(p.read_text(encoding="utf-8"), fields, scenes, devices)
