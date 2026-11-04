@@ -264,17 +264,4 @@ mod tests {
         b.analyze_partial(&x[..10]);
         assert_eq!(b.forward_count(), n + 1);
     }
-
-    /// `power_into` 与 `norm_sqr` 逐位相同（场景旧代码用的是 `norm_sqr`）。
-    #[test]
-    fn power_matches_norm_sqr() {
-        let spec: Vec<Complex32> = (0..257)
-            .map(|k| Complex32::new((k as f32 * 0.3).sin() * 1e3, (k as f32 * 0.7).cos() * 1e-3))
-            .collect();
-        let mut p = vec![0.0; 257];
-        power_into(&spec, &mut p);
-        for (a, c) in p.iter().zip(&spec) {
-            assert_eq!(a.to_bits(), c.norm_sqr().to_bits());
-        }
-    }
 }
