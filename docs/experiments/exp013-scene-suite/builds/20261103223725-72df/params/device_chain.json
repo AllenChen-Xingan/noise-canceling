@@ -1,0 +1,232 @@
+{
+  "_说明": "设备链参数正本（022 simulation.md 第二节 9 步）。device_chain.py 只从这里读数；tests/test_device_chain.py 把这里的数字按文档写法拼出来，逐条在 022 文档里找，找不到即红。改数字 = 先改 022 文档。",
+  "source_doc": "docs/research/022_mac-mic/simulation.md",
+  "devices": {
+    "mba-builtin": {
+      "mic_mode": "standard",
+      "steps": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    "external-mic": {
+      "mic_mode": "unknown",
+      "steps": [
+        1,
+        6,
+        9
+      ]
+    }
+  },
+  "step1_room": {
+    "owner_dist_m": {
+      "range": [
+        0.4,
+        0.8
+      ],
+      "default": 0.5
+    }
+  },
+  "step2_direction": {
+    "bands_hz": [
+      330,
+      3000
+    ],
+    "direct_window_ms": 2.5,
+    "front_flat_deg": 30,
+    "strength": {
+      "range": [
+        0.6,
+        1.0
+      ],
+      "default": 0.8
+    },
+    "azimuth_table": {
+      "90": {
+        "low": [
+          -4.2,
+          -3.4
+        ],
+        "mid": [
+          -13.6,
+          -7.8
+        ],
+        "high": [
+          -31.0,
+          -17.5
+        ]
+      },
+      "180": {
+        "low": [
+          -4.0,
+          -4.0
+        ],
+        "mid": [
+          -13.4,
+          -8.5
+        ],
+        "high": [
+          -33.8,
+          -33.7
+        ]
+      }
+    },
+    "diffuse_db": {
+      "low": 0,
+      "mid": -3,
+      "high": -6
+    },
+    "reverb_stress_prob": 0.2
+  },
+  "step3_response": {
+    "curve_db": [
+      [
+        80,
+        80,
+        -14
+      ],
+      [
+        100,
+        100,
+        -10
+      ],
+      [
+        150,
+        300,
+        -2.5
+      ],
+      [
+        500,
+        3000,
+        0
+      ],
+      [
+        4000,
+        4000,
+        3
+      ],
+      [
+        6000,
+        6000,
+        6
+      ],
+      [
+        8000,
+        8000,
+        4.5
+      ],
+      [
+        10000,
+        10000,
+        7.6
+      ],
+      [
+        10700,
+        10700,
+        9.4
+      ],
+      [
+        12000,
+        12000,
+        3.8
+      ],
+      [
+        12600,
+        12600,
+        -3
+      ],
+      [
+        16000,
+        16000,
+        -13
+      ]
+    ],
+    "flat_prob": 0.3,
+    "flat_highpass_hz": 120,
+    "tilt_db_per_oct": [
+      -1.5,
+      1.5
+    ],
+    "peak": {
+      "freq_hz": [
+        1000,
+        8000
+      ],
+      "gain_db": [
+        -3,
+        3
+      ],
+      "q": [
+        0.7,
+        1.5
+      ]
+    },
+    "fir_taps": 512
+  },
+  "step4_floor": {
+    "ratio_db": {
+      "range": [
+        28,
+        41
+      ],
+      "default": 35
+    },
+    "lowmid_excess_db": [
+      0,
+      4
+    ],
+    "lowmid_band_hz": [
+      200,
+      1000
+    ],
+    "high_band_hz": 2000
+  },
+  "step5_fan": {
+    "prob": 0
+  },
+  "step6_level": {
+    "mean_dbfs": -28,
+    "sigma_db": 6,
+    "clip_range": [
+      -40,
+      -16
+    ]
+  },
+  "step7_vpio": {
+    "enabled": false,
+    "prob": 0.05,
+    "gain_db": [
+      -20,
+      -10
+    ]
+  },
+  "step8_clip": {
+    "prob": 0.03,
+    "drive_db": [
+      3,
+      10
+    ],
+    "tiers": [
+      "stress"
+    ]
+  },
+  "step9_output": {
+    "sr": 16000,
+    "dtype": "float32"
+  },
+  "_偏离": {
+    "work_sr": "全链直接在 16 kHz 上算：第 9 步本来就重采样到 16 kHz，8 kHz 以上的曲线点（10–16 kHz）对输出没有影响，只留在表里供比对",
+    "step8_tiers": "削波只进压力档：常见档要三轨可加，方便成绩单拆分",
+    "step7": "默认关（022 原文：可选分支，默认关）",
+    "step6_level": "两处改动：①地点可自带主说话人电平分布，覆盖默认（library-classroom −40 到 −32 dBFS，scenes.json）；②整段峰值超 −1 dBFS 时整段调低，记 chain.headroom_db（真机此时会削波）",
+    "step4_low_end": "022 只规定 200–1000 Hz 与 2 kHz 以上；200 Hz 以下本线按 200–1000 Hz 的值平延【推断】",
+    "step2_wind": "风噪是各麦独立的噪声，不按扩散声衰减，绕过第 2 步只过频响（sounds.json bypass_direction）。022 第 4 步说波束对低频自噪声会放大 6.7–9.8 dB，风噪是否同样被放大未知，本线不加放大【推断】"
+  }
+}
