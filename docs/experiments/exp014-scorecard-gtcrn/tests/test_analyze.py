@@ -26,12 +26,23 @@ class TestAnalyze(unittest.TestCase):
         self.assertEqual(A.fail_items(rs, ["V-NR"]), ["V-NR"])
         self.assertEqual(A.fail_items(rs[:1], ["V-NR"]), [])
 
-    def test_better_of_from_threshold(self):
-        lower = [row("a", "g", scores=[sc("V-NR", -2, "fail", -6)])]
-        higher = [row("a", "g", scores=[sc("V-ESTOI", 0.1, "pass", -0.05)])]
-        self.assertEqual(A.better_of(lower, "V-NR"), "越小越好")
-        self.assertEqual(A.better_of(higher, "V-ESTOI"), "越大越好")
-        self.assertEqual(A.better_of([row("a", "g", scores=[sc("X", None, "unknown")])], "X"), "?")
+    def test_better_map_uses_explicit_direction(self):
+        card = {"scenes": [{"items": [{"v": "V-SIM-GATE", "better": "lower"}, {"v": "V-ESTOI", "better": "higher"}],
+                            "listen": {"models": [{"v": "V-NRMOS-SCOREQ", "better": "higher"}]}}]}
+        m = A.better_map(card)
+        self.assertEqual(m, {"V-SIM-GATE": "越小越好", "V-ESTOI": "越大越好", "V-NRMOS-SCOREQ": "越大越好"})
+
+    def test_direction_not_fooled_by_onset_only_fail(self):
+        # 主漏开比例 0.01 < 过线 0.05，却因字头规则判不过：从判定反推会推成「越大越好」，显式方向不会
+        rs = [row("a", "gtcrn", scores=[sc("V-SIM-GATE", 0.01, "fail", 0.05)]),
+              row("a", "passthrough", scores=[sc("V-SIM-GATE", 0.3, "fail", 0.05)])]
+        card = {"scenes": [{"items": [{"v": "V-SIM-GATE", "better": "lower"}]}]}
+        self.assertIn("| V-SIM-GATE | 越小越好 | 1 | -0.29 |", A.gap_vs_base(rs, "gtcrn", "passthrough", card))
+
+    def test_better_map_rejects_conflict(self):
+        card = {"scenes": [{"items": [{"v": "X", "better": "lower"}]}, {"items": [{"v": "X", "better": "higher"}]}]}
+        with self.assertRaises(ValueError):
+            A.better_map(card)
 
     def test_disagreements_opposite_first(self):
         rs = [row("big", "gtcrn", scores=[sc("V-NRMOS-SCOREQ", 0.9, "pass"), sc("V-NRMOS-DISTILL", 0.1, "pass")]),
