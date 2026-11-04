@@ -305,10 +305,6 @@ mod tests {
     use crate::probes::Probe;
     use crate::synth::{NoiseKind, SceneSpec, TalkerSpec, render};
 
-    pub(super) fn clip_pub() -> Clip {
-        clip()
-    }
-
     fn clip() -> Clip {
         render(&SceneSpec {
             dur_s: 10.0,

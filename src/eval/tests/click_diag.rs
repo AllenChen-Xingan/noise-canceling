@@ -11,6 +11,9 @@ use vdn_eval::scorecard::load_scene_clip;
 use vdn_eval::system::{SystemKind, SystemSpec, run};
 use vdn_eval::verifiers::{Ctx, Params, click_positions};
 
+/// 一处检出：(跳变 dBFS, 名字, 在片段里的位置, 输出, 带噪输入, 干净参考)
+type Pick = (f64, String, usize, Vec<f32>, Vec<f32>, Vec<f32>);
+
 #[test]
 #[ignore = "诊断，要场景测试集音频，人工跑：见文件头"]
 fn where_do_clicks_land() {
@@ -21,7 +24,7 @@ fn where_do_clicks_land() {
     let root = vdn_eval::suite::main_root();
     let (mut n, mut near_gate, mut voiced, mut lag_hist) = (0usize, 0usize, 0usize, [0usize; 8]);
     let mut steps = Vec::new();
-    let mut picks: Vec<(f64, String, usize, Vec<f32>, Vec<f32>, Vec<f32>)> = Vec::new();
+    let mut picks: Vec<Pick> = Vec::new();
     for c in all.iter().filter(|c| {
         c.scene == MeetingPlace::Cafe && c.tier == Tier::Common && c.device == DeviceKey::MbaBuiltin
     }) {
