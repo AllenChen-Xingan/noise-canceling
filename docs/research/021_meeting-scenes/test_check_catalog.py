@@ -96,6 +96,15 @@ class Sources(unittest.TestCase):
         p = cc.check_sources(SRC + "\n" + row + "\n", {})
         self.assertIn("K5", codes(p))
 
+    def test_sources_self_refs_checked_via_run(self):
+        # sources.md 自己正文里引用的编号也要查（第 1 轮 codex #5）
+        with tempfile.TemporaryDirectory() as d:
+            for n, t in (("catalog.md", CAT), ("coverage.md", COV),
+                         ("decision.md", DEC), ("sources.md", SRC + "\n见 [S99]\n")):
+                (Path(d) / n).write_text(t, encoding="utf-8")
+            _, p = cc.run(d)
+        self.assertIn("K5", codes(p))
+
     def test_decision_refs_checked(self):
         p = cc.check_sources(SRC, {"decision.md": DEC.replace("[S24]", "[S98]", 1)})
         self.assertIn("K5", codes(p))
@@ -111,6 +120,12 @@ class Coverage(unittest.TestCase):
         row = self.row("phone-booth")
         bad = row.rsplit("| 1 |", 1)[0] + "| 2 |"
         p = cc.check_coverage(COV.replace(row, bad), self.keys)
+        self.assertIn("K6", codes(p))
+
+    def test_duplicate_place_row(self):
+        # 复制粘贴多出一行同名地点（第 1 轮 codex #6）
+        row = self.row("cafe")
+        p = cc.check_coverage(COV.replace(row, row + "\n" + row), self.keys)
         self.assertIn("K6", codes(p))
 
     def test_missing_place(self):

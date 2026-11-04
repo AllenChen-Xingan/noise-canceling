@@ -7,8 +7,8 @@
 - K3 字段：每行列数等于表头列数，每格非空
 - K4 数字有出处：除前 5 列外，凡带单位的数字（dB、%、s、m、km/h、条 ……）所在的格，
   必须带 [Sxx]、【推断】或【仓内】之一
-- K5 出处编号：sources.md 的编号唯一；四份文件里引用的每个 [Sxx] 都在 sources.md 里有定义
-- K6 覆盖矩阵：coverage.md 矩阵的行键 = 主表的键去掉 `other`；每行「空格数」等于该行 ○ 的个数；
+- K5 出处编号：sources.md 的编号唯一；四份文件（含 sources.md 自己）里引用的每个 [Sxx] 都在 sources.md 里有定义
+- K6 覆盖矩阵：coverage.md 矩阵的行键 = 主表的键去掉 `other`，每个地点恰好一行；每行「空格数」等于该行 ○ 的个数；
   矩阵行不许以反引号键开头
 
 用法：python3 docs/research/021_meeting-scenes/check_catalog.py [目录]
@@ -129,6 +129,8 @@ def check_coverage(cov_text, keys):
             continue
         if claimed != n_empty:
             problems.append(f"K6 coverage.md 第 {i + 1} 行 {key}：写了 {claimed} 个空格，实际 ○ 有 {n_empty} 个")
+    for k in sorted({k for k in got if got.count(k) > 1}):
+        problems.append(f"K6 coverage.md 矩阵里地点 {k} 出现了 {got.count(k)} 行")
     want = [k for k in keys if k != OTHER_KEY]
     for k in sorted(set(want) - set(got)):
         problems.append(f"K6 coverage.md 矩阵缺地点 {k}")
@@ -142,7 +144,7 @@ def run(folder):
     texts = {n: (folder / n).read_text(encoding="utf-8")
              for n in ("catalog.md", "coverage.md", "decision.md", "sources.md")}
     keys, problems = check_catalog(texts["catalog.md"])
-    problems += check_sources(texts["sources.md"], {n: t for n, t in texts.items() if n != "sources.md"})
+    problems += check_sources(texts["sources.md"], texts)
     problems += check_coverage(texts["coverage.md"], keys)
     return keys, problems
 
