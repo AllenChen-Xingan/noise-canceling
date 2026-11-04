@@ -107,10 +107,12 @@ def eval_overlap(u):
     spk = {r["target_spk"] for r in rows if r.get("target_spk")}
     ivs = {}
     for r in rows:
-        m = DEMAND_RE.search(r.get("noise") or "")
-        if m:
-            t = float(m.group(3))
-            ivs.setdefault((m.group(1), int(m.group(2))), []).append((t, t + float(r.get("dur_s", 10.0))))
+        noise = r.get("noise") or ""
+        for item in (noise if isinstance(noise, list) else [noise]):  # seq 段的 noise 是列表（每小段一条）
+            m = DEMAND_RE.search(item if isinstance(item, str) else json.dumps(item))
+            if m:
+                t = float(m.group(3))
+                ivs.setdefault((m.group(1), int(m.group(2))), []).append((t, t + float(r.get("segment_s", r.get("dur_s", 15.0)))))
     dem = sum(1 for env, ch, st, ln, sr in u["demand"]
               if any(st / sr < tb and ta < (st + ln) / sr for ta, tb in ivs.get((env, ch), [])))
     return {"rows": len(rows), "speakers": len(u["speakers"] & spk), "demand_segments": dem}
