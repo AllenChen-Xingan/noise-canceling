@@ -219,10 +219,17 @@ fn repo_scene_suite_parses_and_expands() {
     let mut ids = std::collections::BTreeSet::new();
     let mut n = 0;
     for t in &suite.tasks {
-        let Some(vdn_eval::suite::RealSource::Scene { clips, scene, tier, device }) = &t.real else {
+        let Some(vdn_eval::suite::RealSource::Scene {
+            clips,
+            scene,
+            tier,
+            device,
+        }) = &t.real
+        else {
             panic!("{} 不是场景任务", t.id);
         };
-        let jl = std::fs::read_to_string(root.join(clips)).unwrap_or_else(|e| panic!("{clips}：{e}"));
+        let jl =
+            std::fs::read_to_string(root.join(clips)).unwrap_or_else(|e| panic!("{clips}：{e}"));
         let all = SceneClip::parse_jsonl(&jl).unwrap();
         let mine: Vec<_> = all
             .iter()
