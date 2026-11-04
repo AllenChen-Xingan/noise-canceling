@@ -40,7 +40,7 @@
 | `open-office` | DR-VCTK · DNS 2021 | DR-VCTK 是回放，DNS 2021 众包段地点与家混、无逐条地点标签；建议：自录（`matrix.md` 第三节） |
 | `home-family` | CHiME-6 · DNS 2021 · DNS4 | 本轮未确认「一人开会、家人在旁」的子集；建议：合成或自录 |
 | `home-quiet` | 🟥 | MagicData-RAMC 只有整包 15 GB，不进小批；先用 DNS 2021 里的安静段代替（要人工挑） |
-| `cafe` | DNS5 盲测 · LIVETALK | 没有笔记本录的 → 合成 |
+| `cafe` | DNS5 盲测 · LIVETALK | 尚未确认可筛的笔记本子集（LIVETALK 说话端有分歧，先核）；建议：合成 |
 | `canteen` | EasyCom | — |
 | `transit-hub` | DNS5 盲测 · LIVETALK | 找到的真人来源是手机通话；笔记本的建议自录 |
 | `bus-metro-cabin` | 🟥 | 本轮找到的真人集只有 CHiME-3 BUS（LDC 付费）；建议：合成（TAU / DEMAND 背景） |
@@ -50,7 +50,7 @@
 | `phone-booth` · `cowork` · `rail-air-cabin` · `hotel-room` | 🟥 | 本轮没找到也没专门查；先合成 |
 
 ## 四、刻意没选的
-- **3D-Speaker**：笔记本录音最多（训练集 9.6 万条，按设备可筛，普通话），但音频许可读不到原文，先不选；核清后是中文笔记本锚的首选
+- **3D-Speaker**：笔记本录音最多（训练集 96,262 条，按设备可筛；笔记本段语种分布未知，全集为普通话 + 方言），但音频许可读不到原文，先不选；核清后是中文笔记本锚的首选
 - **MOBIO**：2008 款 MacBook 真人说话，要签 EULA 且签字人须在编，见 `decision.md` 第三节
 - **MISP2021**：家里电视房真人对话正合适，但许可原文和下载入口都没找到
 - **NOTSOFAR-1**：许可干净，但 HF 仓库要 token，且单场按设备拆得很碎，挑子集要先读目录；作为 AMI 的备选
