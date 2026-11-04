@@ -1,7 +1,7 @@
 # 评审 022 · Mac 内置麦调研结论（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/022_mac-mic/`（devices · simulation · selftest · decision · sources · findings/tunings · tools）。**最新一轮：第 2 轮（2026-11-03）· 总评「修改」· 待第 3 轮**。
-> 累计处理：P1×6、P2×6 逐条核实，属实 12、驳回 0。没有新增要人定的事。
+> 对象：`docs/research/022_mac-mic/`（devices · simulation · selftest · decision · sources · findings/tunings · tools）。**最新一轮：第 3 轮（2026-11-03）· 总评「修改」· 待第 4 轮**。
+> 累计处理：P1×7、P2×9 逐条核实，属实 16、驳回 0。没有新增要人定的事。
 
 ## 第 1 轮（2026-11-03）· 总评「修改」
 
@@ -72,3 +72,33 @@
 ### 是否再审
 
 有 P1，改完开第 3 轮。
+
+## 第 3 轮（2026-11-03）· 总评「修改」
+
+原文：`_tmp/reviews/022-mac-mic-codex-3.md`（不入库）。model gpt-6-astra，effort medium。第 2 轮输出顶上同样加了一行标题以绕开 PBM 误判。
+本轮 P0/P1：1 条 · 停止线：未满足 · 留作 issue 的 P2：无
+
+上一轮处理的验证：codex 抽查确认第 2 轮 #1、#2、#3、#5、#6 已改好。
+
+- **P1｜selftest.md:48 实验验证不了「HAL 受不受语音突显影响」**（第 3 轮 #1）
+  - 核实：属实。第 6 步只录 VPIO，`decision.md` 建议 3 却说「第 6 步可以顺带测」。
+  - 处理：第 6 步拆为 6a（VPIO 本身）、6b（HAL 本进程：看控制中心是否列出，列出才切模式，没列出就记结论）、6c（HAL 录音时另一进程开 VPIO 并切模式）；写明「6a 的变化不能推出 HAL 的行为」。末表、档位时长（70–100 分钟）、`decision.md` 建议 3 与拍板题 B 同步。
+- **P2｜simulation.md:23 第 4 步仍写「降噪抵消多少要实测」**（第 3 轮 #2）
+  - 核实：属实，与第四节「单机实测也定不了」矛盾。
+  - 处理：第 4 步改为只加一路「处理后底噪」合成结果，明示不要先加波束放大再另减降噪量；可信度降为低；写明实测只校准处理后总底噪。
+- **P2｜simulation.md:10 等处把 micSense 写成「每麦底噪谱降噪」**（第 3 轮 #3）
+  - 核实：属实。系统文件只证明有注释为 Noise Reduction 的单元和每麦底噪谱参数。
+  - 处理：`simulation.md` 结论 1、`decision.md` 第一节 1、`devices.md` `mba-builtin` 行、`tunings.md` 第四节 1 都改为「注释为降噪的 micSense 单元，算法未知（推断是平稳降噪）」。
+- **P2｜findings/tunings.md:64 同相增益被直接解释成「正上方来声」**（第 3 轮 #4）
+  - 核实：属实。
+  - 处理：保留数学结果，物理方向改为条件推断（依赖几何、坐标约定、传播、通道一致）。
+
+### 引用抽查
+
+- 不符：0 条
+- 核实属实：9 条
+- 无法核实：SDK 头文件行号
+
+### 是否再审
+
+有 P1，改完开第 4 轮。
