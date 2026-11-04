@@ -67,17 +67,29 @@ class ReadTuningsTest(unittest.TestCase):
         r = rows[0]
         self.assertEqual(r["aid"], 7)
         self.assertEqual(r["units"], ["dccb", "bmfd"])
-        # 等权求和：范数 = 1/sqrt(3) → −4.8 dB；同相增益/范数归一后 = 0 dB
-        self.assertAlmostEqual(r["norm_db"][0], round(20 * math.log10(1 / math.sqrt(3)), 1))
-        self.assertAlmostEqual(r["coherent_db"][0], 0.0)
+        # 等权求和 w=1/3：‖w‖ = 1/√3 → −4.77 dB；|Σw| = 1 → 0 dB；相对白噪声增益 0 dB
+        self.assertAlmostEqual(r["norm_db"][0], -4.77, places=2)
+        self.assertAlmostEqual(r["in_phase_db"][0], 0.0, places=2)
+        self.assertAlmostEqual(r["wng_rel_db"][0], 0.0, places=2)
 
-    def test_superdirective_weights_show_negative_coherent_gain(self):
+    def test_superdirective_weights_three_quantities_exact(self):
         n = 481
         with tempfile.TemporaryDirectory() as root:
             self.make_tree(root, 3, [[2.0] * n, [-2.0] * n, [1.0] * n], [[0.0] * n] * 3)
             r = read_tunings.scan(root)[0]
-        self.assertGreater(r["norm_db"][0], 9.0)   # 范数 3 → +9.5 dB
-        self.assertLess(r["coherent_db"][0], -10.0)
+        # w = (2, −2, 1)：‖w‖ = 3 → +9.54；|Σw| = 1 → 0；1/(3·√3) → −14.31 dB
+        self.assertAlmostEqual(r["norm_db"][0], 9.54, places=2)
+        self.assertAlmostEqual(r["in_phase_db"][0], 0.0, places=2)
+        self.assertAlmostEqual(r["wng_rel_db"][0], -14.31, places=2)
+
+    def test_complex_weights_use_magnitude_of_sum(self):
+        n = 481
+        with tempfile.TemporaryDirectory() as root:
+            # w = (1, j)：|Σw| = √2 → +3.01；‖w‖ = √2；相对 = √2/(√2·√2) → −3.01
+            self.make_tree(root, 5, [[1.0] * n, [0.0] * n], [[0.0] * n, [1.0] * n])
+            r = read_tunings.scan(root)[0]
+        self.assertAlmostEqual(r["in_phase_db"][0], 3.01, places=2)
+        self.assertAlmostEqual(r["wng_rel_db"][0], -3.01, places=2)
 
     def test_bad_length_rejected(self):
         with self.assertRaises(ValueError):
