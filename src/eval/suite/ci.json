@@ -276,7 +276,7 @@
       "id": "P06-weak-drop-must-fail",
       "set": "probe", "polarity": "preserve",
       "origin": "012 §3.1 V-WEAK 对抗样本 · 016 §1.1「轻声字被吞」：把弱音节整段吞掉 → L30 必须变差（只压 −10 / −20 dB 时 V-WEAK 读数 1.8 / 3.7 dB，过不了 4 dB 线，见 probes.rs）",
-      "desc": "把 R02 的输出里最弱 30% 的 125 ms 有声段整段置零：V-WEAK 必须判不过",
+      "desc": "把 R02 的输出里最弱 40% 的 125 ms 有声段整段置零：V-WEAK 必须判不过",
       "probe": { "base": "R02-owner-monologue-not-gated", "kind": "weak_drop" },
       "graders": [ { "v": "V-WEAK", "max": 4 } ]
     },

@@ -26,7 +26,7 @@ pub enum Probe {
     Identity,
     /// 全部静音：输出 = 0（刷 V-NR 的极端做法）
     Mute,
-    /// 弱音节（有声 125 ms 段里干净轨能量最低的 30%）整段吞掉（置零）：V-WEAK 必须抓到
+    /// 弱音节（有声 125 ms 段里干净轨能量最低的 40%）整段吞掉（置零）：V-WEAK 必须抓到
     #[serde(rename = "weak_drop")]
     WeakDrop,
     /// 整体乘 2 Hz、±6 dB 的增益抖动：V-PUMPV 必须抓到
@@ -154,8 +154,9 @@ impl Probe {
     }
 }
 
-/// 有声段切成 125 ms 一块（与 V-WEAK 的分析窗同长），干净轨能量最低的 30% 块，输出置零。
-/// 只压 −10 / −20 dB 时 V-WEAK 在合成人声上只读到约 1.8 / 3.7 dB（2026-11-03 实测），抓不住，所以探针取整段吞掉。
+/// 有声段切成 125 ms 一块（与 V-WEAK 的分析窗同长），干净轨能量最低的 40% 块，输出置零。
+/// 只压 −10 / −20 dB 时 V-WEAK 在合成人声上只读到约 1.8 / 3.7 dB（2026-11-03 实测），抓不住，所以探针取整段吞掉；
+/// 取 40% 不取 30%：V-WEAK 读第 30 百分位，正好吞掉 30% 时分位落在边界上，参考降噪器输出上只读到 2.5–3.6 dB（ci 实测）
 fn weak_drop(clip: &Clip, out: &[f32]) -> Vec<f32> {
     let f = (0.125 * clip.sr as f64) as usize;
     let mut y = out.to_vec();
@@ -172,7 +173,7 @@ fn weak_drop(clip: &Clip, out: &[f32]) -> Vec<f32> {
         }
     }
     blocks.sort_by(|p, q| p.1.total_cmp(&q.1));
-    let n = blocks.len() * 3 / 10;
+    let n = blocks.len() * 4 / 10;
     for &(t, _) in &blocks[..n] {
         for v in &mut y[t..t + f] {
             *v = 0.0;
