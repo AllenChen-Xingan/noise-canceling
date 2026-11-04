@@ -95,14 +95,14 @@
 
 本次会话已经下载到本机的 PDF，路径都在 「本会话 WebFetch 缓存（不入库）」 下。
 
-1. **ETSI ES 202 396-1**（V1.7.1 和 V1.10.2）**和 ETSI TS 103 224**：标准里的背景噪声库，录了咖啡馆、车站、车内、街道、办公室等真实场景，并给出声级。它们可以直接当 14 个场景的标准化参照，第 4 路一条都没引。已下载：`webfetch-1793764748617-sprrzl.pdf`、`webfetch-1793764760045-h4vynf.pdf`、`webfetch-1793764789850-yprksx.pdf`。
-2. **3GPP TS 26.131 / 26.132**：终端声学测试规范里的背景噪声条件和声级。已下载：`webfetch-1793764860696-11u34s.pdf`、`webfetch-1793764821396-pohqed.pdf`。
-3. **HEAD acoustics 的 Microsoft Teams 和 Zoom 音频测试规范数据单**：厂商认证用的场景与声级。已下载：`webfetch-1793764989855-li7613.pdf`、`webfetch-1793765060473-p6ktot.pdf`。
-4. **AliMeeting / M2MET（ICASSP 2022）**：真实会议室录音，有房间面积和说话人到麦的距离。可以补 meeting-room 场景「几个人离麦 0.5–2 m 未查到」的缺口。已下载：`webfetch-1793764833233-2i67qd.pdf`。
+1. **ETSI ES 202 396-1**（V1.7.1 和 V1.10.2）**和 ETSI TS 103 224**：标准里的背景噪声库，录了咖啡馆、车站、车内、街道、办公室等真实场景，并给出声级。它们可以直接当 14 个场景的标准化参照，第 4 路一条都没引。已在本会话 WebFetch 缓存（不入库）。
+2. **3GPP TS 26.131 / 26.132**：终端声学测试规范里的背景噪声条件和声级。已在本会话 WebFetch 缓存（不入库）。
+3. **HEAD acoustics 的 Microsoft Teams 和 Zoom 音频测试规范数据单**：厂商认证用的场景与声级。已在本会话 WebFetch 缓存（不入库）。
+4. **AliMeeting / M2MET（ICASSP 2022）**：真实会议室录音，有房间面积和说话人到麦的距离。可以补 meeting-room 场景「几个人离麦 0.5–2 m 未查到」的缺口。已在本会话 WebFetch 缓存（不入库）。
 5. **ISO 3382-3 正文对标准语音声源的规定**（据我记忆是 1 m 处 57.4 dB(A)，未核）：开放办公 SIR 能不能换算，取决于这个数。
 6. **Pearsons 1977 §VII-D 百货商店**：背景 54 dB，说话 61 dB，SNR 7 dB（原文第 1395 行附近）。可以当 transit-hub 和 cafe 的公共场所参照，报告没引。
 7. **Ozcan 表 3 乘客交谈 62–68 dB(A)**：rail-air-cabin 场景邻座说话声级的唯一原文实测，报告没提。
-8. **HEAD acoustics DAGA 2017（Müsch 等）**：讲车内驾驶噪声对语音质量的影响，对 car-passenger 场景有用。已下载：`webfetch-1793764952450-7lc5r2.pdf`。
+8. **HEAD acoustics DAGA 2017（Müsch 等）**：讲车内驾驶噪声对语音质量的影响，对 car-passenger 场景有用。已在本会话 WebFetch 缓存（不入库）。
 9. **Rindel 关于人群噪声与「声学容量」的模型**（Lombard 效应和每组人数）：可以把 canteen、cafe 的声级和人数、T60 连起来，取代零散的点值。原文未核。
 10. **Apple 官方 MacBook 规格**里「三麦阵列、指向性波束成形」的说明：收音朝向用户，会改变所有「在用户处测的背景声 = 麦处背景声」的假设。原文未核。
 
