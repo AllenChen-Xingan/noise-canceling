@@ -307,12 +307,12 @@
 #### ①消费设备
 
 - **场景键**：open-office（中等办公室，开窗 / 关窗）
-- **设备键**：mba-builtin（MacBook Air 2 通道）, non-laptop-phone（iPhone 5S）, non-laptop-tablet（iPad）, non-laptop-studio（Apogee MiC、Blue Snowball）
-- **笔记本段**：有，且能按设备筛（8 通道分设备）；机型年份未写
+- **设备键**：mac-intel-builtin（MacBook Air 2 通道 = 2013–2017 Intel 楔形双麦 Air）（2026-11-03 大总管据 macmic 转交改：论文原文为 MacBook Air 双麦，即 2013–2017 Intel 楔形 Air；许可按 datashare README 为 CC BY 4.0，训练可，见 022 `sources.md` D1）, non-laptop-phone（iPhone 5S）, non-laptop-tablet（iPad）, non-laptop-studio（Apogee MiC、Blue Snowball）
+- **笔记本段**：有，且能按设备筛（8 通道分设备）；机型年份论文未写，按双麦推定为 2013–2017 Intel 楔形 Air（022 `devices.md`）
 - **转写**：有（VCTK 文本）
 - **语体**：朗读；无笑声 / 附和 / 情绪
 - **与 D62 的关系**：回放重录（距麦 2 m）。开发阶段若用于评测：MacBook Air 两通道，16 kHz；全包 1.67 GB
-- **014 卡疑误**：datashare 页标题为「Device Recorded VCTK (Small subset version)」，014 卡未写这是子集版【官方文档】；End-user Licence 本轮仍未读到正文
+- **014 卡疑误**：datashare 页标题为「Device Recorded VCTK (Small subset version)」，014 卡未写这是子集版【官方文档】；许可：022 按 datashare README 核为 CC BY 4.0（022 `sources.md` D1）
 
 ### easycom.md
 

@@ -11,7 +11,7 @@
 
 | 数据集 | 补哪个格子 | 为什么 | 大小 |
 |---|---|---|---|
-| DR-VCTK | `open-office` × `mba-builtin` | 本轮找到的、能按地点对上的 MacBook Air 录音（回放重录），有干净参考；End-user Licence 未读，按 D65 只评测 | 1.67 GB【官方文档】 |
+| DR-VCTK | `open-office` × `mac-intel-builtin` | 本轮找到的、能按地点对上的 Intel 双麦 MacBook Air 录音（2013–2017，回放重录），有干净参考；CC BY 4.0，训练可（2026-11-03 大总管据 macmic 转交改：论文原文为 MacBook Air 双麦，即 2013–2017 Intel 楔形 Air；许可按 datashare README 为 CC BY 4.0，训练可，见 022 `sources.md` D1） | 1.67 GB【官方文档】 |
 | ACE Chromebook 档 | 不补真实锚格子（合成原料） | 笔记本内置 2 麦录的实测 RIR + 现场噪声，语音要自己卷积相加，适合做「真实设备链」合成；许可两处冲突，按只评测 | 1.1 GB【官方文档】 |
 | DNS4 盲测 | `home-family` · `open-office` × `non-laptop-desktop` / `non-laptop-phone` | 859 条逐条带设备字段（Mobile 638 / desktop 221） | 1.66 GB【实测】 |
 | DNS5 盲测 | `cafe` · `transit-hub` | 标了咖啡馆 4 条、机场 25 条；`ap` 段分 desktop / mobile | 3.89 GB【实测】 |

@@ -17,5 +17,5 @@
 
 ## 备注
 - 与 014 的 DAPS（`daps.md`）关系：DDS 用的是 DAPS 的源语音，但录音设备、环境都是新的，是另一份数据。
-- 与 DR-VCTK 互补：DR-VCTK 有 MacBook Air 内置麦但只有一个办公室；DDS 环境多但没有笔记本麦。
+- 与 DR-VCTK 互补：DR-VCTK 有 2013–2017 Intel 双麦 MacBook Air 内置麦但只有一个办公室；DDS 环境多但没有笔记本麦。
 - 怀疑派复核：重读三条 Zenodo 记录的许可字段与文件表（DAPS 包 9 个环境各 5.35–5.69 GB；VCTK 两包合计 90.86 GB，与原卡一致），并读了包内 README 的 COPYING 一节（5.7 KB，许可与字段一致）；回 arXiv 2109.07931 核 1,944 h、三设备、9 环境、最近 50 cm，一致。改动：许可补 README 原句；笔记本段补目录与文件名格式、位置编号；出处补 README。

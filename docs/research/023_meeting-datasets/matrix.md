@@ -7,7 +7,7 @@
 > 🟥 = 公开集里没找到。「回放」= 用音箱放干净语音再录，不是真人在场说话。来源：全部出自卡片，卡上逐条带【官方文档 / 论文 / 实测 / 推断】标签；本表不另加结论。
 
 ## 零、一句话
-**没有一个格子同时满足「Mac 内置麦 + 真人在场 + 有转写 + 许可可训练」**。本轮查到的 Mac 录音有三处：DR-VCTK（MacBook Air 回放重录，办公室）、DNS 2021 盲测里众包者自填 mac 的约 31 条（家里 / 办公混杂，没核实是不是内置麦）、MOBIO（2008 款 MacBook 真人说话，无地点标签，签 EULA）。真人在场的录音多在会议室、家里、车内、餐厅，设备多是研究麦阵或会议终端；公共地点另有手机通话（LIVETALK）与平板朗读（CHiME-3，付费）。
+**没有一个格子同时满足「Mac 内置麦 + 真人在场 + 有转写 + 许可可训练」**。本轮查到的 Mac 录音有三处：DR-VCTK（2013–2017 Intel 双麦 MacBook Air 回放重录，办公室）、DNS 2021 盲测里众包者自填 mac 的约 31 条（家里 / 办公混杂，没核实是不是内置麦）、MOBIO（2008 款 MacBook 真人说话，无地点标签，签 EULA）。真人在场的录音多在会议室、家里、车内、餐厅，设备多是研究麦阵或会议终端；公共地点另有手机通话（LIVETALK）与平板朗读（CHiME-3，付费）。
 
 ## 一、主表
 
@@ -16,7 +16,7 @@
 | 场景键 | Mac | 其他笔记本 | 台式 | 手机平板 | 麦阵终端 | 近讲参考 |
 |---|---|---|---|---|---|---|
 | `meeting-room` | 🟥 | DNS1 dev SurfaceBook 44 条（这是 DNS1 内部真实集的全集数，其中会议室多少条未知；许可未查到）。ACE Chromebook 档只是**合成原料**（实测 RIR + 现场噪声，语音要自己卷积相加），不算真实录音锚 | 🟥 | DAPS confroom（iPad / iPhone 回放，有参考，CC BY-NC → 只评测）· DDS（iPad 回放，有参考；DAPS 部分 CC BY-NC → 只评测，VCTK 部分 ODC-By → 训练可【推断：署名型许可】） | NOTSOFAR-1（会议约 31.5 h，转写，CC BY → 训练可）· AMI（约 100 h，训练可）· ICSI（约 72 h，训练可）· AliMeeting（118.75 h，CC BY-SA → 训练可（D64））· AISHELL-4（120 h，CC BY-SA → 训练可（D64））· MISP-Meeting（125 h，讯飞办公本内置 8 麦，非商用 → 只评测）· ConferencingSpeech 2021（>200 条，需注册） | AMI · ICSI · AliMeeting · NOTSOFAR（仅 train / dev）· MISP-Meeting |
-| `open-office` | DR-VCTK MacBook Air（回放，有参考；CC BY，但 End-user Licence 未读，按 D65 核清前只评测；年份未知） | DNS 2021 盲测文件名带 laptop 约 330 条（地点与家混，许可未查到）· MS AEC 真实录音（Windows PC，无逐条标签） | DNS4 盲测 `desktop` 221 条（台式与笔记本分不开，地点只按噪声字段） | DAPS office · DR-VCTK iPhone / iPad · DDS 办公室（iPad，均为回放） | 🟥 | 🟥 |
+| `open-office` | DR-VCTK Intel 双麦 MacBook Air（`mac-intel-builtin`，2013–2017；回放，有参考；CC BY 4.0，训练可）（2026-11-03 大总管据 macmic 转交改：论文原文为 MacBook Air 双麦，即 2013–2017 Intel 楔形 Air；许可按 datashare README 为 CC BY 4.0，训练可，见 022 `sources.md` D1） | DNS 2021 盲测文件名带 laptop 约 330 条（地点与家混，许可未查到）· MS AEC 真实录音（Windows PC，无逐条标签） | DNS4 盲测 `desktop` 221 条（台式与笔记本分不开，地点只按噪声字段） | DAPS office · DR-VCTK iPhone / iPad · DDS 办公室（iPad，均为回放） | 🟥 | 🟥 |
 | `home-family` | DNS 2021 两届盲测自填 mac 约 31 条（与 open-office 混，未核实） | DNS 2021 盲测 laptop 段（同上） | DNS5 dev：Track1 641 条全为 `Desk` / `HS`，Track2 `Desk` 187 条（台式与笔记本分不开）【实测：文件名】 | DNS5 dev Track2 `Mobile` 413 条（文件名标手机；其中 599 / 600 个文件名与 DNS4 盲测相同，是复用）· AISHELL-DMASH（手机 / 平板 + 近讲同步，签协议）· DDS 客厅（iPad 回放，有参考） | CHiME-5/6（约 50 h，晚餐聚会，禁背景电视，CC BY-SA → 训练可（D64））· DiPCo（5.3 h，CDLA → 训练可）· MISP2021（中文电视房，许可未查到）· VoiceHome-2（法语，只评测） | CHiME-6 双耳 · DiPCo · MISP2021 · DMASH |
 | `home-quiet` | 🟥 | Speech Commands v2（网页众包，笔记本 / 台式 / 手机混，无设备字段；单词 1 s，CC BY → 训练可） | 🟥 | MagicData-RAMC（手机两人对话 180 h，家里小房间、底噪 < 40 dBA，标笑声；CC BY-NC-ND → 只评测）· AISHELL-2（iOS 全集 1000 h 朗读，其中 1347 人在录音棚、客厅部分时长未知；只评测）· DAPS livingroom（回放） | 🟥（VOiCES 是回放重录，用录音棚麦与摆在房间里的领夹，不归此列；CC BY → 训练可） | 🟥 |
 | `phone-booth` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
