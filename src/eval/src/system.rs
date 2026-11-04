@@ -2,7 +2,7 @@
 //!
 //! 模型有四种：
 //! - `passthrough`：输出 = 输入（延迟 0）。量「什么都不做」
-//! - `ref`：[`RefWiener`]，本 crate 的参考降噪器（判决引导维纳 + 最小值跟踪噪声估计，`vdn-dsp` 的 STFT 512/256，
+//! - `ref`：[`RefWiener`]，本 crate 的参考降噪器（判决引导维纳 + 最小值跟踪噪声估计，`vdn-dsp` 的 STFT，口径取正本 `FRONTEND`（512/256），
 //!   与 GTCRN 同 hop、同延迟）。**它不是产品模型**，是 CI 没有权重时的替身，让 Engine 的保命逻辑在真信号上被检验
 //! - `gtcrn` / `fastenhancer-m`：真模型（`vdn-models`），找得到权重才跑
 //!
@@ -15,6 +15,7 @@ use vdn_dsp::StreamingStft;
 use vdn_engine::testing::DelayGain;
 use vdn_engine::{Engine, EngineStats, FaultInjector, FaultKind, Model, ModelError, SafetyConfig};
 use vdn_models::{AnyModel, ModelId, ModelKind};
+use vdn_types::FRONTEND;
 use vdn_types::latency::{IO_BLOCK_PROPOSED, LATENCY_BUDGET_MS, planned_platform};
 
 /// 参考降噪器（CI 替身）。
@@ -27,8 +28,10 @@ pub struct RefWiener {
 }
 
 impl RefWiener {
-    pub const N_FFT: usize = 512;
-    pub const HOP: usize = 256;
+    /// STFT 口径跟频谱前端正本 [`FRONTEND`]（与 GTCRN 同 hop、同延迟）。
+    /// 正本变了，参考降噪器跟着变——这是有意的：它就是「与 GTCRN 同口径」的替身。
+    pub const N_FFT: usize = FRONTEND.n_fft;
+    pub const HOP: usize = FRONTEND.hop;
     /// 增益下限（−25 dB）
     const GMIN: f32 = 0.056;
     /// 判决引导系数
@@ -41,11 +44,7 @@ impl RefWiener {
     pub fn new() -> Self {
         let bins = Self::N_FFT / 2 + 1;
         RefWiener {
-            stft: StreamingStft::new(
-                Self::N_FFT,
-                Self::HOP,
-                vdn_dsp::window::sqrt_hann_periodic(Self::N_FFT),
-            ),
+            stft: StreamingStft::from_spec(&FRONTEND),
             noise: vec![0.0; bins],
             smooth: vec![0.0; bins],
             prev_clean: vec![0.0; bins],

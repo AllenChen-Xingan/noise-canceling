@@ -151,7 +151,7 @@ pub fn truth_from_clean(clean: &[f32]) -> Vec<(usize, usize)> {
 }
 
 /// 幅度平方谱，逐帧（帧 k 覆盖样本 `[(k+1)·hop − n_fft, (k+1)·hop)`，中心约在 `(k+1)·hop − n_fft/2`）。
-/// 用 `vdn_dsp::StreamingStft`，窗 = 周期 Hann（sqrt-Hann 的平方）。
+/// 用 `vdn_dsp::StreamingStft`，窗 = `Window::SqrtHannPeriodicSquared`（sqrt-Hann 转 f32 后再平方，约等于周期 Hann）。
 pub struct Spectrogram {
     pub n_fft: usize,
     pub hop: usize,
@@ -160,10 +160,7 @@ pub struct Spectrogram {
 
 impl Spectrogram {
     pub fn new(x: &[f32], n_fft: usize, hop: usize) -> Spectrogram {
-        let win: Vec<f32> = vdn_dsp::window::sqrt_hann_periodic(n_fft)
-            .iter()
-            .map(|w| w * w)
-            .collect();
+        let win = vdn_dsp::window::table(vdn_types::Window::SqrtHannPeriodicSquared, n_fft);
         let mut st = StreamingStft::new(n_fft, hop, win);
         let frames = x
             .chunks_exact(hop)

@@ -91,7 +91,31 @@ fn hann_inner_matches_estoi_original() {
     }
 }
 
-/// f32 表 = f64 表逐个 `as f32`（先 f64 算再转）。
+#[test]
+fn sqrt_hann_squared_matches_spectrogram_original() {
+    // 原 src/eval/src/analysis.rs::Spectrogram::new 的窗：sqrt-Hann（f32）逐个平方
+    let orig = |n: usize| -> Vec<f32> { sqrt_hann_periodic(n).iter().map(|w| w * w).collect() };
+    for n in LENS {
+        assert_eq!(
+            bits32(&table(Window::SqrtHannPeriodicSquared, n)),
+            bits32(&orig(n)),
+            "n={n}"
+        );
+    }
+    // f64 下就是 coef 的平方
+    let a: Vec<f64> = table(Window::SqrtHannPeriodicSquared, 400);
+    let b: Vec<f64> = (0..400)
+        .map(|i| coef(Window::SqrtHannPeriodicSquared, i, 400))
+        .collect();
+    assert_eq!(bits64(&a), bits64(&b));
+    // 它和周期 Hann 只是约等：f32 下至少有一处末位不同，所以不能代用
+    let h: Vec<f32> = table(Window::HannPeriodic, 512);
+    let s: Vec<f32> = table(Window::SqrtHannPeriodicSquared, 512);
+    assert!(h.iter().zip(&s).all(|(x, y)| (x - y).abs() < 1e-6));
+    assert_ne!(bits32(&h), bits32(&s));
+}
+
+/// f32 表 = f64 表逐个 `as f32`（先 f64 算再转）。唯一例外 `SqrtHannPeriodicSquared`（先转再平方），见上一条。
 #[test]
 fn f32_table_is_f64_table_cast() {
     for w in [
