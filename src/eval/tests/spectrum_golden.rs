@@ -1,11 +1,13 @@
 //! 评测器频谱计算对拍（#104，D82「所有频谱计算放在一个地方」）：评测器 4 处改调 `vdn-dsp` 统一模块后，
-//! 声谱图 · ESTOI · 参考降噪器输出 · 全部 CI 层 verifier 的分数，逐位与改代码**之前**相同。红了 = 评分变了（红线），先停下报。
+//! 声谱图 · ESTOI · 参考降噪器输出 · 全部 CI 层 verifier 的分数 · 边界输入（别的采样率、短于窗长、帧端点、空输入），
+//! 逐位与改代码**之前**相同。红了 = 评分变了（红线），先停下报。
 //!
 //! 4 处：`analysis.rs` 声谱图 · `verifiers/estoi.rs` · `verifiers/speech.rs` 的 V-WEAK 分带电平 · `system.rs` 参考降噪器。
 //! 每组压成一个内容 ID（f32 / f64 逐个 `to_bits`），基准在 `tests/fixtures/spectrum_golden.txt`。
-//! 基准只在没改过这 4 处的代码（`f2782cf4`）上生成：
-//! `VDN_BLESS=1 cargo test -p vdn-eval --release --test spectrum_golden`（只用公开接口；生成基准时本文件与现在只差一处：
-//! ESTOI 内部采样率当时写成字面量 `10_000`，`estoi::FS` 是之后才公开的，值相同）。
+//! 基准只在没改过这 4 处的代码（`f2782cf4`）上生成：`git archive f2782cf4` 导出到临时目录，放进本文件与
+//! `common/platform.rs`（与现在逐字相同），旧源码只改一处——`verifiers/estoi.rs` 的 `const FS` 改成 `pub const FS`
+//! （只改可见性，本文件要引用它），单独 target 目录里跑
+//! `VDN_BLESS=1 cargo test -p vdn-eval --release --test spectrum_golden`（`docs/plan/013_frontend-once.md` 第 13 节）。
 //! 基准带平台标签（含系统主版本）：cos / ln / powf 末位随 macOS 大版本可能变，别的平台打印原因后跳过。
 #[path = "common/platform.rs"]
 mod platform;
@@ -87,10 +89,77 @@ fn ref_spec() -> SystemSpec {
     }
 }
 
-/// 四组：(名字, 内容 ID 行)。
+/// 截短到 `n` 个样本（真值区间一起截）。
+fn truncate(c: &Clip, n: usize) -> Clip {
+    let cut = |v: &[(usize, usize)]| -> Vec<(usize, usize)> {
+        v.iter()
+            .map(|&(a, b)| (a.min(n), b.min(n)))
+            .filter(|(a, b)| a < b)
+            .collect()
+    };
+    let mut d = c.clone();
+    for x in [&mut d.clean, &mut d.interf, &mut d.noise, &mut d.mix] {
+        x.truncate(n);
+    }
+    d.truth.owner = cut(&c.truth.owner);
+    d.truth.interf = cut(&c.truth.interf);
+    d
+}
+
+/// 一个 verifier 的分数逐位记进 `acc`。
+fn record(acc: &mut Acc, s: &vdn_eval::Score) {
+    acc.text(s.id);
+    acc.f64(s.value.unwrap_or(f64::NAN));
+    acc.f64(s.threshold.unwrap_or(f64::NAN));
+    acc.text(&format!("{:?}{}", s.grade, s.verdict.as_str()));
+    for (k, v) in &s.extra {
+        acc.text(k);
+        acc.f64(*v);
+    }
+    acc.text(&s.note);
+}
+
+/// 在片段 `c` 上跑参考降噪器，按 `ids` 评分（`None` = 全部，V-FRAME 量耗时、不确定，不比）。
+fn score(acc: &mut Acc, c: &Clip, ids: Option<&[&str]>) -> Vec<vdn_eval::Score> {
+    let r = run(&ref_spec(), &c.mix).expect("参考降噪器");
+    let noise_run = run(&ref_spec(), &c.noise).expect("参考降噪器（只有噪音）");
+    let m = masks(&c.truth, &c.mix, 0.03);
+    let ctx = Ctx {
+        clip: c,
+        out: &r.out,
+        run: Some(&r),
+        masks: &m,
+        noise_out: Some(&noise_run.out),
+        ci: true,
+    };
+    let all: Vec<&str> = REGISTRY.iter().map(|i| i.id).collect();
+    let out: Vec<_> = ids
+        .unwrap_or(&all)
+        .iter()
+        .filter(|id| **id != "V-FRAME")
+        .map(|id| eval(id, &ctx, &Params::default()))
+        .collect();
+    out.iter().for_each(|s| record(acc, s));
+    out
+}
+
+/// V-WEAK 真进了评分分支（不是「不知道」）：有限分数、有声帧 ≥ 20。
+fn assert_weak_scored(scores: &[vdn_eval::Score]) {
+    let w = scores.iter().find(|s| s.id == "V-WEAK").expect("有 V-WEAK");
+    let frames = w.extra.iter().find(|(k, _)| *k == "frames").map(|e| e.1);
+    assert!(
+        w.value.is_some_and(f64::is_finite) && frames.is_some_and(|f| f >= 20.0),
+        "V-WEAK 没进评分分支：{:?} · {frames:?} · {}",
+        w.value,
+        w.note
+    );
+}
+
+/// 五组：(名字, 内容 ID 行)。
 fn lines() -> Vec<String> {
     let clips = [clip(7, 5.0), clip(11, 15.0)];
-    let (mut sg, mut es, mut rw, mut vf) = (
+    let (mut sg, mut es, mut rw, mut vf, mut eg) = (
+        Acc::default(),
         Acc::default(),
         Acc::default(),
         Acc::default(),
@@ -111,34 +180,39 @@ fn lines() -> Vec<String> {
         rw.f32s(&r.out);
         rw.f32s(&r.raw);
         rw.text(&format!("{:?}{:?}", r.voiced, r.bypass));
-        // 2. ESTOI：16 kHz（先重采样）与 10 kHz（不重采样）两条路
+        // 2. ESTOI：16 kHz（先重采样）与 10 kHz（不重采样）两条路，都必须给出有限分数
         for (a, b) in [(&c.clean, &c.mix), (&c.clean, &r.out), (&c.clean, &c.clean)] {
             for sr in [MODEL_RATE, estoi::FS as u32] {
-                es.f64(estoi(a, b, sr).unwrap_or(f64::NAN));
+                let v = estoi(a, b, sr);
+                assert!(v.is_some_and(f64::is_finite), "ESTOI 没出分：sr={sr}");
+                es.f64(v.unwrap_or(f64::NAN));
             }
         }
-        // 4. 全部 verifier（V-FRAME 量的是耗时，不确定，不比）
-        let noise_run = run(&ref_spec(), &c.noise).expect("参考降噪器（只有噪音）");
-        let m = masks(&c.truth, &c.mix, 0.03);
-        let ctx = Ctx {
-            clip: c,
-            out: &r.out,
-            run: Some(&r),
-            masks: &m,
-            noise_out: Some(&noise_run.out),
-            ci: true,
+        // 4. 全部 verifier
+        assert_weak_scored(&score(&mut vf, c, None));
+    }
+    // 5. 边界：别的采样率（8192 → 窗长 1024 恰为 2 的幂；22050 → 2756 补零到 4096）· 短于窗长 · 帧端点 · 空输入
+    let speech: &[&str] = &["V-WEAK", "V-ESTOI"];
+    for sr in [8192, 22_050] {
+        let c = Clip {
+            sr, // tidy: 非采样率：故意给的非标准采样率，测 V-WEAK 的窗长换算
+            ..clips[0].clone()
         };
-        for info in REGISTRY.iter().filter(|i| i.id != "V-FRAME") {
-            let s = eval(info.id, &ctx, &Params::default());
-            vf.text(s.id);
-            vf.f64(s.value.unwrap_or(f64::NAN));
-            vf.f64(s.threshold.unwrap_or(f64::NAN));
-            vf.text(&format!("{:?}{}", s.grade, s.verdict.as_str()));
-            for (k, v) in &s.extra {
-                vf.text(k);
-                vf.f64(*v);
-            }
-            vf.text(&s.note);
+        assert_weak_scored(&score(&mut eg, &c, Some(speech)));
+    }
+    for n in [0, 1999, 2000, 2001, 3000, 4000] {
+        score(&mut eg, &truncate(&clips[0], n), Some(speech));
+    }
+    for n in [0, 100, 255, 256, 257, 383, 384, 511, 512, 513, 3000] {
+        let x = &clips[0].mix[..n];
+        for (n_fft, hop) in [(512, 256), (256, 128)] {
+            let s = Spectrogram::new(x, n_fft, hop);
+            eg.text(&s.frames.len().to_string());
+            s.frames.iter().for_each(|f| eg.f32s(f));
+        }
+        let y = &clips[0].clean[..n];
+        for sr in [MODEL_RATE, estoi::FS as u32] {
+            eg.f64(estoi(y, x, sr).unwrap_or(f64::NAN));
         }
     }
     vec![
@@ -146,6 +220,7 @@ fn lines() -> Vec<String> {
         es.line("estoi"),
         rw.line("ref_wiener"),
         vf.line("verifiers"),
+        eg.line("edges"),
     ]
 }
 
