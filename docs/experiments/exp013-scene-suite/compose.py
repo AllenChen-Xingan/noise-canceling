@@ -25,6 +25,7 @@ HERE = Path(__file__).resolve().parent
 SCENES = json.loads((HERE / "scenes.json").read_text())
 SOUNDS = json.loads((HERE / "sounds.json").read_text())["classes"]
 STEADY_GROUPS = ("bed", "pattern")
+HEADROOM = 10 ** (-1 / 20)  # −1 dBFS
 
 
 def _u(rng, r):
@@ -218,12 +219,21 @@ def make_clip(scene, tier, idx, device):
     noise = sum(s["x"] for s in sounds if not SOUNDS[s["cls"]]["is_speech"]) + floor
     interf = sum((s["x"] for s in speech), np.zeros(n))
     mix_lin = owner_ref + noise + interf
+    # 余量：整段峰值超过 −1 dBFS 就整段调低（真机会削波；有意的削波只走第 8 步），调了多少记进清单
+    peak = float(np.max(np.abs(mix_lin)))
+    head = min(1.0, HEADROOM / max(peak, 1e-12))
+    if head < 1.0:
+        owner_ref, noise, interf, mix_lin, floor, x_dry = (v * head for v in (owner_ref, noise, interf, mix_lin, floor, x_dry))
+        for t in targets:
+            t["x"] = t["x"] * head
+        for s in sounds:
+            s["x"] = s["x"] * head
     mix, clipped = sc.ch.clip(mix_lin)
     dry_gain = gain * 10 ** ((L_o - gated_level_db(x_dry)) / 20)  # 干轨与链后主说话人同电平
-    arrays = {"mix": mix, "owner": owner_ref, "owner_dry": x_dry * dry_gain, "floor": floor, "noise": noise, "interf": interf,
+    arrays = {"mix": mix, "owner": owner_ref, "owner_dry": x_dry * dry_gain * head, "floor": floor, "noise": noise, "interf": interf,
               "stems": {s["inst"]: s["x"] for s in sounds}}
     meta = {"scene": scene, "tier": tier, "idx": idx, "device": device, "seed": seed, "lang": lang, "polarity": polarity,
             "nominal": nominal, "targets": targets, "sounds": sounds, "chain": {**sc.ch.params, "floor_clamped": bool(floor_clamped),
-            "room_dims_m": list(sc.dims)}, "additive": not clipped, "owner_rir": orir,
+            "room_dims_m": list(sc.dims), "headroom_db": round(20 * np.log10(head), 3)}, "additive": not clipped, "owner_rir": orir,
             "bed": bed_cls}
     return arrays, meta

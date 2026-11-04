@@ -28,9 +28,9 @@ def _colored(rng, n, slope_db_oct):
     """功率谱斜率 slope dB/倍频程的噪声（0 = 白，−3 = 粉，−6 = 布朗）。"""
     nfft = 1 << int(np.ceil(np.log2(n + 1)))
     f = np.fft.rfftfreq(nfft, 1 / SR)
-    g = np.ones_like(f)
-    g[1:] = (f[1:] / 1000.0) ** (slope_db_oct / (20 * np.log10(2)))
-    g[0] = 0
+    # 20 Hz 以下按 20 Hz 的增益封顶、10 Hz 以下置零：否则 −3 / −6 dB 斜率会把亚音频漂移放大成几十 dB 的峰值因数
+    g = (np.maximum(f, 20.0) / 1000.0) ** (slope_db_oct / (20 * np.log10(2)))
+    g[f < 10.0] = 0
     x = np.fft.irfft(np.fft.rfft(rng.standard_normal(nfft)) * g, nfft)[:n]
     return x / (np.std(x) + 1e-12)
 
