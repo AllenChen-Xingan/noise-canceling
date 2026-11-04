@@ -300,18 +300,31 @@ def fails_per_clip(rows: list[dict], system: str) -> list[tuple[str, list[str]]]
 def gap_vs_base(rows: list[dict], system: str, base: str) -> list[str]:
     """表 6：每项「被测系统 − 原声直通」的均值差（同一批段，配对），看模型把这项拉好还是拉坏。"""
     items = [v for v in items_of(rows) if v not in REPORT_ONLY]
-    b = {(r["clip"]): r for r in rows if r["system"] == base}
     out = ["| 项 | 好的方向 | 配对段数 | 均值差（模型 − 原声直通） |", "|---|---|---|---|"]
     for v in items:
-        ds = []
-        for r in rows:
-            if r["system"] != system or r["clip"] not in b:
-                continue
-            s, t = score(r, v), score(b[r["clip"]], v)
-            if s and t and s["value"] is not None and t["value"] is not None:
-                ds.append(s["value"] - t["value"])
-        better = better_of(rows, v)
-        out.append(f"| {v} | {better} | {len(ds)} | {fmt(mean(ds))} |")
+        ds = paired_diffs(rows, system, base, v)
+        out.append(f"| {v} | {better_of(rows, v)} | {len(ds)} | {fmt(mean(ds))} |")
+    return out
+
+
+def quantile(xs: list[float], p: float) -> float | None:
+    xs = sorted(x for x in xs if x is not None)
+    return xs[int(p * (len(xs) - 1))] if xs else None
+
+
+def gate_stats(rows: list[dict], systems: list[str]) -> list[str]:
+    """表：门控漏开（V-SIM-GATE）分布，以及不过的段里有几段只因「字头 200 ms 漏开」这条附加规则。"""
+    out = ["| 系统 | 段数 | 漏开比例 中位 | p90 | 字头漏开 中位 | p90 | 不过段 | 其中主比例超线 | 其中只因字头 |",
+           "|---|---|---|---|---|---|---|---|---|"]
+    for sy in systems:
+        ss = [s for s in (score(r, "V-SIM-GATE") for r in rows if r["system"] == sy) if s and s["value"] is not None]
+        m = [s["value"] for s in ss]
+        on = [(s.get("extra") or {}).get("onset_miss") for s in ss]
+        f = [s for s in ss if s["verdict"] == "fail"]
+        main_ = sum(1 for s in f if s["value"] > (s["threshold"] or 0))
+        q = lambda xs, p: "—" if quantile(xs, p) is None else f"{quantile(xs, p):.3f}"  # noqa: E731
+        out.append(f"| {sy} | {len(ss)} | {q(m, .5)} | {q(m, .9)} | {q(on, .5)} | {q(on, .9)} | "
+                   f"{len(f)} | {main_} | {len(f) - main_} |")
     return out
 
 
