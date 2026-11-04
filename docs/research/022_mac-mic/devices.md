@@ -1,6 +1,6 @@
 # 设备键表（022 · Mac 内置麦克风）
 
-> 状态：**草稿 v0（2026-11-03）**，只用了 011 / 003 / 016 已有结论和 mtgdata 转交，调研未开始。数字列待调研补；查不到的写「未查到」。
+> 状态：**草稿 v1（2026-11-03）**，只用了 011 / 003 / 016 已有结论和 mtgdata 转交，调研未开始。数字列待调研补；查不到的写「未查到」。
 > 用途：scenes、mtgdata 给数据和场景打「设备」标签时，一律用下表第一列的键。缺键发消息给 macmic 加，不自造。
 > 来源标记：【实测】【官方文档】【源码】【论文】【论坛 / 博客，个人说法】【推断】。
 
@@ -36,6 +36,8 @@
 
 ## 二、和现在评测集的对应（推断，待 simulation.md 定）
 
+- 已用标签：MOBIO → `mac-intel-builtin`；DR-VCTK → `mba-builtin`（年份未知）；DNS 2021 Mac 众包 31 条 → `mac-unknown`；3D-Speaker → `laptop-unknown`
+- `mic_mode` 字段只在 Mac 设备上有意义；公开数据集几乎都查不到，数据卡写「系统处理模式未查到」即可（mtgdata 已照此做）
 - exp006 `recipes.json` 的 `device`：`none` ≈ `external-mic` 或 `non-laptop`；`bt_narrow` ≈ `bt-hfp-generic`；`clip` 与 `mic_tilt_db_per_oct` ±1.5 不对应任何一个真实设备，都是假设
 - 016 F8 的 `laptop`（100 Hz 高通 + 7 kHz 低通）≈ `mba-builtin` 的猜测，无出处
 
