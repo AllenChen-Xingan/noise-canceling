@@ -2,7 +2,7 @@
 
 - LibriSpeech test-clean：40 人按编号字符串排序，exp006 训练用偶数位（ids[0::2]）。本集只用奇数位 20 人，
   再分两池：OWNER（奇数位里的偶数位，10 人）只当主说话人；INTERF（其余 10 人）只当旁人 / babble / 电视 / 广播
-- DEMAND：exp006 用过的 6 个环境只取每路后 40% 时段（起点 ≥ 0.6 × 总长）；其余环境全段
+- DEMAND：exp006 用过的 6 个环境只取每路后 40% 时段（起点 ≥ 0.6 × 总长）；没被合成用过的环境只取后一半（前一半是测试份，TEST_SPLIT_FRAC）
 - ESC-50：只用 fetch.py 下载登记过的文件（materials.json），按类别分
 - 中文：只用 exp003 登记过许可的两段 Commons 朗读（CC BY-SA 4.0）
 """

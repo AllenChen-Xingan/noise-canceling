@@ -236,8 +236,9 @@ class SmallBuild(unittest.TestCase):
         """回归（codex 第 2 轮 P1 #1）：同 build id 再跑一次必须直接失败，不碰已有音频。"""
         t = Path(self.tmp.name)
         before = sorted(p.stat().st_mtime_ns for p in (t / "a").rglob("mix.wav"))[:5]
+        dev = [] if manifest.schema_path() else ["--dev"]  # 与 setUpClass 同一模式，才测得到「目录已占用」（codex 第 4 轮 P2 #3）
         r = subprocess.run([sys.executable, str(HERE / "build.py"), "--build", "t0", "--n", "1",
-                            "--builds-dir", str(t / "b"), "--audio-root", str(t / "a")], capture_output=True, text=True)
+                            "--builds-dir", str(t / "b"), "--audio-root", str(t / "a")] + dev, capture_output=True, text=True)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("已存在", r.stdout + r.stderr)
         self.assertEqual(before, sorted(p.stat().st_mtime_ns for p in (t / "a").rglob("mix.wav"))[:5])
