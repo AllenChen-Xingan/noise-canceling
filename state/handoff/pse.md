@@ -60,3 +60,6 @@
 - 2026-11-04 子代理③（自动注册与产品）交回 → `notes/03-enrollment-products.md`；要点：Zoom / Teams 已有会中自动注册的产品，研究上无完整冷启动方案
 - 2026-11-04 子代理⑤（小模型）→ `notes/05-small-models.md`；子代理①（PSE 新模型）→ `notes/01-pse-models.md`
 - 2026-11-04 pse 回源核：voice-isolator（arXiv 2610.35272 摘要 + HF voice-isolator-cpu 卡）因果、2210 万参数、自动注册「3 s 起取最响 3 s」、单核 54%/34%（机器未写）、许可「other」——属实；论文 AMI 60 s 窗 16.13% 与 CPU 卡 15.55% 是两个模型。AV-PVQE（2609.30631）「干净注册下双人混合 46% 认错、加视觉 1.6%」——摘要原文属实
+- 2026-11-04 子代理②（流式 TSE）→ `notes/02`；子代理④（难点 · 数据 · 评测）→ `notes/04`
+- 2026-11-04 pse 回源核：Alkove Focus 模型卡 · 仓库 README · Pipecat 文档——Apache-2.0、约 0.8M、从 GTCRN DNS3 检查点改来、M1 Max 每秒 56 ms 属实；**「约 6 s 自动学声纹」不成立**（声纹由应用给，≥ 1.5 s），已在 notes/02 顶部更正。Zoom 自动声纹原文属实。CARTSE 报告：错注册概率 0.35、目标不在场合计 38.25%、TER 0.699 属实
+- 2026-11-04 写 `sources.md` · `decision.md`；本机路径 grep 为 0；codex 第 1 轮评审已在后台跑
