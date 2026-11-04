@@ -369,7 +369,11 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
     std::fs::write(out.join("scorecard.json"), js).map_err(|e| e.to_string())?;
     std::fs::write(out.join("scorecard.md"), card.to_markdown("场景成绩单"))
         .map_err(|e| e.to_string())?;
-    println!("成绩单：{}（{} 段）", out.join("scorecard.md").display(), card.clips);
+    println!(
+        "成绩单：{}（{} 段）",
+        out.join("scorecard.md").display(),
+        card.clips
+    );
     Ok(true)
 }
 

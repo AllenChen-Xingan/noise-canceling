@@ -8,7 +8,7 @@ use vdn_eval::runner::{Baseline, Opts};
 use vdn_eval::scene::SceneClip;
 use vdn_eval::scorecard::card::Card;
 use vdn_eval::scorecard::rules::Status;
-use vdn_eval::suite::{parse_levels, parse_suite, LEVELS};
+use vdn_eval::suite::{LEVELS, parse_levels, parse_suite};
 use vdn_eval::synth::{NoiseKind, SceneSpec, TalkerSpec, render};
 use vdn_eval::system::SystemKind;
 use vdn_eval::wav;
@@ -46,7 +46,12 @@ fn write_clip(root: &Path, i: usize, with_machine: bool) -> Value {
     if with_machine {
         stems.push("cm0");
     }
-    for (k, x) in [("mix", &c.mix), ("owner", &c.clean), ("noise", &c.noise), ("interf", &c.interf)] {
+    for (k, x) in [
+        ("mix", &c.mix),
+        ("owner", &c.clean),
+        ("noise", &c.noise),
+        ("interf", &c.interf),
+    ] {
         wav::write(&root.join(rel(k)), x, 16_000).unwrap();
     }
     for s in &stems {
@@ -54,7 +59,12 @@ fn write_clip(root: &Path, i: usize, with_machine: bool) -> Value {
     }
     let sha = |k: &str| wav::sha256(&root.join(rel(k))).unwrap();
     let n = c.mix.len() as u64;
-    let owner_iv: Vec<[u64; 2]> = c.truth.owner.iter().map(|&(a, b)| [a as u64, b as u64]).collect();
+    let owner_iv: Vec<[u64; 2]> = c
+        .truth
+        .owner
+        .iter()
+        .map(|&(a, b)| [a as u64, b as u64])
+        .collect();
     let snd = |inst: &str, cls: &str, group: &str| {
         json!({"inst": inst, "cls": cls, "group": group, "is_speech": false, "iv": [[0, n]],
                "level_dbfs": -40.0, "rel_db": -10.0, "dist_m": null, "azimuth_deg": null,
@@ -128,7 +138,8 @@ fn fixture_lines_parse_as_scene_clips() {
 fn scorecard_end_to_end_on_ref_system() {
     let (root, suite_text) = setup("e2e");
     let suite = parse_suite(&suite_text).unwrap();
-    let (rows, skipped) = vdn_eval::scorecard::run(&suite, &[SystemKind::Ref], &opts(), None, Some(&root));
+    let (rows, skipped) =
+        vdn_eval::scorecard::run(&suite, &[SystemKind::Ref], &opts(), None, Some(&root));
     assert!(skipped.is_empty(), "{skipped:?}");
     assert_eq!(rows.len(), 6);
     let card = Card::build(&rows, skipped);
@@ -161,7 +172,12 @@ fn hash_mismatch_is_skipped_not_scored() {
     x[100] += 0.1;
     wav::write(&p, &x, sr).unwrap();
     let suite = parse_suite(&suite_text).unwrap();
-    let (rows, skipped) = vdn_eval::scorecard::run(&suite, &[SystemKind::Ref], &opts(), None, Some(&root));
+    let (rows, skipped) =
+        vdn_eval::scorecard::run(&suite, &[SystemKind::Ref], &opts(), None, Some(&root));
     assert_eq!(rows.len(), 5);
-    assert!(skipped.iter().any(|(k, w)| k == "cafe-c00" && w.contains("sha256")));
+    assert!(
+        skipped
+            .iter()
+            .any(|(k, w)| k == "cafe-c00" && w.contains("sha256"))
+    );
 }
