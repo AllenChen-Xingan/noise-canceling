@@ -15,9 +15,9 @@
 
 | 场景键 | Mac | 其他笔记本 | 台式 | 手机平板 | 麦阵终端 | 近讲参考 |
 |---|---|---|---|---|---|---|
-| `meeting-room` | 🟥 | DNS1 dev SurfaceBook 44 条（未查到许可）。ACE Chromebook 档只是**合成原料**（实测 RIR + 现场噪声，语音要自己卷积相加），不算真实录音锚 | 🟥 | DAPS confroom（iPad / iPhone 回放，有参考，CC BY-NC → 只评测）· DDS（iPad 回放，有参考，只评测） | NOTSOFAR-1（会议约 31.5 h，转写，CC BY → 训练可）· AMI（约 100 h，训练可）· ICSI（约 72 h，训练可）· AliMeeting（118.75 h，CC BY-SA → 训练可（D64））· AISHELL-4（120 h，CC BY-SA → 训练可（D64））· MISP-Meeting（125 h，讯飞办公本内置 8 麦，非商用 → 只评测）· ConferencingSpeech 2021（>200 条，需注册） | AMI · ICSI · AliMeeting · NOTSOFAR（仅 train / dev）· MISP-Meeting |
+| `meeting-room` | 🟥 | DNS1 dev SurfaceBook 44 条（未查到许可）。ACE Chromebook 档只是**合成原料**（实测 RIR + 现场噪声，语音要自己卷积相加），不算真实录音锚 | 🟥 | DAPS confroom（iPad / iPhone 回放，有参考，CC BY-NC → 只评测）· DDS（iPad 回放，有参考；DAPS 部分 CC BY-NC → 只评测，VCTK 部分 ODC-By → 训练可【推断：署名型许可】） | NOTSOFAR-1（会议约 31.5 h，转写，CC BY → 训练可）· AMI（约 100 h，训练可）· ICSI（约 72 h，训练可）· AliMeeting（118.75 h，CC BY-SA → 训练可（D64））· AISHELL-4（120 h，CC BY-SA → 训练可（D64））· MISP-Meeting（125 h，讯飞办公本内置 8 麦，非商用 → 只评测）· ConferencingSpeech 2021（>200 条，需注册） | AMI · ICSI · AliMeeting · NOTSOFAR（仅 train / dev）· MISP-Meeting |
 | `open-office` | DR-VCTK MacBook Air（回放，有参考；CC BY，但 End-user Licence 未读，按 D65 核清前只评测；年份未知） | DNS 2021 盲测文件名带 laptop 约 330 条（地点与家混，许可未查到）· MS AEC 真实录音（Windows PC，无逐条标签） | DNS4 盲测 `desktop` 221 条（台式与笔记本分不开，地点只按噪声字段） | DAPS office · DR-VCTK iPhone / iPad（回放） | 🟥 | 🟥 |
-| `home-family` | DNS 2021 两届盲测自填 mac 约 31 条（与 open-office 混，未核实） | DNS 2021 盲测 laptop 段（同上） | DNS5 dev（笔记本或台式，无逐条区分） | AISHELL-DMASH（手机 / 平板 + 近讲同步，签协议） | CHiME-5/6（约 50 h，晚餐聚会，禁背景电视，CC BY-SA → 训练可（D64））· DiPCo（5.3 h，CDLA → 训练可）· MISP2021（中文电视房，许可未查到）· VoiceHome-2（法语，只评测） | CHiME-6 双耳 · DiPCo · MISP2021 · DMASH |
+| `home-family` | DNS 2021 两届盲测自填 mac 约 31 条（与 open-office 混，未核实） | DNS 2021 盲测 laptop 段（同上） | DNS5 dev：Track1 641 条全为 `Desk` / `HS`，Track2 `Desk` 187 条（台式与笔记本分不开）【实测：文件名】 | DNS5 dev Track2 `Mobile` 413 条（文件名标手机；其中 599 / 600 个文件名与 DNS4 盲测相同，是复用）· AISHELL-DMASH（手机 / 平板 + 近讲同步，签协议） | CHiME-5/6（约 50 h，晚餐聚会，禁背景电视，CC BY-SA → 训练可（D64））· DiPCo（5.3 h，CDLA → 训练可）· MISP2021（中文电视房，许可未查到）· VoiceHome-2（法语，只评测） | CHiME-6 双耳 · DiPCo · MISP2021 · DMASH |
 | `home-quiet` | 🟥 | Speech Commands v2（网页众包，笔记本 / 台式 / 手机混，无设备字段；单词 1 s，CC BY → 训练可） | 🟥 | MagicData-RAMC（手机两人对话 180 h，家里小房间、底噪 < 40 dBA，标笑声；CC BY-NC-ND → 只评测）· AISHELL-2（iOS 1000 h 朗读，只评测）· DAPS livingroom（回放） | 🟥（VOiCES 是回放重录，用录音棚麦与摆在房间里的领夹，不归此列；CC BY → 训练可） | 🟥 |
 | `phone-booth` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
 | `cowork` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
@@ -41,7 +41,7 @@
 
 **要签协议、未逐段核的**：Ego4D（头戴相机麦，卡上场景键含 `street-outdoor` · `transit-hub` · `cafe` · `home-family` · `car-passenger`，部分有转写；哪些片段有主说话人未逐段核）。
 
-**无地点标签、但设备有用的**（进不了上表的行）：3D-Speaker（笔记本 9.6 万条训练集，按设备可筛，普通话，型号未写，音频许可未查到）· MOBIO（2008 款 MacBook 真人说话，`mac-intel-builtin`，签 EULA）· SIG / SSI 挑战 2023–2024 真实集（PC 与手机各 500 条，部分有转写，许可未查到）· Common Voice（网页众包，必含笔记本麦但无设备字段）· URGENT 2024–2026 盲测真实段（无设备、无地点）。
+**无地点标签、但设备有用的**（进不了上表的行）：3D-Speaker（笔记本 9.6 万条训练集，按设备可筛，普通话，型号未写，音频许可未查到）· MOBIO（2008 款 MacBook 真人说话，`mac-intel-builtin`，签 EULA）· SIG / SSI 挑战 2023–2024 真实集（2023 test 500 条 + 500 条转写、2023 blind 500 条、2024 blind 500 条；每条一台设备，PC 与手机混，无逐条设备标签；许可未查到）· NISQA TRAIN_LIVE / VAL_LIVE（有声书经音箱回放进手机 / 笔记本，1,220 条，设备不能逐条筛，地点未核；是回放，不是真人会议）· Common Voice（网页众包，必含笔记本麦但无设备字段）· URGENT 2024–2026 盲测真实段（无设备、无地点）。
 
 ## 二、空格子怎么补
 
