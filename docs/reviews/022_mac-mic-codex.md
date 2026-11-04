@@ -1,7 +1,7 @@
 # 评审 022 · Mac 内置麦调研结论（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/022_mac-mic/`（devices · simulation · selftest · decision · sources · findings/tunings · tools）。**最新一轮：第 3 轮（2026-11-03）· 总评「修改」· 待第 4 轮**。
-> 累计处理：P1×7、P2×9 逐条核实，属实 16、驳回 0。没有新增要人定的事。
+> 对象：`docs/research/022_mac-mic/`（devices · simulation · selftest · decision · sources · findings/tunings · tools）。**最新一轮：第 4 轮（2026-11-03）· 总评「修改」· 本轮无 P0/P1（连续第 1 轮），待第 5 轮确认**。
+> 累计处理：P1×7、P2×13 逐条核实，属实 20、驳回 0。没有新增要人定的事。
 
 ## 第 1 轮（2026-11-03）· 总评「修改」
 
@@ -102,3 +102,33 @@
 ### 是否再审
 
 有 P1，改完开第 4 轮。
+
+## 第 4 轮（2026-11-03）· 总评「修改」
+
+原文：`_tmp/reviews/022-mac-mic-codex-4.md`（不入库）。model gpt-6-astra，effort medium。
+本轮 P0/P1：0 条 · 停止线：连续第 1 轮无 P0/P1 · 留作 issue 的 P2：无（4 条都已改）
+
+上一轮处理的验证：codex 抽查确认第 3 轮 4 条已改好。
+
+- **P2｜tools/check_devices.py:17 麦克风模式值混进设备键**（第 4 轮 #1）
+  - 核实：属实。修前 `check_devices.py` 读出 25 个键（21 个设备键 + 4 个模式值）；mtgdata 的 `check_cards.py` 读同一格式，同样受影响。
+  - 处理：`devices.md` 第二节第一列去掉反引号并加注；脚本只从第一节取键，并新增「整份文件读出的键必须等于第一节」的检查；测试加两条（真表无模式值、构造的越界行被抓到）。12 条测试全过。已报大总管转 mtgdata：它的 023 `cards-014-addendum.md:515` 把 Clarity 标为 `unknown`，应为 `non-laptop-unknown`。
+- **P2｜simulation.md:21 把消声室方位衰减套在整个混响信号上**（第 4 轮 #2）
+  - 核实：属实。
+  - 处理：第 2 步只作用于干扰声直达部分（直达峰前后约 2.5 ms）；所有声源的混响尾部按扩散场近似；另留「混响压力」分支（概率 0.2，尾部不衰减）。拆法与窗长标推断。
+- **P2｜selftest.md:66 最小输入音量不能当电路底噪参考**（第 4 轮 #3）
+  - 核实：属实（userGain 在 general 图末端）。
+  - 处理：删掉该参考用途，只保留为「输入音量是纯数字增益」的一致性检查；底噪固定默认输入音量。
+- **P2｜simulation.md:61 「语音突显只影响 voice-isolation 分支」遗漏**（第 4 轮 #4）
+  - 核实：属实。
+  - 处理：改为 VPIO 与 HAL 结果分开记，HAL 受影响才改主线 `standard`。
+
+### 引用抽查
+
+- 不符：0 条
+- 核实属实：8 条
+- 无法核实：SDK 头文件、cubeb 源码（codex 未获准读取）
+
+### 是否再审
+
+连续第 1 轮无 P0/P1，再审一轮确认。
