@@ -1,7 +1,7 @@
 # 评审 087 · 场景成绩单 + 新评分项 + 评分模型接入（codex · gpt-6-astra · read-only）
 
-> 对象：`git diff origin/main...HEAD`（分支 `feat/scorecard`，issue #87）。**最新一轮：第 2 轮（2026-11-03）· 总评「修改」· 待第 3 轮**。
-> 累计处理：P1×5、P2×4 逐条回源码核实，属实 9、驳回 0。
+> 对象：`git diff origin/main...HEAD`（分支 `feat/scorecard`，issue #87）。**最新一轮：第 3 轮（2026-11-03）· 总评「修改」· 待第 4 轮**。
+> 累计处理：P1×6、P2×6 逐条回源码核实，属实 12、驳回 0。
 
 ## 第 1 轮（2026-11-03）· 总评「修改」
 
@@ -61,3 +61,24 @@
 ### 是否再审
 
 有 P1 → 改完开第 3 轮。
+
+## 第 3 轮（2026-11-03）· 总评「修改」
+
+原文：主目录 `_tmp/scorecard/reviews/scorecard-codex-3.md`（不入库）。effort medium，耗时 104 秒。
+第一次起跑被拦：①`rules.rs` 改完 606 行超 600（tidy R-SIZE）→ 单元测试拆到 `rules/tests.rs`；②隐私扫描把第 2 轮原文判成「非纯文本」：文件以「P1 」开头，被 `file` 认成位图头（误判）→ 原文首行前加一个空行后放行，内容未改。
+上一轮处理的验证：codex 抽查确认第 2 轮 #1、#2、#4 已修；#3 的 Markdown 明细没落地（见本轮 #2）。
+本轮 P0/P1：1 条 · 停止线：未满足 · 留作 issue 的 P2：无
+
+- **P1｜`src/eval/src/scorecard/mod.rs:64` 忽略清单的 `has_clean_ref`**（第 3 轮 #1）
+  - 核实：属实（标 false 的段仍把 owner 轨当干净参考）。本集 scenesuite 恒为 true，但字段在 schema 里
+  - 处理：`has_clean_ref = false` 的段整段不打分、记进 `Missing`（场景最多待测），scorecard.md 第四节第 6 条写明。测试：e2e `clip_without_clean_ref_is_not_scored`
+- **P2｜`src/eval/src/scorecard/card.rs:112` 两个模型的明细没进 Markdown**（第 3 轮 #2）
+  - 核实：属实
+  - 处理：听感一行下面加「评分模型」小表（过 / 不过 / 待测 · Δ 均值 · 最差段）。测试断言 Markdown 里有这一行
+- **P2｜`src/eval/src/scorecard/rules.rs:376` 排最差场景和写摘要时漏了听感不过**（第 3 轮 #3）
+  - 核实：属实（只听感不过的场景摘要写成「没有不过的项」）
+  - 处理：`SceneCard::failed_items()`（听感不过算一项「听感」），排名和摘要都用它。测试：`listen_failure_counts_in_ranking_and_summary`
+
+### 是否再审
+
+有 P1 → 改完开第 4 轮。
