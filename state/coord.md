@@ -26,7 +26,7 @@
 
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
-| card1 | exp014 第一张场景成绩单（GTCRN）· #92 · `exp/014-scorecard-gtcrn` · `../noise_canceling-card1` | 成绩单（报告）· 降噪模型 GTCRN · 评测器（只用） | 已报到（noise-canceling-card1-d8） |
+| card1 | exp014 第一张场景成绩单（GTCRN）· #92 · `exp/014-scorecard-gtcrn` · `../noise_canceling-card1` | 成绩单（报告）· 降噪模型 GTCRN · 评测器（只用） | 完成，已收尾（窗口已关）· PR #97 待合并 |
 ⚠️ 人要真实数据集与 D62「开发阶段不用真实录音」可能冲突 → mtgdata 出选项，进待拍板。
 
 ## 上一件大事（2026-11-02，已收口）
@@ -96,9 +96,9 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | 空（card1 于 2026-11-04 02:39 归还，实测 2 h 35 min，run 20261104-000444-e4511abc；已转 a2） |
+| 重编译 / 全量测试 / 跑模型（1 个） | 空（a2 05:38 借用跑 #96 CI 后已归还；此前 card1 02:39 归还，run 20261104-000444-e4511abc） |
 
-排队：无（a2 已于 2026-11-04 收到名额，锁由 a2 自建自删）
+排队：无
 
 **另一位大总管 noise-canceling-a2**（2026-11-04 起）：「前端只算一次」（D71），批次 b13 · exp015 · tmux vdn-fe · 检出 `../noise_canceling-coordfe` · 账本 `state/coord-fe.md`；我方下一个实验 exp016；会改 vdn-dsp · vdn-models · vdn-scene · vdn-speaker · vdn-engine，承诺 GTCRN 输出逐样本不变。a2 经人同意删了 16 个已合并 worktree（card1、coord99 保留）。
 
@@ -107,6 +107,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-04 card1 收尾：成绩单 run 20261104-000444-e4511abc；评分项自检（V-SIM-GATE 对原声应「不适用」；V-PUMPV/V-TIMBRE 把残留噪声算成人声变化 → 看配对差值；V-INTF 口径对）；codex 3 轮清零；PR #97；人耳 7 题放桌面 20261104-vdn-gtcrn-listen；待定 F-9 F-10
 - 2026-11-04 card1 带 --qa 10 段实测 193 s（3 系统，CPU 约 56%，吃字与听感都出分）→ 480 段约 2 h 35 min，开跑
 - 2026-11-03 card1 冒烟过（cafe 常见档 ref 2.6 s · GTCRN 7.5 s）；名额给它正式跑（约 1–2.5 h，先量 10 段实测耗时）。观察：原声直通在 cafe 上 V-TIMBRE · V-PUMPV · V-SIM-GATE 也不过，待分析
 - 2026-11-03 人「你直接帮我merge」→ #88 #91 合并（#91 前在其分支 merge main、解索引冲突、DATA_FILES 登记 scenes.json，131 测试过）；人「就留下第五版吧」→ 删 _tmp/exp013 前四版音频（约 13 GB，清单仍在仓）；人要手下跑成绩单 → 派 card1（b12）
