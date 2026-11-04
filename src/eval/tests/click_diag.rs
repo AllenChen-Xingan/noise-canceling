@@ -1,7 +1,8 @@
 //! V-CLICK 诊断（人工跑，不进 CI）：检出的咔嗒落在哪里——参考降噪器的门控开关附近？STFT 帧边界上？有没有人声？
 //! 用法：`VDN_CLICK_DIAG=<clips.jsonl 绝对路径> cargo test -p vdn-eval --release --test click_diag -- --ignored --nocapture`
 //! （音频按主目录解析；只看 cafe · common · mba-builtin）
-//! 另设 `VDN_CLICK_DUMP=<目录>`：把跳变最大的 5 处各剪 ±150 ms（输出、带噪输入、干净参考）写成 wav，供人耳核对
+//! 另设 `VDN_CLICK_DUMP=<新目录>`：把跳变最大的 5 处各剪 ±150 ms（输出、带噪输入、干净参考）写成 wav，供人耳核对；
+//! 目录已存在就拒绝（不覆盖旧产物）
 
 use std::path::PathBuf;
 
@@ -10,6 +11,25 @@ use vdn_eval::scene::{DeviceKey, MeetingPlace, SceneClip, Tier};
 use vdn_eval::scorecard::load_scene_clip;
 use vdn_eval::system::{SystemKind, SystemSpec, run};
 use vdn_eval::verifiers::{Ctx, Params, click_positions};
+
+/// 导出目录必须是新的：已存在就拒绝，一个文件都不写（不覆盖旧的试听片段与清单，CLAUDE.md 第五节第 1 条）。
+fn fresh_dir(d: &std::path::Path) -> Result<(), String> {
+    if d.exists() {
+        return Err(format!("{} 已存在，不覆盖：换一个新目录", d.display()));
+    }
+    std::fs::create_dir_all(d).map_err(|e| e.to_string())
+}
+
+/// 第二次导出到同一目录：被拒，旧文件不动。
+#[test]
+fn dump_dir_must_be_new() {
+    let d = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("click-dump-fresh");
+    let _ = std::fs::remove_dir_all(&d);
+    fresh_dir(&d).unwrap();
+    std::fs::write(d.join("list.json"), "旧").unwrap();
+    assert!(fresh_dir(&d).is_err());
+    assert_eq!(std::fs::read_to_string(d.join("list.json")).unwrap(), "旧");
+}
 
 /// 一处检出：(跳变 dBFS, 名字, 在片段里的位置, 输出, 带噪输入, 干净参考)
 type Pick = (f64, String, usize, Vec<f32>, Vec<f32>, Vec<f32>);
@@ -85,7 +105,7 @@ fn where_do_clicks_land() {
     }
     if let Ok(d) = std::env::var("VDN_CLICK_DUMP") {
         let d = PathBuf::from(d);
-        std::fs::create_dir_all(&d).unwrap();
+        fresh_dir(&d).unwrap();
         picks.sort_by(|a, b| b.0.total_cmp(&a.0));
         let mut list = Vec::new();
         for (db, name, at, o, m, c) in picks.into_iter().take(5) {
