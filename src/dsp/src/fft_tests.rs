@@ -5,10 +5,24 @@ use crate::StreamingStft;
 use realfft::num_complex::Complex32;
 use vdn_types::{FRONTEND, StftSpec, Window};
 
+/// 测试信号：每 97 个样本里有一段 ±0（正负零要原样走过分帧，逐位比较能分出它们）。
 fn signal(n: usize) -> Vec<f32> {
     (0..n)
-        .map(|i| ((i as f32) * 0.021).sin() * 0.4 + ((i as f32) * 0.37).cos() * 0.1)
+        .map(|i| match i % 97 {
+            0..=5 => -0.0,
+            6..=9 => 0.0,
+            _ => ((i as f32) * 0.021).sin() * 0.4 + ((i as f32) * 0.37).cos() * 0.1,
+        })
         .collect()
+}
+
+/// 复数逐位（`==` 分不出 +0.0 / −0.0，也会让 NaN 不等于自己）。
+fn bits32(v: &[Complex32]) -> Vec<(u32, u32)> {
+    v.iter().map(|c| (c.re.to_bits(), c.im.to_bits())).collect()
+}
+
+fn bits64(v: &[Complex<f64>]) -> Vec<(u64, u64)> {
+    v.iter().map(|c| (c.re.to_bits(), c.im.to_bits())).collect()
 }
 
 /// Kaldi 认人的切法：400 / 补零到 512 / 160 / 汉明。
@@ -31,7 +45,7 @@ fn whole_matches_streaming_bitwise() {
         let a: Vec<Complex32> = st.analyze(h).to_vec();
         if k >= 1 {
             let b = fr.frame(&x, k - 1).expect("帧在范围内");
-            assert_eq!(a, b.to_vec(), "k={k}");
+            assert_eq!(bits32(&a), bits32(b), "k={k}");
             checked += 1;
         }
     }
@@ -59,7 +73,7 @@ fn zero_padding_is_correct() {
         fft.process(&mut buf, &mut want).unwrap();
         // 先跑一帧别的，确认尾部的零每次都重新写（不是靠初值）
         fr.frame(&x, 1);
-        assert_eq!(fr.frame(&x, k).unwrap().to_vec(), want, "k={k}");
+        assert_eq!(bits32(fr.frame(&x, k).unwrap()), bits32(&want), "k={k}");
     }
 }
 
@@ -78,7 +92,7 @@ fn hook_order_bounds_and_count() {
         })
         .unwrap()
         .to_vec();
-    assert_eq!(got, b.frame(&shifted, 2).unwrap().to_vec());
+    assert_eq!(bits32(&got), bits32(b.frame(&shifted, 2).unwrap()));
     assert_eq!(a.num_frames(399), 0);
     assert_eq!(a.num_frames(400), 1);
     assert_eq!(a.num_frames(1600), 8);
@@ -112,7 +126,7 @@ fn f64_path_matches_manual() {
     let mut want = fft.make_output_vec();
     fft.process(&mut buf, &mut want).unwrap();
     let got = fr.frame(&x, 1).unwrap().to_vec();
-    assert_eq!(got, want);
+    assert_eq!(bits64(&got), bits64(&want));
     let mut p = vec![0.0f64; fr.bins()];
     power_into(&got, &mut p);
     let peak = p
