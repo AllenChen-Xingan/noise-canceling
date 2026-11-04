@@ -48,7 +48,7 @@ impl Server {
         })
     }
 
-    fn score(&mut self, wav: &PathBuf) -> Result<f64, String> {
+    fn score(&mut self, wav: &std::path::Path) -> Result<f64, String> {
         use std::io::{BufRead, Write};
         writeln!(self.stdin, "{}", wav.display()).map_err(|e| format!("写子进程：{e}"))?;
         self.stdin.flush().map_err(|e| e.to_string())?;

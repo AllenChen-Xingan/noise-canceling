@@ -131,3 +131,46 @@ fn local_models_match_registered_hash() {
         vdn_eval::qa::nrmos::verify(kind, &p).unwrap();
     }
 }
+
+/// 常驻模式（`--serve`，QA 层实际用的）与一次性模式给同样的分；坏路径回 error 行、不退出。
+#[test]
+#[ignore = "要本机评分模型，人工跑"]
+fn serve_mode_matches_batch_mode() {
+    use std::io::{BufRead, BufReader, Write};
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("nrmos-serve");
+    std::fs::create_dir_all(&dir).unwrap();
+    let p = dir.join("a.wav");
+    vdn_eval::wav::write(&p, &signal(48_000, 0.05, 9), SR).unwrap(); // tidy: 非采样率：段长 3 s 的样本数
+    for kind in Kind::ALL {
+        let batch = score_all(kind, std::slice::from_ref(&p))[0];
+        let model = locate(kind).unwrap();
+        let mut ch = std::process::Command::new(env!("CARGO_BIN_EXE_vdn-eval"))
+            .args(["nrmos", kind.as_str()])
+            .arg(&model)
+            .arg("--serve")
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        let mut sin = ch.stdin.take().unwrap();
+        let mut sout = BufReader::new(ch.stdout.take().unwrap());
+        let mut ask = |w: &str| {
+            writeln!(sin, "{w}").unwrap();
+            sin.flush().unwrap();
+            let mut l = String::new();
+            sout.read_line(&mut l).unwrap();
+            serde_json::from_str::<serde_json::Value>(&l).unwrap()
+        };
+        assert!(ask("/nonexistent.wav")["error"].is_string());
+        for _ in 0..2 {
+            let v = ask(&p.to_string_lossy());
+            assert!(
+                (v["mos"].as_f64().unwrap() - batch).abs() < 1e-9,
+                "{}",
+                kind.as_str()
+            );
+        }
+        drop(sin);
+        assert!(ch.wait().unwrap().success());
+    }
+}
