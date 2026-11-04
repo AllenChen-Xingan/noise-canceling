@@ -53,7 +53,7 @@
 
 | 编号 | 名称 | 链接 | 来源类型 | 核对 | 用在哪 / 注意 |
 |---|---|---|---|---|---|
-| S31 | Pearsons 等 1977，EPA-600/1-77-025（各场景说话与噪声声级） | https://www.nonoise.org/epa/Roll2/roll2doc16.pdf | 论文 | ✓ | 全文 A 计权 Leq。安静时对话 55 dB @1 m；背景 48–70 dB 时说话每 dB 升约 0.6 dB；电视在观看者耳边平均 61 dB、离电视平均 3 m（观看者自选音量）；捷运与客机里环境 77 / 说话 75 dB、相距 0.4 m；百货商店背景 54 / 说话 61 dB |
+| S31 | Pearsons 等 1977，EPA-600/1-77-025（各场景说话与噪声声级） | https://www.nonoise.org/epa/Roll2/roll2doc16.pdf | 论文 | ✓ | 全文 A 计权 Leq。安静时对话 55 dB @1 m；背景 48–70 dB 时说话每 dB 升约 0.6 dB；电视在观看者耳边平均 61 dB、离电视平均 3 m（观看者自选音量）；捷运与客机里环境 77 / 说话 75 dB、相距 0.4 m；百货商店背景 54 / 说话 61 dB；印刷页 23–25：在家里说话保持 9–14 dB 的语音噪声比，在家门外只保持 5–8 dB |
 | S32 | Wu 等 2018，Ear Hear 39(2) | https://pmc.ncbi.nlm.nih.gov/articles/PMC5824438 | 论文 | ✓ | 拐点 59.3 dBA、斜率 0.34 / 0.54；在家噪声中位 53.6 dBA、SNR 9.9 dB；交通 SNR 5.6 dB。**被试是 20 名 65–80 岁老人** |
 | S33 | Brascamp 2021，J Vision 21(8):19 | https://pmc.ncbi.nlm.nih.gov/articles/PMC8383908/ | 论文 | ✓ | 自然坐姿眼到笔记本屏幕平均 51.7 cm（自测卷尺）；不等于嘴到麦 |
 | S34 | Hongisto & Keränen，Euronoise 2021（ISO 3382-3 开放办公量） | https://www.sea-acustica.es/archivo/congresos/Madeira21/ID107.pdf | 论文 | ✓ | 文献极值：4 m 处语音 40–60 dB、背景 26–54 dB、干扰距离 2.1–21 m；图尔库一间：4 m 处语音 52.4 dB、背景 37.6 dB。标准声源、空场测量 |
@@ -89,6 +89,6 @@
 | S59 | Puglisi 等 2021，Frontiers in Built Environment | https://www.frontiersin.org/journals/built-environment/articles/10.3389/fbuil.2021.688484/full | 论文 | ✓ | 意大利 N=1,934（2020-05）：独立房间 54.6% · 共用房间 43.1%；25% 认为成年人发出的声音是主噪声源；受访者偏大学与研究机构 |
 | S60 | FinanceBuzz 远程工作调查 | https://financebuzz.com/survey-remote-work-lifestyle | 媒体自办调查 | ✓ | N=500（2020-03 至 04）：视频会议被打断——宠物 47% · 快递员 39% · 伴侣 32% · 孩子 21%；「过去一年在哪工作过」口径会放大偶发地点，样本疑似偏 |
 | S61 | Dimensional Research for Cisco Webex 2020 | https://www.cisco.com/c/dam/en/us/products/collateral/collaboration-endpoints/global-workforce-survey.pdf | 官方文档（厂商委托） | ✓ | 全球 N=1,569：在家开会最常用收音设备——笔记本 42%（麦与扬声器合计）；自己这边有背景噪声 32% |
-| S62 | Plantronics《Managing Noise》2017 | https://m.softchoice.com/web/newsite/documents/amplify/Plantronics-Hardware-Managing-Noise.pdf | 官方文档（厂商） | ✓ | 7 国 N=2,184，均在 500 人以上开放办公室：最烦的声音——同事打电话大声 29% · 工位前交谈 23%；29% 嫌吵时离开工位 |
+| S62 | Plantronics《Managing Noise》2017 | https://m.softchoice.com/web/newsite/documents/amplify/Plantronics-Hardware-Managing-Noise.pdf | 官方文档（厂商） | ✓ | 7 国 N=2,184，均在 500 人以上开放办公室。第 12 页问「What are the most annoying noises you hear?」：通话时大声说话 29% · 工位前交谈 23% · 手机提示音 13% · 私人电话 11% · 吸鼻子或咳嗽 9% · 敲键盘 8% · 吃东西 5%；第 7 页：29% 嫌吵时离开工位 |
 | S63 | Owl Labs State of Hybrid Work 2025 | https://owllabs.com/state-of-hybrid-work/2025 | 官方文档（厂商） | 未核 | 美国 N=2,000：67% 放弃会议室设备改用自己笔记本 |
 | S64 | IWG 2019（经 FE News 转述） | https://www.fenews.co.uk/skills/school-holidays-signal-stress-for-home-workers/ | 官方文档（厂商） | 二手 | 英国：49% 工作电话被孩子、家人或宠物打断 |
