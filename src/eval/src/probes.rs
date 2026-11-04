@@ -26,9 +26,12 @@ pub enum Probe {
     Identity,
     /// 全部静音：输出 = 0（刷 V-NR 的极端做法）
     Mute,
-    /// 弱音节（有声 125 ms 段里干净轨能量最低的 40%）整段吞掉（置零）：V-WEAK 必须抓到
-    #[serde(rename = "weak_drop")]
-    WeakDrop,
+    /// 弱音节（有声 125 ms 段里干净轨能量最低的 30%）整段吞掉：V-WEAK **已知抓不到**（xfail，见 `weak_drop`）
+    #[serde(rename = "weak_drop_30")]
+    WeakDrop30,
+    /// 同上，吞掉最弱的 40%：V-WEAK 必须抓到
+    #[serde(rename = "weak_drop_40")]
+    WeakDrop40,
     /// 整体乘 2 Hz、±6 dB 的增益抖动：V-PUMPV 必须抓到
     #[serde(rename = "gain_wobble_6db")]
     GainWobble,
@@ -41,13 +44,14 @@ pub enum Probe {
 }
 
 impl Probe {
-    pub const ALL: [Probe; 9] = [
+    pub const ALL: [Probe; 10] = [
         Probe::OnsetCut,
         Probe::NonSpeechMinus40,
         Probe::Lowpass1k,
         Probe::Identity,
         Probe::Mute,
-        Probe::WeakDrop,
+        Probe::WeakDrop30,
+        Probe::WeakDrop40,
         Probe::GainWobble,
         Probe::Clicks5,
         Probe::Noise0db,
@@ -59,7 +63,8 @@ impl Probe {
             Probe::Lowpass1k => "lowpass_1k",
             Probe::Identity => "identity",
             Probe::Mute => "mute",
-            Probe::WeakDrop => "weak_drop",
+            Probe::WeakDrop30 => "weak_drop_30",
+            Probe::WeakDrop40 => "weak_drop_40",
             Probe::GainWobble => "gain_wobble_6db",
             Probe::Clicks5 => "clicks_5",
             Probe::Noise0db => "noise_0db",
@@ -109,7 +114,8 @@ impl Probe {
             }
             Probe::Identity => clip.mix.clone(),
             Probe::Mute => vec![0.0; out.len()],
-            Probe::WeakDrop => weak_drop(clip, out),
+            Probe::WeakDrop30 => weak_drop(clip, out, 3),
+            Probe::WeakDrop40 => weak_drop(clip, out, 4),
             Probe::Noise0db => {
                 let rms = |x: &[f32]| {
                     (x.iter().map(|v| (*v as f64).powi(2)).sum::<f64>() / x.len().max(1) as f64)
@@ -154,10 +160,11 @@ impl Probe {
     }
 }
 
-/// 有声段切成 125 ms 一块（与 V-WEAK 的分析窗同长），干净轨能量最低的 40% 块，输出置零。
+/// 有声段切成 125 ms 一块（与 V-WEAK 的分析窗同长），干净轨能量最低的 `tenths`/10 块，输出置零。
 /// 只压 −10 / −20 dB 时 V-WEAK 在合成人声上只读到约 1.8 / 3.7 dB（2026-11-03 实测），抓不住，所以探针取整段吞掉；
-/// 取 40% 不取 30%：V-WEAK 读第 30 百分位，正好吞掉 30% 时分位落在边界上，参考降噪器输出上只读到 2.5–3.6 dB（ci 实测）
-fn weak_drop(clip: &Clip, out: &[f32]) -> Vec<f32> {
+/// 30% 是已知做不到（xfail）：V-WEAK 读第 30 百分位，正好吞掉 30% 时分位落在边界上，参考降噪器输出上只读到 2.5–3.6 dB（ci 实测）；
+/// 40% 时分位落进被吞的部分，必须抓到
+fn weak_drop(clip: &Clip, out: &[f32], tenths: usize) -> Vec<f32> {
     let f = (0.125 * clip.sr as f64) as usize;
     let mut y = out.to_vec();
     let mut blocks: Vec<(usize, f64)> = Vec::new();
@@ -173,7 +180,7 @@ fn weak_drop(clip: &Clip, out: &[f32]) -> Vec<f32> {
         }
     }
     blocks.sort_by(|p, q| p.1.total_cmp(&q.1));
-    let n = blocks.len() * 4 / 10;
+    let n = blocks.len() * tenths / 10;
     for &(t, _) in &blocks[..n] {
         for v in &mut y[t..t + f] {
             *v = 0.0;

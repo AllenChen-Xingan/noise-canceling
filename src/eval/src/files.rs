@@ -407,10 +407,11 @@ mod tests {
             | Probe::Lowpass1k
             | Probe::Identity
             | Probe::Mute
-            | Probe::WeakDrop
+            | Probe::WeakDrop30
+            | Probe::WeakDrop40
             | Probe::GainWobble
             | Probe::Clicks5
-            | Probe::Noise0db => 9,
+            | Probe::Noise0db => 10,
         };
         assert_eq!(Probe::ALL.len(), n(Probe::Mute));
         let n = |l: Level| match l {

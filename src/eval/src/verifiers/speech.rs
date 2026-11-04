@@ -204,7 +204,11 @@ pub fn click_positions(c: &Ctx, p: &Params) -> Vec<usize> {
     let sr = c.clip.sr;
     let frac = p.f_or("resid_frac", th::CLICK.def("resid_frac"));
     let peak = quantile(
-        &c.clip.clean.iter().map(|v| v.abs() as f64).collect::<Vec<_>>(),
+        &c.clip
+            .clean
+            .iter()
+            .map(|v| v.abs() as f64)
+            .collect::<Vec<_>>(),
         0.999,
     );
     let floor = (peak * 10f64.powf(p.f_or("floor_db", th::CLICK.def("floor_db")) / 20.0)) as f32;
@@ -214,7 +218,13 @@ pub fn click_positions(c: &Ctx, p: &Params) -> Vec<usize> {
     // 杯碟、开罐这类突发声在混合里被人声盖住、算不上离群点，降噪后露出来，那是原有的声音穿过来了，不是降噪造的咔嗒
     let mut fm = outliers(&c.clip.mix, sr, k);
     if c.clip.tracks {
-        let bg: Vec<f32> = c.clip.noise.iter().zip(&c.clip.interf).map(|(a, b)| a + b).collect();
+        let bg: Vec<f32> = c
+            .clip
+            .noise
+            .iter()
+            .zip(&c.clip.interf)
+            .map(|(a, b)| a + b)
+            .collect();
         for (m, b) in fm.iter_mut().zip(outliers(&bg, sr, k)) {
             *m |= b;
         }
@@ -359,7 +369,7 @@ mod tests {
 
     #[test]
     fn weak_catches_weak_drop() {
-        must_catch("V-WEAK", Probe::WeakDrop);
+        must_catch("V-WEAK", Probe::WeakDrop40);
     }
 
     #[test]

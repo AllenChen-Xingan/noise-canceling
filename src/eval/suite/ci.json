@@ -273,11 +273,20 @@
       "info": [ { "v": "V-NR", "max": -6 } ]
     },
     {
-      "id": "P06-weak-drop-must-fail",
+      "id": "P06-weak-drop-30-known-miss",
       "set": "probe", "polarity": "preserve",
-      "origin": "012 §3.1 V-WEAK 对抗样本 · 016 §1.1「轻声字被吞」：把弱音节整段吞掉 → L30 必须变差（只压 −10 / −20 dB 时 V-WEAK 读数 1.8 / 3.7 dB，过不了 4 dB 线，见 probes.rs）",
+      "origin": "012 §3.1 V-WEAK 对抗样本 · 016 §1.1「轻声字被吞」：把最弱 30% 的弱音节整段吞掉",
+      "desc": "把 R02 的输出里最弱 30% 的 125 ms 有声段整段置零：V-WEAK 应判不过，但已知做不到",
+      "probe": { "base": "R02-owner-monologue-not-gated", "kind": "weak_drop_30" },
+      "graders": [ { "v": "V-WEAK", "max": 4 } ],
+      "xfail": "V-WEAK 读第 30 百分位：正好吞掉 30% 时分位落在被吞与保留的边界上，参考降噪器输出上只差 2.5–3.6 dB（< 4 dB 线，scorecard 2026-11-03 ci 实测），分不开。已写进 specs/rubric/scorecard.md 第九节已知局限"
+    },
+    {
+      "id": "P10-weak-drop-40-must-fail",
+      "set": "probe", "polarity": "preserve",
+      "origin": "同 P06，吞掉 40%：第 30 百分位落进被吞的部分",
       "desc": "把 R02 的输出里最弱 40% 的 125 ms 有声段整段置零：V-WEAK 必须判不过",
-      "probe": { "base": "R02-owner-monologue-not-gated", "kind": "weak_drop" },
+      "probe": { "base": "R02-owner-monologue-not-gated", "kind": "weak_drop_40" },
       "graders": [ { "v": "V-WEAK", "max": 4 } ]
     },
     {

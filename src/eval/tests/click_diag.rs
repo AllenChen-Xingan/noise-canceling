@@ -26,10 +26,21 @@ fn where_do_clicks_land() {
         c.scene == MeetingPlace::Cafe && c.tier == Tier::Common && c.device == DeviceKey::MbaBuiltin
     }) {
         let clip = load_scene_clip(c, &root).unwrap();
-        let spec = SystemSpec { kind: SystemKind::Ref, safety: true, faults: Vec::new() };
+        let spec = SystemSpec {
+            kind: SystemKind::Ref,
+            safety: true,
+            faults: Vec::new(),
+        };
         let r = run(&spec, &clip.mix).unwrap();
         let m = masks(&clip.truth, &clip.mix, 0.03);
-        let ctx = Ctx { clip: &clip, out: &r.out, run: Some(&r), masks: &m, noise_out: None, ci: true };
+        let ctx = Ctx {
+            clip: &clip,
+            out: &r.out,
+            run: Some(&r),
+            masks: &m,
+            noise_out: None,
+            ci: true,
+        };
         let pos = click_positions(&ctx, &Params::default());
         let switches: Vec<usize> = (1..r.out.len())
             .filter(|&t| r.gate_at(t) != r.gate_at(t - 1))
@@ -47,7 +58,14 @@ fn where_do_clicks_land() {
             steps.push(db);
             let w = 2400; // ±150 ms
             let (a, b) = (t.saturating_sub(w), (t + w).min(r.out.len()));
-            picks.push((db, format!("{}-{t}", c.id), t - a, r.out[a..b].to_vec(), clip.mix[a..b].to_vec(), clip.clean[a..b].to_vec()));
+            picks.push((
+                db,
+                format!("{}-{t}", c.id),
+                t - a,
+                r.out[a..b].to_vec(),
+                clip.mix[a..b].to_vec(),
+                clip.clean[a..b].to_vec(),
+            ));
         }
         eprintln!("{}：{} 个，门控切换 {} 次", c.id, pos.len(), switches.len());
     }
@@ -55,7 +73,12 @@ fn where_do_clicks_land() {
     eprintln!("合计 {n} 个；门控切换 ±1 hop 内 {near_gate}；主讲人有声帧里 {voiced}");
     eprintln!("在 hop 内的相位分布（8 格）：{lag_hist:?}");
     if !steps.is_empty() {
-        eprintln!("跳变大小 dBFS：最小 {:.1} · 中位 {:.1} · 最大 {:.1}", steps[0], steps[steps.len() / 2], steps[steps.len() - 1]);
+        eprintln!(
+            "跳变大小 dBFS：最小 {:.1} · 中位 {:.1} · 最大 {:.1}",
+            steps[0],
+            steps[steps.len() / 2],
+            steps[steps.len() - 1]
+        );
     }
     if let Ok(d) = std::env::var("VDN_CLICK_DUMP") {
         let d = PathBuf::from(d);
@@ -64,11 +87,16 @@ fn where_do_clicks_land() {
         let mut list = Vec::new();
         for (db, name, at, o, m, c) in picks.into_iter().take(5) {
             for (k, x) in [("out", &o), ("mix", &m), ("clean", &c)] {
-                vdn_eval::wav::write(&d.join(format!("{name}-{k}.wav")), x, vdn_types::MODEL_RATE).unwrap();
+                vdn_eval::wav::write(&d.join(format!("{name}-{k}.wav")), x, vdn_types::MODEL_RATE)
+                    .unwrap();
             }
             list.push(serde_json::json!({"name": name, "step_dbfs": db, "click_at_s": at as f64 / vdn_types::MODEL_RATE as f64}));
         }
-        std::fs::write(d.join("list.json"), serde_json::to_string_pretty(&list).unwrap()).unwrap();
+        std::fs::write(
+            d.join("list.json"),
+            serde_json::to_string_pretty(&list).unwrap(),
+        )
+        .unwrap();
         eprintln!("已剪 5 处到 {}", d.display());
     }
 }
