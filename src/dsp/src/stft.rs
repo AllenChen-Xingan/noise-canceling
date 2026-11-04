@@ -268,7 +268,10 @@ mod tests {
     fn feed_partial_shifts_by_input_length() {
         let spec = vdn_types::FRONTEND;
         let x: Vec<f32> = (0..spec.n_fft * 2).map(|i| i as f32 + 1.0).collect();
-        let (mut a, mut b) = (StreamingStft::from_spec(&spec), StreamingStft::from_spec(&spec));
+        let (mut a, mut b) = (
+            StreamingStft::from_spec(&spec),
+            StreamingStft::from_spec(&spec),
+        );
         a.feed(&x[..spec.hop]);
         b.feed_partial(&x[..spec.hop]);
         assert_eq!(a.input, b.input);

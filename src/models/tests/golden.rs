@@ -5,13 +5,19 @@
 //! 生成（只在没改过 `gtcrn.rs` 的代码上）：`VDN_BLESS=1 VDN_GTCRN_ONNX=<gtcrn_simple.onnx> cargo test -p vdn-models --test golden`。
 //! 找不到模型文件时同 `smoke.rs` 跳过（设 `VDN_REQUIRE_MODELS` 不许跳）；权重或平台和基准不同时跳过并打印原因
 //! （ORT 与系统数学库在别的平台上末位可能不同）。
+//! 另一条对拍引擎最终输出（48 kHz `Pipeline`，基准 `tests/fixtures/pipeline_golden.txt`），因为成绩单测的是它。
 //! 本文件只用改前就有的接口，才能在 main 的原样源码上生成基准；借谱的检查在 `tap.rs`。
 use vdn_models::{Gtcrn, ModelKind, artifact_id};
-use vdn_types::{ContentId, MODEL_RATE, Model};
+use vdn_engine::{Engine, Pipeline, SafetyConfig};
+use vdn_types::{ContentId, IO_RATE, MODEL_RATE, Model};
 
 const FIXTURE: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/gtcrn_golden.txt"
+);
+const FIXTURE_PIPELINE: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/pipeline_golden.txt"
 );
 
 /// 3 s：噪声 + 一强一弱交替的 150 Hz 正弦 + 一段静音，只用乘加和 LCG，跨平台逐位一致。
@@ -41,35 +47,30 @@ fn platform() -> String {
     format!("{}-{}", std::env::consts::ARCH, std::env::consts::OS)
 }
 
-#[test]
-fn gtcrn_output_matches_golden() {
-    let Some(path) = ModelKind::Gtcrn.default_path() else {
+/// 找模型文件；找不到时按 `VDN_REQUIRE_MODELS` 决定失败还是跳过。
+fn model_path() -> Option<std::path::PathBuf> {
+    let p = ModelKind::Gtcrn.default_path();
+    if p.is_none() {
         assert!(
             std::env::var_os("VDN_REQUIRE_MODELS").is_none(),
             "VDN_REQUIRE_MODELS 已设，但找不到模型文件"
         );
         eprintln!("跳过：找不到 GTCRN 模型文件（设 VDN_GTCRN_ONNX）");
-        return;
-    };
-    let weights = artifact_id(&path).expect("读权重");
-    let mut m = Gtcrn::open(&path).expect("打开 GTCRN");
-    let hop = m.hop();
-    // 截到整 hop：哈希里的每个点都真过了模型（不留没处理的尾巴）
-    let mut x = input();
-    x.truncate(x.len() / hop * hop);
-    let mut y = vec![0.0f32; x.len()];
-    for (xi, yi) in x.chunks_exact(hop).zip(y.chunks_exact_mut(hop)) {
-        m.process(xi, yi).expect("GTCRN 处理");
     }
+    p
+}
+
+/// 输出逐位压成内容 ID，与基准 `<ID> <样本数> <权重 ID> <平台>` 比；设 `VDN_BLESS` 时写基准。
+fn check(fixture: &str, y: &[f32], weights: ContentId, what: &str) {
     let bytes: Vec<u8> = y.iter().flat_map(|v| v.to_bits().to_le_bytes()).collect();
     let got = ContentId::of(&bytes);
     let line = format!("{got} {} {weights} {}", y.len(), platform());
     if std::env::var_os("VDN_BLESS").is_some() {
-        std::fs::write(FIXTURE, format!("{line}\n")).expect("写基准");
+        std::fs::write(fixture, format!("{line}\n")).expect("写基准");
         eprintln!("已写基准：{line}");
         return;
     }
-    let want = std::fs::read_to_string(FIXTURE).expect("缺基准文件（见文件头怎么生成）");
+    let want = std::fs::read_to_string(fixture).expect("缺基准文件（见文件头怎么生成）");
     let f: Vec<&str> = want.split_whitespace().collect();
     let [id, n, w, plat] = f.as_slice() else {
         panic!("基准格式不对：{want}");
@@ -83,5 +84,44 @@ fn gtcrn_output_matches_golden() {
     }
     assert_eq!(n.parse::<usize>().ok(), Some(y.len()), "样本数变了");
     let id = ContentId::parse(id).expect("基准第 1 列是 16 位十六进制");
-    assert_eq!(got, id, "GTCRN 输出与改前不同（红线），先停下报");
+    assert_eq!(got, id, "{what}与改前不同（红线），先停下报");
+}
+
+#[test]
+fn gtcrn_output_matches_golden() {
+    let Some(path) = model_path() else { return };
+    let weights = artifact_id(&path).expect("读权重");
+    let mut m = Gtcrn::open(&path).expect("打开 GTCRN");
+    let hop = m.hop();
+    // 截到整 hop：哈希里的每个点都真过了模型（不留没处理的尾巴）
+    let mut x = input();
+    x.truncate(x.len() / hop * hop);
+    let mut y = vec![0.0f32; x.len()];
+    for (xi, yi) in x.chunks_exact(hop).zip(y.chunks_exact_mut(hop)) {
+        m.process(xi, yi).expect("GTCRN 处理");
+    }
+    check(FIXTURE, &y, weights, "GTCRN 输出");
+}
+
+/// 成绩单测的是引擎最终输出（含门控、混回原声、48 kHz 重采样），不只是模型输出：
+/// GTCRN 走 48 kHz `Pipeline`（默认安全参数），块长轮换 96 / 256 / 4096，整段输出逐位与改前比。
+#[test]
+fn pipeline_output_matches_golden() {
+    let Some(path) = model_path() else { return };
+    let weights = artifact_id(&path).expect("读权重");
+    let m = Gtcrn::open(&path).expect("打开 GTCRN");
+    let mut p = Pipeline::new(Engine::new(m, SafetyConfig::default()), IO_RATE).expect("48 kHz 应可用");
+    // 同一段确定性信号按 3 倍拉长成 48 kHz（每点重复 3 次，只用复制，跨平台一致）
+    let x: Vec<f32> = input().iter().flat_map(|&v| [v, v, v]).collect();
+    let mut y = vec![0.0f32; x.len()];
+    let mut i = 0;
+    for n in [96usize, 256, 4096].iter().cycle() {
+        if i >= x.len() {
+            break;
+        }
+        let end = (i + n).min(x.len());
+        p.process(&x[i..end], &mut y[i..end]);
+        i = end;
+    }
+    check(FIXTURE_PIPELINE, &y, weights, "引擎最终输出");
 }
