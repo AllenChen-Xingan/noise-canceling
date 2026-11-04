@@ -12,7 +12,7 @@
 | fecore | 共用频谱前端 · #94 · `feat/frontend-once` · `../noise_canceling-fecore` | 频谱前端 · 降噪模型适配 · 场景特征 · 修音频谱级 | 完成，验收过（大总管亲手跑 xtask ci 6 项全绿 · 对拍 4 份逐位相同含引擎最终输出 · 路径清零 · 文件 ≤ 557 行），PR #99 已合并（ef0cfdd3，#94 关），窗口与 worktree 已清 |
 | fespk | exp015 认人吃共享频谱 + 耗时分解 · #95 · `exp/015-speaker-shared-spectrum` · `../noise_canceling-fespk` | 认人前端 · 声纹模型（只评）· 认人判断回路 | 完成，验收过（大总管复跑 11 测试 · 9 文件在范围内 · src/speaker/ 未改 · 路径清零），PR #96 已合并（3af03735，#95 关），窗口与 worktree 已清 |
 | pse | 调研 024 个性化降噪：有没有人做过 · 为什么难 · #98 · `research/024-pse-landscape` · `../noise_canceling-pse`（人点名派，属「个性化降噪」大事的前置调研） | 个性化降噪 / 提取模型 · 自动注册 · PSE 训练数据与评测集 | 完成，验收过（11 文件在范围内 · 路径清零 · codex 4 轮 3、4 轮无 P0/P1），PR #100 已合并（#98 关），窗口与 worktree 已清 |
-| fe2 | 第二段之一：统一模块支持 Kaldi 分帧 · 认人 fbank 与离线例子收进来 · #102 · `feat/frontend-speaker` · `../noise_canceling-fe2` | 频谱前端（扩展）· 认人前端 fbank · 离线例子 | 已报到（noise-canceling-fe2-6c） |
+| fe2 | 第二段之一：统一模块支持 Kaldi 分帧 · 认人 fbank 与离线例子收进来 · #102 · `feat/frontend-speaker` · `../noise_canceling-fe2` | 频谱前端（扩展）· 认人前端 fbank · 离线例子 | 完成，验收过（大总管亲手 xtask ci 全绿 · 对拍 14 条真比），PR #103 已合并（f2782cf4，#102 关），窗口与 worktree 已清 |
 
 ## 进度板
 
@@ -41,6 +41,9 @@
 - ⚠️ 同类第二次：大总管 a2 在主目录写文件（`_tmp/` 批次文件）触发主目录 auto-commit hook，把 5-app-5e 的 `state/coord.md` 提交到它的分支（7cf6133f · 51a50418，内容都是它的）。规则：**a2 的命令与写文件只在 `../noise_canceling-coordfe` 里做**；若第三次发生，写进 `state/memory/`
 - 2026-11-04 fe2 盘点 + 设计点头：Window 加 5 种（Kaldi 汉明 / 汉宁 / povey · speech 周期 Hann · estoi numpy 内缩 Hann）· dsp 内 Sample trait 做 f32/f64 通用 · 整段入口 FrameFft<T> · 认人删自有 WindowType · tidy 加 R-FFT（只认 FFT 计划标识符，白名单 speech · estoi · scene 逆 FFT）。评测器另多 1 处 analysis.rs:163 → 下一 PR。改：platform.rs 不用跨 crate #[path]（tidy 禁），照 models 复制 + 比对
 - 2026-11-04 人定 D84（按需启停，答 E-4）；号经 5-app-5e 确认，它方从 D85 起。fe2 报可以收尾（#102），等人说继续后验收
+- 2026-11-04 ⚠️ **大总管失误**：#103 合并前没看 CI 结果（后台等待脚本只打印结论，我没读就合并）。该次 CI 未运行：GitHub macOS arm 机器排队，「job was not acquired」15 分钟后判 failure；main 推送触发的 CI 同样未运行。核对：main 代码树 = 本机验收过的 fe2 HEAD（diff 为空），本机 xtask ci 全绿。已重触发 main CI。**规则：合并前读 CI 结论，failure 先看是代码红还是没跑起来；没跑起来就重跑，不合并**
+- 2026-11-04 人要「v5 场景里效果不错的片段」→ 桌面 `20261104-vdn-scene-demo`（8 段 × 原声 / 降噪后 / 干净参考；01–06 按分数挑好的、07–08 嘈杂场景中位段；排除与 exp014 盲听 7 题同段录音）；清单与挑法 `docs/experiments/demo-20261104-scene/`
+- 下一步：评测器 4 处（speech · estoi · system · analysis:163）单独 PR，开工前问 5-app-5e
 
 ## 待人拍板（本大事）
 
