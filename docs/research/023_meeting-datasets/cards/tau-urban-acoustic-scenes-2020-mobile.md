@@ -1,0 +1,22 @@
+# TAU Urban Acoustic Scenes 2020 Mobile（DCASE 2020 Task 1a）
+
+- **名称**：TAU Urban Acoustic Scenes 2020 Mobile, Development dataset（TAU-UAS-2020-Mobile）
+- **链接**：https://zenodo.org/record/3819968
+- **许可**：Zenodo 许可字段「Other (Non-Commercial)」，页面未给正文 → 结论：只评测【官方文档】
+- **大小**：64 h（其中设备 A 40 h），10 s 一段；Zenodo 文件合计 27.4 GB【官方文档】
+- **场景键**：transit-hub, bus-metro-cabin, street-outdoor, other（购物中心、公园、广场；另有电车 / 公交 / 地铁车厢内）
+- **设备键**：non-laptop-phone, non-laptop-studio, non-laptop-unknown
+- **笔记本段**：没有。真机 A = Soundman OKM II 双耳麦 + Zoom F8，B = Samsung Galaxy S7，C = iPhone SE；开发集另有 S1–S6 为用设备 A 录音加脉冲响应模拟的「虚拟设备」（S4–S6 只在开发集的测试划分里出现；S7–S11 与真机 D = GoPro 只在评测集），脉冲响应不公开。有逐段设备标签（文件名含设备号），可按设备筛【官方文档】
+- **干净参考**：没有（场景分类集，无目标语音）
+- **转写**：没有
+- **语种**：无目标语音；开发集背景人声来自 10 个欧洲城市（评测集 12 个），语种未标【官方文档：DCASE 2020 Task 1a 页】【推断：语种】
+- **语体**：无目标语体；机场、地铁站、广场等场景里应有路人交谈与广播，但未标注（是否含人声官方页未说）【推断】
+- **获取方式**：直接下载（Zenodo，Open）
+- **与 D62 的关系**：真实录音（环境声），无目标说话人，只能当合成用的噪声原料或场景声学对照。若开发阶段拿来评测：取 airport、metro_station、street_pedestrian、street_traffic、bus、tram、metro 等场景、只取设备 A（或 B/C 手机段）做噪声，按场景每类几百段 × 10 s；全量 27.4 GB，单场景单设备约十分之一【推断】
+- **出处**：https://zenodo.org/record/3819968【官方文档】; https://dcase.community/challenge2020/task-acoustic-scene-classification【官方文档】
+
+## 备注
+- 这是本路「机场 / 车站」唯一找到的、按地点逐段标好的公开真实录音；但没有「人在机场对着设备说话」的目标语音。
+- 有手机真机（S7、iPhone SE）段，可做「手机麦频响 vs 双耳麦」对照，但仍不是笔记本麦。
+- DCASE 历年还有 TUT 2016–2019 场景集（含 cafe/restaurant、office、home、car、train 等），本轮未逐个查许可。
+- 怀疑派复核：「S1–S10/S11」改为开发集 A/B/C + S1–S6（S7–S11、D 只在评测集）；「12 个欧洲城市」改为开发集 10 个（评测集 12 个）；大小补「设备 A 40 h」。出处 DCASE 2020 Task 1a 页。许可「Other (Non-Commercial)」、无正文，已在 Zenodo 核实。设备 A 是双耳入耳麦，模板无对应键，暂记 studio。
