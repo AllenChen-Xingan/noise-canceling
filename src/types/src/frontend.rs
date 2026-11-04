@@ -14,6 +14,9 @@ use crate::rate::MODEL_RATE;
 pub enum Window {
     /// 周期 sqrt-Hann：`sqrt(0.5 - 0.5 cos(2πi/n))`；n = 2·hop 时 w² 重叠相加恒为 1（降噪 · 场景 · 修音）
     SqrtHannPeriodic,
+    /// 周期 sqrt-Hann 先转成样本类型、再在样本类型里平方（评测器声谱图）。约等于 [`Window::HannPeriodic`]，
+    /// 但 f32 下末位不同（那个是 f64 里算完才转），两者不能互相代用
+    SqrtHannPeriodicSquared,
     /// 周期 Hann：`0.5 - 0.5 cos(2πi/n)`（评测器人声细节）
     HannPeriodic,
     /// numpy `hanning(n + 2)[1:-1]`：`0.5 - 0.5 cos(2π(i+1)/(n+1))`，两端不为 0（评测器 ESTOI）

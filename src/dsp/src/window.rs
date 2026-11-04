@@ -13,6 +13,11 @@ use crate::fft::Sample;
 pub fn coef(window: Window, i: usize, n: usize) -> f64 {
     match window {
         Window::SqrtHannPeriodic => (0.5 - 0.5 * (2.0 * PI * i as f64 / n as f64).cos()).sqrt(),
+        // f64 下平方；f32 等样本类型的平方在 [`table`] 里做（先转再平方）
+        Window::SqrtHannPeriodicSquared => {
+            let s = coef(Window::SqrtHannPeriodic, i, n);
+            s * s
+        }
         Window::HannPeriodic => 0.5 - 0.5 * (2.0 * PI * i as f64 / n as f64).cos(),
         Window::HannNumpyInner => {
             // numpy hanning(m)：0.5 − 0.5 cos(2πk/(m−1))，m = n + 2，去掉两端 → k = i + 1
@@ -31,9 +36,17 @@ pub fn coef(window: Window, i: usize, n: usize) -> f64 {
     }
 }
 
-/// 长度 `n` 的整张窗。
+/// 长度 `n` 的整张窗。`SqrtHannPeriodicSquared` 照评测器声谱图原写法：sqrt-Hann 转成样本类型后再平方。
 pub fn table<T: Sample>(window: Window, n: usize) -> Vec<T> {
-    (0..n).map(|i| T::of_f64(coef(window, i, n))).collect()
+    (0..n)
+        .map(|i| match window {
+            Window::SqrtHannPeriodicSquared => {
+                let s = T::of_f64(coef(Window::SqrtHannPeriodic, i, n));
+                s * s
+            }
+            _ => T::of_f64(coef(window, i, n)),
+        })
+        .collect()
 }
 
 /// 按口径造窗：长度 `win_len`（不是 `n_fft`；补零在 FFT 那一步做）。
