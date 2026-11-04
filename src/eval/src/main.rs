@@ -5,6 +5,7 @@
 //! vdn-eval qa    [--system gtcrn,fastenhancer-m] [--filter Q0] [--out DIR] [--record]
 //! vdn-eval calib [--answers JSON] [--scores JSON] [--round N] [--write-levels] [--record]
 //! vdn-eval list
+//! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--out DIR]   # 场景成绩单（specs/rubric/scorecard.md）
 //! vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…   # 子进程入口：评分模型打分，每段一行 JSON
 //! ```
 //! - `ci`：CI 层（纯 DSP、无模型）。门禁不过 → 退出码 1。权重不在本机的系统自动跳过
@@ -338,6 +339,40 @@ fn cmd_calib(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// 场景成绩单：读场景任务清单 → 逐段打分 → `scorecard.md` + `scorecard.json`。
+/// 有不过的场景不算命令失败（成绩单是报告，不是门禁）；清单读不了才失败。
+fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
+    let m = meta();
+    let path = arg(args, "--suite").unwrap_or_else(|| "src/eval/suite/scenes.json".into());
+    let p = resolve(&path).ok_or_else(|| format!("找不到 {path}"))?;
+    let suite = parse_suite(&std::fs::read_to_string(&p).map_err(|e| format!("{path}：{e}"))?)?;
+    let sys = systems(args, &[SystemKind::Ref])?;
+    let opts = Opts {
+        ci: m.ci,
+        audio_dir: None,
+        baseline: Baseline::new(),
+        levels: parse_levels(LEVELS)?,
+    };
+    let out = arg(args, "--out").map(PathBuf::from).unwrap_or_else(|| {
+        vdn_eval::suite::main_root()
+            .join("_tmp/scorecard")
+            .join(&m.run_id)
+    });
+    let mut qa = flag(args, "--qa").then(|| vdn_eval::qa::QaExtra::new(out.join("qa")));
+    let extra = qa.as_mut().map(|x| x as &mut dyn vdn_eval::runner::Extra);
+    let (rows, skipped) = vdn_eval::scorecard::run(&suite, &sys, &opts, extra, None);
+    let card = vdn_eval::scorecard::card::Card::build(&rows, skipped);
+    std::fs::create_dir_all(&out).map_err(|e| e.to_string())?;
+    let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "suite": path,
+        "systems": sys.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "qa": qa.is_some()});
+    let js = serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";
+    std::fs::write(out.join("scorecard.json"), js).map_err(|e| e.to_string())?;
+    std::fs::write(out.join("scorecard.md"), card.to_markdown("场景成绩单"))
+        .map_err(|e| e.to_string())?;
+    println!("成绩单：{}（{} 段）", out.join("scorecard.md").display(), card.clips);
+    Ok(true)
+}
+
 /// 子进程入口：`vdn-eval dnsmos <模型.onnx> <音频.wav>` → 一行 JSON。
 fn cmd_dnsmos(args: &[String]) -> Result<bool, String> {
     let (Some(model), Some(wav)) = (args.get(1), args.get(2)) else {
@@ -394,6 +429,7 @@ fn main() -> ExitCode {
         "qa" => cmd_eval(&args, "qa"),
         "calib" => cmd_calib(&args).map(|()| true),
         "dnsmos" => cmd_dnsmos(&args),
+        "scorecard" => cmd_scorecard(&args),
         "nrmos" => vdn_eval::qa::nrmos::cli(&args[1..]).map(|rows| {
             for r in rows {
                 println!("{r}");
