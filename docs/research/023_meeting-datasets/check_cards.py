@@ -3,11 +3,14 @@
 
 正本：字段名与顺序读 card-template.md；场景键读 021 `catalog.md`、设备键读 022 `devices.md`
 （两表第一列反引号里的键）。本脚本和模板都不另抄键。
-合并进 main 前，021 / 022 在旁边的 worktree 里，脚本会去那里找；两处都找不到就报错退出。
+只认本仓库 docs/research/ 下的这两份。合并进 main 前本仓库还没有时，用环境变量
+VDN_KEYS_DIR 显式指过去：值是一个或多个 docs/research 目录，用 `:` 分隔，按顺序找。
+没找到、也没指，就报错退出。
 用法：python3 check_cards.py [卡片目录]，默认同目录下 cards/。有错退出码 1。
 """
 from __future__ import annotations
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -19,10 +22,11 @@ FIELD_RE = re.compile(r"^- \*\*(?P<name>[^*]+)\*\*：(?P<value>.*)$")
 LICENSE_VERDICTS = ("训练可", "只评测", "不可", "未查到")
 ROW_KEY_RE = re.compile(r"^\|\s*`([a-z0-9-]+)`\s*\|", re.M)
 RESEARCH = HERE.parent
-KEY_SOURCES = {  # 名称 → (仓内路径, 合并前所在的 worktree 名)
-    "场景键": ("021_meeting-scenes/catalog.md", "noise_canceling-scenes"),
-    "设备键": ("022_mac-mic/devices.md", "noise_canceling-macmic"),
+KEY_SOURCES = {  # 名称 → docs/research 下的相对路径
+    "场景键": "021_meeting-scenes/catalog.md",
+    "设备键": "022_mac-mic/devices.md",
 }
+KEYS_ENV = "VDN_KEYS_DIR"
 
 
 def parse_fields(text: str) -> list[str]:
@@ -42,14 +46,17 @@ def parse_keys(text: str) -> set[str]:
     return keys
 
 
-def find_key_source(name: str) -> Path:
-    """先找本仓 docs/research/ 下的正本；合并前退到旁边的 worktree。"""
-    rel, worktree = KEY_SOURCES[name]
-    repo = RESEARCH.parent.parent
-    for cand in (RESEARCH / rel, repo.parent / worktree / "docs" / "research" / rel):
-        if cand.exists():
+def find_key_source(name: str, research: Path = RESEARCH, env: str | None = None) -> Path:
+    """先找本仓库 docs/research/；没有再找 VDN_KEYS_DIR 显式指的目录；都没有就报错。"""
+    rel = KEY_SOURCES[name]
+    if env is None:
+        env = os.environ.get(KEYS_ENV, "")
+    cands = [research / rel] + [Path(d) / rel for d in env.split(":") if d]
+    for cand in cands:
+        if cand.is_file():
             return cand
-    raise FileNotFoundError(f"找不到{name}正本 {rel}")
+    raise FileNotFoundError(
+        f"找不到{name}正本 docs/research/{rel}；合并前请设 {KEYS_ENV}=<含它的 docs/research 目录>")
 
 
 def load_schema() -> tuple[list[str], set[str], set[str]]:
@@ -125,7 +132,11 @@ def check_addendum(text: str, scenes: set[str], devices: set[str]) -> list[str]:
 
 def main(argv: list[str]) -> int:
     card_dir = Path(argv[1]) if len(argv) > 1 else HERE / "cards"
-    fields, scenes, devices = load_schema()
+    try:
+        fields, scenes, devices = load_schema()
+    except (FileNotFoundError, ValueError) as e:
+        print(f"错误：{e}")
+        return 2
     cards = sorted(p for p in card_dir.glob("*.md") if p.name != "README.md")
     bad = 0
     for p in cards:

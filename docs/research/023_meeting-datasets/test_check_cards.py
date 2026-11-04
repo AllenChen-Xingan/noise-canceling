@@ -2,6 +2,7 @@
 """check_cards.py 的测试。运行：python3 -m unittest test_check_cards（在本目录下）。"""
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -63,11 +64,39 @@ class KeySourceTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             cc.parse_keys("没有表\n")
 
-    def test_real_sources_resolve(self):
-        """021 / 022 正本能找到并读出键（合并前在旁边的 worktree，合并后在本仓）。"""
-        _, scenes, devices = cc.load_schema()
-        self.assertIn("meeting-room", scenes)
-        self.assertIn("mba-builtin", devices)
+
+
+def make_research(root: Path) -> Path:
+    """在临时目录里造一份最小的 021 / 022 键表。"""
+    (root / "021_meeting-scenes").mkdir(parents=True)
+    (root / "022_mac-mic").mkdir(parents=True)
+    (root / "021_meeting-scenes" / "catalog.md").write_text(
+        "| 键 | 说明 |\n|---|---|\n| `cafe` | 咖啡馆 |\n", encoding="utf-8")
+    (root / "022_mac-mic" / "devices.md").write_text(
+        "| 键 | 说明 |\n|---|---|\n| `mba-builtin` | MBA |\n", encoding="utf-8")
+    return root
+
+
+class FindSourceTest(unittest.TestCase):
+    def test_repo_path_first(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = make_research(Path(d) / "repo")
+            got = cc.find_key_source("场景键", research=repo, env="")
+            self.assertEqual(got, repo / "021_meeting-scenes" / "catalog.md")
+
+    def test_env_fallback(self):
+        with tempfile.TemporaryDirectory() as d:
+            empty = Path(d) / "empty"
+            empty.mkdir()
+            other = make_research(Path(d) / "other")
+            got = cc.find_key_source("设备键", research=empty, env=f"/nonexistent:{other}")
+            self.assertEqual(got, other / "022_mac-mic" / "devices.md")
+
+    def test_missing_raises(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(FileNotFoundError) as cm:
+                cc.find_key_source("场景键", research=Path(d), env="")
+            self.assertIn(cc.KEYS_ENV, str(cm.exception))
 
 
 class CardTest(unittest.TestCase):
@@ -137,8 +166,14 @@ class CliTest(unittest.TestCase):
     def test_exit_codes(self):
         with tempfile.TemporaryDirectory() as d:
             Path(d, "ok.md").write_text(GOOD, encoding="utf-8")
+            keys = make_research(Path(d) / "keys")
+            fixture_keys = "| `cafe` |\n| `meeting-room` |\n"
+            (keys / "021_meeting-scenes" / "catalog.md").write_text(fixture_keys, encoding="utf-8")
+            (keys / "022_mac-mic" / "devices.md").write_text(
+                "| `laptop-unknown` |\n| `non-laptop-phone` |\n", encoding="utf-8")
+            env = {**os.environ, cc.KEYS_ENV: str(keys)}
             run = lambda: subprocess.run([sys.executable, str(HERE / "check_cards.py"), d],
-                                         capture_output=True, text=True)
+                                         capture_output=True, text=True, env=env)
             self.assertEqual(run().returncode, 0)
             Path(d, "bad.md").write_text("# 坏卡\n", encoding="utf-8")
             r = run()
