@@ -94,6 +94,17 @@ class TestAnalyze(unittest.TestCase):
         t = A.drag_summary(card, "gtcrn", ("V-NR",))
         self.assertIn("| V-NR | `music` 2/3 · +1.00 |", t)  # 中位取下位数
 
+    def test_paired_within_needs_three_each(self):
+        rs, man = [], {}
+        for i in range(6):
+            cid = f"c{i}"
+            man[cid] = {"chain": {"room": {"paired": i < 3}}}
+            rs.append(row(cid, "gtcrn", scores=[sc("V-NR", -8.0 if i < 3 else -4.0, "pass", -6)]))
+            rs.append(row(cid, "passthrough", scores=[sc("V-NR", 0.0, "fail", -6)]))
+        t = A.paired_within(rs, man, "gtcrn", "passthrough")
+        self.assertTrue(t[2].startswith("| cafe | 3 | 3 | -8.00 / -4.00 |"))
+        self.assertEqual(len(A.paired_within(rs[:10], man, "gtcrn", "passthrough")), 2)  # 不同房间只剩 2 段
+
     def test_build_end_to_end(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)

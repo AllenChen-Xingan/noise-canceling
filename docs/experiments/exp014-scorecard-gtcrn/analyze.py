@@ -417,6 +417,8 @@ def build(run: Path, manifest_path: Path, system: str = "gtcrn", base: str = "pa
     L += device_by_scene(rows, system, card) + [""]
     L += ["## 6. 人声与底噪同房间 vs 不同房间", ""]
     L += paired_table(rows, man, system) + [""]
+    L += [f"### 6b. 同一场景内比较（{system} − {base} 配对差值；两组各 ≥ 3 段的场景）", ""]
+    L += paired_within(rows, man, system, base) + [""]
     dis = disagreements(rows, system)
     L += [f"## 7. 两个评分模型分歧的段（{system}，共 {len(dis)} 段，列前 12）", "",
           "| 段 | 场景 | 档 | SCOREQ Δ | Distill Δ | 相差 | 方向相反 |", "|---|---|---|---|---|---|---|"]
