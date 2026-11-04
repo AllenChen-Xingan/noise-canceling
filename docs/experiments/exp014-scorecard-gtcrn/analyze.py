@@ -384,6 +384,9 @@ def build(run: Path, manifest_path: Path, system: str = "gtcrn", base: str = "pa
     L += by_snr(rows, man, ("V-PUMPV", "V-TIMBRE", "V-ONSET", "V-SIM-GATE"), systems) + [""]
     L += ["### 3e. 门控漏开分布（V-SIM-GATE）", ""]
     L += gate_stats(rows, systems) + [""]
+    L += [f"### 3f. 拖后腿的声音跨场景汇总（{system}；成绩单第五节的分组结果，相关不是因果）", ""]
+    L += drag_summary(card, system, ("V-EAT-ASR", "V-SPLVL", "V-ONSET", "V-PUMPV", "V-NRMOS-SCOREQ",
+                                     "V-MUSIC", "V-NR", "V-INTF")) + [""]
     L += [f"## 4. Air 内置麦 vs 外接麦（{system}，全部场景合并）", ""]
     L += device_table(rows, system) + [""]
     L += [f"## 5. Air vs 外接，按场景（{system}）", ""]

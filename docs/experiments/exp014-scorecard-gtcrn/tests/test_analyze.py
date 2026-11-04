@@ -86,6 +86,14 @@ class TestAnalyze(unittest.TestCase):
         t = A.gate_stats([row("a", "g", scores=[a]), row("b", "g", scores=[b])], ["g"])
         self.assertTrue(t[-1].endswith("| 2 | 1 | 1 |"))
 
+    def test_drag_summary_only_failing_combos(self):
+        def scene(status, gap):
+            return {"system": "gtcrn", "items": [{"v": "V-NR", "status": status}],
+                    "drags": [{"v": "V-NR", "cls": "music", "gap": gap}]}
+        card = {"scenes": [scene("fail", 1.0), scene("fail", 3.0), scene("pass", 9.0), scene("fail", None)]}
+        t = A.drag_summary(card, "gtcrn", ("V-NR",))
+        self.assertIn("| V-NR | `music` 2/3 · +1.00 |", t)  # 中位取下位数
+
     def test_build_end_to_end(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
