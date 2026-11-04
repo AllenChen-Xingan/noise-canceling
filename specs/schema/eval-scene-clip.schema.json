@@ -134,6 +134,28 @@
       ],
       "type": "object"
     },
+    "MeetingPlace": {
+      "description": "021 主表的地点键（含兜底键 `other`，它不进成绩单）。",
+      "enum": [
+        "home-quiet",
+        "home-family",
+        "open-office",
+        "phone-booth",
+        "meeting-room",
+        "cowork",
+        "cafe",
+        "canteen",
+        "transit-hub",
+        "car-passenger",
+        "bus-metro-cabin",
+        "rail-air-cabin",
+        "street-outdoor",
+        "hotel-room",
+        "library-classroom",
+        "other"
+      ],
+      "type": "string"
+    },
     "MicMode": {
       "description": "022 第二节：系统处理模式。",
       "enum": [
@@ -179,28 +201,6 @@
         "owner_level_dbfs"
       ],
       "type": "object"
-    },
-    "SceneKey": {
-      "description": "021 主表的地点键（含兜底键 `other`，它不进成绩单）。",
-      "enum": [
-        "home-quiet",
-        "home-family",
-        "open-office",
-        "phone-booth",
-        "meeting-room",
-        "cowork",
-        "cafe",
-        "canteen",
-        "transit-hub",
-        "car-passenger",
-        "bus-metro-cabin",
-        "rail-air-cabin",
-        "street-outdoor",
-        "hotel-room",
-        "library-classroom",
-        "other"
-      ],
-      "type": "string"
     },
     "Sound": {
       "additionalProperties": false,
@@ -483,7 +483,7 @@
       "$ref": "#/$defs/ClipPolarity"
     },
     "scene": {
-      "$ref": "#/$defs/SceneKey"
+      "$ref": "#/$defs/MeetingPlace"
     },
     "seed": {
       "format": "uint64",

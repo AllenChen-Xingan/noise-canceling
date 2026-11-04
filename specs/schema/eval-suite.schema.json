@@ -195,6 +195,28 @@
       ],
       "type": "string"
     },
+    "MeetingPlace": {
+      "description": "021 主表的地点键（含兜底键 `other`，它不进成绩单）。",
+      "enum": [
+        "home-quiet",
+        "home-family",
+        "open-office",
+        "phone-booth",
+        "meeting-room",
+        "cowork",
+        "cafe",
+        "canteen",
+        "transit-hub",
+        "car-passenger",
+        "bus-metro-cabin",
+        "rail-air-cabin",
+        "street-outdoor",
+        "hotel-room",
+        "library-classroom",
+        "other"
+      ],
+      "type": "string"
+    },
     "NoiseKind": {
       "description": "噪音种类。清单里的名字由 serde 定（小写），格式正本见 `files.rs`。",
       "oneOf": [
@@ -371,7 +393,7 @@
               "type": "string"
             },
             "scene": {
-              "$ref": "#/$defs/SceneKey"
+              "$ref": "#/$defs/MeetingPlace"
             },
             "tier": {
               "$ref": "#/$defs/Tier"
@@ -473,28 +495,6 @@
         }
       },
       "type": "object"
-    },
-    "SceneKey": {
-      "description": "021 主表的地点键（含兜底键 `other`，它不进成绩单）。",
-      "enum": [
-        "home-quiet",
-        "home-family",
-        "open-office",
-        "phone-booth",
-        "meeting-room",
-        "cowork",
-        "cafe",
-        "canteen",
-        "transit-hub",
-        "car-passenger",
-        "bus-metro-cabin",
-        "rail-air-cabin",
-        "street-outdoor",
-        "hotel-room",
-        "library-classroom",
-        "other"
-      ],
-      "type": "string"
     },
     "Set": {
       "description": "清单里的名字由 serde 定（小写）；`as_str` 与它的一致性由测试核对。",
