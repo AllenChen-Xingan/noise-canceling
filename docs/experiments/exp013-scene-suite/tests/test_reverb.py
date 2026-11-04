@@ -190,6 +190,22 @@ class Consistency(unittest.TestCase):
         r["targets"][0]["src"]["rir"]["file"] = "ir_mouth_pos1_0.wav" if r["chain"]["room"]["seat"] != 1 else "ir_mouth_pos2_0.wav"
         self.assertTrue(reverb_check.check(r))
 
+    def test_reverb_stress_keeps_diffuse_tail(self):
+        """回归（codex 第 2 轮 P2 #3）：混响压力分支开着时，扩散声（babble、广播）的尾部不衰减。"""
+        rng = np.random.default_rng(1)
+        sc = compose.Scene(rng, np.random.default_rng(2), compose.SCENES["scenes"]["canteen"], "common", "mba-builtin")
+        x = np.zeros(16000)
+        x[100] = 1.0
+        outs = {}
+        for flag in (False, True):
+            sc.ch.params["reverb_stress"] = flag
+            sc.rng_mat = np.random.default_rng(3)
+            y, _ = sc.diffuse(x, dist=4.0)
+            outs[flag] = y
+        tail = slice(100 + 800, 16000)  # 50 ms 以后全是尾巴
+        hi = lambda y: np.sum(np.abs(np.fft.rfft(y[tail]))[int(len(y[tail]) * 4000 / 16000):] ** 2)
+        self.assertGreater(hi(outs[True]), 1.5 * hi(outs[False]))  # 不衰减的高频尾巴（扩散衰减 −6 dB）
+
     def test_neg_mit_mixed_irs(self):
         r = copy.deepcopy(self.mit)
         r["targets"][0]["src"]["rir"]["file"] = "h999_Other_1txts.wav"

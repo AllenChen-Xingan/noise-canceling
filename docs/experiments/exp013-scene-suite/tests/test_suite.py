@@ -231,6 +231,16 @@ class SmallBuild(unittest.TestCase):
             for s in r["sounds"]:
                 self.assertIn(s["cls"], labels.SOUNDS)
 
+    def test_same_build_id_refused(self):
+        """回归（codex 第 2 轮 P1 #1）：同 build id 再跑一次必须直接失败，不碰已有音频。"""
+        t = Path(self.tmp.name)
+        before = sorted(p.stat().st_mtime_ns for p in (t / "a").rglob("mix.wav"))[:5]
+        r = subprocess.run([sys.executable, str(HERE / "build.py"), "--build", "t0", "--n", "1",
+                            "--builds-dir", str(t / "b"), "--audio-root", str(t / "a")], capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("已存在", r.stdout + r.stderr)
+        self.assertEqual(before, sorted(p.stat().st_mtime_ns for p in (t / "a").rglob("mix.wav"))[:5])
+
     def test_small_build_cannot_make_task_file(self):
         """回归（codex 第 1 轮 P2 #5）：冒烟 build 只有每档 1 段，tasks.py 必须拒绝。"""
         errs = tasks.coverage_errors(Path(self.tmp.name) / "b/t0")
@@ -254,6 +264,22 @@ class SmallBuild(unittest.TestCase):
 
 
 class Static(unittest.TestCase):
+    def test_missing_material_raises(self):
+        """回归（codex 第 2 轮 P2 #5）：不做替代，缺 DEMAND 素材必须报错。"""
+        orig = pools.demand_available
+        try:
+            pools.demand_available = lambda env: False
+            with self.assertRaises(FileNotFoundError):
+                compose.resolve_cls("bed-street")
+        finally:
+            pools.demand_available = orig
+
+    def test_index_hash_covers_rooms(self):
+        """回归（codex 第 2 轮 P2 #4）：素材索引要包含实测 RIR 与同房间噪声。"""
+        if not (pools.DATA / "rir").exists():
+            self.skipTest("缺 ~/vdn-data/rir")
+        _, n = pools.index_hash()
+        self.assertGreater(n, 600)  # LibriSpeech 20 人 + DEMAND + ESC + 实测 RIR（ACE 56 + MIT 270 + McV 108）
     def test_sounds_referenced_exist(self):
         for key, S in compose.SCENES["scenes"].items():
             beds = [b for o in S["rooms"] for b in o.get("bed", [])] + (["bed-ace"] if any("ace" in o for o in S["rooms"]) else []) \
