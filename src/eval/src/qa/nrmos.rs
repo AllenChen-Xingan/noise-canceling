@@ -121,13 +121,11 @@ pub fn distill_segments(len: usize) -> (usize, Vec<usize>) {
     }
     let over = len - DISTILL_SEQ;
     let hops = over.div_ceil(DISTILL_HOP) + 1;
+    // numpy linspace 的算法：c = i · (1 / (n − 1))，最后一个强制等于 1（逐位一致，免得取整差一个样本）
+    let step = 1.0 / (hops - 1) as f64;
     let starts = (0..hops)
         .map(|i| {
-            let c = if hops == 1 {
-                0.0
-            } else {
-                i as f64 / (hops - 1) as f64
-            };
+            let c = if i == hops - 1 { 1.0 } else { i as f64 * step };
             (c * over as f64) as usize
         })
         .collect();
