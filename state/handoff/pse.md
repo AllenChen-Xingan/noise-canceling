@@ -63,3 +63,21 @@
 - 2026-11-04 子代理②（流式 TSE）→ `notes/02`；子代理④（难点 · 数据 · 评测）→ `notes/04`
 - 2026-11-04 pse 回源核：Alkove Focus 模型卡 · 仓库 README · Pipecat 文档——Apache-2.0、约 0.8M、从 GTCRN DNS3 检查点改来、M1 Max 每秒 56 ms 属实；**「约 6 s 自动学声纹」不成立**（声纹由应用给，≥ 1.5 s），已在 notes/02 顶部更正。Zoom 自动声纹原文属实。CARTSE 报告：错注册概率 0.35、目标不在场合计 38.25%、TER 0.699 属实
 - 2026-11-04 写 `sources.md` · `decision.md`；本机路径 grep 为 0；codex 第 1 轮评审已在后台跑
+- 2026-11-04 codex 评审 4 轮（P1×6、P2×14 全部属实、全部改完），第 3、4 轮无 P0/P1，达停止线；记录 `docs/reviews/024_pse-landscape-codex.md`，索引追加一行
+- 2026-11-04 **024 已收尾**
+
+## 024 收尾
+- **状态**：已收尾，等大总管验收
+- **结论一句话**：产品上有人做过（Zoom、Teams 会中自动采声纹再隔离，闭源）；开源里最接近的是 Alkove Focus（Apache-2.0，约 80 万参数，从 GTCRN 改来，声纹要应用给）；最难是旁人比你响（PVQE 合成条件下选对率 6.25%）。建议先测 Alkove 再在 GTCRN 上自训（待人定）
+
+| 文件 | 改了什么 |
+|---|---|
+| `docs/research/024_pse-landscape/decision.md` · `sources.md` · `README.md` | 结论卡 · 出处 · 索引 |
+| `docs/research/024_pse-landscape/notes/01`–`05` | 5 个子代理原始笔记（02 顶部有 pse 更正） |
+| `docs/reviews/024_pse-landscape-codex.md` · `docs/reviews/README.md`（追加 1 行） | 评审记录 |
+| `state/handoff/pse.md` | 本页（误覆盖已恢复，旧文在前） |
+
+## 024 转交（范围外）
+- 评测线（5-app-5e）：门控类评分项（V-SIM-GATE · V-SIM-FA）要改成量「提取」：按旁人响度分档的提错人比例、TSOS、旁人残留；真实集 REAL-T（错字率 + 声纹相似度）
+- 测 Alkove 要：名额 + 下载 1.1 MB 权重与声纹模型（远小于 50 MB 线）+ 新的「旁人比你响」留出素材
+- D83 在 coordfe 检出、本 worktree 无；codex 无法核对，建议验收时对照

@@ -10,3 +10,5 @@
 | `notes/` | 子代理交回的原始笔记（5 份，按题目分） |
 
 上一轮：`docs/research/005_pse/`（2026-10-30）。
+
+状态：**已收尾**（2026-11-04）。codex 换谱系评审 4 轮，第 3、4 轮无 P0/P1，记录 `docs/reviews/024_pse-landscape-codex.md`。
