@@ -42,3 +42,20 @@
 - DNS 2021 那 31 条 Mac 录音是内置麦还是外接麦（只能人耳或问组织方）
 - 3D-Speaker 音频本身的许可（官网字面只给 metadata 许可）
 - `Microphone_Array_RealtekR_Audio` 是否即笔记本内置麦（推断）
+
+## 怀疑派复核（2026-11-03）
+- 6 张新卡全部改过（每张卡「## 备注」末行写了改了什么）：
+  - `3d-speaker.md` 许可结论由「只评测」降为「未查到」；方言 14 → 13 种；笔记本 96,262 条只是训练集。
+  - `mobio.md` 设备键改为 `laptop-other`；「有转写」无出处，改为未查到。
+  - `libri-adapt.md` 的 7,200 h 有论文原文，去掉【推断】；补 GB；噪声取自 ESC-50（CC BY-NC），许可加限定。
+  - `ssi-challenge-icassp2023-2024.md` 那句许可话属于「Training data」一节。
+  - `conferencingspeech-2021.md` 的半真实小时数只指 dev；「回放 VCTK」无出处，已删。
+  - `dds-device-degraded-speech.md` 补包内 README 的许可原句与目录结构。
+- 补充文件改 9 处，详见 `r1-device-addendum.md` 末节。最要紧的两条：本路原写的「DNS3 情绪集 584 条」是错的，014 的 600 是对的；DNS5 dev Track2 的 600 条里 599 条就是 DNS4 blind 的复用。
+- 上面「待怀疑派复核」4 条的答复：
+  1. DNS5 dev Mobile 413 条：以文件名为准，理由见补充文件。
+  2. 31 条 Mac 录音是不是内置麦：仍只能人耳听或问组织方，未解。
+  3. 3D-Speaker 音频许可：仍未查到，卡上结论已降为未查到。
+  4. Realtek 阵列是不是笔记本内置麦：仍是推断，未解。
+- 找漏补卡：`../cards/speech-commands-v2.md`（众包真人在笔记本 / 电脑 / 安卓手机上录，CC BY 4.0；无设备标签，每条 1 s）。
+- 本路漏查的线索，未开卡：DNS1 dev 有 `SurfaceBook` 44 条，已写进补充文件；DNS5 blind `mt-win_` 81 条可按「Windows 电脑」粗筛。
