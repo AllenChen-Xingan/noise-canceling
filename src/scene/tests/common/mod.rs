@@ -98,10 +98,9 @@ pub fn digest(js: &[Judgement]) -> ContentId {
     ContentId::of(&bytes)
 }
 
-/// 基准文件的平台标签：sin / ln / exp 等由系统数学库算，不同平台末位可能不同，基准只在同平台上比。
-pub fn platform() -> String {
-    format!("{}-{}", std::env::consts::ARCH, std::env::consts::OS)
-}
+mod platform;
+/// 基准文件的平台标签（含系统主版本），见 `platform.rs`。
+pub use platform::platform;
 
 /// 基准行：`<内容 ID> <条数> <平台>`。设了 `VDN_BLESS` 就写入并返回 `None`；平台不同返回 `None` 并打印跳过。
 /// 否则返回 (期望 ID, 期望条数)。
@@ -124,7 +123,10 @@ pub fn golden(path: &str, got: ContentId, n: usize) -> Option<(ContentId, usize)
         .expect("基准第 2 列是条数");
     let plat = it.next().unwrap_or_default();
     if plat != platform() {
-        eprintln!("跳过：基准生成于 {plat}，本机是 {}", platform());
+        eprintln!(
+            "跳过：基准生成于 {plat}，本机是 {}；逐位对拍只在生成基准的平台上成立",
+            platform()
+        );
         return None;
     }
     Some((id, cnt))

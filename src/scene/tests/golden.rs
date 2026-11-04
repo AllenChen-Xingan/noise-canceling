@@ -2,6 +2,8 @@
 //! 压成一个哈希，与改代码**之前**生成的基准逐位比。红了 = 场景数值行为变了（红线：不许变），先停下报。
 //!
 //! 基准在 `tests/fixtures/scene_golden.txt`；只在没改过 `features.rs` 的代码上生成：`VDN_BLESS=1 cargo test -p vdn-scene --test golden`。
+//! 基准带平台标签（含系统主版本，如 `aarch64-macos-27`）：ln / exp / powf 末位随 macOS 大版本可能变，
+//! 逐位对拍只在生成基准的那个平台上成立，别的平台（如 CI 机）打印原因后跳过。
 mod common;
 
 const FIXTURE: &str = concat!(

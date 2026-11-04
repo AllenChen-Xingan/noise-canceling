@@ -4,7 +4,8 @@
 //! 基准 `tests/fixtures/gtcrn_golden.txt` 一行：`<输出内容 ID> <样本数> <权重内容 ID> <平台>`。
 //! 生成（只在没改过 `gtcrn.rs` 的代码上）：`VDN_BLESS=1 VDN_GTCRN_ONNX=<gtcrn_simple.onnx> cargo test -p vdn-models --test golden`。
 //! 找不到模型文件时同 `smoke.rs` 跳过（设 `VDN_REQUIRE_MODELS` 不许跳）；权重或平台和基准不同时跳过并打印原因
-//! （ORT 与系统数学库在别的平台上末位可能不同）。
+//! （ORT 与系统数学库在别的平台上末位可能不同）。平台标签含系统主版本（如 `aarch64-macos-27`）：
+//! 换 macOS 大版本数学库末位就可能变，逐位对拍只在生成基准的那个平台上成立，CI 机型不同时跳过。
 //! 另一条对拍引擎最终输出（48 kHz `Pipeline`，基准 `tests/fixtures/pipeline_golden.txt`），因为成绩单测的是它。
 //! 本文件只用改前就有的接口，才能在 main 的原样源码上生成基准；借谱的检查在 `tap.rs`。
 use vdn_engine::{Engine, Pipeline, SafetyConfig};
@@ -43,8 +44,18 @@ fn input() -> Vec<f32> {
         .collect()
 }
 
-fn platform() -> String {
-    format!("{}-{}", std::env::consts::ARCH, std::env::consts::OS)
+#[path = "common/platform.rs"]
+mod platform;
+use platform::platform;
+
+/// 平台标签的两份实现（本 crate 与 `vdn-scene` 测试各一份）必须逐字相同。
+#[test]
+fn platform_helper_matches_scene() {
+    assert_eq!(
+        include_str!("common/platform.rs"),
+        include_str!("../../scene/tests/common/platform.rs"),
+        "两份 platform.rs 不同：改一份必须同步另一份"
+    );
 }
 
 /// 找模型文件；找不到时按 `VDN_REQUIRE_MODELS` 决定失败还是跳过。
@@ -77,7 +88,7 @@ fn check(fixture: &str, y: &[f32], weights: ContentId, what: &str) {
     };
     if *w != weights.to_string() || *plat != platform() {
         eprintln!(
-            "跳过：基准的权重 / 平台是 {w} / {plat}，本机是 {weights} / {}",
+            "跳过：基准的权重 / 平台是 {w} / {plat}，本机是 {weights} / {}；逐位对拍只在生成基准的平台上成立",
             platform()
         );
         return;
