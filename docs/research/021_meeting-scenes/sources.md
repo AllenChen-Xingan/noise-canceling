@@ -41,7 +41,7 @@
 
 | 编号 | 名称 | 链接 | 来源类型 | 核对 | 用在哪 / 注意 |
 |---|---|---|---|---|---|
-| S24 | Krisp 语音隔离评测与数据集 | https://krisp.ai/blog/voice-isolation-benchmark/ ；https://krisp.ai/blog/speech-recognition-dataset-background-voices/ | 官方文档（厂商自测） | ✓ | 唯一按使用场景分组的公开测试集：工作 96 条 / 呼叫中心 106 条 / 手机通话 63 条，共 265 条真实录音；「cabin rumble」属手机通话组（车、街、店、地铁），不是客舱 |
+| S24 | Krisp 语音隔离评测与数据集 | https://krisp.ai/blog/voice-isolation-benchmark/ ；https://krisp.ai/blog/speech-recognition-dataset-background-voices/ | 官方文档（厂商自测） | ✓ | 本次检索找到的唯一按使用场景分组的公开测试集：工作 96 条 / 呼叫中心 106 条 / 手机通话 63 条，共 265 条真实录音；「cabin rumble」属手机通话组（车、街、店、地铁），不是客舱 |
 | S25 | NVIDIA Maxine 降噪支持的噪声类型（30 类） | https://docs.nvidia.com/maxine/afx/2.0.0/Appendix/DenoiserSupportedNoises.html | 官方文档 | 未核 | 按噪声分，不按地点 |
 | S26 | Microsoft Teams 降噪与语音隔离（帮助页 + 2020 / 2024 博客） | https://support.microsoft.com/en-us/office/reduce-background-noise-in-microsoft-teams-meetings-1a9c6819-137d-4b3b-a1c8-4ab20b234c0d ；https://techcommunity.microsoft.com/blog/microsoftteamsblog/voice-isolation-in-microsoft-teams-enables-personalized-noise-suppression-for-ca/4096077 | 官方文档 | ✓ | 语音隔离点名「开放办公 · 咖啡馆 · 候机」；与同事共用设备时提示关掉 |
 | S27 | Zoom 降噪设置 KB0059985 | https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0059985 | 官方文档 | ✓ | High 档去「旁人背景说话」；个性化音频隔离「适合拥挤环境」 |
