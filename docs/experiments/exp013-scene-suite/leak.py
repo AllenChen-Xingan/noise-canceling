@@ -89,12 +89,13 @@ def check(records):
         for ta, tb in tr["demand"].get((env, ch), []):
             if a < tb and ta < b:
                 hits.append(f"DEMAND {env}/ch{ch:02d} {a:.1f}–{b:.1f}s 与训练段 {ta:.1f}–{tb:.1f}s 重叠")
-        if env in pools.EXP006_DEMAND:
-            key = (env, ch)
-            if key not in frames:
-                frames[key] = sf.info(str(pools.DEMAND / env / f"ch{ch:02d}.wav")).frames
-            if start < pools.EXP006_TRAIN_FRAC * frames[key]:
-                hits.append(f"DEMAND {env}/ch{ch:02d} 起点 {a:.1f}s 落在前 60% 时段")
+        key = (env, ch)
+        if key not in frames:
+            frames[key] = sf.info(str(pools.DEMAND / env / f"ch{ch:02d}.wav")).frames
+        if env in pools.EXP006_DEMAND and start < pools.EXP006_TRAIN_FRAC * frames[key]:
+            hits.append(f"DEMAND {env}/ch{ch:02d} 起点 {a:.1f}s 落在前 60% 时段（exp006 训练）")
+        if env not in pools.EXP006_DEMAND and start < pools.TEST_SPLIT_FRAC * frames[key]:
+            hits.append(f"DEMAND {env}/ch{ch:02d} 起点 {a:.1f}s 落在测试份（前 {pools.TEST_SPLIT_FRAC:.0%}）")
     hits += [f"合成函数 {f}" for f in sorted(u["fns"] & tr["fns"])]
     return {
         "against": "exp006 全部 build 的 train 段", "train_rows": tr["rows"],

@@ -70,7 +70,10 @@ class Measured:
 
     @property
     def valid(self):
-        """MIT 的 IR 多被截到约 0.5 s；T60 估计超过 IR 长度 2.5 倍的不可信，不用。"""
+        """可用的条件：①T60 估计不超过 IR 长度的 2.5 倍（MIT 的 IR 多被截到约 0.5 s，再长的估计不可信）；
+        ②T60 估计失败（返回 0）时，只有直达明显占优（DRR ≥ 15 dB，真的几乎没混响）才算「短混响」，否则不用。"""
+        if self.t60 <= 0:
+            return self.drr >= 15.0
         return self.t60 <= 2.5 * len(self.ir) / SR
 
     def at(self, dist, az):

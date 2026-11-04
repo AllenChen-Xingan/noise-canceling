@@ -56,12 +56,34 @@ def build_tasks(build, old=None):
     }
 
 
+def coverage_errors(bdir):
+    """build 必须覆盖全部 地点 × 档 × 设备，段数等于 scenes.json 的 counts，且泄漏与电平验收都通过。"""
+    man = json.loads((bdir / "manifest.json").read_text())
+    errs = [] if man.get("leak_check", {}).get("ok") else ["泄漏检查未通过"]
+    if not man.get("level_check", {}).get("ok"):
+        errs.append("电平验收未通过或缺失")
+    got = {}
+    for line in (bdir / "clips.jsonl").read_text().splitlines():
+        r = json.loads(line)
+        got[(r["scene"], r["tier"], r["device"])] = got.get((r["scene"], r["tier"], r["device"]), 0) + 1
+    for d in SCENES["devices"]:
+        for k in SCENES["scenes"]:
+            for t, n in SCENES["counts"].items():
+                if got.get((k, t, d), 0) != n:
+                    errs.append(f"{k} / {t} / {d}：{got.get((k, t, d), 0)} 段，应为 {n}")
+    return errs
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--build", required=True)
     a = ap.parse_args()
-    if not (HERE / "builds" / a.build / "clips.jsonl").exists():
+    bdir = HERE / "builds" / a.build
+    if not (bdir / "clips.jsonl").exists():
         raise SystemExit(f"没有 build {a.build}")
+    errs = coverage_errors(bdir)
+    if errs:
+        raise SystemExit("这个 build 不能生成任务文件：\n  " + "\n  ".join(errs[:10]))
     old = json.loads(OUT.read_text()) if OUT.exists() else None
     OUT.write_text(json.dumps(build_tasks(a.build, old), ensure_ascii=False, indent=2) + "\n")
     print(f"写入 {OUT.relative_to(ROOT)}")

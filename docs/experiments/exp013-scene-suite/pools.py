@@ -67,9 +67,14 @@ def utterance(path):
     return x
 
 
+# 从没被合成用过的 DEMAND 环境：按时段切（016 S10①「无说话人的按录音场次 / 时段」）——前一半留作测试份
+# （只测、不当任何合成原料），后一半当裁判原料。016 第 45 行原写「整个环境当测试份」，这里改成按时段切，待大总管定
+TEST_SPLIT_FRAC = 0.5
+
+
 def demand_window(env):
-    """返回 (可用起点下限比例, 1.0)。"""
-    return (EXP006_TRAIN_FRAC, 1.0) if env in EXP006_DEMAND else (0.0, 1.0)
+    """返回 (可用起点下限比例, 1.0)：exp006 用过的环境只用后 40%；其余环境只用后一半（前一半是测试份）。"""
+    return (EXP006_TRAIN_FRAC, 1.0) if env in EXP006_DEMAND else (TEST_SPLIT_FRAC, 1.0)
 
 
 def demand_segment(rng, env, n):
@@ -108,7 +113,24 @@ def esc50_clip(rng, category):
         raise FileNotFoundError(f"ESC-50 类别 {category} 没有已下载的文件（先跑 fetch.py）")
     key = files[int(rng.integers(len(files)))]
     x, _ = read_mono(DATA / key)
-    return x, {"kind": "esc50", "file": key.split("/", 1)[1]}
+    x, end = trim_tail(x)
+    return x, {"kind": "esc50", "file": key.split("/", 1)[1], "trim_end": end}
+
+
+def trim_tail(x, rel_db=-30.0, keep_ms=60, fade_ms=20):
+    """截掉原录音的混响尾巴（reverb-plan.md 第二节）：最后一个能量 > 最大帧 rel_db 的 20 ms 帧之后只留 keep_ms，再淡出。
+    片段内部的原录音混响去不掉，是已知限制。"""
+    f = 320
+    n = len(x) // f
+    e = np.mean(x[: n * f].reshape(n, f) ** 2, axis=1) if n else np.zeros(0)
+    if not e.size or e.max() <= 0:
+        return x, len(x)
+    last = int(np.flatnonzero(e > e.max() * 10 ** (rel_db / 10))[-1])
+    end = min(len(x), (last + 1) * f + int(keep_ms * 1e-3 * SR))
+    y = x[:end].copy()
+    k = min(end, int(fade_ms * 1e-3 * SR))
+    y[end - k :] *= np.linspace(1, 0, k)
+    return y, end
 
 
 @lru_cache(maxsize=4)

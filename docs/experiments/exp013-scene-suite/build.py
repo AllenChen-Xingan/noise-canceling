@@ -131,6 +131,7 @@ def main():
                 path = r["audio"][k][kk] if kk else r["audio"][k]
                 hashes.append(f"{vv}  {path}")
     (bdir / "hashes.txt").write_text("\n".join(sorted(hashes)) + "\n")
+    lv = level_check(recs)
     lk = leak.check(recs)
     (bdir / "exclude.json").write_text(json.dumps(leak.exclude_table(recs), ensure_ascii=False, indent=1) + "\n")
     snap = bdir / "params"
@@ -147,7 +148,7 @@ def main():
         "build_id": a.build, "created": time.strftime("%Y-%m-%d %H:%M:%S"), "seconds": round(time.time() - t0, 1),
         "clips": len(recs), "audio_dir": out_rel, "counts": counts, "base_seed": compose.SCENES["base_seed"],
         "code_sha256": {f: sha_file(HERE / f) for f in CODE}, "params_sha256": {f: sha_file(HERE / f) for f in PARAMS},
-        "material_index": {"sha256": idx_hash, "files": idx_n}, "leak_check": lk, "licenses": lic,
+        "material_index": {"sha256": idx_hash, "files": idx_n}, "leak_check": lk, "level_check": lv, "licenses": lic,
         "schema": ({"path": str(manifest.schema_path().relative_to(manifest.schema_path().parents[2])), "sha256": sha_file(manifest.schema_path())}
                    if manifest.schema_path() else None),
         "versions": {"python": sys.version.split()[0], "numpy": np.__version__, "scipy": __import__("scipy").__version__,
@@ -159,8 +160,25 @@ def main():
     (bdir / "manifest.json").write_text(json.dumps(man, ensure_ascii=False, indent=1) + "\n")
     print(f"build {a.build}：{len(recs)} 段，{man['seconds']} s；泄漏检查 {'通过' if lk['ok'] else '不过：' + str(lk['hits'][:3])}")
     print(f"清单 {bdir.name}；音频 <音频根>/{out_rel}")
+    print(f"电平验收（P.56 实测对名义）：{'通过' if lv['ok'] else '不过'} {lv['summary']}")
     if not lk["ok"]:
         sys.exit(2)
+    if not lv["ok"]:
+        sys.exit(3)
+
+
+def level_check(recs, frac=0.95, tight=1.0, loose=1.5):
+    """全部记录的 SNR / SIR 实测对名义（README 第九节第 2 条）：≥ 95% 段 ≤ 1 dB、全部 ≤ 1.5 dB，SNR 与 SIR 分开报。"""
+    out = {"rule": f"每项 ≥ {frac:.0%} 段 |实测 − 名义| ≤ {tight} dB，且全部 ≤ {loose} dB", "ok": True}
+    for k in ("snr_db", "sir_db"):
+        d = np.array([abs(r["measured"][k] - r["nominal"][k]) for r in recs if r["nominal"][k] is not None])
+        if not d.size:
+            continue
+        ok = bool(np.mean(d <= tight) >= frac and d.max() <= loose)
+        out[k] = {"n": int(d.size), "within_1db": round(float(np.mean(d <= tight)), 4), "max_db": round(float(d.max()), 3), "ok": ok}
+        out["ok"] &= ok
+    out["summary"] = "；".join(f"{k} {v['within_1db']:.1%} ≤ 1 dB、最大 {v['max_db']} dB" for k, v in out.items() if isinstance(v, dict))
+    return out
 
 
 if __name__ == "__main__":
