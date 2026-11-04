@@ -3,9 +3,12 @@
 //! 对一段 WAV 按判断回路的窗长 / 步长（正本 `JudgeParams`，可用 `--win` `--judge-hop` 覆盖）切窗，每个窗依次计时：
 //! - `fbank`：算 fbank + 窗内减均值（与 `Embedder::embed` 里同一组调用）
 //! - `embed`：`Embedder::embed` 整个调用（= fbank + 减均值 + 建张量 + 模型推理 + 归一化）
-//! - `infer_est`：同一个窗的 `embed − fbank`，即「推理及其余」
-//! - `enroll`：喂一次注册器 + 与上一个窗的余弦（判断回路里 fbank 与模型之外的那一截）
+//! - `infer_est`：同一个窗的 `embed − fbank`（有符号，可为负），即「推理及其余」
+//! - `synthetic_enroll_and_cos`：**合成**注册负载——每窗都喂注册器（固定电平、整 hop 时长）+ 与主人（未锁定时与上一窗）的余弦。
+//!   真实判断回路按有声比例和相似度筛选才注册，所以这是上限，不是复现
 //!
+//! 测量偏差的处理：正式计时前用真实窗预热；fbank 与 embed 谁先跑逐窗交替，并分开报两种顺序的 p50（顺序敏感性）。
+//! fbank 独立计时用的是另一份工作区，和 embed 里那一次不是同一次调用，所以 `infer_est` 是估计。
 //! 只计时，不改认人行为；判断回路里「有声 < 30% 不算声纹」的跳过逻辑不在这里，送进来的窗全算。
 
 use std::hint::black_box;
@@ -30,7 +33,7 @@ pub(crate) fn window_starts(n: usize, win: usize, hop: usize) -> Vec<usize> {
 }
 
 /// 最近秩分位数（`q` ∈ [0, 1]）；空输入返回 `None`。
-pub(crate) fn percentile(xs: &[u64], q: f64) -> Option<u64> {
+pub(crate) fn percentile(xs: &[i64], q: f64) -> Option<i64> {
     if xs.is_empty() {
         return None;
     }
@@ -41,12 +44,12 @@ pub(crate) fn percentile(xs: &[u64], q: f64) -> Option<u64> {
 }
 
 /// 一组纳秒样本 → `{n, p50_us, p90_us, max_us, mean_us}`。
-pub(crate) fn summary(xs: &[u64]) -> Value {
-    let us = |v: Option<u64>| v.map(|x| x as f64 / 1e3);
+pub(crate) fn summary(xs: &[i64]) -> Value {
+    let us = |v: Option<i64>| v.map(|x| x as f64 / 1e3);
     let mean = if xs.is_empty() {
         None
     } else {
-        Some(xs.iter().sum::<u64>() as f64 / xs.len() as f64 / 1e3)
+        Some(xs.iter().sum::<i64>() as f64 / xs.len() as f64 / 1e3)
     };
     json!({
         "n": xs.len(),
@@ -57,9 +60,18 @@ pub(crate) fn summary(xs: &[u64]) -> Value {
     })
 }
 
-fn ns(t0: Instant) -> u64 {
-    t0.elapsed().as_nanos() as u64
+fn ns(t0: Instant) -> i64 {
+    i64::try_from(t0.elapsed().as_nanos()).unwrap_or(i64::MAX)
 }
+
+/// 第 `i` 个计时样本是否先跑 fbank（逐个交替，抵消「先跑的把数据和代码焐热」）。
+pub(crate) fn fbank_first(i: usize) -> bool {
+    i % 2 == 0
+}
+
+/// 预热轮数：正式计时前，前几个真实窗各跑几遍（`Embedder::open` 只用 1 s 探针预热过一次）。
+const WARMUP_WINDOWS: usize = 3;
+const WARMUP_PASSES: usize = 3;
 
 /// `vdn-speaker-lab bench-split <in.wav> [--reps N] [--win S] [--judge-hop S] [--speaker-onnx P]`，结果 JSON 打到标准输出。
 pub(crate) fn cmd_bench_split(args: &[String]) -> R<()> {
@@ -86,31 +98,57 @@ pub(crate) fn cmd_bench_split(args: &[String]) -> R<()> {
         Vec::with_capacity(total),
         Vec::with_capacity(total),
     );
-    let mut prev: Option<Vec<f32>> = None;
-    for r in 0..reps {
-        for (k, &s) in starts.iter().enumerate() {
-            let w = x.get(s..s + win).ok_or("窗越界")?;
-            let t0 = Instant::now();
+    for _ in 0..WARMUP_PASSES {
+        for &st in starts.iter().take(WARMUP_WINDOWS) {
+            let w = x.get(st..st + win).ok_or("窗越界")?;
             let nf = fb.compute_into(w, &mut feats);
             cmn(&mut feats, nf, nb);
-            black_box(&feats);
-            let a = ns(t0);
+            black_box(emb.embed(w)?);
+        }
+    }
+    // 按顺序分组的样本：[fbank 先跑, embed 先跑]
+    let (mut fb_by, mut emb_by) = ([Vec::new(), Vec::new()], [Vec::new(), Vec::new()]);
+    let mut prev: Option<Vec<f32>> = None;
+    for r in 0..reps {
+        for (k, &st) in starts.iter().enumerate() {
+            let i = r * starts.len() + k;
+            let w = x.get(st..st + win).ok_or("窗越界")?;
+            let mut time_fbank = || {
+                let t0 = Instant::now();
+                let nf = fb.compute_into(w, &mut feats);
+                cmn(&mut feats, nf, nb);
+                black_box(&feats);
+                ns(t0)
+            };
+            let (a, b, v) = if fbank_first(i) {
+                let a = time_fbank();
+                let t0 = Instant::now();
+                let v = emb.embed(w)?;
+                (a, ns(t0), v)
+            } else {
+                let t0 = Instant::now();
+                let v = emb.embed(w)?;
+                let b = ns(t0);
+                (time_fbank(), b, v)
+            };
             let t0 = Instant::now();
-            let v = emb.embed(w)?;
-            let b = ns(t0);
-            let t0 = Instant::now();
-            let ps = prev.as_ref().map(|p| cosine(p, &v));
-            let t_s = (r * starts.len() + k) as f64 * jp.hop_s as f64;
+            let refv = enroller.owner().map(<[f32]>::to_vec).or_else(|| prev.clone());
+            black_box(refv.as_ref().map(|p| cosine(p, &v)));
+            let t_s = i as f64 * jp.hop_s as f64;
             black_box(enroller.observe(&v, t_s, jp.hop_s, -23.0));
-            black_box(ps);
             t_enr.push(ns(t0));
+            let g = usize::from(!fbank_first(i));
+            if let (Some(fg), Some(eg)) = (fb_by.get_mut(g), emb_by.get_mut(g)) {
+                fg.push(a);
+                eg.push(b);
+            }
             t_fb.push(a);
             t_emb.push(b);
-            t_inf.push(b.saturating_sub(a));
+            t_inf.push(b - a);
             prev = Some(v);
         }
     }
-    let p50 = |v: &[u64]| percentile(v, 0.5).unwrap_or(0) as f64;
+    let p50 = |v: &[i64]| percentile(v, 0.5).unwrap_or(0) as f64;
     let share = p50(&t_fb) / p50(&t_emb).max(1.0);
     println!(
         "{}",
@@ -125,7 +163,12 @@ pub(crate) fn cmd_bench_split(args: &[String]) -> R<()> {
             "fbank": summary(&t_fb),
             "embed": summary(&t_emb),
             "infer_est": summary(&t_inf),
-            "enroll_and_cos": summary(&t_enr),
+            "synthetic_enroll_and_cos": summary(&t_enr),
+            "order_sensitivity": {
+                "fbank_first": {"fbank": summary(&fb_by[0]), "embed": summary(&emb_by[0])},
+                "embed_first": {"fbank": summary(&fb_by[1]), "embed": summary(&emb_by[1])},
+            },
+            "warmup": {"windows": WARMUP_WINDOWS, "passes": WARMUP_PASSES},
             "fbank_share_of_embed_p50": share,
         }))?
     );
@@ -149,7 +192,7 @@ mod tests {
 
     #[test]
     fn percentile_nearest_rank() {
-        let xs = [5u64, 1, 4, 2, 3];
+        let xs = [5i64, 1, 4, 2, 3];
         assert_eq!(percentile(&xs, 0.5), Some(3));
         assert_eq!(percentile(&xs, 0.0), Some(1));
         assert_eq!(percentile(&xs, 1.0), Some(5));
@@ -165,6 +208,15 @@ mod tests {
         assert_eq!(s["max_us"], 3.0);
         assert_eq!(s["mean_us"], 2.0);
         assert!(summary(&[])["p50_us"].is_null());
+        // 有符号差值：负数照常统计，不截成 0
+        assert_eq!(summary(&[-1000, 1000])["mean_us"], 0.0);
+        assert_eq!(summary(&[-3000, 1000])["p50_us"], -3.0);
+    }
+
+    #[test]
+    fn order_alternates() {
+        let firsts: Vec<bool> = (0..4).map(fbank_first).collect();
+        assert_eq!(firsts, vec![true, false, true, false]);
     }
 
     /// 计时用的 fbank 调用与 `Embedder::embed` 里的一致：帧数与判断窗对上（1.5 s → 148 帧）。

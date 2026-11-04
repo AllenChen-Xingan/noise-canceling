@@ -35,7 +35,7 @@ caffeinate -i target/release/vdn-speaker-lab bench-split <exp005 某段降噪输
 
 - 按判断回路的窗长 / 步长切窗（正本 `JudgeParams`，默认 1.5 s / 0.5 s），每个窗分别计 fbank · 整个 embed · 两者之差（≈ 推理）· 注册与余弦
 - 条件：插电、`caffeinate`、拿名额、单线程（与 `Embedder` 一致）；素材用 exp005 的 c01（80 s → 158 个窗 × 5 遍 = 790 个样本）和 c06（只有主人）
-- 判据（verifier `bench-split`，阈值建议，待大总管定）：**fbank 占 embed 的 p50 比例 < 10% → 「共用频谱不值得做」成立**。过线与否、样本数、置信度写回下表
+- 判据（verifier `bench-split`，阈值大总管定 2026-11-04）：**fbank 占 embed 的 p50 比例 < 10% → 「共用频谱不值得做」成立**。过线与否、样本数、置信度写回下表
 
 | 素材 | 样本数 | fbank p50 | embed p50 | 推理 p50（差） | 注册与余弦 p50 | fbank 占比 | 过线（< 10%） |
 |---|---|---|---|---|---|---|---|
