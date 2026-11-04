@@ -3,7 +3,15 @@
 > 2026-11-03 · 手下 mtgdata 合并。014 原卡（`../014_real-datasets/cards/`）一字不改；这里只补 023 数据卡模板（`card-template.md`）要求而 014 卡缺的字段：场景键 · 设备键 · 笔记本段 · 转写（单列）· 语体 · 与 D62 的关系，以及查出的 014 疑误。
 > 来源：4 路调研员 + 各路怀疑派复核（workflow wf_98de0537-23d）。同一张卡被几路都补过的，按路分小节，不合并改写；几路说法冲突时以带【实测】或【论文】且经怀疑派复核的为准，裁定见末节。
 > 场景键 / 设备键只认 021 `catalog.md` / 022 `devices.md` 正本。
-> ⚠️ **许可口径**：014 卡的「结论」按已作废的 D26 把 SA 判为「只评测」。按 D64（2026-11-01），只带 SA、不带 NC 的可以训练（权重按相同条款共享并署名），涉及 014 卡：AliMeeting · AISHELL-4 · AISHELL-5 · CHiME-5 / 6 · CHiME-7 UDASE（音频部分）· ASCEND 类同理。NC、自定义协议、LDC 不变。
+> ⚠️ **许可口径**：014 卡的「结论」按已作废的 D26 把 SA 判为「只评测」。按 D64（2026-11-01），只带 SA、不带 NC 的可以训练（权重按相同条款共享并署名），涉及 014 卡：AliMeeting · AISHELL-4 · AISHELL-5 · CHiME-5 / 6 · CHiME-7 UDASE（音频部分）。NC、自定义协议、LDC 不变。
+> 014 卡索引 `../014_real-datasets/cards/README.md` 已按大总管授权（2026-11-03）改「结论」一列，单张卡不动。旧 → 新：
+> - CHiME-5 / CHiME-6 晚餐聚会：只评测 → 可训练（D64：SA）
+> - AliMeeting (M2MeT)：只评测 → 可训练（D64：SA）
+> - CHiME-7 UDASE：只评测 → 可训练（D64：SA）
+> - AISHELL-4：只评测 → 可训练（D64：SA）
+> - AISHELL-5（车载）：只评测 → 可训练（D64：SA）
+> - 页首口径说明：补一句「D64 起只带 SA 的改为可训练」
+> - 未改：CHiME-7/8 DASR 合集（含 LDC 的 Mixer 6）、URGENT 2024 / VoiceHome-2（含 NC）、URGENT 2025（未查到）
 
 共补 33 张 014 卡。
 
