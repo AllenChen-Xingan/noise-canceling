@@ -192,3 +192,47 @@ fn committed_example_line_parses() {
     assert_eq!(v.len(), 1);
     assert_eq!(v[0].sounds.len(), 2);
 }
+
+/// 仓里的场景任务清单（scenesuite 的 `suite/scenes.json`）与它引用的 `clips.jsonl` 都读得了：
+/// 每条任务是场景任务、展开出至少 1 段、每段的场景 / 档 / 设备与任务一致，片段 id 全局不重复。
+/// 清单在 scenesuite 合并前不在本分支：那时只打印提示（合并后这条测试才真正生效）。
+/// 可以用 `VDN_SCENES_SUITE=<scenes.json 绝对路径>` 指向别处的清单（相对路径按清单所在仓库根解析）。
+#[test]
+fn repo_scene_suite_parses_and_expands() {
+    let (path, root) = match std::env::var("VDN_SCENES_SUITE") {
+        Ok(p) => {
+            let p = PathBuf::from(p);
+            let root = p.ancestors().nth(3).unwrap().to_path_buf();
+            (p, root)
+        }
+        Err(_) => {
+            let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+            (root.join("src/eval/suite/scenes.json"), root)
+        }
+    };
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        eprintln!("没有 {}（scenesuite 未合并），跳过", path.display());
+        return;
+    };
+    let suite = parse_suite(&text).unwrap();
+    assert!(!suite.tasks.is_empty());
+    let mut ids = std::collections::BTreeSet::new();
+    let mut n = 0;
+    for t in &suite.tasks {
+        let Some(vdn_eval::suite::RealSource::Scene { clips, scene, tier, device }) = &t.real else {
+            panic!("{} 不是场景任务", t.id);
+        };
+        let jl = std::fs::read_to_string(root.join(clips)).unwrap_or_else(|e| panic!("{clips}：{e}"));
+        let all = SceneClip::parse_jsonl(&jl).unwrap();
+        let mine: Vec<_> = all
+            .iter()
+            .filter(|c| c.scene == *scene && c.tier == *tier && c.device == *device)
+            .collect();
+        assert!(!mine.is_empty(), "{} 展开不出片段", t.id);
+        for c in mine {
+            assert!(ids.insert(c.id.clone()), "片段 {} 被两条任务展开", c.id);
+            n += 1;
+        }
+    }
+    eprintln!("{} 条任务展开 {n} 段", suite.tasks.len());
+}
