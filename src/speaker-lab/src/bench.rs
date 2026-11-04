@@ -67,7 +67,7 @@ fn ns(t0: Instant) -> i64 {
 
 /// 第 `rep` 遍、第 `k` 个窗是否先跑 fbank。相邻窗交替，同一窗每遍反转，让每个窗两种顺序都测到。
 pub(crate) fn fbank_first(rep: usize, k: usize) -> bool {
-    (rep + k) % 2 == 0
+    (rep + k).is_multiple_of(2)
 }
 
 /// 预热轮数：正式计时前，前几个真实窗各跑几遍（`Embedder::open` 只用 1 s 探针预热过一次）。
@@ -78,7 +78,10 @@ const WARMUP_PASSES: usize = 3;
 pub(crate) fn cmd_bench_split(args: &[String]) -> R<()> {
     let x = read_wav(Path::new(args.first().ok_or("缺 <in.wav>")?))?;
     let jp = judge_params(args)?;
-    let reps: usize = arg(args, "--reps").map(|v| v.parse()).transpose()?.unwrap_or(6);
+    let reps: usize = arg(args, "--reps")
+        .map(|v| v.parse())
+        .transpose()?
+        .unwrap_or(6);
     let win = (jp.window_s * SR as f32) as usize;
     let hop = (jp.hop_s * SR as f32) as usize;
     let starts = window_starts(x.len(), win, hop);
@@ -189,7 +192,8 @@ mod tests {
         assert_eq!(window_starts(10, 0, 3), Vec::<usize>::new());
         assert_eq!(window_starts(10, 4, 0), Vec::<usize>::new());
         // 判断回路默认：1.5 s 窗、0.5 s 步长，80 s 素材 → 158 个窗
-        assert_eq!(window_starts(80 * 16000, 24000, 8000).len(), 158);
+        let sr = SR as usize; // 正本 vdn_types::MODEL_RATE
+        assert_eq!(window_starts(80 * sr, sr * 3 / 2, sr / 2).len(), 158);
     }
 
     #[test]
