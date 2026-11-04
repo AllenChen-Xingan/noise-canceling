@@ -76,6 +76,17 @@ def _walk(node, val, path, errs, defs, name=None):
     if "$ref" in node:
         ref = node["$ref"].split("/")[-1]
         return _walk(defs[ref], val, path, errs, defs, ref)
+    for key in ("anyOf", "oneOf"):
+        if key in node:
+            trials = []
+            for sub in node[key]:
+                e = []
+                _walk(sub, val, path, e, defs)
+                trials.append(e)
+            ok = sum(1 for e in trials if not e)
+            if ok == 0 or (key == "oneOf" and ok > 1):
+                errs.append(f"{path} 不满足 {key}（{min(trials, key=len)[:2]}）")
+            return
     if "type" in node and not _type_ok(val, node["type"] if isinstance(node["type"], list) else [node["type"]]):
         errs.append(f"{path} 类型应为 {node['type']}")
         return

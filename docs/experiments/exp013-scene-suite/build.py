@@ -101,7 +101,12 @@ def main():
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--builds-dir", default=str(HERE / "builds"))
     ap.add_argument("--audio-root", default="", help="音频根目录（默认主目录；测试时给临时目录）")
+    ap.add_argument("--allow-fallback", action="store_true", help="缺下载素材时允许换成合成底噪（会让同种子在不同机器上取材不同）")
     a = ap.parse_args()
+    missing = sorted({e for c in compose.SOUNDS.values() if c["source"]["kind"] == "demand"
+                      for e in c["source"]["envs"] if not pools.demand_available(e)})
+    if missing and not a.allow_fallback:
+        sys.exit(f"缺 DEMAND 环境 {missing}：先跑 fetch.py，或加 --allow-fallback（清单会记下用了替代）")
     main_dir = Path(a.audio_root) if a.audio_root else main_root()
     out_rel = f"_tmp/exp013/{a.build}"
     bdir = Path(a.builds_dir) / a.build
@@ -139,6 +144,11 @@ def main():
         "clips": len(recs), "audio_dir": out_rel, "counts": counts, "base_seed": compose.SCENES["base_seed"],
         "code_sha256": {f: sha_file(HERE / f) for f in CODE}, "params_sha256": {f: sha_file(HERE / f) for f in PARAMS},
         "material_index": {"sha256": idx_hash, "files": idx_n}, "leak_check": lk, "licenses": lic,
+        "schema": ({"path": str(manifest.schema_path().relative_to(manifest.schema_path().parents[2])), "sha256": sha_file(manifest.schema_path())}
+                   if manifest.schema_path() else None),
+        "versions": {"python": sys.version.split()[0], "numpy": np.__version__, "scipy": __import__("scipy").__version__,
+                     "soundfile": __import__("soundfile").__version__},
+        "fallback_used": missing,
         "validity": "D0（016：只保证可复现、可控、真值完整；未做统计对齐与双生成器）",
         "use": "只评测，不训练（含 CC-BY-NC 素材）",
     }
