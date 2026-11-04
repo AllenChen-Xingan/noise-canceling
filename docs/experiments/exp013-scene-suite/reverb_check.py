@@ -23,7 +23,10 @@ def _rirs_of(rec):
         c = SOUNDS[s["cls"]]
         if s["src"].get("kind") == "babble":
             out += [(f"{s['inst']}.talkers[{j}]", t.get("rir")) for j, t in enumerate(s["src"]["talkers"])]
-        elif c["directional"] or "rir" in s["src"]:
+        elif c["directional"] or c["source"]["kind"] in ("speech",) or "rir" in s["src"]:
+            # 按类别判「应当有房间」：有方位的点声源、所有语音（含扩散的广播、隔墙声），不看清单里有没有
+            out.append((s["inst"], s["src"].get("rir")))
+        if s["cls"] == "pa-chime":
             out.append((s["inst"], s["src"].get("rir")))
     return out
 
@@ -53,8 +56,12 @@ def check(rec, bed_t60=None):
         for who, r in used:
             if r["dataset"] != "mcvampire" or r["ch"] != room["mic"]:
                 errs.append(f"{who} 的 RIR 不是同一个车顶麦（要 ch {room['mic']}，是 {r['dataset']} ch {r.get('ch')}）")
-        if bed and not (bed["src"].get("kind") == "mcv-noise" and bed["src"]["ch"] == room["mic"]):
-            errs.append(f"车内底噪不是同一个车顶麦录的：{bed['src']}")
+        if bed and not (bed["src"].get("kind") == "mcv-noise" and bed["src"]["ch"] == room["mic"]
+                        and bed["src"]["speed_kph"] == room["speed_kph"]):
+            errs.append(f"车内底噪不是同一个车顶麦 / 同一车速录的：{bed['src']}")
+        own = rec["targets"][0]["src"].get("rir") or {}
+        if own.get("file") != f"ir_mouth_pos{room['seat']}_0.wav":
+            errs.append(f"主说话人没用本座位（{room['seat']}）正前方的 IR：{own.get('file')}")
     elif ds == "mit":
         files = {r["file"] for _, r in used}
         want = room["room_id"].split("/", 1)[1]

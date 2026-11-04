@@ -38,6 +38,7 @@ ACE_DIST = {
 }
 MIT_DIST = 1.5  # MIT IR Survey 的声源—录音机距离：论文写约 1.5 m【推断，未核原文】
 DIRECT_GAIN_DB = (-12.0, 18.0)  # 按距离调直达部分时的上下限，防止离谱外推【建议值】
+ONSET_REL = 0.2  # 直达声起点：第一个 ≥ 0.2·最大值的样本（再取其后 1 ms 内的峰）
 
 
 @dataclass
@@ -54,10 +55,13 @@ class Measured:
     drr: float = 0.0
 
     def __post_init__(self):
-        # 直达声 = 第一个到达的强峰，不是全段最大值：车厢等小空间里早期反射可能比直达还强（MIT 列车 IR 实测如此）
+        # 直达声 = 第一个到达的强峰，不是全段最大值：车厢等小空间里早期反射可能比直达还强（MIT 列车 IR 实测如此）。
+        # 阈值取 0.2·最大值：0.5 时有 16 / 270 条 MIT IR 抓晚了 2–15 ms（自审 P0）；峰前还有 > 1% 能量的 IR 判不可用
         a = np.abs(self.ir)
-        first = int(np.flatnonzero(a >= 0.5 * a.max())[0])
+        first = int(np.flatnonzero(a >= ONSET_REL * a.max())[0])
         self.peak = first + int(np.argmax(a[first : first + int(0.001 * SR) + 1]))
+        lead = max(0, first - int(0.0005 * SR))
+        self.pre_energy = float(np.sum(self.ir[:lead] ** 2) / max(np.sum(self.ir**2), 1e-30))
         self.ir = self.ir / self.ir[self.peak]
         w = int(round(CP["step2_direction"]["direct_window_ms"] * 1e-3 * SR))
         lo, hi = max(0, self.peak - w), self.peak + w + 1
@@ -72,6 +76,8 @@ class Measured:
     def valid(self):
         """可用的条件（三条都要满足）：①T60 估计不超过 IR 长度的 2.5 倍（MIT 的 IR 多被截到约 0.5 s，再长的估计不可信）；
         ②T60 估计失败（返回 0）时，只有直达明显占优（DRR ≥ 15 dB，真的几乎没混响）才算「短混响」，否则不用。"""
+        if self.pre_energy > 0.01:  # ④直达之前还有明显能量：不是干净的冲激响应
+            return False
         if self.t60 <= 0:
             return self.drr >= 15.0
         return self.t60 <= 2.5 * len(self.ir) / SR and self.tail_end_db <= -30.0
@@ -87,10 +93,13 @@ class Measured:
 
     def at(self, dist, az):
         """把直达部分按 实测距离 / 目标距离 调幅度（反平方律），尾巴不动；返回 rooms.Rir。"""
-        g_db = float(np.clip(20 * np.log10(self.dist_m / max(dist, 0.05)), *DIRECT_GAIN_DB))
-        r = Rir(self._direct * 10 ** (g_db / 20), self._rest.copy(), self.t60, float(dist), float(az), (), self.peak)
+        want = float(np.clip(20 * np.log10(self.dist_m / max(dist, 0.05)), -60, 60))
+        g_db = float(np.clip(want, *DIRECT_GAIN_DB))
+        eff = self.dist_m / 10 ** (g_db / 20)  # 撞了限幅时，等效距离 ≠ 请求距离；清单记等效距离
+        r = Rir(self._direct * 10 ** (g_db / 20), self._rest.copy(), self.t60, float(eff), float(az), (), self.peak)
         return r, {"kind": "rir", "dataset": self.dataset, "room": self.room, "file": self.file, "ch": self.ch,
-                   "t60_s": round(self.t60, 3), "drr_meas_db": round(self.drr, 2), "direct_gain_db": round(g_db, 2)}
+                   "t60_s": round(self.t60, 3), "drr_meas_db": round(self.drr, 2), "direct_gain_db": round(g_db, 2),
+                   "requested_dist_m": round(float(dist), 3), "clamped": bool(g_db != want)}
 
 
 def _read(path, ch=0):

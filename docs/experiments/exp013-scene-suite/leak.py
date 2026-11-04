@@ -138,6 +138,9 @@ def exclude_table(records):
         "esc50_files": sorted(u["esc50"]),
         "synth_fns": sorted(u["fns"]),
         "rir_files": sorted(u["rir"]),
+        "rooms_reserved": {"_说明": "按房间整体保留给评测：训练不只要避开用过的段，同一房间 / 麦位的其他 IR 与噪声也不用（自审 P2）",
+                           "ace": sorted({f.split("/")[1] + "/" + f.split("/")[2] for f in u["rir"] if f.startswith("ace/")}),
+                           "mcvampire": "整个数据集" if any(f.startswith("mcvampire/") for f in u["rir"]) else None},
         "room_noise_segments": [{"kind": k, "file": f, "ch": c, "start": s, "len": n, "sr": sr}
                                 for k, f, c, s, n, sr in sorted(set(u["room_noise"]))],
         "other_segments": [{"file": f, "start": s, "len": n, "sr": 16000, "_说明": "重采样到 16 kHz 后的样本号"}

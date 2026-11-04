@@ -79,7 +79,10 @@ class Measured(unittest.TestCase):
         noisy = np.zeros(len(t))
         noisy[10] = 1.0
         noisy[200:] = rng.standard_normal(len(t) - 200) * 0.2  # 不衰减：估计失败，直达也不占优
-        m = rirs.Measured("t", "r", "flat", 0, noisy, 1.0)
+        self.assertFalse(rirs.Measured("t", "r", "flat", 0, noisy, 1.0).valid)  # 被「结尾没衰减」这条拦下
+        sparse = np.zeros(len(t))
+        sparse[10], sparse[200] = 1.0, 0.9  # 只有一个直达窗外的强反射：T60 估不出（0），直达也不占优
+        m = rirs.Measured("t", "r", "sparse", 0, sparse, 1.0)
         self.assertEqual(m.t60, 0.0)
         self.assertFalse(m.valid)
         dry = np.zeros(len(t))
