@@ -1,6 +1,6 @@
 # 现状页 · card1（批次 20261103-b12）
 
-- **状态**：进行中（2026-11-04），codex 评审中
+- **状态**：已收尾（2026-11-04），等大总管验收
 - **手上**：第一张场景成绩单——GTCRN（exp014 · issue #92 · 分支 `exp/014-scorecard-gtcrn`）
 - **管的实体**：成绩单 · 降噪模型 GTCRN · 评测器（只用，不改）
 - **交代**：主目录 `_tmp/20261103-b12/card1.md`、`_tmp/20261103-b12/card1-msg2.md`
@@ -11,7 +11,9 @@
   - 分析：`analyze.py` + 15 条测试；结论 `findings.md`，含大总管要的「评分项自检」一节
   - 人耳片段：主目录 `_tmp/exp014/listen/20261104-000444-e4511abc/`，7 段 × 2 版本 = 168 秒；揭盲表在仓内 `listen/20261104-000444-e4511abc/`
   - issue 草稿：主目录 `_tmp/exp014/issue-ref-track.md`
-- **下一步**：codex 评审到停止线 → 收尾报告
+  - codex 评审 3 轮，第 2、3 轮无 P0/P1，已达停止线；12 条全部属实已改（`docs/reviews/014_scorecard-gtcrn-codex.md`）
+  - 大总管收尾三件事：`driver/target` 已删（291 MB）；issue 草稿拆成 4 条；答案在仓内 `listen/20261104-000444-e4511abc/listen-key.md`，听音目录里没有
+- **下一步**：等大总管验收、推送、开 PR（本线不做 git 写操作）
 
 ## 待人拍板
 
