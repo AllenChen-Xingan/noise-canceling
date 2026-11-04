@@ -13,7 +13,7 @@
 | fespk | exp015 认人吃共享频谱 + 耗时分解 · #95 · `exp/015-speaker-shared-spectrum` · `../noise_canceling-fespk` | 认人前端 · 声纹模型（只评）· 认人判断回路 | 完成，验收过（大总管复跑 11 测试 · 9 文件在范围内 · src/speaker/ 未改 · 路径清零），PR #96 已合并（3af03735，#95 关），窗口与 worktree 已清 |
 | pse | 调研 024 个性化降噪：有没有人做过 · 为什么难 · #98 · `research/024-pse-landscape` · `../noise_canceling-pse`（人点名派，属「个性化降噪」大事的前置调研） | 个性化降噪 / 提取模型 · 自动注册 · PSE 训练数据与评测集 | 完成，验收过（11 文件在范围内 · 路径清零 · codex 4 轮 3、4 轮无 P0/P1），PR #100 已合并（#98 关），窗口与 worktree 已清 |
 | fe2 | 第二段之一：统一模块支持 Kaldi 分帧 · 认人 fbank 与离线例子收进来 · #102 · `feat/frontend-speaker` · `../noise_canceling-fe2` | 频谱前端（扩展）· 认人前端 fbank · 离线例子 | 完成，验收过（大总管亲手 xtask ci 全绿 · 对拍 14 条真比），PR #103 已合并（f2782cf4，#102 关），窗口与 worktree 已清 |
-| fe3 | 第三段：评测器 4 处改调统一模块（只换计算，评分逐位不变）· #104 · `feat/frontend-eval` · `../noise_canceling-fe3` | 评测器频谱计算 · 频谱前端（小扩展）· 成绩单对拍 | 已报到（noise-canceling-fe3-08） |
+| fe3 | 第三段：评测器 4 处改调统一模块（只换计算，评分逐位不变）· #104 · `feat/frontend-eval` · `../noise_canceling-fe3` | 评测器频谱计算 · 频谱前端（小扩展）· 成绩单对拍 | 完成，验收过（大总管亲手 xtask ci 全绿 · 评测器对拍 4 条真比 · 全仓 FFT 只剩 dsp + 场景逆 FFT 白名单），PR #107 已开，窗口已关；**等 CI 真跑通再合**（5e 无异议） |
 
 ## 进度板
 
@@ -47,6 +47,8 @@
 - 下一步：评测器 4 处（speech · estoi · system · analysis:163）单独 PR，开工前问 5-app-5e
 - 2026-11-04 人：「弄吧 / 然后具体的评测方法，要看是否和好的 best practice 一致」→ ① 派 fe3（#104），已告 5-app-5e 开工 ② 评测方法对照业界做法归 5-app-5e，它开调研 025（以 012 为底）；fe3 发现的评分算法疑点转交给它
 - 2026-11-04 fe3 第一轮：函数级对拍（声谱图 · ESTOI · 参考降噪器 · 全部 verifier）release / debug 都逐位相同；成绩单级（cafe 常见档 Air 10 段 × 3 系统，不带 --qa）json 去 meta 逐字相同、md diff 0 行。另发现 #99 的场景对拍 release 红 / debug 绿（改前源码同样，基准只按 debug 生成）→ 开 #106。在跑带 --qa 两次（顺记识别波动，供 5e 的 F-10）
+- 2026-11-04 fe3 收尾：成绩单级对拍两组（不带 / 带 --qa）去 meta 逐字相同；识别 160 次同文件结果一致（给 5e F-10）；V-WEAK 低于约 9 kHz panic 转 5e。#107 开
+- 2026-11-04 GitHub macOS arm 机器持续排不上（#103 PR · main 推送 · main 重跑 · #107 共 4 次「not acquired」或取消）。main（f2782cf4）在 CI 上仍未真跑；#107 的 CI 测「main + #107」，跑通即同时验证 main。后台自动重试 #107 最多 6 次
 
 ## 待人拍板（本大事）
 
