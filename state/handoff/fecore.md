@@ -15,6 +15,8 @@
   - `vdn-dsp`：`StreamingStft::from_spec / feed / forward_count`、`power_into`、`window::for_spec`
   - GTCRN 实现 `SpectrumTap`；场景加 `push_hop_with_power`，自算入口改用 `StreamingStft`；离线例子改引用正本
   - 测试：`scene/tests/{golden,frontend}.rs` · `models/tests/{golden,tap}.rs` · `polish/tests/borrowed_spectrum.rs` · dsp / scene / models 的 no_alloc 各加一条
+- 2026-11-04 大总管授权改 `specs/rust/architecture.md:225` 的借谱接口说明 → 已改为 `input_power`；全仓旧接口名 0 处
+- 2026-11-04 名额 ①：基准已生成（实测）。场景 `45107641c255052a`，24 次判断；GTCRN `72e947a3fb17c048`，48000 点，权重 `780e68e301ab1513`；平台 aarch64-macos。原样 `features.rs` 的 sha256 与 `git show 990e7843:` 一致。名额已归还，② 已申请
 - 基准怎么生成：草稿目录里的 `bless.sh` 把 `990e7843`（本分支改动前）原样导出，只放两份对拍测试，在那里生成基准再拷回 `tests/fixtures/`。所以基准不受本分支任何改动影响
 
 ## 盘点：每处 FFT / STFT（读源码，未实测）
@@ -38,4 +40,4 @@
 
 ## 转交
 
-- `specs/rust/architecture.md:225` 还写着 `SpectrumTap::last_magnitude`，应改为 `input_power`（该文件不在我可写范围，请大总管处理或授权）
+（暂无）
