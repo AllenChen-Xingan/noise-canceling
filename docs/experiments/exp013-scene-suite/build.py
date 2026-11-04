@@ -106,9 +106,12 @@ def main():
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--builds-dir", default=str(HERE / "builds"))
     ap.add_argument("--audio-root", default="", help="音频根目录（默认主目录；测试时给临时目录）")
+    ap.add_argument("--dev", action="store_true", help="开发冒烟：允许没有 scorecard 的 schema，只查字段名（产出标 dev，tasks.py 拒用）")
     a = ap.parse_args()
     missing = sorted({e for c in compose.SOUNDS.values() if c["source"]["kind"] == "demand"
                       for e in c["source"]["envs"] if not pools.demand_available(e)})
+    if manifest.schema_path() is None and not a.dev:  # 正式 build 必须按正本 schema 校验（codex 第 3 轮 P2 #5）
+        sys.exit("找不到 specs/schema/eval-scene-clip.schema.json：正式 build 必须按它校验；只做冒烟请加 --dev")
     if missing:  # 不做替代：同一种子在不同机器上必须取到同样的素材（codex 第 2 轮 P2 #5，回退入口删掉）
         sys.exit(f"缺 DEMAND 环境 {missing}：先跑 fetch.py")
     main_dir = Path(a.audio_root) if a.audio_root else main_root()
@@ -155,6 +158,7 @@ def main():
                    if manifest.schema_path() else None),
         "versions": {"python": sys.version.split()[0], "numpy": np.__version__, "scipy": __import__("scipy").__version__,
                      "soundfile": __import__("soundfile").__version__},
+        "dev": bool(a.dev),
         "validity": "D0（016：只保证可复现、可控、真值完整；未做统计对齐与双生成器）",
         "use": "只评测，不训练（含 CC-BY-NC 素材）",
     }

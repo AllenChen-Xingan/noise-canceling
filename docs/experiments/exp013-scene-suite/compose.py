@@ -125,7 +125,7 @@ def make_clip(scene, tier, idx, device):
         co = S["co_targets"]
         k = int(rng_mat.integers(co["count"][tier][0], co["count"][tier][1] + 1))
         for _ in range(k):
-            xd, src = tracks.co_target_track(rng_mat, n, gap, {t["spk"] for t in targets})
+            xd, src = tracks.co_target_track(rng_mat, n, gap, {t["spk"] for t in targets}, SCENES["lead_silence_s"])
             y, r, _, src["rir"] = sc.point(xd, _u(rng_mat, co["dist_m"]), _u(rng_mat, co["az_deg"]), role="target")
             y = _scale_to(y, L_o + _u(rng_mat, co["rel_db"]), gated_level_db)
             targets.append({"spk": src["spk"], "dist_m": r.dist_m, "azimuth_deg": r.azimuth_deg, "src": src, "x": y})

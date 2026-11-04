@@ -40,14 +40,19 @@ def band_gain(freqs, low, mid, high, edges=None):
     return low * (1 - s1) + mid * (s1 - s2) + high * s2
 
 
-def azimuth_atten(rng, az_deg, strength):
-    """方位衰减表（022 第 2 步）：0–30° 不衰减；30→90→180° 线性插值；左右对称。三频段各抽各的。"""
+def draw_nodes(rng):
+    """方位衰减表的节点值：每段抽一次（022 第 2 步「每段在范围内均匀抽」），同段所有声源共用（codex 第 3 轮 P2 #3）。"""
+    t = P["step2_direction"]["azimuth_table"]
+    return {k: {b: u(rng, t[k][b]) for b in ("low", "mid", "high")} for k in ("90", "180")}
+
+
+def azimuth_atten(nodes, az_deg, strength):
+    """方位衰减（022 第 2 步）：0–30° 不衰减；30→90→180° 线性插值；左右对称。nodes 来自 draw_nodes。"""
     d = P["step2_direction"]
     a = abs(((az_deg + 180) % 360) - 180)
-    t90, t180 = d["azimuth_table"]["90"], d["azimuth_table"]["180"]
     out = {}
     for b in ("low", "mid", "high"):
-        v90, v180 = u(rng, t90[b]), u(rng, t180[b])
+        v90, v180 = nodes["90"][b], nodes["180"][b]
         flat = d["front_flat_deg"]
         if a <= flat:
             v = 0.0
@@ -121,6 +126,7 @@ class Chain:
         if 2 in self.steps:
             p["strength"] = u(rng, s2["strength"]["range"])
             p["reverb_stress"] = bool(rng.random() < s2["reverb_stress_prob"])
+            p["direction_nodes_db"] = draw_nodes(rng)
         if 3 in self.steps:
             p["flat"] = bool(rng.random() < s3["flat_prob"])
             p["tilt_db_per_oct"] = u(rng, s3["tilt_db_per_oct"])
@@ -145,7 +151,7 @@ class Chain:
         """有方向的源：直达部分按方位衰减，其余按扩散场近似（混响压力分支则不衰减）。返回 (h, PAD)。"""
         if 2 not in self.steps:
             return np.concatenate([np.zeros(PAD), rir.full, np.zeros(PAD)]), PAD, {}
-        att = azimuth_atten(rng, rir.azimuth_deg, self.params["strength"])
+        att = azimuth_atten(self.params["direction_nodes_db"], rir.azimuth_deg, self.params["strength"])
         hd = zero_phase(rir.direct, lambda f: band_gain(f, att["low"], att["mid"], att["high"]))
         hr = rir.rest if self.params["reverb_stress"] else None
         if hr is None:

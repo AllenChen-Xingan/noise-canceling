@@ -106,7 +106,7 @@ class Behaviour(unittest.TestCase):
     def test_front_source_not_attenuated(self):
         rng = np.random.default_rng(2)
         for az in (0, 20, -30):
-            a = dc.azimuth_atten(rng, az, 1.0)
+            a = dc.azimuth_atten(dc.draw_nodes(rng), az, 1.0)
             self.assertEqual(a, {"low": 0.0, "mid": 0.0, "high": 0.0})
 
     def test_side_attenuation_in_table_range(self):
@@ -114,7 +114,7 @@ class Behaviour(unittest.TestCase):
         t = dc.P["step2_direction"]["azimuth_table"]
         for _ in range(50):
             for az, key in ((90, "90"), (-90, "90"), (180, "180")):
-                a = dc.azimuth_atten(rng, az, 1.0)
+                a = dc.azimuth_atten(dc.draw_nodes(rng), az, 1.0)
                 for b in ("low", "mid", "high"):
                     lo, hi = min(t[key][b]), max(t[key][b])
                     self.assertTrue(lo - 1e-9 <= a[b] <= hi + 1e-9, (az, b, a[b]))
@@ -178,6 +178,15 @@ class Behaviour(unittest.TestCase):
         y, clipped = ch.clip(mix)
         self.assertTrue(clipped)
         self.assertGreater(float(np.max(np.abs(y - mix))), 0.1)
+
+    def test_same_clip_same_direction(self):
+        """回归（codex 第 3 轮 P2 #3）：同一段里同方位的两个声源，方位衰减必须相同（节点每段抽一次）。"""
+        rng = np.random.default_rng(12)
+        ch = dc.Chain(rng, "mba-builtin", "common")
+        r = make_rir(rng, (6, 5, 3), 0.4, 1.5, 90)
+        _, _, a1 = ch.source_rir(r, rng)
+        _, _, a2 = ch.source_rir(r, rng)
+        self.assertEqual(a1, a2)
 
     def test_same_seed_same_params(self):
         a = dc.Chain(np.random.default_rng(9), "mba-builtin", "stress").params

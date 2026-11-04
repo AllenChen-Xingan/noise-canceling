@@ -62,6 +62,8 @@ def coverage_errors(bdir):
     errs = [] if man.get("leak_check", {}).get("ok") else ["泄漏检查未通过"]
     if not man.get("level_check", {}).get("ok"):
         errs.append("电平验收未通过或缺失")
+    if man.get("dev") or not man.get("schema"):
+        errs.append("这是开发冒烟 build（没按正本 schema 校验），不能当正式任务")
     got = {}
     for line in (bdir / "clips.jsonl").read_text().splitlines():
         r = json.loads(line)

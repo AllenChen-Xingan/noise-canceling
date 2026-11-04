@@ -50,11 +50,11 @@ def owner_track(rng, n, lang, lead_s, gap, spk=None):
     return x, {"kind": "librispeech", "spk": spk, "utts": utts}
 
 
-def co_target_track(rng, n, gap, exclude):
+def co_target_track(rng, n, gap, exclude, lead_s):
     pool = pools.libri()["owner"]
     cands = [s for s in sorted(pool) if s not in exclude]
     spk = cands[int(rng.integers(len(cands)))]
-    start = int(_u(rng, (0.5, 4.0)) * SR)
+    start = int(_u(rng, (lead_s, 4.0)) * SR)  # 开头留空对所有要留的人都成立（codex 第 3 轮 P2 #4）
     x, utts = speech_fill(rng, pool[spk], n, start, n, gap)
     return x, {"kind": "librispeech", "spk": spk, "utts": utts}
 
