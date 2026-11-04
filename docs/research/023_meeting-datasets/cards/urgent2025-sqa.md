@@ -4,7 +4,7 @@
 - **链接**：https://huggingface.co/datasets/urgent-challenge/urgent2025-sqa
 - **许可**：HF 数据卡 YAML `license: cc-by-nc-sa-4.0`；卡内正文另写挑战数据「publicly available with varying licenses」，源语料许可表标「to be updated」→ 结论：只评测【官方文档】
 - **大小**：默认子集约 168k 行：blind_test_mos 23.4k（卡内原句：26 个系统 × 900 条 = 23,400 条全部有人评分）· blind_test 44.1k · nonblind_test 92k · validation 8k；GB 未查到【官方文档】
-- **场景键**：未查到（源自 URGENT 2025 盲测，014 卡称来源未点名）
+- **场景键**：other（源自 URGENT 2025 盲测，014 卡称来源未点名；具体场景未查到）
 - **设备键**：unknown
 - **笔记本段**：未查到；无逐条设备标签【官方文档】
 - **干净参考**：部分（模拟一半有参考；表内对部分行给了 PESQ、ESTOI 等全参考分，说明这些行有参考【推断】）
@@ -19,4 +19,4 @@
 - 对本路最有用的一份：**中文 + 增强后语音 + 人评分 + 现成多 verifier 分数**，能直接做 verifier 校准表。
 - 评分协议：配套论文 2507.11306 写的是 P.808 ACR，并把 P.808 文本与音频提示本地化到多语种【论文摘要】；每语种评分人数未查到。
 - 该论文提醒：生成式增强会「幻觉」，单靠 ACR MOS 和 DNSMOS / NISQA 抓不到，建议配音素保真度指标【论文摘要】。
-- 怀疑派复核：改了 5 处——「许可」补卡内「varying licenses」原句；「大小」补 26 × 900 原句；「语种」从「另 3 种未显示」补齐为六种；「与 D62 的关系」把「真实比例未查到」改为「覆盖全部盲测，约一半真实【推断】」，中文行估 3,900 条【推断】；「获取方式」去掉「未核」。注意：卡内一段已注释掉的旧文字写「All speech samples in this dataset are in English」，与 YAML 冲突，以 YAML 为准。
+- 怀疑派复核：改了 5 处——「许可」补卡内「varying licenses」原句；「大小」补 26 × 900 原句；「语种」从「另 3 种未显示」补齐为六种；「与 D62 的关系」把「真实比例未查到」改为「覆盖全部盲测，约一半真实【推断】」，中文行估 3,900 条【推断】；「获取方式」去掉「未核」；「场景键」把模板外的「未查到」改为 `other` 加说明（check_cards.py 报错）。注意：卡内一段已注释掉的旧文字写「All speech samples in this dataset are in English」，与 YAML 冲突，以 YAML 为准。
