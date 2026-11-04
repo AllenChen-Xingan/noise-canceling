@@ -5,9 +5,9 @@
 //! 生成（只在没改过 `gtcrn.rs` 的代码上）：`VDN_BLESS=1 VDN_GTCRN_ONNX=<gtcrn_simple.onnx> cargo test -p vdn-models --test golden`。
 //! 找不到模型文件时同 `smoke.rs` 跳过（设 `VDN_REQUIRE_MODELS` 不许跳）；权重或平台和基准不同时跳过并打印原因
 //! （ORT 与系统数学库在别的平台上末位可能不同）。
-use vdn_dsp::{StreamingStft, power_into};
+//! 本文件只用改前就有的接口，才能在 main 的原样源码上生成基准；借谱的检查在 `tap.rs`。
 use vdn_models::{Gtcrn, ModelKind, artifact_id};
-use vdn_types::{ContentId, FRONTEND, MODEL_RATE, Model, SpectrumTap};
+use vdn_types::{ContentId, MODEL_RATE, Model};
 
 const FIXTURE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/gtcrn_golden.txt");
 
@@ -76,39 +76,4 @@ fn gtcrn_output_matches_golden() {
     assert_eq!(n.parse::<usize>().ok(), Some(y.len()), "样本数变了");
     let id = ContentId::parse(id).expect("基准第 1 列是 16 位十六进制");
     assert_eq!(got, id, "GTCRN 输出与改前不同（红线），先停下报");
-}
-
-/// 真 GTCRN 借出的功率谱 == 另起一个同口径 STFT 自算的功率谱（逐位）：场景借谱与自算等价的前提在真模型上也成立。
-/// 推理出错时借出的谱仍是本帧输入的（取自推理前）。
-#[test]
-fn gtcrn_tap_equals_self_compute() {
-    let Some(path) = ModelKind::Gtcrn.default_path() else {
-        assert!(
-            std::env::var_os("VDN_REQUIRE_MODELS").is_none(),
-            "VDN_REQUIRE_MODELS 已设，但找不到模型文件"
-        );
-        eprintln!("跳过：找不到 GTCRN 模型文件（设 VDN_GTCRN_ONNX）");
-        return;
-    };
-    let mut m = Gtcrn::open(&path).expect("打开 GTCRN");
-    assert_eq!(m.spectrum_spec(), FRONTEND);
-    assert!(m.input_power().is_none(), "还没处理过帧就借出了谱");
-    let mut own = StreamingStft::from_spec(&FRONTEND);
-    let mut want = vec![0.0f32; FRONTEND.bins()];
-    let x = input();
-    let mut y = vec![0.0f32; m.hop()];
-    for (k, h) in x.chunks_exact(m.hop()).enumerate() {
-        m.process(h, &mut y).expect("GTCRN 处理");
-        power_into(own.analyze(h), &mut want);
-        let got = m.input_power().expect("处理过帧后应借得出谱");
-        assert!(
-            got.iter().zip(&want).all(|(a, b)| a.to_bits() == b.to_bits()),
-            "第 {k} 帧借出的功率谱与自算不同"
-        );
-    }
-    // 输入长度不对：不做分析，也不借出旧谱
-    assert!(m.process(&x[..10], &mut y[..10]).is_err());
-    assert!(m.input_power().is_none());
-    m.reset();
-    assert!(m.input_power().is_none());
 }
