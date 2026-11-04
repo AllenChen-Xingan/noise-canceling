@@ -1,7 +1,7 @@
 # 评审 087 · 场景成绩单 + 新评分项 + 评分模型接入（codex · gpt-6-astra · read-only）
 
-> 对象：`git diff origin/main...HEAD`（分支 `feat/scorecard`，issue #87）。**最新一轮：第 4 轮（2026-11-03）· 总评「修改」· 连续第 1 轮无 P0/P1，待第 5 轮确认**。
-> 累计处理：P1×6、P2×8 逐条回源码核实，属实 14、驳回 0。
+> 对象：`git diff origin/main...HEAD`（分支 `feat/scorecard`，issue #87）。**最新一轮：第 5 轮（2026-11-03）· 总评「修改」· 待第 6 轮**。
+> 累计处理：P1×7、P2×9 逐条回源码核实，属实 16、驳回 0。
 
 ## 第 1 轮（2026-11-03）· 总评「修改」
 
@@ -99,3 +99,20 @@
 ### 是否再审
 
 本轮无 P0/P1，但只连续 1 轮 → 再审一轮确认。
+
+## 第 5 轮（2026-11-03）· 总评「修改」
+
+原文：主目录 `_tmp/scorecard/reviews/scorecard-codex-5.md`（不入库）。effort medium，耗时 143 秒。
+上一轮处理的验证：codex 抽查确认第 4 轮 #1、#2 已修。
+本轮 P0/P1：1 条 · 停止线：未满足（连续无 P0/P1 的计数归零）· 留作 issue 的 P2：无
+
+- **P1｜`src/eval/src/main.rs:370` 同一 `--out` 目录跑第二次会覆盖旧成绩单**（第 5 轮 #1）
+  - 核实：属实（`std::fs::write` 截断），违反 CLAUDE.md 第五节第 1 条
+  - 处理：`card::ensure_fresh` 在打分前先查，已有成绩单就报错；`card::write_new` 用「只新建」打开两个文件。默认输出目录本来带运行编号，不受影响。测试：e2e `second_write_to_same_dir_is_refused`（旧文件逐字不变）
+- **P2｜`src/eval/src/scorecard/mod.rs:171` 全是 `other` 场景的任务能过 `check_suite`，产出空成绩单**（第 5 轮 #2）
+  - 核实：属实
+  - 处理：`check_suite` 拒绝场景是 `other` 的任务（021：不是开会场景）。测试加进 `non_scene_or_empty_suite_is_rejected`
+
+### 是否再审
+
+有 P1 → 改完开第 6 轮。
