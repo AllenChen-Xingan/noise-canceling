@@ -171,14 +171,24 @@ class CliTest(unittest.TestCase):
             (keys / "021_meeting-scenes" / "catalog.md").write_text(fixture_keys, encoding="utf-8")
             (keys / "022_mac-mic" / "devices.md").write_text(
                 "| `laptop-unknown` |\n| `non-laptop-phone` |\n", encoding="utf-8")
-            env = {**os.environ, cc.KEYS_ENV: str(keys)}
-            run = lambda: subprocess.run([sys.executable, str(HERE / "check_cards.py"), d],
-                                         capture_output=True, text=True, env=env)
+            env = {k: v for k, v in os.environ.items() if k != cc.KEYS_ENV}
+            run = lambda: subprocess.run(
+                [sys.executable, str(HERE / "check_cards.py"), "--research", str(keys), d],
+                capture_output=True, text=True, env=env)
             self.assertEqual(run().returncode, 0)
             Path(d, "bad.md").write_text("# 坏卡\n", encoding="utf-8")
             r = run()
             self.assertEqual(r.returncode, 1)
             self.assertIn("bad.md", r.stdout)
+
+    def test_missing_keys_exit_2(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = {k: v for k, v in os.environ.items() if k != cc.KEYS_ENV}
+            r = subprocess.run(
+                [sys.executable, str(HERE / "check_cards.py"), "--research", d, d],
+                capture_output=True, text=True, env=env)
+            self.assertEqual(r.returncode, 2)
+            self.assertIn(cc.KEYS_ENV, r.stdout)
 
 
 if __name__ == "__main__":

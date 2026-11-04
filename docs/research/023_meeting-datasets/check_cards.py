@@ -6,7 +6,9 @@
 只认本仓库 docs/research/ 下的这两份。合并进 main 前本仓库还没有时，用环境变量
 VDN_KEYS_DIR 显式指过去：值是一个或多个 docs/research 目录，用 `:` 分隔，按顺序找。
 没找到、也没指，就报错退出。
-用法：python3 check_cards.py [卡片目录]，默认同目录下 cards/。有错退出码 1。
+用法：python3 check_cards.py [--research <docs/research 目录>] [卡片目录]
+卡片目录默认同目录下 cards/；--research 替换「本仓库 docs/research」（测试用）。
+退出码：0 合格 · 1 卡片有问题 · 2 找不到正本或正本读不出键。
 """
 from __future__ import annotations
 
@@ -59,10 +61,10 @@ def find_key_source(name: str, research: Path = RESEARCH, env: str | None = None
         f"找不到{name}正本 docs/research/{rel}；合并前请设 {KEYS_ENV}=<含它的 docs/research 目录>")
 
 
-def load_schema() -> tuple[list[str], set[str], set[str]]:
+def load_schema(research: Path = RESEARCH) -> tuple[list[str], set[str], set[str]]:
     fields = parse_fields(TEMPLATE.read_text(encoding="utf-8"))
-    scenes = parse_keys(find_key_source("场景键").read_text(encoding="utf-8"))
-    devices = parse_keys(find_key_source("设备键").read_text(encoding="utf-8"))
+    scenes = parse_keys(find_key_source("场景键", research).read_text(encoding="utf-8"))
+    devices = parse_keys(find_key_source("设备键", research).read_text(encoding="utf-8"))
     return fields, scenes, devices
 
 
@@ -131,9 +133,16 @@ def check_addendum(text: str, scenes: set[str], devices: set[str]) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    card_dir = Path(argv[1]) if len(argv) > 1 else HERE / "cards"
+    args = argv[1:]
+    research = RESEARCH
+    if args[:1] == ["--research"]:
+        if len(args) < 2:
+            print("错误：--research 后要跟目录")
+            return 2
+        research, args = Path(args[1]), args[2:]
+    card_dir = Path(args[0]) if args else HERE / "cards"
     try:
-        fields, scenes, devices = load_schema()
+        fields, scenes, devices = load_schema(research)
     except (FileNotFoundError, ValueError) as e:
         print(f"错误：{e}")
         return 2
