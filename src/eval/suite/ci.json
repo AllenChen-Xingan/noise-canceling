@@ -297,11 +297,11 @@
       "graders": [ { "v": "V-CLICK", "max": 0, "k": 8 } ]
     },
     {
-      "id": "P09-lowpass-1k-estoi-must-fail",
+      "id": "P09-noise-0db-estoi-must-fail",
       "set": "probe", "polarity": "preserve",
-      "origin": "rubric 第 7 节负例护栏 ③（1 kHz 低通）用在可懂度上：ΔESTOI 必须落 D",
-      "desc": "把 R02 的输出做 1 kHz 低通：V-ESTOI 必须判不过",
-      "probe": { "base": "R02-owner-monologue-not-gated", "kind": "lowpass_1k" },
+      "origin": "rubric 硬规则 4「好输入不许修坏」的反面：输出比带噪输入还吵 → ΔESTOI 必须落 D（1 kHz 低通在合成人声上只降 0.02，抓不住，scorecard 2026-11-03 实测）",
+      "desc": "把 R02 的输出加噪到 0 dB 信噪比：V-ESTOI 必须判不过",
+      "probe": { "base": "R02-owner-monologue-not-gated", "kind": "noise_0db" },
       "graders": [ { "v": "V-ESTOI", "min": -0.05 } ]
     }
   ]

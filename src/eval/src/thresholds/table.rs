@@ -230,7 +230,11 @@ pub const CLICK: Lines = Lines {
     edges: &[],
     edges_src: NO_EDGES,
     params: &[
-        p("max", Some(0.0), &[(0.0, Src::Doc012(&["每分钟 0 个为 A"]))]),
+        p(
+            "max",
+            Some(0.0),
+            &[(0.0, Src::Doc012(&["每分钟 0 个为 A"]))],
+        ),
         p("k", Some(8.0), &[(8.0, Src::Doc012(&["k = 8"]))]),
     ],
 };

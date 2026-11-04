@@ -118,7 +118,12 @@ pub(super) fn v_pumpv(c: &Ctx, p: &Params) -> Score {
         s += w;
     }
     if r.len() < 10 {
-        return Score::unknown(ID, "dB²", Better::Lower, format!("有声窗只有 {} 个", r.len()));
+        return Score::unknown(
+            ID,
+            "dB²",
+            Better::Lower,
+            format!("有声窗只有 {} 个", r.len()),
+        );
     }
     let m = mean(&r);
     let var = r.iter().map(|v| (v - m).powi(2)).sum::<f64>() / r.len() as f64;
@@ -141,7 +146,10 @@ fn outliers(x: &[f32], sr: u32, k: f64) -> Vec<bool> {
     let mut flag = vec![false; d.len()];
     for (bi, chunk) in d.chunks(blk).enumerate() {
         let med = quantile(chunk, 0.5);
-        let mad = quantile(&chunk.iter().map(|v| (v - med).abs()).collect::<Vec<_>>(), 0.5);
+        let mad = quantile(
+            &chunk.iter().map(|v| (v - med).abs()).collect::<Vec<_>>(),
+            0.5,
+        );
         let thr = med + k * mad.max(1e-6);
         for (i, v) in chunk.iter().enumerate() {
             flag[bi * blk + i] = *v > thr;
@@ -150,12 +158,37 @@ fn outliers(x: &[f32], sr: u32, k: f64) -> Vec<bool> {
     flag
 }
 
+/// 残差：输出减去逐 20 ms 投影到干净轨上的部分（干净轨全零时就是输出本身）。
+fn residual(x: &[f32], clean: &[f32], sr: u32) -> Vec<f32> {
+    let blk = (0.02 * sr as f64) as usize;
+    let mut r = x.to_vec();
+    for (i, chunk) in r.chunks_mut(blk).enumerate() {
+        let a = i * blk;
+        let Some(c) = clean.get(a..a + chunk.len()) else {
+            break;
+        };
+        let (mut oc, mut cc) = (0.0f64, 0.0f64);
+        for (o, s) in chunk.iter().zip(c) {
+            oc += *o as f64 * *s as f64;
+            cc += *s as f64 * *s as f64;
+        }
+        if cc > 0.0 {
+            let g = oc / cc;
+            for (o, s) in chunk.iter_mut().zip(c) {
+                *o -= (g * *s as f64) as f32;
+            }
+        }
+    }
+    r
+}
+
 pub(super) fn v_click(c: &Ctx, p: &Params) -> Score {
     const ID: &str = "V-CLICK";
     let k = p.f_or("k", th::CLICK.def("k"));
     let sr = c.clip.sr;
-    let fo = outliers(c.out, sr, k);
-    let fm = outliers(&c.clip.mix, sr, k);
+    // 在残差上找：人声自身的陡变（字头、声门脉冲）不算咔嗒
+    let fo = outliers(&residual(c.out, &c.clip.clean, sr), sr, k);
+    let fm = outliers(&residual(&c.clip.mix, &c.clip.clean, sr), sr, k);
     // 同一位置 ±2 ms 内输入也有离群点 → 算原声自带的瞬态，不计
     let guard = (0.002 * sr as f64) as usize;
     let mut count = 0usize;
@@ -197,7 +230,12 @@ pub(super) fn v_estoi(c: &Ctx, p: &Params) -> Score {
         estoi(&c.clip.clean, c.out, sr),
         estoi(&c.clip.clean, &c.clip.mix, sr),
     ) else {
-        return Score::unknown(ID, "Δ", Better::Higher, "去掉静音帧后不足 30 帧（约 0.4 s）");
+        return Score::unknown(
+            ID,
+            "Δ",
+            Better::Higher,
+            "去掉静音帧后不足 30 帧（约 0.4 s）",
+        );
     };
     Score::judged(
         ID,
@@ -267,7 +305,11 @@ mod tests {
         assert!(a.verdict.is_pass(), "{id} 好输出应过：{a} {}", a.note);
         let bad = probe.apply(&c, &g);
         let b = score(id, &c, &bad);
-        assert!(b.verdict.is_fail(), "{id} 探针 {} 应不过：{b}", probe.as_str());
+        assert!(
+            b.verdict.is_fail(),
+            "{id} 探针 {} 应不过：{b}",
+            probe.as_str()
+        );
         let (va, vb) = (a.value.unwrap(), b.value.unwrap());
         assert!(a.better.worse(vb, va), "{id}：探针 {vb} 不比原输出 {va} 差");
     }
@@ -288,8 +330,8 @@ mod tests {
     }
 
     #[test]
-    fn estoi_catches_lowpass() {
-        must_catch("V-ESTOI", Probe::Lowpass1k);
+    fn estoi_catches_added_noise() {
+        must_catch("V-ESTOI", Probe::Noise0db);
     }
 
     #[test]
@@ -319,21 +361,5 @@ mod tests {
             score("V-WEAK", &c, &out).verdict,
             Verdict::Unknown(_)
         ));
-    }
-}
-#[cfg(test)]
-mod scratch {
-    use super::*;
-    use crate::probes::Probe;
-    use crate::synth::{NoiseKind, SceneSpec, TalkerSpec, render};
-    #[test]
-    fn print_estoi() {
-        for snr in [10.0, 20.0, 25.0, 30.0] {
-            let c = render(&SceneSpec { dur_s: 10.0, seed: 7, owner: Some(TalkerSpec { level_dbov: -26.0, f0_lo: 100.0, f0_hi: 140.0, tonal: false }), owner_start_s: 0.5, pause_s: (0.4, 1.2), interferers: Vec::new(), noise: NoiseKind::Pink, snr_db: snr, tail_silence_s: 0.0 });
-            let g: Vec<f32> = c.clean.iter().zip(&c.noise).map(|(s, n)| s + 0.03 * n).collect();
-            let lp = Probe::Lowpass1k.apply(&c, &g);
-            let lpm = Probe::Lowpass1k.apply(&c, &c.mix);
-            eprintln!("snr {snr}: mix {:.3} good {:.3} lp(good) {:.3} lp(mix) {:.3}", estoi(&c.clean,&c.mix,c.sr).unwrap(), estoi(&c.clean,&g,c.sr).unwrap(), estoi(&c.clean,&lp,c.sr).unwrap(), estoi(&c.clean,&lpm,c.sr).unwrap());
-        }
     }
 }

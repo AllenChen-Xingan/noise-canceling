@@ -61,7 +61,6 @@ impl Lines {
 mod table;
 pub use table::*;
 
-
 /// 不一致的原因（codex 第 3 轮 P1 #1：待定项要连原因一起对上，免得数值差异掩盖新的出处错误）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Cause {
@@ -87,7 +86,6 @@ pub enum Pend {
     Edges(&'static [f64], Cause),
     Value(f64, Cause),
 }
-
 
 /// 一处不一致。
 #[derive(Clone, Debug, PartialEq)]

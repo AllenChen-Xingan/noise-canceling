@@ -21,7 +21,11 @@ fn clean(n: usize) -> Vec<f64> {
     (0..n)
         .map(|i| {
             let t = i as f64 / SR as f64;
-            let on = if ((t * 2.5) as usize) % 2 == 0 { 1.0 } else { 0.0 };
+            let on = if ((t * 2.5) as usize) % 2 == 0 {
+                1.0
+            } else {
+                0.0
+            };
             let f0 = 120.0 * (1.0 + 0.08 * (2.0 * std::f64::consts::PI * 0.7 * t).sin());
             let v: f64 = (1..25)
                 .map(|k| (2.0 * std::f64::consts::PI * k as f64 * f0 * t).sin() / k as f64)
@@ -55,8 +59,10 @@ fn case(kind: &str, n: usize, seed: u64) -> (Vec<f32>, Vec<f32>) {
 
 #[test]
 fn estoi_matches_pystoi_within_0_01() {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/estoi-pystoi.json");
-    let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    let path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/estoi-pystoi.json");
+    let v: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     let n = v["n"].as_u64().unwrap() as usize;
     let cases = v["cases"].as_array().unwrap();
     assert!(cases.len() >= 5);
@@ -68,7 +74,10 @@ fn estoi_matches_pystoi_within_0_01() {
         let want = c["estoi"].as_f64().unwrap();
         let d = (got - want).abs();
         worst = worst.max(d);
-        assert!(d <= 0.01, "{kind}: Rust {got:.4} ↔ pystoi {want:.4}（差 {d:.4}）");
+        assert!(
+            d <= 0.01,
+            "{kind}: Rust {got:.4} ↔ pystoi {want:.4}（差 {d:.4}）"
+        );
     }
     eprintln!("ESTOI 对拍最大差 {worst:.5}");
 }

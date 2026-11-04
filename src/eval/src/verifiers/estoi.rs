@@ -148,7 +148,9 @@ fn remove_silent(x: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
 /// 1/3 倍频程带：每带 `[lo, hi)` 的 bin 范围（pystoi `thirdoct`）。
 fn third_oct() -> Vec<(usize, usize)> {
     let nb = NFFT / 2 + 1;
-    let f: Vec<f64> = (0..nb).map(|i| i as f64 * FS as f64 / NFFT as f64).collect();
+    let f: Vec<f64> = (0..nb)
+        .map(|i| i as f64 * FS as f64 / NFFT as f64)
+        .collect();
     let nearest = |hz: f64| -> usize {
         let mut best = 0;
         for (i, v) in f.iter().enumerate() {
@@ -186,7 +188,11 @@ fn tob(x: &[f64]) -> Vec<[f64; NUMBAND]> {
             let _ = fft.process(&mut buf, &mut spec);
             let mut row = [0.0; NUMBAND];
             for (b, &(lo, hi)) in bands.iter().enumerate() {
-                row[b] = spec[lo..hi].iter().map(|z| z.norm_sqr()).sum::<f64>().sqrt();
+                row[b] = spec[lo..hi]
+                    .iter()
+                    .map(|z| z.norm_sqr())
+                    .sum::<f64>()
+                    .sqrt();
             }
             row
         })
@@ -219,7 +225,10 @@ pub fn estoi(clean: &[f32], test: &[f32], sr: u32) -> Option<f64> {
     let (x, y) = if sr as usize == FS {
         (x, y)
     } else {
-        (resample_oct(&x, FS, sr as usize), resample_oct(&y, FS, sr as usize))
+        (
+            resample_oct(&x, FS, sr as usize),
+            resample_oct(&y, FS, sr as usize),
+        )
     };
     let (x, y) = remove_silent(&x, &y);
     let (xt, yt) = (tob(&x), tob(&y));
@@ -255,7 +264,11 @@ mod tests {
                 let v = (2.0 * std::f64::consts::PI * 440.0 * t).sin() * 0.3
                     + (2.0 * std::f64::consts::PI * 1300.0 * t).sin() * 0.1
                     + 0.01 * r.normal();
-                if on { v as f32 } else { (0.01 * r.normal()) as f32 }
+                if on {
+                    v as f32
+                } else {
+                    (0.01 * r.normal()) as f32
+                }
             })
             .collect()
     }

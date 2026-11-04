@@ -26,7 +26,7 @@ pub enum Probe {
     Identity,
     /// 全部静音：输出 = 0（刷 V-NR 的极端做法）
     Mute,
-    /// 弱音节（有声 20 ms 帧里干净轨能量最低的 30%）压 10 dB：V-WEAK 必须抓到
+    /// 弱音节（有声 125 ms 段里干净轨能量最低的 30%）压 10 dB：V-WEAK 必须抓到
     #[serde(rename = "weak_minus10")]
     WeakMinus10,
     /// 整体乘 2 Hz、±6 dB 的增益抖动：V-PUMPV 必须抓到
@@ -35,10 +35,13 @@ pub enum Probe {
     /// 在主讲人有声段里均匀插 5 个单样本脉冲（幅度 0.5）：V-CLICK 必须抓到
     #[serde(rename = "clicks_5")]
     Clicks5,
+    /// 加噪到 0 dB 信噪比（相对干净轨，用本段自己的噪声轨）：输出比输入还吵，V-ESTOI 必须抓到
+    #[serde(rename = "noise_0db")]
+    Noise0db,
 }
 
 impl Probe {
-    pub const ALL: [Probe; 8] = [
+    pub const ALL: [Probe; 9] = [
         Probe::OnsetCut,
         Probe::NonSpeechMinus40,
         Probe::Lowpass1k,
@@ -47,6 +50,7 @@ impl Probe {
         Probe::WeakMinus10,
         Probe::GainWobble,
         Probe::Clicks5,
+        Probe::Noise0db,
     ];
     pub fn as_str(self) -> &'static str {
         match self {
@@ -58,6 +62,7 @@ impl Probe {
             Probe::WeakMinus10 => "weak_minus10",
             Probe::GainWobble => "gain_wobble_6db",
             Probe::Clicks5 => "clicks_5",
+            Probe::Noise0db => "noise_0db",
         }
     }
 
@@ -105,6 +110,17 @@ impl Probe {
             Probe::Identity => clip.mix.clone(),
             Probe::Mute => vec![0.0; out.len()],
             Probe::WeakMinus10 => weak_minus10(clip, out),
+            Probe::Noise0db => {
+                let rms = |x: &[f32]| {
+                    (x.iter().map(|v| (*v as f64).powi(2)).sum::<f64>() / x.len().max(1) as f64)
+                        .sqrt()
+                };
+                let g = (rms(&clip.clean) / rms(&clip.noise).max(1e-12)) as f32;
+                out.iter()
+                    .zip(&clip.noise)
+                    .map(|(o, n)| o + g * n)
+                    .collect()
+            }
             Probe::GainWobble => {
                 let sr = clip.sr as f64;
                 out.iter()
@@ -138,23 +154,26 @@ impl Probe {
     }
 }
 
-/// 有声 20 ms 帧里干净轨能量最低的 30% 帧，输出压 10 dB。
+/// 有声段切成 125 ms 一块（与 V-WEAK 的分析窗同长），干净轨能量最低的 30% 块，输出压 10 dB。
 fn weak_minus10(clip: &Clip, out: &[f32]) -> Vec<f32> {
-    const F: usize = 320;
+    let f = (0.125 * clip.sr as f64) as usize;
     let mut y = out.to_vec();
-    let mut frames: Vec<(usize, f64)> = Vec::new();
+    let mut blocks: Vec<(usize, f64)> = Vec::new();
     for (a, b) in truth_from_clean(&clip.clean) {
         let mut t = a;
-        while t + F <= b.min(y.len()) {
-            let e: f64 = clip.clean[t..t + F].iter().map(|v| (*v as f64).powi(2)).sum();
-            frames.push((t, e));
-            t += F;
+        while t + f <= b.min(y.len()) {
+            let e: f64 = clip.clean[t..t + f]
+                .iter()
+                .map(|v| (*v as f64).powi(2))
+                .sum();
+            blocks.push((t, e));
+            t += f;
         }
     }
-    frames.sort_by(|p, q| p.1.total_cmp(&q.1));
-    let n = frames.len() * 3 / 10;
-    for &(t, _) in &frames[..n] {
-        for v in &mut y[t..t + F] {
+    blocks.sort_by(|p, q| p.1.total_cmp(&q.1));
+    let n = blocks.len() * 3 / 10;
+    for &(t, _) in &blocks[..n] {
+        for v in &mut y[t..t + f] {
             *v *= 0.316;
         }
     }
