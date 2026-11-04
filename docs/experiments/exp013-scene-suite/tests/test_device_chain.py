@@ -46,14 +46,15 @@ def expected_fragments(P):
 
     def cell(r):  # 文档写「−3.4 到 −4.2」：绝对值小的在前；两端相同写一个
         a, b = sorted(r, key=abs)
-        return num(a) if a == b else f"{num(a)} 到 {num(b)}"
+        one = lambda v: ("−" if v < 0 else "") + f"{abs(v):.1f}"
+        return one(a) if a == b else f"{one(a)} 到 {one(b)}"
 
     tilt = s3["tilt_db_per_oct"]
     return [
         f"说话人距屏幕 {d['range'][0]:g}–{d['range'][1]:g} m（{d['default']:g}）",
         f"直达峰前后约 {s2['direct_window_ms']:g} ms",
         f"低频（< {b1} Hz）、中频（{b1}–{b2} Hz）、高频（> {b2 / 1000:g} kHz）",
-        f"强度系数 {st['range'][0]:g}–{st['range'][1]:g}（{st['default']:g}）",
+        f"强度系数 {st['range'][0]:.1f}–{st['range'][1]:.1f}（{st['default']:.1f}）",
         f"中频 {num(dz['mid'])} dB、高频 {num(dz['high'])} dB",
         f"混响压力」分支（概率 {s2['reverb_stress_prob']:g}）",
         f"前方 ±{s2['front_flat_deg']}° 不衰减",
@@ -124,6 +125,7 @@ class Behaviour(unittest.TestCase):
         ch = dc.Chain(rng, "mba-builtin", "common")
         ch.params["strength"], ch.params["reverb_stress"] = 1.0, False
         r = make_rir(rng, (6, 5, 3), 0.4, 1.5, 90)
+        r.rest = np.zeros_like(r.rest)  # 只看直达部分
         h, pad, att = ch.source_rir(r, rng)
         self.assertLessEqual(att["high"], -17.5)
         n = 4096
