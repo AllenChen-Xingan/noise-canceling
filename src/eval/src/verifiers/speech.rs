@@ -198,7 +198,7 @@ fn residual(x: &[f32], clean: &[f32], sr: u32) -> Vec<f32> {
 /// 咔嗒的位置（样本号，5 ms 内的并成一个）。诊断与 [`v_click`] 共用。
 /// 咔嗒 = 输出自身一阶差分的离群点（012 原定义），且同时满足：跳变听得见（不低于人声峰值以下 floor_db）；
 /// 这一步跳变里干净人声解释不了的部分占 resid_frac 以上（人声自身的陡变、平滑的增益变化都由干净轨解释）；
-/// 带噪输入 ±2 ms 内没有离群点（原声自带的瞬态不算）。
+/// 带噪输入（有分轨时还有背景轨）±2 ms 内没有离群点（原声自带的瞬态不算）。
 pub fn click_positions(c: &Ctx, p: &Params) -> Vec<usize> {
     let k = p.f_or("k", th::CLICK.def("k"));
     let sr = c.clip.sr;
@@ -210,7 +210,15 @@ pub fn click_positions(c: &Ctx, p: &Params) -> Vec<usize> {
     let floor = (peak * 10f64.powf(p.f_or("floor_db", th::CLICK.def("floor_db")) / 20.0)) as f32;
     let r = residual(c.out, &c.clip.clean, sr);
     let fo = outliers(c.out, sr, k);
-    let fm = outliers(&c.clip.mix, sr, k);
+    // 原声自带的瞬态：带噪输入里的离群点；有分轨时再加上「背景轨（噪音 + 干扰）自身」的离群点——
+    // 杯碟、开罐这类突发声在混合里被人声盖住、算不上离群点，降噪后露出来，那是原有的声音穿过来了，不是降噪造的咔嗒
+    let mut fm = outliers(&c.clip.mix, sr, k);
+    if c.clip.tracks {
+        let bg: Vec<f32> = c.clip.noise.iter().zip(&c.clip.interf).map(|(a, b)| a + b).collect();
+        for (m, b) in fm.iter_mut().zip(outliers(&bg, sr, k)) {
+            *m |= b;
+        }
+    }
     let guard = (0.002 * sr as f64) as usize;
     let mut pos = Vec::new();
     let mut last: Option<usize> = None;
