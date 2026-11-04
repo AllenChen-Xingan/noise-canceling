@@ -1,13 +1,15 @@
 # 数据卡模板（023 · check_cards.py 按此校验）
 
 > 每份数据集一张卡，文件名 `cards/<英文小写-连字符>.md`。14 个必填字段，格式固定为 `- **字段**：值`，字段名一字不改、顺序不变。查不到写「未查到」，不许空着。
-> 场景键、设备键现为**暂定**（021 catalog.md、022 devices.md 出来后统一替换）。
+> 场景键、设备键抄自 021 / 022 的 v0 草稿，正本在那两处；两边改了，本节随之改，`check_cards.py` 只认本节。
 
 ## 暂定场景键
-`meeting-room` 会议室 · `open-office` 开放办公 · `home` 家里（家人 / 电视 / 厨房）· `cafe` 咖啡馆 / 餐厅 / 食堂 · `car` 车内 · `transit` 车站 / 机场 / 地铁 · `street` 街边 / 户外 · `other` 其他（写明）
+> 正本：worktree `noise_canceling-scenes` 的 `docs/research/021_meeting-scenes/catalog.md`（v0 草稿，2026-11-03）。最后两个键是 mtgdata 请 scenes 加的，待确认。
+`home-quiet` 书房 / 卧室 · `home-family` 家里客厅（家人 / 电视 / 小孩 / 宠物）· `open-office` 开放工位 · `phone-booth` 电话亭 / 专注舱 · `meeting-room` 会议室 · `cowork` 共享办公 · `cafe` 咖啡馆 · `canteen` 餐厅 / 食堂 · `transit-hub` 机场 / 车站候车厅 · `car-passenger` 车内乘客 · `rail-air-cabin` 高铁 / 飞机客舱 · `street-outdoor` 街边 / 户外 · `hotel-room` 酒店房间 · `library-classroom` 教室 / 图书馆 · `bus-metro-cabin` 公交 / 地铁 / 电车车厢（待加）· `other` 录音棚 / 实验室 / 采访间 / 未标（待加）
 
 ## 暂定设备键
-`mba-builtin` MacBook Air 内置麦 · `mbp-builtin` MacBook Pro 内置麦 · `laptop-other` 其他笔记本内置麦 · `desktop` 台式机 / 网络摄像头麦 · `phone` 手机 · `tablet` 平板 · `headset` 头戴 / 耳机麦 · `conf-device` 会议终端（音箱、圆阵）· `array` 研究用麦阵 · `close-talk` 近讲 / 领夹 · `studio` 录音棚麦 · `unknown` 未标
+> 正本：worktree `noise_canceling-macmic` 的 `docs/research/022_mac-mic/devices.md`（v0 草稿，2026-11-03）。`mac-unknown` 与 `non-laptop` 下 8 个子键是 mtgdata 请 macmic 加的，待确认。
+`mba-builtin` MacBook Air 内置麦 · `mbp-builtin` MacBook Pro 内置麦 · `mac-intel-builtin` 2020 前 Intel Mac 内置麦 · `imac-builtin` · `studio-display` · `airpods-hfp` · `bt-hfp-generic` · `usb-headset` · `external-mic` · `iphone-continuity` · `laptop-unknown` 笔记本、型号未写 · `non-laptop` 不是笔记本（父类）· `mac-unknown` Mac 笔记本、型号未知（待加）· `phone` 手机 · `tablet` 平板 · `desktop` 台式机 / 摄像头麦 · `conf-device` 会议终端 · `mic-array` 研究用麦阵 · `close-talk` 近讲 / 领夹 / 头戴参考麦 · `studio` 录音棚麦 · `unknown` 设备未写（以上 8 个为 non-laptop 子键，待加）
 
 ## 卡片格式
 
