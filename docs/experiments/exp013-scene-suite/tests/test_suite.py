@@ -169,6 +169,25 @@ class SmallBuild(unittest.TestCase):
             for k in ("mix", "owner", "noise", "interf"):
                 self.assertIn(k, r["hash"]["wav_sha256"])
 
+    def test_validator_negative_controls(self):
+        """校验器本身要能抓错：坏枚举、多余字段、越界区间、stems 键不对、suppress 却有 2 个 target。"""
+        good = self.recs[0]
+        self.assertEqual(manifest.validate(good), [])
+
+        def bad(fn):
+            r = json.loads(json.dumps(good))
+            fn(r)
+            return manifest.validate(r)
+
+        self.assertTrue(bad(lambda r: r.update(scene="moon")) if manifest.schema_path() else True)
+        self.assertTrue(bad(lambda r: r.update(junk=1)))
+        self.assertTrue(bad(lambda r: r["owner_iv"].append([0, r["dur_samples"] + 1])))
+        self.assertTrue(bad(lambda r: r["audio"]["stems"].update(ghost="x")))
+        self.assertTrue(bad(lambda r: r["targets"].append(r["targets"][0])))
+        if manifest.schema_path():
+            self.assertTrue(bad(lambda r: r["measured"].update(junk=1)))
+            self.assertTrue(bad(lambda r: r["sounds"][0].update(level_dbfs="loud")))
+
     def test_sound_classes_known(self):
         for r in self.recs:
             for s in r["sounds"]:
