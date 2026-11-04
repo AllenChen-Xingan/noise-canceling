@@ -4,7 +4,7 @@
 > 新卡在 `../cards/`；014 已有的 6 集只补字段，见 `r4-zh-addendum.md`。
 
 ## 一句话结论（事实，非建议）
-中文公开集里**没有找到任何笔记本 / Mac 内置麦录的段**。最接近「消费设备 + 中文 + 会议」的是 MISP-Meeting（讯飞智能办公本内置 8 麦 + 相机麦 + 头戴近讲）【论文】和 WenetSpeech 的 TEST_MEETING（真实会议远场，设备未写）【论文】。
+中文公开集里**没有找到带设备标签、能单独筛出的笔记本 / Mac 内置麦段**。Common Voice 中文子集是网页众包录音，必然混有笔记本内置麦，但没有设备字段、筛不出来（怀疑派补，见 addendum）【论文 · 推断】。最接近「消费设备 + 中文 + 会议」的是 MISP-Meeting（讯飞智能办公本内置 8 麦 + 相机麦 + 头戴近讲）【论文】和 WenetSpeech 的 TEST_MEETING（真实会议远场，设备未写）【论文】。
 
 ## 新卡一览（14 张）
 下表用于横向比较设备与许可；接近度未评，留给汇总。
@@ -15,8 +15,8 @@
 | wenetspeech | 真实（TEST_MEETING） | meeting-room, other | unknown | 没有 | 有 | 只评测 | 注册 |
 | kespeech | 真实 | other | phone | 没有 | 有 | 只评测 | 直接下载 |
 | aishell-1 | 真实 | other | studio | 没有 | 有 | 训练可（有歧义） | 直接下载 |
-| aishell-2 | 真实 | other | phone, studio | 部分 | 有 | 未查到 | 签协议 |
-| aishell-dmash-ffsvc2020 | 真实 | home | phone, tablet, array, close-talk, studio | 有 | 部分 | 只评测 | 签协议 |
+| aishell-2 | 真实 | home, other | phone, studio | 部分 | 有 | 只评测（怀疑派据 Kaldi README 改） | 签协议 |
+| aishell-dmash-ffsvc2020 | 真实 | home | phone, tablet, array, close-talk, unknown | 有 | 部分 | 只评测 | 签协议 |
 | magicdata-read-slr68 | 真实 | other | phone | 没有 | 有 | 只评测 | 直接下载 |
 | primewords-set1 | 真实 | other | phone | 没有 | 有 | 只评测 | 直接下载 |
 | st-cmds | 真实 | other | phone | 没有 | 有 | 只评测 | 直接下载 |
@@ -25,6 +25,7 @@
 | hkust-mandarin-telephone | 真实（电话 8 kHz） | other | phone | 没有 | 有（另购） | 不可 | 付费 |
 | wenetspeech-yue | 真实（媒体） | other | unknown | 没有 | 有 | 只评测 | 直接下载元数据，音频需联系 |
 | mdcc | 真实（有声书） | other | studio | 没有 | 有 | 只评测 | 签协议 |
+| ascend（怀疑派补） | 真实（领夹近讲） | other | close-talk | 没有 | 有 | 只评测 | 直接下载 |
 
 ## 按任务点名逐项回答
 1. **MagicData 对话 / 会议集**：RAMC 是唯一公开的 MagicData 对话集（180 h，手机，两人对话，有笑声等非语言事件标注）【论文】。MagicData 会议集未找到公开版。
@@ -47,8 +48,22 @@
 - HKUST：LDC 付费
 
 ## 证据缺口与怀疑派复核点
-- AISHELL-2 官网许可页 WebFetch 只拿到标题，许可「未查到」，需换浏览器复核。
-- aidatatang_200zh 原页 404，许可与数字都来自转述。
+- AISHELL-2 官网许可页 WebFetch 只拿到标题；怀疑派已在 Kaldi 官方仓库 egs/aishell2/README.md 读到申请条款，许可改为只评测；申请表要求大学院系信息，个人项目能否申请未查到。
+- aidatatang_200zh 原页现为「Resource not found」；怀疑派用 Wayback 存档亲读原页，许可 CC BY-NC-ND 4.0、18G 已改为【官方文档，存档】。
 - WenetSpeech TEST_MEETING 设备、单独体积均未查到。
 - MagicData-RAMC 是否分通道、有无设备型号标签未查到。
 - KeSpeech 总 GB 未查到。
+
+## 怀疑派复核（2026-11-03）
+复核 14 张新卡 + addendum 6 节，许可逐条读原文，数字回论文或官方页。改动摘要：
+- aishell-2：许可「未查到」→ 自定义申请条款、只评测（Kaldi 官方 README）；场景键补 home
+- aidatatang-200zh：许可与大小改为 Wayback 存档原页亲读；删去无出处的「retracted as per the data owner wish」
+- aishell-dmash-ffsvc2020：「前 90 句固定唤醒词」与论文不符，改为 30 + 60；设备键 studio → unknown
+- aishell-1：场景括注「安静室内录音间」无出处，改未查到
+- hkust：设备括注「固话 / 手机」无出处，删
+- wenetspeech-yue：评测集表头实为「Speakers」；情绪标签出处只在 GitHub README
+- mdcc：许可写成 PDF 原文条款；两个收件邮箱不一致
+- addendum：misp-meeting 设备键「other」不在暂定键内，已改；补 common-voice.md 中文子集一节
+- 补卡：ascend.md（中英夹杂自发对话，领夹近讲，CC BY-SA 4.0）
+- 跨路提示：腾讯相关只有另一路的 tencent-corpus-cs2022.md（会议通话损伤 + 人评分），不是会议录音集，本路「腾讯未找到公开会议录音集」仍成立
+
