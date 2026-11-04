@@ -158,27 +158,39 @@ fn outliers(x: &[f32], sr: u32, k: f64) -> Vec<bool> {
     flag
 }
 
-/// 残差：输出减去逐 5 ms 投影到干净轨上的部分（干净轨全零时就是输出本身）。
-/// 块要短：降噪器逐帧调增益时，块内增益在变，块越长残差里留下的人声越多（20 ms 块在 4 Hz ±30% 的平滑增益上误报 1746 个/分钟）。
+/// 残差：输出减去「随时间平滑变化的增益 × 干净轨」（干净轨全零时就是输出本身）。
+/// 增益逐 5 ms 块最小二乘估，块中心之间线性插值：块要短（降噪器逐帧调增益，20 ms 块在 4 Hz ±30% 的平滑增益上
+/// 误报 1746 个/分钟），又不能逐块阶跃（块边界的增益台阶本身会在残差里造出跳变）。
 fn residual(x: &[f32], clean: &[f32], sr: u32) -> Vec<f32> {
     let blk = (0.005 * sr as f64) as usize;
-    let mut r = x.to_vec();
-    for (i, chunk) in r.chunks_mut(blk).enumerate() {
-        let a = i * blk;
-        let Some(c) = clean.get(a..a + chunk.len()) else {
-            break;
-        };
-        let (mut oc, mut cc) = (0.0f64, 0.0f64);
-        for (o, s) in chunk.iter().zip(c) {
-            oc += *o as f64 * *s as f64;
-            cc += *s as f64 * *s as f64;
-        }
-        if cc > 0.0 {
-            let g = oc / cc;
-            for (o, s) in chunk.iter_mut().zip(c) {
-                *o -= (g * *s as f64) as f32;
+    let n = x.len().min(clean.len());
+    let nb = n / blk;
+    if nb == 0 {
+        return x.to_vec();
+    }
+    let g: Vec<f64> = (0..nb)
+        .map(|b| {
+            let (mut oc, mut cc) = (0.0f64, 0.0f64);
+            for t in b * blk..(b + 1) * blk {
+                oc += x[t] as f64 * clean[t] as f64;
+                cc += clean[t] as f64 * clean[t] as f64;
             }
-        }
+            if cc > 0.0 { oc / cc } else { 0.0 }
+        })
+        .collect();
+    let center = |b: usize| (b * blk + blk / 2) as f64;
+    let mut r = x.to_vec();
+    for (t, v) in r.iter_mut().enumerate().take(n) {
+        let pos = (t as f64 - blk as f64 / 2.0) / blk as f64;
+        let b0 = pos.floor().clamp(0.0, (nb - 1) as f64) as usize;
+        let b1 = (b0 + 1).min(nb - 1);
+        let w = if b1 == b0 {
+            0.0
+        } else {
+            ((t as f64 - center(b0)) / blk as f64).clamp(0.0, 1.0)
+        };
+        let gt = g[b0] * (1.0 - w) + g[b1] * w;
+        *v -= (gt * clean[t] as f64) as f32;
     }
     r
 }
