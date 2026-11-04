@@ -33,7 +33,7 @@
 
 **有地点、但设备未知的**（主表没有「设备未知」列，列在这里；设备未知不等于该地点没有数据）：
 - `meeting-room`：WenetSpeech TEST_MEETING（中文真实会议 15 h，有转写，无干净参考，要填表申请）· ConferencingSpeech 2021 已在麦阵列
-- `home-family` / `home-quiet`：CANDOR（Zoom 对话，设备推测多为笔记本或台式摄像头麦，签协议）
+- `home-family`：CANDOR（Zoom 对话，设备推测多为笔记本或台式摄像头麦，签协议）
 - `street-outdoor`：VoxCeleb 户外采访（无逐条地点标签，要人工挑，申请表拿密码）
 - 多地点：Ego4D（头戴相机，签协议）
 
