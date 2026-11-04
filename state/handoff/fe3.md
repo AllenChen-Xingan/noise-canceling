@@ -8,6 +8,9 @@
 
 - 2026-11-04 报到；读完交代、共同规矩、013 第 11–12 节、评测器 4 处源码、`vdn_dsp::fft` / `window` / `stft`
 - 2026-11-04 方案已发大总管，等点头（见下「方案」）
+- 2026-11-04 大总管点头；另准多写 `fft_site_tests.rs` · `window_tests.rs`
+- 2026-11-04 代码与测试写完（未编译）：4 处 · 新窗值 · R-FFT 白名单缩到 1 条 · `eval/tests/spectrum_golden.rs`（新）· `eval/tests/common/platform.rs`（复制，逐字比对）· 013 第 13 节
+- 2026-11-04 一次性跑的脚本在草稿目录 `run-all.sh`；等名额
 
 ## 方案（读源码，未构建）
 
@@ -20,7 +23,11 @@
 
 ## 改了哪些文件
 
-（未动手）
+- `src/types/src/frontend.rs`（+1 窗值）· `src/dsp/src/window.rs` · `src/dsp/src/window_tests.rs`
+- `src/eval/src/verifiers/speech.rs` · `estoi.rs` · `src/eval/src/system.rs` · `src/eval/src/analysis.rs`
+- `src/eval/tests/spectrum_golden.rs`（新）· `src/eval/tests/common/platform.rs`（新，场景那份的逐字复制）
+- `src/xtask/src/fft_site.rs` · `fft_site_tests.rs`
+- `docs/plan/013_frontend-once.md`（第 13 节）
 
 ## 待人拍板
 
