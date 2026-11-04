@@ -38,7 +38,7 @@ use std::sync::Arc;
 use realfft::num_complex::Complex32;
 use realfft::{ComplexToReal, RealFftPlanner};
 use vdn_dsp::{StreamingStft, power_into};
-use vdn_types::FRONTEND;
+use vdn_types::{FRONTEND, MODEL_RATE, StftSpec, Window};
 
 pub const NF: usize = 35;
 /// 环形缓冲长度（帧）：125 × 16 ms = 2 s
@@ -46,8 +46,13 @@ pub const CTX: usize = 125;
 const NB: usize = 16;
 const N_FFT: usize = FRONTEND.n_fft;
 const BINS: usize = FRONTEND.bins();
-// 分类器权重（weights.rs）按 512 点 / 帧移 256 训练：正本一改，这里编译不过，提醒重训
-const _: () = assert!(FRONTEND.n_fft == 512 && FRONTEND.hop == 256);
+// 分类器权重（weights.rs）按 512 点 / 帧移 256 / 16 kHz / 周期 sqrt-Hann 训练：正本任一项一改，这里编译不过，提醒重训
+const _: () = assert!(
+    FRONTEND.n_fft == 512
+        && FRONTEND.hop == 256
+        && FRONTEND.sample_rate == MODEL_RATE
+        && matches!(FRONTEND.window, Window::SqrtHannPeriodic)
+);
 
 pub const FEATURE_NAMES: [&str; NF] = [
     "snr_est",
@@ -133,7 +138,9 @@ impl FeatureExtractor {
     pub fn new(sr: f32, hop: usize) -> Self {
         assert!(
             hop == FRONTEND.hop && (sr - FRONTEND.sample_rate as f32).abs() < 1.0,
-            "vdn-scene 目前只支持 16 kHz / hop 256"
+            "vdn-scene 只支持 FRONTEND 的采样率 {} Hz / hop {}，收到 {sr} Hz / hop {hop}",
+            FRONTEND.sample_rate,
+            FRONTEND.hop
         );
         let inv = RealFftPlanner::<f32>::new().plan_fft_inverse(N_FFT);
         // 16 个对数间隔频带，100 Hz – 8 kHz
@@ -204,11 +211,12 @@ impl FeatureExtractor {
         self.finish_frame(x);
     }
 
-    /// 借谱：`power` 是同一帧带噪输入的功率谱（`vdn_types::SpectrumTap::input_power`，口径须是 `FRONTEND`，
-    /// 调用方构造期比对 `spectrum_spec()`）。长度不对时退回自算。
+    /// 借谱：`power` 是同一帧带噪输入的功率谱（`vdn_types::SpectrumTap::input_power`），`spec` 是借出方的口径
+    /// （`SpectrumTap::spectrum_spec`）。口径不等于 `FRONTEND` 或长度不对时退回自算——分类器权重只认正本口径；
+    /// 退回可由 `own_fft_count` 看到。
     /// `x` 仍要：削波按时域算；并推进自算缓冲，切回自算（换成 FE-M）时第一帧不吃旧数据。
-    pub fn push_hop_with_power(&mut self, x: &[f32], power: &[f32]) {
-        if power.len() != BINS {
+    pub fn push_hop_with_power(&mut self, x: &[f32], spec: &StftSpec, power: &[f32]) {
+        if *spec != FRONTEND || power.len() != BINS {
             self.push_hop(x);
             return;
         }

@@ -135,10 +135,11 @@ impl SceneAnalyzer {
         self.clock += x.len() as u64;
     }
 
-    /// 逐帧：喂一个 hop 的麦克风原声 + 降噪模型借出的同一帧输入功率谱（`SpectrumTap::input_power`），不另算 FFT。
+    /// 逐帧：喂一个 hop 的麦克风原声 + 降噪模型借出的同一帧输入功率谱（`SpectrumTap::input_power`）与
+    /// 借出方口径（`SpectrumTap::spectrum_spec`），不另算 FFT。口径不是 `FRONTEND` 或长度不对时退回自算。
     /// 结果与 [`Self::push_hop`] 相同（`tests/frontend.rs` 证明）。
-    pub fn push_hop_with_power(&mut self, x: &[f32], power: &[f32]) {
-        self.fx.push_hop_with_power(x, power);
+    pub fn push_hop_with_power(&mut self, x: &[f32], spec: &vdn_types::StftSpec, power: &[f32]) {
+        self.fx.push_hop_with_power(x, spec, power);
         self.clock += x.len() as u64;
     }
 
