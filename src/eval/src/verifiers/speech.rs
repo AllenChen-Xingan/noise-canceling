@@ -275,6 +275,10 @@ pub(super) fn v_click(c: &Ctx, p: &Params) -> Score {
 pub(super) fn v_estoi(c: &Ctx, p: &Params) -> Score {
     const ID: &str = "V-ESTOI";
     let sr = c.clip.sr;
+    // 没有干净参考（全零）时两次 ESTOI 都是 0、Δ = 0 会「过线」：显式判不了（codex 第 1 轮 P1 #3）
+    if c.clip.clean.iter().all(|v| *v == 0.0) {
+        return Score::unknown(ID, "Δ", Better::Higher, "没有干净参考");
+    }
     let (Some(o), Some(m)) = (
         estoi(&c.clip.clean, c.out, sr),
         estoi(&c.clip.clean, &c.clip.mix, sr),
@@ -450,9 +454,11 @@ mod tests {
         let mut c = clip();
         c.clean.iter_mut().for_each(|v| *v = 0.0);
         let out = c.mix.clone();
-        assert!(matches!(
-            score("V-WEAK", &c, &out).verdict,
-            Verdict::Unknown(_)
-        ));
+        for id in ["V-WEAK", "V-ESTOI"] {
+            assert!(
+                matches!(score(id, &c, &out).verdict, Verdict::Unknown(_)),
+                "{id}"
+            );
+        }
     }
 }

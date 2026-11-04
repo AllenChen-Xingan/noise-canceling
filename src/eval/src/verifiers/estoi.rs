@@ -125,6 +125,10 @@ fn remove_silent(x: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
         })
         .collect();
     let max = en.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    // 干净轨全静音：没有可比的语音帧
+    if max <= 20.0 * EPS.log10() + 1.0 {
+        return (Vec::new(), Vec::new());
+    }
     let keep: Vec<usize> = starts
         .iter()
         .zip(&en)
@@ -292,6 +296,13 @@ mod tests {
         let y2: Vec<f32> = y.iter().map(|v| v * 0.25).collect();
         let d2 = estoi(&x, &y2, SR16).unwrap();
         assert!((d - d2).abs() < 1e-9);
+    }
+
+    #[test]
+    fn silent_clean_is_none() {
+        let x = vec![0.0f32; SR16 as usize * 3];
+        let y = tone_bursts(SR16, 3.0, 4);
+        assert!(estoi(&x, &y, SR16).is_none());
     }
 
     #[test]

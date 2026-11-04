@@ -486,7 +486,11 @@ mod tests {
         let c = summarize(&rows, &[miss(MeetingPlace::Canteen, "S-canteen")]);
         let canteen = c.iter().find(|x| x.scene == MeetingPlace::Canteen).unwrap();
         assert_eq!((canteen.clips, canteen.status), (0, CardStatus::Unknown));
-        assert!(worst(&c).iter().any(|&i| c[i].scene == MeetingPlace::Canteen));
+        assert!(
+            worst(&c)
+                .iter()
+                .any(|&i| c[i].scene == MeetingPlace::Canteen)
+        );
     }
 
     #[test]

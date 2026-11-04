@@ -180,8 +180,60 @@ fn hash_mismatch_is_skipped_not_scored() {
     assert!(
         skipped
             .iter()
-            .any(|(k, w)| k == "cafe-c00" && w.contains("sha256"))
+            .any(|m| m.what == "cafe-c00" && m.why.contains("sha256"))
     );
+    // 缺段的场景不能判「过」
+    let card = Card::build(&rows, skipped);
+    assert_eq!(card.cards[0].missing.len(), 1);
+    assert_ne!(card.cards[0].status, Status::Pass);
+}
+
+/// 轨长与清单 dur_samples 不符：报错、不截短（codex 第 1 轮 P1 #2）。
+#[test]
+fn track_length_mismatch_is_reported_not_truncated() {
+    let (root, suite_text) = setup("len");
+    let jl = root.join("clips.jsonl");
+    let t = std::fs::read_to_string(&jl).unwrap();
+    let mut lines: Vec<Value> = t
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    let n = lines[0]["dur_samples"].as_u64().unwrap();
+    lines[0]["dur_samples"] = json!(n + 160);
+    std::fs::write(
+        &jl,
+        lines
+            .iter()
+            .map(Value::to_string)
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n",
+    )
+    .unwrap();
+    let suite = parse_suite(&suite_text).unwrap();
+    let (rows, missing) =
+        vdn_eval::scorecard::run(&suite, &[SystemKind::Ref], &opts(), None, Some(&root));
+    assert_eq!(rows.len(), 5);
+    assert!(
+        missing
+            .iter()
+            .any(|m| m.what == "cafe-c00" && m.why.contains("dur_samples"))
+    );
+}
+
+/// 整条任务展开不出片段：成绩单里仍有这一行（待测），不会消失（codex 第 1 轮 P1 #1）。
+#[test]
+fn task_without_clips_still_appears() {
+    let (_root, suite_text) = setup("empty");
+    let mut v: Value = serde_json::from_str(&suite_text).unwrap();
+    v["tasks"][0]["real"]["tier"] = json!("stress");
+    let suite = parse_suite(&v.to_string()).unwrap();
+    let (rows, missing) = vdn_eval::scorecard::run(&suite, &[SystemKind::Ref], &opts(), None, None);
+    assert!(rows.is_empty());
+    let card = Card::build(&rows, missing);
+    assert_eq!(card.cards.len(), 1);
+    assert_eq!(card.cards[0].status, Status::Unknown);
+    assert!(card.to_markdown("t").contains("没跑成的"));
 }
 
 /// 进仓的样例行（`tests/fixtures/scene-clip-example.jsonl`，vdn-schema 的 schema 测试也用它）能被解析器读。

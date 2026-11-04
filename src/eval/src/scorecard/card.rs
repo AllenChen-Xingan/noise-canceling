@@ -2,8 +2,8 @@
 
 use serde_json::{Value, json};
 
-use super::{ClipRow, Missing};
 use super::rules::{CardStatus, SceneCard, summarize, worst};
+use super::{ClipRow, Missing};
 use crate::files::serde_name;
 
 /// 整张成绩单。
@@ -80,7 +80,10 @@ impl Card {
         for c in &self.cards {
             s += &format!("### {} — {}（{} 段）\n\n", key(c), c.status.zh(), c.clips);
             if !c.missing.is_empty() {
-                s += &format!("缺 {} 段没打分（见文末「没跑成的」），本场景最多判「待测」。\n\n", c.missing.len());
+                s += &format!(
+                    "缺 {} 段没打分（见文末「没跑成的」），本场景最多判「待测」。\n\n",
+                    c.missing.len()
+                );
             }
             s += "| 项 | 否决 | 过 / 不过 / 待测（段） | 均值 | 最差（段） | 过线 | 判定 |\n|---|---|---|---|---|---|---|\n";
             for i in &c.items {

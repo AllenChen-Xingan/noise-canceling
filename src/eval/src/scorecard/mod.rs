@@ -66,7 +66,12 @@ pub fn load_scene_clip(c: &SceneClip, root: &Path) -> Result<Clip, String> {
     let interf = get(&a.interf, &h.interf)?;
     // 长度不对就报错，不截短（截短会悄悄删掉尾部内容，codex 第 1 轮 P1 #2）
     let n = c.dur_samples as usize;
-    for (k, x) in [("mix", &mix), ("owner", &clean), ("noise", &noise), ("interf", &interf)] {
+    for (k, x) in [
+        ("mix", &mix),
+        ("owner", &clean),
+        ("noise", &noise),
+        ("interf", &interf),
+    ] {
         if x.len() != n {
             return Err(format!("{k} 长 {} 样本 ≠ 清单 dur_samples {n}", x.len()));
         }
@@ -162,7 +167,10 @@ pub fn run(
     for task in &suite.tasks {
         let whole = |why: String| -> Vec<Missing> {
             let Some(RealSource::Scene {
-                scene, tier, device, ..
+                scene,
+                tier,
+                device,
+                ..
             }) = &task.real
             else {
                 return Vec::new();
