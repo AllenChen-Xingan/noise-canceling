@@ -131,6 +131,23 @@ class SmallBuild(unittest.TestCase):
             if r["tier"] == "common":
                 self.assertTrue(r["additive"])
 
+    def test_headroom(self):
+        """回归：合成舱噪的亚音频漂移曾让 mix 峰值到 5 倍满幅。整段峰值 ≤ −1 dBFS（削波段除外），调低量记在清单。"""
+        for r in self.recs:
+            pk = float(np.max(np.abs(read(self.root, r["audio"]["mix"]))))
+            if r["additive"]:
+                self.assertLessEqual(pk, 10 ** (-1 / 20) + 1e-6, r["id"])
+            self.assertLessEqual(r["chain"]["headroom_db"], 0.0)
+
+    def test_synth_crest_factor(self):
+        import synth_sounds as ss
+
+        rng = np.random.default_rng(0)
+        for name, fn in ss.CONTINUOUS.items():
+            x, _ = fn(rng, 12 * dsp.SR)
+            crest = 20 * np.log10(np.max(np.abs(x)) / dsp.rms(x))
+            self.assertLess(crest, 20.0, name)
+
     def test_no_leak(self):
         self.assertTrue(self.man["leak_check"]["ok"], self.man["leak_check"]["hits"])
 

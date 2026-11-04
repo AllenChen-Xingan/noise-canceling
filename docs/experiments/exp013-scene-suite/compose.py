@@ -223,7 +223,7 @@ def make_clip(scene, tier, idx, device):
     peak = float(np.max(np.abs(mix_lin)))
     head = min(1.0, HEADROOM / max(peak, 1e-12))
     if head < 1.0:
-        owner_ref, noise, interf, mix_lin, floor, x_dry = (v * head for v in (owner_ref, noise, interf, mix_lin, floor, x_dry))
+        owner_ref, noise, interf, mix_lin, floor = (v * head for v in (owner_ref, noise, interf, mix_lin, floor))
         for t in targets:
             t["x"] = t["x"] * head
         for s in sounds:
