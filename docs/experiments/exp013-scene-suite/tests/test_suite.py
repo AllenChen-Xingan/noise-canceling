@@ -194,10 +194,11 @@ class SmallBuild(unittest.TestCase):
                 self.assertIn(s["cls"], labels.SOUNDS)
 
     def test_task_file_shape(self):
-        t = tasks.build_tasks("t0", "mba-builtin")
-        self.assertEqual(len(t["tasks"]), 30)
-        keys = {(x["real"]["scene"], x["real"]["tier"]) for x in t["tasks"]}
-        self.assertEqual(keys, {(s, tr) for s in compose.SCENES["scenes"] for tr in ("common", "stress")})
+        t = tasks.build_tasks("t0")
+        self.assertEqual(len(t["tasks"]), 60)
+        keys = {(x["real"]["scene"], x["real"]["tier"], x["real"]["device"]) for x in t["tasks"]}
+        self.assertEqual(keys, {(s, tr, d) for s in compose.SCENES["scenes"] for tr in ("common", "stress") for d in compose.SCENES["devices"]})
+        self.assertEqual(len({x["id"] for x in t["tasks"]}), 60)
 
 
 class Static(unittest.TestCase):
@@ -220,7 +221,7 @@ class Static(unittest.TestCase):
             self.skipTest("任务文件还没生成")
         cur = json.loads(tasks.OUT.read_text())
         build = cur["tasks"][0]["real"]["clips"].split("/")[-2]
-        want = tasks.build_tasks(build, cur["tasks"][0]["real"]["device"], cur)
+        want = tasks.build_tasks(build, cur)
         self.assertEqual(cur, want)
         self.assertTrue((HERE / "builds" / build / "clips.jsonl").exists())
 
