@@ -5,7 +5,8 @@
 //! 和上游的差别：pystoi 归一前加 `EPS·randn` 防除零（量级 1e-16，对结果无影响），这里不加随机数、改为分母加 EPS，结果确定。
 //! 对拍：`tests/fixtures/estoi-pystoi.json`（上游 Python 算的参考值），差 ≤ 0.01。
 
-use realfft::RealFftPlanner;
+use vdn_dsp::FrameFft;
+use vdn_types::{StftSpec, Window};
 
 const FS: usize = 10_000;
 const N_FRAME: usize = 256;
@@ -102,20 +103,18 @@ pub(crate) fn resample_oct(x: &[f64], fs_out: usize, fs_in: usize) -> Vec<f64> {
         .collect()
 }
 
-/// `np.hanning(n + 2)[1:-1]`。
-fn hann_inner(n: usize) -> Vec<f64> {
-    let m = (n + 2) as f64;
-    (1..=n)
-        .map(|i| 0.5 - 0.5 * (2.0 * std::f64::consts::PI * i as f64 / (m - 1.0)).cos())
-        .collect()
+/// `np.hanning(n + 2)[1:-1]`，长 [`N_FRAME`]（窗公式在 `vdn_dsp::window`，D82）。
+fn hann_inner() -> Vec<f64> {
+    vdn_dsp::window::table(Window::HannNumpyInner, N_FRAME)
 }
 
+/// 分帧口径（照 pystoi）：帧起点 `0, HOP, …` 且 `< len − N_FRAME`，比 `snip_edges` 少最后一帧。
 fn frame_starts(len: usize) -> impl Iterator<Item = usize> {
     (0..len.saturating_sub(N_FRAME)).step_by(HOP)
 }
 
 fn remove_silent(x: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
-    let w = hann_inner(N_FRAME);
+    let w = hann_inner();
     let starts: Vec<usize> = frame_starts(x.len()).collect();
     let en: Vec<f64> = starts
         .iter()
@@ -174,22 +173,20 @@ fn third_oct() -> Vec<(usize, usize)> {
         .collect()
 }
 
-/// 每帧 15 带的幅度（`sqrt(OBM · |X|²)`），形状 [帧][带]。
+/// 每帧 15 带的幅度（`sqrt(OBM · |X|²)`），形状 [帧][带]。频谱由统一模块 `vdn_dsp::FrameFft` 算（D82）。
 fn tob(x: &[f64]) -> Vec<[f64; NUMBAND]> {
-    let w = hann_inner(N_FRAME);
     let bands = third_oct();
-    let mut planner = RealFftPlanner::<f64>::new();
-    let fft = planner.plan_fft_forward(NFFT);
-    let mut buf = fft.make_input_vec();
-    let mut spec = fft.make_output_vec();
+    let mut fft = FrameFft::<f64>::from_spec(&StftSpec {
+        n_fft: NFFT,
+        win_len: N_FRAME,
+        hop: HOP,
+        sample_rate: FS as u32,
+        window: Window::HannNumpyInner,
+    });
+    // 帧号按 pystoi 口径自己数（见 frame_starts），起点都 < len − N_FRAME，不会越界
     frame_starts(x.len())
-        .map(|s| {
-            buf.iter_mut().for_each(|v| *v = 0.0);
-            for k in 0..N_FRAME {
-                buf[k] = w[k] * x[s + k];
-            }
-            // 长度固定，不会出错
-            let _ = fft.process(&mut buf, &mut spec);
+        .map_while(|s| {
+            let spec = fft.frame(x, s / HOP)?;
             let mut row = [0.0; NUMBAND];
             for (b, &(lo, hi)) in bands.iter().enumerate() {
                 row[b] = spec[lo..hi]
@@ -198,7 +195,7 @@ fn tob(x: &[f64]) -> Vec<[f64; NUMBAND]> {
                     .sum::<f64>()
                     .sqrt();
             }
-            row
+            Some(row)
         })
         .collect()
 }
