@@ -223,14 +223,16 @@ def gap_vs_base(rows: list[dict], system: str, base: str) -> list[str]:
 
 
 def better_of(rows: list[dict], v: str) -> str:
-    """从过线值和判定推出「越大越好」还是「越小越好」：找一段过、一段不过的值比较。"""
-    ps, fs = [], []
+    """从一段的分数、过线值和判定推出方向：过且分数 > 过线 → 越大越好；不过且分数 > 过线 → 越小越好。"""
     for r in rows:
         s = score(r, v)
-        if s and s["value"] is not None:
-            (ps if s["verdict"] == "pass" else fs if s["verdict"] == "fail" else []).append(s["value"])
-    if ps and fs:
-        return "越大越好" if min(ps) > max(fs) or mean(ps) > mean(fs) else "越小越好"
+        if not s or s["value"] is None or s["threshold"] is None or s["value"] == s["threshold"]:
+            continue
+        above = s["value"] > s["threshold"]
+        if s["verdict"] == "pass":
+            return "越大越好" if above else "越小越好"
+        if s["verdict"] == "fail":
+            return "越小越好" if above else "越大越好"
     return "?"
 
 
