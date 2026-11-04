@@ -125,6 +125,13 @@ class TestAnalyze(unittest.TestCase):
         self.assertEqual(t[-1], "| V-PUMPV | p | 1/1 | 0/1 | 1/1 | 0/0 | 0/0 | 0/1 |")
         self.assertEqual(A.t60_bin(0.6), "0.6–1")
 
+    def test_fail_ratio_excludes_unknown(self):
+        rs = [row("a", "g", scores=[sc("V-INTF", -3, "fail", -10)]),
+              row("b", "g", scores=[sc("V-INTF", None, "unknown", -10)]),
+              row("c", "g", scores=[sc("V-INTF", -12, "pass", -10)])]
+        self.assertEqual(A.fail_ratio(rs, "V-INTF"), "1/2")
+        self.assertEqual(A.fail_ratio(rs[1:2], "V-INTF"), "—")
+
     def test_build_end_to_end(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
@@ -141,7 +148,7 @@ class TestAnalyze(unittest.TestCase):
             (d / "m.jsonl").write_text("\n".join(json.dumps(m) for m in man) + "\n")
             text = A.build(d, d / "m.jsonl")
             self.assertIn("| cafe | common | mba-builtin | pass | — | — |", text)
-            self.assertIn("| V-NR | -8.00 | -10.00 | +2.00 | 0 / 1 | 0 / 1 |", text)
+            self.assertIn("| V-NR | -8.00 | -10.00 | +2.00 | 0/1 | 0/1 |", text)
             self.assertIn("同房间 1 段 · 不同房间 1 段", text)
 
 
