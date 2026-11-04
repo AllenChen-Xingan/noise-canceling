@@ -78,10 +78,10 @@ fn write_clip(root: &Path, i: usize, with_machine: bool) -> Value {
         "id": id, "scene": "cafe", "tier": "common", "device": "mba-builtin", "mic_mode": "standard",
         "pair": format!("{id}-x"), "lang": "en", "polarity": "suppress", "dur_samples": n, "sr": 16000,
         "audio": tracks(|k| rel(k), &stems), "has_clean_ref": true, "additive": true,
-        "targets": [{"spk": "s1", "dist_m": 0.5, "azimuth_deg": 0.0, "level_dbfs": -26.0, "iv": owner_iv}],
+        "targets": [{"spk": "s1", "dist_m": 0.5, "azimuth_deg": 0.0, "level_dbfs": -26.0, "iv": owner_iv, "src": {"kind": "synth", "spk": "s1"}}],
         "sounds": sounds,
         "nominal": {"snr_db": 10.0, "sir_db": null, "t60_s": 0.3, "owner_dist_m": 0.5, "owner_level_dbfs": -26.0},
-        "measured": {"snr_db": 10.0, "sir_db": null, "t60_s": 0.3, "drr_db": 5.0, "overlap_ratio": 0.0},
+        "measured": {"snr_db": 10.0, "snr_all_db": 9.0, "owner_level_dbfs": -26.0, "sir_db": null, "t60_s": 0.3, "drr_db": 5.0, "overlap_ratio": 0.0},
         "owner_iv": owner_iv, "interf_iv": [], "chain": {"flat": true}, "seed": 100 + i,
         "hash": {"samples": tracks(|_| "0".repeat(64), &stems), "wav_sha256": tracks(sha, &stems)},
     })

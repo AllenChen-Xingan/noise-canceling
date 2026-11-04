@@ -203,6 +203,17 @@ pub struct Target {
     pub azimuth_deg: f64,
     pub level_dbfs: f64,
     pub iv: Vec<Iv>,
+    /// 素材出处（说话人 id + 句子列表；防泄漏检查用，016 S10⑦；形状由 scenesuite 定）
+    pub src: serde_json::Map<String, serde_json::Value>,
+}
+
+/// 设备链第 2 步对一个声源三个频段的方位衰减（dB）。
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DirectionDb {
+    pub low: f64,
+    pub mid: f64,
+    pub high: f64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -220,6 +231,9 @@ pub struct Sound {
     /// 扩散声（底噪、babble）为 null
     pub dist_m: Option<f64>,
     pub azimuth_deg: Option<f64>,
+    /// 方位衰减；扩散声没有这一项
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub direction_db: Option<DirectionDb>,
     /// 素材出处（`kind` 加各自字段，形状由 scenesuite 定）
     pub src: serde_json::Map<String, serde_json::Value>,
     pub license: String,
@@ -239,7 +253,12 @@ pub struct Nominal {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Measured {
+    /// 只算稳态干扰（底噪 + 有规律的声音 + babble + 设备底噪），同名义值的口径
     pub snr_db: f64,
+    /// 把突发声也算进去的 SNR
+    pub snr_all_db: f64,
+    /// 主说话人实测活动电平（P.56；名义值用 gated 电平，两者最多差约 1.5 dB，按声学条件分档时用名义值）
+    pub owner_level_dbfs: f64,
     pub sir_db: Option<f64>,
     pub t60_s: f64,
     pub drr_db: f64,

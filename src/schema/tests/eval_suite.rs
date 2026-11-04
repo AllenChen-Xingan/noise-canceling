@@ -273,8 +273,46 @@ fn scene_clip_schema_and_parser_agree_on_bad_lines() {
         (edit(&|x| x["tier"] = json!("hard")), false),
         (edit(&|x| x["sounds"][0]["group"] = json!("noise")), false),
         (edit(&|x| x["owner_iv"] = json!([[1, 2, 3]])), false),
-        (edit(&|x| x["hash"]["wav_sha256"]["stems"] = json!(7)), false),
+        (
+            edit(&|x| x["hash"]["wav_sha256"]["stems"] = json!(7)),
+            false,
+        ),
         (edit(&|x| x["nominal"]["sir_db"] = json!(null)), true),
+        // 方位衰减可选；有就必须三段齐全
+        (
+            edit(&|x| {
+                x["sounds"][1]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("direction_db")
+                    .map_or((), |_| ())
+            }),
+            true,
+        ),
+        (
+            edit(&|x| x["sounds"][1]["direction_db"] = json!({"low": 0.0, "mid": 0.0})),
+            false,
+        ),
+        (
+            edit(&|x| {
+                x["targets"][0]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("src")
+                    .map_or((), |_| ())
+            }),
+            false,
+        ),
+        (
+            edit(&|x| {
+                x["measured"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("snr_all_db")
+                    .map_or((), |_| ())
+            }),
+            false,
+        ),
     ];
     for (v, ok) in cases {
         let s_ok = validate(&schema, &v).is_ok();

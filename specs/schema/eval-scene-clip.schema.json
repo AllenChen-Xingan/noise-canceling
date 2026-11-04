@@ -54,6 +54,30 @@
       ],
       "type": "string"
     },
+    "DirectionDb": {
+      "additionalProperties": false,
+      "description": "设备链第 2 步对一个声源三个频段的方位衰减（dB）。",
+      "properties": {
+        "high": {
+          "format": "double",
+          "type": "number"
+        },
+        "low": {
+          "format": "double",
+          "type": "number"
+        },
+        "mid": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "low",
+        "mid",
+        "high"
+      ],
+      "type": "object"
+    },
     "Lang": {
       "description": "ASR 分词用的语言。",
       "enum": [
@@ -73,6 +97,11 @@
           "format": "double",
           "type": "number"
         },
+        "owner_level_dbfs": {
+          "description": "主说话人实测活动电平（P.56；名义值用 gated 电平，两者最多差约 1.5 dB，按声学条件分档时用名义值）",
+          "format": "double",
+          "type": "number"
+        },
         "sir_db": {
           "format": "double",
           "type": [
@@ -80,7 +109,13 @@
             "null"
           ]
         },
+        "snr_all_db": {
+          "description": "把突发声也算进去的 SNR",
+          "format": "double",
+          "type": "number"
+        },
         "snr_db": {
+          "description": "只算稳态干扰（底噪 + 有规律的声音 + babble + 设备底噪），同名义值的口径",
           "format": "double",
           "type": "number"
         },
@@ -91,6 +126,8 @@
       },
       "required": [
         "snr_db",
+        "snr_all_db",
+        "owner_level_dbfs",
         "t60_s",
         "drr_db",
         "overlap_ratio"
@@ -178,6 +215,17 @@
         "cls": {
           "description": "声音类别键（正本 scenesuite `sounds.json`）",
           "type": "string"
+        },
+        "direction_db": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DirectionDb"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "方位衰减；扩散声没有这一项"
         },
         "dist_m": {
           "description": "扩散声（底噪、babble）为 null",
@@ -282,6 +330,11 @@
         },
         "spk": {
           "type": "string"
+        },
+        "src": {
+          "additionalProperties": true,
+          "description": "素材出处（说话人 id + 句子列表；防泄漏检查用，016 S10⑦；形状由 scenesuite 定）",
+          "type": "object"
         }
       },
       "required": [
@@ -289,7 +342,8 @@
         "dist_m",
         "azimuth_deg",
         "level_dbfs",
-        "iv"
+        "iv",
+        "src"
       ],
       "type": "object"
     },
