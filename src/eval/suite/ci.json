@@ -271,6 +271,38 @@
       "probe": { "base": "R04-pause-noise-suppressed-pink", "kind": "mute" },
       "graders": [ { "v": "V-SPLVL", "min": -3 } ],
       "info": [ { "v": "V-NR", "max": -6 } ]
+    },
+    {
+      "id": "P06-weak-minus10-must-fail",
+      "set": "probe", "polarity": "preserve",
+      "origin": "012 §3.1 V-WEAK 对抗样本 · 016 §1.1「轻声字被吞」：把弱音节压 10 dB → L30 必须变差",
+      "desc": "把 R02 的输出里最弱 30% 的有声帧压 10 dB：V-WEAK 必须判不过",
+      "probe": { "base": "R02-owner-monologue-not-gated", "kind": "weak_minus10" },
+      "graders": [ { "v": "V-WEAK", "max": 4 } ]
+    },
+    {
+      "id": "P07-gain-wobble-must-fail",
+      "set": "probe", "polarity": "preserve",
+      "origin": "012 §3.2 V-PUMPV · 016 §1.2「人声忽大忽小」：2 Hz ±6 dB 增益抖动必须被抓到",
+      "desc": "把 R02 的输出乘 2 Hz、±6 dB 的增益抖动：V-PUMPV 必须判不过",
+      "probe": { "base": "R02-owner-monologue-not-gated", "kind": "gain_wobble_6db" },
+      "graders": [ { "v": "V-PUMPV", "max": 1 } ]
+    },
+    {
+      "id": "P08-clicks-must-fail",
+      "set": "probe", "polarity": "preserve",
+      "origin": "012 §3.2 V-CLICK「人造插入咔嗒作对抗样本」",
+      "desc": "在 R02 的输出里插 5 个单样本脉冲：V-CLICK 必须判不过",
+      "probe": { "base": "R02-owner-monologue-not-gated", "kind": "clicks_5" },
+      "graders": [ { "v": "V-CLICK", "max": 0, "k": 8 } ]
+    },
+    {
+      "id": "P09-lowpass-1k-estoi-must-fail",
+      "set": "probe", "polarity": "preserve",
+      "origin": "rubric 第 7 节负例护栏 ③（1 kHz 低通）用在可懂度上：ΔESTOI 必须落 D",
+      "desc": "把 R02 的输出做 1 kHz 低通：V-ESTOI 必须判不过",
+      "probe": { "base": "R02-owner-monologue-not-gated", "kind": "lowpass_1k" },
+      "graders": [ { "v": "V-ESTOI", "min": -0.05 } ]
     }
   ]
 }

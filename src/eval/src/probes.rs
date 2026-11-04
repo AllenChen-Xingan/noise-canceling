@@ -26,15 +26,27 @@ pub enum Probe {
     Identity,
     /// 全部静音：输出 = 0（刷 V-NR 的极端做法）
     Mute,
+    /// 弱音节（有声 20 ms 帧里干净轨能量最低的 30%）压 10 dB：V-WEAK 必须抓到
+    #[serde(rename = "weak_minus10")]
+    WeakMinus10,
+    /// 整体乘 2 Hz、±6 dB 的增益抖动：V-PUMPV 必须抓到
+    #[serde(rename = "gain_wobble_6db")]
+    GainWobble,
+    /// 在主讲人有声段里均匀插 5 个单样本脉冲（幅度 0.5）：V-CLICK 必须抓到
+    #[serde(rename = "clicks_5")]
+    Clicks5,
 }
 
 impl Probe {
-    pub const ALL: [Probe; 5] = [
+    pub const ALL: [Probe; 8] = [
         Probe::OnsetCut,
         Probe::NonSpeechMinus40,
         Probe::Lowpass1k,
         Probe::Identity,
         Probe::Mute,
+        Probe::WeakMinus10,
+        Probe::GainWobble,
+        Probe::Clicks5,
     ];
     pub fn as_str(self) -> &'static str {
         match self {
@@ -43,6 +55,9 @@ impl Probe {
             Probe::Lowpass1k => "lowpass_1k",
             Probe::Identity => "identity",
             Probe::Mute => "mute",
+            Probe::WeakMinus10 => "weak_minus10",
+            Probe::GainWobble => "gain_wobble_6db",
+            Probe::Clicks5 => "clicks_5",
         }
     }
 
@@ -89,8 +104,61 @@ impl Probe {
             }
             Probe::Identity => clip.mix.clone(),
             Probe::Mute => vec![0.0; out.len()],
+            Probe::WeakMinus10 => weak_minus10(clip, out),
+            Probe::GainWobble => {
+                let sr = clip.sr as f64;
+                out.iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        let g = 6.0 * (2.0 * std::f64::consts::PI * 2.0 * i as f64 / sr).sin();
+                        v * 10f64.powf(g / 20.0) as f32
+                    })
+                    .collect()
+            }
+            Probe::Clicks5 => {
+                let mut y = out.to_vec();
+                let ivs = truth_from_clean(&clip.clean);
+                let total: usize = ivs.iter().map(|(a, b)| b - a).sum();
+                for k in 0..5 {
+                    // 第 k 个点落在全部有声样本的 (k + 0.5) / 5 处
+                    let mut want = (total as f64 * (k as f64 + 0.5) / 5.0) as usize;
+                    for &(a, b) in &ivs {
+                        if want < b - a {
+                            if let Some(v) = y.get_mut(a + want) {
+                                *v += 0.5;
+                            }
+                            break;
+                        }
+                        want -= b - a;
+                    }
+                }
+                y
+            }
         }
     }
+}
+
+/// 有声 20 ms 帧里干净轨能量最低的 30% 帧，输出压 10 dB。
+fn weak_minus10(clip: &Clip, out: &[f32]) -> Vec<f32> {
+    const F: usize = 320;
+    let mut y = out.to_vec();
+    let mut frames: Vec<(usize, f64)> = Vec::new();
+    for (a, b) in truth_from_clean(&clip.clean) {
+        let mut t = a;
+        while t + F <= b.min(y.len()) {
+            let e: f64 = clip.clean[t..t + F].iter().map(|v| (*v as f64).powi(2)).sum();
+            frames.push((t, e));
+            t += F;
+        }
+    }
+    frames.sort_by(|p, q| p.1.total_cmp(&q.1));
+    let n = frames.len() * 3 / 10;
+    for &(t, _) in &frames[..n] {
+        for v in &mut y[t..t + F] {
+            *v *= 0.316;
+        }
+    }
+    y
 }
 
 /// RBJ cookbook 二阶低通，原地。
