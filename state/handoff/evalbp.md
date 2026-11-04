@@ -3,17 +3,29 @@
 - 大总管：`5-app-5e` · 分支 `research/025-eval-best-practice` · issue #105
 - 管的实体：评测器（只读）· 成绩单标准（只读，提改动建议）· 调研 025（写）
 
+**状态：已收尾，待大总管验收。**
+
 ## 做到哪
 
-6 个子代理并行调研中（A 系统与数值 · B 电平与背景 · C 不做坏事类失真 + F-9 · D 门控模拟 / 个性化降噪 · E 可懂度与吃字 + F-10 · F 听感分）。等它们交回后汇总成 `docs/research/025_eval-best-practice/`。
+交付全部写完，codex 评审 9 轮达到停止线（35 条全部属实已改，无 issue），隐私 grep 为 0。
+
+## 改了哪些文件
+
+- `docs/research/025_eval-best-practice/`：README · matrix · decision · sources · notes/group-A…F · notes/scripts/（6 个重算脚本 + README）
+- `docs/reviews/025_eval-best-practice-codex.md`；`docs/reviews/README.md` 加一行
+- 本现状页
 
 ## 待人拍板
 
-（汇总后填）
+见 `docs/research/025_eval-best-practice/decision.md` 第 ③ 节：7 题分两批（第一批方向：汇总方式 · F-9 · F-10 · 门控改量输出；第二批数：人声压低线 · 听感容差 · 咔嗒校准要不要听），另有 5 件「以后再问」（V-FRAME 线、V-MUSIC 免判、V-NR 低电平帧、V-LAT 判法、V-SWITCH 判法）。题面供大总管合进 `state/pending-decisions.md`。
+F-9 的默认值改了：待定清单原默认 A，现建议默认 D（三项暂「只报不判」），理由在题 2。
 
-## 转交
+## 转交（范围外发现）
 
-（无）
+- `docs/reviews/README.md` 索引原有 5 行重复（013 · 015 · 094 · 024 · 102 各两行），不是本线造成，未动。
+- 两条可直接开 issue：decision ①-1 延迟测量器（互相关未归一化）、①-1b 轻声字检测在低采样率下崩溃（现行流程碰不到，防回归）。
+- rubric V3（`specs/rubric/denoise.md:92`）里「DNS RTF ≤ 0.5 是平均」的类比与 012 同一处误读（decision A2）。
+- 规则建议：同一类评审意见第二次出现时整体扫一遍再送审（本线前 7 轮各冒一条同类 P1，整体扫后两轮清零）。是否沉淀进手册由大总管定。
 
 ## 流水
 
@@ -28,3 +40,6 @@
 - 2026-11-04 A 组（系统与数值）交回：延迟偏 6.6 ms 根因＝互相关未归一化 + 窗口固定开头 2 s，c07 误取基音周期峰（子代理在 480 段输入上用同公式轻量重算，仅 c07 两段错）；DNS 实时要求是「处理时间 < 帧移」，012 误作 0.5；1 道待拍板。6 组全部交回
 - 2026-11-04 6 组脚本补交、重跑核对（F 组改 2 个数）；笔记与脚本进 notes/；写完 matrix · decision · sources · README；fe3 两条（识别重复性、V-WEAK 低采样率崩溃）写进 decision
 - 2026-11-04 codex 第 1 轮开跑（research 类，隐私扫描 54 个文件通过）
+- 2026-11-04 codex 第 1–7 轮：每轮 P1 1–4 条，逐条核实修改；第 7 轮后按大总管要求整体通读 matrix 与 decision 一次
+- 2026-11-04 codex 第 8、9 轮无 P0/P1，达到停止线；末条 P2 当场修；评审记录与索引一行写完
+- 2026-11-04 收尾：隐私 grep 为 0，报大总管「可以收尾」
