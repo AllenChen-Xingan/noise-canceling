@@ -13,6 +13,7 @@
 | fespk | exp015 认人吃共享频谱 + 耗时分解 · #95 · `exp/015-speaker-shared-spectrum` · `../noise_canceling-fespk` | 认人前端 · 声纹模型（只评）· 认人判断回路 | 完成，验收过（大总管复跑 11 测试 · 9 文件在范围内 · src/speaker/ 未改 · 路径清零），PR #96 已合并（3af03735，#95 关），窗口与 worktree 已清 |
 | pse | 调研 024 个性化降噪：有没有人做过 · 为什么难 · #98 · `research/024-pse-landscape` · `../noise_canceling-pse`（人点名派，属「个性化降噪」大事的前置调研） | 个性化降噪 / 提取模型 · 自动注册 · PSE 训练数据与评测集 | 完成，验收过（11 文件在范围内 · 路径清零 · codex 4 轮 3、4 轮无 P0/P1），PR #100 已合并（#98 关），窗口与 worktree 已清 |
 | fe2 | 第二段之一：统一模块支持 Kaldi 分帧 · 认人 fbank 与离线例子收进来 · #102 · `feat/frontend-speaker` · `../noise_canceling-fe2` | 频谱前端（扩展）· 认人前端 fbank · 离线例子 | 完成，验收过（大总管亲手 xtask ci 全绿 · 对拍 14 条真比），PR #103 已合并（f2782cf4，#102 关），窗口与 worktree 已清 |
+| fe3 | 第三段：评测器 4 处改调统一模块（只换计算，评分逐位不变）· #104 · `feat/frontend-eval` · `../noise_canceling-fe3` | 评测器频谱计算 · 频谱前端（小扩展）· 成绩单对拍 | 已派 |
 
 ## 进度板
 
@@ -44,6 +45,7 @@
 - 2026-11-04 ⚠️ **大总管失误**：#103 合并前没看 CI 结果（后台等待脚本只打印结论，我没读就合并）。该次 CI 未运行：GitHub macOS arm 机器排队，「job was not acquired」15 分钟后判 failure；main 推送触发的 CI 同样未运行。核对：main 代码树 = 本机验收过的 fe2 HEAD（diff 为空），本机 xtask ci 全绿。已重触发 main CI。**规则：合并前读 CI 结论，failure 先看是代码红还是没跑起来；没跑起来就重跑，不合并**
 - 2026-11-04 人要「v5 场景里效果不错的片段」→ 桌面 `20261104-vdn-scene-demo`（8 段 × 原声 / 降噪后 / 干净参考；01–06 按分数挑好的、07–08 嘈杂场景中位段；排除与 exp014 盲听 7 题同段录音）；清单与挑法 `docs/experiments/demo-20261104-scene/`
 - 下一步：评测器 4 处（speech · estoi · system · analysis:163）单独 PR，开工前问 5-app-5e
+- 2026-11-04 人：「弄吧 / 然后具体的评测方法，要看是否和好的 best practice 一致」→ ① 派 fe3（#104），已告 5-app-5e 开工 ② 评测方法对照业界做法归 5-app-5e，它开调研 025（以 012 为底）；fe3 发现的评分算法疑点转交给它
 
 ## 待人拍板（本大事）
 
