@@ -12,6 +12,7 @@
 | fecore | 共用频谱前端 · #94 · `feat/frontend-once` · `../noise_canceling-fecore` | 频谱前端 · 降噪模型适配 · 场景特征 · 修音频谱级 | 完成，验收过（大总管亲手跑 xtask ci 6 项全绿 · 对拍 4 份逐位相同含引擎最终输出 · 路径清零 · 文件 ≤ 557 行），PR #99 已合并（ef0cfdd3，#94 关），窗口与 worktree 已清 |
 | fespk | exp015 认人吃共享频谱 + 耗时分解 · #95 · `exp/015-speaker-shared-spectrum` · `../noise_canceling-fespk` | 认人前端 · 声纹模型（只评）· 认人判断回路 | 完成，验收过（大总管复跑 11 测试 · 9 文件在范围内 · src/speaker/ 未改 · 路径清零），PR #96 已合并（3af03735，#95 关），窗口与 worktree 已清 |
 | pse | 调研 024 个性化降噪：有没有人做过 · 为什么难 · #98 · `research/024-pse-landscape` · `../noise_canceling-pse`（人点名派，属「个性化降噪」大事的前置调研） | 个性化降噪 / 提取模型 · 自动注册 · PSE 训练数据与评测集 | 完成，验收过（11 文件在范围内 · 路径清零 · codex 4 轮 3、4 轮无 P0/P1），PR #100 已合并（#98 关），窗口与 worktree 已清 |
+| fe2 | 第二段之一：统一模块支持 Kaldi 分帧 · 认人 fbank 与离线例子收进来 · #102 · `feat/frontend-speaker` · `../noise_canceling-fe2` | 频谱前端（扩展）· 认人前端 fbank · 离线例子 | 已派 |
 
 ## 进度板
 
@@ -36,6 +37,8 @@
 - 2026-11-04 #99 CI 红：场景对拍基准在 macOS 27 生成、CI 为 macOS 15，平台标签只写 aarch64-macos → 误比（推断：libm 跨系统版本末位不同；同机借谱 vs 自算在 CI 上过）。子代理改标签含系统大版本，借名额跑 ci
 - 2026-11-04 #99 修 CI：对拍平台标签改 aarch64-macos-27（哈希不变），本机 4 份真比（大总管复跑）；CI 上 4 份跳过但日志显示 ok（eprintln 被 cargo 吞）→ PR 写明 + 开 #101。#99 · #100 合并（各解一次 reviews 索引冲突）
 - **第一段收口**。下一步：第二段（认人 fbank · 评测器 FFT · 离线例子收进同一模块，D82），派前先与 5-app-5e 商量评测器那几处
+- 2026-11-04 5-app-5e 同意评测器 3 处由我方改，条件：单独 PR、只换频谱不改评分、函数级 + exp014 cafe 常见档 10 段 scorecard JSON（去元数据）逐位对拍、开工与合并前告知、谁先开工谁先做。第二段拆两 PR：先 #102（fe2，不碰 eval），合并后再做评测器
+- ⚠️ 同类第二次：大总管 a2 在主目录写文件（`_tmp/` 批次文件）触发主目录 auto-commit hook，把 5-app-5e 的 `state/coord.md` 提交到它的分支（7cf6133f · 51a50418，内容都是它的）。规则：**a2 的命令与写文件只在 `../noise_canceling-coordfe` 里做**；若第三次发生，写进 `state/memory/`
 
 ## 待人拍板（本大事）
 
