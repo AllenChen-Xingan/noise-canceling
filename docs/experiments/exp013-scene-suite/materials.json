@@ -1530,7 +1530,28 @@
    "cls": "coughing",
    "fold": 2,
    "src_file": "87412"
+  },
+  "rir/ace-single.tbz2": {
+   "url": "https://zenodo.org/api/records/6257551/files/ACE_Corpus_RIRN_Single.tbz2/content",
+   "sha256": "52267c82f497fdc893f6fbd1787ea7dcb09c122f6f094f556da0993905a5ca5c",
+   "md5": "d365026b3974a198ef58e8d3e647a415",
+   "bytes": 417202565,
+   "license": "Zenodo 6257551 元数据 CC-BY-4.0；IEEE DataPort 同页另写 CC-BY-ND-4.0。ND 只禁止分享改编品，本地卷积只评测不外发不冲突（README 第二节）"
+  },
+  "rir/mcvampire.zip": {
+   "url": "https://zenodo.org/api/records/12806684/files/In-Car_McVAMPIRE_V1.0.zip/content",
+   "sha256": "53c5cd08577a9d30bbb54bcb18915bb32dd57adeaacb0c348cfe4b01b863ae61",
+   "md5": "187b2d91cb8a3b0ea0ae397a3de8afe0",
+   "bytes": 256172199,
+   "license": "CC-BY-4.0（Zenodo 12806684）；只评测"
+  },
+  "rir/mit-ir-survey.zip": {
+   "url": "https://mcdermottlab.mit.edu/Reverb/IRMAudio/Audio.zip",
+   "sha256": "648e988c2b12b1df1d92abe78aff441d7cad65bee23dc91f6026d4506a389b70",
+   "md5": "5b934b42e866ef06f88d05ab99acb27a",
+   "bytes": 11660005,
+   "license": "页面未写许可；镜像标 CC-BY-4.0【未核原文】；只评测、本地卷积、不外发"
   }
  },
- "updated": "2026-11-03 21:29"
+ "updated": "2026-11-03 22:19"
 }
