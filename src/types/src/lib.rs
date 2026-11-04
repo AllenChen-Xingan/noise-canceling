@@ -48,12 +48,12 @@ pub use frame::{
     BypassReason, Confidence, FrameCtx, FrameFeatures, SampleClock, SpeakerClass, SpeakerVerdict,
     Status,
 };
+pub use frontend::{FRONTEND, StftSpec, Window};
 pub use graph::{ChainMismatch, CheckedGraph, Hook, NodeKind, ProcessingGraph, match_chain};
 pub use latency::{
     Basis, IO_BLOCK_009, IO_BLOCK_PROPOSED, LATENCY_BUDGET_MS, LatencyItem, LatencyLedger,
 };
 pub use memory::{Learner, Overrides, SceneKey, UserProfile};
-pub use frontend::{FRONTEND, StftSpec, Window};
 pub use model::{Model, ModelError, SpectrumTap};
 pub use params::{ModelId, ParamBlock, ParamError, ParamField, ParamSet, ToneId};
 pub use policy::{

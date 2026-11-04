@@ -9,7 +9,10 @@
 use vdn_models::{Gtcrn, ModelKind, artifact_id};
 use vdn_types::{ContentId, MODEL_RATE, Model};
 
-const FIXTURE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/gtcrn_golden.txt");
+const FIXTURE: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/gtcrn_golden.txt"
+);
 
 /// 3 s：噪声 + 一强一弱交替的 150 Hz 正弦 + 一段静音，只用乘加和 LCG，跨平台逐位一致。
 fn input() -> Vec<f32> {
@@ -70,7 +73,10 @@ fn gtcrn_output_matches_golden() {
         panic!("基准格式不对：{want}");
     };
     if *w != weights.to_string() || *plat != platform() {
-        eprintln!("跳过：基准的权重 / 平台是 {w} / {plat}，本机是 {weights} / {}", platform());
+        eprintln!(
+            "跳过：基准的权重 / 平台是 {w} / {plat}，本机是 {weights} / {}",
+            platform()
+        );
         return;
     }
     assert_eq!(n.parse::<usize>().ok(), Some(y.len()), "样本数变了");

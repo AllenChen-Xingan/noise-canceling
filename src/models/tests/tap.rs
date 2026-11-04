@@ -39,7 +39,9 @@ fn gtcrn_tap_equals_self_compute() {
         power_into(own.analyze(h), &mut want);
         let got = m.input_power().expect("处理过帧后应借得出谱");
         assert!(
-            got.iter().zip(&want).all(|(a, b)| a.to_bits() == b.to_bits()),
+            got.iter()
+                .zip(&want)
+                .all(|(a, b)| a.to_bits() == b.to_bits()),
             "第 {k} 帧借出的功率谱与自算不同"
         );
     }

@@ -4,8 +4,8 @@
 
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use vdn_dsp::{
-    Decimator3, DelayLine, Interpolator3, OpenCloseEnvelope, OpenCloseParams, StreamingStft, power_into,
-    window,
+    Decimator3, DelayLine, Interpolator3, OpenCloseEnvelope, OpenCloseParams, StreamingStft,
+    power_into, window,
 };
 
 #[global_allocator]

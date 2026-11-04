@@ -4,7 +4,10 @@
 //! 基准在 `tests/fixtures/scene_golden.txt`；只在没改过 `features.rs` 的代码上生成：`VDN_BLESS=1 cargo test -p vdn-scene --test golden`。
 mod common;
 
-const FIXTURE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/scene_golden.txt");
+const FIXTURE: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/scene_golden.txt"
+);
 
 #[test]
 fn self_compute_matches_golden() {

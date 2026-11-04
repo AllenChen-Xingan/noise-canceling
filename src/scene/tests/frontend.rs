@@ -24,7 +24,12 @@ fn run_borrowed(x: &[f32]) -> (Vec<Judgement>, u64, u64) {
 fn max_feature_diff(a: &[Judgement], b: &[Judgement]) -> f32 {
     a.iter()
         .zip(b)
-        .flat_map(|(x, y)| x.features.iter().zip(&y.features).map(|(p, q)| (p - q).abs()))
+        .flat_map(|(x, y)| {
+            x.features
+                .iter()
+                .zip(&y.features)
+                .map(|(p, q)| (p - q).abs())
+        })
         .fold(0.0, f32::max)
 }
 
@@ -37,14 +42,20 @@ fn borrowed_equals_self_compute() {
     assert_eq!(own.len(), borrowed.len());
     assert!(own.len() >= 20, "判断次数太少，测不出东西");
     let d = max_feature_diff(&own, &borrowed);
-    eprintln!("借谱 vs 自算：35 维最大绝对差 {d:e}（阈值 1e-5），判断 {} 次", own.len());
+    eprintln!(
+        "借谱 vs 自算：35 维最大绝对差 {d:e}（阈值 1e-5），判断 {} 次",
+        own.len()
+    );
     assert!(d <= 1e-5, "35 维最大绝对差 {d:e} > 1e-5");
     for (k, (a, b)) in own.iter().zip(&borrowed).enumerate() {
         assert_eq!(a.label.fine, b.label.fine, "第 {k} 次判断的原始细场景不同");
         assert_eq!(a.committed, b.committed, "第 {k} 次判断的生效场景不同");
     }
     // 信号确实让判断动起来了（否则上面的比较没意义）
-    assert!(own.windows(2).any(|w| w[0].label.fine != w[1].label.fine), "测试信号没让场景变化");
+    assert!(
+        own.windows(2).any(|w| w[0].label.fine != w[1].label.fine),
+        "测试信号没让场景变化"
+    );
 }
 
 /// 借谱时每帧正向 FFT 恰好 1 次：前端每帧 1 次，场景自己 0 次。
@@ -63,7 +74,12 @@ fn combined_path_counts_one_fft_per_frame() {
     let x = common::signal();
     let mut fe = StreamingStft::from_spec(&FRONTEND);
     let mut sa = SceneAnalyzer::new(MODEL_RATE, HOP);
-    let mut chain = PolishChain::new(FRONTEND.n_fft, FRONTEND.hop, MODEL_RATE as f32, PolishParams::preset(2));
+    let mut chain = PolishChain::new(
+        FRONTEND.n_fft,
+        FRONTEND.hop,
+        MODEL_RATE as f32,
+        PolishParams::preset(2),
+    );
     let mut pow = vec![0.0f32; FRONTEND.bins()];
     let mut dry = vec![Default::default(); FRONTEND.bins()];
     let mut out = vec![0.0f32; HOP];
@@ -84,7 +100,11 @@ fn combined_path_counts_one_fft_per_frame() {
         if (k + 1) % TICK_HOPS == 0 {
             sa.judge();
         }
-        assert_eq!(fe.forward_count() + sa.own_fft_count() - before, 1, "第 {k} 帧正向 FFT 不是 1 次");
+        assert_eq!(
+            fe.forward_count() + sa.own_fft_count() - before,
+            1,
+            "第 {k} 帧正向 FFT 不是 1 次"
+        );
         frames += 1;
     }
     assert_eq!(fe.forward_count(), frames);

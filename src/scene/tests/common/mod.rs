@@ -31,7 +31,12 @@ pub fn signal() -> Vec<f32> {
             };
             match seg {
                 0 => 0.05 * w,
-                1 => 0.02 * w + 0.2 * harm(140.0) * (0.5 + 0.5 * (2.0 * std::f32::consts::PI * 4.0 * t).sin()),
+                1 => {
+                    0.02 * w
+                        + 0.2
+                            * harm(140.0)
+                            * (0.5 + 0.5 * (2.0 * std::f32::consts::PI * 4.0 * t).sin())
+                }
                 2 => 0.0,
                 3 => 0.01 * w + 0.3 * (2.0 * std::f32::consts::PI * 60.0 * t).sin(),
                 4 => (0.8 * harm(220.0)).clamp(-0.5, 0.5),
@@ -87,8 +92,14 @@ pub fn golden(path: &str, got: ContentId, n: usize) -> Option<(ContentId, usize)
     }
     let want = std::fs::read_to_string(path).expect("缺基准文件（见测试文件头怎么生成）");
     let mut it = want.split_whitespace();
-    let id = it.next().and_then(ContentId::parse).expect("基准第 1 列是 16 位十六进制");
-    let cnt: usize = it.next().and_then(|s| s.parse().ok()).expect("基准第 2 列是条数");
+    let id = it
+        .next()
+        .and_then(ContentId::parse)
+        .expect("基准第 1 列是 16 位十六进制");
+    let cnt: usize = it
+        .next()
+        .and_then(|s| s.parse().ok())
+        .expect("基准第 2 列是条数");
     let plat = it.next().unwrap_or_default();
     if plat != platform() {
         eprintln!("跳过：基准生成于 {plat}，本机是 {}", platform());
