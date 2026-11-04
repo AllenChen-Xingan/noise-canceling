@@ -251,10 +251,41 @@ pub const ESTOI: Lines = Lines {
     )],
 };
 
+/// 评分模型（QA 层）：Δ = 输出 − 带噪原声。过线 0 是 012 的约束口径，不是外部锚点
+const NOT_WORSE: Src = Src::Design(
+    "012 §2.3 第 4 条：L0 感知量只作「不比基线差」的约束；基线 = 带噪原声，所以 Δ ≥ 0",
+);
+
+pub const NRMOS_SCOREQ: Lines = Lines {
+    id: "V-NRMOS-SCOREQ",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[p("min", Some(0.0), &[(0.0, NOT_WORSE)])],
+};
+
+pub const NRMOS_DISTILL: Lines = Lines {
+    id: "V-NRMOS-DISTILL",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[p("min", Some(0.0), &[(0.0, NOT_WORSE)])],
+};
+
+/// 成绩单层：两个评分模型的 Δ 相差多少算「分歧，送人耳」。rubric 第 1 节第 3 条（原文标建议值）
+pub const NRMOS_SPLIT: Lines = Lines {
+    id: "SC-NRMOS-SPLIT",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[p(
+        "max",
+        Some(0.3),
+        &[(0.3, Src::Rubric(&["SCOREQ 比原声高 ≥ 0.3"]))],
+    )],
+};
+
 /// 表里全部 verifier。
-pub const ALL: [&Lines; 20] = [
+pub const ALL: [&Lines; 23] = [
     &BGSTAB, &ONSET, &SPLVL, &MUSIC, &TIMBRE, &NR, &INTF, &VACUUM, &EAT_ASR, &FRAME, &MUTE,
-    &SWITCH, &SIM_GATE, &SIM_FA, &SIM_QUIET, &SIM_SWLAT, &WEAK, &PUMPV, &CLICK, &ESTOI,
+    &SWITCH, &SIM_GATE, &SIM_FA, &SIM_QUIET, &SIM_SWLAT, &WEAK, &PUMPV, &CLICK, &ESTOI, &NRMOS_SCOREQ, &NRMOS_DISTILL, &NRMOS_SPLIT,
 ];
 
 /// 待定清单：已知不一致或没有出处的条目。全部是建议值，挂 012 拍板 #8 · D44。
