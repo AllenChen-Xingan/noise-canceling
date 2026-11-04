@@ -16,7 +16,7 @@
 ### dns2-icassp2021-real-testset-pdns.md
 - **场景键**：home, open-office, other（文件名噪声字段：狗叫、打字、婴儿哭、风扇等；无地点字段）
 - **设备键**：laptop-other, mbp-builtin（极少，见下）, headset, desktop（webcam）, phone, unknown
-- **笔记本段**：有，可粗筛。T1 blind（合集 `noisy_blind_testset_v2_challenge_withSNR_16k/`，700 条 = 真实 650 + 合成唱歌 50）文件名里含 `laptop` 192 条、`macbook` 6 条、`headset` 97、`webcam` 41、`surface` 24、手机类 25。设备字段是众包者自由填写，写法不统一（如 `Win_laptop_mic`、`laptopmic`、`builtinmicrophone`，甚至有未替换的占位符 `your_device_type`），只能用正则粗筛，不可靠【实测：文件名】
+- **笔记本段**：有，可粗筛。T1 blind（合集 `noisy_blind_testset_v2_challenge_withSNR_16k/`，700 条 = 真实 650 + 非真实 50，其中合成唱歌 45）文件名里含 `laptop` 192 条、`macbook` 6 条、`headset` 97、`webcam` 41、`surface` 24、手机类 25。设备字段是众包者自由填写，写法不统一（如 `Win_laptop_mic`、`laptopmic`、`builtinmicrophone`，甚至有未替换的占位符 `your_device_type`），只能用正则粗筛，不可靠【实测：文件名】
 - **转写**：没有
 - **语体**：文件名分 english / nonenglish / emotional（emotional 102 条；`laughter` 34 条）；附和无标注【实测：文件名】
 - **与 D62 的关系**：真实录音（众包 + MS 内部）。开发阶段若用于评测：T1 blind 里文件名含 laptop / macbook 的约 200 条；合集 zip 778 MB（V2+V3+情绪+鼠标点击一起）【实测：HTTP 头 Content-Length】
@@ -24,11 +24,11 @@
 ### dns3-interspeech2021-real-testset.md
 - **场景键**：home, open-office, other
 - **设备键**：laptop-other, mbp-builtin（文件名 `macbook` / `mac`，见下）, headset, desktop, phone, unknown
-- **笔记本段**：有，可粗筛。V3 blind（600 条 = 真实 440 + 合成 160）文件名含 `laptop` 137 条、`macbook` 12 条（同一众包者 `A1RK5KQQ320OH4`，英语男声，打字 / 风扇 / 厨房 / 洗碗机等，near / far 都有）、`mac` 12 条（同一人 `XMQ6Y5VEXRUU`，钢琴背景 far）、`headset` 124、`surface` 46。同包的情绪集 584 条：`laptop` 241、手机类 142、`headset` 114、`Macbookpro` 1；鼠标点击集 99 条：手机类 30、`headset` 29、`laptop` 10【实测：文件名】
+- **笔记本段**：有，可粗筛。V3 blind（600 条 = 真实 440 + 非真实 160）文件名含 `laptop` 137 条、`macbook` 12 条（同一众包者 `A1RK5KQQ320OH4`，英语男声，打字 / 风扇 / 厨房 / 洗碗机等，near / far 都有）、`mac` 12 条（同一人 `XMQ6Y5VEXRUU`，钢琴背景 far）、`headset` 124、`surface` 46。同包的情绪集 584 条：`laptop` 241、手机类 142、`headset` 114、`Macbookpro` 1；鼠标点击集 99 条：手机类 30、`headset` 29、`laptop` 10【实测：文件名】
 - **转写**：没有
 - **语体**：情绪集 584 条（文件名标 sad / angry / crying / yelling / happy / laughter；`laugh` 99 条）；V3 另有 musical（乐器背景）78 条；附和无标注【实测：文件名】
 - **与 D62 的关系**：真实录音（众包，1–5 m 内非头戴）+ 合成段。开发阶段若用于评测：V3 + 情绪集里文件名带 laptop / mac 的约 400 条；合集 zip 778 MB
-- **014 卡疑误**：原句「V3 blind 600 条」，未说明其中 160 条是合成（`nonenglish_synthetic` 58、`nonenglish_tonal_synthetic` 51、`stationary_english_tug` 30 等），真实只有 440 条；原句「合集另含 600 条情感片段、100 条鼠标点击片段」，实际文件数为 584 与 99（目录名写 600）【实测：文件名】
+- **014 卡疑误**：原句「V3 blind 600 条」，未说明其中 160 条不是 `realrec`（`nonenglish_synthetic` 59、`nonenglish_tonal_synthetic` 51、`stationary_english_tug`（Graz 干净语音 + 稳态噪声【推断】）50），真实只有 440 条；原句「合集另含 600 条情感片段、100 条鼠标点击片段」，实际文件数为 584 与 99（目录名写 600）【实测：文件名】
 
 ### dns4-icassp2022-real-testset-pdns.md
 - **场景键**：home, open-office, street, car, other（文件名噪声字段：Typing 83、Water 68、Fan 62、Door 62、MouseClicks 61、Chips 56、Cutlery 53、Street 29、InsideCar 7、CopyRoom 10 等；无 babble / 咖啡馆字段）
