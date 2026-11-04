@@ -326,3 +326,135 @@ pub fn worst(cards: &[SceneCard]) -> Vec<usize> {
         .take(WORST_N)
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Better, Score};
+
+    fn s(id: &'static str, v: f64, thr: f64, better: Better) -> Score {
+        Score::judged(id, v, "x", better, Some(thr), &[])
+    }
+
+    fn row(clip: &str, sounds: &[&str], weak: f64, dq: f64, dd: f64) -> ClipRow {
+        ClipRow {
+            clip: clip.into(),
+            scene: SceneKey::Cafe,
+            tier: Tier::Common,
+            device: "mba-builtin".into(),
+            system: "ref".into(),
+            sounds: sounds
+                .iter()
+                .map(|c| (c.to_string(), SoundGroup::Pattern))
+                .collect(),
+            scores: vec![
+                ("V-NAN", true, s("V-NAN", 0.0, 0.0, Better::Lower)),
+                ("V-WEAK", false, s("V-WEAK", weak, 4.0, Better::Lower)),
+                (
+                    "V-NRMOS-SCOREQ",
+                    false,
+                    s("V-NRMOS-SCOREQ", dq, 0.0, Better::Higher),
+                ),
+                (
+                    "V-NRMOS-DISTILL",
+                    false,
+                    s("V-NRMOS-DISTILL", dd, 0.0, Better::Higher),
+                ),
+            ],
+        }
+    }
+
+    #[test]
+    fn listen_rules() {
+        assert_eq!(
+            listen_one(&row("a", &[], 0.0, 0.2, 0.1).scores),
+            (Status::Pass, None)
+        );
+        assert_eq!(
+            listen_one(&row("a", &[], 0.0, -0.2, -0.1).scores).0,
+            Status::Fail
+        );
+        let (st, why) = listen_one(&row("a", &[], 0.0, 0.2, -0.1).scores);
+        assert_eq!(st, Status::Unknown);
+        assert!(why.unwrap().contains("一个说好一个说差"));
+        // 都过但相差 ≥ 0.3：仍过，送人耳
+        let (st, why) = listen_one(&row("a", &[], 0.0, 0.5, 0.1).scores);
+        assert_eq!(st, Status::Pass);
+        assert!(why.is_some());
+    }
+
+    #[test]
+    fn worst_clip_decides_and_listen_is_not_an_item() {
+        let rows = vec![
+            row("a", &[], 1.0, 0.1, 0.1),
+            row("b", &[], 5.0, 0.1, 0.1),
+            row("c", &[], 1.0, 0.1, 0.1),
+        ];
+        let c = &summarize(&rows)[0];
+        let weak = c.items.iter().find(|i| i.v == "V-WEAK").unwrap();
+        assert_eq!((weak.pass, weak.fail, weak.status), (2, 1, Status::Fail));
+        assert_eq!(weak.worst_clip.as_deref(), Some("b"));
+        assert!(c.items.iter().all(|i| !LISTEN.contains(&i.v)));
+        assert_eq!(c.status, Status::Fail);
+        assert!(c.veto_failed.is_empty());
+    }
+
+    #[test]
+    fn veto_failure_is_listed_and_fails_scene() {
+        let mut r = row("a", &[], 1.0, 0.1, 0.1);
+        r.scores[0].2 = s("V-NAN", 3.0, 0.0, Better::Lower);
+        let c = &summarize(&[r])[0];
+        assert_eq!(c.veto_failed, vec!["V-NAN"]);
+        assert_eq!(c.status, Status::Fail);
+    }
+
+    #[test]
+    fn drag_finds_the_sound_and_needs_enough_clips() {
+        // 有咖啡机的 3 段更差（6 dB），没有的 3 段 1 dB
+        let mut rows: Vec<ClipRow> = (0..3)
+            .map(|i| {
+                row(
+                    &format!("m{i}"),
+                    &["coffee-machine", "bed-cafe"],
+                    6.0,
+                    0.1,
+                    0.1,
+                )
+            })
+            .collect();
+        rows.extend((0..3).map(|i| row(&format!("q{i}"), &["bed-cafe"], 1.0, 0.1, 0.1)));
+        let c = &summarize(&rows)[0];
+        let top = &c.drags[0];
+        assert_eq!(top.cls, "coffee-machine");
+        assert!((top.gap.unwrap() - 5.0).abs() < 1e-9);
+        // 每段都有的声音分不出组 → 样本不够
+        let bed = c.drags.iter().find(|d| d.cls == "bed-cafe").unwrap();
+        assert!(bed.gap.is_none());
+        // 只有 2 段有：样本不够，不下结论
+        let c2 = &summarize(&rows[1..])[0];
+        assert!(
+            c2.drags
+                .iter()
+                .all(|d| d.cls != "coffee-machine" || d.gap.is_none())
+        );
+    }
+
+    #[test]
+    fn worst_orders_fail_before_unknown_and_skips_pass() {
+        let mk = |scene: SceneKey, weak: f64, dq: f64| {
+            let mut r = row("a", &[], weak, dq, dq);
+            r.scene = scene;
+            r
+        };
+        let rows = vec![
+            mk(SceneKey::Cafe, 1.0, 0.1),           // 过
+            mk(SceneKey::Canteen, 6.0, 0.1),        // 不过
+            mk(SceneKey::HomeQuiet, 1.0, f64::NAN), // 听感判不了 → 待测
+        ];
+        let cards = summarize(&rows);
+        let w = worst(&cards);
+        assert_eq!(w.len(), 2);
+        assert_eq!(cards[w[0]].scene, SceneKey::Canteen);
+        assert_eq!(cards[w[1]].scene, SceneKey::HomeQuiet);
+    }
+}
