@@ -1,7 +1,7 @@
 # 评审 · exp015 认人耗时估算与计时命令（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/experiments/exp015-speaker-shared-spectrum/README.md`（依据：`src/speaker-lab/src/bench.rs`、`state/handoff/fespk.md`、`src/speaker/src/{fbank,embed,judge}.rs`）。**最新一轮：第 2 轮（2026-11-04）· 总评「修改」· 无 P0/P1，连续第 1 轮，待第 3 轮确认**。
-> 累计处理：P1×1、P2×6 逐条回源码核实，属实 7、驳回 0。没有新的要人定的事。
+> 对象：`docs/experiments/exp015-speaker-shared-spectrum/README.md`（依据：`src/speaker-lab/src/bench.rs`、`state/handoff/fespk.md`、`src/speaker/src/{fbank,embed,judge}.rs`）。**最新一轮：第 3 轮（2026-11-04）· 总评「修改」· 已达停止线（连续两轮无 P0/P1）**。
+> 累计处理：P1×1、P2×7 逐条回源码核实，属实 8、驳回 0。没有新的要人定的事。
 > 编号：本记录按交代的文件名规则 `docs/reviews/exp015-*.md` 命名；`docs/reviews/README.md` 不在本线可写范围，索引那一行由大总管加。
 
 ## 第 1 轮（2026-11-04）· 总评「修改」
@@ -58,3 +58,24 @@
 ### 是否再审
 
 本轮无 P0/P1，连续第 1 轮，再审一轮确认。
+
+## 第 3 轮（2026-11-04）· 总评「修改」
+
+原文：`_tmp/exp015-reviews/readme-codex-3.md`（不入库）。effort medium。
+本轮 P0/P1：0 条 · 停止线：本轮与上一轮都无 P0/P1 → 满足 · 留作 issue 的 P2：无（1 条当场改了）
+
+上一轮处理的验证：两条都已改到位；第 1 轮的修正也都保留。
+
+- **P2｜README:63 降频与缩窗的代价漏了注册、锁定、纠错的变化**（第 3 轮 #1）
+  - 核实：属实。注册要求与上一窗相似（`judge.rs:283-301`），锁定按连续居首次数累计（`enroll.rs:335-363`），步长与窗长都会改这些
+  - 处理：README 第 3 节加一段，要求候选配置重测注册接受率、锁定时间、锁错后恢复时间；现状页第 1、2 题的后果补上「认出主人要更久、认错后改回更慢（未量化）」
+
+### 引用抽查
+
+- 「不符」：无
+- 「核实属实」：8 条（含组合数字 11.9 ÷ 1.73 ≈ 6.9、11.9 ÷ 3.95 ≈ 3.0）
+- 无法核实：模型元数据与上游网络定义、fecore 的 `FRONTEND`——同第 2 轮，README 已把乘加估算标为假设
+
+### 是否再审
+
+停：连续两轮无 P0/P1。剩余 P2 为 0。实测数字填入 README 后若结论改变，再审一轮。
