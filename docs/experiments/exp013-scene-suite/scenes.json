@@ -3,224 +3,1619 @@
   "sr": 16000,
   "clip_s": 12.0,
   "lead_silence_s": 1.5,
-  "counts": {"common": 10, "stress": 6},
-  "devices": ["mba-builtin", "external-mic"],
+  "counts": {
+    "common": 10,
+    "stress": 6
+  },
+  "devices": [
+    "mba-builtin",
+    "external-mic"
+  ],
   "base_seed": 20261103,
-  "zh_clips": {"common": [3], "stress": [2]},
+  "zh_clips": {
+    "common": [
+      3
+    ],
+    "stress": [
+      2
+    ]
+  },
   "owner_speech_frac": 0.7,
-  "gap_s": [0.3, 1.0],
-  "event_count": [1, 3],
-  "event_rel_db": {"common": [-18, -6], "stress": [-10, 2]},
-  "pattern_rel_db": [-6, 3],
-  "speech_rel_db": [-6, 0],
+  "gap_s": [
+    0.3,
+    1.0
+  ],
+  "event_count": [
+    1,
+    3
+  ],
+  "event_rel_db": {
+    "common": [
+      -18,
+      -6
+    ],
+    "stress": [
+      -10,
+      2
+    ]
+  },
+  "pattern_rel_db": [
+    -6,
+    3
+  ],
+  "speech_rel_db": [
+    -6,
+    0
+  ],
   "stress_min_extras": 2,
-  "default_dist_m": [1.5, 3.0],
-  "default_az_deg": [-170, 170],
+  "default_dist_m": [
+    1.5,
+    3.0
+  ],
+  "default_az_deg": [
+    -170,
+    170
+  ],
   "scenes": {
     "home-quiet": {
-      "room": {"dims": [[3, 5], [3, 4], [2.5, 2.8]], "t60": {"common": [0.3, 0.5], "stress": [0.45, 0.55]}},
-      "snr_db": {"common": [20, 30], "stress": [8, 15]},
-      "bed": ["bed-room"],
+      "snr_db": {
+        "common": [
+          20,
+          30
+        ],
+        "stress": [
+          8,
+          15
+        ]
+      },
       "sounds": [
-        {"cls": "fan", "p": [0.5, 0.7], "dist_m": [1.0, 2.5]},
-        {"cls": "fridge-hum", "p": [0.3, 0.4], "dist_m": [2.0, 4.0]},
-        {"cls": "hvac", "p": [0.3, 0.5]},
-        {"cls": "keyboard", "p": [0.5, 0.6], "dist_m": [0.3, 0.5], "az_deg": [-20, 20]},
-        {"cls": "mouse", "p": [0.3, 0.4], "dist_m": [0.3, 0.5], "az_deg": [20, 60]},
-        {"cls": "door-knock", "p": [0.15, 0.3], "dist_m": [2.5, 4.0]}
+        {
+          "cls": "fan",
+          "p": [
+            0.5,
+            0.7
+          ],
+          "dist_m": [
+            1.0,
+            2.5
+          ]
+        },
+        {
+          "cls": "fridge-hum",
+          "p": [
+            0.3,
+            0.4
+          ],
+          "dist_m": [
+            2.0,
+            4.0
+          ]
+        },
+        {
+          "cls": "hvac",
+          "p": [
+            0.3,
+            0.5
+          ]
+        },
+        {
+          "cls": "keyboard",
+          "p": [
+            0.5,
+            0.6
+          ],
+          "dist_m": [
+            0.3,
+            0.5
+          ],
+          "az_deg": [
+            -20,
+            20
+          ]
+        },
+        {
+          "cls": "mouse",
+          "p": [
+            0.3,
+            0.4
+          ],
+          "dist_m": [
+            0.3,
+            0.5
+          ],
+          "az_deg": [
+            20,
+            60
+          ]
+        },
+        {
+          "cls": "door-knock",
+          "p": [
+            0.15,
+            0.3
+          ],
+          "dist_m": [
+            2.5,
+            4.0
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "ace": "Office_1",
+          "noise": [
+            "Ambient",
+            "Fan"
+          ]
+        },
+        {
+          "mit": [
+            "Bedroom",
+            "MasterBedroom",
+            "BabysRoom",
+            "Office_Small"
+          ],
+          "bed": [
+            "bed-room"
+          ]
+        }
       ]
     },
     "home-family": {
-      "room": {"dims": [[4, 7], [3.5, 5], [2.5, 2.8]], "t60": {"common": [0.3, 0.5], "stress": [0.45, 0.55]}},
-      "snr_db": {"common": [10, 20], "stress": [0, 8]},
-      "sir_db": {"common": [6, 12], "stress": [-6, 3]},
-      "bed": ["bed-kitchen"],
+      "snr_db": {
+        "common": [
+          10,
+          20
+        ],
+        "stress": [
+          0,
+          8
+        ]
+      },
+      "sir_db": {
+        "common": [
+          6,
+          12
+        ],
+        "stress": [
+          -6,
+          3
+        ]
+      },
       "sounds": [
-        {"cls": "tv-voice", "p": [0.7, 0.9], "dist_m": [2.0, 3.5], "az_deg": [30, 160]},
-        {"cls": "talker", "p": [0.4, 0.6], "dist_m": [1.5, 3.0]},
-        {"cls": "dog-bark", "p": [0.3, 0.5], "dist_m": [2.0, 5.0]},
-        {"cls": "baby-cry", "p": [0.2, 0.4], "dist_m": [2.0, 4.0]},
-        {"cls": "dishes", "p": [0.3, 0.4], "dist_m": [2.5, 4.5]},
-        {"cls": "music", "p": [0.2, 0.3], "dist_m": [2.0, 3.5]},
-        {"cls": "doorbell", "p": [0.2, 0.4], "dist_m": [4.0, 6.0]},
-        {"cls": "door-knock", "p": [0.15, 0.3], "dist_m": [4.0, 6.0]},
-        {"cls": "pour", "p": [0.2, 0.3], "dist_m": [2.5, 4.5]}
+        {
+          "cls": "tv-voice",
+          "p": [
+            0.7,
+            0.9
+          ],
+          "dist_m": [
+            2.0,
+            3.5
+          ],
+          "az_deg": [
+            30,
+            160
+          ]
+        },
+        {
+          "cls": "talker",
+          "p": [
+            0.4,
+            0.6
+          ],
+          "dist_m": [
+            1.5,
+            3.0
+          ]
+        },
+        {
+          "cls": "dog-bark",
+          "p": [
+            0.3,
+            0.5
+          ],
+          "dist_m": [
+            2.0,
+            5.0
+          ]
+        },
+        {
+          "cls": "baby-cry",
+          "p": [
+            0.2,
+            0.4
+          ],
+          "dist_m": [
+            2.0,
+            4.0
+          ]
+        },
+        {
+          "cls": "dishes",
+          "p": [
+            0.3,
+            0.4
+          ],
+          "dist_m": [
+            2.5,
+            4.5
+          ]
+        },
+        {
+          "cls": "music",
+          "p": [
+            0.2,
+            0.3
+          ],
+          "dist_m": [
+            2.0,
+            3.5
+          ]
+        },
+        {
+          "cls": "doorbell",
+          "p": [
+            0.2,
+            0.4
+          ],
+          "dist_m": [
+            4.0,
+            6.0
+          ]
+        },
+        {
+          "cls": "door-knock",
+          "p": [
+            0.15,
+            0.3
+          ],
+          "dist_m": [
+            4.0,
+            6.0
+          ]
+        },
+        {
+          "cls": "pour",
+          "p": [
+            0.2,
+            0.3
+          ],
+          "dist_m": [
+            2.5,
+            4.5
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "mit": [
+            "Livingroom",
+            "LivingRoom",
+            "LivingRoom_Large",
+            "Kitchen",
+            "Diningroom"
+          ],
+          "bed": [
+            "bed-kitchen"
+          ]
+        }
       ]
     },
     "open-office": {
-      "room": {"dims": [[10, 25], [8, 15], [2.7, 3.2]], "t60": {"common": [0.4, 0.8], "stress": [0.8, 1.0]}},
-      "snr_db": {"common": [10, 20], "stress": [3, 8]},
-      "sir_db": {"common": [5, 15], "stress": [-3, 3]},
-      "bed": ["bed-office"],
+      "snr_db": {
+        "common": [
+          10,
+          20
+        ],
+        "stress": [
+          3,
+          8
+        ]
+      },
+      "sir_db": {
+        "common": [
+          5,
+          15
+        ],
+        "stress": [
+          -3,
+          3
+        ]
+      },
       "sounds": [
-        {"cls": "talker", "p": [0.8, 1.0], "dist_m": {"common": [1.5, 3.0], "stress": [1.0, 1.5]}},
-        {"cls": "hvac", "p": [0.4, 0.5]},
-        {"cls": "keyboard", "p": [0.6, 0.8], "dist_m": [0.3, 1.5]},
-        {"cls": "phone-ring", "p": [0.2, 0.5], "dist_m": [1.5, 4.0]},
-        {"cls": "notify", "p": [0.3, 0.5], "dist_m": [0.4, 2.0]},
-        {"cls": "mouse", "p": [0.3, 0.3], "dist_m": [0.3, 0.5], "az_deg": [20, 60]}
+        {
+          "cls": "talker",
+          "p": [
+            0.8,
+            1.0
+          ],
+          "dist_m": {
+            "common": [
+              1.5,
+              3.0
+            ],
+            "stress": [
+              1.0,
+              1.5
+            ]
+          }
+        },
+        {
+          "cls": "hvac",
+          "p": [
+            0.4,
+            0.5
+          ]
+        },
+        {
+          "cls": "keyboard",
+          "p": [
+            0.6,
+            0.8
+          ],
+          "dist_m": [
+            0.3,
+            1.5
+          ]
+        },
+        {
+          "cls": "phone-ring",
+          "p": [
+            0.2,
+            0.5
+          ],
+          "dist_m": [
+            1.5,
+            4.0
+          ]
+        },
+        {
+          "cls": "notify",
+          "p": [
+            0.3,
+            0.5
+          ],
+          "dist_m": [
+            0.4,
+            2.0
+          ]
+        },
+        {
+          "cls": "mouse",
+          "p": [
+            0.3,
+            0.3
+          ],
+          "dist_m": [
+            0.3,
+            0.5
+          ],
+          "az_deg": [
+            20,
+            60
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "ace": "Office_2",
+          "noise": [
+            "Ambient",
+            "Fan",
+            "Babble"
+          ]
+        },
+        {
+          "ace": "Meeting_Room_2",
+          "noise": [
+            "Ambient",
+            "Babble"
+          ]
+        },
+        {
+          "mit": [
+            "Office_LargeBrickWalledOpenPlanOffice",
+            "Office"
+          ],
+          "bed": [
+            "bed-office"
+          ]
+        }
       ]
     },
     "phone-booth": {
-      "room": {"dims": [[1.0, 1.4], [1.0, 1.4], [2.1, 2.3]], "t60": {"common": [0.1, 0.25], "stress": [0.2, 0.3]}},
-      "snr_db": {"common": [22, 30], "stress": [15, 22]},
-      "sir_db": {"common": [25, 35], "stress": [15, 20]},
-      "bed": ["bed-room"],
+      "snr_db": {
+        "common": [
+          22,
+          30
+        ],
+        "stress": [
+          15,
+          22
+        ]
+      },
+      "sir_db": {
+        "common": [
+          25,
+          35
+        ],
+        "stress": [
+          15,
+          20
+        ]
+      },
       "sounds": [
-        {"cls": "fan", "p": [0.8, 0.9], "dist_m": [0.5, 0.9]},
-        {"cls": "muffled-talker", "p": [0.5, 0.8]},
-        {"cls": "door-knock", "p": [0.1, 0.3], "dist_m": [0.6, 1.0]}
+        {
+          "cls": "fan",
+          "p": [
+            0.8,
+            0.9
+          ],
+          "dist_m": [
+            0.5,
+            0.9
+          ]
+        },
+        {
+          "cls": "muffled-talker",
+          "p": [
+            0.5,
+            0.8
+          ]
+        },
+        {
+          "cls": "door-knock",
+          "p": [
+            0.1,
+            0.3
+          ],
+          "dist_m": [
+            0.6,
+            1.0
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "ace": "Office_1",
+          "cfg": [
+            1
+          ],
+          "noise": [
+            "Ambient",
+            "Fan"
+          ]
+        },
+        {
+          "mit": [
+            "Office_Small",
+            "Bathroom_Small"
+          ],
+          "bed": [
+            "bed-room"
+          ]
+        }
       ]
     },
     "meeting-room": {
       "polarity": "preserve_all",
-      "co_targets": {"count": {"common": [1, 2], "stress": [2, 2]}, "dist_m": [0.5, 2.0], "az_deg": [-150, 150], "rel_db": [-12, 0]},
-      "room": {"dims": [[4, 7], [3, 5], [2.6, 3.0]], "t60": {"common": [0.5, 0.7], "stress": [0.8, 1.0]}},
-      "snr_db": {"common": [15, 25], "stress": [8, 15]},
-      "bed": ["bed-room"],
+      "co_targets": {
+        "count": {
+          "common": [
+            1,
+            2
+          ],
+          "stress": [
+            2,
+            2
+          ]
+        },
+        "dist_m": [
+          0.5,
+          2.0
+        ],
+        "az_deg": [
+          -150,
+          150
+        ],
+        "rel_db": [
+          -12,
+          0
+        ]
+      },
+      "snr_db": {
+        "common": [
+          15,
+          25
+        ],
+        "stress": [
+          8,
+          15
+        ]
+      },
       "sounds": [
-        {"cls": "hvac", "p": [0.9, 1.0]},
-        {"cls": "door", "p": [0.3, 0.5], "dist_m": [2.5, 4.0]},
-        {"cls": "cough", "p": [0.3, 0.5], "dist_m": [0.8, 2.0]},
-        {"cls": "laugh", "p": [0.3, 0.5], "dist_m": [0.8, 2.0]},
-        {"cls": "keyboard", "p": [0.2, 0.3], "dist_m": [0.5, 1.5]},
-        {"cls": "chair", "p": [0.4, 0.6], "dist_m": [0.8, 2.5]}
+        {
+          "cls": "hvac",
+          "p": [
+            0.9,
+            1.0
+          ]
+        },
+        {
+          "cls": "door",
+          "p": [
+            0.3,
+            0.5
+          ],
+          "dist_m": [
+            2.5,
+            4.0
+          ]
+        },
+        {
+          "cls": "cough",
+          "p": [
+            0.3,
+            0.5
+          ],
+          "dist_m": [
+            0.8,
+            2.0
+          ]
+        },
+        {
+          "cls": "laugh",
+          "p": [
+            0.3,
+            0.5
+          ],
+          "dist_m": [
+            0.8,
+            2.0
+          ]
+        },
+        {
+          "cls": "keyboard",
+          "p": [
+            0.2,
+            0.3
+          ],
+          "dist_m": [
+            0.5,
+            1.5
+          ]
+        },
+        {
+          "cls": "chair",
+          "p": [
+            0.4,
+            0.6
+          ],
+          "dist_m": [
+            0.8,
+            2.5
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "ace": "Meeting_Room_1",
+          "noise": [
+            "Ambient",
+            "Fan"
+          ]
+        },
+        {
+          "ace": "Meeting_Room_2",
+          "noise": [
+            "Ambient",
+            "Fan"
+          ]
+        },
+        {
+          "mit": [
+            "Office_ConferenceRoom",
+            "Office_MeetingRoom"
+          ],
+          "bed": [
+            "bed-room"
+          ]
+        }
       ]
     },
     "cowork": {
-      "room": {"dims": [[10, 20], [8, 14], [3, 4]], "t60": {"common": [0.6, 1.0], "stress": [1.0, 1.2]}},
-      "snr_db": {"common": [5, 15], "stress": [0, 5]},
-      "sir_db": {"common": [5, 15], "stress": [0, 5]},
-      "bed": ["bed-office", "bed-cafe"],
+      "snr_db": {
+        "common": [
+          5,
+          15
+        ],
+        "stress": [
+          0,
+          5
+        ]
+      },
+      "sir_db": {
+        "common": [
+          5,
+          15
+        ],
+        "stress": [
+          0,
+          5
+        ]
+      },
       "sounds": [
-        {"cls": "talker", "p": [0.7, 0.9], "dist_m": [2.0, 4.0]},
-        {"cls": "coffee-machine", "p": [0.4, 0.6], "dist_m": [3.0, 6.0]},
-        {"cls": "footsteps", "p": [0.4, 0.5], "dist_m": [1.5, 4.0]},
-        {"cls": "dishes", "p": [0.2, 0.4], "dist_m": [2.0, 5.0]},
-        {"cls": "babble", "p": [0.2, 0.4]}
+        {
+          "cls": "talker",
+          "p": [
+            0.7,
+            0.9
+          ],
+          "dist_m": [
+            2.0,
+            4.0
+          ]
+        },
+        {
+          "cls": "coffee-machine",
+          "p": [
+            0.4,
+            0.6
+          ],
+          "dist_m": [
+            3.0,
+            6.0
+          ]
+        },
+        {
+          "cls": "footsteps",
+          "p": [
+            0.4,
+            0.5
+          ],
+          "dist_m": [
+            1.5,
+            4.0
+          ]
+        },
+        {
+          "cls": "dishes",
+          "p": [
+            0.2,
+            0.4
+          ],
+          "dist_m": [
+            2.0,
+            5.0
+          ]
+        },
+        {
+          "cls": "babble",
+          "p": [
+            0.2,
+            0.4
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "ace": "Building_Lobby",
+          "noise": [
+            "Ambient",
+            "Babble"
+          ]
+        },
+        {
+          "ace": "Meeting_Room_2",
+          "noise": [
+            "Babble"
+          ]
+        },
+        {
+          "mit": [
+            "MITCampus_StudentLounge",
+            "MITCampus_Atrium"
+          ],
+          "bed": [
+            "bed-cafeteria",
+            "bed-office"
+          ]
+        }
       ]
     },
     "cafe": {
-      "room": {"dims": [[6, 12], [5, 9], [2.8, 3.5]], "t60": {"common": [0.6, 1.0], "stress": [1.0, 1.3]}},
-      "snr_db": {"common": [3, 10], "stress": [-3, 3]},
-      "sir_db": {"common": [0, 15], "stress": [-6, 0]},
-      "bed": ["bed-cafe"],
+      "snr_db": {
+        "common": [
+          3,
+          10
+        ],
+        "stress": [
+          -3,
+          3
+        ]
+      },
+      "sir_db": {
+        "common": [
+          0,
+          15
+        ],
+        "stress": [
+          -6,
+          0
+        ]
+      },
       "sounds": [
-        {"cls": "talker", "p": [0.6, 0.9], "dist_m": [1.0, 2.5]},
-        {"cls": "coffee-machine", "p": [0.5, 0.7], "dist_m": [2.5, 6.0]},
-        {"cls": "music", "p": [0.4, 0.5], "dist_m": [3.0, 6.0]},
-        {"cls": "dishes", "p": [0.5, 0.7], "dist_m": [0.8, 3.0]},
-        {"cls": "can-open", "p": [0.1, 0.2], "dist_m": [1.0, 2.5]},
-        {"cls": "laugh", "p": [0.2, 0.3], "dist_m": [1.5, 3.0]}
+        {
+          "cls": "talker",
+          "p": [
+            0.6,
+            0.9
+          ],
+          "dist_m": [
+            1.0,
+            2.5
+          ]
+        },
+        {
+          "cls": "coffee-machine",
+          "p": [
+            0.5,
+            0.7
+          ],
+          "dist_m": [
+            2.5,
+            6.0
+          ]
+        },
+        {
+          "cls": "music",
+          "p": [
+            0.4,
+            0.5
+          ],
+          "dist_m": [
+            3.0,
+            6.0
+          ]
+        },
+        {
+          "cls": "dishes",
+          "p": [
+            0.5,
+            0.7
+          ],
+          "dist_m": [
+            0.8,
+            3.0
+          ]
+        },
+        {
+          "cls": "can-open",
+          "p": [
+            0.1,
+            0.2
+          ],
+          "dist_m": [
+            1.0,
+            2.5
+          ]
+        },
+        {
+          "cls": "laugh",
+          "p": [
+            0.2,
+            0.3
+          ],
+          "dist_m": [
+            1.5,
+            3.0
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "mit": [
+            "CoffeeShop",
+            "Restaurant",
+            "Bar",
+            "Pizzeria",
+            "SandwichShop",
+            "SamdwichShop",
+            "IceCreamParlor",
+            "WineBar",
+            "FastFoodRestaurant"
+          ],
+          "bed": [
+            "bed-restaurant"
+          ]
+        }
       ]
     },
     "canteen": {
-      "room": {"dims": [[15, 30], [10, 20], [3.5, 5]], "t60": {"common": [0.8, 1.3], "stress": [1.5, 2.5]}},
-      "snr_db": {"common": [0, 6], "stress": [-5, 0]},
-      "sir_db": {"common": [0, 10], "stress": [-5, 0]},
-      "bed": ["bed-restaurant"],
+      "snr_db": {
+        "common": [
+          0,
+          6
+        ],
+        "stress": [
+          -5,
+          0
+        ]
+      },
+      "sir_db": {
+        "common": [
+          0,
+          10
+        ],
+        "stress": [
+          -5,
+          0
+        ]
+      },
       "sounds": [
-        {"cls": "babble", "p": [0.8, 1.0]},
-        {"cls": "talker", "p": [0.5, 0.8], "dist_m": [1.0, 1.5]},
-        {"cls": "dishes", "p": [0.7, 0.9], "dist_m": [0.6, 3.0]},
-        {"cls": "laugh", "p": [0.2, 0.4], "dist_m": [1.0, 3.0]}
+        {
+          "cls": "babble",
+          "p": [
+            0.8,
+            1.0
+          ]
+        },
+        {
+          "cls": "talker",
+          "p": [
+            0.5,
+            0.8
+          ],
+          "dist_m": [
+            1.0,
+            1.5
+          ]
+        },
+        {
+          "cls": "dishes",
+          "p": [
+            0.7,
+            0.9
+          ],
+          "dist_m": [
+            0.6,
+            3.0
+          ]
+        },
+        {
+          "cls": "laugh",
+          "p": [
+            0.2,
+            0.4
+          ],
+          "dist_m": [
+            1.0,
+            3.0
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "mit": [
+            "Cafeteria",
+            "MallFoodCourt_BurlingtonMall",
+            "Campground_Dininghall",
+            "Restaurant"
+          ],
+          "bed": [
+            "bed-cafeteria",
+            "bed-restaurant"
+          ]
+        }
       ]
     },
     "transit-hub": {
-      "room": {"dims": [[30, 60], [20, 40], [8, 15]], "t60": {"common": [1.5, 2.5], "stress": [4.0, 8.0]}},
-      "snr_db": {"common": [3, 10], "stress": [-3, 3]},
-      "sir_db": {"common": [3, 12], "stress": [-3, 3]},
-      "bed": ["bed-station"],
+      "snr_db": {
+        "common": [
+          3,
+          10
+        ],
+        "stress": [
+          -3,
+          3
+        ]
+      },
+      "sir_db": {
+        "common": [
+          3,
+          12
+        ],
+        "stress": [
+          -3,
+          3
+        ]
+      },
       "sounds": [
-        {"cls": "announce", "p": [0.6, 0.9]},
-        {"cls": "babble", "p": [0.5, 0.7]},
-        {"cls": "luggage", "p": [0.5, 0.7], "dist_m": [1.0, 3.0]},
-        {"cls": "footsteps", "p": [0.4, 0.6], "dist_m": [1.0, 3.0]},
-        {"cls": "talker", "p": [0.3, 0.5], "dist_m": [1.5, 3.0]}
+        {
+          "cls": "announce",
+          "p": [
+            0.6,
+            0.9
+          ]
+        },
+        {
+          "cls": "babble",
+          "p": [
+            0.5,
+            0.7
+          ]
+        },
+        {
+          "cls": "luggage",
+          "p": [
+            0.5,
+            0.7
+          ],
+          "dist_m": [
+            1.0,
+            3.0
+          ]
+        },
+        {
+          "cls": "footsteps",
+          "p": [
+            0.4,
+            0.6
+          ],
+          "dist_m": [
+            1.0,
+            3.0
+          ]
+        },
+        {
+          "cls": "talker",
+          "p": [
+            0.3,
+            0.5
+          ],
+          "dist_m": [
+            1.5,
+            3.0
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "ace": "Building_Lobby",
+          "noise": [
+            "Ambient",
+            "Babble"
+          ]
+        },
+        {
+          "mit": [
+            "SubwayStation_CentralSquareCambridge",
+            "SubwayStation_ParkStreetBoston",
+            "MITCampus_Atrium",
+            "TrainStation_SouthStationBoston"
+          ],
+          "bed": [
+            "bed-station"
+          ]
+        }
       ]
     },
     "car-passenger": {
-      "room": {"dims": [[2.0, 2.4], [1.4, 1.6], [1.1, 1.3]], "t60": {"common": [0.05, 0.1], "stress": [0.05, 0.1]}},
-      "snr_db": {"common": [0, 8], "stress": [-5, 0]},
-      "sir_db": {"common": [5, 15], "stress": [0, 5]},
-      "bed": ["bed-car"],
+      "snr_db": {
+        "common": [
+          0,
+          8
+        ],
+        "stress": [
+          -5,
+          0
+        ]
+      },
+      "sir_db": {
+        "common": [
+          5,
+          15
+        ],
+        "stress": [
+          0,
+          5
+        ]
+      },
       "sounds": [
-        {"cls": "talker", "p": [0.6, 0.8], "dist_m": [0.8, 1.2], "az_deg": [40, 80]},
-        {"cls": "nav-voice", "p": [0.4, 0.6], "dist_m": [0.6, 1.0], "az_deg": [-40, 40]},
-        {"cls": "turn-signal", "p": [0.4, 0.6], "dist_m": [0.8, 1.2]},
-        {"cls": "car-horn", "p": [0.2, 0.4], "dist_m": [1.0, 1.5]}
+        {
+          "cls": "talker",
+          "p": [
+            0.6,
+            0.8
+          ],
+          "dist_m": [
+            0.8,
+            1.2
+          ],
+          "az_deg": [
+            40,
+            80
+          ]
+        },
+        {
+          "cls": "nav-voice",
+          "p": [
+            0.4,
+            0.6
+          ],
+          "dist_m": [
+            0.6,
+            1.0
+          ],
+          "az_deg": [
+            -40,
+            40
+          ]
+        },
+        {
+          "cls": "turn-signal",
+          "p": [
+            0.4,
+            0.6
+          ],
+          "dist_m": [
+            0.8,
+            1.2
+          ]
+        },
+        {
+          "cls": "car-horn",
+          "p": [
+            0.2,
+            0.4
+          ],
+          "dist_m": [
+            1.0,
+            1.5
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "mcv": true,
+          "seats": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "speed_kph": {
+            "common": [
+              30,
+              100
+            ],
+            "stress": [
+              110,
+              150
+            ]
+          }
+        }
       ]
     },
     "bus-metro-cabin": {
-      "room": {"dims": [[9, 12], [2.4, 2.6], [2.1, 2.4]], "t60": {"common": [0.1, 0.3], "stress": [0.2, 0.4]}},
-      "snr_db": {"common": [0, 8], "stress": [-5, 0]},
-      "sir_db": {"common": [3, 12], "stress": [-3, 3]},
-      "bed": ["bed-bus", "bed-metro"],
+      "snr_db": {
+        "common": [
+          0,
+          8
+        ],
+        "stress": [
+          -5,
+          0
+        ]
+      },
+      "sir_db": {
+        "common": [
+          3,
+          12
+        ],
+        "stress": [
+          -3,
+          3
+        ]
+      },
       "sounds": [
-        {"cls": "announce", "p": [0.6, 0.9]},
-        {"cls": "talker", "p": [0.5, 0.7], "dist_m": [1.0, 2.0]},
-        {"cls": "door-chime", "p": [0.4, 0.6], "dist_m": [1.5, 4.0]},
-        {"cls": "door-pneumatic", "p": [0.3, 0.5], "dist_m": [1.5, 4.0]},
-        {"cls": "brake", "p": [0.2, 0.4], "dist_m": [2.0, 6.0]},
-        {"cls": "babble", "p": [0.2, 0.4]}
+        {
+          "cls": "announce",
+          "p": [
+            0.6,
+            0.9
+          ]
+        },
+        {
+          "cls": "talker",
+          "p": [
+            0.5,
+            0.7
+          ],
+          "dist_m": [
+            1.0,
+            2.0
+          ]
+        },
+        {
+          "cls": "door-chime",
+          "p": [
+            0.4,
+            0.6
+          ],
+          "dist_m": [
+            1.5,
+            4.0
+          ]
+        },
+        {
+          "cls": "door-pneumatic",
+          "p": [
+            0.3,
+            0.5
+          ],
+          "dist_m": [
+            1.5,
+            4.0
+          ]
+        },
+        {
+          "cls": "brake",
+          "p": [
+            0.2,
+            0.4
+          ],
+          "dist_m": [
+            2.0,
+            6.0
+          ]
+        },
+        {
+          "cls": "babble",
+          "p": [
+            0.2,
+            0.4
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "mit": [
+            "Train_BostonTGreenline",
+            "Train_BostonTOrangeLine",
+            "Train_BostonTRedLine"
+          ],
+          "bed": [
+            "bed-bus",
+            "bed-metro"
+          ]
+        }
       ]
     },
     "rail-air-cabin": {
-      "room": {"dims": [[15, 25], [3.2, 3.8], [2.0, 2.4]], "t60": {"common": [0.1, 0.3], "stress": [0.2, 0.4]}},
-      "snr_db": {"common": [-2, 5], "stress": [-6, -2]},
-      "sir_db": {"common": [0, 10], "stress": [-6, 0]},
-      "bed": ["bed-cabin"],
+      "snr_db": {
+        "common": [
+          -2,
+          5
+        ],
+        "stress": [
+          -6,
+          -2
+        ]
+      },
+      "sir_db": {
+        "common": [
+          0,
+          10
+        ],
+        "stress": [
+          -6,
+          0
+        ]
+      },
       "sounds": [
-        {"cls": "talker", "p": [0.7, 0.9], "dist_m": [0.6, 1.0], "az_deg": [60, 100]},
-        {"cls": "announce", "p": [0.4, 0.6]},
-        {"cls": "dishes", "p": [0.2, 0.4], "dist_m": [0.6, 1.5]},
-        {"cls": "trolley", "p": [0.2, 0.4], "dist_m": [0.6, 1.2]},
-        {"cls": "cough", "p": [0.2, 0.3], "dist_m": [0.8, 2.0]}
+        {
+          "cls": "talker",
+          "p": [
+            0.7,
+            0.9
+          ],
+          "dist_m": [
+            0.6,
+            1.0
+          ],
+          "az_deg": [
+            60,
+            100
+          ]
+        },
+        {
+          "cls": "announce",
+          "p": [
+            0.4,
+            0.6
+          ]
+        },
+        {
+          "cls": "dishes",
+          "p": [
+            0.2,
+            0.4
+          ],
+          "dist_m": [
+            0.6,
+            1.5
+          ]
+        },
+        {
+          "cls": "trolley",
+          "p": [
+            0.2,
+            0.4
+          ],
+          "dist_m": [
+            0.6,
+            1.2
+          ]
+        },
+        {
+          "cls": "cough",
+          "p": [
+            0.2,
+            0.3
+          ],
+          "dist_m": [
+            0.8,
+            2.0
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "mit": [
+            "Train_BostonTGreenline",
+            "Train_BostonTOrangeLine"
+          ],
+          "bed": [
+            "bed-cabin"
+          ]
+        }
       ]
     },
     "street-outdoor": {
-      "room": {"dims": [[100, 100], [100, 100], [10, 10]], "t60": {"common": [0.0, 0.0], "stress": [0.0, 0.0]}},
-      "snr_db": {"common": [0, 10], "stress": [-5, 0]},
-      "sir_db": {"common": [5, 15], "stress": [0, 5]},
-      "bed": ["bed-street"],
+      "snr_db": {
+        "common": [
+          0,
+          10
+        ],
+        "stress": [
+          -5,
+          0
+        ]
+      },
+      "sir_db": {
+        "common": [
+          5,
+          15
+        ],
+        "stress": [
+          0,
+          5
+        ]
+      },
       "sounds": [
-        {"cls": "wind", "p": [0.0, 0.7]},
-        {"cls": "car-horn", "p": [0.4, 0.6], "dist_m": [5.0, 15.0]},
-        {"cls": "talker", "p": [0.4, 0.6], "dist_m": [2.0, 5.0]},
-        {"cls": "footsteps", "p": [0.2, 0.3], "dist_m": [1.0, 3.0]},
-        {"cls": "jackhammer", "p": [0.1, 0.4], "dist_m": [10.0, 30.0]}
+        {
+          "cls": "wind",
+          "p": [
+            0.0,
+            0.7
+          ]
+        },
+        {
+          "cls": "car-horn",
+          "p": [
+            0.4,
+            0.6
+          ],
+          "dist_m": [
+            5.0,
+            15.0
+          ]
+        },
+        {
+          "cls": "talker",
+          "p": [
+            0.4,
+            0.6
+          ],
+          "dist_m": [
+            2.0,
+            5.0
+          ]
+        },
+        {
+          "cls": "footsteps",
+          "p": [
+            0.2,
+            0.3
+          ],
+          "dist_m": [
+            1.0,
+            3.0
+          ]
+        },
+        {
+          "cls": "jackhammer",
+          "p": [
+            0.1,
+            0.4
+          ],
+          "dist_m": [
+            10.0,
+            30.0
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "mit": [
+            "Outside_StreetsOfCambridge",
+            "Outside_StreetsOfBoston",
+            "StreetsOfCambridge",
+            "StreetsOfBoston",
+            "StreetsOfcambridge",
+            "Outside_StreetsOfcambridge",
+            "Outside_StreetsOfSomerville",
+            "OutsideStreetsOfBoston",
+            "Outside_ParkingLot",
+            "Outside_InTramStopRainShelter"
+          ],
+          "bed": [
+            "bed-street",
+            "bed-terrace"
+          ]
+        }
       ]
     },
     "hotel-room": {
-      "room": {"dims": [[4, 6], [3.5, 4.5], [2.5, 2.8]], "t60": {"common": [0.3, 0.6], "stress": [0.5, 0.7]}},
-      "snr_db": {"common": [20, 30], "stress": [10, 18]},
-      "bed": ["bed-room"],
+      "snr_db": {
+        "common": [
+          20,
+          30
+        ],
+        "stress": [
+          10,
+          18
+        ]
+      },
       "sounds": [
-        {"cls": "hvac-cycle", "p": [0.6, 0.8]},
-        {"cls": "footsteps", "p": [0.3, 0.5], "dist_m": [3.0, 5.0]},
-        {"cls": "door", "p": [0.3, 0.5], "dist_m": [3.0, 5.0]},
-        {"cls": "door-knock", "p": [0.1, 0.3], "dist_m": [3.0, 4.5]}
+        {
+          "cls": "hvac-cycle",
+          "p": [
+            0.6,
+            0.8
+          ]
+        },
+        {
+          "cls": "footsteps",
+          "p": [
+            0.3,
+            0.5
+          ],
+          "dist_m": [
+            3.0,
+            5.0
+          ]
+        },
+        {
+          "cls": "door",
+          "p": [
+            0.3,
+            0.5
+          ],
+          "dist_m": [
+            3.0,
+            5.0
+          ]
+        },
+        {
+          "cls": "door-knock",
+          "p": [
+            0.1,
+            0.3
+          ],
+          "dist_m": [
+            3.0,
+            4.5
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "mit": [
+            "Bedroom",
+            "MasterBedroom"
+          ],
+          "bed": [
+            "bed-room"
+          ]
+        },
+        {
+          "ace": "Office_1",
+          "noise": [
+            "Ambient",
+            "Fan"
+          ]
+        }
       ]
     },
     "library-classroom": {
-      "owner_level_dbfs": [-40, -32],
-      "room": {"dims": [[8, 15], [6, 12], [3, 4]], "t60": {"common": [0.6, 1.3], "stress": [1.0, 1.3]}},
-      "snr_db": {"common": [18, 28], "stress": [10, 18]},
-      "sir_db": {"common": [10, 20], "stress": [3, 8]},
-      "bed": ["bed-room"],
+      "owner_level_dbfs": [
+        -40,
+        -32
+      ],
+      "snr_db": {
+        "common": [
+          18,
+          28
+        ],
+        "stress": [
+          10,
+          18
+        ]
+      },
+      "sir_db": {
+        "common": [
+          10,
+          20
+        ],
+        "stress": [
+          3,
+          8
+        ]
+      },
       "sounds": [
-        {"cls": "page-turn", "p": [0.6, 0.8], "dist_m": [0.4, 2.0]},
-        {"cls": "keyboard", "p": [0.4, 0.6], "dist_m": [0.5, 2.0]},
-        {"cls": "talker", "p": [0.5, 0.8], "dist_m": [2.0, 4.0]},
-        {"cls": "cough", "p": [0.2, 0.3], "dist_m": [2.0, 5.0]}
+        {
+          "cls": "page-turn",
+          "p": [
+            0.6,
+            0.8
+          ],
+          "dist_m": [
+            0.4,
+            2.0
+          ]
+        },
+        {
+          "cls": "keyboard",
+          "p": [
+            0.4,
+            0.6
+          ],
+          "dist_m": [
+            0.5,
+            2.0
+          ]
+        },
+        {
+          "cls": "talker",
+          "p": [
+            0.5,
+            0.8
+          ],
+          "dist_m": [
+            2.0,
+            4.0
+          ]
+        },
+        {
+          "cls": "cough",
+          "p": [
+            0.2,
+            0.3
+          ],
+          "dist_m": [
+            2.0,
+            5.0
+          ]
+        }
+      ],
+      "rooms": [
+        {
+          "ace": "Lecture_Room_1",
+          "noise": [
+            "Ambient",
+            "Fan"
+          ]
+        },
+        {
+          "ace": "Lecture_Room_2",
+          "noise": [
+            "Ambient",
+            "Fan"
+          ]
+        },
+        {
+          "mit": [
+            "Classroom",
+            "BostonPubliLibrary",
+            "Bookstore"
+          ],
+          "bed": [
+            "bed-room"
+          ]
+        }
       ]
     }
   },
   "_推断": {
-    "t60": "open-office · cowork · cafe · bus-metro-cabin · rail-air-cabin · phone-booth · hotel-room 的 T60 在 021 写「未查到」，按相邻地点取；car-passenger 的 0.05–0.1 s 来自 016 F6 的假设值，不是实测；transit-hub 压力档 4–8 s 低于 021 唯一一座车站的实测 8.6–10 s，是有意取在实测与评测网格上限 1.3 s 之间",
+    "t60": "第三版起 T60 不再抽：取所用实测 RIR 的 T60（ACE / McVAMPIRE / MIT，rirs.py 在去掉直达窗后用 Schroeder 法量）；房间选项见每个地点的 rooms",
     "sir_db": "全部地点的 SIR 都是推断：021 主表在笔记本麦处的 SIR 一格都没有实测（open-office 的 +9 dB 是标准声源折算，home-family 的 0 ± 6 是测试假设，rail-air 写「麦处未知」）",
     "snr_db": "全部地点的 SNR 都是推断：cafe 取 016 F2（本身是推断）；car 参考交通场景 SNR 中位 5.6 dB（被试为老人）；rail-air 的 −2 dB 是听者处、麦处未知；其余按 021 声级与说话声 60 dB 左右推",
     "snr_cap": "SNR 上限取 30 dB；设备底噪比主说话人低 28–41 dB（022 第 4 步），名义 SNR 高于底噪比时底噪被压到总噪声的一半并记 chain.floor_clamped",
-    "event_rel_db": "突发声音相对主说话人的电平〔建议值〕；021 只有狗叫 1 m 处 75 dB(A) 一个数"
+    "event_rel_db": "突发声音相对主说话人的电平〔建议值〕；021 只有狗叫 1 m 处 75 dB(A) 一个数",
+    "rooms": "地点 → 实测房间的对应是按房间类型推断的（例如电话亭用 ACE 最小的办公室 Office_1、酒店用 MIT 卧室）；ACE 与 McVAMPIRE 是同房间成对，MIT 是非成对、按 bed_t60 约束"
+  },
+  "bed_t60": {
+    "_说明": "非成对房间的底噪名义 T60 区间（s）。DEMAND 官方只给一句地点描述、没有 T60，下面全按描述推断【推断】；agnostic = 合成的扩散底噪，与房间无关；成对（ACE / McVAMPIRE）不查这张表，查房间 id。比对：RIR T60 ∈ [下限 × 0.8, 上限 × 1.25]（暂定，出处见 reverb-plan.md 第三节）；上限 < _short_s 的短混响类只查 RIR T60 ≤ _short_max_s",
+    "_tolerance": [
+      0.8,
+      1.25
+    ],
+    "_short_s": 0.2,
+    "_short_max_s": 0.3,
+    "bed-room": "agnostic",
+    "bed-cabin": "agnostic",
+    "bed-office": [
+      0.3,
+      0.6
+    ],
+    "bed-kitchen": [
+      0.3,
+      0.6
+    ],
+    "bed-restaurant": [
+      0.4,
+      0.9
+    ],
+    "bed-cafeteria": [
+      0.7,
+      1.4
+    ],
+    "bed-terrace": [
+      0.0,
+      0.15
+    ],
+    "bed-street": [
+      0.0,
+      0.15
+    ],
+    "bed-bus": [
+      0.1,
+      0.4
+    ],
+    "bed-metro": [
+      0.2,
+      0.6
+    ],
+    "bed-station": [
+      0.6,
+      2.0
+    ],
+    "_依据": {
+      "bed-office": "OOFFICE「小办公室，三人用电脑」",
+      "bed-kitchen": "DKITCHEN「住宅厨房」",
+      "bed-restaurant": "PRESTO「大学餐厅午餐时段」",
+      "bed-cafeteria": "PCAFETER「繁忙的办公楼自助食堂」",
+      "bed-terrace": "SCAFE「广场边咖啡馆露台（户外）」",
+      "bed-street": "STRAFFIC「繁忙路口（户外）」",
+      "bed-bus": "TBUS「公交车内」",
+      "bed-metro": "TMETRO「地铁车厢内」",
+      "bed-station": "PSTATION「繁忙地铁站换乘区」"
+    }
   }
 }
