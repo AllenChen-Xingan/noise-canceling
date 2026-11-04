@@ -5,7 +5,7 @@
 - **许可**：按子集各异。全集原句「all of the files in this corpus can be used for non-commercial research purposes」，并要求看包内各子集 readme / license；SIM 与 LIVE 段原句「provided under the original terms of the used source speech and noise samples」，维基称 LIVE 段可用于商业与非商业研究；LIVETALK「made available for research purposes under」CC BY 4.0；TEST_FOR 只许非商业研究与司法；TEST_NSC 只许非商业研究；TEST_P501 不得进商业产品；Zenodo 记录的许可字段为 `other-at` → 结论：只评测【官方文档】
 - **大小**：> 14,000 条：TRAIN_SIM 10,000 · VAL_SIM 2,500 · TRAIN_LIVE 1,020 · VAL_LIVE 200 · LIVETALK 232 · FOR 240 · NSC 240 · P501 240；`NISQA_Corpus.zip` 15,945,499,507 字节（约 15.9 GB，Zenodo API 文件元数据）【官方文档】
 - **场景键**：home-family, cafe, car-passenger, transit-hub, street-outdoor, other（LIVE 段在室内放音并制造敲键盘、开窗街噪；LIVETALK 含咖啡馆、高速车内、电梯、商场、地铁站、街边）
-- **设备键**：phone, laptop-unknown, unknown
+- **设备键**：non-laptop-phone, laptop-unknown, non-laptop-unknown
 - **笔记本段**：有（回放进笔记本麦）但不能筛。TRAIN_LIVE / VAL_LIVE：有声书经录音棚监听音箱放进终端（论文写「phone/laptop」，维基写 Skype 为两台笔记本互打）；TEST_FOR / NSC / P501 的 VoIP 段是「played back directly from the laptop」——这是从笔记本直接送入信号，**不经笔记本麦**，不算笔记本麦录音；LIVETALK 说话端是手机还是笔记本，论文与维基说法不一（见 r3 补充文件）。逐条设备标签未查到；笔记本型号未写【论文 §3】【官方文档】
 - **干净参考**：部分（SIM 与 LIVE 段源自 LibriVox 等干净语料，可做全参考；LIVETALK 没有）【论文】
 - **转写**：没有（未提）

@@ -1,7 +1,7 @@
 # 覆盖表：开会地点 × 录音设备 → 有哪些真实录音
 
 > 2026-11-03 · 手下 mtgdata · issue #82。用途：查某个「地点 × 设备」格子里，公开真实录音有没有、够不够、能不能用。
-> 键：场景键来自 021 `catalog.md` v1，设备键来自 022 `devices.md` v0（都抄在 `card-template.md`）。`other` 不是开会场景，不进本表。
+> 键：场景键来自 021 `catalog.md` v1，设备键来自 022 `devices.md` v1（都抄在 `card-template.md`）。`other` 不是开会场景，不进本表。
 > 每格写：数据集 · 量 · 参考 / 转写 · 许可结论。细节见 `cards/<名>.md`（023 新卡）或 `../014_real-datasets/cards/<名>.md` + `cards-014-addendum.md`（014 已有）。
 > 🟥 = 公开集里没找到。「回放」= 用音箱放干净语音再录，不是真人在场说话。来源：全部出自卡片，卡上逐条带【官方文档 / 论文 / 实测 / 推断】标签；本表不另加结论。
 
@@ -10,7 +10,7 @@
 
 ## 一、主表
 
-列：**Mac** = `mba-builtin` / `mbp-builtin` / `mac-intel-builtin` / `mac-unknown` · **其他笔记本** = `laptop-unknown` · **台式** = `desktop` · **手机平板** = `phone` / `tablet` · **麦阵终端** = `mic-array` / `conf-device` · **近讲参考** = `close-talk`（可当干净参考的那一路）
+列：**Mac** = `mba-builtin` / `mbp-builtin` / `mac-intel-builtin` / `mac-unknown` · **其他笔记本** = `laptop-unknown` · **台式** = `non-laptop-desktop` · **手机平板** = `non-laptop-phone` / `non-laptop-tablet` · **麦阵终端** = `non-laptop-mic-array` / `non-laptop-conf-device` · **近讲参考** = `non-laptop-close-talk`（可当干净参考的那一路）
 
 | 场景键 | Mac | 其他笔记本 | 台式 | 手机平板 | 麦阵终端 | 近讲参考 |
 |---|---|---|---|---|---|---|

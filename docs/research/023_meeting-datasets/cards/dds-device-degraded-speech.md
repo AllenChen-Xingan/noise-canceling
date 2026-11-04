@@ -5,7 +5,7 @@
 - **许可**：DAPS 部分 Zenodo 许可字段 `cc-by-nc-4.0`，包内 README 原句「This repository is made available under Creative Commons Attribution Non Commercial 4.0 International.」；VCTK 两包许可字段 `odc-by`，包内 README 原句「This repository is made available under Open Data Commons Attribution License (ODC-By) v1.0」→ 结论：只评测（DAPS 部分）；VCTK 部分按署名型口径可训练【官方文档】【推断：ODC-By 不在口径列表里，与 CC BY 同属只要求署名】
 - **大小**：1,944 h（3 设备 × 9 环境 × 6 位置 × 12 h 源语音）；只发布 16 kHz 版；DAPS 包 9 个环境各约 5.3–5.7 GB，VCTK 两包合计约 90.9 GB【论文 §1】【官方文档：Zenodo 文件表】
 - **场景键**：meeting-room, open-office, home-family, other（两间办公室、两间会议室、三间工作室、一间客厅、一间候客室）
-- **设备键**：tablet（iPad Air，MEMS 麦）, studio（两只电容麦：论文图注为 Uber Mic 与 MPM1000）
+- **设备键**：non-laptop-tablet（iPad Air，MEMS 麦）, non-laptop-studio（两只电容麦：论文图注为 Uber Mic 与 MPM1000）
 - **笔记本段**：没有。唯一消费设备是 iPad Air；按设备（`Marantz` / `Uber` / `iPad`）、环境、位置（ch1–ch6 对应 F/D/B/A/C/E，A 为 50 cm 正前方，F 为 200 cm、75°）分目录，文件名 `{uttid}_{env}_{device}_{channel}.flac`，可逐条筛【论文 §3.3、图 1】【官方文档：包内 README】
 - **干净参考**：有（与录音棚源语音逐条对齐）【官方文档】
 - **转写**：有（`text.zip`，源语料朗读文本；无时间戳）【官方文档：Zenodo 文件表】【推断：内容为 DAPS / VCTK 脚本】

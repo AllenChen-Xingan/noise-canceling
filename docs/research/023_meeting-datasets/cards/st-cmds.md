@@ -5,7 +5,7 @@
 - **许可**：Creative Common BY-NC-ND 4.0 (Attribution-NonCommercial-NoDerivatives 4.0 International) → 结论：只评测【官方文档】
 - **大小**：102,600 句 · 855 人（每人 120 句）；ST-CMDS-20170001_1-OS.tar.gz 8.2 GB；时长未写【官方文档】
 - **场景键**：other（安静室内）
-- **设备键**：phone
+- **设备键**：non-laptop-phone
 - **笔记本段**：没有（「using cellphone」）；逐条设备标签未查到
 - **干净参考**：没有
 - **转写**：有（句级，无时间戳）

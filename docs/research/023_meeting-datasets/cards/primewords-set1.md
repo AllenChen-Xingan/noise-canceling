@@ -5,7 +5,7 @@
 - **许可**：Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) → 结论：只评测【官方文档】
 - **大小**：100 h · 296 人；primewords_md_2018_set1.tar.gz 9.0 GB【官方文档】
 - **场景键**：other（录音环境未写）
-- **设备键**：phone
+- **设备键**：non-laptop-phone
 - **笔记本段**：没有。「recorded by smart mobile phones」；逐条设备标签未查到
 - **干净参考**：没有
 - **转写**：有（句级，无时间戳）

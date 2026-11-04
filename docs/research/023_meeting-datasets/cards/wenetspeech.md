@@ -5,7 +5,7 @@
 - **许可**：「available to download for non-commercial purposes under a Creative Commons Attribution 4.0 International License」（CC BY 4.0 + 仅非商业的附加限制；音频版权归原视频 / 音频所有者）→ 结论：只评测【官方文档】
 - **大小**：总 22,435 h（强标注 10,005 h、弱标注 2,478 h、无标注 9,952 h）；DEV 20 h、TEST_NET 23 h、TEST_MEETING 15 h；HF 仓库总 1.02 TB【官方文档 · 论文 表 4】
 - **场景键**：meeting-room（只 TEST_MEETING）, other（训练集与 TEST_NET 是 YouTube 与播客：有声书、解说、纪录片、剧、访谈、新闻、综艺等）
-- **设备键**：unknown（TEST_MEETING 录音设备论文未写；训练集为网络视频 / 播客，设备不明）
+- **设备键**：non-laptop-unknown（TEST_MEETING 录音设备论文未写；训练集为网络视频 / 播客，设备不明）
 - **笔记本段**：未查到。TEST_MEETING 只写「far-field」「sampled from 197 real meetings in a variety of rooms」，没有设备说明，无设备标签【论文 §3.4】
 - **干净参考**：没有
 - **转写**：有（TEST_MEETING 由专业标注员人工校对；训练集由字幕 OCR / 识别生成并带置信度）；段级时间戳有（论文 §3.1：元数据 JSON 为每段给出 timestamp、label、confidence）【论文】

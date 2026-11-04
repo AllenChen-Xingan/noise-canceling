@@ -5,7 +5,7 @@
 - **许可**：包内 DEMAND.pdf §5 原文「licensed under the Creative Commons Attribution-ShareAlike 3.0 Unported License」；Zenodo「Rights」字段另写 CC BY 4.0，两处冲突，按严者（SA）算 → 结论：只评测【官方文档】
 - **大小**：18 个环境 × 300 s ≈ 1.5 h（每环境 16 通道）；Zenodo 全部文件 7.4 GB【官方文档】；小时数由 18×300 s 算得【推断】
 - **场景键**：home-family, open-office, meeting-room, cafe, canteen, transit-hub, bus-metro-cabin, street-outdoor, car-passenger, other（自然：田野 / 河边 / 公园）
-- **设备键**：mic-array
+- **设备键**：non-laptop-mic-array
 - **笔记本段**：没有。16 支 Sony ECM-C10 驻极体麦组成平面阵，架在 1.4 m 三脚架上；笔记本只用来接 USB 声卡存盘，不是收音设备【官方文档】
 - **干净参考**：没有（纯噪声录音，没有目标语音）
 - **转写**：没有

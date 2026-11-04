@@ -5,7 +5,7 @@
 - **许可**：README 原句「The QUT-NOISE data is licensed CC-BY-SA」；生成 QUT-NOISE-TIMIT 的代码为 BSD → 结论：只评测【官方文档】
 - **大小**：20 段噪声会话，每段 ≥30 min，合计 >10 h；zip 合计约 7.7 GB（cafe 1.6 / car 1.7 / home 1.4 / reverb 1.4 / street 1.6 GB）【论文】【官方文档】
 - **场景键**：cafe, home-family, street-outdoor, car-passenger, other（室内泳池、半封闭停车场，用于混响）
-- **设备键**：studio
+- **设备键**：non-laptop-studio
 - **笔记本段**：没有。全部用 Zoom H2 手持立体声录音笔（后置麦对），48 kHz / 16 bit【论文 §2.2】
 - **干净参考**：没有（噪声本身无参考；QUT-NOISE-TIMIT 是把 TIMIT 干净语音混进去的合成集，那部分有参考）
 - **转写**：没有（噪声段无转写；TIMIT 合成部分有 TIMIT 原转写）

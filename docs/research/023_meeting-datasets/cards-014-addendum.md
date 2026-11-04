@@ -13,7 +13,7 @@
 #### ①消费设备
 
 - **场景键**：open-office, meeting-room, other（报告厅、带咖啡厅的大堂）
-- **设备键**：laptop-unknown（Chromebook Pixel 内置 2 麦）, mic-array, studio
+- **设备键**：laptop-unknown（Chromebook Pixel 内置 2 麦）, non-laptop-mic-array, non-laptop-studio
 - **笔记本段**：有（Chromebook 档 1.1 GB，单独打包，可筛）；无 Mac
 - **转写**：没有（目标语音为消声室录音，babble 无转写）
 - **语体**：朗读；babble 为 4–7 人同时朗读
@@ -25,7 +25,7 @@
 #### ②按地点
 
 - **场景键**：meeting-room
-- **设备键**：mic-array（8 通道圆阵）
+- **设备键**：non-laptop-mic-array（8 通道圆阵）
 - **笔记本段**：没有
 - **转写**：有（TextGrid，带时间戳）
 - **语体**：中文会议自然讨论；笑声、附和是否标注未查到
@@ -34,7 +34,7 @@
 #### ④中文
 
 - **场景键**：meeting-room
-- **设备键**：mic-array（录制时有 close-talk，但公开包只有阵列）
+- **设备键**：non-laptop-mic-array（录制时有 non-laptop-close-talk，但公开包只有阵列）
 - **笔记本段**：没有。OpenSLR SLR111 只列 8 通道圆阵包（train_L 7.0 GB / train_M 25 GB / train_S 14 GB / test 5.2 GB）【官方文档，2026-11-03 复读】
 - **转写**：有（TextGrid，带时间戳与说话人）
 - **语体**：会议讨论（医疗、教育、商务、组织管理、工业生产及日常会议，每场约 30 min、4–8 人）【论文 arXiv:2104.03603 §3】；笑声 / 附和 / 情绪标注未查到
@@ -45,7 +45,7 @@
 #### ②按地点
 
 - **场景键**：car-passenger
-- **设备键**：mic-array（4 个门把上方远场麦）, close-talk（近讲，仅 train 发音频）
+- **设备键**：non-laptop-mic-array（4 个门把上方远场麦）, non-laptop-close-talk（近讲，仅 train 发音频）
 - **笔记本段**：没有
 - **转写**：有（TextGrid，带时间戳）
 - **语体**：车内 2–4 人无脚本自然对话；笑声、附和是否标注未查到
@@ -54,7 +54,7 @@
 #### ④中文
 
 - **场景键**：car-passenger
-- **设备键**：mic-array（四个门把手上方各一个远场麦）, close-talk（仅 train）
+- **设备键**：non-laptop-mic-array（四个门把手上方各一个远场麦）, non-laptop-close-talk（仅 train）
 - **笔记本段**：没有
 - **转写**：有（TextGrid）
 - **语体**：车内 2–4 人无脚本对话，各约 10 min；笑声 / 附和标注未查到
@@ -65,7 +65,7 @@
 #### ②按地点
 
 - **场景键**：meeting-room
-- **设备键**：mic-array（8 通道定向麦阵）, close-talk
+- **设备键**：non-laptop-mic-array（8 通道定向麦阵）, non-laptop-close-talk
 - **笔记本段**：没有；远场 / 近讲分包
 - **转写**：有（TextGrid，带时间戳）
 - **语体**：中文会议自然讨论，重叠率高（train 42%）；笑声、附和是否标注未查到
@@ -74,7 +74,7 @@
 #### ④中文
 
 - **场景键**：meeting-room
-- **设备键**：mic-array, close-talk
+- **设备键**：non-laptop-mic-array, non-laptop-close-talk
 - **笔记本段**：没有。远场是桌上 8 通道定向麦阵，近场是每人头戴麦；按目录分 far / near，无笔记本【论文 arXiv:2110.07393 §2】
 - **转写**：有（TextGrid，每段带起止时间戳、说话人；另给「未处理原始文本」，其中停顿、噪声、重叠等非语音事件也有转写）【论文 §2】
 - **语体**：会议自由讨论（医疗、教育、商务等话题，每场 2–4 人，重叠率高）；笑声 / 附和是否单独标未查到（原始文本只写了停顿、噪声、重叠几类）【论文 §2】
@@ -85,7 +85,7 @@
 #### ②按地点
 
 - **场景键**：meeting-room
-- **设备键**：mic-array（8 麦圆阵）, close-talk（ME 3-N 头戴）, close-talk（领夹，部分站点）
+- **设备键**：non-laptop-mic-array（8 麦圆阵）, non-laptop-close-talk（ME 3-N 头戴）, non-laptop-close-talk（领夹，部分站点）
 - **笔记本段**：没有；按流名（Array1-01 / Headset-0 等）可筛
 - **转写**：有（NXT 词级时间戳）
 - **语体**：约 2/3 为角色扮演设计会议、1/3 自然会议；对话行为层有「backchannel」类（如 um、uh-huh）【官方文档：annotation.shtml】；词转写含 `<vocalsound>` 类非言语标记（是否单分笑声未核实）【论坛 / 博客，个人说法：第三方转换项目示例】；情绪层 AmiEmotion 未公开【官方文档】
@@ -96,7 +96,7 @@
 #### ②按地点·地点补充
 
 - **场景键**：cafe, home-family（晚宴）, transit-hub（火车站）, open-office（「open-plan office, people typing, chatting and talking on the phone」）【论坛 / 博客，个人说法：检索摘录 ARTE overview PDF】
-- **设备键**：mic-array（62 通道球阵）
+- **设备键**：non-laptop-mic-array（62 通道球阵）
 - **笔记本段**：没有
 - **转写**：没有
 - **语体**：背景人声（交谈、打电话），无目标语体
@@ -107,7 +107,7 @@
 #### ②按地点
 
 - **场景键**：canteen（大学食堂 / 餐厅午餐高峰）, other（隔音棚对照）
-- **设备键**：close-talk（领夹麦，接在 iPad mini 2 上录，iPad 距说话人 90 cm 只管录像）, studio（Zoom H4n Pro + 双耳麦，由对面听者佩戴，约 140 cm；模板无双耳麦键）
+- **设备键**：non-laptop-close-talk（领夹麦，接在 iPad mini 2 上录，iPad 距说话人 90 cm 只管录像）, non-laptop-studio（Zoom H4n Pro + 双耳麦，由对面听者佩戴，约 140 cm；模板无双耳麦键）
 - **笔记本段**：没有；iPad（领夹）与 H4n（双耳）分文件，可按设备筛【论文：arXiv 1910.00424 §2】
 - **转写**：有（Grid 固定句，脚本即转写；时间戳未查到）
 - **语体**：朗读 Grid 句，无对话、无笑声、无附和、无情绪
@@ -117,14 +117,14 @@
 
 #### ①消费设备·设备补充
 
-- **设备键**：tablet（平板四周 6 麦）, close-talk
+- **设备键**：non-laptop-tablet（平板四周 6 麦）, non-laptop-close-talk
 - **笔记本段**：没有；平板通道与近讲通道分文件，可筛
 - **与 D62 的关系**：真实录音（真人朗读 WSJ 句子，公交 / 咖啡馆 / 步行街 / 路口）；LDC 付费（LDC2017S24）、不可再分发。开发阶段若拿来评测：真实 dev 1640 句约 2.74 h 的平板通道，前提是先付费取得【沿用 014】
 
 #### ②按地点·地点补充
 
 - **场景键**：cafe, transit-hub, bus-metro-cabin（公交车内）, street-outdoor（街口、步行区）
-- **设备键**：tablet（手持平板装 6 麦，ch1–6）, close-talk（ch0 近讲）
+- **设备键**：non-laptop-tablet（手持平板装 6 麦，ch1–6）, non-laptop-close-talk（ch0 近讲）
 - **笔记本段**：没有
 - **转写**：有（WSJ0 提示文本，句级，无词级时间戳）
 - **语体**：朗读，无笑声、附和、情绪
@@ -135,7 +135,7 @@
 #### ②按地点
 
 - **场景键**：home-family（厨房 / 餐厅 / 客厅晚餐聚会；禁止背景电视与商业音乐）
-- **设备键**：mic-array（Kinect 4 麦线阵）, close-talk（双耳入耳麦）
+- **设备键**：non-laptop-mic-array（Kinect 4 麦线阵）, non-laptop-close-talk（双耳入耳麦）
 - **笔记本段**：没有；按设备 ID（U01–U06 / 参与者 P..）可筛，但无笔记本
 - **转写**：有（每场 JSON，逐句起止时间）
 - **语体**：家中自然对话；转写含 `[laughs]`（参与者笑）、`[noise]`（咳嗽、咀嚼等）标签【官方文档：chimechallenge.github.io/chime6/track1_data】；附和随词转写保留【推断】；无情绪标注
@@ -146,7 +146,7 @@
 #### ②按地点
 
 - **场景键**：canteen（模拟食堂：回放干扰对话 + WHAM! 背景）
-- **设备键**：mic-array（Project Aria 眼镜 7 通道；助听器每耳前后 2 麦共 4 通道，键表无助听器类，也记 mic-array）, close-talk（近讲，仅训练可用）
+- **设备键**：non-laptop-mic-array（Project Aria 眼镜 7 通道；助听器每耳前后 2 麦共 4 通道，键表无助听器类，也记 non-laptop-mic-array）, non-laptop-close-talk（近讲，仅训练可用）
 - **笔记本段**：没有；按设备分文件（Aria / 助听器）
 - **转写**：未查到（官网与数据卡未提）
 - **语体**：桌边 4 人真实自然对话；笑声、附和未标注（未查到）
@@ -157,7 +157,7 @@
 #### ①消费设备
 
 - **场景键**：other（录音室，回放布局）
-- **设备键**：unknown（实为助听器壳 3 麦；暂定键里没有助听器）
+- **设备键**：non-laptop-unknown（实为助听器壳 3 麦；暂定键里没有助听器）
 - **笔记本段**：没有
 - **转写**：未查到
 - **语体**：未查到
@@ -169,7 +169,7 @@
 #### ④中文·中文子集，怀疑派补
 
 - **场景键**：other（众包，各人所在环境，无环境标签）
-- **设备键**：unknown（用户自己的设备，经 Common Voice 网站或 iPhone 应用录制【论文 arXiv:1912.06670 §2】）
+- **设备键**：non-laptop-unknown（用户自己的设备，经 Common Voice 网站或 iPhone 应用录制【论文 arXiv:1912.06670 §2】）
 - **笔记本段**：可能有，但筛不出来。网页端录音会用到笔记本内置麦（014 卡已写「含笔记本内置麦」），但数据里没有设备字段，不能按设备筛【论文】【推断：网页端必然含笔记本用户，比例未查到】
 - **转写**：有（只有朗读提示文本，无时间戳）
 - **语体**：朗读（读屏幕上的句子）；无笑声、附和、情绪
@@ -180,7 +180,7 @@
 #### ①消费设备
 
 - **场景键**：open-office（office1/2）, meeting-room（confroom1/2）, home-quiet（livingroom1、bedroom1）, street-outdoor（balcony1 车流）
-- **设备键**：tablet（iPad Air）, phone（iPhone 5S）
+- **设备键**：non-laptop-tablet（iPad Air）, non-laptop-phone（iPhone 5S）
 - **笔记本段**：没有；按版本目录（如 `ipad_confroom1`）可筛设备【沿用 014】
 - **转写**：有（朗读脚本，篇章级，无时间戳）
 - **语体**：朗读；无笑声 / 附和 / 情绪
@@ -192,7 +192,7 @@
 #### ②按地点
 
 - **场景键**：home-family（同一房间模拟晚餐，部分时段放音乐）
-- **设备键**：mic-array（5 台 7 麦圆阵）, close-talk
+- **设备键**：non-laptop-mic-array（5 台 7 麦圆阵）, non-laptop-close-talk
 - **笔记本段**：没有
 - **转写**：有（JSON，≤10–15 s 分段，有起止时间）
 - **语体**：4 人晚餐自然聊天；笑声标注未查到
@@ -203,7 +203,7 @@
 #### ①消费设备
 
 - **场景键**：home-family, open-office, other（按年份见上面各届）
-- **设备键**：phone, desktop, laptop-unknown, close-talk, unknown
+- **设备键**：non-laptop-phone, non-laptop-desktop, laptop-unknown, non-laptop-close-talk, non-laptop-unknown
 - **笔记本段**：按年份不同：2020 blind 无设备字段；2021 两届文件名带自由填写的设备字（含 macbook 约 31 条）；2022 只有 Mobile / Desk；2023 `ap` 段写型号、`mt` 段部分写 Windows / 安卓（见上面各节）【实测：文件名】
 - **转写**：没有公开（blind 均未公开转写）
 - **语体**：2021 合集有情绪 600 条、文件名带 laugh 约 100 条；2023 有附和 1 条（hmm-mhm）
@@ -215,7 +215,7 @@
 #### ①消费设备
 
 - **场景键**：open-office, meeting-room, cafe（dev 内部真实录音文件名含 cafe / cafeteria / cafee 共 27 条）, other（AudioSet 片段）
-- **设备键**：close-talk, conf-device（文件名 speakerphone）, laptop-unknown（文件名 `SurfaceBook` 44 条，Surface Book 是可拆键盘的笔记本【推断：据产品名】）, unknown（AudioSet 与 blind 段）
+- **设备键**：non-laptop-close-talk, non-laptop-conf-device（文件名 speakerphone）, laptop-unknown（文件名 `SurfaceBook` 44 条，Surface Book 是可拆键盘的笔记本【推断：据产品名】）, non-laptop-unknown（AudioSet 与 blind 段）
 - **笔记本段**：dev：MS 内部 150 条文件名带 `headset` 57 / `speakerphone` 93；speakerphone 里 55 条带 surface 字样，其中 `SurfaceBook` 44 条、只写 `surface` 11 条（是 Surface Book 还是 Surface Pro 平板未写）；无 Mac 字样。「SurfaceBook」是否指用了机身内置麦，文件名没写【实测：文件名】【推断】。blind：300 条真实录音文件名只有 `realrec_fileid_N`，不能按设备筛【实测：文件名，分支 interspeech2020/master】
 - **转写**：没有
 - **语体**：朗读与自由说未区分；无笑声 / 附和 / 情绪标注
@@ -227,7 +227,7 @@
 #### ①消费设备
 
 - **场景键**：home-family, open-office, other（文件名噪声字段：狗叫、打字、婴儿哭、风扇等；无地点字段）
-- **设备键**：laptop-unknown（含 6 条自填 `macbook`，型号与是否内置麦未核，不能归 `mba-builtin` / `mbp-builtin`）, close-talk, desktop（webcam）, phone, unknown
+- **设备键**：laptop-unknown（含 6 条自填 `macbook`，型号与是否内置麦未核，不能归 `mba-builtin` / `mbp-builtin`）, non-laptop-close-talk, non-laptop-desktop（webcam）, non-laptop-phone, non-laptop-unknown
 - **笔记本段**：有，可粗筛。T1 blind（合集 `noisy_blind_testset_v2_challenge_withSNR_16k/`，700 条 = 真实 650 + 合成唱歌 50（女 40、男 5、合唱 5））文件名里含 `laptop` 192 条、`macbook` 6 条、`headset` 97、`webcam` 41、`surface` 24、手机类 25。设备字段是众包者自由填写，写法不统一（如 `Win_laptop_mic`、`laptopmic`、`builtinmicrophone`，甚至有未替换的占位符 `your_device_type`），只能用正则粗筛，不可靠【实测：文件名】
 - **转写**：没有
 - **语体**：文件名分 english / nonenglish / emotional（emotional 102 条；`laughter` 34 条）；附和无标注【实测：文件名】
@@ -238,7 +238,7 @@
 #### ①消费设备
 
 - **场景键**：home-family, open-office, other
-- **设备键**：laptop-unknown（含自填 `macbook` 12、`mac` 12、情绪集 `Macbookpro` 1，型号与是否内置麦未核）, close-talk, desktop, phone, unknown
+- **设备键**：laptop-unknown（含自填 `macbook` 12、`mac` 12、情绪集 `Macbookpro` 1，型号与是否内置麦未核）, non-laptop-close-talk, non-laptop-desktop, non-laptop-phone, non-laptop-unknown
 - **笔记本段**：有，可粗筛。V3 blind（600 条 = 真实 440 + 非真实 160）文件名含 `laptop` 137 条、`macbook` 12 条（同一众包者 `A1RK5KQQ320OH4`，英语男声，打字 / 风扇 / 厨房 / 洗碗机等，near / far 都有）、`mac` 12 条（同一人 `XMQ6Y5VEXRUU`，钢琴背景 far）、`headset` 124、`surface` 46。同包的情绪集 600 条（怀疑派重数，见文末）：`laptop` 252（不分大小写）、手机类 142、`headset` 114、`Macbookpro` 1；鼠标点击集 99 条：手机类 30、`headset` 29、`laptop` 10【实测：文件名】
 - **转写**：没有
 - **语体**：情绪集 600 条（文件名标 sad / angry / crying / yelling / happy / laughter；`laugh` 不分大小写 100 条）；V3 另有 musical（乐器背景）78 条；附和无标注【实测：文件名】
@@ -248,7 +248,7 @@
 #### ③无参考
 
 - **场景键**：未查到（论文只写多种背景噪声；无逐条场景标签）
-- **设备键**：unknown
+- **设备键**：non-laptop-unknown
 - **笔记本段**：未查到；众包设备未标型号（014 原卡）
 - **转写**：没有
 - **语体**：含情感语音（笑、哭、喊、惊讶）（014 原卡）——本路补：这是公开集里少有的带「笑声 / 情绪」的真实带噪段，但没有人评分随集发布
@@ -262,7 +262,7 @@
 #### ①消费设备
 
 - **场景键**：home-family, open-office, street-outdoor, car-passenger, other（文件名噪声字段：Typing 83、Water 68、Fan 62、Door 62、MouseClicks 61、Chips 56、Cutlery 53、Street 29、InsideCar 7、CopyRoom 10 等；无 babble / 咖啡馆字段）
-- **设备键**：phone, desktop（文件名 `desktop` / `Desk`，不分台式与笔记本）
+- **设备键**：non-laptop-phone, non-laptop-desktop（文件名 `non-laptop-desktop` / `Desk`，不分台式与笔记本）
 - **笔记本段**：blind 859 条每条文件名都有设备字段：`Mobile` 638、`desktop` / `Desk` 221；**笔记本与台式机分不开**，无 Mac 字样。另有距离字段 Near / Far、说话人字段 Primary / Neighbor（Neighbor 121 条）【实测：文件名】
 - **转写**：部分（dev 有 `DNSChallenge4_devtest.tsv`；blind 标 TBD 未公开）
 - **语体**：blind 情绪段 98 条（sad、angry、yelling、laughter 14、crying、happy）；无附和标注【实测：文件名】
@@ -274,7 +274,7 @@
 #### ①消费设备
 
 - **场景键**：home-family, open-office, cafe（Cafe 4 条）, transit-hub（Airport 25、Announcements 9）, street-outdoor（Traffic 12）, car-passenger, other
-- **设备键**：close-talk, conf-device（回音消除免提）, desktop（Logitech C920、LifeCam 摄像头麦）, laptop-unknown（推断：`Microphone_Array_RealtekR_Audio` 36 条，Realtek 阵列麦常见于 Windows 笔记本内置）, phone（Pixel 4a、Moto G 共 4 条）, unknown
+- **设备键**：non-laptop-close-talk, non-laptop-conf-device（回音消除免提）, non-laptop-desktop（Logitech C920、LifeCam 摄像头麦）, laptop-unknown（推断：`Microphone_Array_RealtekR_Audio` 36 条，Realtek 阵列麦常见于 Windows 笔记本内置）, non-laptop-phone（Pixel 4a、Moto G 共 4 条）, non-laptop-unknown
 - **笔记本段**：blind 分 4 个来源前缀：`ap`（349 条，再分 `ap_desktop` 176 / `ap_mobile` 173，并写全设备型号，如 Plantronics、Jabra、EPOS、Realtek）· `mt`（众包；其中 `mt-win_` 81 条标 Windows 电脑、`mt-and_mobile` 44 条标安卓手机，其余约 45 条无设备字段）· `sa`（131 条，只有 GUID）· `lk`（实验室，距离 0.5 / 1 / 2 m）。`ap` 段能按型号筛，`mt` 段只能分 Windows / 安卓；Windows 电脑里笔记本与台式机分不开；无 Mac / MacBook 字样【实测：文件名，怀疑派重数】
 - **转写**：部分（dev Track2 有 `v5_devset_transcripts_track2.tsv`；Track1 只有 README；blind 未公开）【实测：文件名】
 - **语体**：blind Track1 有副语言片段 `pl_cat1-throat-clear`、`pl_cat2-hmm-mhm`（附和）、`pl_cat3-Huh-what` 等 4 条，`Laughing` 2 条；dev Track2 情绪 72 条（laughter 11）【实测：文件名】
@@ -287,7 +287,7 @@
 #### ②按地点·语体补充
 
 - **场景键**：home-family, open-office（dev 写「办公」）, car-passenger, cafe, transit-hub（blind 含机场广播）
-- **设备键**：laptop-unknown, desktop（dev 全部笔记本或台式机）, unknown（blind 设备清单未公开）
+- **设备键**：laptop-unknown, non-laptop-desktop（dev 全部笔记本或台式机）, non-laptop-unknown（blind 设备清单未公开）
 - **笔记本段**：dev 有，但无逐条设备标签，不能筛
 - **转写**：部分（见 014 原卡的说法冲突）
 - **语体**：193 条情绪语音，分高兴、悲伤、愤怒、喊叫、哭、笑 6 类，由众包者按提示表演，混有噪声【论文：arXiv 2202.13288，DNS4 非个性化 dev】；DNS5 是否原样复用这 193 条为 014 的推算；无附和标注
@@ -298,7 +298,7 @@
 #### ①消费设备
 
 - **场景键**：open-office（中等办公室，开窗 / 关窗）
-- **设备键**：mba-builtin（MacBook Air 2 通道）, phone（iPhone 5S）, tablet（iPad）, studio（Apogee MiC、Blue Snowball）
+- **设备键**：mba-builtin（MacBook Air 2 通道）, non-laptop-phone（iPhone 5S）, non-laptop-tablet（iPad）, non-laptop-studio（Apogee MiC、Blue Snowball）
 - **笔记本段**：有，且能按设备筛（8 通道分设备）；机型年份未写
 - **转写**：有（VCTK 文本）
 - **语体**：朗读；无笑声 / 附和 / 情绪
@@ -310,7 +310,7 @@
 #### ②按地点
 
 - **场景键**：canteen（餐厅噪声为扬声器回放，对话为真人现场）
-- **设备键**：mic-array（AR 眼镜 6 通道）, close-talk（非佩戴者的头戴参考麦）
+- **设备键**：non-laptop-mic-array（AR 眼镜 6 通道）, non-laptop-close-talk（非佩戴者的头戴参考麦）
 - **笔记本段**：没有；按通道区分眼镜麦与头戴麦，无笔记本设备
 - **转写**：有（按视频帧计时，20 fps，即有时间戳）
 - **语体**：点餐、拼图、I spy 游戏中的自然对话，有重叠；笑声、附和未单列标注（未查到）
@@ -321,7 +321,7 @@
 #### ②按地点·怀疑派补
 
 - **场景键**：meeting-room
-- **设备键**：close-talk（头戴为主，早期部分领夹）, mic-array（桌面 4 支 PZM）, unknown（「假 PDA」上 2 支廉价麦，型号未写）【沿用 014】
+- **设备键**：non-laptop-close-talk（头戴为主，早期部分领夹）, non-laptop-mic-array（桌面 4 支 PZM）, non-laptop-unknown（「假 PDA」上 2 支廉价麦，型号未写）【沿用 014】
 - **笔记本段**：没有；按通道可筛，最接近消费级的是 PDA 廉价麦
 - **转写**：有（带时间）
 - **语体**：研究组例会自然对话；转写用 VocalSound 标记笑声（laugh 是最常见的非言语标记，另有 Comment 标长段笑），原始转写共 13,678 处笑声；MRDA 对话行为层覆盖全部 75 场，含 backchannel 类（5 类版 14,275 处）【论文：Laskowski & Burger 2007；MRDA 相关论文 arXiv 1807.08587，经检索摘录】；无情绪标注
@@ -332,7 +332,7 @@
 #### ④中文
 
 - **场景键**：meeting-room
-- **设备键**：conf-device（8 麦阵集成在讯飞智能办公本 X3 里；Insta360 X3 全景相机两侧 2 麦、48 kHz 也归此键，暂定键里没有「相机」）, close-talk（头戴麦，44.1 kHz，接 Zoom F8N）
+- **设备键**：non-laptop-conf-device（8 麦阵集成在讯飞智能办公本 X3 里；Insta360 X3 全景相机两侧 2 麦、48 kHz 也归此键，暂定键里没有「相机」）, non-laptop-close-talk（头戴麦，44.1 kHz，接 Zoom F8N）
 - **笔记本段**：没有笔记本。但远场「阵列」实为消费级办公本 iFLYTEK Smart Office Book X3 的内置 8 麦（矩形 197 × 134 mm，16 kHz / 32-bit），设备高出桌面 30–40 cm；全景相机另录 2 通道 48 kHz 音频【论文 arXiv:2505.13971 §2.2】
 - **转写**：有（转写包；时间戳据 AVDR 任务推断有，014 卡已注【推断】）
 - **语体**：真实会议自然讨论（医疗、教育、商务、工业生产），参与者是与话题相关的专业人员或学生，重叠段占比 57.30%；有键盘、点击、开关门、风扇声【论文 §2.1–2.2】；笑声 / 附和标注未查到
@@ -343,7 +343,7 @@
 #### ②按地点·怀疑派补
 
 - **场景键**：home-family（34 个真实家庭电视房，边看电视边聊天）
-- **设备键**：mic-array（远场 6 麦线阵 3–5 m；中场 2 麦阵 1–1.5 m）, close-talk（每人下巴处高保真麦）【沿用 014，二手】
+- **设备键**：non-laptop-mic-array（远场 6 麦线阵 3–5 m；中场 2 麦阵 1–1.5 m）, non-laptop-close-talk（每人下巴处高保真麦）【沿用 014，二手】
 - **笔记本段**：没有
 - **转写**：有（MISP2022 起带时间戳）
 - **语体**：中文多人家中闲聊，含重叠；笑声、附和是否标注未查到
@@ -352,7 +352,7 @@
 #### ④中文
 
 - **场景键**：home-family
-- **设备键**：mic-array（远场 6 麦线阵、中场 2 麦阵）, close-talk
+- **设备键**：non-laptop-mic-array（远场 6 麦线阵、中场 2 麦阵）, non-laptop-close-talk
 - **笔记本段**：没有
 - **转写**：有（MISP2022 起带 RTTM / 时间戳，据 014 卡）
 - **语体**：家中边看电视边闲聊，多人重叠；有电视声；笑声 / 附和标注未查到
@@ -363,7 +363,7 @@
 #### ①消费设备
 
 - **场景键**：home-family, open-office
-- **设备键**：laptop-unknown, desktop, phone（`fullband_mobile`）
+- **设备键**：laptop-unknown, non-laptop-desktop, non-laptop-phone（`fullband_mobile`）
 - **笔记本段**：数据集 README 原句「The real files were captured on Windows PCs」；文件名只有 GUID + 场景（`nearend_singletalk` 等），**不能按设备筛**；全为 Windows，没有 Mac【官方文档：datasets/README.md】【实测：git tree 文件名】
 - **转写**：没有
 - **语体**：近端单讲为朗读或自由说未写
@@ -373,7 +373,7 @@
 #### ②按地点·怀疑派补
 
 - **场景键**：home-family, open-office（014 写「真实家庭和办公」，无逐条场景标签）
-- **设备键**：laptop-unknown, desktop, phone（众包 PC 与移动设备；是否有逐条设备标签未查到）
+- **设备键**：laptop-unknown, non-laptop-desktop, non-laptop-phone（众包 PC 与移动设备；是否有逐条设备标签未查到）
 - **笔记本段**：未查到（众包 PC 里应有笔记本，属推断；能否按设备筛未查到）
 - **转写**：没有（无公开转写文件）
 - **语体**：近端单讲，朗读或自由说未查到；无笑声、附和、情绪标注
@@ -384,7 +384,7 @@
 #### ①消费设备
 
 - **场景键**：cafe, car-passenger, transit-hub, street-outdoor, other（电梯、商场）
-- **设备键**：phone, laptop-unknown, unknown（说话人「spoke directly into the terminal device (i.e. a smartphone or laptop)」；Google Pixel 3 与笔记本是**录音端**，不一定是说话人的设备）
+- **设备键**：non-laptop-phone, laptop-unknown, non-laptop-unknown（说话人「spoke directly into the terminal device (i.e. a smartphone or laptop)」；Google Pixel 3 与笔记本是**录音端**，不一定是说话人的设备）
 - **笔记本段**：可能有，不能筛。官方原句「The calls were recorded on a Laptop for the VoIP calls and on a Google Pixel 3 for the mobile phone calls」——笔记本是录通话的那一端，录的是经网络传过来的信号，不是笔记本麦直录；说话人哪几条用的是笔记本未写；逐条设备标签未查到【官方文档：NISQA Corpus wiki】
 - **转写**：未查到
 - **语体**：真人对设备说话；无笑声 / 附和标注
@@ -394,7 +394,7 @@
 #### ③无参考
 
 - **场景键**：cafe, car-passenger, transit-hub, street-outdoor, other（电梯、信号差的楼里、商场）
-- **设备键**：phone, laptop-unknown
+- **设备键**：non-laptop-phone, laptop-unknown
 - **笔记本段**：未查到确证，不能按条筛。维基原句：VoIP 通话「recorded on a laptop」，移动通话在 Google Pixel 3 上录；论文 §3 同一段里先写说话人「spoke directly into the terminal device (i.e. a smartphone or laptop)」，后写「The talkers used their mobile phone to call either through the mobile network or with a VoIP service (Skype/Facebook)」——两句互相矛盾，说话端有没有用笔记本麦说不清；笔记本更可能是接收端录音机【推断】。逐条设备标签未查到；58 个条件名里可能写了网络类型，未下载核对【官方文档】【论文】
 - **转写**：没有（未提）
 - **语体**：真人对话式说话（德语），按条件要求大声、小声、免提或放背景音乐；笑声 / 附和未标注【论文 §3】
@@ -409,7 +409,7 @@
 #### ②按地点
 
 - **场景键**：meeting-room
-- **设备键**：conf-device（Yealink、EPOS、Sennheiser、Logitech、Poly、Jabra）, close-talk（Shure WH20 近讲）
+- **设备键**：non-laptop-conf-device（Yealink、EPOS、Sennheiser、Logitech、Poly、Jabra）, non-laptop-close-talk（Shure WH20 近讲）
 - **笔记本段**：没有；有逐场逐设备标签，可按设备筛
 - **转写**：有（专业人工转写，带时间戳；eval 无近讲但有转写）
 - **语体**：会议自然对话，有打断、重叠；014 卡写环境含笑声咳嗽、元数据标了声学事件，但笑声是否作为单独事件标签未核实；附和随转写保留【推断】；无情绪标注
@@ -420,7 +420,7 @@
 #### ④中文
 
 - **场景键**：other（室内、室外、半室外、交通工具，具体场所 014 卡注未查到）
-- **设备键**：mic-array（32 通道）
+- **设备键**：non-laptop-mic-array（32 通道）
 - **笔记本段**：没有
 - **转写**：有（`transcriptions.trn`）
 - **语体**：朗读语音经音箱回放，无笑声、附和、情绪
@@ -431,7 +431,7 @@
 #### ①消费设备
 
 - **场景键**：other（未标）
-- **设备键**：unknown
+- **设备键**：non-laptop-unknown
 - **笔记本段**：没有设备信息。HF 数据卡原句「no labels or meta information are provided for the blind test set」；数据卡列的源语音含 CHiME-6、VOiCES、EasyCom、YouTube 提取音频，真实段是否取自这些未写【官方文档】
 - **转写**：没有
 - **语体**：未查到
@@ -440,7 +440,7 @@
 #### ③无参考
 
 - **场景键**：未查到（真实段「collected from unseen sources」，未点名）
-- **设备键**：unknown
+- **设备键**：non-laptop-unknown
 - **笔记本段**：未查到；无逐条设备标签
 - **转写**：没有（HF 数据卡：blind「no labels or meta information」，014 原卡已写）
 - **语体**：未查到
@@ -456,7 +456,7 @@
 #### ③无参考
 
 - **场景键**：未查到
-- **设备键**：unknown
+- **设备键**：non-laptop-unknown
 - **笔记本段**：未查到
 - **转写**：未查到（官网说 CER 只在「if transcription is available」时算，014 原卡已写）
 - **语体**：未查到
@@ -468,7 +468,7 @@
 #### ①消费设备
 
 - **场景键**：other
-- **设备键**：unknown
+- **设备键**：non-laptop-unknown
 - **笔记本段**：没有设备信息；`track1/blind_noisy.zip`（115 MB）内 840 条文件名只有 `fileid_N.flac`，另带 `__MACOSX/` 资源叉文件（打包者用 Mac 压缩，与录音设备无关）【实测：zip 目录】
 - **转写**：未查到
 - **语体**：未查到
@@ -478,7 +478,7 @@
 #### ③无参考
 
 - **场景键**：未查到（「collected from public sources」）
-- **设备键**：unknown
+- **设备键**：non-laptop-unknown
 - **笔记本段**：未查到
 - **转写**：未查到
 - **语体**：未查到
@@ -490,7 +490,7 @@
 #### ①消费设备
 
 - **场景键**：home-quiet（家具齐全的真实房间）, other
-- **设备键**：studio（SHURE SM58 动圈）, close-talk（AKG 417L / SM11 领夹，摆在房间里）
+- **设备键**：non-laptop-studio（SHURE SM58 动圈）, non-laptop-close-talk（AKG 417L / SM11 领夹，摆在房间里）
 - **笔记本段**：没有
 - **转写**：有（LibriSpeech 文本）
 - **语体**：朗读（有声书回放）；babble 为回放

@@ -5,7 +5,7 @@
 - **许可**：README 原句「The datasets are provided under the original terms that Microsoft received such datasets」，测试集本身没写许可名；仓库 LICENSE 为 MIT（GitHub API），是否覆盖音频未写 → 结论：未查到【官方文档】
 - **大小**：测试集 500 条、盲测集 500 条【论文 §V】【论文 2309.07385】；`ICASSP2023/test_data` 500 个 wav 共约 414 MB（GitHub API 文件大小合计），约 1.2 h【推断：按 48 kHz、16 位、单声道折算】；盲测集大小未查到
 - **场景键**：other（通话发送端真实录音；环境逐条不同，未分类）
-- **设备键**：unknown（论文只写「PCs and mobile devices」，每条设备不同）
+- **设备键**：non-laptop-unknown（论文只写「PCs and mobile devices」，每条设备不同）
 - **笔记本段**：可能有，但不能筛。论文写 500 条「each using a unique device, environment, and person speaking」，来自 PC 与移动设备；PC 里有没有笔记本、有没有逐条设备标签，未查到【论文 §V】
 - **干净参考**：没有（真实录音，无干净轨）【论文】
 - **转写**：部分（2024 版 README：「we release the transcripts for the test set」，供算 WER；`test_data` 目录里未见转写文件，位置未查到；盲测集转写未查到）【官方文档】

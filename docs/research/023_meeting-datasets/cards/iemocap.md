@@ -5,7 +5,7 @@
 - **许可**：USC SAIL release license（申请表只有「I agree to the release license」勾选框，许可正文未读到）；申请页原句「academic institute email addresses only」「We do not share the dataset for commercial purposes due to privacy concerns」→ 结论：只评测【官方文档：申请页】
 - **大小**：约 12 h 音视频，10 名演员，5 个双人会话【官方文档】
 - **场景键**：other（实验室录音间）
-- **设备键**：unknown（官方页未写麦型号）
+- **设备键**：non-laptop-unknown（官方页未写麦型号）
 - **笔记本段**：没有
 - **干净参考**：没有（录音间录制，较干净，无独立参考）
 - **转写**：有（词、音素、音节级对齐）【官方文档】

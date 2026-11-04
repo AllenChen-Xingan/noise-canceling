@@ -5,7 +5,7 @@
 - **许可**：Attribution-NonCommercial-NoDerivatives 4.0 International Public License (CC BY-NC-ND 4.0) → 结论：只评测【官方文档】
 - **大小**：755 h · 1,080 人；train 52 GB、dev 1.0 GB、test 2.2 GB【官方文档】
 - **场景键**：other（安静室内）
-- **设备键**：phone
+- **设备键**：non-laptop-phone
 - **笔记本段**：没有。页面写「mostly mobile recorded data」；逐条设备标签未查到
 - **干净参考**：没有
 - **转写**：有（句级，无时间戳）

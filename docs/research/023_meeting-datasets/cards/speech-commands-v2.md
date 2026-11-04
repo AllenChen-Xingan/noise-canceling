@@ -5,7 +5,7 @@
 - **许可**：论文原句「released under the Creative Commons BY 4.0 license」→ 结论：训练可【论文 §2】
 - **大小**：105,829 条、2,618 人，每条 1 s（约 29 h【推断：105,829 × 1 s】）；解压约 3.8 GB、gzip 包 2.7 GB（论文）；v0.02 包实测 2,428,923,189 字节【论文 §6】【实测：HTTP 头 Content-Length】
 - **场景键**：home-quiet, other（论文原句「wherever users happened to be」，地点未标）
-- **设备键**：laptop-unknown, desktop, phone, unknown（经网页 WebAudio 录：桌面浏览器 Firefox / Chrome 与安卓手机；iOS 当时不支持）
+- **设备键**：laptop-unknown, non-laptop-desktop, non-laptop-phone, non-laptop-unknown（经网页 WebAudio 录：桌面浏览器 Firefox / Chrome 与安卓手机；iOS 当时不支持）
 - **笔记本段**：有，但不能筛。论文原句「utterances were captured through phone or laptop microphones」；文件名经哈希，无设备字段；是否含 Mac 内置麦未查到（桌面浏览器可在 Mac 上跑，但论文没写比例）【论文 §3–§5】【推断：Mac 段存在与否】
 - **干净参考**：没有（真实录音，无平行干净版）
 - **转写**：有（每条只有一个词，标签即转写；无时间戳，已切成 1 s）【论文 §6】

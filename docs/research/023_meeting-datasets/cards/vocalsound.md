@@ -5,7 +5,7 @@
 - **许可**：官方页原句「distributed under the Creative Commons Attribution-ShareAlike (CC BY-SA) license」；GitHub README 写「Creative Commons Attribution-ShareAlike 4.0 International License」→ 结论：只评测【官方文档】
 - **大小**：21,024 条，3,365 人；44.1 kHz 版 4.5 GB、16 kHz 版 1.7 GB；总时长未查到；国家数未查到；年龄从测试子集分组（18–25 / 26–48 / 49–80）看覆盖 18–80 岁【官方文档：官网与 GitHub README】
 - **场景键**：home-family, other（众包，参与者自选地点；推断）
-- **设备键**：unknown（Amazon Mechanical Turk 众包，参与者自有设备；官方页未写）
+- **设备键**：non-laptop-unknown（Amazon Mechanical Turk 众包，参与者自有设备；官方页未写）
 - **笔记本段**：可能有（众包常用笔记本或手机录），但无设备字段，不能筛【推断】
 - **干净参考**：没有（单人近距离录制，本身较干净，但无独立参考）
 - **转写**：没有（只有 6 类标签：笑声、叹气、咳嗽、清嗓、喷嚏、吸鼻子；附说话人年龄、性别、母语、国家、健康状况）

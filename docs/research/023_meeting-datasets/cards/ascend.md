@@ -5,7 +5,7 @@
 - **许可**：Creative Common Attribution Share-Alike 4.0 International (CC-BY-SA 4.0)（HF 数据卡原文）→ 结论：只评测【官方文档】
 - **大小**：10.62 h · 12,314 句（train 9,869 / validation 1,130 / test 1,315）· 26 场对话 · 23 人【官方文档 · 论文 摘要、§1】；GB 未查到
 - **场景键**：library-classroom（香港一间安静教室）
-- **设备键**：close-talk（每人一支 RODE SmartLav+ 领夹麦，夹在衣领上）
+- **设备键**：non-laptop-close-talk（每人一支 RODE SmartLav+ 领夹麦，夹在衣领上）
 - **笔记本段**：没有。全部用领夹麦录，每人一路单声道 16 kHz WAV；无笔记本、无手机【论文 §3.1】
 - **干净参考**：没有（发布的就是领夹近讲本身，论文称「clean speech」；无远场通道可配对）
 - **转写**：有（人工逐句转写，中文汉字 / 英文字母混写；按语义边界或长停顿切句；HF 数据卡未见时间戳字段，未查到）【论文 §3】

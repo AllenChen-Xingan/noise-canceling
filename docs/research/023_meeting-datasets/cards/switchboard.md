@@ -5,7 +5,7 @@
 - **许可**：音频 LDC User Agreement for Non-Members（付费，登录后见价格）→ 结论：不可；NXT 标注层 CC BY-NC-SA 3.0 → 结论：只评测【官方文档】
 - **大小**：约 260 h，约 2,400 通双人电话，543 人（男 302 / 女 241）；8 kHz 双声道 μ-law【官方文档】
 - **场景键**：other（电话，家中或办公室）
-- **设备键**：phone（1990 年代固定电话线路）
+- **设备键**：non-laptop-phone（1990 年代固定电话线路）
 - **笔记本段**：没有
 - **干净参考**：没有
 - **转写**：有（多版本；NXT 版有词级时间、音素词层「words, laughter and noise」）【官方文档：Edinburgh Switchboard in NXT】

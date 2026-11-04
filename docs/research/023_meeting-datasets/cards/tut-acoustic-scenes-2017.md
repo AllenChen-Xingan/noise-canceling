@@ -5,7 +5,7 @@
 - **许可**：Zenodo 许可字段「Other (Non-Commercial)」，正文写「No further description」→ 结论：只评测【官方文档】
 - **大小**：15 个场景 × 312 段 × 10 s，每场景 52 min，共 4,680 段约 13 h；Zenodo 文件合计 10.7 GB【官方文档】；段数合计与小时数由 15 × 312、15 × 52 min 算得【推断】
 - **场景键**：cafe, open-office, home-family, car-passenger, transit-hub, street-outdoor, other（公交、电车、火车车厢；杂货店、图书馆；森林、湖边、公园、住宅区）
-- **设备键**：studio（Soundman OKM II 双耳入耳麦 + Roland Edirol R-09 录音机；模板无双耳麦键，暂记 studio）
+- **设备键**：non-laptop-studio（Soundman OKM II 双耳入耳麦 + Roland Edirol R-09 录音机；模板无双耳麦键，暂记 non-laptop-studio）
 - **笔记本段**：没有；全集只有一种设备
 - **干净参考**：没有（场景分类集，无目标语音）
 - **转写**：没有

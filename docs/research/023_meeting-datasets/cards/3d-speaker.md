@@ -5,7 +5,7 @@
 - **许可**：官网原句「The provided 3D-Speaker metadata is available to download under a Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)」——字面只说 metadata，音频本身未另写 → 结论：未查到（音频本身的许可原文没找到；即使按元数据的 CC BY-SA 4.0 算，含 SA 也只能评测）【官方文档】
 - **大小**：训练 10,000 人、579,013 条、有效语音 1,124 h；评测 240 人、18,782 条、15.42 h；train 包约 190 GB、test 包约 1.1 GB【论文 §3、表 5】【官方文档】
 - **场景键**：other（录音房间类型未写）
-- **设备键**：laptop-unknown, phone, tablet, mic-array, close-talk, unknown（iPad、安卓手机、iPhone、8 麦阵、PC 笔记本、录音笔、指向麦、未指明手机）
+- **设备键**：laptop-unknown, non-laptop-phone, non-laptop-tablet, non-laptop-mic-array, non-laptop-close-talk, non-laptop-unknown（iPad、安卓手机、iPhone、8 麦阵、PC 笔记本、录音笔、指向麦、未指明手机）
 - **笔记本段**：有，且能筛。**训练集**里 PC 笔记本 96,262 条（16.63%，表 2 只统计训练集）；评测集里笔记本有多少条未查到；官网「Device labels of all utterances are provided」；笔记本都放在离说话人 1 m 以内。笔记本品牌型号未写（未查到是否含 Mac）【论文表 2、§3、§3.2】【官方文档】
 - **干净参考**：部分（同一句由多台设备同时录，近讲指向麦 ≤ 0.3 m 可作近似参考；不是录音棚级干净）【论文 §3.1–§3.2】【推断】
 - **转写**：部分（只有普通话语句给转写，方言语句没有；时间戳未查到）【官方文档】

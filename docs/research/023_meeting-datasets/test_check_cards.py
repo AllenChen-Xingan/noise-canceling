@@ -22,7 +22,7 @@ GOOD = """# 示例集
 - **许可**：CC BY 4.0 → 结论：训练可【官方文档】
 - **大小**：10 h
 - **场景键**：cafe, meeting-room
-- **设备键**：laptop-unknown（品牌未查到）, phone
+- **设备键**：laptop-unknown（品牌未查到）, non-laptop-phone
 - **笔记本段**：有，可按设备筛
 - **干净参考**：没有
 - **转写**：有（带时间戳）
@@ -75,7 +75,7 @@ class CardTest(unittest.TestCase):
         self.assertTrue(any("`kitchen`" in e for e in errs))
 
     def test_unknown_device_key(self):
-        errs = check(GOOD.replace("laptop-unknown（品牌未查到）, phone", "macbook"))
+        errs = check(GOOD.replace("laptop-unknown（品牌未查到）, non-laptop-phone", "macbook"))
         self.assertTrue(any("`macbook`" in e for e in errs))
 
     def test_license_needs_verdict(self):

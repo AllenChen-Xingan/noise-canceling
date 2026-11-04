@@ -5,7 +5,7 @@
 - **许可**：Zenodo 许可字段「Other (Non-Commercial)」，页面未给正文 → 结论：只评测【官方文档】
 - **大小**：64 h（其中设备 A 40 h），10 s 一段；Zenodo 文件合计 27.4 GB【官方文档】
 - **场景键**：transit-hub, bus-metro-cabin, street-outdoor, other（购物中心、公园、广场；另有电车 / 公交 / 地铁车厢内）
-- **设备键**：phone, studio, unknown
+- **设备键**：non-laptop-phone, non-laptop-studio, non-laptop-unknown
 - **笔记本段**：没有。真机 A = Soundman OKM II 双耳麦 + Zoom F8，B = Samsung Galaxy S7，C = iPhone SE；开发集另有 S1–S6 为用设备 A 录音加脉冲响应模拟的「虚拟设备」（S4–S6 只在开发集的测试划分里出现；S7–S11 与真机 D = GoPro 只在评测集），脉冲响应不公开。有逐段设备标签（文件名含设备号），可按设备筛【官方文档】
 - **干净参考**：没有（场景分类集，无目标语音）
 - **转写**：没有

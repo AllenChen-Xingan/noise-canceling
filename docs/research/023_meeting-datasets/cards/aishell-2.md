@@ -5,7 +5,7 @@
 - **许可**：AISHELL 基金会自定义申请条款（Kaldi 官方仓库 egs/aishell2/README.md 原文：iOS 数据「free for non-commercial research and education use」；申请表须确认填全大学院系 / 教育机构信息、只作非商业研究 / 教育用；院系内可共享，不得再分发给其他高校或机构）→ 结论：只评测【官方文档】
 - **大小**：1000 h（iOS 通道）· 1991 人；dev 2500 句（5 人）、test 5000 句（10 人）× 3 通道；GB 未查到【论文 §2】
 - **场景键**：home-quiet, other（1347 人在录音棚，其余在有自然混响的客厅【论文 §2】）
-- **设备键**：phone, studio
+- **设备键**：non-laptop-phone, non-laptop-studio
 - **笔记本段**：没有笔记本。训练集只有 iPhone 通道；dev / test 有 iOS、Android、Mic 三通道并行录音，按通道分别发布，可按设备筛（论文表 1 按 dev android / dev ios / dev mic 分列；包内目录名未查到）【论文 §1–2、表 1】
 - **干净参考**：部分（dev / test 的 Mic 通道与手机通道是同一句话并行录，可当参考；位置不同、未说明是否时间对齐）
 - **转写**：有（句级，无时间戳）

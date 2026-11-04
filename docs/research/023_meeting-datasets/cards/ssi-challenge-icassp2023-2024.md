@@ -5,7 +5,7 @@
 - **许可**：仓库 LICENSE 为 MIT（只覆盖代码）；README 原句「The datasets are provided under the original terms that Microsoft received such datasets.」写在「Training data」一节下，说的是训练数据；test / blind 集所在的「Datasets」一节没有任何许可句 → 结论：未查到【官方文档：README.md、ICASSP2023/README.md、LICENSE】
 - **大小**：ICASSP2023/test_data 500 条（约 414 MB）· ICASSP2023/blind_data 500 条（约 432 MB）· ICASSP2024/blind_data 500 条（git LFS，大小未查到）· 2023 test 转写 500 个 txt【实测：GitHub git tree API 读文件表与字节数】
 - **场景键**：other（通话发送端；按「噪声 / 混响 / 失真 / 音色 / 断续 / 响度」分层抽样，不按地点标）
-- **设备键**：laptop-unknown, desktop, phone, unknown（论文只说「PCs and mobile devices」，每条一台不同设备）
+- **设备键**：laptop-unknown, non-laptop-desktop, non-laptop-phone, non-laptop-unknown（论文只说「PCs and mobile devices」，每条一台不同设备）
 - **笔记本段**：可能有，但不能筛。论文原句「each using a unique device, environment, and person speaking… captured from both PCs and mobile devices」；文件名为 GUID，无设备字段【论文 §V】【实测：文件名】
 - **干净参考**：没有（真实发送端录音）
 - **转写**：部分（2023 test 集 500 条有转写，2024 年随挑战发布，可算字准确率；无时间戳；2023 / 2024 blind 未见转写）【官方文档】【论文 2401.14444 §2】

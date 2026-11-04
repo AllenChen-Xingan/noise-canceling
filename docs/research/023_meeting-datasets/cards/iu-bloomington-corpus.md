@@ -5,7 +5,7 @@
 - **许可**：未查到（挑战仓库只要求引用；源 VOiCES 为 CC BY 4.0（014 卡），COSINE 许可本路未读）→ 结论：未查到【官方文档】
 - **大小**：36,000 条（COSINE 18,000 + VOiCES 18,000），每条 3–6 s，约 45 h；GB 未查到【论文 §4.3】
 - **场景键**：other（COSINE：多人在嘈杂环境中自然对话；VOiCES：房间回放重录）
-- **设备键**：close-talk, unknown（COSINE 胸前 / 肩部麦；VOiCES 为研究用多麦）
+- **设备键**：non-laptop-close-talk, non-laptop-unknown（COSINE 胸前 / 肩部麦；VOiCES 为研究用多麦）
 - **笔记本段**：没有【论文】
 - **干净参考**：有（COSINE 给近讲麦作参考，VOiCES 给前景语音作参考；另附低通「锚点」版本）【论文】
 - **转写**：未查到

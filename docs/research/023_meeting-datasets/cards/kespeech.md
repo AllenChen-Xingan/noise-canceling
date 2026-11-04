@@ -5,7 +5,7 @@
 - **许可**：KeSpeech 自定义协议（dataset_license.md：不得商用、不得向第三方分发、不得改编）→ 结论：只评测【官方文档】
 - **大小**：1,542 h · 27,237 人 · 34 个城市；GB 未查到【论文 摘要】
 - **场景键**：other（众包，各人所在环境不一；第二期每条带「clean / noisy」人工标签）
-- **设备键**：phone
+- **设备键**：non-laptop-phone
 - **笔记本段**：没有。「recorded with mobile phones from many different brands」；有无逐条手机型号标签未查到；第二期有 `phase2.utt2env`（clean / noisy）环境标签【论文 §1、§3.3】
 - **干净参考**：没有
 - **转写**：有（句级文本；无时间戳【推断：朗读句子，按句切分】）

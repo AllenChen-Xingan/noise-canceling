@@ -5,7 +5,7 @@
 - **许可**：官网原句「The corpus is FREE for noncommercial uses」，需在站点注册 → 结论：只评测【官方文档】
 - **大小**：40 人【官方文档】；约 30 万词（307,000 词出自论文，经检索摘录，原文未读）；小时数未查到
 - **场景键**：other（采访室，俄亥俄州哥伦布）
-- **设备键**：close-talk（推断：官方页只写「high-quality recordings」，未写麦型号）
+- **设备键**：non-laptop-close-talk（推断：官方页只写「high-quality recordings」，未写麦型号）
 - **笔记本段**：没有
 - **干净参考**：没有（录音较干净，无独立参考）
 - **转写**：有（正字转写 + 时间对齐音素标注）【官方文档】

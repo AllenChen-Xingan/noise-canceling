@@ -5,7 +5,7 @@
 - **许可**：Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)（Wayback 存档的 openslr.org/62 原页亲读；现页显示「Resource not found: 62」）→ 结论：只评测【官方文档，存档】
 - **大小**：200 h · 600 人；aidatatang_200zh.tgz 18G；train / dev / test = 7:1:2【官方文档，存档】
 - **场景键**：other（存档原页：「Recordings are conducted in a quiet indoor environment」）
-- **设备键**：phone
+- **设备键**：non-laptop-phone
 - **笔记本段**：没有（「mostly mobile recorded data」）；逐条设备标签未查到
 - **干净参考**：没有
 - **转写**：有（句级；转写准确率 > 98%）

@@ -5,7 +5,7 @@
 - **许可**：HF 数据卡 YAML `license: cc-by-nc-sa-4.0`；卡内正文另写挑战数据「publicly available with varying licenses」，源语料许可表标「to be updated」→ 结论：只评测【官方文档】
 - **大小**：默认子集约 168k 行：blind_test_mos 23.4k（卡内原句：26 个系统 × 900 条 = 23,400 条全部有人评分）· blind_test 44.1k · nonblind_test 92k · validation 8k；GB 未查到【官方文档】
 - **场景键**：other（源自 URGENT 2025 盲测，014 卡称来源未点名；具体场景未查到）
-- **设备键**：unknown
+- **设备键**：non-laptop-unknown
 - **笔记本段**：未查到；无逐条设备标签【官方文档】
 - **干净参考**：部分（模拟一半有参考；表内对部分行给了 PESQ、ESTOI 等全参考分，说明这些行有参考【推断】）
 - **转写**：未查到（表头无转写列；有 `sbert` 列）【官方文档】
