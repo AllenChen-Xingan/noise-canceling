@@ -307,6 +307,28 @@ def gap_vs_base(rows: list[dict], system: str, base: str) -> list[str]:
     return out
 
 
+def drag_summary(card: dict, system: str, items: tuple[str, ...], top: int = 5) -> list[str]:
+    """表：拖后腿的声音跨场景汇总。取成绩单 `drags`（scorecard 第五节，场景内分组、每组 ≥ 3 段才有 gap），
+    数每类声音在多少个不过的组合里拖累 > 0，及拖累量中位数。只看该项不过的组合。"""
+    out = ["| 项 | 声音（拖累 > 0 的组合数 · 拖累中位数） |", "|---|---|"]
+    for v in items:
+        hit: dict[str, list[float]] = defaultdict(list)
+        n_fail = 0
+        for s in card["scenes"]:
+            if s["system"] != system:
+                continue
+            if not any(i["v"] == v and i["status"] == "fail" for i in s["items"]):
+                continue
+            n_fail += 1
+            for d in s["drags"]:
+                if d["v"] == v and d["gap"] is not None and d["gap"] > 0:
+                    hit[d["cls"]].append(d["gap"])
+        ranked = sorted(hit.items(), key=lambda kv: (-len(kv[1]), -(quantile(kv[1], 0.5) or 0)))[:top]
+        cells = " · ".join(f"`{c}` {len(g)}/{n_fail} · {quantile(g, 0.5):+.2f}" for c, g in ranked)
+        out.append(f"| {v} | {cells or '—'} |")
+    return out
+
+
 def quantile(xs: list[float], p: float) -> float | None:
     xs = sorted(x for x in xs if x is not None)
     return xs[int(p * (len(xs) - 1))] if xs else None
