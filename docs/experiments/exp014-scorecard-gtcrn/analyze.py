@@ -264,6 +264,29 @@ def paired_table(rows: list[dict], manifest: dict, system: str) -> list[str]:
     return out
 
 
+PAIRED_ITEMS = ("V-NR", "V-PUMPV", "V-TIMBRE", "V-EAT-ASR", "V-NRMOS-SCOREQ")
+
+
+def paired_within(rows: list[dict], manifest: dict, system: str, base: str) -> list[str]:
+    """表：同一场景里比「同房间」与「不同房间」（两组各 ≥ 3 段的场景才列），看「模型 − 原声直通」配对差值。
+    同房间的段只出现在一部分场景（车内全是、咖啡馆一段没有），跨场景合并会混进场景差别。"""
+    def paired(r):
+        return bool((((manifest.get(r["clip"]) or {}).get("chain") or {}).get("room") or {}).get("paired"))
+    head = " | ".join(f"{v} 同 / 不同" for v in PAIRED_ITEMS)
+    out = [f"| 场景 | 同房间段 | 不同房间段 | {head} |", "|---|---|---|" + "---|" * len(PAIRED_ITEMS)]
+    for (sc,), rs in sorted(group(rows, "scene").items()):
+        yes = [r for r in rs if paired(r)]
+        no = [r for r in rs if not paired(r)]
+        ny = sum(1 for r in yes if r["system"] == system)
+        nn = sum(1 for r in no if r["system"] == system)
+        if ny < 3 or nn < 3:
+            continue
+        cells = [f"{fmt(mean(paired_diffs(yes, system, base, v)))} / {fmt(mean(paired_diffs(no, system, base, v)))}"
+                 for v in PAIRED_ITEMS]
+        out.append(f"| {sc} | {ny} | {nn} | " + " | ".join(cells) + " |")
+    return out
+
+
 def disagreements(rows: list[dict], system: str) -> list[dict]:
     """两个评分模型分歧的段：Δ 方向相反，或相差 ≥ 0.3。按相差从大到小。"""
     out = []
@@ -317,10 +340,11 @@ def drag_summary(card: dict, system: str, items: tuple[str, ...], top: int = 5) 
         for s in card["scenes"]:
             if s["system"] != system:
                 continue
-            if not any(i["v"] == v and i["status"] == "fail" for i in s["items"]):
+            its = s.get("items", []) + (s.get("listen") or {}).get("models", [])
+            if not any(i["v"] == v and i["status"] == "fail" for i in its):
                 continue
             n_fail += 1
-            for d in s["drags"]:
+            for d in s.get("drags", []):
                 if d["v"] == v and d["gap"] is not None and d["gap"] > 0:
                     hit[d["cls"]].append(d["gap"])
         ranked = sorted(hit.items(), key=lambda kv: (-len(kv[1]), -(quantile(kv[1], 0.5) or 0)))[:top]
