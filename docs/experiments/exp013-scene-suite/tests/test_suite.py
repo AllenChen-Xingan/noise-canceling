@@ -46,8 +46,9 @@ class SmallBuild(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
         t = Path(cls.tmp.name)
+        dev = [] if manifest.schema_path() else ["--dev"]  # 干净克隆里没有 scorecard 的 schema 时按开发冒烟跑
         r = subprocess.run([sys.executable, str(HERE / "build.py"), "--build", "t0", "--n", "1", "--workers", "4",
-                            "--builds-dir", str(t / "b"), "--audio-root", str(t / "a")], capture_output=True, text=True)
+                            "--builds-dir", str(t / "b"), "--audio-root", str(t / "a")] + dev, capture_output=True, text=True)
         if r.returncode != 0:
             raise RuntimeError(r.stdout + r.stderr)
         cls.root = t / "a"
