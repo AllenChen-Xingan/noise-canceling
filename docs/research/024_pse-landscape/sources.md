@@ -10,7 +10,7 @@
 |---|---|---|
 | 005 PSE 调研（2026-10-30） | `docs/research/005_pse/` | 候选口径、TSOS 定义、注册规则 1–7 照用；本线只补 2025-01 以后的 |
 | VoxLock 在 M5 上计时 | `docs/experiments/exp003-offline-ab/README.md:137` | int8 单帧 p50 8.36 ms / 8 ms 周期，跟不上实时【本机实测】 |
-| 自写注册器 | `docs/experiments/exp005-p2-speaker/README.md:45` | 合成 8 段里 7 段锁对、0 段锁错，锁定前主人累计 20–28 s【本机实测，合成素材】 |
+| 自写注册器 | `docs/experiments/exp005-p2-speaker/README.md:45` | 合成 8 段里 7 段锁定，可直接核对的 6 段锁对，c03 只有间接支持；未观察到错锁，防错锁规则未被真正考验（README:9、82、92），锁定前主人累计 20–28 s【本机实测，合成素材】 |
 | 竞争说话人数据配方 | `docs/research/015_dfn-hush-synth/decision.md` 第三节 | SIR −6~+20 dB、约 20% ≤ 0 dB、「只有干扰者」段 ≥ 20% 帧 |
 | D83 | `docs/plan/001_decisions-20261029-b1.md:594`（在 coordfe 检出） | 放弃门控，改为先认人再提取 |
 
@@ -18,7 +18,7 @@
 
 | 候选 | 关键事实 | 证据等级 · 出处 |
 |---|---|---|
-| **Alkove Focus**（`alkove-focus-1-preview`） | 约 0.8M 参数、int8 1.1 MB；**从 GTCRN 的 DNS3 检查点改来**（GTCRN 部分 MIT，见 `NOTICE`）；代码与权重 Apache-2.0；256 点（16 ms）步长，输出晚 16 ms；单线程 M1 Max 每秒音频约 56 ms（≈ 每 10 ms 0.56 ms） | **【核】** huggingface.co/alkove-ai/alkove-focus-1-preview · github.com/alkove-ai/alkove |
+| **Alkove Focus**（`alkove-focus-1-preview`） | 约 0.8M 参数、int8 1.1 MB；**从 GTCRN 的 DNS3 检查点改来**（GTCRN 部分 MIT，见 `NOTICE`）；代码与权重 Apache-2.0；256 点（16 ms）步长，模型卡写输出晚 256 点（16 ms，即对齐偏移；攒块等待另算，合计约 32 ms 为推断）；单线程 M1 Max 每秒音频约 56 ms（≈ 每 10 ms 0.56 ms） | **【核】** huggingface.co/alkove-ai/alkove-focus-1-preview · github.com/alkove-ai/alkove |
 | 同上 · 注册方式 | 模型本身**不会**自动学声纹：吃一个 192 维声纹（另一个模型 alkove-timbre 从 ≥ 1.5 s 用户语音算出），或给零 = 「留最近的那个人」；运行中可换声纹 | **【核】** 模型卡 · docs.pipecat.ai 的 alkove 页。子代理说的「约 6 s 自动学、下次静音生效」**未证实**，三处原文都没有 |
 | 同上 · 效果 | 旁人与目标同响（Common Voice 7 语）：有声纹 SI-SDR 7.1 dB；VoxLock 11.7；无声纹 4.5。旁人残留 有声纹 −22.6 / VoxLock −28.6 / 无声纹 −7.8 dB——**测量条件待核**：子代理笔记写「旁人单独说话」，pse 读到的模型卡写法未明说是否重叠段。AMI 头戴麦 WER 16.1%（原声 20.8%、VoxLock 15.1%，作者称差距不显著）。**只有噪声时**（VoiceBank+DEMAND）STOI 0.895、WER 4.0%，**都比带噪输入（0.921、2.7%）差** | **【核】** 模型卡，作者自测 |
 | 同上 · 局限 | 预览版，权重与接口 v1 前可能改；只适合近讲麦；有声纹时新人刚开口约 150 ms 漏过（低 25–35 dB）；训练数据未公开；训练代码未见 | **【核】** 模型卡 |
