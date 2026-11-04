@@ -202,14 +202,59 @@ pub const SIM_SWLAT: Lines = Lines {
     params: &[p("max", Some(32.0), &[(32.0, PHYS)])],
 };
 
+/// 012 V-WEAK 原文标〔建议值〕：按惯例 012 摘录算出处，成绩单标准里另注「原文是建议值」
+pub const WEAK: Lines = Lines {
+    id: "V-WEAK",
+    edges: &[1.0, 2.0, 4.0],
+    edges_src: Src::Doc012(&["≤ 1 dB A · ≤ 2 B · ≤ 4 C · > 4 D"]),
+    params: &[
+        p("max", Some(4.0), &[(4.0, Src::Doc012(&["≤ 4 C · > 4 D"]))]),
+        p(
+            "compress_min",
+            Some(-3.0),
+            &[(-3.0, Src::Doc012(&["< −3 dB 另标「被压缩」"]))],
+        ),
+    ],
+};
+
+/// 012 只给了 A 档（「≤ 1 dB² A …」），B / C / D 没写：过线值暂定，进待定清单
+pub const PUMPV: Lines = Lines {
+    id: "V-PUMPV",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[p("max", Some(1.0), &[(1.0, Src::None)])],
+};
+
+pub const CLICK: Lines = Lines {
+    id: "V-CLICK",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[
+        p("max", Some(0.0), &[(0.0, Src::Doc012(&["每分钟 0 个为 A"]))]),
+        p("k", Some(8.0), &[(8.0, Src::Doc012(&["k = 8"]))]),
+    ],
+};
+
+/// ΔESTOI = 输出 − 原声（rubric C3）；过线 = 不落 D 档
+pub const ESTOI: Lines = Lines {
+    id: "V-ESTOI",
+    edges: &[0.05, 0.0, -0.05],
+    edges_src: Src::Rubric(&["ΔESTOI ≥ +0.05", "ΔESTOI ≥ 0", "ΔESTOI < −0.05"]),
+    params: &[p(
+        "min",
+        Some(-0.05),
+        &[(-0.05, Src::Rubric(&["ΔESTOI < −0.05"]))],
+    )],
+};
+
 /// 表里全部 verifier。
-pub const ALL: [&Lines; 16] = [
+pub const ALL: [&Lines; 20] = [
     &BGSTAB, &ONSET, &SPLVL, &MUSIC, &TIMBRE, &NR, &INTF, &VACUUM, &EAT_ASR, &FRAME, &MUTE,
-    &SWITCH, &SIM_GATE, &SIM_FA, &SIM_QUIET, &SIM_SWLAT,
+    &SWITCH, &SIM_GATE, &SIM_FA, &SIM_QUIET, &SIM_SWLAT, &WEAK, &PUMPV, &CLICK, &ESTOI,
 ];
 
 /// 待定清单：已知不一致或没有出处的条目。全部是建议值，挂 012 拍板 #8 · D44。
-pub const PENDING: [(&str, &str, Pend); 7] = [
+pub const PENDING: [(&str, &str, Pend); 8] = [
     // 量法与 rubric N4 不同，数也不同（代码 2 / 4 / 6，N4 1.5 / 3 / 6）
     (
         "V-TIMBRE",
@@ -230,4 +275,6 @@ pub const PENDING: [(&str, &str, Pend); 7] = [
     // 门控误关 0.05、词首 0.2 没有出处
     ("V-SIM-GATE", "max", Pend::Value(0.05, Cause::NoSource)),
     ("V-SIM-GATE", "onset_max", Pend::Value(0.2, Cause::NoSource)),
+    // 012 只给了 A 档 1 dB²，过线值没有出处
+    ("V-PUMPV", "max", Pend::Value(1.0, Cause::NoSource)),
 ];
