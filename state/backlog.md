@@ -89,3 +89,5 @@
 - [ ] 场景分类器噪音 7 类缺 4 种声音：外放人声（电视 / 视频）· 小孩和狗 · 键盘与提示音 · 风噪；是否改分类器归「场景分类器」那件事 · 出处 021 `decision.md` 转交
 - [ ] 真实数据补空格线索（023 后续）：DCASE 2016 TUT 声景（library / train / tram / metro station，无主说话人，只作合成原料或统计参照）· AliMeeting 会场参数可能含 RT60 · 出处 021 现状页转交
 - [ ] 开放工位 · 候车厅 · 街边的公开候选待核（scenes 评审后提出，mtgdata 已收尾未核）：DNS 2020 实录 · Krisp 测试集——核地点标签、设备、许可后补进 023 `matrix.md` · 出处 021 现状页转交
+- [ ] `vdn-eval ci` / `qa` / `calib --record` 报告用 `std::fs::write`，同目录跑第二次会覆盖旧报告（违第五节 1 条）；照 `scorecard::card::write_new` 改为只新建 · 出处 scorecard 现状页转交
+- [ ] 成绩单按语种（`lang`）分组比较（旧 G4 中文组的替代）· 出处 `specs/rubric/scorecard.md` 第七节

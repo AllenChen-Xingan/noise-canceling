@@ -9,16 +9,16 @@
 
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
-| scenes | 021 开会场景目录 · #80 · `research/021-meeting-scenes` · `../noise_canceling-scenes` | 会议场景 · 噪声类别 · 场景声学条件 | 完成，验收过（25 测试 · 0 问题 · 路径清零），窗口已关；PR #83 等 CI；4 题待拍板 |
-| macmic | 022 Mac 内置麦克风 · #81 · `research/022-mac-mic` · `../noise_canceling-macmic` | 麦克风（设备链）· 设备链模拟 | 完成，验收过（12 测试 · 21 键 0 问题 · 路径清零），窗口已关；PR #84；1 题待拍板 |
-| mtgdata | 023 真实录音数据集 · #82 · `research/023-meeting-datasets` · `../noise_canceling-mtgdata` | 真实数据集 · 真实锚 | 完成，验收过（25 测试 · 44 卡 0 问题 · codex 5 轮、4/5 轮无 P0/P1 · 无大文件无下载），分支已推送，窗口已关；PR #85（排在 #83、#84 之后合并）；4 题待拍板 |
+| scenes | 021 开会场景目录 · #80 · `research/021-meeting-scenes` · `../noise_canceling-scenes` | 会议场景 · 噪声类别 · 场景声学条件 | 完成，验收过（25 测试 · 0 问题 · 路径清零），窗口已关；PR #83 已合并；4 题待拍板 |
+| macmic | 022 Mac 内置麦克风 · #81 · `research/022-mac-mic` · `../noise_canceling-macmic` | 麦克风（设备链）· 设备链模拟 | 完成，验收过（12 测试 · 21 键 0 问题 · 路径清零），窗口已关；PR #84 已合并；1 题待拍板 |
+| mtgdata | 023 真实录音数据集 · #82 · `research/023-meeting-datasets` · `../noise_canceling-mtgdata` | 真实数据集 · 真实锚 | 完成，验收过（25 测试 · 44 卡 0 问题 · codex 5 轮、4/5 轮无 P0/P1 · 无大文件无下载），分支已推送，窗口已关；PR #85 已合并；4 题待拍板 |
 
 **b11（D81：按场景成绩单推进）**，批次 `_tmp/20261103-b11/`：
 
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
-| scenesuite | exp013 场景测试集 · #86 · `exp/013-scene-suite` · `../noise_canceling-scenesuite` | 场景测试集 · 合成数据生成器 · 设备链模拟 | 已报到（noise-canceling-scenesuite-85） |
-| scorecard | 场景成绩单：评分模型 + 补评分项 + 标准 · #87 · `feat/scorecard` · `../noise_canceling-scorecard` | 评测器 · 成绩单 · 定标等级 | 已派 |
+| scenesuite | exp013 场景测试集 · #86 · `exp/013-scene-suite` · `../noise_canceling-scenesuite` | 场景测试集 · 合成数据生成器 · 设备链模拟 | 方案已批，开工；1 题待拍板（会议室近处几人都留） |
+| scorecard | 场景成绩单：评分模型 + 补评分项 + 标准 · #87 · `feat/scorecard` · `../noise_canceling-scorecard` | 评测器 · 成绩单 · 定标等级 | 完成，验收过（大总管复跑 131 测试 · tidy · schema 一致），窗口已关；PR #88 CI 过，合并等人放行；1 题待拍板（暂定过关线先用 vs 先盲听） |
 
 两条做完后由大总管接 GTCRN 出第一张成绩单。
 ⚠️ 人要真实数据集与 D62「开发阶段不用真实录音」可能冲突 → mtgdata 出选项，进待拍板。
@@ -92,13 +92,33 @@
 |---|---|
 | 重编译 / 全量测试 / 跑模型（1 个） | 空 |
 
-排队：99 方最终复跑
+排队：无
 
 **跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。加锁文件：mkdir 主目录 `_tmp/heavy.lock`（内写 owner · 开始 · 预计结束，跑完 rmdir），由各自大总管放名额时建、收回时删，手下不碰（47 已确认）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-03 codex-review 误判位图根因【实测】：macOS iconv 输出直接写 /dev/null 且超过约 100 字节就报「Inappropriate ioctl for device」，privacy-scan.sh:269 的 UTF-8 复核因此失败 → 长的 codex 输出被拦。修法：`iconv … -- "$r" 2>/dev/null | cmp -s - "$r"`。改 skill 被权限检查拦（自我修改），等人。016 synth-standard 第 45 行改为按时段切（S10①）
+- 2026-11-03 scenesuite 第四版 build 20261103223725-72df 通过（同房间 37.5% · 混响 0 不过 · SNR 99.2% / SIR 98.2% 段差 ≤ 1 dB · 63 测试）；codex-review 隐私扫描把「P1」开头的输出误认成位图，第二次出现（macmic 一次）→ 改结构
+- 2026-11-03 scenesuite codex 第 1 轮 P1×3 P2×2 + 实测房间自审已修（DEMAND 4 个未用环境按时段切 · ESC-50 截尾 · 4 条 MIT IR 直达起点 · build 自验电平 · 混响检查按声音类别）→ 第四版 build 名额给它；63 测试过。大总管定技术题：第 5 题按时段切（S10① 允许：前一半测试份、后一半裁判原料）· 第 2 题合成不像的声音在成绩单标「合成，待真实录音校」· 第 3、4 题已定（人选 A；阈值暂定）
+- 2026-11-03 scorecard 收尾：大总管复跑 vdn-eval + vdn-schema 131 过 · tidy 过 · schema 一致 · levels 原 16 项未变；开 PR #88，CI 过；合并被权限检查拦（上次「可以 merge」只覆盖 #83–#85），等人；窗口已关。转交：scenesuite 合并时在 src/schema/src/eval.rs DATA_FILES 加 scenes.json 一行；ci / qa / calib 报告会覆盖旧文件（旧代码）→ backlog
+- 2026-11-03 scenesuite 第三版 build 20261103222950-de56 通过（480 段 · 同房间 37.5% · 混响检查 0 不过 · 54 测试 · SNR/SIR 99.2% 段差 ≤ 1 dB）；在查「三版削波都是 0」
+- 2026-11-03 scorecard 合并前复跑：nrmos_parity 3/3（SCOREQ 差 0 · Distill-MOS 0.00225）· 全量 release 84 组过；名额转 scenesuite
+- 2026-11-03 scenesuite 混响修法实现（54 测试过；三包大小与方案一致；预演 240 段约 37% 人声与底噪同房间；reverb_check 480 段 0 不过、6 个负对照全红；修 MIT 列车 IR 直达峰误判；SCAFE 户外露台拆出咖啡馆类）→ 申请第三版 build，排队等 scorecard
+- 2026-11-03 scenesuite 混响方案批（一段 = 一个房间；6 个地点同房间实测 RIR + 噪声：ACE · McVAMPIRE；其余 MIT 271 条实测 IR 按 T60 区间配 DEMAND；公交 / 地铁 / 机舱 / 候车厅标「非同房间」；检查改生成端约束 + 清单比对）。人在问答里选下载 A 约 685 MB；T60 阈值 ×[0.8, 1.25] 大总管定为暂定
+- 2026-11-03 scorecard V-CLICK 排查：自造平滑增益负例原误报 1746 次 / 分钟 → 修算法（离群跳变 · 干净人声解释不了 ≥ 一半 · 背景分轨排除）+ 两条负例测试；参考降噪器 cafe 约 100 → 28 次 / 分钟，剩余机器分不开，5 处样本在 `_tmp/scorecard/click-check-20261103/`。大总管定：V-CLICK 先只报不判，等 GTCRN 成绩单再决定要不要人听；P06 拆为 30% xfail + P10 40% 必须判不过；scorecard 起 codex
+- 2026-11-03 scenesuite 第二版 build 20261103215813-c025 通过（480 段 · 40 测试 · 0 削波 · scenes.json 60 条）；两版音频共 6.5 GB 都留；codex 推迟到混响修完
+- 2026-11-03 人试听 b22d 反馈：说话声与场景底噪的混响不一致（原话「很多说话声和场景实际上能给的环境混响不一致啊」）。原因：底噪是真实地点录音、人声套随机 T60 的模拟长方体房间。已转 scenesuite 出修法方案（同房间实测 RIR + 噪声如 ACE · 实测 RIR 库 · 加「人声 vs 底噪混响一致」机器检查）
+- 2026-11-03 scenesuite 自审修 7 项（干轨提前 1–2 ms · 会议室电平 · 补 7 种声音 · 风噪 · 有规律声音电平 · 方位角 · 防泄漏加对照 exp006 test/seq 只报告）+ 场景任务改 60 条（加外接麦对照）→ 名额给它出第二版 build；第一版保留
+- 2026-11-03 scorecard 名额归还（通过）：eval ci 门禁过、探针 9/9；全量 release 83 组过；gtcrn 因 worktree 无权重被跳过 → 告知 VDN_GTCRN_ONNX；P06 由 30% 改 40% 打回 → 30% 留 xfail 记局限 + 40% 必须判不过
+- 2026-11-03 scorecard：成绩单命令 · scorecard.md（与代码比对）· 片段清单 schema 写完；cafe 常见档试跑能出表；V-CLICK 在参考降噪器上约 100 次 / 分钟（直通为 0），疑误报待查；external-mic 240 段未进任务 → 转 scenesuite；名额给它跑 eval ci + 全量测试
+- 2026-11-03 人要试听 → 大总管从 build b22d 挑 11 段（8 个场景常见段 + 家里补一段 + 咖啡馆压力段 + 不加麦模拟对照）调到约 −23 dBFS 复制到 `~/Desktop/20261103-vdn-scene-samples/`（原件不动，非盲听），等人反馈「像不像真的」
+- 2026-11-03 scenesuite 第一版 build 20261103214702-b22d 通过（480 段，18 s，音频 3.2 GB 在 _tmp；清单 / 哈希进仓；39 测试 · 防泄漏三项交集 0 · SNR / SIR 98.2% 段差 ≤ 1 dB）；scenes.json 30 条 graders 待 scorecard 填；锁已删
+- 2026-11-03 scenesuite 下载完成实测约 447 MB（单包最大 130 MB），登记 materials.json；自报冒烟跑满规模 17 s 未申请名额（已记，以后整批先申请）；名额给它跑第一版 build（480 段 = 15 地点 × 16 段 × 2 设备，约 2.5 GB）
+- 2026-11-03 scorecard 名额归还（通过）：Distill-MOS 导出 ONNX（复数 STFT 换实数卷积，对原模型差 1.4e-6，17.6 MB 在 ~/vdn-data，哈希进仓）；对拍 6 段 SCOREQ 差 0、Distill-MOS 0.00225；onnx 包另装在主目录 _tmp 29 MB；锁已删
+- 2026-11-03 scorecard：4 个新评分项 + 探针 36 测试过（ESTOI 对 pystoi 差 0）；批改 src/schema/（片段清单 schema 导出与正负例）；levels.json 手加 6 条打回，改为 calib --write-levels 自动补新项为 L0 + 测试
+- 2026-11-03 人「可以 merge」→ #83 #84 #85 按序合并（#84 #85 与评审索引冲突，保留两行解决），#80–#82 关；两个 b11 分支已 merge main。scorecard 方案批（SCOREQ ONNX · Distill-MOS 导 ONNX 后对拍）；scenesuite 方案批（15 × 16 段 × 12 s = 240 段；防泄漏按 LibriSpeech 奇偶位 + DEMAND 后 40%；下载 ESC-50 约 75 MB + DEMAND 三包约 350 MB，累计约 425 MB，大总管批）
 - 2026-11-03 人定 D81（按场景测能力 → 成绩单 → 针对优化；听感用 SCOREQ 主 + Distill-MOS 交叉）；派 b11 两线 scenesuite · scorecard
 - 2026-11-03 macmic 路径清零复查过，窗口已关；开 PR #84（022）· #85（023）。三线全收尾；合并被本机权限检查拦，等人。人新方向：按场景测能力 → 成绩单 → 针对优化（待确认后记决策）
 - 2026-11-03 macmic 报收尾（codex 5 轮，4/5 轮无 P0/P1，22 条全改；12 测试 · 21 键 0 问题，大总管复跑过）；打回 1 处：findings/ 10 处本机路径。同类第二次 → 新记忆 `state/memory/20261103-no-local-paths-in-research.md`。另记：codex-review 隐私扫描把「P1」开头的输出误判为 PBM 位图（macmic 现状页「发现」），属 skill 问题，待告诉人

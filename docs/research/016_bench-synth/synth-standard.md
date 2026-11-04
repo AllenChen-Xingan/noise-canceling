@@ -42,7 +42,7 @@
    - **A、B 两套生成器都不再调用 `sim.py` 的取材与合成噪声函数**（`speech_track`、`demand`、`synth_*`、`file_music`；RIR 函数可留，记为「生成器机理相同」）
    - 素材分三类：**测试份**（只测，不训练、不当合成原料）· **裁判原料**（只给评测格的生成器用，永不训练）· **训练原料**。D63 原文只分两份，「裁判原料」是本线的细化，**待人确认**（decision.md 待拍板第 10 条）
    - LibriSpeech：test-clean 已被 exp006 训练和 0c67 合成用过 → 划为裁判原料（其中 exp006 train 那 20 人另标「exp006 训练用过」，评场景分类器时排除）；dev-clean 划为测试份（test-other 说话人偏难，分布与 test-clean 不一致）；训练原料用 train-clean-100。**LibriSpeech 不在 D65 清单里**，dev-clean 约 0.3 GB、train-clean-100 约 6.3 GB 超过 500 MB 先报规则，要单独申请（已转交大总管）
-   - DEMAND：已被合成用过的 6 个环境（PCAFETER · PRESTO · SCAFE · DKITCHEN · STRAFFIC · TBUS，exp006 前 60% 训练、后 40% 测试与 0c67 B 都碰过）**全部不能当测试份**，划为训练原料 / 裁判原料；测试份只用从没被合成用过的环境（本机已有 OOFFICE，其余随下载）
+   - DEMAND：已被合成用过的 6 个环境（PCAFETER · PRESTO · SCAFE · DKITCHEN · STRAFFIC · TBUS，exp006 前 60% 训练、后 40% 测试与 0c67 B 都碰过）**全部不能当测试份**，划为训练原料 / 裁判原料；测试份只从没被合成用过的环境里取，按 S10①「按时段」切：每个这类环境（OOFFICE · TMETRO · PSTATION · TCAR）前一半为测试份、后一半为裁判原料（2026-11-03 大总管按 S10① 定，exp013 第四版起照此；原写「整个环境当测试份」）
    - 清单补 babble 说话人与合成噪声种子；每个 build 生成后跑 `s10.py`，交集 = ∅ 才算过
 3. 将来项目自己的训练（D56 小适配器、D47 小模型）只从训练原料取，并把 0c67 用过的素材列入排除表
 
