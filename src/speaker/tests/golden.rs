@@ -7,7 +7,9 @@
 //! 改前的代码里窗种类叫 `vdn_speaker::fbank::WindowType::{Povey, Hanning}`，生成基准时只把下面 [`old_names`]
 //! 里的两行换成旧名（`docs/plan/013_frontend-once.md` 第 12 节写明）。
 //! 基准带平台标签（含系统主版本）：ln / cos / powf 末位随 macOS 大版本可能变，别的平台打印原因后跳过。
-mod common;
+#[path = "common/platform.rs"]
+mod platform;
+use platform::platform;
 
 use vdn_speaker::fbank::{Fbank, FbankConfig};
 use vdn_types::{ContentId, MODEL_RATE};
@@ -84,7 +86,7 @@ fn configs() -> [FbankConfig; 3] {
 
 /// 基准行：`<内容 ID> <条数> <平台>`。设了 `VDN_BLESS` 就写入并返回 `None`；平台不同返回 `None` 并打印跳过。
 fn golden(path: &str, got: ContentId, n: usize) -> Option<(ContentId, usize)> {
-    let line = format!("{got} {n} {}", common::platform());
+    let line = format!("{got} {n} {}", platform());
     if std::env::var_os("VDN_BLESS").is_some() {
         std::fs::write(path, format!("{line}\n")).expect("写基准");
         eprintln!("已写基准：{line}");
@@ -95,10 +97,10 @@ fn golden(path: &str, got: ContentId, n: usize) -> Option<(ContentId, usize)> {
     let id = it.next().and_then(ContentId::parse).expect("第 1 列是内容 ID");
     let cnt: usize = it.next().and_then(|s| s.parse().ok()).expect("第 2 列是条数");
     let plat = it.next().unwrap_or_default();
-    if plat != common::platform() {
+    if plat != platform() {
         eprintln!(
             "跳过：基准生成于 {plat}，本机是 {}；逐位对拍只在生成基准的平台上成立",
-            common::platform()
+            platform()
         );
         return None;
     }
