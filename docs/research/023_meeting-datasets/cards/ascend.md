@@ -2,7 +2,7 @@
 
 - **名称**：A Spontaneous Chinese-English Dataset for Code-switching in Multi-turn Conversation（ASCEND）
 - **链接**：https://huggingface.co/datasets/CAiRE/ASCEND
-- **许可**：Creative Common Attribution Share-Alike 4.0 International (CC-BY-SA 4.0)（HF 数据卡原文）→ 结论：只评测【官方文档】
+- **许可**：Creative Common Attribution Share-Alike 4.0 International (CC-BY-SA 4.0)（HF 数据卡原文）→ 结论：训练可（按 D64：SA 可训练，训出的权重按相同条款共享并署名）【官方文档】
 - **大小**：10.62 h · 12,314 句（train 9,869 / validation 1,130 / test 1,315）· 26 场对话 · 23 人【官方文档 · 论文 摘要、§1】；GB 未查到
 - **场景键**：library-classroom（香港一间安静教室）
 - **设备键**：non-laptop-close-talk（每人一支 RODE SmartLav+ 领夹麦，夹在衣领上）
@@ -19,3 +19,4 @@
 - 本路原调研漏掉。对本项目的价值在「中文自发对话 + 夹英文术语」，接近开会时的说话方式；但录音是领夹近讲、安静教室，本身无噪声、无笔记本麦。
 - 论文写 23 人，HF 预览里 `original_speaker_id` 编到 26，二者口径不一，未裁定。
 - 怀疑派复核：本卡由怀疑派补写，许可读 HF 数据卡原文，设备与环境读论文 §3.1。
+- 主控复核（2026-11-03，codex 第 2 轮 #1）：许可结论按 D64 由「只评测」改为「训练可」。

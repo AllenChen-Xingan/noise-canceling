@@ -2,7 +2,7 @@
 
 - **名称**：VocalSound: A Dataset for Improving Human Vocal Sounds Recognition（VocalSound）
 - **链接**：https://sls.csail.mit.edu/downloads/vocalsound/
-- **许可**：官方页原句「distributed under the Creative Commons Attribution-ShareAlike (CC BY-SA) license」；GitHub README 写「Creative Commons Attribution-ShareAlike 4.0 International License」→ 结论：只评测【官方文档】
+- **许可**：官方页原句「distributed under the Creative Commons Attribution-ShareAlike (CC BY-SA) license」；GitHub README 写「Creative Commons Attribution-ShareAlike 4.0 International License」→ 结论：训练可（按 D64：SA 可训练，训出的权重按相同条款共享并署名）【官方文档】
 - **大小**：21,024 条，3,365 人；44.1 kHz 版 4.5 GB、16 kHz 版 1.7 GB；总时长未查到；国家数未查到；年龄从测试子集分组（18–25 / 26–48 / 49–80）看覆盖 18–80 岁【官方文档：官网与 GitHub README】
 - **场景键**：home-family, other（众包，参与者自选地点；推断）
 - **设备键**：non-laptop-unknown（Amazon Mechanical Turk 众包，参与者自有设备；官方页未写）
@@ -18,3 +18,4 @@
 ## 备注
 - 咳嗽、清嗓、喷嚏在会议里也常见；它们该保留还是压掉，属于人耳偏好问题，不在本卡下结论。
 - 怀疑派复核：删去无出处的「60 个国家」（摘要、官网、README 都没有）；补 GB（README：44.1 kHz 4.5 GB / 16 kHz 1.7 GB）；补 README 的许可全名 CC BY-SA 4.0；场景键里的来源标签挪进括号。
+- 主控复核（2026-11-03，codex 第 2 轮 #1）：许可结论按 D64 由「只评测」改为「训练可」。

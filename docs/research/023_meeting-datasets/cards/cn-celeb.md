@@ -2,7 +2,7 @@
 
 - **名称**：CN-Celeb: multi-genre speaker recognition（CN-Celeb，OpenSLR SLR82）
 - **链接**：https://www.openslr.org/82/
-- **许可**：Attribution-ShareAlike 4.0 International（CC BY-SA 4.0）→ 结论：只评测【官方文档】
+- **许可**：Attribution-ShareAlike 4.0 International（CC BY-SA 4.0）→ 结论：训练可（按 D64：SA 可训练，训出的权重按相同条款共享并署名）【官方文档】
 - **大小**：3,000 人（CN-Celeb1 1,000 人、约 270 h、13 万+ 句；CN-Celeb2 2,000 人、52 万+ 句）；cn-celeb_v2.tar.gz 22 GB + CN-Celeb2 三包 26 / 26 / 23 GB【官方文档 · 论文 §1、§3】
 - **场景键**：other（网络媒体：11 种体裁，含访谈、vlog、演讲、朗诵、唱歌、直播、影视等）
 - **设备键**：non-laptop-unknown
@@ -18,3 +18,4 @@
 ## 备注
 - 体裁列表中「vlog / 直播 / 访谈」里可能有笔记本或手机录的段，但无标签无法筛，属【推断】。
 - 怀疑派复核：OpenSLR 页许可（CC BY-SA 4.0）、四个包大小、13 万 / 52 万句核对一致；论文确认 CN-Celeb1 1,000 人 270 h、数据取自 Bilibili 等媒体（CN-Celeb2 另有网易云、唱吧、喜马拉雅等）。无改动。
+- 主控复核（2026-11-03，codex 第 2 轮 #1）：许可结论按 D64 由「只评测」改为「训练可」。

@@ -2,7 +2,7 @@
 
 - **名称**：QUT-NOISE database and protocols（QUT-NOISE）
 - **链接**：https://github.com/qutsaivt/QUT-NOISE
-- **许可**：README 原句「The QUT-NOISE data is licensed CC-BY-SA」；生成 QUT-NOISE-TIMIT 的代码为 BSD → 结论：只评测【官方文档】
+- **许可**：README 原句「The QUT-NOISE data is licensed CC-BY-SA」；生成 QUT-NOISE-TIMIT 的代码为 BSD → 结论：训练可（按 D64：SA 可训练，训出的权重按相同条款共享并署名）【官方文档】
 - **大小**：20 段噪声会话，每段 ≥30 min，合计 >10 h；zip 合计约 7.7 GB（cafe 1.6 / car 1.7 / home 1.4 / reverb 1.4 / street 1.6 GB）【论文】【官方文档】
 - **场景键**：cafe, home-family, street-outdoor, car-passenger, other（室内泳池、半封闭停车场，用于混响）
 - **设备键**：non-laptop-studio
@@ -19,3 +19,4 @@
 - 「家里有孩子和电视」这种声音，本路只在 QUT-NOISE HOME-LIVINGB 和 CHiME-Home 里找到成段真实录音。
 - 每段会话标了坏段（麦故障）位置，可以避开。
 - 怀疑派复核：无改动。已读 README（CC-BY-SA；代码 BSD 式）与 Interspeech 2010 论文 §2.1–2.2：20 段 ≥30 min、合计 >10 h、Zoom H2 后置麦对 48 kHz、CAFE / HOME-LIVINGB / CAR「no radio or speech noise」均属实；zip 大小与 README 一致。
+- 主控复核（2026-11-03，codex 第 2 轮 #1）：许可结论按 D64 由「只评测」改为「训练可」。

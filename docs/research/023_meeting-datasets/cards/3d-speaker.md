@@ -2,7 +2,7 @@
 
 - **名称**：3D-Speaker: A Large-Scale Multi-Device, Multi-Distance, and Multi-Dialect Corpus（3D-Speaker）
 - **链接**：https://3dspeaker.github.io/
-- **许可**：官网原句「The provided 3D-Speaker metadata is available to download under a Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)」——字面只说 metadata，音频本身未另写 → 结论：未查到（音频本身的许可原文没找到；即使按元数据的 CC BY-SA 4.0 算，含 SA 也只能评测）【官方文档】
+- **许可**：官网原句「The provided 3D-Speaker metadata is available to download under a Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)」——字面只说 metadata，音频本身未另写 → 结论：未查到（音频本身的许可原文没找到；若音频也是元数据那样的 CC BY-SA 4.0，按 D64 可训练）【官方文档】
 - **大小**：训练 10,000 人、579,013 条、有效语音 1,124 h；评测 240 人、18,782 条、15.42 h；train 包约 190 GB、test 包约 1.1 GB【论文 §3、表 5】【官方文档】
 - **场景键**：other（录音房间类型未写）
 - **设备键**：laptop-unknown, non-laptop-phone, non-laptop-tablet, non-laptop-mic-array, non-laptop-close-talk, non-laptop-unknown（iPad、安卓手机、iPhone、8 麦阵、PC 笔记本、录音笔、指向麦、未指明手机）
