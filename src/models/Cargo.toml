@@ -14,6 +14,8 @@ vdn-backend-ort.workspace = true
 
 [dev-dependencies]
 vdn-engine.workspace = true
+# 只给 examples/frontend_timing.rs（013 每帧耗时对比）
+vdn-scene = { path = "../scene" }
 assert_no_alloc.workspace = true
 
 [lints]

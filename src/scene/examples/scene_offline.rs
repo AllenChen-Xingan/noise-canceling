@@ -13,7 +13,7 @@ use vdn_scene::features::NF;
 use vdn_scene::{SceneAnalyzer, route, weights};
 use vdn_types::{Hysteresis, MODEL_RATE};
 
-const HOP: usize = 256;
+const HOP: usize = vdn_types::FRONTEND.hop;
 const TICK_HOPS: usize = 31;
 
 fn read_wav(path: &str) -> Vec<f32> {

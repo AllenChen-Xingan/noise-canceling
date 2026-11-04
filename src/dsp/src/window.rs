@@ -1,6 +1,13 @@
 //! 窗函数。与 exp003 `enhance.py` 逐值一致：
 //! `sqrt_hann_periodic(n) = sqrt(0.5 - 0.5 cos(2πi/n))`（周期窗，分析与合成都用它）。
 
+/// 按口径造窗：窗种类 → 窗函数只在这里对应一次（正本 `vdn_types::frontend`）。
+pub fn for_spec(spec: &vdn_types::StftSpec) -> Vec<f32> {
+    match spec.window {
+        vdn_types::Window::SqrtHannPeriodic => sqrt_hann_periodic(spec.n_fft),
+    }
+}
+
 /// 周期 sqrt-Hann 窗（GTCRN：n = 512，hop = 256 时 w² 重叠相加恒为 1）。
 pub fn sqrt_hann_periodic(n: usize) -> Vec<f32> {
     (0..n)
