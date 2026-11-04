@@ -148,7 +148,10 @@ pub fn run(
             }
         };
         if clips.is_empty() {
-            skipped.push((task.id.clone(), "清单里没有这个 场景 × 档 × 设备 的片段".into()));
+            skipped.push((
+                task.id.clone(),
+                "清单里没有这个 场景 × 档 × 设备 的片段".into(),
+            ));
         }
         for c in &clips {
             let Some(_) = standard::group_of(c.scene) else {

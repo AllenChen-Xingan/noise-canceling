@@ -90,6 +90,16 @@ impl Group {
 
     pub fn as_str(self) -> &'static str {
         match self {
+            Group::Quiet => "quiet",
+            Group::Talkers => "talkers",
+            Group::Transit => "transit",
+            Group::MeetingRoom => "meeting-room",
+        }
+    }
+
+    /// 本类在 [`COMMON`] 之外加看的项。
+    pub fn extra(self) -> &'static [Item] {
+        match self {
             Group::Quiet => &QUIET,
             Group::Talkers => &TALKERS,
             Group::Transit => &TRANSIT,

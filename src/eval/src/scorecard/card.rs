@@ -92,7 +92,9 @@ impl Card {
                     f(i.mean),
                     i.unit,
                     f(i.worst),
-                    i.worst_clip.as_ref().map_or(String::new(), |w| format!("（{w}）")),
+                    i.worst_clip
+                        .as_ref()
+                        .map_or(String::new(), |w| format!("（{w}）")),
                     f(i.threshold),
                     i.status.zh()
                 );

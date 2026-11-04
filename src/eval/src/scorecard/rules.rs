@@ -163,9 +163,8 @@ pub fn listen_one(scores: &[(&'static str, bool, Score)]) -> (Status, Option<Str
     let (fa, fb) = (a.verdict.is_fail(), b.verdict.is_fail());
     if pa && pb {
         let gap = (da - db).abs();
-        let why = (gap >= split).then(|| {
-            format!("两个评分模型都说不比原声差，但 Δ 相差 {gap:.2} ≥ {split}")
-        });
+        let why = (gap >= split)
+            .then(|| format!("两个评分模型都说不比原声差，但 Δ 相差 {gap:.2} ≥ {split}"));
         (Status::Pass, why)
     } else if fa && fb {
         (Status::Fail, None)
@@ -272,7 +271,10 @@ pub fn summarize(rows: &[ClipRow]) -> Vec<SceneCard> {
                 .filter(|(v, _, _)| !LISTEN.contains(v))
                 .map(|(v, veto, _)| (*v, *veto))
                 .collect();
-            let items: Vec<ItemCell> = order.iter().map(|(v, veto)| item_cell(v, *veto, &rs)).collect();
+            let items: Vec<ItemCell> = order
+                .iter()
+                .map(|(v, veto)| item_cell(v, *veto, &rs))
+                .collect();
             let listen = listen_cell(&rs);
             let veto_failed: Vec<&'static str> = items
                 .iter()
@@ -313,7 +315,11 @@ pub fn worst(cards: &[SceneCard]) -> Vec<usize> {
     let fails = |c: &SceneCard| c.items.iter().filter(|i| i.status == Status::Fail).count();
     idx.sort_by_key(|&i| {
         let c = &cards[i];
-        (c.status, std::cmp::Reverse(c.veto_failed.len()), std::cmp::Reverse(fails(c)))
+        (
+            c.status,
+            std::cmp::Reverse(c.veto_failed.len()),
+            std::cmp::Reverse(fails(c)),
+        )
     });
     idx.into_iter()
         .filter(|&i| cards[i].status != Status::Pass)
