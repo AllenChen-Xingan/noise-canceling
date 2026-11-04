@@ -1,0 +1,103 @@
+{
+ "seed": 20261104,
+ "items": [
+  {
+   "n": 1,
+   "clip": "transit-hub-c03-ext",
+   "A": {
+    "is": "GTCRN",
+    "src": "transit-hub-c03-ext#7b4ff82f-gtcrn-bfff75a3e9c11999.wav",
+    "sha256": "dd48f42becbf251b3c862777547f3a0506d247cc10ffeef50e804e92139a2a83"
+   },
+   "B": {
+    "is": "原声",
+    "src": "transit-hub-c03-ext#7b4ff82f-mix-d31c86999f630417.wav",
+    "sha256": "e68f72f6aae08982b3d23a1512baec4f4c18e32df60e0ede8cabf54abb6a235e"
+   }
+  },
+  {
+   "n": 2,
+   "clip": "canteen-c04-mba",
+   "A": {
+    "is": "原声",
+    "src": "canteen-c04-mba#8ed1ffe7-mix-001c14ed2b2a4f09.wav",
+    "sha256": "bb82f4008094a042318042b774f19695dced2cc7bad30356883a6c1dd868824f"
+   },
+   "B": {
+    "is": "GTCRN",
+    "src": "canteen-c04-mba#8ed1ffe7-gtcrn-fcb3bfa538dc2fb1.wav",
+    "sha256": "e2410d8b851008a235ae62039622e6ab297252e342d2c0d9e7340b234523ad81"
+   }
+  },
+  {
+   "n": 3,
+   "clip": "cafe-s00-mba",
+   "A": {
+    "is": "原声",
+    "src": "cafe-s00-mba#55087df9-mix-56fc091e62485252.wav",
+    "sha256": "7e5194ab89205110d34e758272b57d1497c0165bc133b4131ed4f07957cf7ea4"
+   },
+   "B": {
+    "is": "GTCRN",
+    "src": "cafe-s00-mba#55087df9-gtcrn-3e0657219e3e3991.wav",
+    "sha256": "846a1a6ce0d1fa132a93a3ac563829ee0d7d354182632c48a660d65e090d36b7"
+   }
+  },
+  {
+   "n": 4,
+   "clip": "canteen-c09-mba",
+   "A": {
+    "is": "原声",
+    "src": "canteen-c09-mba#9743aa1e-mix-ed9c0bc702030677.wav",
+    "sha256": "5f25f20ba105a4e39d0bcdc0d88789972f97861dcaedd1e7fe0d80a520c02524"
+   },
+   "B": {
+    "is": "GTCRN",
+    "src": "canteen-c09-mba#9743aa1e-gtcrn-ac13a71705d06338.wav",
+    "sha256": "6b8f1a88588ec8e28c063819ddbdcd7381174d67cb31c849419053e0d001deb3"
+   }
+  },
+  {
+   "n": 5,
+   "clip": "home-family-c00-mba",
+   "A": {
+    "is": "GTCRN",
+    "src": "home-family-c00-mba#3f496537-gtcrn-a4c7abfb232e7584.wav",
+    "sha256": "99e64162b5d64694ed30ea04d47604c3ba25010a59feba887cdd995d2bad282b"
+   },
+   "B": {
+    "is": "原声",
+    "src": "home-family-c00-mba#3f496537-mix-7feae082d1d0100b.wav",
+    "sha256": "ba466442f9cecc742e85b629fe6b345b13d46506f9ed31bbcac3a0e48c943aeb"
+   }
+  },
+  {
+   "n": 6,
+   "clip": "transit-hub-c08-ext",
+   "A": {
+    "is": "GTCRN",
+    "src": "transit-hub-c08-ext#60547c62-gtcrn-99f65178f4824cc2.wav",
+    "sha256": "e3b62315a661a79a53d35b04535397523c189987a1098fb588af6e8b8ceaf22a"
+   },
+   "B": {
+    "is": "原声",
+    "src": "transit-hub-c08-ext#60547c62-mix-6e6f11d1ef635295.wav",
+    "sha256": "55f53474920811fcdb530f4dc04b892099f1313c52daea690297f9f2f4a8b78e"
+   }
+  },
+  {
+   "n": 7,
+   "clip": "library-classroom-c09-ext",
+   "A": {
+    "is": "原声",
+    "src": "library-classroom-c09-ext#384303c7-mix-aac9e0753befa08f.wav",
+    "sha256": "04424f7100e2e6dec8b1b73d2b817d7fdd1748975832f4a5f4eeb48506574ab3"
+   },
+   "B": {
+    "is": "GTCRN",
+    "src": "library-classroom-c09-ext#384303c7-gtcrn-7a9aa888300b1495.wav",
+    "sha256": "34f9f6b9da465a2d79f4130cfd2b4336c4758938b80920520a37746f1b422006"
+   }
+  }
+ ]
+}
