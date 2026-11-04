@@ -15,6 +15,9 @@ vdn-speaker-lab run   <noisy.wav> <out_dir> --wet <wet.wav> [--speaker-onnx ecap
 vdn-speaker-lab envelope <noisy.wav> <wet.wav> <out_prefix>
 vdn-speaker-lab fbank <in.wav> <out.f32>
 vdn-speaker-lab embed <in.wav>
+vdn-speaker-lab bench-split <in.wav> [--reps 6] [--win 1.5] [--judge-hop 0.5] [--speaker-onnx ecapa.onnx]
 ```
 
 `run` 一次出 `raw / floor / energy / vad / personal / aggressive` 六个版本和一份 `log.json`（判断回路每次判决、注册事件、逐 hop 增益与耗时）。目标文件已存在时拒绝覆盖，除非换 `--tag` 或加 `--overwrite`；`--replay` 必须带 `--tag`。
+
+`bench-split`（exp015）按判断回路的窗长 / 步长切窗，把一次声纹计算拆成 fbank · 整个 embed · 推理（两者之差）· 注册与余弦分别计时，输出各项 p50 / p90 / 最慢（µs）。计时要拿名额、插电、`caffeinate`。

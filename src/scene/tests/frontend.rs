@@ -1,0 +1,208 @@
+//! 借谱 vs 自算（013 第 8 节第 2、3 条）。谱源用 `StreamingStft::from_spec(FRONTEND)` + `power_into`——
+//! 与 GTCRN 适配器借出功率谱是同一段代码，所以这里不需要模型文件，CI 上能跑；真 GTCRN 的同一检查在 `vdn-models` 的测试里。
+mod common;
+
+use common::{HOP, TICK_HOPS};
+use vdn_dsp::{StreamingStft, power_into};
+use vdn_polish::{PolishChain, PolishParams};
+use vdn_scene::{Judgement, SceneAnalyzer};
+use vdn_types::{FRONTEND, FrameCtx, MODEL_RATE};
+
+/// 借谱跑一遍：外面一个 STFT 当降噪模型的前端，场景吃它借出的功率谱。返回判断与前端正向 FFT 次数。
+fn run_borrowed(x: &[f32]) -> (Vec<Judgement>, u64, u64) {
+    let mut fe = StreamingStft::from_spec(&FRONTEND);
+    let mut pow = vec![0.0f32; FRONTEND.bins()];
+    let mut own = 0;
+    let js = common::run(x, |sa, h| {
+        power_into(fe.analyze(h), &mut pow);
+        sa.push_hop_with_power(h, &FRONTEND, &pow);
+        own = sa.own_fft_count();
+    });
+    (js, fe.forward_count(), own)
+}
+
+fn max_feature_diff(a: &[Judgement], b: &[Judgement]) -> f32 {
+    a.iter()
+        .zip(b)
+        .flat_map(|(x, y)| {
+            x.features
+                .iter()
+                .zip(&y.features)
+                .map(|(p, q)| (p - q).abs())
+        })
+        .fold(0.0, f32::max)
+}
+
+/// 35 维最大绝对差 ≤ 1e-5（预期 0），每次判断的原始细场景与生效细场景都相同。
+#[test]
+fn borrowed_equals_self_compute() {
+    let x = common::signal();
+    let own = common::run(&x, |sa, h| sa.push_hop(h));
+    let (borrowed, _, _) = run_borrowed(&x);
+    assert_eq!(own.len(), borrowed.len());
+    assert!(own.len() >= 20, "判断次数太少，测不出东西");
+    let d = max_feature_diff(&own, &borrowed);
+    eprintln!(
+        "借谱 vs 自算：35 维最大绝对差 {d:e}（阈值 1e-5），判断 {} 次",
+        own.len()
+    );
+    assert!(d <= 1e-5, "35 维最大绝对差 {d:e} > 1e-5");
+    for (k, (a, b)) in own.iter().zip(&borrowed).enumerate() {
+        assert_eq!(a.label.fine, b.label.fine, "第 {k} 次判断的原始细场景不同");
+        assert_eq!(a.committed, b.committed, "第 {k} 次判断的生效场景不同");
+    }
+    // 信号确实让判断动起来了（否则上面的比较没意义）
+    assert!(
+        own.windows(2).any(|w| w[0].label.fine != w[1].label.fine),
+        "测试信号没让场景变化"
+    );
+}
+
+/// 借谱时每帧正向 FFT 恰好 1 次：前端每帧 1 次，场景自己 0 次。
+#[test]
+fn one_forward_fft_per_frame_when_borrowing() {
+    let x = common::signal();
+    let hops = (x.len() / HOP) as u64;
+    let (_, fe_count, own) = run_borrowed(&x);
+    assert_eq!(fe_count, hops);
+    assert_eq!(own, 0);
+}
+
+/// 组合路径（前端 + 场景借谱 + 测试里手动接修音频谱级）每帧正向 FFT 恰好 1 次。
+#[test]
+fn combined_path_counts_one_fft_per_frame() {
+    let x = common::signal();
+    let mut fe = StreamingStft::from_spec(&FRONTEND);
+    let mut sa = SceneAnalyzer::new(MODEL_RATE, HOP);
+    let mut chain = PolishChain::new(
+        FRONTEND.n_fft,
+        FRONTEND.hop,
+        MODEL_RATE as f32,
+        PolishParams::preset(2),
+    );
+    let mut pow = vec![0.0f32; FRONTEND.bins()];
+    let mut dry = vec![Default::default(); FRONTEND.bins()];
+    let mut out = vec![0.0f32; HOP];
+    let mut frames = 0u64;
+    for (k, h) in x.as_chunks::<HOP>().0.iter().enumerate() {
+        let before = fe.forward_count() + sa.own_fft_count();
+        let spec = fe.analyze(h);
+        power_into(spec, &mut pow);
+        dry.copy_from_slice(spec);
+        // 假模型：输出谱 = 输入谱减半
+        for c in spec.iter_mut() {
+            *c *= 0.5;
+        }
+        sa.push_hop_with_power(h, &FRONTEND, &pow);
+        chain.process_spectrum(fe.spectrum_mut(), &dry, FrameCtx::default());
+        fe.synthesize(&mut out);
+        chain.process_time(&mut out);
+        if (k + 1) % TICK_HOPS == 0 {
+            sa.judge();
+        }
+        assert_eq!(
+            fe.forward_count() + sa.own_fft_count() - before,
+            1,
+            "第 {k} 帧正向 FFT 不是 1 次"
+        );
+        frames += 1;
+    }
+    assert_eq!(fe.forward_count(), frames);
+    assert_eq!(sa.own_fft_count(), 0);
+}
+
+/// 借谱 → 自算（换到 FE-M）→ 再借谱：结果与全程自算相同——借谱时自算缓冲也在同步推进。
+/// 切换点都在有声段中间（3 s 在类语音段、7 s 在低频轰鸣段，信号每 2 s 换一段），
+/// 若借谱时没推进自算缓冲，切换后第一帧就吃到旧数据，摘要必不同（codex 第 2 轮 P2 #1）。
+#[test]
+fn switching_to_self_compute_mid_stream_is_seamless() {
+    let x = common::signal();
+    let own = common::run(&x, |sa, h| sa.push_hop(h));
+    // 前端每帧都跑（降噪模型一直在），场景按时段选入口
+    let mut fe = StreamingStft::from_spec(&FRONTEND);
+    let mut pow = vec![0.0f32; FRONTEND.bins()];
+    let mut k = 0usize;
+    let per_s = MODEL_RATE as usize / HOP;
+    let (to_own, back) = (3 * per_s, 7 * per_s);
+    let mixed = common::run(&x, |sa, h| {
+        power_into(fe.analyze(h), &mut pow);
+        if k < to_own || k >= back {
+            sa.push_hop_with_power(h, &FRONTEND, &pow);
+        } else {
+            sa.push_hop(h);
+        }
+        k += 1;
+    });
+    assert_eq!(
+        common::digest(&own),
+        common::digest(&mixed),
+        "切换前后与全程自算不逐位相同"
+    );
+    let d = max_feature_diff(&own, &mixed);
+    assert!(d <= 1e-5, "切换后 35 维最大绝对差 {d:e} > 1e-5");
+    for (a, b) in own.iter().zip(&mixed) {
+        assert_eq!(a.committed, b.committed);
+    }
+}
+
+/// 借来的谱长度不对：退回自算，结果仍与自算相同（不 panic、不算错）。
+#[test]
+fn wrong_length_power_falls_back_to_self_compute() {
+    let x = common::signal();
+    let own = common::run(&x, |sa, h| sa.push_hop(h));
+    let short = [0.0f32; 10];
+    let fb = common::run(&x, |sa, h| sa.push_hop_with_power(h, &FRONTEND, &short));
+    assert_eq!(common::digest(&own), common::digest(&fb));
+}
+
+/// 借出方口径不是正本（频点数同为 257，但帧移 128）：不吃这份谱，退回自算，结果与自算相同。
+/// 没有口径比对时，长度检查会放行这份谱，35 维特征会悄悄算错。
+#[test]
+fn mismatched_spec_falls_back_to_self_compute() {
+    let x = common::signal();
+    let own = common::run(&x, |sa, h| sa.push_hop(h));
+    let other = vdn_types::StftSpec {
+        hop: FRONTEND.hop / 2,
+        ..FRONTEND
+    };
+    assert_eq!(other.bins(), FRONTEND.bins());
+    let mut fe = StreamingStft::from_spec(&FRONTEND);
+    let mut pow = vec![0.0f32; FRONTEND.bins()];
+    let mut own_ffts = 0;
+    let fb = common::run(&x, |sa, h| {
+        power_into(fe.analyze(h), &mut pow);
+        pow.iter_mut().for_each(|p| *p *= 4.0); // 内容故意改掉：若被吃进去，摘要一定不同
+        sa.push_hop_with_power(h, &other, &pow);
+        own_ffts = sa.own_fft_count();
+    });
+    assert_eq!(common::digest(&own), common::digest(&fb));
+    assert_eq!(own_ffts, (x.len() / HOP) as u64, "口径不对时应每帧自算");
+}
+
+/// 借谱入口收到不整齐长度的 `x`：不吃整帧谱，退回自算（保留改前的移位语义），结果与全程自算相同。
+#[test]
+fn ragged_input_with_power_falls_back_to_self_compute() {
+    let x = common::signal();
+    let own = common::run_ragged(&x, |sa, h| sa.push_hop(h));
+    let pow = vec![1.0f32; FRONTEND.bins()];
+    let (mut short_calls, mut calls, mut ffts) = (0u64, 0u64, 0u64);
+    let mixed = common::run_ragged(&x, |sa, h| {
+        calls += 1;
+        if h.len() == HOP {
+            sa.push_hop(h); // 整 hop 照常自算
+        } else {
+            short_calls += 1;
+            sa.push_hop_with_power(h, &FRONTEND, &pow); // 内容是假的：若被吃进去摘要一定不同
+        }
+        ffts = sa.own_fft_count();
+    });
+    assert!(short_calls > 0);
+    assert_eq!(common::digest(&own), common::digest(&mixed));
+    assert_eq!(ffts, calls, "每次都应自算一次 FFT");
+}
+
+/// 测试共用的 `HOP` 是字面量（要在改前源码上编译），这里和正本比对。
+#[test]
+fn helper_hop_is_frontend_hop() {
+    assert_eq!(HOP, FRONTEND.hop);
+}
