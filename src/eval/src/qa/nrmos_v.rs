@@ -27,13 +27,19 @@ struct Server {
 
 impl Server {
     fn spawn(kind: Kind, model: &PathBuf) -> Result<Server, String> {
-        use std::process::{Command, Stdio};
         let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-        let mut child = Command::new(exe)
-            .arg("nrmos")
+        let mut cmd = std::process::Command::new(exe);
+        cmd.arg("nrmos")
             .arg(kind.as_str())
             .arg(model)
-            .arg("--serve")
+            .arg("--serve");
+        Server::spawn_cmd(cmd)
+    }
+
+    /// 起任意一个按 `--serve` 协议说话的子进程（测试里用假子进程造错行）。
+    fn spawn_cmd(mut cmd: std::process::Command) -> Result<Server, String> {
+        use std::process::Stdio;
+        let mut child = cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
@@ -61,6 +67,11 @@ impl Server {
             return Err("评分模型子进程退出了（哈希不对或模型打不开，见上面的报错）".into());
         }
         let v: Value = serde_json::from_str(&line).map_err(|e| format!("子进程输出读不懂：{e}"))?;
+        // 回的必须是这一段：错行、重复行都当子进程坏了（调用方会丢掉它、下次重起），不收错配的分（codex 第 4 轮 P2 #2）
+        let want = wav.display().to_string();
+        if v["wav"].as_str() != Some(want.as_str()) {
+            return Err(format!("子进程回的是别的段（{}），应为 {want}", v["wav"]));
+        }
         if let Some(e) = v["error"].as_str() {
             return Err(e.to_string());
         }
@@ -179,5 +190,41 @@ impl QaExtra {
         .with_extra("mos_out", o)
         .with_extra("mos_mix", mix)
         .with_note("Δ = 输出 − 带噪原声；过线 = 不比原声差（L0 约束，不当奖励）")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 假子进程：对每行输入回一行固定 JSON（不管问的是哪段）。
+    fn fake(reply: &str) -> Server {
+        let mut c = std::process::Command::new("/bin/sh");
+        c.arg("-c")
+            .arg(format!("while read l; do echo '{reply}'; done"));
+        Server::spawn_cmd(c).unwrap()
+    }
+
+    #[test]
+    fn reply_for_another_clip_is_rejected() {
+        let mut s = fake(r#"{"wav": "/x/other.wav", "mos": 3.0}"#);
+        let e = s.score(std::path::Path::new("/x/this.wav")).unwrap_err();
+        assert!(e.contains("别的段"), "{e}");
+    }
+
+    #[test]
+    fn matching_reply_is_accepted_and_error_line_is_error() {
+        let mut ok = fake(r#"{"wav": "/x/a.wav", "mos": 3.5}"#);
+        assert_eq!(ok.score(std::path::Path::new("/x/a.wav")).unwrap(), 3.5);
+        let mut bad = fake(r#"{"wav": "/x/a.wav", "error": "坏了"}"#);
+        assert!(bad.score(std::path::Path::new("/x/a.wav")).is_err());
+    }
+
+    #[test]
+    fn early_exit_is_error() {
+        let mut c = std::process::Command::new("/bin/sh");
+        c.arg("-c").arg("exit 0");
+        let mut s = Server::spawn_cmd(c).unwrap();
+        assert!(s.score(std::path::Path::new("/x/a.wav")).is_err());
     }
 }

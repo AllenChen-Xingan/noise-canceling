@@ -268,6 +268,18 @@ fn clip_without_clean_ref_is_not_scored() {
     );
 }
 
+/// 误传 ci 清单、空清单：直接报错，不出空成绩单（codex 第 4 轮 P2 #1）。
+#[test]
+fn non_scene_or_empty_suite_is_rejected() {
+    let ci = parse_suite(vdn_eval::suite::CI_SUITE).unwrap();
+    let e = vdn_eval::scorecard::check_suite(&ci).unwrap_err();
+    assert!(e.contains("不是场景任务"), "{e}");
+    let empty = parse_suite(r#"{"name": "x", "tasks": []}"#).unwrap();
+    assert!(vdn_eval::scorecard::check_suite(&empty).is_err());
+    let (_, suite_text) = setup("check");
+    assert!(vdn_eval::scorecard::check_suite(&parse_suite(&suite_text).unwrap()).is_ok());
+}
+
 /// 进仓的样例行（`tests/fixtures/scene-clip-example.jsonl`，vdn-schema 的 schema 测试也用它）能被解析器读。
 #[test]
 fn committed_example_line_parses() {

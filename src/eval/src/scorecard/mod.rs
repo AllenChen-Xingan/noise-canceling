@@ -160,6 +160,27 @@ pub fn clips_of(task: &Task) -> Result<Vec<SceneClip>, String> {
         .collect())
 }
 
+/// 清单必须全是场景任务（`real.kind = "scene"`）且至少一条；误传 ci / qa 清单直接报错，不出一张空成绩单（codex 第 4 轮 P2 #1）。
+pub fn check_suite(suite: &Suite) -> Result<(), String> {
+    if suite.tasks.is_empty() {
+        return Err("清单里没有任务".into());
+    }
+    let bad: Vec<&str> = suite
+        .tasks
+        .iter()
+        .filter(|t| !matches!(t.real, Some(RealSource::Scene { .. })))
+        .map(|t| t.id.as_str())
+        .collect();
+    if bad.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "这些不是场景任务（real.kind 应为 scene）：{}",
+            bad.join(" · ")
+        ))
+    }
+}
+
 /// 跑全部场景任务。读不了的段、展开不出片段的任务记进 [`Missing`]（原因），不中断，也不从成绩单里消失。
 pub fn run(
     suite: &Suite,

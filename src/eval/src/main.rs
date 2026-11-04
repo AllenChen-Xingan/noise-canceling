@@ -346,6 +346,7 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
     let path = arg(args, "--suite").unwrap_or_else(|| "src/eval/suite/scenes.json".into());
     let p = resolve(&path).ok_or_else(|| format!("找不到 {path}"))?;
     let suite = parse_suite(&std::fs::read_to_string(&p).map_err(|e| format!("{path}：{e}"))?)?;
+    vdn_eval::scorecard::check_suite(&suite)?;
     let sys = systems(args, &[SystemKind::Ref])?;
     let opts = Opts {
         ci: m.ci,
