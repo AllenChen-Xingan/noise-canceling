@@ -165,6 +165,20 @@ class Behaviour(unittest.TestCase):
         for _ in range(300):
             self.assertIsNone(dc.Chain(rng, "mba-builtin", "common").params["clip_drive_db"])
 
+    def test_clip_happens_in_stress_at_doc_rate(self):
+        """压力档按 022 第 8 步的概率（0.03）削波；第一到三版 90 段压力档碰巧一段都没抽到（概率约 6%），这里证明分支是活的。"""
+        rng = np.random.default_rng(11)
+        n = 4000
+        hits = sum(dc.Chain(rng, "mba-builtin", "stress").params["clip_drive_db"] is not None for _ in range(n))
+        p = dc.P["step8_clip"]["prob"]
+        self.assertAlmostEqual(hits / n, p, delta=4 * (p * (1 - p) / n) ** 0.5)
+        mix = np.sin(np.linspace(0, 200, SR))
+        ch = dc.Chain(rng, "mba-builtin", "stress")
+        ch.params["clip_drive_db"] = 6.0
+        y, clipped = ch.clip(mix)
+        self.assertTrue(clipped)
+        self.assertGreater(float(np.max(np.abs(y - mix))), 0.1)
+
     def test_same_seed_same_params(self):
         a = dc.Chain(np.random.default_rng(9), "mba-builtin", "stress").params
         b = dc.Chain(np.random.default_rng(9), "mba-builtin", "stress").params
