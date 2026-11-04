@@ -65,7 +65,7 @@ fn whitelist_only_shrinks() {
     };
     w("src/dsp/src/fft.rs", "use realfft::RealFftPlanner;\n");
     let dirty = "use realfft::RealFftPlanner;\n";
-    for (p, _) in ALLOW {
+    for (p, _, _) in ALLOW {
         w(p, dirty);
     }
     let mut probs = Vec::new();
@@ -87,4 +87,19 @@ fn whitelist_only_shrinks() {
     assert!(probs.iter().any(|p| p.contains("已没有 FFT 计划")));
     assert!(probs.iter().any(|p| p.contains("不存在")));
     let _ = fs::remove_dir_all(&d);
+}
+
+/// 白名单只放行声明过的那几个标识符：场景文件只许逆 FFT，新加正向计划照样红；白名单文件解析失败也红。
+#[test]
+fn whitelist_is_scoped_per_identifier() {
+    let scene = "src/scene/src/features.rs";
+    let inv = "fn f(p: &mut realfft::RealFftPlanner<f32>) { p.plan_fft_inverse(8); }\n";
+    assert_eq!(n(scene, inv), 0);
+    let fwd = "fn f(p: &mut realfft::RealFftPlanner<f32>) { p.plan_fft_inverse(8); p.plan_fft_forward(8); }\n";
+    let p = fft_problems(scene, fwd);
+    assert_eq!(p.len(), 1, "{p:?}");
+    assert!(p[0].contains("plan_fft_forward"));
+    assert!(fft_problems(scene, "fn (")[0].contains("解析失败"));
+    // 评测器只许正向
+    assert_eq!(n("src/eval/src/verifiers/estoi.rs", inv), 1);
 }

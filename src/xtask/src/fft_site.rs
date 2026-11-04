@@ -96,10 +96,7 @@ pub fn fft_problems(rel: &str, src: &str) -> Vec<String> {
     };
     let found = hits(&file);
     let entry = ALLOW.iter().find(|(p, _, _)| *p == rel);
-    if let Some((_, ids, _)) = entry
-        && found.is_empty()
-    {
-        let _ = ids;
+    if entry.is_some() && found.is_empty() {
         return vec![format!(
             "{rel}：在 R-FFT 白名单里但已没有 FFT 计划，删掉 fft_site.rs 里这一条"
         )];
