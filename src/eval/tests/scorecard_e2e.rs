@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use vdn_eval::runner::{Baseline, Opts};
 use vdn_eval::scene::SceneClip;
 use vdn_eval::scorecard::card::Card;
-use vdn_eval::scorecard::rules::Status;
+use vdn_eval::scorecard::rules::CardStatus;
 use vdn_eval::suite::{LEVELS, parse_levels, parse_suite};
 use vdn_eval::synth::{NoiseKind, SceneSpec, TalkerSpec, render};
 use vdn_eval::system::SystemKind;
@@ -148,9 +148,9 @@ fn scorecard_end_to_end_on_ref_system() {
     assert_eq!(c.clips, 6);
     // 否决项排在最前；吃字没接 ASR → 待测；听感没接模型 → 待测
     assert!(c.items[0].veto && c.items[3].v == "V-EAT-ASR");
-    assert_eq!(c.items[3].status, Status::Unknown);
-    assert_eq!(c.listen.status, Some(Status::Unknown));
-    assert_ne!(c.status, Status::Pass, "缺 QA 项时不许判「过」");
+    assert_eq!(c.items[3].status, CardStatus::Unknown);
+    assert_eq!(c.listen.status, Some(CardStatus::Unknown));
+    assert_ne!(c.status, CardStatus::Pass, "缺 QA 项时不许判「过」");
     // 每一项都有数（DSP 项）或明确判不了
     for i in &c.items {
         assert_eq!(i.pass + i.fail + i.unknown, 6, "{}", i.v);

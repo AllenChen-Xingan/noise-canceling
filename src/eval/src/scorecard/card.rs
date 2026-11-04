@@ -3,7 +3,7 @@
 use serde_json::{Value, json};
 
 use super::ClipRow;
-use super::rules::{SceneCard, Status, summarize, worst};
+use super::rules::{SceneCard, CardStatus, summarize, worst};
 use crate::files::serde_name;
 
 /// 整张成绩单。
@@ -39,14 +39,14 @@ impl Card {
 
     pub fn to_markdown(&self, title: &str) -> String {
         let mut s = format!("# {title}\n\n");
-        let n = |st: Status| self.cards.iter().filter(|c| c.status == st).count();
+        let n = |st: CardStatus| self.cards.iter().filter(|c| c.status == st).count();
         s += &format!(
             "共 {} 个 场景 × 档 × 设备 × 系统 组合、{} 段：过 {} · 不过 {} · 待测 {}。感知项全部 L0（只作约束，不当奖励）。\n\n",
             self.cards.len(),
             self.clips,
-            n(Status::Pass),
-            n(Status::Fail),
-            n(Status::Unknown)
+            n(CardStatus::Pass),
+            n(CardStatus::Fail),
+            n(CardStatus::Unknown)
         );
         s += "## 最差的场景\n\n";
         if self.worst.is_empty() {
@@ -57,7 +57,7 @@ impl Card {
             let bad: Vec<&str> = c
                 .items
                 .iter()
-                .filter(|x| x.status == Status::Fail)
+                .filter(|x| x.status == CardStatus::Fail)
                 .map(|x| x.v)
                 .collect();
             s += &format!(
@@ -105,7 +105,7 @@ impl Card {
                 l.pass,
                 l.fail,
                 l.unknown,
-                l.status.map_or("待测", Status::zh)
+                l.status.map_or("待测", CardStatus::zh)
             );
             if !l.to_human.is_empty() {
                 s += "送人耳：\n";

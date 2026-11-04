@@ -26,18 +26,18 @@ pub const LISTEN: [&str; 2] = ["V-NRMOS-SCOREQ", "V-NRMOS-DISTILL"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
-pub enum Status {
+pub enum CardStatus {
     Fail,
     Unknown,
     Pass,
 }
 
-impl Status {
+impl CardStatus {
     pub fn zh(self) -> &'static str {
         match self {
-            Status::Pass => "过",
-            Status::Fail => "不过",
-            Status::Unknown => "待测",
+            CardStatus::Pass => "过",
+            CardStatus::Fail => "不过",
+            CardStatus::Unknown => "待测",
         }
     }
 }
@@ -55,7 +55,7 @@ pub struct ItemCell {
     pub worst: Option<f64>,
     pub worst_clip: Option<String>,
     pub threshold: Option<f64>,
-    pub status: Status,
+    pub status: CardStatus,
 }
 
 #[derive(Clone, Debug, Default, serde::Serialize)]
@@ -65,7 +65,7 @@ pub struct ListenCell {
     pub unknown: usize,
     /// 送人耳的段：(段 id, 原因)
     pub to_human: Vec<(String, String)>,
-    pub status: Option<Status>,
+    pub status: Option<CardStatus>,
 }
 
 #[derive(Clone, Debug, serde::Serialize)]
@@ -88,20 +88,20 @@ pub struct SceneCard {
     pub device: String,
     pub system: String,
     pub clips: usize,
-    pub status: Status,
+    pub status: CardStatus,
     pub veto_failed: Vec<&'static str>,
     pub items: Vec<ItemCell>,
     pub listen: ListenCell,
     pub drags: Vec<Drag>,
 }
 
-fn status_of(pass: usize, fail: usize) -> Status {
+fn status_of(pass: usize, fail: usize) -> CardStatus {
     if fail > 0 {
-        Status::Fail
+        CardStatus::Fail
     } else if pass > 0 {
-        Status::Pass
+        CardStatus::Pass
     } else {
-        Status::Unknown
+        CardStatus::Unknown
     }
 }
 
@@ -150,13 +150,13 @@ fn item_cell(v: &'static str, veto: bool, rows: &[&ClipRow]) -> ItemCell {
 }
 
 /// 一段的听感判定。
-pub fn listen_one(scores: &[(&'static str, bool, Score)]) -> (Status, Option<String>) {
+pub fn listen_one(scores: &[(&'static str, bool, Score)]) -> (CardStatus, Option<String>) {
     let get = |id: &str| scores.iter().find(|(v, _, _)| *v == id).map(|(_, _, s)| s);
     let (Some(a), Some(b)) = (get(LISTEN[0]), get(LISTEN[1])) else {
-        return (Status::Unknown, None);
+        return (CardStatus::Unknown, None);
     };
     let (Some(da), Some(db)) = (a.value, b.value) else {
-        return (Status::Unknown, None);
+        return (CardStatus::Unknown, None);
     };
     let split = th::NRMOS_SPLIT.def("max");
     let (pa, pb) = (a.verdict.is_pass(), b.verdict.is_pass());
@@ -165,18 +165,18 @@ pub fn listen_one(scores: &[(&'static str, bool, Score)]) -> (Status, Option<Str
         let gap = (da - db).abs();
         let why = (gap >= split)
             .then(|| format!("两个评分模型都说不比原声差，但 Δ 相差 {gap:.2} ≥ {split}"));
-        (Status::Pass, why)
+        (CardStatus::Pass, why)
     } else if fa && fb {
-        (Status::Fail, None)
+        (CardStatus::Fail, None)
     } else if (pa && fb) || (fa && pb) {
         (
-            Status::Unknown,
+            CardStatus::Unknown,
             Some(format!(
                 "一个说好一个说差：SCOREQ Δ {da:+.2} · Distill-MOS Δ {db:+.2}"
             )),
         )
     } else {
-        (Status::Unknown, None)
+        (CardStatus::Unknown, None)
     }
 }
 
@@ -185,9 +185,9 @@ fn listen_cell(rows: &[&ClipRow]) -> ListenCell {
     for r in rows {
         let (st, why) = listen_one(&r.scores);
         match st {
-            Status::Pass => c.pass += 1,
-            Status::Fail => c.fail += 1,
-            Status::Unknown => c.unknown += 1,
+            CardStatus::Pass => c.pass += 1,
+            CardStatus::Fail => c.fail += 1,
+            CardStatus::Unknown => c.unknown += 1,
         }
         if let Some(w) = why {
             c.to_human.push((r.clip.clone(), w));
@@ -202,7 +202,7 @@ fn drags(items: &[ItemCell], rows: &[&ClipRow]) -> Vec<Drag> {
     let mut out = Vec::new();
     let classes: BTreeSet<(String, SoundGroup)> =
         rows.iter().flat_map(|r| r.sounds.iter().cloned()).collect();
-    for it in items.iter().filter(|i| i.status == Status::Fail) {
+    for it in items.iter().filter(|i| i.status == CardStatus::Fail) {
         let better = crate::verifiers::info(it.v).map_or(Better::Lower, |i| i.better);
         let mut per: Vec<Drag> = Vec::new();
         for (cls, group) in &classes {
@@ -279,19 +279,19 @@ pub fn summarize(rows: &[ClipRow]) -> Vec<SceneCard> {
             let listen = listen_cell(&rs);
             let veto_failed: Vec<&'static str> = items
                 .iter()
-                .filter(|i| i.veto && i.status == Status::Fail)
+                .filter(|i| i.veto && i.status == CardStatus::Fail)
                 .map(|i| i.v)
                 .collect();
-            let any_fail = items.iter().any(|i| i.status == Status::Fail)
-                || listen.status == Some(Status::Fail);
-            let any_unknown = items.iter().any(|i| i.status == Status::Unknown)
-                || listen.status == Some(Status::Unknown);
+            let any_fail = items.iter().any(|i| i.status == CardStatus::Fail)
+                || listen.status == Some(CardStatus::Fail);
+            let any_unknown = items.iter().any(|i| i.status == CardStatus::Unknown)
+                || listen.status == Some(CardStatus::Unknown);
             let status = if any_fail {
-                Status::Fail
+                CardStatus::Fail
             } else if any_unknown {
-                Status::Unknown
+                CardStatus::Unknown
             } else {
-                Status::Pass
+                CardStatus::Pass
             };
             let drags = drags(&items, &rs);
             SceneCard {
@@ -313,7 +313,7 @@ pub fn summarize(rows: &[ClipRow]) -> Vec<SceneCard> {
 /// 最差的几个场景（下标）：不过在前；同为不过时否决项多的在前，再按不过项数。
 pub fn worst(cards: &[SceneCard]) -> Vec<usize> {
     let mut idx: Vec<usize> = (0..cards.len()).collect();
-    let fails = |c: &SceneCard| c.items.iter().filter(|i| i.status == Status::Fail).count();
+    let fails = |c: &SceneCard| c.items.iter().filter(|i| i.status == CardStatus::Fail).count();
     idx.sort_by_key(|&i| {
         let c = &cards[i];
         (
@@ -323,7 +323,7 @@ pub fn worst(cards: &[SceneCard]) -> Vec<usize> {
         )
     });
     idx.into_iter()
-        .filter(|&i| cards[i].status != Status::Pass)
+        .filter(|&i| cards[i].status != CardStatus::Pass)
         .take(WORST_N)
         .collect()
 }
@@ -369,18 +369,18 @@ mod tests {
     fn listen_rules() {
         assert_eq!(
             listen_one(&row("a", &[], 0.0, 0.2, 0.1).scores),
-            (Status::Pass, None)
+            (CardStatus::Pass, None)
         );
         assert_eq!(
             listen_one(&row("a", &[], 0.0, -0.2, -0.1).scores).0,
-            Status::Fail
+            CardStatus::Fail
         );
         let (st, why) = listen_one(&row("a", &[], 0.0, 0.2, -0.1).scores);
-        assert_eq!(st, Status::Unknown);
+        assert_eq!(st, CardStatus::Unknown);
         assert!(why.unwrap().contains("一个说好一个说差"));
         // 都过但相差 ≥ 0.3：仍过，送人耳
         let (st, why) = listen_one(&row("a", &[], 0.0, 0.5, 0.1).scores);
-        assert_eq!(st, Status::Pass);
+        assert_eq!(st, CardStatus::Pass);
         assert!(why.is_some());
     }
 
@@ -393,10 +393,10 @@ mod tests {
         ];
         let c = &summarize(&rows)[0];
         let weak = c.items.iter().find(|i| i.v == "V-WEAK").unwrap();
-        assert_eq!((weak.pass, weak.fail, weak.status), (2, 1, Status::Fail));
+        assert_eq!((weak.pass, weak.fail, weak.status), (2, 1, CardStatus::Fail));
         assert_eq!(weak.worst_clip.as_deref(), Some("b"));
         assert!(c.items.iter().all(|i| !LISTEN.contains(&i.v)));
-        assert_eq!(c.status, Status::Fail);
+        assert_eq!(c.status, CardStatus::Fail);
         assert!(c.veto_failed.is_empty());
     }
 
@@ -406,7 +406,7 @@ mod tests {
         r.scores[0].2 = s("V-NAN", 3.0, 0.0, Better::Lower);
         let c = &summarize(&[r])[0];
         assert_eq!(c.veto_failed, vec!["V-NAN"]);
-        assert_eq!(c.status, Status::Fail);
+        assert_eq!(c.status, CardStatus::Fail);
     }
 
     #[test]
