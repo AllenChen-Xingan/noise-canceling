@@ -40,3 +40,33 @@ fn gtcrn_engine_process_does_not_allocate_in_rust() {
     });
     assert_eq!(e.stats().fault_backend, 0);
 }
+
+/// GTCRN 直接 `process` 并借出功率谱（`SpectrumTap::input_power`，013）：Rust 侧零分配。
+#[test]
+fn gtcrn_spectrum_tap_does_not_allocate_in_rust() {
+    use vdn_types::{Model, SpectrumTap};
+    let Some(path) = ModelKind::Gtcrn.default_path() else {
+        assert!(
+            std::env::var_os("VDN_REQUIRE_MODELS").is_none(),
+            "VDN_REQUIRE_MODELS 已设，但找不到模型文件"
+        );
+        eprintln!("跳过：找不到模型文件（设 VDN_GTCRN_ONNX）");
+        return;
+    };
+    let mut m = vdn_models::Gtcrn::open(&path).expect("打开模型");
+    let x: Vec<f32> = (0..256).map(|i| 0.1 * (i as f32 * 0.07).sin()).collect();
+    let mut y = vec![0.0; 256];
+    for _ in 0..5 {
+        m.process(&x, &mut y).expect("热身");
+    }
+    let mut sum = 0.0f32;
+    assert_no_alloc(|| {
+        for _ in 0..50 {
+            let _ = m.process(&x, &mut y);
+            if let Some(p) = m.input_power() {
+                sum += p[10];
+            }
+        }
+    });
+    assert!(sum > 0.0);
+}

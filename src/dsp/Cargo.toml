@@ -9,10 +9,10 @@ publish.workspace = true
 
 [dependencies]
 realfft.workspace = true
+# 频谱前端口径正本 FRONTEND（013）；vdn-types 零依赖，规约 §2.2 依赖图里本来就有 dsp → types
+vdn-types.workspace = true
 
 [dev-dependencies]
-# 测试与示例取采样率正本（R-RATE）；只是 dev 依赖，普通依赖闭包里没有它（forbid 只管普通依赖）
-vdn-types.workspace = true
 assert_no_alloc.workspace = true
 
 [lints]

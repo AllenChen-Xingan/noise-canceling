@@ -2,7 +2,7 @@
 //!
 //! ```text
 //!  麦克风原声（模型采样率 16 kHz）
-//!     │ 每 16 ms：FeatureExtractor::push_hop      ← 逐帧，一次 FFT + 一次逆 FFT，不分配
+//!     │ 每 16 ms：FeatureExtractor::push_hop[_with_power] ← 逐帧，借模型的谱或自算一次 FFT，外加一次逆 FFT，不分配
 //!     ▼
 //!  2 s 环形缓冲
 //!     │ 约每 0.5 s：SceneAnalyzer::judge           ← 判断回路（C 档线程），不碰声音、不加延迟
@@ -129,10 +129,23 @@ impl SceneAnalyzer {
         self.last_committed = FineSceneId::UNKNOWN;
     }
 
-    /// 逐帧：喂一个 hop 的麦克风原声。
+    /// 逐帧：喂一个 hop 的麦克风原声，自算频谱（拿不到模型频谱时用，如 FE-M）。
     pub fn push_hop(&mut self, x: &[f32]) {
         self.fx.push_hop(x);
         self.clock += x.len() as u64;
+    }
+
+    /// 逐帧：喂一个 hop 的麦克风原声 + 降噪模型借出的同一帧输入功率谱（`SpectrumTap::input_power`）与
+    /// 借出方口径（`SpectrumTap::spectrum_spec`），不另算 FFT。口径不是 `FRONTEND` 或长度不对时退回自算。
+    /// 结果与 [`Self::push_hop`] 相同（`tests/frontend.rs` 证明）。
+    pub fn push_hop_with_power(&mut self, x: &[f32], spec: &vdn_types::StftSpec, power: &[f32]) {
+        self.fx.push_hop_with_power(x, spec, power);
+        self.clock += x.len() as u64;
+    }
+
+    /// 本分析器自己做过几次正向 FFT（测试用：借谱时应为 0）。
+    pub fn own_fft_count(&self) -> u64 {
+        self.fx.own_fft_count()
     }
 
     /// 判断回路：算特征 → 分类 → 平滑 → 滞回 → 查表。约 0.5 s 调一次。
