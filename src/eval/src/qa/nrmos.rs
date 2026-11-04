@@ -72,8 +72,8 @@ impl Kind {
     }
 }
 
-/// Distill-MOS 导出物的哈希：导出后由 `tools/export_distillmos.py` 打印，填在这里。
-pub const DISTILL_SHA256: &str = "PENDING-EXPORT";
+/// Distill-MOS 导出物的哈希（`tools/export_distillmos.py` 2026-11-03 导出：distillmos 0.9.1 · torch 2.15.0 · opset 17 · 17,613,491 B；原模型 ↔ ONNX 最大差 1.4e−6）。
+pub const DISTILL_SHA256: &str = "b8e2dc186286377ddd5145698446ce949933c356a306a758eb986c0f881d2928";
 
 /// SCOREQ 补零的倍数（wav2vec 2.0 卷积前端总步长）。
 pub const SCOREQ_PAD: usize = 320;
