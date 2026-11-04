@@ -5,8 +5,9 @@ torch 的 ONNX 导出器不支持复数 STFT，所以导出时把 sqa.py 的 `_c
 （分帧 × 周期 Hann 窗 × DFT 矩阵，center=False，输出形状同 view_as_real）；数值是否一致由下面的核对保证：
 参考输出取**未替换**的原模型，ONNX 输出与它比。
 导出后在本脚本里当场核对：同一组随机输入，torch 与 onnxruntime 的输出差 ≤ 1e-3，否则不写文件。
-跑法（exp009 的 Python 环境，带 distillmos 0.9.1 与 torch）：
-    <主目录>/_tmp/exp009-venv/bin/python -I src/eval/tools/export_distillmos.py <输出目录>
+跑法（exp009 的 Python 环境带 distillmos 0.9.1 与 torch；导出器要的 onnx 1.23.2 · ml_dtypes 0.6.0 另装在单独目录，
+不改 exp009 环境：`uv pip install --python <venv>/bin/python --target <主目录>/_tmp/scorecard-onnx-pkgs --no-deps onnx ml_dtypes`）：
+    PYTHONPATH=<主目录>/_tmp/scorecard-onnx-pkgs <主目录>/_tmp/exp009-venv/bin/python src/eval/tools/export_distillmos.py <输出目录>
 输出：<输出目录>/distill_mos_v7-seg122880.onnx，并打印 sha256（填进 nrmos.rs 的 DISTILL_SHA256）。
 """
 import hashlib, pathlib, sys

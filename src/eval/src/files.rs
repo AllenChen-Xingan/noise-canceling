@@ -299,6 +299,32 @@ pub struct LevelEntry {
     pub level: Level,
 }
 
+/// 补进级别表的新项的依据（`calib --write-levels` 写）。
+pub const NEW_ENTRY_BASIS: &str = "新登记，未定标：取登记表的默认级别（感知量 L0、物理量 L3，012 §2.1）";
+
+impl LevelsFile {
+    /// 把 `registry`（id, 默认级别）里表上还没有的项补上，已有条目一个字不动。返回补了哪些。
+    pub fn fill_missing<'a>(
+        &mut self,
+        registry: impl IntoIterator<Item = (&'a str, Level)>,
+    ) -> Vec<String> {
+        let mut added = Vec::new();
+        for (id, level) in registry {
+            if !self.verifiers.contains_key(id) {
+                self.verifiers.insert(
+                    id.to_string(),
+                    LevelEntry {
+                        basis: NEW_ENTRY_BASIS.to_string(),
+                        level,
+                    },
+                );
+                added.push(id.to_string());
+            }
+        }
+        added
+    }
+}
+
 /// CI 层冻结基线（`baseline-ci.json`）。只由 `vdn-eval ci --write-baseline` 写。
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -342,6 +368,33 @@ mod tests {
         for s in Set::ALL {
             assert_eq!(s.as_str(), serde_name(&s));
         }
+    }
+
+    /// 补缺项：表上没有的按默认级别补上，已有条目原样不动（含依据文字）。
+    #[test]
+    fn fill_missing_adds_only_new_entries() {
+        let mut lv: LevelsFile = serde_json::from_str(crate::suite::LEVELS).unwrap();
+        let before = lv.verifiers.clone();
+        let removed = lv.verifiers.remove("V-WEAK");
+        assert!(removed.is_some(), "测试前提：表里有 V-WEAK");
+        let reg = crate::verifiers::REGISTRY
+            .iter()
+            .map(|i| (i.id, i.default_level));
+        let added = lv.fill_missing(reg);
+        assert_eq!(added, vec!["V-WEAK".to_string()]);
+        assert_eq!(lv.verifiers["V-WEAK"].level, Level::L0);
+        assert_eq!(lv.verifiers["V-WEAK"].basis, NEW_ENTRY_BASIS);
+        for (k, v) in &before {
+            if k != "V-WEAK" {
+                assert_eq!(lv.verifiers[k].basis, v.basis, "{k} 的依据被改了");
+                assert_eq!(lv.verifiers[k].level, v.level, "{k} 的级别被改了");
+            }
+        }
+        // 再补一次：什么都不加
+        let reg = crate::verifiers::REGISTRY
+            .iter()
+            .map(|i| (i.id, i.default_level));
+        assert!(lv.fill_missing(reg).is_empty());
     }
 
     /// `ALL` 列全了：靠穷举 match（加变体不加进 ALL，这里编译不过）。

@@ -320,6 +320,11 @@ fn cmd_calib(args: &[String]) -> Result<(), String> {
                 ),
             });
         }
+        // 登记表里有、级别表里还没有的新项：按默认级别补上（已有条目不动）
+        let added = lv.fill_missing(REGISTRY.iter().map(|i| (i.id, i.default_level)));
+        if !added.is_empty() {
+            println!("级别表补了新项：{}", added.join(" · "));
+        }
         if let Some(d) = sh("date", &["+%Y-%m-%d"]) {
             lv.updated = d;
         }
