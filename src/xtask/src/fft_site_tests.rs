@@ -79,13 +79,20 @@ fn whitelist_only_shrinks() {
     assert!(probs[0].contains("fbank.rs"));
 
     fs::remove_file(d.join("src/speaker/src/fbank.rs")).unwrap();
-    w(ALLOW[0].0, "fn clean() {}\n");
-    fs::remove_file(d.join(ALLOW[1].0)).unwrap();
-    let mut probs = Vec::new();
-    check(&d, &mut probs);
-    assert_eq!(probs.len(), 2, "{probs:?}");
-    assert!(probs.iter().any(|p| p.contains("已没有 FFT 计划")));
-    assert!(probs.iter().any(|p| p.contains("不存在")));
+    // 每条白名单：文件已干净 → 红（「已没有」）；文件不在了 → 红（「不存在」）
+    for (p, _, _) in ALLOW {
+        w(p, "fn clean() {}\n");
+        let mut probs = Vec::new();
+        check(&d, &mut probs);
+        assert_eq!(probs.len(), 1, "{probs:?}");
+        assert!(probs[0].contains("已没有 FFT 计划"), "{probs:?}");
+        fs::remove_file(d.join(p)).unwrap();
+        let mut probs = Vec::new();
+        check(&d, &mut probs);
+        assert_eq!(probs.len(), 1, "{probs:?}");
+        assert!(probs[0].contains("不存在"), "{probs:?}");
+        w(p, dirty);
+    }
     let _ = fs::remove_dir_all(&d);
 }
 
@@ -100,6 +107,12 @@ fn whitelist_is_scoped_per_identifier() {
     assert_eq!(p.len(), 1, "{p:?}");
     assert!(p[0].contains("plan_fft_forward"));
     assert!(fft_problems(scene, "fn (")[0].contains("解析失败"));
-    // 评测器只许正向
-    assert_eq!(n("src/eval/src/verifiers/estoi.rs", inv), 1);
+    // 评测器已收进统一模块（#104），不在白名单：正向、逆向计划都红
+    for f in [
+        "src/eval/src/verifiers/estoi.rs",
+        "src/eval/src/verifiers/speech.rs",
+    ] {
+        assert_eq!(n(f, inv), 2, "{f}");
+        assert_eq!(n(f, fwd), 3, "{f}");
+    }
 }

@@ -2,6 +2,7 @@
 //!
 //! 每种窗照抄原调用方的运算顺序（如 Kaldi 先算 `2π/(n−1)` 再乘 i，周期窗是 `2π·i/n`）：顺序不同，末位就不同。
 //! 一律先用 f64 算，再转成样本类型（numpy 在 float64 里算完才 astype；认人 fbank 原来也是先 f64 再转 f32）。
+//! 唯一例外 `SqrtHannPeriodicSquared`：照评测器声谱图原写法，先转成样本类型再平方（在 [`table`] 里）。
 
 use std::f64::consts::PI;
 
