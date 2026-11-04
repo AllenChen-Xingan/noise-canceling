@@ -18,7 +18,7 @@ from scipy import signal
 import pools
 import tracks
 from device_chain import Chain
-from dsp import SR, gated_level_db, rms
+from dsp import SR, gated_level_db
 from rooms import make_rir
 
 HERE = Path(__file__).resolve().parent
@@ -76,12 +76,9 @@ class Scene:
         rir = make_rir(self.rng_mat, self.dims, self.t60, dist, az, src_h)
         h, pad, att = self.ch.source_rir(rir, self.rng_dev)
         n = len(x)
-        lead = len(h) if continuous else 0
-        xx = np.concatenate([x[-lead:] if lead else np.zeros(0), x]) if lead and lead < n else x
-        if lead >= n:
-            xx = np.concatenate([np.tile(x, lead // n + 1)[-lead:], x])
-        lead = len(xx) - n
-        y = signal.fftconvolve(xx, h)[lead + pad : lead + pad + n]
+        L = len(h) if continuous else 0  # 连续声循环补一段前奏，开头就是稳态混响
+        pre = np.tile(x, L // n + 1)[-L:] if L else np.zeros(0)
+        y = signal.fftconvolve(np.concatenate([pre, x]), h)[L + pad : L + pad + n]
         return self.ch.response(y), rir, att
 
     def diffuse(self, x, dist=None):
@@ -110,8 +107,8 @@ def make_clip(scene, tier, idx, device):
     gap = SCENES["gap_s"]
     lang = "zh" if idx in SCENES["zh_clips"][tier] else "en"
     sc = Scene(rng_mat, rng_dev, S, tier, device)
-    if "owner_level_dbfs" in S:  # 地点自带电平分布（如图书馆压低声音），覆盖第 6 步默认
-        sc.ch.params["owner_level_dbfs"] = _u(rng_dev, S["owner_level_dbfs"])
+    if "owner_level_dbfs" in S:  # 地点自带电平分布（如图书馆压低声音），覆盖第 6 步默认；用 rng_mat 保证两设备相同
+        sc.ch.params["owner_level_dbfs"] = _u(rng_mat, S["owner_level_dbfs"])
     from device_chain import P as CP
 
     # ---- 主说话人与要留的人 ----
@@ -129,6 +126,7 @@ def make_clip(scene, tier, idx, device):
             y, r, _ = sc.point(xd, _u(rng_mat, co["dist_m"]), _u(rng_mat, co["az_deg"]))
             y = _scale_to(y, L_o + _u(rng_mat, co["rel_db"]), gated_level_db)
             targets.append({"spk": src["spk"], "dist_m": r.dist_m, "azimuth_deg": r.azimuth_deg, "src": src, "x": y})
+        L_o = gated_level_db(sum(t["x"] for t in targets))  # 「全留」时参照 = 所有要留的人之和
 
     # ---- 干扰声 ----
     bed_cls, chosen = pick_sounds(rng_mat, S, tier)
@@ -223,14 +221,8 @@ def make_clip(scene, tier, idx, device):
     dry_gain = gain * 10 ** ((L_o - gated_level_db(x_dry)) / 20)  # 干轨与链后主说话人同电平
     arrays = {"mix": mix, "owner": owner_ref, "owner_dry": x_dry * dry_gain, "floor": floor, "noise": noise, "interf": interf,
               "stems": {s["inst"]: s["x"] for s in sounds}}
-    if polarity == "preserve_all":
-        arrays["stems"].update({f"target{i}": t["x"] for i, t in enumerate(targets[1:], 1)})
     meta = {"scene": scene, "tier": tier, "idx": idx, "device": device, "seed": seed, "lang": lang, "polarity": polarity,
             "nominal": nominal, "targets": targets, "sounds": sounds, "chain": {**sc.ch.params, "floor_clamped": bool(floor_clamped),
-            "owner_attenuation": None, "room_dims_m": list(sc.dims)}, "additive": not clipped, "owner_rir": orir,
+            "room_dims_m": list(sc.dims)}, "additive": not clipped, "owner_rir": orir,
             "bed": bed_cls}
     return arrays, meta
-
-
-def mix_rms_db(arrays):
-    return 20 * np.log10(rms(arrays["mix"]))
