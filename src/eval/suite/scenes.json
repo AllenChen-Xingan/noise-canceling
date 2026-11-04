@@ -10,11 +10,11 @@
       "id": "S-home-quiet-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 home-quiet（书房 / 卧室）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 home-quiet（书房 / 卧室）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "home-quiet",
         "tier": "common",
         "device": "mba-builtin"
@@ -25,11 +25,11 @@
       "id": "S-home-quiet-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 home-quiet（书房 / 卧室）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 home-quiet（书房 / 卧室）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "home-quiet",
         "tier": "stress",
         "device": "mba-builtin"
@@ -40,11 +40,11 @@
       "id": "S-home-family-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 home-family（家里客厅）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 home-family（家里客厅）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "home-family",
         "tier": "common",
         "device": "mba-builtin"
@@ -55,11 +55,11 @@
       "id": "S-home-family-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 home-family（家里客厅）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 home-family（家里客厅）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "home-family",
         "tier": "stress",
         "device": "mba-builtin"
@@ -70,11 +70,11 @@
       "id": "S-open-office-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 open-office（开放工位）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 open-office（开放工位）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "open-office",
         "tier": "common",
         "device": "mba-builtin"
@@ -85,11 +85,11 @@
       "id": "S-open-office-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 open-office（开放工位）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 open-office（开放工位）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "open-office",
         "tier": "stress",
         "device": "mba-builtin"
@@ -100,11 +100,11 @@
       "id": "S-phone-booth-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 phone-booth（电话亭 / 专注舱）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 phone-booth（电话亭 / 专注舱）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "phone-booth",
         "tier": "common",
         "device": "mba-builtin"
@@ -115,11 +115,11 @@
       "id": "S-phone-booth-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 phone-booth（电话亭 / 专注舱）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 phone-booth（电话亭 / 专注舱）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "phone-booth",
         "tier": "stress",
         "device": "mba-builtin"
@@ -130,11 +130,11 @@
       "id": "S-meeting-room-common",
       "set": "capability",
       "polarity": "preserve",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 meeting-room（会议室（多人共用一台 Mac））· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 meeting-room（会议室（多人共用一台 Mac））· 常见档",
       "desc": "近处几个人都要留（会议模式，干净参考 = 所有要留的人）；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "meeting-room",
         "tier": "common",
         "device": "mba-builtin"
@@ -145,11 +145,11 @@
       "id": "S-meeting-room-stress",
       "set": "capability",
       "polarity": "preserve",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 meeting-room（会议室（多人共用一台 Mac））· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 meeting-room（会议室（多人共用一台 Mac））· 压力档",
       "desc": "近处几个人都要留（会议模式，干净参考 = 所有要留的人）；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "meeting-room",
         "tier": "stress",
         "device": "mba-builtin"
@@ -160,11 +160,11 @@
       "id": "S-cowork-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 cowork（共享办公空间）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 cowork（共享办公空间）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "cowork",
         "tier": "common",
         "device": "mba-builtin"
@@ -175,11 +175,11 @@
       "id": "S-cowork-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 cowork（共享办公空间）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 cowork（共享办公空间）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "cowork",
         "tier": "stress",
         "device": "mba-builtin"
@@ -190,11 +190,11 @@
       "id": "S-cafe-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 cafe（咖啡馆）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 cafe（咖啡馆）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "cafe",
         "tier": "common",
         "device": "mba-builtin"
@@ -205,11 +205,11 @@
       "id": "S-cafe-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 cafe（咖啡馆）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 cafe（咖啡馆）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "cafe",
         "tier": "stress",
         "device": "mba-builtin"
@@ -220,11 +220,11 @@
       "id": "S-canteen-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 canteen（餐厅 / 食堂）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 canteen（餐厅 / 食堂）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "canteen",
         "tier": "common",
         "device": "mba-builtin"
@@ -235,11 +235,11 @@
       "id": "S-canteen-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 canteen（餐厅 / 食堂）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 canteen（餐厅 / 食堂）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "canteen",
         "tier": "stress",
         "device": "mba-builtin"
@@ -250,11 +250,11 @@
       "id": "S-transit-hub-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 transit-hub（机场 / 车站候车厅）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 transit-hub（机场 / 车站候车厅）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "transit-hub",
         "tier": "common",
         "device": "mba-builtin"
@@ -265,11 +265,11 @@
       "id": "S-transit-hub-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 transit-hub（机场 / 车站候车厅）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 transit-hub（机场 / 车站候车厅）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "transit-hub",
         "tier": "stress",
         "device": "mba-builtin"
@@ -280,11 +280,11 @@
       "id": "S-car-passenger-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 car-passenger（车内（乘客））· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 car-passenger（车内（乘客））· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "car-passenger",
         "tier": "common",
         "device": "mba-builtin"
@@ -295,11 +295,11 @@
       "id": "S-car-passenger-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 car-passenger（车内（乘客））· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 car-passenger（车内（乘客））· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "car-passenger",
         "tier": "stress",
         "device": "mba-builtin"
@@ -310,11 +310,11 @@
       "id": "S-bus-metro-cabin-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 bus-metro-cabin（公交 / 地铁 / 电车车厢）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 bus-metro-cabin（公交 / 地铁 / 电车车厢）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "bus-metro-cabin",
         "tier": "common",
         "device": "mba-builtin"
@@ -325,11 +325,11 @@
       "id": "S-bus-metro-cabin-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 bus-metro-cabin（公交 / 地铁 / 电车车厢）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 bus-metro-cabin（公交 / 地铁 / 电车车厢）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "bus-metro-cabin",
         "tier": "stress",
         "device": "mba-builtin"
@@ -340,11 +340,11 @@
       "id": "S-rail-air-cabin-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 rail-air-cabin（高铁 / 飞机客舱）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 rail-air-cabin（高铁 / 飞机客舱）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "rail-air-cabin",
         "tier": "common",
         "device": "mba-builtin"
@@ -355,11 +355,11 @@
       "id": "S-rail-air-cabin-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 rail-air-cabin（高铁 / 飞机客舱）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 rail-air-cabin（高铁 / 飞机客舱）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "rail-air-cabin",
         "tier": "stress",
         "device": "mba-builtin"
@@ -370,11 +370,11 @@
       "id": "S-street-outdoor-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 street-outdoor（街边 / 户外）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 street-outdoor（街边 / 户外）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "street-outdoor",
         "tier": "common",
         "device": "mba-builtin"
@@ -385,11 +385,11 @@
       "id": "S-street-outdoor-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 street-outdoor（街边 / 户外）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 street-outdoor（街边 / 户外）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "street-outdoor",
         "tier": "stress",
         "device": "mba-builtin"
@@ -400,11 +400,11 @@
       "id": "S-hotel-room-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 hotel-room（酒店房间）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 hotel-room（酒店房间）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "hotel-room",
         "tier": "common",
         "device": "mba-builtin"
@@ -415,11 +415,11 @@
       "id": "S-hotel-room-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 hotel-room（酒店房间）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 hotel-room（酒店房间）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "hotel-room",
         "tier": "stress",
         "device": "mba-builtin"
@@ -430,11 +430,11 @@
       "id": "S-library-classroom-common",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 library-classroom（教室 / 图书馆）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 library-classroom（教室 / 图书馆）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "library-classroom",
         "tier": "common",
         "device": "mba-builtin"
@@ -445,11 +445,11 @@
       "id": "S-library-classroom-stress",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 library-classroom（教室 / 图书馆）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 library-classroom（教室 / 图书馆）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "library-classroom",
         "tier": "stress",
         "device": "mba-builtin"
@@ -460,11 +460,11 @@
       "id": "S-home-quiet-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 home-quiet（书房 / 卧室）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 home-quiet（书房 / 卧室）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "home-quiet",
         "tier": "common",
         "device": "external-mic"
@@ -475,11 +475,11 @@
       "id": "S-home-quiet-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 home-quiet（书房 / 卧室）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 home-quiet（书房 / 卧室）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "home-quiet",
         "tier": "stress",
         "device": "external-mic"
@@ -490,11 +490,11 @@
       "id": "S-home-family-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 home-family（家里客厅）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 home-family（家里客厅）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "home-family",
         "tier": "common",
         "device": "external-mic"
@@ -505,11 +505,11 @@
       "id": "S-home-family-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 home-family（家里客厅）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 home-family（家里客厅）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "home-family",
         "tier": "stress",
         "device": "external-mic"
@@ -520,11 +520,11 @@
       "id": "S-open-office-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 open-office（开放工位）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 open-office（开放工位）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "open-office",
         "tier": "common",
         "device": "external-mic"
@@ -535,11 +535,11 @@
       "id": "S-open-office-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 open-office（开放工位）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 open-office（开放工位）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "open-office",
         "tier": "stress",
         "device": "external-mic"
@@ -550,11 +550,11 @@
       "id": "S-phone-booth-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 phone-booth（电话亭 / 专注舱）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 phone-booth（电话亭 / 专注舱）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "phone-booth",
         "tier": "common",
         "device": "external-mic"
@@ -565,11 +565,11 @@
       "id": "S-phone-booth-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 phone-booth（电话亭 / 专注舱）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 phone-booth（电话亭 / 专注舱）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "phone-booth",
         "tier": "stress",
         "device": "external-mic"
@@ -580,11 +580,11 @@
       "id": "S-meeting-room-common-ext",
       "set": "capability",
       "polarity": "preserve",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 meeting-room（会议室（多人共用一台 Mac））· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 meeting-room（会议室（多人共用一台 Mac））· 常见档",
       "desc": "近处几个人都要留（会议模式，干净参考 = 所有要留的人）；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "meeting-room",
         "tier": "common",
         "device": "external-mic"
@@ -595,11 +595,11 @@
       "id": "S-meeting-room-stress-ext",
       "set": "capability",
       "polarity": "preserve",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 meeting-room（会议室（多人共用一台 Mac））· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 meeting-room（会议室（多人共用一台 Mac））· 压力档",
       "desc": "近处几个人都要留（会议模式，干净参考 = 所有要留的人）；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "meeting-room",
         "tier": "stress",
         "device": "external-mic"
@@ -610,11 +610,11 @@
       "id": "S-cowork-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 cowork（共享办公空间）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 cowork（共享办公空间）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "cowork",
         "tier": "common",
         "device": "external-mic"
@@ -625,11 +625,11 @@
       "id": "S-cowork-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 cowork（共享办公空间）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 cowork（共享办公空间）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "cowork",
         "tier": "stress",
         "device": "external-mic"
@@ -640,11 +640,11 @@
       "id": "S-cafe-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 cafe（咖啡馆）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 cafe（咖啡馆）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "cafe",
         "tier": "common",
         "device": "external-mic"
@@ -655,11 +655,11 @@
       "id": "S-cafe-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 cafe（咖啡馆）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 cafe（咖啡馆）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "cafe",
         "tier": "stress",
         "device": "external-mic"
@@ -670,11 +670,11 @@
       "id": "S-canteen-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 canteen（餐厅 / 食堂）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 canteen（餐厅 / 食堂）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "canteen",
         "tier": "common",
         "device": "external-mic"
@@ -685,11 +685,11 @@
       "id": "S-canteen-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 canteen（餐厅 / 食堂）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 canteen（餐厅 / 食堂）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "canteen",
         "tier": "stress",
         "device": "external-mic"
@@ -700,11 +700,11 @@
       "id": "S-transit-hub-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 transit-hub（机场 / 车站候车厅）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 transit-hub（机场 / 车站候车厅）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "transit-hub",
         "tier": "common",
         "device": "external-mic"
@@ -715,11 +715,11 @@
       "id": "S-transit-hub-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 transit-hub（机场 / 车站候车厅）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 transit-hub（机场 / 车站候车厅）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "transit-hub",
         "tier": "stress",
         "device": "external-mic"
@@ -730,11 +730,11 @@
       "id": "S-car-passenger-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 car-passenger（车内（乘客））· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 car-passenger（车内（乘客））· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "car-passenger",
         "tier": "common",
         "device": "external-mic"
@@ -745,11 +745,11 @@
       "id": "S-car-passenger-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 car-passenger（车内（乘客））· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 car-passenger（车内（乘客））· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "car-passenger",
         "tier": "stress",
         "device": "external-mic"
@@ -760,11 +760,11 @@
       "id": "S-bus-metro-cabin-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 bus-metro-cabin（公交 / 地铁 / 电车车厢）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 bus-metro-cabin（公交 / 地铁 / 电车车厢）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "bus-metro-cabin",
         "tier": "common",
         "device": "external-mic"
@@ -775,11 +775,11 @@
       "id": "S-bus-metro-cabin-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 bus-metro-cabin（公交 / 地铁 / 电车车厢）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 bus-metro-cabin（公交 / 地铁 / 电车车厢）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "bus-metro-cabin",
         "tier": "stress",
         "device": "external-mic"
@@ -790,11 +790,11 @@
       "id": "S-rail-air-cabin-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 rail-air-cabin（高铁 / 飞机客舱）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 rail-air-cabin（高铁 / 飞机客舱）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "rail-air-cabin",
         "tier": "common",
         "device": "external-mic"
@@ -805,11 +805,11 @@
       "id": "S-rail-air-cabin-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 rail-air-cabin（高铁 / 飞机客舱）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 rail-air-cabin（高铁 / 飞机客舱）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "rail-air-cabin",
         "tier": "stress",
         "device": "external-mic"
@@ -820,11 +820,11 @@
       "id": "S-street-outdoor-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 street-outdoor（街边 / 户外）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 street-outdoor（街边 / 户外）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "street-outdoor",
         "tier": "common",
         "device": "external-mic"
@@ -835,11 +835,11 @@
       "id": "S-street-outdoor-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 street-outdoor（街边 / 户外）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 street-outdoor（街边 / 户外）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "street-outdoor",
         "tier": "stress",
         "device": "external-mic"
@@ -850,11 +850,11 @@
       "id": "S-hotel-room-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 hotel-room（酒店房间）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 hotel-room（酒店房间）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "hotel-room",
         "tier": "common",
         "device": "external-mic"
@@ -865,11 +865,11 @@
       "id": "S-hotel-room-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 hotel-room（酒店房间）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 hotel-room（酒店房间）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "hotel-room",
         "tier": "stress",
         "device": "external-mic"
@@ -880,11 +880,11 @@
       "id": "S-library-classroom-common-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 library-classroom（教室 / 图书馆）· 常见档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 library-classroom（教室 / 图书馆）· 常见档",
       "desc": "只留主说话人；10 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "library-classroom",
         "tier": "common",
         "device": "external-mic"
@@ -895,11 +895,11 @@
       "id": "S-library-classroom-stress-ext",
       "set": "capability",
       "polarity": "suppress",
-      "origin": "exp013 build 20261103223725-72df · 021 地点 library-classroom（教室 / 图书馆）· 压力档",
+      "origin": "exp013 build 20261103230756-17f5 · 021 地点 library-classroom（教室 / 图书馆）· 压力档",
       "desc": "只留主说话人；6 段 × 12 s；设备 external-mic（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）",
       "real": {
         "kind": "scene",
-        "clips": "docs/experiments/exp013-scene-suite/builds/20261103223725-72df/clips.jsonl",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
         "scene": "library-classroom",
         "tier": "stress",
         "device": "external-mic"

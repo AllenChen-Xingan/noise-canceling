@@ -1,0 +1,178 @@
+{
+ "build_id": "20261103230756-17f5",
+ "created": "2026-11-03 23:08:11",
+ "seconds": 15.3,
+ "clips": 480,
+ "audio_dir": "_tmp/exp013/20261103230756-17f5",
+ "counts": {
+  "bus-metro-cabin": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "cafe": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "canteen": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "car-passenger": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "cowork": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "home-family": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "home-quiet": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "hotel-room": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "library-classroom": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "meeting-room": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "open-office": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "phone-booth": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "rail-air-cabin": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "street-outdoor": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "transit-hub": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  }
+ },
+ "base_seed": 20261103,
+ "code_sha256": {
+  "build.py": "917fc1ffc8f49b41991655ae40bd695d9e5671cb33788b431d540470781f527d",
+  "compose.py": "ef0072095853d3694dec154e2f5ed13902a02aef5b0b6da8411fd65913f8a60a",
+  "tracks.py": "b6e851043f78d3fc398b53869dddcf809d4a4a1bc1cc294d38e6a726fcf36955",
+  "labels.py": "9962538e892d20321977ac808251567658c67a3948580955654c3587524beeaa",
+  "manifest.py": "addb0f29d280280c3c26c2c077581f8004f2f793f113e9d6a0dea1e78afe7575",
+  "leak.py": "d730c3d126cfdc3b6030f9fe379b512ab5b3a4528653395563711d4e5dcd1376",
+  "pools.py": "83c4bdc965cf6faf378eb34adac6e1a692eeeb71d9c1f5e1939396196792eba1",
+  "rooms.py": "9aa3d2c9e120eb1f63e7ab1e94bd67b957c190df54b34a266dc8d673f5c210b4",
+  "rirs.py": "15d597675cef129970ead0e54db7f35b715dffcf964a6e2d2f6d1cf1e818524d",
+  "reverb_check.py": "a6930f0f6e6029578e4a07892b8d5855cf8811ca41c7f144dfef332b1fc4a4f8",
+  "synth_sounds.py": "0f7ba624dc8f55734368606eed9617ea254534799ac6b89f1888c536041ee856",
+  "device_chain.py": "8c92573ff2744d60753f5df4a22fd56d4255bcc2e13f5e1b391c21795321fed6",
+  "dsp.py": "20ee13f7d251b7a842983b4f0d9167f33871a51deaea36ffa0d16c14756f4e61"
+ },
+ "params_sha256": {
+  "scenes.json": "06ad34ce5eab9c4ecee135e4bffadb0487325a9adc2550ed6071f71f17050b99",
+  "sounds.json": "f103496fb9526a46b5ee3b36ed16b6da98a3c2323485071437e311fdff7e7c6e",
+  "device_chain.json": "4378cd66dc7149477fd8e82ff3b18b0c31c30f90300841ed3dbe1594ab485515",
+  "materials.json": "e913282b36b0ad544cb4e43b749c24a2adc616c565bbe7517c394298f581a09d",
+  "docs/experiments/exp006-scene-sim/recipes.json": "748a1091a24feb08a16aae247154234e992d7a909031b35e17e8743cfc7637db"
+ },
+ "material_index": {
+  "sha256": "a8de10ada8c9f8215606613c88f82b8a234a459611941183e9b3212932a71b8e",
+  "files": 1994
+ },
+ "leak_check": {
+  "against": "exp006 全部 build 的 train 段",
+  "train_rows": 2240,
+  "speakers": 0,
+  "demand": 0,
+  "synth_fn": 0,
+  "hits": [],
+  "ok": true,
+  "synth_fn_note": "按函数名比；真正的保证是本目录代码不 import exp006 sim.py（tests 里 test_no_exp006_import）",
+  "exp006_eval_overlap": {
+   "rows": 888,
+   "speakers": 20,
+   "demand_segments": 46
+  }
+ },
+ "level_check": {
+  "rule": "每项 ≥ 95% 段 |实测 − 名义| ≤ 1.0 dB，且全部 ≤ 1.5 dB",
+  "ok": true,
+  "snr_db": {
+   "n": 480,
+   "within_1db": 0.9938,
+   "max_db": 1.083,
+   "ok": true
+  },
+  "sir_db": {
+   "n": 284,
+   "within_1db": 0.9859,
+   "max_db": 1.308,
+   "ok": true
+  },
+  "summary": "snr_db 99.4% ≤ 1 dB、最大 1.083 dB；sir_db 98.6% ≤ 1 dB、最大 1.308 dB"
+ },
+ "licenses": [
+  "CC-BY-4.0",
+  "CC-BY-4.0（ACE，见 README）",
+  "CC-BY-NC-3.0",
+  "own",
+  "public-domain"
+ ],
+ "schema": {
+  "path": "specs/schema/eval-scene-clip.schema.json",
+  "sha256": "03f227c3efecd18b8522088f44855f464c4e9908503ff56f3df82f6473494610"
+ },
+ "versions": {
+  "python": "3.12.14",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "soundfile": "0.14.0"
+ },
+ "dev": false,
+ "validity": "D0（016：只保证可复现、可控、真值完整；未做统计对齐与双生成器）",
+ "use": "只评测，不训练（含 CC-BY-NC 素材）"
+}
