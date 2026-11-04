@@ -13,7 +13,7 @@
 | fespk | exp015 认人吃共享频谱 + 耗时分解 · #95 · `exp/015-speaker-shared-spectrum` · `../noise_canceling-fespk` | 认人前端 · 声纹模型（只评）· 认人判断回路 | 完成，验收过（大总管复跑 11 测试 · 9 文件在范围内 · src/speaker/ 未改 · 路径清零），PR #96 已合并（3af03735，#95 关），窗口与 worktree 已清 |
 | pse | 调研 024 个性化降噪：有没有人做过 · 为什么难 · #98 · `research/024-pse-landscape` · `../noise_canceling-pse`（人点名派，属「个性化降噪」大事的前置调研） | 个性化降噪 / 提取模型 · 自动注册 · PSE 训练数据与评测集 | 完成，验收过（11 文件在范围内 · 路径清零 · codex 4 轮 3、4 轮无 P0/P1），PR #100 已合并（#98 关），窗口与 worktree 已清 |
 | fe2 | 第二段之一：统一模块支持 Kaldi 分帧 · 认人 fbank 与离线例子收进来 · #102 · `feat/frontend-speaker` · `../noise_canceling-fe2` | 频谱前端（扩展）· 认人前端 fbank · 离线例子 | 完成，验收过（大总管亲手 xtask ci 全绿 · 对拍 14 条真比），PR #103 已合并（f2782cf4，#102 关），窗口与 worktree 已清 |
-| fe3 | 第三段：评测器 4 处改调统一模块（只换计算，评分逐位不变）· #104 · `feat/frontend-eval` · `../noise_canceling-fe3` | 评测器频谱计算 · 频谱前端（小扩展）· 成绩单对拍 | 已派 |
+| fe3 | 第三段：评测器 4 处改调统一模块（只换计算，评分逐位不变）· #104 · `feat/frontend-eval` · `../noise_canceling-fe3` | 评测器频谱计算 · 频谱前端（小扩展）· 成绩单对拍 | 已报到（noise-canceling-fe3-08） |
 
 ## 进度板
 
