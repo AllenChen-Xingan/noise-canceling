@@ -123,6 +123,11 @@ fn item_table_matches_code() {
             COMMON.iter().any(|i| i.v == v),
             "{v} 的「共同」"
         );
+        assert_eq!(
+            used.contains("只报不判"),
+            vdn_eval::scorecard::standard::is_report_only(v),
+            "{v} 的「只报不判」"
+        );
         for g in Group::ALL {
             let in_code = g.extra().iter().any(|i| i.v == v);
             // 「quiet」等类名按词出现；meeting-room 含连字符，单独按全名找
