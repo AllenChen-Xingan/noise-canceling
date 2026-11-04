@@ -45,16 +45,15 @@ fn borrowed_dry_equals_self_computed_dry() {
         assert_eq!(&dry_b[..], &dry_s[..], "借来的 dry 与自算的 dry 不同");
 
         ca.process_spectrum(fe.spectrum_mut(), &dry_b, FrameCtx::default());
-        fe.synthesize(&mut ya);
-        ca.process_time(&mut ya);
-
-        let wb = syn_b.analyze(h);
+        let wb = syn_b.analyze(h); // 只为拿一块同口径的谱缓冲，内容马上被覆盖
         wb.copy_from_slice(&wet_s);
         cb.process_spectrum(wb, own.spectrum_mut(), FrameCtx::default());
+        assert_eq!(fe.spectrum_mut().to_vec(), syn_b.spectrum_mut().to_vec(), "修音改写后的谱不同");
+
+        fe.synthesize(&mut ya);
+        ca.process_time(&mut ya);
         syn_b.synthesize(&mut yb);
         cb.process_time(&mut yb);
-
-        assert_eq!(fe.spectrum_mut().to_vec(), syn_b.spectrum_mut().to_vec());
         assert!(ya.iter().zip(&yb).all(|(a, b)| a.to_bits() == b.to_bits()), "修音输出不同");
     }
 }
