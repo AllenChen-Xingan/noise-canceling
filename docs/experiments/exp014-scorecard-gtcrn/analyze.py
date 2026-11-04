@@ -210,7 +210,7 @@ def gap_vs_base(rows: list[dict], system: str, base: str) -> list[str]:
     b = {(r["clip"]): r for r in rows if r["system"] == base}
     out = ["| 项 | 好的方向 | 配对段数 | 均值差（模型 − 原声直通） |", "|---|---|---|---|"]
     for v in items:
-        ds, better = [], "?"
+        ds = []
         for r in rows:
             if r["system"] != system or r["clip"] not in b:
                 continue
