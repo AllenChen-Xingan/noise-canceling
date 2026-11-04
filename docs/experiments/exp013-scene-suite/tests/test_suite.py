@@ -136,9 +136,12 @@ class SmallBuild(unittest.TestCase):
         for r in self.recs:
             dry, own = read(self.root, r["audio"]["owner_dry"]), read(self.root, r["audio"]["owner"])
             if r["polarity"] == "suppress":
-                onset = lambda x: int(np.flatnonzero(np.abs(x) > 1e-3 * np.max(np.abs(x)))[0])
-                # 起点差：外接麦应为 0（旧 bug 时 owner_dry 早 19–37 样本）；Air 麦的最小相位 FIR 是因果的，起点也不该差多
-                self.assertLessEqual(abs(onset(own) - onset(dry)), 2 if r["device"] == "external-mic" else 8, r["id"])
+                # owner = 干轨 ⊛ RIR（⊛ FIR）。对齐正确时互相关在 0 附近（直达声）有强峰；旧 bug 时强峰在 +n0（19–37 样本）
+                a, z = own[24000:88000], dry[24000:88000]
+                lags = np.arange(-64, 65)
+                xc = np.array([abs(np.dot(a[64 + k : len(a) - 64 + k], z[64 : len(z) - 64])) for k in lags])
+                near = xc[(lags >= -1) & (lags <= (1 if r["device"] == "external-mic" else 8))].max()
+                self.assertGreaterEqual(near, 0.5 * xc.max(), r["id"])
             lead = r["targets"][0]
             self.assertAlmostEqual(dsp.gated_level_db(dry), lead["level_dbfs"], delta=0.6, msg=r["id"])
 
