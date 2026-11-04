@@ -20,6 +20,7 @@
 - 2026-11-04 fespk 早报（读源码估算，未实测）：认人每次约 6 ms 里声纹模型推理占约 90–97%，fbank 约 0.1–0.4 ms，共用频谱最多省约 5%。大总管定：fespk 收窄为「实测耗时分解 + 待人拍板」，认人不接共享频谱，不改 src/speaker/；已通知 fecore 不为认人设计输出谱
 - 2026-11-04 fecore 设计稿 `docs/plan/013_frontend-once.md`（fecore worktree）大总管点头：STFT 参数正本放 vdn-types `frontend.rs`；借谱接口改为带噪输入功率谱；新增 `vdn_dsp::SpectrumFrontend`；场景加借谱入口。大总管定：SpectralStage 不挪、GTCRN 不带修音槽（接线不在本大事）。名额放开后 fecore 先在未改的 gtcrn.rs 上生成对拍哈希
 - 2026-11-04 fespk：exp015 README 估算与三方案写完；计时命令 `vdn-speaker-lab bench-split`（未编译）；判据大总管定「fbank 占 embed p50 < 10% → 共用不值得」；codex 第一轮放行；名额顺序 fecore 对拍哈希 → fespk 实测
+- 2026-11-04 fecore：代码与测试写完未编译；基准用 git archive 990e7843 + 单独 target；授权改 `specs/rust/architecture.md` 的 SpectrumTap 说明。fespk：codex 3 轮到停止线（8 条全改）；授权只读 exp005 降噪输出、追加 reviews 索引一行。两条线都等名额；已告 5-app-5e 归还时通知
 
 ## 待人拍板（本大事）
 
