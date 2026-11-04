@@ -18,3 +18,4 @@
 | 012 | 2026-11-02 | [参数描述导出 · 模型接口三方一致 · FE-M 名字唯一 · 模型节点带权重版本](012_param-model-schema-codex.md)（diff，codex，7 轮，停止线满足） | 采纳 18 / 提出 19（P1×3 P2×16；另 1 条 P1 部分接受；无 issue） |
 | — | 2026-11-02 | 项目难度与机会判断（codex 评审 + 联网调研，`outlook-codex-20261102/`） | 采纳：Mac 非空白、评测方法非首创 → D77 · 待拍板 6-1 |
 | 071 | 2026-11-03 | [tidy 规则迁到 syn 语法树](071_tidy-syn-codex.md)（`origin/main...HEAD`，issue #71，codex，8 轮；未达停止线，人定 2026-11-03 提前合并） | 采纳 36 / 提出 37（P1×14 P2×23；1 条 P1 绕过写法按人定记入后续 issue） |
+| 022 | 2026-11-03 | [022 Mac 内置麦调研结论](022_mac-mic-codex.md)（devices · simulation · selftest · decision · sources · tunings · tools，codex gpt-6-astra，5 轮，已达停止线） | 采纳 22 / 提出 22（P1×7 P2×15；无 issue） |
