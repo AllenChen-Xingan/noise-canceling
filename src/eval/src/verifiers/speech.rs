@@ -195,36 +195,32 @@ fn residual(x: &[f32], clean: &[f32], sr: u32) -> Vec<f32> {
     r
 }
 
-pub(super) fn v_click(c: &Ctx, p: &Params) -> Score {
-    const ID: &str = "V-CLICK";
+/// 咔嗒的位置（样本号，5 ms 内的并成一个）。诊断与 [`v_click`] 共用。
+/// 咔嗒 = 输出自身一阶差分的离群点（012 原定义），且同时满足：跳变听得见（不低于人声峰值以下 floor_db）；
+/// 这一步跳变里干净人声解释不了的部分占 resid_frac 以上（人声自身的陡变、平滑的增益变化都由干净轨解释）；
+/// 带噪输入 ±2 ms 内没有离群点（原声自带的瞬态不算）。
+pub(crate) fn click_positions(c: &Ctx, p: &Params) -> Vec<usize> {
     let k = p.f_or("k", th::CLICK.def("k"));
     let sr = c.clip.sr;
-    // 咔嗒 = 输出自身一阶差分的离群点（012 原定义），且这一步跳变里「干净人声解释不了的部分」占一半以上：
-    // 人声自身的陡变（字头、声门脉冲）、平滑的增益变化都由干净轨解释，不算
     let frac = p.f_or("resid_frac", th::CLICK.def("resid_frac"));
-    // 听得见才算：跳变至少到人声峰值（干净轨 |x| 的 99.9 分位）以下 floor_db；更小的是底噪里的毛刺
     let peak = quantile(
         &c.clip.clean.iter().map(|v| v.abs() as f64).collect::<Vec<_>>(),
         0.999,
     );
     let floor = (peak * 10f64.powf(p.f_or("floor_db", th::CLICK.def("floor_db")) / 20.0)) as f32;
     let r = residual(c.out, &c.clip.clean, sr);
-    let fo: Vec<bool> = outliers(c.out, sr, k)
-        .into_iter()
-        .enumerate()
-        .map(|(i, f)| {
-            let d_out = (c.out[i + 1] - c.out[i]).abs();
-            let d_res = (r[i + 1] - r[i]).abs();
-            f && d_out >= floor && d_res >= frac as f32 * d_out
-        })
-        .collect();
+    let fo = outliers(c.out, sr, k);
     let fm = outliers(&c.clip.mix, sr, k);
-    // 同一位置 ±2 ms 内输入也有离群点 → 算原声自带的瞬态，不计
     let guard = (0.002 * sr as f64) as usize;
-    let mut count = 0usize;
+    let mut pos = Vec::new();
     let mut last: Option<usize> = None;
     for (i, &f) in fo.iter().enumerate() {
-        if !f {
+        if !f || i + 1 >= r.len() {
+            continue;
+        }
+        let d_out = (c.out[i + 1] - c.out[i]).abs();
+        let d_res = (r[i + 1] - r[i]).abs();
+        if d_out < floor || d_res < frac as f32 * d_out {
             continue;
         }
         let a = i.saturating_sub(guard);
@@ -232,13 +228,18 @@ pub(super) fn v_click(c: &Ctx, p: &Params) -> Score {
         if fm.get(a..b).is_some_and(|w| w.iter().any(|x| *x)) {
             continue;
         }
-        // 相邻 5 ms 内的离群点算同一个咔嗒
         if last.is_none_or(|l| i > l + 5 * guard / 2) {
-            count += 1;
+            pos.push(i);
         }
         last = Some(i);
     }
-    let minutes = c.out.len() as f64 / sr as f64 / 60.0;
+    pos
+}
+
+pub(super) fn v_click(c: &Ctx, p: &Params) -> Score {
+    const ID: &str = "V-CLICK";
+    let count = click_positions(c, p).len();
+    let minutes = c.out.len() as f64 / c.clip.sr as f64 / 60.0;
     if minutes <= 0.0 {
         return Score::unknown(ID, "个/分钟", Better::Lower, "输出为空");
     }
