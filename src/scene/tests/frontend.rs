@@ -15,7 +15,7 @@ fn run_borrowed(x: &[f32]) -> (Vec<Judgement>, u64, u64) {
     let mut own = 0;
     let js = common::run(x, |sa, h| {
         power_into(fe.analyze(h), &mut pow);
-        sa.push_hop_with_power(h, &pow);
+        sa.push_hop_with_power(h, &FRONTEND, &pow);
         own = sa.own_fft_count();
     });
     (js, fe.forward_count(), own)
@@ -93,7 +93,7 @@ fn combined_path_counts_one_fft_per_frame() {
         for c in spec.iter_mut() {
             *c *= 0.5;
         }
-        sa.push_hop_with_power(h, &pow);
+        sa.push_hop_with_power(h, &FRONTEND, &pow);
         chain.process_spectrum(fe.spectrum_mut(), &dry, FrameCtx::default());
         fe.synthesize(&mut out);
         chain.process_time(&mut out);
@@ -123,7 +123,7 @@ fn switching_to_self_compute_mid_stream_is_seamless() {
     let mixed = common::run(&x, |sa, h| {
         if k < half {
             power_into(fe.analyze(h), &mut pow);
-            sa.push_hop_with_power(h, &pow);
+            sa.push_hop_with_power(h, &FRONTEND, &pow);
         } else {
             sa.push_hop(h);
         }
@@ -142,6 +142,6 @@ fn wrong_length_power_falls_back_to_self_compute() {
     let x = common::signal();
     let own = common::run(&x, |sa, h| sa.push_hop(h));
     let short = [0.0f32; 10];
-    let fb = common::run(&x, |sa, h| sa.push_hop_with_power(h, &short));
+    let fb = common::run(&x, |sa, h| sa.push_hop_with_power(h, &FRONTEND, &short));
     assert_eq!(common::digest(&own), common::digest(&fb));
 }

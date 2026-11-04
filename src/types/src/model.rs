@@ -33,9 +33,9 @@ impl std::error::Error for ModelError {}
 
 /// 扩展 trait：频域模型把本帧**带噪输入**的功率谱借出来，场景特征复用它，不另算 STFT
 /// （D71「前端只算一次」，`docs/plan/013_frontend-once.md`；规约 §3.1「共用一次 STFT」）。
-/// 不改 `Model` 本身；时域模型（FE-M wav2wav）不实现它，调用方自己算一次。
+/// 不改 `Model` 本身；时域模型（FE-M = FastEnhancer-M，波形进波形出，频谱变换在模型图内部）不实现它，调用方自己算一次。
 pub trait SpectrumTap: Model {
-    /// 借出的谱的口径；调用方在构造期与自己要的口径比对（一般是 [`crate::FRONTEND`]）
+    /// 借出的谱的口径。吃谱方每帧与自己要的口径比对，不同就不用（如 `vdn_scene::SceneAnalyzer::push_hop_with_power`）
     fn spectrum_spec(&self) -> crate::StftSpec;
     /// 最近一次 `process` 输入帧的功率谱 `re² + im²`（不归一、不加下限），长度 = `spectrum_spec().bins()`；
     /// 取自推理**之前**，所以推理出错时它仍有效。还没处理过帧、或最近一次 `process` 因输入长度不对没做分析时为 `None`。

@@ -33,8 +33,9 @@ fn run(m: &mut Gtcrn, x: &[f32], borrow: bool) -> Vec<(f64, f64)> {
         let t0 = Instant::now();
         m.process(h, &mut out).expect("GTCRN 推理");
         let t1 = Instant::now();
+        let spec = m.spectrum_spec();
         match (borrow, m.input_power()) {
-            (true, Some(p)) => sa.push_hop_with_power(h, p),
+            (true, Some(p)) => sa.push_hop_with_power(h, &spec, p),
             _ => sa.push_hop(h),
         }
         let t2 = Instant::now();

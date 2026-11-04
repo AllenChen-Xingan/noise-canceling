@@ -32,7 +32,7 @@ fn borrowed_spectrum_entry_does_not_allocate() {
     assert_no_alloc(|| {
         for k in 0..400 {
             vdn_dsp::power_into(fe.analyze(&x), &mut pow);
-            sa.push_hop_with_power(&x, &pow);
+            sa.push_hop_with_power(&x, &vdn_types::FRONTEND, &pow);
             if k % 31 == 30 {
                 let j = sa.judge();
                 assert!(j.raw.iter().all(|p| p.is_finite()));
