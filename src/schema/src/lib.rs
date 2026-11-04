@@ -126,6 +126,10 @@ pub fn export() -> Vec<Doc> {
             text: pretty(&eval::baseline_schema()),
         },
         Doc {
+            file: eval::SCENE_CLIP_FILE,
+            text: pretty(&eval::scene_clip_schema()),
+        },
+        Doc {
             file: params::TABLE_FILE,
             text: pretty(&params::table_doc()),
         },

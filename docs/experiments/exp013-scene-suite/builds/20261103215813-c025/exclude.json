@@ -1,0 +1,1463 @@
+{
+ "_说明": "exp013 评测用过的素材。任何训练配方取材前都要先减掉这张表（016 S10 第 3 条）",
+ "librispeech_speakers": [
+  "1188",
+  "1221",
+  "1320",
+  "1995",
+  "2300",
+  "260",
+  "2961",
+  "3575",
+  "4077",
+  "4507",
+  "4992",
+  "5142",
+  "5683",
+  "672",
+  "6930",
+  "7127",
+  "7729",
+  "8230",
+  "8463",
+  "908"
+ ],
+ "demand_segments": [
+  {
+   "env": "DKITCHEN",
+   "ch": 2,
+   "start": 3970602,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 2,
+   "start": 4121598,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 5,
+   "start": 3911898,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 6,
+   "start": 3192656,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 7,
+   "start": 3761427,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 7,
+   "start": 3797107,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 7,
+   "start": 3954463,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 8,
+   "start": 3690578,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 9,
+   "start": 4300393,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 9,
+   "start": 4431218,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 10,
+   "start": 3020834,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 10,
+   "start": 3728975,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 12,
+   "start": 3079280,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 14,
+   "start": 3849056,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 14,
+   "start": 4397859,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "DKITCHEN",
+   "ch": 15,
+   "start": 4181567,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 1,
+   "start": 3360552,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 2,
+   "start": 1989473,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 6,
+   "start": 495287,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 6,
+   "start": 1457458,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 6,
+   "start": 1661895,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 6,
+   "start": 4323312,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 7,
+   "start": 1016684,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 8,
+   "start": 2202974,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 8,
+   "start": 2977638,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 11,
+   "start": 1191740,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 11,
+   "start": 4234326,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 12,
+   "start": 2336786,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 12,
+   "start": 4363956,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 14,
+   "start": 490191,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 15,
+   "start": 927882,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 15,
+   "start": 2377164,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 15,
+   "start": 2963826,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 16,
+   "start": 1485929,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 16,
+   "start": 2489335,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "OOFFICE",
+   "ch": 16,
+   "start": 3105462,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 1,
+   "start": 4103944,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 2,
+   "start": 3196099,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 2,
+   "start": 4175334,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 4,
+   "start": 3586080,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 5,
+   "start": 2941637,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 5,
+   "start": 4001698,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 6,
+   "start": 3910177,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 6,
+   "start": 4395244,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 7,
+   "start": 2985367,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 7,
+   "start": 4085991,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 9,
+   "start": 3944160,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 12,
+   "start": 3591491,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 14,
+   "start": 3476747,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PCAFETER",
+   "ch": 16,
+   "start": 3053518,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 1,
+   "start": 3377872,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 2,
+   "start": 4172153,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 5,
+   "start": 3212200,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 5,
+   "start": 4189009,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 7,
+   "start": 3282629,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 7,
+   "start": 3758381,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 9,
+   "start": 3357433,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 9,
+   "start": 4470296,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 9,
+   "start": 4568432,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 12,
+   "start": 2970799,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 13,
+   "start": 3130649,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 13,
+   "start": 3375154,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 13,
+   "start": 3629997,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 13,
+   "start": 4486144,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 15,
+   "start": 3691958,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PRESTO",
+   "ch": 16,
+   "start": 3817930,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 3,
+   "start": 3479776,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 3,
+   "start": 4387632,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 4,
+   "start": 1192222,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 4,
+   "start": 1204408,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 4,
+   "start": 4012217,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 6,
+   "start": 191968,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 6,
+   "start": 4242330,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 8,
+   "start": 2660435,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 8,
+   "start": 3083768,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 8,
+   "start": 4205335,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 10,
+   "start": 1794180,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 10,
+   "start": 1963030,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 11,
+   "start": 1145222,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 11,
+   "start": 4606964,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 13,
+   "start": 1603340,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "PSTATION",
+   "ch": 15,
+   "start": 2512233,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 3,
+   "start": 12416437,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 5,
+   "start": 11644467,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 5,
+   "start": 12719053,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 7,
+   "start": 8755481,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 8,
+   "start": 9500969,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 8,
+   "start": 9536092,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 8,
+   "start": 12340776,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 10,
+   "start": 9290478,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 11,
+   "start": 10431952,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 11,
+   "start": 11014947,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 12,
+   "start": 9679606,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 12,
+   "start": 11792546,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 13,
+   "start": 11899591,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "SCAFE",
+   "ch": 16,
+   "start": 9277478,
+   "len": 576064,
+   "sr": 48000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 1,
+   "start": 3002264,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 1,
+   "start": 4512746,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 2,
+   "start": 2970639,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 3,
+   "start": 3645024,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 6,
+   "start": 3227878,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 9,
+   "start": 3045381,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 9,
+   "start": 3361342,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 9,
+   "start": 3978470,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 11,
+   "start": 3730097,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 12,
+   "start": 3081477,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 12,
+   "start": 3814238,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 12,
+   "start": 4119843,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 13,
+   "start": 4219069,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 14,
+   "start": 3029728,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 14,
+   "start": 3352716,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "STRAFFIC",
+   "ch": 16,
+   "start": 4054705,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TBUS",
+   "ch": 4,
+   "start": 3952820,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TBUS",
+   "ch": 5,
+   "start": 2924915,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TBUS",
+   "ch": 5,
+   "start": 3289741,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TBUS",
+   "ch": 7,
+   "start": 3643067,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TBUS",
+   "ch": 8,
+   "start": 4057820,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TBUS",
+   "ch": 10,
+   "start": 3017038,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TBUS",
+   "ch": 12,
+   "start": 3521768,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TBUS",
+   "ch": 13,
+   "start": 4071067,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TBUS",
+   "ch": 13,
+   "start": 4192978,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TBUS",
+   "ch": 14,
+   "start": 4110806,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 1,
+   "start": 2605694,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 2,
+   "start": 1707698,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 2,
+   "start": 4564435,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 4,
+   "start": 104806,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 4,
+   "start": 3913732,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 5,
+   "start": 3887047,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 7,
+   "start": 827671,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 7,
+   "start": 1098539,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 8,
+   "start": 807442,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 9,
+   "start": 1163956,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 10,
+   "start": 2778025,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 12,
+   "start": 401349,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 13,
+   "start": 139643,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 13,
+   "start": 1406112,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 13,
+   "start": 4559078,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TCAR",
+   "ch": 14,
+   "start": 2893304,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TMETRO",
+   "ch": 1,
+   "start": 258469,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TMETRO",
+   "ch": 6,
+   "start": 1950511,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TMETRO",
+   "ch": 8,
+   "start": 1722827,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TMETRO",
+   "ch": 9,
+   "start": 1122563,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TMETRO",
+   "ch": 13,
+   "start": 1122972,
+   "len": 192064,
+   "sr": 16000
+  },
+  {
+   "env": "TMETRO",
+   "ch": 14,
+   "start": 1978368,
+   "len": 192064,
+   "sr": 16000
+  }
+ ],
+ "esc50_files": [
+  "1-100032-A-0.wav",
+  "1-101336-A-30.wav",
+  "1-101404-A-34.wav",
+  "1-103995-A-30.wav",
+  "1-103999-A-30.wav",
+  "1-110389-A-0.wav",
+  "1-118206-A-31.wav",
+  "1-118559-A-17.wav",
+  "1-137-A-32.wav",
+  "1-155858-A-25.wav",
+  "1-155858-B-25.wav",
+  "1-155858-C-25.wav",
+  "1-155858-D-25.wav",
+  "1-155858-E-25.wav",
+  "1-155858-F-25.wav",
+  "1-17124-A-43.wav",
+  "1-1791-A-26.wav",
+  "1-18655-A-31.wav",
+  "1-187207-A-20.wav",
+  "1-19026-A-43.wav",
+  "1-19111-A-24.wav",
+  "1-19118-A-24.wav",
+  "1-211527-C-20.wav",
+  "1-223162-A-25.wav",
+  "1-22694-B-20.wav",
+  "1-24074-A-43.wav",
+  "1-24076-A-43.wav",
+  "1-254507-A-43.wav",
+  "1-26176-A-43.wav",
+  "1-26177-A-43.wav",
+  "1-26188-A-30.wav",
+  "1-28808-A-43.wav",
+  "1-30039-A-26.wav",
+  "1-30043-A-26.wav",
+  "1-30830-A-24.wav",
+  "1-32318-A-0.wav",
+  "1-33658-A-26.wav",
+  "1-36164-A-26.wav",
+  "1-36164-B-26.wav",
+  "1-50688-A-17.wav",
+  "1-51147-A-25.wav",
+  "1-51805-A-33.wav",
+  "1-51805-B-33.wav",
+  "1-51805-C-33.wav",
+  "1-51805-D-33.wav",
+  "1-51805-E-33.wav",
+  "1-51805-F-33.wav",
+  "1-51805-G-33.wav",
+  "1-51805-H-33.wav",
+  "1-52266-A-24.wav",
+  "1-52290-A-30.wav",
+  "1-52323-A-24.wav",
+  "1-53501-A-32.wav",
+  "1-53663-A-24.wav",
+  "1-58792-A-24.wav",
+  "1-58846-A-34.wav",
+  "1-60997-A-20.wav",
+  "1-60997-B-20.wav",
+  "1-61212-A-32.wav",
+  "1-62594-A-32.wav",
+  "1-63679-A-24.wav",
+  "1-67152-A-17.wav",
+  "1-68670-A-34.wav",
+  "1-69165-A-34.wav",
+  "1-72695-A-26.wav",
+  "1-79220-A-17.wav",
+  "1-79711-A-32.wav",
+  "1-81001-A-30.wav",
+  "1-81001-B-30.wav",
+  "1-81851-A-31.wav",
+  "1-82817-A-30.wav",
+  "1-84393-A-32.wav",
+  "1-85123-A-31.wav",
+  "1-85362-A-0.wav",
+  "1-94231-A-32.wav",
+  "1-94231-B-32.wav",
+  "1-95563-A-31.wav",
+  "1-97793-A-31.wav",
+  "1-99958-A-31.wav",
+  "2-100648-A-43.wav",
+  "2-102414-B-17.wav",
+  "2-102414-C-17.wav",
+  "2-104168-A-32.wav",
+  "2-107351-B-20.wav",
+  "2-108017-A-24.wav",
+  "2-109316-A-32.wav",
+  "2-109759-A-26.wav",
+  "2-109759-B-26.wav",
+  "2-114254-A-30.wav",
+  "2-116400-A-0.wav",
+  "2-118459-A-32.wav",
+  "2-118459-B-32.wav",
+  "2-118624-A-30.wav",
+  "2-118625-A-30.wav",
+  "2-119139-A-31.wav",
+  "2-120218-A-30.wav",
+  "2-123712-A-33.wav",
+  "2-123896-A-24.wav",
+  "2-125520-A-43.wav",
+  "2-128465-A-43.wav",
+  "2-128465-B-43.wav",
+  "2-146877-A-31.wav",
+  "2-146877-B-31.wav",
+  "2-151079-A-20.wav",
+  "2-209471-A-25.wav",
+  "2-209472-A-25.wav",
+  "2-209473-A-25.wav",
+  "2-209474-A-25.wav",
+  "2-60791-A-26.wav",
+  "2-60794-A-26.wav",
+  "2-70344-A-33.wav",
+  "2-70367-A-33.wav",
+  "2-85292-A-24.wav",
+  "2-87412-A-24.wav"
+ ],
+ "synth_fns": [
+  "brake_squeal",
+  "cabin",
+  "chair_scrape",
+  "coffee_machine",
+  "dishes",
+  "door_chime",
+  "door_pneumatic",
+  "doorbell",
+  "fan",
+  "fridge_hum",
+  "hvac",
+  "hvac_cycle",
+  "jackhammer",
+  "luggage",
+  "notify",
+  "pa_chime",
+  "page_turn",
+  "phone_ring",
+  "room_tone",
+  "turn_signal",
+  "wind"
+ ],
+ "other_segments": [
+  {
+   "file": "Scott_Joplin_-_Maple_Leaf_Rag.ogg",
+   "start": 259086,
+   "len": 192000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "Scott_Joplin_-_Maple_Leaf_Rag.ogg",
+   "start": 342596,
+   "len": 192000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "Scott_Joplin_-_Maple_Leaf_Rag.ogg",
+   "start": 755619,
+   "len": 192000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "Scott_Joplin_-_Maple_Leaf_Rag.ogg",
+   "start": 771523,
+   "len": 192000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "Scott_Joplin_-_Maple_Leaf_Rag.ogg",
+   "start": 897740,
+   "len": 192000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "Scott_Joplin_-_Maple_Leaf_Rag.ogg",
+   "start": 1188680,
+   "len": 192000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "Scott_Joplin_-_Maple_Leaf_Rag.ogg",
+   "start": 1465727,
+   "len": 192000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "Scott_Joplin_-_Maple_Leaf_Rag.ogg",
+   "start": 1551605,
+   "len": 192000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "Scott_Joplin_-_Maple_Leaf_Rag.ogg",
+   "start": 1869517,
+   "len": 192000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "Scott_Joplin_-_Maple_Leaf_Rag.ogg",
+   "start": 1972898,
+   "len": 192000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "Scott_Joplin_-_Maple_Leaf_Rag.ogg",
+   "start": 2070765,
+   "len": 192000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_braille_commusic.ogg",
+   "start": 1524944,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_braille_commusic.ogg",
+   "start": 3933725,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_braille_commusic.ogg",
+   "start": 4095656,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_braille_commusic.ogg",
+   "start": 5552038,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_braille_commusic.ogg",
+   "start": 6524733,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_braille_commusic.ogg",
+   "start": 6995939,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_braille_commusic.ogg",
+   "start": 7512101,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_braille_commusic.ogg",
+   "start": 8631034,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_braille_commusic.ogg",
+   "start": 8772451,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_braille_commusic.ogg",
+   "start": 9144736,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_braille_commusic.ogg",
+   "start": 9197569,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_braille_commusic.ogg",
+   "start": 9366636,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 2251084,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 3409774,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 3971803,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 4175233,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 4309653,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 4382054,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 6210849,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 6386050,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 7060633,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 7526650,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 7817761,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 8240733,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 8351614,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 8379746,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 8422354,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 9019772,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 9681091,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  },
+  {
+   "file": "zh_popobing_landxia.ogg",
+   "start": 9974498,
+   "len": 168000,
+   "sr": 16000,
+   "_说明": "重采样到 16 kHz 后的样本号"
+  }
+ ]
+}

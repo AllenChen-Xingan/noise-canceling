@@ -26,15 +26,35 @@ pub enum Probe {
     Identity,
     /// 全部静音：输出 = 0（刷 V-NR 的极端做法）
     Mute,
+    /// 弱音节（有声 125 ms 段里干净轨能量最低的 30%）整段吞掉：V-WEAK **已知抓不到**（xfail，见 `weak_drop`）
+    #[serde(rename = "weak_drop_30")]
+    WeakDrop30,
+    /// 同上，吞掉最弱的 40%：V-WEAK 必须抓到
+    #[serde(rename = "weak_drop_40")]
+    WeakDrop40,
+    /// 整体乘 2 Hz、±6 dB 的增益抖动：V-PUMPV 必须抓到
+    #[serde(rename = "gain_wobble_6db")]
+    GainWobble,
+    /// 在主讲人有声段里均匀插 5 个单样本脉冲（幅度 0.5）：V-CLICK 必须抓到
+    #[serde(rename = "clicks_5")]
+    Clicks5,
+    /// 加噪到 0 dB 信噪比（相对干净轨，用本段自己的噪声轨）：输出比输入还吵，V-ESTOI 必须抓到
+    #[serde(rename = "noise_0db")]
+    Noise0db,
 }
 
 impl Probe {
-    pub const ALL: [Probe; 5] = [
+    pub const ALL: [Probe; 10] = [
         Probe::OnsetCut,
         Probe::NonSpeechMinus40,
         Probe::Lowpass1k,
         Probe::Identity,
         Probe::Mute,
+        Probe::WeakDrop30,
+        Probe::WeakDrop40,
+        Probe::GainWobble,
+        Probe::Clicks5,
+        Probe::Noise0db,
     ];
     pub fn as_str(self) -> &'static str {
         match self {
@@ -43,6 +63,11 @@ impl Probe {
             Probe::Lowpass1k => "lowpass_1k",
             Probe::Identity => "identity",
             Probe::Mute => "mute",
+            Probe::WeakDrop30 => "weak_drop_30",
+            Probe::WeakDrop40 => "weak_drop_40",
+            Probe::GainWobble => "gain_wobble_6db",
+            Probe::Clicks5 => "clicks_5",
+            Probe::Noise0db => "noise_0db",
         }
     }
 
@@ -89,8 +114,79 @@ impl Probe {
             }
             Probe::Identity => clip.mix.clone(),
             Probe::Mute => vec![0.0; out.len()],
+            Probe::WeakDrop30 => weak_drop(clip, out, 3),
+            Probe::WeakDrop40 => weak_drop(clip, out, 4),
+            Probe::Noise0db => {
+                let rms = |x: &[f32]| {
+                    (x.iter().map(|v| (*v as f64).powi(2)).sum::<f64>() / x.len().max(1) as f64)
+                        .sqrt()
+                };
+                let g = (rms(&clip.clean) / rms(&clip.noise).max(1e-12)) as f32;
+                out.iter()
+                    .zip(&clip.noise)
+                    .map(|(o, n)| o + g * n)
+                    .collect()
+            }
+            Probe::GainWobble => {
+                let sr = clip.sr as f64;
+                out.iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        let g = 6.0 * (2.0 * std::f64::consts::PI * 2.0 * i as f64 / sr).sin();
+                        v * 10f64.powf(g / 20.0) as f32
+                    })
+                    .collect()
+            }
+            Probe::Clicks5 => {
+                let mut y = out.to_vec();
+                let ivs = truth_from_clean(&clip.clean);
+                let total: usize = ivs.iter().map(|(a, b)| b - a).sum();
+                for k in 0..5 {
+                    // 第 k 个点落在全部有声样本的 (k + 0.5) / 5 处
+                    let mut want = (total as f64 * (k as f64 + 0.5) / 5.0) as usize;
+                    for &(a, b) in &ivs {
+                        if want < b - a {
+                            if let Some(v) = y.get_mut(a + want) {
+                                *v += 0.5;
+                            }
+                            break;
+                        }
+                        want -= b - a;
+                    }
+                }
+                y
+            }
         }
     }
+}
+
+/// 有声段切成 125 ms 一块（与 V-WEAK 的分析窗同长），干净轨能量最低的 `tenths`/10 块，输出置零。
+/// 只压 −10 / −20 dB 时 V-WEAK 在合成人声上只读到约 1.8 / 3.7 dB（2026-11-03 实测），抓不住，所以探针取整段吞掉；
+/// 30% 是已知做不到（xfail）：V-WEAK 读第 30 百分位，正好吞掉 30% 时分位落在边界上，参考降噪器输出上只读到 2.5–3.6 dB（ci 实测）；
+/// 40% 时分位落进被吞的部分，必须抓到
+fn weak_drop(clip: &Clip, out: &[f32], tenths: usize) -> Vec<f32> {
+    let f = (0.125 * clip.sr as f64) as usize;
+    let mut y = out.to_vec();
+    let mut blocks: Vec<(usize, f64)> = Vec::new();
+    for (a, b) in truth_from_clean(&clip.clean) {
+        let mut t = a;
+        while t + f <= b.min(y.len()) {
+            let e: f64 = clip.clean[t..t + f]
+                .iter()
+                .map(|v| (*v as f64).powi(2))
+                .sum();
+            blocks.push((t, e));
+            t += f;
+        }
+    }
+    blocks.sort_by(|p, q| p.1.total_cmp(&q.1));
+    let n = blocks.len() * tenths / 10;
+    for &(t, _) in &blocks[..n] {
+        for v in &mut y[t..t + f] {
+            *v = 0.0;
+        }
+    }
+    y
 }
 
 /// RBJ cookbook 二阶低通，原地。

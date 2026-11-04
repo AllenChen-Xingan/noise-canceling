@@ -100,6 +100,14 @@ pub enum RealSource {
     },
     /// exp003 现成的 noisy + clean（`resources/` 下）
     Exp003 { clips: String, clip: String },
+    /// 场景测试集（exp013）：`clips` 是某个 build 的 `clips.jsonl` 仓内路径；一条任务按 场景 × 档 × 设备 展开成多段，
+    /// 由 `vdn-eval scorecard` 跑（`qa` / `ci` 不展开，判「不知道」）
+    Scene {
+        clips: String,
+        scene: crate::scene::MeetingPlace,
+        tier: crate::scene::Tier,
+        device: crate::scene::DeviceKey,
+    },
 }
 
 #[derive(Clone, Debug)]

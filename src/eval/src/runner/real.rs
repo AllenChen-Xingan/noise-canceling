@@ -97,5 +97,6 @@ pub fn load_real(src: &RealSource) -> Result<Clip, String> {
                 tracks: false,
             })
         }
+        RealSource::Scene { .. } => Err("场景任务一条展开成多段：用 vdn-eval scorecard 跑".into()),
     }
 }

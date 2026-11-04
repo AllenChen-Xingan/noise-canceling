@@ -145,14 +145,25 @@ fn scene_clip(task: &Task, seed: u64) -> Option<Clip> {
     })
 }
 
-struct Prepared {
-    clip: Clip,
-    run: RunOut,
-    noise_out: Option<Vec<f32>>,
-    masks: Masks,
+pub(crate) struct Prepared {
+    pub(crate) clip: Clip,
+    pub(crate) run: RunOut,
+    pub(crate) noise_out: Option<Vec<f32>>,
+    pub(crate) masks: Masks,
 }
 
 fn prepare(task: &Task, sys: SystemKind, clip: Clip) -> Result<Prepared, String> {
+    // 只在合成场景上做「只有噪音」的对照处理：真实录音的噪音轨不是逐样本可重放的同一段输入
+    prepare_clip(task, sys, clip, task.scene.is_some())
+}
+
+/// `replayable`：噪音 + 干扰轨能逐样本重放（合成场景；场景测试集里分轨相加等于混合的段）。
+pub(crate) fn prepare_clip(
+    task: &Task,
+    sys: SystemKind,
+    clip: Clip,
+    replayable: bool,
+) -> Result<Prepared, String> {
     let spec = SystemSpec {
         kind: sys,
         safety: task.safety,
@@ -160,8 +171,7 @@ fn prepare(task: &Task, sys: SystemKind, clip: Clip) -> Result<Prepared, String>
     };
     let r = run(&spec, &clip.mix)?;
     let needs_noise = task.graders.iter().any(|g| g.v == "V-BGSTAB");
-    // 只在合成场景上做「只有噪音」的对照处理：真实录音的噪音轨不是逐样本可重放的同一段输入
-    let noise_out = if needs_noise && task.scene.is_some() {
+    let noise_out = if needs_noise && replayable {
         let bg: Vec<f32> = clip
             .noise
             .iter()
@@ -185,7 +195,7 @@ fn prepare(task: &Task, sys: SystemKind, clip: Clip) -> Result<Prepared, String>
     })
 }
 
-fn score_one(
+pub(crate) fn score_one(
     g: &Grader,
     sys: SystemKind,
     task: &Task,

@@ -1,7 +1,9 @@
-//! QA 层：要本机模型的 verifier（V-EAT-ASR · V-DNSMOS）。只在本机跑，CI 不跑。
+//! QA 层：要本机模型的 verifier（V-EAT-ASR · V-DNSMOS · V-NRMOS-SCOREQ · V-NRMOS-DISTILL）。只在本机跑，CI 不跑。
 
 pub mod asr;
 pub mod dnsmos;
+pub mod nrmos;
+mod nrmos_v;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -41,9 +43,11 @@ pub struct QaExtra {
     /// 任务 → 参考分词与原声的 (删, 替, 插)，每个任务只转写一次
     refs: BTreeMap<String, RefEntry>,
     mix_mos: BTreeMap<String, f64>,
+    /// 评分模型（SCOREQ / Distill-MOS）的模型路径或找不到的原因，及带噪原声的分（按任务 + 模型缓存）
+    nrmos: nrmos_v::Models,
 }
 
-fn fnv(x: &[f32]) -> u64 {
+pub(crate) fn fnv(x: &[f32]) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     for v in x {
         for b in v.to_le_bytes() {
@@ -73,10 +77,11 @@ impl QaExtra {
             eat: Vec::new(),
             refs: BTreeMap::new(),
             mix_mos: BTreeMap::new(),
+            nrmos: nrmos_v::Models::locate(),
         }
     }
 
-    fn dump(&self, name: &str, x: &[f32]) -> Result<(PathBuf, String), String> {
+    pub(crate) fn dump(&self, name: &str, x: &[f32]) -> Result<(PathBuf, String), String> {
         let p = self
             .tmp
             .join("asr-wav")
@@ -269,6 +274,8 @@ impl Extra for QaExtra {
         match v {
             "V-EAT-ASR" => Some(self.eat(sys, task, clip, out, p)),
             "V-DNSMOS" => Some(self.mos(task, clip, out)),
+            "V-NRMOS-SCOREQ" => Some(self.nrmos_score(nrmos::Kind::Scoreq, task, clip, out, p)),
+            "V-NRMOS-DISTILL" => Some(self.nrmos_score(nrmos::Kind::Distill, task, clip, out, p)),
             _ => None,
         }
     }
