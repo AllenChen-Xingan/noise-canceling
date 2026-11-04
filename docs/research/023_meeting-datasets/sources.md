@@ -9,7 +9,7 @@
 |---|---|---|
 | 自有积累 | 014 的 51 张卡、gap、decision；016 `benchmark.md` 第三、五节；决策 D62 · D65 · D80 | `../014_real-datasets/` · `../016_bench-synth/benchmark.md` · `../../plan/001_decisions-20261029-b1.md` |
 | 他人积累 | 数据集官网、LICENSE / 数据卡原文、论文（arXiv / Interspeech / ICASSP）、GitHub / HuggingFace / Zenodo / OpenSLR 页面、LDC 目录页 | 各卡「出处」字段 |
-| 兄弟线 | 场景键正本 021 `catalog.md`（scenes）· 设备键正本 022 `devices.md`（macmic） | 合并前在 worktree `noise_canceling-scenes` / `noise_canceling-macmic` |
+| 兄弟线 | 场景键正本 021 `catalog.md`（scenes）· 设备键正本 022 `devices.md`（macmic） | 合并前本仓库没有，`check_cards.py` 用环境变量 `VDN_KEYS_DIR` 显式指过去 |
 
 ## 二、怎么查的
 

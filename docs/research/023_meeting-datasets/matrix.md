@@ -24,7 +24,7 @@
 | `canteen` | 🟥 | 🟥 | 🟥 | 🟥（ASPIRE 的 iPad 只录像，声音来自领夹） | EasyCom（AR 眼镜，真人对话 + 回放餐厅噪声，CC BY-NC → 只评测）· CHiME-9 ECHI（签协议）· DEMAND PCAFETER / PRESTO（只有背景） | ASPIRE 领夹（在食堂里，不干净，非商用）· EasyCom 头戴 · ECHI |
 | `transit-hub` | 🟥 | 🟥 | △ DNS5 盲测机场 25 条（`ap_desktop` / `ap_mobile` 混，未逐条核） | TAU 2020 Mobile 机场 / 地铁站（手机，只有背景，非商用）· NISQA-LIVETALK | ARTE 火车站 · DEMAND PSTATION（只有背景） | 🟥 |
 | `bus-metro-cabin` | 🟥 | 🟥 | 🟥 | CHiME-3/4 BUS（平板，真人朗读，LDC → 不可）· TAU 公交 / 电车 / 地铁车厢（只有背景） | DEMAND TBUS / TMETRO（只有背景） | CHiME-3/4 ch0（LDC） |
-| `car-passenger` | 🟥 | 🟥 | 🟥 | NISQA-LIVETALK 车内（手机） | AISHELL-5（中文车内 2–4 人对话 100+ h，门把麦，只评测）· AVICAR（英语朗读，需申请）· QUT CAR · DEMAND TCAR（只有背景） | AISHELL-5（仅 train） |
+| `car-passenger` | 🟥 | 🟥 | 🟥 | NISQA-LIVETALK 车内（手机） | AISHELL-5（中文车内 2–4 人对话 100+ h，门把麦，CC BY-SA → 训练可（D64））· AVICAR（英语朗读，需申请）· QUT CAR · DEMAND TCAR（只有背景） | AISHELL-5（仅 train） |
 | `rail-air-cabin` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
 | `street-outdoor` | 🟥 | 🟥 | 🟥 | CHiME-3/4 PED / STR（平板，LDC → 不可）· TAU 街道（只有背景）· NISQA-LIVETALK | QUT STREET · DEMAND STRAFFIC（只有背景） | CHiME-3/4 ch0（LDC） |
 | `hotel-room` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
