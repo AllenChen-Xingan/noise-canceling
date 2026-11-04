@@ -278,6 +278,31 @@ fn non_scene_or_empty_suite_is_rejected() {
     assert!(vdn_eval::scorecard::check_suite(&empty).is_err());
     let (_, suite_text) = setup("check");
     assert!(vdn_eval::scorecard::check_suite(&parse_suite(&suite_text).unwrap()).is_ok());
+    // 场景是 other 的任务：报错（codex 第 5 轮 P2 #2）
+    let mut v: Value = serde_json::from_str(&suite_text).unwrap();
+    v["tasks"][0]["real"]["scene"] = json!("other");
+    let e = vdn_eval::scorecard::check_suite(&parse_suite(&v.to_string()).unwrap()).unwrap_err();
+    assert!(e.contains("other"), "{e}");
+}
+
+/// 同一输出目录跑第二次：报错，旧成绩单一个字不动（codex 第 5 轮 P1 #1）。
+#[test]
+fn second_write_to_same_dir_is_refused() {
+    use vdn_eval::scorecard::card::{ensure_fresh, write_new};
+    let d = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("scorecard-nooverwrite");
+    let _ = std::fs::remove_dir_all(&d);
+    ensure_fresh(&d).unwrap();
+    write_new(&d, "{\"a\": 1}\n", "# 第一次\n").unwrap();
+    assert!(ensure_fresh(&d).is_err());
+    assert!(write_new(&d, "{}\n", "# 第二次\n").is_err());
+    assert_eq!(
+        std::fs::read_to_string(d.join("scorecard.md")).unwrap(),
+        "# 第一次\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(d.join("scorecard.json")).unwrap(),
+        "{\"a\": 1}\n"
+    );
 }
 
 /// 进仓的样例行（`tests/fixtures/scene-clip-example.jsonl`，vdn-schema 的 schema 测试也用它）能被解析器读。

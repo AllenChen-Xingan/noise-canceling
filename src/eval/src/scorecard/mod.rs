@@ -171,12 +171,25 @@ pub fn check_suite(suite: &Suite) -> Result<(), String> {
         .filter(|t| !matches!(t.real, Some(RealSource::Scene { .. })))
         .map(|t| t.id.as_str())
         .collect();
-    if bad.is_empty() {
+    if !bad.is_empty() {
+        return Err(format!(
+            "这些不是场景任务（real.kind 应为 scene）：{}",
+            bad.join(" · ")
+        ));
+    }
+    // 兜底键 other 不是开会场景、不进成绩单（021 主表）：写进任务是清单写错了（codex 第 5 轮 P2 #2）
+    let other: Vec<&str> = suite
+        .tasks
+        .iter()
+        .filter(|t| matches!(&t.real, Some(RealSource::Scene { scene, .. }) if !scene.is_meeting()))
+        .map(|t| t.id.as_str())
+        .collect();
+    if other.is_empty() {
         Ok(())
     } else {
         Err(format!(
-            "这些不是场景任务（real.kind 应为 scene）：{}",
-            bad.join(" · ")
+            "这些任务的场景是 other（不是开会场景，不进成绩单）：{}",
+            other.join(" · ")
         ))
     }
 }

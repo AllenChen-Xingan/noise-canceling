@@ -359,17 +359,15 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
             .join("_tmp/scorecard")
             .join(&m.run_id)
     });
+    vdn_eval::scorecard::card::ensure_fresh(&out)?;
     let mut qa = flag(args, "--qa").then(|| vdn_eval::qa::QaExtra::new(out.join("qa")));
     let extra = qa.as_mut().map(|x| x as &mut dyn vdn_eval::runner::Extra);
     let (rows, skipped) = vdn_eval::scorecard::run(&suite, &sys, &opts, extra, None);
     let card = vdn_eval::scorecard::card::Card::build(&rows, skipped);
-    std::fs::create_dir_all(&out).map_err(|e| e.to_string())?;
     let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "suite": path,
         "systems": sys.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "qa": qa.is_some()});
     let js = serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";
-    std::fs::write(out.join("scorecard.json"), js).map_err(|e| e.to_string())?;
-    std::fs::write(out.join("scorecard.md"), card.to_markdown("场景成绩单"))
-        .map_err(|e| e.to_string())?;
+    vdn_eval::scorecard::card::write_new(&out, &js, &card.to_markdown("场景成绩单"))?;
     println!(
         "成绩单：{}（{} 段）",
         out.join("scorecard.md").display(),

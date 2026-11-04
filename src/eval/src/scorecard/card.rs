@@ -6,6 +6,37 @@ use super::rules::{CardStatus, SceneCard, summarize, worst};
 use super::{ClipRow, Missing};
 use crate::files::serde_name;
 
+/// 成绩单的两个文件名。
+pub const FILES: [&str; 2] = ["scorecard.json", "scorecard.md"];
+
+/// 输出目录里已有成绩单就报错：不覆盖旧结果（CLAUDE.md 第五节第 1 条；codex 第 5 轮 P1 #1）。先查再跑，免得白跑。
+pub fn ensure_fresh(dir: &std::path::Path) -> Result<(), String> {
+    for f in FILES {
+        let p = dir.join(f);
+        if p.exists() {
+            return Err(format!("{} 已存在，不覆盖：换一个 --out 目录", p.display()));
+        }
+    }
+    Ok(())
+}
+
+/// 写成绩单：两个文件都用「只新建」打开，已存在就报错（与 [`ensure_fresh`] 之间被别的进程抢先写入也不会覆盖）。
+pub fn write_new(dir: &std::path::Path, json: &str, md: &str) -> Result<(), String> {
+    use std::io::Write;
+    ensure_fresh(dir)?;
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    for (f, text) in FILES.iter().zip([json, md]) {
+        let p = dir.join(f);
+        let mut h = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&p)
+            .map_err(|e| format!("{}：{e}", p.display()))?;
+        h.write_all(text.as_bytes()).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 /// 整张成绩单。
 pub struct Card {
     pub cards: Vec<SceneCard>,
