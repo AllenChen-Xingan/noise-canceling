@@ -30,11 +30,11 @@
 
 ```sh
 cargo build --release -p vdn-speaker-lab
-caffeinate -i target/release/vdn-speaker-lab bench-split <exp005 某段降噪输出.wav> --reps 5 > docs/experiments/exp015-speaker-shared-spectrum/results/bench-split.<段>.json
+caffeinate -i target/release/vdn-speaker-lab bench-split <exp005 某段降噪输出.wav> --reps 6 > docs/experiments/exp015-speaker-shared-spectrum/results/bench-split.<段>.json
 ```
 
 - 按判断回路的窗长 / 步长切窗（正本 `JudgeParams`，默认 1.5 s / 0.5 s），每个窗分别计 fbank · 整个 embed · 两者之差（≈ 推理）· 合成注册负载与余弦。如果两种顺序的 fbank p50 差超过 20%，在表下写明并按较大的那个判过线
-- 条件：插电、`caffeinate`、拿名额、单线程（与 `Embedder` 一致）；素材用 exp005 的 c01（80 s → 158 个窗 × 5 遍 = 790 个样本）和 c06（只有主人）
+- 条件：插电、`caffeinate`、拿名额、单线程（与 `Embedder` 一致）；素材用 exp005 的 c01（80 s → 158 个窗 × 6 遍 = 948 个样本）和 c06（只有主人）
 - 判据（verifier `bench-split`，阈值大总管定 2026-11-04）：**fbank 占 embed 的 p50 比例 < 10% → 「共用频谱不值得做」成立**。过线与否、样本数、置信度写回下表
 
 | 素材 | 样本数 | fbank p50 | embed p50 | 推理 p50（差） | 合成注册与余弦 p50 | fbank 占比 | 过线（< 10%） |
@@ -71,6 +71,6 @@ B 那一行说明一件事：认人的成本主要看**模型要处理多少帧*
 ## 4. 产出
 
 - 计时命令 `src/speaker-lab/src/bench.rs`（带单元测试：切窗、分位数、有符号差值、单位换算、顺序交替、帧数与判断窗对上）。子命令接在 `src/speaker-lab/src/main.rs`
-- 测量偏差的处理：正式计时前用真实窗预热 3 窗 × 3 遍；fbank 与 embed 谁先跑逐窗交替，两种顺序分开报 p50；差值保留正负号。fbank 是另一份工作区上的独立调用，所以推理那一截是**估计**。注册那一项是**合成负载**（每窗都注册、固定电平），是上限，不复现真实判断回路的筛选
+- 测量偏差的处理：正式计时前用真实窗预热 3 窗 × 3 遍；fbank 与 embed 谁先跑按「第几遍 + 第几窗」交替，同一个窗在相邻两遍里两种顺序都测到（默认 6 遍，各占一半），两种顺序分开报 p50；差值保留正负号。fbank 是另一份工作区上的独立调用，所以推理那一截是**估计**。注册那一项是**合成负载**（每窗都注册、固定电平、两次余弦），只是这条合成轨迹的测量，不是真实判断回路成本的上限
 - 结果 `results/bench-split.*.json`（待名额）
 - 本线不改 `src/speaker/`，不接共享频谱，fecore 那边的接口需求已撤回（2026-11-04）

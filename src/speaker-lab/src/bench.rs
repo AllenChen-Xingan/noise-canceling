@@ -4,10 +4,11 @@
 //! - `fbank`：算 fbank + 窗内减均值（与 `Embedder::embed` 里同一组调用）
 //! - `embed`：`Embedder::embed` 整个调用（= fbank + 减均值 + 建张量 + 模型推理 + 归一化）
 //! - `infer_est`：同一个窗的 `embed − fbank`（有符号，可为负），即「推理及其余」
-//! - `synthetic_enroll_and_cos`：**合成**注册负载——每窗都喂注册器（固定电平、整 hop 时长）+ 与主人（未锁定时与上一窗）的余弦。
-//!   真实判断回路按有声比例和相似度筛选才注册，所以这是上限，不是复现
+//! - `synthetic_enroll_and_cos`：**合成**注册负载——每窗都喂注册器（固定电平、整 hop 时长）+ 与上一窗、与主人（锁定后）各一次余弦。
+//!   真实判断回路按有声比例和相似度筛选才注册、用真实电平，状态轨迹不同，所以这只是这条合成轨迹的测量，不是真实成本的上限
 //!
-//! 测量偏差的处理：正式计时前用真实窗预热；fbank 与 embed 谁先跑逐窗交替，并分开报两种顺序的 p50（顺序敏感性）。
+//! 测量偏差的处理：正式计时前用真实窗预热；fbank 与 embed 谁先跑按「第几遍 + 第几窗」交替，所以同一个窗在相邻两遍里两种顺序都测到，
+//! 两组 p50 里音频内容的影响大致抵消（遍数取偶数时完全对半），分开报两种顺序的 p50（顺序敏感性）。
 //! fbank 独立计时用的是另一份工作区，和 embed 里那一次不是同一次调用，所以 `infer_est` 是估计。
 //! 只计时，不改认人行为；判断回路里「有声 < 30% 不算声纹」的跳过逻辑不在这里，送进来的窗全算。
 
@@ -64,9 +65,9 @@ fn ns(t0: Instant) -> i64 {
     i64::try_from(t0.elapsed().as_nanos()).unwrap_or(i64::MAX)
 }
 
-/// 第 `i` 个计时样本是否先跑 fbank（逐个交替，抵消「先跑的把数据和代码焐热」）。
-pub(crate) fn fbank_first(i: usize) -> bool {
-    i % 2 == 0
+/// 第 `rep` 遍、第 `k` 个窗是否先跑 fbank。相邻窗交替，同一窗每遍反转，让每个窗两种顺序都测到。
+pub(crate) fn fbank_first(rep: usize, k: usize) -> bool {
+    (rep + k) % 2 == 0
 }
 
 /// 预热轮数：正式计时前，前几个真实窗各跑几遍（`Embedder::open` 只用 1 s 探针预热过一次）。
@@ -77,7 +78,7 @@ const WARMUP_PASSES: usize = 3;
 pub(crate) fn cmd_bench_split(args: &[String]) -> R<()> {
     let x = read_wav(Path::new(args.first().ok_or("缺 <in.wav>")?))?;
     let jp = judge_params(args)?;
-    let reps: usize = arg(args, "--reps").map(|v| v.parse()).transpose()?.unwrap_or(5);
+    let reps: usize = arg(args, "--reps").map(|v| v.parse()).transpose()?.unwrap_or(6);
     let win = (jp.window_s * SR as f32) as usize;
     let hop = (jp.hop_s * SR as f32) as usize;
     let starts = window_starts(x.len(), win, hop);
@@ -120,7 +121,8 @@ pub(crate) fn cmd_bench_split(args: &[String]) -> R<()> {
                 black_box(&feats);
                 ns(t0)
             };
-            let (a, b, v) = if fbank_first(i) {
+            let first = fbank_first(r, k);
+            let (a, b, v) = if first {
                 let a = time_fbank();
                 let t0 = Instant::now();
                 let v = emb.embed(w)?;
@@ -132,12 +134,12 @@ pub(crate) fn cmd_bench_split(args: &[String]) -> R<()> {
                 (time_fbank(), b, v)
             };
             let t0 = Instant::now();
-            let refv = enroller.owner().map(<[f32]>::to_vec).or_else(|| prev.clone());
-            black_box(refv.as_ref().map(|p| cosine(p, &v)));
+            black_box(prev.as_ref().map(|p| cosine(p, &v)));
+            black_box(enroller.owner().map(|o| cosine(o, &v)));
             let t_s = i as f64 * jp.hop_s as f64;
             black_box(enroller.observe(&v, t_s, jp.hop_s, -23.0));
             t_enr.push(ns(t0));
-            let g = usize::from(!fbank_first(i));
+            let g = usize::from(!first);
             if let (Some(fg), Some(eg)) = (fb_by.get_mut(g), emb_by.get_mut(g)) {
                 fg.push(a);
                 eg.push(b);
@@ -214,9 +216,16 @@ mod tests {
     }
 
     #[test]
-    fn order_alternates() {
-        let firsts: Vec<bool> = (0..4).map(fbank_first).collect();
+    fn order_alternates_and_flips_per_rep() {
+        let firsts: Vec<bool> = (0..4).map(|k| fbank_first(0, k)).collect();
         assert_eq!(firsts, vec![true, false, true, false]);
+        // 窗数为偶数（c01 有 158 个窗）时，同一个窗在相邻两遍里顺序相反
+        for k in 0..158 {
+            assert_ne!(fbank_first(0, k), fbank_first(1, k), "窗 {k}");
+        }
+        // 偶数遍：每个窗两种顺序各一半
+        let n_first = (0..6).filter(|&r| fbank_first(r, 7)).count();
+        assert_eq!(n_first, 3);
     }
 
     /// 计时用的 fbank 调用与 `Embedder::embed` 里的一致：帧数与判断窗对上（1.5 s → 148 帧）。
