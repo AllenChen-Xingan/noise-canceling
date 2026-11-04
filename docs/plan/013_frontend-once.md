@@ -144,3 +144,49 @@ pub trait SpectrumTap: Model {
 - 全仓 grep：除 `vdn-dsp` 外没有 `plan_fft_forward`（只管正向 FFT 的创建；场景求自相关的逆 FFT 不在此列，第 5 节说它留着。要收进来就另加验收；codex 第 2 轮 P2 #3）。可以写成一条 tidy 规则，把「只在一处」变成机器检查。
 
 **估计改动量**：types 约 +30 行，dsp 约 +100 行；认人 fbank 约 −30 行，评测器 3 处约 −40 行；每处配一条逐位对拍测试。
+
+## 12. 第二段 · 实现（#102，手下 fe2，2026-11-04）
+
+> 范围：统一模块扩展 + 认人 fbank 改调它 + 「只一处」机器检查。评测器不在本 PR（下一 PR，见本节末清单）。
+> 依据：读源码实现；测试结果见下表（名额放开后实测填写）。
+
+**正本与实现**
+
+- `vdn_types::frontend`：`StftSpec` 加 `win_len`（`FRONTEND` 取 512，编译期断言 `win_len == n_fft`）与 `is_valid()`；`Window` 加 5 个值：`HannPeriodic` · `HannNumpyInner` · `KaldiHamming` · `KaldiHanning` · `KaldiPovey`
+- `vdn_dsp::window::coef`：窗公式全仓唯一一处。每种照抄原调用方的运算顺序（Kaldi 是 `(2π/(n−1))·i`，周期窗是 `2π·i/n`），先 f64 算再转
+- `vdn_dsp::fft`（新文件）：
+  - `Sample`：f32 / f64 两行 impl，样本类型泛型，不手抄两份
+  - `FftCore<T>`（crate 内部）：「取一帧 → 钩子 → 加窗 → 尾部补零 → 正向 FFT → 计数」只写在 `transform` 一处
+  - `FrameFft<T>`：按整段分帧入口，第 k 帧取 `x[k·hop .. k·hop + win_len]`；`frame_with(x, k, 钩子)`，越界返回 `None`；`num_frames` 按 `snip_edges`
+  - `power_into<T>`：功率公式唯一一处，改为泛型，f32 调用方不变
+- `StreamingStft` 改为持有 `FftCore<f32>`，正向那段与 `FrameFft` 共用；逆变换与重叠相加不变。`from_spec` 要求 `win_len == n_fft`（流式合成不补零）
+- 认人 `fbank.rs`：删掉自建 FFT 计划、窗公式和自有的 `WindowType`（第二处表示），改用 `vdn_types::Window` 与 `FrameFft` + `power_into`。去直流 · 预加重 · 输入缩放作为每帧钩子留在认人 crate；mel 滤波器组留在认人 crate（频谱之后的特征）。`vdn-speaker` 不再直接依赖 `realfft`
+- 离线例子：`polish_offline` · `scene_offline` · `frontend_timing` 第一段已引用 `FRONTEND`，本段不用改
+
+**「只一处」的机器检查**：tidy 新规则 R-FFT（`src/xtask/src/fft_site.rs`）。`src/` 下除 `src/dsp/src/` 外不许出现 FFT 计划标识符（`RealFftPlanner`、`FftPlanner*`、`plan_fft_*`）。白名单 3 条，各写原因；白名单只许缩短（文件不在了或已干净也报红）。边界：认不出手写窗公式与手写 DFT，靠评审守。
+
+**对拍基准**：在 `d23bfe66` 的原样源码上生成（`git archive` 导出、单独 target 目录、`VDN_BLESS=1`）。改前的窗种类叫 `WindowType::{Povey, Hanning}`，生成时只把 `src/speaker/tests/golden.rs` 里 `old_names` 的两行换成旧名，其余逐字相同。
+
+**测试**
+
+| 判据（测试名） | 比什么 | 阈值 |
+|---|---|---|
+| `speaker/tests/golden.rs::fbank_matches_golden` | 3 种配置（汉明 ×32768 · povey 不放大 · 汉宁 256 不补零不预加重）fbank 输出哈希 vs 改前 | 逐位 |
+| `speaker/tests/golden.rs::embedding_matches_golden`（`onnx`，有模型才跑） | 声纹向量哈希 vs 改前 | 逐位 |
+| `dsp/src/window_tests.rs` | 6 种窗 vs 改前各处原公式（f32 / f64），6 种长度 | 逐位 |
+| `dsp/src/fft_tests.rs::whole_matches_streaming_bitwise` | 整段入口 vs 流式入口 | 逐位 |
+| `dsp/src/fft_tests.rs::zero_padding_is_correct` · `f64_path_matches_manual` | 补零 400 → 512；f64 2000 → 2048，vs 直接调 realfft | 逐位 |
+| `dsp/tests/no_alloc.rs::frame_fft_does_not_allocate` | 整段入口 f32 / f64 每帧不分配 | 0 次分配 |
+| `xtask` `fft_site_tests.rs` | R-FFT 负例红、正例不红、白名单只缩短 | — |
+| 第一段 4 份对拍（GTCRN · 引擎 · 场景两份） | 加 `win_len` 后仍逐位 | 逐位 |
+
+**交给评测器下一 PR 的清单**（本 PR 不碰 `src/eval/`）：
+
+| 位置 | 改成 | 窗 |
+|---|---|---|
+| `src/eval/src/verifiers/speech.rs:31-34` | `FrameFft<f64>`，`win_len` 2000 · `n_fft` 2048 | `HannPeriodic` |
+| `src/eval/src/verifiers/estoi.rs:106-110,181-182` | `FrameFft<f64>`，256 / 512；帧数口径是 `0..len−N` 步长 hop（比 snip_edges 少最后一帧），调用方自己算 | `HannNumpyInner` |
+| `src/eval/src/system.rs:47` | `StreamingStft::from_spec(&FRONTEND)` 或写明不跟 | `SqrtHannPeriodic` |
+| `src/eval/src/analysis.rs:163` | 声谱图把 sqrt-Hann 在 f32 里平方当窗（交代 3 处之外多出的 1 处）。与 `HannPeriodic` 不逐位相同，要么加窗种类、要么接受分数变化 | 待定 |
+
+清完前两处后删 R-FFT 白名单对应两条（规则会提醒）。
