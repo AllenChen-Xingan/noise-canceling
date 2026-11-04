@@ -160,6 +160,6 @@
 
 ---
 
-**DXOMARK 数据怎么来的：**我从页面内嵌的 echarts 数据里抽出数值再计算。解析脚本在 `/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-macmic/a5b0364a-7ef2-4d59-b924-8888b7e88ca5/scratchpad/dxofr.py`，原始网页在 `/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-macmic/a5b0364a-7ef2-4d59-b924-8888b7e88ca5/scratchpad/web/`。
+**DXOMARK 数据怎么来的：**我从页面内嵌的 echarts 数据里抽出数值再计算。解析脚本在 本会话临时目录 `scratchpad/dxofr.py`（不入库），原始网页在 本会话临时目录 `scratchpad/web/`（不入库）。
 
 **本次范围：**只读网页和源码，没有下载超过 50 MB 的文件，没碰麦克风，没改仓库。

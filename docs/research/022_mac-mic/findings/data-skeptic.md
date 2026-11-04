@@ -50,7 +50,7 @@
 7. **距离外推。** DR-VCTK 回放距离是 2 m，3D-Speaker 的笔记本在 1 m 以内，实际使用约 0.5 m。报告应明确：DR-VCTK 反推的是整条链的平均频响，混响和距离部分不能直接当成麦克风频响。
 
 我复现用的文件：
-- `/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-macmic/a5b0364a-7ef2-4d59-b924-8888b7e88ca5/scratchpad/zipdir/train_ch_log.txt`
-- `/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-macmic/a5b0364a-7ef2-4d59-b924-8888b7e88ca5/scratchpad/zipdir/train.txt`
+- 本会话临时目录 `scratchpad/zipdir/train_ch_log.txt`（不入库）
+- 本会话临时目录 `scratchpad/zipdir/train.txt`（不入库）
 
 我没下载音频，也没改仓库文件。

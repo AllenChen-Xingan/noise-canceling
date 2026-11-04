@@ -47,4 +47,4 @@
 7. **论坛样本要去重**：Zoom 社区里同一作者的模板式回复贴在两帖里，导致人数和「2 个组织」都多算了。建议按作者去重，并标出「疑似模板 / AI 生成文本」。
 8. **能听的录音没去取**：pokde（M3 Air 15″ 的 MP3）和 Audacity 论坛（M1 MBP 的 m4a）都有录音。拿它们做频谱，可以和 DXOMARK 曲线交叉校验，小于 50 MB，可以本地分析。
 
-我核对时存的文件都在 `/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-macmic/a5b0364a-7ef2-4d59-b924-8888b7e88ca5/scratchpad/skeptic2/`：3 份 Chromium 源码、6 帖 Apple 社区、键盘声论文的 arXiv HTML（`ks.html`）。仓库没改，没碰麦克风。
+我核对时存的文件都在 本会话临时目录 `scratchpad/skeptic2/`（不入库）：3 份 Chromium 源码、6 帖 Apple 社区、键盘声论文的 arXiv HTML（`ks.html`）。仓库没改，没碰麦克风。

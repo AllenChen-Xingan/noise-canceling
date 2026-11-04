@@ -94,4 +94,4 @@
 7. Verge 测试里 M2 Air 的结论原文：没读到。
 8. Freesound 那 18 条的完整描述：只看了搜索页摘要，没逐条打开。
 
-临时文件（DR-VCTK 目录、配置、客观分、照片和两个只读脚本）都在 `/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-macmic/a5b0364a-7ef2-4d59-b924-8888b7e88ca5/scratchpad/zipdir/`。没下载任何音频，没改仓库里任何文件。
+临时文件（DR-VCTK 目录、配置、客观分、照片和两个只读脚本）都在 本会话临时目录 `scratchpad/zipdir/`（不入库）。没下载任何音频，没改仓库里任何文件。

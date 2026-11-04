@@ -171,4 +171,4 @@
 9. Intel T2 机型上，波束成形是否在 T2 里做：只有「T2 集成音频控制器」这条第三方转述。
 10. apple.com 上 M1 Air 的发布新闻稿没提麦克风。M1 Air 有没有官方「高信噪比」一类说法：未查到。
 
-本次没有改仓库文件。临时下载的网页放在 `/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-macmic/a5b0364a-7ef2-4d59-b924-8888b7e88ca5/scratchpad/kb/`。
+本次没有改仓库文件。临时下载的网页放在 本会话临时目录 `scratchpad/kb/`（不入库）。

@@ -52,4 +52,4 @@
 5. 设备仿真增强的源头是 RNNoise（Valin 2018）。PercepNet 和 DNS-5 的基线也可以顺查一下。
 
 ---
-核对用的下载件在 `/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-macmic/a5b0364a-7ef2-4d59-b924-8888b7e88ca5/scratchpad/dl/`（论文 PDF 和文本、DR-VCTK README、MicIRP 页面）。算系数范数的脚本是 `/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-macmic/a5b0364a-7ef2-4d59-b924-8888b7e88ca5/scratchpad/wng.py`，它算出的 WNG 列假设看向正上方、各麦相位一致，只能当粗参考。仓库文件没有改动。
+核对用的下载件在 本会话临时目录 `scratchpad/dl/`（不入库）（论文 PDF 和文本、DR-VCTK README、MicIRP 页面）。算系数范数的脚本是 本会话临时目录 `scratchpad/wng.py`（不入库），它算出的 WNG 列假设看向正上方、各麦相位一致，只能当粗参考。仓库文件没有改动。

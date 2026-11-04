@@ -12,9 +12,9 @@
 核查方式：
 - 本地已下载的 64 份 support.apple.com 页面，逐份重新筛出原句，并核对页面标题对应的机型。
 - 本机 CommandLineTools 自带的 macOS SDK 头文件，逐行核对。
-- 主仓库里的源码：`/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling/resources/`。另外核了项目实际编译用的 crates.io 版 cpal 0.18.2 和 coreaudio-rs 0.14.2。
+- 主仓库里的源码：主仓 `resources/`。另外核了项目实际编译用的 crates.io 版 cpal 0.18.2 和 coreaudio-rs 0.14.2。
 - 用 WebFetch 打开了 Asahi、Triforce、苹果帮助页、新闻稿、论坛原帖；用 `gh api` 查了 asahi-audio 的提交记录。
-- 临时文件在 `/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-macmic/a5b0364a-7ef2-4d59-b924-8888b7e88ca5/scratchpad/skeptic/`。
+- 临时文件在 本会话临时目录 `scratchpad/skeptic/`（不入库）。
 
 ## 逐条判定
 
