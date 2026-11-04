@@ -1,7 +1,7 @@
 # 评审 023 · 开会场景真实录音数据集调研的结论层与卡片检查脚本（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/023_meeting-datasets/` 的 `decision.md` · `matrix.md` · `pick.md` · `sources.md` · `card-template.md` · `check_cards.py` · `test_check_cards.py`；依据：44 张新卡、`cards-014-addendum.md`、014 卡片索引、交代文件。**最新一轮：第 4 轮（2026-11-03）· 总评「修改」· 连续第 1 轮无 P0/P1，待第 5 轮确认**。
-> 累计处理：P1×10、P2×16 逐条回卡片 / 决策正本核实，属实 26、驳回 0。新出的要人定的事：无（已有 4 题见 `decision.md` 第四节）。
+> 对象：`docs/research/023_meeting-datasets/` 的 `decision.md` · `matrix.md` · `pick.md` · `sources.md` · `card-template.md` · `check_cards.py` · `test_check_cards.py`；依据：44 张新卡、`cards-014-addendum.md`、014 卡片索引、交代文件。**最新一轮：第 5 轮（2026-11-03）· 总评「修改」· 已达停止线（第 4、5 轮连续无 P0/P1）**。
+> 累计处理：P1×10、P2×20 逐条回卡片 / 决策正本核实，属实 30、驳回 0；第 5 轮的 4 条 P2 当场改完，未留 issue。新出的要人定的事：无（已有 4 题见 `decision.md` 第四节）。
 
 ## 第 1 轮（2026-11-03）· 总评「修改」
 
@@ -131,3 +131,20 @@
 
 ### 是否再审
 连续第 1 轮无 P0/P1 → 再审一轮确认。
+
+## 第 5 轮（2026-11-03）· 总评「修改」
+
+原文：主目录 `_tmp/20261103-b10/mtgdata/reviews/decision-codex-5.md`（不入库）。effort medium，耗时 107 秒。
+上一轮处理的验证：codex 抽查 DNS1 全集数、ECHI 仅 train、SSI 转写、014 索引改判、四题默认值，均「核实属实」。
+本轮 P0/P1：0 条 · 停止线：**满足**（脚本 `stop-line:` 行：本轮与上一轮都无 P0/P1）· 留作 issue 的 P2：无（4 条都是小改，当场改完）
+
+- **P2｜decision.md:40 AISHELL-2 仍写 1000 h 当客厅子集**（第 5 轮 #1）· 核实属实 · 处理：注明全集 1000 h、1347 人在录音棚、客厅部分未知
+- **P2｜matrix.md:32 ASCEND 放在近讲参考列**（第 5 轮 #2）· 核实属实（卡：干净参考没有）· 处理：移出该列，注明只能作底料或吃字检查
+- **P2｜matrix.md:19 漏 DDS 办公室 / 客厅与 DAPS 阳台**（第 5 轮 #3）· 核实属实（DDS 卡场景键；补充卡 DAPS 节 balcony1）· 处理：补进 open-office、home-family、street-outdoor 三行，注明回放
+- **P2｜matrix.md:36 CANDOR 地点、Common Voice 设备的推断性质丢了**（第 5 轮 #4）· 核实属实 · 处理：标【推断】，小节标题改「有地点（或推断地点）」
+
+### 引用抽查
+- 「不符」1 条（AISHELL-2）：已改 · 「核实属实」6 条 · 无法核实：021 / 022 正本格式（大总管已用真正本验收）；「未下载音频、未越界写入」只有自报
+
+### 是否再审
+停。第 4、5 轮连续无 P0/P1；改后检查脚本 25 条测试过，44 张卡 0 处问题【实测】。

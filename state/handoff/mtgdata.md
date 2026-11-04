@@ -1,10 +1,10 @@
 # 现状页 · mtgdata（批次 20261103-b10）
 
-- **状态**：进行中
+- **状态**：已收尾
 - **手上**：023 开会场景的真实录音数据集（issue #82）
 - **交代**：主目录 `_tmp/20261103-b10/mtgdata.md`
-- **做到哪**（2026-11-03）：调研完成，6 份交付物写完（cards 44 张 · addendum 33 张 · matrix · pick · decision · sources）；check_cards.py 0 处问题、20 条测试过；正在做 codex 评审
-- **下一步**：codex 评审，连续两轮无 P0/P1 即收尾
+- **做到哪**（2026-11-03）：全部交付；codex 5 轮，第 4、5 轮连续无 P0/P1，已达停止线；P2 全部改完
+- **下一步**：等大总管验收；4 题待人拍板（见下）
 
 ## 改了哪些文件
 | 文件 | 改了什么 |
@@ -16,7 +16,7 @@
 | `docs/research/023_meeting-datasets/cards-014-addendum.md` | 014 的 33 张卡补字段与疑误（由 4 份分路补充合并，原分路文件已删） |
 | `docs/research/023_meeting-datasets/matrix.md` · `pick.md` · `decision.md` · `sources.md` | 覆盖表 · 建议先下 · 结论与待拍板 · 来源 |
 | `docs/research/014_real-datasets/cards/README.md` | 经大总管授权，只改「结论」列受 D64 影响的 5 行 + 页首口径一句；旧 → 新列在 addendum 页首 |
-| `docs/reviews/023_meeting-datasets-codex.md` | codex 评审记录 |
+| `docs/reviews/023_meeting-datasets-codex.md` · `docs/reviews/README.md` | codex 评审记录（5 轮）· 索引加一行 |
 
 ## 发现
 - 场景键已对齐 021 catalog v1（scenes 应我请求加了 `bus-metro-cabin`、`other`）；设备键已对齐 022 devices v1（macmic 加了 `mac-unknown` 与 8 个 `non-laptop-*` 子键）
@@ -50,3 +50,5 @@
 - 大总管要求：不再去旁边 worktree 找正本 → 改为只认本仓路径 + VDN_KEYS_DIR + `--research` 参数（测试用），测试用内置小键表 → 23 条测试过；不设变量时退出码 2 并提示变量名【实测】
 - codex 第 1 轮 P1×7 P2×3、第 2 轮 P1×2 P2×4，全部属实已改；第 2 轮发现调研沿用作废的 D26，按 D64 改判 SA 为可训练
 - 大总管授权改 014 索引结论列 → 改 5 行 + 页首一句，单卡未动
+- codex 第 3–5 轮：P1×1 → 0 → 0；强结论同类出现 3 次，按类改结构（页首措辞口径 + 笔记补注）；第 5 轮 4 条 P2 当场改完 → 已达停止线
+- 收尾：25 条测试过、44 张卡 0 处问题【实测】
