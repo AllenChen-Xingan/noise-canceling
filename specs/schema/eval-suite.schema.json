@@ -289,8 +289,13 @@
           "type": "string"
         },
         {
-          "const": "weak_drop",
-          "description": "弱音节（有声 125 ms 段里干净轨能量最低的 40%）整段吞掉（置零）：V-WEAK 必须抓到",
+          "const": "weak_drop_30",
+          "description": "弱音节（有声 125 ms 段里干净轨能量最低的 30%）整段吞掉：V-WEAK **已知抓不到**（xfail，见 `weak_drop`）",
+          "type": "string"
+        },
+        {
+          "const": "weak_drop_40",
+          "description": "同上，吞掉最弱的 40%：V-WEAK 必须抓到",
           "type": "string"
         },
         {
