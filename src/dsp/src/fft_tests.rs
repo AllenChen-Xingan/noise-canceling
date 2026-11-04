@@ -52,8 +52,8 @@ fn zero_padding_is_correct() {
     let fft = RealFftPlanner::<f32>::new().plan_fft_forward(512);
     for k in [0usize, 3, fr.num_frames(x.len()) - 1] {
         let mut buf = vec![0.0f32; 512];
-        for i in 0..400 {
-            buf[i] = x[k * 160 + i] * w[i];
+        for ((d, &s), &wi) in buf.iter_mut().zip(&x[k * 160..k * 160 + 400]).zip(&w) {
+            *d = s * wi;
         }
         let mut want = fft.make_output_vec();
         fft.process(&mut buf, &mut want).unwrap();
@@ -106,8 +106,8 @@ fn f64_path_matches_manual() {
     let w: Vec<f64> = crate::window::for_spec(&spec);
     let fft = RealFftPlanner::<f64>::new().plan_fft_forward(2048);
     let mut buf = vec![0.0f64; 2048];
-    for i in 0..2000 {
-        buf[i] = w[i] * x[1000 + i];
+    for ((d, &s), &wi) in buf.iter_mut().zip(&x[1000..3000]).zip(&w) {
+        *d = wi * s;
     }
     let mut want = fft.make_output_vec();
     fft.process(&mut buf, &mut want).unwrap();
