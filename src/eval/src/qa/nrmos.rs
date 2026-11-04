@@ -190,6 +190,29 @@ impl Nrmos {
     }
 }
 
+/// 子进程入口：`vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…` → 每段一行 JSON `{"wav", "mos"}`。
+/// 一次进程打多段，模型只载一次（SCOREQ 378 MB）。哈希对不上直接报错，不打分。
+pub fn cli(args: &[String]) -> Result<Vec<serde_json::Value>, String> {
+    let usage = "用法：vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…";
+    let kind = args.first().and_then(|s| Kind::parse(s)).ok_or(usage)?;
+    let model = args.get(1).ok_or(usage)?;
+    if args.len() < 3 {
+        return Err(usage.into());
+    }
+    verify(kind, Path::new(model))?;
+    let mut m = Nrmos::open(kind, Path::new(model)).map_err(|e| e.to_string())?;
+    let mut out = Vec::new();
+    for w in &args[2..] {
+        let (x, sr) = crate::wav::read(Path::new(w))?;
+        if sr != vdn_types::MODEL_RATE {
+            return Err(format!("{w}：只支持 16 kHz，实际 {sr}"));
+        }
+        let mos = m.score(&x).map_err(|e| format!("{w}：{e}"))?;
+        out.push(serde_json::json!({"wav": w, "mos": mos}));
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
