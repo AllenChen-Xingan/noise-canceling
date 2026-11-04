@@ -29,11 +29,11 @@ class Levels(unittest.TestCase):
         a, b = dsp.p56_level_db(x), dsp.p56_level_db(0.1 * x)
         self.assertAlmostEqual(a - b, 20.0, delta=0.05)
 
-    def test_p56_ignores_few_loud_samples(self):
-        """回归：曾取「最后一个满足 15.9 dB 余量的门限」，几个尖峰会把电平抬高 20 dB 以上。"""
-        x = np.concatenate([tone(3, 0.05), np.zeros(SR)])
-        x[SR] = 0.9
-        self.assertAlmostEqual(dsp.p56_level_db(x), dsp.db(0.05 / np.sqrt(2)), delta=1.0)
+    def test_p56_short_loud_burst(self):
+        """回归：曾取「最后一个满足 15.9 dB 余量的门限」，一段 50 ms 的响声会把电平抬高约 14 dB（旧版 −21.4，应为 −35.6）。
+        信号从头到尾都在响（安静段是连续正弦），所以活动电平应等于整段功率。"""
+        x = np.concatenate([tone(6, 0.01), tone(0.05, 0.3), tone(4, 0.01)])
+        self.assertAlmostEqual(dsp.p56_level_db(x), 10 * np.log10(np.mean(x**2)), delta=1.0)
 
 
 class Intervals(unittest.TestCase):
