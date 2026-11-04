@@ -1,0 +1,488 @@
+{
+  "$comment": "由 `cargo run -p vdn-schema` 从 src/eval/src/scene.rs 的 SceneClip 导出，勿手改",
+  "$defs": {
+    "ClipHash": {
+      "additionalProperties": false,
+      "properties": {
+        "samples": {
+          "$ref": "#/$defs/Tracks",
+          "description": "样本内容 sha256（float32 小端字节，016 S1）"
+        },
+        "wav_sha256": {
+          "$ref": "#/$defs/Tracks",
+          "description": "wav 文件 sha256，`vdn-eval` 逐条核对"
+        }
+      },
+      "required": [
+        "samples",
+        "wav_sha256"
+      ],
+      "type": "object"
+    },
+    "ClipPolarity": {
+      "description": "只留主说话人 / 近处几人都留（只有 `meeting-room`）。",
+      "enum": [
+        "suppress",
+        "preserve_all"
+      ],
+      "type": "string"
+    },
+    "DeviceKey": {
+      "description": "022 第一节的设备键。",
+      "enum": [
+        "mba-builtin",
+        "mbp-builtin",
+        "mac-intel-builtin",
+        "imac-builtin",
+        "studio-display",
+        "airpods-hfp",
+        "bt-hfp-generic",
+        "usb-headset",
+        "external-mic",
+        "iphone-continuity",
+        "mac-unknown",
+        "laptop-unknown",
+        "non-laptop",
+        "non-laptop-phone",
+        "non-laptop-tablet",
+        "non-laptop-desktop",
+        "non-laptop-conf-device",
+        "non-laptop-mic-array",
+        "non-laptop-close-talk",
+        "non-laptop-studio",
+        "non-laptop-unknown"
+      ],
+      "type": "string"
+    },
+    "Lang": {
+      "description": "ASR 分词用的语言。",
+      "enum": [
+        "en",
+        "zh"
+      ],
+      "type": "string"
+    },
+    "Measured": {
+      "additionalProperties": false,
+      "properties": {
+        "drr_db": {
+          "format": "double",
+          "type": "number"
+        },
+        "overlap_ratio": {
+          "format": "double",
+          "type": "number"
+        },
+        "sir_db": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "snr_db": {
+          "format": "double",
+          "type": "number"
+        },
+        "t60_s": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "snr_db",
+        "t60_s",
+        "drr_db",
+        "overlap_ratio"
+      ],
+      "type": "object"
+    },
+    "MicMode": {
+      "description": "022 第二节：系统处理模式。",
+      "enum": [
+        "standard",
+        "voice-isolation",
+        "wide-spectrum",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "Nominal": {
+      "additionalProperties": false,
+      "properties": {
+        "owner_dist_m": {
+          "format": "double",
+          "type": "number"
+        },
+        "owner_level_dbfs": {
+          "format": "double",
+          "type": "number"
+        },
+        "sir_db": {
+          "description": "无旁人时为 null",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "snr_db": {
+          "format": "double",
+          "type": "number"
+        },
+        "t60_s": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "snr_db",
+        "t60_s",
+        "owner_dist_m",
+        "owner_level_dbfs"
+      ],
+      "type": "object"
+    },
+    "SceneKey": {
+      "description": "021 主表的地点键（含兜底键 `other`，它不进成绩单）。",
+      "enum": [
+        "home-quiet",
+        "home-family",
+        "open-office",
+        "phone-booth",
+        "meeting-room",
+        "cowork",
+        "cafe",
+        "canteen",
+        "transit-hub",
+        "car-passenger",
+        "bus-metro-cabin",
+        "rail-air-cabin",
+        "street-outdoor",
+        "hotel-room",
+        "library-classroom",
+        "other"
+      ],
+      "type": "string"
+    },
+    "Sound": {
+      "additionalProperties": false,
+      "properties": {
+        "azimuth_deg": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cls": {
+          "description": "声音类别键（正本 scenesuite `sounds.json`）",
+          "type": "string"
+        },
+        "dist_m": {
+          "description": "扩散声（底噪、babble）为 null",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "group": {
+          "$ref": "#/$defs/SoundGroup"
+        },
+        "inst": {
+          "description": "段内唯一；同时是 `audio.stems` 的键",
+          "type": "string"
+        },
+        "is_speech": {
+          "type": "boolean"
+        },
+        "iv": {
+          "items": {
+            "items": {
+              "format": "uint64",
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "level_dbfs": {
+          "format": "double",
+          "type": "number"
+        },
+        "license": {
+          "type": "string"
+        },
+        "rel_db": {
+          "format": "double",
+          "type": "number"
+        },
+        "src": {
+          "additionalProperties": true,
+          "description": "素材出处（`kind` 加各自字段，形状由 scenesuite 定）",
+          "type": "object"
+        }
+      },
+      "required": [
+        "inst",
+        "cls",
+        "group",
+        "is_speech",
+        "iv",
+        "level_dbfs",
+        "rel_db",
+        "src",
+        "license"
+      ],
+      "type": "object"
+    },
+    "SoundGroup": {
+      "description": "声音分组：底噪 · 有规律 · 突发 · 旁人语音（含电视、广播）。",
+      "enum": [
+        "bed",
+        "pattern",
+        "event",
+        "speech"
+      ],
+      "type": "string"
+    },
+    "Target": {
+      "additionalProperties": false,
+      "properties": {
+        "azimuth_deg": {
+          "format": "double",
+          "type": "number"
+        },
+        "dist_m": {
+          "format": "double",
+          "type": "number"
+        },
+        "iv": {
+          "items": {
+            "items": {
+              "format": "uint64",
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "level_dbfs": {
+          "format": "double",
+          "type": "number"
+        },
+        "spk": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "spk",
+        "dist_m",
+        "azimuth_deg",
+        "level_dbfs",
+        "iv"
+      ],
+      "type": "object"
+    },
+    "Tier": {
+      "description": "档：常见档 / 压力档。",
+      "enum": [
+        "common",
+        "stress"
+      ],
+      "type": "string"
+    },
+    "Tracks": {
+      "additionalProperties": false,
+      "description": "每条轨一个值（路径或哈希），键与 `audio` 一致；`stems` 的键是声音实例 id。",
+      "properties": {
+        "floor": {
+          "type": "string"
+        },
+        "interf": {
+          "description": "全部旁人语音分轨之和（削波前）",
+          "type": "string"
+        },
+        "mix": {
+          "type": "string"
+        },
+        "noise": {
+          "description": "全部非语音分轨 + `floor` 之和（削波前）",
+          "type": "string"
+        },
+        "owner": {
+          "description": "混响 + 设备链之后的主说话人：**评测用的干净参考**",
+          "type": "string"
+        },
+        "owner_dry": {
+          "type": "string"
+        },
+        "stems": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "mix",
+        "owner",
+        "owner_dry",
+        "floor",
+        "noise",
+        "interf",
+        "stems"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "`clips.jsonl` 的一行。",
+  "properties": {
+    "additive": {
+      "description": "分轨相加是否等于 mix（削过波的段为假）",
+      "type": "boolean"
+    },
+    "audio": {
+      "$ref": "#/$defs/Tracks",
+      "description": "各轨相对主目录的路径"
+    },
+    "chain": {
+      "additionalProperties": true,
+      "description": "设备链各步实际抽到的参数（形状由 scenesuite 定）",
+      "type": "object"
+    },
+    "device": {
+      "$ref": "#/$defs/DeviceKey"
+    },
+    "dur_samples": {
+      "format": "uint64",
+      "maximum": 18446744073709551615,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "has_clean_ref": {
+      "type": "boolean"
+    },
+    "hash": {
+      "$ref": "#/$defs/ClipHash"
+    },
+    "id": {
+      "description": "build 内唯一，形如 `cafe-c03`",
+      "type": "string"
+    },
+    "interf_iv": {
+      "items": {
+        "items": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "maxItems": 2,
+        "minItems": 2,
+        "type": "array"
+      },
+      "type": "array"
+    },
+    "lang": {
+      "$ref": "#/$defs/Lang"
+    },
+    "measured": {
+      "$ref": "#/$defs/Measured"
+    },
+    "mic_mode": {
+      "$ref": "#/$defs/MicMode"
+    },
+    "nominal": {
+      "$ref": "#/$defs/Nominal"
+    },
+    "owner_iv": {
+      "items": {
+        "items": {
+          "format": "uint64",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "maxItems": 2,
+        "minItems": 2,
+        "type": "array"
+      },
+      "type": "array"
+    },
+    "pair": {
+      "description": "同一份素材另一设备版本的 id",
+      "type": "string"
+    },
+    "polarity": {
+      "$ref": "#/$defs/ClipPolarity"
+    },
+    "scene": {
+      "$ref": "#/$defs/SceneKey"
+    },
+    "seed": {
+      "format": "uint64",
+      "maximum": 18446744073709551615,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "sounds": {
+      "items": {
+        "$ref": "#/$defs/Sound"
+      },
+      "type": "array"
+    },
+    "sr": {
+      "format": "uint32",
+      "maximum": 4294967295,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "targets": {
+      "items": {
+        "$ref": "#/$defs/Target"
+      },
+      "type": "array"
+    },
+    "tier": {
+      "$ref": "#/$defs/Tier"
+    }
+  },
+  "required": [
+    "id",
+    "scene",
+    "tier",
+    "device",
+    "mic_mode",
+    "pair",
+    "lang",
+    "polarity",
+    "dur_samples",
+    "sr",
+    "audio",
+    "has_clean_ref",
+    "additive",
+    "targets",
+    "sounds",
+    "nominal",
+    "measured",
+    "owner_iv",
+    "interf_iv",
+    "chain",
+    "seed",
+    "hash"
+  ],
+  "title": "SceneClip",
+  "type": "object"
+}
