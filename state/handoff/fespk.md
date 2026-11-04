@@ -1,10 +1,10 @@
 # 现状页 · fespk（批次 20261104-b13）
 
-- **状态**：进行中——估算与方案对比已写完；实测等名额
+- **状态**：实测已完成、过线；等第 4 轮 codex 后报收尾
 - **手上**：exp015（#95）认人能不能吃共享频谱 · 认人每次 6 ms 花在哪
 - **管的实体**：认人前端（fbank）· 声纹模型（只评）· 认人判断回路
 - **交代**：主目录 `_tmp/20261104-b13/fespk.md`
-- **下一步**：名额放开 → 申请名额 → 编译 + 跑 bench-split 单元测试 → `bench-split` 实测 c01 / c06 → 填 README 实测表 → 结论若变再审一轮 → 报「可以收尾」
+- **下一步**：数字变了，再审一轮 codex → 报「可以收尾」
 
 ## 做了什么（按时间）
 
@@ -14,12 +14,16 @@
 - 加计时命令 `vdn-speaker-lab bench-split`（`src/speaker-lab/src/bench.rs` + 4 条单元测试）；尚未编译（名额未放开）
 - 写 `docs/experiments/exp015-speaker-shared-spectrum/README.md`：耗时估算表 · 三方案对比 · 要省 8 倍的办法
 - codex 换谱系评审 3 轮（P1×1、P2×7，全部属实、全部已改），第 2、3 轮无 P0/P1，已达停止线：`docs/reviews/exp015-speaker-shared-spectrum-codex.md`。索引 `docs/reviews/README.md` 不在我的可写范围，请大总管加一行
+- 名额（大总管给）：`cargo build --release -p vdn-speaker-lab` 过；`cargo test -p vdn-speaker-lab` 11 条全过（bench 5 条）；`bench-split` c01、c06 各 158 窗 × 6 遍，插电 + caffeinate。算频谱占一次声纹计算 5.19% / 5.22%，< 10%，过线。名额已归还
+- 发现：一次声纹计算实测约 3.05 ms，只有 exp005 记的 6 ms 的一半；原因待查，按大总管要求不在本线查，记入转交
 - 大总管授权：主目录 `_tmp/20261031-exp005/out-r2/` 只读（实测素材用 `c01.wet.wav`、`c06.wet.wav`）；`docs/reviews/README.md` 追加了一行索引（015）
 - bench.rs 按评审改：真实窗预热、按「遍 + 窗」交替顺序、有符号差值、两次余弦、默认 6 遍
 
 ## 改了哪些文件
 
-- 新增 `src/speaker-lab/src/bench.rs`（237 行，6 条单元测试）
+- 新增 `src/speaker-lab/src/bench.rs`（237 行，5 条单元测试）
+- 新增 `docs/experiments/exp015-speaker-shared-spectrum/results/bench-split.{c01,c06}.json`
+- 追加 `docs/reviews/README.md` 一行（大总管授权）
 - 新增 `docs/reviews/exp015-speaker-shared-spectrum-codex.md`
 - 改 `src/speaker-lab/src/main.rs`（注册子命令）· `src/speaker-lab/README.md`（用法一行 + 一段说明）
 - 新增 `docs/experiments/exp015-speaker-shared-spectrum/README.md`
@@ -28,7 +32,7 @@
 
 ## 待人拍板
 
-背景：认人现在说话时约占一个核的 1.2%，目标 0.15%，差约 8 倍。共用频谱估计只能省几个百分点（待实测；大总管已定不做）。三项合用的估算见 exp015 README 第 3 节：量化快 2.5 倍时约省 7 倍，不量化约省 3 倍。要省更多，只能动下面这些。下面「省多少」都是按「耗时与每秒处理的帧数成正比」推断，没实测。
+背景：认人说话时约占一个核的 0.6%（本次实测；exp005 的旧数是 1.2%），目标 0.15%，差约 4 倍。共用频谱实测最多省约 5%（大总管已定不做）。三项合用的估算见 exp015 README 第 3 节：1 s 判一次 + 1.0 s 窗，不量化约 0.21% 个核；再加量化快 2.5 倍约 0.09%，到线。要省更多，只能动下面这些。下面「省多少」都是按「耗时与每秒处理的帧数成正比」推断，没实测。
 
 1. **认人多久判一次？** 现在 0.5 s 一次。
    - 选项：保持 0.5 s · 改 1 s（省一半）· 同一人一直说时 2 s 一次、有人起头再恢复 0.5 s（省 1.5–4 倍，看说话方式）
@@ -48,4 +52,4 @@
 ## 转交
 
 - 判据阈值「fbank 占 embed 的 p50 比例 < 10% → 共用频谱不值得做」：大总管已定（2026-11-04）
-- 名额顺序：放开后先给 fecore，再给我，大总管单独通知
+- 待查（转交大总管）：一次声纹计算本次实测约 3.05 ms，exp005 判断回路记的是 5.9–6.1 ms，差约 2 倍，原因未查（推断：测法、负载或版本不同）。它决定认人现在占 0.6% 还是 1.2% 个核，进而决定待人拍板第 1–3 题要省几倍。建议另开一件小事，在 exp005 的 `run` 流程里同条件重测一次
