@@ -197,9 +197,9 @@ fn lines() -> Vec<String> {
         // 4. 全部 verifier
         assert_weak_scored(&score(&mut vf, c, None));
     }
-    // 5. 边界：别的采样率（8192 → 窗长 1024 恰为 2 的幂；22050 → 2756 补零到 4096）· 短于窗长 · 帧端点 · 空输入
+    // 5. 边界：别的采样率（16384 → 窗长 2048 恰为 2 的幂；22050 → 2756 补零到 4096）· 短于窗长 · 帧端点 · 空输入
     let speech: &[&str] = &["V-WEAK", "V-ESTOI"];
-    for sr in [8192, 22_050] {
+    for sr in [16_384, 22_050] {
         let c = Clip {
             sr,
             ..clips[0].clone()
