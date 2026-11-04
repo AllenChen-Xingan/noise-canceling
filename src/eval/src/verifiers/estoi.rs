@@ -260,7 +260,7 @@ mod tests {
         (0..n)
             .map(|i| {
                 let t = i as f64 / sr as f64;
-                let on = ((t * 3.0) as usize) % 2 == 0;
+                let on = ((t * 3.0) as usize).is_multiple_of(2);
                 let v = (2.0 * std::f64::consts::PI * 440.0 * t).sin() * 0.3
                     + (2.0 * std::f64::consts::PI * 1300.0 * t).sin() * 0.1
                     + 0.01 * r.normal();

@@ -57,13 +57,19 @@ fn scene_group_table_matches_code() {
     let mut doc_map = BTreeMap::new();
     for l in sec.lines().filter(|l| l.starts_with("| `")) {
         let c = cells(l);
-        doc_map.insert(c[0].trim_matches('`').to_string(), c[2].trim_matches('`').to_string());
+        doc_map.insert(
+            c[0].trim_matches('`').to_string(),
+            c[2].trim_matches('`').to_string(),
+        );
     }
     let code: BTreeMap<String, String> = SceneKey::ALL
         .iter()
         .filter_map(|s| group_of(*s).map(|g| (s.as_str(), g.as_str().to_string())))
         .collect();
-    assert_eq!(doc_map, code, "scorecard.md 第一节与 standard::group_of 不一致");
+    assert_eq!(
+        doc_map, code,
+        "scorecard.md 第一节与 standard::group_of 不一致"
+    );
 }
 
 /// 代码实际用的过关线。
@@ -107,14 +113,20 @@ fn item_table_matches_code() {
     assert_eq!(doc_ids, code_ids, "第三节的项与代码不一致");
     for r in &rows {
         let (v, used, line) = (r[0].as_str(), r[2].as_str(), r[3].as_str());
-        assert_eq!(used.contains("否决"), VETO.iter().any(|i| i.v == v), "{v} 的「否决」");
-        assert_eq!(used.contains("共同"), COMMON.iter().any(|i| i.v == v), "{v} 的「共同」");
+        assert_eq!(
+            used.contains("否决"),
+            VETO.iter().any(|i| i.v == v),
+            "{v} 的「否决」"
+        );
+        assert_eq!(
+            used.contains("共同"),
+            COMMON.iter().any(|i| i.v == v),
+            "{v} 的「共同」"
+        );
         for g in Group::ALL {
             let in_code = g.extra().iter().any(|i| i.v == v);
             // 「quiet」等类名按词出现；meeting-room 含连字符，单独按全名找
-            let in_doc = used
-                .split(['·', ' '])
-                .any(|w| w.trim() == g.as_str());
+            let in_doc = used.split(['·', ' ']).any(|w| w.trim() == g.as_str());
             assert_eq!(in_doc, in_code, "{v} 的「用在」与 {} 类不一致", g.as_str());
         }
         let want = effective(v).unwrap_or_else(|| panic!("{v} 在代码里查不到过关线"));
@@ -130,6 +142,12 @@ fn item_table_matches_code() {
 fn split_line_in_doc_matches_code() {
     let t = doc();
     let want = vdn_eval::thresholds::NRMOS_SPLIT.def("max");
-    assert!(t.contains(&format!("Δ 相差 ≥ {want}")), "第四节的分歧线与代码 {want} 不一致");
-    assert!(t.contains(&format!("分歧线 {want}")), "第三节脚注的分歧线与代码 {want} 不一致");
+    assert!(
+        t.contains(&format!("Δ 相差 ≥ {want}")),
+        "第四节的分歧线与代码 {want} 不一致"
+    );
+    assert!(
+        t.contains(&format!("分歧线 {want}")),
+        "第三节脚注的分歧线与代码 {want} 不一致"
+    );
 }

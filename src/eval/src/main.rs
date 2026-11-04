@@ -445,7 +445,7 @@ fn main() -> ExitCode {
             Ok(true)
         }
         _ => {
-            eprintln!("用法：vdn-eval <ci | qa | calib | list> [选项]（见源码头注释）");
+            eprintln!("用法：vdn-eval <ci | qa | calib | scorecard | list> [选项]（见源码头注释）");
             return ExitCode::FAILURE;
         }
     };

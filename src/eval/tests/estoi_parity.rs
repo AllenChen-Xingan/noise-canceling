@@ -21,7 +21,7 @@ fn clean(n: usize) -> Vec<f64> {
     (0..n)
         .map(|i| {
             let t = i as f64 / SR as f64;
-            let on = if ((t * 2.5) as usize) % 2 == 0 {
+            let on = if ((t * 2.5) as usize).is_multiple_of(2) {
                 1.0
             } else {
                 0.0

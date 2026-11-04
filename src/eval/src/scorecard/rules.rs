@@ -230,10 +230,11 @@ fn drags(items: &[ItemCell], rows: &[&ClipRow]) -> Vec<Drag> {
                 }
             };
             let (mw, mo) = (m(&w), m(&wo));
-            let gap = (w.len() >= MIN_SPLIT && wo.len() >= MIN_SPLIT).then(|| match better {
+            let d = match better {
                 Better::Lower => mw - mo,
                 Better::Higher => mo - mw,
-            });
+            };
+            let gap = (w.len() >= MIN_SPLIT && wo.len() >= MIN_SPLIT).then_some(d);
             per.push(Drag {
                 v: it.v,
                 cls: cls.clone(),
