@@ -3,14 +3,14 @@
 - **状态**：进行中
 - **手上**：exp013 场景测试集：15 个地点的混合声音片段 + Mac 内置麦模拟 + 逐段声音标注
 - **交代**：主目录 `_tmp/20261103-b11/scenesuite.md`
-- **做到哪**（2026-11-03）：方案草稿与片段清单格式已写，等大总管说「可以」；格式已发 scorecard 对齐
+- **做到哪**（2026-11-03）：方案草稿与片段清单格式已写，等大总管说「可以」；清单格式已与 scorecard 对齐到 v1（正本在 Rust schema，待 scorecard 导出）
 - **下一步**：收到「可以」后先写设备链模块与参数文件（带测试），再写生成器
 
 ## 改了哪些文件
 | 文件 | 改了什么 |
 |---|---|
 | `docs/experiments/exp013-scene-suite/README.md` | 方案草稿 |
-| `docs/experiments/exp013-scene-suite/clip-manifest.md` | 片段清单格式草稿 v0 |
+| `docs/experiments/exp013-scene-suite/clip-manifest.md` | 片段清单格式 v1（已与 scorecard 对齐）|
 
 ## 发现
 - 本机可用的英文说话人只有 20 人（LibriSpeech test-clean 奇数位），另一半被 exp006 训练用过
@@ -28,3 +28,4 @@
 ## 流水
 - 读交代、共同规矩、手下协议 → 报到
 - 读 021 catalog / coverage、022 simulation / devices、016 synth-standard、exp006 sim / recipes、exp008 cells、vdn-eval suite → 写方案草稿与清单格式
+- scorecard 回复清单 v0：正本放 Rust schema，加 audio.noise / interf、逐轨 wav_sha256 → 改到 v1 并回 scorecard
