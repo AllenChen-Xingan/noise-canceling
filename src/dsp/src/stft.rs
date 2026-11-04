@@ -108,10 +108,32 @@ impl StreamingStft {
         }
     }
 
+    /// 推进 `min(x.len(), hop)` 个样本（不足一个 hop 时只移这么多、不补零；多的丢掉；空输入不动缓冲）。
+    /// 给输入长度不由自己定的吃谱方（场景特征）保留改前的移位语义；整 hop 时与 [`Self::feed`] 逐位相同。
+    pub fn feed_partial(&mut self, x: &[f32]) {
+        let h = self.hop.min(x.len());
+        self.input.copy_within(h.., 0);
+        let tail = self.n_fft - h;
+        for (d, &s) in self.input.iter_mut().skip(tail).zip(x) {
+            *d = s;
+        }
+    }
+
+    /// 同 [`Self::analyze`]，但按 [`Self::feed_partial`] 推进缓冲。
+    pub fn analyze_partial(&mut self, x: &[f32]) -> &mut [Complex32] {
+        self.feed_partial(x);
+        self.transform()
+    }
+
     /// 喂一个 hop 的新样本，返回这一帧的频谱（可原地改写，再调 [`Self::synthesize`]）。
     /// `hop_in.len()` 同 [`Self::feed`]。
     pub fn analyze(&mut self, hop_in: &[f32]) -> &mut [Complex32] {
         self.feed(hop_in);
+        self.transform()
+    }
+
+    /// 对当前输入缓冲加窗、做一次正向 FFT（计数 +1）。
+    fn transform(&mut self) -> &mut [Complex32] {
         self.forward += 1;
         for ((t, x), w) in self.time.iter_mut().zip(&self.input).zip(&self.win) {
             *t = x * w;
