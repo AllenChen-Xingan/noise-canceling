@@ -1,0 +1,65 @@
+# 覆盖表：开会地点 × 录音设备 → 有哪些真实录音
+
+> 2026-11-03 · 手下 mtgdata · issue #82。用途：查某个「地点 × 设备」格子里，公开真实录音有没有、够不够、能不能用。
+> 键：场景键来自 021 `catalog.md` v1，设备键来自 022 `devices.md` v0（都抄在 `card-template.md`）。`other` 不是开会场景，不进本表。
+> 每格写：数据集 · 量 · 参考 / 转写 · 许可结论。细节见 `cards/<名>.md`（023 新卡）或 `../014_real-datasets/cards/<名>.md` + `cards-014-addendum.md`（014 已有）。
+> 🟥 = 公开集里没找到。「回放」= 用音箱放干净语音再录，不是真人在场说话。来源：全部出自卡片，卡上逐条带【官方文档 / 论文 / 实测 / 推断】标签；本表不另加结论。
+
+## 零、一句话
+**没有一个格子同时满足「Mac 内置麦 + 真人在场 + 有转写 + 许可可训练」**。Mac 内置麦只有两处：DR-VCTK（回放，办公室）和 DNS 2021 盲测里众包者自填 mac 的约 31 条（家里 / 办公混杂，没核实是不是内置麦）。真人在场的录音集中在会议室、家里、车内、餐厅，但设备是研究麦阵或会议终端。
+
+## 一、主表
+
+列：**Mac** = `mba-builtin` / `mbp-builtin` / `mac-intel-builtin` / `mac-unknown` · **其他笔记本** = `laptop-unknown` · **台式** = `desktop` · **手机平板** = `phone` / `tablet` · **麦阵终端** = `mic-array` / `conf-device` · **近讲参考** = `close-talk`（可当干净参考的那一路）
+
+| 场景键 | Mac | 其他笔记本 | 台式 | 手机平板 | 麦阵终端 | 近讲参考 |
+|---|---|---|---|---|---|---|
+| `meeting-room` | 🟥 | ACE Chromebook 档（回放 + 现场 babble，1.1 GB，只评测：CC BY 与 CC BY-ND 冲突）· DNS1 dev SurfaceBook 44 条（未查到许可） | 🟥 | DAPS confroom（iPad / iPhone 回放，有参考，CC BY-NC → 只评测）· DDS（iPad 回放，有参考，只评测） | NOTSOFAR-1（会议约 31.5 h，转写，CC BY → 训练可）· AMI（约 100 h，训练可）· ICSI（约 72 h，训练可）· AliMeeting（118.75 h，CC BY-SA → 只评测）· AISHELL-4（120 h，只评测）· MISP-Meeting（125 h，讯飞办公本内置 8 麦，非商用 → 只评测）· ConferencingSpeech 2021（>200 条，需注册） | AMI · ICSI · AliMeeting · NOTSOFAR（仅 train / dev）· MISP-Meeting |
+| `open-office` | DR-VCTK MacBook Air（回放，有参考，CC BY → 训练可，End-user Licence 待核；年份未知） | ACE Chromebook（办公室档）· DNS 2021 盲测文件名带 laptop 约 330 条（地点与家混，许可未查到）· MS AEC 真实录音（Windows PC，无逐条标签） | DNS4 盲测 `desktop` 221 条（台式与笔记本分不开，地点只按噪声字段） | DAPS office · DR-VCTK iPhone / iPad（回放） | 🟥（ARTE、DEMAND OOFFICE、TUT 2017 office 只有背景，无主说话人） | 🟥 |
+| `home-family` | DNS 2021 两届盲测自填 mac 约 31 条（与 open-office 混，未核实） | DNS 2021 盲测 laptop 段（同上）· Speech Commands v2（单词 1 s，CC BY → 训练可） | DNS5 dev（笔记本或台式，无逐条区分） | AISHELL-DMASH（手机 / 平板 + 近讲同步，签协议）· MagicData-RAMC（见 home-quiet） | CHiME-5/6（约 50 h，晚餐聚会，禁背景电视，CC BY-SA → 只评测）· DiPCo（5.3 h，CDLA → 训练可）· MISP2021（中文电视房，许可未查到）· VoiceHome-2（法语，只评测） | CHiME-6 双耳 · DiPCo · MISP2021 · DMASH |
+| `home-quiet` | 🟥 | 🟥 | 🟥 | MagicData-RAMC（手机两人对话 180 h，标笑声，只评测）· AISHELL-2（iOS 1000 h 朗读，只评测）· DAPS livingroom（回放） | VOiCES（回放重录，CC BY → 训练可） | 🟥 |
+| `phone-booth` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
+| `cowork` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
+| `cafe` | 🟥 | 🟥（DNS5 盲测标咖啡馆 4 条，无设备） | 🟥 | CHiME-3/4 CAF（平板，真人朗读，LDC 付费 → 不可）· NISQA-LIVETALK（手机，德语通话，有人评分，只评测） | ARTE · DEMAND SCAFE · QUT CAFE（只有背景） | CHiME-3/4 ch0（LDC） |
+| `canteen` | 🟥 | 🟥 | 🟥 | 🟥（ASPIRE 的 iPad 只录像，声音来自领夹） | EasyCom（AR 眼镜，真人对话 + 回放餐厅噪声，CC BY-NC → 只评测）· CHiME-9 ECHI（签协议）· DEMAND PCAFETER / PRESTO（只有背景） | ASPIRE 领夹（在食堂里，不干净，非商用）· EasyCom 头戴 · ECHI |
+| `transit-hub` | 🟥 | 🟥 | △ DNS5 盲测机场 25 条（`ap_desktop` / `ap_mobile` 混，未逐条核） | TAU 2020 Mobile 机场 / 地铁站（手机，只有背景，非商用）· NISQA-LIVETALK | ARTE 火车站 · DEMAND PSTATION（只有背景） | 🟥 |
+| `bus-metro-cabin` | 🟥 | 🟥 | 🟥 | CHiME-3/4 BUS（平板，真人朗读，LDC → 不可）· TAU 公交 / 电车 / 地铁车厢（只有背景） | DEMAND TBUS / TMETRO（只有背景） | CHiME-3/4 ch0（LDC） |
+| `car-passenger` | 🟥 | 🟥 | 🟥 | NISQA-LIVETALK 车内（手机） | AISHELL-5（中文车内 2–4 人对话 100+ h，门把麦，只评测）· AVICAR（英语朗读，需申请）· QUT CAR · DEMAND TCAR（只有背景） | AISHELL-5（仅 train） |
+| `rail-air-cabin` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
+| `street-outdoor` | 🟥 | 🟥 | 🟥 | CHiME-3/4 PED / STR（平板，LDC → 不可）· TAU 街道（只有背景）· NISQA-LIVETALK | QUT STREET · DEMAND STRAFFIC（只有背景） | CHiME-3/4 ch0（LDC） |
+| `hotel-room` | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 | 🟥 |
+| `library-classroom` | 🟥 | 🟥 | 🟥 | 🟥 | ACE 报告厅（回放） | ASCEND（安静教室，领夹，中英夹杂对话，CC BY-SA → 只评测） |
+
+**无地点标签、但设备有用的**（进不了上表的行）：3D-Speaker（笔记本 9.6 万条训练集，普通话，型号未写，音频许可未查到）· MOBIO（2008 款 MacBook，`mac-intel-builtin`，签 EULA）· SIG / SSI 挑战 2023–2024 真实集（PC 与手机各 500 条，部分有转写，许可未查到）· Common Voice（网页众包，必含笔记本麦但无设备字段）· URGENT 2024–2026 盲测真实段（无设备、无地点）。
+
+## 二、空格子怎么补
+
+| 空格 | 公开集里有什么可借 | 怎么补 |
+|---|---|---|
+| 所有地点 × Mac | 只有 DR-VCTK（回放）和约 31 条自填 mac | 回放重录（见第三节）或自录 |
+| `cafe` / `canteen` × 笔记本 | 背景噪声齐（QUT、DEMAND、ARTE）；真人在场的只有平板、眼镜、领夹 | 合成：干净语音过 Mac 设备链（022 的模拟）+ 真实背景；真实锚只能自录 |
+| `home-family` × 「一人开会、家人在旁」 | MISP2021 是多人闲聊，不是一人开会 | 合成（QUT HOME / CHiME-Home 背景 + 干净语音）；或自录 |
+| `open-office` · `transit-hub` · `street-outdoor` × 主说话人 | 只有背景 | **只能自录**，见第三节 |
+| `phone-booth` · `cowork` · `rail-air-cabin` · `hotel-room` | 什么都没找到（本轮未专门查） | 先合成；要真实锚只能自录。下一轮可补查 |
+| 中文 × 笔记本 | 3D-Speaker 有设备标签但无地点、许可未查到 | 核清 3D-Speaker 音频许可后可做中文笔记本锚 |
+
+## 三、只能自录的格子（开放办公 · 机场车站 · 街边）
+
+> 这一节是**步骤草案**，不是已定的事。按 D62，开发阶段不做作者实录；要不要录、何时录，写在 `decision.md` 待人拍板。我（mtgdata）不录音、不放声。
+
+**每个格子要录什么**【推断：按 016 第三节真实锚层的用途倒推】：
+1. 说话人坐在 MacBook Air 前，正常开会距离（约 40–60 cm），念一段固定稿子（约 3 min）+ 自由说话（约 3 min）
+2. **同时**录一路近讲参考：领夹麦接手机，或头戴耳机麦。开头拍一下手，用来对齐两路
+3. 原地不说话，录 2 min 纯背景
+4. 记下：时间、位置、Mac 型号、系统麦克风模式（标准 / 语音突显 / 宽频谱）、近讲设备型号
+
+**要多久**【推断：依据上面每格约 8 min 录音 × 3 遍取稳】：
+- 每个地点录 3 次（不同时段），每次约 10 min，现场约 30 min；加路程，每个地点约 1–1.5 h
+- 三个地点合计约 3–4.5 h（人的时间）；产出约 24 min 有效语音 / 地点
+
+**难点**：
+- 公共场所会录到旁人声音：只存本机、不入库、不外发（铁律 13）
+- 机场、车站可能不允许录音：先确认场所规定
+- 近讲那一路在嘈杂处也不是完全干净，只能当「较干净参考」，算全参考指标时要注明
+
+**替代：回放重录**（不出门，约 2 h）：安静房间里，一只音箱放干净语音（离 Mac 约 50 cm），另一只放 TAU / DEMAND / QUT 的真实背景，用 Mac 内置麦录。得到「真实设备链 + 已知干净参考」，但声场是回放的，不是真人在场。⚠️ 这一步要外放声音，需要人在场安排时间。
