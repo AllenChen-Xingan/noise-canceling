@@ -14,7 +14,7 @@
 
 use vdn_dsp::{FrameFft, power_into};
 pub use vdn_types::Window;
-use vdn_types::{StftSpec, Window as W};
+use vdn_types::StftSpec;
 
 #[derive(Clone, Copy, Debug)]
 pub struct FbankConfig {
@@ -54,7 +54,7 @@ impl FbankConfig {
             low_freq: 20.0,
             high_freq: 0.0,
             preemph: 0.97,
-            window: W::KaldiHamming,
+            window: Window::KaldiHamming,
             input_scale: 32768.0,
         }
     }
