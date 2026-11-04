@@ -2,7 +2,7 @@
 
 用法（compose.py 调）：
     ch = Chain(rng, "mba-builtin", tier)          # 每段抽一次链参数，ch.params 进清单
-    h, off = ch.source_rir(rir, rng)              # 第 1–2 步：有方向的源（直达部分按方位衰减）
+    h, off, att = ch.source_rir(rir, rng)         # 第 1–2 步：有方向的源（直达部分按方位衰减）
     y = ch.diffuse(x)                             # 第 2 步：扩散声（底噪、babble）只做扩散场衰减
     y = ch.response(y)                            # 第 3 步：频响 FIR（每条轨都过，线性）
     fl = ch.floor(n, owner_level_db, rng)         # 第 4 步：处理后底噪（单独一轨）
@@ -144,7 +144,7 @@ class Chain:
     def source_rir(self, rir, rng):
         """有方向的源：直达部分按方位衰减，其余按扩散场近似（混响压力分支则不衰减）。返回 (h, PAD)。"""
         if 2 not in self.steps:
-            return np.concatenate([np.zeros(PAD), rir.full, np.zeros(PAD)]), PAD
+            return np.concatenate([np.zeros(PAD), rir.full, np.zeros(PAD)]), PAD, {}
         att = azimuth_atten(rng, rir.azimuth_deg, self.params["strength"])
         hd = zero_phase(rir.direct, lambda f: band_gain(f, att["low"], att["mid"], att["high"]))
         hr = rir.rest if self.params["reverb_stress"] else None
