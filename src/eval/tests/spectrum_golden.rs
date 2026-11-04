@@ -89,17 +89,18 @@ fn ref_spec() -> SystemSpec {
     }
 }
 
-/// 截短到 `n` 个样本（真值区间一起截）。
-fn truncate(c: &Clip, n: usize) -> Clip {
+/// 从 `start` 起截 `n` 个样本（真值区间一起平移、截断）。
+fn excerpt(c: &Clip, start: usize, n: usize) -> Clip {
+    let end = (start + n).min(c.len());
     let cut = |v: &[(usize, usize)]| -> Vec<(usize, usize)> {
         v.iter()
-            .map(|&(a, b)| (a.min(n), b.min(n)))
+            .map(|&(a, b)| (a.clamp(start, end) - start, b.clamp(start, end) - start))
             .filter(|(a, b)| a < b)
             .collect()
     };
     let mut d = c.clone();
     for x in [&mut d.clean, &mut d.interf, &mut d.noise, &mut d.mix] {
-        x.truncate(n);
+        *x = x[start..end].to_vec();
     }
     d.truth.owner = cut(&c.truth.owner);
     d.truth.interf = cut(&c.truth.interf);
@@ -206,21 +207,31 @@ fn lines() -> Vec<String> {
         };
         assert_weak_scored(&score(&mut eg, &c, Some(speech)));
     }
+    // 截取从主讲人第一次开口处开始（不是开头的静音），帧端点与短于窗长的情形才真走到分帧
+    let s0 = clips[0].truth.owner.first().expect("有主讲人").0;
     for n in [0, 1999, 2000, 2001, 3000, 4000] {
-        score(&mut eg, &truncate(&clips[0], n), Some(speech));
+        score(&mut eg, &excerpt(&clips[0], s0, n), Some(speech));
     }
-    for n in [0, 100, 255, 256, 257, 383, 384, 511, 512, 513, 3000] {
-        let x = &clips[0].mix[..n];
+    for n in [0, 100, 255, 256, 257, 383, 384, 511, 512, 513, 3000, 6000] {
+        let c = excerpt(&clips[0], s0, n);
         for (n_fft, hop) in [(512, 256), (256, 128)] {
-            let s = Spectrogram::new(x, n_fft, hop);
+            let s = Spectrogram::new(&c.mix, n_fft, hop);
             eg.text(&s.frames.len().to_string());
             s.frames.iter().for_each(|f| eg.f32s(f));
         }
-        let y = &clips[0].clean[..n];
         for sr in [MODEL_RATE, estoi::FS as u32] {
-            eg.f64(estoi(y, x, sr).unwrap_or(f64::NAN));
+            eg.f64(estoi(&c.clean, &c.mix, sr).unwrap_or(f64::NAN));
         }
     }
+    // ESTOI 去静音后刚够 / 刚不够 30 帧附近（10 kHz 下 30 帧 ≈ 3968 个样本），必须有出分的
+    let mut scored = 0;
+    for n in [5000, 6000, 6500, 7000, 8000] {
+        let c = excerpt(&clips[0], s0, n);
+        let v = estoi(&c.clean, &c.mix, estoi::FS as u32);
+        scored += usize::from(v.is_some());
+        eg.f64(v.unwrap_or(f64::NAN));
+    }
+    assert!(scored > 0, "ESTOI 短片段一个都没出分，边界没测到");
     vec![
         sg.line("spectrogram"),
         es.line("estoi"),
