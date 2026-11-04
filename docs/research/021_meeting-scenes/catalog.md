@@ -38,6 +38,6 @@
 
 常见声音 · 声级范围（出处）· T60（出处）· 旁人说话（有无 / SIR）· 突发声音 · 难点 · 现有评测任务覆盖（ci.json / qa.json / exp008）· 估计用户占比（出处或「未查到」）· 公开真实集（与 023 数据卡对齐）。
 
-设备键见 macmic 的 `docs/research/022_mac-mic/devices.md`（12 个键；语音突显开关另起字段 `mic_mode`，不进场景键或设备键）。
+设备键见 macmic 的 `docs/research/022_mac-mic/devices.md`（v1：原 12 个键 + `mac-unknown` + `non-laptop` 下 8 个子键；语音突显开关另起字段 `mic_mode`，不进场景键或设备键）。
 
 已知线索（mtgdata 转来，未核）：`home-family` 有 MISP2021（真实电视房聊天）；中文办公会议有 MISP-Meeting；`open-office`、`transit-hub`、`street-outdoor` 暂未查到带主说话人的公开真实集。
