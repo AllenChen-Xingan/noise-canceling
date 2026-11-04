@@ -93,7 +93,7 @@
 
 # 三、报告漏掉、但对 14 个开会地点的评测覆盖重要的来源（10 条）
 
-本次会话已经下载到本机的 PDF，路径都在 `/Users/allenchen/.claude/projects/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-scenes/d30acd32-697d-4346-9811-adea3e1dbdee/tool-results/` 下。
+本次会话已经下载到本机的 PDF，路径都在 「本会话 WebFetch 缓存（不入库）」 下。
 
 1. **ETSI ES 202 396-1**（V1.7.1 和 V1.10.2）**和 ETSI TS 103 224**：标准里的背景噪声库，录了咖啡馆、车站、车内、街道、办公室等真实场景，并给出声级。它们可以直接当 14 个场景的标准化参照，第 4 路一条都没引。已下载：`webfetch-1793764748617-sprrzl.pdf`、`webfetch-1793764760045-h4vynf.pdf`、`webfetch-1793764789850-yprksx.pdf`。
 2. **3GPP TS 26.131 / 26.132**：终端声学测试规范里的背景噪声条件和声级。已下载：`webfetch-1793764860696-11u34s.pdf`、`webfetch-1793764821396-pohqed.pdf`。

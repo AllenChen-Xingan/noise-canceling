@@ -222,4 +222,4 @@
 - 不对应任何开会地点的录音：Bathroom、Shopping_Center、Sports、Machine_Shop、SalesCounter、Light_Aircraft、Orchestra、Pinknoise。
 - Inside_Bus 在 14 键里没有对应，在 v1 目录（`docs/research/021_meeting-scenes/catalog.md`）里对应 `bus-metro-cabin`。
 
-**怎么核对**：ETSI 和 3GPP 的数字是我用 `pdftotext` 从官方 PDF 逐表抽出来的，读到终端里，没有写任何文件。PDF 由 WebFetch 自动缓存在本会话的 `/Users/allenchen/.claude/projects/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-scenes/d30acd32-697d-4346-9811-adea3e1dbdee/tool-results/` 目录下。
+**怎么核对**：ETSI 和 3GPP 的数字是我用 `pdftotext` 从官方 PDF 逐表抽出来的，读到终端里，没有写任何文件。PDF 由 WebFetch 自动缓存在本会话的 「本会话 WebFetch 缓存（不入库）」 目录下。

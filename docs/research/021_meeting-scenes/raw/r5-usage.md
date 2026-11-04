@@ -176,4 +176,4 @@
 - Jabra Hybrid Ways of Working 2022 全文（第三场所用的是倍数比较，没给绝对数）
 - 意大利研究 Figure 2 的分项数值
 
-我用 `Read` 读了三份下载到本机的 PDF（Webex、Plantronics、arXiv），存在 `/Users/allenchen/.claude/projects/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-scenes/d30acd32-697d-4346-9811-adea3e1dbdee/tool-results/`。本次没有写或改仓库里的任何文件。
+我用 `Read` 读了三份下载到本机的 PDF（Webex、Plantronics、arXiv），存在 「本会话 WebFetch 缓存（不入库）」。本次没有写或改仓库里的任何文件。

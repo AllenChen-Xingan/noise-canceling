@@ -12,7 +12,7 @@
 ---
 
 ## 一、核对方法
-- 【实测】标准和论文：我用 `pdftotext` 读本会话缓存的官方 PDF，逐行比对，没有写任何文件。缓存目录：`/Users/allenchen/.claude/projects/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-scenes/d30acd32-697d-4346-9811-adea3e1dbdee/tool-results/`。
+- 【实测】标准和论文：我用 `pdftotext` 读本会话缓存的官方 PDF，逐行比对，没有写任何文件。缓存目录：「本会话 WebFetch 缓存（不入库）」。
 - 【实测】网页：用 WebFetch 现场打开。下文「核对」标「✓」的是我亲眼看到原文的；标「未核」的是我也没打开原文的。
 
 ---
