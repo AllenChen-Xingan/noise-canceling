@@ -1,7 +1,7 @@
 # 评审 023 · 开会场景真实录音数据集调研的结论层与卡片检查脚本（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/023_meeting-datasets/` 的 `decision.md` · `matrix.md` · `pick.md` · `sources.md` · `card-template.md` · `check_cards.py` · `test_check_cards.py`；依据：44 张新卡、`cards-014-addendum.md`、014 卡片索引、交代文件。**最新一轮：第 1 轮（2026-11-03）· 总评「修改」· 待第 2 轮**。
-> 累计处理：P1×7、P2×3 逐条回卡片核实，属实 10、驳回 0。新出的要人定的事：无（已有 4 题见 `decision.md` 第四节）。
+> 对象：`docs/research/023_meeting-datasets/` 的 `decision.md` · `matrix.md` · `pick.md` · `sources.md` · `card-template.md` · `check_cards.py` · `test_check_cards.py`；依据：44 张新卡、`cards-014-addendum.md`、014 卡片索引、交代文件。**最新一轮：第 2 轮（2026-11-03）· 总评「修改」· 待第 3 轮**。
+> 累计处理：P1×9、P2×7 逐条回卡片 / 决策正本核实，属实 16、驳回 0。新出的要人定的事：无（已有 4 题见 `decision.md` 第四节）。
 
 ## 第 1 轮（2026-11-03）· 总评「修改」
 
@@ -48,3 +48,38 @@
 ### 是否再审
 
 本轮有 P1 → 改完开第 2 轮，带本记录。另外，评审期间 `check_cards.py` 按大总管要求改了取正本的方式（只认本仓库路径 + `VDN_KEYS_DIR` + `--research`），第 2 轮一并审。
+
+## 第 2 轮（2026-11-03）· 总评「修改」
+
+原文：主目录 `_tmp/20261103-b10/mtgdata/reviews/decision-codex-2.md`（不入库）。effort medium，耗时 117 秒。
+上一轮处理的验证：codex 抽查 DR-VCTK、MOBIO、NISQA 整包、DNSMOS 数字、目录检查 5 处，均「核实属实」。
+本轮 P0/P1：2 条 · 停止线：未满足 · 留作 issue 的 P2：无
+
+- **P1｜sources.md:18 许可口径仍按已作废的 D26 把 SA 判为只评测**（第 2 轮 #1）
+  - 核实：属实（决策正本 D64：SA 可进训练份，NC 仍只评测；D26 已标作废）
+  - 处理：5 张只带 SA 的新卡（DEMAND、CN-Celeb、ASCEND、QUT-NOISE、VocalSound）结论改「训练可（按 D64）」并在卡末记一行；3D-Speaker 括注改为「若同为 BY-SA 则按 D64 可训练」；matrix、pick 里 AliMeeting、AISHELL-4 / 5、CHiME-5/6、ASCEND 等改「训练可（D64）」；sources 写明调研时用了旧口径与改判；`cards-014-addendum.md` 页首加 ⚠️ 说明 014 卡 SA 结论按 D64 读
+- **P1｜decision.md:24 等处「补不上 / 只能自录」仍过强**（第 2 轮 #2）
+  - 核实：属实（MOBIO 已在第一节；LIVETALK 说话端是否笔记本有分歧；phone-booth 等格子本轮未专门检索）
+  - 处理：decision 第二节、第 1 题选项 C，matrix 第二、三节，`notes/r2-place.md` 两处，统一改为「本轮未找到已确认的……；要补得自录 / 回放重录」；未专门检索的格子改「先合成，补查后再定」
+- **P2｜decision.md:14 WenetSpeech 并入「有近讲参考」**（第 2 轮 #3）
+  - 核实：属实（`cards/wenetspeech.md` 干净参考：没有）
+  - 处理：单列为「有转写、没有干净参考」
+- **P2｜matrix.md:23 只有背景的集放进麦阵终端列**（第 2 轮 #4）
+  - 核实：属实（QUT 设备键 `non-laptop-studio`；TAU 手机 / 录音棚）
+  - 处理：主表移除全部「只有背景」条目，另列「只有背景声（合成原料）」一节并按卡片设备键标注
+- **P2｜decision.md:33 Ego4D「规模最大」依据不足**（第 2 轮 #5）
+  - 核实：属实（卡上只有全集 3,025 h，地点子集规模未知）
+  - 处理：改为「待核候选，规模未知」，第 4 题选项 B 后果同步
+- **P2｜check_cards.py:164 相对路径漏检补充文件**（第 2 轮 #6）
+  - 核实：属实（读代码：未 resolve 就与绝对路径比较）
+  - 处理：入口 `resolve()`；补充文件改为在卡片目录上一级找；加测试 `test_addendum_checked_for_relative_and_absolute`；25 条测试过，从仓库根用相对路径跑也是 44 张卡 0 处问题【实测】
+
+### 引用抽查
+
+- 「不符」1 条（WenetSpeech）：已改（#3）
+- 「核实属实」5 条
+- 无法核实：021 / 022 正本格式（大总管已验收）；「未下载音频」只有自报
+
+### 是否再审
+
+本轮有 P1 → 改完开第 3 轮。
