@@ -9,7 +9,7 @@
 
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
-| fecore | 共用频谱前端 · #94 · `feat/frontend-once` · `../noise_canceling-fecore` | 频谱前端 · 降噪模型适配 · 场景特征 · 修音频谱级 | 已报到（noise-canceling-fecore-c7） |
+| fecore | 共用频谱前端 · #94 · `feat/frontend-once` · `../noise_canceling-fecore` | 频谱前端 · 降噪模型适配 · 场景特征 · 修音频谱级 | 完成，验收过（大总管亲手跑 xtask ci 6 项全绿 · 对拍 4 份逐位相同含引擎最终输出 · 路径清零 · 文件 ≤ 557 行），PR #99 已开（合并冲突已解），窗口已关 |
 | fespk | exp015 认人吃共享频谱 + 耗时分解 · #95 · `exp/015-speaker-shared-spectrum` · `../noise_canceling-fespk` | 认人前端 · 声纹模型（只评）· 认人判断回路 | 完成，验收过（大总管复跑 11 测试 · 9 文件在范围内 · src/speaker/ 未改 · 路径清零），PR #96 已开，窗口已关 |
 | pse | 调研 024 个性化降噪：有没有人做过 · 为什么难 · #98 · `research/024-pse-landscape` · `../noise_canceling-pse`（人点名派，属「个性化降噪」大事的前置调研） | 个性化降噪 / 提取模型 · 自动注册 · PSE 训练数据与评测集 | 已报到（noise-canceling-pse-8b） |
 
@@ -29,6 +29,9 @@
 - **第二段（待派）**：认人 fbank · 评测器 FFT（`src/eval/src/verifiers/estoi.rs` · `speech.rs`，eval 归 5-app-5e 在用，派前先商量）· 离线例子，收进统一模块；基于 fecore 分支
 - 2026-11-04 人：「不能走ort，ort太慢了」（针对认人声纹模型 ECAPA512 走 ORT）；人定「先记下，以后再定」→ 已记 `state/backlog.md`「推理后端：去掉 ORT」
 - 2026-11-04 人定 D83：放弃门控，改为先认人再提取（个性化降噪），倾向自训；人点名「派一个手下查一下……到底有没有人做过，为啥可能很难」→ 派 pse（调研 024，#98，已告 5-app-5e 占 024）。fespk 那 3 道待拍板题随门控作废
+- 2026-11-04 fecore 收尾：codex 3 轮（2、3 轮无 P0/P1，P2×7 全修）；对拍 4 份（场景整 hop 24 次 · 场景不整齐 31 次 · GTCRN 47872 点 · 引擎最终输出 144000 点）基准均在 990e7843 生成，改后逐位相同；5-app-5e 复核同意 exp014 仍可比。每帧耗时：场景段中位 2.42 → 2.00 µs，合计在噪声内。大总管验收：亲手跑 xtask ci 全绿；补 reviews 索引；解 docs/reviews/README.md 合并冲突（两行都留）
+- fecore 转交 → **第二段**（D82）：认人 fbank · 评测器 FFT（estoi · speech · system.rs 参考降噪器手写 512/256）· 离线例子收进同一模块，接口见 `docs/plan/013_frontend-once.md` 第 11 节（StftSpec 加 win_len · Window 加枚举 · 每帧预处理钩子 · f32/f64 通用 · 每处逐位对拍）；`src/models/Cargo.toml` dev 依赖 vdn-scene 用 path 写法 → 根 workspace.dependencies 补一项
+- fecore 转交 → backlog「文档」：src/README.md 仍是模板 · 模块说明内部编号多 · A/B/C 档无定义 · 「档」一词三义 · L0–L3 无逐级说明 · types/src/lib.rs 表头三块表里四行 · 帧长 10/16 ms 不一致
 
 ## 待人拍板（本大事）
 
