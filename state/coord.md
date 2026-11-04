@@ -13,7 +13,14 @@
 | macmic | 022 Mac 内置麦克风 · #81 · `research/022-mac-mic` · `../noise_canceling-macmic` | 麦克风（设备链）· 设备链模拟 | 完成，验收过（12 测试 · 21 键 0 问题 · 路径清零），窗口已关；PR #84；1 题待拍板 |
 | mtgdata | 023 真实录音数据集 · #82 · `research/023-meeting-datasets` · `../noise_canceling-mtgdata` | 真实数据集 · 真实锚 | 完成，验收过（25 测试 · 44 卡 0 问题 · codex 5 轮、4/5 轮无 P0/P1 · 无大文件无下载），分支已推送，窗口已关；PR #85（排在 #83、#84 之后合并）；4 题待拍板 |
 
-下一批（三份目录回来后）：效果检查实现线 dimeff（评测器 · 定标等级）；按目录补评测格子。
+**b11（D81：按场景成绩单推进）**，批次 `_tmp/20261103-b11/`：
+
+| 手下 | 线 | 管的实体 | 状态 |
+|---|---|---|---|
+| scenesuite | exp013 场景测试集 · #86 · `exp/013-scene-suite` · `../noise_canceling-scenesuite` | 场景测试集 · 合成数据生成器 · 设备链模拟 | 已报到（noise-canceling-scenesuite-85） |
+| scorecard | 场景成绩单：评分模型 + 补评分项 + 标准 · #87 · `feat/scorecard` · `../noise_canceling-scorecard` | 评测器 · 成绩单 · 定标等级 | 已派 |
+
+两条做完后由大总管接 GTCRN 出第一张成绩单。
 ⚠️ 人要真实数据集与 D62「开发阶段不用真实录音」可能冲突 → mtgdata 出选项，进待拍板。
 
 ## 上一件大事（2026-11-02，已收口）
@@ -92,6 +99,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-03 人定 D81（按场景测能力 → 成绩单 → 针对优化；听感用 SCOREQ 主 + Distill-MOS 交叉）；派 b11 两线 scenesuite · scorecard
 - 2026-11-03 macmic 路径清零复查过，窗口已关；开 PR #84（022）· #85（023）。三线全收尾；合并被本机权限检查拦，等人。人新方向：按场景测能力 → 成绩单 → 针对优化（待确认后记决策）
 - 2026-11-03 macmic 报收尾（codex 5 轮，4/5 轮无 P0/P1，22 条全改；12 测试 · 21 键 0 问题，大总管复跑过）；打回 1 处：findings/ 10 处本机路径。同类第二次 → 新记忆 `state/memory/20261103-no-local-paths-in-research.md`。另记：codex-review 隐私扫描把「P1」开头的输出误判为 PBM 位图（macmic 现状页「发现」），属 skill 问题，待告诉人
 - 2026-11-03 macmic 发现 devices.md 第二节模式值被当设备键读（25 → 21 键），已修并加检查；大总管复跑 023 检查 0 问题，改 addendum 一处 unknown → non-laptop-unknown（3c9b779）；macmic codex 第 4 轮无 P0/P1，第 5 轮在跑
