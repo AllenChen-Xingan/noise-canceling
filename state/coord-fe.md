@@ -39,6 +39,7 @@
 - **第一段收口**。下一步：第二段（认人 fbank · 评测器 FFT · 离线例子收进同一模块，D82），派前先与 5-app-5e 商量评测器那几处
 - 2026-11-04 5-app-5e 同意评测器 3 处由我方改，条件：单独 PR、只换频谱不改评分、函数级 + exp014 cafe 常见档 10 段 scorecard JSON（去元数据）逐位对拍、开工与合并前告知、谁先开工谁先做。第二段拆两 PR：先 #102（fe2，不碰 eval），合并后再做评测器
 - ⚠️ 同类第二次：大总管 a2 在主目录写文件（`_tmp/` 批次文件）触发主目录 auto-commit hook，把 5-app-5e 的 `state/coord.md` 提交到它的分支（7cf6133f · 51a50418，内容都是它的）。规则：**a2 的命令与写文件只在 `../noise_canceling-coordfe` 里做**；若第三次发生，写进 `state/memory/`
+- 2026-11-04 fe2 盘点 + 设计点头：Window 加 5 种（Kaldi 汉明 / 汉宁 / povey · speech 周期 Hann · estoi numpy 内缩 Hann）· dsp 内 Sample trait 做 f32/f64 通用 · 整段入口 FrameFft<T> · 认人删自有 WindowType · tidy 加 R-FFT（只认 FFT 计划标识符，白名单 speech · estoi · scene 逆 FFT）。评测器另多 1 处 analysis.rs:163 → 下一 PR。改：platform.rs 不用跨 crate #[path]（tidy 禁），照 models 复制 + 比对
 
 ## 待人拍板（本大事）
 
