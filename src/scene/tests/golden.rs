@@ -8,6 +8,10 @@ const FIXTURE: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/scene_golden.txt"
 );
+const FIXTURE_RAGGED: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/scene_ragged_golden.txt"
+);
 
 #[test]
 fn self_compute_matches_golden() {
@@ -18,4 +22,16 @@ fn self_compute_matches_golden() {
     };
     assert_eq!(js.len(), n, "判断次数变了");
     assert_eq!(got, id, "场景判断与改前不同（红线），先停下报");
+}
+
+/// 不整齐的输入长度（不足一个 hop、空、超过一个 hop）下，自算入口与改前逐位相同：改前按实际长度移位，不补零。
+#[test]
+fn ragged_hops_match_golden() {
+    let js = common::run_ragged(&common::signal(), |sa, h| sa.push_hop(h));
+    let got = common::digest(&js);
+    let Some((id, n)) = common::golden(FIXTURE_RAGGED, got, js.len()) else {
+        return;
+    };
+    assert_eq!(js.len(), n, "判断次数变了");
+    assert_eq!(got, id, "不整齐输入下场景判断与改前不同（红线），先停下报");
 }

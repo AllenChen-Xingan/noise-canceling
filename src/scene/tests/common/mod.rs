@@ -70,6 +70,26 @@ pub fn run(x: &[f32], mut push: impl FnMut(&mut SceneAnalyzer, &[f32])) -> Vec<J
     out
 }
 
+/// 不整齐的喂法：每次喂的样本数按这张表循环（含不足一个 hop、空、超过一个 hop），对拍短输入的移位语义。
+pub const RAGGED: [usize; 10] = [HOP, HOP, HOP, 100, HOP, 0, HOP, HOP + 44, HOP, 1];
+
+/// 按 [`RAGGED`] 的长度逐次喂 `x`（超过一个 hop 的那次只用前 hop 个、但从信号里取走全部），每 [`TICK_HOPS`] 次判断一次。
+pub fn run_ragged(x: &[f32], mut push: impl FnMut(&mut SceneAnalyzer, &[f32])) -> Vec<Judgement> {
+    let mut sa = SceneAnalyzer::new(MODEL_RATE, HOP);
+    let mut out = Vec::new();
+    let (mut at, mut k) = (0usize, 0usize);
+    while at + HOP + 44 <= x.len() {
+        let n = RAGGED[k % RAGGED.len()];
+        push(&mut sa, &x[at..at + n]);
+        at += n;
+        k += 1;
+        if k % TICK_HOPS == 0 {
+            out.push(sa.judge());
+        }
+    }
+    out
+}
+
 /// 全部判断压成一个内容 ID。
 pub fn digest(js: &[Judgement]) -> ContentId {
     let bytes: Vec<u8> = js.iter().flat_map(record).collect();

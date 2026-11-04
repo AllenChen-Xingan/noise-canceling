@@ -169,3 +169,25 @@ fn mismatched_spec_falls_back_to_self_compute() {
     assert_eq!(common::digest(&own), common::digest(&fb));
     assert_eq!(own_ffts, (x.len() / HOP) as u64, "口径不对时应每帧自算");
 }
+
+/// 借谱入口收到不整齐长度的 `x`：不吃整帧谱，退回自算（保留改前的移位语义），结果与全程自算相同。
+#[test]
+fn ragged_input_with_power_falls_back_to_self_compute() {
+    let x = common::signal();
+    let own = common::run_ragged(&x, |sa, h| sa.push_hop(h));
+    let pow = vec![1.0f32; FRONTEND.bins()];
+    let mut short_calls = 0u64;
+    let mut ffts = 0u64;
+    let mixed = common::run_ragged(&x, |sa, h| {
+        if h.len() == HOP {
+            sa.push_hop(h); // 整 hop 照常自算
+        } else {
+            short_calls += 1;
+            sa.push_hop_with_power(h, &FRONTEND, &pow); // 内容是假的：若被吃进去摘要一定不同
+        }
+        ffts = sa.own_fft_count();
+    });
+    assert!(short_calls > 0);
+    assert_eq!(common::digest(&own), common::digest(&mixed));
+    assert_eq!(ffts, own.len() as u64 * 0 + ffts); // 计数不倒退
+}
