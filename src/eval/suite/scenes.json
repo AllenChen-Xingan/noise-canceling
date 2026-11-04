@@ -1,0 +1,460 @@
+{
+  "name": "exp013-scenes",
+  "doc": "场景测试集（exp013）：15 个开会地点 × 常见 / 压力两档，每条任务展开成该地点该档的全部片段；片段清单格式见 docs/experiments/exp013-scene-suite/clip-manifest.md。graders 由 scorecard 填。",
+  "seed": 20261103,
+  "defaults": {
+    "trials": 1
+  },
+  "tasks": [
+    {
+      "id": "S-home-quiet-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 home-quiet（书房 / 卧室）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "home-quiet",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-home-quiet-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 home-quiet（书房 / 卧室）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "home-quiet",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-home-family-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 home-family（家里客厅）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "home-family",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-home-family-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 home-family（家里客厅）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "home-family",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-open-office-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 open-office（开放工位）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "open-office",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-open-office-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 open-office（开放工位）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "open-office",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-phone-booth-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 phone-booth（电话亭 / 专注舱）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "phone-booth",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-phone-booth-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 phone-booth（电话亭 / 专注舱）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "phone-booth",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-meeting-room-common",
+      "set": "capability",
+      "polarity": "preserve",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 meeting-room（会议室（多人共用一台 Mac））· 常见档",
+      "desc": "近处几个人都要留（会议模式，干净参考 = 所有要留的人）；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "meeting-room",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-meeting-room-stress",
+      "set": "capability",
+      "polarity": "preserve",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 meeting-room（会议室（多人共用一台 Mac））· 压力档",
+      "desc": "近处几个人都要留（会议模式，干净参考 = 所有要留的人）；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "meeting-room",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-cowork-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 cowork（共享办公空间）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "cowork",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-cowork-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 cowork（共享办公空间）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "cowork",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-cafe-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 cafe（咖啡馆）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "cafe",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-cafe-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 cafe（咖啡馆）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "cafe",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-canteen-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 canteen（餐厅 / 食堂）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "canteen",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-canteen-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 canteen（餐厅 / 食堂）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "canteen",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-transit-hub-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 transit-hub（机场 / 车站候车厅）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "transit-hub",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-transit-hub-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 transit-hub（机场 / 车站候车厅）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "transit-hub",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-car-passenger-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 car-passenger（车内（乘客））· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "car-passenger",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-car-passenger-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 car-passenger（车内（乘客））· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "car-passenger",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-bus-metro-cabin-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 bus-metro-cabin（公交 / 地铁 / 电车车厢）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "bus-metro-cabin",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-bus-metro-cabin-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 bus-metro-cabin（公交 / 地铁 / 电车车厢）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "bus-metro-cabin",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-rail-air-cabin-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 rail-air-cabin（高铁 / 飞机客舱）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "rail-air-cabin",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-rail-air-cabin-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 rail-air-cabin（高铁 / 飞机客舱）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "rail-air-cabin",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-street-outdoor-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 street-outdoor（街边 / 户外）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "street-outdoor",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-street-outdoor-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 street-outdoor（街边 / 户外）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "street-outdoor",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-hotel-room-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 hotel-room（酒店房间）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "hotel-room",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-hotel-room-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 hotel-room（酒店房间）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "hotel-room",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-library-classroom-common",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 library-classroom（教室 / 图书馆）· 常见档",
+      "desc": "只留主说话人；10 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "library-classroom",
+        "tier": "common",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    },
+    {
+      "id": "S-library-classroom-stress",
+      "set": "capability",
+      "polarity": "suppress",
+      "origin": "exp013 build 20261103214702-b22d · 021 地点 library-classroom（教室 / 图书馆）· 压力档",
+      "desc": "只留主说话人；6 段 × 12 s；设备 mba-builtin",
+      "real": {
+        "kind": "scene",
+        "clips": "docs/experiments/exp013-scene-suite/builds/20261103214702-b22d/clips.jsonl",
+        "scene": "library-classroom",
+        "tier": "stress",
+        "device": "mba-builtin"
+      },
+      "graders": []
+    }
+  ]
+}
