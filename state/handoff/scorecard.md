@@ -1,10 +1,10 @@
 # 现状页 · scorecard（批次 20261103-b11）
 
-- **状态**：进行中（方案已批）
+- **状态**：已收尾（2026-11-03）
 - **手上**：场景成绩单——评分模型接入 · 补评分项 · 成绩单标准与报告（issue #87）
 - **交代**：主目录 `_tmp/20261103-b11/scorecard.md`
-- **做到哪**（2026-11-03）：交代第 2–6 步写完；ci 门禁过、全量测试 83 组全过；codex 第 1 轮评审在跑
-- **下一步**：逐条核实 codex 意见 → 第 2 轮 → 收尾
+- **做到哪**（2026-11-03）：交代 7 步全部完成。ci 门禁过（ref，探针 9/10，P06 是预期的已知做不到）；全量测试 83 组过；codex 评审 8 轮，第 7、8 轮连续无问题，已达停止线（`docs/reviews/087_scorecard-codex.md`）
+- **下一步**：等大总管验收；scenesuite 合并后在 `src/schema/src/eval.rs` 的 `DATA_FILES` 加 scenes.json 一行；GTCRN 第一张成绩单要名额（`--system gtcrn --qa`，带 `VDN_GTCRN_ONNX`）
 
 ## 一、方案（大总管已批，2026-11-03）
 
@@ -105,6 +105,8 @@
 - 成绩单输出默认在主目录 `_tmp/scorecard/<run_id>/`；要进仓（CLAUDE.md 第五节第 1 条）时放哪个目录，由大总管定
 
 ## 流水
+- codex 评审 8 轮：P1×8、P2×9 全部属实并修复（缺段不许判过 · 轨长不许截短 · 无参考判不知道 · 听感有待测就待测 · 缓存按内容哈希 · 不覆盖旧成绩单等），第 7、8 轮无问题 → 停
+- V-CLICK 只报不判；P06 拆成 30% 已知做不到 + 40% 必须判不过；`has_clean_ref = false` 的段不打分
 - 片段清单类型 + schema（与 scenesuite 对齐两轮，加 4 个字段）· 成绩单标准 + 比对测试 · 成绩单命令 + 端到端测试 · 常驻评分子进程 · tidy / clippy 过
 - 用 scenesuite 第一版 build（20261103214702-b22d）实测：30 条任务展开 240 段；cafe 常见档 10 段 ref 约 1.7 秒出表
 - 新评分项 V-WEAK · V-PUMPV · V-CLICK · V-ESTOI（`src/eval/src/verifiers/speech.rs` · `estoi.rs`）+ 探针 P06–P09 → 单元测试全过
