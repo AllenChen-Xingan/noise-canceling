@@ -48,8 +48,25 @@ fn gtcrn_tap_equals_self_compute() {
     // 输入长度不对：不做分析，也不借出旧谱
     assert!(m.process(&x[..10], &mut y[..10]).is_err());
     assert!(m.input_power().is_none());
+    // 复位：先处理一个合法帧确认借得出，再复位确认清掉（不被上面的长度错误分支掩盖；codex 第 3 轮 P2 #1）
+    let h0 = &x[..m.hop()];
+    m.process(h0, &mut y).expect("GTCRN 处理");
+    assert!(m.input_power().is_some());
     m.reset();
-    assert!(m.input_power().is_none());
+    assert!(m.input_power().is_none(), "复位后借出了旧谱");
+    // 复位后重新借谱：与同样复位过的独立前端逐位相同
+    let mut fresh = StreamingStft::from_spec(&FRONTEND);
+    for h in x.chunks_exact(m.hop()).take(5) {
+        m.process(h, &mut y).expect("GTCRN 处理");
+        power_into(fresh.analyze(h), &mut want);
+        let got = m.input_power().expect("复位后处理过帧应借得出谱");
+        assert!(
+            got.iter()
+                .zip(&want)
+                .all(|(a, b)| a.to_bits() == b.to_bits()),
+            "复位后借出的谱与自算不同"
+        );
+    }
 }
 
 /// 真 GTCRN + 场景借谱的组合路径：场景自己 0 次正向 FFT（GTCRN 内部那 1 次由构造保证），
