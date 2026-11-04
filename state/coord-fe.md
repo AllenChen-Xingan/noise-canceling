@@ -18,6 +18,7 @@
 - 2026-11-04 读源码发现：场景特征与 GTCRN 同为 512 / 256 / sqrt-hann，可直接共用；认人用 Kaldi 400 / 160，且吃降噪后的声音 → 认人单开实验线
 - 2026-11-04 名额被 5-app-5e 的成绩单正式跑占着（约 2 h 35 min，heavy.lock）；两人在此期间只读、设计、写代码，不编译不测试。5-app-5e 要求一条 GTCRN 逐样本对拍测试，已写进 fecore 交代
 - 2026-11-04 fespk 早报（读源码估算，未实测）：认人每次约 6 ms 里声纹模型推理占约 90–97%，fbank 约 0.1–0.4 ms，共用频谱最多省约 5%。大总管定：fespk 收窄为「实测耗时分解 + 待人拍板」，认人不接共享频谱，不改 src/speaker/；已通知 fecore 不为认人设计输出谱
+- 2026-11-04 fecore 设计稿 `docs/plan/013_frontend-once.md`（fecore worktree）大总管点头：STFT 参数正本放 vdn-types `frontend.rs`；借谱接口改为带噪输入功率谱；新增 `vdn_dsp::SpectrumFrontend`；场景加借谱入口。大总管定：SpectralStage 不挪、GTCRN 不带修音槽（接线不在本大事）。名额放开后 fecore 先在未改的 gtcrn.rs 上生成对拍哈希
 
 ## 待人拍板（本大事）
 
