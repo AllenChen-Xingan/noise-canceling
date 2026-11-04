@@ -9,7 +9,7 @@
 | 编号 | 名称 | 链接 | 来源类型 | 核对 | 用在哪 / 注意 |
 |---|---|---|---|---|---|
 | S01 | ETSI ES 202 396-1 V1.10.2（背景噪声模拟与数据库） | https://www.etsi.org/deliver/etsi_es/202300_202399/20239601/01.10.02_60/es_20239601v011002p.pdf | 官方文档 | ✓ | 表 1–18 共 72 段噪声及 dB SPL(A) 声级。大多是人工头双耳录音，例外：表 16–18 用后视镜处 2 支心形麦，表 15 小飞机是真人戴耳机。`Cafeteria_Noise` 原文是「超市收银台」，`Mensa` 才是食堂。表 9 呼叫中心与表 10 客厅声级完全相同（56.6/57.8），疑为原文抄错 |
-| S02 | ETSI TS 103 224 V1.7.2（背景噪声场模拟） | https://www.etsi.org/deliver/etsi_ts/103200_103299/103224/01.07.02_60/ts_103224v010702p.pdf | 官方文档 | ✓ | 8 麦阵列。**只有表 8A（会议 · 家庭 · 办公）有桌面免提布置的声级**，最接近 MacBook 放桌上。表 10 类家庭环境（水槽、冰箱、旁人说话）；附录 A 表 A.1 两档混响 T60 0.3 s / 0.45–0.5 s |
+| S02 | ETSI TS 103 224 V1.7.2（背景噪声场模拟） | https://www.etsi.org/deliver/etsi_ts/103200_103299/103224/01.07.02_60/ts_103224v010702p.pdf | 官方文档 | ✓ | 8 麦阵列，声级是录音位置每声道 dB SPL(A)，下面写 8 声道的范围。**只有表 8A（会议 · 家庭 · 办公）有桌面免提布置的声级**，最接近 MacBook 放桌上。主表用到的值——表 8（手持 / 手持免提）：车内副驾 MidSize 80/100/130 km/h 66.4–68.4 · 65.1–67.5 · 70.1–72.3，FullSize 60.3–64.0 · 63.0–67.1 · 68.3–71.9；Inside_Train 67.6–69.6；Inside_Bus 70.5–73.4；Roadnoise 69.9–73.8；Cafeteria 69.0–71.0；Airport 走廊 77.2–78.8；Callcenter1 69.6–72.6、Callcenter2 59.3–60.8。表 8A（桌面免提）：Conference1–3 48.2–55.0；Kitchen 65.8–67.3；Livingroom 63.1–64.4。表 9：StationBuilding 65.1–66.2；Roadnoise 74.5–75.7。表 10：Fridge 38.5–44.8；Talker 54.1–61.0。附录 A 表 A.1 两档混响 T60 0.3 s / 0.45–0.5 s |
 | S03 | 3GPP TS 26.132 V18.2.0（终端声学测试方法） | https://www.etsi.org/deliver/etsi_TS/126100_126199/126132/18.02.00_60/ts_126132v180200p.pdf | 官方文档 | ✓ | §7.12 表 2d：手持 8 段噪声（酒吧 · 马路 · 十字路口 · 站台 · 车内 130 km/h · 收银台 · 食堂 · 呼叫中心）；表 2d2 手持免提 5 段。**没有桌面免提的环境噪声测试** |
 | S04 | 3GPP TS 26.131 V18.1.0（终端声学性能要求） | https://www.etsi.org/deliver/etsi_TS/126100_126199/126131/18.01.00_60/ts_126131v180100p.pdf | 官方文档 | ✓ | 门槛是所有噪声条件的平均分：窄带 / 宽带手持 S-MOS ≥ 3.0、N-MOS ≥ 2.3；超宽带 / 全带（§7.10）手持 S-MOS ≥ 3.7、N-MOS ≥ 2.7 |
 | S05 | ITU-T P.835 修订 1（2007-10）附录 III | https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-P.835-200710-S!Amd1!PDF-E&type=items | 官方文档 | ✓ | 噪声类别：粉噪 · babble（≥ 4 人）· 街道 · 车内 · 单人说话 · 含鼓音乐；SNR 12 / 6 / 0 dB。无声级、无地点 |
@@ -25,7 +25,7 @@
 | S10 | DNS Challenge Interspeech 2020 | https://arxiv.org/pdf/2005.13981 | 论文 | ✓ | 开发集实录 300 条含「开放办公区和会议室」，未拆比例；合成集 RT60 300–1300 ms |
 | S11 | DNS Challenge ICASSP 2021 | https://arxiv.org/pdf/2009.06122 | 论文 | ✓ | 盲测集 700 条按语言 / 情绪分组，不按地点 |
 | S12 | DNS Challenge Interspeech 2021 | https://arxiv.org/pdf/2101.01902 | 论文 | 未核 | 不戴耳机时说话人离麦 1–5 m；分组条数未给 |
-| S13 | DNS Challenge ICASSP 2022 | https://arxiv.org/pdf/2202.13288 | 论文 | ✓ | 盲测集 859 条 × 10 s，70% 手机录；图 1 给 19 类噪声占比（柱上印数值）。「噪声 / 邻座 / 两者」各几条未给 |
+| S13 | DNS Challenge ICASSP 2022 | https://arxiv.org/pdf/2202.13288 | 论文 | ✓ | 盲测集 859 条 × 10 s，70% 手机录；图 1 给 19 类噪声占比（柱上印数值）：打字 10.2 · 鼠标 9.5 · 水流 9.3 · 风扇 8.8 · 关门 7.4 · 撕包装 7.4 · 餐具 5.7 · 婴儿哭 5.5 · 椅子 5.4 · 无噪声 5.3 · 狗叫 4.4 · 街道 4.2 · 粗重呼吸 3.7 · 碰撞声 3.5 · 空调 3.0 · 洗碗机 2.1 · 咀嚼 2.1 · 复印机 1.5 · 车内 0.9（%）。「噪声 / 邻座 / 两者」各几条未给 |
 | S14 | DNS Challenge ICASSP 2023（论文 + 官方页） | https://arxiv.org/pdf/2303.11510 ；https://www.microsoft.com/en-us/research/academic-program/deep-noise-suppression-challenge-icassp-2023 | 论文 / 官方文档 | ✓ | 第 2 赛道明写含笔记本内置麦，开发 / 盲测各 600 条；盲测分组（副语言 · 情绪 · 强混响 · 强混响 + 噪声 · 噪声 + 邻座）各组条数未给；噪声名单原文只分「办公 · 家庭 · 家电」三组，其余未分组（含 Café、机场广播） |
 | S15 | ConferencingSpeech 2021 | https://arxiv.org/pdf/2104.00960 | 论文 | ✓ | 共 12 间安静会议室，评测用其中 9 间；专用阵列录音；T60 与尺寸未给 |
 | S16 | URGENT 2024 / 2025 / 2026 | https://arxiv.org/html/2406.04660v1 ；https://arxiv.org/html/2601.13531v1 | 论文 | 未核 | 按失真类型分组，不按地点 |
