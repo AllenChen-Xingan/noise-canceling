@@ -19,7 +19,7 @@
 ## 发现
 - 场景键已对齐 021 catalog v1（scenes 应我请求加了 `bus-metro-cabin`、`other`）；设备键已对齐 022 devices v1（macmic 加了 `mac-unknown` 与 8 个 `non-laptop-*` 子键）
 - Mac 内置麦真实录音只有 DR-VCTK（回放）与 DNS 2021 自填 mac 约 31 条；开放办公 / 机场车站 / 街边无带主说话人的公开集
-- 数据卡模板不抄键，check_cards.py 直接读 021 / 022 正本；合并后三份同在 main 才能在 CI 里跑
+- 数据卡模板不抄键，check_cards.py 只认本仓库 021 / 022 正本，合并前用 VDN_KEYS_DIR 显式指；大总管排合并顺序 021、022 先于 023
 
 ## 待人拍板
 4 题，题面、选项、默认与后果见 `docs/research/023_meeting-datasets/decision.md` 第四节：
@@ -30,7 +30,7 @@
 
 ## 转交（范围外，留给大总管）
 - Mac 设备相关材料 → macmic：`docs/research/023_meeting-datasets/notes/r1-device-macmic-handoff.md`（大总管已转）
-- check_cards.py 依赖 021 / 022 正本；三条线合并顺序上 023 宜在 021、022 之后，或同批合并
+- check_cards.py 依赖 021 / 022 正本；大总管已定合并顺序 021、022 先于 023
 - 要注册 / 签协议的 17 项清单在 decision.md 第三节；本线未注册任何一项
 
 ## 流水
@@ -45,3 +45,4 @@
 - 合并 4 份 014 补充为 cards-014-addendum.md（33 张卡，逐行核对无丢失）→ 删 4 份分路文件
 - 场景键 v1、设备键 v1 到 → 迁移全部卡；检查脚本改为直接读 021 / 022 正本 → 20 条测试过、0 处问题
 - 写 matrix · pick · decision · sources → 完成
+- 大总管要求：不再去旁边 worktree 找正本 → 改为只认本仓路径 + VDN_KEYS_DIR + `--research` 参数（测试用），测试用内置小键表 → 23 条测试过；不设变量时退出码 2 并提示变量名【实测】

@@ -4,7 +4,7 @@
 > 场景键、设备键只认 021 / 022 两份正本，见下节。
 
 ## 场景键与设备键
-不在这里抄。场景键正本：`docs/research/021_meeting-scenes/catalog.md` 键表第一列；设备键正本：`docs/research/022_mac-mic/devices.md` 键表第一列（合并进 main 前在 worktree `noise_canceling-scenes` / `noise_canceling-macmic`）。`check_cards.py` 直接读这两处。`other` 只给数据卡用，不算开会场景。
+不在这里抄。场景键正本：`docs/research/021_meeting-scenes/catalog.md` 键表第一列；设备键正本：`docs/research/022_mac-mic/devices.md` 键表第一列。`check_cards.py` 只认本仓库这两处；合并前本仓库还没有时，设环境变量 `VDN_KEYS_DIR` 指向含它们的 docs/research 目录（多个用 `:` 分隔），没指就报错。`other` 只给数据卡用，不算开会场景。
 
 ## 卡片格式
 
