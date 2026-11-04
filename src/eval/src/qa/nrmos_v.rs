@@ -2,7 +2,8 @@
 //!
 //! 主值 = 输出的分 − 带噪原声的分（Δ，越大越好）；过线 = 不比原声差（012 §2.3 第 4 条：L0 感知量只作「不比基线差」的约束）。
 //! 只打分，不当训练奖励（018 结论 4）。「两个都说好才算听感过」「分歧送人耳」是成绩单层的规则（`scorecard`），不在这里。
-//! 模型在子进程里跑（`vdn-eval nrmos`，一个进程只许一个 ort 环境）；带噪原声的分按（任务, 模型）缓存。
+//! 模型在常驻子进程里跑（`vdn-eval nrmos <kind> <模型> --serve`，一个进程只许一个 ort 环境；模型只载一次）；
+//! 带噪原声的分按（任务, 模型）缓存。
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -17,9 +18,69 @@ use crate::thresholds as th;
 use crate::verifiers::Params;
 use crate::{Better, Score};
 
+/// 一个常驻的评分子进程（`vdn-eval nrmos <kind> <模型> --serve`）。
+struct Server {
+    child: std::process::Child,
+    stdin: std::process::ChildStdin,
+    stdout: std::io::BufReader<std::process::ChildStdout>,
+}
+
+impl Server {
+    fn spawn(kind: Kind, model: &PathBuf) -> Result<Server, String> {
+        use std::process::{Command, Stdio};
+        let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+        let mut child = Command::new(exe)
+            .arg("nrmos")
+            .arg(kind.as_str())
+            .arg(model)
+            .arg("--serve")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .map_err(|e| format!("起不来评分模型子进程：{e}"))?;
+        let stdin = child.stdin.take().ok_or("子进程没有标准输入")?;
+        let stdout = std::io::BufReader::new(child.stdout.take().ok_or("子进程没有标准输出")?);
+        Ok(Server {
+            child,
+            stdin,
+            stdout,
+        })
+    }
+
+    fn score(&mut self, wav: &PathBuf) -> Result<f64, String> {
+        use std::io::{BufRead, Write};
+        writeln!(self.stdin, "{}", wav.display()).map_err(|e| format!("写子进程：{e}"))?;
+        self.stdin.flush().map_err(|e| e.to_string())?;
+        let mut line = String::new();
+        let n = self
+            .stdout
+            .read_line(&mut line)
+            .map_err(|e| format!("读子进程：{e}"))?;
+        if n == 0 {
+            return Err("评分模型子进程退出了（哈希不对或模型打不开，见上面的报错）".into());
+        }
+        let v: Value = serde_json::from_str(&line).map_err(|e| format!("子进程输出读不懂：{e}"))?;
+        if let Some(e) = v["error"].as_str() {
+            return Err(e.to_string());
+        }
+        v["mos"]
+            .as_f64()
+            .ok_or_else(|| format!("子进程输出缺 mos：{line}"))
+    }
+}
+
+impl Drop for Server {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
 pub(super) struct Models {
     paths: BTreeMap<&'static str, Result<PathBuf, String>>,
     mix: BTreeMap<(String, &'static str), f64>,
+    servers: BTreeMap<&'static str, Server>,
 }
 
 impl Models {
@@ -41,38 +102,23 @@ impl Models {
         Models {
             paths,
             mix: BTreeMap::new(),
+            servers: BTreeMap::new(),
         }
     }
-}
 
-/// 起子进程给若干段打分，按顺序返回。
-fn run_sub(kind: Kind, model: &PathBuf, wavs: &[PathBuf]) -> Result<Vec<f64>, String> {
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let o = std::process::Command::new(exe)
-        .arg("nrmos")
-        .arg(kind.as_str())
-        .arg(model)
-        .args(wavs)
-        .output()
-        .map_err(|e| format!("起不来评分模型子进程：{e}"))?;
-    if !o.status.success() {
-        return Err(String::from_utf8_lossy(&o.stderr).trim().to_string());
+    /// 用常驻子进程给若干段打分；子进程坏了就丢掉，下次重起。
+    fn run(&mut self, kind: Kind, model: &PathBuf, wavs: &[PathBuf]) -> Result<Vec<f64>, String> {
+        if !self.servers.contains_key(kind.as_str()) {
+            self.servers
+                .insert(kind.as_str(), Server::spawn(kind, model)?);
+        }
+        let srv = self.servers.get_mut(kind.as_str()).ok_or("内部错误")?;
+        let r: Result<Vec<f64>, String> = wavs.iter().map(|w| srv.score(w)).collect();
+        if r.is_err() {
+            self.servers.remove(kind.as_str());
+        }
+        r
     }
-    let text = String::from_utf8_lossy(&o.stdout);
-    let v: Vec<f64> = text
-        .lines()
-        .filter(|l| !l.trim().is_empty())
-        .map(|l| {
-            serde_json::from_str::<Value>(l)
-                .ok()
-                .and_then(|j| j["mos"].as_f64())
-                .ok_or_else(|| format!("子进程输出读不懂：{l}"))
-        })
-        .collect::<Result<_, _>>()?;
-    if v.len() != wavs.len() {
-        return Err(format!("子进程只回了 {} / {} 段", v.len(), wavs.len()));
-    }
-    Ok(v)
 }
 
 /// 该 verifier 的过线值（表里的默认值，清单可覆盖）。
@@ -111,7 +157,7 @@ impl QaExtra {
         if let Err(e) = dumped {
             return Score::unknown(id, "Δ MOS", Better::Higher, e);
         }
-        let got = match run_sub(kind, &model, &wavs) {
+        let got = match self.nrmos.run(kind, &model, &wavs) {
             Ok(v) => v,
             Err(e) => return Score::unknown(id, "Δ MOS", Better::Higher, e),
         };
