@@ -13,6 +13,8 @@ use vdn_eval::synth::{NoiseKind, SceneSpec, TalkerSpec, render};
 use vdn_eval::system::SystemKind;
 use vdn_eval::wav;
 
+const SR: u32 = vdn_types::MODEL_RATE;
+
 fn tracks(v: impl Fn(&str) -> String, stems: &[&str]) -> Value {
     let mut st = serde_json::Map::new();
     for s in stems {
@@ -52,10 +54,10 @@ fn write_clip(root: &Path, i: usize, with_machine: bool) -> Value {
         ("noise", &c.noise),
         ("interf", &c.interf),
     ] {
-        wav::write(&root.join(rel(k)), x, 16_000).unwrap();
+        wav::write(&root.join(rel(k)), x, SR).unwrap();
     }
     for s in &stems {
-        wav::write(&root.join(rel(&format!("stem-{s}"))), &c.noise, 16_000).unwrap();
+        wav::write(&root.join(rel(&format!("stem-{s}"))), &c.noise, SR).unwrap();
     }
     let sha = |k: &str| wav::sha256(&root.join(rel(k))).unwrap();
     let n = c.mix.len() as u64;
@@ -76,7 +78,7 @@ fn write_clip(root: &Path, i: usize, with_machine: bool) -> Value {
     }
     json!({
         "id": id, "scene": "cafe", "tier": "common", "device": "mba-builtin", "mic_mode": "standard",
-        "pair": format!("{id}-x"), "lang": "en", "polarity": "suppress", "dur_samples": n, "sr": 16000,
+        "pair": format!("{id}-x"), "lang": "en", "polarity": "suppress", "dur_samples": n, "sr": SR,
         "audio": tracks(|k| rel(k), &stems), "has_clean_ref": true, "additive": true,
         "targets": [{"spk": "s1", "dist_m": 0.5, "azimuth_deg": 0.0, "level_dbfs": -26.0, "iv": owner_iv, "src": {"kind": "synth", "spk": "s1"}}],
         "sounds": sounds,

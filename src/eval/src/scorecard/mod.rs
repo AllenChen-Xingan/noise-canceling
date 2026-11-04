@@ -12,7 +12,7 @@ use std::path::Path;
 
 use crate::files::serde_name;
 use crate::runner::{Extra, Opts, prepare_clip, score_one};
-use crate::scene::{SceneClip, MeetingPlace, SoundGroup, Tier};
+use crate::scene::{MeetingPlace, SceneClip, SoundGroup, Tier};
 use crate::suite::{Grader, RealSource, Set, Suite, Task, main_root, resolve};
 use crate::synth::{Clip, SR, Truth};
 use crate::system::SystemKind;

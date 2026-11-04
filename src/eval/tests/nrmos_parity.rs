@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use vdn_eval::qa::nrmos::{Kind, locate};
 
-const SR: u32 = 16_000;
+const SR: u32 = vdn_types::MODEL_RATE;
 
 struct Lcg(u64);
 

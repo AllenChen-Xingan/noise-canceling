@@ -313,7 +313,12 @@ pub fn summarize(rows: &[ClipRow]) -> Vec<SceneCard> {
 /// 最差的几个场景（下标）：不过在前；同为不过时否决项多的在前，再按不过项数。
 pub fn worst(cards: &[SceneCard]) -> Vec<usize> {
     let mut idx: Vec<usize> = (0..cards.len()).collect();
-    let fails = |c: &SceneCard| c.items.iter().filter(|i| i.status == CardStatus::Fail).count();
+    let fails = |c: &SceneCard| {
+        c.items
+            .iter()
+            .filter(|i| i.status == CardStatus::Fail)
+            .count()
+    };
     idx.sort_by_key(|&i| {
         let c = &cards[i];
         (
@@ -393,7 +398,10 @@ mod tests {
         ];
         let c = &summarize(&rows)[0];
         let weak = c.items.iter().find(|i| i.v == "V-WEAK").unwrap();
-        assert_eq!((weak.pass, weak.fail, weak.status), (2, 1, CardStatus::Fail));
+        assert_eq!(
+            (weak.pass, weak.fail, weak.status),
+            (2, 1, CardStatus::Fail)
+        );
         assert_eq!(weak.worst_clip.as_deref(), Some("b"));
         assert!(c.items.iter().all(|i| !LISTEN.contains(&i.v)));
         assert_eq!(c.status, CardStatus::Fail);

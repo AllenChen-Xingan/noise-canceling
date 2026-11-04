@@ -254,6 +254,8 @@ pub fn estoi(clean: &[f32], test: &[f32], sr: u32) -> Option<f64> {
 mod tests {
     use super::*;
 
+    const SR16: u32 = vdn_types::MODEL_RATE;
+
     fn tone_bursts(sr: u32, secs: f64, seed: u64) -> Vec<f32> {
         let mut r = crate::rng::Rng::new(seed);
         let n = (sr as f64 * secs) as usize;
@@ -275,33 +277,33 @@ mod tests {
 
     #[test]
     fn identical_is_one() {
-        let x = tone_bursts(16_000, 3.0, 1);
-        let d = estoi(&x, &x, 16_000).unwrap();
+        let x = tone_bursts(SR16, 3.0, 1);
+        let d = estoi(&x, &x, SR16).unwrap();
         assert!((d - 1.0).abs() < 1e-6, "{d}");
     }
 
     #[test]
     fn noise_lowers_score_and_scale_invariant() {
-        let x = tone_bursts(16_000, 3.0, 2);
+        let x = tone_bursts(SR16, 3.0, 2);
         let mut r = crate::rng::Rng::new(9);
         let y: Vec<f32> = x.iter().map(|v| v + 0.3 * r.normal() as f32).collect();
-        let d = estoi(&x, &y, 16_000).unwrap();
+        let d = estoi(&x, &y, SR16).unwrap();
         assert!(d < 0.9, "{d}");
         let y2: Vec<f32> = y.iter().map(|v| v * 0.25).collect();
-        let d2 = estoi(&x, &y2, 16_000).unwrap();
+        let d2 = estoi(&x, &y2, SR16).unwrap();
         assert!((d - d2).abs() < 1e-9);
     }
 
     #[test]
     fn too_short_is_none() {
-        let x = tone_bursts(16_000, 0.2, 3);
-        assert!(estoi(&x, &x, 16_000).is_none());
+        let x = tone_bursts(SR16, 0.2, 3);
+        assert!(estoi(&x, &x, SR16).is_none());
     }
 
     #[test]
     fn resample_keeps_dc_and_length() {
-        let x = vec![1.0f64; 1600];
-        let y = resample_oct(&x, 10_000, 16_000);
+        let x = vec![1.0f64; SR16 as usize / 10];
+        let y = resample_oct(&x, FS, SR16 as usize);
         assert_eq!(y.len(), 1000);
         // 中段直流增益 1
         assert!((y[500] - 1.0).abs() < 1e-3, "{}", y[500]);

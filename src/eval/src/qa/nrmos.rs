@@ -79,7 +79,7 @@ pub const DISTILL_SHA256: &str = "b8e2dc186286377ddd5145698446ce949933c356a306a7
 pub const SCOREQ_PAD: usize = 320;
 /// Distill-MOS 一段的样本数与最大跳长。
 pub const DISTILL_SEQ: usize = 122_880;
-pub const DISTILL_HOP: usize = 16_000;
+pub const DISTILL_HOP: usize = 16_000; // tidy: 非采样率：上游 sqa.py MAX_HOP_LEN，是样本数
 
 /// 找模型文件：环境变量优先，其次家目录下的默认位置。只看存不存在，不核哈希（核哈希见 [`verify`]）。
 pub fn locate(k: Kind) -> Option<PathBuf> {
@@ -229,7 +229,7 @@ mod tests {
     #[test]
     fn distill_segments_match_upstream() {
         // 短于一段：补零、一段
-        assert_eq!(distill_segments(48_000), (DISTILL_SEQ, vec![0]));
+        assert_eq!(distill_segments(48_000), (DISTILL_SEQ, vec![0])); // tidy: 非采样率：段长 3 s 的样本数
         assert_eq!(distill_segments(DISTILL_SEQ), (DISTILL_SEQ, vec![0]));
         // 10.6 s：超出 46,720 → ceil(2.92) + 1 = 4 段，起点 0 · 15573 · 31146 · 46720
         let (len, s) = distill_segments(169_600);

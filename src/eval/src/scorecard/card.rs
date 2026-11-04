@@ -3,7 +3,7 @@
 use serde_json::{Value, json};
 
 use super::ClipRow;
-use super::rules::{SceneCard, CardStatus, summarize, worst};
+use super::rules::{CardStatus, SceneCard, summarize, worst};
 use crate::files::serde_name;
 
 /// 整张成绩单。

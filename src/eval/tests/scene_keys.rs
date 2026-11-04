@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use vdn_eval::files::serde_name;
-use vdn_eval::scene::{DeviceKey, MicMode, MeetingPlace};
+use vdn_eval::scene::{DeviceKey, MeetingPlace, MicMode};
 
 fn read(rel: &str) -> String {
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
