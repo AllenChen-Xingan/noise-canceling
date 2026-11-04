@@ -512,7 +512,7 @@
 
 > 方法同上：只用 HTTP Range 读 zip 末尾目录（每次 < 8 MB，未下载音频），GitHub contents 接口读文件名，回论文原文核句子。
 - 重数并核实无误：DNS1 dev 真实 300 = `ms_` 150 + `audioset_` 150；DNS2 V2 blind laptop 192、macbook 6、headset 97、webcam 41、emotional 102、laughter 34；DNS3 V3 600 = realrec 440 + 非真实 160、laptop 137；全合集自填 mac 类 31 条（V2 6 + V3 24 + 情绪 1）；DNS4 blind 859 = Mobile 638 + Desk 221；DNS5 dev Track2 Mobile 413 / Desk 187、blind Track2 364、`ap` 段 128（Realtek 36）、cafe 4；URGENT 2026 `blind_noisy.zip` 114,939,046 字节；URGENT 2024 数据卡「no labels or meta information」原句；AEC README「captured on Windows PCs」原句；DR-VCTK datashare 页标题「Small subset version」；DNS 2022 论文「70% of the test clips」原句。
-- 推翻 / 改正 9 处：①DNS3「情绪集 584」错，实为 600，014 索引行的 600 是对的；②DNS5 blind Track1 388 → 389；③DNS5 dev「Mobile 413 与论文冲突」已解：论文自相矛盾，且 dev Track2 是 DNS4 blind 的复用；④DNS5 `mt` 段并非无设备，81 条标 Windows、44 条标安卓；⑤DNS1 dev 漏了 `SurfaceBook` 44 条（笔记本）；⑥DNS2 合成唱歌是 50 条不是 45；⑦DNS2 / DNS3 设备键 `mbp-builtin` 不成立（只有 1 条写 Macbookpro，其余写 macbook / mac），改为 `laptop-other` 并注明；⑧NISQA-LIVETALK 的笔记本是录音端，不是说话人的麦；⑨Clarity / CHiME 两节的「与 D62 的关系」原写了结论（不建议用 / 不可用），改为只列事实，Clarity 设备键 `other` 不在暂定键里，改 `unknown`。
+- 推翻 / 改正 9 处：①DNS3「情绪集 584」错，实为 600，014 索引行的 600 是对的；②DNS5 blind Track1 388 → 389；③DNS5 dev「Mobile 413 与论文冲突」已解：论文自相矛盾，且 dev Track2 是 DNS4 blind 的复用；④DNS5 `mt` 段并非无设备，81 条标 Windows、44 条标安卓；⑤DNS1 dev 漏了 `SurfaceBook` 44 条（笔记本）；⑥DNS2 合成唱歌是 50 条不是 45；⑦DNS2 / DNS3 设备键 `mbp-builtin` 不成立（只有 1 条写 Macbookpro，其余写 macbook / mac），改为 `laptop-other` 并注明；⑧NISQA-LIVETALK 的笔记本是录音端，不是说话人的麦；⑨Clarity / CHiME 两节的「与 D62 的关系」原写了结论（不建议用 / 不可用），改为只列事实，Clarity 设备键 `other` 不在暂定键里，改 `non-laptop-unknown`。
 - 未复核（保留原文）：VOiCES、DAPS、ACE、AEC 2022 / 2023 文件数、DNS5 副语言片段与 dev 情绪 72 条。
 
 ### ②按地点 · 014 卡疑误（未改原卡）
