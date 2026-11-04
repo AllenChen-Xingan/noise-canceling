@@ -36,7 +36,7 @@
 - **小时**：ARTE 单场景时长未查到；DEMAND 每段 5 min；TUT 2017 office 52 min
 - **参考 / 转写**：均无
 - **许可**：ARTE 只评测（说明写仅非商业）；DEMAND 只评测；TUT 2017 只评测（Other Non-Commercial）；DNS5、MS AEC 未查到
-- **缺口**：**公开集没有开放办公里带主说话人的真实录音**，只能自录，或把 ARTE / DEMAND 背景混进干净语音（合成）
+- **缺口**：**本轮未找到开放办公里带主说话人的公开真实录音**（汇总时措辞已收窄，见 `../matrix.md` 第二节），要补得自录，或把 ARTE / DEMAND 背景混进干净语音（合成）
 
 ## car 车内
 - **候选**：AISHELL-5（014，中文 2–4 人车内自然对话，即 ICMC-ASR 修正版）；AVICAR（新卡，英语朗读，行驶车内 8 麦线阵）；QUT-NOISE CAR（新卡，开窗 / 关窗，无人声）；DEMAND TCAR；DNS5 dev/blind 车内段（014）
@@ -50,7 +50,7 @@
 - **小时**：TAU 64 h（10 个场景约各 6.4 h【推断：按均衡划分】）；DEMAND 每段 5 min；CHiME-3 BUS 小时见 014 卡
 - **参考 / 转写**：TAU、DEMAND、ARTE 无；CHiME-3 有近讲 + 转写
 - **许可**：TAU 只评测（Other Non-Commercial）；DEMAND 只评测；CHiME-3 不可（LDC）
-- **缺口**：**机场 / 车站里有主说话人的公开真实录音没有找到**（CHiME-3 BUS 是车上，非车站）；只能自录或回放重录
+- **缺口**：**本轮未找到机场 / 车站里有主说话人的公开真实录音**（CHiME-3 BUS 是车上，非车站；LIVETALK 手机通话含地铁站，见 `../matrix.md`）；要补得自录或回放重录
 
 ## street 街边
 - **候选**：TAU street_pedestrian / street_traffic / public_square；QUT-NOISE STREET；DEMAND STRAFFIC / SPSQUARE；CHiME-3 PED / STR；VoxCeleb 户外采访（新卡，无地点标签）；Ego4D 户外对话（新卡，需签协议）
