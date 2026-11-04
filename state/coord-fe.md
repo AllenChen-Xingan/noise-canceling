@@ -9,9 +9,9 @@
 
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
-| fecore | 共用频谱前端 · #94 · `feat/frontend-once` · `../noise_canceling-fecore` | 频谱前端 · 降噪模型适配 · 场景特征 · 修音频谱级 | 完成，验收过（大总管亲手跑 xtask ci 6 项全绿 · 对拍 4 份逐位相同含引擎最终输出 · 路径清零 · 文件 ≤ 557 行），PR #99 已开（合并冲突已解），窗口已关 |
-| fespk | exp015 认人吃共享频谱 + 耗时分解 · #95 · `exp/015-speaker-shared-spectrum` · `../noise_canceling-fespk` | 认人前端 · 声纹模型（只评）· 认人判断回路 | 完成，验收过（大总管复跑 11 测试 · 9 文件在范围内 · src/speaker/ 未改 · 路径清零），PR #96 已开，窗口已关 |
-| pse | 调研 024 个性化降噪：有没有人做过 · 为什么难 · #98 · `research/024-pse-landscape` · `../noise_canceling-pse`（人点名派，属「个性化降噪」大事的前置调研） | 个性化降噪 / 提取模型 · 自动注册 · PSE 训练数据与评测集 | 完成，验收过（11 文件在范围内 · 路径清零 · codex 4 轮 3、4 轮无 P0/P1），PR #100 已开，窗口已关 |
+| fecore | 共用频谱前端 · #94 · `feat/frontend-once` · `../noise_canceling-fecore` | 频谱前端 · 降噪模型适配 · 场景特征 · 修音频谱级 | 完成，验收过（大总管亲手跑 xtask ci 6 项全绿 · 对拍 4 份逐位相同含引擎最终输出 · 路径清零 · 文件 ≤ 557 行），PR #99 已合并（ef0cfdd3，#94 关），窗口与 worktree 已清 |
+| fespk | exp015 认人吃共享频谱 + 耗时分解 · #95 · `exp/015-speaker-shared-spectrum` · `../noise_canceling-fespk` | 认人前端 · 声纹模型（只评）· 认人判断回路 | 完成，验收过（大总管复跑 11 测试 · 9 文件在范围内 · src/speaker/ 未改 · 路径清零），PR #96 已合并（3af03735，#95 关），窗口与 worktree 已清 |
+| pse | 调研 024 个性化降噪：有没有人做过 · 为什么难 · #98 · `research/024-pse-landscape` · `../noise_canceling-pse`（人点名派，属「个性化降噪」大事的前置调研） | 个性化降噪 / 提取模型 · 自动注册 · PSE 训练数据与评测集 | 完成，验收过（11 文件在范围内 · 路径清零 · codex 4 轮 3、4 轮无 P0/P1），PR #100 已合并（#98 关），窗口与 worktree 已清 |
 
 ## 进度板
 
@@ -34,6 +34,8 @@
 - fecore 转交 → backlog「文档」：src/README.md 仍是模板 · 模块说明内部编号多 · A/B/C 档无定义 · 「档」一词三义 · L0–L3 无逐级说明 · types/src/lib.rs 表头三块表里四行 · 帧长 10/16 ms 不一致
 - 2026-11-04 pse 收尾（调研 024）：Zoom · Teams 会中自动注册 + 隔离（闭源）；开源最接近 Alkove Focus（Apache-2.0，约 80 万参数，从 GTCRN 改，厂商测 M1 Max 约 0.56 ms / 10 ms，声纹需外部给）；最难是旁人比你响（PVQE 6.25%）；小模型最小证据约 21–23 万参数。建议先半天测 Alkove 再自训（待人定）。PR #100
 - 2026-11-04 #99 CI 红：场景对拍基准在 macOS 27 生成、CI 为 macOS 15，平台标签只写 aarch64-macos → 误比（推断：libm 跨系统版本末位不同；同机借谱 vs 自算在 CI 上过）。子代理改标签含系统大版本，借名额跑 ci
+- 2026-11-04 #99 修 CI：对拍平台标签改 aarch64-macos-27（哈希不变），本机 4 份真比（大总管复跑）；CI 上 4 份跳过但日志显示 ok（eprintln 被 cargo 吞）→ PR 写明 + 开 #101。#99 · #100 合并（各解一次 reviews 索引冲突）
+- **第一段收口**。下一步：第二段（认人 fbank · 评测器 FFT · 离线例子收进同一模块，D82），派前先与 5-app-5e 商量评测器那几处
 
 ## 待人拍板（本大事）
 
