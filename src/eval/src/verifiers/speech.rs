@@ -199,7 +199,7 @@ fn residual(x: &[f32], clean: &[f32], sr: u32) -> Vec<f32> {
 /// 咔嗒 = 输出自身一阶差分的离群点（012 原定义），且同时满足：跳变听得见（不低于人声峰值以下 floor_db）；
 /// 这一步跳变里干净人声解释不了的部分占 resid_frac 以上（人声自身的陡变、平滑的增益变化都由干净轨解释）；
 /// 带噪输入 ±2 ms 内没有离群点（原声自带的瞬态不算）。
-pub(crate) fn click_positions(c: &Ctx, p: &Params) -> Vec<usize> {
+pub fn click_positions(c: &Ctx, p: &Params) -> Vec<usize> {
     let k = p.f_or("k", th::CLICK.def("k"));
     let sr = c.clip.sr;
     let frac = p.f_or("resid_frac", th::CLICK.def("resid_frac"));

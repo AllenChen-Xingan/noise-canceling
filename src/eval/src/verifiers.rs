@@ -23,6 +23,7 @@ mod speech;
 use perceptual::*;
 use physical::*;
 pub use sim::GATE_TOLERANCE_S;
+pub use speech::click_positions;
 use sim::*;
 use speech::*;
 
