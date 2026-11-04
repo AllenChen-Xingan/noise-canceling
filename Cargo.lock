@@ -1929,7 +1929,6 @@ version = "0.1.0"
 dependencies = [
  "hound",
  "ort",
- "realfft",
  "schemars",
  "serde",
  "serde_json",

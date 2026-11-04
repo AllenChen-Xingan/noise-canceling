@@ -1,7 +1,8 @@
 //! 人声细节 verifier（012 §3.1 · §3.2，定标前一律 L0）：轻声字被吞 V-WEAK · 人声忽大忽小 V-PUMPV ·
 //! 爆音 V-CLICK · 可懂度 V-ESTOI。都要干净参考（V-CLICK 要带噪输入），真实录音没有参考时判「不知道」。
 
-use realfft::RealFftPlanner;
+use vdn_dsp::FrameFft;
+use vdn_types::{StftSpec, Window};
 
 use super::estoi::estoi;
 use super::perceptual::proj_energy;
@@ -21,19 +22,19 @@ fn owner_at(c: &Ctx, center: usize) -> bool {
         .unwrap_or(false)
 }
 
-/// 每帧每带的电平（dB），125 ms Hann 窗、50% 重叠；只留有声帧。返回 [带][帧]。
+/// 每帧每带的电平（dB），125 ms 周期 Hann 窗（补零到 2 的幂）、50% 重叠，f64；只留有声帧。返回 [带][帧]。
+/// 频谱由统一模块 `vdn_dsp::FrameFft` 算（D82）。
 fn band_levels(c: &Ctx, x: &[f32]) -> Vec<Vec<f64>> {
     let sr = c.clip.sr as f64;
     let win = (0.125 * sr) as usize;
-    let hop = win / 2;
     let nfft = win.next_power_of_two();
-    let w: Vec<f64> = (0..win)
-        .map(|i| 0.5 - 0.5 * (2.0 * std::f64::consts::PI * i as f64 / win as f64).cos())
-        .collect();
-    let mut planner = RealFftPlanner::<f64>::new();
-    let fft = planner.plan_fft_forward(nfft);
-    let mut buf = fft.make_input_vec();
-    let mut spec = fft.make_output_vec();
+    let mut fft = FrameFft::<f64>::from_spec(&StftSpec {
+        n_fft: nfft,
+        win_len: win,
+        hop: win / 2,
+        sample_rate: c.clip.sr,
+        window: Window::HannPeriodic,
+    });
     let edges: Vec<(usize, usize)> = WEAK_CF
         .iter()
         .map(|f| {
@@ -44,20 +45,18 @@ fn band_levels(c: &Ctx, x: &[f32]) -> Vec<Vec<f64>> {
         .collect();
     let mut out = vec![Vec::new(); WEAK_CF.len()];
     let n = x.len().min(c.clip.clean.len());
-    let mut s = 0;
-    while s + win <= n {
-        if owner_at(c, s + win / 2) {
-            buf.iter_mut().for_each(|v| *v = 0.0);
-            for k in 0..win {
-                buf[k] = w[k] * x[s + k] as f64;
-            }
-            let _ = fft.process(&mut buf, &mut spec);
-            for (b, &(lo, hi)) in edges.iter().enumerate() {
-                let p: f64 = spec[lo..hi].iter().map(|z| z.norm_sqr()).sum();
-                out[b].push(db10(p));
-            }
+    let x64: Vec<f64> = x[..n].iter().map(|&v| v as f64).collect();
+    for k in 0..fft.num_frames(n) {
+        if !owner_at(c, k * fft.hop() + win / 2) {
+            continue;
         }
-        s += hop;
+        let Some(spec) = fft.frame(&x64, k) else {
+            break;
+        };
+        for (b, &(lo, hi)) in edges.iter().enumerate() {
+            let p: f64 = spec[lo..hi].iter().map(|z| z.norm_sqr()).sum();
+            out[b].push(db10(p));
+        }
     }
     out
 }

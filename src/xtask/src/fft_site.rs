@@ -39,23 +39,11 @@ pub const BANNED: [&str; 10] = [
 ];
 
 /// 白名单：(文件, 这个文件只许出现的标识符, 原因)。不在第二列的标识符照样报红（例外只放行声明过的那一种计划）。
-pub const ALLOW: [(&str, &[&str], &str); 3] = [
-    (
-        "src/eval/src/verifiers/speech.rs",
-        &["RealFftPlanner", "plan_fft_forward"],
-        "评测器人声细节（f64 周期 Hann），下一 PR 改调 vdn_dsp::FrameFft",
-    ),
-    (
-        "src/eval/src/verifiers/estoi.rs",
-        &["RealFftPlanner", "plan_fft_forward"],
-        "评测器 ESTOI（f64 numpy 内缩 Hann），下一 PR 改调 vdn_dsp::FrameFft",
-    ),
-    (
-        "src/scene/src/features.rs",
-        &["RealFftPlanner", "plan_fft_inverse"],
-        "逆 FFT：功率谱 → 自相关求谐波度，不是分析频谱（013 第 5 节：留着）",
-    ),
-];
+pub const ALLOW: [(&str, &[&str], &str); 1] = [(
+    "src/scene/src/features.rs",
+    &["RealFftPlanner", "plan_fft_inverse"],
+    "逆 FFT：功率谱 → 自相关求谐波度，不是分析频谱（013 第 5 节：留着）",
+)];
 
 fn walk(ts: TokenStream, out: &mut Vec<(usize, String)>) {
     for t in ts {
