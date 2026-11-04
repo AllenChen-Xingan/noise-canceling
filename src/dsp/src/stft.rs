@@ -263,6 +263,30 @@ mod tests {
         assert_eq!(a.analyze(hops[4]).to_vec(), b.analyze(hops[4]).to_vec());
     }
 
+    /// `feed_partial`：整 hop 时与 `feed` 相同；不足一个 hop 只移那么多、不补零；空输入不动；多的丢掉。
+    #[test]
+    fn feed_partial_shifts_by_input_length() {
+        let spec = vdn_types::FRONTEND;
+        let x: Vec<f32> = (0..spec.n_fft * 2).map(|i| i as f32 + 1.0).collect();
+        let (mut a, mut b) = (StreamingStft::from_spec(&spec), StreamingStft::from_spec(&spec));
+        a.feed(&x[..spec.hop]);
+        b.feed_partial(&x[..spec.hop]);
+        assert_eq!(a.input, b.input);
+        // 手算参照：左移 h、尾部填 x[..h]
+        let mut want = b.input.clone();
+        for len in [100usize, 0, spec.hop + 50, 1] {
+            let h = len.min(spec.hop);
+            want.copy_within(h.., 0);
+            let tail = spec.n_fft - h;
+            want[tail..].copy_from_slice(&x[..h]);
+            b.feed_partial(&x[..len]);
+            assert_eq!(b.input, want, "len = {len}");
+        }
+        let n = b.forward_count();
+        b.analyze_partial(&x[..10]);
+        assert_eq!(b.forward_count(), n + 1);
+    }
+
     /// `power_into` 与 `norm_sqr` 逐位相同（场景旧代码用的是 `norm_sqr`）。
     #[test]
     fn power_matches_norm_sqr() {

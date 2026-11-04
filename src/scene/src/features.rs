@@ -46,7 +46,8 @@ pub const CTX: usize = 125;
 const NB: usize = 16;
 const N_FFT: usize = FRONTEND.n_fft;
 const BINS: usize = FRONTEND.bins();
-// 分类器权重（weights.rs）按 512 点 / 帧移 256 / 16 kHz / 周期 sqrt-Hann 训练：正本任一项一改，这里编译不过，提醒重训
+// 分类器权重（weights.rs）按 512 点 / 帧移 256 / 周期 sqrt-Hann、在 MODEL_RATE 上训练：正本的点数、帧移、窗一改，
+// 或正本不再取 MODEL_RATE，这里编译不过，提醒重训。MODEL_RATE 本身改了这里拦不住——那会让所有模型一起作废，归采样率正本管
 const _: () = assert!(
     FRONTEND.n_fft == 512
         && FRONTEND.hop == 256
@@ -204,19 +205,20 @@ impl FeatureExtractor {
     }
 
     /// 自算：喂一个 hop 的带噪输入（判断用的是麦克风原声，不是降噪后的声音），自己做一次正向 FFT。
-    /// `x.len()` 应等于 `hop()`。
+    /// `x.len()` 应等于 `hop()`；不足时只移那么多样本（改前语义，`tests/golden.rs` 的不整齐长度对拍证明不变）。
     pub fn push_hop(&mut self, x: &[f32]) {
-        let spec = self.stft.analyze(x);
+        let spec = self.stft.analyze_partial(x);
         power_into(spec, &mut self.pow);
         self.finish_frame(x);
     }
 
     /// 借谱：`power` 是同一帧带噪输入的功率谱（`vdn_types::SpectrumTap::input_power`），`spec` 是借出方的口径
-    /// （`SpectrumTap::spectrum_spec`）。口径不等于 `FRONTEND` 或长度不对时退回自算——分类器权重只认正本口径；
+    /// （`SpectrumTap::spectrum_spec`）。口径不等于 `FRONTEND`、谱长度不对、或 `x` 不是整 hop 时退回自算——分类器权重只认正本口径；
     /// 退回可由 `own_fft_count` 看到。
     /// `x` 仍要：削波按时域算；并推进自算缓冲，切回自算（换成 FE-M）时第一帧不吃旧数据。
     pub fn push_hop_with_power(&mut self, x: &[f32], spec: &StftSpec, power: &[f32]) {
-        if *spec != FRONTEND || power.len() != BINS {
+        // 不是整 hop 时借来的整帧谱和改前的移位语义对不上，也退回自算
+        if *spec != FRONTEND || power.len() != BINS || x.len() != self.hop {
             self.push_hop(x);
             return;
         }
