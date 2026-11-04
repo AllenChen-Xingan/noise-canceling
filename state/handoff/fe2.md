@@ -8,6 +8,9 @@
 
 - 2026-11-04 报到；读完交代、013 计划、第一段实现、fbank、评测器三处
 - 2026-11-04 盘点完成（读源码 + grep，未构建），见下表；设计要点已发大总管等点头
+- 2026-11-04 大总管点头（三点改动：platform.rs 复制 + 逐字比对；analysis.rs:163 进下一 PR 清单；R-FFT 边界写明）
+- 2026-11-04 tidy 确认禁止 `#[path]` 跳出 crate → speaker 复制一份 platform.rs，`golden.rs::platform_helper_matches_scene` 逐字比对
+- 2026-11-04 代码与测试写完（未编译）：types `frontend.rs` · dsp `fft.rs`（新）`window.rs` `stft.rs` · speaker `fbank.rs` · xtask `fft_site.rs`（新，R-FFT）；013 第 12 节写好；等名额生成基准与跑测试
 
 ## 盘点：全仓手写频谱 / 窗（读源码，grep `plan_fft|RealFftPlanner|hann|hamming|povey|cos\(`）
 
