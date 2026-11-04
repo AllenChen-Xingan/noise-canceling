@@ -88,8 +88,10 @@ pub trait SpectrumTap: Model {
 
 | 判据（测试名） | 结果 | 阈值 | 过线 |
 |---|---|---|---|
-| GTCRN 改前改后输出（`models/tests/golden.rs`，3 s，48000 点） | 逐位相同 | 逐位 | 是 |
-| 场景改前改后判断（`scene/tests/golden.rs`，12 s，24 次判断） | 逐位相同 | 逐位 | 是 |
+| GTCRN 改前改后输出（`models/tests/golden.rs`，约 3 s，截到整 hop 共 47872 点） | 逐位相同 | 逐位 | 是 |
+| 引擎最终输出（同文件，48 kHz `Pipeline`，默认安全参数，块长轮换，144000 点） | 逐位相同 | 逐位 | 是 |
+| 场景改前改后判断（`scene/tests/golden.rs`，12 s，整 hop，24 次判断） | 逐位相同 | 逐位 | 是 |
+| 场景不整齐长度（同文件，含不足一个 hop、空、超过一个 hop，31 次判断） | 逐位相同 | 逐位 | 是 |
 | 场景借谱 vs 自算（`scene/tests/frontend.rs`） | 35 维最大差 0，24 次判断全同 | ≤ 1e-5，判断全同 | 是 |
 | 组合路径每帧正向 FFT 次数（同上） | 每帧 1 次 | 1 次 | 是 |
 | 修音吃借来的谱 vs 自算（`polish/tests/borrowed_spectrum.rs`） | 逐位相同 | 逐位 | 是 |
