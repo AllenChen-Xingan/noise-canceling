@@ -44,6 +44,20 @@ class Measured(unittest.TestCase):
         np.testing.assert_allclose(r.full, m.ir, atol=1e-9)  # 实测距离处不调
         self.assertEqual(src["direct_gain_db"], 0.0)
 
+    def test_onset_is_first_arrival(self):
+        """回归（自审 P0）：第一个到达只有最大值的 0.3 倍、后面的反射更强时，直达要取第一个。"""
+        x = np.zeros(4000)
+        x[100], x[300] = 0.3, 1.0
+        x[300:] += np.random.default_rng(0).standard_normal(3700) * 0.02 * np.exp(-np.arange(3700) / 800)
+        m = rirs.Measured("t", "r", "onset", 0, x, 1.0)
+        self.assertEqual(m.peak, 100)
+
+    def test_clamped_distance_labelled(self):
+        m = rirs.ace("Office_1", 2)  # 实测 2.68 m
+        r, src = m.at(0.05, 0)  # 要 +34 dB，撞上限 +18 dB
+        self.assertTrue(src["clamped"])
+        self.assertAlmostEqual(r.dist_m, 2.68 / 10 ** (18 / 20), places=3)
+
     def test_closer_means_more_direct(self):
         m = rirs.ace("Office_2", 2)
         near, s1 = m.at(0.5, 0)
@@ -157,6 +171,24 @@ class Consistency(unittest.TestCase):
         tbl = dict(compose.SCENES["bed_t60"])
         tbl.pop(self.mit["chain"]["room"]["bed_cls"])
         self.assertTrue(reverb_check.check(self.mit, tbl))
+
+    def test_neg_missing_rir_by_class(self):
+        """回归（自审 P2）：旁人语音等应当带房间的声音，清单里删掉 rir 也要判红（按类别判，不看清单）。"""
+        for base in (self.ace, self.mit):
+            r = copy.deepcopy(base)
+            hit = next((s for s in r["sounds"] if labels.SOUNDS[s["cls"]]["directional"] or s["group"] == "speech" and s["cls"] != "babble"), None)
+            if hit is None:
+                continue
+            hit["src"].pop("rir", None)
+            self.assertTrue(reverb_check.check(r), r["id"])
+
+    def test_neg_car_speed_and_seat(self):
+        r = copy.deepcopy(self.car)
+        next(s for s in r["sounds"] if s["cls"] == "bed-car-mcv")["src"]["speed_kph"] += 10
+        self.assertTrue(reverb_check.check(r))
+        r = copy.deepcopy(self.car)
+        r["targets"][0]["src"]["rir"]["file"] = "ir_mouth_pos1_0.wav" if r["chain"]["room"]["seat"] != 1 else "ir_mouth_pos2_0.wav"
+        self.assertTrue(reverb_check.check(r))
 
     def test_neg_mit_mixed_irs(self):
         r = copy.deepcopy(self.mit)
