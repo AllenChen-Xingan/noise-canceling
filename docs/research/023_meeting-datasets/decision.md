@@ -37,7 +37,7 @@
 | 4 | CHiME-9 ECHI | `canteen` 真人对话；近讲参考只在 train 提供 | HF 门控 + 签 DUA |
 | 5 | MOBIO | `mac-intel-builtin`（2008 款 MacBook）真人说话 | Zenodo 申请 + EULA，签字人须是在编人员，只限非商业 |
 | 6 | ConferencingSpeech 2021 | `meeting-room` 中文真实会议麦阵 | 挑战注册后发链接和密码；赛后还能否申请未查到 |
-| 7 | AISHELL-2 | `home-quiet` × iOS 手机 1000 h 朗读 | 学术申请，要填大学院系 |
+| 7 | AISHELL-2 | `home-quiet` × iOS 手机朗读（全集 1000 h，其中 1347 人在录音棚，客厅部分时长未知） | 学术申请，要填大学院系 |
 | 其余 | VoxCeleb · CANDOR · MSP-Podcast · IEMOCAP · Buckeye · AVICAR · Freesound 批量 · MDCC · MISP2021 · WenetSpeech-Yue | 主要补语体（笑声、附和、情绪）或无地点标签 | 各自申请表 / 协议；Switchboard、HKUST、CHiME-3/4 要 LDC 付费；MISP2021 页面没有申请入口 |
 
 ## 四、待人拍板（4 题；同步写进现状页，由大总管汇总）
