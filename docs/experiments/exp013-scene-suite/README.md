@@ -26,7 +26,7 @@
 | `meeting-room` | 空调 合（NC 25–30）| — | 椅子、开关门 下、咳嗽 / 笑 下 | **近处 2–3 人都是要留的人**（0.5–2 m，电平差 0 到 −12 dB）|
 | `cowork` | OOFFICE + PCAFETER 后段 本 | 咖啡机（磨豆 + 蒸汽）合 | 脚步 下、杯碟 本 | 陌生人 2–4 m |
 | `cafe` | PRESTO 后段 本（SCAFE 是户外露台，第三版起只给户外）| 咖啡机 合、背景音乐 本 | 杯碟 本、开罐 下 | 邻桌 1–2.5 m |
-| `canteen` | PRESTO 后段 本 + 多人 babble（6–10 人）本 | — | 餐具碰撞 本 | 同桌 1–1.5 m |
+| `canteen` | PCAFETER / PRESTO 后段 本 + 多人 babble（6–10 人）本 | — | 餐具碰撞 本 | 同桌 1–1.5 m |
 | `transit-hub` | ACE 大厅同房间噪声；PSTATION 后一半 下 | 广播（人声经喇叭滤波 + 提示音）本 + 合 | 行李箱轮子 合、脚步 下 | 人流 babble |
 | `car-passenger` | McVAMPIRE 同车行驶噪声 下 | 胎噪 / 发动机（含在底噪）| 转向灯 合、喇叭 下 | 司机 0.8–1.2 m 侧面、导航语音 |
 | `bus-metro-cabin` | TBUS 后段 本、TMETRO 下 | 报站广播 本 + 合 | 刹车 / 开关门提示音 合 | 乘客 1–2 m |
