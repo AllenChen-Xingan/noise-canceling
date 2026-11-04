@@ -4,21 +4,17 @@
 //! `use_power = true`、`dither = 0`、帧长补到 2 的幂做 FFT、mel 用 Kaldi 的 `1127·ln(1 + f/700)`。
 //! 窗型和输入缩放可配：WeSpeaker = hamming + 输入 ×32768；3D-Speaker CAM++ = povey + 输入保持 [-1, 1]（009 §5）。
 //!
-//! 一个 [`Fbank`] 自带 FFT 计划和工作区，`compute_into` 不分配（声纹在非实时线程，但每 0.5 s 一次，没必要每次分配）。
+//! 一个 [`Fbank`] 自带分帧 FFT 和工作区，`compute_into` 不分配（声纹在非实时线程，但每 0.5 s 一次，没必要每次分配）。
+//!
+//! 频谱那一段（分帧 → 加窗 → 补零 → FFT → 功率）不在这里写：调统一模块 `vdn_dsp::FrameFft` 与 `vdn_dsp::power_into`
+//!（D82「同一处代码，各自切法」）。这里只留 Kaldi 特有的每帧预处理（去直流 · 预加重 · 输入缩放）和 mel 滤波器组。
+//! 窗种类用正本 `vdn_types::Window`（`Kaldi*` 三种）。
 
 #![allow(clippy::indexing_slicing)] // NRT: 判断回路（C 档线程，约 0.5 s 一次），不在降噪线程上跑
 
-use std::sync::Arc;
-
-use realfft::num_complex::Complex32;
-use realfft::{RealFftPlanner, RealToComplex};
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum WindowType {
-    Hamming,
-    Povey,
-    Hanning,
-}
+use vdn_dsp::{FrameFft, power_into};
+use vdn_types::StftSpec;
+pub use vdn_types::Window;
 
 #[derive(Clone, Copy, Debug)]
 pub struct FbankConfig {
@@ -30,12 +26,24 @@ pub struct FbankConfig {
     /// ≤ 0 时表示「奈奎斯特 + high_freq」（Kaldi 约定）
     pub high_freq: f32,
     pub preemph: f32,
-    pub window: WindowType,
+    /// Kaldi 窗：`KaldiHamming` / `KaldiPovey` / `KaldiHanning`（对称，分母 n−1）
+    pub window: Window,
     /// 计算前把输入乘上它（WeSpeaker 训练时用 16 bit 整数幅度，即 32768）
     pub input_scale: f32,
 }
 
 impl FbankConfig {
+    /// 频谱口径：窗长 `frame_length`、补零到 2 的幂、帧移 `frame_shift`。
+    pub fn spec(&self) -> StftSpec {
+        StftSpec {
+            n_fft: self.frame_length.next_power_of_two(),
+            win_len: self.frame_length,
+            hop: self.frame_shift,
+            sample_rate: self.sample_rate as u32,
+            window: self.window,
+        }
+    }
+
     /// WeSpeaker（ECAPA / ResNet / CAM++ 的 wespeaker 版）前端：`resources/wespeaker/wespeaker/bin/infer_onnx.py:31-50`。
     pub fn wespeaker() -> Self {
         Self {
@@ -46,7 +54,7 @@ impl FbankConfig {
             low_freq: 20.0,
             high_freq: 0.0,
             preemph: 0.97,
-            window: WindowType::Hamming,
+            window: Window::KaldiHamming,
             input_scale: 32768.0,
         }
     }
@@ -54,13 +62,11 @@ impl FbankConfig {
 
 pub struct Fbank {
     cfg: FbankConfig,
-    win: Vec<f32>,
     /// 每个 mel 带：(起始 FFT bin, 权重)
     banks: Vec<(usize, Vec<f32>)>,
-    fft: Arc<dyn RealToComplex<f32>>,
-    frame: Vec<f32>,
-    spec: Vec<Complex32>,
-    scratch: Vec<Complex32>,
+    fft: FrameFft<f32>,
+    /// 本帧功率谱（bins 个）
+    power: Vec<f32>,
 }
 
 fn mel(f: f64) -> f64 {
@@ -69,19 +75,8 @@ fn mel(f: f64) -> f64 {
 
 impl Fbank {
     pub fn new(cfg: FbankConfig) -> Self {
-        let n = cfg.frame_length;
-        let n_fft = n.next_power_of_two();
-        let win = (0..n)
-            .map(|i| {
-                let a = 2.0 * std::f64::consts::PI / (n as f64 - 1.0);
-                let x = i as f64;
-                (match cfg.window {
-                    WindowType::Hamming => 0.54 - 0.46 * (a * x).cos(),
-                    WindowType::Hanning => 0.5 - 0.5 * (a * x).cos(),
-                    WindowType::Povey => (0.5 - 0.5 * (a * x).cos()).powf(0.85),
-                }) as f32
-            })
-            .collect();
+        let fft = FrameFft::<f32>::from_spec(&cfg.spec());
+        let n_fft = fft.n_fft();
         // mel 滤波器组：Kaldi `MelBanks`（只用前 n_fft/2 个 bin，奈奎斯特 bin 权重为 0）
         let nyq = 0.5 * cfg.sample_rate as f64;
         let high = if cfg.high_freq <= 0.0 {
@@ -118,16 +113,10 @@ impl Fbank {
                 (start.min(n_fft / 2), w)
             })
             .collect();
-        let fft = RealFftPlanner::<f32>::new().plan_fft_forward(n_fft);
-        let spec = fft.make_output_vec();
-        let scratch = fft.make_scratch_vec();
         Self {
             cfg,
-            win,
             banks,
-            frame: vec![0.0; n_fft],
-            spec,
-            scratch,
+            power: vec![0.0; fft.bins()],
             fft,
         }
     }
@@ -138,51 +127,41 @@ impl Fbank {
 
     /// `snip_edges = true` 时的帧数。
     pub fn num_frames(&self, n_samples: usize) -> usize {
-        if n_samples < self.cfg.frame_length {
-            0
-        } else {
-            1 + (n_samples - self.cfg.frame_length) / self.cfg.frame_shift
-        }
+        self.fft.num_frames(n_samples)
     }
 
     /// 把 `x` 的 fbank 写进 `out`（行主序，`num_frames × num_mel_bins`），返回帧数。`out` 不够长时只写能放下的帧。
     pub fn compute_into(&mut self, x: &[f32], out: &mut [f32]) -> usize {
-        let (len, shift, nb) = (
-            self.cfg.frame_length,
-            self.cfg.frame_shift,
-            self.cfg.num_mel_bins,
-        );
+        let nb = self.cfg.num_mel_bins;
         let nf = self.num_frames(x.len()).min(out.len() / nb);
-        let scale = self.cfg.input_scale;
+        let (scale, pe) = (self.cfg.input_scale, self.cfg.preemph);
         for f in 0..nf {
-            let src = &x[f * shift..f * shift + len];
-            // 去直流用 f64 累加（009 §2：安静频带的数值误差）
-            let mean = (src.iter().map(|&v| v as f64).sum::<f64>() / len as f64) as f32 * scale;
-            let fr = &mut self.frame[..len];
-            for (d, &s) in fr.iter_mut().zip(src) {
-                *d = s * scale - mean;
-            }
-            // 预加重：从后往前，第 0 个样本用自己（Kaldi 约定）
-            let pe = self.cfg.preemph;
-            if pe != 0.0 {
-                for j in (1..len).rev() {
-                    fr[j] -= pe * fr[j - 1];
+            // Kaldi 每帧预处理（统一模块在加窗之前调它；拿到的是这一帧原样本的拷贝）
+            let pre = |fr: &mut [f32]| {
+                let len = fr.len();
+                // 去直流用 f64 累加（009 §2：安静频带的数值误差）
+                let mean = (fr.iter().map(|&v| v as f64).sum::<f64>() / len as f64) as f32 * scale;
+                for d in fr.iter_mut() {
+                    *d = *d * scale - mean;
                 }
-                fr[0] -= pe * fr[0];
-            }
-            for (d, &w) in fr.iter_mut().zip(&self.win) {
-                *d *= w;
-            }
-            self.frame[len..].fill(0.0);
-            // 长度都由同一个计划生成，不会出错
-            let _ =
-                self.fft
-                    .process_with_scratch(&mut self.frame, &mut self.spec, &mut self.scratch);
+                // 预加重：从后往前，第 0 个样本用自己（Kaldi 约定）
+                if pe != 0.0 {
+                    for j in (1..len).rev() {
+                        fr[j] -= pe * fr[j - 1];
+                    }
+                    fr[0] -= pe * fr[0];
+                }
+            };
+            // 帧号 < num_frames，不会越界
+            let Some(spec) = self.fft.frame_with(x, f, pre) else {
+                return f;
+            };
+            power_into(spec, &mut self.power);
             let row = &mut out[f * nb..(f + 1) * nb];
             for (o, (start, w)) in row.iter_mut().zip(&self.banks) {
                 let mut e = 0.0f32;
                 for (k, &wk) in w.iter().enumerate() {
-                    e += self.spec[start + k].norm_sqr() * wk;
+                    e += self.power[start + k] * wk;
                 }
                 *o = e.max(f32::EPSILON).ln();
             }

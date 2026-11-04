@@ -2032,7 +2032,6 @@ dependencies = [
  "assert_no_alloc",
  "earshot",
  "ort",
- "realfft",
  "vdn-dsp",
  "vdn-types",
 ]

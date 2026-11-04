@@ -5,28 +5,27 @@
 //!
 //! 输入缓冲初始为全零，所以第一次调用分析的是「`n_fft - hop` 个零 + 第一个 hop」。
 //!
-//! 全链路共用的口径是 `vdn_types::FRONTEND`，用 [`StreamingStft::from_spec`] 建；功率谱一律用 [`power_into`] 算
+//! 全链路共用的口径是 `vdn_types::FRONTEND`，用 [`StreamingStft::from_spec`] 建；功率谱一律用 [`crate::power_into`] 算
 //! （GTCRN 借出与场景自算是同一段代码，逐位相同靠构造保证，`docs/plan/013_frontend-once.md`）。
+//! 正向那一段（加窗 → FFT）与按整段分帧的 [`crate::FrameFft`] 共用 [`FftCore`]（`fft.rs`）。
 
 use std::sync::Arc;
 
 use realfft::num_complex::Complex32;
-use realfft::{ComplexToReal, RealFftPlanner, RealToComplex};
+use realfft::{ComplexToReal, RealFftPlanner};
+
+use crate::fft::FftCore;
 
 pub struct StreamingStft {
     n_fft: usize,
     hop: usize,
-    win: Vec<f32>,
+    /// 正向：窗表、正向计划、频谱缓冲、计数
+    core: FftCore<f32>,
     input: Vec<f32>,
     ola: Vec<f32>,
     time: Vec<f32>,
-    spec: Vec<Complex32>,
-    scratch_fwd: Vec<Complex32>,
     scratch_inv: Vec<Complex32>,
-    fwd: Arc<dyn RealToComplex<f32>>,
     inv: Arc<dyn ComplexToReal<f32>>,
-    /// 正向 FFT 做过几次（测试用：证明每帧只算一次）
-    forward: u64,
 }
 
 // 构造：非实时线程（会分配、会 assert）
@@ -35,27 +34,27 @@ impl StreamingStft {
     pub fn new(n_fft: usize, hop: usize, win: Vec<f32>) -> Self {
         assert_eq!(win.len(), n_fft, "窗长必须等于 n_fft");
         assert!(hop > 0 && hop <= n_fft, "hop 必须在 1..=n_fft");
-        let mut planner = RealFftPlanner::<f32>::new();
-        let fwd = planner.plan_fft_forward(n_fft);
-        let inv = planner.plan_fft_inverse(n_fft);
+        // 逆变换只有流式合成要；正向计划在 FftCore 里
+        let inv = RealFftPlanner::<f32>::new().plan_fft_inverse(n_fft);
         Self {
             n_fft,
             hop,
-            win,
+            core: FftCore::new(n_fft, win),
             input: vec![0.0; n_fft],
             ola: vec![0.0; n_fft],
             time: vec![0.0; n_fft],
-            spec: fwd.make_output_vec(),
-            scratch_fwd: fwd.make_scratch_vec(),
             scratch_inv: inv.make_scratch_vec(),
-            fwd,
             inv,
-            forward: 0,
         }
     }
 
-    /// 按口径正本建（窗由 [`crate::window::for_spec`] 造）。
+    /// 按口径正本建（窗由 [`crate::window::for_spec`] 造）。流式重叠相加要求 `win_len == n_fft`（不补零）。
     pub fn from_spec(spec: &vdn_types::StftSpec) -> Self {
+        assert!(spec.is_valid(), "口径不自洽：{spec:?}");
+        assert_eq!(
+            spec.win_len, spec.n_fft,
+            "流式 STFT 不支持补零（win_len 必须等于 n_fft）"
+        );
         Self::new(spec.n_fft, spec.hop, crate::window::for_spec(spec))
     }
 }
@@ -77,7 +76,7 @@ impl StreamingStft {
 
     /// 频点数 = n_fft / 2 + 1。
     pub fn bins(&self) -> usize {
-        self.spec.len()
+        self.core.bins()
     }
 
     /// 输出比输入晚的样本数。
@@ -93,7 +92,7 @@ impl StreamingStft {
 
     /// 正向 FFT 累计次数（`reset` 不清零）。
     pub fn forward_count(&self) -> u64 {
-        self.forward
+        self.core.forward
     }
 
     /// 只把一个 hop 推进输入缓冲、不做 FFT（借别人的谱时让自己的缓冲保持同步，切回自算时第一帧不吃旧数据）。
@@ -134,44 +133,36 @@ impl StreamingStft {
 
     /// 对当前输入缓冲加窗、做一次正向 FFT（计数 +1）。
     fn transform(&mut self) -> &mut [Complex32] {
-        self.forward += 1;
-        for ((t, x), w) in self.time.iter_mut().zip(&self.input).zip(&self.win) {
-            *t = x * w;
-        }
-        // 缓冲长度都由 planner 给定，不会出错；万一出错，这一帧当静音
-        if self
-            .fwd
-            .process_with_scratch(&mut self.time, &mut self.spec, &mut self.scratch_fwd)
-            .is_err()
-        {
-            debug_assert!(false, "rfft 长度不匹配");
-            self.spec.fill(Complex32::default());
-        }
-        &mut self.spec
+        let input = &self.input;
+        self.core.transform(|t| {
+            for (d, &x) in t.iter_mut().zip(input) {
+                *d = x;
+            }
+        })
     }
 
     /// 当前帧频谱（`analyze` 之后、`synthesize` 之前可读写）。
     pub fn spectrum_mut(&mut self) -> &mut [Complex32] {
-        &mut self.spec
+        self.core.spectrum_mut()
     }
 
     /// 把当前频谱做逆变换、加窗、重叠相加，输出一个 hop 的完整样本。
     /// `hop_out.len()` 应等于 `hop()`（调用方的 bug：debug 下 panic；release 下多出的部分清零）。
     pub fn synthesize(&mut self, hop_out: &mut [f32]) {
         debug_assert_eq!(hop_out.len(), self.hop);
+        let even = self.n_fft.is_multiple_of(2);
+        let spec = self.core.spectrum_mut();
         // numpy irfft 忽略 DC 与 Nyquist 的虚部；realfft 遇到非零虚部会报错，这里先清掉
-        if let Some(dc) = self.spec.first_mut() {
+        if let Some(dc) = spec.first_mut() {
             dc.im = 0.0;
         }
-        if self.n_fft.is_multiple_of(2)
-            && let Some(ny) = self.spec.last_mut()
-        {
+        if even && let Some(ny) = spec.last_mut() {
             ny.im = 0.0;
         }
         // InputValues（DC / Nyquist 虚部非零）时 realfft 照样算完、结果可用；只有缓冲长度类错误才当静音
         match self
             .inv
-            .process_with_scratch(&mut self.spec, &mut self.time, &mut self.scratch_inv)
+            .process_with_scratch(spec, &mut self.time, &mut self.scratch_inv)
         {
             Ok(()) | Err(realfft::FftError::InputValues(..)) => {}
             Err(_) => {
@@ -180,7 +171,7 @@ impl StreamingStft {
             }
         }
         let norm = 1.0 / self.n_fft as f32;
-        for ((o, t), w) in self.ola.iter_mut().zip(&self.time).zip(&self.win) {
+        for ((o, t), w) in self.ola.iter_mut().zip(&self.time).zip(&self.core.win) {
             *o += t * norm * w;
         }
         let mut src = self.ola.iter().take(self.hop);
@@ -192,19 +183,6 @@ impl StreamingStft {
         for o in self.ola.iter_mut().skip(tail) {
             *o = 0.0;
         }
-    }
-}
-
-/// 功率谱 `re² + im²`（不归一、不加下限）写进 `out`；两边长度不同时只写较短的那段。
-/// 全 workspace 只在这里写这个公式（GTCRN 借出、场景自算都调它）。实时可调，不分配。
-#[deny(
-    clippy::disallowed_methods,
-    clippy::disallowed_types,
-    clippy::disallowed_macros
-)]
-pub fn power_into(spec: &[Complex32], out: &mut [f32]) {
-    for (p, c) in out.iter_mut().zip(spec) {
-        *p = c.re * c.re + c.im * c.im;
     }
 }
 
@@ -288,18 +266,5 @@ mod tests {
         let n = b.forward_count();
         b.analyze_partial(&x[..10]);
         assert_eq!(b.forward_count(), n + 1);
-    }
-
-    /// `power_into` 与 `norm_sqr` 逐位相同（场景旧代码用的是 `norm_sqr`）。
-    #[test]
-    fn power_matches_norm_sqr() {
-        let spec: Vec<Complex32> = (0..257)
-            .map(|k| Complex32::new((k as f32 * 0.3).sin() * 1e3, (k as f32 * 0.7).cos() * 1e-3))
-            .collect();
-        let mut p = vec![0.0; 257];
-        power_into(&spec, &mut p);
-        for (a, c) in p.iter().zip(&spec) {
-            assert_eq!(a.to_bits(), c.norm_sqr().to_bits());
-        }
     }
 }

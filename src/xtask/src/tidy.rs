@@ -13,6 +13,7 @@
 //! | `src/` 与 `docs/experiments/` 下的代码文件 ≤ 600 行，不设基线 | R-SIZE（见 `file_size.rs`） |
 //! | 代码里不写 16000 / 48000 采样率字面量，引用 `vdn_types::{IO_RATE, MODEL_RATE}` | R-RATE（见 `rate_literal.rs`） |
 //! | 不许有镜像文件、不许在 vdn-types 之外定义同名类型；参数范围不许在描述表之外写成数字字面量 | R-MIRROR · R-PARAM · R-MODEL（见 `no_mirror.rs` · `param_range.rs` · `model_name.rs`） |
+//! | FFT 计划只在 `src/dsp/src/`（频谱统一模块）建，白名单写原因、只许缩短 | R-FFT（见 `fft_site.rs`） |
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -334,6 +335,8 @@ pub fn check() -> Result<Tidy, String> {
     crate::file_size::check(&root, &mut t.problems);
     // 采样率只写一处（R-RATE）
     crate::rate_literal::check(&root, &mut t.problems);
+    // 频谱只算在一处（R-FFT）
+    crate::fft_site::check(&root, &mut t.problems);
 
     // 根 clippy.toml 只许一份
     let mut all = Vec::new();

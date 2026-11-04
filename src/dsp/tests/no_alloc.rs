@@ -1,11 +1,12 @@
-//! 证明每帧路径不分配内存：在 assert_no_alloc 里跑 analyze / feed / power_into / synthesize / delay / envelope，分配就 panic。
+//! 证明每帧路径不分配内存：在 assert_no_alloc 里跑 analyze / feed / power_into / synthesize / delay / envelope /
+//! 整段分帧 FrameFft（f32 与 f64），分配就 panic。
 // assert_no_alloc 的 AllocDisabler 只在 debug_assertions 下存在：release 测试跳过这个文件
 #![cfg(debug_assertions)]
 
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use vdn_dsp::{
-    Decimator3, DelayLine, Interpolator3, OpenCloseEnvelope, OpenCloseParams, StreamingStft,
-    power_into, window,
+    Decimator3, DelayLine, FrameFft, Interpolator3, OpenCloseEnvelope, OpenCloseParams,
+    StreamingStft, power_into, window,
 };
 
 #[global_allocator]
@@ -69,5 +70,32 @@ fn resample_blocks_do_not_allocate() {
         }
         d.reset();
         u.reset();
+    });
+}
+
+#[test]
+fn frame_fft_does_not_allocate() {
+    let spec = vdn_types::StftSpec {
+        n_fft: 512,
+        win_len: 400,
+        hop: 160,
+        window: vdn_types::Window::KaldiPovey,
+        ..vdn_types::FRONTEND
+    };
+    let mut a = FrameFft::<f32>::from_spec(&spec);
+    let mut b = FrameFft::<f64>::from_spec(&spec);
+    let x: Vec<f32> = (0..1600).map(|i| (i as f32 * 0.1).sin()).collect();
+    let x64: Vec<f64> = x.iter().map(|&v| f64::from(v)).collect();
+    let mut p = vec![0.0f32; a.bins()];
+    let mut p64 = vec![0.0f64; b.bins()];
+    assert_no_alloc(|| {
+        for k in 0..a.num_frames(x.len()) {
+            if let Some(s) = a.frame_with(&x, k, |f| f.iter_mut().for_each(|v| *v *= 2.0)) {
+                power_into(s, &mut p);
+            }
+            if let Some(s) = b.frame(&x64, k) {
+                power_into(s, &mut p64);
+            }
+        }
     });
 }
