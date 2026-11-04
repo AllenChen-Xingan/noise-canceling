@@ -61,7 +61,7 @@ pub trait SpectrumTap: Model {
 
 ## 7. 处理图描述
 
-不加新节点种类。场景特征不在音频路径上，本来就不进图。修音频域级已有种类 `POLISH_SPECTRAL`（挂点 Spectral）。GTCRN 装槽时与 `ProcessingGraph::spectral` 比对——留给 engine 接线那件事（backlog），本线在 `set_spectral` 的文档里写明。
+不加新节点种类。场景特征不在音频路径上，本来就不进图。修音频域级已有种类 `POLISH_SPECTRAL`（挂点 Spectral）。以后模型里装修音槽时，要与 `ProcessingGraph::spectral` 比对——那是接线那件事（backlog）的活。本线不改图。
 
 ## 8. 测试
 

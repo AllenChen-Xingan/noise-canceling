@@ -7,7 +7,7 @@
 //! - `reset` 把内部状态清回初值，可以在实时线程上调
 //! - 构造（打开会话、预分配、预热）在非实时线程
 //!
-//! 以后要加的东西不改这个 trait：共享频谱用扩展 trait；换模型由外层持有两套并交叉淡化（规约 §3.5）。
+//! 以后要加的东西不改这个 trait：共享频谱用扩展 trait [`SpectrumTap`]；换模型由外层持有两套并交叉淡化（规约 §3.5）。
 
 use core::fmt;
 
@@ -31,11 +31,15 @@ impl fmt::Display for ModelError {
 
 impl std::error::Error for ModelError {}
 
-/// 扩展 trait：频域模型把本帧输入的幅度谱借出来，特征通道与声纹复用它，不另算 STFT（规约 §3.1「共用一次 STFT」；ondevice #4）。
-/// 不改 `Model` 本身；时域模型不实现它。
+/// 扩展 trait：频域模型把本帧**带噪输入**的功率谱借出来，场景特征复用它，不另算 STFT
+/// （D71「前端只算一次」，`docs/plan/013_frontend-once.md`；规约 §3.1「共用一次 STFT」）。
+/// 不改 `Model` 本身；时域模型（FE-M wav2wav）不实现它，调用方自己算一次。
 pub trait SpectrumTap: Model {
-    /// 最近一次 `process` 输入帧的幅度谱（长度 = 频点数）；还没处理过任何帧时为 `None`。实时线程可调，不分配
-    fn last_magnitude(&self) -> Option<&[f32]>;
+    /// 借出的谱的口径；调用方在构造期与自己要的口径比对（一般是 [`crate::FRONTEND`]）
+    fn spectrum_spec(&self) -> crate::StftSpec;
+    /// 最近一次 `process` 输入帧的功率谱 `re² + im²`（不归一、不加下限），长度 = `spectrum_spec().bins()`；
+    /// 取自推理**之前**。还没处理过帧、或上一帧出错时为 `None`。实时线程可调，不分配
+    fn input_power(&self) -> Option<&[f32]>;
 }
 
 /// `Send`：模型要搬到实时线程上跑。
