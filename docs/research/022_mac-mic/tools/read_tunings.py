@@ -71,22 +71,19 @@ def scan(root=ROOT):
             "_aufx_bmfd.plist", ".dspg")
         units = graph_units(graph) if os.path.exists(graph) else []
         stats = [beam_stats(beam, hz) for hz in REPORT_HZ]
-        rows.append({
-            "aid": aid_number(p),
-            "mics": d.get("nMicsUsed"),
-            "units": units,
-            "norm_db": [round(s[0], 1) for s in stats],
-            "coherent_db": [round(s[1], 1) for s in stats],
-        })
+        row = {"aid": aid_number(p), "mics": d.get("nMicsUsed"), "units": units}
+        for key in ("norm", "in_phase", "wng_rel"):
+            row[key + "_db"] = [round(s[key], 2) for s in stats]
+        rows.append(row)
     return rows
 
 
 def main(argv):
     root = argv[1] if len(argv) > 1 else ROOT
-    print("AID\t麦数\t处理单元\t范数dB@%s\t同相dB" % (REPORT_HZ,))
+    print("AID\t麦数\t处理单元\t‖w‖dB@%s\t|Σw|dB\t相对白噪声增益dB" % (REPORT_HZ,))
     for r in scan(root):
-        print("%d\t%s\t%s\t%s\t%s" % (r["aid"], r["mics"], ",".join(r["units"]),
-                                      r["norm_db"], r["coherent_db"]))
+        print("%d\t%s\t%s\t%s\t%s\t%s" % (r["aid"], r["mics"], ",".join(r["units"]),
+                                          r["norm_db"], r["in_phase_db"], r["wng_rel_db"]))
     return 0
 
 
