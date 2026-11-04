@@ -33,7 +33,19 @@ pub struct ClipRow {
     pub scores: Vec<(&'static str, bool, Score)>,
 }
 
-/// 读一段：核 wav 哈希（混合 · 干净参考 · 噪音 · 干扰四条），对齐成 [`Clip`]。
+/// 没跑成的一段（或一整条任务）：照样进成绩单，让该场景不能判「过」（codex 第 1 轮 P1 #1）。
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct Missing {
+    pub scene: MeetingPlace,
+    pub tier: Tier,
+    pub device: String,
+    pub system: String,
+    /// 片段 id，或整条任务读不了时的任务 id
+    pub what: String,
+    pub why: String,
+}
+
+/// 读一段：核 wav 哈希（混合 · 干净参考 · 噪音 · 干扰四条）；四条长度都必须等于清单的 `dur_samples`。
 pub fn load_scene_clip(c: &SceneClip, root: &Path) -> Result<Clip, String> {
     let get = |rel: &str, want: &str| -> Result<Vec<f32>, String> {
         let p = root.join(rel);
@@ -52,10 +64,13 @@ pub fn load_scene_clip(c: &SceneClip, root: &Path) -> Result<Clip, String> {
     let clean = get(&a.owner, &h.owner)?;
     let noise = get(&a.noise, &h.noise)?;
     let interf = get(&a.interf, &h.interf)?;
-    let n = [mix.len(), clean.len(), noise.len(), interf.len()]
-        .into_iter()
-        .min()
-        .unwrap_or(0);
+    // 长度不对就报错，不截短（截短会悄悄删掉尾部内容，codex 第 1 轮 P1 #2）
+    let n = c.dur_samples as usize;
+    for (k, x) in [("mix", &mix), ("owner", &clean), ("noise", &noise), ("interf", &interf)] {
+        if x.len() != n {
+            return Err(format!("{k} 长 {} 样本 ≠ 清单 dur_samples {n}", x.len()));
+        }
+    }
     let iv = |v: &[[u64; 2]]| -> Vec<(usize, usize)> {
         v.iter()
             .map(|[s, e]| (*s as usize, (*e as usize).min(n)))
@@ -68,10 +83,10 @@ pub fn load_scene_clip(c: &SceneClip, root: &Path) -> Result<Clip, String> {
             owner: iv(&c.owner_iv),
             interf: iv(&c.interf_iv),
         },
-        clean: clean[..n].to_vec(),
-        interf: interf[..n].to_vec(),
-        noise: noise[..n].to_vec(),
-        mix: mix[..n].to_vec(),
+        clean,
+        interf,
+        noise,
+        mix,
         tracks: true,
     })
 }
@@ -134,47 +149,72 @@ pub fn clips_of(task: &Task) -> Result<Vec<SceneClip>, String> {
         .collect())
 }
 
-/// 跑全部场景任务。读不了的段记进 `skipped`（原因），不中断。
+/// 跑全部场景任务。读不了的段、展开不出片段的任务记进 [`Missing`]（原因），不中断，也不从成绩单里消失。
 pub fn run(
     suite: &Suite,
     systems: &[SystemKind],
     opts: &Opts,
     mut extra: Option<&mut dyn Extra>,
     audio_root: Option<&Path>,
-) -> (Vec<ClipRow>, Vec<(String, String)>) {
+) -> (Vec<ClipRow>, Vec<Missing>) {
     let root = audio_root.map_or_else(main_root, Path::to_path_buf);
-    let (mut rows, mut skipped) = (Vec::new(), Vec::new());
+    let (mut rows, mut missing) = (Vec::new(), Vec::new());
     for task in &suite.tasks {
+        let whole = |why: String| -> Vec<Missing> {
+            let Some(RealSource::Scene {
+                scene, tier, device, ..
+            }) = &task.real
+            else {
+                return Vec::new();
+            };
+            systems
+                .iter()
+                .map(|s| Missing {
+                    scene: *scene,
+                    tier: *tier,
+                    device: serde_name(device),
+                    system: s.as_str().to_string(),
+                    what: task.id.clone(),
+                    why: why.clone(),
+                })
+                .collect()
+        };
         let clips = match clips_of(task) {
+            Ok(c) if c.is_empty() => {
+                missing.extend(whole("清单里没有这个 场景 × 档 × 设备 的片段".into()));
+                continue;
+            }
             Ok(c) => c,
             Err(e) => {
-                skipped.push((task.id.clone(), e));
+                missing.extend(whole(e));
                 continue;
             }
         };
-        if clips.is_empty() {
-            skipped.push((
-                task.id.clone(),
-                "清单里没有这个 场景 × 档 × 设备 的片段".into(),
-            ));
-        }
         for c in &clips {
             let Some(_) = standard::group_of(c.scene) else {
                 continue;
             };
             let t = clip_task(task, c);
+            let miss = |sys: SystemKind, why: String| Missing {
+                scene: c.scene,
+                tier: c.tier,
+                device: serde_name(&c.device),
+                system: sys.as_str().to_string(),
+                what: c.id.clone(),
+                why,
+            };
+            let clip = match load_scene_clip(c, &root) {
+                Ok(x) => x,
+                Err(e) => {
+                    missing.extend(systems.iter().map(|&s| miss(s, e.clone())));
+                    continue;
+                }
+            };
             for &sys in systems {
-                let clip = match load_scene_clip(c, &root) {
-                    Ok(x) => x,
-                    Err(e) => {
-                        skipped.push((c.id.clone(), e));
-                        break;
-                    }
-                };
-                let p = match prepare_clip(&t, sys, clip, c.additive) {
+                let p = match prepare_clip(&t, sys, clip.clone(), c.additive) {
                     Ok(p) => p,
                     Err(e) => {
-                        skipped.push((format!("{} · {}", c.id, sys.as_str()), e));
+                        missing.push(miss(sys, e));
                         continue;
                     }
                 };
@@ -203,5 +243,5 @@ pub fn run(
             }
         }
     }
-    (rows, skipped)
+    (rows, missing)
 }
