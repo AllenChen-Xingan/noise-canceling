@@ -1,10 +1,11 @@
-//! 证明每帧路径不分配内存：在 assert_no_alloc 里跑 analyze / synthesize / delay / envelope，分配就 panic。
+//! 证明每帧路径不分配内存：在 assert_no_alloc 里跑 analyze / feed / power_into / synthesize / delay / envelope，分配就 panic。
 // assert_no_alloc 的 AllocDisabler 只在 debug_assertions 下存在：release 测试跳过这个文件
 #![cfg(debug_assertions)]
 
 use assert_no_alloc::{AllocDisabler, assert_no_alloc};
 use vdn_dsp::{
-    Decimator3, DelayLine, Interpolator3, OpenCloseEnvelope, OpenCloseParams, StreamingStft, window,
+    Decimator3, DelayLine, Interpolator3, OpenCloseEnvelope, OpenCloseParams, StreamingStft, power_into,
+    window,
 };
 
 #[global_allocator]
@@ -30,9 +31,12 @@ fn per_frame_paths_do_not_allocate() {
     let mut y = vec![0.0; h];
     let mut d = vec![0.0; h];
     let mut m = vec![0.0; h];
+    let mut pow = vec![0.0; stft.bins()];
     assert_no_alloc(|| {
         for _ in 0..50 {
+            stft.feed(&x);
             let spec = stft.analyze(&x);
+            power_into(spec, &mut pow);
             spec[3] *= 0.5;
             stft.synthesize(&mut y);
             delay.process(&x, &mut d);
