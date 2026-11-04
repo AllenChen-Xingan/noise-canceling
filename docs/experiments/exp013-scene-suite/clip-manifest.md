@@ -1,6 +1,7 @@
-# exp013 · 片段清单格式（v1 · 2026-11-03 · 已与 scorecard 对齐）
+# exp013 · 片段清单格式（v1.1 · 2026-11-03 · 已与 scorecard 对齐）
 
 > v0 → v1（scorecard 回复）：正本改为 Rust 类型导出的 schema；`audio` 加 `noise` / `interf` 两条汇总轨；`hash.wav_sha256` 改为逐轨对象。
+> v1 → v1.1：`hash` 定为 `{samples, wav_sha256}` 两个逐轨对象（同 scorecard schema）；另加 4 个字段，已请 scorecard 加进 Rust 类型：`targets[].src` · `measured.snr_all_db` · `measured.owner_level_dbfs` · `sounds[].direction_db`。
 
 > 用途：场景测试集每段一条记录，`vdn-eval` 与成绩单按它读音频、按场景和声音分组出分。
 > 落点：每个 build 一份 `docs/experiments/exp013-scene-suite/builds/<build-id>/clips.jsonl`（每行一段）+ 一份 `manifest.json`（整批）。
@@ -24,14 +25,14 @@
 | `audio` | 对象 | 各轨相对主目录的路径：`mix` · `owner`（混响 + 设备后，**评测用干净参考**）· `owner_dry` · `stems`（键 = 声音实例 id）· `floor`（设备底噪）· `noise`（全部非语音分轨 + `floor` 之和）· `interf`（全部旁人语音分轨之和）。`noise` / `interf` 都取削波前，`additive` 为假时也给 |
 | `has_clean_ref` | 布尔 | 有无干净参考（本集恒为真）|
 | `additive` | 布尔 | 分轨相加是否等于 mix（削过波的段为假，此时 `stems` 是削波前的）|
-| `targets` | 数组 | 要留的说话人：`[{"spk": "<说话人 id>", "dist_m": 0.5, "azimuth_deg": 0, "level_dbfs": -27.3, "iv": [[起, 止), …]}]`。`suppress` 段只有 1 个 |
+| `targets` | 数组 | 要留的说话人：`[{"spk": "<说话人 id>", "dist_m": 0.5, "azimuth_deg": 0, "level_dbfs": -27.3, "iv": [[起, 止), …]}]`。外加 `src`（素材出处，同 `sounds[].src`，防泄漏检查用）。`suppress` 段恰好 1 个；`preserve_all` 段 2–3 个，`owner` = 全部之和 |
 | `sounds` | 数组 | 每个干扰声音实例一条，见第二节 |
-| `nominal` | 对象 | 名义值：`snr_db` · `sir_db`（无旁人时 `null`）· `t60_s` · `owner_dist_m` · `owner_level_dbfs` |
-| `measured` | 对象 | 实测值（设备链之后、独立算法量）：`snr_db` · `sir_db` · `t60_s`（由所用 RIR 算）· `drr_db` · `overlap_ratio`（主说话人与旁人语音同时出现的比例）|
+| `nominal` | 对象 | 名义值：`snr_db`（主说话人对**稳态干扰**：底噪 + 有规律 + babble + 设备底噪；突发声不算，按各自 `rel_db` 单设）· `sir_db`（对听得清的旁人语音之和；无旁人时 `null`）· `t60_s` · `owner_dist_m` · `owner_level_dbfs`。生成时用 gated 电平（20 ms 帧 > 最大帧 −35 dB）|
+| `measured` | 对象 | 实测值（设备链之后，主说话人电平改用 ITU-T P.56，与生成时不同算法）：`snr_db` · `snr_all_db`（突发声也算进去）· `sir_db` · `owner_level_dbfs` · `t60_s`（Schroeder 法，在主说话人 RIR 去掉直达窗后量）· `drr_db` · `overlap_ratio`（主说话人活动区间里有旁人语音的比例）。与名义值 95% 的段差 ≤ 1 dB、全部 ≤ 1.5 dB；按条件分档请用 `nominal` |
 | `owner_iv` · `interf_iv` | 区间数组 | 016 §4 的样本级区间：从**混响后**轨算，帧能量 > 全段最大帧 −35 dB，两端各外扩 2 帧（40 ms）。`interf_iv` = 所有旁人语音的并集 |
-| `chain` | 对象 | 设备链各步实际抽到的参数（频响曲线是否平坦、倾斜量、峰值滤波、底噪比、方位衰减、是否削波…）|
+| `chain` | 对象 | 设备链各步实际抽到的参数：`flat` · `tilt_db_per_oct` · `peak_*` · `floor_ratio_db` · `floor_lowmid_excess_db` · `strength` · `reverb_stress` · `vpio_db` · `clip_drive_db`；另有 `floor_clamped`（底噪比名义 SNR 允许的还响、被压低）· `headroom_db`（整段峰值超 −1 dBFS 时整段调低的量，0 = 没调）· `room_dims_m` |
 | `seed` | 整数 | 本段种子；`build.py --only <id>` 用它单段重现 |
-| `hash` | 对象 | 每条轨的**样本内容** sha256（float32 小端字节，不是 wav 文件哈希，016 S1）+ `wav_sha256`：对象，每条轨一个文件哈希，键与 `audio` 里的键相同（`stems` 下的按实例 id），`vdn-eval` 逐条核对 |
+| `hash` | 对象 | `{"samples": {…}, "wav_sha256": {…}}`，两个都是逐轨对象，键同 `audio`（`stems` 下按实例 id）。`samples` = 样本内容 sha256（float32 小端字节，016 S1）；`wav_sha256` = 文件哈希，`vdn-eval` 逐条核对（wav 不带时间戳块，可复现）|
 
 ## 二、声音实例（`sounds[]` 每项）
 
@@ -40,13 +41,14 @@
 | `inst` | 实例 id，段内唯一，如 `bed0`、`talker1`、`dog0`；同时是 `audio.stems` 的键 |
 | `cls` | 声音类别键（正本 `sounds.json`），如 `bed-cafe` · `coffee-machine` · `talker` · `tv-voice` · `dog-bark` |
 | `group` | `bed`（底噪）/ `pattern`（有规律）/ `event`（突发）/ `speech`（旁人语音、电视、广播）|
-| `is_speech` | 布尔；为真的算进 SIR 与 `interf_iv`，为假的算进 SNR |
+| `is_speech` | 布尔：听得清的单个人声（旁人、电视、导航、广播人声）为真，算进 SIR、`interf_iv`、`audio.interf`；其余（含 babble、广播提示音）为假，算进 `audio.noise` |
 | `iv` | 活动区间（样本，规则同 `owner_iv`）|
 | `level_dbfs` | 活动段电平（设备链之后）|
 | `rel_db` | 相对主说话人的电平差（活动段对活动段）|
 | `dist_m` · `azimuth_deg` | 声源距离、相对正前方的方位角；扩散声（底噪、babble）填 `null` |
 | `src` | 素材出处：`{"kind": "librispeech", "spk": "1089", "utts": [...]}` / `{"kind": "demand", "env": "SCAFE", "ch": 3, "start": 3840000, "len": 192000}` / `{"kind": "esc50", "file": "1-100038-A-14.wav"}` / `{"kind": "synth", "fn": "coffee_machine", "seed": 123}` |
 | `license` | 许可简称（`CC-BY-4.0` · `CC-BY-NC-3.0` · `own` …），用途恒为「只评测」|
+| `direction_db` | 可选：设备链第 2 步对该声源直达部分的三频段方位衰减 `{low, mid, high}`（dB）；扩散声与 `external-mic` 没有 |
 
 ## 三、整批（`manifest.json`）
 
