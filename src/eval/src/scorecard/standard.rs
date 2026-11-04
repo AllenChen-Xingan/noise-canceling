@@ -136,6 +136,14 @@ pub fn group_of(s: MeetingPlace) -> Option<Group> {
     })
 }
 
+/// 这一项是不是「只报不判」。
+pub fn is_report_only(v: &str) -> bool {
+    VETO.iter()
+        .chain(&COMMON)
+        .chain(Group::ALL.iter().flat_map(|g| g.extra()))
+        .any(|i| i.v == v && i.report_only)
+}
+
 /// 一个场景要跑的全部项：否决项在前，再是共同项，再是本类加看的项。
 pub fn items(s: MeetingPlace) -> Vec<(Item, bool)> {
     let Some(g) = group_of(s) else {
