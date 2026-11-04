@@ -96,9 +96,11 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | card1（正式成绩单 480 段 --qa，实测推算约 2 h 35 min） |
+| 重编译 / 全量测试 / 跑模型（1 个） | 空（card1 于 2026-11-04 02:39 归还，实测 2 h 35 min，run 20261104-000444-e4511abc；已转 a2） |
 
-排队：无
+排队：无（a2 已于 2026-11-04 收到名额，锁由 a2 自建自删）
+
+**另一位大总管 noise-canceling-a2**（2026-11-04 起）：「前端只算一次」（D71），批次 b13 · exp015 · tmux vdn-fe · 检出 `../noise_canceling-coordfe` · 账本 `state/coord-fe.md`；我方下一个实验 exp016；会改 vdn-dsp · vdn-models · vdn-scene · vdn-speaker · vdn-engine，承诺 GTCRN 输出逐样本不变。a2 经人同意删了 16 个已合并 worktree（card1、coord99 保留）。
 
 **跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。加锁文件：mkdir 主目录 `_tmp/heavy.lock`（内写 owner · 开始 · 预计结束，跑完 rmdir），由各自大总管放名额时建、收回时删，手下不碰（47 已确认）
 
