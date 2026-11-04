@@ -4,6 +4,8 @@
 //!
 //! 用法：VDN_GTCRN_ONNX=<模型> caffeinate -i cargo run --release -p vdn-models --example frontend_timing -- [轮数]
 //! 要插电跑；结果打到标准输出（Markdown 表）。
+//! 看「场景」两列：借谱省掉的是场景那次 512 点正向 FFT 加窗，预期每帧省几百纳秒到一两微秒；
+//! 「合计」与每帧预算（一个 hop 的时长）比，省下的占比才是这次改动在算力上的意义。
 use std::time::Instant;
 
 use vdn_models::{Gtcrn, ModelKind};

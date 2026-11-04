@@ -11,7 +11,9 @@ static A: AllocDisabler = AllocDisabler;
 #[test]
 fn push_and_judge_do_not_allocate() {
     let mut sa = SceneAnalyzer::new(MODEL_RATE, vdn_types::FRONTEND.hop);
-    let x: Vec<f32> = (0..vdn_types::FRONTEND.hop).map(|i| (i as f32 * 0.03).sin() * 0.1).collect();
+    let x: Vec<f32> = (0..vdn_types::FRONTEND.hop)
+        .map(|i| (i as f32 * 0.03).sin() * 0.1)
+        .collect();
     assert_no_alloc(|| {
         for k in 0..400 {
             sa.push_hop(&x);
@@ -28,7 +30,9 @@ fn borrowed_spectrum_entry_does_not_allocate() {
     let mut sa = SceneAnalyzer::new(MODEL_RATE, vdn_types::FRONTEND.hop);
     let mut fe = vdn_dsp::StreamingStft::from_spec(&vdn_types::FRONTEND);
     let mut pow = vec![0.0f32; vdn_types::FRONTEND.bins()];
-    let x: Vec<f32> = (0..vdn_types::FRONTEND.hop).map(|i| (i as f32 * 0.03).sin() * 0.1).collect();
+    let x: Vec<f32> = (0..vdn_types::FRONTEND.hop)
+        .map(|i| (i as f32 * 0.03).sin() * 0.1)
+        .collect();
     assert_no_alloc(|| {
         for k in 0..400 {
             vdn_dsp::power_into(fe.analyze(&x), &mut pow);
