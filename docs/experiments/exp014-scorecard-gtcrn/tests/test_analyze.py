@@ -51,6 +51,41 @@ class TestAnalyze(unittest.TestCase):
         t = A.gap_vs_base(rs, "gtcrn", "passthrough")
         self.assertIn("| V-NR | 越小越好 | 1 | -8.00 |", t)
 
+    def test_combo_verdict_unknown_is_not_fail(self):
+        unk = [row("a", "g", scores=[sc("V-INTF", None, "unknown", -10)])]
+        self.assertEqual(A.combo_verdict(unk, "V-INTF"), "unknown")
+        mixed = unk + [row("b", "g", scores=[sc("V-INTF", -12, "pass", -10)])]
+        self.assertEqual(A.combo_verdict(mixed, "V-INTF"), "pass")
+        bad = mixed + [row("c", "g", scores=[sc("V-INTF", -3, "fail", -10)])]
+        self.assertEqual(A.combo_verdict(bad, "V-INTF"), "fail")
+
+    def test_item_counts_three_columns(self):
+        rs = [row("a", "gtcrn", scene="home-quiet", scores=[sc("V-INTF", None, "unknown", -10)]),
+              row("b", "gtcrn", scene="cafe", scores=[sc("V-INTF", -3, "fail", -10)])]
+        t = A.item_counts(rs, {}, ["gtcrn"])
+        self.assertIn("| V-INTF | 1 / 1 / 0 |", t)
+
+    def test_eat_pooled_weights_by_words(self):
+        def eat(clip, sy, v, n):
+            s = sc("V-EAT-ASR", v, "fail" if v > 1 else "pass", 1.0)
+            s["extra"] = {"ref_len": n}
+            return row(clip, sy, scores=[s])
+        rs = [eat("a", "gtcrn", 10.0, 10), eat("b", "gtcrn", 0.0, 30)]
+        t = A.eat_pooled(rs, ["gtcrn"])
+        self.assertIn("| cafe | common | 40 | +2.50 |", t)  # 10×10 / 40
+
+    def test_snr_bin_edges(self):
+        self.assertEqual(A.snr_bin(-1), "< 0")
+        self.assertEqual(A.snr_bin(0), "0–5")
+        self.assertEqual(A.snr_bin(19.9), "15–20")
+        self.assertEqual(A.snr_bin(20), "≥ 20")
+
+    def test_gate_stats_splits_onset_only(self):
+        a = sc("V-SIM-GATE", 0.2, "fail", 0.05); a["extra"] = {"onset_miss": 0.5}
+        b = sc("V-SIM-GATE", 0.01, "fail", 0.05); b["extra"] = {"onset_miss": 0.4}
+        t = A.gate_stats([row("a", "g", scores=[a]), row("b", "g", scores=[b])], ["g"])
+        self.assertTrue(t[-1].endswith("| 2 | 1 | 1 |"))
+
     def test_build_end_to_end(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
