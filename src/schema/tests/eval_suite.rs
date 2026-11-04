@@ -237,3 +237,87 @@ fn eval_writer_outputs_pass_schema() {
         );
     }
 }
+
+// ───────────── 场景片段清单 ─────────────
+
+/// 进仓的样例行过 schema，解析器也读得了（正例）。
+#[test]
+fn scene_clip_example_passes_schema_and_parser() {
+    let schema = committed(eval::SCENE_CLIP_FILE);
+    let t = std::fs::read_to_string(root().join(eval::SCENE_CLIP_EXAMPLE)).unwrap();
+    for line in t.lines().filter(|l| !l.trim().is_empty()) {
+        let v: Value = serde_json::from_str(line).unwrap();
+        validate(&schema, &v).unwrap_or_else(|e| panic!("样例行不过 schema：{e}"));
+    }
+    vdn_eval::scene::SceneClip::parse_jsonl(&t).unwrap();
+}
+
+/// 坏行：schema 与解析器判定一致（负例）。只比 schema 表达得了的约束；
+/// 「stems 与 sounds 对得上」「区间不越界」这类跨字段约束只在解析器里（`SceneClip::check`），这里不比。
+#[test]
+fn scene_clip_schema_and_parser_agree_on_bad_lines() {
+    let schema = committed(eval::SCENE_CLIP_FILE);
+    let t = std::fs::read_to_string(root().join(eval::SCENE_CLIP_EXAMPLE)).unwrap();
+    let base: Value = serde_json::from_str(t.lines().next().unwrap()).unwrap();
+    let edit = |f: &dyn Fn(&mut Value)| {
+        let mut x = base.clone();
+        f(&mut x);
+        x
+    };
+    let cases = [
+        (edit(&|_| {}), true),
+        (edit(&|x| x["scnee"] = json!("cafe")), false),
+        (edit(&|x| x["scene"] = json!("beach")), false),
+        (edit(&|x| x["device"] = json!("mba")), false),
+        (edit(&|x| x["mic_mode"] = json!("isolation")), false),
+        (edit(&|x| x["tier"] = json!("hard")), false),
+        (edit(&|x| x["sounds"][0]["group"] = json!("noise")), false),
+        (edit(&|x| x["owner_iv"] = json!([[1, 2, 3]])), false),
+        (
+            edit(&|x| x["hash"]["wav_sha256"]["stems"] = json!(7)),
+            false,
+        ),
+        (edit(&|x| x["nominal"]["sir_db"] = json!(null)), true),
+        // 方位衰减可选；有就必须三段齐全
+        (
+            edit(&|x| {
+                x["sounds"][1]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("direction_db")
+                    .map_or((), |_| ())
+            }),
+            true,
+        ),
+        (
+            edit(&|x| x["sounds"][1]["direction_db"] = json!({"low": 0.0, "mid": 0.0})),
+            false,
+        ),
+        (
+            edit(&|x| {
+                x["targets"][0]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("src")
+                    .map_or((), |_| ())
+            }),
+            false,
+        ),
+        (
+            edit(&|x| {
+                x["measured"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("snr_all_db")
+                    .map_or((), |_| ())
+            }),
+            false,
+        ),
+    ];
+    for (v, ok) in cases {
+        let s_ok = validate(&schema, &v).is_ok();
+        let p_ok = serde_json::from_value::<vdn_eval::scene::SceneClip>(v.clone()).is_ok();
+        assert_eq!(s_ok, ok, "schema 判错：{v}");
+        assert_eq!(p_ok, ok, "解析器判错：{v}");
+    }
+}
