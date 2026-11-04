@@ -136,9 +136,9 @@ class SmallBuild(unittest.TestCase):
         for r in self.recs:
             dry, own = read(self.root, r["audio"]["owner_dry"]), read(self.root, r["audio"]["owner"])
             if r["polarity"] == "suppress":
-                xc = np.correlate(own[: 4 * dsp.SR], dry[: 4 * dsp.SR], "full")
-                lag = int(np.argmax(np.abs(xc))) - (4 * dsp.SR - 1)
-                self.assertLessEqual(abs(lag), 12, r["id"])  # 剩下的是最小相位 FIR 的群延迟
+                onset = lambda x: int(np.flatnonzero(np.abs(x) > 1e-3 * np.max(np.abs(x)))[0])
+                # 起点差：外接麦应为 0（旧 bug 时 owner_dry 早 19–37 样本）；Air 麦的最小相位 FIR 是因果的，起点也不该差多
+                self.assertLessEqual(abs(onset(own) - onset(dry)), 2 if r["device"] == "external-mic" else 8, r["id"])
             lead = r["targets"][0]
             self.assertAlmostEqual(dsp.gated_level_db(dry), lead["level_dbfs"], delta=0.6, msg=r["id"])
 
