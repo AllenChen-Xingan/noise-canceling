@@ -121,8 +121,14 @@ fn record(acc: &mut Acc, s: &vdn_eval::Score) {
 
 /// 在片段 `c` 上跑参考降噪器，按 `ids` 评分（`None` = 全部，V-FRAME 量耗时、不确定，不比）。
 fn score(acc: &mut Acc, c: &Clip, ids: Option<&[&str]>) -> Vec<vdn_eval::Score> {
-    let r = run(&ref_spec(), &c.mix).expect("参考降噪器");
-    let noise_run = run(&ref_spec(), &c.noise).expect("参考降噪器（只有噪音）");
+    let (r, noise_run) = match (run(&ref_spec(), &c.mix), run(&ref_spec(), &c.noise)) {
+        (Ok(r), Ok(n)) => (r, n),
+        (r, n) => {
+            // 输入太短等：把报错也记进对拍（改前改后应一样）
+            acc.text(&format!("{:?} {:?}", r.err(), n.err()));
+            return Vec::new();
+        }
+    };
     let m = masks(&c.truth, &c.mix, 0.03);
     let ctx = Ctx {
         clip: c,
@@ -195,7 +201,7 @@ fn lines() -> Vec<String> {
     let speech: &[&str] = &["V-WEAK", "V-ESTOI"];
     for sr in [8192, 22_050] {
         let c = Clip {
-            sr, // tidy: 非采样率：故意给的非标准采样率，测 V-WEAK 的窗长换算
+            sr,
             ..clips[0].clone()
         };
         assert_weak_scored(&score(&mut eg, &c, Some(speech)));
