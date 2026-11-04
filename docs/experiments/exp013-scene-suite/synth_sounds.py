@@ -259,6 +259,60 @@ def page_turn(rng):
     return _ramp(x, 15), {"dur_s": d}
 
 
+def doorbell(rng):
+    """门铃「叮—咚」：两个长衰减的钟声音（基频 + 非整数倍泛音）。"""
+    f1 = _u(rng, 620, 720)
+    f2 = f1 * _u(rng, 0.78, 0.84)
+    t = np.arange(int(1.2 * SR)) / SR
+    bell = lambda f: (np.sin(2 * np.pi * f * t) + 0.4 * np.sin(2 * np.pi * 2.76 * f * t) * np.exp(-t / 0.15)) * np.exp(-t / 0.5)
+    x = np.concatenate([bell(f1)[: int(0.5 * SR)], bell(f2)])
+    return _ramp(x, 3), {"tones_hz": [f1, f2]}
+
+
+def chair_scrape(rng):
+    """椅子拖地：摩擦噪声 + 带抖动的共振吱声。"""
+    d = _u(rng, 0.4, 1.2)
+    n = int(d * SR)
+    fr = _filt(rng.standard_normal(n), "bandpass", (200, 3000))
+    fr *= 0.5 + np.abs(_filt(rng.standard_normal(n), "lowpass", 40)) * 3
+    f0 = _u(rng, 300, 900)
+    sweep = f0 * (1 + 0.3 * np.sin(2 * np.pi * _u(rng, 3, 9) * np.arange(n) / SR))
+    sq = np.sin(2 * np.pi * np.cumsum(sweep) / SR) * (rng.random() < 0.6)
+    return _ramp(fr / (np.std(fr) + 1e-12) + 0.5 * sq, 30), {"dur_s": d, "squeak_hz": f0}
+
+
+def brake_squeal(rng):
+    """刹车尖叫：2–5 kHz 带颤音的窄带音，渐强再收。"""
+    d = _u(rng, 0.6, 1.8)
+    n = int(d * SR)
+    f = _u(rng, 2000, 5000) * (1 + 0.01 * np.sin(2 * np.pi * _u(rng, 5, 12) * np.arange(n) / SR))
+    env = np.sin(np.pi * np.arange(n) / n) ** 0.5
+    x = np.sin(2 * np.pi * np.cumsum(f) / SR) * env + 0.3 * _filt(rng.standard_normal(n), "highpass", 1500) * env
+    return x, {"dur_s": d}
+
+
+def door_pneumatic(rng):
+    """车门气动开关：泄气嘶声 + 末尾一声闷撞。"""
+    n = int(_u(rng, 0.5, 1.0) * SR)
+    hiss = _filt(rng.standard_normal(n), "highpass", 2500) * np.exp(-np.arange(n) / (0.3 * SR))
+    th = np.zeros(int(0.15 * SR))
+    th[:600] = _filt(rng.standard_normal(600), "lowpass", 300) * np.exp(-np.arange(600) / 120) * 4
+    return np.concatenate([hiss, th]), {"dur_ms": int(1000 * n / SR)}
+
+
+def jackhammer(rng):
+    """施工风钻：15–25 Hz 的冲击串，每下带低频撞击与中频金属声，成段出现。"""
+    d = _u(rng, 1.0, 3.0)
+    n = int(d * SR)
+    rate = _u(rng, 15, 25)
+    x = np.zeros(n)
+    for t in np.arange(0, d - 0.05, 1 / rate):
+        i = int(t * SR)
+        m = min(500, n - i)
+        x[i : i + m] += (_filt(rng.standard_normal(m), "bandpass", (80, 2500)) * np.exp(-np.arange(m) / 90))
+    return _ramp(x, 20), {"rate_hz": rate, "dur_s": d}
+
+
 # ---------------- 语音外放 ----------------
 def speaker(x, rng, style):
     """把干语音变成外放声：电视 / 导航（小喇叭）、广播（窄带 + 压缩 + 轻失真）、隔墙（低通）。"""
@@ -287,4 +341,5 @@ def pa_chime(rng):
 CONTINUOUS = {"room_tone": room_tone, "hvac": hvac, "fan": fan, "fridge_hum": fridge_hum, "hvac_cycle": hvac_cycle,
               "coffee_machine": coffee_machine, "wind": wind, "cabin": cabin}
 EVENTS = {"dishes": dishes, "phone_ring": phone_ring, "notify": notify, "turn_signal": turn_signal,
-          "door_chime": door_chime, "luggage": luggage, "page_turn": page_turn}
+          "door_chime": door_chime, "luggage": luggage, "page_turn": page_turn, "doorbell": doorbell,
+          "chair_scrape": chair_scrape, "brake_squeal": brake_squeal, "door_pneumatic": door_pneumatic, "jackhammer": jackhammer}
