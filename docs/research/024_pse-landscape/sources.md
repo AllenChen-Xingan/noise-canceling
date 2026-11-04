@@ -20,11 +20,11 @@
 |---|---|---|
 | **Alkove Focus**（`alkove-focus-1-preview`） | 约 0.8M 参数、int8 1.1 MB；**从 GTCRN 的 DNS3 检查点改来**（GTCRN 部分 MIT，见 `NOTICE`）；代码与权重 Apache-2.0；256 点（16 ms）步长，输出晚 16 ms；单线程 M1 Max 每秒音频约 56 ms（≈ 每 10 ms 0.56 ms） | **【核】** huggingface.co/alkove-ai/alkove-focus-1-preview · github.com/alkove-ai/alkove |
 | 同上 · 注册方式 | 模型本身**不会**自动学声纹：吃一个 192 维声纹（另一个模型 alkove-timbre 从 ≥ 1.5 s 用户语音算出），或给零 = 「留最近的那个人」；运行中可换声纹 | **【核】** 模型卡 · docs.pipecat.ai 的 alkove 页。子代理说的「约 6 s 自动学、下次静音生效」**未证实**，三处原文都没有 |
-| 同上 · 效果 | 旁人与目标同响（Common Voice 7 语）：有声纹 SI-SDR 7.1 dB，旁人残留 −22.6 dB；VoxLock 11.7 / −28.6；无声纹 4.5 / −7.8。AMI 头戴麦 WER 16.1%（原声 20.8%、VoxLock 15.1%，作者称差距不显著）。**只有噪声时**（VoiceBank+DEMAND）STOI 0.895、WER 4.0%，**都比带噪输入（0.921、2.7%）差** | **【核】** 模型卡，作者自测 |
+| 同上 · 效果 | 旁人与目标同响（Common Voice 7 语）：有声纹 SI-SDR 7.1 dB；VoxLock 11.7；无声纹 4.5。旁人残留 有声纹 −22.6 / VoxLock −28.6 / 无声纹 −7.8 dB——**测量条件待核**：子代理笔记写「旁人单独说话」，pse 读到的模型卡写法未明说是否重叠段。AMI 头戴麦 WER 16.1%（原声 20.8%、VoxLock 15.1%，作者称差距不显著）。**只有噪声时**（VoiceBank+DEMAND）STOI 0.895、WER 4.0%，**都比带噪输入（0.921、2.7%）差** | **【核】** 模型卡，作者自测 |
 | 同上 · 局限 | 预览版，权重与接口 v1 前可能改；只适合近讲麦；有声纹时新人刚开口约 150 ms 漏过（低 25–35 dB）；训练数据未公开；训练代码未见 | **【核】** 模型卡 |
 | **voice-isolator / -cpu**（Scicom，arXiv 2610.35272，2026-10-26） | 因果；CPU 版 2210 万参数；单核占用 10 ms 帧 54%（fp）/ 34%（int8），同机 GTCRN 5%、VoxLock 264%（机器未写）；**会中自动注册**：第 3 s 起取「到目前为止最响的 3 s」，卡上写旁人更响（电视、音乐）会被选中；许可「other」无条款 | **【核】** 论文摘要 · HF 模型卡 |
 | 同上 · 效果 | CPU 卡：AMI 60 s 窗 WER 15.55%（VoxLock 23.66%）；NOTSOFAR 7.58%（8.84%）；只有来电者一人 5.32%（VoxLock 2.92%，更差）。论文大模型 AMI 60 s 窗 16.13% | **【核】** 作者自测 |
-| **VoxLock** | 005 已列；新增：voice-isolator 作者同机测其占单核 65–264%；本机 M5 已测跟不上 | 【官方】+【本机】 |
+| **VoxLock** | 005 已列；新增：voice-isolator 作者同机测其占单核 65–264%；本机 M5 **int8 单线程**跟不上，fp32 加缓冲、多线程、Core ML 未测（exp003 README:140） | 【官方】+【本机】 |
 | REAL-TSE 因果基线 | BSRNN，窗 32 / 跳 8 ms、算法延迟 24 ms；仓库无 LICENSE、权重许可未证实 | 【官方】arXiv 2607.15198 |
 | WeSep 新版 | 因果 BSRNN；Libri2Mix-100 上「SI-SDRi > 1 dB」占比：说话人嵌入条件 79.9%，USEF 等约 95–96% | 【官方】arXiv 2607.27436 |
 | AFW | 2.9M 因果 TCN；旁人响 10 / 15 dB 时 SI-SNRi 13.6 / 14.0；提错人 4%；每块 250 ms（延迟超线）；仿真 | 【官方】arXiv 2609.20463 |
