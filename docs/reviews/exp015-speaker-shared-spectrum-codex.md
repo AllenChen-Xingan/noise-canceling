@@ -1,7 +1,7 @@
 # 评审 · exp015 认人耗时估算与计时命令（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/experiments/exp015-speaker-shared-spectrum/README.md`（依据：`src/speaker-lab/src/bench.rs`、`state/handoff/fespk.md`、`src/speaker/src/{fbank,embed,judge}.rs`）。**最新一轮：第 3 轮（2026-11-04）· 总评「修改」· 已达停止线（连续两轮无 P0/P1）**。
-> 累计处理：P1×1、P2×7 逐条回源码核实，属实 8、驳回 0。没有新的要人定的事。
+> 对象：`docs/experiments/exp015-speaker-shared-spectrum/README.md`（依据：`src/speaker-lab/src/bench.rs`、`state/handoff/fespk.md`、`src/speaker/src/{fbank,embed,judge}.rs`）。**最新一轮：第 4 轮（2026-11-04，实测数字填入后）· 总评「修改」· 已达停止线（第 2、3、4 轮无 P0/P1）**。
+> 累计处理：P1×1、P2×9 逐条回源码核实，属实 10、驳回 0。没有新的要人定的事。
 > 编号：本记录按交代的文件名规则 `docs/reviews/exp015-*.md` 命名；`docs/reviews/README.md` 不在本线可写范围，索引那一行由大总管加。
 
 ## 第 1 轮（2026-11-04）· 总评「修改」
@@ -79,3 +79,21 @@
 ### 是否再审
 
 停：连续两轮无 P0/P1。剩余 P2 为 0。实测数字填入 README 后若结论改变，再审一轮。
+
+## 第 4 轮（2026-11-04）· 总评「修改」
+
+实测数字填入后再审（依据加上 `results/bench-split.{c01,c06}.json`）。原文：`_tmp/exp015-reviews/readme-codex-4.md`（不入库）。effort medium，61 秒。
+本轮 P0/P1：0 条 · 停止线：满足 · 留作 issue 的 P2：无（2 条当场改了）
+
+上一轮处理的验证：注册与锁定的代价已补入 README 与现状页；前几轮的修正都保留。实测表数字与两份结果文件逐项吻合（codex 抽查）。
+
+- **P2｜README:79 来源不明的约 3 ms 不能推出「全部数字约翻倍」**（第 4 轮 #1）
+  - 核实：属实。如果那 3 ms 是每次固定开销，不随缩窗和量化减少，组合结果是 0.93 + 3 ≈ 3.9 ms/s，不是翻倍
+  - 处理：README 与现状页删掉「约翻倍」，把它单列为未知项，写出两种情况（随帧数缩小 / 每次固定），并写明「到线」要先在真实流程里复测判断回路
+- **P2｜README:72 「最多晚 2 s 才发现」不是上限**（第 4 轮 #2）
+  - 核实：属实。下一次判断的 1.5 s 窗里可能还混着上一个人，判决可以仍是主人或不确定（`judge.rs:304-318`），还要再等一次
+  - 处理：README 与现状页第 1 题改成「要等下一次判断，可能还要再等一次，总共晚多久未量化，要在不同换人时刻上实测」
+
+### 是否再审
+
+停：第 2、3、4 轮都无 P0/P1，剩余 P2 为 0。
