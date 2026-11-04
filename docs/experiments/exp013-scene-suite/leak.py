@@ -105,14 +105,18 @@ def eval_overlap(u):
     本集与它同池（LibriSpeech 奇数位、DEMAND 后 40%），所以 exp006 场景分类器不能在本集上评（README 第四节）。"""
     rows = exp006_rows(("test", "seq"))
     spk = {r["target_spk"] for r in rows if r.get("target_spk")}
+    seg_s = float(json.loads((EXP006 / "recipes.json").read_text())["seq"]["segment_s"])
     ivs = {}
     for r in rows:
         noise = r.get("noise") or ""
-        for item in (noise if isinstance(noise, list) else [noise]):  # seq 段的 noise 是列表（每小段一条）
-            m = DEMAND_RE.search(item if isinstance(item, str) else json.dumps(item))
+        listed = isinstance(noise, list)  # seq 段的 noise 是列表（每小段一条，每小段 seg_s 秒）
+        for item in (noise if listed else [noise]):
+            for ids in re.findall(r"talkersx\d+\(([\d,]+)\)", item):  # 邻座说话人也算
+                spk |= set(ids.split(","))
+            m = DEMAND_RE.search(item)
             if m:
                 t = float(m.group(3))
-                ivs.setdefault((m.group(1), int(m.group(2))), []).append((t, t + float(r.get("segment_s", r.get("dur_s", 15.0)))))
+                ivs.setdefault((m.group(1), int(m.group(2))), []).append((t, t + (seg_s if listed else float(r.get("dur_s", 10.0)))))
     dem = sum(1 for env, ch, st, ln, sr in u["demand"]
               if any(st / sr < tb and ta < (st + ln) / sr for ta, tb in ivs.get((env, ch), [])))
     return {"rows": len(rows), "speakers": len(u["speakers"] & spk), "demand_segments": dem}
