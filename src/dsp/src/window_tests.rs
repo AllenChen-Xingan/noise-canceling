@@ -45,7 +45,11 @@ fn kaldi_windows_match_fbank_original() {
             })
             .collect()
     };
-    for w in [Window::KaldiHamming, Window::KaldiHanning, Window::KaldiPovey] {
+    for w in [
+        Window::KaldiHamming,
+        Window::KaldiHanning,
+        Window::KaldiPovey,
+    ] {
         for n in LENS {
             assert_eq!(bits32(&table(w, n)), bits32(&orig(w, n)), "{w:?} n={n}");
         }

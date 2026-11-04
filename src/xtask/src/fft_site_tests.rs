@@ -27,7 +27,13 @@ fn planner_outside_home_is_flagged() {
 #[test]
 fn home_comments_and_strings_pass() {
     assert_eq!(n("src/dsp/src/fft.rs", "use realfft::RealFftPlanner;\n"), 0);
-    assert_eq!(n("src/dsp/src/fft_tests.rs", "fn f(p: P) { p.plan_fft_forward(8); }\n"), 0);
+    assert_eq!(
+        n(
+            "src/dsp/src/fft_tests.rs",
+            "fn f(p: P) { p.plan_fft_forward(8); }\n"
+        ),
+        0
+    );
     for code in [
         "// RealFftPlanner 在注释里\nfn f() {}\n",
         "/// 文档里提到 `plan_fft_forward`\nfn f() {}\n",

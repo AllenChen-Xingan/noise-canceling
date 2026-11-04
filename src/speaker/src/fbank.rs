@@ -13,8 +13,8 @@
 #![allow(clippy::indexing_slicing)] // NRT: 判断回路（C 档线程，约 0.5 s 一次），不在降噪线程上跑
 
 use vdn_dsp::{FrameFft, power_into};
-pub use vdn_types::Window;
 use vdn_types::StftSpec;
+pub use vdn_types::Window;
 
 #[derive(Clone, Copy, Debug)]
 pub struct FbankConfig {

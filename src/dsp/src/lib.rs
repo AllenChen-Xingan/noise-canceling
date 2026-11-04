@@ -28,9 +28,9 @@ pub mod window;
 
 pub use delay::DelayLine;
 pub use envelope::{OpenCloseEnvelope, OpenCloseParams};
+pub use fft::{FrameFft, Sample, power_into};
 pub use ftz::FtzGuard;
 pub use resample::{Decimator3, Interpolator3};
-pub use fft::{FrameFft, Sample, power_into};
 pub use stft::StreamingStft;
 
 /// 分贝 → 线性幅度。

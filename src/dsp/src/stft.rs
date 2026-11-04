@@ -51,7 +51,10 @@ impl StreamingStft {
     /// 按口径正本建（窗由 [`crate::window::for_spec`] 造）。流式重叠相加要求 `win_len == n_fft`（不补零）。
     pub fn from_spec(spec: &vdn_types::StftSpec) -> Self {
         assert!(spec.is_valid(), "口径不自洽：{spec:?}");
-        assert_eq!(spec.win_len, spec.n_fft, "流式 STFT 不支持补零（win_len 必须等于 n_fft）");
+        assert_eq!(
+            spec.win_len, spec.n_fft,
+            "流式 STFT 不支持补零（win_len 必须等于 n_fft）"
+        );
         Self::new(spec.n_fft, spec.hop, crate::window::for_spec(spec))
     }
 }

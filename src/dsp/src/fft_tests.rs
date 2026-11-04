@@ -44,7 +44,10 @@ fn whole_matches_streaming_bitwise() {
 fn zero_padding_is_correct() {
     let x = signal(1600);
     let mut fr = FrameFft::<f32>::from_spec(&KALDI);
-    assert_eq!((fr.n_fft(), fr.win_len(), fr.hop(), fr.bins()), (512, 400, 160, 257));
+    assert_eq!(
+        (fr.n_fft(), fr.win_len(), fr.hop(), fr.bins()),
+        (512, 400, 160, 257)
+    );
     let w: Vec<f32> = crate::window::for_spec(&KALDI);
     let fft = RealFftPlanner::<f32>::new().plan_fft_forward(512);
     for k in [0usize, 3, fr.num_frames(x.len()) - 1] {
