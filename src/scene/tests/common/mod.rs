@@ -70,3 +70,29 @@ pub fn digest(js: &[Judgement]) -> ContentId {
     let bytes: Vec<u8> = js.iter().flat_map(record).collect();
     ContentId::of(&bytes)
 }
+
+/// 基准文件的平台标签：sin / ln / exp 等由系统数学库算，不同平台末位可能不同，基准只在同平台上比。
+pub fn platform() -> String {
+    format!("{}-{}", std::env::consts::ARCH, std::env::consts::OS)
+}
+
+/// 基准行：`<内容 ID> <条数> <平台>`。设了 `VDN_BLESS` 就写入并返回 `None`；平台不同返回 `None` 并打印跳过。
+/// 否则返回 (期望 ID, 期望条数)。
+pub fn golden(path: &str, got: ContentId, n: usize) -> Option<(ContentId, usize)> {
+    let line = format!("{got} {n} {}", platform());
+    if std::env::var_os("VDN_BLESS").is_some() {
+        std::fs::write(path, format!("{line}\n")).expect("写基准");
+        eprintln!("已写基准：{line}");
+        return None;
+    }
+    let want = std::fs::read_to_string(path).expect("缺基准文件（见测试文件头怎么生成）");
+    let mut it = want.split_whitespace();
+    let id = it.next().and_then(ContentId::parse).expect("基准第 1 列是 16 位十六进制");
+    let cnt: usize = it.next().and_then(|s| s.parse().ok()).expect("基准第 2 列是条数");
+    let plat = it.next().unwrap_or_default();
+    if plat != platform() {
+        eprintln!("跳过：基准生成于 {plat}，本机是 {}", platform());
+        return None;
+    }
+    Some((id, cnt))
+}
