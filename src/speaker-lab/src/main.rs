@@ -1,6 +1,6 @@
 //! vdn-speaker-lab：P2 离线实验命令行（exp005）。从 vdn-speaker 的 offline feature 挪出（2026-10-31 p2fix，规约 §2.2 规则 1）。
 //!
-//! 子命令与参数以 `src/speaker-lab/README.md` 为准（denoise · run · envelope · fbank · embed），这里不另抄一份。
+//! 子命令与参数以 `src/speaker-lab/README.md` 为准（denoise · run · envelope · fbank · embed · bench-split），这里不另抄一份。
 //!
 //! `run` 一次出 6 个版本（共用同一份降噪输出）：
 //! - `raw`：模型原样输出 · `floor`：只开衰减下限 −12 dB · `energy`：p1 能量版快开慢关
@@ -11,6 +11,7 @@
 
 #![forbid(unsafe_code)]
 
+mod bench;
 mod cmds;
 mod params;
 mod run;
@@ -36,7 +37,8 @@ fn main() {
         Some("envelope") => cmds::cmd_envelope(&args[1..]),
         Some("fbank") => cmds::cmd_fbank(&args[1..]),
         Some("embed") => cmds::cmd_embed(&args[1..]),
-        _ => Err("用法：vdn-speaker-lab denoise|run|envelope|fbank|embed …（见 src/speaker-lab/README.md）".into()),
+        Some("bench-split") => bench::cmd_bench_split(&args[1..]),
+        _ => Err("用法：vdn-speaker-lab denoise|run|envelope|fbank|embed|bench-split …（见 src/speaker-lab/README.md）".into()),
     };
     if let Err(e) = r {
         eprintln!("vdn-speaker-lab: {e}");
