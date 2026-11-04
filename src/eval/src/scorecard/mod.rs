@@ -12,7 +12,7 @@ use std::path::Path;
 
 use crate::files::serde_name;
 use crate::runner::{Extra, Opts, prepare_clip, score_one};
-use crate::scene::{MeetingPlace, SceneClip, SoundGroup, Tier};
+use crate::scene::{ClipPolarity, MeetingPlace, SceneClip, SoundGroup, Tier};
 use crate::suite::{Grader, RealSource, Set, Suite, Task, main_root, resolve};
 use crate::synth::{Clip, SR, Truth};
 use crate::system::SystemKind;
@@ -94,7 +94,12 @@ fn clip_task(base: &Task, c: &SceneClip) -> Task {
     Task {
         id: c.id.clone(),
         set: Set::Capability,
-        polarity: serde_name(&c.polarity),
+        // 任务极性的词表沿用 qa.json（suppress / preserve）；清单的 preserve_all 对到 preserve
+        polarity: match c.polarity {
+            ClipPolarity::Suppress => "suppress",
+            ClipPolarity::PreserveAll => "preserve",
+        }
+        .to_string(),
         origin: base.origin.clone(),
         desc: base.desc.clone(),
         scene: None,
