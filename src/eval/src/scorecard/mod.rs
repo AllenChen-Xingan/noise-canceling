@@ -10,7 +10,6 @@ pub mod standard;
 
 use std::path::Path;
 
-use crate::analysis::masks;
 use crate::files::serde_name;
 use crate::runner::{Extra, Opts, prepare_clip, score_one};
 use crate::scene::{SceneClip, SceneKey, SoundGroup, Tier};
@@ -196,6 +195,5 @@ pub fn run(
             }
         }
     }
-    let _ = masks; // 掩码由 prepare_clip 按 owner_iv / interf_iv 算
     (rows, skipped)
 }

@@ -54,6 +54,19 @@ const INTF10: Item = Item {
     params: &[("max", -10.0)],
 };
 
+const QUIET: [Item; 2] = [it("V-MUSIC"), NR6];
+const TALKERS: [Item; 4] = [
+    NR6,
+    INTF10,
+    Item {
+        v: "V-SIM-FA",
+        params: &[("max", 0.1)],
+    },
+    it("V-BGSTAB"),
+];
+const TRANSIT: [Item; 4] = [NR6, INTF10, it("V-BGSTAB"), it("V-MUSIC")];
+const MEETROOM: [Item; 2] = [NR6, it("V-BGSTAB")];
+
 /// 场景类：决定在 [`COMMON`] 之外再看哪几项。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Group {
@@ -77,28 +90,10 @@ impl Group {
 
     pub fn as_str(self) -> &'static str {
         match self {
-            Group::Quiet => "quiet",
-            Group::Talkers => "talkers",
-            Group::Transit => "transit",
-            Group::MeetingRoom => "meeting-room",
-        }
-    }
-
-    /// 本类在 [`COMMON`] 之外加看的项。
-    pub fn extra(self) -> &'static [Item] {
-        match self {
-            Group::Quiet => &[it("V-MUSIC"), NR6],
-            Group::Talkers => &[
-                NR6,
-                INTF10,
-                Item {
-                    v: "V-SIM-FA",
-                    params: &[("max", 0.1)],
-                },
-                it("V-BGSTAB"),
-            ],
-            Group::Transit => &[NR6, INTF10, it("V-BGSTAB"), it("V-MUSIC")],
-            Group::MeetingRoom => &[NR6, it("V-BGSTAB")],
+            Group::Quiet => &QUIET,
+            Group::Talkers => &TALKERS,
+            Group::Transit => &TRANSIT,
+            Group::MeetingRoom => &MEETROOM,
         }
     }
 }

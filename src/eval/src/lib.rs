@@ -23,6 +23,7 @@ pub mod report;
 pub mod rng;
 pub mod runner;
 pub mod scene;
+pub mod scorecard;
 pub mod suite;
 pub mod synth;
 pub mod system;
