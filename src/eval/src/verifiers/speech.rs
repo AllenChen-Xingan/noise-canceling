@@ -210,3 +210,114 @@ pub(super) fn v_estoi(c: &Ctx, p: &Params) -> Score {
     .with_extra("estoi_out", o)
     .with_extra("estoi_mix", m)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::analysis::masks;
+    use crate::probes::Probe;
+    use crate::synth::{NoiseKind, SceneSpec, TalkerSpec, render};
+
+    fn clip() -> Clip {
+        render(&SceneSpec {
+            dur_s: 10.0,
+            seed: 7,
+            owner: Some(TalkerSpec {
+                level_dbov: -26.0,
+                f0_lo: 100.0,
+                f0_hi: 140.0,
+                tonal: false,
+            }),
+            owner_start_s: 0.5,
+            pause_s: (0.4, 1.2),
+            interferers: Vec::new(),
+            noise: NoiseKind::Pink,
+            snr_db: 10.0,
+            tail_silence_s: 0.0,
+        })
+    }
+
+    /// 「好输出」：干净轨 + 低 30 dB 的残留噪声（像一个合格的降噪器）。
+    fn good(c: &Clip) -> Vec<f32> {
+        c.clean
+            .iter()
+            .zip(&c.noise)
+            .map(|(s, n)| s + 0.03 * n)
+            .collect()
+    }
+
+    fn score(id: &str, c: &Clip, out: &[f32]) -> Score {
+        let m = masks(&c.truth, &c.mix, 0.03);
+        let ctx = Ctx {
+            clip: c,
+            out,
+            run: None,
+            masks: &m,
+            noise_out: None,
+            ci: true,
+        };
+        eval(id, &ctx, &Params::default())
+    }
+
+    /// 好输出过、探针劣化后不过且更差（012 §2.3 第 2 条）。
+    fn must_catch(id: &str, probe: Probe) {
+        let c = clip();
+        let g = good(&c);
+        let a = score(id, &c, &g);
+        assert!(a.verdict.is_pass(), "{id} 好输出应过：{a} {}", a.note);
+        let bad = probe.apply(&c, &g);
+        let b = score(id, &c, &bad);
+        assert!(b.verdict.is_fail(), "{id} 探针 {} 应不过：{b}", probe.as_str());
+        let (va, vb) = (a.value.unwrap(), b.value.unwrap());
+        assert!(a.better.worse(vb, va), "{id}：探针 {vb} 不比原输出 {va} 差");
+    }
+
+    #[test]
+    fn weak_catches_weak_minus10() {
+        must_catch("V-WEAK", Probe::WeakMinus10);
+    }
+
+    #[test]
+    fn pumpv_catches_gain_wobble() {
+        must_catch("V-PUMPV", Probe::GainWobble);
+    }
+
+    #[test]
+    fn click_catches_clicks() {
+        must_catch("V-CLICK", Probe::Clicks5);
+    }
+
+    #[test]
+    fn estoi_catches_lowpass() {
+        must_catch("V-ESTOI", Probe::Lowpass1k);
+    }
+
+    #[test]
+    fn identity_output_is_not_a_click() {
+        // 输出 = 带噪输入：输入自带的陡变不算咔嗒
+        let c = clip();
+        let s = score("V-CLICK", &c, &c.mix);
+        assert_eq!(s.value, Some(0.0), "{s}");
+    }
+
+    #[test]
+    fn weak_is_gain_sensitive() {
+        // 不先扣整体增益：整体压 6 dB，L30 损失应约 6 dB
+        let c = clip();
+        let out: Vec<f32> = good(&c).iter().map(|v| v * 0.5).collect();
+        let s = score("V-WEAK", &c, &out);
+        let v = s.value.unwrap();
+        assert!((v - 6.0).abs() < 1.0, "{v}");
+    }
+
+    #[test]
+    fn silent_reference_is_unknown() {
+        let mut c = clip();
+        c.clean.iter_mut().for_each(|v| *v = 0.0);
+        let out = c.mix.clone();
+        assert!(matches!(
+            score("V-WEAK", &c, &out).verdict,
+            Verdict::Unknown(_)
+        ));
+    }
+}
