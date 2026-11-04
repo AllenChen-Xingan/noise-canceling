@@ -202,6 +202,12 @@ pub(super) fn v_click(c: &Ctx, p: &Params) -> Score {
     // 咔嗒 = 输出自身一阶差分的离群点（012 原定义），且这一步跳变里「干净人声解释不了的部分」占一半以上：
     // 人声自身的陡变（字头、声门脉冲）、平滑的增益变化都由干净轨解释，不算
     let frac = p.f_or("resid_frac", th::CLICK.def("resid_frac"));
+    // 听得见才算：跳变至少到人声峰值（干净轨 |x| 的 99.9 分位）以下 floor_db；更小的是底噪里的毛刺
+    let peak = quantile(
+        &c.clip.clean.iter().map(|v| v.abs() as f64).collect::<Vec<_>>(),
+        0.999,
+    );
+    let floor = (peak * 10f64.powf(p.f_or("floor_db", th::CLICK.def("floor_db")) / 20.0)) as f32;
     let r = residual(c.out, &c.clip.clean, sr);
     let fo: Vec<bool> = outliers(c.out, sr, k)
         .into_iter()
@@ -209,7 +215,7 @@ pub(super) fn v_click(c: &Ctx, p: &Params) -> Score {
         .map(|(i, f)| {
             let d_out = (c.out[i + 1] - c.out[i]).abs();
             let d_res = (r[i + 1] - r[i]).abs();
-            f && d_res >= frac as f32 * d_out
+            f && d_out >= floor && d_res >= frac as f32 * d_out
         })
         .collect();
     let fm = outliers(&c.clip.mix, sr, k);
@@ -433,26 +439,5 @@ mod tests {
             score("V-WEAK", &c, &out).verdict,
             Verdict::Unknown(_)
         ));
-    }
-}
-#[cfg(test)]
-mod scratch_click {
-    use super::*;
-    #[test]
-    fn dbg_click() {
-        let c = super::tests::clip_pub();
-        let out: Vec<f32> = c.clean.iter().zip(&c.noise).map(|(s, n)| s + 0.03 * n).collect();
-        let sr = c.sr;
-        let r = residual(&out, &c.clean, sr);
-        let fo = outliers(&out, sr, 8.0);
-        let fm = outliers(&c.mix, sr, 8.0);
-        for i in 0..fo.len() {
-            let dout = (out[i + 1] - out[i]).abs();
-            let dres = (r[i + 1] - r[i]).abs();
-            if fo[i] && dres >= 0.5 * dout {
-                let near = fm[i.saturating_sub(32)..(i + 33).min(fm.len())].iter().any(|x| *x);
-                eprintln!("i={i} t={:.4} dout={dout:.5} dres={dres:.5} clean={:.5} cdiff={:.5} mixflag={near}", i as f64 / sr as f64, c.clean[i], c.clean[i+1]-c.clean[i]);
-            }
-        }
     }
 }
