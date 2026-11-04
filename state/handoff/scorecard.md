@@ -97,6 +97,8 @@
 
 ## 转交（范围外，留给大总管）
 
+- scenesuite 第三版 build 起，每段 `chain.room.paired` 标人声混响与底噪是否同房间（约 63% 不同房间）。成绩单这一版没有按它分组；要拆时照「拖后腿的声音」那套分组比较做（`scorecard/rules.rs` 的 `drags`），不用改 schema
+
 - `vdn-eval ci` / `qa` / `calib --record` 的报告用 `std::fs::write` 写，同一输出目录跑第二次会覆盖（旧代码，不在本分支改动里；codex 第 6 轮按类归并时发现）。成绩单已改成只新建（`scorecard::card::write_new`），可照这个改
 
 - scenesuite 合并进本分支后：`src/schema/src/eval.rs` 的 `DATA_FILES` 加 `("src/eval/suite/scenes.json", SUITE_FILE)` 一行（否则 `eval_data_files_registered` 红）；`repo_scene_suite_parses_and_expands` 测试那时才真正生效
@@ -105,6 +107,7 @@
 - 成绩单输出默认在主目录 `_tmp/scorecard/<run_id>/`；要进仓（CLAUDE.md 第五节第 1 条）时放哪个目录，由大总管定
 
 ## 流水
+- 名额：nrmos_parity --ignored 3/3 过（SCOREQ 差 0.00000 · Distill-MOS 0.00225）；cargo test --workspace --release 84 组全过 → 名额已还
 - codex 评审 8 轮：P1×8、P2×9 全部属实并修复（缺段不许判过 · 轨长不许截短 · 无参考判不知道 · 听感有待测就待测 · 缓存按内容哈希 · 不覆盖旧成绩单等），第 7、8 轮无问题 → 停
 - V-CLICK 只报不判；P06 拆成 30% 已知做不到 + 40% 必须判不过；`has_clean_ref = false` 的段不打分
 - 片段清单类型 + schema（与 scenesuite 对齐两轮，加 4 个字段）· 成绩单标准 + 比对测试 · 成绩单命令 + 端到端测试 · 常驻评分子进程 · tidy / clippy 过
