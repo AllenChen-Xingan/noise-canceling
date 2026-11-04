@@ -21,7 +21,7 @@
 
 ### aspire-stirling.md
 - **场景键**：cafe（大学食堂 / 餐厅午餐高峰）, other（隔音棚对照）
-- **设备键**：tablet（iPad mini 2，90 cm）, close-talk（领夹）, other→array 不适用：双耳录音机记为 studio（Zoom H4n Pro，约 140 cm）
+- **设备键**：tablet（iPad mini 2，90 cm）, close-talk（领夹）, studio（Zoom H4n Pro 双耳录音，约 140 cm）
 - **笔记本段**：没有；iPad 与 H4n 分文件，可按设备筛
 - **转写**：有（Grid 固定句，脚本即转写；时间戳未查到）
 - **语体**：朗读 Grid 句，无对话、无笑声、无附和、无情绪
@@ -29,7 +29,7 @@
 
 ### chime9-echi.md
 - **场景键**：cafe（模拟食堂：回放干扰对话 + WHAM! 背景）
-- **设备键**：array（Project Aria 眼镜 7 通道）, other→记为 unknown 不合适：助听器 4 通道记为 array；close-talk（近讲，仅训练可用）
+- **设备键**：array（Project Aria 眼镜 7 通道；助听器每耳前后 2 麦共 4 通道，键表无助听器类，也记 array）, close-talk（近讲，仅训练可用）
 - **笔记本段**：没有；按设备分文件（Aria / 助听器）
 - **转写**：未查到（官网与数据卡未提）
 - **语体**：桌边 4 人真实自然对话；笑声、附和未标注（未查到）
@@ -85,9 +85,9 @@
 
 ### chime3-chime4-real.md（地点补充）
 - **场景键**：cafe, transit（公交车内）, street（街口、步行区）
-- **设备键**：tablet（平板上装 6 麦）, close-talk
+- **设备键**：tablet（手持平板装 6 麦，ch1–6）, close-talk（ch0 近讲）
 - **笔记本段**：没有
-- **转写**：有（WSJ 朗读句）
+- **转写**：有（WSJ0 提示文本，句级，无词级时间戳）
 - **语体**：朗读，无笑声、附和、情绪
 - **与 D62 的关系**：真实录音（真人在真实地点对平板朗读）。是本路「公交 / 街边 / 咖啡馆真人说话」的唯一按地点标注的真实集，但 LDC 付费不可再分发
 
