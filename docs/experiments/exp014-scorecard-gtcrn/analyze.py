@@ -223,6 +223,20 @@ def device_table(rows: list[dict], system: str) -> list[str]:
     return out
 
 
+def device_gap(rows: list[dict], system: str, base: str) -> list[str]:
+    """表：每项「模型 − 原声直通」配对均值差，Air 与外接分开算；最后一列是两者之差（Air − 外接）。"""
+    items = [v for v in items_of(rows) if v not in REPORT_ONLY]
+    by = group(rows, "device")
+    air, ext = by.get(("mba-builtin",), []), by.get(("external-mic",), [])
+    out = ["| 项 | Air：模型 − 原声（段数） | 外接：模型 − 原声（段数） | Air − 外接 |", "|---|---|---|---|"]
+    for v in items:
+        a, e = paired_diffs(air, system, base, v), paired_diffs(ext, system, base, v)
+        ma, me = mean(a), mean(e)
+        d = None if ma is None or me is None else ma - me
+        out.append(f"| {v} | {fmt(ma)} ({len(a)}) | {fmt(me)} ({len(e)}) | {fmt(d)} |")
+    return out
+
+
 def device_by_scene(rows: list[dict], system: str, card: dict) -> list[str]:
     """表 4：每场景 × 档，Air 与外接的判定和不过项数（只看被测系统）。"""
     status = {(s["scene"], s["tier"], s["device"], s["system"]): s for s in card["scenes"]}
@@ -414,6 +428,8 @@ def build(run: Path, manifest_path: Path, system: str = "gtcrn", base: str = "pa
                                      "V-MUSIC", "V-NR", "V-INTF")) + [""]
     L += [f"## 4. Air 内置麦 vs 外接麦（{system}，全部场景合并）", ""]
     L += device_table(rows, system) + [""]
+    L += [f"### 4b. 按设备分开的配对差值（{system} − {base}，扣掉设备链对原声本身的影响）", ""]
+    L += device_gap(rows, system, base) + [""]
     L += [f"## 5. Air vs 外接，按场景（{system}）", ""]
     L += device_by_scene(rows, system, card) + [""]
     L += ["## 6. 人声与底噪同房间 vs 不同房间", ""]
