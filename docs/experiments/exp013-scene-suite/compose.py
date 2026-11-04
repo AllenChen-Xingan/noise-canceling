@@ -42,13 +42,11 @@ def clip_seed(scene, tier, idx):
 
 
 def resolve_cls(cls):
-    """素材缺失时按 sounds.json 的 fallback 换类别（只有下载类底噪有 fallback）。"""
+    """类别必须在 sounds.json 里、下载类素材必须在本机；不做替代（同种子跨机器取材要一致）。"""
     c = SOUNDS[cls]
     src = c["source"]
     if src["kind"] == "demand" and not all(pools.demand_available(e) for e in src["envs"]):
-        if "fallback" not in src:
-            raise FileNotFoundError(f"{cls} 缺素材且没有 fallback")
-        return resolve_cls(src["fallback"])
+        raise FileNotFoundError(f"{cls} 缺 DEMAND 素材 {src['envs']}：先跑 fetch.py")
     return cls
 
 
@@ -85,6 +83,10 @@ class Scene:
         rsrc = None
         if dist is not None:
             rir, rsrc = self.room.rir(self.rng_mat, role, dist, _u(self.rng_mat, (-180, 180)))
+            if self.ch.params.get("reverb_stress"):  # 022 第 2 步「混响压力」分支：所有声源的尾部都不衰减（codex 第 2 轮 P2 #3）
+                d = signal.fftconvolve(x, rir.direct)[: len(x)]
+                t = signal.fftconvolve(x, rir.rest)[: len(x)]
+                return self.ch.response(self.ch.diffuse(d) + t), rsrc
             x = signal.fftconvolve(x, rir.full)[: len(x)]
         return self.ch.response(self.ch.diffuse(x)), rsrc
 

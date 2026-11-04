@@ -68,7 +68,7 @@ def utterance(path):
 
 
 # 从没被合成用过的 DEMAND 环境：按时段切（016 S10①「无说话人的按录音场次 / 时段」）——前一半留作测试份
-# （只测、不当任何合成原料），后一半当裁判原料。016 第 45 行原写「整个环境当测试份」，这里改成按时段切，待大总管定
+# （只测、不当任何合成原料），后一半当裁判原料。大总管 2026-11-03 定（016 第 45 行由大总管改为指向 S10①）
 TEST_SPLIT_FRAC = 0.5
 
 
@@ -157,5 +157,8 @@ def index_hash():
     L = libri()
     files = [f for pool in ("owner", "interf") for fs in L[pool].values() for f in fs]
     files += sorted(DEMAND.glob("*/ch*.wav")) + [DATA / k for v in esc50().values() for k in v] + ZH + [MUSIC]
+    rir = DATA / "rir"  # 实测 RIR、同房间噪声、McVAMPIRE 几何（codex 第 2 轮 P2 #4）
+    files += sorted(rir.glob("ace-single/Single/*/*/*.wav")) + sorted(rir.glob("mit-ir-survey/Audio/*.wav"))
+    files += sorted(rir.glob("mcvampire/ir/*.wav")) + sorted(rir.glob("mcvampire/driving_noise/*.wav")) + [rir / "mcvampire/geometry.mat"]
     rows = sorted(f"{Path(f).relative_to(DATA)}\t{Path(f).stat().st_size}" for f in files)
     return hashlib.sha256("\n".join(rows).encode()).hexdigest(), len(rows)
