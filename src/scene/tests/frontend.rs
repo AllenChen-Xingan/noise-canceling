@@ -111,24 +111,29 @@ fn combined_path_counts_one_fft_per_frame() {
     assert_eq!(sa.own_fft_count(), 0);
 }
 
-/// 先借谱、中途换成自算（换到 FE-M）：结果与全程自算相同——借谱时自算缓冲也在同步推进。
+/// 借谱 → 自算（换到 FE-M）→ 再借谱：结果与全程自算相同——借谱时自算缓冲也在同步推进。
+/// 切换点都在有声段中间（3 s 在类语音段、7 s 在低频轰鸣段，信号每 2 s 换一段），
+/// 若借谱时没推进自算缓冲，切换后第一帧就吃到旧数据，摘要必不同（codex 第 2 轮 P2 #1）。
 #[test]
 fn switching_to_self_compute_mid_stream_is_seamless() {
     let x = common::signal();
     let own = common::run(&x, |sa, h| sa.push_hop(h));
+    // 前端每帧都跑（降噪模型一直在），场景按时段选入口
     let mut fe = StreamingStft::from_spec(&FRONTEND);
     let mut pow = vec![0.0f32; FRONTEND.bins()];
     let mut k = 0usize;
-    let half = x.len() / HOP / 2;
+    let per_s = MODEL_RATE as usize / HOP;
+    let (to_own, back) = (3 * per_s, 7 * per_s);
     let mixed = common::run(&x, |sa, h| {
-        if k < half {
-            power_into(fe.analyze(h), &mut pow);
+        power_into(fe.analyze(h), &mut pow);
+        if k < to_own || k >= back {
             sa.push_hop_with_power(h, &FRONTEND, &pow);
         } else {
             sa.push_hop(h);
         }
         k += 1;
     });
+    assert_eq!(common::digest(&own), common::digest(&mixed), "切换前后与全程自算不逐位相同");
     let d = max_feature_diff(&own, &mixed);
     assert!(d <= 1e-5, "切换后 35 维最大绝对差 {d:e} > 1e-5");
     for (a, b) in own.iter().zip(&mixed) {

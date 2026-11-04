@@ -51,3 +51,41 @@ fn gtcrn_tap_equals_self_compute() {
     m.reset();
     assert!(m.input_power().is_none());
 }
+
+/// 真 GTCRN + 场景借谱的组合路径：场景自己 0 次正向 FFT（GTCRN 内部那 1 次由构造保证），
+/// 场景判断与场景自算逐位相同（013 第 8 节第 3 条的真模型版；codex 第 2 轮 P2 #2）。
+#[test]
+fn gtcrn_plus_scene_borrowing_does_no_extra_fft() {
+    let Some(path) = ModelKind::Gtcrn.default_path() else {
+        assert!(
+            std::env::var_os("VDN_REQUIRE_MODELS").is_none(),
+            "VDN_REQUIRE_MODELS 已设，但找不到模型文件"
+        );
+        eprintln!("跳过：找不到 GTCRN 模型文件（设 VDN_GTCRN_ONNX）");
+        return;
+    };
+    let mut m = Gtcrn::open(&path).expect("打开 GTCRN");
+    let spec = m.spectrum_spec();
+    let x = input();
+    let hop = m.hop();
+    let mut y = vec![0.0f32; hop];
+    let mut borrowed = vdn_scene::SceneAnalyzer::new(vdn_types::MODEL_RATE, hop);
+    let mut own = vdn_scene::SceneAnalyzer::new(vdn_types::MODEL_RATE, hop);
+    let (mut jb, mut jo) = (Vec::new(), Vec::new());
+    for (k, h) in x.chunks_exact(hop).enumerate() {
+        m.process(h, &mut y).expect("GTCRN 处理");
+        let p = m.input_power().expect("处理过帧后应借得出谱");
+        borrowed.push_hop_with_power(h, &spec, p);
+        own.push_hop(h);
+        if (k + 1) % 31 == 0 {
+            jb.push(borrowed.judge());
+            jo.push(own.judge());
+        }
+    }
+    assert_eq!(borrowed.own_fft_count(), 0, "借谱时场景不该自己做 FFT");
+    assert!(!jb.is_empty());
+    for (a, b) in jb.iter().zip(&jo) {
+        assert!(a.features.iter().zip(&b.features).all(|(p, q)| p.to_bits() == q.to_bits()));
+        assert_eq!(a.committed, b.committed);
+    }
+}

@@ -70,7 +70,7 @@ pub trait SpectrumTap: Model {
 
 1. **GTCRN 对拍**：固定约 3 s 输入（截到整 hop，每个点都真过模型；codex 第 1 轮 P2 #4），输出 f32 逐位的哈希写进 `src/models/tests/fixtures/`。顺序：先在**没改过**的 `gtcrn.rs` 上生成哈希（名额放开后），再改 GTCRN。没模型文件时同 `smoke.rs` 跳过（设 `VDN_REQUIRE_MODELS` 不许跳）
 2. 场景：借谱 vs 自算，35 维最大绝对差 ≤ 1e-5（预期 0）；场景判断逐帧相同。谱源用 `StreamingStft` + `power_into`（与 GTCRN 同一段代码），CI 上能跑。「改前的场景实现」的参照是两份基准：整 hop 一份、不整齐长度一份，都在改前的提交上生成。原稿说「把旧实现抄进测试」，没有这样做，因为那是一份 300 多行的副本。基准带平台标签：别的平台上跳过；CI 是 macos-15（arm），和生成基准的平台相同，所以 CI 上真比（codex 第 1 轮 P2 #3）
-3. 计数：一个 `StreamingStft` 当模型前端 + 场景借谱 + 测试里手动接修音，每帧正向 FFT 总数恰好 1（前端 `forward_count` 增 1、场景自算 0）；有模型文件时对真 GTCRN 再测一次
+3. 计数：一个 `StreamingStft` 当模型前端 + 场景借谱 + 测试里手动接修音，每帧正向 FFT 总数恰好 1（前端 `forward_count` 增 1、场景自算 0）。真 GTCRN 版在 `models/tests/tap.rs::gtcrn_plus_scene_borrowing_does_no_extra_fft`：场景 0 次，判断与自算逐位相同。GTCRN 内部那 1 次由构造保证，没有对外计数
 4. 修音（测试里手动接）：dry 用前端借出的那份 vs 另起一个 `StreamingStft` 自算的 dry，`PolishChain` 输出逐位相同
 5. 0 分配：`assert_no_alloc` 包住 `power_into`、`feed`、场景借谱入口、GTCRN 借谱
 
@@ -141,6 +141,6 @@ pub trait SpectrumTap: Model {
 
 - 每处改前改后逐位对拍：声纹 fbank 输出、评测器分数、参考降噪器输出。做法同第一段：在改前的提交上生成基准。
 - `FRONTEND` 加了 `win_len` 以后，第一段的 GTCRN 和场景对拍仍逐位相同。
-- 全仓 grep：除 `vdn-dsp` 外没有 `plan_fft_forward` / `RealFftPlanner`。可以写成一条 tidy 规则，把「只在一处」变成机器检查。
+- 全仓 grep：除 `vdn-dsp` 外没有 `plan_fft_forward`（只管正向 FFT 的创建；场景求自相关的逆 FFT 不在此列，第 5 节说它留着。要收进来就另加验收；codex 第 2 轮 P2 #3）。可以写成一条 tidy 规则，把「只在一处」变成机器检查。
 
 **估计改动量**：types 约 +30 行，dsp 约 +100 行；认人 fbank 约 −30 行，评测器 3 处约 −40 行；每处配一条逐位对拍测试。
