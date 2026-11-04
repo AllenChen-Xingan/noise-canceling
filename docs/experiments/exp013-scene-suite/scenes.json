@@ -1,0 +1,218 @@
+{
+  "_说明": "exp013 每个地点怎么组一段（参数正本）。地点键必须与 021 catalog.md 主表一致（测试比对）。数字出处见 README 第一节：021 有实测的照抄，未查到的标在 _推断 里。",
+  "sr": 16000,
+  "clip_s": 12.0,
+  "lead_silence_s": 1.5,
+  "counts": {"common": 10, "stress": 6},
+  "devices": ["mba-builtin", "external-mic"],
+  "base_seed": 20261103,
+  "zh_clips": {"common": [3], "stress": [2]},
+  "owner_speech_frac": 0.7,
+  "gap_s": [0.3, 1.0],
+  "event_count": [1, 3],
+  "event_rel_db": {"common": [-15, -5], "stress": [-8, 4]},
+  "pattern_rel_db": [-6, 3],
+  "speech_rel_db": [-6, 0],
+  "stress_min_extras": 2,
+  "default_dist_m": [1.5, 3.0],
+  "default_az_deg": [-170, 170],
+  "scenes": {
+    "home-quiet": {
+      "room": {"dims": [[3, 5], [3, 4], [2.5, 2.8]], "t60": {"common": [0.3, 0.5], "stress": [0.45, 0.55]}},
+      "snr_db": {"common": [20, 30], "stress": [8, 15]},
+      "bed": ["bed-room"],
+      "sounds": [
+        {"cls": "fan", "p": [0.5, 0.7], "dist_m": [1.0, 2.5]},
+        {"cls": "fridge-hum", "p": [0.3, 0.4], "dist_m": [2.0, 4.0]},
+        {"cls": "hvac", "p": [0.3, 0.5]},
+        {"cls": "keyboard", "p": [0.5, 0.6], "dist_m": [0.3, 0.5], "az_deg": [-20, 20]},
+        {"cls": "mouse", "p": [0.3, 0.4], "dist_m": [0.3, 0.5], "az_deg": [20, 60]},
+        {"cls": "door-knock", "p": [0.15, 0.3], "dist_m": [2.5, 4.0]}
+      ]
+    },
+    "home-family": {
+      "room": {"dims": [[4, 7], [3.5, 5], [2.5, 2.8]], "t60": {"common": [0.3, 0.5], "stress": [0.45, 0.55]}},
+      "snr_db": {"common": [10, 20], "stress": [0, 8]},
+      "sir_db": {"common": [6, 12], "stress": [-6, 3]},
+      "bed": ["bed-kitchen"],
+      "sounds": [
+        {"cls": "tv-voice", "p": [0.7, 0.9], "dist_m": [2.0, 3.5], "az_deg": [30, 160]},
+        {"cls": "talker", "p": [0.4, 0.6], "dist_m": [1.5, 3.0]},
+        {"cls": "dog-bark", "p": [0.3, 0.5], "dist_m": [2.0, 5.0]},
+        {"cls": "baby-cry", "p": [0.2, 0.4], "dist_m": [2.0, 4.0]},
+        {"cls": "dishes", "p": [0.3, 0.4], "dist_m": [2.5, 4.5]},
+        {"cls": "music", "p": [0.2, 0.3], "dist_m": [2.0, 3.5]}
+      ]
+    },
+    "open-office": {
+      "room": {"dims": [[10, 25], [8, 15], [2.7, 3.2]], "t60": {"common": [0.4, 0.8], "stress": [0.8, 1.0]}},
+      "snr_db": {"common": [10, 20], "stress": [3, 8]},
+      "sir_db": {"common": [5, 15], "stress": [-3, 3]},
+      "bed": ["bed-office"],
+      "sounds": [
+        {"cls": "talker", "p": [0.8, 1.0], "dist_m": {"common": [1.5, 3.0], "stress": [1.0, 1.5]}},
+        {"cls": "hvac", "p": [0.4, 0.5]},
+        {"cls": "keyboard", "p": [0.6, 0.8], "dist_m": [0.3, 1.5]},
+        {"cls": "phone-ring", "p": [0.2, 0.5], "dist_m": [1.5, 4.0]},
+        {"cls": "notify", "p": [0.3, 0.5], "dist_m": [0.4, 2.0]},
+        {"cls": "mouse", "p": [0.3, 0.3], "dist_m": [0.3, 0.5], "az_deg": [20, 60]}
+      ]
+    },
+    "phone-booth": {
+      "room": {"dims": [[1.0, 1.4], [1.0, 1.4], [2.1, 2.3]], "t60": {"common": [0.1, 0.25], "stress": [0.2, 0.3]}},
+      "snr_db": {"common": [22, 30], "stress": [15, 22]},
+      "sir_db": {"common": [25, 35], "stress": [15, 20]},
+      "bed": ["bed-room"],
+      "sounds": [
+        {"cls": "fan", "p": [0.8, 0.9], "dist_m": [0.5, 0.9]},
+        {"cls": "muffled-talker", "p": [0.5, 0.8]},
+        {"cls": "door-knock", "p": [0.1, 0.3], "dist_m": [0.6, 1.0]}
+      ]
+    },
+    "meeting-room": {
+      "polarity": "preserve_all",
+      "co_targets": {"count": {"common": [1, 2], "stress": [2, 2]}, "dist_m": [0.5, 2.0], "az_deg": [-150, 150], "rel_db": [-12, 0]},
+      "room": {"dims": [[4, 7], [3, 5], [2.6, 3.0]], "t60": {"common": [0.5, 0.7], "stress": [0.8, 1.0]}},
+      "snr_db": {"common": [15, 25], "stress": [8, 15]},
+      "bed": ["bed-room"],
+      "sounds": [
+        {"cls": "hvac", "p": [0.9, 1.0]},
+        {"cls": "door", "p": [0.3, 0.5], "dist_m": [2.5, 4.0]},
+        {"cls": "cough", "p": [0.3, 0.5], "dist_m": [0.8, 2.0]},
+        {"cls": "laugh", "p": [0.3, 0.5], "dist_m": [0.8, 2.0]},
+        {"cls": "keyboard", "p": [0.2, 0.3], "dist_m": [0.5, 1.5]}
+      ]
+    },
+    "cowork": {
+      "room": {"dims": [[10, 20], [8, 14], [3, 4]], "t60": {"common": [0.6, 1.0], "stress": [1.0, 1.2]}},
+      "snr_db": {"common": [5, 15], "stress": [0, 5]},
+      "sir_db": {"common": [5, 15], "stress": [0, 5]},
+      "bed": ["bed-office", "bed-cafe"],
+      "sounds": [
+        {"cls": "talker", "p": [0.7, 0.9], "dist_m": [2.0, 4.0]},
+        {"cls": "coffee-machine", "p": [0.4, 0.6], "dist_m": [3.0, 6.0]},
+        {"cls": "footsteps", "p": [0.4, 0.5], "dist_m": [1.5, 4.0]},
+        {"cls": "dishes", "p": [0.2, 0.4], "dist_m": [2.0, 5.0]},
+        {"cls": "babble", "p": [0.2, 0.4]}
+      ]
+    },
+    "cafe": {
+      "room": {"dims": [[6, 12], [5, 9], [2.8, 3.5]], "t60": {"common": [0.6, 1.0], "stress": [1.0, 1.3]}},
+      "snr_db": {"common": [3, 10], "stress": [-3, 3]},
+      "sir_db": {"common": [0, 15], "stress": [-6, 0]},
+      "bed": ["bed-cafe"],
+      "sounds": [
+        {"cls": "talker", "p": [0.6, 0.9], "dist_m": [1.0, 2.5]},
+        {"cls": "coffee-machine", "p": [0.5, 0.7], "dist_m": [2.5, 6.0]},
+        {"cls": "music", "p": [0.4, 0.5], "dist_m": [3.0, 6.0]},
+        {"cls": "dishes", "p": [0.5, 0.7], "dist_m": [0.8, 3.0]},
+        {"cls": "can-open", "p": [0.1, 0.2], "dist_m": [1.0, 2.5]},
+        {"cls": "laugh", "p": [0.2, 0.3], "dist_m": [1.5, 3.0]}
+      ]
+    },
+    "canteen": {
+      "room": {"dims": [[15, 30], [10, 20], [3.5, 5]], "t60": {"common": [0.8, 1.3], "stress": [1.5, 2.5]}},
+      "snr_db": {"common": [0, 6], "stress": [-5, 0]},
+      "sir_db": {"common": [0, 10], "stress": [-5, 0]},
+      "bed": ["bed-restaurant"],
+      "sounds": [
+        {"cls": "babble", "p": [0.8, 1.0]},
+        {"cls": "talker", "p": [0.5, 0.8], "dist_m": [1.0, 1.5]},
+        {"cls": "dishes", "p": [0.7, 0.9], "dist_m": [0.6, 3.0]},
+        {"cls": "laugh", "p": [0.2, 0.4], "dist_m": [1.0, 3.0]}
+      ]
+    },
+    "transit-hub": {
+      "room": {"dims": [[30, 60], [20, 40], [8, 15]], "t60": {"common": [1.5, 2.5], "stress": [4.0, 8.0]}},
+      "snr_db": {"common": [3, 10], "stress": [-3, 3]},
+      "sir_db": {"common": [3, 12], "stress": [-3, 3]},
+      "bed": ["bed-station"],
+      "sounds": [
+        {"cls": "announce", "p": [0.6, 0.9]},
+        {"cls": "babble", "p": [0.5, 0.7]},
+        {"cls": "luggage", "p": [0.5, 0.7], "dist_m": [1.0, 3.0]},
+        {"cls": "footsteps", "p": [0.4, 0.6], "dist_m": [1.0, 3.0]},
+        {"cls": "talker", "p": [0.3, 0.5], "dist_m": [1.5, 3.0]}
+      ]
+    },
+    "car-passenger": {
+      "room": {"dims": [[2.0, 2.4], [1.4, 1.6], [1.1, 1.3]], "t60": {"common": [0.05, 0.1], "stress": [0.05, 0.1]}},
+      "snr_db": {"common": [0, 8], "stress": [-5, 0]},
+      "sir_db": {"common": [5, 15], "stress": [0, 5]},
+      "bed": ["bed-car"],
+      "sounds": [
+        {"cls": "talker", "p": [0.6, 0.8], "dist_m": [0.8, 1.2], "az_deg": [40, 80]},
+        {"cls": "nav-voice", "p": [0.4, 0.6], "dist_m": [0.6, 1.0], "az_deg": [-40, 40]},
+        {"cls": "turn-signal", "p": [0.4, 0.6], "dist_m": [0.8, 1.2]},
+        {"cls": "car-horn", "p": [0.2, 0.4], "dist_m": [1.0, 1.5]}
+      ]
+    },
+    "bus-metro-cabin": {
+      "room": {"dims": [[9, 12], [2.4, 2.6], [2.1, 2.4]], "t60": {"common": [0.1, 0.3], "stress": [0.2, 0.4]}},
+      "snr_db": {"common": [0, 8], "stress": [-5, 0]},
+      "sir_db": {"common": [3, 12], "stress": [-3, 3]},
+      "bed": ["bed-bus", "bed-metro"],
+      "sounds": [
+        {"cls": "announce", "p": [0.6, 0.9]},
+        {"cls": "talker", "p": [0.5, 0.7], "dist_m": [1.0, 2.0]},
+        {"cls": "door-chime", "p": [0.4, 0.6], "dist_m": [1.5, 4.0]},
+        {"cls": "babble", "p": [0.2, 0.4]}
+      ]
+    },
+    "rail-air-cabin": {
+      "room": {"dims": [[15, 25], [3.2, 3.8], [2.0, 2.4]], "t60": {"common": [0.1, 0.3], "stress": [0.2, 0.4]}},
+      "snr_db": {"common": [-2, 5], "stress": [-6, -2]},
+      "sir_db": {"common": [0, 10], "stress": [-6, 0]},
+      "bed": ["bed-cabin"],
+      "sounds": [
+        {"cls": "talker", "p": [0.7, 0.9], "dist_m": [0.6, 1.0], "az_deg": [60, 100]},
+        {"cls": "announce", "p": [0.4, 0.6]},
+        {"cls": "dishes", "p": [0.2, 0.4], "dist_m": [0.6, 1.5]},
+        {"cls": "cough", "p": [0.2, 0.3], "dist_m": [0.8, 2.0]}
+      ]
+    },
+    "street-outdoor": {
+      "room": {"dims": [[100, 100], [100, 100], [10, 10]], "t60": {"common": [0.0, 0.0], "stress": [0.0, 0.0]}},
+      "snr_db": {"common": [0, 10], "stress": [-5, 0]},
+      "sir_db": {"common": [5, 15], "stress": [0, 5]},
+      "bed": ["bed-street"],
+      "sounds": [
+        {"cls": "wind", "p": [0.0, 0.7]},
+        {"cls": "car-horn", "p": [0.4, 0.6], "dist_m": [5.0, 15.0]},
+        {"cls": "talker", "p": [0.4, 0.6], "dist_m": [2.0, 5.0]},
+        {"cls": "footsteps", "p": [0.2, 0.3], "dist_m": [1.0, 3.0]}
+      ]
+    },
+    "hotel-room": {
+      "room": {"dims": [[4, 6], [3.5, 4.5], [2.5, 2.8]], "t60": {"common": [0.3, 0.6], "stress": [0.5, 0.7]}},
+      "snr_db": {"common": [20, 30], "stress": [10, 18]},
+      "bed": ["bed-room"],
+      "sounds": [
+        {"cls": "hvac-cycle", "p": [0.6, 0.8]},
+        {"cls": "footsteps", "p": [0.3, 0.5], "dist_m": [3.0, 5.0]},
+        {"cls": "door", "p": [0.3, 0.5], "dist_m": [3.0, 5.0]},
+        {"cls": "door-knock", "p": [0.1, 0.3], "dist_m": [3.0, 4.5]}
+      ]
+    },
+    "library-classroom": {
+      "owner_level_dbfs": [-40, -32],
+      "room": {"dims": [[8, 15], [6, 12], [3, 4]], "t60": {"common": [0.6, 1.3], "stress": [1.0, 1.3]}},
+      "snr_db": {"common": [18, 28], "stress": [10, 18]},
+      "sir_db": {"common": [10, 20], "stress": [3, 8]},
+      "bed": ["bed-room"],
+      "sounds": [
+        {"cls": "page-turn", "p": [0.6, 0.8], "dist_m": [0.4, 2.0]},
+        {"cls": "keyboard", "p": [0.4, 0.6], "dist_m": [0.5, 2.0]},
+        {"cls": "talker", "p": [0.5, 0.8], "dist_m": [2.0, 4.0]},
+        {"cls": "cough", "p": [0.2, 0.3], "dist_m": [2.0, 5.0]}
+      ]
+    }
+  },
+  "_推断": {
+    "t60": "open-office · cowork · cafe · bus-metro-cabin · rail-air-cabin · phone-booth 的 T60 在 021 写「未查到」，按相邻地点取",
+    "sir_db": "cowork · canteen · transit-hub · car-passenger · bus-metro-cabin · street-outdoor 的 SIR 在 021 写「未查到」，按开放办公与咖啡馆取",
+    "snr_db": "只有 cafe（016 F2）、car（交通中位 5.6）、rail-air（听者处 −2）有依据；其余按 021 声级与说话声 60 dB 左右推",
+    "snr_cap": "SNR 上限取 30 dB：设备底噪比主说话人低 28–41 dB（022 第 4 步），再高就被底噪盖住",
+    "event_rel_db": "突发声音相对主说话人的电平〔建议值〕；021 只有狗叫 1 m 处 75 dB(A) 一个数"
+  }
+}

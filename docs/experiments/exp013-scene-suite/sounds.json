@@ -1,5 +1,5 @@
 {
-  "_说明": "声音类别正本（cls）。group：bed 底噪 / pattern 有规律 / event 突发 / speech 旁人语音。is_speech 为真的进 SIR 与 interf_iv，其余进 SNR（event 另按 rel_db 设电平）。directional：有方位的点声源（过设备链第 2 步的方位衰减）；false = 扩散声。source.kind：demand · esc50 · synth · speech · babble · music。license 指素材许可，用途恒为只评测。",
+  "_说明": "声音类别正本（cls）。group：bed 底噪 / pattern 有规律 / event 突发 / speech 旁人语音。is_speech = 听得清的单个人声（旁人、电视、广播），进 SIR、interf_iv 与 audio.interf；其余（含 babble：多人重叠听不清，按噪声算）进 SNR 与 audio.noise（event 另按 rel_db 设电平）。directional：有方位的点声源（过设备链第 2 步的方位衰减）；false = 扩散声。source.kind：demand · esc50 · synth · speech · babble · music。license 指素材许可，用途恒为只评测。",
   "classes": {
     "bed-room":        {"zh": "房间底噪",       "group": "bed",     "is_speech": false, "directional": false, "source": {"kind": "synth", "fn": "room_tone"}, "license": "own"},
     "bed-office":      {"zh": "办公室底噪",     "group": "bed",     "is_speech": false, "directional": false, "source": {"kind": "demand", "envs": ["OOFFICE"]}, "license": "CC-BY-4.0"},
@@ -44,6 +44,6 @@
     "tv-voice":        {"zh": "电视外放",       "group": "speech",  "is_speech": true,  "directional": true,  "source": {"kind": "speech", "style": "tv"}, "license": "CC-BY-4.0"},
     "nav-voice":       {"zh": "导航语音",       "group": "speech",  "is_speech": true,  "directional": true,  "source": {"kind": "speech", "style": "nav"}, "license": "CC-BY-4.0"},
     "announce":        {"zh": "广播（提示音 + 人声）", "group": "speech", "is_speech": true, "directional": false, "source": {"kind": "speech", "style": "announce"}, "license": "CC-BY-4.0"},
-    "babble":          {"zh": "多人嘈杂人声",   "group": "speech",  "is_speech": true,  "directional": false, "source": {"kind": "babble", "talkers": [6, 10]}, "license": "CC-BY-4.0"}
+    "babble":          {"zh": "多人嘈杂人声",   "group": "speech",  "is_speech": false,  "directional": false, "source": {"kind": "babble", "talkers": [6, 10]}, "license": "CC-BY-4.0"}
   }
 }
