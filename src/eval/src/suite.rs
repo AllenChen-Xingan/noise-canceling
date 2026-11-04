@@ -104,7 +104,7 @@ pub enum RealSource {
     /// 由 `vdn-eval scorecard` 跑（`qa` / `ci` 不展开，判「不知道」）
     Scene {
         clips: String,
-        scene: crate::scene::SceneKey,
+        scene: crate::scene::MeetingPlace,
         tier: crate::scene::Tier,
         device: crate::scene::DeviceKey,
     },

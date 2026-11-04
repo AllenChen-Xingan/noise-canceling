@@ -4,7 +4,7 @@
 //! 过关线一律取 `thresholds` 表（正本）；这里只在表的默认值为空、必须由任务给的参数上写数，
 //! 这些数必须是表里已登记的取值（同一个测试核对），不许在这里新造过关线。
 
-use crate::scene::SceneKey;
+use crate::scene::MeetingPlace;
 
 /// 一项：verifier + 必须由任务给的参数。
 #[derive(Clone, Copy, Debug)]
@@ -109,8 +109,8 @@ impl Group {
 }
 
 /// 场景 → 场景类。`other` 不是开会场景，不进成绩单。
-pub fn group_of(s: SceneKey) -> Option<Group> {
-    use SceneKey::*;
+pub fn group_of(s: MeetingPlace) -> Option<Group> {
+    use MeetingPlace::*;
     Some(match s {
         HomeQuiet | PhoneBooth | HotelRoom | LibraryClassroom => Group::Quiet,
         HomeFamily | OpenOffice | Cowork | Cafe | Canteen => Group::Talkers,
@@ -121,7 +121,7 @@ pub fn group_of(s: SceneKey) -> Option<Group> {
 }
 
 /// 一个场景要跑的全部项：否决项在前，再是共同项，再是本类加看的项。
-pub fn items(s: SceneKey) -> Vec<(Item, bool)> {
+pub fn items(s: MeetingPlace) -> Vec<(Item, bool)> {
     let Some(g) = group_of(s) else {
         return Vec::new();
     };
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn every_meeting_scene_has_a_group_and_veto_first() {
-        for s in SceneKey::ALL {
+        for s in MeetingPlace::ALL {
             let v = items(s);
             if s.is_meeting() {
                 assert!(v.len() > VETO.len() + COMMON.len(), "{s:?}");
@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn items_are_registered_and_unique_per_scene() {
-        for s in SceneKey::ALL {
+        for s in MeetingPlace::ALL {
             let mut ids: Vec<&str> = items(s).iter().map(|(i, _)| i.v).collect();
             for id in &ids {
                 assert!(crate::verifiers::info(id).is_some(), "{id} 没登记");

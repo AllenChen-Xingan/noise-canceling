@@ -18,7 +18,7 @@ use crate::files::Lang;
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(rename_all = "kebab-case")]
-pub enum SceneKey {
+pub enum MeetingPlace {
     HomeQuiet,
     HomeFamily,
     OpenOffice,
@@ -37,24 +37,24 @@ pub enum SceneKey {
     Other,
 }
 
-impl SceneKey {
-    pub const ALL: [SceneKey; 16] = [
-        SceneKey::HomeQuiet,
-        SceneKey::HomeFamily,
-        SceneKey::OpenOffice,
-        SceneKey::PhoneBooth,
-        SceneKey::MeetingRoom,
-        SceneKey::Cowork,
-        SceneKey::Cafe,
-        SceneKey::Canteen,
-        SceneKey::TransitHub,
-        SceneKey::CarPassenger,
-        SceneKey::BusMetroCabin,
-        SceneKey::RailAirCabin,
-        SceneKey::StreetOutdoor,
-        SceneKey::HotelRoom,
-        SceneKey::LibraryClassroom,
-        SceneKey::Other,
+impl MeetingPlace {
+    pub const ALL: [MeetingPlace; 16] = [
+        MeetingPlace::HomeQuiet,
+        MeetingPlace::HomeFamily,
+        MeetingPlace::OpenOffice,
+        MeetingPlace::PhoneBooth,
+        MeetingPlace::MeetingRoom,
+        MeetingPlace::Cowork,
+        MeetingPlace::Cafe,
+        MeetingPlace::Canteen,
+        MeetingPlace::TransitHub,
+        MeetingPlace::CarPassenger,
+        MeetingPlace::BusMetroCabin,
+        MeetingPlace::RailAirCabin,
+        MeetingPlace::StreetOutdoor,
+        MeetingPlace::HotelRoom,
+        MeetingPlace::LibraryClassroom,
+        MeetingPlace::Other,
     ];
 
     /// 键名（由 serde 定；一致性由测试核对）。
@@ -64,7 +64,7 @@ impl SceneKey {
 
     /// 成绩单里算不算一个开会场景（`other` 不算，021 主表原文「不算开会场景，不进覆盖矩阵」）。
     pub fn is_meeting(self) -> bool {
-        self != SceneKey::Other
+        self != MeetingPlace::Other
     }
 }
 
@@ -280,7 +280,7 @@ pub struct ClipHash {
 pub struct SceneClip {
     /// build 内唯一，形如 `cafe-c03`
     pub id: String,
-    pub scene: SceneKey,
+    pub scene: MeetingPlace,
     pub tier: Tier,
     pub device: DeviceKey,
     pub mic_mode: MicMode,

@@ -12,7 +12,7 @@ use std::path::Path;
 
 use crate::files::serde_name;
 use crate::runner::{Extra, Opts, prepare_clip, score_one};
-use crate::scene::{SceneClip, SceneKey, SoundGroup, Tier};
+use crate::scene::{SceneClip, MeetingPlace, SoundGroup, Tier};
 use crate::suite::{Grader, RealSource, Set, Suite, Task, main_root, resolve};
 use crate::synth::{Clip, SR, Truth};
 use crate::system::SystemKind;
@@ -23,7 +23,7 @@ use crate::{Score, wav};
 #[derive(Clone, Debug)]
 pub struct ClipRow {
     pub clip: String,
-    pub scene: SceneKey,
+    pub scene: MeetingPlace,
     pub tier: Tier,
     pub device: String,
     pub system: String,

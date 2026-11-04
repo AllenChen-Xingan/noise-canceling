@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use vdn_eval::files::serde_name;
-use vdn_eval::scene::{DeviceKey, MicMode, SceneKey};
+use vdn_eval::scene::{DeviceKey, MicMode, MeetingPlace};
 
 fn read(rel: &str) -> String {
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -36,8 +36,8 @@ fn section<'a>(text: &'a str, from: &str, to: &str) -> &'a str {
 #[test]
 fn scene_keys_match_021_catalog() {
     let doc = backtick_keys(&read("docs/research/021_meeting-scenes/catalog.md"));
-    let code: BTreeSet<String> = SceneKey::ALL.iter().map(serde_name).collect();
-    assert_eq!(code, doc, "SceneKey 与 021 主表第一列不一致");
+    let code: BTreeSet<String> = MeetingPlace::ALL.iter().map(serde_name).collect();
+    assert_eq!(code, doc, "MeetingPlace 与 021 主表第一列不一致");
     assert_eq!(doc.len(), 16, "021 主表现在是 15 个地点键 + other");
 }
 
@@ -68,25 +68,25 @@ fn mic_modes_match_022_section2() {
 #[test]
 fn all_lists_are_exhaustive() {
     // 加变体不加进 ALL，这里编译不过
-    let n = |k: SceneKey| match k {
-        SceneKey::HomeQuiet
-        | SceneKey::HomeFamily
-        | SceneKey::OpenOffice
-        | SceneKey::PhoneBooth
-        | SceneKey::MeetingRoom
-        | SceneKey::Cowork
-        | SceneKey::Cafe
-        | SceneKey::Canteen
-        | SceneKey::TransitHub
-        | SceneKey::CarPassenger
-        | SceneKey::BusMetroCabin
-        | SceneKey::RailAirCabin
-        | SceneKey::StreetOutdoor
-        | SceneKey::HotelRoom
-        | SceneKey::LibraryClassroom
-        | SceneKey::Other => 16,
+    let n = |k: MeetingPlace| match k {
+        MeetingPlace::HomeQuiet
+        | MeetingPlace::HomeFamily
+        | MeetingPlace::OpenOffice
+        | MeetingPlace::PhoneBooth
+        | MeetingPlace::MeetingRoom
+        | MeetingPlace::Cowork
+        | MeetingPlace::Cafe
+        | MeetingPlace::Canteen
+        | MeetingPlace::TransitHub
+        | MeetingPlace::CarPassenger
+        | MeetingPlace::BusMetroCabin
+        | MeetingPlace::RailAirCabin
+        | MeetingPlace::StreetOutdoor
+        | MeetingPlace::HotelRoom
+        | MeetingPlace::LibraryClassroom
+        | MeetingPlace::Other => 16,
     };
-    assert_eq!(SceneKey::ALL.len(), n(SceneKey::Other));
+    assert_eq!(MeetingPlace::ALL.len(), n(MeetingPlace::Other));
     let n = |m: MicMode| match m {
         MicMode::Standard | MicMode::VoiceIsolation | MicMode::WideSpectrum | MicMode::Unknown => 4,
     };

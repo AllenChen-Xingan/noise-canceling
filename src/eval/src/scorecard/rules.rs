@@ -13,7 +13,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::ClipRow;
-use crate::scene::{SceneKey, SoundGroup, Tier};
+use crate::scene::{MeetingPlace, SoundGroup, Tier};
 use crate::thresholds as th;
 use crate::{Better, Score, Verdict};
 
@@ -83,7 +83,7 @@ pub struct Drag {
 
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct SceneCard {
-    pub scene: SceneKey,
+    pub scene: MeetingPlace,
     pub tier: Tier,
     pub device: String,
     pub system: String,
@@ -258,7 +258,7 @@ fn drags(items: &[ItemCell], rows: &[&ClipRow]) -> Vec<Drag> {
 
 /// 按 场景 × 档 × 设备 × 系统 汇总。
 pub fn summarize(rows: &[ClipRow]) -> Vec<SceneCard> {
-    let mut by: BTreeMap<(SceneKey, Tier, String, String), Vec<&ClipRow>> = BTreeMap::new();
+    let mut by: BTreeMap<(MeetingPlace, Tier, String, String), Vec<&ClipRow>> = BTreeMap::new();
     for r in rows {
         by.entry((r.scene, r.tier, r.device.clone(), r.system.clone()))
             .or_default()
@@ -340,7 +340,7 @@ mod tests {
     fn row(clip: &str, sounds: &[&str], weak: f64, dq: f64, dd: f64) -> ClipRow {
         ClipRow {
             clip: clip.into(),
-            scene: SceneKey::Cafe,
+            scene: MeetingPlace::Cafe,
             tier: Tier::Common,
             device: "mba-builtin".into(),
             system: "ref".into(),
@@ -442,20 +442,20 @@ mod tests {
 
     #[test]
     fn worst_orders_fail_before_unknown_and_skips_pass() {
-        let mk = |scene: SceneKey, weak: f64, dq: f64| {
+        let mk = |scene: MeetingPlace, weak: f64, dq: f64| {
             let mut r = row("a", &[], weak, dq, dq);
             r.scene = scene;
             r
         };
         let rows = vec![
-            mk(SceneKey::Cafe, 1.0, 0.1),           // 过
-            mk(SceneKey::Canteen, 6.0, 0.1),        // 不过
-            mk(SceneKey::HomeQuiet, 1.0, f64::NAN), // 听感判不了 → 待测
+            mk(MeetingPlace::Cafe, 1.0, 0.1),           // 过
+            mk(MeetingPlace::Canteen, 6.0, 0.1),        // 不过
+            mk(MeetingPlace::HomeQuiet, 1.0, f64::NAN), // 听感判不了 → 待测
         ];
         let cards = summarize(&rows);
         let w = worst(&cards);
         assert_eq!(w.len(), 2);
-        assert_eq!(cards[w[0]].scene, SceneKey::Canteen);
-        assert_eq!(cards[w[1]].scene, SceneKey::HomeQuiet);
+        assert_eq!(cards[w[0]].scene, MeetingPlace::Canteen);
+        assert_eq!(cards[w[1]].scene, MeetingPlace::HomeQuiet);
     }
 }

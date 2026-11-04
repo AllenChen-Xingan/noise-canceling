@@ -6,7 +6,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
-use vdn_eval::scene::SceneKey;
+use vdn_eval::scene::MeetingPlace;
 use vdn_eval::scorecard::standard::{COMMON, Group, VETO, group_of};
 
 fn doc() -> String {
@@ -62,7 +62,7 @@ fn scene_group_table_matches_code() {
             c[2].trim_matches('`').to_string(),
         );
     }
-    let code: BTreeMap<String, String> = SceneKey::ALL
+    let code: BTreeMap<String, String> = MeetingPlace::ALL
         .iter()
         .filter_map(|s| group_of(*s).map(|g| (s.as_str(), g.as_str().to_string())))
         .collect();
