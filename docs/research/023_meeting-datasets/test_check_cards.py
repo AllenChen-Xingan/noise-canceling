@@ -98,6 +98,24 @@ class CardTest(unittest.TestCase):
         self.assertEqual(check(GOOD.replace("cafe, meeting-room", "未查到")), [])
 
 
+class SplitKeysTest(unittest.TestCase):
+    def test_nested_parens_and_tags(self):
+        v = "phone, unknown（说话人「a (i.e. b) c」）【论文】, close-talk【沿用 014，二手】"
+        self.assertEqual(cc.split_keys(v), ["phone", "unknown", "close-talk"])
+
+
+class AddendumTest(unittest.TestCase):
+    def test_bad_key_in_addendum(self):
+        text = "### x.md\n- **场景键**：cafe\n- **设备键**：macbook（注）\n"
+        errs = cc.check_addendum(text, SCENES, DEVICES)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("`macbook`", errs[0])
+
+    def test_good_addendum(self):
+        text = "- **场景键**：home-family（电视）【论文】\n- **设备键**：未查到\n"
+        self.assertEqual(cc.check_addendum(text, SCENES, DEVICES), [])
+
+
 class CliTest(unittest.TestCase):
     def test_exit_codes(self):
         with tempfile.TemporaryDirectory() as d:

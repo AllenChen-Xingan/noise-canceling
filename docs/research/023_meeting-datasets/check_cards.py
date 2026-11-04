@@ -38,8 +38,11 @@ def parse_template(text: str) -> tuple[list[str], set[str], set[str]]:
 
 
 def split_keys(value: str) -> list[str]:
-    """「a, b（说明）」→ ['a', 'b']；括号里的说明不算键。"""
-    value = re.sub(r"[（(].*?[）)]", "", value)
+    """「a, b（说明（嵌套））【来源】」→ ['a', 'b']；括号与来源标签里的文字不算键。"""
+    prev = None
+    while prev != value:  # 由内向外剥括号，处理嵌套
+        prev, value = value, re.sub(r"[（(][^（）()]*[）)]", "", value)
+    value = re.sub(r"【[^】]*】", "", value)
     return [k.strip() for k in re.split(r"[,，、;；]", value) if k.strip()]
 
 
@@ -84,6 +87,20 @@ def check_card(text: str, fields: list[str], scenes: set[str], devices: set[str]
     return errs
 
 
+def check_addendum(text: str, scenes: set[str], devices: set[str]) -> list[str]:
+    """补字段文件里每行「场景键 / 设备键」也只许用模板里的键。"""
+    errs: list[str] = []
+    for i, line in enumerate(text.splitlines(), 1):
+        m = FIELD_RE.match(line)
+        if not m or m.group("name") not in ("场景键", "设备键"):
+            continue
+        allowed = scenes if m.group("name") == "场景键" else devices
+        for k in split_keys(m.group("value")):
+            if k != "未查到" and k not in allowed:
+                errs.append(f"第 {i} 行「{m.group('name')}」用了模板外的键 `{k}`")
+    return errs
+
+
 def main(argv: list[str]) -> int:
     card_dir = Path(argv[1]) if len(argv) > 1 else HERE / "cards"
     fields, scenes, devices = parse_template(TEMPLATE.read_text(encoding="utf-8"))
@@ -95,7 +112,12 @@ def main(argv: list[str]) -> int:
             bad += 1
             for e in errs:
                 print(f"{p.name}: {e}")
-    print(f"检查 {len(cards)} 张卡，{bad} 张有问题")
+    addendum = HERE / "cards-014-addendum.md"
+    if card_dir == HERE / "cards" and addendum.exists():
+        for e in check_addendum(addendum.read_text(encoding="utf-8"), scenes, devices):
+            bad += 1
+            print(f"{addendum.name}: {e}")
+    print(f"检查 {len(cards)} 张卡，{bad} 处问题")
     return 1 if bad else 0
 
 
