@@ -194,9 +194,10 @@ def by_snr(rows: list[dict], manifest: dict, items: tuple[str, ...], systems: li
             for r in rows:
                 s = score(r, v)
                 m = manifest.get(r["clip"])
-                if r["system"] != sy or not s or not m or s["verdict"] == "unknown":
+                snr = ((m or {}).get("measured") or {}).get("snr_all_db")
+                if r["system"] != sy or not s or snr is None or s["verdict"] == "unknown":
                     continue
-                b = snr_bin(m["measured"]["snr_all_db"])
+                b = snr_bin(snr)
                 n[b][0] += s["verdict"] == "fail"
                 n[b][1] += 1
             out.append(f"| {v} | {sy} | " + " | ".join(f"{a}/{t}" for a, t in n.values()) + " |")
