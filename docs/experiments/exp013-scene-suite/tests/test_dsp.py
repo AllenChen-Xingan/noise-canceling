@@ -70,6 +70,19 @@ class Rooms(unittest.TestCase):
         self.assertAlmostEqual(float(np.max(np.abs(r.direct))), 1.0, places=6)
 
 
+class Trim(unittest.TestCase):
+    def test_tail_trimmed(self):
+        """回归（codex 第 1 轮 P1 #2）：ESC 片段的混响尾巴要截掉，只留 60 ms。"""
+        import pools
+
+        rng = np.random.default_rng(0)
+        x = np.concatenate([tone(0.5), rng.standard_normal(SR) * np.exp(-np.arange(SR) / (0.3 * SR)) * 0.5])
+        y, end = pools.trim_tail(x)
+        self.assertLess(end, len(x))
+        self.assertLess(end, int(1.2 * SR))
+        self.assertEqual(float(y[-1]), 0.0)
+
+
 class Hash(unittest.TestCase):
     def test_sample_hash_is_float32_bytes(self):
         x = np.array([0.1, -0.2], np.float64)

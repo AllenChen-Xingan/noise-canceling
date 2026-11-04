@@ -185,7 +185,9 @@ class SmallBuild(unittest.TestCase):
             {"inst": "s", "src": {"kind": "demand", "env": "SCAFE", "ch": 2, "start": 48000 * 100, "len": 48000, "sr": 48000}},
             {"inst": "f", "src": {"kind": "events", "items": [{"kind": "synth", "fn": "synth_hvac"}]}},
         ]
+        f2["sounds"].append({"inst": "t", "src": {"kind": "demand", "env": "OOFFICE", "ch": 1, "start": 0, "len": 16000, "sr": 16000}})
         lk2 = leak.check([f2])
+        self.assertTrue(any("测试份" in h for h in lk2["hits"]), lk2["hits"])
         self.assertEqual((lk2["speakers"], lk2["synth_fn"]), (1, 1))
         self.assertGreaterEqual(lk2["demand"], 1)
         f3 = json.loads(json.dumps(self.recs[0]))
@@ -228,6 +230,20 @@ class SmallBuild(unittest.TestCase):
         for r in self.recs:
             for s in r["sounds"]:
                 self.assertIn(s["cls"], labels.SOUNDS)
+
+    def test_small_build_cannot_make_task_file(self):
+        """回归（codex 第 1 轮 P2 #5）：冒烟 build 只有每档 1 段，tasks.py 必须拒绝。"""
+        errs = tasks.coverage_errors(Path(self.tmp.name) / "b/t0")
+        self.assertTrue(any("应为" in e for e in errs))
+
+    def test_level_check_in_manifest(self):
+        lv = self.man["level_check"]
+        self.assertTrue(lv["ok"], lv)
+        import build
+
+        bad = json.loads(json.dumps(self.recs[:3]))
+        bad[0]["measured"]["snr_db"] = bad[0]["nominal"]["snr_db"] + 3
+        self.assertFalse(build.level_check(bad)["ok"])
 
     def test_task_file_shape(self):
         t = tasks.build_tasks("t0")

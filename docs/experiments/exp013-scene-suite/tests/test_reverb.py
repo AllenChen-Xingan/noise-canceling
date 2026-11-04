@@ -62,6 +62,30 @@ class Measured(unittest.TestCase):
         self.assertTrue(all(m.valid for m in rirs.mit_all()))
         self.assertGreater(len(rirs.mit_all()), 200)
 
+    def test_valid_filter_rejects_bad_irs(self):
+        """回归（codex 第 1 轮 P2 #4）：独立造三条 IR，过滤器必须分得开。"""
+        rng = np.random.default_rng(0)
+        t = np.arange(int(0.5 * 16000)) / 16000
+
+        def ir(t60, n=None):
+            x = rng.standard_normal(len(t)) * np.exp(-6.91 * t / t60) * 0.3
+            x[10] = 1.0
+            return x
+
+        ok = rirs.Measured("t", "r", "ok", 0, ir(0.4), 1.0)
+        trunc = rirs.Measured("t", "r", "trunc", 0, ir(4.0), 1.0)  # 4 s 的衰减被截在 0.5 s
+        self.assertTrue(ok.valid)
+        self.assertFalse(trunc.valid)
+        noisy = np.zeros(len(t))
+        noisy[10] = 1.0
+        noisy[200:] = rng.standard_normal(len(t) - 200) * 0.2  # 不衰减：估计失败，直达也不占优
+        m = rirs.Measured("t", "r", "flat", 0, noisy, 1.0)
+        self.assertEqual(m.t60, 0.0)
+        self.assertFalse(m.valid)
+        dry = np.zeros(len(t))
+        dry[10] = 1.0
+        self.assertTrue(rirs.Measured("t", "r", "dry", 0, dry, 1.0).valid)  # 真的没混响
+
     def test_every_room_option_has_candidates(self):
         for key, S in compose.SCENES["scenes"].items():
             for o in S["rooms"]:
