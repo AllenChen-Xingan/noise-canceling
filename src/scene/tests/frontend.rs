@@ -84,7 +84,7 @@ fn combined_path_counts_one_fft_per_frame() {
     let mut dry = vec![Default::default(); FRONTEND.bins()];
     let mut out = vec![0.0f32; HOP];
     let mut frames = 0u64;
-    for (k, h) in x.chunks_exact(HOP).enumerate() {
+    for (k, h) in x.as_chunks::<HOP>().0.iter().enumerate() {
         let before = fe.forward_count() + sa.own_fft_count();
         let spec = fe.analyze(h);
         power_into(spec, &mut pow);

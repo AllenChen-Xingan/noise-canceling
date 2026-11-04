@@ -61,7 +61,7 @@ pub fn record(j: &Judgement) -> Vec<u8> {
 pub fn run(x: &[f32], mut push: impl FnMut(&mut SceneAnalyzer, &[f32])) -> Vec<Judgement> {
     let mut sa = SceneAnalyzer::new(MODEL_RATE, HOP);
     let mut out = Vec::new();
-    for (k, h) in x.chunks_exact(HOP).enumerate() {
+    for (k, h) in x.as_chunks::<HOP>().0.iter().enumerate() {
         push(&mut sa, h);
         if (k + 1) % TICK_HOPS == 0 {
             out.push(sa.judge());

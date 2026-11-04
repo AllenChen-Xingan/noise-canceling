@@ -17,6 +17,7 @@
   - 测试：`scene/tests/{golden,frontend}.rs` · `models/tests/{golden,tap}.rs` · `polish/tests/borrowed_spectrum.rs` · dsp / scene / models 的 no_alloc 各加一条
 - 2026-11-04 大总管授权改 `specs/rust/architecture.md:225` 的借谱接口说明 → 已改为 `input_power`；全仓旧接口名 0 处
 - 2026-11-04 名额 ①：基准已生成（实测）。场景 `45107641c255052a`，24 次判断；GTCRN `72e947a3fb17c048`，48000 点，权重 `780e68e301ab1513`；平台 aarch64-macos。原样 `features.rs` 的 sha256 与 `git show 990e7843:` 一致。名额已归还，② 已申请
+- 2026-11-04 名额 ②：五个 crate（types · dsp · scene · polish · models，带真模型）`cargo test` 全绿，0 失败（实测）。GTCRN 对拍、场景对拍都不是跳过，而是真比了，逐位相同；借谱 vs 自算 35 维最大差 0（阈值 1e-5），24 次判断全同。修了一处：`src/dsp/Cargo.toml` 把 `vdn-types` 从 dev 依赖挪进普通依赖。名额已归还，③ 已申请
 - 基准怎么生成：草稿目录里的 `bless.sh` 把 `990e7843`（本分支改动前）原样导出，只放两份对拍测试，在那里生成基准再拷回 `tests/fixtures/`。所以基准不受本分支任何改动影响
 
 ## 盘点：每处 FFT / STFT（读源码，未实测）
