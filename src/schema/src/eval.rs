@@ -12,9 +12,10 @@ pub const SCENE_CLIP_FILE: &str = "eval-scene-clip.schema.json";
 pub const SCENE_CLIP_EXAMPLE: &str = "src/eval/tests/fixtures/scene-clip-example.jsonl";
 
 /// 仓里受 schema 管的数据文件：(相对仓库根的路径, 用哪份 schema)。新加清单文件时登记在这里。
-pub const DATA_FILES: [(&str, &str); 4] = [
+pub const DATA_FILES: [(&str, &str); 5] = [
     ("src/eval/suite/ci.json", SUITE_FILE),
     ("src/eval/suite/qa.json", SUITE_FILE),
+    ("src/eval/suite/scenes.json", SUITE_FILE),
     ("src/eval/suite/levels.json", LEVELS_FILE),
     ("src/eval/suite/baseline-ci.json", BASELINE_FILE),
 ];
