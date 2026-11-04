@@ -85,7 +85,12 @@ fn gtcrn_plus_scene_borrowing_does_no_extra_fft() {
     assert_eq!(borrowed.own_fft_count(), 0, "借谱时场景不该自己做 FFT");
     assert!(!jb.is_empty());
     for (a, b) in jb.iter().zip(&jo) {
-        assert!(a.features.iter().zip(&b.features).all(|(p, q)| p.to_bits() == q.to_bits()));
+        assert!(
+            a.features
+                .iter()
+                .zip(&b.features)
+                .all(|(p, q)| p.to_bits() == q.to_bits())
+        );
         assert_eq!(a.committed, b.committed);
     }
 }

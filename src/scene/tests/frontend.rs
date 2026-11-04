@@ -133,7 +133,11 @@ fn switching_to_self_compute_mid_stream_is_seamless() {
         }
         k += 1;
     });
-    assert_eq!(common::digest(&own), common::digest(&mixed), "切换前后与全程自算不逐位相同");
+    assert_eq!(
+        common::digest(&own),
+        common::digest(&mixed),
+        "切换前后与全程自算不逐位相同"
+    );
     let d = max_feature_diff(&own, &mixed);
     assert!(d <= 1e-5, "切换后 35 维最大绝对差 {d:e} > 1e-5");
     for (a, b) in own.iter().zip(&mixed) {
