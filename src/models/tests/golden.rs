@@ -1,4 +1,4 @@
-//! GTCRN 对拍（013 第 8 节第 1 条；另一位大总管点名要，成绩单重跑靠它可比）：固定 3 s 输入逐 hop 过真模型，
+//! GTCRN 对拍（013 第 8 节第 1 条；成绩单重跑靠它可比）：固定 3 s 输入逐 hop 过真模型，
 //! 输出 f32 逐位压成一个内容 ID，与改 `gtcrn.rs` **之前**生成的基准比。红了 = GTCRN 数值行为变了（红线），先停下报。
 //!
 //! 基准 `tests/fixtures/gtcrn_golden.txt` 一行：`<输出内容 ID> <样本数> <权重内容 ID> <平台>`。
@@ -10,13 +10,13 @@ use vdn_types::{ContentId, MODEL_RATE, Model};
 
 const FIXTURE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/gtcrn_golden.txt");
 
-/// 3 s：噪声 + 有调制的谐波音（像带噪说话）+ 一段静音，只用乘加和 LCG，跨平台逐位一致。
+/// 3 s：噪声 + 一强一弱交替的 150 Hz 正弦 + 一段静音，只用乘加和 LCG，跨平台逐位一致。
 fn input() -> Vec<f32> {
     let n = 3 * MODEL_RATE as usize;
     let mut rng: u32 = 0x0BAD_5EED;
     // 二阶递推正弦振荡器：y[n] = c·y[n-1] − y[n-2]，c = 2cos(2π·150/16000)（字面量，不调 cos）
-    let c = 1.998_266_8_f32;
-    let (mut y1, mut y2) = (0.058_870_3_f32, 0.0_f32);
+    let c = 1.996_531_2_f32;
+    let (mut y1, mut y2) = (0.058_870_8_f32, 0.0_f32);
     (0..n)
         .map(|i| {
             rng = rng.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
