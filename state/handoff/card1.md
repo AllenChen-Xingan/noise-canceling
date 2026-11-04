@@ -31,10 +31,14 @@
 3. V-LAT：`phone-booth-c07` 两段三个系统都量出多 6.6 ms，原声直通也不过 → 这段上的测量偏差【实测】
 4. V-EAT-ASR：按段判时 1 个字就超线；识别重复误差未量【实测 + 推断】
 5. V-INTF 口径核过，没有问题
+6. codex-review 工具：codex 输出以「P1 」「P2 」开头时，`file` 会误认成 PBM / PGM 图片，隐私扫描因此拦下 `--previous`。本次手动加标题行绕过，建议脚本自己处理
 
 ## 已收尾
 
-（未收尾）
+- 交付：`docs/experiments/exp014-scorecard-gtcrn/`（README · runs/ · analysis.md · findings.md · driver/ · analyze.py · make_listen.py · tests/ · listen/）
+- 人耳片段：主目录 `_tmp/exp014/listen/20261104-000444-e4511abc/`（7 段 × 2 = 168 秒，无答案文件）
+- issue 草稿 × 4：主目录 `_tmp/exp014/issue-ref-track.md`
+- 测试：`python3 -m unittest discover -s docs/experiments/exp014-scorecard-gtcrn/tests` 19 条过；驱动测试 1 条（删 target 之前跑过，过）
 
 ## 进度日志（正式跑期间后台每 30 分钟追加）
 
