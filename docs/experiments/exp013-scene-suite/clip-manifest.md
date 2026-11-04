@@ -31,7 +31,7 @@
 | `nominal` | 对象 | 名义值：`snr_db`（主说话人对**稳态干扰**：底噪 + 有规律 + babble + 设备底噪；突发声不算，按各自 `rel_db` 单设）· `sir_db`（对听得清的旁人语音之和；无旁人时 `null`）· `t60_s` · `owner_dist_m` · `owner_level_dbfs`。生成时用 gated 电平（20 ms 帧 > 最大帧 −35 dB）|
 | `measured` | 对象 | 实测值（设备链之后，主说话人电平改用 ITU-T P.56，与生成时不同算法）：`snr_db` · `snr_all_db`（突发声也算进去）· `sir_db` · `owner_level_dbfs` · `t60_s`（Schroeder 法，在主说话人 RIR 去掉直达窗后量）· `drr_db` · `overlap_ratio`（主说话人活动区间里有旁人语音的比例）。与名义值 95% 的段差 ≤ 1 dB、全部 ≤ 1.5 dB；按条件分档请用 `nominal` |
 | `owner_iv` · `interf_iv` | 区间数组 | 016 §4 的样本级区间：从**混响后**轨算，帧能量 > 全段最大帧 −35 dB，两端各外扩 2 帧（40 ms）。`interf_iv` = 所有旁人语音的并集 |
-| `chain` | 对象 | 设备链各步实际抽到的参数：`flat` · `tilt_db_per_oct` · `peak_*` · `floor_ratio_db` · `floor_lowmid_excess_db` · `strength` · `reverb_stress` · `vpio_db` · `clip_drive_db`；另有 `floor_clamped`（底噪比名义 SNR 允许的还响、被压低）· `headroom_db`（整段峰值超 −1 dBFS 时整段调低的量，0 = 没调）· `room_dims_m` · `owner_dry_delay_samples`（owner_dry 后移了多少样本）|
+| `chain` | 对象 | 设备链各步实际抽到的参数：`flat` · `tilt_db_per_oct` · `peak_*` · `floor_ratio_db` · `floor_lowmid_excess_db` · `strength` · `reverb_stress` · `vpio_db` · `clip_drive_db`；另有 `floor_clamped`（底噪比名义 SNR 允许的还响、被压低）· `headroom_db`（整段峰值超 −1 dBFS 时整段调低的量，0 = 没调）· `room`（这段用的实测房间，见 v1.2）· `owner_dry_delay_samples`（owner_dry 后移了多少样本）|
 | `seed` | 整数 | 本段种子；`build.py --only <id>` 用它单段重现 |
 | `hash` | 对象 | `{"samples": {…}, "wav_sha256": {…}}`，两个都是逐轨对象，键同 `audio`（`stems` 下按实例 id）。`samples` = 样本内容 sha256（float32 小端字节，016 S1）；`wav_sha256` = 文件哈希，`vdn-eval` 逐条核对（wav 不带时间戳块，可复现）|
 

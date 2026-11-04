@@ -95,12 +95,16 @@
 | `scenes.json` | 每个地点的声音组法、各量范围、两档；**参数正本** |
 | `sounds.json` | 声音类别键、中文名、素材来源、许可；**类别正本** |
 | `pools.py` | 素材索引与切池（说话人 / DEMAND 时段 / 下载片段），产出素材索引哈希 |
-| `rooms.py` | 房间冲激响应（直达部分与尾部分开给） |
+| `rirs.py` | 实测房间冲激响应（ACE · McVAMPIRE · MIT）：直达窗、按距离调直达、一段选一个房间、同房间底噪 |
+| `reverb_check.py` | 混响一致性检查：同房间 / T60 区间（build 逐段跑） |
+| `rooms.py` | `Rir` 数据结构；自写模拟房间只留给单元测试 |
 | `synth_sounds.py` | 自写合成声音 |
 | `device_chain.py` · `device_chain.json` | 设备链与它的参数 |
 | `compose.py` | 一段怎么组：抽声音、排时间、设电平 |
 | `labels.py` | 活动区间、逐声音起止与电平、实测 SNR / SIR / T60 |
 | `build.py` | 主入口：按 build id 批量出音频与清单 |
+| `tasks.py` | 从 build 生成 `src/eval/suite/scenes.json`（60 条任务） |
+| `fetch.py` | 下载素材并登记 `materials.json` |
 | `leak.py` | 与 exp006 训练清单求交集 |
 | `tests/` | 第七条的自检 |
 
