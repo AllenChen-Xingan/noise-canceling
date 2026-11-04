@@ -158,9 +158,10 @@ fn outliers(x: &[f32], sr: u32, k: f64) -> Vec<bool> {
     flag
 }
 
-/// 残差：输出减去逐 20 ms 投影到干净轨上的部分（干净轨全零时就是输出本身）。
+/// 残差：输出减去逐 5 ms 投影到干净轨上的部分（干净轨全零时就是输出本身）。
+/// 块要短：降噪器逐帧调增益时，块内增益在变，块越长残差里留下的人声越多（20 ms 块在 4 Hz ±30% 的平滑增益上误报 1746 个/分钟）。
 fn residual(x: &[f32], clean: &[f32], sr: u32) -> Vec<f32> {
-    let blk = (0.02 * sr as f64) as usize;
+    let blk = (0.005 * sr as f64) as usize;
     let mut r = x.to_vec();
     for (i, chunk) in r.chunks_mut(blk).enumerate() {
         let a = i * blk;
@@ -186,9 +187,20 @@ pub(super) fn v_click(c: &Ctx, p: &Params) -> Score {
     const ID: &str = "V-CLICK";
     let k = p.f_or("k", th::CLICK.def("k"));
     let sr = c.clip.sr;
-    // 在残差上找：人声自身的陡变（字头、声门脉冲）不算咔嗒
-    let fo = outliers(&residual(c.out, &c.clip.clean, sr), sr, k);
-    let fm = outliers(&residual(&c.clip.mix, &c.clip.clean, sr), sr, k);
+    // 咔嗒 = 输出自身一阶差分的离群点（012 原定义），且这一步跳变里「干净人声解释不了的部分」占一半以上：
+    // 人声自身的陡变（字头、声门脉冲）、平滑的增益变化都由干净轨解释，不算
+    let frac = p.f_or("resid_frac", th::CLICK.def("resid_frac"));
+    let r = residual(c.out, &c.clip.clean, sr);
+    let fo: Vec<bool> = outliers(c.out, sr, k)
+        .into_iter()
+        .enumerate()
+        .map(|(i, f)| {
+            let d_out = (c.out[i + 1] - c.out[i]).abs();
+            let d_res = (r[i + 1] - r[i]).abs();
+            f && d_res >= frac as f32 * d_out
+        })
+        .collect();
+    let fm = outliers(&c.clip.mix, sr, k);
     // 同一位置 ±2 ms 内输入也有离群点 → 算原声自带的瞬态，不计
     let guard = (0.002 * sr as f64) as usize;
     let mut count = 0usize;
