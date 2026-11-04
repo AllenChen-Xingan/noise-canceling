@@ -416,7 +416,9 @@
         {
           "mit": [
             "Office_LargeBrickWalledOpenPlanOffice",
-            "Office"
+            "Office",
+            "Office_Foyer",
+            "OfficeKitchen"
           ],
           "bed": [
             "bed-office"
