@@ -245,17 +245,23 @@ def device_table(rows: list[dict], system: str) -> list[str]:
     sel = [r for r in rows if r["system"] == system]
     by = group(sel, "device")
     air, ext = by.get(("mba-builtin",), []), by.get(("external-mic",), [])
-    out = ["| 项 | Air 均值 | 外接均值 | 差（Air − 外接） | Air 不过段 | 外接不过段 |",
+    out = ["不过段 = 不过 / 判得了的段（「不知道」不进分母）", "",
+           "| 项 | Air 均值 | 外接均值 | 差（Air − 外接） | Air 不过段 | 外接不过段 |",
            "|---|---|---|---|---|---|"]
     for v in items:
         a = [(score(r, v) or {}).get("value") for r in air]
         e = [(score(r, v) or {}).get("value") for r in ext]
-        fa = sum(1 for r in air if (score(r, v) or {}).get("verdict") == "fail")
-        fe = sum(1 for r in ext if (score(r, v) or {}).get("verdict") == "fail")
         ma, me = mean(a), mean(e)
         d = None if ma is None or me is None else ma - me
-        out.append(f"| {v} | {fmt(ma)} | {fmt(me)} | {fmt(d)} | {fa} / {len(air)} | {fe} / {len(ext)} |")
+        out.append(f"| {v} | {fmt(ma)} | {fmt(me)} | {fmt(d)} | {fail_ratio(air, v)} | {fail_ratio(ext, v)} |")
     return out
+
+
+def fail_ratio(rows: list[dict], v: str) -> str:
+    """不过段 / 判得了的段；「不知道」不进分母（codex 第 3 轮 #2）。"""
+    vs = [(score(r, v) or {}).get("verdict") for r in rows]
+    judged = sum(1 for x in vs if x in ("pass", "fail"))
+    return f"{vs.count('fail')}/{judged}" if judged else "—"
 
 
 def device_gap(rows: list[dict], system: str, base: str) -> list[str]:
