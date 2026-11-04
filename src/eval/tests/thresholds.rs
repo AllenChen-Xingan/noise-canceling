@@ -52,10 +52,17 @@ fn table_matches_docs_and_suites_except_pending() {
 /// 调用处也不许再写数字的默认阈值或分档
 #[test]
 fn every_default_used_in_code_exists() {
-    // verifiers.rs 与它的子模块（physical / perceptual / sim）
+    // verifiers.rs 与 verifiers/ 下的全部子模块（按目录列，不手写名单：新加的子模块不会漏查）
     let mut src = read("src/eval/src/verifiers.rs");
-    for m in ["physical", "perceptual", "sim"] {
-        src.push_str(&read(&format!("src/eval/src/verifiers/{m}.rs")));
+    let mut subs: Vec<_> = std::fs::read_dir(repo().join("src/eval/src/verifiers"))
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.extension().is_some_and(|x| x == "rs"))
+        .collect();
+    subs.sort();
+    assert!(subs.len() >= 4, "verifiers/ 下只有 {} 个子模块", subs.len());
+    for p in subs {
+        src.push_str(&std::fs::read_to_string(p).unwrap());
     }
     let mut n = 0;
     for (i, _) in src.match_indices(".def(\"") {
