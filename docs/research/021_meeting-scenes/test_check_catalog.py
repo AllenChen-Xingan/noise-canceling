@@ -142,6 +142,30 @@ class Coverage(unittest.TestCase):
         self.assertIn("K6", codes(p))
 
 
+class Claims(unittest.TestCase):
+    texts = {"coverage.md": COV, "decision.md": DEC}
+
+    def test_real_claims_match(self):
+        self.assertEqual(cc.check_claims(self.texts), [])
+
+    def test_total_drift_in_decision(self):
+        # 改了矩阵、忘了改 decision 里的总数（第 3 轮 codex 起因：总数在三处各写一遍）
+        empty, _ = cc.matrix_stats(COV)
+        bad = DEC.replace(f"有 {empty} 个格子关键", f"有 {empty + 2} 个格子关键")
+        self.assertIn("K7", codes(cc.check_claims({**self.texts, "decision.md": bad})))
+
+    def test_matrix_change_without_claim_update(self):
+        row = next(l for l in COV.splitlines() if l.startswith("| phone-booth |"))
+        bad = row.replace("| · | · | · |", "| ○ 新空格 | · | · |", 1)
+        self.assertNotEqual(bad, row)
+        self.assertIn("K7", codes(cc.check_claims({**self.texts, "coverage.md": COV.replace(row, bad)})))
+
+    def test_no_full_column_count(self):
+        _, no_full = cc.matrix_stats(COV)
+        bad = COV.replace(f"一个 ● 都没有的因素有 {no_full} 个", f"一个 ● 都没有的因素有 {no_full + 1} 个")
+        self.assertIn("K7", codes(cc.check_claims({**self.texts, "coverage.md": bad})))
+
+
 class Cli(unittest.TestCase):
     def test_exit_code_on_broken_copy(self):
         with tempfile.TemporaryDirectory() as d:

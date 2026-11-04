@@ -10,6 +10,8 @@
 - K5 出处编号：sources.md 的编号唯一；四份文件（含 sources.md 自己）里引用的每个 [Sxx] 都在 sources.md 里有定义
 - K6 覆盖矩阵：coverage.md 矩阵的行键 = 主表的键去掉 `other`，每个地点恰好一行；每行「空格数」等于该行 ○ 的个数；
   矩阵行不许以反引号键开头
+- K7 矩阵汇总数只有一个正本（矩阵本身）：coverage.md「空格总数 N 个」与 decision.md「有 N 个格子」= 全表 ○ 之和；
+  coverage.md「一个 ● 都没有的因素有 N 个」= 没有任何 ● 的因素列数
 
 用法：python3 docs/research/021_meeting-scenes/check_catalog.py [目录]
 全过退出 0，有问题逐条打印并退出 1。
@@ -103,6 +105,46 @@ def check_sources(src_text, cited_texts):
     return problems
 
 
+def matrix_stats(cov_text):
+    """从矩阵算 (○ 总数, 没有 ● 的因素列数)；找不到矩阵返回 None。"""
+    lines = cov_text.splitlines()
+    hdr = next((i for i, l in enumerate(lines) if l.startswith("| 地点键 |") and "空格数" in l), None)
+    if hdr is None:
+        return None
+    header = split_row(lines[hdr])
+    factor_cols = [j for j, h in enumerate(header) if j > 0 and "空格数" not in h]
+    rows = []
+    for l in lines[hdr + 2:]:
+        if not l.startswith("|"):
+            break
+        rows.append(split_row(l))
+    empty = sum(r[j].startswith("○") for r in rows for j in factor_cols if j < len(r))
+    no_full = sum(not any(j < len(r) and r[j].startswith("●") for r in rows) for j in factor_cols)
+    return empty, no_full
+
+
+CLAIMS = (  # (文件, 句式, 取哪个统计量)
+    ("coverage.md", r"空格总数 (\d+) 个", 0),
+    ("coverage.md", r"一个 ● 都没有的因素有 (\d+) 个", 1),
+    ("decision.md", r"有 (\d+) 个格子关键", 0),
+)
+
+
+def check_claims(texts):
+    stats = matrix_stats(texts["coverage.md"])
+    if stats is None:
+        return []  # 缺矩阵已由 K6 报
+    problems = []
+    for name, pat, k in CLAIMS:
+        found = re.findall(pat, texts[name])
+        if not found:
+            problems.append(f"K7 {name} 找不到汇总句「{pat}」")
+        for n in found:
+            if int(n) != stats[k]:
+                problems.append(f"K7 {name} 写 {n}，矩阵算出来是 {stats[k]}")
+    return problems
+
+
 def check_coverage(cov_text, keys):
     problems = []
     lines = cov_text.splitlines()
@@ -146,6 +188,7 @@ def run(folder):
     keys, problems = check_catalog(texts["catalog.md"])
     problems += check_sources(texts["sources.md"], texts)
     problems += check_coverage(texts["coverage.md"], keys)
+    problems += check_claims(texts)
     return keys, problems
 
 
