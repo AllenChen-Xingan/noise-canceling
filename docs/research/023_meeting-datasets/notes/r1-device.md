@@ -13,9 +13,9 @@
 ## 查了哪些
 | 数据集 | 结果 | 落在哪 |
 |---|---|---|
-| DNS 2020 / 2021×2 / 2022 / 2023 真实测试集 | 014 已有卡；补字段 + 4 处疑误 | `r1-device-addendum.md` |
-| URGENT 2024 / 2025 / 2026 | 014 已有；2024、2026 无设备信息；2025 未补（r3 已补） | `r1-device-addendum.md` |
-| VOiCES · DAPS · DR-VCTK · ACE · AEC · NISQA-LIVETALK · Clarity CEC3 · CHiME-4 | 014 已有；补字段 | `r1-device-addendum.md` |
+| DNS 2020 / 2021×2 / 2022 / 2023 真实测试集 | 014 已有卡；补字段 + 4 处疑误 | `../cards-014-addendum.md` |
+| URGENT 2024 / 2025 / 2026 | 014 已有；2024、2026 无设备信息；2025 未补（r3 已补） | `../cards-014-addendum.md` |
+| VOiCES · DAPS · DR-VCTK · ACE · AEC · NISQA-LIVETALK · Clarity CEC3 · CHiME-4 | 014 已有；补字段 | `../cards-014-addendum.md` |
 | ConferencingSpeech 2021 | 新卡（真实会议室 + 麦阵，需注册） | `../cards/conferencingspeech-2021.md` |
 | ConferencingSpeech 2022 | 他路已写 `tencent-corpus-cs2022.md`、`pstn-corpus.md`、`nisqa-corpus.md`、`iu-bloomington-corpus.md`，本路无新增，不追加 | — |
 | SSI 挑战 2023 / 2024 | 新卡（500 条真实设备 + 转写） | `../cards/ssi-challenge-icassp2023-2024.md` |
@@ -51,7 +51,7 @@
   - `ssi-challenge-icassp2023-2024.md` 那句许可话属于「Training data」一节。
   - `conferencingspeech-2021.md` 的半真实小时数只指 dev；「回放 VCTK」无出处，已删。
   - `dds-device-degraded-speech.md` 补包内 README 的许可原句与目录结构。
-- 补充文件改 9 处，详见 `r1-device-addendum.md` 末节。最要紧的两条：本路原写的「DNS3 情绪集 584 条」是错的，014 的 600 是对的；DNS5 dev Track2 的 600 条里 599 条就是 DNS4 blind 的复用。
+- 补充文件改 9 处，详见 `../cards-014-addendum.md` 末节。最要紧的两条：本路原写的「DNS3 情绪集 584 条」是错的，014 的 600 是对的；DNS5 dev Track2 的 600 条里 599 条就是 DNS4 blind 的复用。
 - 上面「待怀疑派复核」4 条的答复：
   1. DNS5 dev Mobile 413 条：以文件名为准，理由见补充文件。
   2. 31 条 Mac 录音是不是内置麦：仍只能人耳听或问组织方，未解。
