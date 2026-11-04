@@ -59,7 +59,8 @@ class TestAnalyze(unittest.TestCase):
         rs = [row("a", "gtcrn", scores=[sc("V-NR", -8, "pass", -6)]),
               row("a", "passthrough", scores=[sc("V-NR", 0, "fail", -6)]),
               row("b", "gtcrn", scores=[sc("V-NR", -4, "fail", -6)])]  # b 没有原声直通：不进配对
-        t = A.gap_vs_base(rs, "gtcrn", "passthrough")
+        card = {"scenes": [{"items": [{"v": "V-NR", "better": "lower"}]}]}
+        t = A.gap_vs_base(rs, "gtcrn", "passthrough", card)
         self.assertIn("| V-NR | 越小越好 | 1 | -8.00 |", t)
 
     def test_combo_verdict_unknown_is_not_fail(self):
