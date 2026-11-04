@@ -2,7 +2,7 @@
 
 use serde_json::{Value, json};
 
-use super::ClipRow;
+use super::{ClipRow, Missing};
 use super::rules::{CardStatus, SceneCard, summarize, worst};
 use crate::files::serde_name;
 
@@ -10,18 +10,18 @@ use crate::files::serde_name;
 pub struct Card {
     pub cards: Vec<SceneCard>,
     pub worst: Vec<usize>,
-    pub skipped: Vec<(String, String)>,
+    pub missing: Vec<Missing>,
     pub clips: usize,
 }
 
 impl Card {
-    pub fn build(rows: &[ClipRow], skipped: Vec<(String, String)>) -> Card {
-        let cards = summarize(rows);
+    pub fn build(rows: &[ClipRow], missing: Vec<Missing>) -> Card {
+        let cards = summarize(rows, &missing);
         let worst = worst(&cards);
         Card {
             cards,
             worst,
-            skipped,
+            missing,
             clips: rows.len(),
         }
     }
@@ -33,7 +33,7 @@ impl Card {
             "clips_scored": self.clips,
             "scenes": self.cards,
             "worst": self.worst.iter().map(|&i| key(&self.cards[i])).collect::<Vec<_>>(),
-            "skipped": self.skipped.iter().map(|(k, w)| json!({"what": k, "why": w})).collect::<Vec<_>>(),
+            "missing": self.missing,
         })
     }
 
@@ -79,6 +79,9 @@ impl Card {
         s += "\n## 每个场景\n\n";
         for c in &self.cards {
             s += &format!("### {} — {}（{} 段）\n\n", key(c), c.status.zh(), c.clips);
+            if !c.missing.is_empty() {
+                s += &format!("缺 {} 段没打分（见文末「没跑成的」），本场景最多判「待测」。\n\n", c.missing.len());
+            }
             s += "| 项 | 否决 | 过 / 不过 / 待测（段） | 均值 | 最差（段） | 过线 | 判定 |\n|---|---|---|---|---|---|---|\n";
             for i in &c.items {
                 let f = |v: Option<f64>| v.map_or("—".into(), |x| format!("{x:.3}"));
@@ -105,10 +108,12 @@ impl Card {
             }
             let l = &c.listen;
             s += &format!(
-                "| 听感（SCOREQ + Distill-MOS 都说不比原声差） | | {} / {} / {} | | | Δ ≥ 0 | {} |\n\n",
+                "| 听感（SCOREQ + Distill-MOS 都说不比原声差） | | {} / {} / {} | SCOREQ Δ {} · Distill-MOS Δ {} | | Δ ≥ 0 | {} |\n\n",
                 l.pass,
                 l.fail,
                 l.unknown,
+                l.mean_scoreq.map_or("—".into(), |x| format!("{x:+.3}")),
+                l.mean_distill.map_or("—".into(), |x| format!("{x:+.3}")),
                 l.status.map_or("待测", CardStatus::zh)
             );
             if !l.to_human.is_empty() {
@@ -145,10 +150,10 @@ impl Card {
                 s += "\n";
             }
         }
-        if !self.skipped.is_empty() {
-            s += "## 没跑的\n\n";
-            for (k, w) in &self.skipped {
-                s += &format!("- {k}：{w}\n");
+        if !self.missing.is_empty() {
+            s += "## 没跑成的（所在场景最多判「待测」）\n\n";
+            for m in &self.missing {
+                s += &format!("- {} · {}：{}\n", m.what, m.system, m.why);
             }
         }
         s

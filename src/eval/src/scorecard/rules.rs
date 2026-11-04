@@ -12,7 +12,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::ClipRow;
+use super::{ClipRow, Missing};
 use crate::scene::{MeetingPlace, SoundGroup, Tier};
 use crate::thresholds as th;
 use crate::{Better, Score, Verdict};
@@ -62,6 +62,9 @@ pub struct ItemCell {
 
 #[derive(Clone, Debug, Default, serde::Serialize)]
 pub struct ListenCell {
+    /// 两个评分模型各自的 Δ 均值（输出 − 原声；判不了的段不计）
+    pub mean_scoreq: Option<f64>,
+    pub mean_distill: Option<f64>,
     pub pass: usize,
     pub fail: usize,
     pub unknown: usize,
@@ -90,6 +93,8 @@ pub struct SceneCard {
     pub device: String,
     pub system: String,
     pub clips: usize,
+    /// 没打分的段（或整条任务）：(id, 原因)
+    pub missing: Vec<(String, String)>,
     pub status: CardStatus,
     pub veto_failed: Vec<&'static str>,
     pub items: Vec<ItemCell>,
@@ -197,6 +202,16 @@ fn listen_cell(rows: &[&ClipRow]) -> ListenCell {
         }
     }
     c.status = Some(status_of(c.pass, c.fail));
+    let mean_of = |id: &str| {
+        let v: Vec<f64> = rows
+            .iter()
+            .filter_map(|r| r.scores.iter().find(|(x, _, _)| *x == id))
+            .filter_map(|(_, _, s)| s.value)
+            .collect();
+        (!v.is_empty()).then(|| v.iter().sum::<f64>() / v.len() as f64)
+    };
+    c.mean_scoreq = mean_of(LISTEN[0]);
+    c.mean_distill = mean_of(LISTEN[1]);
     c
 }
 
@@ -265,22 +280,36 @@ fn drags(items: &[ItemCell], rows: &[&ClipRow]) -> Vec<Drag> {
     out
 }
 
-/// 按 场景 × 档 × 设备 × 系统 汇总。
-pub fn summarize(rows: &[ClipRow]) -> Vec<SceneCard> {
-    let mut by: BTreeMap<(MeetingPlace, Tier, String, String), Vec<&ClipRow>> = BTreeMap::new();
+type Key = (MeetingPlace, Tier, String, String);
+
+/// 按 场景 × 档 × 设备 × 系统 汇总。`missing` 里的段没打分：该组合有缺段就不能判「过」（最多待测）；
+/// 一段都没打成的组合也出一行（待测），不会从成绩单里消失。
+pub fn summarize(rows: &[ClipRow], missing: &[Missing]) -> Vec<SceneCard> {
+    let mut by: BTreeMap<Key, (Vec<&ClipRow>, Vec<&Missing>)> = BTreeMap::new();
     for r in rows {
         by.entry((r.scene, r.tier, r.device.clone(), r.system.clone()))
             .or_default()
+            .0
             .push(r);
     }
+    for m in missing {
+        by.entry((m.scene, m.tier, m.device.clone(), m.system.clone()))
+            .or_default()
+            .1
+            .push(m);
+    }
     by.into_iter()
-        .map(|((scene, tier, device, system), rs)| {
-            let order: Vec<(&'static str, bool)> = rs[0]
-                .scores
-                .iter()
-                .filter(|(v, _, _)| !LISTEN.contains(v))
-                .map(|(v, veto, _)| (*v, *veto))
-                .collect();
+        .map(|((scene, tier, device, system), (rs, ms))| {
+            let order: Vec<(&'static str, bool)> = rs
+                .first()
+                .map(|r| {
+                    r.scores
+                        .iter()
+                        .filter(|(v, _, _)| !LISTEN.contains(v))
+                        .map(|(v, veto, _)| (*v, *veto))
+                        .collect()
+                })
+                .unwrap_or_default();
             let items: Vec<ItemCell> = order
                 .iter()
                 .map(|(v, veto)| item_cell(v, *veto, &rs))
@@ -303,7 +332,7 @@ pub fn summarize(rows: &[ClipRow]) -> Vec<SceneCard> {
                 || listen.status == Some(CardStatus::Unknown);
             let status = if any_fail {
                 CardStatus::Fail
-            } else if any_unknown {
+            } else if any_unknown || !ms.is_empty() || rs.is_empty() {
                 CardStatus::Unknown
             } else {
                 CardStatus::Pass
@@ -315,6 +344,7 @@ pub fn summarize(rows: &[ClipRow]) -> Vec<SceneCard> {
                 device,
                 system,
                 clips: rs.len(),
+                missing: ms.iter().map(|m| (m.what.clone(), m.why.clone())).collect(),
                 status,
                 veto_failed,
                 items,
@@ -411,7 +441,7 @@ mod tests {
             row("b", &[], 5.0, 0.1, 0.1),
             row("c", &[], 1.0, 0.1, 0.1),
         ];
-        let c = &summarize(&rows)[0];
+        let c = &summarize(&rows, &[])[0];
         let weak = c.items.iter().find(|i| i.v == "V-WEAK").unwrap();
         assert_eq!(
             (weak.pass, weak.fail, weak.status),
@@ -428,7 +458,7 @@ mod tests {
         let mut r = row("a", &[], 1.0, 0.1, 0.1);
         r.scores
             .push(("V-CLICK", false, s("V-CLICK", 30.0, 0.0, Better::Lower)));
-        let c = &summarize(&[r])[0];
+        let c = &summarize(&[r], &[])[0];
         let click = c.items.iter().find(|i| i.v == "V-CLICK").unwrap();
         assert!(click.report_only);
         assert_eq!(click.status, CardStatus::Fail, "照常判、照常列");
@@ -437,10 +467,41 @@ mod tests {
     }
 
     #[test]
+    fn missing_clips_block_pass_and_empty_combo_still_listed() {
+        let rows = vec![row("a", &[], 1.0, 0.1, 0.1)];
+        let miss = |scene: MeetingPlace, what: &str| Missing {
+            scene,
+            tier: Tier::Common,
+            device: "mba-builtin".into(),
+            system: "ref".into(),
+            what: what.into(),
+            why: "sha256 对不上".into(),
+        };
+        // 一段过、一段没读成 → 待测，不是过
+        let c = summarize(&rows, &[miss(MeetingPlace::Cafe, "b")]);
+        assert_eq!(c.len(), 1);
+        assert_eq!(c[0].status, CardStatus::Unknown);
+        assert_eq!(c[0].missing.len(), 1);
+        // 整个场景一段都没读成 → 仍出一行、待测
+        let c = summarize(&rows, &[miss(MeetingPlace::Canteen, "S-canteen")]);
+        let canteen = c.iter().find(|x| x.scene == MeetingPlace::Canteen).unwrap();
+        assert_eq!((canteen.clips, canteen.status), (0, CardStatus::Unknown));
+        assert!(worst(&c).iter().any(|&i| c[i].scene == MeetingPlace::Canteen));
+    }
+
+    #[test]
+    fn listen_means_are_reported() {
+        let rows = vec![row("a", &[], 1.0, 0.2, 0.1), row("b", &[], 1.0, 0.4, 0.3)];
+        let c = &summarize(&rows, &[])[0];
+        assert!((c.listen.mean_scoreq.unwrap() - 0.3).abs() < 1e-9);
+        assert!((c.listen.mean_distill.unwrap() - 0.2).abs() < 1e-9);
+    }
+
+    #[test]
     fn veto_failure_is_listed_and_fails_scene() {
         let mut r = row("a", &[], 1.0, 0.1, 0.1);
         r.scores[0].2 = s("V-NAN", 3.0, 0.0, Better::Lower);
-        let c = &summarize(&[r])[0];
+        let c = &summarize(&[r], &[])[0];
         assert_eq!(c.veto_failed, vec!["V-NAN"]);
         assert_eq!(c.status, CardStatus::Fail);
     }
@@ -460,7 +521,7 @@ mod tests {
             })
             .collect();
         rows.extend((0..3).map(|i| row(&format!("q{i}"), &["bed-cafe"], 1.0, 0.1, 0.1)));
-        let c = &summarize(&rows)[0];
+        let c = &summarize(&rows, &[])[0];
         let top = &c.drags[0];
         assert_eq!(top.cls, "coffee-machine");
         assert!((top.gap.unwrap() - 5.0).abs() < 1e-9);
@@ -470,7 +531,7 @@ mod tests {
         // 有这类声音反而更好的（gap < 0）不列
         assert!(c.drags.iter().all(|d| d.gap.is_none_or(|g| g > 0.0)));
         // 只有 2 段有：样本不够，不下结论
-        let c2 = &summarize(&rows[1..])[0];
+        let c2 = &summarize(&rows[1..], &[])[0];
         assert!(
             c2.drags
                 .iter()
@@ -490,7 +551,7 @@ mod tests {
             mk(MeetingPlace::Canteen, 6.0, 0.1),        // 不过
             mk(MeetingPlace::HomeQuiet, 1.0, f64::NAN), // 听感判不了 → 待测
         ];
-        let cards = summarize(&rows);
+        let cards = summarize(&rows, &[]);
         let w = worst(&cards);
         assert_eq!(w.len(), 2);
         assert_eq!(cards[w[0]].scene, MeetingPlace::Canteen);
