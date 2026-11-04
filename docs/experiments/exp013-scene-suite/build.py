@@ -100,8 +100,9 @@ def main():
     ap.add_argument("--devices", default=",".join(compose.SCENES["devices"]))
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--builds-dir", default=str(HERE / "builds"))
+    ap.add_argument("--audio-root", default="", help="音频根目录（默认主目录；测试时给临时目录）")
     a = ap.parse_args()
-    main_dir = main_root()
+    main_dir = Path(a.audio_root) if a.audio_root else main_root()
     out_rel = f"_tmp/exp013/{a.build}"
     bdir = Path(a.builds_dir) / a.build
     if bdir.exists() or (main_dir / out_rel).exists():
@@ -143,7 +144,7 @@ def main():
     }
     (bdir / "manifest.json").write_text(json.dumps(man, ensure_ascii=False, indent=1) + "\n")
     print(f"build {a.build}：{len(recs)} 段，{man['seconds']} s；泄漏检查 {'通过' if lk['ok'] else '不过：' + str(lk['hits'][:3])}")
-    print(f"清单 {bdir.relative_to(ROOT)}；音频 主目录/{out_rel}")
+    print(f"清单 {bdir.name}；音频 <音频根>/{out_rel}")
     if not lk["ok"]:
         sys.exit(2)
 
