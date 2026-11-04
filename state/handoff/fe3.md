@@ -2,7 +2,7 @@
 
 - 分支 `feat/frontend-eval`（worktree `../noise_canceling-fe3`），基于 main `f2782cf4`
 - 管的实体：评测器的频谱计算（4 处）· 频谱前端（只在必要时小扩展）· 成绩单对拍（验收用）
-- 状态：进行中（代码 · 测试 · 对拍 · CI 已完成，等 codex 第 2 轮）
+- 状态：**已收尾**（2026-11-04）
 
 ## 记录
 
@@ -16,7 +16,8 @@
 - 2026-11-04 发现 `vdn-scene` golden 在 `--release` 下红、debug 下绿；改前源码 release 同样红、哈希相同 → 不是本 PR 造成，大总管开 #106
 - 2026-11-04 第 2 次跑：xtask ci 全绿；带 `--qa` 成绩单去 meta 后逐字相同；识别缓存 80 条全同
 - 2026-11-04 codex 第 1 轮：P0 0 · P1 0 · P2 3，全属实已改（补边界输入、断言 V-WEAK 进评分分支、写清基准生成步骤）；在旧源码上重生成基准，改后 release / debug 逐位相同，xtask ci 全绿；名额已归还
-- 2026-11-04 codex 第 2 轮进行中
+- 2026-11-04 codex 第 2 轮：P0 0 · P1 0 · P2 1 → 连续两轮无 P0/P1，达停止线。这条 P2 属实（截短片段取在开头静音段，没测到分帧边界），已改为从主讲人开口处截取并重生成基准，改后 release / debug 逐位相同；fmt · tidy · clippy（vdn-eval）通过
+- 2026-11-04 评审记录 `docs/reviews/104_frontend-eval-codex.md`；PR 正文草稿 `_tmp/20261104-b13/pr-fe3.md`
 
 ## 方案（读源码；已实现，见第 13 节）
 

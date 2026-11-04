@@ -214,7 +214,7 @@ pub trait SpectrumTap: Model {
 
 | 判据（测试名） | 比什么 | 阈值 |
 |---|---|---|
-| `eval/tests/spectrum_golden.rs::eval_spectra_match_golden` | 2 段合成咖啡馆片段上：声谱图（512/256 · 1024/256）· ESTOI（16 kHz 与 10 kHz 两条路，断言出分）· 参考降噪器输出与门控 · 全部 verifier 的分数 / 阈值 / 判定 / 附加量 / 备注（V-FRAME 量耗时，不比；断言 V-WEAK 真进评分分支、有声帧 ≥ 20）；边界：采样率 16384（窗长恰为 2 的幂）与 22050 · 截短到 0 / 1999 / 2000 / 2001 / 3000 / 4000 样本 · 声谱图与 ESTOI 在 0–3000 样本的 11 种长度。各压一个内容 ID，vs 改前 | 逐位 |
+| `eval/tests/spectrum_golden.rs::eval_spectra_match_golden` | 2 段合成咖啡馆片段上：声谱图（512/256 · 1024/256）· ESTOI（16 kHz 与 10 kHz 两条路，断言出分）· 参考降噪器输出与门控 · 全部 verifier 的分数 / 阈值 / 判定 / 附加量 / 备注（V-FRAME 量耗时，不比；断言 V-WEAK 真进评分分支、有声帧 ≥ 20）；边界：采样率 16384（窗长恰为 2 的幂）与 22050 · 从主讲人开口处截 0 / 1999 / 2000 / 2001 / 3000 / 4000 样本评 V-WEAK / V-ESTOI · 声谱图与 ESTOI 在 0–6000 样本的 12 种长度 · ESTOI 在「去静音后约 30 帧」附近 5 种长度（断言至少一种出分）。各压一个内容 ID，vs 改前 | 逐位 |
 | `dsp/src/window_tests.rs::sqrt_hann_squared_matches_spectrogram_original` | 新窗值 vs 声谱图原写法，6 种长度；并证明它与 `HannPeriodic` 末位不同 | 逐位 |
 | `xtask` `fft_site_tests.rs` | 白名单只剩 1 条后：清空 / 删文件仍报红；评测器文件里任何 FFT 计划都红 | — |
 | 成绩单级（人工跑，不进仓） | cafe 常见档 Air 内置麦 10 段 × passthrough · ref · gtcrn，不带 `--qa`，`vdn-eval scorecard` 的 `scorecard.json` 去掉 `meta`（run_id · commit · suite 路径）后 vs 改前 | 逐字 |
