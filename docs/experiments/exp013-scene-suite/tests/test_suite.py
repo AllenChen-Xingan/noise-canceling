@@ -131,6 +131,17 @@ class SmallBuild(unittest.TestCase):
             if r["tier"] == "common":
                 self.assertTrue(r["additive"])
 
+    def test_owner_dry_aligned_and_levelled(self):
+        """回归（自审 P1）：owner_dry 曾比 owner 早到 n0 样本；「全留」段曾按所有人之和定电平。"""
+        for r in self.recs:
+            dry, own = read(self.root, r["audio"]["owner_dry"]), read(self.root, r["audio"]["owner"])
+            if r["polarity"] == "suppress":
+                xc = np.correlate(own[: 4 * dsp.SR], dry[: 4 * dsp.SR], "full")
+                lag = int(np.argmax(np.abs(xc))) - (4 * dsp.SR - 1)
+                self.assertLessEqual(abs(lag), 12, r["id"])  # 剩下的是最小相位 FIR 的群延迟
+            lead = r["targets"][0]
+            self.assertAlmostEqual(dsp.gated_level_db(dry), lead["level_dbfs"], delta=0.6, msg=r["id"])
+
     def test_headroom(self):
         """回归：合成舱噪的亚音频漂移曾让 mix 峰值到 5 倍满幅。整段峰值 ≤ −1 dBFS（削波段除外），调低量记在清单。"""
         for r in self.recs:
@@ -149,7 +160,10 @@ class SmallBuild(unittest.TestCase):
             self.assertLess(crest, 20.0, name)
 
     def test_no_leak(self):
-        self.assertTrue(self.man["leak_check"]["ok"], self.man["leak_check"]["hits"])
+        lk = leak.check(self.recs)  # 重跑，不只看 manifest 里的标志
+        self.assertTrue(lk["ok"], lk["hits"])
+        self.assertEqual(lk, self.man["leak_check"])
+        self.assertGreater(lk["train_rows"], 0)
 
     def test_leak_negative_controls(self):
         bad_spk = sorted(pools.libri()["exp006_train"])[0]
@@ -160,6 +174,20 @@ class SmallBuild(unittest.TestCase):
         self.assertFalse(lk["ok"])
         self.assertEqual(lk["speakers"], 1)
         self.assertGreaterEqual(lk["demand"], 1)
+        # 嵌套的说话人（babble 里、电视的配乐旁）、48 kHz 的 SCAFE 前 60%、exp006 的合成函数名
+        f2 = json.loads(json.dumps(self.recs[0]))
+        f2["sounds"] = [
+            {"inst": "b", "src": {"kind": "babble", "talkers": [{"kind": "librispeech", "spk": bad_spk, "utts": []}]}},
+            {"inst": "s", "src": {"kind": "demand", "env": "SCAFE", "ch": 2, "start": 48000 * 100, "len": 48000, "sr": 48000}},
+            {"inst": "f", "src": {"kind": "events", "items": [{"kind": "synth", "fn": "synth_hvac"}]}},
+        ]
+        lk2 = leak.check([f2])
+        self.assertEqual((lk2["speakers"], lk2["synth_fn"]), (1, 1))
+        self.assertGreaterEqual(lk2["demand"], 1)
+        f3 = json.loads(json.dumps(self.recs[0]))
+        f3["sounds"] = [{"inst": "u", "src": {"kind": "mystery"}}]
+        with self.assertRaises(ValueError):
+            leak.check([f3])
 
     def test_manifest_fields(self):
         self.assertEqual(manifest.FIELDS, manifest.doc_fields("一、"))
@@ -179,14 +207,18 @@ class SmallBuild(unittest.TestCase):
             fn(r)
             return manifest.validate(r)
 
-        self.assertTrue(bad(lambda r: r.update(scene="moon")) if manifest.schema_path() else True)
         self.assertTrue(bad(lambda r: r.update(junk=1)))
         self.assertTrue(bad(lambda r: r["owner_iv"].append([0, r["dur_samples"] + 1])))
         self.assertTrue(bad(lambda r: r["audio"]["stems"].update(ghost="x")))
         self.assertTrue(bad(lambda r: r["targets"].append(r["targets"][0])))
-        if manifest.schema_path():
-            self.assertTrue(bad(lambda r: r["measured"].update(junk=1)))
-            self.assertTrue(bad(lambda r: r["sounds"][0].update(level_dbfs="loud")))
+        if not manifest.schema_path():
+            self.skipTest("scorecard 的 schema 不在本机：嵌套字段的负对照跳过（字段名负对照已跑）")
+        self.assertTrue(bad(lambda r: r.update(scene="moon")))
+        self.assertTrue(bad(lambda r: r["measured"].update(junk=1)))
+        self.assertTrue(bad(lambda r: r["sounds"][0].update(level_dbfs="loud")))
+        d = next((s for s in good["sounds"] if s.get("direction_db")), None)
+        if d:
+            self.assertTrue(bad(lambda r: next(s for s in r["sounds"] if s["inst"] == d["inst"])["direction_db"].pop("low")))
 
     def test_sound_classes_known(self):
         for r in self.recs:
