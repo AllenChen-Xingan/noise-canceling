@@ -29,23 +29,23 @@ def build_tasks(build, old=None):
     old = {t["id"]: t for t in (old or {}).get("tasks", [])}
     clips = f"docs/experiments/exp013-scene-suite/builds/{build}/clips.jsonl"
     tasks = []
-    for device in SCENES["devices"]:
-      ext = device != "mba-builtin"
-      for key, S in SCENES["scenes"].items():
-        for tier in ("common", "stress"):
-            tid = f"S-{key}-{tier}" + ("-ext" if ext else "")
-            keep_all = S.get("polarity") == "preserve_all"
-            tasks.append({
-                "id": tid,
-                "set": "capability",
-                "polarity": "preserve" if keep_all else "suppress",
-                "origin": f"exp013 build {build} · 021 地点 {key}（{catalog_name(key)}）· {'常见档' if tier == 'common' else '压力档'}",
-                "desc": ("近处几个人都要留（会议模式，干净参考 = 所有要留的人）" if keep_all else "只留主说话人")
-                        + f"；{SCENES['counts'][tier]} 段 × {SCENES['clip_s']:g} s；设备 {device}"
-                        + ("（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）" if ext else ""),
-                "real": {"kind": "scene", "clips": clips, "scene": key, "tier": tier, "device": device},
-                "graders": old.get(tid, {}).get("graders", []),
-            })
+    combos = [(d, k, t) for d in SCENES["devices"] for k in SCENES["scenes"] for t in ("common", "stress")]
+    for device, key, tier in combos:
+        S = SCENES["scenes"][key]
+        ext = device != "mba-builtin"
+        tid = f"S-{key}-{tier}" + ("-ext" if ext else "")
+        keep_all = S.get("polarity") == "preserve_all"
+        tasks.append({
+            "id": tid,
+            "set": "capability",
+            "polarity": "preserve" if keep_all else "suppress",
+            "origin": f"exp013 build {build} · 021 地点 {key}（{catalog_name(key)}）· {'常见档' if tier == 'common' else '压力档'}",
+            "desc": ("近处几个人都要留（会议模式，干净参考 = 所有要留的人）" if keep_all else "只留主说话人")
+                    + f"；{SCENES['counts'][tier]} 段 × {SCENES['clip_s']:g} s；设备 {device}"
+                    + ("（无设备链对照：与 mba-builtin 同素材，只差 MacBook Air 麦模拟）" if ext else ""),
+            "real": {"kind": "scene", "clips": clips, "scene": key, "tier": tier, "device": device},
+            "graders": old.get(tid, {}).get("graders", []),
+        })
     return {
         "name": "exp013-scenes",
         "doc": "场景测试集（exp013）：15 个开会地点 × 常见 / 压力两档，每条任务展开成该地点该档的全部片段；"
