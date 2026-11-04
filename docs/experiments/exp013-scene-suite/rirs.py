@@ -70,11 +70,20 @@ class Measured:
 
     @property
     def valid(self):
-        """可用的条件：①T60 估计不超过 IR 长度的 2.5 倍（MIT 的 IR 多被截到约 0.5 s，再长的估计不可信）；
+        """可用的条件（三条都要满足）：①T60 估计不超过 IR 长度的 2.5 倍（MIT 的 IR 多被截到约 0.5 s，再长的估计不可信）；
         ②T60 估计失败（返回 0）时，只有直达明显占优（DRR ≥ 15 dB，真的几乎没混响）才算「短混响」，否则不用。"""
         if self.t60 <= 0:
             return self.drr >= 15.0
-        return self.t60 <= 2.5 * len(self.ir) / SR
+        return self.t60 <= 2.5 * len(self.ir) / SR and self.tail_end_db <= -30.0
+
+    @property
+    def tail_end_db(self):
+        """③IR 结尾 50 ms 比混响开头 50 ms 低多少 dB。高于 −30 dB = 衰减没完就被截断（MIT 约一成如此），不用。"""
+        r = self._rest[self.peak :]
+        w = int(0.05 * SR)
+        if len(r) < 3 * w:
+            return 0.0 if np.any(r) else -120.0
+        return float(10 * np.log10(np.mean(r[-w:] ** 2) / max(np.mean(r[:w] ** 2), 1e-20) + 1e-30))
 
     def at(self, dist, az):
         """把直达部分按 实测距离 / 目标距离 调幅度（反平方律），尾巴不动；返回 rooms.Rir。"""

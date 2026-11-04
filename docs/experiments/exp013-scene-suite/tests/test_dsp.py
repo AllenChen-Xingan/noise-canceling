@@ -76,10 +76,9 @@ class Trim(unittest.TestCase):
         import pools
 
         rng = np.random.default_rng(0)
-        x = np.concatenate([tone(0.5), rng.standard_normal(SR) * np.exp(-np.arange(SR) / (0.3 * SR)) * 0.5])
+        x = np.concatenate([tone(0.5), rng.standard_normal(SR) * np.exp(-np.arange(SR) / (0.1 * SR)) * 0.5])
         y, end = pools.trim_tail(x)
-        self.assertLess(end, len(x))
-        self.assertLess(end, int(1.2 * SR))
+        self.assertLess(end, int(0.95 * SR))  # 0.5 s 的声音 + 约 0.3 s 衰到 −30 dB + 60 ms，原长 1.5 s
         self.assertEqual(float(y[-1]), 0.0)
 
 
