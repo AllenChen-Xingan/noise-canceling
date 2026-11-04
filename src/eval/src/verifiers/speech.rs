@@ -334,6 +334,50 @@ mod tests {
         must_catch("V-ESTOI", Probe::Noise0db);
     }
 
+    /// 负例：平滑的增益变化（4 Hz、±30%，像降噪器逐帧调增益）不是咔嗒，必须报 0。
+    #[test]
+    fn smooth_gain_change_is_not_a_click() {
+        let c = clip();
+        let sr = c.sr as f64;
+        let out: Vec<f32> = good(&c)
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                let g = 1.0 + 0.3 * (2.0 * std::f64::consts::PI * 4.0 * i as f64 / sr).sin();
+                v * g as f32
+            })
+            .collect();
+        let s = score("V-CLICK", &c, &out);
+        assert_eq!(s.value, Some(0.0), "{s}");
+    }
+
+    /// 负例：门控式的增益台阶，但用 10 ms 斜坡过渡（平滑），也不是咔嗒。
+    #[test]
+    fn ramped_gate_steps_are_not_clicks() {
+        let c = clip();
+        let ramp = (0.01 * c.sr as f64) as usize;
+        let period = c.sr as usize / 2;
+        let out: Vec<f32> = good(&c)
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                let ph = i % period;
+                let g = if ph < ramp {
+                    0.25 + 0.75 * ph as f32 / ramp as f32
+                } else if ph < period / 2 {
+                    1.0
+                } else if ph < period / 2 + ramp {
+                    1.0 - 0.75 * (ph - period / 2) as f32 / ramp as f32
+                } else {
+                    0.25
+                };
+                v * g
+            })
+            .collect();
+        let s = score("V-CLICK", &c, &out);
+        assert_eq!(s.value, Some(0.0), "{s}");
+    }
+
     #[test]
     fn identity_output_is_not_a_click() {
         // 输出 = 带噪输入：输入自带的陡变不算咔嗒

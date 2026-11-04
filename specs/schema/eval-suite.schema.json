@@ -290,7 +290,7 @@
         },
         {
           "const": "weak_drop",
-          "description": "弱音节（有声 125 ms 段里干净轨能量最低的 30%）整段吞掉（置零）：V-WEAK 必须抓到",
+          "description": "弱音节（有声 125 ms 段里干净轨能量最低的 40%）整段吞掉（置零）：V-WEAK 必须抓到",
           "type": "string"
         },
         {
