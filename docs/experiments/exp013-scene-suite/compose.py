@@ -19,7 +19,7 @@ import pools
 import tracks
 from device_chain import Chain
 from dsp import SR, gated_level_db
-from rooms import make_rir
+import rirs
 
 HERE = Path(__file__).resolve().parent
 SCENES = json.loads((HERE / "scenes.json").read_text())
@@ -54,40 +54,39 @@ def resolve_cls(cls):
 
 def pick_sounds(rng, S, tier):
     t = 0 if tier == "common" else 1
-    bed = resolve_cls(S["bed"][int(rng.integers(len(S["bed"])))])
     chosen = [e for e in S["sounds"] if rng.random() < e["p"][t]]
     if tier == "stress" and len(chosen) < SCENES["stress_min_extras"]:
         rest = sorted((e for e in S["sounds"] if e not in chosen and e["p"][t] > 0), key=lambda e: -e["p"][t])
         chosen += rest[: SCENES["stress_min_extras"] - len(chosen)]
-    return bed, chosen
+    return chosen
 
 
 class Scene:
-    """一段里的房间与设备链，以及「把一条干轨变成链后分轨」的办法。"""
+    """一段里的房间与设备链。一段 = 一个实测房间（rirs.py，reverb-plan.md）：所有点声源都从这个房间取 RIR。"""
 
     def __init__(self, rng_mat, rng_dev, S, tier, device):
-        R = S["room"]
-        self.dims = tuple(_u(rng_mat, d) for d in R["dims"])
-        self.t60 = _u(rng_mat, R["t60"][tier])
+        self.room = rirs.choose(rng_mat, S, tier, SCENES["bed_t60"])
+        self.t60 = self.room.t60
         self.ch = Chain(rng_dev, device, tier)
         self.rng_mat, self.rng_dev = rng_mat, rng_dev
 
-    def point(self, x, dist, az, src_h=1.2, continuous=False):
-        """点声源：房间（第 1 步）+ 方位（第 2 步）+ 频响（第 3 步）。返回 (分轨, rir, 方位衰减)。"""
-        rir = make_rir(self.rng_mat, self.dims, self.t60, dist, az, src_h)
+    def point(self, x, dist, az, role="other", continuous=False):
+        """点声源：房间（第 1 步）+ 方位（第 2 步）+ 频响（第 3 步）。返回 (分轨, rir, 方位衰减, rir 出处)。"""
+        rir, rsrc = self.room.rir(self.rng_mat, role, dist, az)
         h, pad, att = self.ch.source_rir(rir, self.rng_dev)
         n = len(x)
         L = len(h) if continuous else 0  # 连续声循环补一段前奏，开头就是稳态混响
         pre = np.tile(x, L // n + 1)[-L:] if L else np.zeros(0)
         y = signal.fftconvolve(np.concatenate([pre, x]), h)[L + pad : L + pad + n]
-        return self.ch.response(y), rir, att
+        return self.ch.response(y), rir, att, rsrc
 
-    def diffuse(self, x, dist=None):
-        """扩散声：可选先加房间（babble、广播、隔墙声），只做扩散场衰减 + 频响。"""
+    def diffuse(self, x, dist=None, role="diffuse"):
+        """扩散声：可选先加同一房间的 RIR（babble、广播、隔墙声），只做扩散场衰减 + 频响。返回 (分轨, rir 出处或 None)。"""
+        rsrc = None
         if dist is not None:
-            rir = make_rir(self.rng_mat, self.dims, self.t60, dist, _u(self.rng_mat, (-180, 180)))
+            rir, rsrc = self.room.rir(self.rng_mat, role, dist, _u(self.rng_mat, (-180, 180)))
             x = signal.fftconvolve(x, rir.full)[: len(x)]
-        return self.ch.response(self.ch.diffuse(x))
+        return self.ch.response(self.ch.diffuse(x)), rsrc
 
 
 def _scale_to(x, target_db, level_fn):
@@ -115,7 +114,7 @@ def make_clip(scene, tier, idx, device):
     # ---- 主说话人与要留的人 ----
     owner_dist = _u(rng_mat, CP["step1_room"]["owner_dist_m"]["range"])
     x_dry, osrc = tracks.owner_track(rng_mat, n, lang, SCENES["lead_silence_s"], gap)
-    owner, orir, _ = sc.point(x_dry, owner_dist, 0.0)
+    owner, orir, _, osrc["rir"] = sc.point(x_dry, owner_dist, 0.0, role="owner")
     L_o = gated_level_db(owner)
     L_owner = L_o  # 主说话人自己的电平；「全留」时 L_o 会改成所有人之和，owner_dry 只含主说话人
     targets = [{"spk": osrc["spk"], "dist_m": orir.dist_m, "azimuth_deg": 0.0, "src": osrc, "x": owner}]
@@ -125,21 +124,25 @@ def make_clip(scene, tier, idx, device):
         k = int(rng_mat.integers(co["count"][tier][0], co["count"][tier][1] + 1))
         for _ in range(k):
             xd, src = tracks.co_target_track(rng_mat, n, gap, {t["spk"] for t in targets})
-            y, r, _ = sc.point(xd, _u(rng_mat, co["dist_m"]), _u(rng_mat, co["az_deg"]))
+            y, r, _, src["rir"] = sc.point(xd, _u(rng_mat, co["dist_m"]), _u(rng_mat, co["az_deg"]), role="target")
             y = _scale_to(y, L_o + _u(rng_mat, co["rel_db"]), gated_level_db)
             targets.append({"spk": src["spk"], "dist_m": r.dist_m, "azimuth_deg": r.azimuth_deg, "src": src, "x": y})
         L_o = gated_level_db(sum(t["x"] for t in targets))  # 「全留」时参照 = 所有要留的人之和
 
     # ---- 干扰声 ----
-    bed_cls, chosen = pick_sounds(rng_mat, S, tier)
+    chosen = pick_sounds(rng_mat, S, tier)
+    bed_cls = sc.room.info["bed_cls"]
     sounds = []  # 每项：inst, cls, x（链后、未定电平）, dist, az, src, att
 
     def add(cls, x, src, dist=None, az=None, att=None):
         k = sum(1 for s in sounds if s["cls"] == cls)
         sounds.append({"inst": f"{cls}{k}", "cls": cls, "x": x, "dist_m": dist, "azimuth_deg": az, "src": src, "att": att})
 
-    xb, sb = tracks.continuous_track(rng_mat, SOUNDS[bed_cls]["source"], n)
-    add(bed_cls, sc.diffuse(xb), sb)
+    if sc.room.paired:  # 同房间录的噪声（ACE / McVAMPIRE）
+        xb, sb = sc.room.noise(rng_mat, n)
+    else:
+        xb, sb = tracks.continuous_track(rng_mat, SOUNDS[bed_cls]["source"], n)
+    add(bed_cls, sc.diffuse(xb)[0], sb)
     for e in chosen:
         cls = resolve_cls(e["cls"])
         c = SOUNDS[cls]
@@ -148,8 +151,8 @@ def make_clip(scene, tier, idx, device):
         az = _u(rng_mat, e.get("az_deg", SCENES["default_az_deg"]))
         if src_def["kind"] == "babble":
             parts = tracks.babble_tracks(rng_mat, n, src_def["talkers"])
-            y = sum(sc.diffuse(x, dist=_u(rng_mat, (3.0, 8.0))) for x, _ in parts)
-            add(cls, y, {"kind": "babble", "talkers": [s for _, s in parts]})
+            ys = [sc.diffuse(x, dist=_u(rng_mat, (3.0, 8.0))) for x, _ in parts]
+            add(cls, sum(y for y, _ in ys), {"kind": "babble", "talkers": [{**s, "rir": r} for (_, s), (_, r) in zip(parts, ys)]})
             continue
         if src_def["kind"] == "speech":
             style = src_def["style"]
@@ -161,7 +164,8 @@ def make_clip(scene, tier, idx, device):
                 x, s = tracks.nav_track(rng_mat, n)
             elif style == "announce":
                 x, s, (xc, sc_src) = tracks.announce_track(rng_mat, n)
-                add("pa-chime", sc.diffuse(xc, dist=dist), sc_src)
+                yc, rc = sc.diffuse(xc, dist=dist)
+                add("pa-chime", yc, {**sc_src, "rir": rc})
             else:
                 x, s = tracks.muffled_track(rng_mat, n, gap)
         elif c["group"] == "event":
@@ -170,13 +174,14 @@ def make_clip(scene, tier, idx, device):
         else:
             x, s = tracks.continuous_track(rng_mat, src_def, n)
         if c["directional"]:
-            y, r, att = sc.point(x, dist, az, continuous=c["group"] in STEADY_GROUPS)
+            role = {"talker": "talker", "nav": "nav"}.get(src_def.get("style"), "dash" if cls == "turn-signal" else "other")
+            y, r, att, s["rir"] = sc.point(x, dist, az, role=role, continuous=c["group"] in STEADY_GROUPS)
             add(cls, y, s, r.dist_m, r.azimuth_deg, att)
         elif c.get("bypass_direction"):  # 麦口独立噪声（风噪）：不经波束的扩散场衰减，只过频响
             add(cls, sc.ch.response(x), s)
         else:
-            y = sc.diffuse(x, dist=dist if src_def["kind"] == "speech" else None)
-            add(cls, y, s)
+            y, rs = sc.diffuse(x, dist=dist if src_def["kind"] == "speech" else None)
+            add(cls, y, {**s, "rir": rs} if rs else s)
 
     # ---- 设电平 ----
     nominal = {"owner_dist_m": orir.dist_m, "t60_s": sc.t60, "snr_db": _u(rng_mat, S["snr_db"][tier]), "sir_db": None,
@@ -239,6 +244,6 @@ def make_clip(scene, tier, idx, device):
               "stems": {s["inst"]: s["x"] for s in sounds}}
     meta = {"scene": scene, "tier": tier, "idx": idx, "device": device, "seed": seed, "lang": lang, "polarity": polarity,
             "nominal": nominal, "targets": targets, "sounds": sounds, "chain": {**sc.ch.params, "floor_clamped": bool(floor_clamped),
-            "room_dims_m": list(sc.dims), "headroom_db": round(20 * np.log10(head), 3), "owner_dry_delay_samples": int(orir.delay)}, "additive": not clipped, "owner_rir": orir,
+            "room": sc.room.manifest(), "headroom_db": round(20 * np.log10(head), 3), "owner_dry_delay_samples": int(orir.delay)}, "additive": not clipped, "owner_rir": orir,
             "bed": bed_cls}
     return arrays, meta
