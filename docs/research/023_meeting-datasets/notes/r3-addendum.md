@@ -7,12 +7,12 @@
 
 - **场景键**：cafe, car, transit, street, other（电梯、信号差的楼里、商场）
 - **设备键**：phone, laptop-other
-- **笔记本段**：有但不能按条筛。维基原句：VoIP 通话「recorded on a laptop」，移动通话在 Google Pixel 3 上录；论文 §3 写说话人「spoke directly into the terminal device (i.e. a smartphone or laptop)」。逐条设备标签未查到；58 个条件名里可能写了网络类型，未下载核对【官方文档】【论文】
+- **笔记本段**：未查到确证，不能按条筛。维基原句：VoIP 通话「recorded on a laptop」，移动通话在 Google Pixel 3 上录；论文 §3 同一段里先写说话人「spoke directly into the terminal device (i.e. a smartphone or laptop)」，后写「The talkers used their mobile phone to call either through the mobile network or with a VoIP service (Skype/Facebook)」——两句互相矛盾，说话端有没有用笔记本麦说不清；笔记本更可能是接收端录音机【推断】。逐条设备标签未查到；58 个条件名里可能写了网络类型，未下载核对【官方文档】【论文】
 - **转写**：没有（未提）
 - **语体**：真人对话式说话（德语），按条件要求大声、小声、免提或放背景音乐；笑声 / 附和未标注【论文 §3】
 - **与 D62 的关系**：真实录音（真人对终端说话，经移动网或 VoIP 传输后录下）。人评分为实验室 P.800，每条 24 分，58 条件 × 4 条。若开发阶段拿来评测：232 条全用，作无参考音质分在「真实嘈杂地点 + 真实通话链路」上的旁证；大小未查到（每条 6–12 s，总时长约 0.6 h【推断】）
 - **014 卡需更正 / 补充**：
-  - 原句「**VoIP 通话在笔记本上录**」：维基确是此说；但论文 §3 原句是「The talkers used their mobile phone to call either through the mobile network or with a VoIP service」。两处出处说法不同——「笔记本」更可能是接收端录音机，说话人手里多是手机。建议改成「说话人对手机或笔记本说话（论文）；VoIP 接收端在笔记本上录（维基）」【论文】【官方文档】
+  - 原句「**VoIP 通话在笔记本上录**」：维基确是此说；但论文 §3 原句是「The talkers used their mobile phone to call either through the mobile network or with a VoIP service (Skype/Facebook)」，同段前文又说对着「smartphone or laptop」说话。两处出处说法不同——「笔记本」更可能是接收端录音机，说话人手里多是手机。建议改成「说话人对手机或笔记本说话（论文）；VoIP 接收端在笔记本上录（维基）」【论文】【官方文档】
   - 原句「每条 24 票」：补「实验室 P.800（不是众包 P.808）」【论文 §3】
   - NISQA 模型在本集按条件平均、一阶映射后 PCC 0.90、RMSE 0.35【论文 Table 4】；SCOREQ（natural、无参考）README 报 0.86（按条件平均）【官方文档】
 
@@ -27,7 +27,8 @@
 - **014 卡需更正 / 补充**：
   - 原句「另有 MOS 子集（urgent2024_mos）」：补规模与协议（见上）；该子集许可为 HF 标签 cc-by-nc-sa-4.0 → 只评测【官方文档】
   - 补：组委会用该子集做的相关分析结论——UTMOS、SCOREQ 与人评分相关最高；WADA-SNR 最低；DNSMOS 排序相关（KRCC）落后但线性相关（LCC）较高，即数值接近、排序可能错；NISQA、DNSMOS Pro 在排序与数值上都更一致；说话人相似度与识别正确率 KRCC 较高但 LCC 低（非线性）。具体数字只在图 4 里，文本未给【论文 2506.01611 §3.2】
-  - 补：T17、T18 两队 DNSMOS / NISQA 很高，但人评分与其他指标都差——**只看无参考分会被骗**【论文 §3.2】
+  - 补：T17、T18 两队 DNSMOS / NISQA 很高，但人评分与其他指标都差——**只看无参考分会被骗**【论文 §3.1 末段】
+  - 补：HF `urgent2024_mos` 数据卡本身没写真实 / 模拟比例；「一半模拟一半真实」出自论文 §3.1 原句「half simulated and half real-recorded」【论文】
 
 ### urgent2025-blind-real.md
 
@@ -56,5 +57,7 @@
 - **笔记本段**：未查到；众包设备未标型号（014 原卡）
 - **转写**：没有
 - **语体**：含情感语音（笑、哭、喊、惊讶）（014 原卡）——本路补：这是公开集里少有的带「笑声 / 情绪」的真实带噪段，但没有人评分随集发布
-- **与 D62 的关系**：真实众包录音。DNSMOS P.835 的训练标签就来自「DNS Challenge V3 测试集 600 条 × 约 40 个降噪模型」的 P.835 众包评分（约 30,000 条、75 h）【论文 arXiv:2110.01763 §3】；**这些人评分本身未见公开发布**（检索未找到下载处）。若开发阶段拿来评测：用 V3 blind 600 条跑无参考分作回归；但用 DNSMOS 测它属于「训练分布内」，分数会偏乐观【推断】
+- **与 D62 的关系**：真实众包录音（与合成段混在同一测试集里）。DNSMOS P.835 的训练标签就来自「DNS Challenge V3 测试集 600 条 × 约 40 个降噪模型」的 P.835 众包评分（约 30,000 条、75 h）【论文 arXiv:2110.01763 §3】；**这些人评分本身未见公开发布**（检索未找到下载处）。若开发阶段拿来评测：用 V3 blind 600 条跑无参考分作回归；但用 DNSMOS 测它属于「训练分布内」，分数会偏乐观【推断】
 - **014 卡需更正 / 补充**：补上一条「DNSMOS P.835 见过本集」——用它在本集上评 DNSMOS 不算独立验证【论文】
+
+> 怀疑派复核（2026-11-03）：改了 nisqa-livetalk「笔记本段」（「有」→「未查到确证」，补论文同段两句互相矛盾的原文）；urgent2024 补「一半真实」只出自论文、HF 卡未写，T17 / T18 一句出处节号更正为 §3.1；dns3 补「真实与合成混在同一测试集」。urgent2024_mos 的 300 条、6,900 条、13.8 h、1.34 GB、8 人评分、CC BY-NC-SA 4.0 回 HF 数据卡核对一致；DNSMOS P.835 的 600 条 × 约 40 模型、约 30,000 条、75 h 回论文 §3 核对一致。
