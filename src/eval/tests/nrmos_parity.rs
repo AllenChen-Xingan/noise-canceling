@@ -75,12 +75,27 @@ fn score_all(kind: Kind, wavs: &[PathBuf]) -> Vec<f64> {
         .output()
         .unwrap();
     assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
-    String::from_utf8_lossy(&o.stdout)
+    let rows: Vec<serde_json::Value> = String::from_utf8_lossy(&o.stdout)
         .lines()
-        .map(|l| {
-            serde_json::from_str::<serde_json::Value>(l).unwrap()["mos"]
-                .as_f64()
-                .unwrap()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    assert_eq!(
+        rows.len(),
+        wavs.len(),
+        "子进程回了 {} / {} 行",
+        rows.len(),
+        wavs.len()
+    );
+    // 逐行核对是哪一段（不按顺序猜）
+    rows.iter()
+        .zip(wavs)
+        .map(|(r, w)| {
+            assert_eq!(
+                r["wav"].as_str().unwrap(),
+                w.to_string_lossy(),
+                "行与段对不上"
+            );
+            r["mos"].as_f64().unwrap()
         })
         .collect()
 }
@@ -106,6 +121,14 @@ fn nrmos_matches_upstream_within_0_01() {
     }
     for kind in Kind::ALL {
         let got = score_all(kind, &wavs);
+        // 先核条数：少一行也要红，不能让 zip 按短的那边悄悄结束（codex 第 2 轮 P2 #4）
+        assert_eq!(
+            got.len(),
+            cases.len(),
+            "{} 只回了 {} 段",
+            kind.as_str(),
+            got.len()
+        );
         let mut worst = 0.0f64;
         for (c, g) in cases.iter().zip(&got) {
             let want = c[kind.as_str()].as_f64().unwrap();

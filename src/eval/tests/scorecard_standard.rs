@@ -164,7 +164,11 @@ fn item_table_matches_code() {
         if want.is_empty() {
             want.push(effective(v).unwrap_or_else(|| panic!("{v} 在代码里查不到过关线")));
         }
-        assert_eq!(got.len(), want.len(), "{v}：过关线格 {line:?} 里的数 {got:?} ↔ 代码 {want:?}");
+        assert_eq!(
+            got.len(),
+            want.len(),
+            "{v}：过关线格 {line:?} 里的数 {got:?} ↔ 代码 {want:?}"
+        );
         for (g, w) in got.iter().zip(&want) {
             assert!((g - w).abs() < 1e-9, "{v}：scorecard.md 写 {g}，代码用 {w}");
         }

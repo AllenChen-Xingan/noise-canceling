@@ -79,7 +79,8 @@ impl Drop for Server {
 
 pub(super) struct Models {
     paths: BTreeMap<&'static str, Result<PathBuf, String>>,
-    mix: BTreeMap<(String, &'static str), f64>,
+    /// 带噪原声的分，按（混合音频内容哈希, 模型）缓存：片段 id 只在一个 build 内唯一，不能当键（codex 第 2 轮 P1 #1）
+    mix: BTreeMap<(u64, &'static str), f64>,
     servers: BTreeMap<&'static str, Server>,
 }
 
@@ -144,7 +145,7 @@ impl QaExtra {
             Some(Err(e)) => return Score::unknown(id, "Δ MOS", Better::Higher, e.clone()),
             None => return Score::unknown(id, "Δ MOS", Better::Higher, "内部错误"),
         };
-        let key = (task.id.clone(), kind.as_str());
+        let key = (super::fnv(&clip.mix), kind.as_str());
         let mut wavs = Vec::new();
         let need_mix = !self.nrmos.mix.contains_key(&key);
         let dumped = (|| -> Result<(), String> {

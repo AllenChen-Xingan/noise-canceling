@@ -62,6 +62,8 @@ pub struct ItemCell {
 
 #[derive(Clone, Debug, Default, serde::Serialize)]
 pub struct ListenCell {
+    /// 两个评分模型各自的逐项汇总（过 / 不过 / 待测段数、均值、最差段）；不单独决定场景，只给人看、给分组比较用
+    pub models: Vec<ItemCell>,
     /// 两个评分模型各自的 Δ 均值（输出 − 原声；判不了的段不计）
     pub mean_scoreq: Option<f64>,
     pub mean_distill: Option<f64>,
@@ -201,7 +203,14 @@ fn listen_cell(rows: &[&ClipRow]) -> ListenCell {
             c.to_human.push((r.clip.clone(), w));
         }
     }
-    c.status = Some(status_of(c.pass, c.fail));
+    // 有一段判不了（模型出错、两个模型一个说好一个说差）、又没有不过的 → 待测，不是过（codex 第 2 轮 P1 #2）
+    c.status = Some(if c.fail > 0 {
+        CardStatus::Fail
+    } else if c.unknown > 0 || c.pass == 0 {
+        CardStatus::Unknown
+    } else {
+        CardStatus::Pass
+    });
     let mean_of = |id: &str| {
         let v: Vec<f64> = rows
             .iter()
@@ -314,7 +323,8 @@ pub fn summarize(rows: &[ClipRow], missing: &[Missing]) -> Vec<SceneCard> {
                 .iter()
                 .map(|(v, veto)| item_cell(v, *veto, &rs))
                 .collect();
-            let listen = listen_cell(&rs);
+            let mut listen = listen_cell(&rs);
+            listen.models = LISTEN.iter().map(|v| item_cell(v, false, &rs)).collect();
             let veto_failed: Vec<&'static str> = items
                 .iter()
                 .filter(|i| i.veto && i.status == CardStatus::Fail)
@@ -337,7 +347,12 @@ pub fn summarize(rows: &[ClipRow], missing: &[Missing]) -> Vec<SceneCard> {
             } else {
                 CardStatus::Pass
             };
-            let drags = drags(&items, &rs);
+            // 听感不过时，对说「比原声差」的那个评分模型也做声音分组（codex 第 2 轮 P2 #3）
+            let mut for_drag: Vec<ItemCell> = items.clone();
+            if listen.status == Some(CardStatus::Fail) {
+                for_drag.extend(listen.models.iter().cloned());
+            }
+            let drags = drags(&for_drag, &rs);
             SceneCard {
                 scene,
                 tier,
@@ -491,6 +506,33 @@ mod tests {
                 .iter()
                 .any(|&i| c[i].scene == MeetingPlace::Canteen)
         );
+    }
+
+    #[test]
+    fn listen_with_unknown_clip_is_not_pass() {
+        // 一段两个模型都说好，另一段一个说好一个说差 → 听感待测，场景不能判过
+        let rows = vec![row("a", &[], 1.0, 0.2, 0.1), row("b", &[], 1.0, 0.2, -0.1)];
+        let c = &summarize(&rows, &[])[0];
+        assert_eq!(c.listen.status, Some(CardStatus::Unknown));
+        assert_eq!(c.status, CardStatus::Unknown);
+        assert_eq!(c.listen.to_human.len(), 1);
+    }
+
+    #[test]
+    fn listen_failure_gets_sound_split() {
+        let mut rows: Vec<ClipRow> = (0..3)
+            .map(|i| row(&format!("m{i}"), &["coffee-machine"], 1.0, -0.5, -0.4))
+            .collect();
+        rows.extend((0..3).map(|i| row(&format!("q{i}"), &[], 1.0, 0.1, 0.1)));
+        let c = &summarize(&rows, &[])[0];
+        assert_eq!(c.listen.status, Some(CardStatus::Fail));
+        assert_eq!(c.listen.models.len(), 2);
+        let d = c
+            .drags
+            .iter()
+            .find(|d| d.v == "V-NRMOS-SCOREQ" && d.cls == "coffee-machine")
+            .expect("听感不过时要按声音分组");
+        assert!((d.gap.unwrap() - 0.6).abs() < 1e-9);
     }
 
     #[test]

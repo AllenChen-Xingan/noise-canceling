@@ -112,7 +112,8 @@ fn clip_task(base: &Task, c: &SceneClip) -> Task {
         })
         .collect();
     Task {
-        id: c.id.clone(),
+        // 片段 id 只在一个 build 内唯一：加上混合轨文件哈希的前 8 位，免得两个 build 的同名段共用吃字的参考转写缓存
+        id: format!("{}#{}", c.id, c.hash.wav_sha256.mix.get(..8).unwrap_or("")),
         set: Set::Capability,
         // 任务极性的词表沿用 qa.json（suppress / preserve）；清单的 preserve_all 对到 preserve
         polarity: match c.polarity {

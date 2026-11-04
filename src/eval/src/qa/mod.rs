@@ -47,7 +47,7 @@ pub struct QaExtra {
     nrmos: nrmos_v::Models,
 }
 
-fn fnv(x: &[f32]) -> u64 {
+pub(crate) fn fnv(x: &[f32]) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     for v in x {
         for b in v.to_le_bytes() {
