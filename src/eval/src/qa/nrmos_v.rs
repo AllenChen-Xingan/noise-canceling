@@ -163,7 +163,7 @@ impl QaExtra {
             Err(e) => return Score::unknown(id, "Δ MOS", Better::Higher, e),
         };
         if need_mix {
-            self.nrmos.mix.insert(key.clone(), got[0]);
+            self.nrmos.mix.insert(key, got[0]);
         }
         let mix = self.nrmos.mix[&key];
         let o = *got.last().unwrap_or(&f64::NAN);
