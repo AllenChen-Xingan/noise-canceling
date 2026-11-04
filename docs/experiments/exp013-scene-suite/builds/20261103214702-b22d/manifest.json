@@ -1,0 +1,140 @@
+{
+ "build_id": "20261103214702-b22d",
+ "created": "2026-11-03 21:47:20",
+ "seconds": 18.1,
+ "clips": 480,
+ "audio_dir": "_tmp/exp013/20261103214702-b22d",
+ "counts": {
+  "bus-metro-cabin": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "cafe": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "canteen": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "car-passenger": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "cowork": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "home-family": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "home-quiet": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "hotel-room": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "library-classroom": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "meeting-room": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "open-office": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "phone-booth": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "rail-air-cabin": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "street-outdoor": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  },
+  "transit-hub": {
+   "common/external-mic": 10,
+   "common/mba-builtin": 10,
+   "stress/external-mic": 6,
+   "stress/mba-builtin": 6
+  }
+ },
+ "base_seed": 20261103,
+ "code_sha256": {
+  "build.py": "20eaa25dffc55a1fb0c39eddc4d3428c5e5d5342dafea6f37917aac88183d494",
+  "compose.py": "d036019d30e2ba66b58d46e5cfc4d2e55e44311a2d5b47880df3f033c2eb7c63",
+  "tracks.py": "65e8b865cf7b37e509578666344bcc3f051edd9e8e4abcf0bcac809ad04c7ec2",
+  "labels.py": "9962538e892d20321977ac808251567658c67a3948580955654c3587524beeaa",
+  "manifest.py": "608a9a4f57fd97a584c3a49a1fe4650008c45b7ffed343c11bf5205b4a824a7a",
+  "leak.py": "f30405af0c1f07293a5cb70e0c87ef513354763f47fe5dea6816b6275d395ddc",
+  "pools.py": "cab1b90cab4573b74739bd9f80493eeae547b2093434c517b6cd8ce5fb7af460",
+  "rooms.py": "af4ddf4c0c34dd24d88cf00fe9787c22aef411d669c993620fbd333642a7090a",
+  "synth_sounds.py": "894ffd8fe7935ae1bd77fa5190846bbc3028a077b7e7155fd9b9bf0a3572bf72",
+  "device_chain.py": "d79d32bd6d01dfbb6f6fc48ff46ada629e40d88766a995cb04de8b8d11eefd4a",
+  "dsp.py": "20ee13f7d251b7a842983b4f0d9167f33871a51deaea36ffa0d16c14756f4e61"
+ },
+ "params_sha256": {
+  "scenes.json": "7ff94409fba713d83ce1330105a3f25c267d8c292d0e707ec4eb161607f14458",
+  "sounds.json": "b67aff615ef6e59b03775dc752ee993259f0f71b4402f227cf0631c38bf5ae20",
+  "device_chain.json": "99d3078aa3ab06554978f2ebacf808e6929b7ae503c9bc68fcc15f2178e59e46",
+  "materials.json": "422344084b4280a9797ab2d7cae3b29a12cefec57340b37226367398cb7d3911"
+ },
+ "material_index": {
+  "sha256": "5452da6e136cf9120c844daede2da4e8ad951de3bce0d97c6796dddd8ce57a88",
+  "files": 1559
+ },
+ "leak_check": {
+  "against": "exp006 全部 build 的 train 段",
+  "train_rows": 2240,
+  "speakers": 0,
+  "demand": 0,
+  "synth_fn": 0,
+  "hits": [],
+  "ok": true
+ },
+ "licenses": [
+  "CC-BY-4.0",
+  "CC-BY-NC-3.0",
+  "own",
+  "public-domain"
+ ],
+ "validity": "D0（016：只保证可复现、可控、真值完整；未做统计对齐与双生成器）",
+ "use": "只评测，不训练（含 CC-BY-NC 素材）"
+}
