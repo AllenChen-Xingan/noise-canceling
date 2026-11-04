@@ -9,3 +9,4 @@
 - [实验对照表与答卷一律提交](20261030-commit-experiment-keys.md) — 揭盲表、清单、人的答卷当场进 git；听测页每次重建写新 build 目录（揭盲表丢失之坑）
 - [学习材料只放桌面](20261101-study-notes-desktop-only.md) — 给人的科普 / 讲解只出到桌面（.md + .pdf），不进 docs/plan（人定 2026-11-01）
 - [榨干硬件 · 能耗极低 · 非常轻量](20261102-squeeze-hardware-low-power-lightweight.md) — 选后端、写引擎、定 CPU / 耗电 / 体积预算时对照（人定 2026-11-02，D69 整机 CPU 目标 1% 上限 2%）
+- [两个大总管同机：hook 在会话目录提交](20261104-two-coordinators-hook-cwd.md) — 第二位大总管从自己的检出启动会话，否则 hook 会替对方提交主检出里的改动（三次教训，2026-11-04）
