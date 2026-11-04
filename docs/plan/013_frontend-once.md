@@ -1,7 +1,8 @@
 # 013 · 每帧只算一次频谱：降噪 · 场景 · 修音共用（#94，D71）
 
 > 状态：大总管 2026-11-04 点头（修音槽不做，见第 4 节）。依据：读源码盘点（`state/handoff/fecore.md`「盘点」），未构建、未实测。
-> 范围：场景特征与修音借降噪模型的谱。认人不接（大总管 2026-11-04 定，fespk 估最多省约 5%）。
+> 范围（第一段，本线）：场景特征与修音借降噪模型的谱。认人不借降噪的谱（大总管 2026-11-04 定）。
+> 人改定（D82，2026-11-04）：仓里所有频谱计算只在一个模块实现，认人保留自己的分帧、各自切法。第一段立好这个模块；认人 fbank、评测器、离线例子收进来是第二段，见第 11 节。
 
 ## 1. 现在的毛病
 
@@ -22,13 +23,14 @@ pub const FRONTEND: StftSpec = StftSpec { n_fft: 512, hop: 256, sample_rate: MOD
 
 - `vdn-dsp` 加 `StreamingStft::from_spec(&StftSpec)`，窗种类 → 窗函数只在这一处对应（dsp 新增依赖 vdn-types，后者零依赖）
 - GTCRN、场景、两个离线例子删掉本地常量，改引用 `FRONTEND`
-- 比对：场景 `const _: () = assert!(FRONTEND.hop == 256)`（权重按它训练）；GTCRN 已有测试把 `mix` 形状与频点数比对，改为与 `FRONTEND.bins()` 比
+- 比对：场景编译期断言 `FRONTEND` 的点数、帧移、采样率、窗种类都等于权重训练时的值；GTCRN 已有测试把 `mix` 形状与频点数比对，改为与 `FRONTEND.bins()` 比
+- 能扩展：`StftSpec` 是通用的口径描述，`FRONTEND` 只是其中一份实例，512 / 256 只写在这份实例里。第二段要的「窗长 ≠ FFT 点数（补零）」「更多窗种类」都是给它加字段、加枚举值，现有实例取默认值，结果不变，见第 11 节
 
 ## 3. 借谱接口（正本归 fecore）
 
 ```rust
 pub trait SpectrumTap: Model {
-    fn spectrum_spec(&self) -> StftSpec;             // 谱的口径，调用方构造期比对
+    fn spectrum_spec(&self) -> StftSpec;             // 谱的口径，吃谱方每帧与自己要的口径比对
     fn input_power(&self) -> Option<&[f32]>;          // 本帧带噪输入功率谱 re²+im²，长度 bins；推理前取；还没处理过帧为 None
 }
 ```
@@ -43,12 +45,13 @@ pub trait SpectrumTap: Model {
 - `vdn_dsp::stft::power_into(spec, out)`：功率 `re²+im²` 的唯一写法。GTCRN 借出与场景自算都调它，逐位相同靠构造保证
 - `StreamingStft` 加 `feed(hop)`（只移位、不做 FFT）与 `forward_count()`（测试用：正向 FFT 次数）
 - GTCRN：`analyze` 之后、推理之前 `power_into` 到自己的 `power` 缓冲，实现 `SpectrumTap`
+- 「一个模块」落在哪：参数正本在 `vdn-types::frontend`，实现（窗表 `window::for_spec`、流式 `StreamingStft`、功率 `power_into`）在 `vdn-dsp`。第二段在 `vdn-dsp` 加按整段分帧的入口，两个入口共用同一段「加窗 → 补零 → 正向 FFT → 功率」，见第 11 节
 - **修音频域级槽：不做**。原因：把修音接到模型里属于接线，不在本大事（大总管 2026-11-04 定，`SpectralStage` 留在 polish）；槽与 engine 接线留给 backlog 那件事
 
 ## 5. 场景特征
 
 - `push_hop(x)`：自算（兜底，FE-M 用），内部改用 `StreamingStft::from_spec`，删掉自建的窗、缓冲、FFT 计划
-- 新增 `push_hop_with_power(x, power)`：吃现成功率谱；`x` 仍要（削波是时域算的）
+- 新增 `push_hop_with_power(x, spec, power)`：吃现成功率谱；`x` 仍要（削波是时域算的）。`spec` 是借出方的口径（`spectrum_spec()`），不等于 `FRONTEND` 或长度不对就退回自算（自审 P2，`docs/reviews/013_frontend-once-selfreview.md`）
 - 两个入口只差「功率从哪来」：各一行填 `self.pow`，之后同一段 `finish_frame` 算 35 维要用的帧量
 - 借谱时也把 `x` 推进自算缓冲（`StreamingStft::feed`），换到 FE-M 时第一帧不吃旧数据
 - 只差一处：`x` 不足一个 hop 时，旧代码只移 `len` 个样本，`StreamingStft` 移一整个 hop 并补零。实时路径每次都是整 hop，不受影响；测试只喂整 hop
@@ -110,3 +113,32 @@ pub trait SpectrumTap: Model {
 - 场景每帧省约 0.4 µs（p50 降 17%）。
 - 每帧合计没有可测出的变化，0.4 µs 只占一帧 16 ms 预算的约 0.003%。
 - 本改动的价值在口径只有一份正本、每帧只做 1 次正向 FFT，不在提速。
+
+## 11. 第二段：认人与评测器收进来（D82，另派手下，基于本分支）
+
+人定：所有频谱计算放在同一处代码，各自切法。认人保留自己的 400 / 160 分帧和汉明 / povey 窗，不共用降噪的结果，声纹输出逐位不变。下面是第一段留下的接口怎么容纳它（读源码判断，未实现）。
+
+**要收进来的几处**（读源码）：
+
+| 位置 | 窗长 / FFT 点数 / 帧移 | 窗 | 精度 | 分帧方式 |
+|---|---|---|---|---|
+| `src/speaker/src/fbank.rs` | 400 / 补零到 512 / 160 | 汉明、povey、汉宁（对称，分母 n−1） | f32 | 整段，`snip_edges` |
+| `src/eval/src/verifiers/speech.rs` | 0.125 s / 补零到 2 的幂 / 窗长一半 | 周期 Hann | f64 | 整段 |
+| `src/eval/src/verifiers/estoi.rs` | 256 / 512 | numpy `hanning(n+2)[1:-1]` | f64 | 整段 |
+| `src/eval/src/system.rs` 参考降噪器 | 512 / 512 / 256 | 周期 sqrt-Hann | f32 | 流式（已用 `StreamingStft`，只差改引用正本或写明不跟） |
+
+**接口怎么长（都是加东西，不改现有的）**：
+
+1. `StftSpec` 加 `win_len`（窗长，≤ `n_fft`，尾部补零到 `n_fft`）。`FRONTEND` 取 `win_len = n_fft`，降噪、场景、修音的结果不变。
+2. `Window` 加枚举值：汉明对称、povey、汉宁对称、numpy 内缩汉宁、周期 Hann。窗表仍只写在 `vdn_dsp::window::for_spec` 一处。每种窗按各处现有写法实现（例如认人是先用 f64 算再转 f32），保证逐位不变。
+3. 每帧预处理钩子：分帧之后、加窗之前，调用方可以改这一帧（闭包或 trait）。Kaldi 的去直流、预加重、×32768 留在认人自己的 crate 里，统一模块不认识它们。
+4. f32 / f64 都通用：评测器现在用 f64 FFT，改成 f32 分数会变。所以实现对样本类型泛型（realfft 两种都支持）。
+5. 按整段分帧的入口（暂名 `FrameFft`）：给整段信号和帧号，取出那一帧，做钩子 → 加窗 → 补零 → 正向 FFT，可选再出功率。流式的 `StreamingStft` 与它共用这一段。
+
+**验收**（第二段的测试）：
+
+- 每处改前改后逐位对拍：声纹 fbank 输出、评测器分数、参考降噪器输出。做法同第一段：在改前的提交上生成基准。
+- `FRONTEND` 加了 `win_len` 以后，第一段的 GTCRN 和场景对拍仍逐位相同。
+- 全仓 grep：除 `vdn-dsp` 外没有 `plan_fft_forward` / `RealFftPlanner`。可以写成一条 tidy 规则，把「只在一处」变成机器检查。
+
+**估计改动量**：types 约 +30 行，dsp 约 +100 行；认人 fbank 约 −30 行，评测器 3 处约 −40 行；每处配一条逐位对拍测试。
