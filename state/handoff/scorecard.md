@@ -3,10 +3,10 @@
 - **状态**：进行中（方案已批）
 - **手上**：场景成绩单——评分模型接入 · 补评分项 · 成绩单标准与报告（issue #87）
 - **交代**：主目录 `_tmp/20261103-b11/scorecard.md`
-- **做到哪**（2026-11-03）：新评分项 4 个 + 评分模型 2 个已接入并对拍过；级别表改由命令补新项。下一步写片段清单的 Rust 类型与 schema
-- **下一步**：片段清单类型 → 成绩单标准 → 成绩单命令
+- **做到哪**（2026-11-03）：交代第 2–6 步全写完，本 crate 测试全过；等名额跑 `vdn-eval ci` 与全量测试，然后换谱系评审
+- **下一步**：名额 → ci + 全量测试 → codex 评审 → 收尾
 
-## 一、方案（待大总管回「可以」）
+## 一、方案（大总管已批，2026-11-03）
 
 来源标注：【读源码】【读文档】【本机查】；没有出处的数一律「暂定」进过关线检查器的待定清单（`src/eval/src/thresholds.rs` 的 `PENDING`）。
 
@@ -59,21 +59,51 @@
 不需要下载：两个评分模型本机都有。
 
 ## 改了哪些文件
+
 | 文件 | 改了什么 |
 |---|---|
-| `state/handoff/scorecard.md` | 新建本页 |
+| `src/eval/src/verifiers/speech.rs` · `estoi.rs` | 新评分项 V-WEAK · V-PUMPV · V-CLICK · V-ESTOI；ESTOI 照 pystoi 口径重写 |
+| `src/eval/src/verifiers.rs` | 登记表加 6 项（含两个评分模型）；子模块接线 |
+| `src/eval/src/qa/nrmos.rs` · `nrmos_v.rs` · `qa/mod.rs` | SCOREQ / Distill-MOS 用 ort 跑；常驻子进程 `vdn-eval nrmos … --serve`；模型哈希正本 |
+| `src/eval/src/thresholds.rs` → `thresholds/table.rs` | 表拆出（原文件 581 行，加项会超 600）；加 7 组过关线；待定清单 7 → 8 条（V-PUMPV） |
+| `src/eval/src/probes.rs` · `suite/ci.json` | 探针 4 个 + 任务 P06–P09 |
+| `src/eval/src/scene.rs` | 片段清单类型（正本）：场景键 · 设备键 · 系统处理模式枚举 |
+| `src/eval/src/scorecard/`（`mod` · `standard` · `rules` · `card`） | 成绩单：跑、汇总、拖后腿的声音、Markdown + JSON |
+| `src/eval/src/suite.rs` · `runner.rs` · `runner/real.rs` · `main.rs` · `files.rs` | 场景任务来源 `kind = scene`；`scorecard` · `nrmos` 子命令；`calib --write-levels` 补缺项（`LevelsFile::fill_missing`） |
+| `src/eval/suite/levels.json` | 用 `calib --write-levels` 重生成：补 6 个新项（L0），原有条目逐项核对未变（只是缩进从 1 格变 2 格） |
+| `src/eval/tools/export_distillmos.py` · `gen_nrmos_ref.py` · `tests/fixtures/gen_estoi_ref.py` | 导出与参考分脚本（依赖写在文件头） |
+| `src/eval/tests/`（`estoi_parity` · `nrmos_parity` · `scene_keys` · `scorecard_e2e` · `scorecard_standard` · `thresholds`）· `tests/fixtures/` | 对拍、键表比对、端到端、标准文档比对；thresholds 测试改为按目录扫子模块 |
+| `src/schema/src/eval.rs` · `lib.rs` · `tests/eval_suite.rs`（大总管批） | 导出 `eval-scene-clip.schema.json`；正例 + 负例 |
+| `specs/schema/eval-scene-clip.schema.json` · `eval-suite.schema.json` · `README.md` | 导出物；README 加一行 |
+| `specs/rubric/scorecard.md`（新）· `denoise.md`（只加一行指针） | 成绩单标准 |
 
 ## 发现
-- SCOREQ 的「natural」模式实际读的是 `adapt_nr_telephone.onnx`（上游代码把 natural 映射成 telephone，`scoreq.py:93`）。不是错，但成绩单里写模型文件名时以文件名为准，免得以为用错了模型
-- 021 / 022 还没合进 main：场景键 / 设备键的比对测试在合并前先读 worktree 里的正本会让测试依赖仓外路径。打算：合并前测试找不到正本就标「不知道」并提示，合并后改成必须找到
+
+- SCOREQ 的「natural」模式实际读 `adapt_nr_telephone.onnx`（上游 `scoreq.py:93` 把 natural 映射成 telephone）。不是错，成绩单里以文件名为准
+- **V-WEAK 灵敏度低**（实测，合成人声）：最弱 30% 的段压 −10 / −20 dB 只读到 1.8 / 3.7 dB，过线 4 dB 只抓得住整段吞掉；输出里残留噪声多时 L30「损失」是负的（passthrough 上 −9.4 dB），等于看不见。要靠人耳
+- **V-CLICK 疑似误报**（实测）：scenesuite 第一版 build 的 cafe 常见档 10 段，参考降噪器 ref 上约 100 个/分钟，passthrough 上 0。分不清是 ref 真有咔嗒还是检测器误报，结论不可用，送人耳核对
+- 1 kHz 低通在合成人声上只让 ESTOI 降 0.02（1.000 → 0.979），所以可懂度探针改用「加噪到 0 dB」
+- Distill-MOS 导出：torch 导出器不支持复数 STFT，换成等价的实数卷积（对原模型差 1.4e−6）；导出要的 onnx 包装在主目录 `_tmp/scorecard-onnx-pkgs/`（29 MB，不进仓，不动 exp009 环境）
+- 评分模型每段重起子进程要重载 378 MB 模型：改成常驻子进程，480 段从估计约 40 分钟降到只载一次（未实测）
+- tidy 的同名检查（R-MIRROR）抓到 `SceneKey` 与 `vdn_types::SceneKey`（用户层 5 类）同名、不同物：本线的改名为 `MeetingPlace`（021 地点键），`Status` 改名 `CardStatus`
 
 ## 待人拍板
-（暂无）
+
+1. **暂定过关线先用着，还是先盲听校准再出成绩单？** 现在 V-PUMPV（人声忽大忽小）、V-SPLVL（人声被压低）、门控误关三处过关线没有出处。参考降噪器在 cafe 10 段上，V-PUMPV 有 9 段不过。
+   - A. 先用暂定值出第一张成绩单，标「暂定」，盲听结果回来再改 ← 建议
+   - B. 先盲听校准这三项，再出成绩单（每次 ≤ 10 分钟，第一张成绩单推迟到校准后）
+   - 如果你不回：默认 A，后果是第一张成绩单里这三项的「不过」可能偏严或偏松
 
 ## 转交（范围外，留给大总管）
-- （暂无）
+
+- scenesuite 合并进本分支后：`src/schema/src/eval.rs` 的 `DATA_FILES` 加 `("src/eval/suite/scenes.json", SUITE_FILE)` 一行（否则 `eval_data_files_registered` 红）；`repo_scene_suite_parses_and_expands` 测试那时才真正生效
+- scenes.json 只有 `mba-builtin` 的 30 条任务，240 段 `external-mic` 片段没有任务展开
+- 按语种（`lang`）分组比较还没做（旧 G4 中文组的替代），`scorecard.md` 第七节已写
+- 成绩单输出默认在主目录 `_tmp/scorecard/<run_id>/`；要进仓（CLAUDE.md 第五节第 1 条）时放哪个目录，由大总管定
 
 ## 流水
+- 片段清单类型 + schema（与 scenesuite 对齐两轮，加 4 个字段）· 成绩单标准 + 比对测试 · 成绩单命令 + 端到端测试 · 常驻评分子进程 · tidy / clippy 过
+- 用 scenesuite 第一版 build（20261103214702-b22d）实测：30 条任务展开 240 段；cafe 常见档 10 段 ref 约 1.7 秒出表
 - 新评分项 V-WEAK · V-PUMPV · V-CLICK · V-ESTOI（`src/eval/src/verifiers/speech.rs` · `estoi.rs`）+ 探针 P06–P09 → 单元测试全过
 - ESTOI 对拍 pystoi 0.4.1，5 段公式信号，最大差 0.00000（`tests/estoi_parity.rs`）
 - V-WEAK 灵敏度低（实测）：弱音节压 −10 / −20 dB 只读到 1.8 / 3.7 dB，过线 4 dB 只抓得住整段吞掉 → 探针改为整段置零，登记表写明
