@@ -1,0 +1,34 @@
+# 现状页 · fecore（每帧只算一次频谱，#94）
+
+- 分支 `feat/frontend-once` · 大总管 `noise-canceling-a2` · 批次 20261104-b13
+- 管的实体：频谱前端 · 降噪模型适配（GTCRN / FE-M）· 场景特征 · 修音频谱级
+
+## 进度（当场记）
+
+- 2026-11-04 报到；读完交代与 common
+- 2026-11-04 盘点完（读源码，未构建），见下表
+- 2026-11-04 大总管与 fespk 先后告知：认人不接共享频谱 → 借谱接口不提供「输出谱」，只服务场景特征与修音
+- 2026-11-04 写设计稿 `docs/plan/013_frontend-once.md`，发大总管待点头
+
+## 盘点：每处 FFT / STFT（读源码，未实测）
+
+| 位置 | 参数 | 窗 | 缩放 | 吃什么 | 备注 |
+|---|---|---|---|---|---|
+| `src/dsp/src/stft.rs:28` `StreamingStft` | 由调用方给 | 由调用方给 | 分析不归一；合成 ×1/n 再乘窗 | — | 唯一的流式 STFT 实现 |
+| `src/models/src/gtcrn.rs:19-21,49` | 512 / 256 / 257 点，本地常量 | `sqrt_hann_periodic(512)` | 同上 | 带噪输入；`infer` 后频谱被**改写成模型输出谱** | 不实现 `SpectrumTap` |
+| `src/models/src/fastenhancer.rs:18` | `N_FFT=512` 只用来算延迟；hop 160 | 图内 | 图内 | 波形进波形出 | 拿不到谱 |
+| `src/scene/src/features.rs:43-44,134-159,209-218` | 512，hop 由构造给（只许 256），本地常量 | `sqrt_hann_periodic(512)` | 不归一；功率 = `re²+im²+1e-12` | 带噪输入 | 另有一次**逆** FFT 求自相关（功率谱 → 自相关），这次省不掉 |
+| `src/polish/src/spectral.rs` | `new(n_fft, hop, sr)` 由调用方给 | — | — | 现成的 dry / wet 复数谱 | **库里不做 FFT**；只有离线例子做 |
+| `src/polish/examples/polish_offline.rs:17-18,98-99` | 512 / 256，本地常量 | `sqrt_hann_periodic` | 同 StreamingStft | dry 波形、wet 波形各做一次 | wet 是「降噪后波形再分析」，不等于模型输出谱 |
+| `src/scene/examples/scene_offline.rs:16` | HOP=256 本地常量 | — | — | — | 只用 hop |
+| `src/speaker/src/fbank.rs:73,121` | 帧长 400 → 512，hop 160 | hamming / povey | Kaldi 口径 | 降噪后 | 归 fespk；口径与上面不同，本线不碰 |
+
+**场景特征与 GTCRN 口径核对（读源码）**：窗同为 `sqrt_hann_periodic(512)`；输入缓冲同样全零起步、每次左移一个 hop 再填尾；加窗同为 `x * w`；正向 FFT 同为 `realfft` 512 点、不归一。结论：同一段输入下，场景自算的复数谱与 GTCRN 分析出的复数谱**逐位应相同**（推断，待测试证实）。差别只有一处：GTCRN 推理后把频谱原地改写成输出谱，借谱必须在推理**之前**取。
+
+## 待人拍板
+
+（暂无）
+
+## 转交
+
+（暂无）
