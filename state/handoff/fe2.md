@@ -2,7 +2,7 @@
 
 - 分支 `feat/frontend-speaker`（worktree `../noise_canceling-fe2`），基于 main `d23bfe66`
 - 管的实体：频谱前端（`vdn_types::frontend` · `vdn-dsp`）· 认人前端（`src/speaker/src/fbank.rs`）· 离线例子
-- 状态：进行中
+- 状态：**已收尾**（2026-11-04）
 
 ## 记录
 
@@ -27,10 +27,28 @@
 | `src/eval/src/synth.rs:159,162` | 升余弦淡入淡出 | — | f64 | 不是频谱（包络） |
 | 离线例子 `polish_offline` · `scene_offline` · `frontend_timing` | 已在第一段改为引用 `FRONTEND` / `StreamingStft::from_spec` | — | — | 无需再改 |
 
+## 改了哪些文件
+
+- `src/types/src/frontend.rs`：`StftSpec.win_len` · `is_valid()` · `Window` 加 5 种
+- `src/dsp/src/fft.rs`（新）· `fft_tests.rs`（新）· `window.rs` · `window_tests.rs`（新）· `stft.rs` · `lib.rs` · `tests/no_alloc.rs`
+- `src/speaker/src/fbank.rs` · `Cargo.toml`（去掉 realfft 直接依赖，`Cargo.lock` 自动少一条边）· `tests/golden.rs`（新）· `tests/common/platform.rs`（复制，逐字比对）· `tests/fixtures/{fbank,embed}_golden.txt`（新）
+- `src/xtask/src/fft_site.rs`（新，R-FFT）· `fft_site_tests.rs`（新）· `tidy.rs` · `main.rs`
+- `docs/plan/013_frontend-once.md` 第 12 节 · `docs/reviews/102_frontend-speaker-codex.md` · `docs/reviews/README.md`
+
+## 验收（实测）
+
+- 认人 fbank / 声纹与改前（`d23bfe66`）逐位相同；第一段 4 份对拍真比、逐位相同；`xtask ci` 6 项全绿
+- codex 2 轮达停止线；评审后改动复跑 dsp / xtask 测试、clippy、tidy 通过
+- PR 正文：`_tmp/20261104-b13/pr-fe2.md`（不入库）
+
 ## 待人拍板
 
 （暂无）
 
-## 转交
+## 转交（评测器下一 PR）
 
-（收尾时填）
+- `speech.rs` · `estoi.rs` 改调 `FrameFft<f64>`（窗 `HannPeriodic` / `HannNumpyInner` 已备好、已与原公式逐位比对），清完删 R-FFT 白名单两条
+- `system.rs:47` 改 `from_spec`
+- `analysis.rs:163`：sqrt-Hann 在 f32 里平方当窗，与周期 Hann 不逐位相同，要定加窗种类还是接受分数变化
+- 小事：三份 `platform.rs` 的文件头仍写「两份」（场景 / models 那两份不归本线改，改一份三份都得同步改）
+
