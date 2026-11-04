@@ -1,0 +1,54 @@
+{
+ "doc": "上游 scoreq 1.0.1（natural · NR，ONNX）与 distillmos 0.9.1 在公式信号上的参考分（gen_nrmos_ref.py 生成）；对拍要求 |Rust − 上游| ≤ 0.01",
+ "sr": 16000,
+ "cases": [
+  {
+   "case": "short-3s",
+   "n": 48000,
+   "noise": 0.0,
+   "seed": 1,
+   "scoreq": 1.1681747436523438,
+   "distill": 1.2987070083618164
+  },
+  {
+   "case": "seq-exact",
+   "n": 122880,
+   "noise": 0.01,
+   "seed": 2,
+   "scoreq": 1.2277287244796753,
+   "distill": 1.3291847705841064
+  },
+  {
+   "case": "odd-len",
+   "n": 81967,
+   "noise": 0.03,
+   "seed": 3,
+   "scoreq": 1.1541979312896729,
+   "distill": 1.476000428199768
+  },
+  {
+   "case": "seg4-10.6s",
+   "n": 169600,
+   "noise": 0.05,
+   "seed": 4,
+   "scoreq": 1.0440797805786133,
+   "distill": 1.4158310890197754
+  },
+  {
+   "case": "long-20s-noisy",
+   "n": 320000,
+   "noise": 0.1,
+   "seed": 5,
+   "scoreq": 1.0063788890838623,
+   "distill": 1.258613109588623
+  },
+  {
+   "case": "noise-only",
+   "n": 64000,
+   "noise": -1.0,
+   "seed": 6,
+   "scoreq": 1.2691984176635742,
+   "distill": 1.7070591449737549
+  }
+ ]
+}

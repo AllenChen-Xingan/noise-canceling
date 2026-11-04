@@ -21,4 +21,5 @@
 | 021 | 2026-11-03 | [021 开会场景目录](021_meeting-scenes-codex.md)（catalog · coverage · decision · sources · check_catalog.py，codex gpt-6-astra，5 轮，已达停止线） | 采纳 23 / 提出 23（P1×5 P2×18；无 issue） |
 | 022 | 2026-11-03 | [022 Mac 内置麦调研结论](022_mac-mic-codex.md)（devices · simulation · selftest · decision · sources · tunings · tools，codex gpt-6-astra，5 轮，已达停止线） | 采纳 22 / 提出 22（P1×7 P2×15；无 issue） |
 | 023 | 2026-11-03 | [开会场景真实录音数据集调研：结论层与卡片检查脚本](023_meeting-datasets-codex.md)（decision · matrix · pick · sources · check_cards.py，issue #82，codex gpt-6-astra，5 轮，已达停止线） | 采纳 30 / 提出 30（P1×10 P2×20；无 issue） |
+| 087 | 2026-11-03 | [场景成绩单 + 新评分项 + 评分模型接入](087_scorecard-codex.md)（`origin/main...HEAD`，issue #87，codex gpt-6-astra，8 轮，已达停止线） | 采纳 17 / 提出 17（P1×8 P2×9；无 issue） |
 | 013 | 2026-11-03 | [exp013 场景测试集：生成器 · 设备链 · 实测房间](013_scene-suite-codex.md)（exp013 目录 + scenes.json，issue #86，codex gpt-6-astra，4 轮，已达停止线） | 采纳 13 / 提出 15（P1×4 P2×11；2 条 P2 留作 issue） |

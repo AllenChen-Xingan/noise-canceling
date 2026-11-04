@@ -15,13 +15,17 @@ use crate::system::{BUDGET_MS, RunOut};
 use crate::thresholds as th;
 use crate::{Better, Level, Score, Verdict, db10};
 
+pub mod estoi;
 mod perceptual;
 mod physical;
 mod sim;
+mod speech;
 use perceptual::*;
 use physical::*;
 pub use sim::GATE_TOLERANCE_S;
 use sim::*;
+pub use speech::click_positions;
+use speech::*;
 
 /// 类别：决定置信度从哪来（012 §1）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -283,6 +287,58 @@ pub const REGISTRY: &[Info] = &[
         failure: "同 V-SIM-GATE；拖尾容许 200 ms 是〔建议值〕",
     },
     Info {
+        id: "V-WEAK",
+        name: "轻声字被吞",
+        layer: "ci",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "dB",
+        better: Better::Lower,
+        definition: "500 Hz–4 kHz 各 1/3 倍频程带上，干净轨与输出有声帧电平第 30 百分位之差（L30 损失）的均值；旁报动态范围变化 Δ(P99 − P30)",
+        algorithm: "012 §3.1 V-WEAK（IEC 60118-15 式分析）：125 ms Hann 窗、50% 重叠，帧中心落在主讲人掩码里才算；不先扣整体增益",
+        anchor: "012：L30 ≤ 1 / 2 / 4 dB 为 A / B / C，> 4 D；Δ(P99 − P30) < −3 dB 另标「被压缩」（原文标〔建议值〕）",
+        failure: "灵敏度低：合成人声上把最弱 30% 的段压 −10 / −20 dB 只读到约 1.8 / 3.7 dB，整段吞掉 30% 也只读到 2.5–3.6 dB（分位落在边界上），4 dB 线要吞掉 40% 才抓得住（scorecard 2026-11-03 实测）；残留噪声会抬高低分位；策略可以加压缩把 L30 抬回来 → 看 Δ(P99 − P30)",
+    },
+    Info {
+        id: "V-PUMPV",
+        name: "人声忽大忽小",
+        layer: "ci",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "dB²",
+        better: Better::Lower,
+        definition: "有声 100 ms 窗上，输出投影到干净轨的能量 ÷ 干净轨能量（dB）的方差",
+        algorithm: "012 §3.2 V-PUMPV；用投影能量（同 V-ONSET）去掉不相关的残留噪声；一窗里有声 10 ms 帧 ≥ 80% 才算",
+        anchor: "012：方差 ≤ 1 dB² 为 A，其余档未写；过线值暂定（待定清单）",
+        failure: "原声本身的 Lombard 变化不在干净轨里时会误报；慢变的整体增益不算抽动",
+    },
+    Info {
+        id: "V-CLICK",
+        name: "爆音 / 咔嗒",
+        layer: "ci",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "个/分钟",
+        better: Better::Lower,
+        definition: "输出一阶差分超过局部 20 ms 中位绝对偏差 k 倍、这一步跳变里干净人声解释不了的部分 ≥ 一半、且带噪输入 ±2 ms 内没有的点；5 ms 内的算一个",
+        algorithm: "012 §3.2 V-CLICK（k = 8）；「解释不了的部分」= 输出减去逐 5 ms 投影到干净轨后的残差的跳变（自加，012 原定义在平滑增益变化上误报 1746 个/分钟）；按每分钟计",
+        anchor: "012：每分钟 0 个为 A",
+        failure: "原声里的真实瞬态（杯碟）被降噪后变陡也会被计；帧边界不连续另需专查",
+    },
+    Info {
+        id: "V-ESTOI",
+        name: "可懂度变化（ΔESTOI）",
+        layer: "ci",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "Δ",
+        better: Better::Higher,
+        definition: "ESTOI(干净, 输出) − ESTOI(干净, 带噪原声)",
+        algorithm: "pystoi 0.4.1 口径的 ESTOI，Rust 重写（`verifiers/estoi.rs`），与上游对拍差 ≤ 0.01（`tests/estoi_parity.rs`）",
+        anchor: "rubric C3：ΔESTOI ≥ +0.05 A · ≥ 0 B · < 0 C · < −0.05 D",
+        failure: "对生成式伪影不敏感（012）；要求输出与干净轨逐样本对齐",
+    },
+    Info {
         id: "V-EAT-ASR",
         name: "吃字（ASR 删除 + 替换差）",
         layer: "qa",
@@ -307,6 +363,32 @@ pub const REGISTRY: &[Info] = &[
         algorithm: "9.01 s 窗、1 s 跳，不够长时自我重复（同官方 dnsmos_local.py 的口径，Rust 自写）；ort 单线程 CPU",
         anchor: "无外部锚点；只作 L0 约束（不比基线差）",
         failure: "exp003：机器分领先的 DPDFNet-2 人耳最差；007 已见 BAK 被刷高；不建议作奖励",
+    },
+    Info {
+        id: "V-NRMOS-SCOREQ",
+        name: "听感分 · SCOREQ（主）",
+        layer: "qa",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "Δ MOS",
+        better: Better::Higher,
+        definition: "SCOREQ（natural · NR）给输出的分 − 给带噪原声的分",
+        algorithm: "ort 跑上游 ONNX（adapt_nr_telephone.onnx，sha256 登记在 qa/nrmos.rs）；16 kHz 尾部补零到 320 倍数、一次前向；与上游 Python 对拍差 ≤ 0.01（tests/nrmos_parity.rs）",
+        anchor: "过线 = 不比原声差（012 §2.3 第 4 条 L0 约束）；公开众人数据上配对一致率 0.70–0.77（017 decision 第 0 节）；在我们片段上尚无判据",
+        failure: "当奖励时被钻空子最狠（018 结论 4）→ 只打分不优化；TMHINT 上系统级 −0.714（018 第二节）；exp009 里与作者一致率 0.375–0.40",
+    },
+    Info {
+        id: "V-NRMOS-DISTILL",
+        name: "听感分 · Distill-MOS（交叉）",
+        layer: "qa",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "Δ MOS",
+        better: Better::Higher,
+        definition: "Distill-MOS v7 给输出的分 − 给带噪原声的分",
+        algorithm: "上游 PyTorch 权重导出的 ONNX（不分段前向，tools/export_distillmos.py）；分段与求均值照上游 sqa.py 在 Rust 里做；与上游 Python 对拍差 ≤ 0.01",
+        anchor: "过线 = 不比原声差；公开众人数据上配对一致率 0.68–0.69（017 decision 第 3 节）",
+        failure: "与 SCOREQ 同为众包 MOS 训的，彼此一致不算独立旁证（017 第 0 节第 4 条）；系统级相关 0.772 低于 SCOREQ",
     },
 ];
 
@@ -373,6 +455,10 @@ pub fn eval(id: &str, c: &Ctx, p: &Params) -> Score {
         "V-SIM-FA" => v_sim_fa(c, p),
         "V-SIM-SWLAT" => v_sim_swlat(c, p),
         "V-SIM-QUIET" => v_sim_quiet(c, p),
+        "V-WEAK" => v_weak(c, p),
+        "V-PUMPV" => v_pumpv(c, p),
+        "V-CLICK" => v_click(c, p),
+        "V-ESTOI" => v_estoi(c, p),
         _ => Score::unknown("V-?", "", Better::Lower, format!("CI 层没有 verifier {id}")),
     }
 }

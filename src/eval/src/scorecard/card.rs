@@ -1,0 +1,220 @@
+//! 成绩单输出：一张 Markdown 表（场景 × 项 → 分数 · 过不过 · 拖后腿的声音）+ 一份 JSON（同样的内容，机读）。
+
+use serde_json::{Value, json};
+
+use super::rules::{CardStatus, SceneCard, summarize, worst};
+use super::{ClipRow, Missing};
+use crate::files::serde_name;
+
+/// 成绩单的两个文件名。
+pub const FILES: [&str; 2] = ["scorecard.json", "scorecard.md"];
+
+/// 输出目录里已有成绩单就报错：不覆盖旧结果（CLAUDE.md 第五节第 1 条；codex 第 5 轮 P1 #1）。先查再跑，免得白跑。
+pub fn ensure_fresh(dir: &std::path::Path) -> Result<(), String> {
+    for f in FILES {
+        let p = dir.join(f);
+        if p.exists() {
+            return Err(format!("{} 已存在，不覆盖：换一个 --out 目录", p.display()));
+        }
+    }
+    Ok(())
+}
+
+/// 写成绩单：两个文件都用「只新建」打开，已存在就报错（与 [`ensure_fresh`] 之间被别的进程抢先写入也不会覆盖）。
+pub fn write_new(dir: &std::path::Path, json: &str, md: &str) -> Result<(), String> {
+    use std::io::Write;
+    ensure_fresh(dir)?;
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    for (f, text) in FILES.iter().zip([json, md]) {
+        let p = dir.join(f);
+        let mut h = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&p)
+            .map_err(|e| format!("{}：{e}", p.display()))?;
+        h.write_all(text.as_bytes()).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// 整张成绩单。
+pub struct Card {
+    pub cards: Vec<SceneCard>,
+    pub worst: Vec<usize>,
+    pub missing: Vec<Missing>,
+    pub clips: usize,
+}
+
+impl Card {
+    pub fn build(rows: &[ClipRow], missing: Vec<Missing>) -> Card {
+        let cards = summarize(rows, &missing);
+        let worst = worst(&cards);
+        Card {
+            cards,
+            worst,
+            missing,
+            clips: rows.len(),
+        }
+    }
+
+    pub fn to_json(&self, meta: Value) -> Value {
+        json!({
+            "doc": "场景成绩单（vdn-eval scorecard）。规则见 specs/rubric/scorecard.md；感知项全部 L0（只作约束，不当奖励）",
+            "meta": meta,
+            "clips_scored": self.clips,
+            "scenes": self.cards,
+            "worst": self.worst.iter().map(|&i| key(&self.cards[i])).collect::<Vec<_>>(),
+            "missing": self.missing,
+        })
+    }
+
+    pub fn to_markdown(&self, title: &str) -> String {
+        let mut s = format!("# {title}\n\n");
+        let n = |st: CardStatus| self.cards.iter().filter(|c| c.status == st).count();
+        s += &format!(
+            "共 {} 个 场景 × 档 × 设备 × 系统 组合、{} 段：过 {} · 不过 {} · 待测 {}。感知项全部 L0（只作约束，不当奖励）。\n\n",
+            self.cards.len(),
+            self.clips,
+            n(CardStatus::Pass),
+            n(CardStatus::Fail),
+            n(CardStatus::Unknown)
+        );
+        s += "## 最差的场景\n\n";
+        if self.worst.is_empty() {
+            s += "（没有不过或待测的场景）\n\n";
+        }
+        for &i in &self.worst {
+            let c = &self.cards[i];
+            let bad = c.failed_items();
+            s += &format!(
+                "- **{}** · {}：{}{}\n",
+                key(c),
+                c.status.zh(),
+                if c.veto_failed.is_empty() {
+                    String::new()
+                } else {
+                    format!("否决项不过 {} · ", c.veto_failed.join(" "))
+                },
+                if bad.is_empty() {
+                    "没有不过的项（有待测）".to_string()
+                } else {
+                    format!("不过的项 {}", bad.join(" "))
+                }
+            );
+        }
+        s += "\n## 每个场景\n\n";
+        for c in &self.cards {
+            s += &format!("### {} — {}（{} 段）\n\n", key(c), c.status.zh(), c.clips);
+            if !c.missing.is_empty() {
+                s += &format!(
+                    "缺 {} 段没打分（见文末「没跑成的」），本场景最多判「待测」。\n\n",
+                    c.missing.len()
+                );
+            }
+            s += "| 项 | 否决 | 过 / 不过 / 待测（段） | 均值 | 最差（段） | 过线 | 判定 |\n|---|---|---|---|---|---|---|\n";
+            for i in &c.items {
+                let f = |v: Option<f64>| v.map_or("—".into(), |x| format!("{x:.3}"));
+                s += &format!(
+                    "| {} | {} | {} / {} / {} | {} {} | {}{} | {} | {} |\n",
+                    i.v,
+                    if i.veto { "是" } else { "" },
+                    i.pass,
+                    i.fail,
+                    i.unknown,
+                    f(i.mean),
+                    i.unit,
+                    f(i.worst),
+                    i.worst_clip
+                        .as_ref()
+                        .map_or(String::new(), |w| format!("（{w}）")),
+                    f(i.threshold),
+                    if i.report_only {
+                        format!("{}（只报不判）", i.status.zh())
+                    } else {
+                        i.status.zh().to_string()
+                    }
+                );
+            }
+            let l = &c.listen;
+            s += &format!(
+                "| 听感（SCOREQ + Distill-MOS 都说不比原声差） | | {} / {} / {} | SCOREQ Δ {} · Distill-MOS Δ {} | | Δ ≥ 0 | {} |\n\n",
+                l.pass,
+                l.fail,
+                l.unknown,
+                l.mean_scoreq.map_or("—".into(), |x| format!("{x:+.3}")),
+                l.mean_distill.map_or("—".into(), |x| format!("{x:+.3}")),
+                l.status.map_or("待测", CardStatus::zh)
+            );
+            // 两个评分模型各自的明细（只给人看，不单独决定场景）
+            if !l.models.is_empty() {
+                s += "| 评分模型 | 过 / 不过 / 待测（段） | Δ 均值 | 最差（段） |\n|---|---|---|---|\n";
+                for m in &l.models {
+                    let f = |v: Option<f64>| v.map_or("—".into(), |x| format!("{x:+.3}"));
+                    s += &format!(
+                        "| {} | {} / {} / {} | {} | {}{} |\n",
+                        m.v,
+                        m.pass,
+                        m.fail,
+                        m.unknown,
+                        f(m.mean),
+                        f(m.worst),
+                        m.worst_clip
+                            .as_ref()
+                            .map_or(String::new(), |w| format!("（{w}）"))
+                    );
+                }
+                s += "\n";
+            }
+            if !l.to_human.is_empty() {
+                s += "送人耳：\n";
+                for (clip, why) in &l.to_human {
+                    s += &format!("- {clip}：{why}\n");
+                }
+                s += "\n";
+            }
+            if !c.drags.is_empty() {
+                s += "拖后腿的声音（有这类声音的段比没有的段差多少）：\n";
+                for d in &c.drags {
+                    s += &match d.gap {
+                        Some(g) => format!(
+                            "- {} · `{}`（{}）：差 {g:+.3}（有 {} 段 {:.3} · 没有 {} 段 {:.3}）\n",
+                            d.v,
+                            d.cls,
+                            serde_name(&d.group),
+                            d.n_with,
+                            d.mean_with,
+                            d.n_without,
+                            d.mean_without
+                        ),
+                        None => format!(
+                            "- {} · `{}`：样本不够（有 {} 段 · 没有 {} 段，每组要 ≥ {}）\n",
+                            d.v,
+                            d.cls,
+                            d.n_with,
+                            d.n_without,
+                            super::rules::MIN_SPLIT
+                        ),
+                    };
+                }
+                s += "\n";
+            }
+        }
+        if !self.missing.is_empty() {
+            s += "## 没跑成的（所在场景最多判「待测」）\n\n";
+            for m in &self.missing {
+                s += &format!("- {} · {}：{}\n", m.what, m.system, m.why);
+            }
+        }
+        s
+    }
+}
+
+fn key(c: &SceneCard) -> String {
+    format!(
+        "{} · {} · {} · {}",
+        c.scene.as_str(),
+        serde_name(&c.tier),
+        c.device,
+        c.system
+    )
+}

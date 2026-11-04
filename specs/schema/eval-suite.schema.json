@@ -27,6 +27,33 @@
       },
       "type": "object"
     },
+    "DeviceKey": {
+      "description": "022 第一节的设备键。",
+      "enum": [
+        "mba-builtin",
+        "mbp-builtin",
+        "mac-intel-builtin",
+        "imac-builtin",
+        "studio-display",
+        "airpods-hfp",
+        "bt-hfp-generic",
+        "usb-headset",
+        "external-mic",
+        "iphone-continuity",
+        "mac-unknown",
+        "laptop-unknown",
+        "non-laptop",
+        "non-laptop-phone",
+        "non-laptop-tablet",
+        "non-laptop-desktop",
+        "non-laptop-conf-device",
+        "non-laptop-mic-array",
+        "non-laptop-close-talk",
+        "non-laptop-studio",
+        "non-laptop-unknown"
+      ],
+      "type": "string"
+    },
     "FaultFile": {
       "additionalProperties": false,
       "properties": {
@@ -81,8 +108,14 @@
             "V-SIM-FA",
             "V-SIM-SWLAT",
             "V-SIM-QUIET",
+            "V-WEAK",
+            "V-PUMPV",
+            "V-CLICK",
+            "V-ESTOI",
             "V-EAT-ASR",
-            "V-DNSMOS"
+            "V-DNSMOS",
+            "V-NRMOS-SCOREQ",
+            "V-NRMOS-DISTILL"
           ],
           "type": "string"
         }
@@ -162,6 +195,28 @@
       ],
       "type": "string"
     },
+    "MeetingPlace": {
+      "description": "021 主表的地点键（含兜底键 `other`，它不进成绩单）。",
+      "enum": [
+        "home-quiet",
+        "home-family",
+        "open-office",
+        "phone-booth",
+        "meeting-room",
+        "cowork",
+        "cafe",
+        "canteen",
+        "transit-hub",
+        "car-passenger",
+        "bus-metro-cabin",
+        "rail-air-cabin",
+        "street-outdoor",
+        "hotel-room",
+        "library-classroom",
+        "other"
+      ],
+      "type": "string"
+    },
     "NoiseKind": {
       "description": "噪音种类。清单里的名字由 serde 定（小写），格式正本见 `files.rs`。",
       "oneOf": [
@@ -232,6 +287,31 @@
           "const": "mute",
           "description": "全部静音：输出 = 0（刷 V-NR 的极端做法）",
           "type": "string"
+        },
+        {
+          "const": "weak_drop_30",
+          "description": "弱音节（有声 125 ms 段里干净轨能量最低的 30%）整段吞掉：V-WEAK **已知抓不到**（xfail，见 `weak_drop`）",
+          "type": "string"
+        },
+        {
+          "const": "weak_drop_40",
+          "description": "同上，吞掉最弱的 40%：V-WEAK 必须抓到",
+          "type": "string"
+        },
+        {
+          "const": "gain_wobble_6db",
+          "description": "整体乘 2 Hz、±6 dB 的增益抖动：V-PUMPV 必须抓到",
+          "type": "string"
+        },
+        {
+          "const": "clicks_5",
+          "description": "在主讲人有声段里均匀插 5 个单样本脉冲（幅度 0.5）：V-CLICK 必须抓到",
+          "type": "string"
+        },
+        {
+          "const": "noise_0db",
+          "description": "加噪到 0 dB 信噪比（相对干净轨，用本段自己的噪声轨）：输出比输入还吵，V-ESTOI 必须抓到",
+          "type": "string"
         }
       ]
     },
@@ -300,6 +380,36 @@
             "kind",
             "clips",
             "clip"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "场景测试集（exp013）：`clips` 是某个 build 的 `clips.jsonl` 仓内路径；一条任务按 场景 × 档 × 设备 展开成多段，\n由 `vdn-eval scorecard` 跑（`qa` / `ci` 不展开，判「不知道」）",
+          "properties": {
+            "clips": {
+              "type": "string"
+            },
+            "device": {
+              "$ref": "#/$defs/DeviceKey"
+            },
+            "kind": {
+              "const": "scene",
+              "type": "string"
+            },
+            "scene": {
+              "$ref": "#/$defs/MeetingPlace"
+            },
+            "tier": {
+              "$ref": "#/$defs/Tier"
+            }
+          },
+          "required": [
+            "kind",
+            "clips",
+            "scene",
+            "tier",
+            "device"
           ],
           "type": "object"
         }
@@ -589,6 +699,14 @@
         "set"
       ],
       "type": "object"
+    },
+    "Tier": {
+      "description": "档：常见档 / 压力档。",
+      "enum": [
+        "common",
+        "stress"
+      ],
+      "type": "string"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
