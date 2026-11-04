@@ -159,18 +159,25 @@ pub fn listen_one(scores: &[(&'static str, bool, Score)]) -> (Status, Option<Str
         return (Status::Unknown, None);
     };
     let split = th::NRMOS_SPLIT.def("max");
-    match (a.verdict.is_pass(), b.verdict.is_pass()) {
-        (true, true) if (da - db).abs() >= split => (
-            Status::Pass,
-            Some(format!("两个评分模型都说不比原声差，但 Δ 相差 {:.2} ≥ {split}", (da - db).abs())),
-        ),
-        (true, true) => (Status::Pass, None),
-        (false, false) if a.verdict.is_fail() && b.verdict.is_fail() => (Status::Fail, None),
-        _ if a.verdict.is_fail() || b.verdict.is_fail() => (
+    let (pa, pb) = (a.verdict.is_pass(), b.verdict.is_pass());
+    let (fa, fb) = (a.verdict.is_fail(), b.verdict.is_fail());
+    if pa && pb {
+        let gap = (da - db).abs();
+        let why = (gap >= split).then(|| {
+            format!("两个评分模型都说不比原声差，但 Δ 相差 {gap:.2} ≥ {split}")
+        });
+        (Status::Pass, why)
+    } else if fa && fb {
+        (Status::Fail, None)
+    } else if (pa && fb) || (fa && pb) {
+        (
             Status::Unknown,
-            Some(format!("一个说好一个说差：SCOREQ Δ {da:+.2} · Distill-MOS Δ {db:+.2}")),
-        ),
-        _ => (Status::Unknown, None),
+            Some(format!(
+                "一个说好一个说差：SCOREQ Δ {da:+.2} · Distill-MOS Δ {db:+.2}"
+            )),
+        )
+    } else {
+        (Status::Unknown, None)
     }
 }
 
