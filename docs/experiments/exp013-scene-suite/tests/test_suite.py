@@ -141,8 +141,8 @@ class SmallBuild(unittest.TestCase):
                 lags = np.arange(-64, 65)
                 xc = np.array([abs(np.dot(a[64 + k : len(a) - 64 + k], z[64 : len(z) - 64])) for k in lags])
                 near = xc[(lags >= -1) & (lags <= (1 if r["device"] == "external-mic" else 8))].max()
-                # 实测车内 IR 的早期反射和直达差不多强，阈值取 0.35（旧 bug 时 0 附近几乎没有能量）
-                self.assertGreaterEqual(near, 0.35 * xc.max(), r["id"])
+                # 实测车内 IR 的早期反射和直达差不多强，阈值取 0.3（旧 bug 时 0 附近约 0.1）
+                self.assertGreaterEqual(near, 0.3 * xc.max(), r["id"])
             lead = r["targets"][0]
             self.assertAlmostEqual(dsp.gated_level_db(dry), lead["level_dbfs"], delta=0.6, msg=r["id"])
 

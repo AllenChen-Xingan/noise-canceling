@@ -54,7 +54,10 @@ class Measured:
     drr: float = 0.0
 
     def __post_init__(self):
-        self.peak = int(np.argmax(np.abs(self.ir)))
+        # 直达声 = 第一个到达的强峰，不是全段最大值：车厢等小空间里早期反射可能比直达还强（MIT 列车 IR 实测如此）
+        a = np.abs(self.ir)
+        first = int(np.flatnonzero(a >= 0.5 * a.max())[0])
+        self.peak = first + int(np.argmax(a[first : first + int(0.001 * SR) + 1]))
         self.ir = self.ir / self.ir[self.peak]
         w = int(round(CP["step2_direction"]["direct_window_ms"] * 1e-3 * SR))
         lo, hi = max(0, self.peak - w), self.peak + w + 1
