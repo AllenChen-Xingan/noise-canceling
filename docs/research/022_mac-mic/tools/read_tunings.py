@@ -27,14 +27,20 @@ def db20(x):
 
 
 def beam_stats(beam, hz):
-    """返回 (范数 dB, 同相增益/范数 dB)；范数 = 波束器对各麦独立自噪声的放大。"""
+    """返回某频点的三个量（都是 dB）：
+
+    norm      ‖w‖：波束器对各麦互不相关的自噪声的功率放大
+    in_phase  |Σw|：三麦收到完全相同（同相同幅）信号时的绝对增益
+    wng_rel   |Σw| / (‖w‖·√M)：同相信号的白噪声增益，相对等权求和（0 dB）
+    """
     k = int(round(hz / BIN_HZ))
     mics = sorted(beam["RealCoefficients"])
     re = [f32_be(beam["RealCoefficients"][m])[k] for m in mics]
     im = [f32_be(beam["ImagCoefficients"][m])[k] for m in mics]
     norm = math.sqrt(sum(r * r + i * i for r, i in zip(re, im)))
-    coherent = math.hypot(sum(re), sum(im))
-    return db20(norm), db20(coherent / max(norm, 1e-12) / math.sqrt(len(mics)))
+    in_phase = math.hypot(sum(re), sum(im))
+    wng_rel = in_phase / max(norm, 1e-12) / math.sqrt(len(mics))
+    return {"norm": db20(norm), "in_phase": db20(in_phase), "wng_rel": db20(wng_rel)}
 
 
 def graph_units(path):
