@@ -109,7 +109,7 @@
 
 ### icsi.md（怀疑派补）
 - **场景键**：meeting-room
-- **设备键**：close-talk（头戴为主，早期部分领夹）, array（桌面 4 支 PZM）, other（「假 PDA」上 2 支廉价麦；模板无此键，记为 unknown 亦可）【沿用 014】
+- **设备键**：close-talk（头戴为主，早期部分领夹）, array（桌面 4 支 PZM）, unknown（「假 PDA」上 2 支廉价麦，型号未写）【沿用 014】
 - **笔记本段**：没有；按通道可筛，最接近消费级的是 PDA 廉价麦
 - **转写**：有（带时间）
 - **语体**：研究组例会自然对话；转写用 VocalSound 标记笑声（laugh 是最常见的非言语标记，另有 Comment 标长段笑），原始转写共 13,678 处笑声；MRDA 对话行为层覆盖全部 75 场，含 backchannel 类（5 类版 14,275 处）【论文：Laskowski & Burger 2007；MRDA 相关论文 arXiv 1807.08587，经检索摘录】；无情绪标注
