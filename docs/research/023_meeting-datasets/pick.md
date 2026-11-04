@@ -1,6 +1,7 @@
 # 建议先下的一小批（只列不下）
 
 > 2026-11-03 · 手下 mtgdata · issue #82。用途：要拿真实录音做评测锚时，先下哪几份。**本文不下载任何东西**；下不下、何时下，见 `decision.md` 待人拍板。
+> **措辞口径**：本文说「未找到 / 🟥」一律指「本轮检索范围内，没有确认到能筛出的匹配子集」，不等于世上没有；「自录 / 回放重录」是补法建议，不是结论。
 > 挑选顺序：笔记本 / Mac 录的优先 → 带转写的优先 → 许可干净的优先 → 体积小的优先。每个开会地点至少一份；找不到的写明。
 > 大小标【实测】的，是读远端 HTTP 头或 zip 目录得到的；标【官方文档】的，出自数据集页面。
 
@@ -10,7 +11,7 @@
 
 | 数据集 | 补哪个格子 | 为什么 | 大小 |
 |---|---|---|---|
-| DR-VCTK | `open-office` × `mba-builtin` | 唯一能按地点对上的 MacBook Air 录音（回放重录），有干净参考；End-user Licence 未读，按 D65 只评测 | 1.67 GB【官方文档】 |
+| DR-VCTK | `open-office` × `mba-builtin` | 本轮找到的、能按地点对上的 MacBook Air 录音（回放重录），有干净参考；End-user Licence 未读，按 D65 只评测 | 1.67 GB【官方文档】 |
 | ACE Chromebook 档 | 不补真实锚格子（合成原料） | 笔记本内置 2 麦录的实测 RIR + 现场噪声，语音要自己卷积相加，适合做「真实设备链」合成；许可两处冲突，按只评测 | 1.1 GB【官方文档】 |
 | DNS4 盲测 | `home-family` · `open-office` × `non-laptop-desktop` / `non-laptop-phone` | 859 条逐条带设备字段（Mobile 638 / desktop 221） | 1.66 GB【实测】 |
 | DNS5 盲测 | `cafe` · `transit-hub` | 标了咖啡馆 4 条、机场 25 条；`ap` 段分 desktop / mobile | 3.89 GB【实测】 |
@@ -36,15 +37,15 @@
 | 场景键 | 第一、二节里的 | 没着落时怎么办 |
 |---|---|---|
 | `meeting-room` | AliMeeting · AMI | — |
-| `open-office` | DR-VCTK · DNS 2021 | DR-VCTK 是回放，DNS 2021 众包段地点与家混、无逐条地点标签 → 要「笔记本 + 开放办公 + 主说话人」得自录（`matrix.md` 第三节） |
-| `home-family` | CHiME-6 · DNS 2021 · DNS4 | 没有「一人开会、家人在旁」→ 合成或自录 |
+| `open-office` | DR-VCTK · DNS 2021 | DR-VCTK 是回放，DNS 2021 众包段地点与家混、无逐条地点标签；建议：自录（`matrix.md` 第三节） |
+| `home-family` | CHiME-6 · DNS 2021 · DNS4 | 本轮未确认「一人开会、家人在旁」的子集；建议：合成或自录 |
 | `home-quiet` | 🟥 | MagicData-RAMC 只有整包 15 GB，不进小批；先用 DNS 2021 里的安静段代替（要人工挑） |
 | `cafe` | DNS5 盲测 · LIVETALK | 没有笔记本录的 → 合成 |
 | `canteen` | EasyCom | — |
-| `transit-hub` | DNS5 盲测 · LIVETALK | 有主说话人的只有手机通话；笔记本的 → 自录 |
-| `bus-metro-cabin` | 🟥 | 唯一的真人集 CHiME-3 BUS 要 LDC 付费 → 合成（TAU / DEMAND 背景） |
+| `transit-hub` | DNS5 盲测 · LIVETALK | 找到的真人来源是手机通话；笔记本的建议自录 |
+| `bus-metro-cabin` | 🟥 | 本轮找到的真人集只有 CHiME-3 BUS（LDC 付费）；建议：合成（TAU / DEMAND 背景） |
 | `car-passenger` | LIVETALK · AISHELL-5 | — |
-| `street-outdoor` | LIVETALK | 有主说话人的只有手机通话；笔记本的 → 自录 |
+| `street-outdoor` | LIVETALK | 找到的真人来源是手机通话与 VoxCeleb 户外采访（要人工挑）；笔记本的建议自录 |
 | `library-classroom` | 🟥 | ASCEND（安静教室，领夹）可选，CC BY-SA → 训练可（D64） |
 | `phone-booth` · `cowork` · `rail-air-cabin` · `hotel-room` | 🟥 | 本轮没找到也没专门查；先合成 |
 

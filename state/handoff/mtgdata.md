@@ -15,6 +15,8 @@
 | `docs/research/023_meeting-datasets/cards/`（44 张）· `notes/`（5 份） | 4 路调研 + 怀疑派产出 |
 | `docs/research/023_meeting-datasets/cards-014-addendum.md` | 014 的 33 张卡补字段与疑误（由 4 份分路补充合并，原分路文件已删） |
 | `docs/research/023_meeting-datasets/matrix.md` · `pick.md` · `decision.md` · `sources.md` | 覆盖表 · 建议先下 · 结论与待拍板 · 来源 |
+| `docs/research/014_real-datasets/cards/README.md` | 经大总管授权，只改「结论」列受 D64 影响的 5 行 + 页首口径一句；旧 → 新列在 addendum 页首 |
+| `docs/reviews/023_meeting-datasets-codex.md` | codex 评审记录 |
 
 ## 发现
 - 场景键已对齐 021 catalog v1（scenes 应我请求加了 `bus-metro-cabin`、`other`）；设备键已对齐 022 devices v1（macmic 加了 `mac-unknown` 与 8 个 `non-laptop-*` 子键）
@@ -46,3 +48,5 @@
 - 场景键 v1、设备键 v1 到 → 迁移全部卡；检查脚本改为直接读 021 / 022 正本 → 20 条测试过、0 处问题
 - 写 matrix · pick · decision · sources → 完成
 - 大总管要求：不再去旁边 worktree 找正本 → 改为只认本仓路径 + VDN_KEYS_DIR + `--research` 参数（测试用），测试用内置小键表 → 23 条测试过；不设变量时退出码 2 并提示变量名【实测】
+- codex 第 1 轮 P1×7 P2×3、第 2 轮 P1×2 P2×4，全部属实已改；第 2 轮发现调研沿用作废的 D26，按 D64 改判 SA 为可训练
+- 大总管授权改 014 索引结论列 → 改 5 行 + 页首一句，单卡未动
