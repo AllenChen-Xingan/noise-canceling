@@ -176,9 +176,9 @@ fn ragged_input_with_power_falls_back_to_self_compute() {
     let x = common::signal();
     let own = common::run_ragged(&x, |sa, h| sa.push_hop(h));
     let pow = vec![1.0f32; FRONTEND.bins()];
-    let mut short_calls = 0u64;
-    let mut ffts = 0u64;
+    let (mut short_calls, mut calls, mut ffts) = (0u64, 0u64, 0u64);
     let mixed = common::run_ragged(&x, |sa, h| {
+        calls += 1;
         if h.len() == HOP {
             sa.push_hop(h); // 整 hop 照常自算
         } else {
@@ -189,5 +189,5 @@ fn ragged_input_with_power_falls_back_to_self_compute() {
     });
     assert!(short_calls > 0);
     assert_eq!(common::digest(&own), common::digest(&mixed));
-    assert_eq!(ffts, own.len() as u64 * 0 + ffts); // 计数不倒退
+    assert_eq!(ffts, calls, "每次都应自算一次 FFT");
 }
