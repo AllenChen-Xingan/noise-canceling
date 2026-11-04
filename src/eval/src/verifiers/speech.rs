@@ -280,6 +280,10 @@ mod tests {
     use crate::probes::Probe;
     use crate::synth::{NoiseKind, SceneSpec, TalkerSpec, render};
 
+    pub(super) fn clip_pub() -> Clip {
+        clip()
+    }
+
     fn clip() -> Clip {
         render(&SceneSpec {
             dur_s: 10.0,
@@ -429,5 +433,26 @@ mod tests {
             score("V-WEAK", &c, &out).verdict,
             Verdict::Unknown(_)
         ));
+    }
+}
+#[cfg(test)]
+mod scratch_click {
+    use super::*;
+    #[test]
+    fn dbg_click() {
+        let c = super::tests::clip_pub();
+        let out: Vec<f32> = c.clean.iter().zip(&c.noise).map(|(s, n)| s + 0.03 * n).collect();
+        let sr = c.sr;
+        let r = residual(&out, &c.clean, sr);
+        let fo = outliers(&out, sr, 8.0);
+        let fm = outliers(&c.mix, sr, 8.0);
+        for i in 0..fo.len() {
+            let dout = (out[i + 1] - out[i]).abs();
+            let dres = (r[i + 1] - r[i]).abs();
+            if fo[i] && dres >= 0.5 * dout {
+                let near = fm[i.saturating_sub(32)..(i + 33).min(fm.len())].iter().any(|x| *x);
+                eprintln!("i={i} t={:.4} dout={dout:.5} dres={dres:.5} clean={:.5} cdiff={:.5} mixflag={near}", i as f64 / sr as f64, c.clean[i], c.clean[i+1]-c.clean[i]);
+            }
+        }
     }
 }
