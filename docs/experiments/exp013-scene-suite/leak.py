@@ -41,7 +41,7 @@ def exp006_train():
 
 def used(records):
     """从清单记录里收集用过的素材（也用来写 exclude.json）。"""
-    spk, dem, fns, esc, other = set(), [], set(), set(), []
+    spk, dem, fns, esc, other, rir, room_noise = set(), [], set(), set(), [], set(), []
 
     def walk(src):
         if not isinstance(src, dict):
@@ -57,20 +57,25 @@ def used(records):
             esc.add(src["file"])
         elif k in ("commons-zh", "music"):
             other.append((src["file"], src["start"], src["len"]))
+        elif k == "rir":
+            rir.add(f"{src['dataset']}/{src['file']}#ch{src.get('ch', 0)}")
+        elif k in ("ace-noise", "mcv-noise"):
+            room_noise.append((src["kind"], src["file"], src.get("ch", 0), src["start"], src["len"], src["sr"]))
         elif k not in ("babble", "events"):
             raise ValueError(f"leak.used 不认识素材类型 {k!r}：先在这里登记它怎么查，再用")
         for key in ("talkers", "items"):
             for s in src.get(key, []):
                 walk(s)
-        if "music" in src and isinstance(src["music"], dict):
-            walk(src["music"])
+        for key in ("music", "rir"):
+            if isinstance(src.get(key), dict):
+                walk(src[key])
 
     for r in records:
         for t in r["targets"]:
             walk(t["src"])
         for s in r["sounds"]:
             walk(s["src"])
-    return {"speakers": spk, "demand": dem, "fns": fns, "esc50": esc, "other": other}
+    return {"speakers": spk, "demand": dem, "fns": fns, "esc50": esc, "other": other, "rir": rir, "room_noise": room_noise}
 
 
 def check(records):
@@ -131,6 +136,9 @@ def exclude_table(records):
         "demand_segments": [{"env": e, "ch": c, "start": s, "len": n, "sr": sr} for e, c, s, n, sr in sorted(set(u["demand"]))],
         "esc50_files": sorted(u["esc50"]),
         "synth_fns": sorted(u["fns"]),
+        "rir_files": sorted(u["rir"]),
+        "room_noise_segments": [{"kind": k, "file": f, "ch": c, "start": s, "len": n, "sr": sr}
+                                for k, f, c, s, n, sr in sorted(set(u["room_noise"]))],
         "other_segments": [{"file": f, "start": s, "len": n, "sr": 16000, "_说明": "重采样到 16 kHz 后的样本号"}
                            for f, s, n in sorted(set(u["other"]))],
     }

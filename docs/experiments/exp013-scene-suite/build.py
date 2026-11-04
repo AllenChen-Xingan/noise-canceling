@@ -27,10 +27,11 @@ import labels  # noqa: E402
 import leak  # noqa: E402
 import manifest  # noqa: E402
 import pools  # noqa: E402
+import reverb_check  # noqa: E402
 from dsp import SR, sample_hash  # noqa: E402
 
 ROOT = HERE.parents[2]
-CODE = ["build.py", "compose.py", "tracks.py", "labels.py", "manifest.py", "leak.py", "pools.py", "rooms.py",
+CODE = ["build.py", "compose.py", "tracks.py", "labels.py", "manifest.py", "leak.py", "pools.py", "rooms.py", "rirs.py", "reverb_check.py",
         "synth_sounds.py", "device_chain.py", "dsp.py"]
 PARAMS = ["scenes.json", "sounds.json", "device_chain.json", "materials.json"]
 
@@ -76,6 +77,9 @@ def run_job(job):
     errs = manifest.validate(rec)
     if errs:
         raise ValueError(f"{cid} 清单字段不合格：{errs[:5]}")
+    errs = reverb_check.check(rec)
+    if errs:
+        raise ValueError(f"{cid} 混响一致性不过：{errs[:5]}")
     return rec
 
 
