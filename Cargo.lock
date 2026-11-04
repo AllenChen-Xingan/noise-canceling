@@ -1963,6 +1963,7 @@ dependencies = [
  "vdn-backend-ort",
  "vdn-dsp",
  "vdn-engine",
+ "vdn-scene",
  "vdn-types",
 ]
 

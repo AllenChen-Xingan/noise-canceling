@@ -52,21 +52,32 @@ fn pct(v: &mut [f64], q: f64) -> f64 {
 }
 
 fn main() {
-    let rounds: usize = std::env::args().nth(1).and_then(|s| s.parse().ok()).unwrap_or(6);
-    let path = ModelKind::Gtcrn.default_path().expect("找不到 GTCRN 模型文件（设 VDN_GTCRN_ONNX）");
+    let rounds: usize = std::env::args()
+        .nth(1)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(6);
+    let path = ModelKind::Gtcrn
+        .default_path()
+        .expect("找不到 GTCRN 模型文件（设 VDN_GTCRN_ONNX）");
     let mut m = Gtcrn::open(&path).expect("打开 GTCRN");
     let x = signal();
     run(&mut m, &x, false); // 预热
     let (mut own, mut bor) = (Vec::new(), Vec::new());
     for r in 0..rounds {
         // 交替先后，抵消漂移
-        let order = if r % 2 == 0 { [false, true] } else { [true, false] };
+        let order = if r % 2 == 0 {
+            [false, true]
+        } else {
+            [true, false]
+        };
         for b in order {
             let t = run(&mut m, &x, b);
             if b { bor.extend(t) } else { own.extend(t) }
         }
     }
-    println!("| 走法 | 帧数 | 模型 中位 µs | 场景 中位 µs | 场景 p99 µs | 合计 中位 µs | 合计 p99 µs |");
+    println!(
+        "| 走法 | 帧数 | 模型 中位 µs | 场景 中位 µs | 场景 p99 µs | 合计 中位 µs | 合计 p99 µs |"
+    );
     println!("|---|---|---|---|---|---|---|");
     for (name, t) in [("场景自算（改前）", &own), ("场景借谱（013）", &bor)] {
         let mut mo: Vec<f64> = t.iter().map(|p| p.0).collect();
@@ -82,5 +93,6 @@ fn main() {
             pct(&mut to, 0.99)
         );
     }
-    println!("\n帧长 16 ms（每帧预算 16000 µs）；{rounds} 轮 × {HOPS} 帧，两种走法交替先后。"); // tidy: 非采样率：16000 µs = 16 ms 一帧的预算
+    let budget = FRONTEND.hop as f64 * 1e6 / f64::from(FRONTEND.sample_rate);
+    println!("\n每帧预算 {budget:.0} µs（一个 hop）；{rounds} 轮 × {HOPS} 帧，两种走法交替先后。");
 }
