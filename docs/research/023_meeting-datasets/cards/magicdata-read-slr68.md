@@ -17,3 +17,4 @@
 
 ## 备注
 - 「mostly」意味着少量非手机录音，具体是什么设备未查到。
+- 怀疑派复核：OpenSLR 页许可、755 h / 1,080 人、train 52G / dev 1.0G / test 2.2G、「mostly mobile recorded data」「quiet indoor environment」逐条核对一致；另：RAMC 论文表 5 把 MAGICDATA-READ 设备写作「mobile phone, mic」，可佐证少量非手机段是麦克风【论文 arXiv:2203.16844】。字段无改动。
