@@ -2,7 +2,7 @@
 //!
 //! | 规则 | 查什么 | 放行 |
 //! |---|---|---|
-//! | R-FFT | `src/**/*.rs` 的代码里出现 FFT 计划的标识符（[`BANNED`]：`RealFftPlanner`、rustfft 的各种 `FftPlanner*`、`plan_fft_forward` / `plan_fft_inverse` / `plan_fft`），**测试与示例也一样** | 统一模块 [`HOME`] 之内；[`ALLOW`] 白名单（每条写原因） |
+//! | R-FFT | `src/**/*.rs` 的代码里出现 FFT 计划的标识符（[`BANNED`]：`RealFftPlanner`、rustfft 的各种 `FftPlanner*`、`plan_fft_forward` / `plan_fft_inverse` / `plan_fft`），**测试与示例也一样** | 统一模块 [`HOME`] 之内；[`ALLOW`] 白名单（每条写原因，并限定只许哪几个标识符） |
 //!
 //! 白名单只许缩短：条目指向的文件不在了，或文件里已经没有命中，也报红（提醒删掉这一条）。
 //!
@@ -38,18 +38,21 @@ pub const BANNED: [&str; 10] = [
     "plan_fft",
 ];
 
-/// 白名单：(文件, 原因)。
-pub const ALLOW: [(&str, &str); 3] = [
+/// 白名单：(文件, 这个文件只许出现的标识符, 原因)。不在第二列的标识符照样报红（例外只放行声明过的那一种计划）。
+pub const ALLOW: [(&str, &[&str], &str); 3] = [
     (
         "src/eval/src/verifiers/speech.rs",
+        &["RealFftPlanner", "plan_fft_forward"],
         "评测器人声细节（f64 周期 Hann），下一 PR 改调 vdn_dsp::FrameFft",
     ),
     (
         "src/eval/src/verifiers/estoi.rs",
+        &["RealFftPlanner", "plan_fft_forward"],
         "评测器 ESTOI（f64 numpy 内缩 Hann），下一 PR 改调 vdn_dsp::FrameFft",
     ),
     (
         "src/scene/src/features.rs",
+        &["RealFftPlanner", "plan_fft_inverse"],
         "逆 FFT：功率谱 → 自相关求谐波度，不是分析频谱（013 第 5 节：留着）",
     ),
 ];
@@ -77,7 +80,7 @@ pub fn hits(file: &syn::File) -> Vec<(usize, String)> {
     out
 }
 
-/// 一个文件的问题（不看白名单）。文件解析不了也报（不静默跳过）。
+/// 一个文件的问题（含白名单判断）。文件解析不了一律报（白名单文件也报，不静默跳过）。
 pub fn fft_problems(rel: &str, src: &str) -> Vec<String> {
     if rel.starts_with(HOME) {
         return Vec::new();
@@ -91,8 +94,20 @@ pub fn fft_problems(rel: &str, src: &str) -> Vec<String> {
             )];
         }
     };
-    hits(&file)
+    let found = hits(&file);
+    let entry = ALLOW.iter().find(|(p, _, _)| *p == rel);
+    if let Some((_, ids, _)) = entry
+        && found.is_empty()
+    {
+        let _ = ids;
+        return vec![format!(
+            "{rel}：在 R-FFT 白名单里但已没有 FFT 计划，删掉 fft_site.rs 里这一条"
+        )];
+    }
+    let ok: &[&str] = entry.map_or(&[], |(_, ids, _)| ids);
+    found
         .into_iter()
+        .filter(|(_, id)| !ok.contains(&id.as_str()))
         .map(|(l, id)| {
             format!(
                 "{rel}:{l}：自建 FFT 计划 `{id}`（R-FFT）——频谱计算只在 {HOME}，改调 vdn_dsp::FrameFft / StreamingStft / power_into"
@@ -111,23 +126,12 @@ pub fn check(root: &Path, problems: &mut Vec<String>) {
         let Ok(rel) = f.strip_prefix(root).map(|p| p.display().to_string()) else {
             continue;
         };
-        let allowed = ALLOW.iter().any(|(p, _)| *p == rel);
         match fs::read_to_string(f) {
-            Ok(src) => {
-                let p = fft_problems(&rel, &src);
-                if allowed && p.is_empty() {
-                    problems.push(format!(
-                        "{rel}：在 R-FFT 白名单里但已没有 FFT 计划，删掉 fft_site.rs 里这一条"
-                    ));
-                }
-                if !allowed {
-                    problems.extend(p);
-                }
-            }
+            Ok(src) => problems.extend(fft_problems(&rel, &src)),
             Err(e) => problems.push(format!("读 {rel}：{e}（R-FFT）")),
         }
     }
-    for (p, _) in ALLOW {
+    for (p, _, _) in ALLOW {
         if !root.join(p).exists() {
             problems.push(format!("{p}：R-FFT 白名单里的文件不存在，删掉这一条"));
         }
