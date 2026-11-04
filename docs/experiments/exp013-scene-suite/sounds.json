@@ -38,6 +38,7 @@
     "turn-signal":     {"zh": "转向灯",         "group": "event",   "is_speech": false, "directional": true,  "source": {"kind": "synth", "fn": "turn_signal"}, "license": "own"},
     "door-chime":      {"zh": "车门提示音",     "group": "event",   "is_speech": false, "directional": true,  "source": {"kind": "synth", "fn": "door_chime"}, "license": "own"},
     "luggage":         {"zh": "行李箱轮子",     "group": "event",   "is_speech": false, "directional": true,  "source": {"kind": "synth", "fn": "luggage"}, "license": "own"},
+    "pa-chime":        {"zh": "广播提示音",     "group": "event",   "is_speech": false, "directional": false, "source": {"kind": "synth", "fn": "pa_chime"}, "license": "own", "only_with": "announce"},
     "page-turn":       {"zh": "翻书",           "group": "event",   "is_speech": false, "directional": true,  "source": {"kind": "synth", "fn": "page_turn"}, "license": "own"},
     "talker":          {"zh": "旁人说话",       "group": "speech",  "is_speech": true,  "directional": true,  "source": {"kind": "speech", "style": "talker"}, "license": "CC-BY-4.0"},
     "muffled-talker":  {"zh": "隔墙人声",       "group": "speech",  "is_speech": true,  "directional": false, "source": {"kind": "speech", "style": "muffled"}, "license": "CC-BY-4.0"},

@@ -158,7 +158,8 @@ def make_clip(scene, tier, idx, device):
             elif style == "nav":
                 x, s = tracks.nav_track(rng_mat, n)
             elif style == "announce":
-                x, s = tracks.announce_track(rng_mat, n)
+                x, s, (xc, sc_src) = tracks.announce_track(rng_mat, n)
+                add("pa-chime", sc.diffuse(xc, dist=dist), sc_src)
             else:
                 x, s = tracks.muffled_track(rng_mat, n, gap)
         elif c["group"] == "event":

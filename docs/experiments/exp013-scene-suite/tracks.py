@@ -95,15 +95,16 @@ def nav_track(rng, n):
 
 
 def announce_track(rng, n):
+    """广播：先一段提示音、再人声。返回 (人声, src, 提示音轨)；提示音不是语音，compose 另记成 pa-chime。"""
     spk, files = _interf_spk(rng)
     chime = ss.pa_chime(rng)
     t0 = int(_u(rng, (0.5, 4.0)) * SR)
-    x = np.zeros(n)
-    x[t0 : t0 + len(chime)] = 0.5 * chime[: n - t0] / (np.max(np.abs(chime)) + 1e-12)
+    c = np.zeros(n)
+    c[t0 : t0 + len(chime)] = chime[: n - t0]
     s = t0 + len(chime) + int(0.3 * SR)
     sp, utts = speech_fill(rng, files, n, s, min(n, s + int(_u(rng, (3.0, 6.0)) * SR)), (0.3, 0.6))
     y, p = ss.speaker(sp, rng, "announce")
-    return x + y, {"kind": "librispeech", "spk": spk, "utts": utts, "chime_at": t0, **p}
+    return y, {"kind": "librispeech", "spk": spk, "utts": utts, **p}, (c, {"kind": "synth", "fn": "pa_chime", "at": t0})
 
 
 def muffled_track(rng, n, gap):
