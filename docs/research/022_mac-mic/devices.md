@@ -20,8 +20,19 @@
 | `usb-headset` | USB 或 3.5 mm 有线耳麦（嘴边近讲） | 1–2 声道 | 多数不处理，少数带硬件降噪【推断】 | 因品牌而异 | 未查到 |
 | `external-mic` | 桌面外接麦（USB 电容 / 动圈，如 Shure MV5） | 1–2 声道 | 一般不处理 | 无 | 因型号而异 |
 | `iphone-continuity` | 连续互通相机 / 麦克风：iPhone 当 Mac 的麦 | 待查 | 待查（可能带 iPhone 端处理） | 待查 | 未查到 |
-| `laptop-unknown` | 笔记本内置麦，品牌型号未写（如 3D-Speaker 的 9.6 万条） | — | — | — | — |
-| `non-laptop` | 数据集用的不是笔记本（手机、近讲参考麦、录音棚） | — | — | — | — |
+| `mac-unknown` | Mac 笔记本，型号未知、是否内置麦未核（如 DNS 2021 众包者自填 macbook / mac 的约 31 条） | — | — | — | — |
+| `laptop-unknown` | 非 Mac 或品牌未写的笔记本内置麦（3D-Speaker、DNS 文件名里的 laptop、Chromebook、Surface Book） | — | — | — | — |
+| `non-laptop` | 父类：不是笔记本。打标签时尽量用下面的子键 | — | — | — | — |
+| `non-laptop-phone` | 手机 | — | — | — | — |
+| `non-laptop-tablet` | 平板 | — | — | — | — |
+| `non-laptop-desktop` | 台式机 / 摄像头自带麦 | — | — | — | — |
+| `non-laptop-conf-device` | 会议终端（会议室一体机、全向会议麦） | — | — | — | — |
+| `non-laptop-mic-array` | 研究用麦克风阵列 | — | — | — | — |
+| `non-laptop-close-talk` | 近讲 / 领夹 / 头戴参考麦 | — | — | — | — |
+| `non-laptop-studio` | 录音棚麦 | — | — | — | — |
+| `non-laptop-unknown` | 设备未写 | — | — | — | — |
+
+> v1（2026-11-03）：应 mtgdata 加 `mac-unknown` 与 `non-laptop` 的 8 个子键，用于数据卡区分「这份集离笔记本多远」。子键统一写成 `non-laptop-<子类>`。
 
 ## 二、和现在评测集的对应（推断，待 simulation.md 定）
 
