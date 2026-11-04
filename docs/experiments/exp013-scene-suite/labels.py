@@ -71,7 +71,8 @@ def label(arrays, meta):
     m = measure(owner, stems, arrays["floor"], cls_of)
     r = meta["owner_rir"]
     m.update({
-        "t60_s": round(schroeder_t60(r.full), 3), "drr_db": round(drr_db(r), 2),
+        # T60 在混响部分上量（不含直达窗）：近距离时直达声会把 Schroeder 曲线前段拉陡
+        "t60_s": round(schroeder_t60(r.rest), 3) if r.t60 >= 0.03 else 0.0, "drr_db": round(drr_db(r), 2),
         "overlap_ratio": round(iv_overlap(owner_iv, interf_iv) / max(iv_len(owner_iv), 1), 4),
         "owner_level_dbfs": round(p56_level_db(owner), 2),
     })

@@ -166,7 +166,8 @@ def schroeder_t60(h, sr=SR):
         return 0.0
     t = np.arange(i5[0], i25[0]) / sr
     slope = np.polyfit(t, edc[i5[0] : i25[0]], 1)[0]
-    return float(-60.0 / slope) if slope < 0 else 0.0
+    t60 = float(-60.0 / slope) if slope < 0 else 0.0
+    return t60 if t60 < 30.0 else 0.0  # 只有零星脉冲（如户外地面反射）时斜率近 0，按无混响算
 
 
 def sample_hash(x):
