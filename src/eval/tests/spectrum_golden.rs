@@ -15,7 +15,10 @@ use vdn_eval::synth::{Clip, InterfMode, InterfSpec, NoiseKind, SceneSpec, Talker
 use vdn_eval::system::{SystemKind, SystemSpec, run};
 use vdn_eval::verifiers::estoi::estoi;
 use vdn_eval::verifiers::{Ctx, Params, REGISTRY, eval};
-use vdn_types::ContentId;
+use vdn_types::{ContentId, MODEL_RATE};
+
+/// ESTOI 内部采样率（`verifiers/estoi.rs` 的私有常量 `FS`）：传它时不重采样，覆盖另一条路。
+const ESTOI_RATE: u32 = 10_000; // tidy: 非采样率：ESTOI 算法自己的固定内部采样率，不是 IO / 模型采样率
 
 const FIXTURE: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -69,7 +72,12 @@ impl Acc {
         self.bytes.push(0);
     }
     fn line(&self, name: &str) -> String {
-        format!("{name} {} {} {}", ContentId::of(&self.bytes), self.n, platform())
+        format!(
+            "{name} {} {} {}",
+            ContentId::of(&self.bytes),
+            self.n,
+            platform()
+        )
     }
 }
 
@@ -107,7 +115,7 @@ fn lines() -> Vec<String> {
         rw.text(&format!("{:?}{:?}", r.voiced, r.bypass));
         // 2. ESTOI：16 kHz（先重采样）与 10 kHz（不重采样）两条路
         for (a, b) in [(&c.clean, &c.mix), (&c.clean, &r.out), (&c.clean, &c.clean)] {
-            for sr in [16_000, 10_000] {
+            for sr in [MODEL_RATE, ESTOI_RATE] {
                 es.f64(estoi(a, b, sr).unwrap_or(f64::NAN));
             }
         }
