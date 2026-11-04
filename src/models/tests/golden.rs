@@ -7,8 +7,8 @@
 //! （ORT 与系统数学库在别的平台上末位可能不同）。
 //! 另一条对拍引擎最终输出（48 kHz `Pipeline`，基准 `tests/fixtures/pipeline_golden.txt`），因为成绩单测的是它。
 //! 本文件只用改前就有的接口，才能在 main 的原样源码上生成基准；借谱的检查在 `tap.rs`。
-use vdn_models::{Gtcrn, ModelKind, artifact_id};
 use vdn_engine::{Engine, Pipeline, SafetyConfig};
+use vdn_models::{Gtcrn, ModelKind, artifact_id};
 use vdn_types::{ContentId, IO_RATE, MODEL_RATE, Model};
 
 const FIXTURE: &str = concat!(
@@ -110,7 +110,8 @@ fn pipeline_output_matches_golden() {
     let Some(path) = model_path() else { return };
     let weights = artifact_id(&path).expect("读权重");
     let m = Gtcrn::open(&path).expect("打开 GTCRN");
-    let mut p = Pipeline::new(Engine::new(m, SafetyConfig::default()), IO_RATE).expect("48 kHz 应可用");
+    let mut p =
+        Pipeline::new(Engine::new(m, SafetyConfig::default()), IO_RATE).expect("48 kHz 应可用");
     // 同一段确定性信号按 3 倍拉长成 48 kHz（每点重复 3 次，只用复制，跨平台一致）
     let x: Vec<f32> = input().iter().flat_map(|&v| [v, v, v]).collect();
     let mut y = vec![0.0f32; x.len()];
