@@ -18,6 +18,24 @@ def read_keys(text):
     return [m.group(1) for m in (ROW.match(l) for l in text.splitlines()) if m]
 
 
+def key_section(text):
+    """第一节（键表）的正文：从「## 一、」到下一个「## 」之前。"""
+    out, inside = [], False
+    for line in text.splitlines():
+        if line.startswith("## "):
+            inside = line.startswith("## 一、")
+            continue
+        if inside:
+            out.append(line)
+    return "\n".join(out)
+
+
+def stray_rows(text):
+    """第一节以外、却会被下游（mtgdata check_cards.py）读成设备键的行。"""
+    inside = read_keys(key_section(text))
+    return [k for k in read_keys(text) if k not in inside]
+
+
 def problems(keys):
     out = []
     seen = set()
@@ -37,8 +55,10 @@ def problems(keys):
 def main(argv):
     path = argv[1] if len(argv) > 1 else DEFAULT
     with open(path, encoding="utf-8") as fh:
-        keys = read_keys(fh.read())
+        text = fh.read()
+    keys = read_keys(key_section(text))
     errs = problems(keys)
+    errs += ["第一节以外的行会被读成设备键：%s" % k for k in stray_rows(text)]
     for e in errs:
         print(e)
     print("设备键 %d 个，问题 %d 处" % (len(keys), len(errs)))

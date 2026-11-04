@@ -19,10 +19,22 @@ def be(vals):
 class CheckDevicesTest(unittest.TestCase):
     def test_real_table_passes(self):
         with open(check_devices.DEFAULT, encoding="utf-8") as fh:
-            keys = check_devices.read_keys(fh.read())
+            text = fh.read()
+        keys = check_devices.read_keys(check_devices.key_section(text))
         self.assertIn("mba-builtin", keys)
         self.assertIn("non-laptop-phone", keys)
         self.assertEqual(check_devices.problems(keys), [])
+        # 下游按整份文件读；整份读出的必须正好是键表那一节
+        self.assertEqual(check_devices.read_keys(text), keys)
+        for mode in ("standard", "voice-isolation", "wide-spectrum", "unknown"):
+            self.assertNotIn(mode, keys)
+
+    def test_stray_backtick_row_outside_key_section_is_caught(self):
+        text = ("## 一、键表\n| `mba-builtin` | x |\n"
+                "## 二、模式\n| `standard` | y |\n")
+        self.assertEqual(check_devices.stray_rows(text), ["standard"])
+        self.assertEqual(check_devices.read_keys(check_devices.key_section(text)),
+                         ["mba-builtin"])
 
     def test_duplicate_and_bad_name(self):
         errs = check_devices.problems(["mba-builtin", "mba-builtin", "MBA_x"])
