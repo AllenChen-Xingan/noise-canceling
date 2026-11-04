@@ -2,6 +2,7 @@
 
 > 用途：回答「第三方经普通采集（HAL）拿到的内置麦信号，系统已经做了什么」。这是本线证据最硬的一份。
 > 做法：只读本机 `/System/Library/Audio/Tunings/`（45 MB，系统自带，纯文本 `.dspg` + plist）和 `ioreg`。没开麦、没录音、没改任何设置。
+> ⚠️ 限定（codex 第 1 轮 #1）：本机运行时用的是哪一份调音（AIDnn）**未查到**；下文以 AID40 为例的处理链是「候选」，运行时选的图、`micSense` 与波束器运行时是否自适应，都要第 `selftest.md` 第 2 步确认。
 > 来源标记：【读系统文件】= 本机 macOS 自带文件的原文；【推断】= 我据此推出的。样本：1 台机（本机 Mac17,3）+ 系统里 34 份机型调音。
 > 起因：sim 路怀疑派指出这个目录（`findings/sim-skeptic.md` 末尾第 1 条），我逐条复核并补全。
 
@@ -22,7 +23,7 @@
 
 | 模式 | 用的图 | 说明 |
 |---|---|---|
-| General · Telephony · Measurement · Movie | `builtin_microphone_general.dspg` | 3 进 1 出。**普通 HAL 采集走这条**【推断：General 是默认模式；Measurement 也用它，说明苹果没有「不处理」的测量模式】 |
+| General · Telephony · Measurement · Movie | `builtin_microphone_general.dspg` | 3 进 1 出。**推断普通 HAL 采集走这条**【推断：General 是默认模式名；运行时选图未见证据】。Measurement 也指向它 |
 | Voice | `builtin_microphone_voice.dspg` | 3 进 1 出，只有增益、求和、均衡。**推断**：开 VPIO 时系统用它，降噪由 VPIO 自己做 |
 | VoiceRaw | `builtin_microphone_voice_raw.dspg` | 3 进 3 出，只有增益 |
 | Dictation（听写） | `builtin_microphone_dictation.dspg` | 多麦对齐 → 去混响（`drev`，注释 MCLP）→ 多通道维纳滤波（`dnos`，注释 PMWF）→ 波束 → 神经降噪（`nnsp`） |
@@ -45,7 +46,7 @@ in(3 路, 48 kHz)
 ```
 
 - `micSense` 的参数（`builtin_microphone_general_aufx_sens.plist`）：3 路各一条 `NoiseProfile`，每条 481 点（0–24 kHz，每点 50 Hz）。【读系统文件】**推断**：这是按每支麦的固定底噪谱做的平稳降噪，主要去麦自噪声（嘶声），不是跟着环境变的降噪。
-- 波束器参数（`builtin_microphone_general_aufx_bmfd.plist`）：1 个波束，`Azimuth 0`、`Elevation 90`，每支麦 481 点复数系数，外加一条 481 点 `EQSelection`。【读系统文件】系数固定写死，**不是自适应**【推断：文件里只有一组系数，没有更新参数】。这一条与 Triforce 作者「自适应」的说法相反，以文件为准，可信度中（运行时是否还有自适应部分，看不到）。
+- 波束器参数（`builtin_microphone_general_aufx_bmfd.plist`）：1 个波束，`Azimuth 0`、`Elevation 90`，每支麦 481 点复数系数，外加一条 481 点 `EQSelection`。【读系统文件】文件里只有一组静态系数。**推断**波束是固定的；但静态初值不能排除运行时自适应更新，Triforce 作者说是自适应。两说并存，可信度低，待实测（如 `selftest.md` 第 5 步换角度看指向图是否随声场变）。
 - 输入音量范围（`Config/AID40.plist`）：内置麦 `InputVolumeInitial 0`、`Min −12`、`Max 12`（推断单位 dB）。【读系统文件】所以系统设置里的输入音量是这条图末端的数字增益，±12 dB。
 
 ## 三、34 份机型调音的对比
@@ -60,13 +61,13 @@ in(3 路, 48 kHz)
 | J | 44 | 2 麦，含 `nnet` | — | 2 麦机型【推断】 |
 
 - 「对低频自噪声的放大」= 3 支麦系数的范数 ‖w‖（20·log10）。A 组在 200 Hz 是 +9.8 dB：波束器为了在低频取得方向性，把麦自噪声放大约 10 倍功率。【读系统文件 + 推断】这解释了为什么 `micSense` 放在波束器**之前**：先压每支麦的嘶声，再做波束。
-- A 组「同相信号增益 / 范数」在 500–1000 Hz 是 −20 dB：从各麦同相到达的声音（如低频扩散噪声、正上方来声）被压得很重，属于超指向设计。【推断：同相近似只在低频成立】
+- A 组对「三麦收到完全相同信号」的绝对增益 |Σw|：200 / 500 / 1000 Hz 为 −1.9 / −6.3 / −9.6 dB；相对等权求和的白噪声增益为 −16.4 / −20.3 / −21.0 dB（三个量的定义见 `tools/read_tunings.py` 的 `beam_stats`）。【读系统文件 + 计算】含义：正上方（与阵列平面垂直）来的声音会被压低几 dB，波束器属于超指向设计。**不能**把它当作扩散噪声的衰减量：扩散噪声在各麦之间并不同相【推断】。（第 1 轮把相对值 −20 dB 写成了「同相增益」，已改，codex #4）
 - `EQSelection` 在 A 组是 1 kHz 以上约 −4.5 dB 的平缓下凹、100 Hz 处 −0.7 dB。它的确切作用（波束后的补偿还是选择权重）未查到，不直接当频响用。
 - `ToneMeister` 均衡的参数在二进制 `.austrip` 里，**没解出来**。所以标准模式的最终频响仍要靠 DXOMARK 曲线（`findings/measure.md` 表 2）或实测。
 
 ## 四、对本项目的意义
 
-1. 我们用 cpal 走 HAL，拿到的是 `general` 图的输出：**已做麦自噪声降噪 + 固定波束成形 + 均衡 + 数字增益**，没有回声消除，也没有环境自适应降噪（A 组）。【读系统文件 + 推断】
+1. 我们用 cpal 走 HAL，**很可能**拿到的是 `general` 图的输出：已做「每麦底噪谱降噪 + 波束成形 + 均衡 + 数字增益」，图里没有回声消除单元，A 组的图里也没有风扇 / 环境降噪单元。【读系统文件 + 推断】本机用哪组、运行时是否自适应，待 `selftest.md` 第 2 步确认。
 2. 「第三方拿不到原始三路」不完全对：系统里有 `Diagnostic`（raw，3 出）和 `VoiceRaw` 图。普通 app 能否选到这些格式未查到，要在本机只读列格式（`selftest.md` 第 1 步）。
 3. 模拟「像 MacBook Air 内置麦录的」时，波束器那一步可以**直接用苹果的系数**：给定三麦几何（Asahi 的 2 cm 等边三角形，可信度低），就能算出真实的指向图。没有几何就只能用 DXOMARK 指向数据。
 
