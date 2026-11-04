@@ -3,7 +3,7 @@
 - 大事：降噪效果（D80）第一步——补评测维度
 - 管的实体：会议场景 · 噪声类别 · 场景声学条件
 - worktree `../noise_canceling-scenes` · 分支 `research/021-meeting-scenes` · issue #80
-- 状态：**收尾中**：产出已齐，在做换模型评审（codex）（2026-11-03）
+- 状态：**已收尾**（2026-11-03）。codex 换模型评审 5 轮，第 4、5 轮无 P0/P1，已达停止线；23 条意见全部属实并已改，无遗留 issue。记录：`docs/reviews/021_meeting-scenes-codex.md`
 
 ## 产出（都在 `docs/research/021_meeting-scenes/`）
 
