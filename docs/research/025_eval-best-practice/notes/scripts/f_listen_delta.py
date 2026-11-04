@@ -11,8 +11,11 @@
       逐段判定的 both<0、方向相反段数
   [2] 第 2 节第 4 问：SCOREQ Δ 与 Distill Δ 逐段相关 0.45；按带噪原声 SCOREQ 分档的负段数
   [3] 第 2 节第 5 问：组合内 Δ 段间标准差中位数；所需段数（不劣、比两个系统）
-  [4] 第 0 节第 3 条、第 4 节、第 6 节第 1 题：组合均值单侧 95% bootstrap 下界 ≥ −δ 的过线数
-      （δ = 0 / 0.05 / 0.1 / 0.15；2000 次重抽，种子 20261030）
+  [4] 第 0 节第 3 条、第 4 节、第 6 节第 1 题：组合均值的 bootstrap 判定，两种口径分开输出
+      （δ = 0 / 0.05 / 0.1 / 0.15；每个 组合×模型 2000 次重抽，种子 20261030，两种口径共用同一批重抽）
+      (a) 旧口径（对照）：单侧 95% 下界 ≥ −δ = 该模型说过，否则算「不过」；两模型都过 = 过，都不过 = 不过，其余待测
+      (b) decision X2 三态：双侧 95% 区间（下界 2.5%、上界 97.5%）；下界 ≥ −δ = 该模型说过，
+          上界 < −δ = 该模型说不过，其余 = 该模型说待测；两模型都过 = 过，都不过 = 不过，其余 = 待测
 """
 import collections
 import json
@@ -42,9 +45,33 @@ def pearson(a, b):
     return num / math.sqrt(sum((x - ma) ** 2 for x in a) * sum((y - mb) ** 2 for y in b))
 
 
-def lower_bound(x, rng, b=2000):
-    m = sorted(st.mean(rng.choices(x, k=len(x))) for _ in range(b))
-    return m[int(0.05 * b)]  # 单侧 95%
+B = 2000
+
+
+def boot_means(x, rng, b=B):
+    """组合均值的 bootstrap 分布（已排序）。重抽顺序与旧版 lower_bound 相同，(a) 口径的数不变。"""
+    return sorted(st.mean(rng.choices(x, k=len(x))) for _ in range(b))
+
+
+def model_say_a(m, delta):
+    """(a) 单侧 95% 下界：过 / 不过（不过 = 下界 < −δ）。"""
+    return "过" if m[int(0.05 * B)] >= -delta else "不过"
+
+
+def model_say_b(m, delta):
+    """(b) 双侧 95% 区间三态：过 / 不过 / 待测。"""
+    lo, hi = m[int(0.025 * B)], m[int(0.975 * B) - 1]
+    if lo >= -delta:
+        return "过"
+    if hi < -delta:
+        return "不过"
+    return "待测"
+
+
+def combine(a, b):
+    if a == b and a in ("过", "不过"):
+        return a
+    return "待测"
 
 
 def main(path):
@@ -85,16 +112,23 @@ def main(path):
               f" n(δ=0.05) {((1.645 + 0.84) * sd_in / 0.05) ** 2:.1f}；"
               f"gtcrn−ref 配对差标准差 {sd_d:.3f} → 分出 0.1 要 {((1.96 + 0.84) * sd_d / 0.1) ** 2:.1f}"
               f" 段，0.05 要 {((1.96 + 0.84) * sd_d / 0.05) ** 2:.1f} 段")
-    print("[4] 组合均值单侧 95% 下界 ≥ −δ（两模型都过=过，都不过=不过，否则待测）")
+    print("[4] 组合均值 bootstrap 判定（两种口径，同一批重抽）")
     rng = random.Random(20261030)
-    lbs = {k: tuple(lower_bound(d[v], rng) for v in V) for k, d in sorted(by.items())}
-    for delta in (0.0, 0.05, 0.1, 0.15):
-        c = collections.Counter()
-        for k, (a, b) in lbs.items():
-            pa, pb = a >= -delta, b >= -delta
-            c[(k[0], "过" if pa and pb else "不过" if not (pa or pb) else "待测")] += 1
-        print(f"  δ={delta}: " + " · ".join(f"{s}/{r} {n}" for (s, r), n in sorted(c.items())))
-
+    boots = {k: tuple(boot_means(d[v], rng) for v in V) for k, d in sorted(by.items())}
+    for name, say in (("(a) 单侧 95% 下界（旧口径，对照）", model_say_a),
+                      ("(b) 双侧 95% 区间三态（decision X2）", model_say_b)):
+        print(f"  {name}")
+        for delta in (0.0, 0.05, 0.1, 0.15):
+            c = collections.Counter()
+            hi_fail = 0
+            for k, ms in boots.items():
+                says = [say(m, delta) for m in ms]
+                hi_fail += sum(1 for t in says if t == "不过")
+                c[(k[0], combine(*says))] += 1
+            parts = []
+            for sy in sorted({k[0] for k in boots}):
+                parts.append(f"{sy} 过 {c[(sy, '过')]} / 不过 {c[(sy, '不过')]} / 待测 {c[(sy, '待测')]}")
+            print(f"    δ={delta}: " + " · ".join(parts) + f"  ｜单个模型说「不过」的 组合×模型 数 {hi_fail}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
