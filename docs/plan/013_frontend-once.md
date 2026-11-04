@@ -148,7 +148,7 @@ pub trait SpectrumTap: Model {
 ## 12. 第二段 · 实现（#102，手下 fe2，2026-11-04）
 
 > 范围：统一模块扩展 + 认人 fbank 改调它 + 「只一处」机器检查。评测器不在本 PR（下一 PR，见本节末清单）。
-> 依据：读源码实现；测试结果见下表（名额放开后实测填写）。
+> 依据：实测（本机 Apple M5，macOS 27，2026-11-04）。下表测试全过，`xtask ci` 6 项全绿；codex 评审 2 轮达停止线（`docs/reviews/102_frontend-speaker-codex.md`）。
 
 **正本与实现**
 
@@ -163,7 +163,7 @@ pub trait SpectrumTap: Model {
 - 认人 `fbank.rs`：删掉自建 FFT 计划、窗公式和自有的 `WindowType`（第二处表示），改用 `vdn_types::Window` 与 `FrameFft` + `power_into`。去直流 · 预加重 · 输入缩放作为每帧钩子留在认人 crate；mel 滤波器组留在认人 crate（频谱之后的特征）。`vdn-speaker` 不再直接依赖 `realfft`
 - 离线例子：`polish_offline` · `scene_offline` · `frontend_timing` 第一段已引用 `FRONTEND`，本段不用改
 
-**「只一处」的机器检查**：tidy 新规则 R-FFT（`src/xtask/src/fft_site.rs`）。`src/` 下除 `src/dsp/src/` 外不许出现 FFT 计划标识符（`RealFftPlanner`、`FftPlanner*`、`plan_fft_*`）。白名单 3 条，各写原因；白名单只许缩短（文件不在了或已干净也报红）。边界：认不出手写窗公式与手写 DFT，靠评审守。
+**「只一处」的机器检查**：tidy 新规则 R-FFT（`src/xtask/src/fft_site.rs`）。`src/` 下除 `src/dsp/src/` 外不许出现 FFT 计划标识符（`RealFftPlanner`、`FftPlanner*`、`plan_fft_*`）。白名单 3 条，各写原因并限定只许哪几个标识符（场景只许逆 FFT，评测器只许正向）；白名单只许缩短（文件不在了或已干净也报红）。边界：认不出手写窗公式与手写 DFT，靠评审守。
 
 **对拍基准**：在 `d23bfe66` 的原样源码上生成（`git archive` 导出、单独 target 目录、`VDN_BLESS=1`）。改前的窗种类叫 `WindowType::{Povey, Hanning}`，生成时只把 `src/speaker/tests/golden.rs` 里 `old_names` 的两行换成旧名，其余逐字相同。
 
@@ -179,6 +179,8 @@ pub trait SpectrumTap: Model {
 | `dsp/tests/no_alloc.rs::frame_fft_does_not_allocate` | 整段入口 f32 / f64 每帧不分配 | 0 次分配 |
 | `xtask` `fft_site_tests.rs` | R-FFT 负例红、正例不红、白名单只缩短 | — |
 | 第一段 4 份对拍（GTCRN · 引擎 · 场景两份） | 加 `win_len` 后仍逐位 | 逐位 |
+
+上表结果（实测）：认人 fbank 3 种配置 970 帧、声纹 3 段 × 192 维，与改前逐位相同；第一段 4 份对拍真比（设了 `VDN_GTCRN_ONNX` + `VDN_REQUIRE_MODELS`），逐位相同；其余单测全过。CI 机是 macos-15，基准平台是 `aarch64-macos-27`，CI 上这几份对拍打印原因后跳过；窗公式、整段 vs 流式、补零、f64、不分配、R-FFT 测试不依赖系统数学库版本，CI 上真比。
 
 **交给评测器下一 PR 的清单**（本 PR 不碰 `src/eval/`）：
 

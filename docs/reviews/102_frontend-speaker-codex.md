@@ -1,6 +1,8 @@
 # 评审 102 · 统一频谱模块支持 Kaldi 分帧，认人 fbank 改调它（codex · gpt-6-astra · read-only）
 
 > 对象：`git diff d23bfe66..HEAD`（分支 `feat/frontend-speaker`，issue #102，含 `docs/plan/013_frontend-once.md` 第 12 节）。
+> **最新一轮：第 2 轮（2026-11-04）· 总评「通过」· 已达停止线（第 1、2 轮连续无 P0/P1）**。
+> 累计处理：P2×3 逐条回源码核实，属实并修改 2、驳回 1（平台跳过是全仓既定做法）；没有留 issue。
 > 自审（手下 fe2，交 codex 之前）：改动文件 ≤ 600 行（最大 `tidy.rs` 593）；产出里没有本机路径；`xtask ci` 6 项全绿；认人 fbank / 声纹与第一段 4 份对拍在本机真比、逐位相同。
 
 ## 第 1 轮（2026-11-04）· 总评「修改」
@@ -29,3 +31,16 @@
 ### 是否再审
 
 无 P0/P1，开第 2 轮确认。
+
+## 第 2 轮（2026-11-04）· 总评「通过」
+
+原文：草稿目录 `_tmp/20261104-b13/reviews/102-frontend-speaker-codex-2.md`（不入库）。effort medium，耗时 44 秒。
+本轮 P0/P1：0 条 · 停止线：满足（第 1、2 轮连续无 P0/P1）· 留作 issue 的 P2：无
+
+- 未发现 P0–P2。codex 确认第 1 轮 #2、#3 的修复已落实，#1 的驳回理由接受、不再重报。
+- 引用抽查：核实属实 5 条；无法核实 2 条（同第 1 轮：基准生成过程、窗参照来源。作者已用 `git show d23bfe66:<文件>` 核对 speech / estoi / fbank 三处原公式与 `window_tests.rs` 参照逐字一致）。
+- 修复后复跑（本机）：`cargo test -p vdn-dsp`、`cargo test -p xtask fft_site` 全过；`cargo clippy -p xtask -p vdn-dsp --all-targets -D warnings`、`cargo fmt --all --check`、`xtask tidy` 通过。
+
+### 是否再审
+
+停止线满足，停。
