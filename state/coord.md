@@ -17,7 +17,7 @@
 
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
-| scenesuite | exp013 场景测试集 · #86 · `exp/013-scene-suite` · `../noise_canceling-scenesuite` | 场景测试集 · 合成数据生成器 · 设备链模拟 | 方案已批，开工；1 题待拍板（会议室近处几人都留） |
+| scenesuite | exp013 场景测试集 · #86 · `exp/013-scene-suite` · `../noise_canceling-scenesuite` | 场景测试集 · 合成数据生成器 · 设备链模拟 | 完成，验收过（大总管复跑 68 测试 · 白名单内 · 无音频进仓 · 本机路径 0 · 代码文件 ≤ 600 行），分支已推送，窗口已关；PR 等 #88 合并后开（要先在本分支加 DATA_FILES 一行）；1 题待拍板（会议室） |
 | scorecard | 场景成绩单：评分模型 + 补评分项 + 标准 · #87 · `feat/scorecard` · `../noise_canceling-scorecard` | 评测器 · 成绩单 · 定标等级 | 完成，验收过（大总管复跑 131 测试 · tidy · schema 一致），窗口已关；PR #88 CI 过，合并等人放行；1 题待拍板（暂定过关线先用 vs 先盲听） |
 
 两条做完后由大总管接 GTCRN 出第一张成绩单。
@@ -99,6 +99,9 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-03 scenesuite 收尾验收过，窗口已关；b11 两线全收尾，tmux 无窗口。卡在人：#88 合并 · skill 第 269 行修复
+- 2026-11-03 scenesuite 第五版（正式）build 20261103230756-17f5 通过（480 段 · 混响 0 不过 · SNR 99.4% / SIR 98.6% 段差 ≤ 1 dB · 68 测试 · 本机路径 0）；scenes.json 指向它；五版音频共约 16 GB 都在 _tmp，去留待定
+- 2026-11-03 scenesuite codex 4 轮达停止线（15 条全属实，改 13，剩 2 条 P2）；第五版（最后一版）build 名额给它；开 issue #89（设备链后有效 T60 / DRR）· #90（codex-review 位图误判，skill 改动等人执行）
 - 2026-11-03 codex-review 误判位图根因【实测】：macOS iconv 输出直接写 /dev/null 且超过约 100 字节就报「Inappropriate ioctl for device」，privacy-scan.sh:269 的 UTF-8 复核因此失败 → 长的 codex 输出被拦。修法：`iconv … -- "$r" 2>/dev/null | cmp -s - "$r"`。改 skill 被权限检查拦（自我修改），等人。016 synth-standard 第 45 行改为按时段切（S10①）
 - 2026-11-03 scenesuite 第四版 build 20261103223725-72df 通过（同房间 37.5% · 混响 0 不过 · SNR 99.2% / SIR 98.2% 段差 ≤ 1 dB · 63 测试）；codex-review 隐私扫描把「P1」开头的输出误认成位图，第二次出现（macmic 一次）→ 改结构
 - 2026-11-03 scenesuite codex 第 1 轮 P1×3 P2×2 + 实测房间自审已修（DEMAND 4 个未用环境按时段切 · ESC-50 截尾 · 4 条 MIT IR 直达起点 · build 自验电平 · 混响检查按声音类别）→ 第四版 build 名额给它；63 测试过。大总管定技术题：第 5 题按时段切（S10① 允许：前一半测试份、后一半裁判原料）· 第 2 题合成不像的声音在成绩单标「合成，待真实录音校」· 第 3、4 题已定（人选 A；阈值暂定）
