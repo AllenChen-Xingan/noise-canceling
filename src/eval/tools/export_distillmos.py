@@ -35,12 +35,16 @@ def real_complex_compressed(x, hop_length, win_length):
     n_fft = win_length
     pad = int((win_length - hop_length) / 2)
     x = F.pad(x, (pad, pad), mode="reflect")
-    fr = x.unfold(-1, n_fft, hop_length) * torch.hann_window(win_length)  # (B, T, n_fft)
+    # conv1d 等价于「分帧 × 窗 × DFT」（导出器不支持 unfold）
     k = torch.arange(n_fft // 2 + 1, dtype=torch.float32)[:, None]
     n = torch.arange(n_fft, dtype=torch.float32)[None, :]
     ang = 2 * np.pi * k * n / n_fft
-    re = torch.matmul(fr, torch.cos(ang).T).transpose(-1, -2)
-    im = -torch.matmul(fr, torch.sin(ang).T).transpose(-1, -2)
+    w = torch.hann_window(win_length)[None, :]
+    kc = (torch.cos(ang) * w)[:, None, :]
+    ks = (-torch.sin(ang) * w)[:, None, :]
+    xi = x[:, None, :]
+    re = F.conv1d(xi, kc, stride=hop_length)  # (B, F, T)
+    im = F.conv1d(xi, ks, stride=hop_length)
     x = torch.stack([re, im], dim=-1)  # (B, F, T, 2)
     mag = torch.sum(x**2, dim=-1, keepdim=True) ** 0.5
     return torch.clip(mag, 1e-12) ** 0.3 * x / torch.clip(mag, 1e-12)
