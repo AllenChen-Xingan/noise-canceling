@@ -191,3 +191,9 @@ fn ragged_input_with_power_falls_back_to_self_compute() {
     assert_eq!(common::digest(&own), common::digest(&mixed));
     assert_eq!(ffts, calls, "每次都应自算一次 FFT");
 }
+
+/// 测试共用的 `HOP` 是字面量（要在改前源码上编译），这里和正本比对。
+#[test]
+fn helper_hop_is_frontend_hop() {
+    assert_eq!(HOP, FRONTEND.hop);
+}

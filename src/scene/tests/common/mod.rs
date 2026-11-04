@@ -4,7 +4,9 @@
 use vdn_scene::{Judgement, SceneAnalyzer};
 use vdn_types::{ContentId, MODEL_RATE};
 
-pub const HOP: usize = vdn_types::FRONTEND.hop;
+/// 写字面量而不引用 `FRONTEND`：本文件要在改前的源码上编译（生成基准用），那时还没有正本。
+/// 与正本的比对在 `tests/frontend.rs::helper_hop_is_frontend_hop`。
+pub const HOP: usize = 256;
 /// 约 0.5 s 判断一次（同 `examples/scene_offline.rs`）
 pub const TICK_HOPS: usize = 31;
 
