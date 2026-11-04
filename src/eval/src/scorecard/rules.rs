@@ -46,6 +46,8 @@ impl CardStatus {
 pub struct ItemCell {
     pub v: &'static str,
     pub veto: bool,
+    /// 只报不判：照常列出，不进场景的过不过、不做「拖后腿的声音」
+    pub report_only: bool,
     pub unit: &'static str,
     pub better: &'static str,
     pub pass: usize,
@@ -136,6 +138,7 @@ fn item_cell(v: &'static str, veto: bool, rows: &[&ClipRow]) -> ItemCell {
     ItemCell {
         v,
         veto,
+        report_only: super::standard::is_report_only(v),
         unit: info.map_or("", |i| i.unit),
         better: better.as_str(),
         pass,
@@ -202,7 +205,10 @@ fn drags(items: &[ItemCell], rows: &[&ClipRow]) -> Vec<Drag> {
     let mut out = Vec::new();
     let classes: BTreeSet<(String, SoundGroup)> =
         rows.iter().flat_map(|r| r.sounds.iter().cloned()).collect();
-    for it in items.iter().filter(|i| i.status == CardStatus::Fail) {
+    for it in items
+        .iter()
+        .filter(|i| i.status == CardStatus::Fail && !i.report_only)
+    {
         let better = crate::verifiers::info(it.v).map_or(Better::Lower, |i| i.better);
         let mut per: Vec<Drag> = Vec::new();
         for (cls, group) in &classes {
@@ -285,9 +291,15 @@ pub fn summarize(rows: &[ClipRow]) -> Vec<SceneCard> {
                 .filter(|i| i.veto && i.status == CardStatus::Fail)
                 .map(|i| i.v)
                 .collect();
-            let any_fail = items.iter().any(|i| i.status == CardStatus::Fail)
+            let any_fail = items
+                .iter()
+                .filter(|i| !i.report_only)
+                .any(|i| i.status == CardStatus::Fail)
                 || listen.status == Some(CardStatus::Fail);
-            let any_unknown = items.iter().any(|i| i.status == CardStatus::Unknown)
+            let any_unknown = items
+                .iter()
+                .filter(|i| !i.report_only)
+                .any(|i| i.status == CardStatus::Unknown)
                 || listen.status == Some(CardStatus::Unknown);
             let status = if any_fail {
                 CardStatus::Fail
@@ -319,7 +331,7 @@ pub fn worst(cards: &[SceneCard]) -> Vec<usize> {
     let fails = |c: &SceneCard| {
         c.items
             .iter()
-            .filter(|i| i.status == CardStatus::Fail)
+            .filter(|i| i.status == CardStatus::Fail && !i.report_only)
             .count()
     };
     idx.sort_by_key(|&i| {
@@ -409,6 +421,19 @@ mod tests {
         assert!(c.items.iter().all(|i| !LISTEN.contains(&i.v)));
         assert_eq!(c.status, CardStatus::Fail);
         assert!(c.veto_failed.is_empty());
+    }
+
+    #[test]
+    fn report_only_item_does_not_decide_scene() {
+        let mut r = row("a", &[], 1.0, 0.1, 0.1);
+        r.scores
+            .push(("V-CLICK", false, s("V-CLICK", 30.0, 0.0, Better::Lower)));
+        let c = &summarize(&[r])[0];
+        let click = c.items.iter().find(|i| i.v == "V-CLICK").unwrap();
+        assert!(click.report_only);
+        assert_eq!(click.status, CardStatus::Fail, "照常判、照常列");
+        assert_eq!(c.status, CardStatus::Pass, "但不进场景的过不过");
+        assert!(c.drags.iter().all(|d| d.v != "V-CLICK"));
     }
 
     #[test]

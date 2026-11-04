@@ -57,7 +57,7 @@ impl Card {
             let bad: Vec<&str> = c
                 .items
                 .iter()
-                .filter(|x| x.status == CardStatus::Fail)
+                .filter(|x| x.status == CardStatus::Fail && !x.report_only)
                 .map(|x| x.v)
                 .collect();
             s += &format!(
@@ -96,7 +96,11 @@ impl Card {
                         .as_ref()
                         .map_or(String::new(), |w| format!("（{w}）")),
                     f(i.threshold),
-                    i.status.zh()
+                    if i.report_only {
+                        format!("{}（只报不判）", i.status.zh())
+                    } else {
+                        i.status.zh().to_string()
+                    }
                 );
             }
             let l = &c.listen;
