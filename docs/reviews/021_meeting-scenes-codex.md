@@ -1,7 +1,7 @@
 # 评审 021 · 开会场景目录（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/021_meeting-scenes/` 的 catalog · coverage · decision · sources · check_catalog.py · test_check_catalog.py（type research）。**最新一轮：第 3 轮（2026-11-03）· 总评「修改」· 待第 4 轮**。
-> 累计处理：P1×5、P2×11 逐条回文件核实，属实 16、驳回 0、无法核实 0。新出的要人定的事：无（第 3 题题面已改，默认不变）。
+> 对象：`docs/research/021_meeting-scenes/` 的 catalog · coverage · decision · sources · check_catalog.py · test_check_catalog.py（type research）。**最新一轮：第 4 轮（2026-11-03）· 总评「修改」· 连续第 1 轮无 P0/P1，待第 5 轮确认**。
+> 累计处理：P1×5、P2×15 逐条回文件核实，属实 20、驳回 0、无法核实 0。新出的要人定的事：无（第 3 题题面已改，默认不变）。
 
 ## 第 1 轮（2026-11-03）· 总评「修改」
 
@@ -101,3 +101,32 @@
 ### 是否再审
 
 有 P1 → 开第 4 轮。改后检查脚本 0 处问题，测试 24 条全过【实测】。
+
+## 第 4 轮（2026-11-03）· 总评「修改」
+
+原文：`_tmp/reviews/catalog-codex-4.md`（不入库）。
+上一轮处理的验证：codex 抽查确认距离拆分、S-SIR 咖啡馆底噪、「本次检索」收窄、单座车站压力测试、D62 / D63 相容都已到位。
+本轮 P0/P1：0 条 · 停止线：连续第 1 轮无 P0/P1 · 留作 issue 的 P2：无
+
+- **P2｜catalog.md:38 客舱数字丢了测量条件，又被拿去排「最难」**（第 4 轮 #1）
+  - 核实：属实。[S31] 的 0.4 m 是交谈双方间距、−2 dB 是听者处；[S47] 的 62–68 dB(A) 在停机时测
+  - 处理：catalog 客舱行补回位置和停机条件，麦处 SNR / SIR 标未知；coverage 矩阵两格、第 3 批，decision 结论 5 同步
+- **P2｜coverage.md:46 食堂混响判 ○ 时漏了丹麦来源**（第 4 轮 #2）
+  - 核实：属实。[S43] 0.8–2.5 s（二手）含 1.3 s 档
+  - 处理：判法补一条「实测含摘要与二手，任一来源范围含某档即 ●，格里写明来源」；食堂 F6 改 ●。K7 当场报出 coverage、decision 两处总数没跟着改，改为 40
+- **P2｜coverage.md:84 误述现有 Meeting 的含义**（第 4 轮 #3）
+  - 核实：属实。`scene.rs` 第 13–14 行已定义 Meeting = 一屋子人共用一台电脑、保留近处所有人声
+  - 处理：5.1 节 meeting 只对 meeting-room，加「无贴合」一行放 open-office；提议改为「meeting 保持不动，另加家里有人的类，开放工位另议」；catalog 主表 open-office 用户层改「无贴合（缺）」、cowork 改「cafe（缺）」；decision 第 1 题写明这是现有模式要不要现在出评测
+- **P2｜check_catalog.py:126 K7 没管 decision 里的「无 ● 因素数」**（第 4 轮 #4）
+  - 核实：属实
+  - 处理：CLAIMS 加这一句；补测试 `test_no_full_count_drift_in_decision`
+
+### 引用抽查
+
+- 「不符」1 条（Meeting 定义），即 #3，已改
+- 「核实属实」6 条
+- 无法核实：mtgdata 卡片检查结果——同第 3 轮，已注明不是本线跑的
+
+### 是否再审
+
+连续第 1 轮无 P0/P1 → 再审一轮确认。改后检查脚本 0 处问题，测试 25 条全过【实测】。

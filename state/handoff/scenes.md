@@ -13,10 +13,10 @@
 | `coverage.md` | 地点 × 9 个随地点变的因素（016 F1–F16 中的 9 个）矩阵：40 个空格；补的先后分 4 批；与用户层 5 类、噪音 7 类的对应（只提议） |
 | `decision.md` | 结论 · 我定的技术事项 · 待人拍板 4 题 · 转交 |
 | `sources.md` | 64 条出处，按怀疑派判定标了是否核过原文 |
-| `check_catalog.py` + `test_check_catalog.py` | 检查 K1–K7（键唯一、字段齐、带单位的数字有出处、出处编号存在、覆盖矩阵与主表一致、汇总数由矩阵算出并比对）；24 条测试全过【实测】 |
+| `check_catalog.py` + `test_check_catalog.py` | 检查 K1–K7（键唯一、字段齐、带单位的数字有出处、出处编号存在、覆盖矩阵与主表一致、汇总数由矩阵算出并比对）；25 条测试全过【实测】 |
 | `raw/` | 调研 workflow 的 5 份原始报告 + 2 份怀疑派判定（供追溯） |
 
-复现检查：`python3 docs/research/021_meeting-scenes/check_catalog.py` → `ok 主表 16 个键，问题 0 处`；`python3 docs/research/021_meeting-scenes/test_check_catalog.py` → `Ran 24 tests … OK`。
+复现检查：`python3 docs/research/021_meeting-scenes/check_catalog.py` → `ok 主表 16 个键，问题 0 处`；`python3 docs/research/021_meeting-scenes/test_check_catalog.py` → `Ran 25 tests … OK`。
 
 ## 待人拍板（题面全文在 `decision.md` 第三节）
 
