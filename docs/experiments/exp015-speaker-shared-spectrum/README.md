@@ -30,7 +30,8 @@
 
 ```sh
 cargo build --release -p vdn-speaker-lab
-caffeinate -i target/release/vdn-speaker-lab bench-split <exp005 某段降噪输出.wav> --reps 6 > docs/experiments/exp015-speaker-shared-spectrum/results/bench-split.<段>.json
+# 素材：exp005 第二轮的 GTCRN 输出（判断回路看的就是它），主目录 _tmp/20261031-exp005/out-r2/<段>.wet.wav，只读
+caffeinate -i target/release/vdn-speaker-lab bench-split <主目录>/_tmp/20261031-exp005/out-r2/c01.wet.wav --reps 6 > docs/experiments/exp015-speaker-shared-spectrum/results/bench-split.c01.json
 ```
 
 - 按判断回路的窗长 / 步长切窗（正本 `JudgeParams`，默认 1.5 s / 0.5 s），每个窗分别计 fbank · 整个 embed · 两者之差（≈ 推理）· 合成注册负载与余弦。如果两种顺序的 fbank p50 差超过 20%，在表下写明并按较大的那个判过线

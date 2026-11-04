@@ -14,6 +14,7 @@
 - 加计时命令 `vdn-speaker-lab bench-split`（`src/speaker-lab/src/bench.rs` + 4 条单元测试）；尚未编译（名额未放开）
 - 写 `docs/experiments/exp015-speaker-shared-spectrum/README.md`：耗时估算表 · 三方案对比 · 要省 8 倍的办法
 - codex 换谱系评审 3 轮（P1×1、P2×7，全部属实、全部已改），第 2、3 轮无 P0/P1，已达停止线：`docs/reviews/exp015-speaker-shared-spectrum-codex.md`。索引 `docs/reviews/README.md` 不在我的可写范围，请大总管加一行
+- 大总管授权：主目录 `_tmp/20261031-exp005/out-r2/` 只读（实测素材用 `c01.wet.wav`、`c06.wet.wav`）；`docs/reviews/README.md` 追加了一行索引（015）
 - bench.rs 按评审改：真实窗预热、按「遍 + 窗」交替顺序、有符号差值、两次余弦、默认 6 遍
 
 ## 改了哪些文件
