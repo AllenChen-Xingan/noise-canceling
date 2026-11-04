@@ -243,7 +243,11 @@ mod tests {
     fn kinds_round_trip() {
         for k in Kind::ALL {
             assert_eq!(Kind::parse(k.as_str()), Some(k));
-            assert!(crate::verifiers::info(k.verifier()).is_some(), "{}", k.verifier());
+            assert!(
+                crate::verifiers::info(k.verifier()).is_some(),
+                "{}",
+                k.verifier()
+            );
         }
     }
 }

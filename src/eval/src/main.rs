@@ -5,6 +5,7 @@
 //! vdn-eval qa    [--system gtcrn,fastenhancer-m] [--filter Q0] [--out DIR] [--record]
 //! vdn-eval calib [--answers JSON] [--scores JSON] [--round N] [--write-levels] [--record]
 //! vdn-eval list
+//! vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…   # 子进程入口：评分模型打分，每段一行 JSON
 //! ```
 //! - `ci`：CI 层（纯 DSP、无模型）。门禁不过 → 退出码 1。权重不在本机的系统自动跳过
 //! - `qa`：QA 层（本机 Qwen3-ASR + DNSMOS + 真实片段）
@@ -388,6 +389,12 @@ fn main() -> ExitCode {
         "qa" => cmd_eval(&args, "qa"),
         "calib" => cmd_calib(&args).map(|()| true),
         "dnsmos" => cmd_dnsmos(&args),
+        "nrmos" => vdn_eval::qa::nrmos::cli(&args[1..]).map(|rows| {
+            for r in rows {
+                println!("{r}");
+            }
+            true
+        }),
         "list" => {
             cmd_list();
             Ok(true)
