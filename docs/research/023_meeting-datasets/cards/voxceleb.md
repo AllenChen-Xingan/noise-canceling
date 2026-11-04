@@ -2,7 +2,7 @@
 
 - **名称**：VoxCeleb1 / VoxCeleb2（VoxCeleb）
 - **链接**：https://www.robots.ox.ac.uk/~vgg/data/voxceleb/
-- **许可**：官方页未写数据许可（只给隐私声明与引用要求）→ 结论：未查到【官方文档】
+- **许可**：官方页未写数据许可（只有「Copyright © Visual Geometry Group」与隐私声明）→ 结论：未查到【官方文档】
 - **大小**：7,000+ 人，100 万+ 段，2,000+ h；VoxCeleb1 15 万+ 段 / 1,251 人，VoxCeleb2 100 万+ 段 / 6,112 人【官方文档】
 - **场景键**：street, other（采访视频：室内、户外、活动现场，未逐条标地点）
 - **设备键**：unknown（YouTube 视频，设备各异）
@@ -17,3 +17,4 @@
 
 ## 备注
 - 「街边带人声」本路没找到按地点标注的公开集；VoxCeleb 只是退而求其次。
+- 怀疑派复核：许可补官方页唯一版权行；人数、段数、2,000+ h、音频填表拿密码、「background chatter, laughter, overlapping speech」已在官网核实。
