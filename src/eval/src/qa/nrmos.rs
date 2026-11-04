@@ -191,9 +191,10 @@ impl Nrmos {
 }
 
 /// 子进程入口：`vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…` → 每段一行 JSON `{"wav", "mos"}`。
-/// 一次进程打多段，模型只载一次（SCOREQ 378 MB）。哈希对不上直接报错，不打分。
+/// `vdn-eval nrmos <kind> <模型> --serve`：常驻，从标准输入逐行读 wav 路径、逐行回 JSON（出错回 `{"wav", "error"}`），
+/// 读到输入结束才退出。模型只载一次、哈希只核一次（SCOREQ 378 MB，每段重载约要 1–2 s）。哈希对不上直接报错，不打分。
 pub fn cli(args: &[String]) -> Result<Vec<serde_json::Value>, String> {
-    let usage = "用法：vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…";
+    let usage = "用法：vdn-eval nrmos <scoreq|distill> <模型.onnx> (<音频.wav>… | --serve)";
     let kind = args.first().and_then(|s| Kind::parse(s)).ok_or(usage)?;
     let model = args.get(1).ok_or(usage)?;
     if args.len() < 3 {
@@ -201,16 +202,36 @@ pub fn cli(args: &[String]) -> Result<Vec<serde_json::Value>, String> {
     }
     verify(kind, Path::new(model))?;
     let mut m = Nrmos::open(kind, Path::new(model)).map_err(|e| e.to_string())?;
-    let mut out = Vec::new();
-    for w in &args[2..] {
+    let mut one = |w: &str| -> Result<f64, String> {
         let (x, sr) = crate::wav::read(Path::new(w))?;
         if sr != vdn_types::MODEL_RATE {
-            return Err(format!("{w}：只支持 16 kHz，实际 {sr}"));
+            return Err(format!("{w}：采样率 {sr} ≠ {}", vdn_types::MODEL_RATE));
         }
-        let mos = m.score(&x).map_err(|e| format!("{w}：{e}"))?;
-        out.push(serde_json::json!({"wav": w, "mos": mos}));
+        m.score(&x).map_err(|e| format!("{w}：{e}"))
+    };
+    if args[2] == "--serve" {
+        use std::io::{BufRead, Write};
+        let stdout = std::io::stdout();
+        for line in std::io::stdin().lock().lines() {
+            let w = line.map_err(|e| e.to_string())?;
+            let w = w.trim();
+            if w.is_empty() {
+                continue;
+            }
+            let v = match one(w) {
+                Ok(mos) => serde_json::json!({"wav": w, "mos": mos}),
+                Err(e) => serde_json::json!({"wav": w, "error": e}),
+            };
+            let mut o = stdout.lock();
+            writeln!(o, "{v}").map_err(|e| e.to_string())?;
+            o.flush().map_err(|e| e.to_string())?;
+        }
+        return Ok(Vec::new());
     }
-    Ok(out)
+    args[2..]
+        .iter()
+        .map(|w| one(w).map(|mos| serde_json::json!({"wav": w, "mos": mos})))
+        .collect()
 }
 
 #[cfg(test)]
