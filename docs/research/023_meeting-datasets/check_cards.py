@@ -7,7 +7,8 @@
 VDN_KEYS_DIR 显式指过去：值是一个或多个 docs/research 目录，用 `:` 分隔，按顺序找。
 没找到、也没指，就报错退出。
 用法：python3 check_cards.py [--research <docs/research 目录>] [卡片目录]
-卡片目录默认同目录下 cards/；--research 替换「本仓库 docs/research」（测试用）。
+卡片目录默认同目录下 cards/；它的上一级若有 cards-014-addendum.md，一并检查其中的键。
+--research 替换「本仓库 docs/research」（测试用）。
 退出码：0 合格 · 1 卡片有问题 · 2 找不到正本、正本读不出键、卡片目录不存在或为空。
 """
 from __future__ import annotations
@@ -140,7 +141,7 @@ def main(argv: list[str]) -> int:
             print("错误：--research 后要跟目录")
             return 2
         research, args = Path(args[1]), args[2:]
-    card_dir = Path(args[0]) if args else HERE / "cards"
+    card_dir = (Path(args[0]) if args else HERE / "cards").resolve()
     try:
         fields, scenes, devices = load_schema(research)
     except (FileNotFoundError, ValueError) as e:
@@ -160,8 +161,8 @@ def main(argv: list[str]) -> int:
             bad += 1
             for e in errs:
                 print(f"{p.name}: {e}")
-    addendum = HERE / "cards-014-addendum.md"
-    if card_dir == HERE / "cards" and addendum.exists():
+    addendum = card_dir.parent / "cards-014-addendum.md"  # 与 cards/ 同级就一起查
+    if addendum.is_file():
         for e in check_addendum(addendum.read_text(encoding="utf-8"), scenes, devices):
             bad += 1
             print(f"{addendum.name}: {e}")

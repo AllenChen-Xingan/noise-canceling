@@ -192,6 +192,23 @@ class CliTest(unittest.TestCase):
             empty.mkdir()
             self.assertEqual(run(str(empty)).returncode, 2)  # 空目录
 
+    def test_addendum_checked_for_relative_and_absolute(self):
+        with tempfile.TemporaryDirectory() as d:
+            keys = make_research(Path(d) / "keys")
+            (keys / "021_meeting-scenes" / "catalog.md").write_text("| `cafe` |\n| `meeting-room` |\n", encoding="utf-8")
+            (keys / "022_mac-mic" / "devices.md").write_text(
+                "| `laptop-unknown` |\n| `non-laptop-phone` |\n", encoding="utf-8")
+            cards = Path(d) / "work" / "cards"
+            cards.mkdir(parents=True)
+            (cards / "ok.md").write_text(GOOD, encoding="utf-8")
+            (cards.parent / "cards-014-addendum.md").write_text("- **场景键**：kitchen\n", encoding="utf-8")
+            for target, cwd in ((str(cards), None), ("cards", str(cards.parent))):
+                r = subprocess.run(
+                    [sys.executable, str(HERE / "check_cards.py"), "--research", str(keys), target],
+                    capture_output=True, text=True, cwd=cwd)
+                self.assertEqual(r.returncode, 1, (target, r.stdout))
+                self.assertIn("`kitchen`", r.stdout)
+
     def test_missing_keys_exit_2(self):
         with tempfile.TemporaryDirectory() as d:
             env = {k: v for k, v in os.environ.items() if k != cc.KEYS_ENV}
