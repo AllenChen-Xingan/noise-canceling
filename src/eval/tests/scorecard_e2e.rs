@@ -181,3 +181,12 @@ fn hash_mismatch_is_skipped_not_scored() {
             .any(|(k, w)| k == "cafe-c00" && w.contains("sha256"))
     );
 }
+
+/// 进仓的样例行（`tests/fixtures/scene-clip-example.jsonl`，vdn-schema 的 schema 测试也用它）能被解析器读。
+#[test]
+fn committed_example_line_parses() {
+    let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/scene-clip-example.jsonl");
+    let v = SceneClip::parse_jsonl(&std::fs::read_to_string(p).unwrap()).unwrap();
+    assert_eq!(v.len(), 1);
+    assert_eq!(v[0].sounds.len(), 2);
+}
