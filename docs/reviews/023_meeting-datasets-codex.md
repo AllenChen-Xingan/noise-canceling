@@ -1,7 +1,7 @@
 # 评审 023 · 开会场景真实录音数据集调研的结论层与卡片检查脚本（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/023_meeting-datasets/` 的 `decision.md` · `matrix.md` · `pick.md` · `sources.md` · `card-template.md` · `check_cards.py` · `test_check_cards.py`；依据：44 张新卡、`cards-014-addendum.md`、014 卡片索引、交代文件。**最新一轮：第 2 轮（2026-11-03）· 总评「修改」· 待第 3 轮**。
-> 累计处理：P1×9、P2×7 逐条回卡片 / 决策正本核实，属实 16、驳回 0。新出的要人定的事：无（已有 4 题见 `decision.md` 第四节）。
+> 对象：`docs/research/023_meeting-datasets/` 的 `decision.md` · `matrix.md` · `pick.md` · `sources.md` · `card-template.md` · `check_cards.py` · `test_check_cards.py`；依据：44 张新卡、`cards-014-addendum.md`、014 卡片索引、交代文件。**最新一轮：第 3 轮（2026-11-03）· 总评「修改」· 待第 4 轮**。
+> 累计处理：P1×10、P2×12 逐条回卡片 / 决策正本核实，属实 22、驳回 0。新出的要人定的事：无（已有 4 题见 `decision.md` 第四节）。
 
 ## 第 1 轮（2026-11-03）· 总评「修改」
 
@@ -83,3 +83,29 @@
 ### 是否再审
 
 本轮有 P1 → 改完开第 3 轮。
+
+## 第 3 轮（2026-11-03）· 总评「修改」
+
+原文：主目录 `_tmp/20261103-b10/mtgdata/reviews/decision-codex-3.md`（不入库）。effort medium。
+上一轮处理的验证：codex 确认许可口径、WenetSpeech、背景声分类、Ego4D、相对路径 5 项已修。
+本轮 P0/P1：1 条 · 停止线：未满足 · 留作 issue 的 P2：无
+
+- **P1｜decision.md:13 等处仍有「没有……公开真实集」类强断言**（第 3 轮 #1）
+  - 核实：属实（同类问题第 1、2、3 轮各出现一次，属「换写法就漏」）
+  - 处理：**按类改结构**，不再逐句追：decision / matrix / pick 页首加「措辞口径」一行（「未找到 / 🟥」= 本轮没确认到能筛出的匹配子集；自录 / 回放重录 = 建议）；`notes/` 三份笔记页首加「汇总时补注」，声明原话里「没有 / 只能 / 唯一」以汇总文件为准；同时把 decision 第 3 条与第二节、matrix 第二、三节、pick 第三节的句子逐条改为「本轮未确认」+「建议」；街边补 VoxCeleb 户外采访候选
+- **P2｜notes/r4-zh.md:7 中文笔记本结论未同步**（第 3 轮 #2）
+  - 核实：属实 · 处理：改为「只找到 3D-Speaker」，注明汇总时据卡补
+- **P2｜matrix.md:19 DNS5 dev 用了被推翻的「笔记本或台式」描述**（第 3 轮 #3）
+  - 核实：属实（补充卡 DNS5 疑误第 2 条：Track2 `Mobile` 413 / `Desk` 187，Track1 全为 `Desk` / `HS`）· 处理：台式列与手机平板列分开写，注明 Track2 是 DNS4 盲测复用
+- **P2｜matrix.md:17 DDS 整体写只评测**（第 3 轮 #4）
+  - 核实：属实（卡：DAPS 部分 NC、VCTK 部分 ODC-By）· 处理：分两部分写，VCTK 部分标【推断】训练可
+- **P2｜pick.md:26 SIG「只能当无标签样本」与 500 条转写不符；matrix「PC 与手机各 500 条」错**（第 3 轮 #5）
+  - 核实：属实（SSI 卡：2023 test 500 条 + 500 个转写；500 是分集条数不是设备数）· 处理：pick 改为「可做吃字回归」；matrix 按 test / blind 列条数；decision 第 2 题选项 B 同步
+- **P2｜matrix.md:43 笔记本汇总漏 NISQA LIVE**（第 3 轮 #6）
+  - 核实：属实（nisqa-corpus 卡：TRAIN_LIVE 1,020 + VAL_LIVE 200 回放进手机 / 笔记本）· 处理：matrix、decision 第一节第 2 条补上，注明回放、不能逐条筛
+
+### 引用抽查
+- 「不符」1 条（SIG）：已改（#5）· 「核实属实」5 条 · 无法核实：同前两轮
+
+### 是否再审
+本轮有 P1 → 开第 4 轮。第 4 轮同时覆盖大总管授权的 014 卡索引改动（5 行结论 + 页首一句）。
