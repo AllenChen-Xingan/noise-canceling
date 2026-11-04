@@ -11,10 +11,16 @@ use crate::scene::MeetingPlace;
 pub struct Item {
     pub v: &'static str,
     pub params: &'static [(&'static str, f64)],
+    /// 只报不判：照常打分、列在表里，但不进该场景的过不过（检测器自己还不可信时用）
+    pub report_only: bool,
 }
 
 const fn it(v: &'static str) -> Item {
-    Item { v, params: &[] }
+    Item {
+        v,
+        params: &[],
+        report_only: false,
+    }
 }
 
 /// 一票否决项（排在听感前）：吃字 · 人声被压 · 延迟 · 坏值。任一不过 → 该场景不过（018 结论 5）。
@@ -26,6 +32,7 @@ pub const VETO: [Item; 4] = [
     Item {
         v: "V-EAT-ASR",
         params: &[("max", 1.0)],
+        report_only: false,
     },
 ];
 
@@ -35,10 +42,16 @@ pub const COMMON: [Item; 9] = [
     Item {
         v: "V-SIM-GATE",
         params: &[("max", 0.05), ("onset_max", 0.2)],
+        report_only: false,
     },
     it("V-WEAK"),
     it("V-PUMPV"),
-    it("V-CLICK"),
+    // 只报不判（大总管 2026-11-03）：真实降噪输出上分不清咔嗒和残留噪声的短促起伏（scorecard.md 第九节第 2 条）
+    Item {
+        v: "V-CLICK",
+        params: &[],
+        report_only: true,
+    },
     it("V-ESTOI"),
     it("V-TIMBRE"),
     it("V-NRMOS-SCOREQ"),
@@ -48,10 +61,12 @@ pub const COMMON: [Item; 9] = [
 const NR6: Item = Item {
     v: "V-NR",
     params: &[("max", -6.0)],
+    report_only: false,
 };
 const INTF10: Item = Item {
     v: "V-INTF",
     params: &[("max", -10.0)],
+    report_only: false,
 };
 
 const QUIET: [Item; 2] = [it("V-MUSIC"), NR6];
@@ -61,6 +76,7 @@ const TALKERS: [Item; 4] = [
     Item {
         v: "V-SIM-FA",
         params: &[("max", 0.1)],
+        report_only: false,
     },
     it("V-BGSTAB"),
 ];
