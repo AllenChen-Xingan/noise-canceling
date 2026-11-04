@@ -8,9 +8,9 @@
 
 | # | 出处 | 支撑什么 | 复核 |
 |---|---|---|---|
-| S1 | `/System/Library/Audio/Tunings/AID40/DSP/Graphs/builtin_microphone_general.dspg` | 标准模式处理链（直流隔离 → micSense → 波束 → ToneMeister → 输入音量） | ✅ 我亲读原文 |
+| S1 | `/System/Library/Audio/Tunings/AID40/DSP/Graphs/builtin_microphone_general.dspg` | 标准模式的候选处理链（直流隔离 → micSense → 波束 → ToneMeister → 输入音量） | ⚠️ 我亲读原文；本机用不用 AID40、运行时是否走这张图未确认 |
 | S2 | 同目录 `DSP/DSPDatabase.plist` | General / Telephony / Measurement / Movie 共用 general 图；Voice、VoiceRaw、Dictation、Diagnostic 各自的图 | ✅ 我亲读 |
-| S3 | `.../Strips/builtin_microphone_general_aufx_bmfd.plist`、`..._aufx_sens.plist` | 固定波束系数（481 点 × 3 麦）；每麦底噪谱 | ✅ `tools/read_tunings.py` 解码，带测试 |
+| S3 | `.../Strips/builtin_microphone_general_aufx_bmfd.plist`、`..._aufx_sens.plist` | 静态波束系数（481 点 × 3 麦）；每麦底噪谱 | ⚠️ `tools/read_tunings.py` 解码，带测试；运行时是否自适应更新看不到 |
 | S4 | `Config/AID40.plist` | 内置麦输入音量 −12 到 +12，初值 0 | ✅ 我亲读 |
 | S5 | `ioreg -l`（「Digital Mic」节点、`lp-mic-device`） | 硬件进系统 3 路 48 kHz；低功耗麦 3 路 16 kHz | ✅ 我亲读 |
 | S6 | `system_profiler SPHardwareDataType` | 本机 MacBook Air M5，Mac17,3 | ✅ |
