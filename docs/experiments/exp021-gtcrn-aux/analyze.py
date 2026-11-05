@@ -13,8 +13,9 @@ import sys
 from collections import defaultdict
 
 # 读引擎门控 / 送原声状态或原始未对齐输出的项：预混 + 关保命这条路上必然不同，比对时只报不判。
-# 来源：src/eval/src/verifiers/sim.rs（V-SIM-*，读 gate）· physical.rs（V-SWITCH 读 bypass，V-LAT 读 raw）
-EXPECTED_DIFF = {"V-SIM-GATE", "V-SIM-FA", "V-SIM-QUIET", "V-SIM-SWLAT", "V-SWITCH", "V-LAT"}
+# 来源：src/eval/src/verifiers/sim.rs（V-SIM-*，读 gate）· physical.rs（V-SWITCH 读 bypass，V-LAT 读 raw，
+# V-FRAME 读每帧耗时：内置模型有、外部回放给空，所以「内置 gtcrn 对外部预混」时它必然不同）
+EXPECTED_DIFF = {"V-SIM-GATE", "V-SIM-FA", "V-SIM-QUIET", "V-SIM-SWLAT", "V-SWITCH", "V-LAT", "V-FRAME"}
 TOL = 0.0
 
 

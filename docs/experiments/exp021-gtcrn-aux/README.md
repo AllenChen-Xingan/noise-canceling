@@ -36,7 +36,7 @@ python3 -m unittest docs/experiments/exp021-gtcrn-aux/test_analyze.py docs/exper
 
 | 文件 | 用途 |
 |---|---|
-| `driver/` | 重混 · 生成 GTCRN 原始输出 · 派生测试集（Rust，独立 crate，测试 7 条） |
+| `driver/` | 重混 · 生成 GTCRN 原始输出 · 派生测试集（Rust，独立 crate，测试 6 条） |
 | `sweep.sh` | 一个模型扫 8 档 + 不混回，一次打分 |
 | `analyze.py` · `test_analyze.py` | 逐段核对 · 按场景平均 |
 | `plot.py` · `test_plot.py` | 取舍曲线 SVG |
