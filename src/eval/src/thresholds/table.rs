@@ -320,6 +320,55 @@ pub const NRMOS_SPLIT: Lines = Lines {
     )],
 };
 
+/// 用户被误删（TSOS，人定 D85 题 4 = A；025 D1）：Eskimez 等 2022 式 (2)(3) 的两个参数。过关线待人拍板，只报不判。
+pub const TSOS: Lines = Lines {
+    id: "V-TSOS",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[
+        p(
+            "p",
+            Some(0.3),
+            &[(0.3, Src::Design("Eskimez 2022 式 (2)：谱压缩 p = 0.3"))],
+        ),
+        p(
+            "gamma",
+            Some(0.1),
+            &[(0.1, Src::Design("Eskimez 2022 §4.4：γ = 0.1"))],
+        ),
+    ],
+};
+
+/// 旁人漏过事件率（025 D2b）：只有旁人的 1 秒窗里压低不到几 dB 算漏过。X 待人拍板，暂取 V-INTF 的线 10 dB，只报不判。
+pub const LEAK: Lines = Lines {
+    id: "V-LEAK",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[p(
+        "min_att_db",
+        Some(10.0),
+        &[(
+            10.0,
+            Src::Design("025 D2b 写「X 待定」；暂取压旁人 V-INTF 的过关线 10 dB，待人拍板"),
+        )],
+    )],
+};
+
+/// 同时说话只留用户（025 D5）：SI-SDRi 低于几 dB 记一次失败（Delcroix 2022 §5.3）。只报不判。
+pub const PSE_OVL: Lines = Lines {
+    id: "V-PSE-OVL",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[p(
+        "fail_below",
+        Some(1.0),
+        &[(
+            1.0,
+            Src::Design("Delcroix 2022 §5.3：SI-SDRi < 1 dB 记失败"),
+        )],
+    )],
+};
+
 /// 成绩单层（新规则 v2，人定 D85 题 1 = B）：组合内均值的 bootstrap 区间与 Holm 校正（调研 025 X1 · X4）。
 pub const AGG: Lines = Lines {
     id: "SC-AGG",
@@ -378,7 +427,7 @@ pub const NRMOS_DELTA: Lines = Lines {
 };
 
 /// 表里全部 verifier。
-pub const ALL: [&Lines; 25] = [
+pub const ALL: [&Lines; 28] = [
     &BGSTAB,
     &ONSET,
     &SPLVL,
@@ -404,6 +453,9 @@ pub const ALL: [&Lines; 25] = [
     &NRMOS_SPLIT,
     &AGG,
     &NRMOS_DELTA,
+    &TSOS,
+    &LEAK,
+    &PSE_OVL,
 ];
 
 /// 待定清单：已知不一致或没有出处的条目。全部是建议值，挂 012 拍板 #8 · D44。
