@@ -15,8 +15,8 @@
 |---|---|---|
 | 1 速度 | 批量 32 × 4 s：MPS 0.821 s / 步，CPU 1.346 s / 步。批量 8 时反而 CPU 快（0.368 vs 0.593 s）。**这是不带绕法的 MPS，算错了**；带绕法的重测待补 | `runs/20261105-145149-step/` |
 | 2 瓶颈 | 成立：单进程 476 段 / 秒，4 进程 775 段 / 秒（每墙钟小时约 3,100 小时音频），是训练（CPU 约 95 小时 / 小时）的 30 倍以上 | `runs/20261105-150423-mix-clean/`（`20261105-145445-mix/` 与别的满载任务重叠，留作对照） |
-| 3 正确性 | **不成立**：MPS 前向差 61%、梯度差约 84%。根因不是 GRU（GRU 前向与梯度差 < 1e-7），是逐通道、沿时间轴带空洞的 `Conv2d`；转置卷积对输入的梯度用的是同一个算子，也错。GTCRN 中招 4 处 | `runs/20261105-150438-parity/` · `runs/20261105-150606-layers/` |
-| 3′ 绕法 | `smoke/mps_fix.py` 把这 4 个卷积换成数学等价写法后，正式尺寸（8 × 4 s，20 步）前向差 1.2e-6、整模型梯度差 6.1e-5、损失差 4.4e-6，全过 | `runs/20261105-151236-parity-fix/` |
+| 3 正确性 | **不成立**：MPS 前向差 61%、梯度差约 84%。根因不是 GRU（GTCRN 三种尺寸的 GRU 单独比，前向与梯度差 < 1e-5，`test_mps_fix.py` 的 `GruTest`），是逐通道、沿时间轴带空洞的 `Conv2d`；转置卷积对输入的梯度用的是同一个算子，也错。GTCRN 中招 4 处 | `runs/20261105-150438-parity/` · `runs/20261105-150606-layers/` |
+| 3′ 绕法 | `smoke/mps_fix.py` 把这 4 个卷积换成数学等价写法后，正式尺寸（8 × 4 s，20 步）前向差 1.2e-6、整模型梯度差 6.1e-5、损失差 4.4e-6、训后完整状态（含 BatchNorm 统计）差 1.0e-4；MPS 训出的状态装进没打绕法的原模块，eval 前向与 CPU 训出的差 1.0e-3，全过 | `runs/20261105-152353-parity-fix2/`（`20261105-151236-parity-fix/` 是补这两项之前的一次） |
 
 ## 文件
 
@@ -24,11 +24,11 @@
 |---|---|---|
 | `smoke/step_timing.py` | 单步训练耗时（前向 + 反向 + Adam），可选 `--mps-fix` | `test_step_timing.py` |
 | `smoke/mix_timing.py` | 读入 + 在线混音耗时 | `test_mix_timing.py` |
-| `smoke/mps_parity.py` | CPU 与 MPS 比前向 · 整模型梯度 · N 步训练 | `test_mps_parity.py` |
+| `smoke/mps_parity.py` | CPU 与 MPS 比前向 · 整模型梯度 · N 步训练 · 训后完整状态 · 导出口径（原模块 eval） | `test_mps_parity.py` |
 | `smoke/layer_diff.py` | 逐层比 CPU 与 MPS，找第一个差的层 | `test_layer_diff.py` |
 | `smoke/mps_fix.py` | MPS 绕法（只训练时用，导出用原模块） | `test_mps_fix.py`（含「原写法在 MPS 上仍错」两条：上游修好时会红） |
 
-跑全部测试（在 `smoke/` 下）：`GTCRN_DIR=<主目录>/resources/gtcrn python -m unittest test_step_timing test_mps_parity test_mps_fix test_layer_diff test_mix_timing`——24 条全过。用的 venv 是主目录 `_tmp/exp008-torch-venv`（torch 2.15.0，有 einops，无 pytest）。
+跑全部测试（在 `smoke/` 下）：`GTCRN_DIR=<主目录>/resources/gtcrn python -m unittest test_step_timing test_mps_parity test_mps_fix test_layer_diff test_mix_timing`——26 条全过。用的 venv 是主目录 `_tmp/exp008-torch-venv`（torch 2.15.0，有 einops，无 pytest）。
 
 ## 边界
 

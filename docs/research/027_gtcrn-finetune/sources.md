@@ -46,8 +46,8 @@
 | E2 | 读入 + 混音耗时（干净重测；重叠的那次留作对照，标了 NOTE） | `runs/20261105-150423-mix-clean/` · `runs/20261105-145445-mix/` |
 | E3 | MPS 正确性：不带绕法不过 | `runs/20261105-150438-parity/` |
 | E4 | 逐层定位（前向） | `runs/20261105-150606-layers/` |
-| E5 | MPS 正确性：带绕法过 | `runs/20261105-151236-parity-fix/` |
-| E6 | 最小复现与绕法 | `smoke/mps_fix.py` · `smoke/test_mps_fix.py` |
+| E5 | MPS 正确性：带绕法过（含训后完整状态与导出口径） | `runs/20261105-152353-parity-fix2/`（之前一次 `runs/20261105-151236-parity-fix/`） |
+| E6 | 最小复现与绕法；GRU 单独比 | `smoke/mps_fix.py` · `smoke/test_mps_fix.py`（`MpsTest` · `GruTest`） |
 | E7 | GTCRN 弱项 83 组 / 守住项 71 组（cands 线，未合并） | `docs/experiments/exp016-candidates/runs/weak-spots-20261105/weak_spots.md`（在 `../noise_canceling-cands`） |
 | E8 | 引擎原声混回 | `src/engine/src/engine.rs` `mix_out`；cands `runs/dfn3-ll-20261105-103000-4cf04ac1/notes.md` 第三节 |
 | E9 | V-ONSET · V-SPLVL 定义 | `src/eval/src/verifiers/perceptual.rs:107-172` · `:263-291` |
