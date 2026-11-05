@@ -8,7 +8,7 @@ use serde_json::Value;
 
 use crate::analysis::{
     MASK_FRAME, Masks, Spectrogram, frame_power, kurtosis, mean, quantile, truth_from_clean,
-    xcorr_lag,
+    busiest_start, xcorr_lag,
 };
 use crate::synth::Clip;
 use crate::system::{BUDGET_MS, RunOut};
@@ -74,7 +74,7 @@ pub const REGISTRY: &[Info] = &[
         unit: "ms",
         better: Better::Lower,
         definition: "端到端附加延迟：引擎延迟账（hop 等待 + 模型算法延迟，代码声明）+ 平台预算（IO 块取提议值 96 帧）；并实测算法延迟核对声明",
-        algorithm: "输入与未对齐原始输出的互相关峰（前 2 s、0–2048 样本）= 实测算法延迟；|实测 − Model::latency_samples| ≤ 1 样本且账面合计 ≤ 45 ms 才过。5 个种子各量一次（Teams §6.35 放 5 次的口径；本实现确定性，5 次一致）",
+        algorithm: "输入与未对齐原始输出的归一化互相关 |r| 峰（窗 = 主讲人能量最多的 4 s，照 TS 26.132 §7.10.4.2 窗心对准句子；滞后 0–2048 样本；峰 |r| < 0.1 判不知道）= 实测算法延迟；|实测 − Model::latency_samples| ≤ 1 样本且账面合计 ≤ 45 ms 才过。离线确定性，每段量一次（#109）",
         anchor: "D32：≤ 45 ms；rubric L1 / V2",
         failure: "平台项是预算（Basis::Budget）不是实测，P3 脉冲法之前只证明「账面不超」；互相关对强非线性输出可能偏峰",
     },

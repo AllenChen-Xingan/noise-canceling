@@ -223,25 +223,59 @@ pub fn quantile(v: &[f64], q: f64) -> f64 {
     s[lo] + (s[hi] - s[lo]) * (pos - lo as f64)
 }
 
-/// `y` 相对 `x` 的延迟（样本）：在 `0..=max_lag` 里找互相关峰。只用前 `win` 个样本，够定位、又不慢。
-pub fn xcorr_lag(x: &[f32], y: &[f32], max_lag: usize, win: usize) -> Option<usize> {
-    let n = win.min(x.len());
-    let mut best: Option<(usize, f64)> = None;
-    for lag in 0..=max_lag {
-        if lag + n > y.len() {
-            break;
-        }
-        let s: f64 = x[..n]
-            .iter()
-            .zip(&y[lag..lag + n])
-            .map(|(a, b)| *a as f64 * *b as f64)
-            .sum();
-        if best.is_none_or(|(_, bs)| s > bs) {
-            best = Some((lag, s));
+/// `guide` 里能量最大的 `win` 样本窗的起点（步长 100 ms）。延迟测量把窗放在人声最多处，
+/// 照 TS 26.132 §7.10.4.2「窗心对准句子」（#109：固定在开头时，人声晚出现的段会量错）。
+pub fn busiest_start(guide: &[f32], win: usize, step: usize) -> usize {
+    if guide.len() <= win {
+        return 0;
+    }
+    let e: Vec<f64> = guide.iter().map(|v| (*v as f64).powi(2)).collect();
+    let mut acc: f64 = e[..win].iter().sum();
+    let (mut best, mut at) = (acc, 0);
+    let mut s = 0;
+    while s + step + win <= e.len() {
+        acc += e[s + win..s + win + step].iter().sum::<f64>() - e[s..s + step].iter().sum::<f64>();
+        s += step;
+        if acc > best {
+            (best, at) = (acc, s);
         }
     }
-    best.and_then(|(l, s)| (s > 0.0).then_some(l))
+    at
 }
+
+/// `y` 相对 `x` 的延迟（样本）：在 `0..=max_lag` 里找**归一化**互相关 |r| 的峰（#109）。
+/// 窗取 `x[start..start + win]`，每个滞后除以两窗能量的几何平均，所以窗内能量随滞后变大不会抬高次峰。
+/// 两窗任一全零、或峰 |r| < [`XCORR_MIN_R`] 时返回 `None`。
+pub fn xcorr_lag(x: &[f32], y: &[f32], max_lag: usize, start: usize, win: usize) -> Option<usize> {
+    let start = start.min(x.len());
+    let n = win.min(x.len() - start);
+    let xs = &x[start..start + n];
+    let ex: f64 = xs.iter().map(|a| (*a as f64).powi(2)).sum();
+    if n == 0 || ex <= 0.0 {
+        return None;
+    }
+    let mut best: Option<(usize, f64)> = None;
+    for lag in 0..=max_lag {
+        let b = start + lag;
+        if b + n > y.len() {
+            break;
+        }
+        let ys = &y[b..b + n];
+        let ey: f64 = ys.iter().map(|v| (*v as f64).powi(2)).sum();
+        if ey <= 0.0 {
+            continue;
+        }
+        let dot: f64 = xs.iter().zip(ys).map(|(a, v)| *a as f64 * *v as f64).sum();
+        let r = (dot / (ex * ey).sqrt()).abs();
+        if best.is_none_or(|(_, br)| r > br) {
+            best = Some((lag, r));
+        }
+    }
+    best.and_then(|(l, r)| (r >= XCORR_MIN_R).then_some(l))
+}
+
+/// 归一化互相关峰的下限：低于它算「找不到峰」。
+pub const XCORR_MIN_R: f64 = 0.1;
 
 /// 35 ms 时间常数（P.1120 §11.14.5）的平滑功率，逐 10 ms 掩码帧取帧末值，单位 dB。
 pub fn smoothed_level_db(x: &[f32], sr: u32, tau_s: f64) -> Vec<f64> {
@@ -300,7 +334,7 @@ mod tests {
         let x: Vec<f32> = (0..8000).map(|_| r.normal() as f32).collect();
         let mut y = vec![0.0f32; 300];
         y.extend_from_slice(&x);
-        assert_eq!(xcorr_lag(&x, &y, 600, 4000), Some(300));
+        assert_eq!(xcorr_lag(&x, &y, 600, 0, 4000), Some(300));
     }
 
     /// #109 缺陷样例：前 1.9 s 只有底噪，之后接一段渐强的浊音（基音周期正好 106 样本）。
@@ -327,7 +361,29 @@ mod tests {
     #[test]
     fn passthrough_with_late_voiced_onset_measures_zero() {
         let x = late_voiced_onset();
-        assert_eq!(xcorr_lag(&x, &x, 2048, 32_000), Some(0));
+        let sr = vdn_types::MODEL_RATE as usize;
+        let start = busiest_start(&x, 4 * sr, sr / 10);
+        assert!(start >= sr * 19 / 10, "窗应落在人声段：{start}");
+        assert_eq!(xcorr_lag(&x, &x, 2048, start, 4 * sr), Some(0));
+        // 旧窗口（开头 2 s）在归一化后也必须量对：归一化本身就能压住次峰
+        assert_eq!(xcorr_lag(&x, &x, 2048, 0, 2 * sr), Some(0));
+    }
+
+    /// 同一信号人为延后 300 样本：窗放在人声段，量出 300。
+    #[test]
+    fn late_voiced_onset_with_known_delay() {
+        let x = late_voiced_onset();
+        let sr = vdn_types::MODEL_RATE as usize;
+        let mut y = vec![0.0f32; 300];
+        y.extend_from_slice(&x);
+        let start = busiest_start(&x, 4 * sr, sr / 10);
+        assert_eq!(xcorr_lag(&x, &y, 2048, start, 4 * sr), Some(300));
+    }
+
+    #[test]
+    fn xcorr_silent_is_none() {
+        let z = vec![0.0f32; 8000];
+        assert_eq!(xcorr_lag(&z, &z, 100, 0, 4000), None);
     }
 
     #[test]

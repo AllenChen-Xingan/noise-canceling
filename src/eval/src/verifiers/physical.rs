@@ -8,7 +8,15 @@ pub(super) fn v_lat(c: &Ctx) -> Score {
         return Score::unknown(ID, "ms", Better::Lower, "没有系统运行记录");
     };
     let sr = c.clip.sr as f64;
-    let Some(lag) = xcorr_lag(&c.clip.mix, &r.raw, 2048, 32_000) else {
+    // 窗放在主讲人能量最多的 4 s（干净轨全零时退回混合轨），#109
+    let win = 4 * c.clip.sr as usize;
+    let guide = if c.clip.clean.iter().any(|v| *v != 0.0) {
+        &c.clip.clean
+    } else {
+        &c.clip.mix
+    };
+    let start = busiest_start(guide, win, c.clip.sr as usize / 10);
+    let Some(lag) = xcorr_lag(&c.clip.mix, &r.raw, 2048, start, win) else {
         return Score::unknown(ID, "ms", Better::Lower, "输入太弱，互相关找不到峰");
     };
     let ok_algo = lag.abs_diff(r.latency) <= 1;

@@ -81,7 +81,7 @@ fn score(id: &str, c: &Clip) -> Score {
 }
 
 fn extra(s: &Score, k: &str) -> Option<f64> {
-    s.extra.iter().find(|(x, _)| x == k).map(|(_, v)| *v)
+    s.extra.iter().find(|(x, _)| *x == k).map(|(_, v)| *v)
 }
 
 /// 8 kHz：最高一带（4 kHz，上沿 4.49 kHz）越过奈奎斯特，旧代码切片越界 panic。
