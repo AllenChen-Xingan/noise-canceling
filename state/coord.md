@@ -117,11 +117,15 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-05 11:57 timbre 名额 11:48–11:56 用完：旧代码三系统 243 项逐项同基线；新 ERB 量法提交 88de9880，对拍 0.000 dB；golden 只 V-TIMBRE 变；基线只 36 项 V-TIMBRE 变、通过数不变（GTCRN 2.27 · FE-M 2.02 < 3）。名额 → cands 跑 DPDFNet-2（约 13:15），之后 timbre 全量测试
+- 2026-11-05 11:48 cands DFN3 成绩单跑完（run 20261105-103000-4cf04ac1，77 min，0 段失败，缓存 1920 条原样 + 新增 960）；DFN3 降噪 +2.16 dB、听感 +0.05、可懂度 +0.01，咔哒 +6/min、字头 −0.93 dB、背景稳 −0.74 dB；组合 过1/不过42/待测17 vs GTCRN 0/40/20。名额 → timbre（第 1 段半 + 第 2 段），之后回 cands 跑 DPDFNet-2（约 80 min）
 - 2026-11-05 00:59 evalfix 全量重出 run 20261105-005916-4ccf0638 开跑（权重哈希 · 工作区干净 · 接电源 · build 17f5 已核），预计 03:30；延迟预算 planned_platform_for 进 vdn-types（只加法，16 kHz 逐位不变）；cands 等合并后跑两候选最终版
 - 2026-11-05 00:07 evalfix 中途评审② 2 轮 P1×3 已修（SI-SDR 全零 · 干净人声掩码 · 重叠段桥接），申请冒烟名额 → 排在 cands 后；cands 草稿只跑 DSP 项，最终版只跑两候选、与 evalfix 的 GTCRN run 配对
 - 2026-11-04 #115 外部入口 CI 过、已合并（分支保留）；名额给 cands 跑 DPDFNet-2 + DFN3 低延迟版 480 段（约 30 min）；NoNoise-Mac 人未选 → 默认 C 推迟；待告诉 a2：spectrum_golden 改冻结法（a2 会话现不在线）
 - 2026-11-04 23:3x 会话重启，大总管改名 noise-canceling-26，已通知两手下；cands 入口 PR #115；evalfix spectrum_golden 改冻结法（技术题我定，要告诉 a2）
 - 2026-11-04 人逐题定评分方法 → D85（G-1 B · G-2 B 干净人声单独跑 · G-3 C 单段 ≥ 5 字否决 · G-4 A · 4 dB · 0.1 · 不听咔嗒）；已转 evalfix。evalfix 首次编译名额已还；对 cands 外部入口提 3 处公平性（延迟标声明值 · 最坏一帧判不知道 · 截断查偷看未来），我同意
+- 2026-11-05 人问音色项「代码和文档到底谁对，要研究和证据，开手下做，有错就修」→ 派 timbre（调研 026 · #119 · worktree ../noise_canceling-timbre · 分支 research/026-timbre-measure；实体：音色项 · N4 条文 · 判定线）；交代 _tmp/20261104-b15/timbre.md；名额排在 cands 后。更正 #119「没抓到」→ 已在 PENDING 登记
+- 2026-11-05 机器 06:59 关机 07:00 重启（shutdown_stall 报告，起因未查）：tmux 与手下会话全断，大总管改名 noise-canceling-74；两个候选离线新 run 完整（各 mix/clean 480），锚点成绩单 065944 中断作废；名额重发给 cands，`claude --continue` 接回（交代 `_tmp/20261104-b15/msg-cands-resume.txt`），从锚点成绩单接着跑。evalfix 窗口随重启消失，worktree/分支仍待人删
 - 2026-11-05 #116 CI 过（macos 4m18s）→ 合并 90ed08f2；关 #111 #109 #110；开 #117（e2e 夹具并发）#118（候选复位）；evalfix 验收通过、worktree 干净，笔记另存主目录 _tmp/evalfix/worktree-scratch-20261105/；关窗 + 删 worktree / 分支被权限拦下，等人处理；通知 cands merge main 后申请名额（估 3–3.3 h，含直通锚点 + 识别漂移核对）
 - 2026-11-05 合并提交 bdf0ad57 + 987a3af8（cands 的 clean/ 入口补丁 + runner 没给 clean 时那 3 项只报不判、开头写明）；我亲跑 fmt · tidy · clippy 过，全量只一次 external_e2e 假红（与 evalfix 并发互删夹具目录，开 #117 P2），单跑 2 次 11/11 过；推送开 PR #116，等 CI。cands 最终跑定为另开新 run（mix + clean 一次跑全，不补旧 run、不写 amend），估 2.5–2.8 h，开跑前 codex 审 1 轮
 - 2026-11-05 evalfix 收尾（codex 收尾 2 轮无 P0/P1，P2×5 已修，e3be788d）；待人 2 题记为 G-8 G-9。我在其 worktree 合 origin/main：解 main.rs · 评审索引冲突，system.rs:471 测试补 build 第二参数；全量只红 external_e2e 主测试（外部入口 × v2 干净人声路查不到输出，推断）→ 交 evalfix + cands 对齐修，合并未提交

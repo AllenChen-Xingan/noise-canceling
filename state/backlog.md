@@ -65,7 +65,7 @@
 
 - [ ] **开会负载下的测速与耗电**（E-5）：分纯音频通话（音频通话不等于空闲）与视频会议（+ 摄像头 ± 屏幕共享）两档，先量会议软件自身占用，v4i 按 16 ms 节奏的最坏帧 · 超时帧 · 功耗增量 · 会议软件自身是否变卡；进 / 出会议启停（StopIO 后 CPU 回 0）· 参照 DAFx26 争用测试
 
-- [ ] **codex-review 工具问题**：codex 输出以「P1」「P2」开头时，`file` 命令把它误判为 PBM / PGM 图片，第 2 轮起 `--previous` 被隐私扫描拦下；绕法：文件开头加一行 HTML 注释 · 出处 fastpath 收尾报告
+- [ ] **codex-review 工具问题**：codex 输出以「P1」「P2」开头时，`file` 命令把它误判为 PBM / PGM 图片，第 2 轮起 `--previous` 被隐私扫描拦下；绕法：文件开头加一行 HTML 注释 · 出处 fastpath 收尾报告 · 2026-11-05 timbre（026）第二次撞上，要转 skill 维护者
 
 - [ ] **019 待重测（下次名额）**：耗电 3 轮（人 sudo，约 35 min）· BE-IMPACT 新测法 · rt 下 10 min BE-DEADLINE · BE-SIZE / BE-RT-SAN · 出处 019 `decision.md` §7
 - [ ] **apple-rs 与 bench 合成一个共用 crate**（JSON 字段唯一真相源）· 出处 019 §7
@@ -93,3 +93,4 @@
 - [ ] 成绩单按语种（`lang`）分组比较（旧 G4 中文组的替代）· 出处 `specs/rubric/scorecard.md` 第七节
 - [ ] DFN3 离线链路换产品重采样器（vdn_dsp Interpolator3 / Decimator3）复测：前视 284 → 约 192 样本，看输出效果变不变 · 方案 exp016 `plan-dfn3-resampler.md`（cands，2026-11-05，大总管定这批不做）
 - [ ] NoNoise-Mac 进成绩单（D77）：命令行文件降噪模式可用，要下载未公证的 release 程序约 7.5 MB；人未选，默认推迟 · 出处 exp016 `state/handoff/cands.md` 待人拍板 1
+- [ ] 模型（候选对比）：成绩单在引擎「原声混回」后打分（说话时约一半原声，engine.rs mix_out），模型本身的差约被压一半（推断）。如人选「改进 / 训练」，用 safety: false 再跑一轮看模型本身；改场景集参数归 evalfix，要名额。来源 exp016 runs/dfn3-ll-20261105-103000-4cf04ac1/notes.md 第三节
