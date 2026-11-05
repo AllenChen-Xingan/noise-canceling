@@ -1,6 +1,6 @@
 # 现状页 · arch（批次 20261104-b15 · GTCRN 改进四条路之一）
 
-- **状态**：方案写完，codex 评审中
+- **状态**：可以收尾（codex 3 轮，连续两轮无 P0/P1，P2 全改；测试 12 条全过）
 - **手上**：调研 028 · issue #122 · GTCRN 改结构（加注意力头或别的小结构）；实测 exp019
 - **管的实体**：GTCRN 结构 · 实时推理代价（延迟 · 每帧耗时 · 内存 · 耗电）
 - **交代**：主目录 `_tmp/20261104-b15/arch.md` · `gtcrn-options-common.md`
@@ -21,7 +21,7 @@
 | `docs/research/028_gtcrn-arch/` | README · sources · decision（第一节比较卡） |
 | `docs/research/README.md` | 索引一行 |
 | `docs/experiments/exp019-gtcrn-arch/` | 脚本 6 个 · 测试 12 条 · 两次测速读数 · README |
-| `docs/reviews/028_gtcrn-arch-codex.md` · `docs/reviews/README.md` | 评审记录 · 索引一行（评审后补） |
+| `docs/reviews/028_gtcrn-arch-codex.md` · `docs/reviews/README.md` | 评审记录 · 索引一行 |
 
 ## 待人拍板（由大总管汇总）
 
