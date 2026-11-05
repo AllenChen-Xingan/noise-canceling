@@ -346,3 +346,38 @@ fn huge_declared_latency_cannot_be_verified() {
     let e = load(&fx, &dir).unwrap_err();
     assert!(e.contains("截半自检无法验证"), "{e}");
 }
+
+/// 保命开、注入故障：Engine 复位模型后，回放位置不回卷——输出、送原声、门控与内置 passthrough 逐位一致
+/// （内置 passthrough 延迟 0、复位不改输出；回放若回卷，故障后的输出会变成段首的样本）。codex 016 入口第 2 轮 P2 #1。
+/// 成绩单标准（`scorecard::standard`）不含计时项，所以「计时给空」对成绩单无影响；这里只断言计时为空。
+#[test]
+fn faults_and_resets_keep_replay_on_the_same_time_axis() {
+    use vdn_engine::FaultKind;
+    let fx = setup("fault");
+    let dir = write_ext(&fx, "fault", "fault-ext", 0, &ALL, &ident);
+    let ext = SystemKind::external(load(&fx, &dir).unwrap()).unwrap();
+    let clip = load_scene_clip(&fx.clips[0], &fx.root).unwrap();
+    let faults = vec![
+        (20, FaultKind::Nan),
+        (60, FaultKind::Error),
+        (100, FaultKind::Explode),
+    ];
+    let spec = |kind| SystemSpec {
+        kind,
+        safety: true,
+        faults: faults.clone(),
+    };
+    let a = run(&spec(SystemKind::Passthrough), &clip.mix).unwrap();
+    let b = run(&spec(ext), &clip.mix).unwrap();
+    assert!(a.stats.model_resets >= 2, "故障没触发复位：{:?}", a.stats);
+    assert_eq!(a.stats.model_resets, b.stats.model_resets);
+    assert_eq!(a.out, b.out);
+    assert_eq!(a.bypass, b.bypass);
+    assert_eq!(a.voiced, b.voiced);
+    assert!(b.engine_times.is_empty());
+    assert!(
+        !vdn_eval::scorecard::standard::items(fx.clips[0].scene)
+            .iter()
+            .any(|(i, _)| i.v == "V-FRAME" || i.v == "V-RTF")
+    );
+}
