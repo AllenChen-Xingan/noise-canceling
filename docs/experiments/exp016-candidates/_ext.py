@@ -134,13 +134,21 @@ def xcorr_lag(a, b, max_lag=4000):
 def probe(process, clips, root, nominal):
     """在清单第一段的 mix 上实测前视与对齐（不是截半自检挑的那批之外的保证，只作定声明延迟的依据）。
     返回 (声明延迟, 记录)。对齐后滞后 ≠ 0 就报错：输出没对齐，入口会把延迟算错。"""
-    c = next(c for c in clips if c["has_clean_ref"])
+    ok = [c for c in clips if c["has_clean_ref"]]
+    c, c2 = ok[0], ok[1 % len(ok)]
     x = inputs_of(c, root, set())[0][1]
     la = measure_lookahead(process, x)
-    lag = xcorr_lag(x, process(x))
+    a1 = process(x)
+    lag = xcorr_lag(x, a1)
     if abs(lag) > 1:
         raise SystemExit(f"对齐不对：{c['id']} 输出相对输入滞后 {lag} 样本")
-    return max(nominal, la), {"probe_clip": c["id"], "nominal_latency": nominal, "measured_lookahead": la, "lag_after_align": lag}
+    # 每段之间状态清干净：A → B → A 两次 A 的输出应一致（codex 016 脚本第 2 轮 P2 #5）
+    process(inputs_of(c2, root, set())[0][1])
+    reset_diff = float(np.max(np.abs(process(x) - a1)))
+    if reset_diff > 1e-6:
+        raise SystemExit(f"每段之间状态没清干净：A→B→A 两次 A 输出最大差 {reset_diff:.2e}")
+    return max(nominal, la), {"probe_clip": c["id"], "nominal_latency": nominal, "measured_lookahead": la,
+                              "lag_after_align": lag, "reset_check_clip": c2["id"], "reset_max_abs_diff": reset_diff}
 
 
 def check_existing(path, n):
@@ -156,7 +164,16 @@ def versions():
          "libsndfile": sf.__libsndfile_version__, "platform": platform.platform(), "machine": platform.machine()}
     for m in ("onnxruntime", "soxr"):
         if m in sys.modules:
-            v[m] = getattr(sys.modules[m], "__version__", "?")
+            v[m] = getattr(sys.modules[m], "__version__", "未知")
+    if "soxr" in sys.modules:
+        sx = sys.modules["soxr"]
+        v["libsoxr"] = getattr(sx, "__libsoxr_version__", "未知")
+        ext = sorted(Path(sx.__file__).parent.glob("soxr_ext*.so"))
+        v["soxr_ext_sha256"] = sha256_file(ext[0]) if ext else "未知"
+    if "onnxruntime" in sys.modules:
+        ort = sys.modules["onnxruntime"]
+        libs = sorted(Path(ort.__file__).parent.glob("capi/libonnxruntime*.dylib"))
+        v["libonnxruntime_sha256"] = sha256_file(libs[0]) if libs else "未知"
     return v
 
 
@@ -176,12 +193,22 @@ def fingerprint(model_info, setup):
             "versions": versions(), "clips_sha256": sha256_file(ROOT / CLIPS)}
 
 
-def pin_fingerprint(shard_dir, fp):
+def pin_fingerprint(shard_dir, fp, out=None):
+    """第一次：原子建档（先写临时文件，再 `os.link` 发布；已有就不覆盖）。之后：比对。
+    输出目录里已有 wav 却没有指纹（旧版脚本跑的）→ 拒绝续跑（codex 016 脚本第 2 轮 P1 #2）。"""
     p = shard_dir / "fingerprint.json"
     shard_dir.mkdir(parents=True, exist_ok=True)
     if not p.exists():
-        p.write_text(json.dumps(fp, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
-        return
+        if out is not None and any(out.glob("*/*.wav")):
+            raise SystemExit(f"{out.name} 里已有输出但没有运行指纹（来源不明），换一个新 run-id 重跑")
+        tmp = shard_dir / f".fingerprint.{os.getpid()}.tmp"
+        tmp.write_text(json.dumps(fp, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+        try:
+            os.link(tmp, p)  # 目标已存在就失败：两个进程同时建档时只有一个成功
+        except FileExistsError:
+            pass
+        finally:
+            tmp.unlink()
     old = json.loads(p.read_text())
     if old != json.loads(json.dumps(fp, sort_keys=True)):
         diff = sorted(k for k in set(old) | set(fp) if old.get(k) != json.loads(json.dumps(fp.get(k))))
@@ -240,12 +267,12 @@ def main(name, process, nominal_latency, model_info, setup=None):
         print(json.dumps(rec, ensure_ascii=False))
         return rec
     if args.finalize:
-        pin_fingerprint(shard_dir, fingerprint(model_info, setup))  # 收尾时的环境也必须和跑的时候一样
+        pin_fingerprint(shard_dir, fingerprint(model_info, setup), out)  # 收尾时的环境也必须和跑的时候一样
         latency, rec = probe(process, clips, root, nominal_latency)
         info = dict(model_info, latency_probe=rec)
         return finalize(name, out, builds, clips_rel, clips, picks, latency, info, setup, args, shard_dir)
     k, n = (int(v) for v in args.shard.split("/"))
-    pin_fingerprint(shard_dir, fingerprint(model_info, setup))
+    pin_fingerprint(shard_dir, fingerprint(model_info, setup), out)
     t0, done, skipped, audio_s = time.time(), 0, 0, 0.0
     for c, kind, x in jobs(clips, root, picks, (k, n)):
         p = out / kind / f"{c['id']}.wav"
@@ -279,14 +306,17 @@ def finalize(name, out, builds, clips_rel, clips, picks, latency_samples, model_
     stray = [p.name for p in out.iterdir() if p.is_dir() and p.name not in KINDS] + [p.name for p in out.glob("*/*.part")]
     if stray:
         raise SystemExit(f"输出目录里有入口不认的东西：{stray}")
+    n_of = {c["id"]: c["dur_samples"] for c in clips}
+    for p in out.glob("*/*.wav"):  # 逐个校验：能读 · 16 kHz · 等长 · 全有限
+        check_existing(p, n_of[p.stem])
     rj = {"schema": SCHEMA, "name": name, "clips": clips_rel, "sr": SR, "latency_samples": int(latency_samples),
           "inputs": list(KINDS), "model": model_info}
     rj_path = out / "run.json"
     if rj_path.exists():
         raise SystemExit(f"{rj_path} 已存在，不覆盖")
-    rj_path.write_text(json.dumps(rj, ensure_ascii=False, indent=2) + "\n")
+    rj_text = json.dumps(rj, ensure_ascii=False, indent=2) + "\n"
     builds.mkdir(parents=True)
-    (builds / "run.json").write_text(rj_path.read_text())
+    (builds / "run.json").write_text(rj_text)
     hashes = sorted(f"{sha256_file(p)}  {p.parent.name}/{p.name}" for p in out.glob("*/*.wav"))
     (builds / "hashes.txt").write_text("\n".join(hashes) + "\n")
     shards = [json.loads(p.read_text()) for p in sorted(shard_dir.glob("*.json"))] if shard_dir else []
@@ -295,4 +325,8 @@ def finalize(name, out, builds, clips_rel, clips, picks, latency_samples, model_
               "cpu_count": os.cpu_count(), "out_dir": f"_tmp/exp016/{name}/{out.name}",
               "fingerprint": json.loads(fp_path.read_text()) if fp_path and fp_path.exists() else None}
     (builds / "params.json").write_text(json.dumps(params, ensure_ascii=False, indent=2) + "\n")
+    # run.json 最后发布：入口只认有 run.json 的目录；之前任何一步失败都可以删掉 builds/ 重试（codex 016 脚本第 2 轮 P2 #3）
+    tmp = rj_path.with_name(".run.json.tmp")
+    tmp.write_text(rj_text)
+    os.replace(tmp, rj_path)
     print(f"[{name}] 已写 {out.name}/run.json 与 builds/{builds.name}（{len(hashes)} 个文件）")
