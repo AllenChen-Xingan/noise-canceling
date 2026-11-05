@@ -1,0 +1,577 @@
+{
+  "device": "mps",
+  "mode": "train",
+  "seconds": 0.5,
+  "threshold": 0.001,
+  "output_rel": 0.6902060486851528,
+  "first_bad": {
+    "name": "encoder.en_convs.3.depth_conv",
+    "type": "Conv2d",
+    "rel": 0.6738504250045851
+  },
+  "worst": [
+    {
+      "name": "encoder.en_convs.4.point_bn2",
+      "type": "BatchNorm2d",
+      "rel": 1.1316677136181923
+    },
+    {
+      "name": "decoder.de_convs.4.bn",
+      "type": "BatchNorm2d",
+      "rel": 1.0608568949449506
+    },
+    {
+      "name": "decoder.de_convs.4.conv",
+      "type": "ConvTranspose2d",
+      "rel": 1.0409575072328014
+    },
+    {
+      "name": "decoder.de_convs.3.act",
+      "type": "PReLU",
+      "rel": 1.004009239675956
+    },
+    {
+      "name": "encoder.en_convs.4.point_conv2",
+      "type": "Conv2d",
+      "rel": 1.0009374761761176
+    },
+    {
+      "name": "encoder.en_convs.4.depth_conv",
+      "type": "Conv2d",
+      "rel": 0.9774135359208433
+    },
+    {
+      "name": "encoder.en_convs.4.depth_bn",
+      "type": "BatchNorm2d",
+      "rel": 0.9714198531867514
+    },
+    {
+      "name": "erb.ierb_fc",
+      "type": "Linear",
+      "rel": 0.9510018101721768
+    }
+  ],
+  "layers": [
+    {
+      "name": "erb.erb_fc",
+      "type": "Linear",
+      "rel": 0.0
+    },
+    {
+      "name": "sfe.unfold",
+      "type": "Unfold",
+      "rel": 0.0
+    },
+    {
+      "name": "encoder.en_convs.0.conv",
+      "type": "Conv2d",
+      "rel": 1.3788331559304524e-07
+    },
+    {
+      "name": "encoder.en_convs.0.bn",
+      "type": "BatchNorm2d",
+      "rel": 1.993771015414611e-07
+    },
+    {
+      "name": "encoder.en_convs.0.act",
+      "type": "PReLU",
+      "rel": 1.9427461082191548e-07
+    },
+    {
+      "name": "encoder.en_convs.1.conv",
+      "type": "Conv2d",
+      "rel": 2.3121260104838414e-07
+    },
+    {
+      "name": "encoder.en_convs.1.bn",
+      "type": "BatchNorm2d",
+      "rel": 2.6068700895568137e-07
+    },
+    {
+      "name": "encoder.en_convs.1.act",
+      "type": "PReLU",
+      "rel": 3.221935048166433e-07
+    },
+    {
+      "name": "encoder.en_convs.2.sfe.unfold",
+      "type": "Unfold",
+      "rel": 3.901123096381381e-07
+    },
+    {
+      "name": "encoder.en_convs.2.point_conv1",
+      "type": "Conv2d",
+      "rel": 3.530956365582652e-07
+    },
+    {
+      "name": "encoder.en_convs.2.point_bn1",
+      "type": "BatchNorm2d",
+      "rel": 4.437228906310292e-07
+    },
+    {
+      "name": "encoder.en_convs.2.point_act",
+      "type": "PReLU",
+      "rel": 3.9908795297893243e-07
+    },
+    {
+      "name": "encoder.en_convs.2.depth_conv",
+      "type": "Conv2d",
+      "rel": 5.636230830337885e-07
+    },
+    {
+      "name": "encoder.en_convs.2.depth_bn",
+      "type": "BatchNorm2d",
+      "rel": 4.6465413663214454e-07
+    },
+    {
+      "name": "encoder.en_convs.2.depth_act",
+      "type": "PReLU",
+      "rel": 5.083788258246496e-07
+    },
+    {
+      "name": "encoder.en_convs.2.point_conv2",
+      "type": "Conv2d",
+      "rel": 4.6312697595018793e-07
+    },
+    {
+      "name": "encoder.en_convs.2.point_bn2",
+      "type": "BatchNorm2d",
+      "rel": 4.2163188940393177e-07
+    },
+    {
+      "name": "encoder.en_convs.2.tra.att_gru",
+      "type": "GRU",
+      "rel": 1.491070152946229e-07
+    },
+    {
+      "name": "encoder.en_convs.2.tra.att_fc",
+      "type": "Linear",
+      "rel": 1.0089149157892032e-07
+    },
+    {
+      "name": "encoder.en_convs.2.tra.att_act",
+      "type": "Sigmoid",
+      "rel": 8.87535545485159e-08
+    },
+    {
+      "name": "encoder.en_convs.3.sfe.unfold",
+      "type": "Unfold",
+      "rel": 3.0054193439099564e-07
+    },
+    {
+      "name": "encoder.en_convs.3.point_conv1",
+      "type": "Conv2d",
+      "rel": 3.3281124827431294e-07
+    },
+    {
+      "name": "encoder.en_convs.3.point_bn1",
+      "type": "BatchNorm2d",
+      "rel": 4.593907009259543e-07
+    },
+    {
+      "name": "encoder.en_convs.3.point_act",
+      "type": "PReLU",
+      "rel": 4.567304438198876e-07
+    },
+    {
+      "name": "encoder.en_convs.3.depth_conv",
+      "type": "Conv2d",
+      "rel": 0.6738504250045851
+    },
+    {
+      "name": "encoder.en_convs.3.depth_bn",
+      "type": "BatchNorm2d",
+      "rel": 0.7349456679093889
+    },
+    {
+      "name": "encoder.en_convs.3.depth_act",
+      "type": "PReLU",
+      "rel": 0.6171032052343907
+    },
+    {
+      "name": "encoder.en_convs.3.point_conv2",
+      "type": "Conv2d",
+      "rel": 0.8457710070540972
+    },
+    {
+      "name": "encoder.en_convs.3.point_bn2",
+      "type": "BatchNorm2d",
+      "rel": 0.8889201827867357
+    },
+    {
+      "name": "encoder.en_convs.3.tra.att_gru",
+      "type": "GRU",
+      "rel": 0.3480959204375371
+    },
+    {
+      "name": "encoder.en_convs.3.tra.att_fc",
+      "type": "Linear",
+      "rel": 0.15218416228882867
+    },
+    {
+      "name": "encoder.en_convs.3.tra.att_act",
+      "type": "Sigmoid",
+      "rel": 0.07380391695054271
+    },
+    {
+      "name": "encoder.en_convs.4.sfe.unfold",
+      "type": "Unfold",
+      "rel": 0.5492615397416352
+    },
+    {
+      "name": "encoder.en_convs.4.point_conv1",
+      "type": "Conv2d",
+      "rel": 0.40273380364916794
+    },
+    {
+      "name": "encoder.en_convs.4.point_bn1",
+      "type": "BatchNorm2d",
+      "rel": 0.6285677887759102
+    },
+    {
+      "name": "encoder.en_convs.4.point_act",
+      "type": "PReLU",
+      "rel": 0.6101974808871103
+    },
+    {
+      "name": "encoder.en_convs.4.depth_conv",
+      "type": "Conv2d",
+      "rel": 0.9774135359208433
+    },
+    {
+      "name": "encoder.en_convs.4.depth_bn",
+      "type": "BatchNorm2d",
+      "rel": 0.9714198531867514
+    },
+    {
+      "name": "encoder.en_convs.4.depth_act",
+      "type": "PReLU",
+      "rel": 0.8712418105724036
+    },
+    {
+      "name": "encoder.en_convs.4.point_conv2",
+      "type": "Conv2d",
+      "rel": 1.0009374761761176
+    },
+    {
+      "name": "encoder.en_convs.4.point_bn2",
+      "type": "BatchNorm2d",
+      "rel": 1.1316677136181923
+    },
+    {
+      "name": "encoder.en_convs.4.tra.att_gru",
+      "type": "GRU",
+      "rel": 0.5763493867051658
+    },
+    {
+      "name": "encoder.en_convs.4.tra.att_fc",
+      "type": "Linear",
+      "rel": 0.3329218083667098
+    },
+    {
+      "name": "encoder.en_convs.4.tra.att_act",
+      "type": "Sigmoid",
+      "rel": 0.24175374975126623
+    },
+    {
+      "name": "dpgrnn1.intra_rnn.rnn1",
+      "type": "GRU",
+      "rel": 0.8220496181316314
+    },
+    {
+      "name": "dpgrnn1.intra_rnn.rnn2",
+      "type": "GRU",
+      "rel": 0.6203435738791339
+    },
+    {
+      "name": "dpgrnn1.intra_fc",
+      "type": "Linear",
+      "rel": 0.461459205841188
+    },
+    {
+      "name": "dpgrnn1.intra_ln",
+      "type": "LayerNorm",
+      "rel": 0.4793282088537068
+    },
+    {
+      "name": "dpgrnn1.inter_rnn.rnn1",
+      "type": "GRU",
+      "rel": 0.8032073980423087
+    },
+    {
+      "name": "dpgrnn1.inter_rnn.rnn2",
+      "type": "GRU",
+      "rel": 0.5284250906406167
+    },
+    {
+      "name": "dpgrnn1.inter_fc",
+      "type": "Linear",
+      "rel": 0.3941234358690652
+    },
+    {
+      "name": "dpgrnn1.inter_ln",
+      "type": "LayerNorm",
+      "rel": 0.38573049147080885
+    },
+    {
+      "name": "dpgrnn2.intra_rnn.rnn1",
+      "type": "GRU",
+      "rel": 0.7075970316845559
+    },
+    {
+      "name": "dpgrnn2.intra_rnn.rnn2",
+      "type": "GRU",
+      "rel": 0.3521148568197719
+    },
+    {
+      "name": "dpgrnn2.intra_fc",
+      "type": "Linear",
+      "rel": 0.44982713396169893
+    },
+    {
+      "name": "dpgrnn2.intra_ln",
+      "type": "LayerNorm",
+      "rel": 0.42207630647154637
+    },
+    {
+      "name": "dpgrnn2.inter_rnn.rnn1",
+      "type": "GRU",
+      "rel": 0.593923570516098
+    },
+    {
+      "name": "dpgrnn2.inter_rnn.rnn2",
+      "type": "GRU",
+      "rel": 0.3827070762025521
+    },
+    {
+      "name": "dpgrnn2.inter_fc",
+      "type": "Linear",
+      "rel": 0.42963645248297233
+    },
+    {
+      "name": "dpgrnn2.inter_ln",
+      "type": "LayerNorm",
+      "rel": 0.4561079688716694
+    },
+    {
+      "name": "decoder.de_convs.0.sfe.unfold",
+      "type": "Unfold",
+      "rel": 0.5754477405463548
+    },
+    {
+      "name": "decoder.de_convs.0.point_conv1",
+      "type": "ConvTranspose2d",
+      "rel": 0.6154436627619093
+    },
+    {
+      "name": "decoder.de_convs.0.point_bn1",
+      "type": "BatchNorm2d",
+      "rel": 0.8078302952088507
+    },
+    {
+      "name": "decoder.de_convs.0.point_act",
+      "type": "PReLU",
+      "rel": 0.8383899025446956
+    },
+    {
+      "name": "decoder.de_convs.0.depth_conv",
+      "type": "ConvTranspose2d",
+      "rel": 0.717646162316816
+    },
+    {
+      "name": "decoder.de_convs.0.depth_bn",
+      "type": "BatchNorm2d",
+      "rel": 0.8664988542165896
+    },
+    {
+      "name": "decoder.de_convs.0.depth_act",
+      "type": "PReLU",
+      "rel": 0.7474277087430821
+    },
+    {
+      "name": "decoder.de_convs.0.point_conv2",
+      "type": "ConvTranspose2d",
+      "rel": 0.7910055031122802
+    },
+    {
+      "name": "decoder.de_convs.0.point_bn2",
+      "type": "BatchNorm2d",
+      "rel": 0.8785743389015134
+    },
+    {
+      "name": "decoder.de_convs.0.tra.att_gru",
+      "type": "GRU",
+      "rel": 0.6787701886237403
+    },
+    {
+      "name": "decoder.de_convs.0.tra.att_fc",
+      "type": "Linear",
+      "rel": 0.35107013671072834
+    },
+    {
+      "name": "decoder.de_convs.0.tra.att_act",
+      "type": "Sigmoid",
+      "rel": 0.4375692465491479
+    },
+    {
+      "name": "decoder.de_convs.1.sfe.unfold",
+      "type": "Unfold",
+      "rel": 0.516915219189627
+    },
+    {
+      "name": "decoder.de_convs.1.point_conv1",
+      "type": "ConvTranspose2d",
+      "rel": 0.4728087457570065
+    },
+    {
+      "name": "decoder.de_convs.1.point_bn1",
+      "type": "BatchNorm2d",
+      "rel": 0.8373759864289436
+    },
+    {
+      "name": "decoder.de_convs.1.point_act",
+      "type": "PReLU",
+      "rel": 0.7988376497608293
+    },
+    {
+      "name": "decoder.de_convs.1.depth_conv",
+      "type": "ConvTranspose2d",
+      "rel": 0.7085098847587536
+    },
+    {
+      "name": "decoder.de_convs.1.depth_bn",
+      "type": "BatchNorm2d",
+      "rel": 0.603139651760214
+    },
+    {
+      "name": "decoder.de_convs.1.depth_act",
+      "type": "PReLU",
+      "rel": 0.7539241258603152
+    },
+    {
+      "name": "decoder.de_convs.1.point_conv2",
+      "type": "ConvTranspose2d",
+      "rel": 0.7046603772971516
+    },
+    {
+      "name": "decoder.de_convs.1.point_bn2",
+      "type": "BatchNorm2d",
+      "rel": 0.9220947023615995
+    },
+    {
+      "name": "decoder.de_convs.1.tra.att_gru",
+      "type": "GRU",
+      "rel": 0.4546774093336595
+    },
+    {
+      "name": "decoder.de_convs.1.tra.att_fc",
+      "type": "Linear",
+      "rel": 0.6775236179470532
+    },
+    {
+      "name": "decoder.de_convs.1.tra.att_act",
+      "type": "Sigmoid",
+      "rel": 0.24565128570727165
+    },
+    {
+      "name": "decoder.de_convs.2.sfe.unfold",
+      "type": "Unfold",
+      "rel": 0.4584303261472938
+    },
+    {
+      "name": "decoder.de_convs.2.point_conv1",
+      "type": "ConvTranspose2d",
+      "rel": 0.6000277165319056
+    },
+    {
+      "name": "decoder.de_convs.2.point_bn1",
+      "type": "BatchNorm2d",
+      "rel": 0.7620346372574355
+    },
+    {
+      "name": "decoder.de_convs.2.point_act",
+      "type": "PReLU",
+      "rel": 0.7046654570384701
+    },
+    {
+      "name": "decoder.de_convs.2.depth_conv",
+      "type": "ConvTranspose2d",
+      "rel": 0.5608168951635055
+    },
+    {
+      "name": "decoder.de_convs.2.depth_bn",
+      "type": "BatchNorm2d",
+      "rel": 0.48137777716582425
+    },
+    {
+      "name": "decoder.de_convs.2.depth_act",
+      "type": "PReLU",
+      "rel": 0.43360437854210254
+    },
+    {
+      "name": "decoder.de_convs.2.point_conv2",
+      "type": "ConvTranspose2d",
+      "rel": 0.470201327975778
+    },
+    {
+      "name": "decoder.de_convs.2.point_bn2",
+      "type": "BatchNorm2d",
+      "rel": 0.6439132563559484
+    },
+    {
+      "name": "decoder.de_convs.2.tra.att_gru",
+      "type": "GRU",
+      "rel": 0.42506402767089935
+    },
+    {
+      "name": "decoder.de_convs.2.tra.att_fc",
+      "type": "Linear",
+      "rel": 0.5142991798619725
+    },
+    {
+      "name": "decoder.de_convs.2.tra.att_act",
+      "type": "Sigmoid",
+      "rel": 0.31096681987051134
+    },
+    {
+      "name": "decoder.de_convs.3.conv",
+      "type": "ConvTranspose2d",
+      "rel": 0.5530686952229826
+    },
+    {
+      "name": "decoder.de_convs.3.bn",
+      "type": "BatchNorm2d",
+      "rel": 0.7075570258744007
+    },
+    {
+      "name": "decoder.de_convs.3.act",
+      "type": "PReLU",
+      "rel": 1.004009239675956
+    },
+    {
+      "name": "decoder.de_convs.4.conv",
+      "type": "ConvTranspose2d",
+      "rel": 1.0409575072328014
+    },
+    {
+      "name": "decoder.de_convs.4.bn",
+      "type": "BatchNorm2d",
+      "rel": 1.0608568949449506
+    },
+    {
+      "name": "decoder.de_convs.4.act",
+      "type": "Tanh",
+      "rel": 0.6589222291462864
+    },
+    {
+      "name": "erb.ierb_fc",
+      "type": "Linear",
+      "rel": 0.9510018101721768
+    },
+    {
+      "name": "mask",
+      "type": "Mask",
+      "rel": 0.6902060486851528
+    }
+  ],
+  "torch": "2.15.0"
+}

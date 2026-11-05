@@ -28,7 +28,42 @@
 - 不做响度统一：成绩单各项自己处理电平（与内置 GTCRN 同口径）
 - 参数、权重哈希、清单进 `builds/<run-id>/`；音频只在主目录 `_tmp/exp016/`
 
+### 延迟口径（codex 016 脚本第 1、2 轮 P1 的回应）
+
+两种延迟分开记，**本实验只用第一种**：
+
+| 量 | 定义 | DFN3 低延迟版（实测） | 用在哪 |
+|---|---|---|---|
+| 算法前视（`latency_samples`） | 对齐后第 t 个输出最晚用到第 t + L 个输入；截半实测 | 284 样本（17.75 ms）= libDF 一帧 160 + soxr HQ 前视 124 | 回放进 Engine 的延迟；决定输出内容 |
+| 实时调度延迟 | 逐块喂入时，第 t 个输出最早在收齐多少输入后放出（`run_dfn3ll.scheduling_delay`） | **1393 样本（87 ms）**，稳定段与开头一样；soxr 流式内部攒大块所致（VHQ 2639 · MQ 1447 · LQ 939） | 只记录，进 `builds/…/params.json` |
+
+- 模型接口正本（`src/types/src/model.rs`）的 `latency_samples` 是「算法延迟，不含攒满一个 hop 的等待」；内置 GTCRN 的 256 也是算法前视。所以三者在**算法前视**上同口径
+- **撤回**之前「三者延迟可比」的说法：实时调度延迟取决于重采样器、攒块方式和设备块，本实验的 soxr 流式链路不代表产品实现。DFN3 低延迟版换成小块低延迟重采样器后能到多少，未量化
+- 实时线程能不能跑、端到端多少毫秒，引用 019 结论，不在本实验测
+
 ## 已知局限
 
 - 评测音频是 16 kHz（8 kHz 以上没有内容），48 kHz 的两个 DFN3 吃的是升采样后的窄带输入，和它们训练时的全带不同【推断：对它们不利】
 - 回放进 Engine 时延迟只是声明值，计时项判「不知道」；实时能不能跑引用 019 结论，不重测
+
+## runs 与配对
+
+| 用途 | run-id | 内容 | 位置 |
+|---|---|---|---|
+| 候选输出（草稿用，被 `20261105-061524-e4eb13d9` 取代） | `20261104-235743-73c68379` | DPDFNet-2 · 971 个文件 · 14 分 07 秒 · 声明延迟 960 | 音频：主目录 `_tmp/exp016/dpdfnet2/<run-id>/`；清单：`builds/dpdfnet2-<run-id>/` |
+| 候选输出（草稿用，被 `20261105-063623-e4eb13d9` 取代） | `20261105-001245-201407de` | DFN3 低延迟版 · 971 个文件 · 15 分 32 秒 · 声明延迟 284 | 音频：主目录 `_tmp/exp016/dfn3-ll/<run-id>/`；清单：`builds/dfn3-ll-<run-id>/` |
+| 草稿成绩单（草稿，被 `20261105-103000-4cf04ac1` · `20261105-115707-fcf7cfb0` 取代） | `20261105-002946-e21f3a93`（元数据带 `-dirty`，见 `provenance.json`） | gtcrn · dpdfnet2 · dfn3-ll，**不带 `--qa`**，旧规则，0 段没跑成，7 分 33 秒 | `runs/draft-20261105-002946-e21f3a93/` |
+| 最终版 · GTCRN 一侧 | `20261105-005916-4ccf0638`（evalfix 跑，规则 v2，进行中） | passthrough · ref · gtcrn，带 `--qa` | evalfix 跑完放 `docs/experiments/exp014-scorecard-gtcrn/runs/20261105-005916-4ccf0638/` |
+| 最终版 · 候选一侧（待跑） | 待定 | dpdfnet2 · dfn3-ll，带 `--qa`；须与上一行同 build · 同规则版本 · 同评分模型版本（跑前逐项核对上一行 README 记的版本） | 跑完填在这里 |
+| 最终版 · 候选输出 | `20261105-061524-e4eb13d9` | DPDFNet-2 · 1451 个文件（mix · bg · trunc · clean）· 20 分 50 秒 · 声明延迟 960 | 音频：主目录 `_tmp/exp016/dpdfnet2/<run-id>/`；清单：`builds/dpdfnet2-<run-id>/` |
+| 最终版 · 候选输出 | `20261105-063623-e4eb13d9` | DFN3 低延迟版 · 1451 个文件（同上）· 22 分 42 秒 · 声明延迟 284 · `native_rate` 48000 | 音频：主目录 `_tmp/exp016/dfn3-ll/<run-id>/`；清单：`builds/dfn3-ll-<run-id>/` |
+| ~~锚点成绩单~~ **作废** | `20261105-065944-a0a04ae6` | passthrough · `--qa --rules v2`；06:59 机器关机重启（系统有 shutdown_stall 报告，起因未查明），只留 4 个识别 wav、没有 `clips.jsonl`。不续用，新跑另起 run-id | 主目录 `_tmp/scorecard/20261105-065944-a0a04ae6/`（原样保留） |
+| DPDFNet-2 成绩单输出目录（缓存已预置，11:57 起跑） | 开跑时生成；目录名 `dpdfnet2-seeded-20261105`（用 `--out` 指定） | 同下一行 DFN3 的做法：识别缓存从锚点 run 预置，1920 条，sha256 `61305aba6104a6b470d098431e6fe1cf1407322c331d5208c3f2047a2c0a549f`；外部系统 `_tmp/exp016/dpdfnet2/20261105-061524-e4eb13d9` | 主目录 `_tmp/scorecard/dpdfnet2-seeded-20261105/` |
+| DPDFNet-2 成绩单（已完成） | `20261105-115707-fcf7cfb0`，11:57–13:17；配对分析在 `runs/dpdfnet2-20261105-115707-fcf7cfb0/`；识别缓存核对：原 1920 条全在且逐条不变，新增 960 条，共 2880 | — | — |
+| DFN3 成绩单（已完成） | `20261105-103000-4cf04ac1`，10:30–11:47；配对分析在 `runs/dfn3-ll-20261105-103000-4cf04ac1/` | — | — |
+| DFN3 成绩单输出目录（缓存已预置） | 开跑时生成；目录名 `dfn3-ll-seeded-20261105`（用 `--out` 指定） | 大总管定 2026-11-05：识别漂移实测为 0，所以把原声和干净人声两路的识别结果从锚点 run 灌进来。来源是锚点 run 的 `qa/asr_cache.json`，1920 条（960 条音频 × 2 次），sha256 `61305aba6104a6b470d098431e6fe1cf1407322c331d5208c3f2047a2c0a549f`。读源码：`ensure_fresh` 只查 `scorecard.json`/`.md`；`Asr::new` 读出已有缓存，解析失败就当空缓存，所以跑完要核对缓存条数 ≥ 1920 且这 1920 条原样还在 | 主目录 `_tmp/scorecard/dfn3-ll-seeded-20261105/` |
+| 锚点成绩单（已完成，比对过线） | `20261105-073042-a0a04ae6-dirty` | passthrough · `--qa --rules v2`，07:30–10:26，480 段。与 GTCRN run 的 passthrough 逐段比：23 项全部差 0（`runs/anchor-…/anchor.json`）；识别缓存 1920/1920 逐字相同（`asr_drift.json`）；评分模型 sha256 与 GTCRN run 相同（SCOREQ `d493ba8a…` · Distill-MOS `b8e2dc18…`）；识别服务 `qwen3-asr-plus:1.7b` · 4412418975 字节。`-dirty` 只因开跑时本 README 有 3 行未提交（上面「作废」那一行等），`src/` 与 `Cargo.lock` 与 HEAD `a0a04ae6` 相同（实测 `git status --short` 只列本文件）；不重跑（大总管定 2026-11-05） | 主目录 `_tmp/scorecard/20261105-073042-a0a04ae6-dirty/` |
+
+最终版两个候选都**另开新 run**，mix 与 clean（干净人声单独过一遍，成绩单新规则 v2 用）一次跑全；DFN3 新 run 的 `run.json` 直接写 `"native_rate": 48000`。旧的两个 run 不补、不改，跑完后在上表标「草稿，被 <新 run-id> 取代」（大总管定 2026-11-05，撤回先前的「补 native_rate + amend.json」）。
+
+分析：`analyze.py <run 目录> <exp013 clips.jsonl> --out analysis.md --json analysis.json`（测试 `tests/test_analyze.py`）。草稿只出单 run 里的配对；最终版需要把两个 run 的 `clips.jsonl` 合到一起再分析（到时给 analyze.py 加多 run 输入，带测试）。

@@ -1,0 +1,21 @@
+# 现状页 · rl（批次 20261104-b15）
+
+- **状态**：可以收尾（codex 4 轮，连续两轮无 P0/P1，已达停止线）
+- **手上**：调研 029 · 用强化学习专门调 GTCRN · issue #123 · 分支 `research/029-gtcrn-rl`
+- **交代**：主目录 `_tmp/20261104-b15/rl.md`
+- **管的实体**：训练环境（场景模拟器）· 奖励（由 verifier 组成）· 训练策略
+- **做到哪**（2026-11-05）：
+  - 计时实测完成（`docs/experiments/exp020-gtcrn-rl/runs/20261105-timing/`）
+  - 离线排序模拟完成（`runs/20261105-reward-rank/`）
+  - 029 的 README、sources、decision 都已写好
+- **结论**：现在不做强化学习，排在监督微调之后，有条件再做（见 `docs/research/029_gtcrn-rl/decision.md` 第四节）
+- **待人拍板**（大总管汇总）：
+  - R-1：可懂度、降噪量（正向奖励）和字头三项（硬约束）都还没定标，能否先用来做强化学习？建议 B（等定标），不回默认 B
+  - R-2：「不许变差」怎么算：A 和原版比、容许 1 / 2 / 1 dB · B 一点不许退 · C 固定线。不回默认 A
+- **交给别线**：
+  - finetune：把「人声被压低」写进损失。GTCRN 有 12% 的段压低超过 3 dB，集中在食堂、共享办公、车厢
+  - finetune：字头能量损失也写进损失
+- **评审**：`docs/reviews/029_gtcrn-rl-codex.md`（采纳 15 / 提出 15，无 issue）
+- **测试**：模拟脚本 `python3 -m unittest discover -s docs/experiments/exp020-gtcrn-rl/sim`（7 条，全过）；计时程序 `cargo test --release`（2 条，全过）
+- **注意**：`sim/runs.json` 里的两份 exp016 输入在 cands 分支，cands 合并后才能在 main 上复现
+- **下一步**：大总管推送、开 PR（Closes #123）

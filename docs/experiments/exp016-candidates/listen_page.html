@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>盲听四题</title>
+<style>
+:root{--bg:#fafaf8;--fg:#1d1d1b;--mut:#6b6b66;--card:#fff;--line:#deded8;--acc:#2f5fb3}
+@media (prefers-color-scheme:dark){:root{--bg:#161615;--fg:#ececea;--mut:#a3a39d;--card:#20201e;--line:#3a3a36;--acc:#8fb0ec}}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,"PingFang SC",sans-serif;margin:0;padding:24px 16px}
+main{max-width:680px;margin:0 auto}h1{font-size:22px;margin:0 0 4px}p.mut{color:var(--mut);margin:0 0 20px}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:0 0 16px}
+.row{display:flex;gap:12px;flex-wrap:wrap}.row>div{flex:1 1 260px}audio{width:100%}
+fieldset{border:0;padding:0;margin:12px 0 0}legend{font-weight:600}label{display:block;padding:4px 0;cursor:pointer}
+textarea{width:100%;box-sizing:border-box;min-height:56px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px}
+button{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:10px 18px;font-size:16px;cursor:pointer}
+pre{white-space:pre-wrap;word-break:break-all;background:var(--bg);border:1px solid var(--line);padding:8px;border-radius:6px;font-size:13px}
+</style></head><body><main>
+<h1>盲听四题</h1>
+<p class="mut">每题是同一段 12 秒录音的两种降噪处理，两边音量已对齐。请戴耳机，各听至少一遍，每题回答三问。没有标准答案；答完点最下面的按钮保存。</p>
+__QUESTIONS__
+<button id="save">保存答卷</button>
+<p class="mut" id="msg"></p><pre id="out" hidden></pre>
+</main>
+<script>
+const BUILD="__BUILD__", QS=__QIDS__;
+document.getElementById('save').onclick=()=>{
+  const ans={build:BUILD,saved_at:new Date().toISOString(),answers:{}};
+  for(const q of QS){
+    const pick=n=>{const v=document.querySelector('input[name="'+q+'_'+n+'"]:checked');return v?v.value:null;};
+    ans.answers[q]={overall:pick('overall'),eaten:pick('eaten'),click:pick('click'),note:document.getElementById(q+'_note').value};
+  }
+  const txt=JSON.stringify(ans,null,1);
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));
+      a.download='answers-'+BUILD+'.json';a.click();}catch(e){}
+  const o=document.getElementById('out');o.textContent=txt;o.hidden=false;
+  document.getElementById('msg').textContent='已下载 answers-'+BUILD+'.json；如果没下载成功，把下面这段文字复制给我也行。';
+};
+</script></body></html>
