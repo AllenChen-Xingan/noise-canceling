@@ -1,7 +1,7 @@
 //! exp021-remix：重混外部离线输出目录，派生关掉保命的测试集。
 //!
 //! 用法：
-//!   exp021-remix remix --src <外部目录> --out <新目录> --prefix <名字前缀> [--open-db X] [--floor-db Y] [--off]
+//!   exp021-remix remix --src <外部目录> --out <新目录> --prefix <名字前缀> [--open-db X] [--floor-db Y] [--off] [--head <预热目录>]
 //!   exp021-remix raw --like <外部目录> --out <新目录> --model gtcrn [--limit N]   # 生成混回前的原始输出
 //!   exp021-remix suite --out <JSON>        # 由 src/eval/suite/scenes.json 派生，全部任务 safety = false
 //!
@@ -13,7 +13,7 @@ mod raw;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use exp021_remix::{MixParams, remix_one, suite_safety_off, system_name};
+use exp021_remix::{MixParams, remix_one, remix_with_head, suite_safety_off, system_name};
 use vdn_eval::scene::SceneClip;
 use vdn_eval::scorecard::load_scene_clip;
 use vdn_eval::suite::{main_root, resolve};
@@ -53,6 +53,7 @@ fn cmd_remix(args: &[String]) -> Result<(), String> {
     if out.exists() {
         return Err(format!("{} 已存在，不覆盖", out.display()));
     }
+    let head_dir = arg(args, "--head").map(|h| abs(&h));
     let rj_path = src.join("run.json");
     let mut rj: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(&rj_path).map_err(|e| format!("{}：{e}", rj_path.display()))?,
@@ -85,7 +86,16 @@ fn cmd_remix(args: &[String]) -> Result<(), String> {
             if x.len() != y.len() {
                 return Err(format!("{} 长度 {} ≠ 输入 {}", f.display(), y.len(), x.len()));
             }
-            let o = remix_one(&x, &y, lat, p.config());
+            let o = match &head_dir {
+                Some(h) => {
+                    let (head, _) = wav::read(&h.join(k.as_str()).join(format!("{}.wav", c.id)))?;
+                    if head.len() != lat {
+                        return Err(format!("{} 预热段长 {} ≠ 延迟 {lat}", c.id, head.len()));
+                    }
+                    remix_with_head(&x, &head, &y, p.config())
+                }
+                None => remix_one(&x, &y, lat, p.config()),
+            };
             wav::write(&out.join(k.as_str()).join(format!("{}.wav", c.id)), &o, sr)?;
             n_files += 1;
         }
@@ -104,6 +114,7 @@ fn cmd_remix(args: &[String]) -> Result<(), String> {
             "open_db": c.open_db,
             "floor_db": c.floor_db,
             "files": n_files,
+            "head": head_dir.as_ref().map(|h| h.strip_prefix(&root).unwrap_or(h).to_string_lossy().to_string()),
             "note": "已用真引擎按上面的参数混回原声；打分时须用 safety=false 的派生测试集，免得混两次",
         },
         "upstream": model,

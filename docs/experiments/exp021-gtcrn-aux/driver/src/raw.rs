@@ -1,10 +1,12 @@
 //! `raw` 子命令：用项目里的真模型（`vdn_models`）生成「混回前的原始输出」外部目录。
 //! 文件清单照抄一个现成外部目录（`--like`），保证段与输入种类和其他候选一致。
 //! 引擎三件保命全关（`SafetyConfig::off`），输出 = 模型原样输出；坏值直接报错，不写进目录。
+//! 模型的预热输出（对齐前的前 latency 个样本）另存到 `<out>.head/<种类>/<段>.wav`：外部目录格式不收它，
+//! 但重混要带上它才和内置模型路径逐段一致（`remix --head`）。
 
 use std::path::Path;
 
-use exp021_remix::{SR, run_engine};
+use exp021_remix::{SR, run_engine_full};
 use vdn_engine::SafetyConfig;
 use vdn_eval::scene::SceneClip;
 use vdn_eval::scorecard::load_scene_clip;
@@ -20,8 +22,9 @@ pub fn run(like: &Path, out: &Path, model: &str, limit: Option<usize>) -> Result
         _ => return Err(format!("只支持 gtcrn，收到 {model}")),
     };
     let path = mk.default_path().ok_or("GTCRN 权重不在本机")?;
-    if out.exists() {
-        return Err(format!("{} 已存在，不覆盖", out.display()));
+    let head_dir = out.with_extension("head");
+    if out.exists() || head_dir.exists() {
+        return Err(format!("{} 或其 .head 已存在，不覆盖", out.display()));
     }
     let rj_path = like.join("run.json");
     let like_rj: serde_json::Value = serde_json::from_str(
@@ -52,11 +55,13 @@ pub fn run(like: &Path, out: &Path, model: &str, limit: Option<usize>) -> Result
                 continue;
             }
             // 每个文件新开模型：和评测器每段新建引擎同口径（状态清零）
-            let y = run_engine(open()?, &k.input(&clip), SafetyConfig::off());
-            if let Some(i) = y.iter().position(|v| !v.is_finite()) {
+            let (head, y) = run_engine_full(open()?, &k.input(&clip), SafetyConfig::off());
+            if let Some(i) = head.iter().chain(&y).position(|v| !v.is_finite()) {
                 return Err(format!("{} {} 第 {i} 样本不是有限数", c.id, k.as_str()));
             }
-            wav::write(&out.join(k.as_str()).join(format!("{}.wav", c.id)), &y, SR)?;
+            let name = format!("{}.wav", c.id);
+            wav::write(&out.join(k.as_str()).join(&name), &y, SR)?;
+            wav::write(&head_dir.join(k.as_str()).join(&name), &head, SR)?;
             n_files += 1;
             any = true;
         }
@@ -75,6 +80,7 @@ pub fn run(like: &Path, out: &Path, model: &str, limit: Option<usize>) -> Result
                 "model": model,
                 "weights_sha256": wav::sha256(&path)?,
                 "engine": "SafetyConfig::off（三件保命全关，输出 = 模型原样输出）",
+                "head_dir": head_dir.strip_prefix(&root).unwrap_or(&head_dir).to_string_lossy(),
                 "file_list_like": like.strip_prefix(&root).unwrap_or(like).to_string_lossy(),
                 "clips": n_clips,
                 "files": n_files,

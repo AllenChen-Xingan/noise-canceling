@@ -139,4 +139,6 @@ fn head_makes_remix_equal_real_model_path() {
     assert_eq!(head.len(), lat);
     assert!(head.iter().any(|v| *v != 0.0));
     assert_eq!(remix_with_head(&x, &head, &y, SafetyConfig::default()), direct);
+    // 补零（外部目录格式的做法）会偏：这就是核对不过的原因
+    assert_ne!(remix_one(&x, &y, lat, SafetyConfig::default()), direct);
 }
