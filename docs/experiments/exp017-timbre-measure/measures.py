@@ -122,3 +122,30 @@ def third_oct_dev(out, clean, owner, sr=16000):
     po = band_mean(so, sp, bands, sr, 512)
     align = db10(po.sum()) - db10(pc.sum())
     return db10(po) - db10(pc) - align, bands
+
+
+def erb_bands(lo=100.0, hi=7900.0, step=1.0):
+    """按 ERB 数等距切带（Glasberg & Moore 1990：ERB 数 = 21.4·log10(1 + 0.00437·f)）。"""
+    e = lambda f: 21.4 * np.log10(1 + 0.00437 * f)  # noqa: E731
+    inv = lambda n: (10 ** (n / 21.4) - 1) / 0.00437  # noqa: E731
+    edges = inv(np.arange(e(lo), e(hi) + 1e-9, step))
+    return list(zip(edges[:-1], edges[1:]))
+
+
+def erb_shape(out, clean, owner, noise_only=None, sr=16000, step=1.0):
+    """候选第三种：1024/512，ERB 带（默认 1 ERB 宽，100–7900 Hz），只用有声帧，
+    扣停顿帧残留噪声（同代码版），去掉整体电平（减各带偏差均值），
+    报 形状差标准差 · 相邻带斜率差标准差 · 最大绝对形状差。"""
+    bands = erb_bands(step=step)
+    so, sc = spectrogram(out, 1024, 512), spectrogram(clean, 1024, 512)
+    sp = speech_frames(owner, len(so), 1024, 512)
+    q = quiet_frames(noise_only, len(so), 1024, 512) if noise_only is not None else np.array([], int)
+    pc = band_mean(sc, sp, bands, sr, 1024)
+    po = band_mean(so, sp, bands, sr, 1024)
+    pn = band_mean(so, q, bands, sr, 1024)
+    po = np.maximum(np.maximum(po - pn, 0.1 * po), 1e-20)
+    keep = pc > 0
+    d = db10(po[keep]) - db10(pc[keep])
+    d = np.maximum(d, -40.0)  # 单带最多记 −40 dB，空带不拖成 −100 dB 级
+    d = d - d.mean()
+    return dict(std=float(d.std()), slope=float(np.diff(d).std()), max=float(np.abs(d).max()), n=int(keep.sum())), d

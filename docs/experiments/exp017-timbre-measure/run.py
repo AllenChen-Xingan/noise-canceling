@@ -107,10 +107,13 @@ def main(build, outdir):
             code_n, _ = M.code_timbre(y, ref, owner, noise_only)
             doc, ddev = M.doc_timbre(y, ref, owner)
             tdev, _ = M.third_oct_dev(y, ref, owner)
+            erb, _ = M.erb_shape(y, ref, owner)
+            erb_n, _ = M.erb_shape(y, ref, owner, noise_only)
             rows.append(dict(
                 clip=d.name, deg=name,
                 code_max=abs(code), code_signed=code, code_noisy_path=abs(code_n),
                 doc_rms=doc, third_rms=float(np.sqrt(np.mean(tdev**2))), third_max=float(np.max(np.abs(tdev))),
+                erb_std=erb['std'], erb_slope=erb['slope'], erb_max=erb['max'], erb_n=erb['n'], erb_std_noisy_path=erb_n['std'],
                 **{f"code_b{i}": v for i, v in enumerate(cdev)},
                 **{f"doc_b{i}": v for i, v in enumerate(ddev)},
             ))

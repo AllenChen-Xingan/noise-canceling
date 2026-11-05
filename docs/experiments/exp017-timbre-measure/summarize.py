@@ -7,7 +7,7 @@ import sys
 
 import pandas as pd
 
-COLS = ["code_max", "doc_rms", "third_rms", "third_max", "code_noisy_path"]
+COLS = ["code_max", "doc_rms", "erb_std", "erb_slope", "erb_max", "third_max", "code_noisy_path", "erb_std_noisy_path"]
 BANDS = [f"code_b{i}" for i in range(4)] + [f"doc_b{i}" for i in range(4)]
 
 
@@ -24,7 +24,7 @@ def main(path):
     order = list(dict.fromkeys(d.deg))
     g = d.groupby("deg")
     med = g[COLS].median().loc[order]
-    p95 = g[["code_max", "doc_rms"]].quantile(0.95).loc[order].add_suffix("_p95")
+    p95 = g[["code_max", "doc_rms", "erb_std"]].quantile(0.95).loc[order].add_suffix("_p95")
     t = pd.concat([med, p95], axis=1).round(2)
     print(f"样本：{d['clip'].nunique()} 段 × {len(order)} 种劣化\n")
     print("## 合成值（中位数；_p95 = 95 分位）\n")
