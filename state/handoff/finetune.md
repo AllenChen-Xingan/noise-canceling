@@ -9,7 +9,11 @@
 1. `.gitignore` 加训练产物规则（`*.pt` `*.pth` `*.ckpt` `*.safetensors` `*.npz` `/runs/` `wandb/` `lightning_logs/` `tb_logs/`）；不写裸 `runs/`，以免忽略已入库的 `docs/experiments/*/runs/`
 2. 单步耗时冒烟（实测，已发大总管）：脚本 `docs/experiments/exp018-gtcrn-finetune/smoke/step_timing.py`（unittest 3 条全过）；读数 `docs/experiments/exp018-gtcrn-finetune/runs/20261105-145149-step/`
    - 批量 8：CPU 0.368 s / 步，MPS 0.593 s / 步；批量 32：CPU 1.346 s，MPS 0.821 s（每段 4 s 音频）
-   - MPS 回落算子 0 个（回落截获逻辑只用合成警告测过）
+   - MPS 回落算子 0 个（局限：回落截获逻辑只用合成警告测过）
+3. 读入 + 在线混音冒烟（实测，已发大总管）：脚本 `smoke/mix_timing.py`（unittest 5 条全过）；读数 `runs/20261105-145445-mix/`
+   - 单进程 366–474 段 / 秒；4 进程 785 段 / 秒（≈ 3,100 小时音频 / 墙钟小时），是训练 156 小时的约 20 倍——不是瓶颈
+   - 局限：系统缓存已热、未测冷盘；未测和训练同时跑时抢 CPU
+4. 收到 cands 的「GTCRN 弱在哪」（`../noise_canceling-cands/docs/experiments/exp016-candidates/runs/weak-spots-20261105/`）：弱项 83 组定训练数据，守住项 71 组当「不许退」清单
 
 ## 下一步
 
