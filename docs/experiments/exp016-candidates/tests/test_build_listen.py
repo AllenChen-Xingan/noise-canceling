@@ -14,7 +14,6 @@ import build_listen as B  # noqa: E402
 class Page(unittest.TestCase):
     def test_page_has_no_answers(self):
         page = B.PAGE.replace("__QUESTIONS__", "".join(B.question(f"q{i}", i) for i in range(1, 5)))
-        B.check_listen_dir_page_only = None
         low = page.lower()
         for bad in B.FORBIDDEN:
             self.assertNotIn(bad, low)

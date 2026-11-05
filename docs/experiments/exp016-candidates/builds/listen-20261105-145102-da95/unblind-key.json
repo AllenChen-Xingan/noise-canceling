@@ -1,0 +1,85 @@
+{
+ "build": "20261105-145102-da95",
+ "seed": 20261105,
+ "runs": {
+  "gtcrn": "_tmp/scorecard/20261105-005916-4ccf0638",
+  "dfn3-ll": "_tmp/scorecard/dfn3-ll-seeded-20261105"
+ },
+ "loudness": "每段对齐到 -26.0 LUFS，峰值 ≤ -1 dBFS",
+ "what": "成绩单打分时那份输出（含引擎原声混回）",
+ "questions": {
+  "q1": {
+   "clip": "cafe-s00-ext",
+   "why": "DFN3 咔哒最多（125 vs 60 个/分钟）",
+   "slots": {
+    "X": {
+     "system": "gtcrn",
+     "source": "_tmp/scorecard/20261105-005916-4ccf0638/qa/asr-wav/cafe-s00-ext#ae691954-gtcrn-09748fcf091cf862.wav",
+     "source_sha256": "2e74e994b0ed5442f67f5ab867543fc314a6af8418e63f675ecf39241e2ec7c3",
+     "gain_db": 2.02
+    },
+    "Y": {
+     "system": "dfn3-ll",
+     "source": "_tmp/scorecard/dfn3-ll-seeded-20261105/qa/asr-wav/cafe-s00-ext#ae691954-dfn3-ll-4b562b9ef0aac764.wav",
+     "source_sha256": "f852a009488d03f2f5651f5dc9396461915ee70eb7826c0cb2a0c413bedfaca2",
+     "gain_db": 0.87
+    }
+   }
+  },
+  "q2": {
+   "clip": "rail-air-cabin-s03-ext",
+   "why": "守住项：DFN3 吞字头比 GTCRN 多 4.8 dB",
+   "slots": {
+    "X": {
+     "system": "gtcrn",
+     "source": "_tmp/scorecard/20261105-005916-4ccf0638/qa/asr-wav/rail-air-cabin-s03-ext#61ae5aeb-gtcrn-3ee4551bbb02eb98.wav",
+     "source_sha256": "fb7d266e7d86863878e8e350ddf99d1a7ec41653b3cc8e9d2afd34da7a6f509e",
+     "gain_db": -4.19
+    },
+    "Y": {
+     "system": "dfn3-ll",
+     "source": "_tmp/scorecard/dfn3-ll-seeded-20261105/qa/asr-wav/rail-air-cabin-s03-ext#61ae5aeb-dfn3-ll-5a482d6b4989d95b.wav",
+     "source_sha256": "fabb1ba7abb1ad5ef8a1a2023ce7a685f03df825ddb0185b0728b8eadc820788",
+     "gain_db": -4.69
+    }
+   }
+  },
+  "q3": {
+   "clip": "transit-hub-c06-ext",
+   "why": "GTCRN 最弱的交通段：空调底噪，ESTOI 差 +0.046",
+   "slots": {
+    "X": {
+     "system": "gtcrn",
+     "source": "_tmp/scorecard/20261105-005916-4ccf0638/qa/asr-wav/transit-hub-c06-ext#a2cbea27-gtcrn-2ba2a9d4daf4343e.wav",
+     "source_sha256": "70627524d3d60b93dfb727fce266125131458a00c97daa1329d871194a51d167",
+     "gain_db": 1.91
+    },
+    "Y": {
+     "system": "dfn3-ll",
+     "source": "_tmp/scorecard/dfn3-ll-seeded-20261105/qa/asr-wav/transit-hub-c06-ext#a2cbea27-dfn3-ll-f21c4ac7a3856d2e.wav",
+     "source_sha256": "515aaf8cd49796656dd8f2610cc78241698aa8ec50dca2dd7d9ef5b2a4477752",
+     "gain_db": -0.28
+    }
+   }
+  },
+  "q4": {
+   "clip": "street-outdoor-s05-ext",
+   "why": "GTCRN 最弱的户外段：风声，Distill-MOS 差 +0.23",
+   "slots": {
+    "X": {
+     "system": "gtcrn",
+     "source": "_tmp/scorecard/20261105-005916-4ccf0638/qa/asr-wav/street-outdoor-s05-ext#2193a60e-gtcrn-6c153cc32a9f2916.wav",
+     "source_sha256": "e5b9b344583a6bf7f28770653cd9f6d48804066e0405e641ad8fcdac9d9ee564",
+     "gain_db": 11.28
+    },
+    "Y": {
+     "system": "dfn3-ll",
+     "source": "_tmp/scorecard/dfn3-ll-seeded-20261105/qa/asr-wav/street-outdoor-s05-ext#2193a60e-dfn3-ll-7e3822408fb4f76c.wav",
+     "source_sha256": "86bc30749efa2da647a59b5a961236756cd8e704f8c09e3ac84416cf106fdca8",
+     "gain_db": 10.02
+    }
+   }
+  }
+ },
+ "total_seconds": 96.0
+}
