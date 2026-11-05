@@ -321,7 +321,7 @@ impl External {
         }
         let provenance = serde_json::json!({
             "name": rj.name,
-            "dir": dir.to_string_lossy(),
+            "dir": dir.strip_prefix(root).unwrap_or(dir).to_string_lossy(),
             "run_json_sha256": wav::sha256(&rj_path)?,
             "inputs": listed.iter().map(|k| k.as_str()).collect::<Vec<_>>(),
             "latency_samples": lat,
