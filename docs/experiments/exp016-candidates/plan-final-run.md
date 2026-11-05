@@ -19,8 +19,8 @@ GTCRN 在哪几个开会场景、哪种声音上落后于两个候选（DPDFNet-
    - 场景集与清单：两边 `meta.suite` 同为 `src/eval/suite/scenes.json`；`git diff 4ccf0638 <本次提交> -- src/eval/suite docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/` 为空（2026-11-05 对当前分支已核：空），即 GTCRN 那次读的是同一份清单；评分程序载入每段音频时按清单里的 sha256 校验（`load_scene_clip`），所以两边输入音频逐字节相同。外部 `run.json.clips` 指向同一 build，其 sha256 与 `builds/…/params.json` 的 `clips_sha256` 相同
    - 评分代码：`git diff --stat 4ccf0638 <本次提交> -- src/ Cargo.lock`，排除外部入口（`system.rs` 分发 · `system/external.rs` · `scorecard/mod.rs` 里 `provides` 那一处 · `tests/`）后**必须为空**；二进制用 `cargo build --release` 在本次提交上重编（`meta.commit` 不带 `-dirty`）。不为空 → 停下，报大总管，选项是把 `gtcrn` 一起放进本次成绩单（约多 55 分钟）
    - 评分模型：SCOREQ `adapt_nr_telephone.onnx` 与 Distill-MOS 的 sha256 与 GTCRN run 的 README 记的一致（逐个 `shasum -a 256`）；识别服务记模型名与服务端报的身份：服务 `/v1/models` 只给 `id` 与 `size_bytes`（2026-11-05 实测 `qwen3-asr-plus:1.7b` · 4412418975 字节），没有权重摘要，两次都记，不同即停
-   - **锚点（实测可比性，codex 016 最终版方法第 1 轮 P1 #1）**：本次成绩单加 `passthrough`（原声直通，不经模型），逐段与 GTCRN run 里的 `passthrough` 比。过线：DSP 类项与听感分（SCOREQ · Distill-MOS，确定性）逐段差 ≤ 1e-6；吞字头项在直通上恒为 0（原声和自己比），锚点量不出跨 run 识别差，所以锚点不判它。DSP 或听感分任一段超差 → 两次 run 不可比，停下报大总管。代价：多一个系统，成绩单约多 35 分钟（推断：直通无模型推理，只多打分）
-   - **跨 run 识别差（大总管 2026-11-05 要实测）**：成绩单跑完后，`asr_drift.py <GTCRN run 的 qa/asr_cache.json> <本次 run 的 qa/asr_cache.json>`，比两份缓存里同键（文件 sha256 | 模型 | 语言 | 第几次，正本 `qa/asr.rs`）的转写；两次 run 都会重新识别同样的 480 段原声 × 2 次，这些就是共同键。每段编辑距离是它让「多错字数」变动的上界。判定（阈值 cands 提，大总管同意 2026-11-05）：全部相同 →「一致」，照常比；每段最大 ≤ 1 字（否决线 5 字的 1/5）→ 照常比，findings 写实测差；更大 → 吞字头跨 run 结论降为只作参考。测试 `tests/test_asr_drift.py`
+   - **锚点（实测可比性，codex 016 最终版方法第 1 轮 P1 #1）**：本次成绩单加 `passthrough`（原声直通，不经模型），逐段与 GTCRN run 里的 `passthrough` 比。过线：DSP 类项与听感分（SCOREQ · Distill-MOS，确定性）逐段差 ≤ 1e-6；吃字（V-EAT-ASR）项在直通上恒为 0（原声和自己比），锚点量不出跨 run 识别差，所以锚点不判它。DSP 或听感分任一段超差 → 两次 run 不可比，停下报大总管。代价：多一个系统，成绩单约多 35 分钟（推断：直通无模型推理，只多打分）
+   - **跨 run 识别差（大总管 2026-11-05 要实测）**：成绩单跑完后，`asr_drift.py <GTCRN run 的 qa/asr_cache.json> <本次 run 的 qa/asr_cache.json>`，比两份缓存里同键（文件 sha256 | 模型 | 语言 | 第几次，正本 `qa/asr.rs`）的转写；两次 run 都会重新识别同样的 480 段原声 × 2 次，这些就是共同键。每段编辑距离是它让「多错字数」变动的上界。判定（阈值 cands 提，大总管同意 2026-11-05）：全部相同 →「一致」，照常比；每段最大 ≤ 1 字（否决线 5 字的 1/5）→ 照常比，findings 写实测差；更大 → 吃字（V-EAT-ASR）跨 run 结论降为只作参考。测试 `tests/test_asr_drift.py`
    - 供电：接电源（`meta.power = ac`），`caffeinate -i`
 5. **成绩单**（占名额，约 2.3–2.6 小时，推断）。锚点单独成 run、先跑（大总管 2026-11-05 要锚点比完先报再往下）：5a `--system passthrough --qa --rules v2`（约 35 分钟）→ 锚点逐段比 + `asr_drift.py` → 报大总管 → 5b `--system external:<dpdfnet2 新 run>,external:<dfn3-ll 新 run> --qa --rules v2`。两次同一二进制、同一提交的 `src/`、同一台机器、接着跑。过线：0 段没跑成；两个外部系统截半自检通过（`meta.external[*].trunc_max_abs_diff` ≤ 容差）；`inputs` 含 `clean`，三项带 `clean_pass` 标记
 6. **配对分析**：`analyze.py <GTCRN run 目录>,<5b run 目录> <exp013 clips.jsonl> --anchor <5a run 目录> --out analysis.md --json analysis.json`（锚点单独成 run 时用 `--anchor`，与第一个 run 比；测试 `AnchorRun`）。先做锚点比对（`anchor`：两边 `passthrough` 逐段逐项，判的项超 1e-6 或一边有数一边没有即退出），再只挑 `gtcrn` 与两个候选的行去合并（`pick`），合并后每个系统的片段必须恰好是清单里有干净参考的 480 段（`check_coverage`，缺多都拒绝）。测试 `tests/test_analyze.py::Anchor`。`merge` 会拒绝：元数据缺规则版本 · 场景集 · 是否带评分模型，或两边不同；评分项方向或单位不同；任一 run 内或跨 run 的（片段, 系统）重复；同一片段两边的场景 / 声音标签不同（测试 `tests/test_analyze.py::Merge`）。
@@ -34,7 +34,7 @@ GTCRN 一侧用 evalfix 跑的 `20261105-005916-4ccf0638`（规则 v2 · 带评�
 
 | 项 | GTCRN | 候选 | 影响 |
 |---|---|---|---|
-| 跑的时间 | 一个 run | 另一个 run | 吞字头项的识别每段 2 次、有随机性，且识别服务的权重两次是否相同不一定能核实；锚点只能证明直通上一致，不能保证降噪输出上一致。所以这一项按第二节第 4 步「跨 run 识别差」实测后再定照常比还是降级，其余项靠锚点逐段一致担保 |
+| 跑的时间 | 一个 run | 另一个 run | 吃字（V-EAT-ASR）项的识别每段 2 次、有随机性，且识别服务的权重两次是否相同不一定能核实；锚点只能证明直通上一致，不能保证降噪输出上一致。所以这一项按第二节第 4 步「跨 run 识别差」实测后再定照常比还是降级，其余项靠锚点逐段一致担保 |
 | 延迟 | 引擎实测 | 声明值（`latency_declared_only`） | 延迟项不进配对（`analyze.py` 的 `SKIP`），只在代价对照里列 |
 | 计时 | 实测 | 判「不知道」 | 同上 |
 | 采样率 | 16 kHz 原生 | DFN3 是 48 kHz 模型，吃的是升采样后的窄带 | 对 DFN3 不利【推断】，README「已知局限」已写 |
