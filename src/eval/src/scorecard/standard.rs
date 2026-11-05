@@ -188,7 +188,10 @@ mod tests {
         for (v, k, x) in V2_PARAMS {
             let l = crate::thresholds::ALL.iter().find(|l| l.id == v).unwrap();
             let p = l.params.iter().find(|p| p.key == k).unwrap();
-            assert!(p.values.iter().any(|(y, _)| (y - x).abs() < 1e-12), "{v} {k} {x}");
+            assert!(
+                p.values.iter().any(|(y, _)| (y - x).abs() < 1e-12),
+                "{v} {k} {x}"
+            );
         }
         for v in PHYSICAL.iter().chain(&V2_REPORT_ONLY).chain(&CLEAN_PASS) {
             assert!(crate::verifiers::info(v).is_some(), "{v} 没登记");

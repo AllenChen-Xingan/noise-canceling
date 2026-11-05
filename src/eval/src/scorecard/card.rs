@@ -264,8 +264,9 @@ impl Card {
 }
 
 fn ci_text(i: &ItemCell) -> String {
-    i.ci.as_ref()
-        .map_or("—".into(), |c| format!("[{:.3}, {:.3}]（{} 组）", c.lo, c.hi, c.groups))
+    i.ci.as_ref().map_or("—".into(), |c| {
+        format!("[{:.3}, {:.3}]（{} 组）", c.lo, c.hi, c.groups)
+    })
 }
 
 /// 判法的短名（表头图例见 v2 说明行）。

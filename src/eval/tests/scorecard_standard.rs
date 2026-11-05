@@ -209,19 +209,37 @@ fn v2_column_matches_code() {
         n += 1;
         let report = V2_REPORT_ONLY.contains(&v);
         assert_eq!(col.starts_with("只报"), report, "{v}：v2 列 {col:?}");
-        assert_eq!(col.starts_with("逐段"), PHYSICAL.contains(&v) || v == "V-EAT-ASR", "{v}：v2 列 {col:?}");
-        assert_eq!(col.starts_with("区间"), !report && !PHYSICAL.contains(&v) && v != "V-EAT-ASR", "{v}：v2 列 {col:?}");
-        assert_eq!(col.contains("干净人声单独过一遍"), CLEAN_PASS.contains(&v), "{v}：v2 列 {col:?}");
+        assert_eq!(
+            col.starts_with("逐段"),
+            PHYSICAL.contains(&v) || v == "V-EAT-ASR",
+            "{v}：v2 列 {col:?}"
+        );
+        assert_eq!(
+            col.starts_with("区间"),
+            !report && !PHYSICAL.contains(&v) && v != "V-EAT-ASR",
+            "{v}：v2 列 {col:?}"
+        );
+        assert_eq!(
+            col.contains("干净人声单独过一遍"),
+            CLEAN_PASS.contains(&v),
+            "{v}：v2 列 {col:?}"
+        );
         if let Some((_, _, x)) = V2_PARAMS.iter().find(|(id, _, _)| *id == v) {
             assert_eq!(first_number(col), Some(*x), "{v}：v2 列的线 ↔ 代码 {x}");
         }
         if v == "V-EAT-ASR" {
             let k = vdn_eval::thresholds::EAT_ASR.def("fail_chars");
-            assert!(col.contains(&format!("≥ {k} 字")), "{v}：v2 列 {col:?} ↔ 代码 {k} 字");
+            assert!(
+                col.contains(&format!("≥ {k} 字")),
+                "{v}：v2 列 {col:?} ↔ 代码 {k} 字"
+            );
         }
         if v.starts_with("V-NRMOS") {
             let d = vdn_eval::thresholds::NRMOS_DELTA.def("max");
-            assert!(col.contains(&format!("≥ -{d}")), "{v}：v2 列 {col:?} ↔ 代码 δ {d}");
+            assert!(
+                col.contains(&format!("≥ -{d}")),
+                "{v}：v2 列 {col:?} ↔ 代码 δ {d}"
+            );
         }
     }
     assert!(n > 15);
@@ -244,6 +262,9 @@ fn v2_rules_numbers_match_code() {
         vdn_eval::scorecard::standard::PHYSICAL.join(" · "),
     ];
     for w in want {
-        assert!(sec.contains(&w), "第四节 v2 里找不到「{w}」（与代码不一致）");
+        assert!(
+            sec.contains(&w),
+            "第四节 v2 里找不到「{w}」（与代码不一致）"
+        );
     }
 }

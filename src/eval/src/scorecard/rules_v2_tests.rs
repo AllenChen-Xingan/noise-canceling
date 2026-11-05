@@ -16,7 +16,12 @@ fn row(i: usize, scene: MeetingPlace, extra: Vec<(&'static str, bool, Score)>) -
     ];
     scores.splice(0..0, extra);
     ClipRow {
-        clip: format!("{}-c{:02}-{}", scene.as_str(), i / 2, if i % 2 == 0 { "ext" } else { "mba" }),
+        clip: format!(
+            "{}-c{:02}-{}",
+            scene.as_str(),
+            i / 2,
+            if i % 2 == 0 { "ext" } else { "mba" }
+        ),
         scene,
         tier: Tier::Common,
         device: "mba-builtin".into(),
@@ -39,7 +44,17 @@ fn one(rows: &[ClipRow]) -> SceneCard {
 #[test]
 fn physical_item_still_vetoes_on_one_clip() {
     let rows: Vec<ClipRow> = (0..10)
-        .map(|i| row(i, MeetingPlace::Cafe, vec![("V-NAN", true, sc("V-NAN", if i == 3 { 1.0 } else { 0.0 }, 0.0))]))
+        .map(|i| {
+            row(
+                i,
+                MeetingPlace::Cafe,
+                vec![(
+                    "V-NAN",
+                    true,
+                    sc("V-NAN", if i == 3 { 1.0 } else { 0.0 }, 0.0),
+                )],
+            )
+        })
         .collect();
     let c = one(&rows);
     assert_eq!(item(&c, "V-NAN").status, CardStatus::Fail);
@@ -52,9 +67,22 @@ fn physical_item_still_vetoes_on_one_clip() {
 fn one_bad_clip_no_longer_fails_a_mean_item() {
     // V-ONSET 线 3：9 段 0.5、1 段 5 → 旧规则不过；均值 0.95，区间整个在线内 → 过
     let rows: Vec<ClipRow> = (0..10)
-        .map(|i| row(i, MeetingPlace::Cafe, vec![("V-ONSET", false, sc("V-ONSET", if i == 0 { 5.0 } else { 0.5 }, 3.0))]))
+        .map(|i| {
+            row(
+                i,
+                MeetingPlace::Cafe,
+                vec![(
+                    "V-ONSET",
+                    false,
+                    sc("V-ONSET", if i == 0 { 5.0 } else { 0.5 }, 3.0),
+                )],
+            )
+        })
         .collect();
-    assert_eq!(item(&rules::summarize(&rows, &[])[0], "V-ONSET").status, CardStatus::Fail);
+    assert_eq!(
+        item(&rules::summarize(&rows, &[])[0], "V-ONSET").status,
+        CardStatus::Fail
+    );
     let c = one(&rows);
     let it = item(&c, "V-ONSET");
     assert_eq!((it.status, it.rule), (CardStatus::Pass, RULE_MEAN));
@@ -67,7 +95,17 @@ fn one_bad_clip_no_longer_fails_a_mean_item() {
 fn clearly_bad_mean_fails_and_straddling_is_unknown() {
     let mk = |base: f64| -> Vec<ClipRow> {
         (0..10)
-            .map(|i| row(i, MeetingPlace::Cafe, vec![("V-ONSET", false, sc("V-ONSET", base + 0.5 * (i % 3) as f64, 3.0))]))
+            .map(|i| {
+                row(
+                    i,
+                    MeetingPlace::Cafe,
+                    vec![(
+                        "V-ONSET",
+                        false,
+                        sc("V-ONSET", base + 0.5 * (i % 3) as f64, 3.0),
+                    )],
+                )
+            })
             .collect()
     };
     assert_eq!(item(&one(&mk(6.0)), "V-ONSET").status, CardStatus::Fail);
@@ -82,9 +120,14 @@ fn eat_vetoes_only_at_five_chars() {
         s.extra.push(("ref_len", 27.0));
         ("V-EAT-ASR", true, s)
     };
-    let rows: Vec<ClipRow> = (0..6).map(|i| row(i, MeetingPlace::Cafe, vec![eat(4.0)])).collect();
+    let rows: Vec<ClipRow> = (0..6)
+        .map(|i| row(i, MeetingPlace::Cafe, vec![eat(4.0)]))
+        .collect();
     let c = one(&rows);
-    assert_eq!((item(&c, "V-EAT-ASR").status, item(&c, "V-EAT-ASR").rule), (CardStatus::Pass, RULE_EAT));
+    assert_eq!(
+        (item(&c, "V-EAT-ASR").status, item(&c, "V-EAT-ASR").rule),
+        (CardStatus::Pass, RULE_EAT)
+    );
     let mut rows = rows;
     rows[2].scores[0] = eat(5.0);
     assert_eq!(item(&one(&rows), "V-EAT-ASR").status, CardStatus::Fail);
@@ -96,10 +139,14 @@ fn report_only_and_old_input_do_not_decide_scene() {
     // 门控项不过、轻声字没在干净人声上算：都只报不判，场景照样过
     let rows: Vec<ClipRow> = (0..10)
         .map(|i| {
-            row(i, MeetingPlace::Cafe, vec![
-                ("V-SIM-GATE", false, sc("V-SIM-GATE", 0.9, 0.05)),
-                ("V-WEAK", false, sc("V-WEAK", 9.0, 4.0)),
-            ])
+            row(
+                i,
+                MeetingPlace::Cafe,
+                vec![
+                    ("V-SIM-GATE", false, sc("V-SIM-GATE", 0.9, 0.05)),
+                    ("V-WEAK", false, sc("V-WEAK", 9.0, 4.0)),
+                ],
+            )
         })
         .collect();
     let c = one(&rows);
@@ -115,14 +162,23 @@ fn report_only_and_old_input_do_not_decide_scene() {
         })
         .collect();
     let c = one(&rows);
-    assert_eq!((item(&c, "V-WEAK").rule, item(&c, "V-WEAK").status), (RULE_MEAN, CardStatus::Fail));
+    assert_eq!(
+        (item(&c, "V-WEAK").rule, item(&c, "V-WEAK").status),
+        (RULE_MEAN, CardStatus::Fail)
+    );
 }
 
 #[test]
 fn splvl_uses_four_db_line() {
     // 均值约 −3.5 dB：旧线 −3 不过，新线 −4 过
     let rows: Vec<ClipRow> = (0..10)
-        .map(|i| row(i, MeetingPlace::Cafe, vec![("V-SPLVL", true, sc("V-SPLVL", -3.5 + 0.02 * i as f64, -3.0))]))
+        .map(|i| {
+            row(
+                i,
+                MeetingPlace::Cafe,
+                vec![("V-SPLVL", true, sc("V-SPLVL", -3.5 + 0.02 * i as f64, -3.0))],
+            )
+        })
         .collect();
     let it = item(&one(&rows), "V-SPLVL").clone();
     assert_eq!((it.threshold, it.status), (Some(-4.0), CardStatus::Pass));
@@ -177,15 +233,23 @@ fn holm_downgrades_weak_fails_in_a_big_family() {
     // 一个明显不过、一个刚好不过：单独看都不过；同族 20 个组合时，刚好不过的被 Holm 改判待测
     let mut cells: Vec<ItemCell> = Vec::new();
     let base = rules::summarize(
-        &[row(0, MeetingPlace::Cafe, vec![("V-ONSET", false, sc("V-ONSET", 0.1, 3.0))])],
+        &[row(
+            0,
+            MeetingPlace::Cafe,
+            vec![("V-ONSET", false, sc("V-ONSET", 0.1, 3.0))],
+        )],
         &[],
     )[0]
     .items[0]
-    .clone();
+        .clone();
     for k in 0..20 {
         let mut c = base.clone();
         c.rule = RULE_MEAN;
-        c.status = if k < 2 { CardStatus::Fail } else { CardStatus::Pass };
+        c.status = if k < 2 {
+            CardStatus::Fail
+        } else {
+            CardStatus::Pass
+        };
         c.ci = Some(Ci {
             mean: 0.0,
             lo: 0.0,
@@ -211,7 +275,11 @@ fn holm_can_reject_a_whole_family_of_sixty() {
     let rows: Vec<ClipRow> = (0..60)
         .flat_map(|k| {
             (0..8).map(move |i| {
-                let mut r = row(i, MeetingPlace::Cafe, vec![("V-ONSET", false, sc("V-ONSET", 9.0 + 0.1 * i as f64, 3.0))]);
+                let mut r = row(
+                    i,
+                    MeetingPlace::Cafe,
+                    vec![("V-ONSET", false, sc("V-ONSET", 9.0 + 0.1 * i as f64, 3.0))],
+                );
                 r.device = format!("dev{k}");
                 r
             })
@@ -219,7 +287,11 @@ fn holm_can_reject_a_whole_family_of_sixty() {
         .collect();
     let cards = summarize(&rows, &[]);
     assert_eq!(cards.len(), 60);
-    assert!(cards.iter().all(|c| item(c, "V-ONSET").status == CardStatus::Fail));
+    assert!(
+        cards
+            .iter()
+            .all(|c| item(c, "V-ONSET").status == CardStatus::Fail)
+    );
     let min_p = 1.0 / (th::AGG.def("reps") + 1.0);
     assert!(min_p < th::AGG.def("alpha") / 60.0);
 }

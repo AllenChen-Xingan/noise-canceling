@@ -21,7 +21,8 @@ pub const RULE_PHYS: &str = "逐段：物理硬事实，任一段不过即否决
 pub const RULE_EAT: &str = "逐段：比原声多错 ≥ 5 字的段即否决（人定 D85 题 3）";
 pub const RULE_MEAN: &str = "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）";
 pub const RULE_REPORT: &str = "只报不判（人定 D85）";
-pub const RULE_OLD_INPUT: &str = "只报不判：旧口径（在带噪输出上算），D85 题 2 要在干净人声单独过一遍的输出上重跑";
+pub const RULE_OLD_INPUT: &str =
+    "只报不判：旧口径（在带噪输出上算），D85 题 2 要在干净人声单独过一遍的输出上重跑";
 
 /// 送人耳的最差听感段数。
 pub const LISTEN_WORST: usize = 3;
@@ -32,12 +33,17 @@ fn key_of(c: &SceneCard) -> String {
 
 fn rows_of<'a>(c: &SceneCard, rows: &'a [ClipRow]) -> Vec<&'a ClipRow> {
     rows.iter()
-        .filter(|r| r.scene == c.scene && r.tier == c.tier && r.device == c.device && r.system == c.system)
+        .filter(|r| {
+            r.scene == c.scene && r.tier == c.tier && r.device == c.device && r.system == c.system
+        })
         .collect()
 }
 
 fn score_in<'a>(r: &'a ClipRow, v: &str) -> Option<&'a Score> {
-    r.scores.iter().find(|(id, _, _)| *id == v).map(|(_, _, s)| s)
+    r.scores
+        .iter()
+        .find(|(id, _, _)| *id == v)
+        .map(|(_, _, s)| s)
 }
 
 fn extra(s: &Score, k: &str) -> Option<f64> {
@@ -130,7 +136,10 @@ fn redo_listen_model(m: &mut ItemCell, rs: &[&ClipRow], key: &str) {
 
 /// Holm：同一项 × 同一系统的所有组合是一族；区间判不过、但 Holm 不拒绝的改判待测。
 fn apply_holm(cells: &mut [&mut ItemCell]) {
-    let ps: Vec<f64> = cells.iter().map(|c| c.ci.as_ref().map_or(1.0, |x| x.p_fail)).collect();
+    let ps: Vec<f64> = cells
+        .iter()
+        .map(|c| c.ci.as_ref().map_or(1.0, |x| x.p_fail))
+        .collect();
     let rej = holm(&ps);
     for (c, r) in cells.iter_mut().zip(rej) {
         if c.status == CardStatus::Fail && !c.report_only && !r && c.rule == RULE_MEAN {
@@ -155,8 +164,8 @@ fn finish(c: &mut SceneCard, rs: &[&ClipRow]) {
         .map(|i| i.v)
         .collect();
     let judged = || c.items.iter().filter(|i| !i.report_only);
-    let any_fail = judged().any(|i| i.status == CardStatus::Fail)
-        || c.listen.status == Some(CardStatus::Fail);
+    let any_fail =
+        judged().any(|i| i.status == CardStatus::Fail) || c.listen.status == Some(CardStatus::Fail);
     let any_unknown = judged().any(|i| i.status == CardStatus::Unknown)
         || c.listen.status == Some(CardStatus::Unknown);
     c.status = if any_fail {
@@ -183,7 +192,9 @@ fn finish(c: &mut SceneCard, rs: &[&ClipRow]) {
     w.sort_by(|a, b| a.0.total_cmp(&b.0));
     for (d, clip) in w.into_iter().take(LISTEN_WORST) {
         if !c.listen.to_human.iter().any(|(x, _)| *x == clip) {
-            c.listen.to_human.push((clip, format!("听感最差段之一（较差的 Δ {d:+.2}）")));
+            c.listen
+                .to_human
+                .push((clip, format!("听感最差段之一（较差的 Δ {d:+.2}）")));
         }
     }
 }

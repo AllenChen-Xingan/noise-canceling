@@ -138,7 +138,10 @@ pub const EAT_ASR: Lines = Lines {
         p(
             "fail_chars",
             Some(5.0),
-            &[(5.0, Src::Design("人定 D85 题 3 选 C：单段多错 ≥ 5 字才否决"))],
+            &[(
+                5.0,
+                Src::Design("人定 D85 题 3 选 C：单段多错 ≥ 5 字才否决"),
+            )],
         ),
     ],
 };
@@ -346,12 +349,18 @@ pub const AGG: Lines = Lines {
         p(
             "min_groups",
             Some(2.0),
-            &[(2.0, Src::Design("只有 1 组源片段时 bootstrap 区间退化成一点，判不了"))],
+            &[(
+                2.0,
+                Src::Design("只有 1 组源片段时 bootstrap 区间退化成一点，判不了"),
+            )],
         ),
         p(
             "alpha",
             Some(0.025),
-            &[(0.025, Src::Design("Holm 单侧 α：与 95% 双侧区间的「不过」一端对齐"))],
+            &[(
+                0.025,
+                Src::Design("Holm 单侧 α：与 95% 双侧区间的「不过」一端对齐"),
+            )],
         ),
     ],
 };

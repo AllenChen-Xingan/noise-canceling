@@ -69,7 +69,10 @@ fn estoi_matches_pystoi_within_1e_4() {
     let n = v["n"].as_u64().unwrap() as usize;
     let cases = v["cases"].as_array().unwrap();
     assert!(cases.len() >= 6);
-    assert!(cases.iter().any(|c| c["case"] == "zero"), "缺整段数字零样例");
+    assert!(
+        cases.iter().any(|c| c["case"] == "zero"),
+        "缺整段数字零样例"
+    );
     let mut worst = 0.0f64;
     for c in cases {
         let kind = c["case"].as_str().unwrap();
@@ -79,7 +82,10 @@ fn estoi_matches_pystoi_within_1e_4() {
         if kind == "zero" {
             // 上游 row_col_normalize 先加 EPS × 随机噪声再归一化：输出全零时它的值只是这点随机噪声，
             // 每次不同（实测 −0.0002 ~ 0.0024）。不逐位对拍，两边都必须接近 0
-            assert!(got.abs() <= 0.01 && want.abs() <= 0.01, "zero: Rust {got} · pystoi {want}");
+            assert!(
+                got.abs() <= 0.01 && want.abs() <= 0.01,
+                "zero: Rust {got} · pystoi {want}"
+            );
             continue;
         }
         let d = (got - want).abs();

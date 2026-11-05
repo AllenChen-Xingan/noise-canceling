@@ -122,7 +122,12 @@ mod tests {
     fn vals(xs: &[f64]) -> Vec<(String, f64)> {
         xs.iter()
             .enumerate()
-            .map(|(i, x)| (format!("s-c{:02}-{}", i / 2, if i % 2 == 0 { "ext" } else { "mba" }), *x))
+            .map(|(i, x)| {
+                (
+                    format!("s-c{:02}-{}", i / 2, if i % 2 == 0 { "ext" } else { "mba" }),
+                    *x,
+                )
+            })
             .collect()
     }
 
@@ -141,13 +146,30 @@ mod tests {
     #[test]
     fn three_states() {
         // 均值 1，按组波动 ±0.1（同组两段同值）：线 2 → 过；线 0 → 不过；线 1 → 跨线待测（越小越好）
-        let xs: Vec<f64> = (0..20).map(|i| 1.0 + if (i / 2) % 2 == 0 { 0.1 } else { -0.1 }).collect();
-        assert_eq!(tri(&ci(&xs, 2.0, Better::Lower), 2.0, Better::Lower), CardStatus::Pass);
-        assert_eq!(tri(&ci(&xs, 0.0, Better::Lower), 0.0, Better::Lower), CardStatus::Fail);
-        assert_eq!(tri(&ci(&xs, 1.0, Better::Lower), 1.0, Better::Lower), CardStatus::Unknown);
+        let xs: Vec<f64> = (0..20)
+            .map(|i| 1.0 + if (i / 2) % 2 == 0 { 0.1 } else { -0.1 })
+            .collect();
+        assert_eq!(
+            tri(&ci(&xs, 2.0, Better::Lower), 2.0, Better::Lower),
+            CardStatus::Pass
+        );
+        assert_eq!(
+            tri(&ci(&xs, 0.0, Better::Lower), 0.0, Better::Lower),
+            CardStatus::Fail
+        );
+        assert_eq!(
+            tri(&ci(&xs, 1.0, Better::Lower), 1.0, Better::Lower),
+            CardStatus::Unknown
+        );
         // 越大越好时方向反过来
-        assert_eq!(tri(&ci(&xs, 0.0, Better::Higher), 0.0, Better::Higher), CardStatus::Pass);
-        assert_eq!(tri(&ci(&xs, 2.0, Better::Higher), 2.0, Better::Higher), CardStatus::Fail);
+        assert_eq!(
+            tri(&ci(&xs, 0.0, Better::Higher), 0.0, Better::Higher),
+            CardStatus::Pass
+        );
+        assert_eq!(
+            tri(&ci(&xs, 2.0, Better::Higher), 2.0, Better::Higher),
+            CardStatus::Fail
+        );
     }
 
     #[test]

@@ -152,7 +152,12 @@ pub fn derive_vacuum(rows: &mut [ClipRow]) {
         if r.scores.iter().any(|(v, _, _)| *v == "V-VACUUM") {
             continue;
         }
-        let Some(t) = r.scores.iter().find(|(v, _, _)| *v == "V-NR").and_then(|(_, _, s)| s.value) else {
+        let Some(t) = r
+            .scores
+            .iter()
+            .find(|(v, _, _)| *v == "V-NR")
+            .and_then(|(_, _, s)| s.value)
+        else {
             continue;
         };
         let s = Score::judged("V-VACUUM", t, "dB", crate::Better::Higher, Some(min), &[])
@@ -206,13 +211,20 @@ mod tests {
     fn vacuum_column_derived_from_nr() {
         let mut rows = parse_jsonl(EXP014_LINE).unwrap();
         derive_vacuum(&mut rows);
-        assert!(rows[0].scores.iter().all(|(v, _, _)| *v != "V-VACUUM"), "没有 V-NR 就不生成");
+        assert!(
+            rows[0].scores.iter().all(|(v, _, _)| *v != "V-VACUUM"),
+            "没有 V-NR 就不生成"
+        );
         let mut nr = Score::judged("V-NR", -45.0, "dB", crate::Better::Lower, Some(-6.0), &[]);
         nr.extra.clear();
         rows[0].scores.push(("V-NR", false, nr));
         derive_vacuum(&mut rows);
         derive_vacuum(&mut rows);
-        let vac: Vec<_> = rows[0].scores.iter().filter(|(v, _, _)| *v == "V-VACUUM").collect();
+        let vac: Vec<_> = rows[0]
+            .scores
+            .iter()
+            .filter(|(v, _, _)| *v == "V-VACUUM")
+            .collect();
         assert_eq!(vac.len(), 1, "重复调用不重复加");
         assert_eq!(vac[0].2.value, Some(-45.0));
         assert!(vac[0].2.verdict.is_fail(), "−45 dB 低于 −40 dB 真空线");
@@ -221,7 +233,11 @@ mod tests {
     #[test]
     fn unknown_verifier_and_bad_verdict_are_errors_with_line() {
         let bad = EXP014_LINE.replace("V-NAN", "V-NOPE");
-        assert!(parse_jsonl(&format!("\n{bad}")).unwrap_err().contains("第 2 行"));
+        assert!(
+            parse_jsonl(&format!("\n{bad}"))
+                .unwrap_err()
+                .contains("第 2 行")
+        );
         let bad = EXP014_LINE.replace(r#""verdict":"pass""#, r#""verdict":"maybe""#);
         assert!(parse_jsonl(&bad).is_err());
     }

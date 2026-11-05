@@ -349,15 +349,31 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
         Some(r) => vdn_eval::scorecard::card::Rules::parse(&r)
             .ok_or_else(|| format!("--rules 只认 v1 或 v2，收到 {r}"))?,
     };
-    let default_out = || vdn_eval::suite::main_root().join("_tmp/scorecard").join(&m.run_id);
+    let default_out = || {
+        vdn_eval::suite::main_root()
+            .join("_tmp/scorecard")
+            .join(&m.run_id)
+    };
     if let Some(src) = arg(args, "--from-clips") {
-        let out = arg(args, "--out").map(PathBuf::from).unwrap_or_else(default_out);
+        let out = arg(args, "--out")
+            .map(PathBuf::from)
+            .unwrap_or_else(default_out);
         let (card, sha) = vdn_eval::scorecard::load::resummarize(Path::new(&src), rules)?;
         let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "from_clips": src,
             "from_clips_sha256": sha, "rules": rules.as_str()});
-        let js = serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";
-        vdn_eval::scorecard::card::write_new(&out, &js, &card.to_markdown("场景成绩单（重新汇总）"))?;
-        println!("成绩单：{}（{} 段，规则 {}）", out.join("scorecard.md").display(), card.clips, rules.as_str());
+        let js =
+            serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";
+        vdn_eval::scorecard::card::write_new(
+            &out,
+            &js,
+            &card.to_markdown("场景成绩单（重新汇总）"),
+        )?;
+        println!(
+            "成绩单：{}（{} 段，规则 {}）",
+            out.join("scorecard.md").display(),
+            card.clips,
+            rules.as_str()
+        );
         return Ok(true);
     }
     let path = arg(args, "--suite").unwrap_or_else(|| "src/eval/suite/scenes.json".into());
@@ -371,7 +387,9 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
         baseline: Baseline::new(),
         levels: parse_levels(LEVELS)?,
     };
-    let out = arg(args, "--out").map(PathBuf::from).unwrap_or_else(default_out);
+    let out = arg(args, "--out")
+        .map(PathBuf::from)
+        .unwrap_or_else(default_out);
     vdn_eval::scorecard::card::ensure_fresh(&out)?;
     let mut qa = flag(args, "--qa").then(|| vdn_eval::qa::QaExtra::new(out.join("qa")));
     let extra = qa.as_mut().map(|x| x as &mut dyn vdn_eval::runner::Extra);
