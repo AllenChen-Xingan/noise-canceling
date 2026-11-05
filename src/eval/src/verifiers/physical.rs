@@ -8,7 +8,15 @@ pub(super) fn v_lat(c: &Ctx) -> Score {
         return Score::unknown(ID, "ms", Better::Lower, "没有系统运行记录");
     };
     let sr = c.clip.sr as f64;
-    let Some(lag) = xcorr_lag(&c.clip.mix, &r.raw, 2048, 32_000) else {
+    // 窗放在主讲人能量最多的 4 s（干净轨全零时退回混合轨），#109
+    let win = 4 * c.clip.sr as usize;
+    let guide = if c.clip.clean.iter().any(|v| *v != 0.0) {
+        &c.clip.clean
+    } else {
+        &c.clip.mix
+    };
+    let start = busiest_start(guide, win, c.clip.sr as usize / 10);
+    let Some(lag) = xcorr_lag(&c.clip.mix, &r.raw, 2048, start, win) else {
         return Score::unknown(ID, "ms", Better::Lower, "输入太弱，互相关找不到峰");
     };
     let ok_algo = lag.abs_diff(r.latency) <= 1;
@@ -59,7 +67,10 @@ pub(super) fn v_frame(c: &Ctx, p: &Params) -> Score {
         Some(p.f_or("max", th::FRAME.def("max"))),
         &[],
     )
-    .with_extra("p999", quantile(&t, 0.999));
+    .with_extra("p999", quantile(&t, 0.999))
+    // 025 A2 旁报：超过 1 个周期的次数（真掉音）· 首帧单列（冷启动）；电源状态记在成绩单元数据 meta.power（`power.rs`）
+    .with_extra("over_1", t.iter().filter(|x| **x > 1.0).count() as f64)
+    .with_extra("first", t[0]);
     if s.verdict.is_fail() && (c.ci || cfg!(debug_assertions)) {
         let why = if c.ci {
             "CI 虚拟机计时不可信（规约 §7 G10 放 L4）"
@@ -88,6 +99,14 @@ pub(super) fn v_nan(c: &Ctx) -> Score {
     )
     .with_extra("nonfinite", bad as f64)
     .with_extra("over_4", huge as f64)
+    // 025 A4 旁报：幅度 > 1.0（写成 16 位会削波）的样本数，不进判定
+    .with_extra(
+        "over_1",
+        c.out
+            .iter()
+            .filter(|v| v.is_finite() && v.abs() > 1.0)
+            .count() as f64,
+    )
 }
 
 pub(super) fn v_mute(c: &Ctx, p: &Params) -> Score {

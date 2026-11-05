@@ -226,6 +226,8 @@ fn listen_failure_counts_in_ranking_and_summary() {
         cards: only,
         missing: Vec::new(),
         clips: 1,
+        rules: crate::scorecard::card::Rules::V1,
+        no_clean_pass: Vec::new(),
     };
     let md = card.to_markdown("t");
     assert!(md.contains("不过的项 听感"), "{md}");

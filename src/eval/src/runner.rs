@@ -149,20 +149,24 @@ pub(crate) struct Prepared {
     pub(crate) clip: Clip,
     pub(crate) run: RunOut,
     pub(crate) noise_out: Option<Vec<f32>>,
+    /// 干净人声单独过一遍系统的输出（成绩单新规则 v2，人定 D85 题 2 = B）；不要时为 `None`
+    pub(crate) clean_out: Option<Vec<f32>>,
     pub(crate) masks: Masks,
 }
 
 fn prepare(task: &Task, sys: SystemKind, clip: Clip) -> Result<Prepared, String> {
     // 只在合成场景上做「只有噪音」的对照处理：真实录音的噪音轨不是逐样本可重放的同一段输入
-    prepare_clip(task, sys, clip, task.scene.is_some())
+    prepare_clip(task, sys, clip, task.scene.is_some(), false)
 }
 
 /// `replayable`：噪音 + 干扰轨能逐样本重放（合成场景；场景测试集里分轨相加等于混合的段）。
+/// `clean_pass`：另把干净人声单独过一遍系统（同一系统、不注入故障，新的引擎状态）。
 pub(crate) fn prepare_clip(
     task: &Task,
     sys: SystemKind,
     clip: Clip,
     replayable: bool,
+    clean_pass: bool,
 ) -> Result<Prepared, String> {
     let spec = SystemSpec {
         kind: sys,
@@ -186,13 +190,50 @@ pub(crate) fn prepare_clip(
     } else {
         None
     };
+    let clean_out = if clean_pass {
+        let spec = SystemSpec {
+            kind: sys,
+            safety: task.safety,
+            faults: Vec::new(),
+        };
+        Some(run(&spec, &clip.clean)?.out)
+    } else {
+        None
+    };
     let m = masks(&clip.truth, &clip.mix, 0.03);
     Ok(Prepared {
         clip,
         run: r,
         noise_out,
+        clean_out,
         masks: m,
     })
+}
+
+impl Prepared {
+    /// 「干净人声单独过一遍」那一路的评分上下文（人定 D85 题 2 = B；codex 中途 2 第 1 轮 P1 #2）：
+    /// 输入里只有主讲人，所以旁人掩码全空、没有「只有噪音」的停顿帧（V-TIMBRE 不扣残留噪声，停顿里的混响尾巴
+    /// 不会被当噪声扣掉；结果也不随原场景里旁人何时说话而变）。主讲人掩码照用真值。
+    pub(crate) fn clean_view(&self) -> Option<(Prepared, Vec<f32>)> {
+        let out = self.clean_out.clone()?;
+        let n = self.masks.owner.len();
+        let masks = Masks {
+            owner: self.masks.owner.clone(),
+            interf: vec![false; n],
+            noise_only: vec![false; n],
+            interf_only: vec![false; n],
+        };
+        Some((
+            Prepared {
+                clip: self.clip.clone(),
+                run: self.run.clone(),
+                noise_out: None,
+                clean_out: None,
+                masks,
+            },
+            out,
+        ))
+    }
 }
 
 pub(crate) fn score_one(
@@ -430,5 +471,82 @@ pub fn run_suite(
         tasks,
         systems: ran,
         skipped_systems: skipped,
+    }
+}
+
+#[cfg(test)]
+mod clean_view_tests {
+    use super::*;
+    use crate::synth::{InterfMode, InterfSpec, NoiseKind, SceneSpec, TalkerSpec};
+
+    fn task() -> Task {
+        crate::suite::parse_suite(include_str!("../suite/ci.json"))
+            .unwrap()
+            .tasks[0]
+            .clone()
+    }
+
+    fn clip(interf: bool) -> Clip {
+        render(&SceneSpec {
+            dur_s: 10.0,
+            seed: 4,
+            owner: Some(TalkerSpec {
+                level_dbov: -26.0,
+                f0_lo: 100.0,
+                f0_hi: 140.0,
+                tonal: false,
+            }),
+            owner_start_s: 0.5,
+            pause_s: (0.5, 1.0),
+            interferers: if interf {
+                vec![InterfSpec {
+                    mode: InterfMode::Overlap,
+                    sir_db: 0.0,
+                    f0_lo: 180.0,
+                    f0_hi: 240.0,
+                }]
+            } else {
+                Vec::new()
+            },
+            noise: NoiseKind::Pink,
+            snr_db: 10.0,
+            tail_silence_s: 0.0,
+        })
+    }
+
+    fn timbre(c: Clip) -> Score {
+        let t = task();
+        let p = prepare_clip(&t, SystemKind::Passthrough, c, false, true).unwrap();
+        let (cp, out) = p.clean_view().unwrap();
+        let ctx = Ctx {
+            clip: &cp.clip,
+            out: &out,
+            run: Some(&cp.run),
+            masks: &cp.masks,
+            noise_out: None,
+            ci: true,
+        };
+        eval("V-TIMBRE", &ctx, &Params::default())
+    }
+
+    /// 原声直通过一遍干净人声 = 干净人声：音色偏差恰为 0；原场景里有没有旁人重叠说话，读数都一样。
+    #[test]
+    fn clean_view_timbre_is_zero_and_ignores_interferer_timing() {
+        let a = timbre(clip(false));
+        let b = timbre(clip(true));
+        assert!(a.value.unwrap().abs() < 1e-9, "{a}");
+        assert!(b.value.unwrap().abs() < 1e-9, "{b}");
+    }
+
+    /// 停顿里有混响尾巴（干净轨在停顿帧非零）：不扣「噪声」，原声直通仍为 0。
+    #[test]
+    fn clean_view_does_not_subtract_reverb_tail() {
+        let mut c = clip(false);
+        let tail: Vec<f32> = (0..c.clean.len())
+            .map(|i| 1e-3 * ((i as f32) * 0.37).sin())
+            .collect();
+        c.clean.iter_mut().zip(&tail).for_each(|(v, t)| *v += t);
+        let s = timbre(c);
+        assert!(s.value.unwrap().abs() < 1e-9, "{s}");
     }
 }

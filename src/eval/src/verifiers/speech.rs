@@ -35,15 +35,18 @@ fn band_levels(c: &Ctx, x: &[f32]) -> Vec<Vec<f64>> {
         sample_rate: c.clip.sr,
         window: Window::HannPeriodic,
     });
+    // 上沿越过奈奎斯特频率的带不计（#110：低采样率下切片越界）；切片再截到频谱长度兜底
+    let bins = nfft / 2 + 1;
     let edges: Vec<(usize, usize)> = WEAK_CF
         .iter()
+        .filter(|f| *f * 2f64.powf(1.0 / 6.0) <= sr / 2.0)
         .map(|f| {
             let lo = (f * 2f64.powf(-1.0 / 6.0) * nfft as f64 / sr).round() as usize;
             let hi = (f * 2f64.powf(1.0 / 6.0) * nfft as f64 / sr).round() as usize;
-            (lo, hi.max(lo + 1))
+            (lo.min(bins - 1), hi.max(lo + 1).min(bins))
         })
         .collect();
-    let mut out = vec![Vec::new(); WEAK_CF.len()];
+    let mut out = vec![Vec::new(); edges.len()];
     let n = x.len().min(c.clip.clean.len());
     let x64: Vec<f64> = x[..n].iter().map(|&v| v as f64).collect();
     for k in 0..fft.num_frames(n) {
@@ -68,6 +71,19 @@ pub(super) fn v_weak(c: &Ctx, p: &Params) -> Score {
     }
     let lc = band_levels(c, &c.clip.clean);
     let lo = band_levels(c, c.out);
+    if lc.len() * 2 < WEAK_CF.len() {
+        return Score::unknown(
+            ID,
+            "dB",
+            Better::Lower,
+            format!(
+                "采样率 {} Hz：奈奎斯特以下只剩 {}/{} 个频带，少于一半",
+                c.clip.sr,
+                lc.len(),
+                WEAK_CF.len()
+            ),
+        );
+    }
     let frames = lc.first().map_or(0, Vec::len);
     if frames < 20 {
         return Score::unknown(ID, "dB", Better::Lower, format!("有声帧只有 {frames} 个"));
@@ -91,6 +107,10 @@ pub(super) fn v_weak(c: &Ctx, p: &Params) -> Score {
     )
     .with_extra("delta_range_db", ddr)
     .with_extra("frames", frames as f64);
+    // 只在有频带被奈奎斯特截掉时报带数，16 kHz 输出与改前逐位相同（spectrum_golden）
+    if lc.len() < WEAK_CF.len() {
+        s = s.with_extra("bands", lc.len() as f64);
+    }
     if ddr < p.f_or("compress_min", th::WEAK.def("compress_min")) {
         s.note = format!("动态范围变化 {ddr:.1} dB：被压缩（012 V-WEAK）");
     }

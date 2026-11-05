@@ -140,7 +140,7 @@ fn load(fx: &Fx, dir: &Path) -> Result<External, String> {
     )
 }
 
-const ALL: [Kind; 3] = [Kind::Mix, Kind::Bg, Kind::Trunc];
+const ALL: [Kind; 4] = Kind::ALL;
 
 fn ident(x: &[f32]) -> Vec<f32> {
     x.to_vec()
@@ -264,6 +264,14 @@ fn missing_input_kind_is_reported() {
     };
     let e = run(&spec, &Kind::Bg.input(&clip)).err().unwrap();
     assert!(e.contains("外部输出没提供 bg"), "{e}");
+    // clean 同理：没列就报错、不回退成带噪那路；runner 凭 provides 事先知道
+    let e = run(&spec, &Kind::Clean.input(&clip)).err().unwrap();
+    assert!(e.contains("外部输出没提供 clean"), "{e}");
+    let SystemKind::External(x) = ext else {
+        unreachable!()
+    };
+    assert!(x.provides(Kind::Mix) && x.provides(Kind::Trunc));
+    assert!(!x.provides(Kind::Bg) && !x.provides(Kind::Clean));
     assert!(run(&spec, &clip.mix).is_ok());
     let mut other = clip.mix.clone();
     other[7] += 1e-3;
@@ -284,6 +292,15 @@ fn self_checks_reject_bad_dirs() {
     let d = good();
     std::fs::remove_file(d.join(format!("mix/{id}.wav"))).unwrap();
     expect(&d, "缺 1 段");
+    // clean/ 列了就必须段段齐、时长对
+    let d = good();
+    std::fs::remove_file(d.join(format!("clean/{id}.wav"))).unwrap();
+    expect(&d, "clean/ 缺 1 段");
+    let d = good();
+    let pc = d.join(format!("clean/{id}.wav"));
+    let (xc, _) = wav::read(&pc).unwrap();
+    wav::write(&pc, &xc[..xc.len() - 1], SR).unwrap();
+    expect(&d, "dur_samples");
     // 多片段
     let d = good();
     wav::write(&d.join("bg/nope-c99.wav"), &[0.0; 4], SR).unwrap();
@@ -380,4 +397,102 @@ fn faults_and_resets_keep_replay_on_the_same_time_axis() {
             .iter()
             .any(|(i, _)| i.v == "V-FRAME" || i.v == "V-RTF")
     );
+}
+
+/// `native_rate`：不写 = MODEL_RATE；写 IO_RATE 可以；别的值自检报错（evalfix 定，#111）。
+#[test]
+fn native_rate_is_read_and_checked() {
+    let fx = setup("native");
+    let dir = write_ext(&fx, "native", "native-ext", 0, &ALL, &ident);
+    assert_eq!(
+        load(&fx, &dir).unwrap().native_rate(),
+        vdn_types::MODEL_RATE
+    );
+    let set = |v: Value| {
+        let p = dir.join("run.json");
+        let mut rj: Value = serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+        rj["native_rate"] = v;
+        std::fs::write(&p, rj.to_string()).unwrap();
+    };
+    set(json!(vdn_types::IO_RATE));
+    let e = load(&fx, &dir).unwrap();
+    assert_eq!(e.native_rate(), vdn_types::IO_RATE);
+    assert_eq!(e.provenance()["native_rate"], json!(vdn_types::IO_RATE));
+    set(json!(44_100)); // tidy: 非采样率：故意给一个不允许的值
+    assert!(load(&fx, &dir).unwrap_err().contains("native_rate"));
+}
+
+/// 外部输出没提供 `clean/`（v2）：零「没跑成」；三项（人声忽大忽小 · 音色 · 轻声字）不带 `clean_pass`、落「只报·旧口径」；
+/// 成绩单开头点名该系统（evalfix 与 cands 定 2026-11-05；本条由 evalfix 写、cands 审）。
+#[test]
+fn no_clean_dir_means_report_only_not_missing() {
+    use vdn_eval::scorecard::card::Card;
+    use vdn_eval::scorecard::standard::{CLEAN_PASS, CLEAN_PASS_MARK};
+    let fx = setup("noclean");
+    let dir = write_ext(
+        &fx,
+        "nc",
+        "nc-ext",
+        0,
+        &[Kind::Mix, Kind::Bg, Kind::Trunc],
+        &ident,
+    );
+    let ext = SystemKind::external(load(&fx, &dir).unwrap()).unwrap();
+    let suite = parse_suite(&fx.suite).unwrap();
+    let (rows, missing) = vdn_eval::scorecard::run(
+        &suite,
+        &[SystemKind::Passthrough, ext],
+        &opts(),
+        None,
+        Some(&fx.root),
+    );
+    assert!(missing.is_empty(), "{missing:?}");
+    assert_eq!(rows.len(), 2 * fx.clips.len());
+    let marked = |r: &vdn_eval::scorecard::ClipRow| {
+        r.scores
+            .iter()
+            .filter(|(v, _, _)| CLEAN_PASS.contains(v))
+            .map(|(_, _, s)| {
+                s.extra
+                    .iter()
+                    .any(|(k, x)| *k == CLEAN_PASS_MARK && *x == 1.0)
+            })
+            .collect::<Vec<_>>()
+    };
+    for r in &rows {
+        let m = marked(r);
+        assert_eq!(m.len(), CLEAN_PASS.len(), "{}", r.clip);
+        let want = r.system == "passthrough";
+        assert!(
+            m.iter().all(|x| *x == want),
+            "{} {} {m:?}",
+            r.system,
+            r.clip
+        );
+    }
+    let card = Card::build(&rows, missing);
+    assert_eq!(card.no_clean_pass, vec!["nc-ext".to_string()]);
+    let md = card.to_markdown("t");
+    let line = md
+        .lines()
+        .find(|l| l.contains("本系统未提供干净人声输出，人声忽大忽小 · 音色 · 轻声字三项不判"))
+        .unwrap_or_else(|| panic!("{md}"));
+    assert!(
+        line.contains("nc-ext") && !line.contains("passthrough"),
+        "{line}"
+    );
+    // 先数再查，免得循环一次都不进就过（cands 审 P2）
+    let ext_cards: Vec<_> = card.cards.iter().filter(|c| c.system == "nc-ext").collect();
+    assert!(!ext_cards.is_empty());
+    for c in ext_cards {
+        let three: Vec<_> = c
+            .items
+            .iter()
+            .filter(|i| CLEAN_PASS.contains(&i.v))
+            .collect();
+        assert_eq!(three.len(), CLEAN_PASS.len(), "{:?}", c.scene);
+        for i in three {
+            assert!(i.report_only, "{:?} {}", c.scene, i.v);
+        }
+    }
 }

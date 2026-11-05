@@ -29,7 +29,7 @@ const HOP: usize = vdn_types::FRONTEND.hop;
 const TRUNC_TOL_FLOAT: f32 = 1e-4;
 const TRUNC_TOL_INT16: f32 = 2.0 / 32768.0;
 
-/// 输入种类 = 子目录名。以后加 `clean`（干净人声单独过一遍，等 evalfix C2 定稿）只在这里加一支。
+/// 输入种类 = 子目录名。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Kind {
     /// 混合轨 `mix.wav`
@@ -38,15 +38,18 @@ pub enum Kind {
     Bg,
     /// 自检用：每个场景第一段的混合轨，第 floor(n/2) 样本起补零。不进索引
     Trunc,
+    /// 干净人声单独过一遍（成绩单新规则 v2 的三项用，人定 D85 题 2 = B）。可选；没列时 v2 下该段报没跑成
+    Clean,
 }
 
 impl Kind {
-    pub const ALL: [Kind; 3] = [Kind::Mix, Kind::Bg, Kind::Trunc];
+    pub const ALL: [Kind; 4] = [Kind::Mix, Kind::Bg, Kind::Trunc, Kind::Clean];
     pub fn as_str(self) -> &'static str {
         match self {
             Kind::Mix => "mix",
             Kind::Bg => "bg",
             Kind::Trunc => "trunc",
+            Kind::Clean => "clean",
         }
     }
     pub fn parse(s: &str) -> Option<Kind> {
@@ -58,6 +61,7 @@ impl Kind {
             Kind::Mix => true,
             Kind::Bg => c.additive,
             Kind::Trunc => trunc_pick,
+            Kind::Clean => true,
         }
     }
     /// 这种输入的样本（与 runner 喂给 `system::run` 的完全同一算法）。
@@ -76,6 +80,7 @@ impl Kind {
                 x[h..].fill(0.0);
                 x
             }
+            Kind::Clean => clip.clean.clone(),
         }
     }
 }
@@ -89,8 +94,27 @@ struct RunJson {
     sr: u32,
     latency_samples: usize,
     inputs: Vec<String>,
+    /// 模型原生采样率（Hz）。可选，不写 = `MODEL_RATE`；只许 `MODEL_RATE` 或 `IO_RATE`（evalfix 定，#111）。
+    /// 延迟账据此决定记不记两跳重采样：原生 = IO 采样率时不记
+    #[serde(default)]
+    native_rate: Option<u32>,
     #[serde(default)]
     model: serde_json::Value,
+}
+
+/// 外部系统可以声明的原生采样率（取自 vdn-types 采样率正本，不手写）。
+pub const NATIVE_RATES: [u32; 2] = [vdn_types::MODEL_RATE, vdn_types::IO_RATE];
+
+/// 读 `native_rate`：不写 → `MODEL_RATE`；不在 [`NATIVE_RATES`] 里 → 报错。
+pub fn native_rate_of(v: Option<u32>) -> Result<u32, String> {
+    let r = v.unwrap_or(vdn_types::MODEL_RATE);
+    if NATIVE_RATES.contains(&r) {
+        Ok(r)
+    } else {
+        Err(format!(
+            "run.json native_rate {r} 不在允许值 {NATIVE_RATES:?} 里"
+        ))
+    }
 }
 
 /// 输入指纹：(长度, FNV-1a 64, SipHash 64)，都按 `f32::to_bits` 算。
@@ -123,6 +147,8 @@ struct Entry {
 pub struct External {
     name: String,
     latency: usize,
+    native_rate: u32,
+    inputs: BTreeSet<Kind>,
     index: HashMap<Fingerprint, Entry>,
     provenance: serde_json::Value,
 }
@@ -228,6 +254,10 @@ impl External {
     pub fn latency_samples(&self) -> usize {
         self.latency
     }
+    /// 模型原生采样率（Hz），给延迟账判断记不记重采样。
+    pub fn native_rate(&self) -> u32 {
+        self.native_rate
+    }
     /// 进成绩单元数据：目录 · run.json 哈希 · 声明延迟 · 截半自检结果。
     pub fn provenance(&self) -> &serde_json::Value {
         &self.provenance
@@ -253,6 +283,7 @@ impl External {
         if rj.sr != SR {
             return Err(format!("run.json sr {} ≠ {SR}", rj.sr));
         }
+        let native_rate = native_rate_of(rj.native_rate)?;
         let mut listed = BTreeSet::new();
         for s in &rj.inputs {
             let k = Kind::parse(s).ok_or_else(|| format!("run.json inputs 里有未知种类 {s}"))?;
@@ -296,7 +327,7 @@ impl External {
             let clip = load_scene_clip(c, root)?;
             let n = c.dur_samples as usize;
             let path = |k: Kind| dir.join(k.as_str()).join(format!("{}.wav", c.id));
-            for k in [Kind::Mix, Kind::Bg] {
+            for k in [Kind::Mix, Kind::Bg, Kind::Clean] {
                 if !k.applies(c, false) {
                     continue;
                 }
@@ -357,11 +388,14 @@ impl External {
             "inputs": listed.iter().map(|k| k.as_str()).collect::<Vec<_>>(),
             "latency_samples": lat,
             "latency_declared_only": true,
+            "native_rate": native_rate,
             "trunc_clips": picks.len(),
             "trunc_max_abs_diff": trunc_max,
             "model": rj.model,
         });
         Ok(External {
+            native_rate,
+            inputs: listed,
             name: rj.name,
             latency: lat,
             index,
@@ -390,6 +424,10 @@ impl External {
         })
     }
 
+    /// run.json 列了这种输入没有（runner 据此决定跑不跑干净人声那一路，evalfix 定 2026-11-05）。
+    pub fn provides(&self, k: Kind) -> bool {
+        self.inputs.contains(&k)
+    }
     /// 测试用：索引里有几条。
     pub fn index_len(&self) -> usize {
         self.index.len()
@@ -436,6 +474,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn native_rate_default_and_allowed_values() {
+        assert_eq!(native_rate_of(None), Ok(vdn_types::MODEL_RATE));
+        assert_eq!(
+            native_rate_of(Some(vdn_types::IO_RATE)),
+            Ok(vdn_types::IO_RATE)
+        );
+        assert_eq!(
+            native_rate_of(Some(vdn_types::MODEL_RATE)),
+            Ok(vdn_types::MODEL_RATE)
+        );
+        assert!(native_rate_of(Some(vdn_types::IO_RATE / 2)).is_err());
+        assert!(native_rate_of(Some(0)).is_err());
+    }
+
+    #[test]
     fn name_rule() {
         let builtin = |s: &str| s == "gtcrn";
         assert!(check_name("dfn3-ll", builtin).is_ok());
@@ -465,6 +518,7 @@ mod tests {
         };
         assert_eq!(Kind::Trunc.input(&clip), vec![1.0, 1.0, 0.0, 0.0, 0.0]);
         assert_eq!(Kind::Bg.input(&clip), vec![0.75; 5]);
+        assert_eq!(Kind::Clean.input(&clip), vec![0.0; 5]);
     }
 
     #[test]

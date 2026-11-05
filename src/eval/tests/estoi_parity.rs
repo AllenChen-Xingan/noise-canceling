@@ -1,4 +1,5 @@
-//! ESTOI 对拍：Rust 重写（`verifiers::estoi`）与上游 pystoi 0.4.1 在同一组公式信号上的结果差 ≤ 0.01。
+//! ESTOI 对拍：Rust 重写（`verifiers::estoi`）与上游 pystoi 0.4.1 在同一组公式信号上的结果差 ≤ 1e−4
+//!（025 E3：原容差 0.01 太松，实测最大差 < 1e−5）。含「输出整段数字零」样例。
 //! 参考值由 `tests/fixtures/gen_estoi_ref.py` 用上游算出后进仓；信号公式两边必须一字不差。
 
 use vdn_eval::verifiers::estoi::estoi;
@@ -42,6 +43,8 @@ fn case(kind: &str, n: usize, seed: u64) -> (Vec<f32>, Vec<f32>) {
     let y: Vec<f64> = if let Some(a) = kind.strip_prefix("noise-") {
         let a: f64 = a.parse().unwrap();
         x.iter().map(|v| v + a * g.next()).collect()
+    } else if kind == "zero" {
+        vec![0.0; n]
     } else if kind == "gate" {
         x.iter()
             .enumerate()
@@ -50,7 +53,7 @@ fn case(kind: &str, n: usize, seed: u64) -> (Vec<f32>, Vec<f32>) {
     } else {
         x.clone()
     };
-    // 上游用 float64 算；这里接口是 f32，量化误差 ~1e−7，远小于 0.01
+    // 上游用 float64 算；这里接口是 f32，量化误差 ~1e−7，远小于容差 1e−4
     (
         x.iter().map(|v| *v as f32).collect(),
         y.iter().map(|v| *v as f32).collect(),
@@ -58,24 +61,37 @@ fn case(kind: &str, n: usize, seed: u64) -> (Vec<f32>, Vec<f32>) {
 }
 
 #[test]
-fn estoi_matches_pystoi_within_0_01() {
+fn estoi_matches_pystoi_within_1e_4() {
     let path =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/estoi-pystoi.json");
     let v: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     let n = v["n"].as_u64().unwrap() as usize;
     let cases = v["cases"].as_array().unwrap();
-    assert!(cases.len() >= 5);
+    assert!(cases.len() >= 6);
+    assert!(
+        cases.iter().any(|c| c["case"] == "zero"),
+        "缺整段数字零样例"
+    );
     let mut worst = 0.0f64;
     for c in cases {
         let kind = c["case"].as_str().unwrap();
         let (x, y) = case(kind, n, c["seed"].as_u64().unwrap());
-        let got = estoi(&x, &y, SR).unwrap();
+        let got = estoi(&x, &y, SR).unwrap_or_else(|| panic!("{kind}: Rust 没出分"));
         let want = c["estoi"].as_f64().unwrap();
+        if kind == "zero" {
+            // 上游 row_col_normalize 先加 EPS × 随机噪声再归一化：输出全零时它的值只是这点随机噪声，
+            // 每次不同（实测 −0.0002 ~ 0.0024）。不逐位对拍，两边都必须接近 0
+            assert!(
+                got.abs() <= 0.01 && want.abs() <= 0.01,
+                "zero: Rust {got} · pystoi {want}"
+            );
+            continue;
+        }
         let d = (got - want).abs();
         worst = worst.max(d);
         assert!(
-            d <= 0.01,
+            d <= 1e-4,
             "{kind}: Rust {got:.4} ↔ pystoi {want:.4}（差 {d:.4}）"
         );
     }

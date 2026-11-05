@@ -13,6 +13,8 @@ pub struct Item {
     pub params: &'static [(&'static str, f64)],
     /// 只报不判：照常打分、列在表里，但不进该场景的过不过（检测器自己还不可信时用）
     pub report_only: bool,
+    /// 新规则（v2）里在「干净人声单独过一遍模型」的输出上算（人定 D85 题 2 = B）；旧规则 v1 仍在带噪输出上算
+    pub clean_input: bool,
 }
 
 const fn it(v: &'static str) -> Item {
@@ -20,6 +22,27 @@ const fn it(v: &'static str) -> Item {
         v,
         params: &[],
         report_only: false,
+        clean_input: false,
+    }
+}
+
+/// 只报不判的项。
+const fn ro(v: &'static str) -> Item {
+    Item {
+        v,
+        params: &[],
+        report_only: true,
+        clean_input: false,
+    }
+}
+
+/// 在干净人声单独过一遍的输出上算的项（[`CLEAN_PASS`]）。
+const fn cp(v: &'static str) -> Item {
+    Item {
+        v,
+        params: &[],
+        report_only: false,
+        clean_input: true,
     }
 }
 
@@ -33,54 +56,75 @@ pub const VETO: [Item; 4] = [
         v: "V-EAT-ASR",
         params: &[("max", 1.0)],
         report_only: false,
+        clean_input: false,
     },
 ];
 
 /// 所有开会场景都看的项。
-pub const COMMON: [Item; 9] = [
+pub const COMMON: [Item; 12] = [
     it("V-ONSET"),
     Item {
         v: "V-SIM-GATE",
         params: &[("max", 0.05), ("onset_max", 0.2)],
         report_only: false,
+        clean_input: false,
     },
-    it("V-WEAK"),
-    it("V-PUMPV"),
+    cp("V-WEAK"),
+    cp("V-PUMPV"),
     // 只报不判（大总管 2026-11-03）：真实降噪输出上分不清咔嗒和残留噪声的短促起伏（scorecard.md 第九节第 2 条）
     Item {
         v: "V-CLICK",
         params: &[],
         report_only: true,
+        clean_input: false,
     },
     it("V-ESTOI"),
-    it("V-TIMBRE"),
+    cp("V-TIMBRE"),
     it("V-NRMOS-SCOREQ"),
     it("V-NRMOS-DISTILL"),
+    // 真空感：与 V-NR 同一个 TNLR，只多一列（调研 025 B4），只报不判
+    ro("V-VACUUM"),
+    // 量输出的「用户被误删」「开口后被吞多久」（人定 D85 题 4 = A；025 D1 · D3）：过关线待人拍板，只报不判
+    ro("V-TSOS"),
+    ro("V-SWALLOW"),
 ];
 
 const NR6: Item = Item {
     v: "V-NR",
     params: &[("max", -6.0)],
     report_only: false,
+    clean_input: false,
 };
 const INTF10: Item = Item {
     v: "V-INTF",
     params: &[("max", -10.0)],
     report_only: false,
+    clean_input: false,
 };
 
 const QUIET: [Item; 2] = [it("V-MUSIC"), NR6];
-const TALKERS: [Item; 4] = [
+const TALKERS: [Item; 6] = [
     NR6,
     INTF10,
     Item {
         v: "V-SIM-FA",
         params: &[("max", 0.1)],
         report_only: false,
+        clean_input: false,
     },
     it("V-BGSTAB"),
+    // 量输出的「旁人漏过事件率」「同时说话只留用户」（025 D2b · D5）：只报不判
+    ro("V-LEAK"),
+    ro("V-PSE-OVL"),
 ];
-const TRANSIT: [Item; 4] = [NR6, INTF10, it("V-BGSTAB"), it("V-MUSIC")];
+const TRANSIT: [Item; 6] = [
+    NR6,
+    INTF10,
+    it("V-BGSTAB"),
+    it("V-MUSIC"),
+    ro("V-LEAK"),
+    ro("V-PSE-OVL"),
+];
 const MEETROOM: [Item; 2] = [NR6, it("V-BGSTAB")];
 
 /// 场景类：决定在 [`COMMON`] 之外再看哪几项。
@@ -136,6 +180,32 @@ pub fn group_of(s: MeetingPlace) -> Option<Group> {
     })
 }
 
+/// 新规则（v2）里仍**逐段判、任一段不过即否决**的物理硬事实项（调研 025 X1；人定 D85 题 1）。
+pub const PHYSICAL: [&str; 5] = ["V-NAN", "V-LAT", "V-MUTE", "V-FRAME", "V-SWITCH"];
+
+/// 新规则（v2）里改为只报不判的项：门控两项降为引擎诊断（人定 D85 题 4 = A，由量输出的新项接替）·
+/// 咔嗒（题 7 = B）· 真空感（025 B4，只多一列）· 量输出的四项（025 D1 · D2b · D3 · D5，过关线待人拍板）。
+pub const V2_REPORT_ONLY: [&str; 8] = [
+    "V-SIM-GATE",
+    "V-SIM-FA",
+    "V-CLICK",
+    "V-VACUUM",
+    "V-TSOS",
+    "V-SWALLOW",
+    "V-LEAK",
+    "V-PSE-OVL",
+];
+
+/// 人定 D85 题 2 = B：这三项要在「干净人声单独过一遍模型」的输出上算。分数里没有 [`CLEAN_PASS_MARK`] 旁证的
+/// （旧口径：在带噪输出上算的），新规则下只报不判，注明待重跑。
+pub const CLEAN_PASS: [&str; 3] = ["V-PUMPV", "V-TIMBRE", "V-WEAK"];
+/// 干净人声单独过一遍模型后算的分数带这个旁证（值 = 1）。
+pub const CLEAN_PASS_MARK: &str = "clean_pass";
+
+/// 新规则（v2）换掉的过关线：(项, 参数, 值)。值必须是 thresholds 表里登记过的取值（测试核对）。
+/// 人定 D85 题 5：人声被压低 4 dB 才否决。
+pub const V2_PARAMS: [(&str, &str, f64); 1] = [("V-SPLVL", "min", -4.0)];
+
 /// 这一项是不是「只报不判」。
 pub fn is_report_only(v: &str) -> bool {
     VETO.iter()
@@ -159,6 +229,49 @@ pub fn items(s: MeetingPlace) -> Vec<(Item, bool)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 标了「干净人声单独过一遍」的项正好是 [`CLEAN_PASS`] 三项（两处表示交叉校验）。
+    #[test]
+    fn clean_input_items_match_clean_pass() {
+        let mut got: Vec<&str> = VETO
+            .iter()
+            .chain(&COMMON)
+            .chain(Group::ALL.iter().flat_map(|g| g.extra()))
+            .filter(|i| i.clean_input)
+            .map(|i| i.v)
+            .collect();
+        got.sort_unstable();
+        got.dedup();
+        let mut want = CLEAN_PASS.to_vec();
+        want.sort_unstable();
+        assert_eq!(got, want);
+    }
+
+    /// 每个只报不判的 v2 项，在标准里也标了 `report_only`（量输出四项、真空感、咔嗒）或是门控两项。
+    #[test]
+    fn v2_report_only_consistent_with_items() {
+        for v in V2_REPORT_ONLY {
+            assert!(
+                is_report_only(v) || v == "V-SIM-GATE" || v == "V-SIM-FA",
+                "{v}"
+            );
+        }
+    }
+
+    #[test]
+    fn v2_params_are_registered_threshold_values() {
+        for (v, k, x) in V2_PARAMS {
+            let l = crate::thresholds::ALL.iter().find(|l| l.id == v).unwrap();
+            let p = l.params.iter().find(|p| p.key == k).unwrap();
+            assert!(
+                p.values.iter().any(|(y, _)| (y - x).abs() < 1e-12),
+                "{v} {k} {x}"
+            );
+        }
+        for v in PHYSICAL.iter().chain(&V2_REPORT_ONLY).chain(&CLEAN_PASS) {
+            assert!(crate::verifiers::info(v).is_some(), "{v} 没登记");
+        }
+    }
 
     #[test]
     fn every_meeting_scene_has_a_group_and_veto_first() {

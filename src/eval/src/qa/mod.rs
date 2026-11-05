@@ -144,7 +144,8 @@ impl QaExtra {
             pp(od + os, md + ms),
             U,
             Better::Lower,
-            Some(p.f_or("max", 1.0)),
+            // 过关线只从任务参数取（成绩单标准给 1.0，正本 thresholds 表 V-EAT-ASR · max；025 E2），不在这里写默认值
+            p.f("max"),
             &[],
         )
         .with_extra("d_del_pp", pp(od, md))
@@ -164,15 +165,17 @@ impl QaExtra {
                 self.dnsmos_err.clone().unwrap_or_default(),
             );
         }
-        if !self.mix_mos.contains_key(&task.id) {
+        // 原声分按带噪输入的内容哈希缓存（025 F1）：同一段输入只算一次，不同输入不会因任务 id 相同而串用
+        let key = content_key(&clip.mix);
+        if !self.mix_mos.contains_key(&key) {
             match self.dnsmos_sub(&format!("{}-mix", task.id), &clip.mix) {
                 Ok(m) => {
-                    self.mix_mos.insert(task.id.clone(), m.ovrl);
+                    self.mix_mos.insert(key.clone(), m.ovrl);
                 }
                 Err(e) => return Score::unknown(ID, "MOS", Better::Higher, format!("DNSMOS：{e}")),
             }
         }
-        let mix = self.mix_mos.get(&task.id).copied();
+        let mix = self.mix_mos.get(&key).copied();
         match self.dnsmos_sub(&format!("{}-out", task.id), out) {
             Ok(m) => Score::judged(ID, m.ovrl, "MOS", Better::Higher, mix, &[])
                 .with_extra("sig", m.sig)
@@ -261,6 +264,18 @@ impl QaExtra {
     }
 }
 
+/// 样本内容的键：f32 逐位的 FNV-1a 64 位哈希 + 长度。
+pub fn content_key(x: &[f32]) -> String {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for v in x {
+        for b in v.to_bits().to_le_bytes() {
+            h ^= b as u64;
+            h = h.wrapping_mul(0x0100_0000_01b3);
+        }
+    }
+    format!("{h:016x}-{}", x.len())
+}
+
 impl Extra for QaExtra {
     fn score(
         &mut self,
@@ -278,5 +293,21 @@ impl Extra for QaExtra {
             "V-NRMOS-DISTILL" => Some(self.nrmos_score(nrmos::Kind::Distill, task, clip, out, p)),
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::content_key;
+
+    /// 同样的样本同一个键；差一个样本、差一位、差长度都换键（DNSMOS 原声分缓存，025 F1）。
+    #[test]
+    fn content_key_changes_with_content() {
+        let a = vec![0.1f32, -0.2, 0.3];
+        assert_eq!(content_key(&a), content_key(&a.clone()));
+        let mut b = a.clone();
+        b[1] = f32::from_bits(b[1].to_bits() ^ 1);
+        assert_ne!(content_key(&a), content_key(&b));
+        assert_ne!(content_key(&a), content_key(&a[..2]));
     }
 }
