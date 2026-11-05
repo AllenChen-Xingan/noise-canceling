@@ -5,7 +5,7 @@
 不带空洞、普通分组、或空洞在第二轴上，都对（差 < 1e-6）。GTCRN 里中招的是
 编码器 en_convs.3 / en_convs.4 的 depth_conv（dilation 2 · 5）。
 转置卷积的前向是对的，但它对输入的梯度在内部就是一次「带空洞的逐通道卷积」，同样算错
-（`runs/20261105-151238-gradlayers/`：梯度在 decoder.de_convs.1.depth_conv 输出处还对，过了它就错）。
+（逐层梯度定位：梯度在 decoder.de_convs.1.depth_conv 输出处还对，过了它就错；复现见 `test_mps_fix.py` 的 `test_transpose_input_grad_bug_and_fix`）。
 所以解码器 de_convs.0 / de_convs.1 的 depth_conv（转置，dilation 5 · 2）也要换。GRU 前向与梯度都对。
 
 做法：不换模块、不换参数，只把这几个卷积实例的 forward 换成数学等价的写法——
