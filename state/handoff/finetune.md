@@ -15,6 +15,10 @@
    - 局限：系统缓存已热、未测冷盘；未测和训练同时跑时抢 CPU
 4. 收到 cands 的「GTCRN 弱在哪」（`../noise_canceling-cands/docs/experiments/exp016-candidates/runs/weak-spots-20261105/`）：弱项 83 组定训练数据，守住项 71 组当「不许退」清单
 
+5. MPS 正确性（实测）：不带绕法不过（前向差 61%）；根因是 PyTorch 带空洞逐通道卷积的 bug（不是 GRU）；`smoke/mps_fix.py` 绕开后正式尺寸全过。已报大总管
+6. 下载清单 `docs/research/027_gtcrn-finetune/download-list.md`：第一批 15.4 GB、第二批 67 GB；已报大总管，**本线不自行下载**
+7. 调研 027 初稿：README · decision（比较卡 + 待人拍板 F-1..F-3）· sources · notes/；exp018 README
+
 ## 方案里必须写到的（大总管 / rl 转来）
 
 - 损失加两项：人声被压低（投影能量比，只罚超过约 3 dB）· 字头 50 ms 能量损失（只罚偏低）；**每项写一条依据**（论文出处，或「我们自定，待实验」）和**权重系数怎么定**
@@ -23,10 +27,6 @@
 - 验收分两种口径：成绩单（引擎混回）与 `safety: false`（模型本身），各量哪几项
 - MPS 若和 CPU 对不上，训练时长按 CPU 算并写原因
 - 下载清单先报大总管，自己不下；每条写许可出处 · 能否训练（D64）· 大小 · 时长 · 覆盖弱场景 · 是否和评测集撞源
-
-5. MPS 正确性（实测）：不带绕法不过（前向差 61%）；根因是 PyTorch 带空洞逐通道卷积的 bug（不是 GRU）；`smoke/mps_fix.py` 绕开后正式尺寸全过。已报大总管
-6. 下载清单 `docs/research/027_gtcrn-finetune/download-list.md`：第一批 15.4 GB、第二批 67 GB；已报大总管，**本线不自行下载**
-7. 调研 027 初稿：README · decision（比较卡 + 待人拍板 F-1..F-3）· sources · notes/；exp018 README
 
 ## 下一步
 
