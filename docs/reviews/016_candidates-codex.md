@@ -1,7 +1,7 @@
 # 评审 016 · exp016 候选模型上同一张成绩单（codex · gpt-6-astra · read-only）
 
 > 本线（issue #112）按人定 2026-11-04 插三次 codex：① 外部入口开小 PR 前（中途，1–2 轮，P0/P1 修掉即停）· ② 第一个候选跑 480 段前审离线推理脚本（中途，同上）· ③ 收尾审 findings（连续两轮无 P0/P1）。
-> **最新：② 离线脚本第 2 轮（2026-11-04）· 总评「修改」· P1×2 已修 · 中途评审按人定 1–2 轮 → 停**（① 外部入口 2 轮已停）。
+> **最新：③′ 最终版方法第 1 轮（2026-11-05）· 总评「修改」· P1×2 已修 · 第 2 轮待跑**（① ② 已停）。③′ 为大总管 2026-11-05 加的跑前方法审，1 轮、只修 P0/P1；③ 收尾审 findings 仍在最后。
 
 ## ① 外部离线输出入口
 
@@ -123,3 +123,19 @@
 #### 是否再审
 
 不再审（中途评审，2 轮，P0/P1 已修）。收尾时 ③ 按连续两轮无 P0/P1 跑。
+
+## ③′ 最终版方法（跑前，大总管定 2026-11-05：1 轮，只修 P0/P1）
+
+> 对象：`docs/experiments/exp016-candidates/plan-final-run.md`（依据：README · `_ext.py` · `analyze.py` · `run_dfn3ll.py` · `run_dpdfnet2.py` · `src/eval/src/system/external.rs`）。重点：跨 run 配对是否可比 · clean 那一路的因果性与口径 · merge 的拒绝条件。
+
+### 第 1 轮（2026-11-05）· 总评「修改」
+
+原文：主目录 `_tmp/exp016/reviews/plan-final-run-codex-1.md`（不入库）。gpt-6-astra · effort medium · 56 秒。
+
+| # | 级 | 要点 | 核实 | 处理 |
+|---|---|---|---|---|
+| 1 | P1 | 跨 run 核对只比路径与限定目录 diff，没覆盖依赖锁、实际二进制、识别模型权重 | 属实：`meta` 只有提交号 · 规则 · qa，无评分模型哈希 | 方法第二节第 4 步：diff 范围扩到 `src/` + `Cargo.lock`、本次提交重编 release、评分模型逐个 sha256；新增**锚点**：本次成绩单加 `passthrough`，逐段与 GTCRN run 的 `passthrough` 比，DSP 与听感分差 ≤ 1e-6，超差即停；识别权重拿不到摘要写「未核实」 |
+| 2 | P1 | clean 那一路没有独立的因果性验收：probe 与入口截半都只查 mix | 属实：`_ext.probe` 原先只在 mix 上量 | `_ext.probe` 对 mix 与 clean 都量前视、核对齐，声明延迟取最大；加测试 `Probe`（只在 clean 上偷看 50 样本的假模型会被量出）；方法里写明复位方式与 runner 口径（读源码） |
+| 3 | P2 | merge 拒绝不全：第一个 run 内重复、元数据缺项、单位、片段标签 | 属实 | 已顺手修：四种都拒绝，加测试 `Merge.test_refuses_missing_meta_dup_in_first_run_units_and_tags` |
+
+测试：Python 30 条全过（exp002 环境）。

@@ -11,7 +11,7 @@ GTCRN 在哪几个开会场景、哪种声音上落后于两个候选（DPDFNet-
 1. **merge main**，补 `system.rs` 的 `SystemKind::native_rate()` 外部一支（返回 `Some(e.native_rate())`）+ 测试「声明 48000 的外部系统，延迟账比 16000 少两跳重采样 = 4 ms」。单 crate 增量编译 + 单测，不占名额
 2. **冒烟**（占名额，各 ≤ 1 分钟）：`run_dpdfnet2.py --probe` · `run_dfn3ll.py --probe`。过线：
    - **mix 与 clean 两种输入各自**截半量前视、互相关核对齐（`_ext.probe`，`measured_lookahead_by_kind` · `lag_after_align_by_kind` 进 `params.json`）；声明延迟取两者与标称的最大值，任一滞后 > 1 样本即停。测试：只在 clean 上偷看 50 样本的假模型会被量出（`tests/test_ext.py::Probe`）。入口的截半自检只查 mix，clean 的因果性由这一步把关
-   - A→B→A 差 ≤ 1e-6：每次 `process` 都新建模型状态（两个脚本的 `process` 每段新建会话 / 句柄），等同新实例
+   - A→B→A 差 ≤ 1e-6：每次 `process` 开头复位模型状态（DFN3：`weya_nc_reset` 同一会话；DPDFNet-2：`state = state0.copy()`），A→B→A 一致是复位干净的实测证据；复位 ≠ 新建实例，若 A→B→A 不过即停
    - 与 runner 对内置系统的口径对照【读源码 `src/eval/src/runner.rs` `prepare_clip`，evalfix 分支】：干净人声那一路用同一系统、`faults: Vec::new()`（不注入故障）、新的 `run` 调用（新引擎状态）；外部回放同样进新引擎、同一声明延迟补回
 3. **离线跑音频，各开新 run-id**（不续旧 run、不覆盖）：`run_<候选>.py`（单分片）→ `--finalize --run-id <新 id>`。每个候选 1451 个文件 = 480 mix + 480 clean + bg（additive 段）+ 15 trunc。`finalize` 逐个校验 wav、原子发布 `run.json`（`inputs` 含 `clean`；DFN3 写 `native_rate: 48000`）。耗时按上次实测 × 1451/971 推算：DPDFNet-2 约 21 分钟 · DFN3 约 23 分钟
 4. **跑前核对**（不占名额，结果写进 `runs/<run-id>/README.md`）：
