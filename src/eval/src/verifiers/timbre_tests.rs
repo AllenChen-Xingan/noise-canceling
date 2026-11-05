@@ -234,13 +234,13 @@ fn n4_mismatches(doc: &str) -> Vec<String> {
     want.into_iter().filter(|w| !has_exact(para, w)).collect()
 }
 
-/// `w` 在 `s` 里出现，且紧跟的不是数字或小数点（「A ≤ 1」不能被「A ≤ 1.5」冒充）。
+/// `w` 在 `s` 里作为完整的数出现：两边紧挨的都不是数字或小数点
+/// （「A ≤ 1」不能被「A ≤ 1.5」冒充，「30 带」不能被「130 带」冒充）。
 fn has_exact(s: &str, w: &str) -> bool {
+    let num = |c: char| c.is_ascii_digit() || c == '.';
     s.match_indices(w).any(|(i, _)| {
-        !s[i + w.len()..]
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_ascii_digit() || c == '.')
+        !s[..i].chars().next_back().is_some_and(num)
+            && !s[i + w.len()..].chars().next().is_some_and(num)
     })
 }
 
@@ -267,6 +267,8 @@ fn rubric_n4_matches_code() {
         ("3.8 kHz", "3.8 Hz"),
         ("< 500 Hz", "< 600 Hz"),
         ("外扩 30 ms", "外扩 ms"),
+        ("30 带", "130 带"),
+        ("100–7900 Hz", "1100–7900 Hz"),
     ] {
         let bad = mutate_n4(doc, from, to).unwrap_or_else(|| panic!("N4 里找不到「{from}」"));
         assert!(
