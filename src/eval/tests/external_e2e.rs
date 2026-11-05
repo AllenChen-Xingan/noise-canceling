@@ -292,7 +292,7 @@ fn self_checks_reject_bad_dirs() {
     let d = good();
     let p = d.join(format!("mix/{id}.wav"));
     let (x, _) = wav::read(&p).unwrap();
-    wav::write(&p, &x, 48_000).unwrap();
+    wav::write(&p, &x, vdn_types::IO_RATE).unwrap();
     expect(&d, "采样率");
     // 时长
     let d = good();
