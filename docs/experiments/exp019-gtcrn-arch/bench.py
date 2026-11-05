@@ -38,7 +38,7 @@ def machine_info():
         "machine": platform.machine(),
         "cpu": sh("sysctl", "-n", "machdep.cpu.brand_string"),
         "os": sh("sw_vers", "-productVersion"),
-        "power": sh("pmset", "-g", "batt").splitlines()[0] if True else "",
+        "power": (sh("pmset", "-g", "batt").splitlines() or [""])[0],
     }
 
 
