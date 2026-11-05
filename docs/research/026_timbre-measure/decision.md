@@ -163,7 +163,7 @@ T15（P.50 人工语音长时谱容差 ±3 / ±6 dB）是测试信号的谱容�
    - 按新线，这一路多半会有更多段落在 C 或「不过」（推断，未按新旧分档逐段计数）。这一路不判，只影响旁报。
 3. **不能只靠重新汇总看到变化**：新量法要重算音频。`--from-clips` 只能换判定线，换不了量法，要重跑成绩单（估时另报，要名额）。
 
-## ⑥ 修法（等大总管回「可以」再动手）
+## ⑥ 修法（已做，2026-11-05；结果见本节末）
 
 1. `src/eval/src/verifiers/perceptual.rs` `v_timbre` 改成 ③。频带、分帧、下限做成 `pub const`，作为正本。先写会红的测试：
    - J1：低搁架 ±6 dB 要读 > 1；
@@ -178,6 +178,15 @@ T15（P.50 人工语音长时谱容差 ±3 / ±6 dB）是测试信号的谱容�
    - `src/eval/tests/spectrum_golden.rs` 冻结清单里 V-TIMBRE 的字段名和基准（单独一条提交，新旧对照，测试证明其余逐位不变）；
    - `src/eval/src/verifiers/low_rate_tests.rs` 里引用旧字段名 `dev_*` 的一条测试，以及要求低采样率判「不知道」的那条（按新的低采样率规则改，codex 第 2 轮 #3）。
 7. 重跑 GTCRN 成绩单，看这一项的变化（要名额，先报估时）。
+
+**结果（实测，2026-11-05，本机 aarch64-macos）**：
+
+- 先在旧代码上用三个系统（ref · gtcrn · fastenhancer-m）重写 CI 基线：243 项与 main 逐项相同，说明环境对齐。
+- 新量法的 Python 移植对改后的 Rust：180 个文件，最大差 0.000 dB（`docs/experiments/exp017-timbre-measure/parity/erb.txt`）。
+- 冻结基准：只有 `verifiers` 一行变，`verifiers_sans_timbre` 逐位不变，即其余 verifier 一个数都没动（`parity/golden-diff.md`）。
+- CI 基线：243 项里只有 V-TIMBRE 的 36 项变，其余 207 项不变（`parity/baseline-ci-diff.md`）。新线 3 下最高读数 GTCRN 2.27、FE-M 2.02、ref 1.05。各系统通过数与旧代码相同，门禁通过，没有任务因此变红。
+- 测试：vdn-eval 的 verifiers 单元测试 44 条、thresholds 8 条、scorecard_standard 5 条、spectrum_golden 5 条都过；`xtask tidy` 过。
+- 第 7 条（重跑 GTCRN 成绩单）还没做。
 
 ## ⑦ 待人拍板
 

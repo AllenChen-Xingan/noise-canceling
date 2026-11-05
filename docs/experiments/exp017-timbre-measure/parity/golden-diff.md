@@ -8,5 +8,5 @@
 | `verifiers_sans_timbre` | `5a0d90dbaeaccdc0`，146 个值 | `5a0d90dbaeaccdc0`，146 个值 | 逐位不变：其余 verifier 一个数都没动 |
 | `spectrogram` · `estoi` · `ref_wiener` · `edges` | — | 不变 | — |
 
-`verifiers_sans_timbre` 是在旧代码上先记下的（提交 7ab6a229 之前那次 bless），换量法后重跑不变，这就是「只有音色变了」的证明。
+`verifiers_sans_timbre` 是在旧代码上先记下的（提交 656380e1，量法改动之前），换量法后重跑不变，这就是「只有音色变了」的证明。
 提交：5c1ed9c8（hook 自动提交，同一提交里还有 `parity/erb.txt` 删掉编译行；提交信息没写原因，原因记在本文件）。
