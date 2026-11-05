@@ -111,25 +111,38 @@ class Exp019(unittest.TestCase):
                 ys.append(y)
         return ys
 
-    def test_branch_uses_current_frame(self):
-        """没有延后一帧：只改模块第 t 帧的输入，模块支路（输出 − 输入）在第 t 帧就变。
+    def _aligned(self, mod, cond=None):
+        """只改模块第 t 帧输入：第 t 帧输出变、第 t−1 帧输出不变 → 输出与输入同帧对齐。
 
-        直接测候选模块（整模型的掩码乘当前频谱，会掩盖内部延后）。纯延后一帧的模块过不了。
+        直接看输出本身（不减输入）：纯延后一帧的模块 y[t] = x[t−1]，第 t 帧输出不变，判为不对齐。
         """
         t = 6
         g = torch.Generator().manual_seed(5)
         seq = torch.randn(10, 1, 16, 1, 33, generator=g)
         seq2 = seq.clone()
         seq2[t] = torch.randn(1, 16, 1, 33, generator=g)
+        a = self._module_outputs(mod, seq, cond)
+        b = self._module_outputs(mod, seq2, cond)
+        now_changes = (a[t] - b[t]).abs().max().item() > 1e-6
+        past_same = torch.equal(a[t - 1], b[t - 1])
+        return now_changes and past_same
+
+    def test_output_aligned_with_input(self):
+        """候选模块输出与输入同帧对齐（没有延后一帧）。整模型的掩码乘当前频谱会掩盖内部延后，所以测模块。"""
         for n in variants.NAMES[1:]:
             with self.subTest(n=n):
-                mod = self._perturbed(n).extra
                 cond = torch.randn(1, 8) if n.startswith("film") else None
-                a = self._module_outputs(mod, seq, cond)
-                b = self._module_outputs(mod, seq2, cond)
-                da, db = a[t] - seq[t], b[t] - seq2[t]
-                self.assertGreater((da - db).abs().max().item(), 1e-6)
-                torch.testing.assert_close(a[t - 1], b[t - 1], rtol=0, atol=0)
+                self.assertTrue(self._aligned(self._perturbed(n).extra, cond))
+
+    def test_alignment_check_catches_one_frame_delay(self):
+        """反向对照：纯延后一帧的模块必须被上一条判为不对齐。"""
+        class Delay1(torch.nn.Module):
+            def init_state(self, batch=1):
+                return torch.zeros(batch, 16, 1, 33)
+
+            def forward(self, x, state, cond=None):
+                return state, x
+        self.assertFalse(self._aligned(Delay1()))
 
     def test_tattn_window_is_k_frames(self):
         """时间注意力正好看最近 K 帧：最老的窗内帧改了，输出变；紧邻窗外那帧改了，输出不变。
