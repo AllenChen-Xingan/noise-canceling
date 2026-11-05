@@ -215,14 +215,23 @@ mod tests {
         let at16 = planned_platform_for(IO_BLOCK_PROPOSED, crate::MODEL_RATE, crate::IO_RATE);
         assert_eq!(at16.len(), old.len());
         for (a, b) in at16.iter().zip(&old) {
-            assert_eq!((a.component, a.samples, a.rate), (b.component, b.samples, b.rate));
+            assert_eq!(
+                (a.component, a.samples, a.rate),
+                (b.component, b.samples, b.rate)
+            );
             assert_eq!(a.ms().to_bits(), b.ms().to_bits());
         }
         let at48 = planned_platform_for(IO_BLOCK_PROPOSED, crate::IO_RATE, crate::IO_RATE);
         assert_eq!(at48.len(), old.len() - 2);
-        assert!(at48.iter().all(|i| !RESAMPLE_COMPONENTS.contains(&i.component)));
+        assert!(
+            at48.iter()
+                .all(|i| !RESAMPLE_COMPONENTS.contains(&i.component))
+        );
         let sum = |v: &[LatencyItem]| v.iter().map(LatencyItem::ms).sum::<f64>();
-        assert!((sum(&old) - sum(&at48) - 4.0).abs() < 1e-9, "少的正好是两跳各 2 ms");
+        assert!(
+            (sum(&old) - sum(&at48) - 4.0).abs() < 1e-9,
+            "少的正好是两跳各 2 ms"
+        );
         // 部件名常量与 planned_platform 里的名字一致（改名会红）
         for c in RESAMPLE_COMPONENTS {
             assert!(old.iter().any(|i| i.component == c), "{c}");
