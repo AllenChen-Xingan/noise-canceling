@@ -33,6 +33,19 @@ impl ReplayBuf {
     }
 }
 
+impl ReplayBuf {
+    /// 前面接模型真实的预热输出（长度 = 延迟），而不是补零。
+    pub fn with_head(head: &[f32], aligned: &[f32]) -> Self {
+        let mut raw = head.to_vec();
+        raw.extend_from_slice(aligned);
+        Self {
+            raw,
+            pos: 0,
+            latency: head.len(),
+        }
+    }
+}
+
 impl Model for ReplayBuf {
     fn name(&self) -> &'static str {
         "exp021-replay"

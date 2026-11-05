@@ -35,6 +35,23 @@ pub fn run(clips_rel: &str, id: &str, kind: &str) -> Result<(), String> {
     let (a, sa) = drive(open()?, &x, SafetyConfig::default());
     let y = run_engine(open()?, &x, SafetyConfig::off());
     let (b, sb) = drive(ReplayBuf::new(&y, lat), &x, SafetyConfig::default());
+    // 假设验证：回放时把模型真实的前 lat 个预热样本补回去（外部目录格式只存对齐后的输出，这段补零）
+    let full = {
+        let mut eng = Engine::new(open()?, SafetyConfig::off());
+        let n = (x.len() + lat).div_ceil(160) * 160;
+        let mut xp = vec![0.0f32; n];
+        xp[..x.len()].copy_from_slice(&x);
+        let mut raw = vec![0.0f32; n];
+        for (p, q) in xp.chunks_exact(160).zip(raw.chunks_exact_mut(160)) {
+            eng.process(p, q);
+        }
+        raw
+    };
+    let head = &full[..lat];
+    println!("真实预热段最大幅度 {:e}", head.iter().fold(0.0f32, |m, v| m.max(v.abs())));
+    let (c2, _) = drive(ReplayBuf::with_head(head, &y), &x, SafetyConfig::default());
+    let d2 = a.iter().zip(&c2).filter(|(p, q)| p != q).count();
+    println!("补回预热段后与 A 不同的样本数：{d2}");
     println!("A 真模型 + 默认保命：{sa:?}");
     println!("B 回放 + 默认保命：  {sb:?}");
     let first = a.iter().zip(&b).position(|(p, q)| p != q);
