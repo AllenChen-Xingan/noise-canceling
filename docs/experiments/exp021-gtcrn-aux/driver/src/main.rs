@@ -2,9 +2,12 @@
 //!
 //! 用法：
 //!   exp021-remix remix --src <外部目录> --out <新目录> --prefix <名字前缀> [--open-db X] [--floor-db Y] [--off]
+//!   exp021-remix raw --like <外部目录> --out <新目录> --model gtcrn [--limit N]   # 生成混回前的原始输出
 //!   exp021-remix suite --out <JSON>        # 由 src/eval/suite/scenes.json 派生，全部任务 safety = false
 //!
 //! 目录可以写相对主目录的路径。新目录已存在就报错（不覆盖旧 build）。
+
+mod raw;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -129,12 +132,23 @@ fn cmd_suite(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+fn cmd_raw(args: &[String]) -> Result<(), String> {
+    let like = abs(&arg(args, "--like").ok_or("缺 --like")?);
+    let out = abs(&arg(args, "--out").ok_or("缺 --out")?);
+    let model = arg(args, "--model").unwrap_or_else(|| "gtcrn".into());
+    let limit = arg(args, "--limit")
+        .map(|v| v.parse::<usize>().map_err(|e| format!("--limit {v}：{e}")))
+        .transpose()?;
+    raw::run(&like, &out, &model, limit)
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let r = match args.first().map(String::as_str) {
         Some("remix") => cmd_remix(&args),
         Some("suite") => cmd_suite(&args),
-        _ => Err("用法：exp021-remix <remix | suite> …".into()),
+        Some("raw") => cmd_raw(&args),
+        _ => Err("用法：exp021-remix <remix | raw | suite> …".into()),
     };
     match r {
         Ok(()) => ExitCode::SUCCESS,
