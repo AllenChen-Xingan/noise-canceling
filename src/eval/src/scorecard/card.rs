@@ -72,6 +72,8 @@ pub struct Card {
     pub missing: Vec<Missing>,
     pub clips: usize,
     pub rules: Rules,
+    /// v2 下没有「干净人声单独过一遍」读数的系统（外部系统没提供 `clean/`）：三项落「只报·旧口径」，开头点名
+    pub no_clean_pass: Vec<String>,
 }
 
 impl Card {
@@ -86,12 +88,28 @@ impl Card {
             Rules::V2 => super::rules_v2::summarize(rows, &missing),
         };
         let worst = worst(&cards);
+        let mut no_clean_pass: Vec<String> = Vec::new();
+        if rules == Rules::V2 {
+            for r in rows {
+                let lacks = r.scores.iter().any(|(v, _, s)| {
+                    super::standard::CLEAN_PASS.contains(v)
+                        && !s
+                            .extra
+                            .iter()
+                            .any(|(k, x)| *k == super::standard::CLEAN_PASS_MARK && *x == 1.0)
+                });
+                if lacks && !no_clean_pass.contains(&r.system) {
+                    no_clean_pass.push(r.system.clone());
+                }
+            }
+        }
         Card {
             cards,
             worst,
             missing,
             clips: rows.len(),
             rules,
+            no_clean_pass,
         }
     }
 
@@ -104,6 +122,7 @@ impl Card {
             "scenes": self.cards,
             "worst": self.worst.iter().map(|&i| key(&self.cards[i])).collect::<Vec<_>>(),
             "missing": self.missing,
+            "no_clean_pass": self.no_clean_pass,
         })
     }
 
@@ -127,6 +146,12 @@ impl Card {
                 只量得到安静时的人声损伤，嘈杂时模型对人声的伤害这三项量不到。\n\n"
                 .to_string(),
         };
+        if !self.no_clean_pass.is_empty() {
+            s += &format!(
+                "**{}**：本系统未提供干净人声输出，人声忽大忽小 · 音色 · 轻声字三项不判（只报·旧口径）。\n\n",
+                self.no_clean_pass.join(" · ")
+            );
+        }
         s += "## 最差的场景\n\n";
         if self.worst.is_empty() {
             s += "（没有不过或待测的场景）\n\n";
@@ -307,5 +332,59 @@ mod header_tests {
         assert!(v2.contains("V-PUMPV") && v2.contains("V-TIMBRE") && v2.contains("V-WEAK"));
         let v1 = Card::build_with(&[], Vec::new(), Rules::V1).to_markdown("t");
         assert!(!v1.contains("只量得到安静时的人声损伤"));
+    }
+
+    /// 系统没提供干净人声输出（外部系统缺 `clean/`）时，三项落「只报·旧口径」，成绩单开头要点名这个系统（大总管 2026-11-05）。
+    #[test]
+    fn v2_markdown_names_systems_without_clean_pass() {
+        use crate::Score;
+        use crate::scene::{MeetingPlace, Tier};
+        let row = |sys: &str, marked: bool| {
+            let mut s = Score::judged(
+                "V-PUMPV",
+                0.5,
+                "dB²",
+                crate::verifiers::info("V-PUMPV").unwrap().better,
+                Some(1.0),
+                &[],
+            );
+            if marked {
+                s = s.with_extra(super::super::standard::CLEAN_PASS_MARK, 1.0);
+            }
+            ClipRow {
+                clip: "cafe-c00-mba".into(),
+                scene: MeetingPlace::Cafe,
+                tier: Tier::Common,
+                device: "mba-builtin".into(),
+                system: sys.into(),
+                sounds: Vec::new(),
+                scores: vec![("V-PUMPV", false, s)],
+            }
+        };
+        let rows = [row("passthrough", true), row("pt-ext", false)];
+        let md = Card::build_with(&rows, Vec::new(), Rules::V2).to_markdown("t");
+        let line = md
+            .lines()
+            .find(|l| l.contains("未提供干净人声输出"))
+            .unwrap_or_else(|| panic!("{md}"));
+        assert!(
+            line.contains("pt-ext") && !line.contains("passthrough"),
+            "{line}"
+        );
+        assert!(
+            line.contains("人声忽大忽小 · 音色 · 轻声字三项不判"),
+            "{line}"
+        );
+        let card = Card::build_with(&rows[..1], Vec::new(), Rules::V2);
+        assert!(!card.to_markdown("t").contains("未提供干净人声输出"));
+        assert_eq!(
+            card.to_json(serde_json::json!({}))["no_clean_pass"],
+            serde_json::json!([])
+        );
+        let card = Card::build_with(&rows, Vec::new(), Rules::V2);
+        assert_eq!(
+            card.to_json(serde_json::json!({}))["no_clean_pass"],
+            serde_json::json!(["pt-ext"])
+        );
     }
 }

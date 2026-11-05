@@ -397,7 +397,8 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
     let card = vdn_eval::scorecard::card::Card::build_with(&rows, skipped, rules);
     let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "suite": path,
         "systems": sys.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "qa": qa.is_some(),
-        "rules": rules.as_str(), "power": vdn_eval::power::source()});
+        "rules": rules.as_str(), "power": vdn_eval::power::source(),
+        "external": sys.iter().filter_map(|s| s.provenance()).collect::<Vec<_>>()});
     let js = serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";
     vdn_eval::scorecard::card::write_new(&out, &js, &card.to_markdown("场景成绩单"))?;
     // 逐段分数一并写出（只新建），以后改规则可以不重跑音频、用 --from-clips 重新汇总

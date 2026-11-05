@@ -277,8 +277,13 @@ pub fn run_with(
             };
             for &sys in systems {
                 let items = standard::items(c.scene);
-                let clean_pass =
-                    rules == card::Rules::V2 && items.iter().any(|(i, _)| i.clean_input);
+                // 外部系统没提供 `clean/` 就不跑这一路：三项落「只报·旧口径」，成绩单开头点名（不记没跑成）
+                let clean_pass = rules == card::Rules::V2
+                    && items.iter().any(|(i, _)| i.clean_input)
+                    && match sys {
+                        SystemKind::External(e) => e.provides(crate::system::external::Kind::Clean),
+                        _ => true,
+                    };
                 let p = match prepare_clip(&t, sys, clip.clone(), c.additive, clean_pass) {
                     Ok(p) => p,
                     Err(e) => {
