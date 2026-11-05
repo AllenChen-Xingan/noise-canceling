@@ -37,8 +37,9 @@
 - 所以 60 ms = 窗长 20 ms + 4 帧 × 10 ms。
 
 **所有官方权重都一样**（读源码）：
-- 导出脚本 `onnx_model/export_dpdfnet_to_onnx.py:91-105` 对每个版本只改 `dprnn_num_blocks`，前视和 `mask_method` 都用默认值。
-- 换权重（baseline / 4 / 8）延迟不变。
+- 16 kHz 版：导出脚本 `onnx_model/export_dpdfnet_to_onnx.py` 导入的是 `onnx_model/dpdfnet.py`（第 9 行）。它的默认值同样是 `df_lookahead=2`、`conv_lookahead=2`、`mask_method='before_df'`（`onnx_model/dpdfnet.py:547-553`）。`build_model`（`:91-105`）只按版本改 `dprnn_num_blocks`，这三个参数都不改。所以 baseline / 2 / 4 / 8 的前视相同。
+- 48 kHz 版：另有导出脚本 `onnx_model/export_dpdfnet_48khz_hr_to_onnx.py`，导入 `onnx_model/dpdfnet_48khz_hr.py`（第 9 行）。它的默认值也是 2 / 2 / `before_df`（`:612-618`），导出脚本没传这几个参数（读源码）。帧长和 hop 不同，所以毫秒数要另算，本文不算。
+- 以上是「读源码 + 导出配置」的结论。权重文件里的实际前视没有逐个实测，只有 dpdfnet2（16 kHz）有对齐实测（下文）。
 
 **换推理引擎能去掉吗**：去不掉（推断）。
 - 这 4 帧是权重训练时用的输入时序：输出第 t 帧真的用到了第 t + 4 帧的输入，不是多余的缓冲。
