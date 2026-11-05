@@ -9,16 +9,20 @@ GTCRN 在哪几个开会场景、哪种声音上落后于两个候选（DPDFNet-
 ## 二、步骤（全部要名额的步骤用同一个名额顺序跑）
 
 1. **merge main**，补 `system.rs` 的 `SystemKind::native_rate()` 外部一支（返回 `Some(e.native_rate())`）+ 测试「声明 48000 的外部系统，延迟账比 16000 少两跳重采样 = 4 ms」。单 crate 增量编译 + 单测，不占名额
-2. **冒烟**（占名额，各 ≤ 1 分钟）：`run_dpdfnet2.py --probe` · `run_dfn3ll.py --probe`。过线：对齐滞后 0 · 前视 ≤ 声明延迟 · A→B→A 差 ≤ 1e-6（证明每次 `process` 是新的模型状态，clean 那一路因此和 runner 对内置系统「新的引擎状态」同口径）
+2. **冒烟**（占名额，各 ≤ 1 分钟）：`run_dpdfnet2.py --probe` · `run_dfn3ll.py --probe`。过线：
+   - **mix 与 clean 两种输入各自**截半量前视、互相关核对齐（`_ext.probe`，`measured_lookahead_by_kind` · `lag_after_align_by_kind` 进 `params.json`）；声明延迟取两者与标称的最大值，任一滞后 > 1 样本即停。测试：只在 clean 上偷看 50 样本的假模型会被量出（`tests/test_ext.py::Probe`）。入口的截半自检只查 mix，clean 的因果性由这一步把关
+   - A→B→A 差 ≤ 1e-6：每次 `process` 都新建模型状态（两个脚本的 `process` 每段新建会话 / 句柄），等同新实例
+   - 与 runner 对内置系统的口径对照【读源码 `src/eval/src/runner.rs` `prepare_clip`，evalfix 分支】：干净人声那一路用同一系统、`faults: Vec::new()`（不注入故障）、新的 `run` 调用（新引擎状态）；外部回放同样进新引擎、同一声明延迟补回
 3. **离线跑音频，各开新 run-id**（不续旧 run、不覆盖）：`run_<候选>.py`（单分片）→ `--finalize --run-id <新 id>`。每个候选 1451 个文件 = 480 mix + 480 clean + bg（additive 段）+ 15 trunc。`finalize` 逐个校验 wav、原子发布 `run.json`（`inputs` 含 `clean`；DFN3 写 `native_rate: 48000`）。耗时按上次实测 × 1451/971 推算：DPDFNet-2 约 21 分钟 · DFN3 约 23 分钟
 4. **跑前核对**（不占名额，结果写进 `runs/<run-id>/README.md`）：
    - 规则版本：两边都 `--rules v2`（成绩单 `meta.rules`）
    - 场景集与清单：两边 `meta.suite` 同为 `src/eval/suite/scenes.json`，外部 `run.json.clips` 指向 exp013 build `20261103230756-17f5`，其 sha256 与 `builds/…/params.json` 的 `clips_sha256` 相同
-   - 评分代码：`git diff --stat 4ccf0638 <本次提交> -- src/eval src/types src/dsp src/engine`，排除外部入口（`system.rs` 分发 · `system/external.rs` · `tests/`）后**必须为空**。不为空 → 停下，报大总管，选项是把 `gtcrn` 一起放进本次成绩单（约多 55 分钟）
-   - 评分模型：SCOREQ `adapt_nr_telephone.onnx` 与 Distill-MOS 的 sha256、识别模型名 `qwen3-asr-plus:1.7b` 与 GTCRN run 的 README 记的一致（逐个 `shasum -a 256`）
+   - 评分代码：`git diff --stat 4ccf0638 <本次提交> -- src/ Cargo.lock`，排除外部入口（`system.rs` 分发 · `system/external.rs` · `scorecard/mod.rs` 里 `provides` 那一处 · `tests/`）后**必须为空**；二进制用 `cargo build --release` 在本次提交上重编（`meta.commit` 不带 `-dirty`）。不为空 → 停下，报大总管，选项是把 `gtcrn` 一起放进本次成绩单（约多 55 分钟）
+   - 评分模型：SCOREQ `adapt_nr_telephone.onnx` 与 Distill-MOS 的 sha256 与 GTCRN run 的 README 记的一致（逐个 `shasum -a 256`）；识别服务记模型名与服务端报的权重摘要（拿不到摘要就写「未核实」，由下面的锚点兜底）
+   - **锚点（实测可比性，codex 016 最终版方法第 1 轮 P1 #1）**：本次成绩单加 `passthrough`（原声直通，不经模型），逐段与 GTCRN run 里的 `passthrough` 比。过线：DSP 类项与听感分（SCOREQ · Distill-MOS，确定性）逐段差 ≤ 1e-6；吃字项（识别有随机性）只报两边平均差与区间，写进 findings。DSP 或听感分任一段超差 → 两次 run 不可比，停下报大总管。代价：多一个系统，成绩单约多 35 分钟（推断：直通无模型推理，只多打分）
    - 供电：接电源（`meta.power = ac`），`caffeinate -i`
-5. **成绩单**（占名额，约 1.7–2 小时，推断）：`vdn-eval scorecard --suite src/eval/suite/scenes.json --system external:<dpdfnet2 新 run>,external:<dfn3-ll 新 run> --qa --rules v2`。过线：0 段没跑成；两个外部系统截半自检通过（`meta.external[*].trunc_max_abs_diff` ≤ 容差）；`inputs` 含 `clean`，三项带 `clean_pass` 标记
-6. **配对分析**：`analyze.py <GTCRN run 目录>,<本次 run 目录> <exp013 clips.jsonl> --out analysis.md --json analysis.json`。`merge` 会拒绝规则版本 · 场景集 · 是否带评分模型不同的 run，拒绝同一（片段, 系统）出现两次（测试 `tests/test_analyze.py::Merge`）
+5. **成绩单**（占名额，约 2.3–2.6 小时，推断）：`vdn-eval scorecard --suite src/eval/suite/scenes.json --system passthrough,external:<dpdfnet2 新 run>,external:<dfn3-ll 新 run> --qa --rules v2`。过线：0 段没跑成；两个外部系统截半自检通过（`meta.external[*].trunc_max_abs_diff` ≤ 容差）；`inputs` 含 `clean`，三项带 `clean_pass` 标记
+6. **配对分析**：`analyze.py <GTCRN run 目录>,<本次 run 目录> <exp013 clips.jsonl> --out analysis.md --json analysis.json`。`merge` 会拒绝：元数据缺规则版本 · 场景集 · 是否带评分模型，或两边不同；评分项方向或单位不同；任一 run 内或跨 run 的（片段, 系统）重复；同一片段两边的场景 / 声音标签不同（测试 `tests/test_analyze.py::Merge`）。锚点比对用两边的 `passthrough` 行，配对只用 `gtcrn`（GTCRN run）与两个候选（本次 run）
 7. 旧的两个候选 run 与草稿成绩单在 README 标「草稿，被 <新 run-id> 取代」，不删不改
 
 ## 三、配对对象
