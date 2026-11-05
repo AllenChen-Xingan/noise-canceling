@@ -167,7 +167,8 @@ fn item_table_matches_code() {
                 // 代码里没有过关线的，只能是只报不判、且文档写明「待人拍板」（数可以是括号里的暂取值，不比）
                 None => {
                     assert!(
-                        vdn_eval::scorecard::standard::is_report_only(v) && line.starts_with("待人拍板"),
+                        vdn_eval::scorecard::standard::is_report_only(v)
+                            && line.starts_with("待人拍板"),
                         "{v} 在代码里查不到过关线，文档也没写「待人拍板」：{line:?}"
                     );
                     continue;

@@ -102,7 +102,10 @@ pub(super) fn v_nan(c: &Ctx) -> Score {
     // 025 A4 旁报：幅度 > 1.0（写成 16 位会削波）的样本数，不进判定
     .with_extra(
         "over_1",
-        c.out.iter().filter(|v| v.is_finite() && v.abs() > 1.0).count() as f64,
+        c.out
+            .iter()
+            .filter(|v| v.is_finite() && v.abs() > 1.0)
+            .count() as f64,
     )
 }
 

@@ -38,13 +38,23 @@ pub(super) fn v_bgstab(c: &Ctx, p: &Params) -> Score {
     let (worst, n, _) = worst3(&d);
     // 025 B3：扣掉输入侧的同一差值（混合 − 噪音 + 干扰，主讲人混响尾巴落在停顿帧里），原声直通应 ≈ 0 dB。
     // 主值改不改待大总管定；先作旁报，并报 3 帧均值绝对值的 95 分位
-    let bg: Vec<f32> = c.clip.noise.iter().zip(&c.clip.interf).map(|(x, y)| x + y).collect();
-    let (mi, bi) = (frame_power(&c.clip.mix, MASK_FRAME), frame_power(&bg, MASK_FRAME));
+    let bg: Vec<f32> = c
+        .clip
+        .noise
+        .iter()
+        .zip(&c.clip.interf)
+        .map(|(x, y)| x + y)
+        .collect();
+    let (mi, bi) = (
+        frame_power(&c.clip.mix, MASK_FRAME),
+        frame_power(&bg, MASK_FRAME),
+    );
     let dc: Vec<Option<f64>> = d
         .iter()
         .enumerate()
         .map(|(f, x)| {
-            let e = (mi.get(f)? > &1e-14 && bi.get(f)? > &1e-14).then(|| db10(mi[f]) - db10(bi[f]))?;
+            let e =
+                (mi.get(f)? > &1e-14 && bi.get(f)? > &1e-14).then(|| db10(mi[f]) - db10(bi[f]))?;
             x.map(|v| v - e)
         })
         .collect();
@@ -79,7 +89,11 @@ fn worst3(d: &[Option<f64>]) -> (f64, usize, f64) {
             all.push(m.abs());
         }
     }
-    let p95 = if all.is_empty() { f64::NAN } else { quantile(&all, 0.95) };
+    let p95 = if all.is_empty() {
+        f64::NAN
+    } else {
+        quantile(&all, 0.95)
+    };
     (worst, all.len(), p95)
 }
 
@@ -190,8 +204,11 @@ pub(super) fn v_nr(c: &Ctx, p: &Params) -> Score {
         .collect();
     let nl = low.iter().filter(|v| **v).count();
     s = s.with_extra("low_frac", nl as f64 / n.max(1) as f64);
-    let keep: Vec<bool> = (0..low.len()).map(|f| c.masks.noise_only[f] && !low[f]).collect();
-    if let (Some((po, k)), Some((pi, _))) = (power_over(c.out, &keep), power_over(&c.clip.mix, &keep))
+    let keep: Vec<bool> = (0..low.len())
+        .map(|f| c.masks.noise_only[f] && !low[f])
+        .collect();
+    if let (Some((po, k)), Some((pi, _))) =
+        (power_over(c.out, &keep), power_over(&c.clip.mix, &keep))
         && k >= 50
         && pi > 1e-14
     {

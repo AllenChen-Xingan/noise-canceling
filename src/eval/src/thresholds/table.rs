@@ -90,16 +90,27 @@ pub const NR: Lines = Lines {
     id: "V-NR",
     edges: &[],
     edges_src: NO_EDGES,
-    params: &[p(
-        "max",
-        None,
-        &[
-            (-6.0, Src::Rubric(&["| D | > −6 dB | 跟原声差不多 |"])),
-            (-8.0, Src::None),
-            (-10.0, Src::None),
-            (-20.0, Src::Rubric(&["| A | ≤ −20 dB |"])),
-        ],
-    )],
+    params: &[
+        p(
+            "max",
+            None,
+            &[
+                (-6.0, Src::Rubric(&["| D | > −6 dB | 跟原声差不多 |"])),
+                (-8.0, Src::None),
+                (-10.0, Src::None),
+                (-20.0, Src::Rubric(&["| A | ≤ −20 dB |"])),
+            ],
+        ),
+        // 025 B1 旁报：输入帧低于它的停顿帧另算（G.160 `cft_lvl`），判定不用
+        p(
+            "low_dbov",
+            Some(-48.0),
+            &[(
+                -48.0,
+                Src::Design("G.160 cft_lvl：−48 dBov（帧均方功率，满幅方波 = 0 dBov）"),
+            )],
+        ),
+    ],
 };
 
 pub const INTF: Lines = Lines {
