@@ -47,6 +47,13 @@ pub fn run(clips_rel: &str, id: &str, kind: &str) -> Result<(), String> {
         }
         raw
     };
+    let y2 = run_engine(open()?, &x, SafetyConfig::off());
+    let full_y = &full[lat..lat + x.len()];
+    println!(
+        "同进程两次原始输出不同的样本数：{} · 与 full 对齐段不同：{}",
+        y.iter().zip(&y2).filter(|(p, q)| p != q).count(),
+        y.iter().zip(full_y).filter(|(p, q)| p != q).count()
+    );
     let head = &full[..lat];
     println!("真实预热段最大幅度 {:e}", head.iter().fold(0.0f32, |m, v| m.max(v.abs())));
     let (c2, _) = drive(ReplayBuf::with_head(head, &y), &x, SafetyConfig::default());
