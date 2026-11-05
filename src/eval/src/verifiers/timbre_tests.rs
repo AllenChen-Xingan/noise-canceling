@@ -121,7 +121,8 @@ fn unchanged_and_volume_only_read_zero() {
     assert!(val(&c, &g) < 1e-6, "只改音量应读 0");
 }
 
-/// J1：250 Hz 低搁架 ±6 dB 要看得见（旧量法 100 Hz–1 kHz 一带只读约 0.6）。
+/// J1：250 Hz 低搁架 ±6 dB 要看得见。旧量法在真人声上读 0.56 / 0.74（exp017），在这里的合成人声上读得到，
+/// 所以这条在旧代码上不红，只防退步；旧量法的这个盲区由 exp017 的真人声实测与对拍（`tests/timbre_parity.rs`）证明。
 #[test]
 fn low_shelf_is_seen() {
     let c = clip();
@@ -132,15 +133,24 @@ fn low_shelf_is_seen() {
     }
 }
 
-/// J2：同样一个倍频程宽的 −6 dB，放在 1 kHz 和 4 kHz，读数之比 < 1.5（旧量法约 2 倍）。
+/// J2：同样一个倍频程宽的 −6 dB，放在 250 Hz、1 kHz、4 kHz，最大与最小读数之比 < 1.5。
+/// 旧量法在这段合成人声上读 2.91 / 3.70 / 1.89（比 1.96），新量法 1.57 / 1.73 / 1.57（比 1.10）。
 #[test]
-fn same_dip_reads_alike_at_1k_and_4k() {
+fn same_dip_reads_alike_across_frequency() {
     let c = clip();
     let q = 2f64.sqrt(); // 一个倍频程带宽
-    let a = val(&c, &biquad(&c.clean, c.sr as f64, 2, 1000.0, -6.0, q));
-    let b = val(&c, &biquad(&c.clean, c.sr as f64, 2, 4000.0, -6.0, q));
-    let r = a.max(b) / a.min(b);
-    assert!(r < 1.5, "1 kHz {a:.2} · 4 kHz {b:.2}，比 {r:.2}");
+    let v: Vec<f64> = [250.0, 1000.0, 4000.0]
+        .iter()
+        .map(|&f| val(&c, &biquad(&c.clean, c.sr as f64, 2, f, -6.0, q)))
+        .collect();
+    let (lo, hi) = v
+        .iter()
+        .fold((f64::MAX, 0.0f64), |(a, b), &x| (a.min(x), b.max(x)));
+    assert!(
+        hi / lo < 1.5,
+        "250 Hz / 1 kHz / 4 kHz：{v:.2?}，比 {:.2}",
+        hi / lo
+    );
 }
 
 /// J4：低通之后再改整体音量，读数不变（截下限在去掉整体增益之后）。
