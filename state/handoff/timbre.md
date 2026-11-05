@@ -1,6 +1,6 @@
 # 现状页 · timbre（批次 20261104-b15）
 
-状态：**进行中（2026-11-05 12:20）**——修复已提交、CI 层全过、代码 codex 评审已满足停止线；只剩全量 `cargo test`（约 13:15 后，等大总管通知）
+状态：**已收尾（2026-11-05）**——修复已提交、CI 层全过、代码 codex 评审已满足停止线、全量测试全过；等大总管推送、开 PR（Closes #119）
 
 ## 手上
 调研 026：音色项（V-TIMBRE）该怎么量——代码和标准文档 N4 哪边对（issue #119，分支 `research/026-timbre-measure`，交代 `_tmp/20261104-b15/timbre.md`）。
@@ -23,7 +23,8 @@
   - 单 crate 测试全过，`xtask tidy` 过
 - 代码 codex 评审：第 1、2 轮都没有 P0/P1，停；3 条 P2 都已修（330ade4b、bc2075b3），记录在 `docs/reviews/026_timbre-measure-codex.md`
 - 本地路径扫描：分支改动的文件里 0 处
-- 未做：全量 `cargo test --no-fail-fast`（约 13:15 后）；重跑 GTCRN 成绩单（可选，要名额）
+- 全量测试：`cargo test --workspace --no-fail-fast` 95 组，通过 745、失败 0、忽略 16；fmt、tidy、clippy `-D warnings` 都过（大总管在 1265fe37 上亲手重跑）
+- 没做（可选，要名额）：重跑 GTCRN 成绩单
 
 ## 待人拍板（草稿，大总管会和两个候选的最终结论一起问）
 1. **音色偏差多大算「不过」：从 6 改成 3，要不要定下来？**
