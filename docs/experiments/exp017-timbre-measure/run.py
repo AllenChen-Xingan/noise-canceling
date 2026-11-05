@@ -75,6 +75,9 @@ DEGS += [(f"notch2-4k{d:d}", (lambda d: lambda x, o, r: notch(x, 2000, 4000, d))
 DEGS += [(f"notch{lo / 1000:g}-{hi / 1000:g}k-12", (lambda lo, hi: lambda x, o, r: notch(x, lo, hi, -12))(lo, hi)) for lo, hi in ((500, 1000), (1000, 2000))]
 DEGS += [("peak2-4k+6", lambda x, o, r: notch(x, 2000, 4000, 6))]
 DEGS += [(f"tilt{t:+g}", (lambda t: lambda x, o, r: tilt(x, t))(t)) for t in (-2, -1)]
+# 定标用：听感研究里测过阈值的形状（倍频程 / 两倍频程带增益变化，中心频率同 Caswell-Midwinter & Whitmer 2019 · Ohlmann & Kollmeier 2026）
+DEGS += [(f"oct{c}{g:+d}", (lambda c, g: lambda x, o, r: notch(x, c / 2**0.5, c * 2**0.5, g))(c, g)) for c in (250, 1000, 4000) for g in (-6, -3, 3, 6)]
+DEGS += [(f"2oct{c}{g:+d}", (lambda c, g: lambda x, o, r: notch(x, c / 2, min(c * 2, 7900), g))(c, g)) for c in (150, 600, 4800) for g in (-6, -4, 4, 6)]
 DEGS += [(f"{k}{s}", (lambda k, s: lambda x, o, r: add_noise(x, o, s, k, r))(k, s)) for k in ("white", "pink") for s in (30, 20, 10)]
 
 
