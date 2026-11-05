@@ -165,7 +165,25 @@ pub fn derive_vacuum(rows: &mut [ClipRow]) {
     }
 }
 
-/// 读一份 `clips.jsonl`，补上真空感一列，按 `rules` 重新汇总。返回成绩单与源文件的 sha256（写进元数据，可追溯）。
+/// 同一次运行的「没跑成的段」：在 `clips.jsonl` 同目录的 `scorecard.json` 的 `missing` 里。
+/// 找不到就报错——缺段决定组合最多判待测，丢了它重新汇总就和原表不等价（codex 中途 1 第 1 轮 P1 #1）。
+pub fn missing_beside(clips: &std::path::Path) -> Result<Vec<super::Missing>, String> {
+    let p = clips.with_file_name(super::card::FILES[0]);
+    let text = std::fs::read_to_string(&p).map_err(|e| {
+        format!(
+            "{}：{e}（重新汇总要同目录的成绩单来读缺段记录）",
+            p.display()
+        )
+    })?;
+    let v: Value = serde_json::from_str(&text).map_err(|e| format!("{}：{e}", p.display()))?;
+    let m = v
+        .get("missing")
+        .ok_or_else(|| format!("{} 里没有 missing", p.display()))?;
+    serde_json::from_value(m.clone()).map_err(|e| format!("{} 的 missing：{e}", p.display()))
+}
+
+/// 读一份 `clips.jsonl` 与同目录成绩单里的缺段记录，补上真空感一列，按 `rules` 重新汇总。
+/// 返回成绩单与 `clips.jsonl` 的 sha256（写进元数据，可追溯）。
 pub fn resummarize(
     path: &std::path::Path,
     rules: super::card::Rules,
@@ -173,11 +191,12 @@ pub fn resummarize(
     let text = std::fs::read_to_string(path).map_err(|e| format!("{}：{e}", path.display()))?;
     let sha = crate::wav::sha256(path)?;
     let mut rows = parse_jsonl(&text)?;
-    if rows.is_empty() {
+    let missing = missing_beside(path)?;
+    if rows.is_empty() && missing.is_empty() {
         return Err(format!("{} 里没有段", path.display()));
     }
     derive_vacuum(&mut rows);
-    Ok((super::card::Card::build_with(&rows, Vec::new(), rules), sha))
+    Ok((super::card::Card::build_with(&rows, missing, rules), sha))
 }
 
 #[cfg(test)]
@@ -227,6 +246,92 @@ mod tests {
         assert_eq!(vac.len(), 1, "重复调用不重复加");
         assert_eq!(vac[0].2.value, Some(-45.0));
         assert!(vac[0].2.verdict.is_fail(), "−45 dB 低于 −40 dB 真空线");
+    }
+
+    /// 缺段记录跟着读回：有缺段的组合不能变成「过」，整组没跑成的组合不能消失；没有成绩单就报错。
+    #[test]
+    fn resummarize_keeps_missing_from_scorecard() {
+        use super::super::card::Rules;
+        let dir = std::env::temp_dir().join(format!("vdn-resum-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        // 一段：坏值过、听感两项都 +0.1 → 旧规则下该组合「过」
+        let ok = |id: &'static str, v: f64| {
+            Score::judged(
+                id,
+                v,
+                "x",
+                crate::verifiers::info(id).unwrap().better,
+                Some(0.0),
+                &[],
+            )
+        };
+        let row = ClipRow {
+            clip: "cafe-c00-mba".into(),
+            scene: MeetingPlace::Cafe,
+            tier: Tier::Common,
+            device: "mba-builtin".into(),
+            system: "gtcrn".into(),
+            sounds: Vec::new(),
+            scores: vec![
+                ("V-NAN", true, ok("V-NAN", 0.0)),
+                ("V-NRMOS-SCOREQ", false, ok("V-NRMOS-SCOREQ", 0.1)),
+                ("V-NRMOS-DISTILL", false, ok("V-NRMOS-DISTILL", 0.1)),
+            ],
+        };
+        let clips = dir.join("clips.jsonl");
+        std::fs::write(&clips, to_jsonl(&[row]).unwrap()).unwrap();
+        assert!(
+            resummarize(&clips, Rules::V1)
+                .unwrap_err()
+                .contains("scorecard.json")
+        );
+        let miss = |device: &str, what: &str| super::super::Missing {
+            scene: MeetingPlace::Cafe,
+            tier: Tier::Common,
+            device: device.into(),
+            system: "gtcrn".into(),
+            what: what.into(),
+            why: "读不了".into(),
+        };
+        let m = vec![
+            miss("mba-builtin", "cafe-c01-mba"),
+            miss("external-mic", "cafe-task"),
+        ];
+        std::fs::write(
+            dir.join("scorecard.json"),
+            json!({"missing": m}).to_string(),
+        )
+        .unwrap();
+        let (card, _) = resummarize(&clips, Rules::V1).unwrap();
+        assert_eq!(card.missing, m);
+        assert_eq!(card.cards.len(), 2, "整组没跑成的组合也要出一行");
+        let st = |dev: &str| card.cards.iter().find(|c| c.device == dev).unwrap().status;
+        assert_eq!(
+            st("mba-builtin"),
+            super::super::rules::CardStatus::Unknown,
+            "有缺段不能判过"
+        );
+        assert_eq!(st("external-mic"), super::super::rules::CardStatus::Unknown);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// 真空感一列对每段都补（没值补「不知道」），所以列集合不随行序变（codex 中途 1 第 1 轮 P2 #4）。
+    #[test]
+    fn vacuum_column_present_whatever_row_order() {
+        let nr = |v: Option<f64>| match v {
+            Some(x) => Score::judged("V-NR", x, "dB", crate::Better::Lower, Some(-6.0), &[]),
+            None => Score::unknown("V-NR", "dB", crate::Better::Lower, "x"),
+        };
+        let mut rows = parse_jsonl(&format!("{EXP014_LINE}\n{EXP014_LINE}")).unwrap();
+        rows[0].scores.push(("V-NR", false, nr(None)));
+        rows[1].scores.push(("V-NR", false, nr(Some(-20.0))));
+        derive_vacuum(&mut rows);
+        for r in &rows {
+            assert!(r.scores.iter().any(|(v, _, _)| *v == "V-VACUUM"));
+        }
+        let cards = super::super::rules::summarize(&rows, &[]);
+        assert!(cards[0].items.iter().any(|i| i.v == "V-VACUUM"));
     }
 
     #[test]

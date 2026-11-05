@@ -37,7 +37,7 @@ pub struct ClipRow {
 }
 
 /// 没跑成的一段（或一整条任务）：照样进成绩单，让该场景不能判「过」（codex 第 1 轮 P1 #1）。
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Missing {
     pub scene: MeetingPlace,
     pub tier: Tier,

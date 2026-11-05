@@ -351,3 +351,61 @@ fn holm_family_excludes_report_only_and_no_ci() {
     apply_holm(&mut refs);
     assert_eq!(cells[0].status, CardStatus::Fail);
 }
+
+/// 全组没分（都判不了、没有线）的只报项，不能变成挡住场景的待测（codex 中途 1 第 1 轮 P1 #2）。
+#[test]
+fn all_unknown_report_only_item_does_not_block_scene() {
+    let rows: Vec<ClipRow> = (0..10)
+        .map(|i| {
+            row(
+                i,
+                MeetingPlace::Cafe,
+                vec![
+                    (
+                        "V-SIM-GATE",
+                        false,
+                        Score::unknown("V-SIM-GATE", "x", Better::Lower, "x"),
+                    ),
+                    (
+                        "V-WEAK",
+                        false,
+                        Score::unknown("V-WEAK", "dB", Better::Lower, "x"),
+                    ),
+                ],
+            )
+        })
+        .collect();
+    let c = one(&rows);
+    assert!(item(&c, "V-SIM-GATE").report_only);
+    assert!(item(&c, "V-WEAK").report_only, "旧口径三项全无分时也只报");
+    assert_eq!(c.status, CardStatus::Pass);
+}
+
+/// 吞字头均值过线、但最差一段单看越线：这段送人耳，哪怕它的听感分不差（codex 中途 1 第 1 轮 P2 #5）。
+#[test]
+fn worst_clip_of_judged_item_goes_to_human() {
+    let rows: Vec<ClipRow> = (0..10)
+        .map(|i| {
+            row(
+                i,
+                MeetingPlace::Cafe,
+                vec![(
+                    "V-ONSET",
+                    false,
+                    sc("V-ONSET", if i == 9 { 6.0 } else { 0.2 }, 3.0),
+                )],
+            )
+        })
+        .collect();
+    let c = one(&rows);
+    assert_eq!(item(&c, "V-ONSET").status, CardStatus::Pass);
+    let bad = &rows[9].clip;
+    assert!(
+        c.listen
+            .to_human
+            .iter()
+            .any(|(x, why)| x == bad && why.contains("V-ONSET")),
+        "{:?}",
+        c.listen.to_human
+    );
+}
