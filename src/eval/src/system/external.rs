@@ -64,7 +64,12 @@ impl Kind {
     pub fn input(self, clip: &Clip) -> Vec<f32> {
         match self {
             Kind::Mix => clip.mix.clone(),
-            Kind::Bg => clip.noise.iter().zip(&clip.interf).map(|(a, b)| a + b).collect(),
+            Kind::Bg => clip
+                .noise
+                .iter()
+                .zip(&clip.interf)
+                .map(|(a, b)| a + b)
+                .collect(),
             Kind::Trunc => {
                 let mut x = clip.mix.clone();
                 let h = x.len() / 2;
@@ -154,12 +159,19 @@ fn read_out(p: &Path, n: usize) -> Result<(Vec<f32>, bool), String> {
         return Err(format!("{} 采样率 {sr}，应为 {SR}", p.display()));
     }
     if x.len() != n {
-        return Err(format!("{} 长 {} 样本 ≠ 清单 dur_samples {n}", p.display(), x.len()));
+        return Err(format!(
+            "{} 长 {} 样本 ≠ 清单 dur_samples {n}",
+            p.display(),
+            x.len()
+        ));
     }
     if let Some(i) = x.iter().position(|v| !v.is_finite()) {
         return Err(format!("{} 第 {i} 样本不是有限数", p.display()));
     }
-    Ok((x, spec.sample_format == hound::SampleFormat::Int && spec.bits_per_sample == 16))
+    Ok((
+        x,
+        spec.sample_format == hound::SampleFormat::Int && spec.bits_per_sample == 16,
+    ))
 }
 
 /// 每个场景挑清单顺序里第一段有干净参考的（离线脚本按同一规则挑）。
@@ -192,7 +204,11 @@ fn check_listing(dir: &Path, kind: Kind, want: &BTreeSet<String>) -> Result<(), 
     let extra: Vec<_> = got.difference(want).cloned().collect();
     let lack: Vec<_> = want.difference(&got).cloned().collect();
     if !extra.is_empty() {
-        return Err(format!("{}/ 里有清单没有的片段：{}", kind.as_str(), extra.join(" · ")));
+        return Err(format!(
+            "{}/ 里有清单没有的片段：{}",
+            kind.as_str(),
+            extra.join(" · ")
+        ));
     }
     if !lack.is_empty() {
         return Err(format!(
@@ -226,8 +242,8 @@ impl External {
         is_builtin: impl Fn(&str) -> bool,
     ) -> Result<External, String> {
         let rj_path = dir.join("run.json");
-        let text = std::fs::read_to_string(&rj_path)
-            .map_err(|e| format!("{}：{e}", rj_path.display()))?;
+        let text =
+            std::fs::read_to_string(&rj_path).map_err(|e| format!("{}：{e}", rj_path.display()))?;
         let rj: RunJson =
             serde_json::from_str(&text).map_err(|e| format!("{}：{e}", rj_path.display()))?;
         if rj.schema != SCHEMA {
@@ -289,7 +305,11 @@ impl External {
                     read_out(p, n)?;
                 }
                 let fp = fingerprint(&k.input(&clip));
-                let e = Entry { id: c.id.clone(), kind: k, path: p };
+                let e = Entry {
+                    id: c.id.clone(),
+                    kind: k,
+                    path: p,
+                };
                 if let Some(old) = index.insert(fp, e) {
                     return Err(format!(
                         "{} 的 {} 输入与 {} 的 {} 输入样本完全相同，索引会错配",
@@ -303,7 +323,11 @@ impl External {
             if picks.contains(&c.id) {
                 let (a, ia) = read_out(&path(Kind::Mix), n)?;
                 let (b, ib) = read_out(&path(Kind::Trunc), n)?;
-                let tol = if ia || ib { TRUNC_TOL_INT16 } else { TRUNC_TOL_FLOAT };
+                let tol = if ia || ib {
+                    TRUNC_TOL_INT16
+                } else {
+                    TRUNC_TOL_FLOAT
+                };
                 let upto = (n / 2).saturating_sub(lat);
                 let d = a[..upto]
                     .iter()
@@ -330,7 +354,12 @@ impl External {
             "trunc_max_abs_diff": trunc_max,
             "model": rj.model,
         });
-        Ok(External { name: rj.name, latency: lat, index, provenance })
+        Ok(External {
+            name: rj.name,
+            latency: lat,
+            index,
+            provenance,
+        })
     }
 
     /// 凭输入样本找对应输出，包成回放模型。找不到 / 没提供该种输入 → 报错（进「没跑成」）。
@@ -346,7 +375,12 @@ impl External {
         let (out, _) = read_out(p, x.len())?;
         let mut raw = vec![0.0f32; self.latency];
         raw.extend_from_slice(&out);
-        Ok(Replay { name, raw, pos: 0, latency: self.latency })
+        Ok(Replay {
+            name,
+            raw,
+            pos: 0,
+            latency: self.latency,
+        })
     }
 
     /// 测试用：索引里有几条。
@@ -412,7 +446,10 @@ mod tests {
         assert_eq!(Kind::parse("out"), None);
         let clip = Clip {
             sr: SR,
-            truth: crate::synth::Truth { owner: vec![], interf: vec![] },
+            truth: crate::synth::Truth {
+                owner: vec![],
+                interf: vec![],
+            },
             clean: vec![0.0; 5],
             interf: vec![0.5; 5],
             noise: vec![0.25; 5],
@@ -434,7 +471,12 @@ mod tests {
 
     #[test]
     fn replay_reinserts_latency_and_ignores_reset() {
-        let mut r = Replay { name: "t", raw: (0..600).map(|i| i as f32).collect(), pos: 0, latency: 0 };
+        let mut r = Replay {
+            name: "t",
+            raw: (0..600).map(|i| i as f32).collect(),
+            pos: 0,
+            latency: 0,
+        };
         let mut o = vec![0.0; HOP];
         r.process(&vec![0.0; HOP], &mut o).unwrap();
         r.reset();

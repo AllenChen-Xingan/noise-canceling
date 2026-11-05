@@ -26,7 +26,12 @@ fn write_clip(root: &Path, scene: &str, i: usize) -> Value {
     let c = render(&SceneSpec {
         dur_s: 4.0,
         seed: 300 + i as u64,
-        owner: Some(TalkerSpec { level_dbov: -26.0, f0_lo: 100.0, f0_hi: 140.0, tonal: false }),
+        owner: Some(TalkerSpec {
+            level_dbov: -26.0,
+            f0_lo: 100.0,
+            f0_hi: 140.0,
+            tonal: false,
+        }),
         owner_start_s: 0.5,
         pause_s: (0.4, 1.2),
         interferers: Vec::new(),
@@ -36,12 +41,22 @@ fn write_clip(root: &Path, scene: &str, i: usize) -> Value {
     });
     let id = format!("{scene}-c{i:02}");
     let rel = |k: &str| format!("clips/{id}-{k}.wav");
-    for (k, x) in [("mix", &c.mix), ("owner", &c.clean), ("noise", &c.noise), ("interf", &c.interf)] {
+    for (k, x) in [
+        ("mix", &c.mix),
+        ("owner", &c.clean),
+        ("noise", &c.noise),
+        ("interf", &c.interf),
+    ] {
         wav::write(&root.join(rel(k)), x, SR).unwrap();
     }
     let sha = |k: &str| wav::sha256(&root.join(rel(k))).unwrap();
     let n = c.mix.len() as u64;
-    let iv: Vec<[u64; 2]> = c.truth.owner.iter().map(|&(a, b)| [a as u64, b as u64]).collect();
+    let iv: Vec<[u64; 2]> = c
+        .truth
+        .owner
+        .iter()
+        .map(|&(a, b)| [a as u64, b as u64])
+        .collect();
     json!({
         "id": id, "scene": scene, "tier": "common", "device": "mba-builtin", "mic_mode": "standard",
         "pair": format!("{id}-x"), "lang": "en", "polarity": "suppress", "dur_samples": n, "sr": SR,
@@ -88,7 +103,14 @@ fn setup(tag: &str) -> Fx {
 }
 
 /// 写外部输出目录：每种输入过一遍 `f`。`inputs` 决定写哪几种子目录。
-fn write_ext(fx: &Fx, tag: &str, name: &str, lat: usize, inputs: &[Kind], f: &dyn Fn(&[f32]) -> Vec<f32>) -> PathBuf {
+fn write_ext(
+    fx: &Fx,
+    tag: &str,
+    name: &str,
+    lat: usize,
+    inputs: &[Kind],
+    f: &dyn Fn(&[f32]) -> Vec<f32>,
+) -> PathBuf {
     let dir = fx.root.join("ext").join(tag);
     let _ = std::fs::remove_dir_all(&dir);
     let picks = trunc_picks(&fx.clips);
@@ -110,7 +132,12 @@ fn write_ext(fx: &Fx, tag: &str, name: &str, lat: usize, inputs: &[Kind], f: &dy
 }
 
 fn load(fx: &Fx, dir: &Path) -> Result<External, String> {
-    External::load(dir, &fx.root, |s| Some(PathBuf::from(s)), |n| SystemKind::parse(n).is_some())
+    External::load(
+        dir,
+        &fx.root,
+        |s| Some(PathBuf::from(s)),
+        |n| SystemKind::parse(n).is_some(),
+    )
 }
 
 const ALL: [Kind; 3] = [Kind::Mix, Kind::Bg, Kind::Trunc];
@@ -129,7 +156,12 @@ fn ahead(k: usize) -> impl Fn(&[f32]) -> Vec<f32> {
 }
 
 fn opts() -> Opts {
-    Opts { ci: true, audio_dir: None, baseline: Baseline::new(), levels: parse_levels(LEVELS).unwrap() }
+    Opts {
+        ci: true,
+        audio_dir: None,
+        baseline: Baseline::new(),
+        levels: parse_levels(LEVELS).unwrap(),
+    }
 }
 
 /// 主测试：外部入口 = 内置 passthrough，逐段逐项逐位一致；外部系统零「没跑成」（即索引用的就是 system::run 收到的 x）。
@@ -139,21 +171,25 @@ fn external_passthrough_matches_builtin_bit_for_bit() {
     let dir = write_ext(&fx, "pt", "pt-ext", 0, &ALL, &ident);
     let ext = SystemKind::external(load(&fx, &dir).unwrap());
     let suite = parse_suite(&fx.suite).unwrap();
-    let (rows, missing) =
-        vdn_eval::scorecard::run(&suite, &[SystemKind::Passthrough, ext], &opts(), None, Some(&fx.root));
+    let (rows, missing) = vdn_eval::scorecard::run(
+        &suite,
+        &[SystemKind::Passthrough, ext],
+        &opts(),
+        None,
+        Some(&fx.root),
+    );
     assert!(missing.is_empty(), "{missing:?}");
     assert_eq!(rows.len(), 2 * fx.clips.len());
     for pair in rows.chunks(2) {
         let (a, b) = (&pair[0], &pair[1]);
-        assert_eq!((a.system.as_str(), b.system.as_str()), ("passthrough", "pt-ext"));
+        assert_eq!(
+            (a.system.as_str(), b.system.as_str()),
+            ("passthrough", "pt-ext")
+        );
         assert_eq!(a.clip, b.clip);
         assert_eq!(a.scores.len(), b.scores.len());
         for ((va, _, sa), (vb, _, sb)) in a.scores.iter().zip(&b.scores) {
             assert_eq!(va, vb);
-            // 回放不计时：只有「最坏一帧」类计时项可以不同，其余逐位相等
-            if sa.id == "V-FRAME" || sa.id == "V-RTF" {
-                continue;
-            }
             assert_eq!(format!("{sa:?}"), format!("{sb:?}"), "{} {va}", a.clip);
         }
     }
@@ -171,7 +207,15 @@ fn declared_latency_is_reinserted_and_timing_is_empty() {
     let dir = write_ext(&fx, "lat", "lat-ext", lat, &ALL, &ident);
     let ext = SystemKind::external(load(&fx, &dir).unwrap());
     let clip = load_scene_clip(&fx.clips[0], &fx.root).unwrap();
-    let o = run(&SystemSpec { kind: ext, safety: false, faults: vec![] }, &clip.mix).unwrap();
+    let o = run(
+        &SystemSpec {
+            kind: ext,
+            safety: false,
+            faults: vec![],
+        },
+        &clip.mix,
+    )
+    .unwrap();
     assert_eq!(o.latency, lat);
     assert!(o.engine_times.is_empty());
     assert_eq!(o.out, clip.mix);
@@ -188,7 +232,14 @@ fn peeking_past_declared_latency_is_rejected() {
     let e = load(&fx, &dir).unwrap_err();
     assert!(e.contains("输出依赖声明延迟之后的输入"), "{e}");
     // 同一个候选如实声明 L + 100：通过
-    let dir = write_ext(&fx, "honest", "honest-ext", lat + 100, &ALL, &ahead(lat + 100));
+    let dir = write_ext(
+        &fx,
+        "honest",
+        "honest-ext",
+        lat + 100,
+        &ALL,
+        &ahead(lat + 100),
+    );
     load(&fx, &dir).unwrap();
 }
 
@@ -196,10 +247,21 @@ fn peeking_past_declared_latency_is_rejected() {
 #[test]
 fn missing_input_kind_is_reported() {
     let fx = setup("nobg");
-    let dir = write_ext(&fx, "nobg", "nobg-ext", 0, &[Kind::Mix, Kind::Trunc], &ident);
+    let dir = write_ext(
+        &fx,
+        "nobg",
+        "nobg-ext",
+        0,
+        &[Kind::Mix, Kind::Trunc],
+        &ident,
+    );
     let ext = SystemKind::external(load(&fx, &dir).unwrap());
     let clip = load_scene_clip(&fx.clips[0], &fx.root).unwrap();
-    let spec = SystemSpec { kind: ext, safety: true, faults: vec![] };
+    let spec = SystemSpec {
+        kind: ext,
+        safety: true,
+        faults: vec![],
+    };
     let e = run(&spec, &Kind::Bg.input(&clip)).err().unwrap();
     assert!(e.contains("外部输出没提供 bg"), "{e}");
     assert!(run(&spec, &clip.mix).is_ok());
@@ -258,5 +320,8 @@ fn self_checks_reject_bad_dirs() {
 #[test]
 fn parse_rejects_missing_dir() {
     assert_eq!(SystemKind::parse("external:no/such/dir"), None);
-    assert_eq!(SystemKind::parse("passthrough"), Some(SystemKind::Passthrough));
+    assert_eq!(
+        SystemKind::parse("passthrough"),
+        Some(SystemKind::Passthrough)
+    );
 }

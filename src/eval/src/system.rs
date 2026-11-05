@@ -220,7 +220,11 @@ impl SystemKind {
     pub fn load_external(dir: &str) -> Result<SystemKind, String> {
         let root = crate::suite::main_root();
         let d = std::path::Path::new(dir);
-        let d = if d.is_absolute() { d.to_path_buf() } else { root.join(d) };
+        let d = if d.is_absolute() {
+            d.to_path_buf()
+        } else {
+            root.join(d)
+        };
         let e = External::load(&d, &root, crate::suite::resolve, |n| {
             Self::parse_builtin(n).is_some()
         })?;
