@@ -4,7 +4,8 @@
 > **机读正本在代码里**：跑哪些项、按什么顺序判 = `src/eval/src/scorecard/standard.rs`；过关线 = `src/eval/src/thresholds/table.rs`；汇总规则 = `src/eval/src/scorecard/rules_v2.rs`（新规则，默认）· `rules.rs`（旧规则 v1）；区间与校正 = `aggregate.rs`。
 > 本文第一节、第三节的表和第四节的数由 `src/eval/tests/scorecard_standard.rs` 逐行和代码比对，对不上即红。改标准先改代码，再改本文。
 > 命令：`vdn-eval scorecard --suite src/eval/suite/scenes.json [--system ref,gtcrn] [--qa] [--rules v1|v2]`，输出 `scorecard.md` + `scorecard.json` + `clips.jsonl`（逐段分数）。
-> 不重跑音频、只按规则重新汇总：`vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] --out <新目录>`。
+> 不重跑音频、只按规则重新汇总：`vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] --out <新目录>`（同目录的 `scorecard.json` 提供「没跑成的段」，缺了就报错）。
+> 成绩单元数据 `meta` 记：run id · 提交号 · 清单 · 系统 · 是否 `--qa` · 规则版本 `rules` · 电源状态 `power`（`ac` / `battery` / `unknown`，读 `pmset -g batt`；计时类读数受供电影响，025 A2）。
 > **汇总规则 v2 是人定 D85（2026-11-04，调研 025 第 ③ 节七题）**；`--rules v1` 可切回旧规则。
 
 ## 〇、用途与边界
@@ -100,6 +101,9 @@
    - 不过段数、最差段照报
 4. **听感**（人定 D85 题 1、题 6）：每个评分模型在组合内算 Δ 均值的 95% 区间，用同一套三态，线是 Δ ≥ -0.1（允许比原声差 0.1 分）。两个模型都过 → 过；都不过 → 不过；其余 → 待测。每个组合听感最差的 3 段送人耳
 5. **人声起伏 · 音色 · 轻声字**（人定 D85 题 2 = B）：在「干净人声单独过一遍模型」的输出上算，照第 3 条判。**局限：只量得到安静时的人声损伤**，有噪声时被伤多少量不到（025 F-9）。旧 run 没有这一路的分数，重新汇总时这三项只报不判，标「旧口径」
+   - 这一路：同一系统、同样的保命设置、不注入故障、新的引擎状态，输入换成干净人声；对齐与主输出同一个 `system::run`
+   - 评分上下文专用（`runner::Prepared::clean_view`）：主讲人掩码照用真值；输入里没有旁人和噪声，所以旁人掩码与「只有噪音」的停顿掩码全空——音色项不从停顿帧扣残留噪声，停顿里的混响尾巴不会被当噪声扣掉，结果也不随原场景旁人何时说话而变
+   - 分数带旁证 `clean_pass = 1`；旧规则 `--rules v1` 不跑这一路，三项照旧在带噪输出上算
 6. **只报不判**：门控两项（V-SIM-GATE · V-SIM-FA，降为引擎诊断，人定 D85 题 4）· 咔嗒（题 7）· 真空感（025 B4）· 接替门控的量输出四项（用户被误删 V-TSOS · 开口后被吞多久 V-SWALLOW · 旁人漏过事件率 V-LEAK · 同时说话只留用户 V-PSE-OVL；过关线待人拍板，见 `state/handoff/evalfix.md`「待人拍板」）
 7. **场景**：同旧规则第 4 条
 
