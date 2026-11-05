@@ -110,6 +110,15 @@ class Fingerprint(unittest.TestCase):
                 _ext.pin_fingerprint(d, _ext.fingerprint({"w": "b"}, lambda: {"thr": 1}))
             self.assertIn("model", str(e.exception))
 
+    def test_legacy_outputs_without_fingerprint_are_refused(self):
+        with tempfile.TemporaryDirectory() as t:
+            out, sd = Path(t) / "out", Path(t) / "sd"
+            _ext.write_out(out / "mix" / "a.wav", np.zeros(10), 10)
+            with self.assertRaises(SystemExit) as e:
+                _ext.pin_fingerprint(sd, {"x": 1}, out)
+            self.assertIn("没有运行指纹", str(e.exception))
+            self.assertEqual(list(sd.glob("*")), [], "不许留临时文件或指纹")
+
     def test_bad_existing_output_is_refused(self):
         with tempfile.TemporaryDirectory() as t:
             p = Path(t) / "a.wav"
@@ -145,6 +154,13 @@ class Dfn3Chain(unittest.TestCase):
         # 换一段信号再量：入口截半自检用的容差 1e-4 下，前视不超过声明值
         self.assertLessEqual(_ext.measure_lookahead(r.identity_chain, x), la)
 
+    def test_scheduling_delay_covers_lookahead_and_frame_wait(self):
+        import run_dfn3ll as r
+        d = r.scheduling_delay()
+        # 至少 = 算法前视（声明延迟）+ 攒满一帧（160 @16 k）减 1；也不该离谱（< 50 ms）
+        self.assertGreaterEqual(d, r.total_delay() + 160 - 1)
+        self.assertLess(d, 800)
+
     def test_lib_constants(self):
         import run_dfn3ll as r
         self.assertEqual(r.SHIFT, 160)
@@ -175,6 +191,15 @@ class Finalize(unittest.TestCase):
                 _ext.finalize("x", out, builds, _ext.CLIPS, cs, {"a"}, 0, {}, None, args)
             self.assertIn("入口不认", str(e.exception))
             (out / "shards").rmdir()
+            # 坏 wav：收尾逐个校验，拒绝，且不写 run.json
+            bad = out / "bg" / "a.wav"
+            sf.write(str(bad), np.zeros(9, np.float32), _ext.SR, subtype="FLOAT")
+            with self.assertRaises(SystemExit):
+                _ext.finalize("x", out, builds, _ext.CLIPS, cs, {"a"}, 7, {"m": 1}, None, args)
+            self.assertFalse((out / "run.json").exists())
+            import shutil
+            shutil.rmtree(builds, ignore_errors=True)
+            _ext.write_out(bad, np.zeros(10), 10)
             _ext.finalize("x", out, builds, _ext.CLIPS, cs, {"a"}, 7, {"m": 1}, None, args)
             rj = json.loads((out / "run.json").read_text())
             self.assertEqual((rj["schema"], rj["latency_samples"], rj["inputs"]), (_ext.SCHEMA, 7, list(_ext.KINDS)))

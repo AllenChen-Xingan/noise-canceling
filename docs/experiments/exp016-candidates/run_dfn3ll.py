@@ -80,8 +80,9 @@ def dfn_frame(fr):
     return out
 
 
-def chain(x, frame_fn):
-    """流式链路：返回原始（未对齐）16 kHz 输出，长度 ≥ len(x) + TAIL − 一点余量。"""
+def chain(x, frame_fn, avail=None):
+    """流式链路：返回原始（未对齐）16 kHz 输出，长度 ≥ len(x) + TAIL − 一点余量。
+    `avail` 给一个空列表时，逐样本记下「这个输出样本放出来时，已经收进了多少个输入样本」。"""
     up = soxr.ResampleStream(SR_IN, SR_MODEL, 1, dtype="float32", quality=QUALITY)
     dn = soxr.ResampleStream(SR_MODEL, SR_IN, 1, dtype="float32", quality=QUALITY)
     xp = np.concatenate([np.asarray(x, np.float32), np.zeros(TAIL, np.float32)])
@@ -89,7 +90,10 @@ def chain(x, frame_fn):
     for i in range(0, len(xp), BLOCK):
         buf = np.concatenate([buf, up.resample_chunk(xp[i:i + BLOCK])])
         while len(buf) >= FRAME:
-            outs.append(dn.resample_chunk(frame_fn(buf[:FRAME])))
+            o = dn.resample_chunk(frame_fn(buf[:FRAME]))
+            outs.append(o)
+            if avail is not None:
+                avail.extend([min(i + BLOCK, len(xp))] * len(o))
             buf = buf[FRAME:]
     return np.concatenate(outs) if outs else np.zeros(0, np.float32)
 
@@ -108,6 +112,19 @@ def resampler_lookahead():
     if lag != 0:
         raise SystemExit(f"soxr 流式重采样不再按样本对齐（滞后 {lag}），本脚本的平移要重算")
     return _ext.measure_lookahead(identity_chain, x, tol=1e-7)
+
+
+def scheduling_delay():
+    """实时调度延迟（16 kHz 样本）：逐块喂入时，对齐后第 t 个输出最早在收齐第 avail − 1 个输入时放出，
+    延迟 = max_t(avail − 1 − t)，含 libDF 一帧、soxr 前视与内部攒块、攒满 480 的等待（不含音频设备块）。
+    恒等模型与真模型攒块方式相同（逐帧同步调用），所以用恒等模型量（codex 016 脚本第 2 轮 P1 #1）。"""
+    x = np.random.default_rng(0).standard_normal(SR_IN * 2).astype(np.float32) * 0.1
+    av = []
+    chain(x, lambda fr: fr, av)
+    av = np.asarray(av[SHIFT:SHIFT + len(x)])
+    if len(av) != len(x):
+        raise SystemExit("链路输出不够长，量不出调度延迟")
+    return int(np.max(av - 1 - np.arange(len(x))))
 
 
 _D = None
@@ -132,7 +149,8 @@ def process(x):
 
 def setup():
     return {"resampler": f"soxr {soxr.__version__} ResampleStream {QUALITY}", "resampler_lookahead_16k": resampler_lookahead(),
-            "model_delay_48k": MODEL_DELAY_48K, "align_shift_16k": SHIFT, "declared_latency_16k": total_delay(), "atten_lim_db": ATTEN_LIM_DB,
+            "model_delay_48k": MODEL_DELAY_48K, "align_shift_16k": SHIFT, "declared_latency_16k": total_delay(),
+            "scheduling_delay_16k": scheduling_delay(), "atten_lim_db": ATTEN_LIM_DB,
             "lib_sha256": SHA["lib"], "model_sha256": SHA["model"]}
 
 
