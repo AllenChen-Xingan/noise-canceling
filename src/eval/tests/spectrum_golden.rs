@@ -216,10 +216,12 @@ fn assert_weak_scored(scores: &[vdn_eval::Score]) {
     );
 }
 
-/// 五组：(名字, 内容 ID 行)。
+/// 六组：(名字, 内容 ID 行)。第 6 组「verifiers_sans_timbre」= 第 4 组去掉 V-TIMBRE（调研 026，#119 起）：
+/// 改 V-TIMBRE 量法、更新基准时，第 4 组会变、第 6 组必须不变——证明其余 verifier 逐位不变。
 fn lines() -> Vec<String> {
     let clips = [clip(7, 5.0), clip(11, 15.0)];
-    let (mut sg, mut es, mut rw, mut vf, mut eg) = (
+    let (mut sg, mut es, mut rw, mut vf, mut eg, mut vx) = (
+        Acc::default(),
         Acc::default(),
         Acc::default(),
         Acc::default(),
@@ -249,8 +251,12 @@ fn lines() -> Vec<String> {
                 es.f64(v.unwrap_or(f64::NAN));
             }
         }
-        // 4. 全部 verifier
-        assert_weak_scored(&score(&mut vf, c, None));
+        // 4. 全部 verifier；6. 同上去掉 V-TIMBRE
+        let all = score(&mut vf, c, None);
+        all.iter()
+            .filter(|s| s.id != "V-TIMBRE")
+            .for_each(|s| record(&mut vx, s));
+        assert_weak_scored(&all);
     }
     // 5. 边界：别的采样率（16384 → 窗长 2048 恰为 2 的幂；22050 → 2756 补零到 4096）· 短于窗长 · 帧端点 · 空输入
     let speech: &[&str] = &["V-WEAK", "V-ESTOI"];
@@ -292,6 +298,7 @@ fn lines() -> Vec<String> {
         rw.line("ref_wiener"),
         vf.line("verifiers"),
         eg.line("edges"),
+        vx.line("verifiers_sans_timbre"),
     ]
 }
 
