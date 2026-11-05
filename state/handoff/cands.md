@@ -27,14 +27,12 @@
    - B. 下载源码用 `swift build` 自己编 —— 代价：多下源码与依赖，编译要一次名额；同样是第三方代码
    - C. 这一批不测 NoNoise-Mac —— 代价：少一个现成 Mac 产品对照（D77 要它当对照组）
    - 如果你不回，默认 C（先测另两个），后果是 NoNoise-Mac 推迟到下一批
-2. **DFN3 低延迟版要不要换产品自己的重采样器复测**（方案 `docs/experiments/exp016-candidates/plan-dfn3-resampler.md`）
-   - A. 做：预计声明延迟 284 → 192 样本，延迟项约 39.7 ms 过线；代价约 1 h 开发 + 20 min 名额 ← 建议
-   - B. 不做
-   - 如果你不回，默认 B，后果是最终版里 DFN3 低延迟版仍按延迟否决项不过（超 0.4 ms）记，换模型这条路暂时关着
+2. **（大总管定：不做，记 backlog）DFN3 低延迟版要不要换产品自己的重采样器复测**（方案 `docs/experiments/exp016-candidates/plan-dfn3-resampler.md`）
 
 ## 转交（范围外，留给大总管）
 - ~~exp014 `driver/Cargo.lock` 要手动提交~~：已随 8556b95b 一起被 hook 提交（已核对），不用再管
-- 规则题交 evalfix：V-LAT 对 48 kHz 原生模型是否去掉两跳重采样预算（各 2 ms），见 `docs/experiments/exp016-candidates/plan-dfn3-resampler.md` 第六节
+- 大总管定为记账错、转 evalfix 修：V-LAT 的重采样项只在模型原生采样率 ≠ IO 采样率时计入；外部系统声明原生采样率的字段待 evalfix 来定，`external.rs` 由 cands 改（带测试）
+- 请大总管把「DFN3 换产品重采样器复测」记进 `state/backlog.md`（不在 cands 可写范围），方案 `docs/experiments/exp016-candidates/plan-dfn3-resampler.md`
 - 入口评审第 1 轮留作 issue 的两条 P2：截半自检多切点 / 有声区切点 / `bg` 截半（#3）；同输入重复运行对照，区分数值抖动与偷看未来（#4）。详见 `docs/reviews/016_candidates-codex.md`
 - 上面「发现」第 1 条：codex-review skill 的 `file` 误判
 
@@ -64,3 +62,4 @@
 - 写 findings 草稿；自核时改掉一处说过头（DFN3 不是 15 个场景都压得更多）并换成评分项正式中文名
 - 大总管确认 Cargo.lock 已随 8556b95b 提交（已核对）
 - 写方案 plan-dfn3-resampler.md：换 vdn-dsp 3 倍重采样（产品正本），预计前视 192、V-LAT 约 39.7 ms；发现 V-LAT 对 48 kHz 原生模型重复记了重采样预算
+- 大总管定：延迟账多记重采样 = 记账错，转 evalfix；换重采样器这批不做、记 backlog → findings 加局限、方案页首标状态、现状页改第 2 条
