@@ -129,6 +129,35 @@ class Anchor(unittest.TestCase):
             A.check_coverage(rows, {"x"}, ["gtcrn", "c"])
 
 
+class AnchorRun(unittest.TestCase):
+    def test_separate_anchor_run(self):
+        """锚点单独成 run：基线 run 含 passthrough + gtcrn，锚点 run 只含 passthrough，候选 run 不含锚点。"""
+        card = lambda rid: {"meta": {"run_id": rid, "rules": "v2", "suite": "s.json", "qa": True},
+                            "scenes": [{"items": [{"v": "V-NR", "better": "lower", "unit": "dB"}]}]}
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+            def put(name, rows):
+                d = t / name
+                d.mkdir()
+                (d / "clips.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+                (d / "scorecard.json").write_text(json.dumps(card(name)))
+                return d
+            ids = [f"c{i}-mba" for i in range(3)]
+            g = put("g", [row(c, s, {"V-NR": v}) for c in ids for s, v in (("passthrough", 0.0), ("gtcrn", -5.0))])
+            pt = put("pt", [row(c, "passthrough", {"V-NR": 0.0}) for c in ids])
+            k = put("k", [row(c, "c", {"V-NR": -8.0}) for c in ids])
+            man = t / "m.jsonl"
+            man.write_text("\n".join(json.dumps({"id": c, "has_clean_ref": True}) for c in ids) + "\n")
+            res = A.analyze([g, k], man, ["c"], anchor_run=pt)
+            self.assertTrue(res["anchor"]["V-NR"]["judged"])
+            self.assertAlmostEqual(res["candidates"]["c"]["by_item"][0]["mean"], 3.0)
+            with self.assertRaises(SystemExit):  # 不给锚点 run：候选 run 里没有锚点，覆盖核对报错
+                A.analyze([g, k], man, ["c"])
+            bad = put("bad", [row(c, "passthrough", {"V-NR": 0.01}) for c in ids])
+            with self.assertRaises(SystemExit):
+                A.analyze([g, k], man, ["c"], anchor_run=bad)
+
+
 class Rank(unittest.TestCase):
     def test_top_behind_needs_units_and_positive_interval(self):
         cells = [{"state": "候选好", "units": 4, "effect": 9.0}, {"state": "候选好", "units": 5, "effect": 1.0},
