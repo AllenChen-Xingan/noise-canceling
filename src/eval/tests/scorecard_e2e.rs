@@ -392,15 +392,23 @@ fn clean_pass_items_scored_on_clean_input_under_v2() {
     let v2 = run(Rules::V2);
     assert_eq!(v2.len(), 6);
     for r in &v2 {
-        for (v, _, s) in r.scores.iter().filter(|(v, _, _)| CLEAN_PASS.contains(v)) {
+        let picked: Vec<_> = r
+            .scores
+            .iter()
+            .filter(|(v, _, _)| CLEAN_PASS.contains(v))
+            .collect();
+        assert_eq!(picked.len(), CLEAN_PASS.len(), "{}：三项都要在", r.clip);
+        for (v, _, s) in picked {
             assert!(mark(s), "{v} 应带干净人声标记");
-            if let Some(x) = s.value {
-                assert!(
-                    x.abs() < 0.5,
-                    "{} · {v}：原声直通过干净人声读数应近 0，得 {x}",
-                    r.clip
-                );
-            }
+            // 每项都必须出分，不许「全无分也通过」（codex 中途 2 第 2 轮 P2 #2）
+            let x = s
+                .value
+                .unwrap_or_else(|| panic!("{} · {v} 没出分：{}", r.clip, s.verdict.as_str()));
+            assert!(
+                x.is_finite() && x.abs() < 0.5,
+                "{} · {v}：原声直通过干净人声读数应近 0，得 {x}",
+                r.clip
+            );
         }
         // 其余项不带标记
         assert!(
