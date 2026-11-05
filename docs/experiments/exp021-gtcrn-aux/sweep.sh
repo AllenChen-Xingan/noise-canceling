@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # exp021 混回参数扫描：对一个原始输出外部目录重混若干档，再用关保命的派生测试集一次打分（不带评分模型）。
 # 用法（在 worktree 根目录跑，需重活名额）：
-#   docs/experiments/exp021-gtcrn-aux/sweep.sh <前缀> <原始输出目录（相对主目录）>
+#   docs/experiments/exp021-gtcrn-aux/sweep.sh <前缀> <原始输出目录（相对主目录）> [预热段目录]
+# 内置模型（GTCRN）必须给预热段目录（raw 子命令写的 <out>.head），否则与内置成绩单差约 0.1 dB 降噪量（runs/20261105-parity-gtcrn）
 # 产物：主目录 _tmp/030/<前缀>/<档>/（音频）· _tmp/030/sweep-<前缀>-<时间>/（成绩单 + clips.jsonl）
 set -euo pipefail
 prefix="$1"
 src="$2"
+head=()
+[ $# -ge 3 ] && head=(--head "$3")
 B=target/release/exp021-remix
 E=target/release/vdn-eval
 suite=_tmp/030/scenes-safety-off.json
@@ -19,7 +22,7 @@ systems=()
 for g in "${grid[@]}"; do
   read -r o f <<<"$g"
   dir="_tmp/030/${prefix}/o${o#-}-f${f#-}"
-  [ -e "../noise_canceling/${dir}" ] || caffeinate -i "$B" remix --src "$src" --out "$dir" --prefix "$prefix" --open-db "$o" --floor-db "$f"
+  [ -e "../noise_canceling/${dir}" ] || caffeinate -i "$B" remix --src "$src" --out "$dir" --prefix "$prefix" --open-db "$o" --floor-db "$f" "${head[@]}"
   systems+=("external:${dir}")
 done
 nomix="_tmp/030/${prefix}/nomix"
