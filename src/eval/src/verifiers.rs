@@ -464,6 +464,9 @@ pub fn eval(id: &str, c: &Ctx, p: &Params) -> Score {
 }
 
 #[cfg(test)]
+mod low_rate_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
