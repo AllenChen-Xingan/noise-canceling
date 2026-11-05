@@ -57,7 +57,7 @@ class Pairs(unittest.TestCase):
 class Merge(unittest.TestCase):
     def card(self, rid, rules="v2", qa=True):
         return {"meta": {"run_id": rid, "rules": rules, "suite": "s.json", "qa": qa},
-                "scenes": [{"items": [{"v": "V-NR", "better": "越小越好", "unit": "dB"}]}]}
+                "scenes": [{"items": [{"v": "V-NR", "better": "lower", "unit": "dB"}]}]}
 
     def test_two_runs_pair_across(self):
         a = ([row("x", "gtcrn", {"V-NR": -5.0})], self.card("g"))
