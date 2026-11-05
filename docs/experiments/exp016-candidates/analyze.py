@@ -51,7 +51,7 @@ def merge(loaded):
     拒绝：元数据缺项或不同 · 方向或单位不同 · 任一 run 内或跨 run 的（片段, 系统）重复 · 同一片段的场景 / 声音标签不同。"""
     card = json.loads(json.dumps(loaded[0][1]))
     first = card["meta"]
-    for k in SAME_META:
+    for k in SAME_META if len(loaded) > 1 else ():  # 只有一个 run 时不用比
         if first.get(k) is None:
             raise SystemExit(f"run {first.get('run_id')} 的元数据缺 {k}，不能配对")
     rows, seen, tags = [], set(), {}

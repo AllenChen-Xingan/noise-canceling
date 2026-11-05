@@ -11,18 +11,18 @@ GTCRN 在哪几个开会场景、哪种声音上落后于两个候选（DPDFNet-
 1. **merge main**，补 `system.rs` 的 `SystemKind::native_rate()` 外部一支（返回 `Some(e.native_rate())`）+ 测试「声明 48000 的外部系统，延迟账比 16000 少两跳重采样 = 4 ms」。单 crate 增量编译 + 单测，不占名额
 2. **冒烟**（占名额，各 ≤ 1 分钟）：`run_dpdfnet2.py --probe` · `run_dfn3ll.py --probe`。过线：
    - **mix 与 clean 两种输入各自**截半量前视、互相关核对齐（`_ext.probe`，`measured_lookahead_by_kind` · `lag_after_align_by_kind` 进 `params.json`）；声明延迟取两者与标称的最大值，任一滞后 > 1 样本即停。测试：只在 clean 上偷看 50 样本的假模型会被量出（`tests/test_ext.py::Probe`）。入口的截半自检只查 mix，clean 的因果性由这一步把关
-   - A→B→A 差 ≤ 1e-6：每次 `process` 开头复位模型状态（DFN3：`weya_nc_reset` 同一会话；DPDFNet-2：`state = state0.copy()`），A→B→A 一致是复位干净的实测证据；复位 ≠ 新建实例，若 A→B→A 不过即停
-   - 与 runner 对内置系统的口径对照【读源码 `src/eval/src/runner.rs` `prepare_clip`，evalfix 分支】：干净人声那一路用同一系统、`faults: Vec::new()`（不注入故障）、新的 `run` 调用（新引擎状态）；外部回放同样进新引擎、同一声明延迟补回
+   - A→B→A 差 ≤ 1e-6：每次 `process` 开头复位模型状态（DFN3：`weya_nc_reset` 同一会话；DPDFNet-2：`state = state0.copy()`），A→B→A 一致是复位干净的实测证据（只在 mix 上测）；「复位后等同新实例」与「clean 上同样复位干净」**待核实**，未单独测（codex 第 2 轮 P2 #3，留作 issue）
+   - 与 runner 对内置系统的口径对照（复位那一点见上，待核实）【读源码 `src/eval/src/runner.rs` `prepare_clip`，evalfix 分支】：干净人声那一路用同一系统、`faults: Vec::new()`（不注入故障）、新的 `run` 调用（新引擎状态）；外部回放同样进新引擎、同一声明延迟补回
 3. **离线跑音频，各开新 run-id**（不续旧 run、不覆盖）：`run_<候选>.py`（单分片）→ `--finalize --run-id <新 id>`。每个候选 1451 个文件 = 480 mix + 480 clean + bg（additive 段）+ 15 trunc。`finalize` 逐个校验 wav、原子发布 `run.json`（`inputs` 含 `clean`；DFN3 写 `native_rate: 48000`）。耗时按上次实测 × 1451/971 推算：DPDFNet-2 约 21 分钟 · DFN3 约 23 分钟
 4. **跑前核对**（不占名额，结果写进 `runs/<run-id>/README.md`）：
    - 规则版本：两边都 `--rules v2`（成绩单 `meta.rules`）
-   - 场景集与清单：两边 `meta.suite` 同为 `src/eval/suite/scenes.json`，外部 `run.json.clips` 指向 exp013 build `20261103230756-17f5`，其 sha256 与 `builds/…/params.json` 的 `clips_sha256` 相同
+   - 场景集与清单：两边 `meta.suite` 同为 `src/eval/suite/scenes.json`；`git diff 4ccf0638 <本次提交> -- src/eval/suite docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/` 为空（2026-11-05 对当前分支已核：空），即 GTCRN 那次读的是同一份清单；评分程序载入每段音频时按清单里的 sha256 校验（`load_scene_clip`），所以两边输入音频逐字节相同。外部 `run.json.clips` 指向同一 build，其 sha256 与 `builds/…/params.json` 的 `clips_sha256` 相同
    - 评分代码：`git diff --stat 4ccf0638 <本次提交> -- src/ Cargo.lock`，排除外部入口（`system.rs` 分发 · `system/external.rs` · `scorecard/mod.rs` 里 `provides` 那一处 · `tests/`）后**必须为空**；二进制用 `cargo build --release` 在本次提交上重编（`meta.commit` 不带 `-dirty`）。不为空 → 停下，报大总管，选项是把 `gtcrn` 一起放进本次成绩单（约多 55 分钟）
-   - 评分模型：SCOREQ `adapt_nr_telephone.onnx` 与 Distill-MOS 的 sha256 与 GTCRN run 的 README 记的一致（逐个 `shasum -a 256`）；识别服务记模型名与服务端报的权重摘要（拿不到摘要就写「未核实」，由下面的锚点兜底）
-   - **锚点（实测可比性，codex 016 最终版方法第 1 轮 P1 #1）**：本次成绩单加 `passthrough`（原声直通，不经模型），逐段与 GTCRN run 里的 `passthrough` 比。过线：DSP 类项与听感分（SCOREQ · Distill-MOS，确定性）逐段差 ≤ 1e-6；吃字项（识别有随机性）只报两边平均差与区间，写进 findings。DSP 或听感分任一段超差 → 两次 run 不可比，停下报大总管。代价：多一个系统，成绩单约多 35 分钟（推断：直通无模型推理，只多打分）
+   - 评分模型：SCOREQ `adapt_nr_telephone.onnx` 与 Distill-MOS 的 sha256 与 GTCRN run 的 README 记的一致（逐个 `shasum -a 256`）；识别服务记模型名与服务端报的权重摘要。**拿不到摘要、或锚点上吞字头项两边平均差的区间不含 0 时**，吞字头（`V-EAT-ASR`）跨 run 的配对只作参考，findings 里不对它下「谁更好」的结论
+   - **锚点（实测可比性，codex 016 最终版方法第 1 轮 P1 #1）**：本次成绩单加 `passthrough`（原声直通，不经模型），逐段与 GTCRN run 里的 `passthrough` 比。过线：DSP 类项与听感分（SCOREQ · Distill-MOS，确定性）逐段差 ≤ 1e-6；吞字头项（识别有随机性）不判，只报两边平均差，写进 findings，并按上一条决定它的结论降不降级。DSP 或听感分任一段超差 → 两次 run 不可比，停下报大总管。代价：多一个系统，成绩单约多 35 分钟（推断：直通无模型推理，只多打分）
    - 供电：接电源（`meta.power = ac`），`caffeinate -i`
 5. **成绩单**（占名额，约 2.3–2.6 小时，推断）：`vdn-eval scorecard --suite src/eval/suite/scenes.json --system passthrough,external:<dpdfnet2 新 run>,external:<dfn3-ll 新 run> --qa --rules v2`。过线：0 段没跑成；两个外部系统截半自检通过（`meta.external[*].trunc_max_abs_diff` ≤ 容差）；`inputs` 含 `clean`，三项带 `clean_pass` 标记
-6. **配对分析**：`analyze.py <GTCRN run 目录>,<本次 run 目录> <exp013 clips.jsonl> --out analysis.md --json analysis.json`。`merge` 会拒绝：元数据缺规则版本 · 场景集 · 是否带评分模型，或两边不同；评分项方向或单位不同；任一 run 内或跨 run 的（片段, 系统）重复；同一片段两边的场景 / 声音标签不同（测试 `tests/test_analyze.py::Merge`）。锚点比对用两边的 `passthrough` 行，配对只用 `gtcrn`（GTCRN run）与两个候选（本次 run）
+6. **配对分析**：`analyze.py <GTCRN run 目录>,<本次 run 目录> <exp013 clips.jsonl> --out analysis.md --json analysis.json`。两个 run 时先做锚点比对（`anchor`：两边 `passthrough` 逐段逐项，判的项超 1e-6 或一边有数一边没有即退出），再只挑 `gtcrn` 与两个候选的行去合并（`pick`），合并后每个系统的片段必须恰好是清单里有干净参考的 480 段（`check_coverage`，缺多都拒绝）。测试 `tests/test_analyze.py::Anchor`。`merge` 会拒绝：元数据缺规则版本 · 场景集 · 是否带评分模型，或两边不同；评分项方向或单位不同；任一 run 内或跨 run 的（片段, 系统）重复；同一片段两边的场景 / 声音标签不同（测试 `tests/test_analyze.py::Merge`）。
 7. 旧的两个候选 run 与草稿成绩单在 README 标「草稿，被 <新 run-id> 取代」，不删不改
 
 ## 三、配对对象
@@ -33,7 +33,7 @@ GTCRN 一侧用 evalfix 跑的 `20261105-005916-4ccf0638`（规则 v2 · 带评�
 
 | 项 | GTCRN | 候选 | 影响 |
 |---|---|---|---|
-| 跑的时间 | 一个 run | 另一个 run | 吃字项的识别每段 2 次、有随机性；两边各自独立识别，和同 run 内不同系统一样，不额外引入偏差【推断】 |
+| 跑的时间 | 一个 run | 另一个 run | 吞字头项的识别每段 2 次、有随机性，且识别服务的权重两次是否相同不一定能核实；锚点只能证明直通上一致，不能保证降噪输出上一致。所以这一项跨 run 的结论按第二节第 4 步降级，其余项靠锚点逐段一致担保 |
 | 延迟 | 引擎实测 | 声明值（`latency_declared_only`） | 延迟项不进配对（`analyze.py` 的 `SKIP`），只在代价对照里列 |
 | 计时 | 实测 | 判「不知道」 | 同上 |
 | 采样率 | 16 kHz 原生 | DFN3 是 48 kHz 模型，吃的是升采样后的窄带 | 对 DFN3 不利【推断】，README「已知局限」已写 |

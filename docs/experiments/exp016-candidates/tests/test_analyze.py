@@ -79,8 +79,9 @@ class Merge(unittest.TestCase):
     def test_refuses_missing_meta_dup_in_first_run_units_and_tags(self):
         bare = self.card("g")
         del bare["meta"]["rules"]
+        A.merge([([row("x", "gtcrn", {"V-NR": 1.0})], bare)])  # 单个 run：不比元数据
         with self.assertRaises(SystemExit):
-            A.merge([([row("x", "gtcrn", {"V-NR": 1.0})], bare)])
+            A.merge([([row("x", "gtcrn", {"V-NR": 1.0})], bare), ([row("x", "c", {"V-NR": 1.0})], self.card("k"))])
         with self.assertRaises(SystemExit):  # 第一个 run 内部重复
             A.merge([([row("x", "gtcrn", {"V-NR": 1.0})] * 2, self.card("g"))])
         g = ([row("x", "gtcrn", {"V-NR": 1.0})], self.card("g"))
