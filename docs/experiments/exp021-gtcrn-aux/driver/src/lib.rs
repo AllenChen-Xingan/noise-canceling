@@ -88,7 +88,12 @@ impl MixParams {
 /// 驱动引擎走一段（和评测器 `system::run` 同一循环：补零到 hop 整数倍、丢前 latency 个样本）。
 /// `x` 是送进系统的输入（原声），`y` 是该输入对应的模型已对齐输出。返回与 `x` 等长的对齐输出。
 pub fn remix_one(x: &[f32], y: &[f32], latency: usize, cfg: SafetyConfig) -> Vec<f32> {
-    let mut eng = Engine::new(ReplayBuf::new(y, latency), cfg);
+    run_engine(ReplayBuf::new(y, latency), x, cfg)
+}
+
+/// 任意模型过一遍引擎，返回与 `x` 等长的对齐输出（重混与生成原始输出共用这一个循环）。
+pub fn run_engine<M: Model>(model: M, x: &[f32], cfg: SafetyConfig) -> Vec<f32> {
+    let mut eng = Engine::new(model, cfg);
     let hop = eng.hop();
     let lat = eng.latency_samples();
     let n_hops = (x.len() + lat).div_ceil(hop);

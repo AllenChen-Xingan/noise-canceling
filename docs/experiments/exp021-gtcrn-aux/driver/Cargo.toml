@@ -10,5 +10,6 @@ publish = false
 [dependencies]
 vdn-eval = { path = "../../../../src/eval" }
 vdn-engine = { path = "../../../../src/engine" }
+vdn-models = { path = "../../../../src/models" }
 vdn-types = { path = "../../../../src/types" }
 serde_json = "1"
