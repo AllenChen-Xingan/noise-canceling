@@ -34,3 +34,4 @@
 | 016 | 2026-11-04 | [exp016 候选模型上同一张成绩单：① 外部离线输出入口 · ② 离线推理脚本 · ③′ 最终版方法 · ③ 收尾审 findings](016_candidates-codex.md)（issue #112，codex gpt-6-astra；①②③′ 中途 2 轮、P0/P1 修掉即停；③ 4 轮，第 3、4 轮无 P0/P1 → 停） | 采纳 38 / 提出 38（P1×13 P2×25；4 条 P2 开成 #113 #114 #118 #126） |
 | 026 | 2026-11-05 | [音色项该怎么量：调研 026 结论是否被证据撑住](026_timbre-measure-codex.md)（`docs/research/026_timbre-measure/decision.md`，issue #119，codex gpt-6-astra，2 轮，P1 修掉即停） | 采纳 10 / 提出 10（P1×6 P2×4；无 issue） |
 | 029 | 2026-11-05 | [调研 029 强化学习专门调 GTCRN + exp020 计时与离线排序模拟](029_gtcrn-rl-codex.md)（issue #123，codex gpt-6-astra，4 轮，连续两轮无 P0/P1 停） | 采纳 15 / 提出 15（P1×7 P2×8；无 issue） |
+| 027 | 2026-11-05 | [调研 027 GTCRN 微调方案 + exp018 MPS 冒烟](027_gtcrn-finetune-codex.md)（research，codex gpt-6-astra，7 轮，已达停止线） | 采纳 19 / 提出 19（P1×8 P2×11；无 issue） |
