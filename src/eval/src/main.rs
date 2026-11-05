@@ -365,7 +365,7 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
     let (rows, skipped) = vdn_eval::scorecard::run(&suite, &sys, &opts, extra, None);
     let card = vdn_eval::scorecard::card::Card::build(&rows, skipped);
     let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "suite": path,
-        "systems": sys.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "qa": qa.is_some()});
+        "systems": sys.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "qa": qa.is_some(), "external": sys.iter().filter_map(|s| s.provenance()).collect::<Vec<_>>()});
     let js = serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";
     vdn_eval::scorecard::card::write_new(&out, &js, &card.to_markdown("场景成绩单"))?;
     println!(
