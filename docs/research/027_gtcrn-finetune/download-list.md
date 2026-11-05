@@ -13,9 +13,9 @@
 | A3 | TUM 风噪集 | 风噪（手机实录 + 合成） | 街边 + 风 | "Creative Commons Attribution 4.0 International"（Zenodo 6687982，**复核**） | 能 | 0.14 GB | 未核 | 不撞 |
 | A4 | OpenSLR 28 RIRS_NOISES | 房间冲激响应（实测 RWCP · REVERB 2014 · Aachen AIR + 模拟）+ 点声源噪声（取自 MUSAN） | 全部（混响） | "License: Apache 2.0"（openslr.org/28，**复核**；内部各来源的许可页面未列，未逐个核） | 能（内部来源待核） | 1.3 GB | 未核 | 不撞：评测用 MIT · ACE · McVAMPIRE |
 
-| A5 | LibriSpeech dev-clean + test-other | 干净人声（英），**只给终测** | 终测的主说话人与旁人 | "CC BY 4.0"（openslr.org/12，**复核**） | 能（这里只测不训） | 约 0.33 + 0.33 GB | 各约 5 小时 | 不撞：说话人与 test-clean、train-clean-100 都不同 |
+| A5 | LibriSpeech dev-clean + test-other | 干净人声（英），一半当终测原料池、一半当 D63 测试份 | 终测的主说话人与旁人 | "CC BY 4.0"（openslr.org/12，**复核**） | 能（这里只测不训） | 约 0.33 + 0.33 GB | 各约 5 小时 | 不撞：说话人与 test-clean、train-clean-100 都不同 |
 
-第一批合计约 16.1 GB。每个来源下载后**先按 `decision.md` 第六节的表切训练 / 开发 / 测试三份**，切法与哈希进仓，再生成数据。
+第一批合计约 16.1 GB。每个来源下载后**先按 `decision.md` 第六节的表切四份**（训练 · 开发 · 终测原料池 · D63 测试份），切法与哈希进仓，再生成数据。D63 测试份不进任何合成原料，本方案不用。
 
 本机已有、可直接用：DEMAND 6 个环境前 60%（0 GB）。另加风噪模拟器 `audiolabs/SC-Wind-Noise-Generator`（MIT，代码，几 MB）。
 
