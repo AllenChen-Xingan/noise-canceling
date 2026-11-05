@@ -40,7 +40,7 @@ def batch(n_batch: int, seconds: float, seed: int) -> tuple[torch.Tensor, torch.
     g = torch.Generator().manual_seed(seed)
     n = int(seconds * st.FS)
     src = torch.randn(n_batch, n, generator=g)
-    k = torch.ones(1, 1, 16) / 16
+    k = torch.ones(1, 1, 15) / 15
     voice = torch.nn.functional.conv1d(src[:, None], k, padding="same")[:, 0]
     env = (torch.sin(torch.linspace(0, 12.0, n))[None] > 0).float() * 0.9 + 0.1
     clean = 0.3 * voice * env
