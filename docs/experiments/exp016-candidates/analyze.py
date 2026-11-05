@@ -172,8 +172,65 @@ def summarize(ds, pair, key, seed, sd_of=None):
     return out
 
 
+ANCHOR = "passthrough"  # 两个 run 都跑的参照系统（原声直通，不经模型）
+ANCHOR_TOL = 1e-6
+ANCHOR_REPORT_ONLY = {"V-EAT-ASR"}  # 识别有随机性：锚点只报差，不判；跨 run 的这一项结论按方法降级
+
+
+def pick(loaded, systems):
+    """只留指定系统的行（锚点系统两边都有，不进配对；codex 016 最终版方法第 2 轮 P1 #1）。"""
+    return [([r for r in rs if r["system"] in systems], c) for rs, c in loaded]
+
+
+def expected_clips(manifest: Path) -> set[str]:
+    return {json.loads(l)["id"] for l in manifest.read_text().splitlines()
+            if l.strip() and json.loads(l).get("has_clean_ref")}
+
+
+def check_coverage(rows, want: set[str], systems):
+    """每个系统的片段集合必须恰好是清单里有干净参考的全部段：缺的、多的都拒绝。"""
+    for s in systems:
+        got = {r["clip"] for r in rows if r["system"] == s}
+        if got != want:
+            raise SystemExit(f"{s} 的片段与清单不符：缺 {len(want - got)} 段、多 {len(got - want)} 段")
+
+
+def anchor(loaded, want: set[str]):
+    """两个 run 里锚点系统逐段逐项比。返回 {评分项: {"max_abs": …, "mean": …, "n": …, "judged": bool}}；
+    不判的项之外，任一段超 ANCHOR_TOL 或一边有数一边没有 → 报错（两次 run 不可比）。"""
+    if len(loaded) != 2:
+        raise SystemExit("锚点比对要正好两个 run")
+    side = []
+    for rs, c in pick(loaded, {ANCHOR}):
+        check_coverage(rs, want, [ANCHOR])
+        side.append({r["clip"]: {x["v"]: x["value"] for x in r["scores"]} for r in rs})
+    a, b = side
+    out, bad = {}, []
+    for clip in sorted(want):
+        for v in sorted(set(a[clip]) | set(b[clip])):
+            x, y = a[clip].get(v), b[clip].get(v)
+            o = out.setdefault(v, {"max_abs": 0.0, "sum": 0.0, "n": 0, "judged": v not in ANCHOR_REPORT_ONLY})
+            if x is None or y is None:
+                if (x is None) != (y is None) and o["judged"]:
+                    bad.append(f"{clip} {v}：一边有数一边没有")
+                continue
+            d = y - x
+            o["max_abs"], o["sum"], o["n"] = max(o["max_abs"], abs(d)), o["sum"] + d, o["n"] + 1
+            if o["judged"] and abs(d) > ANCHOR_TOL:
+                bad.append(f"{clip} {v}：差 {d:+.3g}")
+    for o in out.values():
+        o["mean"] = o.pop("sum") / o["n"] if o["n"] else None
+    if bad:
+        raise SystemExit(f"锚点 {ANCHOR} 两次 run 不一致（{len(bad)} 处，前 5：{' · '.join(bad[:5])}），不能跨 run 配对")
+    return out
+
+
 def analyze(runs: list[Path], manifest: Path, cands: list[str]):
-    rows, card = merge([load(r) for r in runs])
+    loaded = [load(r) for r in runs]
+    want = expected_clips(manifest)
+    res_anchor = anchor(loaded, want) if len(loaded) == 2 else None
+    rows, card = merge(pick(loaded, {BASE, *cands}))
+    check_coverage(rows, want, [BASE, *cands])
     better, unit, pair = better_map(card), units(card), pairs_of(manifest)
     res = {"run_id": card["meta"]["run_id"], "base": BASE, "candidates": {}}
     for c in cands:
@@ -185,7 +242,7 @@ def analyze(runs: list[Path], manifest: Path, cands: list[str]):
             "by_sound_item": summarize(ds, pair, lambda d: [(s, d[3]) for s in d[2]], SEED + 2, g),
             "by_scene_sound_item": summarize(ds, pair, lambda d: [(d[1], s, d[3]) for s in d[2]], SEED + 3, g),
         }
-    res["better"], res["unit"] = better, unit
+    res["better"], res["unit"], res["anchor"] = better, unit, res_anchor
     return res
 
 
