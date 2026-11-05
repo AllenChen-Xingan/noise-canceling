@@ -137,3 +137,20 @@ fn si_sdr_basics() {
     assert_eq!(si_sdr(&y, &x), Some(200.0));
     assert_eq!(si_sdr(&x, &vec![0.0; 1000]), None);
 }
+
+#[test]
+fn zz_debug_print() {
+    for m in [None, Some(InterfMode::OtherFirst), Some(InterfMode::Overlap)] {
+        let c = clip(m);
+        let mk = masks(&c.truth, &c.mix, 0.03);
+        let n_io = mk.interf_only.iter().filter(|x| **x).count();
+        let n_ov = mk.owner.iter().zip(&mk.interf).filter(|(a, b)| **a && **b).count();
+        eprintln!("{m:?} owner iv {:?}", &c.truth.owner[..c.truth.owner.len().min(8)]);
+        eprintln!("  interf iv {:?}", &c.truth.interf[..c.truth.interf.len().min(6)]);
+        eprintln!("  interf_only frames {n_io} overlap frames {n_ov} of {}", mk.owner.len());
+        let s = score("V-LEAK", &c, &c.mix);
+        eprintln!("  leak {s} {:?}", s.verdict);
+        let s = score("V-PSE-OVL", &c, &c.mix);
+        eprintln!("  ovl {s} {:?}", s.verdict);
+    }
+}
