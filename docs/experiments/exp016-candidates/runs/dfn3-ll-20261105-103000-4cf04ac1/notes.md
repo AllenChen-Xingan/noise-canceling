@@ -6,7 +6,7 @@
 
 读源码：
 - 两项都调同一个函数 `tnlr`（`src/eval/src/verifiers/perceptual.rs`）。它算的是：在主讲人和旁人都不说话的那些帧里，输出功率比输入功率低多少 dB。
-- V-NR 越小越好，V-VACUUM 越大越好。所以配对差正好互为相反数：V-NR +2.16 dB，V-VACUUM −2.16 dB；15 个场景逐格也一样。
+- V-NR 越小越好，V-VACUUM 越大越好。所以配对差正好互为相反数：V-NR +2.16 dB，V-VACUUM −2.16 dB。实测：本 run 457 段两项都有数，逐段读数全部相同（457/457）。
 - V-VACUUM 只是在衰减深过 −40 dB 时报警，提醒「静得像真空」（`verifiers.rs` V-VACUUM 条目）。成绩单里它只报不判（`scorecard/standard.rs`：「与 V-NR 同一个 TNLR，只多一列」）。
 
 所以 analysis.md 里 V-VACUUM 的「候选差」不是另一个缺点。它说的是同一件事：DFN3 降噪更深。只有衰减深过 −40 dB 时才有意义，analysis.md 不看这条线。
