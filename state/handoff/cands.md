@@ -22,6 +22,10 @@
 - NoNoise-Mac 用的 Core ML 模型是普通版还是 `_ll` 版无法从仓库判定（元数据只写 TorchScript 转换）
 
 ## 待人拍板
+2. **DFN3 低延迟版要不要换产品自己的重采样器复测**（方案 `docs/experiments/exp016-candidates/plan-dfn3-resampler.md`）
+   - A. 做：预计声明延迟 284 → 192 样本，延迟项约 39.7 ms 过线；代价约 1 h 开发 + 20 min 名额 ← 建议
+   - B. 不做
+   - 如果你不回，默认 B，后果是最终版里 DFN3 低延迟版仍按延迟否决项不过（超 0.4 ms）记，换模型这条路暂时关着
 1. **（已按默认 C：这批不测，推迟到下一批）NoNoise-Mac 怎么进评测**（它有命令行文件降噪模式，不用驱动、不回录）
    - A. 下载它 v1.5.1 release 的 cli.zip（260 KB）+ app.zip（7.2 MB）到主目录 `_tmp/exp016/`，只在本机命令行跑文件降噪，不装 app、不装驱动 —— 代价：运行未公证的第三方二进制（MIT 开源，可对照源码） ← 建议
    - B. 下载源码用 `swift build` 自己编 —— 代价：多下源码与依赖，编译要一次名额；同样是第三方代码
@@ -29,7 +33,8 @@
    - 如果你不回，默认 C（先测另两个），后果是 NoNoise-Mac 推迟到下一批
 
 ## 转交（范围外，留给大总管）
-- exp014 `driver/Cargo.lock`：大总管已放开更新，cargo 已刷新（2 行）；**改动 ≤ 5 行，自动提交 hook 不会提交**，要大总管手动提交（说明「依赖表跟随仓库库版本，代码不变」）
+- ~~exp014 `driver/Cargo.lock` 要手动提交~~：已随 8556b95b 一起被 hook 提交（已核对），不用再管
+- 规则题交 evalfix：V-LAT 对 48 kHz 原生模型是否去掉两跳重采样预算（各 2 ms），见 `docs/experiments/exp016-candidates/plan-dfn3-resampler.md` 第六节
 - 入口评审第 1 轮留作 issue 的两条 P2：截半自检多切点 / 有声区切点 / `bg` 截半（#3）；同输入重复运行对照，区分数值抖动与偷看未来（#4）。详见 `docs/reviews/016_candidates-codex.md`
 - 上面「发现」第 1 条：codex-review skill 的 `file` 误判
 
@@ -57,3 +62,5 @@
 - 编译 exp014 驱动时 cargo 改了它的 Cargo.lock → 先盖回原文件；大总管放开后再让 cargo 刷新留着
 - 写 analyze.py（配对差值 + 成对片段自助重抽样区间 + 三态 + 前 5 处）与 6 条测试；修了排名口径（全局标准差、≥ 5 个配对单位）与同名模块导入
 - 写 findings 草稿；自核时改掉一处说过头（DFN3 不是 15 个场景都压得更多）并换成评分项正式中文名
+- 大总管确认 Cargo.lock 已随 8556b95b 提交（已核对）
+- 写方案 plan-dfn3-resampler.md：换 vdn-dsp 3 倍重采样（产品正本），预计前视 192、V-LAT 约 39.7 ms；发现 V-LAT 对 48 kHz 原生模型重复记了重采样预算
