@@ -165,15 +165,17 @@ impl QaExtra {
                 self.dnsmos_err.clone().unwrap_or_default(),
             );
         }
-        if !self.mix_mos.contains_key(&task.id) {
+        // 原声分按带噪输入的内容哈希缓存（025 F1）：同一段输入只算一次，不同输入不会因任务 id 相同而串用
+        let key = content_key(&clip.mix);
+        if !self.mix_mos.contains_key(&key) {
             match self.dnsmos_sub(&format!("{}-mix", task.id), &clip.mix) {
                 Ok(m) => {
-                    self.mix_mos.insert(task.id.clone(), m.ovrl);
+                    self.mix_mos.insert(key.clone(), m.ovrl);
                 }
                 Err(e) => return Score::unknown(ID, "MOS", Better::Higher, format!("DNSMOS：{e}")),
             }
         }
-        let mix = self.mix_mos.get(&task.id).copied();
+        let mix = self.mix_mos.get(&key).copied();
         match self.dnsmos_sub(&format!("{}-out", task.id), out) {
             Ok(m) => Score::judged(ID, m.ovrl, "MOS", Better::Higher, mix, &[])
                 .with_extra("sig", m.sig)
@@ -260,6 +262,18 @@ impl QaExtra {
         }
         json!(out)
     }
+}
+
+/// 样本内容的键：f32 逐位的 FNV-1a 64 位哈希 + 长度。
+pub fn content_key(x: &[f32]) -> String {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for v in x {
+        for b in v.to_bits().to_le_bytes() {
+            h ^= b as u64;
+            h = h.wrapping_mul(0x0100_0000_01b3);
+        }
+    }
+    format!("{h:016x}-{}", x.len())
 }
 
 impl Extra for QaExtra {
