@@ -4,7 +4,7 @@
 
 用户端耗时推算（推断）：产品用的是手写 Rust 版（020 的 v4i），不是 torch。
 按两种比例把候选的增量换到 v4i 上，取两者为区间：
-- 乘加比例：候选总乘加 / 基座总乘加
+- 乘加比例：1 + 候选新增乘加 / v4i 基座乘加（366,460，020 口径）
 - torch 实测比例：候选 burst 中位 / 基座 burst 中位（含 Python 调度开销，偏高）
 另：多一层双路 RNN 按 020 逐层实测直接加一层的时间（GRU 卡在串行链上，乘加比例会低估）。
 """
@@ -19,6 +19,7 @@ import variants
 
 # 020 调研的实测数（出处：docs/research/020_fastpath/decision.md「下界对照表」与「整帧按 16 ms 节奏」表）
 V4I_BURST_US = 36.2             # 性能核连续跑整帧
+V4I_BASE_MACS = 366_460         # 020 cost.rs 每帧乘加（ERB 按稀疏滤波计）
 V4I_PACED_MS = (0.073, 0.092)   # 16 ms 节奏每帧平均（电池，3 轮）
 # 两层双路 RNN 合计：沿时间 GRU+全连接 7.43 + 沿频率 GRU 7.41 + 沿频率全连接 1.16 + 两个 LN 0.48+0.99
 V4I_DPGRNN_PAIR_US = 7.43 + 7.41 + 1.16 + 0.48 + 0.99
@@ -48,8 +49,8 @@ def counts():
 
 
 def rust_estimate(n, c, burst):
-    base = c["base"]["macs"]
-    r_mac = c[n]["macs"] / base
+    # 增量除以 v4i 的基座乘加（同一口径：ERB 稀疏），不除以本脚本的稠密口径
+    r_mac = 1 + c[n]["extra_macs"] / V4I_BASE_MACS
     r_torch = burst[n]["p50"] / burst["base"]["p50"] if burst else r_mac
     lo, hi = sorted((r_mac, r_torch))
     if n.startswith("dpgrnn3"):
