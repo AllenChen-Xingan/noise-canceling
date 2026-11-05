@@ -22,7 +22,11 @@ fn clean_pass_timbre(clean: &[f32], out: &[f32], sr: u32) -> f64 {
     let mut owner = vec![false; nf];
     for &(a, b) in &owner_iv {
         let fb = b.div_ceil(vdn_eval::analysis::MASK_FRAME).min(nf);
-        for v in owner.iter_mut().take(fb).skip(a / vdn_eval::analysis::MASK_FRAME) {
+        for v in owner
+            .iter_mut()
+            .take(fb)
+            .skip(a / vdn_eval::analysis::MASK_FRAME)
+        {
             *v = true;
         }
     }
@@ -91,7 +95,10 @@ fn parity(column: &str) {
         n += 1;
     }
     assert!(n >= 30, "只对上 {n} 个文件");
-    assert!(worst <= 0.05, "{column}：Python 与 Rust 最大差 {worst:.3} dB（{n} 个文件）");
+    assert!(
+        worst <= 0.05,
+        "{column}：Python 与 Rust 最大差 {worst:.3} dB（{n} 个文件）"
+    );
 }
 
 #[test]
