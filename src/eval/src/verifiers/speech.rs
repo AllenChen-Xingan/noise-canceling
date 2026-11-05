@@ -106,8 +106,11 @@ pub(super) fn v_weak(c: &Ctx, p: &Params) -> Score {
         th::WEAK.edges,
     )
     .with_extra("delta_range_db", ddr)
-    .with_extra("frames", frames as f64)
-    .with_extra("bands", lc.len() as f64);
+    .with_extra("frames", frames as f64);
+    // 只在有频带被奈奎斯特截掉时报带数，16 kHz 输出与改前逐位相同（spectrum_golden）
+    if lc.len() < WEAK_CF.len() {
+        s = s.with_extra("bands", lc.len() as f64);
+    }
     if ddr < p.f_or("compress_min", th::WEAK.def("compress_min")) {
         s.note = format!("动态范围变化 {ddr:.1} dB：被压缩（012 V-WEAK）");
     }
