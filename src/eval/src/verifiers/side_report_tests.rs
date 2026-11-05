@@ -100,7 +100,10 @@ fn intf_minus_floor_isolates_interferer() {
         .collect();
     let s = score("V-INTF", &c, &out, None, None);
     let (main, mf) = (s.value.unwrap(), extra(&s, "minus_floor_db").unwrap());
-    assert!(mf < main && (mf + 20.0).abs() < 3.0, "主值 {main} · 扣底噪 {mf}");
+    assert!(
+        mf < main && (mf + 20.0).abs() < 3.0,
+        "主值 {main} · 扣底噪 {mf}"
+    );
 }
 
 #[test]
@@ -116,10 +119,28 @@ fn bgstab_bias_corrected_passthrough_is_zero() {
 #[test]
 fn music_reports_residual_below_speech() {
     let c = clip(10.0, false);
-    let out_hi: Vec<f32> = c.clean.iter().zip(&c.noise).map(|(s, n)| s + 0.3 * n).collect();
-    let out_lo: Vec<f32> = c.clean.iter().zip(&c.noise).map(|(s, n)| s + 0.03 * n).collect();
-    let a = extra(&score("V-MUSIC", &c, &out_hi, None, None), "resid_below_speech_db").unwrap();
-    let b = extra(&score("V-MUSIC", &c, &out_lo, None, None), "resid_below_speech_db").unwrap();
+    let out_hi: Vec<f32> = c
+        .clean
+        .iter()
+        .zip(&c.noise)
+        .map(|(s, n)| s + 0.3 * n)
+        .collect();
+    let out_lo: Vec<f32> = c
+        .clean
+        .iter()
+        .zip(&c.noise)
+        .map(|(s, n)| s + 0.03 * n)
+        .collect();
+    let a = extra(
+        &score("V-MUSIC", &c, &out_hi, None, None),
+        "resid_below_speech_db",
+    )
+    .unwrap();
+    let b = extra(
+        &score("V-MUSIC", &c, &out_lo, None, None),
+        "resid_below_speech_db",
+    )
+    .unwrap();
     // 残留压低 20 dB，「比人声低多少」应多约 20 dB
     assert!((b - a - 20.0).abs() < 2.0, "{a} → {b}");
 }
