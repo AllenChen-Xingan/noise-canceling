@@ -29,7 +29,7 @@ const HOP: usize = vdn_types::FRONTEND.hop;
 const TRUNC_TOL_FLOAT: f32 = 1e-4;
 const TRUNC_TOL_INT16: f32 = 2.0 / 32768.0;
 
-/// 输入种类 = 子目录名。以后加 `clean`（干净人声单独过一遍，等 evalfix C2 定稿）只在这里加一支。
+/// 输入种类 = 子目录名。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Kind {
     /// 混合轨 `mix.wav`
@@ -38,15 +38,18 @@ pub enum Kind {
     Bg,
     /// 自检用：每个场景第一段的混合轨，第 floor(n/2) 样本起补零。不进索引
     Trunc,
+    /// 干净人声单独过一遍（成绩单新规则 v2 的三项用，人定 D85 题 2 = B）。可选；没列时 v2 下该段报没跑成
+    Clean,
 }
 
 impl Kind {
-    pub const ALL: [Kind; 3] = [Kind::Mix, Kind::Bg, Kind::Trunc];
+    pub const ALL: [Kind; 4] = [Kind::Mix, Kind::Bg, Kind::Trunc, Kind::Clean];
     pub fn as_str(self) -> &'static str {
         match self {
             Kind::Mix => "mix",
             Kind::Bg => "bg",
             Kind::Trunc => "trunc",
+            Kind::Clean => "clean",
         }
     }
     pub fn parse(s: &str) -> Option<Kind> {
@@ -58,6 +61,7 @@ impl Kind {
             Kind::Mix => true,
             Kind::Bg => c.additive,
             Kind::Trunc => trunc_pick,
+            Kind::Clean => true,
         }
     }
     /// 这种输入的样本（与 runner 喂给 `system::run` 的完全同一算法）。
@@ -76,6 +80,7 @@ impl Kind {
                 x[h..].fill(0.0);
                 x
             }
+            Kind::Clean => clip.clean.clone(),
         }
     }
 }
@@ -321,7 +326,7 @@ impl External {
             let clip = load_scene_clip(c, root)?;
             let n = c.dur_samples as usize;
             let path = |k: Kind| dir.join(k.as_str()).join(format!("{}.wav", c.id));
-            for k in [Kind::Mix, Kind::Bg] {
+            for k in [Kind::Mix, Kind::Bg, Kind::Clean] {
                 if !k.applies(c, false) {
                     continue;
                 }
@@ -507,6 +512,7 @@ mod tests {
         };
         assert_eq!(Kind::Trunc.input(&clip), vec![1.0, 1.0, 0.0, 0.0, 0.0]);
         assert_eq!(Kind::Bg.input(&clip), vec![0.75; 5]);
+        assert_eq!(Kind::Clean.input(&clip), vec![0.0; 5]);
     }
 
     #[test]
