@@ -151,18 +151,25 @@ fn listen_uses_delta_and_sends_worst_to_human() {
 }
 
 #[test]
-fn too_few_valued_clips_is_unknown() {
-    let rows: Vec<ClipRow> = (0..10)
-        .map(|i| {
-            let s = if i < 6 {
-                Score::unknown("V-ONSET", "dB", Better::Lower, "x")
-            } else {
-                sc("V-ONSET", 0.1, 3.0)
-            };
-            row(i, MeetingPlace::Cafe, vec![("V-ONSET", false, s)])
-        })
-        .collect();
-    assert_eq!(item(&one(&rows), "V-ONSET").status, CardStatus::Unknown);
+fn not_applicable_clips_are_skipped_but_one_group_is_unknown() {
+    // 10 段里只有 4 段（2 组）有值、且明显不过：照判不过（判不了的段多是不适用，不拖成待测）
+    let mk = |n_valued: usize| -> Vec<ClipRow> {
+        (0..10)
+            .map(|i| {
+                let s = if i < 10 - n_valued {
+                    Score::unknown("V-ONSET", "dB", Better::Lower, "x")
+                } else {
+                    sc("V-ONSET", 9.0 + 0.1 * i as f64, 3.0)
+                };
+                row(i, MeetingPlace::Cafe, vec![("V-ONSET", false, s)])
+            })
+            .collect()
+    };
+    assert_eq!(item(&one(&mk(4)), "V-ONSET").status, CardStatus::Fail);
+    // 只剩 1 组（同一句话的两种设备）→ 区间退化，待测
+    let c = one(&mk(2));
+    assert_eq!(item(&c, "V-ONSET").ci.as_ref().unwrap().groups, 1);
+    assert_eq!(item(&c, "V-ONSET").status, CardStatus::Unknown);
 }
 
 #[test]

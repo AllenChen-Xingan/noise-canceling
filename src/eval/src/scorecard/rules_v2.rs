@@ -3,7 +3,8 @@
 //! 1. **物理硬事实项**（[`standard::PHYSICAL`]）：照旧逐段判，任一段不过即否决
 //! 2. **吃字**（D85 题 3 = C）：单段比原声多错（删 + 替）≥ 5 字才算这段不过；任一段不过即否决
 //! 3. **只报不判**（[`standard::V2_REPORT_ONLY`]，以及没在干净人声上算的 [`standard::CLEAN_PASS`] 三项）：照算区间，不进过不过
-//! 4. **其余项**（D85 题 1 = B）：组合内均值 + 按源片段成组的 95% 区间三态；能判的段不足一半 → 待测
+//! 4. **其余项**（D85 题 1 = B）：组合内均值 + 按源片段成组的 95% 区间三态。逐段「判不了」的段不计
+//!    （多是不适用，如没有旁人说话的段不量压旁人）；有值的源片段少于 `SC-AGG.min_groups` 组 → 待测
 //! 5. **听感**（题 1、题 6）：两个评分模型各自 Δ 均值区间对 −δ（δ = 0.1）三态；都过 → 过，都不过 → 不过，其余待测
 //! 6. **Holm**（X4）：每项每个系统一族，判「不过」的要过 Holm 校正，没过的改判待测
 //! 7. **场景**：同旧规则——否决项或任一判定项不过 → 不过；有待测或缺段 → 待测；全过 → 过
@@ -99,11 +100,7 @@ fn redo_item(it: &mut ItemCell, rs: &[&ClipRow], key: &str) {
         return;
     };
     it.ci = ci_of(it.v, rs, thr, better, key);
-    let valued = rs.iter().filter(|r| score_in(r, it.v).and_then(|s| s.value).is_some()).count();
-    it.status = match &it.ci {
-        Some(c) if valued * 2 >= rs.len() => tri(c, thr, better),
-        _ => CardStatus::Unknown,
-    };
+    it.status = judge(it.ci.as_ref(), thr, better);
     if standard::V2_REPORT_ONLY.contains(&it.v) {
         it.report_only = true;
         it.rule = RULE_REPORT;
@@ -115,11 +112,19 @@ fn redo_item(it: &mut ItemCell, rs: &[&ClipRow], key: &str) {
     }
 }
 
+/// 区间三态；没有区间或源片段组数不够 → 待测。
+fn judge(ci: Option<&Ci>, thr: f64, better: Better) -> CardStatus {
+    match ci {
+        Some(c) if c.groups as f64 >= th::AGG.def("min_groups") => tri(c, thr, better),
+        _ => CardStatus::Unknown,
+    }
+}
+
 fn redo_listen_model(m: &mut ItemCell, rs: &[&ClipRow], key: &str) {
     let d = th::NRMOS_DELTA.def("max");
     m.threshold = Some(-d);
     m.ci = ci_of(m.v, rs, -d, Better::Higher, key);
-    m.status = m.ci.as_ref().map_or(CardStatus::Unknown, |c| tri(c, -d, Better::Higher));
+    m.status = judge(m.ci.as_ref(), -d, Better::Higher);
     m.rule = RULE_MEAN;
 }
 

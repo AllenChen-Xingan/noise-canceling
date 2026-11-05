@@ -344,6 +344,11 @@ pub const AGG: Lines = Lines {
             &[(20_261_030.0, Src::Design("固定种子，同调研 025 重算脚本"))],
         ),
         p(
+            "min_groups",
+            Some(2.0),
+            &[(2.0, Src::Design("只有 1 组源片段时 bootstrap 区间退化成一点，判不了"))],
+        ),
+        p(
             "alpha",
             Some(0.025),
             &[(0.025, Src::Design("Holm 单侧 α：与 95% 双侧区间的「不过」一端对齐"))],
