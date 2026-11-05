@@ -32,6 +32,16 @@ class T(unittest.TestCase):
         deep = row("a-c0", "x", V_ONSET=1.0, V_ESTOI=0.03, V_NR=-60.0)
         self.assertAlmostEqual(rr.r_composite(deep, base), 0.03 + 0.002 * 12)
 
+    def test_eat_words_rule(self):
+        base = row("a-c0", "gtcrn", V_ESTOI=0.02)
+        r = row("a-c0", "x", V_ESTOI=0.03, V_NR=-6.0, V_EAT_ASR=12.5)
+        r["scores"][-1]["extra"] = {"ref_len": 24.0}  # 12.5% × 24 = 3 个字
+        self.assertAlmostEqual(rr.eat_words(r), 3.0)
+        self.assertEqual(rr.r_composite(r, base), -1.0)  # 旧口径 > 1 个百分点 → 否决
+        self.assertGreater(rr.r_composite_d85(r, base), 0.0)  # D85：不到 5 个字 → 不否决
+        r["scores"][-1]["value"] = 25.0  # 6 个字
+        self.assertEqual(rr.r_composite_d85(r, base), -1.0)
+
     def test_end_to_end(self):
         rows = []
         for i in range(4):

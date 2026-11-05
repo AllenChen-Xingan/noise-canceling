@@ -15,18 +15,34 @@ import sys
 from pathlib import Path
 
 JUDGES = ["V-NRMOS-DISTILL", "V-NRMOS-SCOREQ"]  # 留出的裁判，不进任何奖励
-# 一票否决（照 v2 规则与 013 槽位）：吃字、人声被压低超线、数值失效
+# 一票否决（照 013 槽位）：吃字、人声被压低超线、数值失效。
+# 吃字两种口径：旧 = 单段多错 > 1 个百分点（v1 成绩单的线）；D85 G-3 = 单段多错 ≥ 5 个字
 VETO = {"V-EAT-ASR": ("le", 1.0), "V-SPLVL": ("ge", -3.0), "V-NAN": ("le", 0.0)}
+EAT_WORDS = 5.0
 # 约束（「不许比 GTCRN 差」的守住项）：字头、背景跳变、音色
 GUARDS = {"V-ONSET": 1.0, "V-BGSTAB": 2.0, "V-TIMBRE": 1.0}  # 容许比基线多退的量（dB）〔建议值〕
 BASE = "gtcrn"
 
 
-def val(row, v):
+def score(row, v):
     for s in row["scores"]:
         if s["v"] == v:
-            return s["value"]
+            return s
     return None
+
+
+def val(row, v):
+    s = score(row, v)
+    return None if s is None else s["value"]
+
+
+def eat_words(row):
+    """吃字：比原声多错的字数 = 百分点 × 参考字数 / 100。"""
+    s = score(row, "V-EAT-ASR")
+    if s is None or s["value"] is None:
+        return None
+    n = (s.get("extra") or {}).get("ref_len")
+    return None if n is None else s["value"] * n / 100.0
 
 
 def load(runs_json):
@@ -57,7 +73,12 @@ def r_estoi_only(row, base):
     return val(row, "V-ESTOI")
 
 
-def vetoed(row, skip=()):
+def vetoed(row, skip=(), eat_rule="pp"):
+    if eat_rule == "words" and "V-EAT-ASR" not in skip:
+        w = eat_words(row)
+        if w is not None and w >= EAT_WORDS:
+            return True
+        skip = tuple(skip) + ("V-EAT-ASR",)
     for v, (op, t) in VETO.items():
         if v in skip:
             continue
@@ -80,12 +101,12 @@ def guard_penalty(row, base):
     return pen
 
 
-def r_composite(row, base, skip=()):
+def r_composite(row, base, skip=(), eat_rule="pp"):
     """主奖励 = ESTOI 提升 + 0.002 × 降噪量（dB，封顶 12）；否决 → −1；守住项超线按量扣。"""
     e, nr = val(row, "V-ESTOI"), val(row, "V-NR")
     if e is None:
         return None
-    if vetoed(row, skip):
+    if vetoed(row, skip, eat_rule):
         return -1.0
     nr_gain = 0.0 if nr is None else min(12.0, max(0.0, -nr))
     return e + 0.002 * nr_gain - 0.01 * guard_penalty(row, base)
@@ -97,10 +118,16 @@ def r_composite_pooled_asr(row, base):
     return r_composite(row, base, skip=("V-EAT-ASR",))
 
 
+def r_composite_d85(row, base):
+    """同 composite，吃字按 D85 G-3：单段多错 ≥ 5 个字才否决。"""
+    return r_composite(row, base, eat_rule="words")
+
+
 REWARDS = {
     "nr_only": r_nr_only,
     "estoi_only": r_estoi_only,
     "composite": r_composite,
+    "composite_d85": r_composite_d85,
     "composite_pooled_asr": r_composite_pooled_asr,
 }
 
