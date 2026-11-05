@@ -383,6 +383,28 @@ mod tests {
         assert_eq!(xcorr_lag(&z, &z, 100, 0, 4000), None);
     }
 
+    /// 输出与输入等长（延后 300 样本、尾部截掉）：窗口必须给滞后搜索留出尾部空间（codex 中途 1 第 2 轮 P1 #1）。
+    #[test]
+    fn equal_length_delayed_output_short_and_loud_tail() {
+        let sr = vdn_types::MODEL_RATE as usize;
+        let delay = |x: &[f32]| -> Vec<f32> {
+            let mut y = vec![0.0f32; 300];
+            y.extend_from_slice(&x[..x.len() - 300]);
+            y
+        };
+        // 3 秒：4 秒窗盖住整段
+        let mut r = crate::rng::Rng::new(5);
+        let x: Vec<f32> = (0..3 * sr).map(|_| r.normal() as f32).collect();
+        assert_eq!(xcorr_lag(&x, &delay(&x), 2048, 0, 4 * sr), Some(300));
+        // 8 秒、最响的在末尾：选到的窗贴着末尾
+        let x: Vec<f32> = (0..8 * sr)
+            .map(|i| r.normal() as f32 * if i > 6 * sr { 1.0 } else { 0.05 })
+            .collect();
+        let start = busiest_start(&x, 4 * sr, sr / 10);
+        assert_eq!(start, 4 * sr);
+        assert_eq!(xcorr_lag(&x, &delay(&x), 2048, start, 4 * sr), Some(300));
+    }
+
     /// 低相关但非零的输出（与输入几乎无关的噪声）：照旧给出一个滞后，不改判「不知道」——
     /// 那是要人批准的判定改动（025 ①-1），这里只修量法（codex 中途 1 第 1 轮 P1 #3）。
     #[test]
