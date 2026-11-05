@@ -245,9 +245,10 @@ def parse_args(name):
     return ap.parse_args()
 
 
-def main(name, process, nominal_latency, model_info, setup=None):
+def main(name, process, nominal_latency, model_info, setup=None, native_rate=None):
     """候选脚本入口。`process(x16) -> y16`（等长、已对齐）；`nominal_latency` 为模型标称的 16 kHz 延迟。
-    声明延迟 = max(标称, 实测前视)。`setup()` 可选，返回额外参数写进 builds/。不覆盖已有输出文件（同 run-id 续跑时跳过）。"""
+    声明延迟 = max(标称, 实测前视)。`setup()` 可选，返回额外参数写进 builds/。不覆盖已有输出文件（同 run-id 续跑时跳过）。
+    `native_rate`：模型原生采样率（Hz），写进 run.json 给延迟账用；None = 不写（入口按 MODEL_RATE）。"""
     args = parse_args(name)
     root = main_root()
     clips_rel = scenes_clips_path()
@@ -270,7 +271,7 @@ def main(name, process, nominal_latency, model_info, setup=None):
         pin_fingerprint(shard_dir, fingerprint(model_info, setup), out)  # 收尾时的环境也必须和跑的时候一样
         latency, rec = probe(process, clips, root, nominal_latency)
         info = dict(model_info, latency_probe=rec)
-        return finalize(name, out, builds, clips_rel, clips, picks, latency, info, setup, args, shard_dir)
+        return finalize(name, out, builds, clips_rel, clips, picks, latency, info, setup, args, shard_dir, native_rate)
     k, n = (int(v) for v in args.shard.split("/"))
     pin_fingerprint(shard_dir, fingerprint(model_info, setup), out)
     t0, done, skipped, audio_s = time.time(), 0, 0, 0.0
@@ -294,7 +295,8 @@ def main(name, process, nominal_latency, model_info, setup=None):
     print(f"[{name}] 分片 {k}/{n} 完成：{stats}")
 
 
-def finalize(name, out, builds, clips_rel, clips, picks, latency_samples, model_info, setup, args, shard_dir=None):
+def finalize(name, out, builds, clips_rel, clips, picks, latency_samples, model_info, setup, args, shard_dir=None,
+             native_rate=None):
     """写 run.json（入口读）与 builds/（进仓：参数 · 每个输出文件的 sha256 · 分片耗时）。"""
     if builds.exists():
         raise SystemExit(f"{builds} 已存在，不覆盖")
@@ -311,6 +313,8 @@ def finalize(name, out, builds, clips_rel, clips, picks, latency_samples, model_
         check_existing(p, n_of[p.stem])
     rj = {"schema": SCHEMA, "name": name, "clips": clips_rel, "sr": SR, "latency_samples": int(latency_samples),
           "inputs": list(KINDS), "model": model_info}
+    if native_rate is not None:
+        rj["native_rate"] = int(native_rate)
     rj_path = out / "run.json"
     if rj_path.exists():
         raise SystemExit(f"{rj_path} 已存在，不覆盖")

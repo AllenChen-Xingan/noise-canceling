@@ -165,6 +165,13 @@ class Dfn3Chain(unittest.TestCase):
         import run_dfn3ll as r
         self.assertEqual(r.SHIFT, 160)
 
+    def test_native_rate_matches_rust_io_rate(self):
+        """DFN3 写进 run.json 的 native_rate = Rust 正本 IO_RATE；输入 16 kHz = MODEL_RATE（第二处表示的比对）。"""
+        import run_dfn3ll as r
+        rate = (_ext.ROOT / "src/types/src/rate.rs").read_text()
+        self.assertIn(f"pub const IO_RATE: u32 = {r.SR_MODEL // 1000}_{r.SR_MODEL % 1000:03d};", rate)
+        self.assertIn(f"pub const MODEL_RATE: u32 = {r.SR_IN // 1000}_{r.SR_IN % 1000:03d};", rate)
+
 
 class Finalize(unittest.TestCase):
     def test_incomplete_outputs_are_refused(self):
@@ -202,6 +209,7 @@ class Finalize(unittest.TestCase):
             _ext.write_out(bad, np.zeros(10), 10)
             _ext.finalize("x", out, builds, _ext.CLIPS, cs, {"a"}, 7, {"m": 1}, None, args)
             rj = json.loads((out / "run.json").read_text())
+            self.assertNotIn("native_rate", rj)
             self.assertEqual((rj["schema"], rj["latency_samples"], rj["inputs"]), (_ext.SCHEMA, 7, list(_ext.KINDS)))
             self.assertEqual(len((builds / "hashes.txt").read_text().splitlines()), 3)
             with self.assertRaises(SystemExit):  # 不覆盖

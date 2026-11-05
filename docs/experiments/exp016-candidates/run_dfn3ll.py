@@ -164,4 +164,4 @@ if __name__ == "__main__":
         if _ext.sha256_file(p) != SHA[k]:
             raise SystemExit(f"{p.name} 的 sha256 与记录不符")
     # 标称延迟 = libDF 一帧 + 实测的重采样前视；_ext.probe 再在真模型上量前视
-    _ext.main(NAME, process, total_delay(), INFO, setup)
+    _ext.main(NAME, process, total_delay(), INFO, setup, native_rate=SR_MODEL)
