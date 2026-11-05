@@ -166,6 +166,7 @@ def parse_args(name):
     ap.add_argument("--shard", default="0/1", help="第几片/共几片（按片段轮流分），如 1/4")
     ap.add_argument("--limit", type=int, default=0, help="只跑前 N 段（冒烟用；结果不能给成绩单）")
     ap.add_argument("--finalize", action="store_true", help="所有分片跑完后：写 run.json 与 builds/ 清单")
+    ap.add_argument("--probe", action="store_true", help="冒烟：只在第一段上量前视与对齐、计一段耗时，什么都不写")
     return ap.parse_args()
 
 
@@ -182,6 +183,12 @@ def main(name, process, nominal_latency, model_info, setup=None):
     rid = args.run_id or run_id()
     out = root / "_tmp/exp016" / name / rid
     builds = HERE / "builds" / f"{name}-{rid}"
+    if args.probe:
+        t0 = time.time()
+        latency, rec = probe(process, clips, root, nominal_latency)
+        rec.update(declared_latency=latency, probe_wall_s=round(time.time() - t0, 2))
+        print(json.dumps(rec, ensure_ascii=False))
+        return rec
     if args.finalize:
         latency, rec = probe(process, clips, root, nominal_latency)
         info = dict(model_info, latency_probe=rec)
