@@ -150,7 +150,10 @@ def write_out(path, y, n):
     if not np.all(np.isfinite(y)):
         raise ValueError(f"{path.name} 输出有非有限值")
     path.parent.mkdir(parents=True, exist_ok=True)
-    sf.write(str(path), y, SR, subtype="FLOAT")
+    # 先写临时文件再改名：中途被打断不会留下半截 wav，续跑时「已存在就跳过」不会把它当完成
+    tmp = path.with_name(path.name + ".part")
+    sf.write(str(tmp), y, SR, subtype="FLOAT", format="WAV")
+    os.replace(tmp, path)
 
 
 def run_id():
@@ -182,6 +185,8 @@ def main(name, process, nominal_latency, model_info, setup=None):
     picks = trunc_picks(clips)
     rid = args.run_id or run_id()
     out = root / "_tmp/exp016" / name / rid
+    # 分片耗时记在输出目录旁边：入口不许输出目录里有没列的子目录
+    shard_dir = out.parent / f"{rid}.shards"
     builds = HERE / "builds" / f"{name}-{rid}"
     if args.probe:
         t0 = time.time()
@@ -192,7 +197,7 @@ def main(name, process, nominal_latency, model_info, setup=None):
     if args.finalize:
         latency, rec = probe(process, clips, root, nominal_latency)
         info = dict(model_info, latency_probe=rec)
-        return finalize(name, out, builds, clips_rel, clips, picks, latency, info, setup, args)
+        return finalize(name, out, builds, clips_rel, clips, picks, latency, info, setup, args, shard_dir)
     k, n = (int(v) for v in args.shard.split("/"))
     t0, done, skipped, audio_s = time.time(), 0, 0, 0.0
     for c, kind, x in jobs(clips, root, picks, (k, n)):
@@ -209,12 +214,12 @@ def main(name, process, nominal_latency, model_info, setup=None):
     el = time.time() - t0
     stats = {"shard": f"{k}/{n}", "files": done, "skipped_existing": skipped, "audio_s": round(audio_s, 1),
              "wall_s": round(el, 1), "rtf": round(el / audio_s, 4) if audio_s else None}
-    (out / "shards").mkdir(parents=True, exist_ok=True)
-    (out / "shards" / f"{k}-of-{n}.json").write_text(json.dumps(stats, ensure_ascii=False) + "\n")
+    shard_dir.mkdir(parents=True, exist_ok=True)
+    (shard_dir / f"{k}-of-{n}.json").write_text(json.dumps(stats, ensure_ascii=False) + "\n")
     print(f"[{name}] 分片 {k}/{n} 完成：{stats}")
 
 
-def finalize(name, out, builds, clips_rel, clips, picks, latency_samples, model_info, setup, args):
+def finalize(name, out, builds, clips_rel, clips, picks, latency_samples, model_info, setup, args, shard_dir=None):
     """写 run.json（入口读）与 builds/（进仓：参数 · 每个输出文件的 sha256 · 分片耗时）。"""
     if builds.exists():
         raise SystemExit(f"{builds} 已存在，不覆盖")
@@ -223,6 +228,9 @@ def finalize(name, out, builds, clips_rel, clips, picks, latency_samples, model_
     have = {(p.parent.name, p.stem) for p in out.glob("*/*.wav")}
     if want != have:
         raise SystemExit(f"输出不全：缺 {len(want - have)} 个、多 {len(have - want)} 个")
+    stray = [p.name for p in out.iterdir() if p.is_dir() and p.name not in KINDS] + [p.name for p in out.glob("*/*.part")]
+    if stray:
+        raise SystemExit(f"输出目录里有入口不认的东西：{stray}")
     rj = {"schema": SCHEMA, "name": name, "clips": clips_rel, "sr": SR, "latency_samples": int(latency_samples),
           "inputs": list(KINDS), "model": model_info}
     rj_path = out / "run.json"
@@ -233,7 +241,7 @@ def finalize(name, out, builds, clips_rel, clips, picks, latency_samples, model_
     (builds / "run.json").write_text(rj_path.read_text())
     hashes = sorted(f"{sha256_file(p)}  {p.parent.name}/{p.name}" for p in out.glob("*/*.wav"))
     (builds / "hashes.txt").write_text("\n".join(hashes) + "\n")
-    shards = [json.loads(p.read_text()) for p in sorted((out / "shards").glob("*.json"))]
+    shards = [json.loads(p.read_text()) for p in sorted(shard_dir.glob("*.json"))] if shard_dir else []
     params = {"candidate": name, "limit": args.limit, "files": len(hashes), "shards": shards,
               "python": sys.version.split()[0], "platform": platform.platform(), "machine": platform.machine(),
               "cpu_count": os.cpu_count(), "extra": setup() if setup else None,

@@ -118,6 +118,26 @@ class Finalize(unittest.TestCase):
             self.assertIn("输出不全", str(e.exception))
             self.assertFalse((out / "run.json").exists())
 
+    def test_finalize_writes_run_json_and_rejects_stray_dirs(self):
+        with tempfile.TemporaryDirectory() as t:
+            out, builds = Path(t) / "out", Path(t) / "builds"
+            cs = [{"id": "a", "scene": "cafe", "has_clean_ref": True, "additive": True}]
+            for k in _ext.KINDS:
+                _ext.write_out(out / k / "a.wav", np.zeros(10), 10)
+            self.assertEqual(sorted(p.name for p in out.glob("*/*")), ["a.wav"] * 3, "不许留 .part")
+            args = type("A", (), {"limit": 0})()
+            (out / "shards").mkdir()
+            with self.assertRaises(SystemExit) as e:
+                _ext.finalize("x", out, builds, _ext.CLIPS, cs, {"a"}, 0, {}, None, args)
+            self.assertIn("入口不认", str(e.exception))
+            (out / "shards").rmdir()
+            _ext.finalize("x", out, builds, _ext.CLIPS, cs, {"a"}, 7, {"m": 1}, None, args)
+            rj = json.loads((out / "run.json").read_text())
+            self.assertEqual((rj["schema"], rj["latency_samples"], rj["inputs"]), (_ext.SCHEMA, 7, list(_ext.KINDS)))
+            self.assertEqual(len((builds / "hashes.txt").read_text().splitlines()), 3)
+            with self.assertRaises(SystemExit):  # 不覆盖
+                _ext.finalize("x", out, builds, _ext.CLIPS, cs, {"a"}, 7, {}, None, args)
+
     def test_write_out_rejects_bad_shape_and_nan(self):
         with tempfile.TemporaryDirectory() as t:
             with self.assertRaises(ValueError):
