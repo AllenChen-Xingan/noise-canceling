@@ -185,9 +185,49 @@ pub fn planned_platform(io_block: u32) -> [LatencyItem; 5] {
     ]
 }
 
+/// 平台预算里两跳重采样的部件名（48→16、16→48 kHz）。只有模型原生采样率 ≠ IO 采样率时才要这两跳。
+pub const RESAMPLE_COMPONENTS: [&str; 2] = ["resample-down", "resample-up"];
+
+/// 模型原生采样率与产品 IO 采样率不同，才需要两跳重采样。
+pub const fn needs_resample(model_rate: u32, io_rate: u32) -> bool {
+    model_rate != io_rate
+}
+
+/// 按模型原生采样率给的平台预算：[`planned_platform`] 的各项，原生采样率等于 IO 采样率时去掉两跳重采样
+/// （原生 48 kHz 的模型在产品里不重采样，旧账多记约 4 ms；#111）。两个采样率都取正本：模型的取模型声明，
+/// IO 的取 [`crate::IO_RATE`]。16 kHz 模型的结果与 [`planned_platform`] 逐项相同。
+pub fn planned_platform_for(io_block: u32, model_rate: u32, io_rate: u32) -> Vec<LatencyItem> {
+    let keep_resample = needs_resample(model_rate, io_rate);
+    planned_platform(io_block)
+        .into_iter()
+        .filter(|i| keep_resample || !RESAMPLE_COMPONENTS.contains(&i.component))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 16 kHz 模型：与旧函数逐项相同；48 kHz 模型：正好少两跳重采样（各 96 帧 @48k = 2 ms）。
+    #[test]
+    fn planned_platform_for_drops_resample_only_for_native_io_rate() {
+        let old = planned_platform(IO_BLOCK_PROPOSED);
+        let at16 = planned_platform_for(IO_BLOCK_PROPOSED, crate::MODEL_RATE, crate::IO_RATE);
+        assert_eq!(at16.len(), old.len());
+        for (a, b) in at16.iter().zip(&old) {
+            assert_eq!((a.component, a.samples, a.rate), (b.component, b.samples, b.rate));
+            assert_eq!(a.ms().to_bits(), b.ms().to_bits());
+        }
+        let at48 = planned_platform_for(IO_BLOCK_PROPOSED, crate::IO_RATE, crate::IO_RATE);
+        assert_eq!(at48.len(), old.len() - 2);
+        assert!(at48.iter().all(|i| !RESAMPLE_COMPONENTS.contains(&i.component)));
+        let sum = |v: &[LatencyItem]| v.iter().map(LatencyItem::ms).sum::<f64>();
+        assert!((sum(&old) - sum(&at48) - 4.0).abs() < 1e-9, "少的正好是两跳各 2 ms");
+        // 部件名常量与 planned_platform 里的名字一致（改名会红）
+        for c in RESAMPLE_COMPONENTS {
+            assert!(old.iter().any(|i| i.component == c), "{c}");
+        }
+    }
 
     #[test]
     fn ms_and_totals() {
