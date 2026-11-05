@@ -117,6 +117,9 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-05 15:2x PR #120（timbre）· #127（cands）· #128（rl）都已开、本机亲手验收全过；⚠️ GitHub Actions 因账单付款失败不启动（「recent account payments have failed or your spending limit needs to be increased」），已问人：修账单或授权按本机验收合并。rl 收尾关窗（结论：RL 现在不做，排在微调之后）。名额 aux 扫混回（砍 DPDFNet-2，改扫 GTCRN）
+- 2026-11-05 15:4x 人要多开手下比较 GTCRN 改进的几条路 → 四线：finetune 027 #121（微调+数据）· arch 028 #122（改结构/注意力头）· rl 029 #123（强化学习）· aux 030 #124（辅助判场景 + 混回比例，不重训）。共同交代 _tmp/20261104-b15/gtcrn-options-common.md，统一比较卡。exp 号预分：018 finetune · 019 arch · 020 rl · 021 aux
+- 2026-11-05 15:2x 人定 D86：加训 GTCRN（微调 · RL · 加注意力头都在范围），不换模型；DPDFNet-2 前视 4 帧结构定死出局，DFN3 留作对照。开调研 027 #121，手下 finetune（vdn:finetune，worktree ../noise_canceling-finetune，实体：GTCRN 模型 · 训练数据集 · 训练方法）。timbre PR #120 已开（我在 1265fe37 亲手验收 745 过 0 败），等 CI
 - 2026-11-05 12:4x skillfix 收尾：codex-review 隐私扫描已修（iconv → perl 严格校验；23 测试我亲手重跑全绿；timbre 原文件过、假密钥仍拦；codex 2 轮无 P0/P1）。技能真身在 2-aartifacts/skills/（不在 git，备份为按记录还原版）
 - 2026-11-05 12:2x 人要「专门让一个手下来修」codex-review 隐私扫描误拦（P1/P2 开头被 file 认成图片，第二次）→ 起手下 skillfix（tmux vdn:skillfix，交代 _tmp/20261104-b15/skillfix.md，实体只一个：该技能的隐私扫描；先备份、先写红测试、不放松规则）
 - 2026-11-05 11:57 timbre 名额 11:48–11:56 用完：旧代码三系统 243 项逐项同基线；新 ERB 量法提交 88de9880，对拍 0.000 dB；golden 只 V-TIMBRE 变；基线只 36 项 V-TIMBRE 变、通过数不变（GTCRN 2.27 · FE-M 2.02 < 3）。名额 → cands 跑 DPDFNet-2（约 13:15），之后 timbre 全量测试
