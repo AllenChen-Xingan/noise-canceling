@@ -75,15 +75,13 @@ pub const MUSIC: Lines = Lines {
 };
 
 /// 量法与 rubric N4 不同：代码 100–1k / 1–2k / 2–4k / 4–7.9k Hz、512 点跳 256；N4 100–300 / 300–500 / 2–5k / 5–8k Hz、1024 点跳 512
+/// 调研 026：ERB 30 带 dB 差的标准差。分档与过线都是建议值、没有出处（只在 T12 测过的几种形状上锚定过，
+/// 见 `docs/research/026_timbre-measure/decision.md` ④）；不过线 3 暂定，待人定（⑦ 第 2 题）
 pub const TIMBRE: Lines = Lines {
     id: "V-TIMBRE",
-    edges: &[2.0, 4.0, 6.0],
-    edges_src: Src::Rubric(&["D > 6 · C ≤ 6 · B ≤ 3 · A ≤ 1.5"]),
-    params: &[p(
-        "max",
-        Some(6.0),
-        &[(6.0, Src::Rubric(&["D > 6 · C ≤ 6"]))],
-    )],
+    edges: &[1.0, 2.0, 3.0],
+    edges_src: Src::None,
+    params: &[p("max", Some(3.0), &[(3.0, Src::None)])],
 };
 
 pub const NR: Lines = Lines {
@@ -470,13 +468,14 @@ pub const ALL: [&Lines; 28] = [
 ];
 
 /// 待定清单：已知不一致或没有出处的条目。全部是建议值，挂 012 拍板 #8 · D44。
-pub const PENDING: [(&str, &str, Pend); 8] = [
-    // 量法与 rubric N4 不同，数也不同（代码 2 / 4 / 6，N4 1.5 / 3 / 6）
+pub const PENDING: [(&str, &str, Pend); 9] = [
+    // 调研 026：量法已与 N4 一致（timbre_tests 比对），分档 1 / 2 / 3 与过线 3 没有出处，待人耳校（D44）
     (
         "V-TIMBRE",
         "edges",
-        Pend::Edges(&[2.0, 4.0, 6.0], Cause::Differ),
+        Pend::Edges(&[1.0, 2.0, 3.0], Cause::NoSource),
     ),
+    ("V-TIMBRE", "max", Pend::Value(3.0, Cause::NoSource)),
     // 过线值 −3 dB 没有出处
     ("V-SPLVL", "min", Pend::Value(-3.0, Cause::NoSource)),
     // 只有 3 dB 有出处，1 / 2 dB 没有
