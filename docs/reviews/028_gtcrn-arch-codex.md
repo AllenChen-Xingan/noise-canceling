@@ -35,7 +35,7 @@
 
 - codex 列的「不符」：「逐值相同」实为容差 1e-6 → 已改为「相同（误差 ≤ 1e-6）」（比较卡 · exp019 README）
 - codex 列的「核实属实」：4 条（R1 延迟声明 · R2 020 数字 · 时间注意力乘加公式 · torch 读数）
-- 无法核实：S2 / S4 原表（codex 不能联网）；官方模块乘加覆盖（`resources/` 不在 worktree）——由测试 `test_params_match_official`、`test_macs_near_official` 间接覆盖
+- 无法核实：S2 / S4 原表（codex 不能联网）；官方模块乘加覆盖（`resources/` 不在 worktree）——`test_params_match_official`、`test_macs_near_official` 只说明总量接近，不能排除漏算与重算，列为无法核实（第 2 轮 #4）
 
 ### 是否再审
 

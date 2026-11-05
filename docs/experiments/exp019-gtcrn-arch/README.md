@@ -28,7 +28,7 @@
 | `macs.py` | 在真模型上挂钩子数每帧乘加、参数、缓存字节 |
 | `bench.py` | 单线程测每帧耗时：连续推帧（burst）/ 按 16 ms 节奏（paced）；各候选轮流跑；写 `runs/<run-id>/` |
 | `report.py` | 合成汇总表 `runs/<run-id>/summary.md`，并推算手写 Rust 版（020 的 v4i）的每帧耗时 |
-| `tests/test_exp019.py` | 11 条测试（见下） |
+| `tests/test_exp019.py` | 12 条测试（见下） |
 
 ## 怎么跑
 
@@ -51,10 +51,11 @@ worktree 里没有 `resources/`，脚本按 `git rev-parse --git-common-dir` 找
 | `test_zero_init_equals_base` | 每个候选零初始化后输出与原模型相同（误差 ≤ 1e-6） |
 | `test_perturbed_changes_output` | 反向对照：候选权重不为零时输出确实变了 |
 | `test_causal_no_lookahead` | 改未来帧不影响已出的帧 |
-| `test_branch_uses_current_frame` | 候选支路在当前帧就起作用，没有延后一帧 |
+| `test_output_aligned_with_input` | 候选模块输出与输入同帧对齐：只改第 t 帧输入，第 t 帧输出就变 |
+| `test_alignment_check_catches_one_frame_delay` | 反向对照：纯延后一帧的模块被判为不对齐 |
 | `test_tattn_window_is_k_frames` | K = 16 / 32 / 64：最老窗内帧起作用，紧邻窗外帧不起作用 |
 | `test_film_zero_cond_is_bypass_after_training` | 场景条件权重非零时，全零向量仍是恒等旁路（无偏置） |
-| `test_params_match_official` | 可训练参数 23,669，与官方 23.67 K 一致 |
+| `test_params_match_official` | 可训练参数总数 23,669，与官方 23.67 K 一致（只比总数） |
 | `test_macs_near_official` | 每帧乘加落在官方 33.0 MMACs/s ÷ 63 帧的 75–100%（我们不计归一化、激活） |
 | `test_extra_macs_formulas` | 候选乘加 = 比较卡里的手算公式 |
 | `test_dpgrnn3_costs_one_block` | 多一层双路 RNN 的乘加 = 原第一层的乘加 |
