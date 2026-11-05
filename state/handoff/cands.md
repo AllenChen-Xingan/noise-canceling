@@ -4,7 +4,7 @@
 - **手上**：exp016 候选模型（DFN3 低延迟版 · DPDFNet-2 · NoNoise-Mac）上同一张成绩单 · issue #112
 - **交代**：主目录 `_tmp/20261104-b15/cands.md`
 - **做到哪**（2026-11-05）：两个候选 480 段跑完；草稿成绩单（不带 --qa）出了，配对分析与 findings 草稿写好
-- **下一步**：等 evalfix 新规则合并 → 带 --qa 跑两个候选（约 1.7 h，要名额）→ 与 evalfix 的 GTCRN run 配对出最终版 → 挑人耳片段 → 收尾 codex（连续两轮）
+- **下一步**：等 evalfix 全量跑完、PR 合并 → merge main → 补 system.rs 的 native_rate 一支与测试 → DFN3 旧 run.json 补 native_rate → 申请名额带 --qa 跑两个候选最终版
 
 ## 改了哪些文件
 | 文件 | 改了什么 |
@@ -64,3 +64,7 @@
 - 写方案 plan-dfn3-resampler.md：换 vdn-dsp 3 倍重采样（产品正本），预计前视 192、V-LAT 约 39.7 ms；发现 V-LAT 对 48 kHz 原生模型重复记了重采样预算
 - 大总管定：延迟账多记重采样 = 记账错，转 evalfix；换重采样器这批不做、记 backlog → findings 加局限、方案页首标状态、现状页改第 2 条
 - 大总管：backlog 已记（21acbb21）；native_rate 的默认值与允许取值从 vdn-types 采样率正本取（`MODEL_RATE` · `IO_RATE`），不在 external.rs 手写；最终字段以 evalfix 定的为准
+- evalfix 定 native_rate 字段（可选，只许 MODEL_RATE / IO_RATE，默认 MODEL_RATE）→ external.rs 实现 + 单测 + 端到端测试（8531a3bc），Python 收尾写 native_rate、测试比对 rate.rs；system.rs 那一支与「少 4 ms」测试等 evalfix PR 合并后补
+- 问大总管：DFN3 旧 run.json 补 native_rate=48000（不重跑音频，builds/ 加 amend.json 记旧新哈希）；不回默认照做
+- evalfix：native_rate 做法确认；最终 GTCRN run 20261105-005916-4ccf0638（规则 v2，约 03:30 完成）→ 记进 README runs 表
+- 大总管同意补字段：先确认进仓 run.json 已提交，再改；amend.json 记旧新 sha256 · 字段 · 原因 · 日期；最终版元数据记新哈希、README 说明
