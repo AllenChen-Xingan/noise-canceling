@@ -7,8 +7,8 @@
 use serde_json::Value;
 
 use crate::analysis::{
-    MASK_FRAME, Masks, Spectrogram, frame_power, kurtosis, mean, quantile, truth_from_clean,
-    xcorr_lag,
+    MASK_FRAME, Masks, Spectrogram, busiest_start, frame_power, kurtosis, mean, quantile,
+    truth_from_clean, xcorr_lag,
 };
 use crate::synth::Clip;
 use crate::system::{BUDGET_MS, RunOut};
@@ -18,10 +18,12 @@ use crate::{Better, Level, Score, Verdict, db10};
 pub mod estoi;
 mod perceptual;
 mod physical;
+mod pse;
 mod sim;
 mod speech;
 use perceptual::*;
 use physical::*;
+use pse::*;
 pub use sim::GATE_TOLERANCE_S;
 use sim::*;
 pub use speech::click_positions;
@@ -74,7 +76,7 @@ pub const REGISTRY: &[Info] = &[
         unit: "ms",
         better: Better::Lower,
         definition: "端到端附加延迟：引擎延迟账（hop 等待 + 模型算法延迟，代码声明）+ 平台预算（IO 块取提议值 96 帧）；并实测算法延迟核对声明",
-        algorithm: "输入与未对齐原始输出的互相关峰（前 2 s、0–2048 样本）= 实测算法延迟；|实测 − Model::latency_samples| ≤ 1 样本且账面合计 ≤ 45 ms 才过。5 个种子各量一次（Teams §6.35 放 5 次的口径；本实现确定性，5 次一致）",
+        algorithm: "输入与未对齐原始输出的归一化互相关 |r| 峰（窗 = 主讲人能量最多的 4 s，照 TS 26.132 §7.10.4.2 窗心对准句子；滞后 0–2048 样本，窗口太靠后时往前挪、给滞后留出空间；输入窗全零才判不知道）= 实测算法延迟；|实测 − Model::latency_samples| ≤ 1 样本且账面合计 ≤ 45 ms 才过。离线确定性，每段量一次（#109）",
         anchor: "D32：≤ 45 ms；rubric L1 / V2",
         failure: "平台项是预算（Basis::Budget）不是实测，P3 脉冲法之前只证明「账面不超」；互相关对强非线性输出可能偏峰",
     },
@@ -113,7 +115,7 @@ pub const REGISTRY: &[Info] = &[
         unit: "dBFS",
         better: Better::Lower,
         definition: "输入数字静音时，输出（过 0.3 s 稳定期后）的峰峰值",
-        algorithm: "找输入末尾最长的全零段，量输出同段的 max − min，换成 dBFS（全零记 −240）",
+        algorithm: "找输入末尾最长的全零段，量输出同段的 max − min，换成 dBFS（全零记 −240）。换算：1 LSB@16 bit = 1/32768，20·log10(1/32768) = −90.3 dBFS（025 A4）",
         anchor: "[S35] Works With Meet：全零或 (max − min) ≤ 0.0028 dBFS——原文单位口径存疑，这里取〔建议值〕1 LSB@16 bit = −90.3 dBFS",
         failure: "稳定期 0.3 s 是〔建议值〕",
     },
@@ -138,9 +140,9 @@ pub const REGISTRY: &[Info] = &[
         default_level: Level::L0,
         unit: "dB",
         better: Better::Lower,
-        definition: "同一噪声「插入语音」与「不插语音」两次处理，停顿帧里输出噪声电平之差的最大绝对值",
-        algorithm: "P.1120 §11.14.5 式：先放 ≥ 5 s 平稳噪声再插入语音。改动：用 10 ms 帧功率、只取主讲人与干扰者都不在的帧（掩码自带 30 ms + 再扩 50 ms），帧间 3 帧滑动平均，不用 35 ms 一阶平滑（那会把语音能量拖进停顿帧）",
-        anchor: "> 10 dB → D（P.1120 原文线）；≤ 3 / 6 / 10 为 A / B / C〔建议值〕",
+        definition: "同一噪声「插入语音」与「不插语音」两次处理，停顿帧里输出噪声电平之差（扣掉输入侧同一差值后）的最大绝对值",
+        algorithm: "P.1120 §11.14.5 式：先放 ≥ 5 s 平稳噪声再插入语音。改动：用 10 ms 帧功率、只取主讲人与干扰者都不在的帧（掩码自带 30 ms + 再扩 50 ms），帧间 3 帧滑动平均，不用 35 ms 一阶平滑（那会把语音能量拖进停顿帧）。每帧再扣掉输入侧的同一差值（混合 − 噪音 + 干扰：主讲人混响尾巴落进停顿帧带来的偏差，025 B3），原声直通 = 0 dB；改前的值旁报 uncorr_db，另报 95 分位 p95_db",
+        anchor: "P.1120 §11.14.5.1「shall not vary more than 10 dB」（必须，不是 should）→ > 10 dB 为 D；≤ 3 / 6 / 10 为 A / B / C〔建议值〕",
         failure: "把噪声换成恒定假底噪也能拿满分 → 与 V-VACUUM、V-TIMBRE 制衡；要求噪声逐样本可重放（合成场景满足，真实录音不满足 → 判「不知道」）",
     },
     Info {
@@ -233,6 +235,58 @@ pub const REGISTRY: &[Info] = &[
         algorithm: "STFT 512/256；输出的频带功率先减去停顿帧估出的残留噪声频带功率（下限为原值的 10%）",
         anchor: "rubric N4；≤ 2 / 4 / 6 dB 为 A / B / C，> 6 dB 不过〔建议值〕",
         failure: "麦克风本身频响；低信噪比的高频带残留噪声扣不干净",
+    },
+    Info {
+        id: "V-TSOS",
+        name: "用户被误删（量输出）",
+        layer: "ci",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "%",
+        better: Better::Lower,
+        definition: "用户有声谱帧里被误删的帧百分比（Eskimez 等 2022 TSOS）；旁报 ≥ 1 s 误删次数、最长一次时长、字头 200 ms 内的误删比例（字头 = 前面停了 ≥ 300 ms 的开口）",
+        algorithm: "512 / 256 STFT；逐帧 Σ_f max(0, |S|^p − |Ŝ|^p) > γ · Σ_f |S|^p 记误删，S = 干净参考谱，p = 0.3，γ = 0.1（式 (2)(3)）；只算主讲人掩码内的帧（`verifiers/pse.rs`）",
+        anchor: "无外部线（三篇论文都只排名）；人定 D85 题 4 = A：看比原声直通多多少，线待人拍板，只报不判",
+        failure: "原声直通不保证为 0（混合谱在相消频点小于人声谱）；参考带混响；按段数少，要按场景组合并才分得出（025 D1）",
+    },
+    Info {
+        id: "V-SWALLOW",
+        name: "开口后被吞多久（量输出）",
+        layer: "ci",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "ms",
+        better: Better::Lower,
+        definition: "每个开口起点之后第一段连续误删（TSOS）的时长，本段取 p90",
+        algorithm: "与 V-TSOS 同一逐帧误删标记；起点 = 主讲人真值区间的起点；起点帧没误删记 0；起点 < 3 个判不知道",
+        anchor: "业界没有现成指标，025 D3 改义自立；先只报不判",
+        failure: "025 要求按场景组合并 ≥ 30 个起点后取 p90，本实现先给每段的 p90（组合内只报均值），合并取 p90 未实现",
+    },
+    Info {
+        id: "V-LEAK",
+        name: "旁人漏过事件率（量输出）",
+        layer: "ci",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "%",
+        better: Better::Lower,
+        definition: "只有旁人说话的整 1 秒窗里，输出比输入压低不到 X dB 的窗占比",
+        algorithm: "1 s 窗按 100 ms 步长滑动（窗有重叠，读数是窗的占比），用户一帧都不在说、旁人说话的帧过半才计（音节空隙照算在窗里）；压低量 = 10·log10(输出能量 ÷ 混合能量)；X 取表里 `min_att_db`（暂 10 dB）",
+        anchor: "025 D2b（Taherian 2022：用户长时间不说话时易漏）；X 待人拍板，只报不判",
+        failure: "只在有逐轨真值、有整秒旁人独说的段上能算",
+    },
+    Info {
+        id: "V-PSE-OVL",
+        name: "同时说话只留用户（量输出）",
+        layer: "ci",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "dB",
+        better: Better::Higher,
+        definition: "用户与旁人重叠的连续段（≥ 0.5 s）上 SI-SDRi 的均值；旁报失败率（SI-SDRi < 1 dB 的段占比）",
+        algorithm: "先取两人真实同时有声的帧，再桥接其间 300 ms 内的停顿，连续 ≥ 0.5 s 的算一段；SI-SDR(输出, 干净参考) − SI-SDR(混合, 干净参考)，逐重叠段算（`verifiers/pse.rs`）",
+        anchor: "Delcroix 2022 §5.3 失败率；025 D5：先给 GTCRN 与原声直通出基线（原声直通 = 0），只报不判",
+        failure: "参考带混响，去混响的系统会被扣分；只在有逐轨真值、有重叠段的段上能算",
     },
     Info {
         id: "V-SIM-GATE",
@@ -334,9 +388,9 @@ pub const REGISTRY: &[Info] = &[
         unit: "Δ",
         better: Better::Higher,
         definition: "ESTOI(干净, 输出) − ESTOI(干净, 带噪原声)",
-        algorithm: "pystoi 0.4.1 口径的 ESTOI，Rust 重写（`verifiers/estoi.rs`），与上游对拍差 ≤ 0.01（`tests/estoi_parity.rs`）",
+        algorithm: "pystoi 0.4.1 口径的 ESTOI，Rust 重写（`verifiers/estoi.rs`），与上游对拍差 ≤ 1e−4，含输出整段数字零样例（`tests/estoi_parity.rs`，025 E3）。场景测试集里的「干净参考」是带房间混响的主讲人轨（owner.wav），不是干声",
         anchor: "rubric C3：ΔESTOI ≥ +0.05 A · ≥ 0 B · < 0 C · < −0.05 D",
-        failure: "对生成式伪影不敏感（012）；要求输出与干净轨逐样本对齐",
+        failure: "对生成式伪影不敏感（012）；要求输出与干净轨逐样本对齐；参考带混响，去混响的系统会被算成「不像参考」",
     },
     Info {
         id: "V-EAT-ASR",
@@ -362,7 +416,7 @@ pub const REGISTRY: &[Info] = &[
         definition: "DNSMOS sig_bak_ovr.onnx 的三项，非个性化多项式映射；主值报 OVRL",
         algorithm: "9.01 s 窗、1 s 跳，不够长时自我重复（同官方 dnsmos_local.py 的口径，Rust 自写）；ort 单线程 CPU",
         anchor: "无外部锚点；只作 L0 约束（不比基线差）",
-        failure: "exp003：机器分领先的 DPDFNet-2 人耳最差；007 已见 BAK 被刷高；不建议作奖励",
+        failure: "exp003：机器分领先的 DPDFNet-2 人耳最差；007 已见 BAK 被刷高；不建议作奖励。非个性化模型：旁人说话被留下不算劣化（025 F2）",
     },
     Info {
         id: "V-NRMOS-SCOREQ",
@@ -375,7 +429,7 @@ pub const REGISTRY: &[Info] = &[
         definition: "SCOREQ（natural · NR）给输出的分 − 给带噪原声的分",
         algorithm: "ort 跑上游 ONNX（adapt_nr_telephone.onnx，sha256 登记在 qa/nrmos.rs）；16 kHz 尾部补零到 320 倍数、一次前向；与上游 Python 对拍差 ≤ 0.01（tests/nrmos_parity.rs）",
         anchor: "过线 = 不比原声差（012 §2.3 第 4 条 L0 约束）；公开众人数据上配对一致率 0.70–0.77（017 decision 第 0 节）；在我们片段上尚无判据",
-        failure: "当奖励时被钻空子最狠（018 结论 4）→ 只打分不优化；TMHINT 上系统级 −0.714（018 第二节）；exp009 里与作者一致率 0.375–0.40",
+        failure: "当奖励时被钻空子最狠（018 结论 4）→ 只打分不优化；TMHINT 上系统级 −0.714（018 第二节）；exp009 里与作者一致率 0.375–0.40。非个性化模型：旁人说话被留下不算劣化（025 F2）",
     },
     Info {
         id: "V-NRMOS-DISTILL",
@@ -388,7 +442,7 @@ pub const REGISTRY: &[Info] = &[
         definition: "Distill-MOS v7 给输出的分 − 给带噪原声的分",
         algorithm: "上游 PyTorch 权重导出的 ONNX（不分段前向，tools/export_distillmos.py）；分段与求均值照上游 sqa.py 在 Rust 里做；与上游 Python 对拍差 ≤ 0.01",
         anchor: "过线 = 不比原声差；公开众人数据上配对一致率 0.68–0.69（017 decision 第 3 节）",
-        failure: "与 SCOREQ 同为众包 MOS 训的，彼此一致不算独立旁证（017 第 0 节第 4 条）；系统级相关 0.772 低于 SCOREQ",
+        failure: "与 SCOREQ 同为众包 MOS 训的，彼此一致不算独立旁证（017 第 0 节第 4 条）；系统级相关 0.772 低于 SCOREQ。非个性化模型：旁人说话被留下不算劣化；每段先峰值归一化，看不见整体电平高低（025 F2）",
     },
 ];
 
@@ -452,6 +506,10 @@ pub fn eval(id: &str, c: &Ctx, p: &Params) -> Score {
         "V-VACUUM" => v_vacuum(c, p),
         "V-TIMBRE" => v_timbre(c, p),
         "V-SIM-GATE" => v_sim_gate(c, p),
+        "V-TSOS" => v_tsos(c),
+        "V-SWALLOW" => v_swallow(c),
+        "V-LEAK" => v_leak(c),
+        "V-PSE-OVL" => v_pse_ovl(c),
         "V-SIM-FA" => v_sim_fa(c, p),
         "V-SIM-SWLAT" => v_sim_swlat(c, p),
         "V-SIM-QUIET" => v_sim_quiet(c, p),
@@ -462,6 +520,12 @@ pub fn eval(id: &str, c: &Ctx, p: &Params) -> Score {
         _ => Score::unknown("V-?", "", Better::Lower, format!("CI 层没有 verifier {id}")),
     }
 }
+
+#[cfg(test)]
+mod low_rate_tests;
+
+#[cfg(test)]
+mod side_report_tests;
 
 #[cfg(test)]
 mod tests {

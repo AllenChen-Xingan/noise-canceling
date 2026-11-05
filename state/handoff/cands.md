@@ -72,3 +72,5 @@
 - 大总管定：另开新 run，mix + clean 一次跑全；旧 run 不补 native_rate、不写 amend.json（撤回前一条）；旧 run 在 README 标「草稿，被 <新 run-id> 取代」
 - evalfix 套入 clean 补丁（bdf0ad57，出自 fe09f692），v2 下 vdn-eval 全绿；审 evalfix 的「没有 clean/ 判只报」测试：过，P2 一条（循环可能空过）已改 987a3af8；Kind::Clean 注释改为「没列时 runner 凭 provides 不跑这一路」
 - 大总管：开跑前方法审 codex 1 轮。写 plan-final-run.md；codex ③′ 2 轮（P1×4 全修、P2×3 修 2 留 1）→ 停。改动：probe 对 mix 与 clean 都量前视；analyze 加锚点（本次成绩单加 passthrough，与 GTCRN run 逐段比 ≤1e-6）· 只挑基线与候选合并 · 片段覆盖核对；吞字头跨 run 结论在识别权重未核实时降为参考。Python 33 条过；草稿分析重出逐字相同。成绩单估计改为 2.3–2.6 h（多 passthrough），总计约 3–3.3 h
+- 吞字头跨 run：直通锚点恒为 0 测不出 → 改用两次 run 的识别缓存同键逐条比（asr_drift.py + 4 条测试），阈值每段 ≤ 1 字照常比；大总管同意（2026-11-05）。识别服务无权重摘要，记 id + size_bytes
+- 等 #116 合 main，大总管通知后申请名额

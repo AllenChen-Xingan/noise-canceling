@@ -19,7 +19,8 @@ use vdn_engine::testing::DelayGain;
 use vdn_engine::{Engine, EngineStats, FaultInjector, FaultKind, Model, ModelError, SafetyConfig};
 use vdn_models::{AnyModel, ModelId, ModelKind};
 use vdn_types::FRONTEND;
-use vdn_types::latency::{IO_BLOCK_PROPOSED, LATENCY_BUDGET_MS, planned_platform};
+use vdn_types::IO_RATE;
+use vdn_types::latency::{IO_BLOCK_PROPOSED, LATENCY_BUDGET_MS, planned_platform_for};
 
 /// 参考降噪器（CI 替身）。
 pub struct RefWiener {
@@ -255,6 +256,14 @@ impl SystemKind {
             _ => None,
         }
     }
+    /// 模型在产品里的原生采样率（决定平台预算要不要记两跳重采样，#111）：真模型取 `ModelKind::declared()`；
+    /// 原声直通与参考降噪器没有自己的声明，取引擎采样率（`None`）。外部系统取 `run.json` 的 `native_rate`。
+    pub fn native_rate(self) -> Option<u32> {
+        if let SystemKind::External(e) = self {
+            return Some(e.native_rate());
+        }
+        self.model_kind().map(|k| k.declared().sample_rate)
+    }
     /// 真模型的权重在不在本机（不在就跳过，不算失败）。
     pub fn available(self) -> bool {
         self.model_kind().is_none_or(|k| k.default_path().is_some())
@@ -334,7 +343,8 @@ pub fn run(spec: &SystemSpec, x: &[f32]) -> Result<RunOut, String> {
     let hop = eng.hop();
     let lat = eng.latency_samples();
     let mut ledger = eng.latency_ledger();
-    ledger.extend(planned_platform(IO_BLOCK_PROPOSED));
+    let native = spec.kind.native_rate().unwrap_or(eng.sample_rate());
+    ledger.extend(planned_platform_for(IO_BLOCK_PROPOSED, native, IO_RATE));
     let n_hops = (x.len() + lat).div_ceil(hop);
     let mut padded = vec![0.0f32; n_hops * hop];
     padded[..x.len()].copy_from_slice(x);
@@ -449,5 +459,28 @@ mod tests {
     #[test]
     fn ref_latency_is_one_hop() {
         assert_eq!(RefWiener::new().latency_samples(), 256);
+    }
+
+    /// 16 kHz 的系统仍记两跳重采样：账面合计与旧口径逐位相同（参考降噪器 43.67 ms，与 GTCRN 同；#111）。
+    #[test]
+    fn ledger_keeps_resample_for_16k_systems() {
+        use vdn_types::latency::planned_platform;
+        let spec = SystemSpec {
+            kind: SystemKind::Ref,
+            safety: true,
+            faults: Vec::new(),
+        };
+        let r = run(&spec, &vec![0.0f32; vdn_types::MODEL_RATE as usize]).unwrap();
+        let mut old = build(&spec, &[]).unwrap().latency_ledger(); // 参考降噪不读输入（合并 main 后 build 多了输入参数）
+        old.extend(planned_platform(IO_BLOCK_PROPOSED));
+        assert_eq!(r.ledger_total_ms.to_bits(), old.total_ms().to_bits());
+        assert!(
+            (r.ledger_total_ms - 43.666_666).abs() < 1e-3,
+            "{}",
+            r.ledger_total_ms
+        );
+        for k in [SystemKind::Gtcrn, SystemKind::FastEnhancerM] {
+            assert_eq!(k.native_rate(), Some(vdn_types::MODEL_RATE), "{k:?}");
+        }
     }
 }

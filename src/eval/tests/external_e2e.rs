@@ -267,7 +267,9 @@ fn missing_input_kind_is_reported() {
     // clean 同理：没列就报错、不回退成带噪那路；runner 凭 provides 事先知道
     let e = run(&spec, &Kind::Clean.input(&clip)).err().unwrap();
     assert!(e.contains("外部输出没提供 clean"), "{e}");
-    let SystemKind::External(x) = ext else { unreachable!() };
+    let SystemKind::External(x) = ext else {
+        unreachable!()
+    };
     assert!(x.provides(Kind::Mix) && x.provides(Kind::Trunc));
     assert!(!x.provides(Kind::Bg) && !x.provides(Kind::Clean));
     assert!(run(&spec, &clip.mix).is_ok());
@@ -418,4 +420,110 @@ fn native_rate_is_read_and_checked() {
     assert_eq!(e.provenance()["native_rate"], json!(vdn_types::IO_RATE));
     set(json!(44_100)); // tidy: 非采样率：故意给一个不允许的值
     assert!(load(&fx, &dir).unwrap_err().contains("native_rate"));
+}
+
+/// 声明原生 = IO 采样率的外部系统，延迟账不记两跳重采样：比不声明的同一输出正好少这两项预算（#111 记账错修正）。
+/// 差值从 vdn-types 正本算（`RESAMPLE_COMPONENTS` 那两项，现为各 2 ms），不在这里写数。
+#[test]
+fn native_io_rate_drops_resample_budget() {
+    use vdn_types::latency::{IO_BLOCK_PROPOSED, RESAMPLE_COMPONENTS, planned_platform};
+    let fx = setup("ledger");
+    let a = write_ext(&fx, "ledger16", "ledger-16", 0, &ALL, &ident);
+    let b = write_ext(&fx, "ledger48", "ledger-48", 0, &ALL, &ident);
+    let p = b.join("run.json");
+    let mut rj: Value = serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+    rj["native_rate"] = json!(vdn_types::IO_RATE);
+    std::fs::write(&p, rj.to_string()).unwrap();
+    let clip = load_scene_clip(&fx.clips[0], &fx.root).unwrap();
+    let total = |dir: &Path| {
+        let spec = SystemSpec {
+            kind: SystemKind::external(load(&fx, dir).unwrap()).unwrap(),
+            safety: true,
+            faults: vec![],
+        };
+        run(&spec, &clip.mix).unwrap().ledger_total_ms
+    };
+    let want: f64 = planned_platform(IO_BLOCK_PROPOSED)
+        .iter()
+        .filter(|i| RESAMPLE_COMPONENTS.contains(&i.component))
+        .map(|i| i.ms())
+        .sum();
+    assert!(want > 0.0);
+    let d = total(&a) - total(&b);
+    assert!((d - want).abs() < 1e-9, "差 {d} ms，应为 {want} ms");
+}
+
+/// 外部输出没提供 `clean/`（v2）：零「没跑成」；三项（人声忽大忽小 · 音色 · 轻声字）不带 `clean_pass`、落「只报·旧口径」；
+/// 成绩单开头点名该系统（evalfix 与 cands 定 2026-11-05；本条由 evalfix 写、cands 审）。
+#[test]
+fn no_clean_dir_means_report_only_not_missing() {
+    use vdn_eval::scorecard::card::Card;
+    use vdn_eval::scorecard::standard::{CLEAN_PASS, CLEAN_PASS_MARK};
+    let fx = setup("noclean");
+    let dir = write_ext(
+        &fx,
+        "nc",
+        "nc-ext",
+        0,
+        &[Kind::Mix, Kind::Bg, Kind::Trunc],
+        &ident,
+    );
+    let ext = SystemKind::external(load(&fx, &dir).unwrap()).unwrap();
+    let suite = parse_suite(&fx.suite).unwrap();
+    let (rows, missing) = vdn_eval::scorecard::run(
+        &suite,
+        &[SystemKind::Passthrough, ext],
+        &opts(),
+        None,
+        Some(&fx.root),
+    );
+    assert!(missing.is_empty(), "{missing:?}");
+    assert_eq!(rows.len(), 2 * fx.clips.len());
+    let marked = |r: &vdn_eval::scorecard::ClipRow| {
+        r.scores
+            .iter()
+            .filter(|(v, _, _)| CLEAN_PASS.contains(v))
+            .map(|(_, _, s)| {
+                s.extra
+                    .iter()
+                    .any(|(k, x)| *k == CLEAN_PASS_MARK && *x == 1.0)
+            })
+            .collect::<Vec<_>>()
+    };
+    for r in &rows {
+        let m = marked(r);
+        assert_eq!(m.len(), CLEAN_PASS.len(), "{}", r.clip);
+        let want = r.system == "passthrough";
+        assert!(
+            m.iter().all(|x| *x == want),
+            "{} {} {m:?}",
+            r.system,
+            r.clip
+        );
+    }
+    let card = Card::build(&rows, missing);
+    assert_eq!(card.no_clean_pass, vec!["nc-ext".to_string()]);
+    let md = card.to_markdown("t");
+    let line = md
+        .lines()
+        .find(|l| l.contains("本系统未提供干净人声输出，人声忽大忽小 · 音色 · 轻声字三项不判"))
+        .unwrap_or_else(|| panic!("{md}"));
+    assert!(
+        line.contains("nc-ext") && !line.contains("passthrough"),
+        "{line}"
+    );
+    // 先数再查，免得循环一次都不进就过（cands 审 P2）
+    let ext_cards: Vec<_> = card.cards.iter().filter(|c| c.system == "nc-ext").collect();
+    assert!(!ext_cards.is_empty());
+    for c in ext_cards {
+        let three: Vec<_> = c
+            .items
+            .iter()
+            .filter(|i| CLEAN_PASS.contains(&i.v))
+            .collect();
+        assert_eq!(three.len(), CLEAN_PASS.len(), "{:?}", c.scene);
+        for i in three {
+            assert!(i.report_only, "{:?} {}", c.scene, i.v);
+        }
+    }
 }

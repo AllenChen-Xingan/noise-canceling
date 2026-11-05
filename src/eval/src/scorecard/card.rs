@@ -2,7 +2,7 @@
 
 use serde_json::{Value, json};
 
-use super::rules::{CardStatus, SceneCard, summarize, worst};
+use super::rules::{CardStatus, ItemCell, SceneCard, summarize, worst};
 use super::{ClipRow, Missing};
 use crate::files::serde_name;
 
@@ -20,40 +20,96 @@ pub fn ensure_fresh(dir: &std::path::Path) -> Result<(), String> {
     Ok(())
 }
 
+/// 只新建写一个文件：已存在就报错，不覆盖。
+pub fn write_new_file(p: &std::path::Path, text: &str) -> Result<(), String> {
+    use std::io::Write;
+    let mut h = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(p)
+        .map_err(|e| format!("{}：{e}", p.display()))?;
+    h.write_all(text.as_bytes()).map_err(|e| e.to_string())
+}
+
 /// 写成绩单：两个文件都用「只新建」打开，已存在就报错（与 [`ensure_fresh`] 之间被别的进程抢先写入也不会覆盖）。
 pub fn write_new(dir: &std::path::Path, json: &str, md: &str) -> Result<(), String> {
-    use std::io::Write;
     ensure_fresh(dir)?;
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     for (f, text) in FILES.iter().zip([json, md]) {
-        let p = dir.join(f);
-        let mut h = std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&p)
-            .map_err(|e| format!("{}：{e}", p.display()))?;
-        h.write_all(text.as_bytes()).map_err(|e| e.to_string())?;
+        write_new_file(&dir.join(f), text)?;
     }
     Ok(())
 }
 
+/// 汇总规则版本：`v1` = 旧规则（任一段不过即不过）；`v2` = 人定 D85 的新规则（默认）。人改主意时用 `--rules v1` 切回。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Rules {
+    V1,
+    V2,
+}
+
+impl Rules {
+    pub fn parse(s: &str) -> Option<Rules> {
+        match s {
+            "v1" => Some(Rules::V1),
+            "v2" => Some(Rules::V2),
+            _ => None,
+        }
+    }
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Rules::V1 => "v1",
+            Rules::V2 => "v2",
+        }
+    }
+}
+
 /// 整张成绩单。
+#[derive(Debug)]
 pub struct Card {
     pub cards: Vec<SceneCard>,
     pub worst: Vec<usize>,
     pub missing: Vec<Missing>,
     pub clips: usize,
+    pub rules: Rules,
+    /// v2 下没有「干净人声单独过一遍」读数的系统（外部系统没提供 `clean/`）：三项落「只报·旧口径」，开头点名
+    pub no_clean_pass: Vec<String>,
 }
 
 impl Card {
+    /// 按新规则（v2）建表。
     pub fn build(rows: &[ClipRow], missing: Vec<Missing>) -> Card {
-        let cards = summarize(rows, &missing);
+        Card::build_with(rows, missing, Rules::V2)
+    }
+
+    pub fn build_with(rows: &[ClipRow], missing: Vec<Missing>, rules: Rules) -> Card {
+        let cards = match rules {
+            Rules::V1 => summarize(rows, &missing),
+            Rules::V2 => super::rules_v2::summarize(rows, &missing),
+        };
         let worst = worst(&cards);
+        let mut no_clean_pass: Vec<String> = Vec::new();
+        if rules == Rules::V2 {
+            for r in rows {
+                let lacks = r.scores.iter().any(|(v, _, s)| {
+                    super::standard::CLEAN_PASS.contains(v)
+                        && !s
+                            .extra
+                            .iter()
+                            .any(|(k, x)| *k == super::standard::CLEAN_PASS_MARK && *x == 1.0)
+                });
+                if lacks && !no_clean_pass.contains(&r.system) {
+                    no_clean_pass.push(r.system.clone());
+                }
+            }
+        }
         Card {
             cards,
             worst,
             missing,
             clips: rows.len(),
+            rules,
+            no_clean_pass,
         }
     }
 
@@ -61,10 +117,12 @@ impl Card {
         json!({
             "doc": "场景成绩单（vdn-eval scorecard）。规则见 specs/rubric/scorecard.md；感知项全部 L0（只作约束，不当奖励）",
             "meta": meta,
+            "rules": self.rules.as_str(),
             "clips_scored": self.clips,
             "scenes": self.cards,
             "worst": self.worst.iter().map(|&i| key(&self.cards[i])).collect::<Vec<_>>(),
             "missing": self.missing,
+            "no_clean_pass": self.no_clean_pass,
         })
     }
 
@@ -79,6 +137,21 @@ impl Card {
             n(CardStatus::Fail),
             n(CardStatus::Unknown)
         );
+        s += &match self.rules {
+            Rules::V1 => "汇总规则 v1（旧）：每项任一段不过即不过。\n\n".to_string(),
+            Rules::V2 => "汇总规则 v2（人定 D85）：物理硬事实项逐段否决；吃字单段多错 ≥ 5 字否决；\
+                其余项按组合均值的 95% 区间判（区间全在线内 = 过，全在线外 = 不过且经 Holm 校正，跨线 = 待测）；\
+                听感允许比原声差 0.1 分。「判法」列：逐段 · ≥5字 · 区间 · 只报 · 只报·旧口径。\n\n\
+                人声忽大忽小（V-PUMPV）· 音色偏差（V-TIMBRE）· 弱音丢失（V-WEAK）在「干净人声单独过一遍模型」的输出上量（人定 D85 题 2）：\
+                只量得到安静时的人声损伤，嘈杂时模型对人声的伤害这三项量不到。\n\n"
+                .to_string(),
+        };
+        if !self.no_clean_pass.is_empty() {
+            s += &format!(
+                "**{}**：本系统未提供干净人声输出，人声忽大忽小 · 音色 · 轻声字三项不判（只报·旧口径）。\n\n",
+                self.no_clean_pass.join(" · ")
+            );
+        }
         s += "## 最差的场景\n\n";
         if self.worst.is_empty() {
             s += "（没有不过或待测的场景）\n\n";
@@ -111,11 +184,11 @@ impl Card {
                     c.missing.len()
                 );
             }
-            s += "| 项 | 否决 | 过 / 不过 / 待测（段） | 均值 | 最差（段） | 过线 | 判定 |\n|---|---|---|---|---|---|---|\n";
+            s += "| 项 | 否决 | 过 / 不过 / 待测（段） | 均值 | 95% 区间 | 最差（段） | 过线 | 判法 | 判定 |\n|---|---|---|---|---|---|---|---|---|\n";
             for i in &c.items {
                 let f = |v: Option<f64>| v.map_or("—".into(), |x| format!("{x:.3}"));
                 s += &format!(
-                    "| {} | {} | {} / {} / {} | {} {} | {}{} | {} | {} |\n",
+                    "| {} | {} | {} / {} / {} | {} {} | {} | {}{} | {} | {} | {} |\n",
                     i.v,
                     if i.veto { "是" } else { "" },
                     i.pass,
@@ -123,11 +196,13 @@ impl Card {
                     i.unknown,
                     f(i.mean),
                     i.unit,
+                    ci_text(i),
                     f(i.worst),
                     i.worst_clip
                         .as_ref()
                         .map_or(String::new(), |w| format!("（{w}）")),
                     f(i.threshold),
+                    rule_short(i.rule),
                     if i.report_only {
                         format!("{}（只报不判）", i.status.zh())
                     } else {
@@ -137,30 +212,37 @@ impl Card {
             }
             let l = &c.listen;
             s += &format!(
-                "| 听感（SCOREQ + Distill-MOS 都说不比原声差） | | {} / {} / {} | SCOREQ Δ {} · Distill-MOS Δ {} | | Δ ≥ 0 | {} |\n\n",
+                "| 听感（SCOREQ + Distill-MOS 都说不比原声差） | | {} / {} / {} | SCOREQ Δ {} · Distill-MOS Δ {} | | | {} | {} | {} |\n\n",
                 l.pass,
                 l.fail,
                 l.unknown,
                 l.mean_scoreq.map_or("—".into(), |x| format!("{x:+.3}")),
                 l.mean_distill.map_or("—".into(), |x| format!("{x:+.3}")),
+                l.models
+                    .first()
+                    .and_then(|m| m.threshold)
+                    .map_or("Δ ≥ 0".into(), |t| format!("Δ ≥ {t}")),
+                l.models.first().map_or("逐段", |m| rule_short(m.rule)),
                 l.status.map_or("待测", CardStatus::zh)
             );
             // 两个评分模型各自的明细（只给人看，不单独决定场景）
             if !l.models.is_empty() {
-                s += "| 评分模型 | 过 / 不过 / 待测（段） | Δ 均值 | 最差（段） |\n|---|---|---|---|\n";
+                s += "| 评分模型 | 过 / 不过 / 待测（段） | Δ 均值 | 95% 区间 | 最差（段） | 判定 |\n|---|---|---|---|---|---|\n";
                 for m in &l.models {
                     let f = |v: Option<f64>| v.map_or("—".into(), |x| format!("{x:+.3}"));
                     s += &format!(
-                        "| {} | {} / {} / {} | {} | {}{} |\n",
+                        "| {} | {} / {} / {} | {} | {} | {}{} | {} |\n",
                         m.v,
                         m.pass,
                         m.fail,
                         m.unknown,
                         f(m.mean),
+                        ci_text(m),
                         f(m.worst),
                         m.worst_clip
                             .as_ref()
-                            .map_or(String::new(), |w| format!("（{w}）"))
+                            .map_or(String::new(), |w| format!("（{w}）")),
+                        if m.ci.is_some() { m.status.zh() } else { "—" }
                     );
                 }
                 s += "\n";
@@ -209,6 +291,25 @@ impl Card {
     }
 }
 
+fn ci_text(i: &ItemCell) -> String {
+    i.ci.as_ref().map_or("—".into(), |c| {
+        format!("[{:.3}, {:.3}]（{} 组）", c.lo, c.hi, c.groups)
+    })
+}
+
+/// 判法的短名（表头图例见 v2 说明行）。
+fn rule_short(r: &str) -> &'static str {
+    use super::rules_v2 as v2;
+    match r {
+        x if x == v2::RULE_PHYS => "逐段",
+        x if x == v2::RULE_EAT => "≥5字",
+        x if x == v2::RULE_MEAN => "区间",
+        x if x == v2::RULE_REPORT => "只报",
+        x if x == v2::RULE_OLD_INPUT => "只报·旧口径",
+        _ => "逐段",
+    }
+}
+
 fn key(c: &SceneCard) -> String {
     format!(
         "{} · {} · {} · {}",
@@ -217,4 +318,73 @@ fn key(c: &SceneCard) -> String {
         c.device,
         c.system
     )
+}
+
+#[cfg(test)]
+mod header_tests {
+    use super::*;
+
+    /// 人定 D85 题 2：v2 成绩单自己要写明三项在干净人声那一路上量、只量得到安静时的人声损伤（收尾第 2 轮 P2 #2）。
+    #[test]
+    fn v2_markdown_states_clean_pass_limit() {
+        let v2 = Card::build_with(&[], Vec::new(), Rules::V2).to_markdown("t");
+        assert!(v2.contains("只量得到安静时的人声损伤"), "{v2}");
+        assert!(v2.contains("V-PUMPV") && v2.contains("V-TIMBRE") && v2.contains("V-WEAK"));
+        let v1 = Card::build_with(&[], Vec::new(), Rules::V1).to_markdown("t");
+        assert!(!v1.contains("只量得到安静时的人声损伤"));
+    }
+
+    /// 系统没提供干净人声输出（外部系统缺 `clean/`）时，三项落「只报·旧口径」，成绩单开头要点名这个系统（大总管 2026-11-05）。
+    #[test]
+    fn v2_markdown_names_systems_without_clean_pass() {
+        use crate::Score;
+        use crate::scene::{MeetingPlace, Tier};
+        let row = |sys: &str, marked: bool| {
+            let mut s = Score::judged(
+                "V-PUMPV",
+                0.5,
+                "dB²",
+                crate::verifiers::info("V-PUMPV").unwrap().better,
+                Some(1.0),
+                &[],
+            );
+            if marked {
+                s = s.with_extra(super::super::standard::CLEAN_PASS_MARK, 1.0);
+            }
+            ClipRow {
+                clip: "cafe-c00-mba".into(),
+                scene: MeetingPlace::Cafe,
+                tier: Tier::Common,
+                device: "mba-builtin".into(),
+                system: sys.into(),
+                sounds: Vec::new(),
+                scores: vec![("V-PUMPV", false, s)],
+            }
+        };
+        let rows = [row("passthrough", true), row("pt-ext", false)];
+        let md = Card::build_with(&rows, Vec::new(), Rules::V2).to_markdown("t");
+        let line = md
+            .lines()
+            .find(|l| l.contains("未提供干净人声输出"))
+            .unwrap_or_else(|| panic!("{md}"));
+        assert!(
+            line.contains("pt-ext") && !line.contains("passthrough"),
+            "{line}"
+        );
+        assert!(
+            line.contains("人声忽大忽小 · 音色 · 轻声字三项不判"),
+            "{line}"
+        );
+        let card = Card::build_with(&rows[..1], Vec::new(), Rules::V2);
+        assert!(!card.to_markdown("t").contains("未提供干净人声输出"));
+        assert_eq!(
+            card.to_json(serde_json::json!({}))["no_clean_pass"],
+            serde_json::json!([])
+        );
+        let card = Card::build_with(&rows, Vec::new(), Rules::V2);
+        assert_eq!(
+            card.to_json(serde_json::json!({}))["no_clean_pass"],
+            serde_json::json!(["pt-ext"])
+        );
+    }
 }
