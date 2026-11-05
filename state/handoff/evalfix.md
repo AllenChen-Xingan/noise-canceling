@@ -1,11 +1,11 @@
 # 现状页 · 手下 evalfix（#111 成绩单评分方法修正）
 
-状态：进行中 · 冒烟通过，等全量名额
+状态：进行中 · 全量跑完、结论已写，收尾 codex 评审中
 分支 `feat/scorecard-v2` · worktree `../noise_canceling-evalfix` · 管的实体：评测器 · 成绩单（规则与报告）· 定标等级
 
 ## 做到哪
 
-代码全部完成，冒烟通过（全量估约 2.5 h）。已申请全量名额，等「名额给你」。全量跑完后写 exp014 findings 新一节，再做收尾 codex 评审。
+代码全部完成；全量重跑 `20261105-005916-4ccf0638` 跑完（1440 段，0 没跑成，9986 s）。结果 `docs/experiments/exp014-scorecard-gtcrn/runs/20261105-005916-4ccf0638/`，结论 `findings.md` 第十一节。剩收尾 codex 评审（连续两轮无 P0/P1 停）。
 
 ## 人定 D85（2026-11-04，替换计划里的「默认」）
 
@@ -87,3 +87,7 @@ G-1 B 均值 + 95% 区间三态（X1 X2 X4），最差 1–3 段送人耳 · G-2
 - 2026-11-05 冒烟读数（推断，1 个场景）：原声直通「不做坏事」各项全 0；三个系统「旁人漏过」都 100%；GTCRN 在干净人声上「人声忽大忽小」均值 1.54 dB²（线 1）
 - 2026-11-05 延迟预算（大总管加的小事）：`src/types/src/latency.rs` 只加 `planned_platform_for` · `needs_resample` · `RESAMPLE_COMPONENTS` + 测试；`system.rs` 改调新函数、加 `SystemKind::native_rate()` + 测试；外部系统字段 `native_rate` 已发 cands
 - 2026-11-05 申请全量名额
+- 2026-11-05 全量（名额，接电源）：00:59–03:45，9986 s，1440 段 0 没跑成；名额已归还。小文件进 `runs/20261105-005916-4ccf0638/`（README · compare.md · compare.py）；findings 第十一节「新规则下的结论」
+- 2026-11-05 大总管验收：全量测试 0 红 · tidy 过；vdn-schema 红（新 4 项没重导出）→ `cargo run -p vdn-schema` 重导出，只多 4 个评分项名，测试绿
+- 2026-11-05 findings 补两处（大总管要求）：「同时说话只留用户」均值 0 与失败率 1 不矛盾 · GTCRN 场景总判只重新汇总 vs 重跑差 3 个组合的原因
+- 2026-11-05 收尾 codex 评审第 1 轮开跑（对象 `4493f0ce..4ccf0638` + 结论文档作依据）
