@@ -11,6 +11,9 @@
 
 use std::time::{Duration, Instant};
 
+pub mod external;
+use external::{External, Replay};
+
 use vdn_dsp::StreamingStft;
 use vdn_engine::testing::DelayGain;
 use vdn_engine::{Engine, EngineStats, FaultInjector, FaultKind, Model, ModelError, SafetyConfig};
@@ -118,6 +121,7 @@ pub enum EvalModel {
     Passthrough(DelayGain),
     Ref(Box<RefWiener>),
     Real(Box<AnyModel>),
+    Replay(Box<Replay>),
 }
 
 impl Model for EvalModel {
@@ -126,6 +130,7 @@ impl Model for EvalModel {
             EvalModel::Passthrough(m) => m.name(),
             EvalModel::Ref(m) => m.name(),
             EvalModel::Real(m) => m.name(),
+            EvalModel::Replay(m) => m.name(),
         }
     }
     fn sample_rate(&self) -> u32 {
@@ -133,6 +138,7 @@ impl Model for EvalModel {
             EvalModel::Passthrough(m) => m.sample_rate(),
             EvalModel::Ref(m) => m.sample_rate(),
             EvalModel::Real(m) => m.sample_rate(),
+            EvalModel::Replay(m) => m.sample_rate(),
         }
     }
     fn hop(&self) -> usize {
@@ -140,6 +146,7 @@ impl Model for EvalModel {
             EvalModel::Passthrough(m) => m.hop(),
             EvalModel::Ref(m) => m.hop(),
             EvalModel::Real(m) => m.hop(),
+            EvalModel::Replay(m) => m.hop(),
         }
     }
     fn latency_samples(&self) -> usize {
@@ -147,6 +154,7 @@ impl Model for EvalModel {
             EvalModel::Passthrough(m) => m.latency_samples(),
             EvalModel::Ref(m) => m.latency_samples(),
             EvalModel::Real(m) => m.latency_samples(),
+            EvalModel::Replay(m) => m.latency_samples(),
         }
     }
     fn reset(&mut self) {
@@ -154,6 +162,7 @@ impl Model for EvalModel {
             EvalModel::Passthrough(m) => m.reset(),
             EvalModel::Ref(m) => m.reset(),
             EvalModel::Real(m) => m.reset(),
+            EvalModel::Replay(m) => m.reset(),
         }
     }
     fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), ModelError> {
@@ -161,6 +170,7 @@ impl Model for EvalModel {
             EvalModel::Passthrough(m) => m.process(input, output),
             EvalModel::Ref(m) => m.process(input, output),
             EvalModel::Real(m) => m.process(input, output),
+            EvalModel::Replay(m) => m.process(input, output),
         }
     }
 }
@@ -172,10 +182,21 @@ pub enum SystemKind {
     Ref,
     Gtcrn,
     FastEnhancerM,
+    /// 外部离线输出（`external:<目录>`，见 [`external`]）
+    External(&'static External),
 }
 
 impl SystemKind {
     pub fn parse(s: &str) -> Option<SystemKind> {
+        if let Some(dir) = s.strip_prefix("external:") {
+            // 自检不过：原因打到 stderr，调用方照旧报「未知系统」
+            return Self::load_external(dir)
+                .map_err(|e| eprintln!("外部系统 {dir}：{e}"))
+                .ok();
+        }
+        Self::parse_builtin(s)
+    }
+    fn parse_builtin(s: &str) -> Option<SystemKind> {
         Some(match s {
             "passthrough" => SystemKind::Passthrough,
             "ref" => SystemKind::Ref,
@@ -192,6 +213,39 @@ impl SystemKind {
             SystemKind::Ref => "ref",
             SystemKind::Gtcrn => ModelId::Gtcrn.as_str(),
             SystemKind::FastEnhancerM => ModelId::FastEnhancerM.as_str(),
+            SystemKind::External(e) => e.name(),
+        }
+    }
+    /// 载入外部输出目录（相对主目录或绝对路径）并自检。
+    pub fn load_external(dir: &str) -> Result<SystemKind, String> {
+        let root = crate::suite::main_root();
+        let d = std::path::Path::new(dir);
+        let d = if d.is_absolute() {
+            d.to_path_buf()
+        } else {
+            root.join(d)
+        };
+        let e = External::load(&d, &root, crate::suite::resolve, |n| {
+            Self::parse_builtin(n).is_some()
+        })?;
+        Self::external(e)
+    }
+    /// 外部系统活到进程结束（`SystemKind` 是 `Copy`，名字要 `&'static`）。
+    /// 同一进程里名字只能载入一次：两个目录同名时成绩单行分不清来源（codex 016 入口第 1 轮 P1 #1）。
+    pub fn external(e: External) -> Result<SystemKind, String> {
+        static NAMES: std::sync::Mutex<std::collections::BTreeSet<String>> =
+            std::sync::Mutex::new(std::collections::BTreeSet::new());
+        let mut names = NAMES.lock().map_err(|_| "外部系统名表锁坏了")?;
+        if !names.insert(e.name().to_string()) {
+            return Err(format!("外部系统名 {} 已被另一个目录用过", e.name()));
+        }
+        Ok(SystemKind::External(Box::leak(Box::new(e))))
+    }
+    /// 外部系统的追溯信息（进成绩单元数据）；内置系统为 `None`。
+    pub fn provenance(self) -> Option<serde_json::Value> {
+        match self {
+            SystemKind::External(e) => Some(e.provenance().clone()),
+            _ => None,
         }
     }
     fn model_kind(self) -> Option<ModelKind> {
@@ -247,8 +301,9 @@ impl RunOut {
     }
 }
 
-fn build(spec: &SystemSpec) -> Result<Engine<FaultInjector<EvalModel>>, String> {
+fn build(spec: &SystemSpec, x: &[f32]) -> Result<Engine<FaultInjector<EvalModel>>, String> {
     let model = match spec.kind {
+        SystemKind::External(e) => EvalModel::Replay(Box::new(e.replay(x, e.name())?)),
         SystemKind::Passthrough => EvalModel::Passthrough(DelayGain::new(256, 0, 1.0)),
         SystemKind::Ref => EvalModel::Ref(Box::default()),
         k => {
@@ -275,7 +330,7 @@ fn build(spec: &SystemSpec) -> Result<Engine<FaultInjector<EvalModel>>, String> 
 
 /// 跑一段。
 pub fn run(spec: &SystemSpec, x: &[f32]) -> Result<RunOut, String> {
-    let mut eng = build(spec)?;
+    let mut eng = build(spec, x)?;
     let hop = eng.hop();
     let lat = eng.latency_samples();
     let mut ledger = eng.latency_ledger();
@@ -298,6 +353,10 @@ pub fn run(spec: &SystemSpec, x: &[f32]) -> Result<RunOut, String> {
         prev = s;
     }
     let out = raw[lat..lat + x.len()].to_vec();
+    if matches!(spec.kind, SystemKind::External(_)) {
+        // 回放不耗时：计时给空，最坏一帧判「不知道」，不许假过
+        times.clear();
+    }
     Ok(RunOut {
         out,
         raw,
