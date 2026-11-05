@@ -9,7 +9,7 @@
 | S1 | Rong 等，GTCRN（ICASSP 2024）· 官方代码 `resources/gtcrn/`（主目录，只读） | 结构、参数量 23.67 K、33.0 MMACs/s（源码头注释）；TRA = 沿时间的 GRU 通道注意力，已在 GTCRN 里 | 本仓代码 |
 | S2 | Rong 等，UL-UNAS（arXiv 2503.00340v2，2025）表 III | 在 GTCRN 式原型上加「因果时频注意力」：时间支 PESQ 1.99 → 2.09、ESTOI 74.08 → 75.44，+48 K 参数、+3.2 MMACs/s；频率支单独 1.99 → 2.00（「几乎没用」）；两支合计 2.15、+5.9 MMACs/s。频率支用双向 GRU，不是自注意力；时间支就是 GTCRN 的 TRA | 全文（HTML） |
 | S3 | 同上，表 VI（DNS3 测试集，统一重训） | GTCRN 48 K / 34 MMACs/s · PESQ 2.10；UL-UNAS 171 K / 35 MMACs/s · PESQ 2.30 | 全文 |
-| S4 | Wang 等，Adaptive Convolution for CNN-based Speech Enhancement Models（arXiv 2502.14224v2，IEEE TASLP 2025）表 III / V | GTCRN 把普通卷积换成逐帧动态卷积：23.67 K → 117.36 K 参数，33.83 → 40.75 MMACs/s（+20%），PESQ 2.130 → 2.292，ESTOI 0.727 → 0.747，SI-SNR 13.55 → 14.30（DNS5 测试集） | 全文（表格经抓取工具转述，列对齐未逐格核） |
+| S4 | Wang 等，Adaptive Convolution for CNN-based Speech Enhancement Models（arXiv 2502.14224v2，IEEE TASLP 2025）表 III / V | GTCRN 把普通卷积换成逐帧动态卷积：23.67 K → 117.36 K 参数，33.83 → 40.75 MMACs/s（+20%），PESQ 2.130 → 2.292，ESTOI 0.727 → 0.747，SI-SNR 13.55 → 14.30（DNS5 测试集） | 全文（表格经抓取工具转述）：PESQ +0.16 与论文正文「约 0.16」一致；DNSMOS 几列的对齐是推断 |
 
 文献数字都是论文自己的测试集（DNS3 / DNS5，英文为主），**不能直接换算成我们成绩单上的分数**；只用来排先后。
 
