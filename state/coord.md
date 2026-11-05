@@ -28,6 +28,14 @@
 |---|---|---|---|
 | card1 | exp014 第一张场景成绩单（GTCRN）· #92 · `exp/014-scorecard-gtcrn` · `../noise_canceling-card1` | 成绩单（报告）· 降噪模型 GTCRN · 评测器（只用） | 完成，已收尾（窗口已关）· PR #97 待合并 |
 | evalbp | 调研 025 成绩单评分方法对照业界做法 · #105 · `research/025-eval-best-practice` · `../noise_canceling-evalbp` | 评测器（只读）· 成绩单标准（只读）· 调研 025 | 完成，已收尾（窗口已关）· PR #108 待合并 · 开 issue #109 #110 |
+
+**b15（2026-11-04，人「就是第一个大事情 / 就是评测集这个」）**：修好成绩单的评分方法 + 候选模型上同一张成绩单。批次 `_tmp/20261104-b15/`，大总管 `noise-canceling-84`，tmux 工作区 `vdn`。G-1..G-7 按默认推进，待人确认。
+
+| 手下 | 线 | 管的实体 | 状态 |
+|---|---|---|---|
+| evalfix | 成绩单评分方法修正（025）+ 重出 GTCRN 成绩单 · #111（含 #109 #110）· `feat/scorecard-v2` · `../noise_canceling-evalfix` | 评测器 · 成绩单 · 定标等级 | 已派，等报到 |
+| cands | exp016 候选模型（DFN3 低延迟版 · DPDFNet-2 · NoNoise-Mac）上同一张成绩单 · #112 · `exp/016-candidates` · `../noise_canceling-cands` | 降噪模型候选 · 外部输出入口 · 成绩单（只用） | 已派，等报到 |
+
 ⚠️ 人要真实数据集与 D62「开发阶段不用真实录音」可能冲突 → mtgdata 出选项，进待拍板。
 
 ## 上一件大事（2026-11-02，已收口）
