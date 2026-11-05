@@ -2,8 +2,8 @@
 
 > 对象：`git diff 4493f0ce..HEAD`（分支 `feat/scorecard-v2`，issue #111）。依据：调研 025 `decision.md` · 人定 D85（2026-11-04，七题答案）· `specs/rubric/scorecard.md`。
 > 本线按大总管安排插两次中途评审（各 1–2 轮，修掉 P0/P1 即继续），收尾那次按连续两轮无 P0/P1 停。
-> **最新一轮：中途 1 第 2 轮（2026-11-04）· 总评「修改」· 中途评审按约定 2 轮即止，P1 已全部修掉；收尾评审另跑**。
-> 累计处理：P1×4、P2×3 逐条回源码核实，属实 7、驳回 0。新冒出要人定的事并入 `state/handoff/evalfix.md`「待人拍板」。
+> **最新一轮：中途 2 第 1 轮（2026-11-05）· 总评「修改」· P1 已修，开第 2 轮确认**。
+> 累计处理：P1×6、P2×5 逐条回源码核实，属实 11、驳回 0。新冒出要人定的事并入 `state/handoff/evalfix.md`「待人拍板」。
 
 ## 中途 1 · 第 1 轮（2026-11-04）· 总评「修改」
 
@@ -53,3 +53,24 @@
 ### 引用抽查
 
 - 「不符」1 条即本轮 #2，已改；「核实属实」5 条
+
+## 中途 2 · 第 1 轮（2026-11-05）· 总评「修改」
+
+对象同上（`4493f0ce..HEAD`），重点换成第 3 组口径：G-2 B 干净人声那一路 · 量输出四项（`verifiers/pse.rs`）· 025 旁报 · B3 主值修正 · 频谱对拍基准的冻结法。原文：主目录 `_tmp/evalfix/reviews/scorecard-v2-mid2-codex-1.md`（不入库）。effort medium。
+
+- **P1｜`verifiers/pse.rs:211` 全零输出被算成 SI-SDR 200 dB**（中途 2 第 1 轮 #1）
+  - 核实：属实。投影与残差都为 0 时走了「完美重建」分支，把用户整段删掉的系统反而得高分、失败率 0
+  - 处理：投影能量为 0 记下限 −200 dB（`SI_SDR_CAP`），完美重建仍记 +200。测试 `pse_ovl_zero_output_is_total_failure`
+- **P1｜`scorecard/mod.rs:295` 干净人声那一路的音色仍用带噪场景的掩码与扣噪**（中途 2 第 1 轮 #2）
+  - 核实：属实。V-TIMBRE 排除原场景旁人有声帧、又从停顿帧扣残留噪声；干净输出的停顿里是主讲人混响尾巴，会被当噪声扣掉，读数还随原场景旁人时间变
+  - 处理：`runner::Prepared::clean_view` 给干净人声那一路专用上下文：旁人掩码与「只有噪音」掩码全空（不扣噪，参考与输出对称），主讲人掩码照用真值。测试 `clean_view_timbre_is_zero_and_ignores_interferer_timing` · `clean_view_does_not_subtract_reverb_tail`
+- **P2｜`verifiers/pse.rs:144` 整秒网格漏掉跨秒的旁人独说**（中途 2 第 1 轮 #3）
+  - 核实：属实
+  - 处理：1 s 窗按 100 ms 步长滑动，读数是窗的占比。测试 `leak_finds_window_off_the_second_grid`（时间轴平移 0.3 s 仍检出）
+- **P2｜`verifiers/pse.rs:95` 漏了字头 200 ms 内的误删比例**（中途 2 第 1 轮 #4）
+  - 核实：属实（025 `notes/group-D.md:50` 要求单列）
+  - 处理：V-TSOS 旁报 `onset_frames` · `onset200_pct`（字头 = 前面停了 ≥ 300 ms 的开口）。测试 `tsos_reports_onset_window_share`
+
+### 引用抽查
+
+- 「核实属实」4 条；「无法核实」1 条：引擎重置与延迟对齐在 `system.rs`（codex 未读）。补充：两路都调用 `system::run`，每次新建引擎；对齐由同一个 `run` 做
