@@ -88,7 +88,7 @@ fn biquad(x: &[f32], sr: f64, kind: u8, fc: f64, gain_db: f64, q: f64) -> Vec<f3
         .collect()
 }
 
-/// 4 节 2 阶低通（Q = 0.707 的峰值式写法不适用，这里直接用 RBJ 低通）。
+/// RBJ 2 阶低通（Q = 0.707）串 4 节。
 fn lowpass(x: &[f32], sr: f64, fc: f64) -> Vec<f32> {
     let w = 2.0 * std::f64::consts::PI * fc / sr;
     let (cw, al) = (w.cos(), w.sin() / (2.0 * std::f64::consts::FRAC_1_SQRT_2));
