@@ -337,6 +337,21 @@ pub(super) fn v_timbre(c: &Ctx, p: &Params) -> Score {
         return Score::unknown(ID, "dB", Better::Lower, "主讲人有声谱帧不足");
     }
     let sr = c.clip.sr;
+    // 上沿越过奈奎斯特频率的带不计（#110：否则空带读成 −200 dB、拖偏相对总电平）
+    let keep: Vec<usize> = (0..BANDS.len())
+        .filter(|&i| BANDS[i].1 <= sr as f64 / 2.0)
+        .collect();
+    if keep.len() < 3 {
+        return Score::unknown(
+            ID,
+            "dB",
+            Better::Lower,
+            format!(
+                "采样率 {sr} Hz：奈奎斯特以下只剩 {} 个完整频带，少于 3 个",
+                keep.len()
+            ),
+        );
+    }
     let band_pow = |sg: &Spectrogram, ks: &[usize]| -> [f64; 4] {
         let mut out = [0.0; 4];
         if ks.is_empty() {
@@ -362,28 +377,29 @@ pub(super) fn v_timbre(c: &Ctx, p: &Params) -> Score {
         .zip(&pn)
         .map(|(o, n)| (o - n).max(0.1 * o).max(1e-20))
         .collect();
-    let tot_c: f64 = pc.iter().sum();
-    let tot_o: f64 = po.iter().sum();
+    let tot_c: f64 = keep.iter().map(|&i| pc[i]).sum();
+    let tot_o: f64 = keep.iter().map(|&i| po[i]).sum();
     if tot_c <= 0.0 {
         return Score::unknown(ID, "dB", Better::Lower, "干净参考全零");
     }
-    let dev: Vec<f64> = (0..4)
-        .map(|i| (db10(po[i]) - db10(tot_o)) - (db10(pc[i]) - db10(tot_c)))
+    let dev: Vec<(usize, f64)> = keep
+        .iter()
+        .map(|&i| (i, (db10(po[i]) - db10(tot_o)) - (db10(pc[i]) - db10(tot_c))))
         .collect();
     let worst = dev
         .iter()
-        .cloned()
+        .map(|(_, d)| *d)
         .fold(0.0f64, |a, b| if b.abs() > a.abs() { b } else { a });
-    Score::judged(
-        ID,
-        worst.abs(),
-        "dB",
-        Better::Lower,
-        Some(p.f_or("max", th::TIMBRE.def("max"))),
-        th::TIMBRE.edges,
+    const NAMES: [&str; 4] = ["dev_0_1k", "dev_1_2k", "dev_2_4k", "dev_4_8k"];
+    dev.iter().fold(
+        Score::judged(
+            ID,
+            worst.abs(),
+            "dB",
+            Better::Lower,
+            Some(p.f_or("max", th::TIMBRE.def("max"))),
+            th::TIMBRE.edges,
+        ),
+        |s, (i, d)| s.with_extra(NAMES[*i], *d),
     )
-    .with_extra("dev_0_1k", dev[0])
-    .with_extra("dev_1_2k", dev[1])
-    .with_extra("dev_2_4k", dev[2])
-    .with_extra("dev_4_8k", dev[3])
 }
