@@ -36,7 +36,7 @@
 - 流式 ONNX 版照这个结构实现：掩码那级缓冲延 2 帧（`onnx_model/layers.py:377-383`，`delay_frames=2`），DF 系数再延 2 帧（`onnx_model/multiframe.py:171-175`）。官方离线推理脚本也按 4 帧对齐（`onnx_model/infer_dpdfnet_onnx.py:18` `ATTN_LIMIT_NOISY_FRAME_OFFSET = 4`，`:177` 注释「advances the output by ~4 hops」）。
 - 所以 60 ms = 窗长 20 ms + 4 帧 × 10 ms。
 
-**所有官方权重都一样**（读源码）：
+**所有官方权重的前视设置相同**（读源码，权重未逐个实测）：
 - 16 kHz 版：导出脚本 `onnx_model/export_dpdfnet_to_onnx.py` 导入的是 `onnx_model/dpdfnet.py`（第 9 行）。它的默认值同样是 `df_lookahead=2`、`conv_lookahead=2`、`mask_method='before_df'`（`onnx_model/dpdfnet.py:547-553`）。`build_model`（`:91-105`）只按版本改 `dprnn_num_blocks`，这三个参数都不改。所以 baseline / 2 / 4 / 8 的前视相同。
 - 48 kHz 版：另有导出脚本 `onnx_model/export_dpdfnet_48khz_hr_to_onnx.py`，导入 `onnx_model/dpdfnet_48khz_hr.py`（第 9 行）。它的默认值也是 2 / 2 / `before_df`（`:612-618`），导出脚本没传这几个参数（读源码）。帧长和 hop 不同，所以毫秒数要另算，本文不算。
 - 以上是「读源码 + 导出配置」的结论。权重文件里的实际前视没有逐个实测，只有 dpdfnet2（16 kHz）有对齐实测（下文）。
