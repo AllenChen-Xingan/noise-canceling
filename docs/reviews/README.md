@@ -30,4 +30,4 @@
 | 102 | 2026-11-04 | [统一频谱模块支持 Kaldi 分帧 · 认人 fbank 改调 · R-FFT 规则](102_frontend-speaker-codex.md)（`d23bfe66..HEAD`，issue #102，codex gpt-6-astra，2 轮，已达停止线） | 采纳 2 / 提出 3（P2×3；驳回 1；无 issue） |
 | 025 | 2026-11-04 | [成绩单评分方法对照业界做法](025_eval-best-practice-codex.md)（matrix · decision · sources · notes/group-A–F · notes/scripts，issue #105，codex gpt-6-astra，9 轮，已达停止线） | 采纳 35 / 提出 35（P1×15 P2×20；无 issue） |
 | 104 | 2026-11-04 | [评测器 4 处频谱计算改调统一模块 · 评分逐位不变](104_frontend-eval-codex.md)（`f2782cf4...HEAD`，issue #104，codex gpt-6-astra，2 轮，已达停止线） | 采纳 4 / 提出 4（P2×4；无 issue） |
-| 111 | 2026-11-04 | [成绩单评分方法修正：新汇总规则 v2 · #109 · #110](111_scorecard-v2-codex.md)（`4493f0ce..HEAD`，issue #111，codex gpt-6-astra，中途 1 · 中途 2 各 2 轮；收尾评审待跑） | 采纳 14 / 提出 14（P1×7 P2×7；无 issue） |
+| 111 | 2026-11-04 | [成绩单评分方法修正：新汇总规则 v2 · #109 · #110](111_scorecard-v2-codex.md)（`4493f0ce..HEAD`，issue #111，codex gpt-6-astra，中途 1 · 中途 2 各 2 轮；收尾第 1 轮 P2×3） | 采纳 17 / 提出 17（P1×7 P2×10；无 issue） |

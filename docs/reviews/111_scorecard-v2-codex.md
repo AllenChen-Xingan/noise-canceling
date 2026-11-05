@@ -93,3 +93,23 @@
 ### 引用抽查
 
 - 「核实属实」5 条；「无法核实」1 条（同第 1 轮，`system.rs` 未读）
+
+## 收尾 · 第 1 轮（2026-11-05）· 总评「修改」· P0×0 P1×0 P2×3
+
+对象：`4493f0ce..4ccf0638`（整条分支的代码）；依据另带结论文档 `docs/experiments/exp014-scorecard-gtcrn/findings.md` 第十一节、全量 run `20261105-005916-4ccf0638` 的 README 与 compare.md、人定 D85。模型 gpt-6-astra · read-only · effort medium，119 s。
+
+- **P2｜`scorecard/load.rs:199` v2 的 clips.jsonl 能用 `--rules v1` 重新汇总，结果并非旧口径**（收尾第 1 轮 #1）
+  - 核实：属实。v2 下三项（人声忽大忽小 · 音色偏差 · 弱音丢失）是干净人声那一路的读数，v1 要的是带噪读数
+  - 处理：`resummarize` 在 v1 下遇到带 `clean_pass` 的读数即报错，提示用 v1 重跑音频。先写会红的测试 `v1_refuses_rows_scored_on_clean_pass`（红 → 绿）；`specs/rubric/scorecard.md` 第 7 行同步
+- **P2｜findings 第十一节不过原因与吃字组合的数字合计对不上，且 compare 里查不到**（收尾第 1 轮 #2）
+  - 核实：属实。「9 个带吃字」应为 11；「10 个压力档 + 3 个常见档」应为 8 + 3
+  - 处理：`runs/20261105-005916-4ccf0638/compare.py` 加三节（场景总判不过原因分解 · 吃字与人声忽大忽小判不过的组合明细含区间 · 只重新汇总 → 重跑变了的组合），重生成 compare.md；正文按表改为 22 + 7 + 11 = 40、8 压力 + 3 常见、区间下沿 ≤ 0 的 10 个
+- **P2｜「三个系统都接近完全不处理旁人」写成实测**（收尾第 1 轮 #3）
+  - 核实：属实。漏旁人 ≈ 100% 只说明压低没到 10 dB；同时说话那项 GTCRN 只有 68/242 段全部重叠段不到 1 dB
+  - 处理：两项分开写各自的量与实测数；「离把旁人去掉很远」改标【推断】；写明两项尚无判定线
+
+### 引用抽查
+
+- 「核实属实」6 条（场景总判排除只报项 · 重叠先交集后桥接 · e2e 逐项断言 · meta.power · `planned_platform_for` 16 kHz 仍计重采样且旧函数未改 · v2 标准与阈值机器比对）；「无法核实」1 条（测试先红后绿的先后，只能看提交链）
+
+自检：`cargo test -p vdn-eval` 全绿 · `cargo clippy -p vdn-eval --all-targets` 无警告 · `xtask tidy` 通过。大总管已亲手跑全量测试（`--no-fail-fast`）0 红；其间发现 `specs/schema/eval-suite.schema.json` 没随 4 个新项重导出，已用 `cargo run -p vdn-schema` 重导出（只多 4 个项名）并随 `4dd81b48` 提交。

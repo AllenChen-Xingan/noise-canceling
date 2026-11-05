@@ -4,7 +4,7 @@
 > **机读正本在代码里**：跑哪些项、按什么顺序判 = `src/eval/src/scorecard/standard.rs`；过关线 = `src/eval/src/thresholds/table.rs`；汇总规则 = `src/eval/src/scorecard/rules_v2.rs`（新规则，默认）· `rules.rs`（旧规则 v1）；区间与校正 = `aggregate.rs`。
 > 本文第一节、第三节的表和第四节的数由 `src/eval/tests/scorecard_standard.rs` 逐行和代码比对，对不上即红。改标准先改代码，再改本文。
 > 命令：`vdn-eval scorecard --suite src/eval/suite/scenes.json [--system ref,gtcrn] [--qa] [--rules v1|v2]`，输出 `scorecard.md` + `scorecard.json` + `clips.jsonl`（逐段分数）。
-> 不重跑音频、只按规则重新汇总：`vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] --out <新目录>`（同目录的 `scorecard.json` 提供「没跑成的段」，缺了就报错）。
+> 不重跑音频、只按规则重新汇总：`vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] --out <新目录>`（同目录的 `scorecard.json` 提供「没跑成的段」，缺了就报错）。v2 跑出的 `clips.jsonl` 里人声忽大忽小 · 音色偏差 · 弱音丢失是干净人声那一路的读数（带 `clean_pass`），不能用 `--rules v1` 重新汇总，会报错并提示用 v1 重跑音频。
 > 成绩单元数据 `meta` 记：run id · 提交号 · 清单 · 系统 · 是否 `--qa` · 规则版本 `rules` · 电源状态 `power`（`ac` / `battery` / `unknown`，读 `pmset -g batt`；计时类读数受供电影响，025 A2）。
 > **汇总规则 v2 是人定 D85（2026-11-04，调研 025 第 ③ 节七题）**；`--rules v1` 可切回旧规则。
 
