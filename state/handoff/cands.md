@@ -63,3 +63,4 @@
 - 大总管确认 Cargo.lock 已随 8556b95b 提交（已核对）
 - 写方案 plan-dfn3-resampler.md：换 vdn-dsp 3 倍重采样（产品正本），预计前视 192、V-LAT 约 39.7 ms；发现 V-LAT 对 48 kHz 原生模型重复记了重采样预算
 - 大总管定：延迟账多记重采样 = 记账错，转 evalfix；换重采样器这批不做、记 backlog → findings 加局限、方案页首标状态、现状页改第 2 条
+- 大总管：backlog 已记（21acbb21）；native_rate 的默认值与允许取值从 vdn-types 采样率正本取（`MODEL_RATE` · `IO_RATE`），不在 external.rs 手写；最终字段以 evalfix 定的为准

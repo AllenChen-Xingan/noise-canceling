@@ -381,3 +381,26 @@ fn faults_and_resets_keep_replay_on_the_same_time_axis() {
             .any(|(i, _)| i.v == "V-FRAME" || i.v == "V-RTF")
     );
 }
+
+/// `native_rate`：不写 = MODEL_RATE；写 IO_RATE 可以；别的值自检报错（evalfix 定，#111）。
+#[test]
+fn native_rate_is_read_and_checked() {
+    let fx = setup("native");
+    let dir = write_ext(&fx, "native", "native-ext", 0, &ALL, &ident);
+    assert_eq!(
+        load(&fx, &dir).unwrap().native_rate(),
+        vdn_types::MODEL_RATE
+    );
+    let set = |v: Value| {
+        let p = dir.join("run.json");
+        let mut rj: Value = serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+        rj["native_rate"] = v;
+        std::fs::write(&p, rj.to_string()).unwrap();
+    };
+    set(json!(vdn_types::IO_RATE));
+    let e = load(&fx, &dir).unwrap();
+    assert_eq!(e.native_rate(), vdn_types::IO_RATE);
+    assert_eq!(e.provenance()["native_rate"], json!(vdn_types::IO_RATE));
+    set(json!(44_100)); // tidy: 非采样率：故意给一个不允许的值
+    assert!(load(&fx, &dir).unwrap_err().contains("native_rate"));
+}
