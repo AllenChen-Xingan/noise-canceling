@@ -108,12 +108,18 @@ fn intf_minus_floor_isolates_interferer() {
 
 #[test]
 fn bgstab_bias_corrected_passthrough_is_zero() {
-    // 原声直通：输出 = 混合，「只有噪音」那次的输出 = 噪音 + 干扰。修正后必须 ≈ 0 dB（025 B3 验收）
+    // 原声直通：输出 = 混合，「只有噪音」那次的输出 = 噪音 + 干扰。修正后主值必须 ≈ 0 dB（025 B3 验收）；
+    // 改前的读数（uncorr_db）里有主讲人混响尾巴带来的偏差，大于 0
     let c = clip(10.0, true);
     let bg: Vec<f32> = c.noise.iter().zip(&c.interf).map(|(a, b)| a + b).collect();
     let s = score("V-BGSTAB", &c, &c.mix, Some(&bg), None);
-    assert!(extra(&s, "bias_corr_db").unwrap() < 1e-9, "{s}");
-    assert!(extra(&s, "bias_corr_p95_db").unwrap() < 1e-9);
+    assert!(s.value.unwrap() < 1e-9, "{s}");
+    assert!(extra(&s, "p95_db").unwrap() < 1e-9);
+    assert!(extra(&s, "uncorr_db").unwrap() >= s.value.unwrap());
+    // 真有跳变：「插入语音」那次在停顿里把噪声抬高 12 dB，修正后仍量得出
+    let jump: Vec<f32> = c.mix.iter().zip(&bg).map(|(m, b)| m + 3.0 * b).collect();
+    let s = score("V-BGSTAB", &c, &jump, Some(&bg), None);
+    assert!(s.value.unwrap() > 10.0, "{s}");
 }
 
 #[test]

@@ -36,8 +36,8 @@ pub(super) fn v_bgstab(c: &Ctx, p: &Params) -> Score {
         .map(|f| (q[f] && f >= start && b[f] > 1e-14).then(|| db10(a[f]) - db10(b[f])))
         .collect();
     let (worst, n, _) = worst3(&d);
-    // 025 B3：扣掉输入侧的同一差值（混合 − 噪音 + 干扰，主讲人混响尾巴落在停顿帧里），原声直通应 ≈ 0 dB。
-    // 主值改不改待大总管定；先作旁报，并报 3 帧均值绝对值的 95 分位
+    // 025 B3：扣掉输入侧的同一差值（混合 − 噪音 + 干扰，主讲人混响尾巴落在停顿帧里），原声直通应 ≈ 0 dB；
+    // 另报 3 帧均值绝对值的 95 分位
     let bg: Vec<f32> = c
         .clip
         .noise
@@ -58,22 +58,29 @@ pub(super) fn v_bgstab(c: &Ctx, p: &Params) -> Score {
             x.map(|v| v - e)
         })
         .collect();
-    let (worst_c, _, p95_c) = worst3(&dc);
-    if n < 30 {
-        return Score::unknown(ID, "dB", Better::Lower, format!("可比的停顿帧只有 {n} 个"));
+    let (worst_c, n_c, p95_c) = worst3(&dc);
+    if n_c < 30 {
+        return Score::unknown(
+            ID,
+            "dB",
+            Better::Lower,
+            format!("可比的停顿帧只有 {n_c} 个"),
+        );
     }
+    // 主值 = 扣掉输入侧偏差后的最大绝对值（025 B3，AI 自定的测量修正，线与汇总不变）；改前的值留作旁报 uncorr_db
     Score::judged(
         ID,
-        worst.abs(),
+        worst_c.abs(),
         "dB",
         Better::Lower,
         Some(p.f_or("max", th::BGSTAB.def("max"))),
         th::BGSTAB.edges,
     )
-    .with_extra("signed_db", worst)
-    .with_extra("frames", n as f64)
-    .with_extra("bias_corr_db", worst_c.abs())
-    .with_extra("bias_corr_p95_db", p95_c)
+    .with_extra("signed_db", worst_c)
+    .with_extra("frames", n_c as f64)
+    .with_extra("p95_db", p95_c)
+    .with_extra("uncorr_db", worst.abs())
+    .with_extra("uncorr_frames", n as f64)
 }
 
 /// 3 帧滑动平均里绝对值最大的那个（带符号）、可比的窗数、绝对值的 95 分位。

@@ -118,13 +118,19 @@ const FROZEN: &[(&str, &[&str])] = &[
     ("V-MUTE", &[]),
     ("V-SWITCH", &[]),
     ("V-BGSTAB", &["signed_db", "frames"]),
-    ("V-ONSET", &["onsets", "p90_onset_loss_db", "voiced_loss_db"]),
+    (
+        "V-ONSET",
+        &["onsets", "p90_onset_loss_db", "voiced_loss_db"],
+    ),
     ("V-NR", &["frames", "snri_db"]),
     ("V-INTF", &["frames"]),
     ("V-SPLVL", &[]),
     ("V-MUSIC", &["kurt_in", "kurt_out", "isolated_peaks_per_s"]),
     ("V-VACUUM", &[]),
-    ("V-TIMBRE", &["dev_0_1k", "dev_1_2k", "dev_2_4k", "dev_4_8k"]),
+    (
+        "V-TIMBRE",
+        &["dev_0_1k", "dev_1_2k", "dev_2_4k", "dev_4_8k"],
+    ),
     ("V-SIM-GATE", &["onset_miss", "noise_open", "owner_hops"]),
     ("V-SIM-FA", &["interf_only_hops"]),
     ("V-SIM-SWLAT", &[]),
@@ -312,7 +318,10 @@ fn eval_spectra_match_golden() {
 #[test]
 fn frozen_items_and_fields_all_present() {
     for (id, keys) in FROZEN {
-        assert!(REGISTRY.iter().any(|i| i.id == *id), "{id} 从登记表里删掉了");
+        assert!(
+            REGISTRY.iter().any(|i| i.id == *id),
+            "{id} 从登记表里删掉了"
+        );
         if keys.is_empty() {
             continue;
         }
