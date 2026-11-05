@@ -286,13 +286,15 @@ pub fn run_with(
                         continue;
                     }
                 };
+                // 干净人声那一路用专用上下文（旁人掩码空、不扣停顿噪声）
+                let clean_view = p.clean_view();
                 let scores = t
                     .graders
                     .iter()
                     .zip(&items)
                     .map(|(g, (i, veto))| {
-                        let s = match (&p.clean_out, i.clean_input && clean_pass) {
-                            (Some(co), true) => score_one(g, sys, &t, &p, co, opts, &mut extra)
+                        let s = match (&clean_view, i.clean_input && clean_pass) {
+                            (Some((cp, co)), true) => score_one(g, sys, &t, cp, co, opts, &mut extra)
                                 .with_extra(standard::CLEAN_PASS_MARK, 1.0),
                             _ => score_one(g, sys, &t, &p, &p.run.out, opts, &mut extra),
                         };
