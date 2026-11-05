@@ -228,11 +228,18 @@ impl SystemKind {
         let e = External::load(&d, &root, crate::suite::resolve, |n| {
             Self::parse_builtin(n).is_some()
         })?;
-        Ok(Self::external(e))
+        Self::external(e)
     }
     /// 外部系统活到进程结束（`SystemKind` 是 `Copy`，名字要 `&'static`）。
-    pub fn external(e: External) -> SystemKind {
-        SystemKind::External(Box::leak(Box::new(e)))
+    /// 同一进程里名字只能载入一次：两个目录同名时成绩单行分不清来源（codex 016 入口第 1 轮 P1 #1）。
+    pub fn external(e: External) -> Result<SystemKind, String> {
+        static NAMES: std::sync::Mutex<std::collections::BTreeSet<String>> =
+            std::sync::Mutex::new(std::collections::BTreeSet::new());
+        let mut names = NAMES.lock().map_err(|_| "外部系统名表锁坏了")?;
+        if !names.insert(e.name().to_string()) {
+            return Err(format!("外部系统名 {} 已被另一个目录用过", e.name()));
+        }
+        Ok(SystemKind::External(Box::leak(Box::new(e))))
     }
     /// 外部系统的追溯信息（进成绩单元数据）；内置系统为 `None`。
     pub fn provenance(self) -> Option<serde_json::Value> {

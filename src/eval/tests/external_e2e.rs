@@ -169,7 +169,7 @@ fn opts() -> Opts {
 fn external_passthrough_matches_builtin_bit_for_bit() {
     let fx = setup("bitwise");
     let dir = write_ext(&fx, "pt", "pt-ext", 0, &ALL, &ident);
-    let ext = SystemKind::external(load(&fx, &dir).unwrap());
+    let ext = SystemKind::external(load(&fx, &dir).unwrap()).unwrap();
     let suite = parse_suite(&fx.suite).unwrap();
     let (rows, missing) = vdn_eval::scorecard::run(
         &suite,
@@ -205,7 +205,7 @@ fn declared_latency_is_reinserted_and_timing_is_empty() {
     let fx = setup("lat");
     let lat = 320;
     let dir = write_ext(&fx, "lat", "lat-ext", lat, &ALL, &ident);
-    let ext = SystemKind::external(load(&fx, &dir).unwrap());
+    let ext = SystemKind::external(load(&fx, &dir).unwrap()).unwrap();
     let clip = load_scene_clip(&fx.clips[0], &fx.root).unwrap();
     let o = run(
         &SystemSpec {
@@ -255,7 +255,7 @@ fn missing_input_kind_is_reported() {
         &[Kind::Mix, Kind::Trunc],
         &ident,
     );
-    let ext = SystemKind::external(load(&fx, &dir).unwrap());
+    let ext = SystemKind::external(load(&fx, &dir).unwrap()).unwrap();
     let clip = load_scene_clip(&fx.clips[0], &fx.root).unwrap();
     let spec = SystemSpec {
         kind: ext,
@@ -324,4 +324,25 @@ fn parse_rejects_missing_dir() {
         SystemKind::parse("passthrough"),
         Some(SystemKind::Passthrough)
     );
+}
+
+/// 两个目录同名：第二个载入报错（成绩单行分不清来源，codex 016 入口第 1 轮 P1 #1）。
+#[test]
+fn duplicate_external_name_is_rejected() {
+    let fx = setup("dup");
+    let a = write_ext(&fx, "dup-a", "dup-ext", 0, &ALL, &ident);
+    let b = write_ext(&fx, "dup-b", "dup-ext", 0, &ALL, &ident);
+    SystemKind::external(load(&fx, &a).unwrap()).unwrap();
+    let e = SystemKind::external(load(&fx, &b).unwrap()).unwrap_err();
+    assert!(e.contains("已被另一个目录用过"), "{e}");
+}
+
+/// 声明延迟 ≥ 段长 1/4：截半比较区间太短，报「无法验证」而不是空比较通过（codex 016 入口第 1 轮 P2 #2）。
+#[test]
+fn huge_declared_latency_cannot_be_verified() {
+    let fx = setup("hugelat");
+    let n = fx.clips[0].dur_samples as usize;
+    let dir = write_ext(&fx, "hugelat", "hugelat-ext", n / 2, &ALL, &ident);
+    let e = load(&fx, &dir).unwrap_err();
+    assert!(e.contains("截半自检无法验证"), "{e}");
 }

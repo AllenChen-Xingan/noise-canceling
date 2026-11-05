@@ -329,6 +329,13 @@ impl External {
                     TRUNC_TOL_FLOAT
                 };
                 let upto = (n / 2).saturating_sub(lat);
+                // 比较区间太短等于没验（延迟填错单位也会这样）：至少要有 1/4 段（codex 016 入口第 1 轮 P2 #2）
+                if upto < n / 4 {
+                    return Err(format!(
+                        "截半自检无法验证：{} 声明延迟 {lat} 样本，比较区间只剩 {upto} 样本（< 段长 1/4）",
+                        c.id
+                    ));
+                }
                 let d = a[..upto]
                     .iter()
                     .zip(&b[..upto])
