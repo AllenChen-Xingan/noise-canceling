@@ -32,3 +32,4 @@
 | 104 | 2026-11-04 | [评测器 4 处频谱计算改调统一模块 · 评分逐位不变](104_frontend-eval-codex.md)（`f2782cf4...HEAD`，issue #104，codex gpt-6-astra，2 轮，已达停止线） | 采纳 4 / 提出 4（P2×4；无 issue） |
 | 111 | 2026-11-04 | [成绩单评分方法修正：新汇总规则 v2 · #109 · #110](111_scorecard-v2-codex.md)（`4493f0ce..HEAD`，issue #111，codex gpt-6-astra，中途 1 · 中途 2 各 2 轮；收尾 2 轮，连续两轮无 P0/P1 停） | 采纳 19 / 提出 19（P1×7 P2×12；无 issue） |
 | 016 | 2026-11-04 | [exp016 候选模型上同一张成绩单：① 外部离线输出入口](016_candidates-codex.md)（`4493f0ce...HEAD`，issue #112，codex gpt-6-astra，中途 2 轮，P0/P1 清零即停） | 采纳 6 / 提出 6（P1×1 P2×5；2 条 P2 留作 issue） |
+| 028 | 2026-11-05 | [GTCRN 改结构调研与 exp019 实测脚本](028_gtcrn-arch-codex.md)（`docs/research/028_gtcrn-arch/` · `docs/experiments/exp019-gtcrn-arch/`，issue #122，codex gpt-6-astra，3 轮，已达停止线） | 采纳 14 / 提出 14（P1×4 P2×10；无 issue） |
