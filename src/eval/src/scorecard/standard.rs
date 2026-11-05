@@ -37,7 +37,7 @@ pub const VETO: [Item; 4] = [
 ];
 
 /// 所有开会场景都看的项。
-pub const COMMON: [Item; 9] = [
+pub const COMMON: [Item; 10] = [
     it("V-ONSET"),
     Item {
         v: "V-SIM-GATE",
@@ -56,6 +56,12 @@ pub const COMMON: [Item; 9] = [
     it("V-TIMBRE"),
     it("V-NRMOS-SCOREQ"),
     it("V-NRMOS-DISTILL"),
+    // 真空感：与 V-NR 同一个 TNLR，只多一列（调研 025 B4），只报不判
+    Item {
+        v: "V-VACUUM",
+        params: &[],
+        report_only: true,
+    },
 ];
 
 const NR6: Item = Item {
