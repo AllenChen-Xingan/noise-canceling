@@ -228,10 +228,29 @@ fn n4_mismatches(doc: &str) -> Vec<String> {
         format!("外扩 {} ms", GUARD_FRAMES * 10),
         format!("最低记 −{} dB", -FLOOR_DB),
         format!("D > {max} · C ≤ {} · B ≤ {} · A ≤ {}", e[2], e[1], e[0]),
+        format!("≥ {} kHz", HI_SPLIT_HZ / 1000.0),
+        format!("< {LO_SPLIT_HZ} Hz"),
     ];
-    want.into_iter()
-        .filter(|w| !para.contains(w.as_str()))
-        .collect()
+    want.into_iter().filter(|w| !has_exact(para, w)).collect()
+}
+
+/// `w` 在 `s` 里出现，且紧跟的不是数字或小数点（「A ≤ 1」不能被「A ≤ 1.5」冒充）。
+fn has_exact(s: &str, w: &str) -> bool {
+    s.match_indices(w).any(|(i, _)| {
+        !s[i + w.len()..]
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_digit() || c == '.')
+    })
+}
+
+/// 只在 N4 那一行里把 `from` 换成 `to`（同样的字可能在别段出现）。
+fn mutate_n4(doc: &str, from: &str, to: &str) -> Option<String> {
+    let a = doc.find("**N4 音色**")?;
+    let end = a + doc[a..].find('\n').unwrap_or(doc.len() - a);
+    let para = &doc[a..end];
+    para.contains(from)
+        .then(|| format!("{}{}{}", &doc[..a], para.replacen(from, to, 1), &doc[end..]))
 }
 
 #[test]
@@ -243,10 +262,13 @@ fn rubric_n4_matches_code() {
     for (from, to) in [
         ("30 带", "31 带"),
         ("B ≤ 2", "B ≤ 2.5"),
+        ("A ≤ 1", "A ≤ 1.5"),
         ("跳 512", "跳 256"),
+        ("3.8 kHz", "3.8 Hz"),
+        ("< 500 Hz", "< 600 Hz"),
+        ("外扩 30 ms", "外扩 ms"),
     ] {
-        let bad = doc.replacen(from, to, 1);
-        assert_ne!(bad, doc, "N4 里找不到「{from}」");
+        let bad = mutate_n4(doc, from, to).unwrap_or_else(|| panic!("N4 里找不到「{from}」"));
         assert!(
             !n4_mismatches(&bad).is_empty(),
             "把「{from}」改成「{to}」应被查出"

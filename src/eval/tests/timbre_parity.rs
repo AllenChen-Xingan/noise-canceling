@@ -6,7 +6,10 @@
 //!
 //! 音频不进仓，所以这条测试默认不跑。人工跑法：
 //! 1. 主目录下 `python -I docs/experiments/exp017-timbre-measure/run.py <exp013 build 目录> _tmp/026/<run-id>`
-//! 2. `VDN_EXP013=<exp013 build 目录> VDN_EXP017=_tmp/026/<run-id> cargo test -p vdn-eval --test timbre_parity -- --ignored --nocapture`
+//! 2. `VDN_EXP013=<exp013 build 目录> VDN_EXP017=_tmp/026/<run-id> cargo test -p vdn-eval --test timbre_parity -- --ignored --nocapture erb_port_matches_rust`
+//!
+//! ⚠️ `old_code_port_matches_rust` 在现在的代码上**必然红**（它比的是旧四带量法）。只在 main 90ed08f2 检出上、
+//! 把本文件拷过去后单独跑；已跑结果在 `docs/experiments/exp017-timbre-measure/parity/old-code.txt`。不要用不带测试名的 `--ignored`
 
 use std::path::Path;
 
@@ -102,7 +105,7 @@ fn parity(column: &str) {
 }
 
 #[test]
-#[ignore = "要 exp017 劣化音频与 exp013 正式 build（音频不进仓），且只对改量法之前的代码有效，人工跑，步骤见文件头"]
+#[ignore = "只对改量法之前的代码（main 90ed08f2）有效，在现在的代码上必然红；要 exp017 劣化音频与 exp013 正式 build（音频不进仓），步骤见文件头"]
 fn old_code_port_matches_rust() {
     parity("code_max");
 }
