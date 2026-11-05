@@ -212,7 +212,7 @@ class Finalize(unittest.TestCase):
             rj = json.loads((out / "run.json").read_text())
             self.assertNotIn("native_rate", rj)
             self.assertEqual((rj["schema"], rj["latency_samples"], rj["inputs"]), (_ext.SCHEMA, 7, list(_ext.KINDS)))
-            self.assertEqual(len((builds / "hashes.txt").read_text().splitlines()), 3)
+            self.assertEqual(len((builds / "hashes.txt").read_text().splitlines()), len(_ext.KINDS))
             with self.assertRaises(SystemExit):  # 不覆盖
                 _ext.finalize("x", out, builds, _ext.CLIPS, cs, {"a"}, 7, {}, None, args)
 
