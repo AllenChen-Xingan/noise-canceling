@@ -2,7 +2,7 @@
 
 use serde_json::{Value, json};
 
-use super::rules::{CardStatus, SceneCard, summarize, worst};
+use super::rules::{CardStatus, ItemCell, SceneCard, summarize, worst};
 use super::{ClipRow, Missing};
 use crate::files::serde_name;
 
@@ -37,23 +37,56 @@ pub fn write_new(dir: &std::path::Path, json: &str, md: &str) -> Result<(), Stri
     Ok(())
 }
 
+/// 汇总规则版本：`v1` = 旧规则（任一段不过即不过）；`v2` = 人定 D85 的新规则（默认）。人改主意时用 `--rules v1` 切回。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Rules {
+    V1,
+    V2,
+}
+
+impl Rules {
+    pub fn parse(s: &str) -> Option<Rules> {
+        match s {
+            "v1" => Some(Rules::V1),
+            "v2" => Some(Rules::V2),
+            _ => None,
+        }
+    }
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Rules::V1 => "v1",
+            Rules::V2 => "v2",
+        }
+    }
+}
+
 /// 整张成绩单。
 pub struct Card {
     pub cards: Vec<SceneCard>,
     pub worst: Vec<usize>,
     pub missing: Vec<Missing>,
     pub clips: usize,
+    pub rules: Rules,
 }
 
 impl Card {
+    /// 按新规则（v2）建表。
     pub fn build(rows: &[ClipRow], missing: Vec<Missing>) -> Card {
-        let cards = summarize(rows, &missing);
+        Card::build_with(rows, missing, Rules::V2)
+    }
+
+    pub fn build_with(rows: &[ClipRow], missing: Vec<Missing>, rules: Rules) -> Card {
+        let cards = match rules {
+            Rules::V1 => summarize(rows, &missing),
+            Rules::V2 => super::rules_v2::summarize(rows, &missing),
+        };
         let worst = worst(&cards);
         Card {
             cards,
             worst,
             missing,
             clips: rows.len(),
+            rules,
         }
     }
 
@@ -61,6 +94,7 @@ impl Card {
         json!({
             "doc": "场景成绩单（vdn-eval scorecard）。规则见 specs/rubric/scorecard.md；感知项全部 L0（只作约束，不当奖励）",
             "meta": meta,
+            "rules": self.rules.as_str(),
             "clips_scored": self.clips,
             "scenes": self.cards,
             "worst": self.worst.iter().map(|&i| key(&self.cards[i])).collect::<Vec<_>>(),
@@ -79,6 +113,13 @@ impl Card {
             n(CardStatus::Fail),
             n(CardStatus::Unknown)
         );
+        s += &match self.rules {
+            Rules::V1 => "汇总规则 v1（旧）：每项任一段不过即不过。\n\n".to_string(),
+            Rules::V2 => "汇总规则 v2（人定 D85）：物理硬事实项逐段否决；吃字单段多错 ≥ 5 字否决；\
+                其余项按组合均值的 95% 区间判（区间全在线内 = 过，全在线外 = 不过且经 Holm 校正，跨线 = 待测）；\
+                听感允许比原声差 0.1 分。「判法」列：逐段 · ≥5字 · 区间 · 只报 · 只报·旧口径。\n\n"
+                .to_string(),
+        };
         s += "## 最差的场景\n\n";
         if self.worst.is_empty() {
             s += "（没有不过或待测的场景）\n\n";
@@ -111,11 +152,11 @@ impl Card {
                     c.missing.len()
                 );
             }
-            s += "| 项 | 否决 | 过 / 不过 / 待测（段） | 均值 | 最差（段） | 过线 | 判定 |\n|---|---|---|---|---|---|---|\n";
+            s += "| 项 | 否决 | 过 / 不过 / 待测（段） | 均值 | 95% 区间 | 最差（段） | 过线 | 判法 | 判定 |\n|---|---|---|---|---|---|---|---|---|\n";
             for i in &c.items {
                 let f = |v: Option<f64>| v.map_or("—".into(), |x| format!("{x:.3}"));
                 s += &format!(
-                    "| {} | {} | {} / {} / {} | {} {} | {}{} | {} | {} |\n",
+                    "| {} | {} | {} / {} / {} | {} {} | {} | {}{} | {} | {} | {} |\n",
                     i.v,
                     if i.veto { "是" } else { "" },
                     i.pass,
@@ -123,11 +164,13 @@ impl Card {
                     i.unknown,
                     f(i.mean),
                     i.unit,
+                    ci_text(i),
                     f(i.worst),
                     i.worst_clip
                         .as_ref()
                         .map_or(String::new(), |w| format!("（{w}）")),
                     f(i.threshold),
+                    rule_short(i.rule),
                     if i.report_only {
                         format!("{}（只报不判）", i.status.zh())
                     } else {
@@ -137,30 +180,37 @@ impl Card {
             }
             let l = &c.listen;
             s += &format!(
-                "| 听感（SCOREQ + Distill-MOS 都说不比原声差） | | {} / {} / {} | SCOREQ Δ {} · Distill-MOS Δ {} | | Δ ≥ 0 | {} |\n\n",
+                "| 听感（SCOREQ + Distill-MOS 都说不比原声差） | | {} / {} / {} | SCOREQ Δ {} · Distill-MOS Δ {} | | | {} | {} | {} |\n\n",
                 l.pass,
                 l.fail,
                 l.unknown,
                 l.mean_scoreq.map_or("—".into(), |x| format!("{x:+.3}")),
                 l.mean_distill.map_or("—".into(), |x| format!("{x:+.3}")),
+                l.models
+                    .first()
+                    .and_then(|m| m.threshold)
+                    .map_or("Δ ≥ 0".into(), |t| format!("Δ ≥ {t}")),
+                l.models.first().map_or("逐段", |m| rule_short(m.rule)),
                 l.status.map_or("待测", CardStatus::zh)
             );
             // 两个评分模型各自的明细（只给人看，不单独决定场景）
             if !l.models.is_empty() {
-                s += "| 评分模型 | 过 / 不过 / 待测（段） | Δ 均值 | 最差（段） |\n|---|---|---|---|\n";
+                s += "| 评分模型 | 过 / 不过 / 待测（段） | Δ 均值 | 95% 区间 | 最差（段） | 判定 |\n|---|---|---|---|---|---|\n";
                 for m in &l.models {
                     let f = |v: Option<f64>| v.map_or("—".into(), |x| format!("{x:+.3}"));
                     s += &format!(
-                        "| {} | {} / {} / {} | {} | {}{} |\n",
+                        "| {} | {} / {} / {} | {} | {} | {}{} | {} |\n",
                         m.v,
                         m.pass,
                         m.fail,
                         m.unknown,
                         f(m.mean),
+                        ci_text(m),
                         f(m.worst),
                         m.worst_clip
                             .as_ref()
-                            .map_or(String::new(), |w| format!("（{w}）"))
+                            .map_or(String::new(), |w| format!("（{w}）")),
+                        if m.ci.is_some() { m.status.zh() } else { "—" }
                     );
                 }
                 s += "\n";
@@ -206,6 +256,24 @@ impl Card {
             }
         }
         s
+    }
+}
+
+fn ci_text(i: &ItemCell) -> String {
+    i.ci.as_ref()
+        .map_or("—".into(), |c| format!("[{:.3}, {:.3}]（{} 组）", c.lo, c.hi, c.groups))
+}
+
+/// 判法的短名（表头图例见 v2 说明行）。
+fn rule_short(r: &str) -> &'static str {
+    use super::rules_v2 as v2;
+    match r {
+        x if x == v2::RULE_PHYS => "逐段",
+        x if x == v2::RULE_EAT => "≥5字",
+        x if x == v2::RULE_MEAN => "区间",
+        x if x == v2::RULE_REPORT => "只报",
+        x if x == v2::RULE_OLD_INPUT => "只报·旧口径",
+        _ => "逐段",
     }
 }
 

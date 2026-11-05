@@ -144,6 +144,23 @@ pub fn parse_jsonl(text: &str) -> Result<Vec<ClipRow>, String> {
     Ok(out)
 }
 
+/// 真空感（V-VACUUM，调研 025 B4）和残留噪声（V-NR）取的是同一个 TNLR：旧 run 的行里没有这一项时，
+/// 用 V-NR 的数生成一列（只报不判，过线取表里的默认值）。已有这一项的行不动。
+pub fn derive_vacuum(rows: &mut [ClipRow]) {
+    let min = crate::thresholds::VACUUM.def("min");
+    for r in rows {
+        if r.scores.iter().any(|(v, _, _)| *v == "V-VACUUM") {
+            continue;
+        }
+        let Some(t) = r.scores.iter().find(|(v, _, _)| *v == "V-NR").and_then(|(_, _, s)| s.value) else {
+            continue;
+        };
+        let s = Score::judged("V-VACUUM", t, "dB", crate::Better::Higher, Some(min), &[])
+            .with_note("由同段 V-NR 的 TNLR 生成（025 B4）");
+        r.scores.push(("V-VACUUM", false, s));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,6 +185,22 @@ mod tests {
         let back: Value = serde_json::from_str(to_jsonl(&rows).unwrap().trim()).unwrap();
         let orig: Value = serde_json::from_str(EXP014_LINE).unwrap();
         assert_eq!(back, orig);
+    }
+
+    #[test]
+    fn vacuum_column_derived_from_nr() {
+        let mut rows = parse_jsonl(EXP014_LINE).unwrap();
+        derive_vacuum(&mut rows);
+        assert!(rows[0].scores.iter().all(|(v, _, _)| *v != "V-VACUUM"), "没有 V-NR 就不生成");
+        let mut nr = Score::judged("V-NR", -45.0, "dB", crate::Better::Lower, Some(-6.0), &[]);
+        nr.extra.clear();
+        rows[0].scores.push(("V-NR", false, nr));
+        derive_vacuum(&mut rows);
+        derive_vacuum(&mut rows);
+        let vac: Vec<_> = rows[0].scores.iter().filter(|(v, _, _)| *v == "V-VACUUM").collect();
+        assert_eq!(vac.len(), 1, "重复调用不重复加");
+        assert_eq!(vac[0].2.value, Some(-45.0));
+        assert!(vac[0].2.verdict.is_fail(), "−45 dB 低于 −40 dB 真空线");
     }
 
     #[test]
