@@ -163,19 +163,20 @@ fn external_passthrough_matches_builtin_bit_for_bit() {
     assert_eq!(p["run_json_sha256"].as_str().unwrap().len(), 64);
 }
 
-/// 声明延迟 L：回放把延迟补回去，Engine 记账 = L；对齐后的输出 = 输入；计时为空。
+/// 声明延迟 L：离线输出已对齐（≈ 输入），回放把延迟补回去——原始流晚 L 样本、Engine 记账 = L；对齐后的输出 = 文件；计时为空。
 #[test]
 fn declared_latency_is_reinserted_and_timing_is_empty() {
     let fx = setup("lat");
     let lat = 320;
-    let dir = write_ext(&fx, "lat", "lat-ext", lat, &ALL, &ahead(lat));
+    let dir = write_ext(&fx, "lat", "lat-ext", lat, &ALL, &ident);
     let ext = SystemKind::external(load(&fx, &dir).unwrap());
     let clip = load_scene_clip(&fx.clips[0], &fx.root).unwrap();
     let o = run(&SystemSpec { kind: ext, safety: false, faults: vec![] }, &clip.mix).unwrap();
     assert_eq!(o.latency, lat);
     assert!(o.engine_times.is_empty());
-    let n = clip.mix.len() - lat;
-    assert_eq!(&o.out[..n], &clip.mix[..n]);
+    assert_eq!(o.out, clip.mix);
+    assert!(o.raw[..lat].iter().all(|v| *v == 0.0));
+    assert_eq!(&o.raw[lat..lat + clip.mix.len()], &clip.mix[..]);
 }
 
 /// 偷看未来：输出看了 L + 100 样本的未来，只声明 L → 整个系统不打分。
