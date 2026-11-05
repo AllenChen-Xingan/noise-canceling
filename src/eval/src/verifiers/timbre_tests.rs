@@ -58,7 +58,10 @@ fn biquad(x: &[f32], sr: f64, kind: u8, fc: f64, gain_db: f64, q: f64) -> Vec<f3
     let (b, d) = match kind {
         2 => {
             let al = sw / (2.0 * q);
-            ([1.0 + al * a, -2.0 * cw, 1.0 - al * a], [1.0 + al / a, -2.0 * cw, 1.0 - al / a])
+            (
+                [1.0 + al * a, -2.0 * cw, 1.0 - al * a],
+                [1.0 + al / a, -2.0 * cw, 1.0 - al / a],
+            )
         }
         _ => {
             let sa = 2.0 * a.sqrt() * sw / 2.0 * 2f64.sqrt();
@@ -162,7 +165,9 @@ fn clean_pass_hiss_is_subtracted() {
     let mut st = 0x2026u64;
     let noise: Vec<f32> = (0..c.clean.len())
         .map(|_| {
-            st = st.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            st = st
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             ((st >> 40) as f64 / (1u64 << 24) as f64 - 0.5) as f32
         })
         .collect();
@@ -172,7 +177,11 @@ fn clean_pass_hiss_is_subtracted() {
     let v = val(&c, &y);
     assert!(v < crate::thresholds::TIMBRE.edges[0], "−20 dB 底噪读 {v}");
     let s = clean_pass(&c, &y);
-    let qf = s.extra.iter().find(|(k, _)| *k == "quiet_frames").map(|(_, v)| *v);
+    let qf = s
+        .extra
+        .iter()
+        .find(|(k, _)| *k == "quiet_frames")
+        .map(|(_, v)| *v);
     assert!(qf.is_some_and(|n| n > 10.0), "应自求出停顿帧：{s}");
 }
 
@@ -210,7 +219,9 @@ fn n4_mismatches(doc: &str) -> Vec<String> {
         format!("最低记 −{} dB", -FLOOR_DB),
         format!("D > {max} · C ≤ {} · B ≤ {} · A ≤ {}", e[2], e[1], e[0]),
     ];
-    want.into_iter().filter(|w| !para.contains(w.as_str())).collect()
+    want.into_iter()
+        .filter(|w| !para.contains(w.as_str()))
+        .collect()
 }
 
 #[test]
@@ -219,10 +230,17 @@ fn rubric_n4_matches_code() {
     let miss = n4_mismatches(doc);
     assert!(miss.is_empty(), "N4 与代码正本不一致，缺：{miss:?}");
     // 故意改错要红
-    for (from, to) in [("30 带", "31 带"), ("B ≤ 2", "B ≤ 2.5"), ("跳 512", "跳 256")] {
+    for (from, to) in [
+        ("30 带", "31 带"),
+        ("B ≤ 2", "B ≤ 2.5"),
+        ("跳 512", "跳 256"),
+    ] {
         let bad = doc.replacen(from, to, 1);
         assert_ne!(bad, doc, "N4 里找不到「{from}」");
-        assert!(!n4_mismatches(&bad).is_empty(), "把「{from}」改成「{to}」应被查出");
+        assert!(
+            !n4_mismatches(&bad).is_empty(),
+            "把「{from}」改成「{to}」应被查出"
+        );
     }
 }
 
@@ -232,5 +250,8 @@ fn bands_span_100_to_7900_in_30() {
     assert_eq!(b.len(), 30);
     assert_eq!(b[0].0, 100.0);
     assert_eq!(b[29].1, 7900.0);
-    assert!(b.windows(2).all(|w| (w[0].1 - w[1].0).abs() < 1e-9 && w[0].0 < w[0].1));
+    assert!(
+        b.windows(2)
+            .all(|w| (w[0].1 - w[1].0).abs() < 1e-9 && w[0].0 < w[0].1)
+    );
 }
