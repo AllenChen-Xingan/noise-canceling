@@ -481,8 +481,17 @@ fn no_clean_dir_means_report_only_not_missing() {
         line.contains("nc-ext") && !line.contains("passthrough"),
         "{line}"
     );
-    for c in card.cards.iter().filter(|c| c.system == "nc-ext") {
-        for i in c.items.iter().filter(|i| CLEAN_PASS.contains(&i.v)) {
+    // 先数再查，免得循环一次都不进就过（cands 审 P2）
+    let ext_cards: Vec<_> = card.cards.iter().filter(|c| c.system == "nc-ext").collect();
+    assert!(!ext_cards.is_empty());
+    for c in ext_cards {
+        let three: Vec<_> = c
+            .items
+            .iter()
+            .filter(|i| CLEAN_PASS.contains(&i.v))
+            .collect();
+        assert_eq!(three.len(), CLEAN_PASS.len(), "{:?}", c.scene);
+        for i in three {
             assert!(i.report_only, "{:?} {}", c.scene, i.v);
         }
     }
