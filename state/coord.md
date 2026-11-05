@@ -117,6 +117,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-05 15:4x 人定 D87：训练数据先不下；CI 账单停摆期按本机验收合并 → #120（81730e0f）· #127 · #128 已合并（PR 留言写明），#119 #112 #123 关闭；索引冲突由我两行都留。待：main 上全量测试（排在 aux → finetune 测速 → arch 测速之后）。三份结论 PDF 放桌面（026 · exp016 · 029）。timbre 关窗；cands 留着等盲听揭盲
 - 2026-11-05 15:2x PR #120（timbre）· #127（cands）· #128（rl）都已开、本机亲手验收全过；⚠️ GitHub Actions 因账单付款失败不启动（「recent account payments have failed or your spending limit needs to be increased」），已问人：修账单或授权按本机验收合并。rl 收尾关窗（结论：RL 现在不做，排在微调之后）。名额 aux 扫混回（砍 DPDFNet-2，改扫 GTCRN）
 - 2026-11-05 15:4x 人要多开手下比较 GTCRN 改进的几条路 → 四线：finetune 027 #121（微调+数据）· arch 028 #122（改结构/注意力头）· rl 029 #123（强化学习）· aux 030 #124（辅助判场景 + 混回比例，不重训）。共同交代 _tmp/20261104-b15/gtcrn-options-common.md，统一比较卡。exp 号预分：018 finetune · 019 arch · 020 rl · 021 aux
 - 2026-11-05 15:2x 人定 D86：加训 GTCRN（微调 · RL · 加注意力头都在范围），不换模型；DPDFNet-2 前视 4 帧结构定死出局，DFN3 留作对照。开调研 027 #121，手下 finetune（vdn:finetune，worktree ../noise_canceling-finetune，实体：GTCRN 模型 · 训练数据集 · 训练方法）。timbre PR #120 已开（我在 1265fe37 亲手验收 745 过 0 败），等 CI
