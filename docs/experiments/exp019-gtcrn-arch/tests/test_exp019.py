@@ -133,17 +133,23 @@ class Exp019(unittest.TestCase):
                 self.assertEqual(macs.count_frame(self.models[n])["extra"], v)
 
     def test_dpgrnn3_costs_one_block(self):
-        """多一层双路 RNN 的乘加 = 原来一层的乘加（同形）。"""
-        base = macs.count_frame(self.models["base"])
+        """多一层双路 RNN 的乘加 = 原来第一层双路 RNN 的乘加（同形，钩子只挂在那一层上数）。"""
         one = macs.count_frame(self.models["dpgrnn3"])["extra"]
-        # 原模型两层双路 RNN 里的 GRU + 线性层
-        m = self.models["base"].base
-        blk = 0
-        for mod in m.dpgrnn1.modules():
-            if isinstance(mod, torch.nn.GRU):
-                blk += {16: 1}.get(0, 0)
-        self.assertGreater(one, 0)
-        self.assertLess(one, base["total"])
+        m = self.models["base"]
+        tally, hooks = [0], []
+        for mod in m.base.dpgrnn1.modules():
+            for types, fn in macs.RULES:
+                if isinstance(mod, types):
+                    hooks.append(mod.register_forward_hook(
+                        lambda mm, i, o, fn=fn: tally.__setitem__(
+                            0, tally[0] + fn(mm, i, o[0] if isinstance(o, tuple) else o))))
+        try:
+            with torch.no_grad():
+                m(self.xs[0], m.init_state(1))
+        finally:
+            for h in hooks:
+                h.remove()
+        self.assertEqual(one, tally[0])
 
 
 if __name__ == "__main__":
