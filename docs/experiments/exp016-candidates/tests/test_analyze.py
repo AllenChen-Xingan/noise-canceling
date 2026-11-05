@@ -54,6 +54,29 @@ class Pairs(unittest.TestCase):
         self.assertEqual(A.ci({"u": [1.0, 2.0]}, rng)[2], None, "只有一个单位时不给区间")
 
 
+class Merge(unittest.TestCase):
+    def card(self, rid, rules="v2", qa=True):
+        return {"meta": {"run_id": rid, "rules": rules, "suite": "s.json", "qa": qa},
+                "scenes": [{"items": [{"v": "V-NR", "better": "越小越好", "unit": "dB"}]}]}
+
+    def test_two_runs_pair_across(self):
+        a = ([row("x", "gtcrn", {"V-NR": -5.0})], self.card("g"))
+        b = ([row("x", "c", {"V-NR": -8.0})], self.card("k"))
+        rows, card = A.merge([a, b])
+        self.assertEqual(card["meta"]["run_id"], "g+k")
+        self.assertEqual(a[1]["meta"]["run_id"], "g", "不改调用方的 card")
+        d = A.diffs(rows, A.better_map(card), "c")
+        self.assertEqual([x[4] for x in d], [3.0])
+
+    def test_refuses_mismatch_and_duplicates(self):
+        g = ([row("x", "gtcrn", {"V-NR": -5.0})], self.card("g"))
+        for bad in (self.card("k", rules="v1"), self.card("k", qa=False)):
+            with self.assertRaises(SystemExit):
+                A.merge([g, ([row("x", "c", {"V-NR": 1.0})], bad)])
+        with self.assertRaises(SystemExit):
+            A.merge([g, ([row("x", "gtcrn", {"V-NR": 1.0})], self.card("k"))])
+
+
 class Rank(unittest.TestCase):
     def test_top_behind_needs_units_and_positive_interval(self):
         cells = [{"state": "候选好", "units": 4, "effect": 9.0}, {"state": "候选好", "units": 5, "effect": 1.0},

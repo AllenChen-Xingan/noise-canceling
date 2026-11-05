@@ -10,7 +10,8 @@
   不用格子内标准差——那会偏向波动小的格子）；只排区间整体 > 0、且配对单位 ≥ MIN_UNITS 的格子。这个排序方式是本脚本的选择（推断），
   表里同时给原单位的平均。格子很多、未做多重比较校正：前 5 处是「值得先看」，不是统计显著的定论
 
-用法：python3 analyze.py <run 目录> <exp013 clips.jsonl> --out <analysis.md> [--json <analysis.json>]
+用法：python3 analyze.py <run 目录>[,<run 目录>…] <exp013 clips.jsonl> --out <analysis.md> [--json <analysis.json>]
+多个 run（如 GTCRN 一侧与候选一侧分开跑）按 `merge` 合并：规则版本 · 场景集 · 是否带评分模型须一致，同一（片段, 系统）不许出现两次
 """
 from __future__ import annotations
 
@@ -39,6 +40,30 @@ MIN_UNITS = 5  # 拆到 场景 × 声音 时，配对单位（一份素材的两
 def load(run: Path):
     rows = [json.loads(l) for l in (run / "clips.jsonl").read_text().splitlines() if l.strip()]
     card = json.loads((run / "scorecard.json").read_text())
+    return rows, card
+
+
+SAME_META = ("rules", "suite", "qa")  # 合并的几个 run 这几项必须相同
+
+
+def merge(loaded):
+    """[(rows, card)] → (rows, card)：card 取第一个的场景表（方向 · 单位），meta.run_id 用「+」连起来。"""
+    rows, card = list(loaded[0][0]), json.loads(json.dumps(loaded[0][1]))
+    seen = {(r["clip"], r["system"]) for r in rows}
+    for rs, c in loaded[1:]:
+        for k in SAME_META:
+            if c["meta"].get(k) != card["meta"].get(k):
+                raise SystemExit(f"run {c['meta']['run_id']} 的 {k} = {c['meta'].get(k)!r}，"
+                                 f"与 {card['meta']['run_id']} 的 {card['meta'].get(k)!r} 不同，不能配对")
+        if better_map(c) != better_map(card):
+            raise SystemExit(f"run {c['meta']['run_id']} 的评分项方向与第一个 run 不同")
+        for r in rs:
+            key = (r["clip"], r["system"])
+            if key in seen:
+                raise SystemExit(f"{key} 在两个 run 里都有，不知道用哪个")
+            seen.add(key)
+            rows.append(r)
+        card["meta"]["run_id"] += "+" + c["meta"]["run_id"]
     return rows, card
 
 
@@ -138,8 +163,8 @@ def summarize(ds, pair, key, seed, sd_of=None):
     return out
 
 
-def analyze(run: Path, manifest: Path, cands: list[str]):
-    rows, card = load(run)
+def analyze(runs: list[Path], manifest: Path, cands: list[str]):
+    rows, card = merge([load(r) for r in runs])
     better, unit, pair = better_map(card), units(card), pairs_of(manifest)
     res = {"run_id": card["meta"]["run_id"], "base": BASE, "candidates": {}}
     for c in cands:
@@ -201,13 +226,13 @@ def render(res) -> str:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("run", type=Path)
+    ap.add_argument("runs", help="一个或几个 run 目录，逗号分隔")
     ap.add_argument("manifest", type=Path)
     ap.add_argument("--cands", default="dpdfnet2,dfn3-ll")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--json", type=Path)
     a = ap.parse_args()
-    res = analyze(a.run, a.manifest, a.cands.split(","))
+    res = analyze([Path(x) for x in a.runs.split(",")], a.manifest, a.cands.split(","))
     a.out.write_text(render(res))
     if a.json:
         a.json.write_text(json.dumps(res, ensure_ascii=False, separators=(",", ":"), default=list) + "\n")
