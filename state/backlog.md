@@ -65,7 +65,7 @@
 
 - [ ] **开会负载下的测速与耗电**（E-5）：分纯音频通话（音频通话不等于空闲）与视频会议（+ 摄像头 ± 屏幕共享）两档，先量会议软件自身占用，v4i 按 16 ms 节奏的最坏帧 · 超时帧 · 功耗增量 · 会议软件自身是否变卡；进 / 出会议启停（StopIO 后 CPU 回 0）· 参照 DAFx26 争用测试
 
-- [ ] **codex-review 工具问题**：codex 输出以「P1」「P2」开头时，`file` 命令把它误判为 PBM / PGM 图片，第 2 轮起 `--previous` 被隐私扫描拦下；绕法：文件开头加一行 HTML 注释 · 出处 fastpath 收尾报告 · 2026-11-05 timbre（026）第二次撞上，要转 skill 维护者
+- [x] **codex-review 工具问题**：codex 输出以「P1」「P2」开头时，`file` 命令把它误判为 PBM / PGM 图片，第 2 轮起 `--previous` 被隐私扫描拦下；绕法：文件开头加一行 HTML 注释 · 出处 fastpath 收尾报告 · 2026-11-05 timbre（026）第二次撞上，要转 skill 维护者 · 2026-11-05 已修（手下 skillfix）：根因 macOS 27 iconv 跨第 1024 字节失败，改 perl 严格校验，23 条测试，报告 _tmp/skillfix/report.md；剩 1 条 P2（perl 坏时报错文案不准，仍会拦）
 
 - [ ] **019 待重测（下次名额）**：耗电 3 轮（人 sudo，约 35 min）· BE-IMPACT 新测法 · rt 下 10 min BE-DEADLINE · BE-SIZE / BE-RT-SAN · 出处 019 `decision.md` §7
 - [ ] **apple-rs 与 bench 合成一个共用 crate**（JSON 字段唯一真相源）· 出处 019 §7

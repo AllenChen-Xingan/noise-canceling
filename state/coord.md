@@ -117,6 +117,8 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-05 12:4x skillfix 收尾：codex-review 隐私扫描已修（iconv → perl 严格校验；23 测试我亲手重跑全绿；timbre 原文件过、假密钥仍拦；codex 2 轮无 P0/P1）。技能真身在 2-aartifacts/skills/（不在 git，备份为按记录还原版）
+- 2026-11-05 12:2x 人要「专门让一个手下来修」codex-review 隐私扫描误拦（P1/P2 开头被 file 认成图片，第二次）→ 起手下 skillfix（tmux vdn:skillfix，交代 _tmp/20261104-b15/skillfix.md，实体只一个：该技能的隐私扫描；先备份、先写红测试、不放松规则）
 - 2026-11-05 11:57 timbre 名额 11:48–11:56 用完：旧代码三系统 243 项逐项同基线；新 ERB 量法提交 88de9880，对拍 0.000 dB；golden 只 V-TIMBRE 变；基线只 36 项 V-TIMBRE 变、通过数不变（GTCRN 2.27 · FE-M 2.02 < 3）。名额 → cands 跑 DPDFNet-2（约 13:15），之后 timbre 全量测试
 - 2026-11-05 11:48 cands DFN3 成绩单跑完（run 20261105-103000-4cf04ac1，77 min，0 段失败，缓存 1920 条原样 + 新增 960）；DFN3 降噪 +2.16 dB、听感 +0.05、可懂度 +0.01，咔哒 +6/min、字头 −0.93 dB、背景稳 −0.74 dB；组合 过1/不过42/待测17 vs GTCRN 0/40/20。名额 → timbre（第 1 段半 + 第 2 段），之后回 cands 跑 DPDFNet-2（约 80 min）
 - 2026-11-05 00:59 evalfix 全量重出 run 20261105-005916-4ccf0638 开跑（权重哈希 · 工作区干净 · 接电源 · build 17f5 已核），预计 03:30；延迟预算 planned_platform_for 进 vdn-types（只加法，16 kHz 逐位不变）；cands 等合并后跑两候选最终版
