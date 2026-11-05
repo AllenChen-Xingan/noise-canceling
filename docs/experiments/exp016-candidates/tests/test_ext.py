@@ -91,16 +91,19 @@ class Lookahead(unittest.TestCase):
 class Dfn3Chain(unittest.TestCase):
     """DFN3 低延迟版的重采样链路（不载入 dylib，用恒等模型）：因果、对齐后前视 = 总延迟、无滞后。"""
 
-    def test_identity_chain_is_causal_and_aligned(self):
+    def test_identity_chain_is_aligned_and_lookahead_is_declared(self):
         import run_dfn3ll as r
-        d = r.resampler_delay()
-        self.assertGreater(d, 0)
+        la = r.resampler_lookahead()
+        self.assertGreater(la, 0, "soxr 流式应有滤波器前视")
+        self.assertEqual(r.total_delay(), r.SHIFT + la)
         x = (np.random.default_rng(3).standard_normal(16000) * 0.1).astype(np.float32)
-        ident = lambda v: r.chain(v, lambda fr: fr)[d:d + len(v)]
-        y = ident(x)
-        self.assertEqual(_ext.xcorr_lag(x, y), 0)
-        la = _ext.measure_lookahead(ident, x)
-        self.assertLessEqual(la, d, f"恒等链路前视 {la} > 延迟 {d}：链路不因果")
+        self.assertEqual(_ext.xcorr_lag(x, r.identity_chain(x)), 0)
+        # 换一段信号再量：入口截半自检用的容差 1e-4 下，前视不超过声明值
+        self.assertLessEqual(_ext.measure_lookahead(r.identity_chain, x), la)
+
+    def test_lib_constants(self):
+        import run_dfn3ll as r
+        self.assertEqual(r.SHIFT, 160)
 
 
 class Finalize(unittest.TestCase):

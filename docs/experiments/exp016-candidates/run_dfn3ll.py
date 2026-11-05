@@ -6,8 +6,10 @@
 - 整条链路流式、因果：16 kHz 每 160 样本一块 → soxr 流式升到 48 kHz → 攒满 480 交 dylib → soxr 流式降回 16 kHz。
   不用 dylib 自带的线性重采样（以 48 kHz 建会话，它不再转）
 - `atten_lim_db = 100`（不设衰减下限，纯模型输出；与 NoNoise-Mac meeting 档同）
-- 延迟：重采样一来一回的延迟用「恒等模型」（帧原样返回）实测，再加 libDF 一帧 480 @48 k（= 160 @16 k）；
-  输出按总延迟平移对齐。`_ext.probe` 再在真模型上量前视与对齐，滞后 ≠ 0 即报错
+- 延迟：soxr 流式重采样按样本序号对齐（自己扣掉了滤波器延迟），代价是**偷看滤波器那一截未来**；
+  所以对齐只平移 libDF 的一帧 480 @48 k（= 160 @16 k），声明延迟 = 160 + 重采样一来一回的前视
+  （用「恒等模型」截半实测，容差 1e-7，覆盖整个滤波器）。实时管线里这截前视就是要等的延迟。
+  `_ext.probe` 再在真模型上量前视与对齐，滞后 ≠ 0 即报错
 每段 `weya_nc_reset` 并新建两个重采样器（与内置模型每段新建 Engine 同口径）。
 
 用法（项目根下，exp002-venv 有 soxr / soundfile）：
@@ -92,36 +94,45 @@ def chain(x, frame_fn):
     return np.concatenate(outs) if outs else np.zeros(0, np.float32)
 
 
-def resampler_delay():
-    """重采样一来一回的延迟（16 kHz 样本）：恒等模型过一段宽带噪声，互相关找峰。"""
+SHIFT = MODEL_DELAY_48K * SR_IN // SR_MODEL  # 对齐平移（16 kHz 样本）
+
+
+def identity_chain(x):
+    return chain(x, lambda fr: fr)[: len(x)]
+
+
+def resampler_lookahead():
+    """重采样一来一回的前视（16 kHz 样本）：恒等模型过宽带噪声，截半实测；同时核对它按样本对齐（滞后 0）。"""
     x = np.random.default_rng(0).standard_normal(SR_IN * 2).astype(np.float32) * 0.1
-    y = chain(x, lambda fr: fr)
-    return _ext.xcorr_lag(x, y[: len(x)])
+    lag = _ext.xcorr_lag(x, identity_chain(x))
+    if lag != 0:
+        raise SystemExit(f"soxr 流式重采样不再按样本对齐（滞后 {lag}），本脚本的平移要重算")
+    return _ext.measure_lookahead(identity_chain, x, tol=1e-7)
 
 
 _D = None
 
 
 def total_delay():
+    """声明延迟：libDF 一帧 + 重采样前视。"""
     global _D
     if _D is None:
-        _D = resampler_delay() + MODEL_DELAY_48K * SR_IN // SR_MODEL
+        _D = SHIFT + resampler_lookahead()
     return _D
 
 
 def process(x):
     lib().weya_nc_reset(_sess)
     raw = chain(x, dfn_frame)
-    d = total_delay()
-    y = raw[d:d + len(x)]
+    y = raw[SHIFT:SHIFT + len(x)]
     if len(y) != len(x):
-        raise RuntimeError(f"链路输出不够长：{len(raw)} < {d} + {len(x)}")
+        raise RuntimeError(f"链路输出不够长：{len(raw)} < {SHIFT} + {len(x)}")
     return y.astype(np.float32)
 
 
 def setup():
-    return {"resampler": f"soxr {soxr.__version__} ResampleStream {QUALITY}", "resampler_delay_16k": resampler_delay(),
-            "model_delay_48k": MODEL_DELAY_48K, "total_delay_16k": total_delay(), "atten_lim_db": ATTEN_LIM_DB,
+    return {"resampler": f"soxr {soxr.__version__} ResampleStream {QUALITY}", "resampler_lookahead_16k": resampler_lookahead(),
+            "model_delay_48k": MODEL_DELAY_48K, "align_shift_16k": SHIFT, "declared_latency_16k": total_delay(), "atten_lim_db": ATTEN_LIM_DB,
             "lib_sha256": SHA["lib"], "model_sha256": SHA["model"]}
 
 
@@ -134,5 +145,5 @@ if __name__ == "__main__":
     for k, p in (("lib", LIB), ("model", MODEL)):
         if _ext.sha256_file(p) != SHA[k]:
             raise SystemExit(f"{p.name} 的 sha256 与记录不符")
-    # 标称延迟 = 实测的重采样延迟 + libDF 一帧；_ext.probe 再量前视
+    # 标称延迟 = libDF 一帧 + 实测的重采样前视；_ext.probe 再在真模型上量前视
     _ext.main(NAME, process, total_delay(), INFO, setup)
