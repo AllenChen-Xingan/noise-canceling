@@ -42,7 +42,7 @@
 
 | 编号 | 内容 | 位置 |
 |---|---|---|
-| E1 | 单步训练耗时（CPU · MPS，不带绕法） | `docs/experiments/exp018-gtcrn-finetune/runs/20261105-145149-step/` |
+| E1 | 单步训练耗时（CPU · MPS 不带绕法；带绕法重测） | `docs/experiments/exp018-gtcrn-finetune/runs/20261105-145149-step/` · `runs/20261105-153553-step-fix/` |
 | E2 | 读入 + 混音耗时（干净重测；重叠的那次留作对照，标了 NOTE） | `runs/20261105-150423-mix-clean/` · `runs/20261105-145445-mix/` |
 | E3 | MPS 正确性：不带绕法不过 | `runs/20261105-150438-parity/` |
 | E4 | 逐层定位（前向） | `runs/20261105-150606-layers/` |
