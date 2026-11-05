@@ -2,11 +2,13 @@
 
 用法：python report.py runs/<burst-run> [runs/<paced-run>]
 
-用户端耗时推算（推断）：产品用的是手写 Rust 版（020 的 v4i），不是 torch。
-按两种比例把候选的增量换到 v4i 上，取两者为区间：
-- 乘加比例：1 + 候选新增乘加 / v4i 基座乘加（366,460，020 口径）
-- torch 实测比例：候选 burst 中位 / 基座 burst 中位（含 Python 调度开销，偏高）
-另：多一层双路 RNN 按 020 逐层实测直接加一层的时间（GRU 卡在串行链上，乘加比例会低估）。
+用户端耗时：**情景推算，不是上下界，也没经 Rust 实测校准**（推断）。产品用的是手写 Rust 版
+（020 的 v4i），不是 torch；019 standard 第 9 节规定 Python 测的数不进结论，所以 torch 读数只列出来看相对快慢，
+不参与推算。情景：
+- 一般候选：020 的 16 ms 节奏实测区间 × (1 + 候选新增乘加 / v4i 基座乘加 366,460)，即假设耗时与乘加成正比
+- 多加一层双路 RNN：另取「020 逐层实测里一层双路 RNN 的时间」加到连续跑整帧上，再按同一比例换到节奏下；
+  两种情景取较大者（GRU 卡在串行链上，乘加比例会低估；torch 里也看到 +31% 对乘加 +16.7%）
+CPU 占比只作参考（019 standard §6.1：D75 后挡线是对性能的影响 BE-IMPACT 与耗电 BE-POWER，这两项未测）。
 """
 import json
 import statistics
@@ -48,16 +50,13 @@ def counts():
     return out
 
 
-def rust_estimate(n, c, burst):
-    # 增量除以 v4i 的基座乘加（同一口径：ERB 稀疏），不除以本脚本的稠密口径
-    r_mac = 1 + c[n]["extra_macs"] / V4I_BASE_MACS
-    r_torch = burst[n]["p50"] / burst["base"]["p50"] if burst else r_mac
-    lo, hi = sorted((r_mac, r_torch))
+def rust_estimate(n, c, burst=None):
+    """返回乘到 020 节奏区间上的倍数（情景，见文件头）。burst 只为保留签名，不参与。"""
+    r = 1 + c[n]["extra_macs"] / V4I_BASE_MACS
     if n.startswith("dpgrnn3"):
-        # 一层的实测时间 × 乘加放大倍数（加宽时 GRU 乘加约按宽度平方涨）
         add = V4I_DPGRNN_PAIR_US / 2 * (c[n]["extra_macs"] / c["dpgrnn3"]["extra_macs"])
-        hi = max(hi, 1 + add / V4I_BURST_US)
-    return lo, hi
+        r = max(r, 1 + add / V4I_BURST_US)
+    return r, r
 
 
 def fmt_row(n, c, burst, paced):
@@ -81,9 +80,9 @@ def main(argv):
         "# exp019 汇总（report.py 生成，勿手改）", "",
         f"burst run：`{Path(argv[0]).name if argv else '—'}` · paced run：`{Path(argv[1]).name if len(argv) > 1 else '—'}`", "",
         "列说明：加参数 / 加乘加 = 候选模块本身；乘加涨幅 = 新增乘加 / 020 口径基座 366,460；缓存 = 候选新增的流式状态。",
-        "torch 列是实测（单线程、一次一帧）；v4i 推算列是推断（见 report.py 头注释）。",
-        f"用户端占用口径：每 16 ms 一帧占一个核的百分比；019 目标 {CPU_TARGET_PCT}%、上限 {CPU_LIMIT_PCT}%。", "",
-        "| 候选 | 加参数 | 加乘加/帧 | 乘加涨幅 | 加缓存 KB | torch burst p50 ms | torch 16ms 节奏 平均 ms | 节奏 p99 ms | v4i 推算 ms/帧（节奏） | 占一个核 |",
+        "torch 列是实测（单线程、一次一帧），只看相对快慢、不进结论；v4i 列是情景推算（推断，见 report.py 头注释），不是上下界。",
+        f"占一个核 = 每帧耗时 ÷ 16 ms，只作参考（019 §6.1 的旧分摊：目标 {CPU_TARGET_PCT}%、上限 {CPU_LIMIT_PCT}%；D75 后不挡线）。", "",
+        "| 候选 | 加参数 | 加乘加/帧 | 乘加涨幅 | 加缓存 KB | torch burst p50 ms | torch 16ms 节奏 平均 ms | 节奏 p99 ms | v4i 情景推算 ms/帧（节奏） | 占一个核（参考） |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     lines += [fmt_row(n, c, burst, paced) for n in variants.NAMES]
