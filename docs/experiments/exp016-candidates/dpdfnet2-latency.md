@@ -1,6 +1,6 @@
 # DPDFNet-2 的 87.7 ms 怎么拆、哪些能降
 
-> 2026-11-05 · cands · 读源码 + 读官方仓库 issue + 已有实测，**未经 codex 审**；没跑新的模型（不占名额）
+> 2026-11-05 · cands · 读源码 + 读官方仓库 issue + 已有实测；**与 findings 一起codex 审 4 轮，后两轮无 P0/P1（`docs/reviews/016_candidates-codex.md` ③）**；没跑新的模型（不占名额）
 > 官方仓库本地副本：`resources/DPDFNet`，提交 `9bd9844`（远端 `ceva-ip/DPDFNet`）
 
 ## 一句话
