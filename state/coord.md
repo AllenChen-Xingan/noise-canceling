@@ -122,6 +122,9 @@
 - 2026-11-04 #115 外部入口 CI 过、已合并（分支保留）；名额给 cands 跑 DPDFNet-2 + DFN3 低延迟版 480 段（约 30 min）；NoNoise-Mac 人未选 → 默认 C 推迟；待告诉 a2：spectrum_golden 改冻结法（a2 会话现不在线）
 - 2026-11-04 23:3x 会话重启，大总管改名 noise-canceling-26，已通知两手下；cands 入口 PR #115；evalfix spectrum_golden 改冻结法（技术题我定，要告诉 a2）
 - 2026-11-04 人逐题定评分方法 → D85（G-1 B · G-2 B 干净人声单独跑 · G-3 C 单段 ≥ 5 字否决 · G-4 A · 4 dB · 0.1 · 不听咔嗒）；已转 evalfix。evalfix 首次编译名额已还；对 cands 外部入口提 3 处公平性（延迟标声明值 · 最坏一帧判不知道 · 截断查偷看未来），我同意
+- 2026-11-05 #116 CI 过（macos 4m18s）→ 合并 90ed08f2；关 #111 #109 #110；开 #117（e2e 夹具并发）#118（候选复位）；evalfix 验收通过、worktree 干净，笔记另存主目录 _tmp/evalfix/worktree-scratch-20261105/；关窗 + 删 worktree / 分支被权限拦下，等人处理；通知 cands merge main 后申请名额（估 3–3.3 h，含直通锚点 + 识别漂移核对）
+- 2026-11-05 合并提交 bdf0ad57 + 987a3af8（cands 的 clean/ 入口补丁 + runner 没给 clean 时那 3 项只报不判、开头写明）；我亲跑 fmt · tidy · clippy 过，全量只一次 external_e2e 假红（与 evalfix 并发互删夹具目录，开 #117 P2），单跑 2 次 11/11 过；推送开 PR #116，等 CI。cands 最终跑定为另开新 run（mix + clean 一次跑全，不补旧 run、不写 amend），估 2.5–2.8 h，开跑前 codex 审 1 轮
+- 2026-11-05 evalfix 收尾（codex 收尾 2 轮无 P0/P1，P2×5 已修，e3be788d）；待人 2 题记为 G-8 G-9。我在其 worktree 合 origin/main：解 main.rs · 评审索引冲突，system.rs:471 测试补 build 第二参数；全量只红 external_e2e 主测试（外部入口 × v2 干净人声路查不到输出，推断）→ 交 evalfix + cands 对齐修，合并未提交
 - 2026-11-05 我验收 evalfix：tidy 过；全量测试首跑 vdn-schema 红（eval-suite.schema.json 少导出 4 个新评分项名）→ evalfix 重导出；--no-fail-fast 全量 0 红；名额释放；evalfix 开收尾多轮 codex 评审。教训：亲跑一律 --no-fail-fast（已记 memory tests-by-default）
 - 2026-11-05 evalfix 全量 run 20261105-005916-4ccf0638 跑完（9986 s，1440 段，0 没跑成，规则 v2，供电 ac），名额归还；我核 clips.jsonl 1440 段齐；GTCRN 场景 0 过 / 40 不过 / 20 待测（只汇总版 1 / 42 / 17，请它说明变化），PSE 重叠项 passthrough 均值 0 与失败率 = 1 的 242 段待它说明；我占名额亲跑 tidy + 全量测试
 - 2026-11-04 人选继续「降噪效果」（评测集）→ 合并 #97 #108；开 #111 #112、两个 worktree；派 b15 evalfix · cands；G-1..G-7 按默认推进，待人确认；合并顺序 cands 入口小 PR 先、evalfix 后
