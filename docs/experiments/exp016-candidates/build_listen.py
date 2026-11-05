@@ -60,9 +60,10 @@ def match_gain(x, sr, meter):
 
 
 def plan(rng, n):
-    """题序 + 每题左右：返回 [(片段下标, X 是不是 gtcrn)]。"""
+    """题序 + 每题左右：返回 [(片段下标, X 是不是 gtcrn)]。左右各占一半（n 为奇数时差 1），免得位置偏好混进结果。"""
     order = rng.permutation(n)
-    return [(int(i), bool(rng.integers(2))) for i in order]
+    sides = rng.permutation([i < (n + 1) // 2 for i in range(n)])
+    return [(int(i), bool(x)) for i, x in zip(order, sides)]
 
 
 def check_listen_dir(listen, files, page):

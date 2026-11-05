@@ -1,5 +1,5 @@
 {
- "build": "20261105-145102-da95",
+ "build": "20261105-145123-1f9b",
  "seed": 20261105,
  "runs": {
   "gtcrn": "_tmp/scorecard/20261105-005916-4ccf0638",
@@ -13,16 +13,16 @@
    "why": "DFN3 咔哒最多（125 vs 60 个/分钟）",
    "slots": {
     "X": {
-     "system": "gtcrn",
-     "source": "_tmp/scorecard/20261105-005916-4ccf0638/qa/asr-wav/cafe-s00-ext#ae691954-gtcrn-09748fcf091cf862.wav",
-     "source_sha256": "2e74e994b0ed5442f67f5ab867543fc314a6af8418e63f675ecf39241e2ec7c3",
-     "gain_db": 2.02
-    },
-    "Y": {
      "system": "dfn3-ll",
      "source": "_tmp/scorecard/dfn3-ll-seeded-20261105/qa/asr-wav/cafe-s00-ext#ae691954-dfn3-ll-4b562b9ef0aac764.wav",
      "source_sha256": "f852a009488d03f2f5651f5dc9396461915ee70eb7826c0cb2a0c413bedfaca2",
      "gain_db": 0.87
+    },
+    "Y": {
+     "system": "gtcrn",
+     "source": "_tmp/scorecard/20261105-005916-4ccf0638/qa/asr-wav/cafe-s00-ext#ae691954-gtcrn-09748fcf091cf862.wav",
+     "source_sha256": "2e74e994b0ed5442f67f5ab867543fc314a6af8418e63f675ecf39241e2ec7c3",
+     "gain_db": 2.02
     }
    }
   },
@@ -49,16 +49,16 @@
    "why": "GTCRN 最弱的交通段：空调底噪，ESTOI 差 +0.046",
    "slots": {
     "X": {
-     "system": "gtcrn",
-     "source": "_tmp/scorecard/20261105-005916-4ccf0638/qa/asr-wav/transit-hub-c06-ext#a2cbea27-gtcrn-2ba2a9d4daf4343e.wav",
-     "source_sha256": "70627524d3d60b93dfb727fce266125131458a00c97daa1329d871194a51d167",
-     "gain_db": 1.91
-    },
-    "Y": {
      "system": "dfn3-ll",
      "source": "_tmp/scorecard/dfn3-ll-seeded-20261105/qa/asr-wav/transit-hub-c06-ext#a2cbea27-dfn3-ll-f21c4ac7a3856d2e.wav",
      "source_sha256": "515aaf8cd49796656dd8f2610cc78241698aa8ec50dca2dd7d9ef5b2a4477752",
      "gain_db": -0.28
+    },
+    "Y": {
+     "system": "gtcrn",
+     "source": "_tmp/scorecard/20261105-005916-4ccf0638/qa/asr-wav/transit-hub-c06-ext#a2cbea27-gtcrn-2ba2a9d4daf4343e.wav",
+     "source_sha256": "70627524d3d60b93dfb727fce266125131458a00c97daa1329d871194a51d167",
+     "gain_db": 1.91
     }
    }
   },

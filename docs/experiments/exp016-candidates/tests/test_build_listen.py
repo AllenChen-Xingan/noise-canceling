@@ -40,6 +40,11 @@ class Plan(unittest.TestCase):
         self.assertEqual(a, b)
         self.assertEqual(sorted(i for i, _ in a), [0, 1, 2, 3])
 
+    def test_sides_balanced(self):
+        for seed in range(50):
+            got = [x for _, x in B.plan(np.random.default_rng(seed), 4)]
+            self.assertEqual(sum(got), 2, seed)
+
     def test_limits(self):
         self.assertLessEqual(len(B.CLIPS) * 2, B.MAX_FILES)
         self.assertLessEqual(len(B.CLIPS) * 2 * 12, B.MAX_SECONDS)
