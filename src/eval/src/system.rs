@@ -408,7 +408,7 @@ mod tests {
             safety: true,
             faults: Vec::new(),
         };
-        let r = run(&spec, &vec![0.0f32; 16_000]).unwrap();
+        let r = run(&spec, &vec![0.0f32; vdn_types::MODEL_RATE as usize]).unwrap();
         let mut old = build(&spec).unwrap().latency_ledger();
         old.extend(planned_platform(IO_BLOCK_PROPOSED));
         assert_eq!(r.ledger_total_ms.to_bits(), old.total_ms().to_bits());
