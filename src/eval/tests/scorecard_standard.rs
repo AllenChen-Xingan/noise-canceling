@@ -162,7 +162,17 @@ fn item_table_matches_code() {
         let got = all_numbers(line);
         let mut want = explicit_params(v);
         if want.is_empty() {
-            want.push(effective(v).unwrap_or_else(|| panic!("{v} 在代码里查不到过关线")));
+            match effective(v) {
+                Some(x) => want.push(x),
+                // 代码里没有过关线的，只能是只报不判、且文档写明「待人拍板」（数可以是括号里的暂取值，不比）
+                None => {
+                    assert!(
+                        vdn_eval::scorecard::standard::is_report_only(v) && line.starts_with("待人拍板"),
+                        "{v} 在代码里查不到过关线，文档也没写「待人拍板」：{line:?}"
+                    );
+                    continue;
+                }
+            }
         }
         assert_eq!(
             got.len(),
