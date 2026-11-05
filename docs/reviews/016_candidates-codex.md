@@ -59,3 +59,40 @@
 #### 是否再审
 
 不再审（中途评审，P0/P1 已清零）。收尾时 ③ 按连续两轮无 P0/P1 跑。
+
+## ② 离线推理脚本（跑 480 段前）
+
+> 对象：`docs/experiments/exp016-candidates/{_ext.py,run_dpdfnet2.py,run_dfn3ll.py,tests/test_ext.py}`。重点：采样率转换 · 流式 / 低延迟模式与声明是否一致 · 权重哈希与可追溯。
+> 冒烟实测（第 1 段）：DPDFNet-2 滞后 0、截半前视 532 ≤ 声明 960；DFN3 低延迟版滞后 0、前视 160 ≤ 声明 284。
+
+### 第 1 轮（2026-11-04）· 总评「修改」
+
+原文：主目录 `_tmp/exp016/reviews/ext-codex-1.md`（不入库）。effort medium。
+本轮 P0/P1：3 条 · 留作 issue 的 P2：无
+
+- **P1｜_ext.py:212 分片记录建在输出目录里，入口拒绝没列的子目录**（第 1 轮 #1）
+  - 核实：属实（`external.rs` 载入时拒绝 run.json 没列的子目录）。codex 交卷前我自查也发现了
+  - 处理：分片记录与指纹移到输出目录旁边的 `<run-id>.shards/`；`finalize` 查输出目录里不许有入口不认的子目录或 `.part` 文件；加测试 `test_finalize_writes_run_json_and_rejects_stray_dirs`。「生成完整目录后由 Rust 载入」的集成在正式跑后打分那一步实地发生（载入失败即停）
+- **P1｜run_dfn3ll.py:104 截半前视不等于实时链路延迟**（第 1 轮 #2）
+  - 核实：部分属实。截半只量算法前视，确实不含攒块与 soxr 内部缓冲的等待
+  - 处理：不改算法，改说明：`latency_samples` 按模型接口正本定义只含算法前视、不含攒 hop 的等待，内置 GTCRN 同口径，因此可比；DFN3 低延迟版的 284 写明是下界，实时延迟引用 019（README「延迟口径」）。交第 2 轮看这条理由
+- **P1｜_ext.py:200 续跑会混入旧实现的输出**（第 1 轮 #3）
+  - 核实：属实
+  - 处理：第一次运行写 `<run-id>.shards/fingerprint.json`（项目内全部已载入代码的 sha256 · 模型信息 · 运行配置 · 依赖版本 · 片段清单哈希）；每个分片、续跑、`--finalize` 都比对，不一致报错要求换 run-id；指纹进 `builds/…/params.json`；加测试 `Fingerprint.test_mismatch_is_refused`
+- **P2｜_ext.py:153 半截 wav 被当完成**（第 1 轮 #4）
+  - 核实：属实（自查同时发现）
+  - 处理：先写 `.part` 再原子改名；续跑跳过前校验能读 · 等长 · 有限；加测试
+- **P2｜_ext.py:237 归档不足以复现**（第 1 轮 #5）
+  - 核实：属实
+  - 处理：并入 #3 的指纹（推理时记 ORT · soxr · numpy · soundfile · libsndfile 版本与平台）
+- **P2｜test_ext.py:59 输入一致性没跨语言核对**（第 1 轮 #6）
+  - 核实：属实（exp013 输入全是 32 位浮点，实际碰不到整型差异，但测试应覆盖）
+  - 处理：加 `RustWavParity`：比对 `wav.rs` 的归一公式与取第一声道写法仍在；PCM_16 · FLOAT · 双声道三种文件的读值逐位符合该公式
+
+#### 引用抽查
+
+- 「核实属实」6 条；「无法核实」3 条（libDF reset / atten 语义、整型归一、soxr 尾部）→ 前两条由冒烟与 `RustWavParity` 覆盖；尾部由 `process` 的长度检查与截半自检兜底
+
+#### 是否再审
+
+有 P1 → 第 2 轮。
