@@ -9,6 +9,11 @@
 //! （只改可见性，本文件要引用它），单独 target 目录里跑
 //! `VDN_BLESS=1 cargo test -p vdn-eval --release --test spectrum_golden`（`docs/plan/013_frontend-once.md` 第 13 节）。
 //! 基准带平台标签（含系统主版本）：cos / ln / powf 末位随 macOS 大版本可能变，别的平台打印原因后跳过。
+//!
+//! **「verifiers」组只守建基准时的项和字段**（[`FROZEN`]，#111 起，大总管定）：之后新加的 verifier 与旁报
+//! 由各自的单元测试守，不让这条红线每加一列就变红；清单里的项和字段一个都不许少（`frozen_items_and_fields_all_present`）。
+//! #111 改了 V-BGSTAB 的主值（扣掉输入侧偏差，025 B3）：本文件的合成片段停顿里干净人声是数字零，偏差恰为 0，
+//! 基准文件未变；证明「其余项逐位不变」的做法是去掉 V-BGSTAB 后在改动前后各算一次内容 ID，两次相同。
 #[path = "common/platform.rs"]
 mod platform;
 use platform::platform;

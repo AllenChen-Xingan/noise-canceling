@@ -72,3 +72,9 @@ G-1 B 均值 + 95% 区间三态（X1 X2 X4），最差 1–3 段送人耳 · G-2
 - 2026-11-04 校验：v1 重新汇总与原 exp014 成绩单 180 组合逐一相同；新规则对照表 `docs/experiments/exp014-scorecard-gtcrn/runs/20261104-230202-83cafcd0-resum-v2/compare.md`
 - 2026-11-04 自己发现并修：重采样 2000 次时 60 组合 Holm 永远拒绝不了 → 10000 次；「有值段不足一半判待测」太严 → 「源片段 ≥ 2 组」；Holm 族把只报 / 无区间组合算进族大小 → 只数真判的。各带会红的测试
 - 2026-11-04 codex 中途评审 1 第 1 轮开跑（对象 `4493f0ce..HEAD`）
+- 2026-11-04 中途评审 1 共 2 轮完成（P1×4 P2×3 全属实已修），记录 `docs/reviews/111_scorecard-v2-codex.md` + 索引一行；重新汇总新版 `runs/20261104-231355-da5821a4-resum-v2/`（旧版标「已被取代」）
+- 2026-11-04 大总管改名 noise-canceling-26（旧名已下线）
+- 2026-11-04 第 3 组：量输出四项 `verifiers/pse.rs`（V-TSOS · V-SWALLOW · V-LEAK · V-PSE-OVL，只报不判）+ 测试 7 条；G-2 B `scorecard::run_with` + `runner::prepare_clip(clean_pass)`，v2 下三项在干净人声单独过一遍的输出上算、带 `clean_pass` 标记，v1 不跑；e2e 测试 `clean_pass_items_scored_on_clean_input_under_v2`
+- 2026-11-04 旁报 A2（over_1 · first）· A4（over_1）· B1（low_frac · tnlr_excl_low_db；−48 dBov 登表）· B2（minus_floor_db）· C1（resid_below_speech_db）+ 测试 `verifiers/side_report_tests.rs`
+- 2026-11-04 spectrum_golden 按大总管定的冻结法改（FROZEN 清单 + 不许少的测试，故意改错验证会红）；证明：冻结后哈希 = 原基准
+- 2026-11-04 B3 主值修正单独提交 `6e8c66d7`（只动 V-BGSTAB：扣输入侧偏差，旧值旁报 uncorr_db，p95_db；注册表 should → shall）。证明：去掉 V-BGSTAB 的冻结组哈希改前改后相同（90be3b14…，150 个数）；合成基准片段上 V-BGSTAB 本身也逐位不变（停顿里干净轨是数字零），基准文件未变
