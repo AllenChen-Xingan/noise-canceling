@@ -345,4 +345,43 @@ mod tests {
         let bad = EXP014_LINE.replace(r#""verdict":"pass""#, r#""verdict":"maybe""#);
         assert!(parse_jsonl(&bad).is_err());
     }
+
+    /// v2 跑出来的 clips.jsonl 里，人声忽大忽小等三项是干净人声那一路的读数（带 `clean_pass`），没有 v1 要的带噪读数；
+    /// 切回 v1 重新汇总必须拒绝并提示重跑，不能把干净路读数当旧口径（收尾评审第 1 轮 P2 #1）。
+    #[test]
+    fn v1_refuses_rows_scored_on_clean_pass() {
+        use super::super::card::Rules;
+        let dir = std::env::temp_dir().join(format!("vdn-resum-clean-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let pumpv = Score::judged(
+            "V-PUMPV",
+            0.5,
+            "dB²",
+            crate::verifiers::info("V-PUMPV").unwrap().better,
+            Some(1.0),
+            &[],
+        )
+        .with_extra(super::super::standard::CLEAN_PASS_MARK, 1.0);
+        let row = ClipRow {
+            clip: "cafe-c00-mba".into(),
+            scene: MeetingPlace::Cafe,
+            tier: Tier::Common,
+            device: "mba-builtin".into(),
+            system: "gtcrn".into(),
+            sounds: Vec::new(),
+            scores: vec![("V-PUMPV", false, pumpv)],
+        };
+        let clips = dir.join("clips.jsonl");
+        std::fs::write(&clips, to_jsonl(&[row]).unwrap()).unwrap();
+        std::fs::write(
+            dir.join("scorecard.json"),
+            json!({"missing": []}).to_string(),
+        )
+        .unwrap();
+        let e = resummarize(&clips, Rules::V1).unwrap_err();
+        assert!(e.contains("重跑") && e.contains("V-PUMPV"), "{e}");
+        assert!(resummarize(&clips, Rules::V2).is_ok());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
