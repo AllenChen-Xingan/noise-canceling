@@ -32,7 +32,7 @@ class RelTest(unittest.TestCase):
 
 class VerdictTest(unittest.TestCase):
     def _ok(self):
-        return dict(forward_rel=0.0, grad_rel_max=0.0, grad_any_nan_dev=False,
+        return dict(forward_rel=0.0, grad_rel_model=0.0, grad_share_max=0.0, grad_any_nan_dev=False,
                     train_loss_finite=True, train_loss_rel_max=0.0, train_weight_rel=0.0)
 
     def test_all_zero_passes(self):
@@ -42,6 +42,11 @@ class VerdictTest(unittest.TestCase):
         r = self._ok()
         r["grad_any_nan_dev"] = True
         self.assertFalse(mp.verdict(r)["pass"])
+
+    def test_model_grad_drift_fails(self):
+        r = self._ok()
+        r["grad_rel_model"] = 0.8  # 2026-11-05 修复前实测约 0.84
+        self.assertFalse(mp.verdict(r)["checks"]["grad"])
 
     def test_forward_drift_fails(self):
         r = self._ok()

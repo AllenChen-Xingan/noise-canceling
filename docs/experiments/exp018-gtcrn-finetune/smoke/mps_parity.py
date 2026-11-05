@@ -6,7 +6,9 @@ LSTM 已修、GRU 未修；见调研 013 `notes/D-finetune-skeptic.md`）。GTCR
 
 判据（本脚本的默认阈值，写进输出 JSON）：
 - 前向输出相对误差（‖mps−cpu‖ / ‖cpu‖）≤ 1e-3
-- 每个参数的梯度相对误差 ≤ 1e-2（GRU 反向在不同后端累加顺序不同，放宽一档）
+- 整个模型的梯度向量相对误差 ≤ 1e-3；每个参数的梯度误差按「占整个梯度的比例」算
+  （‖Δg_i‖ / ‖g_全部‖）≤ 1e-3。不用「每个参数自己的相对误差」：BatchNorm 前面那层卷积的
+  bias 理论梯度为 0，数值上只剩噪声，自己除自己会到 10 倍量级（2026-11-05 实测，误报）
 - N 步训练后：两边损失都有限；每步损失相对差 ≤ 1e-2；最终权重相对差 ≤ 1e-2
 
 用法（单次 ≤ 约 1 分钟）：
@@ -26,7 +28,7 @@ import torch  # noqa: E402
 
 import step_timing as st  # noqa: E402  （同目录：复用官方模型载入与 STFT，不重复写）
 
-TOL = {"forward": 1e-3, "grad": 1e-2, "train_loss": 1e-2, "train_weight": 1e-2}
+TOL = {"forward": 1e-3, "grad": 1e-3, "train_loss": 1e-2, "train_weight": 1e-2}
 
 
 def rel(a: torch.Tensor, b: torch.Tensor) -> float:
@@ -71,10 +73,17 @@ def compare(model_cpu: torch.nn.Module, device: str, loss_cls, n_batch: int, sec
                      {k: p.grad.detach().cpu() for k, p in m.named_parameters() if p.grad is not None})
     out["forward_rel"] = rel(res["dev"][0], res["cpu"][0])
     out["loss_cpu"], out["loss_dev"] = res["cpu"][1], res["dev"][1]
-    grad_rel = {k: rel(res["dev"][2][k], g) for k, g in res["cpu"][2].items()}
-    worst = sorted(grad_rel.items(), key=lambda kv: -kv[1])[:5]
-    out["grad_rel_max"] = worst[0][1] if worst else 0.0
-    out["grad_rel_worst5"] = dict(worst)
+    gc, gd = res["cpu"][2], res["dev"][2]
+    all_c = torch.cat([gc[k].flatten() for k in gc]).double()
+    all_d = torch.cat([gd[k].flatten() for k in gc]).double()
+    total = float(all_c.norm()) + 1e-12
+    out["grad_rel_model"] = rel(all_d, all_c)
+    share = {k: float((gd[k].double() - gc[k].double()).norm()) / total for k in gc}
+    worst = sorted(share.items(), key=lambda kv: -kv[1])[:5]
+    out["grad_share_max"] = worst[0][1] if worst else 0.0
+    out["grad_share_worst5"] = dict(worst)
+    self_rel = sorted(((k, rel(gd[k], g)) for k, g in gc.items()), key=lambda kv: -kv[1])[:5]
+    out["grad_self_rel_worst5_info_only"] = dict(self_rel)
     out["grad_any_nan_dev"] = any(not torch.isfinite(g).all() for g in res["dev"][2].values())
 
     # 3) 连续训练 N 步，每步同一批数据
@@ -104,7 +113,8 @@ def compare(model_cpu: torch.nn.Module, device: str, loss_cls, n_batch: int, sec
 def verdict(r: dict) -> dict:
     checks = {
         "forward": r["forward_rel"] <= TOL["forward"],
-        "grad": r["grad_rel_max"] <= TOL["grad"] and not r["grad_any_nan_dev"],
+        "grad": (r["grad_rel_model"] <= TOL["grad"] and r["grad_share_max"] <= TOL["grad"]
+                 and not r["grad_any_nan_dev"]),
         "train_loss": r["train_loss_finite"] and r["train_loss_rel_max"] <= TOL["train_loss"],
         "train_weight": r["train_weight_rel"] <= TOL["train_weight"],
     }
