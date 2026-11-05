@@ -123,12 +123,20 @@ def r_composite_d85(row, base):
     return r_composite(row, base, eat_rule="words")
 
 
+def r_composite_hard_guard(row, base):
+    """D85 吃字口径 + 守住项改成硬约束：任一项比 GTCRN 多退超过容许量就否决（−1），不按量扣。"""
+    if guard_penalty(row, base) > 0:
+        return -1.0
+    return r_composite(row, base, eat_rule="words")
+
+
 REWARDS = {
     "nr_only": r_nr_only,
     "estoi_only": r_estoi_only,
     "composite": r_composite,
     "composite_d85": r_composite_d85,
     "composite_pooled_asr": r_composite_pooled_asr,
+    "composite_hard_guard": r_composite_hard_guard,
 }
 
 
