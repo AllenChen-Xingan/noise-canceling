@@ -59,15 +59,16 @@ class Inputs(unittest.TestCase):
     def test_inputs_follow_rust_kind_input(self):
         c = clip("c0", "cafe", self.root, n=1601)
         got = dict(_ext.inputs_of(c, self.root, {"c0"}))
-        self.assertEqual(list(got), ["mix", "bg", "trunc"])
+        self.assertEqual(list(got), ["mix", "bg", "trunc", "clean"])
         mix = _ext.read16(self.root / "c0-mix.wav")
         bg = _ext.read16(self.root / "c0-noise.wav") + _ext.read16(self.root / "c0-interf.wav")
         np.testing.assert_array_equal(got["mix"], mix)
         np.testing.assert_array_equal(got["bg"], bg.astype(np.float32))
         self.assertTrue(np.all(got["trunc"][800:] == 0) and np.array_equal(got["trunc"][:800], mix[:800]))
-        # 非 additive 不给 bg；不在 picks 不给 trunc
+        np.testing.assert_array_equal(got["clean"], _ext.read16(self.root / "c0-owner.wav"))  # = Rust clip.clean（owner 轨）
+        # 非 additive 不给 bg；不在 picks 不给 trunc；clean 每段都给
         c2 = clip("c1", "cafe", self.root, additive=False)
-        self.assertEqual([k for k, _ in _ext.inputs_of(c2, self.root, set())], ["mix"])
+        self.assertEqual([k for k, _ in _ext.inputs_of(c2, self.root, set())], ["mix", "clean"])
 
     def test_hash_mismatch_is_rejected(self):
         c = clip("c0", "cafe", self.root)
@@ -191,7 +192,7 @@ class Finalize(unittest.TestCase):
             cs = [{"id": "a", "scene": "cafe", "has_clean_ref": True, "additive": True, "dur_samples": 10}]
             for k in _ext.KINDS:
                 _ext.write_out(out / k / "a.wav", np.zeros(10), 10)
-            self.assertEqual(sorted(p.name for p in out.glob("*/*")), ["a.wav"] * 3, "不许留 .part")
+            self.assertEqual(sorted(p.name for p in out.glob("*/*")), ["a.wav"] * len(_ext.KINDS), "不许留 .part")
             args = type("A", (), {"limit": 0})()
             (out / "shards").mkdir()
             with self.assertRaises(SystemExit) as e:
