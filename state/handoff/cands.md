@@ -22,7 +22,7 @@
 - NoNoise-Mac 用的 Core ML 模型是普通版还是 `_ll` 版无法从仓库判定（元数据只写 TorchScript 转换）
 
 ## 待人拍板
-1. **NoNoise-Mac 怎么进评测**（它有命令行文件降噪模式，不用驱动、不回录）
+1. **（已按默认 C：这批不测，推迟到下一批）NoNoise-Mac 怎么进评测**（它有命令行文件降噪模式，不用驱动、不回录）
    - A. 下载它 v1.5.1 release 的 cli.zip（260 KB）+ app.zip（7.2 MB）到主目录 `_tmp/exp016/`，只在本机命令行跑文件降噪，不装 app、不装驱动 —— 代价：运行未公证的第三方二进制（MIT 开源，可对照源码） ← 建议
    - B. 下载源码用 `swift build` 自己编 —— 代价：多下源码与依赖，编译要一次名额；同样是第三方代码
    - C. 这一批不测 NoNoise-Mac —— 代价：少一个现成 Mac 产品对照（D77 要它当对照组）
@@ -46,3 +46,7 @@
 - Python 测试 11 条（含与 Rust 正本 SCHEMA / Kind 名比对、与 scenes.json 片段清单比对）全过
 - 申请冒烟名额（两个 --probe，≤ 2 分钟）
 - 大总管改名 84 → 26（已核对会话列表：84 不在、26 新起）；冒烟名额申请重发给 26
+- 大总管定：草稿只跑 DSP 项（三个系统一次跑，吃字 / 听感写「尚无判据，待最终版」）；最终版不重跑 GTCRN——evalfix 新规则合并后它带 --qa 跑 passthrough · ref · gtcrn，cands 只带 --qa 跑 dpdfnet2 · dfn3-ll（约 1.7 h），同 build、同规则、同评分模型配对，README 记两个 run-id
+- NoNoise-Mac：人没选，按默认 C 这批不测，findings 写「推迟到下一批，待人定」
+- 入口 PR #115 已合并（Refs #112）；P2 开成 #113 #114
+- 领名额跑两个候选 480 段：DPDFNet-2 probe 通过（滞后 0，A→B→A 差 0.0），正式跑中
