@@ -1,7 +1,7 @@
 """exp014 旧规则（v1）与新规则（v2，人定 D85）对照 + X3 分组粒度重估。
 
 用法（仓库根目录）：
-    python3 -I docs/experiments/exp014-scorecard-gtcrn/runs/20261104-230025-5e96e885-resum-v2/compare.py > <本目录>/compare.md
+    python3 -I docs/experiments/exp014-scorecard-gtcrn/runs/20261104-230202-83cafcd0-resum-v2/compare.py > <本目录>/compare.md
 输入：旧 run 的 scorecard.json（v1，exp014 原表）与本目录的 scorecard.json（v2，`vdn-eval scorecard --from-clips` 重新汇总）。
 只读这两份文件，不重跑音频。
 """

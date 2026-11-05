@@ -2,11 +2,11 @@
   "clips_scored": 1440,
   "doc": "场景成绩单（vdn-eval scorecard）。规则见 specs/rubric/scorecard.md；感知项全部 L0（只作约束，不当奖励）",
   "meta": {
-    "commit": "5e96e885",
+    "commit": "83cafcd0-dirty",
     "from_clips": "docs/experiments/exp014-scorecard-gtcrn/runs/20261104-000444-e4511abc/clips.jsonl",
     "from_clips_sha256": "7b7e82c4871f034f38f2e07c4d1faedc826f8fbdeaefeb31c6f5c7c08dd33df1",
     "rules": "v2",
-    "run_id": "20261104-230026-5e96e885"
+    "run_id": "20261104-230203-83cafcd0-dirty"
   },
   "missing": [],
   "rules": "v2",
@@ -4881,6 +4881,26 @@
           "cls": "baby-cry",
           "gap": null,
           "group": "event",
+          "mean_with": -3.1336845875460284,
+          "mean_without": -0.9363003540188686,
+          "n_with": 1,
+          "n_without": 1,
+          "v": "V-NR"
+        },
+        {
+          "cls": "bed-kitchen",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -2.0349924707824485,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
+        {
+          "cls": "baby-cry",
+          "gap": null,
+          "group": "event",
           "mean_with": null,
           "mean_without": -1.3301494702074856,
           "n_with": 0,
@@ -5131,7 +5151,7 @@
           "pass": 4,
           "report_only": true,
           "rule": "只报不判：旧口径（在带噪输出上算），D85 题 2 要在干净人声单独过一遍的输出上重跑",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 6.0,
           "unit": "dB",
           "unknown": 6,
@@ -5154,7 +5174,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -6.0,
           "unit": "dB",
           "unknown": 8,
@@ -5223,7 +5243,7 @@
           "pass": 2,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 10.0,
           "unit": "dB",
           "unknown": 8,
@@ -5314,6 +5334,26 @@
       "clips": 10,
       "device": "external-mic",
       "drags": [
+        {
+          "cls": "baby-cry",
+          "gap": null,
+          "group": "event",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 1,
+          "n_without": 1,
+          "v": "V-NR"
+        },
+        {
+          "cls": "bed-kitchen",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
         {
           "cls": "baby-cry",
           "gap": null,
@@ -5568,7 +5608,7 @@
           "pass": 4,
           "report_only": true,
           "rule": "只报不判：旧口径（在带噪输出上算），D85 题 2 要在干净人声单独过一遍的输出上重跑",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 6.0,
           "unit": "dB",
           "unknown": 6,
@@ -5591,7 +5631,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -6.0,
           "unit": "dB",
           "unknown": 8,
@@ -5660,7 +5700,7 @@
           "pass": 2,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 10.0,
           "unit": "dB",
           "unknown": 8,
@@ -5751,6 +5791,26 @@
       "clips": 10,
       "device": "external-mic",
       "drags": [
+        {
+          "cls": "baby-cry",
+          "gap": null,
+          "group": "event",
+          "mean_with": -1.0475992227844415,
+          "mean_without": -4.259254105481652,
+          "n_with": 1,
+          "n_without": 1,
+          "v": "V-NR"
+        },
+        {
+          "cls": "bed-kitchen",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -2.653426664133047,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
         {
           "cls": "dishes",
           "gap": 0.3897212984131724,
@@ -6015,7 +6075,7 @@
           "pass": 4,
           "report_only": true,
           "rule": "只报不判：旧口径（在带噪输出上算），D85 题 2 要在干净人声单独过一遍的输出上重跑",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 6.0,
           "unit": "dB",
           "unknown": 6,
@@ -6038,7 +6098,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -6.0,
           "unit": "dB",
           "unknown": 8,
@@ -6107,7 +6167,7 @@
           "pass": 2,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 10.0,
           "unit": "dB",
           "unknown": 8,
@@ -6278,7 +6338,7 @@
           "pass": 4,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": -4.0,
           "unit": "dB",
           "unknown": 6,
@@ -6462,7 +6522,7 @@
           "pass": 4,
           "report_only": true,
           "rule": "只报不判：旧口径（在带噪输出上算），D85 题 2 要在干净人声单独过一遍的输出上重跑",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 6.0,
           "unit": "dB",
           "unknown": 6,
@@ -6554,7 +6614,7 @@
           "pass": 4,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 10.0,
           "unit": "dB",
           "unknown": 6,
@@ -6649,6 +6709,26 @@
           "cls": "baby-cry",
           "gap": null,
           "group": "event",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 1,
+          "n_without": 2,
+          "v": "V-NR"
+        },
+        {
+          "cls": "bed-kitchen",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": null,
+          "n_with": 3,
+          "n_without": 0,
+          "v": "V-NR"
+        },
+        {
+          "cls": "baby-cry",
+          "gap": null,
+          "group": "event",
           "mean_with": null,
           "mean_without": 0.0,
           "n_with": 0,
@@ -6715,7 +6795,7 @@
           "pass": 4,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": -4.0,
           "unit": "dB",
           "unknown": 6,
@@ -6899,7 +6979,7 @@
           "pass": 3,
           "report_only": true,
           "rule": "只报不判：旧口径（在带噪输出上算），D85 题 2 要在干净人声单独过一遍的输出上重跑",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 6.0,
           "unit": "dB",
           "unknown": 6,
@@ -6922,7 +7002,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -6.0,
           "unit": "dB",
           "unknown": 7,
@@ -6991,7 +7071,7 @@
           "pass": 4,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 10.0,
           "unit": "dB",
           "unknown": 6,
@@ -7162,7 +7242,7 @@
           "pass": 4,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": -4.0,
           "unit": "dB",
           "unknown": 6,
@@ -7346,7 +7426,7 @@
           "pass": 4,
           "report_only": true,
           "rule": "只报不判：旧口径（在带噪输出上算），D85 题 2 要在干净人声单独过一遍的输出上重跑",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 6.0,
           "unit": "dB",
           "unknown": 6,
@@ -7438,7 +7518,7 @@
           "pass": 4,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 10.0,
           "unit": "dB",
           "unknown": 6,
@@ -7529,6 +7609,26 @@
       "clips": 6,
       "device": "external-mic",
       "drags": [
+        {
+          "cls": "baby-cry",
+          "gap": null,
+          "group": "event",
+          "mean_with": -3.847397364614178,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
+        {
+          "cls": "bed-kitchen",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -3.847397364614178,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
         {
           "cls": "baby-cry",
           "gap": null,
@@ -7806,7 +7906,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -6.0,
           "unit": "dB",
           "unknown": 4,
@@ -7875,7 +7975,7 @@
           "pass": 2,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 10.0,
           "unit": "dB",
           "unknown": 4,
@@ -7966,6 +8066,26 @@
       "clips": 6,
       "device": "external-mic",
       "drags": [
+        {
+          "cls": "baby-cry",
+          "gap": null,
+          "group": "event",
+          "mean_with": 0.0,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
+        {
+          "cls": "bed-kitchen",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
         {
           "cls": "baby-cry",
           "gap": null,
@@ -8243,7 +8363,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -6.0,
           "unit": "dB",
           "unknown": 4,
@@ -8312,7 +8432,7 @@
           "pass": 2,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 10.0,
           "unit": "dB",
           "unknown": 4,
@@ -8403,6 +8523,26 @@
       "clips": 6,
       "device": "external-mic",
       "drags": [
+        {
+          "cls": "baby-cry",
+          "gap": null,
+          "group": "event",
+          "mean_with": -2.1669527761684257,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
+        {
+          "cls": "bed-kitchen",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -2.1669527761684257,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
         {
           "cls": "baby-cry",
           "gap": null,
@@ -8680,7 +8820,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -6.0,
           "unit": "dB",
           "unknown": 4,
@@ -8749,7 +8889,7 @@
           "pass": 2,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 10.0,
           "unit": "dB",
           "unknown": 4,
@@ -9186,7 +9326,7 @@
           "pass": 2,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 10.0,
           "unit": "dB",
           "unknown": 4,
@@ -9277,6 +9417,26 @@
       "clips": 6,
       "device": "mba-builtin",
       "drags": [
+        {
+          "cls": "baby-cry",
+          "gap": null,
+          "group": "event",
+          "mean_with": 0.0,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
+        {
+          "cls": "bed-kitchen",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
         {
           "cls": "baby-cry",
           "gap": null,
@@ -9554,7 +9714,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -6.0,
           "unit": "dB",
           "unknown": 4,
@@ -9623,7 +9783,7 @@
           "pass": 2,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 10.0,
           "unit": "dB",
           "unknown": 4,
@@ -9714,6 +9874,26 @@
       "clips": 6,
       "device": "mba-builtin",
       "drags": [
+        {
+          "cls": "baby-cry",
+          "gap": null,
+          "group": "event",
+          "mean_with": -2.100090451565178,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
+        {
+          "cls": "bed-kitchen",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -2.100090451565178,
+          "mean_without": null,
+          "n_with": 2,
+          "n_without": 0,
+          "v": "V-NR"
+        },
         {
           "cls": "baby-cry",
           "gap": null,
@@ -9991,7 +10171,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -6.0,
           "unit": "dB",
           "unknown": 4,
@@ -10060,7 +10240,7 @@
           "pass": 2,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 10.0,
           "unit": "dB",
           "unknown": 4,
@@ -10474,7 +10654,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 6,
@@ -10954,7 +11134,7 @@
           "pass": 1,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 6,
@@ -11464,7 +11644,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 6,
@@ -11934,7 +12114,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 6,
@@ -12414,7 +12594,7 @@
           "pass": 1,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 6,
@@ -12934,7 +13114,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 6,
@@ -21390,7 +21570,7 @@
           "pass": 3,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 3.0,
           "unit": "dB",
           "unknown": 7,
@@ -21834,7 +22014,7 @@
           "pass": 3,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 3.0,
           "unit": "dB",
           "unknown": 7,
@@ -22645,7 +22825,7 @@
           "pass": 3,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 3.0,
           "unit": "dB",
           "unknown": 7,
@@ -23089,7 +23269,7 @@
           "pass": 3,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 3.0,
           "unit": "dB",
           "unknown": 7,
@@ -25935,6 +26115,26 @@
           "n_with": 1,
           "n_without": 9,
           "v": "V-NR"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": null,
+          "mean_without": -3.852644475734891,
+          "n_with": 0,
+          "n_without": 4,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-ace",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -3.5128409139451144,
+          "mean_without": -4.872055161104221,
+          "n_with": 3,
+          "n_without": 1,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -26216,7 +26416,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -26239,7 +26439,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -26395,6 +26595,26 @@
           "n_with": 1,
           "n_without": 9,
           "v": "V-NR"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": null,
+          "mean_without": 0.0,
+          "n_with": 0,
+          "n_without": 4,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-ace",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 3,
+          "n_without": 1,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -26676,7 +26896,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -26875,6 +27095,26 @@
           "n_with": 1,
           "n_without": 9,
           "v": "V-NR"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": null,
+          "mean_without": -1.2671758776602084,
+          "n_with": 0,
+          "n_without": 4,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-ace",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -1.524255887031315,
+          "mean_without": -0.4959358495468891,
+          "n_with": 3,
+          "n_without": 1,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -27156,7 +27396,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -27179,7 +27419,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -27315,7 +27555,28 @@
     {
       "clips": 10,
       "device": "mba-builtin",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": null,
+          "mean_without": -5.201167228399738,
+          "n_with": 0,
+          "n_without": 4,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-ace",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -4.531295102314083,
+          "mean_without": -7.210783606656705,
+          "n_with": 3,
+          "n_without": 1,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -27595,7 +27856,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -27618,7 +27879,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -27746,7 +28007,7 @@
       },
       "missing": [],
       "scene": "cowork",
-      "status": "unknown",
+      "status": "fail",
       "system": "gtcrn",
       "tier": "common",
       "veto_failed": []
@@ -27774,6 +28035,26 @@
           "n_with": 1,
           "n_without": 9,
           "v": "V-NR"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": null,
+          "mean_without": 0.0,
+          "n_with": 0,
+          "n_without": 4,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-ace",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 3,
+          "n_without": 1,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -28055,7 +28336,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -28244,6 +28525,26 @@
           "n_with": 1,
           "n_without": 9,
           "v": "V-NR"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": null,
+          "mean_without": -1.583289765172946,
+          "n_with": 0,
+          "n_without": 4,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-ace",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -1.8750937613264338,
+          "mean_without": -0.7078777767124826,
+          "n_with": 3,
+          "n_without": 1,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -28525,7 +28826,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -28548,7 +28849,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -31574,7 +31875,28 @@
     {
       "clips": 10,
       "device": "external-mic",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "bed-restaurant",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -4.816455571369774,
+          "mean_without": null,
+          "n_with": 4,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "coffee-machine",
+          "gap": null,
+          "group": "pattern",
+          "mean_with": -7.903329919954125,
+          "mean_without": -3.7874974551749907,
+          "n_with": 1,
+          "n_without": 3,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -31854,7 +32176,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -31877,7 +32199,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -32005,7 +32327,7 @@
       },
       "missing": [],
       "scene": "cafe",
-      "status": "unknown",
+      "status": "fail",
       "system": "gtcrn",
       "tier": "common",
       "veto_failed": []
@@ -32033,6 +32355,26 @@
           "n_with": 1,
           "n_without": 9,
           "v": "V-NR"
+        },
+        {
+          "cls": "bed-restaurant",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": null,
+          "n_with": 4,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "coffee-machine",
+          "gap": null,
+          "group": "pattern",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 1,
+          "n_without": 3,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -32314,7 +32656,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -32513,6 +32855,26 @@
           "n_with": 1,
           "n_without": 9,
           "v": "V-NR"
+        },
+        {
+          "cls": "bed-restaurant",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -2.2857158636741683,
+          "mean_without": null,
+          "n_with": 4,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "coffee-machine",
+          "gap": null,
+          "group": "pattern",
+          "mean_with": -3.6998944550031254,
+          "mean_without": -1.8143229998978494,
+          "n_with": 1,
+          "n_without": 3,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -32794,7 +33156,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -32817,7 +33179,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -32953,7 +33315,28 @@
     {
       "clips": 10,
       "device": "mba-builtin",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "bed-restaurant",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -5.750768383047753,
+          "mean_without": null,
+          "n_with": 4,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "coffee-machine",
+          "gap": null,
+          "group": "pattern",
+          "mean_with": -10.140328754962695,
+          "mean_without": -4.287581592409439,
+          "n_with": 1,
+          "n_without": 3,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -33233,7 +33616,7 @@
           "pass": 1,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -33384,7 +33767,7 @@
       },
       "missing": [],
       "scene": "cafe",
-      "status": "unknown",
+      "status": "fail",
       "system": "gtcrn",
       "tier": "common",
       "veto_failed": []
@@ -33412,6 +33795,26 @@
           "n_with": 1,
           "n_without": 9,
           "v": "V-NR"
+        },
+        {
+          "cls": "bed-restaurant",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": null,
+          "n_with": 4,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "coffee-machine",
+          "gap": null,
+          "group": "pattern",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 1,
+          "n_without": 3,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -33693,7 +34096,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -33892,6 +34295,26 @@
           "n_with": 1,
           "n_without": 9,
           "v": "V-NR"
+        },
+        {
+          "cls": "bed-restaurant",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -2.3375213347523065,
+          "mean_without": null,
+          "n_with": 4,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "coffee-machine",
+          "gap": null,
+          "group": "pattern",
+          "mean_with": -3.4740464502186725,
+          "mean_without": -1.9586796295968512,
+          "n_with": 1,
+          "n_without": 3,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -34173,7 +34596,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -34196,7 +34619,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -37244,6 +37667,26 @@
           "n_with": 2,
           "n_without": 8,
           "v": "V-NR"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": -4.17573969393807,
+          "mean_without": -3.9445118314124095,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-cafeteria",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -4.17573969393807,
+          "mean_without": -3.9445118314124095,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -37525,7 +37968,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -37548,7 +37991,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -37708,6 +38151,26 @@
           "n_with": 2,
           "n_without": 8,
           "v": "V-NR"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-cafeteria",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -37989,7 +38452,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -38012,7 +38475,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -38228,6 +38691,26 @@
           "n_with": 2,
           "n_without": 8,
           "v": "V-NR"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": -1.7394802221906858,
+          "mean_without": -1.916177607358934,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-cafeteria",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -1.7394802221906858,
+          "mean_without": -1.916177607358934,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -38509,7 +38992,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -38532,7 +39015,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -38670,7 +39153,28 @@
     {
       "clips": 10,
       "device": "mba-builtin",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": -4.146451756084261,
+          "mean_without": -4.426525091229589,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-cafeteria",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -4.146451756084261,
+          "mean_without": -4.426525091229589,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -38950,7 +39454,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -38973,7 +39477,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -39105,7 +39609,7 @@
       },
       "missing": [],
       "scene": "canteen",
-      "status": "unknown",
+      "status": "fail",
       "system": "gtcrn",
       "tier": "common",
       "veto_failed": []
@@ -39133,6 +39637,26 @@
           "n_with": 2,
           "n_without": 8,
           "v": "V-NR"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-cafeteria",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -39414,7 +39938,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -39437,7 +39961,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -39653,6 +40177,26 @@
           "n_with": 2,
           "n_without": 8,
           "v": "V-NR"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": -1.5934678125110189,
+          "mean_without": -1.9280004279771852,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-cafeteria",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -1.5934678125110189,
+          "mean_without": -1.9280004279771852,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -39934,7 +40478,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -39957,7 +40501,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 7,
@@ -40483,7 +41027,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 4,
@@ -40965,7 +41509,7 @@
           "pass": 2,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "pass",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 4,
@@ -41455,7 +41999,7 @@
           "pass": 0,
           "report_only": true,
           "rule": "只报不判（人定 D85）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": 0.1,
           "unit": "比例",
           "unknown": 4,
@@ -43021,7 +43565,28 @@
     {
       "clips": 10,
       "device": "external-mic",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "announce",
+          "gap": null,
+          "group": "speech",
+          "mean_with": -4.595580471795699,
+          "mean_without": -5.073187556394057,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": -4.783269722918867,
+          "mean_without": -4.88549830527089,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -43301,7 +43866,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -43452,7 +44017,7 @@
       },
       "missing": [],
       "scene": "transit-hub",
-      "status": "unknown",
+      "status": "fail",
       "system": "gtcrn",
       "tier": "common",
       "veto_failed": []
@@ -43460,7 +44025,28 @@
     {
       "clips": 10,
       "device": "external-mic",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "announce",
+          "gap": null,
+          "group": "speech",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -43740,7 +44326,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -43929,6 +44515,26 @@
           "n_with": 3,
           "n_without": 7,
           "v": "V-NR"
+        },
+        {
+          "cls": "announce",
+          "gap": null,
+          "group": "speech",
+          "mean_with": -1.0209555730831497,
+          "mean_without": -4.195536033900549,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": -2.0923419624530837,
+          "mean_without": -3.1241496445306147,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -44210,7 +44816,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -44369,7 +44975,28 @@
     {
       "clips": 10,
       "device": "mba-builtin",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "announce",
+          "gap": null,
+          "group": "speech",
+          "mean_with": -5.288926621264348,
+          "mean_without": -5.83583611209589,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": -5.20674825876014,
+          "mean_without": -5.918014474600099,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -44649,7 +45276,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -44800,7 +45427,7 @@
       },
       "missing": [],
       "scene": "transit-hub",
-      "status": "unknown",
+      "status": "fail",
       "system": "gtcrn",
       "tier": "common",
       "veto_failed": []
@@ -44808,7 +45435,28 @@
     {
       "clips": 10,
       "device": "mba-builtin",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "announce",
+          "gap": null,
+          "group": "speech",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -45088,7 +45736,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -45247,7 +45895,28 @@
     {
       "clips": 10,
       "device": "mba-builtin",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "announce",
+          "gap": null,
+          "group": "speech",
+          "mean_with": -1.5273383878203095,
+          "mean_without": -4.612619305019834,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "babble",
+          "gap": null,
+          "group": "speech",
+          "mean_with": -2.76609029811644,
+          "mean_without": -3.3738673947237032,
+          "n_with": 2,
+          "n_without": 2,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -45527,7 +46196,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -45678,7 +46347,7 @@
       },
       "missing": [],
       "scene": "transit-hub",
-      "status": "unknown",
+      "status": "fail",
       "system": "ref",
       "tier": "common",
       "veto_failed": []
@@ -48634,7 +49303,28 @@
     {
       "clips": 10,
       "device": "external-mic",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "bed-car-mcv",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -6.64148919732505,
+          "mean_without": null,
+          "n_with": 4,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "car-horn",
+          "gap": null,
+          "group": "event",
+          "mean_with": -6.104033385561149,
+          "mean_without": -6.820641134579684,
+          "n_with": 1,
+          "n_without": 3,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -48914,7 +49604,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -49069,7 +49759,7 @@
       },
       "missing": [],
       "scene": "car-passenger",
-      "status": "unknown",
+      "status": "fail",
       "system": "gtcrn",
       "tier": "common",
       "veto_failed": []
@@ -49097,6 +49787,26 @@
           "n_with": 1,
           "n_without": 9,
           "v": "V-NR"
+        },
+        {
+          "cls": "bed-car-mcv",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": null,
+          "n_with": 4,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "car-horn",
+          "gap": null,
+          "group": "event",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 1,
+          "n_without": 3,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -49378,7 +50088,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -49537,7 +50247,28 @@
     {
       "clips": 10,
       "device": "external-mic",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "bed-car-mcv",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -5.051719043720648,
+          "mean_without": null,
+          "n_with": 4,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "car-horn",
+          "gap": null,
+          "group": "event",
+          "mean_with": -4.2867222845633,
+          "mean_without": -5.306717963439763,
+          "n_with": 1,
+          "n_without": 3,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -49817,7 +50548,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -49968,7 +50699,7 @@
       },
       "missing": [],
       "scene": "car-passenger",
-      "status": "unknown",
+      "status": "fail",
       "system": "ref",
       "tier": "common",
       "veto_failed": []
@@ -49976,7 +50707,28 @@
     {
       "clips": 10,
       "device": "mba-builtin",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "bed-car-mcv",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -7.7284504648031405,
+          "mean_without": null,
+          "n_with": 4,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "car-horn",
+          "gap": null,
+          "group": "event",
+          "mean_with": -8.026108394888084,
+          "mean_without": -7.629231154774826,
+          "n_with": 1,
+          "n_without": 3,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -50256,7 +51008,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -50407,7 +51159,7 @@
       },
       "missing": [],
       "scene": "car-passenger",
-      "status": "unknown",
+      "status": "fail",
       "system": "gtcrn",
       "tier": "common",
       "veto_failed": []
@@ -50435,6 +51187,26 @@
           "n_with": 1,
           "n_without": 9,
           "v": "V-NR"
+        },
+        {
+          "cls": "bed-car-mcv",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": null,
+          "n_with": 4,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "car-horn",
+          "gap": null,
+          "group": "event",
+          "mean_with": 0.0,
+          "mean_without": 0.0,
+          "n_with": 1,
+          "n_without": 3,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -50716,7 +51488,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -50875,7 +51647,28 @@
     {
       "clips": 10,
       "device": "mba-builtin",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "bed-car-mcv",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -5.125700007295028,
+          "mean_without": null,
+          "n_with": 4,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "car-horn",
+          "gap": null,
+          "group": "event",
+          "mean_with": -4.462199065828035,
+          "mean_without": -5.346866987784026,
+          "n_with": 1,
+          "n_without": 3,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -51155,7 +51948,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 6,
@@ -51306,7 +52099,7 @@
       },
       "missing": [],
       "scene": "car-passenger",
-      "status": "unknown",
+      "status": "fail",
       "system": "ref",
       "tier": "common",
       "veto_failed": []
@@ -65748,7 +66541,28 @@
     {
       "clips": 10,
       "device": "external-mic",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "bed-street",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -4.248409803209597,
+          "mean_without": null,
+          "n_with": 3,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-terrace",
+          "gap": null,
+          "group": "bed",
+          "mean_with": null,
+          "mean_without": -4.248409803209597,
+          "n_with": 0,
+          "n_without": 3,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -66028,7 +66842,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 7,
@@ -66179,7 +66993,7 @@
       },
       "missing": [],
       "scene": "street-outdoor",
-      "status": "unknown",
+      "status": "fail",
       "system": "gtcrn",
       "tier": "common",
       "veto_failed": []
@@ -66207,6 +67021,26 @@
           "n_with": 2,
           "n_without": 8,
           "v": "V-NR"
+        },
+        {
+          "cls": "bed-street",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": null,
+          "n_with": 3,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-terrace",
+          "gap": null,
+          "group": "bed",
+          "mean_with": null,
+          "mean_without": 0.0,
+          "n_with": 0,
+          "n_without": 3,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -66488,7 +67322,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 7,
@@ -66647,7 +67481,28 @@
     {
       "clips": 10,
       "device": "external-mic",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "bed-street",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -2.979399983621908,
+          "mean_without": null,
+          "n_with": 3,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-terrace",
+          "gap": null,
+          "group": "bed",
+          "mean_with": null,
+          "mean_without": -2.979399983621908,
+          "n_with": 0,
+          "n_without": 3,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -66927,7 +67782,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 7,
@@ -67078,7 +67933,7 @@
       },
       "missing": [],
       "scene": "street-outdoor",
-      "status": "unknown",
+      "status": "fail",
       "system": "ref",
       "tier": "common",
       "veto_failed": []
@@ -67086,7 +67941,28 @@
     {
       "clips": 10,
       "device": "mba-builtin",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "bed-street",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -5.334543409265638,
+          "mean_without": null,
+          "n_with": 3,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-terrace",
+          "gap": null,
+          "group": "bed",
+          "mean_with": null,
+          "mean_without": -5.334543409265638,
+          "n_with": 0,
+          "n_without": 3,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -67366,7 +68242,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 7,
@@ -67521,7 +68397,7 @@
       },
       "missing": [],
       "scene": "street-outdoor",
-      "status": "unknown",
+      "status": "fail",
       "system": "gtcrn",
       "tier": "common",
       "veto_failed": []
@@ -67549,6 +68425,26 @@
           "n_with": 2,
           "n_without": 8,
           "v": "V-NR"
+        },
+        {
+          "cls": "bed-street",
+          "gap": null,
+          "group": "bed",
+          "mean_with": 0.0,
+          "mean_without": null,
+          "n_with": 3,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-terrace",
+          "gap": null,
+          "group": "bed",
+          "mean_with": null,
+          "mean_without": 0.0,
+          "n_with": 0,
+          "n_without": 3,
+          "v": "V-INTF"
         }
       ],
       "items": [
@@ -67830,7 +68726,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 7,
@@ -67989,7 +68885,28 @@
     {
       "clips": 10,
       "device": "mba-builtin",
-      "drags": [],
+      "drags": [
+        {
+          "cls": "bed-street",
+          "gap": null,
+          "group": "bed",
+          "mean_with": -3.4368828344612523,
+          "mean_without": null,
+          "n_with": 3,
+          "n_without": 0,
+          "v": "V-INTF"
+        },
+        {
+          "cls": "bed-terrace",
+          "gap": null,
+          "group": "bed",
+          "mean_with": null,
+          "mean_without": -3.4368828344612523,
+          "n_with": 0,
+          "n_without": 3,
+          "v": "V-INTF"
+        }
+      ],
       "items": [
         {
           "better": "lower",
@@ -68269,7 +69186,7 @@
           "pass": 0,
           "report_only": false,
           "rule": "均值 + 95% 区间三态，不过经 Holm 校正（人定 D85 题 1）",
-          "status": "unknown",
+          "status": "fail",
           "threshold": -10.0,
           "unit": "dB",
           "unknown": 7,
@@ -68424,7 +69341,7 @@
       },
       "missing": [],
       "scene": "street-outdoor",
-      "status": "unknown",
+      "status": "fail",
       "system": "ref",
       "tier": "common",
       "veto_failed": []
@@ -80980,8 +81897,8 @@
     }
   ],
   "worst": [
-    "canteen · stress · external-mic · gtcrn",
-    "transit-hub · stress · external-mic · gtcrn",
-    "transit-hub · stress · external-mic · ref"
+    "canteen · common · external-mic · ref",
+    "canteen · common · mba-builtin · ref",
+    "canteen · stress · external-mic · gtcrn"
   ]
 }
