@@ -284,7 +284,7 @@ pub const REGISTRY: &[Info] = &[
         unit: "dB",
         better: Better::Higher,
         definition: "用户与旁人重叠的连续段（≥ 0.5 s）上 SI-SDRi 的均值；旁报失败率（SI-SDRi < 1 dB 的段占比）",
-        algorithm: "两人的说话区间各自桥接 300 ms 内的停顿后取重叠；SI-SDR(输出, 干净参考) − SI-SDR(混合, 干净参考)，逐重叠段算（`verifiers/pse.rs`）",
+        algorithm: "先取两人真实同时有声的帧，再桥接其间 300 ms 内的停顿，连续 ≥ 0.5 s 的算一段；SI-SDR(输出, 干净参考) − SI-SDR(混合, 干净参考)，逐重叠段算（`verifiers/pse.rs`）",
         anchor: "Delcroix 2022 §5.3 失败率；025 D5：先给 GTCRN 与原声直通出基线（原声直通 = 0），只报不判",
         failure: "参考带混响，去混响的系统会被扣分；只在有逐轨真值、有重叠段的段上能算",
     },

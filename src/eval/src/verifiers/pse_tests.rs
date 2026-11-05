@@ -216,3 +216,28 @@ fn tsos_reports_onset_window_share() {
     assert!(s.value.unwrap() < on, "整体比例应低于字头窗：{s}");
     assert_eq!(extra(&score("V-TSOS", &c, &c.clean), "onset200_pct"), 0.0);
 }
+
+/// 两人每 200 ms 轮流说话、从不同时开口：不许生成重叠段（codex 中途 2 第 2 轮 P1 #1）。
+#[test]
+fn alternating_turns_make_no_overlap() {
+    let c = clip(None);
+    let n = c.mix.len() / MASK_FRAME;
+    let own: Vec<bool> = (0..n).map(|f| (f / 20) % 2 == 0).collect();
+    let itf: Vec<bool> = own.iter().map(|v| !v).collect();
+    let m = crate::analysis::Masks {
+        owner: own,
+        interf: itf,
+        noise_only: vec![false; n],
+        interf_only: vec![false; n],
+    };
+    let ctx = Ctx {
+        clip: &c,
+        out: &c.mix,
+        run: None,
+        masks: &m,
+        noise_out: None,
+        ci: true,
+    };
+    let s = v_pse_ovl(&ctx);
+    assert!(s.value.is_none(), "轮流说话不该有重叠段：{s}");
+}

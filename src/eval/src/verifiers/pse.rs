@@ -5,7 +5,7 @@
 //!   S = 干净参考谱，Ŝ = 输出谱，p = 0.3，γ = 0.1。只算用户有声帧。主数 = 误删帧百分比
 //! - **V-SWALLOW 开口后被吞多久**：每个开口起点之后第一段连续误删的时长（起点帧没误删记 0），报本段 p90
 //! - **V-LEAK 旁人漏过事件率**：只有旁人说话的 1 秒窗（用户一帧不说、旁人说话过半）里，输出比输入压低不到 X dB 的窗占比
-//! - **V-PSE-OVL 同时说话只留用户**：用户与旁人重叠的连续段（两人各自先桥接 300 ms 内的停顿，重叠 ≥ 0.5 s）上 SI-SDRi；旁报失败率（SI-SDRi < 1 dB 的段占比）
+//! - **V-PSE-OVL 同时说话只留用户**：用户与旁人真实同时有声的帧，桥接其间 300 ms 内的停顿后，连续 ≥ 0.5 s 的段上 SI-SDRi；旁报失败率（SI-SDRi < 1 dB 的段占比）
 //!
 //! 四项的过关线都还没定（TSOS 比原声直通多多少算不过、X 取几 dB：待人拍板），成绩单里只报不判。
 
@@ -273,16 +273,24 @@ pub const SI_SDR_CAP: f64 = 200.0;
 pub(super) fn v_pse_ovl(c: &Ctx) -> Score {
     const ID: &str = "V-PSE-OVL";
     let min_len = (0.5 * c.clip.sr as f64) as usize;
-    // 两人各自的说话区间先桥接 300 ms 以内的停顿，再取重叠
+    // 先取两人真实同时有声的帧，再桥接这些重叠帧之间 300 ms 以内的停顿（各自先桥接会把轮流说话造成「重叠」，
+    // codex 中途 2 第 2 轮 P1 #1）
     let gap = (0.3 * c.clip.sr as f64) as usize / MASK_FRAME;
-    let (own, itf) = (bridge(&c.masks.owner, gap), bridge(&c.masks.interf, gap));
-    let n = own.len().min(itf.len());
+    let raw: Vec<bool> = c
+        .masks
+        .owner
+        .iter()
+        .zip(&c.masks.interf)
+        .map(|(a, b)| *a && *b)
+        .collect();
+    let ov = bridge(&raw, gap);
+    let n = ov.len();
     let mut segs = Vec::new();
     let mut k = 0;
     while k < n {
-        if own[k] && itf[k] {
+        if ov[k] {
             let a = k;
-            while k < n && own[k] && itf[k] {
+            while k < n && ov[k] {
                 k += 1;
             }
             let (s, e) = (
