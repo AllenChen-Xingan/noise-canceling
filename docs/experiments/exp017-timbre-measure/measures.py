@@ -128,7 +128,9 @@ def erb_bands(lo=100.0, hi=7900.0, step=1.0):
     """按 ERB 数等距切带（Glasberg & Moore 1990：ERB 数 = 21.4·log10(1 + 0.00437·f)）。"""
     e = lambda f: 21.4 * np.log10(1 + 0.00437 * f)  # noqa: E731
     inv = lambda n: (10 ** (n / 21.4) - 1) / 0.00437  # noqa: E731
-    edges = inv(np.arange(e(lo), e(hi) + 1e-9, step))
+    # 两端钉在 lo / hi，带数 = 跨度 ÷ 步长取整，每带约 1 步宽（codex 026 第 1 轮 #2：旧写法只留整步，末带止于约 7.2 kHz）
+    n = max(1, int(round((e(hi) - e(lo)) / step)))
+    edges = inv(np.linspace(e(lo), e(hi), n + 1))
     return list(zip(edges[:-1], edges[1:]))
 
 
@@ -146,6 +148,8 @@ def erb_shape(out, clean, owner, noise_only=None, sr=16000, step=1.0):
     po = np.maximum(np.maximum(po - pn, 0.1 * po), 1e-20)
     keep = pc > 0
     d = db10(po[keep]) - db10(pc[keep])
-    d = np.maximum(d, -40.0)  # 单带最多记 −40 dB，空带不拖成 −100 dB 级
+    # 先按中位数去掉整体增益，再截下限，最后去均值：截断点随增益平移，整体音量不改读数（codex 026 第 1 轮 #3）
+    d = d - np.median(d)
+    d = np.maximum(d, -40.0)  # 相对中位数最多记 −40 dB，空带不拖成 −100 dB 级
     d = d - d.mean()
     return dict(std=float(d.std()), slope=float(np.diff(d).std()), max=float(np.abs(d).max()), n=int(keep.sum())), d
