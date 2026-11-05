@@ -1,5 +1,3 @@
-   Compiling vdn-eval v0.1.0 (/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-timbre/src/eval)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.28s
      Running tests/timbre_parity.rs (target/debug/deps/timbre_parity-9d8377ff236df62c)
 
 running 1 test
