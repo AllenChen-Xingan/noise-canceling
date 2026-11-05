@@ -7,7 +7,7 @@
 
 87.7 ms 由三部分组成：
 - 模型本身 60 ms，结构定死，换推理引擎去不掉。
-- 评测框架给外部系统多记了 16 ms，接进产品就没有了。
+- 评测框架给外部系统多记了 16 ms。以「整窗」口径、产品按模型自己的 hop 调度为前提，这 16 ms 可以去掉（推断，未验证）。
 - 平台预算 11.7 ms，和 GTCRN 一样。
 
 去掉 16 ms 后约 71.7 ms，仍超 45 ms 的线 26.7 ms。就算按维护者说的「约 40 ms」算，也要 51.7 ms，还超 6.7 ms。
@@ -18,8 +18,8 @@
 
 | 部分 | 毫秒 | 出处 | 能不能降 |
 |---|---|---|---|
-| 模型算法延迟（声明 = 实测对齐） | 60.0 | `run_dpdfnet2.py` 头注释：4 帧 × 160 + 窗长 320 = 960 样本 @16 kHz；V-LAT 记录 `declared_algo_ms` = `measured_algo_ms` = 60.0 | 见第二节。结构定死，不重训降不了 |
-| 外部回放的「攒满一个 hop」 | 16.0 | `src/engine/src/engine.rs` `latency_ledger` 的 hop-buffer 项；外部回放的 hop 固定取 `FRONTEND.hop` = 256 @16 kHz（`src/eval/src/system/external.rs:27`、`src/types/src/frontend.rs:65`） | **能**。这是评测框架的记账口径，不是模型的。DPDFNet 的 60 ms 已经含整窗，窗里包括了攒一个 hop 的等待。接进产品时按它自己的 hop（160）记账，这 16 ms 就不重复算了（推断：60 ms 是整窗加前视，和 GTCRN「hop 16 + 模型 16 = 窗 32」同一口径） |
+| 模型算法延迟（声明值） | 60.0 | `run_dpdfnet2.py` 头注释：4 帧 × 160 + 窗长 320 = 960 样本 @16 kHz。V-LAT 记录的 `measured_algo_ms` 也是 60.0，但回放会按声明值在输出前补零（`external.rs:417`），所以它只证明「补齐无误」，**不独立证明结构下限**。结构下限靠第二节的源码推导 | 见第二节。结构定死，不重训降不了 |
+| 外部回放的「攒满一个 hop」 | 16.0 | `src/engine/src/engine.rs` `latency_ledger` 的 hop-buffer 项；外部回放的 hop 固定取 `FRONTEND.hop` = 256 @16 kHz（`src/eval/src/system/external.rs:27`、`src/types/src/frontend.rs:65`） | **有条件能**（推断，未验证）。这是评测框架的记账口径，不是模型的。前提有两条：60 ms 按「整窗 + 前视」声明，已含攒一个 hop 的等待，和 GTCRN「hop 16 + 模型 16 = 窗 32」同一口径；产品里按模型自己的 hop（160）调度。两条都成立，这 16 ms 就是重复记账（#125） |
 | 平台预算 | 11.67 | `src/types/src/latency.rs` `planned_platform`：重采样两跳 2 + 2、麦克风 IO 块 96 帧 2.0、跨进程环 3.0、HAL 输出 2.67（都 @48 kHz） | 这是预算，不是实测（`Basis::Budget`）。GTCRN 也是 16 kHz 模型，同样付这 11.67。和换推理引擎无关 |
 | 合计 | 87.67 | `16 + 60 + 11.67`，与成绩单 V-LAT 值一致 | |
 
