@@ -4,8 +4,8 @@
 //! - **V-TSOS 用户被误删**：Eskimez 等 2022 式 (2)(3)。逐帧：Σ_f max(0, |S|^p − |Ŝ|^p) > γ · Σ_f |S|^p 记一帧误删；
 //!   S = 干净参考谱，Ŝ = 输出谱，p = 0.3，γ = 0.1。只算用户有声帧。主数 = 误删帧百分比
 //! - **V-SWALLOW 开口后被吞多久**：每个开口起点之后第一段连续误删的时长（起点帧没误删记 0），报本段 p90
-//! - **V-LEAK 旁人漏过事件率**：只有旁人说话的 1 秒窗里，输出比输入压低不到 X dB 的窗占比
-//! - **V-PSE-OVL 同时说话只留用户**：用户与旁人重叠的连续段（≥ 0.5 s）上 SI-SDRi；旁报失败率（SI-SDRi < 1 dB 的段占比）
+//! - **V-LEAK 旁人漏过事件率**：只有旁人说话的 1 秒窗（用户一帧不说、旁人说话过半）里，输出比输入压低不到 X dB 的窗占比
+//! - **V-PSE-OVL 同时说话只留用户**：用户与旁人重叠的连续段（两人各自先桥接 300 ms 内的停顿，重叠 ≥ 0.5 s）上 SI-SDRi；旁报失败率（SI-SDRi < 1 dB 的段占比）
 //!
 //! 四项的过关线都还没定（TSOS 比原声直通多多少算不过、X 取几 dB：待人拍板），成绩单里只报不判。
 
@@ -137,14 +137,18 @@ pub(super) fn v_swallow(c: &Ctx) -> Score {
 pub(super) fn v_leak(c: &Ctx) -> Score {
     const ID: &str = "V-LEAK";
     let x = th::LEAK.def("min_att_db");
-    let win = (1.0 * c.clip.sr as f64) as usize / MASK_FRAME; // 1 s 的掩码帧数
-    let m = &c.masks.interf_only;
+    let win = (c.clip.sr as usize / MASK_FRAME).max(1); // 1 s 的掩码帧数
+    let (own, itf) = (&c.masks.owner, &c.masks.interf);
+    let nf = own.len().min(itf.len());
     let (mut n, mut leak) = (0usize, 0usize);
-    for w in (0..m.len() / win.max(1)).map(|i| i * win..(i + 1) * win) {
-        if !m[w.clone()].iter().all(|v| *v) {
+    for w in (0..nf / win).map(|i| i * win..(i + 1) * win) {
+        // 「只有旁人说话的窗」：用户一帧都不在说，旁人说话的帧过半（音节之间的空隙照算在窗里）
+        if own[w.clone()].iter().any(|v| *v)
+            || itf[w.clone()].iter().filter(|v| **v).count() * 2 < win
+        {
             continue;
         }
-        let sel: Vec<bool> = (0..m.len()).map(|i| w.contains(&i)).collect();
+        let sel: Vec<bool> = (0..nf).map(|i| w.contains(&i)).collect();
         let (Some((po, _)), Some((pi, _))) =
             (power_over(c.out, &sel), power_over(&c.clip.mix, &sel))
         else {
@@ -154,7 +158,7 @@ pub(super) fn v_leak(c: &Ctx) -> Score {
         leak += usize::from(db10(po) - db10(pi) > -x);
     }
     if n == 0 {
-        return Score::unknown(ID, "%", Better::Lower, "没有整秒只有旁人说话的窗");
+        return Score::unknown(ID, "%", Better::Lower, "没有只有旁人说话的整秒窗");
     }
     let mut s = Score::judged(
         ID,
@@ -167,6 +171,23 @@ pub(super) fn v_leak(c: &Ctx) -> Score {
     .with_extra("windows", n as f64);
     s.verdict = Verdict::Unknown(format!("只报不判：压低不到 {x} dB 算漏过，X 待人拍板"));
     s
+}
+
+/// 把不超过 `gap` 帧的停顿填上（音节之间的空隙不算「不说话」）。
+fn bridge(m: &[bool], gap: usize) -> Vec<bool> {
+    let mut out = m.to_vec();
+    let mut last: Option<usize> = None;
+    for (i, &v) in m.iter().enumerate() {
+        if v {
+            if let Some(l) = last
+                && i - l - 1 <= gap
+            {
+                out[l + 1..i].iter_mut().for_each(|x| *x = true);
+            }
+            last = Some(i);
+        }
+    }
+    out
 }
 
 /// SI-SDR（dB）：est 投影到 reference 上的分量与残差之比。
@@ -193,13 +214,16 @@ pub fn si_sdr(est: &[f32], reference: &[f32]) -> Option<f64> {
 pub(super) fn v_pse_ovl(c: &Ctx) -> Score {
     const ID: &str = "V-PSE-OVL";
     let min_len = (0.5 * c.clip.sr as f64) as usize;
-    let n = c.masks.owner.len().min(c.masks.interf.len());
+    // 两人各自的说话区间先桥接 300 ms 以内的停顿，再取重叠
+    let gap = (0.3 * c.clip.sr as f64) as usize / MASK_FRAME;
+    let (own, itf) = (bridge(&c.masks.owner, gap), bridge(&c.masks.interf, gap));
+    let n = own.len().min(itf.len());
     let mut segs = Vec::new();
     let mut k = 0;
     while k < n {
-        if c.masks.owner[k] && c.masks.interf[k] {
+        if own[k] && itf[k] {
             let a = k;
-            while k < n && c.masks.owner[k] && c.masks.interf[k] {
+            while k < n && own[k] && itf[k] {
                 k += 1;
             }
             let (s, e) = (

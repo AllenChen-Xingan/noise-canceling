@@ -68,18 +68,28 @@ fn tsos_zero_for_clean_and_high_for_suppressed_speech() {
 #[test]
 fn swallow_measures_cut_after_onset() {
     let c = clip(None);
-    let cut = (0.2 * c.sr as f64) as usize;
+    // 只切每个区间开头的 100 ms（区间不足 150 ms 的不切，免得相邻区间的切口连成一片）
+    let cut = (0.1 * c.sr as f64) as usize;
     let mut out = c.clean.clone();
-    for &(a, _) in &c.truth.owner {
-        for v in out.iter_mut().skip(a).take(cut) {
-            *v = 0.0;
+    for &(a, e) in &c.truth.owner {
+        if e - a >= cut * 3 / 2 {
+            out[a..a + cut].iter_mut().for_each(|v| *v = 0.0);
         }
     }
     let s = score("V-SWALLOW", &c, &out);
     let p90 = s.value.unwrap();
-    // 每个开口吞 200 ms：按 16 ms 跳、32 ms 窗量，允许 ±3 跳
-    assert!((150.0..=250.0).contains(&p90), "{s}");
+    // 吞 100 ms：按 16 ms 跳、32 ms 窗量，允许 ±3 跳
+    assert!((50.0..=150.0).contains(&p90), "{s}");
     assert_eq!(score("V-SWALLOW", &c, &c.clean).value, Some(0.0));
+}
+
+#[test]
+fn bridge_fills_short_gaps_only() {
+    let m = [true, false, false, true, false, false, false, false, true];
+    assert_eq!(
+        bridge(&m, 2),
+        vec![true, true, true, true, false, false, false, false, true]
+    );
 }
 
 #[test]
@@ -131,26 +141,16 @@ fn pse_ovl_zero_for_passthrough_positive_for_extraction() {
 #[test]
 fn si_sdr_basics() {
     let x: Vec<f32> = (0..1000).map(|i| (i as f32 * 0.1).sin()).collect();
-    assert_eq!(si_sdr(&x, &x), Some(200.0));
-    // 尺度不变：放大 3 倍读数不变
+    // 完全一样：残差只剩 f32 舍入，读数很高
+    assert!(si_sdr(&x, &x).unwrap() > 100.0);
+    // 尺度不变：放大 3 倍读数仍很高；加一半独立噪声读数明显下降
     let y: Vec<f32> = x.iter().map(|v| v * 3.0).collect();
-    assert_eq!(si_sdr(&y, &x), Some(200.0));
+    assert!(si_sdr(&y, &x).unwrap() > 100.0);
+    let z: Vec<f32> = x
+        .iter()
+        .enumerate()
+        .map(|(i, v)| v + 0.5 * (i as f32 * 1.7).cos())
+        .collect();
+    assert!(si_sdr(&z, &x).unwrap() < 20.0);
     assert_eq!(si_sdr(&x, &vec![0.0; 1000]), None);
-}
-
-#[test]
-fn zz_debug_print() {
-    for m in [None, Some(InterfMode::OtherFirst), Some(InterfMode::Overlap)] {
-        let c = clip(m);
-        let mk = masks(&c.truth, &c.mix, 0.03);
-        let n_io = mk.interf_only.iter().filter(|x| **x).count();
-        let n_ov = mk.owner.iter().zip(&mk.interf).filter(|(a, b)| **a && **b).count();
-        eprintln!("{m:?} owner iv {:?}", &c.truth.owner[..c.truth.owner.len().min(8)]);
-        eprintln!("  interf iv {:?}", &c.truth.interf[..c.truth.interf.len().min(6)]);
-        eprintln!("  interf_only frames {n_io} overlap frames {n_ov} of {}", mk.owner.len());
-        let s = score("V-LEAK", &c, &c.mix);
-        eprintln!("  leak {s} {:?}", s.verdict);
-        let s = score("V-PSE-OVL", &c, &c.mix);
-        eprintln!("  ovl {s} {:?}", s.verdict);
-    }
 }
