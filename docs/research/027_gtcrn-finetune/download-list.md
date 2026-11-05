@@ -4,7 +4,7 @@
 > 判据：D63（测试份永不进训练）· D64（BY-SA 可训练，权重按 BY-SA 共享并署名；NC 只评测）· D57（评测音频不进训练）。
 > 为什么要下：本机能合法训练的只有 DEMAND 6 个环境（食堂 · 露台 · 餐馆 · 厨房 · 街道 · 公交）每段前 60%，和 LibriSpeech test-clean 偶数位 20 人（约 2.7 小时）。车内 · 地铁 · 候车厅的 DEMAND 被测试份 / 评测集占用，ESC-50 是 NC，本机三套房间冲激响应全被评测集用了（exp013 README 第二、四节）。
 
-## 第一批：第一个最小实验够用（约 15.4 GB，解压峰值约 31 GB）
+## 第一批：第一个最小实验够用（约 16.1 GB，解压峰值约 32 GB）
 
 | # | 数据集 | 类别 | 补哪些弱场景 | 许可（原文 · 出处） | 能否训练 | 大小 | 时长 / 条数 | 和评测集撞源？ |
 |---|---|---|---|---|---|---|---|---|
@@ -12,6 +12,10 @@
 | A2 | QUT-NOISE（CAFE · CAR · STREET · HOME · REVERB） | 噪声实录 | 咖啡馆 · 车内 · 街边 | "The QUT-NOISE data itself is licensed CC-BY-SA"（QUT SAIVT 官网，**复核**） | 能（BY-SA） | 约 7.7 GB（五个包 1.4–1.7 GB） | 未核 | 不撞 |
 | A3 | TUM 风噪集 | 风噪（手机实录 + 合成） | 街边 + 风 | "Creative Commons Attribution 4.0 International"（Zenodo 6687982，**复核**） | 能 | 0.14 GB | 未核 | 不撞 |
 | A4 | OpenSLR 28 RIRS_NOISES | 房间冲激响应（实测 RWCP · REVERB 2014 · Aachen AIR + 模拟）+ 点声源噪声（取自 MUSAN） | 全部（混响） | "License: Apache 2.0"（openslr.org/28，**复核**；内部各来源的许可页面未列，未逐个核） | 能（内部来源待核） | 1.3 GB | 未核 | 不撞：评测用 MIT · ACE · McVAMPIRE |
+
+| A5 | LibriSpeech dev-clean + test-other | 干净人声（英），**只给终测** | 终测的主说话人与旁人 | "CC BY 4.0"（openslr.org/12，**复核**） | 能（这里只测不训） | 约 0.33 + 0.33 GB | 各约 5 小时 | 不撞：说话人与 test-clean、train-clean-100 都不同 |
+
+第一批合计约 16.1 GB。每个来源下载后**先按 `decision.md` 第六节的表切训练 / 开发 / 测试三份**，切法与哈希进仓，再生成数据。
 
 本机已有、可直接用：DEMAND 6 个环境前 60%（0 GB）。另加风噪模拟器 `audiolabs/SC-Wind-Noise-Generator`（MIT，代码，几 MB）。
 
