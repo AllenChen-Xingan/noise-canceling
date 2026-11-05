@@ -295,3 +295,19 @@ impl Extra for QaExtra {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::content_key;
+
+    /// 同样的样本同一个键；差一个样本、差一位、差长度都换键（DNSMOS 原声分缓存，025 F1）。
+    #[test]
+    fn content_key_changes_with_content() {
+        let a = vec![0.1f32, -0.2, 0.3];
+        assert_eq!(content_key(&a), content_key(&a.clone()));
+        let mut b = a.clone();
+        b[1] = f32::from_bits(b[1].to_bits() ^ 1);
+        assert_ne!(content_key(&a), content_key(&b));
+        assert_ne!(content_key(&a), content_key(&a[..2]));
+    }
+}
