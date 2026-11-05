@@ -102,11 +102,26 @@ class Exp019(unittest.TestCase):
                 torch.testing.assert_close(a[:, :, : t + 1], b[:, :, : t + 1], rtol=0, atol=0)
                 self.assertGreater((a[:, :, t + 1:] - b[:, :, t + 1:]).abs().max().item(), 0)
 
-    def test_tattn_sees_past_k_frames(self):
-        """时间注意力的缓存正好装过去 K-1 帧：第 K 帧以前的改动影响不到当前输出的注意力部分。"""
-        m = self._perturbed("tattn-k16")
-        st = m.extra.init_state(1)
-        self.assertEqual(tuple(st[0].shape), (1, 33, 15, 16))
+    def test_tattn_window_is_k_frames(self):
+        """时间注意力只看最近 K 帧：只改注意力模块的输入里更早的帧，当前输出不变。
+
+        直接测模块本身（不经 GRU，GRU 记得更久）：喂 K+5 帧，两份只在前 5 帧不同。
+        """
+        k = 16
+        att = self._perturbed("tattn-k16").extra
+        g = torch.Generator().manual_seed(3)
+        seq = torch.randn(k + 5, 1, 16, 1, 33, generator=g)
+        seq2 = seq.clone()
+        seq2[:5] = torch.randn(5, 1, 16, 1, 33, generator=g)
+        outs = []
+        for s in (seq, seq2):
+            st = att.init_state(1)
+            with torch.no_grad():
+                for x in s:
+                    y, st = att(x, st)
+            outs.append(y)
+        torch.testing.assert_close(outs[0], outs[1], rtol=0, atol=0)
+        self.assertEqual(tuple(att.init_state(1)[0].shape), (1, 33, k - 1, 16))
 
     def test_params_match_official(self):
         """可训练参数与官方 23.67 K 一致（误差 ≤ 10 个）。"""
