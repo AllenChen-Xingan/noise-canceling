@@ -138,19 +138,24 @@ def probe(process, clips, root, nominal):
     返回 (声明延迟, 记录)。对齐后滞后 ≠ 0 就报错：输出没对齐，入口会把延迟算错。"""
     ok = [c for c in clips if c["has_clean_ref"]]
     c, c2 = ok[0], ok[1 % len(ok)]
-    x = inputs_of(c, root, set())[0][1]
-    la = measure_lookahead(process, x)
+    ins = dict(inputs_of(c, root, set()))
+    # mix 与 clean 两种输入都量前视、核对齐（入口截半自检只查 mix；clean 在这里查，codex 016 最终版方法第 1 轮 P1 #2）
+    la_by, lag_by = {}, {}
+    for kind in ("mix", "clean"):
+        la_by[kind] = measure_lookahead(process, ins[kind])
+        lag_by[kind] = xcorr_lag(ins[kind], process(ins[kind]))
+        if abs(lag_by[kind]) > 1:
+            raise SystemExit(f"对齐不对：{c['id']} 的 {kind} 输出相对输入滞后 {lag_by[kind]} 样本")
+    la, lag = max(la_by.values()), lag_by["mix"]
+    x = ins["mix"]
     a1 = process(x)
-    lag = xcorr_lag(x, a1)
-    if abs(lag) > 1:
-        raise SystemExit(f"对齐不对：{c['id']} 输出相对输入滞后 {lag} 样本")
     # 每段之间状态清干净：A → B → A 两次 A 的输出应一致（codex 016 脚本第 2 轮 P2 #5）
     process(inputs_of(c2, root, set())[0][1])
     reset_diff = float(np.max(np.abs(process(x) - a1)))
     if reset_diff > 1e-6:
         raise SystemExit(f"每段之间状态没清干净：A→B→A 两次 A 输出最大差 {reset_diff:.2e}")
     return max(nominal, la), {"probe_clip": c["id"], "nominal_latency": nominal, "measured_lookahead": la,
-                              "lag_after_align": lag, "reset_check_clip": c2["id"], "reset_max_abs_diff": reset_diff}
+                              "measured_lookahead_by_kind": la_by, "lag_after_align": lag, "lag_after_align_by_kind": lag_by, "reset_check_clip": c2["id"], "reset_max_abs_diff": reset_diff}
 
 
 def check_existing(path, n):
