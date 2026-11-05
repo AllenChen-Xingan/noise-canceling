@@ -290,6 +290,15 @@ fn self_checks_reject_bad_dirs() {
     let d = good();
     std::fs::remove_file(d.join(format!("mix/{id}.wav"))).unwrap();
     expect(&d, "缺 1 段");
+    // clean/ 列了就必须段段齐、时长对
+    let d = good();
+    std::fs::remove_file(d.join(format!("clean/{id}.wav"))).unwrap();
+    expect(&d, "clean/ 缺 1 段");
+    let d = good();
+    let pc = d.join(format!("clean/{id}.wav"));
+    let (xc, _) = wav::read(&pc).unwrap();
+    wav::write(&pc, &xc[..xc.len() - 1], SR).unwrap();
+    expect(&d, "dur_samples");
     // 多片段
     let d = good();
     wav::write(&d.join("bg/nope-c99.wav"), &[0.0; 4], SR).unwrap();
