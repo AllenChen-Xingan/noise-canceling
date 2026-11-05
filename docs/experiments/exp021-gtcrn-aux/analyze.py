@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""exp021 读数：逐段比对 · 混回取舍曲线。只用标准库。
+
+  analyze.py check A/clips.jsonl <系统A> B/clips.jsonl <系统B>
+      逐段逐项比对两路分数。除「预期会变」那几项外，差必须为 0，否则退出码 1。
+  analyze.py curve <clips.jsonl>... --items V-NR,V-ONSET,... [--out 表.md]
+      每个系统（= 一组混回参数）每项的平均值，按场景分组，写成表。
+"""
+
+import json
+import math
+import sys
+from collections import defaultdict
+
+# 读引擎门控 / 送原声状态或原始未对齐输出的项：预混 + 关保命这条路上必然不同，比对时只报不判。
+# 来源：src/eval/src/verifiers/sim.rs（V-SIM-*，读 gate）· physical.rs（V-SWITCH 读 bypass，V-LAT 读 raw）
+EXPECTED_DIFF = {"V-SIM-GATE", "V-SIM-FA", "V-SIM-QUIET", "V-SIM-SWLAT", "V-SWITCH", "V-LAT"}
+TOL = 0.0
+
+
+def load(path):
+    with open(path, encoding="utf-8") as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+
+def by_clip(rows, system):
+    out = {}
+    for r in rows:
+        if r["system"] == system:
+            out[r["clip"]] = {s["v"]: s for s in r["scores"]}
+    return out
+
+
+def same(a, b):
+    if a is None or b is None:
+        return a is None and b is None
+    return abs(a - b) <= TOL
+
+
+def check(rows_a, sys_a, rows_b, sys_b):
+    """返回 (每项统计, 是否通过)。统计：段数 · 值不同的段数 · 最大差 · 判定不同的段数。"""
+    a, b = by_clip(rows_a, sys_a), by_clip(rows_b, sys_b)
+    stats = defaultdict(lambda: {"n": 0, "diff": 0, "max": 0.0, "verdict": 0})
+    ok = True
+    if set(a) != set(b) or not a:
+        return {"_clips": {"a": len(a), "b": len(b)}}, False
+    for clip in sorted(a):
+        va, vb = a[clip], b[clip]
+        for v in sorted(set(va) | set(vb)):
+            st = stats[v]
+            st["n"] += 1
+            sa, sb = va.get(v), vb.get(v)
+            if sa is None or sb is None:
+                st["diff"] += 1
+                if v not in EXPECTED_DIFF:
+                    ok = False
+                continue
+            x, y = sa.get("value"), sb.get("value")
+            if not same(x, y):
+                st["diff"] += 1
+                if x is not None and y is not None:
+                    st["max"] = max(st["max"], abs(x - y))
+                else:
+                    st["max"] = math.inf
+            if sa.get("verdict") != sb.get("verdict"):
+                st["verdict"] += 1
+            if v not in EXPECTED_DIFF and (st["diff"] or st["verdict"]):
+                ok = False
+    return dict(stats), ok
+
+
+def mean(xs):
+    xs = [x for x in xs if x is not None]
+    return sum(xs) / len(xs) if xs else None
+
+
+def curve(rows, items):
+    """{系统: {场景: {项: 平均值}}}，另加场景 "_all"。"""
+    acc = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    for r in rows:
+        for s in r["scores"]:
+            if s["v"] in items:
+                for scene in (r["scene"], "_all"):
+                    acc[r["system"]][scene][s["v"]].append(s.get("value"))
+    return {
+        sys_: {sc: {v: mean(xs) for v, xs in d.items()} for sc, d in scenes.items()}
+        for sys_, scenes in acc.items()
+    }
+
+
+def fmt(x):
+    return "—" if x is None else f"{x:.3f}"
+
+
+def main(argv):
+    if len(argv) >= 5 and argv[0] == "check":
+        stats, ok = check(load(argv[1]), argv[2], load(argv[3]), argv[4])
+        print("| 项 | 段数 | 值不同 | 最大差 | 判定不同 | 预期会变 |")
+        print("|---|---|---|---|---|---|")
+        for v, st in sorted(stats.items()):
+            if v.startswith("_"):
+                print(f"段数对不上：{st}")
+                continue
+            print(f"| {v} | {st['n']} | {st['diff']} | {st['max']:.3g} | {st['verdict']} | "
+                  f"{'是' if v in EXPECTED_DIFF else ''} |")
+        print("核对：" + ("通过" if ok else "不通过"))
+        return 0 if ok else 1
+    if len(argv) >= 2 and argv[0] == "curve":
+        files = [a for a in argv[1:] if a.endswith(".jsonl")]
+        items = next((argv[i + 1] for i, a in enumerate(argv) if a == "--items"), "").split(",")
+        rows = [r for f in files for r in load(f)]
+        c = curve(rows, set(items))
+        lines = ["| 系统 | 场景 | " + " | ".join(items) + " |", "|---" * (len(items) + 2) + "|"]
+        for sys_ in sorted(c):
+            for sc in sorted(c[sys_]):
+                lines.append(f"| {sys_} | {sc} | " + " | ".join(fmt(c[sys_][sc].get(v)) for v in items) + " |")
+        text = "\n".join(lines) + "\n"
+        out = next((argv[i + 1] for i, a in enumerate(argv) if a == "--out"), None)
+        if out:
+            with open(out, "x", encoding="utf-8") as f:
+                f.write(text)
+        print(text)
+        return 0
+    print(__doc__)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
