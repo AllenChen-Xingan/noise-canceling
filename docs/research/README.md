@@ -22,3 +22,4 @@
 | [014](014_real-datasets/) | 2026-10-31 | 真实录音公开数据集：没有「笔记本麦 + 咖啡馆 + 参考」的公开集；首选 DNS 真实测试集 · CHiME-6 · AliMeeting · DR-VCTK ·（CHiME-4 / ACE）|
 | [014](014_real-datasets/) | 2026-10-31 | 真实录音的公开数据集：DNS 真实测试集 · CHiME-6 · AliMeeting · DR-VCTK 等（51 张卡） |
 | [015](015_dfn-hush-synth/) | 2026-10-31 | DFN 实时版 · Hush 与竞争说话人 · 合成数据（给辅助模型的 RL 训练） |
+| [027](027_gtcrn-finetune/) | 2026-11-05 | 在 GTCRN 现有权重上微调：先做（延迟占用不变），卡在数据（本机可训数据覆盖不了弱场景，先下约 15 GB）；MPS 有带空洞逐通道卷积的 bug，已绕开 |
