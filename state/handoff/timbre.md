@@ -1,6 +1,6 @@
 # 现状页 · timbre（批次 20261104-b15）
 
-状态：**进行中（2026-11-05）**——调研结论已写，报大总管等「可以」；对拍待名额
+状态：**进行中（2026-11-05）**——调研结论经 codex 2 轮、大总管已回「可以」；修复代码已写好，等名额编译（命令：本 worktree `_tmp/026-slot-commands.md`）
 
 ## 手上
 调研 026：音色项（V-TIMBRE）该怎么量——代码和标准文档 N4 哪边对（issue #119，分支 `research/026-timbre-measure`，交代 `_tmp/20261104-b15/timbre.md`）。
@@ -12,8 +12,13 @@
 - 文献：3 个只读子代理已交回，整理进 `docs/research/026_timbre-measure/sources.md`（20 条）
 - 结论：`docs/research/026_timbre-measure/decision.md`。两边都要改，推荐 ERB 29 带取标准差，分档 1 / 2 / 3 为建议值。正式实测 run `20261105-092828`（49 种劣化）+ 旁证 `runs/realout-20261105/`（480 段 GTCRN 输出）
 
+- 修复（未编译）：新 v_timbre 在 scratchpad，名额内由 `apply_swap.py` 换入；`src/eval/src/verifiers/timbre_tests.rs`、N4 与 scorecard 条文已写；`spectrum_golden.rs` 加了第 6 组指纹「去掉 V-TIMBRE」
+- 干净人声那一路改为对称扣停顿能量（大总管要求，实测 run `20261105-094833`）
+- 待大总管准许：`src/eval/suite/ci.json`（5 处 max 6）· `baseline-ci.json` 重写
+
 ## 待人拍板
 1. 几 dB 算听得出：A / B 两条线（1.0 / 2.0）是建议值。不回则默认用它，要人盲听一页约 10 分钟（decision ⑦）
+2. 音色偏差多大算不过：建议 > 3.0。不回则照 3.0 判、标暂定；比旧的 6 严，可能有组合从过变成不过或待测，候选和 GTCRN 同一条线（decision ⑦）
 
 ## 转交
 - 修复期：`src/eval/tests/spectrum_golden.rs` 冻结了 V-TIMBRE 的分数。**大总管已定（2026-11-05）**：不移出冻结清单，改为更新基准。这一改单独成一条提交，写清原因与改了哪项；附新旧基准对照，并有测试证明只有 V-TIMBRE 的字段变了、其余逐位不变（同 #116 背景稳不稳那次的做法）
