@@ -117,10 +117,13 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-05 00:59 evalfix 全量重出 run 20261105-005916-4ccf0638 开跑（权重哈希 · 工作区干净 · 接电源 · build 17f5 已核），预计 03:30；延迟预算 planned_platform_for 进 vdn-types（只加法，16 kHz 逐位不变）；cands 等合并后跑两候选最终版
 - 2026-11-05 00:07 evalfix 中途评审② 2 轮 P1×3 已修（SI-SDR 全零 · 干净人声掩码 · 重叠段桥接），申请冒烟名额 → 排在 cands 后；cands 草稿只跑 DSP 项，最终版只跑两候选、与 evalfix 的 GTCRN run 配对
 - 2026-11-04 #115 外部入口 CI 过、已合并（分支保留）；名额给 cands 跑 DPDFNet-2 + DFN3 低延迟版 480 段（约 30 min）；NoNoise-Mac 人未选 → 默认 C 推迟；待告诉 a2：spectrum_golden 改冻结法（a2 会话现不在线）
 - 2026-11-04 23:3x 会话重启，大总管改名 noise-canceling-26，已通知两手下；cands 入口 PR #115；evalfix spectrum_golden 改冻结法（技术题我定，要告诉 a2）
 - 2026-11-04 人逐题定评分方法 → D85（G-1 B · G-2 B 干净人声单独跑 · G-3 C 单段 ≥ 5 字否决 · G-4 A · 4 dB · 0.1 · 不听咔嗒）；已转 evalfix。evalfix 首次编译名额已还；对 cands 外部入口提 3 处公平性（延迟标声明值 · 最坏一帧判不知道 · 截断查偷看未来），我同意
+- 2026-11-05 我验收 evalfix：tidy 过；全量测试首跑 vdn-schema 红（eval-suite.schema.json 少导出 4 个新评分项名）→ evalfix 重导出；--no-fail-fast 全量 0 红；名额释放；evalfix 开收尾多轮 codex 评审。教训：亲跑一律 --no-fail-fast（已记 memory tests-by-default）
+- 2026-11-05 evalfix 全量 run 20261105-005916-4ccf0638 跑完（9986 s，1440 段，0 没跑成，规则 v2，供电 ac），名额归还；我核 clips.jsonl 1440 段齐；GTCRN 场景 0 过 / 40 不过 / 20 待测（只汇总版 1 / 42 / 17，请它说明变化），PSE 重叠项 passthrough 均值 0 与失败率 = 1 的 242 段待它说明；我占名额亲跑 tidy + 全量测试
 - 2026-11-04 人选继续「降噪效果」（评测集）→ 合并 #97 #108；开 #111 #112、两个 worktree；派 b15 evalfix · cands；G-1..G-7 按默认推进，待人确认；合并顺序 cands 入口小 PR 先、evalfix 后
 - 2026-11-04 evalbp 收尾：025 结论「算法大多对得上，偏在汇总（任一段不过 vs 均值 + 区间）」；codex 9 轮清零；待定 G-1..G-7 合进清单（替代 F-9 F-10）；开 #109 延迟测量器、#110 V-WEAK 低采样率；PR #108
 - 2026-11-04 a2：#107（评测器 4 处改调统一频谱模块）CI 真跑通（run 41866359378，main+#107，跳过 0），已合并 8fea2ef2，fe3 worktree 与分支已删，a2「前端只算一次」收口、暂不碰 src/eval；a2 会话 auto-commit 在主检出替我提交了 207a847f（coord + 待定，原样，不丢东西），提交信息照留
