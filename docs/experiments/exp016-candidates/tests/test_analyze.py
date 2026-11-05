@@ -76,6 +76,21 @@ class Merge(unittest.TestCase):
         with self.assertRaises(SystemExit):
             A.merge([g, ([row("x", "gtcrn", {"V-NR": 1.0})], self.card("k"))])
 
+    def test_refuses_missing_meta_dup_in_first_run_units_and_tags(self):
+        bare = self.card("g")
+        del bare["meta"]["rules"]
+        with self.assertRaises(SystemExit):
+            A.merge([([row("x", "gtcrn", {"V-NR": 1.0})], bare)])
+        with self.assertRaises(SystemExit):  # 第一个 run 内部重复
+            A.merge([([row("x", "gtcrn", {"V-NR": 1.0})] * 2, self.card("g"))])
+        g = ([row("x", "gtcrn", {"V-NR": 1.0})], self.card("g"))
+        other_unit = self.card("k")
+        other_unit["scenes"][0]["items"][0]["unit"] = "dBFS"
+        with self.assertRaises(SystemExit):
+            A.merge([g, ([row("x", "c", {"V-NR": 1.0})], other_unit)])
+        with self.assertRaises(SystemExit):  # 同一片段场景标签不同
+            A.merge([g, ([row("x", "c", {"V-NR": 1.0}, scene="home-quiet")], self.card("k"))])
+
 
 class Rank(unittest.TestCase):
     def test_top_behind_needs_units_and_positive_interval(self):
