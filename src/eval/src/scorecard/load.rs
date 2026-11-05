@@ -195,6 +195,20 @@ pub fn resummarize(
     if rows.is_empty() && missing.is_empty() {
         return Err(format!("{} 里没有段", path.display()));
     }
+    if rules == super::card::Rules::V1 {
+        // v2 跑出的三项读数在干净人声那一路上（人定 D85 题 2），没有 v1 要的带噪读数：拒绝，免得把新口径当旧口径
+        let clean = rows.iter().flat_map(|r| &r.scores).find(|(_, _, s)| {
+            s.extra
+                .iter()
+                .any(|(k, v)| *k == super::standard::CLEAN_PASS_MARK && *v == 1.0)
+        });
+        if let Some((id, _, _)) = clean {
+            return Err(format!(
+                "{}：{id} 等项是干净人声那一路的读数（clean_pass），没有 v1 要的带噪读数；要旧规则请用 --rules v1 重跑音频",
+                path.display()
+            ));
+        }
+    }
     derive_vacuum(&mut rows);
     Ok((super::card::Card::build_with(&rows, missing, rules), sha))
 }
