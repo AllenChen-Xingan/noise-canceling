@@ -91,3 +91,5 @@
 - [ ] 开放工位 · 候车厅 · 街边的公开候选待核（scenes 评审后提出，mtgdata 已收尾未核）：DNS 2020 实录 · Krisp 测试集——核地点标签、设备、许可后补进 023 `matrix.md` · 出处 021 现状页转交
 - [ ] `vdn-eval ci` / `qa` / `calib --record` 报告用 `std::fs::write`，同目录跑第二次会覆盖旧报告（违第五节 1 条）；照 `scorecard::card::write_new` 改为只新建 · 出处 scorecard 现状页转交
 - [ ] 成绩单按语种（`lang`）分组比较（旧 G4 中文组的替代）· 出处 `specs/rubric/scorecard.md` 第七节
+- [ ] DFN3 离线链路换产品重采样器（vdn_dsp Interpolator3 / Decimator3）复测：前视 284 → 约 192 样本，看输出效果变不变 · 方案 exp016 `plan-dfn3-resampler.md`（cands，2026-11-05，大总管定这批不做）
+- [ ] NoNoise-Mac 进成绩单（D77）：命令行文件降噪模式可用，要下载未公证的 release 程序约 7.5 MB；人未选，默认推迟 · 出处 exp016 `state/handoff/cands.md` 待人拍板 1

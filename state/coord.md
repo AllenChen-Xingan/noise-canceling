@@ -108,7 +108,7 @@
 |---|---|
 | 重编译 / 全量测试 / 跑模型（1 个） | 空（a2·fe3 借用跑评测器收口对拍后已归还；cafe 10 段成绩单改前改后逐字同；此前 card1 02:39 归还，run 20261104-000444-e4511abc） |
 
-排队：无
+排队：evalfix 冒烟（咖啡馆 32 段，约 20 min）排在 cands 480 段 + DSP 草稿之后
 
 **另一位大总管 noise-canceling-a2**（2026-11-04 起）：「前端只算一次」（D71），批次 b13 · exp015 · tmux vdn-fe · 检出 `../noise_canceling-coordfe` · 账本 `state/coord-fe.md`；我方下一个实验 exp016；会改 vdn-dsp · vdn-models · vdn-scene · vdn-speaker · vdn-engine，承诺 GTCRN 输出逐样本不变。a2 经人同意删了 16 个已合并 worktree（card1、coord99 保留）。
 
@@ -117,6 +117,8 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-05 00:07 evalfix 中途评审② 2 轮 P1×3 已修（SI-SDR 全零 · 干净人声掩码 · 重叠段桥接），申请冒烟名额 → 排在 cands 后；cands 草稿只跑 DSP 项，最终版只跑两候选、与 evalfix 的 GTCRN run 配对
+- 2026-11-04 #115 外部入口 CI 过、已合并（分支保留）；名额给 cands 跑 DPDFNet-2 + DFN3 低延迟版 480 段（约 30 min）；NoNoise-Mac 人未选 → 默认 C 推迟；待告诉 a2：spectrum_golden 改冻结法（a2 会话现不在线）
 - 2026-11-04 23:3x 会话重启，大总管改名 noise-canceling-26，已通知两手下；cands 入口 PR #115；evalfix spectrum_golden 改冻结法（技术题我定，要告诉 a2）
 - 2026-11-04 人逐题定评分方法 → D85（G-1 B · G-2 B 干净人声单独跑 · G-3 C 单段 ≥ 5 字否决 · G-4 A · 4 dB · 0.1 · 不听咔嗒）；已转 evalfix。evalfix 首次编译名额已还；对 cands 外部入口提 3 处公平性（延迟标声明值 · 最坏一帧判不知道 · 截断查偷看未来），我同意
 - 2026-11-04 人选继续「降噪效果」（评测集）→ 合并 #97 #108；开 #111 #112、两个 worktree；派 b15 evalfix · cands；G-1..G-7 按默认推进，待人确认；合并顺序 cands 入口小 PR 先、evalfix 后
