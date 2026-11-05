@@ -3,8 +3,8 @@
 - **状态**：进行中
 - **手上**：exp016 候选模型（DFN3 低延迟版 · DPDFNet-2 · NoNoise-Mac）上同一张成绩单 · issue #112
 - **交代**：主目录 `_tmp/20261104-b15/cands.md`
-- **做到哪**（2026-11-04）：外部入口代码 + 测试完成（全绿），codex 中途评审第 1 轮的 1 条 P1 已修，第 2 轮在跑；三个候选的离线路线已查清（`docs/experiments/exp016-candidates/README.md`）
-- **下一步**：第 2 轮无 P0/P1 → 报「入口可以开 PR」；写 DPDFNet-2 / DFN3 低延迟版离线脚本 → codex 审脚本 → 申请名额跑 480 段
+- **做到哪**（2026-11-04）：外部入口完成，codex 中途 2 轮 P0/P1 清零，已报「入口可以开 PR」；DPDFNet-2 与 DFN3 低延迟版离线脚本写好（Python 测试 11 条全过），等名额冒烟
+- **下一步**：冒烟 → codex 审两个脚本（第②次中途评审）→ 报耗时估计、申请名额跑 480 段
 
 ## 改了哪些文件
 | 文件 | 改了什么 |
@@ -14,7 +14,8 @@
 | `src/eval/tests/external_e2e.rs` | 新：8 条端到端测试 |
 | `src/eval/src/main.rs` | 成绩单元数据加 `external` 一行（evalfix 同意） |
 | `docs/experiments/exp016-candidates/` | `external-entry.md` 入口形状 · `README.md` 候选路线 |
-| `docs/reviews/016_candidates-codex.md` | 评审记录 |
+| `docs/reviews/016_candidates-codex.md` · `docs/reviews/README.md` | 评审记录 · 索引一行 |
+| `docs/experiments/exp016-candidates/_ext.py` · `run_dpdfnet2.py` · `run_dfn3ll.py` · `tests/test_ext.py` | 离线推理公共模块 · 两个候选脚本 · 测试 |
 
 ## 发现
 - codex-review 脚本的隐私扫描用 `file` 判纯文本：codex 输出以 `P1｜…` 开头时，`file` 把它认成 PBM 位图（`P1` 是该格式文件头），第 2 轮带 `--previous` 被硬拦。临时做法：给上一轮输出加一行标题。建议修 skill（判文本改看编码，或输出模板首行固定标题）
@@ -39,3 +40,8 @@
 - 领名额 → `cargo test -p vdn-eval` 全绿、clippy 无警告、tidy 通过（1 处采样率字面量已改）→ 归还
 - codex 入口第 1 轮：P1×1 P2×4 → 修 P1 #1、P2 #2 #5，#3 #4 留 issue；测试 8 条全绿
 - codex 第 2 轮首次被隐私扫描误拦（见发现）→ 加标题后重跑
+- codex 入口第 2 轮：P0/P1 0 条，P2×1（故障路径没测）→ 补测试 + 变异检查；中途评审停；报「入口可以开 PR」
+- 写 `_ext.py`（三种输入同 Rust `Kind::input`、实测前视、对齐检查、finalize 查全）、`run_dpdfnet2.py`（导入 exp003 的 Dpdfnet/stream，声明 960 样本）、`run_dfn3ll.py`（Hush dylib + soxr 流式，声明 284 样本 = 160 + 重采样前视 124）
+- 发现：soxr 流式重采样按样本序号对齐、自扣延迟，等于偷看约 124 样本（7.75 ms）未来 → 计入声明延迟
+- Python 测试 11 条（含与 Rust 正本 SCHEMA / Kind 名比对、与 scenes.json 片段清单比对）全过
+- 申请冒烟名额（两个 --probe，≤ 2 分钟）
