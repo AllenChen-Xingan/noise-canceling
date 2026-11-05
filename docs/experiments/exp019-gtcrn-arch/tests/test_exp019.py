@@ -102,26 +102,63 @@ class Exp019(unittest.TestCase):
                 torch.testing.assert_close(a[:, :, : t + 1], b[:, :, : t + 1], rtol=0, atol=0)
                 self.assertGreater((a[:, :, t + 1:] - b[:, :, t + 1:]).abs().max().item(), 0)
 
-    def test_tattn_window_is_k_frames(self):
-        """时间注意力只看最近 K 帧：只改注意力模块的输入里更早的帧，当前输出不变。
+    @staticmethod
+    def _module_outputs(mod, seq, cond=None):
+        st, ys = mod.init_state(1), []
+        with torch.no_grad():
+            for x in seq:
+                y, st = mod(x, st, cond)
+                ys.append(y)
+        return ys
 
-        直接测模块本身（不经 GRU，GRU 记得更久）：喂 K+5 帧，两份只在前 5 帧不同。
+    def test_branch_uses_current_frame(self):
+        """没有延后一帧：只改模块第 t 帧的输入，模块支路（输出 − 输入）在第 t 帧就变。
+
+        直接测候选模块（整模型的掩码乘当前频谱，会掩盖内部延后）。纯延后一帧的模块过不了。
         """
-        k = 16
-        att = self._perturbed("tattn-k16").extra
-        g = torch.Generator().manual_seed(3)
-        seq = torch.randn(k + 5, 1, 16, 1, 33, generator=g)
+        t = 6
+        g = torch.Generator().manual_seed(5)
+        seq = torch.randn(10, 1, 16, 1, 33, generator=g)
         seq2 = seq.clone()
-        seq2[:5] = torch.randn(5, 1, 16, 1, 33, generator=g)
-        outs = []
-        for s in (seq, seq2):
-            st = att.init_state(1)
-            with torch.no_grad():
-                for x in s:
-                    y, st = att(x, st)
-            outs.append(y)
-        torch.testing.assert_close(outs[0], outs[1], rtol=0, atol=0)
-        self.assertEqual(tuple(att.init_state(1)[0].shape), (1, 33, k - 1, 16))
+        seq2[t] = torch.randn(1, 16, 1, 33, generator=g)
+        for n in variants.NAMES[1:]:
+            with self.subTest(n=n):
+                mod = self._perturbed(n).extra
+                cond = torch.randn(1, 8) if n.startswith("film") else None
+                a = self._module_outputs(mod, seq, cond)
+                b = self._module_outputs(mod, seq2, cond)
+                da, db = a[t] - seq[t], b[t] - seq2[t]
+                self.assertGreater((da - db).abs().max().item(), 1e-6)
+                torch.testing.assert_close(a[t - 1], b[t - 1], rtol=0, atol=0)
+
+    def test_tattn_window_is_k_frames(self):
+        """时间注意力正好看最近 K 帧：最老的窗内帧改了，输出变；紧邻窗外那帧改了，输出不变。
+
+        直接测模块本身（不经 GRU，GRU 记得更久）。K = 16 / 32 / 64 各测一遍。
+        """
+        g = torch.Generator().manual_seed(3)
+        for k in (16, 32, 64):
+            with self.subTest(k=k):
+                att = self._perturbed(f"tattn-k{k}").extra
+                n = k + 5
+                seq = torch.randn(n, 1, 16, 1, 33, generator=g)
+                last = self._module_outputs(att, seq)[-1]
+                for idx, should_change in ((n - k, True), (n - k - 1, False)):
+                    s2 = seq.clone()
+                    s2[idx] = torch.randn(1, 16, 1, 33, generator=g)
+                    y = self._module_outputs(att, s2)[-1]
+                    diff = (y - last).abs().max().item()
+                    if should_change:
+                        self.assertGreater(diff, 1e-6, f"窗内最老帧 {idx} 没起作用")
+                    else:
+                        self.assertEqual(diff, 0.0, f"窗外帧 {idx} 影响了输出")
+                self.assertEqual(tuple(att.init_state(1)[0].shape), (1, 33, k - 1, 16))
+
+    def test_film_zero_cond_is_bypass_after_training(self):
+        """场景条件模块权重已训（非零）时，输入全零向量仍与不加条件的基座逐值相同（无偏置）。"""
+        m = self._perturbed("film-d8")
+        y = run(m, self.xs, torch.zeros(1, 8))
+        torch.testing.assert_close(y, self.ref, rtol=0, atol=0)
 
     def test_params_match_official(self):
         """可训练参数与官方 23.67 K 一致（误差 ≤ 10 个）。"""

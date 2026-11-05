@@ -94,14 +94,15 @@ class FiLM(nn.Module):
     """条件输入：外部给一个场景 / 噪声类型向量（维度 d），算出每通道的缩放和偏移。
 
     零初始化：缩放 = 1、偏移 = 0，等于原模型。向量从哪来（辅助小模型）归 aux 线。
+    线性层**不带偏置**：任何时候（含训练后）输入全零向量，这一层都是恒等旁路——
+    判别模型判不准时给全零，就退回「不加条件的那个基座」（基座若一起微调，就是微调后的基座）。
     """
 
     def __init__(self, cond_dim=8):
         super().__init__()
         self.d = cond_dim
-        self.fc = nn.Linear(cond_dim, 2 * C)
+        self.fc = nn.Linear(cond_dim, 2 * C, bias=False)
         nn.init.zeros_(self.fc.weight)
-        nn.init.zeros_(self.fc.bias)
         self.extra_macs = 0
 
     def init_state(self, batch=1):
