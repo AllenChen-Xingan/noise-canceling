@@ -20,19 +20,23 @@ pub fn ensure_fresh(dir: &std::path::Path) -> Result<(), String> {
     Ok(())
 }
 
+/// 只新建写一个文件：已存在就报错，不覆盖。
+pub fn write_new_file(p: &std::path::Path, text: &str) -> Result<(), String> {
+    use std::io::Write;
+    let mut h = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(p)
+        .map_err(|e| format!("{}：{e}", p.display()))?;
+    h.write_all(text.as_bytes()).map_err(|e| e.to_string())
+}
+
 /// 写成绩单：两个文件都用「只新建」打开，已存在就报错（与 [`ensure_fresh`] 之间被别的进程抢先写入也不会覆盖）。
 pub fn write_new(dir: &std::path::Path, json: &str, md: &str) -> Result<(), String> {
-    use std::io::Write;
     ensure_fresh(dir)?;
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     for (f, text) in FILES.iter().zip([json, md]) {
-        let p = dir.join(f);
-        let mut h = std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&p)
-            .map_err(|e| format!("{}：{e}", p.display()))?;
-        h.write_all(text.as_bytes()).map_err(|e| e.to_string())?;
+        write_new_file(&dir.join(f), text)?;
     }
     Ok(())
 }

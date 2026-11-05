@@ -161,6 +161,21 @@ pub fn derive_vacuum(rows: &mut [ClipRow]) {
     }
 }
 
+/// 读一份 `clips.jsonl`，补上真空感一列，按 `rules` 重新汇总。返回成绩单与源文件的 sha256（写进元数据，可追溯）。
+pub fn resummarize(
+    path: &std::path::Path,
+    rules: super::card::Rules,
+) -> Result<(super::card::Card, String), String> {
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{}：{e}", path.display()))?;
+    let sha = crate::wav::sha256(path)?;
+    let mut rows = parse_jsonl(&text)?;
+    if rows.is_empty() {
+        return Err(format!("{} 里没有段", path.display()));
+    }
+    derive_vacuum(&mut rows);
+    Ok((super::card::Card::build_with(&rows, Vec::new(), rules), sha))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
