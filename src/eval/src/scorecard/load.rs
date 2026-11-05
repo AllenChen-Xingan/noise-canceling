@@ -152,16 +152,15 @@ pub fn derive_vacuum(rows: &mut [ClipRow]) {
         if r.scores.iter().any(|(v, _, _)| *v == "V-VACUUM") {
             continue;
         }
-        let Some(t) = r
-            .scores
-            .iter()
-            .find(|(v, _, _)| *v == "V-NR")
-            .and_then(|(_, _, s)| s.value)
-        else {
+        // 有 V-NR 这一项的段都补一列（没值补「不知道」）：列的有无不能取决于哪一段排在前面（codex 中途 1 第 1 轮 P2 #4）
+        let Some((_, _, nr)) = r.scores.iter().find(|(v, _, _)| *v == "V-NR") else {
             continue;
         };
-        let s = Score::judged("V-VACUUM", t, "dB", crate::Better::Higher, Some(min), &[])
-            .with_note("由同段 V-NR 的 TNLR 生成（025 B4）");
+        let s = match nr.value {
+            Some(t) => Score::judged("V-VACUUM", t, "dB", crate::Better::Higher, Some(min), &[])
+                .with_note("由同段 V-NR 的 TNLR 生成（025 B4）"),
+            None => Score::unknown("V-VACUUM", "dB", crate::Better::Higher, "同段 V-NR 没有值"),
+        };
         r.scores.push(("V-VACUUM", false, s));
     }
 }
