@@ -113,3 +113,22 @@
 - 「核实属实」6 条（场景总判排除只报项 · 重叠先交集后桥接 · e2e 逐项断言 · meta.power · `planned_platform_for` 16 kHz 仍计重采样且旧函数未改 · v2 标准与阈值机器比对）；「无法核实」1 条（测试先红后绿的先后，只能看提交链）
 
 自检：`cargo test -p vdn-eval` 全绿 · `cargo clippy -p vdn-eval --all-targets` 无警告 · `xtask tidy` 通过。大总管已亲手跑全量测试（`--no-fail-fast`）0 红；其间发现 `specs/schema/eval-suite.schema.json` 没随 4 个新项重导出，已用 `cargo run -p vdn-schema` 重导出（只多 4 个项名）并随 `4dd81b48` 提交。
+
+## 收尾 · 第 2 轮（2026-11-05）· 总评「修改」· P0×0 P1×0 P2×2 · 满足停止线
+
+同对象、同依据，另带第 1 轮改过的文件当前内容。模型 gpt-6-astra · read-only · effort medium，86 s。脚本 stop-line：本轮与上一轮都无 P0/P1 → 满足，停。（第 1 轮输出开头是「P2」，`file` 认成位图被隐私扫描拒发，按旧办法在开头加一行标题后重发。）
+
+上一轮处理的验证：codex 抽查确认第 1 轮 #1–#3 都已修。
+
+- **P2｜run README 仍说 clips.jsonl「换规则重汇总，不必重跑音频」**（收尾第 2 轮 #1）
+  - 核实：属实，第 1 轮 #1 改了入口没改这句
+  - 处理：`runs/20261105-005916-4ccf0638/README.md` 改为只能按 v2 重新汇总，切回 v1 会报错、须重跑音频
+- **P2｜生成的成绩单没写干净人声三项的测量边界**（收尾第 2 轮 #2）
+  - 核实：属实。D85 题 2 要求报告写明，原先只写在 findings
+  - 处理：`card.rs` v2 成绩单开头加一句（三项名 · 在干净人声那一路上量 · 只量得到安静时的人声损伤）。先写会红的测试 `v2_markdown_states_clean_pass_limit`（红 → 绿），同时断言 v1 不出这句。已提交的 run `20261105-005916-4ccf0638` 的 scorecard.md 不重生成（不覆盖在用产物），该局限已写在同目录 README 指向的 findings 第十一节
+
+### 引用抽查
+
+- 「核实属实」5 条（v1 拒绝 clean_pass · scorecard.md 第 7 行 · findings 分解与 compare 一致 · 两项分开写且标推断 · schema 含 4 个新项）；「无法核实」1 条（执行记录）
+
+自检：`cargo test -p vdn-eval` 全绿 · clippy 无警告 · `xtask tidy` 通过。
