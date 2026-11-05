@@ -1,6 +1,6 @@
 """exp019 的测试：结构候选的正确性与计数口径。
 
-跑法（在本目录的上一级）：python -m unittest discover -s tests -t .
+跑法（在 exp019 目录下）：python tests/test_exp019.py -v
 需要主目录的 `resources/gtcrn/`（官方代码与检查点）；没有时整组跳过。
 """
 import sys
