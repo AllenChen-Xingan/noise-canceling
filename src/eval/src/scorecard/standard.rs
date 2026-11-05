@@ -13,6 +13,8 @@ pub struct Item {
     pub params: &'static [(&'static str, f64)],
     /// 只报不判：照常打分、列在表里，但不进该场景的过不过（检测器自己还不可信时用）
     pub report_only: bool,
+    /// 新规则（v2）里在「干净人声单独过一遍模型」的输出上算（人定 D85 题 2 = B）；旧规则 v1 仍在带噪输出上算
+    pub clean_input: bool,
 }
 
 const fn it(v: &'static str) -> Item {
@@ -20,6 +22,27 @@ const fn it(v: &'static str) -> Item {
         v,
         params: &[],
         report_only: false,
+        clean_input: false,
+    }
+}
+
+/// 只报不判的项。
+const fn ro(v: &'static str) -> Item {
+    Item {
+        v,
+        params: &[],
+        report_only: true,
+        clean_input: false,
+    }
+}
+
+/// 在干净人声单独过一遍的输出上算的项（[`CLEAN_PASS`]）。
+const fn cp(v: &'static str) -> Item {
+    Item {
+        v,
+        params: &[],
+        report_only: false,
+        clean_input: true,
     }
 }
 
@@ -33,46 +56,50 @@ pub const VETO: [Item; 4] = [
         v: "V-EAT-ASR",
         params: &[("max", 1.0)],
         report_only: false,
+        clean_input: false,
     },
 ];
 
 /// 所有开会场景都看的项。
-pub const COMMON: [Item; 10] = [
+pub const COMMON: [Item; 12] = [
     it("V-ONSET"),
     Item {
         v: "V-SIM-GATE",
         params: &[("max", 0.05), ("onset_max", 0.2)],
         report_only: false,
+        clean_input: false,
     },
-    it("V-WEAK"),
-    it("V-PUMPV"),
+    cp("V-WEAK"),
+    cp("V-PUMPV"),
     // 只报不判（大总管 2026-11-03）：真实降噪输出上分不清咔嗒和残留噪声的短促起伏（scorecard.md 第九节第 2 条）
     Item {
         v: "V-CLICK",
         params: &[],
         report_only: true,
+        clean_input: false,
     },
     it("V-ESTOI"),
-    it("V-TIMBRE"),
+    cp("V-TIMBRE"),
     it("V-NRMOS-SCOREQ"),
     it("V-NRMOS-DISTILL"),
     // 真空感：与 V-NR 同一个 TNLR，只多一列（调研 025 B4），只报不判
-    Item {
-        v: "V-VACUUM",
-        params: &[],
-        report_only: true,
-    },
+    ro("V-VACUUM"),
+    // 量输出的「用户被误删」「开口后被吞多久」（人定 D85 题 4 = A；025 D1 · D3）：过关线待人拍板，只报不判
+    ro("V-TSOS"),
+    ro("V-SWALLOW"),
 ];
 
 const NR6: Item = Item {
     v: "V-NR",
     params: &[("max", -6.0)],
     report_only: false,
+    clean_input: false,
 };
 const INTF10: Item = Item {
     v: "V-INTF",
     params: &[("max", -10.0)],
     report_only: false,
+    clean_input: false,
 };
 
 const QUIET: [Item; 2] = [it("V-MUSIC"), NR6];
@@ -83,6 +110,7 @@ const TALKERS: [Item; 4] = [
         v: "V-SIM-FA",
         params: &[("max", 0.1)],
         report_only: false,
+        clean_input: false,
     },
     it("V-BGSTAB"),
 ];
