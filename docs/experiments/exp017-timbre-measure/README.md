@@ -53,5 +53,5 @@ python -I docs/experiments/exp017-timbre-measure/realout.py _tmp/exp013/20261103
 
 - 劣化都是线性滤波或加噪。降噪器的非线性损伤（逐帧忽深忽浅的压制）没有模拟。
 - 只有 exp013 一个说话人集合，16 kHz。
-- 代码版是 Python 移植。与 Rust 的逐位对拍在 `src/eval/tests/timbre_parity.rs`，要名额编译，**尚未跑**。在那之前，「代码读数」这一列只算推断。
+- 代码版是 Python 移植，已与 Rust 旧 `v_timbre` 逐位对拍：180 个文件最大差 0.000 dB（`parity/old-code.txt`）。
 - 音频在主目录 `_tmp/026/<run-id>/`，不进仓；仓里只有读数与哈希。

@@ -4,7 +4,7 @@
 > 来源编号见 `sources.md`（T…、R…）；实测见 `docs/experiments/exp017-timbre-measure/`，正式一轮 run `20261105-094833`。
 > 样本：exp013 正式 build `20261103230756-17f5`，15 个场景 × 2 种设备 = 30 段干净人声，每段 12 s。读数都是 30 段的中位数，括号里是 95 分位。
 > codex 评审：第 1 轮 5 条 P1、1 条 P2；第 2 轮 1 条 P1、3 条 P2；都属实，已改进本卡（`docs/reviews/026_timbre-measure-codex.md`）。
-> **已对拍（2026-11-05）**：「代码」一列的 Python 移植与 Rust 旧 `v_timbre` 在 180 个文件上最大差 0.000 dB（`src/eval/tests/timbre_parity.rs` `old_code_port_matches_rust`，结果 `docs/experiments/exp017-timbre-measure/parity/old-code.txt`）。下文「」的标注都已解除。
+> **已对拍（2026-11-05）**：「代码」一列的 Python 移植与 Rust 旧 `v_timbre` 在 180 个文件上最大差 0.000 dB（`src/eval/tests/timbre_parity.rs` `old_code_port_matches_rust`，结果 `docs/experiments/exp017-timbre-measure/parity/old-code.txt`）。原先标的「待对拍」都已解除。
 > 分工（大总管定）：改量法是技术题，大总管定；不过线从 6 改到 3 会改变判过不过，要人定（⑦ 第 2 题）。
 
 ## ① 答人：代码对还是文档对
