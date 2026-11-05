@@ -292,3 +292,18 @@ fn key(c: &SceneCard) -> String {
         c.system
     )
 }
+
+#[cfg(test)]
+mod header_tests {
+    use super::*;
+
+    /// 人定 D85 题 2：v2 成绩单自己要写明三项在干净人声那一路上量、只量得到安静时的人声损伤（收尾第 2 轮 P2 #2）。
+    #[test]
+    fn v2_markdown_states_clean_pass_limit() {
+        let v2 = Card::build_with(&[], Vec::new(), Rules::V2).to_markdown("t");
+        assert!(v2.contains("只量得到安静时的人声损伤"), "{v2}");
+        assert!(v2.contains("V-PUMPV") && v2.contains("V-TIMBRE") && v2.contains("V-WEAK"));
+        let v1 = Card::build_with(&[], Vec::new(), Rules::V1).to_markdown("t");
+        assert!(!v1.contains("只量得到安静时的人声损伤"));
+    }
+}

@@ -24,7 +24,7 @@ caffeinate -i ./target/release/vdn-eval scorecard --suite src/eval/suite/scenes.
 ## 文件
 
 - `scorecard.json` · `scorecard.md`：成绩单（180 个「场景 × 档 × 设备 × 系统」组合）
-- `clips.jsonl`：逐段读数；可用 `vdn-eval scorecard --from-clips` 换规则重汇总，不必重跑音频
+- `clips.jsonl`：逐段读数；可用 `vdn-eval scorecard --from-clips … --rules v2` 重新汇总，不必重跑音频。人声忽大忽小 · 音色偏差 · 弱音丢失是干净人声那一路的读数，**不能切回 v1**（会报错）；要旧规则须用 `--rules v1` 重跑音频
 - `compare.py` → `compare.md`：和旧 run `20261104-000444-e4511abc`（旧规则 v1）逐项对照、B3 改前改后、新项基线
 - 音频与评分模型缓存只在主目录 `_tmp/scorecard/20261105-005916-4ccf0638/`，不进仓
 
