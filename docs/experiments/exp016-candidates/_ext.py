@@ -110,6 +110,39 @@ def jobs(clips, root, picks, shard=(0, 1)):
             yield c, kind, x
 
 
+def measure_lookahead(process, x, tol=1e-4):
+    """实测前视：同一段输入截半（第 m = n/2 样本起补零）再跑，找两次输出第一个差超过 tol 的样本 i，前视 = m − i。
+    与入口截半自检同一思路；用于定声明延迟（取标称值与实测值的较大者），入口再在别的片段上复核。"""
+    m = len(x) // 2
+    t = x.copy()
+    t[m:] = 0.0
+    a, b = process(x), process(t)
+    d = np.flatnonzero(np.abs(a[:m] - b[:m]) > tol)
+    return int(m - d[0]) if len(d) else 0
+
+
+def xcorr_lag(a, b, max_lag=4000):
+    """b 相对 a 的滞后样本数（正 = b 落后），FFT 互相关，只在 ±max_lag 内找峰。"""
+    n = len(a) + len(b)
+    nf = 1 << (n - 1).bit_length()
+    c = np.fft.irfft(np.fft.rfft(b, nf) * np.conj(np.fft.rfft(a, nf)), nf)
+    lags = np.concatenate([np.arange(0, max_lag + 1), np.arange(-max_lag, 0)])
+    vals = np.concatenate([c[: max_lag + 1], c[-max_lag:]])
+    return int(lags[np.argmax(vals)])
+
+
+def probe(process, clips, root, nominal):
+    """在清单第一段的 mix 上实测前视与对齐（不是截半自检挑的那批之外的保证，只作定声明延迟的依据）。
+    返回 (声明延迟, 记录)。对齐后滞后 ≠ 0 就报错：输出没对齐，入口会把延迟算错。"""
+    c = next(c for c in clips if c["has_clean_ref"])
+    x = inputs_of(c, root, set())[0][1]
+    la = measure_lookahead(process, x)
+    lag = xcorr_lag(x, process(x))
+    if abs(lag) > 1:
+        raise SystemExit(f"对齐不对：{c['id']} 输出相对输入滞后 {lag} 样本")
+    return max(nominal, la), {"probe_clip": c["id"], "nominal_latency": nominal, "measured_lookahead": la, "lag_after_align": lag}
+
+
 def write_out(path, y, n):
     y = np.asarray(y, dtype=np.float32)
     if y.shape != (n,):
@@ -136,9 +169,9 @@ def parse_args(name):
     return ap.parse_args()
 
 
-def main(name, process, latency_samples, model_info, setup=None):
-    """候选脚本入口。`process(x16) -> y16`（等长、已对齐）；`latency_samples` 为 16 kHz 声明延迟。
-    `setup()` 可选，返回额外参数写进 builds/。不覆盖已有输出文件（同 run-id 续跑时跳过已写的）。"""
+def main(name, process, nominal_latency, model_info, setup=None):
+    """候选脚本入口。`process(x16) -> y16`（等长、已对齐）；`nominal_latency` 为模型标称的 16 kHz 延迟。
+    声明延迟 = max(标称, 实测前视)。`setup()` 可选，返回额外参数写进 builds/。不覆盖已有输出文件（同 run-id 续跑时跳过）。"""
     args = parse_args(name)
     root = main_root()
     clips_rel = scenes_clips_path()
@@ -150,7 +183,9 @@ def main(name, process, latency_samples, model_info, setup=None):
     out = root / "_tmp/exp016" / name / rid
     builds = HERE / "builds" / f"{name}-{rid}"
     if args.finalize:
-        return finalize(name, out, builds, clips_rel, clips, picks, latency_samples, model_info, setup, args)
+        latency, rec = probe(process, clips, root, nominal_latency)
+        info = dict(model_info, latency_probe=rec)
+        return finalize(name, out, builds, clips_rel, clips, picks, latency, info, setup, args)
     k, n = (int(v) for v in args.shard.split("/"))
     t0, done, skipped, audio_s = time.time(), 0, 0, 0.0
     for c, kind, x in jobs(clips, root, picks, (k, n)):
