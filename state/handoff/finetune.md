@@ -24,12 +24,17 @@
 - MPS 若和 CPU 对不上，训练时长按 CPU 算并写原因
 - 下载清单先报大总管，自己不下；每条写许可出处 · 能否训练（D64）· 大小 · 时长 · 覆盖弱场景 · 是否和评测集撞源
 
+5. MPS 正确性（实测）：不带绕法不过（前向差 61%）；根因是 PyTorch 带空洞逐通道卷积的 bug（不是 GRU）；`smoke/mps_fix.py` 绕开后正式尺寸全过。已报大总管
+6. 下载清单 `docs/research/027_gtcrn-finetune/download-list.md`：第一批 15.4 GB、第二批 67 GB；已报大总管，**本线不自行下载**
+7. 调研 027 初稿：README · decision（比较卡 + 待人拍板 F-1..F-3）· sources · notes/；exp018 README
+
 ## 下一步
 
-1. 读 013 · 014 · 018 · 019 · 023 · exp016 `runs/*/analysis.md` · 相关决定
-2. 写 `docs/research/027_gtcrn-finetune/`（README · sources · decision，第一节「比较卡」）；验收节写清引擎原声混回的影响与 `safety: false` 口径
-3. codex-review 1–2 轮 → 报「finetune 可以收尾」
+1. 16:00 后（大总管通知）带绕法重测 MPS 单步耗时（批量 8 · 32），填进 decision 比较卡与 exp018 README
+2. codex-review 1–2 轮（审结论是否被证据支撑），落 `docs/reviews/027_gtcrn-finetune-codex.md` + 索引一行
+3. grep 本机路径为 0 → 报「finetune 可以收尾」
+4. 请大总管：`docs/experiments/README.md` 索引加 exp018 一行（不在本线可写文件里）
 
 ## 待人拍板
 
-（暂无）
+见 `docs/research/027_gtcrn-finetune/decision.md` 第八节：F-1 下第一批数据 · F-2 第二批（CochlScene）何时下 · F-3「户外变好、室内持平」算不算可上线。守住项容许量用 029 的 R-2，不重复问
