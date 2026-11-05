@@ -65,6 +65,7 @@ impl Rules {
 }
 
 /// 整张成绩单。
+#[derive(Debug)]
 pub struct Card {
     pub cards: Vec<SceneCard>,
     pub worst: Vec<usize>,

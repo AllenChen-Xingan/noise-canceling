@@ -99,14 +99,8 @@ fn redo_item(it: &mut ItemCell, rs: &[&ClipRow], key: &str) {
             .iter()
             .filter_map(|r| score_in(r, it.v))
             .any(|s| extra(s, standard::CLEAN_PASS_MARK) != Some(1.0));
-    it.threshold = thr_v2(it.v, it.threshold);
-    let Some(thr) = it.threshold else {
-        it.status = CardStatus::Unknown;
-        it.rule = RULE_MEAN;
-        return;
-    };
-    it.ci = ci_of(it.v, rs, thr, better, key);
-    it.status = judge(it.ci.as_ref(), thr, better);
+    // 先定判法（只报不判与否），再看有没有线：全组没分、没有线时，只报项也不能变成挡路的待测
+    // （codex 中途 1 第 1 轮 P1 #2）
     if standard::V2_REPORT_ONLY.contains(&it.v) {
         it.report_only = true;
         it.rule = RULE_REPORT;
@@ -116,6 +110,13 @@ fn redo_item(it: &mut ItemCell, rs: &[&ClipRow], key: &str) {
     } else {
         it.rule = RULE_MEAN;
     }
+    it.threshold = thr_v2(it.v, it.threshold);
+    let Some(thr) = it.threshold else {
+        it.status = CardStatus::Unknown;
+        return;
+    };
+    it.ci = ci_of(it.v, rs, thr, better, key);
+    it.status = judge(it.ci.as_ref(), thr, better);
 }
 
 /// 区间三态；没有区间或源片段组数不够 → 待测。
@@ -200,11 +201,31 @@ fn finish(c: &mut SceneCard, rs: &[&ClipRow]) {
         })
         .collect();
     w.sort_by(|a, b| a.0.total_cmp(&b.0));
-    for (d, clip) in w.into_iter().take(LISTEN_WORST) {
+    let mut picks: Vec<(String, String)> = w
+        .into_iter()
+        .take(LISTEN_WORST)
+        .map(|(d, clip)| (clip, format!("听感最差段之一（较差的 Δ {d:+.2}）")))
+        .collect();
+    // 均值会掩盖局部损伤（X1「最差段送人耳兜底」）：按区间判的项，最差一段单看就越线的也送人耳
+    // （codex 中途 1 第 1 轮 P2 #5）
+    for it in c
+        .items
+        .iter()
+        .filter(|i| i.rule == RULE_MEAN && !i.report_only)
+    {
+        let better = crate::verifiers::info(it.v).map_or(Better::Lower, |i| i.better);
+        if let (Some(w), Some(t), Some(clip)) = (it.worst, it.threshold, &it.worst_clip)
+            && better.worse(w, t)
+        {
+            picks.push((
+                clip.clone(),
+                format!("{} 最差段单看越线（{w:.2}，线 {t}）", it.v),
+            ));
+        }
+    }
+    for (clip, why) in picks {
         if !c.listen.to_human.iter().any(|(x, _)| *x == clip) {
-            c.listen
-                .to_human
-                .push((clip, format!("听感最差段之一（较差的 Δ {d:+.2}）")));
+            c.listen.to_human.push((clip, why));
         }
     }
 }
