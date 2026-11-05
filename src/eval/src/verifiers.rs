@@ -7,8 +7,8 @@
 use serde_json::Value;
 
 use crate::analysis::{
-    MASK_FRAME, Masks, Spectrogram, frame_power, kurtosis, mean, quantile, truth_from_clean,
-    busiest_start, xcorr_lag,
+    MASK_FRAME, Masks, Spectrogram, busiest_start, frame_power, kurtosis, mean, quantile,
+    truth_from_clean, xcorr_lag,
 };
 use crate::synth::Clip;
 use crate::system::{BUDGET_MS, RunOut};
