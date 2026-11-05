@@ -34,7 +34,7 @@
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
 | evalfix | 成绩单评分方法修正（025）+ 重出 GTCRN 成绩单 · #111（含 #109 #110）· `feat/scorecard-v2` · `../noise_canceling-evalfix` | 评测器 · 成绩单 · 定标等级 | 已派，等报到 |
-| cands | exp016 候选模型（DFN3 低延迟版 · DPDFNet-2 · NoNoise-Mac）上同一张成绩单 · #112 · `exp/016-candidates` · `../noise_canceling-cands` | 降噪模型候选 · 外部输出入口 · 成绩单（只用） | 已派，等报到 |
+| cands | exp016 候选模型（DFN3 低延迟版 · DPDFNet-2 · NoNoise-Mac）上同一张成绩单 · #112 · `exp/016-candidates` · `../noise_canceling-cands` | 降噪模型候选 · 外部输出入口 · 成绩单（只用） | 已报到（noise-canceling-cands-7f），起草外部入口形状 |
 
 ⚠️ 人要真实数据集与 D62「开发阶段不用真实录音」可能冲突 → mtgdata 出选项，进待拍板。
 
@@ -116,6 +116,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-04 人选继续「降噪效果」（评测集）→ 合并 #97 #108；开 #111 #112、两个 worktree；派 b15 evalfix · cands；G-1..G-7 按默认推进，待人确认；合并顺序 cands 入口小 PR 先、evalfix 后
 - 2026-11-04 evalbp 收尾：025 结论「算法大多对得上，偏在汇总（任一段不过 vs 均值 + 区间）」；codex 9 轮清零；待定 G-1..G-7 合进清单（替代 F-9 F-10）；开 #109 延迟测量器、#110 V-WEAK 低采样率；PR #108
 - 2026-11-04 a2：#107（评测器 4 处改调统一频谱模块）CI 真跑通（run 41866359378，main+#107，跳过 0），已合并 8fea2ef2，fe3 worktree 与分支已删，a2「前端只算一次」收口、暂不碰 src/eval；a2 会话 auto-commit 在主检出替我提交了 207a847f（coord + 待定，原样，不丢东西），提交信息照留
 - 2026-11-04 人（经 a2 转）「具体的评测方法，要看是否和好的 best practice 一致」→ 评测器归我方，派 evalbp 做调研 025（#105，b14，以 012 为底，给 F-9 / F-10 业界依据）；a2 派 fe3 做评测器频谱收口 #104（只换计算）
