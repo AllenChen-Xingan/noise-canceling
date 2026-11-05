@@ -94,3 +94,4 @@
 - [ ] DFN3 离线链路换产品重采样器（vdn_dsp Interpolator3 / Decimator3）复测：前视 284 → 约 192 样本，看输出效果变不变 · 方案 exp016 `plan-dfn3-resampler.md`（cands，2026-11-05，大总管定这批不做）
 - [ ] NoNoise-Mac 进成绩单（D77）：命令行文件降噪模式可用，要下载未公证的 release 程序约 7.5 MB；人未选，默认推迟 · 出处 exp016 `state/handoff/cands.md` 待人拍板 1
 - [ ] 模型（候选对比）：成绩单在引擎「原声混回」后打分（说话时约一半原声，engine.rs mix_out），模型本身的差约被压一半（推断）。如人选「改进 / 训练」，用 safety: false 再跑一轮看模型本身；改场景集参数归 evalfix，要名额。来源 exp016 runs/dfn3-ll-20261105-103000-4cf04ac1/notes.md 第三节
+- [ ] **旁人说话 → 另外的小模型（D89 · D83）**：降噪模型不负责去掉旁人声音（成绩单 V-INTF 不过的主因，所有模型都大面积不过）；按调研 024 走「会中认出用户 → 以声纹为条件只留用户」。降噪效果大事收口后换入；起点 024 decision（Alkove Focus 从 GTCRN 改来 · 约 80 万参数 · Apache-2.0，只有厂商自测）
