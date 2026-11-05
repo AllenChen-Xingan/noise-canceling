@@ -1,9 +1,10 @@
 """exp016 离线推理脚本共用：读 exp013 片段清单 → 造三种输入 → 交给候选处理 → 写外部输出目录。
 
 外部输出目录的格式正本在 Rust 入口 `src/eval/src/system/external.rs`（说明 `external-entry.md`）：
-- `run.json`（schema `vdn-external-output/1`）+ 每种输入一个子目录 `mix/` `bg/` `trunc/`，里面 `<片段 id>.wav`
-- 三种输入的算法照 `Kind::input`：mix = mix.wav；bg = noise.wav + interf.wav 逐样本相加（float32）；
-  trunc = 每个场景清单顺序第一段（has_clean_ref）的 mix，从第 floor(n/2) 样本起补零
+- `run.json`（schema `vdn-external-output/1`）+ 每种输入一个子目录 `mix/` `bg/` `trunc/` `clean/`，里面 `<片段 id>.wav`
+- 四种输入的算法照 `Kind::input`：mix = mix.wav；bg = noise.wav + interf.wav 逐样本相加（float32）；
+  trunc = 每个场景清单顺序第一段（has_clean_ref）的 mix，从第 floor(n/2) 样本起补零；
+  clean = 干净人声（清单 `owner` 轨，同 `load_scene_clip`），每段都跑，成绩单新规则 v2 的三项用
 - 输出：已对齐（去掉声明延迟）、16 kHz 单声道 32 位浮点、与输入等长
 入口载入时会再全部自检一遍（片段数 · 采样率 · 时长 · NaN · 截半查偷看未来），这里只做最基本的检查。
 
@@ -30,7 +31,7 @@ SR = 16000
 SCHEMA = "vdn-external-output/1"
 # 场景测试集正式 build（共同规矩第 3 条：只认它与 src/eval/suite/scenes.json）
 CLIPS = "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl"
-KINDS = ("mix", "bg", "trunc")
+KINDS = ("mix", "bg", "trunc", "clean")
 
 
 def main_root():
@@ -79,7 +80,7 @@ def trunc_picks(clips):
 
 
 def inputs_of(c, root, picks, verify_hash=True):
-    """一段的各种输入：[(种类, 样本)]。顺序 mix · bg · trunc；不适用的种类不给。"""
+    """一段的各种输入：[(种类, 样本)]。顺序 mix · bg · trunc · clean；不适用的种类不给。"""
     a, h = c["audio"], c["hash"]["wav_sha256"]
     def get(k):
         p = root / a[k]
@@ -97,6 +98,7 @@ def inputs_of(c, root, picks, verify_hash=True):
         t = mix.copy()
         t[len(t) // 2:] = 0.0
         out.append(("trunc", t))
+    out.append(("clean", get("owner")))
     return out
 
 
@@ -301,7 +303,8 @@ def finalize(name, out, builds, clips_rel, clips, picks, latency_samples, model_
     if builds.exists():
         raise SystemExit(f"{builds} 已存在，不覆盖")
     want = {(kind, c["id"]) for c in clips if c["has_clean_ref"]
-            for kind in KINDS if kind == "mix" or (kind == "bg" and c["additive"]) or (kind == "trunc" and c["id"] in picks)}
+            for kind in KINDS if kind in ("mix", "clean") or (kind == "bg" and c["additive"])
+            or (kind == "trunc" and c["id"] in picks)}
     have = {(p.parent.name, p.stem) for p in out.glob("*/*.wav")}
     if want != have:
         raise SystemExit(f"输出不全：缺 {len(want - have)} 个、多 {len(have - want)} 个")
