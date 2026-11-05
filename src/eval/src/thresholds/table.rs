@@ -52,7 +52,15 @@ pub const SPLVL: Lines = Lines {
     id: "V-SPLVL",
     edges: &[-1.0, -2.0, -4.0],
     edges_src: Src::RubricLoss(&["损失 > 4 dB", "损失 > 2 dB", "损失 ≤ 1 dB"]),
-    params: &[p("min", Some(-3.0), &[(-3.0, Src::None)])],
+    params: &[p(
+        "min",
+        Some(-3.0),
+        &[
+            (-3.0, Src::None),
+            // 人定 D85 题 5（G-5）：新规则（v2）用 4 dB，判在组合均值的区间上（G.160 参考下限）
+            (-4.0, Src::RubricLoss(&["损失 > 4 dB"])),
+        ],
+    )],
 };
 
 pub const MUSIC: Lines = Lines {
@@ -120,11 +128,19 @@ pub const EAT_ASR: Lines = Lines {
     id: "V-EAT-ASR",
     edges: &[],
     edges_src: NO_EDGES,
-    params: &[p(
-        "max",
-        None,
-        &[(1.0, Src::Rubric(&["（> +1 时带 `v7_suspect`）"]))],
-    )],
+    params: &[
+        p(
+            "max",
+            None,
+            &[(1.0, Src::Rubric(&["（> +1 时带 `v7_suspect`）"]))],
+        ),
+        // 人定 D85 题 3（G-3 = C）：新规则（v2）单段比原声多错（删 + 替）≥ 5 字才否决
+        p(
+            "fail_chars",
+            Some(5.0),
+            &[(5.0, Src::Design("人定 D85 题 3 选 C：单段多错 ≥ 5 字才否决"))],
+        ),
+    ],
 };
 
 pub const FRAME: Lines = Lines {
@@ -301,6 +317,47 @@ pub const NRMOS_SPLIT: Lines = Lines {
     )],
 };
 
+/// 成绩单层（新规则 v2，人定 D85 题 1 = B）：组合内均值的 bootstrap 区间与 Holm 校正（调研 025 X1 · X4）。
+pub const AGG: Lines = Lines {
+    id: "SC-AGG",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[
+        p(
+            "level",
+            Some(0.95),
+            &[(0.95, Src::Design("人定 D85 题 1：95% 区间三态"))],
+        ),
+        p(
+            "reps",
+            Some(2000.0),
+            &[(2000.0, Src::Design("重采样次数，同调研 025 重算脚本"))],
+        ),
+        p(
+            "seed",
+            Some(20_261_030.0),
+            &[(20_261_030.0, Src::Design("固定种子，同调研 025 重算脚本"))],
+        ),
+        p(
+            "alpha",
+            Some(0.025),
+            &[(0.025, Src::Design("Holm 单侧 α：与 95% 双侧区间的「不过」一端对齐"))],
+        ),
+    ],
+};
+
+/// 成绩单层（v2）：听感 Δ 允许比原声差多少分（人定 D85 题 6 = B）。
+pub const NRMOS_DELTA: Lines = Lines {
+    id: "SC-NRMOS-DELTA",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[p(
+        "max",
+        Some(0.1),
+        &[(0.1, Src::Design("人定 D85 题 6 选 B：允许比原声差 0.1 分"))],
+    )],
+};
+
 /// 表里全部 verifier。
 pub const ALL: [&Lines; 23] = [
     &BGSTAB,
@@ -326,6 +383,8 @@ pub const ALL: [&Lines; 23] = [
     &NRMOS_SCOREQ,
     &NRMOS_DISTILL,
     &NRMOS_SPLIT,
+    &AGG,
+    &NRMOS_DELTA,
 ];
 
 /// 待定清单：已知不一致或没有出处的条目。全部是建议值，挂 012 拍板 #8 · D44。
