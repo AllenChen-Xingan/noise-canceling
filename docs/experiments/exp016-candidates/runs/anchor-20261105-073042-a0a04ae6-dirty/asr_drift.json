@@ -1,0 +1,10 @@
+{
+ "common_keys": 1920,
+ "identical_keys": 1920,
+ "audios": 960,
+ "audios_changed": 0,
+ "max_edit_per_audio": 0,
+ "max_ok": 1,
+ "veto_chars": 5,
+ "verdict": "一致"
+}
