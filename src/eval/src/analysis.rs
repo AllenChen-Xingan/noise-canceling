@@ -245,7 +245,7 @@ pub fn busiest_start(guide: &[f32], win: usize, step: usize) -> usize {
 
 /// `y` 相对 `x` 的延迟（样本）：在 `0..=max_lag` 里找**归一化**互相关 |r| 的峰（#109）。
 /// 窗取 `x[start..start + win]`，每个滞后除以两窗能量的几何平均，所以窗内能量随滞后变大不会抬高次峰。
-/// 两窗任一全零、或峰 |r| < [`XCORR_MIN_R`] 时返回 `None`。
+/// 输入窗全零、或所有滞后的输出窗都全零时返回 `None`（不另设相关下限：「量不准改判不知道」要人批准，025 ①-1）。
 pub fn xcorr_lag(x: &[f32], y: &[f32], max_lag: usize, start: usize, win: usize) -> Option<usize> {
     let start = start.min(x.len());
     let n = win.min(x.len() - start);
@@ -271,11 +271,8 @@ pub fn xcorr_lag(x: &[f32], y: &[f32], max_lag: usize, start: usize, win: usize)
             best = Some((lag, r));
         }
     }
-    best.and_then(|(l, r)| (r >= XCORR_MIN_R).then_some(l))
+    best.and_then(|(l, r)| (r > 0.0).then_some(l))
 }
-
-/// 归一化互相关峰的下限：低于它算「找不到峰」。
-pub const XCORR_MIN_R: f64 = 0.1;
 
 /// 35 ms 时间常数（P.1120 §11.14.5）的平滑功率，逐 10 ms 掩码帧取帧末值，单位 dB。
 pub fn smoothed_level_db(x: &[f32], sr: u32, tau_s: f64) -> Vec<f64> {
@@ -384,6 +381,16 @@ mod tests {
     fn xcorr_silent_is_none() {
         let z = vec![0.0f32; 8000];
         assert_eq!(xcorr_lag(&z, &z, 100, 0, 4000), None);
+    }
+
+    /// 低相关但非零的输出（与输入几乎无关的噪声）：照旧给出一个滞后，不改判「不知道」——
+    /// 那是要人批准的判定改动（025 ①-1），这里只修量法（codex 中途 1 第 1 轮 P1 #3）。
+    #[test]
+    fn low_correlation_still_measures() {
+        let mut r = crate::rng::Rng::new(9);
+        let x: Vec<f32> = (0..8000).map(|_| r.normal() as f32).collect();
+        let y: Vec<f32> = (0..8000).map(|_| r.normal() as f32).collect();
+        assert!(xcorr_lag(&x, &y, 100, 0, 4000).is_some());
     }
 
     #[test]
