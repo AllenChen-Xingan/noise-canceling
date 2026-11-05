@@ -124,7 +124,11 @@ mod tests {
             .enumerate()
             .map(|(i, x)| {
                 (
-                    format!("s-c{:02}-{}", i / 2, if i % 2 == 0 { "ext" } else { "mba" }),
+                    format!(
+                        "s-c{:02}-{}",
+                        i / 2,
+                        if i.is_multiple_of(2) { "ext" } else { "mba" }
+                    ),
                     *x,
                 )
             })

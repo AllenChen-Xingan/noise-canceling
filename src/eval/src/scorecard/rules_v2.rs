@@ -136,13 +136,23 @@ fn redo_listen_model(m: &mut ItemCell, rs: &[&ClipRow], key: &str) {
 
 /// Holm：同一项 × 同一系统的所有组合是一族；区间判不过、但 Holm 不拒绝的改判待测。
 fn apply_holm(cells: &mut [&mut ItemCell]) {
-    let ps: Vec<f64> = cells
+    // 族只含真按区间判的组合：只报不判、逐段判、没有区间或组数不够（已是待测）的不算进族大小
+    let min_g = th::AGG.def("min_groups");
+    let mut fam: Vec<&mut &mut ItemCell> = cells
+        .iter_mut()
+        .filter(|c| {
+            c.rule == RULE_MEAN
+                && !c.report_only
+                && c.ci.as_ref().is_some_and(|x| x.groups as f64 >= min_g)
+        })
+        .collect();
+    let ps: Vec<f64> = fam
         .iter()
         .map(|c| c.ci.as_ref().map_or(1.0, |x| x.p_fail))
         .collect();
     let rej = holm(&ps);
-    for (c, r) in cells.iter_mut().zip(rej) {
-        if c.status == CardStatus::Fail && !c.report_only && !r && c.rule == RULE_MEAN {
+    for (c, r) in fam.iter_mut().zip(rej) {
+        if c.status == CardStatus::Fail && !r {
             c.status = CardStatus::Unknown;
         }
     }

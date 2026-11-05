@@ -20,7 +20,7 @@ fn row(i: usize, scene: MeetingPlace, extra: Vec<(&'static str, bool, Score)>) -
             "{}-c{:02}-{}",
             scene.as_str(),
             i / 2,
-            if i % 2 == 0 { "ext" } else { "mba" }
+            if i.is_multiple_of(2) { "ext" } else { "mba" }
         ),
         scene,
         tier: Tier::Common,
@@ -307,4 +307,47 @@ fn eat_chars_recovers_integer_char_diff() {
             assert_eq!(eat_chars(&s), Some(d as f64), "len {len} d {d}");
         }
     }
+}
+
+/// 族大小只数真按区间判的组合：同族里多出来的只报不判 / 没区间的组合不让校正变严。
+#[test]
+fn holm_family_excludes_report_only_and_no_ci() {
+    let base = rules::summarize(
+        &[row(
+            0,
+            MeetingPlace::Cafe,
+            vec![("V-ONSET", false, sc("V-ONSET", 0.1, 3.0))],
+        )],
+        &[],
+    )[0]
+    .items[0]
+        .clone();
+    let mk = |p: f64, st: CardStatus| {
+        let mut c = base.clone();
+        c.rule = RULE_MEAN;
+        c.status = st;
+        c.ci = Some(Ci {
+            mean: 0.0,
+            lo: 0.0,
+            hi: 0.0,
+            groups: 5,
+            p_fail: p,
+        });
+        c
+    };
+    // 真判的只有 2 个：p = 0.01 ≤ 0.025 / 2 应拒绝；另有 30 个只报不判、10 个没区间
+    let mut cells = vec![mk(0.01, CardStatus::Fail), mk(0.9, CardStatus::Pass)];
+    for _ in 0..30 {
+        let mut c = mk(0.9, CardStatus::Pass);
+        c.report_only = true;
+        cells.push(c);
+    }
+    for _ in 0..10 {
+        let mut c = mk(1.0, CardStatus::Unknown);
+        c.ci = None;
+        cells.push(c);
+    }
+    let mut refs: Vec<&mut ItemCell> = cells.iter_mut().collect();
+    apply_holm(&mut refs);
+    assert_eq!(cells[0].status, CardStatus::Fail);
 }
