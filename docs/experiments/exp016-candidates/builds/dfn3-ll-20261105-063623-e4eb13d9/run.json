@@ -1,0 +1,39 @@
+{
+  "schema": "vdn-external-output/1",
+  "name": "dfn3-ll",
+  "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
+  "sr": 16000,
+  "latency_samples": 284,
+  "inputs": [
+    "mix",
+    "bg",
+    "trunc",
+    "clean"
+  ],
+  "model": {
+    "repo": "DeepFilterNet（resources/DeepFilterNet，上游 d375b2d8）· 运行库 Hush libweya_nc（上游 9f6414e9）",
+    "weights": "resources/DeepFilterNet/models/DeepFilterNet3_ll_onnx.tar.gz",
+    "weights_sha256": "5998e58e8ba0e09bb76986ef97b84afa065a571ef282d4a1222f341e3251cf3a",
+    "lib_sha256": "4bcd38634000d456ad68db4b6ff97fe4a462542aa65ac5f910fbf374ca33fbaa",
+    "mode": "逐帧流式 · 48 kHz · 零前瞻（_ll）· atten_lim 100 dB · 每段重置",
+    "resample": "soxr 流式 HQ 16→48→16 kHz",
+    "runner": "docs/experiments/exp016-candidates/run_dfn3ll.py",
+    "latency_probe": {
+      "probe_clip": "bus-metro-cabin-c00-ext",
+      "nominal_latency": 284,
+      "measured_lookahead": 161,
+      "measured_lookahead_by_kind": {
+        "mix": 160,
+        "clean": 161
+      },
+      "lag_after_align": 0,
+      "lag_after_align_by_kind": {
+        "mix": 0,
+        "clean": 0
+      },
+      "reset_check_clip": "bus-metro-cabin-c00-mba",
+      "reset_max_abs_diff": 0.0
+    }
+  },
+  "native_rate": 48000
+}
