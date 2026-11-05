@@ -225,10 +225,14 @@ def anchor(loaded, want: set[str]):
     return out
 
 
-def analyze(runs: list[Path], manifest: Path, cands: list[str]):
+def analyze(runs: list[Path], manifest: Path, cands: list[str], anchor_run: Path | None = None):
+    """`anchor_run`：锚点单独成 run 时给它，与 `runs[0]`（基线所在 run）比；不给且正好两个 run 时，两个 run 各自的锚点相比。"""
     loaded = [load(r) for r in runs]
     want = expected_clips(manifest)
-    res_anchor = anchor(loaded, want) if len(loaded) == 2 else None
+    if anchor_run is not None:
+        res_anchor = anchor([loaded[0], load(anchor_run)], want)
+    else:
+        res_anchor = anchor(loaded, want) if len(loaded) == 2 else None
     rows, card = merge(pick(loaded, {BASE, *cands}))
     check_coverage(rows, want, [BASE, *cands])
     better, unit, pair = better_map(card), units(card), pairs_of(manifest)
@@ -303,8 +307,9 @@ def main():
     ap.add_argument("--cands", default="dpdfnet2,dfn3-ll")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--json", type=Path)
+    ap.add_argument("--anchor", type=Path, help="锚点单独成 run 时的目录（与第一个 run 比）")
     a = ap.parse_args()
-    res = analyze([Path(x) for x in a.runs.split(",")], a.manifest, a.cands.split(","))
+    res = analyze([Path(x) for x in a.runs.split(",")], a.manifest, a.cands.split(","), a.anchor)
     a.out.write_text(render(res))
     if a.json:
         a.json.write_text(json.dumps(res, ensure_ascii=False, separators=(",", ":"), default=list) + "\n")
