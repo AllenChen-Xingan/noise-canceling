@@ -112,9 +112,8 @@ def r_composite(row, base, skip=(), eat_rule="pp"):
     return e + 0.002 * nr_gain - 0.01 * guard_penalty(row, base)
 
 
-def r_composite_pooled_asr(row, base):
-    """同 composite，但吃字不在单段上否决（单段约 24 个字，错 1 个字就是 4 个百分点，噪声太大），
-    改到按场景合并字数后作整批约束（G-3 E1），不进逐段奖励。"""
+def r_composite_no_asr(row, base):
+    """同 composite，但完全不看吃字（逐段奖励里没有识别）。整批吃字只在训练中途的成绩单上查，本脚本不模拟。"""
     return r_composite(row, base, skip=("V-EAT-ASR",))
 
 
@@ -123,11 +122,24 @@ def r_composite_d85(row, base):
     return r_composite(row, base, eat_rule="words")
 
 
+# 绝对阈值版守住项（不以 GTCRN 为基线，查基线敏感性）：字头 3 dB（rubric C3）· 背景跳变 4 dB（D85 G-5）· 音色 6 dB
+ABS_GUARDS = {"V-ONSET": 3.0, "V-BGSTAB": 4.0, "V-TIMBRE": 6.0}
+
+
 def r_composite_hard_guard(row, base):
-    """D85 吃字口径 + 守住项改成硬约束：任一项比 GTCRN 多退超过容许量就否决（−1），不按量扣。"""
+    """不带识别 + 守住项改成硬约束：任一项比 GTCRN 多退超过容许量就否决（−1），不按量扣。"""
     if guard_penalty(row, base) > 0:
         return -1.0
-    return r_composite(row, base, eat_rule="words")
+    return r_composite_no_asr(row, base)
+
+
+def r_composite_abs_guard(row, base):
+    """不带识别 + 守住项用绝对阈值硬约束（与 GTCRN 无关）。"""
+    for v, t in ABS_GUARDS.items():
+        x = val(row, v)
+        if x is not None and x > t:
+            return -1.0
+    return r_composite_no_asr(row, base)
 
 
 REWARDS = {
@@ -135,8 +147,9 @@ REWARDS = {
     "estoi_only": r_estoi_only,
     "composite": r_composite,
     "composite_d85": r_composite_d85,
-    "composite_pooled_asr": r_composite_pooled_asr,
+    "composite_no_asr": r_composite_no_asr,
     "composite_hard_guard": r_composite_hard_guard,
+    "composite_abs_guard": r_composite_abs_guard,
 }
 
 
@@ -177,8 +190,26 @@ def boot_ci(xs, groups, reps=2000, seed=20261105):
     return means[int(0.025 * reps)], means[int(0.975 * reps) - 1]
 
 
+def veto_parts(systems, table):
+    """逐项否决率（各自的分母 = 该项有读数的段数）。"""
+    parts = {}
+    for s in systems:
+        rows = [d[s] for d in table.values()]
+        eat = [eat_words(r) for r in rows]
+        eat = [w for w in eat if w is not None]
+        spl = [val(r, "V-SPLVL") for r in rows]
+        spl = [x for x in spl if x is not None]
+        parts[s] = {
+            "eat_ge5_words": [sum(w >= EAT_WORDS for w in eat), len(eat)],
+            "eat_gt1pp": [sum(val(r, "V-EAT-ASR") > 1.0 for r in rows
+                              if val(r, "V-EAT-ASR") is not None), len(eat)],
+            "splvl_lt_-3": [sum(x < -3.0 for x in spl), len(spl)],
+        }
+    return parts
+
+
 def analyse(systems, table):
-    out = {"systems": systems, "clips": len(table), "rewards": {}}
+    out = {"systems": systems, "clips": len(table), "rewards": {}, "veto_parts": veto_parts(systems, table)}
     for rn, rf in REWARDS.items():
         per = {j: ([], []) for j in JUDGES}
         top_onset_worse = top_n = 0
@@ -216,6 +247,7 @@ def analyse(systems, table):
         res["veto_frac"] = {s: sum(rf(d[s], d[BASE]) == -1.0 for d in table.values()) / len(table)
                             for s in systems} if rn.startswith("composite") else None
         res["top_onset_worse_frac"] = top_onset_worse / top_n if top_n else None
+        res["top_onset_n"] = top_n
         res["system_mean_reward"] = {s: v[0] / v[1] for s, v in sys_sum.items() if v[1]}
         out["rewards"][rn] = res
     # 系统级：奖励均值排序 vs 裁判均值排序（只有 len(systems) 个点）

@@ -42,6 +42,17 @@ class T(unittest.TestCase):
         r["scores"][-1]["value"] = 25.0  # 6 个字
         self.assertEqual(rr.r_composite_d85(r, base), -1.0)
 
+    def test_no_asr_and_abs_guard(self):
+        base = row("a-c0", "gtcrn", V_ONSET=1.0, V_ESTOI=0.02)
+        r = row("a-c0", "x", V_ESTOI=0.03, V_NR=-6.0, V_ONSET=2.0, V_EAT_ASR=50.0)
+        r["scores"][-1]["extra"] = {"ref_len": 24.0}  # 12 个字
+        self.assertGreater(rr.r_composite_no_asr(r, base), 0.0)  # 不看吃字
+        self.assertGreater(rr.r_composite_hard_guard(r, base), 0.0)  # 字头多退 1 dB，在容许内
+        self.assertGreater(rr.r_composite_abs_guard(r, base), 0.0)  # 字头 2 dB < 3 dB
+        r["scores"][2]["value"] = 3.5  # 字头 3.5 dB
+        self.assertEqual(rr.r_composite_abs_guard(r, base), -1.0)
+        self.assertEqual(rr.r_composite_hard_guard(r, base), -1.0)
+
     def test_end_to_end(self):
         rows = []
         for i in range(4):

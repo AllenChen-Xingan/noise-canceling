@@ -29,6 +29,7 @@
    },
    "veto_frac": null,
    "top_onset_worse_frac": 0.5378973105134475,
+   "top_onset_n": 409,
    "system_mean_reward": {
     "dfn3-ll": 8.742082741726643,
     "dpdfnet2": 9.687407752224601,
@@ -60,6 +61,7 @@
    },
    "veto_frac": null,
    "top_onset_worse_frac": 0.48842592592592593,
+   "top_onset_n": 432,
    "system_mean_reward": {
     "dfn3-ll": 0.03498892837489646,
     "dpdfnet2": 0.043513470679891836,
@@ -97,6 +99,7 @@
     "ref": 0.21666666666666667
    },
    "top_onset_worse_frac": 0.3125,
+   "top_onset_n": 432,
    "system_mean_reward": {
     "dfn3-ll": -0.1831172279097732,
     "dpdfnet2": -0.18657625267242572,
@@ -134,6 +137,7 @@
     "ref": 0.020833333333333332
    },
    "top_onset_worse_frac": 0.3819444444444444,
+   "top_onset_n": 432,
    "system_mean_reward": {
     "dfn3-ll": -0.00696505284944422,
     "dpdfnet2": -0.017053861880132453,
@@ -144,7 +148,7 @@
    "system_tau_V-NRMOS-DISTILL": -0.6,
    "system_tau_V-NRMOS-SCOREQ": -0.6
   },
-  "composite_pooled_asr": {
+  "composite_no_asr": {
    "V-NRMOS-DISTILL": {
     "mean_tau": 0.6525599380854373,
     "ci95": [
@@ -171,6 +175,7 @@
     "ref": 0.0
    },
    "top_onset_worse_frac": 0.3819444444444444,
+   "top_onset_n": 432,
    "system_mean_reward": {
     "dfn3-ll": 0.018779197735432275,
     "dpdfnet2": 0.004390672720437665,
@@ -183,40 +188,151 @@
   },
   "composite_hard_guard": {
    "V-NRMOS-DISTILL": {
-    "mean_tau": 0.13229611955722692,
+    "mean_tau": 0.1421078645076095,
     "ci95": [
-     0.016929028830128267,
-     0.24512325226976284
+     0.02569384014952375,
+     0.2574100262097275
     ],
     "n_clips": 480,
     "n_scenes": 15
    },
    "V-NRMOS-SCOREQ": {
-    "mean_tau": 0.10976738615197403,
+    "mean_tau": 0.11508206358330533,
     "ci95": [
-     0.017758012266369954,
-     0.19303133525763633
+     0.02114700416719956,
+     0.20211078039931002
     ],
     "n_clips": 480,
     "n_scenes": 15
    },
    "veto_frac": {
-    "dfn3-ll": 0.51875,
-    "dpdfnet2": 0.6,
-    "gtcrn": 0.13541666666666666,
+    "dfn3-ll": 0.5145833333333333,
+    "dpdfnet2": 0.59375,
+    "gtcrn": 0.11875,
     "passthrough": 0.004166666666666667,
-    "ref": 0.15208333333333332
+    "ref": 0.1375
    },
    "top_onset_worse_frac": 0.0,
+   "top_onset_n": 432,
    "system_mean_reward": {
-    "dfn3-ll": -0.4954598171774951,
-    "dpdfnet2": -0.5750781665324161,
-    "gtcrn": -0.10541444054463406,
+    "dfn3-ll": -0.49111489232255523,
+    "dpdfnet2": -0.5685716863745578,
+    "gtcrn": -0.08827991597834281,
     "passthrough": -0.004166666666666667,
-    "ref": -0.13507104966349293
+    "ref": -0.12024907846377617
    },
    "system_tau_V-NRMOS-DISTILL": -0.8,
    "system_tau_V-NRMOS-SCOREQ": -0.8
+  },
+  "composite_abs_guard": {
+   "V-NRMOS-DISTILL": {
+    "mean_tau": -0.014121429598314044,
+    "ci95": [
+     -0.16915689035799936,
+     0.13573302406778945
+    ],
+    "n_clips": 457,
+    "n_scenes": 15
+   },
+   "V-NRMOS-SCOREQ": {
+    "mean_tau": 0.003367716967490977,
+    "ci95": [
+     -0.12675046491133904,
+     0.12191913975550146
+    ],
+    "n_clips": 457,
+    "n_scenes": 15
+   },
+   "veto_frac": {
+    "dfn3-ll": 0.58125,
+    "dpdfnet2": 0.675,
+    "gtcrn": 0.42291666666666666,
+    "passthrough": 0.05,
+    "ref": 0.20625
+   },
+   "top_onset_worse_frac": 0.13657407407407407,
+   "top_onset_n": 432,
+   "system_mean_reward": {
+    "dfn3-ll": -0.5640079830357222,
+    "dpdfnet2": -0.6580922624430563,
+    "gtcrn": -0.40463924538916624,
+    "passthrough": -0.05,
+    "ref": -0.19094433809703185
+   },
+   "system_tau_V-NRMOS-DISTILL": -1.0,
+   "system_tau_V-NRMOS-SCOREQ": -1.0
+  }
+ },
+ "veto_parts": {
+  "dfn3-ll": {
+   "eat_ge5_words": [
+    13,
+    480
+   ],
+   "eat_gt1pp": [
+    97,
+    480
+   ],
+   "splvl_lt_-3": [
+    12,
+    465
+   ]
+  },
+  "dpdfnet2": {
+   "eat_ge5_words": [
+    11,
+    480
+   ],
+   "eat_gt1pp": [
+    97,
+    480
+   ],
+   "splvl_lt_-3": [
+    21,
+    465
+   ]
+  },
+  "gtcrn": {
+   "eat_ge5_words": [
+    12,
+    480
+   ],
+   "eat_gt1pp": [
+    98,
+    480
+   ],
+   "splvl_lt_-3": [
+    57,
+    465
+   ]
+  },
+  "passthrough": {
+   "eat_ge5_words": [
+    0,
+    480
+   ],
+   "eat_gt1pp": [
+    0,
+    480
+   ],
+   "splvl_lt_-3": [
+    0,
+    465
+   ]
+  },
+  "ref": {
+   "eat_ge5_words": [
+    10,
+    480
+   ],
+   "eat_gt1pp": [
+    104,
+    480
+   ],
+   "splvl_lt_-3": [
+    0,
+    465
+   ]
   }
  },
  "system_mean_judge": {
