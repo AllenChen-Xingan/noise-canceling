@@ -47,6 +47,17 @@ class Check(unittest.TestCase):
         self.assertFalse(ok)
 
 
+class Pair(unittest.TestCase):
+    def test_mean_ci_and_scenes(self):
+        a = [row("c1", "A", "cafe", **{"V-NR": -6.0}), row("c2", "A", "bus", **{"V-NR": -8.0})]
+        b = [row("c1", "B", "cafe", **{"V-NR": -7.0}), row("c2", "B", "bus", **{"V-NR": -8.0})]
+        r = analyze.pair(a, "A", b, "B", ["V-NR"])["V-NR"]
+        self.assertEqual((r["n"], r["nz"]), (2, 1))
+        self.assertAlmostEqual(r["mean"], -0.5)
+        self.assertLess(r["lo"], r["mean"])
+        self.assertAlmostEqual(r["scenes"]["cafe"], -1.0)
+
+
 class Curve(unittest.TestCase):
     def test_means_by_scene_and_all(self):
         rows = [row("c1", "S", "cafe", **{"V-NR": -6.0}), row("c2", "S", "cafe", **{"V-NR": -8.0}),

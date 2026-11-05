@@ -3,6 +3,8 @@
 
   analyze.py check A/clips.jsonl <系统A> B/clips.jsonl <系统B>
       逐段逐项比对两路分数。除「预期会变」那几项外，差必须为 0，否则退出码 1。
+  analyze.py pair A/clips.jsonl <系统A> B/clips.jsonl <系统B> --items V-NR,V-ESTOI,...
+      逐段配对差（B − A）：每项均值 · 95% 区间（正态近似）· 段数 · 不为 0 的段数；另按场景给均值差。
   analyze.py curve <clips.jsonl>... --items V-NR,V-ONSET,... [--out 表.md]
       每个系统（= 一组混回参数）每项的平均值，按场景分组，写成表。
 """
@@ -70,6 +72,30 @@ def check(rows_a, sys_a, rows_b, sys_b):
     return dict(stats), ok
 
 
+def pair(rows_a, sys_a, rows_b, sys_b, items):
+    """{项: {"n", "nz", "mean", "lo", "hi", "scenes": {场景: 均值差}}}，差 = B − A。"""
+    a, b = by_clip(rows_a, sys_a), by_clip(rows_b, sys_b)
+    scene = {r["clip"]: r["scene"] for r in rows_a}
+    out = {}
+    for v in items:
+        d, by_sc = [], defaultdict(list)
+        for clip in sorted(set(a) & set(b)):
+            x = a[clip].get(v, {}).get("value")
+            y = b[clip].get(v, {}).get("value")
+            if x is None or y is None:
+                continue
+            d.append(y - x)
+            by_sc[scene[clip]].append(y - x)
+        if not d:
+            continue
+        m = sum(d) / len(d)
+        sd = math.sqrt(sum((t - m) ** 2 for t in d) / (len(d) - 1)) if len(d) > 1 else 0.0
+        h = 1.96 * sd / math.sqrt(len(d))
+        out[v] = {"n": len(d), "nz": sum(1 for t in d if t != 0), "mean": m, "lo": m - h, "hi": m + h,
+                  "scenes": {k: sum(x) / len(x) for k, x in sorted(by_sc.items())}}
+    return out
+
+
 def mean(xs):
     xs = [x for x in xs if x is not None]
     return sum(xs) / len(xs) if xs else None
@@ -106,6 +132,19 @@ def main(argv):
                   f"{'是' if v in EXPECTED_DIFF else ''} |")
         print("核对：" + ("通过" if ok else "不通过"))
         return 0 if ok else 1
+    if len(argv) >= 5 and argv[0] == "pair":
+        items = next((argv[i + 1] for i, x in enumerate(argv) if x == "--items"), "").split(",")
+        res = pair(load(argv[1]), argv[2], load(argv[3]), argv[4], items)
+        print(f"差 = {argv[4]} − {argv[2]}")
+        print("| 项 | 段数 | 差不为 0 | 均值差 | 95% 区间 |")
+        print("|---|---|---|---|---|")
+        for v, r in res.items():
+            print(f"| {v} | {r['n']} | {r['nz']} | {r['mean']:+.4f} | [{r['lo']:+.4f}, {r['hi']:+.4f}] |")
+        scenes = sorted({k for r in res.values() for k in r["scenes"]})
+        print("\n按场景的均值差\n\n| 场景 | " + " | ".join(res) + " |\n|---" * 1 + "|---" * len(res) + "|")
+        for sc in scenes:
+            print(f"| {sc} | " + " | ".join(f"{res[v]['scenes'].get(sc, float('nan')):+.4f}" for v in res) + " |")
+        return 0
     if len(argv) >= 2 and argv[0] == "curve":
         files = [a for a in argv[1:] if a.endswith(".jsonl")]
         items = next((argv[i + 1] for i, a in enumerate(argv) if a == "--items"), "").split(",")
