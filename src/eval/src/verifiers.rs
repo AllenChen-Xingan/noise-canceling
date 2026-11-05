@@ -113,7 +113,7 @@ pub const REGISTRY: &[Info] = &[
         unit: "dBFS",
         better: Better::Lower,
         definition: "输入数字静音时，输出（过 0.3 s 稳定期后）的峰峰值",
-        algorithm: "找输入末尾最长的全零段，量输出同段的 max − min，换成 dBFS（全零记 −240）",
+        algorithm: "找输入末尾最长的全零段，量输出同段的 max − min，换成 dBFS（全零记 −240）。换算：1 LSB@16 bit = 1/32768，20·log10(1/32768) = −90.3 dBFS（025 A4）",
         anchor: "[S35] Works With Meet：全零或 (max − min) ≤ 0.0028 dBFS——原文单位口径存疑，这里取〔建议值〕1 LSB@16 bit = −90.3 dBFS",
         failure: "稳定期 0.3 s 是〔建议值〕",
     },
@@ -334,9 +334,9 @@ pub const REGISTRY: &[Info] = &[
         unit: "Δ",
         better: Better::Higher,
         definition: "ESTOI(干净, 输出) − ESTOI(干净, 带噪原声)",
-        algorithm: "pystoi 0.4.1 口径的 ESTOI，Rust 重写（`verifiers/estoi.rs`），与上游对拍差 ≤ 0.01（`tests/estoi_parity.rs`）",
+        algorithm: "pystoi 0.4.1 口径的 ESTOI，Rust 重写（`verifiers/estoi.rs`），与上游对拍差 ≤ 1e−4，含输出整段数字零样例（`tests/estoi_parity.rs`，025 E3）。场景测试集里的「干净参考」是带房间混响的主讲人轨（owner.wav），不是干声",
         anchor: "rubric C3：ΔESTOI ≥ +0.05 A · ≥ 0 B · < 0 C · < −0.05 D",
-        failure: "对生成式伪影不敏感（012）；要求输出与干净轨逐样本对齐",
+        failure: "对生成式伪影不敏感（012）；要求输出与干净轨逐样本对齐；参考带混响，去混响的系统会被算成「不像参考」",
     },
     Info {
         id: "V-EAT-ASR",
@@ -362,7 +362,7 @@ pub const REGISTRY: &[Info] = &[
         definition: "DNSMOS sig_bak_ovr.onnx 的三项，非个性化多项式映射；主值报 OVRL",
         algorithm: "9.01 s 窗、1 s 跳，不够长时自我重复（同官方 dnsmos_local.py 的口径，Rust 自写）；ort 单线程 CPU",
         anchor: "无外部锚点；只作 L0 约束（不比基线差）",
-        failure: "exp003：机器分领先的 DPDFNet-2 人耳最差；007 已见 BAK 被刷高；不建议作奖励",
+        failure: "exp003：机器分领先的 DPDFNet-2 人耳最差；007 已见 BAK 被刷高；不建议作奖励。非个性化模型：旁人说话被留下不算劣化（025 F2）",
     },
     Info {
         id: "V-NRMOS-SCOREQ",
@@ -375,7 +375,7 @@ pub const REGISTRY: &[Info] = &[
         definition: "SCOREQ（natural · NR）给输出的分 − 给带噪原声的分",
         algorithm: "ort 跑上游 ONNX（adapt_nr_telephone.onnx，sha256 登记在 qa/nrmos.rs）；16 kHz 尾部补零到 320 倍数、一次前向；与上游 Python 对拍差 ≤ 0.01（tests/nrmos_parity.rs）",
         anchor: "过线 = 不比原声差（012 §2.3 第 4 条 L0 约束）；公开众人数据上配对一致率 0.70–0.77（017 decision 第 0 节）；在我们片段上尚无判据",
-        failure: "当奖励时被钻空子最狠（018 结论 4）→ 只打分不优化；TMHINT 上系统级 −0.714（018 第二节）；exp009 里与作者一致率 0.375–0.40",
+        failure: "当奖励时被钻空子最狠（018 结论 4）→ 只打分不优化；TMHINT 上系统级 −0.714（018 第二节）；exp009 里与作者一致率 0.375–0.40。非个性化模型：旁人说话被留下不算劣化（025 F2）",
     },
     Info {
         id: "V-NRMOS-DISTILL",
@@ -388,7 +388,7 @@ pub const REGISTRY: &[Info] = &[
         definition: "Distill-MOS v7 给输出的分 − 给带噪原声的分",
         algorithm: "上游 PyTorch 权重导出的 ONNX（不分段前向，tools/export_distillmos.py）；分段与求均值照上游 sqa.py 在 Rust 里做；与上游 Python 对拍差 ≤ 0.01",
         anchor: "过线 = 不比原声差；公开众人数据上配对一致率 0.68–0.69（017 decision 第 3 节）",
-        failure: "与 SCOREQ 同为众包 MOS 训的，彼此一致不算独立旁证（017 第 0 节第 4 条）；系统级相关 0.772 低于 SCOREQ",
+        failure: "与 SCOREQ 同为众包 MOS 训的，彼此一致不算独立旁证（017 第 0 节第 4 条）；系统级相关 0.772 低于 SCOREQ。非个性化模型：旁人说话被留下不算劣化；每段先峰值归一化，看不见整体电平高低（025 F2）",
     },
 ];
 
