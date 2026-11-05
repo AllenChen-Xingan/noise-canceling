@@ -23,6 +23,12 @@ class RelTest(unittest.TestCase):
         self.assertEqual(mp.rel(a, a), 0.0)
         self.assertAlmostEqual(mp.rel(a * 1.1, a), 0.1, places=6)
 
+    @unittest.skipUnless(torch.backends.mps.is_available(), "本机没有 MPS")
+    def test_rel_accepts_mps_tensors(self):
+        # 回归：先 .double() 再 .cpu() 会在 MPS 上报错（MPS 不支持 float64）
+        a = torch.ones(4, device="mps")
+        self.assertEqual(mp.rel(a, a), 0.0)
+
 
 class VerdictTest(unittest.TestCase):
     def _ok(self):

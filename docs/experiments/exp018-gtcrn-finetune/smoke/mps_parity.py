@@ -31,7 +31,7 @@ TOL = {"forward": 1e-3, "grad": 1e-2, "train_loss": 1e-2, "train_weight": 1e-2}
 
 def rel(a: torch.Tensor, b: torch.Tensor) -> float:
     """‖a−b‖ / ‖b‖，两边先挪到 CPU float64。"""
-    a, b = a.detach().double().cpu(), b.detach().double().cpu()
+    a, b = a.detach().cpu().double(), b.detach().cpu().double()
     return float((a - b).norm() / (b.norm() + 1e-12))
 
 
