@@ -303,6 +303,33 @@ mod tests {
         assert_eq!(xcorr_lag(&x, &y, 600, 4000), Some(300));
     }
 
+    /// #109 缺陷样例：前 1.9 s 只有底噪，之后接一段渐强的浊音（基音周期正好 106 样本）。
+    /// 输出 = 输入（原声直通），延迟必须量出 0。旧公式只看开头 2 s、不归一化，会被基音次峰抬到 106。
+    fn late_voiced_onset() -> Vec<f32> {
+        let sr = vdn_types::MODEL_RATE as usize;
+        let mut r = crate::rng::Rng::new(7);
+        let n = sr * 6;
+        let onset = sr * 19 / 10;
+        (0..n)
+            .map(|i| {
+                let floor = 1e-4 * r.normal() as f32;
+                if i < onset {
+                    return floor;
+                }
+                // 渐强 0.3 s 后持平；脉冲串 + 两个谐波，周期 106 样本
+                let env = ((i - onset) as f32 / (0.3 * sr as f32)).min(1.0);
+                let ph = (i % 106) as f32 / 106.0 * std::f32::consts::TAU;
+                floor + 0.2 * env * (ph.sin() + 0.5 * (2.0 * ph).sin() + 0.3 * (3.0 * ph).sin())
+            })
+            .collect()
+    }
+
+    #[test]
+    fn passthrough_with_late_voiced_onset_measures_zero() {
+        let x = late_voiced_onset();
+        assert_eq!(xcorr_lag(&x, &x, 2048, 32_000), Some(0));
+    }
+
     #[test]
     fn kurtosis_of_gaussian_is_three() {
         let mut r = crate::rng::Rng::new(5);
