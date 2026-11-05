@@ -148,6 +148,7 @@ pub struct External {
     name: String,
     latency: usize,
     native_rate: u32,
+    inputs: BTreeSet<Kind>,
     index: HashMap<Fingerprint, Entry>,
     provenance: serde_json::Value,
 }
@@ -394,6 +395,7 @@ impl External {
         });
         Ok(External {
             native_rate,
+            inputs: listed,
             name: rj.name,
             latency: lat,
             index,
@@ -422,6 +424,10 @@ impl External {
         })
     }
 
+    /// run.json 列了这种输入没有（runner 据此决定跑不跑干净人声那一路，evalfix 定 2026-11-05）。
+    pub fn provides(&self, k: Kind) -> bool {
+        self.inputs.contains(&k)
+    }
     /// 测试用：索引里有几条。
     pub fn index_len(&self) -> usize {
         self.index.len()
