@@ -81,3 +81,4 @@
 - 2026-11-05 大总管定：把锚点 run 的识别缓存灌进 DFN3 成绩单的输出目录（`--out`，主目录 `_tmp/scorecard/dfn3-ll-seeded-20261105/`，1920 条，sha256 61305aba…）；名额交回后开跑 DFN3；跑完核对缓存，出配对分析报大总管；DPDFNet-2 等通知再开（中间给 timbre 约 5 分钟）
 - 2026-11-05 DFN3 成绩单开跑命令用绝对路径（worktree 里没有 `_tmp/`）：`--system external:<主目录>/_tmp/exp016/dfn3-ll/20261105-063623-e4eb13d9 --out <主目录>/_tmp/scorecard/dfn3-ll-seeded-20261105`
 - 2026-11-05 DFN3 成绩单 `20261105-103000-4cf04ac1` 10:30–11:47 跑完；预置缓存 1920 条都在，新增 960 条（干净人声单独过系统那一路不送识别）；配对分析在 `runs/dfn3-ll-20261105-103000-4cf04ac1/`，已报大总管；名额交出，DPDFNet-2 等通知
+- 2026-11-05 更正：上面几行里的「吞字头」若指 V-EAT-ASR，应读作「吃字」（源码 verifiers.rs：V-ONSET = 吞字头，V-EAT-ASR = 吃字）。等名额期间做了：V-VACUUM = V-NR 反向（notes.md）；咔哒诊断 click_diag.py（复刻与成绩单逐段一致，3 段大多是穿过声的陡沿）；findings 加「最终版 · DFN3」一节（实测，未审）
