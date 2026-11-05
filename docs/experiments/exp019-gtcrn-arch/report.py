@@ -68,7 +68,7 @@ def fmt_row(n, c, burst, paced):
     p = paced.get(n, {}) if paced else {}
     cell = lambda d, k: f"{d[k]:.3f}" if k in d else "—"
     return (f"| {n} | {c[n]['extra_params']} | {c[n]['extra_macs']} | "
-            f"{(c[n]['macs'] / c['base']['macs'] - 1) * 100:+.1f}% | {c[n]['extra_state_kb']:.1f} | "
+            f"{c[n]['extra_macs'] / V4I_BASE_MACS * 100:+.1f}% | {c[n]['extra_state_kb']:.1f} | "
             f"{cell(b, 'p50')} | {cell(p, 'mean')} | {cell(p, 'p99')} | "
             f"{ms_lo:.3f}–{ms_hi:.3f} | {pct(ms_lo):.2f}–{pct(ms_hi):.2f}% |")
 
@@ -80,7 +80,7 @@ def main(argv):
     lines = [
         "# exp019 汇总（report.py 生成，勿手改）", "",
         f"burst run：`{Path(argv[0]).name if argv else '—'}` · paced run：`{Path(argv[1]).name if len(argv) > 1 else '—'}`", "",
-        "列说明：加参数 / 加乘加 = 候选模块本身；乘加涨幅相对基座整帧；缓存 = 候选新增的流式状态。",
+        "列说明：加参数 / 加乘加 = 候选模块本身；乘加涨幅 = 新增乘加 / 020 口径基座 366,460；缓存 = 候选新增的流式状态。",
         "torch 列是实测（单线程、一次一帧）；v4i 推算列是推断（见 report.py 头注释）。",
         f"用户端占用口径：每 16 ms 一帧占一个核的百分比；019 目标 {CPU_TARGET_PCT}%、上限 {CPU_LIMIT_PCT}%。", "",
         "| 候选 | 加参数 | 加乘加/帧 | 乘加涨幅 | 加缓存 KB | torch burst p50 ms | torch 16ms 节奏 平均 ms | 节奏 p99 ms | v4i 推算 ms/帧（节奏） | 占一个核 |",
