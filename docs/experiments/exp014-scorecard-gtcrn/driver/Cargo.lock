@@ -741,6 +741,7 @@ name = "vdn-dsp"
 version = "0.1.0"
 dependencies = [
  "realfft",
+ "vdn-types",
 ]
 
 [[package]]
@@ -757,7 +758,6 @@ version = "0.1.0"
 dependencies = [
  "hound",
  "ort",
- "realfft",
  "schemars",
  "serde",
  "serde_json",
