@@ -70,3 +70,5 @@
 - 大总管同意补字段：先确认进仓 run.json 已提交，再改；amend.json 记旧新 sha256 · 字段 · 原因 · 日期；最终版元数据记新哈希、README 说明
 - 大总管：合 main 后 v2 把干净人声单独过一遍，外部入口查不到 → external_e2e 主测试 Missing。与 evalfix 对齐：Kind 加 Clean（clean/ 可选，列了须 480 段齐）+ `External::provides`；没列时 runner 不跑这一路、三项只报不判（evalfix 定；大总管上一条写「报没跑成」，已请大总管知悉）。e2e 夹具写四种、加 clean 负例两条；_ext.py 输出 clean（owner 轨）；Rust 10+5、Python 25 条全过，clippy · tidy 过。补丁放主目录 _tmp/evalfix/cands-clean.patch（出自 fe09f692）
 - 大总管定：另开新 run，mix + clean 一次跑全；旧 run 不补 native_rate、不写 amend.json（撤回前一条）；旧 run 在 README 标「草稿，被 <新 run-id> 取代」
+- evalfix 套入 clean 补丁（bdf0ad57，出自 fe09f692），v2 下 vdn-eval 全绿；审 evalfix 的「没有 clean/ 判只报」测试：过，P2 一条（循环可能空过）已改 987a3af8；Kind::Clean 注释改为「没列时 runner 凭 provides 不跑这一路」
+- 大总管：开跑前方法审 codex 1 轮。写 plan-final-run.md；codex ③′ 2 轮（P1×4 全修、P2×3 修 2 留 1）→ 停。改动：probe 对 mix 与 clean 都量前视；analyze 加锚点（本次成绩单加 passthrough，与 GTCRN run 逐段比 ≤1e-6）· 只挑基线与候选合并 · 片段覆盖核对；吞字头跨 run 结论在识别权重未核实时降为参考。Python 33 条过；草稿分析重出逐字相同。成绩单估计改为 2.3–2.6 h（多 passthrough），总计约 3–3.3 h

@@ -18,7 +18,7 @@ GTCRN 在哪几个开会场景、哪种声音上落后于两个候选（DPDFNet-
    - 规则版本：两边都 `--rules v2`（成绩单 `meta.rules`）
    - 场景集与清单：两边 `meta.suite` 同为 `src/eval/suite/scenes.json`；`git diff 4ccf0638 <本次提交> -- src/eval/suite docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/` 为空（2026-11-05 对当前分支已核：空），即 GTCRN 那次读的是同一份清单；评分程序载入每段音频时按清单里的 sha256 校验（`load_scene_clip`），所以两边输入音频逐字节相同。外部 `run.json.clips` 指向同一 build，其 sha256 与 `builds/…/params.json` 的 `clips_sha256` 相同
    - 评分代码：`git diff --stat 4ccf0638 <本次提交> -- src/ Cargo.lock`，排除外部入口（`system.rs` 分发 · `system/external.rs` · `scorecard/mod.rs` 里 `provides` 那一处 · `tests/`）后**必须为空**；二进制用 `cargo build --release` 在本次提交上重编（`meta.commit` 不带 `-dirty`）。不为空 → 停下，报大总管，选项是把 `gtcrn` 一起放进本次成绩单（约多 55 分钟）
-   - 评分模型：SCOREQ `adapt_nr_telephone.onnx` 与 Distill-MOS 的 sha256 与 GTCRN run 的 README 记的一致（逐个 `shasum -a 256`）；识别服务记模型名与服务端报的权重摘要。**拿不到摘要、或锚点上吞字头项两边平均差的区间不含 0 时**，吞字头（`V-EAT-ASR`）跨 run 的配对只作参考，findings 里不对它下「谁更好」的结论
+   - 评分模型：SCOREQ `adapt_nr_telephone.onnx` 与 Distill-MOS 的 sha256 与 GTCRN run 的 README 记的一致（逐个 `shasum -a 256`）；识别服务记模型名与服务端报的权重摘要。**拿不到摘要时**，吞字头（`V-EAT-ASR`）跨 run 的配对只作参考，findings 里不对它下「谁更好」的结论
    - **锚点（实测可比性，codex 016 最终版方法第 1 轮 P1 #1）**：本次成绩单加 `passthrough`（原声直通，不经模型），逐段与 GTCRN run 里的 `passthrough` 比。过线：DSP 类项与听感分（SCOREQ · Distill-MOS，确定性）逐段差 ≤ 1e-6；吞字头项（识别有随机性）不判，只报两边平均差，写进 findings，并按上一条决定它的结论降不降级。DSP 或听感分任一段超差 → 两次 run 不可比，停下报大总管。代价：多一个系统，成绩单约多 35 分钟（推断：直通无模型推理，只多打分）
    - 供电：接电源（`meta.power = ac`），`caffeinate -i`
 5. **成绩单**（占名额，约 2.3–2.6 小时，推断）：`vdn-eval scorecard --suite src/eval/suite/scenes.json --system passthrough,external:<dpdfnet2 新 run>,external:<dfn3-ll 新 run> --qa --rules v2`。过线：0 段没跑成；两个外部系统截半自检通过（`meta.external[*].trunc_max_abs_diff` ≤ 容差）；`inputs` 含 `clean`，三项带 `clean_pass` 标记
