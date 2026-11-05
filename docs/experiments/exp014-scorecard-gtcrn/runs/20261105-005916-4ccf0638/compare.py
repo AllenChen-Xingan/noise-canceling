@@ -96,3 +96,54 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ---- 收尾评审第 1 轮 #2 补：场景总判的不过原因分解 · 判不过的组合明细 · 与只重新汇总那份的差 ----
+RESUM = REPO / "docs/experiments/exp014-scorecard-gtcrn/runs/20261104-231355-da5821a4-resum-v2"
+KEY = lambda s: (s["scene"], s["tier"], s["device"], s["system"])
+
+
+def judged_fails(s):
+    return tuple(sorted(i["v"] for i in s["items"] if i["status"] == "fail" and not i["report_only"]))
+
+
+def ci_txt(i):
+    c = i.get("ci")
+    return f"{c['mean']:.2f}（{c['lo']:.2f} – {c['hi']:.2f}）" if c else "—"
+
+
+def extra_sections():
+    out, sc = sys.stdout, scenes(NEW)
+    out.write("\n## 场景总判的不过原因（判定项里不过的组合，只报项不算）\n\n| 系统 | 场景总判 | 不过的判定项 | 组合数 |\n|---|---|---|---|\n")
+    for sysn in SYSTEMS:
+        c = Counter((s["status"], judged_fails(s)) for s in sc["scenes"] if s["system"] == sysn)
+        for (st_, f), n in sorted(c.items(), key=lambda x: -x[1]):
+            out.write(f"| {sysn} | {st_} | {' + '.join(f) or '—'} | {n} |\n")
+    out.write("\n## 吃字 · 人声忽大忽小判不过的组合（参考降噪与 GTCRN）\n\n"
+              "| 系统 | 场景 | 档 | 设备 | 项 | 越线段 / 段数 | 最差段 | 均值（95% 区间） |\n|---|---|---|---|---|---|---|---|\n")
+    for s in sc["scenes"]:
+        if s["system"] == "passthrough":
+            continue
+        for i in s["items"]:
+            if i["status"] == "fail" and i["v"] in ("V-EAT-ASR", "V-PUMPV"):
+                n = i["pass"] + i["fail"] + i["unknown"]
+                out.write(f"| {s['system']} | {s['scene']} | {s['tier']} | {s['device']} | {i['v']} | {i['fail']} / {n} | "
+                          f"{i['worst']:.1f}（`{i['worst_clip']}`） | {ci_txt(i)} |\n")
+    if not (RESUM / "scorecard.json").exists():
+        return
+    old = {KEY(s): s for s in scenes(RESUM)["scenes"]}
+    out.write(f"\n## 场景总判：只重新汇总（`{RESUM.name}`）→ 重跑，变了的组合\n\n"
+              "| 系统 | 场景 | 档 | 设备 | 总判 | 判定项变化 | V-PUMPV 均值（95% 区间） |\n|---|---|---|---|---|---|---|\n")
+    for s in sc["scenes"]:
+        o = old.get(KEY(s))
+        if not o or o["status"] == s["status"]:
+            continue
+        oi = {i["v"]: i for i in o["items"]}
+        ch = [f"{i['v']} {oi[i['v']]['status']}{'（只报）' if oi[i['v']]['report_only'] else ''} → {i['status']}"
+              for i in s["items"] if not i["report_only"] and i["v"] in oi
+              and (oi[i["v"]]["status"], oi[i["v"]]["report_only"]) != (i["status"], i["report_only"])]
+        pv = next((ci_txt(i) for i in s["items"] if i["v"] == "V-PUMPV"), "—")
+        out.write(f"| {s['system']} | {s['scene']} | {s['tier']} | {s['device']} | {o['status']} → {s['status']} | {'；'.join(ch)} | {pv} |\n")
+
+
+extra_sections()

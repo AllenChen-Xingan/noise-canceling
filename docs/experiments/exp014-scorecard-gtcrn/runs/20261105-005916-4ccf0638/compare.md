@@ -47,3 +47,61 @@
 | ref | 1.499（480） | 4.600（432） | 100.000（100） | 1.103（242） | 0.000（480） | 0.000（480） | 0.000（480） | 43.667（480） |
 
 同时说话只留用户：失败率 = 1 的段数 {'passthrough': 242, 'ref': 97, 'gtcrn': 68}
+
+## 场景总判的不过原因（判定项里不过的组合，只报项不算）
+
+| 系统 | 场景总判 | 不过的判定项 | 组合数 |
+|---|---|---|---|
+| passthrough | fail | V-INTF + V-NR | 38 |
+| passthrough | fail | V-NR | 22 |
+| gtcrn | fail | V-INTF | 22 |
+| gtcrn | unknown | — | 20 |
+| gtcrn | fail | V-INTF + V-NR | 7 |
+| gtcrn | fail | V-EAT-ASR + V-INTF | 7 |
+| gtcrn | fail | V-EAT-ASR + V-INTF + V-NR | 2 |
+| gtcrn | fail | V-EAT-ASR + V-PUMPV | 1 |
+| gtcrn | fail | V-EAT-ASR | 1 |
+| ref | fail | V-INTF + V-NR | 23 |
+| ref | unknown | — | 10 |
+| ref | fail | V-NR | 9 |
+| ref | fail | V-INTF | 9 |
+| ref | fail | V-EAT-ASR + V-INTF + V-NR | 4 |
+| ref | fail | V-EAT-ASR + V-INTF | 2 |
+| ref | fail | V-EAT-ASR + V-NR | 2 |
+| ref | fail | V-EAT-ASR | 1 |
+
+## 吃字 · 人声忽大忽小判不过的组合（参考降噪与 GTCRN）
+
+| 系统 | 场景 | 档 | 设备 | 项 | 越线段 / 段数 | 最差段 | 均值（95% 区间） |
+|---|---|---|---|---|---|---|---|
+| gtcrn | open-office | stress | mba-builtin | V-EAT-ASR | 2 / 6 | 33.3（`open-office-s02-mba`） | 8.21（-0.79 – 19.35） |
+| ref | open-office | stress | mba-builtin | V-EAT-ASR | 1 / 6 | 33.3（`open-office-s02-mba`） | 5.78（-1.08 – 17.42） |
+| ref | meeting-room | common | mba-builtin | V-EAT-ASR | 1 / 10 | 30.8（`meeting-room-c04-mba`） | 4.81（0.00 – 11.34） |
+| gtcrn | meeting-room | stress | mba-builtin | V-EAT-ASR | 1 / 6 | 19.2（`meeting-room-s01-mba`） | 3.21（0.00 – 9.62） |
+| gtcrn | meeting-room | stress | mba-builtin | V-PUMPV | 5 / 6 | 2.9（`meeting-room-s03-mba`） | 1.95（1.43 – 2.48） |
+| ref | meeting-room | stress | mba-builtin | V-EAT-ASR | 1 / 6 | 46.2（`meeting-room-s01-mba`） | 9.90（0.60 – 24.69） |
+| gtcrn | cafe | stress | external-mic | V-EAT-ASR | 1 / 6 | 14.0（`cafe-s02-ext`） | 3.38（-0.97 – 8.03） |
+| ref | canteen | common | external-mic | V-EAT-ASR | 1 / 10 | 22.2（`canteen-c04-ext`） | 3.83（-1.04 – 9.30） |
+| ref | canteen | common | mba-builtin | V-EAT-ASR | 1 / 10 | 37.0（`canteen-c04-mba`） | 7.84（2.45 – 15.16） |
+| gtcrn | canteen | stress | external-mic | V-EAT-ASR | 1 / 6 | 22.7（`canteen-s04-ext`） | 1.72（-7.72 – 11.36） |
+| gtcrn | transit-hub | stress | external-mic | V-EAT-ASR | 1 / 6 | 21.9（`transit-hub-s01-ext`） | 6.70（0.49 – 13.99） |
+| ref | transit-hub | stress | external-mic | V-EAT-ASR | 2 / 6 | 23.1（`transit-hub-s00-ext`） | 8.44（0.88 – 16.47） |
+| gtcrn | transit-hub | stress | mba-builtin | V-EAT-ASR | 1 / 6 | 18.8（`transit-hub-s01-mba`） | 3.85（-2.06 – 10.76） |
+| ref | transit-hub | stress | mba-builtin | V-EAT-ASR | 1 / 6 | 21.9（`transit-hub-s01-mba`） | 3.95（-1.96 – 11.24） |
+| gtcrn | car-passenger | stress | external-mic | V-EAT-ASR | 1 / 6 | 34.8（`car-passenger-s02-ext`） | 5.73（-2.36 – 17.99） |
+| gtcrn | bus-metro-cabin | stress | mba-builtin | V-EAT-ASR | 1 / 6 | 25.0（`bus-metro-cabin-s03-mba`） | 4.68（-1.52 – 13.40） |
+| gtcrn | rail-air-cabin | common | external-mic | V-EAT-ASR | 1 / 10 | 20.0（`rail-air-cabin-c09-ext`） | 3.57（-1.51 – 9.01） |
+| gtcrn | rail-air-cabin | common | mba-builtin | V-EAT-ASR | 1 / 10 | 19.2（`rail-air-cabin-c08-mba`） | 2.83（-1.88 – 8.49） |
+| ref | rail-air-cabin | common | mba-builtin | V-EAT-ASR | 1 / 10 | 19.2（`rail-air-cabin-c08-mba`） | 2.88（-2.83 – 8.77） |
+| ref | street-outdoor | stress | mba-builtin | V-EAT-ASR | 1 / 6 | 14.7（`street-outdoor-s03-mba`） | 4.50（1.01 – 9.37） |
+| gtcrn | hotel-room | common | mba-builtin | V-EAT-ASR | 1 / 10 | 13.9（`hotel-room-c06-mba`） | 0.57（-2.45 – 4.17） |
+
+## 场景总判：只重新汇总（`20261104-231355-da5821a4-resum-v2`）→ 重跑，变了的组合
+
+| 系统 | 场景 | 档 | 设备 | 总判 | 判定项变化 | V-PUMPV 均值（95% 区间） |
+|---|---|---|---|---|---|---|
+| gtcrn | phone-booth | common | external-mic | fail → unknown | V-LAT fail → pass；V-WEAK pass（只报） → pass；V-PUMPV unknown（只报） → unknown；V-TIMBRE pass（只报） → pass | 1.03（0.65 – 1.48） |
+| ref | phone-booth | common | external-mic | fail → unknown | V-LAT fail → pass；V-WEAK pass（只报） → pass；V-PUMPV pass（只报） → pass；V-TIMBRE pass（只报） → pass | 0.00（0.00 – 0.00） |
+| gtcrn | phone-booth | common | mba-builtin | fail → unknown | V-LAT fail → pass；V-WEAK pass（只报） → pass；V-PUMPV unknown（只报） → unknown；V-TIMBRE pass（只报） → pass | 1.37（0.71 – 2.19） |
+| ref | phone-booth | common | mba-builtin | fail → unknown | V-LAT fail → pass；V-WEAK pass（只报） → pass；V-PUMPV pass（只报） → pass；V-TIMBRE pass（只报） → pass | 0.00（0.00 – 0.00） |
+| gtcrn | library-classroom | common | mba-builtin | pass → unknown | V-WEAK pass（只报） → pass；V-PUMPV unknown（只报） → unknown；V-TIMBRE pass（只报） → pass | 1.28（0.57 – 2.15） |
