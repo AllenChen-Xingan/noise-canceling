@@ -1,0 +1,238 @@
+{
+ "systems": [
+  "dfn3-ll",
+  "dpdfnet2",
+  "gtcrn",
+  "passthrough",
+  "ref"
+ ],
+ "clips": 480,
+ "rewards": {
+  "nr_only": {
+   "V-NRMOS-DISTILL": {
+    "mean_tau": 0.7680525164113785,
+    "ci95": [
+     0.7045951859956237,
+     0.8235023041474654
+    ],
+    "n_clips": 457,
+    "n_scenes": 15
+   },
+   "V-NRMOS-SCOREQ": {
+    "mean_tau": 0.6192560175054704,
+    "ci95": [
+     0.5601750547045952,
+     0.6741935483870968
+    ],
+    "n_clips": 457,
+    "n_scenes": 15
+   },
+   "veto_frac": null,
+   "top_onset_worse_frac": 0.5378973105134475,
+   "system_mean_reward": {
+    "dfn3-ll": 8.742082741726643,
+    "dpdfnet2": 9.687407752224601,
+    "gtcrn": 6.578865330355757,
+    "passthrough": 0.0,
+    "ref": 3.6581086862535557
+   },
+   "system_tau_V-NRMOS-DISTILL": 1.0,
+   "system_tau_V-NRMOS-SCOREQ": 1.0
+  },
+  "estoi_only": {
+   "V-NRMOS-DISTILL": {
+    "mean_tau": 0.7141666666666667,
+    "ci95": [
+     0.5975,
+     0.81625
+    ],
+    "n_clips": 480,
+    "n_scenes": 15
+   },
+   "V-NRMOS-SCOREQ": {
+    "mean_tau": 0.5545833333333333,
+    "ci95": [
+     0.4608333333333334,
+     0.63875
+    ],
+    "n_clips": 480,
+    "n_scenes": 15
+   },
+   "veto_frac": null,
+   "top_onset_worse_frac": 0.48842592592592593,
+   "system_mean_reward": {
+    "dfn3-ll": 0.03498892837489646,
+    "dpdfnet2": 0.043513470679891836,
+    "gtcrn": 0.02062156588150573,
+    "passthrough": 0.0,
+    "ref": 0.013285954526806365
+   },
+   "system_tau_V-NRMOS-DISTILL": 1.0,
+   "system_tau_V-NRMOS-SCOREQ": 1.0
+  },
+  "composite": {
+   "V-NRMOS-DISTILL": {
+    "mean_tau": 0.41917477895859334,
+    "ci95": [
+     0.2984022897831909,
+     0.5196962683148169
+    ],
+    "n_clips": 480,
+    "n_scenes": 15
+   },
+   "V-NRMOS-SCOREQ": {
+    "mean_tau": 0.35796958715439814,
+    "ci95": [
+     0.2524103300681953,
+     0.4456426130379486
+    ],
+    "n_clips": 480,
+    "n_scenes": 15
+   },
+   "veto_frac": {
+    "dfn3-ll": 0.21875,
+    "dpdfnet2": 0.22708333333333333,
+    "gtcrn": 0.2708333333333333,
+    "passthrough": 0.0,
+    "ref": 0.21666666666666667
+   },
+   "top_onset_worse_frac": 0.3125,
+   "system_mean_reward": {
+    "dfn3-ll": -0.1831172279097732,
+    "dpdfnet2": -0.18657625267242572,
+    "gtcrn": -0.24556697259672847,
+    "passthrough": -3.0268094708860284e-05,
+    "ref": -0.20167014760659752
+   },
+   "system_tau_V-NRMOS-DISTILL": -0.2,
+   "system_tau_V-NRMOS-SCOREQ": -0.2
+  },
+  "composite_d85": {
+   "V-NRMOS-DISTILL": {
+    "mean_tau": 0.6334914218509563,
+    "ci95": [
+     0.5499038434267153,
+     0.7088813925803239
+    ],
+    "n_clips": 480,
+    "n_scenes": 15
+   },
+   "V-NRMOS-SCOREQ": {
+    "mean_tau": 0.5122326128491965,
+    "ci95": [
+     0.4222619665559677,
+     0.5926405201523206
+    ],
+    "n_clips": 480,
+    "n_scenes": 15
+   },
+   "veto_frac": {
+    "dfn3-ll": 0.05,
+    "dpdfnet2": 0.06458333333333334,
+    "gtcrn": 0.13541666666666666,
+    "passthrough": 0.0,
+    "ref": 0.020833333333333332
+   },
+   "top_onset_worse_frac": 0.3819444444444444,
+   "system_mean_reward": {
+    "dfn3-ll": -0.00696505284944422,
+    "dpdfnet2": -0.017053861880132453,
+    "gtcrn": -0.10541444054463406,
+    "passthrough": -3.0268094708860284e-05,
+    "ref": -0.0020909740194241014
+   },
+   "system_tau_V-NRMOS-DISTILL": -0.6,
+   "system_tau_V-NRMOS-SCOREQ": -0.6
+  },
+  "composite_pooled_asr": {
+   "V-NRMOS-DISTILL": {
+    "mean_tau": 0.6525599380854373,
+    "ci95": [
+     0.569651267595307,
+     0.7293266994049731
+    ],
+    "n_clips": 480,
+    "n_scenes": 15
+   },
+   "V-NRMOS-SCOREQ": {
+    "mean_tau": 0.5238011290836775,
+    "ci95": [
+     0.4316815772624967,
+     0.6053147270695486
+    ],
+    "n_clips": 480,
+    "n_scenes": 15
+   },
+   "veto_frac": {
+    "dfn3-ll": 0.025,
+    "dpdfnet2": 0.04375,
+    "gtcrn": 0.11875,
+    "passthrough": 0.0,
+    "ref": 0.0
+   },
+   "top_onset_worse_frac": 0.3819444444444444,
+   "system_mean_reward": {
+    "dfn3-ll": 0.018779197735432275,
+    "dpdfnet2": 0.004390672720437665,
+    "gtcrn": -0.08827991597834281,
+    "passthrough": -3.0268094708860284e-05,
+    "ref": 0.019041607738069313
+   },
+   "system_tau_V-NRMOS-DISTILL": 0.0,
+   "system_tau_V-NRMOS-SCOREQ": 0.0
+  },
+  "composite_hard_guard": {
+   "V-NRMOS-DISTILL": {
+    "mean_tau": 0.13229611955722692,
+    "ci95": [
+     0.016929028830128267,
+     0.24512325226976284
+    ],
+    "n_clips": 480,
+    "n_scenes": 15
+   },
+   "V-NRMOS-SCOREQ": {
+    "mean_tau": 0.10976738615197403,
+    "ci95": [
+     0.017758012266369954,
+     0.19303133525763633
+    ],
+    "n_clips": 480,
+    "n_scenes": 15
+   },
+   "veto_frac": {
+    "dfn3-ll": 0.51875,
+    "dpdfnet2": 0.6,
+    "gtcrn": 0.13541666666666666,
+    "passthrough": 0.004166666666666667,
+    "ref": 0.15208333333333332
+   },
+   "top_onset_worse_frac": 0.0,
+   "system_mean_reward": {
+    "dfn3-ll": -0.4954598171774951,
+    "dpdfnet2": -0.5750781665324161,
+    "gtcrn": -0.10541444054463406,
+    "passthrough": -0.004166666666666667,
+    "ref": -0.13507104966349293
+   },
+   "system_tau_V-NRMOS-DISTILL": -0.8,
+   "system_tau_V-NRMOS-SCOREQ": -0.8
+  }
+ },
+ "system_mean_judge": {
+  "V-NRMOS-DISTILL": {
+   "dfn3-ll": 0.26933659691777495,
+   "dpdfnet2": 0.3261603467166424,
+   "gtcrn": 0.20947261887292068,
+   "passthrough": 0.0,
+   "ref": 0.1623984304153257
+  },
+  "V-NRMOS-SCOREQ": {
+   "dfn3-ll": 0.1938430887957414,
+   "dpdfnet2": 0.2515935664375623,
+   "gtcrn": 0.1414294636497895,
+   "passthrough": 0.0,
+   "ref": 0.12268882393836975
+  }
+ }
+}
