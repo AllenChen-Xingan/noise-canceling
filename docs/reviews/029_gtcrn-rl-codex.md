@@ -1,7 +1,7 @@
 # 评审 029 · 强化学习专门调 GTCRN（调研 029 + exp020）（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/research/029_gtcrn-rl/` · `docs/experiments/exp020-gtcrn-rl/README.md` · `sim/reward_rank.py` · `timing/src/main.rs`。**最新一轮：第 3 轮（2026-11-05）· 总评「修改」· 连续第 1 轮无 P0/P1，待第 4 轮确认**。
-> 累计处理：P1×7、P2×6，逐条回源码 / 读数核实，属实 13、驳回 0。新出的要人定的事并入 decision.md 第六节 R-1 / R-2。
+> 对象：`docs/research/029_gtcrn-rl/` · `docs/experiments/exp020-gtcrn-rl/README.md` · `sim/reward_rank.py` · `timing/src/main.rs`。**最新一轮：第 4 轮（2026-11-05）· 总评「修改」· 已达停止线（连续两轮无 P0/P1）**。
+> 累计处理：P1×7、P2×8，逐条回源码 / 读数核实，属实 15、驳回 0；P2 全部当场改完，无 issue。新出的要人定的事并入 decision.md 第六节 R-1 / R-2。
 
 ## 第 1 轮（2026-11-05）· 总评「修改」
 
@@ -91,3 +91,20 @@
 ### 是否再审
 
 本轮无 P0/P1，开第 4 轮确认停止线。
+
+## 第 4 轮（2026-11-05）· 总评「修改」
+
+原文：主目录 `_tmp/029/reviews/029-gtcrn-rl-codex-4.md`（不入库）。effort medium。
+上一轮处理的验证：#1–#3 已落实。
+本轮 P0/P1：0 条 · 停止线：本轮与上一轮都无 P0/P1 → **满足** · 留作 issue 的 P2：无（两条都当场改了）
+
+- **P2｜029 README:10「唯一写不成可微」漏了咔嗒**（第 4 轮 #1）
+  - 核实：属实。
+  - 处理：README 与 decision 第四节理由 ② 分开写咔嗒（便宜、可逐段）与吃字（识别可靠性未验证）两条路。
+- **P2｜sources.md:37 样本效率节仍称「都在大模型上」**（第 4 轮 #2）
+  - 核实：属实。
+  - 处理：标题改为分列已知规模与未写参数量的工作。
+
+### 是否再审
+
+已达停止线，停。
