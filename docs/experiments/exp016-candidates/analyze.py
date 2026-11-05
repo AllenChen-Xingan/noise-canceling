@@ -6,7 +6,9 @@
 - 区间：成对片段自助重抽样（同一份素材的 Air 内置麦与外接麦两段算一个单位，`pair` 字段），2000 次、种子固定，取 2.5 / 97.5 百分位
 - 三态：区间整体 > 0 → 「候选好」；整体 < 0 → 「候选差」；跨 0 → 「分不出」
 - 不比的项：V-NAN（全 0）· V-LAT（外部系统延迟只是声明值）· 判「不知道」的段不进该项
-- 排「GTCRN 落后最多」用标准化效应（平均 ÷ 标准差），因为各项单位不同；这个排序方式是本脚本的选择（推断），表里同时给原单位的平均
+- 排「GTCRN 落后最多」用标准化效应 = 格子平均 ÷ 该项在全部段上差值的标准差（各项单位不同，用同一把全局尺子，
+  不用格子内标准差——那会偏向波动小的格子）；只排区间整体 > 0、且配对单位 ≥ MIN_UNITS 的格子。这个排序方式是本脚本的选择（推断），
+  表里同时给原单位的平均。格子很多、未做多重比较校正：前 5 处是「值得先看」，不是统计显著的定论
 
 用法：python3 analyze.py <run 目录> <exp013 clips.jsonl> --out <analysis.md> [--json <analysis.json>]
 """
@@ -27,7 +29,7 @@ BASE = "gtcrn"
 SKIP = {"V-NAN", "V-LAT"}
 N_BOOT = 2000
 SEED = 20261105
-MIN_N = 6  # 拆到 场景 × 声音 时，少于这么多段不排名
+MIN_UNITS = 5  # 拆到 场景 × 声音 时，配对单位（一份素材的两个设备版本算一个）少于这么多不排名
 
 
 def load(run: Path):
@@ -107,13 +109,28 @@ def group(ds, pair, key):
     return g
 
 
-def summarize(ds, pair, key, seed):
+def item_sd(ds) -> dict[str, float]:
+    """每个评分项在全部段上差值的标准差（标准化效应的分母）。"""
+    by = defaultdict(list)
+    for d in ds:
+        by[d[3]].append(d[4])
+    out = {}
+    for v, xs in by.items():
+        m = sum(xs) / len(xs)
+        out[v] = (sum((x - m) ** 2 for x in xs) / (len(xs) - 1)) ** 0.5 if len(xs) > 1 else 0.0
+    return out
+
+
+def summarize(ds, pair, key, seed, sd_of=None):
     rng = random.Random(seed)
+    sd_of = sd_of or item_sd(ds)
     out = []
     for k, vu in sorted(group(ds, pair, key).items(), key=lambda kv: str(kv[0])):
         n, m, lo, hi, sd = ci(vu, rng)
+        v = k[-1] if isinstance(k, tuple) else k
+        g = sd_of.get(v, 0.0)
         out.append({"key": k, "n": n, "units": len(vu), "mean": m, "lo": lo, "hi": hi, "sd": sd, "state": state(lo, hi),
-                    "effect": (m / sd) if sd > 0 else 0.0})
+                    "effect": (m / g) if g > 0 else 0.0})
     return out
 
 
@@ -123,11 +140,12 @@ def analyze(run: Path, manifest: Path, cands: list[str]):
     res = {"run_id": card["meta"]["run_id"], "base": BASE, "candidates": {}}
     for c in cands:
         ds = diffs(rows, better, c)
+        g = item_sd(ds)
         res["candidates"][c] = {
-            "by_item": summarize(ds, pair, lambda d: [d[3]], SEED),
-            "by_scene_item": summarize(ds, pair, lambda d: [(d[1], d[3])], SEED + 1),
-            "by_sound_item": summarize(ds, pair, lambda d: [(s, d[3]) for s in d[2]], SEED + 2),
-            "by_scene_sound_item": summarize(ds, pair, lambda d: [(d[1], s, d[3]) for s in d[2]], SEED + 3),
+            "by_item": summarize(ds, pair, lambda d: [d[3]], SEED, g),
+            "by_scene_item": summarize(ds, pair, lambda d: [(d[1], d[3])], SEED + 1, g),
+            "by_sound_item": summarize(ds, pair, lambda d: [(s, d[3]) for s in d[2]], SEED + 2, g),
+            "by_scene_sound_item": summarize(ds, pair, lambda d: [(d[1], s, d[3]) for s in d[2]], SEED + 3, g),
         }
     res["better"], res["unit"] = better, unit
     return res
@@ -138,8 +156,8 @@ def f(x, nd=2):
 
 
 def top_behind(rows_, k=5):
-    """GTCRN 落后最多：区间整体 > 0（候选好）且段数 ≥ MIN_N，按标准化效应降序。"""
-    ok = [r for r in rows_ if r["state"] == "候选好" and r["n"] >= MIN_N]
+    """GTCRN 落后最多：区间整体 > 0（候选好）且配对单位 ≥ MIN_UNITS，按标准化效应降序。"""
+    ok = [r for r in rows_ if r["state"] == "候选好" and r["units"] >= MIN_UNITS]
     return sorted(ok, key=lambda r: -r["effect"])[:k]
 
 
@@ -161,11 +179,18 @@ def render(res) -> str:
             if x["state"] in ("候选好", "候选差"):
                 s, v = x["key"]
                 L.append(f"| {s} | {v} | {x['n']} | {f(x['mean'])} {unit.get(v, '')} | [{f(x['lo'])}, {f(x['hi'])}] | {x['state']} |")
-        L += ["", f"### GTCRN 落后最多的前 5 处（场景 × 声音 × 评分项，段数 ≥ {MIN_N}，按标准化效应排）", "",
-              "| 场景 | 声音 | 评分项 | 段数 | 平均 | 95% 区间 | 标准化效应 |", "|---|---|---|---|---|---|---|"]
+        L += ["", f"### GTCRN 落后最多的前 5 处（场景 × 声音 × 评分项，配对单位 ≥ {MIN_UNITS}，按标准化效应排；未做多重比较校正）", "",
+              "| 场景 | 声音 | 评分项 | 段数（单位） | 平均 | 95% 区间 | 标准化效应 |", "|---|---|---|---|---|---|---|"]
         for x in top_behind(r["by_scene_sound_item"]):
             s, snd, v = x["key"]
-            L.append(f"| {s} | {snd} | {v} | {x['n']} | {f(x['mean'])} {unit.get(v, '')} | [{f(x['lo'])}, {f(x['hi'])}] | {x['effect']:.2f} |")
+            L.append(f"| {s} | {snd} | {v} | {x['n']}（{x['units']}） | {f(x['mean'])} {unit.get(v, '')} | [{f(x['lo'])}, {f(x['hi'])}] | {x['effect']:.2f} |")
+        L += ["", f"### 反过来：候选落后 GTCRN 最多的前 5 处（同口径）", "",
+              "| 场景 | 声音 | 评分项 | 段数（单位） | 平均 | 95% 区间 | 标准化效应 |", "|---|---|---|---|---|---|---|"]
+        worse = sorted([x for x in r["by_scene_sound_item"] if x["state"] == "候选差" and x["units"] >= MIN_UNITS],
+                       key=lambda x: x["effect"])[:5]
+        for x in worse:
+            s, snd, v = x["key"]
+            L.append(f"| {s} | {snd} | {v} | {x['n']}（{x['units']}） | {f(x['mean'])} {unit.get(v, '')} | [{f(x['lo'])}, {f(x['hi'])}] | {x['effect']:.2f} |")
         L.append("")
     return "\n".join(L) + "\n"
 

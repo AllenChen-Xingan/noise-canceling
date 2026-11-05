@@ -144,15 +144,25 @@
 | transit-hub | V-TIMBRE | 32 | +0.86 dB | [+0.28, +1.43] | 候选好 |
 | transit-hub | V-WEAK | 32 | -0.44 dB | [-0.64, -0.25] | 候选差 |
 
-### GTCRN 落后最多的前 5 处（场景 × 声音 × 评分项，段数 ≥ 6，按标准化效应排）
+### GTCRN 落后最多的前 5 处（场景 × 声音 × 评分项，配对单位 ≥ 5，按标准化效应排；未做多重比较校正）
 
-| 场景 | 声音 | 评分项 | 段数 | 平均 | 95% 区间 | 标准化效应 |
+| 场景 | 声音 | 评分项 | 段数（单位） | 平均 | 95% 区间 | 标准化效应 |
 |---|---|---|---|---|---|---|
-| canteen | laugh | V-NR | 6 | +3.05 dB | [+2.87, +3.33] | 8.90 |
-| library-classroom | cough | V-NR | 6 | +4.05 dB | [+3.94, +4.17] | 7.62 |
-| transit-hub | bed-ace | V-ESTOI | 10 | +0.05 Δ | [+0.04, +0.05] | 7.02 |
-| canteen | laugh | V-SPLVL | 6 | +1.55 dB | [+1.27, +1.72] | 6.67 |
-| car-passenger | car-horn | V-SPLVL | 10 | +1.86 dB | [+1.57, +2.22] | 4.74 |
+| transit-hub | bed-ace | V-ESTOI | 10（5） | +0.05 Δ | [+0.04, +0.05] | 2.75 |
+| bus-metro-cabin | bed-bus | V-NR | 10（5） | +5.18 dB | [+3.15, +7.22] | 2.46 |
+| cafe | music | V-ESTOI | 18（9） | +0.04 Δ | [+0.04, +0.05] | 2.37 |
+| street-outdoor | wind | V-ESTOI | 10（5） | +0.04 Δ | [+0.04, +0.05] | 2.33 |
+| cowork | talker | V-ESTOI | 20（10） | +0.04 Δ | [+0.03, +0.05] | 2.27 |
+
+### 反过来：候选落后 GTCRN 最多的前 5 处（同口径）
+
+| 场景 | 声音 | 评分项 | 段数（单位） | 平均 | 95% 区间 | 标准化效应 |
+|---|---|---|---|---|---|---|
+| canteen | dishes | V-ONSET | 26（13） | -3.31 dB | [-4.08, -2.66] | -1.97 |
+| canteen | bed-cafeteria | V-ONSET | 12（6） | -3.28 dB | [-3.85, -2.68] | -1.95 |
+| canteen | babble | V-ONSET | 24（12） | -3.10 dB | [-4.10, -2.22] | -1.84 |
+| canteen | talker | V-ONSET | 21（11） | -3.03 dB | [-4.12, -2.06] | -1.80 |
+| canteen | bed-restaurant | V-ONSET | 17（9） | -3.03 dB | [-4.41, -1.90] | -1.80 |
 
 ## dfn3-ll vs gtcrn
 
@@ -270,13 +280,23 @@
 | transit-hub | V-SPLVL | 32 | +0.80 dB | [+0.28, +1.25] | 候选好 |
 | transit-hub | V-TIMBRE | 32 | +1.07 dB | [+0.56, +1.63] | 候选好 |
 
-### GTCRN 落后最多的前 5 处（场景 × 声音 × 评分项，段数 ≥ 6，按标准化效应排）
+### GTCRN 落后最多的前 5 处（场景 × 声音 × 评分项，配对单位 ≥ 5，按标准化效应排；未做多重比较校正）
 
-| 场景 | 声音 | 评分项 | 段数 | 平均 | 95% 区间 | 标准化效应 |
+| 场景 | 声音 | 评分项 | 段数（单位） | 平均 | 95% 区间 | 标准化效应 |
 |---|---|---|---|---|---|---|
-| canteen | laugh | V-SPLVL | 6 | +1.01 dB | [+0.90, +1.12] | 6.93 |
-| meeting-room | cough | V-NR | 6 | +4.75 dB | [+4.45, +5.11] | 6.16 |
-| car-passenger | turn-signal | V-ESTOI | 10 | +0.02 Δ | [+0.02, +0.02] | 5.56 |
-| car-passenger | car-horn | V-SPLVL | 10 | +1.53 dB | [+1.31, +1.79] | 5.14 |
-| open-office | phone-ring | V-ESTOI | 8 | +0.02 Δ | [+0.02, +0.02] | 4.09 |
+| street-outdoor | wind | V-ESTOI | 10（5） | +0.03 Δ | [+0.03, +0.04] | 2.34 |
+| street-outdoor | footsteps | V-ESTOI | 10（5） | +0.03 Δ | [+0.03, +0.03] | 2.31 |
+| transit-hub | bed-ace | V-ESTOI | 10（5） | +0.03 Δ | [+0.02, +0.04] | 2.18 |
+| street-outdoor | car-horn | V-ESTOI | 20（10） | +0.03 Δ | [+0.02, +0.04] | 2.07 |
+| cafe | music | V-ESTOI | 18（9） | +0.03 Δ | [+0.02, +0.04] | 1.99 |
+
+### 反过来：候选落后 GTCRN 最多的前 5 处（同口径）
+
+| 场景 | 声音 | 评分项 | 段数（单位） | 平均 | 95% 区间 | 标准化效应 |
+|---|---|---|---|---|---|---|
+| transit-hub | announce | V-CLICK | 18（9） | -25.00 个/分钟 | [-32.22, -17.78] | -1.64 |
+| transit-hub | pa-chime | V-CLICK | 18（9） | -25.00 个/分钟 | [-32.22, -17.50] | -1.64 |
+| rail-air-cabin | announce | V-ONSET | 14（7） | -2.13 dB | [-3.18, -1.27] | -1.58 |
+| rail-air-cabin | pa-chime | V-ONSET | 14（7） | -2.13 dB | [-3.27, -1.27] | -1.58 |
+| transit-hub | footsteps | V-ONSET | 14（7） | -2.09 dB | [-2.58, -1.55] | -1.55 |
 
