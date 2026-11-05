@@ -136,9 +136,8 @@ fn apply_holm(cells: &mut [&mut ItemCell]) {
 
 /// 场景状态、否决、拖后腿的声音：在每项改判之后重算（同旧规则的合成方式）。
 fn finish(c: &mut SceneCard, rs: &[&ClipRow]) {
-    let ms = &c.models_of_listen();
-    let la = ms.first().map(|m| m.status);
-    let lb = ms.get(1).map(|m| m.status);
+    let la = c.listen.models.first().map(|m| m.status);
+    let lb = c.listen.models.get(1).map(|m| m.status);
     c.listen.status = Some(match (la, lb) {
         (Some(CardStatus::Pass), Some(CardStatus::Pass)) => CardStatus::Pass,
         (Some(CardStatus::Fail), Some(CardStatus::Fail)) => CardStatus::Fail,
@@ -181,12 +180,6 @@ fn finish(c: &mut SceneCard, rs: &[&ClipRow]) {
         if !c.listen.to_human.iter().any(|(x, _)| *x == clip) {
             c.listen.to_human.push((clip, format!("听感最差段之一（较差的 Δ {d:+.2}）")));
         }
-    }
-}
-
-impl SceneCard {
-    fn models_of_listen(&self) -> Vec<ItemCell> {
-        self.listen.models.clone()
     }
 }
 
