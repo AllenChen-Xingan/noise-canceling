@@ -45,3 +45,14 @@
 
 - 评测音频是 16 kHz（8 kHz 以上没有内容），48 kHz 的两个 DFN3 吃的是升采样后的窄带输入，和它们训练时的全带不同【推断：对它们不利】
 - 回放进 Engine 时延迟只是声明值，计时项判「不知道」；实时能不能跑引用 019 结论，不重测
+
+## runs 与配对
+
+| 用途 | run-id | 内容 | 位置 |
+|---|---|---|---|
+| 候选输出 | `20261104-235743-73c68379` | DPDFNet-2 · 971 个文件 · 14 分 07 秒 · 声明延迟 960 | 音频：主目录 `_tmp/exp016/dpdfnet2/<run-id>/`；清单：`builds/dpdfnet2-<run-id>/` |
+| 候选输出 | `20261105-001245-201407de` | DFN3 低延迟版 · 971 个文件 · 15 分 32 秒 · 声明延迟 284 | 音频：主目录 `_tmp/exp016/dfn3-ll/<run-id>/`；清单：`builds/dfn3-ll-<run-id>/` |
+| 草稿成绩单 | `20261105-002946-e21f3a93`（元数据带 `-dirty`，见 `provenance.json`） | gtcrn · dpdfnet2 · dfn3-ll，**不带 `--qa`**，旧规则，0 段没跑成，7 分 33 秒 | `runs/draft-20261105-002946-e21f3a93/` |
+| 最终版（待跑） | 待定 | evalfix 新规则合并后：evalfix 带 `--qa` 跑 passthrough · ref · gtcrn；cands 只带 `--qa` 跑两个候选；同 build · 同规则 · 同评分模型配对 | 两个 run-id 合并后填在这里 |
+
+分析：`analyze.py <run 目录> <exp013 clips.jsonl> --out analysis.md --json analysis.json`（测试 `tests/test_analyze.py`）。草稿只出单 run 里的配对；最终版需要把两个 run 的 `clips.jsonl` 合到一起再分析（到时给 analyze.py 加多 run 输入，带测试）。
