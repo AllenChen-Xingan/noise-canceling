@@ -4,7 +4,7 @@
 - **手上**：exp016 候选模型（DFN3 低延迟版 · DPDFNet-2 · NoNoise-Mac）上同一张成绩单 · issue #112
 - **交代**：主目录 `_tmp/20261104-b15/cands.md`
 - **做到哪**（2026-11-05）：两个候选 480 段跑完；草稿成绩单（不带 --qa）出了，配对分析与 findings 草稿写好
-- **下一步**：等 evalfix 全量跑完、PR 合并 → merge main → 补 system.rs 的 native_rate 一支与测试 → DFN3 旧 run.json 补 native_rate → 申请名额带 --qa 跑两个候选最终版
+- **下一步**：evalfix 套入 clean 补丁、runner 接 provides、PR 合并 → merge main → 补 system.rs 的 native_rate 一支与「少 4 ms」测试 → 申请名额：两个候选**新 run**（mix + clean 一次跑全，各约 21–23 分钟）+ 带 --qa 成绩单（约 1.7–2 小时）
 
 ## 改了哪些文件
 | 文件 | 改了什么 |
@@ -68,3 +68,5 @@
 - 问大总管：DFN3 旧 run.json 补 native_rate=48000（不重跑音频，builds/ 加 amend.json 记旧新哈希）；不回默认照做
 - evalfix：native_rate 做法确认；最终 GTCRN run 20261105-005916-4ccf0638（规则 v2，约 03:30 完成）→ 记进 README runs 表
 - 大总管同意补字段：先确认进仓 run.json 已提交，再改；amend.json 记旧新 sha256 · 字段 · 原因 · 日期；最终版元数据记新哈希、README 说明
+- 大总管：合 main 后 v2 把干净人声单独过一遍，外部入口查不到 → external_e2e 主测试 Missing。与 evalfix 对齐：Kind 加 Clean（clean/ 可选，列了须 480 段齐）+ `External::provides`；没列时 runner 不跑这一路、三项只报不判（evalfix 定；大总管上一条写「报没跑成」，已请大总管知悉）。e2e 夹具写四种、加 clean 负例两条；_ext.py 输出 clean（owner 轨）；Rust 10+5、Python 25 条全过，clippy · tidy 过。补丁放主目录 _tmp/evalfix/cands-clean.patch（出自 fe09f692）
+- 大总管定：另开新 run，mix + clean 一次跑全；旧 run 不补 native_rate、不写 amend.json（撤回前一条）；旧 run 在 README 标「草稿，被 <新 run-id> 取代」

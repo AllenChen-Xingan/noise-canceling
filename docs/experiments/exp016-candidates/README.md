@@ -56,6 +56,6 @@
 | 最终版 · GTCRN 一侧 | `20261105-005916-4ccf0638`（evalfix 跑，规则 v2，进行中） | passthrough · ref · gtcrn，带 `--qa` | evalfix 跑完放 `docs/experiments/exp014-scorecard-gtcrn/runs/20261105-005916-4ccf0638/` |
 | 最终版 · 候选一侧（待跑） | 待定 | dpdfnet2 · dfn3-ll，带 `--qa`；须与上一行同 build · 同规则版本 · 同评分模型版本（跑前逐项核对上一行 README 记的版本） | 跑完填在这里 |
 
-DFN3 低延迟版的 `run.json` 在最终版前补 `"native_rate": 48000`（音频不重跑；大总管定 2026-11-05），旧 / 新 sha256 记在 `builds/dfn3-ll-20261105-001245-201407de/amend.json`；最终版成绩单元数据里外部系统的 `run_json_sha256` 是**新**哈希。
+最终版两个候选都**另开新 run**，mix 与 clean（干净人声单独过一遍，成绩单新规则 v2 用）一次跑全；DFN3 新 run 的 `run.json` 直接写 `"native_rate": 48000`。旧的两个 run 不补、不改，跑完后在上表标「草稿，被 <新 run-id> 取代」（大总管定 2026-11-05，撤回先前的「补 native_rate + amend.json」）。
 
 分析：`analyze.py <run 目录> <exp013 clips.jsonl> --out analysis.md --json analysis.json`（测试 `tests/test_analyze.py`）。草稿只出单 run 里的配对；最终版需要把两个 run 的 `clips.jsonl` 合到一起再分析（到时给 analyze.py 加多 run 输入，带测试）。
