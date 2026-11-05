@@ -140,7 +140,7 @@ fn load(fx: &Fx, dir: &Path) -> Result<External, String> {
     )
 }
 
-const ALL: [Kind; 3] = [Kind::Mix, Kind::Bg, Kind::Trunc];
+const ALL: [Kind; 4] = Kind::ALL;
 
 fn ident(x: &[f32]) -> Vec<f32> {
     x.to_vec()
@@ -264,6 +264,12 @@ fn missing_input_kind_is_reported() {
     };
     let e = run(&spec, &Kind::Bg.input(&clip)).err().unwrap();
     assert!(e.contains("外部输出没提供 bg"), "{e}");
+    // clean 同理：没列就报错、不回退成带噪那路；runner 凭 provides 事先知道
+    let e = run(&spec, &Kind::Clean.input(&clip)).err().unwrap();
+    assert!(e.contains("外部输出没提供 clean"), "{e}");
+    let SystemKind::External(x) = ext else { unreachable!() };
+    assert!(x.provides(Kind::Mix) && x.provides(Kind::Trunc));
+    assert!(!x.provides(Kind::Bg) && !x.provides(Kind::Clean));
     assert!(run(&spec, &clip.mix).is_ok());
     let mut other = clip.mix.clone();
     other[7] += 1e-3;
