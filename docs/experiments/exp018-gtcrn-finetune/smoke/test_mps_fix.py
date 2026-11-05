@@ -121,10 +121,11 @@ class MpsTest(unittest.TestCase):
 @unittest.skipUnless(HAS_MPS, "本机没有 MPS")
 class GruTest(unittest.TestCase):
     """GRU 单独比（同输入、同上游梯度）：调研 013 担心的 PyTorch #94691 在本版本、
-    GTCRN 用到的尺寸上是否出现。尺寸取自 gtcrn.py：TRA 的 GRU(16→32)、DPGRNN 的 GRU(8→8，双向 / 单向)。"""
+    GTCRN 用到的尺寸上是否出现。尺寸取自 gtcrn.py：TRA 的 GRU(8→16，:81，通道 = 16/2)、
+    DPGRNN 组内 GRU(8→4，双向，:163-164 与 :194)、组间 GRU(8→8，单向，:198)。"""
 
     def test_gtcrn_sized_grus_match_cpu(self):
-        cases = [(16, 32, False, (2, 63, 16)), (8, 8, True, (66, 33, 8)), (8, 8, False, (66, 63, 8))]
+        cases = [(8, 16, False, (33, 63, 8)), (8, 4, True, (63, 33, 8)), (8, 8, False, (33, 63, 8))]
         for i, (n_in, n_h, bi, shape) in enumerate(cases):
             torch.manual_seed(i)
             g = nn.GRU(n_in, n_h, batch_first=True, bidirectional=bi)
@@ -133,7 +134,7 @@ class GruTest(unittest.TestCase):
             res = []
             for dev in ("cpu", "mps"):
                 m = copy.deepcopy(g).to(dev)
-                xi = x.to(dev).requires_grad_()
+                xi = x.detach().clone().to(dev).requires_grad_()
                 y, _ = m(xi)
                 y.backward(up.to(dev))
                 res.append((y.detach(), xi.grad.detach(),
