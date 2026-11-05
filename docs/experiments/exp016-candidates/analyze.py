@@ -181,7 +181,7 @@ def main():
     res = analyze(a.run, a.manifest, a.cands.split(","))
     a.out.write_text(render(res))
     if a.json:
-        a.json.write_text(json.dumps(res, ensure_ascii=False, indent=1, default=list) + "\n")
+        a.json.write_text(json.dumps(res, ensure_ascii=False, separators=(",", ":"), default=list) + "\n")
     print(f"已写 {a.out.name}")
 
 
