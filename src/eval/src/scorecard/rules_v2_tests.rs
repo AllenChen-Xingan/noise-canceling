@@ -197,3 +197,22 @@ fn holm_downgrades_weak_fails_in_a_big_family() {
     assert_eq!(cells[0].status, CardStatus::Fail);
     assert_eq!(cells[1].status, CardStatus::Unknown);
 }
+
+/// 60 个组合同族、每个都明显不过：Holm 必须全部拒绝（重采样次数够细，p 值下限 < α / 60）。
+#[test]
+fn holm_can_reject_a_whole_family_of_sixty() {
+    let rows: Vec<ClipRow> = (0..60)
+        .flat_map(|k| {
+            (0..8).map(move |i| {
+                let mut r = row(i, MeetingPlace::Cafe, vec![("V-ONSET", false, sc("V-ONSET", 9.0 + 0.1 * i as f64, 3.0))]);
+                r.device = format!("dev{k}");
+                r
+            })
+        })
+        .collect();
+    let cards = summarize(&rows, &[]);
+    assert_eq!(cards.len(), 60);
+    assert!(cards.iter().all(|c| item(c, "V-ONSET").status == CardStatus::Fail));
+    let min_p = 1.0 / (th::AGG.def("reps") + 1.0);
+    assert!(min_p < th::AGG.def("alpha") / 60.0);
+}
