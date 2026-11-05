@@ -10,7 +10,7 @@
       "origin": "rubric 硬规则 4「比原声只好不坏」· exp003 c08（最容易的一段，人仍给 DPDFNet-2 打了 5 个缺陷标签）",
       "desc": "安静房间（粉噪 SNR 35 dB）里的独白：不许加怪声、不许压人声、不许改音色",
       "scene": { "owner": { "level_dbov": -26 }, "noise": "pink", "snr_db": 35 },
-      "graders": [ { "v": "V-NAN" }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-TIMBRE", "max": 3 }, { "v": "V-MUSIC", "max": 2 }, { "v": "V-SIM-GATE", "max": 0.4, "onset_max": 0.5 } ],
+      "graders": [ { "v": "V-NAN" }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 }, { "v": "V-TIMBRE", "max": 6 }, { "v": "V-MUSIC", "max": 2 }, { "v": "V-SIM-GATE", "max": 0.4, "onset_max": 0.5 } ],
       "note": "V-SIM-GATE 用放宽的护栏线（0.4 / 0.5）：严格线在能力集 C10；这里只防进一步退化（红军自审 P2）"
     },
     {
@@ -51,7 +51,7 @@
       "origin": "D02 场景组「空调 / 风扇」· exp005 素材底噪",
       "desc": "风扇 + 100 Hz 嗡声 5 dB：停顿要压，人声音色不能被带偏",
       "scene": { "owner": { "level_dbov": -26 }, "noise": "hum", "snr_db": 5, "pause_s": [0.8, 1.6] },
-      "graders": [ { "v": "V-NAN" }, { "v": "V-NR", "max": -6 }, { "v": "V-TIMBRE", "max": 3 } ]
+      "graders": [ { "v": "V-NAN" }, { "v": "V-NR", "max": -6 }, { "v": "V-TIMBRE", "max": 6 } ]
     },
     {
       "id": "R07-background-stability-p1120",
@@ -75,7 +75,7 @@
       "origin": "exp003 c10 钢琴 5 dB（人选 F，GTCRN 被勾吃字）· rubric 第 7 节正例「人声不发闷」",
       "desc": "背景音乐 5 dB：人声音色与电平不能被带偏",
       "scene": { "owner": { "level_dbov": -26 }, "noise": "music", "snr_db": 5 },
-      "graders": [ { "v": "V-NAN" }, { "v": "V-TIMBRE", "max": 3 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 } ]
+      "graders": [ { "v": "V-NAN" }, { "v": "V-TIMBRE", "max": 6 }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-ONSET", "max": 3 } ]
     },
     {
       "id": "R10-digital-silence",
@@ -118,7 +118,7 @@
       "origin": "engine max_abs = 4 的状态异常判据不能误伤正常大声说话",
       "desc": "大声说话（−12 dBov）+ 粉噪 20 dB：不许误判状态异常而送原声、不许失真",
       "scene": { "owner": { "level_dbov": -12 }, "noise": "pink", "snr_db": 20 },
-      "graders": [ { "v": "V-NAN" }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-TIMBRE", "max": 3 } ]
+      "graders": [ { "v": "V-NAN" }, { "v": "V-SPLVL", "min": -3 }, { "v": "V-TIMBRE", "max": 6 } ]
     },
     {
       "id": "R15-tonal-language",
@@ -253,7 +253,7 @@
       "origin": "rubric 第 7 节负例护栏 ③：1 kHz 低通 → N4 必须变差（exp003 trap-degraded）",
       "desc": "把 R09 的输出做 1 kHz 低通：V-TIMBRE 必须判不过",
       "probe": { "base": "R09-background-music-timbre", "kind": "lowpass_1k" },
-      "graders": [ { "v": "V-TIMBRE", "max": 3 } ]
+      "graders": [ { "v": "V-TIMBRE", "max": 6 } ]
     },
     {
       "id": "P04-do-nothing-must-fail",

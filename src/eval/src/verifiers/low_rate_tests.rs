@@ -101,22 +101,23 @@ fn weak_with_too_few_bands_is_unknown() {
     assert!(matches!(s.verdict, Verdict::Unknown(_)), "{s}");
 }
 
-/// 12 / 8 / 6 kHz：上沿越过奈奎斯特频率的 ERB 带不计，剩下过半照常打分；不许出现 −200 dB 级的空带读数（调研 026 ③）。
+/// 12 kHz、8 kHz：音色最高一带（4–7.9 kHz）不完整，不计；不许出现 −200 dB 级的空带读数。
 #[test]
 fn timbre_drops_bands_above_nyquist() {
-    for sr in [12_000, 8_000, 6_000] {
+    for sr in [12_000, 8_000] {
         let s = score("V-TIMBRE", &at_rate(sr));
         assert!(s.value.is_some_and(f64::is_finite), "{sr}: {s}");
-        let n = extra(&s, "bands").unwrap_or_else(|| panic!("{sr}: 缺 bands"));
-        assert!((15.0..30.0).contains(&n), "{sr}: bands = {n}");
-        let m = extra(&s, "max_db").unwrap_or_else(|| panic!("{sr}: 缺 max_db"));
-        assert!(m < 40.0, "{sr}: max_db = {m}");
+        assert_eq!(extra(&s, "dev_4_8k"), None, "{sr}: 越界带不该报：{s}");
+        for k in ["dev_0_1k", "dev_1_2k", "dev_2_4k"] {
+            let d = extra(&s, k).unwrap_or_else(|| panic!("{sr}: 缺 {k}"));
+            assert!(d.abs() < 20.0, "{sr}: {k} = {d}");
+        }
     }
 }
 
-/// 2 kHz：奈奎斯特 1 kHz 以下只剩 12 个完整 ERB 带，不到一半（15）→ 判「不知道」。
+/// 6 kHz：只剩 3 带里的 2 带完整（2–4 kHz 上沿 4 kHz > 3 kHz）→ 少于 3 带，判「不知道」。
 #[test]
 fn timbre_with_too_few_bands_is_unknown() {
-    let s = score("V-TIMBRE", &at_rate(2_000));
+    let s = score("V-TIMBRE", &at_rate(6_000));
     assert!(matches!(s.verdict, Verdict::Unknown(_)), "{s}");
 }
