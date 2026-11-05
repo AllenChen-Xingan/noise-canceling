@@ -143,6 +143,51 @@ def probe(process, clips, root, nominal):
     return max(nominal, la), {"probe_clip": c["id"], "nominal_latency": nominal, "measured_lookahead": la, "lag_after_align": lag}
 
 
+def check_existing(path, n):
+    """续跑跳过前校验已有输出：能读、16 kHz、等长、全有限；不对就报错（不静默重写，留给人看）。"""
+    y = read16(path)
+    if len(y) != n or not np.all(np.isfinite(y)):
+        raise SystemExit(f"已有输出 {path.parent.name}/{path.name} 不完整或有非有限值，请人工处理")
+
+
+def versions():
+    """推理时实际用到的依赖版本（只记已载入的）。"""
+    v = {"python": sys.version.split()[0], "numpy": np.__version__, "soundfile": sf.__version__,
+         "libsndfile": sf.__libsndfile_version__, "platform": platform.platform(), "machine": platform.machine()}
+    for m in ("onnxruntime", "soxr"):
+        if m in sys.modules:
+            v[m] = getattr(sys.modules[m], "__version__", "?")
+    return v
+
+
+def fingerprint(model_info, setup):
+    """一次运行的指纹：代码（本模块 + 候选脚本 + 它导入的项目内模块）哈希 · 模型信息 · 运行配置 · 依赖版本 · 片段清单哈希。
+    第一个分片写下，之后每个分片、续跑、finalize 都必须一致（codex 016 脚本第 1 轮 P1 #3 · P2 #5）。"""
+    code = {}
+    for m in list(sys.modules.values()):
+        f = getattr(m, "__file__", None)
+        if f and Path(f).resolve().is_relative_to(ROOT):
+            code[str(Path(f).resolve().relative_to(ROOT))] = sha256_file(f)
+    main_mod = sys.modules["__main__"]
+    if getattr(main_mod, "__file__", None):
+        f = Path(main_mod.__file__).resolve()
+        code[str(f.relative_to(ROOT)) if f.is_relative_to(ROOT) else f.name] = sha256_file(f)
+    return {"code_sha256": dict(sorted(code.items())), "model": model_info, "setup": setup() if setup else None,
+            "versions": versions(), "clips_sha256": sha256_file(ROOT / CLIPS)}
+
+
+def pin_fingerprint(shard_dir, fp):
+    p = shard_dir / "fingerprint.json"
+    shard_dir.mkdir(parents=True, exist_ok=True)
+    if not p.exists():
+        p.write_text(json.dumps(fp, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+        return
+    old = json.loads(p.read_text())
+    if old != json.loads(json.dumps(fp, sort_keys=True)):
+        diff = sorted(k for k in set(old) | set(fp) if old.get(k) != json.loads(json.dumps(fp.get(k))))
+        raise SystemExit(f"本 run-id 已用别的代码 / 配置 / 环境跑过（不同之处：{diff}），换一个新 run-id 重跑")
+
+
 def write_out(path, y, n):
     y = np.asarray(y, dtype=np.float32)
     if y.shape != (n,):
@@ -195,14 +240,17 @@ def main(name, process, nominal_latency, model_info, setup=None):
         print(json.dumps(rec, ensure_ascii=False))
         return rec
     if args.finalize:
+        pin_fingerprint(shard_dir, fingerprint(model_info, setup))  # 收尾时的环境也必须和跑的时候一样
         latency, rec = probe(process, clips, root, nominal_latency)
         info = dict(model_info, latency_probe=rec)
         return finalize(name, out, builds, clips_rel, clips, picks, latency, info, setup, args, shard_dir)
     k, n = (int(v) for v in args.shard.split("/"))
+    pin_fingerprint(shard_dir, fingerprint(model_info, setup))
     t0, done, skipped, audio_s = time.time(), 0, 0, 0.0
     for c, kind, x in jobs(clips, root, picks, (k, n)):
         p = out / kind / f"{c['id']}.wav"
         if p.exists():
+            check_existing(p, len(x))
             skipped += 1
             continue
         write_out(p, process(x), len(x))
@@ -242,9 +290,9 @@ def finalize(name, out, builds, clips_rel, clips, picks, latency_samples, model_
     hashes = sorted(f"{sha256_file(p)}  {p.parent.name}/{p.name}" for p in out.glob("*/*.wav"))
     (builds / "hashes.txt").write_text("\n".join(hashes) + "\n")
     shards = [json.loads(p.read_text()) for p in sorted(shard_dir.glob("*.json"))] if shard_dir else []
+    fp_path = shard_dir / "fingerprint.json" if shard_dir else None
     params = {"candidate": name, "limit": args.limit, "files": len(hashes), "shards": shards,
-              "python": sys.version.split()[0], "platform": platform.platform(), "machine": platform.machine(),
-              "cpu_count": os.cpu_count(), "extra": setup() if setup else None,
-              "out_dir": f"_tmp/exp016/{name}/{out.name}"}
+              "cpu_count": os.cpu_count(), "out_dir": f"_tmp/exp016/{name}/{out.name}",
+              "fingerprint": json.loads(fp_path.read_text()) if fp_path and fp_path.exists() else None}
     (builds / "params.json").write_text(json.dumps(params, ensure_ascii=False, indent=2) + "\n")
-    print(f"[{name}] 已写 {rj_path.relative_to(main_root())} 与 {builds.relative_to(ROOT)}（{len(hashes)} 个文件）")
+    print(f"[{name}] 已写 {out.name}/run.json 与 builds/{builds.name}（{len(hashes)} 个文件）")

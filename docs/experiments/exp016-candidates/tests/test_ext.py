@@ -76,6 +76,50 @@ class Inputs(unittest.TestCase):
             _ext.inputs_of(c, self.root, set())
 
 
+class RustWavParity(unittest.TestCase):
+    """Python 读 wav 与 Rust `wav::read` 同一归一：整型按 v / 2^(位深−1)，浮点原样；多声道取第一声道（codex 016 脚本第 1 轮 P2 #6）。"""
+
+    def test_rust_formula_is_what_we_mirror(self):
+        src = (_ext.ROOT / "src/eval/src/wav.rs").read_text()
+        self.assertIn("1.0 / (1u64 << (spec.bits_per_sample - 1)) as f32", src)
+        self.assertIn(".step_by(ch)", src)
+
+    def test_pcm16_and_float_and_stereo(self):
+        with tempfile.TemporaryDirectory() as t:
+            ints = np.array([-32768, -1, 0, 1, 12345, 32767], np.int16)
+            p = Path(t) / "i.wav"
+            sf.write(str(p), ints, _ext.SR, subtype="PCM_16")
+            np.testing.assert_array_equal(_ext.read16(p), ints.astype(np.float32) * np.float32(1 / 32768))
+            f = np.array([0.1, -0.7, 1e-8], np.float32)
+            sf.write(str(p), f, _ext.SR, subtype="FLOAT")
+            np.testing.assert_array_equal(_ext.read16(p), f)
+            st = np.stack([f, -f], 1)
+            sf.write(str(p), st, _ext.SR, subtype="FLOAT")
+            np.testing.assert_array_equal(_ext.read16(p), f)
+
+
+class Fingerprint(unittest.TestCase):
+    def test_mismatch_is_refused(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            fp = _ext.fingerprint({"w": "a"}, lambda: {"thr": 1})
+            self.assertIn("docs/experiments/exp016-candidates/_ext.py", fp["code_sha256"])
+            _ext.pin_fingerprint(d, fp)
+            _ext.pin_fingerprint(d, fp)  # 一样：通过
+            with self.assertRaises(SystemExit) as e:
+                _ext.pin_fingerprint(d, _ext.fingerprint({"w": "b"}, lambda: {"thr": 1}))
+            self.assertIn("model", str(e.exception))
+
+    def test_bad_existing_output_is_refused(self):
+        with tempfile.TemporaryDirectory() as t:
+            p = Path(t) / "a.wav"
+            sf.write(str(p), np.zeros(9, np.float32), _ext.SR, subtype="FLOAT")
+            with self.assertRaises(SystemExit):
+                _ext.check_existing(p, 10)
+            sf.write(str(p), np.zeros(10, np.float32), _ext.SR, subtype="FLOAT")
+            _ext.check_existing(p, 10)
+
+
 class Lookahead(unittest.TestCase):
     def test_measure_lookahead_of_shift(self):
         x = (np.random.default_rng(1).standard_normal(16000) * 0.1).astype(np.float32)
