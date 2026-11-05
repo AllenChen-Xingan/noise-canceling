@@ -42,11 +42,12 @@ fn timed<T>(reps: usize, mut f: impl FnMut() -> T) -> (Value, T) {
         last = Some(f());
         ts.push(t0.elapsed().as_secs_f64() * 1e3);
     }
+    let first = ts[0];
     let lo = ts.iter().copied().fold(f64::INFINITY, f64::min);
     let hi = ts.iter().copied().fold(0.0, f64::max);
     let md = median(&mut ts);
     (
-        json!({"median_ms": md, "min_ms": lo, "max_ms": hi, "reps": reps}),
+        json!({"median_ms": md, "first_ms": first, "min_ms": lo, "max_ms": hi, "reps": reps}),
         last.expect("reps >= 1"),
     )
 }
