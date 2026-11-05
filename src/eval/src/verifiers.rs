@@ -18,10 +18,12 @@ use crate::{Better, Level, Score, Verdict, db10};
 pub mod estoi;
 mod perceptual;
 mod physical;
+mod pse;
 mod sim;
 mod speech;
 use perceptual::*;
 use physical::*;
+use pse::*;
 pub use sim::GATE_TOLERANCE_S;
 use sim::*;
 pub use speech::click_positions;
@@ -233,6 +235,58 @@ pub const REGISTRY: &[Info] = &[
         algorithm: "STFT 512/256；输出的频带功率先减去停顿帧估出的残留噪声频带功率（下限为原值的 10%）",
         anchor: "rubric N4；≤ 2 / 4 / 6 dB 为 A / B / C，> 6 dB 不过〔建议值〕",
         failure: "麦克风本身频响；低信噪比的高频带残留噪声扣不干净",
+    },
+    Info {
+        id: "V-TSOS",
+        name: "用户被误删（量输出）",
+        layer: "ci",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "%",
+        better: Better::Lower,
+        definition: "用户有声谱帧里被误删的帧百分比（Eskimez 等 2022 TSOS）；旁报 ≥ 1 s 误删次数、最长一次时长",
+        algorithm: "512 / 256 STFT；逐帧 Σ_f max(0, |S|^p − |Ŝ|^p) > γ · Σ_f |S|^p 记误删，S = 干净参考谱，p = 0.3，γ = 0.1（式 (2)(3)）；只算主讲人掩码内的帧（`verifiers/pse.rs`）",
+        anchor: "无外部线（三篇论文都只排名）；人定 D85 题 4 = A：看比原声直通多多少，线待人拍板，只报不判",
+        failure: "原声直通不保证为 0（混合谱在相消频点小于人声谱）；参考带混响；按段数少，要按场景组合并才分得出（025 D1）",
+    },
+    Info {
+        id: "V-SWALLOW",
+        name: "开口后被吞多久（量输出）",
+        layer: "ci",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "ms",
+        better: Better::Lower,
+        definition: "每个开口起点之后第一段连续误删（TSOS）的时长，本段取 p90",
+        algorithm: "与 V-TSOS 同一逐帧误删标记；起点 = 主讲人真值区间的起点；起点帧没误删记 0；起点 < 3 个判不知道",
+        anchor: "业界没有现成指标，025 D3 改义自立；先只报不判",
+        failure: "025 要求按场景组合并 ≥ 30 个起点后取 p90，本实现先给每段的 p90（组合内只报均值），合并取 p90 未实现",
+    },
+    Info {
+        id: "V-LEAK",
+        name: "旁人漏过事件率（量输出）",
+        layer: "ci",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "%",
+        better: Better::Lower,
+        definition: "只有旁人说话的整 1 秒窗里，输出比输入压低不到 X dB 的窗占比",
+        algorithm: "按 10 ms 掩码帧切不重叠的 1 s 窗，窗内全是「只有旁人」才计；压低量 = 10·log10(输出能量 ÷ 混合能量)；X 取表里 `min_att_db`（暂 10 dB）",
+        anchor: "025 D2b（Taherian 2022：用户长时间不说话时易漏）；X 待人拍板，只报不判",
+        failure: "只在有逐轨真值、有整秒旁人独说的段上能算",
+    },
+    Info {
+        id: "V-PSE-OVL",
+        name: "同时说话只留用户（量输出）",
+        layer: "ci",
+        kind: Kind::Perceptual,
+        default_level: Level::L0,
+        unit: "dB",
+        better: Better::Higher,
+        definition: "用户与旁人重叠的连续段（≥ 0.5 s）上 SI-SDRi 的均值；旁报失败率（SI-SDRi < 1 dB 的段占比）",
+        algorithm: "SI-SDR(输出, 干净参考) − SI-SDR(混合, 干净参考)，逐重叠段算（`verifiers/pse.rs`）",
+        anchor: "Delcroix 2022 §5.3 失败率；025 D5：先给 GTCRN 与原声直通出基线（原声直通 = 0），只报不判",
+        failure: "参考带混响，去混响的系统会被扣分；只在有逐轨真值、有重叠段的段上能算",
     },
     Info {
         id: "V-SIM-GATE",
@@ -452,6 +506,10 @@ pub fn eval(id: &str, c: &Ctx, p: &Params) -> Score {
         "V-VACUUM" => v_vacuum(c, p),
         "V-TIMBRE" => v_timbre(c, p),
         "V-SIM-GATE" => v_sim_gate(c, p),
+        "V-TSOS" => v_tsos(c),
+        "V-SWALLOW" => v_swallow(c),
+        "V-LEAK" => v_leak(c),
+        "V-PSE-OVL" => v_pse_ovl(c),
         "V-SIM-FA" => v_sim_fa(c, p),
         "V-SIM-SWLAT" => v_sim_swlat(c, p),
         "V-SIM-QUIET" => v_sim_quiet(c, p),

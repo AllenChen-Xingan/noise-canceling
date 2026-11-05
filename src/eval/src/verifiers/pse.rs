@@ -73,16 +73,34 @@ pub(super) fn v_tsos(c: &Ctx) -> Score {
     const ID: &str = "V-TSOS";
     let f = tsos_flags(c, c.out);
     if f.len() < 20 {
-        return Score::unknown(ID, "%", Better::Lower, format!("用户有声谱帧只有 {} 个", f.len()));
+        return Score::unknown(
+            ID,
+            "%",
+            Better::Lower,
+            format!("用户有声谱帧只有 {} 个", f.len()),
+        );
     }
     let hit = f.iter().filter(|(_, x)| *x).count();
     let hop_s = HOP as f64 / c.clip.sr as f64;
     let rs = runs(&f);
     let long = (1.0 / hop_s).ceil() as usize;
-    let mut s = Score::judged(ID, 100.0 * hit as f64 / f.len() as f64, "%", Better::Lower, None, &[])
-        .with_extra("frames", f.len() as f64)
-        .with_extra("events_1s", rs.iter().filter(|&&n| n >= long).count() as f64)
-        .with_extra("longest_s", rs.iter().copied().max().unwrap_or(0) as f64 * hop_s);
+    let mut s = Score::judged(
+        ID,
+        100.0 * hit as f64 / f.len() as f64,
+        "%",
+        Better::Lower,
+        None,
+        &[],
+    )
+    .with_extra("frames", f.len() as f64)
+    .with_extra(
+        "events_1s",
+        rs.iter().filter(|&&n| n >= long).count() as f64,
+    )
+    .with_extra(
+        "longest_s",
+        rs.iter().copied().max().unwrap_or(0) as f64 * hop_s,
+    );
     s.verdict = Verdict::Unknown("只报不判：过关线（比原声直通多多少算不过）待人拍板".into());
     s
 }
@@ -103,7 +121,12 @@ pub(super) fn v_swallow(c: &Ctx) -> Score {
         d.push(n as f64 * hop / c.clip.sr as f64 * 1000.0);
     }
     if d.len() < 3 {
-        return Score::unknown(ID, "ms", Better::Lower, format!("开口起点只有 {} 个", d.len()));
+        return Score::unknown(
+            ID,
+            "ms",
+            Better::Lower,
+            format!("开口起点只有 {} 个", d.len()),
+        );
     }
     let mut s = Score::judged(ID, quantile(&d, 0.9), "ms", Better::Lower, None, &[])
         .with_extra("onsets", d.len() as f64);
@@ -122,7 +145,9 @@ pub(super) fn v_leak(c: &Ctx) -> Score {
             continue;
         }
         let sel: Vec<bool> = (0..m.len()).map(|i| w.contains(&i)).collect();
-        let (Some((po, _)), Some((pi, _))) = (power_over(c.out, &sel), power_over(&c.clip.mix, &sel)) else {
+        let (Some((po, _)), Some((pi, _))) =
+            (power_over(c.out, &sel), power_over(&c.clip.mix, &sel))
+        else {
             continue;
         };
         n += 1;
@@ -131,15 +156,26 @@ pub(super) fn v_leak(c: &Ctx) -> Score {
     if n == 0 {
         return Score::unknown(ID, "%", Better::Lower, "没有整秒只有旁人说话的窗");
     }
-    let mut s = Score::judged(ID, 100.0 * leak as f64 / n as f64, "%", Better::Lower, None, &[])
-        .with_extra("windows", n as f64);
+    let mut s = Score::judged(
+        ID,
+        100.0 * leak as f64 / n as f64,
+        "%",
+        Better::Lower,
+        None,
+        &[],
+    )
+    .with_extra("windows", n as f64);
     s.verdict = Verdict::Unknown(format!("只报不判：压低不到 {x} dB 算漏过，X 待人拍板"));
     s
 }
 
 /// SI-SDR（dB）：est 投影到 reference 上的分量与残差之比。
 pub fn si_sdr(est: &[f32], reference: &[f32]) -> Option<f64> {
-    let dot: f64 = est.iter().zip(reference).map(|(a, b)| *a as f64 * *b as f64).sum();
+    let dot: f64 = est
+        .iter()
+        .zip(reference)
+        .map(|(a, b)| *a as f64 * *b as f64)
+        .sum();
     let rr: f64 = reference.iter().map(|b| (*b as f64).powi(2)).sum();
     if rr <= 0.0 {
         return None;
@@ -166,7 +202,10 @@ pub(super) fn v_pse_ovl(c: &Ctx) -> Score {
             while k < n && c.masks.owner[k] && c.masks.interf[k] {
                 k += 1;
             }
-            let (s, e) = (a * MASK_FRAME, (k * MASK_FRAME).min(c.out.len()).min(c.clip.clean.len()));
+            let (s, e) = (
+                a * MASK_FRAME,
+                (k * MASK_FRAME).min(c.out.len()).min(c.clip.clean.len()),
+            );
             if e > s && e - s >= min_len {
                 segs.push((s, e));
             }
@@ -184,7 +223,10 @@ pub(super) fn v_pse_ovl(c: &Ctx) -> Score {
     if gains.is_empty() {
         return Score::unknown(ID, "dB", Better::Higher, "没有 ≥ 0.5 s 的用户与旁人重叠段");
     }
-    let fail = gains.iter().filter(|g| **g < th::PSE_OVL.def("fail_below")).count();
+    let fail = gains
+        .iter()
+        .filter(|g| **g < th::PSE_OVL.def("fail_below"))
+        .count();
     let mut s = Score::judged(ID, mean(&gains), "dB", Better::Higher, None, &[])
         .with_extra("segments", gains.len() as f64)
         .with_extra("fail_rate", fail as f64 / gains.len() as f64);

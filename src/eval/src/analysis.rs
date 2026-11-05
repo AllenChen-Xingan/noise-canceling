@@ -250,7 +250,9 @@ pub fn busiest_start(guide: &[f32], win: usize, step: usize) -> usize {
 pub fn xcorr_lag(x: &[f32], y: &[f32], max_lag: usize, start: usize, win: usize) -> Option<usize> {
     // 窗口给滞后搜索留出尾部空间：start + n + max_lag ≤ |y|；放不下时先把窗往前挪，再缩短窗（codex 中途 1 第 2 轮 P1 #1）
     let n = win.min(x.len()).min(y.len().saturating_sub(max_lag));
-    let start = start.min(x.len() - n).min(y.len().saturating_sub(max_lag + n));
+    let start = start
+        .min(x.len() - n)
+        .min(y.len().saturating_sub(max_lag + n));
     let xs = &x[start..start + n];
     let ex: f64 = xs.iter().map(|a| (*a as f64).powi(2)).sum();
     if n == 0 || ex <= 0.0 {

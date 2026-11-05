@@ -45,7 +45,11 @@ fn score(id: &str, c: &Clip, out: &[f32]) -> Score {
 }
 
 fn extra(s: &Score, k: &str) -> f64 {
-    s.extra.iter().find(|(x, _)| *x == k).map(|(_, v)| *v).unwrap()
+    s.extra
+        .iter()
+        .find(|(x, _)| *x == k)
+        .map(|(_, v)| *v)
+        .unwrap()
 }
 
 #[test]
@@ -80,7 +84,14 @@ fn swallow_measures_cut_after_onset() {
 
 #[test]
 fn runs_split_on_gaps_and_non_hits() {
-    let f = [(0, true), (1, true), (2, false), (3, true), (5, true), (6, true)];
+    let f = [
+        (0, true),
+        (1, true),
+        (2, false),
+        (3, true),
+        (5, true),
+        (6, true),
+    ];
     assert_eq!(runs(&f), vec![2, 1, 2]);
     assert!(runs(&[(0, false)]).is_empty());
 }
@@ -89,7 +100,11 @@ fn runs_split_on_gaps_and_non_hits() {
 fn leak_counts_unsuppressed_interferer_windows() {
     let c = clip(Some(InterfMode::OtherFirst));
     let s = score("V-LEAK", &c, &c.mix);
-    assert_eq!(s.value, Some(100.0), "原样输出：旁人一点没压，全算漏过：{s}");
+    assert_eq!(
+        s.value,
+        Some(100.0),
+        "原样输出：旁人一点没压，全算漏过：{s}"
+    );
     assert!(extra(&s, "windows") >= 1.0);
     // 旁人压 30 dB：都不算漏过
     let out: Vec<f32> = c
