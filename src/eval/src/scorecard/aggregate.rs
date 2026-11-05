@@ -140,8 +140,8 @@ mod tests {
 
     #[test]
     fn three_states() {
-        // 均值 1，波动 ±0.1：线 2 → 过；线 0 → 不过；线 1 → 跨线待测（越小越好）
-        let xs: Vec<f64> = (0..20).map(|i| 1.0 + if i % 2 == 0 { 0.1 } else { -0.1 }).collect();
+        // 均值 1，按组波动 ±0.1（同组两段同值）：线 2 → 过；线 0 → 不过；线 1 → 跨线待测（越小越好）
+        let xs: Vec<f64> = (0..20).map(|i| 1.0 + if (i / 2) % 2 == 0 { 0.1 } else { -0.1 }).collect();
         assert_eq!(tri(&ci(&xs, 2.0, Better::Lower), 2.0, Better::Lower), CardStatus::Pass);
         assert_eq!(tri(&ci(&xs, 0.0, Better::Lower), 0.0, Better::Lower), CardStatus::Fail);
         assert_eq!(tri(&ci(&xs, 1.0, Better::Lower), 1.0, Better::Lower), CardStatus::Unknown);

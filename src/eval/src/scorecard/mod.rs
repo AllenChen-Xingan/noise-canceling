@@ -4,8 +4,11 @@
 //! - 汇总规则：[`rules`]；输出 Markdown + JSON：[`card`]
 //! - 任务清单是 `suite/scenes.json`（scenesuite 写，`real.kind = "scene"`）；一条任务按清单里的片段展开成多段
 
+pub mod aggregate;
 pub mod card;
+pub mod load;
 pub mod rules;
+pub mod rules_v2;
 pub mod standard;
 
 use std::path::Path;
