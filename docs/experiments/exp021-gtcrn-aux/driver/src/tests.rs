@@ -72,3 +72,21 @@ fn names_follow_rule() {
     assert_eq!(system_name("g", &MixParams { off: true, ..Default::default() }), "g-nomix");
     assert!(n.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-'));
 }
+
+/// 坏值与超幅保护（出事送原声）在预混那一遍按默认打开、作用于原始输出，和成绩单原路径同一处；
+/// 第二遍关保命只是不再查已混好的结果。原始输出里塞 NaN 与超幅帧，两条路仍逐样本相同、输出全有限。
+#[test]
+fn faults_handled_in_premix_same_as_engine_path() {
+    let (x, mut y) = fake(SR as usize * 3);
+    for v in &mut y[4000..4100] {
+        *v = f32::NAN;
+    }
+    for v in &mut y[20000..20400] {
+        *v = 50.0;
+    }
+    let direct = remix_one(&x, &y, 160, SafetyConfig::default());
+    let pre = remix_one(&x, &y, 160, MixParams::default().config());
+    let twice = remix_one(&x, &pre, 160, SafetyConfig::off());
+    assert!(direct.iter().all(|v| v.is_finite()));
+    assert_eq!(direct, twice);
+}
