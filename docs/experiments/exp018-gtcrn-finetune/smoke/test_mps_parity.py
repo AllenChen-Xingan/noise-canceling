@@ -33,7 +33,8 @@ class RelTest(unittest.TestCase):
 class VerdictTest(unittest.TestCase):
     def _ok(self):
         return dict(forward_rel=0.0, grad_rel_model=0.0, grad_share_max=0.0, grad_any_nan_dev=False,
-                    train_loss_finite=True, train_loss_rel_max=0.0, train_weight_rel=0.0)
+                    train_loss_finite=True, train_loss_rel_max=0.0, train_weight_rel=0.0,
+                    export_unpatched=True, export_eval_rel=0.0)
 
     def test_all_zero_passes(self):
         self.assertTrue(mp.verdict(self._ok())["pass"])
@@ -47,6 +48,11 @@ class VerdictTest(unittest.TestCase):
         r = self._ok()
         r["grad_rel_model"] = 0.8  # 2026-11-05 修复前实测约 0.84
         self.assertFalse(mp.verdict(r)["checks"]["grad"])
+
+    def test_patched_export_fails(self):
+        r = self._ok()
+        r["export_unpatched"] = False
+        self.assertFalse(mp.verdict(r)["checks"]["export_eval"])
 
     def test_forward_drift_fails(self):
         r = self._ok()
@@ -63,6 +69,8 @@ class CompareTest(unittest.TestCase):
         v = mp.verdict(r)
         self.assertTrue(v["pass"], r)
         self.assertEqual(r["forward_rel"], 0.0)
+        self.assertTrue(r["export_unpatched"])
+        self.assertGreater(r["train_state_keys"], len(list(GTCRN().parameters())))  # 含 BN 统计
 
 
 if __name__ == "__main__":

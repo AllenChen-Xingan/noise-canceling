@@ -118,6 +118,30 @@ class MpsTest(unittest.TestCase):
             self.assertLess(rel(a, b), 1e-4)
 
 
+@unittest.skipUnless(HAS_MPS, "本机没有 MPS")
+class GruTest(unittest.TestCase):
+    """GRU 单独比（同输入、同上游梯度）：调研 013 担心的 PyTorch #94691 在本版本、
+    GTCRN 用到的尺寸上是否出现。尺寸取自 gtcrn.py：TRA 的 GRU(16→32)、DPGRNN 的 GRU(8→8，双向 / 单向)。"""
+
+    def test_gtcrn_sized_grus_match_cpu(self):
+        cases = [(16, 32, False, (2, 63, 16)), (8, 8, True, (66, 33, 8)), (8, 8, False, (66, 63, 8))]
+        for i, (n_in, n_h, bi, shape) in enumerate(cases):
+            torch.manual_seed(i)
+            g = nn.GRU(n_in, n_h, batch_first=True, bidirectional=bi)
+            x = torch.randn(*shape)
+            up = torch.randn(shape[0], shape[1], n_h * (2 if bi else 1))
+            res = []
+            for dev in ("cpu", "mps"):
+                m = copy.deepcopy(g).to(dev)
+                xi = x.to(dev).requires_grad_()
+                y, _ = m(xi)
+                y.backward(up.to(dev))
+                res.append((y.detach(), xi.grad.detach(),
+                            torch.cat([p.grad.flatten() for p in m.parameters()])))
+            for a, b in zip(res[1], res[0]):
+                self.assertLess(rel(a, b), 1e-5, f"GRU 第 {i} 组在 MPS 上和 CPU 不一致")
+
+
 @unittest.skipUnless(GTCRN_DIR, "需要 GTCRN_DIR 指向官方代码目录")
 class GtcrnTest(unittest.TestCase):
     def test_patches_exactly_four_dilated_depthwise_convs(self):

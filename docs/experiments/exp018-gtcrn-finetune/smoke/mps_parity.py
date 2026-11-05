@@ -9,7 +9,8 @@ LSTM 已修、GRU 未修；见调研 013 `notes/D-finetune-skeptic.md`）。GTCR
 - 整个模型的梯度向量相对误差 ≤ 1e-3；每个参数的梯度误差按「占整个梯度的比例」算
   （‖Δg_i‖ / ‖g_全部‖）≤ 1e-3。不用「每个参数自己的相对误差」：BatchNorm 前面那层卷积的
   bias 理论梯度为 0，数值上只剩噪声，自己除自己会到 10 倍量级（2026-11-05 实测，误报）
-- N 步训练后：两边损失都有限；每步损失相对差 ≤ 1e-2；最终权重相对差 ≤ 1e-2
+- N 步训练后：两边损失都有限；每步损失相对差 ≤ 1e-2；最终完整状态（参数 + BatchNorm 运行统计）相对差 ≤ 1e-2
+- 导出口径：device 上训出的状态装进**没打绕法**的原模块，CPU eval 前向与 CPU 训出的模型相对差 ≤ 1e-2
 
 用法（单次 ≤ 约 1 分钟）：
     python mps_parity.py --gtcrn-dir <resources/gtcrn> --ckpt <…/model_trained_on_dns3.tar> \
@@ -28,7 +29,7 @@ import torch  # noqa: E402
 
 import step_timing as st  # noqa: E402  （同目录：复用官方模型载入与 STFT，不重复写）
 
-TOL = {"forward": 1e-3, "grad": 1e-3, "train_loss": 1e-2, "train_weight": 1e-2}
+TOL = {"forward": 1e-3, "grad": 1e-3, "train_loss": 1e-2, "train_weight": 1e-2, "export_eval": 1e-2}
 
 
 def rel(a: torch.Tensor, b: torch.Tensor) -> float:
@@ -104,9 +105,24 @@ def compare(model_cpu: torch.nn.Module, device: str, loss_cls, n_batch: int, sec
     out["train_loss_dev"] = traj["dev"]
     out["train_loss_rel_max"] = max(abs(a - b) / (abs(b) + 1e-12) for a, b in zip(traj["dev"], traj["cpu"]))
     out["train_loss_finite"] = all(v == v and abs(v) != float("inf") for v in traj["dev"] + traj["cpu"])
-    w_dev = torch.cat([p.detach().cpu().flatten() for p in m_dev.parameters()])
-    w_cpu = torch.cat([p.detach().cpu().flatten() for p in m_cpu.parameters()])
+    # 4) 训练后的完整状态：参数 + BatchNorm 运行统计（codex 027 第 1 轮 #6）
+    sd_dev, sd_cpu = m_dev.state_dict(), m_cpu.state_dict()
+    fkeys = [k for k, v in sd_cpu.items() if v.is_floating_point()]
+    w_dev = torch.cat([sd_dev[k].detach().cpu().flatten() for k in fkeys])
+    w_cpu = torch.cat([sd_cpu[k].detach().cpu().flatten() for k in fkeys])
     out["train_weight_rel"] = rel(w_dev, w_cpu)
+    out["train_state_keys"] = len(fkeys)
+    # 5) 导出口径：把 device 上训出的 state_dict 装进一个**没打绕法**的新模型，CPU eval 前向，
+    #    与 CPU 上训出的模型 eval 前向比（导出给引擎时用的是原模块）
+    fresh = type(m_cpu)()
+    fresh.load_state_dict({k: v.detach().cpu() for k, v in sd_dev.items()})
+    fresh.eval()
+    m_cpu.eval()
+    noisy, _ = batch(n_batch, seconds, seed=999)
+    x = st.to_real(st.stft(noisy))
+    with torch.no_grad():
+        out["export_eval_rel"] = rel(fresh(x), m_cpu(x))
+    out["export_unpatched"] = not any("forward" in vars(mod) for mod in fresh.modules())
     return out
 
 
@@ -117,6 +133,7 @@ def verdict(r: dict) -> dict:
                  and not r["grad_any_nan_dev"]),
         "train_loss": r["train_loss_finite"] and r["train_loss_rel_max"] <= TOL["train_loss"],
         "train_weight": r["train_weight_rel"] <= TOL["train_weight"],
+        "export_eval": r["export_unpatched"] and r["export_eval_rel"] <= TOL["export_eval"],
     }
     return {"tolerances": TOL, "checks": checks, "pass": all(checks.values())}
 
