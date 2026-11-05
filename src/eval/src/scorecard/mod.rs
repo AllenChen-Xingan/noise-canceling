@@ -197,13 +197,27 @@ pub fn check_suite(suite: &Suite) -> Result<(), String> {
     }
 }
 
-/// 跑全部场景任务。读不了的段、展开不出片段的任务记进 [`Missing`]（原因），不中断，也不从成绩单里消失。
+/// 跑全部场景任务（新规则 v2 的口径）。见 [`run_with`]。
 pub fn run(
+    suite: &Suite,
+    systems: &[SystemKind],
+    opts: &Opts,
+    extra: Option<&mut dyn Extra>,
+    audio_root: Option<&Path>,
+) -> (Vec<ClipRow>, Vec<Missing>) {
+    run_with(suite, systems, opts, extra, audio_root, card::Rules::V2)
+}
+
+/// 跑全部场景任务。读不了的段、展开不出片段的任务记进 [`Missing`]（原因），不中断，也不从成绩单里消失。
+/// `rules = V2` 时，[`standard::CLEAN_PASS`] 三项在「干净人声单独过一遍系统」的输出上算，分数带
+/// [`standard::CLEAN_PASS_MARK`] 旁证（人定 D85 题 2 = B）；`V1` 照旧在带噪输出上算。
+pub fn run_with(
     suite: &Suite,
     systems: &[SystemKind],
     opts: &Opts,
     mut extra: Option<&mut dyn Extra>,
     audio_root: Option<&Path>,
+    rules: card::Rules,
 ) -> (Vec<ClipRow>, Vec<Missing>) {
     let root = audio_root.map_or_else(main_root, Path::to_path_buf);
     let (mut rows, mut missing) = (Vec::new(), Vec::new());
@@ -262,24 +276,27 @@ pub fn run(
                 }
             };
             for &sys in systems {
-                let p = match prepare_clip(&t, sys, clip.clone(), c.additive) {
+                let items = standard::items(c.scene);
+                let clean_pass =
+                    rules == card::Rules::V2 && items.iter().any(|(i, _)| i.clean_input);
+                let p = match prepare_clip(&t, sys, clip.clone(), c.additive, clean_pass) {
                     Ok(p) => p,
                     Err(e) => {
                         missing.push(miss(sys, e));
                         continue;
                     }
                 };
-                let items = standard::items(c.scene);
                 let scores = t
                     .graders
                     .iter()
                     .zip(&items)
                     .map(|(g, (i, veto))| {
-                        (
-                            i.v,
-                            *veto,
-                            score_one(g, sys, &t, &p, &p.run.out, opts, &mut extra),
-                        )
+                        let s = match (&p.clean_out, i.clean_input && clean_pass) {
+                            (Some(co), true) => score_one(g, sys, &t, &p, co, opts, &mut extra)
+                                .with_extra(standard::CLEAN_PASS_MARK, 1.0),
+                            _ => score_one(g, sys, &t, &p, &p.run.out, opts, &mut extra),
+                        };
+                        (i.v, *veto, s)
                     })
                     .collect();
                 rows.push(ClipRow {

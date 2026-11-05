@@ -149,20 +149,24 @@ pub(crate) struct Prepared {
     pub(crate) clip: Clip,
     pub(crate) run: RunOut,
     pub(crate) noise_out: Option<Vec<f32>>,
+    /// 干净人声单独过一遍系统的输出（成绩单新规则 v2，人定 D85 题 2 = B）；不要时为 `None`
+    pub(crate) clean_out: Option<Vec<f32>>,
     pub(crate) masks: Masks,
 }
 
 fn prepare(task: &Task, sys: SystemKind, clip: Clip) -> Result<Prepared, String> {
     // 只在合成场景上做「只有噪音」的对照处理：真实录音的噪音轨不是逐样本可重放的同一段输入
-    prepare_clip(task, sys, clip, task.scene.is_some())
+    prepare_clip(task, sys, clip, task.scene.is_some(), false)
 }
 
 /// `replayable`：噪音 + 干扰轨能逐样本重放（合成场景；场景测试集里分轨相加等于混合的段）。
+/// `clean_pass`：另把干净人声单独过一遍系统（同一系统、不注入故障，新的引擎状态）。
 pub(crate) fn prepare_clip(
     task: &Task,
     sys: SystemKind,
     clip: Clip,
     replayable: bool,
+    clean_pass: bool,
 ) -> Result<Prepared, String> {
     let spec = SystemSpec {
         kind: sys,
@@ -186,11 +190,22 @@ pub(crate) fn prepare_clip(
     } else {
         None
     };
+    let clean_out = if clean_pass {
+        let spec = SystemSpec {
+            kind: sys,
+            safety: task.safety,
+            faults: Vec::new(),
+        };
+        Some(run(&spec, &clip.clean)?.out)
+    } else {
+        None
+    };
     let m = masks(&clip.truth, &clip.mix, 0.03);
     Ok(Prepared {
         clip,
         run: r,
         noise_out,
+        clean_out,
         masks: m,
     })
 }
