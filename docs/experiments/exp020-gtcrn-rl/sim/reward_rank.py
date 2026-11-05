@@ -57,8 +57,10 @@ def r_estoi_only(row, base):
     return val(row, "V-ESTOI")
 
 
-def vetoed(row):
+def vetoed(row, skip=()):
     for v, (op, t) in VETO.items():
+        if v in skip:
+            continue
         x = val(row, v)
         if x is None:
             continue
@@ -78,18 +80,29 @@ def guard_penalty(row, base):
     return pen
 
 
-def r_composite(row, base):
+def r_composite(row, base, skip=()):
     """主奖励 = ESTOI 提升 + 0.002 × 降噪量（dB，封顶 12）；否决 → −1；守住项超线按量扣。"""
     e, nr = val(row, "V-ESTOI"), val(row, "V-NR")
     if e is None:
         return None
-    if vetoed(row):
+    if vetoed(row, skip):
         return -1.0
     nr_gain = 0.0 if nr is None else min(12.0, max(0.0, -nr))
     return e + 0.002 * nr_gain - 0.01 * guard_penalty(row, base)
 
 
-REWARDS = {"nr_only": r_nr_only, "estoi_only": r_estoi_only, "composite": r_composite}
+def r_composite_pooled_asr(row, base):
+    """同 composite，但吃字不在单段上否决（单段约 24 个字，错 1 个字就是 4 个百分点，噪声太大），
+    改到按场景合并字数后作整批约束（G-3 E1），不进逐段奖励。"""
+    return r_composite(row, base, skip=("V-EAT-ASR",))
+
+
+REWARDS = {
+    "nr_only": r_nr_only,
+    "estoi_only": r_estoi_only,
+    "composite": r_composite,
+    "composite_pooled_asr": r_composite_pooled_asr,
+}
 
 
 # ---- 一致性 ----
@@ -159,9 +172,14 @@ def analyse(systems, table):
                 top_onset_worse += (o - ob) > 1.0
         res = {}
         for j, (ts, gs) in per.items():
+            if not ts:
+                res[j] = {"mean_tau": None, "ci95": None, "n_clips": 0, "n_scenes": 0}
+                continue
             lo, hi = boot_ci(ts, gs)
             res[j] = {"mean_tau": sum(ts) / len(ts), "ci95": [lo, hi], "n_clips": len(ts),
                       "n_scenes": len(set(gs))}
+        res["veto_frac"] = {s: sum(rf(d[s], d[BASE]) == -1.0 for d in table.values()) / len(table)
+                            for s in systems} if rn.startswith("composite") else None
         res["top_onset_worse_frac"] = top_onset_worse / top_n if top_n else None
         res["system_mean_reward"] = {s: v[0] / v[1] for s, v in sys_sum.items() if v[1]}
         out["rewards"][rn] = res
@@ -192,7 +210,7 @@ def main(argv):
     Path(argv[2]).write_text(json.dumps(res, ensure_ascii=False, indent=1) + "\n")
     for rn, r in res["rewards"].items():
         line = " ".join(f"{j[8:]} τ={r[j]['mean_tau']:+.3f} [{r[j]['ci95'][0]:+.3f},{r[j]['ci95'][1]:+.3f}]"
-                        for j in JUDGES)
+                        if r[j]["mean_tau"] is not None else f"{j[8:]} τ=无" for j in JUDGES)
         print(f"{rn:11s} {line} 字头退>1dB={r['top_onset_worse_frac']:.2f}")
     return 0
 
