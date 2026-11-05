@@ -63,13 +63,18 @@ def fallback_ops(caught: list) -> list[str]:
 
 
 def run(gtcrn_dir: str, device_name: str, batch: int, seconds: float,
-        warmup: int, steps: int, ckpt: str | None) -> dict:
+        warmup: int, steps: int, ckpt: str | None, mps_fix: bool = False) -> dict:
     device = torch.device(device_name)
     GTCRN, HybridLoss = load_official(gtcrn_dir)
-    model = GTCRN().to(device).train()
+    model = GTCRN()
     if ckpt:
         state = torch.load(ckpt, map_location="cpu", weights_only=False)
         model.load_state_dict(state["model"])
+    patched = []
+    if mps_fix:
+        import mps_fix as fx  # 同目录
+        patched = fx.patch(model)
+    model = model.to(device).train()
     loss_fn = HybridLoss()
     opt = torch.optim.Adam(model.parameters(), lr=1e-4)
     n_params = sum(p.numel() for p in model.parameters())
@@ -107,6 +112,7 @@ def run(gtcrn_dir: str, device_name: str, batch: int, seconds: float,
         "warmup": warmup,
         "steps": steps,
         "checkpoint": os.path.basename(ckpt) if ckpt else None,
+        "mps_fix_patched": patched,
         "params": n_params,
         "step_s_median": med,
         "step_s_min": min(times),
@@ -130,9 +136,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--warmup", type=int, default=3)
     ap.add_argument("--steps", type=int, default=10)
     ap.add_argument("--ckpt", default=None, help="官方检查点；不给则随机初始化")
+    ap.add_argument("--mps-fix", action="store_true", help="换掉 MPS 上算错的空洞逐通道卷积（mps_fix.py）")
     ap.add_argument("--out", default=None, help="写 JSON 的路径；不给则只打印")
     a = ap.parse_args(argv)
-    res = run(a.gtcrn_dir, a.device, a.batch, a.seconds, a.warmup, a.steps, a.ckpt)
+    res = run(a.gtcrn_dir, a.device, a.batch, a.seconds, a.warmup, a.steps, a.ckpt, a.mps_fix)
     text = json.dumps(res, ensure_ascii=False, indent=2)
     if a.out:
         os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)

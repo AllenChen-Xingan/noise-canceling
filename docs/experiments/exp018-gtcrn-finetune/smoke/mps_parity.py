@@ -120,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seconds", type=float, default=4.0)
     ap.add_argument("--steps", type=int, default=20)
     ap.add_argument("--lr", type=float, default=1e-4)
+    ap.add_argument("--mps-fix", action="store_true", help="两边都换上 mps_fix 的等价卷积")
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
     torch.manual_seed(0)
@@ -127,9 +128,13 @@ def main(argv: list[str] | None = None) -> int:
     model = GTCRN()
     if a.ckpt:
         model.load_state_dict(torch.load(a.ckpt, map_location="cpu", weights_only=False)["model"])
+    patched = []
+    if a.mps_fix:
+        import mps_fix as fx  # 同目录；deepcopy 会带上换过的 forward
+        patched = fx.patch(model)
     r = compare(model, a.device, HybridLoss, a.batch, a.seconds, a.steps, a.lr)
     r.update(verdict(r))
-    r.update(batch=a.batch, seconds_per_clip=a.seconds, lr=a.lr,
+    r.update(mps_fix_patched=patched, batch=a.batch, seconds_per_clip=a.seconds, lr=a.lr,
              checkpoint=os.path.basename(a.ckpt) if a.ckpt else None, torch=torch.__version__)
     text = json.dumps(r, ensure_ascii=False, indent=2)
     if a.out:
