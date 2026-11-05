@@ -132,9 +132,11 @@ const FROZEN: &[(&str, &[&str])] = &[
     ("V-SPLVL", &[]),
     ("V-MUSIC", &["kurt_in", "kurt_out", "isolated_peaks_per_s"]),
     ("V-VACUUM", &[]),
+    // 调研 026（#119）：V-TIMBRE 换成 ERB 30 带的标准差，旁报字段随之换；基准的「verifiers」一行随之更新，
+    // 「verifiers_sans_timbre」一行不变（证明其余 verifier 逐位不变）
     (
         "V-TIMBRE",
-        &["dev_0_1k", "dev_1_2k", "dev_2_4k", "dev_4_8k"],
+        &["slope_db", "max_db", "bands", "quiet_frames", "hi_db", "lo_db"],
     ),
     ("V-SIM-GATE", &["onset_miss", "noise_open", "owner_hops"]),
     ("V-SIM-FA", &["interf_only_hops"]),
