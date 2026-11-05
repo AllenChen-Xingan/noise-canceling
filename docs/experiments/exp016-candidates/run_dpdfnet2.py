@@ -18,6 +18,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "exp003-offline-ab"))
 import _ext  # noqa: E402
+import _paths  # noqa: E402  exp003：主目录
 import enhance  # noqa: E402  exp003：Dpdfnet · stream · DPDF 路径
 
 NAME = "dpdfnet2"
@@ -43,7 +44,7 @@ def process(x):
 
 
 def setup():
-    return {"weights": str(enhance.DPDF.relative_to(enhance.MAIN)), "weights_sha256": _ext.sha256_file(enhance.DPDF),
+    return {"weights": str(enhance.DPDF.relative_to(_paths.MAIN)), "weights_sha256": _ext.sha256_file(enhance.DPDF),
             "onnxruntime_threads": 1, "delay_frames": DELAY_FRAMES}
 
 
