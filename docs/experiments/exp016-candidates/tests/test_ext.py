@@ -142,6 +142,37 @@ class Lookahead(unittest.TestCase):
         self.assertEqual(_ext.xcorr_lag(x, np.concatenate([np.zeros(37, np.float32), x])[:8000]), 37)
 
 
+class Probe(unittest.TestCase):
+    def setUp(self):
+        self.d = tempfile.TemporaryDirectory()
+        self.root = Path(self.d.name)
+        self.cs = [clip("p0", "cafe", self.root, n=4000, seed=1), clip("p1", "cafe", self.root, n=4000, seed=2)]
+
+    def tearDown(self):
+        self.d.cleanup()
+
+    def test_identity_passes(self):
+        lat, rec = _ext.probe(lambda x: x.copy(), self.cs, self.root, 0)
+        self.assertEqual(lat, 0)
+        self.assertEqual(rec["measured_lookahead_by_kind"], {"mix": 0, "clean": 0})
+        self.assertEqual(rec["lag_after_align_by_kind"], {"mix": 0, "clean": 0})
+
+    def test_peeking_only_on_clean_is_measured(self):
+        """只在干净人声上偷看 50 样本的假模型：mix 查不出，clean 那一路要量出来并抬高声明延迟。"""
+        clean_head = _ext.read16(self.root / "p0-owner.wav")[:100]
+        k = 50
+
+        def proc(x):
+            y = x.copy()
+            if np.array_equal(x[:100], clean_head):
+                y[:-k] += 0.5 * x[k:]
+            return y
+        lat, rec = _ext.probe(proc, self.cs, self.root, 0)
+        self.assertEqual(rec["measured_lookahead_by_kind"]["mix"], 0)
+        self.assertEqual(rec["measured_lookahead_by_kind"]["clean"], k)
+        self.assertEqual(lat, k)
+
+
 class Dfn3Chain(unittest.TestCase):
     """DFN3 低延迟版的重采样链路（不载入 dylib，用恒等模型）：因果、对齐后前视 = 总延迟、无滞后。"""
 
