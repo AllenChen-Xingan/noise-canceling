@@ -30,11 +30,14 @@
 
 ## 下一步
 
-1. 16:00 后（大总管通知）带绕法重测 MPS 单步耗时（批量 8 · 32），填进 decision 比较卡与 exp018 README
-2. codex-review 1–2 轮（审结论是否被证据支撑），落 `docs/reviews/027_gtcrn-finetune-codex.md` + 索引一行
-3. grep 本机路径为 0 → 报「finetune 可以收尾」
-4. 请大总管：`docs/experiments/README.md` 索引加 exp018 一行（不在本线可写文件里）
+**可以收尾**（2026-11-05）。已做完：
+- 带绕法 MPS 单步重测：批量 32 时 0.856 s（CPU 1.372 s），`runs/20261105-153553-step-fix/`
+- codex 7 轮，第 6、7 轮无 P0/P1，已达停止线；19 条全部属实、全部采纳，无 issue（`docs/reviews/027_gtcrn-finetune-codex.md`）
+- 本机路径 grep 为 0；smoke 测试 26 条全过；代码文件最大 178 行
+- D87（训练数据先不下）已写进 decision 第八节；exp018 索引已加一行（大总管准）
+
+收尾交给大总管：推送、开 PR（正文写 `Closes #121`）
 
 ## 待人拍板
 
-见 `docs/research/027_gtcrn-finetune/decision.md` 第八节：F-1 下第一批数据 · F-2 第二批（CochlScene）何时下 · F-3「户外变好、室内持平」算不算可上线。守住项容许量用 029 的 R-2，不重复问
+见 `docs/research/027_gtcrn-finetune/decision.md` 第八节：F-1 已定（D87：先不下）· F-2 第二批（CochlScene）将来何时下 · F-3「户外变好、室内持平」算不算可上线。守住项容许量用 029 的 R-2，不重复问
