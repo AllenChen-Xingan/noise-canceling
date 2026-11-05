@@ -294,8 +294,10 @@ pub fn run_with(
                     .zip(&items)
                     .map(|(g, (i, veto))| {
                         let s = match (&clean_view, i.clean_input && clean_pass) {
-                            (Some((cp, co)), true) => score_one(g, sys, &t, cp, co, opts, &mut extra)
-                                .with_extra(standard::CLEAN_PASS_MARK, 1.0),
+                            (Some((cp, co)), true) => {
+                                score_one(g, sys, &t, cp, co, opts, &mut extra)
+                                    .with_extra(standard::CLEAN_PASS_MARK, 1.0)
+                            }
                             _ => score_one(g, sys, &t, &p, &p.run.out, opts, &mut extra),
                         };
                         (i.v, *veto, s)

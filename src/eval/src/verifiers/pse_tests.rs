@@ -154,3 +154,65 @@ fn si_sdr_basics() {
     assert!(si_sdr(&z, &x).unwrap() < 20.0);
     assert_eq!(si_sdr(&x, &vec![0.0; 1000]), None);
 }
+
+/// 输出全零：用户被整段删掉，SI-SDRi 必须是极低值、全部算失败（codex 中途 2 第 1 轮 P1 #1）。
+#[test]
+fn pse_ovl_zero_output_is_total_failure() {
+    let c = clip(Some(InterfMode::Overlap));
+    let zero = vec![0.0f32; c.mix.len()];
+    let s = score("V-PSE-OVL", &c, &zero);
+    assert!(s.value.unwrap() < -100.0, "{s}");
+    assert_eq!(extra(&s, "fail_rate"), 1.0);
+    assert_eq!(si_sdr(&zero, &c.clean), Some(-SI_SDR_CAP));
+}
+
+/// 旁人独说跨在两个整秒之间（时间轴平移 0.3 s）：滑窗照样检出（codex 中途 2 第 1 轮 P2 #3）。
+#[test]
+fn leak_finds_window_off_the_second_grid() {
+    let c = clip(Some(InterfMode::OtherFirst));
+    let pad = (0.3 * c.sr as f64) as usize;
+    let shift = |v: &[f32]| -> Vec<f32> {
+        let mut o = vec![0.0f32; pad];
+        o.extend_from_slice(v);
+        o
+    };
+    let mv = |iv: &[(usize, usize)]| iv.iter().map(|(a, b)| (a + pad, b + pad)).collect();
+    let c2 = Clip {
+        sr: c.sr,
+        clean: shift(&c.clean),
+        interf: shift(&c.interf),
+        noise: shift(&c.noise),
+        mix: shift(&c.mix),
+        truth: crate::synth::Truth {
+            owner: mv(&c.truth.owner),
+            interf: mv(&c.truth.interf),
+        },
+        tracks: c.tracks,
+    };
+    let a = score("V-LEAK", &c, &c.mix);
+    let b = score("V-LEAK", &c2, &c2.mix);
+    assert_eq!(a.value, Some(100.0), "{a}");
+    assert_eq!(b.value, Some(100.0), "平移后也要检出：{b}");
+}
+
+/// 字头 200 ms 内的误删比例：只删每个字头的前 100 ms，字头窗约一半误删、整体比例低得多（codex 中途 2 第 1 轮 P2 #4）。
+#[test]
+fn tsos_reports_onset_window_share() {
+    let c = clip(None);
+    let quiet = (0.3 * c.sr as f64) as usize;
+    let cut = (0.1 * c.sr as f64) as usize;
+    let mut out = c.clean.clone();
+    let mut prev: Option<usize> = None;
+    for &(a, e) in &c.truth.owner {
+        if prev.is_none_or(|p| a >= p + quiet) && e - a > cut {
+            out[a..a + cut].iter_mut().for_each(|v| *v = 0.0);
+        }
+        prev = Some(e);
+    }
+    let s = score("V-TSOS", &c, &out);
+    let on = extra(&s, "onset200_pct");
+    assert!(extra(&s, "onset_frames") > 0.0);
+    assert!((25.0..=80.0).contains(&on), "字头窗误删比例 {on}：{s}");
+    assert!(s.value.unwrap() < on, "整体比例应低于字头窗：{s}");
+    assert_eq!(extra(&score("V-TSOS", &c, &c.clean), "onset200_pct"), 0.0);
+}

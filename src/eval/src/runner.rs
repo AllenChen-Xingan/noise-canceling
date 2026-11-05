@@ -480,7 +480,10 @@ mod clean_view_tests {
     use crate::synth::{InterfMode, InterfSpec, NoiseKind, SceneSpec, TalkerSpec};
 
     fn task() -> Task {
-        crate::suite::parse_suite(include_str!("../suite/ci.json")).unwrap().tasks[0].clone()
+        crate::suite::parse_suite(include_str!("../suite/ci.json"))
+            .unwrap()
+            .tasks[0]
+            .clone()
     }
 
     fn clip(interf: bool) -> Clip {
@@ -539,7 +542,9 @@ mod clean_view_tests {
     #[test]
     fn clean_view_does_not_subtract_reverb_tail() {
         let mut c = clip(false);
-        let tail: Vec<f32> = (0..c.clean.len()).map(|i| 1e-3 * ((i as f32) * 0.37).sin()).collect();
+        let tail: Vec<f32> = (0..c.clean.len())
+            .map(|i| 1e-3 * ((i as f32) * 0.37).sin())
+            .collect();
         c.clean.iter_mut().zip(&tail).for_each(|(v, t)| *v += t);
         let s = timbre(c);
         assert!(s.value.unwrap().abs() < 1e-9, "{s}");

@@ -101,8 +101,49 @@ pub(super) fn v_tsos(c: &Ctx) -> Score {
         "longest_s",
         rs.iter().copied().max().unwrap_or(0) as f64 * hop_s,
     );
+    // 字头 200 ms 内的误删比例单列（025 group-D 结论；codex 中途 2 第 1 轮 P2 #4）：字头 = 前面停了 ≥ 300 ms 的开口
+    let (on_n, on_hit) = onset_window_hits(c, &f);
+    s = s.with_extra("onset_frames", on_n as f64).with_extra(
+        "onset200_pct",
+        if on_n > 0 {
+            100.0 * on_hit as f64 / on_n as f64
+        } else {
+            f64::NAN
+        },
+    );
     s.verdict = Verdict::Unknown("只报不判：过关线（比原声直通多多少算不过）待人拍板".into());
     s
+}
+
+/// 字头窗（开口起 200 ms，开口前须停 ≥ 300 ms）里的用户有声谱帧数与其中误删的帧数。
+fn onset_window_hits(c: &Ctx, f: &[(usize, bool)]) -> (usize, usize) {
+    let sr = c.clip.sr as f64;
+    let (win, quiet) = ((0.2 * sr) as isize, (0.3 * sr) as usize);
+    let mut starts = Vec::new();
+    let mut prev_end: Option<usize> = None;
+    for &(a, e) in &c.clip.truth.owner {
+        if prev_end.is_none_or(|p| a >= p + quiet) {
+            starts.push(a as isize);
+        }
+        prev_end = Some(e);
+    }
+    let center = |k: usize| ((k + 1) * HOP) as isize - (NFFT / 2) as isize;
+    let inside: Vec<bool> = f
+        .iter()
+        .map(|(k, x)| {
+            let ck = center(*k);
+            starts.iter().any(|&st| ck >= st && ck < st + win) && *x
+        })
+        .collect();
+    let n = f
+        .iter()
+        .filter(|(k, _)| {
+            starts
+                .iter()
+                .any(|&st| center(*k) >= st && center(*k) < st + win)
+        })
+        .count();
+    (n, inside.iter().filter(|v| **v).count())
 }
 
 pub(super) fn v_swallow(c: &Ctx) -> Score {
@@ -141,7 +182,11 @@ pub(super) fn v_leak(c: &Ctx) -> Score {
     let (own, itf) = (&c.masks.owner, &c.masks.interf);
     let nf = own.len().min(itf.len());
     let (mut n, mut leak) = (0usize, 0usize);
-    for w in (0..nf / win).map(|i| i * win..(i + 1) * win) {
+    // 1 秒窗按 100 ms 步长滑动：旁人独说跨在两个整秒之间也能检出（codex 中途 2 第 1 轮 P2 #3）；窗之间有重叠，读数是窗的占比
+    let step = (win / 10).max(1);
+    for w in (0..nf.saturating_sub(win) / step + usize::from(nf >= win))
+        .map(|i| i * step..i * step + win)
+    {
         // 「只有旁人说话的窗」：用户一帧都不在说，旁人说话的帧过半（音节之间的空隙照算在窗里）
         if own[w.clone()].iter().any(|v| *v)
             || itf[w.clone()].iter().filter(|v| **v).count() * 2 < win
@@ -208,8 +253,22 @@ pub fn si_sdr(est: &[f32], reference: &[f32]) -> Option<f64> {
         t += tv * tv;
         e += (*x as f64 - tv).powi(2);
     }
-    (e > 0.0).then(|| db10(t) - db10(e)).or(Some(200.0))
+    // 输出全零：投影和残差都是 0，不是「完美重建」，而是用户被整段删掉 → 记成下限（codex 中途 2 第 1 轮 P1 #1）
+    if t <= 0.0 {
+        return Some(-SI_SDR_CAP);
+    }
+    Some(
+        if e > 0.0 {
+            db10(t) - db10(e)
+        } else {
+            SI_SDR_CAP
+        }
+        .clamp(-SI_SDR_CAP, SI_SDR_CAP),
+    )
 }
+
+/// SI-SDR 读数的上下限（dB）：完美重建记 +200，全零输出记 −200（与 `db10` 的 1e−20 下限同量级）。
+pub const SI_SDR_CAP: f64 = 200.0;
 
 pub(super) fn v_pse_ovl(c: &Ctx) -> Score {
     const ID: &str = "V-PSE-OVL";
