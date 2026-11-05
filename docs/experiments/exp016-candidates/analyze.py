@@ -261,6 +261,12 @@ def render(res) -> str:
     L = [f"# exp016 配对分析（run `{res['run_id']}`，由 analyze.py 生成，勿手改）", "",
          f"差值 = 候选相对 {res['base']}，**正 = 候选更好**；区间 = 成对片段自助重抽样 95%（{N_BOOT} 次）。"
          "按 025 待拍板 G-1 默认推进，待人确认。", ""]
+    if res.get("anchor"):
+        L += [f"## 锚点：两次 run 的 {ANCHOR} 逐段对照（已过：判的项逐段差 ≤ {ANCHOR_TOL:g}）", "",
+              "| 评分项 | 判不判 | 段数 | 最大绝对差 | 平均差（后 − 前） |", "|---|---|---|---|---|"]
+        for v, o in sorted(res["anchor"].items()):
+            L.append(f"| {v} | {'判' if o['judged'] else '只报'} | {o['n']} | {o['max_abs']:.3g} | {f(o['mean'], 4)} |")
+        L += ["", f"只报的项（{' · '.join(sorted(ANCHOR_REPORT_ONLY))}）跨 run 有随机差，其配对结论只作参考，不下优劣定论。", ""]
     for c, r in res["candidates"].items():
         L += [f"## {c} vs {res['base']}", "", "### 每个评分项（全部 480 段）", "",
               "| 评分项 | 方向 | 单位 | 段数 | 平均 | 95% 区间 | 判断 |", "|---|---|---|---|---|---|---|"]

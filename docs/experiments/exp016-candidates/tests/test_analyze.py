@@ -92,6 +92,42 @@ class Merge(unittest.TestCase):
             A.merge([g, ([row("x", "c", {"V-NR": 1.0}, scene="home-quiet")], self.card("k"))])
 
 
+class Anchor(unittest.TestCase):
+    def card(self, rid):
+        return {"meta": {"run_id": rid, "rules": "v2", "suite": "s.json", "qa": True},
+                "scenes": [{"items": [{"v": "V-NR", "better": "lower", "unit": "dB"}]}]}
+
+    def runs(self, pt_b=1.0, asr_b=0.3):
+        g = [row("x", "passthrough", {"V-NR": 1.0, "V-EAT-ASR": 0.2}), row("x", "gtcrn", {"V-NR": -5.0})]
+        k = [row("x", "passthrough", {"V-NR": pt_b, "V-EAT-ASR": asr_b}), row("x", "c", {"V-NR": -8.0})]
+        return [(g, self.card("g")), (k, self.card("k"))]
+
+    def test_both_runs_with_anchor_pair_after_pick(self):
+        """两个 run 都含锚点：先单独比锚点，再只拿基线与候选去合并（不因重复键被拒）。"""
+        loaded = self.runs()
+        out = A.anchor(loaded, {"x"})
+        self.assertTrue(out["V-NR"]["judged"])
+        self.assertFalse(out["V-EAT-ASR"]["judged"])
+        self.assertAlmostEqual(out["V-EAT-ASR"]["mean"], 0.1)
+        rows, _ = A.merge(A.pick(loaded, {"gtcrn", "c"}))
+        self.assertEqual(sorted(r["system"] for r in rows), ["c", "gtcrn"])
+        with self.assertRaises(SystemExit):  # 不先挑系统就合并：锚点重复键被拒
+            A.merge(loaded)
+
+    def test_anchor_drift_refuses(self):
+        with self.assertRaises(SystemExit):
+            A.anchor(self.runs(pt_b=1.0 + 1e-3), {"x"})
+
+    def test_coverage_refuses_missing_and_extra(self):
+        rows = [row("x", "gtcrn", {"V-NR": 1.0})]
+        A.check_coverage(rows, {"x"}, ["gtcrn"])
+        for want in ({"x", "y"}, set()):
+            with self.assertRaises(SystemExit):
+                A.check_coverage(rows, want, ["gtcrn"])
+        with self.assertRaises(SystemExit):  # 候选一段都没有
+            A.check_coverage(rows, {"x"}, ["gtcrn", "c"])
+
+
 class Rank(unittest.TestCase):
     def test_top_behind_needs_units_and_positive_interval(self):
         cells = [{"state": "候选好", "units": 4, "effect": 9.0}, {"state": "候选好", "units": 5, "effect": 1.0},
