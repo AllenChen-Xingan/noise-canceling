@@ -17,6 +17,7 @@
 pub mod analysis;
 pub mod calib;
 pub mod files;
+pub mod power;
 pub mod probes;
 pub mod qa;
 pub mod report;

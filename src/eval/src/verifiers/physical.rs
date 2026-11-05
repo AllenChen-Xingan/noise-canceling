@@ -68,7 +68,7 @@ pub(super) fn v_frame(c: &Ctx, p: &Params) -> Score {
         &[],
     )
     .with_extra("p999", quantile(&t, 0.999))
-    // 025 A2 旁报：超过 1 个周期的次数（真掉音）· 首帧单列（冷启动）；电源状态未接（要读 pmset，见现状页转交）
+    // 025 A2 旁报：超过 1 个周期的次数（真掉音）· 首帧单列（冷启动）；电源状态记在成绩单元数据 meta.power（`power.rs`）
     .with_extra("over_1", t.iter().filter(|x| **x > 1.0).count() as f64)
     .with_extra("first", t[0]);
     if s.verdict.is_fail() && (c.ci || cfg!(debug_assertions)) {
