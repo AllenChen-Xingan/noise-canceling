@@ -359,7 +359,7 @@ pub const NRMOS_DELTA: Lines = Lines {
 };
 
 /// 表里全部 verifier。
-pub const ALL: [&Lines; 23] = [
+pub const ALL: [&Lines; 25] = [
     &BGSTAB,
     &ONSET,
     &SPLVL,

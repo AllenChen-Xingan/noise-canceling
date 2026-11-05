@@ -136,6 +136,23 @@ pub fn group_of(s: MeetingPlace) -> Option<Group> {
     })
 }
 
+/// 新规则（v2）里仍**逐段判、任一段不过即否决**的物理硬事实项（调研 025 X1；人定 D85 题 1）。
+pub const PHYSICAL: [&str; 5] = ["V-NAN", "V-LAT", "V-MUTE", "V-FRAME", "V-SWITCH"];
+
+/// 新规则（v2）里改为只报不判的项：门控两项降为引擎诊断（人定 D85 题 4 = A，由量输出的新项接替）·
+/// 咔嗒（题 7 = B）· 真空感（025 B4，只多一列）。
+pub const V2_REPORT_ONLY: [&str; 4] = ["V-SIM-GATE", "V-SIM-FA", "V-CLICK", "V-VACUUM"];
+
+/// 人定 D85 题 2 = B：这三项要在「干净人声单独过一遍模型」的输出上算。分数里没有 [`CLEAN_PASS_MARK`] 旁证的
+/// （旧口径：在带噪输出上算的），新规则下只报不判，注明待重跑。
+pub const CLEAN_PASS: [&str; 3] = ["V-PUMPV", "V-TIMBRE", "V-WEAK"];
+/// 干净人声单独过一遍模型后算的分数带这个旁证（值 = 1）。
+pub const CLEAN_PASS_MARK: &str = "clean_pass";
+
+/// 新规则（v2）换掉的过关线：(项, 参数, 值)。值必须是 thresholds 表里登记过的取值（测试核对）。
+/// 人定 D85 题 5：人声被压低 4 dB 才否决。
+pub const V2_PARAMS: [(&str, &str, f64); 1] = [("V-SPLVL", "min", -4.0)];
+
 /// 这一项是不是「只报不判」。
 pub fn is_report_only(v: &str) -> bool {
     VETO.iter()
@@ -159,6 +176,18 @@ pub fn items(s: MeetingPlace) -> Vec<(Item, bool)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn v2_params_are_registered_threshold_values() {
+        for (v, k, x) in V2_PARAMS {
+            let l = crate::thresholds::ALL.iter().find(|l| l.id == v).unwrap();
+            let p = l.params.iter().find(|p| p.key == k).unwrap();
+            assert!(p.values.iter().any(|(y, _)| (y - x).abs() < 1e-12), "{v} {k} {x}");
+        }
+        for v in PHYSICAL.iter().chain(&V2_REPORT_ONLY).chain(&CLEAN_PASS) {
+            assert!(crate::verifiers::info(v).is_some(), "{v} 没登记");
+        }
+    }
 
     #[test]
     fn every_meeting_scene_has_a_group_and_veto_first() {
