@@ -174,7 +174,7 @@ def summarize(ds, pair, key, seed, sd_of=None):
 
 ANCHOR = "passthrough"  # 两个 run 都跑的参照系统（原声直通，不经模型）
 ANCHOR_TOL = 1e-6
-ANCHOR_REPORT_ONLY = {"V-EAT-ASR"}  # 识别有随机性：锚点只报差，不判；跨 run 的这一项结论按方法降级
+ANCHOR_REPORT_ONLY = {"V-EAT-ASR"}  # 直通上恒为 0、量不出跨 run 识别差：锚点不判它，跨 run 识别差由 asr_drift.py 实测
 
 
 def pick(loaded, systems):
@@ -266,7 +266,7 @@ def render(res) -> str:
               "| 评分项 | 判不判 | 段数 | 最大绝对差 | 平均差（后 − 前） |", "|---|---|---|---|---|"]
         for v, o in sorted(res["anchor"].items()):
             L.append(f"| {v} | {'判' if o['judged'] else '只报'} | {o['n']} | {o['max_abs']:.3g} | {f(o['mean'], 4)} |")
-        L += ["", f"只报的项（{' · '.join(sorted(ANCHOR_REPORT_ONLY))}）跨 run 有随机差，其配对结论只作参考，不下优劣定论。", ""]
+        L += ["", f"只报的项（{' · '.join(sorted(ANCHOR_REPORT_ONLY))}）在直通上量不出跨 run 识别差，照不照常比看 `asr_drift.py` 的实测结果（见 findings）。", ""]
     for c, r in res["candidates"].items():
         L += [f"## {c} vs {res['base']}", "", "### 每个评分项（全部 480 段）", "",
               "| 评分项 | 方向 | 单位 | 段数 | 平均 | 95% 区间 | 判断 |", "|---|---|---|---|---|---|---|"]
