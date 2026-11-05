@@ -17,13 +17,17 @@ from __future__ import annotations
 import argparse
 import json
 import random
-import sys
 from collections import defaultdict
 from pathlib import Path
 
+import importlib.util
+
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / "exp014-scorecard-gtcrn"))
-from analyze import better_map  # noqa: E402  exp014：每项方向取自成绩单
+# exp014 的 analyze.py 与本文件同名：按路径载入、换个模块名，免得自己导入自己
+_spec = importlib.util.spec_from_file_location("exp014_analyze", HERE.parent / "exp014-scorecard-gtcrn/analyze.py")
+_exp014 = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_exp014)
+better_map = _exp014.better_map  # 每项方向取自成绩单（exp014 正本）
 
 BASE = "gtcrn"
 SKIP = {"V-NAN", "V-LAT"}
