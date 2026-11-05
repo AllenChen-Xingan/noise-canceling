@@ -104,8 +104,20 @@ pub fn remix_one(x: &[f32], y: &[f32], latency: usize, cfg: SafetyConfig) -> Vec
     run_engine(ReplayBuf::new(y, latency), x, cfg)
 }
 
+/// 同 [`remix_one`]，但回放前面接模型真实的预热输出（`head.len()` = 延迟）。
+/// 引擎的有声包络从第一帧起跟踪底噪，预热段补零与真实输出会让整段开合分岔（exp021 GTCRN 核对，2026-11-05）；
+/// 要和内置模型的成绩单逐段一致，必须带 head。
+pub fn remix_with_head(x: &[f32], head: &[f32], y: &[f32], cfg: SafetyConfig) -> Vec<f32> {
+    run_engine(ReplayBuf::with_head(head, y), x, cfg)
+}
+
 /// 任意模型过一遍引擎，返回与 `x` 等长的对齐输出（重混与生成原始输出共用这一个循环）。
 pub fn run_engine<M: Model>(model: M, x: &[f32], cfg: SafetyConfig) -> Vec<f32> {
+    run_engine_full(model, x, cfg).1
+}
+
+/// 同 [`run_engine`]，另返回对齐前的前 latency 个样本（模型的预热输出）。
+pub fn run_engine_full<M: Model>(model: M, x: &[f32], cfg: SafetyConfig) -> (Vec<f32>, Vec<f32>) {
     let mut eng = Engine::new(model, cfg);
     let hop = eng.hop();
     let lat = eng.latency_samples();
@@ -116,7 +128,7 @@ pub fn run_engine<M: Model>(model: M, x: &[f32], cfg: SafetyConfig) -> Vec<f32> 
     for (xi, yi) in padded.chunks_exact(hop).zip(raw.chunks_exact_mut(hop)) {
         eng.process(xi, yi);
     }
-    raw[lat..lat + x.len()].to_vec()
+    (raw[..lat].to_vec(), raw[lat..lat + x.len()].to_vec())
 }
 
 /// 由测试集正本派生「全部任务关掉保命」的测试集：只改每条任务的 `safety`，别的不动。

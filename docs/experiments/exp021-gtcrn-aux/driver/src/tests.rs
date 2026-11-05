@@ -90,3 +90,53 @@ fn faults_handled_in_premix_same_as_engine_path() {
     assert!(direct.iter().all(|v| v.is_finite()));
     assert_eq!(direct, twice);
 }
+
+/// 假模型：延迟 L 个样本、开头有非零预热输出（像 GTCRN 的重叠相加）。
+struct Warm {
+    buf: Vec<f32>,
+    lat: usize,
+}
+
+impl Model for Warm {
+    fn name(&self) -> &'static str {
+        "warm"
+    }
+    fn sample_rate(&self) -> u32 {
+        SR
+    }
+    fn hop(&self) -> usize {
+        HOP
+    }
+    fn latency_samples(&self) -> usize {
+        self.lat
+    }
+    fn reset(&mut self) {
+        self.buf = vec![0.02; self.lat];
+    }
+    fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), ModelError> {
+        self.buf.extend(input.iter().map(|v| 0.5 * v));
+        for (i, o) in output.iter_mut().enumerate() {
+            *o = self.buf[i];
+        }
+        self.buf.drain(..HOP);
+        Ok(())
+    }
+}
+
+fn warm(lat: usize) -> Warm {
+    let mut w = Warm { buf: Vec::new(), lat };
+    w.reset();
+    w
+}
+
+/// 根因回归（GTCRN 核对不过的那一处）：带真实预热段重混 = 真模型直接走引擎；补零则不保证。
+#[test]
+fn head_makes_remix_equal_real_model_path() {
+    let (x, _) = fake(SR as usize * 3);
+    let lat = 256;
+    let direct = run_engine(warm(lat), &x, SafetyConfig::default());
+    let (head, y) = run_engine_full(warm(lat), &x, SafetyConfig::off());
+    assert_eq!(head.len(), lat);
+    assert!(head.iter().any(|v| *v != 0.0));
+    assert_eq!(remix_with_head(&x, &head, &y, SafetyConfig::default()), direct);
+}
