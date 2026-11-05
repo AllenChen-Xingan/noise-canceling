@@ -38,11 +38,12 @@ pub fn run(clips_rel: &str, id: &str, kind: &str) -> Result<(), String> {
     // 假设验证：回放时把模型真实的前 lat 个预热样本补回去（外部目录格式只存对齐后的输出，这段补零）
     let full = {
         let mut eng = Engine::new(open()?, SafetyConfig::off());
-        let n = (x.len() + lat).div_ceil(160) * 160;
+        let hop = eng.hop();
+        let n = (x.len() + lat).div_ceil(hop) * hop;
         let mut xp = vec![0.0f32; n];
         xp[..x.len()].copy_from_slice(&x);
         let mut raw = vec![0.0f32; n];
-        for (p, q) in xp.chunks_exact(160).zip(raw.chunks_exact_mut(160)) {
+        for (p, q) in xp.chunks_exact(hop).zip(raw.chunks_exact_mut(hop)) {
             eng.process(p, q);
         }
         raw
@@ -63,6 +64,6 @@ pub fn run(clips_rel: &str, id: &str, kind: &str) -> Result<(), String> {
     println!("B 回放 + 默认保命：  {sb:?}");
     let first = a.iter().zip(&b).position(|(p, q)| p != q);
     let maxd = a.iter().zip(&b).map(|(p, q)| (p - q).abs()).fold(0.0f32, f32::max);
-    println!("第一处不同：{first:?}（hop {:?}）· 最大差 {maxd:e} · 段长 {}", first.map(|i| (i + lat) / 160), x.len());
+    println!("第一处不同：{first:?}（hop {:?}）· 最大差 {maxd:e} · 段长 {}", first.map(|i| (i + lat) / exp021_remix::HOP), x.len());
     Ok(())
 }
