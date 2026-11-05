@@ -76,6 +76,12 @@ fn estoi_matches_pystoi_within_1e_4() {
         let (x, y) = case(kind, n, c["seed"].as_u64().unwrap());
         let got = estoi(&x, &y, SR).unwrap_or_else(|| panic!("{kind}: Rust 没出分"));
         let want = c["estoi"].as_f64().unwrap();
+        if kind == "zero" {
+            // 上游 row_col_normalize 先加 EPS × 随机噪声再归一化：输出全零时它的值只是这点随机噪声，
+            // 每次不同（实测 −0.0002 ~ 0.0024）。不逐位对拍，两边都必须接近 0
+            assert!(got.abs() <= 0.01 && want.abs() <= 0.01, "zero: Rust {got} · pystoi {want}");
+            continue;
+        }
         let d = (got - want).abs();
         worst = worst.max(d);
         assert!(
