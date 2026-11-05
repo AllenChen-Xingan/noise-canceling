@@ -107,13 +107,51 @@ fn excerpt(c: &Clip, start: usize, n: usize) -> Clip {
     d
 }
 
-/// 一个 verifier 的分数逐位记进 `acc`。
+/// 建基准时（`f2782cf4`，#104）登记表里的 verifier 与各自的旁报字段，按登记表顺序。
+/// 「verifiers」组只守这些：之后新加的项和旁报（#111 起）由各自的单元测试守，不让这条红线每加一列就变红。
+/// 清单里的项和字段一个都不许少（[`frozen_items_and_fields_all_present`]），防止悄悄删掉；只许改清单外的东西。
+/// 怎么证明「原有读数逐位不变」：按本清单过滤后的内容 ID 必须等于 `fixtures/spectrum_golden.txt` 里的原值。
+const FROZEN: &[(&str, &[&str])] = &[
+    ("V-LAT", &["measured_algo_ms", "declared_algo_ms"]),
+    ("V-FRAME", &[]),
+    ("V-NAN", &["nonfinite", "over_4"]),
+    ("V-MUTE", &[]),
+    ("V-SWITCH", &[]),
+    ("V-BGSTAB", &["signed_db", "frames"]),
+    ("V-ONSET", &["onsets", "p90_onset_loss_db", "voiced_loss_db"]),
+    ("V-NR", &["frames", "snri_db"]),
+    ("V-INTF", &["frames"]),
+    ("V-SPLVL", &[]),
+    ("V-MUSIC", &["kurt_in", "kurt_out", "isolated_peaks_per_s"]),
+    ("V-VACUUM", &[]),
+    ("V-TIMBRE", &["dev_0_1k", "dev_1_2k", "dev_2_4k", "dev_4_8k"]),
+    ("V-SIM-GATE", &["onset_miss", "noise_open", "owner_hops"]),
+    ("V-SIM-FA", &["interf_only_hops"]),
+    ("V-SIM-SWLAT", &[]),
+    ("V-SIM-QUIET", &["quiet_hops"]),
+    ("V-WEAK", &["delta_range_db", "frames"]),
+    ("V-PUMPV", &["windows", "mean_db"]),
+    ("V-CLICK", &["count"]),
+    ("V-ESTOI", &["estoi_out", "estoi_mix"]),
+    ("V-EAT-ASR", &[]),
+    ("V-DNSMOS", &[]),
+    ("V-NRMOS-SCOREQ", &[]),
+    ("V-NRMOS-DISTILL", &[]),
+];
+
+fn frozen_keys(id: &str) -> Option<&'static [&'static str]> {
+    FROZEN.iter().find(|(v, _)| *v == id).map(|(_, k)| *k)
+}
+
+/// 一个 verifier 的分数逐位记进 `acc`：只记 [`FROZEN`] 里登记的旁报字段（原顺序）。
+/// QA 层项在这里没接模型、id 记为 `V-?`，没有旁报，原样记。
 fn record(acc: &mut Acc, s: &vdn_eval::Score) {
     acc.text(s.id);
     acc.f64(s.value.unwrap_or(f64::NAN));
     acc.f64(s.threshold.unwrap_or(f64::NAN));
     acc.text(&format!("{:?}{}", s.grade, s.verdict.as_str()));
-    for (k, v) in &s.extra {
+    let keep = frozen_keys(s.id).unwrap_or(&[]);
+    for (k, v) in s.extra.iter().filter(|(k, _)| keep.contains(k)) {
         acc.text(k);
         acc.f64(*v);
     }
@@ -139,7 +177,12 @@ fn score(acc: &mut Acc, c: &Clip, ids: Option<&[&str]>) -> Vec<vdn_eval::Score> 
         noise_out: Some(&noise_run.out),
         ci: true,
     };
-    let all: Vec<&str> = REGISTRY.iter().map(|i| i.id).collect();
+    // 默认评分清单 = 登记表里属于 FROZEN 的项（保持登记表顺序）
+    let all: Vec<&str> = REGISTRY
+        .iter()
+        .map(|i| i.id)
+        .filter(|id| frozen_keys(id).is_some())
+        .collect();
     let out: Vec<_> = ids
         .unwrap_or(&all)
         .iter()
@@ -262,6 +305,27 @@ fn eval_spectra_match_golden() {
     }
     for (w, g) in want.iter().zip(&got) {
         assert_eq!(*w, g.as_str(), "评测器频谱计算与改前不同（红线），先停下报");
+    }
+}
+
+/// 冻结清单里的项都还在登记表里，每个旁报字段都还会在基准片段上出现（不许悄悄删掉）。
+#[test]
+fn frozen_items_and_fields_all_present() {
+    for (id, keys) in FROZEN {
+        assert!(REGISTRY.iter().any(|i| i.id == *id), "{id} 从登记表里删掉了");
+        if keys.is_empty() {
+            continue;
+        }
+        let mut seen = std::collections::BTreeSet::new();
+        for c in [clip(7, 5.0), clip(11, 15.0)] {
+            let mut acc = Acc::default();
+            for s in score(&mut acc, &c, Some(&[id])) {
+                seen.extend(s.extra.iter().map(|(k, _)| *k));
+            }
+        }
+        for k in *keys {
+            assert!(seen.contains(k), "{id} 的旁报 {k} 不见了");
+        }
     }
 }
 
