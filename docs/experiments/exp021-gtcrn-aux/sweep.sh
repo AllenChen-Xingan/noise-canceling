@@ -22,7 +22,7 @@ systems=()
 for g in "${grid[@]}"; do
   read -r o f <<<"$g"
   dir="_tmp/030/${prefix}/o${o#-}-f${f#-}"
-  [ -e "../noise_canceling/${dir}" ] || caffeinate -i "$B" remix --src "$src" --out "$dir" --prefix "$prefix" --open-db "$o" --floor-db "$f" "${head[@]}"
+  [ -e "../noise_canceling/${dir}" ] || caffeinate -i "$B" remix --src "$src" --out "$dir" --prefix "$prefix" --open-db "$o" --floor-db "$f" ${head[@]+"${head[@]}"}
   systems+=("external:${dir}")
 done
 nomix="_tmp/030/${prefix}/nomix"
