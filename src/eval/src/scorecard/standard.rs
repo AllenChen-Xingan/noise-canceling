@@ -103,7 +103,7 @@ const INTF10: Item = Item {
 };
 
 const QUIET: [Item; 2] = [it("V-MUSIC"), NR6];
-const TALKERS: [Item; 4] = [
+const TALKERS: [Item; 6] = [
     NR6,
     INTF10,
     Item {
@@ -113,8 +113,18 @@ const TALKERS: [Item; 4] = [
         clean_input: false,
     },
     it("V-BGSTAB"),
+    // 量输出的「旁人漏过事件率」「同时说话只留用户」（025 D2b · D5）：只报不判
+    ro("V-LEAK"),
+    ro("V-PSE-OVL"),
 ];
-const TRANSIT: [Item; 4] = [NR6, INTF10, it("V-BGSTAB"), it("V-MUSIC")];
+const TRANSIT: [Item; 6] = [
+    NR6,
+    INTF10,
+    it("V-BGSTAB"),
+    it("V-MUSIC"),
+    ro("V-LEAK"),
+    ro("V-PSE-OVL"),
+];
 const MEETROOM: [Item; 2] = [NR6, it("V-BGSTAB")];
 
 /// 场景类：决定在 [`COMMON`] 之外再看哪几项。
@@ -174,8 +184,17 @@ pub fn group_of(s: MeetingPlace) -> Option<Group> {
 pub const PHYSICAL: [&str; 5] = ["V-NAN", "V-LAT", "V-MUTE", "V-FRAME", "V-SWITCH"];
 
 /// 新规则（v2）里改为只报不判的项：门控两项降为引擎诊断（人定 D85 题 4 = A，由量输出的新项接替）·
-/// 咔嗒（题 7 = B）· 真空感（025 B4，只多一列）。
-pub const V2_REPORT_ONLY: [&str; 4] = ["V-SIM-GATE", "V-SIM-FA", "V-CLICK", "V-VACUUM"];
+/// 咔嗒（题 7 = B）· 真空感（025 B4，只多一列）· 量输出的四项（025 D1 · D2b · D3 · D5，过关线待人拍板）。
+pub const V2_REPORT_ONLY: [&str; 8] = [
+    "V-SIM-GATE",
+    "V-SIM-FA",
+    "V-CLICK",
+    "V-VACUUM",
+    "V-TSOS",
+    "V-SWALLOW",
+    "V-LEAK",
+    "V-PSE-OVL",
+];
 
 /// 人定 D85 题 2 = B：这三项要在「干净人声单独过一遍模型」的输出上算。分数里没有 [`CLEAN_PASS_MARK`] 旁证的
 /// （旧口径：在带噪输出上算的），新规则下只报不判，注明待重跑。
@@ -210,6 +229,34 @@ pub fn items(s: MeetingPlace) -> Vec<(Item, bool)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 标了「干净人声单独过一遍」的项正好是 [`CLEAN_PASS`] 三项（两处表示交叉校验）。
+    #[test]
+    fn clean_input_items_match_clean_pass() {
+        let mut got: Vec<&str> = VETO
+            .iter()
+            .chain(&COMMON)
+            .chain(Group::ALL.iter().flat_map(|g| g.extra()))
+            .filter(|i| i.clean_input)
+            .map(|i| i.v)
+            .collect();
+        got.sort_unstable();
+        got.dedup();
+        let mut want = CLEAN_PASS.to_vec();
+        want.sort_unstable();
+        assert_eq!(got, want);
+    }
+
+    /// 每个只报不判的 v2 项，在标准里也标了 `report_only`（量输出四项、真空感、咔嗒）或是门控两项。
+    #[test]
+    fn v2_report_only_consistent_with_items() {
+        for v in V2_REPORT_ONLY {
+            assert!(
+                is_report_only(v) || v == "V-SIM-GATE" || v == "V-SIM-FA",
+                "{v}"
+            );
+        }
+    }
 
     #[test]
     fn v2_params_are_registered_threshold_values() {
