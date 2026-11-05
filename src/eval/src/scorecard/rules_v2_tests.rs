@@ -223,3 +223,16 @@ fn holm_can_reject_a_whole_family_of_sixty() {
     let min_p = 1.0 / (th::AGG.def("reps") + 1.0);
     assert!(min_p < th::AGG.def("alpha") / 60.0);
 }
+
+/// 吃字的「多错几个字」由百分点 × 参考字数还原（`qa` 只存百分点）：各种字数与差值都要精确还原成整数（025 E2）。
+#[test]
+fn eat_chars_recovers_integer_char_diff() {
+    for len in 1..=80usize {
+        for d in -12i64..=12 {
+            let pp = d as f64 / len as f64 * 100.0;
+            let mut s = sc("V-EAT-ASR", pp, 1.0);
+            s.extra.push(("ref_len", len as f64));
+            assert_eq!(eat_chars(&s), Some(d as f64), "len {len} d {d}");
+        }
+    }
+}

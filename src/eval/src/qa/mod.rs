@@ -144,7 +144,8 @@ impl QaExtra {
             pp(od + os, md + ms),
             U,
             Better::Lower,
-            Some(p.f_or("max", 1.0)),
+            // 过关线只从任务参数取（成绩单标准给 1.0，正本 thresholds 表 V-EAT-ASR · max；025 E2），不在这里写默认值
+            p.f("max"),
             &[],
         )
         .with_extra("d_del_pp", pp(od, md))
