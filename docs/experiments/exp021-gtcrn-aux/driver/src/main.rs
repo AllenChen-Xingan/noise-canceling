@@ -7,6 +7,7 @@
 //!
 //! 目录可以写相对主目录的路径。新目录已存在就报错（不覆盖旧 build）。
 
+mod diag;
 mod raw;
 
 use std::path::{Path, PathBuf};
@@ -148,6 +149,11 @@ fn main() -> ExitCode {
         Some("remix") => cmd_remix(&args),
         Some("suite") => cmd_suite(&args),
         Some("raw") => cmd_raw(&args),
+        Some("diag") => diag::run(
+            &arg(&args, "--clips").unwrap_or_default(),
+            &arg(&args, "--clip").unwrap_or_default(),
+            &arg(&args, "--kind").unwrap_or_else(|| "mix".into()),
+        ),
         _ => Err("用法：exp021-remix <remix | raw | suite> …".into()),
     };
     match r {
