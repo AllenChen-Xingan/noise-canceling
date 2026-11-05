@@ -20,6 +20,8 @@ import measures as M  # noqa: E402
 
 SR = 16000
 SEED = 17
+# 写出音频、供 Rust 对拍（tests/timbre_parity.rs）的劣化
+PARITY = ("ref", "lp4k", "hs+6", "ls+6", "notch1-2k-12", "white20")
 
 
 def lowpass(x, fc):
@@ -46,6 +48,13 @@ def notch(x, lo, hi, depth_db):
     return x + (10 ** (depth_db / 20) - 1) * bp
 
 
+def tilt(x, db_per_oct):
+    """整体谱倾斜：以 1 kHz 为轴，每倍频程 db_per_oct dB（零相位，FFT 域）。"""
+    f = np.fft.rfftfreq(len(x), 1 / SR)
+    g = 10 ** (db_per_oct * np.log2(np.maximum(f, 50) / 1000) / 20)
+    return np.fft.irfft(np.fft.rfft(x) * g, len(x))
+
+
 def add_noise(x, owner, snr_db, kind, rng):
     n = rng.standard_normal(len(x))
     if kind == "pink":
@@ -63,6 +72,9 @@ DEGS += [(f"lp{f // 1000}k", (lambda f: lambda x, o, r: lowpass(x, f))(f)) for f
 DEGS += [(f"hs{g:+d}", (lambda g: lambda x, o, r: shelf(x, 3000, g, "high"))(g)) for g in (-6, -3, 3, 6)]
 DEGS += [(f"ls{g:+d}", (lambda g: lambda x, o, r: shelf(x, 250, g, "low"))(g)) for g in (-6, 6)]
 DEGS += [(f"notch2-4k{d:d}", (lambda d: lambda x, o, r: notch(x, 2000, 4000, d))(d)) for d in (-6, -12)]
+DEGS += [(f"notch{lo / 1000:g}-{hi / 1000:g}k-12", (lambda lo, hi: lambda x, o, r: notch(x, lo, hi, -12))(lo, hi)) for lo, hi in ((500, 1000), (1000, 2000))]
+DEGS += [("peak2-4k+6", lambda x, o, r: notch(x, 2000, 4000, 6))]
+DEGS += [(f"tilt{t:+g}", (lambda t: lambda x, o, r: tilt(x, t))(t)) for t in (-2, -1)]
 DEGS += [(f"{k}{s}", (lambda k, s: lambda x, o, r: add_noise(x, o, s, k, r))(k, s)) for k in ("white", "pink") for s in (30, 20, 10)]
 
 
@@ -89,7 +101,7 @@ def main(build, outdir):
         noise_only = ~M.dilate(owner, 3)
         for name, fn in DEGS:
             y = fn(ref, owner, rng)
-            if name in ("lp1k", "white20", "hs+6"):
+            if name in PARITY:
                 sf.write(outdir / f"{d.name}__{name}.wav", y.astype(np.float32), SR, subtype="FLOAT")
             code, cdev = M.code_timbre(y, ref, owner)
             code_n, _ = M.code_timbre(y, ref, owner, noise_only)
