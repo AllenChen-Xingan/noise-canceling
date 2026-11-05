@@ -1,0 +1,2 @@
+start 15:35:53 lock=owner: noise-canceling-74 / finetune power=Now drawing from 'AC Power'
+end 15:36:39 lock=owner: noise-canceling-74 / finetune
