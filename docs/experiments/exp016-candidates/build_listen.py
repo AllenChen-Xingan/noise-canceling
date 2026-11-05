@@ -1,7 +1,8 @@
 """exp016 · 人耳盲听：GTCRN 对 DFN3 低延迟版，4 题 × 2 段 = 8 段，每段 12 s，共 96 s（≤ 8 段、≤ 2 分钟）。
 
 听的是成绩单打分时那份输出（含引擎的原声混回，就是用户听到的），取自两次成绩单 run 的 `qa/asr-wav/`。
-每题两边按同一积分响度对齐（pyloudnorm，-26 LUFS，峰值不超 -1 dBFS），免得「更响 = 更好」；增益写进揭盲表。
+每题两边按同一积分响度对齐（pyloudnorm，目标 -26 LUFS；任一边会超 -1 dBFS 峰值时两边一起降），免得「更响 = 更好」；
+写出后复测两边响度差 ≤ 0.1 LU；增益、目标响度和实测差写进揭盲表。
 选题（2026-11-05，cands，依据 findings.md 与 `runs/weak-spots-20261105/`）：
   q 咔哒：cafe-s00-ext —— DFN3 咔哒最多的段之一（每分钟 125 个，GTCRN 60 个）
   q 户外：street-outdoor-s05-ext —— GTCRN 最弱的户外段（风声；Distill-MOS 差 +0.23）
@@ -53,10 +54,13 @@ def source(clip, system):
     return hits[0]
 
 
-def match_gain(x, sr, meter):
-    """把 x 调到 LUFS 积分响度的增益（线性）；峰值超 PEAK 就再往下压。"""
-    g = 10 ** ((LUFS - meter.integrated_loudness(x)) / 20)
-    return min(g, PEAK / max(float(np.max(np.abs(x))), 1e-9))
+def pair_gains(xs, meter):
+    """一题两边的增益（线性）：两边调到同一个积分响度。目标取 LUFS，
+    若任一边到 LUFS 时峰值会超 PEAK，就把两边一起降到都不超的那个响度——保证两边等响。"""
+    loud = [meter.integrated_loudness(x) for x in xs]
+    room = [l + 20 * np.log10(PEAK / max(float(np.max(np.abs(x))), 1e-9)) for x, l in zip(xs, loud)]
+    target = min([LUFS] + room)
+    return [10 ** ((target - l) / 20) for l in loud], target
 
 
 def plan(rng, n):
@@ -111,17 +115,26 @@ def main():
         clip, why = CLIPS[i]
         qid = f"q{n}"
         side = {"X": "gtcrn" if x_is_gtcrn else "dfn3-ll", "Y": "dfn3-ll" if x_is_gtcrn else "gtcrn"}
-        rec = {"clip": clip, "why": why, "slots": {}}
-        for slot, system in side.items():
-            src = source(clip, system)
-            x, sr = sf.read(src, dtype="float32")
-            g = match_gain(x, sr, pyln.Meter(sr))
+        srcs = {slot: source(clip, system) for slot, system in side.items()}
+        xs = {slot: sf.read(src, dtype="float32") for slot, src in srcs.items()}
+        sr = {r for _, r in xs.values()}.pop()
+        meter = pyln.Meter(sr)
+        gains, target = pair_gains([xs[s][0] for s in side], meter)
+        rec = {"clip": clip, "why": why, "target_lufs": round(float(target), 2), "slots": {}}
+        outs = []
+        for (slot, system), g in zip(side.items(), gains):
+            src, x = srcs[slot], xs[slot][0]
             out = listen / f"{qid}_{slot}.wav"
             sf.write(out, np.clip(x * g, -1, 1), sr, subtype="PCM_16")
+            outs.append(sf.read(out, dtype="float32")[0])
             files[out.name] = sha(out)
             total += len(x) / sr
             rec["slots"][slot] = {"system": system, "source": str(src.relative_to(MAIN)), "source_sha256": sha(src),
                                   "gain_db": round(20 * float(np.log10(g)), 2)}
+        # 复测：写出去的两边积分响度差 ≤ 0.1 LU
+        diff = abs(meter.integrated_loudness(outs[0]) - meter.integrated_loudness(outs[1]))
+        assert diff <= 0.1, f"{qid} 两边响度差 {diff:.2f} LU"
+        rec["loudness_diff_lu"] = round(float(diff), 3)
         K["questions"][qid] = rec
         qs.append(question(qid, n))
     if len(files) > MAX_FILES or total > MAX_SECONDS:

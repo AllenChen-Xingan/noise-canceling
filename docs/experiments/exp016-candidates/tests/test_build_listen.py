@@ -51,13 +51,22 @@ class Plan(unittest.TestCase):
 
 
 class Gain(unittest.TestCase):
-    def test_peak_cap(self):
-        class Meter:
-            def integrated_loudness(self, x):
-                return -60.0  # 很轻 → 想放大 34 dB
-        x = np.array([0.0, 0.5, -0.5], dtype=np.float32)
-        g = B.match_gain(x, 16000, Meter())
-        self.assertLessEqual(g * 0.5, B.PEAK + 1e-9)
+    class Meter:  # 假响度计：响度 = 20·log10(峰值)，够测增益逻辑
+        def integrated_loudness(self, x):
+            return 20 * np.log10(float(np.max(np.abs(x))))
+
+    def test_equal_loudness_when_one_side_hits_peak(self):
+        quiet = np.array([0.0, 0.01, -0.01], dtype=np.float32)
+        loud = np.array([0.0, 0.9, -0.9], dtype=np.float32)
+        (gq, gl), target = B.pair_gains([quiet, loud], self.Meter())
+        m = self.Meter()
+        self.assertAlmostEqual(m.integrated_loudness(quiet * gq), m.integrated_loudness(loud * gl), places=6)
+        self.assertLessEqual(max(np.max(np.abs(quiet * gq)), np.max(np.abs(loud * gl))), B.PEAK + 1e-9)
+
+    def test_target_is_lufs_when_room(self):
+        x = np.array([0.0, 0.01], dtype=np.float32)
+        _, target = B.pair_gains([x, x], self.Meter())
+        self.assertAlmostEqual(target, B.LUFS)
 
 
 if __name__ == "__main__":
