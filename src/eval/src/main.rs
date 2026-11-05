@@ -393,7 +393,7 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
     vdn_eval::scorecard::card::ensure_fresh(&out)?;
     let mut qa = flag(args, "--qa").then(|| vdn_eval::qa::QaExtra::new(out.join("qa")));
     let extra = qa.as_mut().map(|x| x as &mut dyn vdn_eval::runner::Extra);
-    let (rows, skipped) = vdn_eval::scorecard::run(&suite, &sys, &opts, extra, None);
+    let (rows, skipped) = vdn_eval::scorecard::run_with(&suite, &sys, &opts, extra, None, rules);
     let card = vdn_eval::scorecard::card::Card::build_with(&rows, skipped, rules);
     let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "suite": path,
         "systems": sys.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "qa": qa.is_some(),
