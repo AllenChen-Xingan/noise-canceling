@@ -245,10 +245,12 @@ pub fn busiest_start(guide: &[f32], win: usize, step: usize) -> usize {
 
 /// `y` 相对 `x` 的延迟（样本）：在 `0..=max_lag` 里找**归一化**互相关 |r| 的峰（#109）。
 /// 窗取 `x[start..start + win]`，每个滞后除以两窗能量的几何平均，所以窗内能量随滞后变大不会抬高次峰。
+/// 窗口太靠后、放不下最大滞后时往前挪；整段比 `win + max_lag` 还短时窗缩到 `|y| − max_lag`。
 /// 输入窗全零、或所有滞后的输出窗都全零时返回 `None`（不另设相关下限：「量不准改判不知道」要人批准，025 ①-1）。
 pub fn xcorr_lag(x: &[f32], y: &[f32], max_lag: usize, start: usize, win: usize) -> Option<usize> {
-    let start = start.min(x.len());
-    let n = win.min(x.len() - start);
+    // 窗口给滞后搜索留出尾部空间：start + n + max_lag ≤ |y|；放不下时先把窗往前挪，再缩短窗（codex 中途 1 第 2 轮 P1 #1）
+    let n = win.min(x.len()).min(y.len().saturating_sub(max_lag));
+    let start = start.min(x.len() - n).min(y.len().saturating_sub(max_lag + n));
     let xs = &x[start..start + n];
     let ex: f64 = xs.iter().map(|a| (*a as f64).powi(2)).sum();
     if n == 0 || ex <= 0.0 {
