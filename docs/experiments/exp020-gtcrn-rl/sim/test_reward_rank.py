@@ -53,6 +53,23 @@ class T(unittest.TestCase):
         self.assertEqual(rr.r_composite_abs_guard(r, base), -1.0)
         self.assertEqual(rr.r_composite_hard_guard(r, base), -1.0)
 
+    def test_abs_guard_ignores_gtcrn(self):
+        r = row("a-c0", "x", V_ESTOI=0.03, V_NR=-6.0, V_ONSET=2.5)
+        b1 = row("a-c0", "gtcrn", V_ONSET=0.0)
+        b2 = row("a-c0", "gtcrn", V_ONSET=2.5)
+        self.assertEqual(rr.r_composite_abs_guard(r, b1), rr.r_composite_abs_guard(r, b2))
+
+    def test_no_feasible_excluded(self):
+        rows = []
+        for s, o in [("gtcrn", 4.0), ("a", 5.0), ("b", 6.0)]:  # 全部字头 > 3 dB → 绝对阈值下全否决
+            rows.append(row("s0-c0", s, V_ESTOI=0.02, V_NR=-5.0, V_ONSET=o,
+                            V_NRMOS_DISTILL=0.1, V_NRMOS_SCOREQ=0.1))
+        table = {"s0-c0": {r["system"]: r for r in rows}}
+        res = rr.analyse(["a", "b", "gtcrn"], table)
+        g = res["rewards"]["composite_abs_guard"]
+        self.assertEqual(g["no_feasible_clips"], 1)
+        self.assertEqual(g["top_onset_n"], 0)
+
     def test_end_to_end(self):
         rows = []
         for i in range(4):

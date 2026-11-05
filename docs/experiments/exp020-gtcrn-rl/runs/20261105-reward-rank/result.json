@@ -30,6 +30,7 @@
    "veto_frac": null,
    "top_onset_worse_frac": 0.5378973105134475,
    "top_onset_n": 409,
+   "no_feasible_clips": 0,
    "system_mean_reward": {
     "dfn3-ll": 8.742082741726643,
     "dpdfnet2": 9.687407752224601,
@@ -62,6 +63,7 @@
    "veto_frac": null,
    "top_onset_worse_frac": 0.48842592592592593,
    "top_onset_n": 432,
+   "no_feasible_clips": 0,
    "system_mean_reward": {
     "dfn3-ll": 0.03498892837489646,
     "dpdfnet2": 0.043513470679891836,
@@ -100,6 +102,7 @@
    },
    "top_onset_worse_frac": 0.3125,
    "top_onset_n": 432,
+   "no_feasible_clips": 0,
    "system_mean_reward": {
     "dfn3-ll": -0.1831172279097732,
     "dpdfnet2": -0.18657625267242572,
@@ -138,6 +141,7 @@
    },
    "top_onset_worse_frac": 0.3819444444444444,
    "top_onset_n": 432,
+   "no_feasible_clips": 0,
    "system_mean_reward": {
     "dfn3-ll": -0.00696505284944422,
     "dpdfnet2": -0.017053861880132453,
@@ -176,6 +180,7 @@
    },
    "top_onset_worse_frac": 0.3819444444444444,
    "top_onset_n": 432,
+   "no_feasible_clips": 0,
    "system_mean_reward": {
     "dfn3-ll": 0.018779197735432275,
     "dpdfnet2": 0.004390672720437665,
@@ -214,6 +219,7 @@
    },
    "top_onset_worse_frac": 0.0,
    "top_onset_n": 432,
+   "no_feasible_clips": 0,
    "system_mean_reward": {
     "dfn3-ll": -0.49111489232255523,
     "dpdfnet2": -0.5685716863745578,
@@ -226,19 +232,19 @@
   },
   "composite_abs_guard": {
    "V-NRMOS-DISTILL": {
-    "mean_tau": -0.014121429598314044,
+    "mean_tau": -0.010049913748811501,
     "ci95": [
-     -0.16915689035799936,
-     0.13573302406778945
+     -0.16400727135293633,
+     0.1380853596658478
     ],
     "n_clips": 457,
     "n_scenes": 15
    },
    "V-NRMOS-SCOREQ": {
-    "mean_tau": 0.003367716967490977,
+    "mean_tau": 0.005593994211497748,
     "ci95": [
-     -0.12675046491133904,
-     0.12191913975550146
+     -0.12540190656616054,
+     0.12492467434916214
     ],
     "n_clips": 457,
     "n_scenes": 15
@@ -250,14 +256,15 @@
     "passthrough": 0.05,
     "ref": 0.20625
    },
-   "top_onset_worse_frac": 0.13657407407407407,
-   "top_onset_n": 432,
+   "top_onset_worse_frac": 0.1295843520782396,
+   "top_onset_n": 409,
+   "no_feasible_clips": 23,
    "system_mean_reward": {
-    "dfn3-ll": -0.5640079830357222,
-    "dpdfnet2": -0.6580922624430563,
+    "dfn3-ll": -0.5636494082996528,
+    "dpdfnet2": -0.6576088044424303,
     "gtcrn": -0.40463924538916624,
     "passthrough": -0.05,
-    "ref": -0.19094433809703185
+    "ref": -0.19062418157043018
    },
    "system_tau_V-NRMOS-DISTILL": -1.0,
    "system_tau_V-NRMOS-SCOREQ": -1.0

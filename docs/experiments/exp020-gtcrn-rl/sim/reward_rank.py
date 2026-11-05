@@ -101,7 +101,7 @@ def guard_penalty(row, base):
     return pen
 
 
-def r_composite(row, base, skip=(), eat_rule="pp"):
+def r_composite(row, base, skip=(), eat_rule="pp", rel_guard=True):
     """主奖励 = ESTOI 提升 + 0.002 × 降噪量（dB，封顶 12）；否决 → −1；守住项超线按量扣。"""
     e, nr = val(row, "V-ESTOI"), val(row, "V-NR")
     if e is None:
@@ -109,7 +109,8 @@ def r_composite(row, base, skip=(), eat_rule="pp"):
     if vetoed(row, skip, eat_rule):
         return -1.0
     nr_gain = 0.0 if nr is None else min(12.0, max(0.0, -nr))
-    return e + 0.002 * nr_gain - 0.01 * guard_penalty(row, base)
+    pen = guard_penalty(row, base) if rel_guard else 0.0
+    return e + 0.002 * nr_gain - 0.01 * pen
 
 
 def r_composite_no_asr(row, base):
@@ -134,12 +135,12 @@ def r_composite_hard_guard(row, base):
 
 
 def r_composite_abs_guard(row, base):
-    """不带识别 + 守住项用绝对阈值硬约束（与 GTCRN 无关）。"""
+    """不带识别 + 守住项用绝对阈值硬约束；不再按 GTCRN 扣分（`base` 不参与）。"""
     for v, t in ABS_GUARDS.items():
         x = val(row, v)
         if x is not None and x > t:
             return -1.0
-    return r_composite_no_asr(row, base)
+    return r_composite(row, base, skip=("V-EAT-ASR",), rel_guard=False)
 
 
 REWARDS = {
@@ -212,7 +213,7 @@ def analyse(systems, table):
     out = {"systems": systems, "clips": len(table), "rewards": {}, "veto_parts": veto_parts(systems, table)}
     for rn, rf in REWARDS.items():
         per = {j: ([], []) for j in JUDGES}
-        top_onset_worse = top_n = 0
+        top_onset_worse = top_n = no_feasible = 0
         sys_sum = {s: [0.0, 0] for s in systems}
         for clip, d in table.items():
             base = d[BASE]
@@ -230,8 +231,14 @@ def analyse(systems, table):
                 if t is not None:
                     per[j][0].append(t)
                     per[j][1].append(d[BASE]["scene"])
-            # 讨好检查：奖励最高的系统，字头比 GTCRN 多退 > 1 dB 的比例
-            top = systems[max(range(len(rs)), key=lambda i: rs[i])]
+            # 讨好检查：奖励最高的系统，字头比 GTCRN 多退 > 1 dB 的比例。
+            # 全部候选都被否决 → 记「无可行候选」，不参与；并列最高时取字头最好的那个（对奖励最有利的解读）
+            best = max(rs)
+            if best == -1.0:
+                no_feasible += 1
+                continue
+            tied = [s for s, x in zip(systems, rs) if x == best]
+            top = min(tied, key=lambda s: (val(d[s], "V-ONSET") is None, val(d[s], "V-ONSET") or 0.0))
             o, ob = val(d[top], "V-ONSET"), val(base, "V-ONSET")
             if o is not None and ob is not None:
                 top_n += 1
@@ -248,6 +255,7 @@ def analyse(systems, table):
                             for s in systems} if rn.startswith("composite") else None
         res["top_onset_worse_frac"] = top_onset_worse / top_n if top_n else None
         res["top_onset_n"] = top_n
+        res["no_feasible_clips"] = no_feasible
         res["system_mean_reward"] = {s: v[0] / v[1] for s, v in sys_sum.items() if v[1]}
         out["rewards"][rn] = res
     # 系统级：奖励均值排序 vs 裁判均值排序（只有 len(systems) 个点）
