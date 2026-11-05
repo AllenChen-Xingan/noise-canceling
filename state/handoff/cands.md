@@ -3,8 +3,8 @@
 - **状态**：进行中
 - **手上**：exp016 候选模型（DFN3 低延迟版 · DPDFNet-2 · NoNoise-Mac）上同一张成绩单 · issue #112
 - **交代**：主目录 `_tmp/20261104-b15/cands.md`
-- **做到哪**（2026-11-04）：外部入口完成，codex 中途 2 轮 P0/P1 清零，已报「入口可以开 PR」；DPDFNet-2 与 DFN3 低延迟版离线脚本写好（Python 测试 11 条全过），等名额冒烟
-- **下一步**：冒烟 → codex 审两个脚本（第②次中途评审）→ 报耗时估计、申请名额跑 480 段
+- **做到哪**（2026-11-05）：两个候选 480 段跑完；草稿成绩单（不带 --qa）出了，配对分析与 findings 草稿写好
+- **下一步**：evalfix 套入 clean 补丁、runner 接 provides、PR 合并 → merge main → 补 system.rs 的 native_rate 一支与「少 4 ms」测试 → 申请名额：两个候选**新 run**（mix + clean 一次跑全，各约 21–23 分钟）+ 带 --qa 成绩单（约 1.7–2 小时）
 
 ## 改了哪些文件
 | 文件 | 改了什么 |
@@ -22,13 +22,17 @@
 - NoNoise-Mac 用的 Core ML 模型是普通版还是 `_ll` 版无法从仓库判定（元数据只写 TorchScript 转换）
 
 ## 待人拍板
-1. **NoNoise-Mac 怎么进评测**（它有命令行文件降噪模式，不用驱动、不回录）
+1. **（已按默认 C：这批不测，推迟到下一批）NoNoise-Mac 怎么进评测**（它有命令行文件降噪模式，不用驱动、不回录）
    - A. 下载它 v1.5.1 release 的 cli.zip（260 KB）+ app.zip（7.2 MB）到主目录 `_tmp/exp016/`，只在本机命令行跑文件降噪，不装 app、不装驱动 —— 代价：运行未公证的第三方二进制（MIT 开源，可对照源码） ← 建议
    - B. 下载源码用 `swift build` 自己编 —— 代价：多下源码与依赖，编译要一次名额；同样是第三方代码
    - C. 这一批不测 NoNoise-Mac —— 代价：少一个现成 Mac 产品对照（D77 要它当对照组）
    - 如果你不回，默认 C（先测另两个），后果是 NoNoise-Mac 推迟到下一批
+2. **（大总管定：不做，记 backlog）DFN3 低延迟版要不要换产品自己的重采样器复测**（方案 `docs/experiments/exp016-candidates/plan-dfn3-resampler.md`）
 
 ## 转交（范围外，留给大总管）
+- ~~exp014 `driver/Cargo.lock` 要手动提交~~：已随 8556b95b 一起被 hook 提交（已核对），不用再管
+- 大总管定为记账错、转 evalfix 修：V-LAT 的重采样项只在模型原生采样率 ≠ IO 采样率时计入；外部系统声明原生采样率的字段待 evalfix 来定，`external.rs` 由 cands 改（带测试）
+- 请大总管把「DFN3 换产品重采样器复测」记进 `state/backlog.md`（不在 cands 可写范围），方案 `docs/experiments/exp016-candidates/plan-dfn3-resampler.md`
 - 入口评审第 1 轮留作 issue 的两条 P2：截半自检多切点 / 有声区切点 / `bg` 截半（#3）；同输入重复运行对照，区分数值抖动与偷看未来（#4）。详见 `docs/reviews/016_candidates-codex.md`
 - 上面「发现」第 1 条：codex-review skill 的 `file` 误判
 
@@ -45,3 +49,43 @@
 - 发现：soxr 流式重采样按样本序号对齐、自扣延迟，等于偷看约 124 样本（7.75 ms）未来 → 计入声明延迟
 - Python 测试 11 条（含与 Rust 正本 SCHEMA / Kind 名比对、与 scenes.json 片段清单比对）全过
 - 申请冒烟名额（两个 --probe，≤ 2 分钟）
+- 大总管改名 84 → 26（已核对会话列表：84 不在、26 新起）；冒烟名额申请重发给 26
+- 大总管定：草稿只跑 DSP 项（三个系统一次跑，吃字 / 听感写「尚无判据，待最终版」）；最终版不重跑 GTCRN——evalfix 新规则合并后它带 --qa 跑 passthrough · ref · gtcrn，cands 只带 --qa 跑 dpdfnet2 · dfn3-ll（约 1.7 h），同 build、同规则、同评分模型配对，README 记两个 run-id
+- NoNoise-Mac：人没选，按默认 C 这批不测，findings 写「推迟到下一批，待人定」
+- 入口 PR #115 已合并（Refs #112）；P2 开成 #113 #114
+- 领名额跑两个候选 480 段：DPDFNet-2 probe 通过（滞后 0，A→B→A 差 0.0），正式跑中
+- DPDFNet-2 run 20261104-235743-73c68379：971 文件 14 分 07 秒；finalize 通过（声明 960）
+- DFN3 低延迟版 run 20261105-001245-201407de：probe 通过（A→B→A 差 0.0）；971 文件 15 分 32 秒；finalize 通过（声明 284，调度延迟 1393 只记录）
+- 草稿成绩单 20261105-002946-e21f3a93（3 系统 × 480 段，不带 --qa，0 段没跑成，7 分 33 秒）→ 存 runs/；归还名额
+- 编译 exp014 驱动时 cargo 改了它的 Cargo.lock → 先盖回原文件；大总管放开后再让 cargo 刷新留着
+- 写 analyze.py（配对差值 + 成对片段自助重抽样区间 + 三态 + 前 5 处）与 6 条测试；修了排名口径（全局标准差、≥ 5 个配对单位）与同名模块导入
+- 写 findings 草稿；自核时改掉一处说过头（DFN3 不是 15 个场景都压得更多）并换成评分项正式中文名
+- 大总管确认 Cargo.lock 已随 8556b95b 提交（已核对）
+- 写方案 plan-dfn3-resampler.md：换 vdn-dsp 3 倍重采样（产品正本），预计前视 192、V-LAT 约 39.7 ms；发现 V-LAT 对 48 kHz 原生模型重复记了重采样预算
+- 大总管定：延迟账多记重采样 = 记账错，转 evalfix；换重采样器这批不做、记 backlog → findings 加局限、方案页首标状态、现状页改第 2 条
+- 大总管：backlog 已记（21acbb21）；native_rate 的默认值与允许取值从 vdn-types 采样率正本取（`MODEL_RATE` · `IO_RATE`），不在 external.rs 手写；最终字段以 evalfix 定的为准
+- evalfix 定 native_rate 字段（可选，只许 MODEL_RATE / IO_RATE，默认 MODEL_RATE）→ external.rs 实现 + 单测 + 端到端测试（8531a3bc），Python 收尾写 native_rate、测试比对 rate.rs；system.rs 那一支与「少 4 ms」测试等 evalfix PR 合并后补
+- 问大总管：DFN3 旧 run.json 补 native_rate=48000（不重跑音频，builds/ 加 amend.json 记旧新哈希）；不回默认照做
+- evalfix：native_rate 做法确认；最终 GTCRN run 20261105-005916-4ccf0638（规则 v2，约 03:30 完成）→ 记进 README runs 表
+- 大总管同意补字段：先确认进仓 run.json 已提交，再改；amend.json 记旧新 sha256 · 字段 · 原因 · 日期；最终版元数据记新哈希、README 说明
+- 大总管：合 main 后 v2 把干净人声单独过一遍，外部入口查不到 → external_e2e 主测试 Missing。与 evalfix 对齐：Kind 加 Clean（clean/ 可选，列了须 480 段齐）+ `External::provides`；没列时 runner 不跑这一路、三项只报不判（evalfix 定；大总管上一条写「报没跑成」，已请大总管知悉）。e2e 夹具写四种、加 clean 负例两条；_ext.py 输出 clean（owner 轨）；Rust 10+5、Python 25 条全过，clippy · tidy 过。补丁放主目录 _tmp/evalfix/cands-clean.patch（出自 fe09f692）
+- 大总管定：另开新 run，mix + clean 一次跑全；旧 run 不补 native_rate、不写 amend.json（撤回前一条）；旧 run 在 README 标「草稿，被 <新 run-id> 取代」
+- evalfix 套入 clean 补丁（bdf0ad57，出自 fe09f692），v2 下 vdn-eval 全绿；审 evalfix 的「没有 clean/ 判只报」测试：过，P2 一条（循环可能空过）已改 987a3af8；Kind::Clean 注释改为「没列时 runner 凭 provides 不跑这一路」
+- 大总管：开跑前方法审 codex 1 轮。写 plan-final-run.md；codex ③′ 2 轮（P1×4 全修、P2×3 修 2 留 1）→ 停。改动：probe 对 mix 与 clean 都量前视；analyze 加锚点（本次成绩单加 passthrough，与 GTCRN run 逐段比 ≤1e-6）· 只挑基线与候选合并 · 片段覆盖核对；吞字头跨 run 结论在识别权重未核实时降为参考。Python 33 条过；草稿分析重出逐字相同。成绩单估计改为 2.3–2.6 h（多 passthrough），总计约 3–3.3 h
+- 吞字头跨 run：直通锚点恒为 0 测不出 → 改用两次 run 的识别缓存同键逐条比（asr_drift.py + 4 条测试），阈值每段 ≤ 1 字照常比；大总管同意（2026-11-05）。识别服务无权重摘要，记 id + size_bytes
+- 等 #116 合 main，大总管通知后申请名额
+- 2026-11-05 08:55 大总管定：两个候选的成绩单分两次跑，先 dfn3-ll（延迟在线内的真竞争者；DPDFNet-2 草稿延迟 87.7 ms 已超线）。dfn3-ll 跑完立刻出它对 GTCRN 的配对分析并报大总管，再在同一名额里跑 dpdfnet2。各 run 的识别缓存保持独立，不拷锚点缓存。估时规则：先数「识别调用次数 × 每次秒数」。
+- 2026-11-05 08:55 识别服务带密钥实测（密钥取自 `src/eval/src/qa/asr.rs` 的本机占位常量，仓库无 `.env.local`）：`qwen3-asr-plus:1.7b` · 4412418975 字节，与上次相同。
+- 2026-11-05 大总管：锚点比对报完后，名额先让给 timbre 约 15 分钟（首次编译 + 一次对拍），等大总管通知再开 dfn3-ll 成绩单；比对是读文件，照常做
+- 2026-11-05 锚点 run `20261105-073042-a0a04ae6-dirty` 10:26 跑完；与 GTCRN run 的 passthrough 逐段比，23 项全部差 0；识别缓存 1920/1920 逐字相同；名额让给 timbre
+- 2026-11-05 大总管定：把锚点 run 的识别缓存灌进 DFN3 成绩单的输出目录（`--out`，主目录 `_tmp/scorecard/dfn3-ll-seeded-20261105/`，1920 条，sha256 61305aba…）；名额交回后开跑 DFN3；跑完核对缓存，出配对分析报大总管；DPDFNet-2 等通知再开（中间给 timbre 约 5 分钟）
+- 2026-11-05 DFN3 成绩单开跑命令用绝对路径（worktree 里没有 `_tmp/`）：`--system external:<主目录>/_tmp/exp016/dfn3-ll/20261105-063623-e4eb13d9 --out <主目录>/_tmp/scorecard/dfn3-ll-seeded-20261105`
+- 2026-11-05 DFN3 成绩单 `20261105-103000-4cf04ac1` 10:30–11:47 跑完；预置缓存 1920 条都在，新增 960 条（干净人声单独过系统那一路不送识别）；配对分析在 `runs/dfn3-ll-20261105-103000-4cf04ac1/`，已报大总管；名额交出，DPDFNet-2 等通知
+- 2026-11-05 更正：上面几行里的「吞字头」若指 V-EAT-ASR，应读作「吃字」（源码 verifiers.rs：V-ONSET = 吞字头，V-EAT-ASR = 吃字）。等名额期间做了：V-VACUUM = V-NR 反向（notes.md）；咔哒诊断 click_diag.py（复刻与成绩单逐段一致，3 段大多是穿过声的陡沿）；findings 加「最终版 · DFN3」一节（实测，未审）
+- 2026-11-05 13:30 DPDFNet-2 成绩单 `20261105-115707-fcf7cfb0` 跑完（11:57–13:17，480 段，无缺段，截半自检最大差 0，不带 -dirty）；缓存原 1920 条全在不变，新增 960；配对分析在 `runs/dpdfnet2-20261105-115707-fcf7cfb0/`，路径扫描 0。下一步：重写 findings 五节
+- 2026-11-05 15:00 D86（人定：加训 GTCRN，DPDFNet-2 出局，DFN3 留作对照）。延迟拆账 `dpdfnet2-latency.md`；16 ms 重复记账另开 #125（不在本线修）。findings 整篇重写（九节，含「如果延迟能解决」与「GTCRN 弱在哪」）；`weak_spots.py` + 测试 → `runs/weak-spots-20261105/`。盲听 build `20261105-145123-1f9b`（4 题 × 2 段 96 s）；首个 build `20261105-145102-da95` 左右没平衡（4 题 GTCRN 全在 X），未给人，已删，生成器改成左右各半并加测试。下一步：codex 审 findings
+- 2026-11-05 15:20 收尾 codex 审 findings 4 轮（第 1 轮 P1×2 · 第 2 轮 P1×1 · 第 3、4 轮无 P0/P1 → 停），全部核实属实；P2 剩 1 条开 #126。另开 #125（16 ms 重复记账）。盲听生成器改为两边共同响度 + 写后复测，当前 build 逐字节不变。**状态：已收尾，等大总管开 PR（Closes #112）；人听完把答卷交回 results/**
+- 2026-11-05 16:00 勘误 #129（分支 `fix/016-warmup-erratum`，从 origin/main 开）：findings 加「勘误」一节。
+  - 偏差（aux 实测，480 段）：V-NR 让候选平均多算 +0.108 dB [0.083, 0.133]；V-CLICK 反向 −0.42 个/分钟；其余项 ≈ 0；门控两项因 aux 路径关了保护处理量不了。
+  - 影响：降噪量方向不变（扣后约 +2.05 / +3.00 dB）；弱点表 68 个 V-NR 格子里 1 个（phone-booth · bed-ace）扣后分不出；盲听选段、延迟判定、D86 依据不变。
+  - 正文数字未改，读时按勘误节扣除；#129 不关。

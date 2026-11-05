@@ -1,0 +1,140 @@
+{
+ "V-BGSTAB": {
+  "max_abs": 0.0,
+  "n": 329,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-CLICK": {
+  "max_abs": 0.0,
+  "n": 480,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-EAT-ASR": {
+  "max_abs": 0.0,
+  "n": 480,
+  "judged": false,
+  "mean": 0.0
+ },
+ "V-ESTOI": {
+  "max_abs": 0.0,
+  "n": 480,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-INTF": {
+  "max_abs": 0.0,
+  "n": 178,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-LAT": {
+  "max_abs": 0.0,
+  "n": 480,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-LEAK": {
+  "max_abs": 0.0,
+  "n": 100,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-MUSIC": {
+  "max_abs": 0.0,
+  "n": 288,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-NAN": {
+  "max_abs": 0.0,
+  "n": 480,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-NR": {
+  "max_abs": 0.0,
+  "n": 457,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-NRMOS-DISTILL": {
+  "max_abs": 0.0,
+  "n": 480,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-NRMOS-SCOREQ": {
+  "max_abs": 0.0,
+  "n": 480,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-ONSET": {
+  "max_abs": 0.0,
+  "n": 432,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-PSE-OVL": {
+  "max_abs": 0.0,
+  "n": 242,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-PUMPV": {
+  "max_abs": 0.0,
+  "n": 480,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-SIM-GATE": {
+  "max_abs": 0.0,
+  "n": 480,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-SPLVL": {
+  "max_abs": 0.0,
+  "n": 465,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-SWALLOW": {
+  "max_abs": 0.0,
+  "n": 432,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-TIMBRE": {
+  "max_abs": 0.0,
+  "n": 480,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-TSOS": {
+  "max_abs": 0.0,
+  "n": 480,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-VACUUM": {
+  "max_abs": 0.0,
+  "n": 457,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-WEAK": {
+  "max_abs": 0.0,
+  "n": 480,
+  "judged": true,
+  "mean": 0.0
+ },
+ "V-SIM-FA": {
+  "max_abs": 0.0,
+  "n": 79,
+  "judged": true,
+  "mean": 0.0
+ }
+}

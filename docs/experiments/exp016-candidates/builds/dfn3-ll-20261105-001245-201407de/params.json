@@ -1,0 +1,93 @@
+{
+  "candidate": "dfn3-ll",
+  "limit": 0,
+  "files": 971,
+  "shards": [
+    {
+      "shard": "0/1",
+      "files": 971,
+      "skipped_existing": 0,
+      "audio_s": 11652.0,
+      "wall_s": 931.8,
+      "rtf": 0.08
+    },
+    {
+      "clips_sha256": "f257ed3c2ba8ef89bb043032eb2cbc1100ff8c2cc7a67e8113ef599b22b9c690",
+      "code_sha256": {
+        "docs/experiments/exp016-candidates/_ext.py": "3736b7e1a0135958bcf5bf7c76dbb08c5e51263414830a8eaba62d38a46e8cc1",
+        "docs/experiments/exp016-candidates/run_dfn3ll.py": "68b92ad7ec1fd54ee5f5ac847845919a851f41530125c19fa89e0c67287642e2"
+      },
+      "model": {
+        "lib_sha256": "4bcd38634000d456ad68db4b6ff97fe4a462542aa65ac5f910fbf374ca33fbaa",
+        "mode": "逐帧流式 · 48 kHz · 零前瞻（_ll）· atten_lim 100 dB · 每段重置",
+        "repo": "DeepFilterNet（resources/DeepFilterNet，上游 d375b2d8）· 运行库 Hush libweya_nc（上游 9f6414e9）",
+        "resample": "soxr 流式 HQ 16→48→16 kHz",
+        "runner": "docs/experiments/exp016-candidates/run_dfn3ll.py",
+        "weights": "resources/DeepFilterNet/models/DeepFilterNet3_ll_onnx.tar.gz",
+        "weights_sha256": "5998e58e8ba0e09bb76986ef97b84afa065a571ef282d4a1222f341e3251cf3a"
+      },
+      "setup": {
+        "align_shift_16k": 160,
+        "atten_lim_db": 100.0,
+        "declared_latency_16k": 284,
+        "lib_sha256": "4bcd38634000d456ad68db4b6ff97fe4a462542aa65ac5f910fbf374ca33fbaa",
+        "model_delay_48k": 480,
+        "model_sha256": "5998e58e8ba0e09bb76986ef97b84afa065a571ef282d4a1222f341e3251cf3a",
+        "resampler": "soxr 1.1.0 ResampleStream HQ",
+        "resampler_lookahead_16k": 124,
+        "scheduling_delay_16k": 1393
+      },
+      "versions": {
+        "libsndfile": "1.2.2",
+        "libsoxr": "0.1.3-14-ga66f3ee",
+        "machine": "arm64",
+        "numpy": "2.5.4",
+        "platform": "macOS-27.0.1-arm64-arm-64bit",
+        "python": "3.12.14",
+        "soundfile": "0.14.0",
+        "soxr": "1.1.0",
+        "soxr_ext_sha256": "acd41b4b209f6bc9ba84fd8f89aeb23552c4b7acb14b00f1ac9c19d499988df2"
+      }
+    }
+  ],
+  "cpu_count": 10,
+  "out_dir": "_tmp/exp016/dfn3-ll/20261105-001245-201407de",
+  "fingerprint": {
+    "clips_sha256": "f257ed3c2ba8ef89bb043032eb2cbc1100ff8c2cc7a67e8113ef599b22b9c690",
+    "code_sha256": {
+      "docs/experiments/exp016-candidates/_ext.py": "3736b7e1a0135958bcf5bf7c76dbb08c5e51263414830a8eaba62d38a46e8cc1",
+      "docs/experiments/exp016-candidates/run_dfn3ll.py": "68b92ad7ec1fd54ee5f5ac847845919a851f41530125c19fa89e0c67287642e2"
+    },
+    "model": {
+      "lib_sha256": "4bcd38634000d456ad68db4b6ff97fe4a462542aa65ac5f910fbf374ca33fbaa",
+      "mode": "逐帧流式 · 48 kHz · 零前瞻（_ll）· atten_lim 100 dB · 每段重置",
+      "repo": "DeepFilterNet（resources/DeepFilterNet，上游 d375b2d8）· 运行库 Hush libweya_nc（上游 9f6414e9）",
+      "resample": "soxr 流式 HQ 16→48→16 kHz",
+      "runner": "docs/experiments/exp016-candidates/run_dfn3ll.py",
+      "weights": "resources/DeepFilterNet/models/DeepFilterNet3_ll_onnx.tar.gz",
+      "weights_sha256": "5998e58e8ba0e09bb76986ef97b84afa065a571ef282d4a1222f341e3251cf3a"
+    },
+    "setup": {
+      "align_shift_16k": 160,
+      "atten_lim_db": 100.0,
+      "declared_latency_16k": 284,
+      "lib_sha256": "4bcd38634000d456ad68db4b6ff97fe4a462542aa65ac5f910fbf374ca33fbaa",
+      "model_delay_48k": 480,
+      "model_sha256": "5998e58e8ba0e09bb76986ef97b84afa065a571ef282d4a1222f341e3251cf3a",
+      "resampler": "soxr 1.1.0 ResampleStream HQ",
+      "resampler_lookahead_16k": 124,
+      "scheduling_delay_16k": 1393
+    },
+    "versions": {
+      "libsndfile": "1.2.2",
+      "libsoxr": "0.1.3-14-ga66f3ee",
+      "machine": "arm64",
+      "numpy": "2.5.4",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "python": "3.12.14",
+      "soundfile": "0.14.0",
+      "soxr": "1.1.0",
+      "soxr_ext_sha256": "acd41b4b209f6bc9ba84fd8f89aeb23552c4b7acb14b00f1ac9c19d499988df2"
+    }
+  }
+}
