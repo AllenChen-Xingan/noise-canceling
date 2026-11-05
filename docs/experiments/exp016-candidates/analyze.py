@@ -43,27 +43,36 @@ def load(run: Path):
     return rows, card
 
 
-SAME_META = ("rules", "suite", "qa")  # 合并的几个 run 这几项必须相同
+SAME_META = ("rules", "suite", "qa")  # 合并的几个 run 这几项必须都有、且相同
 
 
 def merge(loaded):
-    """[(rows, card)] → (rows, card)：card 取第一个的场景表（方向 · 单位），meta.run_id 用「+」连起来。"""
-    rows, card = list(loaded[0][0]), json.loads(json.dumps(loaded[0][1]))
-    seen = {(r["clip"], r["system"]) for r in rows}
-    for rs, c in loaded[1:]:
-        for k in SAME_META:
-            if c["meta"].get(k) != card["meta"].get(k):
-                raise SystemExit(f"run {c['meta']['run_id']} 的 {k} = {c['meta'].get(k)!r}，"
-                                 f"与 {card['meta']['run_id']} 的 {card['meta'].get(k)!r} 不同，不能配对")
-        if better_map(c) != better_map(card):
-            raise SystemExit(f"run {c['meta']['run_id']} 的评分项方向与第一个 run 不同")
+    """[(rows, card)] → (rows, card)：card 取第一个的场景表（方向 · 单位），meta.run_id 用「+」连起来。
+    拒绝：元数据缺项或不同 · 方向或单位不同 · 任一 run 内或跨 run 的（片段, 系统）重复 · 同一片段的场景 / 声音标签不同。"""
+    card = json.loads(json.dumps(loaded[0][1]))
+    first = card["meta"]
+    for k in SAME_META:
+        if first.get(k) is None:
+            raise SystemExit(f"run {first.get('run_id')} 的元数据缺 {k}，不能配对")
+    rows, seen, tags = [], set(), {}
+    for i, (rs, c) in enumerate(loaded):
+        m = c["meta"]
+        if i:
+            for k in SAME_META:
+                if m.get(k) != first[k]:
+                    raise SystemExit(f"run {m.get('run_id')} 的 {k} = {m.get(k)!r}，与 {first['run_id']} 的 {first[k]!r} 不同，不能配对")
+            if better_map(c) != better_map(card) or units(c) != units(card):
+                raise SystemExit(f"run {m.get('run_id')} 的评分项方向或单位与第一个 run 不同")
+            card["meta"]["run_id"] += "+" + m["run_id"]
         for r in rs:
             key = (r["clip"], r["system"])
             if key in seen:
-                raise SystemExit(f"{key} 在两个 run 里都有，不知道用哪个")
+                raise SystemExit(f"{key} 出现两次（run {m.get('run_id')}），不知道用哪个")
             seen.add(key)
+            t = (r["scene"], sorted(x["cls"] for x in r["sounds"]))
+            if tags.setdefault(r["clip"], t) != t:
+                raise SystemExit(f"片段 {r['clip']} 在两个 run 里的场景 / 声音标签不同")
             rows.append(r)
-        card["meta"]["run_id"] += "+" + c["meta"]["run_id"]
     return rows, card
 
 
