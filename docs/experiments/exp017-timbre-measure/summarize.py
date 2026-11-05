@@ -7,7 +7,7 @@ import sys
 
 import pandas as pd
 
-COLS = ["code_max", "doc_rms", "erb_std", "erb_slope", "erb_max", "third_max", "code_noisy_path", "erb_std_noisy_path"]
+COLS = ["code_max", "doc_rms", "erb_std", "erb_slope", "erb_max", "third_max", "code_noisy_path", "erb_std_noisy_path", "erb_std_sym"]
 BANDS = [f"code_b{i}" for i in range(4)] + [f"doc_b{i}" for i in range(4)]
 
 

@@ -134,7 +134,7 @@ def erb_bands(lo=100.0, hi=7900.0, step=1.0):
     return list(zip(edges[:-1], edges[1:]))
 
 
-def erb_shape(out, clean, owner, noise_only=None, sr=16000, step=1.0):
+def erb_shape(out, clean, owner, noise_only=None, sr=16000, step=1.0, sym=False):
     """候选第三种：1024/512，ERB 带（默认 1 ERB 宽，100–7900 Hz），只用有声帧，
     扣停顿帧残留噪声（同代码版），去掉整体电平（减各带偏差均值），
     报 形状差标准差 · 相邻带斜率差标准差 · 最大绝对形状差。"""
@@ -146,6 +146,9 @@ def erb_shape(out, clean, owner, noise_only=None, sr=16000, step=1.0):
     po = band_mean(so, sp, bands, sr, 1024)
     pn = band_mean(so, q, bands, sr, 1024)
     po = np.maximum(np.maximum(po - pn, 0.1 * po), 1e-20)
+    if sym:  # 参考也扣它自己停顿帧里的能量（混响尾巴），两边同样处理
+        pr = band_mean(sc, q, bands, sr, 1024)
+        pc = np.where(pc > 0, np.maximum(np.maximum(pc - pr, 0.1 * pc), 1e-20), 0.0)
     keep = pc > 0
     d = db10(po[keep]) - db10(pc[keep])
     # 先按中位数去掉整体增益，再截下限，最后去均值：截断点随增益平移，整体音量不改读数（codex 026 第 1 轮 #3）
