@@ -50,9 +50,9 @@
 
 | 用途 | run-id | 内容 | 位置 |
 |---|---|---|---|
-| 候选输出 | `20261104-235743-73c68379` | DPDFNet-2 · 971 个文件 · 14 分 07 秒 · 声明延迟 960 | 音频：主目录 `_tmp/exp016/dpdfnet2/<run-id>/`；清单：`builds/dpdfnet2-<run-id>/` |
-| 候选输出 | `20261105-001245-201407de` | DFN3 低延迟版 · 971 个文件 · 15 分 32 秒 · 声明延迟 284 | 音频：主目录 `_tmp/exp016/dfn3-ll/<run-id>/`；清单：`builds/dfn3-ll-<run-id>/` |
-| 草稿成绩单 | `20261105-002946-e21f3a93`（元数据带 `-dirty`，见 `provenance.json`） | gtcrn · dpdfnet2 · dfn3-ll，**不带 `--qa`**，旧规则，0 段没跑成，7 分 33 秒 | `runs/draft-20261105-002946-e21f3a93/` |
+| 候选输出（草稿用，被 `20261105-061524-e4eb13d9` 取代） | `20261104-235743-73c68379` | DPDFNet-2 · 971 个文件 · 14 分 07 秒 · 声明延迟 960 | 音频：主目录 `_tmp/exp016/dpdfnet2/<run-id>/`；清单：`builds/dpdfnet2-<run-id>/` |
+| 候选输出（草稿用，被 `20261105-063623-e4eb13d9` 取代） | `20261105-001245-201407de` | DFN3 低延迟版 · 971 个文件 · 15 分 32 秒 · 声明延迟 284 | 音频：主目录 `_tmp/exp016/dfn3-ll/<run-id>/`；清单：`builds/dfn3-ll-<run-id>/` |
+| 草稿成绩单（草稿，被 `20261105-103000-4cf04ac1` · `20261105-115707-fcf7cfb0` 取代） | `20261105-002946-e21f3a93`（元数据带 `-dirty`，见 `provenance.json`） | gtcrn · dpdfnet2 · dfn3-ll，**不带 `--qa`**，旧规则，0 段没跑成，7 分 33 秒 | `runs/draft-20261105-002946-e21f3a93/` |
 | 最终版 · GTCRN 一侧 | `20261105-005916-4ccf0638`（evalfix 跑，规则 v2，进行中） | passthrough · ref · gtcrn，带 `--qa` | evalfix 跑完放 `docs/experiments/exp014-scorecard-gtcrn/runs/20261105-005916-4ccf0638/` |
 | 最终版 · 候选一侧（待跑） | 待定 | dpdfnet2 · dfn3-ll，带 `--qa`；须与上一行同 build · 同规则版本 · 同评分模型版本（跑前逐项核对上一行 README 记的版本） | 跑完填在这里 |
 | 最终版 · 候选输出 | `20261105-061524-e4eb13d9` | DPDFNet-2 · 1451 个文件（mix · bg · trunc · clean）· 20 分 50 秒 · 声明延迟 960 | 音频：主目录 `_tmp/exp016/dpdfnet2/<run-id>/`；清单：`builds/dpdfnet2-<run-id>/` |
