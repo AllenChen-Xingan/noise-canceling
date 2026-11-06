@@ -58,6 +58,19 @@ class Pair(unittest.TestCase):
         self.assertAlmostEqual(r["scenes"]["cafe"], -1.0)
 
 
+class Load(unittest.TestCase):
+    def test_gz_and_plain_same(self):
+        import gzip, json, tempfile
+        rows = [row("c1", "A", **{"V-NR": -7.0})]
+        text = "".join(json.dumps(r) + "\n" for r in rows)
+        with tempfile.TemporaryDirectory() as d:
+            p, g = os.path.join(d, "c.jsonl"), os.path.join(d, "c.jsonl.gz")
+            open(p, "w", encoding="utf-8").write(text)
+            with gzip.open(g, "wt", encoding="utf-8") as f:
+                f.write(text)
+            self.assertEqual(analyze.load(p), analyze.load(g))
+
+
 class Oracle(unittest.TestCase):
     def test_picks_best_within_constraints(self):
         cur = {"D": {"cafe": {"V-ESTOI": 0.02, "V-ONSET": 2.0, "V-BGSTAB": 2.0}},

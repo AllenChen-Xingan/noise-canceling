@@ -12,6 +12,7 @@
       每个系统（= 一组混回参数）每项的平均值，按场景分组，写成表。
 """
 
+import gzip
 import json
 import math
 import sys
@@ -25,7 +26,9 @@ TOL = 0.0
 
 
 def load(path):
-    with open(path, encoding="utf-8") as f:
+    """读 clips.jsonl；.gz 结尾的（仓里超 10 MB 的压缩存）直接解压读。"""
+    opener = gzip.open if path.endswith(".gz") else open
+    with opener(path, "rt", encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
 
 
@@ -189,7 +192,7 @@ def main(argv):
         print(f"\n按段数加权的可懂度总提升：{tot:+.4f}")
         return 0
     if len(argv) >= 2 and argv[0] == "curve":
-        files = [a for a in argv[1:] if a.endswith(".jsonl")]
+        files = [a for a in argv[1:] if a.endswith((".jsonl", ".jsonl.gz"))]
         items = next((argv[i + 1] for i, a in enumerate(argv) if a == "--items"), "").split(",")
         rows = [r for f in files for r in load(f)]
         c = curve(rows, set(items))

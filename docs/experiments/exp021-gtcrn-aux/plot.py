@@ -8,10 +8,13 @@
 每个模型一条线，「不混回」画在最左。y = 所选场景所有段的平均值。
 """
 
-import json
+import os
 import re
 import sys
 from collections import defaultdict
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import analyze  # noqa: E402  只为共用 load（含 .gz）
 
 DEF_OPEN, DEF_FLOOR = -6, -12
 NAME = re.compile(r"^(?P<m>.+?)-(?:om(?P<o>\d+)-fm(?P<f>\d+)|(?P<nomix>nomix))$")
@@ -108,11 +111,11 @@ def main(argv):
         return argv[argv.index(k) + 1] if k in argv else d
     out, items = opt("--out"), opt("--items", "").split(",")
     scenes = set(filter(None, opt("--scenes", "").split(",")))
-    files = [a for a in argv if a.endswith(".jsonl")]
+    files = [a for a in argv if a.endswith((".jsonl", ".jsonl.gz"))]
     if not out or not files or not items[0]:
         print(__doc__)
         return 2
-    rows = [json.loads(l) for f in files for l in open(f, encoding="utf-8") if l.strip()]
+    rows = [r for f in files for r in analyze.load(f)]
     mean = means(rows, set(items), scenes)
     models = sorted({k[0][0] for k in mean})
     title = "全部场景" if not scenes else "场景：" + "、".join(sorted(scenes))
