@@ -5,6 +5,9 @@
       逐段逐项比对两路分数。除「预期会变」那几项外，差必须为 0，否则退出码 1。
   analyze.py pair A/clips.jsonl <系统A> B/clips.jsonl <系统B> --items V-NR,V-ESTOI,...
       逐段配对差（B − A）：每项均值 · 95% 区间（正态近似）· 段数 · 不为 0 的段数；另按场景给均值差。
+  analyze.py oracle <clips.jsonl> <默认系统> [--onset-max 3.0] [--onset-up 9] [--bg-up 0]
+      推演上限：每个场景从全部档里挑可懂度最高的一档，约束 = 字头均值 ≤ onset-max 且比默认升不超过 onset-up dB、
+      背景稳比默认升不超过 bg-up；挑不到就留默认。报每场景所选档与可懂度提升，以及按段数加权的总提升。
   analyze.py curve <clips.jsonl>... --items V-NR,V-ONSET,... [--out 表.md]
       每个系统（= 一组混回参数）每项的平均值，按场景分组，写成表。
 """
@@ -96,6 +99,30 @@ def pair(rows_a, sys_a, rows_b, sys_b, items):
     return out
 
 
+def oracle(cur, default, onset_max=3.0, onset_up=9.0, bg_up=0.0):
+    """cur = curve() 的结果；返回 {场景: (所选系统, 可懂度提升)}。"""
+    out = {}
+    scenes = sorted(k for k in cur.get(default, {}) if k != "_all")
+    for sc in scenes:
+        d = cur[default][sc]
+        best = (default, 0.0)
+        for sys_, by in cur.items():
+            m = by.get(sc)
+            if not m or m.get("V-ESTOI") is None or d.get("V-ESTOI") is None:
+                continue
+            on, on0 = m.get("V-ONSET"), d.get("V-ONSET")
+            if on is not None and (on > onset_max or on - on0 > onset_up):
+                continue
+            bg, bg0 = m.get("V-BGSTAB"), d.get("V-BGSTAB")
+            if bg is not None and bg0 is not None and bg - bg0 > bg_up:
+                continue
+            gain = m["V-ESTOI"] - d["V-ESTOI"]
+            if gain > best[1]:
+                best = (sys_, gain)
+        out[sc] = best
+    return out
+
+
 def mean(xs):
     xs = [x for x in xs if x is not None]
     return sum(xs) / len(xs) if xs else None
@@ -144,6 +171,22 @@ def main(argv):
         print("\n按场景的均值差\n\n| 场景 | " + " | ".join(res) + " |\n|---" * 1 + "|---" * len(res) + "|")
         for sc in scenes:
             print(f"| {sc} | " + " | ".join(f"{res[v]['scenes'].get(sc, float('nan')):+.4f}" for v in res) + " |")
+        return 0
+    if len(argv) >= 3 and argv[0] == "oracle":
+        def opt(k, dflt):
+            return float(argv[argv.index(k) + 1]) if k in argv else dflt
+        rows = load(argv[1])
+        cur = curve(rows, {"V-ESTOI", "V-ONSET", "V-BGSTAB", "V-NR"})
+        n_sc = defaultdict(int)
+        for r in rows:
+            if r["system"] == argv[2]:
+                n_sc[r["scene"]] += 1
+        res = oracle(cur, argv[2], opt("--onset-max", 3.0), opt("--onset-up", 9.0), opt("--bg-up", 0.0))
+        print("| 场景 | 段数 | 所选档 | 可懂度提升 |\n|---|---|---|---|")
+        for sc, (sys_, g) in res.items():
+            print(f"| {sc} | {n_sc[sc]} | {sys_} | {g:+.4f} |")
+        tot = sum(n_sc[sc] * g for sc, (_, g) in res.items()) / max(1, sum(n_sc.values()))
+        print(f"\n按段数加权的可懂度总提升：{tot:+.4f}")
         return 0
     if len(argv) >= 2 and argv[0] == "curve":
         files = [a for a in argv[1:] if a.endswith(".jsonl")]

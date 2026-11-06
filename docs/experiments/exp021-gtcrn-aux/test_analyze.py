@@ -58,6 +58,19 @@ class Pair(unittest.TestCase):
         self.assertAlmostEqual(r["scenes"]["cafe"], -1.0)
 
 
+class Oracle(unittest.TestCase):
+    def test_picks_best_within_constraints(self):
+        cur = {"D": {"cafe": {"V-ESTOI": 0.02, "V-ONSET": 2.0, "V-BGSTAB": 2.0}},
+               "X": {"cafe": {"V-ESTOI": 0.05, "V-ONSET": 3.5, "V-BGSTAB": 1.0}},
+               "Y": {"cafe": {"V-ESTOI": 0.04, "V-ONSET": 2.8, "V-BGSTAB": 1.5}},
+               "Z": {"cafe": {"V-ESTOI": 0.045, "V-ONSET": 2.5, "V-BGSTAB": 2.5}}}
+        r = analyze.oracle(cur, "D", onset_max=3.0, bg_up=0.0)
+        self.assertEqual(r["cafe"][0], "Y")
+        self.assertAlmostEqual(r["cafe"][1], 0.02)
+        r = analyze.oracle(cur, "D", onset_max=3.0, onset_up=0.5)
+        self.assertEqual(r["cafe"][0], "D")
+
+
 class Curve(unittest.TestCase):
     def test_means_by_scene_and_all(self):
         rows = [row("c1", "S", "cafe", **{"V-NR": -6.0}), row("c2", "S", "cafe", **{"V-NR": -8.0}),
