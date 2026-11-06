@@ -1,0 +1,30 @@
+{
+ "build": "20261105-145123-1f9b",
+ "saved_at": "2026-11-06T19:05:44.201Z",
+ "answers": {
+  "q1": {
+   "overall": "=",
+   "eaten": "both",
+   "click": "none",
+   "note": "好像基本上没有降噪啊，还是环境音很炒"
+  },
+  "q2": {
+   "overall": "=",
+   "eaten": "both",
+   "click": "both",
+   "note": "这个两个都听不清"
+  },
+  "q3": {
+   "overall": "X+",
+   "eaten": "none",
+   "click": "none",
+   "note": ""
+  },
+  "q4": {
+   "overall": "=",
+   "eaten": "none",
+   "click": "none",
+   "note": ""
+  }
+ }
+}
