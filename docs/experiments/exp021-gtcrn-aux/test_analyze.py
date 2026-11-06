@@ -83,6 +83,11 @@ class Oracle(unittest.TestCase):
         r = analyze.oracle(cur, "D", onset_max=3.0, onset_up=0.5)
         self.assertEqual(r["cafe"][0], "D")
 
+    def test_reports_infeasible_instead_of_default(self):
+        cur = {"D": {"car": {"V-ESTOI": 0.02, "V-ONSET": 3.4, "V-BGSTAB": 2.0}},
+               "X": {"car": {"V-ESTOI": 0.05, "V-ONSET": 4.0, "V-BGSTAB": 1.0}}}
+        self.assertEqual(analyze.oracle(cur, "D", onset_max=3.0)["car"], (None, 0.0))
+
 
 class Curve(unittest.TestCase):
     def test_means_by_scene_and_all(self):

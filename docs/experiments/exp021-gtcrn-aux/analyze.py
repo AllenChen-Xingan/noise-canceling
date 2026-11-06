@@ -103,12 +103,14 @@ def pair(rows_a, sys_a, rows_b, sys_b, items):
 
 
 def oracle(cur, default, onset_max=3.0, onset_up=9.0, bg_up=0.0):
-    """cur = curve() 的结果；返回 {场景: (所选系统, 可懂度提升)}。"""
+    """cur = curve() 的结果；返回 {场景: (所选系统, 可懂度提升)}。
+    没有一档满足约束时所选系统为 None、提升为 0（显式报「无可行档」，不冒充默认档可行；codex 030 第 1 轮 P2 #5）。
+    默认档本身也要过约束才算可行。"""
     out = {}
     scenes = sorted(k for k in cur.get(default, {}) if k != "_all")
     for sc in scenes:
         d = cur[default][sc]
-        best = (default, 0.0)
+        best = (None, 0.0)
         for sys_, by in cur.items():
             m = by.get(sc)
             if not m or m.get("V-ESTOI") is None or d.get("V-ESTOI") is None:
@@ -120,7 +122,7 @@ def oracle(cur, default, onset_max=3.0, onset_up=9.0, bg_up=0.0):
             if bg is not None and bg0 is not None and bg - bg0 > bg_up:
                 continue
             gain = m["V-ESTOI"] - d["V-ESTOI"]
-            if gain > best[1]:
+            if best[0] is None or gain > best[1]:
                 best = (sys_, gain)
         out[sc] = best
     return out
@@ -187,7 +189,7 @@ def main(argv):
         res = oracle(cur, argv[2], opt("--onset-max", 3.0), opt("--onset-up", 9.0), opt("--bg-up", 0.0))
         print("| 场景 | 段数 | 所选档 | 可懂度提升 |\n|---|---|---|---|")
         for sc, (sys_, g) in res.items():
-            print(f"| {sc} | {n_sc[sc]} | {sys_} | {g:+.4f} |")
+            print(f"| {sc} | {n_sc[sc]} | {sys_ or '无可行档（按 0 计）'} | {g:+.4f} |")
         tot = sum(n_sc[sc] * g for sc, (_, g) in res.items()) / max(1, sum(n_sc.values()))
         print(f"\n按段数加权的可懂度总提升：{tot:+.4f}")
         return 0
