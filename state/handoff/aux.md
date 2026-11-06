@@ -7,7 +7,7 @@
 - 结论：`docs/research/030_gtcrn-aux/decision.md`（第一节比较卡）· `README.md` · `sources.md`
 - 实验：`docs/experiments/exp021-gtcrn-aux/`
   - `driver/`：重混（真引擎，只换混回参数）· 生成 GTCRN 原始输出（带预热段）· 派生关保命测试集 · 诊断。Rust 测试 7 条
-  - `analyze.py`（核对 · 配对差 · 按场景挑上限 · 平均）· `plot.py`（取舍曲线 SVG）· Python 测试 11 条
+  - `analyze.py`（核对 · 配对差 · 按场景挑上限 · 平均）· `plot.py`（取舍曲线 SVG）· Python 测试 13 条 · 复用核对测试 9 条（`test_sweep_reuse.sh`）
   - `sweep.sh`：一个模型扫 8 档 + 不混回
   - `runs/`：DFN3 核对 · GTCRN 核对（补零版不过、带预热段版过）· 口径差 · 两次扫描
 
