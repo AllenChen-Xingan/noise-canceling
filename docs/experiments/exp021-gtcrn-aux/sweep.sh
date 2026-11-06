@@ -22,10 +22,18 @@ grid=(
 headarg="${3:-}"
 reuse_ok() { # $1 档位目录（相对主目录） $2 open_db $3 floor_db $4 off(0/1)
   python3 - "../noise_canceling/$1/run.json" "$src" "$headarg" "$2" "$3" "$4" <<'PY'
-import json, sys
+import hashlib, json, os, sys
 p, src, head, o, f, off = sys.argv[1:]
+root = os.path.dirname(os.path.dirname(os.path.dirname(p)))  # 档位目录在 <主目录>/<前缀目录>/<档>/ 下时取主目录
+root = p[: p.index("/_tmp/")] if "/_tmp/" in p else root
 r = json.load(open(p))["model"]["exp021_remix"]
-ok = r["from"] == src and r["off"] == (off == "1")
+# 来源内容（run.json 哈希）与档位完整性（wav 数 = 记录的 files）也要对上（codex 030 第 2 轮 P2 #2）
+src_rj = os.path.join(root, src, "run.json")
+sha = hashlib.sha256(open(src_rj, "rb").read()).hexdigest() if os.path.exists(src_rj) else ""
+d = os.path.dirname(p)
+n = sum(1 for k in os.listdir(d) if os.path.isdir(os.path.join(d, k))
+        for w in os.listdir(os.path.join(d, k)) if w.endswith(".wav"))
+ok = r["from"] == src and r["off"] == (off == "1") and r.get("from_run_json_sha256") == sha and n == r.get("files")
 if off != "1":  # 不混回那档输出 = 原始输出，与预热段、参数无关
     ok = ok and (r.get("head") or "") == head
     ok = ok and abs(r["open_db"] - float(o)) < 1e-6 and abs(r["floor_db"] - float(f)) < 1e-6
