@@ -117,6 +117,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-05 16:0x 已合并 #130（016 勘误）· #131（027 微调，Closes #121）· #132（028 改结构，Closes #122）；main 全量 746 过 0 败。人定 D88 云 GPU 训练（数据等开训练线再下到云上）· D89 旁人说话交给另外的小模型（backlog）。finetune · arch · rl · timbre 关窗清理；剩 aux（扫 GTCRN 中）与 cands（等盲听）。桌面 PDF：026 · exp016（含勘误版）· 029 · 027 · 028
 - 2026-11-05 15:4x 人定 D87：训练数据先不下；CI 账单停摆期按本机验收合并 → #120（81730e0f）· #127 · #128 已合并（PR 留言写明），#119 #112 #123 关闭；索引冲突由我两行都留。待：main 上全量测试（排在 aux → finetune 测速 → arch 测速之后）。三份结论 PDF 放桌面（026 · exp016 · 029）。timbre 关窗；cands 留着等盲听揭盲
 - 2026-11-05 15:2x PR #120（timbre）· #127（cands）· #128（rl）都已开、本机亲手验收全过；⚠️ GitHub Actions 因账单付款失败不启动（「recent account payments have failed or your spending limit needs to be increased」），已问人：修账单或授权按本机验收合并。rl 收尾关窗（结论：RL 现在不做，排在微调之后）。名额 aux 扫混回（砍 DPDFNet-2，改扫 GTCRN）
 - 2026-11-05 15:4x 人要多开手下比较 GTCRN 改进的几条路 → 四线：finetune 027 #121（微调+数据）· arch 028 #122（改结构/注意力头）· rl 029 #123（强化学习）· aux 030 #124（辅助判场景 + 混回比例，不重训）。共同交代 _tmp/20261104-b15/gtcrn-options-common.md，统一比较卡。exp 号预分：018 finetune · 019 arch · 020 rl · 021 aux
