@@ -25,8 +25,9 @@ reuse_ok() { # $1 档位目录（相对主目录） $2 open_db $3 floor_db $4 of
 import json, sys
 p, src, head, o, f, off = sys.argv[1:]
 r = json.load(open(p))["model"]["exp021_remix"]
-ok = r["from"] == src and (r.get("head") or "") == head and r["off"] == (off == "1")
-if off != "1":
+ok = r["from"] == src and r["off"] == (off == "1")
+if off != "1":  # 不混回那档输出 = 原始输出，与预热段、参数无关
+    ok = ok and (r.get("head") or "") == head
     ok = ok and abs(r["open_db"] - float(o)) < 1e-6 and abs(r["floor_db"] - float(f)) < 1e-6
 sys.exit(0 if ok else 1)
 PY
