@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="870" height="460" font-family="sans-serif" font-size="11">
+<rect width="100%" height="100%" fill="#fff"/><text x="10" y="20" font-size="14">场景：cafe、car-passenger、cowork、street-outdoor、transit-hub</text>
+<text x="70" y="32">说话时混回量 dB（停顿 −12）</text>
+<text x="400" y="32">停顿下限 dB（说话时 −6）</text>
+<text x="5" y="115.0" transform="rotate(-90 12 115.0)">降噪量 dB（低好）</text>
+<rect x="70" y="40" width="300" height="150" fill="none" stroke="#999"/>
+<text x="66" y="50" text-anchor="end">-3.18</text>
+<text x="66" y="190" text-anchor="end">-34.02</text>
+<polyline fill="none" stroke="#2a6fdb" stroke-width="2" points="100.0,177.5 160.0,79.2 220.0,74.0 280.0,67.1 340.0,58.7"/>
+<circle cx="100.0" cy="177.5" r="3" fill="#2a6fdb"/>
+<text x="100.0" y="203" text-anchor="middle">不混回</text>
+<circle cx="160.0" cy="79.2" r="3" fill="#2a6fdb"/>
+<text x="160.0" y="203" text-anchor="middle">-12</text>
+<circle cx="220.0" cy="74.0" r="3" fill="#2a6fdb"/>
+<text x="220.0" y="203" text-anchor="middle">-9</text>
+<circle cx="280.0" cy="67.1" r="3" fill="#2a6fdb"/>
+<text x="280.0" y="203" text-anchor="middle">-6</text>
+<circle cx="340.0" cy="58.7" r="3" fill="#2a6fdb"/>
+<text x="340.0" y="203" text-anchor="middle">-3</text>
+<rect x="400" y="40" width="300" height="150" fill="none" stroke="#999"/>
+<text x="396" y="50" text-anchor="end">-3.18</text>
+<text x="396" y="190" text-anchor="end">-34.02</text>
+<polyline fill="none" stroke="#2a6fdb" stroke-width="2" points="425.0,177.5 475.0,81.0 525.0,76.1 575.0,67.1 625.0,60.6 675.0,52.5"/>
+<circle cx="425.0" cy="177.5" r="3" fill="#2a6fdb"/>
+<text x="425.0" y="203" text-anchor="middle">不混回</text>
+<circle cx="475.0" cy="81.0" r="3" fill="#2a6fdb"/>
+<text x="475.0" y="203" text-anchor="middle">-24</text>
+<circle cx="525.0" cy="76.1" r="3" fill="#2a6fdb"/>
+<text x="525.0" y="203" text-anchor="middle">-18</text>
+<circle cx="575.0" cy="67.1" r="3" fill="#2a6fdb"/>
+<text x="575.0" y="203" text-anchor="middle">-12</text>
+<circle cx="625.0" cy="60.6" r="3" fill="#2a6fdb"/>
+<text x="625.0" y="203" text-anchor="middle">-9</text>
+<circle cx="675.0" cy="52.5" r="3" fill="#2a6fdb"/>
+<text x="675.0" y="203" text-anchor="middle">-6</text>
+<text x="5" y="315.0" transform="rotate(-90 12 315.0)">可懂度变化（高好）</text>
+<rect x="70" y="240" width="300" height="150" fill="none" stroke="#999"/>
+<text x="66" y="250" text-anchor="end">0.17</text>
+<text x="66" y="390" text-anchor="end">0.01</text>
+<polyline fill="none" stroke="#2a6fdb" stroke-width="2" points="100.0,252.5 160.0,313.1 220.0,331.4 280.0,352.8 340.0,377.5"/>
+<circle cx="100.0" cy="252.5" r="3" fill="#2a6fdb"/>
+<text x="100.0" y="403" text-anchor="middle">不混回</text>
+<circle cx="160.0" cy="313.1" r="3" fill="#2a6fdb"/>
+<text x="160.0" y="403" text-anchor="middle">-12</text>
+<circle cx="220.0" cy="331.4" r="3" fill="#2a6fdb"/>
+<text x="220.0" y="403" text-anchor="middle">-9</text>
+<circle cx="280.0" cy="352.8" r="3" fill="#2a6fdb"/>
+<text x="280.0" y="403" text-anchor="middle">-6</text>
+<circle cx="340.0" cy="377.5" r="3" fill="#2a6fdb"/>
+<text x="340.0" y="403" text-anchor="middle">-3</text>
+<rect x="400" y="240" width="300" height="150" fill="none" stroke="#999"/>
+<text x="396" y="250" text-anchor="end">0.17</text>
+<text x="396" y="390" text-anchor="end">0.01</text>
+<polyline fill="none" stroke="#2a6fdb" stroke-width="2" points="425.0,252.5 475.0,353.3 525.0,353.1 575.0,352.8 625.0,352.6 675.0,352.5"/>
+<circle cx="425.0" cy="252.5" r="3" fill="#2a6fdb"/>
+<text x="425.0" y="403" text-anchor="middle">不混回</text>
+<circle cx="475.0" cy="353.3" r="3" fill="#2a6fdb"/>
+<text x="475.0" y="403" text-anchor="middle">-24</text>
+<circle cx="525.0" cy="353.1" r="3" fill="#2a6fdb"/>
+<text x="525.0" y="403" text-anchor="middle">-18</text>
+<circle cx="575.0" cy="352.8" r="3" fill="#2a6fdb"/>
+<text x="575.0" y="403" text-anchor="middle">-12</text>
+<circle cx="625.0" cy="352.6" r="3" fill="#2a6fdb"/>
+<text x="625.0" y="403" text-anchor="middle">-9</text>
+<circle cx="675.0" cy="352.5" r="3" fill="#2a6fdb"/>
+<text x="675.0" y="403" text-anchor="middle">-6</text>
+<rect x="730" y="42" width="10" height="10" fill="#2a6fdb"/><text x="744" y="50">dfn3</text>
+</svg>

@@ -1,0 +1,51 @@
+{
+  "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
+  "inputs": [
+    "mix",
+    "bg",
+    "trunc",
+    "clean"
+  ],
+  "latency_samples": 284,
+  "model": {
+    "exp021_remix": {
+      "files": 1451,
+      "floor_db": -12.0,
+      "from": "_tmp/exp016/dfn3-ll/20261105-063623-e4eb13d9",
+      "from_name": "dfn3-ll",
+      "from_run_json_sha256": "f0cc8e90223b8bce90b0922fbcb9b1afb597b258fb0e0a12328bcf8324a6de81",
+      "note": "已用真引擎按上面的参数混回原声；打分时须用 safety=false 的派生测试集，免得混两次",
+      "off": true,
+      "open_db": -6.0
+    },
+    "upstream": {
+      "latency_probe": {
+        "lag_after_align": 0,
+        "lag_after_align_by_kind": {
+          "clean": 0,
+          "mix": 0
+        },
+        "measured_lookahead": 161,
+        "measured_lookahead_by_kind": {
+          "clean": 161,
+          "mix": 160
+        },
+        "nominal_latency": 284,
+        "probe_clip": "bus-metro-cabin-c00-ext",
+        "reset_check_clip": "bus-metro-cabin-c00-mba",
+        "reset_max_abs_diff": 0.0
+      },
+      "lib_sha256": "4bcd38634000d456ad68db4b6ff97fe4a462542aa65ac5f910fbf374ca33fbaa",
+      "mode": "逐帧流式 · 48 kHz · 零前瞻（_ll）· atten_lim 100 dB · 每段重置",
+      "repo": "DeepFilterNet（resources/DeepFilterNet，上游 d375b2d8）· 运行库 Hush libweya_nc（上游 9f6414e9）",
+      "resample": "soxr 流式 HQ 16→48→16 kHz",
+      "runner": "docs/experiments/exp016-candidates/run_dfn3ll.py",
+      "weights": "resources/DeepFilterNet/models/DeepFilterNet3_ll_onnx.tar.gz",
+      "weights_sha256": "5998e58e8ba0e09bb76986ef97b84afa065a571ef282d4a1222f341e3251cf3a"
+    }
+  },
+  "name": "dfn3-nomix",
+  "native_rate": 48000,
+  "schema": "vdn-external-output/1",
+  "sr": 16000
+}

@@ -36,3 +36,4 @@
 | 029 | 2026-11-05 | [调研 029 强化学习专门调 GTCRN + exp020 计时与离线排序模拟](029_gtcrn-rl-codex.md)（issue #123，codex gpt-6-astra，4 轮，连续两轮无 P0/P1 停） | 采纳 15 / 提出 15（P1×7 P2×8；无 issue） |
 | 027 | 2026-11-05 | [调研 027 GTCRN 微调方案 + exp018 MPS 冒烟](027_gtcrn-finetune-codex.md)（research，codex gpt-6-astra，7 轮，已达停止线） | 采纳 19 / 提出 19（P1×8 P2×11；无 issue） |
 | 028 | 2026-11-05 | [GTCRN 改结构调研与 exp019 实测脚本](028_gtcrn-arch-codex.md)（`docs/research/028_gtcrn-arch/` · `docs/experiments/exp019-gtcrn-arch/`，issue #122，codex gpt-6-astra，3 轮，已达停止线） | 采纳 14 / 提出 14（P1×4 P2×10；无 issue） |
+| 030 | 2026-11-05 | [不重训 GTCRN 的系统级手段：调研 030 结论 + exp021 混回重混工具](030_gtcrn-aux-codex.md)（issue #124，codex gpt-6-astra，3 轮，P0/P1 清零即停） | 采纳 10 / 提出 10（P1×3 P2×7；1 条 P2 留作 issue） |
