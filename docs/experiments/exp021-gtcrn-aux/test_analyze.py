@@ -65,7 +65,8 @@ class Load(unittest.TestCase):
         text = "".join(json.dumps(r) + "\n" for r in rows)
         with tempfile.TemporaryDirectory() as d:
             p, g = os.path.join(d, "c.jsonl"), os.path.join(d, "c.jsonl.gz")
-            open(p, "w", encoding="utf-8").write(text)
+            with open(p, "w", encoding="utf-8") as f:
+                f.write(text)
             with gzip.open(g, "wt", encoding="utf-8") as f:
                 f.write(text)
             self.assertEqual(analyze.load(p), analyze.load(g))
@@ -97,7 +98,8 @@ class OracleMissing(unittest.TestCase):
                      "u": {"V-ESTOI": 0.05, "V-ONSET": 2.5, "V-BGSTAB": 1.0}}}
         r = analyze.oracle(cur, "D", onset_max=3.0)
         self.assertEqual(r["q"][0], "X")   # 背景稳两边都没有：不适用，放行
-        self.assertEqual(r["u"][0], None)  # 默认档字头缺分、候选有：未知，不选（也不报错）
+        # 候选有字头分、默认档没有：候选算未知，不选（也不报错）；默认档自比两边都缺，按不适用留下
+        self.assertEqual(r["u"], ("D", 0.0))
 
 
 class Curve(unittest.TestCase):
