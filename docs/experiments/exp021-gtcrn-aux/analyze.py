@@ -115,11 +115,17 @@ def oracle(cur, default, onset_max=3.0, onset_up=9.0, bg_up=0.0):
             m = by.get(sc)
             if not m or m.get("V-ESTOI") is None or d.get("V-ESTOI") is None:
                 continue
+            # 缺分的口径（codex 030 第 3 轮 P2 #2）：两边都没有 = 该场景不考这项（不适用，放行）；
+            # 只有一边有 = 未知，不当作满足约束
             on, on0 = m.get("V-ONSET"), d.get("V-ONSET")
+            if (on is None) != (on0 is None):
+                continue
             if on is not None and (on > onset_max or on - on0 > onset_up):
                 continue
             bg, bg0 = m.get("V-BGSTAB"), d.get("V-BGSTAB")
-            if bg is not None and bg0 is not None and bg - bg0 > bg_up:
+            if (bg is None) != (bg0 is None):
+                continue
+            if bg is not None and bg - bg0 > bg_up:
                 continue
             gain = m["V-ESTOI"] - d["V-ESTOI"]
             if best[0] is None or gain > best[1]:

@@ -89,6 +89,17 @@ class Oracle(unittest.TestCase):
         self.assertEqual(analyze.oracle(cur, "D", onset_max=3.0)["car"], (None, 0.0))
 
 
+class OracleMissing(unittest.TestCase):
+    def test_unknown_is_not_feasible_but_not_applicable_passes(self):
+        cur = {"D": {"q": {"V-ESTOI": 0.02, "V-ONSET": 2.0, "V-BGSTAB": None},
+                     "u": {"V-ESTOI": 0.02, "V-ONSET": None, "V-BGSTAB": 1.0}},
+               "X": {"q": {"V-ESTOI": 0.03, "V-ONSET": 2.5, "V-BGSTAB": None},
+                     "u": {"V-ESTOI": 0.05, "V-ONSET": 2.5, "V-BGSTAB": 1.0}}}
+        r = analyze.oracle(cur, "D", onset_max=3.0)
+        self.assertEqual(r["q"][0], "X")   # 背景稳两边都没有：不适用，放行
+        self.assertEqual(r["u"][0], None)  # 默认档字头缺分、候选有：未知，不选（也不报错）
+
+
 class Curve(unittest.TestCase):
     def test_means_by_scene_and_all(self):
         rows = [row("c1", "S", "cafe", **{"V-NR": -6.0}), row("c2", "S", "cafe", **{"V-NR": -8.0}),

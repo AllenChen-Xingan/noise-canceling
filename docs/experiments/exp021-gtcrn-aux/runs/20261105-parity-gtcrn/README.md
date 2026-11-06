@@ -23,5 +23,5 @@ VDN_GTCRN_ONNX=<主目录>/resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx 
 | home-quiet-c01-mba | 606 / 596 | 第 0 个样本 | 0 | 0 |
 
 两段的引擎故障计数都是 0（没有复位、没有送原声）。
-机制：引擎的有声包络只看模型输出能量、从第一帧起跟踪底噪（`src/dsp/src/envelope.rs` 第 82–107 行）；外部回放在模型延迟内补零（`src/eval/src/system/external.rs` 的 `replay`），真 GTCRN 这段有输出（峰值约 1e-3 到 3e-2），底噪起点不同，整段开合分岔。
+机制：引擎的有声包络只看模型输出能量、从第一帧起跟踪底噪（`src/dsp/src/envelope.rs` 第 82–107 行）；外部回放在模型延迟内补零（`src/eval/src/system/external.rs` 的 `replay`），真 GTCRN 这段有输出（两段峰值 1.6e-3 · 3.2e-3），底噪起点不同，整段开合分岔。
 回归测试：`driver/src/tests.rs` 的 `head_makes_remix_equal_real_model_path`（合成假模型：带预热段 = 直接走引擎，补零 ≠）。
