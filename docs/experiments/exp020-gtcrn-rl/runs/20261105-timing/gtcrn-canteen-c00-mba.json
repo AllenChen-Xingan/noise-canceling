@@ -1,0 +1,234 @@
+{
+    "audio_s": 12.0,
+    "masks": {
+        "first_ms": 0.057833,
+        "max_ms": 0.057833,
+        "median_ms": 0.047166,
+        "min_ms": 0.046833,
+        "reps": 5
+    },
+    "run_clean_only": {
+        "first_ms": 305.5945,
+        "max_ms": 307.787792,
+        "median_ms": 306.370917,
+        "min_ms": 304.778041,
+        "reps": 5
+    },
+    "run_mix": {
+        "first_ms": 314.309625,
+        "max_ms": 314.309625,
+        "median_ms": 305.542708,
+        "min_ms": 303.831,
+        "reps": 5
+    },
+    "run_noise_only": {
+        "first_ms": 303.31575,
+        "max_ms": 310.048791,
+        "median_ms": 305.51129199999997,
+        "min_ms": 303.31575,
+        "reps": 5
+    },
+    "system": "gtcrn",
+    "verifiers": {
+        "V-BGSTAB": {
+            "first_ms": 0.228833,
+            "max_ms": 0.228833,
+            "median_ms": 0.213334,
+            "min_ms": 0.212833,
+            "reps": 5,
+            "verdict": "Pass"
+        },
+        "V-CLICK": {
+            "first_ms": 13.6785,
+            "max_ms": 13.717875,
+            "median_ms": 13.503792,
+            "min_ms": 13.212958,
+            "reps": 5,
+            "verdict": "Fail"
+        },
+        "V-ESTOI": {
+            "first_ms": 35.702667,
+            "max_ms": 37.356624999999994,
+            "median_ms": 36.539,
+            "min_ms": 35.702667,
+            "reps": 5,
+            "verdict": "Pass"
+        },
+        "V-FRAME": {
+            "first_ms": 0.02175,
+            "max_ms": 0.02175,
+            "median_ms": 0.005833,
+            "min_ms": 0.004958,
+            "reps": 5,
+            "verdict": "Pass"
+        },
+        "V-INTF": {
+            "first_ms": 0.092084,
+            "max_ms": 0.092084,
+            "median_ms": 0.091084,
+            "min_ms": 0.09095800000000001,
+            "reps": 5,
+            "verdict": "Unknown(\"\u6ca1\u6709\u53ea\u6709\u5e72\u6270\u8005\u8bf4\u8bdd\u7684\u5e27\")"
+        },
+        "V-LAT": {
+            "first_ms": 133.2155,
+            "max_ms": 137.31479099999999,
+            "median_ms": 134.354375,
+            "min_ms": 133.2155,
+            "reps": 5,
+            "verdict": "Pass"
+        },
+        "V-LEAK": {
+            "first_ms": 0.0012920000000000002,
+            "max_ms": 0.0012920000000000002,
+            "median_ms": 0.000458,
+            "min_ms": 0.000417,
+            "reps": 5,
+            "verdict": "Unknown(\"\u6ca1\u6709\u53ea\u6709\u65c1\u4eba\u8bf4\u8bdd\u7684\u6574\u79d2\u7a97\")"
+        },
+        "V-MUSIC": {
+            "first_ms": 2.1672919999999998,
+            "max_ms": 2.1672919999999998,
+            "median_ms": 1.94675,
+            "min_ms": 1.942417,
+            "reps": 5,
+            "verdict": "Pass"
+        },
+        "V-MUTE": {
+            "first_ms": 0.000334,
+            "max_ms": 0.000334,
+            "median_ms": 4.2e-05,
+            "min_ms": 0.0,
+            "reps": 5,
+            "verdict": "Unknown(\"\u8f93\u5165\u672b\u5c3e\u6ca1\u6709 \u2265 0.25 s \u7684\u6570\u5b57\u9759\u97f3\")"
+        },
+        "V-NAN": {
+            "first_ms": 0.0895,
+            "max_ms": 0.0895,
+            "median_ms": 0.08875,
+            "min_ms": 0.088625,
+            "reps": 5,
+            "verdict": "Pass"
+        },
+        "V-NR": {
+            "first_ms": 0.420041,
+            "max_ms": 0.438542,
+            "median_ms": 0.415833,
+            "min_ms": 0.414208,
+            "reps": 5,
+            "verdict": "Unknown(\"\u672c\u4efb\u52a1\u6ca1\u7ed9\u9608\u503c\uff0c\u53ea\u8bb0\u6570\")"
+        },
+        "V-ONSET": {
+            "first_ms": 0.11983300000000001,
+            "max_ms": 0.120667,
+            "median_ms": 0.11837500000000001,
+            "min_ms": 0.117916,
+            "reps": 5,
+            "verdict": "Pass"
+        },
+        "V-PSE-OVL": {
+            "first_ms": 0.000875,
+            "max_ms": 0.000875,
+            "median_ms": 0.00075,
+            "min_ms": 0.000625,
+            "reps": 5,
+            "verdict": "Unknown(\"\u6ca1\u6709 \u2265 0.5 s \u7684\u7528\u6237\u4e0e\u65c1\u4eba\u91cd\u53e0\u6bb5\")"
+        },
+        "V-PUMPV": {
+            "first_ms": 0.06245800000000001,
+            "max_ms": 0.06245800000000001,
+            "median_ms": 0.061416,
+            "min_ms": 0.061333000000000006,
+            "reps": 5,
+            "verdict": "Fail"
+        },
+        "V-SIM-FA": {
+            "first_ms": 0.017792,
+            "max_ms": 0.017834,
+            "median_ms": 0.017708,
+            "min_ms": 0.017583,
+            "reps": 5,
+            "verdict": "Unknown(\"\u53ea\u6709\u5e72\u6270\u8005\u8bf4\u8bdd\u7684 hop \u4e0d\u8db3 20 \u4e2a\")"
+        },
+        "V-SIM-GATE": {
+            "first_ms": 0.0235,
+            "max_ms": 0.0235,
+            "median_ms": 0.019083,
+            "min_ms": 0.018875000000000003,
+            "reps": 5,
+            "verdict": "Pass"
+        },
+        "V-SIM-QUIET": {
+            "first_ms": 0.018458,
+            "max_ms": 0.018458,
+            "median_ms": 0.018000000000000002,
+            "min_ms": 0.017792,
+            "reps": 5,
+            "verdict": "Fail"
+        },
+        "V-SIM-SWLAT": {
+            "first_ms": 0.018000000000000002,
+            "max_ms": 0.018000000000000002,
+            "median_ms": 0.017583,
+            "min_ms": 0.017499999999999998,
+            "reps": 5,
+            "verdict": "Unknown(\"\u95e8\u63a7\u5173\u7740\u65f6\u5f00\u53e3\u7684\u8d77\u70b9\u53ea\u6709 0 \u4e2a\")"
+        },
+        "V-SPLVL": {
+            "first_ms": 0.05,
+            "max_ms": 0.05,
+            "median_ms": 0.048958,
+            "min_ms": 0.048833,
+            "reps": 5,
+            "verdict": "Pass"
+        },
+        "V-SWALLOW": {
+            "first_ms": 1.822208,
+            "max_ms": 1.822208,
+            "median_ms": 1.8172920000000001,
+            "min_ms": 1.809833,
+            "reps": 5,
+            "verdict": "Unknown(\"\u53ea\u62a5\u4e0d\u5224\uff1a025 D3 \u5148\u53ea\u62a5\uff1b\u6309\u573a\u666f\u7ec4\u5408\u5e76 \u2265 30 \u4e2a\u8d77\u70b9\u540e\u518d\u5224\")"
+        },
+        "V-SWITCH": {
+            "first_ms": 0.0005,
+            "max_ms": 0.0005,
+            "median_ms": 0.000292,
+            "min_ms": 0.00029099999999999997,
+            "reps": 5,
+            "verdict": "Unknown(\"\u672c\u6b21\u6ca1\u6709\u53d1\u751f\u9001\u539f\u58f0\u5207\u6362\")"
+        },
+        "V-TIMBRE": {
+            "first_ms": 1.0523749999999998,
+            "max_ms": 1.0523749999999998,
+            "median_ms": 1.0445840000000002,
+            "min_ms": 1.0427920000000002,
+            "reps": 5,
+            "verdict": "Pass"
+        },
+        "V-TSOS": {
+            "first_ms": 1.818541,
+            "max_ms": 1.8309579999999999,
+            "median_ms": 1.818541,
+            "min_ms": 1.809625,
+            "reps": 5,
+            "verdict": "Unknown(\"\u53ea\u62a5\u4e0d\u5224\uff1a\u8fc7\u5173\u7ebf\uff08\u6bd4\u539f\u58f0\u76f4\u901a\u591a\u591a\u5c11\u7b97\u4e0d\u8fc7\uff09\u5f85\u4eba\u62cd\u677f\")"
+        },
+        "V-VACUUM": {
+            "first_ms": 0.092208,
+            "max_ms": 0.092208,
+            "median_ms": 0.091625,
+            "min_ms": 0.0915,
+            "reps": 5,
+            "verdict": "Pass"
+        },
+        "V-WEAK": {
+            "first_ms": 0.8116249999999999,
+            "max_ms": 0.8116249999999999,
+            "median_ms": 0.769791,
+            "min_ms": 0.766167,
+            "reps": 5,
+            "verdict": "Pass"
+        }
+    }
+}

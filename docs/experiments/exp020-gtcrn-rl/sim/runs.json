@@ -1,0 +1,5 @@
+{
+ "gtcrn+passthrough+ref": "docs/experiments/exp014-scorecard-gtcrn/runs/20261105-005916-4ccf0638/clips.jsonl",
+ "dfn3-ll": "docs/experiments/exp016-candidates/runs/dfn3-ll-20261105-103000-4cf04ac1/clips.jsonl",
+ "dpdfnet2": "docs/experiments/exp016-candidates/runs/dpdfnet2-20261105-115707-fcf7cfb0/clips.jsonl"
+}

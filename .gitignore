@@ -39,3 +39,15 @@ node_modules/
 
 # 实验目录里的独立小 crate（exp011 driver 等）：构建产物不入库（CLAUDE.md 五.2）
 docs/experiments/*/driver/target/
+
+# 训练产物（检查点 · 日志 · 数据缓存，不入库；放 ~/vdn-data/ 下；CLAUDE.md 五.2，调研 027）
+# 注意：不写裸 runs/——docs/experiments/*/runs/ 是入库的成绩单
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.npz
+/runs/
+wandb/
+lightning_logs/
+tb_logs/

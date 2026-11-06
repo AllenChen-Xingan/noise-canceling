@@ -1,0 +1,38 @@
+{
+  "schema": "vdn-external-output/1",
+  "name": "dpdfnet2",
+  "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
+  "sr": 16000,
+  "latency_samples": 960,
+  "inputs": [
+    "mix",
+    "bg",
+    "trunc",
+    "clean"
+  ],
+  "model": {
+    "repo": "DPDFNet（resources/DPDFNet）",
+    "weights": "resources/weights/dpdfnet/dpdfnet2.onnx",
+    "weights_sha256": "4f0ee28935b4a32abecc717d745416976565834d839601acf43031094b4dc94c",
+    "mode": "逐帧流式 · ORT CPU 单线程 · 16 kHz 原生 · 每段重置状态",
+    "resample": "无",
+    "nominal_latency_ms": 60.0,
+    "runner": "docs/experiments/exp016-candidates/run_dpdfnet2.py",
+    "latency_probe": {
+      "probe_clip": "bus-metro-cabin-c00-ext",
+      "nominal_latency": 960,
+      "measured_lookahead": 532,
+      "measured_lookahead_by_kind": {
+        "mix": 532,
+        "clean": 389
+      },
+      "lag_after_align": 0,
+      "lag_after_align_by_kind": {
+        "mix": 0,
+        "clean": 0
+      },
+      "reset_check_clip": "bus-metro-cabin-c00-mba",
+      "reset_max_abs_diff": 0.0
+    }
+  }
+}

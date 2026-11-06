@@ -20,10 +20,12 @@ _tmp/exp016/<候选>/<run-id>/
 ├── run.json                # 见第 3 节
 ├── mix/<片段 id>.wav       # 候选对混合轨 mix.wav 的输出（已对齐，去掉了声明延迟）
 ├── bg/<片段 id>.wav        # 候选对「噪音 + 干扰」逐样本相加的输出；只给 additive = true 的片段
-└── trunc/<片段 id>.wav     # 自检：每个场景清单顺序第一段的 mix，从第 floor(n/2) 样本起补零后再跑一遍
+├── trunc/<片段 id>.wav     # 自检：每个场景清单顺序第一段的 mix，从第 floor(n/2) 样本起补零后再跑一遍
+└── clean/<片段 id>.wav     # 可选：干净人声（清单 owner 轨）单独过一遍；列了就每段都要有
 ```
 
-- 子目录名 = 输入种类名（正本 `Kind`）；以后的 `clean/` 只在 `Kind` 加一支。run.json 没列的种类不许有子目录
+- 子目录名 = 输入种类名（正本 `Kind`）。run.json 没列的种类不许有子目录
+- `clean/` 给成绩单新规则 v2 的三项（人声忽大忽小 `V-PUMPV` · 音色 `V-TIMBRE` · 弱音 `V-WEAK`）用：v2 对内置模型也把干净人声单独再跑一遍（人定 D85 题 2 = B）。没列 `clean` 时 runner 凭 `External::provides` 不跑这一路，三项只报不判（evalfix 定 2026-11-05）
 - 片段 id = exp013 片段清单 `clips.jsonl` 的 `id`，不另起编号
 - `bg/` 给「背景稳不稳」（`V-BGSTAB`）用：现有流程对内置模型也是把噪音 + 干扰单独再跑一遍
 - wav：单声道 · **16 kHz** · 32 位浮点（推荐）或 16 位整型
@@ -37,7 +39,7 @@ _tmp/exp016/<候选>/<run-id>/
   "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
   "sr": 16000,
   "latency_samples": 640,
-  "inputs": ["mix", "bg", "trunc"],
+  "inputs": ["mix", "bg", "trunc", "clean"],
   "model": { "repo": "...", "weights_sha256": "...", "mode": "...", "resample": "..." }
 }
 ```

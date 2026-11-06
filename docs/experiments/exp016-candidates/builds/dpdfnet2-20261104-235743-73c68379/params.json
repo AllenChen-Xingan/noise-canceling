@@ -1,0 +1,87 @@
+{
+  "candidate": "dpdfnet2",
+  "limit": 0,
+  "files": 971,
+  "shards": [
+    {
+      "shard": "0/1",
+      "files": 971,
+      "skipped_existing": 0,
+      "audio_s": 11652.0,
+      "wall_s": 847.3,
+      "rtf": 0.0727
+    },
+    {
+      "clips_sha256": "f257ed3c2ba8ef89bb043032eb2cbc1100ff8c2cc7a67e8113ef599b22b9c690",
+      "code_sha256": {
+        "docs/experiments/exp003-offline-ab/_common.py": "d4476e1d36c31ab7bcc209c64040d338f445d699cc4208f16eb185d878b1f582",
+        "docs/experiments/exp003-offline-ab/_paths.py": "e253b6405a891aeb3f9dc8462417f390aeaa4f37182bc067ba846c00268dcd28",
+        "docs/experiments/exp003-offline-ab/enhance.py": "6c12aed8eb6e0532f15e9b9dad61bc77a1afb94787a5657f18929f9e123af8de",
+        "docs/experiments/exp016-candidates/_ext.py": "3736b7e1a0135958bcf5bf7c76dbb08c5e51263414830a8eaba62d38a46e8cc1",
+        "docs/experiments/exp016-candidates/run_dpdfnet2.py": "ee5d5ee9b45f8261620ae8ec9b717bca174ab938b78d5318893160093aed0c27"
+      },
+      "model": {
+        "mode": "逐帧流式 · ORT CPU 单线程 · 16 kHz 原生 · 每段重置状态",
+        "nominal_latency_ms": 60.0,
+        "repo": "DPDFNet（resources/DPDFNet）",
+        "resample": "无",
+        "runner": "docs/experiments/exp016-candidates/run_dpdfnet2.py",
+        "weights": "resources/weights/dpdfnet/dpdfnet2.onnx",
+        "weights_sha256": "4f0ee28935b4a32abecc717d745416976565834d839601acf43031094b4dc94c"
+      },
+      "setup": {
+        "delay_frames": 4,
+        "onnxruntime_threads": 1,
+        "weights": "resources/weights/dpdfnet/dpdfnet2.onnx",
+        "weights_sha256": "4f0ee28935b4a32abecc717d745416976565834d839601acf43031094b4dc94c"
+      },
+      "versions": {
+        "libonnxruntime_sha256": "d586cbe89effc085a09d3341b3cfbd5c322517f9d397aeb20814af21433f2b36",
+        "libsndfile": "1.2.2",
+        "machine": "arm64",
+        "numpy": "2.5.4",
+        "onnxruntime": "1.31.1",
+        "platform": "macOS-27.0.1-arm64-arm-64bit",
+        "python": "3.12.14",
+        "soundfile": "0.14.0"
+      }
+    }
+  ],
+  "cpu_count": 10,
+  "out_dir": "_tmp/exp016/dpdfnet2/20261104-235743-73c68379",
+  "fingerprint": {
+    "clips_sha256": "f257ed3c2ba8ef89bb043032eb2cbc1100ff8c2cc7a67e8113ef599b22b9c690",
+    "code_sha256": {
+      "docs/experiments/exp003-offline-ab/_common.py": "d4476e1d36c31ab7bcc209c64040d338f445d699cc4208f16eb185d878b1f582",
+      "docs/experiments/exp003-offline-ab/_paths.py": "e253b6405a891aeb3f9dc8462417f390aeaa4f37182bc067ba846c00268dcd28",
+      "docs/experiments/exp003-offline-ab/enhance.py": "6c12aed8eb6e0532f15e9b9dad61bc77a1afb94787a5657f18929f9e123af8de",
+      "docs/experiments/exp016-candidates/_ext.py": "3736b7e1a0135958bcf5bf7c76dbb08c5e51263414830a8eaba62d38a46e8cc1",
+      "docs/experiments/exp016-candidates/run_dpdfnet2.py": "ee5d5ee9b45f8261620ae8ec9b717bca174ab938b78d5318893160093aed0c27"
+    },
+    "model": {
+      "mode": "逐帧流式 · ORT CPU 单线程 · 16 kHz 原生 · 每段重置状态",
+      "nominal_latency_ms": 60.0,
+      "repo": "DPDFNet（resources/DPDFNet）",
+      "resample": "无",
+      "runner": "docs/experiments/exp016-candidates/run_dpdfnet2.py",
+      "weights": "resources/weights/dpdfnet/dpdfnet2.onnx",
+      "weights_sha256": "4f0ee28935b4a32abecc717d745416976565834d839601acf43031094b4dc94c"
+    },
+    "setup": {
+      "delay_frames": 4,
+      "onnxruntime_threads": 1,
+      "weights": "resources/weights/dpdfnet/dpdfnet2.onnx",
+      "weights_sha256": "4f0ee28935b4a32abecc717d745416976565834d839601acf43031094b4dc94c"
+    },
+    "versions": {
+      "libonnxruntime_sha256": "d586cbe89effc085a09d3341b3cfbd5c322517f9d397aeb20814af21433f2b36",
+      "libsndfile": "1.2.2",
+      "machine": "arm64",
+      "numpy": "2.5.4",
+      "onnxruntime": "1.31.1",
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "python": "3.12.14",
+      "soundfile": "0.14.0"
+    }
+  }
+}

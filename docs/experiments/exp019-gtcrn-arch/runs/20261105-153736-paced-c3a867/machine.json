@@ -1,0 +1,14 @@
+{
+ "torch": "2.15.0",
+ "threads": 1,
+ "python": "3.12.14",
+ "machine": "arm64",
+ "cpu": "Apple M5",
+ "os": "27.0.1",
+ "power": "Now drawing from 'AC Power'",
+ "mode": "paced",
+ "frames": 300,
+ "rounds": 1,
+ "hop_ms": 16.0,
+ "run_id": "20261105-153736-paced-c3a867"
+}

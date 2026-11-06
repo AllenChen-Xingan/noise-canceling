@@ -422,6 +422,37 @@ fn native_rate_is_read_and_checked() {
     assert!(load(&fx, &dir).unwrap_err().contains("native_rate"));
 }
 
+/// 声明原生 = IO 采样率的外部系统，延迟账不记两跳重采样：比不声明的同一输出正好少这两项预算（#111 记账错修正）。
+/// 差值从 vdn-types 正本算（`RESAMPLE_COMPONENTS` 那两项，现为各 2 ms），不在这里写数。
+#[test]
+fn native_io_rate_drops_resample_budget() {
+    use vdn_types::latency::{IO_BLOCK_PROPOSED, RESAMPLE_COMPONENTS, planned_platform};
+    let fx = setup("ledger");
+    let a = write_ext(&fx, "ledger16", "ledger-16", 0, &ALL, &ident);
+    let b = write_ext(&fx, "ledger48", "ledger-48", 0, &ALL, &ident);
+    let p = b.join("run.json");
+    let mut rj: Value = serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+    rj["native_rate"] = json!(vdn_types::IO_RATE);
+    std::fs::write(&p, rj.to_string()).unwrap();
+    let clip = load_scene_clip(&fx.clips[0], &fx.root).unwrap();
+    let total = |dir: &Path| {
+        let spec = SystemSpec {
+            kind: SystemKind::external(load(&fx, dir).unwrap()).unwrap(),
+            safety: true,
+            faults: vec![],
+        };
+        run(&spec, &clip.mix).unwrap().ledger_total_ms
+    };
+    let want: f64 = planned_platform(IO_BLOCK_PROPOSED)
+        .iter()
+        .filter(|i| RESAMPLE_COMPONENTS.contains(&i.component))
+        .map(|i| i.ms())
+        .sum();
+    assert!(want > 0.0);
+    let d = total(&a) - total(&b);
+    assert!((d - want).abs() < 1e-9, "差 {d} ms，应为 {want} ms");
+}
+
 /// 外部输出没提供 `clean/`（v2）：零「没跑成」；三项（人声忽大忽小 · 音色 · 轻声字）不带 `clean_pass`、落「只报·旧口径」；
 /// 成绩单开头点名该系统（evalfix 与 cands 定 2026-11-05；本条由 evalfix 写、cands 审）。
 #[test]

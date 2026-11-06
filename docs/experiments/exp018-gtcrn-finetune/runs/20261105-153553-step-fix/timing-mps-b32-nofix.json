@@ -1,0 +1,20 @@
+{
+  "device": "mps",
+  "batch": 32,
+  "seconds_per_clip": 4.0,
+  "warmup": 3,
+  "steps": 8,
+  "checkpoint": "model_trained_on_dns3.tar",
+  "mps_fix_patched": [],
+  "params": 48245,
+  "step_s_median": 0.8270656045006035,
+  "step_s_min": 0.8207874170002469,
+  "step_s_max": 0.8374703330009652,
+  "audio_s_per_step": 128.0,
+  "audio_hours_per_wall_hour": 154.76402271291238,
+  "loss_finite": true,
+  "mps_fallback_ops": [],
+  "torch": "2.15.0",
+  "machine": "arm64",
+  "mac_ver": "27.0.1"
+}
