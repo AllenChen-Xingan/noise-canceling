@@ -18,15 +18,34 @@ grid=(
   "-3 -12" "-6 -12" "-9 -12" "-12 -12"
   "-6 -6" "-6 -9" "-6 -18" "-6 -24"
 )
+# 复用已有档位前核对来源（codex 030 第 1 轮 P2 #4）：来源目录 · 预热段目录 · 两个参数都对上才复用，否则停
+headarg="${3:-}"
+reuse_ok() { # $1 档位目录（相对主目录） $2 open_db $3 floor_db $4 off(0/1)
+  python3 - "../noise_canceling/$1/run.json" "$src" "$headarg" "$2" "$3" "$4" <<'PY'
+import json, sys
+p, src, head, o, f, off = sys.argv[1:]
+r = json.load(open(p))["model"]["exp021_remix"]
+ok = r["from"] == src and (r.get("head") or "") == head and r["off"] == (off == "1")
+if off != "1":
+    ok = ok and abs(r["open_db"] - float(o)) < 1e-6 and abs(r["floor_db"] - float(f)) < 1e-6
+sys.exit(0 if ok else 1)
+PY
+}
 systems=()
 for g in "${grid[@]}"; do
   read -r o f <<<"$g"
   dir="_tmp/030/${prefix}/o${o#-}-f${f#-}"
-  [ -e "../noise_canceling/${dir}" ] || caffeinate -i "$B" remix --src "$src" --out "$dir" --prefix "$prefix" --open-db "$o" --floor-db "$f" ${head[@]+"${head[@]}"}
+  if [ -e "../noise_canceling/${dir}" ]; then
+    reuse_ok "$dir" "$o" "$f" 0 || { echo "已有 ${dir} 的来源或参数对不上，换前缀重跑" >&2; exit 1; }
+  else caffeinate -i "$B" remix --src "$src" --out "$dir" --prefix "$prefix" --open-db "$o" --floor-db "$f" ${head[@]+"${head[@]}"}
+  fi
   systems+=("external:${dir}")
 done
 nomix="_tmp/030/${prefix}/nomix"
-[ -e "../noise_canceling/${nomix}" ] || caffeinate -i "$B" remix --src "$src" --out "$nomix" --prefix "$prefix" --off
+if [ -e "../noise_canceling/${nomix}" ]; then
+  reuse_ok "$nomix" 0 0 1 || { echo "已有 ${nomix} 的来源对不上，换前缀重跑" >&2; exit 1; }
+else caffeinate -i "$B" remix --src "$src" --out "$nomix" --prefix "$prefix" --off
+fi
 systems+=("external:${nomix}")
 
 list=$(IFS=,; echo "${systems[*]}")
