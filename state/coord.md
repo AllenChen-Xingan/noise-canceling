@@ -117,6 +117,7 @@
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-06 00:xx #134（030，Closes #124）合并，aux 关窗清理；开 #135（sweep 指纹 P2）· #133（hook）。四条路总览 PDF 上桌面；人选 D90：H-1 先重测再盲听（派 cands，分支 exp/021-mix-retest）· H-2 微调与注意力头一起做 · T-1 音色线 3 暂定 · L-1 盲听页已复制到 ~/Desktop/20261106-blind-listen-gtcrn-dfn3/
 - 2026-11-05 16:0x 已合并 #130（016 勘误）· #131（027 微调，Closes #121）· #132（028 改结构，Closes #122）；main 全量 746 过 0 败。人定 D88 云 GPU 训练（数据等开训练线再下到云上）· D89 旁人说话交给另外的小模型（backlog）。finetune · arch · rl · timbre 关窗清理；剩 aux（扫 GTCRN 中）与 cands（等盲听）。桌面 PDF：026 · exp016（含勘误版）· 029 · 027 · 028
 - 2026-11-05 15:4x 人定 D87：训练数据先不下；CI 账单停摆期按本机验收合并 → #120（81730e0f）· #127 · #128 已合并（PR 留言写明），#119 #112 #123 关闭；索引冲突由我两行都留。待：main 上全量测试（排在 aux → finetune 测速 → arch 测速之后）。三份结论 PDF 放桌面（026 · exp016 · 029）。timbre 关窗；cands 留着等盲听揭盲
 - 2026-11-05 15:2x PR #120（timbre）· #127（cands）· #128（rl）都已开、本机亲手验收全过；⚠️ GitHub Actions 因账单付款失败不启动（「recent account payments have failed or your spending limit needs to be increased」），已问人：修账单或授权按本机验收合并。rl 收尾关窗（结论：RL 现在不做，排在微调之后）。名额 aux 扫混回（砍 DPDFNet-2，改扫 GTCRN）
