@@ -32,26 +32,54 @@ def world(delta, n=4, eat_d=0.0, eat_c=0.0):
     return rows
 
 
+GOOD = {"V_ESTOI": 0.01, "V_ONSET": 0.5, "V_BGSTAB": -0.1, "V_INTF": -0.1, "V_NRMOS_DISTILL": 0.1,
+        "V_NRMOS_SCOREQ": 0.1}
+
+
+def states(rows):
+    return {k: s for k, s, _ in C.judge(rows, "D", "X")}
+
+
 class Judge(unittest.TestCase):
     def test_all_pass(self):
-        res = C.judge(world({"V_ESTOI": 0.01, "V_ONSET": 0.5, "V_BGSTAB": -0.1}), "D", "X")
-        self.assertTrue(all(ok for _, ok, _ in res), res)
+        got = states(world(GOOD))
+        self.assertTrue(all(s == C.PASS for s in got.values()), got)
 
     def test_estoi_below_line_fails(self):
-        res = dict((k, ok) for k, ok, _ in C.judge(world({"V_ESTOI": 0.007}), "D", "X"))
-        self.assertFalse(res["弱场景可懂度各 ≥ +0.008"])
+        self.assertEqual(states(world({**GOOD, "V_ESTOI": 0.007}))["弱场景可懂度各 ≥ +0.008"], C.FAIL)
 
     def test_onset_over_fails(self):
-        res = dict((k, ok) for k, ok, _ in C.judge(world({"V_ESTOI": 0.01, "V_ONSET": 0.61}), "D", "X"))
-        self.assertFalse(res["字头每场景升 ≤ 0.6 dB"])
+        self.assertEqual(states(world({**GOOD, "V_ONSET": 0.61}))["字头每场景升 ≤ 0.6 dB"], C.FAIL)
 
     def test_mos_drop_and_bg_worse_fail(self):
-        res = dict((k, ok) for k, ok, _ in C.judge(
-            world({"V_ESTOI": 0.01, "V_NRMOS_DISTILL": -0.1, "V_BGSTAB": 0.2, "V_INTF": 0.3}), "D", "X"))
-        self.assertFalse(res["听感分 V-NRMOS-DISTILL 不降"])
-        self.assertTrue(res["听感分 V-NRMOS-SCOREQ 不降"])
-        self.assertFalse(res["背景稳不变差"])
-        self.assertFalse(res["旁人不变差"])
+        got = states(world({**GOOD, "V_NRMOS_DISTILL": -0.1, "V_BGSTAB": 0.2, "V_INTF": 0.3}))
+        self.assertEqual(got["听感分 V-NRMOS-DISTILL 不降"], C.FAIL)
+        self.assertEqual(got["听感分 V-NRMOS-SCOREQ 不降"], C.PASS)
+        self.assertEqual(got["背景稳不变差"], C.FAIL)
+        self.assertEqual(got["旁人不变差"], C.FAIL)
+
+    def test_interval_across_zero_is_tbd_not_pass(self):
+        # codex 第 1 轮 P1 #1：区间跨 0 不能当「不变差」
+        self.assertEqual(C.ci_state({"lo": -0.3, "hi": 0.1}, True), C.TBD)
+        self.assertEqual(C.ci_state({"lo": -0.1, "hi": 0.3}, False), C.TBD)
+        self.assertEqual(C.ci_state({"lo": 0.0, "hi": 0.3}, True), C.PASS)
+        self.assertEqual(C.ci_state({"lo": -0.3, "hi": -0.1}, False), C.PASS)
+        self.assertEqual(C.ci_state(None, True), C.TBD)
+
+    def test_unchanged_mos_passes(self):
+        # 候选与默认逐段相同 → 区间 [0, 0]：下界 ≥ 0 算过（证明没降）
+        self.assertEqual(states(world({**GOOD, "V_NRMOS_DISTILL": 0.0}))["听感分 V-NRMOS-DISTILL 不降"], C.PASS)
+
+    def test_missing_onset_scene_is_tbd(self):
+        rows = world(GOOD)
+        for r in rows:
+            if r["system"] == "X" and r["scene"] == "cafe":
+                r["scores"] = [s for s in r["scores"] if s["v"] != "V-ONSET"]
+        self.assertEqual(states(rows)["字头每场景升 ≤ 0.6 dB"], C.TBD)
+
+    def test_missing_weak_scene_estoi_is_tbd(self):
+        rows = [r for r in world(GOOD) if not (r["system"] == "X" and r["scene"] == "cafe")]
+        self.assertEqual(states(rows)["弱场景可懂度各 ≥ +0.008"], C.TBD)
 
 
 class Eat(unittest.TestCase):
@@ -62,13 +90,30 @@ class Eat(unittest.TestCase):
         self.assertEqual(C.eat_chars({"value": 22.0, "extra": {"ref_len": 20.0}}), 4)
         self.assertIsNone(C.eat_chars({"value": None, "extra": {}}))
 
+    def test_half_rounds_away_from_zero_like_rust(self):
+        # codex 第 1 轮 P2 #4：22.5 % × 20 字 = 4.5 字；Rust f64::round → 5（否决），Python round → 4
+        self.assertEqual(C.eat_chars({"value": 22.5, "extra": {"ref_len": 20.0}}), 5)
+        self.assertEqual(C.eat_chars({"value": -22.5, "extra": {"ref_len": 20.0}}), -5)
+        self.assertEqual(C.eat_chars({"value": 17.5, "extra": {"ref_len": 20.0}}), 4)  # 3.5 → 4
+
     def test_new_vetoes_listed(self):
-        rows = world({"V_ESTOI": 0.01}, eat_d=0.0, eat_c=30.0)
+        rows = world(GOOD, eat_d=0.0, eat_c=30.0)
         lines = {a: (b, c, d) for a, b, c, d in C.sheet12(rows, "D", "X")}
         b, c, d = lines["吃字否决段数（单段多错 ≥ 5 字）"]
         self.assertTrue(b.startswith("0"))
         self.assertTrue(c.startswith("5"))
+        self.assertIn("通过→否决 5 段", d)
         self.assertIn("street-outdoor-0（6 字）", d)
+
+    def test_unknown_not_counted_as_new_or_gone(self):
+        # codex 第 1 轮 P2 #3：否决→不知道 不能算「消失」，不知道→否决 不能算「新增」
+        rows = world(GOOD, eat_d=30.0, eat_c=30.0)
+        for r in rows:
+            if r["system"] == "X" and r["clip"] == "cafe-0":
+                r["scores"] = [s for s in r["scores"] if s["v"] != "V-EAT-ASR"]
+        moves, odd = C.eat_moves(rows, "D", "X")
+        self.assertEqual(list(moves), [("否决", "不知道")])
+        self.assertEqual(odd, 0)
 
     def test_splvl_line_count(self):
         rows = world({"V_SPLVL": -2.5})
