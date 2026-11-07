@@ -11,7 +11,8 @@
      2 · 4 · 5 的判法（本脚本定的，030 原文没写，codex 第 1 轮 P1 #1）：
      区间整体在好的一侧（高好：下界 ≥ 0；低好：上界 ≤ 0）= 过；整体在坏的一侧 = 不过；跨 0 = 待测。
      没设容忍幅度，所以「过」要求证明不变差，比「没证明变差」严。
-  3. 字头（V-ONSET）每个场景均值升 ≤ 0.6 dB；默认档有字头分、候选档缺的场景 = 待测
+  3. 字头（V-ONSET）每个场景均值升 ≤ 0.6 dB
+  缺分：任何一段只有一边有分（单边缺测），该条不许判过，最多判待测；两边都没分的段 = 不考这项
 --sheet12 另给一张单独检查表（D91 · K11）：弱场景可懂度、两个听感分、吃字（单段多错 ≥ 5 字否决的段数，
 按「通过 / 否决 / 不知道」列出两档之间的转移）、字头、人声电平（几个场景均值越过 −3 dB 线）、忽大忽小（V-PUMPV）。
 """
@@ -26,7 +27,8 @@ from analyze import by_clip, load, pair  # noqa: E402
 
 WEAK = ["street-outdoor", "transit-hub", "car-passenger", "cafe", "cowork"]
 WEAK_ZH = {"street-outdoor": "街边", "transit-hub": "候车厅", "car-passenger": "车内", "cafe": "咖啡馆", "cowork": "共享办公"}
-ESTOI_MIN, ONSET_UP, SPLVL_LINE, EAT_VETO = 0.008, 0.6, -3.0, 5
+ESTOI_MIN, ONSET_UP = 0.008, 0.6  # 030 的过线标准（decision.md 第 21 行）
+EAT_VETO = 5  # 正本：src/eval/src/thresholds/table.rs `EAT_ASR` 的 fail_chars；test_checklist 读 Rust 源码比对
 MOS = ["V-NRMOS-DISTILL", "V-NRMOS-SCOREQ"]
 ITEMS = ["V-ESTOI", "V-ONSET", "V-BGSTAB", "V-INTF", "V-SPLVL", "V-PUMPV"] + MOS
 PASS, FAIL, TBD = "过", "不过", "待测"
@@ -73,6 +75,14 @@ def eat_moves(rows, default, cand):
     return dict(moves), len(set(a) ^ set(b))
 
 
+def line_of(rows, item):
+    """成绩单记在每段分数里的过关线（V-ONSET 3 dB、V-SPLVL −3 dB 等）；不手抄。各段不一致就报错。"""
+    th = {s.get("threshold") for r in rows for s in r["scores"] if s["v"] == item and s.get("threshold") is not None}
+    if len(th) != 1:
+        raise ValueError(f"{item} 的过关线不唯一：{sorted(th)}")
+    return th.pop()
+
+
 def scene_means(rows, system, item):
     acc = defaultdict(list)
     for r in rows:
@@ -96,28 +106,45 @@ def worst(states):
     return FAIL if FAIL in states else TBD if TBD in states else PASS
 
 
+def one_sided(rows, default, cand, item):
+    """两档里只有一边有分的段（单边缺测）。两边都没分 = 这段不考这项，不算缺测（codex 第 2 轮 P2 #1）。"""
+    a, b = by_clip(rows, default), by_clip(rows, cand)
+    has = lambda d, c: d.get(c, {}).get(item, {}).get("value") is not None  # noqa: E731
+    return sorted(c for c in set(a) | set(b) if has(a, c) != has(b, c))
+
+
+def guard(state, miss):
+    """有单边缺测时不许判过：过 → 待测；不过照旧不过。"""
+    return TBD if miss and state == PASS else state
+
+
+def note(miss):
+    return f"；单边缺分 {len(miss)} 段：{', '.join(miss[:5])}{' …' if len(miss) > 5 else ''}" if miss else ""
+
+
 def judge(rows, default, cand):
     """返回 [(条目, 过 / 不过 / 待测, 说明)]。"""
     allp = pair(rows, default, rows, cand, ITEMS)
     weakp = pair(only(rows, WEAK), default, only(rows, WEAK), cand, MOS)
+    miss = {v: one_sided(rows, default, cand, v) for v in ITEMS}
     res = []
     es = allp.get("V-ESTOI", {}).get("scenes", {})
     st = [TBD if es.get(w) is None else PASS if es[w] >= ESTOI_MIN else FAIL for w in WEAK]
-    res.append(("弱场景可懂度各 ≥ +0.008", worst(st),
-                " · ".join(f"{WEAK_ZH[w]} {fmt_x(es.get(w), 4)}" for w in WEAK)))
+    m = one_sided(only(rows, WEAK), default, cand, "V-ESTOI")
+    res.append(("弱场景可懂度各 ≥ +0.008", guard(worst(st), m),
+                " · ".join(f"{WEAK_ZH[w]} {fmt_x(es.get(w), 4)}" for w in WEAK) + note(m)))
     for v in MOS:
         a, w = allp.get(v), weakp.get(v)
-        res.append((f"听感分 {v} 不降", worst([ci_state(a, True), ci_state(w, True)]),
-                    f"全部 {fmt_ci(a)} · 弱场景 {fmt_ci(w)}"))
+        res.append((f"听感分 {v} 不降", guard(worst([ci_state(a, True), ci_state(w, True)]), miss[v]),
+                    f"全部 {fmt_ci(a)} · 弱场景 {fmt_ci(w)}" + note(miss[v])))
     on = allp.get("V-ONSET", {}).get("scenes", {})
-    miss = sorted(set(scene_means(rows, default, "V-ONSET")) - set(on))
     over = sorted((k for k, x in on.items() if x > ONSET_UP), key=lambda k: -on[k])
     why = (f"最大 {max(on.values()):+.2f} dB；" if on else "") + f"越线 {len(over)} 个场景" \
-        + (f"：{fmt_sc(on, over)}" if over else "") + (f"；缺分 {len(miss)} 个场景：{'、'.join(miss)}" if miss else "")
-    res.append(("字头每场景升 ≤ 0.6 dB", FAIL if over else TBD if miss or not on else PASS, why))
+        + (f"：{fmt_sc(on, over)}" if over else "") + note(miss["V-ONSET"])
+    res.append(("字头每场景升 ≤ 0.6 dB", FAIL if over else guard(PASS if on else TBD, miss["V-ONSET"]), why))
     for v, name in (("V-BGSTAB", "背景稳"), ("V-INTF", "旁人")):
         a = allp.get(v)
-        res.append((f"{name}不变差", ci_state(a, False), f"全部 {fmt_ci(a)}（低好）"))
+        res.append((f"{name}不变差", guard(ci_state(a, False), miss[v]), f"全部 {fmt_ci(a)}（低好）" + note(miss[v])))
     return res
 
 
@@ -140,10 +167,15 @@ def sheet12(rows, default, cand):
     on = p["V-ONSET"]["scenes"]
     out.append(("字头（配对差，每场景）", "—", f"全部 {fmt_ci(p['V-ONSET'])}；最大 {max(on.values()):+.2f} dB",
                 f"升 > 0.6 dB 的场景 {sum(1 for x in on.values() if x > ONSET_UP)} 个"))
+    ol = line_of(rows, "V-ONSET")
+    o0, o1 = scene_means(rows, default, "V-ONSET"), scene_means(rows, cand, "V-ONSET")
+    out.append((f"字头场景均值超过成绩单 {ol:g} dB 线的场景数", str(sum(1 for x in o0.values() if x > ol)),
+                str(sum(1 for x in o1.values() if x > ol)), "、".join(sorted(k for k, x in o1.items() if x > ol))))
+    sl = line_of(rows, "V-SPLVL")
     s0, s1 = scene_means(rows, default, "V-SPLVL"), scene_means(rows, cand, "V-SPLVL")
-    l0 = sorted(k for k, x in s0.items() if x < SPLVL_LINE)
-    l1 = sorted(k for k, x in s1.items() if x < SPLVL_LINE)
-    out.append(("人声电平越过 −3 dB 线的场景数", str(len(l0)), str(len(l1)), "、".join(l1) or "无"))
+    l0 = sorted(k for k, x in s0.items() if x < sl)
+    l1 = sorted(k for k, x in s1.items() if x < sl)
+    out.append((f"人声电平越过 {sl:g} dB 线的场景数", str(len(l0)), str(len(l1)), "、".join(l1) or "无"))
     out.append(("忽大忽小（配对差）", "—", fmt_ci(p.get("V-PUMPV")), "低好；按 D85 只报不判"))
     return out
 

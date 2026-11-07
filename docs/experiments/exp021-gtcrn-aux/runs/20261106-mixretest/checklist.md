@@ -56,5 +56,6 @@
 | 听感分 V-NRMOS-SCOREQ | — | 全部 +0.1234 [+0.1144, +0.1325]（480 段） · 弱场景 +0.1352 [+0.1187, +0.1516]（160 段） | 高好 |
 | 吃字否决段数（单段多错 ≥ 5 字） | 12（不知道 0） | 18（不知道 0） | 否决→通过 6 段：car-passenger-s02-ext, meeting-room-s01-mba, rail-air-cabin-c08-mba, rail-air-cabin-c09-ext, transit-hub-s01-ext, transit-hub-s01-mba；通过→否决 12 段：bus-metro-cabin-c04-mba（5 字）, bus-metro-cabin-c05-ext（11 字）, cafe-s01-mba（5 字）, canteen-c04-ext（5 字）, canteen-c04-mba（9 字）, canteen-s00-ext（8 字）, meeting-room-c04-ext（5 字）, open-office-s04-ext（11 字）, rail-air-cabin-c03-mba（6 字）, rail-air-cabin-c04-ext（5 字）, rail-air-cabin-s02-ext（7 字）, transit-hub-s00-ext（5 字） |
 | 字头（配对差，每场景） | — | 全部 +1.0571 [+0.9771, +1.1372]（432 段）；最大 +1.58 dB | 升 > 0.6 dB 的场景 14 个 |
-| 人声电平越过 −3 dB 线的场景数 | 0 | 6 | bus-metro-cabin、canteen、car-passenger、cowork、rail-air-cabin、transit-hub |
+| 字头场景均值超过成绩单 3 dB 线的场景数 | 1 | 7 | cafe、canteen、car-passenger、home-quiet、meeting-room、rail-air-cabin、street-outdoor |
+| 人声电平越过 -3 dB 线的场景数 | 0 | 6 | bus-metro-cabin、canteen、car-passenger、cowork、rail-air-cabin、transit-hub |
 | 忽大忽小（配对差） | — | +1.3761 [+1.2358, +1.5164]（480 段） | 低好；按 D85 只报不判 |

@@ -8,8 +8,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import checklist as C  # noqa: E402
 
 
+TH = {"V-ONSET": 3.0, "V-SPLVL": -3.0}  # 假数据里的成绩单过关线
+
+
 def row(clip, system, scene, eat=None, ref_len=20.0, **vals):
-    scores = [{"v": v.replace("_", "-"), "value": x, "verdict": "pass"} for v, x in vals.items()]
+    scores = [{"v": v.replace("_", "-"), "value": x, "verdict": "pass", "threshold": TH.get(v.replace("_", "-"))}
+              for v, x in vals.items()]
     if eat is not None:
         scores.append({"v": "V-EAT-ASR", "value": eat, "extra": {"ref_len": ref_len}, "verdict": "pass"})
     return {"clip": clip, "system": system, "scene": scene, "scores": scores}
@@ -82,6 +86,50 @@ class Judge(unittest.TestCase):
         self.assertEqual(states(rows)["弱场景可懂度各 ≥ +0.008"], C.TBD)
 
 
+    def test_one_segment_missing_one_side_blocks_pass(self):
+        # codex 第 2 轮 P2 #1：场景里只缺一段也不许判过
+        for v in ("V-NRMOS-SCOREQ", "V-BGSTAB", "V-ONSET"):
+            rows = world(GOOD)
+            r = next(r for r in rows if r["system"] == "X" and r["clip"] == "cafe-1")
+            r["scores"] = [s for s in r["scores"] if s["v"] != v]
+            got = states(rows)
+            key = {"V-NRMOS-SCOREQ": "听感分 V-NRMOS-SCOREQ 不降", "V-BGSTAB": "背景稳不变差",
+                   "V-ONSET": "字头每场景升 ≤ 0.6 dB"}[v]
+            self.assertEqual(got[key], C.TBD, v)
+
+    def test_missing_on_both_sides_is_not_missing(self):
+        rows = world(GOOD)
+        for r in rows:
+            if r["clip"] == "cafe-1":
+                r["scores"] = [s for s in r["scores"] if s["v"] != "V-BGSTAB"]
+        self.assertEqual(states(rows)["背景稳不变差"], C.PASS)
+
+
+class RustSource(unittest.TestCase):
+    """吃字否决线和字数还原公式的正本在 Rust；这里读源码比对，正本一改这条就红（codex 第 2 轮 P2 #2）。"""
+    ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+
+    def read(self, rel):
+        with open(os.path.join(self.ROOT, rel), encoding="utf-8") as f:
+            return f.read()
+
+    def test_veto_line_matches_table(self):
+        import re
+        src = self.read("src/eval/src/thresholds/table.rs")
+        block = src[src.index('id: "V-EAT-ASR"'):]
+        m = re.search(r'"fail_chars",\s*Some\(([0-9.]+)\)', block)
+        self.assertIsNotNone(m, "table.rs 里找不到 V-EAT-ASR 的 fail_chars")
+        self.assertEqual(float(m.group(1)), C.EAT_VETO)
+
+    def test_formula_matches_rules_v2(self):
+        src = self.read("src/eval/src/scorecard/rules_v2.rs")
+        body = src[src.index("pub fn eat_chars"):].split("}", 1)[0]
+        # 公式：百分点 ÷ 100 × ref_len，再 f64::round（半整数远离 0）；checklist.eat_chars 照此实现
+        self.assertIn('s.value? / 100.0 * extra(s, "ref_len")?).round()', body)
+        src2 = self.read("src/eval/src/scorecard/rules_v2.rs")
+        self.assertIn("Some(n) if n >= lim => f += 1", src2)  # 「≥ 线」才否决
+
+
 class Eat(unittest.TestCase):
     def test_same_rule_as_rules_v2(self):
         # 25 百分点 × 20 字 = 5 字：恰好否决；24 → 4.8 → 5 也否决（四舍五入）；22 → 4.4 → 4 不否决
@@ -118,7 +166,19 @@ class Eat(unittest.TestCase):
     def test_splvl_line_count(self):
         rows = world({"V_SPLVL": -2.5})
         lines = {a: (b, c) for a, b, c, _ in C.sheet12(rows, "D", "X")}
-        self.assertEqual(lines["人声电平越过 −3 dB 线的场景数"], ("0", "5"))
+        self.assertEqual(lines["人声电平越过 -3 dB 线的场景数"], ("0", "5"))
+
+    def test_onset_line_count_from_data(self):
+        rows = world({**GOOD, "V_ONSET": 1.5})  # 默认 2.0 → 3.5，越过数据里记的 3 dB 线
+        lines = {a: (b, c) for a, b, c, _ in C.sheet12(rows, "D", "X")}
+        self.assertEqual(lines["字头场景均值超过成绩单 3 dB 线的场景数"], ("0", "5"))
+
+    def test_line_must_be_unique(self):
+        rows = world(GOOD)
+        next(s for s in rows[0]["scores"] if s["v"] == "V-ONSET")["threshold"] = 99.0
+        with self.assertRaises(ValueError):
+            C.line_of(rows, "V-ONSET")
+        self.assertEqual(C.line_of(world(GOOD), "V-SPLVL"), -3.0)
 
 
 class Cli(unittest.TestCase):

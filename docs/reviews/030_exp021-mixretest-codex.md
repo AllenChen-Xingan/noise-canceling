@@ -1,7 +1,7 @@
 # 评审 030 · exp021 混回重测结论 + 检查表脚本（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/experiments/exp021-gtcrn-aux/findings-mixretest-20261106.md` · `docs/experiments/exp021-gtcrn-aux/checklist.py`。**最新一轮：第 1 轮（2026-11-06）· 总评「修改」· 待第 2 轮**。
-> 累计处理：P1×2、P2×4 逐条回源码核实，属实 6、驳回 0、无法核实 0。中途评审，大总管定 1–2 轮。
+> 对象：`docs/experiments/exp021-gtcrn-aux/findings-mixretest-20261106.md` · `docs/experiments/exp021-gtcrn-aux/checklist.py`。**最新一轮：第 2 轮（2026-11-06）· 总评「修改」· 本轮无 P0/P1，按大总管定的中途评审 1–2 轮停**。
+> 累计处理：P1×2、P2×6 逐条回源码核实，属实 8、驳回 0、无法核实 0。中途评审，大总管定 1–2 轮；第 2 轮的 2 条 P2 当场改掉，没留 issue。
 
 ## 第 1 轮（2026-11-06）· 总评「修改」
 
@@ -35,4 +35,23 @@
 - codex 列的「核实属实」：4 条。
 - 无法核实 1 条（V-NR 场景均值，codex 没打开逐段分数）。数字来自 `checklist.py` 的 `scene_means` 对 `clips.jsonl` 的实测输出，第 2 轮把读数附进依据。
 
-测试：`test_checklist.py` 14 条，连 `test_analyze` · `test_plot` 共 27 条全过。
+测试（第 1 轮改后）：`test_checklist.py` 14 条，连 `test_analyze` · `test_plot` 共 27 条全过。
+
+## 第 2 轮（2026-11-06）· 总评「修改」
+
+原文：`_tmp/reviews-exp021-mixretest/findings-mixretest-20261106-codex-2.md`（不入库）。带 `--previous` 第 1 轮原文与本记录；另附 `nr-scene-means.md`（降噪量场景均值读数）。effort medium。
+本轮 P0/P1：0 条 · 停止线：连续第 1 轮无 P0/P1（脚本 `stop-line:`）；大总管定中途评审 1–2 轮，到此停 · 留作 issue 的 P2：无（2 条都改了）
+
+- **P2｜checklist.py:113 缺测只查了整场景缺失**（第 2 轮 #1）
+  - 核实：属实。场景里只缺一段时，`pair()` 丢掉那段、照样判过。
+  - 处理：加 `one_sided`（只有一边有分的段）和 `guard`：有单边缺测的条目不许判过，最多判待测；两边都没分 = 不考这项。加测试 `test_one_segment_missing_one_side_blocks_pass`（听感分 · 背景稳 · 字头各缺一段）、`test_missing_on_both_sides_is_not_missing`。本批重出检查表，单边缺分 0 段，判定不变。
+- **P2｜checklist.py:45 第二处表示没有和 Rust 正本机器比对**（第 2 轮 #2）
+  - 核实：属实，违反 `CLAUDE.md` 第五节第 5 条。
+  - 处理：加 `RustSource` 两条测试，读 `src/eval/src/thresholds/table.rs`（V-EAT-ASR 的 `fail_chars`）和 `src/eval/src/scorecard/rules_v2.rs`（`eat_chars` 公式、「≥ 线才否决」），和 Python 侧比对；把 `EAT_VETO` 临时改成 6，这条测试确实变红（实测）。顺带：字头 3 dB 线、人声电平 −3 dB 线原来也是手抄常量，改为从每段分数里记的 `threshold` 读（`line_of`，各段不一致就报错）。
+
+### 引用抽查
+
+- codex 列的「不符」：0 条。「核实属实」：8 条。
+- 无法核实 1 条：「字头超过 3 dB 线的场景从 1 个变 7 个」。已在 −12 检查表里加这一行（从数据里的线算），读数 1 → 7，和 findings 一致。
+
+测试（第 2 轮改后）：`test_checklist.py` 20 条，连 `test_analyze` · `test_plot` 共 33 条全过。
