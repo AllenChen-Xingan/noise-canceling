@@ -1,61 +1,88 @@
-# Mac 开源实时语音降噪
+# vdn
 
-> 这是一个 **AI 自主系统**：你定方向与标准，它把活干完。
-> 作品在 `src/`，开仓于 2026-10-29。
->
-> **这个系统朝哪儿使劲** —— 见 `.42cog/intent.md` 最上面那一句。
-> 那句话只有一份，改它不必回来改这里。
+> Open-source real-time voice denoising for macOS meetings: the other side hears you
+> clearly and naturally, and no words get swallowed.
 
-## 从这里开始
+**License: GPL-3.0** (copyleft). See [License](#license).
 
-**第一件事，也是唯一要你亲自过目的一件事**：
+**Status: early prototype.** There is no installer and no virtual microphone yet.
+Today `vdn` can denoise WAV files offline and run a live mic → speaker loop for testing.
 
-打开 `.42cog/intent.md`，看最上面那一句「收敛方向」。**觉得不对就改。** 其余都是草稿，看不顺眼再动。
+## Usage
 
-写错没关系，空着才有关系——空着的方向会被平均值填满。第一版粗是常态，跑完一轮系统分析再回来改，改上三五次才定得住。
+Denoise a recording with the default model ([GTCRN][gtcrn]):
 
-然后跑一次工具检查（只看不装）：
-
-```bash
-bash scripts/check-tools.sh            # 缺什么、怎么装
-bash scripts/check-tools.sh --mirrors  # 装不上时的国内镜像
+```console
+$ vdn denoise noisy.wav clean.wav
 ```
 
-**它只报告，不会自己装任何东西。** 输出里的安装命令看不懂就先跳过——
-缺的工具多半这会儿还用不上，等真用到了再回来装。**别卡在这一步。**
+The output is a 32-bit float WAV. Three safety layers are on by default:
 
-## 目录：六组
+- **Passthrough fallback:** if the model fails or produces bad output for a frame, that frame passes through unchanged.
+- **Attenuation floor:** during pauses, the background is turned down by at most 12 dB, never removed completely.
+- **Fast open, slow release:** when speech starts, the floor opens at once, so the first syllables are not cut.
 
-**一、三、四、五是我的，第二组是别人的，第六组是垃圾。**
+You can tune or turn off each layer:
 
-| 组 | 位置 | 装什么 |
-|---|---|---|
-| 1　开工手册与规约 | `CLAUDE.md` · `.42cog/` · `specs/` | 我立的规矩 |
-| 2　真相源与参考 | `vault/` · `notes/` · `resources/` | 别人的材料 |
-| 3　脚本与扩展 | `skills/` · `scripts/` · `plugin.json` | 我的手段 |
-| 4　作品 | `src/` | 我产的东西 |
-| 5　状态与文档 | `state/` · `docs/` | 我的账 |
-| 6　过程材料 | `_build/` `_tmp/` `_archive/` | 扔的，不入库 |
+```console
+$ vdn denoise --floor-db -18 --hangover-ms 200 noisy.wav clean.wav
+$ vdn denoise --no-safety noisy.wav raw-model.wav    # model output only, for comparison
+```
 
-第二组只有一条线要记：**能引用到什么程度**——`vault/` 可引用，`notes/` 与 `resources/` 只读。动了前者是冒犯，抄了后者是侵权。
+List audio devices (does not open a stream or ask for microphone permission):
 
-## 这四份说明这个系统是什么
+```console
+$ vdn devices
+输入 MacBook Air Microphone（系统默认） · 默认 48000 Hz · 1 声道 · 支持 48 kHz：是
+输出 MacBook Air Speakers（系统默认） · 默认 48000 Hz · 2 声道 · 支持 48 kHz：是
+```
 
-| 文件 | 装什么 |
-|---|---|
-| `.42cog/intent.md` | **意向书**：朝哪儿使劲 · 真难题 · 不做什么 |
-| `.42cog/real.md` | **现实约束**：日程 · 底线红线 · 手上有多少资源 · 给谁用 |
-| `.42cog/cog.md` | **认知模型**：有哪些东西，谁产生、谁是谁的输入 |
-| `.42cog/meta.md` | **项目身份**：系统名 · 作品区 · 上下游 · 依赖 |
+Hear it live (opens the mic and plays to the speakers, so **use headphones**):
 
-## 干到哪了
+```console
+$ vdn run --denoise --seconds 30
+```
 
-看 `state/board.md`——每一轮干完什么、下一步是什么，都记在那里。
-换一台机器、换一个新会话，从那份文件接着往下走。
+`vdn --help` lists every command. CLI messages are currently in Chinese.
 
----
+## Install
 
-**给 AI 的开工协议在 `CLAUDE.md`**，它每次开工先读那一份。
-这份 README 是给人看的门面：README 说这是什么，`CLAUDE.md` 说该怎么干。
+Requirements: macOS on Apple silicon and a Rust toolchain (the version is pinned in `rust-toolchain.toml`).
 
-*由 `aias-meta-init` 生成于 2026-10-29。*
+```console
+$ git clone https://github.com/AllenChen-Xingan/noise-canceling.git
+$ cd noise-canceling
+$ cargo build --release -p vdn-cli
+$ ./target/release/vdn --help
+```
+
+The model weights are not in this repository. Download `gtcrn_simple.onnx` from
+[Xiaobin-Rong/gtcrn][gtcrn] (MIT). Then either put it at
+`~/vdn-data/models/gtcrn/gtcrn_simple.onnx`, set `VDN_GTCRN_ONNX`, or pass `--model-path`.
+
+## How quality is judged
+
+A claim such as "it works" or "it is better" must come from a verifier with a score,
+a threshold and a pass/fail result. Opinions do not count.
+
+- **CI**, on every pull request: DSP checks, tests, lint, and a file-size limit (no code file over 600 lines). Run it locally with `cargo run -p xtask -- ci`.
+- **QA**, on this machine before a release: model and meeting-scene scorecards (`vdn-eval scorecard`).
+- **People**: blind listening tests for what machines cannot judge yet. The results are used to calibrate the verifiers.
+
+## Background
+
+This project is built mostly by AI coding agents, directed by one person.
+[`CLAUDE.md`](CLAUDE.md) holds the rules the agents follow.
+The design notes are in Chinese:
+
+- [`.42cog/intent.md`](.42cog/intent.md): goal, hard problems, and non-goals
+- [`docs/research/`](docs/research/): candidate models, datasets and their licenses
+- [`docs/experiments/`](docs/experiments/): one folder per experiment, with parameters, hashes and results (no audio)
+- [`docs/plan/001_decisions-20261029-b1.md`](docs/plan/001_decisions-20261029-b1.md): the decision log
+
+## License
+
+GPL-3.0. See [`LICENSE`](LICENSE).
+Model weights and datasets keep their own licenses.
+
+[gtcrn]: https://github.com/Xiaobin-Rong/gtcrn
