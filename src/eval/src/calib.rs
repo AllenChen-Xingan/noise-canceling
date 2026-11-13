@@ -223,8 +223,8 @@ pub fn calibrate_with(answers: &Value, scores: &Value, preds: &Value, round: u32
             (m.get)(&per[clip][model], &per[clip]["noisy"])
         };
         // 每对：1 = 指标与耳朵同向，0 = 反向，0.5 = 指标打平
-        let scored: Vec<(String, &'static str, f64)> = pairs
-            .iter()
+        let score = |ps: &[Pair]| -> Vec<(String, &'static str, f64)> {
+            ps.iter()
             .filter_map(|p| {
                 let (w, l) = (val(&p.screen, &p.winner)?, val(&p.screen, &p.loser)?);
                 let agree = if (w - l).abs() < 1e-9 {
@@ -236,7 +236,10 @@ pub fn calibrate_with(answers: &Value, scores: &Value, preds: &Value, round: u32
                 };
                 Some((p.screen.clone(), p.source, agree))
             })
-            .collect();
+            .collect()
+        };
+        let scored = score(&pairs);
+        let scored_raw = score(&raw);
         let screens: Vec<String> = {
             let mut s: Vec<String> = scored.iter().map(|x| x.0.clone()).collect();
             s.sort();
@@ -312,7 +315,7 @@ pub fn calibrate_with(answers: &Value, scores: &Value, preds: &Value, round: u32
         let by_src: BTreeMap<&str, (usize, f64)> = ["clearer", "natural", "h3"]
             .iter()
             .map(|s| {
-                let v: Vec<f64> = scored.iter().filter(|x| x.1 == *s).map(|x| x.2).collect();
+                let v: Vec<f64> = scored_raw.iter().filter(|x| x.1 == *s).map(|x| x.2).collect();
                 (*s, (v.len(), crate::analysis::mean(&v)))
             })
             .collect();
@@ -340,10 +343,12 @@ pub fn calibrate_with(answers: &Value, scores: &Value, preds: &Value, round: u32
         "round": round,
         "set": if is_validation { "validation" } else { "calibration" },
         "session_discounted": discounted,
-        "pairs_total": pairs.len(),
+        "pairs_raw": raw.len(),
+        "pairs_effective": pairs.len(),
         "screens": h3.len(),
-        "rules": "配对：最清楚 / 最自然被选者对同屏其余各一对 + H3 同屏差 ≥ 1 级；按屏聚类 bootstrap 10000 次（种子 20261030）；L1：配对 ≥ 20 且下界 > 0.5；L2：再加片段 ≥ 30 且片段内 τ 下界 ≥ 0.2〔建议值，012 拍板 #8〕",
+        "rules": "配对：最清楚 / 最自然被选者对同屏其余各一对 + H3 同屏差 ≥ 1 级，按（屏, 胜, 负）去重为有效配对；按屏聚类 bootstrap 10000 次（种子 20261030）；L1：有效配对 ≥ 20 且下界 > 0.5；L2：再加片段 ≥ 30 且片段内 τ 下界 ≥ 0.2〔建议值，012 拍板 #8〕",
         "metrics": rows,
+        "judges": judge::table(&judge::items(answers, scores, preds), 20_261_030, 10_000),
     })
 }
 
@@ -359,8 +364,9 @@ pub fn to_markdown(c: &Value, src: &str) -> String {
     let _ = writeln!(s, "数据：{src}\n");
     let _ = writeln!(
         s,
-        "配对 {} 对、{} 屏；会话{}。规则：{}\n",
-        c["pairs_total"],
+        "有效配对 {} 对（原始 {} 条）、{} 屏；会话{}。规则：{}\n",
+        c["pairs_effective"],
+        c["pairs_raw"],
         c["screens"],
         if c["session_discounted"] == true {
             "**打折**（陷阱 trap-identical 没过）"
