@@ -64,12 +64,13 @@ def rates(c):
     }
 
 
-def rogan_gladen(judge_fail_rate, tpr, tnr):
-    """按评估器误差校正「真实不过比例」：θ = (p_obs + TNR − 1) / (TPR + TNR − 1)，截到 [0, 1]。
+def rogan_gladen(judge_fail_rate, tpr, tnr, eps=1e-9):
+    """按评估器误差校正「真实不过率」：θ = (p_obs + TNR − 1) / (TPR + TNR − 1)，截到 [0, 1]。
 
-    J = TPR + TNR − 1 ≤ 0 时评估器不比抛硬币好，校正无解，返回 None。"""
+    分母 J = TPR + TNR − 1 为 0 时评估器不含信息，不可识别，返回 None。
+    J < 0（评估器和人反着判）公式照样成立，只是方向反了；|J| 很小时结果极不稳定，调用方应看 J 的区间再用。"""
     j = tpr + tnr - 1
-    if not (j > 0):
+    if abs(j) < eps:
         return None
     return min(1.0, max(0.0, (judge_fail_rate + tnr - 1) / j))
 

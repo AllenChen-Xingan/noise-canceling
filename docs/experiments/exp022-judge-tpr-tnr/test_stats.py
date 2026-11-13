@@ -65,7 +65,11 @@ class RoganGladen(unittest.TestCase):
 
     def test_chance_judge_has_no_solution(self):
         self.assertIsNone(S.rogan_gladen(0.4, 0.5, 0.5))
-        self.assertIsNone(S.rogan_gladen(0.4, 0.3, 0.6))
+
+    def test_negative_j_still_recovers(self):
+        # codex 第 1 轮 P2 #3：反着判的评估器（J < 0）公式照样还原真值
+        # 真不过率 0.3，TPR 0.2，TNR 0.3 → 判不过率 = 0.3·0.2 + 0.7·0.7 = 0.55
+        self.assertAlmostEqual(S.rogan_gladen(0.55, 0.2, 0.3), 0.3)
 
     def test_clamped(self):
         self.assertEqual(S.rogan_gladen(0.0, 0.8, 0.9), 0.0)
@@ -105,6 +109,25 @@ class Verdicts(unittest.TestCase):
         self.assertEqual(T.human_usable("marginal", strict=False), P)
         self.assertEqual(T.human_usable("marginal", strict=True), F)
         self.assertIsNone(T.human_usable("", strict=True))
+
+
+class MissingEaten(unittest.TestCase):
+    """codex 第 1 轮 P1 #1：吃字题没答的屏，人耳真值记缺（None），不当成「没吃」。"""
+
+    def rows_for(self, eaten):
+        bm = {"usable": {"m": "ok"}}
+        if eaten != "MISSING":
+            bm["eaten"] = eaten
+        ans = {"trials": [{"kind": "real", "clip": "c1", "slots": {"A": "m"}, "by_model": bm}]}
+        pred = {"c1": {"m": {"scoreq": 1, "distill_mos": 1}, "noisy": {"scoreq": 1, "distill_mos": 1}}}
+        z = {"del": 0, "sub": 0, "ref_len": 10}
+        return T.build_rows(ans, pred, {"per_clip": {"c1": {"m": z, "noisy": z}}}, T.read_lines())
+
+    def test_unanswered(self):
+        for e in ("MISSING", None, []):
+            self.assertIsNone(self.rows_for(e)[0]["h_eaten"], e)
+        self.assertEqual(self.rows_for(["none"])[0]["h_eaten"], P)
+        self.assertEqual(self.rows_for(["m"])[0]["h_eaten"], F)
 
 
 class Lines(unittest.TestCase):
