@@ -1,0 +1,194 @@
+[
+ {
+  "n": 1,
+  "clip": "phone-booth-c09-mba",
+  "kind": "好",
+  "file": "01-电话亭-1原声.wav",
+  "src": "phone-booth-c09-mba#eae0988d-mix-2cca3ac67146208c.wav",
+  "sha256": "f5f0c8f40d59dde96a8f2a08d43fef4363d7307a1a1cbbbc5cbfcb5813120f3c"
+ },
+ {
+  "n": 1,
+  "clip": "phone-booth-c09-mba",
+  "kind": "好",
+  "file": "01-电话亭-2降噪后.wav",
+  "src": "phone-booth-c09-mba#eae0988d-gtcrn-080dd71230c74597.wav",
+  "sha256": "84644eb7f69c462d9eb72d186348232013b0f5a73608cfda3ce7d25929632f78"
+ },
+ {
+  "n": 1,
+  "clip": "phone-booth-c09-mba",
+  "kind": "好",
+  "file": "01-电话亭-3干净参考.wav",
+  "src": "phone-booth-c09-mba#eae0988d-clean-db8f43cc42e7eb6b.wav",
+  "sha256": "329d9e263584e6c1ecfa23c5669c3df0bfe38f0ba629de6ba90f28b06f71cbf9"
+ },
+ {
+  "n": 2,
+  "clip": "meeting-room-c04-mba",
+  "kind": "好",
+  "file": "02-会议室-1原声.wav",
+  "src": "meeting-room-c04-mba#47b8b42d-mix-34f379fd33cda131.wav",
+  "sha256": "2dd96297fc1c351907f23b413420f8b2ad130e1a633f05e454c70dbf74d1d8ad"
+ },
+ {
+  "n": 2,
+  "clip": "meeting-room-c04-mba",
+  "kind": "好",
+  "file": "02-会议室-2降噪后.wav",
+  "src": "meeting-room-c04-mba#47b8b42d-gtcrn-c3802d9a9c9dd7c9.wav",
+  "sha256": "c96edc58a18e0af4dcdde30cb0c49071763157ee1767c9e3de73e60dfddc1e45"
+ },
+ {
+  "n": 2,
+  "clip": "meeting-room-c04-mba",
+  "kind": "好",
+  "file": "02-会议室-3干净参考.wav",
+  "src": "meeting-room-c04-mba#47b8b42d-clean-a2fb29eca6db48f0.wav",
+  "sha256": "d8417ab509e85ade4f994f9bcb2bcd682e2bb0b615485e507328a71d9d49c7ee"
+ },
+ {
+  "n": 3,
+  "clip": "home-quiet-c06-mba",
+  "kind": "好",
+  "file": "03-安静的家-1原声.wav",
+  "src": "home-quiet-c06-mba#e76afe35-mix-4c8a283c710735fd.wav",
+  "sha256": "910713a7d30a0d220658998873c7e8fd59fd5f83f995533016f34b6bef804775"
+ },
+ {
+  "n": 3,
+  "clip": "home-quiet-c06-mba",
+  "kind": "好",
+  "file": "03-安静的家-2降噪后.wav",
+  "src": "home-quiet-c06-mba#e76afe35-gtcrn-1a195d676591f79d.wav",
+  "sha256": "8ac0bb2d8acda9cf5fe934f61b5c895587d5556883cb793bd5bfa5d6ee15f1b9"
+ },
+ {
+  "n": 3,
+  "clip": "home-quiet-c06-mba",
+  "kind": "好",
+  "file": "03-安静的家-3干净参考.wav",
+  "src": "home-quiet-c06-mba#e76afe35-clean-b1307ac504db0023.wav",
+  "sha256": "9882567273f3d84a6287c3b1002bc054ebc5432ad8fb2b5874f3f6dac932be55"
+ },
+ {
+  "n": 4,
+  "clip": "hotel-room-c05-ext",
+  "kind": "好",
+  "file": "04-酒店房间-1原声.wav",
+  "src": "hotel-room-c05-ext#bab33ef2-mix-7fcfa2ddf935f45b.wav",
+  "sha256": "18d5bbfd2f58098e0b609cb1917c8c7df371424d1ec9d3720f36b5d97dd9cf73"
+ },
+ {
+  "n": 4,
+  "clip": "hotel-room-c05-ext",
+  "kind": "好",
+  "file": "04-酒店房间-2降噪后.wav",
+  "src": "hotel-room-c05-ext#bab33ef2-gtcrn-a61b2907108d8e65.wav",
+  "sha256": "5b424769536c769b32960b942896397d8f2bb426fa61b97e833dd89c8bc1c5d5"
+ },
+ {
+  "n": 4,
+  "clip": "hotel-room-c05-ext",
+  "kind": "好",
+  "file": "04-酒店房间-3干净参考.wav",
+  "src": "hotel-room-c05-ext#bab33ef2-clean-b3ba4f730cc10a7d.wav",
+  "sha256": "efd1119923a749a601e3c73a226df2f2906534aa79b44dd4af984dc903fd20b5"
+ },
+ {
+  "n": 5,
+  "clip": "library-classroom-c05-ext",
+  "kind": "好",
+  "file": "05-图书馆-教室-1原声.wav",
+  "src": "library-classroom-c05-ext#96f5a6cd-mix-e728f7f5009f0a80.wav",
+  "sha256": "b1a606d85a2d2f7f65fc086b7c45561ffc82d068f2ca9a8bf2a30a3b29c9a004"
+ },
+ {
+  "n": 5,
+  "clip": "library-classroom-c05-ext",
+  "kind": "好",
+  "file": "05-图书馆-教室-2降噪后.wav",
+  "src": "library-classroom-c05-ext#96f5a6cd-gtcrn-7e9cef1f738f8473.wav",
+  "sha256": "a904743a1a52af0783ae5166c7ef3c78018b9bc70990ccce1c030100de304887"
+ },
+ {
+  "n": 5,
+  "clip": "library-classroom-c05-ext",
+  "kind": "好",
+  "file": "05-图书馆-教室-3干净参考.wav",
+  "src": "library-classroom-c05-ext#96f5a6cd-clean-0ad6a5d210af7030.wav",
+  "sha256": "38859bdd6770306bcf9f4fcf013d27baf4e86e561c862a3e9b42daa8f90c66ef"
+ },
+ {
+  "n": 6,
+  "clip": "bus-metro-cabin-c03-ext",
+  "kind": "好",
+  "file": "06-公交地铁车厢-1原声.wav",
+  "src": "bus-metro-cabin-c03-ext#ed17595c-mix-166a6e847e67fc67.wav",
+  "sha256": "70bbec887067566958f93f713c1ec2666166d072465e8af9e1073841a88eb54a"
+ },
+ {
+  "n": 6,
+  "clip": "bus-metro-cabin-c03-ext",
+  "kind": "好",
+  "file": "06-公交地铁车厢-2降噪后.wav",
+  "src": "bus-metro-cabin-c03-ext#ed17595c-gtcrn-8b93a3da6a94800a.wav",
+  "sha256": "9c2ad899a477a151a8243cd8e1a37e633b879b52c50dfbee4d930a53b559a28e"
+ },
+ {
+  "n": 6,
+  "clip": "bus-metro-cabin-c03-ext",
+  "kind": "好",
+  "file": "06-公交地铁车厢-3干净参考.wav",
+  "src": "bus-metro-cabin-c03-ext#ed17595c-clean-305fc4d6c3b3bef5.wav",
+  "sha256": "17959482375b08b6b15bb9e2e69a3f84207043bca88c1f2a960e6350e5d5dc00"
+ },
+ {
+  "n": 7,
+  "clip": "cafe-c03-ext",
+  "kind": "典型",
+  "file": "07-咖啡馆-1原声.wav",
+  "src": "cafe-c03-ext#b0f89ece-mix-a9276a25893471b0.wav",
+  "sha256": "d87ebf31d4457784db4d464d59f2fd9b505374a426dc933b9bd03f3dd10ceeb0"
+ },
+ {
+  "n": 7,
+  "clip": "cafe-c03-ext",
+  "kind": "典型",
+  "file": "07-咖啡馆-2降噪后.wav",
+  "src": "cafe-c03-ext#b0f89ece-gtcrn-2073685f33a85352.wav",
+  "sha256": "f43a1d8e322b7318eb81f356237e90eae397435ecc54bbdae0c0b99feda4f871"
+ },
+ {
+  "n": 7,
+  "clip": "cafe-c03-ext",
+  "kind": "典型",
+  "file": "07-咖啡馆-3干净参考.wav",
+  "src": "cafe-c03-ext#b0f89ece-clean-d4f4e2e376be9d26.wav",
+  "sha256": "1e93f77a4624c29e3034150049b2c3b8523f7d0c511ddb74c4e9ff5e3d974e9c"
+ },
+ {
+  "n": 8,
+  "clip": "transit-hub-c02-ext",
+  "kind": "典型",
+  "file": "08-车站候车厅-1原声.wav",
+  "src": "transit-hub-c02-ext#98380d01-mix-fc736bc44370bf44.wav",
+  "sha256": "de5720176ca3dab96da334a6d260da6b35c6553319088dd16c4d06a813fa1384"
+ },
+ {
+  "n": 8,
+  "clip": "transit-hub-c02-ext",
+  "kind": "典型",
+  "file": "08-车站候车厅-2降噪后.wav",
+  "src": "transit-hub-c02-ext#98380d01-gtcrn-e99a1cd02ffe4629.wav",
+  "sha256": "233548b70867cd64fd0b12fdfbb678ead08647c04b6571835fc5d71a5565e1ec"
+ },
+ {
+  "n": 8,
+  "clip": "transit-hub-c02-ext",
+  "kind": "典型",
+  "file": "08-车站候车厅-3干净参考.wav",
+  "src": "transit-hub-c02-ext#98380d01-clean-64bfdc7309024d76.wav",
+  "sha256": "13356d4b46f467484eab91845921fe322dfff655a1bfb147fe863c491faa3806"
+ }
+]

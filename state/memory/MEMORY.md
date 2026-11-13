@@ -10,3 +10,4 @@
 - [学习材料只放桌面](20261101-study-notes-desktop-only.md) — 给人的科普 / 讲解只出到桌面（.md + .pdf），不进 docs/plan（人定 2026-11-01）
 - [榨干硬件 · 能耗极低 · 非常轻量](20261102-squeeze-hardware-low-power-lightweight.md) — 选后端、写引擎、定 CPU / 耗电 / 体积预算时对照（人定 2026-11-02，D69 整机 CPU 目标 1% 上限 2%）
 - [调研产出不写本机绝对路径](20261103-no-local-paths-in-research.md) — 原始报告里的缓存路径含用户名；起 workflow 写死、收尾前 grep 为 0（b10 两线踩过）
+- [两个大总管同机：hook 在会话目录提交](20261104-two-coordinators-hook-cwd.md) — 第二位大总管从自己的检出启动会话，否则 hook 会替对方提交主检出里的改动（三次教训，2026-11-04）
