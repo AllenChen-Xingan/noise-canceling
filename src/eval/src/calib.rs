@@ -16,6 +16,13 @@ use crate::Level;
 use crate::analysis::quantile;
 use crate::rng::Rng;
 
+pub mod judge;
+
+/// 【桩，待实现】
+pub fn effective(p: &[Pair]) -> Vec<Pair> {
+    p.to_vec()
+}
+
 /// 一个指标在答卷候选上的取值来源。
 pub struct Metric {
     /// 对应的 verifier（或「未登记」指标的名字）

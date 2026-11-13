@@ -24,6 +24,9 @@ pub const RULE_REPORT: &str = "只报不判（人定 D85）";
 pub const RULE_OLD_INPUT: &str =
     "只报不判：旧口径（在带噪输出上算），D85 题 2 要在干净人声单独过一遍的输出上重跑";
 
+/// 随机抽查段的送人耳原因都以它开头（调研 031 第 3 条）。
+pub const SPOT_WHY: &str = "随机抽查";
+
 /// 送人耳的最差听感段数。
 pub const LISTEN_WORST: usize = 3;
 
