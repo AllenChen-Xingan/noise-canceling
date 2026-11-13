@@ -3,7 +3,7 @@
 //! ```text
 //! vdn-eval ci    [--system ref,gtcrn] [--filter R0] [--out DIR] [--audio] [--write-baseline] [--record]
 //! vdn-eval qa    [--system gtcrn,fastenhancer-m] [--filter Q0] [--out DIR] [--record]
-//! vdn-eval calib [--answers JSON] [--scores JSON] [--round N] [--write-levels] [--record]
+//! vdn-eval calib [--answers JSON] [--scores JSON] [--predictors JSON] [--round N] [--write-levels] [--record]
 //! vdn-eval list
 //! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--rules v1|v2] [--out DIR]   # 场景成绩单（specs/rubric/scorecard.md）
 //! vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] [--out DIR]   # 不重跑音频，按规则重新汇总
@@ -282,8 +282,18 @@ fn cmd_calib(args: &[String]) -> Result<(), String> {
         serde_json::from_str(&std::fs::read_to_string(&path).map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())
     };
-    let c = vdn_eval::calib::calibrate(&read(&answers)?, &read(&scores)?, round);
-    let src = format!("答卷 `{answers}` · 指标 `{scores}`");
+    // 评分模型表（听感两项的混淆矩阵用）；没给 --answers 时默认用 exp009 对 exp003 那份音频打的分
+    let preds = arg(args, "--predictors").or_else(|| {
+        arg(args, "--answers")
+            .is_none()
+            .then(|| "docs/experiments/exp009-more-ears/results/exp003_predictors.json".into())
+    });
+    let pv = preds.as_deref().map(read).transpose()?.unwrap_or(Value::Null);
+    let c = vdn_eval::calib::calibrate_with(&read(&answers)?, &read(&scores)?, &pv, round);
+    let src = format!(
+        "答卷 `{answers}` · 指标 `{scores}` · 评分模型 `{}`",
+        preds.as_deref().unwrap_or("（没给，听感两项判不了）")
+    );
     let md = vdn_eval::calib::to_markdown(&c, &src);
     println!("{md}");
     if flag(args, "--record") {
