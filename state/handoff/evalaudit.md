@@ -49,3 +49,6 @@
 - 写好第 1、3、4 条的测试与桩（calib/judge.rs · judge_tests.rs · rules_v2_tests.rs · table.rs SC-LISTEN），P2 issue 草稿 5 份
 - ⚠️ 拿名额后查 heavy.lock：info 写着 owner: noise-canceling-74 / cands，不空；我先覆盖了 info 再发现，已把第一行原样写回（其后若有内容已丢）；未跑，报大总管等确认
 - 规则（大总管 2026-11-13）：读锁前先 ls 判断 heavy.lock 是否存在，别先写；存在就读 info 第一行，不是 free 就停
+- 拿名额（mkdir 锁）：先红 5 条 → 修第 1/3/4 条 → cargo test -p vdn-eval 全过、tidy 通过、clippy 无输出 → 删锁、归还
+- 重跑定标第 1 轮：有效配对 20（原始 48），存 exp022/results/calib-round1-rerun.md
+- scorecard.md：第六节加随机抽查行与两种量法，L1 改「有效配对」，新增第十节改动记录
