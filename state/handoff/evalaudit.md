@@ -54,3 +54,8 @@
 - 重跑定标第 1 轮：有效配对 20（原始 48），存 exp022/results/calib-round1-rerun.md
 - scorecard.md：第六节加随机抽查行与两种量法，L1 改「有效配对」，新增第十节改动记录
 - 自审（vdn-review，3 个视角）：本改动内 P1 1 条（随机抽查会抽到逐段否决的段）→ 先加红测再修；calib/judge 术语、main 用法补清；范围外条目记进「转交」
+- 自审修复：名额内先红后绿（150 条），锁已删、归还
+- codex 第 1 轮（gpt-6-astra，59 s）：P1×1 P2×2 + 抽查不符 1，全属实已改；记录 docs/research/031_eval-judge-audit/reviews/031_eval-judge-audit-codex.md
+- 隐私扫描把 `eat_tokens` 当密钥赋值误报 → 改名 eat_count（Python 与 Rust 同改），没用 --force-secrets
+- 建 20 题听测页 build 20261113-121429-ba6b：音频写本 worktree `_tmp/exp022-listen/`（主目录只读），揭盲表在 key/ 并复制进 exp022/builds/；9 判不过 + 9 判过 + 2 重测；Python 测试 24 条全过
+- 申请名额复测 Rust，等回复

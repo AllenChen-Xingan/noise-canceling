@@ -64,7 +64,10 @@ fn human_cuts() {
     assert_eq!(t("marginal", Human::UsableStrict), Some(V::Fail));
     assert_eq!(t("ok", Human::UsableStrict), Some(V::Pass));
     assert_eq!(t("bogus", Human::UsableStrict), None);
-    assert_eq!(item(None, Some(true), &z, &z).truth(Human::Eaten), Some(V::Fail));
+    assert_eq!(
+        item(None, Some(true), &z, &z).truth(Human::Eaten),
+        Some(V::Fail)
+    );
     assert_eq!(item(None, None, &z, &z).truth(Human::Eaten), None);
 }
 
