@@ -99,15 +99,11 @@ def select(pool, n_per, n_retest, seed):
             raise ValueError(f"{name} 层只有 {got} 个不重复源片段，不够 {n_per}")
     rng.shuffle(picks)
     order = [dict(p, retest_of=None) for p in picks]
-    # 重测：两层各取第一个出现在前半段的题，原样插到后半段，且不与原题相邻
+    # 重测：两层各取第一个出现在前半段的题，原样放到最后几题（离原题至少隔半套题）
     half = len(order) // 2
-    retests = []
     for name in ("fail", "pass")[:n_retest]:
-        src = next(i for i, p in enumerate(order[:half]) if p["stratum"] == name)
-        retests.append(src)
-    for k, src in enumerate(retests):
-        pos = len(order) - 2 * k - 1 if len(order) - 2 * k - 1 > src + 1 else len(order)
-        order.insert(pos, dict(order[src], retest_of=src + 1))
+        src = next(i for i, p in enumerate(order[:half]) if p["stratum"] == name and p["retest_of"] is None)
+        order.append(dict(order[src], retest_of=src + 1))
     sizes = {k: len(v) for k, v in strata.items()}
     frac = {k: (n_per / sizes[k]) if sizes[k] else None for k in sizes}
     return order, sizes, frac
