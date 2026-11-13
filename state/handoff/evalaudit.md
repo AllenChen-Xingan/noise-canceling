@@ -16,12 +16,12 @@
 | `src/eval/src/main.rs` | `calib --predictors`；用法说明 |
 | `specs/rubric/scorecard.md` | 第六节随机抽查行、两种量法与样本口径；L1 改「有效配对」；新增第十节改动记录 |
 | `docs/research/031_eval-judge-audit/` | inventory · audit · decision · issues/（P2 × 5）· reviews/（codex 记录） |
-| `docs/experiments/exp022-judge-tpr-tnr/` | 实测脚本与结果；盲听页生成 · 模板 · 答卷转换；Python 测试 36 条；builds/（新 build + 作废旧 build） |
+| `docs/experiments/exp022-judge-tpr-tnr/` | 实测脚本与结果；盲听页生成 · 模板 · 答卷转换；Python 测试 34 条；builds/（新 build + 作废旧 build） |
 
-验证：`cargo test -p vdn-eval` 全过（lib 151 条 + 集成测试）、`clippy -D warnings`、`xtask tidy` 通过（12:16，此后 src/ 未改）；Python 36 条全过。
+验证：`cargo test -p vdn-eval` 全过（lib 151 条 + 集成测试）、`clippy -D warnings`、`xtask tidy` 通过（12:16，此后 src/ 未改）；Python 34 条全过。
 
 ## 盲听页（交人用）
-- 给人的目录：`/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalaudit/_tmp/exp022-listen/20261113-122017-3126/listen/`（`index.html` + 40 个 `qNN.wav` / `qNN_orig.wav`；已查：无揭盲表、无清单、无模型名或场景名）
+- 给人的目录：`_tmp/exp022-listen/20261113-122017-3126/listen/`（worktree 内，不入库）（`index.html` + 40 个 `qNN.wav` / `qNN_orig.wav`；已查：无揭盲表、无清单、无模型名或场景名）
 - 揭盲表：同 build 的 `key/`（不给人），已复制进 `docs/experiments/exp022-judge-tpr-tnr/builds/20261113-122017-3126/`
 - 20 题：9 题评估器判不过 + 9 题判过 + 2 道重测；每题 12 s，约 10–15 分钟；答完点「导出答卷」交回 JSON
 - ⚠️ 本 worktree 删除前，把 `_tmp/exp022-listen/` 挪到主目录 `_tmp/`（git 忽略，删 worktree 会一起丢）
@@ -75,3 +75,4 @@
 - 申请名额复测 Rust，等回复
 - codex 第 2–4 轮：第 2 轮 P1（选题入样概率）→ 改设计、重建 build；第 3 轮 P2×3、第 4 轮 P2×2 全修；第 3、4 轮连续无 P0/P1 → 停止线满足
 - 已收尾
+- 验收更正：Python 测试是 34 条（先前报 36 是我数错，round 4 只改了已有测试、没新增）；现状页绝对路径改相对路径
