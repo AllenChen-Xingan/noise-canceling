@@ -161,7 +161,7 @@ pub fn judges() -> Vec<Judge> {
             },
         },
         Judge {
-            id: "eat_tokens",
+            id: "eat_count",
             verifier: "V-EAT-ASR",
             label: "吃字：多错 ≥ fail_chars 个（v2）",
             humans: &[Human::Eaten],

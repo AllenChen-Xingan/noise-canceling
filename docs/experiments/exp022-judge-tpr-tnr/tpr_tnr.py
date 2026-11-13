@@ -112,7 +112,7 @@ def build_rows(answers, pred, scores, lines):
                 "j_scoreq_v1": v1q, "j_distill_v1": v1d, "j_both_v1": both(v1q, v1d),
                 "j_scoreq_slack": delta_verdict(dq, slack),
                 "j_distill_slack": delta_verdict(dd, slack),
-                "j_eat_tokens": eat_tokens(sc, sn, lines["eat_tokens_v2"]),
+                "j_eat_count": eat_tokens(sc, sn, lines["eat_tokens_v2"]),
                 "j_eat_pp": eat_pp(sc, sn, lines["eat_pp_v1"]),
             })
     return rows
@@ -124,7 +124,7 @@ JUDGES = [
     ("听感 · 两模型合判（v1：一过一不过 = 待测）", "j_both_v1", ["h_loose", "h_strict"]),
     ("听感 · SCOREQ 单段 Δ ≥ −0.1（D85 的线若用在单段上）", "j_scoreq_slack", ["h_loose", "h_strict"]),
     ("听感 · Distill-MOS 单段 Δ ≥ −0.1", "j_distill_slack", ["h_loose", "h_strict"]),
-    ("吃字 · 识别多错 ≥ 5 个词/字（D85 题 3）", "j_eat_tokens", ["h_eaten"]),
+    ("吃字 · 识别多错 ≥ 5 个词/字（D85 题 3）", "j_eat_count", ["h_eaten"]),
     ("吃字 · 识别多错 > 1 个百分点（rubric V7）", "j_eat_pp", ["h_eaten"]),
 ]
 HUMAN = {

@@ -23,7 +23,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "fail",
+   "j_eat_count": "fail",
    "j_eat_pp": "fail"
   },
   {
@@ -42,7 +42,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -61,7 +61,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "fail"
   },
   {
@@ -80,7 +80,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -99,7 +99,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -118,7 +118,7 @@
    "j_both_v1": "undecided",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -137,7 +137,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -156,7 +156,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -175,7 +175,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -194,7 +194,7 @@
    "j_both_v1": "fail",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "fail",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -213,7 +213,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "fail",
+   "j_eat_count": "fail",
    "j_eat_pp": "fail"
   },
   {
@@ -232,7 +232,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "fail"
   },
   {
@@ -251,7 +251,7 @@
    "j_both_v1": "undecided",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "fail",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "fail"
   },
   {
@@ -270,7 +270,7 @@
    "j_both_v1": "undecided",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "fail",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -289,7 +289,7 @@
    "j_both_v1": "fail",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "fail",
+   "j_eat_count": "fail",
    "j_eat_pp": "fail"
   },
   {
@@ -308,7 +308,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "fail",
+   "j_eat_count": "fail",
    "j_eat_pp": "fail"
   },
   {
@@ -327,7 +327,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "fail"
   },
   {
@@ -346,7 +346,7 @@
    "j_both_v1": "fail",
    "j_scoreq_slack": "fail",
    "j_distill_slack": "fail",
-   "j_eat_tokens": "fail",
+   "j_eat_count": "fail",
    "j_eat_pp": "fail"
   },
   {
@@ -365,7 +365,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -384,7 +384,7 @@
    "j_both_v1": "undecided",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "fail",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "fail"
   },
   {
@@ -403,7 +403,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "fail"
   },
   {
@@ -422,7 +422,7 @@
    "j_both_v1": "undecided",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "fail",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -441,7 +441,7 @@
    "j_both_v1": "undecided",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -460,7 +460,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -479,7 +479,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -498,7 +498,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "fail"
   },
   {
@@ -517,7 +517,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -536,7 +536,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -555,7 +555,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -574,7 +574,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "pass"
   },
   {
@@ -593,7 +593,7 @@
    "j_both_v1": "fail",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "fail",
-   "j_eat_tokens": "fail",
+   "j_eat_count": "fail",
    "j_eat_pp": "fail"
   },
   {
@@ -612,7 +612,7 @@
    "j_both_v1": "undecided",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "fail",
-   "j_eat_tokens": "fail",
+   "j_eat_count": "fail",
    "j_eat_pp": "fail"
   },
   {
@@ -631,7 +631,7 @@
    "j_both_v1": "undecided",
    "j_scoreq_slack": "fail",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "fail"
   },
   {
@@ -650,7 +650,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "fail"
   },
   {
@@ -669,7 +669,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "fail"
   },
   {
@@ -688,7 +688,7 @@
    "j_both_v1": "pass",
    "j_scoreq_slack": "pass",
    "j_distill_slack": "pass",
-   "j_eat_tokens": "pass",
+   "j_eat_count": "pass",
    "j_eat_pp": "fail"
   }
  ],
@@ -1143,7 +1143,7 @@
    "balanced_accuracy": 0.6346153846153846,
    "youden_j": 0.26923076923076916,
    "judge": "吃字 · 识别多错 ≥ 5 个词/字（D85 题 3）",
-   "judge_key": "j_eat_tokens",
+   "judge_key": "j_eat_count",
    "human": "人耳勾选「吃字」= 不过",
    "human_key": "h_eaten",
    "confusion": {

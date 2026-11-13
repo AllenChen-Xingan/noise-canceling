@@ -489,7 +489,7 @@ fn random_spot_check_skips_vetoed_clips() {
     let rows: Vec<ClipRow> = (0..12)
         .map(|i| {
             let mut extra = vec![];
-            if i >= 3 && i < 11 {
+            if (3..11).contains(&i) {
                 // 第 3–10 段吃字多错 lim 个（ref_len 100 → 百分点 = 个数）
                 let mut s = sc("V-EAT-ASR", lim, 1.0);
                 s.extra = vec![("ref_len", 100.0)];

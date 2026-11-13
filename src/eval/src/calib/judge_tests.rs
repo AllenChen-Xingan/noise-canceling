@@ -71,7 +71,7 @@ fn human_cuts() {
 #[test]
 fn eat_line_from_table() {
     let lim = th::EAT_ASR.def("fail_chars");
-    let j = judges().into_iter().find(|j| j.id == "eat_tokens").unwrap();
+    let j = judges().into_iter().find(|j| j.id == "eat_count").unwrap();
     let n = json!({"del": 0.0, "sub": 0.0, "ref_len": 1000.0});
     let at = json!({"del": lim, "sub": 0.0, "ref_len": 1000.0});
     let below = json!({"del": lim - 1.0, "sub": 0.0, "ref_len": 1000.0});
