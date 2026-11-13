@@ -409,3 +409,66 @@ fn worst_clip_of_judged_item_goes_to_human() {
         c.listen.to_human
     );
 }
+
+/// 调研 031 第 3 条：评估器判过、又没因别的原因被选中的段，按固定种子随机抽 `SC-LISTEN.random` 段送人耳，
+/// 用来量漏判（评估器说过、人说不过）。只从「两个评分模型单段都过 v2 线」的段里抽。
+fn spot_rows() -> Vec<ClipRow> {
+    (0..12)
+        .map(|i| {
+            let mut r = row(i, MeetingPlace::Cafe, vec![]);
+            // 第 0、1 段听感不过（不该被随机抽到）；其余各不相同，便于区分最差 3 段
+            let d = if i < 2 { -1.0 } else { 0.05 * i as f64 };
+            r.scores[0].2 = sc("V-NRMOS-SCOREQ", d, 0.0);
+            r.scores[1].2 = sc("V-NRMOS-DISTILL", d, 0.0);
+            r
+        })
+        .collect()
+}
+
+fn spot_picks(c: &SceneCard) -> Vec<String> {
+    c.listen
+        .to_human
+        .iter()
+        .filter(|(_, why)| why.starts_with(SPOT_WHY))
+        .map(|(x, _)| x.clone())
+        .collect()
+}
+
+#[test]
+fn random_spot_check_picks_judged_pass_clips() {
+    let rows = spot_rows();
+    let c = one(&rows);
+    let n = th::LISTEN.def("random") as usize;
+    let picks = spot_picks(&c);
+    assert_eq!(picks.len(), n, "{:?}", c.listen.to_human);
+    let worst: Vec<&String> = c
+        .listen
+        .to_human
+        .iter()
+        .filter(|(_, w)| !w.starts_with(SPOT_WHY))
+        .map(|(x, _)| x)
+        .collect();
+    for p in &picks {
+        assert!(!worst.contains(&p), "随机抽查不能和已选的段重复：{p}");
+        assert!(p != &rows[0].clip && p != &rows[1].clip, "听感不过的段不在抽查范围：{p}");
+    }
+    let seed = th::AGG.def("seed") as u64;
+    assert!(
+        c.listen.to_human.iter().any(|(_, w)| w.contains(&format!("种子 {seed}"))),
+        "报告里要写明种子"
+    );
+}
+
+#[test]
+fn random_spot_check_is_reproducible() {
+    let rows = spot_rows();
+    assert_eq!(spot_picks(&one(&rows)), spot_picks(&one(&rows)));
+}
+
+#[test]
+fn random_spot_check_takes_what_is_there() {
+    // 只有 4 段、都过：最差 3 段先选走，只剩 1 段可抽
+    let rows: Vec<ClipRow> = (0..4).map(|i| row(i, MeetingPlace::Cafe, vec![])).collect();
+    let c = one(&rows);
+    assert_eq!(spot_picks(&c).len(), 1.min(th::LISTEN.def("random") as usize));
+}

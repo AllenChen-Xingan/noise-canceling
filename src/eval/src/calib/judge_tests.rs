@@ -109,8 +109,8 @@ fn matches_exp022_python() {
     };
     let mut checked = 0;
     for r in &rows {
+        // 两边命名约定：Python 的 judge_key = "j_" + 本文件的 judge id
         let jk = format!("j_{}", r["judge"].as_str().unwrap());
-        let jk = jk.replace("j_scoreq_v1", "j_scoreq_v1"); // 两边命名一致：j_<judge id>
         let hk = human(r["human"].as_str().unwrap());
         let other = py["results"]
             .as_array()
