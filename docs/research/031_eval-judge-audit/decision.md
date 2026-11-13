@@ -26,11 +26,11 @@
 3. **有效配对去重**：定标按（屏, 胜, 负）去重，exp003 的 48 条实为 20 对；升级门槛用有效配对（`calib.rs`），与 012 原文「有效配对数」对齐
 4. 吃字题没答不再被当成「没吃」（codex 第 1 轮）
 
-验证：`cargo test -p vdn-eval` 全过（lib 151 条），`xtask tidy`、`clippy -D warnings` 通过；Python 28 条测试全过。
+验证：`cargo test -p vdn-eval` 全过（lib 151 条），`xtask tidy`、`clippy -D warnings` 通过；Python 34 条测试全过。
 
 ## 没修的去向
 
 - **吃字线、听感线的数值**：人定 2026-11-13「先不改，攒样本」
-- **再听一轮校准**：人定要听。盲听页 build `20261113-122017-3126` 已建（9 题评估器判不过 + 9 题判过 + 2 道重测，约 10–15 分钟），揭盲表与事先登记在 `docs/experiments/exp022-judge-tpr-tnr/builds/20261113-122017-3126/`。答卷回来后跑 `vdn-eval calib --answers … --round 2`（转换器待写，见下）
+- **再听一轮校准**：人定要听。盲听页 build `20261113-122017-3126` 已建（9 题评估器判不过 + 9 题判过 + 2 道重测，约 10–15 分钟），揭盲表与事先登记在 `docs/experiments/exp022-judge-tpr-tnr/builds/20261113-122017-3126/`。答卷回来后先跑 `convert_answers.py`（答卷 + 揭盲表 → calib 的三份输入），再跑 `vdn-eval calib … --round 2`；整条路已用造的答卷走通
 - **P2 五条**：issue 草稿在 `issues/`（成绩单措辞、样本量、过关比例修正、切法事先登记、L1 措辞）
-- **待写**：新答卷格式（每题一个候选）到 `calib` 的转换，以及按入样概率加权的率；答卷回来再做，免得空转
+- **待写**：按入样概率加权的总体率（`convert_answers.py` 已把每题入样概率写进 `weights.json`）；答卷回来再做，免得空转

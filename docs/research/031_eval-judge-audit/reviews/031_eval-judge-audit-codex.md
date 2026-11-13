@@ -22,3 +22,13 @@
 | 1 | P1 | 选题先抽判不过层、再跨层排除同源片段，揭盲表的「抽样比例」不是真实入样概率，加权回不了总体 | 属实 | 改设计：两层各不放回简单随机抽样，整套有同源片段就整套重抽；按同一设计模拟 200 000 次估每条入样概率（附蒙特卡罗误差），抽样框写进揭盲表。测试 `Inclusion.test_shared_source_lowers_probability` 用可手算的小例（1/7 · 2/7）核对。新 build `20261113-122017-3126`：判不过层入样概率 0.095–0.165（n/N 近似是 0.134），旧 build `20261113-121429-ba6b` 标作废、未交人 |
 | 2 | P2 | 洗牌后前半段若只有一层，重测原题查找会抛 StopIteration | 属实 | 抽出 `place_retests`：两层原题都换到前半段再接重测；测试 `test_retest_when_first_half_is_one_stratum` |
 | 3 | P2 | 揭盲表没事先登记人耳真值切法与本轮用途 | 属实 | 揭盲表加 `prereg`（宽切为主、严切敏感性；unsure 判不了；本轮 = 定标第 2 轮验证集；逆概率加权；重测只量一致性），`make_key` 缺字段即报错，测试 `Key.test_prereg_and_required_fields` |
+
+## 第 3 轮（2026-11-13 12:21，70 s）· P0×0 P1×0 P2×3 · 总评：修改（连续第 1 轮无 P0/P1）
+
+第 2 轮三条 codex 抽查「核实属实」。本轮 P2 三条都属实，代价小，直接修：
+
+| # | 级 | 发现 | 核实 | 处理 |
+|---|---|---|---|---|
+| 1 | P2 | 新答卷是 `answers[{q,…}]`，calib 读 `trials[].by_model`，直接喂会静默出零条 | 属实 | 新增 `convert_answers.py`（答卷 + 揭盲表 → calib 三份输入 + 入样概率 `weights.json`；build 不符、题号不在揭盲表、转出零条都报错；听不出 = 判不了；重测题不进）。测试 `test_convert_answers.py`；另用造的答卷跑通 `vdn-eval calib`（18 条，重测 2 题已排除） |
+| 2 | P2 | 揭盲表必填校验只看顶层键，prereg 子字段缺了也能生成 | 属实 | `check_key` 查顶层与 `prereg` 每个子字段非空；测试逐个删字段 / 置空断言报错；现有 build 揭盲表过新校验 |
+| 3 | P2 | 缺一类人耳样本时 TPR/TNR 为 NaN，Rogan-Gladen 截断后伪造成 0 | 属实 | 输入非有限值返回 None；测试 `test_nan_inputs_give_none` |
