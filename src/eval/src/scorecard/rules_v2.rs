@@ -261,7 +261,47 @@ pub fn summarize(rows: &[ClipRow], missing: &[Missing]) -> Vec<SceneCard> {
         let rs = rows_of(c, rows);
         finish(c, &rs);
     }
+    spot_check(&mut cards, rows);
     cards
+}
+
+/// 随机抽查（调研 031 第 3 条）：上面几类只送「疑似坏」的段，评估器说过的段人永远听不到，漏判量不出。
+/// 这里从全成绩单里「两个评分模型单段 Δ 都不低于 −`SC-NRMOS-DELTA`、且没因别的原因被选中」的段里，
+/// 按 `SC-AGG.seed` 不放回地抽 `SC-LISTEN.random` 段（人定 2026-11-13）。候选顺序 = 组合顺序 × 段在输入里的顺序，
+/// 同样的输入出同样的段；原因里写明种子与总段数。不够就全抽。
+fn spot_check(cards: &mut [SceneCard], rows: &[ClipRow]) {
+    let n = th::LISTEN.def("random") as usize;
+    let seed = th::AGG.def("seed") as u64;
+    let line = -th::NRMOS_DELTA.def("max");
+    let mut cand: Vec<(usize, String)> = Vec::new();
+    for (i, c) in cards.iter().enumerate() {
+        for r in rows_of(c, rows) {
+            let ok = rules::LISTEN.iter().all(|v| {
+                score_in(r, v)
+                    .and_then(|s| s.value)
+                    .is_some_and(|d| d >= line - 1e-12)
+            });
+            let taken = c.listen.to_human.iter().any(|(x, _)| *x == r.clip);
+            if ok && !taken && !cand.iter().any(|(j, x)| *j == i && *x == r.clip) {
+                cand.push((i, r.clip.clone()));
+            }
+        }
+    }
+    let mut rng = crate::rng::Rng::new(seed);
+    let k = n.min(cand.len());
+    for t in 0..k {
+        let j = t + rng.below(cand.len() - t);
+        cand.swap(t, j);
+        let (i, clip) = cand[t].clone();
+        cards[i].listen.to_human.push((
+            clip,
+            format!(
+                "{SPOT_WHY}：评估器判过的段里随机抽，量漏判用（第 {}/{k} 段，种子 {seed}，候选 {} 段）",
+                t + 1,
+                cand.len()
+            ),
+        ));
+    }
 }
 
 #[cfg(test)]
