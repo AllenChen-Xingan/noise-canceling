@@ -401,5 +401,56 @@ mod tests {
         // clearer：m1 胜 m2、m3；h3：m1 胜 m2、m3
         assert_eq!(p.len(), 4);
         assert_eq!(h3.len(), 1);
+        // 同一判断只数一次：clearer 与 h3 给出的是同两对
+        assert_eq!(effective(&p).len(), 2);
+    }
+
+    fn repo_json(rel: &str) -> Value {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").join(rel);
+        serde_json::from_str(&std::fs::read_to_string(&p).expect("读仓内数据")).expect("JSON")
+    }
+
+    /// 调研 031 第 4 条：exp007 定标第 1 轮的 48 对里，不重复的只有 20 对；
+    /// 升级门槛与一致率都按不重复的有效配对算，原始条数另报。
+    #[test]
+    fn exp003_round1_counts_effective_pairs() {
+        let a = repo_json(
+            "docs/experiments/exp003-offline-ab/results/20261030-human-build-20261030110755-f8c3.json",
+        );
+        let s = repo_json("docs/experiments/exp003-offline-ab/scores.json");
+        let c = calibrate(&a, &s, 2);
+        assert_eq!(c["pairs_raw"], 48);
+        assert_eq!(c["pairs_effective"], 20);
+        for m in c["metrics"].as_array().unwrap() {
+            assert!(m["pairs"].as_u64().unwrap() <= 20, "{}", m["verifier"]);
+        }
+    }
+
+    /// 20 条有效配对正好压在门槛上；只有原始条数够、有效配对不够时不能升 L1。
+    #[test]
+    fn level_gate_uses_effective_pairs() {
+        // 12 屏，每屏 clearer · natural · h3 三次给出同一对 → 原始 36 对、有效 12 对，且全部同向
+        let trials: Vec<Value> = (0..12)
+            .map(|i| {
+                json!({"kind": "real", "clip": format!("c{i:02}"), "slots": {"A": "m1", "B": "m2"},
+                  "by_model": {"clearer": "m1", "natural": "m1", "usable": {"m1": "ok", "m2": "no"}}})
+            })
+            .collect();
+        let per: serde_json::Map<String, Value> = (0..12)
+            .map(|i| {
+                (format!("c{i:02}"), json!({"noisy": {"SIG": 1.0}, "m1": {"SIG": 3.0}, "m2": {"SIG": 2.0}}))
+            })
+            .collect();
+        let c = calibrate(&json!({"trials": trials}), &json!({"per_clip": per}), 2);
+        assert_eq!(c["pairs_raw"], 36);
+        assert_eq!(c["pairs_effective"], 12);
+        let sig = c["metrics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|m| m["verifier"] == "V-DNSMOS.SIG")
+            .unwrap();
+        assert_eq!(sig["agreement"], 1.0);
+        assert_eq!(sig["level"], "L0", "有效配对 12 < 20，不能因原始 36 条升级");
     }
 }
