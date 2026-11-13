@@ -36,13 +36,16 @@ def case(kind, n, seed):
     if kind.startswith("noise"):
         a = float(kind.split("-")[1])
         y = np.array([x[i] + a * next(g) for i in range(n)])
+    elif kind == "zero":
+        # 输出整段数字零（降噪器把人声全删掉的极端情形）
+        y = np.zeros(n)
     elif kind == "gate":
         y = np.array([x[i] * (0.1 if (i // 1600) % 3 == 0 else 1.0) for i in range(n)])
     else:
         y = x.copy()
     return x, y
 
-CASES = [("same", 1), ("noise-0.02", 2), ("noise-0.1", 3), ("noise-0.3", 4), ("gate", 5)]
+CASES = [("same", 1), ("noise-0.02", 2), ("noise-0.1", 3), ("noise-0.3", 4), ("gate", 5), ("zero", 6)]
 N = SR * 4
 res = []
 for kind, seed in CASES:
@@ -50,7 +53,7 @@ for kind, seed in CASES:
     res.append({"case": kind, "seed": seed,
                 "estoi": float(pystoi.stoi(x, y, SR, extended=True)),
                 "stoi": float(pystoi.stoi(x, y, SR, extended=False))})
-out = {"doc": "pystoi 0.4.1 在公式信号上的参考值（gen_estoi_ref.py 生成）；对拍要求 |Rust − 上游| ≤ 0.01",
+out = {"doc": "pystoi 0.4.1 在公式信号上的参考值（gen_estoi_ref.py 生成）；对拍要求 |Rust − 上游| ≤ 1e-4",
        "pystoi": pystoi.__version__ if hasattr(pystoi, "__version__") else "0.4.1",
        "sr": SR, "n": N, "cases": res}
 p = pathlib.Path(__file__).with_name("estoi-pystoi.json")

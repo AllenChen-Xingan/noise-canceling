@@ -364,3 +364,63 @@ fn repo_scene_suite_parses_and_expands() {
     }
     eprintln!("{} 条任务展开 {n} 段", suite.tasks.len());
 }
+
+/// 人定 D85 题 2 = B：新规则下人声起伏 · 音色 · 轻声字在「干净人声单独过一遍」的输出上算，分数带标记；
+/// 原声直通过一遍干净人声 = 干净人声本身，三项读数都接近 0。旧规则 v1 照旧在带噪输出上算、不带标记。
+#[test]
+fn clean_pass_items_scored_on_clean_input_under_v2() {
+    use vdn_eval::scorecard::card::Rules;
+    use vdn_eval::scorecard::standard::{CLEAN_PASS, CLEAN_PASS_MARK};
+    let (root, suite_text) = setup("cleanpass");
+    let suite = parse_suite(&suite_text).unwrap();
+    let mark = |s: &vdn_eval::Score| {
+        s.extra
+            .iter()
+            .any(|(k, v)| *k == CLEAN_PASS_MARK && *v == 1.0)
+    };
+    let run = |r| {
+        vdn_eval::scorecard::run_with(
+            &suite,
+            &[SystemKind::Passthrough],
+            &opts(),
+            None,
+            Some(&root),
+            r,
+        )
+        .0
+    };
+    let v2 = run(Rules::V2);
+    assert_eq!(v2.len(), 6);
+    for r in &v2 {
+        let picked: Vec<_> = r
+            .scores
+            .iter()
+            .filter(|(v, _, _)| CLEAN_PASS.contains(v))
+            .collect();
+        assert_eq!(picked.len(), CLEAN_PASS.len(), "{}：三项都要在", r.clip);
+        for (v, _, s) in picked {
+            assert!(mark(s), "{v} 应带干净人声标记");
+            // 每项都必须出分，不许「全无分也通过」（codex 中途 2 第 2 轮 P2 #2）
+            let x = s
+                .value
+                .unwrap_or_else(|| panic!("{} · {v} 没出分：{}", r.clip, s.verdict.as_str()));
+            assert!(
+                x.is_finite() && x.abs() < 0.5,
+                "{} · {v}：原声直通过干净人声读数应近 0，得 {x}",
+                r.clip
+            );
+        }
+        // 其余项不带标记
+        assert!(
+            r.scores
+                .iter()
+                .filter(|(v, _, _)| !CLEAN_PASS.contains(v))
+                .all(|(_, _, s)| !mark(s))
+        );
+    }
+    let v1 = run(Rules::V1);
+    assert!(
+        v1.iter().flat_map(|r| &r.scores).all(|(_, _, s)| !mark(s)),
+        "v1 不跑干净人声那一路"
+    );
+}

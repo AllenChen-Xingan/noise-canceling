@@ -1,0 +1,39 @@
+{
+  "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
+  "inputs": [
+    "mix",
+    "bg",
+    "trunc",
+    "clean"
+  ],
+  "latency_samples": 256,
+  "model": {
+    "exp021_remix": {
+      "files": 1451,
+      "floor_db": -12.0,
+      "from": "_tmp/030/gtcrn-h-raw",
+      "from_name": "gtcrn-raw",
+      "from_run_json_sha256": "5f5e6ca7c1bd6477938f70dd1bac7574e1ffbd82d42a5fd8b01dd99e0c665860",
+      "head": "_tmp/030/gtcrn-h-raw.head",
+      "note": "已用真引擎按上面的参数混回原声；打分时须用 safety=false 的派生测试集，免得混两次",
+      "off": false,
+      "open_db": -6.0
+    },
+    "upstream": {
+      "exp021_raw": {
+        "clips": 480,
+        "engine": "SafetyConfig::off（三件保命全关，输出 = 模型原样输出）",
+        "file_list_like": "_tmp/exp016/dfn3-ll/20261105-063623-e4eb13d9",
+        "files": 1451,
+        "head_dir": "_tmp/030/gtcrn-h-raw.head",
+        "limit": null,
+        "model": "gtcrn",
+        "weights_sha256": "b4718df6228e7bdf1a8a435cf98f838636eb2fd331acabf86ba87c5192ebcb87"
+      }
+    }
+  },
+  "name": "gtcrn-h-om6-fm12",
+  "native_rate": 16000,
+  "schema": "vdn-external-output/1",
+  "sr": 16000
+}

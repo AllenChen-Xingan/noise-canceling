@@ -1,6 +1,9 @@
 //! 便宜的场景特征。两段：
-//! - **逐帧**（[`FeatureExtractor::push_hop`]，每 16 ms 一次，喂带噪输入）：一次 512 点实数 FFT + 一次逆 FFT（自相关求谐波度），
-//!   其余都是 257 个频点上的加法，结果存进 2 s 环形缓冲。不分配
+//! - **逐帧**（每 16 ms 一次，喂带噪输入），两个入口只差「功率谱从哪来」，之后同一段代码：
+//!   - [`FeatureExtractor::push_hop_with_power`]：借降噪模型算好的功率谱（`SpectrumTap::input_power`），不做正向 FFT
+//!   - [`FeatureExtractor::push_hop`]：自算一次（拿不到谱的模型，如 FE-M），口径同 `vdn_types::FRONTEND`
+//!
+//!   另有一次逆 FFT（功率谱 → 自相关求谐波度），其余都是 257 个频点上的加法，结果存进 2 s 环形缓冲。不分配
 //! - **每次判断**（[`FeatureExtractor::compute`]，约 0.5 s 一次）：在 2 s 缓冲上算分位数、调制谱等，得 [`NF`] 维特征。不分配
 //!
 //! 特征表（下标即 [`FeatureExtractor::compute`] 输出的位置）：
@@ -33,15 +36,24 @@
 use std::sync::Arc;
 
 use realfft::num_complex::Complex32;
-use realfft::{ComplexToReal, RealFftPlanner, RealToComplex};
-use vdn_dsp::window::sqrt_hann_periodic;
+use realfft::{ComplexToReal, RealFftPlanner};
+use vdn_dsp::{StreamingStft, power_into};
+use vdn_types::{FRONTEND, MODEL_RATE, StftSpec, Window};
 
 pub const NF: usize = 35;
 /// 环形缓冲长度（帧）：125 × 16 ms = 2 s
 pub const CTX: usize = 125;
 const NB: usize = 16;
-const N_FFT: usize = 512;
-const BINS: usize = N_FFT / 2 + 1;
+const N_FFT: usize = FRONTEND.n_fft;
+const BINS: usize = FRONTEND.bins();
+// 分类器权重（weights.rs）按 512 点 / 帧移 256 / 周期 sqrt-Hann、在 MODEL_RATE 上训练：正本的点数、帧移、窗一改，
+// 或正本不再取 MODEL_RATE，这里编译不过，提醒重训。MODEL_RATE 本身改了这里拦不住——那会让所有模型一起作废，归采样率正本管
+const _: () = assert!(
+    FRONTEND.n_fft == 512
+        && FRONTEND.hop == 256
+        && FRONTEND.sample_rate == MODEL_RATE
+        && matches!(FRONTEND.window, Window::SqrtHannPeriodic)
+);
 
 pub const FEATURE_NAMES: [&str; NF] = [
     "snr_est",
@@ -99,15 +111,13 @@ struct Frame {
 pub struct FeatureExtractor {
     hop: usize,
     sr: f32,
-    win: Vec<f32>,
-    input: Vec<f32>,
-    time: Vec<f32>,
+    /// 自算入口用的 STFT（借谱时只推进缓冲，不做 FFT）
+    stft: StreamingStft,
+    /// 逆 FFT 的输入（功率谱当实部）
     spec: Vec<Complex32>,
     pow: Vec<f32>,
     acorr: Vec<f32>,
-    scratch_f: Vec<Complex32>,
     scratch_i: Vec<Complex32>,
-    fwd: Arc<dyn RealToComplex<f32>>,
     inv: Arc<dyn ComplexToReal<f32>>,
     band_edges: [usize; NB + 1],
     band_hz: [f32; NB],
@@ -128,12 +138,12 @@ impl FeatureExtractor {
     /// 换 hop（如 FE-M 的 160）必须按时长重算帧数并重训，所以这里直接拦下（自审 P2）。
     pub fn new(sr: f32, hop: usize) -> Self {
         assert!(
-            hop == 256 && (sr - vdn_types::MODEL_RATE as f32).abs() < 1.0,
-            "vdn-scene 目前只支持 16 kHz / hop 256"
+            hop == FRONTEND.hop && (sr - FRONTEND.sample_rate as f32).abs() < 1.0,
+            "vdn-scene 只支持 FRONTEND 的采样率 {} Hz / hop {}，收到 {sr} Hz / hop {hop}",
+            FRONTEND.sample_rate,
+            FRONTEND.hop
         );
-        let mut planner = RealFftPlanner::<f32>::new();
-        let fwd = planner.plan_fft_forward(N_FFT);
-        let inv = planner.plan_fft_inverse(N_FFT);
+        let inv = RealFftPlanner::<f32>::new().plan_fft_inverse(N_FFT);
         // 16 个对数间隔频带，100 Hz – 8 kHz
         let mut band_edges = [0usize; NB + 1];
         let mut band_hz = [0f32; NB];
@@ -151,15 +161,11 @@ impl FeatureExtractor {
         Self {
             hop,
             sr,
-            win: sqrt_hann_periodic(N_FFT),
-            input: vec![0.0; N_FFT],
-            time: vec![0.0; N_FFT],
-            spec: fwd.make_output_vec(),
+            stft: StreamingStft::from_spec(&FRONTEND),
+            spec: inv.make_input_vec(),
             pow: vec![0.0; BINS],
             acorr: vec![0.0; N_FFT],
-            scratch_f: fwd.make_scratch_vec(),
             scratch_i: inv.make_scratch_vec(),
-            fwd,
             inv,
             band_edges,
             band_hz,
@@ -184,8 +190,13 @@ impl FeatureExtractor {
         self.filled
     }
 
+    /// 自算入口做过几次正向 FFT（测试用：借谱时应为 0）。
+    pub fn own_fft_count(&self) -> u64 {
+        self.stft.forward_count()
+    }
+
     pub fn reset(&mut self) {
-        self.input.fill(0.0);
+        self.stft.reset();
         self.prev_band = [-100.0; NB];
         self.prev_peak.fill(false);
         self.head = 0;
@@ -193,8 +204,31 @@ impl FeatureExtractor {
         self.prev_sample = 0.0;
     }
 
-    /// 喂一个 hop 的带噪输入（判断用的是麦克风原声，不是降噪后的声音）。
+    /// 自算：喂一个 hop 的带噪输入（判断用的是麦克风原声，不是降噪后的声音），自己做一次正向 FFT。
+    /// `x.len()` 应等于 `hop()`；不足时只移那么多样本（改前语义，`tests/golden.rs` 的不整齐长度对拍证明不变）。
     pub fn push_hop(&mut self, x: &[f32]) {
+        let spec = self.stft.analyze_partial(x);
+        power_into(spec, &mut self.pow);
+        self.finish_frame(x);
+    }
+
+    /// 借谱：`power` 是同一帧带噪输入的功率谱（`vdn_types::SpectrumTap::input_power`），`spec` 是借出方的口径
+    /// （`SpectrumTap::spectrum_spec`）。口径不等于 `FRONTEND`、谱长度不对、或 `x` 不是整 hop 时退回自算——分类器权重只认正本口径；
+    /// 退回可由 `own_fft_count` 看到。
+    /// `x` 仍要：削波按时域算；并推进自算缓冲，切回自算（换成 FE-M）时第一帧不吃旧数据。
+    pub fn push_hop_with_power(&mut self, x: &[f32], spec: &StftSpec, power: &[f32]) {
+        // 不是整 hop 时借来的整帧谱和改前的移位语义对不上，也退回自算
+        if *spec != FRONTEND || power.len() != BINS || x.len() != self.hop {
+            self.push_hop(x);
+            return;
+        }
+        self.stft.feed(x);
+        self.pow.copy_from_slice(power);
+        self.finish_frame(x);
+    }
+
+    /// 两个入口共用：`self.pow` 已是本帧功率谱（未加下限），算一帧的量存进环形缓冲。
+    fn finish_frame(&mut self, x: &[f32]) {
         let h = self.hop.min(x.len());
         // 削波：平顶样本（相邻两点几乎相等且幅度不小）
         let mut flat_top = 0usize;
@@ -207,25 +241,12 @@ impl FeatureExtractor {
         }
         self.prev_sample = prev;
 
-        self.input.copy_within(h.., 0);
-        let tail = N_FFT - h;
-        self.input[tail..].copy_from_slice(&x[..h]);
-        for ((t, s), w) in self.time.iter_mut().zip(&self.input).zip(&self.win) {
-            *t = s * w;
-        }
-        if self
-            .fwd
-            .process_with_scratch(&mut self.time, &mut self.spec, &mut self.scratch_f)
-            .is_err()
-        {
-            return;
-        }
         let mut total = 0.0f32;
         let (mut e_hf, mut e_mf, mut e_low, mut cen_num) = (0.0f32, 0.0f32, 0.0f32, 0.0f32);
         let (mut log_sum, mut lin_sum, mut cnt) = (0.0f32, 0.0f32, 0usize);
         let hz = self.sr / N_FFT as f32;
-        for (k, (p, c)) in self.pow.iter_mut().zip(&self.spec).enumerate() {
-            *p = c.norm_sqr() + 1e-12;
+        for (k, p) in self.pow.iter_mut().enumerate() {
+            *p += 1e-12;
             let f = k as f32 * hz;
             total += *p;
             cen_num += *p * f;

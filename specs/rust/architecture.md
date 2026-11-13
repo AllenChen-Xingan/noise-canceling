@@ -222,7 +222,7 @@ pub trait Stage: Send {          // vdn-types；门控、衰减下限、修音�
 
 **进出实时线程的两个包**（ondevice 线需求，2026-10-31）：
 - 判断 → 实时：`ParamBlock { seq, config: ContentId, model_hash: ContentId, params: ParamSet, transition }`，`Copy`，经 rtrb 送（§3.4「必须同时生效的一组参数」那一行就是它；§3.4 的 `AtomicU32` 只留给单个旋钮的即时值）。实时线程在帧边界取最新一份，没有新的沿用旧的，绝不等。完整格式校验在判断线程写入前做；实时线程只调 `ParamBlock::accept_rt`（`seq` 更新、`model_hash` 与正在跑的模型一致、全部有限 → 钳位后采用，否则沿用旧块）。**覆盖层张量绝不进参数块**。进 Stage 走 `Stage::set_params`
-- 实时 → 判断：`FrameFeatures`（scene 定稿：电平 · 底噪 · SNR · VAD · 16 带能量 · 平坦度 · 高低频比 · 质心 · 谐波性与峰位 · 谱峰保持率 · 削波占比 · 是否送原声；谱取带噪输入、与 GTCRN STFT 同口径），每 hop 一个经 rtrb 送出，满了丢弃并计数；噪声谱复用模型的 STFT（扩展 trait `SpectrumTap::last_magnitude`，不改 `Model`），不另算。FE-M 这类拿不到谱的由特征通道自己做一次 FFT，只喂判断、不进音频路径
+- 实时 → 判断：`FrameFeatures`（scene 定稿：电平 · 底噪 · SNR · VAD · 16 带能量 · 平坦度 · 高低频比 · 质心 · 谐波性与峰位 · 谱峰保持率 · 削波占比 · 是否送原声；谱取带噪输入、与 GTCRN STFT 同口径），每 hop 一个经 rtrb 送出，满了丢弃并计数；噪声谱复用模型的 STFT（扩展 trait `SpectrumTap::input_power`：推理前的带噪输入功率谱，口径正本 `vdn_types::FRONTEND`；不改 `Model`），不另算（013）。FE-M 这类拿不到谱的由特征通道自己做一次 FFT，只喂判断、不进音频路径
 - 平滑：连续参数在 hop 内逐样本插值、dB 类字段限速 `Transition::max_db_per_s`（初值 1 dB/s）、手动改动最短斜坡 `manual_ramp_s`（初值 30 ms）；离散参数（模型、修音链预设）走交叉淡化，**等增益**（等功率对相关信号会鼓 +3 dB），淡化期算力 ×2 计入最坏帧；48 kHz 层的参数（`strength` 湿干比）在 Pipeline 层渐变。零前瞻、零附加延迟
 
 #### 3.7.1 感知输出（`src/types/src/scene.rs`）

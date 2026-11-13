@@ -58,6 +58,10 @@ pub struct ItemCell {
     pub worst_clip: Option<String>,
     pub threshold: Option<f64>,
     pub status: CardStatus,
+    /// 新规则（v2）：组合内均值的 95% 区间；旧规则为 `None`
+    pub ci: Option<super::aggregate::Ci>,
+    /// 这一项按什么判（给人看）：旧规则一律「逐段」
+    pub rule: &'static str,
 }
 
 #[derive(Clone, Debug, Default, serde::Serialize)]
@@ -104,7 +108,7 @@ pub struct SceneCard {
     pub drags: Vec<Drag>,
 }
 
-fn status_of(pass: usize, fail: usize) -> CardStatus {
+pub(super) fn status_of(pass: usize, fail: usize) -> CardStatus {
     if fail > 0 {
         CardStatus::Fail
     } else if pass > 0 {
@@ -118,7 +122,7 @@ fn worse(b: Better, a: f64, c: f64) -> bool {
     b.worse(a, c)
 }
 
-fn item_cell(v: &'static str, veto: bool, rows: &[&ClipRow]) -> ItemCell {
+pub(super) fn item_cell(v: &'static str, veto: bool, rows: &[&ClipRow]) -> ItemCell {
     let info = crate::verifiers::info(v);
     let better = info.map_or(Better::Lower, |i| i.better);
     let (mut pass, mut fail, mut unknown) = (0, 0, 0);
@@ -156,8 +160,13 @@ fn item_cell(v: &'static str, veto: bool, rows: &[&ClipRow]) -> ItemCell {
         worst_clip: worst.map(|w| w.1),
         threshold,
         status: status_of(pass, fail),
+        ci: None,
+        rule: RULE_V1,
     }
 }
+
+/// 旧规则（v1）的判法说明。
+pub const RULE_V1: &str = "逐段：任一段不过即不过";
 
 /// 一段的听感判定。
 pub fn listen_one(scores: &[(&'static str, bool, Score)]) -> (CardStatus, Option<String>) {
@@ -190,7 +199,7 @@ pub fn listen_one(scores: &[(&'static str, bool, Score)]) -> (CardStatus, Option
     }
 }
 
-fn listen_cell(rows: &[&ClipRow]) -> ListenCell {
+pub(super) fn listen_cell(rows: &[&ClipRow]) -> ListenCell {
     let mut c = ListenCell::default();
     for r in rows {
         let (st, why) = listen_one(&r.scores);
@@ -225,7 +234,7 @@ fn listen_cell(rows: &[&ClipRow]) -> ListenCell {
 }
 
 /// 不过的项按声音类别分组比较。
-fn drags(items: &[ItemCell], rows: &[&ClipRow]) -> Vec<Drag> {
+pub(super) fn drags(items: &[ItemCell], rows: &[&ClipRow]) -> Vec<Drag> {
     let mut out = Vec::new();
     let classes: BTreeSet<(String, SoundGroup)> =
         rows.iter().flat_map(|r| r.sounds.iter().cloned()).collect();

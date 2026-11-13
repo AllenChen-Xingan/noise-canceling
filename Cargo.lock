@@ -1929,7 +1929,6 @@ version = "0.1.0"
 dependencies = [
  "hound",
  "ort",
- "realfft",
  "schemars",
  "serde",
  "serde_json",
@@ -1963,6 +1962,7 @@ dependencies = [
  "vdn-backend-ort",
  "vdn-dsp",
  "vdn-engine",
+ "vdn-scene",
  "vdn-types",
 ]
 
@@ -2031,7 +2031,6 @@ dependencies = [
  "assert_no_alloc",
  "earshot",
  "ort",
- "realfft",
  "vdn-dsp",
  "vdn-types",
 ]

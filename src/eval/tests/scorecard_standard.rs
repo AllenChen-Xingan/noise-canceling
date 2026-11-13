@@ -162,7 +162,18 @@ fn item_table_matches_code() {
         let got = all_numbers(line);
         let mut want = explicit_params(v);
         if want.is_empty() {
-            want.push(effective(v).unwrap_or_else(|| panic!("{v} 在代码里查不到过关线")));
+            match effective(v) {
+                Some(x) => want.push(x),
+                // 代码里没有过关线的，只能是只报不判、且文档写明「待人拍板」（数可以是括号里的暂取值，不比）
+                None => {
+                    assert!(
+                        vdn_eval::scorecard::standard::is_report_only(v)
+                            && line.starts_with("待人拍板"),
+                        "{v} 在代码里查不到过关线，文档也没写「待人拍板」：{line:?}"
+                    );
+                    continue;
+                }
+            }
         }
         assert_eq!(
             got.len(),
@@ -195,4 +206,76 @@ fn split_line_in_doc_matches_code() {
         t.contains(&format!("分歧线 {want}")),
         "第三节脚注的分歧线与代码 {want} 不一致"
     );
+}
+
+/// 第三节「新规则（v2）判法」列 = `standard` 的 v2 分类与换线（`PHYSICAL` · `V2_REPORT_ONLY` · `CLEAN_PASS` · `V2_PARAMS`）。
+#[test]
+fn v2_column_matches_code() {
+    use vdn_eval::scorecard::standard::{CLEAN_PASS, PHYSICAL, V2_PARAMS, V2_REPORT_ONLY};
+    let t = doc();
+    let sec = section(&t, "## 三、", "## 四、");
+    let mut n = 0;
+    for r in sec.lines().filter(|l| l.starts_with("| V-")).map(cells) {
+        let (v, col) = (r[0].as_str(), r.last().unwrap().as_str());
+        n += 1;
+        let report = V2_REPORT_ONLY.contains(&v);
+        assert_eq!(col.starts_with("只报"), report, "{v}：v2 列 {col:?}");
+        assert_eq!(
+            col.starts_with("逐段"),
+            PHYSICAL.contains(&v) || v == "V-EAT-ASR",
+            "{v}：v2 列 {col:?}"
+        );
+        assert_eq!(
+            col.starts_with("区间"),
+            !report && !PHYSICAL.contains(&v) && v != "V-EAT-ASR",
+            "{v}：v2 列 {col:?}"
+        );
+        assert_eq!(
+            col.contains("干净人声单独过一遍"),
+            CLEAN_PASS.contains(&v),
+            "{v}：v2 列 {col:?}"
+        );
+        if let Some((_, _, x)) = V2_PARAMS.iter().find(|(id, _, _)| *id == v) {
+            assert_eq!(first_number(col), Some(*x), "{v}：v2 列的线 ↔ 代码 {x}");
+        }
+        if v == "V-EAT-ASR" {
+            let k = vdn_eval::thresholds::EAT_ASR.def("fail_chars");
+            assert!(
+                col.contains(&format!("≥ {k} 字")),
+                "{v}：v2 列 {col:?} ↔ 代码 {k} 字"
+            );
+        }
+        if v.starts_with("V-NRMOS") {
+            let d = vdn_eval::thresholds::NRMOS_DELTA.def("max");
+            assert!(
+                col.contains(&format!("≥ -{d}")),
+                "{v}：v2 列 {col:?} ↔ 代码 δ {d}"
+            );
+        }
+    }
+    assert!(n > 15);
+}
+
+/// 第四节 v2 的数 = `thresholds` 表 `SC-AGG` · `SC-NRMOS-DELTA` · 吃字 `fail_chars` · `standard::PHYSICAL`。
+#[test]
+fn v2_rules_numbers_match_code() {
+    use vdn_eval::thresholds::{AGG, EAT_ASR, NRMOS_DELTA};
+    let t = doc();
+    let sec = section(&t, "### 新规则（v2", "### 旧规则（v1");
+    let want = [
+        format!("{}% 区间", AGG.def("level") * 100.0),
+        format!("重采样 {} 次", AGG.def("reps")),
+        format!("少于 {} 组", AGG.def("min_groups")),
+        format!("α = {}", AGG.def("alpha")),
+        format!("Δ ≥ -{}", NRMOS_DELTA.def("max")),
+        format!("≥ {} 字", EAT_ASR.def("fail_chars")),
+        format!("最差的 {} 段", vdn_eval::scorecard::rules_v2::LISTEN_WORST),
+        vdn_eval::scorecard::standard::PHYSICAL.join(" · "),
+    ];
+    for w in want {
+        assert!(
+            sec.contains(&w),
+            "第四节 v2 里找不到「{w}」（与代码不一致）"
+        );
+    }
 }

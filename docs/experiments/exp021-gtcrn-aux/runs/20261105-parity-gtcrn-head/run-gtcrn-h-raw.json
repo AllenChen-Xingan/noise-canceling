@@ -1,0 +1,26 @@
+{
+  "clips": "docs/experiments/exp013-scene-suite/builds/20261103230756-17f5/clips.jsonl",
+  "inputs": [
+    "mix",
+    "bg",
+    "trunc",
+    "clean"
+  ],
+  "latency_samples": 256,
+  "model": {
+    "exp021_raw": {
+      "clips": 480,
+      "engine": "SafetyConfig::off（三件保命全关，输出 = 模型原样输出）",
+      "file_list_like": "_tmp/exp016/dfn3-ll/20261105-063623-e4eb13d9",
+      "files": 1451,
+      "head_dir": "_tmp/030/gtcrn-h-raw.head",
+      "limit": null,
+      "model": "gtcrn",
+      "weights_sha256": "b4718df6228e7bdf1a8a435cf98f838636eb2fd331acabf86ba87c5192ebcb87"
+    }
+  },
+  "name": "gtcrn-raw",
+  "native_rate": 16000,
+  "schema": "vdn-external-output/1",
+  "sr": 16000
+}

@@ -23,3 +23,18 @@
 | 023 | 2026-11-03 | [开会场景真实录音数据集调研：结论层与卡片检查脚本](023_meeting-datasets-codex.md)（decision · matrix · pick · sources · check_cards.py，issue #82，codex gpt-6-astra，5 轮，已达停止线） | 采纳 30 / 提出 30（P1×10 P2×20；无 issue） |
 | 087 | 2026-11-03 | [场景成绩单 + 新评分项 + 评分模型接入](087_scorecard-codex.md)（`origin/main...HEAD`，issue #87，codex gpt-6-astra，8 轮，已达停止线） | 采纳 17 / 提出 17（P1×8 P2×9；无 issue） |
 | 013 | 2026-11-03 | [exp013 场景测试集：生成器 · 设备链 · 实测房间](013_scene-suite-codex.md)（exp013 目录 + scenes.json，issue #86，codex gpt-6-astra，4 轮，已达停止线） | 采纳 13 / 提出 15（P1×4 P2×11；2 条 P2 留作 issue） |
+| 014 | 2026-11-04 | [exp014 GTCRN 第一张场景成绩单：结论](014_scorecard-gtcrn-codex.md)（findings.md · analyze.py，issue #92，codex gpt-6-astra，3 轮，已达停止线） | 采纳 12 / 提出 12（P1×2 P2×10；无 issue） |
+| 015 | 2026-11-04 | [exp015 认人耗时估算与计时命令](exp015-speaker-shared-spectrum-codex.md)（exp015 README + speaker-lab bench.rs，issue #95，codex gpt-6-astra，4 轮，已达停止线） | 采纳 10 / 提出 10（P1×1 P2×9；无 issue） |
+| 094 | 2026-11-04 | [每帧只算一次频谱：参数正本 · 借谱接口 · 场景 / 修音共用](013_frontend-once-codex.md)（`990e7843...HEAD`，issue #94，codex gpt-6-astra，3 轮，已达停止线；另有多视角自审 `013_frontend-once-selfreview.md`） | 采纳 8 / 提出 8（P1×1 P2×7；无 issue） |
+| 024 | 2026-11-04 | [个性化降噪（先认人再提取）调研结论](024_pse-landscape-codex.md)（decision · sources · notes/01–05，issue #98，codex gpt-6-astra，4 轮，已达停止线） | 采纳 20 / 提出 20（P1×6 P2×14；无 issue） |
+| 102 | 2026-11-04 | [统一频谱模块支持 Kaldi 分帧 · 认人 fbank 改调 · R-FFT 规则](102_frontend-speaker-codex.md)（`d23bfe66..HEAD`，issue #102，codex gpt-6-astra，2 轮，已达停止线） | 采纳 2 / 提出 3（P2×3；驳回 1；无 issue） |
+| 025 | 2026-11-04 | [成绩单评分方法对照业界做法](025_eval-best-practice-codex.md)（matrix · decision · sources · notes/group-A–F · notes/scripts，issue #105，codex gpt-6-astra，9 轮，已达停止线） | 采纳 35 / 提出 35（P1×15 P2×20；无 issue） |
+| 104 | 2026-11-04 | [评测器 4 处频谱计算改调统一模块 · 评分逐位不变](104_frontend-eval-codex.md)（`f2782cf4...HEAD`，issue #104，codex gpt-6-astra，2 轮，已达停止线） | 采纳 4 / 提出 4（P2×4；无 issue） |
+| 111 | 2026-11-04 | [成绩单评分方法修正：新汇总规则 v2 · #109 · #110](111_scorecard-v2-codex.md)（`4493f0ce..HEAD`，issue #111，codex gpt-6-astra，中途 1 · 中途 2 各 2 轮；收尾 2 轮，连续两轮无 P0/P1 停） | 采纳 19 / 提出 19（P1×7 P2×12；无 issue） |
+| 016 | 2026-11-04 | [exp016 候选模型上同一张成绩单：① 外部离线输出入口 · ② 离线推理脚本 · ③′ 最终版方法 · ③ 收尾审 findings](016_candidates-codex.md)（issue #112，codex gpt-6-astra；①②③′ 中途 2 轮、P0/P1 修掉即停；③ 4 轮，第 3、4 轮无 P0/P1 → 停） | 采纳 38 / 提出 38（P1×13 P2×25；4 条 P2 开成 #113 #114 #118 #126） |
+| 026 | 2026-11-05 | [音色项该怎么量：调研 026 结论是否被证据撑住](026_timbre-measure-codex.md)（`docs/research/026_timbre-measure/decision.md`，issue #119，codex gpt-6-astra，2 轮，P1 修掉即停） | 采纳 10 / 提出 10（P1×6 P2×4；无 issue） |
+| 029 | 2026-11-05 | [调研 029 强化学习专门调 GTCRN + exp020 计时与离线排序模拟](029_gtcrn-rl-codex.md)（issue #123，codex gpt-6-astra，4 轮，连续两轮无 P0/P1 停） | 采纳 15 / 提出 15（P1×7 P2×8；无 issue） |
+| 027 | 2026-11-05 | [调研 027 GTCRN 微调方案 + exp018 MPS 冒烟](027_gtcrn-finetune-codex.md)（research，codex gpt-6-astra，7 轮，已达停止线） | 采纳 19 / 提出 19（P1×8 P2×11；无 issue） |
+| 028 | 2026-11-05 | [GTCRN 改结构调研与 exp019 实测脚本](028_gtcrn-arch-codex.md)（`docs/research/028_gtcrn-arch/` · `docs/experiments/exp019-gtcrn-arch/`，issue #122，codex gpt-6-astra，3 轮，已达停止线） | 采纳 14 / 提出 14（P1×4 P2×10；无 issue） |
+| 030 | 2026-11-05 | [不重训 GTCRN 的系统级手段：调研 030 结论 + exp021 混回重混工具](030_gtcrn-aux-codex.md)（issue #124，codex gpt-6-astra，3 轮，P0/P1 清零即停） | 采纳 10 / 提出 10（P1×3 P2×7；1 条 P2 留作 issue） |
+| 030 | 2026-11-06 | [exp021 混回重测结论 + 检查表脚本](030_exp021-mixretest-codex.md)（`findings-mixretest-20261106.md` · `checklist.py`，codex gpt-6-astra，中途评审 2 轮，第 2 轮无 P0/P1 即停） | 采纳 8 / 提出 8（P1×2 P2×6；无 issue） |

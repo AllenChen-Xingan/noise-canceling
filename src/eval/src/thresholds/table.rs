@@ -52,7 +52,15 @@ pub const SPLVL: Lines = Lines {
     id: "V-SPLVL",
     edges: &[-1.0, -2.0, -4.0],
     edges_src: Src::RubricLoss(&["损失 > 4 dB", "损失 > 2 dB", "损失 ≤ 1 dB"]),
-    params: &[p("min", Some(-3.0), &[(-3.0, Src::None)])],
+    params: &[p(
+        "min",
+        Some(-3.0),
+        &[
+            (-3.0, Src::None),
+            // 人定 D85 题 5（G-5）：新规则（v2）用 4 dB，判在组合均值的区间上（G.160 参考下限）
+            (-4.0, Src::RubricLoss(&["损失 > 4 dB"])),
+        ],
+    )],
 };
 
 pub const MUSIC: Lines = Lines {
@@ -67,31 +75,40 @@ pub const MUSIC: Lines = Lines {
 };
 
 /// 量法与 rubric N4 不同：代码 100–1k / 1–2k / 2–4k / 4–7.9k Hz、512 点跳 256；N4 100–300 / 300–500 / 2–5k / 5–8k Hz、1024 点跳 512
+/// 调研 026：ERB 30 带 dB 差的标准差。分档与过线都是建议值、没有出处（只在 T12 测过的几种形状上锚定过，
+/// 见 `docs/research/026_timbre-measure/decision.md` ④）；不过线 3 暂定，待人定（⑦ 第 2 题）
 pub const TIMBRE: Lines = Lines {
     id: "V-TIMBRE",
-    edges: &[2.0, 4.0, 6.0],
-    edges_src: Src::Rubric(&["D > 6 · C ≤ 6 · B ≤ 3 · A ≤ 1.5"]),
-    params: &[p(
-        "max",
-        Some(6.0),
-        &[(6.0, Src::Rubric(&["D > 6 · C ≤ 6"]))],
-    )],
+    edges: &[1.0, 2.0, 3.0],
+    edges_src: Src::None,
+    params: &[p("max", Some(3.0), &[(3.0, Src::None)])],
 };
 
 pub const NR: Lines = Lines {
     id: "V-NR",
     edges: &[],
     edges_src: NO_EDGES,
-    params: &[p(
-        "max",
-        None,
-        &[
-            (-6.0, Src::Rubric(&["| D | > −6 dB | 跟原声差不多 |"])),
-            (-8.0, Src::None),
-            (-10.0, Src::None),
-            (-20.0, Src::Rubric(&["| A | ≤ −20 dB |"])),
-        ],
-    )],
+    params: &[
+        p(
+            "max",
+            None,
+            &[
+                (-6.0, Src::Rubric(&["| D | > −6 dB | 跟原声差不多 |"])),
+                (-8.0, Src::None),
+                (-10.0, Src::None),
+                (-20.0, Src::Rubric(&["| A | ≤ −20 dB |"])),
+            ],
+        ),
+        // 025 B1 旁报：输入帧低于它的停顿帧另算（G.160 `cft_lvl`），判定不用
+        p(
+            "low_dbov",
+            Some(-48.0),
+            &[(
+                -48.0,
+                Src::Design("G.160 cft_lvl：−48 dBov（帧均方功率，满幅方波 = 0 dBov）"),
+            )],
+        ),
+    ],
 };
 
 pub const INTF: Lines = Lines {
@@ -120,11 +137,22 @@ pub const EAT_ASR: Lines = Lines {
     id: "V-EAT-ASR",
     edges: &[],
     edges_src: NO_EDGES,
-    params: &[p(
-        "max",
-        None,
-        &[(1.0, Src::Rubric(&["（> +1 时带 `v7_suspect`）"]))],
-    )],
+    params: &[
+        p(
+            "max",
+            None,
+            &[(1.0, Src::Rubric(&["（> +1 时带 `v7_suspect`）"]))],
+        ),
+        // 人定 D85 题 3（G-3 = C）：新规则（v2）单段比原声多错（删 + 替）≥ 5 字才否决
+        p(
+            "fail_chars",
+            Some(5.0),
+            &[(
+                5.0,
+                Src::Design("人定 D85 题 3 选 C：单段多错 ≥ 5 字才否决"),
+            )],
+        ),
+    ],
 };
 
 pub const FRAME: Lines = Lines {
@@ -301,8 +329,114 @@ pub const NRMOS_SPLIT: Lines = Lines {
     )],
 };
 
+/// 用户被误删（TSOS，人定 D85 题 4 = A；025 D1）：Eskimez 等 2022 式 (2)(3) 的两个参数。过关线待人拍板，只报不判。
+pub const TSOS: Lines = Lines {
+    id: "V-TSOS",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[
+        p(
+            "p",
+            Some(0.3),
+            &[(0.3, Src::Design("Eskimez 2022 式 (2)：谱压缩 p = 0.3"))],
+        ),
+        p(
+            "gamma",
+            Some(0.1),
+            &[(0.1, Src::Design("Eskimez 2022 §4.4：γ = 0.1"))],
+        ),
+    ],
+};
+
+/// 旁人漏过事件率（025 D2b）：只有旁人的 1 秒窗里压低不到几 dB 算漏过。X 待人拍板，暂取 V-INTF 的线 10 dB，只报不判。
+pub const LEAK: Lines = Lines {
+    id: "V-LEAK",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[p(
+        "min_att_db",
+        Some(10.0),
+        &[(
+            10.0,
+            Src::Design("025 D2b 写「X 待定」；暂取压旁人 V-INTF 的过关线 10 dB，待人拍板"),
+        )],
+    )],
+};
+
+/// 同时说话只留用户（025 D5）：SI-SDRi 低于几 dB 记一次失败（Delcroix 2022 §5.3）。只报不判。
+pub const PSE_OVL: Lines = Lines {
+    id: "V-PSE-OVL",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[p(
+        "fail_below",
+        Some(1.0),
+        &[(
+            1.0,
+            Src::Design("Delcroix 2022 §5.3：SI-SDRi < 1 dB 记失败"),
+        )],
+    )],
+};
+
+/// 成绩单层（新规则 v2，人定 D85 题 1 = B）：组合内均值的 bootstrap 区间与 Holm 校正（调研 025 X1 · X4）。
+pub const AGG: Lines = Lines {
+    id: "SC-AGG",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[
+        p(
+            "level",
+            Some(0.95),
+            &[(0.95, Src::Design("人定 D85 题 1：95% 区间三态"))],
+        ),
+        p(
+            "reps",
+            Some(10_000.0),
+            &[(
+                10_000.0,
+                Src::Design(
+                    "重采样次数：p 值最小 1/(次数+1)，要小于 Holm 最严一档 α/族大小（exp014 族 60 → 次数 ≥ 2400）；取 10000，同 qa 吃字集合层",
+                ),
+            )],
+        ),
+        p(
+            "seed",
+            Some(20_261_030.0),
+            &[(20_261_030.0, Src::Design("固定种子，同调研 025 重算脚本"))],
+        ),
+        p(
+            "min_groups",
+            Some(2.0),
+            &[(
+                2.0,
+                Src::Design("只有 1 组源片段时 bootstrap 区间退化成一点，判不了"),
+            )],
+        ),
+        p(
+            "alpha",
+            Some(0.025),
+            &[(
+                0.025,
+                Src::Design("Holm 单侧 α：与 95% 双侧区间的「不过」一端对齐"),
+            )],
+        ),
+    ],
+};
+
+/// 成绩单层（v2）：听感 Δ 允许比原声差多少分（人定 D85 题 6 = B）。
+pub const NRMOS_DELTA: Lines = Lines {
+    id: "SC-NRMOS-DELTA",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[p(
+        "max",
+        Some(0.1),
+        &[(0.1, Src::Design("人定 D85 题 6 选 B：允许比原声差 0.1 分"))],
+    )],
+};
+
 /// 表里全部 verifier。
-pub const ALL: [&Lines; 23] = [
+pub const ALL: [&Lines; 28] = [
     &BGSTAB,
     &ONSET,
     &SPLVL,
@@ -326,16 +460,22 @@ pub const ALL: [&Lines; 23] = [
     &NRMOS_SCOREQ,
     &NRMOS_DISTILL,
     &NRMOS_SPLIT,
+    &AGG,
+    &NRMOS_DELTA,
+    &TSOS,
+    &LEAK,
+    &PSE_OVL,
 ];
 
 /// 待定清单：已知不一致或没有出处的条目。全部是建议值，挂 012 拍板 #8 · D44。
-pub const PENDING: [(&str, &str, Pend); 8] = [
-    // 量法与 rubric N4 不同，数也不同（代码 2 / 4 / 6，N4 1.5 / 3 / 6）
+pub const PENDING: [(&str, &str, Pend); 9] = [
+    // 调研 026：量法已与 N4 一致（timbre_tests 比对），分档 1 / 2 / 3 与过线 3 没有出处，待人耳校（D44）
     (
         "V-TIMBRE",
         "edges",
-        Pend::Edges(&[2.0, 4.0, 6.0], Cause::Differ),
+        Pend::Edges(&[1.0, 2.0, 3.0], Cause::NoSource),
     ),
+    ("V-TIMBRE", "max", Pend::Value(3.0, Cause::NoSource)),
     // 过线值 −3 dB 没有出处
     ("V-SPLVL", "min", Pend::Value(-3.0, Cause::NoSource)),
     // 只有 3 dB 有出处，1 / 2 dB 没有

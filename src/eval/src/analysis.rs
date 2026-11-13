@@ -151,7 +151,7 @@ pub fn truth_from_clean(clean: &[f32]) -> Vec<(usize, usize)> {
 }
 
 /// 幅度平方谱，逐帧（帧 k 覆盖样本 `[(k+1)·hop − n_fft, (k+1)·hop)`，中心约在 `(k+1)·hop − n_fft/2`）。
-/// 用 `vdn_dsp::StreamingStft`，窗 = 周期 Hann（sqrt-Hann 的平方）。
+/// 用 `vdn_dsp::StreamingStft`，窗 = `Window::SqrtHannPeriodicSquared`（sqrt-Hann 转 f32 后再平方，约等于周期 Hann）。
 pub struct Spectrogram {
     pub n_fft: usize,
     pub hop: usize,
@@ -160,10 +160,7 @@ pub struct Spectrogram {
 
 impl Spectrogram {
     pub fn new(x: &[f32], n_fft: usize, hop: usize) -> Spectrogram {
-        let win: Vec<f32> = vdn_dsp::window::sqrt_hann_periodic(n_fft)
-            .iter()
-            .map(|w| w * w)
-            .collect();
+        let win = vdn_dsp::window::table(vdn_types::Window::SqrtHannPeriodicSquared, n_fft);
         let mut st = StreamingStft::new(n_fft, hop, win);
         let frames = x
             .chunks_exact(hop)
@@ -226,24 +223,59 @@ pub fn quantile(v: &[f64], q: f64) -> f64 {
     s[lo] + (s[hi] - s[lo]) * (pos - lo as f64)
 }
 
-/// `y` 相对 `x` 的延迟（样本）：在 `0..=max_lag` 里找互相关峰。只用前 `win` 个样本，够定位、又不慢。
-pub fn xcorr_lag(x: &[f32], y: &[f32], max_lag: usize, win: usize) -> Option<usize> {
-    let n = win.min(x.len());
-    let mut best: Option<(usize, f64)> = None;
-    for lag in 0..=max_lag {
-        if lag + n > y.len() {
-            break;
-        }
-        let s: f64 = x[..n]
-            .iter()
-            .zip(&y[lag..lag + n])
-            .map(|(a, b)| *a as f64 * *b as f64)
-            .sum();
-        if best.is_none_or(|(_, bs)| s > bs) {
-            best = Some((lag, s));
+/// `guide` 里能量最大的 `win` 样本窗的起点（步长 100 ms）。延迟测量把窗放在人声最多处，
+/// 照 TS 26.132 §7.10.4.2「窗心对准句子」（#109：固定在开头时，人声晚出现的段会量错）。
+pub fn busiest_start(guide: &[f32], win: usize, step: usize) -> usize {
+    if guide.len() <= win {
+        return 0;
+    }
+    let e: Vec<f64> = guide.iter().map(|v| (*v as f64).powi(2)).collect();
+    let mut acc: f64 = e[..win].iter().sum();
+    let (mut best, mut at) = (acc, 0);
+    let mut s = 0;
+    while s + step + win <= e.len() {
+        acc += e[s + win..s + win + step].iter().sum::<f64>() - e[s..s + step].iter().sum::<f64>();
+        s += step;
+        if acc > best {
+            (best, at) = (acc, s);
         }
     }
-    best.and_then(|(l, s)| (s > 0.0).then_some(l))
+    at
+}
+
+/// `y` 相对 `x` 的延迟（样本）：在 `0..=max_lag` 里找**归一化**互相关 |r| 的峰（#109）。
+/// 窗取 `x[start..start + win]`，每个滞后除以两窗能量的几何平均，所以窗内能量随滞后变大不会抬高次峰。
+/// 窗口太靠后、放不下最大滞后时往前挪；整段比 `win + max_lag` 还短时窗缩到 `|y| − max_lag`。
+/// 输入窗全零、或所有滞后的输出窗都全零时返回 `None`（不另设相关下限：「量不准改判不知道」要人批准，025 ①-1）。
+pub fn xcorr_lag(x: &[f32], y: &[f32], max_lag: usize, start: usize, win: usize) -> Option<usize> {
+    // 窗口给滞后搜索留出尾部空间：start + n + max_lag ≤ |y|；放不下时先把窗往前挪，再缩短窗（codex 中途 1 第 2 轮 P1 #1）
+    let n = win.min(x.len()).min(y.len().saturating_sub(max_lag));
+    let start = start
+        .min(x.len() - n)
+        .min(y.len().saturating_sub(max_lag + n));
+    let xs = &x[start..start + n];
+    let ex: f64 = xs.iter().map(|a| (*a as f64).powi(2)).sum();
+    if n == 0 || ex <= 0.0 {
+        return None;
+    }
+    let mut best: Option<(usize, f64)> = None;
+    for lag in 0..=max_lag {
+        let b = start + lag;
+        if b + n > y.len() {
+            break;
+        }
+        let ys = &y[b..b + n];
+        let ey: f64 = ys.iter().map(|v| (*v as f64).powi(2)).sum();
+        if ey <= 0.0 {
+            continue;
+        }
+        let dot: f64 = xs.iter().zip(ys).map(|(a, v)| *a as f64 * *v as f64).sum();
+        let r = (dot / (ex * ey).sqrt()).abs();
+        if best.is_none_or(|(_, br)| r > br) {
+            best = Some((lag, r));
+        }
+    }
+    best.and_then(|(l, r)| (r > 0.0).then_some(l))
 }
 
 /// 35 ms 时间常数（P.1120 §11.14.5）的平滑功率，逐 10 ms 掩码帧取帧末值，单位 dB。
@@ -303,7 +335,88 @@ mod tests {
         let x: Vec<f32> = (0..8000).map(|_| r.normal() as f32).collect();
         let mut y = vec![0.0f32; 300];
         y.extend_from_slice(&x);
-        assert_eq!(xcorr_lag(&x, &y, 600, 4000), Some(300));
+        assert_eq!(xcorr_lag(&x, &y, 600, 0, 4000), Some(300));
+    }
+
+    /// #109 缺陷样例：前 1.9 s 只有底噪，之后接一段渐强的浊音（基音周期正好 106 样本）。
+    /// 输出 = 输入（原声直通），延迟必须量出 0。旧公式只看开头 2 s、不归一化，会被基音次峰抬到 106。
+    fn late_voiced_onset() -> Vec<f32> {
+        let sr = vdn_types::MODEL_RATE as usize;
+        let mut r = crate::rng::Rng::new(7);
+        let n = sr * 6;
+        let onset = sr * 19 / 10;
+        (0..n)
+            .map(|i| {
+                let floor = 1e-4 * r.normal() as f32;
+                if i < onset {
+                    return floor;
+                }
+                // 渐强 0.3 s 后持平；脉冲串 + 两个谐波，周期 106 样本
+                let env = ((i - onset) as f32 / (0.3 * sr as f32)).min(1.0);
+                let ph = (i % 106) as f32 / 106.0 * std::f32::consts::TAU;
+                floor + 0.2 * env * (ph.sin() + 0.5 * (2.0 * ph).sin() + 0.3 * (3.0 * ph).sin())
+            })
+            .collect()
+    }
+
+    #[test]
+    fn passthrough_with_late_voiced_onset_measures_zero() {
+        let x = late_voiced_onset();
+        let sr = vdn_types::MODEL_RATE as usize;
+        let start = busiest_start(&x, 4 * sr, sr / 10);
+        assert!(start >= sr * 19 / 10, "窗应落在人声段：{start}");
+        assert_eq!(xcorr_lag(&x, &x, 2048, start, 4 * sr), Some(0));
+        // 旧窗口（开头 2 s）在归一化后也必须量对：归一化本身就能压住次峰
+        assert_eq!(xcorr_lag(&x, &x, 2048, 0, 2 * sr), Some(0));
+    }
+
+    /// 同一信号人为延后 300 样本：窗放在人声段，量出 300。
+    #[test]
+    fn late_voiced_onset_with_known_delay() {
+        let x = late_voiced_onset();
+        let sr = vdn_types::MODEL_RATE as usize;
+        let mut y = vec![0.0f32; 300];
+        y.extend_from_slice(&x);
+        let start = busiest_start(&x, 4 * sr, sr / 10);
+        assert_eq!(xcorr_lag(&x, &y, 2048, start, 4 * sr), Some(300));
+    }
+
+    #[test]
+    fn xcorr_silent_is_none() {
+        let z = vec![0.0f32; 8000];
+        assert_eq!(xcorr_lag(&z, &z, 100, 0, 4000), None);
+    }
+
+    /// 输出与输入等长（延后 300 样本、尾部截掉）：窗口必须给滞后搜索留出尾部空间（codex 中途 1 第 2 轮 P1 #1）。
+    #[test]
+    fn equal_length_delayed_output_short_and_loud_tail() {
+        let sr = vdn_types::MODEL_RATE as usize;
+        let delay = |x: &[f32]| -> Vec<f32> {
+            let mut y = vec![0.0f32; 300];
+            y.extend_from_slice(&x[..x.len() - 300]);
+            y
+        };
+        // 3 秒：4 秒窗盖住整段
+        let mut r = crate::rng::Rng::new(5);
+        let x: Vec<f32> = (0..3 * sr).map(|_| r.normal() as f32).collect();
+        assert_eq!(xcorr_lag(&x, &delay(&x), 2048, 0, 4 * sr), Some(300));
+        // 8 秒、最响的在末尾：选到的窗贴着末尾
+        let x: Vec<f32> = (0..8 * sr)
+            .map(|i| r.normal() as f32 * if i > 6 * sr { 1.0 } else { 0.05 })
+            .collect();
+        let start = busiest_start(&x, 4 * sr, sr / 10);
+        assert_eq!(start, 4 * sr);
+        assert_eq!(xcorr_lag(&x, &delay(&x), 2048, start, 4 * sr), Some(300));
+    }
+
+    /// 低相关但非零的输出（与输入几乎无关的噪声）：照旧给出一个滞后，不改判「不知道」——
+    /// 那是要人批准的判定改动（025 ①-1），这里只修量法（codex 中途 1 第 1 轮 P1 #3）。
+    #[test]
+    fn low_correlation_still_measures() {
+        let mut r = crate::rng::Rng::new(9);
+        let x: Vec<f32> = (0..8000).map(|_| r.normal() as f32).collect();
+        let y: Vec<f32> = (0..8000).map(|_| r.normal() as f32).collect();
+        assert!(xcorr_lag(&x, &y, 100, 0, 4000).is_some());
     }
 
     #[test]

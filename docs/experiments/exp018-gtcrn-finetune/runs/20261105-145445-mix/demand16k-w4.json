@@ -1,0 +1,25 @@
+{
+  "clips": 512,
+  "seconds_per_clip": 4.0,
+  "workers": 4,
+  "p_rir": 0.5,
+  "wall_s": 0.6526314580005419,
+  "clips_per_s": 784.5162744201872,
+  "audio_hours_per_wall_hour": 3138.0650976807487,
+  "per_clip_median_ms": {
+    "read": 1.2432704988896148,
+    "resample": 0.09889600005408283,
+    "rir": 0.39464600013161544,
+    "mix": 0.09200000022246968,
+    "total": 1.7344999996566912
+  },
+  "rir_used": 260,
+  "all_finite": true,
+  "all_len_ok": true,
+  "pool_sizes": {
+    "speech": 2620,
+    "noise": 10,
+    "rir": 270
+  },
+  "cpu_count": 10
+}

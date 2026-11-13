@@ -5,7 +5,8 @@
 //! vdn-eval qa    [--system gtcrn,fastenhancer-m] [--filter Q0] [--out DIR] [--record]
 //! vdn-eval calib [--answers JSON] [--scores JSON] [--round N] [--write-levels] [--record]
 //! vdn-eval list
-//! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--out DIR]   # 场景成绩单（specs/rubric/scorecard.md）
+//! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--rules v1|v2] [--out DIR]   # 场景成绩单（specs/rubric/scorecard.md）
+//! vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] [--out DIR]   # 不重跑音频，按规则重新汇总
 //! vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…   # 子进程入口：评分模型打分，每段一行 JSON
 //! ```
 //! - `ci`：CI 层（纯 DSP、无模型）。门禁不过 → 退出码 1。权重不在本机的系统自动跳过
@@ -343,6 +344,38 @@ fn cmd_calib(args: &[String]) -> Result<(), String> {
 /// 有不过的场景不算命令失败（成绩单是报告，不是门禁）；清单读不了才失败。
 fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
     let m = meta();
+    let rules = match arg(args, "--rules") {
+        None => vdn_eval::scorecard::card::Rules::V2,
+        Some(r) => vdn_eval::scorecard::card::Rules::parse(&r)
+            .ok_or_else(|| format!("--rules 只认 v1 或 v2，收到 {r}"))?,
+    };
+    let default_out = || {
+        vdn_eval::suite::main_root()
+            .join("_tmp/scorecard")
+            .join(&m.run_id)
+    };
+    if let Some(src) = arg(args, "--from-clips") {
+        let out = arg(args, "--out")
+            .map(PathBuf::from)
+            .unwrap_or_else(default_out);
+        let (card, sha) = vdn_eval::scorecard::load::resummarize(Path::new(&src), rules)?;
+        let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "from_clips": src,
+            "from_clips_sha256": sha, "rules": rules.as_str()});
+        let js =
+            serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";
+        vdn_eval::scorecard::card::write_new(
+            &out,
+            &js,
+            &card.to_markdown("场景成绩单（重新汇总）"),
+        )?;
+        println!(
+            "成绩单：{}（{} 段，规则 {}）",
+            out.join("scorecard.md").display(),
+            card.clips,
+            rules.as_str()
+        );
+        return Ok(true);
+    }
     let path = arg(args, "--suite").unwrap_or_else(|| "src/eval/suite/scenes.json".into());
     let p = resolve(&path).ok_or_else(|| format!("找不到 {path}"))?;
     let suite = parse_suite(&std::fs::read_to_string(&p).map_err(|e| format!("{path}：{e}"))?)?;
@@ -354,20 +387,23 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
         baseline: Baseline::new(),
         levels: parse_levels(LEVELS)?,
     };
-    let out = arg(args, "--out").map(PathBuf::from).unwrap_or_else(|| {
-        vdn_eval::suite::main_root()
-            .join("_tmp/scorecard")
-            .join(&m.run_id)
-    });
+    let out = arg(args, "--out")
+        .map(PathBuf::from)
+        .unwrap_or_else(default_out);
     vdn_eval::scorecard::card::ensure_fresh(&out)?;
     let mut qa = flag(args, "--qa").then(|| vdn_eval::qa::QaExtra::new(out.join("qa")));
     let extra = qa.as_mut().map(|x| x as &mut dyn vdn_eval::runner::Extra);
-    let (rows, skipped) = vdn_eval::scorecard::run(&suite, &sys, &opts, extra, None);
-    let card = vdn_eval::scorecard::card::Card::build(&rows, skipped);
+    let (rows, skipped) = vdn_eval::scorecard::run_with(&suite, &sys, &opts, extra, None, rules);
+    let card = vdn_eval::scorecard::card::Card::build_with(&rows, skipped, rules);
     let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "suite": path,
-        "systems": sys.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "qa": qa.is_some()});
+        "systems": sys.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "qa": qa.is_some(),
+        "rules": rules.as_str(), "power": vdn_eval::power::source(),
+        "external": sys.iter().filter_map(|s| s.provenance()).collect::<Vec<_>>()});
     let js = serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";
     vdn_eval::scorecard::card::write_new(&out, &js, &card.to_markdown("场景成绩单"))?;
+    // 逐段分数一并写出（只新建），以后改规则可以不重跑音频、用 --from-clips 重新汇总
+    let jsonl = vdn_eval::scorecard::load::to_jsonl(&rows)?;
+    vdn_eval::scorecard::card::write_new_file(&out.join("clips.jsonl"), &jsonl)?;
     println!(
         "成绩单：{}（{} 段）",
         out.join("scorecard.md").display(),

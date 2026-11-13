@@ -35,30 +35,73 @@ pub(super) fn v_bgstab(c: &Ctx, p: &Params) -> Score {
     let d: Vec<Option<f64>> = (0..q.len().min(a.len()).min(b.len()))
         .map(|f| (q[f] && f >= start && b[f] > 1e-14).then(|| db10(a[f]) - db10(b[f])))
         .collect();
+    let (worst, n, _) = worst3(&d);
+    // 025 B3：扣掉输入侧的同一差值（混合 − 噪音 + 干扰，主讲人混响尾巴落在停顿帧里），原声直通应 ≈ 0 dB；
+    // 另报 3 帧均值绝对值的 95 分位
+    let bg: Vec<f32> = c
+        .clip
+        .noise
+        .iter()
+        .zip(&c.clip.interf)
+        .map(|(x, y)| x + y)
+        .collect();
+    let (mi, bi) = (
+        frame_power(&c.clip.mix, MASK_FRAME),
+        frame_power(&bg, MASK_FRAME),
+    );
+    let dc: Vec<Option<f64>> = d
+        .iter()
+        .enumerate()
+        .map(|(f, x)| {
+            let e =
+                (mi.get(f)? > &1e-14 && bi.get(f)? > &1e-14).then(|| db10(mi[f]) - db10(bi[f]))?;
+            x.map(|v| v - e)
+        })
+        .collect();
+    let (worst_c, n_c, p95_c) = worst3(&dc);
+    if n_c < 30 {
+        return Score::unknown(
+            ID,
+            "dB",
+            Better::Lower,
+            format!("可比的停顿帧只有 {n_c} 个"),
+        );
+    }
+    // 主值 = 扣掉输入侧偏差后的最大绝对值（025 B3，AI 自定的测量修正，线与汇总不变）；改前的值留作旁报 uncorr_db
+    Score::judged(
+        ID,
+        worst_c.abs(),
+        "dB",
+        Better::Lower,
+        Some(p.f_or("max", th::BGSTAB.def("max"))),
+        th::BGSTAB.edges,
+    )
+    .with_extra("signed_db", worst_c)
+    .with_extra("frames", n_c as f64)
+    .with_extra("p95_db", p95_c)
+    .with_extra("uncorr_db", worst.abs())
+    .with_extra("uncorr_frames", n as f64)
+}
+
+/// 3 帧滑动平均里绝对值最大的那个（带符号）、可比的窗数、绝对值的 95 分位。
+fn worst3(d: &[Option<f64>]) -> (f64, usize, f64) {
     let mut worst = 0.0f64;
-    let mut n = 0usize;
+    let mut all = Vec::new();
     for w in d.windows(3) {
         if let [Some(x), Some(y), Some(z)] = w {
             let m = (x + y + z) / 3.0;
             if m.abs() > worst.abs() {
                 worst = m;
             }
-            n += 1;
+            all.push(m.abs());
         }
     }
-    if n < 30 {
-        return Score::unknown(ID, "dB", Better::Lower, format!("可比的停顿帧只有 {n} 个"));
-    }
-    Score::judged(
-        ID,
-        worst.abs(),
-        "dB",
-        Better::Lower,
-        Some(p.f_or("max", th::BGSTAB.def("max"))),
-        th::BGSTAB.edges,
-    )
-    .with_extra("signed_db", worst)
-    .with_extra("frames", n as f64)
+    let p95 = if all.is_empty() {
+        f64::NAN
+    } else {
+        quantile(&all, 0.95)
+    };
+    (worst, all.len(), p95)
 }
 
 /// 输出投影到干净参考上的能量 ⟨o, c⟩² / ‖c‖²：只留下与参考相关的部分，不受不相关的残留噪声影响
@@ -157,7 +200,26 @@ pub(super) fn v_nr(c: &Ctx, p: &Params) -> Score {
         power_over(&c.clip.mix, &c.masks.noise_only),
     ) {
         let snr = |s: f64, n: f64| db10((s - n).max(s * 1e-4)) - db10(n.max(1e-14));
+        // 「简化 SNRI」（025 B1 改名）：说话帧与停顿帧的能量差，不是逐频带的标准 SNRI
         s = s.with_extra("snri_db", snr(so, no) - snr(si, ni));
+    }
+    // 025 B1 旁报：输入低于 G.160 `cft_lvl`（−48 dBov）的停顿帧比例，及排除它们后的 TNLR；判定不变
+    let lim = th::NR.def("low_dbov");
+    let fp = frame_power(&c.clip.mix, MASK_FRAME);
+    let low: Vec<bool> = (0..c.masks.noise_only.len())
+        .map(|f| c.masks.noise_only[f] && fp.get(f).is_some_and(|p| db10(*p) < lim))
+        .collect();
+    let nl = low.iter().filter(|v| **v).count();
+    s = s.with_extra("low_frac", nl as f64 / n.max(1) as f64);
+    let keep: Vec<bool> = (0..low.len())
+        .map(|f| c.masks.noise_only[f] && !low[f])
+        .collect();
+    if let (Some((po, k)), Some((pi, _))) =
+        (power_over(c.out, &keep), power_over(&c.clip.mix, &keep))
+        && k >= 50
+        && pi > 1e-14
+    {
+        s = s.with_extra("tnlr_excl_low_db", db10(po) - db10(pi));
     }
     s
 }
@@ -178,7 +240,7 @@ pub(super) fn v_intf(c: &Ctx, p: &Params) -> Score {
             format!("只有干扰者的帧只有 {n} 个"),
         );
     }
-    Score::judged(
+    let mut s = Score::judged(
         ID,
         db10(po) - db10(pi),
         "dB",
@@ -186,7 +248,16 @@ pub(super) fn v_intf(c: &Ctx, p: &Params) -> Score {
         p.f("max"),
         &[],
     )
-    .with_extra("frames", n as f64)
+    .with_extra("frames", n as f64);
+    // 025 B2 旁报：两边都扣掉停顿帧里的残留底噪后再比（只看旁人人声本身被压了多少）；主值仍按混合信号做分母
+    if let (Some((no, _)), Some((ni, _))) = (
+        power_over(c.out, &c.masks.noise_only),
+        power_over(&c.clip.mix, &c.masks.noise_only),
+    ) && pi > ni
+    {
+        s = s.with_extra("minus_floor_db", db10((po - no).max(1e-14)) - db10(pi - ni));
+    }
+    s
 }
 
 pub(super) fn v_splvl(c: &Ctx, p: &Params) -> Score {
@@ -301,6 +372,17 @@ pub(super) fn v_music(c: &Ctx, p: &Params) -> Score {
     .with_extra("kurt_in", ki)
     .with_extra("kurt_out", ko)
     .with_extra("isolated_peaks_per_s", peaks as f64 / secs)
+    // 025 C1 旁报：停顿里的残留噪声比输出人声的主动电平低多少 dB（残留很低时音乐噪声未必听得见；免判门限待人耳校准）
+    .with_extra(
+        "resid_below_speech_db",
+        match (
+            crate::analysis::active_level(c.out, c.clip.sr),
+            power_over(c.out, &c.masks.noise_only),
+        ) {
+            (Some((lvl, _)), Some((pn, _))) if pn > 0.0 => lvl - db10(pn),
+            _ => f64::NAN,
+        },
+    )
 }
 
 pub(super) fn v_vacuum(c: &Ctx, p: &Params) -> Score {
@@ -318,72 +400,198 @@ pub(super) fn v_vacuum(c: &Ctx, p: &Params) -> Score {
     )
 }
 
+/// V-TIMBRE 的量法正本（调研 026 ③）。标准 N4 与 `timbre_tests.rs` 的比对测试都从这里取数。
+pub(crate) mod timbre {
+    /// 分帧：Hann 1024 点，跳 512（16 kHz 下每个 ERB 带至少 2 个频点）
+    pub const N_FFT: usize = 1024;
+    pub const HOP: usize = 512;
+    /// ERB 刻度等分的两端（Hz）与带数
+    pub const LO_HZ: f64 = 100.0;
+    pub const HI_HZ: f64 = 7900.0;
+    pub const N_BANDS: usize = 30;
+    /// 每带偏差相对中位数最低记几 dB
+    pub const FLOOR_DB: f64 = -40.0;
+    /// 扣停顿能量后至少留原值的几成
+    pub const KEEP_FRAC: f64 = 0.1;
+    /// 干净人声那一路自求停顿帧时，主讲人区间两边各外扩几个 10 ms 帧（同 `runner.rs` 的 `masks(…, 0.03)`）
+    pub const GUARD_FRAMES: usize = 3;
+    /// 低采样率：完整频带少于这个数判「不知道」（过半）
+    pub const MIN_BANDS: usize = N_BANDS / 2;
+    /// 方向旁报的分界（Hz）：中心 ≥ HI_SPLIT 算高频，< LO_SPLIT 算低频
+    pub const HI_SPLIT_HZ: f64 = 3800.0;
+    pub const LO_SPLIT_HZ: f64 = 500.0;
+
+    fn erb(f: f64) -> f64 {
+        21.4 * (1.0 + 0.00437 * f).log10()
+    }
+
+    fn inv_erb(n: f64) -> f64 {
+        (10f64.powf(n / 21.4) - 1.0) / 0.00437
+    }
+
+    /// 30 个频带的 (下沿, 上沿) Hz：ERB 数从 LO_HZ 到 HI_HZ 等分（Glasberg & Moore 1990）。
+    pub fn bands() -> [(f64, f64); N_BANDS] {
+        let (a, b) = (erb(LO_HZ), erb(HI_HZ));
+        let e = |i: usize| inv_erb(a + (b - a) * i as f64 / N_BANDS as f64);
+        let mut out = [(0.0, 0.0); N_BANDS];
+        for (i, v) in out.iter_mut().enumerate() {
+            *v = (e(i), e(i + 1));
+        }
+        out[0].0 = LO_HZ;
+        out[N_BANDS - 1].1 = HI_HZ;
+        out
+    }
+}
+
+/// 停顿帧（10 ms 掩码）：评分上下文给了「只有噪音」掩码就用它；没给（干净人声那一路，全空）就取
+/// 主讲人与旁人都不在、两边外扩 [`timbre::GUARD_FRAMES`] 帧的帧（调研 026 J5）。
+pub(super) fn timbre_quiet_mask(m: &crate::analysis::Masks) -> Vec<bool> {
+    if m.noise_only.iter().any(|&v| v) {
+        return m.noise_only.clone();
+    }
+    let nf = m.owner.len();
+    let mut q = vec![true; nf];
+    for f in 0..nf {
+        if m.owner[f] || m.interf.get(f).copied().unwrap_or(false) {
+            let a = f.saturating_sub(timbre::GUARD_FRAMES);
+            let b = (f + timbre::GUARD_FRAMES + 1).min(nf);
+            for v in q.iter_mut().take(b).skip(a) {
+                *v = false;
+            }
+        }
+    }
+    q
+}
+
 pub(super) fn v_timbre(c: &Ctx, p: &Params) -> Score {
+    use timbre::*;
     const ID: &str = "V-TIMBRE";
-    const BANDS: [(f64, f64); 4] = [
-        (100.0, 1000.0),
-        (1000.0, 2000.0),
-        (2000.0, 4000.0),
-        (4000.0, 7900.0),
-    ];
-    let so = Spectrogram::new(c.out, 512, 256);
-    let sc = Spectrogram::new(&c.clip.clean, 512, 256);
+    let sr = c.clip.sr;
+    let all = bands();
+    // 上沿越过奈奎斯特频率的带不计（#110）
+    let keep: Vec<(f64, f64)> = all
+        .iter()
+        .copied()
+        .filter(|b| b.1 <= sr as f64 / 2.0)
+        .collect();
+    if keep.len() < MIN_BANDS {
+        return Score::unknown(
+            ID,
+            "dB",
+            Better::Lower,
+            format!(
+                "采样率 {sr} Hz：奈奎斯特以下只剩 {} 个完整频带，少于 {MIN_BANDS} 个",
+                keep.len()
+            ),
+        );
+    }
+    let so = Spectrogram::new(c.out, N_FFT, HOP);
+    let sc = Spectrogram::new(&c.clip.clean, N_FFT, HOP);
     let own = |m: usize| m < c.masks.owner.len() && c.masks.owner[m] && !c.masks.interf[m];
-    let speech: Vec<usize> = (0..so.frames.len())
+    let speech: Vec<usize> = (0..so.frames.len().min(sc.frames.len()))
         .filter(|&k| so.mask_frame(k).is_some_and(own))
         .collect();
-    let quiet = noise_spec_frames(c, &so);
-    if speech.len() < 50 {
+    if speech.len() < 25 {
         return Score::unknown(ID, "dB", Better::Lower, "主讲人有声谱帧不足");
     }
-    let sr = c.clip.sr;
-    let band_pow = |sg: &Spectrogram, ks: &[usize]| -> [f64; 4] {
-        let mut out = [0.0; 4];
+    let qm = timbre_quiet_mask(c.masks);
+    // 同 noise_spec_frames：中心所在掩码帧前后各 2 帧都是停顿
+    let quiet: Vec<usize> = (0..so.frames.len().min(sc.frames.len()))
+        .filter(|&k| {
+            so.mask_frame(k)
+                .is_some_and(|m| m >= 2 && m + 2 < qm.len() && (m - 2..=m + 2).all(|f| qm[f]))
+        })
+        .collect();
+    let band_pow = |sg: &Spectrogram, ks: &[usize]| -> Vec<f64> {
+        let mut out = vec![0.0; keep.len()];
         if ks.is_empty() {
             return out;
         }
         for &k in ks {
             for (b, v) in sg.frames[k].iter().enumerate() {
                 let hz = sg.bin_hz(b, sr);
-                for (i, (lo, hi)) in BANDS.iter().enumerate() {
-                    if hz >= *lo && hz < *hi {
-                        out[i] += *v as f64;
-                    }
+                if let Some(i) = keep.iter().position(|(lo, hi)| hz >= *lo && hz < *hi) {
+                    out[i] += *v as f64;
                 }
             }
         }
-        out.map(|v| v / ks.len() as f64)
+        out.iter().map(|v| v / ks.len() as f64).collect()
     };
-    let pc = band_pow(&sc, &speech);
-    let po = band_pow(&so, &speech);
-    let pn = band_pow(&so, &quiet);
-    let po: Vec<f64> = po
-        .iter()
-        .zip(&pn)
-        .map(|(o, n)| (o - n).max(0.1 * o).max(1e-20))
-        .collect();
-    let tot_c: f64 = pc.iter().sum();
-    let tot_o: f64 = po.iter().sum();
-    if tot_c <= 0.0 {
-        return Score::unknown(ID, "dB", Better::Lower, "干净参考全零");
+    // 输出与参考各扣自己停顿帧的平均功率，至少留 KEEP_FRAC（两边对称：混响尾巴不算成音色变化）
+    let sub = |s: Vec<f64>, n: Vec<f64>| -> Vec<f64> {
+        s.iter()
+            .zip(&n)
+            .map(|(s, n)| (s - n).max(KEEP_FRAC * s).max(1e-20))
+            .collect()
+    };
+    let pc_raw = band_pow(&sc, &speech);
+    let pc = sub(pc_raw.clone(), band_pow(&sc, &quiet));
+    let po = sub(band_pow(&so, &speech), band_pow(&so, &quiet));
+    let idx: Vec<usize> = (0..keep.len()).filter(|&i| pc_raw[i] > 0.0).collect();
+    if idx.len() < MIN_BANDS {
+        return Score::unknown(ID, "dB", Better::Lower, "干净参考有能量的频带不足");
     }
-    let dev: Vec<f64> = (0..4)
-        .map(|i| (db10(po[i]) - db10(tot_o)) - (db10(pc[i]) - db10(tot_c)))
-        .collect();
-    let worst = dev
-        .iter()
-        .cloned()
-        .fold(0.0f64, |a, b| if b.abs() > a.abs() { b } else { a });
-    Score::judged(
+    let mut d: Vec<f64> = idx.iter().map(|&i| db10(po[i]) - db10(pc[i])).collect();
+    // 先减中位数去掉整体增益，再截下限，最后减均值：截断点随增益平移（调研 026 J4）
+    let mut s = d.clone();
+    s.sort_by(f64::total_cmp);
+    let med = if s.len() % 2 == 1 {
+        s[s.len() / 2]
+    } else {
+        (s[s.len() / 2 - 1] + s[s.len() / 2]) / 2.0
+    };
+    for v in d.iter_mut() {
+        *v = (*v - med).max(FLOOR_DB);
+    }
+    let mean = d.iter().sum::<f64>() / d.len() as f64;
+    for v in d.iter_mut() {
+        *v -= mean;
+    }
+    let std = |x: &[f64]| -> f64 {
+        let m = x.iter().sum::<f64>() / x.len() as f64;
+        (x.iter().map(|v| (v - m).powi(2)).sum::<f64>() / x.len() as f64).sqrt()
+    };
+    let slope: Vec<f64> = d.windows(2).map(|w| w[1] - w[0]).collect();
+    let centre = |i: usize| (keep[i].0 * keep[i].1).sqrt();
+    let region = |f: &dyn Fn(f64) -> bool| -> f64 {
+        let v: Vec<f64> = idx
+            .iter()
+            .zip(&d)
+            .filter(|(i, _)| f(centre(**i)))
+            .map(|(_, x)| *x)
+            .collect();
+        if v.is_empty() {
+            f64::NAN
+        } else {
+            v.iter().sum::<f64>() / v.len() as f64
+        }
+    };
+    let s = Score::judged(
         ID,
-        worst.abs(),
+        std(&d),
         "dB",
         Better::Lower,
         Some(p.f_or("max", th::TIMBRE.def("max"))),
         th::TIMBRE.edges,
     )
-    .with_extra("dev_0_1k", dev[0])
-    .with_extra("dev_1_2k", dev[1])
-    .with_extra("dev_2_4k", dev[2])
-    .with_extra("dev_4_8k", dev[3])
+    .with_extra("slope_db", std(&slope))
+    .with_extra("max_db", d.iter().fold(0.0f64, |a, b| a.max(b.abs())))
+    .with_extra("bands", d.len() as f64)
+    .with_extra("quiet_frames", quiet.len() as f64);
+    let hi = region(&|f| f >= HI_SPLIT_HZ);
+    let lo = region(&|f| f < LO_SPLIT_HZ);
+    let s = if hi.is_finite() {
+        s.with_extra("hi_db", hi)
+    } else {
+        s
+    };
+    if lo.is_finite() {
+        s.with_extra("lo_db", lo)
+    } else {
+        s
+    }
 }
+
+#[cfg(test)]
+#[path = "timbre_tests.rs"]
+mod timbre_tests;

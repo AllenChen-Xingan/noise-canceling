@@ -20,7 +20,6 @@ vdn-models.workspace = true
 ort.workspace = true
 hound.workspace = true
 # ESTOI 的 STFT（f64，照 pystoi 口径）
-realfft.workspace = true
 serde_json.workspace = true
 serde.workspace = true
 # 清单文件格式派生 JSON Schema（specs/schema/eval-*.schema.json，由 vdn-schema 导出）
