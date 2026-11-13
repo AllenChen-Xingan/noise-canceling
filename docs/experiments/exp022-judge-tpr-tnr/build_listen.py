@@ -31,7 +31,7 @@ sys.path.insert(0, str(HERE))
 import tpr_tnr  # noqa: E402  过关线读取（正本 table.rs）
 
 ROOT = HERE.parents[2]
-MAIN = ROOT.parent / "noise_canceling"  # 主目录：音频与 _tmp 在这里（worktree 的 _tmp 不放大件）
+MAIN = ROOT.parent / "noise_canceling"  # 主目录：成绩单音频在这里，只读
 SCORECARD = MAIN / "_tmp/scorecard"
 RUNS = {  # run → 取哪些系统
     "20261105-005916-4ccf0638": ["gtcrn", "ref"],
@@ -176,7 +176,7 @@ def write_pair(out_main, out_mix, main_src, mix_src):
 def main():
     build = sys.argv[1] if len(sys.argv) > 1 else datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + \
         hashlib.sha256(str(random.random()).encode()).hexdigest()[:4]
-    base = MAIN / "_tmp/exp022-listen" / build
+    base = ROOT / "_tmp/exp022-listen" / build  # 写在本 worktree 的 _tmp（git 忽略）；主目录只读
     listen, key = base / "listen", base / "key"
     if base.exists():
         raise SystemExit(f"{base} 已存在：不覆盖旧 build（CLAUDE.md 第五节第 1 条）")
