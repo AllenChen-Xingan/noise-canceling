@@ -33,6 +33,7 @@
    - 如果你不回，默认 B（不占你的时间），评估器继续标「未校准」
 
 ## 转交（范围外，留给大总管）
+- 自审（vdn-review）报的改动范围外条目：`src/README.md` 仍是初始化模板（说目录是空的）；`src/eval/` 没有 README，verifier / L0–L3 / CI 层与 QA 层没集中定义；rules.rs 与 rules_v2.rs 新旧并存、共用类型放在旧模块里；注释大量只写 D 编号不写人话；单元测试四种放法；tests/common/platform.rs 文件头写的副本数不对（实为 4 份）；依赖两种写法。都不是本线引入的
 
 ## 流水
 - 报到 → 大总管确认歧义按「有问题就修」理解，修 src/ 前先回报
@@ -52,3 +53,4 @@
 - 拿名额（mkdir 锁）：先红 5 条 → 修第 1/3/4 条 → cargo test -p vdn-eval 全过、tidy 通过、clippy 无输出 → 删锁、归还
 - 重跑定标第 1 轮：有效配对 20（原始 48），存 exp022/results/calib-round1-rerun.md
 - scorecard.md：第六节加随机抽查行与两种量法，L1 改「有效配对」，新增第十节改动记录
+- 自审（vdn-review，3 个视角）：本改动内 P1 1 条（随机抽查会抽到逐段否决的段）→ 先加红测再修；calib/judge 术语、main 用法补清；范围外条目记进「转交」

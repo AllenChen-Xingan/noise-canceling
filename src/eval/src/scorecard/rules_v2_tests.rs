@@ -505,5 +505,9 @@ fn random_spot_check_skips_vetoed_clips() {
         .collect();
     let c = one(&rows);
     let picks = spot_picks(&c);
-    assert_eq!(picks, vec![rows[11].clip.clone()], "只剩第 11 段既没被否决、又没被选中");
+    assert_eq!(
+        picks,
+        vec![rows[11].clip.clone()],
+        "只剩第 11 段既没被否决、又没被选中"
+    );
 }
