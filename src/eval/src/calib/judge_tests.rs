@@ -42,7 +42,7 @@ fn wilson_known_value() {
     assert!(wilson(0, 0).0.is_nan());
 }
 
-fn item<'a>(usable: Option<&'a str>, eaten: bool, s: &'a Value, n: &'a Value) -> Item<'a> {
+fn item<'a>(usable: Option<&'a str>, eaten: Option<bool>, s: &'a Value, n: &'a Value) -> Item<'a> {
     Item {
         clip: "c",
         model: "m",
@@ -58,13 +58,14 @@ fn item<'a>(usable: Option<&'a str>, eaten: bool, s: &'a Value, n: &'a Value) ->
 #[test]
 fn human_cuts() {
     let z = json!({});
-    let t = |u: &str, h| item(Some(u), false, &z, &z).truth(h);
+    let t = |u: &str, h| item(Some(u), Some(false), &z, &z).truth(h);
     assert_eq!(t("no", Human::UsableLoose), Some(V::Fail));
     assert_eq!(t("marginal", Human::UsableLoose), Some(V::Pass));
     assert_eq!(t("marginal", Human::UsableStrict), Some(V::Fail));
     assert_eq!(t("ok", Human::UsableStrict), Some(V::Pass));
     assert_eq!(t("bogus", Human::UsableStrict), None);
-    assert_eq!(item(None, true, &z, &z).truth(Human::Eaten), Some(V::Fail));
+    assert_eq!(item(None, Some(true), &z, &z).truth(Human::Eaten), Some(V::Fail));
+    assert_eq!(item(None, None, &z, &z).truth(Human::Eaten), None);
 }
 
 /// 吃字线从正本 `V-EAT-ASR.fail_chars` 取：多错正好等于线 → 不过，少一个 → 过。
@@ -75,8 +76,8 @@ fn eat_line_from_table() {
     let n = json!({"del": 0.0, "sub": 0.0, "ref_len": 1000.0});
     let at = json!({"del": lim, "sub": 0.0, "ref_len": 1000.0});
     let below = json!({"del": lim - 1.0, "sub": 0.0, "ref_len": 1000.0});
-    assert_eq!((j.judge)(&item(None, false, &at, &n)), Some(V::Fail));
-    assert_eq!((j.judge)(&item(None, false, &below, &n)), Some(V::Pass));
+    assert_eq!((j.judge)(&item(None, None, &at, &n)), Some(V::Fail));
+    assert_eq!((j.judge)(&item(None, None, &below, &n)), Some(V::Pass));
 }
 
 /// 没给评分模型表：听感几行条数为 0，全数记「判不了」，不报错。
@@ -129,4 +130,27 @@ fn matches_exp022_python() {
         checked += 1;
     }
     assert_eq!(checked, 10);
+}
+
+/// codex 第 1 轮 P1 #1：吃字题没答（字段缺、null、空列表）的屏不进吃字的混淆矩阵，记「判不了」；
+/// 明确答「都没有」（`["none"]`）照常算人判过。
+#[test]
+fn unanswered_eaten_is_skipped_not_pass() {
+    let mk = |eaten: Value| {
+        json!({"trials": [{"kind": "real", "clip": "c1", "slots": {"A": "m"},
+            "by_model": {"usable": {"m": "ok"}, "eaten": eaten}}]})
+    };
+    let s = json!({"per_clip": {"c1": {"noisy": {"del": 0.0, "sub": 0.0, "ref_len": 10.0},
+        "m": {"del": 0.0, "sub": 0.0, "ref_len": 10.0}}}});
+    let eat_n = |a: &Value| {
+        let rows = table(&items(a, &s, &Value::Null), 1, 10);
+        let r = rows.iter().find(|r| r["judge"] == "eat_pp").unwrap();
+        (r["n"].as_u64().unwrap(), r["skipped"].as_u64().unwrap())
+    };
+    let missing = json!({"trials": [{"kind": "real", "clip": "c1", "slots": {"A": "m"},
+        "by_model": {"usable": {"m": "ok"}}}]});
+    assert_eq!(eat_n(&missing), (0, 1));
+    assert_eq!(eat_n(&mk(Value::Null)), (0, 1));
+    assert_eq!(eat_n(&mk(json!([]))), (0, 1));
+    assert_eq!(eat_n(&mk(json!(["none"]))), (1, 0));
 }

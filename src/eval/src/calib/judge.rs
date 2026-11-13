@@ -59,7 +59,8 @@ pub struct Item<'a> {
     pub clip: &'a str,
     pub model: &'a str,
     pub usable: Option<&'a str>,
-    pub eaten: bool,
+    /// 人勾了这份吃字没有；`None` = 这屏没答吃字题（字段缺、null 或空列表；明确「都没有」记为 `["none"]`）
+    pub eaten: Option<bool>,
     pub scores: &'a Value,
     pub noisy: &'a Value,
     /// `{scoreq, distill_mos}`；没给评分模型表时为 Null
@@ -71,7 +72,7 @@ impl Item<'_> {
     pub fn truth(&self, h: Human) -> Option<V> {
         let u = self.usable;
         match h {
-            Human::Eaten => Some(if self.eaten { V::Fail } else { V::Pass }),
+            Human::Eaten => self.eaten.map(|e| if e { V::Fail } else { V::Pass }),
             Human::UsableLoose | Human::UsableStrict => match u? {
                 "no" => Some(V::Fail),
                 "marginal" if matches!(h, Human::UsableStrict) => Some(V::Fail),
@@ -276,19 +277,18 @@ pub fn items<'a>(answers: &'a Value, scores: &'a Value, preds: &'a Value) -> Vec
         let Some(clip) = t["clip"].as_str() else {
             continue;
         };
-        let eaten: Vec<&str> = t["by_model"]["eaten"]
+        // 吃字题没答（字段缺、null、空列表）→ None，不当成「没吃」（codex 第 1 轮 P1 #1）
+        let eaten: Option<Vec<&str>> = t["by_model"]["eaten"]
             .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(Value::as_str)
-            .collect();
+            .filter(|a| !a.is_empty())
+            .map(|a| a.iter().filter_map(Value::as_str).collect());
         for m in t["slots"].as_object().into_iter().flat_map(|o| o.values()) {
             let Some(model) = m.as_str() else { continue };
             out.push(Item {
                 clip,
                 model,
                 usable: t["by_model"]["usable"][model].as_str(),
-                eaten: eaten.contains(&model),
+                eaten: eaten.as_ref().map(|e| e.contains(&model)),
                 scores: &per[clip][model],
                 noisy: &per[clip]["noisy"],
                 pred: &preds[clip][model],

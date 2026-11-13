@@ -93,7 +93,9 @@ def build_rows(answers, pred, scores, lines):
         if t.get("kind") != "real":
             continue
         clip, bm = t["clip"], t["by_model"]
-        eaten = set(bm.get("eaten") or [])
+        # 吃字题没答（字段缺、null、空列表）→ 人耳真值缺，不当成「没吃」；明确「都没有」是 ["none"]
+        eaten_ans = bm.get("eaten")
+        eaten = set(eaten_ans) if isinstance(eaten_ans, list) and eaten_ans else None
         for model in t["slots"].values():
             p, n = pred[clip][model], pred[clip]["noisy"]
             sc, sn = scores["per_clip"][clip][model], scores["per_clip"][clip]["noisy"]
@@ -106,7 +108,7 @@ def build_rows(answers, pred, scores, lines):
                 "usable": bm["usable"].get(model),
                 "h_loose": human_usable(bm["usable"].get(model), strict=False),
                 "h_strict": human_usable(bm["usable"].get(model), strict=True),
-                "h_eaten": F if model in eaten else P,
+                "h_eaten": None if eaten is None else (F if model in eaten else P),
                 "d_scoreq": round(dq, 4), "d_distill": round(dd, 4),
                 "extra_tokens": _extra(sc, sn), "ref_len": sc["ref_len"],
                 "j_scoreq_v1": v1q, "j_distill_v1": v1d, "j_both_v1": both(v1q, v1d),
