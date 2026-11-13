@@ -481,3 +481,29 @@ fn random_spot_check_takes_what_is_there() {
         1.min(th::LISTEN.def("random") as usize)
     );
 }
+
+/// 自审 P1：逐段否决的段（吃字 ≥ fail_chars、物理硬事实不过）已经被成绩单判不过，不能当「评估器判过」抽查。
+#[test]
+fn random_spot_check_skips_vetoed_clips() {
+    let lim = th::EAT_ASR.def("fail_chars");
+    let rows: Vec<ClipRow> = (0..12)
+        .map(|i| {
+            let mut extra = vec![];
+            if i >= 3 && i < 11 {
+                // 第 3–10 段吃字多错 lim 个（ref_len 100 → 百分点 = 个数）
+                let mut s = sc("V-EAT-ASR", lim, 1.0);
+                s.extra = vec![("ref_len", 100.0)];
+                extra.push(("V-EAT-ASR", true, s));
+            }
+            let mut r = row(i, MeetingPlace::Cafe, extra);
+            let d = 0.05 * i as f64 + 0.1; // 都过听感线，最差 3 段是 0–2
+            let k = r.scores.len();
+            r.scores[k - 2].2 = sc("V-NRMOS-SCOREQ", d, 0.0);
+            r.scores[k - 1].2 = sc("V-NRMOS-DISTILL", d, 0.0);
+            r
+        })
+        .collect();
+    let c = one(&rows);
+    let picks = spot_picks(&c);
+    assert_eq!(picks, vec![rows[11].clip.clone()], "只剩第 11 段既没被否决、又没被选中");
+}

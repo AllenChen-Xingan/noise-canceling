@@ -266,7 +266,8 @@ pub fn summarize(rows: &[ClipRow], missing: &[Missing]) -> Vec<SceneCard> {
 }
 
 /// 随机抽查（调研 031 第 3 条）：上面几类只送「疑似坏」的段，评估器说过的段人永远听不到，漏判量不出。
-/// 这里从全成绩单里「两个评分模型单段 Δ 都不低于 −`SC-NRMOS-DELTA`、且没因别的原因被选中」的段里，
+/// 这里从全成绩单里「两个评分模型单段 Δ 都不低于 −`SC-NRMOS-DELTA`、没被逐段否决（物理硬事实、吃字）、
+/// 且没因别的原因被选中」的段里，
 /// 按 `SC-AGG.seed` 不放回地抽 `SC-LISTEN.random` 段（人定 2026-11-13）。候选顺序 = 组合顺序 × 段在输入里的顺序，
 /// 同样的输入出同样的段；原因里写明种子与总段数。不够就全抽。
 fn spot_check(cards: &mut [SceneCard], rows: &[ClipRow]) {
@@ -282,6 +283,13 @@ fn spot_check(cards: &mut [SceneCard], rows: &[ClipRow]) {
                     .is_some_and(|d| d >= line - 1e-12)
             });
             let taken = c.listen.to_human.iter().any(|(x, _)| *x == r.clip);
+            // 逐段否决（物理硬事实不过、吃字 ≥ fail_chars）的段已被判不过，不算「评估器判过」（自审 P1）
+            let vetoed = r.scores.iter().any(|(id, _, s)| {
+                (standard::PHYSICAL.contains(id) && s.verdict == crate::Verdict::Fail)
+                    || (*id == "V-EAT-ASR"
+                        && eat_chars(s).is_some_and(|n| n >= th::EAT_ASR.def("fail_chars")))
+            });
+            let ok = ok && !vetoed;
             if ok && !taken && !cand.iter().any(|(j, x)| *j == i && *x == r.clip) {
                 cand.push((i, r.clip.clone()));
             }
