@@ -45,3 +45,7 @@
 - exp022：写 stats.py / tpr_tnr.py / 17 条测试，全过；过关线运行时读 table.rs
 - 写 inventory.md、audit.md（P1 × 4 · P2 × 5 · P0 × 0）
 - 第一次回报发大总管，等放行
+- 放行修 1/3/4；人拍板三题：吃字线不改 · 随机抽查 2 段（table.rs 已改标人定）· 要听一页约 20 题（修完再建页）
+- 写好第 1、3、4 条的测试与桩（calib/judge.rs · judge_tests.rs · rules_v2_tests.rs · table.rs SC-LISTEN），P2 issue 草稿 5 份
+- ⚠️ 拿名额后查 heavy.lock：info 写着 owner: noise-canceling-74 / cands，不空；我先覆盖了 info 再发现，已把第一行原样写回（其后若有内容已丢）；未跑，报大总管等确认
+- 规则（大总管 2026-11-13）：读锁前先 ls 判断 heavy.lock 是否存在，别先写；存在就读 info 第一行，不是 free 就停

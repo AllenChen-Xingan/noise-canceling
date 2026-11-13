@@ -4,7 +4,12 @@
 //! 规则照 012（全部〔建议值〕，拍板 #8）：
 //! - 配对：AB 页被选「最 X」者对同屏其余各一对；H3（能用 / 勉强 / 不能用）同屏差 ≥ 1 级的两个候选一对。
 //!   **只按人耳分差筛**，不按 verifier 自己的分差筛
-//! - L1：累计**验证集**配对 ≥ 20 且一致率 95% 下界 > 0.5；L2：再加验证集片段 ≥ 30、片段内 τ 下界 ≥ 0.2
+//! - **同一判断只数一次**（012 原文「有效配对数」，调研 031 第 4 条）：同一屏里「最清楚」「最自然」「能用等级」
+//!   常给出同一个「A 比 B 好」，按（屏, 胜, 负）去重后才是有效配对（[`effective`]）。一致率、区间、升级门槛
+//!   都只用有效配对；原始条数照报（`pairs_raw`），分来源的一致率（`by_source`）按原始条数算。
+//!   同屏两问给出相反方向的两对（A 胜 B、B 胜 A）都保留，各算一次
+//! - L1：累计**验证集**有效配对 ≥ 20 且一致率 95% 下界 > 0.5；L2：再加验证集片段 ≥ 30、片段内 τ 下界 ≥ 0.2
+//! - 另报评估器按成绩单过关线判「过 / 不过」时与人耳的混淆矩阵（[`judge`]，只报不判）
 //! - 奇数轮进定标集、偶数轮进验证集；判级只看验证集 → 第 1 轮无论数字多好都是 L0
 //! - 统计全部确定性：种子 20261030，bootstrap 10000 次
 
@@ -18,9 +23,13 @@ use crate::rng::Rng;
 
 pub mod judge;
 
-/// 【桩，待实现】
+/// 有效配对：按（屏, 胜, 负）去重，保留第一次出现的那条（见文件头「同一判断只数一次」）。
 pub fn effective(p: &[Pair]) -> Vec<Pair> {
-    p.to_vec()
+    let mut seen = std::collections::BTreeSet::new();
+    p.iter()
+        .filter(|x| seen.insert((x.screen.clone(), x.winner.clone(), x.loser.clone())))
+        .cloned()
+        .collect()
 }
 
 /// 一个指标在答卷候选上的取值来源。
@@ -195,7 +204,14 @@ fn kendall_tau_b(x: &[f64], y: &[f64]) -> Option<f64> {
 
 /// 定标一轮。`scores` 是 exp003 scores.json（`per_clip[clip][model]`，原声为 `noisy`）。
 pub fn calibrate(answers: &Value, scores: &Value, round: u32) -> Value {
-    let (pairs, h3) = extract(answers);
+    calibrate_with(answers, scores, &Value::Null, round)
+}
+
+/// 同 [`calibrate`]，另给评分模型表 `preds`（`[clip][model]{scoreq, distill_mos}`，可为 Null），
+/// 用来算听感两项的混淆矩阵。
+pub fn calibrate_with(answers: &Value, scores: &Value, preds: &Value, round: u32) -> Value {
+    let (raw, h3) = extract(answers);
+    let pairs = effective(&raw);
     let per = &scores["per_clip"];
     let is_validation = round.is_multiple_of(2);
     let discounted = answers["summary"]["traps"]
