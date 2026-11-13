@@ -37,13 +37,13 @@ class Judge(unittest.TestCase):
 
 class Select(unittest.TestCase):
     def test_strata_unique_sources_and_retests(self):
-        order, sizes, frac = B.select(pool(30, 300), 9, 2, 1)
+        order, sizes, tries = B.select(pool(30, 300), 9, 2, 1)
         self.assertEqual(len(order), 20)
         first = [p for p in order if p["retest_of"] is None]
         self.assertEqual(sum(p["stratum"] == "fail" for p in first), 9)
         self.assertEqual(len({B.source_of(p["clip"]) for p in first}), 18, "同一源片段只出一次")
         self.assertEqual(sizes, {"fail": 60, "pass": 600})
-        self.assertAlmostEqual(frac["fail"], 9 / 60)
+        self.assertGreaterEqual(tries, 1)
         rts = [(i + 1, p) for i, p in enumerate(order) if p["retest_of"]]
         self.assertEqual({p["stratum"] for _, p in rts}, {"fail", "pass"})
         for pos, p in rts:
@@ -59,6 +59,48 @@ class Select(unittest.TestCase):
     def test_not_enough_raises(self):
         with self.assertRaises(ValueError):
             B.select(pool(3, 300), 9, 2, 1)
+
+    def test_retest_when_first_half_is_one_stratum(self):
+        # codex 第 2 轮 P2 #2：洗牌后前半段全是判不过层，判过层的原题也要被换到前半段，不能崩
+        order = [{"clip": f"f{i}", "stratum": "fail"} for i in range(9)] + \
+                [{"clip": f"p{i}", "stratum": "pass"} for i in range(9)]
+        out = B.place_retests(order, 2, None)
+        rts = [p for p in out if p["retest_of"]]
+        self.assertEqual({p["stratum"] for p in rts}, {"fail", "pass"})
+        for p in rts:
+            self.assertLessEqual(p["retest_of"], 9, "原题在前半段")
+            self.assertEqual(out[p["retest_of"] - 1]["clip"], p["clip"])
+
+
+class Inclusion(unittest.TestCase):
+    """codex 第 2 轮 P1 #1：入样概率按实际设计模拟，跨层共享源片段时偏离 n/N。"""
+
+    def test_no_shared_sources_matches_n_over_n(self):
+        strata = B.frame_of(pool(10, 10)[::2] + [dict(x, clip=x["clip"] + "z") for x in pool(0, 0)])
+        pi = B.inclusion_probs(strata, 2, 3, 20000)
+        for k in strata:
+            for it in strata[k]:
+                self.assertAlmostEqual(pi.get(B.item_key(it), 0), 2 / len(strata[k]), delta=0.02)
+
+    def test_shared_source_lowers_probability(self):
+        # 判不过层 2 条：源 A、源 B；判过层 4 条：源 A、C、D、E。每层抽 1。
+        # 判过层抽到源 A 时，只要判不过层抽到 A 就要整套重抽 → 判过层的 A 入样概率低于 1/4
+        mk = lambda clip, v: {"run": "r", "system": "s", "clip": clip, "judge": {"verdict": v}}  # noqa: E731
+        p = [mk("A-ext", "fail"), mk("B-ext", "fail"),
+             mk("A-mba", "pass"), mk("C-ext", "pass"), mk("D-ext", "pass"), mk("E-ext", "pass")]
+        pi = B.inclusion_probs(B.frame_of(p), 1, 5, 40000)
+        # 精确值：接受的套数 = 2×4 − 1 = 7，含「判过 A」的 1 套 → 1/7；其余判过条 2/7
+        self.assertAlmostEqual(pi["r|s|A-mba"], 1 / 7, delta=0.01)
+        self.assertAlmostEqual(pi["r|s|C-ext"], 2 / 7, delta=0.01)
+
+
+class Key(unittest.TestCase):
+    def test_prereg_and_required_fields(self):
+        k = B.make_key("b", T.read_lines(), {"fail": 1, "pass": 1}, 1, [], "<html>", pool(1, 1))
+        for f in B.REQUIRED_KEY_FIELDS:
+            self.assertIn(f, k)
+        for f in ("usable_cut", "eaten_cut", "use", "weighting"):
+            self.assertIn(f, k["prereg"])
 
 
 class Forbidden(unittest.TestCase):
