@@ -36,11 +36,13 @@
 | evalfix | 成绩单评分方法修正（025）+ 重出 GTCRN 成绩单 · #111（含 #109 #110）· `feat/scorecard-v2` · `../noise_canceling-evalfix` | 评测器 · 成绩单 · 定标等级 | 已报到（noise-canceling-evalfix-07）；#109 #110 修完；D85 新规则写完，对照表 runs/20261104-231355-da5821a4-resum-v2/compare.md；中途评审①（2 轮，P1×4 已修）；第 3 组写完，下一步中途评审② → 1 场景冒烟 |
 | cands | exp016 候选模型（DFN3 低延迟版 · DPDFNet-2 · NoNoise-Mac）上同一张成绩单 · #112 · `exp/016-candidates` · `../noise_canceling-cands` | 降噪模型候选 · 外部输出入口 · 成绩单（只用） | 已报到（noise-canceling-cands-7f）；入口 PR #115 开（大总管复跑 0 失败 · tidy 过），P2 → #113 #114；两候选冒烟过（每段约 0.8–0.9 s，480 段各约 15 min）；下一步中途评审② → 跑 480 段；NoNoise-Mac 待人 |
 
+> 2026-11-13 清理：PR #93 合并（收拢 b10 · b9 · fe 三条账本分支，补 D82–D84）；删 worktree cands · mixretest · coord99 · coordfe；删已合并分支 本地 24 · 远程 10；scratch 存档 `_tmp/archive-worktrees-20261113/`。
+
 **b17（2026-11-13，人：按 hamel.dev《field guide》查评估器测一致性是否忽略假阳性 / 假阴性等问题，有问题就修）**：批次 `_tmp/20261113-b17/`，大总管 `noise-canceling-68`，tmux 工作区 `vdn`。
 
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
-| evalaudit | 调研 031 评估器体检 + 修复 · #142 · `research/031-eval-judge-audit` · `../noise_canceling-evalaudit` | 评测器 · 人耳标注 · 成绩单标准 | 已派（会话 noise-canceling-evalaudit-1f）；修之前先回报问题清单，大总管放行才改 `src/` |
+| evalaudit | 调研 031 评估器体检 + 修复 · #142 · `research/031-eval-judge-audit` · `../noise_canceling-evalaudit` | 评测器 · 人耳标注 · 成绩单标准 | 体检初稿交：P0 0 · P1 4 · P2 5（`docs/research/031_eval-judge-audit/audit.md`）；大总管抽查后放行修第 1、3、4 条；人定 D93（吃字线不改 · 抽查 2 段 · 听 20 题校准）；旧 heavy.lock（11-05 cands）已清，名额给 evalaudit |
 
 ⚠️ 人要真实数据集与 D62「开发阶段不用真实录音」可能冲突 → mtgdata 出选项，进待拍板。
 
