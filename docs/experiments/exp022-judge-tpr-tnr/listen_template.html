@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>盲听 · 开会能用吗</title>
+<style>
+  :root { --bg: #fff; --fg: #1a1a1a; --muted: #555; --line: #ccc; --accent: #0b5cad; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #161616; --fg: #eee; --muted: #aaa; --line: #444; --accent: #6aa8ff; } }
+  body { background: var(--bg); color: var(--fg); font: 17px/1.6 -apple-system, "PingFang SC", sans-serif; margin: 0 auto; max-width: 760px; padding: 16px; }
+  section { border-top: 1px solid var(--line); padding: 16px 0; }
+  fieldset { border: 0; margin: 8px 0; padding: 0; }
+  legend { font-weight: 600; }
+  label { margin-right: 18px; white-space: nowrap; }
+  .text { color: var(--muted); }
+  audio { width: 100%; }
+  button { font: inherit; padding: 8px 16px; }
+  #status { color: var(--accent); }
+</style>
+</head>
+<body>
+<h1>盲听：开会能用吗（共 <span id="n"></span> 题）</h1>
+<p>每题一段 12 秒的降噪输出。请用平时开会的耳机听，音量先调到舒服。每题只答两件事：</p>
+<ol>
+  <li><strong>开会能用吗</strong>：如果对方听到的是这段声音，你觉得开会能不能用</li>
+  <li><strong>有没有吃字</strong>：对照下面的「原文」，有没有字词被吞掉、变轻到听不清、句首被切</li>
+</ol>
+<p>「原声」是没降噪的带噪录音，可听可不听。答案会自动存在这个浏览器里；全部答完后点最下面的「导出答卷」，把下载的文件交回。预计 10–15 分钟。</p>
+<main id="qs"></main>
+<section>
+  <p id="status" role="status" aria-live="polite"></p>
+  <button id="export" type="button">导出答卷</button>
+</section>
+<script>
+const BUILD = "__BUILD__";
+const QS = __QS__;
+const KEY = "exp022-listen-" + BUILD;
+let ans = {};
+try { ans = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { ans = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(ans)); } catch (e) {} };
+document.getElementById("n").textContent = QS.length;
+const root = document.getElementById("qs");
+const radios = (q, name, legend, opts) => {
+  const fs = document.createElement("fieldset");
+  const lg = document.createElement("legend"); lg.textContent = legend; fs.appendChild(lg);
+  for (const [v, t] of opts) {
+    const l = document.createElement("label");
+    const r = document.createElement("input");
+    r.type = "radio"; r.name = name + q.q; r.value = v;
+    if ((ans[q.q] || {})[name] === v) r.checked = true;
+    r.addEventListener("change", () => { ans[q.q] = Object.assign(ans[q.q] || {}, {[name]: v, t: new Date().toISOString()}); save(); });
+    l.appendChild(r); l.append(" " + t); fs.appendChild(l);
+  }
+  return fs;
+};
+for (const q of QS) {
+  const s = document.createElement("section");
+  s.setAttribute("aria-labelledby", "h" + q.q);
+  const h = document.createElement("h2"); h.id = "h" + q.q; h.textContent = "第 " + q.q + " 题"; s.appendChild(h);
+  const a = document.createElement("audio"); a.controls = true; a.preload = "none"; a.src = q.audio;
+  a.setAttribute("aria-label", "第 " + q.q + " 题 降噪输出");
+  a.addEventListener("play", () => { ans[q.q] = Object.assign(ans[q.q] || {}, {plays: ((ans[q.q] || {}).plays || 0) + 1}); save(); });
+  s.appendChild(a);
+  const p = document.createElement("p"); p.className = "text"; p.textContent = "原文：" + (q.text || "（无）"); s.appendChild(p);
+  const d = document.createElement("details"); const sm = document.createElement("summary"); sm.textContent = "原声（没降噪，可选）";
+  const o = document.createElement("audio"); o.controls = true; o.preload = "none"; o.src = q.orig;
+  o.setAttribute("aria-label", "第 " + q.q + " 题 原声");
+  d.appendChild(sm); d.appendChild(o); s.appendChild(d);
+  s.appendChild(radios(q, "usable", "开会能用吗", [["ok", "能用"], ["marginal", "勉强"], ["no", "不能用"]]));
+  s.appendChild(radios(q, "eaten", "有没有吃字", [["yes", "有"], ["no", "没有"], ["unsure", "听不出"]]));
+  const nl = document.createElement("label"); nl.textContent = "备注（可不填）：";
+  const n = document.createElement("input"); n.type = "text"; n.size = 40; n.value = (ans[q.q] || {}).note || "";
+  n.addEventListener("input", () => { ans[q.q] = Object.assign(ans[q.q] || {}, {note: n.value}); save(); });
+  nl.appendChild(n); s.appendChild(nl);
+  root.appendChild(s);
+}
+document.getElementById("export").addEventListener("click", () => {
+  const missing = QS.filter(q => !(ans[q.q] || {}).usable || !(ans[q.q] || {}).eaten).map(q => q.q);
+  const out = {build: BUILD, exported: new Date().toISOString(), user_agent: navigator.userAgent,
+               missing: missing, answers: QS.map(q => Object.assign({q: q.q}, ans[q.q] || {}))};
+  const b = new Blob([JSON.stringify(out, null, 1)], {type: "application/json"});
+  const u = URL.createObjectURL(b);
+  const el = document.createElement("a"); el.href = u; el.download = "answers-" + BUILD + ".json"; el.click();
+  document.getElementById("status").textContent = missing.length
+    ? "已导出。还有 " + missing.length + " 题没答完：第 " + missing.join("、") + " 题；答完可再导出一次。"
+    : "已导出，全部答完。请把下载的文件交回。";
+});
+</script>
+</body>
+</html>
