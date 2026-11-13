@@ -42,7 +42,7 @@
 
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
-| evalaudit | 调研 031 评估器体检 + 修复 · #142 · `research/031-eval-judge-audit` · `../noise_canceling-evalaudit` | 评测器 · 人耳标注 · 成绩单标准 | 体检初稿交：P0 0 · P1 4 · P2 5（`docs/research/031_eval-judge-audit/audit.md`）；大总管抽查后放行修第 1、3、4 条；人定 D93（吃字线不改 · 抽查 2 段 · 听 20 题校准）；旧 heavy.lock（11-05 cands）已清，名额给 evalaudit |
+| evalaudit | 调研 031 评估器体检 + 修复 · #142 · `research/031-eval-judge-audit` · `../noise_canceling-evalaudit` | 评测器 · 人耳标注 · 成绩单标准 | 完成，验收过（大总管复跑 vdn-eval 全过 · clippy · fmt · tidy · Python 34 条；codex 4 轮第 3、4 轮无 P0/P1）；窗口已关；PR #149 已合并（#142 关），worktree 与分支已删；P2 → #143–#147，范围外 → #148；人待做：20 题校准听测 `_tmp/exp022-listen/20261113-122017-3126/listen/` |
 
 ⚠️ 人要真实数据集与 D62「开发阶段不用真实录音」可能冲突 → mtgdata 出选项，进待拍板。
 
