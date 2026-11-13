@@ -159,7 +159,8 @@ def check_key(key):
     """揭盲表必填项：顶层字段与事先登记的每个子字段都要在、且非空（codex 第 3 轮 P2 #2）。"""
     missing = [f for f in REQUIRED_KEY_FIELDS if not key.get(f) and key.get(f) != 0]
     pre = key.get("prereg") or {}
-    missing += [f"prereg.{f}" for f in REQUIRED_PREREG if not str(pre.get(f, "")).strip()]
+    missing += [f"prereg.{f}" for f in REQUIRED_PREREG
+                if not (isinstance(pre.get(f), str) and pre[f].strip())]  # null、非字符串也算缺（codex 第 4 轮）
     if missing:
         raise ValueError(f"揭盲表缺字段：{missing}")
 

@@ -110,9 +110,9 @@ class Key(unittest.TestCase):
             with self.assertRaises(ValueError, msg=f):
                 B.check_key(bad)
         for f in B.REQUIRED_PREREG:
-            for v in (None, "", "  "):
+            for v in ("DEL", None, "", "  ", 0):
                 bad = dict(k, prereg=dict(k["prereg"]))
-                if v is None:
+                if v == "DEL":
                     del bad["prereg"][f]
                 else:
                     bad["prereg"][f] = v
