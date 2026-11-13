@@ -179,8 +179,10 @@ def to_markdown(res, lines, n_rows):
          "同一屏 3 条不独立，所以另给按屏重采样的区间（10000 次，种子 20261030）",
          f"- 过关线（运行时读 `src/eval/src/thresholds/table.rs`）：`{json.dumps(lines, ensure_ascii=False)}`",
          "- 「全判过时的一致率」= 评估器一律判过能拿到的总一致率；总一致率不高于它，说明总一致率没有信息量",
-         "- 「校正后不过比例」= Rogan-Gladen：按本表 TPR/TNR 校正评估器判出的不过比例；TPR + TNR ≤ 1 时无解\n",
-         "| 评估器 | 人耳真值 | 人不过 / 人过 | 待测 | TP FN TN FP | 真阳性率 [Wilson] [按屏] | 真阴性率 [Wilson] [按屏] | 总一致率 | 全判过时的一致率 | TPR+TNR−1 | 评估器判不过 / 人判不过 / 校正后 |",
+         "- 「评估器判不过 / 人判不过」：两者差多远，就是直接拿评估器的不过比例当结论会差多远。"
+         "Rogan-Gladen 校正（`stats.rogan_gladen`）要用**另一批**数据量出的 TPR/TNR 去校正新数据；"
+         "在同一批数据上它恒等于人判不过比例，所以本表不列，json 里的 `rogan_gladen_fail_rate` 只是公式自检\n",
+         "| 评估器 | 人耳真值 | 人不过 / 人过 | 待测 | TP FN TN FP | 真阳性率 [Wilson] [按屏] | 真阴性率 [Wilson] [按屏] | 总一致率 | 全判过时的一致率 | TPR+TNR−1 | 评估器判不过 / 人判不过 |",
          "|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in res:
         c = r["confusion"]
@@ -190,7 +192,7 @@ def to_markdown(res, lines, n_rows):
             f"| {_f(r['tpr'])} {_ci(r['tpr_ci95'])} {_ci(r['tpr_ci95_cluster'])} "
             f"| {_f(r['tnr'])} {_ci(r['tnr_ci95'])} {_ci(r['tnr_ci95_cluster'])} "
             f"| {_f(r['raw_agreement'])} | {_f(r['always_pass_agreement'])} | {_f(r['youden_j'])} "
-            f"| {_f(r['judge_fail_rate'])} / {_f(r['human_fail_rate'])} / {_f(r['rogan_gladen_fail_rate'])} |")
+            f"| {_f(r['judge_fail_rate'])} / {_f(r['human_fail_rate'])} |")
     return "\n".join(s) + "\n"
 
 
