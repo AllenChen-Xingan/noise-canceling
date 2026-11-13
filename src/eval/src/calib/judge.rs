@@ -238,6 +238,41 @@ fn cluster_ci(by: &BTreeMap<&str, Vec<(V, V)>>, rate: fn(&Confusion) -> f64, see
     (quantile(&vals, 0.025), quantile(&vals, 0.975))
 }
 
+/// 从答卷抽（屏, 候选）条目：只用 `kind == "real"` 的屏，与 [`super::extract`] 同一口径。
+/// `scores` 是指标表（`per_clip[clip][model]`，原声为 `noisy`）；`preds` 是评分模型表（`[clip][model]`，可为 Null）。
+pub fn items<'a>(answers: &'a Value, scores: &'a Value, preds: &'a Value) -> Vec<Item<'a>> {
+    let per = &scores["per_clip"];
+    let mut out = Vec::new();
+    for t in answers["trials"].as_array().into_iter().flatten() {
+        if t["kind"] != "real" {
+            continue;
+        }
+        let Some(clip) = t["clip"].as_str() else {
+            continue;
+        };
+        let eaten: Vec<&str> = t["by_model"]["eaten"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .collect();
+        for m in t["slots"].as_object().into_iter().flat_map(|o| o.values()) {
+            let Some(model) = m.as_str() else { continue };
+            out.push(Item {
+                clip,
+                model,
+                usable: t["by_model"]["usable"][model].as_str(),
+                eaten: eaten.contains(&model),
+                scores: &per[clip][model],
+                noisy: &per[clip]["noisy"],
+                pred: &preds[clip][model],
+                pred_noisy: &preds[clip]["noisy"],
+            });
+        }
+    }
+    out
+}
+
 /// 对每个评估器 × 每种人耳切法出一行。没有评分模型表时，听感两项的条目全部「判不了」，行照出、条数为 0。
 pub fn table(items: &[Item], seed: u64, reps: usize) -> Vec<Value> {
     let mut rows = Vec::new();
