@@ -131,7 +131,12 @@ pub fn judges() -> Vec<Judge> {
             verifier: "V-NRMOS-DISTILL",
             label: "Distill-MOS 单段 Δ ≥ min（v1）",
             humans: USABLE,
-            judge: |it| Some(at_least(delta(it, "distill_mos")?, th::NRMOS_DISTILL.def("min"))),
+            judge: |it| {
+                Some(at_least(
+                    delta(it, "distill_mos")?,
+                    th::NRMOS_DISTILL.def("min"),
+                ))
+            },
         },
         Judge {
             id: "scoreq_slack",
@@ -145,7 +150,12 @@ pub fn judges() -> Vec<Judge> {
             verifier: "V-NRMOS-DISTILL",
             label: "Distill-MOS 单段 Δ ≥ −SC-NRMOS-DELTA",
             humans: USABLE,
-            judge: |it| Some(at_least(delta(it, "distill_mos")?, -th::NRMOS_DELTA.def("max"))),
+            judge: |it| {
+                Some(at_least(
+                    delta(it, "distill_mos")?,
+                    -th::NRMOS_DELTA.def("max"),
+                ))
+            },
         },
         Judge {
             id: "eat_tokens",
@@ -154,7 +164,11 @@ pub fn judges() -> Vec<Judge> {
             humans: &[Human::Eaten],
             judge: |it| {
                 let lim = th::EAT_ASR.def("fail_chars");
-                Some(if extra_tokens(it)? >= lim { V::Fail } else { V::Pass })
+                Some(if extra_tokens(it)? >= lim {
+                    V::Fail
+                } else {
+                    V::Pass
+                })
             },
         },
         Judge {
@@ -195,7 +209,11 @@ impl Confusion {
     }
 
     fn ratio(k: usize, n: usize) -> f64 {
-        if n == 0 { f64::NAN } else { k as f64 / n as f64 }
+        if n == 0 {
+            f64::NAN
+        } else {
+            k as f64 / n as f64
+        }
     }
 
     pub fn tpr(&self) -> f64 {
@@ -221,7 +239,12 @@ pub fn wilson(k: usize, n: usize) -> (f64, f64) {
 }
 
 /// 按屏重采样的 95% 区间（跳过 NaN）。
-fn cluster_ci(by: &BTreeMap<&str, Vec<(V, V)>>, rate: fn(&Confusion) -> f64, seed: u64, reps: usize) -> (f64, f64) {
+fn cluster_ci(
+    by: &BTreeMap<&str, Vec<(V, V)>>,
+    rate: fn(&Confusion) -> f64,
+    seed: u64,
+    reps: usize,
+) -> (f64, f64) {
     let keys: Vec<&&str> = by.keys().collect();
     let mut rng = Rng::new(seed);
     let mut vals = Vec::with_capacity(reps);
@@ -290,7 +313,13 @@ pub fn table(items: &[Item], seed: u64, reps: usize) -> Vec<Value> {
             let c = Confusion::of(&all);
             let (nf, np) = (c.tp + c.fn_, c.tn + c.fp);
             let n = nf + np;
-            let r = |k: usize| if n == 0 { f64::NAN } else { k as f64 / n as f64 };
+            let r = |k: usize| {
+                if n == 0 {
+                    f64::NAN
+                } else {
+                    k as f64 / n as f64
+                }
+            };
             rows.push(json!({
                 "judge": j.id, "verifier": j.verifier, "label": j.label,
                 "human": h.id(), "human_label": h.label(),

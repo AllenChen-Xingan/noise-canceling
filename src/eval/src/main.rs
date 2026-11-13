@@ -288,7 +288,11 @@ fn cmd_calib(args: &[String]) -> Result<(), String> {
             .is_none()
             .then(|| "docs/experiments/exp009-more-ears/results/exp003_predictors.json".into())
     });
-    let pv = preds.as_deref().map(read).transpose()?.unwrap_or(Value::Null);
+    let pv = preds
+        .as_deref()
+        .map(read)
+        .transpose()?
+        .unwrap_or(Value::Null);
     let c = vdn_eval::calib::calibrate_with(&read(&answers)?, &read(&scores)?, &pv, round);
     let src = format!(
         "答卷 `{answers}` · 指标 `{scores}` · 评分模型 `{}`",

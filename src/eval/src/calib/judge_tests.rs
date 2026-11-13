@@ -3,7 +3,9 @@ use serde_json::{Value, json};
 use super::*;
 
 fn repo_json(rel: &str) -> Value {
-    let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").join(rel);
+    let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(rel);
     serde_json::from_str(&std::fs::read_to_string(&p).expect("读仓内数据")).expect("JSON")
 }
 
@@ -119,7 +121,10 @@ fn matches_exp022_python() {
             .find(|x| x["judge_key"] == jk.as_str() && x["human_key"] == hk)
             .unwrap_or_else(|| panic!("exp022 里没有 {jk} × {hk}"));
         for k in ["tp", "fn", "tn", "fp"] {
-            assert_eq!(r["confusion"][k], other["confusion"][k], "{jk} × {hk} 的 {k}");
+            assert_eq!(
+                r["confusion"][k], other["confusion"][k],
+                "{jk} × {hk} 的 {k}"
+            );
         }
         checked += 1;
     }

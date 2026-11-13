@@ -225,18 +225,18 @@ pub fn calibrate_with(answers: &Value, scores: &Value, preds: &Value, round: u32
         // 每对：1 = 指标与耳朵同向，0 = 反向，0.5 = 指标打平
         let score = |ps: &[Pair]| -> Vec<(String, &'static str, f64)> {
             ps.iter()
-            .filter_map(|p| {
-                let (w, l) = (val(&p.screen, &p.winner)?, val(&p.screen, &p.loser)?);
-                let agree = if (w - l).abs() < 1e-9 {
-                    0.5
-                } else if (w > l) == m.higher_better {
-                    1.0
-                } else {
-                    0.0
-                };
-                Some((p.screen.clone(), p.source, agree))
-            })
-            .collect()
+                .filter_map(|p| {
+                    let (w, l) = (val(&p.screen, &p.winner)?, val(&p.screen, &p.loser)?);
+                    let agree = if (w - l).abs() < 1e-9 {
+                        0.5
+                    } else if (w > l) == m.higher_better {
+                        1.0
+                    } else {
+                        0.0
+                    };
+                    Some((p.screen.clone(), p.source, agree))
+                })
+                .collect()
         };
         let scored = score(&pairs);
         let scored_raw = score(&raw);
@@ -315,7 +315,11 @@ pub fn calibrate_with(answers: &Value, scores: &Value, preds: &Value, round: u32
         let by_src: BTreeMap<&str, (usize, f64)> = ["clearer", "natural", "h3"]
             .iter()
             .map(|s| {
-                let v: Vec<f64> = scored_raw.iter().filter(|x| x.1 == *s).map(|x| x.2).collect();
+                let v: Vec<f64> = scored_raw
+                    .iter()
+                    .filter(|x| x.1 == *s)
+                    .map(|x| x.2)
+                    .collect();
                 (*s, (v.len(), crate::analysis::mean(&v)))
             })
             .collect();
@@ -438,7 +442,9 @@ mod tests {
     }
 
     fn repo_json(rel: &str) -> Value {
-        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").join(rel);
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join(rel);
         serde_json::from_str(&std::fs::read_to_string(&p).expect("读仓内数据")).expect("JSON")
     }
 
@@ -470,7 +476,10 @@ mod tests {
             .collect();
         let per: serde_json::Map<String, Value> = (0..12)
             .map(|i| {
-                (format!("c{i:02}"), json!({"noisy": {"SIG": 1.0}, "m1": {"SIG": 3.0}, "m2": {"SIG": 2.0}}))
+                (
+                    format!("c{i:02}"),
+                    json!({"noisy": {"SIG": 1.0}, "m1": {"SIG": 3.0}, "m2": {"SIG": 2.0}}),
+                )
             })
             .collect();
         let c = calibrate(&json!({"trials": trials}), &json!({"per_clip": per}), 2);

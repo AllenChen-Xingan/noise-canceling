@@ -450,11 +450,17 @@ fn random_spot_check_picks_judged_pass_clips() {
         .collect();
     for p in &picks {
         assert!(!worst.contains(&p), "随机抽查不能和已选的段重复：{p}");
-        assert!(p != &rows[0].clip && p != &rows[1].clip, "听感不过的段不在抽查范围：{p}");
+        assert!(
+            p != &rows[0].clip && p != &rows[1].clip,
+            "听感不过的段不在抽查范围：{p}"
+        );
     }
     let seed = th::AGG.def("seed") as u64;
     assert!(
-        c.listen.to_human.iter().any(|(_, w)| w.contains(&format!("种子 {seed}"))),
+        c.listen
+            .to_human
+            .iter()
+            .any(|(_, w)| w.contains(&format!("种子 {seed}"))),
         "报告里要写明种子"
     );
 }
@@ -470,5 +476,8 @@ fn random_spot_check_takes_what_is_there() {
     // 只有 4 段、都过：最差 3 段先选走，只剩 1 段可抽
     let rows: Vec<ClipRow> = (0..4).map(|i| row(i, MeetingPlace::Cafe, vec![])).collect();
     let c = one(&rows);
-    assert_eq!(spot_picks(&c).len(), 1.min(th::LISTEN.def("random") as usize));
+    assert_eq!(
+        spot_picks(&c).len(),
+        1.min(th::LISTEN.def("random") as usize)
+    );
 }
