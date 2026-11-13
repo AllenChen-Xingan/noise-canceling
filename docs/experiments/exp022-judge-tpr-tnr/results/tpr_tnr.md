@@ -3,7 +3,7 @@
 由 `tpr_tnr.py` 生成，勿手改。「阳性」= 不过。真阳性率 = 人说不过的里面评估器也判不过；真阴性率 = 人说过的里面评估器也判过。
 
 - 样本：36 条（12 屏 × 3 个模型），**1 名听者**，会话打折（全同陷阱没过）。同一屏 3 条不独立，所以另给按屏重采样的区间（10000 次，种子 20261030）
-- 过关线（运行时读 `src/eval/src/thresholds/table.rs`）：`{"scoreq_min_v1": 0.0, "distill_min_v1": 0.0, "nrmos_slack_v2": 0.1, "eat_pp_v1": 1.0, "eat_tokens_v2": 5.0}`
+- 过关线（运行时读 `src/eval/src/thresholds/table.rs`）：`{"scoreq_min_v1": 0.0, "distill_min_v1": 0.0, "nrmos_slack_v2": 0.1, "eat_pp_v1": 1.0, "eat_count_v2": 5.0}`
 - 「全判过时的一致率」= 评估器一律判过能拿到的总一致率；总一致率不高于它，说明总一致率没有信息量
 - 「评估器判不过 / 人判不过」：两者差多远，就是直接拿评估器的不过比例当结论会差多远。Rogan-Gladen 校正（`stats.rogan_gladen`）要用**另一批**数据量出的 TPR/TNR 去校正新数据；在同一批数据上它恒等于人判不过比例，所以本表不列，json 里的 `rogan_gladen_fail_rate` 只是公式自检
 

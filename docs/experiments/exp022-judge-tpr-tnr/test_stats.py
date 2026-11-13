@@ -95,8 +95,8 @@ class Verdicts(unittest.TestCase):
 
     def test_eat_judge(self):
         noisy = {"del": 1, "sub": 1, "ref_len": 100}
-        self.assertEqual(T.eat_tokens({"del": 4, "sub": 2, "ref_len": 100}, noisy, 5), P)  # 多 4 个
-        self.assertEqual(T.eat_tokens({"del": 5, "sub": 2, "ref_len": 100}, noisy, 5), F)  # 多 5 个
+        self.assertEqual(T.eat_count({"del": 4, "sub": 2, "ref_len": 100}, noisy, 5), P)  # 多 4 个
+        self.assertEqual(T.eat_count({"del": 5, "sub": 2, "ref_len": 100}, noisy, 5), F)  # 多 5 个
         self.assertEqual(T.eat_pp({"del": 2, "sub": 1, "ref_len": 100}, noisy, 1.0), P)  # 多 1 个百分点
         self.assertEqual(T.eat_pp({"del": 3, "sub": 1, "ref_len": 100}, noisy, 1.0), F)
 
@@ -113,10 +113,10 @@ class Lines(unittest.TestCase):
     def test_reads_real_table(self):
         lines = T.read_lines()
         self.assertEqual(set(lines), {"scoreq_min_v1", "distill_min_v1", "nrmos_slack_v2",
-                                      "eat_pp_v1", "eat_tokens_v2"})
+                                      "eat_pp_v1", "eat_count_v2"})
         src = T.TABLE.read_text(encoding="utf-8")
         blk = src[src.index('id: "V-EAT-ASR"'):]
-        self.assertIn(f'"fail_chars",\n            Some({lines['eat_tokens_v2']})', blk)
+        self.assertIn(f'"fail_chars",\n            Some({lines['eat_count_v2']})', blk)
 
     def test_missing_param_raises(self):
         with self.assertRaises(KeyError):

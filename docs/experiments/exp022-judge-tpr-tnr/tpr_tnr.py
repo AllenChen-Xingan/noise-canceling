@@ -51,7 +51,7 @@ def read_lines(path=TABLE):
         "distill_min_v1": _param(src, "V-NRMOS-DISTILL", "min"),
         "nrmos_slack_v2": _param(src, "SC-NRMOS-DELTA", "max"),
         "eat_pp_v1": _param(src, "V-EAT-ASR", "max"),
-        "eat_tokens_v2": _param(src, "V-EAT-ASR", "fail_chars"),
+        "eat_count_v2": _param(src, "V-EAT-ASR", "fail_chars"),
     }
 
 
@@ -68,7 +68,7 @@ def _extra(c, noisy):
     return (c["del"] + c["sub"]) - (noisy["del"] + noisy["sub"])
 
 
-def eat_tokens(c, noisy, lim):
+def eat_count(c, noisy, lim):
     """D85 题 3：单段比原声多错（删 + 替）≥ lim 个词 / 字 = 不过。"""
     return F if _extra(c, noisy) >= lim else P
 
@@ -112,7 +112,7 @@ def build_rows(answers, pred, scores, lines):
                 "j_scoreq_v1": v1q, "j_distill_v1": v1d, "j_both_v1": both(v1q, v1d),
                 "j_scoreq_slack": delta_verdict(dq, slack),
                 "j_distill_slack": delta_verdict(dd, slack),
-                "j_eat_count": eat_tokens(sc, sn, lines["eat_tokens_v2"]),
+                "j_eat_count": eat_count(sc, sn, lines["eat_count_v2"]),
                 "j_eat_pp": eat_pp(sc, sn, lines["eat_pp_v1"]),
             })
     return rows

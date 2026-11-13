@@ -4,7 +4,7 @@
   "distill_min_v1": 0.0,
   "nrmos_slack_v2": 0.1,
   "eat_pp_v1": 1.0,
-  "eat_tokens_v2": 5.0
+  "eat_count_v2": 5.0
  },
  "rows": [
   {
