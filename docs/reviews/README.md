@@ -37,4 +37,5 @@
 | 027 | 2026-11-05 | [调研 027 GTCRN 微调方案 + exp018 MPS 冒烟](027_gtcrn-finetune-codex.md)（research，codex gpt-6-astra，7 轮，已达停止线） | 采纳 19 / 提出 19（P1×8 P2×11；无 issue） |
 | 028 | 2026-11-05 | [GTCRN 改结构调研与 exp019 实测脚本](028_gtcrn-arch-codex.md)（`docs/research/028_gtcrn-arch/` · `docs/experiments/exp019-gtcrn-arch/`，issue #122，codex gpt-6-astra，3 轮，已达停止线） | 采纳 14 / 提出 14（P1×4 P2×10；无 issue） |
 | 030 | 2026-11-05 | [不重训 GTCRN 的系统级手段：调研 030 结论 + exp021 混回重混工具](030_gtcrn-aux-codex.md)（issue #124，codex gpt-6-astra，3 轮，P0/P1 清零即停） | 采纳 10 / 提出 10（P1×3 P2×7；1 条 P2 留作 issue） |
+| 031 | 2026-11-13 | [评估器体检 + 修复（调研 031 · exp022）](../research/031_eval-judge-audit/reviews/031_eval-judge-audit-codex.md)（`audit.md` · `calib/judge.rs` · `rules_v2.rs` 随机抽查 · 听测页生成，codex gpt-6-astra，4 轮，第 3、4 轮无 P0/P1 即停） | 采纳 12 / 提出 12（P1×3 P2×9；codex 条目无 issue，体检 P2 → #143–#147） |
 | 030 | 2026-11-06 | [exp021 混回重测结论 + 检查表脚本](030_exp021-mixretest-codex.md)（`findings-mixretest-20261106.md` · `checklist.py`，codex gpt-6-astra，中途评审 2 轮，第 2 轮无 P0/P1 即停） | 采纳 8 / 提出 8（P1×2 P2×6；无 issue） |
