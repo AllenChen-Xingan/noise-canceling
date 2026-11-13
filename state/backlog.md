@@ -65,7 +65,7 @@
 
 - [ ] **开会负载下的测速与耗电**（E-5）：分纯音频通话（音频通话不等于空闲）与视频会议（+ 摄像头 ± 屏幕共享）两档，先量会议软件自身占用，v4i 按 16 ms 节奏的最坏帧 · 超时帧 · 功耗增量 · 会议软件自身是否变卡；进 / 出会议启停（StopIO 后 CPU 回 0）· 参照 DAFx26 争用测试
 
-- [ ] **codex-review 工具问题**：codex 输出以「P1」「P2」开头时，`file` 命令把它误判为 PBM / PGM 图片，第 2 轮起 `--previous` 被隐私扫描拦下；绕法：文件开头加一行 HTML 注释 · 出处 fastpath 收尾报告
+- [x] **codex-review 工具问题**：codex 输出以「P1」「P2」开头时，`file` 命令把它误判为 PBM / PGM 图片，第 2 轮起 `--previous` 被隐私扫描拦下；绕法：文件开头加一行 HTML 注释 · 出处 fastpath 收尾报告 · 2026-11-05 timbre（026）第二次撞上，要转 skill 维护者 · 2026-11-05 已修（手下 skillfix）：根因 macOS 27 iconv 跨第 1024 字节失败，改 perl 严格校验，23 条测试，报告 _tmp/skillfix/report.md；剩 1 条 P2（perl 坏时报错文案不准，仍会拦）
 
 - [ ] **019 待重测（下次名额）**：耗电 3 轮（人 sudo，约 35 min）· BE-IMPACT 新测法 · rt 下 10 min BE-DEADLINE · BE-SIZE / BE-RT-SAN · 出处 019 `decision.md` §7
 - [ ] **apple-rs 与 bench 合成一个共用 crate**（JSON 字段唯一真相源）· 出处 019 §7
@@ -83,3 +83,28 @@
 ## 待拍板清单
 
 - [ ] **待拍板清单瘦身**：约 35 题按实体重新分组，过时的（BlackHole 相关）划掉 · 出处 `state/pending-decisions.md`
+
+## 降噪效果大事 b10 转交（2026-11-03）
+
+- [ ] 场景分类器噪音 7 类缺 4 种声音：外放人声（电视 / 视频）· 小孩和狗 · 键盘与提示音 · 风噪；是否改分类器归「场景分类器」那件事 · 出处 021 `decision.md` 转交
+- [ ] 真实数据补空格线索（023 后续）：DCASE 2016 TUT 声景（library / train / tram / metro station，无主说话人，只作合成原料或统计参照）· AliMeeting 会场参数可能含 RT60 · 出处 021 现状页转交
+- [ ] 开放工位 · 候车厅 · 街边的公开候选待核（scenes 评审后提出，mtgdata 已收尾未核）：DNS 2020 实录 · Krisp 测试集——核地点标签、设备、许可后补进 023 `matrix.md` · 出处 021 现状页转交
+- [ ] `vdn-eval ci` / `qa` / `calib --record` 报告用 `std::fs::write`，同目录跑第二次会覆盖旧报告（违第五节 1 条）；照 `scorecard::card::write_new` 改为只新建 · 出处 scorecard 现状页转交
+- [ ] 成绩单按语种（`lang`）分组比较（旧 G4 中文组的替代）· 出处 `specs/rubric/scorecard.md` 第七节
+- [ ] DFN3 离线链路换产品重采样器（vdn_dsp Interpolator3 / Decimator3）复测：前视 284 → 约 192 样本，看输出效果变不变 · 方案 exp016 `plan-dfn3-resampler.md`（cands，2026-11-05，大总管定这批不做）
+- [ ] NoNoise-Mac 进成绩单（D77）：命令行文件降噪模式可用，要下载未公证的 release 程序约 7.5 MB；人未选，默认推迟 · 出处 exp016 `state/handoff/cands.md` 待人拍板 1
+- [ ] 模型（候选对比）：成绩单在引擎「原声混回」后打分（说话时约一半原声，engine.rs mix_out），模型本身的差约被压一半（推断）。如人选「改进 / 训练」，用 safety: false 再跑一轮看模型本身；改场景集参数归 evalfix，要名额。来源 exp016 runs/dfn3-ll-20261105-103000-4cf04ac1/notes.md 第三节
+- [ ] **旁人说话 → 另外的小模型（D89 · D83）**：降噪模型不负责去掉旁人声音（成绩单 V-INTF 不过的主因，所有模型都大面积不过）；按调研 024 走「会中认出用户 → 以声纹为条件只留用户」。降噪效果大事收口后换入；起点 024 decision（Alkove Focus 从 GTCRN 改来 · 约 80 万参数 · Apache-2.0，只有厂商自测）
+- [ ] **麦克风 / 输入清晰度（D91）**：人听明标对比觉得「a（带噪原声，外接麦克风合成链）本身就很不清楚」。待查：是合成链（房间混响 · 麦克风模拟）过重、还是真实 Mac 麦克风也这样；可能的手段：去混响 · 频响补偿 · 带宽扩展。实体：虚拟麦克风 / 输入链（调研 022）。降噪效果大事收口后换入
+## 推理后端：去掉 ORT（人 2026-11-04「不能走ort，ort太慢了」；人定「先记下，以后再定」，大总管 a2 记）
+
+- [ ] **ORT 整个退出**：① 降噪 GTCRN 手写版 `native-v4i` 从 exp010 / exp012 接进 `src/`，替掉 `backend-ort`（推理引擎大事已定 ORT 退出正式方案，每帧 1557 次分配）② **认人声纹模型 ECAPA512**（WeSpeaker，约 620 万参数，`src/speaker/src/embed.rs`）现走 ORT，一次推理约 2.9 ms（exp015 实测）——候选：手写 Rust（照 GTCRN 路子）· BNNS · Core ML（判断线程不在声音通路上，Core ML 可考虑），测了再定 ③ `vdn-eval` / `vdn-speaker` / `vdn-speaker-lab` 改走推理后端、不直连 ort（与「Rust 骨架的遗留」节同一条）· 判据：输出与 ORT 对拍 · 每次推理耗时 · 0 分配 · 认人等错率不变 · 出处 exp015 README（PR #96）· D68–D79
+
+## 个性化降噪：把用户的声音提取出来（D83，人 2026-11-04 定；大事，待排）
+
+- [ ] **路线**：照 005 `docs/research/005_pse/decision.md` 第 2、3 步——① VoxLock（唯一因果 + 开源 + 自动注册 + 真实录音证据，27M 参数）在 M5 上逐帧实测耗时与耗电（005 推算为上限的 3–5 倍）② 超预算就当老师模型：在 GTCRN 或 DPDFNet 上加声纹条件（PVQE-S / pDFN2 做法）蒸馏训练 ③ 合成数据覆盖旁人比用户响、只有旁人在说（015 配方）④ 评测加「同时说话段：用户保留 · 旁人压低」· 人盲听 · 出处 D83 · 005 · 015
+- [ ] 认人代码去留：门控（`gate.rs` 等）与 exp005 管线在新路线定型后清理；声纹模型保留（作条件），去 ORT 见「推理后端」节
+
+## 文档可读性（fecore 自审顺带发现，2026-11-04，非本线引入）
+
+- [ ] `src/README.md` 仍是模板 · 模块说明里内部编号多、缺白话 · A / B / C 档没有定义 · 「档」一词有三个意思 · L0–L3 没有逐级说明 · verifier 代号没有中文 · `src/types/src/lib.rs` 表头写「三块」表里四行、帧长 10 / 16 ms 不一致 · 出处 `docs/reviews/013_frontend-once-selfreview.md`（PR #99）

@@ -3,7 +3,49 @@
 > 只有大总管跟人说话。手下做完、卡住、要名额，只报给大总管。
 > 大总管会话名：`noise-canceling-e3`（2026-11-02 换班；旧名 c4 · 69）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
 
-## 当前大事（2026-11-02 起）
+## 当前大事（2026-11-03 起）
+
+**降噪效果**（D80，人「a，我觉得做这个吧」）：在难场景里比 GTCRN 与其他候选，定训练 / 改进 / 换模型。第一步：盘点评测集对难场景的覆盖（人追问「评测集是否覆盖了很多难的场景」）。批次 `_tmp/20261103-b10/`，大总管 `5-app-5e`，tmux 工作区 `vdn`。
+
+| 手下 | 线 | 管的实体 | 状态 |
+|---|---|---|---|
+| scenes | 021 开会场景目录 · #80 · `research/021-meeting-scenes` · `../noise_canceling-scenes` | 会议场景 · 噪声类别 · 场景声学条件 | 完成，验收过（25 测试 · 0 问题 · 路径清零），窗口已关；PR #83 已合并；4 题待拍板 |
+| macmic | 022 Mac 内置麦克风 · #81 · `research/022-mac-mic` · `../noise_canceling-macmic` | 麦克风（设备链）· 设备链模拟 | 完成，验收过（12 测试 · 21 键 0 问题 · 路径清零），窗口已关；PR #84 已合并；1 题待拍板 |
+| mtgdata | 023 真实录音数据集 · #82 · `research/023-meeting-datasets` · `../noise_canceling-mtgdata` | 真实数据集 · 真实锚 | 完成，验收过（25 测试 · 44 卡 0 问题 · codex 5 轮、4/5 轮无 P0/P1 · 无大文件无下载），分支已推送，窗口已关；PR #85 已合并；4 题待拍板 |
+
+**b11（D81：按场景成绩单推进）**，批次 `_tmp/20261103-b11/`：
+
+| 手下 | 线 | 管的实体 | 状态 |
+|---|---|---|---|
+| scenesuite | exp013 场景测试集 · #86 · `exp/013-scene-suite` · `../noise_canceling-scenesuite` | 场景测试集 · 合成数据生成器 · 设备链模拟 | 完成，PR #91 已合并（#86 关），窗口已关；1 题待拍板（会议室） |
+| scorecard | 场景成绩单：评分模型 + 补评分项 + 标准 · #87 · `feat/scorecard` · `../noise_canceling-scorecard` | 评测器 · 成绩单 · 定标等级 | 完成，验收过（大总管复跑 131 测试 · tidy · schema 一致），窗口已关；PR #88 已合并（#87 关）；1 题待拍板（暂定过关线先用 vs 先盲听） |
+
+两条已合并。
+
+**b12**，批次 `_tmp/20261103-b12/`：
+
+| 手下 | 线 | 管的实体 | 状态 |
+|---|---|---|---|
+| card1 | exp014 第一张场景成绩单（GTCRN）· #92 · `exp/014-scorecard-gtcrn` · `../noise_canceling-card1` | 成绩单（报告）· 降噪模型 GTCRN · 评测器（只用） | 完成，已收尾（窗口已关）· PR #97 待合并 |
+| evalbp | 调研 025 成绩单评分方法对照业界做法 · #105 · `research/025-eval-best-practice` · `../noise_canceling-evalbp` | 评测器（只读）· 成绩单标准（只读）· 调研 025 | 完成，已收尾（窗口已关）· PR #108 待合并 · 开 issue #109 #110 |
+
+**b15（2026-11-04，人「就是第一个大事情 / 就是评测集这个」）**：修好成绩单的评分方法 + 候选模型上同一张成绩单。批次 `_tmp/20261104-b15/`，大总管 `noise-canceling-84`，tmux 工作区 `vdn`。G-1..G-7 按默认推进，待人确认。
+
+| 手下 | 线 | 管的实体 | 状态 |
+|---|---|---|---|
+| evalfix | 成绩单评分方法修正（025）+ 重出 GTCRN 成绩单 · #111（含 #109 #110）· `feat/scorecard-v2` · `../noise_canceling-evalfix` | 评测器 · 成绩单 · 定标等级 | 已报到（noise-canceling-evalfix-07）；#109 #110 修完；D85 新规则写完，对照表 runs/20261104-231355-da5821a4-resum-v2/compare.md；中途评审①（2 轮，P1×4 已修）；第 3 组写完，下一步中途评审② → 1 场景冒烟 |
+| cands | exp016 候选模型（DFN3 低延迟版 · DPDFNet-2 · NoNoise-Mac）上同一张成绩单 · #112 · `exp/016-candidates` · `../noise_canceling-cands` | 降噪模型候选 · 外部输出入口 · 成绩单（只用） | 已报到（noise-canceling-cands-7f）；入口 PR #115 开（大总管复跑 0 失败 · tidy 过），P2 → #113 #114；两候选冒烟过（每段约 0.8–0.9 s，480 段各约 15 min）；下一步中途评审② → 跑 480 段；NoNoise-Mac 待人 |
+
+**b17（2026-11-13，人：按 hamel.dev《field guide》查评估器测一致性是否忽略假阳性 / 假阴性等问题，有问题就修）**：批次 `_tmp/20261113-b17/`，大总管 `noise-canceling-68`，tmux 工作区 `vdn`。
+
+| 手下 | 线 | 管的实体 | 状态 |
+|---|---|---|---|
+| evalaudit | 调研 031 评估器体检 + 修复 · #142 · `research/031-eval-judge-audit` · `../noise_canceling-evalaudit` | 评测器 · 人耳标注 · 成绩单标准 | 已派（会话 noise-canceling-evalaudit-1f）；修之前先回报问题清单，大总管放行才改 `src/` |
+
+⚠️ 人要真实数据集与 D62「开发阶段不用真实录音」可能冲突 → mtgdata 出选项，进待拍板。
+
+## 上一件大事（2026-11-02，已收口）
+
 
 **推理引擎：降噪模型在 Mac 上用什么跑最快、最稳、最省电**（「轻快」尺子 · D53）。人定「可以先做1」。批次 `_tmp/20261102-b8/`。**✅ 2026-11-02 四条线全部合并（#55 #59 #66），窗口全关；下一件大事待人定（建议「降噪效果」）**
 
@@ -60,6 +102,7 @@
 - **大总管一次只做好一件大事，每个手下只管 2–4 个实体**（人定 2026-11-02，改 2026-10-31 版，见 CLAUDE.md 第五节第 4 条）：线 / 题 / 讨论都挂在当前实体下，其余按实体记进 `state/backlog.md`
 
 - **自审改用 codex 换谱系评审**（人定 2026-11-02「审可以让codex来做」）：手下收尾前用 codex-review skill，连续两轮无 P0/P1 即停，结果落 `docs/reviews/`
+- **codex 评审中途插入**（人定 2026-11-04「记住有的时候或者说合适的时候，需要插入 codex的交叉评审」）：耗时 ≥ 1 h 的重跑前 · 开 PR 前 · 结论给人前各插一次；派活交代里写明评审点。**中途只跑 1–2 轮**，修掉 P0/P1 就继续；多轮（连续两轮无 P0/P1）只在最后验收前（人定 2026-11-04「这种评审，基本上就是1-2轮就好……最后验收之前需要这种多伦评审」）
 
 - **记决策号前先 `grep -n '^### D' docs/plan/001_decisions-20261029-b1.md | tail -1` 看文件最大号，并向另一位大总管发「占用 Dxx」**（2026-11-02 两次撞号：47 方 D66–D68；主检出 D77 被另一会话先用，我方改 D78）
 
@@ -69,15 +112,95 @@
 
 | 名额 | 当前持有 |
 |---|---|
-| 重编译 / 全量测试 / 跑模型（1 个） | 空 |
+| 重编译 / 全量测试 / 跑模型（1 个） | 空（a2·fe3 借用跑评测器收口对拍后已归还；cafe 10 段成绩单改前改后逐字同；此前 card1 02:39 归还，run 20261104-000444-e4511abc） |
 
-排队：99 方最终复跑
+排队：evalfix 冒烟（咖啡馆 32 段，约 20 min）排在 cands 480 段 + DSP 草稿之后
+
+**另一位大总管 noise-canceling-a2**（2026-11-04 起）：「前端只算一次」（D71），批次 b13 · exp015 · tmux vdn-fe · 检出 `../noise_canceling-coordfe` · 账本 `state/coord-fe.md`；我方下一个实验 exp016；会改 vdn-dsp · vdn-models · vdn-scene · vdn-speaker · vdn-engine，承诺 GTCRN 输出逐样本不变。a2 经人同意删了 16 个已合并 worktree（card1、coord99 保留）。
 
 **跨大总管约定**（与 noise-canceling-47，tmux vdn-rust，2026-11-02）：任一方跑计时基准前后互发「基准开始，约 N 分钟」/「基准结束」，期间对方不起编译、测试、推理；普通编译测试不打招呼。加锁文件：mkdir 主目录 `_tmp/heavy.lock`（内写 owner · 开始 · 预计结束，跑完 rmdir），由各自大总管放名额时建、收回时删，手下不碰（47 已确认）
 
 ## 进度板
 
 进度（HH:MM）
+- 2026-11-06 00:xx #134（030，Closes #124）合并，aux 关窗清理；开 #135（sweep 指纹 P2）· #133（hook）。四条路总览 PDF 上桌面；人选 D90：H-1 先重测再盲听（派 cands，分支 exp/021-mix-retest）· H-2 微调与注意力头一起做 · T-1 音色线 3 暂定 · L-1 盲听页已复制到 ~/Desktop/20261106-blind-listen-gtcrn-dfn3/
+- 2026-11-05 16:0x 已合并 #130（016 勘误）· #131（027 微调，Closes #121）· #132（028 改结构，Closes #122）；main 全量 746 过 0 败。人定 D88 云 GPU 训练（数据等开训练线再下到云上）· D89 旁人说话交给另外的小模型（backlog）。finetune · arch · rl · timbre 关窗清理；剩 aux（扫 GTCRN 中）与 cands（等盲听）。桌面 PDF：026 · exp016（含勘误版）· 029 · 027 · 028
+- 2026-11-05 15:4x 人定 D87：训练数据先不下；CI 账单停摆期按本机验收合并 → #120（81730e0f）· #127 · #128 已合并（PR 留言写明），#119 #112 #123 关闭；索引冲突由我两行都留。待：main 上全量测试（排在 aux → finetune 测速 → arch 测速之后）。三份结论 PDF 放桌面（026 · exp016 · 029）。timbre 关窗；cands 留着等盲听揭盲
+- 2026-11-05 15:2x PR #120（timbre）· #127（cands）· #128（rl）都已开、本机亲手验收全过；⚠️ GitHub Actions 因账单付款失败不启动（「recent account payments have failed or your spending limit needs to be increased」），已问人：修账单或授权按本机验收合并。rl 收尾关窗（结论：RL 现在不做，排在微调之后）。名额 aux 扫混回（砍 DPDFNet-2，改扫 GTCRN）
+- 2026-11-05 15:4x 人要多开手下比较 GTCRN 改进的几条路 → 四线：finetune 027 #121（微调+数据）· arch 028 #122（改结构/注意力头）· rl 029 #123（强化学习）· aux 030 #124（辅助判场景 + 混回比例，不重训）。共同交代 _tmp/20261104-b15/gtcrn-options-common.md，统一比较卡。exp 号预分：018 finetune · 019 arch · 020 rl · 021 aux
+- 2026-11-05 15:2x 人定 D86：加训 GTCRN（微调 · RL · 加注意力头都在范围），不换模型；DPDFNet-2 前视 4 帧结构定死出局，DFN3 留作对照。开调研 027 #121，手下 finetune（vdn:finetune，worktree ../noise_canceling-finetune，实体：GTCRN 模型 · 训练数据集 · 训练方法）。timbre PR #120 已开（我在 1265fe37 亲手验收 745 过 0 败），等 CI
+- 2026-11-05 12:4x skillfix 收尾：codex-review 隐私扫描已修（iconv → perl 严格校验；23 测试我亲手重跑全绿；timbre 原文件过、假密钥仍拦；codex 2 轮无 P0/P1）。技能真身在 2-aartifacts/skills/（不在 git，备份为按记录还原版）
+- 2026-11-05 12:2x 人要「专门让一个手下来修」codex-review 隐私扫描误拦（P1/P2 开头被 file 认成图片，第二次）→ 起手下 skillfix（tmux vdn:skillfix，交代 _tmp/20261104-b15/skillfix.md，实体只一个：该技能的隐私扫描；先备份、先写红测试、不放松规则）
+- 2026-11-05 11:57 timbre 名额 11:48–11:56 用完：旧代码三系统 243 项逐项同基线；新 ERB 量法提交 88de9880，对拍 0.000 dB；golden 只 V-TIMBRE 变；基线只 36 项 V-TIMBRE 变、通过数不变（GTCRN 2.27 · FE-M 2.02 < 3）。名额 → cands 跑 DPDFNet-2（约 13:15），之后 timbre 全量测试
+- 2026-11-05 11:48 cands DFN3 成绩单跑完（run 20261105-103000-4cf04ac1，77 min，0 段失败，缓存 1920 条原样 + 新增 960）；DFN3 降噪 +2.16 dB、听感 +0.05、可懂度 +0.01，咔哒 +6/min、字头 −0.93 dB、背景稳 −0.74 dB；组合 过1/不过42/待测17 vs GTCRN 0/40/20。名额 → timbre（第 1 段半 + 第 2 段），之后回 cands 跑 DPDFNet-2（约 80 min）
+- 2026-11-05 00:59 evalfix 全量重出 run 20261105-005916-4ccf0638 开跑（权重哈希 · 工作区干净 · 接电源 · build 17f5 已核），预计 03:30；延迟预算 planned_platform_for 进 vdn-types（只加法，16 kHz 逐位不变）；cands 等合并后跑两候选最终版
+- 2026-11-05 00:07 evalfix 中途评审② 2 轮 P1×3 已修（SI-SDR 全零 · 干净人声掩码 · 重叠段桥接），申请冒烟名额 → 排在 cands 后；cands 草稿只跑 DSP 项，最终版只跑两候选、与 evalfix 的 GTCRN run 配对
+- 2026-11-04 #115 外部入口 CI 过、已合并（分支保留）；名额给 cands 跑 DPDFNet-2 + DFN3 低延迟版 480 段（约 30 min）；NoNoise-Mac 人未选 → 默认 C 推迟；待告诉 a2：spectrum_golden 改冻结法（a2 会话现不在线）
+- 2026-11-04 23:3x 会话重启，大总管改名 noise-canceling-26，已通知两手下；cands 入口 PR #115；evalfix spectrum_golden 改冻结法（技术题我定，要告诉 a2）
+- 2026-11-04 人逐题定评分方法 → D85（G-1 B · G-2 B 干净人声单独跑 · G-3 C 单段 ≥ 5 字否决 · G-4 A · 4 dB · 0.1 · 不听咔嗒）；已转 evalfix。evalfix 首次编译名额已还；对 cands 外部入口提 3 处公平性（延迟标声明值 · 最坏一帧判不知道 · 截断查偷看未来），我同意
+- 2026-11-05 人问音色项「代码和文档到底谁对，要研究和证据，开手下做，有错就修」→ 派 timbre（调研 026 · #119 · worktree ../noise_canceling-timbre · 分支 research/026-timbre-measure；实体：音色项 · N4 条文 · 判定线）；交代 _tmp/20261104-b15/timbre.md；名额排在 cands 后。更正 #119「没抓到」→ 已在 PENDING 登记
+- 2026-11-05 机器 06:59 关机 07:00 重启（shutdown_stall 报告，起因未查）：tmux 与手下会话全断，大总管改名 noise-canceling-74；两个候选离线新 run 完整（各 mix/clean 480），锚点成绩单 065944 中断作废；名额重发给 cands，`claude --continue` 接回（交代 `_tmp/20261104-b15/msg-cands-resume.txt`），从锚点成绩单接着跑。evalfix 窗口随重启消失，worktree/分支仍待人删
+- 2026-11-05 #116 CI 过（macos 4m18s）→ 合并 90ed08f2；关 #111 #109 #110；开 #117（e2e 夹具并发）#118（候选复位）；evalfix 验收通过、worktree 干净，笔记另存主目录 _tmp/evalfix/worktree-scratch-20261105/；关窗 + 删 worktree / 分支被权限拦下，等人处理；通知 cands merge main 后申请名额（估 3–3.3 h，含直通锚点 + 识别漂移核对）
+- 2026-11-05 合并提交 bdf0ad57 + 987a3af8（cands 的 clean/ 入口补丁 + runner 没给 clean 时那 3 项只报不判、开头写明）；我亲跑 fmt · tidy · clippy 过，全量只一次 external_e2e 假红（与 evalfix 并发互删夹具目录，开 #117 P2），单跑 2 次 11/11 过；推送开 PR #116，等 CI。cands 最终跑定为另开新 run（mix + clean 一次跑全，不补旧 run、不写 amend），估 2.5–2.8 h，开跑前 codex 审 1 轮
+- 2026-11-05 evalfix 收尾（codex 收尾 2 轮无 P0/P1，P2×5 已修，e3be788d）；待人 2 题记为 G-8 G-9。我在其 worktree 合 origin/main：解 main.rs · 评审索引冲突，system.rs:471 测试补 build 第二参数；全量只红 external_e2e 主测试（外部入口 × v2 干净人声路查不到输出，推断）→ 交 evalfix + cands 对齐修，合并未提交
+- 2026-11-05 我验收 evalfix：tidy 过；全量测试首跑 vdn-schema 红（eval-suite.schema.json 少导出 4 个新评分项名）→ evalfix 重导出；--no-fail-fast 全量 0 红；名额释放；evalfix 开收尾多轮 codex 评审。教训：亲跑一律 --no-fail-fast（已记 memory tests-by-default）
+- 2026-11-05 evalfix 全量 run 20261105-005916-4ccf0638 跑完（9986 s，1440 段，0 没跑成，规则 v2，供电 ac），名额归还；我核 clips.jsonl 1440 段齐；GTCRN 场景 0 过 / 40 不过 / 20 待测（只汇总版 1 / 42 / 17，请它说明变化），PSE 重叠项 passthrough 均值 0 与失败率 = 1 的 242 段待它说明；我占名额亲跑 tidy + 全量测试
+- 2026-11-04 人选继续「降噪效果」（评测集）→ 合并 #97 #108；开 #111 #112、两个 worktree；派 b15 evalfix · cands；G-1..G-7 按默认推进，待人确认；合并顺序 cands 入口小 PR 先、evalfix 后
+- 2026-11-04 evalbp 收尾：025 结论「算法大多对得上，偏在汇总（任一段不过 vs 均值 + 区间）」；codex 9 轮清零；待定 G-1..G-7 合进清单（替代 F-9 F-10）；开 #109 延迟测量器、#110 V-WEAK 低采样率；PR #108
+- 2026-11-04 a2：#107（评测器 4 处改调统一频谱模块）CI 真跑通（run 41866359378，main+#107，跳过 0），已合并 8fea2ef2，fe3 worktree 与分支已删，a2「前端只算一次」收口、暂不碰 src/eval；a2 会话 auto-commit 在主检出替我提交了 207a847f（coord + 待定，原样，不丢东西），提交信息照留
+- 2026-11-04 人（经 a2 转）「具体的评测方法，要看是否和好的 best practice 一致」→ 评测器归我方，派 evalbp 做调研 025（#105，b14，以 012 为底，给 F-9 / F-10 业界依据）；a2 派 fe3 做评测器频谱收口 #104（只换计算）
+- 2026-11-04 允许 a2（D82 第二段）把评测器 estoi.rs · speech.rs · system.rs 的频谱计算收进 vdn-dsp：单独 PR、不改评分逻辑，cafe 常见档 10 段成绩单 JSON 逐位对拍；开工、合并前通知我；我方 F-9 或评测器 issue 动这些文件前先找 a2，先开工者先做
+- 2026-11-04 #97 与 main 冲突（评审索引）→ 两边都留，08c59771 已推
+- 2026-11-04 a2 fecore 对拍：基准在 990e7843 生成，改后 GTCRN 输出与引擎最终输出都逐位相同（src/models/tests/golden.rs）；exp014 成绩单在 a2 改动后仍可比
+- 2026-11-04 a2 占用 D82（认人收进统一频谱模块）、D83（放弃认人门控，改做个性化降噪 PSE：同时说话也只留用户）→ a2 再占 D84（E-4 按需启停）→ 我方下一条从 D85 起；a2 占用调研 024（个性化降噪 / 目标说话人提取）→ 我方调研从 025 起；V-SIM-GATE / V-SIM-FA 这类门控评分项的意义要随 D83 重看（F-9 一起问）
+- 2026-11-04 card1 收尾：成绩单 run 20261104-000444-e4511abc；评分项自检（V-SIM-GATE 对原声应「不适用」；V-PUMPV/V-TIMBRE 把残留噪声算成人声变化 → 看配对差值；V-INTF 口径对）；codex 3 轮清零；PR #97；人耳 7 题放桌面 20261104-vdn-gtcrn-listen；待定 F-9 F-10
+- 2026-11-04 card1 带 --qa 10 段实测 193 s（3 系统，CPU 约 56%，吃字与听感都出分）→ 480 段约 2 h 35 min，开跑
+- 2026-11-03 card1 冒烟过（cafe 常见档 ref 2.6 s · GTCRN 7.5 s）；名额给它正式跑（约 1–2.5 h，先量 10 段实测耗时）。观察：原声直通在 cafe 上 V-TIMBRE · V-PUMPV · V-SIM-GATE 也不过，待分析
+- 2026-11-03 人「你直接帮我merge」→ #88 #91 合并（#91 前在其分支 merge main、解索引冲突、DATA_FILES 登记 scenes.json，131 测试过）；人「就留下第五版吧」→ 删 _tmp/exp013 前四版音频（约 13 GB，清单仍在仓）；人要手下跑成绩单 → 派 card1（b12）
+- 2026-11-03 scenesuite 收尾验收过，窗口已关；b11 两线全收尾，tmux 无窗口。卡在人：#88 合并 · skill 第 269 行修复
+- 2026-11-03 scenesuite 第五版（正式）build 20261103230756-17f5 通过（480 段 · 混响 0 不过 · SNR 99.4% / SIR 98.6% 段差 ≤ 1 dB · 68 测试 · 本机路径 0）；scenes.json 指向它；五版音频共约 16 GB 都在 _tmp，去留待定
+- 2026-11-03 scenesuite codex 4 轮达停止线（15 条全属实，改 13，剩 2 条 P2）；第五版（最后一版）build 名额给它；开 issue #89（设备链后有效 T60 / DRR）· #90（codex-review 位图误判，skill 改动等人执行）
+- 2026-11-03 codex-review 误判位图根因【实测】：macOS iconv 输出直接写 /dev/null 且超过约 100 字节就报「Inappropriate ioctl for device」，privacy-scan.sh:269 的 UTF-8 复核因此失败 → 长的 codex 输出被拦。修法：`iconv … -- "$r" 2>/dev/null | cmp -s - "$r"`。改 skill 被权限检查拦（自我修改），等人。016 synth-standard 第 45 行改为按时段切（S10①）
+- 2026-11-03 scenesuite 第四版 build 20261103223725-72df 通过（同房间 37.5% · 混响 0 不过 · SNR 99.2% / SIR 98.2% 段差 ≤ 1 dB · 63 测试）；codex-review 隐私扫描把「P1」开头的输出误认成位图，第二次出现（macmic 一次）→ 改结构
+- 2026-11-03 scenesuite codex 第 1 轮 P1×3 P2×2 + 实测房间自审已修（DEMAND 4 个未用环境按时段切 · ESC-50 截尾 · 4 条 MIT IR 直达起点 · build 自验电平 · 混响检查按声音类别）→ 第四版 build 名额给它；63 测试过。大总管定技术题：第 5 题按时段切（S10① 允许：前一半测试份、后一半裁判原料）· 第 2 题合成不像的声音在成绩单标「合成，待真实录音校」· 第 3、4 题已定（人选 A；阈值暂定）
+- 2026-11-03 scorecard 收尾：大总管复跑 vdn-eval + vdn-schema 131 过 · tidy 过 · schema 一致 · levels 原 16 项未变；开 PR #88，CI 过；合并被权限检查拦（上次「可以 merge」只覆盖 #83–#85），等人；窗口已关。转交：scenesuite 合并时在 src/schema/src/eval.rs DATA_FILES 加 scenes.json 一行；ci / qa / calib 报告会覆盖旧文件（旧代码）→ backlog
+- 2026-11-03 scenesuite 第三版 build 20261103222950-de56 通过（480 段 · 同房间 37.5% · 混响检查 0 不过 · 54 测试 · SNR/SIR 99.2% 段差 ≤ 1 dB）；在查「三版削波都是 0」
+- 2026-11-03 scorecard 合并前复跑：nrmos_parity 3/3（SCOREQ 差 0 · Distill-MOS 0.00225）· 全量 release 84 组过；名额转 scenesuite
+- 2026-11-03 scenesuite 混响修法实现（54 测试过；三包大小与方案一致；预演 240 段约 37% 人声与底噪同房间；reverb_check 480 段 0 不过、6 个负对照全红；修 MIT 列车 IR 直达峰误判；SCAFE 户外露台拆出咖啡馆类）→ 申请第三版 build，排队等 scorecard
+- 2026-11-03 scenesuite 混响方案批（一段 = 一个房间；6 个地点同房间实测 RIR + 噪声：ACE · McVAMPIRE；其余 MIT 271 条实测 IR 按 T60 区间配 DEMAND；公交 / 地铁 / 机舱 / 候车厅标「非同房间」；检查改生成端约束 + 清单比对）。人在问答里选下载 A 约 685 MB；T60 阈值 ×[0.8, 1.25] 大总管定为暂定
+- 2026-11-03 scorecard V-CLICK 排查：自造平滑增益负例原误报 1746 次 / 分钟 → 修算法（离群跳变 · 干净人声解释不了 ≥ 一半 · 背景分轨排除）+ 两条负例测试；参考降噪器 cafe 约 100 → 28 次 / 分钟，剩余机器分不开，5 处样本在 `_tmp/scorecard/click-check-20261103/`。大总管定：V-CLICK 先只报不判，等 GTCRN 成绩单再决定要不要人听；P06 拆为 30% xfail + P10 40% 必须判不过；scorecard 起 codex
+- 2026-11-03 scenesuite 第二版 build 20261103215813-c025 通过（480 段 · 40 测试 · 0 削波 · scenes.json 60 条）；两版音频共 6.5 GB 都留；codex 推迟到混响修完
+- 2026-11-03 人试听 b22d 反馈：说话声与场景底噪的混响不一致（原话「很多说话声和场景实际上能给的环境混响不一致啊」）。原因：底噪是真实地点录音、人声套随机 T60 的模拟长方体房间。已转 scenesuite 出修法方案（同房间实测 RIR + 噪声如 ACE · 实测 RIR 库 · 加「人声 vs 底噪混响一致」机器检查）
+- 2026-11-03 scenesuite 自审修 7 项（干轨提前 1–2 ms · 会议室电平 · 补 7 种声音 · 风噪 · 有规律声音电平 · 方位角 · 防泄漏加对照 exp006 test/seq 只报告）+ 场景任务改 60 条（加外接麦对照）→ 名额给它出第二版 build；第一版保留
+- 2026-11-03 scorecard 名额归还（通过）：eval ci 门禁过、探针 9/9；全量 release 83 组过；gtcrn 因 worktree 无权重被跳过 → 告知 VDN_GTCRN_ONNX；P06 由 30% 改 40% 打回 → 30% 留 xfail 记局限 + 40% 必须判不过
+- 2026-11-03 scorecard：成绩单命令 · scorecard.md（与代码比对）· 片段清单 schema 写完；cafe 常见档试跑能出表；V-CLICK 在参考降噪器上约 100 次 / 分钟（直通为 0），疑误报待查；external-mic 240 段未进任务 → 转 scenesuite；名额给它跑 eval ci + 全量测试
+- 2026-11-03 人要试听 → 大总管从 build b22d 挑 11 段（8 个场景常见段 + 家里补一段 + 咖啡馆压力段 + 不加麦模拟对照）调到约 −23 dBFS 复制到 `~/Desktop/20261103-vdn-scene-samples/`（原件不动，非盲听），等人反馈「像不像真的」
+- 2026-11-03 scenesuite 第一版 build 20261103214702-b22d 通过（480 段，18 s，音频 3.2 GB 在 _tmp；清单 / 哈希进仓；39 测试 · 防泄漏三项交集 0 · SNR / SIR 98.2% 段差 ≤ 1 dB）；scenes.json 30 条 graders 待 scorecard 填；锁已删
+- 2026-11-03 scenesuite 下载完成实测约 447 MB（单包最大 130 MB），登记 materials.json；自报冒烟跑满规模 17 s 未申请名额（已记，以后整批先申请）；名额给它跑第一版 build（480 段 = 15 地点 × 16 段 × 2 设备，约 2.5 GB）
+- 2026-11-03 scorecard 名额归还（通过）：Distill-MOS 导出 ONNX（复数 STFT 换实数卷积，对原模型差 1.4e-6，17.6 MB 在 ~/vdn-data，哈希进仓）；对拍 6 段 SCOREQ 差 0、Distill-MOS 0.00225；onnx 包另装在主目录 _tmp 29 MB；锁已删
+- 2026-11-03 scorecard：4 个新评分项 + 探针 36 测试过（ESTOI 对 pystoi 差 0）；批改 src/schema/（片段清单 schema 导出与正负例）；levels.json 手加 6 条打回，改为 calib --write-levels 自动补新项为 L0 + 测试
+- 2026-11-03 人「可以 merge」→ #83 #84 #85 按序合并（#84 #85 与评审索引冲突，保留两行解决），#80–#82 关；两个 b11 分支已 merge main。scorecard 方案批（SCOREQ ONNX · Distill-MOS 导 ONNX 后对拍）；scenesuite 方案批（15 × 16 段 × 12 s = 240 段；防泄漏按 LibriSpeech 奇偶位 + DEMAND 后 40%；下载 ESC-50 约 75 MB + DEMAND 三包约 350 MB，累计约 425 MB，大总管批）
+- 2026-11-03 人定 D81（按场景测能力 → 成绩单 → 针对优化；听感用 SCOREQ 主 + Distill-MOS 交叉）；派 b11 两线 scenesuite · scorecard
+- 2026-11-03 macmic 路径清零复查过，窗口已关；开 PR #84（022）· #85（023）。三线全收尾；合并被本机权限检查拦，等人。人新方向：按场景测能力 → 成绩单 → 针对优化（待确认后记决策）
+- 2026-11-03 macmic 报收尾（codex 5 轮，4/5 轮无 P0/P1，22 条全改；12 测试 · 21 键 0 问题，大总管复跑过）；打回 1 处：findings/ 10 处本机路径。同类第二次 → 新记忆 `state/memory/20261103-no-local-paths-in-research.md`。另记：codex-review 隐私扫描把「P1」开头的输出误判为 PBM 位图（macmic 现状页「发现」），属 skill 问题，待告诉人
+- 2026-11-03 macmic 发现 devices.md 第二节模式值被当设备键读（25 → 21 键），已修并加检查；大总管复跑 023 检查 0 问题，改 addendum 一处 unknown → non-laptop-unknown（3c9b779）；macmic codex 第 4 轮无 P0/P1，第 5 轮在跑
+- 2026-11-03 PR #83 CI 过；大总管合并被本机权限检查拦下（「未经评审合并」），等人放行或人手动合并
+- 2026-11-03 scenes 路径清零复查过，推送、开 PR #83（先于 022 / 023 合并），窗口已关
+- 2026-11-03 scenes 报收尾（codex 5 轮，4/5 轮无 P0/P1，23 条全改）：空格 43 → 40；电视人声 SIR 改为「未知，0 ± 6 dB 只是测试假设」；三处不再写「只能自录」。验收打回 1 处：raw/ 三处本机绝对路径（铁律 12）。DNS 2020 实录 · Krisp 测试集两条候选记 backlog
+- 2026-11-03 macmic 5 份交付齐，codex 第 1 轮在跑。关键发现【读系统文件】：本机系统调音文件显示，第三方普通采集拿到的 1 路内置麦已经过「每麦降噪 + 固定波束成形 + 均衡」（022 `findings/tunings.md`）。转交 mtgdata 的 DR-VCTK 改判由大总管在 023 分支改（d3743ac）并回写 D65；1 题待拍板（要不要在人的 Mac 上实测）
+- 2026-11-03 scenes 五样产出齐，codex 第 1 轮在跑：无公开「按开会地点」分类，15 地点为本项目自定；15 地点 × 9 因素有 43 个空格（距离 · 突发 · 声级与 SNR 联动整列空；家里客厅、会议室 0 条）；4 题待拍板。mtgdata 已关，其转交（catalog v2 只加列 · DCASE 2016 声景线索 · AliMeeting RT60）由大总管接：catalog v2 下 check_cards 复跑 44 卡 0 问题；线索记 backlog。转交大总管：噪音 7 类缺 4 种声音 → backlog 场景分类器
+- 2026-11-03 mtgdata 收尾验收过，窗口已关
+- 2026-11-03 mtgdata codex 第 3 轮 P1×1 P2×5 全改；「没有…公开集」说法过强第三次出现 → 按规矩改结构（三份汇总页首加措辞口径）；第 4 轮在跑
+- 2026-11-03 mtgdata codex 第 2 轮 P1×2 P2×4 全改；发现调研代理沿用已作废 D26（SA 只评测）→ 按 D64 改 5 张卡为可训练；放开它改 014 cards/README.md「结论」列（铁律 5）；第 3 轮在跑
+- 2026-11-03 mtgdata codex 第 1 轮 P1×7 P2×3 全改（补 MOBIO Mac 录音 · DR-VCTK 只评测 · ACE 移出真实锚 · 下载估计改为 < 10 GB / 含 LIVETALK 整包约 20–25 GB）；第 2 轮在跑；检查脚本修复已验收
+- 2026-11-03 mtgdata 6 份交付写完、codex 第 1 轮在跑；4 道待拍板（开发阶段用不用真实录音评测 · 下多少 · 三格要不要自录 · 申不申请 Ego4D）等三线齐了一起问。打回 1 处：check_cards.py 去旁边 worktree 找键表 → 改只认本仓库 + 环境变量显式指；合并顺序 021、022 先于 023
+- 2026-11-03 macmic 调研已起（wf_16dd3e65-ebc）；设备键表 v1：加 mac-unknown 与 non-laptop 8 个子键，原 12 键不改名
+- 2026-11-03 scenes 调研已起；键表 v1：15 个地点 + 兜底 other（加 bus-metro-cabin），三方已对齐
+- 2026-11-03 macmic 设备键表 v0（12 个键）已发；调研计划批准（4 路 + 4 怀疑派 = 8 代理；补：Air 单列 · 嘈杂环境录音什么样 · 可执行的 Air 麦模拟步骤）
+- 2026-11-03 scenes 草稿键表 v0（14 个地点）已发；调研计划批准（5 路 + 2 怀疑派 = 7 代理）
+- 2026-11-03 mtgdata 四路调研完（44 张新卡，检查 0 问题）：无「Mac 内置麦 + 会议 + 设备标签」公开集；开放办公 · 机场车站 · 街边只能自录；家里 MISP2021；笑声附和 ICSI；约 20 项要注册。Mac 材料已转 macmic。scenes 因大总管漏回报到停了约半小时，已催
+- 2026-11-03 mtgdata 调研计划批准（4 路 + 4 怀疑派 = 8 代理；补：按设备筛笔记本段 · 笑声 / 附和 / 情绪语音 · 与 D62 关系只列事实）
+- 2026-11-03 b10 派三条调研线（scenes · macmic · mtgdata）补评测维度；名额不需要（只调研）
 - 2026-11-02 约 22:40 e3 窗口收工：人「这些东西下一阶段要做的东西，都记下来，后面的窗口可以再定」→ 待拍板第〇·五组 E-1–E-3 · backlog · board 接续点已写；名额空、锁无
 - 2026-11-02 fastpath 收尾：PR #66 合并（默认 native-v4i · codex 3 轮 · 600 行拆分）；剩余 P2 → issue #67；转交「接起来」：产品接入 v4i、src/dsp 重采样多累加器；测速提醒：rt 连续跑会被降级，连续峰值用 --qos ui，长计时 caffeinate + 查电源
 - 2026-11-02 fastpath 600 行拆分完成：gtcrn_native.rs 1926 → 445（+ weights / cost / kern / ops / block / dpgrnn / simd / tests）· main.rs 1280 → 485（+ alloc / nets / util / parity），最大 532；35 测试过、11 个后端对 ORT 指标拆前后一字不差；已 merge main 并删 fields.rs 三条 APPLE_ONLY。下一步结论 + codex
