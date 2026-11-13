@@ -96,7 +96,7 @@ class Inclusion(unittest.TestCase):
 
 class Key(unittest.TestCase):
     def test_prereg_and_required_fields(self):
-        k = B.make_key("b", T.read_lines(), {"fail": 1, "pass": 1}, 1, [], "<html>", pool(1, 1))
+        k = B.make_key("b", T.read_lines(), {"fail": 1, "pass": 1}, 1, [{"q": 1}], "<html>", pool(1, 1))
         for f in B.REQUIRED_KEY_FIELDS:
             self.assertIn(f, k)
         for f in B.REQUIRED_PREREG:

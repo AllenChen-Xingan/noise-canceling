@@ -74,7 +74,7 @@ def judge_of(row, lines):
     listen_fail = q < slack - 1e-12 or d < slack - 1e-12
     eat_fail = n >= lines["eat_count_v2"]
     return {"verdict": "fail" if (listen_fail or eat_fail) else "pass",
-            "d_scoreq": q, "d_distill": d, "eat_extra": n,
+            "d_scoreq": q, "d_distill": d, "eat_extra": n, "ref_len": e["extra"]["ref_len"],
             "listen_fail": listen_fail, "eat_fail": eat_fail}
 
 
