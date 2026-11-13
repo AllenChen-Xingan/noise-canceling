@@ -207,13 +207,13 @@ def main():
     unblind = {"build": build, "seed": SEED, "n_per_stratum": N_PER, "n_retest": N_RETEST,
                "stratum_sizes": sizes, "sampling_fraction": frac, "lines": lines,
                "runs": RUNS, "lufs": LUFS, "questions": rows,
+               # 给人的目录里每个文件的哈希只记在这里（音频在 questions 的 sha256_out*）
+               "sha256_index_html": sha(listen / "index.html"),
                "note": "分层抽样：算 TPR/TNR 时按 1/sampling_fraction 加权回总体；retest_of = 第几题的重测"}
     (key / "unblind-key.json").write_text(json.dumps(unblind, ensure_ascii=False, indent=1) + "\n")
     repo = HERE / "builds" / build
     repo.mkdir(parents=True)
     shutil.copy(key / "unblind-key.json", repo / "unblind-key.json")
-    (repo / "listen-files.sha256").write_text(
-        "".join(f"{sha(p)}  {p.name}\n" for p in sorted(listen.iterdir())))
     print(f"给人听：{listen}\n揭盲表：{key}（已复制进 {repo}）\n共 {len(order)} 题")
 
 

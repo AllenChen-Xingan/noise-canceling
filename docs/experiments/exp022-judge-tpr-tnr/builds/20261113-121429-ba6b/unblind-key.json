@@ -553,5 +553,6 @@
    "sha256_out_orig": "3c5847b5e9102857c5ecc8fc39e8ed34ea04849e7693ff8c49bd84903ad1e83f"
   }
  ],
- "note": "分层抽样：算 TPR/TNR 时按 1/sampling_fraction 加权回总体；retest_of = 第几题的重测"
+ "note": "分层抽样：算 TPR/TNR 时按 1/sampling_fraction 加权回总体；retest_of = 第几题的重测",
+ "sha256_index_html": "4e68b680a2b3ff531f0bf0d6b484fcdde00d673abbd31d23f655df564f509f81"
 }
