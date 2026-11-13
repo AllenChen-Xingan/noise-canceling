@@ -333,3 +333,9 @@
 - [ ] 待开实验（011）：① VPIO / 语音突显 + 4 声道 + 蓝牙麦延迟（随 dev-4，P0）② babble 人数×SNR 曲线（dev-3）③ 近 / 远特征 AUC ④ 会议室识别回归 ⑤ 商业对照；提醒 dev-4：别的进程在内置麦开 VPIO 时 HAL 读到的电平骤降
 - [ ] 规约跟进（下一批接入线）：`specs/rust/architecture.md` §2.1 / §4 补 vdn-speaker（B 档）、vdn-speaker-lab、vdn-scene、vdn-polish；speaker-lab tier；CI 补 `--features onnx`；ORT 一个进程只许一个 Environment
 - [ ] 008 给 P1 后续改动第 5 项（exp004 README 补注「0 次分配只计 Rust 侧」）是否已由 align 完成——下一批核对
+
+> 2026-11-13 14:xx 删除（人批，选择题两题都选「删」）：`~/vdn-data` 已解压的压缩包（demand 10 个 zip · rir 3 个 · librispeech tar，删前逐个核对成员都在解压目录）· `_tmp` 三个 venv（exp008-torch · exp010 · exp010-ct）· `_tmp/030` 混回旧产物（dfn3 · gtcrn · gtcrn-h · gtcrn-raw · check-* · smoke-* · mixretest 两轮 · sweep-*），保留 natural 在用的 `gtcrn-h-raw` 与 `scenes-safety-off*.json`。系统盘剩余 69 → 103 GB。清单 `docs/research/032_real-meeting-eval/storage-inventory.md`（realmtg 分支）。
+> 2026-11-13 删除（人批）：`~/vdn-data/real-meeting/alimeeting/Eval_Ali.tar.gz` 3.4 GB（realmtg 核过 66 文件与解压目录一致）。人批 `uv cache prune`（只清没在用的），首次被 realmtg 运行中的 uv 锁住 300 s 超时，未用 --force，待 realmtg 归还名额后再跑。
+> 2026-11-13 约 14:0x 意外：人另开的全机深度清理会话 noise-canceling-19 删了全盘 target/ 与 .venv（含本项目主目录 + realmtg + natural 三处 target），realmtg 的 ICSI 打分在 50/72 段崩（50 段结果已落盘）。已请 19 不再碰 noise_canceling* 与 ~/vdn-data。名额给 realmtg 重编 + 正式 199 段（约 2 h）；natural 排队。uv prune 暂不做（19 在做 uv cache clean）。
+> 2026-11-13 14:3x 续：全机清理会话 14:13 还删了主目录 `_tmp/` 的 exp016 · exp013 · 20261031-exp006 · exp008 · 20261031-exp005 · exp009-venv（清点里多数标「留」）；全是合成数据，可按仓内脚本 + 种子 + hashes 重建。另：我删 `_tmp/030/gtcrn-h` 与 mixretest 时漏查 natural 拿它们作对照组。exp013 已派子代理按原种子重建并逐文件核哈希；对照组由 natural 重生成；exp005（QA 层）· exp006 · exp008 · exp016 等用到时再重建（记 backlog）。
+> 2026-11-13 uv cache prune 搁置：锁被常驻 uvx mcp-server-linkedin 占着，不用 --force；人退出 LinkedIn 工具后再清。清理会话 noise-canceling-19 确认删除清单并承诺不再碰 noise_canceling* 与 ~/vdn-data。
