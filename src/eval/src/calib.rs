@@ -402,6 +402,9 @@ pub fn to_markdown(c: &Value, src: &str) -> String {
         s,
         "\n一致率 0.5 = 和抛硬币一样；低于 0.5 = 指标与耳朵**反向**。片段内 τ > 0 = 同一片段里指标排序与 H3 同向。"
     );
+    if let Some(j) = c["judges"].as_array() {
+        s += &judge::to_markdown(j);
+    }
     s
 }
 

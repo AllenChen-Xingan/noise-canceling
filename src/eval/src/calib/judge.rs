@@ -309,6 +309,46 @@ pub fn table(items: &[Item], seed: u64, reps: usize) -> Vec<Value> {
     rows
 }
 
+/// 定标报告里「按过关线判」一节。
+pub fn to_markdown(rows: &[Value]) -> String {
+    let f = |v: &Value| v.as_f64().map_or("—".into(), |x| format!("{x:.2}"));
+    let ci = |v: &Value| format!("[{}, {}]", f(&v[0]), f(&v[1]));
+    let mut s = String::from(
+        "\n## 按成绩单过关线判：和人耳的混淆矩阵（只报不判）\n\n\
+         「阳性」= 不过。真阳性率 = 人说不过的里面评估器也判不过（抓到坏的）；\
+         真阴性率 = 人说过的里面评估器也判过（不冤枉好的）。\
+         总一致率不高于「一律判过时的一致率」，说明总一致率没有信息量。区间：Wilson · 按屏重采样。\n\n\
+         | 评估器（单段线） | 人耳真值 | 条数（判不了） | 人不过 / 人过 | TP FN TN FP | 真阳性率 | 真阴性率 | 总一致率 / 一律判过时 | TPR+TNR−1 |\n\
+         |---|---|---|---|---|---|---|---|---|\n",
+    );
+    for r in rows {
+        let c = &r["confusion"];
+        s += &format!(
+            "| {} | {} | {}（{}） | {} / {} | {} {} {} {} | {} {} {} | {} {} {} | {} / {} | {} |\n",
+            r["label"].as_str().unwrap_or(""),
+            r["human_label"].as_str().unwrap_or(""),
+            r["n"],
+            r["skipped"],
+            r["human_fail"],
+            r["human_pass"],
+            c["tp"],
+            c["fn"],
+            c["tn"],
+            c["fp"],
+            f(&r["tpr"]),
+            ci(&r["tpr_ci95"]),
+            ci(&r["tpr_ci95_cluster"]),
+            f(&r["tnr"]),
+            ci(&r["tnr_ci95"]),
+            ci(&r["tnr_ci95_cluster"]),
+            f(&r["raw_agreement"]),
+            f(&r["always_pass_agreement"]),
+            f(&r["youden_j"]),
+        );
+    }
+    s
+}
+
 #[cfg(test)]
 #[path = "judge_tests.rs"]
 mod tests;
