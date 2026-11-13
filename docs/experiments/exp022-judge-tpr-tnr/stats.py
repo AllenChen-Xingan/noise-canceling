@@ -59,7 +59,7 @@ def rates(c):
         # 评估器什么都不看、一律判过时的总一致率：类别不平衡时总一致率会被它撑高
         "always_pass_agreement": ratio(np_, n),
         "balanced_accuracy": (tpr + tnr) / 2 if nf and np_ else float("nan"),
-        # Youden J = TPR + TNR − 1：0 = 和抛硬币一样，≤ 0 时 Rogan-Gladen 校正无解
+        # Youden J = TPR + TNR − 1：0 = 和抛硬币一样（Rogan-Gladen 校正此时不可识别），< 0 = 和人反着判
         "youden_j": tpr + tnr - 1 if nf and np_ else float("nan"),
     }
 
