@@ -7,9 +7,10 @@ GTCRN · 参考降噪器 · DFN3 低延迟版 · DPDFNet-2，各 480 段，每�
 选题（事先登记，种子固定，写进揭盲表）：
 - 每段先按评估器分层：「评估器判不过」= 两个评分模型任一 Δ < −SC-NRMOS-DELTA，或吃字多错 ≥ fail_chars；其余「判过」。
   物理硬事实项（延迟等）人听不出，不参与分层。过关线运行时从 `src/eval/src/thresholds/table.rs` 读
-- 判不过只占约 3.5%，纯随机抽几乎全是判过，量不了真阳性率；所以两层各抽 N_PER 题。
-  **分层抽样会让两层的比例失真**：揭盲表记下每层的总数与抽样比例，算真阳性率 / 真阴性率时要按比例加权回总体
-- 同一个源片段（去掉设备后缀）只出一次，免得两题不独立
+- 判不过只占约 3.5%，纯随机抽几乎全是判过，量不了真阳性率；所以两层各抽 N_PER 题（不放回简单随机）。
+- 同一个源片段（去掉设备后缀）只出一次：整套里有重复就整套重抽。这会让入样概率偏离 n/N，
+  所以按同一设计模拟 SIMS 次估计每条的入样概率，连同抽样框写进揭盲表；估总体率时按它做逆概率加权
+- 人耳真值怎么切、这一轮拿来干什么，听测前写进揭盲表（PREREG）
 - 另选 N_RETEST 题（两层各一）在后半段原样再出一次，量同一个人前后一致不一致
 
 给人的目录里只有页面和 q01.wav 这类无名文件；揭盲表写在听测目录之外，并复制进仓
@@ -42,6 +43,7 @@ ASR_MODEL = "qwen3-asr-plus:1.7b"
 SEED = 20261113
 N_PER = 9
 N_RETEST = 2
+SIMS = 200_000  # 入样概率模拟次数：判过层 π ≈ 0.005，蒙特卡罗相对误差约 3%
 LUFS, PEAK = -26.0, 10 ** (-1 / 20)
 # 页面与文件名里不许出现的字样（模型名、场景名、揭盲相关）
 FORBIDDEN = ["gtcrn", "dfn3", "dpdf", "deepfilter", "ref-", "unblind", "manifest", "-ext", "-mba",
@@ -76,37 +78,80 @@ def judge_of(row, lines):
             "listen_fail": listen_fail, "eat_fail": eat_fail}
 
 
-def select(pool, n_per, n_retest, seed):
-    """pool: [{run, system, clip, judge}]。两层各抽 n_per，源片段不重复；再定重测题与题序。"""
-    rng = random.Random(seed)
+def frame_of(pool):
+    """抽样框：按（run, 系统, 片段）排序后分两层。"""
     strata = {"fail": [], "pass": []}
     for it in sorted(pool, key=lambda x: (x["run"], x["system"], x["clip"])):
         strata[it["judge"]["verdict"]].append(it)
-    used, picks = set(), []
-    for name in ("fail", "pass"):
-        cand = strata[name][:]
-        rng.shuffle(cand)
-        got = 0
-        for it in cand:
-            if got == n_per:
-                break
-            if source_of(it["clip"]) in used:
-                continue
-            used.add(source_of(it["clip"]))
-            picks.append(dict(it, stratum=name))
-            got += 1
-        if got < n_per:
-            raise ValueError(f"{name} 层只有 {got} 个不重复源片段，不够 {n_per}")
-    rng.shuffle(picks)
-    order = [dict(p, retest_of=None) for p in picks]
-    # 重测：两层各取第一个出现在前半段的题，原样放到最后几题（离原题至少隔半套题）
+    return strata
+
+
+def draw(strata, n_per, rng, max_tries=100000):
+    """抽样设计（codex 第 2 轮 P1 #1）：两层各做一次不放回简单随机抽样；整套里同一源片段出现两次就整套重抽。
+    入样概率由 [`inclusion_probs`] 按同一设计模拟估计，不用 n/N 近似。"""
+    for t in range(max_tries):
+        picks = [dict(it, stratum=k) for k in ("fail", "pass") for it in rng.sample(strata[k], n_per)]
+        if len({source_of(p["clip"]) for p in picks}) == len(picks):
+            return picks, t + 1
+    raise ValueError(f"{max_tries} 次都抽不出源片段不重复的一套")
+
+
+def item_key(it):
+    return f'{it["run"]}|{it["system"]}|{it["clip"]}'
+
+
+def inclusion_probs(strata, n_per, seed, sims):
+    """照 [`draw`] 的设计模拟 sims 次，估计每条的入样概率（命中次数 / sims）。"""
+    rng = random.Random(seed)
+    hits = {}
+    for _ in range(sims):
+        picks, _ = draw(strata, n_per, rng)
+        for p in picks:
+            k = item_key(p)
+            hits[k] = hits.get(k, 0) + 1
+    return {k: v / sims for k, v in hits.items()}
+
+
+def place_retests(order, n_retest, rng):
+    """重测（codex 第 2 轮 P2 #2）：两层各挑一题当原题，换到前半段（不论洗牌后前半段是不是只有一层），
+    再把原样的重测题接在最后，离原题至少隔半套题。"""
+    order = [dict(p, retest_of=None) for p in order]
     half = len(order) // 2
+    used = set()
     for name in ("fail", "pass")[:n_retest]:
-        src = next(i for i, p in enumerate(order[:half]) if p["stratum"] == name and p["retest_of"] is None)
+        src = next(i for i, p in enumerate(order) if p["stratum"] == name)
+        if src >= half:
+            dst = next(i for i in range(half) if i not in used)
+            order[src], order[dst] = order[dst], order[src]
+            src = dst
+        used.add(src)
+    for src in sorted(used):
         order.append(dict(order[src], retest_of=src + 1))
-    sizes = {k: len(v) for k, v in strata.items()}
-    frac = {k: (n_per / sizes[k]) if sizes[k] else None for k in sizes}
-    return order, sizes, frac
+    return order
+
+
+def select(pool, n_per, n_retest, seed):
+    """抽题 + 排题。返回（题序, 各层总数, 抽到这套用了几次）。"""
+    strata = frame_of(pool)
+    for k in strata:
+        if len({source_of(it["clip"]) for it in strata[k]}) < n_per:
+            raise ValueError(f"{k} 层不重复的源片段不够 {n_per}")
+    rng = random.Random(seed)
+    picks, tries = draw(strata, n_per, rng)
+    rng.shuffle(picks)
+    order = place_retests(picks, n_retest, rng)
+    return order, {k: len(v) for k, v in strata.items()}, tries
+
+
+# 人耳真值怎么切、这一轮拿来干什么：听测前写死（codex 第 2 轮 P2 #3 · issue 草稿 p2-8）
+PREREG = {
+    "usable_cut": "两种切法都报：宽切 no = 不过（主结论）；严切 no 或 marginal = 不过（敏感性）",
+    "eaten_cut": "yes = 不过；no = 过；unsure = 判不了（不进吃字的混淆矩阵）",
+    "use": "验证集：vdn-eval calib 第 2 轮（偶数轮，只用来考，不用来调线）",
+    "weighting": "按 questions[].inclusion_prob 做逆概率加权估总体 TPR/TNR；重测题只用来量前后一致，不进率",
+    "retest": "重测原题与重测题的两个答案不一致的比例 = 同一人前后不一致率，只报",
+}
+REQUIRED_KEY_FIELDS = ("prereg", "frame", "inclusion_sims", "questions", "seed")
 
 
 def forbidden_hits(texts):
@@ -173,6 +218,22 @@ def write_pair(out_main, out_mix, main_src, mix_src):
     return {"gain_db_main": 20 * np.log10(ga * shrink), "gain_db_mix": 20 * np.log10(gb * shrink)}
 
 
+def make_key(build, lines, sizes, tries, rows, html, pool):
+    key = {"build": build, "seed": SEED, "n_per_stratum": N_PER, "n_retest": N_RETEST,
+           "stratum_sizes": sizes, "draw_tries": tries, "lines": lines, "runs": RUNS, "lufs": LUFS,
+           "prereg": PREREG,
+           "design": "两层各不放回简单随机抽样；整套同一源片段重复则整套重抽；入样概率按同一设计模拟估计",
+           "inclusion_sims": {"sims": SIMS, "seed": SEED + 1},
+           # 抽样框：每条（run|系统|片段）与所在层，供以后复核入样概率
+           "frame": {k: [item_key(it) for it in v] for k, v in frame_of(pool).items()},
+           "questions": rows,
+           "sha256_index_html": hashlib.sha256(html.encode()).hexdigest()}
+    missing = [f for f in REQUIRED_KEY_FIELDS if f not in key]
+    if missing:
+        raise ValueError(f"揭盲表缺字段：{missing}")
+    return key
+
+
 def main():
     build = sys.argv[1] if len(sys.argv) > 1 else datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + \
         hashlib.sha256(str(random.random()).encode()).hexdigest()[:4]
@@ -183,7 +244,9 @@ def main():
     listen.mkdir(parents=True)
     key.mkdir()
     lines = tpr_tnr.read_lines()
-    order, sizes, frac = select(load_pool(lines), N_PER, N_RETEST, SEED)
+    pool = load_pool(lines)
+    order, sizes, tries = select(pool, N_PER, N_RETEST, SEED)
+    probs = inclusion_probs(frame_of(pool), N_PER, SEED + 1, SIMS)
     qs, rows = [], []
     for i, it in enumerate(order, 1):
         main_src = wav_of(it["run"], it["clip"], it["system"])
@@ -192,8 +255,10 @@ def main():
         gains = write_pair(listen / fm, listen / fx, main_src, mix_src)
         text, lang = ref_text(it["run"], it["clip"])
         qs.append({"q": i, "audio": fm, "orig": fx, "text": text})
+        pi = probs.get(item_key(it), 0.0)
         rows.append({"q": i, **{k: it[k] for k in ("run", "system", "clip", "scene", "tier", "stratum",
                                                      "retest_of", "judge")},
+                     "inclusion_prob": pi, "inclusion_prob_mc_se": (pi * (1 - pi) / SIMS) ** 0.5,
                      "lang": lang, "ref_text": text, **gains,
                      "sha256_src": sha(main_src), "sha256_mix_src": sha(mix_src),
                      "sha256_out": sha(listen / fm), "sha256_out_orig": sha(listen / fx)})
@@ -204,12 +269,7 @@ def main():
     if hits:
         shutil.rmtree(listen)
         raise SystemExit(f"给人的目录里出现禁用字样，已删除听测目录：{hits}")
-    unblind = {"build": build, "seed": SEED, "n_per_stratum": N_PER, "n_retest": N_RETEST,
-               "stratum_sizes": sizes, "sampling_fraction": frac, "lines": lines,
-               "runs": RUNS, "lufs": LUFS, "questions": rows,
-               # 给人的目录里每个文件的哈希只记在这里（音频在 questions 的 sha256_out*）
-               "sha256_index_html": sha(listen / "index.html"),
-               "note": "分层抽样：算 TPR/TNR 时按 1/sampling_fraction 加权回总体；retest_of = 第几题的重测"}
+    unblind = make_key(build, lines, sizes, tries, rows, html, pool)
     (key / "unblind-key.json").write_text(json.dumps(unblind, ensure_ascii=False, indent=1) + "\n")
     repo = HERE / "builds" / build
     repo.mkdir(parents=True)
