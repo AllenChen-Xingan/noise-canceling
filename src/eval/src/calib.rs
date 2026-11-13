@@ -1,11 +1,24 @@
-//! 定标（D44 · 012 §2 与 §5）：读人耳答卷 + 每个候选的指标表，算每条感知 verifier 与人耳的
+//! 定标（每次盲听回灌校准 verifier，决策 D44；规则在 `docs/research/012_eval-standards/verifiers.md` §2 与 §5）：
+//! 读人耳答卷 + 每个候选的指标表，算每条感知 verifier（自动判据，下文也叫评估器）与人耳的
 //! 成对方向一致率（按屏聚类 bootstrap 区间）与片段内 Kendall τ，再按 L0–L3 判据定级。
+//!
+//! 答卷长什么样（盲听页 exp003 起的格式）：
+//! - **屏**：一道题，一个源片段（`clip`）；**候选**：同一片段经不同降噪系统的输出，一屏 2–4 个，页面上只显示 A/B/C
+//! - 每屏问「最清楚」「最自然」各选一个候选（或「分不出」），问每个候选「开会能用吗」：ok / marginal / no（下称 H3 三级），
+//!   再勾「哪份吃字」。`by_model` 是揭盲后按系统名记的答案
+//! - 同一屏的几个候选共享片段难度，彼此不独立，所以区间按屏整体重采样（bootstrap），不按单条
+//! - Kendall τ：同一屏里 verifier 给候选的排序与 H3 等级排序的一致程度，−1 到 1，0 = 无关
 //!
 //! 规则照 012（全部〔建议值〕，拍板 #8）：
 //! - 配对：AB 页被选「最 X」者对同屏其余各一对；H3（能用 / 勉强 / 不能用）同屏差 ≥ 1 级的两个候选一对。
 //!   **只按人耳分差筛**，不按 verifier 自己的分差筛
-//! - L1：累计**验证集**配对 ≥ 20 且一致率 95% 下界 > 0.5；L2：再加验证集片段 ≥ 30、片段内 τ 下界 ≥ 0.2
-//! - 奇数轮进定标集、偶数轮进验证集；判级只看验证集 → 第 1 轮无论数字多好都是 L0
+//! - **同一判断只数一次**（012 原文「有效配对数」，调研 031 第 4 条）：同一屏里「最清楚」「最自然」「能用等级」
+//!   常给出同一个「A 比 B 好」，按（屏, 胜, 负）去重后才是有效配对（[`effective`]）。一致率、区间、升级门槛
+//!   都只用有效配对；原始条数照报（`pairs_raw`），分来源的一致率（`by_source`）按原始条数算。
+//!   同屏两问给出相反方向的两对（A 胜 B、B 胜 A）都保留，各算一次
+//! - L1：累计**验证集**有效配对 ≥ 20 且一致率 95% 下界 > 0.5；L2：再加验证集片段 ≥ 30、片段内 τ 下界 ≥ 0.2
+//! - 另报评估器按成绩单过关线判「过 / 不过」时与人耳的混淆矩阵（[`judge`]，只报不判）
+//! - 奇数轮进定标集（用来调 verifier）、偶数轮进验证集（只用来考）；判级只看验证集 → 第 1 轮无论数字多好都是 L0
 //! - 统计全部确定性：种子 20261030，bootstrap 10000 次
 
 use std::collections::BTreeMap;
@@ -15,6 +28,17 @@ use serde_json::{Value, json};
 use crate::Level;
 use crate::analysis::quantile;
 use crate::rng::Rng;
+
+pub mod judge;
+
+/// 有效配对：按（屏, 胜, 负）去重，保留第一次出现的那条（见文件头「同一判断只数一次」）。
+pub fn effective(p: &[Pair]) -> Vec<Pair> {
+    let mut seen = std::collections::BTreeSet::new();
+    p.iter()
+        .filter(|x| seen.insert((x.screen.clone(), x.winner.clone(), x.loser.clone())))
+        .cloned()
+        .collect()
+}
 
 /// 一个指标在答卷候选上的取值来源。
 pub struct Metric {
@@ -188,7 +212,14 @@ fn kendall_tau_b(x: &[f64], y: &[f64]) -> Option<f64> {
 
 /// 定标一轮。`scores` 是 exp003 scores.json（`per_clip[clip][model]`，原声为 `noisy`）。
 pub fn calibrate(answers: &Value, scores: &Value, round: u32) -> Value {
-    let (pairs, h3) = extract(answers);
+    calibrate_with(answers, scores, &Value::Null, round)
+}
+
+/// 同 [`calibrate`]，另给评分模型表 `preds`（`[clip][model]{scoreq, distill_mos}`，可为 Null），
+/// 用来算听感两项的混淆矩阵。
+pub fn calibrate_with(answers: &Value, scores: &Value, preds: &Value, round: u32) -> Value {
+    let (raw, h3) = extract(answers);
+    let pairs = effective(&raw);
     let per = &scores["per_clip"];
     let is_validation = round.is_multiple_of(2);
     let discounted = answers["summary"]["traps"]
@@ -200,20 +231,23 @@ pub fn calibrate(answers: &Value, scores: &Value, round: u32) -> Value {
             (m.get)(&per[clip][model], &per[clip]["noisy"])
         };
         // 每对：1 = 指标与耳朵同向，0 = 反向，0.5 = 指标打平
-        let scored: Vec<(String, &'static str, f64)> = pairs
-            .iter()
-            .filter_map(|p| {
-                let (w, l) = (val(&p.screen, &p.winner)?, val(&p.screen, &p.loser)?);
-                let agree = if (w - l).abs() < 1e-9 {
-                    0.5
-                } else if (w > l) == m.higher_better {
-                    1.0
-                } else {
-                    0.0
-                };
-                Some((p.screen.clone(), p.source, agree))
-            })
-            .collect();
+        let score = |ps: &[Pair]| -> Vec<(String, &'static str, f64)> {
+            ps.iter()
+                .filter_map(|p| {
+                    let (w, l) = (val(&p.screen, &p.winner)?, val(&p.screen, &p.loser)?);
+                    let agree = if (w - l).abs() < 1e-9 {
+                        0.5
+                    } else if (w > l) == m.higher_better {
+                        1.0
+                    } else {
+                        0.0
+                    };
+                    Some((p.screen.clone(), p.source, agree))
+                })
+                .collect()
+        };
+        let scored = score(&pairs);
+        let scored_raw = score(&raw);
         let screens: Vec<String> = {
             let mut s: Vec<String> = scored.iter().map(|x| x.0.clone()).collect();
             s.sort();
@@ -289,7 +323,11 @@ pub fn calibrate(answers: &Value, scores: &Value, round: u32) -> Value {
         let by_src: BTreeMap<&str, (usize, f64)> = ["clearer", "natural", "h3"]
             .iter()
             .map(|s| {
-                let v: Vec<f64> = scored.iter().filter(|x| x.1 == *s).map(|x| x.2).collect();
+                let v: Vec<f64> = scored_raw
+                    .iter()
+                    .filter(|x| x.1 == *s)
+                    .map(|x| x.2)
+                    .collect();
                 (*s, (v.len(), crate::analysis::mean(&v)))
             })
             .collect();
@@ -317,10 +355,12 @@ pub fn calibrate(answers: &Value, scores: &Value, round: u32) -> Value {
         "round": round,
         "set": if is_validation { "validation" } else { "calibration" },
         "session_discounted": discounted,
-        "pairs_total": pairs.len(),
+        "pairs_raw": raw.len(),
+        "pairs_effective": pairs.len(),
         "screens": h3.len(),
-        "rules": "配对：最清楚 / 最自然被选者对同屏其余各一对 + H3 同屏差 ≥ 1 级；按屏聚类 bootstrap 10000 次（种子 20261030）；L1：配对 ≥ 20 且下界 > 0.5；L2：再加片段 ≥ 30 且片段内 τ 下界 ≥ 0.2〔建议值，012 拍板 #8〕",
+        "rules": "配对：最清楚 / 最自然被选者对同屏其余各一对 + H3 同屏差 ≥ 1 级，按（屏, 胜, 负）去重为有效配对；按屏聚类 bootstrap 10000 次（种子 20261030）；L1：有效配对 ≥ 20 且下界 > 0.5；L2：再加片段 ≥ 30 且片段内 τ 下界 ≥ 0.2〔建议值，012 拍板 #8〕",
         "metrics": rows,
+        "judges": judge::table(&judge::items(answers, scores, preds), 20_261_030, 10_000),
     })
 }
 
@@ -336,8 +376,9 @@ pub fn to_markdown(c: &Value, src: &str) -> String {
     let _ = writeln!(s, "数据：{src}\n");
     let _ = writeln!(
         s,
-        "配对 {} 对、{} 屏；会话{}。规则：{}\n",
-        c["pairs_total"],
+        "有效配对 {} 对（原始 {} 条）、{} 屏；会话{}。规则：{}\n",
+        c["pairs_effective"],
+        c["pairs_raw"],
         c["screens"],
         if c["session_discounted"] == true {
             "**打折**（陷阱 trap-identical 没过）"
@@ -373,6 +414,9 @@ pub fn to_markdown(c: &Value, src: &str) -> String {
         s,
         "\n一致率 0.5 = 和抛硬币一样；低于 0.5 = 指标与耳朵**反向**。片段内 τ > 0 = 同一片段里指标排序与 H3 同向。"
     );
+    if let Some(j) = c["judges"].as_array() {
+        s += &judge::to_markdown(j);
+    }
     s
 }
 
@@ -401,5 +445,61 @@ mod tests {
         // clearer：m1 胜 m2、m3；h3：m1 胜 m2、m3
         assert_eq!(p.len(), 4);
         assert_eq!(h3.len(), 1);
+        // 同一判断只数一次：clearer 与 h3 给出的是同两对
+        assert_eq!(effective(&p).len(), 2);
+    }
+
+    fn repo_json(rel: &str) -> Value {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join(rel);
+        serde_json::from_str(&std::fs::read_to_string(&p).expect("读仓内数据")).expect("JSON")
+    }
+
+    /// 调研 031 第 4 条：exp007 定标第 1 轮的 48 对里，不重复的只有 20 对；
+    /// 升级门槛与一致率都按不重复的有效配对算，原始条数另报。
+    #[test]
+    fn exp003_round1_counts_effective_pairs() {
+        let a = repo_json(
+            "docs/experiments/exp003-offline-ab/results/20261030-human-build-20261030110755-f8c3.json",
+        );
+        let s = repo_json("docs/experiments/exp003-offline-ab/scores.json");
+        let c = calibrate(&a, &s, 2);
+        assert_eq!(c["pairs_raw"], 48);
+        assert_eq!(c["pairs_effective"], 20);
+        for m in c["metrics"].as_array().unwrap() {
+            assert!(m["pairs"].as_u64().unwrap() <= 20, "{}", m["verifier"]);
+        }
+    }
+
+    /// 20 条有效配对正好压在门槛上；只有原始条数够、有效配对不够时不能升 L1。
+    #[test]
+    fn level_gate_uses_effective_pairs() {
+        // 12 屏，每屏 clearer · natural · h3 三次给出同一对 → 原始 36 对、有效 12 对，且全部同向
+        let trials: Vec<Value> = (0..12)
+            .map(|i| {
+                json!({"kind": "real", "clip": format!("c{i:02}"), "slots": {"A": "m1", "B": "m2"},
+                  "by_model": {"clearer": "m1", "natural": "m1", "usable": {"m1": "ok", "m2": "no"}}})
+            })
+            .collect();
+        let per: serde_json::Map<String, Value> = (0..12)
+            .map(|i| {
+                (
+                    format!("c{i:02}"),
+                    json!({"noisy": {"SIG": 1.0}, "m1": {"SIG": 3.0}, "m2": {"SIG": 2.0}}),
+                )
+            })
+            .collect();
+        let c = calibrate(&json!({"trials": trials}), &json!({"per_clip": per}), 2);
+        assert_eq!(c["pairs_raw"], 36);
+        assert_eq!(c["pairs_effective"], 12);
+        let sig = c["metrics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|m| m["verifier"] == "V-DNSMOS.SIG")
+            .unwrap();
+        assert_eq!(sig["agreement"], 1.0);
+        assert_eq!(sig["level"], "L0", "有效配对 12 < 20，不能因原始 36 条升级");
     }
 }

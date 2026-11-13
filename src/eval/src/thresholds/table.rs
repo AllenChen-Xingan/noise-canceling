@@ -435,8 +435,25 @@ pub const NRMOS_DELTA: Lines = Lines {
     )],
 };
 
+/// 成绩单层：送人耳清单里的随机抽查（调研 031 第 3 条）。从「评估器判过、没因别的原因被选中」的段里，
+/// 按 `SC-AGG.seed` 固定种子抽 `random` 段，量漏判（评估器说过、人说不过）。段数会加长人每次听测的时间，
+/// 由人定：2 段（2026-11-13，经大总管 noise-canceling-68 转达）。
+pub const LISTEN: Lines = Lines {
+    id: "SC-LISTEN",
+    edges: &[],
+    edges_src: NO_EDGES,
+    params: &[p(
+        "random",
+        Some(2.0),
+        &[(
+            2.0,
+            Src::Design("人定 2026-11-13：随机抽查每次 2 段（调研 031 待拍板第 2 题）"),
+        )],
+    )],
+};
+
 /// 表里全部 verifier。
-pub const ALL: [&Lines; 28] = [
+pub const ALL: [&Lines; 29] = [
     &BGSTAB,
     &ONSET,
     &SPLVL,
@@ -465,6 +482,7 @@ pub const ALL: [&Lines; 28] = [
     &TSOS,
     &LEAK,
     &PSE_OVL,
+    &LISTEN,
 ];
 
 /// 待定清单：已知不一致或没有出处的条目。全部是建议值，挂 012 拍板 #8 · D44。
