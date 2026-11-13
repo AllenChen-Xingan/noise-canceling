@@ -1,23 +1,37 @@
 # 现状页 · evalaudit（批次 20261113-b17）
 
-- **状态**：进行中
+- **状态**：已收尾
 - **手上**：按 Hamel 的 eval 指南体检评估器，重点查和人耳一致性是否分开报假阳性 / 假阴性
 - **交代**：`../noise_canceling/_tmp/20261113-b17/evalaudit.md`（主目录，git 忽略）
-- **做到哪**（2026-11-13）：盘点、体检初稿、exp022 真阳性率 / 真阴性率已完成；第一次回报已发，等大总管回「可以修」
-- **下一步**：放行后修 audit 第 1、3、4 条（`src/eval/`），先写会红的测试
+- **做到哪**（2026-11-13 12:26）：体检、实测、修复（P1 × 4 中代码类 3 条）、自审、codex 4 轮（停止线满足）全部完成；20 题盲听页 build `20261113-122017-3126` 已建好，等大总管交人
+- **下一步**（接班者）：人交回答卷 → 放进 `docs/experiments/exp022-judge-tpr-tnr/results/` 并提交 → `convert_answers.py` → `vdn-eval calib … --round 2` → 写按入样概率加权的总体率
 
 ## 改了哪些文件
 | 文件 | 改了什么 |
 |---|---|
-| `docs/research/031_eval-judge-audit/inventory.md` | 新建：评估器、人耳数据、过去的量法 |
-| `docs/research/031_eval-judge-audit/audit.md` | 新建：逐条对照，P1 × 4、P2 × 5 |
-| `docs/experiments/exp022-judge-tpr-tnr/` | 新建：脚本 · 17 条测试 · 结果 |
+| `src/eval/src/calib.rs` | 有效配对去重（规则只写在文件头）；`calibrate_with` 接评分模型表；报告加混淆矩阵一节；术语说明 |
+| `src/eval/src/calib/judge.rs` · `judge_tests.rs`（新） | 按过关线的混淆矩阵、Wilson 区间、按屏重采样；吃字题没答记判不了；与 exp022 Python 逐格比对 |
+| `src/eval/src/scorecard/rules_v2.rs` · `rules_v2_tests.rs` | 随机抽查 2 段（跳过已逐段否决的段），种子写进原因 |
+| `src/eval/src/thresholds/table.rs` | 新增 `SC-LISTEN.random = 2`（人定 2026-11-13） |
+| `src/eval/src/main.rs` | `calib --predictors`；用法说明 |
+| `specs/rubric/scorecard.md` | 第六节随机抽查行、两种量法与样本口径；L1 改「有效配对」；新增第十节改动记录 |
+| `docs/research/031_eval-judge-audit/` | inventory · audit · decision · issues/（P2 × 5）· reviews/（codex 记录） |
+| `docs/experiments/exp022-judge-tpr-tnr/` | 实测脚本与结果；盲听页生成 · 模板 · 答卷转换；Python 测试 36 条；builds/（新 build + 作废旧 build） |
+
+验证：`cargo test -p vdn-eval` 全过（lib 151 条 + 集成测试）、`clippy -D warnings`、`xtask tidy` 通过（12:16，此后 src/ 未改）；Python 36 条全过。
+
+## 盲听页（交人用）
+- 给人的目录：`/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalaudit/_tmp/exp022-listen/20261113-122017-3126/listen/`（`index.html` + 40 个 `qNN.wav` / `qNN_orig.wav`；已查：无揭盲表、无清单、无模型名或场景名）
+- 揭盲表：同 build 的 `key/`（不给人），已复制进 `docs/experiments/exp022-judge-tpr-tnr/builds/20261113-122017-3126/`
+- 20 题：9 题评估器判不过 + 9 题判过 + 2 道重测；每题 12 s，约 10–15 分钟；答完点「导出答卷」交回 JSON
+- ⚠️ 本 worktree 删除前，把 `_tmp/exp022-listen/` 挪到主目录 `_tmp/`（git 忽略，删 worktree 会一起丢）
+- 旧 build `20261113-121429-ba6b` 作废（选题设计被 codex 否定），未交人
 
 ## 发现
 - 人耳说「不能用」的，SCOREQ 单段线只抓到 0.20（区间 0.00–0.40，36 条，1 人）；它几乎不冤枉能用的（0.88）
 - 吃字线从「> 1 个百分点」换成「≥ 5 字」后，抓到率 0.69 → 0.27，冤枉率不变（同一批 36 条）
 
-## 待人拍板（草稿，等大总管汇总）
+## 待人拍板（已由人定 2026-11-13：① 吃字线不改 ② 随机抽查 2 段 ③ 要听一页；题面留档）
 1. **吃字的否决线要不要收紧？** 现行「单段比原声多错 ≥ 5 字才否决」（D85 题 3）。在 exp003 那批 36 条上，你勾了吃字的 26 条里它只抓到 7 条；旧线「多 1 个百分点」抓到 18 条；两条线都没有冤枉你没勾的 10 条。注意：这批多是英文，5 个英文词比 5 个汉字长
    - A. 不改，等再听一轮、样本够了再定 —— 代价：期间成绩单会把多数你觉得吃字的段判过 ← 建议
    - B. 现在改回「多 > 1 个百分点」 —— 代价：D85 当时要避免的「一个字就否决整段」会回来
@@ -59,3 +73,5 @@
 - 隐私扫描把 `eat_tokens` 当密钥赋值误报 → 改名 eat_count（Python 与 Rust 同改），没用 --force-secrets
 - 建 20 题听测页 build 20261113-121429-ba6b：音频写本 worktree `_tmp/exp022-listen/`（主目录只读），揭盲表在 key/ 并复制进 exp022/builds/；9 判不过 + 9 判过 + 2 重测；Python 测试 24 条全过
 - 申请名额复测 Rust，等回复
+- codex 第 2–4 轮：第 2 轮 P1（选题入样概率）→ 改设计、重建 build；第 3 轮 P2×3、第 4 轮 P2×2 全修；第 3、4 轮连续无 P0/P1 → 停止线满足
+- 已收尾
