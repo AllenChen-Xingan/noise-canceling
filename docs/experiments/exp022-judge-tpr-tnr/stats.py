@@ -69,6 +69,9 @@ def rogan_gladen(judge_fail_rate, tpr, tnr, eps=1e-9):
 
     分母 J = TPR + TNR − 1 为 0 时评估器不含信息，不可识别，返回 None。
     J < 0（评估器和人反着判）公式照样成立，只是方向反了；|J| 很小时结果极不稳定，调用方应看 J 的区间再用。"""
+    vals = (judge_fail_rate, tpr, tnr)
+    if any(v is None or not math.isfinite(v) for v in vals):
+        return None  # 缺一类人耳样本时 TPR/TNR 是 NaN：估不了，不能伪造成 0（codex 第 3 轮 P2 #3）
     j = tpr + tnr - 1
     if abs(j) < eps:
         return None

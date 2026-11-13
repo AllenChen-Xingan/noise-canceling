@@ -152,6 +152,16 @@ PREREG = {
     "retest": "重测原题与重测题的两个答案不一致的比例 = 同一人前后不一致率，只报",
 }
 REQUIRED_KEY_FIELDS = ("prereg", "frame", "inclusion_sims", "questions", "seed")
+REQUIRED_PREREG = ("usable_cut", "eaten_cut", "use", "weighting", "retest")
+
+
+def check_key(key):
+    """揭盲表必填项：顶层字段与事先登记的每个子字段都要在、且非空（codex 第 3 轮 P2 #2）。"""
+    missing = [f for f in REQUIRED_KEY_FIELDS if not key.get(f) and key.get(f) != 0]
+    pre = key.get("prereg") or {}
+    missing += [f"prereg.{f}" for f in REQUIRED_PREREG if not str(pre.get(f, "")).strip()]
+    if missing:
+        raise ValueError(f"揭盲表缺字段：{missing}")
 
 
 def forbidden_hits(texts):
@@ -228,9 +238,7 @@ def make_key(build, lines, sizes, tries, rows, html, pool):
            "frame": {k: [item_key(it) for it in v] for k, v in frame_of(pool).items()},
            "questions": rows,
            "sha256_index_html": hashlib.sha256(html.encode()).hexdigest()}
-    missing = [f for f in REQUIRED_KEY_FIELDS if f not in key]
-    if missing:
-        raise ValueError(f"揭盲表缺字段：{missing}")
+    check_key(key)
     return key
 
 

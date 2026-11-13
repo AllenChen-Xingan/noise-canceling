@@ -99,8 +99,25 @@ class Key(unittest.TestCase):
         k = B.make_key("b", T.read_lines(), {"fail": 1, "pass": 1}, 1, [], "<html>", pool(1, 1))
         for f in B.REQUIRED_KEY_FIELDS:
             self.assertIn(f, k)
-        for f in ("usable_cut", "eaten_cut", "use", "weighting"):
+        for f in B.REQUIRED_PREREG:
             self.assertIn(f, k["prereg"])
+
+    def test_missing_fields_rejected(self):
+        k = B.make_key("b", T.read_lines(), {"fail": 1, "pass": 1}, 1, [{"q": 1}], "<html>", pool(1, 1))
+        for f in B.REQUIRED_KEY_FIELDS:
+            bad = dict(k)
+            del bad[f]
+            with self.assertRaises(ValueError, msg=f):
+                B.check_key(bad)
+        for f in B.REQUIRED_PREREG:
+            for v in (None, "", "  "):
+                bad = dict(k, prereg=dict(k["prereg"]))
+                if v is None:
+                    del bad["prereg"][f]
+                else:
+                    bad["prereg"][f] = v
+                with self.assertRaises(ValueError, msg=f"prereg.{f}={v!r}"):
+                    B.check_key(bad)
 
 
 class Forbidden(unittest.TestCase):

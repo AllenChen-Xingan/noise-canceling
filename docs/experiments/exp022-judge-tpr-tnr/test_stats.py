@@ -71,6 +71,12 @@ class RoganGladen(unittest.TestCase):
         # 真不过率 0.3，TPR 0.2，TNR 0.3 → 判不过率 = 0.3·0.2 + 0.7·0.7 = 0.55
         self.assertAlmostEqual(S.rogan_gladen(0.55, 0.2, 0.3), 0.3)
 
+    def test_nan_inputs_give_none(self):
+        self.assertIsNone(S.rogan_gladen(0.3, float("nan"), 0.9))
+        self.assertIsNone(S.rogan_gladen(float("nan"), 0.8, 0.9))
+        r = S.rates(S.confusion(mk(0, 0, 3, 1)))  # 没有人判不过的条目
+        self.assertIsNone(S.rogan_gladen(0.25, r["tpr"], r["tnr"]))
+
     def test_clamped(self):
         self.assertEqual(S.rogan_gladen(0.0, 0.8, 0.9), 0.0)
 
