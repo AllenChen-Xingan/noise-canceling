@@ -38,6 +38,13 @@
 
 > 2026-11-13 清理：PR #93 合并（收拢 b10 · b9 · fe 三条账本分支，补 D82–D84）；删 worktree cands · mixretest · coord99 · coordfe；删已合并分支 本地 24 · 远程 10；scratch 存档 `_tmp/archive-worktrees-20261113/`。
 
+**b18（2026-11-13，人：合成数据有问题、完全没有降噪；要真实会议录音与真实降噪输出做评测；不能混回、换办法保持真实感；没用的数据集可删 → D94）**：批次 `_tmp/20261113-b18/`，大总管 `noise-canceling-68`，tmux 工作区 `vdn`。
+
+| 手下 | 线 | 管的实体 | 状态 |
+|---|---|---|---|
+| realmtg | 调研 032 / exp024 公开真实会议录音评测集 + 本机数据集清点 · #151 · `research/032-real-meeting-eval` · `../noise_canceling-realmtg` | 真实数据集 · 真实会议评测集 · 本机数据存储 | 已报到（noise-canceling-realmtg-03）；选集 ICSI · AMI · AliMeeting，人批全下 6.0 GB（2026-11-13）；删除只出清单 |
+| natural | 调研 033 / exp023 去掉混回、换办法保持真实感 · #152 · `exp/023-no-mixback` · `../noise_canceling-natural` | 引擎后处理 · 降噪模型输出 · 评测器（只用） | 已报到（noise-canceling-natural-b5）；options.md 初稿：A 舒适噪声 · B 字头放宽 · A+B，下一步冒烟；前 1–2 名要在 exp024 真实会议集上复跑；改引擎默认值前等放行 |
+
 **b17（2026-11-13，人：按 hamel.dev《field guide》查评估器测一致性是否忽略假阳性 / 假阴性等问题，有问题就修）**：批次 `_tmp/20261113-b17/`，大总管 `noise-canceling-68`，tmux 工作区 `vdn`。
 
 | 手下 | 线 | 管的实体 | 状态 |
