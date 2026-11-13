@@ -107,5 +107,23 @@ class Verdicts(unittest.TestCase):
         self.assertIsNone(T.human_usable("", strict=True))
 
 
+class Lines(unittest.TestCase):
+    """过关线只从 Rust 正本读：读得到、读出的值能在原文找到；正本缺参数时必须报错，不许静默用默认值。"""
+
+    def test_reads_real_table(self):
+        lines = T.read_lines()
+        self.assertEqual(set(lines), {"scoreq_min_v1", "distill_min_v1", "nrmos_slack_v2",
+                                      "eat_pp_v1", "eat_tokens_v2"})
+        src = T.TABLE.read_text(encoding="utf-8")
+        blk = src[src.index('id: "V-EAT-ASR"'):]
+        self.assertIn(f'"fail_chars",\n            Some({lines['eat_tokens_v2']})', blk)
+
+    def test_missing_param_raises(self):
+        with self.assertRaises(KeyError):
+            T._param('id: "V-X",\n params: &[p("min", Some(0.0), &[])],\n};', "V-X", "max")
+        with self.assertRaises(KeyError):
+            T._param("", "V-NOPE", "min")
+
+
 if __name__ == "__main__":
     unittest.main()
