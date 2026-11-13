@@ -4,6 +4,9 @@
 //! vdn-eval ci    [--system ref,gtcrn] [--filter R0] [--out DIR] [--audio] [--write-baseline] [--record]
 //! vdn-eval qa    [--system gtcrn,fastenhancer-m] [--filter Q0] [--out DIR] [--record]
 //! vdn-eval calib [--answers JSON] [--scores JSON] [--predictors JSON] [--round N] [--write-levels] [--record]
+//!   盲听答卷回灌定标（见 calib.rs 文件头）。--round 奇数 = 定标轮（不定级），偶数 = 验证轮（按 012 判级）；
+//!   --predictors = 评分模型表 `[片段][系统]{scoreq, distill_mos}`，给了才算听感两项的过关线混淆矩阵。
+//!   **什么都不给时默认读 exp003 build f8c3 的答卷、指标表和 exp009 的评分模型表**（演示用旧数据）
 //! vdn-eval list
 //! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--rules v1|v2] [--out DIR]   # 场景成绩单（specs/rubric/scorecard.md）
 //! vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] [--out DIR]   # 不重跑音频，按规则重新汇总
