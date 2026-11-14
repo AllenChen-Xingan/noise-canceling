@@ -339,3 +339,6 @@
 > 2026-11-13 约 14:0x 意外：人另开的全机深度清理会话 noise-canceling-19 删了全盘 target/ 与 .venv（含本项目主目录 + realmtg + natural 三处 target），realmtg 的 ICSI 打分在 50/72 段崩（50 段结果已落盘）。已请 19 不再碰 noise_canceling* 与 ~/vdn-data。名额给 realmtg 重编 + 正式 199 段（约 2 h）；natural 排队。uv prune 暂不做（19 在做 uv cache clean）。
 > 2026-11-13 14:3x 续：全机清理会话 14:13 还删了主目录 `_tmp/` 的 exp016 · exp013 · 20261031-exp006 · exp008 · 20261031-exp005 · exp009-venv（清点里多数标「留」）；全是合成数据，可按仓内脚本 + 种子 + hashes 重建。另：我删 `_tmp/030/gtcrn-h` 与 mixretest 时漏查 natural 拿它们作对照组。exp013 已派子代理按原种子重建并逐文件核哈希；对照组由 natural 重生成；exp005（QA 层）· exp006 · exp008 · exp016 等用到时再重建（记 backlog）。
 > 2026-11-13 uv cache prune 搁置：锁被常驻 uvx mcp-server-linkedin 占着，不用 --force；人退出 LinkedIn 工具后再清。清理会话 noise-canceling-19 确认删除清单并承诺不再碰 noise_canceling* 与 ~/vdn-data。
+> 2026-11-13 exp013 重建完成：原 build id 20261103230756-17f5，子代理 53 s 生成，大总管复核 shasum 4540/4540 一致，测试 68 过；名额并行特许给 natural（-j ≤ 4）。
+- 2026-11-13 删 _tmp/exp023/20261113-full1（4.2 GB，被 full2 替代，人同意）
+- 2026-11-13 D95：后处理人耳分不出，exp023 盲听作废；已通知 natural 改用 exp024 成绩单选
