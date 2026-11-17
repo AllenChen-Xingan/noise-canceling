@@ -44,12 +44,17 @@ def to_rir(ir, name="rir"):
     return r.full, early_rir(r).full, m
 
 
-def fit(x, n, rng):
-    """取 n 个样本：够长就随机起点截，不够就循环拼。"""
+def fit(x, n, rng, pad=False):
+    """取 n 个样本：够长就随机起点截；不够时噪声循环拼，人声（pad=True）随机位置补零（留出停顿，不重复同一句）。"""
     x = np.asarray(x, float)
     if len(x) >= n:
         s = int(rng.integers(0, len(x) - n + 1))
         return x[s : s + n]
+    if pad:
+        out = np.zeros(n)
+        s = int(rng.integers(0, n - len(x) + 1))
+        out[s : s + len(x)] = x
+        return out
     return np.tile(x, int(np.ceil(n / max(len(x), 1))))[:n]
 
 
@@ -75,7 +80,7 @@ def make_example(rng, speech, noises, ir, knobs, n):
     ir：RIR 波形或 None。返回 noisy, clean（float32，长 n）和 meta。"""
     K = knobs
     meta = {"near_silent": False}
-    s = fit(speech, n, rng)
+    s = fit(speech, n, rng, pad=True)
     if K["reverb"]["on"] and ir is not None and rng.random() < K["reverb"]["prob"]:
         full, early, m = to_rir(ir)
         rev, tgt = fftconvolve(s, full)[:n], fftconvolve(s, early)[:n]
