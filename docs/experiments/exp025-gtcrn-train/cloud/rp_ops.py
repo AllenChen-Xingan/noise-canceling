@@ -18,6 +18,7 @@ from rp_client import ApiError, Client
 
 RUNNING = "RUNNING"
 DEAD = ("EXITED", "ERROR", "TERMINATED")
+QUEUE_STATES = ("QUEUED", "DEPLOYED", "FAILED", "EXPIRED", "CANCELLED")  # openapi 202 响应的状态
 
 
 # ---------- 选机房 ----------
