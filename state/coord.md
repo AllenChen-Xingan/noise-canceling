@@ -3,7 +3,19 @@
 > 只有大总管跟人说话。手下做完、卡住、要名额，只报给大总管。
 > 大总管会话名：`noise-canceling-e3`（2026-11-02 换班；旧名 c4 · 69）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
 
-## 当前大事（2026-11-03 起）
+## 当前大事（2026-11-16 起，b19）
+
+**开训：GTCRN 加训第一批**（人「我们应该可以开始训模型了」）。拆法与卡点 `docs/plan/014_training-kickoff.md`；训练机 RunPod + 网络存储盘（D96，人授权 AI 定）。批次 `_tmp/20261116-b19/`，tmux 工作区 `vdn`。b18（真实会议评测集 · 后处理）暂停，不在本窗口做。
+
+| 手下 | 线 | 管的实体 | 状态 |
+|---|---|---|---|
+| traindata | 训练数据下载 · 切分 · 混音 | 训练数据集 · 数据切分 · 混音配方 | 待派 |
+| trainer | 训练器 + 两组损失 + 注意力头变体 | 训练器 · 训练损失 · 模型变体 | 待派 |
+| cloudrun | 云上训两组 | 云训练机 · 检查点 | 等人开 RunPod 账号 |
+
+## 上一件（b10–b18，2026-11-03 起）
+
+### 降噪效果（2026-11-03 起）
 
 **降噪效果**（D80，人「a，我觉得做这个吧」）：在难场景里比 GTCRN 与其他候选，定训练 / 改进 / 换模型。第一步：盘点评测集对难场景的覆盖（人追问「评测集是否覆盖了很多难的场景」）。批次 `_tmp/20261103-b10/`，大总管 `5-app-5e`，tmux 工作区 `vdn`。
 
@@ -333,3 +345,15 @@
 - [ ] 待开实验（011）：① VPIO / 语音突显 + 4 声道 + 蓝牙麦延迟（随 dev-4，P0）② babble 人数×SNR 曲线（dev-3）③ 近 / 远特征 AUC ④ 会议室识别回归 ⑤ 商业对照；提醒 dev-4：别的进程在内置麦开 VPIO 时 HAL 读到的电平骤降
 - [ ] 规约跟进（下一批接入线）：`specs/rust/architecture.md` §2.1 / §4 补 vdn-speaker（B 档）、vdn-speaker-lab、vdn-scene、vdn-polish；speaker-lab tier；CI 补 `--features onnx`；ORT 一个进程只许一个 Environment
 - [ ] 008 给 P1 后续改动第 5 项（exp004 README 补注「0 次分配只计 Rust 侧」）是否已由 align 完成——下一批核对
+
+> 2026-11-13 14:xx 删除（人批，选择题两题都选「删」）：`~/vdn-data` 已解压的压缩包（demand 10 个 zip · rir 3 个 · librispeech tar，删前逐个核对成员都在解压目录）· `_tmp` 三个 venv（exp008-torch · exp010 · exp010-ct）· `_tmp/030` 混回旧产物（dfn3 · gtcrn · gtcrn-h · gtcrn-raw · check-* · smoke-* · mixretest 两轮 · sweep-*），保留 natural 在用的 `gtcrn-h-raw` 与 `scenes-safety-off*.json`。系统盘剩余 69 → 103 GB。清单 `docs/research/032_real-meeting-eval/storage-inventory.md`（realmtg 分支）。
+> 2026-11-13 删除（人批）：`~/vdn-data/real-meeting/alimeeting/Eval_Ali.tar.gz` 3.4 GB（realmtg 核过 66 文件与解压目录一致）。人批 `uv cache prune`（只清没在用的），首次被 realmtg 运行中的 uv 锁住 300 s 超时，未用 --force，待 realmtg 归还名额后再跑。
+> 2026-11-13 约 14:0x 意外：人另开的全机深度清理会话 noise-canceling-19 删了全盘 target/ 与 .venv（含本项目主目录 + realmtg + natural 三处 target），realmtg 的 ICSI 打分在 50/72 段崩（50 段结果已落盘）。已请 19 不再碰 noise_canceling* 与 ~/vdn-data。名额给 realmtg 重编 + 正式 199 段（约 2 h）；natural 排队。uv prune 暂不做（19 在做 uv cache clean）。
+> 2026-11-13 14:3x 续：全机清理会话 14:13 还删了主目录 `_tmp/` 的 exp016 · exp013 · 20261031-exp006 · exp008 · 20261031-exp005 · exp009-venv（清点里多数标「留」）；全是合成数据，可按仓内脚本 + 种子 + hashes 重建。另：我删 `_tmp/030/gtcrn-h` 与 mixretest 时漏查 natural 拿它们作对照组。exp013 已派子代理按原种子重建并逐文件核哈希；对照组由 natural 重生成；exp005（QA 层）· exp006 · exp008 · exp016 等用到时再重建（记 backlog）。
+> 2026-11-13 uv cache prune 搁置：锁被常驻 uvx mcp-server-linkedin 占着，不用 --force；人退出 LinkedIn 工具后再清。清理会话 noise-canceling-19 确认删除清单并承诺不再碰 noise_canceling* 与 ~/vdn-data。
+> 2026-11-13 exp013 重建完成：原 build id 20261103230756-17f5，子代理 53 s 生成，大总管复核 shasum 4540/4540 一致，测试 68 过；名额并行特许给 natural（-j ≤ 4）。
+- 2026-11-13 删 _tmp/exp023/20261113-full1（4.2 GB，被 full2 替代，人同意）
+- 2026-11-13 D95：后处理人耳分不出，exp023 盲听作废；已通知 natural 改用 exp024 成绩单选
+- 2026-11-13 natural 申请名额：批冒烟 3 段并行（限 15 min，不拿 heavy.lock）；正式跑先用 80 段子集，等 realmtg 交回名额；结果相当就选不混回，不补全量；去舒适噪声两组不做。natural 自报未申请就跑了一次 cargo test（约 1 min），已记
+- 2026-11-13 派子代理核实网络会议 / 通话真实录音数据集（DNS 盲测真实录音、AEC 近端单讲），只读网页，结果在 scratchpad
+- 2026-11-13 21:40 natural 冒烟完、名额已还：每条约 24 s（realmtg 约 62 s/条，差异待查）；80 段正式跑报约 1.5 h，排在 realmtg 之后；评分指纹一致 c91c80bdb0ae4696
