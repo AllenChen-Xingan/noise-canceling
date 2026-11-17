@@ -106,7 +106,7 @@ class Reproduce(unittest.TestCase):
             self.assertNotIn("owner_early", h, "旧 build 不应有早期参考")
 
     def test_early_differs_only_after_cut(self):
-        """单人段：owner − owner_early 在直达到达 + EARLY_REVERB_MS 之前（含设备链 FIR 的拖尾余量）的能量远小于之后。"""
+        """单人段：早期参考能量不超过主参考；两者之差（晚期尾巴）非零，且与早期参考几乎不相关。"""
         r, a, m = self.out["cafe-c00-mba"]
         e, o = np.asarray(a["owner_early"]), np.asarray(a["owner"])
         self.assertEqual(e.shape, o.shape)
