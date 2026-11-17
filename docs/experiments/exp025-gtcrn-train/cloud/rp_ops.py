@@ -171,9 +171,8 @@ def billed_usd(cli: Client, pod_id: str) -> Optional[float]:
 
 
 def list_our_pods(cli: Client) -> list:
-    j = cli.get("/v2/pods")
-    pods = j.get("pods", j) if isinstance(j, dict) else j
-    return [p for p in pods or [] if str(p.get("name", "")).startswith(C.POD_NAME_PREFIX)]
+    pods = cli.get("/v2/pods").get("pods", [])  # 一页默认 1000 台，够用
+    return [p for p in pods if str(p.get("name", "")).startswith(C.POD_NAME_PREFIX)]
 
 
 # ---------- 跑命令 ----------
