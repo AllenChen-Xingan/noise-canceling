@@ -249,7 +249,6 @@ def make_clip(scene, tier, idx, device):
         s["x"] = s["x"] * gain
     floor = floor * gain
     owner_ref = sum(t["x"] for t in targets)
-    owner_early = sum(t["x_early"] for t in targets)
     noise = sum(s["x"] for s in sounds if not SOUNDS[s["cls"]]["is_speech"]) + floor
     interf = sum((s["x"] for s in speech), np.zeros(n))
     mix_lin = owner_ref + noise + interf
@@ -263,6 +262,8 @@ def make_clip(scene, tier, idx, device):
             t["x_early"] = t["x_early"] * head
         for s in sounds:
             s["x"] = s["x"] * head
+    # 早期参考在余量调整之后求和：与 owner_ref 同一组系数，但不进 mix、不参与削波
+    owner_early = sum(t["x_early"] for t in targets)
     mix, clipped = sc.ch.clip(mix_lin)
     dry_gain = gain * 10 ** ((L_owner - gated_level_db(x_dry)) / 20)  # 干轨与链后主说话人同电平
     # 干轨按直达声到达时刻后移，和 owner / mix 对齐（最小相位 FIR 的几个样本延迟不补）
