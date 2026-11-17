@@ -100,9 +100,16 @@ def create_pod(cli: Client, data_center: str, volume_id: Optional[str], max_hour
         raise SystemExit(f"机器名必须以 {C.POD_NAME_PREFIX} 开头（reap 靠它认）")
     L.check_budget(L.read_rows(ledger_path), usd_per_hr_hint, max_hours)
     p = cli.post("/v2/pods", pod_body(name, data_center, volume_id, max_hours))
-    if "podId" in p and "status" in p and p.get("status") != RUNNING and "gpu" not in p:
-        raise SystemExit(f"开机被排进队列而不是直接开（{p.get('status')}，{p.get('failureReason')}），"
-                         f"请到控制台取消队列项 {p.get('id')}")
+    if p.get("status") in QUEUE_STATES:  # 202：没货被排进队列
+        if p.get("status") == "DEPLOYED" and p.get("podId"):
+            p = cli.get(f"/v2/pods/{p['podId']}")
+        else:
+            try:
+                cli.delete(f"/v2/queued-pods/{p['id']}")
+                gone = "已取消队列项"
+            except ApiError:
+                gone = f"取消队列项 {p['id']} 失败，请到控制台取消"
+            raise SystemExit(f"开机没直接开成（{p.get('status')}，{p.get('failureReason')}），{gone}")
     now = L.iso(L.utcnow())
     rate = float(p.get("cost") or usd_per_hr_hint)
     L.append_row({"ts_utc": now, "action": "pod_create", "resource_id": p["id"], "gpu": C.GPU_TYPE_ID,
