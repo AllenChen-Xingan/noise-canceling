@@ -65,6 +65,24 @@ def collate(exs: list[dict]) -> dict:
     }
 
 
+BATCH_KEYS = ("noisy", "clean", "replay", "near_silent", "owner_ivs", "interf_ivs")
+
+
+def normalize(b: dict) -> dict:
+    """loader 出的整批 dict → trainer 批次格式；缺键即报错（接口对不上要早红）。"""
+    miss = [k for k in BATCH_KEYS if k not in b]
+    if miss:
+        raise KeyError(f"loader 批次缺键：{miss}")
+    return {
+        "noisy": torch.as_tensor(b["noisy"], dtype=torch.float32),
+        "clean": torch.as_tensor(b["clean"], dtype=torch.float32),
+        "replay": torch.as_tensor(b["replay"], dtype=torch.bool),
+        "near_silent": torch.as_tensor(b["near_silent"], dtype=torch.bool),
+        "owner_ivs": [[tuple(map(int, p)) for p in s] for s in b["owner_ivs"]],
+        "interf_ivs": [[tuple(map(int, p)) for p in s] for s in b["interf_ivs"]],
+    }
+
+
 class SyntheticSource:
     def __init__(self, cfg):
         self.cfg = cfg
