@@ -95,7 +95,9 @@ def loss_cfg(cfg, w_lvl: float, w_on: float) -> losses.LossCfg:
 @torch.no_grad()
 def calibrate(model, cfg, dev, device) -> dict:
     """027 3.2 权重第 1 步：起点模型在开发批上量各项大小，把 "auto" 的权重定成约占 HybridLoss 的 10%。"""
-    probe = losses.TrainLoss(loss_cfg(cfg, 1.0, 1.0)).to(device)
+    pc = loss_cfg(cfg, 1.0, 1.0)
+    pc.sp, pc.kd = False, False  # 标定只量 HybridLoss 与两项保护
+    probe = losses.TrainLoss(pc).to(device)
     model.eval()
     sums = {"hybrid": 0.0, "lvl": 0.0, "on": 0.0}
     valid = {"lvl": 0, "on": 0}
@@ -118,11 +120,11 @@ def calibrate(model, cfg, dev, device) -> dict:
 
 
 @torch.no_grad()
-def evaluate(model, crit, dev, device) -> dict:
+def evaluate(model, crit, dev, device, **kw) -> dict:
     model.eval()
     acc, n = {}, 0
     for b in dev:
-        _, logs = forward_loss(model, crit, b, device)
+        _, logs = forward_loss(model, crit, b, device, **kw)
         for k, v in logs.items():
             acc[k] = acc.get(k, 0.0) + v
         n += 1
@@ -227,11 +229,12 @@ def train(cfg, *, max_wall_s: float | None = None) -> dict:
             rd.log({"step": step, "lr": sched.get_last_lr()[0], "elapsed_s": round(elapsed, 2),
                     "grad_norm": float(gn), **logs})
         if step % sc.eval_every == 0:
-            row = {"step": step, "dev": evaluate(model, crit, dev, device)}
+            kw = {"sp_ref": sp_ref, "teacher": teacher}
+            row = {"step": step, "dev": evaluate(model, crit, dev, device, **kw)}
             if ema is not None:
                 raw = {k: v.clone() for k, v in model.state_dict().items()}
                 model.load_state_dict(ema.state_dict())
-                row["dev_ema"] = evaluate(model, crit, dev, device)
+                row["dev_ema"] = evaluate(model, crit, dev, device, **kw)
                 model.load_state_dict(raw)
             rd.log(row)
         if step % sc.ckpt_every == 0:
