@@ -31,7 +31,7 @@
    "src": "027 第六节表第 5 行（同一房间的不同收发位置只进一份）", "group": "A4", "unit": "room",
    "glob": ["train-raw/openslr28/RIRS_NOISES/real_rirs_isotropic_noises/*.wav", "train-raw/openslr28/RIRS_NOISES/simulated_rirs/*/*/*.wav"],
    "room_lists": ["train-raw/openslr28/RIRS_NOISES/real_rirs_isotropic_noises/rir_list", "train-raw/openslr28/RIRS_NOISES/simulated_rirs/*/rir_list"],
-   "exclude_regex": "(?i)noise",
+   "exclude_regex": "(?i)noise[^/]*\\.wav$",
    "frac": {"train": 0.7, "dev": 0.1, "final": 0.1, "d63": 0.1},
    "_注": "房间号从包内 Kaldi 的 rir_list（--room-id）读；同目录的 isotropic noise 文件不当 RIR（exclude_regex）。pointsource_noises 取自 MUSAN，内部许可未逐个核，第一批不用"
   },
