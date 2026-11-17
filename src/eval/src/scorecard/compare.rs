@@ -315,13 +315,14 @@ pub fn compare(
     let mut out = vec![one_scope("all", &ia, &ib, npairs.as_deref())?];
     if by_scene {
         let scenes: BTreeSet<String> = a.iter().chain(b).map(|r| r.scene.as_str()).collect();
+        let of_scene = |m: &BTreeMap<&'a str, &'a ClipRow>, s: &str| -> BTreeMap<&'a str, &'a ClipRow> {
+            m.iter()
+                .filter(|(_, r)| r.scene.as_str() == s)
+                .map(|(k, r)| (*k, *r))
+                .collect()
+        };
         for s in scenes {
-            let pick = |m: &BTreeMap<&'static str, &ClipRow>| -> BTreeMap<&'static str, &ClipRow> { m.clone() };
-            let _ = pick;
-            let f = |m: &BTreeMap<&str, &ClipRow>| -> Vec<(String, usize)> { Vec::new_in_scene(m, &s) };
-            let _ = f;
-            let sa: BTreeMap<&str, &ClipRow> = ia.iter().filter(|(_, r)| r.scene.as_str() == s).map(|(k, r)| (*k, *r)).collect();
-            let sb: BTreeMap<&str, &ClipRow> = ib.iter().filter(|(_, r)| r.scene.as_str() == s).map(|(k, r)| (*k, *r)).collect();
+            let (sa, sb) = (of_scene(&ia, &s), of_scene(&ib, &s));
             let sn: Option<Vec<_>> = npairs
                 .as_ref()
                 .map(|v| v.iter().filter(|p| p.1.scene.as_str() == s).copied().collect());
