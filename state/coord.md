@@ -9,9 +9,12 @@
 
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
-| traindata | 训练数据下载 · 切分 · 混音 | 训练数据集 · 数据切分 · 混音配方 | 待派 |
-| trainer | 训练器 + 两组损失 + 注意力头变体 | 训练器 · 训练损失 · 模型变体 | 待派 |
-| cloudrun | 云上训两组 | 云训练机 · 检查点 | 等人开 RunPod 账号 |
+| evalcmp | 配对比较子命令 + 早期回声参考轨 · #155 · `feat/eval-paired-compare` · `../noise_canceling-evalcmp` | 评测器 · 评测参考轨 · 成绩单 | 已报到（noise-canceling-evalcmp-aa） |
+| traindata | 训练数据下载 · 切分 · 混音配方 · #156 · `exp/025-train-data` · `../noise_canceling-traindata` | 训练数据集 · 数据切分 · 混音配方 | 已报到（noise-canceling-traindata-cc） |
+| trainer | 训练器 · 损失 · 注意力头与条件输入 · #157 · `exp/025-trainer` · `../noise_canceling-trainer` | 训练器 · 训练损失 · 模型变体 | 已报到（noise-canceling-trainer-95） |
+| cloudrun | Chrome 开 RunPod · 网络盘 · 开关机脚本 · #158 · `feat/cloud-runpod` · `../noise_canceling-cloudrun` | RunPod 账号与密钥 · 网络存储盘 · 云训练机 | 已报到（noise-canceling-cloudrun-8b）；花钱动作先报 |
+
+- 2026-11-16 定稿计划 014 + 调研 034 · 035 + D96–D99 经 PR #154 合并；四个手下从 main 6abdbcc2 开 worktree
 
 ## 上一件（b10–b18，2026-11-03 起）
 
