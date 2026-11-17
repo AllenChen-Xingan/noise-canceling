@@ -294,10 +294,10 @@ fn one_scope(
 }
 
 /// 比较 a（基线）与 b（候选）。`noise` = 同配置两个种子的一对（种子噪声底）。`by_scene` 时先出全部，再逐场景各出一份。
-pub fn compare(
-    a: &[ClipRow],
-    b: &[ClipRow],
-    noise: Option<(&[ClipRow], &[ClipRow])>,
+pub fn compare<'a>(
+    a: &'a [ClipRow],
+    b: &'a [ClipRow],
+    noise: Option<(&'a [ClipRow], &'a [ClipRow])>,
     by_scene: bool,
 ) -> Result<Vec<Compare>, String> {
     let (ia, ib) = (index(a, "a")?, index(b, "b")?);
