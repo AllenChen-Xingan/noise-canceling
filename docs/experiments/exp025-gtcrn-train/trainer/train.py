@@ -1,0 +1,267 @@
+"""训练脚本（014 第 4–5 步的代码）。
+
+用法（在本目录）：
+    python train.py --config configs/default.yaml --set run.name=exp025-B-s0 --set data.shard_root=… --set data.recipe=…
+同一个 run.name 再跑一次 = 从最新检查点续训（配置只许改 `runrec.RESUMABLE_CHANGES` 里那几项）。
+
+- 优化器 Adam，梯度裁剪，学习率前 warmup_steps 步线性升到 lr、之后不变（027 3.1）
+- 设备 auto：cuda > mps（打 exp018 的绕法，导出时用原模块）> cpu
+- 到 max_steps、累计时长 ≥ max_hours、或累计时长 × 单价 ≥ max_usd 即存检查点停下，原因写进 run.json
+- 损失不是有限数：不存坏权重，记 `stop.reason = nonfinite` 停下（014 意外矩阵：训崩记进清单不删）
+"""
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import math
+import sys
+import time
+from pathlib import Path
+
+import torch
+import yaml
+
+import config as cfgmod
+import losses
+import models
+from data import frames_mask, make_source
+from official import load_start_state
+from runrec import EMA, RunDir, check_resume, start_record
+
+HERE = Path(__file__).resolve().parent
+MPS_FIX = HERE.parents[1] / "exp018-gtcrn-finetune" / "smoke" / "mps_fix.py"
+
+
+def resolve_device(name: str) -> torch.device:
+    if name != "auto":
+        return torch.device(name)
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
+def mps_patch(model: torch.nn.Module) -> list[str]:
+    spec = importlib.util.spec_from_file_location("exp018_mps_fix", MPS_FIX)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.patch(model)
+
+
+def build_model(cfg, device: torch.device) -> torch.nn.Module:
+    m = cfg.model
+    kw = {} if m.variant == "A" else dict(k_frames=m.k_frames, heads=m.heads, cond_dim=m.cond_dim,
+                                          attn=m.attn, film=m.film)
+    torch.manual_seed(cfg.run.seed)  # B 的 q / kv 随机初始化由种子定
+    model = models.build(m.variant, **kw)
+    if m.init == "official":
+        model.load_base(load_start_state())
+    model = model.to(device)
+    if device.type == "mps":
+        mps_patch(model)
+    return model
+
+
+def cond_for(model, batch_size: int, device) -> torch.Tensor | None:
+    """本次条件输入一律全零（D98）；以后喂场景向量 / 声纹改这里。"""
+    film = getattr(model, "film", None)
+    return None if film is None else torch.zeros(batch_size, film.d, device=device)
+
+
+def to_dev(batch: dict, device) -> tuple:
+    n = batch["clean"].shape[1]
+    return (batch["noisy"].to(device), batch["clean"].to(device),
+            frames_mask(batch, n).to(device), batch["replay"].to(device))
+
+
+def forward_loss(model, crit, batch, device, *, sp_ref=None, teacher=None):
+    noisy, clean, fr, replay = to_dev(batch, device)
+    spec = losses.stft(noisy)
+    pred = model(spec, cond_for(model, noisy.shape[0], device))
+    t_spec = None
+    if teacher is not None and replay.any():
+        with torch.no_grad():
+            t_spec = teacher(spec, cond_for(teacher, noisy.shape[0], device))
+    return crit(pred, clean, fr, model=model, sp_ref=sp_ref, teacher_spec=t_spec, replay=replay)
+
+
+def loss_cfg(cfg, w_lvl: float, w_on: float) -> losses.LossCfg:
+    lc = cfg.loss
+    return losses.LossCfg(w_lvl=w_lvl, w_on=w_on, lvl_margin_db=lc.lvl_margin_db, sp=lc.sp, w_sp=lc.w_sp,
+                          kd=lc.kd, w_kd=lc.w_kd, level_norm=lc.level_norm, level_floor=lc.level_floor)
+
+
+@torch.no_grad()
+def calibrate(model, cfg, dev, device) -> dict:
+    """027 3.2 权重第 1 步：起点模型在开发批上量各项大小，把 "auto" 的权重定成约占 HybridLoss 的 10%。"""
+    probe = losses.TrainLoss(loss_cfg(cfg, 1.0, 1.0)).to(device)
+    model.eval()
+    sums = {"hybrid": 0.0, "lvl": 0.0, "on": 0.0}
+    valid = {"lvl": 0, "on": 0}
+    nb = min(cfg.data.calib_batches, len(dev))
+    for b in dev[:nb]:
+        _, logs = forward_loss(model, probe, b, device)
+        sums["hybrid"] += logs["hybrid"]
+        for k in ("lvl", "on"):
+            sums[k] += logs[k] * logs[f"{k}_valid"]
+            valid[k] += logs[f"{k}_valid"]
+    model.train()
+    h = sums["hybrid"] / nb
+    out = {"batches": nb, "hybrid_mean": h}
+    for k, key in (("lvl", "w_lvl"), ("on", "w_on")):
+        mean = sums[k] / valid[k] if valid[k] else 0.0
+        v = getattr(cfg.loss, key)
+        out[k] = {"mean_valid": mean, "valid_segments": valid[k],
+                  "weight": losses.calibrate_weight(h, mean) if v == "auto" else float(v), "auto": v == "auto"}
+    return out
+
+
+@torch.no_grad()
+def evaluate(model, crit, dev, device) -> dict:
+    model.eval()
+    acc, n = {}, 0
+    for b in dev:
+        _, logs = forward_loss(model, crit, b, device)
+        for k, v in logs.items():
+            acc[k] = acc.get(k, 0.0) + v
+        n += 1
+    model.train()
+    return {k: v / n for k, v in acc.items()}
+
+
+def _lr_lambda(warmup: int):
+    return lambda s: min(1.0, (s + 1) / warmup) if warmup > 0 else 1.0
+
+
+def train(cfg, *, max_wall_s: float | None = None) -> dict:
+    """跑到停下为止，返回停下记录。max_wall_s 只给测试用（模拟被打断）。"""
+    device = resolve_device(cfg.device)
+    cfg_dict = cfgmod.to_dict(cfg)
+    rd = RunDir(Path(cfg.run.out_dir).expanduser() / cfg.run.name)
+    source = make_source(cfg)
+    dev = source.dev_batches()
+    model = build_model(cfg, device)
+    sp_ref = {k: v.detach().clone() for k, v in model.named_parameters()} if cfg.loss.sp else None
+    teacher = None
+    if cfg.loss.kd:
+        teacher = build_model(cfg, device).eval()
+        for p in teacher.parameters():
+            p.requires_grad_(False)
+    opt = torch.optim.Adam([p for p in model.parameters() if p.requires_grad], lr=cfg.optim.lr,
+                           betas=tuple(cfg.optim.betas))
+    sched = torch.optim.lr_scheduler.LambdaLR(opt, _lr_lambda(cfg.optim.warmup_steps))
+    ema = EMA(model, cfg.ema.decay) if cfg.ema.enabled else None
+
+    last = rd.latest()
+    if last is not None:
+        rec = rd.read()
+        why = check_resume(rec, cfg_dict, source.build_id)
+        if why:
+            raise RuntimeError("拒绝续训：" + "；".join(why))
+        st = torch.load(last, map_location=device, weights_only=False)
+        model.load_state_dict(st["model"])
+        opt.load_state_dict(st["optim"])
+        sched.load_state_dict(st["sched"])
+        if ema is not None:
+            ema.load_state_dict(st["ema"])
+        if sp_ref is not None:
+            sp_ref = {k: v.to(device) for k, v in st["sp_ref"].items()}
+        step, elapsed, calib = st["step"], st["elapsed_s"], st["calib"]
+        rec["config"] = cfg_dict
+        rec["resumes"].append({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "from_step": step,
+                               "git": start_record(cfg_dict, "", 0, {})["git"]})
+    else:
+        calib = calibrate(model, cfg, dev, device)
+        step, elapsed = 0, 0.0
+        rec = start_record(cfg_dict, source.build_id, source.num_workers,
+                           {"device": str(device), "params": models.param_counts(model)["trainable"],
+                            "calib": calib})
+        rec["params_fixed"] = models.param_counts(model)["fixed"]
+    rd.write(rec)
+    crit = losses.TrainLoss(loss_cfg(cfg, calib["lvl"]["weight"], calib["on"]["weight"])).to(device)
+
+    def state():
+        return {"model": model.state_dict(), "optim": opt.state_dict(), "sched": sched.state_dict(),
+                "ema": ema.state_dict() if ema else None, "sp_ref": sp_ref, "step": step,
+                "elapsed_s": elapsed, "calib": calib, "config": cfg_dict, "variant": cfg.model.variant}
+
+    if last is None:
+        rd.save(state(), 0, cfg.schedule.keep_last)
+    lim, sc = cfg.limits, cfg.schedule
+    t_start = time.monotonic()
+    t_mark = t_start
+    reason = None
+    model.train()
+    batches = source.train_batches(start_batch=step)
+    while True:
+        now = time.monotonic()
+        elapsed += now - t_mark
+        t_mark = now
+        hours = elapsed / 3600
+        if step >= sc.max_steps:
+            reason = "max_steps"
+        elif hours >= lim.max_hours:
+            reason = "max_hours"
+        elif hours * lim.usd_per_hour >= lim.max_usd:
+            reason = "max_usd"
+        elif max_wall_s is not None and now - t_start >= max_wall_s:
+            reason = "interrupted"
+        if reason:
+            break
+        batch = next(batches)
+        loss, logs = forward_loss(model, crit, batch, device, sp_ref=sp_ref, teacher=teacher)
+        if not math.isfinite(loss.item()):
+            reason = "nonfinite"
+            rec["crash"] = {"step": step, "logs": logs}
+            break
+        opt.zero_grad(set_to_none=True)
+        loss.backward()
+        gn = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.optim.grad_clip)
+        opt.step()
+        sched.step()
+        if ema is not None:
+            ema.update(model)
+        step += 1
+        if step % sc.log_every == 0 or step == 1:
+            rd.log({"step": step, "lr": sched.get_last_lr()[0], "elapsed_s": round(elapsed, 2),
+                    "grad_norm": float(gn), **logs})
+        if step % sc.eval_every == 0:
+            row = {"step": step, "dev": evaluate(model, crit, dev, device)}
+            if ema is not None:
+                raw = {k: v.clone() for k, v in model.state_dict().items()}
+                model.load_state_dict(ema.state_dict())
+                row["dev_ema"] = evaluate(model, crit, dev, device)
+                model.load_state_dict(raw)
+            rd.log(row)
+        if step % sc.ckpt_every == 0:
+            rd.save(state(), step, sc.keep_last)
+    if reason != "nonfinite":
+        rd.save(state(), step, sc.keep_last)
+    rec["stop"] = {"reason": reason, "step": step, "elapsed_s": round(elapsed, 2),
+                   "usd_est": round(elapsed / 3600 * lim.usd_per_hour, 4),
+                   "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+    rd.write(rec)
+    return rec["stop"]
+
+
+def parse_set(items: list[str]) -> dict:
+    out = {}
+    for it in items:
+        k, _, v = it.partition("=")
+        out[k] = yaml.safe_load(v)
+    return out
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description="exp025 GTCRN 训练")
+    ap.add_argument("--config", required=True)
+    ap.add_argument("--set", action="append", default=[], help="覆盖配置，如 run.name=x（可多次）")
+    a = ap.parse_args(argv)
+    stop = train(cfgmod.load(a.config, parse_set(a.set)))
+    print(stop)
+    return 0 if stop["reason"] in ("max_steps", "max_hours", "max_usd") else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
