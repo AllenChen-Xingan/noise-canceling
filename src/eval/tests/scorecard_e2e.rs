@@ -500,7 +500,9 @@ fn early_reference_side_column() {
     let est = card.cards[0].items.iter().find(|i| i.v == "V-ESTOI").unwrap();
     assert!(est.early_mean.is_some());
     assert!(card.to_markdown("t").contains("早期参考"));
-    assert_eq!(card.to_json(json!({}))["scenes"][0]["items"].as_array().unwrap().iter().filter(|i| i.get("early_mean").is_some()).count() > 0, true);
+    let js = card.to_json(json!({}));
+    let items = js["scenes"][0]["items"].as_array().unwrap();
+    assert!(items.iter().any(|i| i.get("early_mean").is_some()));
     for (x, y) in card.cards[0].items.iter().zip(&card0.cards[0].items) {
         assert_eq!(x.status, y.status, "{}", x.v);
     }

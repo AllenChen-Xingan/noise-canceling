@@ -195,3 +195,49 @@ fn veto_rules_per_item() {
         let _ = veto_rule(i.v);
     }
 }
+
+/// 真实打分链路：同一批合成段，b 的输出整体压低 6 dB（×0.5）→ 人声被压低（V-SPLVL）判退，
+/// 差值约 −6 dB；没动输出的一边自己比自己全部不确定。
+#[test]
+fn real_scoring_output_6db_down_is_down() {
+    use crate::runner::{Baseline, Opts, prepare_clip, score_one};
+    use crate::suite::{Grader, LEVELS, parse_levels};
+    use crate::synth::{NoiseKind, SceneSpec, TalkerSpec, render};
+    use crate::system::SystemKind;
+    use crate::verifiers::Params;
+    let t = crate::suite::parse_suite(include_str!("../../suite/ci.json")).unwrap().tasks[0].clone();
+    let o = Opts { ci: true, audio_dir: None, baseline: Baseline::new(), levels: parse_levels(LEVELS).unwrap() };
+    let g = Grader { v: "V-SPLVL".into(), params: Params::default(), info_only: false };
+    let (mut a, mut b) = (Vec::new(), Vec::new());
+    for i in 0..8 {
+        let c = render(&SceneSpec {
+            dur_s: 6.0,
+            seed: 300 + i as u64,
+            owner: Some(TalkerSpec { level_dbov: -26.0, f0_lo: 100.0, f0_hi: 140.0, tonal: false }),
+            owner_start_s: 0.5,
+            pause_s: (0.4, 1.0),
+            interferers: Vec::new(),
+            noise: NoiseKind::Pink,
+            snr_db: 20.0,
+            tail_silence_s: 0.0,
+        });
+        let p = prepare_clip(&t, SystemKind::Passthrough, c, false, false).unwrap();
+        let mut none: Option<&mut dyn crate::runner::Extra> = None;
+        let sa = score_one(&g, SystemKind::Passthrough, &t, &p, &p.run.out, &o, &mut none);
+        let low: Vec<f32> = p.run.out.iter().map(|x| x * 0.5).collect();
+        let sb = score_one(&g, SystemKind::Passthrough, &t, &p, &low, &o, &mut none);
+        let mut ra = row(MeetingPlace::Cafe, i, vec![]);
+        ra.scores = vec![("V-SPLVL", true, sa)];
+        let mut rb = ra.clone();
+        rb.scores = vec![("V-SPLVL", true, sb)];
+        a.push(ra);
+        b.push(rb);
+    }
+    let c = &compare(&a, &b, None, false).unwrap()[0];
+    let s = item(c, "V-SPLVL");
+    assert_eq!(s.pairs, 8);
+    assert_eq!(s.call, Call::Down);
+    let m = s.diff.as_ref().unwrap().mean;
+    assert!((m + 6.02).abs() < 0.3, "差值 {m}");
+    assert!(compare(&a, &a, None, false).unwrap()[0].items.iter().all(|i| i.call == Call::Unsure));
+}
