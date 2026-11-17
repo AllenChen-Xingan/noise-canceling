@@ -54,6 +54,10 @@ pub struct ItemCell {
     pub fail: usize,
     pub unknown: usize,
     pub mean: Option<f64>,
+    /// 旁列：用早期回声参考算的均值（D99 第 2 条；只有 [`super::standard::EARLY_REF`] 项、且 build 带早期参考时有值）。
+    /// 不参与判定
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub early_mean: Option<f64>,
     pub worst: Option<f64>,
     pub worst_clip: Option<String>,
     pub threshold: Option<f64>,
@@ -127,6 +131,7 @@ pub(super) fn item_cell(v: &'static str, veto: bool, rows: &[&ClipRow]) -> ItemC
     let better = info.map_or(Better::Lower, |i| i.better);
     let (mut pass, mut fail, mut unknown) = (0, 0, 0);
     let mut vals = Vec::new();
+    let mut early = Vec::new();
     let mut worst: Option<(f64, String)> = None;
     let mut threshold = None;
     for r in rows {
@@ -139,6 +144,7 @@ pub(super) fn item_cell(v: &'static str, veto: bool, rows: &[&ClipRow]) -> ItemC
             Verdict::Unknown(_) => unknown += 1,
         }
         threshold = threshold.or(s.threshold);
+        early.extend(super::early::value_of(s));
         if let Some(x) = s.value {
             vals.push(x);
             if worst.as_ref().is_none_or(|(w, _)| worse(better, x, *w)) {
@@ -156,6 +162,7 @@ pub(super) fn item_cell(v: &'static str, veto: bool, rows: &[&ClipRow]) -> ItemC
         fail,
         unknown,
         mean: (!vals.is_empty()).then(|| vals.iter().sum::<f64>() / vals.len() as f64),
+        early_mean: (!early.is_empty()).then(|| early.iter().sum::<f64>() / early.len() as f64),
         worst: worst.as_ref().map(|w| w.0),
         worst_clip: worst.map(|w| w.1),
         threshold,
