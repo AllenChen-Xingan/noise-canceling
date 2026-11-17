@@ -47,18 +47,11 @@ class TempAttnSeq(nn.Module):
         qh = q.view(b, f, t, self.h, self.dh)
         kh = kw.reshape(b, f, t, self.h, self.dh, self.k)
         vh = vw.reshape(b, f, t, self.h, self.dh, self.k)
-        att = torch.softmax(torch.einsum("bfthd,bftjdk->bfthk", qh[..., None, :].squeeze(-2)
-                                         .unsqueeze(-2).expand(-1, -1, -1, -1, 1, -1)
-                                         .squeeze(-2)[..., None, :].transpose(-1, -2).squeeze(-1)
-                                         if False else qh, kh) / self.dh ** 0.5, dim=-1) \
-            if False else self._scores(qh, kh)
+        s = torch.einsum("bfthd,bfthdk->bfthk", qh, kh) / self.dh ** 0.5
+        att = torch.softmax(s, dim=-1)
         o = torch.einsum("bfthk,bfthdk->bfthd", att, vh).reshape(b, f, t, C)
         y = z + self.out(o)
         return y.permute(0, 3, 2, 1)
-
-    def _scores(self, qh: torch.Tensor, kh: torch.Tensor) -> torch.Tensor:
-        s = torch.einsum("bfthd,bfthdk->bfthk", qh, kh) / self.dh ** 0.5
-        return torch.softmax(s, dim=-1)
 
 
 class CondFiLM(nn.Module):
