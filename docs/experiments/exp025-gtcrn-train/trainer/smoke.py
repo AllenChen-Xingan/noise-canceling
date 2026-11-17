@@ -59,6 +59,11 @@ def check_init(cfg, batch, device) -> dict:
             "rule": "B 与 A 相对差 ≤ 1e-5，且起点损失 < 随机初始化"}
 
 
+def overfit_pass(first: float, last: float) -> bool:
+    """单批过拟合判据：损失下降 ≥ 50%（按初值绝对值归一，初值为负也成立）。"""
+    return bool(np.isfinite(last) and (first - last) / max(abs(first), 1e-9) >= 0.5)
+
+
 def check_overfit(cfg, batch, device, steps: int, lr: float) -> dict:
     m = _model(cfg, device).train()
     crit = losses.TrainLoss(losses.LossCfg()).to(device)
@@ -71,7 +76,7 @@ def check_overfit(cfg, batch, device, steps: int, lr: float) -> dict:
         opt.step()
         traj.append(logs["total"])
     drop = (traj[0] - traj[-1]) / max(abs(traj[0]), 1e-9)
-    return {"pass": bool(drop >= 0.5 and np.isfinite(traj[-1])), "first": traj[0], "last": traj[-1],
+    return {"pass": overfit_pass(traj[0], traj[-1]), "first": traj[0], "last": traj[-1],
             "drop_frac": drop, "steps": steps, "lr": lr, "rule": "损失下降 ≥ 50%"}
 
 

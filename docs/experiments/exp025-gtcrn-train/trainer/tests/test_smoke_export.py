@@ -31,12 +31,10 @@ def test_init_check_passes_and_overfit_reports(tmp_path):
 
 
 def test_overfit_rule_threshold():
-    """判据本身：下降 49% 不过、51% 过（防判据写反）。"""
-    assert (1.0 - 0.51) / 1.0 < 0.5 <= (1.0 - 0.49) / 1.0 or True
-    fake = {"first": 10.0, "last": 5.1}
-    assert (fake["first"] - fake["last"]) / fake["first"] < 0.5
-    fake = {"first": 10.0, "last": 4.9}
-    assert (fake["first"] - fake["last"]) / fake["first"] >= 0.5
+    """判据本身：下降 49% 不过、51% 过、变成 NaN 不过（防判据写反）。"""
+    assert not smoke.overfit_pass(10.0, 5.1)
+    assert smoke.overfit_pass(10.0, 4.9)
+    assert not smoke.overfit_pass(10.0, float("nan"))
 
 
 def test_known_dev_mismatch_fails(tmp_path):
