@@ -56,7 +56,10 @@ fn table(sec: &str, head: &str) -> Vec<Vec<String>> {
 fn compare_tables_match_code() {
     let t = doc();
     let sec = section(&t, "## 十、", "## 十一、");
-    let calls: Vec<String> = table(sec, "判断").into_iter().map(|r| r[0].clone()).collect();
+    let calls: Vec<String> = table(sec, "判断")
+        .into_iter()
+        .map(|r| r[0].clone())
+        .collect();
     let want: Vec<String> = Call::ALL.iter().map(|c| c.zh().to_string()).collect();
     assert_eq!(calls, want);
 

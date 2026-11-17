@@ -140,7 +140,10 @@ pub fn call_of(ci: Option<&Ci>, better: Better) -> Call {
 }
 
 fn score<'a>(r: &'a ClipRow, v: &str) -> Option<&'a Score> {
-    r.scores.iter().find(|(id, _, _)| *id == v).map(|(_, _, s)| s)
+    r.scores
+        .iter()
+        .find(|(id, _, _)| *id == v)
+        .map(|(_, _, s)| s)
 }
 
 fn finite(r: &ClipRow, v: &str) -> Option<f64> {
@@ -152,7 +155,10 @@ fn mean(v: &[f64]) -> Option<f64> {
 }
 
 /// 按片段 id 建索引；同一 id 出现两次（文件里有多个系统、或拼了两个 build）报错。
-pub fn index<'a>(rows: &'a [ClipRow], side: &str) -> Result<BTreeMap<&'a str, &'a ClipRow>, String> {
+pub fn index<'a>(
+    rows: &'a [ClipRow],
+    side: &str,
+) -> Result<BTreeMap<&'a str, &'a ClipRow>, String> {
     let mut m = BTreeMap::new();
     for r in rows {
         if m.insert(r.clip.as_str(), r).is_some() {
@@ -192,7 +198,12 @@ fn item_ids(a: &[&ClipRow], b: &[&ClipRow]) -> Vec<&'static str> {
 }
 
 /// 配对差值的区间：`pairs` = (片段 id, a 行, b 行)。
-fn diff_ci(pairs: &[(&str, &ClipRow, &ClipRow)], v: &str, better: Better, scope: &str) -> (Option<Ci>, usize, usize) {
+fn diff_ci(
+    pairs: &[(&str, &ClipRow, &ClipRow)],
+    v: &str,
+    better: Better,
+    scope: &str,
+) -> (Option<Ci>, usize, usize) {
     let mut d: Vec<(&str, f64)> = Vec::new();
     let mut one = 0;
     for (id, ra, rb) in pairs {
@@ -203,7 +214,11 @@ fn diff_ci(pairs: &[(&str, &ClipRow, &ClipRow)], v: &str, better: Better, scope:
         }
     }
     let n = d.len();
-    (bootstrap(&d, 0.0, better, seed_for(v, &format!("compare|{scope}"))), n, one)
+    (
+        bootstrap(&d, 0.0, better, seed_for(v, &format!("compare|{scope}"))),
+        n,
+        one,
+    )
 }
 
 fn pairs_of<'a>(
@@ -286,8 +301,16 @@ fn one_scope(
     Ok(Compare {
         scope: scope.to_string(),
         pairs: pairs.len(),
-        only_a: a.keys().filter(|k| !b.contains_key(*k)).map(|k| k.to_string()).collect(),
-        only_b: b.keys().filter(|k| !a.contains_key(*k)).map(|k| k.to_string()).collect(),
+        only_a: a
+            .keys()
+            .filter(|k| !b.contains_key(*k))
+            .map(|k| k.to_string())
+            .collect(),
+        only_b: b
+            .keys()
+            .filter(|k| !a.contains_key(*k))
+            .map(|k| k.to_string())
+            .collect(),
         items,
         vetoes,
     })
@@ -315,17 +338,21 @@ pub fn compare<'a>(
     let mut out = vec![one_scope("all", &ia, &ib, npairs.as_deref())?];
     if by_scene {
         let scenes: BTreeSet<String> = a.iter().chain(b).map(|r| r.scene.as_str()).collect();
-        let of_scene = |m: &BTreeMap<&'a str, &'a ClipRow>, s: &str| -> BTreeMap<&'a str, &'a ClipRow> {
-            m.iter()
-                .filter(|(_, r)| r.scene.as_str() == s)
-                .map(|(k, r)| (*k, *r))
-                .collect()
-        };
+        let of_scene =
+            |m: &BTreeMap<&'a str, &'a ClipRow>, s: &str| -> BTreeMap<&'a str, &'a ClipRow> {
+                m.iter()
+                    .filter(|(_, r)| r.scene.as_str() == s)
+                    .map(|(k, r)| (*k, *r))
+                    .collect()
+            };
         for s in scenes {
             let (sa, sb) = (of_scene(&ia, &s), of_scene(&ib, &s));
-            let sn: Option<Vec<_>> = npairs
-                .as_ref()
-                .map(|v| v.iter().filter(|p| p.1.scene.as_str() == s).copied().collect());
+            let sn: Option<Vec<_>> = npairs.as_ref().map(|v| {
+                v.iter()
+                    .filter(|p| p.1.scene.as_str() == s)
+                    .copied()
+                    .collect()
+            });
             out.push(one_scope(&s, &sa, &sb, sn.as_deref())?);
         }
     }

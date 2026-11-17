@@ -468,7 +468,12 @@ fn early_reference_side_column() {
         for (v, _, s) in &r.scores {
             assert_eq!(has(s), EARLY_REF.contains(v), "{} · {v}", r.clip);
             if EARLY_REF.contains(v) {
-                assert_eq!(value_of(s), s.value.filter(|x| x.is_finite()), "{} · {v}", r.clip);
+                assert_eq!(
+                    value_of(s),
+                    s.value.filter(|x| x.is_finite()),
+                    "{} · {v}",
+                    r.clip
+                );
             }
         }
     }
@@ -479,7 +484,12 @@ fn early_reference_side_column() {
     let mut changed = 0;
     for (a, b) in base.iter().zip(&diff) {
         for ((v, _, sa), (_, _, sb)) in a.scores.iter().zip(&b.scores) {
-            assert_eq!(sa.value.map(f64::to_bits), sb.value.map(f64::to_bits), "{} · {v}", a.clip);
+            assert_eq!(
+                sa.value.map(f64::to_bits),
+                sb.value.map(f64::to_bits),
+                "{} · {v}",
+                a.clip
+            );
             assert_eq!(sa.verdict.as_str(), sb.verdict.as_str());
             if value_of(sb).is_some() && value_of(sb) != sb.value {
                 changed += 1;
@@ -488,7 +498,10 @@ fn early_reference_side_column() {
     }
     assert!(changed > 0, "压低 6 dB 的早期参考应让部分旁列读数变化");
     // clips.jsonl 写出读回保留旁证
-    let back = vdn_eval::scorecard::load::parse_jsonl(&vdn_eval::scorecard::load::to_jsonl(&diff).unwrap()).unwrap();
+    let back = vdn_eval::scorecard::load::parse_jsonl(
+        &vdn_eval::scorecard::load::to_jsonl(&diff).unwrap(),
+    )
+    .unwrap();
     for (a, b) in diff.iter().zip(&back) {
         for ((_, _, sa), (_, _, sb)) in a.scores.iter().zip(&b.scores) {
             assert_eq!(value_of(sa), value_of(sb));
@@ -497,7 +510,11 @@ fn early_reference_side_column() {
     // 成绩单：有旁列的项带 early_mean 与「早期参考」字样；状态与没有旁列时一样
     let card = Card::build(&diff, Vec::new());
     let card0 = Card::build(&base, Vec::new());
-    let est = card.cards[0].items.iter().find(|i| i.v == "V-ESTOI").unwrap();
+    let est = card.cards[0]
+        .items
+        .iter()
+        .find(|i| i.v == "V-ESTOI")
+        .unwrap();
     assert!(est.early_mean.is_some());
     assert!(card.to_markdown("t").contains("早期参考"));
     let js = card.to_json(json!({}));
@@ -513,5 +530,10 @@ fn early_reference_side_column() {
     wav::write(&p, &vec![0.1f32; 16], SR).unwrap();
     let (rows3, miss3) = run(&root3, &t3);
     assert_eq!(rows3.len(), 5);
-    assert!(miss3.iter().any(|m| m.what == "cafe-c00" && m.why.contains("sha256")), "{miss3:?}");
+    assert!(
+        miss3
+            .iter()
+            .any(|m| m.what == "cafe-c00" && m.why.contains("sha256")),
+        "{miss3:?}"
+    );
 }

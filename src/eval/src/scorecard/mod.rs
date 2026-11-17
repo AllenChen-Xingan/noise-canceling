@@ -271,8 +271,8 @@ pub fn run_with(
                 what: c.id.clone(),
                 why,
             };
-            let clip_early = load_scene_clip(c, &root)
-                .and_then(|x| Ok((x, early::load_early(c, &root)?)));
+            let clip_early =
+                load_scene_clip(c, &root).and_then(|x| Ok((x, early::load_early(c, &root)?)));
             let (clip, early_ref) = match clip_early {
                 Ok(x) => x,
                 Err(e) => {
@@ -316,7 +316,9 @@ pub fn run_with(
                         };
                         if let Some(pe) = pe.as_ref().filter(|_| early::wants(i.v)) {
                             let se = match (&pe_view, on_clean) {
-                                (Some((cp, co)), true) => score_one(g, sys, &t, cp, co, opts, &mut extra),
+                                (Some((cp, co)), true) => {
+                                    score_one(g, sys, &t, cp, co, opts, &mut extra)
+                                }
                                 _ => score_one(g, sys, &t, pe, &pe.run.out, opts, &mut extra),
                             };
                             s = early::attach(s, &se);

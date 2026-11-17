@@ -4,9 +4,9 @@
 //! 这里**按行为**核对它——把参考换成带 100 ms 回声的版本，读数变了的非物理 CI 项必须正好是这份清单。
 
 use super::*;
-use crate::runner::{Opts, Prepared, Baseline, prepare_clip, score_one};
+use crate::runner::{Baseline, Opts, Prepared, prepare_clip, score_one};
 use crate::scene::MeetingPlace;
-use crate::suite::{Grader, Task, parse_levels, LEVELS};
+use crate::suite::{Grader, LEVELS, Task, parse_levels};
 use crate::synth::{Clip, InterfMode, InterfSpec, NoiseKind, SceneSpec, TalkerSpec, render};
 use crate::system::SystemKind;
 use crate::verifiers::Params;
@@ -130,7 +130,10 @@ fn early_ref_items_are_registered_ci_and_not_physical() {
         let i = crate::verifiers::info(v).unwrap_or_else(|| panic!("{v} 没登记"));
         assert_eq!(i.layer, "ci", "{v}");
         assert!(!standard::PHYSICAL.contains(&v), "{v}");
-        assert!(ci_items().iter().any(|x| x.v == v), "{v} 不在任何场景的标准里");
+        assert!(
+            ci_items().iter().any(|x| x.v == v),
+            "{v} 不在任何场景的标准里"
+        );
     }
 }
 

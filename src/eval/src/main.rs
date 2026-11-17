@@ -489,7 +489,9 @@ fn main() -> ExitCode {
         "scorecard" => cmd_scorecard(&args),
         "compare" => {
             let m = meta();
-            let dir = vdn_eval::suite::main_root().join("_tmp/compare").join(&m.run_id);
+            let dir = vdn_eval::suite::main_root()
+                .join("_tmp/compare")
+                .join(&m.run_id);
             vdn_eval::scorecard::compare_out::cli(&args[1..], &m.run_id, dir)
                 .map(|d| println!("配对比较：{}", d.join("compare.md").display()))
                 .map(|()| true)
@@ -505,7 +507,9 @@ fn main() -> ExitCode {
             Ok(true)
         }
         _ => {
-            eprintln!("用法：vdn-eval <ci | qa | calib | scorecard | compare | list> [选项]（见源码头注释）");
+            eprintln!(
+                "用法：vdn-eval <ci | qa | calib | scorecard | compare | list> [选项]（见源码头注释）"
+            );
             return ExitCode::FAILURE;
         }
     };
