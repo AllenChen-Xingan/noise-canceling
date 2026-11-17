@@ -15,7 +15,6 @@ EXP013 = HERE.parents[1] / "exp013-scene-suite"
 EXCLUDE_BUILD = "20261103230756-17f5"
 EXCLUDE = EXP013 / "builds" / EXCLUDE_BUILD / "exclude.json"
 GUARDED = ("train", "dev", "final")  # d63 测试份本来就不进任何合成原料，不在训练 build 里
-EXP013_DATASETS = ("ace", "mit", "mcvampire", "esc50", "commons-zh", "music")  # exp013 独占的来源（exclude.json rir_files 前缀等）
 
 
 def load_exclude(path=EXCLUDE):
@@ -90,9 +89,9 @@ def chk_datasets(ex, splits):
 
 
 def chk_rooms(ex, splits):
-    rr = ex["rooms_reserved"]
-    hits = chk_datasets(ex, splits) if (rr.get("ace") or rr.get("mcvampire")) else []
-    return hits
+    """按房间整体保留给评测的（ACE 房间 · McVAMPIRE 整个数据集）：训练原料里不许有这些数据集的任何文件。
+    数据集级比房间级更严，这里直接按数据集查（认不出按最严处理，CLAUDE.md 二）。"""
+    return chk_datasets(ex, splits)
 
 
 def chk_synth(ex, splits, code_dir=HERE):
@@ -129,6 +128,5 @@ def check(splits, ex=None):
         h = fn(ex, splits)
         per[k] = len(h)
         hits += h
-    hits += [h for h in chk_datasets(ex, splits) if h not in hits]
     return {"against": f"exp013 build {EXCLUDE_BUILD} exclude.json", "ok": not hits, "hits": hits[:200], "n_hits": len(hits), "per_key": per,
             "rows": sum(1 for _ in pool_rows(splits))}
