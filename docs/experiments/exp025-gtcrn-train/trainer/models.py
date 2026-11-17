@@ -42,8 +42,10 @@ class TempAttnSeq(nn.Module):
         pad = self.k - 1
         k = nn.functional.pad(k, [0, 0, pad, 0])  # 开头补零 key / value（= 流式初始缓存）
         v = nn.functional.pad(v, [0, 0, pad, 0])
-        kw = k.unfold(2, self.k, 1)  # (B,F,T,C,K)：第 i 帧的窗口 = 补零后的 [i, i+K)，末位是当前帧
-        vw = v.unfold(2, self.k, 1)
+        # (B,F,T,C,K)：第 i 帧的窗口 = 补零后的 [i, i+K)，末位是当前帧。
+        # 用 K 个错位切片拼，不用 Tensor.unfold：后者在时间长度可变时导不出 ONNX
+        kw = torch.stack([k[:, :, j:j + t] for j in range(self.k)], dim=-1)
+        vw = torch.stack([v[:, :, j:j + t] for j in range(self.k)], dim=-1)
         qh = q.view(b, f, t, self.h, self.dh)
         kh = kw.reshape(b, f, t, self.h, self.dh, self.k)
         vh = vw.reshape(b, f, t, self.h, self.dh, self.k)
