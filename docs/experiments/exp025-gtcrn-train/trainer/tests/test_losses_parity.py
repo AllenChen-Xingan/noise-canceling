@@ -1,0 +1,126 @@
+"""训练损失的读数与 Rust verifier 正本对拍（027 3.2 交叉校验第 1 条 · CLAUDE.md 五.5）。
+
+对拍的是**参与反传的那份代码**（`losses.splvl_db` / `losses.onset_excess_db`），不另写不可导版本。
+Rust 侧：`parity_rs`（只读调用 vdn-eval 的 `verifiers::eval` 与 `analysis::masks / truth_from_clean`）。
+先编：`cargo build --release --manifest-path parity_rs/Cargo.toml`（没编时本文件的测试红，不跳过）。
+"""
+import json
+import subprocess
+from pathlib import Path
+
+import numpy as np
+import pytest
+import torch
+
+import losses
+
+HERE = Path(__file__).resolve().parents[1]
+BIN = HERE / "parity_rs" / "target" / "release" / "exp025-parity"
+N = 16_000 * 4
+
+
+def _speechlike(rng, n, n_bursts, min_gap=0.15):
+    """一串「有声段」：带包络的噪声爆发 + 停顿；返回 (clean, 区间)。确定性（按 rng）。"""
+    x = np.zeros(n, np.float32)
+    ivs, t = [], int(0.2 * 16000)
+    for _ in range(n_bursts):
+        dur = int(rng.uniform(0.25, 0.6) * 16000)
+        if t + dur > n:
+            break
+        env = np.sin(np.linspace(0, np.pi, dur)) ** 0.5
+        x[t:t + dur] = (rng.standard_normal(dur) * env * rng.uniform(0.05, 0.3)).astype(np.float32)
+        ivs.append((t, t + dur))
+        t += dur + int(rng.uniform(min_gap, 0.5) * 16000)
+    return x, ivs
+
+
+def _cases():
+    rng = np.random.default_rng(20261116)
+    cases = []
+    c, iv = _speechlike(rng, N, 6)
+    cases.append(("scaled_half", c, c * 0.5, iv, []))
+    c, iv = _speechlike(rng, N, 6)
+    o = c.copy()
+    for a, _ in iv:  # 每个有声段开头 50 ms 压 12 dB，模拟吞字头
+        o[a:a + 800] *= 0.25
+    o += rng.standard_normal(N).astype(np.float32) * 0.003
+    cases.append(("onset_eaten_noisy", c, o, iv, []))
+    c, iv = _speechlike(rng, N, 6)
+    cases.append(("crushed_floor", c, c * 1e-4, iv, []))  # 触发 pc·1e-4 下限与 40 dB 封顶
+    c, iv = _speechlike(rng, N, 6)
+    cases.append(("with_interf", c, c * 0.7 + 0.01 * rng.standard_normal(N).astype(np.float32),
+                  iv, [(iv[1][0] + 333, iv[2][1] - 77)]))
+    c, iv = _speechlike(rng, N, 2)
+    cases.append(("two_onsets_only", c, c * 0.8, iv, []))  # V-ONSET 待测
+    c = np.zeros(N, np.float32)
+    c[4000:4000 + 3000] = rng.standard_normal(3000).astype(np.float32) * 0.1
+    cases.append(("short_speech", c, c * 0.9, [(4000, 7000)], []))  # V-SPLVL 不足 50 帧，待测
+    c, iv = _speechlike(rng, N, 7, min_gap=0.05)  # 有的停顿 < 100 ms：不算新字头
+    iv = [(a, b + 37) for a, b in iv]  # 区间端点不对齐 160
+    cases.append(("short_gaps_unaligned", c, np.roll(c, 40) * 0.9, iv, []))
+    return cases
+
+
+@pytest.fixture(scope="module")
+def rust(tmp_path_factory):
+    assert BIN.exists(), f"先编对拍驱动：cargo build --release --manifest-path {HERE / 'parity_rs/Cargo.toml'}"
+    d = tmp_path_factory.mktemp("parity")
+    items = []
+    for name, c, o, own, itf in _cases():
+        c.astype("<f4").tofile(d / f"{name}.clean.f32")
+        o.astype("<f4").tofile(d / f"{name}.out.f32")
+        items.append({"name": name, "clean": f"{name}.clean.f32", "out": f"{name}.out.f32",
+                      "owner": [list(p) for p in own], "interf": [list(p) for p in itf]})
+    (d / "list.json").write_text(json.dumps(items))
+    res = subprocess.run([str(BIN), str(d / "list.json")], check=True, capture_output=True, text=True)
+    return {r["name"]: r for r in json.loads(res.stdout)}
+
+
+CASES = _cases()
+IDS = [c[0] for c in CASES]
+
+
+@pytest.mark.parametrize("case", CASES, ids=IDS)
+def test_masks_and_truth_match_rust(rust, case):
+    name, c, _, own, itf = case
+    r = rust[name]
+    nf = N // losses.MASK_FRAME
+    assert "".join("1" if v else "0" for v in losses.paint(own, nf)) == r["owner_mask"]
+    assert "".join("1" if v else "0" for v in losses.paint(itf, nf)) == r["interf_mask"]
+    assert [list(p) for p in losses.truth_from_clean(c)] == r["truth_from_clean"]
+
+
+def _ours(case, dtype):
+    _, c, o, own, itf = case
+    ct = torch.as_tensor(c, dtype=dtype)[None]
+    ot = torch.as_tensor(o, dtype=dtype)[None]
+    fr = torch.as_tensor(losses.owner_only_mask(own, itf, N))[None]
+    d, vd = losses.splvl_db(ot, ct, fr)
+    e, ve, cnt = losses.onset_excess_db(ot, ct)
+    return d.item(), bool(vd), e.item(), bool(ve), cnt[0]
+
+
+@pytest.mark.parametrize("dtype,tol", [(torch.float64, 1e-6), (torch.float32, 2e-3)], ids=["f64", "f32"])
+@pytest.mark.parametrize("case", CASES, ids=IDS)
+def test_readings_match_rust(rust, case, dtype, tol):
+    """V-SPLVL / V-ONSET：有效性一致；有效时读数差 ≤ tol dB（f64 是对拍精度，f32 是训练时精度）。"""
+    r = rust[case[0]]
+    d, vd, e, ve, cnt = _ours(case, dtype)
+    assert vd == (r["splvl"]["value"] is not None)
+    if vd:
+        assert abs(d - r["splvl"]["value"]) <= tol
+    assert ve == (r["onset"]["value"] is not None)
+    if ve:
+        assert abs(e - r["onset"]["value"]) <= tol
+        assert cnt == r["onset"]["extra"]["onsets"]
+
+
+def test_cases_cover_both_branches(rust):
+    """夹具本身要覆盖：两项都有「判了」和「待测」；字头超额有明显为正的一条（防夹具退化成全 0）。"""
+    sp = [r["splvl"]["value"] for r in rust.values()]
+    on = [r["onset"]["value"] for r in rust.values()]
+    assert any(v is None for v in sp) and any(v is not None for v in sp)
+    assert any(v is None for v in on) and any(v is not None for v in on)
+    assert rust["onset_eaten_noisy"]["onset"]["value"] > 3.0
+    assert abs(rust["scaled_half"]["splvl"]["value"] - 20 * np.log10(0.5)) < 1e-3
+    assert abs(rust["crushed_floor"]["splvl"]["value"] + 40.0) < 1e-6
