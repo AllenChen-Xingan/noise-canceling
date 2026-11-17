@@ -111,12 +111,15 @@ class LoaderSource:
         self.build_id = getattr(self.dev, "build_id", None) or "unknown"
 
     def train_batches(self, start_batch: int = 0):
+        """traindata 约定：第 k 批 = 样本 k·B … k·B+B−1，样本 i 只由 (seed, i) 决定，与 num_workers 无关；
+        torch_iterable 自己出整批 dict，所以 DataLoader 用 batch_size=None。换批量会换内容（续训时 train.py 核）。"""
         d = self.cfg.data
-        it = self.mod.torch_iterable(d.shard_root, d.recipe, split="train", seed=self.cfg.run.seed,
-                                     seg_s=d.seg_s, start_batch=start_batch, batch_size=d.batch)
-        dl = torch.utils.data.DataLoader(it, batch_size=d.batch, num_workers=d.num_workers,
-                                         collate_fn=collate, persistent_workers=d.num_workers > 0)
-        yield from dl
+        it = self.mod.torch_iterable(d.shard_root, d.recipe, "train", self.cfg.run.seed, d.seg_s,
+                                     d.batch, start_batch=start_batch)
+        dl = torch.utils.data.DataLoader(it, batch_size=None, num_workers=d.num_workers,
+                                         persistent_workers=d.num_workers > 0)
+        for b in dl:
+            yield normalize(b)
 
     def dev_batches(self) -> list[dict]:
         d = self.cfg.data
