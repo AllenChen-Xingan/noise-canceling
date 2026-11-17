@@ -57,6 +57,7 @@ class Server:
 
     def close(self):
         self.httpd.shutdown()
+        self.httpd.server_close()
 
 
 class Download(unittest.TestCase):

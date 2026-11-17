@@ -1,0 +1,45 @@
+{
+ "_说明": "切分规则正本 = 027 decision.md 第六节第 5 条的表（逐行照抄比例，出处列在每条 src）。split.py 只认这里。四份：train 训练 · dev 开发 · final 终测原料池 · d63 测试份（只测不训，也不进任何合成原料）",
+ "seed": 20261116,
+ "splits": ["train", "dev", "final", "d63"],
+ "sources": {
+  "librispeech-train-clean-100": {
+   "src": "027 第六节表第 1 行", "group": "A1", "unit": "speaker",
+   "glob": "train-raw/librispeech/LibriSpeech/train-clean-100/*/*/*.flac",
+   "frac": {"train": 0.8, "dev": 0.1, "final": 0.0, "d63": 0.1}
+  },
+  "librispeech-dev-clean-test-other": {
+   "src": "027 第六节表第 2 行", "group": "A5", "unit": "speaker",
+   "glob": ["train-raw/librispeech/LibriSpeech/dev-clean/*/*/*.flac", "train-raw/librispeech/LibriSpeech/test-other/*/*/*.flac"],
+   "frac": {"train": 0.0, "dev": 0.0, "final": 0.5, "d63": 0.5}
+  },
+  "qut-noise": {
+   "src": "027 第六节表第 3 行（按时段：前 50% / 10% / 20% / 后 20%）", "group": "A2", "unit": "time",
+   "glob": "train-raw/qut-noise/**/*.wav",
+   "exclude_regex": "(?i)impulse|/ir/|_ir_|labels",
+   "time": [["train", 0.0, 0.5], ["dev", 0.5, 0.6], ["final", 0.6, 0.8], ["d63", 0.8, 1.0]],
+   "_未核": "压缩包内目录结构未核（本机没下）；第一次云上跑 split.py --inventory 后看清单再确认 glob 与 exclude_regex"
+  },
+  "tum-wind": {
+   "src": "027 第六节表第 4 行（实录与合成分开切）", "group": "A3", "unit": "file",
+   "glob": "train-raw/tum-wind/**/*.wav",
+   "stratum_regex": "(?i)(synth|simulat)",
+   "frac": {"train": 0.7, "dev": 0.1, "final": 0.1, "d63": 0.1},
+   "_未核": "文件组织未核；同一次录音被切成多个文件时改按录音切（027 原文）"
+  },
+  "openslr28-rir": {
+   "src": "027 第六节表第 5 行（同一房间的不同收发位置只进一份）", "group": "A4", "unit": "room",
+   "glob": ["train-raw/openslr28/RIRS_NOISES/real_rirs_isotropic_noises/*.wav", "train-raw/openslr28/RIRS_NOISES/simulated_rirs/*/*/*.wav"],
+   "room_lists": ["train-raw/openslr28/RIRS_NOISES/real_rirs_isotropic_noises/rir_list", "train-raw/openslr28/RIRS_NOISES/simulated_rirs/*/rir_list"],
+   "exclude_regex": "(?i)noise",
+   "frac": {"train": 0.7, "dev": 0.1, "final": 0.1, "d63": 0.1},
+   "_注": "房间号从包内 Kaldi 的 rir_list（--room-id）读；同目录的 isotropic noise 文件不当 RIR（exclude_regex）。pointsource_noises 取自 MUSAN，内部许可未逐个核，第一批不用"
+  },
+  "demand-train": {
+   "src": "027 第六节表最后一行 + 隔离规则第 2 条：只用 exp006 用过的 6 个环境前 60%，按时段再切 训练 50% / 开发 10%；不给终测", "group": "E2", "unit": "time",
+   "glob": "vdn-data/demand/*/ch*.wav",
+   "envs_from": "exp013 pools.EXP006_DEMAND（正本在 exp006 recipes.json）",
+   "time": [["train", 0.0, 0.5], ["dev", 0.5, 0.6]]
+  }
+ }
+}
