@@ -1,0 +1,135 @@
+"""数据来源适配：trainer 只认一种批次格式，两种来源。
+
+批次（dict）：`noisy` (B,N) · `clean` (B,N) float32 · `replay` bool(B) · `near_silent` bool(B) ·
+`owner_ivs` / `interf_ivs`（每段一个区间 list，样本下标左闭右开）。与 traindata 约定（2026-11-16 会话间消息）。
+
+- `synthetic`：仓内现场合成的小样（带包络的噪声爆发当「人声」+ 有色噪声），只给测试与本机冒烟用，
+  **不出任何效果结论**；第 k 批只由 (seed, k) 决定。
+- `loader`：traindata 的 `../data/loader.py`（`torch_iterable` · `DevSet` · `build_id`）。区间 → 掩码在 trainer 里做
+  （`losses.owner_only_mask`，正本归 trainer，和 analysis.rs 对拍）。
+"""
+from __future__ import annotations
+
+import importlib.util
+import sys
+from pathlib import Path
+
+import numpy as np
+import torch
+
+SR = 16_000
+LOADER_PATH = Path(__file__).resolve().parents[1] / "data" / "loader.py"
+
+
+# ---------- 合成小样 ----------
+
+def synth_example(rng: np.random.Generator, n: int) -> dict:
+    clean = np.zeros(n, np.float32)
+    ivs, t = [], int(rng.uniform(0.05, 0.3) * SR)
+    while True:
+        dur = int(rng.uniform(0.2, 0.6) * SR)
+        if t + dur > n:
+            break
+        env = np.sin(np.linspace(0, np.pi, dur)) ** 0.5
+        f0 = rng.uniform(100, 250)
+        tt = np.arange(dur) / SR
+        voiced = sum(np.sin(2 * np.pi * f0 * h * tt) / h for h in range(1, 12))
+        clean[t:t + dur] = (voiced * env * rng.uniform(0.03, 0.2)).astype(np.float32)
+        ivs.append((t, t + dur))
+        t += dur + int(rng.uniform(0.12, 0.5) * SR)
+    white = rng.standard_normal(n)
+    noise = np.cumsum(white) * 0.02 + white  # 偏低频的有色噪声
+    noise = (noise - noise.mean()) / (noise.std() + 1e-9)
+    ps = float((clean ** 2).mean()) + 1e-12
+    snr = rng.uniform(-5, 15)
+    noise *= np.sqrt(ps / 10 ** (snr / 10))
+    return {"noisy": (clean + noise).astype(np.float32), "clean": clean, "owner_ivs": ivs, "interf_ivs": []}
+
+
+def synth_batch(seed: int, k: int, batch: int, n: int) -> dict:
+    rng = np.random.default_rng([seed, k])
+    exs = [synth_example(rng, n) for _ in range(batch)]
+    return collate(exs)
+
+
+def collate(exs: list[dict]) -> dict:
+    b = len(exs)
+    return {
+        "noisy": torch.as_tensor(np.stack([e["noisy"] for e in exs])),
+        "clean": torch.as_tensor(np.stack([e["clean"] for e in exs])),
+        "replay": torch.as_tensor([bool(e.get("meta", {}).get("replay", e.get("replay", False))) for e in exs]),
+        "near_silent": torch.as_tensor([bool(e.get("meta", {}).get("near_silent", e.get("near_silent", False)))
+                                        for e in exs]),
+        "owner_ivs": [list(e.get("meta", e).get("owner_ivs", [])) for e in exs][:b],
+        "interf_ivs": [list(e.get("meta", e).get("interf_ivs", [])) for e in exs][:b],
+    }
+
+
+class SyntheticSource:
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.n = int(cfg.data.seg_s * SR)
+        self.build_id = f"synthetic-seed{cfg.run.seed}"
+        self.num_workers = 0
+
+    def train_batches(self, start_batch: int = 0):
+        k = start_batch
+        while True:
+            yield synth_batch(self.cfg.run.seed, k, self.cfg.data.batch, self.n)
+            k += 1
+
+    def dev_batches(self) -> list[dict]:
+        d = self.cfg.data
+        nb = max(1, min(d.dev_batches, -(-d.dev_n // d.batch)))
+        return [synth_batch(d.dev_seed, 10_000_000 + i, d.batch, self.n) for i in range(nb)]
+
+
+# ---------- traindata 的 loader ----------
+
+def import_loader(path: Path = LOADER_PATH):
+    name = "exp025_loader"
+    if name in sys.modules:
+        return sys.modules[name]
+    if not path.exists():
+        raise FileNotFoundError(f"traindata 的 loader 还没落地：{path}")
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class LoaderSource:
+    def __init__(self, cfg, mod=None):
+        self.cfg = cfg
+        self.mod = mod or import_loader()
+        d = cfg.data
+        if not d.shard_root or not d.recipe:
+            raise ValueError("data.kind = loader 时必须给 data.shard_root 与 data.recipe")
+        self.num_workers = d.num_workers
+        self.dev = self.mod.DevSet(d.shard_root, d.recipe, n=d.dev_n, seed=d.dev_seed, seg_s=d.seg_s)
+        self.build_id = getattr(self.dev, "build_id", None) or "unknown"
+
+    def train_batches(self, start_batch: int = 0):
+        d = self.cfg.data
+        it = self.mod.torch_iterable(d.shard_root, d.recipe, split="train", seed=self.cfg.run.seed,
+                                     seg_s=d.seg_s, start_batch=start_batch, batch_size=d.batch)
+        dl = torch.utils.data.DataLoader(it, batch_size=d.batch, num_workers=d.num_workers,
+                                         collate_fn=collate, persistent_workers=d.num_workers > 0)
+        yield from dl
+
+    def dev_batches(self) -> list[dict]:
+        d = self.cfg.data
+        n = min(len(self.dev), d.dev_batches * d.batch)
+        return [collate([self.dev[j] for j in range(i, min(i + d.batch, n))]) for i in range(0, n, d.batch)]
+
+
+def make_source(cfg):
+    return SyntheticSource(cfg) if cfg.data.kind == "synthetic" else LoaderSource(cfg)
+
+
+def frames_mask(batch: dict, n: int) -> torch.Tensor:
+    """批次的「主说话人单独说话」10 ms 帧掩码 (B, n//160)。"""
+    from losses import owner_only_mask
+    return torch.as_tensor(np.stack([owner_only_mask(o, i, n)
+                                     for o, i in zip(batch["owner_ivs"], batch["interf_ivs"])]))
