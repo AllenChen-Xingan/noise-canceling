@@ -16,6 +16,7 @@ import numpy as np
 from scipy import signal
 
 import pools
+import rooms
 import tracks
 from device_chain import Chain
 from dsp import SR, gated_level_db
@@ -78,6 +79,16 @@ class Scene:
         y = signal.fftconvolve(np.concatenate([pre, x]), h)[L + pad : L + pad + n]
         return self.ch.response(y), rir, att, rsrc
 
+    def point_early(self, x, rir):
+        """同一条 RIR 只留直达 + 前 EARLY_REVERB_MS 毫秒（rooms.early_rir），过同样的第 2–3 步。
+
+        不抽任何随机数（rng_mat / rng_dev 都不碰），所以加这一路不改变其余各轨的任何样本（旧 build 可逐字节重现）。
+        """
+        h, pad, _ = self.ch.source_rir(rooms.early_rir(rir), None)
+        n = len(x)
+        y = signal.fftconvolve(x, h)[pad : pad + n]
+        return self.ch.response(y)
+
     def diffuse(self, x, dist=None, role="diffuse"):
         """扩散声：可选先加同一房间的 RIR（babble、广播、隔墙声），只做扩散场衰减 + 频响。返回 (分轨, rir 出处或 None)。"""
         rsrc = None
@@ -89,6 +100,12 @@ class Scene:
                 return self.ch.response(self.ch.diffuse(d) + t), rsrc
             x = signal.fftconvolve(x, rir.full)[: len(x)]
         return self.ch.response(self.ch.diffuse(x)), rsrc
+
+
+def _scale_factor(x, target_db, level_fn):
+    """_scale_to 用的系数（同一表达式；乘它与 _scale_to 的结果逐位相同）。"""
+    cur = level_fn(x)
+    return 10 ** ((target_db - cur) / 20) if cur > -200 else 1.0
 
 
 def _scale_to(x, target_db, level_fn):
@@ -119,7 +136,9 @@ def make_clip(scene, tier, idx, device):
     owner, orir, _, osrc["rir"] = sc.point(x_dry, owner_dist, 0.0, role="owner")
     L_o = gated_level_db(owner)
     L_owner = L_o  # 主说话人自己的电平；「全留」时 L_o 会改成所有人之和，owner_dry 只含主说话人
-    targets = [{"spk": osrc["spk"], "dist_m": orir.dist_m, "azimuth_deg": 0.0, "src": osrc, "x": owner}]
+    # x_early：同一人只留早期混响的版本（早期回声参考轨 owner_early，D99 第 2 条），电平系数与 x 完全相同
+    targets = [{"spk": osrc["spk"], "dist_m": orir.dist_m, "azimuth_deg": 0.0, "src": osrc, "x": owner,
+                "x_early": sc.point_early(x_dry, orir)}]
     polarity = S.get("polarity", "suppress")
     if polarity == "preserve_all":
         co = S["co_targets"]
@@ -127,8 +146,11 @@ def make_clip(scene, tier, idx, device):
         for _ in range(k):
             xd, src = tracks.co_target_track(rng_mat, n, gap, {t["spk"] for t in targets}, SCENES["lead_silence_s"])
             y, r, _, src["rir"] = sc.point(xd, _u(rng_mat, co["dist_m"]), _u(rng_mat, co["az_deg"]), role="target")
-            y = _scale_to(y, L_o + _u(rng_mat, co["rel_db"]), gated_level_db)
-            targets.append({"spk": src["spk"], "dist_m": r.dist_m, "azimuth_deg": r.azimuth_deg, "src": src, "x": y})
+            k_lv = _scale_factor(y, L_o + _u(rng_mat, co["rel_db"]), gated_level_db)
+            ye = sc.point_early(xd, r) * k_lv
+            y = y * k_lv
+            targets.append({"spk": src["spk"], "dist_m": r.dist_m, "azimuth_deg": r.azimuth_deg, "src": src, "x": y,
+                            "x_early": ye})
         L_o = gated_level_db(sum(t["x"] for t in targets))  # 「全留」时参照 = 所有要留的人之和
 
     # ---- 干扰声 ----
@@ -222,10 +244,12 @@ def make_clip(scene, tier, idx, device):
     gain = 10 ** (sc.ch.level_gain_db(L_o) / 20)
     for t in targets:
         t["x"] = t["x"] * gain
+        t["x_early"] = t["x_early"] * gain
     for s in sounds:
         s["x"] = s["x"] * gain
     floor = floor * gain
     owner_ref = sum(t["x"] for t in targets)
+    owner_early = sum(t["x_early"] for t in targets)
     noise = sum(s["x"] for s in sounds if not SOUNDS[s["cls"]]["is_speech"]) + floor
     interf = sum((s["x"] for s in speech), np.zeros(n))
     mix_lin = owner_ref + noise + interf
@@ -236,13 +260,14 @@ def make_clip(scene, tier, idx, device):
         owner_ref, noise, interf, mix_lin, floor = (v * head for v in (owner_ref, noise, interf, mix_lin, floor))
         for t in targets:
             t["x"] = t["x"] * head
+            t["x_early"] = t["x_early"] * head
         for s in sounds:
             s["x"] = s["x"] * head
     mix, clipped = sc.ch.clip(mix_lin)
     dry_gain = gain * 10 ** ((L_owner - gated_level_db(x_dry)) / 20)  # 干轨与链后主说话人同电平
     # 干轨按直达声到达时刻后移，和 owner / mix 对齐（最小相位 FIR 的几个样本延迟不补）
     dry = np.concatenate([np.zeros(orir.delay), x_dry])[:n] * dry_gain * head
-    arrays = {"mix": mix, "owner": owner_ref, "owner_dry": dry, "floor": floor, "noise": noise, "interf": interf,
+    arrays = {"mix": mix, "owner": owner_ref, "owner_early": owner_early, "owner_dry": dry, "floor": floor, "noise": noise, "interf": interf,
               "stems": {s["inst"]: s["x"] for s in sounds}}
     meta = {"scene": scene, "tier": tier, "idx": idx, "device": device, "seed": seed, "lang": lang, "polarity": polarity,
             "nominal": nominal, "targets": targets, "sounds": sounds, "chain": {**sc.ch.params, "floor_clamped": bool(floor_clamped),
