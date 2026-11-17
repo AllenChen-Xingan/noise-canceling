@@ -58,7 +58,22 @@ def compare(old_path, new_path):
     same = sum(1 for k, v in old.items() if new.get(k) == v)
     diff = sorted(k for k in old if k in new and new[k] != old[k])
     return {"old": len(old), "new": len(new), "same": same, "differ": len(diff), "missing": sorted(set(old) - set(new))[:50],
-            "extra": sorted(set(new) - set(old))[:50], "differ_first": diff[:50], "ok": same == len(old) == len(new)}
+            "extra": sorted(set(new) - set(old))[:50], "n_extra": len(set(new) - set(old)), "differ_first": diff[:50],
+            "ok": same == len(old)}  # 判据只看旧的 4540 个逐个相同；新代码多出的轨（如早期混响参考轨）单列 extra，不算不过
+
+
+def code_drift():
+    """当前 exp013 代码 / 参数文件和旧 build manifest 记的哈希比：列出变了的文件（变了不一定不过，结果以逐文件哈希为准）。"""
+    import hashlib
+
+    m = json.loads((OLD / "manifest.json").read_text())
+    root = HERE.parents[3]
+    out = []
+    for f, h in {**m["code_sha256"], **m["params_sha256"]}.items():
+        p = (root / f) if "/" in f else (EXP013 / f)
+        if not p.exists() or hashlib.sha256(p.read_bytes()).hexdigest() != h:
+            out.append(f)
+    return out
 
 
 def run(cmd, env):
@@ -94,7 +109,7 @@ def main():
         rep = compare(OLD / "hashes.txt", new / "hashes.txt")
         rep["exclude_equal"] = json.loads((new / "exclude.json").read_text()) == json.loads((OLD / "exclude.json").read_text())
         rep["ok"] = rep["ok"] and rep["exclude_equal"]
-    rep.update({"build": BUILD, "versions": versions(), "version_drift": drift, "fetched": a.fetch, "seconds": round(time.time() - t0, 1),
+    rep.update({"build": BUILD, "versions": versions(), "version_drift": drift, "code_drift": code_drift(), "fetched": a.fetch, "seconds": round(time.time() - t0, 1),
                 "when": time.strftime("%Y-%m-%d %H:%M:%S")})
     REPORTS.mkdir(exist_ok=True)
     out = REPORTS / f"exp013-{time.strftime('%Y%m%d-%H%M%S')}.json"
