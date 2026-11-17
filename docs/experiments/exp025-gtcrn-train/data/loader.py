@@ -81,10 +81,15 @@ class Pools:
         self.root, self.idx, self.split = Path(shard_root), idx, split_
         src = idx["sources"]
 
-        def members(name):
+        def members(name, required=True):
             if name not in src or split_ not in src[name]:
-                raise SystemExit(f"分片里没有 {name} 的 {split_} 份")
+                if required:
+                    raise SystemExit(f"分片里没有 {name} 的 {split_} 份")
+                self.missing.append(name)  # 噪声池里某个来源这一份为空（如时段太短）：跳过，记下
+                return []
             return src[name][split_]["members"]
+
+        self.missing = []
 
         self.speech = [m for s in recipe["speech"]["train"] for m in members(s)]
         self.rir = [m for s in recipe["rir"] for m in members(s)]
@@ -95,12 +100,20 @@ class Pools:
             ms = []
             for it in items:
                 rx = re.compile(it["regex"])
-                ms += [(m, bool(it.get("wind")), it["source"]) for m in members(it["source"]) if rx.search(m["src_path"])]
+                ms += [(m, bool(it.get("wind")), it["source"]) for m in members(it["source"], False) if rx.search(m["src_path"])]
             if ms:
                 self.pools[scene] = ms
         if not self.speech or not self.pools:
             raise SystemExit("人声或噪声池为空：先检查分片与配方 noise_pools 的正则")
         self._fh = {}
+
+    def close(self):
+        for f in self._fh.values():
+            f.close()
+        self._fh = {}
+
+    def __del__(self):
+        self.close()
 
     def read(self, m):
         f = self._fh.get(m["shard"])

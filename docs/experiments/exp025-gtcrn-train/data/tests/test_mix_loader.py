@@ -159,8 +159,8 @@ def tone(path, sec, sr=SR, ch=1, seed=0):
 def make_tree(root):
     for i, spk in enumerate(("100", "200", "300", "400", "500", "600", "700", "800", "900", "1000")):
         tone(root / f"train-raw/librispeech/LibriSpeech/train-clean-100/{spk}/1/{spk}-1-0000.flac", 2.5, seed=i)
-    tone(root / "train-raw/qut-noise/QUT-NOISE/STREET-CITY-1.wav", 4, sr=48000, ch=2, seed=11)
-    tone(root / "train-raw/qut-noise/QUT-NOISE/CAFE-CAFE-1.wav", 4, sr=48000, ch=2, seed=12)
+    tone(root / "train-raw/qut-noise/QUT-NOISE/STREET-CITY-1.wav", 8, sr=48000, ch=2, seed=11)
+    tone(root / "train-raw/qut-noise/QUT-NOISE/CAFE-CAFE-1.wav", 8, sr=48000, ch=2, seed=12)
     for j in range(10):
         tone(root / f"train-raw/tum-wind/wind/rec{j}.wav", 1, seed=20 + j)
     d = root / "train-raw/openslr28/RIRS_NOISES/simulated_rirs/smallroom"
@@ -209,7 +209,7 @@ class EndToEnd(unittest.TestCase):
         self.assertIn("train", self.idx["sources"]["qut-noise"])
         p = loader.Pools(self.shards, json.loads(self.recipe.read_text()), self.idx, "train")
         x = p.read(self.idx["sources"]["qut-noise"]["train"]["members"][0])
-        self.assertEqual(len(x), 2 * SR)  # 4 s 的前 50% = 2 s，48 kHz 立体声 → 16 kHz 单声道
+        self.assertEqual(len(x), 4 * SR)  # 8 s 的前 50% = 4 s，48 kHz 立体声 → 16 kHz 单声道
 
     def test_build_json_valid(self):
         bj = json.loads((self.builds / self.bid / "build.json").read_text())
