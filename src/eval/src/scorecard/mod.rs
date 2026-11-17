@@ -7,6 +7,7 @@
 pub mod aggregate;
 pub mod card;
 pub mod compare;
+pub mod compare_out;
 pub mod early;
 pub mod load;
 pub mod rules;
