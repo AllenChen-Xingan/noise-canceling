@@ -1,0 +1,10 @@
+# trainer 的 Python 依赖。装法（在仓库根）：uv venv --python 3.13 .venv && uv pip install -p .venv -r <本文件>
+# 版本钉死，云上同一份；torch 换版本先跑 tests/test_mps.py（027 第七节：MPS 绕法只在 2.15.0 验过）
+torch==2.15.0
+einops==0.7.0
+numpy
+soundfile
+pyyaml
+onnx
+onnxruntime
+pytest
