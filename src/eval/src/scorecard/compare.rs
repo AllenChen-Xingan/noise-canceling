@@ -152,7 +152,7 @@ fn mean(v: &[f64]) -> Option<f64> {
 }
 
 /// 按片段 id 建索引；同一 id 出现两次（文件里有多个系统、或拼了两个 build）报错。
-pub fn index(rows: &[ClipRow], side: &str) -> Result<BTreeMap<&str, &ClipRow>, String> {
+pub fn index<'a>(rows: &'a [ClipRow], side: &str) -> Result<BTreeMap<&'a str, &'a ClipRow>, String> {
     let mut m = BTreeMap::new();
     for r in rows {
         if m.insert(r.clip.as_str(), r).is_some() {

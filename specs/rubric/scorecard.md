@@ -223,7 +223,16 @@ rubric 的「压噪只在 G1 算」在新成绩单里不再需要：场景测试
 
 | 有早期参考旁列的项 |
 |---|
-@@EARLY_ROWS@@
+| V-ONSET |
+| V-WEAK |
+| V-PUMPV |
+| V-CLICK |
+| V-ESTOI |
+| V-TIMBRE |
+| V-SPLVL |
+| V-TSOS |
+| V-SWALLOW |
+| V-PSE-OVL |
 
 ## 十二、改动记录
 
