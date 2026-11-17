@@ -53,16 +53,17 @@ def synth_batch(seed: int, k: int, batch: int, n: int) -> dict:
 
 
 def collate(exs: list[dict]) -> dict:
-    b = len(exs)
-    return {
-        "noisy": torch.as_tensor(np.stack([e["noisy"] for e in exs])),
-        "clean": torch.as_tensor(np.stack([e["clean"] for e in exs])),
-        "replay": torch.as_tensor([bool(e.get("meta", {}).get("replay", e.get("replay", False))) for e in exs]),
-        "near_silent": torch.as_tensor([bool(e.get("meta", {}).get("near_silent", e.get("near_silent", False)))
-                                        for e in exs]),
-        "owner_ivs": [list(e.get("meta", e).get("owner_ivs", [])) for e in exs][:b],
-        "interf_ivs": [list(e.get("meta", e).get("interf_ivs", [])) for e in exs][:b],
-    }
+    """单段 dict 拼成批。单段的标记可以在顶层，也可以在 `meta` 里（traindata DevSet 的写法）。"""
+    def tag(e, k, default):
+        return e.get("meta", {}).get(k, e.get(k, default))
+    return normalize({
+        "noisy": np.stack([e["noisy"] for e in exs]),
+        "clean": np.stack([e["clean"] for e in exs]),
+        "replay": [bool(tag(e, "replay", False)) for e in exs],
+        "near_silent": [bool(tag(e, "near_silent", False)) for e in exs],
+        "owner_ivs": [tag(e, "owner_ivs", []) for e in exs],
+        "interf_ivs": [tag(e, "interf_ivs", []) for e in exs],
+    })
 
 
 BATCH_KEYS = ("noisy", "clean", "replay", "near_silent", "owner_ivs", "interf_ivs")
