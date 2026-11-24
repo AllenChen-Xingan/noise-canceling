@@ -10,11 +10,13 @@
   python3 .../fetch.py --root /workspace --only E1,E2,E3   # exp013 原料（ESC-50 与 RIR 走 exp013 fetch.py）
   python3 .../fetch.py --plan                               # 只列要下什么、多大，不联网
   python3 .../fetch.py --head --only A1,A2,A3,A4,A5         # 只核服务器报的大小，不下载
-  开下载前会查盘：还要的空间（含解压峰值 ≈ 包 × 2）大于剩余空间就停
+  开下载前会查盘：还要的空间（含解压峰值 ≈ 包 × 2）大于还能用的就停。网络盘上「还能用」= cloud/config.py 的配额 − du 已用
+  （df 在 RunPod 网络盘上报的是整个集群的剩余，不能用）
 """
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import sys
 import tarfile
@@ -161,12 +163,55 @@ def need_bytes(groups, only, root):
     return int(n)
 
 
-def check_space(groups, only, root):
-    free = shutil.disk_usage(root).free
+CLOUD_CONFIG = HERE.parent / "cloud" / "config.py"  # 网络盘配额与挂载点的正本（cloudrun 管）
+
+
+def load_cloud_config(path=CLOUD_CONFIG):
+    """按路径加载 cloud/config.py（只有常量）。读不到就报错，不猜配额。"""
+    import importlib.util
+
+    p = Path(path)
+    if not p.exists():
+        raise SystemExit(f"找不到网络盘配额正本 {p}：等 cloudrun 的分支合进来再跑下载")
+    spec = importlib.util.spec_from_file_location("vdn_cloud_config", p)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+def used_bytes(root):
+    """du 口径：root 下所有文件实际占的块（st_blocks × 512；文件系统不报块数时用字节数）。不跟随链接。"""
+    n = 0
+    for d, _, files in os.walk(root):
+        for f in files:
+            try:
+                st = os.lstat(os.path.join(d, f))
+            except FileNotFoundError:
+                continue
+            n += st.st_blocks * 512 if getattr(st, "st_blocks", 0) else st.st_size
+    return n
+
+
+def check_space(groups, only, root, config_path=CLOUD_CONFIG):
+    """返回 (还要, 还能用, 口径)。
+    root 是网络盘挂载点（config.VOLUME_MOUNT）时：df 报的是整个集群的剩余（cloudrun 实测 158 TB），不可信，
+    改用「配额 VOLUME_SIZE_GB − du 已用」当还能用的量；同时仍要求不超过 df 的剩余。其他盘只看 df。"""
     need = need_bytes(groups, only, root)
+    free = shutil.disk_usage(root).free
+    mode = "df"
+    cfg = load_cloud_config(config_path) if Path(config_path).exists() or _is_volume(root) else None
+    if cfg is not None and Path(root).resolve() == Path(cfg.VOLUME_MOUNT).resolve():
+        quota = int(cfg.VOLUME_SIZE_GB * 1e9)  # 按十进制 GB 算（比 GiB 小，偏保守）
+        free = min(free, quota - used_bytes(root))
+        mode = f"配额 {cfg.VOLUME_SIZE_GB} GB − du 已用"
     if need > free:
-        raise SystemExit(f"盘不够：还要约 {need / 1e9:.1f} GB（含解压峰值），{root} 只剩 {free / 1e9:.1f} GB")
-    return need, free
+        raise SystemExit(f"盘不够：还要约 {need / 1e9:.1f} GB（含解压峰值），{root} 只剩 {free / 1e9:.1f} GB（{mode}）")
+    return need, free, mode
+
+
+def _is_volume(root):
+    """config.py 还没合进来时，按惯用挂载点 /workspace 认出网络盘——认出来就必须读到配额正本，读不到就停（认不出按最严处理）。"""
+    return Path(root).resolve() == Path("/workspace").resolve()
 
 
 def head(groups, only):
@@ -219,8 +264,8 @@ def main():
         raise SystemExit("本机不下训练数据（D88 · D97）：请在云机器上跑；只看清单用 --plan")
     if not a.root:
         raise SystemExit("要给 --root（云上网络盘挂载点）")
-    need, free = check_space(groups, only, a.root)
-    print(f"盘：还要约 {need / 1e9:.1f} GB，剩 {free / 1e9:.1f} GB", flush=True)
+    need, free, mode = check_space(groups, only, a.root)
+    print(f"盘：还要约 {need / 1e9:.1f} GB，还能用 {free / 1e9:.1f} GB（{mode}）", flush=True)
     fetched = load_fetched()
     try:
         for gid in only:

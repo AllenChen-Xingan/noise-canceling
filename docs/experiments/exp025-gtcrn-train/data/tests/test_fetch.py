@@ -191,13 +191,48 @@ class Space(unittest.TestCase):
             self.assertEqual(fetch.need_bytes(g, ["X"], d), 10**6)
             g["X"]["files"][1]["bytes"] = 10**18
             with self.assertRaises(SystemExit):
-                fetch.check_space(g, ["X"], d)
+                fetch.check_space(g, ["X"], d, config_path=Path(d) / "无")
 
-    def test_first_batch_fits_150gb_volume(self):
-        """D96：网络盘 150 GB；第一批含解压峰值要放得下。"""
-        g = fetch.load_sources()
+    def fake_config(self, d, mount, gb):
+        p = Path(d) / "config.py"
+        p.write_text(f'VOLUME_SIZE_GB = {gb}\nVOLUME_MOUNT = "{mount}"\n')
+        return p
+
+    def test_quota_minus_du_on_volume(self):
+        """挂载点 = 网络盘时，按「配额 − du 已用」判；df 很大也不算数（cloudrun 2026-11-24 实测 df 报 158 TB）。"""
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as vol:
+            (Path(vol) / "old.bin").write_bytes(b"x" * 3_000_000)
+            cfg = self.fake_config(d, vol, 0.004)  # 配额 4 MB
+            g = {"X": {"files": [{"name": "a.ogg", "extract": "none", "dest": "a.ogg", "bytes": 500_000}]}}
+            need, free, mode = fetch.check_space(g, ["X"], vol, config_path=cfg)
+            self.assertIn("配额", mode)
+            self.assertLessEqual(free, 4_000_000 - 3_000_000)
+            g["X"]["files"][0]["bytes"] = 1_500_000  # 已用 3 MB + 1.5 MB > 4 MB
+            with self.assertRaises(SystemExit):
+                fetch.check_space(g, ["X"], vol, config_path=cfg)
+
+    def test_other_disk_uses_df(self):
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as other:
+            cfg = self.fake_config(d, "/no/such/mount", 0.000001)
+            g = {"X": {"files": [{"name": "a.ogg", "extract": "none", "dest": "a.ogg", "bytes": 500_000}]}}
+            self.assertEqual(fetch.check_space(g, ["X"], other, config_path=cfg)[2], "df")
+
+    def test_used_bytes_counts_files(self):
         with tempfile.TemporaryDirectory() as d:
-            self.assertLess(fetch.need_bytes(g, ["A1", "A2", "A3", "A4", "A5"], d), 150e9)
+            (Path(d) / "s").mkdir()
+            (Path(d) / "s/a").write_bytes(b"x" * 100_000)
+            self.assertGreaterEqual(fetch.used_bytes(d), 100_000)
+
+    def test_workspace_without_config_refused(self):
+        with self.assertRaises(SystemExit):
+            fetch.load_cloud_config(Path("/no/such/config.py"))
+
+    def test_real_cloud_config_quota(self):
+        """配额正本是 cloud/config.py（cloudrun 的分支，未合进本分支前这条会红）：第一批含解压峰值要放得下。"""
+        cfg = fetch.load_cloud_config()
+        self.assertEqual(cfg.VOLUME_MOUNT, "/workspace")
+        with tempfile.TemporaryDirectory() as d:
+            self.assertLess(fetch.need_bytes(fetch.load_sources(), ["A1", "A2", "A3", "A4", "A5", "E2"], d), cfg.VOLUME_SIZE_GB * 1e9)
 
 
 class Head(unittest.TestCase):
