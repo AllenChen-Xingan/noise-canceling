@@ -11,6 +11,7 @@ model:
   attn: true
   film: true
   init: official
+  bn: frozen
 data:
   kind: loader
   shard_root: ""
@@ -22,6 +23,7 @@ data:
   dev_seed: 12345
   dev_batches: 20
   calib_batches: 200
+  timeout_s: 600.0
 optim:
   lr: 1.0e-4
   warmup_steps: 500

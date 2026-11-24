@@ -32,6 +32,7 @@ class ModelCfg:
     attn: bool = True
     film: bool = True
     init: str = "official"  # official = 官方 DNS3 起点；random = 随机初始化（只给冒烟对照用）
+    bn: str = "frozen"  # frozen = 批归一化用起点统计量、不更新（训练与推理一致）；train = 照官方训练模式（扫参选项）
 
 
 @dataclass
@@ -46,6 +47,7 @@ class DataCfg:
     dev_seed: int = 12345
     dev_batches: int = 20  # 每次开发评估用几批
     calib_batches: int = 200  # 权重 "auto" 标定用几批开发数据（027）
+    timeout_s: float = 600.0  # DataLoader 取一批的最长等待；worker 卡住时停下而不是一直计费
 
 
 @dataclass
@@ -145,6 +147,8 @@ def to_dict(cfg: Config) -> dict[str, Any]:
 def validate(cfg: Config) -> None:
     if cfg.model.variant not in ("A", "B"):
         raise ValueError("model.variant 只能是 A 或 B")
+    if cfg.model.bn not in ("frozen", "train"):
+        raise ValueError("model.bn 只能是 frozen 或 train")
     if cfg.model.init not in ("official", "random"):
         raise ValueError("model.init 只能是 official 或 random")
     if cfg.data.kind not in ("loader", "synthetic"):
