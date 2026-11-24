@@ -82,8 +82,8 @@ class RunDir:
         text = json.dumps(rec, ensure_ascii=False, indent=2).encode()
         _atomic_write(self.run_json, lambda f: f.write(text))
 
-    def beat(self, step: int, billed_s: float) -> None:
-        text = json.dumps({"step": step, "billed_s": billed_s}).encode()
+    def beat(self, step: int, billed_s: float, usd: float = 0.0) -> None:
+        text = json.dumps({"step": step, "billed_s": billed_s, "usd": usd}).encode()
         _atomic_write(self.root / "heartbeat.json", lambda f: f.write(text))
 
     def heartbeat(self) -> dict:

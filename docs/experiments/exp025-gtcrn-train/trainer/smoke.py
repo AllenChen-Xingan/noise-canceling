@@ -120,10 +120,11 @@ def check_known_dev(cfg, dev, device, known: dict, tol: float) -> dict:
 
 
 def timing(cfg, source, device, steps: int) -> dict:
-    m = _model(cfg, device).train()
+    m = _model(cfg, device)
+    train.set_train(m, cfg)  # 与正式训练同一模式
     crit = losses.TrainLoss(losses.LossCfg(w_lvl=1.0, w_on=1.0)).to(device)
     opt = torch.optim.Adam([p for p in m.parameters() if p.requires_grad], lr=1e-5)
-    it = source.train_batches(0)
+    it = source.train_batches(0, device=device)  # 显卡上走 GPU 混音，与正式训练同一条路（codex 第 1 轮 #7）
     t_data, t_step = [], []
     ru0 = resource.getrusage(resource.RUSAGE_SELF)
     w0 = time.perf_counter()

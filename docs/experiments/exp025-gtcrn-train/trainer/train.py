@@ -172,11 +172,38 @@ class _Signals:
             signal.signal(sig, h)
 
 
-def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = None) -> dict:
-    """跑到停下为止，返回停下记录。max_wall_s / _signals 只给测试用。
+HEARTBEAT_S = 30.0
 
-    计时（billed_s）从本函数开始算，含建模型、取开发份、标定；续训时接上次检查点与心跳文件里较大的那个，
-    所以被抢占时「上次检查点之后」那段也计入花费（自审 P1）。上限按 billed_s 判。"""
+
+class _Beat:
+    """后台线程每 HEARTBEAT_S 秒写一次心跳（步数 · 计费秒 · 累计美元），取数卡住、算标定时也照写。
+    被抢占时最多漏记一个间隔（≤ 30 s）；机器的真实账单归 cloudrun（codex 第 1 轮 #4）。心跳只由这个线程写。"""
+
+    def __init__(self, rd, snap, every: float):
+        self.rd, self.snap, self.every = rd, snap, every
+        self.stop = threading.Event()
+        self.th = threading.Thread(target=self._run, daemon=True)
+
+    def _run(self):
+        while not self.stop.wait(self.every):
+            self.rd.beat(*self.snap())
+
+    def __enter__(self):
+        self.th.start()
+        return self
+
+    def __exit__(self, *exc):
+        self.stop.set()
+        self.th.join()
+        self.rd.beat(*self.snap())
+
+
+def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = None,
+          _beat_s: float = HEARTBEAT_S) -> dict:
+    """跑到停下为止，返回停下记录。max_wall_s / _signals / _beat_s 只给测试用。
+
+    计费（billed_s · usd）从本函数开始算，含建模型、取开发份、标定；续训时接上次检查点与心跳里较大的那个。
+    美元按段累计：每段只按本段单价乘本段时长，改单价不追溯（codex 第 1 轮 #6）。上限按这两个数判。"""
     t_proc = time.monotonic()
     device = resolve_device(cfg.device)
     cfg_dict = cfgmod.to_dict(cfg)
@@ -196,6 +223,9 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
     ema = EMA(model, cfg.ema.decay) if cfg.ema.enabled else None
 
     st, last = rd.load_latest(device)
+    if st is None and (rd.run_json.exists() or any(rd.ckpt_dir.glob("step-*.pt"))):
+        # 已有运行却一份检查点都读不出：不当成新运行（会清零花费、覆盖 run.json、跳过训崩检查，codex 第 1 轮 #5）
+        raise RuntimeError(f"{rd.root} 已有运行记录，但没有可读的检查点（见 ckpt/bad_ckpt.txt）；请人工处理或换 run.name")
     if st is not None:
         rec = rd.read()
         why = check_resume(rec, cfg_dict, source.build_id)
@@ -209,29 +239,36 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
         if sp_ref is not None:
             sp_ref = {k: v.to(device) for k, v in st["sp_ref"].items()}
         step, calib = st["step"], st["calib"]
-        billed0 = max(st["billed_s"], rd.heartbeat().get("billed_s", 0.0))
+        hb = rd.heartbeat()
+        billed0 = max(st["billed_s"], hb.get("billed_s", 0.0))
+        usd0 = max(st.get("usd", 0.0), hb.get("usd", 0.0))
         rec["config"] = cfg_dict
         rec["resumes"].append({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "from_step": step,
                                "from_ckpt": last.name, "billed_s_before": round(billed0, 2),
                                "env": env_info(), "prev_stop": rec.pop("stop", None)})
     else:
         calib = calibrate(model, cfg, source.dev_batches(cfg.data.calib_batches), device)
-        step, billed0 = 0, 0.0
+        step, billed0, usd0 = 0, 0.0, 0.0
         pcnt = models.param_counts(model)
         rec = start_record(cfg_dict, source.build_id, source.num_workers,
                            {"device": str(device), "params": pcnt["trainable"], "params_fixed": pcnt["fixed"],
                             "calib": calib, "env": env_info()})
     rd.write(rec)
+    lim, sc = cfg.limits, cfg.schedule
     crit = losses.TrainLoss(loss_cfg(cfg, calib["lvl"]["weight"], calib["on"]["weight"])).to(device)
     kw = {"sp_ref": sp_ref, "teacher": teacher}
 
     def billed():
         return billed0 + time.monotonic() - t_proc
 
+    def usd():
+        return usd0 + (time.monotonic() - t_proc) / 3600 * lim.usd_per_hour
+
     def state():
         return {"model": model.state_dict(), "optim": opt.state_dict(), "sched": sched.state_dict(),
                 "ema": ema.state_dict() if ema else None, "sp_ref": sp_ref, "step": step,
-                "billed_s": billed(), "calib": calib, "config": cfg_dict, "variant": cfg.model.variant}
+                "billed_s": billed(), "usd": usd(), "calib": calib, "config": cfg_dict,
+                "variant": cfg.model.variant}
 
     def dev_eval():
         row = {"step": step, "dev": evaluate(model, crit, dev, device, cfg, **kw)}
@@ -244,19 +281,17 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
 
     if st is None:
         rd.save(state(), 0, cfg.schedule.keep_last)
-    lim, sc = cfg.limits, cfg.schedule
     t_start = time.monotonic()
     reason, last_eval = None, step
     set_train(model, cfg)
     batches = source.train_batches(start_batch=step, device=device)
-    with (_signals or _Signals()) as sigs:
+    with (_signals or _Signals()) as sigs, _Beat(rd, lambda: (step, billed(), usd()), _beat_s):
         while True:
-            hours = billed() / 3600
             if step >= sc.max_steps:
                 reason = "max_steps"
-            elif hours >= lim.max_hours:
+            elif billed() / 3600 >= lim.max_hours:
                 reason = "max_hours"
-            elif hours * lim.usd_per_hour >= lim.max_usd:
+            elif usd() >= lim.max_usd:
                 reason = "max_usd"
             elif sigs.got:
                 reason = f"signal:{sigs.got}"
@@ -284,6 +319,10 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
             opt.zero_grad(set_to_none=True)
             loss.backward()
             gn = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.optim.grad_clip)
+            if not torch.isfinite(gn):  # 损失有限、梯度却不是：不更新，否则 Adam 会把 NaN 写进权重（codex 第 1 轮 #2）
+                reason = "nonfinite"
+                rec["crash"] = {"step": step, "logs": logs, "grad_norm": float(gn)}
+                break
             opt.step()
             sched.step()
             if ema is not None:
@@ -291,21 +330,18 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
             step += 1
             if step % sc.log_every == 0 or step == 1:
                 rd.log({"step": step, "lr": sched.get_last_lr()[0], "billed_s": round(billed(), 2),
-                        "grad_norm": float(gn), **logs})
-                rd.beat(step, billed())
+                        "usd": round(usd(), 4), "grad_norm": float(gn), **logs})
             if step % sc.eval_every == 0:
                 dev_eval()
                 last_eval = step
             if step % sc.ckpt_every == 0:
                 rd.save(state(), step, sc.keep_last)
-    if reason != "nonfinite":
-        if step > last_eval:  # 停在两次评估之间（上限、抢占）时补一次，最终权重也有开发读数
-            dev_eval()
-        rd.save(state(), step, sc.keep_last)
-    b = billed()
-    rd.beat(step, b)
-    rec["stop"] = {"reason": reason, "step": step, "billed_s": round(b, 2),
-                   "usd_est": round(b / 3600 * lim.usd_per_hour, 4), "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+        if reason != "nonfinite":
+            rd.save(state(), step, sc.keep_last)  # 先存：被抢占时可能只剩几秒（codex 第 1 轮 #3）
+            if reason == "max_steps" and step > last_eval:  # 只在正常跑完时补评估；上限 / 信号时不再花时间
+                dev_eval()
+    rec["stop"] = {"reason": reason, "step": step, "billed_s": round(billed(), 2), "usd": round(usd(), 4),
+                   "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
     rd.write(rec)
     return rec["stop"]
 
