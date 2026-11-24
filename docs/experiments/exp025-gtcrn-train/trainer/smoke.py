@@ -4,7 +4,7 @@
 
 1. **初始损失合理**（034 修正：微调时看「等于原检查点的损失」，不看随机初始化的理论值）：
    B 零初始化时与 A 在同一批上的损失相同（相对差 ≤ 1e-5），且低于随机初始化模型的损失
-2. **单批能过拟合**：同一批反复训 overfit_steps 步，把「初值到完美输出损失」的距离走完 ≥ 一半；B 的注意力层要动过
+2. **单批能过拟合**：同一批反复训 overfit_steps 步，把「初值到近乎完美输出（目标 + 40 dB 噪声）损失」的距离走完 ≥ 一半；B 的注意力层要动过
 3. **原检查点读数复现**：起点权重在官方样例 `mix.wav` 上的输出与官方 `enh.wav` 最大差 ≤ 2 个 16 位量化步（2/32768）；
    云上另可用 `--known-dev` 给出开发份已知读数比对（evalcmp 出数后接）
 4. **耗时**：正式配置下每步墙钟与 CPU 时间、进程 CPU 占用（不判过线，只记；D96 要看 CPU 是不是瓶颈）
@@ -60,9 +60,24 @@ def check_init(cfg, batch, device) -> dict:
             "rule": "B 与 A 相对差 ≤ 1e-5，且起点损失 < 随机初始化"}
 
 
+NEAR_PERFECT_SNR_DB = 40.0
+
+
+def near_perfect_loss(crit, clean, fr, snr_db: float = NEAR_PERFECT_SNR_DB, seed: int = 0) -> float:
+    """「近乎完美」输出（目标 + 低 snr_db 的白噪声）的损失，当过拟合判据的下限。
+
+    不用「输出恰好等于目标」：那时 SI-SNR 项被官方的 1e-8 分母下限顶成约 −8，下限约 −10，任何训练都到不了
+    （2026-11-24 本机冒烟实测：下限 −10.04，150 步走到 −0.92 只占 37%）。40 dB 是达得到的参照（AI 定）。"""
+    g = torch.Generator(device="cpu").manual_seed(seed)
+    noise = torch.randn(clean.shape, generator=g).to(clean.device)
+    p_c = clean.pow(2).mean(dim=1, keepdim=True)
+    noise = noise * torch.sqrt(p_c / 10 ** (snr_db / 10)) / noise.pow(2).mean(dim=1, keepdim=True).sqrt()
+    return crit(losses.stft(clean + noise), clean, fr)[0].item()
+
+
 def overfit_pass(first: float, last: float, floor: float) -> bool:
-    """单批过拟合判据：把「初值到完美输出的距离」走完至少一半，即 (first − last) / (first − floor) ≥ 0.5。
-    floor = 输出恰好等于目标时的损失。不按 |初值| 归一：SI-SNR 项是负对数，总损失会跨零（自审 P2）。"""
+    """单批过拟合判据：把「初值到近乎完美输出（40 dB）损失」的距离走完至少一半，即 (first − last) / (first − floor) ≥ 0.5。
+    不按 |初值| 归一：SI-SNR 项是负对数，总损失会跨零（自审 P2）。"""
     span = first - floor
     return bool(np.isfinite(last) and span > 0 and (first - last) / span >= 0.5)
 
@@ -76,7 +91,7 @@ def check_overfit(cfg, batch, device, steps: int, lr: float) -> dict:
     with torch.no_grad():
         clean = batch["clean"].to(device)
         fr = train.frames_mask(batch, clean.shape[1]).to(device)
-        floor = crit(losses.stft(clean), clean, fr)[0].item()
+        floor = near_perfect_loss(crit, clean, fr)
     attn0 = m.attn.out.weight.detach().clone() if getattr(m, "attn", None) is not None else None
     opt = torch.optim.Adam([p for p in m.parameters() if p.requires_grad], lr=lr)
     traj = []
@@ -92,7 +107,7 @@ def check_overfit(cfg, batch, device, steps: int, lr: float) -> dict:
     return {"pass": ok, "first": traj[0], "last": traj[-1], "floor": floor,
             "drop_frac_of_span": (traj[0] - traj[-1]) / span if span > 0 else None,
             "attn_out_max_change": moved, "steps": steps, "lr": lr,
-            "rule": "(初值 − 终值) / (初值 − 完美输出的损失) ≥ 0.5；B 的注意力输出层权重要动过"}
+            "rule": "(初值 − 终值) / (初值 − 近乎完美输出（目标 + 40 dB 白噪声）的损失) ≥ 0.5；B 的注意力输出层权重要动过"}
 
 
 def check_reproduce(device) -> dict:

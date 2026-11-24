@@ -80,3 +80,18 @@ def test_export_cli_writes_report(tmp_path):
     assert export.main(["--official", "--out", str(out)]) == 0
     rep = json.loads(out.with_suffix(".json").read_text())
     assert rep["variant"] == "A" and rep["parity"]["pass"]
+
+
+
+def test_near_perfect_floor_is_reachable_and_ordered(tmp_path):
+    """下限要介于「原样输出带噪混合」与「恰好等于目标」之间，且离后者很远（后者被 1e-8 顶成不可达）。"""
+    import losses as L
+    cfg = _cfg(tmp_path)
+    b = train.make_source(cfg).dev_batches()[0]
+    clean = b["clean"]
+    fr = train.frames_mask(b, clean.shape[1])
+    crit = L.TrainLoss(L.LossCfg())
+    exact = crit(L.stft(clean), clean, fr)[0].item()
+    near = smoke.near_perfect_loss(crit, clean, fr)
+    noisy = crit(L.stft(b["noisy"]), clean, fr)[0].item()
+    assert exact < near < noisy and near - exact > 3.0
