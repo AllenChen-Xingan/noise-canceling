@@ -26,6 +26,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header("Content-Length", str(len(BLOB)))
+        self.send_header("Accept-Ranges", "bytes")
+        self.end_headers()
+
     def do_GET(self):
         cls = type(self)
         cls.calls.append(self.headers.get("Range"))
@@ -173,6 +179,35 @@ class Extract(unittest.TestCase):
             t.addfile(ti, io.BytesIO(b"abc"))
         fetch.extract(arc, self.d / "out", "tar")
         self.assertEqual((self.d / "out/LibriSpeech/x.txt").read_bytes(), b"abc")
+
+
+class Space(unittest.TestCase):
+    def test_need_and_check(self):
+        g = {"X": {"files": [{"name": "a.zip", "extract": "zip", "dest": "x", "bytes": 10**9}, {"name": "b.ogg", "extract": "none", "dest": "y/b.ogg", "bytes": 10**6}]}}
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(fetch.need_bytes(g, ["X"], d), int(10**9 * fetch.PEAK_FACTOR + 10**6))
+            (Path(d) / "x").mkdir()
+            (Path(d) / "x/.done-a.zip").write_text("s")
+            self.assertEqual(fetch.need_bytes(g, ["X"], d), 10**6)
+            g["X"]["files"][1]["bytes"] = 10**18
+            with self.assertRaises(SystemExit):
+                fetch.check_space(g, ["X"], d)
+
+    def test_first_batch_fits_150gb_volume(self):
+        """D96：网络盘 150 GB；第一批含解压峰值要放得下。"""
+        g = fetch.load_sources()
+        with tempfile.TemporaryDirectory() as d:
+            self.assertLess(fetch.need_bytes(g, ["A1", "A2", "A3", "A4", "A5"], d), 150e9)
+
+
+class Head(unittest.TestCase):
+    def test_head_size_match(self):
+        s = Server()
+        try:
+            g = {"X": {"files": [{"name": "b", "url": s.url, "bytes": len(BLOB)}, {"name": "c", "url": s.url, "bytes": 5}]}}
+            self.assertEqual(fetch.head(g, ["X"]), ["c"])
+        finally:
+            s.close()
 
 
 class Sources(unittest.TestCase):

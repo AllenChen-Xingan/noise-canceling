@@ -9,10 +9,13 @@
   python3 docs/experiments/exp025-gtcrn-train/data/fetch.py --root /workspace --only A1,A2,A3,A4,A5
   python3 .../fetch.py --root /workspace --only E1,E2,E3   # exp013 原料（ESC-50 与 RIR 走 exp013 fetch.py）
   python3 .../fetch.py --plan                               # 只列要下什么、多大，不联网
+  python3 .../fetch.py --head --only A1,A2,A3,A4,A5         # 只核服务器报的大小，不下载
+  开下载前会查盘：还要的空间（含解压峰值 ≈ 包 × 2）大于剩余空间就停
 """
 import argparse
 import hashlib
 import json
+import shutil
 import sys
 import tarfile
 import time
@@ -144,6 +147,44 @@ def fetch_file(f, root, fetched, keep_archive=False):
     return "下完并解压"
 
 
+PEAK_FACTOR = 2.05  # 压缩包与解压目录同时在盘上的峰值 ≈ 包大小 × 2（音频几乎压不动）+ 余量；解压完删包
+
+
+def need_bytes(groups, only, root):
+    """还要多少盘：没解压完的文件按 包 × PEAK_FACTOR 算（已有 .done 标记的不算）。"""
+    n = 0
+    for gid in only:
+        for f in groups[gid]["files"]:
+            done = Path(root) / f["dest"] / f".done-{f['name']}" if f["extract"] != "none" else Path(root) / f["dest"]
+            if not done.exists():
+                n += f["bytes"] * (PEAK_FACTOR if f["extract"] != "none" else 1.0)
+    return int(n)
+
+
+def check_space(groups, only, root):
+    free = shutil.disk_usage(root).free
+    need = need_bytes(groups, only, root)
+    if need > free:
+        raise SystemExit(f"盘不够：还要约 {need / 1e9:.1f} GB（含解压峰值），{root} 只剩 {free / 1e9:.1f} GB")
+    return need, free
+
+
+def head(groups, only):
+    """只发 HEAD 请求，核 sources.json 里的字节数和服务器报的一致（不下载）。返回不一致的条目。"""
+    bad = []
+    for gid in only:
+        for f in groups[gid]["files"]:
+            req = urllib.request.Request(f["url"], method="HEAD", headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                n = int(r.headers.get("content-length") or 0)
+                rng = r.headers.get("accept-ranges", "")
+            ok = n == f["bytes"]
+            print(f"{gid} {f['name']}：服务器 {n} 字节 {'=' if ok else '≠'} 清单 {f['bytes']}；续传 {rng or '未声明'}", flush=True)
+            if not ok:
+                bad.append(f["name"])
+    return bad
+
+
 def plan(groups, only):
     total = 0
     for gid in only:
@@ -160,6 +201,7 @@ def main():
     ap.add_argument("--root", default="", help="数据根（云上网络盘挂载点）")
     ap.add_argument("--only", default="A1,A2,A3,A4,A5")
     ap.add_argument("--plan", action="store_true", help="只列清单，不联网")
+    ap.add_argument("--head", action="store_true", help="只发 HEAD 请求核大小，不下载（云上开工前先跑这个）")
     ap.add_argument("--keep-archive", action="store_true")
     a = ap.parse_args()
     groups = load_sources()
@@ -170,10 +212,15 @@ def main():
     if a.plan:
         plan(groups, only)
         return
+    if a.head:
+        bad = head(groups, only)
+        sys.exit(1 if bad else 0)
     if sys.platform == "darwin":
         raise SystemExit("本机不下训练数据（D88 · D97）：请在云机器上跑；只看清单用 --plan")
     if not a.root:
         raise SystemExit("要给 --root（云上网络盘挂载点）")
+    need, free = check_space(groups, only, a.root)
+    print(f"盘：还要约 {need / 1e9:.1f} GB，剩 {free / 1e9:.1f} GB", flush=True)
     fetched = load_fetched()
     try:
         for gid in only:
