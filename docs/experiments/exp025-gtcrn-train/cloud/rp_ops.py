@@ -163,6 +163,23 @@ def wait_running(cli: Client, pod_id: str, timeout_s: float = 900,
         sleep(10)
 
 
+def wait_exec_ready(cli: Client, pod_id: str, timeout_s: float = 900,
+                    sleep: Callable[[float], None] = time.sleep,
+                    clock: Callable[[], float] = time.monotonic) -> None:
+    """状态是 RUNNING 不等于容器起好了（拉镜像要几分钟，期间 exec 回 409）：等到 exec 能跑通。"""
+    t0 = clock()
+    while True:
+        try:
+            if exec_cmd(cli, pod_id, ["true"], 10).get("exitCode") == 0:
+                return
+        except ApiError as e:
+            if e.status not in (409, 503):
+                raise
+        if clock() - t0 > timeout_s:
+            raise SystemExit(f"机器 {pod_id} {timeout_s:.0f} 秒内容器没起好")
+        sleep(10)
+
+
 def delete_pod(cli: Client, pod_id: str, ledger_path: str = L.DEFAULT_PATH, note: str = "") -> float:
     """删机并记账；返回估算花费。机器已经没了（404）也照记。"""
     try:

@@ -85,6 +85,7 @@ def bring_up(cli, a):
     print(f"已开机 {p['id']}（{dc}，每小时 {p.get('cost')} 美元，最长 {a.max_hours} 小时）", file=sys.stderr)
     try:
         p = O.wait_running(cli, p["id"])
+        O.wait_exec_ready(cli, p["id"])
     except BaseException:
         O.delete_pod(cli, p["id"], a.ledger, note="没跑起来，自动删")
         raise

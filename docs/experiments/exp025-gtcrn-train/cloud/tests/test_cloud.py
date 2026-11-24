@@ -223,6 +223,20 @@ class TestOps(Base):
         with self.assertRaises(SystemExit):
             O.start_job(self.cli, "pod_9", "echo hi", "k")
 
+    def test_wait_exec_ready_retries_409(self):
+        self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}
+        orig, n = self.fake.route, [0]
+
+        def starting(m, p, q, d):
+            if p.endswith("/exec") and n[0] < 2:
+                n[0] += 1
+                return 409, {"detail": "Pod container is starting, retry shortly"}
+            return orig(m, p, q, d)
+        self.fake.route = starting
+        slept = []
+        O.wait_exec_ready(self.cli, "pod_9", sleep=slept.append)
+        self.assertEqual((n[0], slept), (2, [10, 10]))
+
     def test_wait_running_times_out(self):
         self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "STARTING"}
         ticks = iter(range(0, 10000, 100))
