@@ -27,7 +27,7 @@
 
 ```sh
 cargo build --release --manifest-path parity_rs/Cargo.toml   # 对拍测试要它，第一次约 25 秒
-../../../../.venv/bin/python -m pytest -q tests/              # 116 条通过，3 条等 traindata 的 loader 合入（和小分片）后自动跑
+../../../../.venv/bin/python -m pytest -q tests/              # 117 条通过，4 条等 traindata 的 loader / cloud 合入（和小分片）后自动跑
 python smoke.py --config configs/default.yaml --set data.shard_root=… --set data.recipe=… --out smoke.json
 python train.py --config configs/default.yaml --set run.name=exp025-B-s0 --set data.shard_root=… --set data.recipe=…
 python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b.onnx
