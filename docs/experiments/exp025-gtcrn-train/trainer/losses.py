@@ -176,6 +176,14 @@ def onset_excess_db(out: torch.Tensor, clean: torch.Tensor, skip_leading: bool =
     return torch.stack(exc), torch.as_tensor(valid, device=out.device), counts
 
 
+def si_snr_db(est: torch.Tensor, ref: torch.Tensor) -> torch.Tensor:
+    """尺度不变信噪比（dB），每段一个，只作读数（冒烟报告），不进损失。与官方 HybridLoss 里 SI-SNR 项同一个投影：
+    s_t = ⟨est, ref⟩ ref / ‖ref‖²，结果 = 10·log10(‖s_t‖² / ‖est − s_t‖²)。"""
+    est, ref = est.double(), ref.double()
+    s_t = (est * ref).sum(-1, keepdim=True) * ref / ((ref ** 2).sum(-1, keepdim=True) + 1e-12)
+    return 10 * torch.log10((s_t ** 2).sum(-1) / ((est - s_t) ** 2).sum(-1).clamp(min=1e-20))
+
+
 def masked_mean(x: torch.Tensor, valid: torch.Tensor) -> torch.Tensor:
     """只在有效段上平均；整批无效时为 0（仍挂在计算图上）。"""
     k = valid.sum()

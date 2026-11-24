@@ -82,6 +82,17 @@ def overfit_pass(first: float, last: float, floor: float) -> bool:
     return bool(np.isfinite(last) and span > 0 and (first - last) / span >= 0.5)
 
 
+SI_SNR_GAIN_DB = 6.0  # 过拟合后这一批 SI-SNR 至少提高这么多（大总管 2026-11-24 要的不依赖下限的读数；阈值 AI 定，云上再核）
+
+
+@torch.no_grad()
+def batch_si_snr(m, batch, device) -> float:
+    """这一批的平均 SI-SNR（dB）：模型输出过 istft 后对干净目标。"""
+    noisy, clean = batch["noisy"].to(device), batch["clean"].to(device)
+    out = losses.istft(m(losses.stft(noisy), train.cond_for(m, noisy.shape[0], device)), clean.shape[1])
+    return float(losses.si_snr_db(out, clean).mean())
+
+
 def check_overfit(cfg, batch, device, steps: int, lr: float) -> dict:
     """同一批反复训。B 另要求注意力输出层的权重动过（零初始化，只靠基座也能降一半，自审 P2）。
     条件口子本次喂全零（D98），W·0 对 W 的梯度恒为 0，它不动是预期，不作要求。"""
@@ -93,6 +104,7 @@ def check_overfit(cfg, batch, device, steps: int, lr: float) -> dict:
         fr = train.frames_mask(batch, clean.shape[1]).to(device)
         floor = near_perfect_loss(crit, clean, fr)
     attn0 = m.attn.out.weight.detach().clone() if getattr(m, "attn", None) is not None else None
+    sisnr0 = batch_si_snr(m, batch, device)
     opt = torch.optim.Adam([p for p in m.parameters() if p.requires_grad], lr=lr)
     traj = []
     for _ in range(steps):
@@ -102,12 +114,16 @@ def check_overfit(cfg, batch, device, steps: int, lr: float) -> dict:
         opt.step()
         traj.append(logs["total"])
     moved = None if attn0 is None else float((m.attn.out.weight.detach() - attn0).abs().max())
-    ok = overfit_pass(traj[0], traj[-1], floor) and (moved is None or moved > 0)
+    sisnr1 = batch_si_snr(m, batch, device)
+    gain_ok = bool(np.isfinite(sisnr1) and sisnr1 - sisnr0 >= SI_SNR_GAIN_DB)
+    ok = overfit_pass(traj[0], traj[-1], floor) and (moved is None or moved > 0) and gain_ok
     span = traj[0] - floor
     return {"pass": ok, "first": traj[0], "last": traj[-1], "floor": floor,
             "drop_frac_of_span": (traj[0] - traj[-1]) / span if span > 0 else None,
-            "attn_out_max_change": moved, "steps": steps, "lr": lr,
-            "rule": "(初值 − 终值) / (初值 − 近乎完美输出（目标 + 40 dB 白噪声）的损失) ≥ 0.5；B 的注意力输出层权重要动过"}
+            "attn_out_max_change": moved, "si_snr_db_before": sisnr0, "si_snr_db_after": sisnr1,
+            "si_snr_gain_db": sisnr1 - sisnr0, "si_snr_gain_ok": gain_ok, "steps": steps, "lr": lr,
+            "rule": "(初值 − 终值) / (初值 − 近乎完美输出（目标 + 40 dB 白噪声）的损失) ≥ 0.5；"
+                    f"这一批 SI-SNR 提高 ≥ {SI_SNR_GAIN_DB:g} dB；B 的注意力输出层权重要动过"}
 
 
 def check_reproduce(device) -> dict:

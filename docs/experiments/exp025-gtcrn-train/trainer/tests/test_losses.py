@@ -144,3 +144,16 @@ def test_calibrate_weight():
 def test_stft_roundtrip():
     x = torch.randn(2, N) * 0.1
     assert (losses.istft(losses.stft(x), N) - x).abs().max() < 1e-5
+
+
+
+def test_si_snr_db_textbook_values():
+    """目标 + 20 dB 白噪声 ≈ 20 dB；整体缩放不变；输出 = 目标时很高。"""
+    g = torch.Generator().manual_seed(0)
+    c = torch.randn(2, 32000, generator=g)
+    n = torch.randn(2, 32000, generator=g)
+    n = n * (c.pow(2).mean(1, keepdim=True) / 100).sqrt() / n.pow(2).mean(1, keepdim=True).sqrt()
+    v = losses.si_snr_db(c + n, c)
+    assert torch.allclose(v, torch.full_like(v, 20.0), atol=0.3)
+    assert torch.allclose(losses.si_snr_db(0.1 * (c + n), c), v, atol=1e-6)
+    assert (losses.si_snr_db(c, c) > 100).all()
