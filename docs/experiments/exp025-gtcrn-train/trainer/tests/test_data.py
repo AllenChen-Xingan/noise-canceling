@@ -105,9 +105,28 @@ def test_train_stops_on_batch_misalignment(tmp_path, monkeypatch):
         train.train(_cfg(tmp_path))
 
 
-@pytest.mark.skipif(not data.LOADER_PATH.exists(),
-                    reason="traindata 的 loader.py 还没合入本分支；合入后自动跑。人工步骤：合入 exp/025-train-data 后重跑本文件")
+_NO_LOADER = "traindata 的 loader.py 还没合入本分支；合入后自动跑。人工步骤：合入 exp/025-train-data，备好小分片后重跑本文件"
+
+
+@pytest.mark.skipif(not data.LOADER_PATH.exists(), reason=_NO_LOADER)
 def test_real_loader_importable_and_has_contract():
     mod = data.import_loader()
     for name in ("torch_iterable", "render_on_gpu", "DevSet"):
         assert hasattr(mod, name), name
+
+
+@pytest.mark.skipif(not data.LOADER_PATH.exists() or not __import__("os").environ.get("VDN_LOADER_SHARDS"),
+                    reason=_NO_LOADER + "；另设 VDN_LOADER_SHARDS=<小分片目录> 与 VDN_LOADER_RECIPE=<配方>")
+@pytest.mark.parametrize("workers", [0, 2])
+def test_real_loader_resume_from_batch_k_equals_continuous(tmp_path, workers):
+    """真 loader：从第 k 批起取，与从 0 连续取到第 k 批逐值相同，与 worker 数无关（续训等价的数据那一半）。"""
+    import os
+    cfg = _cfg(tmp_path, kind="loader", shard_root=os.environ["VDN_LOADER_SHARDS"],
+               recipe=os.environ["VDN_LOADER_RECIPE"], num_workers=workers)
+    src = data.LoaderSource(cfg)
+    it = src.train_batches(0, device=torch.device("cpu"))
+    seq = [next(it) for _ in range(3)]
+    again = next(src.train_batches(2, device=torch.device("cpu")))
+    assert [b["batch_index"] for b in seq] == [0, 1, 2] and again["batch_index"] == 2
+    assert torch.equal(seq[2]["noisy"], again["noisy"]) and torch.equal(seq[2]["clean"], again["clean"])
+    assert seq[2]["owner_ivs"] == again["owner_ivs"]

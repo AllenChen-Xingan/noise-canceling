@@ -158,7 +158,13 @@ def validate(cfg: Config) -> None:
         v = getattr(cfg.loss, k)
         if not (v == "auto" or isinstance(v, (int, float)) and v >= 0):
             raise ValueError(f"loss.{k} 应是非负数或 \"auto\"")
-    if cfg.limits.max_hours <= 0 or cfg.limits.max_usd <= 0:
-        raise ValueError("limits 必须为正（不许不设上限）")
+    import math
+    L = cfg.limits
+    for k in ("max_hours", "max_usd"):
+        v = getattr(L, k)
+        if not (isinstance(v, (int, float)) and math.isfinite(v) and v > 0):
+            raise ValueError(f"limits.{k} 必须是有限正数（不许不设上限，也不许 .inf / .nan）")
+    if not (isinstance(L.usd_per_hour, (int, float)) and math.isfinite(L.usd_per_hour) and L.usd_per_hour >= 0):
+        raise ValueError("limits.usd_per_hour 必须是有限非负数（负单价会让累计花费下降）")
     if cfg.schedule.ckpt_every <= 0:
         raise ValueError("schedule.ckpt_every 必须为正")

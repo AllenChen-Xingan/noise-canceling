@@ -49,6 +49,10 @@ def test_unknown_key_and_bad_values_rejected():
         cfgmod.from_dict({"loss": {"w_lvl": "big"}})
     with pytest.raises(ValueError):
         cfgmod.from_dict({"limits": {"max_usd": 0}})
+    for bad in ({"max_usd": float("inf")}, {"max_hours": float("nan")}, {"usd_per_hour": -1.0},
+                {"usd_per_hour": float("nan")}):
+        with pytest.raises(ValueError, match="limits"):
+            cfgmod.from_dict({"limits": bad})
 
 
 def _cfg(tmp_path, **over):
