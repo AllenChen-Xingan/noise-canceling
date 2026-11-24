@@ -118,13 +118,13 @@ def test_limits_hit_during_setup_stop_before_training(tmp_path, over, reason):
 
 
 def test_limit_hit_after_resume_saves_checkpoint(tmp_path):
-    """续训时上限已低于已花的钱：在循环第一次检查时停下，并存检查点。"""
+    """续训时上限已低于已花的钱：准备期就停（不再花钱），报告已落盘的步数。"""
     train.train(_cfg(tmp_path, **{"schedule.max_steps": 2, "limits.usd_per_hour": 100.0}))
     spent = json.loads((tmp_path / "t" / "heartbeat.json").read_text())["usd"]
     stop = train.train(_cfg(tmp_path, **{"schedule.max_steps": 1000, "limits.usd_per_hour": 100.0,
                                          "limits.max_usd": spent * 0.99}))
-    assert stop["reason"] == "max_usd" and stop["step"] == 2
-    assert (tmp_path / "t" / "ckpt" / "last.txt").exists()
+    assert stop["reason"] == "max_usd" and stop["step"] == 2 and stop["phase"] == "setup"
+    assert (tmp_path / "t" / "ckpt" / "last.txt").exists()  # 第一段的检查点还在，下次提高上限即可续
 
 
 def test_nonfinite_stops_without_saving_bad_weights(tmp_path, monkeypatch):

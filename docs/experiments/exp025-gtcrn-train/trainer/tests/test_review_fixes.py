@@ -333,3 +333,65 @@ def test_onset_default_matches_rust_rule(tmp_path):
     assert losses.LossCfg().on_skip_leading is False
     assert cfgmod.Config().loss.on_skip_leading is False
     assert train.loss_cfg(cfgmod.from_dict({"loss": {"on_skip_leading": True}}), 1, 1).on_skip_leading
+
+
+# ---------- codex 第 3 轮 ----------
+
+def test_signal_on_last_step_skips_final_eval(tmp_path, monkeypatch):
+    """最后一步收到信号：停下原因是信号（优先于「步数跑满」），不补评估（codex 第 3 轮 #1）。"""
+    sig = train._Signals()
+    _signal_at(monkeypatch, sig, 3)  # max_steps = 4，取第 4 批（下标 3）时收到
+    stop = train.train(_cfg(tmp_path, **{"schedule.eval_every": 100}), _signals=sig)
+    assert stop["reason"] == "signal:SIGTERM" and stop["step"] == 4
+    rows = [json.loads(x) for x in (tmp_path / "r" / "metrics.jsonl").read_text().splitlines()]
+    assert not any("dev" in r for r in rows)
+
+
+def test_crash_between_record_and_step0_can_rebuild(tmp_path, monkeypatch):
+    """写了 run.json（phase = init）、第 0 步没存下就被杀：重启时按同配置重建，不被永久拒绝（codex 第 3 轮 #2）。"""
+    real = train.RunDir.save
+
+    def die(self, state, step, keep):
+        raise KeyboardInterrupt("模拟被杀")
+
+    monkeypatch.setattr(train.RunDir, "save", die)
+    with pytest.raises(KeyboardInterrupt):
+        train.train(_cfg(tmp_path))
+    assert _rec(tmp_path)["phase"] == "init"
+    monkeypatch.setattr(train.RunDir, "save", real)
+    stop = train.train(_cfg(tmp_path))
+    assert stop["reason"] == "max_steps" and _rec(tmp_path)["phase"] == "training"
+    with pytest.raises(RuntimeError, match="data.batch"):  # 配置变了仍拒绝
+        rec = _rec(tmp_path)
+        rec["phase"] = "init"
+        (tmp_path / "r" / "run.json").write_text(json.dumps(rec))
+        for f in (tmp_path / "r" / "ckpt").glob("step-*.pt"):
+            f.unlink()
+        train.train(_cfg(tmp_path, **{"data.batch": 3}))
+
+
+def test_evaluate_weights_protection_terms_by_valid_segments(monkeypatch):
+    """一批 lvl = 4（2 段有效）、一批整批无效：开发读数是 4，不是 2（codex 第 3 轮 #3）。"""
+    seq = iter([({"hybrid": 1.0, "lvl": 4.0, "lvl_valid": 2, "total": 5.0}),
+                ({"hybrid": 3.0, "lvl": 0.0, "lvl_valid": 0, "total": 3.0})])
+    monkeypatch.setattr(train, "forward_loss", lambda *a, **k: (None, next(seq)))
+    m = torch.nn.Linear(1, 1)
+    out = train.evaluate(m, None, [0, 1], "cpu", cfgmod.from_dict({"device": "cpu"}))
+    assert out["lvl"] == 4.0 and out["hybrid"] == 2.0 and out["lvl_valid"] == 2
+
+
+def test_export_compare_rejects_nonfinite(tmp_path, monkeypatch):
+    """输出里有 inf 时不能因为 inf ≤ inf 判过（codex 第 3 轮 #4）。"""
+    import export
+    m, _ = export.model_from_ckpt(None)
+    out = tmp_path / "a.onnx"
+    export.export(m, out)
+    real_fwd = type(m).forward
+
+    def inf_fwd(self, spec, cond=None):
+        y = real_fwd(self, spec, cond)
+        return y + float("inf")
+
+    monkeypatch.setattr(type(m), "forward", inf_fwd)
+    r = export.compare(m, out)
+    assert not r["pass"] and not r["cases"][0]["finite"]

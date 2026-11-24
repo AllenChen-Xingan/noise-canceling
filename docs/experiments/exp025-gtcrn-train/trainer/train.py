@@ -216,9 +216,9 @@ class _Beat:
         self.rd.beat(*self.snap())
 
 
-def _setup_stop(reason, billed_s, usd) -> dict:
-    """准备期就停：没有检查点、不写 run.json，账只在心跳里。"""
-    return {"reason": reason or "setup_stopped", "step": 0, "phase": "setup",
+def _setup_stop(reason, step, billed_s, usd) -> dict:
+    """准备期就停：不新存检查点、不改 run.json，账只在心跳里；step 是已落盘的进度（新运行为 0）。"""
+    return {"reason": reason or "setup_stopped", "step": step, "phase": "setup",
             "billed_s": round(billed_s, 2), "usd": round(usd, 4)}
 
 
@@ -256,7 +256,7 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
         source = make_source(cfg)
         dev = source.dev_batches(should_stop=stop_reason)
         if dev is None:
-            return _setup_stop(stop_reason(), billed(), usd())
+            return _setup_stop(stop_reason(), acct["step"], billed(), usd())
         model = build_model(cfg, device)
         sp_ref = {k: v.detach().clone() for k, v in model.named_parameters()} if cfg.loss.sp else None
         teacher = None
@@ -304,7 +304,7 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
             cal_dev = source.dev_batches(cfg.data.calib_batches, should_stop=stop_reason)
             calib = None if cal_dev is None else calibrate(model, cfg, cal_dev, device, stop_reason)
             if calib is None:  # 准备期就到上限 / 收到信号：没有检查点可存，只留心跳里的账
-                return _setup_stop(stop_reason(), billed(), usd())
+                return _setup_stop(stop_reason(), acct["step"], billed(), usd())
             step = 0
             pcnt = models.param_counts(model)
             rec = start_record(cfg_dict, source.build_id, source.num_workers,
