@@ -136,7 +136,8 @@ class _Base:
         self.split, self.seed, self.n = split, int(seed), int(round(seg_s * 16000))
         self.p = Pools(shard_root, self.recipe, idx, split)
 
-    def example(self, i):
+    def plan(self, i):
+        """第 i 个样本的 Plan（CPU：读片段 + 抽随机数）；渲染另做（CPU 用 mix.render，GPU 用 gpu_mix.render_batch）。"""
         rng = np.random.default_rng([self.seed, SPLIT_CODE[self.split], int(i)])
         K = self.recipe["knobs"]
         p = self.p
@@ -153,12 +154,17 @@ class _Base:
         else:
             scene = scenes[int(rng.integers(len(scenes)))]
         pool = p.pools[scene]
-        picks = [pool[int(j)] for j in rng.integers(len(pool), size=3)]
+        picks = [pool[int(j)] for j in rng.integers(len(pool), size=mix.MAX_NOISES)]
         noises = [(p.read(m), w, f"{src}:{m['key']}") for m, w, src in picks]
         rm = p.rir[int(rng.integers(len(p.rir)))] if p.rir else None
         ir = p.read(rm) if rm is not None else None
-        noisy, clean, meta = mix.make_example(rng, p.read(sp), noises, ir, K, self.n)
-        meta.update({"i": int(i), "scene": scene, "replay": replay, "speech": sp["key"], "rir": rm["key"] if rm else None})
+        pl = mix.plan(rng, p.read(sp), noises, ir, K, self.n)
+        pl.meta.update({"i": int(i), "scene": scene, "replay": replay, "speech": sp["key"], "rir": rm["key"] if rm else None})
+        return pl
+
+    def example(self, i):
+        """CPU 渲染一段（本机冒烟、对拍用；训练走 GPU）。"""
+        noisy, clean, meta = mix.render(self.plan(i), self.n)
         return {"noisy": noisy, "clean": clean, "meta": meta}
 
 
@@ -196,11 +202,39 @@ def collate(exs):
 
 
 def batch(ds, k, batch_size):
+    """CPU 渲染的第 k 批（对拍用）。"""
     return collate([ds.example(k * batch_size + j) for j in range(batch_size)])
 
 
-def torch_iterable(shard_root, recipe_path, split="train", seed=0, seg_s=4.0, batch_size=32, start_batch=0, **kw):
-    """返回 torch IterableDataset；每次迭代出一整批（numpy 转 torch 张量）。DataLoader(it, batch_size=None, num_workers=N)。"""
+def plan_batch(ds, k, batch_size):
+    """第 k 批的 Plan 打包（numpy），交给 render_on_gpu。只由 (seed, k, batch_size) 决定。"""
+    import gpu_mix
+
+    b = gpu_mix.collate_plans([ds.plan(k * batch_size + j) for j in range(batch_size)])
+    b["batch_index"] = k
+    return b
+
+
+def render_on_gpu(b, device="cuda"):
+    """plan_batch（或 DataLoader 送来的同一结构）→ 渲染好的一批 dict：noisy · clean [B, T] float32（在 device 上）·
+    replay · near_silent bool [B] · owner_ivs · interf_ivs（list，样本下标，左闭右开）· clip_thr · meta · batch_index。"""
+    import torch
+
+    import gpu_mix
+
+    out = gpu_mix.render_batch(b, device=device)
+    out["replay"] = torch.tensor([m["replay"] for m in b["meta"]], device=device)
+    out["near_silent"] = torch.tensor([m["near_silent"] for m in b["meta"]], device=device)
+    out["batch_index"] = int(b["batch_index"])
+    for m, iv, thr in zip(out["meta"], out["owner_ivs"], out["clip_thr"]):
+        m.update(owner_ivs=iv, clip_thr=thr)
+    return out
+
+
+def torch_iterable(shard_root, recipe_path, split="train", seed=0, seg_s=4.0, batch_size=32, start_batch=0, render="gpu", **kw):
+    """返回 torch IterableDataset；DataLoader(it, batch_size=None, num_workers=N)。
+    render="gpu"（默认，D102 后）：worker 只出 plan_batch（读片段 + 随机数），主进程里 loader.render_on_gpu(b, "cuda") 混音；
+    render="cpu"：worker 里直接 CPU 渲染（旧路，对拍与无卡冒烟用）。"""
     import torch
     from torch.utils.data import IterableDataset, get_worker_info
 
@@ -214,11 +248,14 @@ def torch_iterable(shard_root, recipe_path, split="train", seed=0, seg_s=4.0, ba
             wid, nw = (w.id, w.num_workers) if w else (0, 1)
             k = start_batch + wid
             while True:
-                b = batch(self.ds, k, batch_size)
-                for key in ("noisy", "clean", "replay", "near_silent"):
-                    b[key] = torch.from_numpy(b[key])
-                b["batch_index"] = k
-                yield b
+                if render == "gpu":
+                    yield plan_batch(self.ds, k, batch_size)
+                else:
+                    b = batch(self.ds, k, batch_size)
+                    for key in ("noisy", "clean", "replay", "near_silent"):
+                        b[key] = torch.from_numpy(b[key])
+                    b["batch_index"] = k
+                    yield b
                 k += nw
 
     return It()

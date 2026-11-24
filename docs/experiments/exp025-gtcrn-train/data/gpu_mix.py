@@ -100,7 +100,7 @@ def runs(act_row, n):
 def render_batch(b, device="cuda", dtype=torch.float64):
     """b = collate_plans 的输出（numpy）。返回 dict：noisy · clean [B, n]（float32 张量，在 device 上）·
     owner_ivs · interf_ivs（list）· near_silent · replay 由调用方从 meta 取 · clip_thr [B] · meta。"""
-    T = lambda a: torch.as_tensor(np.asarray(a), device=device, dtype=dtype)  # noqa: E731
+    T = lambda a: torch.as_tensor(a, device=device, dtype=dtype)  # noqa: E731  numpy 或 DataLoader 转好的张量都行
     s, ns = T(b["speech"]), T(b["noises"])
     B, M, n = ns.shape
     L = b["rir_full"].shape[1]
@@ -119,7 +119,7 @@ def render_batch(b, device="cuda", dtype=torch.float64):
     noise = noise * (10 ** ((lv - T(b["snr_db"]) - pn) / 20)).unsqueeze(-1)
     g = (10 ** ((T(b["level_dbfs"]) - lv) / 20)).unsqueeze(-1)
     rev, tgt, noise = rev * g, tgt * g, noise * g
-    keep = (~torch.as_tensor(b["silent"], device=device)).to(dtype).unsqueeze(-1)
+    keep = (~torch.as_tensor(b["silent"], device=device, dtype=torch.bool)).to(dtype).unsqueeze(-1)
     rev, tgt = rev * keep, tgt * keep
     noisy = rev + noise
     peak = torch.maximum(noisy.abs().max(-1).values, tgt.abs().max(-1).values).clamp(min=EPS)
@@ -131,10 +131,11 @@ def render_batch(b, device="cuda", dtype=torch.float64):
     clipped = torch.maximum(torch.minimum(noisy, thr.unsqueeze(-1)), -thr.unsqueeze(-1))
     noisy = torch.where((u > 0).unsqueeze(-1), clipped, noisy)
     silent = np.asarray(b["silent"], bool)
+    clip_on = np.asarray(b["clip_u"]) > 0
     thr_np = thr.cpu().numpy()
     return {
         "noisy": noisy.to(torch.float32), "clean": tgt.to(torch.float32),
         "owner_ivs": [[] if silent[i] else runs(act[i], n) for i in range(B)], "interf_ivs": [[] for _ in range(B)],
-        "clip_thr": [round(float(thr_np[i]), 5) if b["clip_u"][i] > 0 else None for i in range(B)],
+        "clip_thr": [round(float(thr_np[i]), 5) if clip_on[i] else None for i in range(B)],
         "meta": b["meta"],
     }
