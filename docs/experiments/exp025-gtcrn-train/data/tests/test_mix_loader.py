@@ -259,10 +259,10 @@ class EndToEnd(unittest.TestCase):
             import torch  # noqa: F401
         except ImportError:
             self.skipTest("本机无 torch；云上必跑（trainer 的对接测试也覆盖）")
-        it = loader.torch_iterable(self.shards, self.recipe, seed=3, batch_size=2, start_batch=0, **self.kw)
+        it = loader.torch_iterable(self.shards, self.recipe, seed=3, batch_size=2, start_batch=0, render="cpu", **self.kw)
         g = iter(it)
         seq = [next(g) for _ in range(3)]
-        it2 = loader.torch_iterable(self.shards, self.recipe, seed=3, batch_size=2, start_batch=2, **self.kw)
+        it2 = loader.torch_iterable(self.shards, self.recipe, seed=3, batch_size=2, start_batch=2, render="cpu", **self.kw)
         b = next(iter(it2))
         self.assertEqual(b["batch_index"], 2)
         self.assertTrue(torch.equal(b["noisy"], seq[2]["noisy"]))

@@ -231,34 +231,45 @@ def render_on_gpu(b, device="cuda"):
     return out
 
 
+try:
+    from torch.utils.data import IterableDataset as _IterableDataset
+except ImportError:  # 没装 torch 的环境仍能用 TrainStream / DevSet
+    _IterableDataset = object
+
+
+class TorchIterable(_IterableDataset):
+    """模块级类（DataLoader 的 spawn 方式要能 pickle）。第 k 批只由 (seed, k, batch_size) 决定；worker w 出 k ≡ w (mod N) 的批。"""
+
+    def __init__(self, shard_root, recipe_path, split, seed, seg_s, batch_size, start_batch, render, kw):
+        if render not in ("gpu", "cpu"):
+            raise ValueError(render)
+        self.ds = _Base(shard_root, recipe_path, split=split, seed=seed, seg_s=seg_s, **kw)
+        self.build_id, self.batch_size, self.start_batch, self.render = self.ds.build_id, batch_size, start_batch, render
+
+    def __iter__(self):
+        import torch
+        from torch.utils.data import get_worker_info
+
+        w = get_worker_info()
+        wid, nw = (w.id, w.num_workers) if w else (0, 1)
+        k = self.start_batch + wid
+        while True:
+            if self.render == "gpu":
+                yield plan_batch(self.ds, k, self.batch_size)
+            else:
+                b = batch(self.ds, k, self.batch_size)
+                for key in ("noisy", "clean", "replay", "near_silent"):
+                    b[key] = torch.from_numpy(b[key])
+                b["batch_index"] = k
+                yield b
+            k += nw
+
+
 def torch_iterable(shard_root, recipe_path, split="train", seed=0, seg_s=4.0, batch_size=32, start_batch=0, render="gpu", **kw):
-    """返回 torch IterableDataset；DataLoader(it, batch_size=None, num_workers=N)。
+    """返回 TorchIterable；DataLoader(it, batch_size=None, num_workers=N)。
     render="gpu"（默认，D102 后）：worker 只出 plan_batch（读片段 + 随机数），主进程里 loader.render_on_gpu(b, "cuda") 混音；
     render="cpu"：worker 里直接 CPU 渲染（旧路，对拍与无卡冒烟用）。"""
-    import torch
-    from torch.utils.data import IterableDataset, get_worker_info
-
-    class It(IterableDataset):
-        def __init__(self):
-            self.ds = _Base(shard_root, recipe_path, split=split, seed=seed, seg_s=seg_s, **kw)
-            self.build_id = self.ds.build_id
-
-        def __iter__(self):
-            w = get_worker_info()
-            wid, nw = (w.id, w.num_workers) if w else (0, 1)
-            k = start_batch + wid
-            while True:
-                if render == "gpu":
-                    yield plan_batch(self.ds, k, batch_size)
-                else:
-                    b = batch(self.ds, k, batch_size)
-                    for key in ("noisy", "clean", "replay", "near_silent"):
-                        b[key] = torch.from_numpy(b[key])
-                    b["batch_index"] = k
-                    yield b
-                k += nw
-
-    return It()
+    return TorchIterable(shard_root, recipe_path, split, seed, seg_s, batch_size, start_batch, render, kw)
 
 
 if __name__ == "__main__":
