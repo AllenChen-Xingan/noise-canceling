@@ -52,7 +52,8 @@ def pod_env() -> dict:
 
 # ---------- 第 1 层：本机看门狗 ----------
 
-def _load(path: str = DEADLINES) -> dict:
+def _load(path: Optional[str] = None) -> dict:
+    path = path or DEADLINES
     try:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
@@ -60,7 +61,8 @@ def _load(path: str = DEADLINES) -> dict:
         return {}
 
 
-def _save(d: dict, path: str = DEADLINES) -> None:
+def _save(d: dict, path: Optional[str] = None) -> None:
+    path = path or DEADLINES
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -68,7 +70,7 @@ def _save(d: dict, path: str = DEADLINES) -> None:
     os.replace(tmp, path)
 
 
-def register(pod_id: str, max_hours: float, now: Optional[dt.datetime] = None, path: str = DEADLINES) -> str:
+def register(pod_id: str, max_hours: float, now: Optional[dt.datetime] = None, path: Optional[str] = None) -> str:
     now = now or L.utcnow()
     when = L.iso(now + dt.timedelta(seconds=int(max_hours * 3600) + GRACE_S))
     d = _load(path)
@@ -77,13 +79,13 @@ def register(pod_id: str, max_hours: float, now: Optional[dt.datetime] = None, p
     return when
 
 
-def unregister(pod_id: str, path: str = DEADLINES) -> None:
+def unregister(pod_id: str, path: Optional[str] = None) -> None:
     d = _load(path)
     if d.pop(pod_id, None) is not None:
         _save(d, path)
 
 
-def tick(delete: Callable[[str], object], now: Optional[dt.datetime] = None, path: str = DEADLINES) -> list:
+def tick(delete: Callable[[str], object], now: Optional[dt.datetime] = None, path: Optional[str] = None) -> list:
     """删掉所有到点的机器；返回删了哪些。删失败的留着下次再试。"""
     now = now or L.utcnow()
     done = []
@@ -99,7 +101,7 @@ def tick(delete: Callable[[str], object], now: Optional[dt.datetime] = None, pat
     return done
 
 
-def run_loop(delete: Callable[[str], object], poll_s: float = 30, path: str = DEADLINES,
+def run_loop(delete: Callable[[str], object], poll_s: float = 30, path: Optional[str] = None,
              sleep: Callable[[float], None] = time.sleep, now_fn: Callable[[], dt.datetime] = L.utcnow) -> None:
     """登记表空了就退出。"""
     while _load(path):
@@ -109,7 +111,8 @@ def run_loop(delete: Callable[[str], object], poll_s: float = 30, path: str = DE
             sleep(poll_s)
 
 
-def alive(pidfile: str = PIDFILE) -> bool:
+def alive(pidfile: Optional[str] = None) -> bool:
+    pidfile = pidfile or PIDFILE
     try:
         with open(pidfile) as f:
             pid = int(f.read().strip())
@@ -120,8 +123,9 @@ def alive(pidfile: str = PIDFILE) -> bool:
 
 
 def ensure_running(rp_path: str, spawn: Callable[..., object] = subprocess.Popen,
-                   pidfile: str = PIDFILE) -> bool:
+                   pidfile: Optional[str] = None) -> bool:
     """没有看门狗在跑就起一个（脱离本终端；有 caffeinate 就防空闲睡眠）。返回是否新起了一个。"""
+    pidfile = pidfile or PIDFILE
     if alive(pidfile):
         return False
     os.makedirs(os.path.dirname(pidfile), exist_ok=True)

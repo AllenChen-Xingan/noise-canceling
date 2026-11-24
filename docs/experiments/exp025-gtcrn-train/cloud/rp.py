@@ -17,9 +17,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config as C  # noqa: E402
 import ledger as L  # noqa: E402
 import rp_ops as O  # noqa: E402
+import subprocess  # noqa: E402
+import watchdog as W  # noqa: E402
 from rp_client import Client, load_key  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+SPAWN = subprocess.Popen  # 测试换成假的，不真起后台进程
 
 
 def need_yes(a, what: str):
@@ -73,6 +76,9 @@ def bring_up(cli, a):
     if not dc:
         raise SystemExit("要指定 --dc（不挂盘时）")
     p = O.create_pod(cli, dc, vol, a.max_hours, _rate_hint(cli), ledger_path=a.ledger)
+    when = W.register(p["id"], a.max_hours)  # 第 1 层兜底：本机看门狗到点删机
+    W.ensure_running(os.path.abspath(__file__), spawn=SPAWN)
+    print(f"看门狗登记：{p['id']} 最晚 {when} 删机", file=sys.stderr)
     print(f"已开机 {p['id']}（{dc}，每小时 {p.get('cost')} 美元，最长 {a.max_hours} 小时）", file=sys.stderr)
     try:
         p = O.wait_running(cli, p["id"])
@@ -94,6 +100,7 @@ def cmd_up(cli, a):
 
 def cmd_down(cli, a):
     est = O.delete_pod(cli, a.pod, a.ledger, note=a.note)
+    W.unregister(a.pod)
     print(f"已删机 {a.pod}，估算 {est:.4f} 美元")
 
 
@@ -101,12 +108,18 @@ def cmd_reap(cli, a):
     pods = O.list_our_pods(cli)
     for p in pods:
         O.delete_pod(cli, p["id"], a.ledger, note="reap")
+        W.unregister(p["id"])
         print(f"已删 {p['id']} {p.get('name')}")
     for pid in L.open_pods(L.read_rows(a.ledger)):
         if pid not in {p["id"] for p in pods}:
             O.delete_pod(cli, pid, a.ledger, note="reap：账上未关、云上已无")
     if not pods:
         print("云上没有 vdn- 开头的机器")
+
+
+def cmd_watchdog(cli, a):
+    """本机看门狗进程本身（由 up 自动起，一般不用手动跑）。登记表空了就退出。"""
+    W.run_loop(lambda pid: O.delete_pod(cli, pid, a.ledger, note="watchdog 到点删机"))
 
 
 def cmd_sh(cli, a):
@@ -206,6 +219,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("pod")
     p.add_argument("--note", default="")
     add("reap", cmd_reap, "删掉所有 vdn- 开头的机器（兜底）")
+    add("watchdog", cmd_watchdog, "本机看门狗：到点删机（up 自动起）")
     add("spend", cmd_spend, "按账本汇总已花与上限")
     p = add("sh", cmd_sh, "在机器里跑一条短命令（≤25 秒）")
     p.add_argument("pod")

@@ -14,6 +14,7 @@ from typing import Callable, Optional
 
 import config as C
 import ledger as L
+import watchdog as W
 from rp_client import ApiError, Client
 
 RUNNING = "RUNNING"
@@ -83,7 +84,7 @@ def delete_volume(cli: Client, volume_id: str, ledger_path: str = L.DEFAULT_PATH
 
 def pod_body(name: str, data_center: str, volume_id: Optional[str], max_hours: float,
              gpu_id: str = C.GPU_TYPE_ID) -> dict:
-    # 容器只睡到最长时限；到点容器退出，算力停止计费（删机仍由脚本做）
+    # 容器睡到最长时限后删自己（第 2 层兜底，见 watchdog.py）；只是退出的话平台会重启它、照常计费
     body = {
         "name": name,
         "cloud": C.CLOUD,
@@ -91,8 +92,8 @@ def pod_body(name: str, data_center: str, volume_id: Optional[str], max_hours: f
         "dataCenterIds": [data_center],
         "image": C.IMAGE,
         "disk": C.CONTAINER_DISK_GB,
-        "cmd": ["sleep", str(int(max_hours * 3600))],
-        "env": {},
+        "cmd": W.pod_cmd(max_hours),
+        "env": W.pod_env(),
         "ports": [],
     }
     if volume_id:
