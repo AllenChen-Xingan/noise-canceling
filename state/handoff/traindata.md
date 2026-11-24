@@ -19,6 +19,8 @@
 - 早期混响 100 ms 的正本在 `docs/experiments/exp013-scene-suite/rooms.py` 的 `EARLY_REVERB_MS` 与 `early_rir`。它们在 evalcmp 的分支 `feat/eval-paired-compare` 上，还没合进 main。合并前本分支的混音测试会红；本机验证用的是那个分支的 rooms.py
 - 那个分支合并后，`test_rebuild.test_code_unchanged_since_build` 可能会红：exp013 的 rooms.py 变了，要在云上确认旧的 4,540 个文件仍逐位一致
 
+- 网络盘配额正本 `docs/experiments/exp025-gtcrn-train/cloud/config.py` 在 cloudrun 的分支 `feat/cloud-runpod` 上。合进来之前，`test_real_cloud_config_quota` 会红，`fetch.py` 在 /workspace 上也会拒绝开下
+
 ## 待人拍板
 （暂无）
 
@@ -36,4 +38,5 @@
 - 2026-11-24 loader 改成 worker 只出 plan_batch，主进程调 `render_on_gpu`；DataLoader 用 2 个 worker 加 start_batch 测过
 - 2026-11-24 fetch.py 加了两样：开下前先查盘（含解压峰值），以及 `--head`（只核大小，不下载）。本机发 HEAD 核了 A3，大小一致
 - 2026-11-24 写 requirements.txt（版本钉死，和 exp013 旧 build 一致）· cloud_steps.sh · data/README.md · exp025 README 的数据一节
+- 2026-11-24 大总管（noise-canceling-33）转来 cloudrun 的发现：网络盘上 df 报整个集群的剩余（158 TB）。查盘改成「配额 − du 已用」，配额从 cloud/config.py 按路径读，加了 5 条测试。用 cloudrun 分支上的真 config 临时核过：配额 150 GB，第一批含解压峰值约 37.2 GB，放得下
 - 2026-11-24 建本 worktree 的 `.venv`（已被 git 忽略）：torch 2.15.0 · numpy 2.5.4 · scipy 1.18.1 · soundfile 0.14.0
