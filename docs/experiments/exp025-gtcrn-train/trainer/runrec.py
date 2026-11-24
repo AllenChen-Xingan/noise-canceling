@@ -45,13 +45,23 @@ def env_info() -> dict:
     return e
 
 
-def _atomic_write(path: Path, write) -> None:
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "wb") as f:
-        write(f)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, path)
+_SEQ = __import__("itertools").count()
+
+
+def _atomic_write(path: Path, write, commit_ok=lambda: True) -> None:
+    """写临时文件 → fsync → 改名。临时文件名每次不同（进程号 + 序号），重叠的写入不会互相截断；
+    commit_ok() 为假时放弃改名——迟到的写入（比如卡住的心跳在运行结束后才写完）不再覆盖新状态（codex 第 8 轮 #2）。"""
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{next(_SEQ)}.tmp")
+    try:
+        with open(tmp, "wb") as f:
+            write(f)
+            f.flush()
+            os.fsync(f.fileno())
+        if commit_ok():
+            os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
 
 
 def config_diff(a: dict, b: dict, prefix=()) -> list[tuple]:
@@ -104,9 +114,9 @@ class RunDir:
         text = json.dumps(rec, ensure_ascii=False, indent=2).encode()
         _atomic_write(self.run_json, lambda f: f.write(text))
 
-    def beat(self, step: int, billed_s: float, usd: float = 0.0) -> None:
+    def beat(self, step: int, billed_s: float, usd: float = 0.0, commit_ok=lambda: True) -> None:
         text = json.dumps({"step": step, "billed_s": billed_s, "usd": usd}).encode()
-        _atomic_write(self.root / "heartbeat.json", lambda f: f.write(text))
+        _atomic_write(self.root / "heartbeat.json", lambda f: f.write(text), commit_ok)
 
     def heartbeat(self) -> dict:
         p = self.root / "heartbeat.json"

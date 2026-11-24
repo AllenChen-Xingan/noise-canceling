@@ -484,35 +484,71 @@ def test_calibration_gets_all_requested_batches_beyond_dev_n(tmp_path):
 
 # ---------- codex 第 7 轮 ----------
 
-def _beat_with(tmp_path, beat_fn, fired):
-    import time as _t
-    rd = train.RunDir(tmp_path / "w")
-    rd.beat = beat_fn
-    b = train._Beat(rd, lambda: (0, 1.0, 0.0), 0.02, want_stop=lambda: "max_usd",
-                    last_progress=lambda: _t.monotonic() - 999, hang_s=1.0, on_hang=fired.append)
-    return b
-
-
 @pytest.mark.parametrize("kind", ["raises", "blocks"])
 def test_watchdog_fires_even_if_heartbeat_write_fails(tmp_path, kind):
-    """心跳写盘报错或卡住（网络盘坏了）：看门狗照样按时出手（codex 第 7 轮 #1）。"""
+    """心跳写盘先报错 / 先卡住，**之后**才满足停止条件：看门狗照样按时出手（codex 第 7 轮 #1、第 8 轮 #3）。"""
     import threading as th
     import time as _t
-    gate = th.Event()
+    gate, entered = th.Event(), th.Event()
+    rd = train.RunDir(tmp_path / "w")
 
-    def bad(*a):
+    def bad(*a, **k):
+        entered.set()
         if kind == "raises":
             raise OSError("disk gone")
-        gate.wait(5)
+        gate.wait(10)  # 卡住，直到测试结束才放开
 
+    rd.beat = bad
+    want = {"v": None}
     fired = []
-    b = _beat_with(tmp_path, bad, fired)
-    t0 = _t.monotonic()
+    b = train._Beat(rd, lambda: (0, 1.0, 0.0), 0.02, want_stop=lambda: want["v"],
+                    last_progress=lambda: _t.monotonic() - 999, hang_s=1.0, on_hang=fired.append)
     with b:
+        assert entered.wait(2)  # 先确认写盘已进入失败 / 卡住
+        want["v"] = "max_usd"  # 再满足停止条件
+        t0 = _t.monotonic()
         while not fired and _t.monotonic() - t0 < 3:
             _t.sleep(0.01)
+        assert fired and b.write_failures >= 1  # 写盘仍卡着 / 仍失败时就出手了
         gate.set()
-    assert fired and _t.monotonic() - t0 < 3
+
+
+def test_heartbeat_single_writer_and_no_late_commit(tmp_path):
+    """写卡住时不叠第二个写入；运行结束后迟到的那次写入不提交，心跳不倒退、文件完整（codex 第 8 轮 #2）。"""
+    import threading as th
+    import time as _t
+    rd = train.RunDir(tmp_path / "w")
+    rd.beat(5, 500.0, 5.0)  # 已有的新状态
+    gate = th.Event()
+    real = rd.beat
+    calls = []
+
+    def slow(*a, **k):
+        calls.append(a)
+        gate.wait(5)
+        real(*a, **k)
+
+    rd.beat = slow
+    b = train._Beat(rd, lambda: (1, 1.0, 0.1), 0.02)  # 旧快照（数值更小）
+    with b:
+        _t.sleep(0.2)
+    gate.set()
+    _t.sleep(0.2)
+    assert len(calls) == 1  # 只有一个在途写入
+    hb = json.loads((tmp_path / "w" / "heartbeat.json").read_text())
+    assert hb == {"step": 5, "billed_s": 500.0, "usd": 5.0}  # 迟到的旧快照没覆盖
+    assert not list((tmp_path / "w").glob("*.tmp"))
+
+
+def test_deadline_watchdog_needs_no_disk(tmp_path):
+    fired = []
+    with train._Deadline(0.05, on_hang=fired.append):
+        __import__("time").sleep(0.2)
+    assert fired and "跑满" in fired[0]
+    fired.clear()
+    with train._Deadline(5.0, on_hang=fired.append):
+        pass
+    assert not fired
 
 
 def test_hard_exit_exits_even_if_record_write_blocks(tmp_path, monkeypatch):

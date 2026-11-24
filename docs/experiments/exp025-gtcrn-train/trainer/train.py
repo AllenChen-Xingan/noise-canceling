@@ -235,11 +235,30 @@ class _Beat:
         self.want_stop, self.last_progress, self.hang_s = want_stop, last_progress, hang_s
         self.on_hang = on_hang or (lambda why: _hard_exit(rd, why))
         self.stop = threading.Event()
+        self.closed = threading.Event()
         self.write_failures = 0
+        self.inflight = None
         self.th = threading.Thread(target=self._run, daemon=True)
 
     def _beat(self) -> None:
-        if not _bounded(lambda: self.rd.beat(*self.snap()), max(self.every, 1.0)):
+        """单写者：上一次写入还没回来（盘卡住）就跳过本轮，不叠第二个写入；关闭后迟到的写入不提交（第 8 轮 #2）。"""
+        if self.inflight is not None and self.inflight.is_alive():
+            self.write_failures += 1
+            return
+        snap = self.snap()
+        box = {}
+
+        def run():
+            try:
+                self.rd.beat(*snap, commit_ok=lambda: not self.closed.is_set())
+                box["ok"] = True
+            except Exception:  # noqa: BLE001 —— 写不成只记次数
+                pass
+
+        self.inflight = threading.Thread(target=run, daemon=True)
+        self.inflight.start()
+        self.inflight.join(max(self.every, 1.0))
+        if not box.get("ok"):
             self.write_failures += 1
 
     def _run(self):
@@ -258,6 +277,34 @@ class _Beat:
         self.stop.set()
         self.th.join()
         self._beat()
+        self.closed.set()  # 之后还没写完的心跳一律不提交
+
+
+class _Deadline:
+    """兜底看门狗：本段进程跑满 seconds 秒就强退，不依赖任何磁盘读写（codex 第 8 轮 #1）。"""
+
+    def __init__(self, seconds: float, on_hang=None):
+        self.seconds, self.rd = seconds, None
+        self.on_hang = on_hang
+        self.done = threading.Event()
+        self.th = threading.Thread(target=self._run, daemon=True)
+
+    def _run(self):
+        if not self.done.wait(self.seconds):
+            why = f"本段已跑满 {self.seconds:.0f} s（时长上限 + hang_s）"
+            if self.on_hang is not None:
+                self.on_hang(why)
+            elif self.rd is not None:
+                _hard_exit(self.rd, why)
+            else:
+                os._exit(75)
+
+    def __enter__(self):
+        self.th.start()
+        return self
+
+    def __exit__(self, *exc):
+        self.done.set()
 
 
 def _setup_stop(reason, step, billed_s, usd) -> dict:
@@ -275,12 +322,17 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
     记录三处取最大值。美元按段累计：每段只按本段单价乘本段时长，改单价不追溯（codex 第 1 轮 #6）。"""
     t_proc = time.monotonic()
     cfg_dict = cfgmod.to_dict(cfg)
-    rd = RunDir(Path(cfg.run.out_dir).expanduser() / cfg.run.name)
-    rd.lock()  # 先占住目录再读任何状态
-    try:
-        return _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_hang)
-    finally:
-        rd.unlock()
+    # 第一次碰磁盘之前先起「本段墙钟时限」看门狗：不读盘、不写盘，只看本进程已跑多久。建目录、加锁、读心跳
+    # 卡在网络盘上时它照样出手（codex 第 8 轮 #1）。之后由 _Beat 按累计账判上限，这一道只兜底。
+    deadline = _Deadline(cfg.limits.max_hours * 3600 + cfg.limits.hang_s, _on_hang)
+    with deadline:
+        rd = RunDir(Path(cfg.run.out_dir).expanduser() / cfg.run.name)
+        rd.lock()  # 先占住目录再读任何状态
+        deadline.rd = rd
+        try:
+            return _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_hang)
+        finally:
+            rd.unlock()
 
 
 def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_hang) -> dict:
