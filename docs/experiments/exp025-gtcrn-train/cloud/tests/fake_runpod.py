@@ -24,6 +24,7 @@ class FakeRunPod:
         self.jobs = {}           # {job: (rc, log)}，start_job 后立即「跑完」
         self.price, self.vcpu, self.queue = price, vcpu, queue
         self.n = 0
+        self.cpu_price = C.CPU_USD_PER_VCPU_HR_EXPECTED
         self.fail_exec = None    # 设成字符串时，含该子串的 exec 返回非零
 
     # transport 接口
@@ -41,6 +42,9 @@ class FakeRunPod:
         if p == "/v2/catalog/gpus":
             return 200, {"gpus": [{"id": GPU, "price": {"secure": self.price, "community": 0.22},
                                    "minVcpuCount": self.vcpu, "availability": "HIGH"}]}
+        if p == "/v2/catalog/cpus":
+            return 200, {"cpus": [{"id": C.CPU_FLAVOR_ID, "price": {"securePerVcpu": self.cpu_price}},
+                                  {"id": "cpu5c", "price": {"securePerVcpu": 0.035}}]}
         if p == "/v2/catalog/datacenters":
             return 200, {"dataCenters": [
                 {"id": "EU-RO-1", "name": "RO", "region": "EUROPE", "networkVolumeTypes": ["STANDARD"],
@@ -75,6 +79,11 @@ class FakeRunPod:
             pod = {"id": f"pod_{self.n}", "name": d["name"], "status": "RUNNING", "cost": self.price,
                    "dataCenterId": d["dataCenterIds"][0],
                    "gpu": {"id": GPU, "count": 1, "vcpuCount": self.vcpu, "memory": 125}}
+            if "cpu" in d:  # 纯 CPU 机器：没有 gpu 字段，价 = 每核价 × 核数
+                assert "gpu" not in d, "gpu 和 cpu 只能二选一"
+                pod.pop("gpu")
+                pod["cpu"] = dict(d["cpu"])
+                pod["cost"] = self.cpu_price * d["cpu"]["vcpuCount"]
             self.pods[pod["id"]] = pod
             return 201, pod
         m_pod = re.fullmatch(r"/v2/pods/([^/]+)(/exec)?", p)

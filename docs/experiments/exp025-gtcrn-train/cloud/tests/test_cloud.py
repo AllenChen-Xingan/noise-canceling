@@ -285,6 +285,24 @@ class TestCli(Base):
         body = [c[2] for c in self.fake.calls if c[:2] == ("POST", "/v2/network-volumes")][0]
         self.assertEqual(body["dataCenter"], C.DATA_CENTER)
 
+    def test_cpu_pod_body_and_ledger(self):
+        self.run_cli("volume-create", "--yes")
+        self.run_cli("up", "--yes", "--cpu", "--max-hours", "1")
+        body = [c[2] for c in self.fake.calls if c[:2] == ("POST", "/v2/pods")][0]
+        self.assertNotIn("gpu", body)
+        self.assertEqual(body["cpu"], {"id": C.CPU_FLAVOR_ID, "vcpuCount": C.CPU_VCPU})
+        self.assertEqual(C.CPU_VCPU & (C.CPU_VCPU - 1), 0)  # openapi：必须是 2 的幂
+        self.assertEqual(body["mounts"]["network"][0]["path"], C.VOLUME_MOUNT)  # 挂同一块盘
+        row = L.read_rows(self.ledger)[-1]
+        self.assertEqual(row["gpu"], f"{C.CPU_FLAVOR_ID} x{C.CPU_VCPU}")
+        self.assertAlmostEqual(float(row["usd_per_hr"]), C.CPU_USD_PER_VCPU_HR_EXPECTED * C.CPU_VCPU, places=4)
+
+    def test_cpu_price_above_tolerance_refuses(self):
+        self.fake.cpu_price = C.CPU_USD_PER_VCPU_HR_EXPECTED * 2
+        with self.assertRaises(SystemExit):
+            self.run_cli("up", "--yes", "--cpu", "--dc", C.DATA_CENTER, "--no-volume")
+        self.assertFalse([c for c in self.fake.calls if c[:2] == ("POST", "/v2/pods")])
+
     def test_reap_and_spend(self):
         self.run_cli("up", "--yes", "--dc", "US-KS-2", "--no-volume")
         self.run_cli("reap")
