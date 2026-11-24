@@ -267,7 +267,8 @@ class TestDocsCrossCheck(unittest.TestCase):
     def test_readme_numbers_match_config(self):
         with open(os.path.join(CLOUD, "README.md"), encoding="utf-8") as f:
             text = f.read()
-        for needle in (f"{C.SPEND_CAP_USD:g} 美元", f"{C.VOLUME_SIZE_GB} GB", C.GPU_TYPE_ID, C.IMAGE,
+        for needle in (f"{C.SPEND_CAP_USD:g} 美元", f"{C.VOLUME_SIZE_GB} GB", C.GPU_TYPE_ID, C.IMAGE, C.DATA_CENTER,
+                       f"{C.USD_PER_HR_EXPECTED} 美元",
                        f"vCPU ≥ {C.MIN_VCPU_PER_GPU}"):
             self.assertIn(needle, text)
 

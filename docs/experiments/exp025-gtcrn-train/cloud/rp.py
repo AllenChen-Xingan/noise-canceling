@@ -57,6 +57,8 @@ def _rate_hint(cli) -> float:
     price = (O.gpu_offer(cli).get("price") or {}).get("secure")
     if not price:
         raise SystemExit("目录里拿不到 Secure 价格，不开机")
+    if float(price) > C.USD_PER_HR_EXPECTED * C.PRICE_TOLERANCE:
+        raise SystemExit(f"目录价 {price} 美元/时，高于预期 {C.USD_PER_HR_EXPECTED} 的 {C.PRICE_TOLERANCE} 倍，不开机")
     return float(price)
 
 
@@ -179,7 +181,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     add("offers", cmd_offers, "3090 价格、vCPU、有货且能建网络盘的机房")
     p = add("volume-create", cmd_volume_create, "建网络盘（花钱）")
-    p.add_argument("--dc", required=True)
+    p.add_argument("--dc", default=C.DATA_CENTER)
     p.add_argument("--size", type=int, default=C.VOLUME_SIZE_GB)
     p.add_argument("--yes", action="store_true")
     for name, fn, h in (("up", cmd_up, "开机并挂网络盘（花钱）"), ("probe", cmd_probe, "试开一台测速后删（花钱）")):
