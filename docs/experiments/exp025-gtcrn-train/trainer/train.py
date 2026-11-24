@@ -15,7 +15,9 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import math
+import os
 import signal
 import sys
 import threading
@@ -193,18 +195,36 @@ class _Signals:
 HEARTBEAT_S = 30.0
 
 
+def _hard_exit(rd, why: str) -> None:
+    """看门狗的最后手段：记一笔再强退。最近的检查点是完整的（原子写），下次按心跳续训、补账。"""
+    (rd.root / "hung.json").write_text(json.dumps({"why": why, "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")},
+                                                  ensure_ascii=False))
+    os._exit(75)
+
+
 class _Beat:
     """后台线程每 HEARTBEAT_S 秒写一次心跳（步数 · 计费秒 · 累计美元），取数卡住、算标定时也照写。
-    被抢占时最多漏记一个间隔（≤ 30 s）；机器的真实账单归 cloudrun（codex 第 1 轮 #4）。心跳只由这个线程写。"""
+    被抢占时最多漏记一个间隔（≤ 30 s）；机器的真实账单归 cloudrun（codex 第 1 轮 #4）。心跳只由这个线程写。
 
-    def __init__(self, rd, snap, every: float):
+    兼作看门狗（codex 第 6 轮 #1）：已该停（到上限 / 收到信号）而主线程超过 hang_s 没有进展（比如卡在一次
+    同步取数里，worker = 0 时 DataLoader 没有超时），就写 hung.json 后强退，免得一直计费。"""
+
+    def __init__(self, rd, snap, every: float, want_stop=lambda: None, last_progress=None,
+                 hang_s: float = 120.0, on_hang=None):
         self.rd, self.snap, self.every = rd, snap, every
+        self.want_stop, self.last_progress, self.hang_s = want_stop, last_progress, hang_s
+        self.on_hang = on_hang or (lambda why: _hard_exit(rd, why))
         self.stop = threading.Event()
         self.th = threading.Thread(target=self._run, daemon=True)
 
     def _run(self):
         while not self.stop.wait(self.every):
             self.rd.beat(*self.snap())
+            why = self.want_stop()
+            if why and self.last_progress is not None and time.monotonic() - self.last_progress() > self.hang_s:
+                self.rd.beat(*self.snap())
+                self.on_hang(f"{why}；主线程 {self.hang_s:.0f} s 无进展")
+                return
 
     def __enter__(self):
         self.th.start()
@@ -223,7 +243,7 @@ def _setup_stop(reason, step, billed_s, usd) -> dict:
 
 
 def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = None,
-          _beat_s: float = HEARTBEAT_S) -> dict:
+          _beat_s: float = HEARTBEAT_S, _on_hang=None) -> dict:
     """跑到停下为止，返回停下记录。max_wall_s / _signals / _beat_s 只给测试用。
 
     计费（billed_s · usd）从本函数第一行算起；信号处理与心跳线程也从第一行起生效，覆盖建模型、取开发份、标定
@@ -234,12 +254,12 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
     rd = RunDir(Path(cfg.run.out_dir).expanduser() / cfg.run.name)
     rd.lock()  # 先占住目录再读任何状态
     try:
-        return _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s)
+        return _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_hang)
     finally:
         rd.unlock()
 
 
-def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s) -> dict:
+def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_hang) -> dict:
     lim, sc = cfg.limits, cfg.schedule
     hb0 = rd.heartbeat()
     acct = {"billed0": hb0.get("billed_s", 0.0), "usd0": hb0.get("usd", 0.0), "step": hb0.get("step", 0)}
@@ -250,8 +270,22 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s) -> d
     def usd():
         return acct["usd0"] + (time.monotonic() - t_proc) / 3600 * lim.usd_per_hour
 
-    with (_signals or _Signals()) as sigs, _Beat(rd, lambda: (acct["step"], billed(), usd()), _beat_s):
-        def stop_reason():
+    acct["t_progress"] = time.monotonic()
+    sigs = _signals or _Signals()
+
+    def stop_reason():
+        if billed() / 3600 >= lim.max_hours:
+            return "max_hours"
+        if usd() >= lim.max_usd:
+            return "max_usd"
+        if sigs.got:
+            return f"signal:{sigs.got}"
+        return None
+
+    beat = _Beat(rd, lambda: (acct["step"], billed(), usd()), _beat_s, want_stop=stop_reason,
+                 last_progress=lambda: acct["t_progress"], hang_s=lim.hang_s, on_hang=_on_hang)
+    with sigs, beat:
+        def _unused():
             if billed() / 3600 >= lim.max_hours:
                 return "max_hours"
             if usd() >= lim.max_usd:
@@ -309,7 +343,7 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s) -> d
                                    "from_ckpt": last.name, "billed_s_before": round(acct["billed0"], 2),
                                    "env": env_info(), "prev_stop": rec.pop("stop", None)})
         else:
-            cal_dev = source.dev_batches(cfg.data.calib_batches, should_stop=stop_reason)
+            cal_dev = source.calib_batches(cfg.data.calib_batches, should_stop=stop_reason)
             calib = None if cal_dev is None else calibrate(model, cfg, cal_dev, device, stop_reason)
             if calib is None:  # 准备期就到上限 / 收到信号：没有检查点可存，只留心跳里的账
                 return _setup_stop(stop_reason(), acct["step"], billed(), usd())
@@ -386,6 +420,7 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s) -> d
                 ema.update(model)
             step += 1
             acct["step"] = step
+            acct["t_progress"] = time.monotonic()
             if step % sc.log_every == 0 or step == 1:
                 rd.log({"step": step, "lr": sched.get_last_lr()[0], "billed_s": round(billed(), 2),
                         "usd": round(usd(), 4), "grad_norm": float(gn), **logs})
