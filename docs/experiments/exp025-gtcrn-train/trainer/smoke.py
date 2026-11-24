@@ -115,8 +115,14 @@ def check_known_dev(cfg, dev, device, known: dict, tol: float) -> dict:
     """开发份已知读数（键 = 损失日志名，如 hybrid）与起点模型实测比对。"""
     m = _model(cfg, device, variant="A").eval()
     got = train.evaluate(m, losses.TrainLoss(losses.LossCfg()).to(device), dev, device, cfg)
-    bad = {k: (got.get(k), v) for k, v in known.items() if abs(got.get(k, float("inf")) - v) > tol}
-    return {"pass": not bad, "got": got, "known": known, "tol": tol, "mismatch": bad}
+    bad = {}
+    for k, v in known.items():
+        g = got.get(k)
+        # 实测、已知、容差都必须是有限数；NaN 时 abs(NaN − v) > tol 为假，会误判通过（codex 第 4 轮 #2）
+        ok = (g is not None and all(np.isfinite(x) for x in (g, v, tol)) and abs(g - v) <= tol)
+        if not ok:
+            bad[k] = (g, v)
+    return {"pass": bool(known) and not bad, "got": got, "known": known, "tol": tol, "mismatch": bad}
 
 
 def timing(cfg, source, device, steps: int) -> dict:
@@ -163,6 +169,10 @@ def run(cfg, *, overfit_steps: int, overfit_lr: float, timing_steps: int,
     rep["reproduce"] = check_reproduce(device)
     if known_dev:
         rep["known_dev"] = check_known_dev(cfg, dev, device, known_dev, known_tol)
+    elif cfg.data.kind == "loader":
+        # 014 第 3 步要「原检查点在开发份上读数等于已知成绩」：正式数据没给基准就不算通过（codex 第 4 轮 #3）
+        rep["known_dev"] = {"pass": False, "incomplete": True,
+                            "rule": "正式数据冒烟必须用 --known-dev 给开发份已知读数（等 evalcmp / cloudrun 出数）"}
     rep["timing"] = timing(cfg, source, device, timing_steps)
     checks = [k for k in ("init_loss", "overfit", "reproduce", "known_dev") if k in rep]
     rep["pass"] = all(rep[k]["pass"] for k in checks)

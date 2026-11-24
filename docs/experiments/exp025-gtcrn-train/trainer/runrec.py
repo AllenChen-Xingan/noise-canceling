@@ -70,6 +70,28 @@ class RunDir:
         self.root = root
         self.ckpt_dir = root / "ckpt"
         self.ckpt_dir.mkdir(parents=True, exist_ok=True)
+        self._lock = None
+
+    def lock(self) -> None:
+        """独占这个运行目录直到进程退出或 unlock：同名运行重复启动时第二个直接报错（codex 第 4 轮 #1）。
+        用 flock（进程死了锁自动释放，不会留下死锁）。"""
+        import fcntl
+        f = open(self.root / "run.lock", "w")
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            f.close()
+            raise RuntimeError(f"{self.root} 正被另一个训练进程使用（run.lock）；同名运行不能同时跑") from None
+        f.write(str(os.getpid()))
+        f.flush()
+        self._lock = f
+
+    def unlock(self) -> None:
+        if self._lock is not None:
+            import fcntl
+            fcntl.flock(self._lock, fcntl.LOCK_UN)
+            self._lock.close()
+            self._lock = None
 
     @property
     def run_json(self) -> Path:

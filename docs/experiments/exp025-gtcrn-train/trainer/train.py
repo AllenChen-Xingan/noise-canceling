@@ -232,6 +232,14 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
     t_proc = time.monotonic()
     cfg_dict = cfgmod.to_dict(cfg)
     rd = RunDir(Path(cfg.run.out_dir).expanduser() / cfg.run.name)
+    rd.lock()  # 先占住目录再读任何状态
+    try:
+        return _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s)
+    finally:
+        rd.unlock()
+
+
+def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s) -> dict:
     lim, sc = cfg.limits, cfg.schedule
     hb0 = rd.heartbeat()
     acct = {"billed0": hb0.get("billed_s", 0.0), "usd0": hb0.get("usd", 0.0), "step": hb0.get("step", 0)}

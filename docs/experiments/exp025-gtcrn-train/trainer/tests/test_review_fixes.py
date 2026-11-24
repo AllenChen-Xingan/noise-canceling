@@ -395,3 +395,30 @@ def test_export_compare_rejects_nonfinite(tmp_path, monkeypatch):
     monkeypatch.setattr(type(m), "forward", inf_fwd)
     r = export.compare(m, out)
     assert not r["pass"] and not r["cases"][0]["finite"]
+
+
+# ---------- codex 第 4 轮 ----------
+
+def test_same_run_cannot_start_twice(tmp_path):
+    """同名运行已有进程占着目录：第二个直接拒绝，不读不写任何状态（codex 第 4 轮 #1）。"""
+    rd = train.RunDir(tmp_path / "r")
+    rd.lock()
+    try:
+        with pytest.raises(RuntimeError, match="另一个训练进程"):
+            train.train(_cfg(tmp_path))
+        assert not (tmp_path / "r" / "run.json").exists()
+    finally:
+        rd.unlock()
+    assert train.train(_cfg(tmp_path, **{"schedule.max_steps": 1}))["reason"] == "max_steps"  # 释放后可跑
+
+
+def test_known_dev_nan_and_missing_fail(tmp_path, monkeypatch):
+    import smoke
+    cfg = cfgmod.from_dict({"run": {"out_dir": str(tmp_path)},
+                            "data": {"kind": "synthetic", "seg_s": 1.0, "batch": 2, "dev_n": 2, "dev_batches": 1},
+                            "device": "cpu"})
+    dev = data.make_source(cfg).dev_batches()
+    monkeypatch.setattr(train, "evaluate", lambda *a, **k: {"hybrid": float("nan")})
+    assert not smoke.check_known_dev(cfg, dev, torch.device("cpu"), {"hybrid": 1.0}, 1e-3)["pass"]
+    assert not smoke.check_known_dev(cfg, dev, torch.device("cpu"), {"other": 1.0}, 1e-3)["pass"]
+    assert not smoke.check_known_dev(cfg, dev, torch.device("cpu"), {}, 1e-3)["pass"]  # 空基准不算通过
