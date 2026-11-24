@@ -4,7 +4,7 @@
 
 1. **初始损失合理**（034 修正：微调时看「等于原检查点的损失」，不看随机初始化的理论值）：
    B 零初始化时与 A 在同一批上的损失相同（相对差 ≤ 1e-5），且低于随机初始化模型的损失
-2. **单批能过拟合**：同一批反复训 overfit_steps 步，损失下降 ≥ 50%（本机合成小样实测 150 步降约 91%）
+2. **单批能过拟合**：同一批反复训 overfit_steps 步，把「初值到完美输出损失」的距离走完 ≥ 一半；B 的注意力层要动过
 3. **原检查点读数复现**：起点权重在官方样例 `mix.wav` 上的输出与官方 `enh.wav` 最大差 ≤ 2 个 16 位量化步（2/32768）；
    云上另可用 `--known-dev` 给出开发份已知读数比对（evalcmp 出数后接）
 4. **耗时**：正式配置下每步墙钟与 CPU 时间、进程 CPU 占用（不判过线，只记；D96 要看 CPU 是不是瓶颈）
@@ -51,7 +51,8 @@ def check_init(cfg, batch, device) -> dict:
     vals = {}
     with torch.no_grad():
         for tag, over in (("A", {"variant": "A"}), ("B", {"variant": "B"}), ("random", {"init": "random"})):
-            m = _model(cfg, device, **over).eval()
+            m = _model(cfg, device, **over)
+            train.set_train(m, cfg)  # 与训练同一模式：bn = frozen 时三者都用起点统计量
             vals[tag] = train.forward_loss(m, crit, batch, device)[0].item()
     rel = abs(vals["B"] - vals["A"]) / max(abs(vals["A"]), 1e-9)
     ok = rel <= 1e-5 and np.isfinite(vals["A"]) and vals["A"] < vals["random"]
@@ -59,25 +60,39 @@ def check_init(cfg, batch, device) -> dict:
             "rule": "B 与 A 相对差 ≤ 1e-5，且起点损失 < 随机初始化"}
 
 
-def overfit_pass(first: float, last: float) -> bool:
-    """单批过拟合判据：损失下降 ≥ 50%（按初值绝对值归一，初值为负也成立）。"""
-    return bool(np.isfinite(last) and (first - last) / max(abs(first), 1e-9) >= 0.5)
+def overfit_pass(first: float, last: float, floor: float) -> bool:
+    """单批过拟合判据：把「初值到完美输出的距离」走完至少一半，即 (first − last) / (first − floor) ≥ 0.5。
+    floor = 输出恰好等于目标时的损失。不按 |初值| 归一：SI-SNR 项是负对数，总损失会跨零（自审 P2）。"""
+    span = first - floor
+    return bool(np.isfinite(last) and span > 0 and (first - last) / span >= 0.5)
 
 
 def check_overfit(cfg, batch, device, steps: int, lr: float) -> dict:
-    m = _model(cfg, device).train()
+    """同一批反复训。B 另要求注意力输出层的权重动过（零初始化，只靠基座也能降一半，自审 P2）。
+    条件口子本次喂全零（D98），W·0 对 W 的梯度恒为 0，它不动是预期，不作要求。"""
+    m = _model(cfg, device)
+    train.set_train(m, cfg)
     crit = losses.TrainLoss(losses.LossCfg()).to(device)
+    with torch.no_grad():
+        clean = batch["clean"].to(device)
+        fr = train.frames_mask(batch, clean.shape[1]).to(device)
+        floor = crit(losses.stft(clean), clean, fr)[0].item()
+    attn0 = m.attn.out.weight.detach().clone() if getattr(m, "attn", None) is not None else None
     opt = torch.optim.Adam([p for p in m.parameters() if p.requires_grad], lr=lr)
     traj = []
-    for i in range(steps):
+    for _ in range(steps):
         loss, logs = train.forward_loss(m, crit, batch, device)
         opt.zero_grad(set_to_none=True)
         loss.backward()
         opt.step()
         traj.append(logs["total"])
-    drop = (traj[0] - traj[-1]) / max(abs(traj[0]), 1e-9)
-    return {"pass": overfit_pass(traj[0], traj[-1]), "first": traj[0], "last": traj[-1],
-            "drop_frac": drop, "steps": steps, "lr": lr, "rule": "损失下降 ≥ 50%"}
+    moved = None if attn0 is None else float((m.attn.out.weight.detach() - attn0).abs().max())
+    ok = overfit_pass(traj[0], traj[-1], floor) and (moved is None or moved > 0)
+    span = traj[0] - floor
+    return {"pass": ok, "first": traj[0], "last": traj[-1], "floor": floor,
+            "drop_frac_of_span": (traj[0] - traj[-1]) / span if span > 0 else None,
+            "attn_out_max_change": moved, "steps": steps, "lr": lr,
+            "rule": "(初值 − 终值) / (初值 − 完美输出的损失) ≥ 0.5；B 的注意力输出层权重要动过"}
 
 
 def check_reproduce(device) -> dict:
