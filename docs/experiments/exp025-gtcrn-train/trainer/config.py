@@ -91,7 +91,7 @@ class ScheduleCfg:
 class LimitsCfg:
     max_hours: float = 6.0
     max_usd: float = 20.0
-    usd_per_hour: float = 0.50
+    usd_per_hour: float = 4.39  # 正本：../cloud/config.py USD_PER_HR_EXPECTED（H100，D102）；tests/test_train.py 比对
     hang_s: float = 120.0  # 已该停而主线程这么久没有进展时，看门狗强退（train._Beat）
 
 

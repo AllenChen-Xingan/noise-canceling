@@ -171,3 +171,16 @@ def test_dataclass_fields_documented_in_default_yaml():
     y = yaml.safe_load((HERE / "configs" / "default.yaml").read_text())
     for f in dataclasses.fields(cfgmod.Config):
         assert f.name in y
+
+
+_CLOUD_CFG = HERE.parent / "cloud" / "config.py"
+
+
+@pytest.mark.skipif(not _CLOUD_CFG.exists(), reason="cloudrun 的 cloud/config.py 还没合入本分支；合入后自动跑")
+def test_usd_per_hour_matches_cloud_config():
+    """单价的正本在 cloud/config.py（CLAUDE.md 五.5）：trainer 的默认值必须与它一致。"""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("exp025_cloud_config", _CLOUD_CFG)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert cfgmod.Config().limits.usd_per_hour == mod.USD_PER_HR_EXPECTED
