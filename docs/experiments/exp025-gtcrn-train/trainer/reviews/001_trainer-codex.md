@@ -1,7 +1,7 @@
 # 评审 001 · exp025 trainer 代码（codex · gpt-6-astra · read-only）
 
-> 对象：`main...HEAD` 的 diff（`docs/experiments/exp025-gtcrn-train/trainer/**` + `state/handoff/trainer.md`）。**最新一轮：第 4 轮（2026-11-24）· 总评「修改」· 待第 5 轮**。
-> 累计处理：P1×10、P2×8，逐条回源码核实：属实 17、驳回 1（第 1 轮 #1，第 2 轮 codex 给出反例后改为采纳）。
+> 对象：`main...HEAD` 的 diff（`docs/experiments/exp025-gtcrn-train/trainer/**` + `state/handoff/trainer.md`）。**最新一轮：第 5 轮（2026-11-24）· 总评「修改」· 连续第 1 轮无 P0/P1，待第 6 轮确认**。
+> 累计处理：P1×10、P2×10，逐条回源码核实：属实 19、驳回 1（第 1 轮 #1，第 2 轮 codex 给出反例后改为采纳）。
 > 记录放在本目录：trainer 的写入范围只有 `trainer/**`，不写 `docs/reviews/`；收口时由大总管决定要不要并入总索引。
 
 ## 第 1 轮（2026-11-24）· 总评「修改」
@@ -120,3 +120,23 @@
 ### 是否再审
 
 有 P1，改完开第 5 轮。
+
+## 第 5 轮（2026-11-24）· 总评「修改」
+
+本轮 P0/P1：0 条 · 停止线：连续第 1 轮无 P0/P1 · 留作待办的 P2：#2 的一部分（见下）。上一轮 3 条修复 codex 核实到位。
+
+- **P2｜config.py:161 上限可以填 .inf / .nan，单价可以为负**（第 5 轮 #1）
+  - 核实：属实
+  - 处理：上限必须是有限正数，单价必须是有限非负数，开跑前拒绝；测试加进 `test_unknown_key_and_bad_values_rejected`
+- **P2｜tests/test_data.py:110 真 loader 的对接测试只查名字**（第 5 轮 #2）
+  - 核实：属实；真 loader（traindata 的 `data/loader.py`）还没合入本分支，本机也没有训练数据（D88）
+  - 处理：补 `test_real_loader_resume_from_batch_k_equals_continuous`（worker 0 / 2，从第 k 批起取 = 连续取）。合入后设 `VDN_LOADER_SHARDS` / `VDN_LOADER_RECIPE` 自动跑
+  - 留作待办：GPU 混音路径与真数据下的续训权重逐值比较，要云上显卡和分片，记在现状页「转交」，由 cloudrun 云上冒烟时跑
+
+### 引用抽查
+
+- codex 列的「核实属实」5 条；「无法核实」1 条（exp019 流式源码不在它的补读清单里）——本机测试 `test_offline_matches_exp019_stream` 实跑通过
+
+### 是否再审
+
+只连续 1 轮无 P0/P1，再审一轮确认。
