@@ -1,7 +1,7 @@
 # 评审 001 · exp025 trainer 代码（codex · gpt-6-astra · read-only）
 
-> 对象：`main...HEAD` 的 diff（`docs/experiments/exp025-gtcrn-train/trainer/**` + `state/handoff/trainer.md`）。**最新一轮：第 2 轮（2026-11-24）· 总评「修改」· 待第 3 轮**。
-> 累计处理：P1×8、P2×3，逐条回源码核实：属实 10、驳回 1（第 1 轮 #1，第 2 轮 codex 给出反例后改为采纳）。
+> 对象：`main...HEAD` 的 diff（`docs/experiments/exp025-gtcrn-train/trainer/**` + `state/handoff/trainer.md`）。**最新一轮：第 3 轮（2026-11-24）· 总评「修改」· 待第 4 轮**。
+> 累计处理：P1×9、P2×6，逐条回源码核实：属实 14、驳回 1（第 1 轮 #1，第 2 轮 codex 给出反例后改为采纳）。
 > 记录放在本目录：trainer 的写入范围只有 `trainer/**`，不写 `docs/reviews/`；收口时由大总管决定要不要并入总索引。
 
 ## 第 1 轮（2026-11-24）· 总评「修改」
@@ -73,3 +73,32 @@
 ### 是否再审
 
 有 P1，改完开第 3 轮。
+
+## 第 3 轮（2026-11-24）· 总评「修改」
+
+原文在 scratchpad（不入库）。effort medium，耗时 75 秒。本轮 P0/P1：1 条 · 停止线：未满足 · 留作 issue 的 P2：无
+
+上一轮处理的验证：codex 核实 on_skip_leading 默认关、标定按绝对值并拒绝非正权重、心跳线程在准备前启动，都已到位。
+
+- **P1｜train.py:313 最后一步收到信号时仍被判「步数跑满」并补评估；开发批构造与评估中不检查停止**（第 3 轮 #1）
+  - 核实：属实
+  - 处理：循环顶上上限 / 信号优先于步数；开发批逐批构造、逐批检查；评估逐批检查，中途要停就不记这一行。测试 `test_signal_on_last_step_skips_final_eval`
+- **P2｜train.py:287 先写 run.json、后存第 0 步，中间被杀就被永久拒绝**（第 3 轮 #2）
+  - 核实：属实
+  - 处理：run.json 先记 `phase: init`，第 0 步落盘后改 `training`；重启时遇到「init 且没有任何检查点」，核对配置与数据一致就重建，账从心跳接上。测试 `test_crash_between_record_and_step0_can_rebuild`
+- **P2｜train.py:139 开发评估把整批无效的保护项算进分母**（第 3 轮 #3）
+  - 核实：属实
+  - 处理：lvl / on 按有效段数加权，另报有效段数。测试 `test_evaluate_weights_protection_terms_by_valid_segments`
+- **P2｜export.py:86 inf ≤ inf 会判通过**（第 3 轮 #4）
+  - 核实：属实
+  - 处理：三路输出和阈值都必须是有限数。测试 `test_export_compare_rejects_nonfinite`
+
+另：续训时如果心跳里的账一开始就超过上限，现在会在准备期就停（不再花钱），报告已落盘的步数。
+
+### 引用抽查
+
+- codex 列的「核实属实」6 条，没有「不符」
+
+### 是否再审
+
+有 P1，改完开第 4 轮。
