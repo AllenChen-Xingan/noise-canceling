@@ -195,7 +195,7 @@ def train(cfg, *, max_wall_s: float | None = None) -> dict:
     t_mark = t_start
     reason = None
     model.train()
-    batches = source.train_batches(start_batch=step)
+    batches = source.train_batches(start_batch=step, device=device)
     while True:
         now = time.monotonic()
         elapsed += now - t_mark
@@ -212,6 +212,8 @@ def train(cfg, *, max_wall_s: float | None = None) -> dict:
         if reason:
             break
         batch = next(batches)
+        if batch.get("batch_index", step) != step:  # 第 step 步必须拿第 step 批（续训对齐的交叉校验）
+            raise RuntimeError(f"数据批次错位：第 {step} 步拿到第 {batch['batch_index']} 批")
         loss, logs = forward_loss(model, crit, batch, device, sp_ref=sp_ref, teacher=teacher)
         if not math.isfinite(loss.item()):
             reason = "nonfinite"

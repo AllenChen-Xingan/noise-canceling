@@ -74,7 +74,7 @@ def normalize(b: dict) -> dict:
     miss = [k for k in BATCH_KEYS if k not in b]
     if miss:
         raise KeyError(f"loader 批次缺键：{miss}")
-    return {
+    out = {
         "noisy": torch.as_tensor(b["noisy"], dtype=torch.float32),
         "clean": torch.as_tensor(b["clean"], dtype=torch.float32),
         "replay": torch.as_tensor(b["replay"], dtype=torch.bool),
@@ -82,6 +82,9 @@ def normalize(b: dict) -> dict:
         "owner_ivs": [[tuple(map(int, p)) for p in s] for s in b["owner_ivs"]],
         "interf_ivs": [[tuple(map(int, p)) for p in s] for s in b["interf_ivs"]],
     }
+    if "batch_index" in b:
+        out["batch_index"] = int(b["batch_index"])
+    return out
 
 
 class SyntheticSource:
@@ -91,10 +94,12 @@ class SyntheticSource:
         self.build_id = f"synthetic-seed{cfg.run.seed}"
         self.num_workers = 0
 
-    def train_batches(self, start_batch: int = 0):
+    def train_batches(self, start_batch: int = 0, device=None):
         k = start_batch
         while True:
-            yield synth_batch(self.cfg.run.seed, k, self.cfg.data.batch, self.n)
+            b = synth_batch(self.cfg.run.seed, k, self.cfg.data.batch, self.n)
+            b["batch_index"] = k
+            yield b
             k += 1
 
     def dev_batches(self) -> list[dict]:
@@ -129,16 +134,19 @@ class LoaderSource:
         self.dev = self.mod.DevSet(d.shard_root, d.recipe, n=d.dev_n, seed=d.dev_seed, seg_s=d.seg_s)
         self.build_id = getattr(self.dev, "build_id", None) or "unknown"
 
-    def train_batches(self, start_batch: int = 0):
-        """traindata 约定：第 k 批 = 样本 k·B … k·B+B−1，样本 i 只由 (seed, i) 决定，与 num_workers 无关；
-        torch_iterable 自己出整批 dict，所以 DataLoader 用 batch_size=None。换批量会换内容（续训时 train.py 核）。"""
+    def train_batches(self, start_batch: int = 0, device=None):
+        """traindata 约定：第 k 批只由 (seed, k, batch_size) 决定，与 num_workers 无关；torch_iterable 自己出整批，
+        所以 DataLoader 用 batch_size=None。显卡上走 render="gpu"：worker 只出混音计划，主进程 render_on_gpu 混音
+        （D102）；没有显卡走 render="cpu"。换批量会换内容（续训时 runrec 核）。"""
         d = self.cfg.data
-        it = self.mod.torch_iterable(d.shard_root, d.recipe, "train", self.cfg.run.seed, d.seg_s,
-                                     d.batch, start_batch=start_batch)
+        on_gpu = device is not None and torch.device(device).type == "cuda"
+        it = self.mod.torch_iterable(d.shard_root, d.recipe, split="train", seed=self.cfg.run.seed,
+                                     seg_s=d.seg_s, batch_size=d.batch, start_batch=start_batch,
+                                     render="gpu" if on_gpu else "cpu")
         dl = torch.utils.data.DataLoader(it, batch_size=None, num_workers=d.num_workers,
                                          persistent_workers=d.num_workers > 0)
         for b in dl:
-            yield normalize(b)
+            yield normalize(self.mod.render_on_gpu(b, device) if on_gpu else b)
 
     def dev_batches(self) -> list[dict]:
         d = self.cfg.data
