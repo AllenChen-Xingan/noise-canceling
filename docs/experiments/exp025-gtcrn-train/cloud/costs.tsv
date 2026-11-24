@@ -2,3 +2,7 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-24T21:20:41Z	volume_create	mq9446qc8j		US-MO-2	0.014583	2026-11-24T21:20:41Z					150 GB ≈ 10.5 USD/月
 2026-11-24T21:20:52Z	pod_create	3ejjz1jpshcjiz	NVIDIA L4	US-MO-2	0.6900	2026-11-24T21:20:52Z					max_hours=0.25
 2026-11-24T21:20:53Z	pod_delete	3ejjz1jpshcjiz	NVIDIA L4	US-MO-2	0.6900	2026-11-24T21:20:52Z	2026-11-24T21:20:53Z	0.0003	0.0002		probe
+2026-11-24T21:38:48Z	volume_delete	mq9446qc8j					2026-11-24T21:38:48Z				D102 换机房，空盘
+2026-11-24T21:38:51Z	volume_create	bzpbedqdsi		US-MO-1	0.014583	2026-11-24T21:38:51Z					150 GB ≈ 10.5 USD/月
+2026-11-24T21:39:05Z	pod_create	j44z387wj7wqvl	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-24T21:39:05Z					max_hours=0.1
+2026-11-24T21:48:10Z	pod_delete	j44z387wj7wqvl	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-24T21:39:05Z	2026-11-24T21:48:10Z	0.1514	0.6646		trial: exec+测速+到时限观察
