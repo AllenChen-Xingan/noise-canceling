@@ -26,7 +26,7 @@
 
 ```sh
 cargo build --release --manifest-path parity_rs/Cargo.toml   # 对拍测试要它，第一次约 25 秒
-../../../../.venv/bin/python -m pytest -q tests/              # 92 条通过，1 条等 traindata 的 loader 合入后自动跑
+../../../../.venv/bin/python -m pytest -q tests/              # 101 条通过，1 条等 traindata 的 loader 合入后自动跑
 python smoke.py --config configs/default.yaml --set data.shard_root=… --set data.recipe=… --out smoke.json
 python train.py --config configs/default.yaml --set run.name=exp025-B-s0 --set data.shard_root=… --set data.recipe=…
 python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b.onnx
@@ -86,7 +86,8 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 - L_lvl / L_on 的权重默认 `auto`：开跑前在开发份上量，定成约占 HybridLoss 的 10%（027 第 3.2 节第 1 步）。如果某项初始为 0，按「超出 1 dB 时等于 10%」标定
 - L2-SP、老师蒸馏、EMA 默认关（034 papers 第二节建议 7）
 - 电平归一默认关：它的作用是「加了电平随机以后不掉分」，收益 0.01–0.05 PESQ（034 修正 3）。traindata 的配方开了电平随机，所以建议在数据消融时扫一组开 / 关
-- 花费上限默认 $20、单价 $0.50/小时（014 第五节 · D96）。这是训练器自己的保险，计费时长含开跑准备与被抢占丢的那段；机器总账归 cloudrun
+- 花费上限默认 $20、单价 $0.50/小时（014 第五节 · D96）。这是训练器自己的保险：从开跑第一行起计费，后台线程每 30 s 写一次心跳，被抢占时最多漏记 30 s；美元按段累计，续训改单价不追溯。机器的真实账单归 cloudrun
+- 字头项默认与 V-ONSET 正本同口径；`loss.on_skip_leading` 可跳过 a = 0 的区间（随机裁切的假字头），扫参选项，默认关
 - 批归一化默认冻结统计量（`model.bn: frozen`，AI 定）：训练模式的批归一化用整段（含未来帧）与整批的统计量，和推理不一致，还会冲掉 DNS3 的统计量。`train` 作扫参选项
 - 条件口子本次喂全零，W·0 对 W 的梯度恒为 0，所以训练中它不会动——这是 D98「这次喂全零」的直接后果，不是 bug；以后喂向量时它才开始学
 - 条件输入本次一律喂全零（D98），`train.cond_for` 是以后改喂场景向量或声纹的唯一入口。以后要加宽维度，可以给权重补零列，不改结构（推断，未测）

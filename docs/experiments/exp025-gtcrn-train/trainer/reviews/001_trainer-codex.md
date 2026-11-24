@@ -1,7 +1,7 @@
 # 评审 001 · exp025 trainer 代码（codex · gpt-6-astra · read-only）
 
-> 对象：`main...HEAD` 的 diff（`docs/experiments/exp025-gtcrn-train/trainer/**` + `state/handoff/trainer.md`）。**最新一轮：第 1 轮（2026-11-24）· 总评「修改」· 待第 2 轮**。
-> 累计处理：P1×5、P2×2，逐条回源码核实：属实 6、驳回 1。
+> 对象：`main...HEAD` 的 diff（`docs/experiments/exp025-gtcrn-train/trainer/**` + `state/handoff/trainer.md`）。**最新一轮：第 2 轮（2026-11-24）· 总评「修改」· 待第 3 轮**。
+> 累计处理：P1×8、P2×3，逐条回源码核实：属实 10、驳回 1（第 1 轮 #1，第 2 轮 codex 给出反例后改为采纳）。
 > 记录放在本目录：trainer 的写入范围只有 `trainer/**`，不写 `docs/reviews/`；收口时由大总管决定要不要并入总索引。
 
 ## 第 1 轮（2026-11-24）· 总评「修改」
@@ -44,3 +44,32 @@
 ### 是否再审
 
 有 P1，改完开第 2 轮，附本记录；#1 的驳回理由交 codex 再看。
+
+## 第 2 轮（2026-11-24）· 总评「修改」
+
+原文在 scratchpad（不入库）。effort medium。本轮 P0/P1：3 条 · 停止线：未满足 · 留作 issue 的 P2：无
+
+上一轮处理的验证：codex 核实 #2 #5 #6 #7 已到位。它指出我上一轮记录里有一句不符：「心跳在标定时也写」——实际上线程是在标定之后才启动的。**这句不符属实，是我写错了**，本轮已改成真正从第一行起生效。
+
+- **P1｜train.py:334 准备期和每次评估前不检查上限与信号**（第 2 轮 #1）
+  - 核实：属实
+  - 处理：信号处理与心跳线程挪到函数第一行；标定逐批检查，要停就在准备期返回（不建 run.json、不存检查点）；每步算完后先查上限与信号，命中就跳过评估、直接存盘停下。测试 `test_signal_mid_training_saves` · `test_signal_saves_without_extra_eval` · `test_limits_hit_during_setup_stop_before_training` · `test_limit_hit_after_resume_saves_checkpoint`
+  - 已知局限：一次开发评估（默认 20 批）进行中不再检查；量级是秒级（推断，未量化）
+- **P1｜train.py:288 心跳漏记整个准备期**（第 2 轮 #2）
+  - 核实：属实（同上一条的根因）
+  - 处理：心跳从第一行起写；准备期就被杀、还没有检查点时，下次开跑从心跳接上账（写进 run.json 的 `billed_s_before`）。测试 `test_signal_during_setup_keeps_only_heartbeat`
+- **P1｜losses.py:259 a = 0 字头的驳回理由有反例**（第 2 轮 #3，即第 1 轮 #1 第二次提出）
+  - 核实：属实。片头只静 10 ms 就开口时，20 ms 分帧也给出 a = 0，那是真字头
+  - 处理：改为采纳。默认与 V-ONSET 正本同口径（不跳过）；「跳过 a = 0」降成配置开关 `loss.on_skip_leading`，默认关，作扫参选项。测试 `test_onset_default_matches_rust_rule`
+- **P2｜losses.py:279 HybridLoss 均值 ≤ 0 时自动标定给出非正权重，保护项静默失效**（第 2 轮 #4）
+  - 核实：属实（SI-SNR 项是负对数）
+  - 处理：按绝对值定尺度，接近 0 时取 1；输入不是有限数或结果不是有限正数就报错。测试 `test_calibrate_weight_positive_even_if_hybrid_negative`
+
+### 引用抽查
+
+- codex 列的「不符」1 条（心跳线程启动时机）：属实，已改
+- codex 列的「核实属实」5 条
+
+### 是否再审
+
+有 P1，改完开第 3 轮。
