@@ -9,11 +9,13 @@ import re
 import shlex
 import urllib.parse
 
-GPU = "NVIDIA GeForce RTX 3090"
+import config as C  # noqa: E402
+
+GPU = C.GPU_TYPE_ID
 
 
 class FakeRunPod:
-    def __init__(self, price=0.5, vcpu=16, queue=False):
+    def __init__(self, price=C.USD_PER_HR_EXPECTED, vcpu=16, queue=False):
         self.calls = []          # (method, path, body)
         self.headers_seen = []
         self.pods = {}
@@ -42,13 +44,13 @@ class FakeRunPod:
         if p == "/v2/catalog/datacenters":
             return 200, {"dataCenters": [
                 {"id": "EU-RO-1", "name": "RO", "region": "EUROPE", "networkVolumeTypes": ["STANDARD"],
-                 "gpuAvailability": [{"id": GPU, "name": "RTX 3090", "availability": "LOW"}]},
+                 "gpuAvailability": [{"id": GPU, "name": "gpu", "availability": "LOW"}]},
                 {"id": "US-KS-2", "name": "KS", "region": "NA", "networkVolumeTypes": ["STANDARD"],
-                 "gpuAvailability": [{"id": GPU, "name": "RTX 3090", "availability": "HIGH"}]},
+                 "gpuAvailability": [{"id": GPU, "name": "gpu", "availability": "HIGH"}]},
                 {"id": "US-XX-9", "name": "no vol", "region": "NA", "networkVolumeTypes": [],
-                 "gpuAvailability": [{"id": GPU, "name": "RTX 3090", "availability": "HIGH"}]},
+                 "gpuAvailability": [{"id": GPU, "name": "gpu", "availability": "HIGH"}]},
                 {"id": "EU-SE-1", "name": "none", "region": "EUROPE", "networkVolumeTypes": ["STANDARD"],
-                 "gpuAvailability": [{"id": GPU, "name": "RTX 3090", "availability": "NONE"}]},
+                 "gpuAvailability": [{"id": GPU, "name": "gpu", "availability": "NONE"}]},
             ]}
         if p == "/v2/network-volumes" and m == "GET":
             return 200, {"networkVolumes": list(self.volumes.values()), "pagination": {"hasNextPage": False}}

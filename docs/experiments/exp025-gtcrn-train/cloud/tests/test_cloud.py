@@ -255,6 +255,17 @@ class TestCli(Base):
             self.assertEqual(json.load(f)["nproc"], 16)
         self.assertEqual(self.fake.pods, {})
 
+    def test_catalog_price_above_tolerance_refuses(self):
+        self.fake.price = C.USD_PER_HR_EXPECTED * C.PRICE_TOLERANCE + 0.01
+        with self.assertRaises(SystemExit):
+            self.run_cli("up", "--yes", "--dc", C.DATA_CENTER, "--no-volume")
+        self.assertFalse([c for c in self.fake.calls if c[:2] == ("POST", "/v2/pods")])
+
+    def test_volume_create_defaults_to_config_dc(self):
+        self.run_cli("volume-create", "--yes")
+        body = [c[2] for c in self.fake.calls if c[:2] == ("POST", "/v2/network-volumes")][0]
+        self.assertEqual(body["dataCenter"], C.DATA_CENTER)
+
     def test_reap_and_spend(self):
         self.run_cli("up", "--yes", "--dc", "US-KS-2", "--no-volume")
         self.run_cli("reap")

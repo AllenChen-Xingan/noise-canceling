@@ -179,7 +179,7 @@ def build_parser() -> argparse.ArgumentParser:
         p.set_defaults(fn=fn)
         return p
 
-    add("offers", cmd_offers, "3090 价格、vCPU、有货且能建网络盘的机房")
+    add("offers", cmd_offers, "本卡价格、vCPU、有货且能建网络盘的机房")
     p = add("volume-create", cmd_volume_create, "建网络盘（花钱）")
     p.add_argument("--dc", default=C.DATA_CENTER)
     p.add_argument("--size", type=int, default=C.VOLUME_SIZE_GB)
