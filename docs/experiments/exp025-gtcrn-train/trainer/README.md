@@ -26,7 +26,7 @@
 
 ```sh
 cargo build --release --manifest-path parity_rs/Cargo.toml   # 对拍测试要它，第一次约 25 秒
-../../../../.venv/bin/python -m pytest -q tests/              # 105 条通过，1 条等 traindata 的 loader 合入后自动跑
+../../../../.venv/bin/python -m pytest -q tests/              # 107 条通过，1 条等 traindata 的 loader 合入后自动跑
 python smoke.py --config configs/default.yaml --set data.shard_root=… --set data.recipe=… --out smoke.json
 python train.py --config configs/default.yaml --set run.name=exp025-B-s0 --set data.shard_root=… --set data.recipe=…
 python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b.onnx
@@ -74,7 +74,8 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 | 2 单批过拟合 | 150 步走完「初值到完美输出损失」距离的 ≥ 一半；B 的注意力输出层权重要动过 | 7.64 → −0.08（旧判据下降 101%；新判据自审后改，待下次冒烟重读） |
 | 3 原检查点读数复现 | 在官方 `mix.wav` 上和官方 `enh.wav` 的最大差 ≤ 2 个 16 位量化步 | 3.05e-5，即 1 个量化步 |
 
-- 云上还可以用 `--known-dev` 拿开发份的已知读数比对，等 evalcmp 出数
+- 正式数据（`data.kind: loader`）冒烟**必须**用 `--known-dev` 给开发份已知读数，否则记「未完成」、不通过（014 第 3 步）；基准等 evalcmp / cloudrun 出数
+- 同名运行同时只能有一个进程（`run.lock`，flock）
 - 测速只作记录：本机每步中位 1.17 s，取数 0.015 s，主进程 CPU 99%。电池加高负载下测的，**不能和云上比**
 - 本机跑任何超过 1 分钟的命令，都要先申请名额，套 `caffeinate -dims`，并记电源状态。2026-11-16 有一次探测因为用电池、空闲睡眠，CPU 只用了 136 秒，墙钟却拖到 56 分钟
 

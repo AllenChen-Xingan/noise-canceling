@@ -41,7 +41,8 @@ def test_overfit_rule_threshold():
 def test_known_dev_mismatch_fails(tmp_path):
     cfg = _cfg(tmp_path)
     dev = train.make_source(cfg).dev_batches()
-    good = smoke.check_known_dev(cfg, dev, torch.device("cpu"), {}, 1e-3)
+    first = smoke.check_known_dev(cfg, dev, torch.device("cpu"), {"hybrid": 0.0}, 1e-3)
+    good = smoke.check_known_dev(cfg, dev, torch.device("cpu"), {"hybrid": first["got"]["hybrid"]}, 1e-3)
     bad = smoke.check_known_dev(cfg, dev, torch.device("cpu"), {"hybrid": -999.0}, 1e-3)
     assert good["pass"] and not bad["pass"]
 

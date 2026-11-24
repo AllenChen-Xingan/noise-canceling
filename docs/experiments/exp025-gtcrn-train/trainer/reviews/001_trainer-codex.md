@@ -1,7 +1,7 @@
 # 评审 001 · exp025 trainer 代码（codex · gpt-6-astra · read-only）
 
-> 对象：`main...HEAD` 的 diff（`docs/experiments/exp025-gtcrn-train/trainer/**` + `state/handoff/trainer.md`）。**最新一轮：第 3 轮（2026-11-24）· 总评「修改」· 待第 4 轮**。
-> 累计处理：P1×9、P2×6，逐条回源码核实：属实 14、驳回 1（第 1 轮 #1，第 2 轮 codex 给出反例后改为采纳）。
+> 对象：`main...HEAD` 的 diff（`docs/experiments/exp025-gtcrn-train/trainer/**` + `state/handoff/trainer.md`）。**最新一轮：第 4 轮（2026-11-24）· 总评「修改」· 待第 5 轮**。
+> 累计处理：P1×10、P2×8，逐条回源码核实：属实 17、驳回 1（第 1 轮 #1，第 2 轮 codex 给出反例后改为采纳）。
 > 记录放在本目录：trainer 的写入范围只有 `trainer/**`，不写 `docs/reviews/`；收口时由大总管决定要不要并入总索引。
 
 ## 第 1 轮（2026-11-24）· 总评「修改」
@@ -102,3 +102,21 @@
 ### 是否再审
 
 有 P1，改完开第 4 轮。
+
+## 第 4 轮（2026-11-24）· 总评「修改」
+
+本轮 P0/P1：1 条 · 停止线：未满足 · 留作 issue 的 P2：无。上一轮 4 条修复 codex 逐条核实到位。
+
+- **P1｜train.py:234 同名运行没有互斥**（第 4 轮 #1）
+  - 核实：属实（两个进程会同时写 run.json、心跳、检查点，临时文件同名）
+  - 处理：读任何状态前先用 flock 独占 `run.lock`，第二个进程直接报错；进程死了锁自动释放。测试 `test_same_run_cannot_start_twice`
+- **P2｜smoke.py:118 开发份复现把 NaN 判通过**（第 4 轮 #2）
+  - 核实：属实
+  - 处理：实测、已知、容差都必须是有限数；缺键、空基准都不算通过。测试 `test_known_dev_nan_and_missing_fail`
+- **P2｜smoke.py:164 正式数据冒烟可以不给开发份基准**（第 4 轮 #3）
+  - 核实：属实（014 第 3 步要求开发份读数等于已知成绩）
+  - 处理：正式数据模式下没给 `--known-dev` 就记「未完成」，冒烟不通过；合成小样保持原判据
+
+### 是否再审
+
+有 P1，改完开第 5 轮。
