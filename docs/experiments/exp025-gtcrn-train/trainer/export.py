@@ -72,7 +72,12 @@ def compare(m: torch.nn.Module, onnx_path: Path, lengths=(63, 250), tol: float =
             feed["cond"] = cond.numpy()
         with torch.no_grad():
             ref = m(spec, cond).numpy()
-            ref64 = m64(spec.double(), None if cond is None else cond.double()).numpy()
+            old = torch.get_default_dtype()
+            torch.set_default_dtype(torch.float64)  # 官方 GRNN 在 h=None 时按默认 dtype 新建隐状态
+            try:
+                ref64 = m64(spec.double(), None if cond is None else cond.double()).numpy()
+            finally:
+                torch.set_default_dtype(old)
         got = sess.run(None, feed)[0]
         f32_err = float(np.abs(ref - ref64).max())
         d = float(np.abs(ref - got).max())
