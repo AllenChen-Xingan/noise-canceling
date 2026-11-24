@@ -42,17 +42,18 @@ class TempAttnSeq(nn.Module):
         pad = self.k - 1
         k = nn.functional.pad(k, [0, 0, pad, 0])  # 开头补零 key / value（= 流式初始缓存）
         v = nn.functional.pad(v, [0, 0, pad, 0])
-        # (B,F,T,C,K)：第 i 帧的窗口 = 补零后的 [i, i+K)，末位是当前帧。
-        # 用 K 个错位切片拼，不用 Tensor.unfold：后者在时间长度可变时导不出 ONNX
-        kw = torch.stack([k[:, :, j:j + t] for j in range(self.k)], dim=-1)
-        vw = torch.stack([v[:, :, j:j + t] for j in range(self.k)], dim=-1)
+        # 第 i 帧的窗口 = 补零后的 [i, i+K)，末位 j = K−1 是当前帧。逐个错位 j 算打分、再逐个累加：
+        # 不把窗口摊成 (B,F,T,C,K)——批量 32 × 251 帧时那样每份约 543 MB（自审实测）；也不用 Tensor.unfold
+        # （时间长度可变时导不出 ONNX）。显存只多打分 (B,F,T,H,K) 这一份。
         qh = q.view(b, f, t, self.h, self.dh)
-        kh = kw.reshape(b, f, t, self.h, self.dh, self.k)
-        vh = vw.reshape(b, f, t, self.h, self.dh, self.k)
-        s = torch.einsum("bfthd,bfthdk->bfthk", qh, kh) / self.dh ** 0.5
-        att = torch.softmax(s, dim=-1)
-        o = torch.einsum("bfthk,bfthdk->bfthd", att, vh).reshape(b, f, t, C)
-        y = z + self.out(o)
+        kh = k.view(b, f, t + pad, self.h, self.dh)
+        vh = v.view(b, f, t + pad, self.h, self.dh)
+        s = torch.stack([(qh * kh[:, :, j:j + t]).sum(-1) for j in range(self.k)], dim=-1)
+        att = torch.softmax(s / self.dh ** 0.5, dim=-1)  # (B,F,T,H,K)
+        o = att[..., 0:1] * vh[:, :, 0:t]
+        for j in range(1, self.k):
+            o = o + att[..., j:j + 1] * vh[:, :, j:j + t]
+        y = z + self.out(o.reshape(b, f, t, C))
         return y.permute(0, 3, 2, 1)
 
 
