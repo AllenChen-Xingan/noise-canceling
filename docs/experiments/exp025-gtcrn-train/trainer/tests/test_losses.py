@@ -17,32 +17,40 @@ def _pair(seed=0, n_bursts=6):
             torch.as_tensor(o, dtype=torch.float64)[None], iv)
 
 
-def _directional(f, x, n_dir=6, eps=1e-6, seed=0):
-    """有限差分核梯度：随机方向 v 上，(f(x+εv) − f(x−εv)) / 2ε 与 ∇f·v 比。"""
+def _directional(f, x, n_dir=6, eps=1e-6, seed=0, scale=1.0):
+    """有限差分核梯度：随机方向 v 上，(f(x+εv) − f(x−εv)) / 2ε 与 ∇f·v 比。
+    判据是真正的相对差：|fd − an| ≤ 1e-5·|an| + 1e-12（近零时只靠极小的绝对下限，codex 第 10 轮 #2）。
+    scale ≠ 1 时把解析梯度故意放大，给反向对照用。返回 (梯度, 是否全部通过)。"""
     g = torch.Generator().manual_seed(seed)
     x = x.clone().requires_grad_(True)
     y = f(x)
     (grad,) = torch.autograd.grad(y, x)
+    ok = True
     for _ in range(n_dir):
         v = torch.randn(x.shape, generator=g, dtype=x.dtype)
         with torch.no_grad():
             fd = (f(x + eps * v) - f(x - eps * v)) / (2 * eps)
-        an = (grad * v).sum()
-        assert abs(fd.item() - an.item()) <= 1e-5 * max(1.0, abs(an.item())), (fd.item(), an.item())
-    return grad
+        an = (grad * scale * v).sum()
+        assert abs(an.item()) > 1e-9  # 方向导数不是近零，相对判据才有意义
+        ok &= abs(fd.item() - an.item()) <= 1e-5 * abs(an.item()) + 1e-12
+    return grad, ok
 
 
 def test_splvl_gradient_finite_difference():
     c, o, iv = _pair(1)
     fr = torch.as_tensor(losses.owner_only_mask(iv, [], N))[None]
-    grad = _directional(lambda x: losses.splvl_db(x, c, fr)[0].sum(), o)
-    assert grad.abs().sum() > 0
+    f = lambda x: losses.splvl_db(x, c, fr)[0].sum()  # noqa: E731
+    grad, ok = _directional(f, o)
+    assert ok and grad.abs().sum() > 0
+    assert not _directional(f, o, scale=1.01)[1]  # 反向对照：梯度错 1% 就红
 
 
 def test_onset_gradient_finite_difference():
     c, o, _ = _pair(2)
-    grad = _directional(lambda x: losses.onset_excess_db(x, c)[0].sum(), o)
-    assert grad.abs().sum() > 0
+    f = lambda x: losses.onset_excess_db(x, c)[0].sum()  # noqa: E731
+    grad, ok = _directional(f, o)
+    assert ok and grad.abs().sum() > 0
+    assert not _directional(f, o, scale=1.01)[1]
 
 
 def test_short_samples_skipped_not_in_denominator():

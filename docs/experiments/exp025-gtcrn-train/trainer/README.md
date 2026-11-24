@@ -54,9 +54,9 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 | 不看未来帧（A · B） | 改 t0 之后的输入，t0 之前的输出不变；未来帧确实改了（反向对照） | 通过 | `test_no_lookahead` |
 | 整段版注意力 = exp019 逐帧版 | 非零权重，K = 4 和 32，差 ≤ 1e-5 | 通过 | `test_offline_matches_exp019_stream` |
 | 批归一化冻结：训练模式 = 评估模式 · 训练模式也不看未来帧 | 差 ≤ 1e-6；统计量不更新 | 通过 | `test_frozen_bn_train_mode_equals_eval_and_has_no_lookahead` |
-| B 在 MPS（带 exp018 绕法）= CPU | 前向差 ≤ 1e-4 · 梯度相对差 ≤ 1e-3 | 本机通过 | `test_b_on_mps_matches_cpu` |
+| B 在 MPS（带 exp018 绕法）= CPU | 前向最大差 ≤ 1e-4 · 梯度范数相对差 ≤ 1e-3；差 1% 必红 | 本机通过 | `test_b_on_mps_matches_cpu` |
 | L_lvl / L_on 和 Rust 正本对拍 | 有效 / 待测一致；读数差 f64 ≤ 1e-6 dB、f32 ≤ 2e-3 dB；字头数一致；10 ms 掩码和有声区间逐位一致 | 10 段夹具（含段长不整除、说话到段尾、字头窗口越界、全零），31 条通过 | `test_losses_parity.py` |
-| 梯度检查 | 6 个随机方向上有限差分 vs 解析梯度，相对差 ≤ 1e-5 | 通过 | `test_*_gradient_finite_difference` |
+| 梯度检查 | 6 个随机方向上有限差分 vs 解析梯度：\|差\| ≤ 1e-5·\|方向导数\| + 1e-12（方向导数非近零）；梯度放大 1% 必红（反向对照） | 通过 | `test_*_gradient_finite_difference` |
 | 样本不足 | 与 verifier 同条件跳过、不进分母；整批无效时该项 = 0 | 通过 | `test_short_samples_skipped_not_in_denominator` |
 | 默认开关 = 官方损失 | 逐值相同 | 通过 | `test_trainloss_defaults_equal_official_hybrid` |
 | 续训 = 不中断 | 先训 3 步再续到 6 步，和一口气训 6 步权重逐值相同 | **只在 CPU + 合成数据上**通过；云上 GPU + 真数据待测（现状页「转交」1） | `test_resume_equals_uninterrupted` |

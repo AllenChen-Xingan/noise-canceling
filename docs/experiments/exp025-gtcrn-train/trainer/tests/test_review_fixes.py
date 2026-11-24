@@ -123,8 +123,11 @@ def test_b_on_mps_matches_cpu():
         y.pow(2).mean().backward()
         out[dev] = (y.detach().cpu(), m.attn.q.weight.grad.cpu())
     assert (out["cpu"][0] - out["mps"][0]).abs().max().item() <= 1e-4
-    g = out["cpu"][1]
-    assert (g - out["mps"][1]).abs().max().item() <= 1e-3 * max(1.0, g.abs().max().item())
+    g, gm = out["cpu"][1], out["mps"][1]
+    assert g.norm() > 0
+    rel = ((g - gm).norm() / g.norm()).item()  # 范数相对差（codex 第 10 轮 #2：不再以 1 为下限）
+    assert rel <= 1e-3, rel
+    assert ((g - gm * 1.01).norm() / g.norm()).item() > 1e-3  # 反向对照：差 1% 就红
 
 
 # ---------- 训练循环 ----------
