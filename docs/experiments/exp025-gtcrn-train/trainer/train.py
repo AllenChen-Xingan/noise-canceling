@@ -239,9 +239,9 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
         if sp_ref is not None:
             sp_ref = {k: v.to(device) for k, v in st["sp_ref"].items()}
         step, calib = st["step"], st["calib"]
-        hb = rd.heartbeat()
-        billed0 = max(st["billed_s"], hb.get("billed_s", 0.0))
-        usd0 = max(st.get("usd", 0.0), hb.get("usd", 0.0))
+        hb, prev = rd.heartbeat(), rec.get("stop") or {}
+        billed0 = max(st["billed_s"], hb.get("billed_s", 0.0), prev.get("billed_s", 0.0))  # 三处取最晚的
+        usd0 = max(st.get("usd", 0.0), hb.get("usd", 0.0), prev.get("usd", 0.0))
         rec["config"] = cfg_dict
         rec["resumes"].append({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "from_step": step,
                                "from_ckpt": last.name, "billed_s_before": round(billed0, 2),
