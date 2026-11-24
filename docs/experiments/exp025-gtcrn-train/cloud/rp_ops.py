@@ -50,6 +50,14 @@ def candidate_datacenters(cli: Client, gpu_id: str = C.GPU_TYPE_ID) -> list:
     return out
 
 
+def cpu_rate(cli: Client) -> float:
+    """纯 CPU 机器每小时目录价 = 每核价 × 核数。"""
+    for c in cli.get("/v2/catalog/cpus").get("cpus", []):
+        if c.get("id") == C.CPU_FLAVOR_ID:
+            return float((c.get("price") or {}).get("securePerVcpu") or 0) * C.CPU_VCPU
+    raise SystemExit(f"目录里没有 {C.CPU_FLAVOR_ID}")
+
+
 # ---------- 网络盘 ----------
 
 def find_volume(cli: Client, name: str = C.VOLUME_NAME) -> Optional[dict]:
@@ -82,13 +90,23 @@ def delete_volume(cli: Client, volume_id: str, ledger_path: str = L.DEFAULT_PATH
 
 # ---------- 开机 / 删机 ----------
 
+def compute_spec(cpu: bool = False) -> dict:
+    if cpu:
+        return {"cpu": {"id": C.CPU_FLAVOR_ID, "vcpuCount": C.CPU_VCPU}}
+    return {"gpu": {"id": C.GPU_TYPE_ID, "count": 1, "minVcpuCountPerGpu": C.MIN_VCPU_PER_GPU}}
+
+
+def compute_label(cpu: bool = False) -> str:
+    return f"{C.CPU_FLAVOR_ID} x{C.CPU_VCPU}" if cpu else C.GPU_TYPE_ID
+
+
 def pod_body(name: str, data_center: str, volume_id: Optional[str], max_hours: float,
-             gpu_id: str = C.GPU_TYPE_ID) -> dict:
+             cpu: bool = False) -> dict:
     # 容器睡到最长时限后删自己（第 2 层兜底，见 watchdog.py）；只是退出的话平台会重启它、照常计费
     body = {
         "name": name,
         "cloud": C.CLOUD,
-        "gpu": {"id": gpu_id, "count": 1, "minVcpuCountPerGpu": C.MIN_VCPU_PER_GPU},
+        **compute_spec(cpu),
         "dataCenterIds": [data_center],
         "image": C.IMAGE,
         "disk": C.CONTAINER_DISK_GB,
@@ -103,13 +121,13 @@ def pod_body(name: str, data_center: str, volume_id: Optional[str], max_hours: f
 
 def create_pod(cli: Client, data_center: str, volume_id: Optional[str], max_hours: float,
                usd_per_hr_hint: float, name: Optional[str] = None,
-               ledger_path: str = L.DEFAULT_PATH) -> dict:
+               ledger_path: str = L.DEFAULT_PATH, cpu: bool = False) -> dict:
     if not name:
         name = C.POD_NAME_PREFIX + time.strftime("%Y%m%d-%H%M%S")
     if not name.startswith(C.POD_NAME_PREFIX):
         raise SystemExit(f"机器名必须以 {C.POD_NAME_PREFIX} 开头（reap 靠它认）")
     L.check_budget(L.read_rows(ledger_path), usd_per_hr_hint, max_hours)
-    p = cli.post("/v2/pods", pod_body(name, data_center, volume_id, max_hours))
+    p = cli.post("/v2/pods", pod_body(name, data_center, volume_id, max_hours, cpu))
     if p.get("status") in QUEUE_STATES:  # 202：没货被排进队列
         if p.get("status") == "DEPLOYED" and p.get("podId"):
             p = cli.get(f"/v2/pods/{p['podId']}")
@@ -122,7 +140,7 @@ def create_pod(cli: Client, data_center: str, volume_id: Optional[str], max_hour
             raise SystemExit(f"开机没直接开成（{p.get('status')}，{p.get('failureReason')}），{gone}")
     now = L.iso(L.utcnow())
     rate = float(p.get("cost") or usd_per_hr_hint)
-    L.append_row({"ts_utc": now, "action": "pod_create", "resource_id": p["id"], "gpu": C.GPU_TYPE_ID,
+    L.append_row({"ts_utc": now, "action": "pod_create", "resource_id": p["id"], "gpu": compute_label(cpu),
                   "data_center": p.get("dataCenterId") or data_center, "usd_per_hr": f"{rate:.4f}",
                   "started_utc": now, "note": f"max_hours={max_hours}"}, ledger_path)
     if rate * max_hours > usd_per_hr_hint * max_hours * 1.5 + 0.01:

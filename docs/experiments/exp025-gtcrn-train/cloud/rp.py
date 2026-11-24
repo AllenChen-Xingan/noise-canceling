@@ -62,12 +62,15 @@ def _volume_id(cli, a):
     return v["id"], v["dataCenter"]
 
 
-def _rate_hint(cli) -> float:
-    price = (O.gpu_offer(cli).get("price") or {}).get("secure")
+def _rate_hint(cli, cpu: bool = False) -> float:
+    if cpu:
+        price, want = O.cpu_rate(cli), C.CPU_USD_PER_VCPU_HR_EXPECTED * C.CPU_VCPU
+    else:
+        price, want = (O.gpu_offer(cli).get("price") or {}).get("secure"), C.USD_PER_HR_EXPECTED
     if not price:
         raise SystemExit("目录里拿不到 Secure 价格，不开机")
-    if float(price) > C.USD_PER_HR_EXPECTED * C.PRICE_TOLERANCE:
-        raise SystemExit(f"目录价 {price} 美元/时，高于预期 {C.USD_PER_HR_EXPECTED} 的 {C.PRICE_TOLERANCE} 倍，不开机")
+    if float(price) > want * C.PRICE_TOLERANCE:
+        raise SystemExit(f"目录价 {price} 美元/时，高于预期 {want} 的 {C.PRICE_TOLERANCE} 倍，不开机")
     return float(price)
 
 
@@ -75,7 +78,7 @@ def bring_up(cli, a):
     vol, dc = _volume_id(cli, a)
     if not dc:
         raise SystemExit("要指定 --dc（不挂盘时）")
-    p = O.create_pod(cli, dc, vol, a.max_hours, _rate_hint(cli), ledger_path=a.ledger)
+    p = O.create_pod(cli, dc, vol, a.max_hours, _rate_hint(cli, a.cpu), ledger_path=a.ledger, cpu=a.cpu)
     when = W.register(p["id"], a.max_hours)  # 第 1 层兜底：本机看门狗到点删机
     W.ensure_running(os.path.abspath(__file__), spawn=SPAWN)
     print(f"看门狗登记：{p['id']} 最晚 {when} 删机", file=sys.stderr)
@@ -86,7 +89,7 @@ def bring_up(cli, a):
         O.delete_pod(cli, p["id"], a.ledger, note="没跑起来，自动删")
         raise
     gpu = p.get("gpu") or {}
-    if gpu.get("vcpuCount") and gpu["vcpuCount"] < C.MIN_VCPU_PER_GPU:
+    if not a.cpu and gpu.get("vcpuCount") and gpu["vcpuCount"] < C.MIN_VCPU_PER_GPU:
         O.delete_pod(cli, p["id"], a.ledger, note=f"vCPU {gpu['vcpuCount']} 不够，自动删")
         raise SystemExit(f"分到的机器只有 {gpu['vcpuCount']} vCPU，已删")
     return p
@@ -210,6 +213,7 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--max-hours", type=float, default=C.DEFAULT_MAX_HOURS)
         p.add_argument("--no-volume", action="store_true")
         p.add_argument("--dc", default=None)
+        p.add_argument("--cpu", action="store_true", help="开纯 CPU 机器（下载数据用），不开显卡")
         p.add_argument("--yes", action="store_true")
         if name == "probe":
             p.add_argument("--seconds", type=float, default=20.0, help="每个地址最多测几秒")

@@ -14,6 +14,10 @@ DATA_CENTER = "US-MO-1"
 USD_PER_HR_EXPECTED = 4.39
 PRICE_TOLERANCE = 1.2
 CLOUD = "SECURE"
+# 纯 CPU 机器（下载数据到网络盘用，大总管 2026-11-24 方案）：同机房最便宜的一档
+CPU_FLAVOR_ID = "cpu3c"
+CPU_VCPU = 4  # 必须是 2 的幂（openapi BaseCpuConfig）
+CPU_USD_PER_VCPU_HR_EXPECTED = 0.03  # 目录价（2026-11-24 实测）；4 核 ≈ 0.12 美元 / 小时
 # D102：H100 平台最低 8 个；分到的少于它就删，多于它照实记
 MIN_VCPU_PER_GPU = 8
 # 镜像锁版本（034 compute.md 第三节第 4 条）；容器只睡觉，活全靠 exec 发进去
