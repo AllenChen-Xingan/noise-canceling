@@ -103,10 +103,15 @@ class SyntheticSource:
             yield b
             k += 1
 
-    def dev_batches(self, n_batches: int | None = None) -> list[dict]:
+    def dev_batches(self, n_batches: int | None = None, should_stop=None) -> list[dict] | None:
         d = self.cfg.data
         nb = max(1, min(n_batches or d.dev_batches, -(-d.dev_n // d.batch)))
-        return [synth_batch(d.dev_seed, 10_000_000 + i, d.batch, self.n) for i in range(nb)]
+        out = []
+        for i in range(nb):
+            if should_stop and should_stop():
+                return None
+            out.append(synth_batch(d.dev_seed, 10_000_000 + i, d.batch, self.n))
+        return out
 
 
 # ---------- traindata 的 loader ----------
@@ -152,10 +157,16 @@ class LoaderSource:
         for b in dl:
             yield normalize(self.mod.render_on_gpu(b, device) if on_gpu else b, require_index=True)
 
-    def dev_batches(self, n_batches: int | None = None) -> list[dict]:
+    def dev_batches(self, n_batches: int | None = None, should_stop=None) -> list[dict] | None:
+        """逐批构造（DevSet 在 CPU 上渲染，640 段可能要一会儿）；每批前问 should_stop，要停返回 None。"""
         d = self.cfg.data
         n = min(len(self.dev), (n_batches or d.dev_batches) * d.batch)
-        return [collate([self.dev[j] for j in range(i, min(i + d.batch, n))]) for i in range(0, n, d.batch)]
+        out = []
+        for i in range(0, n, d.batch):
+            if should_stop and should_stop():
+                return None
+            out.append(collate([self.dev[j] for j in range(i, min(i + d.batch, n))]))
+        return out
 
 
 def make_source(cfg):

@@ -129,17 +129,30 @@ def calibrate(model, cfg, batches, device, should_stop=lambda: None) -> dict | N
 
 
 @torch.no_grad()
-def evaluate(model, crit, dev, device, cfg, **kw) -> dict:
-    """开发份平均读数。每个键按「出现过的批数」平均（kd 只在有回放样本的批出现，不按总批数摊薄）。"""
+def evaluate(model, crit, dev, device, cfg, should_stop=lambda: None, **kw) -> dict | None:
+    """开发份平均读数。lvl / on 按有效段数加权（整批无效的不进分母，codex 第 3 轮 #3）；kd 等按出现过的批数平均。
+    每批前问一次 should_stop，要停就返回 None（codex 第 3 轮 #1）。"""
     model.eval()
     acc, cnt = {}, {}
-    for b in dev:
-        _, logs = forward_loss(model, crit, b, device, **kw)
-        for k, v in logs.items():
-            acc[k] = acc.get(k, 0.0) + v
-            cnt[k] = cnt.get(k, 0) + 1
-    set_train(model, cfg)
-    return {k: v / cnt[k] for k, v in acc.items()}
+    try:
+        for b in dev:
+            if should_stop():
+                return None
+            _, logs = forward_loss(model, crit, b, device, **kw)
+            for k, v in logs.items():
+                if k.endswith("_valid"):
+                    continue
+                w = logs.get(f"{k}_valid", 1) if k in ("lvl", "on") else 1
+                acc[k] = acc.get(k, 0.0) + v * w
+                cnt[k] = cnt.get(k, 0) + w
+            for k in ("lvl", "on"):
+                if f"{k}_valid" in logs:
+                    cnt[f"{k}_valid"] = cnt.get(f"{k}_valid", 0) + logs[f"{k}_valid"]
+    finally:
+        set_train(model, cfg)
+    out = {k: (v / cnt[k] if cnt[k] else 0.0) for k, v in acc.items()}
+    out |= {k: v for k, v in cnt.items() if k.endswith("_valid")}
+    return out
 
 
 def set_train(model, cfg) -> None:
@@ -203,6 +216,12 @@ class _Beat:
         self.rd.beat(*self.snap())
 
 
+def _setup_stop(reason, billed_s, usd) -> dict:
+    """准备期就停：没有检查点、不写 run.json，账只在心跳里。"""
+    return {"reason": reason or "setup_stopped", "step": 0, "phase": "setup",
+            "billed_s": round(billed_s, 2), "usd": round(usd, 4)}
+
+
 def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = None,
           _beat_s: float = HEARTBEAT_S) -> dict:
     """跑到停下为止，返回停下记录。max_wall_s / _signals / _beat_s 只给测试用。
@@ -235,7 +254,9 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
 
         device = resolve_device(cfg.device)
         source = make_source(cfg)
-        dev = source.dev_batches()
+        dev = source.dev_batches(should_stop=stop_reason)
+        if dev is None:
+            return _setup_stop(stop_reason(), billed(), usd())
         model = build_model(cfg, device)
         sp_ref = {k: v.detach().clone() for k, v in model.named_parameters()} if cfg.loss.sp else None
         teacher = None
@@ -249,7 +270,13 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
         ema = EMA(model, cfg.ema.decay) if cfg.ema.enabled else None
 
         st, last = rd.load_latest(device)
-        if st is None and (rd.run_json.exists() or any(rd.ckpt_dir.glob("step-*.pt"))):
+        init_only = st is None and rd.read().get("phase") == "init" and not any(rd.ckpt_dir.glob("step-*.pt"))
+        if init_only:
+            # 上次写了 run.json、还没存下第 0 步就被杀（codex 第 3 轮 #2）：配置与数据一致就重建，账从心跳接上
+            why = check_resume(rd.read(), cfg_dict, source.build_id)
+            if why:
+                raise RuntimeError("拒绝重建：" + "；".join(why))
+        elif st is None and (rd.run_json.exists() or any(rd.ckpt_dir.glob("step-*.pt"))):
             # 已有运行却一份检查点都读不出：不当成新运行（会清零花费、覆盖 run.json、跳过训崩检查，codex 第 1 轮 #5）
             raise RuntimeError(f"{rd.root} 已有运行记录，但没有可读的检查点（见 ckpt/bad_ckpt.txt）；请人工处理或换 run.name")
         if st is not None:
@@ -274,15 +301,16 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
                                    "from_ckpt": last.name, "billed_s_before": round(acct["billed0"], 2),
                                    "env": env_info(), "prev_stop": rec.pop("stop", None)})
         else:
-            calib = calibrate(model, cfg, source.dev_batches(cfg.data.calib_batches), device, stop_reason)
+            cal_dev = source.dev_batches(cfg.data.calib_batches, should_stop=stop_reason)
+            calib = None if cal_dev is None else calibrate(model, cfg, cal_dev, device, stop_reason)
             if calib is None:  # 准备期就到上限 / 收到信号：没有检查点可存，只留心跳里的账
-                return {"reason": stop_reason() or "setup_stopped", "step": 0, "phase": "setup",
-                        "billed_s": round(billed(), 2), "usd": round(usd(), 4)}
+                return _setup_stop(stop_reason(), billed(), usd())
             step = 0
             pcnt = models.param_counts(model)
             rec = start_record(cfg_dict, source.build_id, source.num_workers,
                                {"device": str(device), "params": pcnt["trainable"], "params_fixed": pcnt["fixed"],
-                                "calib": calib, "env": env_info(), "billed_s_before": round(acct["billed0"], 2)})
+                                "calib": calib, "env": env_info(), "billed_s_before": round(acct["billed0"], 2),
+                                "phase": "init"})
         acct["step"] = step
         rd.write(rec)
         crit = losses.TrainLoss(loss_cfg(cfg, calib["lvl"]["weight"], calib["on"]["weight"])).to(device)
@@ -295,22 +323,27 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
                     "variant": cfg.model.variant}
 
         def dev_eval():
-            row = {"step": step, "dev": evaluate(model, crit, dev, device, cfg, **kw)}
-            if ema is not None:  # 034 建议 7：EMA 与不用 EMA 在开发份上并排比
+            row = {"step": step, "dev": evaluate(model, crit, dev, device, cfg, stop_reason, **kw)}
+            if ema is not None and row["dev"] is not None:  # 034 建议 7：EMA 与不用 EMA 在开发份上并排比
                 raw = {k: v.clone() for k, v in model.state_dict().items()}
                 model.load_state_dict(ema.state_dict())
-                row["dev_ema"] = evaluate(model, crit, dev, device, cfg, **kw)
-                model.load_state_dict(raw)
-            rd.log(row)
+                try:
+                    row["dev_ema"] = evaluate(model, crit, dev, device, cfg, stop_reason, **kw)
+                finally:
+                    model.load_state_dict(raw)
+            if row["dev"] is not None:  # 评估中途要停：这一行不记（半份读数会误导比较）
+                rd.log(row)
 
         if st is None:
             rd.save(state(), 0, sc.keep_last)
+            rec["phase"] = "training"  # 第 0 步已落盘，之后才算正式开训
+            rd.write(rec)
         t_start = time.monotonic()
         reason, last_eval = None, step
         set_train(model, cfg)
         batches = source.train_batches(start_batch=step, device=device)
         while True:
-            reason = "max_steps" if step >= sc.max_steps else stop_reason()
+            reason = stop_reason() or ("max_steps" if step >= sc.max_steps else None)  # 上限 / 信号优先（第 3 轮 #1）
             if reason is None and max_wall_s is not None and time.monotonic() - t_start >= max_wall_s:
                 reason = "interrupted"
             if reason:

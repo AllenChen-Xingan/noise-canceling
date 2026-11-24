@@ -84,8 +84,10 @@ def compare(m: torch.nn.Module, onnx_path: Path, lengths=(63, 250), tol: float =
         f32_err = float(np.abs(ref - ref64).max())
         onnx_err = float(np.abs(got - ref64).max())
         lim = max(tol, 4 * f32_err)
+        finite = all(np.isfinite(a).all() for a in (ref, ref64, got)) and np.isfinite(lim)  # 防 inf ≤ inf（第 3 轮 #4）
         rows.append({"T": t, "max_abs_diff": float(np.abs(ref - got).max()), "onnx_vs_f64": onnx_err,
-                     "torch_f32_vs_f64": f32_err, "limit": lim, "pass": onnx_err <= lim,
+                     "torch_f32_vs_f64": f32_err, "limit": lim, "finite": bool(finite),
+                     "pass": bool(finite and onnx_err <= lim),
                      "ref_rms": float(np.sqrt((ref ** 2).mean()))})
     return {"pass": all(r["pass"] for r in rows), "tol": tol, "cases": rows}
 
