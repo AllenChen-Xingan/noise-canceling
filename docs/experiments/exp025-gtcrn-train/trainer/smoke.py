@@ -99,7 +99,7 @@ def check_reproduce(device) -> dict:
 def check_known_dev(cfg, dev, device, known: dict, tol: float) -> dict:
     """开发份已知读数（键 = 损失日志名，如 hybrid）与起点模型实测比对。"""
     m = _model(cfg, device, variant="A").eval()
-    got = train.evaluate(m, losses.TrainLoss(losses.LossCfg()).to(device), dev, device)
+    got = train.evaluate(m, losses.TrainLoss(losses.LossCfg()).to(device), dev, device, cfg)
     bad = {k: (got.get(k), v) for k, v in known.items() if abs(got.get(k, float("inf")) - v) > tol}
     return {"pass": not bad, "got": got, "known": known, "tol": tol, "mismatch": bad}
 

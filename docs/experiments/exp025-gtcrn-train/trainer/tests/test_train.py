@@ -85,7 +85,7 @@ def test_run_record_and_checkpoints(tmp_path):
     names = sorted(p.name for p in (root / "ckpt").glob("step-*.pt"))
     assert names == ["step-0000000.pt", "step-0000004.pt", "step-0000006.pt"]  # 起点 + 最近 2 份
     st = torch.load(root / "ckpt" / "step-0000006.pt", weights_only=False)
-    assert st["step"] == 6 and {"model", "optim", "sched", "elapsed_s", "calib"} <= set(st)
+    assert st["step"] == 6 and {"model", "optim", "sched", "billed_s", "calib"} <= set(st)
 
 
 def test_resume_equals_uninterrupted(tmp_path):

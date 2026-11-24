@@ -57,8 +57,13 @@ def export(m: torch.nn.Module, out: Path) -> list[str]:
 
 
 def compare(m: torch.nn.Module, onnx_path: Path, lengths=(63, 250), tol: float = 1e-4) -> dict:
+    """ONNX Runtime 对 PyTorch（float32）的最大差。判据：≤ max(tol, 4 × PyTorch 自身 float32 对 float64 的差)。
+    后一项是这组权重下浮点舍入本来就有的误差（训后权重大时下游会放大它；自审实测注意力层单独两者同为约 1e-5）。"""
+    import copy
+
     import onnxruntime as ort
     sess = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
+    m64 = copy.deepcopy(m).double()
     rows = []
     for i, t in enumerate(lengths):
         spec, cond = _inputs(m, t, 100 + i)
@@ -67,10 +72,14 @@ def compare(m: torch.nn.Module, onnx_path: Path, lengths=(63, 250), tol: float =
             feed["cond"] = cond.numpy()
         with torch.no_grad():
             ref = m(spec, cond).numpy()
+            ref64 = m64(spec.double(), None if cond is None else cond.double()).numpy()
         got = sess.run(None, feed)[0]
-        rows.append({"T": t, "max_abs_diff": float(np.abs(ref - got).max()),
+        f32_err = float(np.abs(ref - ref64).max())
+        d = float(np.abs(ref - got).max())
+        lim = max(tol, 4 * f32_err)
+        rows.append({"T": t, "max_abs_diff": d, "torch_f32_vs_f64": f32_err, "limit": lim, "pass": d <= lim,
                      "ref_rms": float(np.sqrt((ref ** 2).mean()))})
-    return {"pass": all(r["max_abs_diff"] <= tol for r in rows), "tol": tol, "cases": rows}
+    return {"pass": all(r["pass"] for r in rows), "tol": tol, "cases": rows}
 
 
 def main(argv=None) -> int:
