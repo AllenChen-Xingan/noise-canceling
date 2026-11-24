@@ -31,10 +31,11 @@ def test_init_check_passes_and_overfit_reports(tmp_path):
 
 
 def test_overfit_rule_threshold():
-    """判据本身：下降 49% 不过、51% 过、变成 NaN 不过（防判据写反）。"""
-    assert not smoke.overfit_pass(10.0, 5.1)
-    assert smoke.overfit_pass(10.0, 4.9)
-    assert not smoke.overfit_pass(10.0, float("nan"))
+    """判据本身：走完 49% 不过、51% 过、NaN 不过、跨零也对（防判据写反）。"""
+    assert not smoke.overfit_pass(10.0, 5.1, 0.0)
+    assert smoke.overfit_pass(10.0, 4.9, 0.0)
+    assert not smoke.overfit_pass(10.0, float("nan"), 0.0)
+    assert smoke.overfit_pass(2.0, -2.5, -8.0) and not smoke.overfit_pass(2.0, -2.0, -8.0)  # 跨零：按到下限的距离算
 
 
 def test_known_dev_mismatch_fails(tmp_path):
