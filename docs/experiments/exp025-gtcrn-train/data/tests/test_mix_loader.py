@@ -267,6 +267,28 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(b["batch_index"], 2)
         self.assertTrue(torch.equal(b["noisy"], seq[2]["noisy"]))
 
+    def test_gpu_path_dataloader_workers_and_parity(self):
+        """GPU 路：DataLoader 2 个 worker + start_batch=1 出的批 = 单进程顺序取的第 1、2 批；渲染后与 CPU 路 ≤ 1e-4。"""
+        try:
+            import torch
+            from torch.utils.data import DataLoader
+        except ImportError:
+            self.skipTest("本机无 torch；用仓库 .venv 跑")
+        dev = "cuda" if torch.cuda.is_available() else "cpu"
+        it = loader.torch_iterable(self.shards, self.recipe, seed=4, batch_size=3, start_batch=1, **self.kw)
+        dl = iter(DataLoader(it, batch_size=None, num_workers=2))
+        got = [next(dl) for _ in range(2)]
+        ds = loader._Base(self.shards, self.recipe, seed=4, **self.kw)
+        for k, b in zip((1, 2), got):
+            self.assertEqual(int(b["batch_index"]), k)
+            out = loader.render_on_gpu(b, dev)
+            ref = loader.batch(ds, k, 3)
+            self.assertLessEqual(float((out["noisy"].cpu() - torch.from_numpy(ref["noisy"])).abs().max()), 1e-4)
+            self.assertLessEqual(float((out["clean"].cpu() - torch.from_numpy(ref["clean"])).abs().max()), 1e-4)
+            self.assertEqual(out["owner_ivs"], ref["owner_ivs"])
+            self.assertEqual(out["replay"].cpu().tolist(), ref["replay"].tolist())
+            self.assertEqual([m["i"] for m in out["meta"]], [3 * k, 3 * k + 1, 3 * k + 2])
+
 
 if __name__ == "__main__":
     unittest.main()
