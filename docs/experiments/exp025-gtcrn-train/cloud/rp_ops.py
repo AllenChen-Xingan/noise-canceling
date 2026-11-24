@@ -200,7 +200,8 @@ def start_job(cli: Client, pod_id: str, script: str, job: str, jobs_dir: str = "
     d = shlex.quote(f"{jobs_dir}/{job}")
     inner = f"( {script} ) > {d}.log 2>&1; echo $? > {d}.rc"
     check_ok(sh(cli, pod_id, f"mkdir -p {shlex.quote(jobs_dir)} && rm -f {d}.rc && "
-                              f"nohup sh -c {shlex.quote(inner)} > /dev/null 2>&1 &"), f"启动 {job}")
+                              f"setsid nohup sh -c {shlex.quote(inner)} > /dev/null 2>&1 < /dev/null &"),
+             f"启动 {job}")
 
 
 def job_status(cli: Client, pod_id: str, job: str, jobs_dir: str = "/root/jobs", tail: int = 20) -> dict:
