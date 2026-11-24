@@ -158,19 +158,19 @@ class TestOps(Base):
     def test_queued_pod_is_cancelled(self):
         self.fake.queue = True
         with self.assertRaises(SystemExit):
-            O.create_pod(self.cli, "US-KS-2", None, 1, 0.5, ledger_path=self.ledger)
+            O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
         self.assertIn(("DELETE", "/v2/queued-pods/q_1", None), self.fake.calls)
         self.assertEqual(L.open_pods(L.read_rows(self.ledger)), {})
 
     def test_price_far_above_hint_deletes(self):
-        self.fake.price = 2.0
+        self.fake.price = C.USD_PER_HR_EXPECTED * 3
         with self.assertRaises(SystemExit):
-            O.create_pod(self.cli, "US-KS-2", None, 1, 0.5, ledger_path=self.ledger)
+            O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
         self.assertEqual(self.fake.pods, {})
         self.assertEqual(L.open_pods(L.read_rows(self.ledger)), {})
 
     def test_create_then_delete_uses_delete_not_stop(self):
-        p = O.create_pod(self.cli, "US-KS-2", None, 1, 0.5, ledger_path=self.ledger)
+        p = O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
         O.delete_pod(self.cli, p["id"], self.ledger)
         self.assertIn(("DELETE", f"/v2/pods/{p['id']}", None), self.fake.calls)
         self.assertFalse([c for c in self.fake.calls if c[1].endswith("/action")])
