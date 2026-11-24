@@ -125,8 +125,8 @@ def splvl_db(out: torch.Tensor, clean: torch.Tensor, frames: torch.Tensor):
 def onset_plan(clean_np: np.ndarray, n_out: int, skip_leading: bool = False):
     """一段的字头起点与有声 20 ms 帧下标（只依赖干净轨，不参与求导）。
 
-    skip_leading：训练用。随机裁切的段若从说话中间开始，第一个区间 a = 0 不是真字头（之前的停顿被裁掉了），
-    叠着 istft 首帧边缘效应，跳过它。对拍用 False，与 Rust 一致（评测片段以停顿开头，不受影响）。"""
+    skip_leading：扫参开关，默认关（与 Rust 正本一致）。开时跳过 a = 0 的区间：随机裁切从说话中间开始时它不是真字头；
+    但片头只静 10 ms 就开口也会得到 a = 0、那是真字头（codex 第 2 轮 #3 的反例），所以不默认开。"""
     ivs = truth_from_clean(clean_np)
     onsets, last_end = [], None
     for a, b in ivs:
@@ -195,6 +195,7 @@ class LossCfg:
     w_kd: float = 0.1
     level_norm: bool = False
     level_floor: float = 1e-3  # 归一除数的下限（034 修正 3-③：近静音段防除以 0）
+    on_skip_leading: bool = False  # 见 onset_plan；默认与 V-ONSET 正本同口径
 
 
 def active_rms(clean: torch.Tensor, frames: torch.Tensor, floor: float) -> torch.Tensor:
@@ -256,7 +257,7 @@ class TrainLoss(torch.nn.Module):
             total = total + cfg.w_lvl * l_lvl
             logs |= {"lvl": l_lvl.item(), "lvl_valid": int(v.sum())}
         if cfg.w_on > 0:
-            e, v, _ = onset_excess_db(out, clean, skip_leading=True)
+            e, v, _ = onset_excess_db(out, clean, skip_leading=cfg.on_skip_leading)
             l_on = masked_mean(torch.relu(e), v)
             total = total + cfg.w_on * l_on
             logs |= {"on": l_on.item(), "on_valid": int(v.sum())}
@@ -274,6 +275,13 @@ class TrainLoss(torch.nn.Module):
 
 
 def calibrate_weight(hybrid_mean: float, item_mean: float, share: float = 0.1) -> float:
-    """027 3.2 权重标定：初始时该项约占 HybridLoss 的 share；若该项初始为 0（没有超出），
-    按「超出 1 dB 时等于 HybridLoss 的 share」标定，不除以 0。item_mean 只用有效段算。"""
-    return share * hybrid_mean / (item_mean if item_mean > 1e-6 else 1.0)
+    """027 3.2 权重标定：初始时该项约占 HybridLoss **大小**的 share；若该项初始为 0（没有超出），
+    按「超出 1 dB 时等于 HybridLoss 大小的 share」标定，不除以 0。item_mean 只用有效段算。
+
+    HybridLoss 含负对数（SI-SNR）项，均值可以 ≤ 0：按绝对值算尺度；接近 0 时尺度取 1。
+    结果必须是有限正数，否则报错——非正权重会让保护项静默失效（codex 第 2 轮 #4）。"""
+    scale = abs(hybrid_mean) if abs(hybrid_mean) > 1e-6 else 1.0
+    w = share * scale / (item_mean if item_mean > 1e-6 else 1.0)
+    if not (np.isfinite(w) and w > 0):
+        raise ValueError(f"标定出的权重不是有限正数：{w}（hybrid_mean={hybrid_mean}, item_mean={item_mean}）")
+    return w

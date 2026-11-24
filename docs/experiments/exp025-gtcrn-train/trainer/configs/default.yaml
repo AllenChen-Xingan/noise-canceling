@@ -39,6 +39,7 @@ loss:
   w_kd: 0.1
   level_norm: false
   level_floor: 1.0e-3
+  on_skip_leading: false
 ema:
   enabled: false
   decay: 0.999

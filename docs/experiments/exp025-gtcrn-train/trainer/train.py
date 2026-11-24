@@ -93,7 +93,8 @@ def forward_loss(model, crit, batch, device, *, sp_ref=None, teacher=None):
 def loss_cfg(cfg, w_lvl: float, w_on: float) -> losses.LossCfg:
     lc = cfg.loss
     return losses.LossCfg(w_lvl=w_lvl, w_on=w_on, lvl_margin_db=lc.lvl_margin_db, sp=lc.sp, w_sp=lc.w_sp,
-                          kd=lc.kd, w_kd=lc.w_kd, level_norm=lc.level_norm, level_floor=lc.level_floor)
+                          kd=lc.kd, w_kd=lc.w_kd, level_norm=lc.level_norm, level_floor=lc.level_floor,
+                          on_skip_leading=lc.on_skip_leading)
 
 
 @torch.no_grad()

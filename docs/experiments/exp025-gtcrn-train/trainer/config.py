@@ -69,6 +69,7 @@ class LossCfgFile:
     w_kd: float = 0.1
     level_norm: bool = False
     level_floor: float = 1e-3
+    on_skip_leading: bool = False  # 字头项跳过 a = 0 的区间（扫参选项，默认与 V-ONSET 同口径）
 
 
 @dataclass
