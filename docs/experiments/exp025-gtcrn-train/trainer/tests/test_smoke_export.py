@@ -35,7 +35,7 @@ def test_overfit_rule_threshold():
     assert not smoke.overfit_pass(10.0, 5.1, 0.0)
     assert smoke.overfit_pass(10.0, 4.9, 0.0)
     assert not smoke.overfit_pass(10.0, float("nan"), 0.0)
-    assert smoke.overfit_pass(2.0, -2.5, -8.0) and not smoke.overfit_pass(2.0, -2.0, -8.0)  # 跨零：按到下限的距离算
+    assert smoke.overfit_pass(2.0, -3.5, -8.0) and not smoke.overfit_pass(2.0, -2.5, -8.0)  # 跨零：按到下限的距离算
 
 
 def test_known_dev_mismatch_fails(tmp_path):

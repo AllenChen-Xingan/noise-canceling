@@ -53,13 +53,11 @@ def test_crushed_speech_still_has_gradient():
     assert d.item() == pytest.approx(-40.0)
     d.sum().backward()
     assert o.grad.abs().sum() > 0
-    o2 = (ct * 1e-4).clone().requires_grad_(True)
-    e, _, _ = losses.onset_excess_db(o2, ct)
-    (-e).sum().backward() if e.item() != 0 else None
-    lo = losses._onset_loss(torch.tensor(1e-12, dtype=torch.float64, requires_grad=True),
-                            torch.tensor(1.0, dtype=torch.float64))
-    assert lo.item() == pytest.approx(40.0)
+    eo = torch.tensor(1e-12, dtype=torch.float64, requires_grad=True)
+    lo = losses._onset_loss(eo, torch.tensor(1.0, dtype=torch.float64))
+    assert lo.item() == pytest.approx(40.0)  # 字头损失碰到下限与 40 dB 封顶
     lo.backward()
+    assert eo.grad.item() != 0
 
 
 def test_skip_leading_onset_only_in_training():
