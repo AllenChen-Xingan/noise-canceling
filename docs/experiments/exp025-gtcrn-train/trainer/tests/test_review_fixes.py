@@ -222,3 +222,69 @@ def test_loader_requires_batch_index_and_build_id(tmp_path):
     cfg = _cfg(tmp_path, **{"data.kind": "loader", "data.shard_root": "s", "data.recipe": "r"})
     with pytest.raises(ValueError, match="build_id"):
         data.LoaderSource(cfg, mod=mod)
+
+
+# ---------- codex 第 1 轮 ----------
+
+def test_nonfinite_gradient_does_not_update(tmp_path, monkeypatch):
+    """损失有限、梯度为 NaN：不更新权重，按训崩停下，存下的权重全是有限数（codex 第 1 轮 #2）。"""
+    real = torch.nn.utils.clip_grad_norm_
+    calls = {"n": 0}
+
+    def bad(params, *a, **k):
+        calls["n"] += 1
+        gn = real(params, *a, **k)
+        return gn * float("nan") if calls["n"] >= 2 else gn
+
+    monkeypatch.setattr(torch.nn.utils, "clip_grad_norm_", bad)
+    stop = train.train(_cfg(tmp_path, **{"schedule.max_steps": 10, "schedule.ckpt_every": 1}))
+    assert stop["reason"] == "nonfinite" and stop["step"] == 1
+    assert _rec(tmp_path)["crash"]["grad_norm"] != _rec(tmp_path)["crash"]["grad_norm"]  # NaN
+    st, _ = train.RunDir(tmp_path / "r").load_latest("cpu")
+    assert all(torch.isfinite(v).all() for v in st["model"].values() if v.dtype.is_floating_point)
+
+
+def test_all_checkpoints_corrupt_is_an_error_not_a_fresh_run(tmp_path):
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 2}))
+    for f in (tmp_path / "r" / "ckpt").glob("step-*.pt"):
+        f.write_bytes(b"x")
+    before = (tmp_path / "r" / "run.json").read_text()
+    with pytest.raises(RuntimeError, match="没有可读的检查点"):
+        train.train(_cfg(tmp_path))
+    assert (tmp_path / "r" / "run.json").read_text() == before  # 原记录没被覆盖
+
+
+def test_usd_accumulates_per_segment_price(tmp_path):
+    """续训时改单价只作用于新的一段，不追溯（codex 第 1 轮 #6）。"""
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 2, "limits.usd_per_hour": 1000.0}))
+    usd1 = _rec(tmp_path)["stop"]["usd"]
+    stop = train.train(_cfg(tmp_path, **{"schedule.max_steps": 4, "limits.usd_per_hour": 0.0}))
+    assert usd1 > 0 and stop["usd"] == pytest.approx(usd1, abs=1e-9)
+
+
+def test_heartbeat_thread_writes_while_data_stalls(tmp_path, monkeypatch):
+    """取数卡住时心跳线程照写（不靠训练步），被杀前的计费不丢（codex 第 1 轮 #4）。"""
+    import time as _t
+    real = data.SyntheticSource.train_batches
+    seen = []
+
+    def slow(self, start_batch=0, device=None):
+        for b in real(self, start_batch, device):
+            _t.sleep(0.3)
+            hb = tmp_path / "r" / "heartbeat.json"
+            if hb.exists():
+                seen.append(json.loads(hb.read_text())["billed_s"])
+            yield b
+
+    monkeypatch.setattr(data.SyntheticSource, "train_batches", slow)
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 3, "schedule.log_every": 1000}), _beat_s=0.05)
+    assert len(seen) >= 2 and seen[-1] > seen[0]
+
+
+def test_signal_saves_without_extra_eval(tmp_path):
+    sig = train._Signals()
+    sig.got = "SIGTERM"
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 100}), _signals=sig)
+    rows = [json.loads(x) for x in (tmp_path / "r" / "metrics.jsonl").read_text().splitlines()] \
+        if (tmp_path / "r" / "metrics.jsonl").exists() else []
+    assert not any("dev" in r for r in rows)  # 被抢占时先存盘，不再花时间评估（codex 第 1 轮 #3）
