@@ -3,11 +3,11 @@
 用途：开关云训练机、在机器里跑命令、传文件、记费用。所有跑模型的活都在这里开机跑（D97）。
 数字的正本是 `config.py`；本文只说怎么用。`tests/test_cloud.py` 会核对本文的关键数字和 `config.py` 一致。
 
-## 机器与花费（正本 `config.py`，依据 D96 · D101）
+## 机器与花费（正本 `config.py`，依据 D96 · D101 · D102）
 
-- 卡：`NVIDIA L4` 一张，机房 `US-MO-2`（美国密苏里），Secure Cloud，要求 vCPU ≥ 16（分到的少于 16 个就自动删）。
-- 价格：目录价约 0.69 美元 / 小时（2026-11-24）。开机前目录价高出 20% 以上就不开。
-- 为什么不是 3090：2026-11-24 查 RunPod 目录，3090 在 Secure Cloud 所有机房都无货，人改选 L4（D101）。
+- 卡：`NVIDIA H100 80GB HBM3` 一张，机房 `US-MO-1`（美国密苏里），Secure Cloud，要求 vCPU ≥ 8（分到的少于 8 个就自动删；实际核数开机实测）。
+- 价格：目录价约 4.39 美元 / 小时（2026-11-24）。开机前目录价高出 20% 以上就不开。
+- 为什么是 H100：2026-11-24 查 RunPod 目录，3090 在 Secure Cloud 所有机房无货，人改选 L4 · US-MO-2（D101）；L4 开机报「无可用机器」，人改 H100（D102）。60 美元上限约合 H100 13 小时。
 - 镜像：`pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime`，容器只运行 `sleep <最长秒数>`，活都用 exec 发进去。
 - 网络存储盘：`vdn-train`，150 GB，挂在 `/workspace`；每月约 10.5 美元（0.07 美元 / GB / 月）。
 - 花费上限：60 美元。开机前检查「已删机器的花费 + 在开机器到现在的花费 + 网络盘到今天的摊销 + 本次最坏（每小时价 × 最长小时数）」，超了就不开。
@@ -20,7 +20,7 @@
 ```sh
 cd docs/experiments/exp025-gtcrn-train/cloud
 python3 rp.py offers                                   # 本卡价格、有货且能建盘的机房
-python3 rp.py volume-create --yes                      # 在 US-MO-2 建 150 GB 网络盘（花钱，先经大总管放行）
+python3 rp.py volume-create --yes                      # 在 US-MO-1 建 150 GB 网络盘（花钱，先经大总管放行）
 python3 rp.py up --max-hours 2 --yes                   # 开机并挂盘；打印机器编号
 python3 rp.py sh <机器> 'nvidia-smi; nproc'            # 短命令（≤ 25 秒）
 python3 rp.py job-start <机器> train 'cd /workspace && python3 train.py'

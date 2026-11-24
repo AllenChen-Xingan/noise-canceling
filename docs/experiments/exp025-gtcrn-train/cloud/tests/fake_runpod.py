@@ -59,6 +59,12 @@ class FakeRunPod:
             v = {"id": f"vol_{self.n}", "name": d["name"], "size": d["size"], "dataCenter": d["dataCenter"]}
             self.volumes[v["id"]] = v
             return 201, v
+        if p.startswith("/v2/network-volumes/") and m == "DELETE":
+            vid = p.rsplit("/", 1)[1]
+            if vid not in self.volumes:
+                return 404, {"detail": "not found"}
+            del self.volumes[vid]
+            return 204, None
         if p == "/v2/pods" and m == "GET":
             return 200, {"pods": list(self.pods.values()), "pagination": {"hasNextPage": False}}
         if p == "/v2/pods" and m == "POST":

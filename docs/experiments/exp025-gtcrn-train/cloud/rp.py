@@ -42,6 +42,12 @@ def cmd_volume_create(cli, a):
     print(json.dumps(v, ensure_ascii=False))
 
 
+def cmd_volume_delete(cli, a):
+    need_yes(a, "删网络盘（数据一起删）")
+    O.delete_volume(cli, a.id, a.ledger, note=a.note)
+    print(f"已删网络盘 {a.id}")
+
+
 def _volume_id(cli, a):
     if a.no_volume:
         return None, a.dc
@@ -183,6 +189,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = add("volume-create", cmd_volume_create, "建网络盘（花钱）")
     p.add_argument("--dc", default=C.DATA_CENTER)
     p.add_argument("--size", type=int, default=C.VOLUME_SIZE_GB)
+    p.add_argument("--yes", action="store_true")
+    p = add("volume-delete", cmd_volume_delete, "删网络盘（数据一起删）")
+    p.add_argument("--id", required=True)
+    p.add_argument("--note", default="")
     p.add_argument("--yes", action="store_true")
     for name, fn, h in (("up", cmd_up, "开机并挂网络盘（花钱）"), ("probe", cmd_probe, "试开一台测速后删（花钱）")):
         p = add(name, fn, h)

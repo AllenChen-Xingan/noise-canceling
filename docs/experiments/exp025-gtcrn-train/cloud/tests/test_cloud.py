@@ -137,6 +137,15 @@ class TestOps(Base):
         with self.assertRaises(SystemExit):
             O.create_volume(self.cli, "US-KS-2", ledger_path=self.ledger)
 
+    def test_volume_delete_stops_accrual(self):
+        v = O.create_volume(self.cli, C.DATA_CENTER, ledger_path=self.ledger)
+        O.delete_volume(self.cli, v["id"], self.ledger)
+        self.assertEqual(self.fake.volumes, {})
+        rows = L.read_rows(self.ledger)
+        self.assertEqual([r["action"] for r in rows], ["volume_create", "volume_delete"])
+        later = L.utcnow() + dt.timedelta(days=30)
+        self.assertLess(L.volume_spent(rows, later), 0.01)  # 删后不再摊
+
     def test_over_budget_never_posts(self):
         with self.assertRaises(SystemExit):
             O.create_pod(self.cli, "US-KS-2", None, max_hours=C.SPEND_CAP_USD / 0.5 + 1, usd_per_hr_hint=0.5, ledger_path=self.ledger)
@@ -214,10 +223,10 @@ class TestOps(Base):
 class TestCli(Base):
     def test_money_commands_need_yes(self):
         for argv in (["up", "--dc", "US-KS-2", "--no-volume"], ["probe", "--dc", "US-KS-2", "--no-volume"],
-                     ["volume-create", "--dc", "US-KS-2"]):
+                     ["volume-create", "--dc", "US-KS-2"], ["volume-delete", "--id", "vol_1"]):
             with self.assertRaises(SystemExit):
                 self.run_cli(*argv)
-        self.assertFalse([c for c in self.fake.calls if c[0] == "POST"])
+        self.assertFalse([c for c in self.fake.calls if c[0] in ("POST", "DELETE")])
 
     def test_up_mounts_volume_in_its_dc(self):
         self.run_cli("volume-create", "--dc", "EU-RO-1", "--yes")

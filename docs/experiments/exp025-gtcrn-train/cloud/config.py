@@ -1,20 +1,21 @@
 """云训练机的常量：唯一正本。其他文件（README、脚本、测试）只从这里引用，不手抄。
 
-出处：D96（Secure Cloud · vCPU ≥ 16 · 150 GB 网络盘）· D101（3090 全机房无货 → L4 · US-MO-2 · 上限 60 美元）。
+出处：D96（Secure Cloud · vCPU ≥ 16 · 150 GB 网络盘）· D101（上限 60 美元）· D102（L4 开不出 → H100 · US-MO-1）。
 接口：RunPod API v2（https://api.runpod.io/v2/openapi.json，2026-11-16 取，sha256 前 16 位见 SPEC_SHA256_16）。
 """
 
 API_BASE = "https://api.runpod.io"
 SPEC_SHA256_16 = "41f48a46a68fd023"
 
-# 机器（D101）
-GPU_TYPE_ID = "NVIDIA L4"
-DATA_CENTER = "US-MO-2"
+# 机器（D102）
+GPU_TYPE_ID = "NVIDIA H100 80GB HBM3"
+DATA_CENTER = "US-MO-1"
 # 目录价（2026-11-24 实测）；开机时目录价超过它 20% 就不开
-USD_PER_HR_EXPECTED = 0.69
+USD_PER_HR_EXPECTED = 4.39
 PRICE_TOLERANCE = 1.2
 CLOUD = "SECURE"
-MIN_VCPU_PER_GPU = 16
+# D102：H100 平台最低 8 个；分到的少于它就删，多于它照实记
+MIN_VCPU_PER_GPU = 8
 # 镜像锁版本（034 compute.md 第三节第 4 条）；容器只睡觉，活全靠 exec 发进去
 IMAGE = "pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime"
 CONTAINER_DISK_GB = 30

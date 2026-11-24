@@ -71,6 +71,14 @@ def create_volume(cli: Client, data_center: str, size_gb: int = C.VOLUME_SIZE_GB
     return v
 
 
+def delete_volume(cli: Client, volume_id: str, ledger_path: str = L.DEFAULT_PATH, note: str = "") -> None:
+    """删网络盘并记账（盘里的数据会一起没，调用前确认）。"""
+    cli.delete(f"/v2/network-volumes/{volume_id}")
+    now = L.iso(L.utcnow())
+    L.append_row({"ts_utc": now, "action": "volume_delete", "resource_id": volume_id,
+                  "ended_utc": now, "note": note}, ledger_path)
+
+
 # ---------- 开机 / 删机 ----------
 
 def pod_body(name: str, data_center: str, volume_id: Optional[str], max_hours: float,
