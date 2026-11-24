@@ -285,15 +285,6 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
     beat = _Beat(rd, lambda: (acct["step"], billed(), usd()), _beat_s, want_stop=stop_reason,
                  last_progress=lambda: acct["t_progress"], hang_s=lim.hang_s, on_hang=_on_hang)
     with sigs, beat:
-        def _unused():
-            if billed() / 3600 >= lim.max_hours:
-                return "max_hours"
-            if usd() >= lim.max_usd:
-                return "max_usd"
-            if sigs.got:
-                return f"signal:{sigs.got}"
-            return None
-
         device = resolve_device(cfg.device)
         source = make_source(cfg)
         dev = source.dev_batches(should_stop=stop_reason)
