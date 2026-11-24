@@ -11,7 +11,7 @@ import train
 
 
 def _cfg(tmp_path, **data_over):
-    d = {"kind": "synthetic", "seg_s": 0.5, "batch": 2, "num_workers": 0, "dev_n": 2, "dev_batches": 1,
+    d = {"kind": "synthetic", "seg_s": 1.0, "batch": 2, "num_workers": 0, "dev_n": 2, "dev_batches": 1,
          "calib_batches": 1, **data_over}
     return cfgmod.from_dict({"run": {"out_dir": str(tmp_path), "name": "d", "seed": 1}, "data": d,
                              "schedule": {"max_steps": 3, "ckpt_every": 3, "eval_every": 99, "log_every": 1},
