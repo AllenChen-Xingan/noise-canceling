@@ -280,6 +280,8 @@ def calibrate_weight(hybrid_mean: float, item_mean: float, share: float = 0.1) -
 
     HybridLoss 含负对数（SI-SNR）项，均值可以 ≤ 0：按绝对值算尺度；接近 0 时尺度取 1。
     结果必须是有限正数，否则报错——非正权重会让保护项静默失效（codex 第 2 轮 #4）。"""
+    if not (np.isfinite(hybrid_mean) and np.isfinite(item_mean)):
+        raise ValueError(f"标定输入不是有限数：hybrid_mean={hybrid_mean}, item_mean={item_mean}")
     scale = abs(hybrid_mean) if abs(hybrid_mean) > 1e-6 else 1.0
     w = share * scale / (item_mean if item_mean > 1e-6 else 1.0)
     if not (np.isfinite(w) and w > 0):

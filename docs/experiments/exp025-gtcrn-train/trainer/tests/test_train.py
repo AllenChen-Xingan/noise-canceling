@@ -110,9 +110,20 @@ def test_resume_refused_when_batch_changes(tmp_path):
 
 @pytest.mark.parametrize("over,reason", [({"limits.max_hours": 1e-9}, "max_hours"),
                                          ({"limits.max_usd": 1e-9, "limits.usd_per_hour": 1.0}, "max_usd")])
-def test_time_and_cost_limits_stop(tmp_path, over, reason):
+def test_limits_hit_during_setup_stop_before_training(tmp_path, over, reason):
+    """上限小到准备期就用完：不开训、不建检查点，账留在心跳里。"""
     stop = train.train(_cfg(tmp_path, **{"schedule.max_steps": 1000, **over}))
-    assert stop["reason"] == reason and stop["step"] < 1000
+    assert stop["reason"] == reason and stop["phase"] == "setup" and stop["step"] == 0
+    assert (tmp_path / "t" / "heartbeat.json").exists()
+
+
+def test_limit_hit_after_resume_saves_checkpoint(tmp_path):
+    """续训时上限已低于已花的钱：在循环第一次检查时停下，并存检查点。"""
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 2, "limits.usd_per_hour": 100.0}))
+    spent = json.loads((tmp_path / "t" / "heartbeat.json").read_text())["usd"]
+    stop = train.train(_cfg(tmp_path, **{"schedule.max_steps": 1000, "limits.usd_per_hour": 100.0,
+                                         "limits.max_usd": spent * 0.99}))
+    assert stop["reason"] == "max_usd" and stop["step"] == 2
     assert (tmp_path / "t" / "ckpt" / "last.txt").exists()
 
 
