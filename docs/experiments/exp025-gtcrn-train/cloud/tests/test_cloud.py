@@ -21,6 +21,7 @@ import config as C  # noqa: E402
 import ledger as L  # noqa: E402
 import rp  # noqa: E402
 import rp_ops as O  # noqa: E402
+import watchdog as W  # noqa: E402
 from fake_runpod import FakeRunPod  # noqa: E402
 from rp_client import ApiError, Client, load_key, parse_env_file  # noqa: E402
 
@@ -33,8 +34,15 @@ class Base(unittest.TestCase):
         self.ledger = os.path.join(self.tmp.name, "costs.tsv")
         self.fake = FakeRunPod()
         self.cli = Client(FAKE_KEY, transport=self.fake, sleep=lambda s: None)
+        # 看门狗状态写临时目录；不真起后台进程
+        self._saved = (W.DEADLINES, W.PIDFILE, rp.SPAWN)
+        W.DEADLINES = os.path.join(self.tmp.name, "deadlines.json")
+        W.PIDFILE = os.path.join(self.tmp.name, "watchdog.pid")
+        self.spawned = []
+        rp.SPAWN = lambda argv, **kw: self.spawned.append(argv) or type("P", (), {"pid": 999999999})()
 
     def tearDown(self):
+        W.DEADLINES, W.PIDFILE, rp.SPAWN = self._saved
         self.tmp.cleanup()
 
     def run_cli(self, *argv):
@@ -122,7 +130,9 @@ class TestOps(Base):
         self.assertLessEqual(set(b["mounts"]["network"][0]), set(spec["schemas"]["NetworkMount"]))
         self.assertEqual(b["gpu"]["minVcpuCountPerGpu"], C.MIN_VCPU_PER_GPU)
         self.assertEqual(b["cloud"], "SECURE")
-        self.assertEqual(b["cmd"], ["sleep", "5400"])
+        self.assertEqual(b["cmd"][:2], ["sh", "-c"])
+        self.assertTrue(b["cmd"][2].startswith("sleep 5400;"))
+        self.assertIn("VDN_SELF_DELETE_PY", b["env"])
         self.assertEqual(spec["exec_timeout_max"], C.EXEC_TIMEOUT_MAX_S)
         self.assertEqual(spec["exec_arg_max"], C.EXEC_ARG_MAX_CHARS)
         self.assertEqual(spec["exec_args_max"], C.EXEC_ARGS_MAX)

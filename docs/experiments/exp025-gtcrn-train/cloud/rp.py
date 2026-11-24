@@ -100,7 +100,6 @@ def cmd_up(cli, a):
 
 def cmd_down(cli, a):
     est = O.delete_pod(cli, a.pod, a.ledger, note=a.note)
-    W.unregister(a.pod)
     print(f"已删机 {a.pod}，估算 {est:.4f} 美元")
 
 
@@ -108,7 +107,6 @@ def cmd_reap(cli, a):
     pods = O.list_our_pods(cli)
     for p in pods:
         O.delete_pod(cli, p["id"], a.ledger, note="reap")
-        W.unregister(p["id"])
         print(f"已删 {p['id']} {p.get('name')}")
     for pid in L.open_pods(L.read_rows(a.ledger)):
         if pid not in {p["id"] for p in pods}:

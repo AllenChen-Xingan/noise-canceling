@@ -167,6 +167,7 @@ def delete_pod(cli: Client, pod_id: str, ledger_path: str = L.DEFAULT_PATH, note
                   "data_center": created.get("data_center", "") if created else "",
                   "usd_per_hr": f"{rate:.4f}", "started_utc": start, "ended_utc": L.iso(now),
                   "hours": f"{hours:.4f}", "est_usd": f"{est:.4f}", "note": note}, ledger_path)
+    W.unregister(pod_id)  # 删了就从本机看门狗登记表里去掉
     return est
 
 
