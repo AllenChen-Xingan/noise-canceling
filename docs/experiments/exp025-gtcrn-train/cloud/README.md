@@ -22,6 +22,7 @@ cd docs/experiments/exp025-gtcrn-train/cloud
 python3 rp.py offers                                   # 本卡价格、有货且能建盘的机房
 python3 rp.py volume-create --yes                      # 在 US-MO-1 建 150 GB 网络盘（花钱，先经大总管放行）
 python3 rp.py up --max-hours 2 --yes                   # 开机并挂盘；打印机器编号
+python3 rp.py up --cpu --max-hours 1 --yes            # 开纯 CPU 机器（cpu3c 4 核）挂同一块盘，下载数据用
 python3 rp.py sh <机器> 'nvidia-smi; nproc'            # 短命令（≤ 25 秒）
 python3 rp.py job-start <机器> train 'cd /workspace && python3 train.py'
 python3 rp.py job-wait <机器> train --timeout 7200     # 等后台命令结束，打印日志尾

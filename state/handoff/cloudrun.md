@@ -4,12 +4,11 @@
 > 管的实体：RunPod 账号与密钥 · 网络存储盘 · 云训练机
 
 ## 做到哪
-H100 · US-MO-1 试开完成并已删机；网络盘 `bzpbedqdsi`（150 GB，US-MO-1）在用；已花约 0.67 美元（上限 60）。结果在 cloud/README.md「试开结果」。
+防忘删机两层已做完并实测（机器内自删 1 次成功；本机看门狗起停正常）；纯 CPU 机器支持已写好未开机，等大总管放行报价。累计花费约 0.83 美元（上限 60）。
 
 ## 下一步
-1. 等大总管验收；补账单金额（billed_usd，约 1 小时后出）
-2. 自审 + codex 评审
-3. 建议（待定）：机器到时限会被重启、照常计费，要不要加本机看门狗或机器内自删
+1. 等大总管放行 CPU 下载机；补账单金额（billed_usd）
+2. 自审 + codex 评审；开 PR（Closes #158）前报大总管
 
 ## 待人拍板
 - （无）
@@ -30,3 +29,8 @@ H100 · US-MO-1 试开完成并已删机；网络盘 `bzpbedqdsi`（150 GB，US-
 - 2026-11-24 D102 改 H100 · US-MO-1 · 4.39 美元/时 · vCPU 下限 8；加 volume-delete 命令与测试（31 条全过）
 - 2026-11-24 删空盘 mq9446qc8j，在 US-MO-1 建 bzpbedqdsi（150 GB）
 - 2026-11-24 试开 H100 j44z387wj7wqvl 9 分 5 秒，约 0.66 美元：exec 可用；vCPU 26（cgroup 22.1）；内存 251 GB；OpenSLR 0.43–1.39 MB/s，Zenodo 25.6 MB/s；容器到时限被平台重启、照常计费；已删机，云上无残留机器
+- 2026-11-24 大总管 noise-canceling-33（重启后）要求：两层防忘删机 · OpenSLR 下载方案报价
+- 2026-11-24 写 watchdog.py：本机看门狗（登记表 .watch/，caffeinate -i，空表即退出）+ 机器内自删（平台注入的 RUNPOD_POD_ID / RUNPOD_API_KEY，只删自己）；delete_pod 统一注销登记；cloud/.gitignore 忽略 .watch/
+- 2026-11-24 实测自删：H100 7mfuc62ykdmrm3 设时限 108 秒，约 108 秒后自己消失（接口 404）；机器内确有 RUNPOD_API_KEY、RUNPOD_POD_ID（只看了变量名）；补记删机，约 0.15 美元；看门狗随后自行退出
+- 2026-11-24 查 CPU 目录：US-MO-1 cpu3c 库存 HIGH，0.03 美元/核/时；OpenSLR 28 页面无 MD5、无美国镜像（主链接即 trmal，另有 elda、CN magicdatatech）
+- 2026-11-24 加 --cpu（cpu3c × 4 核，挂同一块盘）与测试；测试共 44 条全过
