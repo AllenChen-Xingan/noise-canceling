@@ -34,3 +34,9 @@
 - 2026-11-24 实测自删：H100 7mfuc62ykdmrm3 设时限 108 秒，约 108 秒后自己消失（接口 404）；机器内确有 RUNPOD_API_KEY、RUNPOD_POD_ID（只看了变量名）；补记删机，约 0.15 美元；看门狗随后自行退出
 - 2026-11-24 查 CPU 目录：US-MO-1 cpu3c 库存 HIGH，0.03 美元/核/时；OpenSLR 28 页面无 MD5、无美国镜像（主链接即 trmal，另有 elda、CN magicdatatech）
 - 2026-11-24 加 --cpu（cpu3c × 4 核，挂同一块盘）与测试；测试共 44 条全过
+- 2026-11-24 大总管放行 CPU 下载机（cpu3c，US-MO-1，最长 6 小时）；读了 traindata 的 cloud_steps.sh、fetch.py、sources.json（A1–A5 + E2 共约 18.1 GB）
+- 2026-11-24 开 CPU 机 vggy9ggvbi3h1p（4 核，0.12 美元/时）；发现 RUNNING 后容器还要约 1 分钟才能 exec（409），加 wait_exec_ready 与测试
+- 2026-11-24 传 traindata 仓库包（git archive fc37e9ba，22 MB，sha256 核对一致）；装 aria2/unzip/curl；setup 通过
+- 2026-11-24 test：2 个模块导入失败（rooms.py 缺 EARLY_REVERB_MS / early_rir，只在 evalcmp 分支有）→ 停下报大总管，等选 A（跳过继续下载）或 B（等合并重跑）
+- 2026-11-24 发现：网络盘 df 显示集群总量 158 TB，看不到 150 GB 配额，fetch.py 查盘无效（已报，请转 traindata）
+- 2026-11-24 大总管选 A：test 时跳过 test_gpu_mix、test_mix_loader，原因是 early_rir 未合入（evalcmp 未合进 main），下载不依赖它们；盘量用 du -sh /workspace 盯，超 120 GB 停
