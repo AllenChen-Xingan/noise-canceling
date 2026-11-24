@@ -13,6 +13,7 @@
 | `config.py` · `configs/` | 配置正本（dataclass）与实例：`default.yaml` 正式默认 · `smoke-cpu.yaml` 本机小冒烟 |
 | `data.py` | 数据适配：traindata 的 loader（显卡上 GPU 混音）· 仓内合成小样（只给测试与冒烟） |
 | `train.py` · `runrec.py` | 训练循环 · 运行记录 · 检查点 · 续训 · 时长与花费上限 · EMA（开关，默认关） |
+| `watchdog.py` | 信号 · 心跳 · 看门狗（单写者心跳；先判断后写盘；不碰磁盘的本段时限兜底） |
 | `smoke.py` | 开训前冒烟三件事 + 测每步耗时，一个命令 |
 | `export.py` | 导出 ONNX（整段版）并与 PyTorch 对拍 |
 | `parity_rs/` | 只读调用 `vdn-eval` 的小程序，给损失对拍用（不改 `src/eval`） |
@@ -26,7 +27,7 @@
 
 ```sh
 cargo build --release --manifest-path parity_rs/Cargo.toml   # 对拍测试要它，第一次约 25 秒
-../../../../.venv/bin/python -m pytest -q tests/              # 114 条通过，3 条等 traindata 的 loader 合入（和小分片）后自动跑
+../../../../.venv/bin/python -m pytest -q tests/              # 116 条通过，3 条等 traindata 的 loader 合入（和小分片）后自动跑
 python smoke.py --config configs/default.yaml --set data.shard_root=… --set data.recipe=… --out smoke.json
 python train.py --config configs/default.yaml --set run.name=exp025-B-s0 --set data.shard_root=… --set data.recipe=…
 python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b.onnx
