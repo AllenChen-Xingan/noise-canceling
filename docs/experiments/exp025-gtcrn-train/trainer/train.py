@@ -195,11 +195,30 @@ class _Signals:
 HEARTBEAT_S = 30.0
 
 
-def _hard_exit(rd, why: str) -> None:
-    """看门狗的最后手段：记一笔再强退。最近的检查点是完整的（原子写），下次按心跳续训、补账。"""
-    (rd.root / "hung.json").write_text(json.dumps({"why": why, "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")},
-                                                  ensure_ascii=False))
-    os._exit(75)
+def _bounded(fn, timeout: float) -> bool:
+    """在另一个线程里跑 fn，最多等 timeout 秒；异常或超时都只返回 False，不往外抛、不挡调用方。
+    看门狗靠它把「写盘」和「判断要不要强退」隔开：网络盘卡住或报错时，强退照样执行（codex 第 7 轮 #1）。"""
+    box = {"ok": False}
+
+    def run():
+        try:
+            fn()
+            box["ok"] = True
+        except Exception:  # noqa: BLE001 —— 记录失败不能阻止退出
+            pass
+
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+    t.join(timeout)
+    return box["ok"]
+
+
+def _hard_exit(rd, why: str, _exit=os._exit) -> None:
+    """看门狗的最后手段：尽量记一笔（最多等 2 s，写不成也不管），然后强退。
+    最近的检查点是完整的（原子写），下次按心跳续训、补账。"""
+    text = json.dumps({"why": why, "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}, ensure_ascii=False)
+    _bounded(lambda: (rd.root / "hung.json").write_text(text), 2.0)
+    _exit(75)
 
 
 class _Beat:
@@ -207,7 +226,8 @@ class _Beat:
     被抢占时最多漏记一个间隔（≤ 30 s）；机器的真实账单归 cloudrun（codex 第 1 轮 #4）。心跳只由这个线程写。
 
     兼作看门狗（codex 第 6 轮 #1）：已该停（到上限 / 收到信号）而主线程超过 hang_s 没有进展（比如卡在一次
-    同步取数里，worker = 0 时 DataLoader 没有超时），就写 hung.json 后强退，免得一直计费。"""
+    同步取数里，worker = 0 时 DataLoader 没有超时），就强退，免得一直计费。
+    每轮**先判断再写盘**，写盘有时限、出错不抛（codex 第 7 轮 #1）：盘坏了或卡住，看门狗仍能按时出手。"""
 
     def __init__(self, rd, snap, every: float, want_stop=lambda: None, last_progress=None,
                  hang_s: float = 120.0, on_hang=None):
@@ -215,16 +235,20 @@ class _Beat:
         self.want_stop, self.last_progress, self.hang_s = want_stop, last_progress, hang_s
         self.on_hang = on_hang or (lambda why: _hard_exit(rd, why))
         self.stop = threading.Event()
+        self.write_failures = 0
         self.th = threading.Thread(target=self._run, daemon=True)
+
+    def _beat(self) -> None:
+        if not _bounded(lambda: self.rd.beat(*self.snap()), max(self.every, 1.0)):
+            self.write_failures += 1
 
     def _run(self):
         while not self.stop.wait(self.every):
-            self.rd.beat(*self.snap())
             why = self.want_stop()
             if why and self.last_progress is not None and time.monotonic() - self.last_progress() > self.hang_s:
-                self.rd.beat(*self.snap())
                 self.on_hang(f"{why}；主线程 {self.hang_s:.0f} s 无进展")
                 return
+            self._beat()
 
     def __enter__(self):
         self.th.start()
@@ -233,7 +257,7 @@ class _Beat:
     def __exit__(self, *exc):
         self.stop.set()
         self.th.join()
-        self.rd.beat(*self.snap())
+        self._beat()
 
 
 def _setup_stop(reason, step, billed_s, usd) -> dict:

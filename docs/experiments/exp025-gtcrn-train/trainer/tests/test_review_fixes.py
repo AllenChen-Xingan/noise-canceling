@@ -480,3 +480,50 @@ def test_calibration_gets_all_requested_batches_beyond_dev_n(tmp_path):
     assert _rec(tmp_path)["calib"]["batches"] == 5
     src = data.make_source(_cfg(tmp_path))
     assert torch.equal(src.calib_batches(2)[0]["noisy"], src.dev_batches()[0]["noisy"])  # 前几批与开发份相同
+
+
+# ---------- codex 第 7 轮 ----------
+
+def _beat_with(tmp_path, beat_fn, fired):
+    import time as _t
+    rd = train.RunDir(tmp_path / "w")
+    rd.beat = beat_fn
+    b = train._Beat(rd, lambda: (0, 1.0, 0.0), 0.02, want_stop=lambda: "max_usd",
+                    last_progress=lambda: _t.monotonic() - 999, hang_s=1.0, on_hang=fired.append)
+    return b
+
+
+@pytest.mark.parametrize("kind", ["raises", "blocks"])
+def test_watchdog_fires_even_if_heartbeat_write_fails(tmp_path, kind):
+    """心跳写盘报错或卡住（网络盘坏了）：看门狗照样按时出手（codex 第 7 轮 #1）。"""
+    import threading as th
+    import time as _t
+    gate = th.Event()
+
+    def bad(*a):
+        if kind == "raises":
+            raise OSError("disk gone")
+        gate.wait(5)
+
+    fired = []
+    b = _beat_with(tmp_path, bad, fired)
+    t0 = _t.monotonic()
+    with b:
+        while not fired and _t.monotonic() - t0 < 3:
+            _t.sleep(0.01)
+        gate.set()
+    assert fired and _t.monotonic() - t0 < 3
+
+
+def test_hard_exit_exits_even_if_record_write_blocks(tmp_path, monkeypatch):
+    """hung.json 写不进去（卡住）：最多等 2 s 仍强退。"""
+    import threading as th
+    import time as _t
+    rd = train.RunDir(tmp_path / "w")
+    gate = th.Event()
+    monkeypatch.setattr(type(rd.root), "write_text", lambda self, *a, **k: gate.wait(10))
+    exited = []
+    t0 = _t.monotonic()
+    train._hard_exit(rd, "测试", _exit=exited.append)
+    gate.set()
+    assert exited == [75] and _t.monotonic() - t0 < 3
