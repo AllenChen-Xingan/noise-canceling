@@ -10,6 +10,7 @@
 同一批 plan 两边逐样本差 ≤ 1e-4，写成了测试。本机 75 条测试全过（torch CPU 后端）。下载脚本已备好，没在云上跑。
 
 ## 下一步
+0. 第一批下完后补下 E3：`bash cloud_steps.sh fetch-e3`；cloudrun 交来的 OpenSLR 28 的 md5 / sha256 写进 sources.json / fetched.json
 1. 等大总管放行：云上 `bash cloud_steps.sh setup → test → head → fetch`
 2. 下完：`split`（先看 QUT / TUM 的清单）→ `shard` → `register`；切分表与 build.json 拷回进仓
 3. exp013 重建：`bash cloud_steps.sh rebuild`
@@ -39,4 +40,5 @@
 - 2026-11-24 fetch.py 加了两样：开下前先查盘（含解压峰值），以及 `--head`（只核大小，不下载）。本机发 HEAD 核了 A3，大小一致
 - 2026-11-24 写 requirements.txt（版本钉死，和 exp013 旧 build 一致）· cloud_steps.sh · data/README.md · exp025 README 的数据一节
 - 2026-11-24 大总管（noise-canceling-33）转来 cloudrun 的发现：网络盘上 df 报整个集群的剩余（158 TB）。查盘改成「配额 − du 已用」，配额从 cloud/config.py 按路径读，加了 5 条测试。用 cloudrun 分支上的真 config 临时核过：配额 150 GB，第一批含解压峰值约 37.2 GB，放得下
+- 2026-11-24 大总管转 cloudrun：E3（Wikimedia）回 429 没下成。fetch.py 改了三处：429 / 503 按 Retry-After 等（没有就 5·2^n 秒，上限 600 s）；404 等立刻报错；对 wikimedia.org 每次请求前停 5 s。下载本来就是串行的，User-Agent 仍是通用名。加 6 条测试；cloud_steps.sh 加 `fetch-e3` 一步单独补下
 - 2026-11-24 建本 worktree 的 `.venv`（已被 git 忽略）：torch 2.15.0 · numpy 2.5.4 · scipy 1.18.1 · soundfile 0.14.0
