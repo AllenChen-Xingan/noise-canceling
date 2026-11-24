@@ -91,6 +91,12 @@ def db10(x: torch.Tensor) -> torch.Tensor:
     return 10 * torch.log10(torch.clamp(x, min=1e-20))
 
 
+def st(clamped: torch.Tensor, raw: torch.Tensor) -> torch.Tensor:
+    """前向取 clamped（与 Rust 读数逐值一致），反传按 raw 走（直通）。
+    否则人声被压过 40 dB、碰到下限 / 封顶后梯度恰好为 0，压得越狠越不纠正（自审 P2）。"""
+    return raw + (clamped - raw).detach()
+
+
 def _proj(o: torch.Tensor, c: torch.Tensor):
     """⟨o,c⟩²/‖c‖² 与 ‖c‖²，沿最后一维（perceptual.rs proj_energy；‖c‖² = 0 时投影记 0）。"""
     oc = (o * c).sum(-1)
@@ -108,17 +114,21 @@ def splvl_db(out: torch.Tensor, clean: torch.Tensor, frames: torch.Tensor):
     w = frames.to(po.dtype)
     ps, pc = (po * w).sum(1), (cc * w).sum(1)
     valid = (frames.sum(1) >= SPLVL_MIN_FRAMES) & (pc > 1e-14)
-    ps = torch.maximum(ps, pc * 1e-4)
-    d = torch.clamp(db10(ps) - db10(pc), max=0.0)
+    ps = st(torch.maximum(ps, pc * 1e-4), ps)
+    d = torch.clamp(db10(ps) - db10(pc), max=0.0)  # 上限 0 不直通：「没被压低」本来就不该有梯度
     return torch.where(valid, d, torch.zeros_like(d)), valid
 
 
-def onset_plan(clean_np: np.ndarray, n_out: int):
-    """一段的字头起点与有声 20 ms 帧下标（只依赖干净轨，不参与求导）。"""
+def onset_plan(clean_np: np.ndarray, n_out: int, skip_leading: bool = False):
+    """一段的字头起点与有声 20 ms 帧下标（只依赖干净轨，不参与求导）。
+
+    skip_leading：训练用。随机裁切的段若从说话中间开始，第一个区间 a = 0 不是真字头（之前的停顿被裁掉了），
+    叠着 istft 首帧边缘效应，跳过它。对拍用 False，与 Rust 一致（评测片段以停顿开头，不受影响）。"""
     ivs = truth_from_clean(clean_np)
     onsets, last_end = [], None
     for a, b in ivs:
-        if (last_end is None or a >= last_end + 5 * ONSET_F) and a + ONSET_W <= n_out:
+        if (last_end is None or a >= last_end + 5 * ONSET_F) and a + ONSET_W <= n_out \
+                and not (skip_leading and a == 0):
             onsets.append(a)
         last_end = b
     voiced = []
@@ -132,10 +142,11 @@ def onset_plan(clean_np: np.ndarray, n_out: int):
 
 
 def _onset_loss(eo: torch.Tensor, ec: torch.Tensor) -> torch.Tensor:
-    return torch.clamp(db10(ec) - db10(torch.maximum(eo, ec * 1e-4)), max=40.0)
+    raw = db10(ec) - db10(st(torch.maximum(eo, ec * 1e-4), eo))
+    return st(torch.clamp(raw, max=40.0), raw)
 
 
-def onset_excess_db(out: torch.Tensor, clean: torch.Tensor):
+def onset_excess_db(out: torch.Tensor, clean: torch.Tensor, skip_leading: bool = False):
     """V-ONSET 读数（字头平均损失 − 整段有声损失，dB）。返回 (excess (B,), valid (B,), 字头数 list)。"""
     b, n = out.shape
     cn = clean.detach().cpu().numpy()
@@ -145,7 +156,7 @@ def onset_excess_db(out: torch.Tensor, clean: torch.Tensor):
     pof, ccf = _proj(of, cf)
     exc, valid, counts = [], [], []
     for i in range(b):
-        onsets, voiced = onset_plan(cn[i], n)
+        onsets, voiced = onset_plan(cn[i], n, skip_leading)
         counts.append(len(onsets))
         if len(onsets) < ONSET_MIN:
             exc.append(out.new_zeros(()))
@@ -183,6 +194,20 @@ class LossCfg:
     level_floor: float = 1e-3  # 归一除数的下限（034 修正 3-③：近静音段防除以 0）
 
 
+def active_rms(clean: torch.Tensor, frames: torch.Tensor, floor: float) -> torch.Tensor:
+    """每段「主说话人单独说话」帧上的均方根（Braun 按活跃语音电平归一；整段 std 会被停顿占比拉低，自审 P1）。
+    没有说话帧的段（近静音）用同批有说话段的中位数，整批都没有时用 1；最后夹到 ≥ floor（034 修正 3-③）。"""
+    nf = frames.shape[1]
+    c = clean[:, : nf * MASK_FRAME].reshape(clean.shape[0], nf, MASK_FRAME).detach()
+    w = frames.to(c.dtype)
+    n = w.sum(1)
+    ms = ((c ** 2).mean(-1) * w).sum(1) / torch.clamp(n, min=1)
+    rms = ms.sqrt()
+    has = n > 0
+    fill = rms[has].median() if has.any() else torch.ones((), dtype=c.dtype, device=c.device)
+    return torch.clamp(torch.where(has, rms, fill), min=floor)
+
+
 def compressed(spec: torch.Tensor) -> torch.Tensor:
     """官方 HybridLoss 的压缩复谱 s/|s|^0.7。"""
     mag = torch.sqrt(spec[..., 0] ** 2 + spec[..., 1] ** 2 + 1e-12)
@@ -215,9 +240,7 @@ class TrainLoss(torch.nn.Module):
         true_spec = stft(clean)
         p_h, t_h = pred_spec, true_spec
         if cfg.level_norm:
-            act = torch.as_tensor(frames.any(1), device=clean.device)
-            sd = clean.std(dim=1).where(act, torch.ones_like(clean[:, 0]))
-            g = 1.0 / torch.clamp(sd, min=cfg.level_floor)
+            g = 1.0 / active_rms(clean, frames, cfg.level_floor)
             p_h, t_h = pred_spec * g[:, None, None, None], true_spec * g[:, None, None, None]
         total = self.hybrid(p_h, t_h)
         logs = {"hybrid": total.item()}
@@ -230,7 +253,7 @@ class TrainLoss(torch.nn.Module):
             total = total + cfg.w_lvl * l_lvl
             logs |= {"lvl": l_lvl.item(), "lvl_valid": int(v.sum())}
         if cfg.w_on > 0:
-            e, v, _ = onset_excess_db(out, clean)
+            e, v, _ = onset_excess_db(out, clean, skip_leading=True)
             l_on = masked_mean(torch.relu(e), v)
             total = total + cfg.w_on * l_on
             logs |= {"on": l_on.item(), "on_valid": int(v.sum())}
