@@ -174,6 +174,12 @@ def _setup_stop(reason, step, billed_s, usd) -> dict:
             "billed_s": round(billed_s, 2), "usd": round(usd, 4)}
 
 
+def deadline_s(lim) -> float:
+    """兜底时限：时长上限与「美元上限 ÷ 单价」折成的时长取较小者，再加 hang_s（codex 第 9 轮 #1 的非故障部分）。"""
+    hours = lim.max_hours if lim.usd_per_hour <= 0 else min(lim.max_hours, lim.max_usd / lim.usd_per_hour)
+    return hours * 3600 + lim.hang_s
+
+
 def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = None,
           _beat_s: float = HEARTBEAT_S, _on_hang=None) -> dict:
     """跑到停下为止，返回停下记录。max_wall_s / _signals / _beat_s 只给测试用。
@@ -185,7 +191,7 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
     cfg_dict = cfgmod.to_dict(cfg)
     # 第一次碰磁盘之前先起「本段墙钟时限」看门狗：不读盘、不写盘，只看本进程已跑多久。建目录、加锁、读心跳
     # 卡在网络盘上时它照样出手（codex 第 8 轮 #1）。之后由 _Beat 按累计账判上限，这一道只兜底。
-    deadline = _Deadline(cfg.limits.max_hours * 3600 + cfg.limits.hang_s, _on_hang)
+    deadline = _Deadline(deadline_s(cfg.limits), _on_hang)
     with deadline:
         rd = RunDir(Path(cfg.run.out_dir).expanduser() / cfg.run.name)
         rd.lock()  # 先占住目录再读任何状态

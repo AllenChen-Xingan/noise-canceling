@@ -563,3 +563,14 @@ def test_hard_exit_exits_even_if_record_write_blocks(tmp_path, monkeypatch):
     train._hard_exit(rd, "测试", _exit=exited.append)
     gate.set()
     assert exited == [75] and _t.monotonic() - t0 < 3
+
+
+
+# ---------- codex 第 9 轮 ----------
+
+def test_deadline_uses_budget_when_it_is_tighter():
+    lim = cfgmod.from_dict({"limits": {"max_hours": 6.0, "max_usd": 0.01, "usd_per_hour": 0.5,
+                                       "hang_s": 10.0}}).limits
+    assert train.deadline_s(lim) == pytest.approx(0.01 / 0.5 * 3600 + 10.0)  # 72 s + 10 s，不是 6 h
+    lim = cfgmod.from_dict({"limits": {"max_hours": 1.0, "max_usd": 100.0, "usd_per_hour": 0.0}}).limits
+    assert train.deadline_s(lim) == pytest.approx(3600 + lim.hang_s)
