@@ -57,8 +57,9 @@ def export(m: torch.nn.Module, out: Path) -> list[str]:
 
 
 def compare(m: torch.nn.Module, onnx_path: Path, lengths=(63, 250), tol: float = 1e-4) -> dict:
-    """ONNX Runtime 对 PyTorch（float32）的最大差。判据：≤ max(tol, 4 × PyTorch 自身 float32 对 float64 的差)。
-    后一项是这组权重下浮点舍入本来就有的误差（训后权重大时下游会放大它；自审实测注意力层单独两者同为约 1e-5）。"""
+    """判据：ONNX 离 PyTorch float64 真值的最大差 ≤ max(tol, 4 × PyTorch float32 离真值的最大差)，即「ONNX 不比
+    PyTorch 自己的 float32 更离谱」。只比 ONNX 与 PyTorch float32 会把两边各自的舍入误差算成导出错误：自审实测
+    训后大权重下两者差 3.3e-4，而 ONNX 离真值 1.1e-4、PyTorch 离真值 1.6e-4。ONNX 对 PyTorch 的差照样记下。"""
     import copy
 
     import onnxruntime as ort
@@ -80,9 +81,10 @@ def compare(m: torch.nn.Module, onnx_path: Path, lengths=(63, 250), tol: float =
                 torch.set_default_dtype(old)
         got = sess.run(None, feed)[0]
         f32_err = float(np.abs(ref - ref64).max())
-        d = float(np.abs(ref - got).max())
+        onnx_err = float(np.abs(got - ref64).max())
         lim = max(tol, 4 * f32_err)
-        rows.append({"T": t, "max_abs_diff": d, "torch_f32_vs_f64": f32_err, "limit": lim, "pass": d <= lim,
+        rows.append({"T": t, "max_abs_diff": float(np.abs(ref - got).max()), "onnx_vs_f64": onnx_err,
+                     "torch_f32_vs_f64": f32_err, "limit": lim, "pass": onnx_err <= lim,
                      "ref_rms": float(np.sqrt((ref ** 2).mean()))})
     return {"pass": all(r["pass"] for r in rows), "tol": tol, "cases": rows}
 
