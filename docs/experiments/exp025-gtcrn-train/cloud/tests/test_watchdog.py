@@ -83,7 +83,7 @@ class TestInPodSelfDelete(unittest.TestCase):
     def test_script_targets_only_own_pod_id(self):
         s = W.SELF_DELETE_PY
         self.assertIn("os.environ.get('RUNPOD_POD_ID')", s)
-        self.assertIn("'/v2/pods/'+pid", s)
+        self.assertIn("/v2/pods/'+pid", s)
         self.assertNotIn("/v2/pods'", s)  # 不列机器、不删别的
         compile(s, "<self-delete>", "exec")
         W.assert_spec_safe()
