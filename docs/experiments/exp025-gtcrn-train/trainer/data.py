@@ -69,9 +69,10 @@ def collate(exs: list[dict]) -> dict:
 BATCH_KEYS = ("noisy", "clean", "replay", "near_silent", "owner_ivs", "interf_ivs")
 
 
-def normalize(b: dict) -> dict:
-    """loader 出的整批 dict → trainer 批次格式；缺键即报错（接口对不上要早红）。"""
-    miss = [k for k in BATCH_KEYS if k not in b]
+def normalize(b: dict, require_index: bool = False) -> dict:
+    """loader 出的整批 dict → trainer 批次格式；缺键即报错（接口对不上要早红）。
+    require_index：训练批必须带 batch_index，否则「第 k 步拿第 k 批」的核对会被静默跳过（自审 P1）。"""
+    miss = [k for k in BATCH_KEYS + (("batch_index",) if require_index else ()) if k not in b]
     if miss:
         raise KeyError(f"loader 批次缺键：{miss}")
     out = {
@@ -102,9 +103,9 @@ class SyntheticSource:
             yield b
             k += 1
 
-    def dev_batches(self) -> list[dict]:
+    def dev_batches(self, n_batches: int | None = None) -> list[dict]:
         d = self.cfg.data
-        nb = max(1, min(d.dev_batches, -(-d.dev_n // d.batch)))
+        nb = max(1, min(n_batches or d.dev_batches, -(-d.dev_n // d.batch)))
         return [synth_batch(d.dev_seed, 10_000_000 + i, d.batch, self.n) for i in range(nb)]
 
 
@@ -132,7 +133,9 @@ class LoaderSource:
             raise ValueError("data.kind = loader 时必须给 data.shard_root 与 data.recipe")
         self.num_workers = d.num_workers
         self.dev = self.mod.DevSet(d.shard_root, d.recipe, n=d.dev_n, seed=d.dev_seed, seg_s=d.seg_s)
-        self.build_id = getattr(self.dev, "build_id", None) or "unknown"
+        self.build_id = getattr(self.dev, "build_id", None)
+        if not self.build_id:
+            raise ValueError("loader 没给 build_id：无法核对数据版本，不开跑")
 
     def train_batches(self, start_batch: int = 0, device=None):
         """traindata 约定：第 k 批只由 (seed, k, batch_size) 决定，与 num_workers 无关；torch_iterable 自己出整批，
@@ -144,13 +147,14 @@ class LoaderSource:
                                      seg_s=d.seg_s, batch_size=d.batch, start_batch=start_batch,
                                      render="gpu" if on_gpu else "cpu")
         dl = torch.utils.data.DataLoader(it, batch_size=None, num_workers=d.num_workers,
-                                         persistent_workers=d.num_workers > 0)
+                                         persistent_workers=d.num_workers > 0,
+                                         timeout=d.timeout_s if d.num_workers > 0 else 0)
         for b in dl:
-            yield normalize(self.mod.render_on_gpu(b, device) if on_gpu else b)
+            yield normalize(self.mod.render_on_gpu(b, device) if on_gpu else b, require_index=True)
 
-    def dev_batches(self) -> list[dict]:
+    def dev_batches(self, n_batches: int | None = None) -> list[dict]:
         d = self.cfg.data
-        n = min(len(self.dev), d.dev_batches * d.batch)
+        n = min(len(self.dev), (n_batches or d.dev_batches) * d.batch)
         return [collate([self.dev[j] for j in range(i, min(i + d.batch, n))]) for i in range(0, n, d.batch)]
 
 
