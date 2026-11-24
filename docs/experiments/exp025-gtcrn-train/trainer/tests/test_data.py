@@ -75,7 +75,7 @@ def _fake_loader(n, batch_size_seen):
 
 
 def test_loader_contract_cpu_path(tmp_path):
-    cfg = _cfg(tmp_path, kind="loader", shard_root="s", recipe="r.json")
+    cfg = _cfg(tmp_path, kind="loader", shard_root="s", recipe="r.json", num_workers=1)
     seen = []
     src = data.LoaderSource(cfg, mod=_fake_loader(8000, seen))
     assert src.build_id == "fake-build-1"
@@ -117,12 +117,12 @@ def test_real_loader_importable_and_has_contract():
 
 @pytest.mark.skipif(not data.LOADER_PATH.exists() or not __import__("os").environ.get("VDN_LOADER_SHARDS"),
                     reason=_NO_LOADER + "；另设 VDN_LOADER_SHARDS=<小分片目录> 与 VDN_LOADER_RECIPE=<配方>")
-@pytest.mark.parametrize("workers", [0, 2])
+@pytest.mark.parametrize("workers", [1, 2])
 def test_real_loader_resume_from_batch_k_equals_continuous(tmp_path, workers):
     """真 loader：从第 k 批起取，与从 0 连续取到第 k 批逐值相同，与 worker 数无关（续训等价的数据那一半）。"""
     import os
     cfg = _cfg(tmp_path, kind="loader", shard_root=os.environ["VDN_LOADER_SHARDS"],
-               recipe=os.environ["VDN_LOADER_RECIPE"], num_workers=workers)
+               recipe=os.environ["VDN_LOADER_RECIPE"], num_workers=max(workers, 1))
     src = data.LoaderSource(cfg)
     it = src.train_batches(0, device=torch.device("cpu"))
     seq = [next(it) for _ in range(3)]

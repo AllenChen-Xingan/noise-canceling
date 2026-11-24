@@ -53,4 +53,5 @@ limits:
   max_hours: 6.0
   max_usd: 20.0
   usd_per_hour: 0.50
+  hang_s: 120.0
 device: auto

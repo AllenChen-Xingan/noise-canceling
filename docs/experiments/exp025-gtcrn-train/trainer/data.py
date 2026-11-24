@@ -113,6 +113,15 @@ class SyntheticSource:
             out.append(synth_batch(d.dev_seed, 10_000_000 + i, d.batch, self.n))
         return out
 
+    def calib_batches(self, n_batches: int, should_stop=None) -> list[dict] | None:
+        """标定用的开发批：恰好 n_batches 批，不受 dev_n 限制（codex 第 6 轮 #3）。前 dev_batches 批与 dev_batches() 相同。"""
+        out = []
+        for i in range(n_batches):
+            if should_stop and should_stop():
+                return None
+            out.append(synth_batch(self.cfg.data.dev_seed, 10_000_000 + i, self.cfg.data.batch, self.n))
+        return out
+
 
 # ---------- traindata 的 loader ----------
 
@@ -137,6 +146,9 @@ class LoaderSource:
         if not d.shard_root or not d.recipe:
             raise ValueError("data.kind = loader 时必须给 data.shard_root 与 data.recipe")
         self.num_workers = d.num_workers
+        if d.num_workers < 1:
+            # worker = 0 时 DataLoader 不支持超时，取数卡住就无法停下（codex 第 6 轮 #1）
+            raise ValueError("data.kind = loader 时 data.num_workers 必须 ≥ 1（取数超时只在子进程模式下生效）")
         self.dev = self.mod.DevSet(d.shard_root, d.recipe, n=d.dev_n, seed=d.dev_seed, seg_s=d.seg_s)
         self.build_id = getattr(self.dev, "build_id", None)
         if not self.build_id:
@@ -156,6 +168,18 @@ class LoaderSource:
                                          timeout=d.timeout_s if d.num_workers > 0 else 0)
         for b in dl:
             yield normalize(self.mod.render_on_gpu(b, device) if on_gpu else b, require_index=True)
+
+    def calib_batches(self, n_batches: int, should_stop=None) -> list[dict] | None:
+        """标定用：另建一份恰好 n_batches × batch 段的开发集（同种子，前 dev_n 段与开发份相同），
+        不被 dev_n 截短——默认 dev_n = 2000、批量 32 时开发份只有 63 批（codex 第 6 轮 #3）。"""
+        d = self.cfg.data
+        ds = self.mod.DevSet(d.shard_root, d.recipe, n=n_batches * d.batch, seed=d.dev_seed, seg_s=d.seg_s)
+        out = []
+        for i in range(n_batches):
+            if should_stop and should_stop():
+                return None
+            out.append(collate([ds[j] for j in range(i * d.batch, (i + 1) * d.batch)]))
+        return out
 
     def dev_batches(self, n_batches: int | None = None, should_stop=None) -> list[dict] | None:
         """逐批构造（DevSet 在 CPU 上渲染，640 段可能要一会儿）；每批前问 should_stop，要停返回 None。"""

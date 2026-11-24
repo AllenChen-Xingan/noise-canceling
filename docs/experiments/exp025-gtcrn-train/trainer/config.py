@@ -92,6 +92,7 @@ class LimitsCfg:
     max_hours: float = 6.0
     max_usd: float = 20.0
     usd_per_hour: float = 0.50
+    hang_s: float = 120.0  # 已该停而主线程这么久没有进展时，看门狗强退（train._Beat）
 
 
 @dataclass
@@ -166,5 +167,7 @@ def validate(cfg: Config) -> None:
             raise ValueError(f"limits.{k} 必须是有限正数（不许不设上限，也不许 .inf / .nan）")
     if not (isinstance(L.usd_per_hour, (int, float)) and math.isfinite(L.usd_per_hour) and L.usd_per_hour >= 0):
         raise ValueError("limits.usd_per_hour 必须是有限非负数（负单价会让累计花费下降）")
+    if not (isinstance(L.hang_s, (int, float)) and math.isfinite(L.hang_s) and L.hang_s > 0):
+        raise ValueError("limits.hang_s 必须是有限正数")
     if cfg.schedule.ckpt_every <= 0:
         raise ValueError("schedule.ckpt_every 必须为正")
