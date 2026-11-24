@@ -27,7 +27,7 @@
 
 ```sh
 cargo build --release --manifest-path parity_rs/Cargo.toml   # 对拍测试要它，第一次约 25 秒
-../../../../.venv/bin/python -m pytest -q tests/              # 117 条通过，4 条等 traindata 的 loader / cloud 合入（和小分片）后自动跑
+../../../../.venv/bin/python -m pytest -q tests/              # 118 条通过，4 条等 traindata 的 loader / cloud 合入（和小分片）后自动跑
 python smoke.py --config configs/default.yaml --set data.shard_root=… --set data.recipe=… --out smoke.json
 python train.py --config configs/default.yaml --set run.name=exp025-B-s0 --set data.shard_root=… --set data.recipe=…
 python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b.onnx
@@ -72,14 +72,17 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 | 件 | 判据 | 本机读数（2026-11-24，电池，合成小样，批量 4 × 2 s） |
 |---|---|---|
 | 1 初始损失合理 | B 与 A 相对差 ≤ 1e-5，且起点损失 < 随机初始化 | A 4.388 = B 4.388；随机初始化 37.43（批归一化冻结后，训练模式与评估模式同值） |
-| 2 单批过拟合 | 150 步走完「初值到近乎完美输出（目标 + 40 dB 白噪声）损失」距离的 ≥ 一半；B 的注意力输出层权重要动过 | 4.39 → −0.92，下限 −0.41，走完 111%；注意力输出层权重最大变化 0.063 |
+| 2 单批过拟合 | 150 步走完「初值到近乎完美输出（目标 + 40 dB 白噪声）损失」距离的 ≥ 一半；**且**这一批 SI-SNR 提高 ≥ 6 dB；B 的注意力输出层权重要动过 | 4.39 → −0.92，下限 −0.41，走完 111%；注意力输出层权重最大变化 0.063；SI-SNR 那条后加，本机未测 |
 | 3 原检查点读数复现 | 在官方 `mix.wav` 上和官方 `enh.wav` 的最大差 ≤ 2 个 16 位量化步 | 3.05e-5，即 1 个量化步 |
 
 - 正式数据（`data.kind: loader`）冒烟**必须**用 `--known-dev` 给开发份已知读数，否则记「未完成」、不通过（014 第 3 步）；基准等 evalcmp / cloudrun 出数
 - 同名运行同时只能有一个进程（`run.lock`，flock）
 - 看门狗：已该停（到上限 / 收到信号）而主线程 `limits.hang_s`（默认 120 s）没有进展时，写 `hung.json` 后强退；正式数据要求 `num_workers ≥ 1`，取数超时才生效
 - 标定单独取满 `calib_batches` 批（默认 200 × 32 段），不被开发份大小截短
-- 第 2 件的下限：先按「输出恰好等于目标」的损失（−10.04）跑过一次，没过（150 步只走完 37%），报告留在 `smoke_reports/…-floor-exact-FAILED.json`。原因是 SI-SNR 项在输出与目标完全相同时被官方的 1e-8 分母下限顶成约 −8，这个下限达不到。改用 40 dB 近乎完美参照后过。**这是看到失败之后改的判据（AI 定），已报大总管**
+- **第 2 件的判据改过一次（事后改判据，AI 定，大总管认可）**：
+  - 原判据：(初值 − 终值) / (初值 − 「输出恰好等于目标」的损失) ≥ 0.5
+  - 为什么定错：输出与目标完全相同时，官方 HybridLoss 的 SI-SNR 项被分母里的 1e-8 下限顶成约 −8，下限因此是 −10.04，任何训练都到不了。本机 150 步走到 −0.92，只占 37%，判「不过」。报告是 `smoke_reports/20261124-cpu-synthetic-v2-floor-exact-FAILED.json`
+  - 新判据：下限改成「目标 + 40 dB 白噪声」这个近乎完美输出的损失（本机 −0.41），走完 111%，判过。另加一个不依赖下限的读数：这一批的 SI-SNR 过拟合后要提高 ≥ 6 dB（阈值 AI 定）。**本机还没用这条测过**，名额已收回；云上 GPU 冒烟时两个读数都要过
 - 测速只作记录：本机每步中位 0.25 s（批量 4 × 2 s），取数 0.007 s。电池下测的，**不能和云上比**
 - 本机跑任何超过 1 分钟的命令，都要先申请名额，套 `caffeinate -dims`，并记电源状态。2026-11-16 有一次探测因为用电池、空闲睡眠，CPU 只用了 136 秒，墙钟却拖到 56 分钟
 
@@ -108,6 +111,7 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
   - 一道不碰磁盘的本段时限兜底
   - 网络盘卡住、写盘失败这类故障下，这些保险不保证生效
 - **硬止损（cloudrun）**：机器到时限自删（实测有效），加上本机看门狗按登记的删机时刻删机。说明见 `../cloud/README.md`「防忘删机」一节。**只有删机才停止计费**
+- 待办 issue：#159（启动期网络盘阻塞，T-1）· #160（心跳改名阻塞的跨运行覆盖，T-2）
 - 评审：codex 第 9 轮起，「故障注入下训练器的看门狗能不能强退」这一类条目记 P2 待办，不进停止线；其他 P1 照修
 
 ## 不在本目录
