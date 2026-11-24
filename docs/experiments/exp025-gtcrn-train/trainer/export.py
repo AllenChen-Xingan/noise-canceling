@@ -85,7 +85,9 @@ def main(argv=None) -> int:
     m, meta = model_from_ckpt(None if a.official else a.ckpt, a.ema)
     meta["inputs"] = export(m, a.out)
     meta["parity"] = compare(m, a.out, tol=a.tol)
-    print(json.dumps(meta, ensure_ascii=False, indent=2))
+    text = json.dumps(meta, ensure_ascii=False, indent=2)
+    a.out.with_suffix(".json").write_text(text)  # torch 导出器会往标准输出打整张图，机器读这份
+    print(text)
     return 0 if meta["parity"]["pass"] else 1
 
 

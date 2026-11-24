@@ -69,3 +69,12 @@ def test_export_trained_b_from_checkpoint(tmp_path):
     assert export.export(m, out) == ["spec", "cond"]
     r = export.compare(m, out)
     assert r["pass"], r
+
+
+def test_export_cli_writes_report(tmp_path):
+    """命令行入口：返回 0，旁边写出 .json 报告（机器读这份，不读被导出器刷屏的标准输出）。"""
+    import json
+    out = tmp_path / "a.onnx"
+    assert export.main(["--official", "--out", str(out)]) == 0
+    rep = json.loads(out.with_suffix(".json").read_text())
+    assert rep["variant"] == "A" and rep["parity"]["pass"]
