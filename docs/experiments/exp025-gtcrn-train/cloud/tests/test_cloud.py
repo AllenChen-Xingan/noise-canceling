@@ -99,7 +99,7 @@ class TestLedger(Base):
         self.assertAlmostEqual(spent, 10.5 + 3.0 + 2.0, places=2)  # 盘一个月 10.5 + 账单优先
         self.assertAlmostEqual(L.check_budget(rows, 0.5, 4, now=now), spent + 2.0, places=2)
         with self.assertRaises(SystemExit):
-            L.check_budget(rows, 0.5, 10, now=now)  # 15.5 + 5 > 20
+            L.check_budget(rows, 0.5, 10, cap=20.0, now=now)  # 15.5 + 5 > 20（显式上限，不随 config 变）
 
     def test_open_pod_counts_toward_budget(self):
         t0 = dt.datetime(2026, 11, 16, tzinfo=dt.timezone.utc)
@@ -139,7 +139,7 @@ class TestOps(Base):
 
     def test_over_budget_never_posts(self):
         with self.assertRaises(SystemExit):
-            O.create_pod(self.cli, "US-KS-2", None, max_hours=100, usd_per_hr_hint=0.5, ledger_path=self.ledger)
+            O.create_pod(self.cli, "US-KS-2", None, max_hours=C.SPEND_CAP_USD / 0.5 + 1, usd_per_hr_hint=0.5, ledger_path=self.ledger)
         self.assertFalse([c for c in self.fake.calls if c[:2] == ("POST", "/v2/pods")])
 
     def test_pod_name_prefix_enforced(self):
