@@ -14,7 +14,9 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import math
+import signal
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -26,7 +28,7 @@ import losses
 import models
 from data import frames_mask, make_source
 from official import load_start_state
-from runrec import EMA, RunDir, check_resume, start_record
+from runrec import EMA, RunDir, check_resume, env_info, start_record
 
 HERE = Path(__file__).resolve().parent
 MPS_FIX = HERE.parents[1] / "exp018-gtcrn-finetune" / "smoke" / "mps_fix.py"
@@ -93,22 +95,22 @@ def loss_cfg(cfg, w_lvl: float, w_on: float) -> losses.LossCfg:
 
 
 @torch.no_grad()
-def calibrate(model, cfg, dev, device) -> dict:
-    """027 3.2 权重第 1 步：起点模型在开发批上量各项大小，把 "auto" 的权重定成约占 HybridLoss 的 10%。"""
+def calibrate(model, cfg, batches, device) -> dict:
+    """027 3.2 权重第 1 步：起点模型在 calib_batches 个开发批上量各项大小，把 "auto" 的权重定成约占 HybridLoss 的 10%。"""
     pc = loss_cfg(cfg, 1.0, 1.0)
     pc.sp, pc.kd = False, False  # 标定只量 HybridLoss 与两项保护
     probe = losses.TrainLoss(pc).to(device)
     model.eval()
     sums = {"hybrid": 0.0, "lvl": 0.0, "on": 0.0}
     valid = {"lvl": 0, "on": 0}
-    nb = min(cfg.data.calib_batches, len(dev))
-    for b in dev[:nb]:
+    for b in batches:
         _, logs = forward_loss(model, probe, b, device)
         sums["hybrid"] += logs["hybrid"]
         for k in ("lvl", "on"):
             sums[k] += logs[k] * logs[f"{k}_valid"]
             valid[k] += logs[f"{k}_valid"]
-    model.train()
+    set_train(model, cfg)
+    nb = len(batches)
     h = sums["hybrid"] / nb
     out = {"batches": nb, "hybrid_mean": h}
     for k, key in (("lvl", "w_lvl"), ("on", "w_on")):
@@ -120,24 +122,60 @@ def calibrate(model, cfg, dev, device) -> dict:
 
 
 @torch.no_grad()
-def evaluate(model, crit, dev, device, **kw) -> dict:
+def evaluate(model, crit, dev, device, cfg, **kw) -> dict:
+    """开发份平均读数。每个键按「出现过的批数」平均（kd 只在有回放样本的批出现，不按总批数摊薄）。"""
     model.eval()
-    acc, n = {}, 0
+    acc, cnt = {}, {}
     for b in dev:
         _, logs = forward_loss(model, crit, b, device, **kw)
         for k, v in logs.items():
             acc[k] = acc.get(k, 0.0) + v
-        n += 1
+            cnt[k] = cnt.get(k, 0) + 1
+    set_train(model, cfg)
+    return {k: v / cnt[k] for k, v in acc.items()}
+
+
+def set_train(model, cfg) -> None:
+    """训练模式。bn = frozen（默认）时批归一化层留在评估模式：用起点的运行统计量、不更新，缩放与偏移照训。
+    理由（自审 P1）：训练模式的批归一化用整段（含未来帧）与整批的统计量，和推理不一致；微调时还会冲掉 DNS3 的统计量。"""
     model.train()
-    return {k: v / n for k, v in acc.items()}
+    if cfg.model.bn == "frozen":
+        for m in model.modules():
+            if isinstance(m, torch.nn.modules.batchnorm._BatchNorm):
+                m.eval()
 
 
 def _lr_lambda(warmup: int):
     return lambda s: min(1.0, (s + 1) / warmup) if warmup > 0 else 1.0
 
 
-def train(cfg, *, max_wall_s: float | None = None) -> dict:
-    """跑到停下为止，返回停下记录。max_wall_s 只给测试用（模拟被打断）。"""
+class _Signals:
+    """收到 SIGTERM / SIGINT（RunPod 抢占、人按 Ctrl-C）时置位，循环在本步结束后存检查点停下。"""
+
+    def __init__(self):
+        self.got = None
+        self.old = {}
+
+    def __enter__(self):
+        if threading.current_thread() is threading.main_thread():
+            for sig in (signal.SIGTERM, signal.SIGINT):
+                self.old[sig] = signal.signal(sig, self._on)
+        return self
+
+    def _on(self, signum, frame):
+        self.got = signal.Signals(signum).name
+
+    def __exit__(self, *exc):
+        for sig, h in self.old.items():
+            signal.signal(sig, h)
+
+
+def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = None) -> dict:
+    """跑到停下为止，返回停下记录。max_wall_s / _signals 只给测试用。
+
+    计时（billed_s）从本函数开始算，含建模型、取开发份、标定；续训时接上次检查点与心跳文件里较大的那个，
+    所以被抢占时「上次检查点之后」那段也计入花费（自审 P1）。上限按 billed_s 判。"""
+    t_proc = time.monotonic()
     device = resolve_device(cfg.device)
     cfg_dict = cfgmod.to_dict(cfg)
     rd = RunDir(Path(cfg.run.out_dir).expanduser() / cfg.run.name)
@@ -155,13 +193,12 @@ def train(cfg, *, max_wall_s: float | None = None) -> dict:
     sched = torch.optim.lr_scheduler.LambdaLR(opt, _lr_lambda(cfg.optim.warmup_steps))
     ema = EMA(model, cfg.ema.decay) if cfg.ema.enabled else None
 
-    last = rd.latest()
-    if last is not None:
+    st, last = rd.load_latest(device)
+    if st is not None:
         rec = rd.read()
         why = check_resume(rec, cfg_dict, source.build_id)
         if why:
             raise RuntimeError("拒绝续训：" + "；".join(why))
-        st = torch.load(last, map_location=device, weights_only=False)
         model.load_state_dict(st["model"])
         opt.load_state_dict(st["optim"])
         sched.load_state_dict(st["sched"])
@@ -169,83 +206,104 @@ def train(cfg, *, max_wall_s: float | None = None) -> dict:
             ema.load_state_dict(st["ema"])
         if sp_ref is not None:
             sp_ref = {k: v.to(device) for k, v in st["sp_ref"].items()}
-        step, elapsed, calib = st["step"], st["elapsed_s"], st["calib"]
+        step, calib = st["step"], st["calib"]
+        billed0 = max(st["billed_s"], rd.heartbeat().get("billed_s", 0.0))
         rec["config"] = cfg_dict
         rec["resumes"].append({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "from_step": step,
-                               "git": start_record(cfg_dict, "", 0, {})["git"]})
+                               "from_ckpt": last.name, "billed_s_before": round(billed0, 2),
+                               "env": env_info(), "prev_stop": rec.pop("stop", None)})
     else:
-        calib = calibrate(model, cfg, dev, device)
-        step, elapsed = 0, 0.0
+        calib = calibrate(model, cfg, source.dev_batches(cfg.data.calib_batches), device)
+        step, billed0 = 0, 0.0
+        pcnt = models.param_counts(model)
         rec = start_record(cfg_dict, source.build_id, source.num_workers,
-                           {"device": str(device), "params": models.param_counts(model)["trainable"],
-                            "calib": calib})
-        rec["params_fixed"] = models.param_counts(model)["fixed"]
+                           {"device": str(device), "params": pcnt["trainable"], "params_fixed": pcnt["fixed"],
+                            "calib": calib, "env": env_info()})
     rd.write(rec)
     crit = losses.TrainLoss(loss_cfg(cfg, calib["lvl"]["weight"], calib["on"]["weight"])).to(device)
+    kw = {"sp_ref": sp_ref, "teacher": teacher}
+
+    def billed():
+        return billed0 + time.monotonic() - t_proc
 
     def state():
         return {"model": model.state_dict(), "optim": opt.state_dict(), "sched": sched.state_dict(),
                 "ema": ema.state_dict() if ema else None, "sp_ref": sp_ref, "step": step,
-                "elapsed_s": elapsed, "calib": calib, "config": cfg_dict, "variant": cfg.model.variant}
+                "billed_s": billed(), "calib": calib, "config": cfg_dict, "variant": cfg.model.variant}
 
-    if last is None:
+    def dev_eval():
+        row = {"step": step, "dev": evaluate(model, crit, dev, device, cfg, **kw)}
+        if ema is not None:  # 034 建议 7：EMA 与不用 EMA 在开发份上并排比
+            raw = {k: v.clone() for k, v in model.state_dict().items()}
+            model.load_state_dict(ema.state_dict())
+            row["dev_ema"] = evaluate(model, crit, dev, device, cfg, **kw)
+            model.load_state_dict(raw)
+        rd.log(row)
+
+    if st is None:
         rd.save(state(), 0, cfg.schedule.keep_last)
     lim, sc = cfg.limits, cfg.schedule
     t_start = time.monotonic()
-    t_mark = t_start
-    reason = None
-    model.train()
+    reason, last_eval = None, step
+    set_train(model, cfg)
     batches = source.train_batches(start_batch=step, device=device)
-    while True:
-        now = time.monotonic()
-        elapsed += now - t_mark
-        t_mark = now
-        hours = elapsed / 3600
-        if step >= sc.max_steps:
-            reason = "max_steps"
-        elif hours >= lim.max_hours:
-            reason = "max_hours"
-        elif hours * lim.usd_per_hour >= lim.max_usd:
-            reason = "max_usd"
-        elif max_wall_s is not None and now - t_start >= max_wall_s:
-            reason = "interrupted"
-        if reason:
-            break
-        batch = next(batches)
-        if batch.get("batch_index", step) != step:  # 第 step 步必须拿第 step 批（续训对齐的交叉校验）
-            raise RuntimeError(f"数据批次错位：第 {step} 步拿到第 {batch['batch_index']} 批")
-        loss, logs = forward_loss(model, crit, batch, device, sp_ref=sp_ref, teacher=teacher)
-        if not math.isfinite(loss.item()):
-            reason = "nonfinite"
-            rec["crash"] = {"step": step, "logs": logs}
-            break
-        opt.zero_grad(set_to_none=True)
-        loss.backward()
-        gn = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.optim.grad_clip)
-        opt.step()
-        sched.step()
-        if ema is not None:
-            ema.update(model)
-        step += 1
-        if step % sc.log_every == 0 or step == 1:
-            rd.log({"step": step, "lr": sched.get_last_lr()[0], "elapsed_s": round(elapsed, 2),
-                    "grad_norm": float(gn), **logs})
-        if step % sc.eval_every == 0:
-            kw = {"sp_ref": sp_ref, "teacher": teacher}
-            row = {"step": step, "dev": evaluate(model, crit, dev, device, **kw)}
+    with (_signals or _Signals()) as sigs:
+        while True:
+            hours = billed() / 3600
+            if step >= sc.max_steps:
+                reason = "max_steps"
+            elif hours >= lim.max_hours:
+                reason = "max_hours"
+            elif hours * lim.usd_per_hour >= lim.max_usd:
+                reason = "max_usd"
+            elif sigs.got:
+                reason = f"signal:{sigs.got}"
+            elif max_wall_s is not None and time.monotonic() - t_start >= max_wall_s:
+                reason = "interrupted"
+            if reason:
+                break
+            try:
+                batch = next(batches)
+            except StopIteration:
+                reason = "data_exhausted"
+                break
+            except RuntimeError as e:  # DataLoader 的 timeout：worker 卡住时不无限等（自审 P1）
+                if "timed out" not in str(e).lower():
+                    raise
+                reason = "data_timeout"
+                break
+            if batch.get("batch_index", step) != step:  # 第 step 步必须拿第 step 批（续训对齐的交叉校验）
+                raise RuntimeError(f"数据批次错位：第 {step} 步拿到第 {batch['batch_index']} 批")
+            loss, logs = forward_loss(model, crit, batch, device, sp_ref=sp_ref, teacher=teacher)
+            if not math.isfinite(loss.item()):
+                reason = "nonfinite"
+                rec["crash"] = {"step": step, "logs": logs}
+                break
+            opt.zero_grad(set_to_none=True)
+            loss.backward()
+            gn = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.optim.grad_clip)
+            opt.step()
+            sched.step()
             if ema is not None:
-                raw = {k: v.clone() for k, v in model.state_dict().items()}
-                model.load_state_dict(ema.state_dict())
-                row["dev_ema"] = evaluate(model, crit, dev, device, **kw)
-                model.load_state_dict(raw)
-            rd.log(row)
-        if step % sc.ckpt_every == 0:
-            rd.save(state(), step, sc.keep_last)
+                ema.update(model)
+            step += 1
+            if step % sc.log_every == 0 or step == 1:
+                rd.log({"step": step, "lr": sched.get_last_lr()[0], "billed_s": round(billed(), 2),
+                        "grad_norm": float(gn), **logs})
+                rd.beat(step, billed())
+            if step % sc.eval_every == 0:
+                dev_eval()
+                last_eval = step
+            if step % sc.ckpt_every == 0:
+                rd.save(state(), step, sc.keep_last)
     if reason != "nonfinite":
+        if step > last_eval:  # 停在两次评估之间（上限、抢占）时补一次，最终权重也有开发读数
+            dev_eval()
         rd.save(state(), step, sc.keep_last)
-    rec["stop"] = {"reason": reason, "step": step, "elapsed_s": round(elapsed, 2),
-                   "usd_est": round(elapsed / 3600 * lim.usd_per_hour, 4),
-                   "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+    b = billed()
+    rd.beat(step, b)
+    rec["stop"] = {"reason": reason, "step": step, "billed_s": round(b, 2),
+                   "usd_est": round(b / 3600 * lim.usd_per_hour, 4), "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
     rd.write(rec)
     return rec["stop"]
 

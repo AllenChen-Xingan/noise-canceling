@@ -80,7 +80,10 @@ def truth_from_clean(clean: np.ndarray) -> list[tuple[int, int]]:
 
 
 def owner_only_mask(owner_ivs, interf_ivs, n: int) -> np.ndarray:
-    """V-SPLVL 用的帧：主说话人在、旁人不在（masks(truth) 的 owner && !interf，guard = 0）。"""
+    """V-SPLVL 用的帧：主说话人在、旁人不在（masks(truth) 的 owner && !interf，guard = 0）。
+
+    区间来自 traindata，用的是 exp013 `dsp.intervals`（两端各外扩 2 个 20 ms 帧）——评测场景集的真值也是它算的，
+    所以训练与评测的口径一致（自审时核过，不是遗漏）。"""
     nf = n // MASK_FRAME
     return paint(owner_ivs, nf) & ~paint(interf_ivs, nf)
 
