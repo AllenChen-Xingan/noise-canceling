@@ -98,8 +98,9 @@ def loss_cfg(cfg, w_lvl: float, w_on: float) -> losses.LossCfg:
 
 
 @torch.no_grad()
-def calibrate(model, cfg, batches, device) -> dict:
-    """027 3.2 权重第 1 步：起点模型在 calib_batches 个开发批上量各项大小，把 "auto" 的权重定成约占 HybridLoss 的 10%。"""
+def calibrate(model, cfg, batches, device, should_stop=lambda: None) -> dict | None:
+    """027 3.2 权重第 1 步：起点模型在 calib_batches 个开发批上量各项大小，把 "auto" 的权重定成约占 HybridLoss 的 10%。
+    每批前问一次 should_stop（上限 / 信号）；要停就返回 None（codex 第 2 轮 #1）。"""
     pc = loss_cfg(cfg, 1.0, 1.0)
     pc.sp, pc.kd = False, False  # 标定只量 HybridLoss 与两项保护
     probe = losses.TrainLoss(pc).to(device)
@@ -107,6 +108,9 @@ def calibrate(model, cfg, batches, device) -> dict:
     sums = {"hybrid": 0.0, "lvl": 0.0, "on": 0.0}
     valid = {"lvl": 0, "on": 0}
     for b in batches:
+        if should_stop():
+            set_train(model, cfg)
+            return None
         _, logs = forward_loss(model, probe, b, device)
         sums["hybrid"] += logs["hybrid"]
         for k in ("lvl", "on"):
@@ -203,100 +207,111 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
           _beat_s: float = HEARTBEAT_S) -> dict:
     """跑到停下为止，返回停下记录。max_wall_s / _signals / _beat_s 只给测试用。
 
-    计费（billed_s · usd）从本函数开始算，含建模型、取开发份、标定；续训时接上次检查点与心跳里较大的那个。
-    美元按段累计：每段只按本段单价乘本段时长，改单价不追溯（codex 第 1 轮 #6）。上限按这两个数判。"""
+    计费（billed_s · usd）从本函数第一行算起；信号处理与心跳线程也从第一行起生效，覆盖建模型、取开发份、标定
+    （codex 第 2 轮 #1 #2）。准备期就被杀、还没有检查点时，下次开跑从心跳接上账。续训时在检查点、心跳、上次停下
+    记录三处取最大值。美元按段累计：每段只按本段单价乘本段时长，改单价不追溯（codex 第 1 轮 #6）。"""
     t_proc = time.monotonic()
-    device = resolve_device(cfg.device)
     cfg_dict = cfgmod.to_dict(cfg)
     rd = RunDir(Path(cfg.run.out_dir).expanduser() / cfg.run.name)
-    source = make_source(cfg)
-    dev = source.dev_batches()
-    model = build_model(cfg, device)
-    sp_ref = {k: v.detach().clone() for k, v in model.named_parameters()} if cfg.loss.sp else None
-    teacher = None
-    if cfg.loss.kd:
-        teacher = build_model(cfg, device).eval()
-        for p in teacher.parameters():
-            p.requires_grad_(False)
-    opt = torch.optim.Adam([p for p in model.parameters() if p.requires_grad], lr=cfg.optim.lr,
-                           betas=tuple(cfg.optim.betas))
-    sched = torch.optim.lr_scheduler.LambdaLR(opt, _lr_lambda(cfg.optim.warmup_steps))
-    ema = EMA(model, cfg.ema.decay) if cfg.ema.enabled else None
-
-    st, last = rd.load_latest(device)
-    if st is None and (rd.run_json.exists() or any(rd.ckpt_dir.glob("step-*.pt"))):
-        # 已有运行却一份检查点都读不出：不当成新运行（会清零花费、覆盖 run.json、跳过训崩检查，codex 第 1 轮 #5）
-        raise RuntimeError(f"{rd.root} 已有运行记录，但没有可读的检查点（见 ckpt/bad_ckpt.txt）；请人工处理或换 run.name")
-    if st is not None:
-        rec = rd.read()
-        why = check_resume(rec, cfg_dict, source.build_id)
-        if why:
-            raise RuntimeError("拒绝续训：" + "；".join(why))
-        model.load_state_dict(st["model"])
-        opt.load_state_dict(st["optim"])
-        sched.load_state_dict(st["sched"])
-        if ema is not None:
-            ema.load_state_dict(st["ema"])
-        if sp_ref is not None:
-            sp_ref = {k: v.to(device) for k, v in st["sp_ref"].items()}
-        step, calib = st["step"], st["calib"]
-        hb, prev = rd.heartbeat(), rec.get("stop") or {}
-        billed0 = max(st["billed_s"], hb.get("billed_s", 0.0), prev.get("billed_s", 0.0))  # 三处取最晚的
-        usd0 = max(st.get("usd", 0.0), hb.get("usd", 0.0), prev.get("usd", 0.0))
-        rec["config"] = cfg_dict
-        rec["resumes"].append({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "from_step": step,
-                               "from_ckpt": last.name, "billed_s_before": round(billed0, 2),
-                               "env": env_info(), "prev_stop": rec.pop("stop", None)})
-    else:
-        calib = calibrate(model, cfg, source.dev_batches(cfg.data.calib_batches), device)
-        step, billed0, usd0 = 0, 0.0, 0.0
-        pcnt = models.param_counts(model)
-        rec = start_record(cfg_dict, source.build_id, source.num_workers,
-                           {"device": str(device), "params": pcnt["trainable"], "params_fixed": pcnt["fixed"],
-                            "calib": calib, "env": env_info()})
-    rd.write(rec)
     lim, sc = cfg.limits, cfg.schedule
-    crit = losses.TrainLoss(loss_cfg(cfg, calib["lvl"]["weight"], calib["on"]["weight"])).to(device)
-    kw = {"sp_ref": sp_ref, "teacher": teacher}
+    hb0 = rd.heartbeat()
+    acct = {"billed0": hb0.get("billed_s", 0.0), "usd0": hb0.get("usd", 0.0), "step": hb0.get("step", 0)}
 
     def billed():
-        return billed0 + time.monotonic() - t_proc
+        return acct["billed0"] + time.monotonic() - t_proc
 
     def usd():
-        return usd0 + (time.monotonic() - t_proc) / 3600 * lim.usd_per_hour
+        return acct["usd0"] + (time.monotonic() - t_proc) / 3600 * lim.usd_per_hour
 
-    def state():
-        return {"model": model.state_dict(), "optim": opt.state_dict(), "sched": sched.state_dict(),
-                "ema": ema.state_dict() if ema else None, "sp_ref": sp_ref, "step": step,
-                "billed_s": billed(), "usd": usd(), "calib": calib, "config": cfg_dict,
-                "variant": cfg.model.variant}
+    with (_signals or _Signals()) as sigs, _Beat(rd, lambda: (acct["step"], billed(), usd()), _beat_s):
+        def stop_reason():
+            if billed() / 3600 >= lim.max_hours:
+                return "max_hours"
+            if usd() >= lim.max_usd:
+                return "max_usd"
+            if sigs.got:
+                return f"signal:{sigs.got}"
+            return None
 
-    def dev_eval():
-        row = {"step": step, "dev": evaluate(model, crit, dev, device, cfg, **kw)}
-        if ema is not None:  # 034 建议 7：EMA 与不用 EMA 在开发份上并排比
-            raw = {k: v.clone() for k, v in model.state_dict().items()}
-            model.load_state_dict(ema.state_dict())
-            row["dev_ema"] = evaluate(model, crit, dev, device, cfg, **kw)
-            model.load_state_dict(raw)
-        rd.log(row)
+        device = resolve_device(cfg.device)
+        source = make_source(cfg)
+        dev = source.dev_batches()
+        model = build_model(cfg, device)
+        sp_ref = {k: v.detach().clone() for k, v in model.named_parameters()} if cfg.loss.sp else None
+        teacher = None
+        if cfg.loss.kd:
+            teacher = build_model(cfg, device).eval()
+            for p in teacher.parameters():
+                p.requires_grad_(False)
+        opt = torch.optim.Adam([p for p in model.parameters() if p.requires_grad], lr=cfg.optim.lr,
+                               betas=tuple(cfg.optim.betas))
+        sched = torch.optim.lr_scheduler.LambdaLR(opt, _lr_lambda(cfg.optim.warmup_steps))
+        ema = EMA(model, cfg.ema.decay) if cfg.ema.enabled else None
 
-    if st is None:
-        rd.save(state(), 0, cfg.schedule.keep_last)
-    t_start = time.monotonic()
-    reason, last_eval = None, step
-    set_train(model, cfg)
-    batches = source.train_batches(start_batch=step, device=device)
-    with (_signals or _Signals()) as sigs, _Beat(rd, lambda: (step, billed(), usd()), _beat_s):
+        st, last = rd.load_latest(device)
+        if st is None and (rd.run_json.exists() or any(rd.ckpt_dir.glob("step-*.pt"))):
+            # 已有运行却一份检查点都读不出：不当成新运行（会清零花费、覆盖 run.json、跳过训崩检查，codex 第 1 轮 #5）
+            raise RuntimeError(f"{rd.root} 已有运行记录，但没有可读的检查点（见 ckpt/bad_ckpt.txt）；请人工处理或换 run.name")
+        if st is not None:
+            rec = rd.read()
+            why = check_resume(rec, cfg_dict, source.build_id)
+            if why:
+                raise RuntimeError("拒绝续训：" + "；".join(why))
+            model.load_state_dict(st["model"])
+            opt.load_state_dict(st["optim"])
+            sched.load_state_dict(st["sched"])
+            if ema is not None:
+                ema.load_state_dict(st["ema"])
+            if sp_ref is not None:
+                sp_ref = {k: v.to(device) for k, v in st["sp_ref"].items()}
+            step, calib = st["step"], st["calib"]
+            prev = rec.get("stop") or {}
+            # 三处取最晚的（本段准备期的秒数由 billed() / usd() 从 t_proc 起自动计入）
+            acct["billed0"] = max(st["billed_s"], hb0.get("billed_s", 0.0), prev.get("billed_s", 0.0))
+            acct["usd0"] = max(st.get("usd", 0.0), hb0.get("usd", 0.0), prev.get("usd", 0.0))
+            rec["config"] = cfg_dict
+            rec["resumes"].append({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "from_step": step,
+                                   "from_ckpt": last.name, "billed_s_before": round(acct["billed0"], 2),
+                                   "env": env_info(), "prev_stop": rec.pop("stop", None)})
+        else:
+            calib = calibrate(model, cfg, source.dev_batches(cfg.data.calib_batches), device, stop_reason)
+            if calib is None:  # 准备期就到上限 / 收到信号：没有检查点可存，只留心跳里的账
+                return {"reason": stop_reason() or "setup_stopped", "step": 0, "phase": "setup",
+                        "billed_s": round(billed(), 2), "usd": round(usd(), 4)}
+            step = 0
+            pcnt = models.param_counts(model)
+            rec = start_record(cfg_dict, source.build_id, source.num_workers,
+                               {"device": str(device), "params": pcnt["trainable"], "params_fixed": pcnt["fixed"],
+                                "calib": calib, "env": env_info(), "billed_s_before": round(acct["billed0"], 2)})
+        acct["step"] = step
+        rd.write(rec)
+        crit = losses.TrainLoss(loss_cfg(cfg, calib["lvl"]["weight"], calib["on"]["weight"])).to(device)
+        kw = {"sp_ref": sp_ref, "teacher": teacher}
+
+        def state():
+            return {"model": model.state_dict(), "optim": opt.state_dict(), "sched": sched.state_dict(),
+                    "ema": ema.state_dict() if ema else None, "sp_ref": sp_ref, "step": step,
+                    "billed_s": billed(), "usd": usd(), "calib": calib, "config": cfg_dict,
+                    "variant": cfg.model.variant}
+
+        def dev_eval():
+            row = {"step": step, "dev": evaluate(model, crit, dev, device, cfg, **kw)}
+            if ema is not None:  # 034 建议 7：EMA 与不用 EMA 在开发份上并排比
+                raw = {k: v.clone() for k, v in model.state_dict().items()}
+                model.load_state_dict(ema.state_dict())
+                row["dev_ema"] = evaluate(model, crit, dev, device, cfg, **kw)
+                model.load_state_dict(raw)
+            rd.log(row)
+
+        if st is None:
+            rd.save(state(), 0, sc.keep_last)
+        t_start = time.monotonic()
+        reason, last_eval = None, step
+        set_train(model, cfg)
+        batches = source.train_batches(start_batch=step, device=device)
         while True:
-            if step >= sc.max_steps:
-                reason = "max_steps"
-            elif billed() / 3600 >= lim.max_hours:
-                reason = "max_hours"
-            elif usd() >= lim.max_usd:
-                reason = "max_usd"
-            elif sigs.got:
-                reason = f"signal:{sigs.got}"
-            elif max_wall_s is not None and time.monotonic() - t_start >= max_wall_s:
+            reason = "max_steps" if step >= sc.max_steps else stop_reason()
+            if reason is None and max_wall_s is not None and time.monotonic() - t_start >= max_wall_s:
                 reason = "interrupted"
             if reason:
                 break
@@ -329,9 +344,12 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
             if ema is not None:
                 ema.update(model)
             step += 1
+            acct["step"] = step
             if step % sc.log_every == 0 or step == 1:
                 rd.log({"step": step, "lr": sched.get_last_lr()[0], "billed_s": round(billed(), 2),
                         "usd": round(usd(), 4), "grad_norm": float(gn), **logs})
+            if stop_reason():  # 本步算完时已到上限 / 收到信号：不评估，回到循环顶上存盘停下（codex 第 2 轮 #1）
+                continue
             if step % sc.eval_every == 0:
                 dev_eval()
                 last_eval = step
@@ -341,9 +359,9 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
             rd.save(state(), step, sc.keep_last)  # 先存：被抢占时可能只剩几秒（codex 第 1 轮 #3）
             if reason == "max_steps" and step > last_eval:  # 只在正常跑完时补评估；上限 / 信号时不再花时间
                 dev_eval()
-    rec["stop"] = {"reason": reason, "step": step, "billed_s": round(billed(), 2), "usd": round(usd(), 4),
-                   "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
-    rd.write(rec)
+        rec["stop"] = {"reason": reason, "step": step, "billed_s": round(billed(), 2), "usd": round(usd(), 4),
+                       "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+        rd.write(rec)
     return rec["stop"]
 
 
