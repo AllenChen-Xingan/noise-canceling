@@ -1,7 +1,7 @@
 # 评审 001 · exp025 trainer 代码（codex · gpt-6-astra · read-only）
 
-> 对象：`main...HEAD` 的 diff（`docs/experiments/exp025-gtcrn-train/trainer/**` + `state/handoff/trainer.md`）。**最新一轮：第 6 轮（2026-11-24）· 总评「修改」· 待第 7 轮**。
-> 累计处理：P1×11、P2×12，逐条回源码核实：属实 22、驳回 1（第 1 轮 #1，第 2 轮 codex 给出反例后改为采纳）。
+> 对象：`main...HEAD` 的 diff（`docs/experiments/exp025-gtcrn-train/trainer/**` + `state/handoff/trainer.md`）。**最新一轮：第 7 轮（2026-11-24）· 总评「修改」· 待第 8 轮**。
+> 累计处理：P1×12、P2×12，逐条回源码核实：属实 23、驳回 1（第 1 轮 #1，第 2 轮 codex 给出反例后改为采纳）。
 > 记录放在本目录：trainer 的写入范围只有 `trainer/**`，不写 `docs/reviews/`；收口时由大总管决定要不要并入总索引。
 
 ## 第 1 轮（2026-11-24）· 总评「修改」
@@ -163,3 +163,15 @@
 ### 是否再审
 
 有 P1，改完开第 7 轮。
+
+## 第 7 轮（2026-11-24）· 总评「修改」
+
+本轮 P0/P1：1 条 · 停止线：未满足。上一轮 3 条修复 codex 核实到位（含现状页「转交」已补）。
+
+- **P1｜train.py:222 看门狗依赖写盘成功，网络盘坏了或卡住时到上限也强退不了**（第 7 轮 #1）
+  - 核实：属实（心跳在判断之前同步写；异常会结束线程；`_hard_exit` 要先写成 hung.json）
+  - 处理：每轮先判断再写盘；心跳与 hung.json 都放进有时限的子线程写（`_bounded`），出错或超时只记次数、不抛、不挡强退。测试 `test_watchdog_fires_even_if_heartbeat_write_fails`（报错 / 卡住两种）· `test_hard_exit_exits_even_if_record_write_blocks`
+
+### 是否再审
+
+有 P1，改完开第 8 轮。
