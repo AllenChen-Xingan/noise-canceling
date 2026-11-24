@@ -1,7 +1,7 @@
 # 评审 001 · exp025 trainer 代码（codex · gpt-6-astra · read-only）
 
-> 对象：`main...HEAD` 的 diff（`docs/experiments/exp025-gtcrn-train/trainer/**` + `state/handoff/trainer.md`）。**最新一轮：第 5 轮（2026-11-24）· 总评「修改」· 连续第 1 轮无 P0/P1，待第 6 轮确认**。
-> 累计处理：P1×10、P2×10，逐条回源码核实：属实 19、驳回 1（第 1 轮 #1，第 2 轮 codex 给出反例后改为采纳）。
+> 对象：`main...HEAD` 的 diff（`docs/experiments/exp025-gtcrn-train/trainer/**` + `state/handoff/trainer.md`）。**最新一轮：第 6 轮（2026-11-24）· 总评「修改」· 待第 7 轮**。
+> 累计处理：P1×11、P2×12，逐条回源码核实：属实 22、驳回 1（第 1 轮 #1，第 2 轮 codex 给出反例后改为采纳）。
 > 记录放在本目录：trainer 的写入范围只有 `trainer/**`，不写 `docs/reviews/`；收口时由大总管决定要不要并入总索引。
 
 ## 第 1 轮（2026-11-24）· 总评「修改」
@@ -140,3 +140,26 @@
 ### 是否再审
 
 只连续 1 轮无 P0/P1，再审一轮确认。
+
+## 第 6 轮（2026-11-24）· 总评「修改」
+
+本轮 P0/P1：1 条 · 停止线：未满足（重新计数）。上一轮 #1 codex 核实到位。
+
+- **P1｜data.py:156 worker = 0 时取数卡住，上限与信号都停不了**（第 6 轮 #1）
+  - 核实：属实（DataLoader 只在子进程模式支持超时；信号只置位）
+  - 处理：① 正式数据要求 `num_workers ≥ 1`；② 心跳线程兼作看门狗：已该停而主线程 `limits.hang_s`（默认 120 s）无进展时写 `hung.json` 后强退，最近检查点完整，下次按心跳续训补账。测试 `test_watchdog_fires_only_when_stop_wanted_and_stalled` · `test_stalled_fetch_after_signal_triggers_watchdog` · `test_loader_rejects_zero_workers`
+- **P2｜tests/test_data.py:127 真数据续训验收没完成；记录里说的现状页「转交」不存在**（第 6 轮 #2）
+  - 核实：属实。**「转交」那句是我上一轮写错了**：当时没写进现状页
+  - 处理：现状页补「转交」一节（云上 GPU 续训等价的具体步骤、开发份基准、loader 合入后的测试）；README 把续训等价的通过范围限定为「CPU + 合成数据」
+- **P2｜data.py:163 标定实际只有 63 批，不是配置的 200 批**（第 6 轮 #3）
+  - 核实：属实（dev_n 2000 ÷ 批量 32）
+  - 处理：标定单独建一份恰好 `calib_batches × batch` 段的开发集（同种子，前 dev_n 段与开发份相同）。测试 `test_calibration_gets_all_requested_batches_beyond_dev_n`
+
+### 引用抽查
+
+- 「不符」1 条（现状页「转交」）：属实，已补
+- 「核实属实」4 条
+
+### 是否再审
+
+有 P1，改完开第 7 轮。

@@ -19,6 +19,11 @@
 - macOS 没有 `timeout` 命令；限时用 `perl -e 'alarm N; exec @ARGV' …`
 - 早期混响 100 ms 的正本归 exp013 `rooms.py`（evalcmp / traindata）；trainer 不切混响，没有第二处表示
 
+## 转交（范围外、要云上或别的线做的）
+1. **云上 GPU 续训等价**（cloudrun，codex 第 5 / 6 轮）：本机只验证了 CPU + 合成数据下「续训 = 不中断」逐值相同（`test_resume_equals_uninterrupted`）。云上第一次冒烟时请跑：同配置训 6 步，与「训 3 步停 → 续 3 步」比 `step-0000006.pt` 的 `model` 逐键相等（CUDA 非确定性算子可能让它只近似相等，记下最大差）；并在有小分片的机器上设 `VDN_LOADER_SHARDS` / `VDN_LOADER_RECIPE` 跑 `tests/test_data.py`
+2. **正式冒烟的开发份基准**（evalcmp / cloudrun）：`smoke.py --known-dev` 要一份「起点检查点在开发份上的已知读数」，没有它正式冒烟记「未完成」
+3. **traindata 的 loader 合入后**：`tests/test_data.py` 里 3 条跳过的对接测试会自动跑
+
 ## 待人拍板
 （暂无。电平归一开不开是技术题，建议在数据消融里扫开 / 关两组，见 README「默认值与依据」）
 

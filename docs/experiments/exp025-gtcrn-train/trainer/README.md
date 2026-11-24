@@ -26,7 +26,7 @@
 
 ```sh
 cargo build --release --manifest-path parity_rs/Cargo.toml   # 对拍测试要它，第一次约 25 秒
-../../../../.venv/bin/python -m pytest -q tests/              # 107 条通过，1 条等 traindata 的 loader 合入后自动跑
+../../../../.venv/bin/python -m pytest -q tests/              # 111 条通过，3 条等 traindata 的 loader 合入（和小分片）后自动跑
 python smoke.py --config configs/default.yaml --set data.shard_root=… --set data.recipe=… --out smoke.json
 python train.py --config configs/default.yaml --set run.name=exp025-B-s0 --set data.shard_root=… --set data.recipe=…
 python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b.onnx
@@ -58,7 +58,7 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 | 梯度检查 | 6 个随机方向上有限差分 vs 解析梯度，相对差 ≤ 1e-5 | 通过 | `test_*_gradient_finite_difference` |
 | 样本不足 | 与 verifier 同条件跳过、不进分母；整批无效时该项 = 0 | 通过 | `test_short_samples_skipped_not_in_denominator` |
 | 默认开关 = 官方损失 | 逐值相同 | 通过 | `test_trainloss_defaults_equal_official_hybrid` |
-| 续训 = 不中断 | 先训 3 步再续到 6 步，和一口气训 6 步权重逐值相同 | 通过 | `test_resume_equals_uninterrupted` |
+| 续训 = 不中断 | 先训 3 步再续到 6 步，和一口气训 6 步权重逐值相同 | **只在 CPU + 合成数据上**通过；云上 GPU + 真数据待测（现状页「转交」1） | `test_resume_equals_uninterrupted` |
 | 第 k 步拿第 k 批 | 错位就报错停下 | 通过 | `test_train_stops_on_batch_misalignment` |
 | 时长 / 花费上限 · 训崩 | 到线就存检查点停下；损失不是有限数时不存坏权重，之后拒绝续训 | 通过 | `test_time_and_cost_limits_stop` · `test_nonfinite_…` · `test_resume_refused_after_nonfinite` |
 | 被抢占 · 取数卡住 · 检查点写坏 | SIGTERM 停下并存；取数超时 / 用完时干净地停；最新检查点读坏时退回上一份；续训按心跳补记花费 | 通过 | `test_review_fixes.py` |
@@ -76,6 +76,8 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 
 - 正式数据（`data.kind: loader`）冒烟**必须**用 `--known-dev` 给开发份已知读数，否则记「未完成」、不通过（014 第 3 步）；基准等 evalcmp / cloudrun 出数
 - 同名运行同时只能有一个进程（`run.lock`，flock）
+- 看门狗：已该停（到上限 / 收到信号）而主线程 `limits.hang_s`（默认 120 s）没有进展时，写 `hung.json` 后强退；正式数据要求 `num_workers ≥ 1`，取数超时才生效
+- 标定单独取满 `calib_batches` 批（默认 200 × 32 段），不被开发份大小截短
 - 测速只作记录：本机每步中位 1.17 s，取数 0.015 s，主进程 CPU 99%。电池加高负载下测的，**不能和云上比**
 - 本机跑任何超过 1 分钟的命令，都要先申请名额，套 `caffeinate -dims`，并记电源状态。2026-11-16 有一次探测因为用电池、空闲睡眠，CPU 只用了 136 秒，墙钟却拖到 56 分钟
 
