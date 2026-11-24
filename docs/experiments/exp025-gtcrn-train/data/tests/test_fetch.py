@@ -338,6 +338,19 @@ class Sources(unittest.TestCase):
         n = sum(f["bytes"] for k in ("A1", "A2", "A3", "A4", "A5") for f in g[k]["files"])
         self.assertLess(abs(n / 1e9 - 16.1) / 16.1, 0.10, n)
 
+    def test_fetched_matches_sources(self):
+        """fetched.json 记的每个文件都在 sources.json 里、字节数相同、md5 不和上游冲突（两处表示交叉校验）。"""
+        rec = fetch.load_fetched()
+        by_url = {f["url"]: f for g in fetch.load_sources().values() for f in g["files"]}
+        for url, r in rec["files"].items():
+            self.assertIn(url, by_url)
+            f = by_url[url]
+            self.assertEqual(r["bytes"], f["bytes"], url)
+            self.assertEqual(len(r["sha256"]), 64)
+            if f.get("md5") and r.get("md5"):
+                self.assertEqual(r["md5"], f["md5"], url)
+            self.assertFalse(f.get("sha256") and f["sha256"] != r["sha256"], url)
+
     def test_nc_not_trainable(self):
         for g in fetch.load_sources().values():
             if "NC" in g["license"]:

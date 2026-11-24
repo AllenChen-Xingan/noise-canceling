@@ -1,0 +1,12 @@
+{
+ "_说明": "第一次在云上下完记下的 sha256（sources.json 里为 null 的那些）；fetch.py 以后以它为准。src 写读数来源",
+ "files": {
+  "https://www.openslr.org/resources/28/rirs_noises.zip": {
+   "name": "rirs_noises.zip",
+   "bytes": 1311166223,
+   "sha256": "3b50cfde915b3984738169b4beb341e9f6b8062ae4c2076146c5db71c2c05dc7",
+   "md5": "e6f48e257286e05de56413b4779d8ffb",
+   "src": "cloudrun 云上实测 2026-11-24（unzip -t 无错），经大总管 noise-canceling-33 转"
+  }
+ }
+}
