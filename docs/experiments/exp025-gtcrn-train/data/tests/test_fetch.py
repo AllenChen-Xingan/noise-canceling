@@ -20,6 +20,8 @@ BLOB = bytes(range(256)) * 4000  # 1,024,000 字节，跨多个 CHUNK
 
 class Handler(http.server.BaseHTTPRequestHandler):
     ranges = True
+    status_first = []  # 依次先回这些状态码（如 [429, 429]），之后正常发
+    retry_after = None
     cut_after = None  # 第一次请求只发这么多字节就断
     calls = []
 
@@ -35,6 +37,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         cls = type(self)
         cls.calls.append(self.headers.get("Range"))
+        cls.agents.append(self.headers.get("User-Agent"))
+        if cls.status_first:
+            code = cls.status_first.pop(0)
+            self.send_response(code)
+            if cls.retry_after is not None:
+                self.send_header("Retry-After", str(cls.retry_after))
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         start = 0
         rng = self.headers.get("Range")
         if rng and cls.ranges:
@@ -55,8 +66,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 class Server:
-    def __init__(self, ranges=True, cut_after=None):
-        Handler.ranges, Handler.cut_after, Handler.calls = ranges, cut_after, []
+    def __init__(self, ranges=True, cut_after=None, status_first=(), retry_after=None):
+        Handler.ranges, Handler.cut_after, Handler.calls, Handler.agents = ranges, cut_after, [], []
+        Handler.status_first, Handler.retry_after = list(status_first), retry_after
         self.httpd = http.server.HTTPServer(("127.0.0.1", 0), Handler)
         self.url = f"http://127.0.0.1:{self.httpd.server_address[1]}/blob"
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
@@ -119,6 +131,68 @@ class Download(unittest.TestCase):
         finally:
             s.close()
         self.assertFalse(self.out.exists())
+
+
+class RateLimit(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.out = Path(self.tmp.name) / "x.bin"
+        self.slept = []
+        self.orig = fetch._sleep
+        fetch._sleep = self.slept.append
+
+    def tearDown(self):
+        fetch._sleep = self.orig
+        self.tmp.cleanup()
+
+    def test_429_honors_retry_after(self):
+        s = Server(status_first=[429, 429], retry_after=7)
+        try:
+            fetch.download(s.url, self.out, len(BLOB))
+        finally:
+            s.close()
+        self.assertEqual(self.out.read_bytes(), BLOB)
+        self.assertEqual(self.slept, [7.0, 7.0])
+
+    def test_429_without_header_backs_off(self):
+        s = Server(status_first=[429, 503])
+        try:
+            fetch.download(s.url, self.out, len(BLOB))
+        finally:
+            s.close()
+        self.assertEqual(self.slept, [5.0, 10.0])
+
+    def test_404_fails_fast(self):
+        s = Server(status_first=[404])
+        try:
+            with self.assertRaises(SystemExit):
+                fetch.download(s.url, self.out, len(BLOB))
+        finally:
+            s.close()
+        self.assertEqual(len(Handler.calls), 1)
+
+    def test_retry_after_capped_and_date(self):
+        class E:
+            headers = {"Retry-After": "99999"}
+        self.assertEqual(fetch.retry_after(E(), 0), fetch.MAX_WAIT_S)
+        E.headers = {"Retry-After": "Wed, 21 Oct 2015 07:28:00 GMT"}  # 过去的日期 → 退回指数退避
+        self.assertEqual(fetch.retry_after(E(), 1), 10.0)
+
+    def test_polite_only_wikimedia(self):
+        fetch.polite("https://commons.wikimedia.org/wiki/Special:FilePath/x.ogg")
+        fetch.polite("https://upload.wikimedia.org/a.ogg")
+        fetch.polite("https://www.openslr.org/resources/12/x.tar.gz")
+        fetch.polite("https://notwikimedia.org/x")
+        self.assertEqual(self.slept, [fetch.POLITE_GAP_S] * 2)
+
+    def test_user_agent_generic(self):
+        s = Server()
+        try:
+            fetch.download(s.url, self.out, len(BLOB))
+        finally:
+            s.close()
+        self.assertEqual(Handler.agents, [fetch.UA])
+        self.assertNotRegex(fetch.UA, r"@|\.edu|\.com|chen|allen")
 
 
 class Verify(unittest.TestCase):

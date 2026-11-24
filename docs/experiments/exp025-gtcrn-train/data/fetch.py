@@ -29,7 +29,7 @@ HERE = Path(__file__).resolve().parent
 SOURCES = HERE / "sources.json"
 FETCHED = HERE / "fetched.json"
 CHUNK = 1 << 20
-UA = "vdn-train-data-fetch/0.1"
+UA = "vdn-train-data-fetch/0.1"  # 通用名字，不带个人信息（CLAUDE.md 铁律 12）
 
 
 def load_sources(path=SOURCES):
@@ -55,8 +55,44 @@ def hashes(path):
     return h5.hexdigest(), h256.hexdigest()
 
 
-def download(url, out, expect_bytes, retries=5, timeout=120):
-    """断点续传下载到 out；返回实际字节数。中途断了重试，每次从 .part 的末尾接着下。"""
+RATE_CODES = (429, 503)  # 「请求太多 / 暂时不可用」：按 Retry-After 等了再试
+FATAL_CODES = (400, 401, 403, 404, 410)  # 再试也没用：立刻报错
+POLITE_HOSTS = ("wikimedia.org",)  # 对这些站每次请求前先停一会儿，串行、不并发（cloudrun 2026-11-24 遇到 429）
+POLITE_GAP_S = 5.0
+MAX_WAIT_S = 600.0
+_sleep = time.sleep  # 测试里换成假的，不真睡
+
+
+def retry_after(e, attempt):
+    """读 Retry-After（秒数或 HTTP 日期）；没有就指数退避 5·2^attempt 秒。上限 MAX_WAIT_S。"""
+    v = e.headers.get("Retry-After") if getattr(e, "headers", None) else None
+    wait = None
+    if v:
+        try:
+            wait = float(v)
+        except ValueError:
+            from email.utils import parsedate_to_datetime
+
+            try:
+                wait = parsedate_to_datetime(v).timestamp() - time.time()
+            except (TypeError, ValueError):
+                wait = None
+    if wait is None or wait < 0:
+        wait = 5.0 * 2**attempt
+    return min(float(wait), MAX_WAIT_S)
+
+
+def polite(url):
+    from urllib.parse import urlparse
+
+    host = urlparse(url).hostname or ""
+    if any(host == h or host.endswith("." + h) for h in POLITE_HOSTS):
+        _sleep(POLITE_GAP_S)
+
+
+def download(url, out, expect_bytes, retries=8, timeout=120):
+    """断点续传下载到 out；返回实际字节数。中途断了重试，每次从 .part 的末尾接着下。
+    429 / 503 按 Retry-After 等；404 等立刻报错；Wikimedia 每次请求前先停 POLITE_GAP_S 秒。"""
     out = Path(out)
     part = out.with_name(out.name + ".part")
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -68,6 +104,7 @@ def download(url, out, expect_bytes, retries=5, timeout=120):
         if expect_bytes and have == expect_bytes:
             break
         req = urllib.request.Request(url, headers={"User-Agent": UA, **({"Range": f"bytes={have}-"} if have else {})})
+        polite(url)
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 mode = "ab" if (have and r.status == 206) else "wb"  # 服务器不认 Range 时回 200，从头写
@@ -76,10 +113,16 @@ def download(url, out, expect_bytes, retries=5, timeout=120):
                         f.write(b)
             if not expect_bytes:
                 break
+        except urllib.error.HTTPError as e:
+            if e.code in FATAL_CODES:
+                raise SystemExit(f"{out.name}：服务器回 {e.code}，不重试（地址失效或无权限）")
+            wait = retry_after(e, attempt) if e.code in RATE_CODES else 2.0**attempt
+            print(f"  第 {attempt + 1} 次：服务器回 {e.code}，{wait:.0f} s 后再试", flush=True)
+            _sleep(wait)
         except (OSError, urllib.error.URLError) as e:
             print(f"  第 {attempt + 1} 次中断：{e}；{2 ** attempt} s 后接着下", flush=True)
-            time.sleep(2 ** attempt)
-    n = part.stat().st_size
+            _sleep(2**attempt)
+    n = part.stat().st_size if part.exists() else 0
     if expect_bytes and n != expect_bytes:
         raise SystemExit(f"{out.name} 下了 {n} 字节，应为 {expect_bytes}：留着 .part，重跑会接着下")
     part.rename(out)
@@ -220,6 +263,7 @@ def head(groups, only):
     for gid in only:
         for f in groups[gid]["files"]:
             req = urllib.request.Request(f["url"], method="HEAD", headers={"User-Agent": UA})
+            polite(f["url"])
             with urllib.request.urlopen(req, timeout=60) as r:
                 n = int(r.headers.get("content-length") or 0)
                 rng = r.headers.get("accept-ranges", "")
