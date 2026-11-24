@@ -7,7 +7,8 @@
 导出前一律在 CPU 上重建**原模块**（不带 MPS 绕法，027 第七节局限 ②）再装权重。
 流式版（每帧一调、带缓存，产品 `gtcrn_simple.onnx` 那种）不在本文件：A 可走官方 `convert_to_stream`；
 B 的注意力要在 Rust 引擎里另写（014 第六节：归 backlog）。
-对拍：两种长度的随机输入，ONNX Runtime 与 PyTorch 输出最大差 ≤ tol（默认 1e-4），超了返回非零。
+对拍：两种长度的随机输入，ONNX 离 PyTorch float64 真值的差 ≤ max(tol, 4 × PyTorch float32 离真值的差)，
+tol 默认 1e-4；超了返回非零。报告另写一份 `<out>.json`。
 """
 from __future__ import annotations
 

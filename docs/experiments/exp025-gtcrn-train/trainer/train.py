@@ -6,8 +6,10 @@
 
 - 优化器 Adam，梯度裁剪，学习率前 warmup_steps 步线性升到 lr、之后不变（027 3.1）
 - 设备 auto：cuda > mps（打 exp018 的绕法，导出时用原模块）> cpu
-- 到 max_steps、累计时长 ≥ max_hours、或累计时长 × 单价 ≥ max_usd 即存检查点停下，原因写进 run.json
-- 损失不是有限数：不存坏权重，记 `stop.reason = nonfinite` 停下（014 意外矩阵：训崩记进清单不删）
+- 到 max_steps、计费时长 ≥ max_hours、计费时长 × 单价 ≥ max_usd、收到 SIGTERM / SIGINT、取数超时或数据用完，
+  都存检查点（并补一次开发评估）停下，原因写进 run.json。计费时长含开跑准备，续训时按心跳文件补上被抢占丢的那段
+- 损失不是有限数：不存坏权重，记 `stop.reason = nonfinite` 停下；之后拒绝在同一 run.name 上续训（014 意外矩阵：训崩记进清单不删）
+- 批归一化默认冻结统计量（`model.bn = frozen`），训练与推理一致
 """
 from __future__ import annotations
 
