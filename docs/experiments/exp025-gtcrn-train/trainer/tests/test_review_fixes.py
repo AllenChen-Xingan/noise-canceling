@@ -145,12 +145,40 @@ def _rec(tmp_path):
     return json.loads((tmp_path / "r" / "run.json").read_text())
 
 
-def test_signal_stops_and_saves(tmp_path):
+def _signal_at(monkeypatch, sig, at_batch):
+    """取第 at_batch 批时「收到」SIGTERM（模拟训练中途被抢占）。"""
+    real = data.SyntheticSource.train_batches
+
+    def gen(self, start_batch=0, device=None):
+        for b in real(self, start_batch, device):
+            if b["batch_index"] == at_batch:
+                sig.got = "SIGTERM"
+            yield b
+
+    monkeypatch.setattr(data.SyntheticSource, "train_batches", gen)
+
+
+def test_signal_mid_training_saves(tmp_path, monkeypatch):
+    sig = train._Signals()
+    _signal_at(monkeypatch, sig, 2)
+    stop = train.train(_cfg(tmp_path, **{"schedule.max_steps": 100}), _signals=sig)
+    assert stop["reason"] == "signal:SIGTERM" and stop["step"] == 3
+    st, _ = train.RunDir(tmp_path / "r").load_latest("cpu")
+    assert st["step"] == 3
+
+
+def test_signal_during_setup_keeps_only_heartbeat(tmp_path):
+    """准备期（标定前）就收到信号：不建 run.json、不存检查点，但心跳记下了准备期的账；下次开跑接上它。"""
     sig = train._Signals()
     sig.got = "SIGTERM"
     stop = train.train(_cfg(tmp_path, **{"schedule.max_steps": 100}), _signals=sig)
-    assert stop["reason"] == "signal:SIGTERM"
-    assert (tmp_path / "r" / "ckpt" / "last.txt").exists()
+    assert stop["reason"] == "signal:SIGTERM" and stop["phase"] == "setup"
+    assert not (tmp_path / "r" / "run.json").exists()
+    hb = json.loads((tmp_path / "r" / "heartbeat.json").read_text())
+    assert hb["billed_s"] > 0
+    stop2 = train.train(_cfg(tmp_path, **{"schedule.max_steps": 2}))
+    assert stop2["reason"] == "max_steps" and stop2["billed_s"] > hb["billed_s"]
+    assert _rec(tmp_path)["billed_s_before"] == pytest.approx(hb["billed_s"], abs=0.01)
 
 
 @pytest.mark.parametrize("exc,reason", [(StopIteration, "data_exhausted"),
@@ -257,9 +285,9 @@ def test_all_checkpoints_corrupt_is_an_error_not_a_fresh_run(tmp_path):
 def test_usd_accumulates_per_segment_price(tmp_path):
     """续训时改单价只作用于新的一段，不追溯（codex 第 1 轮 #6）。"""
     train.train(_cfg(tmp_path, **{"schedule.max_steps": 2, "limits.usd_per_hour": 1000.0}))
-    usd1 = _rec(tmp_path)["stop"]["usd"]
+    usd1 = json.loads((tmp_path / "r" / "heartbeat.json").read_text())["usd"]  # 第一段最后落盘的账
     stop = train.train(_cfg(tmp_path, **{"schedule.max_steps": 4, "limits.usd_per_hour": 0.0}))
-    assert usd1 > 0 and stop["usd"] == pytest.approx(usd1, abs=1e-9)
+    assert usd1 > 0 and stop["usd"] == pytest.approx(usd1, abs=1e-4)  # 第二段单价 0：不追溯、不再涨
 
 
 def test_heartbeat_thread_writes_while_data_stalls(tmp_path, monkeypatch):
@@ -281,10 +309,27 @@ def test_heartbeat_thread_writes_while_data_stalls(tmp_path, monkeypatch):
     assert len(seen) >= 2 and seen[-1] > seen[0]
 
 
-def test_signal_saves_without_extra_eval(tmp_path):
+def test_signal_saves_without_extra_eval(tmp_path, monkeypatch):
     sig = train._Signals()
-    sig.got = "SIGTERM"
+    _signal_at(monkeypatch, sig, 2)  # 第 3 步是评估步（eval_every = 3）：收到信号后不评估
     train.train(_cfg(tmp_path, **{"schedule.max_steps": 100}), _signals=sig)
     rows = [json.loads(x) for x in (tmp_path / "r" / "metrics.jsonl").read_text().splitlines()] \
         if (tmp_path / "r" / "metrics.jsonl").exists() else []
     assert not any("dev" in r for r in rows)  # 被抢占时先存盘，不再花时间评估（codex 第 1 轮 #3）
+
+
+# ---------- codex 第 2 轮 ----------
+
+def test_calibrate_weight_positive_even_if_hybrid_negative():
+    """HybridLoss 均值为负或为 0 时，标定出的权重仍是有限正数（codex 第 2 轮 #4）。"""
+    assert losses.calibrate_weight(-3.0, 1.5) == pytest.approx(0.2)
+    assert losses.calibrate_weight(0.0, 0.0) == pytest.approx(0.1)
+    with pytest.raises(ValueError):
+        losses.calibrate_weight(float("nan"), 1.0)
+
+
+def test_onset_default_matches_rust_rule(tmp_path):
+    """默认训练口径与 V-ONSET 正本同（不跳过 a = 0）；跳过只是开关（codex 第 2 轮 #3）。"""
+    assert losses.LossCfg().on_skip_leading is False
+    assert cfgmod.Config().loss.on_skip_leading is False
+    assert train.loss_cfg(cfgmod.from_dict({"loss": {"on_skip_leading": True}}), 1, 1).on_skip_leading
