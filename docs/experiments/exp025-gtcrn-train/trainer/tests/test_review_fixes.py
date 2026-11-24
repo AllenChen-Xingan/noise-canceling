@@ -247,7 +247,8 @@ def test_loader_requires_batch_index_and_build_id(tmp_path):
             pass
 
     mod = type("M", (), {"DevSet": NoId})
-    cfg = _cfg(tmp_path, **{"data.kind": "loader", "data.shard_root": "s", "data.recipe": "r"})
+    cfg = _cfg(tmp_path, **{"data.kind": "loader", "data.shard_root": "s", "data.recipe": "r",
+                            "data.num_workers": 1})
     with pytest.raises(ValueError, match="build_id"):
         data.LoaderSource(cfg, mod=mod)
 
@@ -422,3 +423,60 @@ def test_known_dev_nan_and_missing_fail(tmp_path, monkeypatch):
     assert not smoke.check_known_dev(cfg, dev, torch.device("cpu"), {"hybrid": 1.0}, 1e-3)["pass"]
     assert not smoke.check_known_dev(cfg, dev, torch.device("cpu"), {"other": 1.0}, 1e-3)["pass"]
     assert not smoke.check_known_dev(cfg, dev, torch.device("cpu"), {}, 1e-3)["pass"]  # 空基准不算通过
+
+
+# ---------- codex 第 6 轮 ----------
+
+def test_watchdog_fires_only_when_stop_wanted_and_stalled(tmp_path):
+    rd = train.RunDir(tmp_path / "w")
+    fired = []
+    t0 = __import__("time").monotonic()
+    for want, last, expect in (("signal:SIGTERM", t0 - 999, True), (None, t0 - 999, False),
+                               ("max_usd", lambda: __import__("time").monotonic(), False)):
+        fired.clear()
+        lp = last if callable(last) else (lambda v=last: v)
+        b = train._Beat(rd, lambda: (0, 1.0, 0.0), 0.01, want_stop=lambda w=want: w, last_progress=lp,
+                        hang_s=5.0, on_hang=fired.append)
+        with b:
+            __import__("time").sleep(0.1)
+        assert bool(fired) == expect, (want, expect)
+
+
+def test_stalled_fetch_after_signal_triggers_watchdog(tmp_path, monkeypatch):
+    """worker = 0、取数卡住时收到信号：看门狗在 hang_s 后出手（codex 第 6 轮 #1）。测试里出手 = 放开卡住的取数。"""
+    import threading as th
+    release = th.Event()
+    sig = train._Signals()
+    real = data.SyntheticSource.train_batches
+
+    def stuck(self, start_batch=0, device=None):
+        for b in real(self, start_batch, device):
+            if b["batch_index"] == 1:
+                sig.got = "SIGTERM"
+                release.wait(10)  # 模拟一次同步 I/O 卡住
+            yield b
+
+    monkeypatch.setattr(data.SyntheticSource, "train_batches", stuck)
+    hung = []
+
+    def on_hang(why):
+        hung.append(why)
+        release.set()
+
+    stop = train.train(_cfg(tmp_path, **{"schedule.max_steps": 50, "limits.hang_s": 0.2}), _signals=sig,
+                       _beat_s=0.05, _on_hang=on_hang)
+    assert hung and "SIGTERM" in hung[0] and stop["reason"] == "signal:SIGTERM"
+
+
+def test_loader_rejects_zero_workers(tmp_path):
+    cfg = _cfg(tmp_path, **{"data.kind": "loader", "data.shard_root": "s", "data.recipe": "r"})
+    with pytest.raises(ValueError, match="num_workers"):
+        data.LoaderSource(cfg, mod=type("M", (), {}))
+
+
+def test_calibration_gets_all_requested_batches_beyond_dev_n(tmp_path):
+    """开发份只有 1 批（dev_n = 2，批量 2），标定仍用满配置的 5 批（codex 第 6 轮 #3）。"""
+    train.train(_cfg(tmp_path, **{"data.dev_n": 2, "data.calib_batches": 5, "schedule.max_steps": 1}))
+    assert _rec(tmp_path)["calib"]["batches"] == 5
+    src = data.make_source(_cfg(tmp_path))
+    assert torch.equal(src.calib_batches(2)[0]["noisy"], src.dev_batches()[0]["noisy"])  # 前几批与开发份相同
