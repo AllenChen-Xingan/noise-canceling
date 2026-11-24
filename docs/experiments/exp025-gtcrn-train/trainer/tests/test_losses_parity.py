@@ -58,6 +58,21 @@ def _cases():
     c, iv = _speechlike(rng, N, 7, min_gap=0.05)  # 有的停顿 < 100 ms：不算新字头
     iv = [(a, b + 37) for a, b in iv]  # 区间端点不对齐 160
     cases.append(("short_gaps_unaligned", c, np.roll(c, 40) * 0.9, iv, []))
+    # 自审补的盲区：段长不是 160 / 320 的整数倍 · 说话一直延伸到段尾 · 字头离段尾不到 50 ms · 干净轨全零
+    n = N + 123
+    c, iv = _speechlike(rng, n, 6)
+    tail = n - 5000
+    c[tail:] = (rng.standard_normal(n - tail) * 0.1).astype(np.float32)
+    iv.append((tail, n))
+    cases.append(("odd_len_speech_to_end", c, c * 0.6 + 0.002, iv, []))
+    n = N + 7
+    c, iv = _speechlike(rng, n, 6)
+    late = n - 500  # 停顿 > 100 ms 后在段尾前 500 样本又开口：窗口越界，不算字头
+    c[late - 4000: late] = 0
+    c[late:] = (rng.standard_normal(n - late) * 0.1).astype(np.float32)
+    cases.append(("onset_window_past_end", c, c * 0.7, iv + [(late, n)], []))
+    cases.append(("all_zero_clean", np.zeros(N, np.float32),
+                  (rng.standard_normal(N) * 0.01).astype(np.float32), [], []))
     return cases
 
 
@@ -84,7 +99,7 @@ IDS = [c[0] for c in CASES]
 def test_masks_and_truth_match_rust(rust, case):
     name, c, _, own, itf = case
     r = rust[name]
-    nf = N // losses.MASK_FRAME
+    nf = len(c) // losses.MASK_FRAME
     assert "".join("1" if v else "0" for v in losses.paint(own, nf)) == r["owner_mask"]
     assert "".join("1" if v else "0" for v in losses.paint(itf, nf)) == r["interf_mask"]
     assert [list(p) for p in losses.truth_from_clean(c)] == r["truth_from_clean"]
@@ -94,7 +109,7 @@ def _ours(case, dtype):
     _, c, o, own, itf = case
     ct = torch.as_tensor(c, dtype=dtype)[None]
     ot = torch.as_tensor(o, dtype=dtype)[None]
-    fr = torch.as_tensor(losses.owner_only_mask(own, itf, N))[None]
+    fr = torch.as_tensor(losses.owner_only_mask(own, itf, len(c)))[None]
     d, vd = losses.splvl_db(ot, ct, fr)
     e, ve, cnt = losses.onset_excess_db(ot, ct)
     return d.item(), bool(vd), e.item(), bool(ve), cnt[0]
