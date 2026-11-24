@@ -84,5 +84,5 @@ bash cloud_steps.sh rebuild    # 重建 exp013，逐文件核 4,540 个哈希
 
 - QUT-NOISE 和 TUM 风噪：压缩包里的目录结构还没核，`split_rules.json` 里的通配符要等云上 `--inventory` 列出清单后再确认。另外 QUT 的服务器没有声明支持断点续传；脚本遇到不支持时会从头重下
 - OpenSLR 28：包里的点声源噪声取自 MUSAN，里面各个来源的许可没有逐个核，所以第一批不用
-- 测试状态：本机共 72 条，全过（torch 用 CPU 后端）。云上 GPU 对拍还没跑
+- 测试状态：本机共 75 条，全过（torch 用 CPU 后端）。云上 GPU 对拍还没跑
 - 依赖：测试要用 evalcmp 在分支 `feat/eval-paired-compare` 上加进 exp013 `rooms.py` 的 `early_rir`。那个分支合进 main 之前，在本分支上跑会红
