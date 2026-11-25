@@ -86,9 +86,13 @@ def code_drift():
     return out
 
 
+def code_path(f):
+    """manifest 里记的代码 / 参数文件名 → 路径：带 / 的从仓库根算，否则在 exp013 目录下。"""
+    return (HERE.parents[3] / f) if "/" in f else (EXP013 / f)
+
+
 def file_hashes(names):
-    root = HERE.parents[3]
-    return {f: hashlib.sha256(((root / f) if "/" in f else (EXP013 / f)).read_bytes()).hexdigest() for f in names}
+    return {f: hashlib.sha256(code_path(f).read_bytes()).hexdigest() for f in names}
 
 
 def _manifest(d):
@@ -101,15 +105,20 @@ def check_cloud(local, cloud, upload_log, inputs_log):
     ml, mc, mo = _manifest(local), _manifest(cloud), _manifest(OLD)
     vs_old = compare(OLD / "hashes.txt", local / "hashes.txt")
     want = set(read_hashes(local / "hashes.txt"))
-    okp, failed = set(), []
+    prefix = f"_tmp/exp013/{ml.get('build_id', local.name)}/"  # sha256sum -c 打印的是它读的 hashes.txt 里的路径：
+    okp, failed, foreign = set(), [], []  # 拿云上自产 build 的 hashes.txt 核，路径带的是那份的 build id，不算
     for line in upload_log.splitlines():
         if ": " not in line:
             continue
-        path, st = line.rsplit(": ", 1)
-        key = re.sub(r"^_tmp/exp013/[^/]+/", "", path.strip())
-        (okp.add(key) if st.strip() == "OK" else failed.append(key))
-    up = {"expected": len(want), "ok": len(okp & want), "failed": failed[:50], "missing": sorted(want - okp)[:50]}
-    up["all_ok"] = not failed and okp >= want
+        path, st = (x.strip() for x in line.rsplit(": ", 1))
+        if not path.startswith(prefix):
+            foreign.append(path)
+            continue
+        key = path[len(prefix):]
+        (okp.add(key) if st == "OK" else failed.append(key))
+    up = {"expected": len(want), "ok": len(okp & want), "failed": failed[:50], "missing": sorted(want - okp)[:50],
+          "foreign": foreign[:50], "n_foreign": len(foreign)}
+    up["all_ok"] = not failed and not foreign and okp >= want
     code = lambda m: {**m["code_sha256"], **m["params_sha256"]}  # noqa: E731
     rep = {"local_build": ml.get("build_id", local.name), "cloud_build": mc.get("build_id", cloud.name),
            "local_vs_old": {k: vs_old[k] for k in ("old", "same", "differ", "missing", "n_extra", "ok")},
@@ -131,7 +140,7 @@ def drift_covered():
     for p in sorted(REPORTS.glob("exp013-*.json")) if REPORTS.exists() else []:
         r = json.loads(p.read_text())
         code = r.get("new_code_sha256")
-        if r.get("ok") and code and all((HERE.parents[3] / f if "/" in f else EXP013 / f).exists() for f in code) and file_hashes(code) == code:
+        if r.get("ok") and code and all(code_path(f).exists() for f in code) and file_hashes(code) == code:
             return True
     return False
 
