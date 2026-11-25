@@ -179,7 +179,7 @@ class RateLimit(unittest.TestCase):
                 fetch.download(s.url, self.out, len(BLOB), rate_retries=3)
         finally:
             s.close()
-        self.assertEqual(len(self.slept), 4)
+        self.assertEqual(len(self.slept), 3)  # 重试 3 次 = 等 3 次；第 4 次限流就停，不再白等（自审 P3）
         self.assertFalse(self.out.exists())
 
     def test_404_fails_fast(self):

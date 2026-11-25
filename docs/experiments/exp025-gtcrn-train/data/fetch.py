@@ -123,6 +123,8 @@ def download(url, out, expect_bytes, retries=8, timeout=120, rate_retries=None):
                 raise SystemExit(f"{out.name}：服务器回 {e.code}，不重试（地址失效或无权限）")
             if e.code in RATE_CODES:
                 rated += 1
+                if rated > rate_retries:
+                    break  # 已重试 rate_retries 次，不再等
                 raw = e.headers.get("Retry-After") if getattr(e, "headers", None) else None
                 wait = retry_after(e, rated - 1)
                 print(f"  限流第 {rated}/{rate_retries} 次：服务器回 {e.code}（Retry-After={raw!r}），{wait:.0f} s 后再试", flush=True)
