@@ -354,11 +354,17 @@ def main(argv=None) -> int:
     ap.add_argument("--out", help="报告写到这里（JSON）")
     ap.add_argument("--write-known-dev", help="只算起点模型的开发份读数写到这里（不覆盖已有文件），不跑三件事")
     ap.add_argument("--skip-overfit-ref", action="store_true", help="不跑整批 32 段的过拟合参考（只记录用，不影响过线）")
+    ap.add_argument("--overfit-probe", help="过拟合慢的诊断（学习曲线 · 参数与梯度 · 学习率）写到这里，见 overfit_probe.py")
+    ap.add_argument("--probe-steps", type=int, default=2000, help="--overfit-probe 的学习曲线步数")
+    ap.add_argument("--probe-sweep-steps", type=int, default=300, help="--overfit-probe 每个对照学习率的步数")
     ap.add_argument("--overfit-diag", help="只做过拟合排查（同一批：过拟合 + oracle 对照）写到这里，不判过不过")
     a = ap.parse_args(argv)
     cfg = cfgmod.load(a.config, train.parse_set(a.set))
     if a.write_known_dev:
         return write_known_dev(cfg, Path(a.write_known_dev))
+    if a.overfit_probe:
+        import overfit_probe  # 只在诊断时导入（它反过来用本模块的函数）
+        return overfit_probe.run_probe(cfg, Path(a.overfit_probe), a.probe_steps, a.probe_sweep_steps)
     if a.overfit_diag:
         return overfit_diag(cfg, Path(a.overfit_diag), a.overfit_steps, a.overfit_lr)
     known = json.loads(Path(a.known_dev).read_text()) if a.known_dev else None
