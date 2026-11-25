@@ -68,6 +68,7 @@ transcript="$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/nu
 [ -n "$cwd" ] || cwd="${CLAUDE_PROJECT_DIR:-.}"
 
 git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
+same_project "$cwd" "$HOOK_DIR" || exit 0   # 别的仓库（如 resources/ 下的第三方克隆）一律不碰
 top="$(git -C "$cwd" rev-parse --show-toplevel)"
 gitdir="$(git -C "$top" rev-parse --absolute-git-dir)"
 g() { git -C "$top" "$@"; }
