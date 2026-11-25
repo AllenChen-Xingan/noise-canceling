@@ -54,18 +54,64 @@ pub struct Part {
     pub missing_units: Vec<usize>,
 }
 
-/// 清单里每个单位（顺序同 [`super::run_shard`]）要不要有记录：有片段且分组认得 / 展开不出片段的任务 = 要；分组不认得 = 不要。
-fn units(suite: &Suite) -> Vec<bool> {
-    let mut need = Vec::new();
+/// 清单里的一个单位（一段，或一条展开不出片段的任务）：要不要有记录、归哪一片看的下标、应该是谁。
+#[derive(Clone, Debug)]
+pub struct Unit {
+    /// 有片段且分组认得 / 展开不出片段的任务 = 要有记录；分组不认得 = 不要
+    pub need: bool,
+    /// 分片看的下标：同一段（id + 混合轨哈希）在清单里出现几次，都按它第一次出现的位置分，落在同一片里
+    /// （单进程会复用它的参考转写，分到两片就要重新识别、结果可能不同；codex 本分支第 2 轮 P1 #1）
+    pub home: usize,
+    /// 记录里应有的身份：(片段或任务 id, 场景, 档, 设备, 混合轨哈希；任务单位没有哈希)
+    pub expect: (
+        String,
+        crate::scene::MeetingPlace,
+        crate::scene::Tier,
+        String,
+        Option<String>,
+    ),
+}
+
+/// 单位清单（正本；[`super::run_shard`] 与 [`merge`] 共用，顺序就是单进程的顺序）。
+pub fn unit_plan(suite: &Suite) -> Vec<Unit> {
+    let mut v: Vec<Unit> = Vec::new();
+    let mut first: BTreeMap<(String, String), usize> = BTreeMap::new();
     for task in &suite.tasks {
         match clips_of(task) {
             Ok(c) if !c.is_empty() => {
-                need.extend(c.iter().map(|c| standard::group_of(c.scene).is_some()))
+                for c in &c {
+                    let k = v.len();
+                    let mix = c.hash.wav_sha256.mix.clone();
+                    let home = *first.entry((c.id.clone(), mix.clone())).or_insert(k);
+                    let dev = crate::files::serde_name(&c.device);
+                    v.push(Unit {
+                        need: standard::group_of(c.scene).is_some(),
+                        home,
+                        expect: (c.id.clone(), c.scene, c.tier, dev, Some(mix)),
+                    });
+                }
             }
-            _ => need.push(true),
+            _ => {
+                let Some(crate::suite::RealSource::Scene {
+                    scene,
+                    tier,
+                    device,
+                    ..
+                }) = &task.real
+                else {
+                    continue;
+                };
+                let k = v.len();
+                let dev = crate::files::serde_name(device);
+                v.push(Unit {
+                    need: true,
+                    home: k,
+                    expect: (task.id.clone(), *scene, *tier, dev, None),
+                });
+            }
         }
     }
-    need
+    v
 }
 
 /// 清单指纹：每条任务的定义 + 它引用的片段清单的字节（FNV-64，只用来查「是不是同一份」；codex 本分支第 1 轮 P1 #2）。
@@ -104,7 +150,7 @@ pub fn merge(
             n.saturating_sub(1)
         ));
     }
-    let need = units(suite);
+    let plan = unit_plan(suite);
     let sys_pos = |s: &str| {
         systems
             .iter()
@@ -112,14 +158,34 @@ pub fn merge(
             .ok_or_else(|| format!("系统 {s} 不在 meta.systems 里"))
     };
     let mut seen: BTreeSet<(usize, usize)> = BTreeSet::new();
-    let mut claim = |u: usize, sys: &str, p: &Part| -> Result<(usize, usize), String> {
-        if u >= need.len() || !need[u] {
+    // 每条记录：单位要在清单里、该有记录、归这一片；记录的身份要和清单里这个单位一致（codex 本分支第 2 轮 P1 #2）；同一单位同一系统只许一条
+    type Who<'a> = (
+        &'a str,
+        crate::scene::MeetingPlace,
+        crate::scene::Tier,
+        &'a str,
+        Option<&'a str>,
+    );
+    let mut claim = |u: usize, sys: &str, who: Who, p: &Part| -> Result<(usize, usize), String> {
+        let Some(unit) = plan.get(u).filter(|x| x.need) else {
             return Err(format!(
                 "第 {u} 个单位不在清单里（或不该有记录）：分片和合并用的不是同一份清单"
             ));
-        }
-        if u % n != p.shard.i {
+        };
+        if unit.home % n != p.shard.i {
             return Err(format!("第 {u} 个单位不归第 {}/{n} 片", p.shard.i));
+        }
+        let e = &unit.expect;
+        let same = who.0 == e.0
+            && who.1 == e.1
+            && who.2 == e.2
+            && who.3 == e.3
+            && (who.4.is_none() || who.4 == e.4.as_deref());
+        if !same {
+            return Err(format!(
+                "第 {}/{n} 片第 {u} 个单位的记录是 {}，清单里这里是 {}：文件配错了，不合并",
+                p.shard.i, who.0, e.0
+            ));
         }
         let k = (u, sys_pos(sys)?);
         if !seen.insert(k) {
@@ -136,13 +202,27 @@ pub fn merge(
             return Err(format!("第 {}/{n} 片的单位记录和行数对不上", p.shard.i));
         }
         for ((line, r), &u) in raw.iter().zip(&rows).zip(&p.row_units) {
-            lines.push((claim(u, &r.system, p)?, line));
+            let who = (
+                r.clip.as_str(),
+                r.scene,
+                r.tier,
+                r.device.as_str(),
+                r.mix_sha256.as_deref(),
+            );
+            if who.4.is_none() {
+                return Err(format!(
+                    "{} 的分数行没有 mix_sha256：旧格式，不能核身份",
+                    r.clip
+                ));
+            }
+            lines.push((claim(u, &r.system, who, p)?, line));
         }
         for (m, &u) in p.missing.iter().zip(&p.missing_units) {
-            miss.push((claim(u, &m.system, p)?, m.clone()));
+            let who = (m.what.as_str(), m.scene, m.tier, m.device.as_str(), None);
+            miss.push((claim(u, &m.system, who, p)?, m.clone()));
         }
     }
-    let want = need.iter().filter(|&&x| x).count() * systems.len();
+    let want = plan.iter().filter(|x| x.need).count() * systems.len();
     if seen.len() != want {
         return Err(format!(
             "少了 {} 条「单位 × 系统」的记录：少了一片，或某片没跑完，不合并",

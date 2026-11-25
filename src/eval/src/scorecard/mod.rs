@@ -258,13 +258,15 @@ pub fn run_shard(
     };
     // 分片单位：清单顺序里的每一段，或一条展开不出片段的任务；第 k 个单位归第 k mod n 片
     let mut unit = 0usize;
+    // 分片看每个单位的 home 下标（同一段出现几次都落在同一片；见 shard::unit_plan，正本）
+    let plan = shard.map(|_| shard::unit_plan(suite)).unwrap_or_default();
     let (mut row_units, mut missing_units, mut cur) = (Vec::new(), Vec::new(), 0usize);
     // 一个单位开始时，把上一个单位新增的记录都标成上一个单位的；返回这个单位归不归这一片
     macro_rules! start {
         () => {{
             let u = unit;
             unit += 1;
-            if shard.is_none_or(|s| s.owns(u)) {
+            if shard.is_none_or(|s| s.owns(plan.get(u).map_or(u, |x| x.home))) {
                 row_units.resize(rows.len(), cur);
                 missing_units.resize(missing.len(), cur);
                 cur = u;

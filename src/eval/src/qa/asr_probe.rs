@@ -59,5 +59,7 @@ pub fn probe(
     };
     json!({"model": super::asr_or::OR_MODEL, "temperature": c.temperature, "repeats": repeats,
         "audio": n, "unstable": unstable, "unstable_rate": rate,
-        "max_unstable": PROBE_MAX_UNSTABLE, "pass": n > 0 && rate <= PROBE_MAX_UNSTABLE, "items": rows})
+        "max_unstable": PROBE_MAX_UNSTABLE,
+        // 正式结论只在连调 PROBE_REPEATS 次时给；别的次数只是探索，pass 为 null（codex 本分支第 2 轮 P2 #3）
+        "pass": (repeats == PROBE_REPEATS).then_some(n > 0 && rate <= PROBE_MAX_UNSTABLE), "items": rows})
 }
