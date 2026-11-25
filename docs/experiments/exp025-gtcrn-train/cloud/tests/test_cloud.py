@@ -330,6 +330,55 @@ class TestOps(Base):
         self.assertEqual(self.fake.files["/root/x/a b.bin"], data)
         self.assertEqual(O.fetch_bytes(self.cli, "pod_9", "/root/x/a b.bin"), data)
 
+    def test_put_refuses_overwrite_and_keeps_backup(self):
+        # 评审第 5 轮 #2：默认不覆盖；确要覆盖时旧文件留作 .bak
+        self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}
+        O.put_bytes(self.cli, "pod_9", b"old", "/w/f")
+        with self.assertRaises(SystemExit):
+            O.put_bytes(self.cli, "pod_9", b"new", "/w/f")
+        self.assertEqual(self.fake.files["/w/f"], b"old")
+        O.put_bytes(self.cli, "pod_9", b"new", "/w/f", overwrite=True)
+        self.assertEqual((self.fake.files["/w/f"], self.fake.files["/w/f.bak"]), (b"new", b"old"))
+
+    def test_put_bad_hash_leaves_original(self):
+        self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}
+        O.put_bytes(self.cli, "pod_9", b"old", "/w/f")
+        with mock.patch.object(O.hashlib, "sha256", return_value=mock.Mock(hexdigest=lambda: "0" * 64)), \
+                self.assertRaises(SystemExit):
+            O.put_bytes(self.cli, "pod_9", b"new", "/w/f", overwrite=True)
+        self.assertEqual(self.fake.files["/w/f"], b"old")  # 核不过：正式文件没动
+
+    def test_get_refuses_to_overwrite_local(self):
+        self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}
+        O.put_bytes(self.cli, "pod_9", b"cloud", "/w/f")
+        local = os.path.join(self.tmp.name, "here.bin")
+        with open(local, "wb") as f:
+            f.write(b"mine")
+        with self.assertRaises(SystemExit):
+            self.run_cli("get", "pod_9", "/w/f", local)
+        with open(local, "rb") as f:
+            self.assertEqual(f.read(), b"mine")
+
+    def test_budget_lock_held_during_create(self):
+        # 评审第 5 轮 #1：建机请求发出时，账本锁在本进程手里，别的进程进不来
+        import fcntl
+        orig = self.fake.__call__
+        seen = []
+
+        def probe(method, url, headers, body):
+            if method == "POST" and url.endswith("/v2/pods"):
+                with open(self.ledger + ".lock", "a") as f:
+                    try:
+                        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        seen.append("free")
+                        fcntl.flock(f, fcntl.LOCK_UN)
+                    except BlockingIOError:
+                        seen.append("held")
+            return orig(method, url, headers, body)
+        cli = Client(FAKE_KEY, transport=probe, sleep=lambda s: None)
+        O.create_pod(cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
+        self.assertEqual(seen, ["held"])
+
     def test_fetch_detects_corruption(self):
         self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}
         O.put_bytes(self.cli, "pod_9", b"hello", "/f")
@@ -353,6 +402,14 @@ class TestOps(Base):
         self.fake.fail_exec = "nohup"
         with self.assertRaises(SystemExit):
             O.start_job(self.cli, "pod_9", "echo hi", "k")
+
+    def test_start_job_refuses_same_name_still_running(self):
+        # 评审第 5 轮 #3：同名任务还在跑就拒绝，不会读到上次的退出码
+        self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}
+        self.fake.running = {"train"}
+        with self.assertRaises(SystemExit):
+            O.start_job(self.cli, "pod_9", "echo hi", "train")
+        self.assertNotIn("train", self.fake.jobs)
 
     def test_wait_exec_ready_retries_409(self):
         self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}
