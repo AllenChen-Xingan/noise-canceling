@@ -120,6 +120,33 @@ fn fname(p: &Path) -> String {
         .map_or_else(|| "账本".into(), |n| n.to_string_lossy().into_owned())
 }
 
+/// 逐笔明细：`<账本>.calls.jsonl`，每次 HTTP 尝试一行，只追加（大总管 2026-11-25：以后逐笔核后台用量）。
+pub fn details_path(p: &Path) -> PathBuf {
+    let mut s = p.as_os_str().to_owned();
+    s.push(".calls.jsonl");
+    PathBuf::from(s)
+}
+
+/// 在账本锁里往明细追加一行（几个进程同时写也不会串行）。
+pub fn append_detail(p: &Path, row: &serde_json::Value) -> Result<(), String> {
+    use std::io::Write;
+    let lock = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(lock_path(p))
+        .map_err(|e| format!("开不了账本锁：{e}"))?;
+    lock.lock().map_err(|e| format!("锁不上账本：{e}"))?;
+    let r = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(details_path(p))
+        .and_then(|mut f| f.write_all(format!("{row}\n").as_bytes()))
+        .map_err(|e| format!("写不了识别费明细 {}：{e}", fname(&details_path(p))));
+    let _ = lock.unlock();
+    r
+}
+
 /// 封存说明文件：`<账本>.sealed`。
 pub fn sealed_path(p: &Path) -> PathBuf {
     let mut s = p.as_os_str().to_owned();
