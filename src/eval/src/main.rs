@@ -10,6 +10,7 @@
 //! vdn-eval list
 //! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--rules v1|v2] [--no-safety] [--asr-ledger PATH] [--init-ledger] [--shard i/n] [--asr-workers N] [--out DIR]   # 场景成绩单
 //! vdn-eval scorecard --merge-shards <目录1>,<目录2>,… [--suite FILE] --out DIR   # 合并分片（与单进程逐字节相同）（specs/rubric/scorecard.md）；--no-safety = 不回混口径
+//! vdn-eval asr-probe --wav-dir DIR --cache FILE --out FILE [--temperature T] [--repeats N]   # 钉温度探针（真调用）
 //! vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] [--out DIR]   # 不重跑音频，按规则重新汇总
 //! vdn-eval compare --a <clips.jsonl> --b <clips.jsonl> [--by-scene] [--noise-a … --noise-b …] [--out DIR]   # 配对比较（scorecard.md 第十节）
 //! vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…   # 子进程入口：评分模型打分，每段一行 JSON
@@ -34,6 +35,7 @@ use vdn_eval::suite::{
 };
 use vdn_eval::system::SystemKind;
 
+mod cli_probe;
 mod cli_scorecard;
 use cli_scorecard::cmd_scorecard;
 use vdn_eval::verifiers::{Kind, REGISTRY, info};
@@ -419,6 +421,7 @@ fn main() -> ExitCode {
         "calib" => cmd_calib(&args).map(|()| true),
         "dnsmos" => cmd_dnsmos(&args),
         "scorecard" => cmd_scorecard(&args),
+        "asr-probe" => cli_probe::cmd_asr_probe(&args),
         "compare" => {
             let m = meta();
             let dir = vdn_eval::suite::main_root()

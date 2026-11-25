@@ -4,6 +4,7 @@ use serde_json::{Value, json};
 
 use super::super::asr_or::tests::{audio, client, fake, tmpdir};
 use super::super::asr_probe::*;
+#[allow(unused_imports)]
 use super::*;
 
 /// 设了温度就带上 `temperature`，没设就不带（不改原来的请求）。
