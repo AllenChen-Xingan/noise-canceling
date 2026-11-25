@@ -196,6 +196,19 @@ def cmd_job_wait(cli, a):
     sys.exit(st["rc"] or 0)
 
 
+def cmd_preflight(cli, a):
+    """显卡机开机检查：装 git、核提交号（见 preflight.py）。--down-on-fail 时不过就删机。"""
+    import preflight as F
+    try:
+        got = F.check_commit(cli, a.pod, a.repo, a.commit)
+    except SystemExit as e:
+        if a.down_on_fail:
+            O.delete_pod(cli, a.pod, a.ledger, note=f"开机检查不过，删机：{str(e)[:60]}")
+            raise SystemExit(f"{e}；已删机 {a.pod}") from None
+        raise
+    print(f"开机检查过：{a.pod} 有 git，{a.repo} 在 {got}")
+
+
 def cmd_put_secret(cli, a):
     """密钥送进机器容器盘（见 secret_ops.py）；只报位数。"""
     import secret_ops as S
@@ -320,6 +333,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("pod")
     p.add_argument("job", metavar="run_id", help="job-start 打印的运行编号")
     p.add_argument("--timeout", type=float, default=3600)
+    p = add("preflight", cmd_preflight, "显卡机开机检查：没有 git 就装，再核仓库提交号")
+    p.add_argument("pod")
+    p.add_argument("--repo", required=True)
+    p.add_argument("--commit", required=True, help="完整 40 位提交号")
+    p.add_argument("--down-on-fail", action="store_true", help="检查不过就删机")
     p = add("put-secret", cmd_put_secret, "把 .env.local 里的一个密钥送进机器容器盘（不经命令行，只报位数）")
     p.add_argument("pod")
     p.add_argument("name", help="键名，例如 OPENROUTER_API_KEY")
