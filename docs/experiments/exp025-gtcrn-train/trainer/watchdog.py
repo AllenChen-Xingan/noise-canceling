@@ -73,9 +73,10 @@ class _Beat:
     每轮**先判断再写盘**，写盘有时限、出错不抛（codex 第 7 轮 #1）：盘坏了或卡住，看门狗仍能按时出手。"""
 
     def __init__(self, rd, snap, every: float, want_stop=lambda: None, last_progress=None,
-                 hang_s: float = 120.0, on_hang=None):
+                 hang_s: float = 120.0, on_hang=None, stall_s: float | None = None):
         self.rd, self.snap, self.every = rd, snap, every
         self.want_stop, self.last_progress, self.hang_s = want_stop, last_progress, hang_s
+        self.stall_s = stall_s  # None = 用 guards.STALL_S（运行时读，测试可改）
         self.on_hang = on_hang or (lambda why: _hard_exit(rd, why))
         self.stop = threading.Event()
         self.closed = threading.Event()
@@ -107,8 +108,16 @@ class _Beat:
     def _run(self):
         while not self.stop.wait(self.every):
             why = self.want_stop()
-            if why and self.last_progress is not None and time.monotonic() - self.last_progress() > self.hang_s:
+            idle = None if self.last_progress is None else time.monotonic() - self.last_progress()
+            if why and idle is not None and idle > self.hang_s:
                 self.on_hang(f"{why}；主线程 {self.hang_s:.0f} s 无进展")
+                return
+            stall = self.stall_s
+            if stall is None:
+                import guards
+                stall = guards.STALL_S
+            if idle is not None and idle > stall:  # guards ⑤：不管该不该停，久无进展就强退（GPU 卡死、评估卡住）
+                self.on_hang(f"卡住：主线程 {stall:.0f} s 无进展")
                 return
             self._beat()
 

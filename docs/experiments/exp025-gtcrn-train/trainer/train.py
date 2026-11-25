@@ -10,6 +10,8 @@
   都存检查点（并补一次开发评估）停下，原因写进 run.json。计费时长含开跑准备，续训时按心跳文件补上被抢占丢的那段
 - 损失不是有限数：不存坏权重，记 `stop.reason = nonfinite` 停下；之后拒绝在同一 run.name 上续训（014 意外矩阵：训崩记进清单不删）
 - 批归一化默认冻结统计量（`model.bn = frozen`），训练与推理一致
+- 自动保护（guards.py，方案第十二节）：不是有限数另存现场 crash-<步>.pt · 损失猛涨停 · 开发份最好的一次另存 best.pt ·
+  前 500 步太慢停 · 中途卡住 900 s 强退。停下原因写进 run.json，退出码非 0
 """
 from __future__ import annotations
 
@@ -24,6 +26,7 @@ import torch
 import yaml
 
 import config as cfgmod
+import guards as G
 import losses
 import models
 from data import frames_mask, make_source
@@ -217,6 +220,10 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
     acct["t_progress"] = time.monotonic()
     sigs = _signals or _Signals()
 
+    def tick_stop():  # 准备期与评估里每批问一次：顺带报进展，免得被「卡住」看门狗误杀（guards ⑤）
+        acct["t_progress"] = time.monotonic()
+        return stop_reason()
+
     def stop_reason():
         if billed() / 3600 >= lim.max_hours:
             return "max_hours"
@@ -231,7 +238,7 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
     with sigs, beat:
         device = resolve_device(cfg.device)
         source = make_source(cfg)
-        dev = source.dev_batches(should_stop=stop_reason)
+        dev = source.dev_batches(should_stop=tick_stop)
         if dev is None:
             return _setup_stop(stop_reason(), acct["step"], billed(), usd())
         model = build_model(cfg, device)
@@ -247,6 +254,9 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
         ema = EMA(model, cfg.ema.decay) if cfg.ema.enabled else None
 
         st, last = rd.load_latest(device)
+        guard = G.Guard(cfg.limits.expect_s_step)
+        if st is not None and st.get("guards") is not None:
+            guard.load_state_dict(st["guards"])
         init_only = st is None and rd.read().get("phase") == "init" and not any(rd.ckpt_dir.glob("step-*.pt"))
         if init_only:
             # 上次写了 run.json、还没存下第 0 步就被杀（codex 第 3 轮 #2）：配置与数据一致就重建，账从心跳接上
@@ -278,8 +288,8 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
                                    "from_ckpt": last.name, "billed_s_before": round(acct["billed0"], 2),
                                    "env": env_info(), "prev_stop": rec.pop("stop", None)})
         else:
-            cal_dev = source.calib_batches(cfg.data.calib_batches, should_stop=stop_reason)
-            calib = None if cal_dev is None else calibrate(model, cfg, cal_dev, device, stop_reason)
+            cal_dev = source.calib_batches(cfg.data.calib_batches, should_stop=tick_stop)
+            calib = None if cal_dev is None else calibrate(model, cfg, cal_dev, device, tick_stop)
             if calib is None:  # 准备期就到上限 / 收到信号：没有检查点可存，只留心跳里的账
                 return _setup_stop(stop_reason(), acct["step"], billed(), usd())
             step = 0
@@ -297,19 +307,43 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
             return {"model": model.state_dict(), "optim": opt.state_dict(), "sched": sched.state_dict(),
                     "ema": ema.state_dict() if ema else None, "sp_ref": sp_ref, "step": step,
                     "billed_s": billed(), "usd": usd(), "calib": calib, "config": cfg_dict,
-                    "variant": cfg.model.variant}
+                    "variant": cfg.model.variant, "guards": guard.state_dict()}
+
+        def guard_event(kind, **detail):
+            ev = {"kind": kind, "step": step, "at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **detail}
+            rec.setdefault("guards", []).append(ev)
+            rd.log({"step": step, "guard": ev})
+            rd.write(rec)
+
+        def crash_snapshot():  # ①：出事前的权重与优化器状态（还没被这一步更新），不进 step-* 轮换
+            name = f"crash-{step:07d}.pt"
+            rd.save_as(state(), name)
+            return name
 
         def dev_eval():
-            row = {"step": step, "dev": evaluate(model, crit, dev, device, cfg, stop_reason, **kw)}
+            """评估一次；读数不是有限数时返回 "nonfinite"（①），否则 None。"""
+            row = {"step": step, "dev": evaluate(model, crit, dev, device, cfg, tick_stop, **kw)}
             if ema is not None and row["dev"] is not None:  # 034 建议 7：EMA 与不用 EMA 在开发份上并排比
                 raw = {k: v.clone() for k, v in model.state_dict().items()}
                 model.load_state_dict(ema.state_dict())
                 try:
-                    row["dev_ema"] = evaluate(model, crit, dev, device, cfg, stop_reason, **kw)
+                    row["dev_ema"] = evaluate(model, crit, dev, device, cfg, tick_stop, **kw)
                 finally:
                     model.load_state_dict(raw)
-            if row["dev"] is not None:  # 评估中途要停：这一行不记（半份读数会误导比较）
-                rd.log(row)
+            if row["dev"] is None:  # 评估中途要停：这一行不记（半份读数会误导比较）
+                return None
+            rd.log(row)
+            g = guard.on_eval(step, row["dev"].get("hybrid"))
+            if g["nonfinite"]:
+                rec["crash"] = {"step": step, "dev": row["dev"], "snapshot": crash_snapshot()}
+                return "nonfinite"
+            if g["best"]:  # ③：最好的一次另存，不参与轮换；成绩单默认用它
+                rd.save_as(state(), "best.pt")
+                rec["best"] = guard.best
+                rd.write(rec)
+            if g["warn"]:
+                guard_event("dev_plateau", message=g["warn"], best=guard.best)
+            return None
 
         if st is None:
             rd.save(state(), 0, sc.keep_last)
@@ -325,6 +359,7 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
                 reason = "interrupted"
             if reason:
                 break
+            t_iter = time.monotonic()
             try:
                 batch = next(batches)
             except StopIteration:
@@ -340,14 +375,14 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
             loss, logs = forward_loss(model, crit, batch, device, sp_ref=sp_ref, teacher=teacher)
             if not math.isfinite(loss.item()):
                 reason = "nonfinite"
-                rec["crash"] = {"step": step, "logs": logs}
+                rec["crash"] = {"step": step, "logs": logs, "snapshot": crash_snapshot()}
                 break
             opt.zero_grad(set_to_none=True)
             loss.backward()
             gn = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.optim.grad_clip)
             if not torch.isfinite(gn):  # 损失有限、梯度却不是：不更新，否则 Adam 会把 NaN 写进权重（codex 第 1 轮 #2）
                 reason = "nonfinite"
-                rec["crash"] = {"step": step, "logs": logs, "grad_norm": float(gn)}
+                rec["crash"] = {"step": step, "logs": logs, "grad_norm": float(gn), "snapshot": crash_snapshot()}
                 break
             opt.step()
             sched.step()
@@ -359,17 +394,25 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
             if step % sc.log_every == 0 or step == 1:
                 rd.log({"step": step, "lr": sched.get_last_lr()[0], "billed_s": round(billed(), 2),
                         "usd": round(usd(), 4), "grad_norm": float(gn), **logs})
+            why = guard.on_train_step(step, logs.get("total", loss.item()), time.monotonic() - t_iter)
+            if why:  # ② 损失猛涨 / ④ 太慢：只停本运行（每个运行各自判）
+                reason = why
+                guard_event(why, **(guard.spike_detail() if why == "loss_spike" else guard.slow_detail()))
+                break
             if stop_reason():  # 本步算完时已到上限 / 收到信号：不评估，回到循环顶上存盘停下（codex 第 2 轮 #1）
                 continue
             if step % sc.eval_every == 0:
-                dev_eval()
                 last_eval = step
+                if dev_eval() == "nonfinite":
+                    reason = "nonfinite"
+                    break
             if step % sc.ckpt_every == 0:
                 rd.save(state(), step, sc.keep_last)
         if reason != "nonfinite":
             rd.save(state(), step, sc.keep_last)  # 先存：被抢占时可能只剩几秒（codex 第 1 轮 #3）
             if reason == "max_steps" and step > last_eval:  # 只在正常跑完时补评估；上限 / 信号时不再花时间
-                dev_eval()
+                if dev_eval() == "nonfinite":
+                    reason = "nonfinite"
         rec["stop"] = {"reason": reason, "step": step, "billed_s": round(billed(), 2), "usd": round(usd(), 4),
                        "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
         rd.write(rec)
@@ -391,6 +434,11 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     stop = train(cfgmod.load(a.config, parse_set(a.set)))
     print(stop)
+    return exit_code(stop)
+
+
+def exit_code(stop: dict) -> int:
+    """正常停（跑满 / 到时长或花费上限）0；其余（自动保护、取数超时、信号等）1，job-wait 据此报警。"""
     return 0 if stop["reason"] in ("max_steps", "max_hours", "max_usd") else 1
 
 
