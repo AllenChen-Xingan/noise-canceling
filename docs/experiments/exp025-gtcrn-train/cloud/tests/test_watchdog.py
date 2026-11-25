@@ -59,6 +59,28 @@ class TestLocalWatchdog(Base):
         self.run_cli("up", "--yes", "--dc", "US-MO-1", "--no-volume", "--max-hours", "0.5")
         self.assertEqual(len(self.spawned), 1)
 
+    def test_spawned_watchdog_gets_same_ledger(self):
+        # 评审第 1 轮 #6：看门狗删机要记到同一本账
+        self.run_cli("up", "--yes", "--dc", "US-MO-1", "--no-volume", "--max-hours", "0.5")
+        argv = self.spawned[0]
+        self.assertEqual(argv[argv.index("--ledger") + 1], os.path.abspath(self.ledger))
+        self.assertLess(argv.index("--ledger"), argv.index("watchdog"))  # 全局参数在子命令前
+
+    def test_exiting_watchdog_drops_pidfile_so_next_up_spawns(self):
+        # 评审第 1 轮 #7：看门狗空表退出时撤掉自己的 pid 文件，之后的开机会新起一个
+        with open(W.PIDFILE, "w") as f:
+            f.write(str(os.getpid()))
+        W.run_loop(lambda pid: None, sleep=lambda s: None)
+        self.assertFalse(os.path.exists(W.PIDFILE))
+        self.run_cli("up", "--yes", "--dc", "US-MO-1", "--no-volume", "--max-hours", "0.5")
+        self.assertEqual(len(self.spawned), 1)
+
+    def test_exit_keeps_other_watchdogs_pidfile(self):
+        with open(W.PIDFILE, "w") as f:
+            f.write("1")
+        W.run_loop(lambda pid: None, sleep=lambda s: None)
+        self.assertTrue(os.path.exists(W.PIDFILE))
+
     def test_down_and_reap_unregister(self):
         self.run_cli("up", "--yes", "--dc", "US-MO-1", "--no-volume")
         pid = next(iter(W._load()))
@@ -104,7 +126,7 @@ class TestInPodSelfDelete(unittest.TestCase):
     def test_restart_only_sleeps_the_remainder(self):
         # 评审第 1 轮 #8：容器被重启时重跑同一条命令，只睡到原定截止时刻，不重新睡满
         import time
-        head = W.pod_cmd(1.0, now=time.time() - 3000)[2].split("[")[0]  # 只取「算剩余秒数」那段
+        head = W.pod_cmd(1.0, now=time.time() - 3000)[2].split("if")[0]  # 只取「算剩余秒数」那段
         r = subprocess.run(["sh", "-c", head + 'echo "$s"'], capture_output=True, text=True)
         self.assertTrue(590 <= int(r.stdout) <= 600, r.stdout)
         past = W.pod_cmd(1.0, now=time.time() - 7200)[2].split("while")[0]

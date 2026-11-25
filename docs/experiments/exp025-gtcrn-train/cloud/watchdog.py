@@ -47,7 +47,7 @@ def pod_cmd(max_hours: float, now: Optional[float] = None) -> list:
     """容器命令：睡到固定的截止时刻 → 自删；自删失败每 60 秒重试。
     截止时刻是开机请求时算好的绝对时间：容器被平台重启也只睡剩下的，不重新计时（评审第 1 轮 #8）。"""
     deadline = int((time.time() if now is None else now) + max_hours * 3600)
-    return ["sh", "-c", f'd={deadline}; s=$((d - $(date +%s))); [ "$s" -gt 0 ] && sleep "$s"; '
+    return ["sh", "-c", f'd={deadline}; s=$((d - $(date +%s))); if [ "$s" -gt 0 ]; then sleep "$s"; fi; '
                         f'while true; do python3 -c "$VDN_SELF_DELETE_PY" && sleep 600; sleep 60; done']
 
 
