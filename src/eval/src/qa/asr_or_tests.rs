@@ -455,8 +455,11 @@ fn errors_never_contain_the_key() {
 #[test]
 fn key_straddling_truncation_boundary_is_scrubbed() {
     let d = tmpdir("scrub300");
-    let pad = "x".repeat(300 - 20);
-    let body = format!("{{\"error\":{{\"code\":400,\"message\":\"{pad}{KEY}\"}}}}");
+    // 响应体前缀 `{"error":{"code":400,"message":"` 共 32 字；让密钥从第 290 字开始，跨过第 300 字的截断点
+    let prefix = r#"{"error":{"code":400,"message":""#;
+    let pad = "x".repeat(290 - prefix.len());
+    let body = format!("{prefix}{pad}{KEY}\"}}}}");
+    assert!(body.find(KEY).unwrap() < 300 && body.find(KEY).unwrap() + KEY.len() > 300);
     let (url, _) = fake(vec![(400, "", body)]);
     let mut c = client(&url, &d);
     let e = c
