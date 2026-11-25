@@ -390,8 +390,9 @@ class TestCli(Base):
 
     def test_job_with_empty_rc_is_not_done(self):
         # 评审第 1 轮 #11：.rc 空着或乱码不算完
+        self.run_cli("up", "--yes", "--dc", "US-KS-2", "--no-volume")
         self.fake.jobs["j"] = ("", "partial\n")
-        st = O.job_status(self.cli, "pod_1", "j")
+        st = O.job_status(self.cli, next(iter(self.fake.pods)), "j")
         self.assertEqual((st["done"], st["rc"]), (False, None))
 
     def test_reap_and_spend(self):
