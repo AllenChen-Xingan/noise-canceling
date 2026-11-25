@@ -3,10 +3,13 @@
 - 切法确定：单位（说话人 / 房间 / 文件）按 sha256(种子:来源:单位) 排序后按比例分（最大余数法，合计不差一个）；
   不依赖 numpy 版本、文件系统列目录的顺序
 - 按时段切的（QUT · DEMAND）：每个文件按样本号切几段，段界写进清单
+- 按房间切的（OpenSLR 28）：房间号从上游 Kaldi rir_list 读（room_map），rir_list 的 sha256 钉在规则里；
+  room-id 看不出房间的库按 room_merge 整库并成一个单位
+- 先只看路径认出每个文件的单位（认不出立刻停），再读逐文件读数（filecache.py 缓存，重跑只算变了的）
 - 输出（进仓）：`splits/<来源>.jsonl`（每文件一行：路径 · 字节 · sha256 · 单位 · 份 / 段界）+ `splits/<来源>.json`（摘要：
   规则哈希 · 种子 · 每份单位数与文件数 · jsonl 的 sha256）。正文超 GZIP_OVER 时存成 `<来源>.jsonl.gz`（auto-commit hook
   不收超 10 MB 的文件）；摘要里的哈希始终是解压后正文的
-用法（云上）：python3 split.py --root /workspace [--only qut-noise] [--inventory]
+用法（云上）：python3 split.py --root /workspace [--only qut-noise] [--inventory] [--cache <路径>|none] [--workers 32]
 """
 import argparse
 import glob as globmod

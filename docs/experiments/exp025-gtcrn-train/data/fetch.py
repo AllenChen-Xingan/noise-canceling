@@ -4,6 +4,7 @@
 - 断点续传：没下完的留成 `<文件>.part`，下次用 HTTP Range 接着下；服务器不认 Range（回 200）就从头下
 - 下完核：字节数 = sources.json；有 md5 核 md5；有 sha256 核 sha256；都没有的，第一次下完把 sha256 记进
   `fetched.json`（进仓），以后以它为准（再下一次对不上即报错）
+- 限流：429 / 503 按 Retry-After 等，单独计 RATE_RETRIES 次，不占断线重试的次数；Wikimedia 每次请求前先停 POLITE_GAP_S 秒
 - 解压：拒绝绝对路径和「..」成员（压缩包是外来数据）；解压完写 `<dest>/.done-<文件名>` 标记，下次跳过
 用法（云上，仓库根下）：
   python3 docs/experiments/exp025-gtcrn-train/data/fetch.py --root /workspace --only A1,A2,A3,A4,A5

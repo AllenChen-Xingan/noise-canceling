@@ -1,4 +1,4 @@
-"""切分表超 10 MB 时存成 gzip（2026-11-25：openslr28-rir.jsonl 16.4 MB，被 auto-commit hook 的 10 MB 线挡在库外）。
+"""切分表正文超 8 MB（split.GZIP_OVER，留在 hook 的 10 MB 线以下）时存成 gzip（2026-11-25：openslr28-rir.jsonl 16.4 MB，被 auto-commit hook 的 10 MB 线挡在库外）。
 
 摘要里的 jsonl_sha256 始终是解压后正文的哈希：压不压缩不改变切分表的身份，云上旧摘要照样能核。
 """
