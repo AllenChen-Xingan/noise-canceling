@@ -245,7 +245,8 @@ class EndToEnd(unittest.TestCase):
     def test_build_id_covers_index_and_gpu_code(self):
         """codex 第 1 轮 P1 #1：build_id 要随分片索引（成员偏移）和真正混音的 gpu_mix.py 变。"""
         bid, parts, _ = loader.build_info(self.shards, self.recipe)
-        for f in ("gpu_mix.py", "mix.py", "loader.py", "shard.py", "leakcheck.py", "split.py"):
+        for f in ("gpu_mix.py", "mix.py", "loader.py", "shard.py", "leakcheck.py", "split.py",
+                  "exp013/dsp.py", "exp013/rooms.py", "exp013/rirs.py"):  # codex 第 2 轮 P1 #1：mix 直接调 exp013 这三个
             self.assertIn(f, parts["code_sha256"])
         with tempfile.TemporaryDirectory() as d:
             sh = Path(d) / "shards"

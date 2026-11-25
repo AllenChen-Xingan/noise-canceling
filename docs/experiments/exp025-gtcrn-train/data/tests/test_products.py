@@ -8,6 +8,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE))
+import loader  # noqa: E402
 import split  # noqa: E402
 
 SPLITS = HERE / "splits"
@@ -118,6 +119,8 @@ class Builds(unittest.TestCase):
         for f in build_files():
             b = json.loads(f.read_text())
             self.assertEqual(b["build_id"], f.parent.name)
+            ident = {k: b[k] for k in loader.ID_KEYS if k in b}  # codex 第 2 轮 P2 #4：由记录的身份字段重算 id
+            self.assertEqual(loader.build_id_of(ident), b["build_id"], f"{f}：身份字段被改过")
             self.assertTrue(b["valid"], f"{f}：交集检查不过")
             self.assertTrue(b["leak_check"]["ok"], str(f))
             self.assertEqual(sorted(b["split_tables"]), sorted(SHARDED), str(f))
