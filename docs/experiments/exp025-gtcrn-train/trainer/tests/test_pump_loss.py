@@ -168,3 +168,59 @@ def test_training_with_w_pump_on_logs_the_term(tmp_path):
     import json
     rows = [json.loads(x) for x in (tmp_path / "t" / "metrics.jsonl").read_text().splitlines()]
     assert any("pump_valid" in r for r in rows if "dev" not in r)
+
+
+# ---- 大总管定（2026-11-25）：pump_on 可选 all | clean_only；老 run.json 缺字段按默认值处理 ----
+
+def _strip_pump_from_record(root):
+    import json
+    p = root / "run.json"
+    rec = json.loads(p.read_text())
+    for k in ("w_pump", "pump_on"):
+        rec["config"]["loss"].pop(k, None)
+    p.write_text(json.dumps(rec))
+
+
+def test_old_run_json_without_pump_fields_can_resume(tmp_path):
+    from test_train import _cfg
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 3}))
+    _strip_pump_from_record(tmp_path / "t")          # 模拟改动前写的运行记录
+    assert train.train(_cfg(tmp_path))["step"] == 6
+
+
+def test_old_run_json_refused_when_pump_actually_turned_on(tmp_path):
+    from test_train import _cfg
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 3}))
+    _strip_pump_from_record(tmp_path / "t")
+    with pytest.raises(RuntimeError, match="loss.w_pump"):
+        train.train(_cfg(tmp_path, **{"loss.w_pump": 0.5}))
+
+
+def test_pump_on_config():
+    assert cfgmod.from_dict({}).loss.pump_on == "all"
+    with pytest.raises(ValueError, match="pump_on"):
+        cfgmod.from_dict({"loss": {"pump_on": "noisy"}})
+    assert train.loss_cfg(cfgmod.from_dict({"loss": {"pump_on": "clean_only"}}), 1.0, 1.0).pump_on == "clean_only"
+
+
+def test_clean_only_counts_only_clean_input_segments():
+    """clean_only：只算输入几乎就是目标的段（输入 − 目标 的能量比目标低 ≥ 30 dB）。"""
+    pred, clean, fr = _pred_and_clean()           # 两段都加了 −6 dB 左右的噪声
+    noisy = clean.clone()
+    noisy[0] = noisy[0] + 0.05 * torch.randn(N, generator=torch.Generator().manual_seed(9))
+    assert losses.clean_input(noisy, clean).tolist() == [False, True]
+    _, la = _crit(w_pump=0.5)(pred, clean, fr, owner_frames=fr, noisy=noisy)
+    _, lc = _crit(w_pump=0.5, pump_on="clean_only")(pred, clean, fr, owner_frames=fr, noisy=noisy)
+    assert la["pump_valid"] == 2 and lc["pump_valid"] == 1
+    with pytest.raises(ValueError, match="noisy"):
+        _crit(w_pump=0.5, pump_on="clean_only")(pred, clean, fr, owner_frames=fr)
+
+
+def test_forward_loss_passes_noisy_for_clean_only(monkeypatch):
+    rng = np.random.default_rng(6)
+    clean = torch.as_tensor(np.stack([_speech(rng)]))
+    b = {"noisy": clean, "clean": clean, "replay": torch.zeros(1, dtype=torch.bool), "near_silent": torch.zeros(1),
+         "owner_ivs": [[(0, N)]], "interf_ivs": [[]]}
+    m = train.build_model(cfgmod.from_dict({"model": {"variant": "A"}, "device": "cpu"}), torch.device("cpu"))
+    _, logs = train.forward_loss(m, _crit(w_pump=1.0, pump_on="clean_only"), b, torch.device("cpu"))
+    assert logs["pump_valid"] == 1
