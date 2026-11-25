@@ -371,29 +371,24 @@ impl Asr {
     ) -> Result<(String, bool), String> {
         use super::asr_vote::{TIE_BREAK_REP, Vote, vote};
         let backend = self.backend_for(clip);
-        let mut texts = vec![self.once(path, sha, lang, 1, backend)?];
-        let n = repeats_for(sha, self.single);
         let model = self.backends.get(backend).map_or("?", Backend::model);
         let id = format!("{sha}|{model}");
-        let mut rep = 2;
-        let (text, ok) = loop {
-            let v = if rep > n {
-                Vote::Use(0)
-            } else {
-                vote(&texts.iter().map(String::as_str).collect::<Vec<_>>(), lang)
-            };
-            match v {
-                // 只有 1 次（单次模式）或已判出：取那一次
-                Vote::Use(i) if texts.len() > 1 || rep > n => break (texts[i].clone(), true),
-                Vote::NoMajority => break (texts[0].clone(), false),
-                _ => {}
+        let strs = |t: &[String]| t.iter().map(String::as_str).collect::<Vec<_>>();
+        let mut texts = vec![self.once(path, sha, lang, 1, backend)?];
+        let mut v = Vote::Use(0);
+        if repeats_for(sha, self.single) >= 2 {
+            texts.push(self.once(path, sha, lang, 2, backend)?);
+            // 前两次的一致率照旧计（决定以后能不能改成 1 次）
+            self.count_check(id.clone(), same_text(&texts[1], &texts[0], lang));
+            v = vote(&strs(&texts), lang);
+            if v == Vote::NeedTieBreak {
+                texts.push(self.once(path, sha, lang, TIE_BREAK_REP, backend)?);
+                v = vote(&strs(&texts), lang);
             }
-            texts.push(self.once(path, sha, lang, rep, backend)?);
-            if rep == 2 {
-                self.count_check(id.clone(), same_text(&texts[1], &texts[0], lang));
-            }
-            rep += 1;
-            debug_assert!(rep <= TIE_BREAK_REP + 1);
+        }
+        let (text, ok) = match v {
+            Vote::Use(i) => (texts[i].clone(), true),
+            _ => (texts[0].clone(), false),
         };
         if texts.len() >= TIE_BREAK_REP {
             self.votes.insert(id, ok);
