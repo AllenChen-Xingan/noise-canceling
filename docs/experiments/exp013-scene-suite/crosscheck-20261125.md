@@ -79,4 +79,25 @@ python docs/experiments/exp013-scene-suite/compare_builds.py --tolerance \
   - 「全留多人 + 余量调整」：本 build 只有 meeting-room-s02 的两个设备版本，其中 -mba 已用过，只能取 **meeting-room-s02-ext**（与 -mba 同一份素材，不完全独立）
   - 其余 4 段：从没用过的 10 个场景里，用固定种子 20261030（`SC-AGG.seed`，Python `random.Random`）抽 4 个场景，每个场景再随机抽 1 段：**home-family-s03-ext · library-classroom-c01-ext · open-office-c08-ext · rail-air-cabin-c08-mba**
 - **停止线**：新 5 段在第 3 版下还不过，就停下报大总管，不再改阈值；「跨平台等价」改记为「未证实」，并写出差信号的 dB 读数
-- 新旧 10 段都按第 3 版判。结果：待新 5 段取回后补在下面
+- 新旧 10 段都按第 3 版判
+
+### 第 3 版结果（实测，2026-11-25；cloudrun 取回第二批 52 个 wav，逐个核过 sha256）
+
+**新 5 段（预先登记，没调过阈值）：全过**，`compare_builds.py --tolerance` 退出码 0。**旧 5 段：也全过**，退出码 0。
+
+| 片段 | 轨数 | 每样本最大差（整轨峰值处最小单位的倍数，线 4） | 差信号最高（dB，线 −120） | 批次 |
+|---|---|---|---|---|
+| meeting-room-s02-ext | 10 | 2 | −140.6 | 新 |
+| home-family-s03-ext | 11 | 1 | −142.4 | 新 |
+| library-classroom-c01-ext | 11 | 3.05e-05 | −263.8 | 新 |
+| open-office-c08-ext | 11 | 9.54e-07 | −291.1 | 新 |
+| rail-air-cabin-c08-mba | 9 | 0.125 | −200.9 | 新 |
+| cafe-c00-mba | 9 | 0.000977 | −232.3 | 旧 |
+| meeting-room-s02-mba | 10 | 3 | −138.3 | 旧 |
+| street-outdoor-c00-ext | 8 | 2.38e-07 | −300.1 | 旧 |
+| bus-metro-cabin-c00-ext | 8 | 0.00195 | −232.4 | 旧 |
+| home-quiet-s01-mba | 10 | 0.000244 | −241.2 | 旧 |
+
+**结论**：跨平台（macOS arm64 对 Linux x86_64）按第 3 版判，10 段 97 条轨全部等价；最紧的是两段「全留多人 + 余量调整」（3 个、2 个最小单位，差信号 −138 到 −141 dB）。
+- 局限：新 5 段里的 meeting-room-s02-ext 和旧的 -mba 是同一份素材，不完全独立；10 段只占 480 段的 2%，是抽查不是全量
+- 评测仍只用本机 6323 这一份音频（云上也读它），这条结论只是「跨平台可复现」的证据
