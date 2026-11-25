@@ -133,9 +133,12 @@ def calibrate(model, cfg, batches, device, should_stop=lambda: None) -> dict | N
     return out
 
 
+VALID_WEIGHTED = ("lvl", "on", "pump")  # 按有效段数加权的项（pump：codex pump-loss 第 1 轮 #1）
+
+
 @torch.no_grad()
 def evaluate(model, crit, dev, device, cfg, should_stop=lambda: None, **kw) -> dict | None:
-    """开发份平均读数。lvl / on 按有效段数加权（整批无效的不进分母，codex 第 3 轮 #3）；kd 等按出现过的批数平均。
+    """开发份平均读数。lvl / on / pump 按有效段数加权（整批无效的不进分母，codex 第 3 轮 #3）；kd 等按出现过的批数平均。
     每批前问一次 should_stop，要停就返回 None（codex 第 3 轮 #1）。"""
     model.eval()
     acc, cnt = {}, {}
@@ -147,10 +150,10 @@ def evaluate(model, crit, dev, device, cfg, should_stop=lambda: None, **kw) -> d
             for k, v in logs.items():
                 if k.endswith("_valid"):
                     continue
-                w = logs.get(f"{k}_valid", 1) if k in ("lvl", "on") else 1
+                w = logs.get(f"{k}_valid", 1) if k in VALID_WEIGHTED else 1
                 acc[k] = acc.get(k, 0.0) + v * w
                 cnt[k] = cnt.get(k, 0) + w
-            for k in ("lvl", "on"):
+            for k in VALID_WEIGHTED:
                 if f"{k}_valid" in logs:
                     cnt[f"{k}_valid"] = cnt.get(f"{k}_valid", 0) + logs[f"{k}_valid"]
     finally:
