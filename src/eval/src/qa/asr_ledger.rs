@@ -27,7 +27,8 @@ fn lock_path(p: &Path) -> PathBuf {
 /// 读账本（不加锁）：没有文件 = 空账本；读不出或格式坏了 = `Err`。
 pub fn read(p: &Path) -> Result<Ledger, String> {
     match std::fs::read_to_string(p) {
-        Ok(t) => serde_json::from_str(&t).map_err(|e| format!("识别费账本 {} 坏了（{e}）：拒跑，先人工查", p.display())),
+        Ok(t) => serde_json::from_str(&t)
+            .map_err(|e| format!("识别费账本 {} 坏了（{e}）：拒跑，先人工查", p.display())),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Ledger::default()),
         Err(e) => Err(format!("读不了识别费账本 {}：{e}", p.display())),
     }
@@ -124,7 +125,10 @@ mod tests {
         .unwrap();
         reserve(&p, 0.05, 1.0).unwrap();
         reserve(&p, 0.05, 1.0).unwrap();
-        assert!(reserve(&p, 0.01, 1.0).is_err(), "已花 + 在途预留 = 1.0，再预留就超");
+        assert!(
+            reserve(&p, 0.01, 1.0).is_err(),
+            "已花 + 在途预留 = 1.0，再预留就超"
+        );
     }
 
     #[test]
@@ -133,7 +137,11 @@ mod tests {
         std::fs::write(&p, "{ not json").unwrap();
         assert!(read(&p).is_err());
         assert!(reserve(&p, 0.01, 1.0).is_err());
-        assert_eq!(std::fs::read_to_string(&p).unwrap(), "{ not json", "坏账本原样留着，等人查");
+        assert_eq!(
+            std::fs::read_to_string(&p).unwrap(),
+            "{ not json",
+            "坏账本原样留着，等人查"
+        );
     }
 
     #[test]
