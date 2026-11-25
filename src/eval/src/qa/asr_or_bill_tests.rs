@@ -100,3 +100,31 @@ fn unreachable_attempt_is_logged() {
             .is_some_and(|e| e.contains("连不上"))
     );
 }
+
+/// codex 本分支第 1 轮 P1 #2：标价估算只按实际音频秒数，返回的 seconds 只进明细（返回说 1 秒、音频 0.1 秒时不多记）。
+#[test]
+fn list_estimate_uses_audio_seconds_not_reported() {
+    let d = tmpdir("bill-secs");
+    let (url, _) = fake(vec![(200, "", json!({"text": "a", "usage": {"seconds": 1.0, "cost": 1e-12}}).to_string())]);
+    let mut c = client(&url, &d);
+    c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap();
+    let secs = audio().len() as f64 / f64::from(vdn_types::MODEL_RATE);
+    assert!((c.ledger.spent_usd - booked_cost(1e-12, secs)).abs() < 1e-18, "{}", c.ledger.spent_usd);
+    assert!(c.ledger.review.is_none());
+    assert_eq!(details(&d)[0]["usage"]["seconds"], 1.0, "返回的秒数照记在明细里");
+}
+
+/// codex 本分支第 1 轮 P1 #1：明细写不了 → 账本持久标待核，之后任何进程都拒发（明细缺了就核不了账）。
+#[test]
+fn detail_write_failure_flags_review() {
+    let d = tmpdir("bill-nowrite");
+    let (url, seen) = fake(vec![super::tests::ok("a", 1e-12), super::tests::ok("never", 1e-12)]);
+    let mut c = client(&url, &d);
+    std::fs::create_dir_all(ledger::details_path(&d.join("ledger.json"))).unwrap(); // 同名目录：追加必失败
+    let _ = c.transcribe(&audio(), vdn_types::MODEL_RATE, "en");
+    let l = ledger::read(&d.join("ledger.json")).unwrap();
+    assert!(l.review.as_deref().is_some_and(|r| r.contains("明细")), "{l:?}");
+    let mut again = client(&url, &d);
+    assert!(again.transcribe(&audio(), vdn_types::MODEL_RATE, "en").is_err());
+    assert_eq!(seen.lock().unwrap().len(), 1, "标了待核就不再发");
+}
