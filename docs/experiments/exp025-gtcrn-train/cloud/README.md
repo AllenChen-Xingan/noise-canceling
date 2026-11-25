@@ -89,3 +89,20 @@ python3 -m unittest discover -s docs/experiments/exp025-gtcrn-train/cloud/tests
 
 - 推论（未实测）：OpenSLR 28 号包 1.3 GB，按 1.39 MB/s 约 16 分钟；按 0.43 MB/s 约 50 分钟。大包从 OpenSLR 下时，开多个连接并行，或在便宜的 CPU 机器上下到网络盘，别占着 H100 等下载。
 - 到时限后：容器被重启，照常计费（当时还没有机器内自删）。见「防忘删机」一节。
+
+## 下数据（2026-11-24，CPU 机 cpu3c 4 核 · US-MO-1，1 次）
+
+做法：先用 `predownload.py` 以 aria2c 多连接（8 连接，OpenSLR 同时用三个镜像）把压缩包下到 `/workspace/archives/`，
+每个包先过 `unzip -tq` / `tar -tzf`；再跑 traindata 的 `cloud_steps.sh fetch`，它见包已存在就跳过下载，照常核哈希、解压、记 `fetched.json`。
+
+```sh
+python3 rp.py up --cpu --max-hours 6 --yes
+python3 rp.py put <机器> predownload.py /workspace/tools/predownload.py
+python3 rp.py job-start <机器> dl 'python3 /workspace/tools/predownload.py $D/sources.json /workspace A1,A2,A3,A4,A5,E2 --max-gb 120 && cd $D && bash cloud_steps.sh fetch'
+```
+
+实测（样本 1 次）：
+- 21 个包、18.15 GB，下载加核对加解压共约 48 分钟，退出码 0；网络盘用到 33 GB。
+- 速度：OpenSLR 大包 4.4–5.2 MB/s（单连接时 0.43–1.39 MB/s）；Zenodo 的 DEMAND 包 7–56 MB/s。
+- Wikimedia 的 3 个小文件连回 7 次 429（「请求太多」，服务器给 Retry-After 120 秒），第 8 次才成。traindata 已改成限流另算、最多 30 次。
+- 这台机器开了 2.39 小时，估算 0.29 美元。

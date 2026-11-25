@@ -40,3 +40,4 @@
 - 2026-11-24 test：2 个模块导入失败（rooms.py 缺 EARLY_REVERB_MS / early_rir，只在 evalcmp 分支有）→ 停下报大总管，等选 A（跳过继续下载）或 B（等合并重跑）
 - 2026-11-24 发现：网络盘 df 显示集群总量 158 TB，看不到 150 GB 配额，fetch.py 查盘无效（已报，请转 traindata）
 - 2026-11-24 大总管选 A：test 时跳过 test_gpu_mix、test_mix_loader，原因是 early_rir 未合入（evalcmp 未合进 main），下载不依赖它们；盘量用 du -sh /workspace 盯，超 120 GB 停
+- 2026-11-25 00:21Z：第一批 A1–A5 + E2 共 21 包 18.15 GB 下完（aria2c，大包 4.4–5.2 MB/s），全过 unzip/tar 检查与 fetch.py 核对、已解压；/workspace 33 GB。E3 三个文件第 8 次才过 Wikimedia 429，sha256 与 sources.json 一致。两份 fetched.json 取回到主仓 `_tmp/20261124-cloudrun-fetched/`，读数已发 traindata（它已合并第一批，提交 7bffd12e）。CPU 机 vggy9ggvbi3h1p 已删（估 $0.29），账上 0 台机器；累计约 $1.15 / 上限 $60（账单数据晚约 1 小时，待补实扣）。
