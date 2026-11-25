@@ -4,6 +4,8 @@
 1. 学习曲线：lr 1e-3 跑到 probe_steps 步，在 150 · 300 · 500 · 1000 · 2000 步记损失、走完 oracle 距离的比例、SI-SNR
 2. 哪些参数在动：可训练参数数、按层分组；批归一化是否全在评估模式、缩放偏移是否照训；第 1 步与最后 1 步各组梯度范数
 3. 学习率：3e-4 与 3e-3 各跑 sweep_steps 步（默认 300），同样记录
+4–6. 数据侧（`data_probe.py`）：输入与目标的对齐 · 目标本身（静音、削波、电平）与 wav · 逐个关配方旋钮各 150 步
+跑的顺序按便宜的先来：数据检查 → 关旋钮 → 学习曲线 → 学习率。
 每记一个点就重写报告（原子改名），中途被杀也留下已跑完的部分（complete 为 False）。
 """
 from __future__ import annotations
@@ -16,11 +18,12 @@ from pathlib import Path
 import torch
 
 import config as cfgmod
+import data_probe
 import losses
 import oracle
 import smoke
 import train
-from data import make_source
+from data import import_loader, make_source
 
 MARKS = (150, 300, 500, 1000, 2000)
 SWEEP_LRS = (3e-4, 3e-3)
@@ -116,6 +119,29 @@ def run_probe(cfg, out: Path, steps: int, sweep_steps: int) -> int:
            "oracle_loss": o["loss"], "oracle_si_snr_db": o["si_snr_db"], "params": param_report(m),
            "note": "诊断用，不判过不过、不改判据（大总管 2026-11-25）", "started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
     del m
+    _write(out, rep)
+
+    # 数据侧：对齐 · 目标 · wav（4 段）
+    maker, recipe, metas = None, None, None
+    if cfg.data.kind == "loader":
+        recipe = json.loads(Path(cfg.data.recipe).read_text())
+        maker = data_probe.loader_batch_maker(import_loader(), cfg, out.parent / f"{out.stem}-recipes", smoke.OVERFIT_N)
+        b0 = maker(recipe, "baseline")
+        metas = b0["metas"]
+        rep["baseline_rebuild_max_abs_diff"] = float((b0["noisy"] - batch["noisy"]).abs().max())
+    rep["data_checks"] = {"alignment": data_probe.alignment(batch["noisy"], batch["clean"]),
+                          "targets": data_probe.target_stats(batch["clean"], batch["noisy"], metas, recipe),
+                          "wavs": data_probe.write_wavs(out.parent / f"{out.stem}-wav", batch["noisy"], batch["clean"])}
+    _write(out, rep)
+    if maker is None:
+        rep["ablation"] = {"skipped": "合成数据没有配方"}
+    else:
+        rep["ablation"] = {}
+
+        def save_abl(name, r):
+            rep["ablation"][name] = r
+            _write(out, rep)
+        data_probe.run_ablations(cfg, device, recipe, maker, 150, run_curve, on_entry=save_abl)
     _write(out, rep)
 
     def save_curve(r):
