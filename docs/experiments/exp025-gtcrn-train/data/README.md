@@ -132,7 +132,7 @@ bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /
 | register | `builds/<id>/build.json` | `valid: true`，`leak_check.ok: true`；`dropped_rir` 是被 exp013 `rirs.Measured.valid` 剔掉的 RIR 数：直达声之前有明显能量、混响时长估不准、或尾巴衰减不到 −30 dB 的不用 |
 | pack | `/workspace/out/traindata-products-<时间>.tar.gz` | 几 MB；不含音频 |
 
-耗时：2026-11-25 那次 split 跑了 1800 s 才在 OpenSLR 28 上停下。现在改成先只看路径认出每个文件的单位，认不出几秒内就停；逐文件读数（sha256 · 帧数 · 采样率）缓存在 `/workspace/cache/split-files.jsonl`，重跑只算变了的文件。第一次跑仍要全算：2026-11-25 云上实测 1346 s（4 核 CPU 机）。别给它设超时（前一次 cloudrun 设了 30 分钟上限）。下载阶段的哈希复用不了：那是整个压缩包的哈希，包里的文件没有单独的哈希。
+耗时：2026-11-25 那次 split 跑了 1800 s 才在 OpenSLR 28 上停下。现在改成先只看路径认出每个文件的单位，认不出几秒内就停；逐文件读数（sha256 · 帧数 · 采样率）缓存在 `/workspace/cache/split-files.jsonl`，重跑只算变了的文件（缓存按数据根 · 相对路径 · 字节数 · 修改时间认；2026-11-25 加了数据根，此前写的缓存行不再认，下次全算一遍）。第一次跑仍要全算：2026-11-25 云上实测 1346 s（4 核 CPU 机）。别给它设超时（前一次 cloudrun 设了 30 分钟上限）。下载阶段的哈希复用不了：那是整个压缩包的哈希，包里的文件没有单独的哈希。
 
 ### 6.3 出错时怎么办
 

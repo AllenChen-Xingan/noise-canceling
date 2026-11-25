@@ -1,7 +1,7 @@
 # 评审 156 · exp025 训练数据：下载 · 切分 · 混音 · exp013 核对（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/experiments/exp025-gtcrn-train/data/` 下 29 个代码、规则与说明文件（数据产物 `splits/` · `rebuild/*.log` · `builds/` · `inventory.txt` 不发）。**最新一轮：第 2 轮（2026-11-25）· 总评「修改」· 待第 3 轮**。
-> 累计处理：P1×5、P2×6 逐条回源码核实，属实 11、驳回 0。其中 1 条 P1 按大总管定的规则降为 P2（同一主题往上加层）；留作 issue 的 P2 共 2 件（待大总管开）。
+> 对象：`docs/experiments/exp025-gtcrn-train/data/` 下 29 个代码、规则与说明文件（数据产物 `splits/` · `rebuild/*.log` · `builds/` · `inventory.txt` 不发）。**最新一轮：第 3 轮（2026-11-25）· 总评「修改」· 连续第 1 轮无 P0/P1，待第 4 轮确认**。
+> 累计处理：P1×5、P2×11 逐条回源码核实，属实 16、驳回 0。其中 1 条 P1 按大总管定的规则降为 P2（同一主题往上加层）；留作 issue 的 P2 共 2 件（待大总管开）。
 > 记录放在本目录，因为 `docs/reviews/` 不是 traindata 能写的文件；索引那一行请大总管加。
 > 之前做过一轮多视角自审（外行 · 老手 · 挑刺，2026-11-25）：1 条 P1（判据 2 认不出云上自产音频）已修，见第 1 轮之前的提交。
 
@@ -71,3 +71,30 @@
 ### 是否再审
 
 有 P1，改完开第 3 轮。
+
+## 第 3 轮（2026-11-25）· 总评「修改」
+
+原文：`_tmp/reviews-traindata/exp025-data-codex-3.md`（不入库）。effort high。
+上一轮处理的验证：codex 认 #1、#3、#4 已落实；#2、#5 是 issue，维持 P2。
+本轮 P0/P1：0 条 · 停止线：连续第 1 轮无 P0/P1 · 留作 issue 的 P2：#1（同第 2 轮 #2）、#2（同第 1 轮 #6）
+
+- **P2｜loader.py:52 分片内容仍未核**（第 3 轮 #1）：同第 2 轮 #2，issue
+- **P2｜README.md:158 重切流程没打通**（第 3 轮 #2）：同第 1 轮 #6，issue
+- **P2｜fetch.py:137 分块响应截断不重试**（第 3 轮 #3）
+  - 核实：属实。`http.client.IncompleteRead` 是 `HTTPException`，不是 `OSError`
+  - 处理：一并捕获 `http.client.HTTPException`，从 .part 末尾接着下。测试 `test_chunked_cut_resumes`（先红后绿）
+- **P2｜filecache.py:49 缓存键没绑数据根**（第 3 轮 #4）
+  - 核实：属实
+  - 处理：缓存行记规范化的数据根，按（数据根 · 相对路径）查；没记数据根的旧行不认。云上已有的缓存因此下次全算一遍（约 1346 s），README 6.2 写明。测试 `test_other_root_not_reused`
+- **P2｜loader.py:165 target_scene.frac 不生效**（第 3 轮 #5）
+  - 核实：属实。抽样只用 `replay.frac`；`target_scene.frac`（0.667）是同一件事的第二处表示
+  - 处理：`load_recipe` 核两者之和为 1，不一致即报错。测试 `test_target_and_replay_frac_agree`
+
+### 引用抽查
+
+- 「核实属实」：8 条（含上一轮三处修复）
+- 无法核实：同第 2 轮
+
+### 是否再审
+
+连续第 1 轮无 P0/P1，开第 4 轮确认。全量 138 条全过（实测）。
