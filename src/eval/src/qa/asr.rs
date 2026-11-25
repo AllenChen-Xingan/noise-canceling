@@ -48,7 +48,7 @@ pub const LOCAL42: &str = "local42";
 /// 一个后端：本机服务，或 OpenRouter 客户端。
 pub enum Backend {
     Local42,
-    OpenRouter(super::asr_or::OpenRouter),
+    OpenRouter(Box<super::asr_or::OpenRouter>),
 }
 
 impl Backend {
@@ -198,10 +198,8 @@ impl Asr {
                         .clone()
                         .unwrap_or_else(|| super::asr_ledger::ledger_path(root));
                     super::asr_ledger::read(&ledger)?;
-                    backends.push(Backend::OpenRouter(super::asr_or::OpenRouter::new(
-                        super::asr_or::OR_URL,
-                        key,
-                        ledger,
+                    backends.push(Backend::OpenRouter(Box::new(
+                        super::asr_or::OpenRouter::new(super::asr_or::OR_URL, key, ledger),
                     )));
                 }
                 LOCAL42 if Asr::alive() => backends.push(Backend::Local42),
