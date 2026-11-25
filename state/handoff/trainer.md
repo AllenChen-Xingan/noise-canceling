@@ -57,3 +57,4 @@
 - 11-25 甲段第一次跑（cloudrun）：113 过 · 1 跳过 · 5 红，都是环境问题（漏装 onnx；git archive 没有 .git，运行记录 commit 为空）。改：方案第 2 步两份 requirements 一起装、代码必须 git clone / bundle 带 .git；`runrec.git_info` 拿不到提交号就在开跑前失败（`tests/test_git_record.py` 先红后绿）
 - 11-25 甲段第二次跑（cloudrun，d2477f63）全过：单元测试 122 过 · 1 跳过（MPS），321 s；CPU 参照 hybrid 3.97330（build f032a75eedad80d6），存进 `trainer/smoke_reports/20261125-known-dev-cpu.json`；等乙段
 - 11-25 乙段第 1 步（cloudrun）：冒烟只有过拟合不过（损失走完 14%、SI-SNR +3.5 dB，要 50% 与 +6 dB）；其余三件过。测速：每步 0.126 s、取数 0.033 s（中位，100 步）。报告 `trainer/smoke_reports/20261125-h100-overfit-FAILED.json`；已删机，等大总管定怎么重跑
+- 11-25 过拟合本机排查（名额）：合成小样 4×2 s 与 32×4 s 都过（走完 111% / 110%，SI-SNR +12.9 / +16.0 dB；占掩码族最好损失距离 73%）。第 2 组期间本机合盖睡眠，墙钟作废；caffeinate 挡不住合盖。报告 `trainer/smoke_reports/20261125-overfit-diag-local-cpu.json`
