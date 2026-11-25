@@ -277,10 +277,11 @@ class TestOps(Base):
 
     def test_same_second_creates_get_distinct_names(self):
         # 评审第 4 轮 #1：同一秒开两台也不重名
-        with mock.patch.object(O.time, "strftime", return_value="20261125-000000-"):
-            a = O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
-            b = O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
-        self.assertNotEqual(self.fake.pods[a["id"]]["name"], self.fake.pods[b["id"]]["name"])
+        a = O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
+        b = O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
+        na, nb = self.fake.pods[a["id"]]["name"], self.fake.pods[b["id"]]["name"]
+        self.assertRegex(na, r"^vdn-\d{8}-\d{6}-[0-9a-f]{8}$")
+        self.assertNotEqual(na, nb)  # 两次几乎同时：靠随机尾巴区分
 
     def test_missing_ledger_refuses_even_with_empty_cloud(self):
         # 评审第 4 轮 #4：云上全删了，账本路径错也不能按 0 放行
