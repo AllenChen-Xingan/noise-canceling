@@ -21,8 +21,8 @@ class TestTransfer(Base):
         # 第 6 轮 #1：开始时没有，传的过程中别人放了同名文件：发布失败，对方的文件不动
         orig = self.fake.exec
 
-        def sneaky(argv):
-            out = orig(argv)
+        def sneaky(argv, env=None):
+            out = orig(argv, env)
             if "base64 -d >>" in " ".join(argv):
                 self.fake.files.setdefault("/w/f", b"theirs")
             return out
@@ -66,11 +66,11 @@ class TestTransfer(Base):
         # 评审第 8 轮 #1：启动请求发出后断网，报错里带编号、说「结果未知」，CLI 也先打出编号
         orig = self.fake.exec
 
-        def lost(argv):
+        def lost(argv, env=None):
             if "nohup" in " ".join(argv):
-                orig(argv)  # 其实已经启动了
+                orig(argv, env)  # 其实已经启动了
                 raise OSError("connection reset")
-            return orig(argv)
+            return orig(argv, env)
         self.fake.exec = lost
         with self.assertRaises(SystemExit) as cm:
             self.run_cli("job-start", "pod_9", "train", "true")
