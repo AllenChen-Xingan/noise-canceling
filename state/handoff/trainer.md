@@ -64,3 +64,4 @@
 - 11-25 第 3 版判据云上 CPU 核对（cloudrun，a8168c98）：只有过拟合不过：前 4 段走完 oracle 距离 19.6%（要 50%），SI-SNR +2.5 dB（要 6）；其余三件过。报告 `trainer/smoke_reports/20261125-cpu-gate3-FAILED.json`；不降门槛，已报大总管
 - 11-25 加 `overfit_probe.py` 与 `smoke.py --overfit-probe`（学习曲线到 2000 步 · 参数与梯度 · 学习率 3e-4 / 3e-3）；`tests/test_overfit_probe.py` 6 条先红后绿；方案第十节
 - 11-25 加 `data_probe.py`（对齐 · 目标检查与 wav · 逐个关配方旋钮 6 组），并进 `--overfit-probe`；`tests/test_data_probe.py` 8 条先红后绿
+- 11-25 `--overfit-probe` 云上 CPU 跑完（cloudrun，21e2e5b7，4429 s）：2000 步走完 oracle 距离 30.7%，学习率 3e-4/3e-3 差 3 个百分点内，梯度、对齐、目标、关旋钮都没找到故障。读数与建议 `trainer/smoke_reports/20261125-overfit-probe-reading.md`；建议先用官方 DNS3 权重做独立参照，待大总管定；H100 仍不开
