@@ -66,7 +66,7 @@ def parse_rir_line(line):
 
 
 def room_map(root, rule):
-    """从 OpenSLR 28 包内的 Kaldi rir_list 读「文件名 → 房间号」；房间号前加列表所在目录，防不同房型重号。
+    """从 OpenSLR 28 包内的 Kaldi rir_list 读「相对路径 → 房间号」；房间号前加列表所在目录，防不同房型重号。
     room_lists_sha256：规则是对着这几份上游 rir_list 定的，内容变了就停。
     room_merge：上游 room-id 不是房间的那几个库（见 split_rules.json 里的 why），整库并成一个单位。"""
     root, m = Path(root), {}
@@ -82,16 +82,23 @@ def room_map(root, rule):
                     raise SystemExit(f"{rel} 和规则核过的上游版本不同（sha256 对不上）：房间规则要重新核")
                 seen.add(rel)
             tag = Path(lst).parent.name
+            lparts = Path(rel).parts
             for line in body.decode().splitlines():
                 if not line.strip():
                     continue
                 wav, rid = parse_rir_line(line)
+                wparts = Path(wav).parts
+                if wparts[0] not in lparts:
+                    raise SystemExit(f"{rel}：路径 {wav} 和列表所在目录对不上")
+                key = str(Path(*lparts[: lparts.index(wparts[0])], *wparts))  # 完整相对路径：三套模拟 RIR 文件名重复
                 unit = f"{tag}/{rid}"
                 for rx, to in merge:
                     if rx.search(unit):
                         unit = to
                         break
-                m[Path(wav).name] = unit
+                if key in m:
+                    raise SystemExit(f"{key} 在 rir_list 里出现两次")
+                m[key] = unit
     if pins is not None and seen != set(pins):
         raise SystemExit(f"rir_list 少了：{sorted(set(pins) - seen)}")
     return m
@@ -102,7 +109,7 @@ def unit_of(rel, rule, rooms=None):
     if u == "speaker":
         return Path(rel).parts[-3]
     if u == "room":
-        name = Path(rel).name
+        name = str(Path(rel))
         if name not in rooms:
             raise SystemExit(f"{rel} 不在任何 rir_list 里，查不到房间号：不许按文件切（同房间会跨份）")
         return rooms[name]
