@@ -77,10 +77,9 @@ def code_drift():
     import hashlib
 
     m = json.loads((OLD / "manifest.json").read_text())
-    root = HERE.parents[3]
     out = []
     for f, h in {**m["code_sha256"], **m["params_sha256"]}.items():
-        p = (root / f) if "/" in f else (EXP013 / f)
+        p = code_path(f)
         if not p.exists() or hashlib.sha256(p.read_bytes()).hexdigest() != h:
             out.append(f)
     return out
@@ -120,7 +119,8 @@ def check_cloud(local, cloud, upload_log, inputs_log):
           "foreign": foreign[:50], "n_foreign": len(foreign)}
     up["all_ok"] = not failed and not foreign and okp >= want
     code = lambda m: {**m["code_sha256"], **m["params_sha256"]}  # noqa: E731
-    rep = {"local_build": ml.get("build_id", local.name), "cloud_build": mc.get("build_id", cloud.name),
+    rep = {"criterion": "check_cloud 第 2 版：日志路径须带本机 build id（2026-11-25 自审 P1；第 1 版认不出云上自产音频）",
+           "local_build": ml.get("build_id", local.name), "cloud_build": mc.get("build_id", cloud.name),
            "local_vs_old": {k: vs_old[k] for k in ("old", "same", "differ", "missing", "n_extra", "ok")},
            "upload": up,
            "cloud_exclude_equal": json.loads((cloud / "exclude.json").read_text()) == json.loads((OLD / "exclude.json").read_text()),
@@ -193,7 +193,7 @@ def main():
         rep["ok"] = rep["ok"] and rep["exclude_equal"]
         m = json.loads((new / "manifest.json").read_text())
         rep["new_code_sha256"] = {**m["code_sha256"], **m["params_sha256"]}
-    rep.update({"build": BUILD, "versions": versions(), "version_drift": drift, "code_drift": code_drift(), "fetched": a.fetch, "seconds": round(time.time() - t0, 1),
+    rep.update({"criterion": "整套重建：旧 4540 个逐位相同 + exclude 全等", "build": BUILD, "versions": versions(), "version_drift": drift, "code_drift": code_drift(), "fetched": a.fetch, "seconds": round(time.time() - t0, 1),
                 "when": time.strftime("%Y-%m-%d %H:%M:%S")})
     report(rep)
 
