@@ -29,6 +29,7 @@ python3 rp.py job-start <机器> train 'cd /workspace && python3 train.py'   # �
 python3 rp.py job-wait <机器> <运行编号> --timeout 7200  # 按编号等后台命令结束，打印日志尾
 python3 rp.py put <机器> 本地文件 /workspace/远端路径   # 传上去，核 sha256
 python3 rp.py get <机器> /workspace/ckpt.pt ckpt.pt    # 取回来，核 sha256
+python3 rp.py put-secret <机器> OPENROUTER_API_KEY   # 把 .env.local 里这个密钥送进机器 /root/.env.local（容器盘，600），只报位数
 python3 rp.py down <机器> --yes                        # 删机并记账（不带 --yes 只列出要删的）
 python3 rp.py reap --yes                               # 兜底：删掉所有 vdn- 开头的机器（不带 --yes 只列出）
 python3 rp.py spend                                    # 按账本汇总已花
@@ -36,6 +37,7 @@ python3 rp.py probe --dc <机房> --no-volume --max-hours 0.25 --yes   # 试开�
 ```
 
 - 长命令放后台：exec 接口单次最多等 25 秒；`job-start` 每次生成唯一运行编号，输出写进 `/root/jobs/<编号>.log`，退出码写进 `.rc`。同名任务跑两次各有各的文件。命令按 `sh` 解析，bash 专有写法（如 `>( )`）要包进 `bash -c`，否则启动前就报语法错。
+- `put-secret`：值走 exec 请求的 env 字段，不进任何命令参数、输出、账本；只许写到容器盘 `/root/` 下，删机即没。后台任务里用 `set -a; . /root/.env.local; set +a` 读进环境变量。残余风险：RunPod 会不会记录 exec 请求里的 env 不知道（大总管已接受，用完轮换）。详见 `secret_ops.py`、`plan-eval-baseline.md` 第一节。
 - `put` / `get` 默认不覆盖已有文件；加 `--overwrite` 才覆盖，`put` 会把远端旧文件留作 `.bak-时间-随机`。
 - 传文件走 exec：上传每次约 1 MB，取回每块 512 KB；适合代码、检查点、结果表。大数据集直接在机器里从源站下载到网络盘。
 ## 防忘删机（实现在 `watchdog.py`）

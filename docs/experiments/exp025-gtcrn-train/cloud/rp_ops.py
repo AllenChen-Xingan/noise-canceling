@@ -289,10 +289,14 @@ def list_our_pods(cli: Client) -> list:
 
 # ---------- 跑命令 ----------
 
-def exec_cmd(cli: Client, pod_id: str, argv: list, timeout_s: int = 20, cwd: Optional[str] = None) -> dict:
+def exec_cmd(cli: Client, pod_id: str, argv: list, timeout_s: int = 20, cwd: Optional[str] = None,
+             env: Optional[dict] = None) -> dict:
+    """env 走请求体的 env 字段，不进命令参数（机器里 ps 看不到）；secret_ops 送密钥用它。"""
     body = {"command": argv, "timeoutSeconds": max(1, min(int(timeout_s), C.EXEC_TIMEOUT_MAX_S))}
     if cwd:
         body["cwd"] = cwd
+    if env:
+        body["env"] = env
     # 只在「肯定没执行」时重发：409 容器还在启动、429 限流。503 可能已经执行过，重发会把命令跑两遍（评审第 2 轮 #2）
     return cli.post(f"/v2/pods/{pod_id}/exec", body, retry_on=(409, 429))
 

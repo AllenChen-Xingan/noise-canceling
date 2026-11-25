@@ -22,6 +22,7 @@ class FakeRunPod:
         self.pods = {}
         self.volumes = {}
         self.files = {}          # 机器里的文件：{path: bytes}
+        self.modes = {}          # 机器里文件的权限：{path: int}
         self.jobs = {}           # {job: (rc, log)}，start_job 后立即「跑完」
         self.price, self.vcpu, self.queue = price, vcpu, queue
         self.n = 0
@@ -97,7 +98,7 @@ class FakeRunPod:
             if m == "DELETE":
                 del self.pods[pid]
                 return 204, None
-            return 200, self.exec(d["command"])
+            return 200, self.exec(d["command"], d.get("env"))
         if p.startswith("/v2/queued-pods/") and m == "DELETE":
             return 204, None
         if p == "/v2/billing/pods":
@@ -105,9 +106,18 @@ class FakeRunPod:
         return 404, {"detail": f"fake: no route {m} {p}"}
 
     # 只认 rp_ops 发出的几种命令形状
-    def exec(self, argv):
+    def exec(self, argv, env=None):
         ok = {"stdout": "", "stderr": "", "exitCode": 0, "timedOut": False, "truncated": False, "durationMs": 1}
         assert len(argv) <= 256 and all(len(a) <= 4096 for a in argv), "超出 exec 参数上限"
+        if env and '"$V"' in argv[-1]:  # secret_ops.WRITE_SH：只引用变量，值在 env 里
+            if env["P"] in getattr(self, "dirs", set()):
+                return dict(ok, stdout="DIR\n")
+            line = f"{env['K']}={env['V']}\n".encode()
+            if hashlib.sha256(line).hexdigest() != env["W"]:
+                return dict(ok, stdout="BAD\n")  # 旧文件不动
+            self.files[env["P"]] = line
+            self.modes[env["P"]] = 0o600
+            return dict(ok, stdout="OK\n")
         if argv[:2] == ["python3", "-c"] and "log_exists" in argv[2]:  # rp_ops.JOB_STATUS_PY
             job = argv[3].rsplit("/", 1)[1]
             if job in getattr(self, "unreadable_logs", set()):

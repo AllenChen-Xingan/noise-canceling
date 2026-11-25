@@ -60,11 +60,16 @@ def load_key(env: Optional[dict] = None, env_file: Optional[str] = None) -> str:
     if env.get(C.KEY_NAME):
         return env[C.KEY_NAME]
     path = env_file or os.path.join(main_repo_root(), ".env.local")
+    key, failed = "", None
     try:
         with open(path, encoding="utf-8") as f:
             key = parse_env_file(f.read()).get(C.KEY_NAME, "")
     except FileNotFoundError:
         key = ""
+    except BaseException as e:  # 坏 UTF-8 等：异常会带着原始字节（含别的密钥），出了块再抛固定错误
+        failed = type(e).__name__
+    if failed:
+        raise SystemExit(f"读 {path} 出错（{failed}）；细节不显示，免得带出密钥")
     if not key:
         raise SystemExit(f"{C.KEY_NAME} 未设置：环境变量和 .env.local 里都没有")
     return key

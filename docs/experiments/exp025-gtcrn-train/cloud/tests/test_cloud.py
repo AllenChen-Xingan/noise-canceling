@@ -384,8 +384,8 @@ class TestOps(Base):
         O.put_bytes(self.cli, "pod_9", b"hello", "/f")
         orig = self.fake.exec
 
-        def bad(argv):
-            r = orig(argv)
+        def bad(argv, env=None):
+            r = orig(argv, env)
             if argv[2].startswith("dd if="):
                 r["stdout"] = "aGVsbG8h"  # "hello!"
             return r

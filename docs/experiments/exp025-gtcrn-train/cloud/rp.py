@@ -196,6 +196,13 @@ def cmd_job_wait(cli, a):
     sys.exit(st["rc"] or 0)
 
 
+def cmd_put_secret(cli, a):
+    """密钥送进机器容器盘（见 secret_ops.py）；只报位数。"""
+    import secret_ops as S
+    n = S.put_secret(cli, a.pod, a.name, a.env_file, remote=a.remote)
+    print(f"{a.name} 已写入 {a.pod}:{a.remote}（{n} 位，权限 600，容器盘，删机即没）")
+
+
 def cmd_put(cli, a):
     with open(a.local, "rb") as f:
         print(O.put_bytes(cli, a.pod, f.read(), a.remote, overwrite=a.overwrite))
@@ -313,6 +320,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("pod")
     p.add_argument("job", metavar="run_id", help="job-start 打印的运行编号")
     p.add_argument("--timeout", type=float, default=3600)
+    p = add("put-secret", cmd_put_secret, "把 .env.local 里的一个密钥送进机器容器盘（不经命令行，只报位数）")
+    p.add_argument("pod")
+    p.add_argument("name", help="键名，例如 OPENROUTER_API_KEY")
+    p.add_argument("--remote", default="/root/.env.local", help="机器里的位置，只许 /root/ 下")
     for name, fn in (("put", cmd_put), ("get", cmd_get)):
         p = add(name, fn, "传上去" if name == "put" else "取回来（核 sha256）")
         p.add_argument("pod")
