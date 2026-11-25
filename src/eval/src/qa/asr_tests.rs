@@ -93,6 +93,15 @@ fn summary_default_is_effective_route_default() {
 /// 不等到每段都去撞一次。
 #[test]
 fn from_env_refuses_when_ledger_missing() {
+    // 外面设了改后端、路由、次数的环境变量时，组装走的分支会变，这条测不准：跳过并说明（codex 本分支第 2 轮 P2 #1）
+    let set: Vec<&str> = ["VDN_ASR_BACKEND", "VDN_ASR_ROUTE", "VDN_ASR_REPEATS"]
+        .into_iter()
+        .filter(|k| std::env::var_os(k).is_some())
+        .collect();
+    if !set.is_empty() {
+        eprintln!("跳过 from_env_refuses_when_ledger_missing：环境里设了 {set:?}");
+        return;
+    }
     let root = std::env::temp_dir().join(format!("vdn-asr-fromenv-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(&root).unwrap();
