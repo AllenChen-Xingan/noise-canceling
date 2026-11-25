@@ -34,9 +34,36 @@ class Compare(unittest.TestCase):
         self.assertEqual(rb.version_diff(rb.versions()), {})
         self.assertIn("numpy", rb.version_diff(dict(rb.versions(), numpy="0.0")))
 
-    def test_code_unchanged_since_build(self):
-        """本分支上 exp013 代码与旧 build 记的哈希一致；evalcmp 的改动合进来后若变了，这条会红，要核旧输出仍逐位一致。"""
-        self.assertEqual(rb.code_drift(), [])
+    def test_code_drift_covered_by_report(self):
+        """exp013 代码和旧 build 记的不同（evalcmp 合进 early_rir 后如此）：仓里必须有一份 ok 的核对报告，且报告里新 build 用的代码就是现在的代码。"""
+        if rb.code_drift():
+            self.assertTrue(rb.drift_covered(), f"代码变了 {rb.code_drift()}，rebuild/ 里没有对着现行代码的 ok 报告")
+
+    def test_any_build_id_prefix_stripped(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "h"
+            p.write_text("ab  _tmp/exp013/20261124165427-6323/c1/mix.wav\ncd  _tmp/exp013/%s/c1/owner.wav\n" % rb.BUILD)
+            self.assertEqual(rb.read_hashes(p), {"c1/mix.wav": "ab", "c1/owner.wav": "cd"})
+
+    def test_check_existing_build_dir(self):
+        """直接核一份已出好的 build 目录（云上 main 出的那份），不再自己重跑：哈希 · exclude · 版本 · 原料都要过。"""
+        with tempfile.TemporaryDirectory() as d:
+            new = Path(d) / "20991231000000-abcd"
+            new.mkdir()
+            for f in ("manifest.json", "exclude.json"):
+                (new / f).write_bytes((rb.OLD / f).read_bytes())
+            (new / "hashes.txt").write_text((rb.OLD / "hashes.txt").read_text().replace(rb.BUILD, new.name))
+            r = rb.check_dir(new, inputs_ok=True)
+            self.assertTrue(r["ok"], r)
+            self.assertEqual(r["same"], 4540)
+            self.assertFalse(rb.check_dir(new, inputs_ok=False)["ok"])
+            m = json.loads((new / "manifest.json").read_text())
+            m["versions"]["numpy"] = "0.0"
+            (new / "manifest.json").write_text(json.dumps(m))
+            self.assertFalse(rb.check_dir(new, inputs_ok=True)["ok"])
+            (new / "manifest.json").write_bytes((rb.OLD / "manifest.json").read_bytes())
+            (new / "exclude.json").write_text("{}")
+            self.assertFalse(rb.check_dir(new, inputs_ok=True)["ok"])
 
 
 class Inputs(unittest.TestCase):
