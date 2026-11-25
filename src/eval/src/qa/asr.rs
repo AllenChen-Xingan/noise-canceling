@@ -45,11 +45,10 @@ pub fn repeats_for(sha: &str, single: bool) -> usize {
 pub const OPENROUTER: &str = "openrouter";
 pub const LOCAL42: &str = "local42";
 
-/// 一个后端：本机服务，或 OpenRouter 客户端；`Offline(名)` = 只读缓存、缺了就报错，绝不发请求（只按缓存重算，qa/rescore.rs）。
+/// 一个后端：本机服务，或 OpenRouter 客户端。
 pub enum Backend {
     Local42,
     OpenRouter(Box<super::asr_or::OpenRouter>),
-    Offline(&'static str),
 }
 
 impl Backend {
@@ -57,13 +56,12 @@ impl Backend {
         match self {
             Backend::Local42 => LOCAL42,
             Backend::OpenRouter(_) => OPENROUTER,
-            Backend::Offline(n) => n,
         }
     }
     pub fn model(&self) -> &'static str {
         match self {
-            Backend::Local42 | Backend::Offline(LOCAL42) => MODEL,
-            Backend::OpenRouter(_) | Backend::Offline(_) => super::asr_or::OR_MODEL,
+            Backend::Local42 => MODEL,
+            Backend::OpenRouter(_) => super::asr_or::OR_MODEL,
         }
     }
 }
@@ -121,8 +119,6 @@ pub struct Asr {
     pub halted: Option<String>,
     /// 已计入 checked / unstable 的音频（sha256 | 型号），同一条只计一次
     counted: std::collections::BTreeSet<String>,
-    /// 只读缓存的后端没命中的次数（> 0 时重算结果不能当整套重跑用）
-    pub offline_misses: usize,
 }
 
 pub use super::asr_or::is_permanent;
@@ -163,7 +159,6 @@ impl Asr {
             failed: BTreeMap::new(),
             halted: None,
             counted: std::collections::BTreeSet::new(),
-            offline_misses: 0,
         }
     }
 
@@ -179,20 +174,6 @@ impl Asr {
         cache_path: PathBuf,
         root: &Path,
         ledger: Option<PathBuf>,
-    ) -> Result<Asr, String> {
-        Asr::build(cache_path, root, ledger, false)
-    }
-
-    /// 只读缓存的组装：后端、路由、次数照环境变量（与整套重跑同一套），后端一律换成 [`Backend::Offline`]；不要密钥、不碰账本。
-    pub fn offline_from_env(cache_path: PathBuf) -> Result<Asr, String> {
-        Asr::build(cache_path, Path::new("."), None, true)
-    }
-
-    fn build(
-        cache_path: PathBuf,
-        root: &Path,
-        ledger: Option<PathBuf>,
-        offline: bool,
     ) -> Result<Asr, String> {
         let default: &'static str = match std::env::var("VDN_ASR_BACKEND").as_deref() {
             Err(_) | Ok("openrouter") => OPENROUTER,
@@ -213,8 +194,6 @@ impl Asr {
         let mut backends = Vec::new();
         for w in wanted {
             match w {
-                OPENROUTER if offline => backends.push(Backend::Offline(OPENROUTER)),
-                LOCAL42 if offline => backends.push(Backend::Offline(LOCAL42)),
                 OPENROUTER => {
                     let key = super::asr_or::load_key(root)
                         .ok_or("没有 OPENROUTER_API_KEY（环境变量或仓库根 .env.local）")?;
@@ -303,12 +282,6 @@ impl Asr {
         let key = format!("{sha}|{model}|{lang}|{rep}");
         if let Some(t) = self.cache.get(&key) {
             return Ok(t.clone());
-        }
-        if let Backend::Offline(_) = b {
-            self.offline_misses += 1;
-            return Err(format!(
-                "缓存里没有这条转写（{rep} 次）：只按缓存重算，不发请求"
-            ));
         }
         if backend == OPENROUTER {
             if let Some(h) = &self.halted {
@@ -526,7 +499,65 @@ impl Asr {
     }
 }
 
-pub use super::asr_text::{edit_ops, same_text, tokens};
+/// 两次转写算不算一样：按评分用的分词（[`tokens`]）比，大小写、标点、空白的差别不算（大总管 2026-11-25 冒烟：
+/// 原先逐字比原文，评分看不见的差别也判成不一致）。
+pub fn same_text(a: &str, b: &str, lang: &str) -> bool {
+    tokens(a, lang) == tokens(b, lang)
+}
+
+/// 分词：中文按字，英文按词（小写、只留字母数字与撇号）。
+pub fn tokens(text: &str, lang: &str) -> Vec<String> {
+    if lang == "zh" {
+        text.chars()
+            .filter(|c| c.is_alphanumeric())
+            .map(|c| c.to_lowercase().to_string())
+            .collect()
+    } else {
+        text.split_whitespace()
+            .map(|w| {
+                w.chars()
+                    .filter(|c| c.is_alphanumeric() || *c == '\'')
+                    .collect::<String>()
+                    .to_lowercase()
+            })
+            .filter(|w| !w.is_empty())
+            .collect()
+    }
+}
+
+/// Levenshtein 对齐，返回 (删除, 替换, 插入)。回溯优先级与 exp003 `edit_ops` 一致：对角 → 删除 → 插入。
+pub fn edit_ops(r: &[String], h: &[String]) -> (usize, usize, usize) {
+    let (n, m) = (r.len(), h.len());
+    let mut d = vec![vec![0usize; m + 1]; n + 1];
+    for (i, row) in d.iter_mut().enumerate() {
+        row[0] = i;
+    }
+    for (j, v) in d[0].iter_mut().enumerate() {
+        *v = j;
+    }
+    for i in 1..=n {
+        for j in 1..=m {
+            let sub = d[i - 1][j - 1] + usize::from(r[i - 1] != h[j - 1]);
+            d[i][j] = (d[i - 1][j] + 1).min(d[i][j - 1] + 1).min(sub);
+        }
+    }
+    let (mut i, mut j) = (n, m);
+    let (mut del, mut sub, mut ins) = (0, 0, 0);
+    while i > 0 || j > 0 {
+        if i > 0 && j > 0 && d[i][j] == d[i - 1][j - 1] + usize::from(r[i - 1] != h[j - 1]) {
+            sub += usize::from(r[i - 1] != h[j - 1]);
+            i -= 1;
+            j -= 1;
+        } else if i > 0 && d[i][j] == d[i - 1][j] + 1 {
+            del += 1;
+            i -= 1;
+        } else {
+            ins += 1;
+            j -= 1;
+        }
+    }
+    (del, sub, ins)
+}
 
 #[cfg(test)]
 #[path = "asr_conc_tests.rs"]

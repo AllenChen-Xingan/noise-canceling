@@ -3,11 +3,9 @@
 pub mod asr;
 pub mod asr_ledger;
 pub mod asr_or;
-pub mod asr_text;
 pub mod dnsmos;
 pub mod nrmos;
 mod nrmos_v;
-pub mod rescore;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -32,9 +30,6 @@ pub struct EatRow {
     pub out_del: usize,
     pub out_sub: usize,
 }
-
-/// 要识别的音频：名字（`<任务>-clean` · `<任务>-mix` · `<任务>-<系统>`）→ 落盘的路径与 sha256，或落盘失败的原因。
-pub type Audio = Vec<(String, Result<(PathBuf, String), String>)>;
 
 /// 参考分词 + 原声的 (删, 替, 插)。
 type RefEntry = Result<(Vec<String>, (usize, usize, usize)), String>;
@@ -74,17 +69,11 @@ impl QaExtra {
 
     /// 同 [`QaExtra::new`]，可显式给识别费账本路径（`scorecard --asr-ledger`）。
     pub fn with_ledger(tmp: PathBuf, ledger: Option<PathBuf>) -> QaExtra {
-        let asr = asr::Asr::from_env_with(
+        let (asr, asr_err) = match asr::Asr::from_env_with(
             tmp.join("asr_cache.json"),
             &crate::suite::main_root(),
             ledger,
-        );
-        QaExtra::with_asr(tmp, asr)
-    }
-
-    /// 识别后端由调用方给（只按缓存重算用 [`asr::Asr::offline_from_env`]）。
-    pub fn with_asr(tmp: PathBuf, asr: Result<asr::Asr, String>) -> QaExtra {
-        let (asr, asr_err) = match asr {
+        ) {
             Ok(a) => (Some(a), None),
             Err(e) => (None, Some(e)),
         };
@@ -133,13 +122,10 @@ impl QaExtra {
         &mut self,
         clip: &str,
         name: &str,
-        audio: &Audio,
+        x: &[f32],
         lang: &str,
     ) -> Result<Vec<String>, String> {
-        let (p, sha) = audio.iter().find(|(n, _)| n == name).map_or_else(
-            || Err(format!("内部错误：没有 {name} 的音频")),
-            |(_, r)| r.clone(),
-        )?;
+        let (p, sha) = self.dump(name, x)?;
         let why = self
             .asr_err
             .clone()
@@ -153,41 +139,35 @@ impl QaExtra {
     }
 
     fn eat(&mut self, sys: &str, task: &Task, clip: &Clip, out: &[f32], p: &Params) -> Score {
+        const ID: &str = "V-EAT-ASR";
+        const U: &str = "百分点";
         // 这一段要识别的几条（参考转写没缓存过才带上干净人声与原声）先一起并发发出去（大总管 2026-11-25：8 路）
         let mut want: Vec<(String, &[f32])> = vec![(format!("{}-{sys}", task.id), out)];
         if !self.refs.contains_key(&task.id) {
             want.push((format!("{}-clean", task.id), &clip.clean));
             want.push((format!("{}-mix", task.id), &clip.mix));
         }
-        let audio: Audio = want
+        let items: Vec<_> = want
             .iter()
-            .map(|(n, x)| (n.clone(), self.dump(n, x)))
-            .collect();
-        self.eat_on(sys, task, p, &audio)
-    }
-
-    /// 吃字打分的后半段：音频已落盘（名字 → 路径与 sha256）。整套跑时由 [`QaExtra::eat`] 落盘后调用；
-    /// 只按缓存重算时由 [`rescore::find_wav`] 找到旧的落盘文件后调用。两条路走同一段代码，结果才能逐字节相同。
-    pub fn eat_on(&mut self, sys: &str, task: &Task, p: &Params, audio: &Audio) -> Score {
-        const ID: &str = "V-EAT-ASR";
-        const U: &str = "百分点";
-        let items: Vec<_> = audio
-            .iter()
-            .filter_map(|(_, r)| r.as_ref().ok())
-            .map(|(p, sha)| (p.clone(), sha.clone(), task.lang.clone(), task.id.clone()))
+            .filter_map(|(name, x)| self.dump(name, x).ok())
+            .map(|(p, sha)| (p, sha, task.lang.clone(), task.id.clone()))
             .collect();
         if let Some(a) = self.asr.as_mut() {
             a.prefetch(&items);
         }
         if !self.refs.contains_key(&task.id) {
             let r = (|| {
-                let rt =
-                    self.transcribe(&task.id, &format!("{}-clean", task.id), audio, &task.lang)?;
+                let rt = self.transcribe(
+                    &task.id,
+                    &format!("{}-clean", task.id),
+                    &clip.clean,
+                    &task.lang,
+                )?;
                 if rt.is_empty() {
                     return Err("参考转写为空".to_string());
                 }
                 let mt =
-                    self.transcribe(&task.id, &format!("{}-mix", task.id), audio, &task.lang)?;
+                    self.transcribe(&task.id, &format!("{}-mix", task.id), &clip.mix, &task.lang)?;
                 let ops = asr::edit_ops(&rt, &mt);
                 Ok((rt, ops))
             })();
@@ -198,7 +178,7 @@ impl QaExtra {
             Some(Err(e)) => return Score::unknown(ID, U, Better::Lower, e.clone()),
             None => return Score::unknown(ID, U, Better::Lower, "内部错误"),
         };
-        let ot = match self.transcribe(&task.id, &format!("{}-{sys}", task.id), audio, &task.lang) {
+        let ot = match self.transcribe(&task.id, &format!("{}-{sys}", task.id), out, &task.lang) {
             Ok(t) => t,
             Err(e) => return Score::unknown(ID, U, Better::Lower, e),
         };
