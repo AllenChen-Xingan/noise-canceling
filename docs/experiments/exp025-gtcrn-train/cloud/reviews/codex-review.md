@@ -24,3 +24,20 @@
 | P2 #12 | 假接口不模拟关键失败 | 上面新测试补了 POST 失败、写账失败、容器重启、下载越线；账户切换未补，留 issue | — |
 
 测试：63 条全过（`python3 -m unittest discover -s tests`）。
+
+## 第 2 轮（2026-11-25，模型 gpt-6-astra，只读沙箱）
+
+结果：P0×0 P1×4 P2×3，另有 1 处引用不符。都是第 1 轮问题的延伸，核实属实。
+
+| 编号 | 问题 | 处理 | 测试 |
+|---|---|---|---|
+| P1 #1 | 只在建盘时查一个月盘费，之后开机不再预留 | 没删的网络盘每次都按往后一个月盘费算进最坏总额（`volume_reserve`）；README 同步 | `test_budget_counts_pods_volume_and_projection` · `test_deleted_volume_has_no_reserve` |
+| P1 #2 | exec 遇 503 仍自动重发 | exec 只在 409（容器在启动）、429（限流）时重发，这两种肯定没执行 | `test_exec_not_resent_on_503` |
+| P1 #3 | 登记看门狗、建盘写账失败不在保护内 | `bring_up` 从建机后到 exec 就绪整段保护，出错先删机；建盘写账失败就删掉空盘 | `test_register_failure_after_create_deletes_pod` · `test_volume_ledger_failure_deletes_new_volume` |
+| P1 #4 | 看门狗跨账号、跨账本复用 | pid 文件记「密钥指纹 + 账本绝对路径」；已有看门狗管的是别的，开机前就拒 | `test_watchdog_for_other_account_refuses_before_create` |
+| P2 #5 | 断点续传时整包重算、下完不复查 | 只预留还差的字节；下完查 `.aria2` 标记和实际用量 | `test_partial_file_only_reserves_missing_bytes` |
+| P2 #6 | 先截断后脱敏会留密钥残片 | 先脱敏再截断 | `test_redaction_happens_before_truncation` |
+| P2 #7 | 假接口仍缺有状态故障 | 留 issue（队列状态、执行后响应丢失、caffeinate 包装进程） | — |
+| 不符 | README 说容器只跑 sleep | 改成「睡到截止时刻再自删」 | — |
+
+测试：71 条全过。
