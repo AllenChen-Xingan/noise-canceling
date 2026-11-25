@@ -39,6 +39,11 @@ pub fn vote(texts: &[&str], lang: &str) -> Vote {
     }
 }
 
+/// 同 [`vote`]，收自有字符串。
+pub fn vote_on(texts: &[String], lang: &str) -> Vote {
+    vote(&texts.iter().map(String::as_str).collect::<Vec<_>>(), lang)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

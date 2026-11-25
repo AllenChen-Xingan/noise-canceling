@@ -369,21 +369,20 @@ impl Asr {
         lang: &str,
         clip: &str,
     ) -> Result<(String, bool), String> {
-        use super::asr_vote::{TIE_BREAK_REP, Vote, vote};
+        use super::asr_vote::{TIE_BREAK_REP, Vote, vote_on};
         let backend = self.backend_for(clip);
         let model = self.backends.get(backend).map_or("?", Backend::model);
         let id = format!("{sha}|{model}");
-        let strs = |t: &[String]| t.iter().map(String::as_str).collect::<Vec<_>>();
         let mut texts = vec![self.once(path, sha, lang, 1, backend)?];
         let mut v = Vote::Use(0);
         if repeats_for(sha, self.single) >= 2 {
             texts.push(self.once(path, sha, lang, 2, backend)?);
             // 前两次的一致率照旧计（决定以后能不能改成 1 次）
             self.count_check(id.clone(), same_text(&texts[1], &texts[0], lang));
-            v = vote(&strs(&texts), lang);
+            v = vote_on(&texts, lang);
             if v == Vote::NeedTieBreak {
                 texts.push(self.once(path, sha, lang, TIE_BREAK_REP, backend)?);
-                v = vote(&strs(&texts), lang);
+                v = vote_on(&texts, lang);
             }
         }
         let (text, ok) = match v {
@@ -396,101 +395,6 @@ impl Asr {
         let cid = clip.split('#').next().unwrap_or(clip).to_string();
         self.used.entry(backend).or_default().insert(cid);
         Ok((text, ok))
-    }
-
-    /// 预取：把这批音频（路径, sha256, 语言, 片段 id）里走 OpenRouter、还没缓存的各次转写**并发**发出去，
-    /// 结果按 sha256 写进缓存。之后 [`Asr::transcribe`] 照旧逐条取，都命中缓存，所以成绩与完成先后无关。
-    /// 分两批：先发缺的前几次；前两次分词后不同的，再并发补第 3 次（A，`asr_vote`）。
-    /// 预取失败的那几次不写缓存，[`Asr::transcribe`] 会再串行试一次并报出原因。本机后端不预取。
-    pub fn prefetch(&mut self, items: &[(PathBuf, String, String, String)]) {
-        use super::asr_vote::{TIE_BREAK_REP, Vote, vote};
-        let model = super::asr_or::OR_MODEL;
-        let key = |sha: &str, lang: &str, r: usize| format!("{sha}|{model}|{lang}|{r}");
-        let mine: Vec<_> = items
-            .iter()
-            .filter(|(_, _, _, clip)| self.backend_for(clip) == OPENROUTER)
-            .map(|(p, sha, lang, _)| (p, sha, lang, repeats_for(sha, self.single)))
-            .collect();
-        let first: Vec<_> = mine
-            .iter()
-            .flat_map(|&(p, sha, lang, n)| (1..=n).map(move |r| (p, sha, lang, r)))
-            .collect();
-        self.send(&first);
-        let texts = |a: &Asr, sha: &str, lang: &str, upto: usize| -> Option<Vec<String>> {
-            (1..=upto)
-                .map(|r| a.cache.get(&key(sha, lang, r)).cloned())
-                .collect()
-        };
-        let split = |t: &[String]| t.iter().map(String::as_str).collect::<Vec<_>>();
-        let third: Vec<_> = mine
-            .iter()
-            .filter(|&&(_, sha, lang, n)| {
-                n >= 2
-                    && texts(self, sha, lang, 2)
-                        .is_some_and(|t| vote(&split(&t), lang) == Vote::NeedTieBreak)
-            })
-            .map(|&(p, sha, lang, _)| (p, sha, lang, TIE_BREAK_REP))
-            .collect();
-        self.send(&third);
-        // 到手的当场计入复核与判法（评分那边可能因为参考转写为空就提前返回，不能靠它计；codex 第 5 轮 P2 #4）
-        for &(_, sha, lang, n) in &mine {
-            let Some(t) = texts(self, sha, lang, 2).filter(|_| n >= 2) else {
-                continue;
-            };
-            let id = format!("{sha}|{model}");
-            self.count_check(id.clone(), same_text(&t[1], &t[0], lang));
-            if let Some(t3) =
-                texts(self, sha, lang, TIE_BREAK_REP).filter(|_| !same_text(&t[1], &t[0], lang))
-            {
-                let ok = matches!(vote(&split(&t3), lang), Vote::Use(_));
-                self.votes.insert(id, ok);
-            }
-        }
-    }
-
-    /// 并发发一批（路径, sha256, 语言, 第几次）：已缓存、已失败（codex 第 6 轮 P1 #1）、本批已排上的都不再发；停发后一个不发。
-    fn send(&mut self, want: &[(&PathBuf, &String, &String, usize)]) {
-        let mut keys = Vec::new();
-        let mut jobs = Vec::new();
-        for &(path, sha, lang, rep) in want {
-            let key = format!("{sha}|{}|{lang}|{rep}", super::asr_or::OR_MODEL);
-            if self.cache.contains_key(&key)
-                || self.failed.contains_key(&key)
-                || keys.contains(&key)
-            {
-                continue;
-            }
-            let Ok((x, sr)) = crate::wav::read(path) else {
-                continue;
-            };
-            keys.push(key);
-            jobs.push((x, sr, lang.clone()));
-        }
-        let workers = self.workers;
-        let results = match self.backends.get_mut(OPENROUTER) {
-            Some(Backend::OpenRouter(c)) if !jobs.is_empty() && self.halted.is_none() => {
-                c.transcribe_many(&jobs, workers)
-            }
-            _ => Vec::new(),
-        };
-        self.sync_review();
-        let keys = if results.is_empty() { Vec::new() } else { keys };
-        let mut any = false;
-        for (k, r) in keys.into_iter().zip(results) {
-            match r {
-                Ok(t) => {
-                    self.calls += 1;
-                    self.cache.insert(k, t);
-                    any = true;
-                }
-                Err(e) => {
-                    self.fail(k, e);
-                }
-            }
-        }
-        if any {
-            self.save();
-        }
     }
 
     /// 客户端账本被标了「待核」（费用未知）时，Asr 也算停发，原因进 `meta.asr.halted`（codex 第 8 轮 P2 #2）。
@@ -599,6 +503,9 @@ pub fn edit_ops(r: &[String], h: &[String]) -> (usize, usize, usize) {
     }
     (del, sub, ins)
 }
+
+#[path = "asr_prefetch.rs"]
+mod prefetch;
 
 #[cfg(test)]
 #[path = "asr_conc_tests.rs"]
