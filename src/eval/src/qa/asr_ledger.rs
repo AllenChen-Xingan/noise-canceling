@@ -16,6 +16,10 @@ pub struct Ledger {
     /// 已经发出、还没结算的请求预留的金额
     #[serde(default)]
     pub reserved_usd: f64,
+    /// 待核：有请求的费用不知道（连不上、超时、返回读不出或没带金额）。设了就拒发，重启也一样，
+    /// 要人核对 OpenRouter 后台的实际花费、改正 `spent_usd` 与 `reserved_usd`、再删掉这一项（codex 第 7 轮 P1 #2）
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub review: Option<String>,
 }
 
 fn lock_path(p: &Path) -> PathBuf {
@@ -64,6 +68,11 @@ pub fn update<T>(p: &Path, f: impl FnOnce(&mut Ledger) -> Result<T, String>) -> 
 /// 预留 `est` 美元：放得下（`spent + reserved + est ≤ budget`）就记上并返回 `Ok`，放不下返回 `Err`（不发）。
 pub fn reserve(p: &Path, est: f64, budget: f64) -> Result<(), String> {
     update(p, |l| {
+        if let Some(r) = &l.review {
+            return Err(format!(
+                "识别费账本待核（{r}）：停发，等人核对后清掉 review"
+            ));
+        }
         if l.spent_usd + l.reserved_usd + est > budget {
             return Err(format!(
                 "识别费已花 {:.6} 美元、在途预留 {:.6} 美元，再发这一条（估 {est:.6}）会超过上限 {budget} 美元：停发",
@@ -71,6 +80,16 @@ pub fn reserve(p: &Path, est: f64, budget: f64) -> Result<(), String> {
             ));
         }
         l.reserved_usd += est;
+        Ok(())
+    })
+}
+
+/// 标「待核」：费用不知道的那条，预留不退，并让之后的预留一律拒绝。
+pub fn flag_review(p: &Path, why: &str) -> Result<(), String> {
+    update(p, |l| {
+        if l.review.is_none() {
+            l.review = Some(why.to_string());
+        }
         Ok(())
     })
 }
