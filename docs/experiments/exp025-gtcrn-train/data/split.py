@@ -16,7 +16,6 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import soundfile as sf
 
 HERE = Path(__file__).resolve().parent
 RULES = HERE / "split_rules.json"
@@ -156,31 +155,6 @@ def assign_units(units, frac, seed, source, order, strata=None):
 
 def time_segments(frames, spec):
     return {k: [int(round(a * frames)), int(round(b * frames))] for k, a, b in spec}
-
-
-def sha256(path, buf=1 << 20):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for b in iter(lambda: f.read(buf), b""):
-            h.update(b)
-    return h.hexdigest()
-
-
-def check_expect(name, rule, files):
-    """文件数（与说话人数）对不上上游公布的数目就停：通配符写错时不写切分表。"""
-    e = rule.get("expect", {})
-    n = len(files)
-    bad = []
-    if "files" in e and n != e["files"]:
-        bad.append(f"文件 {n} 个，应为 {e['files']}")
-    if "min_files" in e and n < e["min_files"]:
-        bad.append(f"文件 {n} 个，应至少 {e['min_files']}")
-    if "units" in e and rule["unit"] == "speaker":
-        u = len({unit_of(f, rule) for f in files})
-        if u != e["units"]:
-            bad.append(f"说话人 {u} 名，应为 {e['units']}")
-    if bad:
-        raise SystemExit(f"{name}：{'；'.join(bad)}（{e.get('src', '')}）。不写切分表；请把 split.py --inventory 的输出发给 traindata")
 
 
 def split_source(root, name, rule, seed, order, workers=32, cache=None):
