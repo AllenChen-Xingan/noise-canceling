@@ -67,6 +67,7 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 | 样本不足 | 与 verifier 同条件跳过、不进分母；整批无效时该项 = 0 | 通过 | `test_short_samples_skipped_not_in_denominator` |
 | 默认开关 = 官方损失 | 逐值相同 | 通过 | `test_trainloss_defaults_equal_official_hybrid` |
 | L_pump 和 V-PUMPV 正本对拍 | 有效 / 待测一致；方差差 f64 ≤ 1e-6、f32 ≤ 2e-3（相对，dB²）；有声窗数一致 | 12 段夹具（含 2 Hz ±6 dB 抖动、整体增益、有旁人、段长不整除），全过 | `test_losses_parity.py::test_pumpv_*` |
+| 老运行记录能续训 | run.json 缺 `loss.w_pump` / `loss.pump_on` 时按默认值（0 / all）算，不算「配置改了」；真开了 w_pump 仍拒绝续训 | 通过 | `test_pump_loss.py::test_old_run_json_*` |
 | w_pump = 0 训练逐值不变 | 检查点与默认配置逐值相同，这一项与主讲人掩码都不被调用；另对改动前提交 7eecbbe8 实测 6 步训练检查点最大差 0、日志逐行相同 | 通过 | `test_pump_loss.py` |
 | 续训 = 不中断 | 先训 3 步再续到 6 步，和一口气训 6 步权重逐值相同 | **只在 CPU + 合成数据上**通过；云上 GPU + 真数据待测（现状页「转交」1） | `test_resume_equals_uninterrupted` |
 | 第 k 步拿第 k 批 | 错位就报错停下 | 通过 | `test_train_stops_on_batch_misalignment` |
@@ -98,6 +99,13 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 云上 H100 冒烟的方案（大总管已批，开机前先过 codex）：`plan-h100-smoke.md`。开发份参照用 `smoke.py --write-known-dev` 在 CPU 机上算；续训核对用 `cmp_ckpt.py`。
 
 报告：`smoke_reports/20261124-cpu-synthetic-v2.json`（第 2 版判据，历史）；`20261124-cpu-synthetic.json` 是自审前旧判据那次。
+
+## 人声忽大忽小项（`loss.w_pump`，D107）
+
+- 罚的就是 V-PUMPV 的读数：有声 100 ms 窗上「输出投影到干净轨的能量 ÷ 干净轨能量」（dB）的方差（dB²）。口径逐项照正本 `src/eval/src/verifiers/speech.rs` `v_pumpv`，由 `parity_rs` 对拍
+- 默认 `w_pump: 0`（关）。只收有限非负数，没有 "auto"
+- `pump_on: all`（默认）：所有训练段都算。大总管定（2026-11-25，技术题）：用户在乎的是有噪声时人声稳不稳；成绩单在只输入干净人声时量 V-PUMPV，只是因为那样好测
+- `pump_on: clean_only`：只算「输入几乎就是目标」的段（输入 − 目标 的能量比目标低 ≥ 30 dB，阈值 AI 定），给消融用。注意（推断，读配方）：现行配方 SNR 在 −5 到 15 dB，每段都加混响，所以几乎没有这样的段，这一项会一直是 0；日志里的 `pump_valid` 会显示 0
 
 ## 默认值与依据
 
