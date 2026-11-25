@@ -9,7 +9,7 @@
 **容差模式**（跨平台，2026-11-25 大总管定）：x86_64 与 arm64 的浮点数学库舍入不同，逐位一致做不到
 （见 `crosscheck-20261125.md`）。改为抽几段两边都有的音频逐轨比，三条都满足才算过：
 - 样本数相等
-- 每样本差 ≤ `TOL_ULP` 个 32 位浮点最小单位（按两边中较大的幅度算；wav 存的就是 32 位浮点）
+- 每样本差 ≤ `TOL_ULP` × 整轨峰值处的 32 位浮点最小单位（两边峰值取大的，每轨一个数；wav 存的就是 32 位浮点）
 - 整轨差信号比原信号低 ≥ `TOL_DIFF_DB` dB
 manifest 的素材 / 代码 / 参数哈希仍须逐位相等。阈值的正本是本文件的 `TOL_ULP` 与 `TOL_DIFF_DB`。
 
@@ -27,7 +27,8 @@ from scipy.io import wavfile
 
 # 跨平台容差（大总管 2026-11-25 定，在看到结果之后改；原阈值「逐样本绝对差 ≤ 1e-9」比 wav 的 32 位浮点精度
 # 细 60 倍：幅度 0.5–1 的样本最小单位是 5.96e-8。依据是数据的存储精度，见 crosscheck-20261125.md）
-TOL_ULP = 4  # 每样本差最多几个 32 位浮点最小单位
+# 第 3 版（最后一版）：最小单位按整轨峰值算。第 2 版按每个样本自己的幅度算，接近 0 的样本最小单位极小，必然失真
+TOL_ULP = 4  # 每样本差最多是整轨峰值处 32 位浮点最小单位的几倍
 TOL_DIFF_DB = 120  # 整轨差信号至少比原信号低多少 dB
 MANIFEST_KEYS = ("material_index", "code_sha256", "params_sha256", "base_seed", "clips")
 
@@ -71,10 +72,11 @@ def _read(p):
 
 
 def _ulp_and_db(x, y):
-    """(每样本差相当于几个 32 位浮点最小单位的最大值, 整轨差信号对原信号的 dB)。两轨全零时为 (0, −inf)。"""
+    """(每样本最大差折合「整轨峰值处 32 位浮点最小单位」的倍数, 整轨差信号对原信号的 dB)。两轨全零时为 (0, −inf)。"""
     d = np.abs(x - y)
-    unit = np.spacing(np.maximum(np.abs(x), np.abs(y)).astype(np.float32)).astype(np.float64)
-    ulps = float(np.max(d / unit)) if len(d) else 0.0
+    peak = max(float(np.max(np.abs(x))), float(np.max(np.abs(y)))) if len(d) else 0.0
+    unit = float(np.spacing(np.float32(peak)))
+    ulps = float(np.max(d)) / unit if len(d) else 0.0
     e_sig, e_diff = float(np.sum(x * x)), float(np.sum(d * d))
     if e_diff == 0.0:
         return ulps, float("-inf")
@@ -101,7 +103,7 @@ def tolerance_check(a, root_a, b, root_b, clips):
             ulps, db = _ulp_and_db(x, y)
             stats[(cid, k)] = (ulps, db)
             if not ulps <= TOL_ULP:
-                errs.append(f"{cid} · {k} 每样本差最多 {ulps:.3g} 个 32 位浮点最小单位 > {TOL_ULP}")
+                errs.append(f"{cid} · {k} 每样本差最多 {ulps:.3g} 个（整轨峰值处的）32 位浮点最小单位 > {TOL_ULP}")
             if not db <= -TOL_DIFF_DB:
                 errs.append(f"{cid} · {k} 差信号比原信号只低 {-db:.1f} dB < {TOL_DIFF_DB} dB")
     tolerance_check.last = stats
