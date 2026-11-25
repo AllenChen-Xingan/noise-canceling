@@ -145,6 +145,11 @@ fn read(p: &str, sys: Option<&str>, side: &str) -> Result<(Vec<super::ClipRow>, 
     Ok((rows, crate::wav::sha256(path)?))
 }
 
+/// 选系统之后一个文件里只剩一个系统（[`select`] 保证）：取它的名字。
+fn system_of(rows: &[super::ClipRow]) -> &str {
+    rows.first().map_or("", |r| r.system.as_str())
+}
+
 /// 命令行入口（`args` 不含子命令名）。返回报告目录。
 pub fn cli(args: &[String], run_id: &str, default_out: PathBuf) -> Result<PathBuf, String> {
     let need =
@@ -168,13 +173,20 @@ pub fn cli(args: &[String], run_id: &str, default_out: PathBuf) -> Result<PathBu
     )?;
     let out = arg(args, "--out").map(PathBuf::from).unwrap_or(default_out);
     let meta: Value = json!({
-        "run_id": run_id, "a": pa, "a_sha256": sha_a, "b": pb, "b_sha256": sha_b, "by_scene": by_scene,
+        "run_id": run_id, "a": pa, "a_sha256": sha_a, "a_system": system_of(&a), "b": pb, "b_sha256": sha_b,
+        "b_system": system_of(&b), "by_scene": by_scene,
         "noise": noise.as_ref().map(|((_, sx), (_, sy), x, y)| json!({"a": x, "a_sha256": sx, "b": y, "b_sha256": sy})),
     });
     let js = serde_json::to_string_pretty(&json!({"meta": meta, "scopes": cmp}))
         .map_err(|e| e.to_string())?
         + "\n";
-    let md = to_markdown(&cmp, &pa, &pb, noise.is_some());
+    // 报告里写明两边实际比的系统（codex 第 2 轮 P2 #1：同一文件选不同系统时，只看路径分不出谁是基线）
+    let md = to_markdown(
+        &cmp,
+        &format!("{pa}（系统 {}）", system_of(&a)),
+        &format!("{pb}（系统 {}）", system_of(&b)),
+        noise.is_some(),
+    );
     for f in FILES {
         if out.join(f).exists() {
             return Err(format!(
@@ -245,6 +257,24 @@ mod tests {
         cli(&s(&["--a", &p, "--b", &p]), "t", out.clone()).unwrap();
         assert!(out.join("compare.md").exists() && out.join("compare.json").exists());
         assert!(cli(&s(&["--a", &p, "--b", &p]), "t", out).is_err());
+        // 同一个多系统文件，两边选不同系统：JSON 与 Markdown 都写明谁是基线、谁是候选；交换后跟着换
+        let mut two = row.clone();
+        two.system = "ref".into();
+        let jl2 = dir.join("two.jsonl");
+        std::fs::write(&jl2, super::super::load::to_jsonl(&[row.clone(), two]).unwrap()).unwrap();
+        let p2 = jl2.to_string_lossy().to_string();
+        for (sa, sb, tag) in [("gtcrn", "ref", "o3"), ("ref", "gtcrn", "o4")] {
+            let o = dir.join(tag);
+            let args = s(&["--a", &p2, "--b", &p2, "--system-a", sa, "--system-b", sb]);
+            cli(&args, "t", o.clone()).unwrap();
+            let js: Value = serde_json::from_str(&std::fs::read_to_string(o.join("compare.json")).unwrap()).unwrap();
+            assert_eq!((js["meta"]["a_system"].as_str(), js["meta"]["b_system"].as_str()), (Some(sa), Some(sb)));
+            let md = std::fs::read_to_string(o.join("compare.md")).unwrap();
+            assert!(md.contains(&format!("（系统 {sa}）`").replace("`", "")) || md.contains(&format!("系统 {sa}")), "{md}");
+            let ia = md.find(&format!("系统 {sa}")).unwrap();
+            let ib = md.find(&format!("系统 {sb}")).unwrap();
+            assert!(ia < ib, "基线在前");
+        }
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
