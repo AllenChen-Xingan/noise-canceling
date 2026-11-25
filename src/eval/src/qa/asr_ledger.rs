@@ -24,6 +24,9 @@ pub struct Ledger {
     /// 这本账是怎么建的（[`init`] 写；旧账本没有）
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub created: Option<Created>,
+    /// 手动更正记录（清 review 时由 exp025 baseline/clear_review.py 追加）：程序原样保留，不解读
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub adjustments: Vec<serde_json::Value>,
     /// 待核：有请求的费用不知道（连不上、超时、返回读不出或没带金额）。设了就拒发，重启也一样，
     /// 要人核对 OpenRouter 后台的实际花费、改正 `spent_usd` 与 `reserved_usd`、再删掉这一项（codex 第 7 轮 P1 #2）
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -375,6 +378,22 @@ mod tests {
                 .contains("已存在"),
             "已有账本时要求新建 = 报错，不覆盖"
         );
+    }
+
+    /// 手动更正（清 review 的脚本写的 `adjustments`）在程序之后每次写账本时都要留着，不能被丢掉。
+    #[test]
+    fn manual_adjustments_survive_updates() {
+        let p = tmp("adj");
+        init(&p, Created::test()).unwrap();
+        let mut v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+        v["adjustments"] = serde_json::json!([{"kind": "review-cleared", "worst_usd": 0.000096}]);
+        std::fs::write(&p, v.to_string()).unwrap();
+        reserve(&p, 0.01, 1.0).unwrap();
+        settle(&p, 0.01, Some(0.001)).unwrap();
+        let back: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+        assert_eq!(back["adjustments"][0]["kind"], "review-cleared", "{back}");
     }
 
     /// codex 第 1 轮（本分支）P1 #2 + 自审：错误会进 `meta.asr.error`（成绩单进公开仓库）。错误信息里只许出现账本文件名，
