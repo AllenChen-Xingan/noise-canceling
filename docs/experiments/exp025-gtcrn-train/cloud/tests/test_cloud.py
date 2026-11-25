@@ -65,6 +65,14 @@ class TestClient(Base):
         self.assertEqual(cm.exception.status, 404)
         self.assertNotIn(FAKE_KEY, str(cm.exception))
 
+    def test_echoed_key_is_redacted_in_errors(self):
+        # 评审第 1 轮 #10：服务把密钥回显进错误详情，异常里也看不到
+        cli = Client(FAKE_KEY, transport=lambda *a: (401, {}, json.dumps({"detail": f"bad key {FAKE_KEY}"}).encode()))
+        with self.assertRaises(ApiError) as cm:
+            cli.get("/x")
+        self.assertNotIn(FAKE_KEY, str(cm.exception))
+        self.assertIn("<key>", str(cm.exception))
+
     def test_retry_after_then_success(self):
         seq = [(409, {"Retry-After": "1"}, b"{}"), (200, {}, b'{"ok": 1}')]
         slept = []
@@ -370,6 +378,21 @@ class TestCli(Base):
         with self.assertRaises(SystemExit):
             self.run_cli("up", "--yes", "--cpu", "--dc", C.DATA_CENTER, "--no-volume")
         self.assertFalse([c for c in self.fake.calls if c[:2] == ("POST", "/v2/pods")])
+
+    def test_reap_skips_ledger_pod_renamed_away_from_prefix(self):
+        # 评审第 1 轮 #1：账上未关、云上还在但名字不是 vdn- 开头的，不删
+        self.run_cli("up", "--yes", "--dc", "US-KS-2", "--no-volume")
+        pid = next(iter(self.fake.pods))
+        self.fake.pods[pid]["name"] = "someone-else"
+        out, _ = self.run_cli("reap")
+        self.assertIn(pid, self.fake.pods)
+        self.assertIn("跳过", out)
+
+    def test_job_with_empty_rc_is_not_done(self):
+        # 评审第 1 轮 #11：.rc 空着或乱码不算完
+        self.fake.jobs["j"] = ("", "partial\n")
+        st = O.job_status(self.cli, "pod_1", "j")
+        self.assertEqual((st["done"], st["rc"]), (False, None))
 
     def test_reap_and_spend(self):
         self.run_cli("up", "--yes", "--dc", "US-KS-2", "--no-volume")

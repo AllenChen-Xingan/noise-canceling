@@ -42,7 +42,8 @@ class TestPredownload(unittest.TestCase):
             src = os.path.join(root, "sources.json")
             files = [{"name": "a.zip", "bytes": 5, "extract": "zip", "dest": "d", "url": "https://x/a.zip"},
                      {"name": "b.zip", "bytes": 5, "extract": "zip", "dest": "d", "url": "https://x/b.zip"}]
-            json.dump({"groups": {"G": {"files": files}}}, open(src, "w"))
+            with open(src, "w") as fh:
+                json.dump({"groups": {"G": {"files": files}}}, fh)
             os.makedirs(os.path.join(root, "d"))
             open(os.path.join(root, "d", ".done-a.zip"), "w").close()
             out = io.StringIO()
@@ -53,6 +54,27 @@ class TestPredownload(unittest.TestCase):
             lines = [json.loads(x) for x in out.getvalue().splitlines()]
             self.assertEqual(lines[0]["status"], "已解压，跳过")
             self.assertIn("120", lines[1]["stop"])
+
+    def test_stops_before_a_file_would_cross_the_cap(self):
+        # 评审第 1 轮 #9：下载前把本包大小算进去
+        with tempfile.TemporaryDirectory() as root:
+            src = os.path.join(root, "sources.json")
+            f = {"name": "big.zip", "bytes": int(30e9), "extract": "zip", "dest": "d", "url": "https://x/big.zip"}
+            with open(src, "w") as fh:
+                json.dump({"groups": {"G": {"files": [f]}}}, fh)
+            out = io.StringIO()
+            with mock.patch.object(P, "du_gb", return_value=100.0), mock.patch.object(P.subprocess, "run") as run, \
+                    redirect_stdout(out), self.assertRaises(SystemExit) as cm:
+                P.main(["x", src, root, "G", "--max-gb", "120"])
+            self.assertEqual(cm.exception.code, 3)
+            run.assert_not_called()  # 没开始下
+
+    def test_du_failure_stops(self):
+        failed = mock.Mock(returncode=1, stdout="", stderr="du: cannot read")
+        with mock.patch.object(P.subprocess, "run", return_value=failed), redirect_stdout(io.StringIO()), \
+                self.assertRaises(SystemExit) as cm:
+            P.du_gb("/nowhere")
+        self.assertEqual(cm.exception.code, 6)
 
 
 if __name__ == "__main__":
