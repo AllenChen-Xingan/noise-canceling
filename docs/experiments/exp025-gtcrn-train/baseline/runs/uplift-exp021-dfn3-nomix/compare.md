@@ -1,7 +1,7 @@
 # 配对比较
 
-基线 a：`/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-evalcmp/38d37afb-20e6-4b58-aa68-6e45b7d85278/scratchpad/uplift/gtcrn.jsonl（系统 gtcrn-h-nomix）`
-候选 b：`/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-evalcmp/38d37afb-20e6-4b58-aa68-6e45b7d85278/scratchpad/uplift/dfn3.jsonl（系统 dfn3-nomix）`
+基线 a：`<会话临时目录>/uplift/gtcrn.jsonl（系统 gtcrn-h-nomix）`
+候选 b：`<会话临时目录>/uplift/dfn3.jsonl（系统 dfn3-nomix）`
 
 差值 = b − a；区间 = 按源片段成组 bootstrap 的 95% 区间（SC-AGG）。区间整个在更好一侧 = 涨，整个在更差一侧 = 退，碰到 0 或组数不够 = 不确定。没有做多重比较校正。
 

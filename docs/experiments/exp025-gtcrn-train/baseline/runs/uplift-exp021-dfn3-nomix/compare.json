@@ -1,9 +1,9 @@
 {
   "meta": {
-    "a": "/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-evalcmp/38d37afb-20e6-4b58-aa68-6e45b7d85278/scratchpad/uplift/gtcrn.jsonl",
+    "a": "<会话临时目录>/uplift/gtcrn.jsonl",
     "a_sha256": "5804f1d58751fcef6732d9d65035bccc658c79d58352b132db471e98340bfc7f",
     "a_system": "gtcrn-h-nomix",
-    "b": "/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-evalcmp/38d37afb-20e6-4b58-aa68-6e45b7d85278/scratchpad/uplift/dfn3.jsonl",
+    "b": "<会话临时目录>/uplift/dfn3.jsonl",
     "b_sha256": "22babff862d9e16f0b1394b02b01b5998ce7e112e536425e7783c2600ead26a2",
     "b_system": "dfn3-nomix",
     "by_scene": true,
