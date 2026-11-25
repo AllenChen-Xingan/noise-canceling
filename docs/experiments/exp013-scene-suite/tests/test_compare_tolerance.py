@@ -57,7 +57,8 @@ class Tolerance(unittest.TestCase):
         return bdir, root
 
     def _check(self, **kw):
-        return cb.tolerance_check(*self._build("A"), *self._build("B", **kw), CLIPS)
+        self.n = getattr(self, "n", 0) + 1  # 同一测试里多次比较：每次新目录
+        return cb.tolerance_check(*self._build(f"A{self.n}"), *self._build(f"B{self.n}", **kw), CLIPS)
 
     def test_threshold_is_1e9(self):
         self.assertEqual(cb.TOL_ABS, 1e-9)
