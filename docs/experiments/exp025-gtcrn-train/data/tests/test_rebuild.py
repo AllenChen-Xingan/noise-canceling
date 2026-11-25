@@ -102,6 +102,15 @@ class Compare(unittest.TestCase):
             (c / "exclude.json").write_text("{}")
             self.assertFalse(rb.check_cloud(L6323, c, upload_log(), "原料全对")["ok"])
 
+    def test_upload_log_of_cloud_built_audio_red(self):
+        """自审 P1：云上自产的 aa9f 和 6323 文件名全同、2758 个哈希不同。拿 aa9f 自己的 hashes.txt 跑 sha256sum -c，
+        也是 5020 行 OK——判据 2 必须认出这不是 6323 的音频（日志里的路径带的是 aa9f 的 build id）。"""
+        aa9f = rb.EXP013 / "builds" / "20261125022300-aa9f"
+        r = rb.check_cloud(L6323, aa9f, upload_log(aa9f), "原料全对")
+        self.assertFalse(r["upload"]["all_ok"], r["upload"])
+        self.assertFalse(r["ok"])
+        self.assertTrue(rb.check_cloud(L6323, aa9f, upload_log(), "原料全对")["ok"])
+
     def test_local_must_match_old(self):
         """本机那份要是改过一个旧文件，就不算。"""
         with tempfile.TemporaryDirectory() as d:
