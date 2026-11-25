@@ -132,7 +132,10 @@ mod tests {
         assert!(read(&p).unwrap_err().contains("封存"));
         let q = tmp("sealed2");
         std::fs::write(sealed_path(&q), "x").unwrap();
-        assert!(init(&q, Created::test()).unwrap_err().contains("封存"), "封存了也不许另起一本");
+        assert!(
+            init(&q, Created::test()).unwrap_err().contains("封存"),
+            "封存了也不许另起一本"
+        );
     }
 
     /// 只有显式新建才有账本；新建记 created（四个键），再新建报错，不覆盖。
@@ -144,8 +147,14 @@ mod tests {
         assert_eq!((l.spent_usd, l.calls), (0.0, 0));
         let c = l.created.clone().expect("新建要记 created");
         assert_eq!(c.place, "local");
-        let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
-        let mut keys: Vec<&str> = v["created"].as_object().unwrap().keys().map(String::as_str).collect();
+        let v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+        let mut keys: Vec<&str> = v["created"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
         keys.sort_unstable();
         assert_eq!(keys, ["at", "by", "machine", "place"]);
         assert!(init(&p, Created::test()).unwrap_err().contains("已存在"));
@@ -176,16 +185,25 @@ mod tests {
     fn utc_formatting() {
         assert_eq!(utc_iso(0), "1970-01-01T00:00:00Z");
         assert_eq!(utc_iso(951_782_400), "2000-02-29T00:00:00Z");
-        assert_eq!(utc_iso(1_793_000_000), "2026-10-26T09:33:20Z");
+        assert_eq!(utc_iso(1_793_000_000), "2026-10-26T07:33:20Z");
     }
 
     /// 账本路径：给了 `VDN_ASR_LEDGER` 就用它（读写都落在那个文件上），没给用主目录下的默认位置。
     #[test]
     fn ledger_path_override() {
         let root = Path::new("/r");
-        assert_eq!(ledger_path_from(root, None), root.join(super::super::asr_or::LEDGER_REL));
-        assert_eq!(ledger_path_from(root, Some("/w/l.json".into())), PathBuf::from("/w/l.json"));
-        assert_eq!(ledger_path_from(root, Some(String::new())), root.join(super::super::asr_or::LEDGER_REL));
+        assert_eq!(
+            ledger_path_from(root, None),
+            root.join(super::super::asr_or::LEDGER_REL)
+        );
+        assert_eq!(
+            ledger_path_from(root, Some("/w/l.json".into())),
+            PathBuf::from("/w/l.json")
+        );
+        assert_eq!(
+            ledger_path_from(root, Some(String::new())),
+            root.join(super::super::asr_or::LEDGER_REL)
+        );
         let p = tmp("override");
         init(&p, Created::test()).unwrap();
         reserve(&p, 0.01, 1.0).unwrap();
