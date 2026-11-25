@@ -59,7 +59,9 @@ fn units(suite: &Suite) -> Vec<bool> {
     let mut need = Vec::new();
     for task in &suite.tasks {
         match clips_of(task) {
-            Ok(c) if !c.is_empty() => need.extend(c.iter().map(|c| standard::group_of(c.scene).is_some())),
+            Ok(c) if !c.is_empty() => {
+                need.extend(c.iter().map(|c| standard::group_of(c.scene).is_some()))
+            }
             _ => need.push(true),
         }
     }
@@ -78,7 +80,9 @@ pub fn suite_fingerprint(suite: &Suite) -> String {
     for t in &suite.tasks {
         eat(format!("{t:?}").as_bytes());
         if let Some(crate::suite::RealSource::Scene { clips, .. }) = &t.real {
-            let bytes = crate::suite::resolve(clips).and_then(|p| std::fs::read(p).ok()).unwrap_or_default();
+            let bytes = crate::suite::resolve(clips)
+                .and_then(|p| std::fs::read(p).ok())
+                .unwrap_or_default();
             eat(&bytes);
         }
     }
@@ -86,19 +90,33 @@ pub fn suite_fingerprint(suite: &Suite) -> String {
 }
 
 /// 合并各片（顺序随意）。`systems` = 单进程时的系统顺序（`meta.systems`）。返回 (合并后的 `clips.jsonl` 全文, 缺段记录)。
-pub fn merge(suite: &Suite, systems: &[String], parts: &[Part]) -> Result<(String, Vec<Missing>), String> {
+pub fn merge(
+    suite: &Suite,
+    systems: &[String],
+    parts: &[Part],
+) -> Result<(String, Vec<Missing>), String> {
     let n = parts.first().map_or(0, |p| p.shard.n);
     let mut got: Vec<usize> = parts.iter().map(|p| p.shard.i).collect();
     got.sort_unstable();
     if parts.iter().any(|p| p.shard.n != n) || got != (0..n).collect::<Vec<_>>() {
-        return Err(format!("分片不齐：要 0/{n} … {}/{n} 各一份，收到 {got:?}", n.saturating_sub(1)));
+        return Err(format!(
+            "分片不齐：要 0/{n} … {}/{n} 各一份，收到 {got:?}",
+            n.saturating_sub(1)
+        ));
     }
     let need = units(suite);
-    let sys_pos = |s: &str| systems.iter().position(|x| x == s).ok_or_else(|| format!("系统 {s} 不在 meta.systems 里"));
+    let sys_pos = |s: &str| {
+        systems
+            .iter()
+            .position(|x| x == s)
+            .ok_or_else(|| format!("系统 {s} 不在 meta.systems 里"))
+    };
     let mut seen: BTreeSet<(usize, usize)> = BTreeSet::new();
     let mut claim = |u: usize, sys: &str, p: &Part| -> Result<(usize, usize), String> {
         if u >= need.len() || !need[u] {
-            return Err(format!("第 {u} 个单位不在清单里（或不该有记录）：分片和合并用的不是同一份清单"));
+            return Err(format!(
+                "第 {u} 个单位不在清单里（或不该有记录）：分片和合并用的不是同一份清单"
+            ));
         }
         if u % n != p.shard.i {
             return Err(format!("第 {u} 个单位不归第 {}/{n} 片", p.shard.i));
@@ -126,7 +144,10 @@ pub fn merge(suite: &Suite, systems: &[String], parts: &[Part]) -> Result<(Strin
     }
     let want = need.iter().filter(|&&x| x).count() * systems.len();
     if seen.len() != want {
-        return Err(format!("少了 {} 条「单位 × 系统」的记录：少了一片，或某片没跑完，不合并", want - seen.len()));
+        return Err(format!(
+            "少了 {} 条「单位 × 系统」的记录：少了一片，或某片没跑完，不合并",
+            want - seen.len()
+        ));
     }
     lines.sort_by_key(|(k, _)| *k);
     miss.sort_by_key(|(k, _)| *k);
@@ -135,7 +156,16 @@ pub fn merge(suite: &Suite, systems: &[String], parts: &[Part]) -> Result<(Strin
 }
 
 /// 各片 meta 里必须相同的键（不同就不是同一次运行的几片）。
-const SAME_KEYS: [&str; 8] = ["commit", "suite", "suite_fingerprint", "systems", "qa", "safety", "rules", "external"];
+const SAME_KEYS: [&str; 8] = [
+    "commit",
+    "suite",
+    "suite_fingerprint",
+    "systems",
+    "qa",
+    "safety",
+    "rules",
+    "external",
+];
 
 /// 读几个分片输出目录（各有 `clips.jsonl` 与 `scorecard.json`），核对它们是同一次运行的 `0/n … n-1/n`、
 /// 清单指纹和 `suite` 一致，合并。返回 (合并后的 `clips.jsonl`, 缺段记录, 合并后的 meta)。meta：共同的键照抄；
@@ -148,13 +178,17 @@ pub fn merge_dirs(
     let mut parts = Vec::new();
     let mut metas: Vec<Value> = Vec::new();
     for d in dirs {
-        let rd = |f: &str| std::fs::read_to_string(d.join(f)).map_err(|e| format!("读不了分片输出 {f}：{e}"));
-        let card: Value = serde_json::from_str(&rd("scorecard.json")?).map_err(|e| e.to_string())?;
+        let rd = |f: &str| {
+            std::fs::read_to_string(d.join(f)).map_err(|e| format!("读不了分片输出 {f}：{e}"))
+        };
+        let card: Value =
+            serde_json::from_str(&rd("scorecard.json")?).map_err(|e| e.to_string())?;
         let m = card["meta"].clone();
         let shard = Shard::parse(m["shard"].as_str().unwrap_or(""))
             .map_err(|_| "有一个输出目录不是分片跑的（meta 里没有 shard）".to_string())?;
         let us = |k: &str| -> Result<Vec<usize>, String> {
-            serde_json::from_value(m["shard_units"][k].clone()).map_err(|_| "meta 里没有 shard_units".to_string())
+            serde_json::from_value(m["shard_units"][k].clone())
+                .map_err(|_| "meta 里没有 shard_units".to_string())
         };
         parts.push(Part {
             shard,
@@ -176,7 +210,8 @@ pub fn merge_dirs(
     if metas[0]["suite_fingerprint"] != json!(suite_fingerprint(suite)) {
         return Err("合并用的清单和各片跑时的内容不同（指纹对不上）：不合并".into());
     }
-    let systems: Vec<String> = serde_json::from_value(metas[0]["systems"].clone()).map_err(|e| e.to_string())?;
+    let systems: Vec<String> =
+        serde_json::from_value(metas[0]["systems"].clone()).map_err(|e| e.to_string())?;
     let (text, missing) = merge(suite, &systems, &parts)?;
     let n = parts[0].shard.n;
     let mut meta = serde_json::Map::new();
