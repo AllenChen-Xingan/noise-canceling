@@ -56,3 +56,4 @@
 - 11-24 大总管批方案（参照读数用 CPU 机同代码算，大总管定，人未参与；乙段 1.5 小时 / 7 美元）。写了 `smoke.py --write-known-dev` 与 `cmp_ckpt.py`，测试先红后绿。名额：全套测试 66 s，139 过 2 跳过，已还。合进 main 73631939。codex 3 轮（P1×4 全修；第 2、3 轮无 P0/P1，达停止线），记录 `trainer/reviews/002_h100-smoke-codex.md`
 - 11-25 甲段第一次跑（cloudrun）：113 过 · 1 跳过 · 5 红，都是环境问题（漏装 onnx；git archive 没有 .git，运行记录 commit 为空）。改：方案第 2 步两份 requirements 一起装、代码必须 git clone / bundle 带 .git；`runrec.git_info` 拿不到提交号就在开跑前失败（`tests/test_git_record.py` 先红后绿）
 - 11-25 甲段第二次跑（cloudrun，d2477f63）全过：单元测试 122 过 · 1 跳过（MPS），321 s；CPU 参照 hybrid 3.97330（build f032a75eedad80d6），存进 `trainer/smoke_reports/20261125-known-dev-cpu.json`；等乙段
+- 11-25 乙段第 1 步（cloudrun）：冒烟只有过拟合不过（损失走完 14%、SI-SNR +3.5 dB，要 50% 与 +6 dB）；其余三件过。测速：每步 0.126 s、取数 0.033 s（中位，100 步）。报告 `trainer/smoke_reports/20261125-h100-overfit-FAILED.json`；已删机，等大总管定怎么重跑

@@ -1,0 +1,148 @@
+{
+  "device": "cuda",
+  "power": "n/a",
+  "torch": "2.15.0+cu132",
+  "build_id": "f032a75eedad80d6",
+  "config": {
+    "run": {
+      "out_dir": "~/vdn-data/runs",
+      "name": "exp025",
+      "seed": 0
+    },
+    "model": {
+      "variant": "B",
+      "k_frames": 32,
+      "heads": 2,
+      "cond_dim": 8,
+      "attn": true,
+      "film": true,
+      "init": "official",
+      "bn": "frozen"
+    },
+    "data": {
+      "kind": "loader",
+      "shard_root": "/workspace/shards/first-batch",
+      "recipe": "/workspace/repo-d2477f63/docs/experiments/exp025-gtcrn-train/data/recipe.json",
+      "seg_s": 4.0,
+      "batch": 32,
+      "num_workers": 8,
+      "dev_n": 2000,
+      "dev_seed": 12345,
+      "dev_batches": 20,
+      "calib_batches": 200,
+      "timeout_s": 600.0
+    },
+    "optim": {
+      "lr": 0.0001,
+      "warmup_steps": 500,
+      "grad_clip": 3.0,
+      "betas": [
+        0.9,
+        0.999
+      ]
+    },
+    "loss": {
+      "w_lvl": "auto",
+      "w_on": "auto",
+      "lvl_margin_db": 2.0,
+      "sp": false,
+      "w_sp": 0.0001,
+      "kd": false,
+      "w_kd": 0.1,
+      "level_norm": false,
+      "level_floor": 0.001,
+      "on_skip_leading": false
+    },
+    "ema": {
+      "enabled": false,
+      "decay": 0.999
+    },
+    "schedule": {
+      "max_steps": 5000,
+      "ckpt_every": 500,
+      "eval_every": 500,
+      "log_every": 20,
+      "keep_last": 3
+    },
+    "limits": {
+      "max_hours": 6.0,
+      "max_usd": 20.0,
+      "usd_per_hour": 4.39,
+      "hang_s": 120.0
+    },
+    "device": "auto"
+  },
+  "started_at": "2026-11-25T05:26:56+0000",
+  "init_loss": {
+    "pass": true,
+    "loss": {
+      "A": 3.341064453125,
+      "B": 3.341064453125,
+      "random": 14.341630935668945
+    },
+    "rel_diff_B_vs_A": 0.0,
+    "rule": "B 与 A 相对差 ≤ 1e-5，且起点损失 < 随机初始化"
+  },
+  "overfit": {
+    "pass": false,
+    "first": 3.341064453125,
+    "last": 2.3808200359344482,
+    "floor": -3.306539535522461,
+    "drop_frac_of_span": 0.14444970230332954,
+    "attn_out_max_change": 0.07019966095685959,
+    "si_snr_db_before": 8.659671138365791,
+    "si_snr_db_after": 12.183954881207747,
+    "si_snr_gain_db": 3.5242837428419556,
+    "si_snr_gain_ok": false,
+    "steps": 150,
+    "lr": 0.001,
+    "rule": "(初值 − 终值) / (初值 − 近乎完美输出（目标 + 40 dB 白噪声）的损失) ≥ 0.5；这一批 SI-SNR 提高 ≥ 6 dB；B 的注意力输出层权重要动过"
+  },
+  "reproduce": {
+    "pass": true,
+    "max_abs_diff": 3.0543655157089233e-05,
+    "lsb16": 3.0517578125e-05,
+    "samples": 156160,
+    "rule": "最大差 ≤ 2 个 16 位量化步"
+  },
+  "known_dev": {
+    "pass": true,
+    "got": {
+      "hybrid": 3.9733854293823243,
+      "total": 3.9733854293823243
+    },
+    "known": {
+      "readings": {
+        "hybrid": 3.9733044862747193
+      },
+      "meta": {
+        "kind": "loader",
+        "build_id": "f032a75eedad80d6",
+        "dev_n": 2000,
+        "dev_seed": 12345,
+        "seg_s": 4.0,
+        "batch": 32,
+        "dev_batches": 20,
+        "device": "cpu",
+        "torch": "2.15.0+cu132"
+      },
+      "written_at": "2026-11-25T05:23:00+0000"
+    },
+    "tol": 0.001,
+    "mismatch": {},
+    "meta_mismatch": {},
+    "meta_missing": false
+  },
+  "timing": {
+    "steps": 100,
+    "batch": 32,
+    "seg_s": 4.0,
+    "data_s_median": 0.03315565502271056,
+    "step_s_median": 0.12636060698423535,
+    "wall_s": 20.275205056997947,
+    "cpu_s_main_process": 17.502976999999998,
+    "cpu_util_main_process": 0.8632700360265347,
+    "note": "DataLoader 子进程的 CPU 不在此数内；含两项保护损失"
+  },
+  "pass": false
+}
