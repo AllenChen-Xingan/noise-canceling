@@ -89,7 +89,7 @@
 - 和评测集同源吗：**有同源风险**。ESC-50 的片段也是从 Freesound 剪的（实读 ESC-50 说明），exp013 用了 168 条 ESC-50（`materials.json`）。处理办法：
   - FSD50K 的文件名就是 Freesound 编号（实读说明）；ESC-50 每条在 `materials.json` 里记着 `src_file`，也就是 Freesound 编号
   - **排除所有和 ESC-50 同一个 Freesound 编号的片段**。范围取 ESC-50 全部 2,000 条，不只 exp013 用到的 168 条：以后 exp013 换片段也不会撞
-  - 残留风险：同一个上传者同一次录的不同文件，编号不同，排除不掉（推断）。要更严，可以按上传者排除，但 ESC-50 没给上传者名，要查 Freesound 才知道。**建议先按编号排，待你定要不要按上传者排**
+  - 残留风险：同一个上传者同一次录的不同文件，编号不同，排除不掉（推断）。**大总管 2026-11-25 定：按上传者也排除**（防泄漏的技术题）。ESC-50 没给上传者名，要先查出 ESC-50 那 2,000 条的 Freesound 上传者，再排除 FSD50K 里这些上传者的全部片段；剩多少条下载后才知道（未量化）
 - 怎么切分：按上传者切（`clips_info` 里有上传者名，实读说明；字段名下载后再核）。同一个上传者的片段进同一份
 - 不用的：exp013 自己合成的声音（风扇、空调、机舱底噪等，`synth_sounds.py`）**不能拿来训练**，同一个生成器就算同源
 
@@ -147,6 +147,7 @@ du -sh /workspace/* | sort -h
 
 1. `sources.json` 加三个来源，`dest` 分别是 `train-raw/cochlscene` · `train-raw/demand-extra` · `train-raw/fsd50k`，钉住 md5
 2. `split_rules.json` 加三条规则：CochlScene 按录音人、DEMAND 按时段（0–40 % / 40–50 %）、FSD50K 按上传者，并排除 ESC-50 的 Freesound 编号。先写会红的测试
-3. 人声筛查：CochlScene 和 FSD50K 都要做；方法和阈值另定
-4. `recipe.json` 的 `noise_pools` 加新场景；`target_scene.scene` 可以写成列表，比如 `["rail-air-cabin", "transit-hub"]`（loader 已支持，见本分支 `tests/test_target_scenes.py`）
-5. 改了 loader 和配方，build 身份就变了，云上要重跑 `register`
+3. 查 ESC-50 全部 2,000 条的 Freesound 上传者（排除用，见 2.3）
+4. 人声筛查：CochlScene 和 FSD50K 都要做；方法和阈值另定
+5. `recipe.json` 的 `noise_pools` 加新场景；`target_scene.scene` 可以写成列表，比如 `["rail-air-cabin", "transit-hub"]`（loader 已支持，见本分支 `tests/test_target_scenes.py`）
+6. 改了 loader 和配方，build 身份就变了，云上要重跑 `register`
