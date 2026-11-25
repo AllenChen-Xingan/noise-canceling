@@ -63,7 +63,7 @@ fn echo_server(
                     let sum: u64 = d.bytes().map(u64::from).sum();
                     (
                         200,
-                        json!({"text": format!("t{} s{sum}", d.len()), "usage": {"cost": 0.0001}})
+                        json!({"text": format!("t{} s{sum}", d.len()), "usage": {"cost": 3e-7}})
                             .to_string(),
                     )
                 };
@@ -130,7 +130,7 @@ fn concurrent_batch_equals_serial_and_really_overlaps() {
     assert!(p > 1 && p <= asr_or::ASR_CONCURRENCY, "同时在途 {p} 路");
     assert_eq!(c8.ledger.calls, 12);
     assert!(
-        (c8.ledger.spent_usd - 12.0 * 0.0001).abs() < 1e-12,
+        (c8.ledger.spent_usd - 12.0 * 3e-7).abs() < 1e-15,
         "每条只记一次账"
     );
 }
