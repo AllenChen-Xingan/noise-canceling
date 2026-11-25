@@ -24,7 +24,7 @@ import split  # noqa: E402
 
 BUILDS = HERE / "builds"
 SPLIT_CODE = {"train": 1, "dev": 2}
-CODE = ("mix.py", "loader.py", "shard.py")
+CODE = ("mix.py", "gpu_mix.py", "loader.py", "shard.py", "leakcheck.py", "split.py")  # 改了任一个，build_id 就变
 
 
 def sha_bytes(b):
@@ -43,6 +43,7 @@ def build_info(shard_root, recipe_path):
     idx_bytes = (Path(shard_root) / "index.json").read_bytes()
     idx = json.loads(idx_bytes)
     parts = {
+        "index_sha256": sha_bytes(idx_bytes),  # 成员偏移等都在索引里
         "split_tables": idx["split_tables"],
         "shards": {s: {sp: v["shards"] for sp, v in d.items() if sp != "kind"} for s, d in idx["sources"].items()},
         "recipe_sha256": sha_bytes(Path(recipe_path).read_bytes()),
@@ -56,15 +57,19 @@ def register_build(shard_root, recipe_path, splits_dir=split.OUT, builds_dir=BUI
     """跑交集检查，写 builds/<id>/build.json（进仓）。检查不过也写（记作废），并抛错。"""
     bid, parts, idx = build_info(shard_root, recipe_path)
     tables = {}
-    for src, want in idx["split_tables"].items():
-        summ, rows = split.load_split(src, splits_dir)
-        if summ["jsonl_sha256"] != want:
+    for src in sorted(split.load_rules()["sources"]):  # 交集检查查规则里每个来源（含不进分片的终测原料池），缺表即停
+        if not (Path(splits_dir) / f"{src}.json").exists():
+            raise SystemExit(f"缺切分表 {src}：交集检查要查规则里的全部来源")
+        summ, tables[src] = split.load_split(src, splits_dir)
+        want = idx["split_tables"].get(src)
+        if want is not None and summ["jsonl_sha256"] != want:
             raise SystemExit(f"分片用的 {src} 切分表 {want[:12]}… 和仓里的 {summ['jsonl_sha256'][:12]}… 不同")
-        tables[src] = rows
+    if set(idx["split_tables"]) - set(tables):
+        raise SystemExit(f"分片用了规则里没有的来源：{sorted(set(idx['split_tables']) - set(tables))}")
     lk = leakcheck.check(tables)
     out = Path(builds_dir) / bid
     out.mkdir(parents=True, exist_ok=True)
-    rec = {"build_id": bid, **parts, "leak_check": lk, "valid": lk["ok"], "dropped_rir": len(idx.get("dropped", [])),
+    rec = {"build_id": bid, **parts, "leak_check": lk, "leak_checked_sources": sorted(tables), "valid": lk["ok"], "dropped_rir": len(idx.get("dropped", [])),
            "determinism": "第 i 个样本只由 (seed, 份, i) 决定；第 k 批 = 样本 k·B…k·B+B−1，和 num_workers 无关；换批量 B 内容会变",
            "counts": {s: {sp: len(v["members"]) for sp, v in d.items() if sp != "kind"} for s, d in idx["sources"].items()}}
     (out / "build.json").write_text(json.dumps(rec, ensure_ascii=False, indent=1) + "\n")
