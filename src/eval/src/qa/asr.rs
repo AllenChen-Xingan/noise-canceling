@@ -103,6 +103,17 @@ pub struct Asr {
     pub unstable: usize,
     /// OpenRouter 一批并发几路
     pub workers: usize,
+    /// 已经失败过的转写（缓存键 → 原因）：再问到直接报这个错，不再发请求（codex 第 5 轮 P1 #3）
+    failed: BTreeMap<String, String>,
+    /// 遇到永久错误（数据政策、余额、上限、账本坏）后停发全部 OpenRouter 请求，原因在这里
+    pub halted: Option<String>,
+    /// 已计入 checked / unstable 的音频（sha256 | 型号），同一条只计一次
+    counted: std::collections::BTreeSet<String>,
+}
+
+/// 这个错误是不是永久的：再发也一样（不重试的 4xx、到上限、账本坏或写不了）。
+pub fn is_permanent(e: &str) -> bool {
+    ["不重试", "上限", "账本"].iter().any(|k| e.contains(k))
 }
 
 impl Asr {
@@ -138,6 +149,9 @@ impl Asr {
             checked: 0,
             unstable: 0,
             workers: super::asr_or::ASR_CONCURRENCY,
+            failed: BTreeMap::new(),
+            halted: None,
+            counted: std::collections::BTreeSet::new(),
         }
     }
 
