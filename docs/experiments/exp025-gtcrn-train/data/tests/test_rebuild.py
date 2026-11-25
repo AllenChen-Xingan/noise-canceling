@@ -142,10 +142,17 @@ class Inputs(unittest.TestCase):
         if not pools.LIBRI.exists():
             self.skipTest("本机无 ~/vdn-data（云上由 rebuild_exp013.py 跑 --verify）")
         rec = json.loads(exp013_inputs.OUT.read_text())
-        rec["files"] = rec["files"][:20]  # 抽前 20 个，单测不读满 2 GB
-        self.assertEqual(exp013_inputs.verify(pools, rec), [])
+        self.assertEqual(exp013_inputs.verify(pools, rec, sample=20), [])  # 只核前 20 个的内容，单测不读满 2 GB
         rec["files"][0] = dict(rec["files"][0], sha256="0" * 64)
-        self.assertEqual(len(exp013_inputs.verify(pools, rec)), 1)
+        self.assertEqual(len(exp013_inputs.verify(pools, rec, sample=20)), 1)
+
+    def test_incomplete_record_red(self):
+        """codex 第 1 轮 P2 #4：记录里少了文件（甚至一个都没有），以前照样报「原料全对」。先核记录本身齐不齐。"""
+        pools = exp013_inputs.load_pools()
+        rec = json.loads(exp013_inputs.OUT.read_text())
+        for bad in ([], rec["files"][1:], rec["files"] + rec["files"][:1]):
+            with self.assertRaises(SystemExit):
+                exp013_inputs.verify(pools, dict(rec, files=bad))
 
 
 if __name__ == "__main__":
