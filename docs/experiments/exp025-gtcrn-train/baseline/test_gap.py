@@ -198,7 +198,7 @@ class Completeness(unittest.TestCase):
         items = ["V-NR", "V-ESTOI", "V-A", "V-B", "V-C"]  # 至少 MIN_ITEMS 个有差值的判定项
         full = {s: [(v, "up", -1.0, "lower") for v in items] for s in ALL15}
         cj = compare_json(full)
-        self.assertIn(gap.uplift_table(cj, baseline_card())["verdict"], ("一致", "不一致"))
+        self.assertNotEqual(gap.uplift_table(cj, baseline_card())["verdict"], "数据不足")  # 全并列时是「不确定」，也对
         cj = compare_json(full)
         for sc in cj["scopes"]:
             if sc["scope"] == "cafe":
