@@ -1,0 +1,74 @@
+{
+ "system": "gtcrn",
+ "rows": [
+  {
+   "scene": "transit-hub",
+   "fails": 0,
+   "weakness": 0.5833333333333334,
+   "cells": 12,
+   "rank": 1
+  },
+  {
+   "scene": "car-passenger",
+   "fails": 0,
+   "weakness": 0.5,
+   "cells": 13,
+   "rank": 2
+  },
+  {
+   "scene": "street-outdoor",
+   "fails": 0,
+   "weakness": 0.5,
+   "cells": 12,
+   "rank": 3
+  },
+  {
+   "scene": "home-quiet",
+   "fails": 0,
+   "weakness": 0.4772727272727273,
+   "cells": 11,
+   "rank": 4
+  },
+  {
+   "scene": "cafe",
+   "fails": 0,
+   "weakness": 0.4318181818181818,
+   "cells": 11,
+   "rank": 5
+  }
+ ],
+ "excluded": [],
+ "top": [
+  "transit-hub",
+  "car-passenger",
+  "street-outdoor",
+  "home-quiet"
+ ],
+ "provisional": [
+  "street-outdoor",
+  "transit-hub",
+  "car-passenger",
+  "cafe"
+ ],
+ "overlap": [
+  "car-passenger",
+  "street-outdoor",
+  "transit-hub"
+ ],
+ "overlap_range": [
+  3,
+  3
+ ],
+ "verdict": "数据不足",
+ "incomplete": [
+  "参与排名的场景只有 5 个 < 15",
+  "缺切片的场景：cafe · car-passenger · home-quiet · street-outdoor · transit-hub"
+ ],
+ "params": {
+  "TOP_K": 4,
+  "MIN_OVERLAP": 3,
+  "MIN_CELLS": 10,
+  "MIN_SCENES": 15,
+  "SLICES": 4
+ }
+}

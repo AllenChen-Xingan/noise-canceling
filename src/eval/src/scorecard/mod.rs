@@ -37,6 +37,8 @@ pub struct ClipRow {
     pub sounds: Vec<(String, SoundGroup)>,
     /// (verifier, 是否否决项, 分数)，顺序同 [`standard::items`]
     pub scores: Vec<(&'static str, bool, Score)>,
+    /// 这一段混合轨 wav 的 sha256（取自片段清单）。`compare` 拿它核两份成绩单是不是同一批音频；旧成绩单没有，为 `None`
+    pub mix_sha256: Option<String>,
 }
 
 /// 没跑成的一段（或一整条任务）：照样进成绩单，让该场景不能判「过」（codex 第 1 轮 P1 #1）。
@@ -334,6 +336,7 @@ pub fn run_with(
                     system: sys.as_str().to_string(),
                     sounds: c.sounds.iter().map(|s| (s.cls.clone(), s.group)).collect(),
                     scores,
+                    mix_sha256: Some(c.hash.wav_sha256.mix.clone()),
                 });
             }
         }

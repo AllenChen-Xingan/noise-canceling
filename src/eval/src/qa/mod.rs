@@ -1,6 +1,8 @@
 //! QA 层：要本机模型的 verifier（V-EAT-ASR · V-DNSMOS · V-NRMOS-SCOREQ · V-NRMOS-DISTILL）。只在本机跑，CI 不跑。
 
 pub mod asr;
+pub mod asr_ledger;
+pub mod asr_or;
 pub mod dnsmos;
 pub mod nrmos;
 mod nrmos_v;
@@ -34,6 +36,8 @@ type RefEntry = Result<(Vec<String>, (usize, usize, usize)), String>;
 
 pub struct QaExtra {
     pub asr: Option<asr::Asr>,
+    /// 识别后端装不起来的原因（这时吃字整列判「不知道」，原因写进 `meta.asr`）
+    pub asr_err: Option<String>,
     /// DNSMOS 模型路径。ort 一个进程只许一个 Environment（ort rc.15 environment.rs:515），
     /// 而 vdn-models 已建了一个，所以 DNSMOS 在子进程 `vdn-eval dnsmos` 里跑
     pub dnsmos: Option<PathBuf>,
@@ -60,7 +64,11 @@ pub(crate) fn fnv(x: &[f32]) -> u64 {
 
 impl QaExtra {
     pub fn new(tmp: PathBuf) -> QaExtra {
-        let asr = asr::Asr::alive().then(|| asr::Asr::new(tmp.join("asr_cache.json")));
+        let (asr, asr_err) =
+            match asr::Asr::from_env(tmp.join("asr_cache.json"), &crate::suite::main_root()) {
+                Ok(a) => (Some(a), None),
+                Err(e) => (None, Some(e)),
+            };
         let (dnsmos, dnsmos_err) =
             match resolve("resources/DNS-Challenge/DNSMOS/DNSMOS/sig_bak_ovr.onnx") {
                 Some(p) => (Some(p), None),
@@ -71,6 +79,7 @@ impl QaExtra {
             };
         QaExtra {
             asr,
+            asr_err,
             dnsmos,
             dnsmos_err,
             tmp,
@@ -93,10 +102,28 @@ impl QaExtra {
         Ok((p, sha))
     }
 
-    fn transcribe(&mut self, name: &str, x: &[f32], lang: &str) -> Result<Vec<String>, String> {
+    /// 成绩单 `meta.asr`：用了哪些后端、各自的型号与段数；装不起来时写原因。
+    pub fn asr_meta(&self) -> serde_json::Value {
+        match (&self.asr, &self.asr_err) {
+            (Some(a), _) => a.summary(),
+            (None, e) => serde_json::json!({"error": e}),
+        }
+    }
+
+    fn transcribe(
+        &mut self,
+        clip: &str,
+        name: &str,
+        x: &[f32],
+        lang: &str,
+    ) -> Result<Vec<String>, String> {
         let (p, sha) = self.dump(name, x)?;
-        let a = self.asr.as_mut().ok_or("ASR 服务不在（127.0.0.1:11520）")?;
-        let (text, stable) = a.transcribe(&p, &sha, lang)?;
+        let why = self
+            .asr_err
+            .clone()
+            .unwrap_or_else(|| "识别后端没装好".into());
+        let a = self.asr.as_mut().ok_or(why)?;
+        let (text, stable) = a.transcribe(&p, &sha, lang, clip)?;
         if !stable {
             return Err(format!("ASR 对 {name} 两次转写不一致（剔除，rubric V7）"));
         }
@@ -106,13 +133,33 @@ impl QaExtra {
     fn eat(&mut self, sys: &str, task: &Task, clip: &Clip, out: &[f32], p: &Params) -> Score {
         const ID: &str = "V-EAT-ASR";
         const U: &str = "百分点";
+        // 这一段要识别的几条（参考转写没缓存过才带上干净人声与原声）先一起并发发出去（大总管 2026-11-25：8 路）
+        let mut want: Vec<(String, &[f32])> = vec![(format!("{}-{sys}", task.id), out)];
+        if !self.refs.contains_key(&task.id) {
+            want.push((format!("{}-clean", task.id), &clip.clean));
+            want.push((format!("{}-mix", task.id), &clip.mix));
+        }
+        let items: Vec<_> = want
+            .iter()
+            .filter_map(|(name, x)| self.dump(name, x).ok())
+            .map(|(p, sha)| (p, sha, task.lang.clone(), task.id.clone()))
+            .collect();
+        if let Some(a) = self.asr.as_mut() {
+            a.prefetch(&items);
+        }
         if !self.refs.contains_key(&task.id) {
             let r = (|| {
-                let rt = self.transcribe(&format!("{}-clean", task.id), &clip.clean, &task.lang)?;
+                let rt = self.transcribe(
+                    &task.id,
+                    &format!("{}-clean", task.id),
+                    &clip.clean,
+                    &task.lang,
+                )?;
                 if rt.is_empty() {
                     return Err("参考转写为空".to_string());
                 }
-                let mt = self.transcribe(&format!("{}-mix", task.id), &clip.mix, &task.lang)?;
+                let mt =
+                    self.transcribe(&task.id, &format!("{}-mix", task.id), &clip.mix, &task.lang)?;
                 let ops = asr::edit_ops(&rt, &mt);
                 Ok((rt, ops))
             })();
@@ -123,7 +170,7 @@ impl QaExtra {
             Some(Err(e)) => return Score::unknown(ID, U, Better::Lower, e.clone()),
             None => return Score::unknown(ID, U, Better::Lower, "内部错误"),
         };
-        let ot = match self.transcribe(&format!("{}-{sys}", task.id), out, &task.lang) {
+        let ot = match self.transcribe(&task.id, &format!("{}-{sys}", task.id), out, &task.lang) {
             Ok(t) => t,
             Err(e) => return Score::unknown(ID, U, Better::Lower, e),
         };

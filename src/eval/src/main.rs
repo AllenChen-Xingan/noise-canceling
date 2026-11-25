@@ -8,7 +8,7 @@
 //!   --predictors = 评分模型表 `[片段][系统]{scoreq, distill_mos}`，给了才算听感两项的过关线混淆矩阵。
 //!   **什么都不给时默认读 exp003 build f8c3 的答卷、指标表和 exp009 的评分模型表**（演示用旧数据）
 //! vdn-eval list
-//! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--rules v1|v2] [--out DIR]   # 场景成绩单（specs/rubric/scorecard.md）
+//! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--rules v1|v2] [--no-safety] [--out DIR]   # 场景成绩单（specs/rubric/scorecard.md）；--no-safety = 不回混口径
 //! vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] [--out DIR]   # 不重跑音频，按规则重新汇总
 //! vdn-eval compare --a <clips.jsonl> --b <clips.jsonl> [--by-scene] [--noise-a … --noise-b …] [--out DIR]   # 配对比较（scorecard.md 第十节）
 //! vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…   # 子进程入口：评分模型打分，每段一行 JSON
@@ -396,8 +396,13 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
     }
     let path = arg(args, "--suite").unwrap_or_else(|| "src/eval/suite/scenes.json".into());
     let p = resolve(&path).ok_or_else(|| format!("找不到 {path}"))?;
-    let suite = parse_suite(&std::fs::read_to_string(&p).map_err(|e| format!("{path}：{e}"))?)?;
+    let mut suite = parse_suite(&std::fs::read_to_string(&p).map_err(|e| format!("{path}：{e}"))?)?;
     vdn_eval::scorecard::check_suite(&suite)?;
+    // 「不回混」口径：全部任务关保护处理（exp021 已核与原路径逐段相同）
+    let no_safety = flag(args, "--no-safety");
+    if no_safety {
+        suite.without_safety();
+    }
     let sys = systems(args, &[SystemKind::Ref])?;
     let opts = Opts {
         ci: m.ci,
@@ -415,6 +420,7 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
     let card = vdn_eval::scorecard::card::Card::build_with(&rows, skipped, rules);
     let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "suite": path,
         "systems": sys.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "qa": qa.is_some(),
+        "safety": if no_safety { "off" } else { "task" }, "asr": qa.as_ref().map(|q| q.asr_meta()),
         "rules": rules.as_str(), "power": vdn_eval::power::source(),
         "external": sys.iter().filter_map(|s| s.provenance()).collect::<Vec<_>>()});
     let js = serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";

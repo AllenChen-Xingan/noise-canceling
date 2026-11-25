@@ -28,6 +28,7 @@ fn row(i: usize, scene: MeetingPlace, extra: Vec<(&'static str, bool, Score)>) -
         system: "gtcrn".into(),
         sounds: vec![("bed-x".into(), SoundGroup::Bed)],
         scores,
+        mix_sha256: None,
     }
 }
 

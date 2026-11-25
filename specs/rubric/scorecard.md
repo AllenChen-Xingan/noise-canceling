@@ -4,6 +4,7 @@
 > **机读正本在代码里**：跑哪些项、按什么顺序判 = `src/eval/src/scorecard/standard.rs`；过关线 = `src/eval/src/thresholds/table.rs`；汇总规则 = `src/eval/src/scorecard/rules_v2.rs`（新规则，默认）· `rules.rs`（旧规则 v1）；区间与校正 = `aggregate.rs`。
 > 本文第一节、第三节的表和第四节的数由 `src/eval/tests/scorecard_standard.rs` 逐行和代码比对，对不上即红。改标准先改代码，再改本文。
 > 命令：`vdn-eval scorecard --suite src/eval/suite/scenes.json [--system ref,gtcrn] [--qa] [--rules v1|v2]`，输出 `scorecard.md` + `scorecard.json` + `clips.jsonl`（逐段分数）。
+> 「不回混」口径：加 `--no-safety`，把全部任务的引擎保护处理关掉（不混回原声、不做超幅与坏值保护），打模型自己的输出；`meta.safety` 记为 `off`（不加时为 `task`，按任务清单）。用法见 `docs/experiments/exp025-gtcrn-train/baseline/README.md`。
 > 不重跑音频、只按规则重新汇总：`vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] --out <新目录>`（同目录的 `scorecard.json` 提供「没跑成的段」，缺了就报错）。v2 跑出的 `clips.jsonl` 里人声忽大忽小 · 音色偏差 · 弱音丢失是干净人声那一路的读数（带 `clean_pass`），不能用 `--rules v1` 重新汇总，会报错并提示用 v1 重跑音频。v2 下某系统没有干净人声那一路的读数（外部系统没提供 `clean/`）时，三项落「只报·旧口径」，成绩单开头点名该系统「本系统未提供干净人声输出，人声忽大忽小 · 音色 · 轻声字三项不判」，`scorecard.json` 的 `no_clean_pass` 列出这些系统。
 > 成绩单元数据 `meta` 记：run id · 提交号 · 清单 · 系统 · 是否 `--qa` · 规则版本 `rules` · 电源状态 `power`（`ac` / `battery` / `unknown`，读 `pmset -g batt`；计时类读数受供电影响，025 A2）。
 > **汇总规则 v2 是人定 D85（2026-11-04，调研 025 第 ③ 节七题）**；`--rules v1` 可切回旧规则。
@@ -183,7 +184,7 @@ rubric 的「压噪只在 G1 算」在新成绩单里不再需要：场景测试
 
 用法：两个模型在**同一个 build** 的片段上各跑一遍成绩单，把两份 `clips.jsonl` 交给它。一个文件只放一个系统；有多个系统时用 `--system-a` / `--system-b` 选。
 
-1. **配对**：按片段 id 配对。每项只用两边都有有限值的段；只有一边有值的段计数单列。只在一边出现的段列在报告末尾，不参与比较。同一 id 两边的场景 / 档 / 设备不一致时报错（两个文件不是同一个 build）
+1. **配对**：按片段 id 配对，并核两边是不是同一批音频：两份都记了混合轨哈希（`clips.jsonl` 每行的 `mix_sha256`，2026-11-25 起写）时，同一 id 的哈希不同就拒绝（换了 build、换了题）；有一份没记（旧成绩单）就照比，但报告开头写明有几对核不了（`unverified_pairs`）。每项只用两边都有有限值的段；只有一边有值的段计数单列。只在一边出现的段列在报告末尾，不参与比较。同一 id 两边的场景 / 档 / 设备不一致时报错（两个文件不是同一个 build）
 2. **区间**：每段差值 = b − a，按源片段成组 bootstrap（同第四节新规则，两种设备版本整组抽），参数取下表，不另立
 3. **判断**：只比 0（有没有变），不比过关线，不新造线：
 
@@ -236,6 +237,7 @@ rubric 的「压噪只在 G1 算」在新成绩单里不再需要：场景测试
 
 ## 十二、改动记录
 
+- 2026-11-25（计划 014，手下 evalcmp）：`scorecard` 加 `--no-safety`（不回混口径），`meta` 加 `safety` 与 `asr`（这次有没有识别服务）。为什么：原版 GTCRN 基线要按不回混口径出（exp025）
 - 2026-11-16（计划 014，手下 evalcmp）：加第十节配对比较（`vdn-eval compare`）与第十一节早期回声参考旁列。为什么：没有配对比较就判不了「新模型比旧模型好没好」；评测参考带全部混响，和训练目标（只留 100 ms 早期混响）不一致（调研 035 缺口 1、3）
 
 - 2026-11-13（调研 031，手下 evalaudit）：第六节加「随机抽查」2 题（人定）；`calib` 加按过关线的混淆矩阵；L1 的配对改按有效配对（去重）计。为什么：只看排序一致和只送疑似坏的段，量不到评估器漏判（`docs/research/031_eval-judge-audit/audit.md` 第 1、3、4 条）
