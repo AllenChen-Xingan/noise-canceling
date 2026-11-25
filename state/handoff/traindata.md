@@ -58,3 +58,4 @@
 - 2026-11-25 cloudrun 带回两份日志：6323 音频 5020/5020 按 hashes.txt 对上；原料全对。合入 origin/main（971c7eec，aa9f 小文件已在 main）。--check-cloud 四项全过，报告 rebuild/exp013-20261124-192451.json 和两份日志进仓；官方源可复现记「未验证」。全量 128 条 127 过，1 条红（缺 cloud/config.py）
 - 2026-11-25 收尾评审：多视角自审（第一次误审了 src/，改参数重跑）+ codex gpt-6-astra 4 轮，P1×5 · P2×15 全核实属实，第 3、4 轮无 P0/P1 停。exp013 判据升到第 4 版，现行报告 rebuild/exp013-20261124-200416.json。合入 cloudrun 的 main（df145344）后 test_real_cloud_config_quota 转绿，全量 139 条全过
 - 2026-11-25 cloudrun 用 main 86698924 重跑 register + pack：新 build f032a75eedad80d6。包 sha256 53e59cdc… 核对一致；包里其余文件和仓里逐字节相同；按记录字段重算 id 相同，代码与配方哈希等于现行，交集检查 6 个来源 83,460 行 0 处。进仓于分支 chore/exp025-register2
+- 2026-11-25 大总管交代：CPU 镜像 rust:1.99.1-trixie 没有 pip，setup 的 pip install uv 失败。新增 setup_uv.sh：有 uv 直接用；没有就下 uv 0.13.7 官方二进制包，按钉死的官方 sha256 核对，解压到 /workspace/bin。测试 tests/test_setup_uv.py 10 条（哈希不对拒绝、路径、联网核官方 sha256 要设 VDN_NET=1）。分支 fix/cloud-setup-uv；全量 149 条全过（1 条联网的跳过，另手动跑过也过）

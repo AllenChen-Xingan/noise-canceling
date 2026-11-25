@@ -112,7 +112,7 @@ RunPod 是租云机器的服务；网络盘是挂在云机器上的共享硬盘�
 
 ```bash
 cd <新 checkout>/docs/experiments/exp025-gtcrn-train/data
-bash cloud_steps.sh setup       # 建 .venv，装 requirements.txt
+bash cloud_steps.sh setup       # 建 .venv，装 requirements.txt；机器上没有 uv 就由 setup_uv.sh 装钉死版本到 /workspace/bin（核官方 sha256，不用 pip）
 bash cloud_steps.sh inventory   # 写 inventory.txt：每个来源的文件数与前 20 个路径
 bash cloud_steps.sh split       # 写 splits/<来源>.jsonl + .json，共 6 个来源 12 个文件
 bash cloud_steps.sh shard       # 写 /workspace/shards/first-batch/*.tar 与 index.json（目录已存在就拒绝）

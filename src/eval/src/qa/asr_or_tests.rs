@@ -53,7 +53,12 @@ pub(super) fn fake(script: Vec<(u16, &'static str, String)>) -> (String, Seen) {
 pub(super) const KEY: &str = "placeholder-test-credential-0001";
 
 pub(super) fn client(url: &str, dir: &Path) -> OpenRouter {
-    let mut c = OpenRouter::new(url, KEY.into(), dir.join("ledger.json"));
+    // 2026-11-25 起账本要显式新建；测试事先写好了账本（上限、坏账本那几条）的就用它
+    let l = dir.join("ledger.json");
+    if !l.exists() {
+        crate::qa::asr_ledger::init(&l, crate::qa::asr_ledger::Created::test()).unwrap();
+    }
+    let mut c = OpenRouter::new(url, KEY.into(), l);
     c.backoff_ms = 5;
     c
 }
@@ -346,7 +351,7 @@ fn real_call_three_times() {
     let key = load_key(&root).expect("没有 OPENROUTER_API_KEY");
     let wav = std::env::var("VDN_ASR_REAL_WAV").expect("用 VDN_ASR_REAL_WAV 指定一条 wav");
     let (x, sr) = crate::wav::read(Path::new(&wav)).unwrap();
-    let mut c = OpenRouter::new(OR_URL, key, root.join(LEDGER_REL));
+    let mut c = OpenRouter::new(OR_URL, key, crate::qa::asr_ledger::ledger_path(&root));
     let mut texts = Vec::new();
     for i in 1..=3 {
         let before = c.ledger.spent_usd;

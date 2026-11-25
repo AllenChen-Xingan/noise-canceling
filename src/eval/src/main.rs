@@ -8,7 +8,7 @@
 //!   --predictors = 评分模型表 `[片段][系统]{scoreq, distill_mos}`，给了才算听感两项的过关线混淆矩阵。
 //!   **什么都不给时默认读 exp003 build f8c3 的答卷、指标表和 exp009 的评分模型表**（演示用旧数据）
 //! vdn-eval list
-//! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--rules v1|v2] [--no-safety] [--out DIR]   # 场景成绩单（specs/rubric/scorecard.md）；--no-safety = 不回混口径
+//! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--rules v1|v2] [--no-safety] [--asr-ledger PATH] [--init-ledger] [--out DIR]   # 场景成绩单（specs/rubric/scorecard.md）；--no-safety = 不回混口径
 //! vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] [--out DIR]   # 不重跑音频，按规则重新汇总
 //! vdn-eval compare --a <clips.jsonl> --b <clips.jsonl> [--by-scene] [--noise-a … --noise-b …] [--out DIR]   # 配对比较（scorecard.md 第十节）
 //! vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…   # 子进程入口：评分模型打分，每段一行 JSON
@@ -414,7 +414,19 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
         .map(PathBuf::from)
         .unwrap_or_else(default_out);
     vdn_eval::scorecard::card::ensure_fresh(&out)?;
-    let mut qa = flag(args, "--qa").then(|| vdn_eval::qa::QaExtra::new(out.join("qa")));
+    // 识别费账本：--asr-ledger 指路径（同 VDN_ASR_LEDGER）；--init-ledger（或 VDN_ASR_INIT_LEDGER=1）才新建
+    let asr_ledger = vdn_eval::suite::option_value(args, "--asr-ledger")?.map(PathBuf::from);
+    if flag(args, "--qa") {
+        let lp = asr_ledger.clone().unwrap_or_else(|| {
+            vdn_eval::qa::asr_ledger::ledger_path(&vdn_eval::suite::main_root())
+        });
+        let env = std::env::var("VDN_ASR_INIT_LEDGER").ok();
+        if vdn_eval::qa::asr_ledger::init_if_requested(&lp, flag(args, "--init-ledger"), env)? {
+            eprintln!("已新建识别费账本");
+        }
+    }
+    let mut qa = flag(args, "--qa")
+        .then(|| vdn_eval::qa::QaExtra::with_ledger(out.join("qa"), asr_ledger.clone()));
     let extra = qa.as_mut().map(|x| x as &mut dyn vdn_eval::runner::Extra);
     let (rows, skipped) = vdn_eval::scorecard::run_with(&suite, &sys, &opts, extra, None, rules);
     let card = vdn_eval::scorecard::card::Card::build_with(&rows, skipped, rules);

@@ -48,7 +48,7 @@ pub const LOCAL42: &str = "local42";
 /// 一个后端：本机服务，或 OpenRouter 客户端。
 pub enum Backend {
     Local42,
-    OpenRouter(super::asr_or::OpenRouter),
+    OpenRouter(Box<super::asr_or::OpenRouter>),
 }
 
 impl Backend {
@@ -78,9 +78,12 @@ pub struct Route {
 impl Route {
     /// 从 JSON 文件读路由（`VDN_ASR_ROUTE` 给的是文件路径，不是 JSON 本身）。
     pub fn load(path: &Path) -> Result<Route, String> {
-        let t = std::fs::read_to_string(path)
-            .map_err(|e| format!("路由文件 {}：{e}", path.display()))?;
-        serde_json::from_str(&t).map_err(|e| format!("路由文件 {}：{e}", path.display()))
+        // 错误里只写文件名：错误会进成绩单 meta.asr，本机目录含用户名
+        let name = path
+            .file_name()
+            .map_or_else(|| "路由文件".into(), |n| n.to_string_lossy().into_owned());
+        let t = std::fs::read_to_string(path).map_err(|e| format!("路由文件 {name}：{e}"))?;
+        serde_json::from_str(&t).map_err(|e| format!("路由文件 {name}：{e}"))
     }
 
     /// 这一段用哪个后端（片段 id 去掉 `#…` 的缓存后缀再查）。
@@ -162,6 +165,16 @@ impl Asr {
     /// 按环境变量组装（见文件头）。返回 `Err(原因)` 时这次成绩单的吃字整列判「不知道」。
     /// 默认后端 OpenRouter：要有密钥（`asr_or::load_key`）；路由文件里点名 `local42` 的段要本机服务在。
     pub fn from_env(cache_path: PathBuf, root: &Path) -> Result<Asr, String> {
+        Asr::from_env_with(cache_path, root, None)
+    }
+
+    /// 同 [`Asr::from_env`]，可显式给账本路径（`scorecard --asr-ledger`）；不给就按 `VDN_ASR_LEDGER` 或默认位置。
+    /// OpenRouter 后端装起来时就核账本：不存在、已封存、坏了都直接返回 `Err`（2026-11-25 起不再当空账本）。
+    pub fn from_env_with(
+        cache_path: PathBuf,
+        root: &Path,
+        ledger: Option<PathBuf>,
+    ) -> Result<Asr, String> {
         let default: &'static str = match std::env::var("VDN_ASR_BACKEND").as_deref() {
             Err(_) | Ok("openrouter") => OPENROUTER,
             Ok("local42") => LOCAL42,
@@ -184,11 +197,12 @@ impl Asr {
                 OPENROUTER => {
                     let key = super::asr_or::load_key(root)
                         .ok_or("没有 OPENROUTER_API_KEY（环境变量或仓库根 .env.local）")?;
-                    let ledger = root.join(super::asr_or::LEDGER_REL);
-                    backends.push(Backend::OpenRouter(super::asr_or::OpenRouter::new(
-                        super::asr_or::OR_URL,
-                        key,
-                        ledger,
+                    let ledger = ledger
+                        .clone()
+                        .unwrap_or_else(|| super::asr_ledger::ledger_path(root));
+                    super::asr_ledger::read(&ledger)?;
+                    backends.push(Backend::OpenRouter(Box::new(
+                        super::asr_or::OpenRouter::new(super::asr_or::OR_URL, key, ledger),
                     )));
                 }
                 LOCAL42 if Asr::alive() => backends.push(Backend::Local42),
