@@ -564,3 +564,18 @@ fn early_reference_side_column() {
         "{miss3:?}"
     );
 }
+
+/// 并行 / 并发隔离（2026-11-24 整套重跑时 early_reference_side_column 偶发「没跑成的段」）：
+/// 旧 setup 按标签定目录、开头先删同名目录，另一个同时跑的测试进程用同一标签就会把正在用的夹具删掉。
+/// 现在每次 setup 都得到独立目录：同一标签连调两次，第一份夹具仍完整可读。
+#[test]
+fn setup_dirs_are_isolated() {
+    let (r1, _) = setup("iso");
+    let (r2, _) = setup("iso");
+    assert_ne!(r1, r2, "同一标签两次 setup 必须是不同目录");
+    let text = std::fs::read_to_string(r1.join("clips.jsonl")).unwrap();
+    let clips = SceneClip::parse_jsonl(&text).unwrap();
+    for c in &clips {
+        assert!(r1.join(&c.audio.mix).exists(), "第一份夹具被第二次 setup 删了：{}", c.audio.mix);
+    }
+}
