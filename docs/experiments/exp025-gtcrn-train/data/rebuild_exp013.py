@@ -11,9 +11,14 @@
 4. 比 hashes.txt：逐行比，外加 exclude.json 全等；报告写 rebuild/exp013-<时间>.json（进仓）
 用法（云上，仓库根下）：
   python3 docs/experiments/exp025-gtcrn-train/data/rebuild_exp013.py --root /workspace [--fetch] [--workers 16]
-另一条路（2026-11-25 大总管定：云上用 main 出的新 build 只跑一次，直接核它）：
-  python3 rebuild_exp013.py --check-dir <拷回的 build 目录> --inputs-log <云上 exp013_inputs.py --verify 的输出>
-  同样四项：4540 个旧文件逐个相同 · exclude.json 全等 · 版本相同 · 1,994 个原料内容对上（build 自带的素材索引只记路径与字节数）
+现行判据（2026-11-25 大总管定）：跨平台做不到逐位相同（云上 x86 对本机 arm64，样本差约 4e-13，见
+exp013 crosscheck-20261125.md），所以不再要求云上重建逐位同 17f5。云上评测用本机 6323 的音频，改核：
+  1. 本机 6323（main 现行代码）旧 4540 个文件逐个同 17f5
+  2. 云上 6323 音频按 hashes.txt 全部对上（`sha256sum -c` 的输出）
+  3. 云上那份 build（aa9f）的 exclude.json 与依赖版本同 17f5，代码与参数哈希同 6323
+  4. 云上原料 1,994 个内容对上（exp013_inputs.py --verify；build 自带的素材索引只记路径与字节数）
+  「官方源可复现」这次没验证：云上原料是本机上传的
+  python3 rebuild_exp013.py --check-cloud --local <6323 目录> --cloud <aa9f 目录> --upload-log <sha256sum -c 输出> --inputs-log <verify 输出>
 """
 import argparse
 import hashlib
@@ -86,18 +91,38 @@ def file_hashes(names):
     return {f: hashlib.sha256(((root / f) if "/" in f else (EXP013 / f)).read_bytes()).hexdigest() for f in names}
 
 
-def check_dir(new, inputs_ok):
-    """核一份已出好的 build 目录（只要 hashes.txt · exclude.json · manifest.json）。"""
-    new = Path(new)
-    rep = compare(OLD / "hashes.txt", new / "hashes.txt")
-    m = json.loads((new / "manifest.json").read_text())
-    rep["exclude_equal"] = json.loads((new / "exclude.json").read_text()) == json.loads((OLD / "exclude.json").read_text())
-    old_v = json.loads((OLD / "manifest.json").read_text())["versions"]
-    rep["version_drift"] = {k: [v, m["versions"].get(k)] for k, v in old_v.items() if m["versions"].get(k) != v}
-    rep["inputs_ok"] = bool(inputs_ok)
-    rep["checked_build"] = m.get("build_id", new.name)
-    rep["new_code_sha256"] = {**m["code_sha256"], **m["params_sha256"]}
-    rep["ok"] = rep["ok"] and rep["exclude_equal"] and not rep["version_drift"] and rep["inputs_ok"]
+def _manifest(d):
+    return json.loads((Path(d) / "manifest.json").read_text())
+
+
+def check_cloud(local, cloud, upload_log, inputs_log):
+    """按现行判据核（见文件头）；返回报告，ok 为四项全过。"""
+    local, cloud = Path(local), Path(cloud)
+    ml, mc, mo = _manifest(local), _manifest(cloud), _manifest(OLD)
+    vs_old = compare(OLD / "hashes.txt", local / "hashes.txt")
+    want = set(read_hashes(local / "hashes.txt"))
+    okp, failed = set(), []
+    for line in upload_log.splitlines():
+        if ": " not in line:
+            continue
+        path, st = line.rsplit(": ", 1)
+        key = re.sub(r"^_tmp/exp013/[^/]+/", "", path.strip())
+        (okp.add(key) if st.strip() == "OK" else failed.append(key))
+    up = {"expected": len(want), "ok": len(okp & want), "failed": failed[:50], "missing": sorted(want - okp)[:50]}
+    up["all_ok"] = not failed and okp >= want
+    code = lambda m: {**m["code_sha256"], **m["params_sha256"]}  # noqa: E731
+    rep = {"local_build": ml.get("build_id", local.name), "cloud_build": mc.get("build_id", cloud.name),
+           "local_vs_old": {k: vs_old[k] for k in ("old", "same", "differ", "missing", "n_extra", "ok")},
+           "upload": up,
+           "cloud_exclude_equal": json.loads((cloud / "exclude.json").read_text()) == json.loads((OLD / "exclude.json").read_text()),
+           "cloud_version_drift": {k: [v, mc["versions"].get(k)] for k, v in mo["versions"].items() if mc["versions"].get(k) != v},
+           "cloud_code_equal_local": code(mc) == code(ml),
+           "inputs_ok": "原料全对" in inputs_log,
+           "official_source": "未验证：云上原料是本机上传的，只证明与本机原料逐个相同（从官方源重下记进 backlog）",
+           "bit_exact_cross_platform": "不要求：x86 对 arm64 浮点差约 4e-13（exp013 crosscheck-20261125.md）",
+           "new_code_sha256": code(ml)}
+    rep["ok"] = (vs_old["ok"] and up["all_ok"] and rep["cloud_exclude_equal"] and not rep["cloud_version_drift"]
+                 and rep["cloud_code_equal_local"] and rep["inputs_ok"])
     return rep
 
 
@@ -118,17 +143,21 @@ def run(cmd, env):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--root", required=True, help="云上数据根；原料在 <root>/vdn-data")
+    ap.add_argument("--root", default="", help="云上数据根；原料在 <root>/vdn-data")
     ap.add_argument("--fetch", action="store_true", help="走 A：从官方源重下原料")
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--allow-version-drift", action="store_true")
-    ap.add_argument("--check-dir", default="", help="不重跑，直接核这份已出好的 build 目录")
+    ap.add_argument("--check-cloud", action="store_true", help="不重跑：按现行判据核本机 6323 与云上 build（见文件头）")
+    ap.add_argument("--local", default="", help="本机 build 目录（6323）")
+    ap.add_argument("--cloud", default="", help="云上 build 的小文件目录（aa9f）")
+    ap.add_argument("--upload-log", default="", help="云上对 6323 音频跑 sha256sum -c hashes.txt 的输出")
     ap.add_argument("--inputs-log", default="", help="同一台机器上 exp013_inputs.py --verify 的输出（要有「原料全对」）")
     a = ap.parse_args()
-    if a.check_dir:
-        log = Path(a.inputs_log).read_text() if a.inputs_log else ""
-        rep = check_dir(a.check_dir, "原料全对" in log)
-        rep.update({"build": BUILD, "inputs_log_sha256": hashlib.sha256(log.encode()).hexdigest(), "when": time.strftime("%Y-%m-%d %H:%M:%S")})
+    if a.check_cloud:
+        up, inp = (Path(x).read_text() for x in (a.upload_log, a.inputs_log))
+        rep = check_cloud(a.local, a.cloud, up, inp)
+        rep.update({"build": BUILD, "upload_log_sha256": hashlib.sha256(up.encode()).hexdigest(),
+                    "inputs_log_sha256": hashlib.sha256(inp.encode()).hexdigest(), "when": time.strftime("%Y-%m-%d %H:%M:%S")})
         return report(rep)
     if sys.platform == "darwin":
         raise SystemExit("重建在云上跑（D97）；本机只跑单元测试")
