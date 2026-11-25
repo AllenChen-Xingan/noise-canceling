@@ -59,7 +59,8 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
 - 识别默认走 OpenRouter（D103）：密钥放仓库根 `.env.local` 的 `OPENROUTER_API_KEY`（或同名环境变量），云上同样放一份，权限 600、不进仓
 - 成绩单 `meta` 里应看到 `"safety": "off"`、`"qa": true`；`"asr"` 是一个对象：`default` = `openrouter`、`backends.openrouter.model` = `qwen/qwen3-asr-1.7b-20260813`、各后端实际用到的段数、`checked` / `unstable`（多次转写的条数与不一致的条数）。装不起来时是 `{"error": 原因}`，吃字整列判「不知道」
 - 输出：`scorecard.md` · `scorecard.json` · `clips.jsonl`；音频类中间产物（`qa/asr-wav/`）不进仓
-- 识别花费累计在主目录 `_tmp/asr-openrouter-ledger.json`（全部真调用共用一本），到 15 美元就停发（第三节）
+- 识别花费累计在**一本**账本里（大总管 2026-11-25 定：正本是云上网络盘 `/workspace/asr-ledger/asr-openrouter-ledger.json`）。云上跑时设 `VDN_ASR_LEDGER=/workspace/asr-ledger/asr-openrouter-ledger.json`（或 `--asr-ledger` 同一路径），直接读写正本，不用复制、写回；不设时用主目录 `_tmp/asr-openrouter-ledger.json`。到 15 美元就停发（软上限，第三节）
+- 账本规矩（2026-11-25 起，代码 `src/eval/src/qa/asr_ledger.rs`）：账本**不存在就拒发**，不当成空账本；只有显式 `--init-ledger`（或 `VDN_ASR_INIT_LEDGER=1`）才新建，新建时记 `created`（UTC 时间 · `local` 或 `cloud` · RunPod 机器 id · 会话名，不记主机名）；账本旁边有 `<账本>.sealed` 就拒发。本机那份在云上结果合并后封存，以后要在本机发真调用，先取回云上正本
 - 按段换后端（可选）：先把路由写成一个 JSON **文件**，例如 `route.json` 内容为 `{"default": "openrouter", "clips": {"<片段 id>": "local42"}}`，再 `export VDN_ASR_ROUTE=<route.json 的路径>`（变量里放路径，不放 JSON 本身；入口 `Route::load`，测试 `route_loads_from_file_path`）。`VDN_ASR_BACKEND=local42` 整套改回本机 42model
 - 停发：遇到永久错误（数据政策 403/404、余额 402、密钥 401、到上限、账本坏或写不了、费用未知）整套停发 OpenRouter 请求，原因写在 `meta.asr.halted`。「费用未知」= 连不上、超时、返回读不出、或返回有文本但没带 `usage.cost`：可能已经计费。这时账本里的预留不退，并写上 `review`（待核）；**只要 `review` 在，任何进程、重启以后都拒发**。处理：到 OpenRouter 后台核实际花费，改正账本的 `spent_usd` 与 `reserved_usd`，删掉 `review` 一项，再重跑（缓存里已有的转写不会重发）
 

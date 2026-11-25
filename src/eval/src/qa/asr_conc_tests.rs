@@ -106,6 +106,10 @@ fn jobs() -> Vec<asr_or::Job> {
 }
 
 fn client(url: &str, dir: &std::path::Path) -> OpenRouter {
+    let l = dir.join("ledger.json");
+    if !l.exists() {
+        crate::qa::asr_ledger::init(&l, crate::qa::asr_ledger::Created::test()).unwrap();
+    }
     let mut c = OpenRouter::new(
         url,
         "placeholder-test-credential-0002".into(),
@@ -168,7 +172,7 @@ fn prefetch_then_transcribe_equals_plain_serial() {
         let cache = dir.join("asr_cache.json");
         let mut a = Asr::with_backends(
             cache.clone(),
-            vec![Backend::OpenRouter(or)],
+            vec![Backend::OpenRouter(Box::new(or))],
             OPENROUTER,
             Route::default(),
         );
@@ -271,7 +275,7 @@ fn permanent_prefetch_error_stops_everything_without_resending() {
     let or = client(&url, &d);
     let mut a = Asr::with_backends(
         d.join("cache.json"),
-        vec![Backend::OpenRouter(or)],
+        vec![Backend::OpenRouter(Box::new(or))],
         OPENROUTER,
         Route::default(),
     );
@@ -303,7 +307,7 @@ fn exhausted_retries_in_prefetch_are_not_retried_again() {
     let or = client(&url, &d);
     let mut a = Asr::with_backends(
         d.join("cache.json"),
-        vec![Backend::OpenRouter(or)],
+        vec![Backend::OpenRouter(Box::new(or))],
         OPENROUTER,
         Route::default(),
     );
@@ -324,7 +328,7 @@ fn prefetched_checks_are_counted_once() {
     let or = client(&url, &d);
     let mut a = Asr::with_backends(
         d.join("cache.json"),
-        vec![Backend::OpenRouter(or)],
+        vec![Backend::OpenRouter(Box::new(or))],
         OPENROUTER,
         Route::default(),
     );
@@ -349,7 +353,7 @@ fn failed_keys_are_not_prefetched_again() {
     let or = client(&url, &d);
     let mut a = Asr::with_backends(
         d.join("cache.json"),
-        vec![Backend::OpenRouter(or)],
+        vec![Backend::OpenRouter(Box::new(or))],
         OPENROUTER,
         Route::default(),
     );
@@ -370,7 +374,7 @@ fn fully_cached_rerun_still_counts_checks() {
         let or = client(&url, &d);
         Asr::with_backends(
             d.join("cache.json"),
-            vec![Backend::OpenRouter(or)],
+            vec![Backend::OpenRouter(Box::new(or))],
             OPENROUTER,
             Route::default(),
         )
@@ -424,7 +428,7 @@ fn review_flag_from_last_batch_reaches_summary() {
     let or = client(&url, &d);
     let mut a = Asr::with_backends(
         d.join("cache.json"),
-        vec![Backend::OpenRouter(or)],
+        vec![Backend::OpenRouter(Box::new(or))],
         OPENROUTER,
         Route::default(),
     );
