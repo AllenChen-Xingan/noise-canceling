@@ -8,13 +8,15 @@
 
 ## 1. 结论先说
 
+> **人定（2026-11-25，经大总管转达）：第二批只下排序 1（CochlScene 3 类）；排序 2、3「人未选，暂不下」。盘放不下可扩到 200 GB。**
+
 按「覆盖弱项前列 · 许可干净 · 体积小」排出 3 个来源。
 
 | 排序 | 来源 | 补哪些场景（括号里是弱项名次） | 许可 | 下载量 | 能不能训练 |
 |---|---|---|---|---|---|
 | 1 | CochlScene 的 3 类：地铁站 · 地铁车厢 · 拥挤室内 | 车站（第 3）· 火车舱的「车厢」部分（第 1）· 联合办公（第 10）· 开放办公（第 6，只算部分） | CC BY-SA 3.0 | 53.9 GB（分卷包，只能整包下） | 能，要先筛人声 |
-| 2 | DEMAND 没被评测集用过的 2 个环境：OHALLWAY · DLIVING | 开放办公（第 6）· 安静的家（第 12）· 酒店房间（第 14，只算近似） | CC BY 4.0（Zenodo 元数据）/ BY-SA 3.0（说明文字），两种都能训练 | 0.16 GB | 能 |
-| 3 | FSD50K 按标签取：风扇 · 打字 · 键盘 · 打印机 · 门 · 敲门 | 电话亭（第 5）· 开放办公 · 安静的家 · 酒店房间（都只补突发声与风扇，不补底噪） | 每条单独许可；只留 CC0 和 CC BY，去掉 NC 和 Sampling+ | 24.7 GB（分卷包，只能整包下） | 能，要过滤许可和同源 |
+| 2（人未选，暂不下） | DEMAND 没被评测集用过的 2 个环境：OHALLWAY · DLIVING | 开放办公（第 6）· 安静的家（第 12）· 酒店房间（第 14，只算近似） | CC BY 4.0（Zenodo 元数据）/ BY-SA 3.0（说明文字），两种都能训练 | 0.16 GB | 能 |
+| 3（人未选，暂不下） | FSD50K 按标签取：风扇 · 打字 · 键盘 · 打印机 · 门 · 敲门 | 电话亭（第 5）· 开放办公 · 安静的家 · 酒店房间（都只补突发声与风扇，不补底噪） | 每条单独许可；只留 CC0 和 CC BY，去掉 NC 和 Sampling+ | 24.7 GB（分卷包，只能整包下） | 能，要过滤许可和同源 |
 
 有 3 个场景**没有合规的数据**，照实写：
 
@@ -49,7 +51,7 @@
   - 地铁车厢只能代表「火车舱」，不能代表飞机舱
   - BY-SA：用了它训练的权重要按 BY-SA 发、记署名（D64）
 
-### 2.2 DEMAND 的 OHALLWAY · DLIVING（排序 2）
+### 2.2 DEMAND 的 OHALLWAY · DLIVING（排序 2 · 人未选，暂不下）
 
 - 出处：https://zenodo.org/records/1227121（实读）；环境说明见同一记录里的 `DEMAND.pdf`（实读）
 - 许可：页面两处不一致：说明文字写 CC BY-SA 3.0，元数据字段写 CC BY 4.0（实读）。两种都能训练，按较严的 BY-SA 记署名
@@ -67,7 +69,7 @@
   - **放的位置要和 exp013 分开**：放到 `train-raw/demand-extra/`，不放 `vdn-data/demand/`。原因：exp013 列素材时会把 `vdn-data/demand/*/ch*.wav` 全部算进去（`pools.py` 第 159 行），放进去会改掉 exp013 build 的素材清单
   - 建议加一条机器检查：exp013 的 `sounds.json` 不许出现 `demand-extra` 里的环境名，出现就红（待做）
 
-### 2.3 FSD50K 按标签取（排序 3）
+### 2.3 FSD50K 按标签取（排序 3 · 人未选，暂不下）
 
 - 出处：https://zenodo.org/records/4060432（实读）；标签表 `vocabulary.csv` 读的是 HuggingFace 上的第三方镜像（实读），下载后要用官方包里的那份再核一次
 - 许可：数据集整体是 CC BY，**每条另有许可**，由 Freesound 上传者定（实读）
@@ -137,7 +139,7 @@ du -sh /workspace/* | sort -h
 - 先 CochlScene：峰值约 48 + 53.9 + 15.4 ≈ 117 GB。离 cloudrun 定的「超 120 GB 停」只差约 3 GB，太紧
 - 删掉分卷包和 44.1 kHz 中间文件后，再下 FSD50K：峰值约 48 + 5.6 + 24.7 + 解出的标签片段（未量化，估几 GB）≈ 80 GB
 
-**要不要扩盘**：
+**要不要扩盘**（人定：放不下可扩到 200 GB；这次只下 CochlScene，FSD50K 那一步不做）：
 
 - 如果 cloudrun 量出来现在 ≤ 45 GB，又能确认第一批的压缩包已经删了：不用扩，按上面的顺序下
 - 否则：扩 50 GB（150 → 200 GB），CochlScene 的峰值才有约 80 GB 余量。按 D96 的单价（150 GB 约 $10.5 / 月）推算，每月约多 $3.5（推断）
@@ -146,7 +148,7 @@ du -sh /workspace/* | sort -h
 ## 4. 下载后要做的（给 cloudrun 和 traindata，不在这次）
 
 1. `sources.json` 加三个来源，`dest` 分别是 `train-raw/cochlscene` · `train-raw/demand-extra` · `train-raw/fsd50k`，钉住 md5
-2. `split_rules.json` 加三条规则：CochlScene 按录音人、DEMAND 按时段（0–40 % / 40–50 %）、FSD50K 按上传者，并排除 ESC-50 的 Freesound 编号。先写会红的测试
+2. `split_rules.json` 加三条规则：CochlScene 按录音人、DEMAND 按时段（0–40 % / 40–50 %）、FSD50K 按上传者，并排除 ESC-50 的 Freesound 编号与上传者。先写会红的测试
 3. 查 ESC-50 全部 2,000 条的 Freesound 上传者（排除用，见 2.3）
 4. 人声筛查：CochlScene 和 FSD50K 都要做；方法和阈值另定
 5. `recipe.json` 的 `noise_pools` 加新场景；`target_scene.scene` 可以写成列表，比如 `["rail-air-cabin", "transit-hub"]`（loader 已支持，见本分支 `tests/test_target_scenes.py`）
