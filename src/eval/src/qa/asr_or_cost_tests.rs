@@ -330,3 +330,23 @@ fn retry_costs_over_reservation_stop_immediately() {
             .is_some_and(|r| r.contains("超过预留"))
     );
 }
+
+/// codex 第 15 轮 P2 #1：HTTP 200 里内嵌的永久错误（403/404，零费用）也要整批停发。
+#[test]
+fn embedded_permanent_error_in_200_stops_the_batch() {
+    let d = tmpdir("embedded403");
+    let e403 = (
+        200,
+        "",
+        json!({"error": {"code": 403, "message": "Forbidden"}, "usage": {"cost": 0}}).to_string(),
+    );
+    let (url, seen) = fake(vec![e403.clone(), e403.clone(), e403]);
+    let mut c = client(&url, &d);
+    let jobs: Vec<Job> = (0..3)
+        .map(|_| (audio(), vdn_types::MODEL_RATE, "en".to_string()))
+        .collect();
+    let r = c.transcribe_many(&jobs, 1);
+    assert!(r.iter().all(Result::is_err));
+    assert!(is_permanent(r[0].as_ref().unwrap_err()), "{:?}", r[0]);
+    assert_eq!(seen.lock().unwrap().len(), 1, "内嵌 403 之后不再派发");
+}

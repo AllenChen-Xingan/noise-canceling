@@ -292,7 +292,15 @@ impl Conn<'_> {
                 };
                 let c = cost.map_or(Cost::Unknown, Cost::Known);
                 if let Some(e) = v.get("error") {
-                    return Err(fail(format!("{tag}识别返回 200 但带错误：{e}"), c, carried));
+                    // 内嵌错误码按 HTTP 状态码同一套分类：不该重试的（4xx 里除了 408 · 429）当永久错误，整套停发（codex 第 15 轮）
+                    let inner = e["code"].as_u64().and_then(|x| u16::try_from(x).ok());
+                    let perm = inner.is_some_and(|x| (400..500).contains(&x) && !retryable(x));
+                    let kind = if perm { "，不重试" } else { "" };
+                    return Err(fail(
+                        format!("{tag}识别返回 200 但带错误{kind}：{e}"),
+                        c,
+                        carried,
+                    ));
                 }
                 let Some(t) = v["text"].as_str() else {
                     return Err(fail(format!("{tag}识别返回缺 text：{v}"), c, carried));
