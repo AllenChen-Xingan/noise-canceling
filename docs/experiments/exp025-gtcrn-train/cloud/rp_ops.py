@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import os
 import re
 import secrets
@@ -341,19 +342,49 @@ def start_job(cli: Client, pod_id: str, script: str, job: str, jobs_dir: str = "
     return run_id
 
 
+# 在机器里读任务状态（评审第 10–12 轮同一处三次「换写法就漏」，按 CLAUDE.md 第二节改结构）：
+# 用 Python 读文件，只有 FileNotFoundError 才算「不存在」，其余错误原样报出；状态与日志分字段输出，日志内容不会和标记混淆。
+JOB_STATUS_PY = r"""
+import json, sys
+d, n = sys.argv[1], int(sys.argv[2])
+out = {}
+def rd(p, limit=None):
+    try:
+        with open(p, "rb") as f:
+            if not limit:
+                return f.read(), False
+            f.seek(0, 2); size = f.tell(); f.seek(max(0, size - limit))
+            return f.read(), size > limit
+    except FileNotFoundError:
+        return None, False
+try:
+    rc, _ = rd(d + ".rc")
+    out["rc_raw"] = None if rc is None else rc.decode("utf-8", "replace").strip()
+    log, cut = rd(d + ".log", 262144)
+    out["log_exists"] = log is not None
+    if log is not None:
+        lines = log.decode("utf-8", "replace").splitlines(True)
+        out["log"] = "".join(lines[-n:])
+        out["log_partial"] = cut or len(lines) > n
+except Exception as e:
+    out["error"] = type(e).__name__ + ": " + str(e)
+print(json.dumps(out))
+"""
+
+
 def job_status(cli: Client, pod_id: str, job: str, jobs_dir: str = "/root/jobs", tail: int = 20) -> dict:
-    d = shlex.quote(f"{jobs_dir}/{job}")
-    # 只有「日志文件确实不存在」才算还没开始（刚启动、或启动结果未知），按没完继续等（评审第 10 轮 #2）；
-    # 日志在但读不出（权限、I/O）照样报错，不当成没日志（第 11 轮 #1）
-    out = check_ok(sh(cli, pod_id, f"cat {d}.rc 2>/dev/null || echo RUNNING; echo ---; "
-                                   f"if [ -e {d}.log ]; then tail -n {int(tail)} {d}.log; else echo NOLOG; fi"),
-                   f"查 {job}")
-    head, _, log = out.partition("---\n")
-    head = head.strip()
-    rc = int(head) if head.lstrip("-").isdigit() else None
-    seen = log.strip() != "NOLOG"
+    """返回 done / rc / log（最后 tail 行）/ log_seen（日志文件是否存在）。
+    读不出（非「不存在」的错误）、exec 输出被截断，一律报错，不当成「没日志」或「完成」。"""
+    r = exec_cmd(cli, pod_id, ["python3", "-c", JOB_STATUS_PY, f"{jobs_dir}/{job}", str(int(tail))])
+    if r.get("truncated"):
+        raise SystemExit(f"查 {job} 的输出被截断，结果不完整，不判完成")
+    st = json.loads(check_ok(r, f"查 {job}").strip().splitlines()[-1])
+    if st.get("error"):
+        raise SystemExit(f"查 {job} 读文件出错：{st['error']}")
+    raw = st.get("rc_raw")
+    rc = int(raw) if raw and raw.lstrip("-").isdigit() else None
     # 只有读到合法退出码才算完；.rc 空着（正在写）或乱码都当没完（评审第 1 轮 #11）
-    return {"done": rc is not None, "rc": rc, "log": log if seen else "", "log_seen": seen}
+    return {"done": rc is not None, "rc": rc, "log": st.get("log", ""), "log_seen": bool(st.get("log_exists"))}
 
 
 def wait_job(cli: Client, pod_id: str, job: str, timeout_s: float, poll_s: float = 15,

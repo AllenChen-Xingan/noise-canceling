@@ -124,6 +124,32 @@ class TestTransfer(Base):
         with self.assertRaises(SystemExit):
             O.job_status(self.cli, "pod_9", rid)
 
+    def test_status_reader_runs_in_real_python(self):
+        # 改结构后的读取器：在本机真 Python 里跑三种情况——不存在、正常、目录当文件（读出错）
+        import json, subprocess, sys, tempfile
+        with tempfile.TemporaryDirectory() as t:
+            d = os.path.join(t, "j")
+            run = lambda: json.loads(subprocess.run([sys.executable, "-c", O.JOB_STATUS_PY, d, "20"],
+                                                    capture_output=True, text=True).stdout)
+            self.assertEqual(run(), {"rc_raw": None, "log_exists": False})
+            with open(d + ".log", "w") as f:
+                f.write("NOLOG\n")  # 正文恰好是 NOLOG：照样当日志（第 12 轮 #2）
+            with open(d + ".rc", "w") as f:
+                f.write("0\n")
+            st = run()
+            self.assertEqual((st["rc_raw"], st["log_exists"], st["log"]), ("0", True, "NOLOG\n"))
+            os.remove(d + ".log")
+            os.mkdir(d + ".log")  # 读出错但不是「不存在」（第 12 轮 #1）
+            self.assertIn("error", run())
+
+    def test_truncated_status_output_is_an_error(self):
+        # 第 12 轮 #3：exec 输出被截断，不判完成
+        rid = "t-20261125000000-abcdef"
+        self.fake.jobs[rid] = (0, "x\n")
+        self.fake.truncate_status = True
+        with self.assertRaises(SystemExit):
+            O.job_status(self.cli, "pod_9", rid)
+
     def test_manual_delete_needs_yes(self):
         # 评审第 10 轮 #1：down / reap 不带 --yes 只列出要删的，不删
         with self.assertRaises(SystemExit) as cm:

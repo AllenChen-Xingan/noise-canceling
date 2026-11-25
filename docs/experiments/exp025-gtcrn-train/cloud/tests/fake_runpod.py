@@ -108,6 +108,15 @@ class FakeRunPod:
     def exec(self, argv):
         ok = {"stdout": "", "stderr": "", "exitCode": 0, "timedOut": False, "truncated": False, "durationMs": 1}
         assert len(argv) <= 256 and all(len(a) <= 4096 for a in argv), "超出 exec 参数上限"
+        if argv[:2] == ["python3", "-c"] and "log_exists" in argv[2]:  # rp_ops.JOB_STATUS_PY
+            job = argv[3].rsplit("/", 1)[1]
+            if job in getattr(self, "unreadable_logs", set()):
+                return dict(ok, stdout=json.dumps({"error": "PermissionError: denied"}) + "\n")
+            if job not in self.jobs:
+                return dict(ok, stdout=json.dumps({"rc_raw": None, "log_exists": False}) + "\n")
+            rc, log = self.jobs[job]
+            return dict(ok, stdout=json.dumps({"rc_raw": str(rc), "log_exists": True, "log": log}) + "\n",
+                        truncated=getattr(self, "truncate_status", False))
         script = argv[2] if argv[:2] == ["sh", "-c"] else " ".join(argv)
         if self.fail_exec and self.fail_exec in script:
             return dict(ok, exitCode=1, stderr="boom")
