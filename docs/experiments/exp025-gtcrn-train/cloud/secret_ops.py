@@ -66,25 +66,34 @@ def _check_remote(remote: str) -> str:
     return norm
 
 
-def put_secret(cli: Client, pod_id: str, name: str, value: str, remote: str = DEFAULT_REMOTE) -> int:
-    """写入并核对；返回值的位数。"""
-    if not re.fullmatch(r"[A-Z][A-Z0-9_]{1,63}", name):
-        raise SystemExit(f"键名只用大写字母、数字、下划线：{name!r}")
-    remote = _check_remote(remote)
+def _send(cli: Client, pod_id: str, name: str, value: str, remote: str) -> tuple:
+    """发出去并把结果消化成安全的 (结果码, 说明)：远端正文、原始异常都不出这个函数。"""
     want = hashlib.sha256(f"{name}={value}\n".encode()).hexdigest()
-    # 报错里一律不带远端正文与原始异常（评审第 1 轮 #1、#3）：只给异常类型、状态码、退出码；
-    # 异常在 except 块里换成一句话，出了块再抛，异常链里没有原始异常
-    failed = None
     try:
         r = O.exec_cmd(cli, pod_id, ["sh", "-c", WRITE_SH], env={"K": name, "V": value, "P": remote, "W": want})
     except BaseException as e:
-        failed = f"{type(e).__name__} {getattr(e, 'status', '')}".strip()
-    if failed:
-        raise SystemExit(f"送 {name} 的结果未知（{failed}）；细节不显示，免得带出密钥。先在机器里查 {remote} 的权限和位数再决定重送")
+        return "UNKNOWN", f"{type(e).__name__} {getattr(e, 'status', '')}".strip()
     if r.get("timedOut"):
-        raise SystemExit(f"送 {name} 超时，结果未知；先在机器里查 {remote} 的权限和位数再决定重送")
+        return "UNKNOWN", "超时"
     status = (r.get("stdout") or "").strip()
-    if r.get("exitCode") != 0 or status != "OK":
-        why = RESULTS.get(status, f"退出码 {r.get('exitCode')}")
-        raise SystemExit(f"送 {name} 没成：{why}；细节不显示，免得带出密钥")
-    return len(value)
+    if r.get("exitCode") == 0 and status == "OK":
+        return "OK", ""
+    if status in RESULTS:
+        return status, RESULTS[status]
+    return "UNKNOWN", f"没有完成标记，退出码 {r.get('exitCode')}"  # 可能已替换完、在回 OK 前断了（第 3 轮 #4）
+
+
+def put_secret(cli: Client, pod_id: str, name: str, value: str, remote: str = DEFAULT_REMOTE) -> int:
+    """写入并核对；返回值的位数。报错只有结果码和中文说明，不带远端正文、原始异常；
+    抛错前删掉本函数里的 value，traceback 的帧里也没有它（评审第 3 轮 #1）。"""
+    if not re.fullmatch(r"[A-Z][A-Z0-9_]{1,63}", name):
+        raise SystemExit(f"键名只用大写字母、数字、下划线：{name!r}")
+    remote = _check_remote(remote)
+    n = len(value)
+    code, why = _send(cli, pod_id, name, value, remote)
+    del value
+    if code == "OK":
+        return n
+    if code == "UNKNOWN":
+        raise SystemExit(f"[{code}] 送 {name} 的结果未知（{why}）；细节不显示。先在机器里查 {remote} 的权限和位数再决定重送")
+    raise SystemExit(f"[{code}] 送 {name} 没成：{why}；细节不显示")

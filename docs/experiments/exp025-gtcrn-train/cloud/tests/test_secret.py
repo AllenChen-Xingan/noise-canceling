@@ -103,6 +103,11 @@ class TestPutSecret(Base):
                 chain.append(x)
                 x = x.__cause__ or x.__context__
             self.assertEqual(len(chain), 1)
+            tb = e.__traceback__  # 第 3 轮 #1：traceback 各帧的局部变量里也不能有值
+            while tb is not None:
+                if tb.tb_frame.f_code.co_filename.endswith("secret_ops.py"):
+                    self.assertNotIn(self.value, repr(tb.tb_frame.f_locals))
+                tb = tb.tb_next
             text = "".join(traceback.format_exception(e))
             self.assert_no_leak(text, str(e))
             self.assertIn("结果未知", str(e))
@@ -122,6 +127,14 @@ class TestPutSecret(Base):
         with self.assertRaises(SystemExit):
             S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.value)
         self.assertEqual(self.fake.files["/root/.env.local"], b"OLD\n")
+
+    def test_no_completion_marker_is_unknown(self):
+        # 第 3 轮 #4：替换完、回 OK 前断了：没有完成标记就按「结果未知」
+        orig = self.fake.exec
+        self.fake.exec = lambda argv, env=None: dict(orig(argv, env), stdout="") if env else orig(argv, env)
+        with self.assertRaises(SystemExit) as cm:
+            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.value)
+        self.assertIn("[UNKNOWN]", str(cm.exception))
 
     def test_timeout_is_reported_as_unknown(self):
         # 第 1 轮 #5：超时不宣称成功或已清理
