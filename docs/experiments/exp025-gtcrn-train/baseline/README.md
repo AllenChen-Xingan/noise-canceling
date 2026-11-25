@@ -80,6 +80,7 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
 **云上照做的步骤**（冒烟 5 段那次的产物，路径由 cloudrun 2026-11-25 给出；`vdn-eval` 要用含 `asr-probe` 的 main，即 4fb3d8cc 或更新，旧目录 `repo-27d2808a` 里的二进制没有这个子命令，只取它的音频和缓存）：
 
 ```bash
+set -euo pipefail   # 任一步失败就停：别用旧二进制发付费调用
 OLD=/workspace/repo-27d2808a/docs/experiments/exp025-gtcrn-train/baseline/runs/smoke5-20261125-052356-e5sjgks999cqbf/qa
 LEDGER=/workspace/asr-ledger/asr-openrouter-ledger.json
 # 1. 核输入：应有 15 个 wav；缓存 30 条、sha256 = 057edd601ed5617c5a37b22ef09ceffcf8af6b9ab85412f186bfe6ab1c52e1ff
@@ -94,7 +95,7 @@ cd "$REPO" && cargo build --release -p vdn-eval
 # 4. 取回：报告 JSON、跑后的账本快照（附 sha256）、账本旁的明细 asr-openrouter-ledger.json.calls.jsonl
 ```
 
-验收：报告里 `audio` = 15、`repeats` = 3、`halted` 为 null，看 `unstable_rate` 与 `pass`；账本 `calls` 增加 45（若有重试，明细里多出的行就是重试）、`spent_usd` 增量 ≈ 45 × 每条秒数 × 0.000008。`--temperature 0` 若被接口拒（4xx），探针当场停发、`halted` 写原因：那就说明这个模型不收温度参数，直接改用 A。
+验收：报告里 `audio` = 15、`repeats` = 3、`halted` 为 null，看 `unstable_rate` 与 `pass`；账本 `calls` 增加 45（若有重试，明细里多出的行就是重试）、`spent_usd` 增量 ≈ 45 × 每条秒数 × 0.000008。遇到不重试的错误（4xx 等）探针当场停发、`halted` 写原因。**只有原因里明说不支持 `temperature` 这个参数**，才算「这个模型钉不住温度」、改用 A；401（密钥）、402（余额）、403/404（数据政策）等别的原因都不说明温度的事，查清后重跑。
 
 ## 二、识别与外发（D103 · D104，人定 2026-11-25）
 
