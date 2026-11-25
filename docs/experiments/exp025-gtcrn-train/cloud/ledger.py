@@ -16,6 +16,8 @@ from typing import Iterable, Optional
 
 import config as C
 
+GRACE_H = C.WATCHDOG_GRACE_S / 3600
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_PATH = os.path.join(HERE, "costs.tsv")
 

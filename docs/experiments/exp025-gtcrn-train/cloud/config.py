@@ -35,6 +35,7 @@ VOLUME_MOUNT = "/workspace"
 SPEND_CAP_USD = 60.0
 # 单次开机最长小时数的默认值；开机前按「已花 + 盘费 + 本次最坏」检查不超上限
 DEFAULT_MAX_HOURS = 1.0
+WATCHDOG_GRACE_S = 300  # 本机看门狗比机器内自删晚 5 分钟；花费上限也按「时限 + 宽限」算最坏
 
 # exec 接口限制（openapi PodExecRequest / PodExecResult）
 EXEC_TIMEOUT_MAX_S = 25

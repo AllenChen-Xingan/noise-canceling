@@ -24,7 +24,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 WATCH_DIR = os.path.join(HERE, ".watch")  # cloud/.gitignore 忽略
 DEADLINES = os.path.join(WATCH_DIR, "deadlines.json")
 PIDFILE = os.path.join(WATCH_DIR, "watchdog.pid")
-GRACE_S = 300  # 本机看门狗比机器内自删晚 5 分钟，自删失败时兜底
+GRACE_S = C.WATCHDOG_GRACE_S  # 本机看门狗比机器内自删晚这么久，自删失败时兜底
 
 # 机器内自删脚本：只删 RUNPOD_POD_ID 这一台（URL 里只有自己的编号）。先试 v2 接口，再试 v1。
 SELF_DELETE_PY = (

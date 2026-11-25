@@ -105,7 +105,7 @@ class TestLedger(Base):
         ]
         spent = L.spent_so_far(rows, now)
         self.assertAlmostEqual(spent, 10.5 + 3.0 + 2.0, places=2)  # 盘一个月 10.5 + 账单优先
-        self.assertAlmostEqual(L.check_budget(rows, 0.5, 4, now=now), spent + 2.0, places=2)
+        self.assertAlmostEqual(L.check_budget(rows, 0.5, 4, now=now), spent + 0.5 * (4 + L.GRACE_H), places=2)
         with self.assertRaises(SystemExit):
             L.check_budget(rows, 0.5, 10, cap=20.0, now=now)  # 15.5 + 5 > 20（显式上限，不随 config 变）
 
@@ -113,6 +113,18 @@ class TestLedger(Base):
         t0 = dt.datetime(2026, 11, 16, tzinfo=dt.timezone.utc)
         rows = [{"action": "pod_create", "resource_id": "p", "usd_per_hr": "0.5", "started_utc": L.iso(t0)}]
         self.assertAlmostEqual(L.live_pod_cost(rows, t0 + dt.timedelta(hours=2)), 1.0)
+
+    def test_open_pods_reserve_their_full_max_hours(self):
+        # 评审第 1 轮 #2：两台各开 4 小时，第二台开机时要算上第一台跑满的费用，不只算已跑的
+        t0 = dt.datetime(2026, 11, 16, tzinfo=dt.timezone.utc)
+        rows = [{"action": "pod_create", "resource_id": "p", "usd_per_hr": "5.0",
+                 "started_utc": L.iso(t0), "note": "max_hours=4.0"}]
+        now = t0 + dt.timedelta(minutes=6)
+        self.assertAlmostEqual(L.open_pods_worst(rows, now), 5.0 * (4 + L.GRACE_H))
+        with self.assertRaises(SystemExit):
+            L.check_budget(rows, 5.0, 4, cap=40.0, now=now)  # 旧算法 0.5 + 20.4 < 40 会放行
+        late = t0 + dt.timedelta(hours=6)  # 已超时还没删：按实际已跑算
+        self.assertAlmostEqual(L.open_pods_worst(rows, late), 30.0)
 
 
 class TestOps(Base):
