@@ -257,10 +257,10 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
         guard = G.Guard(cfg.limits.expect_s_step)
         if st is not None and st.get("guards") is not None:
             guard.load_state_dict(st["guards"])
-        if st is not None:  # 最好的一次以 run.json 为准：检查点存在评估之前时（跑满补评估、被抢占）它更新（codex guards 第 1 轮 #2）
-            b = rd.read().get("best")
-            if b is not None and (guard.best is None or b["hybrid"] < guard.best["hybrid"]):
-                guard.best, guard.bad = dict(b), 0
+        if st is not None:  # 最好的一次取三处里最好的：检查点 · run.json · best.pt 自带的（与权重一起原子存，codex guards 第 1、2 轮）
+            for b in (rd.read().get("best"), best_in_file(rd.ckpt_dir / "best.pt", device)):
+                if b is not None and (guard.best is None or b["hybrid"] < guard.best["hybrid"]):
+                    guard.best, guard.bad = dict(b), 0
         init_only = st is None and rd.read().get("phase") == "init" and not any(rd.ckpt_dir.glob("step-*.pt"))
         if init_only:
             # 上次写了 run.json、还没存下第 0 步就被杀（codex 第 3 轮 #2）：配置与数据一致就重建，账从心跳接上
@@ -433,6 +433,8 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
             if reason == "max_steps" and step > last_eval:  # 只在正常跑完时补评估；上限 / 信号时不再花时间
                 if dev_eval() == "nonfinite":
                     reason = "nonfinite"
+                else:  # 补评估改了保护状态（最好一次、连续变差次数）：重存这一步，续训才接得上（codex guards 第 2 轮 #2）
+                    rd.save(state(), step, sc.keep_last)
         rec["stop"] = {"reason": reason, "step": step, "billed_s": round(billed(), 2), "usd": round(usd(), 4),
                        "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
         rd.write(rec)
@@ -458,6 +460,17 @@ def main(argv=None) -> int:
 
 
 CRASH_SAVE_S = 120.0  # 存现场最多等这么久；存不成也照样停（codex guards 第 1 轮 #3）
+
+
+def best_in_file(path: Path, device) -> dict | None:
+    """best.pt 里与权重一起存下的最好成绩；文件没有或读坏了返回 None。"""
+    if not path.exists():
+        return None
+    try:
+        g = torch.load(path, map_location=device, weights_only=False).get("guards") or {}
+    except Exception:  # noqa: BLE001 —— 读坏了就不用它
+        return None
+    return g.get("best")
 
 
 def all_finite(x) -> bool:
