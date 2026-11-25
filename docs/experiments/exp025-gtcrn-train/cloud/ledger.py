@@ -111,6 +111,12 @@ def volume_spent(rows: Iterable[dict], now: Optional[dt.datetime] = None) -> flo
     for r in rows:
         if r["action"] == "volume_create":
             created[r["resource_id"]] = (parse_iso(r["started_utc"]), _f(r["usd_per_hr"]))
+        elif r["action"] == "volume_resize" and r["resource_id"] in created:
+            # 扩盘：旧单价算到扩盘那一刻，之后按新单价（started_utc 记扩盘时刻）
+            t0, rate = created[r["resource_id"]]
+            t1 = parse_iso(r["started_utc"])
+            total += rate * max((t1 - t0).total_seconds(), 0) / 3600
+            created[r["resource_id"]] = (t1, _f(r["usd_per_hr"]))
         elif r["action"] == "volume_delete" and r["resource_id"] in created:
             t0, rate = created.pop(r["resource_id"])
             total += rate * (parse_iso(r["ended_utc"]) - t0).total_seconds() / 3600
@@ -150,7 +156,7 @@ def volume_reserve(rows: Iterable[dict]) -> float:
     """还没删的网络盘：按往后 VOLUME_RESERVE_HOURS 小时的盘费预留（评审第 2 轮 #1）。盘不删就一直收钱。"""
     live = {}
     for r in rows:
-        if r["action"] == "volume_create":
+        if r["action"] in ("volume_create", "volume_resize"):
             live[r["resource_id"]] = _f(r["usd_per_hr"])
         elif r["action"] == "volume_delete":
             live.pop(r["resource_id"], None)

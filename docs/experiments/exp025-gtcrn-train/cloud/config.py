@@ -39,6 +39,7 @@ VOLUME_MOUNT = "/workspace"
 SPEND_CAP_USD = 60.0
 # 单次开机最长小时数的默认值；开机前按「已花 + 盘费 + 本次最坏」检查不超上限
 DEFAULT_MAX_HOURS = 1.0
+VOLUME_MAX_GB = 200  # 扩盘上限（人定 2026-11-25：放不下可从 150 扩到 200 GB）
 VOLUME_RESERVE_HOURS = 720  # 建盘时花费上限按先留一个月盘费检查（评审第 1 轮 #2）
 WATCHDOG_GRACE_S = 300  # 本机看门狗比机器内自删晚 5 分钟；花费上限也按「时限 + 宽限」算最坏
 

@@ -36,3 +36,5 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-25T21:43:37Z	pod_delete	t7wneq6dc0l3lv	cpu3c x4	US-MO-1	0.1200	2026-11-25T21:40:36Z	2026-11-25T21:43:37Z	0.0503	0.0060		乙段第 0 步：clone 7eecbbe8、复制 known-dev
 2026-11-25T21:44:09Z	pod_create	ijfkm5fvi6xfp7	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T21:44:09Z					max_hours=1.5
 2026-11-25T22:02:20Z	pod_delete	ijfkm5fvi6xfp7	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T21:44:09Z	2026-11-25T22:02:20Z	0.3031	1.3304		乙段第 2 步：镜像没有 git，train.py 拒跑；按收尾取回后删机
+2026-11-25T22:04:59Z	pod_create	htpp90buaagezi	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T22:04:59Z					max_hours=1.5
+2026-11-25T22:06:20Z	pod_create	gwgj2a97e1a92q	cpu3c x4	US-MO-1	0.1200	2026-11-25T22:06:20Z					max_hours=6.0
