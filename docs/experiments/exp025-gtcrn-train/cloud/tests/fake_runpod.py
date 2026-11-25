@@ -163,8 +163,10 @@ class FakeRunPod:
             return ok
         if script.startswith("cat ") and ".rc" in script:
             job = re.search(r"/([\w.-]+)\.rc", script).group(1)
-            if job not in self.jobs:
-                return dict(ok, stdout="RUNNING\n---\n")
+            if job not in self.jobs:  # 和真 shell 一样：日志不存在时 tail 失败，除非后面跟了 || 兜底
+                tolerant = "|| echo NOLOG" in script or "|| true" in script
+                return dict(ok, stdout="RUNNING\n---\n" + ("NOLOG\n" if tolerant else ""),
+                            exitCode=0 if tolerant else 1)
             rc, log = self.jobs[job]
             return dict(ok, stdout=f"{rc}\n---\n{log}")
         return dict(ok, stdout=f"ran: {script}")

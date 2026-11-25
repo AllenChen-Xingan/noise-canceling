@@ -343,13 +343,15 @@ def start_job(cli: Client, pod_id: str, script: str, job: str, jobs_dir: str = "
 
 def job_status(cli: Client, pod_id: str, job: str, jobs_dir: str = "/root/jobs", tail: int = 20) -> dict:
     d = shlex.quote(f"{jobs_dir}/{job}")
-    out = check_ok(sh(cli, pod_id, f"cat {d}.rc 2>/dev/null || echo RUNNING; echo ---; tail -n {int(tail)} {d}.log 2>/dev/null"),
-                   f"查 {job}")
+    # 日志还没出现（刚启动、或启动结果未知）时 tail 会失败：用 || echo NOLOG 兜住，按「没完」继续等（评审第 10 轮 #2）
+    out = check_ok(sh(cli, pod_id, f"cat {d}.rc 2>/dev/null || echo RUNNING; echo ---; "
+                                   f"tail -n {int(tail)} {d}.log 2>/dev/null || echo NOLOG"), f"查 {job}")
     head, _, log = out.partition("---\n")
     head = head.strip()
     rc = int(head) if head.lstrip("-").isdigit() else None
+    seen = log.strip() != "NOLOG"
     # 只有读到合法退出码才算完；.rc 空着（正在写）或乱码都当没完（评审第 1 轮 #11）
-    return {"done": rc is not None, "rc": rc, "log": log}
+    return {"done": rc is not None, "rc": rc, "log": log if seen else "", "log_seen": seen}
 
 
 def wait_job(cli: Client, pod_id: str, job: str, timeout_s: float, poll_s: float = 15,
