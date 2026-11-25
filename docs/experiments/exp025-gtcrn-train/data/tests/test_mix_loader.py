@@ -2,9 +2,11 @@
 夹具在临时目录现造（几秒长的合成波形，总共 < 1 MB），不用真数据集。"""
 import copy
 import json
+import shutil
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import numpy as np
@@ -172,6 +174,8 @@ def make_tree(root):
         lines.append(f"--rir-id r{room} --room-id Room{room:03d} RIRS_NOISES/simulated_rirs/smallroom/{f.parent.name}/{f.name}")  # 上游格式
     (d / "rir_list").write_text("\n".join(lines) + "\n")
     tone(root / "vdn-data/demand/STRAFFIC/ch01.wav", 6, seed=30)
+    for i, spk in enumerate(("1272", "1462", "2033", "2414")):  # 终测原料池来源：不进分片，但交集检查要查它
+        tone(root / f"train-raw/librispeech/LibriSpeech/{'dev-clean' if i < 2 else 'test-other'}/{spk}/1/{spk}-1-0000.flac", 1, seed=40 + i)
 
 
 class EndToEnd(unittest.TestCase):
@@ -187,7 +191,7 @@ class EndToEnd(unittest.TestCase):
             r.pop("room_lists_sha256", None)  # 夹具的 rir_list 不是上游原文件（钉哈希另有 test_openslr28_rooms）
         cls.splits = t / "splits"
         names = ["librispeech-train-clean-100", "qut-noise", "tum-wind", "openslr28-rir", "demand-train"]
-        for n in names:
+        for n in names + ["librispeech-dev-clean-test-other"]:
             rows = split.split_source(root, n, R["sources"][n], R["seed"], R["splits"], workers=2)
             split.write(n, R["sources"][n], R["seed"], rows, cls.splits)
         cls.shards = t / "shards"
@@ -218,6 +222,40 @@ class EndToEnd(unittest.TestCase):
         bj = json.loads((self.builds / self.bid / "build.json").read_text())
         self.assertTrue(bj["valid"])
         self.assertTrue(bj["leak_check"]["ok"])
+
+    def test_leak_check_covers_every_rule_source(self):
+        """codex 第 1 轮 P1 #2：终测原料池的人声来源不进分片，以前登记时就不查它。规则里每个来源都要查。"""
+        bj = json.loads((self.builds / self.bid / "build.json").read_text())
+        self.assertEqual(bj["leak_checked_sources"], sorted(split.load_rules()["sources"]))
+        seen = {}
+        real = loader.leakcheck.check
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(loader.leakcheck, "check", lambda t: seen.update(t) or real(t)):
+            loader.register_build(self.shards, self.recipe, self.splits, Path(d))
+        self.assertIn("librispeech-dev-clean-test-other", seen)
+
+    def test_register_refuses_missing_table(self):
+        with tempfile.TemporaryDirectory() as d:
+            sp = Path(d) / "splits"
+            shutil.copytree(self.splits, sp)
+            for f in sp.glob("librispeech-dev-clean-test-other.*"):
+                f.unlink()
+            with self.assertRaises(SystemExit):
+                loader.register_build(self.shards, self.recipe, sp, Path(d) / "builds")
+
+    def test_build_id_covers_index_and_gpu_code(self):
+        """codex 第 1 轮 P1 #1：build_id 要随分片索引（成员偏移）和真正混音的 gpu_mix.py 变。"""
+        bid, parts, _ = loader.build_info(self.shards, self.recipe)
+        for f in ("gpu_mix.py", "mix.py", "loader.py", "shard.py", "leakcheck.py", "split.py"):
+            self.assertIn(f, parts["code_sha256"])
+        with tempfile.TemporaryDirectory() as d:
+            sh = Path(d) / "shards"
+            shutil.copytree(self.shards, sh)
+            idx = json.loads((sh / "index.json").read_text())
+            m = idx["sources"]["qut-noise"]["train"]["members"][0]
+            k = next(k for k, v in m.items() if isinstance(v, int) and not isinstance(v, bool))
+            m[k] += 1
+            (sh / "index.json").write_text(json.dumps(idx))
+            self.assertNotEqual(loader.build_info(sh, self.recipe)[0], bid)
 
     def test_unregistered_build_refused(self):
         with self.assertRaises(SystemExit):
