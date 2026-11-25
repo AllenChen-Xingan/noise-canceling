@@ -78,9 +78,12 @@ pub struct Route {
 impl Route {
     /// 从 JSON 文件读路由（`VDN_ASR_ROUTE` 给的是文件路径，不是 JSON 本身）。
     pub fn load(path: &Path) -> Result<Route, String> {
-        let t = std::fs::read_to_string(path)
-            .map_err(|e| format!("路由文件 {}：{e}", path.display()))?;
-        serde_json::from_str(&t).map_err(|e| format!("路由文件 {}：{e}", path.display()))
+        // 错误里只写文件名：错误会进成绩单 meta.asr，本机目录含用户名
+        let name = path
+            .file_name()
+            .map_or_else(|| "路由文件".into(), |n| n.to_string_lossy().into_owned());
+        let t = std::fs::read_to_string(path).map_err(|e| format!("路由文件 {name}：{e}"))?;
+        serde_json::from_str(&t).map_err(|e| format!("路由文件 {name}：{e}"))
     }
 
     /// 这一段用哪个后端（片段 id 去掉 `#…` 的缓存后缀再查）。
