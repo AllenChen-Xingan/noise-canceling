@@ -355,7 +355,7 @@ impl Asr {
         text
     }
 
-    /// 转写 `REPEATS` 次，返回 (第一次文本, 是否每次逐字相同)。`clip` = 片段 id（按路由选后端，记进 [`Asr::used`]）。
+    /// 转写 `REPEATS` 次，返回 (第一次文本, 是否每次分词后相同，见 [`same_text`])。`clip` = 片段 id（按路由选后端，记进 [`Asr::used`]）。
     pub fn transcribe(
         &mut self,
         path: &Path,
@@ -368,7 +368,7 @@ impl Asr {
         let mut stable = true;
         let n = repeats_for(sha, self.single);
         for rep in 2..=n {
-            stable &= self.once(path, sha, lang, rep, backend)? == first;
+            stable &= same_text(&self.once(path, sha, lang, rep, backend)?, &first, lang);
         }
         if n > 1 {
             let model = self.backends.get(backend).map_or("?", Backend::model);
@@ -446,7 +446,7 @@ impl Asr {
                 })
                 .collect();
             if let Some(t) = texts {
-                let stable = t.iter().all(|x| *x == t[0]);
+                let stable = t.iter().all(|x| same_text(x, &t[0], lang));
                 self.count_check(format!("{sha}|{model}"), stable);
             }
         }
@@ -497,6 +497,12 @@ impl Asr {
             _ => self.default,
         }
     }
+}
+
+/// 两次转写算不算一样：按评分用的分词（[`tokens`]）比，大小写、标点、空白的差别不算（大总管 2026-11-25 冒烟：
+/// 原先逐字比原文，评分看不见的差别也判成不一致）。
+pub fn same_text(a: &str, b: &str, lang: &str) -> bool {
+    tokens(a, lang) == tokens(b, lang)
 }
 
 /// 分词：中文按字，英文按词（小写、只留字母数字与撇号）。
