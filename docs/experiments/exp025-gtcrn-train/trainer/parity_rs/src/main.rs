@@ -1,4 +1,4 @@
-//! 对拍驱动：读一份清单（JSON），对每条用 vdn-eval 的正本算 V-SPLVL · V-ONSET 与 10 ms 掩码，打印 JSON。
+//! 对拍驱动：读一份清单（JSON），对每条用 vdn-eval 的正本算 V-SPLVL · V-ONSET · V-PUMPV 与 10 ms 掩码，打印 JSON。
 //!
 //! 清单：`[{"name", "clean", "out", "mix"?, "owner": [[a,b],…], "interf": [[a,b],…]}]`，
 //! 音频是小端 f32 原始样本（`.f32`，16 kHz），避免 WAV 量化影响对拍。
@@ -75,6 +75,7 @@ fn main() {
             "name": case.get("name"),
             "splvl": score_json(&eval("V-SPLVL", &ctx, &p)),
             "onset": score_json(&eval("V-ONSET", &ctx, &p)),
+            "pumpv": score_json(&eval("V-PUMPV", &ctx, &p)),
             "owner_mask": bits(&m.owner),
             "interf_mask": bits(&m.interf),
             "truth_from_clean": tfc,

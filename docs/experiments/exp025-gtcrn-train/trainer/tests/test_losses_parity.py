@@ -73,6 +73,12 @@ def _cases():
     cases.append(("onset_window_past_end", c, c * 0.7, iv + [(late, n)], []))
     cases.append(("all_zero_clean", np.zeros(N, np.float32),
                   (rng.standard_normal(N) * 0.01).astype(np.float32), [], []))
+    # V-PUMPV（人声忽大忽小）：连续说话 + 2 Hz ±6 dB 增益抖动（同 probes.rs 的探针）· 只有整体增益 · 有旁人的区间
+    c = (rng.standard_normal(N) * 0.1).astype(np.float32)
+    g = (10 ** (6 * np.sin(2 * np.pi * 2 * np.arange(N) / 16000) / 20)).astype(np.float32)
+    cases.append(("pump_2hz_6db", c, c * g + 0.002 * rng.standard_normal(N).astype(np.float32), [(0, N)], []))
+    c = (rng.standard_normal(N + 77) * 0.1).astype(np.float32)
+    cases.append(("pump_flat_gain", c, c * 0.3, [(500, N + 77)], [(8000, 20000)]))
     return cases
 
 
@@ -128,6 +134,28 @@ def test_readings_match_rust(rust, case, dtype, tol):
     if ve:
         assert abs(e - r["onset"]["value"]) <= tol
         assert cnt == r["onset"]["extra"]["onsets"]
+
+
+@pytest.mark.parametrize("dtype,tol", [(torch.float64, 1e-6), (torch.float32, 2e-3)], ids=["f64", "f32"])
+@pytest.mark.parametrize("case", CASES, ids=IDS)
+def test_pumpv_matches_rust(rust, case, dtype, tol):
+    """V-PUMPV（人声忽大忽小）：有效性一致；有效时方差差 ≤ tol dB²，窗数相同。"""
+    _, c, o, own, _ = case
+    r = rust[case[0]]["pumpv"]
+    ct = torch.as_tensor(c, dtype=dtype)[None]
+    ot = torch.as_tensor(o, dtype=dtype)[None]
+    fr = torch.as_tensor(losses.owner_mask(own, len(c)))[None]
+    v, ok, nw = losses.pumpv_var(ot, ct, fr)
+    assert bool(ok) == (r["value"] is not None)
+    if ok:
+        assert abs(v.item() - r["value"]) <= tol * max(1.0, abs(r["value"]))
+        assert nw[0] == r["extra"]["windows"]
+
+
+def test_pumpv_cases_cover_both_branches(rust):
+    pv = {k: r["pumpv"]["value"] for k, r in rust.items()}
+    assert any(v is None for v in pv.values()) and pv["pump_flat_gain"] == pytest.approx(0.0, abs=1e-6)
+    assert pv["pump_2hz_6db"] > 1.0  # 探针抖动明显超过 1 dB² 的 A 档线
 
 
 def test_cases_cover_both_branches(rust):
