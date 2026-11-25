@@ -1,6 +1,6 @@
 # 方案：H100 上的开训前冒烟（014 第 3 步）
 
-状态：方案稿，待大总管批；**不开机**。写于 2026-11-24，trainer。分支 `exp/025-h100-smoke`（从 origin/main 2362d715 开）。
+状态：大总管已批（2026-11-24），开机前先过一轮 codex（P0 / P1 修完才开）。写于 2026-11-24，trainer。分支 `exp/025-h100-smoke`（从 origin/main 2362d715 开）。
 开机、传文件、删机都由 cloudrun 照第四节做；trainer 只给命令、收报告、判过不过。
 
 ## 一、要回答的三件事
@@ -25,7 +25,7 @@
   - 风险：trainer 在本机是 Python 3.13 测过的，3.12 没测过（推断：没用 3.13 专有语法，应该能跑）。第四节第 3 步先跑一遍单元测试来核
 - 已花：`cloud/costs.tsv` 里机器估算合计约 1.43 美元，另有网络盘按月摊销；总上限 60 美元（D101）
 
-## 三、开发份「已知读数」从哪来（需要你定）
+## 三、开发份「已知读数」从哪来（大总管定，人未参与）
 
 `smoke.py` 遇到正式数据时，必须用 `--known-dev` 给一份「起点检查点在开发份上的已知读数」，否则记「未完成」。evalcmp 的基线成绩单是 480 段评测场景上的分数，不是这份开发份上的训练损失，不能直接拿来用。
 **建议**：在 CPU 机器上算一次，作为参照。
@@ -33,13 +33,18 @@
 - 怎么比：H100 冒烟时 GPU 上的读数要和它相差 ≤ 1e-3
 - 能证明什么：GPU 上的取数、模型与损失和 CPU 参考一致
 - 不能证明什么：「原检查点成绩没变」这件事，CPU 和 GPU 跑的是同一份代码，所以它证明不了。这一条由第一节「原检查点复现」（对上游 `enh.wav`）证明
-如果你不回：默认按这个建议做，报告里写明「已知读数 = 同代码 CPU 参照」。
+大总管 2026-11-24 照这个建议定（技术题，人未参与）。报告里写明「已知读数 = 同代码 CPU 参照」。
 
-为此 trainer 要先加两处小代码（都带测试，每个文件仍 ≤ 600 行），你批了再写：
-1. `smoke.py --write-known-dev <文件>`：只建开发份、跑起点模型、写出 `{"hybrid": …}` 后退出，不跑过拟合（CPU 上过拟合 150 步要十几分钟，推断）
-2. `cmp_ckpt.py <检查点 1> <检查点 2>`：逐键比两个检查点的 `model`，打印最大差和不同的键名。续训核对用
+为此加了两处小代码（测试在 `tests/test_smoke_tools.py`，先红后绿）：
+1. `smoke.py --write-known-dev <文件>`：只建开发份、跑起点模型，写出 `{"readings": {"hybrid": …}, "meta": {…}}` 后退出，不跑过拟合（CPU 上过拟合 150 步要十几分钟，推断）
+   - meta 记数据版本（build id、开发份段数、种子、段长、批量、批数）。`--known-dev` 读它时逐项核，有一项不同就判不过；正式数据不认没有 meta 的旧格式
+   - 读数不是有限数，或文件已存在，都不写，退出码非 0
+2. `cmp_ckpt.py <检查点 1> <检查点 2> [--tol 0]`：逐键比两个检查点的 `model`，打印最大差和不同的键名。续训核对用
+   - 缺键、多键、形状或类型不同、NaN / inf、步数不同、模型为空，不管容差多大都判不过；默认容差 0
 
 ## 四、跑法（给 cloudrun）
+
+花费上限（大总管批）：乙段 1.5 小时、7 美元，在人定的 60 美元总上限内。甲段测试一红就停，不开 H100。
 
 下面 `R=/workspace/repo-main-<提交前 8 位>`，`T=$R/docs/experiments/exp025-gtcrn-train/trainer`，`D=$R/docs/experiments/exp025-gtcrn-train/data`，`PY=$R/.venv/bin/python`，`G=/workspace/gtcrn-502ebfab`，`O=/workspace/runs/exp025-smoke-<UTC 时间>`。
 每条后台命令都用 `rp.py job-start` 发、按运行编号 `job-wait`；任何一步退出码非 0 就停下，把日志尾发给大总管转 trainer。
@@ -71,7 +76,7 @@
 3. **续训核对**（预计 2–3 分钟）：同配置，`schedule.max_steps=6`、`ckpt_every=3`、`eval_every=1000`
    - 一次训满：`run.name=res-full`
    - 分两次：`run.name=res-split`，先 `max_steps=3` 跑完，再用同名、`max_steps=6` 续上
-   - 比：`$PY cmp_ckpt.py $O/res-full/ckpt/step-0000006.pt $O/res-split/ckpt/step-0000006.pt`。CUDA 的非确定性算子可能让它只近似相等，记下最大差
+   - 比：`$PY cmp_ckpt.py $O/res-full/ckpt/step-0000006.pt $O/res-split/ckpt/step-0000006.pt`（容差 0）。CUDA 的非确定性算子可能让它只近似相等：不过时记下 `max_abs_diff`，不改判据，带回由 trainer 分析
 4. **3 个同时跑**（预计 5 分钟）：第 2 步的 B 配置，`max_steps=200`，`num_workers=6`（3 × 6 = 18 个取数进程，容器配额约 22 核），`run.name` 分别为 `par-1`…`par-3`，用 3 个 `job-start` 同时发
 5. 打包取回：`tar czf /workspace/out/trainer-smoke-<UTC 时间>.tar.gz -C $O --exclude='*.pt' .`，取回主仓 `_tmp/<日期>-trainer-h100-smoke/`，不覆盖；检查点不取回
 6. 删机，报账上 0 台和本次花费
