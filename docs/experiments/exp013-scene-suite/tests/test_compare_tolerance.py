@@ -1,10 +1,10 @@
 """compare_builds.py 的容差模式（跨平台可复现的验收，2026-11-25 大总管定）：
-抽几段两边都有的音频，逐轨比：样本数相等；每样本差 ≤ TOL_ULP（4）个 32 位浮点最小单位（按两边较大的幅度算）；
+抽几段两边都有的音频，逐轨比：样本数相等；每样本差 ≤ TOL_ULP（4）× 整轨峰值处的 32 位浮点最小单位（第 3 版）；
 整轨差信号比原信号低 ≥ TOL_DIFF_DB（120 dB）；manifest 素材 / 代码 / 参数哈希逐位相等。
 （原阈值「逐样本绝对差 ≤ 1e-9」比 wav 的 32 位浮点精度细 60 倍，看到结果后改，见 crosscheck-20261125.md。）
 
 在临时目录造两份迷你 build（2 段 × 3 条轨 + 1 条分轨，float32 wav）：
-- 只差浮点最后一位 · 整段 2e-9 的相对增益差 → 一致
+- 只差浮点最后一位 · 整段 2e-9 的相对增益差 · 接近 0 的样本差 1e-15 → 一致
 - 一条轨有样本差 5 个最小单位 → 不一致，并点名哪段哪轨；差信号只低 100 dB → 不一致，原因里有 dB
 - 样本数不同 · 素材索引不同 · 抽的段只在一边 → 不一致
 """
@@ -78,6 +78,17 @@ class Tolerance(unittest.TestCase):
         sig = copy.deepcopy(self.sig)
         for k in sig:
             sig[k] = (sig[k].astype(np.float64) * (1 + 2e-9)).astype("<f4")
+        self.assertEqual(self._check(sig=sig), [])
+
+    def test_tiny_difference_on_near_zero_samples_is_consistent(self):
+        """第 2 版的失误：接近 0 的样本最小单位极小，1e-15 的差折成几千万个最小单位。第 3 版按整轨峰值算，必须判一致。"""
+        sig = copy.deepcopy(self.sig)
+        x = sig[("a-c00-ext", "owner")]
+        x[:50] = np.float32(1e-30)
+        y = x.copy()
+        y[:50] = np.float32(1e-30 + 1e-15)
+        sig[("a-c00-ext", "owner")] = y
+        self.sig[("a-c00-ext", "owner")] = x
         self.assertEqual(self._check(sig=sig), [])
 
     def test_five_ulp_is_inconsistent(self):
