@@ -88,3 +88,20 @@ fn summary_default_is_effective_route_default() {
     assert_eq!(s["default"], LOCAL42, "生效的默认");
     assert_eq!(s["env_default"], OPENROUTER, "环境变量给的默认另列");
 }
+
+/// 2026-11-25：OpenRouter 后端在装起来时就核账本；账本不存在，识别后端整个装不起来（原因写进 meta.asr），
+/// 不等到每段都去撞一次。
+#[test]
+fn from_env_refuses_when_ledger_missing() {
+    let root = std::env::temp_dir().join(format!("vdn-asr-fromenv-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::write(root.join(".env.local"), "OPENROUTER_API_KEY=placeholder-test-credential-0003\n").unwrap();
+    let e = Asr::from_env_with(root.join("cache.json"), &root, None).err().expect("账本不存在应装不起来");
+    assert!(e.contains("不存在"), "{e}");
+    // 显式指定一本存在的账本就装得起来（不发请求）
+    let l = root.join("elsewhere/ledger.json");
+    crate::qa::asr_ledger::init(&l, crate::qa::asr_ledger::Created::test()).unwrap();
+    assert!(Asr::from_env_with(root.join("cache.json"), &root, Some(l)).is_ok());
+    let _ = std::fs::remove_dir_all(&root);
+}
