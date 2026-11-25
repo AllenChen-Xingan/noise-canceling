@@ -8,7 +8,8 @@
 //!   --predictors = 评分模型表 `[片段][系统]{scoreq, distill_mos}`，给了才算听感两项的过关线混淆矩阵。
 //!   **什么都不给时默认读 exp003 build f8c3 的答卷、指标表和 exp009 的评分模型表**（演示用旧数据）
 //! vdn-eval list
-//! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--rules v1|v2] [--no-safety] [--asr-ledger PATH] [--init-ledger] [--out DIR]   # 场景成绩单（specs/rubric/scorecard.md）；--no-safety = 不回混口径
+//! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--rules v1|v2] [--no-safety] [--asr-ledger PATH] [--init-ledger] [--shard i/n] [--asr-workers N] [--out DIR]   # 场景成绩单
+//! vdn-eval scorecard --merge-shards <目录1>,<目录2>,… [--suite FILE] --out DIR   # 合并分片（与单进程逐字节相同）（specs/rubric/scorecard.md）；--no-safety = 不回混口径
 //! vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] [--out DIR]   # 不重跑音频，按规则重新汇总
 //! vdn-eval compare --a <clips.jsonl> --b <clips.jsonl> [--by-scene] [--noise-a … --noise-b …] [--out DIR]   # 配对比较（scorecard.md 第十节）
 //! vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…   # 子进程入口：评分模型打分，每段一行 JSON
