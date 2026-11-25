@@ -1,0 +1,32 @@
+{
+ "source": "tum-wind",
+ "group": "A3",
+ "unit": "file",
+ "seed": 20261116,
+ "rule_sha256": "f5d3f77afd80806f8fd98da62a98c8a8107cc75ee1c15368b0db7401aad23b60",
+ "files": 478,
+ "units": 132,
+ "jsonl_sha256": "60b0a72df1495acd4c82b5cfb268f9ba61f123bd220aee96ba24800d868d6e09",
+ "per_split": {
+  "d63": {
+   "units": 13,
+   "files": 59,
+   "seconds": 447.0
+  },
+  "dev": {
+   "units": 13,
+   "files": 29,
+   "seconds": 357.0
+  },
+  "final": {
+   "units": 13,
+   "files": 23,
+   "seconds": 339.0
+  },
+  "train": {
+   "units": 93,
+   "files": 367,
+   "seconds": 2991.0
+  }
+ }
+}

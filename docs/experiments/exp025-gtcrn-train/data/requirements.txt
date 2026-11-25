@@ -1,0 +1,6 @@
+# exp025 数据线依赖（钉死版本）。numpy / scipy / soundfile / python 3.12.14 和 exp013 正式 build 20261103230756-17f5 的
+# manifest.versions 一致——重建 exp013 要逐位一致（tests/test_rebuild.py 核对）。torch 与 trainer 的 .venv 一致。
+numpy==2.5.4
+scipy==1.18.1
+soundfile==0.14.0
+torch==2.15.0

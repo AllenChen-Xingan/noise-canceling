@@ -1,0 +1,23 @@
+{
+ "source": "demand-train",
+ "group": "E2",
+ "unit": "time",
+ "seed": 20261116,
+ "rule_sha256": "deb9266079ef1e13dd02d9118ce5b66fb05266e0713b30be4d61fdd75d6dabcf",
+ "files": 96,
+ "units": 96,
+ "jsonl_sha256": "87fd8bb8e7698b2905d2ce493e28166025bbe9ac0cde1f830b4ac78e0fbfa02b",
+ "time": [
+  [
+   "train",
+   0.0,
+   0.5
+  ],
+  [
+   "dev",
+   0.5,
+   0.6
+  ]
+ ],
+ "seconds": 28800.4
+}
