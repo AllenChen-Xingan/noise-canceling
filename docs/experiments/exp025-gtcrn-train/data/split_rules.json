@@ -24,12 +24,13 @@
    "_未核": "压缩包内目录结构未核（本机没下）；第一次云上跑 split.py --inventory 后看清单再确认 glob 与 exclude_regex"
   },
   "tum-wind": {
-   "expect": {"min_files": 1, "src": "文件数未知；数目由 --inventory 清单人工核"},
+   "expect": {"files": 478, "src": "2026-11-25 按 HTTP Range 读上游 zip 目录（不下音频）：合成 100 个 + 手机实录 378 个；云上 inventory 同为 478"},
    "src": "027 第六节表第 4 行（实录与合成分开切）", "group": "A3", "unit": "file",
    "glob": "train-raw/tum-wind/**/*.wav",
-   "stratum_regex": "(?i)(synth|simulat)",
+   "stratum_regex": "(?i)(synth|simulat|artifi)",
+   "unit_regex": [{"match": "mobilephone_wind_noise/[^/]+/(\\d+)_\\d+\\.wav$", "unit": "mobilephone_wind_noise/rec\\1", "why": "文件名 <前缀>_<序号>：32 个前缀里 20 个在 normal_wind 与 strong_wind 两个文件夹都有，按前缀当一次录音；上游没写前缀含义，按前缀并只会让单位更粗"}],
+   "_核": "上游 Zenodo 说明原文：Wind Noise Dataset including artificially generated and mobilephone recorded samples（许可 CC-BY-4.0）。合成在 artifitial_wind_noise/（上游拼写），实录在 mobilephone_wind_noise/。合成 100 个文件各一个单位，实录 32 次录音各一个单位，两层各自按比例切",
    "frac": {"train": 0.7, "dev": 0.1, "final": 0.1, "d63": 0.1},
-   "_未核": "文件组织未核；同一次录音被切成多个文件时改按录音切（027 原文）"
   },
   "openslr28-rir": {
    "expect": {"min_files": 60000, "src": "OpenSLR 28 README：simulated_rirs 小中大房各 200 间 × 100 个 = 60,000，另加 real_rirs（数目未核）"},

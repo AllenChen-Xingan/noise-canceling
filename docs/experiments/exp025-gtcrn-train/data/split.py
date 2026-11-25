@@ -114,6 +114,10 @@ def unit_of(rel, rule, rooms=None):
             raise SystemExit(f"{rel} 不在任何 rir_list 里，查不到房间号：不许按文件切（同房间会跨份）")
         return rooms[name]
     if u == "file":
+        for x in rule.get("unit_regex", []):  # 同一次录音被切成多个文件时按录音切（027）
+            m = re.search(x["match"], rel)
+            if m:
+                return m.expand(x["unit"])
         return rel
     raise ValueError(u)
 
