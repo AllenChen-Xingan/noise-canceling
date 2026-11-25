@@ -123,16 +123,17 @@ def check_cloud(local, cloud, upload_log, inputs_log):
            "cloud_version_drift": {k: [v, mc["versions"].get(k)] for k, v in mo["versions"].items() if mc["versions"].get(k) != v},
            "cloud_code_equal_local": code(mc) == code(ml),
            "cloud_is_other_build": mc.get("build_id", cloud.name) != ml.get("build_id", local.name),  # --cloud 误填成本机那份
+           "file_list_equal_cloud": set(read_hashes(cloud / "hashes.txt")) == want,  # 同代码独立生成的那份，文件清单应相同
            "inputs_ok": "原料全对" in inputs_log,
            "official_source": "未验证：云上原料是本机上传的，只证明与本机原料逐个相同（从官方源重下记进 backlog）",
            "bit_exact_cross_platform": "不要求：x86 对 arm64 浮点差约 4e-13（exp013 crosscheck-20261125.md）",
            "new_code_sha256": code(ml)}
     rep["ok"] = (vs_old["ok"] and up["all_ok"] and rep["cloud_exclude_equal"] and not rep["cloud_version_drift"]
-                 and rep["cloud_code_equal_local"] and rep["cloud_is_other_build"] and rep["inputs_ok"])
+                 and rep["cloud_code_equal_local"] and rep["cloud_is_other_build"] and rep["file_list_equal_cloud"] and rep["inputs_ok"])
     return rep
 
 
-CRITERIA = ("check_cloud 第 3 版：日志路径须带本机 build id；云上与本机须是不同 build（2026-11-25 自审 P1 · codex 第 2 轮 P2 #3）",
+CRITERIA = ("check_cloud 第 4 版：日志路径须带本机 build id；云上与本机须是不同 build，文件清单相同（自审 P1 · codex 第 2 轮 #3 · 第 4 轮 #3）",
             "整套重建：旧 4540 个逐位相同 + exclude 全等")  # drift_covered 只认这几种判据出的报告
 
 

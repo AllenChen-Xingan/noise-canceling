@@ -91,7 +91,7 @@ class Compare(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             c = Path(d) / "20261125022300-aa9f"
             c.mkdir()
-            for f in ("manifest.json", "exclude.json"):
+            for f in ("manifest.json", "exclude.json", "hashes.txt"):
                 (c / f).write_bytes((AA9F / f).read_bytes())
             self.assertTrue(rb.check_cloud(L6323, c, upload_log(), "原料全对")["ok"])
             m = json.loads((c / "manifest.json").read_text())
