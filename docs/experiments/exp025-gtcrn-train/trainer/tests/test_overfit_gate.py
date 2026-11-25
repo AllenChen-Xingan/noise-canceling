@@ -1,4 +1,4 @@
-"""单批过拟合判据第 3 版（事后改判据：AI 提、大总管定，2026-11-25）：
+"""单批过拟合判据第 3 版（现只记录在 verdict_v3，过线改用第 4 版 gate_v4.py；事后改判据：AI 提、大总管定，2026-11-25）：
 过线只看开发份第 0 批的前 4 段；下限 = 这 4 段的 oracle 损失；oracle 不可用时判「判据不可用」而不是「不过」；
 原来 32 段的读数照算照记，只作参考。门槛（50% · +6 dB）、步数、lr 不动。"""
 import json
@@ -76,7 +76,9 @@ def test_reference_run_recorded_but_not_gating(tmp_path, monkeypatch):
 
 
 def test_criterion_unusable_propagates_to_report_and_exit_code(tmp_path, monkeypatch):
-    monkeypatch.setattr(oracle, "oracle_loss", lambda *a, **k: {"loss": float("nan"), "si_snr_db": float("nan")})
+    """第 4 版起：初值不是正数（相对下降没有意义）才判「判据不可用」；oracle 不可用只记录。"""
+    real = smoke._overfit_run
+    monkeypatch.setattr(smoke, "_overfit_run", lambda *a, **k: {**real(*a, **k), "first": -1.0})
     out = tmp_path / "r.json"
     rc = smoke.main(["--config", str(_cfg_file(tmp_path)), "--overfit-steps", "1", "--timing-steps", "1",
                      "--out", str(out)])

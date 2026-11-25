@@ -28,6 +28,7 @@ from data import import_loader, make_source
 
 MARKS = (150, 300, 500, 1000, 2000)
 SWEEP_LRS = (3e-4, 3e-3)
+grad_norms = gate_v4.grad_norms  # 正本在 gate_v4.py
 
 
 def marks_for(steps: int) -> list[int]:

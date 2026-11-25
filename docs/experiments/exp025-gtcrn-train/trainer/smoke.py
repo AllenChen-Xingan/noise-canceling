@@ -193,7 +193,8 @@ def check_overfit(cfg, batch, device, steps: int, lr: float, reference: bool = T
         g["first"], g["last"], g["si_snr_gain_db"], g["grad_norms_first_step"], g["attn_out_max_change"])
     v3 = "criterion_unusable" if short else overfit_verdict(
         g["first"], g["last"], g["oracle_loss"], g["si_snr_gain_db"], g["attn_out_max_change"])
-    out = {**g, "verdict": verdict, "verdict_v3": v3, "backbone_grads_ok": gate_v4.backbone_grads_ok(g["grad_norms_first_step"]), "pass": verdict == "pass", "floor": g["oracle_loss"], "floor_kind": "oracle",
+    out = {**g, "verdict": verdict, "verdict_v3": v3,
+           "backbone_grads_ok": gate_v4.backbone_grads_ok(g["grad_norms_first_step"]), "pass": verdict == "pass", "floor": g["oracle_loss"], "floor_kind": "oracle",
            "floor_reachable": oracle.floor_reachable(g["oracle_loss"], g["oracle_loss"]),
            "drop_frac_of_span": g["drop_frac_of_oracle_span"],
            "si_snr_gain_ok": bool(np.isfinite(g["si_snr_gain_db"]) and g["si_snr_gain_db"] >= SI_SNR_GAIN_DB),
