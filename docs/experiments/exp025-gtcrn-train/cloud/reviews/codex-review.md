@@ -83,3 +83,15 @@ codex 要的是一套持久的操作日志、按账号分开的看门狗进程�
 - 网络盘闲置费：驳回 codex 那条。删不删盘由人定，大总管放进待拍板清单。
 - 再跑 1 轮 codex，只看有没有新类问题；没有就开 PR（Closes #158），有就先报大总管。
 - 已开 issue：#163 建机结果不明的持久登记 · #164 看门狗按账号分进程 · #165 账本核平台历史账单 · #166 predownload 源文件比清单大 · #167 假接口有状态故障测试。
+
+## 第 5 轮（2026-11-25，模型 gpt-6-astra，只看新类问题）
+
+结果：P0×0 P1×3 P2×0。三条都是新类（前四轮没提过），核实属实，已修：
+
+| 编号 | 问题 | 处理 | 测试 |
+|---|---|---|---|
+| P1 #1 | 建盘、开机两个进程同时跑，各自过了上限检查、合起来超额 | 「查上限 → 建资源 → 记账」放进账本旁的跨进程文件锁（`<账本>.lock`，git 忽略） | `test_budget_lock_held_during_create` |
+| P1 #2 | `put` 先替换正式文件再核哈希；`get` 直接覆盖本机文件 | `put` 先核 `.part` 再替换，默认不覆盖远端已有文件，`--overwrite` 时旧文件改名留作 `.bak-时间`；`get` 默认不覆盖，先写临时文件再改名 | `test_put_refuses_overwrite_and_keeps_backup` · `test_put_bad_hash_leaves_original` · `test_get_refuses_to_overwrite_local` |
+| P1 #3 | `job-start` 把清旧退出码也放进后台，可能读到上次的退出码 | 准备步骤同步做完；同名任务还在跑（有日志没退出码）就拒绝 | `test_start_job_refuses_same_name_still_running` |
+
+测试：83 条全过。按裁决，有新类问题先报大总管，不自行开第 6 轮。
