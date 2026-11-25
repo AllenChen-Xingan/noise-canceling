@@ -1,24 +1,20 @@
-"""exp025 · 在云机器上按仓内脚本 + 种子重建 exp013 正式 build，逐文件核旧哈希（014 第 0 步 ③，判据 4540/4540）。
+"""exp025 · 核 exp013 评测素材能重现（014 第 0 步 ③）。
 
-步骤：
-1. 核版本：python · numpy · scipy · soundfile 要和旧 build manifest 记的一样（浮点结果逐位一致的前提）；不一样就停，
-   除非 --allow-version-drift（结果照样核，但报告里标出版本不同）
-2. 原料：两条路，优先 A
-   A. 从官方源重下：本目录 fetch.py --only E1,E2,E3 + exp013 自己的 fetch.py --only esc50,rir
-   B. 从本机上传 ~/vdn-data 的同名子目录到 <root>/vdn-data（cloudrun 做），不跑下载
-   两条路之后都跑 exp013_inputs.py --verify：1,994 个原料逐个 sha256 对上才往下走
-3. 跑 exp013 build.py（同一 build id，清单写临时目录，不碰仓里 builds/）
-4. 比 hashes.txt：逐行比，外加 exclude.json 全等；报告写 rebuild/exp013-<时间>.json（进仓）
-用法（云上，仓库根下）：
-  python3 docs/experiments/exp025-gtcrn-train/data/rebuild_exp013.py --root /workspace [--fetch] [--workers 16]
-现行判据（2026-11-25 大总管定）：跨平台做不到逐位相同（云上 x86 对本机 arm64，样本差约 4e-13，见
-exp013 crosscheck-20261125.md），所以不再要求云上重建逐位同 17f5。云上评测用本机 6323 的音频，改核：
+现行判据（2026-11-25 大总管定，详见 README 6.5）：跨平台做不到逐位相同（云上 x86 对本机 arm64，样本差约 4e-13，见
+exp013 crosscheck-20261125.md），所以不再要求云上重建逐位同 17f5。云上评测用本机 6323 的音频，改核四项：
   1. 本机 6323（main 现行代码）旧 4540 个文件逐个同 17f5
-  2. 云上 6323 音频按 hashes.txt 全部对上（`sha256sum -c` 的输出）
+  2. 云上 6323 音频按 6323 的 hashes.txt 全部对上（`sha256sum -c` 的输出；路径要带 6323 的 build id）
   3. 云上那份 build（aa9f）的 exclude.json 与依赖版本同 17f5，代码与参数哈希同 6323
   4. 云上原料 1,994 个内容对上（exp013_inputs.py --verify；build 自带的素材索引只记路径与字节数）
   「官方源可复现」这次没验证：云上原料是本机上传的
   python3 rebuild_exp013.py --check-cloud --local <6323 目录> --cloud <aa9f 目录> --upload-log <sha256sum -c 输出> --inputs-log <verify 输出>
+
+旧流程（停用，留作从官方源验证时用）：在云机器上按仓内脚本 + 种子整套重建，判据 4540/4540 逐位相同。
+1. 核版本：python · numpy · scipy · soundfile 要和旧 build manifest 记的一样；不一样就停，除非 --allow-version-drift
+2. 原料：A 从官方源重下（--fetch）；B 用上传到 <root>/vdn-data 的。之后都跑 exp013_inputs.py --verify
+3. 跑 exp013 build.py（同一 build id，清单写临时目录，不碰仓里 builds/）
+4. 比 hashes.txt 与 exclude.json；报告写 rebuild/exp013-<时间>.json
+  python3 docs/experiments/exp025-gtcrn-train/data/rebuild_exp013.py --root /workspace [--fetch] [--workers 16]
 """
 import argparse
 import hashlib
