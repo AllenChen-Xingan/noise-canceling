@@ -6,7 +6,8 @@
   作为跨平台对拍的读数（云上 Linux 与本机 macOS 的浮点舍入不同，读数不必为 0，判据见 README 第四节）
 
 行格式的正本是 Rust `scorecard/load.rs` 的 `row_json`；本文件只换一个分数对象，不解析分数的含义。
-合并后用 `vdn-eval scorecard --from-clips <合并目录>/clips.jsonl` 出成绩单（Rust 读回时会再核一遍行格式）。
+合并后用 `vdn-eval scorecard --from-clips <合并目录>/clips.jsonl --out <另一个新目录>` 出成绩单（Rust 读回时会再核一遍行格式）。
+两边同目录 `scorecard.json` 的缺段记录必须都为空才合并；合并目录里写一份只含缺段记录的 `scorecard.json` 给 `--from-clips` 读。
 
 用法：python merge.py --cloud <云上 clips.jsonl> --local <本机 clips.jsonl> --out <新目录>
 """
@@ -73,10 +74,19 @@ def main(argv=None):
     a = ap.parse_args(argv)
     read = lambda p: [json.loads(x) for x in Path(p).read_text().splitlines() if x.strip()]  # noqa: E731
     rows, rep = merge(read(a.cloud), read(a.local))
+    # 两边同目录成绩单的缺段记录都必须为空（README 第四节验收：没跑成的段数为 0）
+    for side, p in (("云上", a.cloud), ("本机", a.local)):
+        miss = json.loads(Path(p).with_name("scorecard.json").read_text())["missing"]
+        if miss:
+            raise ValueError(f"{side}那份有 {len(miss)} 段没跑成（{miss[:2]}…），先补跑，不合并")
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     with open(out / "clips.jsonl", "x") as f:
         f.write("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
+    # vdn-eval scorecard --from-clips 要读同目录 scorecard.json 的缺段记录：只写这一项（都为空）
+    with open(out / "scorecard.json", "x") as f:
+        f.write(json.dumps({"doc": "merge.py 产物：只含缺段记录，供 --from-clips 读；成绩单另出到别的目录", "missing": []},
+                           ensure_ascii=False) + "\n")
     with open(out / "merge-report.json", "x") as f:
         f.write(json.dumps({"cloud": a.cloud, "local": a.local, "clips": len(rows), "items": rep},
                            ensure_ascii=False, indent=1) + "\n")
