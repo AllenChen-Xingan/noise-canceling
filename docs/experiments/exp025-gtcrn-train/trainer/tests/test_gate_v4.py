@@ -139,3 +139,44 @@ def test_dev_gate_cli_exit_codes(tmp_path):
     assert dev_gate.main([str(d), "--known-dev", str(k)]) == 1
     (d / "metrics.jsonl").write_text("")
     assert dev_gate.main([str(d), "--known-dev", str(k)]) == 2
+
+
+# ---- codex 第 1 轮（gate-v4）----
+
+def test_missing_backbone_group_fails():  # #1
+    for k in g4.REQUIRED_BACKBONE:
+        assert not g4.backbone_grads_ok({kk: v for kk, v in GOOD.items() if kk != k}), k
+    assert not g4.backbone_grads_ok({"base.encoder": 1.0})
+
+
+def test_bool_readings_rejected():  # #4
+    assert g4.verdict(True, False, True, {k: True for k in g4.REQUIRED_BACKBONE}, True) != "pass"
+    assert g4.drop_frac(True, False) is None
+    assert not g4.backbone_grads_ok({**GOOD, "base.encoder": True})
+    assert g4.verdict(4.0, 3.0, 1.0, GOOD, True) == "fail"
+
+
+def test_dev_gate_rejects_weak_reference(tmp_path):  # #2
+    rows = [{"step": 300, "dev": {"hybrid": 1.0}}]
+    no_dev = {**KNOWN, "meta": {k: v for k, v in KNOWN["meta"].items() if k != "device"}}
+    assert dev_gate.check(_run_dir(tmp_path, rows), no_dev, step=300, tol=1e-3)["verdict"] == "incomplete"
+    (tmp_path / "run").rename(tmp_path / "r1")
+    both_none = {**KNOWN, "meta": {**KNOWN["meta"], "seg_s": None}}
+    assert dev_gate.check(_run_dir(tmp_path, rows, seg_s=None), both_none, step=300, tol=1e-3)["verdict"] == "incomplete"
+    (tmp_path / "run").rename(tmp_path / "r2")
+    assert dev_gate.check(_run_dir(tmp_path, [{"step": 300, "dev": {"hybrid": False}}]), KNOWN,
+                          step=300, tol=1e-3)["verdict"] == "incomplete"
+    (tmp_path / "run").rename(tmp_path / "r3")
+    assert dev_gate.check(_run_dir(tmp_path, rows), {**KNOWN, "readings": {"hybrid": True}},
+                          step=300, tol=1e-3)["verdict"] == "incomplete"
+    (tmp_path / "run").rename(tmp_path / "r4")
+    assert dev_gate.check(_run_dir(tmp_path, ["x"]), KNOWN, step=300, tol=1e-3)["verdict"] == "incomplete"
+
+
+def test_last_is_measured_after_final_update(tmp_path):  # #5
+    cfg = cfgmod.load(str(_cfg_file(tmp_path)), {})
+    b = train.make_source(cfg).dev_batches()[0]
+    ov = smoke.check_overfit(cfg, b, torch.device("cpu"), steps=2, lr=1e-3, reference=False)
+    m_last = sum(s["loss_after"] for s in ov["per_segment"]) / 4
+    assert ov["last"] == pytest.approx(m_last, rel=1e-4)  # 整批终值与逐段读数同一权重状态
+    assert "last_traj" in ov and ov["last"] != ov["last_traj"]

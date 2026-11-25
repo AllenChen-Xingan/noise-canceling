@@ -140,3 +140,11 @@ def test_loader_batch_maker_uses_registered_recipe_only_for_baseline(tmp_path):
     assert all(c["n"] == 4 and c["seed"] == 7 for c in calls)
     assert [m["j"] for m in b["metas"]] == [0, 1, 2, 3] and b["noisy"].shape == (4, 16000)
     assert reg.read_text() == json.dumps(base)  # 正本配方没被改
+
+
+def test_probe_refuses_existing_attachment_dirs(tmp_path):  # codex gate-v4 第 1 轮 #6
+    out = tmp_path / "p.json"
+    (tmp_path / "p-wav").mkdir()
+    assert smoke.main(["--config", str(_cfg_file(tmp_path)), "--overfit-probe", str(out),
+                       "--probe-steps", "2", "--probe-sweep-steps", "1"]) == 2
+    assert not out.exists() and list((tmp_path / "p-wav").iterdir()) == []
