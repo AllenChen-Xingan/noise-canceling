@@ -226,3 +226,53 @@ def test_exit_code_nonzero_for_guard_stops():
         assert train.exit_code({"reason": r}) == 1
     for r in ("max_steps", "max_hours", "max_usd"):
         assert train.exit_code({"reason": r}) == 0
+
+
+# ---------- codex guards 第 1 轮 ----------
+
+@pytest.mark.parametrize("which", ["other_item", "ema"])
+def test_any_nonfinite_dev_value_stops(tmp_path, monkeypatch, which):  # #1
+    real = train.evaluate
+    n = {"k": 0}
+
+    def ev(model, *a, **k):
+        out = real(model, *a, **k)
+        n["k"] += 1
+        bad = (which == "other_item" and n["k"] == 1) or (which == "ema" and n["k"] == 2)
+        return {**out, "total": float("inf")} if bad else out
+    monkeypatch.setattr(train, "evaluate", ev)
+    over = {"schedule.eval_every": 2}
+    if which == "ema":
+        over["ema.enabled"] = True
+    stop = train.train(_cfg(tmp_path, **over))
+    assert stop["reason"] == "nonfinite" and stop["step"] == 2
+    assert not (tmp_path / "t" / "ckpt" / "best.pt").exists()
+
+
+def test_best_from_final_eval_survives_resume(tmp_path, monkeypatch):  # #2
+    vals = iter([3.0, 2.0, 2.5, 2.6])  # 第 2 步 3.0；跑满第 3 步补评估 2.0；续训后 2.5、2.6 都不该覆盖 best
+    real = train.evaluate
+    monkeypatch.setattr(train, "evaluate", lambda *a, **k: {**real(*a, **k), "hybrid": next(vals)})
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 3, "schedule.eval_every": 2}))
+    train.train(_cfg(tmp_path, **{"schedule.eval_every": 2}))
+    root, rec, _ = _read(tmp_path)
+    assert rec["best"] == {"step": 3, "hybrid": 2.0}
+    assert torch.load(root / "ckpt" / "best.pt", weights_only=False)["step"] == 3
+
+
+def test_crash_snapshot_failure_still_stops_and_refuses_resume(tmp_path, monkeypatch):  # #3
+    import runrec
+    real = runrec.RunDir.save_as
+
+    def boom(self, state, name):
+        if name.startswith("crash-"):
+            raise OSError("disk full")
+        return real(self, state, name)
+    monkeypatch.setattr(runrec.RunDir, "save_as", boom)
+    _nan_at(monkeypatch, 3)
+    stop = train.train(_cfg(tmp_path))
+    assert stop["reason"] == "nonfinite"
+    _, rec, _ = _read(tmp_path)
+    assert rec["crash"]["snapshot"] is None and "disk full" in rec["crash"]["snapshot_error"]
+    with pytest.raises(RuntimeError, match="训崩"):
+        train.train(_cfg(tmp_path))
