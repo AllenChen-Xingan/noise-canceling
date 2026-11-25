@@ -66,5 +66,18 @@ class ClearReview(unittest.TestCase):
                 self.assertEqual(after, before, kw)
 
 
+    def test_existing_tmp_is_kept_and_nothing_changes(self):
+        """codex 本分支第 2 轮 P2 #2：临时文件只新建；已有同名临时文件就拒绝，它和账本都不动，备份删掉。"""
+        with tempfile.TemporaryDirectory() as d:
+            p, h = ledger(d)
+            before = p.read_bytes()
+            Path(str(p) + ".tmp").write_text("someone else")
+            with self.assertRaises(FileExistsError):
+                cr.clear(p, h, 1, 12.0, "x", now=NOW, price=0.000008)
+            self.assertEqual(Path(str(p) + ".tmp").read_text(), "someone else")
+            self.assertEqual(p.read_bytes(), before)
+            self.assertEqual(sorted(f.name for f in Path(d).iterdir()), ["ledger.json", "ledger.json.lock", "ledger.json.tmp"])
+
+
 if __name__ == "__main__":
     unittest.main()

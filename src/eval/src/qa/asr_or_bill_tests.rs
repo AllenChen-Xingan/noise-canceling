@@ -136,7 +136,10 @@ fn detail_write_failure_flags_review() {
     ]);
     let mut c = client(&url, &d);
     std::fs::create_dir_all(ledger::details_path(&d.join("ledger.json"))).unwrap(); // 同名目录：追加必失败
-    let _ = c.transcribe(&audio(), vdn_types::MODEL_RATE, "en");
+    // codex 本分支第 2 轮 P1 #1：这一次也要报错（调用方从返回值就知道明细缺了），费用照记
+    let e = c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap_err();
+    assert!(e.contains("明细"), "{e}");
+    assert!(c.ledger.spent_usd > 0.0, "费用照记");
     let l = ledger::read(&d.join("ledger.json")).unwrap();
     assert!(
         l.review.as_deref().is_some_and(|r| r.contains("明细")),
