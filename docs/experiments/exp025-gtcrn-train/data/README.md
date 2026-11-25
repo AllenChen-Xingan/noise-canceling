@@ -170,7 +170,7 @@ bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /
 
 1. 本机 6323 的旧 4540 个文件逐个同 17f5
 2. 云上的 6323 音频按 6323 的 `hashes.txt` 全部对上，5020 个。日志里的路径要带 6323 的编号；拿 aa9f 自己的 `hashes.txt` 核出来的不算
-3. 云上 `aa9f` 的 `exclude.json`（训练要避开的评测素材清单）与依赖版本同 17f5，代码与参数哈希同 6323
+3. 云上 `aa9f` 的 `exclude.json`（训练要避开的评测素材清单）与依赖版本同 17f5，代码与参数哈希同 6323；`--cloud` 和 `--local` 不许指向同一个 build
 4. 云上原料 1,994 个的内容对上（build 自带的素材索引只记路径与字节数）
 
 「官方源可复现」（从各数据集官网重新下载原料，也能生成同样的音频）这次**未验证**：云上原料是本机上传的，只证明与本机原料逐个相同。报告里照实写。
@@ -185,14 +185,14 @@ cloudrun 在同一台云机器上做两件事（`python3` 指装了钉死依赖�
 然后在本目录（`docs/experiments/exp025-gtcrn-train/data`）下跑：
 `python3 rebuild_exp013.py --check-cloud --local ../../exp013-scene-suite/builds/20261124165427-6323 --cloud ../../exp013-scene-suite/builds/20261125022300-aa9f --upload-log rebuild/<上传日志> --inputs-log rebuild/<原料日志>`
 `aa9f` 的小文件 evalcmp 已经放进仓里。报告写进 `rebuild/` 并提交；有了 ok 的报告，`test_rebuild.test_code_drift_covered_by_report` 才变绿。
-现行报告：`rebuild/exp013-20261124-194001.json`（判据第 2 版，四项全过）。`exp013-20261124-192451.json` 是第 1 版判据出的，第 1 版认不出 aa9f 的日志（自审发现），留作记录。
+现行报告：`rebuild/exp013-20261124-195551.json`（判据第 3 版，四项全过）。旧报告留作记录、不再算数：`192451` 是第 1 版（认不出 aa9f 的日志，自审发现），`194001` 是第 2 版（`--cloud` 误填成本机那份也能过，codex 第 2 轮发现）。
 
 ## 七、已知局限
 
 - QUT-NOISE 和 TUM 风噪：包内结构已按云上清单与上游 zip 目录核过（2026-11-25）。TUM 手机录音的文件名前缀按一次录音算，上游没写前缀含义；按前缀并只会让单位更粗。QUT 的服务器没有声明支持断点续传，遇到时从头重下
 - OpenSLR 28：包里的点声源噪声取自 MUSAN，里面各个来源的许可没有逐个核，所以第一批不用
-- 测试状态（2026-11-25 产物带回后）：本机共 128 条，127 条过，1 条红：缺 cloud/config.py。exp013 核对报告见 `rebuild/exp013-20261124-194001.json`（6.5 四项全过，官方源可复现未验证）。evalcmp 已合进 main，混音测试用 main 上的 rooms.py（torch 用 CPU 后端）。云上 GPU 对拍还没跑
-- 2026-11-25 codex 评审后，build_id 多算了分片索引本身和 gpu_mix · leakcheck · split 三个文件，登记时交集检查也改成查规则里全部 6 个来源（以前漏了不进分片的终测人声来源；本机补查结果仍是 0 处交集）。所以下面这个 build 和现行代码算出的 id 对不上，trainer 用之前要在云上用现行代码重跑 `register` 与 `pack`（不用重切、不用重分片）
+- 测试状态（2026-11-25 产物带回后）：本机共 128 条，127 条过，1 条红：缺 cloud/config.py。exp013 核对报告见 `rebuild/exp013-20261124-195551.json`（6.5 四项全过，官方源可复现未验证）。evalcmp 已合进 main，混音测试用 main 上的 rooms.py（torch 用 CPU 后端）。云上 GPU 对拍还没跑
+- 2026-11-25 codex 评审后，build_id 多算了分片索引本身和 gpu_mix · leakcheck · split 三个文件，登记时交集检查也改成查规则里全部 6 个来源（以前漏了不进分片的终测人声来源；本机补查结果仍是 0 处交集）。codex 第 2 轮后 build_id 又加了 mix.py 直接调的 exp013 `dsp.py` · `rooms.py` · `rirs.py`。所以下面这个 build 和现行代码算出的 id 对不上，trainer 用之前要在云上用现行代码重跑 `register` 与 `pack`（不用重切、不用重分片）
 - 第一批产物（build `49349c158a4defdc`，云上提交 8b4194d3）：分片 15 GB 与 `index.json` 30 MB 只在网络盘 `/workspace/shards/first-batch`，没取回本机。分片时按 `rirs.Measured.valid` 丢掉 3307 条 RIR（训练加开发份共 48214 条，约 6.9%），逐条名单在那份 `index.json` 的 `dropped` 里
 - `splits/openslr28-rir.jsonl` 原文 16.4 MB，auto-commit hook 不收超 10 MB 的文件，所以仓里存的是 `openslr28-rir.jsonl.gz`（2.6 MB）。`split.write` 遇到正文超 8 MB 会自动这样存；`split.load_split` 两种都能读，核的始终是解压后正文的 sha256，所以云上出的摘要不用改
 - 网络盘查盘：RunPod 网络盘上 df 报的是整个集群的剩余（cloudrun 实测 158 TB），所以在挂载点上改用「配额 − du 已用」。配额的正本是 `../cloud/config.py`（cloudrun 的分支）。那个分支合进来之前，`test_real_cloud_config_quota` 会红，下载也会拒绝开始
