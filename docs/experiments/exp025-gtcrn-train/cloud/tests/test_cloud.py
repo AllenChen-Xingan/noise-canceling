@@ -255,9 +255,33 @@ class TestOps(Base):
                 return 503, {"Retry-After": "1"}, b'{"detail":"busy"}'
             return orig(method, url, headers, body)
         cli = Client("k" * 50, transport=flaky, sleep=lambda s: None)
-        with self.assertRaises(ApiError):
+        with self.assertRaises(SystemExit) as cm:  # 结果未知：按名字查过、报出来
             O.create_pod(cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
         self.assertEqual(n["post"], 1)
+        self.assertIn("结果未知", str(cm.exception))
+
+    def test_lost_create_response_finds_and_deletes_pod(self):
+        # 评审第 3 轮 #1：机器其实建了、响应丢了：按名字查到并删
+        orig = self.fake.__call__
+
+        def lost(method, url, headers, body):
+            out = orig(method, url, headers, body)
+            if method == "POST" and url.endswith("/v2/pods"):
+                return 503, {}, b"{}"
+            return out
+        cli = Client("k" * 50, transport=lost, sleep=lambda s: None)
+        with self.assertRaises(SystemExit):
+            O.create_pod(cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
+        self.assertEqual(self.fake.pods, {})
+
+    def test_wrong_ledger_refuses_when_cloud_has_our_volume(self):
+        # 评审第 3 轮 #3：账本路径错了（新文件），云上已有盘：不按 0 放行
+        O.create_volume(self.cli, "US-KS-2", ledger_path=self.ledger)
+        with self.assertRaises(SystemExit) as cm:
+            O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED,
+                         ledger_path=os.path.join(self.tmp.name, "typo.tsv"))
+        self.assertIn("账本", str(cm.exception))
+        self.assertEqual(self.fake.pods, {})
 
     def test_failure_after_create_deletes_pod(self):
         # 评审第 1 轮 #5：机器建好后写账本出错，也要先删机
@@ -423,6 +447,21 @@ class TestCli(Base):
         self.fake.jobs["j"] = ("", "partial\n")
         st = O.job_status(self.cli, next(iter(self.fake.pods)), "j")
         self.assertEqual((st["done"], st["rc"]), (False, None))
+
+    def test_reap_continues_after_one_failure(self):
+        # 评审第 3 轮 #5：第一台删失败，其余照删，最后非零退出
+        self.run_cli("up", "--yes", "--dc", "US-KS-2", "--no-volume")
+        self.run_cli("up", "--yes", "--dc", "US-KS-2", "--no-volume")
+        first, second = sorted(self.fake.pods)
+        real = O.delete_pod
+
+        def flaky(cli, pid, *a, **k):
+            if pid == first:
+                raise OSError("offline")
+            return real(cli, pid, *a, **k)
+        with mock.patch.object(O, "delete_pod", flaky), self.assertRaises(SystemExit):
+            self.run_cli("reap")
+        self.assertEqual(sorted(self.fake.pods), [first])
 
     def test_reap_and_spend(self):
         self.run_cli("up", "--yes", "--dc", "US-KS-2", "--no-volume")
