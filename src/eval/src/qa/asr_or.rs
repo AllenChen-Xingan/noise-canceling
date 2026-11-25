@@ -279,10 +279,12 @@ impl Conn<'_> {
                 return Ok((t.split_whitespace().collect::<Vec<_>>().join(" "), cost));
             }
             let text = String::from_utf8_lossy(&body);
-            last = self.scrub(&format!(
+            // 先对完整响应抹密钥再截断：密钥跨过截断点时也不会漏出半截（codex 第 8 轮 P2 #1）
+            let clean = self.scrub(&text);
+            last = format!(
                 "HTTP {code}：{}",
-                text.chars().take(300).collect::<String>()
-            ));
+                clean.chars().take(300).collect::<String>()
+            );
             if !retryable(code) {
                 let hint = match code {
                     402 => "（余额不足）",

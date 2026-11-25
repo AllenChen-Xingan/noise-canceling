@@ -277,7 +277,9 @@ impl Asr {
         }
         if let Some(Backend::OpenRouter(c)) = self.backends.get_mut(backend) {
             let (x, sr) = crate::wav::read(path)?;
-            return match c.transcribe(&x, sr, lang) {
+            let r = c.transcribe(&x, sr, lang);
+            self.sync_review();
+            return match r {
                 Ok(text) => {
                     self.calls += 1;
                     Ok(self.remember(key, text))
@@ -395,6 +397,7 @@ impl Asr {
             }
             _ => Vec::new(),
         };
+        self.sync_review();
         let keys = if results.is_empty() { Vec::new() } else { keys };
         let mut any = false;
         for (k, r) in keys.into_iter().zip(results) {
@@ -430,6 +433,18 @@ impl Asr {
                 let stable = t.iter().all(|x| *x == t[0]);
                 self.count_check(format!("{sha}|{model}"), stable);
             }
+        }
+    }
+
+    /// 客户端账本被标了「待核」（费用未知）时，Asr 也算停发，原因进 `meta.asr.halted`（codex 第 8 轮 P2 #2）。
+    fn sync_review(&mut self) {
+        if self.halted.is_some() {
+            return;
+        }
+        if let Some(Backend::OpenRouter(c)) = self.backends.get(OPENROUTER)
+            && let Some(r) = &c.ledger.review
+        {
+            self.halted = Some(format!("识别费账本待核：{r}"));
         }
     }
 
