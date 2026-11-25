@@ -68,18 +68,29 @@ fn units(suite: &Suite) -> (BTreeMap<String, usize>, BTreeSet<String>) {
 }
 
 /// 合并各片：`parts` = 每片的 (`clips.jsonl` 全文, 缺段记录)，顺序随意。返回 (合并后的 `clips.jsonl` 全文, 缺段记录)。
-pub fn merge(suite: &Suite, parts: &[(String, Vec<Missing>)]) -> Result<(String, Vec<Missing>), String> {
+pub fn merge(
+    suite: &Suite,
+    parts: &[(String, Vec<Missing>)],
+) -> Result<(String, Vec<Missing>), String> {
     let (pos, need) = units(suite);
-    let at = |what: &str| pos.get(what).copied().ok_or_else(|| format!("{what} 不在清单里：分片和合并用的不是同一份清单"));
+    let at = |what: &str| {
+        pos.get(what)
+            .copied()
+            .ok_or_else(|| format!("{what} 不在清单里：分片和合并用的不是同一份清单"))
+    };
     let mut lines: Vec<(usize, usize, &str)> = Vec::new();
     let mut miss: Vec<(usize, usize, Missing)> = Vec::new();
-    let (mut seen, mut miss_seen, mut covered) = (BTreeSet::new(), BTreeSet::new(), BTreeSet::new());
+    let (mut seen, mut miss_seen, mut covered) =
+        (BTreeSet::new(), BTreeSet::new(), BTreeSet::new());
     for (pi, (text, m)) in parts.iter().enumerate() {
         let raw: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
         let rows = parse_jsonl(text)?;
         for (j, (line, r)) in raw.iter().zip(&rows).enumerate() {
             if !seen.insert((r.clip.clone(), r.system.clone())) {
-                return Err(format!("{} · {} 在两片里重复出现：不合并", r.clip, r.system));
+                return Err(format!(
+                    "{} · {} 在两片里重复出现：不合并",
+                    r.clip, r.system
+                ));
             }
             covered.insert(r.clip.clone());
             lines.push((at(&r.clip)?, pi * 1_000_000 + j, line));
@@ -94,7 +105,11 @@ pub fn merge(suite: &Suite, parts: &[(String, Vec<Missing>)]) -> Result<(String,
     }
     let lack: Vec<&String> = need.difference(&covered).collect();
     if !lack.is_empty() {
-        return Err(format!("少了 {} 段（如 {:?}）：少了一片，或某片没跑完，不合并", lack.len(), &lack[..lack.len().min(3)]));
+        return Err(format!(
+            "少了 {} 段（如 {:?}）：少了一片，或某片没跑完，不合并",
+            lack.len(),
+            &lack[..lack.len().min(3)]
+        ));
     }
     // 位置相同的（同一段的几个系统）都在同一片里：按片内顺序排，即单进程的系统顺序
     lines.sort_by_key(|(p, o, _)| (*p, *o));

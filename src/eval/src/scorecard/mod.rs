@@ -250,7 +250,9 @@ pub fn run_shard(
     let root = audio_root.map_or_else(main_root, Path::to_path_buf);
     let (mut rows, mut missing) = (Vec::new(), Vec::new());
     let mut timing: std::collections::BTreeMap<String, f64> = Default::default();
-    let mut tick = |k: &str, t: std::time::Instant| *timing.entry(k.to_string()).or_default() += t.elapsed().as_secs_f64();
+    let mut tick = |k: &str, t: std::time::Instant| {
+        *timing.entry(k.to_string()).or_default() += t.elapsed().as_secs_f64()
+    };
     // 分片单位：清单顺序里的每一段，或一条展开不出片段的任务；第 k 个单位归第 k mod n 片
     let mut unit = 0usize;
     let mut owned = || {
@@ -387,5 +389,9 @@ pub fn run_shard(
             }
         }
     }
-    Run { rows, missing, timing }
+    Run {
+        rows,
+        missing,
+        timing,
+    }
 }

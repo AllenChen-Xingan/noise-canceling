@@ -30,21 +30,37 @@ fn assert_same_as_single(tag: &str, n: usize, break_one: bool) {
     assert!(!single.rows.is_empty());
     let mut parts: Vec<(String, Vec<Missing>)> = Vec::new();
     for i in 0..n {
-        let r = run_shard(&suite, &sys, &opts(), None, Some(&root), Rules::V2, Some(Shard { i, n }));
+        let r = run_shard(
+            &suite,
+            &sys,
+            &opts(),
+            None,
+            Some(&root),
+            Rules::V2,
+            Some(Shard { i, n }),
+        );
         assert!(r.rows.len() < single.rows.len() || n == 1, "每片只跑一部分");
         parts.push((to_jsonl(&r.rows).unwrap(), r.missing));
     }
     // 合并时片的顺序不该有影响
     parts.reverse();
     let (jsonl, missing) = merge(&suite, &parts).unwrap();
-    assert_eq!(jsonl, to_jsonl(&single.rows).unwrap(), "clips.jsonl 逐字节相同");
+    assert_eq!(
+        jsonl,
+        to_jsonl(&single.rows).unwrap(),
+        "clips.jsonl 逐字节相同"
+    );
     let meta = json!({"t": 1});
     let a = Card::build_with(&single.rows, single.missing.clone(), Rules::V2);
     let b = Card::build_with(&parse_jsonl(&jsonl).unwrap(), missing, Rules::V2);
     let ja = serde_json::to_string_pretty(&a.to_json(meta.clone())).unwrap();
     let jb = serde_json::to_string_pretty(&b.to_json(meta)).unwrap();
     assert_eq!(ja, jb, "成绩单 JSON 逐字节相同");
-    assert_eq!(a.to_markdown("t"), b.to_markdown("t"), "成绩单 Markdown 逐字节相同");
+    assert_eq!(
+        a.to_markdown("t"),
+        b.to_markdown("t"),
+        "成绩单 Markdown 逐字节相同"
+    );
     if break_one {
         assert_eq!(a.cards[0].missing.len(), 1);
     }
@@ -72,11 +88,23 @@ fn duplicate_or_missing_part_is_refused() {
     let suite = parse_suite(&suite_text).unwrap();
     let sys = [SystemKind::Ref];
     let part = |i, n| {
-        let r = run_shard(&suite, &sys, &opts(), None, Some(&root), Rules::V2, Some(Shard { i, n }));
+        let r = run_shard(
+            &suite,
+            &sys,
+            &opts(),
+            None,
+            Some(&root),
+            Rules::V2,
+            Some(Shard { i, n }),
+        );
         (to_jsonl(&r.rows).unwrap(), r.missing)
     };
     let (p0, p1) = (part(0, 2), part(1, 2));
-    assert!(merge(&suite, &[p0.clone(), p0.clone(), p1.clone()]).unwrap_err().contains("重复"));
+    assert!(
+        merge(&suite, &[p0.clone(), p0.clone(), p1.clone()])
+            .unwrap_err()
+            .contains("重复")
+    );
     assert!(merge(&suite, &[p0]).unwrap_err().contains("少"));
 }
 
