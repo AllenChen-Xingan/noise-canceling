@@ -10,6 +10,7 @@
 - 为什么是 H100：2026-11-24 查 RunPod 目录，3090 在 Secure Cloud 所有机房无货，人改选 L4 · US-MO-2（D101）；L4 开机报「无可用机器」，人改 H100（D102）。60 美元上限约合 H100 13 小时。
 - 镜像：`pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime`，容器命令只做一件事：睡到开机时算好的截止时刻，再用平台注入的变量删掉自己（失败每 60 秒重试）；活都用 exec 发进去。
 - CPU 机镜像：`rust:1.99.1-trixie`（钉 digest，正本 `config.py` 的 `CPU_IMAGE`）。显卡机那个镜像是 Ubuntu 22.04（glibc 2.35），vdn-eval 用的 ort 预编译库在上面链接不过（2026-11-25 实测）；Debian 13 的 glibc 是 2.41，Rust 版本与 `rust-toolchain.toml` 一致。
+- 装 trainer 环境用 `remote/setup_env_timed.sh <仓库根> <setup_uv.sh>`：做法与现行相同，每步单独计时，uv 不带 -q，留下「Prepared … in」（下载 + 解包）和「Installed … in」（链接进 venv）两段时间。起因：2026-11-25 同样的装法一次 133 秒、一次 889 秒（推断：网络盘小文件慢）。大总管定：先用计时定原因；如果证实慢在网络盘小文件，再把 venv 做成整包（包名带 requirements 的 sha256，解到容器盘），写进本目录代码并带测试，赶在正式训练前做好。所有机器统一用 setup_uv.sh 钉的 uv 版本。
 - uv 装的 Python 放网络盘：在机器里跑 traindata 的 `cloud_steps.sh setup` 前先 `export UV_PYTHON_INSTALL_DIR=/workspace/uv-python`。不设的话解释器落在容器盘 `/root/.local/share/uv`，网络盘上的 `.venv` 换一台机器就用不了（大总管定，2026-11-25）。
 - 网络存储盘：`vdn-train`，150 GB，挂在 `/workspace`；每月约 10.5 美元（0.07 美元 / GB / 月）。
   机器全删了网络盘也照收钱。花费上限只在花钱前检查（每次都按往后一个月盘费预留），不会自动删盘；盘里有数据，闲置多久删盘由人定。按 10.5 美元 / 月，闲置约 4.5 个月会把 60 美元上限剩下的部分用完（2026-11-25 已花约 1.26 美元）。
