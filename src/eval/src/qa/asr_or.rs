@@ -242,7 +242,10 @@ impl Conn<'_> {
         let mut last = String::new();
         for attempt in 0..MAX_ATTEMPTS {
             if let Some(why) = self.stop.lock().unwrap_or_else(|e| e.into_inner()).clone() {
-                return Err(Failure { msg: format!("已停发：{why}"), cost: Cost::Free });
+                return Err(Failure {
+                    msg: format!("已停发：{why}"),
+                    cost: Cost::Free,
+                });
             }
             // 连不上、超时：请求可能已送到、可能已计费，不知道 → 费用未知，停发（偏保守）
             let (code, retry_after, body) = self.post(body_path).map_err(|e| Failure {
@@ -362,8 +365,6 @@ impl OpenRouter {
             stop: &stop,
         };
         let ledger_path = &self.ledger_path;
-        // 遇到永久错误后，本批里还没派出去的不再派（codex 第 6 轮 P1 #1）
-        let stop: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
         let slots: Vec<Slot> = jobs.iter().map(|_| std::sync::Mutex::new(None)).collect();
         std::thread::scope(|sc| {
             for _ in 0..workers.clamp(1, jobs.len().max(1)) {
@@ -385,7 +386,9 @@ impl OpenRouter {
                             ledger::reserve(ledger_path, est, BUDGET_USD).and_then(|()| match conn
                                 .transcribe(x, *sr, lang)
                             {
-                                Ok((t, Some(c))) => ledger::settle(ledger_path, est, Some(c)).map(|()| t),
+                                Ok((t, Some(c))) => {
+                                    ledger::settle(ledger_path, est, Some(c)).map(|()| t)
+                                }
                                 Ok((t, None)) => {
                                     // 文本照用；预留不退、账本标待核，本批与以后都停发
                                     let why = "费用未知：返回有文本但没带 usage.cost";
