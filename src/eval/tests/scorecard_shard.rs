@@ -217,3 +217,44 @@ fn shard_parse_and_asr_workers() {
     // 每片识别并发：8 ÷ n 向上取整，不低于 1（大总管 2026-11-25）
     assert_eq!([1, 2, 3, 4, 8, 16].map(asr_workers), [8, 4, 3, 2, 1, 1]);
 }
+
+/// codex 本分支第 2 轮 P1 #2：两片的 clips.jsonl 行数一样、互相换了（配错文件），按身份核出来拒绝。
+#[test]
+fn swapped_files_between_shards_are_refused() {
+    let (root, suite) = fixture("shard-swap");
+    let (mut p0, mut p1) = (part(&suite, &root, 0, 2), part(&suite, &root, 1, 2));
+    assert_eq!(
+        p0.row_units.len(),
+        p1.row_units.len(),
+        "夹具 6 段分 2 片各 3 段"
+    );
+    std::mem::swap(&mut p0.jsonl, &mut p1.jsonl);
+    let e = merge(&suite, &systems(), &[p0, p1]).unwrap_err();
+    assert!(e.contains("配错"), "{e}");
+}
+
+/// codex 本分支第 2 轮 P1 #1：同一段在清单里出现两次时，两次都落在同一片（单进程会复用参考转写，分开就要重识别）。
+#[test]
+fn repeated_clip_lands_in_one_shard() {
+    let (root, text) = setup("shard-home");
+    let mut v: Value = serde_json::from_str(&text).unwrap();
+    let mut t2 = v["tasks"][0].clone();
+    t2["id"] = json!("again");
+    v["tasks"].as_array_mut().unwrap().push(t2);
+    let suite = parse_suite(&v.to_string()).unwrap();
+    for i in 0..4 {
+        let p = part(&suite, &root, i, 4);
+        let clips: Vec<String> = parse_jsonl(&p.jsonl)
+            .unwrap()
+            .into_iter()
+            .map(|r| r.clip)
+            .collect();
+        for c in &clips {
+            assert_eq!(
+                clips.iter().filter(|x| *x == c).count(),
+                2,
+                "第 {i} 片里 {c} 两次都在：{clips:?}"
+            );
+        }
+    }
+}
