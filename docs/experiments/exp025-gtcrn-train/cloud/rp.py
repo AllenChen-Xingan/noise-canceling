@@ -113,26 +113,38 @@ def cmd_down(cli, a):
     print(f"已删机 {a.pod}，估算 {est:.4f} 美元")
 
 
+def _reap_one(cli, a, pid: str, live_names: dict) -> str:
+    """处理一台；返回一句结果。只删 vdn- 开头的；账上未关、云上已没的只补账。"""
+    if pid in live_names:
+        O.delete_pod(cli, pid, a.ledger, note="reap")
+        return f"已删 {pid} {live_names[pid]}"
+    try:  # 只在云上确实没有、或名字仍是 vdn- 时才删 / 补账（评审第 1 轮 #1）
+        live = cli.get(f"/v2/pods/{pid}")
+    except O.ApiError as e:
+        if e.status != 404:
+            raise
+        live = None
+    if live and not str(live.get("name", "")).startswith(C.POD_NAME_PREFIX):
+        return f"跳过 {pid}：账上未关，但云上名字是 {live.get('name')!r}，不是 {C.POD_NAME_PREFIX} 开头，请人工核对"
+    O.delete_pod(cli, pid, a.ledger, note="reap：账上未关、云上已无" if live is None else "reap")
+    return f"已处理账上未关的 {pid}"
+
+
 def cmd_reap(cli, a):
-    pods = O.list_our_pods(cli)
-    for p in pods:
-        O.delete_pod(cli, p["id"], a.ledger, note="reap")
-        print(f"已删 {p['id']} {p.get('name')}")
-    for pid in L.open_pods(L.read_rows(a.ledger)):
-        if pid in {p["id"] for p in pods}:
-            continue
-        try:  # 只在云上确实没有、或名字仍是 vdn- 时才删 / 补账（评审第 1 轮 #1）
-            live = cli.get(f"/v2/pods/{pid}")
-        except O.ApiError as e:
-            if e.status != 404:
-                raise
-            live = None
-        if live and not str(live.get("name", "")).startswith(C.POD_NAME_PREFIX):
-            print(f"跳过 {pid}：账上未关，但云上名字是 {live.get('name')!r}，不是 {C.POD_NAME_PREFIX} 开头，请人工核对")
-            continue
-        O.delete_pod(cli, pid, a.ledger, note="reap：账上未关、云上已无" if live is None else "reap")
-    if not pods:
-        print("云上没有 vdn- 开头的机器")
+    """每台单独处理：一台失败不影响其余，最后汇总失败并以非零退出（评审第 3 轮 #5）。"""
+    live_names = {p["id"]: p.get("name") for p in O.list_our_pods(cli)}
+    todo = list(live_names) + [pid for pid in L.open_pods(L.read_rows(a.ledger)) if pid not in live_names]
+    failed = []
+    for pid in todo:
+        try:
+            print(_reap_one(cli, a, pid, live_names))
+        except Exception as e:
+            failed.append(pid)
+            print(f"删 {pid} 失败：{e}", file=sys.stderr)
+    if not todo:
+        print("云上没有 vdn- 开头的机器，账上也没有未关的")
+    if failed:
+        raise SystemExit(f"reap 有 {len(failed)} 台没删成：{', '.join(failed)}；请重跑 reap")
 
 
 def cmd_watchdog(cli, a):

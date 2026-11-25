@@ -71,7 +71,7 @@ def create_volume(cli: Client, data_center: str, size_gb: int = C.VOLUME_SIZE_GB
                   name: str = C.VOLUME_NAME, ledger_path: str = L.DEFAULT_PATH) -> dict:
     if find_volume(cli, name):
         raise SystemExit(f"已有同名网络盘 {name}，不重复建")
-    L.check_budget(L.read_rows(ledger_path), L.volume_hourly(size_gb), C.VOLUME_RESERVE_HOURS)
+    L.check_budget(check_ledger_covers_cloud(cli, ledger_path), L.volume_hourly(size_gb), C.VOLUME_RESERVE_HOURS)
     v = cli.post("/v2/network-volumes", {"name": name, "size": size_gb, "dataCenter": data_center}, retries=0)
     try:  # 刚建的空盘：写账失败就删掉，免得有盘没账（评审第 2 轮 #3）
         now = L.iso(L.utcnow())
@@ -127,6 +127,21 @@ def pod_body(name: str, data_center: str, volume_id: Optional[str], max_hours: f
     return body
 
 
+def check_ledger_covers_cloud(cli: Client, ledger_path: str) -> list:
+    """账本要认得云上我们的东西，否则花费上限会按 0 算（评审第 3 轮 #3）：
+    云上有 vdn- 机器或本项目网络盘、账本里却没有它的记录，就拒绝花钱。返回账本行。"""
+    rows = L.read_rows(ledger_path)
+    known = {r["resource_id"] for r in rows if r["action"] in ("pod_create", "volume_create")}
+    v = find_volume(cli)
+    missing = [x["id"] for x in list_our_pods(cli) if x["id"] not in known]
+    if v and v["id"] not in known:
+        missing.append(v["id"])
+    if missing:
+        raise SystemExit(f"账本 {ledger_path} 里没有云上这些资源的记录：{', '.join(missing)}；"
+                         f"账本路径可能错了（默认 cloud/costs.tsv），不花钱")
+    return rows
+
+
 def create_pod(cli: Client, data_center: str, volume_id: Optional[str], max_hours: float,
                usd_per_hr_hint: float, name: Optional[str] = None,
                ledger_path: str = L.DEFAULT_PATH, cpu: bool = False) -> dict:
@@ -134,9 +149,15 @@ def create_pod(cli: Client, data_center: str, volume_id: Optional[str], max_hour
         name = C.POD_NAME_PREFIX + time.strftime("%Y%m%d-%H%M%S")
     if not name.startswith(C.POD_NAME_PREFIX):
         raise SystemExit(f"机器名必须以 {C.POD_NAME_PREFIX} 开头（reap 靠它认）")
-    L.check_budget(L.read_rows(ledger_path), usd_per_hr_hint, max_hours)
+    L.check_budget(check_ledger_covers_cloud(cli, ledger_path), usd_per_hr_hint, max_hours)
     # 建机不自动重试：回 503 时机器可能已经建了，重试会多开一台（评审第 1 轮 #4）
-    p = cli.post("/v2/pods", pod_body(name, data_center, volume_id, max_hours, cpu), retries=0)
+    try:
+        p = cli.post("/v2/pods", pod_body(name, data_center, volume_id, max_hours, cpu), retries=0)
+    except BaseException as e:
+        if isinstance(e, ApiError) and 400 <= e.status < 500:
+            raise  # 明确拒了：没建
+        _cleanup_unknown_create(cli, name, ledger_path, e)  # 503 / 断网：结果未知（评审第 3 轮 #1）
+        raise
     if p.get("status") in QUEUE_STATES:  # 202：没货被排进队列
         if p.get("status") == "DEPLOYED" and p.get("podId"):
             p = cli.get(f"/v2/pods/{p['podId']}")
@@ -164,6 +185,17 @@ def create_pod(cli: Client, data_center: str, volume_id: Optional[str], max_hour
             raise SystemExit(f"{e}；而且删机 {p['id']} 失败（{e2}），请马上 rp.py down {p['id']} 或 reap") from e
         raise
     return p
+
+
+def _cleanup_unknown_create(cli: Client, name: str, ledger_path: str, err: BaseException) -> None:
+    """建机请求结果未知：按这次的唯一机器名查云上，查到就删；查不到也报「结果未知」。"""
+    try:
+        found = [x["id"] for x in list_our_pods(cli) if x.get("name") == name]
+        for pid in found:
+            delete_pod(cli, pid, ledger_path, note="建机结果未知，按名字查到后删")
+    except BaseException as e2:
+        raise SystemExit(f"建机结果未知（{err}），按名字 {name} 核查也失败（{e2}）；请稍后跑 rp.py reap") from err
+    raise SystemExit(f"建机结果未知（{err}）；按名字 {name} 查到 {len(found)} 台，已删") from err
 
 
 def wait_running(cli: Client, pod_id: str, timeout_s: float = 900,
