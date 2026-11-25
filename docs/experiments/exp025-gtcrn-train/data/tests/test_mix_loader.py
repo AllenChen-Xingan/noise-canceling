@@ -184,6 +184,7 @@ class EndToEnd(unittest.TestCase):
         R = split.load_rules()
         for r in R["sources"].values():
             r.pop("expect", None)  # 夹具只有几个文件，不按上游数目核
+            r.pop("room_lists_sha256", None)  # 夹具的 rir_list 不是上游原文件（钉哈希另有 test_openslr28_rooms）
         cls.splits = t / "splits"
         names = ["librispeech-train-clean-100", "qut-noise", "tum-wind", "openslr28-rir", "demand-train"]
         for n in names:

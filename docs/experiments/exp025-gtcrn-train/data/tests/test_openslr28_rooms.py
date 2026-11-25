@@ -76,6 +76,17 @@ class Rooms(unittest.TestCase):
         self.assertNotEqual(a, self.unit("RVB2014_type1_rir_smallroom1_far_angla.wav"))
         self.assertNotEqual(a, self.unit("RWCP_type4_rir_000l.wav"))
 
+    def test_same_basename_in_three_room_sets(self):
+        """模拟 RIR 小中大三套都有 Room001/Room001-00001.wav：按文件名查会互相覆盖（600 间房并成 200 间）。按完整路径查。"""
+        sim = self.root / "train-raw/openslr28/RIRS_NOISES/simulated_rirs"
+        for size in ("small", "medium", "large"):
+            d = sim / f"{size}room"
+            d.mkdir(parents=True)
+            (d / "rir_list").write_text(f"--rir-id {size}-Room001-00001 --room-id {size}-Room001 RIRS_NOISES/simulated_rirs/{size}room/Room001/Room001-00001.wav\n")
+        m = split.room_map(self.root, rule())
+        units = {split.unit_of(f"train-raw/openslr28/RIRS_NOISES/simulated_rirs/{z}room/Room001/Room001-00001.wav", rule(), m) for z in ("small", "medium", "large")}
+        self.assertEqual(len(units), 3)
+
     def test_line_without_single_path_red(self):
         (self.root / REAL / "rir_list").write_text("--rir-id 1 --room-id R1 a.wav b.wav\n")
         with self.assertRaises(SystemExit):
