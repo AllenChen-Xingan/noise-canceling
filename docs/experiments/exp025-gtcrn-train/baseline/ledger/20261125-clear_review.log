@@ -1,0 +1,32 @@
+before 1454fe320909ae7c85061ba4febf689cdd56120ad63940e0755c36e7978c501b /workspace/asr-ledger/asr-openrouter-ledger.json
+no vdn-eval process
+048ad638fbf82ccd8fb80f0c3a4b8ac4d1aa3bc8
+已清 review；备份 asr-openrouter-ledger.json.before-clear-20261125T200246Z.json；spent_usd 0.105588，calls 1173；新 sha256 7d4c97ec5dfd87493ff0474d3c956903e90b5e88ecf680483a047d4708a664c8
+after 7d4c97ec5dfd87493ff0474d3c956903e90b5e88ecf680483a047d4708a664c8 /workspace/asr-ledger/asr-openrouter-ledger.json
+total 3037
+drwxr-xr-x  2 root   root     96400 Nov 25 20:02 .
+drwxrwxrwx 38 655360 655360 3010688 Nov 25 20:02 ..
+-rw-r--r--  1 root   root       739 Nov 25 20:02 asr-openrouter-ledger.json
+-rw-r--r--  1 root   root       225 Nov 25 20:02 asr-openrouter-ledger.json.before-clear-20261125T200246Z.json
+-rw-r--r--  1 root   root         0 Nov 25 05:26 asr-openrouter-ledger.json.lock
+1454fe320909ae7c85061ba4febf689cdd56120ad63940e0755c36e7978c501b  /workspace/asr-ledger/asr-openrouter-ledger.json.before-clear-20261125T200246Z.json
+{
+  "spent_usd": 0.10558800000000204,
+  "calls": 1173,
+  "reserved_usd": 0.0,
+  "adjustments": [
+    {
+      "kind": "review-cleared",
+      "at": "2026-11-25T20:02:46Z",
+      "review": "费用未知，停发：连不上识别服务：curl: (28) Operation timed out after 120002 milliseconds with 0 bytes received",
+      "worst_count": 3,
+      "audio_s": 12.0,
+      "price_per_second": 8e-06,
+      "worst_usd": 0.000288,
+      "reserved_released_usd": 0.000405,
+      "backup": "asr-openrouter-ledger.json.before-clear-20261125T200246Z.json",
+      "backup_sha256": "1454fe320909ae7c85061ba4febf689cdd56120ad63940e0755c36e7978c501b",
+      "note": "费用未知，按最坏估。超时 0 字节；大总管 2026-11-25 定"
+    }
+  ]
+}
