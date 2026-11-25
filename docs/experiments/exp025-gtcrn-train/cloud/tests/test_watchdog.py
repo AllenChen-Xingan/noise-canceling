@@ -39,6 +39,12 @@ class TestLocalWatchdog(Base):
         self.assertIn("pod_a", W._load())
         self.assertEqual(W.tick(deleted.append, now=T0 + dt.timedelta(hours=1), ctx="acct1|/l"), ["pod_a"])
 
+    def test_loop_exits_when_only_other_accounts_entries_remain(self):
+        # 评审第 4 轮 #3：只剩别的账号的登记，不长期占位
+        W.register("pod_x", 5.0, now=T0, ctx="acct1|/l")
+        W.run_loop(lambda pid: None, sleep=lambda s: None, now_fn=lambda: T0, ctx="acct2|/l")
+        self.assertIn("pod_x", W._load())
+
     def test_failed_delete_is_retried_next_tick(self):
         W.register("pod_a", 0.0, now=T0)
 

@@ -275,6 +275,20 @@ class TestOps(Base):
             O.create_pod(cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
         self.assertEqual(self.fake.pods, {})
 
+    def test_same_second_creates_get_distinct_names(self):
+        # 评审第 4 轮 #1：同一秒开两台也不重名
+        with mock.patch.object(O.time, "strftime", return_value="20261125-000000-"):
+            a = O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
+            b = O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
+        self.assertNotEqual(self.fake.pods[a["id"]]["name"], self.fake.pods[b["id"]]["name"])
+
+    def test_missing_ledger_refuses_even_with_empty_cloud(self):
+        # 评审第 4 轮 #4：云上全删了，账本路径错也不能按 0 放行
+        with self.assertRaises(SystemExit):
+            O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED,
+                         ledger_path=os.path.join(self.tmp.name, "nope.tsv"))
+        self.assertEqual(self.fake.pods, {})
+
     def test_wrong_ledger_refuses_when_cloud_has_our_volume(self):
         # 评审第 3 轮 #3：账本路径错了（新文件），云上已有盘：不按 0 放行
         O.create_volume(self.cli, "US-KS-2", ledger_path=self.ledger)
