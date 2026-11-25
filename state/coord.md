@@ -382,3 +382,9 @@
 - 2026-11-25 PR #170 合并（exp013 云上 build aa9f 跨平台交叉核对，容差第 3 版：4 × 峰值最小单位 + 差信号 ≥120 dB；10 段 97 轨过，大总管亲手重跑）。evalcmp 线可关。
 - 2026-11-25 03:40Z evalcmp 基线 README 写完（分支 exp/025-baseline-scorecard，codex 第 1 轮中）。大总管定（人未参与）：基线成绩单全在本机跑（A；识别服务 42model 只有 macOS 版，云上省不了本机时间），首个约 2.6 h、之后每个约 1.6 h，6 个合计约 10.6 h，费用 0。发现：按「GTCRN 自己多弱」排的前 4 场景与临时选的四个只重合 1 个（车站）；gap.py 出弱项表 + 提升空间表两种，等不回混基线出数后交人定加训场景。
 - 2026-11-25 03:55Z PR #172 合并（cloudrun，Closes #158）。put-secret 等新提交另开 PR。
+- 2026-11-25 04:10Z PR #177 合并（traindata，Closes #156）。残余 P2 #174–#176。
+- 2026-11-25 04:17Z cloudrun 开 CPU 机 ciuc12isly6w84（自删 1 h，最晚 05:22Z），用 main 86698924 跑 setup → register → pack。
+- 2026-11-25 04:30Z cloudrun register+pack 完成：新 build f032a75eedad80d6，交集检查过；机器 ciuc12isly6w84 已删，0 台；累计 1.55 美元。
+- 2026-11-25 04:45Z PR #178 合并（put-secret）。PR #179（trainer）、#181（基线+识别上云）、#182（register2）CI 中。
+- 2026-11-25 PR #179 合并（trainer，Closes #157）。开训前四条线全部合进 main。
+- 2026-11-25 04:45Z PR #181（基线 + 识别上云）与 #182（register2，现行 build f032a75e）合并。
