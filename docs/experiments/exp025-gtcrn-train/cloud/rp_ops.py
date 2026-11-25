@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import os
+import secrets
 import shlex
 import time
 from typing import Callable, Optional
@@ -130,6 +132,8 @@ def pod_body(name: str, data_center: str, volume_id: Optional[str], max_hours: f
 def check_ledger_covers_cloud(cli: Client, ledger_path: str) -> list:
     """账本要认得云上我们的东西，否则花费上限会按 0 算（评审第 3 轮 #3）：
     云上有 vdn- 机器或本项目网络盘、账本里却没有它的记录，就拒绝花钱。返回账本行。"""
+    if not os.path.exists(ledger_path):  # 评审第 4 轮 #4：新路径 = 没有历史花费，不能按 0 放行
+        raise SystemExit(f"账本 {ledger_path} 不存在；正式账本是 cloud/costs.tsv。确要新开一本，先用 ledger.init 建表头")
     rows = L.read_rows(ledger_path)
     known = {r["resource_id"] for r in rows if r["action"] in ("pod_create", "volume_create")}
     v = find_volume(cli)
@@ -146,7 +150,8 @@ def create_pod(cli: Client, data_center: str, volume_id: Optional[str], max_hour
                usd_per_hr_hint: float, name: Optional[str] = None,
                ledger_path: str = L.DEFAULT_PATH, cpu: bool = False) -> dict:
     if not name:
-        name = C.POD_NAME_PREFIX + time.strftime("%Y%m%d-%H%M%S")
+        # 时间 + 8 位随机：同一秒开两台也不重名；结果未知时按名字清理只会碰到这一次建的（评审第 4 轮 #1）
+        name = C.POD_NAME_PREFIX + time.strftime("%Y%m%d-%H%M%S-") + secrets.token_hex(4)
     if not name.startswith(C.POD_NAME_PREFIX):
         raise SystemExit(f"机器名必须以 {C.POD_NAME_PREFIX} 开头（reap 靠它认）")
     L.check_budget(check_ledger_covers_cloud(cli, ledger_path), usd_per_hr_hint, max_hours)

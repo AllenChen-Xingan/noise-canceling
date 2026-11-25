@@ -137,14 +137,15 @@ def tick(delete: Callable[[str], object], now: Optional[dt.datetime] = None, pat
 def run_loop(delete: Callable[[str], object], poll_s: float = 30, path: Optional[str] = None,
              sleep: Callable[[float], None] = time.sleep, now_fn: Callable[[], dt.datetime] = L.utcnow,
              pidfile: Optional[str] = None, ctx: str = "") -> None:
-    """登记表空了就退出。退出前在锁里再看一眼并撤掉自己的 pid 文件：
+    """自己这份登记删完就退出。退出前在锁里再看一眼并撤掉自己的 pid 文件：
     之后才登记的机器会看到「没有看门狗」而新起一个，不会以为这个快退出的还在管（评审第 1 轮 #7）。"""
     pidfile = pidfile or PIDFILE
     while True:
         for pid in tick(delete, now_fn(), path, ctx):
             print(f"watchdog: 到点已删 {pid}", flush=True)
         with _locked(path):
-            if not _load(path):
+            mine = [p for p, v in _load(path).items() if not ctx or _entry(v)[1] in ("", ctx)]
+            if not mine:  # 只剩别的账号的登记也退出，不长期占位（评审第 4 轮 #3）
                 _drop_own_pidfile(pidfile)
                 return
         sleep(poll_s)

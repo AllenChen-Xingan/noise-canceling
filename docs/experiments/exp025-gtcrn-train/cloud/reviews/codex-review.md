@@ -55,4 +55,4 @@
 | P1 #5 | reap 一台失败就停 | 每台单独处理，汇总失败，非零退出 | `test_reap_continues_after_one_failure` |
 | P2 #6 | 假接口仍缺有状态故障 | 同第 2 轮 #7，留 issue | — |
 
-测试：77 条全过。
+测试：75 条全过。

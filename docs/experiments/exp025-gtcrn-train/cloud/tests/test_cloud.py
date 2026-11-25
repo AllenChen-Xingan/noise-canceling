@@ -33,6 +33,7 @@ class Base(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.ledger = os.path.join(self.tmp.name, "costs.tsv")
+        L.init(self.ledger)
         self.fake = FakeRunPod()
         self.cli = Client(FAKE_KEY, transport=self.fake, sleep=lambda s: None)
         # 看门狗状态写临时目录；不真起后台进程

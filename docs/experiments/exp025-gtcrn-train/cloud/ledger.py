@@ -48,6 +48,13 @@ def read_rows(path: str = DEFAULT_PATH) -> list:
         return list(r)
 
 
+def init(path: str) -> None:
+    """建一本只有表头的新账本（已存在就不动）。花钱的命令要求账本已存在，免得路径写错按 0 放行。"""
+    if not os.path.exists(path):
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            csv.DictWriter(f, fieldnames=C.COSTS_TSV_COLUMNS, delimiter="\t", lineterminator="\n").writeheader()
+
+
 def append_row(row: dict, path: str = DEFAULT_PATH) -> None:
     extra = set(row) - set(C.COSTS_TSV_COLUMNS)
     if extra:
