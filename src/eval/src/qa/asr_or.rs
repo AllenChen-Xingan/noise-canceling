@@ -389,6 +389,17 @@ impl OpenRouter {
                                 .transcribe(x, *sr, lang)
                             {
                                 Ok((t, Some(c))) => {
+                                    // 实际费用比预留高（估算不准）：照记，账本标待核、停发（codex 第 9 轮 P1 #1）
+                                    if c > est {
+                                        let why = format!(
+                                            "实际费用 {c:.6} 美元超过预留 {est:.6} 美元：估算不准"
+                                        );
+                                        ledger::flag_review(ledger_path, &why)?;
+                                        let mut st = stop.lock().unwrap_or_else(|e| e.into_inner());
+                                        if st.is_none() {
+                                            *st = Some(why);
+                                        }
+                                    }
                                     ledger::settle(ledger_path, est, Some(c)).map(|()| t)
                                 }
                                 Ok((t, None)) => {

@@ -223,7 +223,9 @@ impl Asr {
             })
             .collect();
         let rate = (self.checked > 0).then(|| self.unstable as f64 / self.checked as f64);
-        serde_json::json!({"default": self.default, "backends": b, "calls": self.calls,
+        // 生效的默认 = 路由文件的 default（有的话），否则环境变量给的（codex 第 9 轮 P2 #2）
+        let effective = self.route.default.as_deref().unwrap_or(self.default);
+        serde_json::json!({"default": effective, "env_default": self.default, "backends": b, "calls": self.calls,
             "repeats": if self.single { "1 + 抽查" } else { "2" }, "spot_fraction": SPOT_FRACTION,
             "checked": self.checked, "unstable": self.unstable, "unstable_rate": rate,
             "halted": self.halted})
