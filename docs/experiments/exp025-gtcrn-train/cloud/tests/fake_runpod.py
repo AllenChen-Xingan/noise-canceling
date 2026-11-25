@@ -128,6 +128,8 @@ class FakeRunPod:
         if "base64 -d >>" in script:
             path = shlex.split(script.split(">>", 1)[1])[0]
             self.files[path] = self.files.get(path, b"") + base64.b64decode("".join(argv[4:]))
+            if getattr(self, "corrupt_put", False):  # 模拟传输损坏
+                self.files[path] += b"!"
             return ok
         if ": >" in script:
             path = shlex.split(script.split(": >", 1)[1])[0]

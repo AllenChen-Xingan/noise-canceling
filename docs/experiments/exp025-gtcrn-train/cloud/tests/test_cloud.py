@@ -343,8 +343,8 @@ class TestOps(Base):
     def test_put_bad_hash_leaves_original(self):
         self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}
         O.put_bytes(self.cli, "pod_9", b"old", "/w/f")
-        with mock.patch.object(O.hashlib, "sha256", return_value=mock.Mock(hexdigest=lambda: "0" * 64)), \
-                self.assertRaises(SystemExit):
+        self.fake.corrupt_put = True
+        with self.assertRaises(SystemExit):
             O.put_bytes(self.cli, "pod_9", b"new", "/w/f", overwrite=True)
         self.assertEqual(self.fake.files["/w/f"], b"old")  # 核不过：正式文件没动
 
