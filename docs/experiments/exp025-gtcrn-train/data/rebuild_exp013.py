@@ -159,6 +159,8 @@ def main():
         rep.update({"build": BUILD, "upload_log_sha256": hashlib.sha256(up.encode()).hexdigest(),
                     "inputs_log_sha256": hashlib.sha256(inp.encode()).hexdigest(), "when": time.strftime("%Y-%m-%d %H:%M:%S")})
         return report(rep)
+    if not a.root:
+        raise SystemExit("整套重建要 --root；只核云上 build 用 --check-cloud")
     if sys.platform == "darwin":
         raise SystemExit("重建在云上跑（D97）；本机只跑单元测试")
     drift = version_diff()
@@ -191,7 +193,13 @@ def report(rep):
     REPORTS.mkdir(exist_ok=True)
     out = REPORTS / f"exp013-{time.strftime('%Y%m%d-%H%M%S')}.json"
     out.write_text(json.dumps(rep, ensure_ascii=False, indent=1) + "\n")
-    print(f"重建 {rep['same']}/{rep['old']} 一致，exclude.json {'相同' if rep['exclude_equal'] else '不同'}；报告 {out.name}（请提交进仓）")
+    if "local_vs_old" in rep:
+        v, u = rep["local_vs_old"], rep["upload"]
+        print(f"本机 {v['same']}/{v['old']} 同旧 build；云上音频 {u['ok']}/{u['expected']} 对上；exclude {'相同' if rep['cloud_exclude_equal'] else '不同'}；"
+              f"版本{'相同' if not rep['cloud_version_drift'] else '不同'}；原料{'全对' if rep['inputs_ok'] else '不对'}；官方源：未验证")
+    else:
+        print(f"重建 {rep['same']}/{rep['old']} 一致，exclude.json {'相同' if rep['exclude_equal'] else '不同'}")
+    print(f"{'通过' if rep['ok'] else '不过'}；报告 {out.name}（请提交进仓）")
     sys.exit(0 if rep["ok"] else 1)
 
 
