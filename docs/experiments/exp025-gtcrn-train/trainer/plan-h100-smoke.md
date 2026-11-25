@@ -50,8 +50,9 @@
 
 1. 拉代码与官方源码：`git clone <仓库> $R && git -C $R checkout <提交>`；`git clone https://github.com/Xiaobin-Rong/gtcrn $G && git -C $G checkout 502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73`
 2. 装环境：`cd $D && bash cloud_steps.sh setup && uv pip install --python $PY einops==0.7.0 pyyaml pytest`
-3. 单元测试（不要 Rust 的那几条会自动跳过）：`cd $T && VDN_GTCRN_DIR=$G VDN_LOADER_SHARDS=/workspace/shards/first-batch VDN_LOADER_RECIPE=$D/recipe.json $PY -m pytest -q tests/ 2>&1 | tail -20`
-   - 预期：除对拍（要 `parity_rs`，云上不编）外全过；loader 的 3 条对接测试这次在真分片上跑
+3. 单元测试：`cd $T && VDN_GTCRN_DIR=$G VDN_LOADER_SHARDS=/workspace/shards/first-batch VDN_LOADER_RECIPE=$D/recipe.json $PY -m pytest -q tests/ --ignore=tests/test_losses_parity.py 2>&1 | tail -20`
+   - 对拍测试没编 Rust 驱动时会红（故意不跳过），云上不编 Rust，所以用 `--ignore` 排除。对拍在本机和 CI 上已过（大总管验收时 121 条通过）
+   - 预期：其余全过；loader 的 3 条对接测试这次在真分片上跑（真分片 15 GB，这几条耗时未量化）
 4. CPU 参照：`cd $T && VDN_GTCRN_DIR=$G $PY smoke.py --config configs/default.yaml --set device=cpu --set data.shard_root=/workspace/shards/first-batch --set data.recipe=$D/recipe.json --write-known-dev $O/known-dev-cpu.json`
 5. 删机：`python3 rp.py down <机器> --yes`
 

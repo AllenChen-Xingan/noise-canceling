@@ -86,6 +86,8 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 - 测速只作记录：本机每步中位 0.25 s（批量 4 × 2 s），取数 0.007 s。电池下测的，**不能和云上比**
 - 本机跑任何超过 1 分钟的命令，都要先申请名额，套 `caffeinate -dims`，并记电源状态。2026-11-16 有一次探测因为用电池、空闲睡眠，CPU 只用了 136 秒，墙钟却拖到 56 分钟
 
+云上 H100 冒烟的方案（待批，未开机）：`plan-h100-smoke.md`。
+
 报告：`smoke_reports/20261124-cpu-synthetic-v2.json`（现行判据）；`20261124-cpu-synthetic.json` 是自审前旧判据那次。
 
 ## 默认值与依据
