@@ -140,11 +140,25 @@ bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /
    - 只有训练份与开发份进分片
 4. 测试全过后提交（hook 自动做）。发现问题时，按 6.3 改规则重切，旧表不原地覆盖（`split.write` 会拒绝）
 
+### 6.5 exp013 重建：直接核云上 main 出的那份 build（2026-11-25 大总管定，不另跑 rebuild）
+
+云上用 main 复刻 `20261124165427-6323` 时，cloudrun 在**同一台机器**上多做两件事：
+
+1. 出完 build 后，在仓库根下跑原料内容核对（build 自带的素材索引只记路径与字节数，不读内容）：
+   `python3 docs/experiments/exp025-gtcrn-train/data/exp013_inputs.py --verify --data <数据根>/vdn-data | tee inputs-verify.log`
+   要求输出「原料全对」、退出码 0。这个脚本在本分支上，main 上还没有
+2. 带回新 build 目录里的 4 个小文件（不含音频）：`manifest.json` · `hashes.txt` · `exclude.json` · `clips.jsonl`，加上 `inputs-verify.log`
+
+带回后 traindata 在本机跑：
+`python3 rebuild_exp013.py --check-dir <带回的 build 目录> --inputs-log inputs-verify.log`
+它核四项：旧 4540 个文件逐个相同、`exclude.json` 全等、版本相同、原料全对。报告写进 `rebuild/` 并提交。
+有了这份报告，`test_rebuild.test_code_drift_covered_by_report` 才会变绿。
+
 ## 七、已知局限
 
 - QUT-NOISE 和 TUM 风噪：包内结构已按云上清单与上游 zip 目录核过（2026-11-25）。TUM 手机录音的文件名前缀按一次录音算，上游没写前缀含义；按前缀并只会让单位更粗。QUT 的服务器没有声明支持断点续传，遇到时从头重下
 - OpenSLR 28：包里的点声源噪声取自 MUSAN，里面各个来源的许可没有逐个核，所以第一批不用
-- 测试状态（2026-11-25 产物带回后）：本机共 124 条，123 条过，1 条红（缺 cloud/config.py）（torch 用 CPU 后端；混音那几条借 evalcmp 分支的 rooms.py 跑）。云上 GPU 对拍还没跑
+- 测试状态（2026-11-25 产物带回后）：本机共 127 条，125 条过，2 条红：缺 cloud/config.py；exp013 代码变了、还没有云上核对报告（见 6.5）。evalcmp 已合进 main，混音测试用 main 上的 rooms.py（torch 用 CPU 后端）。云上 GPU 对拍还没跑
 - 第一批产物（build `49349c158a4defdc`，云上提交 8b4194d3）：分片 15 GB 与 `index.json` 30 MB 只在网络盘 `/workspace/shards/first-batch`，没取回本机。分片时按 `rirs.Measured.valid` 丢掉 3307 条 RIR（训练加开发份共 48214 条，约 6.9%），逐条名单在那份 `index.json` 的 `dropped` 里
 - `splits/openslr28-rir.jsonl` 原文 16.4 MB，auto-commit hook 不收超 10 MB 的文件，所以仓里存的是 `openslr28-rir.jsonl.gz`（2.6 MB）。`split.write` 遇到正文超 8 MB 会自动这样存；`split.load_split` 两种都能读，核的始终是解压后正文的 sha256，所以云上出的摘要不用改
 - 网络盘查盘：RunPod 网络盘上 df 报的是整个集群的剩余（cloudrun 实测 158 TB），所以在挂载点上改用「配额 − du 已用」。配额的正本是 `../cloud/config.py`（cloudrun 的分支）。那个分支合进来之前，`test_real_cloud_config_quota` 会红，下载也会拒绝开始
