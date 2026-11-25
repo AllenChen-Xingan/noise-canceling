@@ -3,9 +3,10 @@
   "gate3_verdict": "fail",
   "overfit": {
     "first": 3.9680330753326416,
-    "last": 2.985973358154297,
-    "drop_frac": 0.24749282542107295,
+    "last": 2.984607696533203,
+    "drop_frac": 0.24783699130758824,
     "si_snr_gain_db": 2.518848105215678,
+    "gate3_last_traj": 2.985973358154297,
     "attn_out_max_change": 0.08028104901313782,
     "grad_norms_first_step": {
       "base.encoder": 17.162641970253304,
