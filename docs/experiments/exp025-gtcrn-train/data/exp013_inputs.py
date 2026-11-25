@@ -82,11 +82,22 @@ def record(pools):
     print(f"已记 {len(rows)} 个文件 → {OUT.name}")
 
 
-def verify(pools, rec=None):
-    """返回不一致的条目列表（空 = 全对）。"""
-    rec = rec or json.loads(OUT.read_text())
+def check_record_complete(rec):
+    """记录本身要齐：路径不重复，「路径 + 字节数」的索引等于正式 build 记的 material_index（条数也等）。"""
+    files = rec["files"]
+    man = json.loads((EXP013 / "builds" / BUILD / "manifest.json").read_text())["material_index"]
+    if len({r["path"] for r in files}) != len(files):
+        raise SystemExit("原料记录里有重复路径")
+    if len(files) != man["files"] or index_of(files) != man["sha256"]:
+        raise SystemExit(f"原料记录不齐：{len(files)} 条，应为 {man['files']} 条且索引等于 build {BUILD} 记的 material_index")
+
+
+def verify(pools, rec=None, sample=None):
+    """返回不一致的条目列表（空 = 全对）。sample=N 只核前 N 个文件的内容（单测用）；记录齐不齐总是全核。"""
+    rec = rec if rec is not None else json.loads(OUT.read_text())
+    check_record_complete(rec)
     bad = []
-    for r in rec["files"]:
+    for r in rec["files"][:sample]:
         p = pools.DATA / r["path"]
         if not p.exists():
             bad.append(f"缺 {r['path']}")
@@ -109,7 +120,7 @@ def main():
         record(pools)
         return
     bad = verify(pools)
-    print("原料全对" if not bad else f"{len(bad)} 处不对：{bad[:10]}")
+    print(f"原料全对（{len(json.loads(OUT.read_text())['files'])} 个逐个核过内容）" if not bad else f"{len(bad)} 处不对：{bad[:10]}")
     sys.exit(1 if bad else 0)
 
 
