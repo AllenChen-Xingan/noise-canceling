@@ -1,0 +1,109 @@
+{
+ "source": "cloudrun 2026-11-25，H100，代码 7eecbbe8，tar sha256 98d40c59dbbe9d053eba8502c4abf12427cbdddc30ad4abdcc750a4784216615",
+ "runs": {
+  "speed-B": {
+   "variant": "B",
+   "num_workers": 8,
+   "steps": 300,
+   "t_setup_s": 293.73,
+   "s_step_median": 0.16650000000000062,
+   "s_step_min": 0.1634999999999991,
+   "s_step_max": 0.17549999999999955,
+   "t_eval_plus_ckpt_s": [
+    0.879999999999967,
+    0.5999999999999943
+   ],
+   "billed_s_end": 346.39,
+   "usd_end": 0.4224,
+   "dev_hybrid": {
+    "100": 3.9392234086990356,
+    "200": 3.912222909927368,
+    "300": 3.904974412918091
+   },
+   "git": "7eecbbe85db862dc4666088d6d8a1593c4f39cd8",
+   "dirty": false
+  },
+  "speed-A": {
+   "variant": "A",
+   "num_workers": 8,
+   "steps": 300,
+   "t_setup_s": 175.75,
+   "s_step_median": 0.1479999999999997,
+   "s_step_min": 0.14599999999999938,
+   "s_step_max": 0.15400000000000064,
+   "t_eval_plus_ckpt_s": [
+    0.7600000000000051,
+    0.4999999999999858
+   ],
+   "billed_s_end": 222.13,
+   "usd_end": 0.2709,
+   "dev_hybrid": {
+    "100": 3.939661383628845,
+    "200": 3.9122801065444945,
+    "300": 3.903706443309784
+   },
+   "git": "7eecbbe85db862dc4666088d6d8a1593c4f39cd8",
+   "dirty": false
+  },
+  "par-1": {
+   "variant": "B",
+   "num_workers": 6,
+   "steps": 200,
+   "t_setup_s": 151.53,
+   "s_step_median": 0.39199999999999946,
+   "s_step_min": 0.22400000000000092,
+   "s_step_max": 0.39899999999999947,
+   "t_eval_plus_ckpt_s": [
+    2.1200000000000188
+   ],
+   "billed_s_end": 227.66,
+   "usd_end": 0.2776,
+   "dev_hybrid": {
+    "100": 3.9393213510513307,
+    "200": 3.912151646614075
+   },
+   "git": "7eecbbe85db862dc4666088d6d8a1593c4f39cd8",
+   "dirty": false
+  },
+  "par-2": {
+   "variant": "B",
+   "num_workers": 6,
+   "steps": 200,
+   "t_setup_s": 157.5,
+   "s_step_median": 0.39375000000000004,
+   "s_step_min": 0.27399999999999947,
+   "s_step_max": 0.40600000000000025,
+   "t_eval_plus_ckpt_s": [
+    2.0749999999999877
+   ],
+   "billed_s_end": 234.99,
+   "usd_end": 0.2866,
+   "dev_hybrid": {
+    "100": 3.9392457485198973,
+    "200": 3.912321925163269
+   },
+   "git": "7eecbbe85db862dc4666088d6d8a1593c4f39cd8",
+   "dirty": false
+  },
+  "par-3": {
+   "variant": "B",
+   "num_workers": 6,
+   "steps": 200,
+   "t_setup_s": 158.91,
+   "s_step_median": 0.38799999999999957,
+   "s_step_min": 0.25150000000000006,
+   "s_step_max": 0.39850000000000135,
+   "t_eval_plus_ckpt_s": [
+    2.2900000000000205
+   ],
+   "billed_s_end": 234.48,
+   "usd_end": 0.2859,
+   "dev_hybrid": {
+    "100": 3.9393099784851073,
+    "200": 3.9118221044540404
+   },
+   "git": "7eecbbe85db862dc4666088d6d8a1593c4f39cd8",
+   "dirty": false
+  }
+ }
+}
