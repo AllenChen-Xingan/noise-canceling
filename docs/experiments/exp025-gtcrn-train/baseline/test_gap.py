@@ -229,5 +229,19 @@ class Completeness(unittest.TestCase):
         self.assertEqual(gap.uplift_table(cj, card)["verdict"], "数据不足", "没有覆盖信息也判数据不足")
 
 
+    def test_uplift_baseline_with_missing_clips_is_insufficient(self):
+        """codex 第 4 轮 P1 #1：基线成绩单自己有没跑成的段时，它的段数不能当预期数；判「数据不足」。"""
+        items = ["V-NR", "V-ESTOI", "V-A", "V-B", "V-C"]
+        cj = compare_json({s: [(v, "up", -1.0, "lower") for v in items] for s in ALL15})
+        card = baseline_card(clips=10)
+        card["missing"] = [{"scene": "cafe", "tier": "common", "device": "mba-builtin", "system": "gtcrn",
+                            "what": "cafe-c00-mba", "why": "测试"}]
+        u = gap.uplift_table(cj, card)
+        self.assertEqual(u["verdict"], "数据不足")
+        self.assertTrue(any("没跑成" in x for x in u["incomplete"]), u["incomplete"])
+        # 别的系统的缺段不影响
+        card["missing"][0]["system"] = "other"
+        self.assertNotEqual(gap.uplift_table(cj, card)["verdict"], "数据不足")
+
 if __name__ == "__main__":
     unittest.main()

@@ -26,7 +26,7 @@ Rust 算好的），不重算任何评分项，所以这里不是 verifier 的�
    `--exclude` 去掉两边量法不同的项（例如比较的两份来自不同代码版本、其中某项改过量法）。
    **数据不全不下结论**（提升空间表自己的条件）：逐场景结果 < `MIN_SCENES`；有场景的有差值判定项 < `MIN_ITEMS`；
    有片段只在一边；某场景的配对段数 ≠ 基线成绩单里该场景的段数（两边共同缺段时 only_a / only_b 是空的，靠这条抓；
-   基线卡里没有段数也算核不了）。任一成立 → 「数据不足」。compare 不带切片信息，所以这张表不查切片
+   基线卡里没有段数也算核不了）；基线成绩单自己有基线系统没跑成的段。任一成立 → 「数据不足」。compare 不带切片信息，所以这张表不查切片
 
 用法：
   python gap.py weak <scorecard.json> [--system gtcrn] [--out <目录>]                       → gap-weak.md / .json
@@ -196,6 +196,9 @@ def uplift_table(cmp_json, card_json, exclude=()):
     thin = sorted(r["scene"] for r in rows if r["items"] < MIN_ITEMS)
     if thin:
         incomplete.append(f"有差值的判定项少于 {MIN_ITEMS} 个的场景：{' · '.join(thin)}")
+    base_missing = [m for m in card_json.get("missing", []) if base is None or m.get("system") == base]
+    if base_missing:
+        incomplete.append(f"基线成绩单有 {len(base_missing)} 段没跑成，它的段数不能当预期数")
     if no_count:
         incomplete.append("基线成绩单的卡里没有段数，核不了覆盖")
     else:
