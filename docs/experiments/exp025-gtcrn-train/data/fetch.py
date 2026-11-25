@@ -60,6 +60,7 @@ FATAL_CODES = (400, 401, 403, 404, 410)  # 再试也没用：立刻报错
 POLITE_HOSTS = ("wikimedia.org",)  # 对这些站每次请求前先停一会儿，串行、不并发（cloudrun 2026-11-24 遇到 429）
 POLITE_GAP_S = 5.0
 MAX_WAIT_S = 600.0
+RATE_RETRIES = 30  # 429 / 503 另算次数，不占断线重试的名额；E3 实测服务器每次给 120 s，8 次里第 8 次才成（cloudrun 2026-11-24），30 × 120 s ≈ 1 h
 _sleep = time.sleep  # 测试里换成假的，不真睡
 
 
@@ -90,13 +91,16 @@ def polite(url):
         _sleep(POLITE_GAP_S)
 
 
-def download(url, out, expect_bytes, retries=8, timeout=120):
+def download(url, out, expect_bytes, retries=8, timeout=120, rate_retries=None):
     """断点续传下载到 out；返回实际字节数。中途断了重试，每次从 .part 的末尾接着下。
-    429 / 503 按 Retry-After 等；404 等立刻报错；Wikimedia 每次请求前先停 POLITE_GAP_S 秒。"""
+    429 / 503 按 Retry-After 等，另算 rate_retries 次（默认 RATE_RETRIES）；404 等立刻报错；
+    Wikimedia 每次请求前先停 POLITE_GAP_S 秒。"""
+    rate_retries = RATE_RETRIES if rate_retries is None else rate_retries
     out = Path(out)
     part = out.with_name(out.name + ".part")
     out.parent.mkdir(parents=True, exist_ok=True)
-    for attempt in range(retries):
+    attempt = rated = 0
+    while attempt < retries and rated <= rate_retries:
         have = part.stat().st_size if part.exists() else 0
         if expect_bytes and have > expect_bytes:
             part.unlink()
@@ -116,12 +120,20 @@ def download(url, out, expect_bytes, retries=8, timeout=120):
         except urllib.error.HTTPError as e:
             if e.code in FATAL_CODES:
                 raise SystemExit(f"{out.name}：服务器回 {e.code}，不重试（地址失效或无权限）")
-            wait = retry_after(e, attempt) if e.code in RATE_CODES else 2.0**attempt
-            print(f"  第 {attempt + 1} 次：服务器回 {e.code}，{wait:.0f} s 后再试", flush=True)
+            if e.code in RATE_CODES:
+                rated += 1
+                raw = e.headers.get("Retry-After") if getattr(e, "headers", None) else None
+                wait = retry_after(e, rated - 1)
+                print(f"  限流第 {rated}/{rate_retries} 次：服务器回 {e.code}（Retry-After={raw!r}），{wait:.0f} s 后再试", flush=True)
+            else:
+                wait = 2.0**attempt
+                attempt += 1
+                print(f"  第 {attempt} 次：服务器回 {e.code}，{wait:.0f} s 后再试", flush=True)
             _sleep(wait)
         except (OSError, urllib.error.URLError) as e:
             print(f"  第 {attempt + 1} 次中断：{e}；{2 ** attempt} s 后接着下", flush=True)
             _sleep(2**attempt)
+            attempt += 1
     n = part.stat().st_size if part.exists() else 0
     if expect_bytes and n != expect_bytes:
         raise SystemExit(f"{out.name} 下了 {n} 字节，应为 {expect_bytes}：留着 .part，重跑会接着下")
