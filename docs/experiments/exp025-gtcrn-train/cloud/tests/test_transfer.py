@@ -62,6 +62,45 @@ class TestTransfer(Base):
         st = O.wait_job(self.cli, "pod_9", rid1, 10, sleep=lambda s: None)
         self.assertEqual((st["rc"], st["log"]), (1, "first\n"))
 
+    def test_lost_start_response_reports_run_id(self):
+        # 评审第 8 轮 #1：启动请求发出后断网，报错里带编号、说「结果未知」，CLI 也先打出编号
+        orig = self.fake.exec
+
+        def lost(argv):
+            if "nohup" in " ".join(argv):
+                orig(argv)  # 其实已经启动了
+                raise OSError("connection reset")
+            return orig(argv)
+        self.fake.exec = lost
+        with self.assertRaises(SystemExit) as cm:
+            self.run_cli("job-start", "pod_9", "train", "true")
+        msg = str(cm.exception)
+        self.assertIn("结果未知", msg)
+        rid = msg.split("运行编号 ")[1].split("。")[0]
+        self.assertTrue(rid.startswith("train-"))
+        self.assertIn(rid, self.fake.jobs)  # 按这个编号能查回来
+        st = O.wait_job(self.cli, "pod_9", rid, 10, sleep=lambda s: None)
+        self.assertEqual(st["rc"], 0)
+
+    def test_probe_fails_on_nonzero_rc_or_empty_log(self):
+        # 评审第 8 轮 #2：测速退出码非 0 或日志空，不写结果文件、非零退出，机器照删
+        import rp
+        orig = rp.HERE
+        rp.HERE = self.tmp.name
+        try:
+            for n in ("probe_remote.py", "probe_urls.txt"):
+                with open(os.path.join(os.path.dirname(HERE), n), "rb") as s, \
+                        open(os.path.join(self.tmp.name, n), "wb") as d:
+                    d.write(s.read())
+            self.fake.next_job = (137, "")
+            with self.assertRaises(SystemExit) as cm:
+                self.run_cli("probe", "--yes", "--dc", "US-KS-2", "--no-volume", "--max-hours", "0.25")
+        finally:
+            rp.HERE = orig
+        self.assertIn("137", str(cm.exception))
+        self.assertFalse(os.path.exists(os.path.join(self.tmp.name, "probes")))
+        self.assertEqual([p for p in self.fake.pods if p != "pod_9"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

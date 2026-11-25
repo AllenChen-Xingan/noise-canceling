@@ -159,7 +159,7 @@ class FakeRunPod:
             return dict(ok, stdout=base64.b64encode(chunk).decode())
         if "nohup sh -c" in script:
             job = re.search(r"/([\w.-]+)\.rc", script).group(1)
-            self.jobs[job] = self.jobs.get(job, (0, '{"nproc": 16}\n'))
+            self.jobs[job] = self.jobs.get(job, getattr(self, "next_job", None) or (0, '{"nproc": 16}\n'))
             return ok
         if script.startswith("cat ") and ".rc" in script:
             job = re.search(r"/([\w.-]+)\.rc", script).group(1)
