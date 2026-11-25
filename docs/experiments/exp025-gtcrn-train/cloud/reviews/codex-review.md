@@ -246,3 +246,14 @@ P1 #1（校验失败、畸形响应时帧里还有值）是第 1–4 轮「异�
 **顺带查出测试自身的漏洞**：`assertRaises` 会清掉异常的 traceback，帧检查成了空检查。改用 try/except 保住 traceback，并断言 traceback 不为空。修正后这条测试在修前的代码上两个出口红，修后绿。共 107 条全过。
 
 P2 #2（绑定挂载、检查前 mkdir）、#4（真 Linux 执行）：同 #173。
+
+## 第 5 轮（2026-11-25，模型 gpt-6-astra）
+
+结果：P0×0 P1×0 P2×3，另有 2 处引用不符。**连续第 1 轮无 P0/P1。** 三条 P2 改起来便宜，都改了：
+
+- P2 #1 远端给的 status、exitCode 被直接拼进说明（构造绕过）：只认范围内的整数，其余换成「非整数」。
+- P2 #2 请求发出后响应格式不对，被报成「没成」：发出后的任何岔子都报 `[UNKNOWN]`。
+- P2 #3 替换那一步失败时没删临时文件：也尝试删，并分 MVFAIL / MVFAIL_LEFTOVER 报。
+- 不符：方案的结果码清单补全（REFUSED / MISSING / ERROR / DIR / OUTSIDE / BAD / LEFTOVER / UNKNOWN）；参数校验错误也带 `[REFUSED]`；注释与方案的「失败清理」说法分成替换前、替换时两种。
+
+测试：`test_every_failure_exit_is_clean` 加「退出码字段是密钥」的出口，并逐个断言结果码。共 107 条全过。
