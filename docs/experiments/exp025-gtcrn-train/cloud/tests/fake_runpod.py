@@ -120,16 +120,23 @@ class FakeRunPod:
         if script.startswith("sha256sum "):
             path = shlex.split(script)[1]
             return dict(ok, stdout=f"{hashlib.sha256(self.files[path]).hexdigest()}  {path}\n")
-        if script.startswith("if [ -e ") and "mv " in script and ".part" in script:
-            dst = shlex.split(script.split("; mv ")[-1])[1]
+        if script.startswith("ln ") and "&& rm -f" in script:  # 不覆盖发布
+            src, dst = shlex.split(script.split("&&")[0])[1:3]
+            if dst in self.files:
+                return dict(ok, exitCode=1, stderr="File exists")
+            self.files[dst] = self.files.pop(src)
+            return ok
+        if script.startswith("if [ -e ") and "mv -f " in script:  # 覆盖发布：先留备份
+            src, dst = shlex.split(script.split("mv -f ")[1])[:2]
             if dst in self.files:
                 self.files[dst + ".bak"] = self.files[dst]
-            self.files[dst] = self.files.pop(dst + ".part")
+            self.files[dst] = self.files.pop(src)
             return ok
-        if "echo BUSY" in script:
-            job = re.search(r"/([\w.-]+)\.log", script).group(1)
-            busy = getattr(self, "running", set())
-            return dict(ok, stdout="BUSY\n" if job in busy else "READY\n")
+        if "mkdir" in script and ".run" in script and "READY" in script:
+            job = re.search(r"/([\w.-]+)\.run", script).group(1)
+            return dict(ok, stdout="BUSY\n" if job in getattr(self, "running", set()) else "READY\n")
+        if script.startswith("for i in 1 2 3 4 5"):
+            return ok
         if "base64 -d >>" in script:
             path = shlex.split(script.split(">>", 1)[1])[0]
             self.files[path] = self.files.get(path, b"") + base64.b64decode("".join(argv[4:]))

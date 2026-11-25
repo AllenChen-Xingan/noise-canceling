@@ -307,22 +307,27 @@ def check_ok(r: dict, what: str) -> str:
 
 
 def start_job(cli: Client, pod_id: str, script: str, job: str, jobs_dir: str = "/root/jobs") -> None:
-    """长命令放后台跑（exec 单次最多等 25 秒）：输出写 <job>.log，退出码写 <job>.rc。"""
+    """长命令放后台跑（exec 单次最多等 25 秒）：输出写 <job>.log，退出码写 <job>.rc。
+    - 任务名用 mkdir <job>.run 原子占位，跑完才撤；两次同名启动只有一个能占到（评审第 6 轮 #3）
+    - 脚本作为独立参数交给 sh -c，不拼进括号：行尾注释吞掉右括号那种事不会发生（评审第 6 轮 #4）
+    - 启动前对脚本和外层包装都做 sh -n；放后台后等日志出现才算启动成功"""
     d = shlex.quote(f"{jobs_dir}/{job}")
-    # 第 1 步同步做完：建目录、拒绝同名任务还在跑（有 .log 没 .rc）、清掉上次的 .rc / .log（评审第 5 轮 #3）
+    inner = f"sh -c {shlex.quote(script)} > {d}.log 2>&1; echo $? > {d}.rc; rmdir {d}.run"
+    for what, text in (("命令", script), ("包装", inner)):
+        syn = sh(cli, pod_id, f"sh -n -c {shlex.quote(text)}")
+        if syn.get("exitCode") != 0:  # 语法错的后台任务连日志都写不出，会一直像「在跑」（2026-11-25 实测）
+            raise SystemExit(f"{job} 的{what}有 sh 语法错误（bash 专有写法请包进 bash -c）："
+                             f"{(syn.get('stderr') or '')[-200:]}")
     prep = check_ok(sh(cli, pod_id, f"mkdir -p {shlex.quote(jobs_dir)} && "
-                                    f"if [ -e {d}.log ] && [ ! -e {d}.rc ]; then echo BUSY; exit 0; fi; "
-                                    f"rm -f {d}.rc {d}.log && echo READY"), f"准备 {job}")
-    if "BUSY" in prep:
-        raise SystemExit(f"同名任务 {job} 还在跑（有日志、没退出码）；换个名字，或等它跑完")
-    # 先用 sh -n 查语法：语法错的命令在后台连日志和退出码都写不出，会一直像「在跑」（2026-11-25 实测踩到）
-    syn = sh(cli, pod_id, f"sh -n -c {shlex.quote(script)}")
-    if syn.get("exitCode") != 0:
-        raise SystemExit(f"{job} 的命令有 sh 语法错误（bash 专有写法请包进 bash -c）：{(syn.get('stderr') or '')[-200:]}")
-    # 第 2 步才放后台
-    inner = f"( {script} ) > {d}.log 2>&1; echo $? > {d}.rc"
+                                    f"if mkdir {d}.run 2>/dev/null; then rm -f {d}.rc {d}.log; echo READY; "
+                                    f"else echo BUSY; fi"), f"准备 {job}")
+    if "READY" not in prep:
+        raise SystemExit(f"同名任务 {job} 还在跑（{jobs_dir}/{job}.run 在）；换个名字，或等它跑完")
     check_ok(sh(cli, pod_id, f"setsid nohup sh -c {shlex.quote(inner)} > /dev/null 2>&1 < /dev/null &"),
              f"启动 {job}")
+    up = sh(cli, pod_id, f"for i in 1 2 3 4 5; do [ -e {d}.log ] && exit 0; sleep 1; done; exit 1")
+    if up.get("exitCode") != 0:
+        raise SystemExit(f"{job} 放进后台 5 秒还没有日志，可能没起来；查 {jobs_dir}/{job}.run 后再试")
 
 
 def job_status(cli: Client, pod_id: str, job: str, jobs_dir: str = "/root/jobs", tail: int = 20) -> dict:
@@ -351,27 +356,38 @@ def wait_job(cli: Client, pod_id: str, job: str, timeout_s: float, poll_s: float
 # ---------- 传文件 ----------
 
 def put_bytes(cli: Client, pod_id: str, data: bytes, remote: str, overwrite: bool = False) -> str:
-    """把小文件传上去（每次 exec 最多约 240 × 4 KB base64）；返回远端 sha256 并核对。"""
+    """把小文件传上去（每次 exec 最多约 240 × 4 KB base64）；返回远端 sha256 并核对。
+    每次上传用自己的临时文件；核过哈希才发布（评审第 5 轮 #2、第 6 轮 #1）：
+    - 默认：ln 临时文件 → 正式名，已存在就失败（原子的「不存在才发布」）
+    - --overwrite：先把旧文件硬链接到唯一的备份名（已存在就失败），成功了才 mv 替换（第 6 轮 #2）"""
     b64 = base64.b64encode(data).decode()
     step = C.EXEC_ARG_MAX_CHARS
     chunks = [b64[i:i + step] for i in range(0, len(b64), step)] or [""]
     q = shlex.quote(remote)
-    if not overwrite:  # 默认不覆盖远端已有文件（评审第 5 轮 #2）
+    tq = shlex.quote(f"{remote}.part-{secrets.token_hex(4)}")
+    if not overwrite:  # 先查一次，省得白传；真正的保证在发布那一步
         r = sh(cli, pod_id, f"test ! -e {q}")
         if r.get("exitCode") != 0:
-            raise SystemExit(f"远端已有 {remote}；确要覆盖加 --overwrite（旧文件会改名留作 .bak-时间）")
-    check_ok(sh(cli, pod_id, f"mkdir -p \"$(dirname {q})\" && : > {q}.part"), "建远端文件")
+            raise SystemExit(f"远端已有 {remote}；确要覆盖加 --overwrite（旧文件会留作 .bak-时间-随机）")
+    check_ok(sh(cli, pod_id, f"mkdir -p \"$(dirname {q})\" && : > {tq}"), "建远端文件")
     for i in range(0, len(chunks), C.PUT_ARGS_PER_CALL):
         part = chunks[i:i + C.PUT_ARGS_PER_CALL]
-        r = exec_cmd(cli, pod_id, ["sh", "-c", f"printf %s \"$@\" | base64 -d >> {q}.part", "sh", *part])
+        r = exec_cmd(cli, pod_id, ["sh", "-c", f"printf %s \"$@\" | base64 -d >> {tq}", "sh", *part])
         check_ok(r, f"上传第 {i // C.PUT_ARGS_PER_CALL + 1} 批")
-    out = check_ok(sh(cli, pod_id, f"sha256sum {q}.part"), "核哈希")  # 先核临时文件，对了才替换
+    out = check_ok(sh(cli, pod_id, f"sha256sum {tq}"), "核哈希")
     got = out.split()[0] if out.split() else ""
     want = hashlib.sha256(data).hexdigest()
     if got != want:
-        raise SystemExit(f"上传后哈希不一致：{remote}（临时文件 {remote}.part 留着，正式文件没动）")
-    bak = f"{q}.bak-{time.strftime('%Y%m%d%H%M%S')}"
-    check_ok(sh(cli, pod_id, f"if [ -e {q} ]; then mv {q} {bak}; fi; mv {q}.part {q}"), "替换正式文件")
+        raise SystemExit(f"上传后哈希不一致：{remote}（临时文件留着，正式文件没动）")
+    if overwrite:
+        bak = shlex.quote(f"{remote}.bak-{time.strftime('%Y%m%d%H%M%S')}-{secrets.token_hex(3)}")
+        pub = f"if [ -e {q} ]; then ln {q} {bak} || exit 1; fi && mv -f {tq} {q}"
+    else:
+        pub = f"ln {tq} {q} && rm -f {tq}"
+    r = sh(cli, pod_id, pub)
+    if r.get("exitCode") != 0:
+        raise SystemExit(f"发布 {remote} 失败（{'备份旧文件失败' if overwrite else '远端已有同名文件'}）；"
+                         f"正式文件没动，临时文件留着：{(r.get('stderr') or '')[-120:]}")
     return got
 
 
