@@ -43,7 +43,30 @@ def load_recipe(path):
     ts, rp = r["knobs"]["target_scene"], r["knobs"]["replay"]
     if abs(ts["frac"] + rp["frac"] - 1.0) > 0.01:  # 抽样只用 replay.frac；target_scene.frac 是它的另一种写法
         raise ValueError(f"target_scene.frac {ts['frac']} + replay.frac {rp['frac']} ≠ 1：两处要一致（抽样按 replay.frac）")
+    sc = ts["scene"]
+    ok = sc is None or (isinstance(sc, str) and sc) or (
+        isinstance(sc, list) and sc and all(isinstance(x, str) and x for x in sc) and len(set(sc)) == len(sc))
+    if not ok:
+        raise ValueError(f"target_scene.scene 只能是 null、一个场景名或不重复的场景名列表：{sc!r}")
     return r
+
+
+def pick_scene(rng, ts, rp, scenes):
+    """抽本样本的噪声场景，返回（场景, 是否回放）。scene 为 null 或旋钮关：全部噪声池等概率。
+    scene 为名字或列表：按 replay.frac 回放列表以外的场景（等概率），否则在列表里等概率抽。
+    列表只有一项时不抽目标（与单个名字的随机数用法相同，已登记 build 的样本流不变）。"""
+    scenes = sorted(scenes)
+    if not (ts["on"] and ts["scene"]):
+        return scenes[int(rng.integers(len(scenes)))], False
+    targets = [ts["scene"]] if isinstance(ts["scene"], str) else list(ts["scene"])
+    miss = [t for t in targets if t not in scenes]
+    if miss:
+        raise SystemExit(f"目标场景 {miss} 没有噪声池")
+    others = [s for s in scenes if s not in targets]
+    replay = bool(rp["on"] and others and rng.random() < rp["frac"])
+    if replay:
+        return others[int(rng.integers(len(others)))], True
+    return (targets[int(rng.integers(len(targets)))] if len(targets) > 1 else targets[0]), False
 
 
 def build_info(shard_root, recipe_path):
@@ -158,17 +181,7 @@ class _Base:
         K = self.recipe["knobs"]
         p = self.p
         sp = p.speech[int(rng.integers(len(p.speech)))]
-        scenes = sorted(p.pools)
-        ts = K["target_scene"]
-        replay = False
-        if ts["on"] and ts["scene"]:
-            if ts["scene"] not in p.pools:
-                raise SystemExit(f"目标场景 {ts['scene']} 没有噪声池")
-            others = [s for s in scenes if s != ts["scene"]]
-            replay = bool(K["replay"]["on"] and others and rng.random() < K["replay"]["frac"])
-            scene = others[int(rng.integers(len(others)))] if replay else ts["scene"]
-        else:
-            scene = scenes[int(rng.integers(len(scenes)))]
+        scene, replay = pick_scene(rng, K["target_scene"], K["replay"], p.pools)
         pool = p.pools[scene]
         import mix  # noqa: E402  用时才导入：登记 build 不需要混音代码
         picks = [pool[int(j)] for j in rng.integers(len(pool), size=mix.MAX_NOISES)]

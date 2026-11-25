@@ -67,8 +67,6 @@ class PickScene(unittest.TestCase):
             self.assertEqual(a.random(), b.random())
 
     def test_null_or_off_uniform_over_all(self):
-        for t in (ts(None), ts(["cafe"], on=False), ts([])):
-            pass
         got = draws(None, n=4000)
         self.assertFalse(any(r for _, r in got))
         c = collections.Counter(s for s, _ in got)
