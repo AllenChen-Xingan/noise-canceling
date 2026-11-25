@@ -110,11 +110,14 @@ class FakeRunPod:
         ok = {"stdout": "", "stderr": "", "exitCode": 0, "timedOut": False, "truncated": False, "durationMs": 1}
         assert len(argv) <= 256 and all(len(a) <= 4096 for a in argv), "超出 exec 参数上限"
         if env and '"$V"' in argv[-1]:  # secret_ops.WRITE_SH：只引用变量，值在 env 里
+            if env["P"] in getattr(self, "dirs", set()):
+                return dict(ok, stdout="DIR\n")
             line = f"{env['K']}={env['V']}\n".encode()
+            if hashlib.sha256(line).hexdigest() != env["W"]:
+                return dict(ok, stdout="BAD\n")  # 旧文件不动
             self.files[env["P"]] = line
             self.modes[env["P"]] = 0o600
-            good = hashlib.sha256(line).hexdigest() == env["W"]
-            return dict(ok, stdout="OK\n" if good else "BAD\n")
+            return dict(ok, stdout="OK\n")
         if argv[:2] == ["python3", "-c"] and "log_exists" in argv[2]:  # rp_ops.JOB_STATUS_PY
             job = argv[3].rsplit("/", 1)[1]
             if job in getattr(self, "unreadable_logs", set()):
