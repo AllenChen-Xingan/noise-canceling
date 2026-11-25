@@ -47,7 +47,7 @@ class Splits(unittest.TestCase):
             self.assertEqual(s["rule_sha256"], split.rule_sha(rule), f"{n}：切分表是按旧规则切的")
             self.assertEqual(s["seed"], self.R["seed"], n)
             self.assertEqual(s["files"], len(rows), n)
-            e = rule["expect"]
+            e = rule.get("expect", {})  # 真规则一定有（Expect 测试核）
             if "files" in e:
                 self.assertEqual(len(rows), e["files"], n)
             self.assertGreaterEqual(len(rows), e.get("min_files", 0), n)
