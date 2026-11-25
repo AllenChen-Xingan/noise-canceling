@@ -16,3 +16,4 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-25T03:24:31Z	pod_delete	e49nwj60n7hfpg	cpu3c x4	US-MO-1	0.1200	2026-11-25T01:29:16Z	2026-11-25T03:24:31Z	1.9208	0.2305		任务都完成：traindata 六步、exp013 build aa9f、素材与 6323 上传核对
 2026-11-25T04:17:15Z	pod_create	ciuc12isly6w84	cpu3c x4	US-MO-1	0.1200	2026-11-25T04:17:15Z					max_hours=1.0
 2026-11-25T04:27:09Z	pod_delete	ciuc12isly6w84	cpu3c x4	US-MO-1	0.1200	2026-11-25T04:17:15Z	2026-11-25T04:27:09Z	0.1650	0.0198		register+pack 完成（main 86698924）
+2026-11-25T04:42:37Z	pod_create	5f62454se0t6hs	cpu3c x4	US-MO-1	0.1200	2026-11-25T04:42:37Z					max_hours=6.0

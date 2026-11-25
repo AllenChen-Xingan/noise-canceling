@@ -21,7 +21,11 @@ CPU_USD_PER_VCPU_HR_EXPECTED = 0.03  # 目录价（2026-11-24 实测）；4 核 
 # D102：H100 平台最低 8 个；分到的少于它就删，多于它照实记
 MIN_VCPU_PER_GPU = 8
 # 镜像锁版本（034 compute.md 第三节第 4 条）；容器只睡觉，活全靠 exec 发进去
-IMAGE = "pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime"
+IMAGE = "pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime"  # 显卡机用（训练要 torch + CUDA）
+# CPU 机镜像（大总管定 2026-11-25）：上面那个是 Ubuntu 22.04（glibc 2.35），vdn-eval 用的 ort 2.0.0-rc.15 预编译库
+# 链接不过（缺 __isoc23_strtol 等，实测）。改用 Debian 13 的官方 Rust 镜像：glibc 2.41，Rust 1.99.1 与 rust-toolchain.toml 一致。
+# 写到 tag + digest（Docker Hub 多架构索引的 digest，2026-11-25 查）；机器内自删要 python3，开机后先冒烟。
+CPU_IMAGE = "rust:1.99.1-trixie@sha256:8a4e90c7946b74626488b1446f712c0fe0ed1a596cbd3d871684bc9c5433ae07"
 CONTAINER_DISK_GB = 30
 POD_NAME_PREFIX = "vdn-"
 

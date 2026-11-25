@@ -125,7 +125,7 @@ def pod_body(name: str, data_center: str, volume_id: Optional[str], max_hours: f
         "cloud": C.CLOUD,
         **compute_spec(cpu),
         "dataCenterIds": [data_center],
-        "image": C.IMAGE,
+        "image": C.CPU_IMAGE if cpu else C.IMAGE,
         "disk": C.CONTAINER_DISK_GB,
         "cmd": W.pod_cmd(max_hours),
         "env": W.pod_env(),

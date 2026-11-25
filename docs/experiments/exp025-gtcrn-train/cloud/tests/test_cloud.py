@@ -495,6 +495,8 @@ class TestCli(Base):
         self.assertEqual(body["cpu"], {"id": C.CPU_FLAVOR_ID, "vcpuCount": C.CPU_VCPU})
         self.assertEqual(C.CPU_VCPU & (C.CPU_VCPU - 1), 0)  # openapi：必须是 2 的幂
         self.assertEqual(body["mounts"]["network"][0]["path"], C.VOLUME_MOUNT)  # 挂同一块盘
+        self.assertEqual(body["image"], C.CPU_IMAGE)  # CPU 机用自己的镜像（glibc 要够新）
+        self.assertRegex(C.CPU_IMAGE, r"^[a-z0-9./-]+:[\w.-]+@sha256:[0-9a-f]{64}$")  # 钉到 tag + digest
         row = L.read_rows(self.ledger)[-1]
         self.assertEqual(row["gpu"], f"{C.CPU_FLAVOR_ID} x{C.CPU_VCPU}")
         self.assertAlmostEqual(float(row["usd_per_hr"]), C.CPU_USD_PER_VCPU_HR_EXPECTED * C.CPU_VCPU, places=4)
