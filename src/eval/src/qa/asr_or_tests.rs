@@ -12,7 +12,7 @@ use serde_json::json;
 type Seen = Arc<Mutex<Vec<(String, Vec<u8>)>>>;
 
 /// 起一个假服务，按顺序回 `script` 里的 (状态码, 额外响应头, 响应体)；回完就退出。返回 (地址, 收到的请求)。
-pub(super) fn fake(script: Vec<(u16, &'static str, String)>) -> (String, Seen) {
+pub(in crate::qa) fn fake(script: Vec<(u16, &'static str, String)>) -> (String, Seen) {
     let l = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!(
         "http://{}/api/v1/audio/transcriptions",
@@ -53,7 +53,7 @@ pub(super) fn fake(script: Vec<(u16, &'static str, String)>) -> (String, Seen) {
 /// 测试只核「请求头里带了它」和「出错信息里抹掉了它」。
 pub(super) const KEY: &str = "placeholder-test-credential-0001";
 
-pub(super) fn client(url: &str, dir: &Path) -> OpenRouter {
+pub(in crate::qa) fn client(url: &str, dir: &Path) -> OpenRouter {
     // 2026-11-25 起账本要显式新建；测试事先写好了账本（上限、坏账本那几条）的就用它
     let l = dir.join("ledger.json");
     if !l.exists() {
@@ -64,14 +64,14 @@ pub(super) fn client(url: &str, dir: &Path) -> OpenRouter {
     c
 }
 
-pub(super) fn tmpdir(tag: &str) -> PathBuf {
+pub(in crate::qa) fn tmpdir(tag: &str) -> PathBuf {
     let d = std::env::temp_dir().join(format!("vdn-asr-or-test-{tag}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     d
 }
 
-pub(super) fn ok(text: &str, cost: f64) -> (u16, &'static str, String) {
+pub(in crate::qa) fn ok(text: &str, cost: f64) -> (u16, &'static str, String) {
     (
         200,
         "",
@@ -80,7 +80,7 @@ pub(super) fn ok(text: &str, cost: f64) -> (u16, &'static str, String) {
     )
 }
 
-pub(super) fn audio() -> Vec<f32> {
+pub(in crate::qa) fn audio() -> Vec<f32> {
     (0..1600).map(|i| (i as f32 * 0.05).sin() * 0.5).collect()
 }
 
