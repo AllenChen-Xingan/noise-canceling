@@ -169,7 +169,7 @@ def make_tree(root):
         f = d / f"Room{room:03d}/Room{room:03d}-00001.wav"
         f.parent.mkdir(parents=True, exist_ok=True)
         sf.write(str(f), rir(SR // 4, 0.3, room), SR, subtype="FLOAT")
-        lines.append(f"--rir-id r{room} --room-id Room{room:03d} --rir-rspecifier x/{f.name}")
+        lines.append(f"--rir-id r{room} --room-id Room{room:03d} RIRS_NOISES/simulated_rirs/smallroom/{f.parent.name}/{f.name}")  # 上游格式
     (d / "rir_list").write_text("\n".join(lines) + "\n")
     tone(root / "vdn-data/demand/STRAFFIC/ch01.wav", 6, seed=30)
 

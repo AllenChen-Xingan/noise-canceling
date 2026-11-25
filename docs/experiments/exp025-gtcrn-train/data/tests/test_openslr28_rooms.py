@@ -57,8 +57,9 @@ class Rooms(unittest.TestCase):
 
     def test_room_id_that_ends_in_wav(self):
         """云上失败原文：RWCP_type4_rir_000l.wav 不在任何 rir_list 里。它在，只是 room-id 也以 .wav 结尾。"""
-        self.assertIn("RWCP_type4_rir_000l.wav", self.m)
-        self.assertNotIn("RWCP_000l.wav", self.m)
+        self.assertIn(f"{REAL}/RWCP_type4_rir_000l.wav", self.m)
+        self.assertFalse(any(k.endswith("/RWCP_000l.wav") for k in self.m))
+        split.unit_of(f"{REAL}/RWCP_type4_rir_000l.wav", rule(), self.m)  # 云上那次在这里 SystemExit
 
     def test_rwcp_one_unit(self):
         """RWCP 的 room-id 是阵列 / 设置代码（circle · cirline · type4 的文件名），认不出房间：整库归一个单位。"""
