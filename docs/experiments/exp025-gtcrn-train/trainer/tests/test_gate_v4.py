@@ -84,7 +84,7 @@ def test_oracle_unusable_no_longer_blocks(tmp_path, monkeypatch):
     cfg = cfgmod.load(str(_cfg_file(tmp_path)), {})
     b = train.make_source(cfg).dev_batches()[0]
     ov = smoke.check_overfit(cfg, b, torch.device("cpu"), steps=2, lr=1e-3, reference=False)
-    assert ov["verdict"] != "criterion_unusable" or not (ov["first"] > 0)
+    assert ov["first"] > 0 and ov["verdict"] in ("pass", "fail")
 
 
 def test_rejudge_this_diagnosis_passes_v4():
