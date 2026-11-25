@@ -195,3 +195,23 @@ H100 这段总计估 30–45 分钟（推断），约 2.2–3.3 美元。最坏 
 - 退出码：0 = 全过；1 = 有一件不过；3 = 判据不可用。非 0 都照「出错时的必经收尾」处理，报告照样取回
 - 估时（推断）：4 段是 32 段的 1/8，过拟合约 3 分钟；加建开发份、复现、开发份读数，共约 10 分钟，约 0.02 美元
 - 取回 `$O/smoke-cpu-gate3.json` 和后台日志到主仓 `_tmp/<日期>-trainer-gate3/`，不覆盖
+
+## 十、过拟合慢的诊断：云上 CPU、真数据（2026-11-25，大总管要求；只诊断，不改判据）
+
+起因：第 3 版判据在云上 CPU 也没过（`smoke_reports/20261125-cpu-gate3-FAILED.json`）。前 4 段走完 oracle 距离 19.6%，SI-SNR +2.52 dB；32 段那次是 20.6%。
+段数少了 8 倍，结果几乎没变，所以更像是步数不够或者优化太慢，不像容量不够（大总管的判断）。门槛不降。
+
+- 命令（`smoke.py --overfit-probe`，代码在 `overfit_probe.py`；还是同一批前 4 段）：
+  `cd $T && VDN_GTCRN_DIR=$G $PY smoke.py --config configs/default.yaml --set device=cpu --set data.shard_root=/workspace/shards/first-batch --set data.recipe=$D/recipe.json --overfit-probe $O/overfit-probe-cpu.json`
+- 做三件事：
+  1. 学习曲线：lr 1e-3 跑 2000 步，在 150 · 300 · 500 · 1000 · 2000 步各记一次损失、走完 oracle 距离的比例和 SI-SNR
+  2. 参数：可训练参数数（按层分组）；批归一化是不是全在评估模式、缩放和偏移是不是照训；第 1 步和最后 1 步各组的梯度范数，其中包括 B 新加的注意力头和条件口子
+  3. 学习率：3e-4、3e-3 各跑 300 步
+- 机器：CPU 机 cpu3c 4 核，上限 1 小时、0.15 美元（大总管批）。`$PY` 照第九节，用 `/workspace/repo-1831886c/.venv/bin/python`，不重装
+- 估时（推断）：32 段 150 步那次约 7.5 s 一步，4 段按 1/8 算约 1 s 一步。共 2600 步，约 45 分钟
+  - 报告每记一个点就重写一次。到 55 分钟还没完就停下，取回已有的部分（`complete` 为 false），然后删机
+- 取回 `$O/overfit-probe-cpu.json` 和后台日志，放主仓 `_tmp/<日期>-trainer-overfit-probe/`，不覆盖
+- 结果怎么读，由 trainer 报大总管：
+  - 2000 步内走过 50%：只是步数问题。正式训练有 5000 步，判据要不要改步数，由大总管定
+  - 曲线早早走平：查梯度表，看是哪层没在动
+  - 3e-3 明显更快：是学习率问题
