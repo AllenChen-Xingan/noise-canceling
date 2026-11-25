@@ -261,3 +261,14 @@ def test_backward_finite_on_edge_inputs(kind):  # #3：float32 反传不出 NaN 
     l = losses.masked_mean(pv, v)
     l.backward()
     assert torch.isfinite(l) and torch.isfinite(o.grad).all()
+
+
+def test_short_owner_mask_reads_as_unvoiced_tail():  # codex pump-loss 第 2 轮 #1：掩码比音频短 = 超出部分按无声
+    rng = np.random.default_rng(8)
+    c = torch.as_tensor(_speech(rng))[None].double()
+    o = c * (1 + 0.3 * torch.as_tensor(rng.standard_normal(N)))[None]
+    full = torch.zeros(1, N // 160, dtype=torch.bool)
+    full[0, :300] = True
+    short = torch.ones(1, 300, dtype=torch.bool)
+    a, b = losses.pumpv_var(o, c, full), losses.pumpv_var(o, c, short)
+    assert torch.equal(a[0], b[0]) and a[2] == b[2] == [30]

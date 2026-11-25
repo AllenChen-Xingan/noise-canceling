@@ -66,3 +66,4 @@
 - 11-25 加 `data_probe.py`（对齐 · 目标检查与 wav · 逐个关配方旋钮 6 组），并进 `--overfit-probe`；`tests/test_data_probe.py` 8 条先红后绿
 - 11-25 `--overfit-probe` 云上 CPU 跑完（cloudrun，21e2e5b7，4429 s）：2000 步走完 oracle 距离 30.7%，学习率 3e-4/3e-3 差 3 个百分点内，梯度、对齐、目标、关旋钮都没找到故障。读数与建议 `trainer/smoke_reports/20261125-overfit-probe-reading.md`；建议先用官方 DNS3 权重做独立参照，待大总管定；H100 仍不开
 - 11-25 判据第 4 版（大总管定）：`gate_v4.py` 正本、`dev_gate.py`、smoke 改用第 4 版、逐段读数；重判诊断为过（`smoke_reports/20261125-rejudge-v4.json`）。codex 3 轮（`reviews/003_gate-v4-codex.md`）满足停止线；待办 P2：诊断输出并发覆盖（不原子占用目录）
+- 11-25 w_pump 追加（大总管定）：pump_on all | clean_only（默认 all）；老 run.json 缺字段按默认值续训。codex 2 轮（`reviews/004_pump-loss-codex.md`）满足停止线；待办 P2：db10 下限附近两侧的对拍、对拍驱动支持短掩码
