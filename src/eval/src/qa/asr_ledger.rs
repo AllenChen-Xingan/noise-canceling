@@ -140,11 +140,17 @@ pub fn append_detail(p: &Path, row: &serde_json::Value) -> Result<(), String> {
         .open(lock_path(p))
         .map_err(|e| format!("开不了账本锁：{e}"))?;
     lock.lock().map_err(|e| format!("锁不上账本：{e}"))?;
+    // 写到半行就失败时退回追加前的长度，免得下一行接在残行后面（codex 本分支第 4 轮 P2 #2）
     let r = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open(details_path(p))
-        .and_then(|mut f| f.write_all(format!("{row}\n").as_bytes()))
+        .and_then(|mut f| {
+            let before = f.metadata()?.len();
+            f.write_all(format!("{row}\n").as_bytes()).inspect_err(|_| {
+                let _ = f.set_len(before);
+            })
+        })
         .map_err(|e| format!("写不了识别费明细 {}：{e}", fname(&details_path(p))));
     let _ = lock.unlock();
     r

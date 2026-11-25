@@ -225,8 +225,12 @@ impl Conn<'_> {
         // 有状态码但 curl 没正常退出（收到头以后超时、响应体不完整）：不当完整响应，按连不上处理 = 费用未知（codex 本分支第 3 轮 P1 #1）
         if !o.status.success() {
             return Err(self.scrub(&format!(
-                "连不上识别服务：HTTP {code} 之后传输中断（curl 退出码 {}）：{}",
+                "连不上识别服务：HTTP {code} 之后传输中断（curl 退出码 {}，生成 id {}）：{}",
                 o.status.code().unwrap_or(-1),
+                headers
+                    .get("x-generation-id")
+                    .and_then(Value::as_str)
+                    .unwrap_or("无"),
                 String::from_utf8_lossy(&o.stderr).trim()
             )));
         }
