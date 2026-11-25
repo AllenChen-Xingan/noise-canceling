@@ -147,3 +147,49 @@ class Uplift(unittest.TestCase):
         u = gap.uplift_table(cj, baseline_card())
         self.assertEqual(sorted(u["top"]), sorted(gap.PROVISIONAL))
         self.assertEqual(u["verdict"], "一致")
+
+
+ALL15 = ["street-outdoor", "transit-hub", "car-passenger", "cafe", "home-quiet", "open-office", "canteen", "cowork",
+         "home-family", "hotel-room", "library-classroom", "meeting-room", "phone-booth", "rail-air-cabin", "bus-metro-cabin"]
+
+
+class Completeness(unittest.TestCase):
+    """codex 第 1 轮 P1 #1 · #2：数据不全不下结论；第 TOP_K 名边界有并列时，重合数是个范围，跨线就不下结论。"""
+
+    def test_min_scenes_matches_task_list(self):
+        root = Path(__file__).resolve().parents[3]
+        suite = json.loads((root / "src/eval/suite/scenes.json").read_text())
+        self.assertEqual(gap.MIN_SCENES, len({t["real"]["scene"] for t in suite["tasks"]}))
+        self.assertEqual(gap.SLICES, 4)
+
+    def test_weak_partial_scenes_is_insufficient(self):
+        g = gap.gap_table(scorecard(SCENES), "gtcrn")  # 只有 6 个场景
+        self.assertEqual(g["verdict"], "数据不足")
+        self.assertTrue(g["incomplete"])
+
+    def test_weak_full_scenes_gives_verdict(self):
+        g = gap.gap_table(scorecard(ALL15), "gtcrn")
+        self.assertEqual(g["incomplete"], [])
+        self.assertIn(g["verdict"], ("一致", "不一致"))
+
+    def test_weak_missing_slice_or_missing_clips_is_insufficient(self):
+        sc = scorecard(ALL15)
+        sc["scenes"] = [c for c in sc["scenes"] if not (c["scene"] == "cafe" and c["tier"] == "stress")]
+        self.assertEqual(gap.gap_table(sc, "gtcrn")["verdict"], "数据不足")
+        sc = scorecard(ALL15)
+        sc["missing"] = [{"what": "cafe-c00-mba"}]
+        self.assertEqual(gap.gap_table(sc, "gtcrn")["verdict"], "数据不足")
+
+    def test_boundary_tie_spanning_line_is_undecided(self):
+        # 前 3 名是临时选定的 3 个；第 4、5 名同分，一个是临时选定的 cafe，一个不是 → 重合 3 或 4，都 ≥ 3 → 仍可判「一致」
+        rows = [{"scene": s, "key": k} for s, k in [("street-outdoor", 9), ("transit-hub", 8), ("car-passenger", 7),
+                                                     ("cafe", 5), ("home-quiet", 5), ("open-office", 1)]]
+        self.assertEqual(gap._verdict(rows, lambda r: r["key"]), ((3, 4), "一致"))
+        # 前 2 名是临时选定的；第 3–5 名三者同分，只有 1 个是临时选定 → 重合 2 或 3，跨线 → 「不确定」
+        rows = [{"scene": s, "key": k} for s, k in [("street-outdoor", 9), ("transit-hub", 8), ("car-passenger", 5),
+                                                     ("home-quiet", 5), ("open-office", 5), ("cowork", 1)]]
+        self.assertEqual(gap._verdict(rows, lambda r: r["key"]), ((2, 3), "不确定（第 4 名边界并列）"))
+
+    def test_uplift_partial_scenes_is_insufficient(self):
+        cj = compare_json({"cafe": [("V-NR", "up", -1.0, "lower")]})
+        self.assertEqual(gap.uplift_table(cj, baseline_card())["verdict"], "数据不足")
