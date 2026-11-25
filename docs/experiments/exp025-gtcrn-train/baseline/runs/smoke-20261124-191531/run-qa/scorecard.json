@@ -10,7 +10,7 @@
     "rules": "v2",
     "run_id": "20261124-191612-a3490593",
     "safety": "off",
-    "suite": "/private/tmp/claude-501/-Users-allenchen-xingan-chen-B-MyCreate-5-App-noise-canceling-evalcmp/38d37afb-20e6-4b58-aa68-6e45b7d85278/scratchpad/smoke-baseline/subset/suite.json",
+    "suite": "<会话临时目录>/smoke-baseline/subset/suite.json",
     "systems": [
       "gtcrn"
     ]

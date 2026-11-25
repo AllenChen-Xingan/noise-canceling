@@ -32,7 +32,7 @@
    Compiling serde_core v1.0.229
    Compiling zmij v1.0.23
    Compiling smallvec v1.16.4
-   Compiling vdn-types v0.1.0 (/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalcmp/src/types)
+   Compiling vdn-types v0.1.0 (<worktree>/src/types)
    Compiling serde_json v1.0.154
    Compiling syn v3.0.9
    Compiling serde v1.0.229
@@ -58,13 +58,13 @@
    Compiling schemars_derive v1.2.3
    Compiling ort-sys v2.0.0-rc.15
    Compiling realfft v3.5.1
-   Compiling vdn-dsp v0.1.0 (/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalcmp/src/dsp)
+   Compiling vdn-dsp v0.1.0 (<worktree>/src/dsp)
    Compiling ort v2.0.0-rc.15
-   Compiling vdn-engine v0.1.0 (/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalcmp/src/engine)
+   Compiling vdn-engine v0.1.0 (<worktree>/src/engine)
    Compiling schemars v1.2.3
-   Compiling vdn-backend-ort v0.1.0 (/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalcmp/src/backend-ort)
-   Compiling vdn-models v0.1.0 (/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalcmp/src/models)
-   Compiling vdn-eval v0.1.0 (/Users/allenchen/xingan-chen/B-MyCreate/5-App/noise_canceling-evalcmp/src/eval)
+   Compiling vdn-backend-ort v0.1.0 (<worktree>/src/backend-ort)
+   Compiling vdn-models v0.1.0 (<worktree>/src/models)
+   Compiling vdn-eval v0.1.0 (<worktree>/src/eval)
     Finished `release` profile [optimized] target(s) in 18.81s
 real 18.85
 user 100.26
