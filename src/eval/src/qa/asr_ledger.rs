@@ -113,6 +113,86 @@ pub fn settle(p: &Path, est: f64, actual: Option<f64>) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    /// 大总管 2026-11-25：账本文件不存在时拒发，不再当成空账本；不会顺手建出文件。
+    #[test]
+    fn missing_ledger_refuses_and_is_not_created() {
+        let p = tmp("missing");
+        let e = reserve(&p, 0.01, 1.0).unwrap_err();
+        assert!(e.contains("不存在") && e.contains("--init-ledger"), "{e}");
+        assert!(!p.exists(), "拒发时不建文件");
+    }
+
+    /// 有 `<账本>.sealed` 时，读、预留、新建都拒，提示正本在哪。
+    #[test]
+    fn sealed_marker_refuses_everything() {
+        let p = tmp("sealed");
+        init(&p, Created::test()).unwrap();
+        std::fs::write(sealed_path(&p), "本机账本已封存；正本在云上\n").unwrap();
+        assert!(reserve(&p, 0.01, 1.0).unwrap_err().contains("封存"));
+        assert!(read(&p).unwrap_err().contains("封存"));
+        let q = tmp("sealed2");
+        std::fs::write(sealed_path(&q), "x").unwrap();
+        assert!(init(&q, Created::test()).unwrap_err().contains("封存"), "封存了也不许另起一本");
+    }
+
+    /// 只有显式新建才有账本；新建记 created（四个键），再新建报错，不覆盖。
+    #[test]
+    fn init_creates_once_and_records_origin() {
+        let p = tmp("init");
+        init(&p, Created::test()).unwrap();
+        let l = read(&p).unwrap();
+        assert_eq!((l.spent_usd, l.calls), (0.0, 0));
+        let c = l.created.clone().expect("新建要记 created");
+        assert_eq!(c.place, "local");
+        let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+        let mut keys: Vec<&str> = v["created"].as_object().unwrap().keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["at", "by", "machine", "place"]);
+        assert!(init(&p, Created::test()).unwrap_err().contains("已存在"));
+        reserve(&p, 0.01, 1.0).unwrap();
+    }
+
+    /// 账本快照会进公开仓库：账本里不能出现本机主机名（大总管 2026-11-25）。
+    #[test]
+    fn ledger_never_contains_hostname() {
+        let p = tmp("host");
+        init(&p, Created::here()).unwrap();
+        reserve(&p, 0.01, 1.0).unwrap();
+        settle(&p, 0.01, Some(0.001)).unwrap();
+        let text = std::fs::read_to_string(&p).unwrap();
+        let host = std::process::Command::new("hostname")
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .unwrap_or_default();
+        for h in [host.as_str(), host.split('.').next().unwrap_or("")] {
+            if h.len() >= 3 {
+                assert!(!text.contains(h), "账本里出现了主机名：{text}");
+            }
+        }
+    }
+
+    /// 时间写成 UTC 的 ISO 8601（自写换算，核几个已知点）。
+    #[test]
+    fn utc_formatting() {
+        assert_eq!(utc_iso(0), "1970-01-01T00:00:00Z");
+        assert_eq!(utc_iso(951_782_400), "2000-02-29T00:00:00Z");
+        assert_eq!(utc_iso(1_793_000_000), "2026-10-26T09:33:20Z");
+    }
+
+    /// 账本路径：给了 `VDN_ASR_LEDGER` 就用它（读写都落在那个文件上），没给用主目录下的默认位置。
+    #[test]
+    fn ledger_path_override() {
+        let root = Path::new("/r");
+        assert_eq!(ledger_path_from(root, None), root.join(super::super::asr_or::LEDGER_REL));
+        assert_eq!(ledger_path_from(root, Some("/w/l.json".into())), PathBuf::from("/w/l.json"));
+        assert_eq!(ledger_path_from(root, Some(String::new())), root.join(super::super::asr_or::LEDGER_REL));
+        let p = tmp("override");
+        init(&p, Created::test()).unwrap();
+        reserve(&p, 0.01, 1.0).unwrap();
+        settle(&p, 0.01, Some(0.002)).unwrap();
+        assert_eq!(read(&p).unwrap().calls, 1, "读写都落在指定的文件上");
+    }
+
     fn tmp(tag: &str) -> PathBuf {
         let d = std::env::temp_dir().join(format!("vdn-asr-ledger-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
