@@ -53,5 +53,18 @@ class ClearReview(unittest.TestCase):
             self.assertEqual(p.read_bytes(), before)
 
 
+    def test_bad_input_refused_before_any_file_is_written(self):
+        """codex 本分支第 1 轮 P1 #3 · P2 #4：非有限秒数、adjustments 格式不对，都在写盘前拒绝，目录内容不变。"""
+        for kw, extra in ((dict(audio_s=float("nan")), {}), (dict(audio_s=float("inf")), {}),
+                          (dict(audio_s=1e309), {}), (dict(audio_s=12.0), {"adjustments": None})):
+            with tempfile.TemporaryDirectory() as d:
+                p, h = ledger(d, **extra)
+                before = {f.name: f.read_bytes() for f in Path(d).iterdir() if f.name != "ledger.json.lock"}
+                with self.assertRaises(SystemExit):
+                    cr.clear(p, h, 1, kw["audio_s"], "x", now=NOW, price=0.000008)
+                after = {f.name: f.read_bytes() for f in Path(d).iterdir() if f.name != "ledger.json.lock"}
+                self.assertEqual(after, before, kw)
+
+
 if __name__ == "__main__":
     unittest.main()
