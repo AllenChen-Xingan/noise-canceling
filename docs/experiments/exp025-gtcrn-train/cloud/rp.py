@@ -93,7 +93,7 @@ def bring_up(cli, a):
         try:
             O.delete_pod(cli, p["id"], a.ledger, note=f"开机后出错，自动删：{str(e)[:60]}")
         except BaseException as e2:
-            raise SystemExit(f"{e}；而且删机 {p['id']} 失败（{e2}），请马上 rp.py down {p['id']} 或 reap") from e
+            raise SystemExit(f"{e}；而且删机 {p['id']} 失败（{e2}），请马上 rp.py down {p['id']} --yes 或 rp.py reap --yes") from e
         raise
     gpu = p.get("gpu") or {}
     if not a.cpu and gpu.get("vcpuCount") and gpu["vcpuCount"] < C.MIN_VCPU_PER_GPU:

@@ -199,7 +199,7 @@ def _create_pod_locked(cli: Client, data_center: str, volume_id: Optional[str], 
         try:
             delete_pod(cli, p["id"], ledger_path, note=f"开机后检查不过，立即删：{str(e)[:80]}")
         except BaseException as e2:
-            raise SystemExit(f"{e}；而且删机 {p['id']} 失败（{e2}），请马上 rp.py down {p['id']} 或 reap") from e
+            raise SystemExit(f"{e}；而且删机 {p['id']} 失败（{e2}），请马上 rp.py down {p['id']} --yes 或 rp.py reap --yes") from e
         raise
     return p
 
@@ -211,7 +211,7 @@ def _cleanup_unknown_create(cli: Client, name: str, ledger_path: str, err: BaseE
         for pid in found:
             delete_pod(cli, pid, ledger_path, note="建机结果未知，按名字查到后删")
     except BaseException as e2:
-        raise SystemExit(f"建机结果未知（{err}），按名字 {name} 核查也失败（{e2}）；请稍后跑 rp.py reap") from err
+        raise SystemExit(f"建机结果未知（{err}），按名字 {name} 核查也失败（{e2}）；请稍后跑 rp.py reap --yes") from err
     raise SystemExit(f"建机结果未知（{err}）；按名字 {name} 查到 {len(found)} 台，已删") from err
 
 
