@@ -385,3 +385,59 @@ fn fully_cached_rerun_still_counts_checks() {
     );
     assert_eq!(again.checked, 3);
 }
+
+/// codex 第 8 轮 P2 #2：最后一批里有一条「有文本、没费用」，其余都成功：Asr 也要知道已停发（meta.asr.halted 不能空）。
+#[test]
+fn review_flag_from_last_batch_reaches_summary() {
+    let l = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!(
+        "http://{}/api/v1/audio/transcriptions",
+        l.local_addr().unwrap()
+    );
+    std::thread::spawn(move || {
+        for c in l.incoming() {
+            let Ok(mut c) = c else { return };
+            std::thread::spawn(move || {
+                let mut r = BufReader::new(c.try_clone().unwrap());
+                let mut len = 0usize;
+                loop {
+                    let mut line = String::new();
+                    if r.read_line(&mut line).unwrap_or(0) == 0 || line == "\r\n" {
+                        break;
+                    }
+                    if let Some(v) = line.to_ascii_lowercase().strip_prefix("content-length:") {
+                        len = v.trim().parse().unwrap_or(0);
+                    }
+                }
+                let mut b = vec![0u8; len];
+                r.read_exact(&mut b).unwrap();
+                let body = json!({"text": "no cost here"}).to_string();
+                let resp = format!(
+                    "HTTP/1.1 200 X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = c.write_all(resp.as_bytes());
+            });
+        }
+    });
+    let d = tmpdir("reviewsum");
+    let or = client(&url, &d);
+    let mut a = Asr::with_backends(
+        d.join("cache.json"),
+        vec![Backend::OpenRouter(or)],
+        OPENROUTER,
+        Route::default(),
+    );
+    let items = items_in(&d, 1);
+    a.prefetch(&items);
+    assert!(
+        a.halted.as_deref().is_some_and(|h| h.contains("费用未知")),
+        "{:?}",
+        a.halted
+    );
+    assert!(
+        a.summary()["halted"]
+            .as_str()
+            .is_some_and(|h| h.contains("费用未知"))
+    );
+}

@@ -61,7 +61,7 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
 - 输出：`scorecard.md` · `scorecard.json` · `clips.jsonl`；音频类中间产物（`qa/asr-wav/`）不进仓
 - 识别花费累计在主目录 `_tmp/asr-openrouter-ledger.json`（全部真调用共用一本），到 15 美元就停发（第三节）
 - 按段换后端（可选）：先把路由写成一个 JSON **文件**，例如 `route.json` 内容为 `{"default": "openrouter", "clips": {"<片段 id>": "local42"}}`，再 `export VDN_ASR_ROUTE=<route.json 的路径>`（变量里放路径，不放 JSON 本身；入口 `Route::load`，测试 `route_loads_from_file_path`）。`VDN_ASR_BACKEND=local42` 整套改回本机 42model
-- 停发：遇到永久错误（数据政策 403/404、余额 402、密钥 401、到上限、账本坏或写不了、费用未知）整套停发 OpenRouter 请求，原因写在 `meta.asr.halted`。「费用未知」= 连不上、超时、返回读不出：可能已经计费，账本里的预留不退，等人核对后手动清
+- 停发：遇到永久错误（数据政策 403/404、余额 402、密钥 401、到上限、账本坏或写不了、费用未知）整套停发 OpenRouter 请求，原因写在 `meta.asr.halted`。「费用未知」= 连不上、超时、返回读不出、或返回有文本但没带 `usage.cost`：可能已经计费。这时账本里的预留不退，并写上 `review`（待核）；**只要 `review` 在，任何进程、重启以后都拒发**。处理：到 OpenRouter 后台核实际花费，改正账本的 `spent_usd` 与 `reserved_usd`，删掉 `review` 一项，再重跑（缓存里已有的转写不会重发）
 
 ## 二、识别与外发（D103 · D104，人定 2026-11-25）
 

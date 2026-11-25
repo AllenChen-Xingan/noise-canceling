@@ -451,6 +451,20 @@ fn errors_never_contain_the_key() {
     assert!(e.contains("<密钥>"));
 }
 
+/// codex 第 8 轮 P2 #1：密钥跨过 300 字的截断边界时也不能漏出半截（先抹密钥，再截断）。
+#[test]
+fn key_straddling_truncation_boundary_is_scrubbed() {
+    let d = tmpdir("scrub300");
+    let pad = "x".repeat(300 - 20);
+    let body = format!("{{\"error\":{{\"code\":400,\"message\":\"{pad}{KEY}\"}}}}");
+    let (url, _) = fake(vec![(400, "", body)]);
+    let mut c = client(&url, &d);
+    let e = c
+        .transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+        .unwrap_err();
+    assert!(!e.contains(&KEY[..10]), "密钥的前半截也不能出现：{e}");
+}
+
 #[test]
 fn error_inside_200_is_an_error_and_not_billed() {
     let d = tmpdir("err200");
