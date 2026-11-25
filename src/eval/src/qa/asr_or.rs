@@ -107,13 +107,18 @@ pub fn b64(bytes: &[u8]) -> String {
 }
 
 /// 请求体。`provider.data_collection = "deny"` 一律带上（大总管硬要求，测试核）。
-pub fn request_body(wav: &[u8], lang: &str) -> Value {
-    json!({
+pub fn request_body(wav: &[u8], lang: &str, temperature: Option<f64>) -> Value {
+    let mut v = json!({
         "model": OR_MODEL,
         "input_audio": {"data": b64(wav), "format": "wav"},
         "language": lang,
         "provider": {"data_collection": "deny"},
-    })
+    });
+    // 钉温度探针用（大总管 2026-11-25）：只在设了时带上，不改原来的请求
+    if let Some(t) = temperature {
+        v["temperature"] = json!(t);
+    }
+    v
 }
 
 use super::asr_ledger as ledger;
@@ -133,6 +138,8 @@ pub struct OpenRouter {
     pub backoff_ms: u64,
     /// 本进程发出的 HTTP 请求数（含重试）
     pub requests: u64,
+    /// 采样温度（`None` = 不带这个参数，照原来的请求）；钉温度探针用
+    pub temperature: Option<f64>,
 }
 
 /// 临时文件名的进程内唯一序号：同一进程里可能有多个客户端（测试并行、按段分后端），各自从 0 数会撞名。
@@ -157,6 +164,7 @@ struct Conn<'a> {
     stop: &'a std::sync::Mutex<Option<String>>,
     /// 共用账本：每次真发请求前看一眼它的待核标记（别的进程可能刚标上；codex 第 11 轮 P1 #1）
     ledger_path: &'a Path,
+    temperature: Option<f64>,
 }
 
 impl Conn<'_> {
@@ -271,7 +279,7 @@ impl Conn<'_> {
             cost: Cost::Free,
             carried: 0.0,
         };
-        let body = serde_json::to_vec(&request_body(&pcm16_wav(x, sr), lang))
+        let body = serde_json::to_vec(&request_body(&pcm16_wav(x, sr), lang, self.temperature))
             .map_err(|e| free(e.to_string()))?;
         let body_path = tmp_path("json");
         std::fs::write(&body_path, &body).map_err(|e| free(e.to_string()))?;
@@ -478,6 +486,7 @@ impl OpenRouter {
             ledger,
             backoff_ms: 1000,
             requests: 0,
+            temperature: None,
         }
     }
 
@@ -501,6 +510,7 @@ impl OpenRouter {
             requests: &requests,
             stop: &stop,
             ledger_path: &self.ledger_path,
+            temperature: self.temperature,
         };
         let ledger_path = &self.ledger_path;
         let slots: Vec<Slot> = jobs.iter().map(|_| std::sync::Mutex::new(None)).collect();

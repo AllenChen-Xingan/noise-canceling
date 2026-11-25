@@ -176,7 +176,7 @@ fn request_carries_model_audio_language_and_deny() {
     );
     // 函数本身也核一遍
     assert_eq!(
-        request_body(b"x", "zh")["provider"]["data_collection"],
+        request_body(b"x", "zh", None)["provider"]["data_collection"],
         "deny"
     );
 }
