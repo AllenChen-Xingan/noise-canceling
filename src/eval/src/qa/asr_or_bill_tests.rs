@@ -162,7 +162,10 @@ fn detail_write_failure_flags_review() {
 fn truncated_response_is_cost_unknown() {
     use std::io::{BufRead, BufReader, Read, Write};
     let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-    let url = format!("http://{}/api/v1/audio/transcriptions", l.local_addr().unwrap());
+    let url = format!(
+        "http://{}/api/v1/audio/transcriptions",
+        l.local_addr().unwrap()
+    );
     std::thread::spawn(move || {
         let Ok((mut c, _)) = l.accept() else { return };
         let mut r = BufReader::new(c.try_clone().unwrap());
@@ -182,10 +185,15 @@ fn truncated_response_is_cost_unknown() {
     });
     let d = tmpdir("bill-trunc");
     let mut c = client(&url, &d);
-    let e = c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap_err();
+    let e = c
+        .transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+        .unwrap_err();
     assert!(e.contains("费用未知"), "{e}");
     let l = ledger::read(&d.join("ledger.json")).unwrap();
-    assert!(l.review.is_some() && l.reserved_usd > 0.0, "预留不退、标待核：{l:?}");
+    assert!(
+        l.review.is_some() && l.reserved_usd > 0.0,
+        "预留不退、标待核：{l:?}"
+    );
     let rows = details(&d);
     assert_eq!(rows.len(), 1, "不重试");
     assert_eq!(rows[0]["status"], 0);
