@@ -280,6 +280,65 @@ fn known_cost_on_failure_is_booked_and_unknown_cost_keeps_reservation() {
     assert_eq!(seen2.lock().unwrap().len(), 1);
 }
 
+/// codex 第 7 轮 P1 #1 · #2：有 text 没 usage.cost → 这条照用，但费用未知：预留不退、账本标「待核」；
+/// 换个客户端（重启）也拒发，直到人清掉。
+#[test]
+fn text_without_cost_flags_ledger_for_review_across_restarts() {
+    let d = tmpdir("review");
+    let (url, seen) = fake(vec![
+        (200, "", json!({"text": "hello"}).to_string()),
+        ok("never", 0.001),
+    ]);
+    let mut c = client(&url, &d);
+    assert_eq!(
+        c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap(),
+        "hello"
+    );
+    assert!(c.ledger.reserved_usd > 0.0, "预留不退");
+    assert!(
+        c.ledger
+            .review
+            .as_deref()
+            .is_some_and(|r| r.contains("费用未知")),
+        "{:?}",
+        c.ledger.review
+    );
+    let e = c
+        .transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+        .unwrap_err();
+    assert!(e.contains("待核"), "{e}");
+    let mut c2 = client(&url, &d); // 重启
+    assert!(
+        c2.transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+            .unwrap_err()
+            .contains("待核")
+    );
+    assert_eq!(seen.lock().unwrap().len(), 1, "待核期间一个请求都不发");
+}
+
+/// codex 第 7 轮 P1 #3：一条在 429 退避，另一条遇到 404：退避醒来不能再发。
+#[test]
+fn backoff_wakeup_checks_stop_before_resending() {
+    let d = tmpdir("wake");
+    // 第一个到的请求回 429（等 1 秒），第二个到的回 404；不管哪条先到，最终只能收到 2 个请求
+    let (url, seen) = fake(vec![
+        (429, "Retry-After: 1\r\n", json!({"error": {"code": 429, "message": "slow"}}).to_string()),
+        (404, "", json!({"error": {"code": 404, "message": "No endpoints found matching your data policy"}}).to_string()),
+        ok("must-not-arrive", 0.001),
+    ]);
+    let mut c = client(&url, &d);
+    let jobs: Vec<Job> = (0..2)
+        .map(|_| (audio(), vdn_types::MODEL_RATE, "en".to_string()))
+        .collect();
+    let r = c.transcribe_many(&jobs, 2);
+    assert!(r.iter().all(Result::is_err), "{r:?}");
+    assert_eq!(
+        seen.lock().unwrap().len(),
+        2,
+        "404 之后，退避中的那条醒来不再发"
+    );
+}
+
 /// codex 第 5 轮 P1 #1：账本坏了拒发，坏文件原样留着。
 #[test]
 fn corrupt_ledger_refuses_to_send() {

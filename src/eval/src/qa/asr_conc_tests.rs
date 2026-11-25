@@ -278,7 +278,8 @@ fn permanent_prefetch_error_stops_everything_without_resending() {
     let items = items_in(&d, 4);
     a.prefetch(&items[..2]);
     let sent = total.load(Ordering::SeqCst);
-    assert_eq!(sent, 2 * REPEATS, "预取这批照发：2 条 × {REPEATS} 次");
+    // 第一个 404 回来后还没派出去的就不再派，所以发了几个取决于线程调度：至少 1 个、至多整批（codex 第 7 轮 P2 #4）
+    assert!((1..=2 * REPEATS).contains(&sent), "发了 {sent} 个");
     for (p, sha, lang, clip) in &items[..2] {
         let e = a.transcribe(p, sha, lang, clip).unwrap_err();
         assert!(e.contains("不重试"), "{e}");

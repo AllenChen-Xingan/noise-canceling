@@ -60,7 +60,8 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
 - 成绩单 `meta` 里应看到 `"safety": "off"`、`"qa": true`；`"asr"` 是一个对象：`default` = `openrouter`、`backends.openrouter.model` = `qwen/qwen3-asr-1.7b-20260813`、各后端实际用到的段数、`checked` / `unstable`（多次转写的条数与不一致的条数）。装不起来时是 `{"error": 原因}`，吃字整列判「不知道」
 - 输出：`scorecard.md` · `scorecard.json` · `clips.jsonl`；音频类中间产物（`qa/asr-wav/`）不进仓
 - 识别花费累计在主目录 `_tmp/asr-openrouter-ledger.json`（全部真调用共用一本），到 15 美元就停发（第三节）
-- 按段换后端（可选）：`VDN_ASR_ROUTE=<json>`，形如 `{"default": "openrouter", "clips": {"<片段 id>": "local42"}}`；`VDN_ASR_BACKEND=local42` 整套改回本机 42model
+- 按段换后端（可选）：先把路由写成一个 JSON **文件**，例如 `route.json` 内容为 `{"default": "openrouter", "clips": {"<片段 id>": "local42"}}`，再 `export VDN_ASR_ROUTE=<route.json 的路径>`（变量里放路径，不放 JSON 本身；入口 `Route::load`，测试 `route_loads_from_file_path`）。`VDN_ASR_BACKEND=local42` 整套改回本机 42model
+- 停发：遇到永久错误（数据政策 403/404、余额 402、密钥 401、到上限、账本坏或写不了、费用未知）整套停发 OpenRouter 请求，原因写在 `meta.asr.halted`。「费用未知」= 连不上、超时、返回读不出：可能已经计费，账本里的预留不退，等人核对后手动清
 
 ## 二、识别与外发（D103 · D104，人定 2026-11-25）
 
