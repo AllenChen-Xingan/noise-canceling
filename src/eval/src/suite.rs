@@ -137,6 +137,18 @@ pub struct Suite {
     pub tasks: Vec<Task>,
 }
 
+impl Suite {
+    /// 全部任务关掉引擎保护处理（`safety = false`）：不做原声混回、超幅与坏值保护，打的是模型自己的输出
+    /// （「不回混」口径，exp021 已核：预混 + 关保护与原路径逐段相同）。返回改了几条任务。
+    pub fn without_safety(&mut self) -> usize {
+        let n = self.tasks.iter().filter(|t| t.safety).count();
+        for t in &mut self.tasks {
+            t.safety = false;
+        }
+        n
+    }
+}
+
 fn pair(v: Option<[f64; 2]>, dflt: [f64; 2]) -> (f64, f64) {
     let [a, b] = v.unwrap_or(dflt);
     (a, b)
@@ -298,6 +310,16 @@ pub fn resolve(rel: &str) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn without_safety_turns_every_task_off() {
+        let mut s = parse_suite(CI_SUITE).unwrap();
+        let on = s.tasks.iter().filter(|t| t.safety).count();
+        assert!(on > 0, "ci 清单里应有开着保护的任务");
+        assert_eq!(s.without_safety(), on);
+        assert!(s.tasks.iter().all(|t| !t.safety));
+        assert_eq!(s.without_safety(), 0, "再调一次没有可改的");
+    }
+
     use super::*;
 
     #[test]
