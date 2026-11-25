@@ -231,6 +231,55 @@ fn near_budget_batch_sends_nothing_that_would_cross_the_cap() {
     assert!(c.ledger.spent_usd <= BUDGET_USD);
 }
 
+/// codex 第 6 轮 P1 #1：单线程跑一批，第一条遇到永久错误（404）后，后面的不再派发。
+#[test]
+fn permanent_error_stops_rest_of_batch() {
+    let d = tmpdir("stopbatch");
+    let deny = (
+        404,
+        "",
+        json!({"error": {"code": 404, "message": "No endpoints found matching your data policy"}})
+            .to_string(),
+    );
+    let (url, seen) = fake(vec![deny.clone(), deny.clone(), deny]);
+    let mut c = client(&url, &d);
+    let jobs: Vec<Job> = (0..3)
+        .map(|_| (audio(), vdn_types::MODEL_RATE, "en".to_string()))
+        .collect();
+    let r = c.transcribe_many(&jobs, 1);
+    assert_eq!(seen.lock().unwrap().len(), 1, "第一条 404 之后不再发");
+    assert!(r.iter().all(Result::is_err));
+    assert!(r[1].as_ref().unwrap_err().contains("停发"), "{:?}", r[1]);
+}
+
+/// codex 第 6 轮 P1 #2：200 带了 usage.cost 但缺 text → 照记这笔钱；响应读不出（费用未知）→ 预留不退、之后停发。
+#[test]
+fn known_cost_on_failure_is_booked_and_unknown_cost_keeps_reservation() {
+    let d = tmpdir("costfail");
+    let (url, _) = fake(vec![(
+        200,
+        "",
+        json!({"usage": {"cost": 0.02}}).to_string(),
+    )]);
+    let mut c = client(&url, &d);
+    assert!(c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").is_err());
+    assert!((c.ledger.spent_usd - 0.02).abs() < 1e-12, "已知费用照记");
+    assert_eq!(c.ledger.reserved_usd, 0.0);
+    let d2 = tmpdir("costunknown");
+    let (url2, seen2) = fake(vec![
+        (200, "", "not json at all".to_string()),
+        ok("never", 0.001),
+    ]);
+    let mut c2 = client(&url2, &d2);
+    let e = c2
+        .transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+        .unwrap_err();
+    assert!(e.contains("费用未知"), "{e}");
+    assert!(c2.ledger.reserved_usd > 0.0, "费用未知：预留不退，等人核对");
+    assert!(crate::qa::asr::is_permanent(&e), "费用未知要停发");
+    assert_eq!(seen2.lock().unwrap().len(), 1);
+}
+
 /// codex 第 5 轮 P1 #1：账本坏了拒发，坏文件原样留着。
 #[test]
 fn corrupt_ledger_refuses_to_send() {

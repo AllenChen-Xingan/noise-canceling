@@ -578,6 +578,22 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// codex 第 6 轮 P2 #4：`VDN_ASR_ROUTE` 指向一个 JSON **文件**（README 第一节同样写法）。
+    #[test]
+    fn route_loads_from_file_path() {
+        let p =
+            std::env::temp_dir().join(format!("vdn-asr-route-file-{}.json", std::process::id()));
+        std::fs::write(
+            &p,
+            r#"{"default": "openrouter", "clips": {"cafe-c00-mba": "local42"}}"#,
+        )
+        .unwrap();
+        let r = Route::load(&p).unwrap();
+        assert_eq!(r.pick("cafe-c00-mba", OPENROUTER), LOCAL42);
+        assert!(Route::load(std::path::Path::new("/no/such/route.json")).is_err());
+        let _ = std::fs::remove_file(&p);
+    }
+
     #[test]
     fn zh_tokens_are_chars() {
         assert_eq!(tokens("你好，世界", "zh").len(), 4);

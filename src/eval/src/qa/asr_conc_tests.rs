@@ -339,3 +339,48 @@ fn prefetched_checks_are_counted_once() {
     }
     assert_eq!(a.checked, 3, "同一条音频不重复计");
 }
+
+/// codex 第 6 轮 P1 #1：同一批音频再预取一次，已失败的不再发。
+#[test]
+fn failed_keys_are_not_prefetched_again() {
+    let d = tmpdir("again");
+    let (url, total) = error_server(503, "busy");
+    let or = client(&url, &d);
+    let mut a = Asr::with_backends(
+        d.join("cache.json"),
+        vec![Backend::OpenRouter(or)],
+        OPENROUTER,
+        Route::default(),
+    );
+    let items = items_in(&d, 1);
+    a.prefetch(&items);
+    let sent = total.load(Ordering::SeqCst);
+    a.prefetch(&items);
+    assert_eq!(total.load(Ordering::SeqCst), sent);
+}
+
+/// codex 第 6 轮 P2 #3：全部命中缓存时（重建 Asr 重跑），复核照样计入。
+#[test]
+fn fully_cached_rerun_still_counts_checks() {
+    let (url, _, _) = echo_server(0, 0);
+    let d = tmpdir("cachedcount");
+    let items = items_in(&d, 3);
+    let mk = || {
+        let or = client(&url, &d);
+        Asr::with_backends(
+            d.join("cache.json"),
+            vec![Backend::OpenRouter(or)],
+            OPENROUTER,
+            Route::default(),
+        )
+    };
+    let mut first = mk();
+    first.prefetch(&items);
+    let mut again = mk(); // 重建：缓存从文件读回，什么都不用发
+    again.prefetch(&items);
+    assert_eq!(
+        (again.checked, again.unstable),
+        (first.checked, first.unstable)
+    );
+    assert_eq!(again.checked, 3);
+}
