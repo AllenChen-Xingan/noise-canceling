@@ -61,3 +61,12 @@ python docs/experiments/exp013-scene-suite/compare_builds.py --tolerance \
   docs/experiments/exp013-scene-suite/builds/20261125022300-aa9f <主目录>/_tmp/20261125-cloudrun-exp013build/audio-root \
   cafe-c00-mba,meeting-room-s02-mba,street-outdoor-c00-ext,bus-metro-cabin-c00-ext,home-quiet-s01-mba
 ```
+
+## 阈值第 2 版（大总管 2026-11-25 定，在看到第 1 版结果之后改）
+
+- **第 1 版**「逐样本绝对差 ≤ 1e-9」不合理：wav 存 32 位浮点，幅度 0.5–1 的样本最小单位是 5.96e-8，比 1e-9 大 60 倍。第 1 版结果（上表，meeting-room-s02-mba 原始读数 1.79e-7）保留，不删
+- **第 2 版**：「每样本差 ≤ 4 个 32 位浮点最小单位，按两边中较大的幅度算」并且「整轨差信号比原信号低 ≥ 120 dB」。依据是数据的存储精度。正本 `compare_builds.py` 的 `TOL_ULP = 4`、`TOL_DIFF_DB = 120`；测试先红后绿
+- **第 2 版结果（实测）：5 段全不过，16 条轨超线**。差信号那条全过：最高 −138.3 dB（meeting-room-s02-mba），其余 −232 到 −300 dB。不过的是「每样本几个最小单位」，读数高达 3.3e7 个
+  - 原因：按每个样本自己的幅度算最小单位时，接近 0 的样本的最小单位极小，例如 1e-33 附近约 1e-40。绝对差只有 1e-15，也会折成几千万个最小单位。这一点我设计时就料到了，但没在实现前提出来（evalcmp 的疏漏）
+  - 同一批数据改按「整轨峰值处的最小单位」算（每轨一个数）：5 段最多 3.0 个（meeting-room-s02-mba 的 mix），其余 ≤ 0.002 个
+- 建议第 3 版，待大总管定：最小单位按整轨峰值算，其余不变
