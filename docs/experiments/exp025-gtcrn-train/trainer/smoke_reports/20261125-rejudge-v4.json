@@ -1,0 +1,34 @@
+{
+  "rule": "事后改判据，2026-11-25（第 4 版，大总管定，人未参与）。开发份第 0 批前 4 段：(初值 − 终值) / 初值 ≥ 15%；SI-SNR 提高 > 0 dB；主干各层第 1 步梯度非零、有限；B 的注意力输出层动过。初值不是正的有限数 → 判据不可用。走完 oracle 距离 ≥ 50%、SI-SNR +6 dB 降为只记录。前三版：输出等于目标（到不了）· 40 dB 下限（到不了）· oracle 下限 50%（2000 步约 30%，曲线变平）",
+  "gate3_verdict": "fail",
+  "overfit": {
+    "first": 3.9680330753326416,
+    "last": 2.985973358154297,
+    "drop_frac": 0.24749282542107295,
+    "si_snr_gain_db": 2.518848105215678,
+    "attn_out_max_change": 0.08028104901313782,
+    "grad_norms_first_step": {
+      "base.encoder": 17.162641970253304,
+      "base.dpgrnn1": 4.764357102768989,
+      "base.dpgrnn2": 5.282186839262897,
+      "base.decoder": 29.062221726510135,
+      "attn.q": 0.0,
+      "attn.kv": 0.0,
+      "attn.out": 1.1540589390573976,
+      "film.fc": 0.0
+    },
+    "backbone_grads_ok": true,
+    "drop_frac_of_oracle_span": 0.1961804588535042,
+    "verdict": "pass"
+  },
+  "others": {
+    "init_loss": true,
+    "reproduce": true,
+    "known_dev": true
+  },
+  "verdict": "pass",
+  "sources": {
+    "gate3": "smoke_reports/20261125-cpu-gate3-FAILED.json",
+    "probe": "smoke_reports/20261125-overfit-probe-cloud-cpu.json"
+  }
+}
