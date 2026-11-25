@@ -18,12 +18,9 @@ pub(crate) fn cmd_asr_probe(args: &[String]) -> Result<bool, String> {
         need("--cache")?,
         PathBuf::from(need("--out")?),
     );
-    // 报告文件在发任何请求之前就「只新建」地占住（create_new），跑完写进这个已打开的文件；同路径已有就直接拒（codex 本分支第 5 轮 P2 #2）
-    let mut report = std::fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&out)
-        .map_err(|e| format!("{}：报告只新建，不覆盖（{e}）", out.display()))?;
+    if out.exists() {
+        return Err(format!("{} 已存在：报告只新建，不覆盖", out.display()));
+    }
     let repeats = match vdn_eval::suite::option_value(args, "--repeats")? {
         Some(r) => r
             .parse::<usize>()
@@ -82,6 +79,12 @@ pub(crate) fn cmd_asr_probe(args: &[String]) -> Result<bool, String> {
         "探针：{} 条 × {repeats} 次，温度 {temperature:?}",
         items.len()
     );
+    // 报告文件在所有检查之后、发第一个请求之前「只新建」地占住（create_new，原子），跑完写进这个已打开的文件；同路径已有就直接拒（codex 本分支第 5 轮 P2 #2）
+    let mut report = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&out)
+        .map_err(|e| format!("{}：报告只新建，不覆盖（{e}）", out.display()))?;
     let r = asr_probe::probe(&mut c, &items, repeats, vdn_types::MODEL_RATE);
     {
         use std::io::Write;
