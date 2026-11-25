@@ -292,12 +292,20 @@ fn cost_carried_by_non_200_responses_is_booked() {
 fn earlier_known_cost_survives_a_later_unknown_cost() {
     let d = tmpdir("carrylost");
     let (url, _) = fake(vec![
-        (503, "", json!({"error": {"code": 503, "message": "busy"}, "usage": {"cost": 1e-7}}).to_string()),
+        (
+            503,
+            "",
+            json!({"error": {"code": 503, "message": "busy"}, "usage": {"cost": 1e-7}}).to_string(),
+        ),
         (200, "", json!({"text": "no cost"}).to_string()),
     ]);
     let mut c = client(&url, &d);
     let _ = c.transcribe(&audio(), vdn_types::MODEL_RATE, "en");
-    assert!((c.ledger.spent_usd - 1e-7).abs() < 1e-15, "503 那笔照记：{}", c.ledger.spent_usd);
+    assert!(
+        (c.ledger.spent_usd - 1e-7).abs() < 1e-15,
+        "503 那笔照记：{}",
+        c.ledger.spent_usd
+    );
     assert!(c.ledger.review.is_some(), "后一次费用未知 → 待核");
 }
 
@@ -305,11 +313,20 @@ fn earlier_known_cost_survives_a_later_unknown_cost() {
 #[test]
 fn retry_costs_over_reservation_stop_immediately() {
     let d = tmpdir("carryover");
-    let pricey = (503, "", json!({"error": {"code": 503, "message": "busy"}, "usage": {"cost": 0.5}}).to_string());
+    let pricey = (
+        503,
+        "",
+        json!({"error": {"code": 503, "message": "busy"}, "usage": {"cost": 0.5}}).to_string(),
+    );
     let (url, seen) = fake(vec![pricey.clone(), pricey, ok("never", 1e-7)]);
     let mut c = client(&url, &d);
     assert!(c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").is_err());
     assert_eq!(seen.lock().unwrap().len(), 1, "第一笔就超了预留，不再重试");
     assert!((c.ledger.spent_usd - 0.5).abs() < 1e-12);
-    assert!(c.ledger.review.as_deref().is_some_and(|r| r.contains("超过预留")));
+    assert!(
+        c.ledger
+            .review
+            .as_deref()
+            .is_some_and(|r| r.contains("超过预留"))
+    );
 }
