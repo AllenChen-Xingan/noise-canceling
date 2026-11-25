@@ -69,6 +69,24 @@ class TestPredownload(unittest.TestCase):
             self.assertEqual(cm.exception.code, 3)
             run.assert_not_called()  # 没开始下
 
+    def test_partial_file_only_reserves_missing_bytes(self):
+        # 评审第 2 轮 #5：已下了 25 GB 的 30 GB 包，du=100 时只差 5 GB，不该误停
+        with tempfile.TemporaryDirectory() as root:
+            src = os.path.join(root, "sources.json")
+            f = {"name": "big.zip", "bytes": 30, "extract": "zip", "dest": "d", "url": "https://x/big.zip"}
+            with open(src, "w") as fh:
+                json.dump({"groups": {"G": {"files": [f]}}}, fh)
+            os.makedirs(os.path.join(root, "archives"))
+            with open(os.path.join(root, "archives", "big.zip"), "wb") as fh:
+                fh.write(b"x" * 25)
+            out = io.StringIO()
+            # 单位换算：把 GB 换成字节好测——du 返回 100e-9 GB 视作「100 字节」，上限 106 字节
+            with mock.patch.object(P, "du_gb", return_value=100e-9), \
+                    mock.patch.object(P.subprocess, "run", side_effect=SystemExit(9)), \
+                    redirect_stdout(out), self.assertRaises(SystemExit) as cm:
+                P.main(["x", src, root, "G", "--max-gb", str(106e-9)])
+            self.assertEqual(cm.exception.code, 9)  # 走到了下载那一步，没被盘量闸误停
+
     def test_du_failure_stops(self):
         failed = mock.Mock(returncode=1, stdout="", stderr="du: cannot read")
         with mock.patch.object(P.subprocess, "run", return_value=failed), redirect_stdout(io.StringIO()), \

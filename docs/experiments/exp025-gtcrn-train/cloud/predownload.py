@@ -71,8 +71,10 @@ def main(argv):
                 print(json.dumps({"group": g, "name": f["name"], "status": "已解压，跳过"}), flush=True)
                 continue
             used = du_gb(root)
-            if used + f["bytes"] / 1e9 > max_gb:  # 把这个包也算进去，下完不会越线（评审第 1 轮 #9）
-                print(json.dumps({"stop": f"盘量 {used:.1f} GB + 本包 {f['bytes'] / 1e9:.1f} GB 超过 {max_gb} GB"},
+            have = os.path.getsize(path) if os.path.exists(path) else 0  # 断点或已下完的部分 du 已算进去
+            need = max(f["bytes"] - have, 0) / 1e9
+            if used + need > max_gb:  # 只预留还差的字节（评审第 1 轮 #9、第 2 轮 #5）
+                print(json.dumps({"stop": f"盘量 {used:.1f} GB + 本包还差 {need:.1f} GB 超过 {max_gb} GB"},
                                  ensure_ascii=False), flush=True)
                 sys.exit(3)
             t0 = time.time()
@@ -80,6 +82,9 @@ def main(argv):
                     and not os.path.exists(path + ".aria2")):
                 subprocess.run(aria2_cmd(mirrors(f["url"]), arc_dir, f["name"]), check=True)
             dt = time.time() - t0
+            if os.path.exists(path + ".aria2"):  # aria2 正常退出却留着断点标记：没下完
+                print(json.dumps({"stop": f"{f['name']} 还有 .aria2 断点标记，没下完"}, ensure_ascii=False), flush=True)
+                sys.exit(4)
             n = os.path.getsize(path)
             if n != f["bytes"]:
                 print(json.dumps({"stop": f"{f['name']} 大小 {n} ≠ 清单 {f['bytes']}"}), flush=True)
@@ -94,6 +99,9 @@ def main(argv):
                               "disk_GB": round(du_gb(root), 1)}, ensure_ascii=False), flush=True)
             if ok.returncode != 0:
                 sys.exit(5)
+            if du_gb(root) > max_gb:  # 下完复查实际用量
+                print(json.dumps({"stop": f"下完 {f['name']} 后盘量超过 {max_gb} GB"}, ensure_ascii=False), flush=True)
+                sys.exit(3)
 
 
 if __name__ == "__main__":
