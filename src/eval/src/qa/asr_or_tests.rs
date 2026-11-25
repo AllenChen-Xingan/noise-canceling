@@ -312,19 +312,35 @@ fn load_key_from_env_local_variants() {
 }
 
 /// 真调用：同一条音频连调 3 次，看是否逐字相同（大总管要求，结果写进 exp025 baseline README）。
-/// 要密钥、要花钱（约 3 × 1 秒 × 0.0000075 美元），并且外发许可要先定。人工跑：
-/// `cargo test -p vdn-eval --lib qa::asr_or::tests::real_call_three_times -- --ignored --nocapture`
+/// 要密钥、会花钱，外发按 D104。音频用 `VDN_ASR_REAL_WAV` 指定（16 kHz 单声道 wav）。人工跑：
+/// `VDN_ASR_REAL_WAV=<wav> cargo test -p vdn-eval --lib qa::asr_or::tests::real_call_three_times -- --ignored --nocapture`
 #[test]
-#[ignore = "要 OPENROUTER_API_KEY、会花钱、外发许可待人定；人工跑"]
+#[ignore = "要 OPENROUTER_API_KEY、会花钱；人工跑"]
 fn real_call_three_times() {
     let root = crate::suite::main_root();
     let key = load_key(&root).expect("没有 OPENROUTER_API_KEY");
-    let d = root.join("_tmp/exp025-asr-real");
-    let mut c = OpenRouter::new(OR_URL, key, d.join("ledger.json"));
-    // 合成的哼声（自造，不涉及任何外部素材的许可）
-    let x: Vec<f32> = (0..16_000).map(|i| (i as f32 * 0.02).sin() * 0.3).collect();
-    let t: Vec<String> = (0..3)
-        .map(|_| c.transcribe(&x, 16_000, "en").expect("真调用失败"))
-        .collect();
-    println!("三次转写：{t:?}；累计 {:.6} 美元", c.ledger.spent_usd);
+    let wav = std::env::var("VDN_ASR_REAL_WAV").expect("用 VDN_ASR_REAL_WAV 指定一条 wav");
+    let (x, sr) = crate::wav::read(Path::new(&wav)).unwrap();
+    let mut c = OpenRouter::new(OR_URL, key, root.join(LEDGER_REL));
+    let mut texts = Vec::new();
+    for i in 1..=3 {
+        let before = c.ledger.spent_usd;
+        let t0 = std::time::Instant::now();
+        let t = c
+            .transcribe(&x, sr, "en")
+            .unwrap_or_else(|e| panic!("第 {i} 次真调用失败：{e}"));
+        println!(
+            "第 {i} 次：{:.2} 秒，花费 {:.8} 美元，请求 {} 个，文本：{t}",
+            t0.elapsed().as_secs_f64(),
+            c.ledger.spent_usd - before,
+            c.requests
+        );
+        texts.push(t);
+    }
+    println!(
+        "三次逐字相同：{}；账本累计 {:.8} 美元 / {} 次",
+        texts.iter().all(|t| t == &texts[0]),
+        c.ledger.spent_usd,
+        c.ledger.calls
+    );
 }

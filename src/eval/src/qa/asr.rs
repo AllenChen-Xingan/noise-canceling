@@ -140,7 +140,7 @@ impl Asr {
                 OPENROUTER => {
                     let key = super::asr_or::load_key(root)
                         .ok_or("没有 OPENROUTER_API_KEY（环境变量或仓库根 .env.local）")?;
-                    let ledger = root.join("_tmp/asr-openrouter-ledger.json");
+                    let ledger = root.join(super::asr_or::LEDGER_REL);
                     backends.push(Backend::OpenRouter(super::asr_or::OpenRouter::new(
                         super::asr_or::OR_URL,
                         key,

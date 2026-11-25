@@ -25,6 +25,8 @@ pub const PRICE_PER_SECOND: f64 = 0.000_007_5;
 pub const BUDGET_USD: f64 = 15.0;
 /// 一次转写最多发几次请求（含第一次）。
 pub const MAX_ATTEMPTS: usize = 5;
+/// 账本文件（相对主目录）：全部真调用共用一个，上限按它累计。
+pub const LEDGER_REL: &str = "_tmp/asr-openrouter-ledger.json";
 /// 密钥的环境变量名。
 pub const KEY_VAR: &str = "OPENROUTER_API_KEY";
 
