@@ -27,6 +27,8 @@ pub const BUDGET_USD: f64 = 15.0;
 pub const MAX_ATTEMPTS: usize = 5;
 /// 账本文件（相对主目录）：全部真调用共用一个，上限按它累计。
 pub const LEDGER_REL: &str = "_tmp/asr-openrouter-ledger.json";
+/// 识别调用默认几路并发（大总管 2026-11-25 定 8 路；遇到 429 各自退避）。
+pub const ASR_CONCURRENCY: usize = 8;
 /// 密钥的环境变量名。
 pub const KEY_VAR: &str = "OPENROUTER_API_KEY";
 
@@ -133,35 +135,29 @@ fn retryable(code: u16) -> bool {
     matches!(code, 408 | 429 | 500 | 502 | 503 | 504)
 }
 
-impl OpenRouter {
-    pub fn new(url: impl Into<String>, key: String, ledger_path: PathBuf) -> OpenRouter {
-        let ledger = std::fs::read_to_string(&ledger_path)
-            .ok()
-            .and_then(|t| serde_json::from_str(&t).ok())
-            .unwrap_or_default();
-        OpenRouter {
-            url: url.into(),
-            key,
-            ledger_path,
-            ledger,
-            backoff_ms: 1000,
-            requests: 0,
-        }
-    }
+/// 一次连接需要的东西（不可变，多个线程共用）。
+struct Conn<'a> {
+    url: &'a str,
+    key: &'a str,
+    backoff_ms: u64,
+    requests: &'a std::sync::atomic::AtomicU64,
+}
 
+impl Conn<'_> {
     /// 抹掉文字里的密钥（出错信息里万一带上）。
     fn scrub(&self, s: &str) -> String {
         if self.key.is_empty() {
             s.to_string()
         } else {
-            s.replace(&self.key, "<密钥>")
+            s.replace(self.key, "<密钥>")
         }
     }
 
-    /// 发一次 HTTP 请求：返回 (状态码, Retry-After 秒数, 响应体)。密钥经标准输入给 curl。
-    fn post(&mut self, body_path: &Path) -> Result<(u16, Option<u64>, Vec<u8>), String> {
+    /// 发一次 HTTP 请求：返回 (状态码, Retry-After 秒数, 响应体)。密钥经标准输入给 curl，不进命令行参数。
+    fn post(&self, body_path: &Path) -> Result<(u16, Option<u64>, Vec<u8>), String> {
         let (out, hdr) = (tmp_path("body"), tmp_path("hdr"));
-        self.requests += 1;
+        self.requests
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let mut child = Command::new("curl")
             .args([
                 "-sS",
@@ -169,7 +165,7 @@ impl OpenRouter {
                 "120",
                 "-X",
                 "POST",
-                &self.url,
+                self.url,
                 "-H",
                 "Content-Type: application/json",
                 "--data-binary",
@@ -216,14 +212,8 @@ impl OpenRouter {
         Ok((code, retry, body))
     }
 
-    /// 转写一条音频（16 kHz 浮点样本）。成功后按 `usage.cost` 记账；到上限、出错都返回 `Err`。
-    pub fn transcribe(&mut self, x: &[f32], sr: u32, lang: &str) -> Result<String, String> {
-        if self.ledger.spent_usd >= BUDGET_USD {
-            return Err(format!(
-                "识别费已累计 {:.4} 美元，到上限 {BUDGET_USD} 美元，停发",
-                self.ledger.spent_usd
-            ));
-        }
+    /// 转写一条：返回 (文本, 实际花费)。重试与不重试的规矩见文件头。
+    fn transcribe(&self, x: &[f32], sr: u32, lang: &str) -> Result<(String, f64), String> {
         let body = serde_json::to_vec(&request_body(&pcm16_wav(x, sr), lang))
             .map_err(|e| e.to_string())?;
         let body_path = tmp_path("json");
@@ -233,11 +223,10 @@ impl OpenRouter {
         r
     }
 
-    fn send_with_retry(&mut self, body_path: &Path, seconds: f64) -> Result<String, String> {
+    fn send_with_retry(&self, body_path: &Path, seconds: f64) -> Result<(String, f64), String> {
         let mut last = String::new();
         for attempt in 0..MAX_ATTEMPTS {
             let (code, retry_after, body) = self.post(body_path)?;
-            let text = String::from_utf8_lossy(&body).to_string();
             if code == 200 {
                 let v: Value =
                     serde_json::from_slice(&body).map_err(|e| format!("识别返回不是 JSON：{e}"))?;
@@ -250,17 +239,9 @@ impl OpenRouter {
                 let cost = v["usage"]["cost"]
                     .as_f64()
                     .unwrap_or(seconds * PRICE_PER_SECOND);
-                self.ledger.spent_usd += cost;
-                self.ledger.calls += 1;
-                if let Some(d) = self.ledger_path.parent() {
-                    let _ = std::fs::create_dir_all(d);
-                }
-                let _ = std::fs::write(
-                    &self.ledger_path,
-                    serde_json::to_string_pretty(&self.ledger).unwrap_or_default(),
-                );
-                return Ok(t.split_whitespace().collect::<Vec<_>>().join(" "));
+                return Ok((t.split_whitespace().collect::<Vec<_>>().join(" "), cost));
             }
+            let text = String::from_utf8_lossy(&body);
             last = self.scrub(&format!(
                 "HTTP {code}：{}",
                 text.chars().take(300).collect::<String>()
@@ -280,6 +261,104 @@ impl OpenRouter {
             }
         }
         Err(format!("识别请求重试 {MAX_ATTEMPTS} 次仍失败：{last}"))
+    }
+}
+
+/// 一条待转写的音频：(16 kHz 样本, 采样率, 语言)。
+pub type Job = (Vec<f32>, u32, String);
+
+impl OpenRouter {
+    pub fn new(url: impl Into<String>, key: String, ledger_path: PathBuf) -> OpenRouter {
+        let ledger = std::fs::read_to_string(&ledger_path)
+            .ok()
+            .and_then(|t| serde_json::from_str(&t).ok())
+            .unwrap_or_default();
+        OpenRouter {
+            url: url.into(),
+            key,
+            ledger_path,
+            ledger,
+            backoff_ms: 1000,
+            requests: 0,
+        }
+    }
+
+    fn check_budget(&self) -> Result<(), String> {
+        if self.ledger.spent_usd >= BUDGET_USD {
+            return Err(format!(
+                "识别费已累计 {:.4} 美元，到上限 {BUDGET_USD} 美元，停发",
+                self.ledger.spent_usd
+            ));
+        }
+        Ok(())
+    }
+
+    fn book(&mut self, costs: &[f64]) {
+        for c in costs {
+            self.ledger.spent_usd += c;
+            self.ledger.calls += 1;
+        }
+        if let Some(d) = self.ledger_path.parent() {
+            let _ = std::fs::create_dir_all(d);
+        }
+        let _ = std::fs::write(
+            &self.ledger_path,
+            serde_json::to_string_pretty(&self.ledger).unwrap_or_default(),
+        );
+    }
+
+    /// 转写一条音频（16 kHz 浮点样本）。成功后按 `usage.cost` 记账；到上限、出错都返回 `Err`。
+    pub fn transcribe(&mut self, x: &[f32], sr: u32, lang: &str) -> Result<String, String> {
+        Ok(self
+            .transcribe_many(&[(x.to_vec(), sr, lang.to_string())], 1)
+            .remove(0)?)
+    }
+
+    /// 并发转写一批（最多 `workers` 路同时发；429 / 5xx 各自退避）。结果按输入顺序返回，和完成先后无关。
+    /// 上限在发这批之前查一次：一批最多超出这一批的花费（每条约 0.0001 美元）。
+    pub fn transcribe_many(&mut self, jobs: &[Job], workers: usize) -> Vec<Result<String, String>> {
+        if let Err(e) = self.check_budget() {
+            return jobs.iter().map(|_| Err(e.clone())).collect();
+        }
+        let requests = std::sync::atomic::AtomicU64::new(0);
+        let next = std::sync::atomic::AtomicUsize::new(0);
+        let conn = Conn {
+            url: &self.url,
+            key: &self.key,
+            backoff_ms: self.backoff_ms,
+            requests: &requests,
+        };
+        let slots: Vec<std::sync::Mutex<Option<Result<(String, f64), String>>>> =
+            jobs.iter().map(|_| std::sync::Mutex::new(None)).collect();
+        std::thread::scope(|sc| {
+            for _ in 0..workers.clamp(1, jobs.len().max(1)) {
+                sc.spawn(|| {
+                    loop {
+                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        let Some((x, sr, lang)) = jobs.get(i) else {
+                            break;
+                        };
+                        let r = conn.transcribe(x, *sr, lang);
+                        *slots[i].lock().unwrap_or_else(|e| e.into_inner()) = Some(r);
+                    }
+                });
+            }
+        });
+        self.requests += requests.into_inner();
+        let results: Vec<Result<(String, f64), String>> = slots
+            .into_iter()
+            .map(|m| {
+                m.into_inner()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .unwrap_or(Err("内部错误：没跑到".into()))
+            })
+            .collect();
+        let costs: Vec<f64> = results
+            .iter()
+            .filter_map(|r| r.as_ref().ok().map(|(_, c)| *c))
+            .collect();
+        self.book(&costs);
+        results.into_iter().map(|r| r.map(|(t, _)| t)).collect()
     }
 }
 
