@@ -1,0 +1,60 @@
+"""过拟合不过的排查（不入库）：同模型 · 同步数 · 同 lr · 同种子，在本机 CPU 上换批量形状跑 check_overfit，
+并算「模型的掩码族能达到的最好损失」（oracle：理想复数掩码，实虚部截到 tanh 的 (−1,1)，高频投影到 ERB 子空间）。
+用法：python overfit_diag.py <batch> <seg_s> <steps> <out.json>"""
+import json
+import sys
+import time
+
+import torch
+
+sys.path.insert(0, ".")
+import config as cfgmod  # noqa: E402
+import losses  # noqa: E402
+import smoke  # noqa: E402
+import train  # noqa: E402
+from official import official_module  # noqa: E402
+
+
+def oracle_loss(crit, batch, device):
+    noisy, clean = batch["noisy"].to(device), batch["clean"].to(device)
+    fr = train.frames_mask(batch, clean.shape[1]).to(device)
+    X, S = losses.stft(noisy), losses.stft(clean)          # (B,F,T,2)
+    Xc, Sc = torch.complex(X[..., 0], X[..., 1]), torch.complex(S[..., 0], S[..., 1])
+    M = Sc / (Xc + 1e-8 * (Xc.abs() < 1e-8))
+    lim = 0.999
+    clip = lambda z: torch.complex(z.real.clamp(-lim, lim), z.imag.clamp(-lim, lim))  # noqa: E731
+    M = clip(M)
+    W = official_module().ERB(65, 64).ierb_fc.weight.detach().to(device)  # (192, 64)
+    P = torch.linalg.pinv(W)
+    hi = M[:, 65:, :]                                          # (B,192,T)
+    m_erb = clip(torch.complex(torch.einsum("ef,bft->bet", P, hi.real), torch.einsum("ef,bft->bet", P, hi.imag)))
+    hi2 = torch.complex(torch.einsum("fe,bet->bft", W, m_erb.real), torch.einsum("fe,bet->bft", W, m_erb.imag))
+    M2 = torch.cat([M[:, :65], hi2], dim=1)
+    Y = Xc * M2
+    pred = torch.stack([Y.real, Y.imag], -1)
+    with torch.no_grad():
+        loss = crit(pred, clean, fr)[0].item()
+        y = losses.istft(pred, clean.shape[1])
+        snr = float(losses.si_snr_db(y, clean).mean())
+    return loss, snr
+
+
+def main(batch, seg_s, steps, out):
+    torch.manual_seed(0)
+    cfg = cfgmod.load("configs/smoke-cpu.yaml", {"data.batch": batch, "data.seg_s": seg_s, "data.dev_n": batch,
+                                                 "data.dev_batches": 1})
+    dev = torch.device("cpu")
+    b = train.make_source(cfg).dev_batches()[0]
+    crit = losses.TrainLoss(losses.LossCfg())
+    t0 = time.time()
+    ov = smoke.check_overfit(cfg, b, dev, steps, 1e-3)
+    o_loss, o_snr = oracle_loss(crit, b, dev)
+    ov.update({"batch": batch, "seg_s": seg_s, "wall_s": time.time() - t0, "oracle_loss": o_loss,
+               "oracle_si_snr_db": o_snr,
+               "drop_frac_of_oracle_span": (ov["first"] - ov["last"]) / (ov["first"] - o_loss)})
+    print(json.dumps(ov, ensure_ascii=False, indent=1))
+    open(out, "w").write(json.dumps(ov, ensure_ascii=False, indent=1))
+
+
+if __name__ == "__main__":
+    main(int(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3]), sys.argv[4])
