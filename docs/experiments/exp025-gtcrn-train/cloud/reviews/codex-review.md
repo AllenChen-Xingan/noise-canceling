@@ -152,3 +152,15 @@ codex 要的是一套持久的操作日志、按账号分开的看门狗进程�
 | P1 #2 | 日志还没出现时，真机上 `tail` 失败，`job_status` 直接报错，「结果未知时按编号核查」走不通 | 查询加 `|| echo NOLOG` 兜底，按「没完」继续等；返回 `log_seen` | `test_wait_keeps_polling_until_log_appears`；假接口改成和真 shell 一样（日志不存在时 tail 失败），改前 `test_job_status_and_failure` 先变红 |
 
 测试：92 条全过。
+
+## 第 11 轮（2026-11-25，模型 gpt-6-astra）
+
+结果：P0×0 P1×1 P2×1，另有 1 处引用不符（同 #1）。
+
+| 编号 | 问题 | 处理 | 测试 |
+|---|---|---|---|
+| P1 #1 | 第 10 轮的 `|| echo NOLOG` 把日志读不出（权限、I/O）也当成「没日志」，退出码为 0 时会报成功 | 只有日志文件确实不存在才回 NOLOG（`if [ -e log ]; then tail; else echo NOLOG; fi`）；读不出照样报错。本机用真 shell 核过三种情况：不存在 → NOLOG、退出 0；正常 → 日志；读不出 → 退出 1 | `test_unreadable_log_is_an_error_even_if_rc_is_zero` |
+| P2 #2 | reap 部分失败时提示「重跑 reap」，加了确认闸后照做不会删 | 提示改为 `rp.py reap --yes` | `test_reap_continues_after_one_failure` 加断言 |
+| 不符 | 记录写「按没完继续等」不够准 | 准确说法：日志不存在时不报错、按退出码判断是否完成；没退出码就继续等 | — |
+
+测试：93 条全过。
