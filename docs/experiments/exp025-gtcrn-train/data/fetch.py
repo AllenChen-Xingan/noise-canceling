@@ -135,7 +135,7 @@ def download(url, out, expect_bytes, retries=8, timeout=120, rate_retries=None):
             _sleep(2**attempt)
             attempt += 1
     n = part.stat().st_size if part.exists() else 0
-    if expect_bytes and n != expect_bytes:
+    if not part.exists() or (expect_bytes and n != expect_bytes):
         raise SystemExit(f"{out.name} 下了 {n} 字节，应为 {expect_bytes}：留着 .part，重跑会接着下")
     part.rename(out)
     return n

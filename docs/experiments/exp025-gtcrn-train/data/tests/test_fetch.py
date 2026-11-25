@@ -162,6 +162,26 @@ class RateLimit(unittest.TestCase):
             s.close()
         self.assertEqual(self.slept, [5.0, 10.0])
 
+    def test_rate_limit_has_own_budget(self):
+        """E3 实测连回 7 次 429：限流次数另算，不占断线重试的 retries 名额。"""
+        s = Server(status_first=[429] * 10, retry_after=120)
+        try:
+            fetch.download(s.url, self.out, len(BLOB), retries=3)
+        finally:
+            s.close()
+        self.assertEqual(self.out.read_bytes(), BLOB)
+        self.assertEqual(self.slept, [120.0] * 10)
+
+    def test_rate_limit_budget_exhausted(self):
+        s = Server(status_first=[429] * 5, retry_after=1)
+        try:
+            with self.assertRaises(SystemExit):
+                fetch.download(s.url, self.out, len(BLOB), rate_retries=3)
+        finally:
+            s.close()
+        self.assertEqual(len(self.slept), 4)
+        self.assertFalse(self.out.exists())
+
     def test_404_fails_fast(self):
         s = Server(status_first=[404])
         try:
