@@ -134,7 +134,8 @@ fn concurrent_batch_equals_serial_and_really_overlaps() {
     assert!(p > 1 && p <= asr_or::ASR_CONCURRENCY, "同时在途 {p} 路");
     assert_eq!(c8.ledger.calls, 12);
     assert!(
-        (c8.ledger.spent_usd - 12.0 * 3e-7).abs() < 1e-15,
+        // 每条 0.05 秒：入账与标价估算取大（2026-11-25 起）
+        (c8.ledger.spent_usd - 12.0 * asr_or::booked_cost(3e-7, 0.05)).abs() < 1e-15,
         "每条只记一次账"
     );
 }

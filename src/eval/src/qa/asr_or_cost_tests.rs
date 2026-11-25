@@ -263,7 +263,8 @@ fn cost_carried_by_non_200_responses_is_booked() {
         "done"
     );
     assert!(
-        (c.ledger.spent_usd - 3e-7).abs() < 1e-15,
+        // 非 200 带回的照记；成功那条与标价估算取大（2026-11-25 起）
+        (c.ledger.spent_usd - (1e-7 + booked_cost(2e-7, 0.1))).abs() < 1e-15,
         "账本 {}",
         c.ledger.spent_usd
     );
