@@ -92,3 +92,58 @@ class Gap(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def compare_json(by_scene, system_a="gtcrn", system_b="dfn3"):
+    """by_scene = {场景: [(项, 判断, 差值均值, better)]} → `vdn-eval compare --by-scene` 的 compare.json 形状。"""
+    scopes = [{"scope": "all", "items": []}]
+    for s, items in by_scene.items():
+        scopes.append({"scope": s, "pairs": 10, "items": [
+            {"v": v, "call": c, "better": b, "diff": {"mean": d, "lo": d - 0.1, "hi": d + 0.1, "groups": 5}} for v, c, d, b in items]})
+    return {"meta": {"a_system": system_a, "b_system": system_b}, "scopes": scopes}
+
+
+def baseline_card(report_only=("V-TSOS",)):
+    """只用来读「哪些项是判定项」的基线 scorecard.json。"""
+    items = [{"v": v, "report_only": v in report_only, "mean": 0.0, "better": "lower", "status": "pass"}
+             for v in ("V-NR", "V-ESTOI", "V-TSOS")]
+    return {"scenes": [{"scene": "cafe", "tier": "common", "device": "mba-builtin", "system": "gtcrn",
+                        "items": items, "listen": {"models": []}}]}
+
+
+class Uplift(unittest.TestCase):
+    def test_ranks_by_up_count_then_normalized_gain(self):
+        cj = compare_json({
+            "street-outdoor": [("V-NR", "up", -2.0, "lower"), ("V-ESTOI", "up", 0.05, "higher")],
+            "transit-hub": [("V-NR", "up", -1.0, "lower"), ("V-ESTOI", "unsure", 0.01, "higher")],
+            "cafe": [("V-NR", "up", -3.0, "lower"), ("V-ESTOI", "unsure", 0.0, "higher")],
+            "home-quiet": [("V-NR", "down", 1.0, "lower"), ("V-ESTOI", "unsure", -0.01, "higher")],
+        })
+        u = gap.uplift_table(cj, baseline_card())
+        self.assertEqual([r["scene"] for r in u["rows"]], ["street-outdoor", "cafe", "transit-hub", "home-quiet"])
+        self.assertEqual((u["rows"][0]["ups"], u["rows"][-1]["downs"]), (2, 1))
+        self.assertEqual(u["candidate"], "dfn3")
+
+    def test_report_only_items_and_all_scope_ignored(self):
+        cj = compare_json({"cafe": [("V-TSOS", "up", -5.0, "lower")], "street-outdoor": [("V-NR", "up", -1.0, "lower")]})
+        u = gap.uplift_table(cj, baseline_card())
+        rows = {r["scene"]: r for r in u["rows"]}
+        self.assertEqual(rows["cafe"]["ups"], 0, "只报不判的项不算")
+        self.assertEqual(rows["street-outdoor"]["ups"], 1)
+
+    def test_excluded_items_are_dropped_and_listed(self):
+        cj = compare_json({"cafe": [("V-NR", "up", -1.0, "lower"), ("V-ESTOI", "up", 0.1, "higher")]})
+        u = gap.uplift_table(cj, baseline_card(), exclude=("V-ESTOI",))
+        self.assertEqual(u["rows"][0]["ups"], 1)
+        self.assertEqual(u["excluded_items"], ["V-ESTOI"])
+
+    def test_needs_by_scene_compare(self):
+        with self.assertRaises(ValueError):
+            gap.uplift_table({"meta": {}, "scopes": [{"scope": "all", "items": []}]}, baseline_card())
+
+    def test_verdict_uses_same_overlap_rule(self):
+        order = list(gap.PROVISIONAL) + ["home-quiet"]
+        cj = compare_json({s: [("V-NR", "up" if k < 4 else "unsure", -(5 - k), "lower")] for k, s in enumerate(order)})
+        u = gap.uplift_table(cj, baseline_card())
+        self.assertEqual(sorted(u["top"]), sorted(gap.PROVISIONAL))
+        self.assertEqual(u["verdict"], "一致")
