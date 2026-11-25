@@ -46,13 +46,28 @@ pub(crate) const OPTIONS: &[Entry] = &[
     ),
     (
         "asr-probe",
-        &["--wav-dir", "--cache", "--out", "--temperature", "--repeats", "--asr-ledger"],
+        &[
+            "--wav-dir",
+            "--cache",
+            "--out",
+            "--temperature",
+            "--repeats",
+            "--asr-ledger",
+        ],
         &[],
         NONE,
     ),
     (
         "compare",
-        &["--a", "--b", "--system-a", "--system-b", "--noise-a", "--noise-b", "--out"],
+        &[
+            "--a",
+            "--b",
+            "--system-a",
+            "--system-b",
+            "--noise-a",
+            "--noise-b",
+            "--out",
+        ],
         &["--by-scene"],
         NONE,
     ),
@@ -69,7 +84,14 @@ pub(crate) fn check(args: &[String]) -> Result<(), String> {
     let Some((_, values, flags, positional)) = OPTIONS.iter().find(|e| e.0 == cmd) else {
         return Ok(());
     };
-    let known = || values.iter().chain(flags.iter()).copied().collect::<Vec<_>>().join(" ");
+    let known = || {
+        values
+            .iter()
+            .chain(flags.iter())
+            .copied()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
     let mut i = 1;
     let mut pos = 0usize;
     while i < args.len() {
@@ -84,7 +106,10 @@ pub(crate) fn check(args: &[String]) -> Result<(), String> {
         } else if flags.contains(&a) {
             i += 1;
         } else if a.starts_with("--") {
-            return Err(format!("vdn-eval {cmd} 不认识选项 {a}（认的有：{}）", known()));
+            return Err(format!(
+                "vdn-eval {cmd} 不认识选项 {a}（认的有：{}）",
+                known()
+            ));
         } else {
             pos += 1;
             if positional.1.is_some_and(|max| pos > max) {
@@ -117,23 +142,60 @@ mod tests {
 
     #[test]
     fn known_pass_unknown_fail() {
-        assert!(check(&a(&["scorecard", "--system", "gtcrn", "--qa", "--out", "/x"])).is_ok());
-        assert!(check(&a(&["scorecard", "--systems", "gtcrn"])).unwrap_err().contains("--systems"));
-        assert!(check(&a(&["scorecard", "gtcrn"])).unwrap_err().contains("gtcrn"));
+        assert!(
+            check(&a(&[
+                "scorecard",
+                "--system",
+                "gtcrn",
+                "--qa",
+                "--out",
+                "/x"
+            ]))
+            .is_ok()
+        );
+        assert!(
+            check(&a(&["scorecard", "--systems", "gtcrn"]))
+                .unwrap_err()
+                .contains("--systems")
+        );
+        assert!(
+            check(&a(&["scorecard", "gtcrn"]))
+                .unwrap_err()
+                .contains("gtcrn")
+        );
         assert!(check(&a(&["asr-probe", "--temperature", "0", "--out", "r.json"])).is_ok());
         assert!(check(&a(&["nrmos", "scoreq", "m.onnx", "a.wav", "--serve"])).is_ok());
         assert!(check(&a(&["dnsmos", "m.onnx", "a.wav"])).is_ok());
-        assert!(check(&a(&["nosuch", "--whatever"])).is_ok(), "不认识的子命令交给分发处报");
+        assert!(
+            check(&a(&["nosuch", "--whatever"])).is_ok(),
+            "不认识的子命令交给分发处报"
+        );
     }
 
     /// codex 本分支第 1 轮：缺值、把下一个选项当值、位置参数超量或不够，都拒。
     #[test]
     fn missing_values_and_positional_counts() {
         assert!(check(&a(&["ci", "--system"])).unwrap_err().contains("缺值"));
-        assert!(check(&a(&["ci", "--filter", "--write-baseline"])).unwrap_err().contains("缺值"));
-        assert!(check(&a(&["dnsmos", "m.onnx", "a.wav", "extra"])).unwrap_err().contains("extra"));
-        assert!(check(&a(&["dnsmos", "m.onnx"])).unwrap_err().contains("少参数"));
-        assert!(check(&a(&["nrmos", "scoreq"])).unwrap_err().contains("少参数"));
+        assert!(
+            check(&a(&["ci", "--filter", "--write-baseline"]))
+                .unwrap_err()
+                .contains("缺值")
+        );
+        assert!(
+            check(&a(&["dnsmos", "m.onnx", "a.wav", "extra"]))
+                .unwrap_err()
+                .contains("extra")
+        );
+        assert!(
+            check(&a(&["dnsmos", "m.onnx"]))
+                .unwrap_err()
+                .contains("少参数")
+        );
+        assert!(
+            check(&a(&["nrmos", "scoreq"]))
+                .unwrap_err()
+                .contains("少参数")
+        );
     }
 
     /// 一段代码读到的 `--选项`：只认读命令行的写法 arg/flag/option_value(args, "--…")、need("--…")、== "--…"
@@ -145,7 +207,9 @@ mod tests {
                 let rest = &s[i + pre.len() - 2..];
                 let opt = &rest[..rest.find('"').unwrap_or(0)];
                 let ok = opt.len() > 2
-                    && opt[2..].bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+                    && opt[2..]
+                        .bytes()
+                        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
                 if ok {
                     out.insert(opt.to_string());
                 }
@@ -156,7 +220,9 @@ mod tests {
 
     /// 一个文件里从 `fn 名(` 到下一个顶层函数或测试模块之间的代码。
     fn func<'a>(src: &'a str, name: &str) -> &'a str {
-        let i = src.find(&format!("fn {name}(")).unwrap_or_else(|| panic!("找不到 fn {name}"));
+        let i = src
+            .find(&format!("fn {name}("))
+            .unwrap_or_else(|| panic!("找不到 fn {name}"));
         let rest = &src[i + 3..];
         let end = ["\nfn ", "\npub fn ", "\npub(crate) fn ", "\n#[cfg(test)]"]
             .iter()
@@ -182,11 +248,19 @@ mod tests {
             ("nrmos", vec![func(include_str!("qa/nrmos.rs"), "cli")]),
             ("list", vec![func(main, "cmd_list")]),
         ];
-        assert_eq!(code.len(), OPTIONS.len(), "每个子命令都要在这里对上入口代码");
+        assert_eq!(
+            code.len(),
+            OPTIONS.len(),
+            "每个子命令都要在这里对上入口代码"
+        );
         for (cmd, parts) in code {
             let read: BTreeSet<String> = parts.iter().flat_map(|p| read_opts(p)).collect();
             let e = OPTIONS.iter().find(|e| e.0 == *cmd).unwrap();
-            let table: BTreeSet<String> = e.1.iter().chain(e.2.iter()).map(|s| s.to_string()).collect();
+            let table: BTreeSet<String> =
+                e.1.iter()
+                    .chain(e.2.iter())
+                    .map(|s| s.to_string())
+                    .collect();
             assert_eq!(read, table, "{cmd}：左 = 代码里读的，右 = 表里的");
         }
     }
