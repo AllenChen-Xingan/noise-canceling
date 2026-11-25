@@ -144,7 +144,7 @@ class TestOps(Base):
         self.assertEqual(b["gpu"]["minVcpuCountPerGpu"], C.MIN_VCPU_PER_GPU)
         self.assertEqual(b["cloud"], "SECURE")
         self.assertEqual(b["cmd"][:2], ["sh", "-c"])
-        self.assertTrue(b["cmd"][2].startswith("sleep 5400;"))
+        self.assertRegex(b["cmd"][2], r"^d=\d+; s=")  # 绝对截止时刻，见 test_watchdog
         self.assertIn("VDN_SELF_DELETE_PY", b["env"])
         self.assertEqual(spec["exec_timeout_max"], C.EXEC_TIMEOUT_MAX_S)
         self.assertEqual(spec["exec_arg_max"], C.EXEC_ARG_MAX_CHARS)

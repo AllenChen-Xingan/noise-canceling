@@ -89,9 +89,9 @@ class TestInPodSelfDelete(unittest.TestCase):
         W.assert_spec_safe()
 
     def test_cmd_sleeps_then_retries(self):
-        cmd = W.pod_cmd(0.25)
+        cmd = W.pod_cmd(0.25, now=1_000_000)
         self.assertEqual(cmd[:2], ["sh", "-c"])
-        self.assertTrue(cmd[2].startswith("sleep 900;"))
+        self.assertTrue(cmd[2].startswith("d=1000900;"))
         self.assertIn('python3 -c "$VDN_SELF_DELETE_PY"', cmd[2])
         self.assertIn("sleep 60", cmd[2])
 
@@ -100,6 +100,17 @@ class TestInPodSelfDelete(unittest.TestCase):
         r = subprocess.run([sys.executable, "-I", "-c", W.SELF_DELETE_PY], env=env,
                            capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 2)  # 没有平台注入的变量就不发请求
+
+    def test_restart_only_sleeps_the_remainder(self):
+        # 评审第 1 轮 #8：容器被重启时重跑同一条命令，只睡到原定截止时刻，不重新睡满
+        import time
+        head = W.pod_cmd(1.0, now=time.time() - 3000)[2].split("[")[0]  # 只取「算剩余秒数」那段
+        r = subprocess.run(["sh", "-c", head + 'echo "$s"'], capture_output=True, text=True)
+        self.assertTrue(590 <= int(r.stdout) <= 600, r.stdout)
+        past = W.pod_cmd(1.0, now=time.time() - 7200)[2].split("while")[0]
+        t = time.time()
+        subprocess.run(["sh", "-c", past], check=True)  # 截止已过：不睡，直接进自删
+        self.assertLess(time.time() - t, 5)
 
     def test_shell_wrapper_runs(self):
         # 用 0 秒睡眠跑一次外壳：脚本缺变量退出 2 → 进入 sleep 60；这里只核外壳语法
