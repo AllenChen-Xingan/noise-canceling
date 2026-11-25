@@ -119,6 +119,8 @@ pub struct Asr {
     pub halted: Option<String>,
     /// 已计入 checked / unstable 的音频（sha256 | 型号），同一条只计一次
     counted: std::collections::BTreeSet<String>,
+    /// 前两次不同、补调过第 3 次的音频（sha256 | 型号）→ 有没有多数（A，`asr_vote`）
+    votes: BTreeMap<String, bool>,
 }
 
 pub use super::asr_or::is_permanent;
@@ -159,6 +161,7 @@ impl Asr {
             failed: BTreeMap::new(),
             halted: None,
             counted: std::collections::BTreeSet::new(),
+            votes: BTreeMap::new(),
         }
     }
 
@@ -241,6 +244,8 @@ impl Asr {
         let effective = self.route.default.as_deref().unwrap_or(self.default);
         serde_json::json!({"default": effective, "env_default": self.default, "backends": b, "calls": self.calls,
             "repeats": if self.single { "1 + 抽查" } else { "2" }, "spot_fraction": SPOT_FRACTION,
+            "tie_break_rep": super::asr_vote::TIE_BREAK_REP, "majority": super::asr_vote::MAJORITY,
+            "tie_breaks": self.votes.len(), "no_majority": self.votes.values().filter(|ok| !**ok).count(),
             "checked": self.checked, "unstable": self.unstable, "unstable_rate": rate,
             "halted": self.halted})
     }
@@ -355,7 +360,8 @@ impl Asr {
         text
     }
 
-    /// 转写 `REPEATS` 次，返回 (第一次文本, 是否每次分词后相同，见 [`same_text`])。`clip` = 片段 id（按路由选后端，记进 [`Asr::used`]）。
+    /// 转写 `REPEATS` 次，前两次分词后不同再补调第 3 次（A，判法正本 [`super::asr_vote`]）。返回 (用的那次文本, 有没有判出来)：
+    /// 前两次相同用第 1 次；不同时取多数，三次都不同返回 `false`。`clip` = 片段 id（按路由选后端，记进 [`Asr::used`]）。
     pub fn transcribe(
         &mut self,
         path: &Path,
@@ -363,20 +369,38 @@ impl Asr {
         lang: &str,
         clip: &str,
     ) -> Result<(String, bool), String> {
+        use super::asr_vote::{TIE_BREAK_REP, Vote, vote};
         let backend = self.backend_for(clip);
-        let first = self.once(path, sha, lang, 1, backend)?;
-        let mut stable = true;
+        let mut texts = vec![self.once(path, sha, lang, 1, backend)?];
         let n = repeats_for(sha, self.single);
-        for rep in 2..=n {
-            stable &= same_text(&self.once(path, sha, lang, rep, backend)?, &first, lang);
+        let model = self.backends.get(backend).map_or("?", Backend::model);
+        let id = format!("{sha}|{model}");
+        let mut rep = 2;
+        let (text, ok) = loop {
+            let v = if rep > n {
+                Vote::Use(0)
+            } else {
+                vote(&texts.iter().map(String::as_str).collect::<Vec<_>>(), lang)
+            };
+            match v {
+                // 只有 1 次（单次模式）或已判出：取那一次
+                Vote::Use(i) if texts.len() > 1 || rep > n => break (texts[i].clone(), true),
+                Vote::NoMajority => break (texts[0].clone(), false),
+                _ => {}
+            }
+            texts.push(self.once(path, sha, lang, rep, backend)?);
+            if rep == 2 {
+                self.count_check(id.clone(), same_text(&texts[1], &texts[0], lang));
+            }
+            rep += 1;
+            debug_assert!(rep <= TIE_BREAK_REP + 1);
+        };
+        if texts.len() >= TIE_BREAK_REP {
+            self.votes.insert(id, ok);
         }
-        if n > 1 {
-            let model = self.backends.get(backend).map_or("?", Backend::model);
-            self.count_check(format!("{sha}|{model}"), stable);
-        }
-        let id = clip.split('#').next().unwrap_or(clip).to_string();
-        self.used.entry(backend).or_default().insert(id);
-        Ok((first, stable))
+        let cid = clip.split('#').next().unwrap_or(clip).to_string();
+        self.used.entry(backend).or_default().insert(cid);
+        Ok((text, ok))
     }
 
     /// 预取：把这批音频（路径, sha256, 语言, 片段 id）里走 OpenRouter、还没缓存的各次转写**并发**发出去，
