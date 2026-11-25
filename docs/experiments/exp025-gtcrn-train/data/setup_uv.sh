@@ -33,21 +33,21 @@ sha256_of() {
 }
 
 # install_uv <下载地址> <预期 sha256> <目标目录>：下载 → 核哈希 → 解压出 uv · uvx。哈希不对退出码 3，目标目录不动。
-install_uv() {
-  local url=$1 want=$2 bin=$3 tmp got
+install_uv() (  # 子 shell：中途失败也会清掉临时目录
+  url=$1 want=$2 bin=$3
   tmp=$(mktemp -d)
-  trap 'rm -rf "$tmp"' RETURN
+  trap 'rm -rf "$tmp"' EXIT
   curl -fsSL --retry 3 -A generic-client -o "$tmp/uv.tar.gz" "$url"
   got=$(sha256_of "$tmp/uv.tar.gz")
   if [ "$got" != "$want" ]; then
     echo "uv 包 sha256 不对，拒绝安装：预期 $want，实得 $got（$url）" >&2
-    return 3
+    exit 3
   fi
   tar -xzf "$tmp/uv.tar.gz" -C "$tmp" --strip-components=1
   mkdir -p "$bin"
   install -m 755 "$tmp/uv" "$tmp/uvx" "$bin/"
   echo "uv $UV_VERSION 已装到 $bin"
-}
+)
 
 main() {
   local bin=${VDN_BIN:-${VDN_ROOT:-/workspace}/bin} target
