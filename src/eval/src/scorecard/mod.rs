@@ -233,6 +233,9 @@ pub fn run_with(
 pub struct Run {
     pub rows: Vec<ClipRow>,
     pub missing: Vec<Missing>,
+    /// 每行分数 / 每条缺段记录来自清单里第几个单位（分片合并按它排，见 [`shard`]）
+    pub row_units: Vec<usize>,
+    pub missing_units: Vec<usize>,
     pub timing: std::collections::BTreeMap<String, f64>,
 }
 
@@ -255,11 +258,22 @@ pub fn run_shard(
     };
     // 分片单位：清单顺序里的每一段，或一条展开不出片段的任务；第 k 个单位归第 k mod n 片
     let mut unit = 0usize;
-    let mut owned = || {
-        let mine = shard.is_none_or(|s| s.owns(unit));
-        unit += 1;
-        mine
-    };
+    let (mut row_units, mut missing_units, mut cur) = (Vec::new(), Vec::new(), 0usize);
+    // 一个单位开始时，把上一个单位新增的记录都标成上一个单位的；返回这个单位归不归这一片
+    macro_rules! start {
+        () => {{
+            let u = unit;
+            unit += 1;
+            if shard.is_none_or(|s| s.owns(u)) {
+                row_units.resize(rows.len(), cur);
+                missing_units.resize(missing.len(), cur);
+                cur = u;
+                true
+            } else {
+                false
+            }
+        }};
+    }
     for task in &suite.tasks {
         let whole = |why: String| -> Vec<Missing> {
             let Some(RealSource::Scene {
@@ -285,21 +299,21 @@ pub fn run_shard(
         };
         let clips = match clips_of(task) {
             Ok(c) if c.is_empty() => {
-                if owned() {
+                if start!() {
                     missing.extend(whole("清单里没有这个 场景 × 档 × 设备 的片段".into()));
                 }
                 continue;
             }
             Ok(c) => c,
             Err(e) => {
-                if owned() {
+                if start!() {
                     missing.extend(whole(e));
                 }
                 continue;
             }
         };
         for c in &clips {
-            if !owned() {
+            if !start!() {
                 continue;
             }
             let Some(_) = standard::group_of(c.scene) else {
@@ -389,9 +403,13 @@ pub fn run_shard(
             }
         }
     }
+    row_units.resize(rows.len(), cur);
+    missing_units.resize(missing.len(), cur);
     Run {
         rows,
         missing,
+        row_units,
+        missing_units,
         timing,
     }
 }

@@ -101,7 +101,7 @@ pub(crate) fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
     }
     let extra = qa.as_mut().map(|x| x as &mut dyn vdn_eval::runner::Extra);
     let run = vdn_eval::scorecard::run_shard(&suite, &sys, &opts, extra, None, rules, shard);
-    let (rows, skipped) = (run.rows, run.missing);
+    let (rows, skipped) = (run.rows.clone(), run.missing.clone());
     let total: f64 = run.timing.values().sum();
     eprintln!(
         "分步计时（秒，共 {total:.1}）：{}",
@@ -117,7 +117,9 @@ pub(crate) fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
         "safety": if no_safety { "off" } else { "task" }, "asr": qa.as_ref().map(|q| q.asr_meta()),
         "rules": rules.as_str(), "power": vdn_eval::power::source(),
         "external": sys.iter().filter_map(|s| s.provenance()).collect::<Vec<_>>(),
-        "shard": shard.map(|s| format!("{}/{}", s.i, s.n)), "asr_workers": qa.is_some().then_some(workers),
+        "shard": shard.map(|s| format!("{}/{}", s.i, s.n)),
+        "shard_units": shard.map(|_| json!({"rows": run.row_units, "missing": run.missing_units})),
+        "suite_fingerprint": vdn_eval::scorecard::shard::suite_fingerprint(&suite), "asr_workers": qa.is_some().then_some(workers),
         "timing": run.timing});
     let js = serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";
     vdn_eval::scorecard::card::write_new(&out, &js, &card.to_markdown("场景成绩单"))?;
