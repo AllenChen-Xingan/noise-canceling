@@ -117,6 +117,7 @@ def download(url, out, expect_bytes, retries=8, timeout=120, rate_retries=None):
                         f.write(b)
             if not expect_bytes:
                 break
+            attempt += 1  # 连接正常结束但没下全（中途断开）：算一次，下一轮接着下
         except urllib.error.HTTPError as e:
             if e.code in FATAL_CODES:
                 raise SystemExit(f"{out.name}：服务器回 {e.code}，不重试（地址失效或无权限）")

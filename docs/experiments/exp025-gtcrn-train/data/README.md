@@ -71,7 +71,7 @@ bash cloud_steps.sh setup      # uv 建 .venv，装 requirements.txt
 bash cloud_steps.sh test       # 全部单元测试；有 CUDA 时 GPU 对拍在 GPU 上跑
 bash cloud_steps.sh head       # 只核服务器上的文件大小，不下载
 bash cloud_steps.sh fetch      # 第一批 A1–A5 + DEMAND：下载约 18.1 GB，解压峰值约 37 GB；开下之前先查盘
-bash cloud_steps.sh fetch-e3   # 单独补下 Wikimedia 上的 3 个 exp013 原料（第一批下完再跑；遇到 429 会按服务器给的时间等）
+bash cloud_steps.sh fetch-e3   # 单独补下 Wikimedia 上的 3 个 exp013 原料（第一批下完再跑；遇到 429 按服务器给的 Retry-After 等，限流另算最多 30 次）
 bash cloud_steps.sh split      # 先列出目录清单（QUT 和 TUM 包内的结构还没核），再切
 bash cloud_steps.sh shard
 bash cloud_steps.sh register   # 交集检查，登记训练 build
@@ -86,6 +86,6 @@ bash cloud_steps.sh rebuild    # 重建 exp013，逐文件核 4,540 个哈希
 
 - QUT-NOISE 和 TUM 风噪：压缩包里的目录结构还没核，`split_rules.json` 里的通配符要等云上 `--inventory` 列出清单后再确认。另外 QUT 的服务器没有声明支持断点续传；脚本遇到不支持时会从头重下
 - OpenSLR 28：包里的点声源噪声取自 MUSAN，里面各个来源的许可没有逐个核，所以第一批不用
-- 测试状态：本机共 86 条，85 条过（torch 用 CPU 后端）。云上 GPU 对拍还没跑
+- 测试状态：本机共 88 条，87 条过（torch 用 CPU 后端）。云上 GPU 对拍还没跑
 - 网络盘查盘：RunPod 网络盘上 df 报的是整个集群的剩余（cloudrun 实测 158 TB），所以在挂载点上改用「配额 − du 已用」。配额的正本是 `../cloud/config.py`（cloudrun 的分支）。那个分支合进来之前，`test_real_cloud_config_quota` 会红，下载也会拒绝开始
 - 依赖：测试要用 evalcmp 在分支 `feat/eval-paired-compare` 上加进 exp013 `rooms.py` 的 `early_rir`。那个分支合进 main 之前，在本分支上跑会红
