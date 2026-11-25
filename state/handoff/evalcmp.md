@@ -68,3 +68,15 @@ $PY docs/experiments/exp013-scene-suite/build.py --workers 8
 ### 第 3 轮（2026-11-24 · gpt-6-astra · 只读 · medium · 43 s）：P0×0 P1×0 P2×1 · 连续第 2 轮无 P0/P1 → 满足停止线
 - 上一轮 1 条：codex 抽查核实已改
 - 第 3 轮 #1（P2，属实，已改，不另开 issue）：缺段测试删一段又补一段，两边段数仍相等。加 `unequal_clip_counts_both_directions`：b 只删 3 段（12 对 9），双向核配对数、只在一边的段、各项有效段数与差值
+- 停止线：第 2、3 轮连续没有 P0/P1，已满足（codex-review 规则）；三轮的 P2 都已改，不另开 issue
+
+## 整套重跑与偶发失败
+- 11-24 16:31 整套跑（大总管预发的名额）：`scorecard_e2e::early_reference_side_column` 失败 1 次，断言「没跑成的段为空」（当时第 486 行），61.6 秒就停了；原因原文被输出过滤丢掉。clippy 1 条（多余 clone，已修）
+- 单跑这一条通过（217.5 s）；并行跑 scorecard_e2e 13/13 通过（209 s）。同一时段本 worktree 没有别的测试进程（后台任务时间已核，大总管也确认）。本机另有 4 个别的仓库在跑 cargo test，耗时数字不能当测速基准
+- 补了夹具隔离（真实隐患，根因未证实）：每次 setup 独立目录；会红的测试 `setup_dirs_are_isolated` 旧代码红、新代码绿。为守 600 行，夹具抽到 `tests/common/scene_fixture.rs`，早期参考 e2e 移到 `tests/scorecard_early_e2e.rs`
+- 追踪 issue：#161（我开的，大总管要求）
+
+## PR 正文要点（大总管开 PR 时用）
+- Closes #155；新 build 由大总管 noise-canceling-33 定上云（D97），人未参与；合并后 cloudrun 在 CPU 机上出，小文件由 evalcmp 核 sha256 后提交
+- 偶发失败照实写：只出现过 1 次，并行重跑 13/13 通过，补了夹具隔离，根因未证实，见 #161
+- 加的测试：compare 单元 17 条（自比全不确定、真实打分压低 6 dB 判退、段数不一致双向、否决三态、判断边界等）· compare_out 2 条 · early 4 条 · e2e 早期参考旁列 + 生成行解析 + 夹具隔离 · 规约表比对 2 条 · exp013 Python `test_early.py` 10 条
