@@ -103,6 +103,7 @@ fn prefetch_sends_third_call_only_on_disagreement() {
     // 预取第一批只发第 3 条的第 2 次（回「m o」，与第 1 次不同）；第二批补第 1、3 条的第 3 次
     let (url, seen) = fake(vec![ok("m o", 1e-9), ok("a b", 1e-9), ok("m o", 1e-9)]);
     let mut a = asr(&url, &d);
+    a.workers = 1; // 假服务按到达顺序回，单路才对得上脚本
     a.prefetch(&it);
     assert_eq!(seen.lock().unwrap().len(), 3);
     let got: Vec<(String, bool)> = it

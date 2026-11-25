@@ -566,3 +566,7 @@ mod conc_tests;
 #[cfg(test)]
 #[path = "asr_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "asr_vote_tests.rs"]
+mod vote_tests;
