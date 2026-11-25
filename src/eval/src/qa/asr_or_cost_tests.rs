@@ -250,17 +250,39 @@ fn key_straddling_truncation_boundary_is_scrubbed() {
 fn cost_carried_by_non_200_responses_is_booked() {
     let d = tmpdir("cost503");
     let (url, _) = fake(vec![
-        (503, "", json!({"error": {"code": 503, "message": "busy"}, "usage": {"cost": 1e-7}}).to_string()),
+        (
+            503,
+            "",
+            json!({"error": {"code": 503, "message": "busy"}, "usage": {"cost": 1e-7}}).to_string(),
+        ),
         ok("done", 2e-7),
     ]);
     let mut c = client(&url, &d);
-    assert_eq!(c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap(), "done");
-    assert!((c.ledger.spent_usd - 3e-7).abs() < 1e-15, "账本 {}", c.ledger.spent_usd);
+    assert_eq!(
+        c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap(),
+        "done"
+    );
+    assert!(
+        (c.ledger.spent_usd - 3e-7).abs() < 1e-15,
+        "账本 {}",
+        c.ledger.spent_usd
+    );
     // 重试用完仍失败：前面各次带的费用照记，不当免费
     let d2 = tmpdir("cost503b");
-    let busy = (503, "", json!({"error": {"code": 503, "message": "busy"}, "usage": {"cost": 1e-7}}).to_string());
+    let busy = (
+        503,
+        "",
+        json!({"error": {"code": 503, "message": "busy"}, "usage": {"cost": 1e-7}}).to_string(),
+    );
     let (url2, _) = fake(vec![busy; MAX_ATTEMPTS]);
     let mut c2 = client(&url2, &d2);
-    assert!(c2.transcribe(&audio(), vdn_types::MODEL_RATE, "en").is_err());
-    assert!((c2.ledger.spent_usd - MAX_ATTEMPTS as f64 * 1e-7).abs() < 1e-15, "账本 {}", c2.ledger.spent_usd);
+    assert!(
+        c2.transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+            .is_err()
+    );
+    assert!(
+        (c2.ledger.spent_usd - MAX_ATTEMPTS as f64 * 1e-7).abs() < 1e-15,
+        "账本 {}",
+        c2.ledger.spent_usd
+    );
 }

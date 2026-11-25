@@ -242,38 +242,45 @@ impl Conn<'_> {
 
     fn send_with_retry(&self, body_path: &Path) -> Result<(String, Option<f64>), Failure> {
         let mut last = String::new();
+        // 前几次（非 200）响应里带回的费用：每个出口都要算进去（codex 第 13 轮 P1 #1）
+        let mut carried = 0.0f64;
+        let fold = |c: Cost, carried: f64| match c {
+            Cost::Free if carried > 0.0 => Cost::Known(carried),
+            Cost::Known(x) => Cost::Known(x + carried),
+            other => other,
+        };
         for attempt in 0..MAX_ATTEMPTS {
             match ledger::read(self.ledger_path) {
                 Ok(l) if l.review.is_some() => {
                     return Err(Failure {
                         msg: format!("识别费账本待核（{}）：停发", l.review.unwrap_or_default()),
-                        cost: Cost::Free,
+                        cost: fold(Cost::Free, carried),
                     });
                 }
                 Ok(_) => {}
                 Err(e) => {
                     return Err(Failure {
                         msg: e,
-                        cost: Cost::Free,
+                        cost: fold(Cost::Free, carried),
                     });
                 }
             }
             if let Some(why) = self.stop.lock().unwrap_or_else(|e| e.into_inner()).clone() {
                 return Err(Failure {
                     msg: format!("已停发：{why}"),
-                    cost: Cost::Free,
+                    cost: fold(Cost::Free, carried),
                 });
             }
             // 连不上、超时：请求可能已送到、可能已计费，不知道 → 费用未知，停发（偏保守）
             let (code, retry_after, body) = self.post(body_path).map_err(|e| Failure {
                 msg: format!("费用未知，停发：{e}"),
-                cost: Cost::Unknown,
+                cost: fold(Cost::Unknown, carried),
             })?;
             if code == 200 {
                 let Ok(v) = serde_json::from_slice::<Value>(&body) else {
                     return Err(Failure {
                         msg: "费用未知，停发：识别返回 200 但不是 JSON".into(),
-                        cost: Cost::Unknown,
+                        cost: fold(Cost::Unknown, carried),
                     });
                 };
                 let cost = v["usage"]["cost"].as_f64();
@@ -284,7 +291,7 @@ impl Conn<'_> {
                 };
                 let fail = |msg: String| Failure {
                     msg: self.scrub(&msg),
-                    cost: cost.map_or(Cost::Unknown, Cost::Known),
+                    cost: fold(cost.map_or(Cost::Unknown, Cost::Known), carried),
                 };
                 if let Some(e) = v.get("error") {
                     return Err(fail(format!("{tag}识别返回 200 但带错误：{e}")));
@@ -293,7 +300,16 @@ impl Conn<'_> {
                     return Err(fail(format!("{tag}识别返回缺 text：{v}")));
                 };
                 // 文本到手但返回里没有 usage.cost：文本照用，费用未知（调用方标「待核」、停发；codex 第 7 轮 P1 #1）
-                return Ok((t.split_whitespace().collect::<Vec<_>>().join(" "), cost));
+                return Ok((
+                    t.split_whitespace().collect::<Vec<_>>().join(" "),
+                    cost.map(|c| c + carried),
+                ));
+            }
+            if let Some(c) = serde_json::from_slice::<Value>(&body)
+                .ok()
+                .and_then(|v| v["usage"]["cost"].as_f64())
+            {
+                carried += c;
             }
             let text = String::from_utf8_lossy(&body);
             // 先对完整响应抹密钥再截断：密钥跨过截断点时也不会漏出半截（codex 第 8 轮 P2 #1）
@@ -311,7 +327,7 @@ impl Conn<'_> {
                 };
                 return Err(Failure {
                     msg: format!("识别请求失败，不重试{hint}：{last}"),
-                    cost: Cost::Free,
+                    cost: fold(Cost::Free, carried),
                 });
             }
             if attempt + 1 < MAX_ATTEMPTS {
@@ -321,7 +337,7 @@ impl Conn<'_> {
         }
         Err(Failure {
             msg: format!("识别请求重试 {MAX_ATTEMPTS} 次仍失败：{last}"),
-            cost: Cost::Free,
+            cost: fold(Cost::Free, carried),
         })
     }
 }

@@ -83,9 +83,10 @@ def _compare(cloud_rows, local_rows, eat_rules):
                 continue
             rep["pairs"] += 1
             rep["max_abs_diff"] = max(rep["max_abs_diff"], abs(a - b))
-        row = dict(rc)
-        row["scores"] = [sl[EAT] if s["v"] == EAT else s for s in rc["scores"]]
-        out.append(row)
+        if eat_rules:  # 只有合并模式才拼行；只对拍时两边可能都缺吃字，不能取（codex 第 13 轮 P2 #2）
+            row = dict(rc)
+            row["scores"] = [sl[EAT] if s["v"] == EAT else s for s in rc["scores"]]
+            out.append(row)
     return out, report
 
 
