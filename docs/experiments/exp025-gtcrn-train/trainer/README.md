@@ -86,7 +86,7 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 - 同名运行同时只能有一个进程（`run.lock`，flock）
 - 看门狗：已该停（到上限 / 收到信号）而主线程 `limits.hang_s`（默认 120 s）没有进展时，写 `hung.json` 后强退；正式数据要求 `num_workers ≥ 1`，取数超时才生效
 - 标定单独取满 `calib_batches` 批（默认 200 × 32 段），不被开发份大小截短
-- **第 2 件的判据改过一次（事后改判据，AI 定，大总管认可）**：
+- **第 2 件的判据改过几次，现行是第 4 版（见上表与 `plan-h100-smoke.md` 第十一节）；下面是第 2 版那次的历史记录（事后改判据，AI 定，大总管认可）**：
   - 原判据：(初值 − 终值) / (初值 − 「输出恰好等于目标」的损失) ≥ 0.5
   - 为什么定错：输出与目标完全相同时，官方 HybridLoss 的 SI-SNR 项被分母里的 1e-8 下限顶成约 −8，下限因此是 −10.04，任何训练都到不了。本机 150 步走到 −0.92，只占 37%，判「不过」。报告是 `smoke_reports/20261124-cpu-synthetic-v2-floor-exact-FAILED.json`
   - 新判据：下限改成「目标 + 40 dB 白噪声」这个近乎完美输出的损失（本机 −0.41），走完 111%，判过。另加一个不依赖下限的读数：这一批的 SI-SNR 过拟合后要提高 ≥ 6 dB（阈值 AI 定）。**本机还没用这条测过**，名额已收回；云上 GPU 冒烟时两个读数都要过
@@ -95,7 +95,7 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 
 云上 H100 冒烟的方案（大总管已批，开机前先过 codex）：`plan-h100-smoke.md`。开发份参照用 `smoke.py --write-known-dev` 在 CPU 机上算；续训核对用 `cmp_ckpt.py`。
 
-报告：`smoke_reports/20261124-cpu-synthetic-v2.json`（现行判据）；`20261124-cpu-synthetic.json` 是自审前旧判据那次。
+报告：`smoke_reports/20261124-cpu-synthetic-v2.json`（第 2 版判据，历史）；`20261124-cpu-synthetic.json` 是自审前旧判据那次。
 
 ## 默认值与依据
 

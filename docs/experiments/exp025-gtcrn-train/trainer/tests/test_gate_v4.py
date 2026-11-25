@@ -96,6 +96,10 @@ def test_rejudge_this_diagnosis_passes_v4():
     assert r["overfit"]["verdict"] == "pass" and r["verdict"] == "pass"
     assert r["others"] == {"init_loss": True, "reproduce": True, "known_dev": True}
     assert r["gate3_verdict"] == "fail"
+    m150 = next(m for m in probe["curve"]["marks"] if m["step"] == 150)
+    o = r["overfit"]  # 派生读数与同一终值对应（codex gate-v4 第 2 轮 #3）
+    assert o["last"] == m150["loss"] and o["drop_frac_of_oracle_span"] == m150["drop_frac_of_oracle_span"]
+    assert o["drop_frac_of_oracle_span"] == pytest.approx(oracle.frac_of_span(o["first"], o["last"], probe["oracle_loss"]))
 
 
 def _run_dir(tmp_path, rows, build="b1", **data):

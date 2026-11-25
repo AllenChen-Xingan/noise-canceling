@@ -79,7 +79,8 @@ def rejudge(probe: dict, gate3: dict) -> dict:
             "overfit": {"first": first, "last": last, "drop_frac": drop_frac(first, last),
                         "si_snr_gain_db": gain, "gate3_last_traj": ov["last"], "attn_out_max_change": ov["attn_out_max_change"],
                         "grad_norms_first_step": grads, "backbone_grads_ok": backbone_grads_ok(grads),
-                        "drop_frac_of_oracle_span": ov["drop_frac_of_oracle_span"], "verdict": v},
+                        "drop_frac_of_oracle_span": m150["drop_frac_of_oracle_span"],
+                        "gate3_drop_frac_of_oracle_span": ov["drop_frac_of_oracle_span"], "verdict": v},
             "others": others, "verdict": v if all(others.values()) else "fail",
             "sources": {"gate3": "smoke_reports/20261125-cpu-gate3-FAILED.json",
                         "probe": "smoke_reports/20261125-overfit-probe-cloud-cpu.json"}}
