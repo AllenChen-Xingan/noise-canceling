@@ -17,6 +17,9 @@ import sys
 import time
 from typing import Callable, Optional
 
+import fcntl
+from contextlib import contextmanager
+
 import config as C
 import ledger as L
 
@@ -40,10 +43,12 @@ SELF_DELETE_PY = (
 )
 
 
-def pod_cmd(max_hours: float) -> list:
-    """容器命令：睡到时限 → 自删；自删失败每 60 秒重试。"""
-    secs = int(max_hours * 3600)
-    return ["sh", "-c", f'sleep {secs}; while true; do python3 -c "$VDN_SELF_DELETE_PY" && sleep 600; sleep 60; done']
+def pod_cmd(max_hours: float, now: Optional[float] = None) -> list:
+    """容器命令：睡到固定的截止时刻 → 自删；自删失败每 60 秒重试。
+    截止时刻是开机请求时算好的绝对时间：容器被平台重启也只睡剩下的，不重新计时（评审第 1 轮 #8）。"""
+    deadline = int((time.time() if now is None else now) + max_hours * 3600)
+    return ["sh", "-c", f'd={deadline}; s=$((d - $(date +%s))); [ "$s" -gt 0 ] && sleep "$s"; '
+                        f'while true; do python3 -c "$VDN_SELF_DELETE_PY" && sleep 600; sleep 60; done']
 
 
 def pod_env() -> dict:
@@ -61,10 +66,23 @@ def _load(path: Optional[str] = None) -> dict:
         return {}
 
 
+@contextmanager
+def _locked(path: Optional[str] = None):
+    """登记表的读改写、看门狗的起与退都在这把文件锁里做（评审第 1 轮 #7）。不可重入：锁内别调 delete_pod。"""
+    path = path or DEADLINES
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path + ".lock", "a") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+
 def _save(d: dict, path: Optional[str] = None) -> None:
     path = path or DEADLINES
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
+    tmp = f"{path}.{os.getpid()}.tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(d, f, indent=1)
     os.replace(tmp, path)
@@ -73,16 +91,18 @@ def _save(d: dict, path: Optional[str] = None) -> None:
 def register(pod_id: str, max_hours: float, now: Optional[dt.datetime] = None, path: Optional[str] = None) -> str:
     now = now or L.utcnow()
     when = L.iso(now + dt.timedelta(seconds=int(max_hours * 3600) + GRACE_S))
-    d = _load(path)
-    d[pod_id] = when
-    _save(d, path)
+    with _locked(path):
+        d = _load(path)
+        d[pod_id] = when
+        _save(d, path)
     return when
 
 
 def unregister(pod_id: str, path: Optional[str] = None) -> None:
-    d = _load(path)
-    if d.pop(pod_id, None) is not None:
-        _save(d, path)
+    with _locked(path):
+        d = _load(path)
+        if d.pop(pod_id, None) is not None:
+            _save(d, path)
 
 
 def tick(delete: Callable[[str], object], now: Optional[dt.datetime] = None, path: Optional[str] = None) -> list:
@@ -102,13 +122,29 @@ def tick(delete: Callable[[str], object], now: Optional[dt.datetime] = None, pat
 
 
 def run_loop(delete: Callable[[str], object], poll_s: float = 30, path: Optional[str] = None,
-             sleep: Callable[[float], None] = time.sleep, now_fn: Callable[[], dt.datetime] = L.utcnow) -> None:
-    """登记表空了就退出。"""
-    while _load(path):
+             sleep: Callable[[float], None] = time.sleep, now_fn: Callable[[], dt.datetime] = L.utcnow,
+             pidfile: Optional[str] = None) -> None:
+    """登记表空了就退出。退出前在锁里再看一眼并撤掉自己的 pid 文件：
+    之后才登记的机器会看到「没有看门狗」而新起一个，不会以为这个快退出的还在管（评审第 1 轮 #7）。"""
+    pidfile = pidfile or PIDFILE
+    while True:
         for pid in tick(delete, now_fn(), path):
             print(f"watchdog: 到点已删 {pid}", flush=True)
-        if _load(path):
-            sleep(poll_s)
+        with _locked(path):
+            if not _load(path):
+                _drop_own_pidfile(pidfile)
+                return
+        sleep(poll_s)
+
+
+def _drop_own_pidfile(pidfile: str) -> None:
+    try:
+        with open(pidfile) as f:
+            mine = f.read().strip() == str(os.getpid())
+        if mine:
+            os.remove(pidfile)
+    except FileNotFoundError:
+        pass
 
 
 def alive(pidfile: Optional[str] = None) -> bool:
@@ -123,19 +159,22 @@ def alive(pidfile: Optional[str] = None) -> bool:
 
 
 def ensure_running(rp_path: str, spawn: Callable[..., object] = subprocess.Popen,
-                   pidfile: Optional[str] = None) -> bool:
-    """没有看门狗在跑就起一个（脱离本终端；有 caffeinate 就防空闲睡眠）。返回是否新起了一个。"""
+                   pidfile: Optional[str] = None, rp_args: tuple = ()) -> bool:
+    """没有看门狗在跑就起一个（脱离本终端；有 caffeinate 就防空闲睡眠）。返回是否新起了一个。
+    rp_args 是 rp.py 的全局参数（--ledger / --env-file），原样传给看门狗，删机记到同一本账、用同一把密钥（评审第 1 轮 #6）。
+    局限：本机同时只跑一个看门狗；它用第一次起它时的账本与密钥。只用一个账号、一本账时没问题。"""
     pidfile = pidfile or PIDFILE
-    if alive(pidfile):
-        return False
-    os.makedirs(os.path.dirname(pidfile), exist_ok=True)
-    argv = [sys.executable, rp_path, "watchdog"]
-    if shutil.which("caffeinate"):
-        argv = ["caffeinate", "-i"] + argv
-    log = open(os.path.join(os.path.dirname(pidfile), "watchdog.log"), "a")
-    p = spawn(argv, stdout=log, stderr=log, stdin=subprocess.DEVNULL, start_new_session=True)
-    with open(pidfile, "w") as f:
-        f.write(str(p.pid))
+    with _locked():
+        if alive(pidfile):
+            return False
+        os.makedirs(os.path.dirname(pidfile), exist_ok=True)
+        argv = [sys.executable, rp_path, *rp_args, "watchdog"]
+        if shutil.which("caffeinate"):
+            argv = ["caffeinate", "-i"] + argv
+        with open(os.path.join(os.path.dirname(pidfile), "watchdog.log"), "a") as log:
+            p = spawn(argv, stdout=log, stderr=log, stdin=subprocess.DEVNULL, start_new_session=True)
+        with open(pidfile, "w") as f:
+            f.write(str(p.pid))
     return True
 
 

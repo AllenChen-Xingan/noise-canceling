@@ -80,7 +80,8 @@ def bring_up(cli, a):
         raise SystemExit("要指定 --dc（不挂盘时）")
     p = O.create_pod(cli, dc, vol, a.max_hours, _rate_hint(cli, a.cpu), ledger_path=a.ledger, cpu=a.cpu)
     when = W.register(p["id"], a.max_hours)  # 第 1 层兜底：本机看门狗到点删机
-    W.ensure_running(os.path.abspath(__file__), spawn=SPAWN)
+    rp_args = ("--ledger", os.path.abspath(a.ledger)) + (("--env-file", os.path.abspath(a.env_file)) if a.env_file else ())
+    W.ensure_running(os.path.abspath(__file__), spawn=SPAWN, rp_args=rp_args)
     print(f"看门狗登记：{p['id']} 最晚 {when} 删机", file=sys.stderr)
     print(f"已开机 {p['id']}（{dc}，每小时 {p.get('cost')} 美元，最长 {a.max_hours} 小时）", file=sys.stderr)
     try:
