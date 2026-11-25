@@ -450,6 +450,10 @@ pub fn edit_ops(r: &[String], h: &[String]) -> (usize, usize, usize) {
 }
 
 #[cfg(test)]
+#[path = "asr_conc_tests.rs"]
+mod conc_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

@@ -14,10 +14,20 @@ use crate::qa::asr_or::{self, OpenRouter};
 /// 并发假服务：每个连接一个线程；转写 = 音频 base64 的长度与校验和（不同音频不同、同一音频永远相同）；
 /// 每次回复前睡 `delay_ms`，好让请求在服务端重叠。`fail_first_429`：前这么多个请求先回 429。
 /// 返回 (地址, 同时在处理的最大请求数, 收到的请求总数)。
-fn echo_server(delay_ms: u64, fail_first_429: usize) -> (String, Arc<AtomicUsize>, Arc<AtomicUsize>) {
+fn echo_server(
+    delay_ms: u64,
+    fail_first_429: usize,
+) -> (String, Arc<AtomicUsize>, Arc<AtomicUsize>) {
     let l = TcpListener::bind("127.0.0.1:0").unwrap();
-    let url = format!("http://{}/api/v1/audio/transcriptions", l.local_addr().unwrap());
-    let (live, peak, total) = (Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)));
+    let url = format!(
+        "http://{}/api/v1/audio/transcriptions",
+        l.local_addr().unwrap()
+    );
+    let (live, peak, total) = (
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicUsize::new(0)),
+    );
     let (p2, t2) = (peak.clone(), total.clone());
     std::thread::spawn(move || {
         for c in l.incoming() {
@@ -43,14 +53,25 @@ fn echo_server(delay_ms: u64, fail_first_429: usize) -> (String, Arc<AtomicUsize
                 std::thread::sleep(std::time::Duration::from_millis(delay_ms));
                 live.fetch_sub(1, Ordering::SeqCst);
                 let (code, body) = if n < fail_first_429 {
-                    (429, json!({"error": {"code": 429, "message": "slow down"}}).to_string())
+                    (
+                        429,
+                        json!({"error": {"code": 429, "message": "slow down"}}).to_string(),
+                    )
                 } else {
                     let v: Value = serde_json::from_slice(&b).unwrap();
                     let d = v["input_audio"]["data"].as_str().unwrap();
                     let sum: u64 = d.bytes().map(u64::from).sum();
-                    (200, json!({"text": format!("t{} s{sum}", d.len()), "usage": {"cost": 0.0001}}).to_string())
+                    (
+                        200,
+                        json!({"text": format!("t{} s{sum}", d.len()), "usage": {"cost": 0.0001}})
+                            .to_string(),
+                    )
                 };
-                let extra = if code == 429 { "Retry-After: 0\r\n" } else { "" };
+                let extra = if code == 429 {
+                    "Retry-After: 0\r\n"
+                } else {
+                    ""
+                };
                 let resp = format!(
                     "HTTP/1.1 {code} X\r\nContent-Type: application/json\r\n{extra}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
                     body.len()
@@ -72,7 +93,15 @@ fn tmpdir(tag: &str) -> PathBuf {
 /// 12 条互不相同的短音频。
 fn jobs() -> Vec<asr_or::Job> {
     (0..12)
-        .map(|k| ((0..800).map(|i| ((i * (k + 1)) as f32 * 0.01).sin() * 0.3).collect(), 16_000, "en".to_string()))
+        .map(|k| {
+            (
+                (0..800)
+                    .map(|i| ((i * (k + 1)) as f32 * 0.01).sin() * 0.3)
+                    .collect(),
+                16_000,
+                "en".to_string(),
+            )
+        })
         .collect()
 }
 
@@ -96,7 +125,10 @@ fn concurrent_batch_equals_serial_and_really_overlaps() {
     let p = peak8.load(Ordering::SeqCst);
     assert!(p > 1 && p <= asr_or::ASR_CONCURRENCY, "同时在途 {p} 路");
     assert_eq!(c8.ledger.calls, 12);
-    assert!((c8.ledger.spent_usd - 12.0 * 0.0001).abs() < 1e-12, "每条只记一次账");
+    assert!(
+        (c8.ledger.spent_usd - 12.0 * 0.0001).abs() < 1e-12,
+        "每条只记一次账"
+    );
 }
 
 #[test]
@@ -107,7 +139,11 @@ fn rate_limited_requests_back_off_and_batch_still_matches() {
     let (url1, _, _) = echo_server(0, 0);
     let want = client(&url1, &d.join("ref")).transcribe_many(&jobs(), 1);
     assert_eq!(got, want);
-    assert_eq!(total.load(Ordering::SeqCst), 12 + 3, "3 个 429 各重发了一次");
+    assert_eq!(
+        total.load(Ordering::SeqCst),
+        12 + 3,
+        "3 个 429 各重发了一次"
+    );
 }
 
 /// 成绩单那一层：先预取（并发）再逐条转写，与不预取、逐条串行转写，转写结果与缓存文件逐字节相同。
@@ -126,17 +162,28 @@ fn prefetch_then_transcribe_equals_plain_serial() {
         let dir = d.join(tag);
         let or = client(&url, &dir);
         let cache = dir.join("asr_cache.json");
-        let mut a = Asr::with_backends(cache.clone(), vec![Backend::OpenRouter(or)], OPENROUTER, Route::default());
+        let mut a = Asr::with_backends(
+            cache.clone(),
+            vec![Backend::OpenRouter(or)],
+            OPENROUTER,
+            Route::default(),
+        );
         if prefetch {
             a.prefetch(&items);
         }
-        let out = items.iter().map(|(p, sha, lang, clip)| a.transcribe(p, sha, lang, clip).unwrap()).collect();
+        let out = items
+            .iter()
+            .map(|(p, sha, lang, clip)| a.transcribe(p, sha, lang, clip).unwrap())
+            .collect();
         (out, std::fs::read_to_string(cache).unwrap())
     };
     let (plain, cache_plain) = run("plain", false);
     let (pre, cache_pre) = run("pre", true);
     assert_eq!(plain, pre);
-    assert_eq!(cache_plain, cache_pre, "缓存文件逐字节相同（按 sha256 排序写，和写的先后无关）");
+    assert_eq!(
+        cache_plain, cache_pre,
+        "缓存文件逐字节相同（按 sha256 排序写，和写的先后无关）"
+    );
     assert!(plain.iter().all(|(_, stable)| *stable));
 }
 
@@ -150,6 +197,10 @@ fn spot_check_sampling_is_deterministic_and_about_ten_percent() {
         .map(|i| format!("{:08x}", (i.wrapping_mul(2_654_435_761)) as u32))
         .filter(|s| repeats_for(s, true) == REPEATS)
         .count() as f64;
-    assert!((hit / n as f64 - SPOT_FRACTION).abs() < 0.01, "抽中比例 {}", hit / n as f64);
+    assert!(
+        (hit / n as f64 - SPOT_FRACTION).abs() < 0.01,
+        "抽中比例 {}",
+        hit / n as f64
+    );
     assert_eq!(MAX_UNSTABLE_RATE, 0.0);
 }
