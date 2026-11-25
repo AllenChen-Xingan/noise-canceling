@@ -221,33 +221,55 @@ impl Conn<'_> {
     }
 
     /// 转写一条：返回 (文本, 实际花费)。重试与不重试的规矩见文件头。
-    fn transcribe(&self, x: &[f32], sr: u32, lang: &str) -> Result<(String, f64), String> {
+    /// 转写一条：成功返回 (文本, 实际花费)；失败返回 [`Failure`]（带上这次请求的费用情况）。
+    fn transcribe(&self, x: &[f32], sr: u32, lang: &str) -> Result<(String, f64), Failure> {
+        let free = |msg: String| Failure {
+            msg,
+            cost: Cost::Free,
+        };
         let body = serde_json::to_vec(&request_body(&pcm16_wav(x, sr), lang))
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| free(e.to_string()))?;
         let body_path = tmp_path("json");
-        std::fs::write(&body_path, &body).map_err(|e| e.to_string())?;
+        std::fs::write(&body_path, &body).map_err(|e| free(e.to_string()))?;
         let r = self.send_with_retry(&body_path, x.len() as f64 / f64::from(sr));
         let _ = std::fs::remove_file(&body_path);
         r
     }
 
-    fn send_with_retry(&self, body_path: &Path, seconds: f64) -> Result<(String, f64), String> {
+    fn send_with_retry(&self, body_path: &Path, seconds: f64) -> Result<(String, f64), Failure> {
         let mut last = String::new();
         for attempt in 0..MAX_ATTEMPTS {
-            let (code, retry_after, body) = self.post(body_path)?;
+            // 连不上、超时：请求可能已送到、可能已计费，不知道 → 费用未知，停发（偏保守）
+            let (code, retry_after, body) = self.post(body_path).map_err(|e| Failure {
+                msg: format!("费用未知，停发：{e}"),
+                cost: Cost::Unknown,
+            })?;
             if code == 200 {
-                let v: Value =
-                    serde_json::from_slice(&body).map_err(|e| format!("识别返回不是 JSON：{e}"))?;
+                let Ok(v) = serde_json::from_slice::<Value>(&body) else {
+                    return Err(Failure {
+                        msg: "费用未知，停发：识别返回 200 但不是 JSON".into(),
+                        cost: Cost::Unknown,
+                    });
+                };
+                let cost = v["usage"]["cost"].as_f64();
+                let tag = if cost.is_some() {
+                    ""
+                } else {
+                    "费用未知，停发："
+                };
+                let fail = |msg: String| Failure {
+                    msg: self.scrub(&msg),
+                    cost: cost.map_or(Cost::Unknown, Cost::Known),
+                };
                 if let Some(e) = v.get("error") {
-                    return Err(self.scrub(&format!("识别返回 200 但带错误：{e}")));
+                    return Err(fail(format!("{tag}识别返回 200 但带错误：{e}")));
                 }
-                let t = v["text"]
-                    .as_str()
-                    .ok_or_else(|| self.scrub(&format!("识别返回缺 text：{v}")))?;
-                let cost = v["usage"]["cost"]
-                    .as_f64()
-                    .unwrap_or(seconds * PRICE_PER_SECOND);
-                return Ok((t.split_whitespace().collect::<Vec<_>>().join(" "), cost));
+                let Some(t) = v["text"].as_str() else {
+                    return Err(fail(format!("{tag}识别返回缺 text：{v}")));
+                };
+                // 文本到手但返回里没有 usage.cost：按标价估着记
+                let c = cost.unwrap_or(seconds * PRICE_PER_SECOND);
+                return Ok((t.split_whitespace().collect::<Vec<_>>().join(" "), c));
             }
             let text = String::from_utf8_lossy(&body);
             last = self.scrub(&format!(
@@ -261,21 +283,45 @@ impl Conn<'_> {
                     403 | 404 => "（多半是没有不留存数据的提供方肯接：按要求不退回，停下）",
                     _ => "",
                 };
-                return Err(format!("识别请求失败，不重试{hint}：{last}"));
+                return Err(Failure {
+                    msg: format!("识别请求失败，不重试{hint}：{last}"),
+                    cost: Cost::Free,
+                });
             }
             if attempt + 1 < MAX_ATTEMPTS {
                 let wait_ms = retry_after.map_or(self.backoff_ms << attempt, |s| s.min(60) * 1000);
                 std::thread::sleep(std::time::Duration::from_millis(wait_ms));
             }
         }
-        Err(format!("识别请求重试 {MAX_ATTEMPTS} 次仍失败：{last}"))
+        Err(Failure {
+            msg: format!("识别请求重试 {MAX_ATTEMPTS} 次仍失败：{last}"),
+            cost: Cost::Free,
+        })
     }
+}
+
+/// 一次请求失败时的费用情况（codex 第 6 轮 P1 #2：费用结算和转写成败分开）。
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Cost {
+    /// HTTP 错误码：没有计费，退预留
+    Free,
+    /// 返回里有 `usage.cost`：照记这笔钱
+    Known(f64),
+    /// 不知道算没算钱（连不上、超时、返回读不出）：预留不退，停发等人核对
+    Unknown,
+}
+
+/// 一次失败：原因 + 费用情况。
+#[derive(Clone, Debug)]
+pub struct Failure {
+    pub msg: String,
+    pub cost: Cost,
 }
 
 /// 一条待转写的音频：(16 kHz 样本, 采样率, 语言)。
 pub type Job = (Vec<f32>, u32, String);
 /// 并发时每条的结果槽：(文本, 实际花费) 或出错原因。
-type Slot = std::sync::Mutex<Option<Result<(String, f64), String>>>;
+type Slot = std::sync::Mutex<Option<Result<String, String>>>;
 
 impl OpenRouter {
     /// 新客户端。账本快照只给人看；真正的上限判断每次都在锁里重读账本（坏账本那时就拒发）。
@@ -309,6 +355,8 @@ impl OpenRouter {
             requests: &requests,
         };
         let ledger_path = &self.ledger_path;
+        // 遇到永久错误后，本批里还没派出去的不再派（codex 第 6 轮 P1 #1）
+        let stop: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
         let slots: Vec<Slot> = jobs.iter().map(|_| std::sync::Mutex::new(None)).collect();
         std::thread::scope(|sc| {
             for _ in 0..workers.clamp(1, jobs.len().max(1)) {
@@ -318,14 +366,38 @@ impl OpenRouter {
                         let Some((x, sr, lang)) = jobs.get(i) else {
                             break;
                         };
+                        if let Some(why) = stop.lock().unwrap_or_else(|e| e.into_inner()).clone() {
+                            *slots[i].lock().unwrap_or_else(|e| e.into_inner()) =
+                                Some(Err(format!("已停发：{why}")));
+                            continue;
+                        }
                         let est =
                             x.len() as f64 / f64::from(*sr) * PRICE_PER_SECOND * RESERVE_FACTOR;
-                        let r = ledger::reserve(ledger_path, est, BUDGET_USD).and_then(|()| {
-                            let r = conn.transcribe(x, *sr, lang);
-                            // 结算失败（写不了账本）就把这一条也当失败：不能确认记上了账
-                            ledger::settle(ledger_path, est, r.as_ref().ok().map(|(_, c)| *c))?;
-                            r
-                        });
+                        // 结算失败（写不了账本）也当这一条失败：不能确认记上了账
+                        let r =
+                            ledger::reserve(ledger_path, est, BUDGET_USD).and_then(|()| match conn
+                                .transcribe(x, *sr, lang)
+                            {
+                                Ok((t, c)) => ledger::settle(ledger_path, est, Some(c)).map(|()| t),
+                                Err(f) => {
+                                    match f.cost {
+                                        Cost::Free => ledger::settle(ledger_path, est, None)?,
+                                        Cost::Known(c) => {
+                                            ledger::settle(ledger_path, est, Some(c))?
+                                        }
+                                        Cost::Unknown => {} // 预留不退：可能已计费，等人核对
+                                    }
+                                    Err(f.msg)
+                                }
+                            });
+                        if let Err(e) = &r
+                            && is_permanent(e)
+                        {
+                            let mut st = stop.lock().unwrap_or_else(|e| e.into_inner());
+                            if st.is_none() {
+                                *st = Some(e.clone());
+                            }
+                        }
                         *slots[i].lock().unwrap_or_else(|e| e.into_inner()) = Some(r);
                     }
                 });
@@ -339,7 +411,6 @@ impl OpenRouter {
                 m.into_inner()
                     .unwrap_or_else(|e| e.into_inner())
                     .unwrap_or(Err("内部错误：没跑到".into()))
-                    .map(|(t, _)| t)
             })
             .collect()
     }
