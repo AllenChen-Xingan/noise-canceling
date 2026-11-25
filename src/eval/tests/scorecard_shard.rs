@@ -305,3 +305,44 @@ fn merged_asr_summary_gathers_all_shards() {
         );
     }
 }
+
+/// codex 本分支第 4 轮 P2 #3：有一片识别装不起来（只有 error、没有 backends），排在第一也不能把别片的后端段数丢掉。
+#[test]
+fn merged_asr_backends_are_union_across_shards() {
+    let (root, suite) = fixture("shard-asr-union");
+    let fp = suite_fingerprint(&suite);
+    let write = |i: usize, asr: Value| {
+        let p = part(&suite, &root, i, 2);
+        let d = root.join(format!("u-{i}"));
+        std::fs::create_dir_all(&d).unwrap();
+        let meta = json!({"commit": "abc", "suite": "s.json", "suite_fingerprint": fp, "systems": systems(),
+            "qa": true, "safety": "task", "rules": "v2", "external": [], "shard": format!("{i}/2"),
+            "shard_units": {"rows": p.row_units, "missing": p.missing_units}, "timing": {}, "asr": asr});
+        let card = Card::build_with(
+            &parse_jsonl(&p.jsonl).unwrap(),
+            p.missing.clone(),
+            Rules::V2,
+        );
+        std::fs::write(d.join("scorecard.json"), card.to_json(meta).to_string()).unwrap();
+        std::fs::write(d.join("clips.jsonl"), &p.jsonl).unwrap();
+        d
+    };
+    let d0 = write(0, json!({"error": "没有 OPENROUTER_API_KEY"}));
+    let d1 = write(
+        1,
+        json!({"calls": 6, "checked": 3, "unstable": 0, "backends": {"openrouter": {"clips": 3, "model": "m"}}}),
+    );
+    for dirs in [vec![d0.clone(), d1.clone()], vec![d1, d0]] {
+        let (_, _, meta) = merge_dirs(&suite, &dirs).unwrap();
+        assert_eq!(
+            meta["asr"]["backends"]["openrouter"]["clips"], 3,
+            "{}",
+            meta["asr"]
+        );
+        assert!(
+            meta["asr"]["error"]
+                .as_str()
+                .is_some_and(|e| e.contains("OPENROUTER"))
+        );
+    }
+}

@@ -164,6 +164,7 @@ fn probe_stops_on_permanent_error() {
 /// codex 本分支第 4 轮 P1 #2：前面都稳定、最后一条遇到永久错误停发，也不能判「钉住了」。
 #[test]
 fn halted_probe_never_passes() {
+    // 60 条：前 59 条三次都一样，最后一条第一次就 403。不一致率 1/60 ≈ 1.7% 在 2% 线以下，但停发了，不能判过
     let d = tmpdir("probe-last403");
     let ok = |t: &str| {
         (
@@ -172,12 +173,19 @@ fn halted_probe_never_passes() {
             json!({"text": t, "usage": {"seconds": 0.1, "cost": 1e-12}}).to_string(),
         )
     };
-    let mut script: Vec<(u16, &'static str, String)> = (0..3).map(|_| ok("a b")).collect();
+    let mut script: Vec<(u16, &'static str, String)> = (0..59 * 3).map(|_| ok("a b")).collect();
     script.push((403, "", json!({"error": {"code": 403}}).to_string()));
     let (url, _) = fake(script);
     let mut c = client(&url, &d);
-    let mk = |n: &str| (n.to_string(), n.to_string(), "en".to_string(), audio());
-    let r = probe(&mut c, &[mk("one"), mk("two")], 3, vdn_types::MODEL_RATE);
+    let items: Vec<_> = (0..60)
+        .map(|k| (format!("w{k}"), format!("s{k}"), "en".to_string(), audio()))
+        .collect();
+    let r = probe(&mut c, &items, 3, vdn_types::MODEL_RATE);
     assert!(r["halted"].is_string());
-    assert_eq!(r["pass"], false, "{r}");
+    assert!(
+        r["unstable_rate"].as_f64().unwrap() <= PROBE_MAX_UNSTABLE,
+        "{}",
+        r["unstable_rate"]
+    );
+    assert_eq!(r["pass"], false, "停发了就不算钉住");
 }
