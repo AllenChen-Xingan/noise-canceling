@@ -89,6 +89,23 @@ class Merge(unittest.TestCase):
             self.assertFalse((d / "p/clips.jsonl").exists(), "对拍模式不写合并结果")
             self.assertIn("V-EAT-ASR", json.loads((d / "p/merge-report.json").read_text())["items"])
 
+    def test_audio_identity_checked_in_both_modes(self):
+        """codex 第 11 轮 P2 #2：两边都记了 mix_sha256 且不同 → 合并、对拍都拒绝；有一边没记 → 照做，但记「核不了」的段数。"""
+        c, l = cloud(), local()
+        for r in c:
+            r["mix_sha256"] = "a" * 64
+        l2 = [dict(r, mix_sha256="b" * 64) for r in l]
+        with self.assertRaises(ValueError):
+            merge.merge(c, l2)
+        with self.assertRaises(ValueError):
+            merge.parity(c, l2)
+        same = [dict(r, mix_sha256="a" * 64) for r in l]
+        _, rep = merge.merge(c, same)
+        self.assertEqual(rep["_identity"]["unverified_pairs"], 0)
+        _, rep = merge.merge(c, l)  # 本机那份没记
+        self.assertEqual(rep["_identity"]["unverified_pairs"], 3)
+        self.assertEqual(merge.parity_errors(rep), [], "核不了不算对拍不过，只单列")
+
     def test_mismatched_clip_sets_or_systems_are_errors(self):
         with self.assertRaises(ValueError):
             merge.merge(cloud(3), local(2))

@@ -49,13 +49,19 @@ def _compare(cloud_rows, local_rows, eat_rules):
     c, l = _by_clip(cloud_rows, "云上"), _by_clip(local_rows, "本机")
     if set(c) != set(l):
         raise ValueError(f"两边片段不一致：只在云上 {sorted(set(c) - set(l))[:5]}，只在本机 {sorted(set(l) - set(c))[:5]}")
-    report = {}
+    report = {"_identity": {"unverified_pairs": 0}}
     out = []
     for clip in [r["clip"] for r in cloud_rows]:
         rc, rl = c[clip], l[clip]
         for k in ("system", "scene", "tier", "device"):
             if rc[k] != rl[k]:
                 raise ValueError(f"{clip} 的 {k} 两边不同：{rc[k]} ≠ {rl[k]}")
+        # 同一批音频：两边都记了混合轨哈希就必须相同（与 vdn-eval compare 同一条规矩）；有一边没记就单列「核不了」
+        hc, hl = rc.get("mix_sha256"), rl.get("mix_sha256")
+        if hc and hl and hc != hl:
+            raise ValueError(f"{clip} 两边的混合音频不同（{hc[:12]} ≠ {hl[:12]}）：不是同一批音频，不合并也不对拍")
+        if not (hc and hl):
+            report["_identity"]["unverified_pairs"] += 1
         sc, sl = _scores(rc), _scores(rl)
         if eat_rules and sc.get(EAT, {}).get("value") is not None:
             raise ValueError(f"{clip}：云上那份已经有吃字的值，不该合并（云上不该有识别服务）")
@@ -85,6 +91,8 @@ def parity_errors(report):
     """对拍不过的项（空 = 过）：逐段值差 > PARITY_ABS；有段一边有值一边没值；判定不同的段占全部段数 > PARITY_FLIP。"""
     errs = []
     for v, r in sorted(report.items()):
+        if v.startswith("_"):
+            continue
         if r["max_abs_diff"] > PARITY_ABS:
             errs.append(f"{v} 逐段值差最大 {r['max_abs_diff']:.3g} > {PARITY_ABS:g}")
         if r["one_sided"]:
@@ -132,7 +140,7 @@ def main(argv=None):
         f.write(json.dumps({"cloud": a.cloud, "local": a.local, "clips": len(rows), "items": rep,
                             "parity": {"PARITY_ABS": PARITY_ABS, "PARITY_FLIP": PARITY_FLIP, "errors": parity_errors(rep)}},
                            ensure_ascii=False, indent=1) + "\n")
-    worst = sorted(rep.items(), key=lambda kv: -kv[1]["max_abs_diff"])[:5]
+    worst = sorted(((v, d) for v, d in rep.items() if not v.startswith("_")), key=lambda kv: -kv[1]["max_abs_diff"])[:5]
     print(f"合并 {len(rows)} 段 → {out}；两边差最大的项：" + " · ".join(f"{v} {d['max_abs_diff']:.3g}" for v, d in worst))
     errs = parity_errors(rep)
     print("跨平台对拍：" + ("过" if not errs else "不过 —— " + "；".join(errs)))
