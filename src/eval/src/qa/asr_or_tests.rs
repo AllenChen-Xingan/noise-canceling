@@ -384,7 +384,11 @@ fn actual_cost_above_reservation_flags_review_and_stops() {
 fn backoff_wakeup_checks_shared_ledger_review() {
     let d = tmpdir("xproc");
     let (url, seen) = fake(vec![
-        (429, "Retry-After: 1\r\n", json!({"error": {"code": 429, "message": "slow"}}).to_string()),
+        (
+            429,
+            "Retry-After: 1\r\n",
+            json!({"error": {"code": 429, "message": "slow"}}).to_string(),
+        ),
         ok("must-not-arrive", 1e-7),
     ]);
     let ledger = d.join("ledger.json");
@@ -394,11 +398,17 @@ fn backoff_wakeup_checks_shared_ledger_review() {
         crate::qa::asr_ledger::flag_review(&l2, "别的进程：费用未知").unwrap();
     });
     let mut a = client(&url, &d);
-    let e = a.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap_err();
+    let e = a
+        .transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+        .unwrap_err();
     other.join().unwrap();
     assert!(e.contains("待核"), "{e}");
     assert_eq!(seen.lock().unwrap().len(), 1, "退避醒来不再发");
-    assert_eq!(crate::qa::asr_ledger::read(&ledger).unwrap().reserved_usd, 0.0, "没发出去的那次退掉预留");
+    assert_eq!(
+        crate::qa::asr_ledger::read(&ledger).unwrap().reserved_usd,
+        0.0,
+        "没发出去的那次退掉预留"
+    );
 }
 
 /// codex 第 5 轮 P1 #1：账本坏了拒发，坏文件原样留着。

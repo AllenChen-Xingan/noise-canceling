@@ -151,6 +151,8 @@ struct Conn<'a> {
     requests: &'a std::sync::atomic::AtomicU64,
     /// 本批共享的停止状态：每次真发请求前都查（含重试，codex 第 7 轮 P1 #3）
     stop: &'a std::sync::Mutex<Option<String>>,
+    /// 共用账本：每次真发请求前看一眼它的待核标记（别的进程可能刚标上；codex 第 11 轮 P1 #1）
+    ledger_path: &'a Path,
 }
 
 impl Conn<'_> {
@@ -241,6 +243,21 @@ impl Conn<'_> {
     fn send_with_retry(&self, body_path: &Path) -> Result<(String, Option<f64>), Failure> {
         let mut last = String::new();
         for attempt in 0..MAX_ATTEMPTS {
+            match ledger::read(self.ledger_path) {
+                Ok(l) if l.review.is_some() => {
+                    return Err(Failure {
+                        msg: format!("识别费账本待核（{}）：停发", l.review.unwrap_or_default()),
+                        cost: Cost::Free,
+                    });
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    return Err(Failure {
+                        msg: e,
+                        cost: Cost::Free,
+                    });
+                }
+            }
             if let Some(why) = self.stop.lock().unwrap_or_else(|e| e.into_inner()).clone() {
                 return Err(Failure {
                     msg: format!("已停发：{why}"),
@@ -384,6 +401,7 @@ impl OpenRouter {
             backoff_ms: self.backoff_ms,
             requests: &requests,
             stop: &stop,
+            ledger_path: &self.ledger_path,
         };
         let ledger_path = &self.ledger_path;
         let slots: Vec<Slot> = jobs.iter().map(|_| std::sync::Mutex::new(None)).collect();
