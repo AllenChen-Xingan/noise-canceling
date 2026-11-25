@@ -325,16 +325,12 @@ def overfit_diag(cfg, out: Path, steps: int, lr: float) -> int:
     device = train.resolve_device(cfg.device)
     source = make_source(cfg)
     batch = source.dev_batches()[0]
-    ov = check_overfit(cfg, batch, device, steps, lr)
-    ov.pop("pass", None)
-    ov.pop("rule", None)
-    o = oracle.oracle_loss(losses.TrainLoss(losses.LossCfg()).to(device), batch, device)
-    if not (np.isfinite(o["loss"]) and np.isfinite(ov["last"])):
-        print(f"读数不是有限数，不写：oracle {o}，last {ov['last']}", file=sys.stderr)
+    ov = _overfit_run(cfg, batch, device, steps, lr)  # 整批、40 dB 下限口径（与 2026-11-25 云上排查同一读法）
+    if not (np.isfinite(ov["oracle_loss"]) and np.isfinite(ov["last"])):
+        print(f"读数不是有限数，不写：oracle {ov['oracle_loss']}，last {ov['last']}", file=sys.stderr)
         return 1
-    rep = {**ov, "oracle_loss": o["loss"], "oracle_si_snr_db": o["si_snr_db"],
-           "drop_frac_of_oracle_span": oracle.frac_of_span(ov["first"], ov["last"], o["loss"]),
-           "floor_reachable": oracle.floor_reachable(ov["floor"], o["loss"]),
+    rep = {**ov, "floor": ov["floor_40db"], "drop_frac_of_span": ov["drop_frac_of_40db_span"],
+           "floor_reachable": ov["floor_40db_reachable"],
            "batch_index": 0, "batch": cfg.data.batch, "seg_s": cfg.data.seg_s, "build_id": source.build_id,
            "device": str(device), "torch": torch.__version__, "config": cfgmod.to_dict(cfg),
            "note": "排查用，不判过不过；oracle 是掩码族里的一个可行点（见 oracle.py），真正的最好损失 ≤ 它",
