@@ -339,6 +339,30 @@ fn backoff_wakeup_checks_stop_before_resending() {
     );
 }
 
+/// codex 第 9 轮 P1 #1：实际费用高于预留（估算不准）→ 照记实际金额，账本标待核、停发，不让后面的请求再把总额推高。
+#[test]
+fn actual_cost_above_reservation_flags_review_and_stops() {
+    let d = tmpdir("overrun");
+    let (url, seen) = fake(vec![ok("a", 1.0), ok("never", 0.001)]); // 1 美元远高于 0.1 秒音频的预留
+    let mut c = client(&url, &d);
+    assert_eq!(
+        c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap(),
+        "a",
+        "文本照用"
+    );
+    assert!((c.ledger.spent_usd - 1.0).abs() < 1e-12, "实际金额照记");
+    assert!(
+        c.ledger
+            .review
+            .as_deref()
+            .is_some_and(|r| r.contains("超过预留")),
+        "{:?}",
+        c.ledger.review
+    );
+    assert!(c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").is_err());
+    assert_eq!(seen.lock().unwrap().len(), 1);
+}
+
 /// codex 第 5 轮 P1 #1：账本坏了拒发，坏文件原样留着。
 #[test]
 fn corrupt_ledger_refuses_to_send() {

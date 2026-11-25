@@ -71,3 +71,20 @@ fn route_loads_from_file_path() {
 fn zh_tokens_are_chars() {
     assert_eq!(tokens("你好，世界", "zh").len(), 4);
 }
+
+/// codex 第 9 轮 P2 #2：摘要里的默认后端是路由覆盖后真正生效的那个，环境变量给的另列。
+#[test]
+fn summary_default_is_effective_route_default() {
+    let route: Route = serde_json::from_str(r#"{"default": "local42"}"#).unwrap();
+    let dir = std::env::temp_dir().join(format!("vdn-asr-sumdef-{}", std::process::id()));
+    let a = Asr::with_backends(
+        dir.join("c.json"),
+        vec![Backend::Local42],
+        OPENROUTER,
+        route,
+    );
+    assert_eq!(a.backend_for("x-c00-ext"), LOCAL42);
+    let s = a.summary();
+    assert_eq!(s["default"], LOCAL42, "生效的默认");
+    assert_eq!(s["env_default"], OPENROUTER, "环境变量给的默认另列");
+}
