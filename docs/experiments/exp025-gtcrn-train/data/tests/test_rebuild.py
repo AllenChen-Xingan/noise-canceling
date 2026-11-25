@@ -12,6 +12,7 @@ import exp013_inputs  # noqa: E402
 import rebuild_exp013 as rb  # noqa: E402
 
 L6323 = rb.EXP013 / "builds" / "20261124165427-6323"  # 本机用 main 现行代码出的 build
+AA9F = rb.EXP013 / "builds" / "20261125022300-aa9f"  # 云上用同样代码出的（小文件，evalcmp 放进仓的）
 
 
 def upload_log(build=L6323):
@@ -52,7 +53,7 @@ class Compare(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as d, mock.patch.object(rb, "REPORTS", Path(d)):
             self.assertFalse(rb.drift_covered())
-            r = rb.check_cloud(L6323, L6323, upload_log(), "原料全对\n")
+            r = rb.check_cloud(L6323, AA9F, upload_log(), "原料全对\n")
             self.assertTrue(r["ok"], r)
             (Path(d) / "exp013-x.json").write_text(json.dumps(dict(r, ok=False)))
             self.assertFalse(rb.drift_covered())
@@ -75,23 +76,23 @@ class Compare(unittest.TestCase):
         """2026-11-25 大总管定的判据：跨平台做不到逐位相同（x86 对 arm64 差约 4e-13），不再要求云上重建逐位同 17f5。
         要：本机 6323 旧 4540 个逐个同 17f5 · 云上 6323 音频按 hashes.txt 全部对上 · 云上 build 的 exclude 与版本同 17f5、代码同 6323 · 原料全对。
         「官方源可复现」这次没验证（原料从本机上传），报告里照实写。"""
-        ok = rb.check_cloud(L6323, L6323, upload_log(), "原料全对\n")
+        ok = rb.check_cloud(L6323, AA9F, upload_log(), "原料全对\n")
         self.assertTrue(ok["ok"], ok)
         self.assertEqual(ok["local_vs_old"]["same"], 4540)
         self.assertEqual(ok["upload"]["ok"], 5020)
         self.assertTrue(ok["official_source"].startswith("未验证"))
-        self.assertFalse(rb.check_cloud(L6323, L6323, upload_log(), "1 处不对")["ok"])
+        self.assertFalse(rb.check_cloud(L6323, AA9F, upload_log(), "1 处不对")["ok"])
         lines = upload_log().splitlines()
-        self.assertFalse(rb.check_cloud(L6323, L6323, "\n".join(lines[1:]), "原料全对")["ok"])  # 少一个
+        self.assertFalse(rb.check_cloud(L6323, AA9F, "\n".join(lines[1:]), "原料全对")["ok"])  # 少一个
         bad = [lines[0].replace(": OK", ": FAILED")] + lines[1:]
-        r = rb.check_cloud(L6323, L6323, "\n".join(bad), "原料全对")
+        r = rb.check_cloud(L6323, AA9F, "\n".join(bad), "原料全对")
         self.assertFalse(r["ok"])
         self.assertEqual(len(r["upload"]["failed"]), 1)
         with tempfile.TemporaryDirectory() as d:
             c = Path(d) / "20261125022300-aa9f"
             c.mkdir()
             for f in ("manifest.json", "exclude.json"):
-                (c / f).write_bytes((L6323 / f).read_bytes())
+                (c / f).write_bytes((AA9F / f).read_bytes())
             self.assertTrue(rb.check_cloud(L6323, c, upload_log(), "原料全对")["ok"])
             m = json.loads((c / "manifest.json").read_text())
             m["versions"]["numpy"] = "0.0"
@@ -101,14 +102,14 @@ class Compare(unittest.TestCase):
             m["code_sha256"] = dict(m["code_sha256"], **{"rooms.py": "0" * 64})
             (c / "manifest.json").write_text(json.dumps(m))
             self.assertFalse(rb.check_cloud(L6323, c, upload_log(), "原料全对")["ok"])
-            (c / "manifest.json").write_bytes((L6323 / "manifest.json").read_bytes())
+            (c / "manifest.json").write_bytes((AA9F / "manifest.json").read_bytes())
             (c / "exclude.json").write_text("{}")
             self.assertFalse(rb.check_cloud(L6323, c, upload_log(), "原料全对")["ok"])
 
     def test_upload_log_of_cloud_built_audio_red(self):
         """自审 P1：云上自产的 aa9f 和 6323 文件名全同、2758 个哈希不同。拿 aa9f 自己的 hashes.txt 跑 sha256sum -c，
         也是 5020 行 OK——判据 2 必须认出这不是 6323 的音频（日志里的路径带的是 aa9f 的 build id）。"""
-        aa9f = rb.EXP013 / "builds" / "20261125022300-aa9f"
+        aa9f = AA9F
         r = rb.check_cloud(L6323, aa9f, upload_log(aa9f), "原料全对")
         self.assertFalse(r["upload"]["all_ok"], r["upload"])
         self.assertFalse(r["ok"])
