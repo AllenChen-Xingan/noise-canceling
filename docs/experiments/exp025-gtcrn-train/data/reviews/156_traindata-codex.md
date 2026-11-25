@@ -1,7 +1,7 @@
 # 评审 156 · exp025 训练数据：下载 · 切分 · 混音 · exp013 核对（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/experiments/exp025-gtcrn-train/data/` 下 29 个代码、规则与说明文件（数据产物 `splits/` · `rebuild/*.log` · `builds/` · `inventory.txt` 不发）。**最新一轮：第 3 轮（2026-11-25）· 总评「修改」· 连续第 1 轮无 P0/P1，待第 4 轮确认**。
-> 累计处理：P1×5、P2×11 逐条回源码核实，属实 16、驳回 0。其中 1 条 P1 按大总管定的规则降为 P2（同一主题往上加层）；留作 issue 的 P2 共 2 件（待大总管开）。
+> 对象：`docs/experiments/exp025-gtcrn-train/data/` 下 29 个代码、规则与说明文件（数据产物 `splits/` · `rebuild/*.log` · `builds/` · `inventory.txt` 不发）。**最新一轮：第 4 轮（2026-11-25）· 总评「修改」· 已达停止线（第 3、4 轮连续无 P0/P1）**。
+> 累计处理：P1×5、P2×15 逐条回源码核实，属实 20、驳回 0。其中 1 条 P1 按大总管定的规则降为 P2（同一主题往上加层）。留作 issue 的 P2 共 3 件（待大总管开）：① register 时在云上核分片 tar 内容；② split · shard · register 贯通切分表目录参数，打通改规则重切；③ split_rules.json 的说明字段移出规则哈希（自审发现）。
 > 记录放在本目录，因为 `docs/reviews/` 不是 traindata 能写的文件；索引那一行请大总管加。
 > 之前做过一轮多视角自审（外行 · 老手 · 挑刺，2026-11-25）：1 条 P1（判据 2 认不出云上自产音频）已修，见第 1 轮之前的提交。
 
@@ -98,3 +98,22 @@
 ### 是否再审
 
 连续第 1 轮无 P0/P1，开第 4 轮确认。全量 138 条全过（实测）。
+
+## 第 4 轮（2026-11-25）· 总评「修改」
+
+原文：`_tmp/reviews-traindata/exp025-data-codex-4.md`（不入库）。effort high。
+上一轮处理的验证：codex 认 #3–#5 已落实，反例测试已核；#1、#2 是 issue。
+本轮 P0/P1：0 条 · 停止线：**满足**（第 3、4 轮连续无 P0/P1）· 留作 issue 的 P2：#1、#2
+
+- **P2｜分片内容未核**（第 4 轮 #1）：issue ①
+- **P2｜重切流程没打通**（第 4 轮 #2）：issue ②
+- **P2｜rebuild_exp013.py:102 上传核对的预期清单全信本机 hashes.txt**（第 4 轮 #3）
+  - 核实：属实（本机清单与日志同时漏掉 480 条早期混响轨，以前照样过）
+  - 处理：加「本机与云上 build 的文件清单相同」一项（两份同代码独立生成），判据升为第 4 版；本机重出报告 `rebuild/exp013-20261124-200416.json`，全过。测试 `test_local_hash_list_must_match_cloud_list`（先红后绿）
+- **P2｜tests/test_products.py:47 切分摘要的统计字段被改不报红**（第 4 轮 #4）
+  - 核实：属实（正文哈希不覆盖摘要字段）
+  - 处理：`test_tables_match_rules` 用 `split.summary` 由正文重算 files · units · per_split · time · seconds，逐项比对
+
+### 是否再审
+
+停。第 4 轮之后的两处改动各带测试，没有再交 codex。全量 139 条全过（实测）。

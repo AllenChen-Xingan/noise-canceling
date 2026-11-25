@@ -1,6 +1,6 @@
 # 现状页 · traindata（issue #156，批次 20261116-b19）
 
-状态：进行中（第一批产物与 exp013 核对都已完成、进仓；待收尾评审）
+状态：已收尾（2026-11-25：多视角自审 + codex 4 轮，第 3、4 轮无 P0/P1；待大总管重跑测试、开 PR）
 
 ## 手上
 实体：训练数据集 · 数据切分 · 混音配方。产出都在 `docs/experiments/exp025-gtcrn-train/data/`，说明见那里的 `README.md`。
@@ -10,8 +10,8 @@
 同一批 plan 两边逐样本差 ≤ 1e-4，写成了测试。本机 75 条测试全过（torch CPU 后端）。下载脚本已备好，没在云上跑。
 
 ## 下一步
-1. cloudrun 的分支合进来后全量重跑测试（剩 test_real_cloud_config_quota 一条红）
-2. 收尾：多视角自审 + codex 评审
+1. 大总管：重跑测试、开 PR（Closes #156）；开 3 件 issue（见 `docs/experiments/exp025-gtcrn-train/data/reviews/156_traindata-codex.md` 页首）；评审索引 `docs/reviews/README.md` 加一行
+2. trainer 用数据前：cloudrun 在云上用现行代码重跑 `register` 与 `pack`（build_id 多算了索引与 exp013 三个模块，旧 build `49349c158a4defdc` 对不上；不用重切、不用重分片）
 
 ## 依赖
 - 早期混响 100 ms 的正本在 `docs/experiments/exp013-scene-suite/rooms.py` 的 `EARLY_REVERB_MS` 与 `early_rir`。它们在 evalcmp 的分支 `feat/eval-paired-compare` 上，还没合进 main。合并前本分支的混音测试会红；本机验证用的是那个分支的 rooms.py
@@ -56,3 +56,4 @@
 - 2026-11-25 合入 origin/main（evalcmp 已合，83280aa0）。本机核 6323 对 17f5：旧 4540 个逐个相同，exclude 与版本相同，多 480 条早期混响轨。rebuild_exp013.py 加 --check-dir（先写会红的测试）。全量 127 条 125 过，2 条红：缺 cloud/config.py；等云上核对报告
 - 2026-11-25 大总管定：跨平台差约 4e-13，不再要求云上逐位同 17f5。判据改为本机 6323 同 17f5 + 云上 6323 音频按 hashes.txt 全对 + aa9f 的 exclude 与版本同 + 原料全对；官方源可复现记「未验证」。--check-dir 换成 --check-cloud（先改测试再改码）。用 aa9f 真小文件干跑通过（两份日志是仿造的）
 - 2026-11-25 cloudrun 带回两份日志：6323 音频 5020/5020 按 hashes.txt 对上；原料全对。合入 origin/main（971c7eec，aa9f 小文件已在 main）。--check-cloud 四项全过，报告 rebuild/exp013-20261124-192451.json 和两份日志进仓；官方源可复现记「未验证」。全量 128 条 127 过，1 条红（缺 cloud/config.py）
+- 2026-11-25 收尾评审：多视角自审（第一次误审了 src/，改参数重跑）+ codex gpt-6-astra 4 轮，P1×5 · P2×15 全核实属实，第 3、4 轮无 P0/P1 停。exp013 判据升到第 4 版，现行报告 rebuild/exp013-20261124-200416.json。合入 cloudrun 的 main（df145344）后 test_real_cloud_config_quota 转绿，全量 139 条全过
