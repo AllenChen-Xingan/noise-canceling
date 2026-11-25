@@ -25,7 +25,8 @@ Rust 算好的），不重算任何评分项，所以这里不是 verifier 的�
    把场景排名换成 0–1（提升最大 = 1），再对项取平均。先按涨数、再按提升分排序；前 TOP_K 与临时选择的重合用同一条线
    `--exclude` 去掉两边量法不同的项（例如比较的两份来自不同代码版本、其中某项改过量法）。
    **数据不全不下结论**（提升空间表自己的条件）：逐场景结果 < `MIN_SCENES`；有场景的有差值判定项 < `MIN_ITEMS`；
-   有片段只在一边。任一成立 → 「数据不足」。compare 不带切片信息，所以这张表不查切片
+   有片段只在一边；某场景的配对段数 ≠ 基线成绩单里该场景的段数（两边共同缺段时 only_a / only_b 是空的，靠这条抓；
+   基线卡里没有段数也算核不了）。任一成立 → 「数据不足」。compare 不带切片信息，所以这张表不查切片
 
 用法：
   python gap.py weak <scorecard.json> [--system gtcrn] [--out <目录>]                       → gap-weak.md / .json
@@ -145,7 +146,13 @@ def gap_table(card_json, system):
 def uplift_table(cmp_json, card_json, exclude=()):
     """提升空间表。`cmp_json` = compare.json（必须带 --by-scene），`card_json` = 基线 scorecard.json。"""
     judged = set()
+    expect = defaultdict(int)  # 场景 → 基线成绩单里的段数（核两边共同缺段用）
+    no_count = False
     for c in card_json["scenes"]:
+        if "clips" in c:
+            expect[c["scene"]] += int(c["clips"])
+        else:
+            no_count = True
         judged |= {i["v"] for i in c["items"] if not i.get("report_only")}
         judged |= {i["v"] for i in c.get("listen", {}).get("models", [])}
     judged -= set(exclude)
@@ -154,8 +161,10 @@ def uplift_table(cmp_json, card_json, exclude=()):
         raise ValueError("compare.json 里没有逐场景的结果：比较时要加 --by-scene")
     ups, downs = defaultdict(int), defaultdict(int)
     by = defaultdict(dict)  # 项 → {场景: 提升（越大越好）}
+    pairs = {}
     for sc in scopes:
         s = sc["scope"]
+        pairs[s] = int(sc.get("pairs", 0))
         ups[s] += 0
         for i in sc["items"]:
             if i["v"] not in judged:
@@ -182,6 +191,12 @@ def uplift_table(cmp_json, card_json, exclude=()):
     thin = sorted(r["scene"] for r in rows if r["items"] < MIN_ITEMS)
     if thin:
         incomplete.append(f"有差值的判定项少于 {MIN_ITEMS} 个的场景：{' · '.join(thin)}")
+    if no_count:
+        incomplete.append("基线成绩单的卡里没有段数，核不了覆盖")
+    else:
+        short = sorted(s for s in pairs if pairs[s] != expect.get(s, 0))
+        if short:
+            incomplete.append("配对段数与基线成绩单不符的场景：" + " · ".join(f"{s}（{pairs[s]}/{expect.get(s, 0)}）" for s in short))
     for sc in cmp_json["scopes"]:
         if sc["scope"] == "all" and (sc.get("only_a") or sc.get("only_b")):
             incomplete.append(f"有片段只在一边（只在基线 {len(sc.get('only_a', []))} 段，只在候选 {len(sc.get('only_b', []))} 段）")
