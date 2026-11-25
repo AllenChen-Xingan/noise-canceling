@@ -164,7 +164,11 @@ mod tests {
         ];
         let mut read = std::collections::BTreeSet::new();
         for s in sources {
-            for (i, _) in s.match_indices("\"--") {
+            // 只认读命令行选项的写法：arg/flag/option_value(args, "--…")、need("--…")、== "--…"（不把 git 之类的参数算进来）
+            let hits = ["(args, \"--", "need(\"--", "== \"--"]
+                .iter()
+                .flat_map(|pre| s.match_indices(pre).map(move |(i, _)| i + pre.len() - 3));
+            for i in hits {
                 let rest = &s[i + 1..];
                 let end = rest.find('"').unwrap_or(0);
                 let opt = &rest[..end];
