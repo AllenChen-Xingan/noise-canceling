@@ -110,6 +110,21 @@ class FakeRunPod:
         script = argv[2] if argv[:2] == ["sh", "-c"] else " ".join(argv)
         if self.fail_exec and self.fail_exec in script:
             return dict(ok, exitCode=1, stderr="boom")
+        if script.startswith("test ! -e "):
+            return dict(ok, exitCode=1 if shlex.split(script)[3] in self.files else 0)
+        if script.startswith("sha256sum "):
+            path = shlex.split(script)[1]
+            return dict(ok, stdout=f"{hashlib.sha256(self.files[path]).hexdigest()}  {path}\n")
+        if script.startswith("if [ -e ") and "mv " in script and ".part" in script:
+            dst = shlex.split(script.split("; mv ")[-1])[1]
+            if dst in self.files:
+                self.files[dst + ".bak"] = self.files[dst]
+            self.files[dst] = self.files.pop(dst + ".part")
+            return ok
+        if "echo BUSY" in script:
+            job = re.search(r"/([\w.-]+)\.log", script).group(1)
+            busy = getattr(self, "running", set())
+            return dict(ok, stdout="BUSY\n" if job in busy else "READY\n")
         if "base64 -d >>" in script:
             path = shlex.split(script.split(">>", 1)[1])[0]
             self.files[path] = self.files.get(path, b"") + base64.b64decode("".join(argv[4:]))

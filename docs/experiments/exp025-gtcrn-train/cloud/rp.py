@@ -279,6 +279,7 @@ def build_parser() -> argparse.ArgumentParser:
         else:
             p.add_argument("remote")
             p.add_argument("local")
+        p.add_argument("--overwrite", action="store_true", help="目标已存在时覆盖（put 会把远端旧文件改名留作 .bak-时间）")
     return ap
 
 
