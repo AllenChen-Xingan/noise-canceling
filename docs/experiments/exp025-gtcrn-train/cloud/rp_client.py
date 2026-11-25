@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -89,8 +90,12 @@ class Client:
     def __repr__(self):  # 防止密钥随对象打印出去
         return f"Client(base={self._base!r}, key=<{len(self._key)} chars>)"
 
+    def fingerprint(self) -> str:
+        """密钥的短指纹（sha256 前 12 位），用来认「是不是同一个账号」，不可逆推出密钥。"""
+        return hashlib.sha256(self._key.encode()).hexdigest()[:12]
+
     def request(self, method: str, path: str, body: Any = None, query: Optional[dict] = None,
-                retries: int = 5) -> Any:
+                retries: int = 5, retry_on: tuple = (409, 429, 503)) -> Any:
         url = self._base + path
         if query:
             url += "?" + urllib.parse.urlencode(query, doseq=True)
@@ -101,12 +106,12 @@ class Client:
             headers["Content-Type"] = "application/json"
         for attempt in range(retries + 1):
             status, rh, raw = self._t(method, url, headers, data)
-            if status in (409, 429, 503) and attempt < retries and _retry_after(rh) is not None:
+            if status in retry_on and attempt < retries and _retry_after(rh) is not None:
                 self._sleep(_retry_after(rh))
                 continue
             break
         if status >= 400:
-            raise ApiError(status, method, path, _detail(raw).replace(self._key, "<key>"))  # 服务若回显密钥也不外漏
+            raise ApiError(status, method, path, _detail(raw, self._key))
         if not raw:
             return None
         return json.loads(raw)
@@ -114,8 +119,8 @@ class Client:
     def get(self, path, **q):
         return self.request("GET", path, query=q or None)
 
-    def post(self, path, body, retries: int = 5):
-        return self.request("POST", path, body=body, retries=retries)
+    def post(self, path, body, retries: int = 5, retry_on: tuple = (409, 429, 503)):
+        return self.request("POST", path, body=body, retries=retries, retry_on=retry_on)
 
     def delete(self, path):
         return self.request("DELETE", path)
@@ -131,9 +136,13 @@ def _retry_after(headers: dict) -> Optional[float]:
     return None
 
 
-def _detail(raw: bytes) -> str:
+def _detail(raw: bytes, key: str = "") -> str:
+    """错误详情：先把密钥换成 <key>，再截到 300 字（先截后换会留下密钥残片，评审第 2 轮 #6）。"""
     try:
         j = json.loads(raw)
-        return str(j.get("detail") or j.get("title") or j)[:300]
+        text = str(j.get("detail") or j.get("title") or j)
     except Exception:
-        return raw[:300].decode("utf-8", "replace")
+        text = raw.decode("utf-8", "replace")
+    if key:
+        text = text.replace(key, "<key>")
+    return text[:300]

@@ -73,11 +73,18 @@ def create_volume(cli: Client, data_center: str, size_gb: int = C.VOLUME_SIZE_GB
         raise SystemExit(f"已有同名网络盘 {name}，不重复建")
     L.check_budget(L.read_rows(ledger_path), L.volume_hourly(size_gb), C.VOLUME_RESERVE_HOURS)
     v = cli.post("/v2/network-volumes", {"name": name, "size": size_gb, "dataCenter": data_center}, retries=0)
-    now = L.iso(L.utcnow())
-    L.append_row({"ts_utc": now, "action": "volume_create", "resource_id": v["id"],
-                  "data_center": data_center, "usd_per_hr": f"{L.volume_hourly(size_gb):.6f}",
-                  "started_utc": now, "note": f"{size_gb} GB ≈ {C.volume_usd_per_month(size_gb)} USD/月"},
-                 ledger_path)
+    try:  # 刚建的空盘：写账失败就删掉，免得有盘没账（评审第 2 轮 #3）
+        now = L.iso(L.utcnow())
+        L.append_row({"ts_utc": now, "action": "volume_create", "resource_id": v["id"],
+                      "data_center": data_center, "usd_per_hr": f"{L.volume_hourly(size_gb):.6f}",
+                      "started_utc": now, "note": f"{size_gb} GB ≈ {C.volume_usd_per_month(size_gb)} USD/月"},
+                     ledger_path)
+    except BaseException as e:
+        try:
+            cli.delete(f"/v2/network-volumes/{v['id']}")
+        except BaseException as e2:
+            raise SystemExit(f"{e}；而且删空盘 {v['id']} 失败（{e2}），请到控制台删") from e
+        raise
     return v
 
 
@@ -236,7 +243,8 @@ def exec_cmd(cli: Client, pod_id: str, argv: list, timeout_s: int = 20, cwd: Opt
     body = {"command": argv, "timeoutSeconds": max(1, min(int(timeout_s), C.EXEC_TIMEOUT_MAX_S))}
     if cwd:
         body["cwd"] = cwd
-    return cli.post(f"/v2/pods/{pod_id}/exec", body)
+    # 只在「肯定没执行」时重发：409 容器还在启动、429 限流。503 可能已经执行过，重发会把命令跑两遍（评审第 2 轮 #2）
+    return cli.post(f"/v2/pods/{pod_id}/exec", body, retry_on=(409, 429))
 
 
 def sh(cli: Client, pod_id: str, script: str, timeout_s: int = 20) -> dict:

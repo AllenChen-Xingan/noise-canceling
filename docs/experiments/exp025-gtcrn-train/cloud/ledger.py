@@ -123,15 +123,26 @@ def open_pods_worst(rows: Iterable[dict], now: Optional[dt.datetime] = None) -> 
     return total
 
 
+def volume_reserve(rows: Iterable[dict]) -> float:
+    """还没删的网络盘：按往后 VOLUME_RESERVE_HOURS 小时的盘费预留（评审第 2 轮 #1）。盘不删就一直收钱。"""
+    live = {}
+    for r in rows:
+        if r["action"] == "volume_create":
+            live[r["resource_id"]] = _f(r["usd_per_hr"])
+        elif r["action"] == "volume_delete":
+            live.pop(r["resource_id"], None)
+    return sum(live.values()) * C.VOLUME_RESERVE_HOURS
+
+
 def check_budget(rows: list, usd_per_hr: float, max_hours: float,
                  cap: float = C.SPEND_CAP_USD, now: Optional[dt.datetime] = None) -> float:
     """返回本次开机后最坏总花费；超上限抛 SystemExit。
-    最坏 = 已关机器 + 网络盘到今天 + 开着的机器跑满时限 + 本台跑满时限（含宽限）。"""
+    最坏 = 已关机器 + 网络盘到今天 + 网络盘往后一个月 + 开着的机器跑满时限 + 本台跑满时限（含宽限）。"""
     done = pod_spent(rows) + volume_spent(rows, now)
-    worst = done + open_pods_worst(rows, now) + usd_per_hr * (max_hours + GRACE_H)
+    worst = done + volume_reserve(rows) + open_pods_worst(rows, now) + usd_per_hr * (max_hours + GRACE_H)
     if worst > cap:
         raise SystemExit(f"花费上限 {cap:.2f} 美元：已花约 {spent_so_far(rows, now):.2f}，"
-                         f"开着的机器最坏 {open_pods_worst(rows, now):.2f}，本次最坏 {usd_per_hr * (max_hours + GRACE_H):.2f}，"
+                         f"盘费预留 {volume_reserve(rows):.2f}，开着的机器最坏 {open_pods_worst(rows, now):.2f}，本次最坏 {usd_per_hr * (max_hours + GRACE_H):.2f}，"
                          f"合计 {worst:.2f}，不开机")
     return worst
 
