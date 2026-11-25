@@ -35,6 +35,7 @@ use vdn_eval::suite::{
 };
 use vdn_eval::system::SystemKind;
 
+mod cli_opts;
 mod cli_probe;
 mod cli_scorecard;
 use cli_scorecard::cmd_scorecard;
@@ -415,6 +416,11 @@ fn cmd_list() {
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let cmd = args.first().cloned().unwrap_or_default();
+    // 不认识的选项、多出来的参数：做任何事之前先拒（#191）
+    if let Err(e) = cli_opts::check(&args) {
+        eprintln!("vdn-eval 出错：{e}");
+        return ExitCode::from(2);
+    }
     let r = match cmd.as_str() {
         "ci" => cmd_eval(&args, "ci"),
         "qa" => cmd_eval(&args, "qa"),

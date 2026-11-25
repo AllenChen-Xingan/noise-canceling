@@ -3,21 +3,50 @@
 use std::process::Command;
 
 fn run(args: &[&str]) -> (bool, String) {
-    let o = Command::new(env!("CARGO_BIN_EXE_vdn-eval")).args(args).output().unwrap();
-    (o.status.success(), String::from_utf8_lossy(&o.stderr).into_owned())
+    let o = Command::new(env!("CARGO_BIN_EXE_vdn-eval"))
+        .args(args)
+        .output()
+        .unwrap();
+    (
+        o.status.success(),
+        String::from_utf8_lossy(&o.stderr).into_owned(),
+    )
 }
 
 /// 拼错的选项：非 0 退出，stderr 点出选项名；在做任何事之前就拒（清单路径不存在也先报选项）。
 #[test]
 fn misspelled_option_is_refused_by_name() {
     for args in [
-        &["scorecard", "--suite", "/nonexistent/suite.json", "--systems", "gtcrn"][..],
+        &[
+            "scorecard",
+            "--suite",
+            "/nonexistent/suite.json",
+            "--systems",
+            "gtcrn",
+        ][..],
         &["compare", "--a", "x", "--b", "y", "--by-sceen"][..],
-        &["asr-probe", "--wav-dir", ".", "--cache", "x", "--out", "y", "--temprature", "0"][..],
+        &[
+            "asr-probe",
+            "--wav-dir",
+            ".",
+            "--cache",
+            "x",
+            "--out",
+            "y",
+            "--temprature",
+            "0",
+        ][..],
         &["ci", "--sytem", "ref"][..],
     ] {
         let (ok, err) = run(args);
-        let bad = args.iter().rev().find(|a| a.starts_with("--") && ["--systems", "--by-sceen", "--temprature", "--sytem"].contains(a)).unwrap();
+        let bad = args
+            .iter()
+            .rev()
+            .find(|a| {
+                a.starts_with("--")
+                    && ["--systems", "--by-sceen", "--temprature", "--sytem"].contains(a)
+            })
+            .unwrap();
         assert!(!ok, "{args:?} 应该失败");
         assert!(err.contains(bad), "{args:?} 的报错要点出 {bad}：{err}");
     }
