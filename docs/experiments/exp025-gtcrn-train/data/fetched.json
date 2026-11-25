@@ -1,12 +1,152 @@
 {
  "_说明": "第一次在云上下完记下的 sha256（sources.json 里为 null 的那些）；fetch.py 以后以它为准。src 写读数来源",
  "files": {
+  "https://data.researchdatafinder.qut.edu.au/dataset/a0eed5af-abd8-441b-b14a-8e064bc3d732/resource/10eeceae-9f0c-4556-b33a-dcf35c4f4db9/download/qutnoisestreet.zip": {
+   "name": "qutnoisestreet.zip",
+   "bytes": 1700338749,
+   "sha256": "2db9e357be638e241059a56799f0c9a62995f1ed83436abe08ab5f7d863bfb4f",
+   "md5": "68d5ebc2e60cb07927cc4d33cdf2f017",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://data.researchdatafinder.qut.edu.au/dataset/a0eed5af-abd8-441b-b14a-8e064bc3d732/resource/164d38a5-c08e-4e20-8272-793534eb10c7/download/qutnoisereverb.zip": {
+   "name": "qutnoisereverb.zip",
+   "bytes": 1548347269,
+   "sha256": "96015df4b3012323a6d72390fbd8b12671a05b620474350644d60f71ceb749d7",
+   "md5": "fe107ab341e6bc75de3a32c69344190e",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://data.researchdatafinder.qut.edu.au/dataset/a0eed5af-abd8-441b-b14a-8e064bc3d732/resource/35cd737a-e6ad-4173-9aee-a1768e864532/download/qutnoisehome.zip": {
+   "name": "qutnoisehome.zip",
+   "bytes": 1466980721,
+   "sha256": "580ba67be325c9b191838746c4eb12a34d6ca4da94d40e37ba7d2c2c794c7b0c",
+   "md5": "d99572ae1c118b749c1ffdb2e0cf0d2e",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://data.researchdatafinder.qut.edu.au/dataset/a0eed5af-abd8-441b-b14a-8e064bc3d732/resource/7412452a-92e9-4612-9d9a-6b00f167dc15/download/qutnoisecar.zip": {
+   "name": "qutnoisecar.zip",
+   "bytes": 1823708518,
+   "sha256": "0b1c16640ef00d55454f4f89b8852764acca067ba14a0bb4619baea35c244d88",
+   "md5": "d680118b4517e1257a9263b99d1ac401",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://data.researchdatafinder.qut.edu.au/dataset/a0eed5af-abd8-441b-b14a-8e064bc3d732/resource/8342a090-89e7-4402-961e-1851da11e1aa/download/qutnoise.zip": {
+   "name": "qutnoise.zip",
+   "bytes": 27958535,
+   "sha256": "3d7ab71effebe541256c97228ebc58d520b5d1c175e28698c276bbe538e7c578",
+   "md5": "672461fd88782e9ea10d5c2cb7a84196",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://data.researchdatafinder.qut.edu.au/dataset/a0eed5af-abd8-441b-b14a-8e064bc3d732/resource/9b0f10ed-e3f5-40e7-b503-73c2943abfb1/download/qutnoisecafe.zip": {
+   "name": "qutnoisecafe.zip",
+   "bytes": 1711572070,
+   "sha256": "f7d775a95db9f2872874895b0914d601d5cd40905f8100590a517b908b93bb68",
+   "md5": "f87fb213c0e1c439e1b727fb258ef2cd",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://www.openslr.org/resources/12/dev-clean.tar.gz": {
+   "name": "dev-clean.tar.gz",
+   "bytes": 337926286,
+   "sha256": "76f87d090650617fca0cac8f88b9416e0ebf80350acb97b343a85fa903728ab3",
+   "md5": "42e2234ba48799c1f50f24a7926300a1",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://www.openslr.org/resources/12/test-other.tar.gz": {
+   "name": "test-other.tar.gz",
+   "bytes": 328757843,
+   "sha256": "d09c181bba5cf717b3dee7d4d592af11a3ee3a09e08ae025c5506f6ebe961c29",
+   "md5": "fb5a50374b501bb3bac4815ee91d3135",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://www.openslr.org/resources/12/train-clean-100.tar.gz": {
+   "name": "train-clean-100.tar.gz",
+   "bytes": 6387309499,
+   "sha256": "d4ddd1d5a6ab303066f14971d768ee43278a5f2a0aa43dc716b0e64ecbbbf6e2",
+   "md5": "2a93770f6d5c6c964bc36631d331a522",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
   "https://www.openslr.org/resources/28/rirs_noises.zip": {
    "name": "rirs_noises.zip",
    "bytes": 1311166223,
    "sha256": "3b50cfde915b3984738169b4beb341e9f6b8062ae4c2076146c5db71c2c05dc7",
    "md5": "e6f48e257286e05de56413b4779d8ffb",
    "src": "cloudrun 云上实测 2026-11-24（unzip -t 无错），经大总管 noise-canceling-33 转"
+  },
+  "https://zenodo.org/api/records/6687982/files/wind_noise_dataset.zip/content": {
+   "name": "wind_noise_dataset.zip",
+   "bytes": 137141772,
+   "sha256": "84c3382343c9f41aae55e60c52dba66d454f0b8a3ab9008e99ac2f201d084320",
+   "md5": "8b9034f8a83165d44b317635ef97a639",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://zenodo.org/records/1227121/files/DKITCHEN_16k.zip?download=1": {
+   "name": "DKITCHEN_16k.zip",
+   "bytes": 110501049,
+   "sha256": "9d68e46d2709847c59580770e2f8aa160607ebff7475788174aa1080332cc845",
+   "md5": "7ffbf52d7f4699f96927846103dc8788",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://zenodo.org/records/1227121/files/OOFFICE_16k.zip?download=1": {
+   "name": "OOFFICE_16k.zip",
+   "bytes": 88995191,
+   "sha256": "7570c952f621990d0d71b8398107d9a78066254f883a5569abec9c233ffda358",
+   "md5": "7b61cc2d182d5a654cb9c3101ddd4041",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://zenodo.org/records/1227121/files/PCAFETER_16k.zip?download=1": {
+   "name": "PCAFETER_16k.zip",
+   "bytes": 107431494,
+   "sha256": "89be7194b83cd583c4b12f4bf7c19e9cf0e612b95312e9f4aedc968cd811bcd5",
+   "md5": "99927d148128254141a9417d051510bb",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://zenodo.org/records/1227121/files/PRESTO_16k.zip?download=1": {
+   "name": "PRESTO_16k.zip",
+   "bytes": 111292815,
+   "sha256": "cfd2e13998fac36aa5628070e08261deb7993dada302dc00a76aaf4e02ee4166",
+   "md5": "b98d2e6854eeebb397f29a8ad7457092",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://zenodo.org/records/1227121/files/PSTATION_16k.zip?download=1": {
+   "name": "PSTATION_16k.zip",
+   "bytes": 119441094,
+   "sha256": "f19565b7b1d089bd89cb0d7178af77b052b59a15502229424fe36ddc9d379f1b",
+   "md5": "d7448009f6c2aeb6ba570375df1750a3",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://zenodo.org/records/1227121/files/SCAFE_48k.zip?download=1": {
+   "name": "SCAFE_48k.zip",
+   "bytes": 325884186,
+   "sha256": "600f3b5b93af2b949f96e4d3fa488d678d4b14c381030a84bfcbb05d7b2d236d",
+   "md5": "1a4ee387f1900f4b15ba219481c76556",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://zenodo.org/records/1227121/files/STRAFFIC_16k.zip?download=1": {
+   "name": "STRAFFIC_16k.zip",
+   "bytes": 118572691,
+   "sha256": "2df9b444afb3b789df92d96cb6f58a50653cdbbbe7e7e74fcd9de2af6385fbea",
+   "md5": "2efa87262f272bbf9ba578088e81939c",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://zenodo.org/records/1227121/files/TBUS_16k.zip?download=1": {
+   "name": "TBUS_16k.zip",
+   "bytes": 128916709,
+   "sha256": "82e79983c91c69acbabf76d56b3fc75ab06e0f1c539eadaaf21d297987a97a5a",
+   "md5": "706b11b0d8504f9f3b3f3211e91b3863",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://zenodo.org/records/1227121/files/TCAR_16k.zip?download=1": {
+   "name": "TCAR_16k.zip",
+   "bytes": 130045975,
+   "sha256": "6b48e45f273ea8d401b5ec97d22c864169684b0ad231bef4a1758922aa5daedc",
+   "md5": "4d930012796bd298932245a26189f973",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
+  },
+  "https://zenodo.org/records/1227121/files/TMETRO_16k.zip?download=1": {
+   "name": "TMETRO_16k.zip",
+   "bytes": 126589090,
+   "sha256": "62deb6b1fbc412139c6b1f021869988aa9fae81b2861c4b2a4f87baa5addb49a",
+   "md5": "95daf4df678e13b120e14211e6d89571",
+   "src": "cloudrun 云上 cloud_steps.sh fetch 实测 2026-11-24（提交 fc37e9ba；unzip -tq / tar -tzf 全过），取回文件 sha256 00adb2df…"
   }
  }
 }
