@@ -2,13 +2,14 @@
 
 use std::process::Command;
 
-fn run(args: &[&str]) -> (bool, String) {
+/// 返回 (退出码, stderr)。入口拒参数一律退出码 2（codex 本分支第 4 轮 P2）。
+fn run(args: &[&str]) -> (Option<i32>, String) {
     let o = Command::new(env!("CARGO_BIN_EXE_vdn-eval"))
         .args(args)
         .output()
         .unwrap();
     (
-        o.status.success(),
+        o.status.code(),
         String::from_utf8_lossy(&o.stderr).into_owned(),
     )
 }
