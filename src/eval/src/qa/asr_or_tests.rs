@@ -113,11 +113,14 @@ fn base64_matches_rfc4648_vectors() {
 
 #[test]
 fn pcm16_wav_header_and_samples() {
-    let w = pcm16_wav(&[0.0, 1.0, -1.0, 2.0], 16_000);
+    let w = pcm16_wav(&[0.0, 1.0, -1.0, 2.0], vdn_types::MODEL_RATE);
     assert_eq!(&w[..4], b"RIFF");
     assert_eq!(&w[8..16], b"WAVEfmt ");
     assert_eq!(u16::from_le_bytes([w[22], w[23]]), 1);
-    assert_eq!(u32::from_le_bytes([w[24], w[25], w[26], w[27]]), 16_000);
+    assert_eq!(
+        u32::from_le_bytes([w[24], w[25], w[26], w[27]]),
+        vdn_types::MODEL_RATE
+    );
     assert_eq!(u16::from_le_bytes([w[34], w[35]]), 16);
     assert_eq!(w.len(), 44 + 8);
     let s: Vec<i16> = w[44..]
@@ -133,7 +136,10 @@ fn request_carries_model_audio_language_and_deny() {
     let d = tmpdir("req");
     let (url, seen) = fake(vec![ok("hello world", 0.001)]);
     let mut c = client(&url, &d);
-    assert_eq!(c.transcribe(&audio(), 16_000, "en").unwrap(), "hello world");
+    assert_eq!(
+        c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap(),
+        "hello world"
+    );
     let reqs = seen.lock().unwrap();
     assert_eq!(reqs.len(), 1);
     let (head, body) = &reqs[0];
@@ -146,7 +152,11 @@ fn request_carries_model_audio_language_and_deny() {
     assert_eq!(v["language"], "en");
     assert_eq!(v["input_audio"]["format"], "wav");
     let wav = unb64(v["input_audio"]["data"].as_str().unwrap());
-    assert_eq!(wav, pcm16_wav(&audio(), 16_000), "送的是 16 位整型 WAV");
+    assert_eq!(
+        wav,
+        pcm16_wav(&audio(), vdn_types::MODEL_RATE),
+        "送的是 16 位整型 WAV"
+    );
     assert!(head.to_ascii_lowercase().contains(&format!(
         "authorization: bearer {}",
         KEY.to_ascii_lowercase()
@@ -167,8 +177,8 @@ fn cost_is_accumulated_into_ledger_and_survives_restart() {
     let d = tmpdir("ledger");
     let (url, _) = fake(vec![ok("a", 0.25), ok("b", 0.5)]);
     let mut c = client(&url, &d);
-    c.transcribe(&audio(), 16_000, "en").unwrap();
-    c.transcribe(&audio(), 16_000, "en").unwrap();
+    c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap();
+    c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap();
     assert!((c.ledger.spent_usd - 0.75).abs() < 1e-12);
     assert_eq!(c.ledger.calls, 2);
     let again = OpenRouter::new("http://127.0.0.1:9/", KEY.into(), d.join("ledger.json"));
@@ -185,7 +195,9 @@ fn budget_reached_refuses_before_sending() {
     .unwrap();
     let (url, seen) = fake(vec![ok("never", 0.0)]);
     let mut c = client(&url, &d);
-    let e = c.transcribe(&audio(), 16_000, "en").unwrap_err();
+    let e = c
+        .transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+        .unwrap_err();
     assert!(e.contains("上限"), "{e}");
     assert_eq!(c.requests, 0);
     assert!(seen.lock().unwrap().is_empty(), "到上限不能再发");
@@ -209,7 +221,10 @@ fn rate_limit_429_backs_off_with_retry_after_then_succeeds() {
     ]);
     let mut c = client(&url, &d);
     let t0 = std::time::Instant::now();
-    assert_eq!(c.transcribe(&audio(), 16_000, "en").unwrap(), "done");
+    assert_eq!(
+        c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap(),
+        "done"
+    );
     assert!(
         t0.elapsed() >= std::time::Duration::from_millis(1000),
         "照 Retry-After 等了 1 秒"
@@ -232,7 +247,9 @@ fn server_errors_give_up_after_max_attempts() {
     };
     let (url, seen) = fake((0..MAX_ATTEMPTS).map(|_| e500()).collect());
     let mut c = client(&url, &d);
-    let e = c.transcribe(&audio(), 16_000, "en").unwrap_err();
+    let e = c
+        .transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+        .unwrap_err();
     assert!(e.contains(&format!("{MAX_ATTEMPTS} 次")), "{e}");
     assert_eq!(seen.lock().unwrap().len(), MAX_ATTEMPTS);
     assert_eq!(c.ledger.calls, 0, "失败不记账");
@@ -256,7 +273,9 @@ fn credit_and_data_policy_failures_do_not_retry_or_fall_back() {
             json!({"error": {"code": code, "message": msg}}).to_string(),
         )]);
         let mut c = client(&url, &d);
-        let e = c.transcribe(&audio(), 16_000, "en").unwrap_err();
+        let e = c
+            .transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+            .unwrap_err();
         assert!(e.contains(hint) && e.contains("不重试"), "{code}：{e}");
         assert_eq!(seen.lock().unwrap().len(), 1, "{code} 不重试");
     }
@@ -271,7 +290,9 @@ fn errors_never_contain_the_key() {
         format!("{{\"error\":{{\"code\":400,\"message\":\"bad key {KEY}\"}}}}"),
     )]);
     let mut c = client(&url, &d);
-    let e = c.transcribe(&audio(), 16_000, "en").unwrap_err();
+    let e = c
+        .transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+        .unwrap_err();
     assert!(!e.contains(KEY), "出错信息里不许有密钥：{e}");
     assert!(e.contains("<密钥>"));
 }
@@ -285,7 +306,7 @@ fn error_inside_200_is_an_error_and_not_billed() {
         json!({"error": {"code": 502, "message": "upstream"}}).to_string(),
     )]);
     let mut c = client(&url, &d);
-    assert!(c.transcribe(&audio(), 16_000, "en").is_err());
+    assert!(c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").is_err());
     assert_eq!(c.ledger.calls, 0);
 }
 

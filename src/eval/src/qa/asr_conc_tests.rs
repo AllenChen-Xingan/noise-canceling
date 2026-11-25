@@ -98,7 +98,7 @@ fn jobs() -> Vec<asr_or::Job> {
                 (0..800)
                     .map(|i| ((i * (k + 1)) as f32 * 0.01).sin() * 0.3)
                     .collect(),
-                16_000,
+                vdn_types::MODEL_RATE,
                 "en".to_string(),
             )
         })

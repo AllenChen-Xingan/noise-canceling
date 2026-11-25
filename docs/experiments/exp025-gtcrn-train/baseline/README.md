@@ -106,7 +106,8 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
      - 5 段冒烟实测：23 项里 19 项有配对，其中 18 项差值为 0，只有 V-TIMBRE 不同；另 4 项（吃字、两个评分模型、V-SIM-FA）没有配对，不可比（`runs/smoke-20261124-191531/compare-vs-exp021/`）
    - **云上跑**的那份（走 B 时）：和本机那份用 `merge.py` 逐段比，三条都满足才过：每项逐段值差 ≤ `PARITY_ABS`（1e-3，该项自己的单位）；没有任何段一边有值一边没值；判定不同的段占全部段数 ≤ `PARITY_FLIP`（1%）。正本在 `merge.py`，测试 `test_merge.py`。用 `compare` 判不了这件事：两边差很小但方向一致时，区间会整个落在 0 的一边，被判成「涨」或「退」
    - 对 exp014 的回混 GTCRN（`docs/experiments/exp014-scorecard-gtcrn/runs/20261105-005916-4ccf0638/`）：只报不判，用来说明回混口径和不回混口径差多少
-4. **差距表**（两种，见第五节）：`python docs/experiments/exp025-gtcrn-train/baseline/gap.py weak <run>/scorecard.json --system gtcrn --out <run>` 与 `gap.py uplift …`；算法和阈值的正本在 `gap.py` 文件头和常量，测试 `test_gap.py`
+4. **识别**：`meta.asr` 里没有 `error`；`backends.openrouter.model` = `qwen/qwen3-asr-1.7b-20260813`，`clips` = 480；`checked` = 1440（每段 3 条，基线每条 2 次）并写出 `unstable` 与 `unstable_rate`（这个数决定以后的模型能不能改成 1 次，见第二节）；账本 `_tmp/asr-openrouter-ledger.json` 的增量与本次调用数相符、累计 ≤ 15 美元
+5. **差距表**（两种，见第五节）：`python docs/experiments/exp025-gtcrn-train/baseline/gap.py weak <run>/scorecard.json --system gtcrn --out <run>` 与 `gap.py uplift …`；算法和阈值的正本在 `gap.py` 文件头和常量，测试 `test_gap.py`
 
 冒烟对拍（实测，5 段，不带 `--qa`；debug 版和 release 版各跑一次，结果相同）：对 exp021 `gtcrn-h-nomix`，19 项有配对，18 项差值为 0，只有 V-TIMBRE 均值差 +0.169 dB（0.188 → 0.357，原因见上）；4 项不可比。合并 → `--from-clips` → 差距表整条链跑通。
 
