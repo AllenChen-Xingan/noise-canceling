@@ -10,9 +10,9 @@
 同一批 plan 两边逐样本差 ≤ 1e-4，写成了测试。本机 75 条测试全过（torch CPU 后端）。下载脚本已备好，没在云上跑。
 
 ## 下一步
-1. 第一批与 E3 已由 cloudrun 下完（A1–A5 + DEMAND 21 个包 18.15 GB；E3 3 个文件，sha256 和 sources.json 一致）；/workspace 用 33 GB
-2. 下完：`split`（先看 QUT / TUM 的清单）→ `shard` → `register`；切分表与 build.json 拷回进仓
-3. exp013 重建：`bash cloud_steps.sh rebuild`
+1. cloudrun 在 CPU 机上跑 README 6.1 的六步（大总管 2026-11-24 已放行）：setup → inventory → split → shard → register → pack
+2. 产物带回后按 README 6.4 核对：读 inventory.txt，跑 `tests.test_products`，过了再提交
+3. exp013 重建：`bash cloud_steps.sh rebuild`（另行放行）
 4. 收尾：多视角自审 + codex 评审
 
 ## 依赖
@@ -44,3 +44,4 @@
 - 2026-11-24 建本 worktree 的 `.venv`（已被 git 忽略）：torch 2.15.0 · numpy 2.5.4 · scipy 1.18.1 · soundfile 0.14.0
 - 2026-11-24 合并 cloudrun 取回的第一批读数（21 个包，A1–A5 + DEMAND）进 fetched.json：字节数 · 文件名 · 上游已给的 md5 逐个和 sources.json 核过，无冲突；28 号包与仓里已记的一致。加 1 条测试：第一批每个包都有钉死的 sha256
 - 2026-11-24 E3 由 cloudrun 下完，3 个文件 sha256 都和 sources.json 一致，fetched.json 不用加。云上 7 次 429，第 8 次（最后一次）才成，每次等 120 s（不是默认退避，按退避应是 5、10、20… s，所以是服务器给的）。fetch.py 改两处：429 / 503 另算次数，最多 30 次（30 × 120 s ≈ 1 h），不占断线重试的名额；日志打出 Retry-After 原值。顺手修了改写时引入的死循环（连接正常结束但没下全时不计次）。加 2 条测试
+- 2026-11-24 大总管放行切分、分片、登记。为云上一次跑通做了三处：① split_rules.json 每个来源加 expect（上游公布的文件数 / 说话人数，读文档得来），对不上就停、不写表；② loader 改成用时才导入 mix，登记 build 不再依赖还没合进来的 rooms.early_rir；③ cloud_steps.sh 加 inventory（清单写进 inventory.txt）与 pack（打包带回）两步。新写 tests/test_products.py 核带回的产物，先在夹具产物上跑通。README 第六节写了确切命令、预期产物、出错怎么办与核对方法。共 100 条测试，93 过 6 跳过 1 红（缺 cloud/config.py）
