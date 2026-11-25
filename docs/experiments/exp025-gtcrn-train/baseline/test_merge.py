@@ -116,6 +116,15 @@ class Merge(unittest.TestCase):
             self.assertEqual(rep["V-ESTOI"]["one_sided"], 3)
             self.assertTrue(any("V-ESTOI" in e and "一边" in e for e in merge.parity_errors(rep)))
 
+    def test_parity_with_eat_missing_on_one_side(self):
+        """codex 第 13 轮 P2 #2：对拍模式下吃字整项在一边缺失，也要出报告（计 one_sided），不能崩。"""
+        a, b = local(), local()
+        for r in b:
+            r["scores"] = [x for x in r["scores"] if x["v"] != "V-EAT-ASR"]
+        for x, y in ((a, b), (b, a)):
+            rep = merge.parity(x, y)
+            self.assertEqual(rep["V-EAT-ASR"]["one_sided"], 3)
+
     def test_mismatched_clip_sets_or_systems_are_errors(self):
         with self.assertRaises(ValueError):
             merge.merge(cloud(3), local(2))

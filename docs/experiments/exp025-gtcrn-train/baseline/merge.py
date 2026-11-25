@@ -67,9 +67,11 @@ def _compare(cloud_rows, local_rows, eat_rules):
             raise ValueError(f"{clip}：云上那份已经有吃字的值，不该合并（云上不该有识别服务）")
         if eat_rules and sl.get(EAT, {}).get("value") is None:
             raise ValueError(f"{clip}：本机那份没有吃字的值（识别服务没开？）")
-        for v, s in sc.items():
+        # 按两边评分项的并集比：一边整项缺失也算「一边有值一边没值」（codex 第 12 轮 P2 #1）
+        for v in list(sc) + [k for k in sl if k not in sc]:
             if eat_rules and v == EAT:
                 continue
+            s = sc.get(v, {})
             a, b = s.get("value"), sl.get(v, {}).get("value")
             rep = report.setdefault(v, {"clips": 0, "pairs": 0, "max_abs_diff": 0.0, "one_sided": 0, "verdict_flips": 0})
             rep["clips"] += 1
