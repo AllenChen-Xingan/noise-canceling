@@ -28,6 +28,7 @@ import torch
 
 import config as cfgmod
 import losses
+import oracle
 import train
 from data import make_source
 from official import gtcrn_dir
@@ -261,6 +262,37 @@ def write_known_dev(cfg, out: Path) -> int:
     return 0
 
 
+def overfit_diag(cfg, out: Path, steps: int, lr: float) -> int:
+    """过拟合排查（大总管 2026-11-25）：与冒烟同一批（开发份第 0 批）、同一个过拟合，另算 oracle 损失。
+    报告给三个比例：走完「40 dB 下限」距离 · 走完「oracle」距离；并判 40 dB 下限是否可达。只记录，不判过不过。"""
+    if out.exists():
+        print(f"拒绝覆盖已有文件：{out}", file=sys.stderr)
+        return 2
+    out.parent.mkdir(parents=True, exist_ok=True)
+    device = train.resolve_device(cfg.device)
+    source = make_source(cfg)
+    batch = source.dev_batches()[0]
+    ov = check_overfit(cfg, batch, device, steps, lr)
+    ov.pop("pass", None)
+    ov.pop("rule", None)
+    o = oracle.oracle_loss(losses.TrainLoss(losses.LossCfg()).to(device), batch, device)
+    if not (np.isfinite(o["loss"]) and np.isfinite(ov["last"])):
+        print(f"读数不是有限数，不写：oracle {o}，last {ov['last']}", file=sys.stderr)
+        return 1
+    rep = {**ov, "oracle_loss": o["loss"], "oracle_si_snr_db": o["si_snr_db"],
+           "drop_frac_of_oracle_span": oracle.frac_of_span(ov["first"], ov["last"], o["loss"]),
+           "floor_reachable": oracle.floor_reachable(ov["floor"], o["loss"]),
+           "batch_index": 0, "batch": cfg.data.batch, "seg_s": cfg.data.seg_s, "build_id": source.build_id,
+           "device": str(device), "torch": torch.__version__, "config": cfgmod.to_dict(cfg),
+           "note": "排查用，不判过不过；oracle 是掩码族里的一个可行点（见 oracle.py），真正的最好损失 ≤ 它",
+           "written_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+    text = json.dumps(rep, ensure_ascii=False, indent=2, default=str)
+    with open(out, "x") as f:
+        f.write(text)
+    print(text)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="exp025 开训前冒烟")
     ap.add_argument("--config", required=True)
@@ -272,10 +304,13 @@ def main(argv=None) -> int:
     ap.add_argument("--known-tol", type=float, default=1e-3)
     ap.add_argument("--out", help="报告写到这里（JSON）")
     ap.add_argument("--write-known-dev", help="只算起点模型的开发份读数写到这里（不覆盖已有文件），不跑三件事")
+    ap.add_argument("--overfit-diag", help="只做过拟合排查（同一批：过拟合 + oracle 对照）写到这里，不判过不过")
     a = ap.parse_args(argv)
     cfg = cfgmod.load(a.config, train.parse_set(a.set))
     if a.write_known_dev:
         return write_known_dev(cfg, Path(a.write_known_dev))
+    if a.overfit_diag:
+        return overfit_diag(cfg, Path(a.overfit_diag), a.overfit_steps, a.overfit_lr)
     known = json.loads(Path(a.known_dev).read_text()) if a.known_dev else None
     rep = run(cfg, overfit_steps=a.overfit_steps, overfit_lr=a.overfit_lr, timing_steps=a.timing_steps,
               known_dev=known, known_tol=a.known_tol)
