@@ -276,3 +276,34 @@ def test_crash_snapshot_failure_still_stops_and_refuses_resume(tmp_path, monkeyp
     assert rec["crash"]["snapshot"] is None and "disk full" in rec["crash"]["snapshot_error"]
     with pytest.raises(RuntimeError, match="训崩"):
         train.train(_cfg(tmp_path))
+
+
+# ---------- codex guards 第 2 轮 ----------
+
+def test_best_pt_wins_if_run_json_was_not_updated(tmp_path, monkeypatch):  # #1：存完 best.pt、写 run.json 前被抢占
+    vals = iter([3.0, 2.0, 2.5])
+    real = train.evaluate
+    monkeypatch.setattr(train, "evaluate", lambda *a, **k: {**real(*a, **k), "hybrid": next(vals)})
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 4, "schedule.eval_every": 2}))
+    p = tmp_path / "t" / "run.json"
+    rec = json.loads(p.read_text())
+    rec["best"] = {"step": 2, "hybrid": 3.0}          # 模拟 run.json 停在旧的最好
+    p.write_text(json.dumps(rec))
+    st = torch.load(tmp_path / "t" / "ckpt" / "step-0000004.pt", weights_only=False)
+    st["guards"]["best"] = {"step": 2, "hybrid": 3.0}  # 检查点也停在旧的
+    torch.save(st, tmp_path / "t" / "ckpt" / "step-0000004.pt")
+    train.train(_cfg(tmp_path, **{"schedule.eval_every": 2}))
+    _, rec, _ = _read(tmp_path)
+    assert rec["best"] == {"step": 4, "hybrid": 2.0}   # best.pt 里的成绩赢；2.5 不覆盖
+
+
+def test_final_eval_guard_state_persisted(tmp_path, monkeypatch):  # #2
+    vals = iter([2.0, 2.1, 2.2, 2.3])                  # 第 2 步最好；3、补评估、续训后各差一次 → 第 3 次差发警告
+    real = train.evaluate
+    monkeypatch.setattr(train, "evaluate", lambda *a, **k: {**real(*a, **k), "hybrid": next(vals)})
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 5, "schedule.eval_every": 2}))  # 评估在 2、4，补评估 5
+    st = torch.load(tmp_path / "t" / "ckpt" / "step-0000005.pt", weights_only=False)
+    assert st["guards"]["bad"] == 2
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 6, "schedule.eval_every": 2}))
+    _, rec, _ = _read(tmp_path)
+    assert any(g["kind"] == "dev_plateau" for g in rec.get("guards", []))
