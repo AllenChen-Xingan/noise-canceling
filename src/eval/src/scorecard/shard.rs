@@ -282,6 +282,31 @@ pub fn merge_dirs(
     if metas.is_empty() {
         return Err("没有给分片目录".into());
     }
+    // 必填字段先核存在与类型（各片都缺时比相等会当 null 通过；codex 本分支第 6 轮 P2 #1）
+    for (i, m) in metas.iter().enumerate() {
+        let ok = [
+            "commit",
+            "suite",
+            "suite_fingerprint",
+            "safety",
+            "rules",
+            "shard",
+        ]
+        .iter()
+        .all(|k| m[*k].is_string())
+            && m["qa"].is_boolean()
+            && m["systems"]
+                .as_array()
+                .is_some_and(|a| !a.is_empty() && a.iter().all(Value::is_string))
+            && m["external"].is_array()
+            && m["timing"].is_object();
+        if !ok {
+            return Err(format!(
+                "第 {} 个分片目录的 meta 缺必填字段或类型不对（commit · suite · suite_fingerprint · safety · rules · shard · qa · systems · external · timing）",
+                i + 1
+            ));
+        }
+    }
     for k in SAME_KEYS {
         if metas.iter().any(|m| m[k] != metas[0][k]) {
             return Err(format!("各片 meta 的 {k} 不同：不是同一次运行，不合并"));
