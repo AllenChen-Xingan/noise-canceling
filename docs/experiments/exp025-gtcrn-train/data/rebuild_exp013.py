@@ -92,8 +92,8 @@ def check_dir(new, inputs_ok):
     rep = compare(OLD / "hashes.txt", new / "hashes.txt")
     m = json.loads((new / "manifest.json").read_text())
     rep["exclude_equal"] = json.loads((new / "exclude.json").read_text()) == json.loads((OLD / "exclude.json").read_text())
-    rep["version_drift"] = version_diff(m["versions"]) if False else {k: [v, m["versions"].get(k)] for k, v in
-                                                                       json.loads((OLD / "manifest.json").read_text())["versions"].items() if m["versions"].get(k) != v}
+    old_v = json.loads((OLD / "manifest.json").read_text())["versions"]
+    rep["version_drift"] = {k: [v, m["versions"].get(k)] for k, v in old_v.items() if m["versions"].get(k) != v}
     rep["inputs_ok"] = bool(inputs_ok)
     rep["checked_build"] = m.get("build_id", new.name)
     rep["new_code_sha256"] = {**m["code_sha256"], **m["params_sha256"]}
@@ -151,6 +151,8 @@ def main():
         rep = compare(OLD / "hashes.txt", new / "hashes.txt")
         rep["exclude_equal"] = json.loads((new / "exclude.json").read_text()) == json.loads((OLD / "exclude.json").read_text())
         rep["ok"] = rep["ok"] and rep["exclude_equal"]
+        m = json.loads((new / "manifest.json").read_text())
+        rep["new_code_sha256"] = {**m["code_sha256"], **m["params_sha256"]}
     rep.update({"build": BUILD, "versions": versions(), "version_drift": drift, "code_drift": code_drift(), "fetched": a.fetch, "seconds": round(time.time() - t0, 1),
                 "when": time.strftime("%Y-%m-%d %H:%M:%S")})
     report(rep)
