@@ -71,6 +71,7 @@ class LossCfgFile:
     level_floor: float = 1e-3
     on_skip_leading: bool = False  # 字头项跳过 a = 0 的区间（扫参选项，默认与 V-ONSET 同口径）
     w_pump: float = 0.0  # 人声忽大忽小项（V-PUMPV 复刻）的权重；默认 0 = 关（D107）
+    pump_on: str = "all"  # all | clean_only（只算输入几乎干净的段，消融用）
 
 
 @dataclass
@@ -164,6 +165,8 @@ def validate(cfg: Config) -> None:
     wp = cfg.loss.w_pump
     if not (isinstance(wp, (int, float)) and not isinstance(wp, bool) and math.isfinite(wp) and wp >= 0):
         raise ValueError("loss.w_pump 应是有限非负数（不支持 \"auto\"）")
+    if cfg.loss.pump_on not in ("all", "clean_only"):
+        raise ValueError("loss.pump_on 只能是 all 或 clean_only")
     L = cfg.limits
     for k in ("max_hours", "max_usd"):
         v = getattr(L, k)

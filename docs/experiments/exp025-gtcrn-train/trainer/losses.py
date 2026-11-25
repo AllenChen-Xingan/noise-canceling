@@ -34,6 +34,7 @@ ONSET_MIN = 3  # perceptual.rs v_onset：字头 < 3 读「待测」
 PUMP_W = 1600  # 100 ms，speech.rs v_pumpv w
 PUMP_MIN_VOICED = 8  # 一窗 10 个 10 ms 帧里有声 ≥ 8 才算（voiced·160·10 ≥ w·8）
 PUMP_MIN_WINDOWS = 10  # 有声窗 < 10 读「待测」
+CLEAN_INPUT_DB = -30.0  # pump_on = clean_only：输入 − 目标 的能量比目标低这么多才算「只输入干净人声」（AI 定）
 
 
 # ---------- STFT（与官方 HybridLoss 内部的 istft 同参数） ----------
@@ -158,6 +159,13 @@ def pumpv_var(out: torch.Tensor, clean: torch.Tensor, owner: torch.Tensor):
     return torch.where(valid, var, torch.zeros_like(var)), valid, [int(x) for x in cnt.tolist()]
 
 
+def clean_input(noisy: torch.Tensor, clean: torch.Tensor) -> torch.Tensor:
+    """每段是否「只输入干净人声」：‖noisy − clean‖² ≤ ‖clean‖² · 10^(CLEAN_INPUT_DB/10)，且目标非全零。"""
+    e = ((noisy - clean) ** 2).sum(-1)
+    c = (clean ** 2).sum(-1)
+    return (c > 0) & (e <= c * 10 ** (CLEAN_INPUT_DB / 10))
+
+
 def onset_plan(clean_np: np.ndarray, n_out: int, skip_leading: bool = False):
     """一段的字头起点与有声 20 ms 帧下标（只依赖干净轨，不参与求导）。
 
@@ -241,6 +249,7 @@ class LossCfg:
     level_floor: float = 1e-3  # 归一除数的下限（034 修正 3-③：近静音段防除以 0）
     on_skip_leading: bool = False  # 见 onset_plan；默认与 V-ONSET 正本同口径
     w_pump: float = 0.0  # 人声忽大忽小（V-PUMPV 复刻）的权重；0 = 关，训练逐值不变
+    pump_on: str = "all"  # all：所有段都算（大总管定：用户在乎有噪声时稳不稳）；clean_only：只算输入几乎干净的段（消融用）
 
 
 def active_rms(clean: torch.Tensor, frames: torch.Tensor, floor: float) -> torch.Tensor:
@@ -280,9 +289,10 @@ class TrainLoss(torch.nn.Module):
         self.hybrid = official_loss_module().HybridLoss()
 
     def forward(self, pred_spec, clean, frames, *, model=None, sp_ref=None,
-                teacher_spec=None, replay=None, owner_frames=None):
+                teacher_spec=None, replay=None, owner_frames=None, noisy=None):
         """pred_spec (B,257,T,2)；clean (B,N) 波形；frames (B,N//160) 主说话人单独说话的帧；
-        owner_frames (B,N//160) 主说话人在的帧（V-PUMPV 口径，w_pump > 0 时必须给）。
+        owner_frames (B,N//160) 主说话人在的帧（V-PUMPV 口径，w_pump > 0 时必须给）；
+        noisy (B,N) 输入波形（pump_on = clean_only 时必须给，用来挑「只输入干净人声」的段）。
 
         返回 (总损失, 各项字典)。各项字典里的读数是 float，直接写日志。
         """
@@ -311,6 +321,12 @@ class TrainLoss(torch.nn.Module):
             if owner_frames is None:
                 raise ValueError("w_pump > 0 时要给 owner_frames（主讲人掩码，V-PUMPV 口径）")
             pv, v, _ = pumpv_var(out, clean, owner_frames.to(out.device))
+            if cfg.pump_on == "clean_only":
+                if noisy is None:
+                    raise ValueError("pump_on = clean_only 时要给 noisy（输入波形）")
+                v = v & clean_input(noisy.to(clean.device), clean)
+            elif cfg.pump_on != "all":
+                raise ValueError(f"pump_on 只能是 all 或 clean_only：{cfg.pump_on!r}")
             l_pump = masked_mean(pv, v)
             total = total + cfg.w_pump * l_pump
             logs |= {"pump": l_pump.item(), "pump_valid": int(v.sum())}

@@ -89,6 +89,8 @@ def forward_loss(model, crit, batch, device, *, sp_ref=None, teacher=None):
     kw = {}
     if crit.cfg.w_pump > 0:  # 只在开着时多算主讲人掩码：关着时调用逐字不变
         kw["owner_frames"] = owner_frames(batch, clean.shape[1]).to(device)
+        if crit.cfg.pump_on == "clean_only":
+            kw["noisy"] = noisy
     return crit(pred, clean, fr, model=model, sp_ref=sp_ref, teacher_spec=t_spec, replay=replay, **kw)
 
 
@@ -96,7 +98,8 @@ def loss_cfg(cfg, w_lvl: float, w_on: float) -> losses.LossCfg:
     lc = cfg.loss
     return losses.LossCfg(w_lvl=w_lvl, w_on=w_on, lvl_margin_db=lc.lvl_margin_db, sp=lc.sp, w_sp=lc.w_sp,
                           kd=lc.kd, w_kd=lc.w_kd, level_norm=lc.level_norm, level_floor=lc.level_floor,
-                          on_skip_leading=lc.on_skip_leading, w_pump=lc.w_pump)
+                          on_skip_leading=lc.on_skip_leading, w_pump=lc.w_pump,
+                          pump_on=lc.pump_on)
 
 
 @torch.no_grad()

@@ -41,6 +41,7 @@ loss:
   level_floor: 1.0e-3
   on_skip_leading: false
   w_pump: 0.0          # 人声忽大忽小（V-PUMPV 复刻）；0 = 关（D107）
+  pump_on: all         # all | clean_only（只算输入几乎干净的段，消融用）
 ema:
   enabled: false
   decay: 0.999

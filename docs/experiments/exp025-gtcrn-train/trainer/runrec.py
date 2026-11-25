@@ -75,6 +75,25 @@ def _atomic_write(path: Path, write, commit_ok=lambda: True) -> None:
             tmp.unlink()
 
 
+# 后加的配置项：老运行记录里没有时按这个默认值算（大总管定 2026-11-25），新值也是默认值就不算「配置改了」
+BACKFILL_DEFAULTS = {("loss", "w_pump"): 0.0, ("loss", "pump_on"): "all"}
+
+
+def backfill(cfg: dict) -> dict:
+    """返回补上 BACKFILL_DEFAULTS 里缺的键的副本（不改原记录）。"""
+    import copy
+    out = copy.deepcopy(cfg)
+    for path, v in BACKFILL_DEFAULTS.items():
+        d = out
+        for k in path[:-1]:
+            if not isinstance(d.get(k), dict):
+                break
+            d = d[k]
+        else:
+            d.setdefault(path[-1], v)
+    return out
+
+
 def config_diff(a: dict, b: dict, prefix=()) -> list[tuple]:
     out = []
     for k in sorted(set(a) | set(b)):
@@ -184,7 +203,7 @@ def check_resume(rec: dict, cfg_dict: dict, build_id: str) -> list[str]:
         why.append(f"上次在第 {stop.get('step')} 步训崩（损失不是有限数），先诊断；要重跑请换 run.name")
     if not build_id or build_id == "unknown":
         why.append("数据 build id 为空，无法核对数据版本")
-    for path in config_diff(rec.get("config", {}), cfg_dict):
+    for path in config_diff(backfill(rec.get("config", {})), cfg_dict):
         if path not in RESUMABLE_CHANGES:
             why.append("配置改了：" + ".".join(path))
     if rec.get("data_build_id") != build_id:
