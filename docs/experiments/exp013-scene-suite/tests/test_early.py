@@ -136,5 +136,56 @@ class Reproduce(unittest.TestCase):
         self.assertEqual(rd.bit_generator.state, s1)
 
 
+@unittest.skipUnless(HAVE, "缺 ~/vdn-data 素材（fetch.py），人工跑")
+class SameCoefficients(unittest.TestCase):
+    """独立核对「早期参考与主参考同电平系数」（codex 第 1 轮 P2 #3）。
+
+    做法：在 make_clip 里监听 Scene.point（主说话人与要留的人）与 Scene.point_early 的未定电平输出；
+    每个要留的人，链末的 x 与 x_early 必须是各自未定电平输出乘**同一个**标量（用 x 最小二乘解出系数，再逐样本核 x_early）；
+    owner / owner_early 是各人之和。覆盖：单人无余量调整、全留多人且触发余量调整（headroom_db < 0）。
+    """
+
+    CASES = {"cafe-c00-mba": False, "meeting-room-s02-mba": True}
+
+    def _run(self, cid):
+        r = _old_recs()[cid]
+        idx = int(cid.split("-")[-2][1:])
+        seen = {"full": [], "early": []}
+        point0, early0 = compose.Scene.point, compose.Scene.point_early
+
+        def point(sc, x, dist, az, role="other", continuous=False):
+            out = point0(sc, x, dist, az, role, continuous)
+            if role in ("owner", "target"):
+                seen["full"].append(np.asarray(out[0], float))
+            return out
+
+        def point_early(sc, x, rir):
+            y = early0(sc, x, rir)
+            seen["early"].append(np.asarray(y, float))
+            return y
+
+        compose.Scene.point, compose.Scene.point_early = point, point_early
+        try:
+            a, m = compose.make_clip(r["scene"], r["tier"], idx, r["device"])
+        finally:
+            compose.Scene.point, compose.Scene.point_early = point0, early0
+        return r, a, m, seen
+
+    def test_each_target_scaled_by_one_coefficient(self):
+        for cid, multi in self.CASES.items():
+            r, a, m, seen = self._run(cid)
+            self.assertEqual(r["chain"]["headroom_db"] < 0, multi, cid)
+            ts = m["targets"]
+            self.assertEqual(len(seen["full"]), len(ts), cid)
+            self.assertEqual(len(seen["early"]), len(ts), cid)
+            self.assertEqual(len(ts) > 1, multi, cid)
+            for i, (t, y, ye) in enumerate(zip(ts, seen["full"], seen["early"])):
+                k = float(np.dot(t["x"], y) / np.dot(y, y))
+                np.testing.assert_allclose(t["x"], k * y, rtol=0, atol=1e-9 * np.max(np.abs(t["x"])), err_msg=f"{cid} 目标 {i} 主轨")
+                np.testing.assert_allclose(t["x_early"], k * ye, rtol=0, atol=1e-9 * np.max(np.abs(t["x_early"])), err_msg=f"{cid} 目标 {i} 早期轨")
+            np.testing.assert_allclose(a["owner"], sum(t["x"] for t in ts), atol=1e-12)
+            np.testing.assert_allclose(a["owner_early"], sum(t["x_early"] for t in ts), atol=1e-12)
+
+
 if __name__ == "__main__":
     unittest.main()

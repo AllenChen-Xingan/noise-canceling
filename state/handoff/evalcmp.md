@@ -34,12 +34,12 @@
 - 11-24 compare 冒烟（只读分数）：a = dfn3-ll、b = dpdfnet2，旧 build 480 段全部配上；涨 10 · 退 8 · 不确定 5。延迟 V-LAT 判退（+46.25 ms）、b 新增否决 480 段。发现 Markdown 里否决段列表太长 → 最多列 10 个，全部在 compare.json
 - 11-24 exp013 冒烟 build（4 段，写在会话临时目录，不进仓）：泄漏、电平验收都过，每段有 owner_early.wav；取 1 行做 Rust 解析夹具 `src/eval/tests/fixtures/scene-clip-early-example.jsonl`
 - 11-24 traindata 已在 `exp025-gtcrn-train/data/mix.py:30` import `EARLY_REVERB_MS, early_rir`，并有测试和正本逐样本对拍（`test_mix_loader.py:64`）
-- 11-24 人在本会话的选项题里选了「新 build 上云出」（见上节）；大总管 noise-canceling-33 另把它当技术题定为上云，结论相同
+- 11-24 本窗口的选项题「新 build 在哪出」收到了「上云」的回答。大总管 noise-canceling-33 事后说明：是它在 tmux 里代按的，人当时没看这个窗口。我无法核实是谁按的，按大总管说明记：这是大总管的决定（D97），人未参与
 - 11-24 大总管 noise-canceling-33 接替 e1：认可此前自行跑的几次（下列）；批 cloudrun 同一台 CPU 机，和 traindata 合计最多 3 小时、1 美元。本分支合并后由 cloudrun 跑，小文件回到 `_tmp/20261125-cloudrun-exp013build/`，由我核 sha256 后提交到 `builds/<id>/`
 - 自行跑的几次（无名额，补记）：11-24 scorecard_e2e 早期参考单条（220 s）· clippy 两次 · xtask tidy · scorecard 单测两次 · compare 冒烟（只读分数）· exp013 冒烟 build（4 段）· exp013 Python 自检
 - 11-24 大总管发 1 个名额：codex 修完后整套 e2e 重跑用，跑完回报「名额已还」
 
-## 云上出新 build（2026-11-24：人在本会话的选项题里选「上云」；大总管 noise-canceling-33 批了开机费）
+## 云上出新 build（大总管 noise-canceling-33 定上云，依据 D97 重活上云，并批了开机费；人未参与）
 在云机器的仓库根下（本分支合并后）：
 ```
 PY=<云上 venv>/bin/python
