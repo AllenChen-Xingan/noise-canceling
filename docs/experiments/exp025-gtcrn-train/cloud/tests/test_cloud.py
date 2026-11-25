@@ -510,7 +510,7 @@ class TestCli(Base):
         self.run_cli("up", "--yes", "--dc", "US-KS-2", "--no-volume")
         pid = next(iter(self.fake.pods))
         self.fake.pods[pid]["name"] = "someone-else"
-        out, _ = self.run_cli("reap")
+        out, _ = self.run_cli("reap", "--yes")
         self.assertIn(pid, self.fake.pods)
         self.assertIn("跳过", out)
 
@@ -533,12 +533,12 @@ class TestCli(Base):
                 raise OSError("offline")
             return real(cli, pid, *a, **k)
         with mock.patch.object(O, "delete_pod", flaky), self.assertRaises(SystemExit):
-            self.run_cli("reap")
+            self.run_cli("reap", "--yes")
         self.assertEqual(sorted(self.fake.pods), [first])
 
     def test_reap_and_spend(self):
         self.run_cli("up", "--yes", "--dc", "US-KS-2", "--no-volume")
-        self.run_cli("reap")
+        self.run_cli("reap", "--yes")
         self.assertEqual(self.fake.pods, {})
         out, _ = self.run_cli("spend")
         self.assertEqual(json.loads(out)["open_pods"], [])

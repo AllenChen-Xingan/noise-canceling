@@ -113,10 +113,10 @@ class TestLocalWatchdog(Base):
     def test_down_and_reap_unregister(self):
         self.run_cli("up", "--yes", "--dc", "US-MO-1", "--no-volume")
         pid = next(iter(W._load()))
-        self.run_cli("down", pid)
+        self.run_cli("down", pid, "--yes")
         self.assertEqual(W._load(), {})
         self.run_cli("up", "--yes", "--dc", "US-MO-1", "--no-volume")
-        self.run_cli("reap")
+        self.run_cli("reap", "--yes")
         self.assertEqual(W._load(), {})
 
     def test_watchdog_command_deletes_overdue_pod_and_logs(self):

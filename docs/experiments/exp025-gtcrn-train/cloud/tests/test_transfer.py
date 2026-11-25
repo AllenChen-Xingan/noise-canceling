@@ -102,6 +102,30 @@ class TestTransfer(Base):
         self.assertFalse(os.path.exists(os.path.join(self.tmp.name, "probes")))
         self.assertEqual(self.fake.pods, {})  # 失败也照删
 
+    def test_wait_keeps_polling_until_log_appears(self):
+        # 评审第 10 轮 #2：日志还没出现时 job_status 不报错，等它出现后拿到结果
+        rid = "late-20261125000000-abcdef"
+        st = O.job_status(self.cli, "pod_9", rid)
+        self.assertEqual((st["done"], st["log_seen"]), (False, False))
+        polls = []
+
+        def appear(s):
+            polls.append(s)
+            self.fake.jobs[rid] = (0, "ok\n")
+        st = O.wait_job(self.cli, "pod_9", rid, 60, sleep=appear)
+        self.assertEqual((st["rc"], st["log"]), (0, "ok\n"))
+        self.assertEqual(len(polls), 1)
+
+    def test_manual_delete_needs_yes(self):
+        # 评审第 10 轮 #1：down / reap 不带 --yes 只列出要删的，不删
+        with self.assertRaises(SystemExit) as cm:
+            self.run_cli("down", "pod_9")
+        self.assertIn("--yes", str(cm.exception))
+        with self.assertRaises(SystemExit):
+            self.run_cli("reap")
+        self.assertIn("pod_9", self.fake.pods)
+        self.assertFalse([c for c in self.fake.calls if c[0] == "DELETE"])
+
 
 if __name__ == "__main__":
     unittest.main()

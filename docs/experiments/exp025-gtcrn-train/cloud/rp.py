@@ -108,7 +108,23 @@ def cmd_up(cli, a):
     print(p["id"])
 
 
+def _need_delete_yes(cli, a, targets: list, what: str) -> None:
+    """手动删机前先列出要删的机器；没带 --yes 就只列不删（评审第 10 轮 #1）。
+    看门狗、机器内自删、开机失败的自动清理不走这里，不会卡住。"""
+    if a.yes:
+        return
+    lines = [f"  {p.get('id')}  {p.get('name')}  {p.get('status')}" for p in targets] or ["  （云上没有）"]
+    raise SystemExit(f"{what}会删掉下面这些机器（容器盘上的东西一起没，网络盘不受影响）：\n" + "\n".join(lines)
+                     + "\n确认后加 --yes 再跑")
+
+
 def cmd_down(cli, a):
+    if not a.yes:
+        try:
+            target = [cli.get(f"/v2/pods/{a.pod}")]
+        except O.ApiError:
+            target = [{"id": a.pod, "name": "?", "status": "查不到"}]
+        _need_delete_yes(cli, a, target, "down ")
     est = O.delete_pod(cli, a.pod, a.ledger, note=a.note)
     print(f"已删机 {a.pod}，估算 {est:.4f} 美元")
 
@@ -132,7 +148,9 @@ def _reap_one(cli, a, pid: str, live_names: dict) -> str:
 
 def cmd_reap(cli, a):
     """每台单独处理：一台失败不影响其余，最后汇总失败并以非零退出（评审第 3 轮 #5）。"""
-    live_names = {p["id"]: p.get("name") for p in O.list_our_pods(cli)}
+    ours = O.list_our_pods(cli)
+    _need_delete_yes(cli, a, ours, "reap ")
+    live_names = {p["id"]: p.get("name") for p in ours}
     todo = list(live_names) + [pid for pid in L.open_pods(L.read_rows(a.ledger)) if pid not in live_names]
     failed = []
     for pid in todo:
@@ -273,10 +291,12 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--yes", action="store_true")
         if name == "probe":
             p.add_argument("--seconds", type=float, default=20.0, help="每个地址最多测几秒")
-    p = add("down", cmd_down, "删机（不是 stop）并记账")
+    p = add("down", cmd_down, "删机（不是 stop）并记账；要带 --yes")
     p.add_argument("pod")
     p.add_argument("--note", default="")
-    add("reap", cmd_reap, "删掉所有 vdn- 开头的机器（兜底）")
+    p.add_argument("--yes", action="store_true")
+    p = add("reap", cmd_reap, "删掉所有 vdn- 开头的机器（兜底）；要带 --yes")
+    p.add_argument("--yes", action="store_true")
     add("watchdog", cmd_watchdog, "本机看门狗：到点删机（up 自动起）")
     add("spend", cmd_spend, "按账本汇总已花与上限")
     p = add("sh", cmd_sh, "在机器里跑一条短命令（≤25 秒）")
