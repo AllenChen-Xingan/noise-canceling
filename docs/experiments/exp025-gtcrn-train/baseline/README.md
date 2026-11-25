@@ -56,46 +56,44 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
   --out docs/experiments/exp025-gtcrn-train/baseline/runs/$RUN       # 云上没有 caffeinate 就去掉
 ```
 
-- 成绩单 `meta` 里应看到 `"safety": "off"`、`"qa": true`；`"asr"` 本机为 true、云上为 false
+- 识别默认走 OpenRouter（D103）：密钥放仓库根 `.env.local` 的 `OPENROUTER_API_KEY`（或同名环境变量），云上同样放一份，权限 600、不进仓
+- 成绩单 `meta` 里应看到 `"safety": "off"`、`"qa": true`；`"asr"` 是一个对象：`default` = `openrouter`、`backends.openrouter.model` = `qwen/qwen3-asr-1.7b-20260813`、各后端实际用到的段数、`checked` / `unstable`（多次转写的条数与不一致的条数）。装不起来时是 `{"error": 原因}`，吃字整列判「不知道」
 - 输出：`scorecard.md` · `scorecard.json` · `clips.jsonl`；音频类中间产物（`qa/asr-wav/`）不进仓
+- 识别花费累计在主目录 `_tmp/asr-openrouter-ledger.json`（全部真调用共用一本），到 15 美元就停发（第三节）
+- 按段换后端（可选）：`VDN_ASR_ROUTE=<json>`，形如 `{"default": "openrouter", "clips": {"<片段 id>": "local42"}}`；`VDN_ASR_BACKEND=local42` 整套改回本机 42model
 
-## 二、识别服务与评分模型能不能上云（实测 + 读源码）
+## 二、识别与外发（D103 · D104，人定 2026-11-25）
 
-- **评分模型能上云**：两个都是 ONNX，用 ort 在 CPU 上跑（`src/eval/src/qa/nrmos.rs`），和平台无关，装法见上一节
-- **识别服务不能上云**：吃字（V-EAT-ASR）用的是本机 42model 应用里的 Qwen3-ASR（`/Applications/42model.app`，`127.0.0.1:11520`，`src/eval/src/qa/asr.rs`），只有 macOS 版。云上换别的识别实现，转写会不同，和本机已有的吃字读数不能比，所以不换
-- **ort 只编了 CPU 版**（`Cargo.toml` 的 ort 特性里没有 CUDA），评分模型在 H100 上也只用 CPU，GPU 不起作用
-- 云上没有识别服务时，`--qa` 照样算评分模型，吃字整列判「不知道」（读源码 `qa/mod.rs`：`Asr::alive()` 为假）
+- **识别改走云端**（D103）：OpenRouter 的 `qwen/qwen3-asr-1.7b-20260813`（Qwen3-ASR 1.7B，和本机 42model 的 `qwen3-asr-plus:1.7b` 同一个 1.7B 模型）。D103 原写的 `qwen3-asr-flash-2026-02-10` 在 OpenRouter 上没有（2026-11-25 03:36 UTC 读公开模型列表：472 个模型，转写类 30 个，没有 Flash），大总管已更正。型号正本 `src/eval/src/qa/asr_or.rs` 的 `OR_MODEL`
+- **接口**：`POST /api/v1/audio/transcriptions`，JSON 体带 16 位 WAV 的 base64；返回 `text` 与 `usage.cost`（读 OpenRouter 文档 STT 一节）
+- **每个请求都带 `provider.data_collection = "deny"`**（大总管硬要求）：路由不到不留存的提供方就当失败、停下，不退回允许留存的提供方。测试 `request_carries_model_audio_language_and_deny`（没带 deny 就红）、`credit_and_data_policy_failures_do_not_retry_or_fall_back`
+- **密钥**：只从环境变量或 `.env.local` 读；经 `curl -K -` 从标准输入传，不进命令行参数、不打印；出错信息里若含密钥先抹掉（测试 `errors_never_contain_the_key`）
+- **并发**（大总管定）：一段要识别的几条（干净人声、原声、输出 × 2 次）先一起并发发出，最多 `ASR_CONCURRENCY` = 8 路；429 与 5xx 各自按 `Retry-After` 或指数退避，最多 5 次。结果按音频 sha256 写缓存，之后照旧逐条取，所以成绩与完成先后无关（测试：`concurrent_batch_equals_serial_and_really_overlaps`、`prefetch_then_transcribe_equals_plain_serial` 核缓存文件逐字节相同）
+- **外发许可**（D104，人定）：480 段都可以送去识别，含 ACE 卷积的 148 段、MIT 卷积的 300 段（MIT 原页没写许可，2026-11-25 核过）；存 RunPod 私有网络盘也认可。依据：识别服务替我们处理、不算分享，且不留存；这个解读没有人从法律上核过。范围只到评测识别和自家云盘，公开发布或给别人听仍要先问人。ESC-50（CC BY-NC）只评测
+- 评分模型照旧在 CPU 上跑 ONNX（ort 没编 CUDA，H100 的 GPU 用不上）
 
-**分工**（走第三节 B 路时）：
-1. 云上：第一节的命令，出 DSP 各项 + 两个评分模型，吃字为「不知道」
-2. 本机：同一条命令（有识别服务），出全部各项
-3. 合并：`python docs/experiments/exp025-gtcrn-train/baseline/merge.py --cloud <云上>/clips.jsonl --local <本机>/clips.jsonl --out <新目录>`：每段吃字取本机、其余取云上，并把其余每项两边逐段比一遍（跨平台对拍，判据见第四节）
-4. 出成绩单：`target/release/vdn-eval scorecard --from-clips <新目录>/clips.jsonl --out <另一个新目录>`
+### 「每条 2 次」是干什么的、怎么定（大总管 2026-11-25 定）
 
-## 三、估时与两条路（大总管 2026-11-25 定：走 A，B′ 不做；技术题，人未参与）
+- **用途**（读源码 `asr.rs` · `qa/mod.rs`）：第 2 次是稳定性复核。两次转写不一致，这条音频剔除，该段吃字判「不知道」（rubric V7）
+- **实测**（2026-11-25，`_tmp/exp025-asr-real-20261124-194229.log`）：同一条音频（car-passenger-c00-ext 的干净人声，LibriSpeech 英文 12 秒）连调 3 次，**逐字相同**；每次 0.00009 美元（`usage.cost`，等于每秒 0.0000075 美元 × 12 秒）；耗时 1.44 / 20.69 / 0.66 秒。只有 1 条音频，不能说明转写总是确定的
+- **定了**：基线保留每条 2 次（`REPEATS` = 2），同时量出 1440 条音频的不一致率，记进 `meta.asr.unstable_rate`。不一致率 ≤ `MAX_UNSTABLE_RATE`（0）时，以后的模型改成只转 1 次（`VDN_ASR_REPEATS=1`），按音频 sha256 固定抽 `SPOT_FRACTION`（10%）照旧转 2 次复核。三个常量的正本在 `asr.rs`，测试 `spot_check_sampling_is_deterministic_and_about_ten_percent`
 
-**依据**：本机 5 段冒烟，release 版，2026-11-25（`runs/smoke-20261124-191531/`，每步日志在同目录）。当时插电，负载约 6.9（别的项目在跑、cloudrun 在上传），**只作估时依据，不是测速基准**。
+## 三、估时与费用（D103 后：整套上云）
 
-| 部分 | 实测 | 每段 | 480 段 |
-|---|---|---|---|
-| GTCRN + DSP 各项（不带 `--qa`） | 5 段 7.07 s | 1.4 s | 约 11 分钟 |
-| 两个评分模型（带 `--qa`、识别已缓存：43.45 s − 7.07 s） | 5 段 36.4 s，每段 4 次评分 | 7.3 s（约每次 1.8 s，含载入） | 约 58 分钟 |
-| 识别（带 `--qa`、没缓存：96.0 s − 43.45 s） | 30 次 | 每次 1.75 s | 2880 次 × 1.75 s ≈ 84 分钟 |
+**依据**：GTCRN 与 DSP、评分模型两项来自本机 5 段冒烟（`runs/smoke-20261124-191531/`，负载约 6.9，只作估时）；识别来自上面 3 次真调用。云上 CPU 的快慢未量化，先按本机速度推。
 
-- **识别次数**：每段识别干净人声、原声、GTCRN 输出 3 条，每条 2 次（`asr.rs` 的 `REPEATS`）→ 480 × 6 = 2880 次（5 段实测 30 次，对得上）。干净人声那一路不送识别
-- **以后每个模型**：干净人声和原声的转写可以预先放进 `<--out>/qa/asr_cache.json` 复用（按音频 sha256 去重），只剩输出 480 × 2 = 960 次 ≈ 28 分钟；评分模型对原声的分不落盘，每次都重算（读源码 `qa/mod.rs` 的 `mix_mos`）
-
-| | A. 全在本机 | B. 云上 DSP + 评分模型，本机识别 |
+| 部分 | 每段 | 480 段 |
 |---|---|---|
-| 每个模型耗时 | 第一个约 2.6 小时（11 + 58 + 84 分钟），之后约 1.6 小时（11 + 58 + 28） | 云上约 1.2 小时（11 + 58 分钟，按本机速度推，云上 CPU 快慢未量化）**加** 本机同样 1.6–2.6 小时 |
-| 6 个模型合计 | 约 10.6 小时（2.6 + 5 × 1.6） | 本机同样约 10.6 小时，另加云上约 7 小时机时 |
-| 费用 | 0 | 云上 CPU 机每小时 0.12 美元（cloudrun 那台）：装环境约 0.5 小时（编译、传 396 MB 评分模型，推断）+ 6 × 1.2 小时 ≈ 1 美元；回传每次约 3 MB（`clips.jsonl` 约 1.8 MB + `scorecard.json` 约 0.9 MB，按 5 段实测每段 3.8 KB 推算） |
-| 风险 | 本机要一直开着：会被休眠打断（11-24 真出过）→ 用 `caffeinate -i`；和别的线抢 CPU（这次负载 6.9）→ 读数不受影响，只是变慢；计时类读数（最坏一帧耗时 V-FRAME 不在成绩单里）不受影响 | 本机那一半的风险和 A 一样；多一份云上开机、装环境、链接音频出错的风险；好处是多一份跨平台对拍 |
+| GTCRN + DSP 各项 | 1.4 s | 约 11 分钟 |
+| 两个评分模型（每段 4 次评分） | 7.3 s | 约 58 分钟 |
+| 识别：每段 3 条 × 2 次 = 6 次，8 路并发成一批 | 一批约 1–2 s（偶有 20 s） | 480 批 ≈ 8–16 分钟（推断） |
+| **合计** | | **约 1.3–1.5 小时 / 每个模型** |
 
-**为什么 B 省不了本机的时间**：吃字要识别 GTCRN 的输出，本机拿不到云上的输出音频，只能自己重跑 GTCRN；而现在的 `--qa` 不能只开识别，评分模型也会跟着重算。
-**B′（要改代码，没做）**：给 `--qa` 加「只算识别」的开关，本机每个模型可省约 58 分钟（6 个模型约 5.8 小时）；或者云上把 GTCRN 输出音频传回本机（每段 1 条，480 段约 0.4 GB：冒烟时 `qa/asr-wav/` 5 段写了 20 条共 15 MB，每条约 0.75 MB），本机只做识别；这也要改代码，让识别能读外部输出。
-
-**已定：走 A**（大总管 2026-11-25）。理由：识别只能在本机，B 不省本机时间，只多花钱、多一处出错的地方。正式跑 480 段前先申请重活名额、确认插着电、用 `caffeinate -i`。第二节的分工与 `merge.py` 留着，以后要跨平台对拍时用。
+- **识别费**：每个模型 480 × 6 = 2880 次 × 0.00009 美元 ≈ **0.26 美元**；以后改成 1 次 + 10% 抽查约 0.14 美元。6 个模型（基线 + 5 个训练出的）约 0.26 + 5 × 0.14 ≈ **1.0 美元**，远低于上限 15 美元（D103：按 `usage.cost` 实际金额累计，到上限就停）
+- **机器费**：CPU 机每小时约 0.12 美元（cloudrun 那台）× 每个模型约 1.5 小时 × 6 ≈ 1.1 美元，另加装环境约 0.5 小时（推断）。RunPod 另有 60 美元上限（D103），不在本表
+- **回传**：每次约 3 MB（`clips.jsonl` 约 1.8 MB + `scorecard.json` 约 0.9 MB，按冒烟每段 3.8 KB 推）
+- 原来的 A / B / B′ 三条路（D103 之前）作废：识别能上云以后，整套在云上一台机器跑完即可；`merge.py` 留着，以后要跨平台对拍时用
+- 正式跑前：申请名额；云上要有 `.env.local` 的密钥、两个评分模型文件、6323 音频链接（第一节）
 
 ## 四、验收
 
