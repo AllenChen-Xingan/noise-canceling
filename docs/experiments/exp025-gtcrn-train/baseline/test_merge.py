@@ -1,0 +1,82 @@
+"""merge.py 的测试：云上一份（吃字判不了）+ 本机一份（带吃字）→ 合并后每段的吃字取本机、其余取云上；两边逐项比对的读数；
+缺段、多段、系统不同、本机没出吃字都报错；只新建不覆盖。"""
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import merge  # noqa: E402
+
+ITEMS = ["V-NAN", "V-EAT-ASR", "V-ESTOI", "V-NRMOS-SCOREQ"]
+
+
+def score(v, value, verdict="pass", extra=None):
+    return {"v": v, "veto": v in ("V-NAN", "V-EAT-ASR"), "value": value, "threshold": 0.0, "verdict": verdict, "extra": extra or {}}
+
+
+def row(clip, vals, system="gtcrn"):
+    return {"clip": clip, "scene": "cafe", "tier": "common", "device": "mba-builtin", "system": system, "sounds": [],
+            "scores": [score(v, vals.get(v), "unknown" if vals.get(v) is None else "pass") for v in ITEMS]}
+
+
+def cloud(n=3):
+    return [row(f"cafe-c0{i}-mba", {"V-NAN": 0.0, "V-ESTOI": 0.1 * i, "V-NRMOS-SCOREQ": 0.2}) for i in range(n)]
+
+
+def local(n=3, d=0.0):
+    return [row(f"cafe-c0{i}-mba", {"V-NAN": 0.0, "V-EAT-ASR": 1.0 * i, "V-ESTOI": 0.1 * i + d, "V-NRMOS-SCOREQ": 0.2 + d})
+            for i in range(n)]
+
+
+class Merge(unittest.TestCase):
+    def test_eat_from_local_rest_from_cloud(self):
+        rows, rep = merge.merge(cloud(), local(d=1e-6))
+        for i, r in enumerate(rows):
+            s = {x["v"]: x for x in r["scores"]}
+            self.assertEqual(s["V-EAT-ASR"]["value"], 1.0 * i)
+            self.assertEqual(s["V-EAT-ASR"]["verdict"], "pass")
+            self.assertAlmostEqual(s["V-ESTOI"]["value"], 0.1 * i)  # 云上那份
+        self.assertEqual([x["v"] for x in rows[0]["scores"]], ITEMS, "项的顺序不变")
+        self.assertAlmostEqual(rep["V-ESTOI"]["max_abs_diff"], 1e-6, places=12)
+        self.assertEqual(rep["V-ESTOI"]["pairs"], 3)
+        self.assertNotIn("V-EAT-ASR", rep, "吃字不比（云上判不了）")
+
+    def test_mismatched_clip_sets_or_systems_are_errors(self):
+        with self.assertRaises(ValueError):
+            merge.merge(cloud(3), local(2))
+        with self.assertRaises(ValueError):
+            merge.merge(cloud(2), local(3))
+        loc = local()
+        loc[0]["system"] = "ref"
+        with self.assertRaises(ValueError):
+            merge.merge(cloud(), loc)
+
+    def test_local_without_eat_is_error(self):
+        loc = local()
+        loc[1]["scores"][1] = score("V-EAT-ASR", None, "unknown")
+        with self.assertRaises(ValueError):
+            merge.merge(cloud(), loc)
+
+    def test_cloud_already_has_eat_is_error(self):
+        cl = cloud()
+        cl[0]["scores"][1] = score("V-EAT-ASR", 3.0)
+        with self.assertRaises(ValueError):
+            merge.merge(cl, local())
+
+    def test_main_writes_new_files(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            for name, rows in (("c.jsonl", cloud()), ("l.jsonl", local())):
+                (d / name).write_text("".join(json.dumps(r) + "\n" for r in rows))
+            merge.main(["--cloud", str(d / "c.jsonl"), "--local", str(d / "l.jsonl"), "--out", str(d / "m")])
+            got = [json.loads(l) for l in (d / "m/clips.jsonl").read_text().splitlines()]
+            self.assertEqual(len(got), 3)
+            self.assertIn("V-ESTOI", json.loads((d / "m/merge-report.json").read_text())["items"])
+            with self.assertRaises(FileExistsError):
+                merge.main(["--cloud", str(d / "c.jsonl"), "--local", str(d / "l.jsonl"), "--out", str(d / "m")])
+
+
+if __name__ == "__main__":
+    unittest.main()

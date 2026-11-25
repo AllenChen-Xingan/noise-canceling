@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[2]
+ROOT = HERE.parents[3]  # baseline → exp025 → experiments → docs → 仓库根
 sys.path.insert(0, str(HERE))
 import subset  # noqa: E402
 
