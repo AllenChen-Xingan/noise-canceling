@@ -175,13 +175,18 @@ def cmd_job_wait(cli, a):
 
 def cmd_put(cli, a):
     with open(a.local, "rb") as f:
-        print(O.put_bytes(cli, a.pod, f.read(), a.remote))
+        print(O.put_bytes(cli, a.pod, f.read(), a.remote, overwrite=a.overwrite))
 
 
 def cmd_get(cli, a):
+    """取回到本机；默认不覆盖已有文件（评审第 5 轮 #2），先写临时文件再改名。"""
+    if os.path.exists(a.local) and not a.overwrite:
+        raise SystemExit(f"本机已有 {a.local}；换个路径，或确要覆盖加 --overwrite")
     data = O.fetch_bytes(cli, a.pod, a.remote)
-    with open(a.local, "wb") as f:
+    tmp = f"{a.local}.part-{os.getpid()}"
+    with open(tmp, "wb") as f:
         f.write(data)
+    os.replace(tmp, a.local)
     print(f"{a.local} {len(data)} 字节")
 
 

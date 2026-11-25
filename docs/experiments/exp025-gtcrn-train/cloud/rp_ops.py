@@ -298,9 +298,15 @@ def check_ok(r: dict, what: str) -> str:
 def start_job(cli: Client, pod_id: str, script: str, job: str, jobs_dir: str = "/root/jobs") -> None:
     """长命令放后台跑（exec 单次最多等 25 秒）：输出写 <job>.log，退出码写 <job>.rc。"""
     d = shlex.quote(f"{jobs_dir}/{job}")
+    # 第 1 步同步做完：建目录、拒绝同名任务还在跑（有 .log 没 .rc）、清掉上次的 .rc / .log（评审第 5 轮 #3）
+    prep = check_ok(sh(cli, pod_id, f"mkdir -p {shlex.quote(jobs_dir)} && "
+                                    f"if [ -e {d}.log ] && [ ! -e {d}.rc ]; then echo BUSY; exit 0; fi; "
+                                    f"rm -f {d}.rc {d}.log && echo READY"), f"准备 {job}")
+    if "BUSY" in prep:
+        raise SystemExit(f"同名任务 {job} 还在跑（有日志、没退出码）；换个名字，或等它跑完")
+    # 第 2 步才放后台
     inner = f"( {script} ) > {d}.log 2>&1; echo $? > {d}.rc"
-    check_ok(sh(cli, pod_id, f"mkdir -p {shlex.quote(jobs_dir)} && rm -f {d}.rc && "
-                              f"setsid nohup sh -c {shlex.quote(inner)} > /dev/null 2>&1 < /dev/null &"),
+    check_ok(sh(cli, pod_id, f"setsid nohup sh -c {shlex.quote(inner)} > /dev/null 2>&1 < /dev/null &"),
              f"启动 {job}")
 
 
@@ -329,22 +335,28 @@ def wait_job(cli: Client, pod_id: str, job: str, timeout_s: float, poll_s: float
 
 # ---------- 传文件 ----------
 
-def put_bytes(cli: Client, pod_id: str, data: bytes, remote: str) -> str:
+def put_bytes(cli: Client, pod_id: str, data: bytes, remote: str, overwrite: bool = False) -> str:
     """把小文件传上去（每次 exec 最多约 240 × 4 KB base64）；返回远端 sha256 并核对。"""
     b64 = base64.b64encode(data).decode()
     step = C.EXEC_ARG_MAX_CHARS
     chunks = [b64[i:i + step] for i in range(0, len(b64), step)] or [""]
     q = shlex.quote(remote)
+    if not overwrite:  # 默认不覆盖远端已有文件（评审第 5 轮 #2）
+        r = sh(cli, pod_id, f"test ! -e {q}")
+        if r.get("exitCode") != 0:
+            raise SystemExit(f"远端已有 {remote}；确要覆盖加 --overwrite（旧文件会改名留作 .bak-时间）")
     check_ok(sh(cli, pod_id, f"mkdir -p \"$(dirname {q})\" && : > {q}.part"), "建远端文件")
     for i in range(0, len(chunks), C.PUT_ARGS_PER_CALL):
         part = chunks[i:i + C.PUT_ARGS_PER_CALL]
         r = exec_cmd(cli, pod_id, ["sh", "-c", f"printf %s \"$@\" | base64 -d >> {q}.part", "sh", *part])
         check_ok(r, f"上传第 {i // C.PUT_ARGS_PER_CALL + 1} 批")
-    out = check_ok(sh(cli, pod_id, f"mv {q}.part {q} && sha256sum {q}"), "核哈希")
+    out = check_ok(sh(cli, pod_id, f"sha256sum {q}.part"), "核哈希")  # 先核临时文件，对了才替换
     got = out.split()[0] if out.split() else ""
     want = hashlib.sha256(data).hexdigest()
     if got != want:
-        raise SystemExit(f"上传后哈希不一致：{remote}")
+        raise SystemExit(f"上传后哈希不一致：{remote}（临时文件 {remote}.part 留着，正式文件没动）")
+    bak = f"{q}.bak-{time.strftime('%Y%m%d%H%M%S')}"
+    check_ok(sh(cli, pod_id, f"if [ -e {q} ]; then mv {q} {bak}; fi; mv {q}.part {q}"), "替换正式文件")
     return got
 
 
