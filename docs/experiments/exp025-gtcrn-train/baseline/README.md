@@ -92,7 +92,7 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
 | 风险 | 本机要一直开着：会被休眠打断（11-24 真出过）→ 用 `caffeinate -i`；和别的线抢 CPU（这次负载 6.9）→ 读数不受影响，只是变慢；计时类读数（最坏一帧耗时 V-FRAME 不在成绩单里）不受影响 | 本机那一半的风险和 A 一样；多一份云上开机、装环境、链接音频出错的风险；好处是多一份跨平台对拍 |
 
 **为什么 B 省不了本机的时间**：吃字要识别 GTCRN 的输出，本机拿不到云上的输出音频，只能自己重跑 GTCRN；而现在的 `--qa` 不能只开识别，评分模型也会跟着重算。
-**B′（要改代码，没做）**：给 `--qa` 加「只算识别」的开关，本机每个模型可省约 58 分钟（6 个模型约 5.8 小时）；或者云上把 GTCRN 输出音频（480 段约 1.1 GB，按 qa/asr-wav 实测 5 段 15 MB 推）传回本机，本机只做识别。
+**B′（要改代码，没做）**：给 `--qa` 加「只算识别」的开关，本机每个模型可省约 58 分钟（6 个模型约 5.8 小时）；或者云上把 GTCRN 输出音频传回本机（每段 1 条，480 段约 0.4 GB：冒烟时 `qa/asr-wav/` 5 段写了 20 条共 15 MB，每条约 0.75 MB），本机只做识别；这也要改代码，让识别能读外部输出。
 
 **建议，待大总管定**：走 A。理由：识别只能在本机，B 不省本机时间，只多花钱、多一处出错的地方；A 的风险用 `caffeinate` 和错开别的重活就能压住。若要跨平台对拍的证据，基线这一次走 B，之后的模型走 A。
 
@@ -101,12 +101,12 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
 1. **没跑成的段为 0**：`scorecard.json` 的 `missing` 为空，`clips_scored` = 480（`merge.py` 遇到任一边有缺段就拒绝合并）
 2. **进仓**：`runs/<run>/` 下的 `clips.jsonl` · `scorecard.json` · `scorecard.md`，以及 `gap.md` · `gap.json`；不进仓的音频写路径与哈希
 3. **和本机已有成绩对拍**（`vdn-eval compare`）：
-   - 对 exp021 的不回混 GTCRN（`docs/experiments/exp021-gtcrn-aux/runs/20261105-sweep-gtcrn/clips.jsonl.gz` 里系统 `gtcrn-h-nomix`，同一批音频，不带 `--qa`）：`vdn-eval compare --a <解压后只留 gtcrn-h-nomix 的文件> --b <本次>/clips.jsonl --system-a gtcrn-h-nomix`。**本机跑**的那份，除音色 V-TIMBRE 外各项差值必须为 0；V-TIMBRE 在 exp021 之后由 #119 改了量法（30 个 ERB 频带的离散程度），不比。5 段冒烟实测：22 项差 0，只有 V-TIMBRE 不同（`runs/smoke-20261124-191531/` 的对拍在冒烟时做，结果见本节末）
+   - 对 exp021 的不回混 GTCRN（`docs/experiments/exp021-gtcrn-aux/runs/20261105-sweep-gtcrn/clips.jsonl.gz` 里系统 `gtcrn-h-nomix`，同一批音频，不带 `--qa`）：`vdn-eval compare --a <解压后只留 gtcrn-h-nomix 的文件> --b <本次>/clips.jsonl --system-a gtcrn-h-nomix`。**本机跑**的那份，除音色 V-TIMBRE 外各项差值必须为 0；V-TIMBRE 在 exp021 之后由 #119 改了量法（30 个 ERB 频带的离散程度），不比。5 段冒烟实测：22 项差 0，只有 V-TIMBRE 不同（`runs/smoke-20261124-191531/compare-vs-exp021/`）
    - **云上跑**的那份（走 B 时）：和本机那份用 `merge.py` 逐段比，每项逐段值差 ≤ `PARITY_ABS`（1e-3，该项自己的单位），且判定不同的段 ≤ `PARITY_FLIP`（1%）；正本在 `merge.py`，测试 `test_merge.py`。用 `compare` 判不了这件事：两边差很小但方向一致时，区间会整个落在 0 的一边，被判成「涨」或「退」
    - 对 exp014 的回混 GTCRN（`docs/experiments/exp014-scorecard-gtcrn/runs/20261105-005916-4ccf0638/`）：只报不判，用来说明回混口径和不回混口径差多少
 4. **差距表**：`python docs/experiments/exp025-gtcrn-train/baseline/gap.py <run>/scorecard.json --system gtcrn --out <run>`；算法和阈值的正本在 `gap.py` 文件头和常量，测试 `test_gap.py`
 
-冒烟对拍（实测，5 段，本机 release，不带 `--qa`）：对 exp021 `gtcrn-h-nomix`，23 项里 22 项差值为 0，只有 V-TIMBRE 均值从 0.188 变成 0.357 dB（原因见上）。合并 → `--from-clips` → 差距表整条链跑通。
+冒烟对拍（实测，5 段，不带 `--qa`；debug 版和 release 版各跑一次，结果相同）：对 exp021 `gtcrn-h-nomix`，23 项里 22 项差值为 0，只有 V-TIMBRE 均值差 +0.169 dB（0.188 → 0.357，原因见上）。合并 → `--from-clips` → 差距表整条链跑通。
 
 ## 五、差距表怎么得出「加训哪几个场景」
 
