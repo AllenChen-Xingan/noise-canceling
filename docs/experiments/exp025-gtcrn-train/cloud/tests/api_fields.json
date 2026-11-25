@@ -1,0 +1,150 @@
+{
+ "source": "https://api.runpod.io/v2/openapi.json",
+ "fetched": "2026-11-16",
+ "sha256_16": "41f48a46a68fd023",
+ "paths": [
+  "/v2/billing/pods",
+  "/v2/catalog/cpus",
+  "/v2/catalog/cpus/{id}",
+  "/v2/catalog/datacenters",
+  "/v2/catalog/datacenters/{id}",
+  "/v2/catalog/gpus",
+  "/v2/catalog/gpus/{id}",
+  "/v2/catalog/templates",
+  "/v2/network-volumes",
+  "/v2/network-volumes/{id}",
+  "/v2/pods",
+  "/v2/pods/{id}",
+  "/v2/pods/{id}/action",
+  "/v2/pods/{id}/exec",
+  "/v2/pods/{id}/logs",
+  "/v2/queued-pods",
+  "/v2/queued-pods/{id}"
+ ],
+ "schemas": {
+  "CreatePodRequest": [
+   "args",
+   "cloud",
+   "cmd",
+   "cpu",
+   "dataCenterIds",
+   "disk",
+   "entrypoint",
+   "env",
+   "globalNetworking",
+   "gpu",
+   "image",
+   "mounts",
+   "name",
+   "ports",
+   "queue",
+   "registry",
+   "startJupyter",
+   "startSsh",
+   "templateId"
+  ],
+  "CreateGpuConfig": [
+   "allowedCudaVersions",
+   "count",
+   "id",
+   "minCudaVersion",
+   "minRamPerGpu",
+   "minVcpuCountPerGpu"
+  ],
+  "Mounts": [
+   "global",
+   "network",
+   "persistent"
+  ],
+  "NetworkMount": [
+   "path",
+   "volumeId"
+  ],
+  "PodExecRequest": [
+   "command",
+   "cwd",
+   "env",
+   "timeoutSeconds"
+  ],
+  "PodExecResult": [
+   "durationMs",
+   "exitCode",
+   "stderr",
+   "stdout",
+   "timedOut",
+   "truncated"
+  ],
+  "CreateNetworkVolumeRequest": [
+   "dataCenter",
+   "name",
+   "size",
+   "type"
+  ],
+  "Pod": [
+   "actions",
+   "args",
+   "cloud",
+   "cluster",
+   "cmd",
+   "cost",
+   "costCenter",
+   "cpu",
+   "createdAt",
+   "cudaVersion",
+   "dataCenterId",
+   "disk",
+   "entrypoint",
+   "env",
+   "globalNetworking",
+   "gpu",
+   "id",
+   "image",
+   "locked",
+   "mounts",
+   "name",
+   "ports",
+   "registry",
+   "runtime",
+   "ssh",
+   "startedAt",
+   "status",
+   "tags",
+   "template"
+  ],
+  "GpuConfig": [
+   "count",
+   "id",
+   "memory",
+   "vcpuCount"
+  ],
+  "DataCenter": [
+   "compliance",
+   "cpuAvailability",
+   "globalNetwork",
+   "gpuAvailability",
+   "id",
+   "name",
+   "networkVolumeTypes",
+   "region"
+  ],
+  "GpuType": [
+   "availability",
+   "community",
+   "cudaVersions",
+   "dataCenters",
+   "id",
+   "manufacturer",
+   "maxCount",
+   "memory",
+   "minRam",
+   "minVcpuCount",
+   "name",
+   "pool",
+   "price",
+   "secure"
+  ]
+ },
+ "exec_timeout_max": 25,
+ "exec_arg_max": 4096,
+ "exec_args_max": 256
+}

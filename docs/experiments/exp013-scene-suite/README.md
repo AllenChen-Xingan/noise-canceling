@@ -54,9 +54,11 @@
 | 突发声音 | 狗叫、婴儿哭、键盘、鼠标、敲门、开关门、脚步、咳嗽、笑、喇叭、开罐等约 14 类 | **下 · 第一批**：ESC-50 按类挑，每类 12 个 5 s 片段，约 170 个文件、约 75 MB，单个 < 1 MB | CC BY-NC 3.0 → **只评测**，不训练（S11） |
 | 车内、地铁、候车厅底噪 | `car-passenger` · `bus-metro-cabin` · `transit-hub` | **下 · 第二批**：DEMAND TCAR · TMETRO · PSTATION（16 kHz 包），每个约 110–130 MB，合计约 350 MB | 同 DEMAND |
 | 合成声音 | 风扇、空调、冰箱、咖啡机、提示音、电话铃、转向灯、刹车提示、行李箱轮子、风噪、舱噪、翻书、喇叭扬声器滤波 | 本线自写（`synth_sounds.py`），不调用 exp006 的任何取材 / 合成函数 | 自有 |
-| 房间冲激响应（第三版起） | 全部 | **实测**（人选下载档 A，2026-11-03）：MIT IR Survey 271 条 · ACE 单声道包（7 个房间，RIR + 同房间噪声）· McVAMPIRE（车内 IR + 行驶噪声），见 `reverb-plan.md`。本线自写的模拟房间只留给单元测试 | MIT：页面未写许可，镜像标 CC BY 4.0【未核原文】· ACE：见下 · McVAMPIRE：CC BY 4.0；都只评测 |
+| 房间冲激响应（第三版起） | 全部 | **实测**（人选下载档 A，2026-11-03）：MIT IR Survey 271 条 · ACE 单声道包（7 个房间，RIR + 同房间噪声）· McVAMPIRE（车内 IR + 行驶噪声），见 `reverb-plan.md`。本线自写的模拟房间只留给单元测试 | MIT：页面未写许可，镜像标 CC BY 4.0【未核原文】；2026-11-25 核了原页 `mcdermottlab.mit.edu/Reverb/IR_Survey.html`，仍没写许可（PNAS 论文页 403 读不到）。送云识别、存 RunPod 网络盘按 **D104**（人定）· ACE：见下 · McVAMPIRE：CC BY 4.0；都只评测 |
 
 **ACE 的许可说明**：Zenodo 6257551 的元数据写 CC BY 4.0，IEEE DataPort 同一数据集的页面同时写 CC BY 和 CC BY-ND 4.0，两处冲突。本线按更严的 ND 处理。CC 4.0 第 2(a)(1) 条允许被许可人自己制作并复制改编品，ND 只禁止把改编品**分享**给别人。本线只在本机卷积、只评测，音频只放主目录 `_tmp/`、不进仓、不外发，所以不冲突【推断，依许可原文】。如果将来要把用 ACE 卷积出的音频给仓库外的人，先停下问人。
+
+**送云识别与存云盘（D104，人定 2026-11-25）**：480 段评测音频（含 ACE 卷积的 148 段、MIT 卷积的 300 段）可以送 OpenRouter 做评测识别、可以存在本项目 RunPod 私有网络盘；前提是每个识别请求都带 `provider.data_collection = "deny"`（代码正本 `src/eval/src/qa/asr_or.rs`，测试核）。依据：识别服务只替我们处理、不算分享给别人；这个解读没有人从法律上核过。范围只到这两件；公开发布、放公开仓库、给第三方听，仍要先问人。ESC-50 仍只评测；中文 Commons 朗读外发要署名。见 `docs/plan/001_decisions-20261029-b1.md` 的 D104。
 
 两批下载已完成：实测约 447 MB（ESC-50 71 MB + DEMAND 376 MB），单包最大 130 MB；逐文件 URL · 哈希 · 许可在 `materials.json`。缺素材时 `build.py` 直接拒跑，不做替代（同一种子在不同机器上必须取到同样的素材）。
 
@@ -109,7 +111,7 @@
 | `leak.py` | 与 exp006 训练清单求交集 |
 | `tests/` | 第七条的自检 |
 
-**输出**：音频写主目录 `_tmp/exp013/<build-id>/`，每段一个子目录：`mix.wav` · `owner_dry.wav` · `owner.wav`（混响 + 设备后，评测用的干净参考）· 每个干扰一条分轨 · `floor.wav`（设备底噪）。仓里只放 `builds/<build-id>/`：`manifest.json` · `clips.jsonl` · `hashes.txt` · `exclude.json` · 参数快照。每个 build 新目录，不覆盖旧 build（CLAUDE.md 第五节 1 条）。
+**输出**：音频写主目录 `_tmp/exp013/<build-id>/`，每段一个子目录：`mix.wav` · `owner_dry.wav` · `owner.wav`（混响 + 设备后，评测用的干净参考）· `owner_early.wav`（2026-11-16 起：只留直达 + 前 `EARLY_REVERB_MS` = 100 ms 混响、过同样设备链的早期回声参考，正本 `rooms.py`；生成它不抽随机数，旧 build 的其余各轨可逐样本重现，见 `tests/test_early.py`）· 每个干扰一条分轨 · `floor.wav`（设备底噪）。仓里只放 `builds/<build-id>/`：`manifest.json` · `clips.jsonl` · `hashes.txt` · `exclude.json` · 参数快照。每个 build 新目录，不覆盖旧 build（CLAUDE.md 第五节 1 条）。
 
 **片段清单格式**：`clip-manifest.md`（v1.1，与 scorecard 导出的 schema 一致；正本是 Rust 类型）。
 
@@ -145,7 +147,7 @@
 6. **中文主说话人只有 2 人**：本机 6 段中文里只有 2 段登记过许可（exp003），只用这 2 段
 7. **T60 实测**在主说话人 RIR 去掉直达窗后量（近距离时直达声会把衰减曲线前段拉陡）。第一、二版用模拟房间时，大房间实测比名义低 5–40%（模拟尾巴的高频按 0.8 × T60 衰减）；第三版起名义值就是实测 IR 的 T60，两者一致。清单里的 T60 / DRR 是房间本身的值（设备链之前）
 8. **会议室**按大总管转达的建议：照样出、标「全留」（`polarity = preserve_all`，`owner` = 所有要留的人之和），题仍在现状页等人定
-9. **测试跑法**：系统 `python3` 没有 numpy，用项目已有的 venv：`<主目录>/_tmp/exp002-venv/bin/python -m unittest discover -s docs/experiments/exp013-scene-suite/tests`
+9. **测试跑法**：系统 `python3` 没有 numpy。环境按本目录 `requirements.lock` 重建（2026-11-24 起；旧的 `_tmp/exp002-venv` 已随清理删除）：`uv venv <主目录>/_tmp/exp013-venv --python 3.12.14 && uv pip install --python <主目录>/_tmp/exp013-venv/bin/python -r docs/experiments/exp013-scene-suite/requirements.lock`，再 `<主目录>/_tmp/exp013-venv/bin/python -m unittest discover -s docs/experiments/exp013-scene-suite/tests`
 10. **第三版起「一段 = 一个房间」**（人试听第一版后指出人声与底噪混响不一致，方案 `reverb-plan.md`，人选下载档 A）：
     - 房间改用实测 RIR（`rirs.py`），本线自写的模拟房间（`rooms.make_rir`）只留给单元测试。T60 不再抽，取所用 IR 的实测值
     - 约 37% 的段人声与底噪同房间：ACE 的 7 个房间（开放办公、联合办公、电话亭、书房、酒店、会议室、教室、候车厅的一部分）、McVAMPIRE 车内。其余用 MIT 的实测 IR 配 DEMAND，按 `scenes.json` 的 `bed_t60` 约束 T60（暂定 ×[0.8, 1.25]）

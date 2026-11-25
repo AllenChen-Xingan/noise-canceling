@@ -1,0 +1,57 @@
+# exp025 正式训练的默认配置。字段正本：../config.py；本文件必须恰好覆盖全部字段（tests/test_config.py）
+run:
+  out_dir: ~/vdn-data/runs
+  name: exp025
+  seed: 0
+model:
+  variant: B
+  k_frames: 32
+  heads: 2
+  cond_dim: 8
+  attn: true
+  film: true
+  init: official
+  bn: frozen
+data:
+  kind: loader
+  shard_root: ""
+  recipe: ""
+  seg_s: 4.0
+  batch: 32
+  num_workers: 8
+  dev_n: 2000
+  dev_seed: 12345
+  dev_batches: 20
+  calib_batches: 200
+  timeout_s: 600.0
+optim:
+  lr: 1.0e-4
+  warmup_steps: 500
+  grad_clip: 3.0
+  betas: [0.9, 0.999]
+loss:
+  w_lvl: auto
+  w_on: auto
+  lvl_margin_db: 2.0
+  sp: false
+  w_sp: 1.0e-4
+  kd: false
+  w_kd: 0.1
+  level_norm: false
+  level_floor: 1.0e-3
+  on_skip_leading: false
+ema:
+  enabled: false
+  decay: 0.999
+schedule:
+  max_steps: 5000
+  ckpt_every: 500
+  eval_every: 500
+  log_every: 20
+  keep_last: 3
+limits:
+  max_hours: 6.0
+  max_usd: 20.0
+  usd_per_hour: 4.39
+  hang_s: 120.0
+device: auto

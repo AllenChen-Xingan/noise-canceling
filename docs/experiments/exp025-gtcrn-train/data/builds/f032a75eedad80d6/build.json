@@ -1,0 +1,171 @@
+{
+ "build_id": "f032a75eedad80d6",
+ "index_sha256": "dbfa14f1294ebb88e28db3cf5754f52879775c61f134ba2df68c77c7fb84164f",
+ "split_tables": {
+  "librispeech-train-clean-100": "22172bc506ddc27200a14af44608c9687926c270328ef28e65912396778ca43c",
+  "qut-noise": "70c13191a8dab67c692a3b1a703bea509bb4c3750900a902c13003515a0d13d7",
+  "tum-wind": "60b0a72df1495acd4c82b5cfb268f9ba61f123bd220aee96ba24800d868d6e09",
+  "openslr28-rir": "98c32d738ac07a9ca74a5d723263957f3611b6d1f6cd9feb3a22e65619fb1939",
+  "demand-train": "87fd8bb8e7698b2905d2ce493e28166025bbe9ac0cde1f830b4ac78e0fbfa02b"
+ },
+ "shards": {
+  "librispeech-train-clean-100": {
+   "train": {
+    "speech-librispeech-train-clean-100-train-00000.tar": "3372c50249813776a9204aef256b2df331d8421460df740b6c0380b0af38f8df",
+    "speech-librispeech-train-clean-100-train-00001.tar": "6508863c6511e4c33b15b8aefacf90194b3432ad8e169fae3b2a883a23c8be4e",
+    "speech-librispeech-train-clean-100-train-00002.tar": "02405cd0f45e8b7b5a5c02bdbe43dac6759e7d70f61ef4d71d052c5169b2b1e3",
+    "speech-librispeech-train-clean-100-train-00003.tar": "b6cb537ea66ded97915e504b6521db04fb2eb0c39442b8e7c7acf49e3fbd7c27",
+    "speech-librispeech-train-clean-100-train-00004.tar": "2a0bc7553231bd31c452f2dd7c9ec73c69dbade4e1589d0fc5aa45bc60652568",
+    "speech-librispeech-train-clean-100-train-00005.tar": "5af435ad669303583feed0ccf32ab3d0f0e822148a224f8a5b6307393bd2dbb8",
+    "speech-librispeech-train-clean-100-train-00006.tar": "4147218b2172b8c83244078b695a1553c1750d803c333bf6fc130fce4eebb6c5",
+    "speech-librispeech-train-clean-100-train-00007.tar": "4f46c6a8be365998874ebb8ede8741247cce7e598dcd5ad5947c4f1c9d4b7d78",
+    "speech-librispeech-train-clean-100-train-00008.tar": "529f1b4d06f0b39a9494fec20673c430d9c7d6574694686fe884e27a13e41c97",
+    "speech-librispeech-train-clean-100-train-00009.tar": "2282bd0f5acdb028bbdb37d27dbf9e56f3b85fcc86dcb997b2f566be4d0dcdd0",
+    "speech-librispeech-train-clean-100-train-00010.tar": "9fdea347d93db1e32835cecfaa997b6df1e4d10c71ee7717808139124172d2d5",
+    "speech-librispeech-train-clean-100-train-00011.tar": "b7923245b73da7d395f8b08d9c0e6d7c0714080e5dd871d1cc819229003f56b7",
+    "speech-librispeech-train-clean-100-train-00012.tar": "e461ad9d6e178a0398397f71d23ca5e5d67521f26bab54caaaa49df7c05cc2e8",
+    "speech-librispeech-train-clean-100-train-00013.tar": "9cb7a282ef044d1c191c24408dccc761216e7dd74013e3bf72d1580270732b6b",
+    "speech-librispeech-train-clean-100-train-00014.tar": "0ef59ea200a9f50bf76e139caee7be971875feaf2deb029bde9c4f49799f105c",
+    "speech-librispeech-train-clean-100-train-00015.tar": "bf66fda02dd7f838db85cb4df5c496fb5f53b4df676eb36e0380deaf9281f60c",
+    "speech-librispeech-train-clean-100-train-00016.tar": "114e0a15bda72a44f325aed4b5273acc0de64a18855ab3e8d7c0e4847a6b4718",
+    "speech-librispeech-train-clean-100-train-00017.tar": "82dcbab0748d473d34f5b3b08d5e0eb7bd71bae6501ef0e6ca1952573592cc8a",
+    "speech-librispeech-train-clean-100-train-00018.tar": "35f05e9167ca96a2c6b98918d8102654940802b0363b3ee05b2185bbb60176fb",
+    "speech-librispeech-train-clean-100-train-00019.tar": "9d47c42c7a5fc4ae759f60005ad99026b9ee7994179a654786fbc919845f2db6",
+    "speech-librispeech-train-clean-100-train-00020.tar": "40e4b86d794015e68d92adee766f1aceaaa8f85671431491c815d2a044e41f9e",
+    "speech-librispeech-train-clean-100-train-00021.tar": "ffd539890c0cb0ecb63f1957ac22c2c745f2840eea7da28557d74997bbff0a52",
+    "speech-librispeech-train-clean-100-train-00022.tar": "c3223301bfc5f94941ed771f1327f460bae61b8142e19e39c78c13487dc58d01",
+    "speech-librispeech-train-clean-100-train-00023.tar": "accaf0f5bb16ead45491aeed4fe1aa10fe0d6b228abbc582ca2f63fccf75c350",
+    "speech-librispeech-train-clean-100-train-00024.tar": "08032507ed4fcde20a913f8ba6d3c8fbc1cbffaa2e5b79a2de78f0de0bb4fa33",
+    "speech-librispeech-train-clean-100-train-00025.tar": "1e110aadfc79fd712c49488e4cd52531ae3d6d8bfae83a4652242366975a9b04",
+    "speech-librispeech-train-clean-100-train-00026.tar": "8d86d59076c2766e61fd747fd8fc9050e4db61588a403390773678c9867280be",
+    "speech-librispeech-train-clean-100-train-00027.tar": "7b45b235aafdb064396a616a5da1e39ec74eab7e4b7b33ec6bf1005ccddf509c",
+    "speech-librispeech-train-clean-100-train-00028.tar": "df4f3fd76eb37172a43802d34826496710c2a57e73496cd84eeabaabbfcb79cd",
+    "speech-librispeech-train-clean-100-train-00029.tar": "46d0826505759b99739dd8d87a2ce8165bb7238198e98a3cc53eb51506e08a0f",
+    "speech-librispeech-train-clean-100-train-00030.tar": "aa0371468f2092b25d56f921ebaff84504907c6f8b37d85ee2431546abe8281a",
+    "speech-librispeech-train-clean-100-train-00031.tar": "8acca115b1f5cc27d49409a3f06bac0db6e13216400da4124664f85c04cd1aa9",
+    "speech-librispeech-train-clean-100-train-00032.tar": "d7e068a37a69255277f15974593700f9f080dd1d2a5201829c4e4b25e2917493",
+    "speech-librispeech-train-clean-100-train-00033.tar": "4e2912ed005008f8d540a56acb8acd9f6e1e3a078e709494bc1e00b2a62dd2bf",
+    "speech-librispeech-train-clean-100-train-00034.tar": "379e53b07359e2629ad28c914b2e048b777de32f74e8f8cfa2d7e9d81e5b3f7a",
+    "speech-librispeech-train-clean-100-train-00035.tar": "39021eccee53c9e92a97d351418e0175cac532b800eaffa0a8eb03e5b647aeab",
+    "speech-librispeech-train-clean-100-train-00036.tar": "337bcb9420efc3f1b6d859da1169bf3e872e38100f1d6f0e3a47b9b04267dfd4"
+   },
+   "dev": {
+    "speech-librispeech-train-clean-100-dev-00000.tar": "42f2ad45e9ce4bac632afd70399fa60d3171cdad32ec7e7a84f209ed66ce1e77",
+    "speech-librispeech-train-clean-100-dev-00001.tar": "50037b26808e280fc55f7c39c652e19c0aad12e024e13a7870b9ead98f9b26cf",
+    "speech-librispeech-train-clean-100-dev-00002.tar": "5e2fa8ed72ea9be80e3d483f58c37d44c692f7e147f6446de7a2440f26e23e26",
+    "speech-librispeech-train-clean-100-dev-00003.tar": "0b1055e6dcac49aa7a766ff48c12ec819731e6f3156f06493c522da14413c187",
+    "speech-librispeech-train-clean-100-dev-00004.tar": "13a159ca444b9e193066ee5aed1208346a2044d62d72a527b7cf8d937eecbe3d"
+   }
+  },
+  "qut-noise": {
+   "dev": {
+    "noise-qut-noise-dev-00000.tar": "8870069e5efa2e60789e602927af5ed310eaadab3bb48334471b6a326c6cb05c"
+   },
+   "train": {
+    "noise-qut-noise-train-00000.tar": "d1bed065cc54d97f4515c638aed28c093741930ce28aa0f0b2444e25de3a5f61",
+    "noise-qut-noise-train-00001.tar": "2538d70b2ac96c1187f91bf127ddfbae2ce9537ad2e232c6042f105d0aa0a1f0",
+    "noise-qut-noise-train-00002.tar": "f94c1b6c161115d128d6afef52d340d3fb5136b530db0366f2481d582283751e",
+    "noise-qut-noise-train-00003.tar": "03e513286dd772379c8fabef62ad617ceaee33ae27fff2c57c14ccf371485e01"
+   }
+  },
+  "tum-wind": {
+   "train": {
+    "noise-tum-wind-train-00000.tar": "71a1df7dda8c5279d7f476f555e03df5c764660a6abe2f777478f1783900370d"
+   },
+   "dev": {
+    "noise-tum-wind-dev-00000.tar": "71894b46774a7d5b00ee4160edb233259a5208e7b65095cb96e7311967a68ea1"
+   }
+  },
+  "openslr28-rir": {
+   "train": {
+    "rir-openslr28-rir-train-00000.tar": "ef1390ea31507fb736c458b3a0499866e8a4c4e3a3b81f9c867a7c4a43b89086",
+    "rir-openslr28-rir-train-00001.tar": "60a97d533fad6b15fee5d1146ceb60a10927ab3a444eacd6d185fed1bf933840",
+    "rir-openslr28-rir-train-00002.tar": "55d66f82a4dc357cefafca668c80715066fcf1d502b630cf0f270137fff86ced",
+    "rir-openslr28-rir-train-00003.tar": "6ac01618b57a774190073169ec88024153f05d8819e1ba856005094f6f519b44",
+    "rir-openslr28-rir-train-00004.tar": "737f8b4dceecd52cf8c8a66ef6df1bedfcb66b7fa7676e8e3b75d639468affd6",
+    "rir-openslr28-rir-train-00005.tar": "05427f896d7845fde8973f4ec2ca8456d7c22f18e7601bb66298ed39ec736f71",
+    "rir-openslr28-rir-train-00006.tar": "da33fa35d161b93b986847f079e868706c7ab1726a84faa453ddc32f8dda9e57",
+    "rir-openslr28-rir-train-00007.tar": "e7c0dcc4ae1a1f77cef4f6ec264b8017be97312c951f1bcef62b3515c8499f82",
+    "rir-openslr28-rir-train-00008.tar": "d04176ee8e435444605ac8f2f81773ceeb083b198b913c018b5f8c3abe48ad82",
+    "rir-openslr28-rir-train-00009.tar": "b145dd7c2e3ada70df6b4ce31cc5e61c2d3c0f00ce23382ceb7c589ec938bef1",
+    "rir-openslr28-rir-train-00010.tar": "b4c962b05508d90b8ee6068947e432fe3607c0e93bcd1d794e08d6f3f4590391",
+    "rir-openslr28-rir-train-00011.tar": "fccaff3f590360b7372dc547bc1f6028301f7f727c9ecde9d3364532484f9bde"
+   },
+   "dev": {
+    "rir-openslr28-rir-dev-00000.tar": "8920a0904e1d655c6b51ba2c8b0d407455906555dc274eb1df88f39b952fe041",
+    "rir-openslr28-rir-dev-00001.tar": "cdf327db849dcf75a36fc165f849420f35bfc08d63079ee2ed7ac5040474c8db"
+   }
+  },
+  "demand-train": {
+   "dev": {
+    "noise-demand-train-dev-00000.tar": "247775a6c25e5600e79182df1a225e0e353921012d6c11488e8bf73468e77d3b"
+   },
+   "train": {
+    "noise-demand-train-train-00000.tar": "5ece7ad3a42de5506c709f2914cf6d197a0deb062eebb83b1b87564c43052084",
+    "noise-demand-train-train-00001.tar": "4ae72925106b77b6a36cd3ba474849a80b4ad517dfea916d2bd9af96acf95d8b"
+   }
+  }
+ },
+ "recipe_sha256": "0f1c34eb317b3e0ec6d80c2d91f71117bea63944ebfc8d77244c1fc2225d22bf",
+ "code_sha256": {
+  "mix.py": "66a209ab00ba07fd8d7e8a421e0bfaa80e393d1f082559d086b14025c822b5d2",
+  "gpu_mix.py": "2b51a7baee3b1909cde3729f8a7a7f7a1c8a0b57329c7d56360f73d2eaecef6a",
+  "loader.py": "901c8a848190002dd490cbbcee389e22129cbdc85268bd0573b946a76506740d",
+  "shard.py": "d698dfd3610856ba082afa08733f1d453df800fd51d0fa88a4abbbc80dfe8ae9",
+  "leakcheck.py": "28ba0bf9e6df918fb0d23a595e305c12a65664eab9d7aedebc8c1f9414582ab2",
+  "split.py": "711b3de52f12e160dcda7814c8f949ea70f785fd3e92c1a1fd7d805401654c8c",
+  "exp013/dsp.py": "20ee13f7d251b7a842983b4f0d9167f33871a51deaea36ffa0d16c14756f4e61",
+  "exp013/rooms.py": "9722a86e947380a9beb4edf06c2aec6fe2ffcb0ef805f1f5e18d77049fd7785e",
+  "exp013/rirs.py": "15d597675cef129970ead0e54db7f35b715dffcf964a6e2d2f6d1cf1e818524d"
+ },
+ "leak_check": {
+  "against": "exp013 build 20261103230756-17f5 exclude.json",
+  "ok": true,
+  "hits": [],
+  "n_hits": 0,
+  "per_key": {
+   "librispeech_speakers": 0,
+   "demand_segments": 0,
+   "esc50_files": 0,
+   "synth_fns": 0,
+   "rir_files": 0,
+   "rooms_reserved": 0,
+   "room_noise_segments": 0,
+   "other_segments": 0
+  },
+  "rows": 83460
+ },
+ "leak_checked_sources": [
+  "demand-train",
+  "librispeech-dev-clean-test-other",
+  "librispeech-train-clean-100",
+  "openslr28-rir",
+  "qut-noise",
+  "tum-wind"
+ ],
+ "valid": true,
+ "dropped_rir": 3307,
+ "determinism": "第 i 个样本只由 (seed, 份, i) 决定；第 k 批 = 样本 k·B…k·B+B−1，和 num_workers 无关；换批量 B 内容会变",
+ "counts": {
+  "librispeech-train-clean-100": {
+   "train": 22952,
+   "dev": 2775
+  },
+  "qut-noise": {
+   "dev": 173,
+   "train": 830
+  },
+  "tum-wind": {
+   "train": 367,
+   "dev": 29
+  },
+  "openslr28-rir": {
+   "train": 39354,
+   "dev": 5553
+  },
+  "demand-train": {
+   "dev": 96,
+   "train": 480
+  }
+ }
+}

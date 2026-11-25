@@ -1,120 +1,20 @@
 //! 成绩单端到端：自造 6 段合成片段（写 wav + clips.jsonl，带声音标注）→ 场景任务清单 → `scorecard::run`（参考降噪器）
 //! → 汇总 → Markdown / JSON。不需要模型：QA 层的吃字与听感判「不知道」，所以场景结论只能是「待测」或「不过」。
+//! 夹具在 `common/scene_fixture.rs`；早期回声参考的端到端测试在 `scorecard_early_e2e.rs`。
 
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
-use vdn_eval::runner::{Baseline, Opts};
 use vdn_eval::scene::SceneClip;
 use vdn_eval::scorecard::card::Card;
 use vdn_eval::scorecard::rules::CardStatus;
-use vdn_eval::suite::{LEVELS, parse_levels, parse_suite};
-use vdn_eval::synth::{NoiseKind, SceneSpec, TalkerSpec, render};
+use vdn_eval::suite::parse_suite;
 use vdn_eval::system::SystemKind;
 use vdn_eval::wav;
 
-const SR: u32 = vdn_types::MODEL_RATE;
-
-fn tracks(v: impl Fn(&str) -> String, stems: &[&str]) -> Value {
-    let mut st = serde_json::Map::new();
-    for s in stems {
-        st.insert(s.to_string(), json!(v(&format!("stem-{s}"))));
-    }
-    json!({"mix": v("mix"), "owner": v("owner"), "owner_dry": v("owner"), "floor": v("noise"),
-           "noise": v("noise"), "interf": v("interf"), "stems": st})
-}
-
-/// 写一段：返回 clips.jsonl 的一行。`with_machine` 的段多一个「咖啡机」声音标注。
-fn write_clip(root: &Path, i: usize, with_machine: bool) -> Value {
-    let c = render(&SceneSpec {
-        dur_s: 6.0,
-        seed: 100 + i as u64,
-        owner: Some(TalkerSpec {
-            level_dbov: -26.0,
-            f0_lo: 100.0,
-            f0_hi: 140.0,
-            tonal: false,
-        }),
-        owner_start_s: 0.5,
-        pause_s: (0.4, 1.2),
-        interferers: Vec::new(),
-        noise: NoiseKind::Cafe,
-        snr_db: if with_machine { 0.0 } else { 15.0 },
-        tail_silence_s: 0.0,
-    });
-    let id = format!("cafe-c{i:02}");
-    let rel = |k: &str| format!("clips/{id}-{k}.wav");
-    let mut stems = vec!["bed0"];
-    if with_machine {
-        stems.push("cm0");
-    }
-    for (k, x) in [
-        ("mix", &c.mix),
-        ("owner", &c.clean),
-        ("noise", &c.noise),
-        ("interf", &c.interf),
-    ] {
-        wav::write(&root.join(rel(k)), x, SR).unwrap();
-    }
-    for s in &stems {
-        wav::write(&root.join(rel(&format!("stem-{s}"))), &c.noise, SR).unwrap();
-    }
-    let sha = |k: &str| wav::sha256(&root.join(rel(k))).unwrap();
-    let n = c.mix.len() as u64;
-    let owner_iv: Vec<[u64; 2]> = c
-        .truth
-        .owner
-        .iter()
-        .map(|&(a, b)| [a as u64, b as u64])
-        .collect();
-    let snd = |inst: &str, cls: &str, group: &str| {
-        json!({"inst": inst, "cls": cls, "group": group, "is_speech": false, "iv": [[0, n]],
-               "level_dbfs": -40.0, "rel_db": -10.0, "dist_m": null, "azimuth_deg": null,
-               "src": {"kind": "synth", "fn": cls}, "license": "own"})
-    };
-    let mut sounds = vec![snd("bed0", "bed-cafe", "bed")];
-    if with_machine {
-        sounds.push(snd("cm0", "coffee-machine", "pattern"));
-    }
-    json!({
-        "id": id, "scene": "cafe", "tier": "common", "device": "mba-builtin", "mic_mode": "standard",
-        "pair": format!("{id}-x"), "lang": "en", "polarity": "suppress", "dur_samples": n, "sr": SR,
-        "audio": tracks(|k| rel(k), &stems), "has_clean_ref": true, "additive": true,
-        "targets": [{"spk": "s1", "dist_m": 0.5, "azimuth_deg": 0.0, "level_dbfs": -26.0, "iv": owner_iv, "src": {"kind": "synth", "spk": "s1"}}],
-        "sounds": sounds,
-        "nominal": {"snr_db": 10.0, "sir_db": null, "t60_s": 0.3, "owner_dist_m": 0.5, "owner_level_dbfs": -26.0},
-        "measured": {"snr_db": 10.0, "snr_all_db": 9.0, "owner_level_dbfs": -26.0, "sir_db": null, "t60_s": 0.3, "drr_db": 5.0, "overlap_ratio": 0.0},
-        "owner_iv": owner_iv, "interf_iv": [], "chain": {"flat": true}, "seed": 100 + i,
-        "hash": {"samples": tracks(|_| "0".repeat(64), &stems), "wav_sha256": tracks(sha, &stems)},
-    })
-}
-
-fn setup(tag: &str) -> (PathBuf, String) {
-    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("scorecard-{tag}"));
-    let _ = std::fs::remove_dir_all(&root);
-    std::fs::create_dir_all(root.join("clips")).unwrap();
-    // 3 段有咖啡机（0 dB，更吵）、3 段没有（15 dB）
-    let lines: Vec<String> = (0..6)
-        .map(|i| write_clip(&root, i, i < 3).to_string())
-        .collect();
-    let jl = root.join("clips.jsonl");
-    std::fs::write(&jl, lines.join("\n") + "\n").unwrap();
-    let suite = json!({"name": "scenes-e2e", "tasks": [{
-        "id": "S-cafe-common-mba", "set": "capability", "polarity": "suppress",
-        "origin": "scorecard 端到端测试", "desc": "咖啡馆 · 常见档 · MacBook Air",
-        "real": {"kind": "scene", "clips": jl.to_string_lossy(), "scene": "cafe", "tier": "common", "device": "mba-builtin"},
-        "graders": []}]});
-    (root, suite.to_string())
-}
-
-fn opts() -> Opts {
-    Opts {
-        ci: true,
-        audio_dir: None,
-        baseline: Baseline::new(),
-        levels: parse_levels(LEVELS).unwrap(),
-    }
-}
+#[path = "common/scene_fixture.rs"]
+mod fx;
+use fx::{opts, setup};
 
 #[test]
 fn fixture_lines_parse_as_scene_clips() {
@@ -312,6 +212,7 @@ fn committed_example_line_parses() {
     let v = SceneClip::parse_jsonl(&std::fs::read_to_string(p).unwrap()).unwrap();
     assert_eq!(v.len(), 1);
     assert_eq!(v[0].sounds.len(), 2);
+    assert!(v[0].audio.owner_early.is_none(), "旧格式行没有早期参考");
 }
 
 /// 仓里的场景任务清单（scenesuite 的 `suite/scenes.json`）与它引用的 `clips.jsonl` 都读得了：

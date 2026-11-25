@@ -1,0 +1,117 @@
+{
+ "cloud": "_tmp/exp025-smoke-20261124-191531/run-noqa/clips.jsonl",
+ "local": "_tmp/exp025-smoke-20261124-191531/run-qa/clips.jsonl",
+ "clips": 5,
+ "items": {
+  "V-NAN": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-LAT": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-SPLVL": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-ONSET": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-SIM-GATE": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-WEAK": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-PUMPV": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-CLICK": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-ESTOI": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-TIMBRE": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-NRMOS-SCOREQ": {
+   "pairs": 0,
+   "max_abs_diff": 0.0,
+   "one_sided": 5
+  },
+  "V-NRMOS-DISTILL": {
+   "pairs": 0,
+   "max_abs_diff": 0.0,
+   "one_sided": 5
+  },
+  "V-VACUUM": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-TSOS": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-SWALLOW": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-MUSIC": {
+   "pairs": 4,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-NR": {
+   "pairs": 5,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-INTF": {
+   "pairs": 1,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-SIM-FA": {
+   "pairs": 0,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-BGSTAB": {
+   "pairs": 4,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-LEAK": {
+   "pairs": 1,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  },
+  "V-PSE-OVL": {
+   "pairs": 2,
+   "max_abs_diff": 0.0,
+   "one_sided": 0
+  }
+ }
+}

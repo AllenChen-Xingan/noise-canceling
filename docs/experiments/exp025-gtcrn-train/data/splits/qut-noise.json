@@ -1,0 +1,33 @@
+{
+ "source": "qut-noise",
+ "group": "A2",
+ "unit": "time",
+ "seed": 20261116,
+ "rule_sha256": "af6d8e61f3d4c27d4c4256de000bc0f18edeb1e4f22e8787bb87a986f63428cb",
+ "files": 20,
+ "units": 20,
+ "jsonl_sha256": "70c13191a8dab67c692a3b1a703bea509bb4c3750900a902c13003515a0d13d7",
+ "time": [
+  [
+   "train",
+   0.0,
+   0.5
+  ],
+  [
+   "dev",
+   0.5,
+   0.6
+  ],
+  [
+   "final",
+   0.6,
+   0.8
+  ],
+  [
+   "d63",
+   0.8,
+   1.0
+  ]
+ ],
+ "seconds": 49131.5
+}

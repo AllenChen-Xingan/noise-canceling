@@ -1,0 +1,8 @@
+# exp013 场景测试集生成器的 Python 依赖（2026-11-24 冻结；与 build 20261103230756-17f5 manifest.versions 一致）
+# 重建：uv venv <主目录>/_tmp/exp013-venv --python 3.12.14 && uv pip install --python <主目录>/_tmp/exp013-venv/bin/python -r requirements.lock
+cffi==2.1.1
+numpy==2.5.4
+pycparser==3.12
+scipy==1.18.1
+soundfile==0.14.0
+typing-extensions==4.16.0

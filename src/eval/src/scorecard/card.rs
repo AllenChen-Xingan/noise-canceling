@@ -195,7 +195,10 @@ impl Card {
                     i.fail,
                     i.unknown,
                     f(i.mean),
-                    i.unit,
+                    match i.early_mean {
+                        Some(e) => format!("{}（早期参考 {e:.3}）", i.unit),
+                        None => i.unit.to_string(),
+                    },
                     ci_text(i),
                     f(i.worst),
                     i.worst_clip
@@ -359,6 +362,7 @@ mod header_tests {
                 system: sys.into(),
                 sounds: Vec::new(),
                 scores: vec![("V-PUMPV", false, s)],
+                mix_sha256: None,
             }
         };
         let rows = [row("passthrough", true), row("pt-ext", false)];

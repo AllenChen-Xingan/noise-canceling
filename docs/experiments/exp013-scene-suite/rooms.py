@@ -14,6 +14,10 @@ from dsp import SR
 
 C = 343.0
 MIC_H = 0.8  # 桌面笔记本麦的高度（m）【推断】
+# 「早期混响」只留直达声到达后多少毫秒（DNS Challenge 官方训练目标的做法，调研 027:40）。
+# **唯一正本**：exp013 早期回声参考轨（owner_early.wav）与训练目标（traindata 混音配方）都从这里 import，不另写 100。
+# 只给新加的早期参考与训练目标用；make_rir 的直达 / 其余拆分与旧 build 的任何输出都不读它。
+EARLY_REVERB_MS = 100
 
 
 @dataclass
@@ -125,6 +129,18 @@ def make_rir(rng, dims, t60, dist, az_deg, src_h=1.2, window_ms=None, order=2):
     rest = h - direct
     scale = d0  # 归一到直达幅度 1
     return Rir(direct * scale, rest * scale, float(t60), d0, az_real, dims, n0)
+
+
+def early_rir(r: Rir, ms=None):
+    """只留直达声 + 直达到达后 `ms` 毫秒内的混响（默认 EARLY_REVERB_MS），之后硬截为 0（同 DNS 官方做法）。
+
+    直达部分原样保留；`rest` 从样本号 `delay + ms` 起置零。其余字段不变，返回新 Rir（不改入参）。
+    """
+    ms = EARLY_REVERB_MS if ms is None else ms
+    cut = int(r.delay) + int(round(ms * 1e-3 * SR))
+    rest = np.asarray(r.rest, float).copy()
+    rest[max(cut, 0):] = 0.0
+    return Rir(np.asarray(r.direct, float).copy(), rest, r.t60, r.dist_m, r.azimuth_deg, r.dims, r.delay)
 
 
 def drr_db(r: Rir):

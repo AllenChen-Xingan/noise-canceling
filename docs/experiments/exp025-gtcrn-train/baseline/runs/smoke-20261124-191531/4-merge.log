@@ -1,0 +1,14 @@
+合并 5 段 → _tmp/exp025-smoke-20261124-191531/merged；两边差最大的项：V-NAN 0 · V-LAT 0 · V-SPLVL 0 · V-ONSET 0 · V-SIM-GATE 0
+成绩单：_tmp/exp025-smoke-20261124-191531/merged-card/scorecard.md（5 段，规则 v2）
+|---|---|---|---|---|---|
+| 1 | transit-hub | 0 | 0.583 | 12 | 是 |
+| 2 | car-passenger | 0 | 0.500 | 13 | 是 |
+| 3 | street-outdoor | 0 | 0.500 | 12 | 是 |
+| 4 | home-quiet | 0 | 0.477 | 11 |  |
+| 5 | cafe | 0 | 0.432 | 11 | 是 |
+
+前 4：transit-hub · car-passenger · street-outdoor · home-quiet
+临时选定：street-outdoor · transit-hub · car-passenger · cafe
+重合 3 个（car-passenger · street-outdoor · transit-hub），线 3 → **一致**
+
+结论（加训哪几个场景）由大总管在看过本表后下。

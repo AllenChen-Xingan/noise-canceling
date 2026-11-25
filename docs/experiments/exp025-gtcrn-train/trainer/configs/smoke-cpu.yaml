@@ -1,0 +1,25 @@
+# 本机 CPU 小冒烟：合成小样、小批、几十步。只证明管线通，不出任何效果结论
+run:
+  out_dir: ~/vdn-data/runs-smoke
+  name: smoke-cpu
+model:
+  variant: B
+data:
+  kind: synthetic
+  seg_s: 2.0
+  batch: 4
+  num_workers: 0
+  dev_n: 8
+  dev_batches: 2
+  calib_batches: 2
+optim:
+  warmup_steps: 5
+schedule:
+  max_steps: 20
+  ckpt_every: 10
+  eval_every: 10
+  log_every: 5
+limits:
+  max_hours: 0.1
+  max_usd: 1.0
+device: cpu

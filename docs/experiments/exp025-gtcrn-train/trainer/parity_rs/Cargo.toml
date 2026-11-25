@@ -1,0 +1,13 @@
+[package]
+name = "exp025-parity"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "只读调用 vdn-eval 的 V-SPLVL · V-ONSET 与掩码，给 Python 训练损失对拍（CLAUDE.md 五.5）"
+
+# 独立于仓库 workspace：只按路径用项目库，不改 src/（同 exp014 driver）
+[workspace]
+
+[dependencies]
+vdn-eval = { path = "../../../../../src/eval" }
+serde_json = "1"

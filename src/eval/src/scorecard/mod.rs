@@ -6,6 +6,9 @@
 
 pub mod aggregate;
 pub mod card;
+pub mod compare;
+pub mod compare_out;
+pub mod early;
 pub mod load;
 pub mod rules;
 pub mod rules_v2;
@@ -14,7 +17,7 @@ pub mod standard;
 use std::path::Path;
 
 use crate::files::serde_name;
-use crate::runner::{Extra, Opts, prepare_clip, score_one};
+use crate::runner::{Extra, Opts, Prepared, prepare_clip, score_one};
 use crate::scene::{ClipPolarity, MeetingPlace, SceneClip, SoundGroup, Tier};
 use crate::suite::{Grader, RealSource, Set, Suite, Task, main_root, resolve};
 use crate::synth::{Clip, SR, Truth};
@@ -34,6 +37,8 @@ pub struct ClipRow {
     pub sounds: Vec<(String, SoundGroup)>,
     /// (verifier, 是否否决项, 分数)，顺序同 [`standard::items`]
     pub scores: Vec<(&'static str, bool, Score)>,
+    /// 这一段混合轨 wav 的 sha256（取自片段清单）。`compare` 拿它核两份成绩单是不是同一批音频；旧成绩单没有，为 `None`
+    pub mix_sha256: Option<String>,
 }
 
 /// 没跑成的一段（或一整条任务）：照样进成绩单，让该场景不能判「过」（codex 第 1 轮 P1 #1）。
@@ -268,7 +273,9 @@ pub fn run_with(
                 what: c.id.clone(),
                 why,
             };
-            let clip = match load_scene_clip(c, &root) {
+            let clip_early =
+                load_scene_clip(c, &root).and_then(|x| Ok((x, early::load_early(c, &root)?)));
+            let (clip, early_ref) = match clip_early {
                 Ok(x) => x,
                 Err(e) => {
                     missing.extend(systems.iter().map(|&s| miss(s, e.clone())));
@@ -293,18 +300,31 @@ pub fn run_with(
                 };
                 // 干净人声那一路用专用上下文（旁人掩码空、不扣停顿噪声）
                 let clean_view = p.clean_view();
+                // 早期回声参考旁列：同一次运行，只换参考（early.rs）
+                let pe = early_ref.as_ref().map(|e| early::swap_ref(&p, e));
+                let pe_view = pe.as_ref().and_then(Prepared::clean_view);
                 let scores = t
                     .graders
                     .iter()
                     .zip(&items)
                     .map(|(g, (i, veto))| {
-                        let s = match (&clean_view, i.clean_input && clean_pass) {
+                        let on_clean = i.clean_input && clean_pass;
+                        let mut s = match (&clean_view, on_clean) {
                             (Some((cp, co)), true) => {
                                 score_one(g, sys, &t, cp, co, opts, &mut extra)
                                     .with_extra(standard::CLEAN_PASS_MARK, 1.0)
                             }
                             _ => score_one(g, sys, &t, &p, &p.run.out, opts, &mut extra),
                         };
+                        if let Some(pe) = pe.as_ref().filter(|_| early::wants(i.v)) {
+                            let se = match (&pe_view, on_clean) {
+                                (Some((cp, co)), true) => {
+                                    score_one(g, sys, &t, cp, co, opts, &mut extra)
+                                }
+                                _ => score_one(g, sys, &t, pe, &pe.run.out, opts, &mut extra),
+                            };
+                            s = early::attach(s, &se);
+                        }
                         (i.v, *veto, s)
                     })
                     .collect();
@@ -316,6 +336,7 @@ pub fn run_with(
                     system: sys.as_str().to_string(),
                     sounds: c.sounds.iter().map(|s| (s.cls.clone(), s.group)).collect(),
                     scores,
+                    mix_sha256: Some(c.hash.wav_sha256.mix.clone()),
                 });
             }
         }
