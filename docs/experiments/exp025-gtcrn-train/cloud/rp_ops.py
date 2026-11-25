@@ -307,14 +307,19 @@ def check_ok(r: dict, what: str) -> str:
     return r.get("stdout", "")
 
 
-def start_job(cli: Client, pod_id: str, script: str, job: str, jobs_dir: str = "/root/jobs") -> str:
+def new_run_id(job: str) -> str:
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,40}", job):
+        raise SystemExit(f"任务名只用字母、数字、_ . -（≤ 40 个）：{job!r}")
+    return f"{job}-{time.strftime('%Y%m%d%H%M%S', time.gmtime())}-{secrets.token_hex(3)}"  # UTC
+
+
+def start_job(cli: Client, pod_id: str, script: str, job: str, jobs_dir: str = "/root/jobs",
+              run_id: Optional[str] = None) -> str:
     """长命令放后台跑（exec 单次最多等 25 秒）；返回这次运行的唯一编号 <任务名>-<时间>-<随机>。
     日志写 <编号>.log，退出码写 <编号>.rc；job_status / wait_job 只认编号。任务名只作显示，
     同名跑两次各有各的文件，等第一次的不会拿到第二次的结果（大总管裁决，评审第 6–7 轮 #3/#2）。
     脚本作为独立参数交给 sh -c；脚本和外层包装都先 sh -n；放后台后等日志出现才算启动。"""
-    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,40}", job):
-        raise SystemExit(f"任务名只用字母、数字、_ . -（≤ 40 个）：{job!r}")
-    run_id = f"{job}-{time.strftime('%Y%m%d%H%M%S', time.gmtime())}-{secrets.token_hex(3)}"  # UTC
+    run_id = run_id or new_run_id(job)  # 调用方可先拿到编号再启动（评审第 8 轮 #1）
     d = shlex.quote(f"{jobs_dir}/{run_id}")
     inner = f"sh -c {shlex.quote(script)} > {d}.log 2>&1; echo $? > {d}.rc"
     for what, text in (("命令", script), ("包装", inner)):
@@ -322,12 +327,17 @@ def start_job(cli: Client, pod_id: str, script: str, job: str, jobs_dir: str = "
         if syn.get("exitCode") != 0:  # 语法错的后台任务连日志都写不出，会一直像「在跑」（2026-11-25 实测）
             raise SystemExit(f"{job} 的{what}有 sh 语法错误（bash 专有写法请包进 bash -c）："
                              f"{(syn.get('stderr') or '')[-200:]}")
-    check_ok(sh(cli, pod_id, f"mkdir -p {shlex.quote(jobs_dir)} && "
-                             f"setsid nohup sh -c {shlex.quote(inner)} > /dev/null 2>&1 < /dev/null &"),
-             f"启动 {job}")
-    up = sh(cli, pod_id, f"for i in 1 2 3 4 5; do [ -e {d}.log ] && exit 0; sleep 1; done; exit 1")
+    try:  # 从这里起，命令可能已经在机器里跑了：出错只报「结果未知」并带上编号，不许当没启动去重试
+        check_ok(sh(cli, pod_id, f"mkdir -p {shlex.quote(jobs_dir)} && "
+                                 f"setsid nohup sh -c {shlex.quote(inner)} > /dev/null 2>&1 < /dev/null &"),
+                 f"启动 {job}")
+        up = sh(cli, pod_id, f"for i in 1 2 3 4 5; do [ -e {d}.log ] && exit 0; sleep 1; done; exit 1")
+    except BaseException as e:
+        raise SystemExit(f"{job} 启动结果未知（{e}）；运行编号 {run_id}。先用 job-wait {run_id} 核查，"
+                         f"不要直接重跑，免得同一件事跑两遍") from e
     if up.get("exitCode") != 0:
-        raise SystemExit(f"{job}（{run_id}）放进后台 5 秒还没有日志，可能没起来")
+        raise SystemExit(f"{job} 启动结果未知：放进后台 5 秒还没有日志；运行编号 {run_id}，"
+                         f"先用 job-wait {run_id} 核查")
     return run_id
 
 

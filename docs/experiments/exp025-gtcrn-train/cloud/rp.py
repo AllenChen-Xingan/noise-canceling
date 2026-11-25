@@ -163,7 +163,9 @@ def cmd_sh(cli, a):
 
 
 def cmd_job_start(cli, a):
-    run_id = O.start_job(cli, a.pod, a.script, a.job)
+    run_id = O.new_run_id(a.job)
+    print(f"运行编号 {run_id}", file=sys.stderr, flush=True)  # 先打出来：启动途中断网也知道按哪个编号查
+    run_id = O.start_job(cli, a.pod, a.script, a.job, run_id=run_id)
     print(f"已启动 {a.job}，运行编号 {run_id}（job-wait 用这个编号）", file=sys.stderr)
     print(run_id)
 
@@ -207,6 +209,18 @@ def cmd_spend(cli, a):
                       "open_pods": list(L.open_pods(rows))}, ensure_ascii=False))
 
 
+def _probe_result(st: dict, rid: str) -> dict:
+    """测速结果：退出码 0、最后一行是带 nproc 的 JSON 才算数；否则带编号、退出码、日志尾报错（评审第 8 轮 #2）。"""
+    tail = st["log"].strip().splitlines()
+    try:
+        result = json.loads(tail[-1]) if tail else None
+    except ValueError:
+        result = None
+    if st.get("rc") != 0 or not isinstance(result, dict) or "nproc" not in result:
+        raise SystemExit(f"测速没成功（运行编号 {rid}，退出码 {st.get('rc')}）；日志尾：\n" + "\n".join(tail[-10:]))
+    return result
+
+
 def cmd_probe(cli, a):
     """开一台、量 vCPU / 下载速度、马上删（finally 保证删）。"""
     need_yes(a, "试开机")
@@ -219,8 +233,7 @@ def cmd_probe(cli, a):
         rid = O.start_job(cli, p["id"], f"python3 /root/probe/probe_remote.py /root/probe/probe_urls.txt {a.seconds}",
                     "probe")
         st = O.wait_job(cli, p["id"], rid, timeout_s=a.seconds * 12 + 120)
-        line = st["log"].strip().splitlines()[-1] if st["log"].strip() else "{}"
-        result = json.loads(line)
+        result = _probe_result(st, rid)
         result["pod"] = {k: p.get(k) for k in ("id", "dataCenterId", "cost", "gpu", "cudaVersion")}
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         with open(out_path, "w", encoding="utf-8") as f:
