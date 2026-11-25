@@ -10,8 +10,8 @@
 同一批 plan 两边逐样本差 ≤ 1e-4，写成了测试。本机 75 条测试全过（torch CPU 后端）。下载脚本已备好，没在云上跑。
 
 ## 下一步
-0. 第一批下完后补下 E3：`bash cloud_steps.sh fetch-e3`；其余包的读数（cloudrun 下完交）写进 fetched.json；云上 fetch.py 自己写的 fetched.json 拷回时和仓里这份合并
-1. 等大总管放行：云上 `bash cloud_steps.sh setup → test → head → fetch`
+0. E3（Wikimedia 3 个文件）cloudrun 正在补下；读数交来后照样合并进 fetched.json
+1. 第一批已由 cloudrun 下完（A1–A5 + DEMAND，21 个包 18.15 GB，/workspace 用 33 GB）
 2. 下完：`split`（先看 QUT / TUM 的清单）→ `shard` → `register`；切分表与 build.json 拷回进仓
 3. exp013 重建：`bash cloud_steps.sh rebuild`
 4. 收尾：多视角自审 + codex 评审
@@ -43,3 +43,4 @@
 - 2026-11-24 大总管转 cloudrun：E3（Wikimedia）回 429 没下成。fetch.py 改了三处：429 / 503 按 Retry-After 等（没有就 5·2^n 秒，上限 600 s）；404 等立刻报错；对 wikimedia.org 每次请求前停 5 s。下载本来就是串行的，User-Agent 仍是通用名。加 6 条测试；cloud_steps.sh 加 `fetch-e3` 一步单独补下
 - 2026-11-24 记下 OpenSLR 28 号包的读数（cloudrun 云上实测，经大总管转）：md5 e6f48e25… 写进 sources.json，sha256 3b50cfde… 写进新建的 fetched.json。加 1 条测试，核 fetched.json 和 sources.json 两边的字节数与 md5 一致
 - 2026-11-24 建本 worktree 的 `.venv`（已被 git 忽略）：torch 2.15.0 · numpy 2.5.4 · scipy 1.18.1 · soundfile 0.14.0
+- 2026-11-24 合并 cloudrun 取回的第一批读数（21 个包，A1–A5 + DEMAND）进 fetched.json：字节数 · 文件名 · 上游已给的 md5 逐个和 sources.json 核过，无冲突；28 号包与仓里已记的一致。加 1 条测试：第一批每个包都有钉死的 sha256
