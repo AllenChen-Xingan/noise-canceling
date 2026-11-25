@@ -241,6 +241,7 @@ mod tests {
                 false,
                 crate::Score::judged("V-ESTOI", 0.5, "Δ", crate::Better::Higher, Some(0.0), &[]),
             )],
+            mix_sha256: None,
         };
         std::fs::write(
             &jl,

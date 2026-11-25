@@ -25,6 +25,7 @@ fn row(scene: MeetingPlace, i: usize, scores: Vec<(&'static str, f64)>) -> ClipR
             .into_iter()
             .map(|(v, x)| (v, standard::VETO.iter().any(|i| i.v == v), sc(v, x)))
             .collect(),
+        mix_sha256: None,
     }
 }
 
@@ -433,7 +434,12 @@ fn unequal_clip_counts_both_directions() {
 fn different_audio_under_same_clip_id_is_refused_and_unknown_is_flagged() {
     let a = base(MeetingPlace::Cafe);
     let with = |rows: &[ClipRow], tag: &str| -> Vec<ClipRow> {
-        rows.iter().map(|r| ClipRow { mix_sha256: Some(format!("{tag}-{}", r.clip)), ..r.clone() }).collect()
+        rows.iter()
+            .map(|r| ClipRow {
+                mix_sha256: Some(format!("{tag}-{}", r.clip)),
+                ..r.clone()
+            })
+            .collect()
     };
     let (x, y) = (with(&a, "build1"), with(&a, "build1"));
     let c = &compare(&x, &y, None, false).unwrap()[0];
@@ -442,5 +448,8 @@ fn different_audio_under_same_clip_id_is_refused_and_unknown_is_flagged() {
     let e = compare(&x, &z, None, false).unwrap_err();
     assert!(e.contains("音频") && e.contains("不同"), "{e}");
     let c = &compare(&x, &a, None, false).unwrap()[0];
-    assert_eq!(c.unverified_pairs, 12, "一边没记哈希：照比，但 12 对都核不了");
+    assert_eq!(
+        c.unverified_pairs, 12,
+        "一边没记哈希：照比，但 12 对都核不了"
+    );
 }

@@ -298,6 +298,7 @@ mod tests {
                 ("V-NRMOS-SCOREQ", false, ok("V-NRMOS-SCOREQ", 0.1)),
                 ("V-NRMOS-DISTILL", false, ok("V-NRMOS-DISTILL", 0.1)),
             ],
+            mix_sha256: None,
         };
         let clips = dir.join("clips.jsonl");
         std::fs::write(&clips, to_jsonl(&[row]).unwrap()).unwrap();
@@ -391,6 +392,7 @@ mod tests {
             system: "gtcrn".into(),
             sounds: Vec::new(),
             scores: vec![("V-PUMPV", false, pumpv)],
+            mix_sha256: None,
         };
         let clips = dir.join("clips.jsonl");
         std::fs::write(&clips, to_jsonl(&[row]).unwrap()).unwrap();
