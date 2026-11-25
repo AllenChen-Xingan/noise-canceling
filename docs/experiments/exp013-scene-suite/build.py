@@ -4,7 +4,7 @@
 - 清单 → 本目录 `builds/<build-id>/`：clips.jsonl · manifest.json · hashes.txt · exclude.json · 参数快照（进仓）
 - 已存在的 build 目录一律拒绝覆盖（CLAUDE.md 第五节 1 条）
 用法（worktree 根下）：
-  PY=<主目录>/_tmp/exp002-venv/bin/python
+  PY=<主目录>/_tmp/exp013-venv/bin/python   # 按 requirements.lock 重建
   $PY docs/experiments/exp013-scene-suite/build.py [--build <id>] [--only cafe,canteen] [--n 2] [--workers 4]
 """
 import argparse
