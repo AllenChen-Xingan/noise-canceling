@@ -17,3 +17,4 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-25T04:17:15Z	pod_create	ciuc12isly6w84	cpu3c x4	US-MO-1	0.1200	2026-11-25T04:17:15Z					max_hours=1.0
 2026-11-25T04:27:09Z	pod_delete	ciuc12isly6w84	cpu3c x4	US-MO-1	0.1200	2026-11-25T04:17:15Z	2026-11-25T04:27:09Z	0.1650	0.0198		register+pack 完成（main 86698924）
 2026-11-25T04:42:37Z	pod_create	5f62454se0t6hs	cpu3c x4	US-MO-1	0.1200	2026-11-25T04:42:37Z					max_hours=6.0
+2026-11-25T05:06:23Z	pod_delete	5f62454se0t6hs	cpu3c x4	US-MO-1	0.1200	2026-11-25T04:42:37Z	2026-11-25T05:06:23Z	0.3961	0.0475		甲段 5 条测试红（缺 onnx 包、无 .git），按收尾删机；vdn-eval 在 22.04 链接不过
