@@ -1,0 +1,27 @@
+{
+ "source": "librispeech-train-clean-100",
+ "group": "A1",
+ "unit": "speaker",
+ "seed": 20261116,
+ "rule_sha256": "b3a6531a24c1fe57a9271fe2d7ad15c3871fe8196f83197c1b688322c30c1477",
+ "files": 28539,
+ "units": 251,
+ "jsonl_sha256": "22172bc506ddc27200a14af44608c9687926c270328ef28e65912396778ca43c",
+ "per_split": {
+  "d63": {
+   "units": 25,
+   "files": 2812,
+   "seconds": 37140.8
+  },
+  "dev": {
+   "units": 25,
+   "files": 2775,
+   "seconds": 35778.2
+  },
+  "train": {
+   "units": 201,
+   "files": 22952,
+   "seconds": 289208.1
+  }
+ }
+}

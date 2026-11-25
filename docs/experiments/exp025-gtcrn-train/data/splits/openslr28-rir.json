@@ -1,0 +1,32 @@
+{
+ "source": "openslr28-rir",
+ "group": "A4",
+ "unit": "room",
+ "seed": 20261116,
+ "rule_sha256": "8d4e0ea6ea79332e79e2b1969da533d1d8efd5e2ccdb75ec20d46e3b84ac3f42",
+ "files": 60325,
+ "units": 611,
+ "jsonl_sha256": "98c32d738ac07a9ca74a5d723263957f3611b6d1f6cd9feb3a22e65619fb1939",
+ "per_split": {
+  "d63": {
+   "units": 61,
+   "files": 6004,
+   "seconds": 6654.0
+  },
+  "dev": {
+   "units": 61,
+   "files": 6004,
+   "seconds": 7504.0
+  },
+  "final": {
+   "units": 61,
+   "files": 6107,
+   "seconds": 6983.7
+  },
+  "train": {
+   "units": 428,
+   "files": 42210,
+   "seconds": 49353.2
+  }
+ }
+}

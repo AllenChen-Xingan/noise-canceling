@@ -1,0 +1,22 @@
+{
+ "source": "librispeech-dev-clean-test-other",
+ "group": "A5",
+ "unit": "speaker",
+ "seed": 20261116,
+ "rule_sha256": "de2d05f062a1ab89e298842fb2c5fe16881c858ba554151d699852e751afd40b",
+ "files": 5642,
+ "units": 73,
+ "jsonl_sha256": "1084bfbbfcb650ac17ba63483d5ac26ee21803850e2a27a2a7daedd15c6491a1",
+ "per_split": {
+  "d63": {
+   "units": 36,
+   "files": 2901,
+   "seconds": 19150.7
+  },
+  "final": {
+   "units": 37,
+   "files": 2741,
+   "seconds": 19475.0
+  }
+ }
+}
