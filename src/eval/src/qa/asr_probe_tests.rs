@@ -160,3 +160,24 @@ fn probe_stops_on_permanent_error() {
     assert_eq!(r["pass"], false);
     assert_eq!(r["items"][1]["ran"], false);
 }
+
+/// codex 本分支第 4 轮 P1 #2：前面都稳定、最后一条遇到永久错误停发，也不能判「钉住了」。
+#[test]
+fn halted_probe_never_passes() {
+    let d = tmpdir("probe-last403");
+    let ok = |t: &str| {
+        (
+            200,
+            "",
+            json!({"text": t, "usage": {"seconds": 0.1, "cost": 1e-12}}).to_string(),
+        )
+    };
+    let mut script: Vec<(u16, &'static str, String)> = (0..3).map(|_| ok("a b")).collect();
+    script.push((403, "", json!({"error": {"code": 403}}).to_string()));
+    let (url, _) = fake(script);
+    let mut c = client(&url, &d);
+    let mk = |n: &str| (n.to_string(), n.to_string(), "en".to_string(), audio());
+    let r = probe(&mut c, &[mk("one"), mk("two")], 3, vdn_types::MODEL_RATE);
+    assert!(r["halted"].is_string());
+    assert_eq!(r["pass"], false, "{r}");
+}

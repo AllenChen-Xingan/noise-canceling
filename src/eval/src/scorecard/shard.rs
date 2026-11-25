@@ -318,15 +318,18 @@ pub fn merge_dirs(
         a["checked"] = json!(checked);
         a["unstable"] = json!(unstable);
         a["unstable_rate"] = json!((checked > 0).then(|| unstable as f64 / checked as f64));
-        if let Some(bs) = a["backends"].as_object_mut() {
-            for (name, b) in bs.iter_mut() {
-                let n: u64 = metas
-                    .iter()
-                    .map(|m| m["asr"]["backends"][name]["clips"].as_u64().unwrap_or(0))
-                    .sum();
-                b["clips"] = json!(n);
+        // 各后端：所有片的并集（有的片识别装不起来，只有 error、没有 backends）；型号取第一个见到的，段数逐片相加
+        let mut bs = serde_json::Map::new();
+        for m in &metas {
+            for (name, b) in m["asr"]["backends"].as_object().into_iter().flatten() {
+                let e = bs
+                    .entry(name.clone())
+                    .or_insert_with(|| json!({"clips": 0, "model": b["model"]}));
+                e["clips"] =
+                    json!(e["clips"].as_u64().unwrap_or(0) + b["clips"].as_u64().unwrap_or(0));
             }
         }
+        a["backends"] = Value::Object(bs);
         let gather = |k: &str| -> Vec<Value> {
             metas
                 .iter()
