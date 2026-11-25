@@ -69,6 +69,26 @@ class Merge(unittest.TestCase):
         self.assertEqual(rep["V-ESTOI"]["verdict_flips"], 1)
         self.assertEqual(merge.parity_errors(rep), [])
 
+    def test_parity_only_compares_runs_that_both_have_eat(self):
+        """codex 第 5 轮 P2 #6：识别上云后两边都有吃字值；对拍模式比全部项（含吃字），不合并、不要求哪边没值。"""
+        a, b = local(), local(d=1e-6)
+        rep = merge.parity(a, b)
+        self.assertIn("V-EAT-ASR", rep)
+        self.assertEqual(rep["V-EAT-ASR"]["max_abs_diff"], 0.0)
+        self.assertAlmostEqual(rep["V-ESTOI"]["max_abs_diff"], 1e-6, places=12)
+        self.assertEqual(merge.parity_errors(rep), [])
+        with self.assertRaises(ValueError):
+            merge.merge(a, b)  # 合并模式照旧拒绝「云上已有吃字」
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            for side, rows in (("c", a), ("l", b)):
+                (d / side).mkdir()
+                (d / side / "clips.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+                (d / side / "scorecard.json").write_text(json.dumps({"missing": []}))
+            merge.main(["--cloud", str(d / "c/clips.jsonl"), "--local", str(d / "l/clips.jsonl"), "--out", str(d / "p"), "--parity-only"])
+            self.assertFalse((d / "p/clips.jsonl").exists(), "对拍模式不写合并结果")
+            self.assertIn("V-EAT-ASR", json.loads((d / "p/merge-report.json").read_text())["items"])
+
     def test_mismatched_clip_sets_or_systems_are_errors(self):
         with self.assertRaises(ValueError):
             merge.merge(cloud(3), local(2))

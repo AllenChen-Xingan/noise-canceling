@@ -225,7 +225,8 @@ impl Asr {
         let rate = (self.checked > 0).then(|| self.unstable as f64 / self.checked as f64);
         serde_json::json!({"default": self.default, "backends": b, "calls": self.calls,
             "repeats": if self.single { "1 + 抽查" } else { "2" }, "spot_fraction": SPOT_FRACTION,
-            "checked": self.checked, "unstable": self.unstable, "unstable_rate": rate})
+            "checked": self.checked, "unstable": self.unstable, "unstable_rate": rate,
+            "halted": self.halted})
     }
 
     /// 服务在不在（GET 根路径能连上即可）。
