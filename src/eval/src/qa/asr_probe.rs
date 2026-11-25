@@ -38,18 +38,32 @@ pub fn probe(
 ) -> Value {
     let mut rows = Vec::new();
     let mut unstable = 0usize;
+    // 永久错误（不重试的 4xx、到上限、账本待核、费用未知…）一出现就整套停发，剩下的标「没跑」（codex 本分支第 3 轮 P1 #2）
+    let mut halted: Option<String> = None;
     for (name, sha, lang, x) in items {
+        if halted.is_some() {
+            unstable += 1;
+            rows.push(json!({"wav": name, "sha256": sha, "lang": lang, "ran": false, "stable": false}));
+            continue;
+        }
         let mut texts = Vec::new();
         let mut errors = Vec::new();
         for _ in 0..repeats {
             match c.transcribe(x, sr, lang) {
                 Ok(t) => texts.push(t),
-                Err(e) => errors.push(e),
+                Err(e) => {
+                    let stop = super::asr_or::is_permanent(&e) || e.contains("HTTP 4");
+                    errors.push(e.clone());
+                    if stop {
+                        halted = Some(e);
+                        break;
+                    }
+                }
             }
         }
         let stable = errors.is_empty() && texts.iter().all(|t| same_text(t, &texts[0], lang));
         unstable += usize::from(!stable);
-        rows.push(json!({"wav": name, "sha256": sha, "lang": lang, "texts": texts, "errors": errors, "stable": stable}));
+        rows.push(json!({"wav": name, "sha256": sha, "lang": lang, "ran": true, "texts": texts, "errors": errors, "stable": stable}));
     }
     let n = items.len();
     let rate = if n > 0 {
@@ -61,5 +75,6 @@ pub fn probe(
         "audio": n, "unstable": unstable, "unstable_rate": rate,
         "max_unstable": PROBE_MAX_UNSTABLE,
         // 正式结论只在连调 PROBE_REPEATS 次时给；别的次数只是探索，pass 为 null（codex 本分支第 2 轮 P2 #3）
+        "halted": halted,
         "pass": (repeats == PROBE_REPEATS).then_some(n > 0 && rate <= PROBE_MAX_UNSTABLE), "items": rows})
 }

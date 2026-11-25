@@ -56,7 +56,7 @@ pub struct Part {
 
 /// 清单里的一个单位（一段，或一条展开不出片段的任务）：要不要有记录、归哪一片看的下标、应该是谁。
 #[derive(Clone, Debug)]
-pub struct Unit {
+pub struct ShardUnit {
     /// 有片段且分组认得 / 展开不出片段的任务 = 要有记录；分组不认得 = 不要
     pub need: bool,
     /// 分片看的下标：同一段（id + 混合轨哈希）在清单里出现几次，都按它第一次出现的位置分，落在同一片里
@@ -73,8 +73,8 @@ pub struct Unit {
 }
 
 /// 单位清单（正本；[`super::run_shard`] 与 [`merge`] 共用，顺序就是单进程的顺序）。
-pub fn unit_plan(suite: &Suite) -> Vec<Unit> {
-    let mut v: Vec<Unit> = Vec::new();
+pub fn unit_plan(suite: &Suite) -> Vec<ShardUnit> {
+    let mut v: Vec<ShardUnit> = Vec::new();
     let mut first: BTreeMap<(String, String), usize> = BTreeMap::new();
     for task in &suite.tasks {
         match clips_of(task) {
@@ -84,7 +84,7 @@ pub fn unit_plan(suite: &Suite) -> Vec<Unit> {
                     let mix = c.hash.wav_sha256.mix.clone();
                     let home = *first.entry((c.id.clone(), mix.clone())).or_insert(k);
                     let dev = crate::files::serde_name(&c.device);
-                    v.push(Unit {
+                    v.push(ShardUnit {
                         need: standard::group_of(c.scene).is_some(),
                         home,
                         expect: (c.id.clone(), c.scene, c.tier, dev, Some(mix)),
@@ -103,7 +103,7 @@ pub fn unit_plan(suite: &Suite) -> Vec<Unit> {
                 };
                 let k = v.len();
                 let dev = crate::files::serde_name(device);
-                v.push(Unit {
+                v.push(ShardUnit {
                     need: true,
                     home: k,
                     expect: (task.id.clone(), *scene, *tier, dev, None),
@@ -310,6 +310,7 @@ pub fn merge_dirs(
             .map(|m| m["asr"][k].as_u64().unwrap_or(0))
             .sum::<u64>()
     };
+    // 识别摘要：计数逐片相加；各后端用到的段数相加；停发与出错原因逐片收齐，不只看第一片（codex 本分支第 3 轮 P2 #3）
     let asr = (!metas[0]["asr"].is_null()).then(|| {
         let mut a = metas[0]["asr"].clone();
         let (checked, unstable) = (sum("checked"), sum("unstable"));
@@ -317,6 +318,16 @@ pub fn merge_dirs(
         a["checked"] = json!(checked);
         a["unstable"] = json!(unstable);
         a["unstable_rate"] = json!((checked > 0).then(|| unstable as f64 / checked as f64));
+        if let Some(bs) = a["backends"].as_object_mut() {
+            for (name, b) in bs.iter_mut() {
+                let n: u64 = metas.iter().map(|m| m["asr"]["backends"][name]["clips"].as_u64().unwrap_or(0)).sum();
+                b["clips"] = json!(n);
+            }
+        }
+        let gather = |k: &str| -> Vec<Value> { metas.iter().map(|m| m["asr"][k].clone()).filter(|v| !v.is_null()).collect() };
+        a["halted"] = json!(gather("halted").first().cloned());
+        a["halted_by_shard"] = json!(metas.iter().map(|m| m["asr"]["halted"].clone()).collect::<Vec<_>>());
+        a["error"] = json!(gather("error").first().cloned());
         a["per_shard"] = json!(metas.iter().map(|m| m["asr"].clone()).collect::<Vec<_>>());
         a
     });
