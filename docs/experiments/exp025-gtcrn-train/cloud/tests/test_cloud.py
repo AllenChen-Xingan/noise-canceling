@@ -403,6 +403,14 @@ class TestOps(Base):
         with self.assertRaises(SystemExit):
             O.start_job(self.cli, "pod_9", "echo hi", "k")
 
+    def test_start_job_rejects_sh_syntax_error(self):
+        # 2026-11-25 实测：bash 专有的 >( ) 在 sh 下解析失败，后台任务连日志都没有、一直像在跑
+        self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}
+        with self.assertRaises(SystemExit) as cm:
+            O.start_job(self.cli, "pod_9", "cat a | tee >(sha256sum) | wc -c", "j")
+        self.assertIn("语法", str(cm.exception))
+        self.assertNotIn("j", self.fake.jobs)
+
     def test_start_job_refuses_same_name_still_running(self):
         # 评审第 5 轮 #3：同名任务还在跑就拒绝，不会读到上次的退出码
         self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}

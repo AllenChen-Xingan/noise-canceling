@@ -315,6 +315,10 @@ def start_job(cli: Client, pod_id: str, script: str, job: str, jobs_dir: str = "
                                     f"rm -f {d}.rc {d}.log && echo READY"), f"准备 {job}")
     if "BUSY" in prep:
         raise SystemExit(f"同名任务 {job} 还在跑（有日志、没退出码）；换个名字，或等它跑完")
+    # 先用 sh -n 查语法：语法错的命令在后台连日志和退出码都写不出，会一直像「在跑」（2026-11-25 实测踩到）
+    syn = sh(cli, pod_id, f"sh -n -c {shlex.quote(script)}")
+    if syn.get("exitCode") != 0:
+        raise SystemExit(f"{job} 的命令有 sh 语法错误（bash 专有写法请包进 bash -c）：{(syn.get('stderr') or '')[-200:]}")
     # 第 2 步才放后台
     inner = f"( {script} ) > {d}.log 2>&1; echo $? > {d}.rc"
     check_ok(sh(cli, pod_id, f"setsid nohup sh -c {shlex.quote(inner)} > /dev/null 2>&1 < /dev/null &"),

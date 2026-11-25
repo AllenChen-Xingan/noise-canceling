@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 import shlex
+import subprocess
 import urllib.parse
 
 import config as C  # noqa: E402
@@ -110,6 +111,10 @@ class FakeRunPod:
         script = argv[2] if argv[:2] == ["sh", "-c"] else " ".join(argv)
         if self.fail_exec and self.fail_exec in script:
             return dict(ok, exitCode=1, stderr="boom")
+        if script.startswith("sh -n -c "):
+            body = shlex.split(script)[3]
+            r = subprocess.run(["sh", "-n", "-c", body], capture_output=True, text=True)
+            return dict(ok, exitCode=r.returncode, stderr=r.stderr)
         if script.startswith("test ! -e "):
             return dict(ok, exitCode=1 if shlex.split(script)[3] in self.files else 0)
         if script.startswith("sha256sum "):

@@ -12,3 +12,4 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-25T00:21:06Z	pod_delete	vggy9ggvbi3h1p	cpu3c x4	US-MO-1	0.1200	2026-11-24T21:57:54Z	2026-11-25T00:21:06Z	2.3867	0.2864		
 2026-11-25T00:25:16Z	pod_create	8mnlr0uvh5pu4a	cpu3c x4	US-MO-1	0.1200	2026-11-25T00:25:16Z					max_hours=3.0
 2026-11-25T01:12:11Z	pod_delete	8mnlr0uvh5pu4a	cpu3c x4	US-MO-1	0.1200	2026-11-25T00:25:16Z	2026-11-25T01:12:11Z	0.7819	0.0938		空转：split 失败 rc=1、上传随 tmux 退出中断；大总管删机止损
+2026-11-25T01:29:16Z	pod_create	e49nwj60n7hfpg	cpu3c x4	US-MO-1	0.1200	2026-11-25T01:29:16Z					max_hours=3.0
