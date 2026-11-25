@@ -171,6 +171,12 @@ def test_cmp_missing_or_bad_step_fails(tmp_path, steps):
     assert cmp_ckpt.main([str(pa), str(pb), "--ignore-step"]) == 0  # 明确不比步数时，只看模型
 
 
+def test_cmp_complex_imag_part_counts(tmp_path):
+    a = _ckpt(tmp_path / "a.pt", {"z": torch.tensor([1 + 2j])})
+    b = _ckpt(tmp_path / "b.pt", {"z": torch.tensor([1 + 3j])})
+    assert cmp_ckpt.main([a, b]) != 0
+
+
 def test_cmp_rejects_negative_or_nonfinite_tol(tmp_path):
     a, b = _ckpt(tmp_path / "a.pt", _sd()), _ckpt(tmp_path / "b.pt", _sd())
     for t in ("-1", "nan", "inf"):

@@ -43,7 +43,8 @@ def compare(a: dict, b: dict, tol: float, ignore_step: bool = False) -> dict:
             if not (torch.isfinite(x).all() and torch.isfinite(y).all()):
                 bad_keys.append(k)
                 continue
-            d = float((x.double() - y.double()).abs().max()) if x.numel() else 0.0
+            up = torch.complex128 if x.is_complex() else torch.float64  # 复数不能 double()，会丢虚部（codex 第 2 轮 #3）
+            d = float((x.to(up) - y.to(up)).abs().max()) if x.numel() else 0.0
         else:
             d = float((x.long() - y.long()).abs().max()) if x.numel() else 0.0
         if d > 0:

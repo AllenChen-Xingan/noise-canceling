@@ -68,7 +68,7 @@
    - 对拍测试没编 Rust 驱动时会红（故意不跳过），云上不编 Rust，所以用 `--ignore` 排除。对拍在本机和 CI 上已过（大总管验收时 121 条通过）
    - 预期：其余全过；loader 的 3 条对接测试这次在真分片上跑（真分片 15 GB，这几条耗时未量化）
 4. CPU 参照：`cd $T && VDN_GTCRN_DIR=$G $PY smoke.py --config configs/default.yaml --set device=cpu --set data.shard_root=/workspace/shards/first-batch --set data.recipe=$D/recipe.json --write-known-dev $O/known-dev-cpu.json`
-5. 取回 `$O/known-dev-cpu.json` 和测试日志到主仓 `_tmp/<日期>-trainer-h100-smoke/`，不覆盖
+5. 先 `cp /root/jobs/*.log /root/jobs/*.rc $O/`，再取回 `$O/known-dev-cpu.json` 和这些日志到主仓 `_tmp/<日期>-trainer-h100-smoke/`，不覆盖
 6. 删机：`python3 rp.py down <机器> --yes`
 
 估时（推断，未量化）：装 torch 2.15.0 要下约 2–3 GB；建开发份 640 段在 CPU 上渲染。整段估 30–60 分钟，约 0.1 美元。
@@ -94,9 +94,9 @@
 3. **续训核对**（预计 2–3 分钟）：同配置，`schedule.max_steps=6`、`ckpt_every=3`、`eval_every=1000`
    - 一次训满：`run.name=res-full`
    - 分两次：`run.name=res-split`，先 `max_steps=3` 跑完，再用同名、`max_steps=6` 续上
-   - 比：`$PY cmp_ckpt.py $O/res-full/ckpt/step-0000006.pt $O/res-split/ckpt/step-0000006.pt`（容差 0）。CUDA 的非确定性算子可能让它只近似相等：不过时记下 `max_abs_diff`，不改判据，带回由 trainer 分析
+   - 比：`$PY cmp_ckpt.py $O/res-full/ckpt/step-0000006.pt $O/res-split/ckpt/step-0000006.pt > $O/cmp-resume.json`（容差 0；重定向不改退出码，codex 第 2 轮 #2）。CUDA 的非确定性算子可能让它只近似相等：不过时记下 `max_abs_diff`，不改判据，带回由 trainer 分析
 4. **3 个同时跑**（预计 5 分钟）：第 2 步的 B 配置，`max_steps=200`，`num_workers=6`（3 × 6 = 18 个取数进程，容器配额约 22 核），`run.name` 分别为 `par-1`…`par-3`，用 3 个 `job-start` 同时发
-5. 打包取回：`tar czf /workspace/out/trainer-smoke-<UTC 时间>.tar.gz -C $O --exclude='*.pt' .`，取回主仓 `_tmp/<日期>-trainer-h100-smoke/`，不覆盖；检查点不取回
+5. 打包取回：先 `cp /root/jobs/*.log /root/jobs/*.rc $O/`（后台日志在容器盘上，删机就没了），再 `tar czf /workspace/out/trainer-smoke-<UTC 时间>.tar.gz -C $O --exclude='*.pt' .`，取回主仓 `_tmp/<日期>-trainer-h100-smoke/`，不覆盖；检查点不取回
 6. 删机，报账上 0 台和本次花费
 
 H100 这段总计估 30–45 分钟（推断），约 2.2–3.3 美元。最坏 = (H + 5/60) × p，按上面的定法不超过 7 美元。
@@ -108,12 +108,12 @@ H100 这段总计估 30–45 分钟（推断），约 2.2–3.3 美元。最坏 
 - `s_step`：第 120 步到第 300 步之间，`billed_s` 差 ÷ 步数，扣掉中间那次开发评估
 - `t_eval`：第 200 步前后两行 `billed_s` 的差，减去这几步的正常耗时
 
-单个正式运行：`T_run = t_setup + 5000 × s_step + 10 × t_eval`（每 500 步评估 1 次，共 10 次；存检查点按实测，预计可忽略）。
+单个正式运行：`T_run = t_setup + 5000 × s_step + 10 × t_eval`（每 500 步评估 1 次，共 10 次；存检查点按实测，预计可忽略）。A、B 各用自己那次 300 步的实测，分别记 `T_A`、`T_B`（codex 第 2 轮 #1）。
 两组 × 3 种子 = 6 个运行：
-- 一个一个跑：`总时长 = 6 × T_run`
-- 每次同时跑 k 个（按第 4 步实测的每步耗时 `s_step(k)`）：`总时长 = ⌈6 / k⌉ × T_run(k)`
+- 一个一个跑：`总时长 = 3 × T_A + 3 × T_B`
+- 每次同时跑 k 个：按第 4 步实测的每步耗时 `s_step(k)` 重算 `T_A(k)`、`T_B(k)`（准备期和评估也用同时跑时的实测）；A、B 混着跑时每批按其中较慢的算
 - 另加每台机器的开机和收尾时间，按本次乙段实测的非训练时间算
-- `总花费 = 总时长（小时）× 4.39 美元`
+- `总花费 = 总时长（小时）× p`。p 是当时的实际每小时价；另给按 4.39 美元和按高 20%（5.27 美元）的两个数
 
 单价的正本是 `cloud/config.py` 的 `USD_PER_HR_EXPECTED`。每个运行另有训练器自带的 20 美元 / 6 小时保险，硬止损在 cloud。
 
