@@ -258,3 +258,50 @@ fn repeated_clip_lands_in_one_shard() {
         }
     }
 }
+
+/// codex 本分支第 3 轮 P2 #3：合并后的识别摘要不只看第一片：计数与各后端段数相加；哪一片停发都要提上来，和目录顺序无关。
+#[test]
+fn merged_asr_summary_gathers_all_shards() {
+    let (root, suite) = fixture("shard-asr");
+    let fp = suite_fingerprint(&suite);
+    let write = |i: usize, halted: Value| {
+        let p = part(&suite, &root, i, 2);
+        let d = root.join(format!("asr-{i}"));
+        std::fs::create_dir_all(&d).unwrap();
+        let asr = json!({"calls": 10, "checked": 4, "unstable": 1, "halted": halted, "default": "openrouter",
+            "backends": {"openrouter": {"clips": 3, "model": "m"}}});
+        let meta = json!({"commit": "abc", "suite": "s.json", "suite_fingerprint": fp, "systems": systems(),
+            "qa": true, "safety": "task", "rules": "v2", "external": [], "shard": format!("{i}/2"),
+            "shard_units": {"rows": p.row_units, "missing": p.missing_units}, "timing": {}, "asr": asr});
+        let card = Card::build_with(
+            &parse_jsonl(&p.jsonl).unwrap(),
+            p.missing.clone(),
+            Rules::V2,
+        );
+        std::fs::write(d.join("scorecard.json"), card.to_json(meta).to_string()).unwrap();
+        std::fs::write(d.join("clips.jsonl"), &p.jsonl).unwrap();
+        d
+    };
+    let (d0, d1) = (
+        write(0, Value::Null),
+        write(1, json!("识别费账本待核：停发")),
+    );
+    for dirs in [vec![d0.clone(), d1.clone()], vec![d1, d0]] {
+        let (_, _, meta) = merge_dirs(&suite, &dirs).unwrap();
+        let a = &meta["asr"];
+        assert_eq!(
+            (
+                a["calls"].as_u64(),
+                a["checked"].as_u64(),
+                a["unstable"].as_u64()
+            ),
+            (Some(20), Some(8), Some(2))
+        );
+        assert_eq!(a["unstable_rate"], 0.25);
+        assert_eq!(a["backends"]["openrouter"]["clips"], 6);
+        assert!(
+            a["halted"].as_str().is_some_and(|h| h.contains("待核")),
+            "后一片停发也要提上来：{a}"
+        );
+    }
+}
