@@ -1,6 +1,6 @@
 """训练损失（027 第 3.2 节 · 034 修正）。
 
-`L = HybridLoss + w_lvl·L_lvl + w_on·L_on [+ w_sp·L_sp + w_kd·L_kd]`
+`L = HybridLoss + w_lvl·L_lvl + w_on·L_on [+ w_pump·L_pump + w_sp·L_sp + w_kd·L_kd]`
 
 - HybridLoss：官方 `resources/gtcrn/loss.py` 原样导入，不改不抄。
 - L_lvl 人声被压低：可微地复刻 V-SPLVL（正本 `src/eval/src/verifiers/perceptual.rs` `v_splvl`）的读数 d（dB，≤ 0），

@@ -9,7 +9,7 @@
 | 文件 | 干什么 |
 |---|---|
 | `models.py` | 变体 A（官方 GTCRN 原样）· B（A + 时间注意力头回看 32 帧 + 条件输入口子，两者零初始化） |
-| `losses.py` | 官方 HybridLoss（原样导入）+ 人声被压低 L_lvl + 字头 L_on；L2-SP · 老师蒸馏 · 电平归一做成开关，默认关 |
+| `losses.py` | 官方 HybridLoss（原样导入）+ 人声被压低 L_lvl + 字头 L_on；人声忽大忽小 L_pump（`loss.w_pump`，D107）· L2-SP · 老师蒸馏 · 电平归一做成开关，默认关 |
 | `config.py` · `configs/` | 配置正本（dataclass）与实例：`default.yaml` 正式默认 · `smoke-cpu.yaml` 本机小冒烟 |
 | `data.py` | 数据适配：traindata 的 loader（显卡上 GPU 混音）· 仓内合成小样（只给测试与冒烟） |
 | `train.py` · `runrec.py` | 训练循环 · 运行记录 · 检查点 · 续训 · 时长与花费上限 · EMA（开关，默认关） |
@@ -66,6 +66,8 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 | 梯度检查 | 6 个随机方向上有限差分 vs 解析梯度：\|差\| ≤ 1e-5·\|方向导数\| + 1e-12（方向导数非近零）；梯度放大 1% 必红（反向对照） | 通过 | `test_*_gradient_finite_difference` |
 | 样本不足 | 与 verifier 同条件跳过、不进分母；整批无效时该项 = 0 | 通过 | `test_short_samples_skipped_not_in_denominator` |
 | 默认开关 = 官方损失 | 逐值相同 | 通过 | `test_trainloss_defaults_equal_official_hybrid` |
+| L_pump 和 V-PUMPV 正本对拍 | 有效 / 待测一致；方差差 f64 ≤ 1e-6、f32 ≤ 2e-3（相对，dB²）；有声窗数一致 | 12 段夹具（含 2 Hz ±6 dB 抖动、整体增益、有旁人、段长不整除），全过 | `test_losses_parity.py::test_pumpv_*` |
+| w_pump = 0 训练逐值不变 | 检查点与默认配置逐值相同，这一项与主讲人掩码都不被调用；另对改动前提交 7eecbbe8 实测 6 步训练检查点最大差 0、日志逐行相同 | 通过 | `test_pump_loss.py` |
 | 续训 = 不中断 | 先训 3 步再续到 6 步，和一口气训 6 步权重逐值相同 | **只在 CPU + 合成数据上**通过；云上 GPU + 真数据待测（现状页「转交」1） | `test_resume_equals_uninterrupted` |
 | 第 k 步拿第 k 批 | 错位就报错停下 | 通过 | `test_train_stops_on_batch_misalignment` |
 | 时长 / 花费上限 · 训崩 | 到线就存检查点停下；损失不是有限数时不存坏权重，之后拒绝续训 | 通过 | `test_time_and_cost_limits_stop` · `test_nonfinite_…` · `test_resume_refused_after_nonfinite` |
