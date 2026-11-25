@@ -16,6 +16,9 @@ import json
 from pathlib import Path
 
 EAT = "V-EAT-ASR"
+# 跨平台对拍的线（正本；README 第四节）：每项逐段值差的上限（该项自己的单位）与判定不同的段占比上限
+PARITY_ABS = 1e-3
+PARITY_FLIP = 0.01
 
 
 def _by_clip(rows, side):
@@ -52,7 +55,8 @@ def merge(cloud_rows, local_rows):
             if v == EAT:
                 continue
             a, b = s.get("value"), sl.get(v, {}).get("value")
-            rep = report.setdefault(v, {"pairs": 0, "max_abs_diff": 0.0, "one_sided": 0})
+            rep = report.setdefault(v, {"pairs": 0, "max_abs_diff": 0.0, "one_sided": 0, "verdict_flips": 0})
+            rep["verdict_flips"] += int(s.get("verdict") != sl.get(v, {}).get("verdict"))
             if a is None and b is None:
                 continue
             if a is None or b is None:
@@ -64,6 +68,18 @@ def merge(cloud_rows, local_rows):
         row["scores"] = [sl[EAT] if s["v"] == EAT else s for s in rc["scores"]]
         out.append(row)
     return out, report
+
+
+def parity_errors(report):
+    """对拍不过的项（空 = 过）：逐段值差 > PARITY_ABS，或判定不同的段占比 > PARITY_FLIP。"""
+    errs = []
+    for v, r in sorted(report.items()):
+        if r["max_abs_diff"] > PARITY_ABS:
+            errs.append(f"{v} 逐段值差最大 {r['max_abs_diff']:.3g} > {PARITY_ABS:g}")
+        n = r["pairs"] + r["one_sided"]
+        if n and r["verdict_flips"] / n > PARITY_FLIP:
+            errs.append(f"{v} 判定不同 {r['verdict_flips']}/{n} 段 > {PARITY_FLIP:.0%}")
+    return errs
 
 
 def main(argv=None):
@@ -88,10 +104,13 @@ def main(argv=None):
         f.write(json.dumps({"doc": "merge.py 产物：只含缺段记录，供 --from-clips 读；成绩单另出到别的目录", "missing": []},
                            ensure_ascii=False) + "\n")
     with open(out / "merge-report.json", "x") as f:
-        f.write(json.dumps({"cloud": a.cloud, "local": a.local, "clips": len(rows), "items": rep},
+        f.write(json.dumps({"cloud": a.cloud, "local": a.local, "clips": len(rows), "items": rep,
+                            "parity": {"PARITY_ABS": PARITY_ABS, "PARITY_FLIP": PARITY_FLIP, "errors": parity_errors(rep)}},
                            ensure_ascii=False, indent=1) + "\n")
     worst = sorted(rep.items(), key=lambda kv: -kv[1]["max_abs_diff"])[:5]
     print(f"合并 {len(rows)} 段 → {out}；两边差最大的项：" + " · ".join(f"{v} {d['max_abs_diff']:.3g}" for v, d in worst))
+    errs = parity_errors(rep)
+    print("跨平台对拍：" + ("过" if not errs else "不过 —— " + "；".join(errs)))
 
 
 if __name__ == "__main__":
