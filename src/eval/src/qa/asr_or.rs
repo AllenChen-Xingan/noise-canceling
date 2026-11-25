@@ -14,7 +14,7 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use serde_json::{Value, json};
+use serde_json::Value;
 
 pub use super::asr_bill::booked_cost;
 
@@ -64,57 +64,7 @@ pub fn load_key(root: &Path) -> Option<String> {
     })
 }
 
-/// 16 位整型单声道 WAV 的完整字节（含 44 字节文件头）。超出 [-1, 1] 的样本截断。
-pub fn pcm16_wav(x: &[f32], sr: u32) -> Vec<u8> {
-    let data_len = (x.len() * 2) as u32;
-    let mut b = Vec::with_capacity(44 + x.len() * 2);
-    b.extend_from_slice(b"RIFF");
-    b.extend_from_slice(&(36 + data_len).to_le_bytes());
-    b.extend_from_slice(b"WAVEfmt ");
-    b.extend_from_slice(&16u32.to_le_bytes());
-    b.extend_from_slice(&1u16.to_le_bytes()); // PCM
-    b.extend_from_slice(&1u16.to_le_bytes()); // 单声道
-    b.extend_from_slice(&sr.to_le_bytes());
-    b.extend_from_slice(&(sr * 2).to_le_bytes());
-    b.extend_from_slice(&2u16.to_le_bytes());
-    b.extend_from_slice(&16u16.to_le_bytes());
-    b.extend_from_slice(b"data");
-    b.extend_from_slice(&data_len.to_le_bytes());
-    for v in x {
-        let s = (v.clamp(-1.0, 1.0) * 32767.0).round() as i16;
-        b.extend_from_slice(&s.to_le_bytes());
-    }
-    b
-}
-
-/// 标准 base64（RFC 4648，带补位）。
-pub fn b64(bytes: &[u8]) -> String {
-    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut s = String::with_capacity(bytes.len().div_ceil(3) * 4);
-    for c in bytes.chunks(3) {
-        let n = (u32::from(c[0]) << 16)
-            | (u32::from(*c.get(1).unwrap_or(&0)) << 8)
-            | u32::from(*c.get(2).unwrap_or(&0));
-        for (i, shift) in [18, 12, 6, 0].into_iter().enumerate() {
-            if i <= c.len() {
-                s.push(T[((n >> shift) & 63) as usize] as char);
-            } else {
-                s.push('=');
-            }
-        }
-    }
-    s
-}
-
-/// 请求体。`provider.data_collection = "deny"` 一律带上（大总管硬要求，测试核）。
-pub fn request_body(wav: &[u8], lang: &str) -> Value {
-    json!({
-        "model": OR_MODEL,
-        "input_audio": {"data": b64(wav), "format": "wav"},
-        "language": lang,
-        "provider": {"data_collection": "deny"},
-    })
-}
+pub use super::asr_wire::{b64, pcm16_wav, request_body};
 
 use super::asr_ledger as ledger;
 /// 账本（跨进程加锁、原子落盘、先预留后结算），见 [`super::asr_ledger`]。
@@ -133,6 +83,8 @@ pub struct OpenRouter {
     pub backoff_ms: u64,
     /// 本进程发出的 HTTP 请求数（含重试）
     pub requests: u64,
+    /// 采样温度（`None` = 不带这个参数，照原来的请求）；钉温度探针用
+    pub temperature: Option<f64>,
 }
 
 /// 临时文件名的进程内唯一序号：同一进程里可能有多个客户端（测试并行、按段分后端），各自从 0 数会撞名。
@@ -157,6 +109,7 @@ struct Conn<'a> {
     stop: &'a std::sync::Mutex<Option<String>>,
     /// 共用账本：每次真发请求前看一眼它的待核标记（别的进程可能刚标上；codex 第 11 轮 P1 #1）
     ledger_path: &'a Path,
+    temperature: Option<f64>,
 }
 
 impl Conn<'_> {
@@ -271,7 +224,7 @@ impl Conn<'_> {
             cost: Cost::Free,
             carried: 0.0,
         };
-        let body = serde_json::to_vec(&request_body(&pcm16_wav(x, sr), lang))
+        let body = serde_json::to_vec(&request_body(&pcm16_wav(x, sr), lang, self.temperature))
             .map_err(|e| free(e.to_string()))?;
         let body_path = tmp_path("json");
         std::fs::write(&body_path, &body).map_err(|e| free(e.to_string()))?;
@@ -478,6 +431,7 @@ impl OpenRouter {
             ledger,
             backoff_ms: 1000,
             requests: 0,
+            temperature: None,
         }
     }
 
@@ -501,6 +455,7 @@ impl OpenRouter {
             requests: &requests,
             stop: &stop,
             ledger_path: &self.ledger_path,
+            temperature: self.temperature,
         };
         let ledger_path = &self.ledger_path;
         let slots: Vec<Slot> = jobs.iter().map(|_| std::sync::Mutex::new(None)).collect();
@@ -576,7 +531,7 @@ impl OpenRouter {
 
 #[cfg(test)]
 #[path = "asr_or_tests.rs"]
-mod tests;
+pub(super) mod tests;
 
 #[cfg(test)]
 #[path = "asr_or_cost_tests.rs"]
@@ -585,3 +540,7 @@ mod cost_tests;
 #[cfg(test)]
 #[path = "asr_or_bill_tests.rs"]
 mod bill_tests;
+
+#[cfg(test)]
+#[path = "asr_probe_tests.rs"]
+mod probe_tests;
