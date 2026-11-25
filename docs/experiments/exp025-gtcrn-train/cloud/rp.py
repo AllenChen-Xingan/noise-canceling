@@ -163,8 +163,9 @@ def cmd_sh(cli, a):
 
 
 def cmd_job_start(cli, a):
-    O.start_job(cli, a.pod, a.script, a.job)
-    print(f"已启动 {a.job}")
+    run_id = O.start_job(cli, a.pod, a.script, a.job)
+    print(f"已启动 {a.job}，运行编号 {run_id}（job-wait 用这个编号）", file=sys.stderr)
+    print(run_id)
 
 
 def cmd_job_wait(cli, a):
@@ -273,9 +274,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("pod")
     p.add_argument("job")
     p.add_argument("script")
-    p = add("job-wait", cmd_job_wait, "等后台命令结束并打印日志尾")
+    p = add("job-wait", cmd_job_wait, "按运行编号等后台命令结束并打印日志尾")
     p.add_argument("pod")
-    p.add_argument("job")
+    p.add_argument("job", metavar="run_id", help="job-start 打印的运行编号")
     p.add_argument("--timeout", type=float, default=3600)
     for name, fn in (("put", cmd_put), ("get", cmd_get)):
         p = add(name, fn, "传上去" if name == "put" else "取回来（核 sha256）")

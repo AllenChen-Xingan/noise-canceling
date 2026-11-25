@@ -132,9 +132,6 @@ class FakeRunPod:
                 self.files[dst + ".bak"] = self.files[dst]
             self.files[dst] = self.files.pop(src)
             return ok
-        if "mkdir" in script and ".run" in script and "READY" in script:
-            job = re.search(r"/([\w.-]+)\.run", script).group(1)
-            return dict(ok, stdout="BUSY\n" if job in getattr(self, "running", set()) else "READY\n")
         if script.startswith("for i in 1 2 3 4 5"):
             return ok
         if "base64 -d >>" in script:

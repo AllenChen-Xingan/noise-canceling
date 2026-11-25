@@ -396,8 +396,8 @@ class TestOps(Base):
     def test_job_status_and_failure(self):
         self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}
         self.assertFalse(O.job_status(self.cli, "pod_9", "j")["done"])
-        O.start_job(self.cli, "pod_9", "echo hi", "j")
-        st = O.wait_job(self.cli, "pod_9", "j", 10, sleep=lambda s: None)
+        rid = O.start_job(self.cli, "pod_9", "echo hi", "j")
+        st = O.wait_job(self.cli, "pod_9", rid, 10, sleep=lambda s: None)
         self.assertEqual((st["done"], st["rc"]), (True, 0))
         self.fake.fail_exec = "nohup"
         with self.assertRaises(SystemExit):
@@ -410,14 +410,6 @@ class TestOps(Base):
             O.start_job(self.cli, "pod_9", "cat a | tee >(sha256sum) | wc -c", "j")
         self.assertIn("语法", str(cm.exception))
         self.assertNotIn("j", self.fake.jobs)
-
-    def test_start_job_refuses_same_name_still_running(self):
-        # 评审第 5 轮 #3：同名任务还在跑就拒绝，不会读到上次的退出码
-        self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}
-        self.fake.running = {"train"}
-        with self.assertRaises(SystemExit):
-            O.start_job(self.cli, "pod_9", "echo hi", "train")
-        self.assertNotIn("train", self.fake.jobs)
 
     def test_wait_exec_ready_retries_409(self):
         self.fake.pods["pod_9"] = {"id": "pod_9", "name": "vdn-t", "status": "RUNNING"}

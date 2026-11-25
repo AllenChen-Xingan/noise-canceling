@@ -52,12 +52,6 @@ class TestTransfer(Base):
         wrapped = [str(c[2]) for c in self.fake.calls if c[0] == "POST" and "nohup" in str(c[2])][-1]
         self.assertNotIn("( echo done", wrapped)
 
-    def test_job_name_claim_is_atomic(self):
-        # 第 6 轮 #3：占位用 mkdir <job>.run；占不到就拒绝
-        self.fake.running = {"t"}
-        with self.assertRaises(SystemExit):
-            O.start_job(self.cli, "pod_9", "true", "t")
-
     def test_same_name_twice_waiter_gets_its_own_result(self):
         # 大总管裁决（第 7 轮 #2，改结构）：每次运行一个唯一编号，等第一次的拿到第一次的结果
         rid1 = O.start_job(self.cli, "pod_9", "false", "t")
