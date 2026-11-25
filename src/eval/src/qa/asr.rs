@@ -20,7 +20,26 @@ pub const URL: &str = "http://127.0.0.1:11520/v1/audio/transcriptions";
 /// 本机服务的固定占位 key，不是密钥（同 exp003 score.py）；可用环境变量 VDN_ASR_KEY 覆盖
 const DEFAULT_KEY: &str = "42model";
 pub const MODEL: &str = "qwen3-asr-plus:1.7b";
+/// 每条音频转写几次（第 2 次是稳定性复核：两次不同就剔除这条，rubric V7）。基线用 2（大总管 2026-11-25）
 pub const REPEATS: usize = 2;
+/// 「以后的模型改成 1 次」时（`VDN_ASR_REPEATS=1`），按音频 sha256 固定抽这个比例照旧转 2 次复核
+pub const SPOT_FRACTION: f64 = 0.10;
+/// 基线量出的不一致率不超过它，以后的模型才可以改成 1 次 + 抽查（大总管 2026-11-25 定 0）
+pub const MAX_UNSTABLE_RATE: f64 = 0.0;
+
+/// 这条音频转几次：默认 [`REPEATS`]；`VDN_ASR_REPEATS=1` 时只转 1 次，但 sha256 落在前 [`SPOT_FRACTION`] 的照旧 2 次。
+/// 抽中与否只看音频内容，同一条音频每次都一样。
+pub fn repeats_for(sha: &str, single: bool) -> usize {
+    if !single {
+        return REPEATS;
+    }
+    let head = u64::from_str_radix(sha.get(..8).unwrap_or("ffffffff"), 16).unwrap_or(u64::MAX);
+    if (head as f64) < SPOT_FRACTION * f64::from(u32::MAX) {
+        REPEATS
+    } else {
+        1
+    }
+}
 
 /// 后端名（`VDN_ASR_BACKEND`、路由文件、`meta.asr` 里用的写法）。
 pub const OPENROUTER: &str = "openrouter";
@@ -77,6 +96,13 @@ pub struct Asr {
     route: Route,
     /// 后端名 → 实际用它转写过的片段 id（写进 `meta.asr`）
     pub used: BTreeMap<&'static str, std::collections::BTreeSet<String>>,
+    /// 只转 1 次 + 抽查（`VDN_ASR_REPEATS=1`）
+    pub single: bool,
+    /// 做过多次转写的音频条数、其中不一致的条数（量不一致率用，写进 `meta.asr`）
+    pub checked: usize,
+    pub unstable: usize,
+    /// OpenRouter 一批并发几路
+    pub workers: usize,
 }
 
 impl Asr {
@@ -108,6 +134,10 @@ impl Asr {
             default,
             route,
             used: BTreeMap::new(),
+            single: false,
+            checked: 0,
+            unstable: 0,
+            workers: super::asr_or::ASR_CONCURRENCY,
         }
     }
 
@@ -156,7 +186,13 @@ impl Asr {
                 }
             }
         }
-        Ok(Asr::with_backends(cache_path, backends, default, route))
+        let mut a = Asr::with_backends(cache_path, backends, default, route);
+        a.single = match std::env::var("VDN_ASR_REPEATS").as_deref() {
+            Err(_) | Ok("2") => false,
+            Ok("1") => true,
+            Ok(x) => return Err(format!("VDN_ASR_REPEATS 只认 1 或 2，收到 {x}")),
+        };
+        Ok(a)
     }
 
     /// 写进成绩单 `meta.asr` 的摘要：默认后端、每个后端的型号与实际用到的段数。
@@ -172,7 +208,10 @@ impl Asr {
                 )
             })
             .collect();
-        serde_json::json!({"default": self.default, "backends": b, "calls": self.calls})
+        let rate = (self.checked > 0).then(|| self.unstable as f64 / self.checked as f64);
+        serde_json::json!({"default": self.default, "backends": b, "calls": self.calls,
+            "repeats": if self.single { "1 + 抽查" } else { "2" }, "spot_fraction": SPOT_FRACTION,
+            "checked": self.checked, "unstable": self.unstable, "unstable_rate": rate})
     }
 
     /// 服务在不在（GET 根路径能连上即可）。
@@ -282,12 +321,68 @@ impl Asr {
         let backend = self.backend_for(clip);
         let first = self.once(path, sha, lang, 1, backend)?;
         let mut stable = true;
-        for rep in 2..=REPEATS {
+        let n = repeats_for(sha, self.single);
+        for rep in 2..=n {
             stable &= self.once(path, sha, lang, rep, backend)? == first;
+        }
+        if n > 1 {
+            self.checked += 1;
+            self.unstable += usize::from(!stable);
         }
         let id = clip.split('#').next().unwrap_or(clip).to_string();
         self.used.entry(backend).or_default().insert(id);
         Ok((first, stable))
+    }
+
+    /// 预取：把这批音频（路径, sha256, 语言, 片段 id）里走 OpenRouter、还没缓存的各次转写**并发**发出去，
+    /// 结果按 sha256 写进缓存。之后 [`Asr::transcribe`] 照旧逐条取，都命中缓存，所以成绩与完成先后无关。
+    /// 预取失败的那几次不写缓存，[`Asr::transcribe`] 会再串行试一次并报出原因。本机后端不预取。
+    pub fn prefetch(&mut self, items: &[(PathBuf, String, String, String)]) {
+        let mut keys = Vec::new();
+        let mut jobs = Vec::new();
+        for (path, sha, lang, clip) in items {
+            if self.backend_for(clip) != OPENROUTER {
+                continue;
+            }
+            for rep in 1..=repeats_for(sha, self.single) {
+                let key = format!("{sha}|{}|{lang}|{rep}", super::asr_or::OR_MODEL);
+                if self.cache.contains_key(&key) || keys.contains(&key) {
+                    continue;
+                }
+                let Ok((x, sr)) = crate::wav::read(path) else {
+                    continue;
+                };
+                keys.push(key);
+                jobs.push((x, sr, lang.clone()));
+            }
+        }
+        if jobs.is_empty() {
+            return;
+        }
+        let workers = self.workers;
+        let Some(Backend::OpenRouter(c)) = self.backends.get_mut(OPENROUTER) else {
+            return;
+        };
+        let results = c.transcribe_many(&jobs, workers);
+        let mut any = false;
+        for (k, r) in keys.into_iter().zip(results) {
+            if let Ok(t) = r {
+                self.calls += 1;
+                self.cache.insert(k, t);
+                any = true;
+            }
+        }
+        if any {
+            self.save();
+        }
+    }
+
+    fn save(&self) {
+        let _ = std::fs::create_dir_all(self.cache_path.parent().unwrap_or(Path::new(".")));
+        let _ = std::fs::write(
+            &self.cache_path,
+            serde_json::to_string_pretty(&self.cache).unwrap_or_default(),
+        );
     }
 
     /// 这一段用哪个后端（路由 → 默认）。路由点名了没装的后端时也照返回，`once` 会报「没装好」。

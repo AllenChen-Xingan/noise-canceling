@@ -132,6 +132,20 @@ impl QaExtra {
     fn eat(&mut self, sys: &str, task: &Task, clip: &Clip, out: &[f32], p: &Params) -> Score {
         const ID: &str = "V-EAT-ASR";
         const U: &str = "百分点";
+        // 这一段要识别的几条（参考转写没缓存过才带上干净人声与原声）先一起并发发出去（大总管 2026-11-25：8 路）
+        let mut want: Vec<(String, &[f32])> = vec![(format!("{}-{sys}", task.id), out)];
+        if !self.refs.contains_key(&task.id) {
+            want.push((format!("{}-clean", task.id), &clip.clean));
+            want.push((format!("{}-mix", task.id), &clip.mix));
+        }
+        let items: Vec<_> = want
+            .iter()
+            .filter_map(|(name, x)| self.dump(name, x).ok())
+            .map(|(p, sha)| (p, sha, task.lang.clone(), task.id.clone()))
+            .collect();
+        if let Some(a) = self.asr.as_mut() {
+            a.prefetch(&items);
+        }
         if !self.refs.contains_key(&task.id) {
             let r = (|| {
                 let rt = self.transcribe(
