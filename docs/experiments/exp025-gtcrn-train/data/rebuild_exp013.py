@@ -115,7 +115,7 @@ def check_cloud(local, cloud, upload_log, inputs_log):
           "foreign": foreign[:50], "n_foreign": len(foreign)}
     up["all_ok"] = not failed and not foreign and okp >= want
     code = lambda m: {**m["code_sha256"], **m["params_sha256"]}  # noqa: E731
-    rep = {"criterion": "check_cloud 第 2 版：日志路径须带本机 build id（2026-11-25 自审 P1；第 1 版认不出云上自产音频）",
+    rep = {"criterion": CRITERIA[0],
            "local_build": ml.get("build_id", local.name), "cloud_build": mc.get("build_id", cloud.name),
            "local_vs_old": {k: vs_old[k] for k in ("old", "same", "differ", "missing", "n_extra", "ok")},
            "upload": up,
@@ -131,12 +131,16 @@ def check_cloud(local, cloud, upload_log, inputs_log):
     return rep
 
 
+CRITERIA = ("check_cloud 第 2 版：日志路径须带本机 build id（2026-11-25 自审 P1；第 1 版认不出云上自产音频）",
+            "整套重建：旧 4540 个逐位相同 + exclude 全等")  # drift_covered 只认这几种判据出的报告
+
+
 def drift_covered():
-    """rebuild/ 里有没有一份 ok 的报告，核的那份新 build 正是用现行 exp013 代码出的。"""
+    """rebuild/ 里有没有一份 ok 的报告：按现行认可的判据出的，且核的那份新 build 正是用现行 exp013 代码出的。"""
     for p in sorted(REPORTS.glob("exp013-*.json")) if REPORTS.exists() else []:
         r = json.loads(p.read_text())
         code = r.get("new_code_sha256")
-        if r.get("ok") and code and all(code_path(f).exists() for f in code) and file_hashes(code) == code:
+        if r.get("ok") and r.get("criterion") in CRITERIA and code and all(code_path(f).exists() for f in code) and file_hashes(code) == code:
             return True
     return False
 
@@ -189,7 +193,7 @@ def main():
         rep["ok"] = rep["ok"] and rep["exclude_equal"]
         m = json.loads((new / "manifest.json").read_text())
         rep["new_code_sha256"] = {**m["code_sha256"], **m["params_sha256"]}
-    rep.update({"criterion": "整套重建：旧 4540 个逐位相同 + exclude 全等", "build": BUILD, "versions": versions(), "version_drift": drift, "code_drift": code_drift(), "fetched": a.fetch, "seconds": round(time.time() - t0, 1),
+    rep.update({"criterion": CRITERIA[1], "build": BUILD, "versions": versions(), "version_drift": drift, "code_drift": code_drift(), "fetched": a.fetch, "seconds": round(time.time() - t0, 1),
                 "when": time.strftime("%Y-%m-%d %H:%M:%S")})
     report(rep)
 
