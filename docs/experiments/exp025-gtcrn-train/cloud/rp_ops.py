@@ -314,7 +314,7 @@ def start_job(cli: Client, pod_id: str, script: str, job: str, jobs_dir: str = "
     脚本作为独立参数交给 sh -c；脚本和外层包装都先 sh -n；放后台后等日志出现才算启动。"""
     if not re.fullmatch(r"[A-Za-z0-9_.-]{1,40}", job):
         raise SystemExit(f"任务名只用字母、数字、_ . -（≤ 40 个）：{job!r}")
-    run_id = f"{job}-{time.strftime('%Y%m%d%H%M%S')}-{secrets.token_hex(3)}"
+    run_id = f"{job}-{time.strftime('%Y%m%d%H%M%S', time.gmtime())}-{secrets.token_hex(3)}"  # UTC
     d = shlex.quote(f"{jobs_dir}/{run_id}")
     inner = f"sh -c {shlex.quote(script)} > {d}.log 2>&1; echo $? > {d}.rc"
     for what, text in (("命令", script), ("包装", inner)):
