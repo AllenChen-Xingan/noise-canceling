@@ -35,11 +35,19 @@ pub fn pick(
     files: &[(String, String)],
     langs: &BTreeMap<String, String>,
 ) -> (Vec<(String, String, String)>, Vec<String>) {
-    let picked = files
-        .iter()
-        .filter_map(|(n, sha)| Some((n.clone(), sha.clone(), langs.get(sha)?.clone())))
-        .collect();
-    (picked, Vec::new())
+    let mut seen = std::collections::BTreeSet::new();
+    let (mut picked, mut dup) = (Vec::new(), Vec::new());
+    for (n, sha) in files {
+        let Some(lang) = langs.get(sha) else {
+            continue;
+        };
+        if seen.insert(sha.clone()) {
+            picked.push((n.clone(), sha.clone(), lang.clone()));
+        } else {
+            dup.push(n.clone());
+        }
+    }
+    (picked, dup)
 }
 
 /// 跑探针。`items` = (文件名, sha256, 语言, 16 kHz 样本)。出错的那次记进 `errors`，整条算不一致（偏保守）。
