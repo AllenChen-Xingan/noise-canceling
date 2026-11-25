@@ -312,6 +312,20 @@ fn committed_example_line_parses() {
     let v = SceneClip::parse_jsonl(&std::fs::read_to_string(p).unwrap()).unwrap();
     assert_eq!(v.len(), 1);
     assert_eq!(v[0].sounds.len(), 2);
+    assert!(v[0].audio.owner_early.is_none(), "旧格式行没有早期参考");
+}
+
+/// exp013 生成器真实写出的一行（带 `owner_early`，冒烟 build 取的）：Rust 读得了，三处（路径 · 两种哈希）都在。
+#[test]
+fn generated_early_line_parses() {
+    let p = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/scene-clip-early-example.jsonl");
+    let v = SceneClip::parse_jsonl(&std::fs::read_to_string(p).unwrap()).unwrap();
+    assert_eq!(v.len(), 1);
+    let c = &v[0];
+    assert!(c.audio.owner_early.as_deref().unwrap().ends_with("owner_early.wav"));
+    assert_eq!(c.hash.wav_sha256.owner_early.as_ref().unwrap().len(), 64);
+    assert_eq!(c.hash.samples.owner_early.as_ref().unwrap().len(), 64);
 }
 
 /// 仓里的场景任务清单（scenesuite 的 `suite/scenes.json`）与它引用的 `clips.jsonl` 都读得了：
