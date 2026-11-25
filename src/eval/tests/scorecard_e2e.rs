@@ -504,7 +504,14 @@ fn early_reference_side_column() {
     .unwrap();
     for (a, b) in diff.iter().zip(&back) {
         for ((_, _, sa), (_, _, sb)) in a.scores.iter().zip(&b.scores) {
-            assert_eq!(value_of(sa), value_of(sb));
+            // serde_json 读浮点可能差最后一位：按相对容差比（有没有值必须一致）
+            match (value_of(sa), value_of(sb)) {
+                (Some(x), Some(y)) => assert!(
+                    (x - y).abs() <= 1e-12 * x.abs().max(y.abs()).max(1e-300),
+                    "{x} vs {y}"
+                ),
+                (x, y) => assert_eq!(x, y),
+            }
         }
     }
     // 成绩单：有旁列的项带 early_mean 与「早期参考」字样；状态与没有旁列时一样
