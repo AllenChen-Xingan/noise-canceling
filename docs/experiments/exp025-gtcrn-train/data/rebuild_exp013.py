@@ -132,7 +132,7 @@ def check_cloud(local, cloud, upload_log, inputs_log):
     return rep
 
 
-CRITERIA = ("check_cloud 第 2 版：日志路径须带本机 build id（2026-11-25 自审 P1；第 1 版认不出云上自产音频）",
+CRITERIA = ("check_cloud 第 3 版：日志路径须带本机 build id；云上与本机须是不同 build（2026-11-25 自审 P1 · codex 第 2 轮 P2 #3）",
             "整套重建：旧 4540 个逐位相同 + exclude 全等")  # drift_covered 只认这几种判据出的报告
 
 

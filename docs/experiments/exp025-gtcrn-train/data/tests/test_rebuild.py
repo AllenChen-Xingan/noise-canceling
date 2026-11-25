@@ -132,7 +132,7 @@ class Compare(unittest.TestCase):
             old_key = next(iter(rb.read_hashes(rb.OLD / "hashes.txt")))
             h = [("0" * 64 + l[64:]) if l.endswith("/" + old_key) else l for l in h]
             (loc / "hashes.txt").write_text("\n".join(h) + "\n")
-            self.assertFalse(rb.check_cloud(loc, loc, upload_log(loc), "原料全对")["ok"])
+            self.assertFalse(rb.check_cloud(loc, AA9F, upload_log(loc), "原料全对")["ok"])
 
 
 class Inputs(unittest.TestCase):
