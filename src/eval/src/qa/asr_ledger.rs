@@ -3,6 +3,11 @@
 //! - **跨进程加锁**：每次读改写都先锁旁边的 `<账本>.lock`（`std::fs::File::lock`，独占），几个进程同时跑也不会互相覆盖
 //! - **原子落盘**：先写 `<账本>.tmp` 再改名；写失败返回 `Err`，调用方据此停发
 //! - **账本坏了拒跑**：文件在但读不出、不是合法 JSON → `Err`，不当成从 0 开始
+//! - **账本不存在也拒跑**（大总管 2026-11-25）：不再当空账本；只有显式新建（`--init-ledger` 或 `VDN_ASR_INIT_LEDGER=1`，
+//!   入口 [`init`]）才有账本，新建时把来历记进 `created`（时间 · 本机或云上 · 机器 id · 哪个会话；**不记主机名**，账本快照进公开仓库）
+//! - **封存**：账本旁边有 `<账本>.sealed`（本机那份合并进云上正本后放的说明）时，读、预留、新建一律拒，提示正本在哪
+//! - **路径可配**：`VDN_ASR_LEDGER` 指向正本（云上是网络盘 `/workspace/asr-ledger/…`）；临时文件与锁都放在账本同一目录，
+//!   改名在同一个文件系统里完成
 //! - **先预留、后结算**：发请求前按估算预留（`spent + reserved + 这次估算 > 上限` 就不发）；返回后按 `usage.cost` 实际金额结算、
 //!   退掉预留。进程中途崩了，预留会留在账本里（偏保守：只会少发，不会超支）；要清就人工把 `reserved_usd` 改回 0
 
@@ -16,6 +21,9 @@ pub struct Ledger {
     /// 已经发出、还没结算的请求预留的金额
     #[serde(default)]
     pub reserved_usd: f64,
+    /// 这本账是怎么建的（[`init`] 写；旧账本没有）
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created: Option<Created>,
     /// 待核：有请求的费用不知道（连不上、超时、返回读不出或没带金额）。设了就拒发，重启也一样，
     /// 要人核对 OpenRouter 后台的实际花费、改正 `spent_usd` 与 `reserved_usd`、再删掉这一项（codex 第 7 轮 P1 #2）
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -28,12 +36,141 @@ fn lock_path(p: &Path) -> PathBuf {
     PathBuf::from(s)
 }
 
-/// 读账本（不加锁）：没有文件 = 空账本；读不出或格式坏了 = `Err`。
+/// 新建来历。四个键，不含主机名。
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct Created {
+    /// UTC 时间，ISO 8601
+    pub at: String,
+    /// `local` 或 `cloud`
+    pub place: String,
+    /// 云上 = RunPod 机器 id（`RUNPOD_POD_ID`）；本机 = `local`（没有不带人名的固定编号，不另造）
+    pub machine: String,
+    /// 新建它的会话名（`VDN_SESSION`），没有为 `unknown`
+    pub by: String,
+}
+
+impl Created {
+    /// 按当前环境记来历。
+    pub fn here() -> Created {
+        let pod = std::env::var("RUNPOD_POD_ID")
+            .ok()
+            .filter(|s| !s.trim().is_empty());
+        let secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        let by = std::env::var("VDN_SESSION")
+            .ok()
+            .filter(|s| !s.trim().is_empty());
+        Created {
+            at: utc_iso(secs),
+            place: if pod.is_some() { "cloud" } else { "local" }.into(),
+            machine: pod.unwrap_or_else(|| "local".into()),
+            by: by.unwrap_or_else(|| "unknown".into()),
+        }
+    }
+
+    /// 测试用的固定来历。
+    pub fn test() -> Created {
+        Created {
+            at: utc_iso(0),
+            place: "local".into(),
+            machine: "local".into(),
+            by: "test".into(),
+        }
+    }
+}
+
+/// Unix 秒 → `YYYY-MM-DDTHH:MM:SSZ`（UTC；公历换算照 Howard Hinnant 的 civil_from_days）。
+pub fn utc_iso(secs: u64) -> String {
+    let days = (secs / 86_400) as i64;
+    let rem = secs % 86_400;
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + i64::from(m <= 2);
+    format!(
+        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z",
+        rem / 3600,
+        rem % 3600 / 60,
+        rem % 60
+    )
+}
+
+/// 账本路径：`VDN_ASR_LEDGER` 非空就用它，否则 `<主目录>/` + [`super::asr_or::LEDGER_REL`]。
+pub fn ledger_path(root: &Path) -> PathBuf {
+    ledger_path_from(root, std::env::var("VDN_ASR_LEDGER").ok())
+}
+
+/// [`ledger_path`] 的纯函数部分（测试不用动环境变量）。
+pub fn ledger_path_from(root: &Path, env: Option<String>) -> PathBuf {
+    match env.filter(|s| !s.trim().is_empty()) {
+        Some(p) => PathBuf::from(p),
+        None => root.join(super::asr_or::LEDGER_REL),
+    }
+}
+
+/// 封存说明文件：`<账本>.sealed`。
+pub fn sealed_path(p: &Path) -> PathBuf {
+    let mut s = p.as_os_str().to_owned();
+    s.push(".sealed");
+    PathBuf::from(s)
+}
+
+fn check_sealed(p: &Path) -> Result<(), String> {
+    let sp = sealed_path(p);
+    if sp.exists() {
+        let note = std::fs::read_to_string(&sp).unwrap_or_default();
+        return Err(format!(
+            "识别费账本 {} 已封存（{}）：拒发。正本在云上，先取回再发",
+            p.display(),
+            note.trim()
+        ));
+    }
+    Ok(())
+}
+
+/// 显式新建一本空账本（记 `created`）。已存在、或已封存，都报错，不覆盖。
+pub fn init(p: &Path, created: Created) -> Result<(), String> {
+    check_sealed(p)?;
+    if let Some(d) = p.parent() {
+        std::fs::create_dir_all(d).map_err(|e| format!("建不了账本目录：{e}"))?;
+    }
+    let l = Ledger {
+        created: Some(created),
+        ..Ledger::default()
+    };
+    let text = serde_json::to_string_pretty(&l).map_err(|e| e.to_string())?;
+    let mut f = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(p)
+        .map_err(|e| {
+            if e.kind() == std::io::ErrorKind::AlreadyExists {
+                format!("识别费账本 {} 已存在：不新建、不覆盖", p.display())
+            } else {
+                format!("建不了识别费账本 {}：{e}", p.display())
+            }
+        })?;
+    use std::io::Write;
+    f.write_all(text.as_bytes())
+        .map_err(|e| format!("写不了识别费账本：{e}"))
+}
+
+/// 读账本（不加锁）：没有文件、已封存、读不出、格式坏了，都是 `Err`。
 pub fn read(p: &Path) -> Result<Ledger, String> {
+    check_sealed(p)?;
     match std::fs::read_to_string(p) {
         Ok(t) => serde_json::from_str(&t)
             .map_err(|e| format!("识别费账本 {} 坏了（{e}）：拒跑，先人工查", p.display())),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Ledger::default()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(format!(
+            "识别费账本 {} 不存在：拒发（不当成空账本）。要新建请带 --init-ledger 或 VDN_ASR_INIT_LEDGER=1",
+            p.display()
+        )),
         Err(e) => Err(format!("读不了识别费账本 {}：{e}", p.display())),
     }
 }
