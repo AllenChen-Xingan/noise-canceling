@@ -115,6 +115,19 @@ class Compare(unittest.TestCase):
         self.assertFalse(r["ok"])
         self.assertTrue(rb.check_cloud(L6323, aa9f, upload_log(), "原料全对")["ok"])
 
+    def test_local_hash_list_must_match_cloud_list(self):
+        """codex 第 4 轮 P2 #3：本机 hashes.txt 和上传日志同时漏掉一批文件时，以前照样过。拿云上那份（同代码独立生成）的文件清单核本机清单齐不齐。"""
+        with tempfile.TemporaryDirectory() as d:
+            loc = Path(d) / L6323.name
+            loc.mkdir()
+            for f in ("manifest.json", "exclude.json"):
+                (loc / f).write_bytes((L6323 / f).read_bytes())
+            h = [l for l in (L6323 / "hashes.txt").read_text().splitlines() if "_early.wav" not in l]
+            (loc / "hashes.txt").write_text("\n".join(h) + "\n")
+            r = rb.check_cloud(loc, AA9F, upload_log(loc), "原料全对")
+            self.assertFalse(r["ok"])
+            self.assertFalse(r["file_list_equal_cloud"])
+
     def test_cloud_pointing_at_local_red(self):
         """codex 第 2 轮 P2 #3：--cloud 误填成本机那份，四项照样全绿。两端必须是不同的 build。"""
         r = rb.check_cloud(L6323, L6323, upload_log(), "原料全对")

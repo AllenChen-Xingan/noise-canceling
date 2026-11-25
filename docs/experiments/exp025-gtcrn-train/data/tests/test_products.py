@@ -52,6 +52,11 @@ class Splits(unittest.TestCase):
                 self.assertEqual(len(rows), e["files"], n)
             self.assertGreaterEqual(len(rows), e.get("min_files", 0), n)
             self.assertEqual(len({r["path"] for r in rows}), len(rows), f"{n}：同一文件出现两次")
+            body = (SPLITS / f"{n}.jsonl").read_bytes() if (SPLITS / f"{n}.jsonl").exists() else None
+            again = split.summary(n, rule, s["seed"], rows, body or b"")  # codex 第 4 轮 P2 #4：摘要统计由正文重算
+            for k in ("files", "units", "per_split", "time", "seconds"):
+                if k in s:
+                    self.assertEqual(again.get(k), s[k], f"{n}：摘要的 {k} 和正文对不上")
 
     def test_unit_tables_reproduce(self):
         """按单位切的：用仓里的单位清单重算一遍分配，结果逐个相同（确定性）。"""
