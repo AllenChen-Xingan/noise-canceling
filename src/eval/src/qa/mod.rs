@@ -5,6 +5,7 @@ pub mod asr_bill;
 pub mod asr_ledger;
 pub mod asr_or;
 pub mod asr_probe;
+pub mod asr_wire;
 pub mod dnsmos;
 pub mod nrmos;
 mod nrmos_v;
