@@ -1,7 +1,7 @@
 # 评审 156 · exp025 训练数据：下载 · 切分 · 混音 · exp013 核对（codex · gpt-6-astra · read-only）
 
-> 对象：`docs/experiments/exp025-gtcrn-train/data/` 下 29 个代码、规则与说明文件（数据产物 `splits/` · `rebuild/*.log` · `builds/` · `inventory.txt` 不发）。**最新一轮：第 1 轮（2026-11-25）· 总评「修改」· 待第 2 轮**。
-> 累计处理：P1×3、P2×3 逐条回源码核实，属实 6、驳回 0。1 条 P2 留作 issue（待大总管开）。
+> 对象：`docs/experiments/exp025-gtcrn-train/data/` 下 29 个代码、规则与说明文件（数据产物 `splits/` · `rebuild/*.log` · `builds/` · `inventory.txt` 不发）。**最新一轮：第 2 轮（2026-11-25）· 总评「修改」· 待第 3 轮**。
+> 累计处理：P1×5、P2×6 逐条回源码核实，属实 11、驳回 0。其中 1 条 P1 按大总管定的规则降为 P2（同一主题往上加层）；留作 issue 的 P2 共 2 件（待大总管开）。
 > 记录放在本目录，因为 `docs/reviews/` 不是 traindata 能写的文件；索引那一行请大总管加。
 > 之前做过一轮多视角自审（外行 · 老手 · 挑刺，2026-11-25）：1 条 P1（判据 2 认不出云上自产音频）已修，见第 1 轮之前的提交。
 
@@ -38,3 +38,36 @@
 ### 是否再审
 
 有 P1，改完开第 2 轮，附本记录。
+
+## 第 2 轮（2026-11-25）· 总评「修改」
+
+原文：`_tmp/reviews-traindata/exp025-data-codex-2.md`（不入库）。effort high，耗时 156 秒。
+上一轮处理的验证：codex 认 #2–#5 已落实；#1 没改全（见本轮 #1）；#6 仍是 issue。
+本轮 P0/P1：2 条（其中 #2 降为 P2，见下）· 停止线：未满足 · 留作 issue 的 P2：#2、#5（同第 1 轮 #6）
+另：本轮期间 cloudrun 的分支合进 main（df145344），合入后 `test_real_cloud_config_quota` 转绿，全量 135 条全过（实测）。
+
+- **P1｜loader.py:28 build 身份仍漏了 mix.py 直接调的 exp013 模块**（第 2 轮 #1，第 1 轮 #1 没改全）
+  - 核实：属实。mix.py:29–31 导入 exp013 的 dsp · rooms · rirs；rooms.py 刚随 evalcmp 合入改过
+  - 处理：`code_sha256` 加 `exp013/dsp.py` · `exp013/rooms.py` · `exp013/rirs.py`。loader 不导入 mix（登记不需要混音代码，有测试核），所以在 loader 里另写 `EXP013` 路径，并加测试核它等于 `mix.EXP013`
+- **P1→P2｜loader.py:49 登记没核分片 tar 的实际内容**（第 2 轮 #2）
+  - 核实：属实（换了 tar 文件，身份不变，加载也不核）
+  - 定级：按大总管 2026-11-25 定的规则，同一主题（build 身份）一轮轮往上加层，最高 P2。核 15 GB 分片要在云上做
+  - 处理：留作 issue：register 时在云上逐个核 tar 的 sha256，加载时可选抽核
+- **P2｜rebuild_exp013.py:100 `--cloud` 误填成本机那份也能过**（第 2 轮 #3）
+  - 核实：属实
+  - 处理：加「云上与本机须是不同 build」一项，判据升为第 3 版；本机用同样两份日志重出报告 `rebuild/exp013-20261124-195551.json`，四项全过。第 2 版报告 `194001` 不再算数。测试里正例改用仓里真的 aa9f 小文件，另加两端同一 build 必须红的反例
+- **P2｜tests/test_products.py:120 build 记录的身份字段被改了也照样全绿**（第 2 轮 #4）
+  - 核实：属实
+  - 处理：`loader.build_id_of` 按 `ID_KEYS` 由记录的字段重算 id；早期 build 没有 `index_sha256`，缺的字段不进哈希，所以旧记录也能核。`test_products.Builds` 现在重算比对
+- **P2｜README.md:158 验收失败仍指向没打通的重切流程**（第 2 轮 #5）
+  - 核实：同第 1 轮 #6
+  - 处理：同一件 issue
+
+### 引用抽查
+
+- 「核实属实」：7 条
+- 无法核实：mix.py:30（同第 1 轮）；README.md:188 的上传与原料日志不在发送清单里（两份日志在 `rebuild/` 里进了仓，sha256 记在报告里）
+
+### 是否再审
+
+有 P1，改完开第 3 轮。
