@@ -33,6 +33,23 @@ Owner: worker `traindata` (issue #156). Plan: `docs/plan/014_training-kickoff.md
 切法是确定的：每个单位（说话人、房间或文件）按 `sha256(种子:来源:单位)` 排序，再按比例分。
 分配用最大余数法，所以各份个数加起来正好等于总数。
 
+### OpenSLR 28 实测 RIR 的房间怎么认（2026-11-25）
+
+027 要求同一间房的不同收发位置只进一份。房间号取自上游包内的 Kaldi `rir_list`（`--room-id`）。
+实测 RIR 有三个库，上游 README 只说「Overall there are 325 real RIRs」，**没有给 room-id 和真实房间的对照**。
+所以只在 room-id 本身看得出是房间名时照用，看不出就整库归一个单位：
+
+| 库 | 条数 | room-id 长什么样 | 怎么切 |
+|---|---|---|---|
+| REVERB 2014 | 36 | 9 个房间名（`RVB2014_largeroom1` …），每间 4 条 = 2 个距离 × 2 个角度 | 照用，每间一个单位 |
+| AIR | 107 | 35 个 id：同一间房按位置、角度、有无假人头拆开（`aula_carolina_1_1_90`、`aula_carolina_1_3_0`；`lecture_0`、`lecture_1`），手机测的又是另一套（`air_phone_lecture`） | 整库一个单位 |
+| RWCP | 182 | 阵列与设置代码（`circle_ane`、`cirline_e2a` …），看不出哪几个是同一间房；type4 的 38 条直接把文件名写成了 room-id（`RWCP_000l.wav`） | 整库一个单位 |
+
+整库归一个单位的代价：这两个库各自只进一份（按种子算，AIR 进终测原料池，RWCP 进训练），开发份与测试份里没有它们。
+不这么做的风险更大：同一间房的 RIR 可能同时进训练和测试份。把几个单位并成一个，只会让单位更粗，不会跨份。
+规则的正本是 `split_rules.json` 里 `openslr28-rir` 的 `room_merge`（每条带 `why`）。上游 4 份 `rir_list` 的 sha256 钉在同一处，上游一变就停（`test_openslr28_rooms`）。
+这些都是 2026-11-25 按 HTTP Range 只读上游 zip 的目录与 `rir_list` 核的，没下音频。模拟 RIR 的 600 间房，每间一个 room-id，照用。
+
 交集检查查的是训练、开发、终测原料池三份里能取到的**全部**原料，不只是某一次抽到的那些。
 检查对照 exp013 的 `exclude.json`，查这几类：说话人 · DEMAND 时段 · ESC-50 · 实测 RIR · 房间噪声 · 中文与音乐 · 合成函数。
 exclude.json 里只要出现不认识的键，检查就直接红。
