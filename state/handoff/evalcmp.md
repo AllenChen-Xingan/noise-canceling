@@ -15,7 +15,7 @@
 ## 正本与交叉校验（CLAUDE.md 五.5）
 | 东西 | 正本 | 第二处表示 · 校验 |
 |---|---|---|
-| 早期混响毫秒数 100 | `docs/experiments/exp013-scene-suite/rooms.py` `EARLY_REVERB_MS` | traindata 混音配方 import 它（对拍测试待 traindata 给路径） |
+| 早期混响毫秒数 100 | `docs/experiments/exp013-scene-suite/rooms.py` `EARLY_REVERB_MS` | traindata `exp025-gtcrn-train/data/mix.py` import 它与 `early_rir`；对拍测试 `test_mix_loader.py`（traindata 写） |
 | 有早期参考旁列的项 | `standard::EARLY_REF` | 按行为核对（`early_tests.rs`：换参考后读数变了的项必须正好是它）；规约第十一节表（`tests/scorecard_compare_doc.rs`） |
 | 片段清单 `owner_early` 字段 | `scene.rs` `Tracks` | `specs/schema/eval-scene-clip.schema.json` 由 vdn-schema 导出，`--check` 比对 |
 | compare 的三态名 · SC-AGG 参数 · 否决逐段判法 | `compare.rs` · `thresholds/table.rs` | 规约第十节三张表（`tests/scorecard_compare_doc.rs`） |
@@ -34,9 +34,12 @@
 - 11-24 compare 冒烟（只读分数）：a = dfn3-ll、b = dpdfnet2，旧 build 480 段全部配上；涨 10 · 退 8 · 不确定 5。延迟 V-LAT 判退（+46.25 ms）、b 新增否决 480 段。发现 Markdown 里否决段列表太长 → 最多列 10 个，全部在 compare.json
 - 11-24 exp013 冒烟 build（4 段，写在会话临时目录，不进仓）：泄漏、电平验收都过，每段有 owner_early.wav；取 1 行做 Rust 解析夹具 `src/eval/tests/fixtures/scene-clip-early-example.jsonl`
 - 11-24 traindata 已在 `exp025-gtcrn-train/data/mix.py:30` import `EARLY_REVERB_MS, early_rir`，并有测试和正本逐样本对拍（`test_mix_loader.py:64`）
-- 11-24 人定：新 build 上云出（见上节）
+- 11-24 人在本会话的选项题里选了「新 build 上云出」（见上节）；大总管 noise-canceling-33 另把它当技术题定为上云，结论相同
+- 11-24 大总管 noise-canceling-33 接替 e1：认可此前自行跑的几次（下列）；批 cloudrun 同一台 CPU 机，和 traindata 合计最多 3 小时、1 美元。本分支合并后由 cloudrun 跑，小文件回到 `_tmp/20261125-cloudrun-exp013build/`，由我核 sha256 后提交到 `builds/<id>/`
+- 自行跑的几次（无名额，补记）：11-24 scorecard_e2e 早期参考单条（220 s）· clippy 两次 · xtask tidy · scorecard 单测两次 · compare 冒烟（只读分数）· exp013 冒烟 build（4 段）· exp013 Python 自检
+- 11-24 大总管发 1 个名额：codex 修完后整套 e2e 重跑用，跑完回报「名额已还」
 
-## 云上出新 build（人定 2026-11-24：上云，不在本机出）
+## 云上出新 build（2026-11-24：人在本会话的选项题里选「上云」；大总管 noise-canceling-33 批了开机费）
 在云机器的仓库根下（本分支合并后）：
 ```
 PY=<云上 venv>/bin/python
@@ -48,7 +51,7 @@ $PY docs/experiments/exp013-scene-suite/build.py --workers 8
 - 验收：`python -m unittest discover -s docs/experiments/exp013-scene-suite/tests` 全过（含旧 build 逐字节不变）；新 build 的 `clips.jsonl` 每行有 `audio.owner_early`
 
 ## 待人拍板
-（暂无。新 build 在哪出：人已定上云）
+（暂无）
 
 ## 转交（范围外的发现）
 - 吃字与两个评分模型（QA 层）的早期参考旁列本批没算：要换参考另跑模型，适合上云时一起做
