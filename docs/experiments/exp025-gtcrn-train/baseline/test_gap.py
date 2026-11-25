@@ -83,11 +83,11 @@ class Gap(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             src = Path(d) / "scorecard.json"
             src.write_text(json.dumps(scorecard(SCENES)))
-            gap.main([str(src), "--out", str(Path(d) / "o")])
-            self.assertTrue((Path(d) / "o/gap.md").exists())
-            self.assertEqual(json.loads((Path(d) / "o/gap.json").read_text())["system"], "gtcrn")
+            gap.main(["weak", str(src), "--out", str(Path(d) / "o")])
+            self.assertTrue((Path(d) / "o/gap-weak.md").exists())
+            self.assertEqual(json.loads((Path(d) / "o/gap-weak.json").read_text())["system"], "gtcrn")
             with self.assertRaises(FileExistsError):
-                gap.main([str(src), "--out", str(Path(d) / "o")])
+                gap.main(["weak", str(src), "--out", str(Path(d) / "o")])
 
 
 if __name__ == "__main__":
