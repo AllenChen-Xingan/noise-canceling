@@ -95,17 +95,18 @@ bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /
 | 步骤 | 产物 | 预期（出处） |
 |---|---|---|
 | inventory | `inventory.txt` | 每个来源一段：文件数 + 前 20 个路径 |
-| split | `splits/` 12 个文件 | 文件数照 `split_rules.json` 的 `expect`：train-clean-100 28,539 句 251 人 → 训练 201 · 开发 25 · 测试份 25 人；dev-clean + test-other 5,642 句 73 人 → 终测 37 · 测试份 36 人；QUT 20 段；DEMAND 96 个（6 环境 × 16 声道）；OpenSLR 28 ≥ 60,000；TUM ≥ 1（上游数目是读文档得来，见各条 `src`） |
+| split | `splits/` 12 个文件 | 文件数照 `split_rules.json` 的 `expect`：train-clean-100 28,539 句 251 人 → 训练 201 · 开发 25 · 测试份 25 人；dev-clean + test-other 5,642 句 73 人 → 终测 37 · 测试份 36 人；QUT 20 段；DEMAND 96 个（6 环境 × 16 声道）；OpenSLR 28 共 60,325 个 = 600 间模拟房 + 11 个实测单位（实测约 8 · 1 · 1 · 1）；TUM 478 个 = 100 个合成文件 + 32 次手机录音（上游数目见各条 `src`） |
 | shard | 分片目录 | 只有训练份与开发份；估计十几 GB（推断：人声约 90 小时 × 16 kHz × 2 字节 ≈ 10 GB，另加噪声与 RIR），`/workspace` 已用 33 GB，配额 150 GB |
 | register | `builds/<id>/build.json` | `valid: true`，`leak_check.ok: true`；`dropped_rir` 是被 `rirs.Measured.valid` 剔掉的 RIR 数 |
 | pack | `/workspace/out/traindata-products-<时间>.tar.gz` | 几 MB；不含音频 |
 
-耗时未量化：split 要对约 20 GB 原始音频逐个算 sha256，shard 要逐个解码、重采样并写盘。
+耗时：2026-11-25 那次 split 跑了 1800 s 才在 OpenSLR 28 上停下。现在改成先只看路径认出每个文件的单位，认不出几秒内就停；逐文件读数（sha256 · 帧数 · 采样率）缓存在 `/workspace/cache/split-files.jsonl`，重跑只算变了的文件。第一次跑仍要全算，用时未量化，别给 split 设 30 分钟上限。下载阶段的哈希复用不了：那是整个压缩包的哈希，包里的文件没有单独的哈希。
 
 ### 6.3 出错时怎么办
 
 - `split` 报「文件 N 个，应为 M」：通配符或上游数目不对，不写表。把 `inventory.txt` 发给 traindata，由 traindata 改 `split_rules.json` 后再跑
-- `split` 报「不在任何 rir_list 里」：OpenSLR 28 的房间表没对上，同样发清单
+- `split` 报「不在任何 rir_list 里」「和规则核过的上游版本不同」「认不出路径与房间号」：OpenSLR 28 的房间表没对上，同样发清单
+- `split` 中途被杀：直接重跑，已算的读数从缓存里取
 - `shard` 报目录已存在：不删旧目录，设 `VDN_SHARDS=/workspace/shards/first-batch-<时间>` 换个新目录再跑
 - `register` 报交集检查不过：`build.json` 仍会写出并记作废，照样 `pack` 带回
 
@@ -124,8 +125,8 @@ bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /
 
 ## 七、已知局限
 
-- QUT-NOISE 和 TUM 风噪：压缩包里的目录结构还没核，`split_rules.json` 里的通配符要等云上 `--inventory` 列出清单后再确认。另外 QUT 的服务器没有声明支持断点续传；脚本遇到不支持时会从头重下
+- QUT-NOISE 和 TUM 风噪：包内结构已按云上清单与上游 zip 目录核过（2026-11-25）。TUM 手机录音的文件名前缀按一次录音算，上游没写前缀含义；按前缀并只会让单位更粗。QUT 的服务器没有声明支持断点续传，遇到时从头重下
 - OpenSLR 28：包里的点声源噪声取自 MUSAN，里面各个来源的许可没有逐个核，所以第一批不用
-- 测试状态：本机共 100 条，99 条过（其中 6 条在产物带回前跳过）（torch 用 CPU 后端）。云上 GPU 对拍还没跑
+- 测试状态：本机共 117 条：110 条过，6 条等产物带回再跑，1 条红（缺 cloud/config.py）（torch 用 CPU 后端）。云上 GPU 对拍还没跑
 - 网络盘查盘：RunPod 网络盘上 df 报的是整个集群的剩余（cloudrun 实测 158 TB），所以在挂载点上改用「配额 − du 已用」。配额的正本是 `../cloud/config.py`（cloudrun 的分支）。那个分支合进来之前，`test_real_cloud_config_quota` 会红，下载也会拒绝开始
 - 依赖：测试要用 evalcmp 在分支 `feat/eval-paired-compare` 上加进 exp013 `rooms.py` 的 `early_rir`。那个分支合进 main 之前，在本分支上跑会红
