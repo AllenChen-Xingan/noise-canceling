@@ -89,7 +89,8 @@ sha256sum "$OLD/asr_cache.json"
 # 2. 核账本：没有 review、reserved_usd 为 0；记下开跑前的 sha256
 sha256sum "$LEDGER"; python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('review'), d['reserved_usd'], d['calls'], d['spent_usd'])" "$LEDGER"
 # 3. 在新 main 的仓库根（$REPO）里编译、跑探针：15 条 × 3 次 = 45 次真调用，约 0.004 美元
-cd "$REPO" && cargo build --release -p vdn-eval
+cd "$REPO"                       # 单独一行：set -e 才管得到（写在 && 左边失败不会停）
+cargo build --release -p vdn-eval
 ./target/release/vdn-eval asr-probe --wav-dir "$OLD/asr-wav" --cache "$OLD/asr_cache.json" \
   --temperature 0 --asr-ledger "$LEDGER" --out /workspace/asr-probe-t0-$(date -u +%Y%m%dT%H%M%SZ).json
 # 4. 取回：报告 JSON、跑后的账本快照（附 sha256）、账本旁的明细 asr-openrouter-ledger.json.calls.jsonl

@@ -47,7 +47,7 @@ fn misspelled_option_is_refused_by_name() {
                     && ["--systems", "--by-sceen", "--temprature", "--sytem"].contains(a)
             })
             .unwrap();
-        assert!(!ok, "{args:?} 应该失败");
+        assert_eq!(ok, Some(2), "{args:?} 应该以 2 退出");
         assert!(err.contains(bad), "{args:?} 的报错要点出 {bad}：{err}");
     }
 }
@@ -56,6 +56,14 @@ fn misspelled_option_is_refused_by_name() {
 #[test]
 fn stray_positional_is_refused() {
     let (ok, err) = run(&["scorecard", "gtcrn", "--suite", "/nonexistent/suite.json"]);
-    assert!(!ok);
+    assert_eq!(ok, Some(2));
     assert!(err.contains("gtcrn"), "{err}");
+}
+
+/// 带值选项缺值同样以 2 退出。
+#[test]
+fn missing_value_exits_2() {
+    let (code, err) = run(&["ci", "--system"]);
+    assert_eq!(code, Some(2));
+    assert!(err.contains("缺值"), "{err}");
 }
