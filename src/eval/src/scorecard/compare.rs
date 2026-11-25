@@ -10,6 +10,8 @@
 //!   新规则的线（[`rules_v2::thr_v2`]）
 //! - **种子噪声底**：同一配置两个种子的一对 `clips.jsonl` 照同样算法比一遍，作为参照列（计划 014 第三节第 2 条）；
 //!   只报，不改三态
+//! - **同一批音频**：两边都记了混合轨哈希（`ClipRow::mix_sha256`）时，同一片段 id 的哈希必须相同，不同就拒绝（不同 build
+//!   换了题，涨跌没意义）；有一边没记（旧成绩单）照比，但计入 `unverified_pairs`，报告里写明
 //! - 不做多重比较校正：每项一个独立的 95% 区间；项多时偶然「涨 / 退」的会有，参照种子噪声底看
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -97,6 +99,8 @@ pub struct Compare {
     pub pairs: usize,
     pub only_a: Vec<String>,
     pub only_b: Vec<String>,
+    /// 配上了、但有一边没记混合音频哈希（旧成绩单）的段数：照比，但核不了是不是同一批音频
+    pub unverified_pairs: usize,
     pub items: Vec<ItemDiff>,
     pub vetoes: Vec<VetoDiff>,
 }
@@ -245,6 +249,16 @@ fn pairs_of<'a>(
                     "片段 {id} 两边的 场景 / 档 / 设备 不一致：两个文件不是同一个 build"
                 ));
             }
+            // 同一片段 id、混合音频不同 = 换了题（不同 build）：比出来的涨跌没有意义，拒绝
+            if let (Some(x), Some(y)) = (&ra.mix_sha256, &rb.mix_sha256)
+                && x != y
+            {
+                return Err(format!(
+                    "片段 {id} 两边的混合音频不同（sha256 {} ≠ {}）：两个文件不是同一批音频，不比",
+                    x.get(..12).unwrap_or(x),
+                    y.get(..12).unwrap_or(y)
+                ));
+            }
             out.push((*id, *ra, *rb));
         }
     }
@@ -311,9 +325,14 @@ fn one_scope(
             d
         })
         .collect();
+    let unverified_pairs = pairs
+        .iter()
+        .filter(|(_, x, y)| x.mix_sha256.is_none() || y.mix_sha256.is_none())
+        .count();
     Ok(Compare {
         scope: scope.to_string(),
         pairs: pairs.len(),
+        unverified_pairs,
         only_a: a
             .keys()
             .filter(|k| !b.contains_key(*k))
