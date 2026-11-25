@@ -79,6 +79,20 @@ def _cases():
     cases.append(("pump_2hz_6db", c, c * g + 0.002 * rng.standard_normal(N).astype(np.float32), [(0, N)], []))
     c = (rng.standard_normal(N + 77) * 0.1).astype(np.float32)
     cases.append(("pump_flat_gain", c, c * 0.3, [(500, N + 77)], [(8000, 20000)]))
+    # 边界（codex pump-loss 第 1 轮 #2）：有声窗 9 / 10 个 · 一窗 8 / 10 与 7 / 10 帧有声 · 投影为 0 的窗（db10 下限）·
+    # 干净轨近零的窗（pc 门槛两侧）
+    c = (rng.standard_normal(N) * 0.1).astype(np.float32)
+    o = c * (1 + 0.3 * rng.standard_normal(N).astype(np.float32))
+    cases.append(("pump_9_windows", c, o, [(0, 9 * 1600)], []))
+    cases.append(("pump_10_windows_8of10", c, o, [(0, 9 * 1600 + 8 * 160)], []))
+    cases.append(("pump_10th_7of10", c, o, [(0, 9 * 1600 + 7 * 160)], []))
+    oz = o.copy()
+    oz[3200:4800] = 0.0                                  # 第 3 窗输出全零：投影 0 → db10 的 1e-20 下限
+    cases.append(("pump_out_zero_window", c, oz, [(0, N)], []))
+    cs = c.copy()
+    cs[1600:3200] = 7e-9                                 # 第 2 窗干净轨能量 1600·4.9e-17 ≈ 7.8e-14 ≤ 1e-12：跳过
+    cs[4800:6400] = 3e-8                                 # 第 4 窗 ≈ 1.4e-12 > 1e-12：算
+    cases.append(("pump_clean_energy_gate", cs, cs * 0.5 + 1e-9, [(0, N)], []))
     return cases
 
 
@@ -156,6 +170,9 @@ def test_pumpv_cases_cover_both_branches(rust):
     pv = {k: r["pumpv"]["value"] for k, r in rust.items()}
     assert any(v is None for v in pv.values()) and pv["pump_flat_gain"] == pytest.approx(0.0, abs=1e-6)
     assert pv["pump_2hz_6db"] > 1.0  # 探针抖动明显超过 1 dB² 的 A 档线
+    assert pv["pump_9_windows"] is None and pv["pump_10_windows_8of10"] is not None and pv["pump_10th_7of10"] is None
+    assert rust["pump_out_zero_window"]["pumpv"]["value"] > 1000  # 下限 −200 dB 的那一窗把方差拉得很大
+    assert rust["pump_clean_energy_gate"]["pumpv"]["extra"]["windows"] == 39
 
 
 def test_cases_cover_both_branches(rust):
