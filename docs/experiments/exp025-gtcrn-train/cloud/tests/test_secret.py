@@ -61,9 +61,15 @@ class TestPutSecret(Base):
         from contextlib import redirect_stderr, redirect_stdout
         import rp
         out, err = io.StringIO(), io.StringIO()
-        with redirect_stdout(out), redirect_stderr(err), self.assertRaises(SystemExit) as cm:
-            rp.main(["--ledger", self.ledger, *argv], client=self.cli)
-        return cm.exception, out.getvalue(), err.getvalue()
+        caught = None
+        try:  # 不用 assertRaises：它会把异常的 traceback 清掉，帧检查就成了空检查
+            with redirect_stdout(out), redirect_stderr(err):
+                rp.main(["--ledger", self.ledger, *argv], client=self.cli)
+        except SystemExit as e:
+            caught = e
+        self.assertIsNotNone(caught, "应当报错")
+        self.assertIsNotNone(caught.__traceback__)
+        return caught, out.getvalue(), err.getvalue()
 
     def test_every_failure_exit_is_clean(self):
         # 第 4 轮 #1：校验失败、畸形响应、各种结果码，每个出口的消息、两路输出、帧局部变量都不含值
