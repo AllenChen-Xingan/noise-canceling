@@ -47,8 +47,9 @@ def clear(path, expect_sha, worst_count, audio_s, note, now=None, price=None):
     path = Path(path)
     price = price_per_second() if price is None else price
     now = now or dt.datetime.now(dt.timezone.utc)
-    if worst_count < 0 or audio_s <= 0:
-        raise SystemExit("--worst-count 不能为负，--audio-s 要大于 0")
+    import math
+    if worst_count < 0 or not (math.isfinite(audio_s) and audio_s > 0) or not (math.isfinite(price) and price > 0):
+        raise SystemExit("--worst-count 不能为负；--audio-s 与标价要是大于 0 的有限数")
     lock = open(str(path) + ".lock", "a")
     try:
         fcntl.flock(lock, fcntl.LOCK_EX)
@@ -58,17 +59,18 @@ def clear(path, expect_sha, worst_count, audio_s, note, now=None, price=None):
         led = json.loads(raw)
         if not led.get("review"):
             raise SystemExit("账本没有 review，不用清")
+        adj = led.get("adjustments", [])
+        if not isinstance(adj, list):
+            raise SystemExit("账本的 adjustments 不是列表：先人工查")
         stamp = now.strftime("%Y%m%dT%H%M%SZ")
         backup = Path(f"{path}.before-clear-{stamp}.json")
-        with open(backup, "xb") as f:  # 只新建
-            f.write(raw)
         worst = worst_count * audio_s * price
         new = dict(led)
         new["spent_usd"] = led.get("spent_usd", 0.0) + worst
         new["calls"] = led.get("calls", 0) + worst_count
         new["reserved_usd"] = 0.0
         del new["review"]
-        new["adjustments"] = list(led.get("adjustments", [])) + [{
+        new["adjustments"] = adj + [{
             "kind": "review-cleared",
             "at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "review": led["review"],
@@ -81,9 +83,25 @@ def clear(path, expect_sha, worst_count, audio_s, note, now=None, price=None):
             "backup_sha256": sha256(raw),
             "note": "费用未知，按最坏估。" + note,
         }]
+        # 先全部算完、序列化（有非有限数就在这里拒），再动文件（codex 本分支第 1 轮 P1 #3 · P2 #4）
+        try:
+            text = json.dumps(new, ensure_ascii=False, indent=2, allow_nan=False)
+        except ValueError as e:
+            raise SystemExit(f"新账本里有非有限数（{e}）：不写")
         tmp = Path(str(path) + ".tmp")
-        tmp.write_text(json.dumps(new, ensure_ascii=False, indent=2))
-        os.replace(tmp, path)
+        made = []
+        try:
+            with open(backup, "xb") as f:  # 只新建
+                made.append(backup)
+                f.write(raw)
+            tmp.write_text(text)
+            made.append(tmp)
+            os.replace(tmp, path)
+        except BaseException:
+            for f in made:
+                if f.exists():
+                    f.unlink()
+            raise
         return new, backup
     finally:
         fcntl.flock(lock, fcntl.LOCK_UN)
