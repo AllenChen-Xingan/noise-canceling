@@ -62,8 +62,12 @@
 
 0. 建输出目录：`mkdir -p $O`（在网络盘上，乙段接着用）
 
-1. 拉代码与官方源码：`git clone <仓库> $R && git -C $R checkout <提交>`；`git clone https://github.com/Xiaobin-Rong/gtcrn $G && git -C $G checkout 502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73`
-2. 装环境：`cd $D && bash cloud_steps.sh setup && uv pip install --python $PY einops==0.7.0 pyyaml pytest`
+1. 拉代码与官方源码：`git clone https://github.com/AllenChen-Xingan/noise-canceling $R && git -C $R checkout <提交>`（仓库已公开）；连不上 GitHub 就从本机传 `git bundle` 再 `git clone`。
+   **必须带 .git，不许用 `git archive` 解包**：训练器开跑前要读提交号，拿不到就直接失败（2026-11-25 甲段第一次跑，运行记录的 commit 为空，之后改成失败）。
+   官方源码：`git clone https://github.com/Xiaobin-Rong/gtcrn $G && git -C $G checkout 502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73`
+2. 装环境：`cd $D && bash cloud_steps.sh setup && uv pip install --python $PY -r $D/requirements.txt -r $T/requirements.txt`
+   - 两份一起装，版本冲突时 uv 直接报错。trainer 那份带导出要的 onnx、onnxruntime（第一次跑漏装，4 条导出测试红）
+   - 第一次实测：装环境 235 s，单元测试 301 s（含真分片上的 loader 对接测试）
 3. 单元测试：`cd $T && VDN_GTCRN_DIR=$G VDN_LOADER_SHARDS=/workspace/shards/first-batch VDN_LOADER_RECIPE=$D/recipe.json $PY -m pytest -q tests/ --ignore=tests/test_losses_parity.py`
    - 对拍测试没编 Rust 驱动时会红（故意不跳过），云上不编 Rust，所以用 `--ignore` 排除。对拍在本机和 CI 上已过（大总管验收时 121 条通过）
    - 预期：其余全过；loader 的 3 条对接测试这次在真分片上跑（真分片 15 GB，这几条耗时未量化）
