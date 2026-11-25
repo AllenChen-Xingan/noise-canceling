@@ -26,6 +26,7 @@ import split  # noqa: E402
 BUILDS = HERE / "builds"
 SPLIT_CODE = {"train": 1, "dev": 2}
 CODE = ("mix.py", "gpu_mix.py", "loader.py", "shard.py", "leakcheck.py", "split.py")  # 改了任一个，build_id 就变
+EXP013 = HERE.parents[1] / "exp013-scene-suite"  # 同 mix.EXP013（test_mix_loader 核）；这里不导入 mix
 EXP013_CODE = ("dsp.py", "rooms.py", "rirs.py")  # mix.py 直接调的 exp013 模块（电平 · 早期混响 · RIR 测量）
 ID_KEYS = ("index_sha256", "split_tables", "shards", "recipe_sha256", "code_sha256")  # build_id 只由这几个字段算
 
@@ -51,7 +52,7 @@ def build_info(shard_root, recipe_path):
         "shards": {s: {sp: v["shards"] for sp, v in d.items() if sp != "kind"} for s, d in idx["sources"].items()},
         "recipe_sha256": sha_bytes(Path(recipe_path).read_bytes()),
         "code_sha256": {**{f: sha_bytes((HERE / f).read_bytes()) for f in CODE},
-                        **{f"exp013/{f}": sha_bytes((mix.EXP013 / f).read_bytes()) for f in EXP013_CODE}},
+                        **{f"exp013/{f}": sha_bytes((EXP013 / f).read_bytes()) for f in EXP013_CODE}},
     }
     return build_id_of(parts), parts, idx
 
