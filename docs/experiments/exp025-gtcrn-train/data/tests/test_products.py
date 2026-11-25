@@ -73,6 +73,34 @@ class Splits(unittest.TestCase):
                 by_unit.setdefault(r["unit"], set()).add(r["split"])
             self.assertTrue(all(len(v) == 1 for v in by_unit.values()), f"{n}：同一单位跨了份")
 
+    def test_units_follow_rules_from_path(self):
+        """自审 P2：单位列是 unit_regex / 说话人取法 / room_merge 的第二处表示，要和正本比。
+        说话人与按文件切的从路径整个重算；按房间切的，仓里没有 rir_list，核「路径落进 room_merge 的 ⇔ 单位是合并后的单位」，
+        其余单位以 rir_list 所在目录名开头。"""
+        for n in split_names():
+            rule = self.R["sources"][n]
+            if rule["unit"] == "time":
+                continue
+            _, rows = split.load_split(n, SPLITS)
+            if rule["unit"] in ("speaker", "file"):
+                for r in rows:
+                    self.assertEqual(r["unit"], split.unit_of(r["path"], rule), f"{n} {r['path']}")
+                continue
+            import re
+            from pathlib import PurePosixPath as P
+
+            merge = [(re.compile(x["match"]), x["unit"]) for x in rule.get("room_merge", [])]
+            targets = {to for _, to in merge}
+            for r in rows:
+                p = P(r["path"])
+                probe = f"{p.parent.name}/{p.name}"  # 实测 RIR 的文件名前缀与 room-id 前缀相同（air_ · RWCP_）
+                hit = next((to for rx, to in merge if rx.search(probe)), None)
+                if hit:
+                    self.assertEqual(r["unit"], hit, f"{n} {r['path']}")
+                else:
+                    self.assertNotIn(r["unit"], targets, f"{n} {r['path']}")
+                    self.assertTrue(r["unit"].startswith(p.parent.name + "/") or r["unit"].startswith(p.parent.parent.name + "/"), f"{n} {r['path']} {r['unit']}")
+
     def test_time_segments_reproduce(self):
         for n in split_names():
             rule = self.R["sources"][n]
