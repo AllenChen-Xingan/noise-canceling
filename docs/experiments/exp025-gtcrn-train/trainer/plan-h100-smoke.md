@@ -23,8 +23,8 @@
   - 放进网络盘新目录 `/workspace/repo-<提交前 8 位>`，不覆盖旧 checkout
   - 本分支只改 `trainer/**` 与现状页，不碰 `data/`，所以 loader 算出的 build id 与 main 相同（推断；甲段第 3 步的 loader 测试会核）
 - 官方 GTCRN 源码：上游 `github.com/Xiaobin-Rong/gtcrn` 提交 `502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73`（与 evalcmp 基线同一提交）。起点检查点由 `official.py` 核 sha256 `250fa282…f06442`，对不上就停
-- 环境：用 data 线的 `bash cloud_steps.sh setup` 建的 `.venv`（Python 3.12.14，torch 2.15.0，numpy 2.5.4 …），再补 trainer 自己的 3 个包（`einops==0.7.0`、`pyyaml`、`pytest`）。不用镜像自带的 torch 2.5.1
-  - 风险：trainer 在本机是 Python 3.13 测过的，3.12 没测过（推断：没用 3.13 专有语法，应该能跑）。第四节第 3 步先跑一遍单元测试来核
+- 环境：用 data 线的 `bash cloud_steps.sh setup` 建的 `.venv`（Python 3.12.14，torch 2.15.0，numpy 2.5.4 …），再装 `trainer/requirements.txt`（einops、pyyaml、onnx、onnxruntime、pytest 等）。不用镜像自带的 torch 2.5.1
+  - trainer 在本机用 Python 3.13 测；云上是 3.12.14。2026-11-25 甲段第一次跑：113 条过、5 条红，红的都是环境问题（漏装 onnx、没有 .git），没有因 3.12 红的
 - 已花：`cloud/costs.tsv` 里机器估算合计约 1.43 美元，另有网络盘按月摊销；总上限 60 美元（D101）
 
 ## 三、开发份「已知读数」从哪来（大总管定，人未参与）
