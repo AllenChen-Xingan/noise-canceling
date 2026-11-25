@@ -75,19 +75,23 @@ class TestPutSecret(Base):
         # 第 4 轮 #1：校验失败、畸形响应、各种结果码，每个出口的消息、两路输出、帧局部变量都不含值
         orig = self.fake.exec
         cases = [
-            ("bad-remote", None, ["--remote", "/workspace/.env.local"]),
-            ("weird-response", lambda argv, env=None: ["not", "a", "dict"] if env else orig(argv, env), []),
-            ("mvfail", lambda argv, env=None: dict(orig(argv, env), stdout="MVFAIL\n") if env else orig(argv, env), []),
+            ("bad-remote", None, ["--remote", "/workspace/.env.local"], "[REFUSED]"),
+            ("weird-response", lambda argv, env=None: ["not", "a", "dict"] if env else orig(argv, env), [], "[UNKNOWN]"),
+            ("mvfail", lambda argv, env=None: dict(orig(argv, env), stdout="MVFAIL\n") if env else orig(argv, env),
+             [], "[UNKNOWN]"),
             ("echo-value", lambda argv, env=None: dict(orig(argv, env), stdout=env["V"], exitCode=1)
-             if env else orig(argv, env), []),
+             if env else orig(argv, env), [], "[UNKNOWN]"),
+            ("value-as-exitcode", lambda argv, env=None: dict(orig(argv, env), stdout="", exitCode=env["V"])
+             if env else orig(argv, env), [], "[UNKNOWN]"),  # 第 5 轮 #1
         ]
-        for label, fake_exec, extra in cases:
+        for label, fake_exec, extra, code in cases:
             with self.subTest(label):
                 self.fake.exec = fake_exec or orig
                 e, out, err = self.run_cli_fail("--env-file", self.env_file, "put-secret", "pod_9",
                                                 "OPENROUTER_API_KEY", *extra)
                 self.assert_no_leak(str(e), out, err)
                 self.assert_no_frame_leak(e)
+                self.assertTrue(str(e).startswith(code), str(e)[:60])  # 第 5 轮 #2：结果码也要对
         self.fake.exec = orig
 
     def test_writes_file_on_container_disk_and_reports_length_only(self):
