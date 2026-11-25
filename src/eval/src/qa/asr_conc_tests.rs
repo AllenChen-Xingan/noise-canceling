@@ -208,3 +208,134 @@ fn spot_check_sampling_is_deterministic_and_about_ten_percent() {
     );
     assert_eq!(MAX_UNSTABLE_RATE, 0.0);
 }
+
+/// 固定回同一个错误码的并发假服务。返回 (地址, 收到的请求数)。
+fn error_server(code: u16, msg: &'static str) -> (String, Arc<AtomicUsize>) {
+    let l = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!(
+        "http://{}/api/v1/audio/transcriptions",
+        l.local_addr().unwrap()
+    );
+    let total = Arc::new(AtomicUsize::new(0));
+    let t2 = total.clone();
+    std::thread::spawn(move || {
+        for c in l.incoming() {
+            let Ok(mut c) = c else { return };
+            let total = t2.clone();
+            std::thread::spawn(move || {
+                let mut r = BufReader::new(c.try_clone().unwrap());
+                let mut len = 0usize;
+                loop {
+                    let mut line = String::new();
+                    if r.read_line(&mut line).unwrap_or(0) == 0 || line == "\r\n" {
+                        break;
+                    }
+                    if let Some(v) = line.to_ascii_lowercase().strip_prefix("content-length:") {
+                        len = v.trim().parse().unwrap_or(0);
+                    }
+                }
+                let mut b = vec![0u8; len];
+                r.read_exact(&mut b).unwrap();
+                total.fetch_add(1, Ordering::SeqCst);
+                let body = json!({"error": {"code": code, "message": msg}}).to_string();
+                let resp = format!(
+                    "HTTP/1.1 {code} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = c.write_all(resp.as_bytes());
+            });
+        }
+    });
+    (url, total)
+}
+
+fn items_in(d: &std::path::Path, n: usize) -> Vec<(PathBuf, String, String, String)> {
+    jobs()
+        .into_iter()
+        .take(n)
+        .enumerate()
+        .map(|(k, (x, sr, lang))| {
+            let p = d.join(format!("e{k}.wav"));
+            crate::wav::write(&p, &x, sr).unwrap();
+            let sha = crate::wav::sha256(&p).unwrap();
+            (p, sha, lang, format!("cafe-c{k:02}-mba#00"))
+        })
+        .collect()
+}
+
+/// codex 第 5 轮 P1 #3：预取遇到永久错误（数据政策 404）后，串行取值不再发请求，后面的段也不再发。
+#[test]
+fn permanent_prefetch_error_stops_everything_without_resending() {
+    let d = tmpdir("perm");
+    let (url, total) = error_server(404, "No endpoints found matching your data policy");
+    let or = client(&url, &d);
+    let mut a = Asr::with_backends(
+        d.join("cache.json"),
+        vec![Backend::OpenRouter(or)],
+        OPENROUTER,
+        Route::default(),
+    );
+    let items = items_in(&d, 4);
+    a.prefetch(&items[..2]);
+    let sent = total.load(Ordering::SeqCst);
+    assert_eq!(sent, 2 * REPEATS, "预取这批照发：2 条 × {REPEATS} 次");
+    for (p, sha, lang, clip) in &items[..2] {
+        let e = a.transcribe(p, sha, lang, clip).unwrap_err();
+        assert!(e.contains("不重试"), "{e}");
+    }
+    a.prefetch(&items[2..]);
+    for (p, sha, lang, clip) in &items[2..] {
+        assert!(a.transcribe(p, sha, lang, clip).is_err());
+    }
+    assert_eq!(
+        total.load(Ordering::SeqCst),
+        sent,
+        "永久错误之后一个请求都不再发"
+    );
+}
+
+/// 预取时 5xx 已经重试满了：串行取值直接报那个错，不再重试一轮。
+#[test]
+fn exhausted_retries_in_prefetch_are_not_retried_again() {
+    let d = tmpdir("5xx");
+    let (url, total) = error_server(503, "busy");
+    let or = client(&url, &d);
+    let mut a = Asr::with_backends(
+        d.join("cache.json"),
+        vec![Backend::OpenRouter(or)],
+        OPENROUTER,
+        Route::default(),
+    );
+    let items = items_in(&d, 1);
+    a.prefetch(&items);
+    let sent = total.load(Ordering::SeqCst);
+    assert_eq!(sent, REPEATS * asr_or::MAX_ATTEMPTS);
+    let (p, sha, lang, clip) = &items[0];
+    assert!(a.transcribe(p, sha, lang, clip).is_err());
+    assert_eq!(total.load(Ordering::SeqCst), sent);
+}
+
+/// codex 第 5 轮 P2 #4：预取完成的复核照样计入 checked / unstable，且同一条音频只计一次。
+#[test]
+fn prefetched_checks_are_counted_once() {
+    let (url, _, _) = echo_server(0, 0);
+    let d = tmpdir("count");
+    let or = client(&url, &d);
+    let mut a = Asr::with_backends(
+        d.join("cache.json"),
+        vec![Backend::OpenRouter(or)],
+        OPENROUTER,
+        Route::default(),
+    );
+    let items = items_in(&d, 3);
+    a.prefetch(&items);
+    assert_eq!(
+        (a.checked, a.unstable),
+        (3, 0),
+        "预取完就算进去，不靠后面的评分走到"
+    );
+    for (p, sha, lang, clip) in &items {
+        a.transcribe(p, sha, lang, clip).unwrap();
+    }
+    assert_eq!(a.checked, 3, "同一条音频不重复计");
+}
