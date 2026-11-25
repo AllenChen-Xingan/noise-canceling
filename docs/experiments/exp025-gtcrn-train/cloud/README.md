@@ -9,6 +9,7 @@
 - 价格：目录价约 4.39 美元 / 小时（2026-11-24）。开机前目录价高出 20% 以上就不开。
 - 为什么是 H100：2026-11-24 查 RunPod 目录，3090 在 Secure Cloud 所有机房无货，人改选 L4 · US-MO-2（D101）；L4 开机报「无可用机器」，人改 H100（D102）。60 美元上限约合 H100 13 小时。
 - 镜像：`pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime`，容器命令只做一件事：睡到开机时算好的截止时刻，再用平台注入的变量删掉自己（失败每 60 秒重试）；活都用 exec 发进去。
+- ⚠️ 显卡机镜像（pytorch）里**没有 git**，trainer 的运行记录要读提交号，没有 git 就拒跑（2026-11-25 H100 乙段第 2 步实测踩到，白花约 0.6 美元）。显卡机开机后第一步先 `apt-get install -y git`，再 `git -C <仓库> rev-parse HEAD` 核一遍，失败就停，不进后面的步骤。CPU 机镜像自带 git。
 - CPU 机镜像：`rust:1.99.1-trixie`（钉 digest，正本 `config.py` 的 `CPU_IMAGE`）。显卡机那个镜像是 Ubuntu 22.04（glibc 2.35），vdn-eval 用的 ort 预编译库在上面链接不过（2026-11-25 实测）；Debian 13 的 glibc 是 2.41，Rust 版本与 `rust-toolchain.toml` 一致。
 - 装 trainer 环境用 `remote/setup_env_timed.sh <仓库根> <setup_uv.sh>`：做法与现行相同，每步单独计时，uv 不带 -q，留下「Prepared … in」（下载 + 解包）和「Installed … in」（链接进 venv）两段时间。起因：2026-11-25 同样的装法一次 133 秒、一次 889 秒（推断：网络盘小文件慢）。大总管定：先用计时定原因；如果证实慢在网络盘小文件，再把 venv 做成整包（包名带 requirements 的 sha256，解到容器盘），写进本目录代码并带测试，赶在正式训练前做好。所有机器统一用 setup_uv.sh 钉的 uv 版本。
 - uv 装的 Python 放网络盘：在机器里跑 traindata 的 `cloud_steps.sh setup` 前先 `export UV_PYTHON_INSTALL_DIR=/workspace/uv-python`。不设的话解释器落在容器盘 `/root/.local/share/uv`，网络盘上的 `.venv` 换一台机器就用不了（大总管定，2026-11-25）。
