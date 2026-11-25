@@ -53,3 +53,4 @@
   · 提速：先认单位再算哈希；逐文件读数缓存在网络盘上（filecache.py），重跑只算变了的；小文件只开一次
   · 加测试：test_openslr28_rooms（8 条，含云上失败那个文件名，先红后绿）· test_tum_units（4 条，先红后绿）· test_filecache（5 条）。共 117 条，110 过 6 跳过 1 红（缺 cloud/config.py）
 - 2026-11-25 云上重跑六步（cloudrun，提交 8b4194d3）全部退出码 0：split 1346 s · shard 1212 s。包 sha256 cf5c6cc9… 核对一致；inventory.txt · splits/ · builds/49349c158a4defdc/ 进仓。tests.test_products 7 条全过；本机按现行规则逐行重算单位 0 处不符；AIR 归终测原料池、RWCP 归训练，与 README 一致。全量 117 条 116 过，1 条红（缺 cloud/config.py）
+- 2026-11-25 openslr28-rir.jsonl 16.4 MB 被 hook 的 10 MB 线挡在库外。先写 7 条会红的测试（tests/test_split_gzip.py），再让 split 把超 8 MB 的表存成 .jsonl.gz（哈希仍按解压后正文）。仓里改存 2.6 MB 的 .gz；全量 124 条 123 过，1 条红同上

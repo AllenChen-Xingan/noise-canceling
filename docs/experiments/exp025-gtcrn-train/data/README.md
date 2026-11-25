@@ -144,8 +144,8 @@ bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /
 
 - QUT-NOISE 和 TUM 风噪：包内结构已按云上清单与上游 zip 目录核过（2026-11-25）。TUM 手机录音的文件名前缀按一次录音算，上游没写前缀含义；按前缀并只会让单位更粗。QUT 的服务器没有声明支持断点续传，遇到时从头重下
 - OpenSLR 28：包里的点声源噪声取自 MUSAN，里面各个来源的许可没有逐个核，所以第一批不用
-- 测试状态（2026-11-25 产物带回后）：本机共 117 条，116 条过，1 条红（缺 cloud/config.py）（torch 用 CPU 后端；混音那几条借 evalcmp 分支的 rooms.py 跑）。云上 GPU 对拍还没跑
+- 测试状态（2026-11-25 产物带回后）：本机共 124 条，123 条过，1 条红（缺 cloud/config.py）（torch 用 CPU 后端；混音那几条借 evalcmp 分支的 rooms.py 跑）。云上 GPU 对拍还没跑
 - 第一批产物（build `49349c158a4defdc`，云上提交 8b4194d3）：分片 15 GB 与 `index.json` 30 MB 只在网络盘 `/workspace/shards/first-batch`，没取回本机。分片时按 `rirs.Measured.valid` 丢掉 3307 条 RIR（训练加开发份共 48214 条，约 6.9%），逐条名单在那份 `index.json` 的 `dropped` 里
-- `splits/openslr28-rir.jsonl` 16.4 MB，超过 10 MB 提醒线、低于 50 MB 硬线：它是 6 万条 RIR 各归哪一份的对照表，测试要用它重算分配，所以进仓
+- `splits/openslr28-rir.jsonl` 原文 16.4 MB，auto-commit hook 不收超 10 MB 的文件，所以仓里存的是 `openslr28-rir.jsonl.gz`（2.6 MB）。`split.write` 遇到正文超 8 MB 会自动这样存；`split.load_split` 两种都能读，核的始终是解压后正文的 sha256，所以云上出的摘要不用改
 - 网络盘查盘：RunPod 网络盘上 df 报的是整个集群的剩余（cloudrun 实测 158 TB），所以在挂载点上改用「配额 − du 已用」。配额的正本是 `../cloud/config.py`（cloudrun 的分支）。那个分支合进来之前，`test_real_cloud_config_quota` 会红，下载也会拒绝开始
 - 依赖：测试要用 evalcmp 在分支 `feat/eval-paired-compare` 上加进 exp013 `rooms.py` 的 `early_rir`。那个分支合进 main 之前，在本分支上跑会红
