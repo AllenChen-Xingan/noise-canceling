@@ -14,7 +14,7 @@ HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 import split  # noqa: E402
 
-RULE = {"unit": "file", "frac": {"train": 1.0}}
+RULE = split.load_rules()["sources"]["tum-wind"]  # 按文件切；summary 只读 group · unit
 ROWS = [{"path": f"a/{i:03d}.wav", "unit": f"a/{i:03d}.wav", "split": "train", "frames": 16000, "sr": 16000} for i in range(50)]
 
 
