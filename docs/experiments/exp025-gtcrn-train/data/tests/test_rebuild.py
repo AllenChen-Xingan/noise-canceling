@@ -39,6 +39,23 @@ class Compare(unittest.TestCase):
         if rb.code_drift():
             self.assertTrue(rb.drift_covered(), f"代码变了 {rb.code_drift()}，rebuild/ 里没有对着现行代码的 ok 报告")
 
+    def test_drift_covered_needs_ok_report_on_current_code(self):
+        """用本机的 6323（main 现行代码出的，旧 4540 个逐个同 17f5）造报告：ok 才算数，代码对不上现行的不算。"""
+        b6323 = rb.EXP013 / "builds" / "20261124165427-6323"
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(rb, "REPORTS", Path(d)):
+            self.assertFalse(rb.drift_covered())
+            r = rb.check_dir(b6323, inputs_ok=True)
+            self.assertTrue(r["ok"], r)
+            (Path(d) / "exp013-x.json").write_text(json.dumps(dict(r, ok=False)))
+            self.assertFalse(rb.drift_covered())
+            stale = dict(r, new_code_sha256=dict(r["new_code_sha256"], **{"rooms.py": "0" * 64}))
+            (Path(d) / "exp013-y.json").write_text(json.dumps(stale))
+            self.assertFalse(rb.drift_covered())
+            (Path(d) / "exp013-z.json").write_text(json.dumps(r))
+            self.assertTrue(rb.drift_covered())
+
     def test_any_build_id_prefix_stripped(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "h"
