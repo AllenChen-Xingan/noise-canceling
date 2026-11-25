@@ -43,7 +43,9 @@ pub fn probe(
     for (name, sha, lang, x) in items {
         if halted.is_some() {
             unstable += 1;
-            rows.push(json!({"wav": name, "sha256": sha, "lang": lang, "ran": false, "stable": false}));
+            rows.push(
+                json!({"wav": name, "sha256": sha, "lang": lang, "ran": false, "stable": false}),
+            );
             continue;
         }
         let mut texts = Vec::new();

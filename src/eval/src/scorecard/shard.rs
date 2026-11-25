@@ -1,7 +1,7 @@
 //! 分片跑成绩单（大总管 2026-11-25 定）：`vdn-eval scorecard --shard i/n` 只跑一部分，各片写自己的 `--out`
 //! （识别缓存 `qa/asr_cache.json` 也因此各片一份，不互相覆盖）；跑完 `--merge-shards` 按清单顺序拼回去。
 //!
-//! - 分法：清单顺序里的每一段（或一条展开不出片段的任务）是一个单位，第 k 个单位归第 `k mod n` 片（[`super::run_shard`]）
+//! - 分法：清单顺序里的每一段（或一条展开不出片段的任务）是一个单位，第 k 个单位归第 `home(k) mod n` 片：`home(k)` = 这一段（id + 混合轨哈希）第一次出现的位置，段不重复时就是 k（[`unit_plan`]，[`super::run_shard`]）
 //! - 每片在 meta 里记下每行分数、每条缺段记录来自第几个单位（`shard_units`）：合并按「单位位置 × 系统顺序」排，
 //!   不靠片段 id 定位（id 只在一个 build 内唯一；codex 本分支第 1 轮 P1 #3）
 //! - 合并：逐段分数的行**原样**拼接（不解析再写出），所以和单进程写出的 `clips.jsonl` 逐字节相同。缺段记录同样排序
@@ -320,13 +320,27 @@ pub fn merge_dirs(
         a["unstable_rate"] = json!((checked > 0).then(|| unstable as f64 / checked as f64));
         if let Some(bs) = a["backends"].as_object_mut() {
             for (name, b) in bs.iter_mut() {
-                let n: u64 = metas.iter().map(|m| m["asr"]["backends"][name]["clips"].as_u64().unwrap_or(0)).sum();
+                let n: u64 = metas
+                    .iter()
+                    .map(|m| m["asr"]["backends"][name]["clips"].as_u64().unwrap_or(0))
+                    .sum();
                 b["clips"] = json!(n);
             }
         }
-        let gather = |k: &str| -> Vec<Value> { metas.iter().map(|m| m["asr"][k].clone()).filter(|v| !v.is_null()).collect() };
+        let gather = |k: &str| -> Vec<Value> {
+            metas
+                .iter()
+                .map(|m| m["asr"][k].clone())
+                .filter(|v| !v.is_null())
+                .collect()
+        };
         a["halted"] = json!(gather("halted").first().cloned());
-        a["halted_by_shard"] = json!(metas.iter().map(|m| m["asr"]["halted"].clone()).collect::<Vec<_>>());
+        a["halted_by_shard"] = json!(
+            metas
+                .iter()
+                .map(|m| m["asr"]["halted"].clone())
+                .collect::<Vec<_>>()
+        );
         a["error"] = json!(gather("error").first().cloned());
         a["per_shard"] = json!(metas.iter().map(|m| m["asr"].clone()).collect::<Vec<_>>());
         a

@@ -256,7 +256,7 @@ pub fn run_shard(
     let mut tick = |k: &str, t: std::time::Instant| {
         *timing.entry(k.to_string()).or_default() += t.elapsed().as_secs_f64()
     };
-    // 分片单位：清单顺序里的每一段，或一条展开不出片段的任务；第 k 个单位归第 k mod n 片
+    // 分片单位：清单顺序里的每一段，或一条展开不出片段的任务；第 k 个单位归第 home(k) mod n 片（home 见 shard::unit_plan：同一段出现几次都按第一次的位置）
     let mut unit = 0usize;
     // 分片看每个单位的 home 下标（同一段出现几次都落在同一片；见 shard::unit_plan，正本）
     let plan = shard.map(|_| shard::unit_plan(suite)).unwrap_or_default();

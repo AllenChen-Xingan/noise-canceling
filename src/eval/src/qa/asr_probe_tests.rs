@@ -131,15 +131,32 @@ fn langs_come_from_cache_keys() {
 #[test]
 fn probe_stops_on_permanent_error() {
     let d = tmpdir("probe-403");
-    let (url, seen) = fake(vec![(403, "", json!({"error": {"code": 403, "message": "no provider"}}).to_string())]);
+    let (url, seen) = fake(vec![(
+        403,
+        "",
+        json!({"error": {"code": 403, "message": "no provider"}}).to_string(),
+    )]);
     let mut c = client(&url, &d);
     let items = vec![
-        ("one.wav".to_string(), "aa".to_string(), "en".to_string(), audio()),
-        ("two.wav".to_string(), "bb".to_string(), "en".to_string(), audio()),
+        (
+            "one.wav".to_string(),
+            "aa".to_string(),
+            "en".to_string(),
+            audio(),
+        ),
+        (
+            "two.wav".to_string(),
+            "bb".to_string(),
+            "en".to_string(),
+            audio(),
+        ),
     ];
     let r = probe(&mut c, &items, 3, vdn_types::MODEL_RATE);
     assert_eq!(seen.lock().unwrap().len(), 1, "403 之后一条都不再发");
-    assert!(r["halted"].as_str().is_some_and(|h| h.contains("403")), "{r}");
+    assert!(
+        r["halted"].as_str().is_some_and(|h| h.contains("403")),
+        "{r}"
+    );
     assert_eq!(r["pass"], false);
     assert_eq!(r["items"][1]["ran"], false);
 }
