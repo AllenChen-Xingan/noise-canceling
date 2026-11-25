@@ -65,6 +65,14 @@ class FakeRunPod:
             v = {"id": f"vol_{self.n}", "name": d["name"], "size": d["size"], "dataCenter": d["dataCenter"]}
             self.volumes[v["id"]] = v
             return 201, v
+        if p.startswith("/v2/network-volumes/") and m == "PATCH":
+            vid = p.rsplit("/", 1)[1]
+            if vid not in self.volumes:
+                return 404, {"detail": "not found"}
+            if d.get("size", 0) < self.volumes[vid]["size"]:
+                return 400, {"detail": "network volume storage cannot be reduced"}
+            self.volumes[vid].update(d)
+            return 200, self.volumes[vid]
         if p.startswith("/v2/network-volumes/") and m == "DELETE":
             vid = p.rsplit("/", 1)[1]
             if vid not in self.volumes:

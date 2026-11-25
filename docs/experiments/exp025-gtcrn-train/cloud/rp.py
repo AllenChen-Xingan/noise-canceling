@@ -45,6 +45,12 @@ def cmd_volume_create(cli, a):
     print(json.dumps(v, ensure_ascii=False))
 
 
+def cmd_volume_resize(cli, a):
+    need_yes(a, "扩网络盘")
+    v = O.resize_volume(cli, a.size, ledger_path=a.ledger)
+    print(f"网络盘已扩到 {v.get('size', a.size)} GB")
+
+
 def cmd_volume_delete(cli, a):
     need_yes(a, "删网络盘（数据一起删）")
     O.delete_volume(cli, a.id, a.ledger, note=a.note)
@@ -299,6 +305,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = add("volume-create", cmd_volume_create, "建网络盘（花钱）")
     p.add_argument("--dc", default=C.DATA_CENTER)
     p.add_argument("--size", type=int, default=C.VOLUME_SIZE_GB)
+    p.add_argument("--yes", action="store_true")
+    p = add("volume-resize", cmd_volume_resize, "扩网络盘（只能变大；花钱）")
+    p.add_argument("--size", type=int, required=True, help="新大小（GB）")
     p.add_argument("--yes", action="store_true")
     p = add("volume-delete", cmd_volume_delete, "删网络盘（数据一起删）")
     p.add_argument("--id", required=True)
