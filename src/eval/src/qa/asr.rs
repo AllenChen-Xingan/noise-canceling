@@ -266,11 +266,23 @@ impl Asr {
         if let Some(t) = self.cache.get(&key) {
             return Ok(t.clone());
         }
+        if backend == OPENROUTER {
+            if let Some(h) = &self.halted {
+                return Err(format!("OpenRouter 已停发：{h}"));
+            }
+            if let Some(e) = self.failed.get(&key) {
+                return Err(e.clone());
+            }
+        }
         if let Some(Backend::OpenRouter(c)) = self.backends.get_mut(backend) {
             let (x, sr) = crate::wav::read(path)?;
-            let text = c.transcribe(&x, sr, lang)?;
-            self.calls += 1;
-            return Ok(self.remember(key, text));
+            return match c.transcribe(&x, sr, lang) {
+                Ok(text) => {
+                    self.calls += 1;
+                    Ok(self.remember(key, text))
+                }
+                Err(e) => Err(self.fail(key, e)),
+            };
         }
         let file_arg = format!("file=@{};type=audio/wav", path.display());
         let o = Command::new("curl")
@@ -340,8 +352,8 @@ impl Asr {
             stable &= self.once(path, sha, lang, rep, backend)? == first;
         }
         if n > 1 {
-            self.checked += 1;
-            self.unstable += usize::from(!stable);
+            let model = self.backends.get(backend).map_or("?", Backend::model);
+            self.count_check(format!("{sha}|{model}"), stable);
         }
         let id = clip.split('#').next().unwrap_or(clip).to_string();
         self.used.entry(backend).or_default().insert(id);
@@ -370,7 +382,7 @@ impl Asr {
                 jobs.push((x, sr, lang.clone()));
             }
         }
-        if jobs.is_empty() {
+        if jobs.is_empty() || self.halted.is_some() {
             return;
         }
         let workers = self.workers;
@@ -380,14 +392,55 @@ impl Asr {
         let results = c.transcribe_many(&jobs, workers);
         let mut any = false;
         for (k, r) in keys.into_iter().zip(results) {
-            if let Ok(t) = r {
-                self.calls += 1;
-                self.cache.insert(k, t);
-                any = true;
+            match r {
+                Ok(t) => {
+                    self.calls += 1;
+                    self.cache.insert(k, t);
+                    any = true;
+                }
+                Err(e) => {
+                    self.fail(k, e);
+                }
             }
         }
         if any {
             self.save();
+        }
+        // 两次都到手的音频当场计入复核（评分那边可能因为参考转写为空就提前返回，不能靠它计；codex 第 5 轮 P2 #4）
+        let model = super::asr_or::OR_MODEL;
+        for (_, sha, lang, clip) in items {
+            let n = repeats_for(sha, self.single);
+            if n < 2 || self.backend_for(clip) != OPENROUTER {
+                continue;
+            }
+            let texts: Option<Vec<String>> = (1..=n)
+                .map(|r| {
+                    self.cache
+                        .get(&format!("{sha}|{model}|{lang}|{r}"))
+                        .cloned()
+                })
+                .collect();
+            if let Some(t) = texts {
+                let stable = t.iter().all(|x| *x == t[0]);
+                self.count_check(format!("{sha}|{model}"), stable);
+            }
+        }
+    }
+
+    /// 记一次失败：之后同一键直接报这个错；永久错误还会停发全部 OpenRouter 请求。返回原因。
+    fn fail(&mut self, key: String, e: String) -> String {
+        if is_permanent(&e) && self.halted.is_none() {
+            self.halted = Some(e.clone());
+        }
+        self.failed.insert(key, e.clone());
+        e
+    }
+
+    /// 计一次复核（同一条音频 · 同一型号只计一次）。
+    fn count_check(&mut self, id: String, stable: bool) {
+        if self.counted.insert(id) {
+            self.checked += 1;
+            self.unstable += usize::from(!stable);
         }
     }
 
