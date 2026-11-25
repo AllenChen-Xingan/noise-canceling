@@ -1,6 +1,6 @@
 # 现状页 · traindata（issue #156，批次 20261116-b19）
 
-状态：进行中（第一批产物已带回、核过、进仓；待 exp013 重建与收尾评审）
+状态：进行中（第一批产物与 exp013 核对都已完成、进仓；待收尾评审）
 
 ## 手上
 实体：训练数据集 · 数据切分 · 混音配方。产出都在 `docs/experiments/exp025-gtcrn-train/data/`，说明见那里的 `README.md`。
@@ -10,9 +10,8 @@
 同一批 plan 两边逐样本差 ≤ 1e-4，写成了测试。本机 75 条测试全过（torch CPU 后端）。下载脚本已备好，没在云上跑。
 
 ## 下一步
-1. exp013 重建不单独跑：等 cloudrun 带回 upload-verify.log 与 inputs-verify.log，按 README 6.5 用 `rebuild_exp013.py --check-cloud` 核
-2. cloudrun 的分支合进来后全量重跑测试
-3. 收尾：多视角自审 + codex 评审
+1. cloudrun 的分支合进来后全量重跑测试（剩 test_real_cloud_config_quota 一条红）
+2. 收尾：多视角自审 + codex 评审
 
 ## 依赖
 - 早期混响 100 ms 的正本在 `docs/experiments/exp013-scene-suite/rooms.py` 的 `EARLY_REVERB_MS` 与 `early_rir`。它们在 evalcmp 的分支 `feat/eval-paired-compare` 上，还没合进 main。合并前本分支的混音测试会红；本机验证用的是那个分支的 rooms.py
@@ -56,3 +55,4 @@
 - 2026-11-25 openslr28-rir.jsonl 16.4 MB 被 hook 的 10 MB 线挡在库外。先写 7 条会红的测试（tests/test_split_gzip.py），再让 split 把超 8 MB 的表存成 .jsonl.gz（哈希仍按解压后正文）。仓里改存 2.6 MB 的 .gz；全量 124 条 123 过，1 条红同上
 - 2026-11-25 合入 origin/main（evalcmp 已合，83280aa0）。本机核 6323 对 17f5：旧 4540 个逐个相同，exclude 与版本相同，多 480 条早期混响轨。rebuild_exp013.py 加 --check-dir（先写会红的测试）。全量 127 条 125 过，2 条红：缺 cloud/config.py；等云上核对报告
 - 2026-11-25 大总管定：跨平台差约 4e-13，不再要求云上逐位同 17f5。判据改为本机 6323 同 17f5 + 云上 6323 音频按 hashes.txt 全对 + aa9f 的 exclude 与版本同 + 原料全对；官方源可复现记「未验证」。--check-dir 换成 --check-cloud（先改测试再改码）。用 aa9f 真小文件干跑通过（两份日志是仿造的）
+- 2026-11-25 cloudrun 带回两份日志：6323 音频 5020/5020 按 hashes.txt 对上；原料全对。合入 origin/main（971c7eec，aa9f 小文件已在 main）。--check-cloud 四项全过，报告 rebuild/exp013-20261124-192451.json 和两份日志进仓；官方源可复现记「未验证」。全量 128 条 127 过，1 条红（缺 cloud/config.py）
