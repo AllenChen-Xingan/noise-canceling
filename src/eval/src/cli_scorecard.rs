@@ -29,7 +29,7 @@ pub(crate) fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
             .map(PathBuf::from)
             .unwrap_or_else(default_out);
         let (card, sha) = vdn_eval::scorecard::load::resummarize(Path::new(&src), rules)?;
-        let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "from_clips": src,
+        let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "from_clips": public_path(&src),
             "from_clips_sha256": sha, "rules": rules.as_str()});
         let js =
             serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";
@@ -112,7 +112,7 @@ pub(crate) fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
             .join(" · ")
     );
     let card = vdn_eval::scorecard::card::Card::build_with(&rows, skipped, rules);
-    let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "suite": path,
+    let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "suite": public_path(&path),
         "systems": sys.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "qa": qa.is_some(),
         "safety": if no_safety { "off" } else { "task" }, "asr": qa.as_ref().map(|q| q.asr_meta()),
         "rules": rules.as_str(), "power": vdn_eval::power::source(),
@@ -177,4 +177,30 @@ fn merge_shards(args: &[String], list: &str, m: &vdn_eval::report::Meta) -> Resu
         card.clips
     );
     Ok(true)
+}
+
+/// 写进成绩单 meta 的路径：相对路径照写；绝对路径只留文件名（本机绝对路径含用户名，成绩单进公开仓库；codex 本分支第 1 轮 P2 #4）。
+fn public_path(p: &str) -> String {
+    let q = Path::new(p);
+    if q.is_absolute() {
+        q.file_name()
+            .map_or_else(String::new, |n| n.to_string_lossy().into_owned())
+    } else {
+        p.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn absolute_paths_keep_only_file_name() {
+        assert_eq!(
+            super::public_path("src/eval/suite/scenes.json"),
+            "src/eval/suite/scenes.json"
+        );
+        assert_eq!(
+            super::public_path("/home/someone/private/suite.json"),
+            "suite.json"
+        );
+    }
 }
