@@ -25,6 +25,7 @@ fn row(scene: MeetingPlace, i: usize, scores: Vec<(&'static str, f64)>) -> ClipR
             .into_iter()
             .map(|(v, x)| (v, standard::VETO.iter().any(|i| i.v == v), sc(v, x)))
             .collect(),
+        mix_sha256: None,
     }
 }
 
@@ -425,4 +426,40 @@ fn unequal_clip_counts_both_directions() {
             assert_eq!(i.call, Call::Unsure);
         }
     }
+}
+
+/// 线索（traindata 自审，2026-11-25）：只按片段 id 配对会把「换了题」误报成涨跌。两边都记了混合音频哈希时，
+/// 同一 id 的哈希不同就拒绝；有一边没记（旧成绩单）就照比，但把这类配对计成「核不了」，报告里写明。
+#[test]
+fn different_audio_under_same_clip_id_is_refused_and_unknown_is_flagged() {
+    let a = base(MeetingPlace::Cafe);
+    let with = |rows: &[ClipRow], tag: &str| -> Vec<ClipRow> {
+        rows.iter()
+            .map(|r| ClipRow {
+                mix_sha256: Some(format!("{tag}-{}", r.clip)),
+                ..r.clone()
+            })
+            .collect()
+    };
+    let (x, y) = (with(&a, "build1"), with(&a, "build1"));
+    let c = &compare(&x, &y, None, false).unwrap()[0];
+    assert_eq!(c.unverified_pairs, 0, "两边哈希都在且相同");
+    let z = with(&a, "build2");
+    let e = compare(&x, &z, None, false).unwrap_err();
+    assert!(e.contains("音频") && e.contains("不同"), "{e}");
+    let c = &compare(&x, &a, None, false).unwrap()[0];
+    assert_eq!(
+        c.unverified_pairs, 12,
+        "一边没记哈希：照比，但 12 对都核不了"
+    );
+}
+
+/// 混合音频哈希写进 clips.jsonl、读回不丢；旧格式（没有这一项）读回为 None。
+#[test]
+fn mix_hash_round_trips_through_clips_jsonl() {
+    let mut a = base(MeetingPlace::Cafe);
+    a[0].mix_sha256 = Some("ab".repeat(32));
+    let back = super::super::load::parse_jsonl(&super::super::load::to_jsonl(&a).unwrap()).unwrap();
+    assert_eq!(back[0].mix_sha256, a[0].mix_sha256);
+    assert_eq!(back[1].mix_sha256, None, "没记的照旧为空");
 }

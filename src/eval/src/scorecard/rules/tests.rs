@@ -31,6 +31,7 @@ fn row(clip: &str, sounds: &[&str], weak: f64, dq: f64, dd: f64) -> ClipRow {
                 s("V-NRMOS-DISTILL", dd, 0.0, Better::Higher),
             ),
         ],
+        mix_sha256: None,
     }
 }
 

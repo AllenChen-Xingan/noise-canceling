@@ -362,6 +362,7 @@ mod header_tests {
                 system: sys.into(),
                 sounds: Vec::new(),
                 scores: vec![("V-PUMPV", false, s)],
+                mix_sha256: None,
             }
         };
         let rows = [row("passthrough", true), row("pt-ext", false)];

@@ -84,3 +84,31 @@
 - 偶发失败照实写：只出现过 1 次，并行重跑 13/13 通过，补了夹具隔离，根因未证实，见 #161
 - 新 build：`builds/20261124165427-6323`，本机与云上交叉核对用 `compare_builds.py`
 - 加的测试：compare 单元 17 条（自比全不确定、真实打分压低 6 dB 判退、段数不一致双向、否决三态、判断边界等）· compare_out 2 条 · early 4 条 · e2e 早期参考旁列 + 生成行解析 + 夹具隔离 · 规约表比对 2 条 · exp013 Python `test_early.py` 10 条 · `test_compare_builds.py` 3 条
+
+---
+
+# 第二条线：exp025 原版 GTCRN 不回混基线（分支 `exp/025-baseline-scorecard`，大总管 noise-canceling-df 交代）
+
+状态：代码与文档已收尾，codex 停止线满足（第 15、16 轮无 P0/P1），等大总管验收、开 PR；正式跑 480 段要另申请名额
+
+## 交付
+- `vdn-eval scorecard --no-safety`（不回混口径，`Suite::without_safety`），`meta` 记 `safety` 与 `asr`（后端、型号、各后端段数、不一致率、停发原因）
+- 识别改走 OpenRouter（D103）：`src/eval/src/qa/asr_or.rs`（型号正本 `qwen/qwen3-asr-1.7b-20260813`；每个请求带 `data_collection = deny`；密钥经标准输入；退避重试；8 路并发）· `asr_ledger.rs`（账本：跨进程锁、原子落盘、先预留后结算、待核标记）· `asr.rs`（按段路由后端、预取、失败记忆与停发、`REPEATS` / `SPOT_FRACTION` / `MAX_UNSTABLE_RATE`）
+- 外发按 D104（人定）：480 段都可送识别、存 RunPod 网络盘；exp013 README 补了 MIT、ACE 的指针
+- `vdn-eval compare` 核同一批音频：`ClipRow::mix_sha256` 写进 `clips.jsonl`，两边哈希不同就拒绝，缺哈希计 `unverified_pairs`（大总管转来的 traindata 线索，属实）
+- `docs/experiments/exp025-gtcrn-train/baseline/`：README（跑法、外发、估时与费用、验收、差距表判据）· `gap.py`（弱项表 / 提升空间表，完整性判据、边界并列）· `merge.py`（合并 / 只对拍，核同一批音频、并集比项）· `subset.py` · 测试 37 条 · 冒烟与提升空间预览结果
+
+## 实测
+- 5 段冒烟（本机 release，负载约 6.9，只作估时）：GTCRN + DSP 每段 1.4 s；评分模型每段 7.3 s；本机识别每次 1.75 s；对 exp021 不回混 19 项有配对、18 项差 0，只有 V-TIMBRE 不同（#119 改了量法）
+- OpenRouter 真调用 3 次（同一条 LibriSpeech 干净人声 12 s）：逐字相同；每次 0.00009 美元；1.44 / 20.69 / 0.66 s；日志 `_tmp/exp025-asr-real-20261124-194229.log`，密钥不在日志里
+
+## 待人 / 大总管
+- 识别费 15 美元按**软上限**执行（人定，D103 补充）；OpenRouter 侧额度 100 美元
+- 场景依据（弱项表还是提升空间表）基线出数后交人定
+- 遗留 P2：#180（HTTP 200 内嵌可重试错误不退避）；#161（偶发 e2e 失败，上一条线）
+
+## 流水（这条线）
+- 11-25 写跑法、`--no-safety`、`gap.py` / `merge.py` / `subset.py`；5 段冒烟（名额内）
+- 11-25 D103：查 OpenRouter 公开模型列表，D103 写的型号不存在，大总管改用 1.7B；写 OpenRouter 后端与测试
+- 11-25 外发许可核对（只读公开页）：480 段里只有 20 段无疑问；MIT 原页没写许可；人定 D104
+- 11-25 真调用可复现测试通过；并发、账本、停发按 codex 一轮轮补（第 5–16 轮，处理记录在本机 `_tmp/reviews/exp025-response-*.md`）

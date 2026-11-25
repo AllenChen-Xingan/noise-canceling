@@ -74,6 +74,12 @@ pub fn to_markdown(cmp: &[Compare], a: &str, b: &str, noise: bool) -> String {
             })
             .collect();
         s += &format!("判断：{}\n\n", tally.join(" · "));
+        if c.unverified_pairs > 0 {
+            s += &format!(
+                "⚠️ 有 {} 对片段至少一边没记混合音频哈希（旧成绩单），核不了两边是不是同一批音频；结论只在确认是同一 build 时可信。\n\n",
+                c.unverified_pairs
+            );
+        }
         s += if noise {
             "| 项 | 越大 / 越小越好 | 配对段 | a 均值 | b 均值 | 差值 [95% 区间] | 判断 | 种子噪声底 |\n|---|---|---|---|---|---|---|---|\n"
         } else {
@@ -241,6 +247,7 @@ mod tests {
                 false,
                 crate::Score::judged("V-ESTOI", 0.5, "Δ", crate::Better::Higher, Some(0.0), &[]),
             )],
+            mix_sha256: None,
         };
         std::fs::write(
             &jl,
