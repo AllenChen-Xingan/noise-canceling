@@ -68,7 +68,7 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
 
 ### 分片跑（大总管 2026-11-25 定）
 
-- 每片：`vdn-eval scorecard … --shard i/n --out <第 i 片的新目录>`（`i` 从 0 起）。第 k 段（清单顺序）归第 `home(k) mod n` 片，`home(k)` = 这一段（id + 混合轨哈希）在清单里第一次出现的位置；段不重复时就是 `k mod n`；每片的识别缓存在自己的 `--out/qa/` 下，不互相覆盖。识别并发 `--asr-workers N`，不给时 = 8 ÷ n 向上取整、不低于 1（总并发不超过 8）
+- 每片：`vdn-eval scorecard … --shard i/n --out <第 i 片的新目录>`（`i` 从 0 起）。第 k 段（清单顺序）归第 `home(k) mod n` 片，`home(k)` = 这一段（id + 混合轨哈希）在清单里第一次出现的位置；段不重复时就是 `k mod n`；每片的识别缓存在自己的 `--out/qa/` 下，不互相覆盖。识别并发 `--asr-workers N`，不给时 = 8 ÷ n 向上取整、不低于 1。总并发 = n × 每片并发：n = 1、2、4、8 时正好 8；n = 3 时 9；n > 8 时 = n（每片至少 1）
 - 合并：`vdn-eval scorecard --merge-shards <目录0>,<目录1>,… --suite <同一份清单> --out <新目录>`。逐段分数的行原样拼回清单顺序，`clips.jsonl` 与单进程逐字节相同，成绩单正文（除 `meta`）也相同（测试 `src/eval/tests/scorecard_shard.rs`，并在本机 5 段真实音频上用命令行核过：单进程对 2 片合并，`clips.jsonl`、`scorecard.md` 逐字节相同）。各片 meta 的提交、清单、系统、规则等必须相同，片要 0…n−1 各一份，有段重复或缺都拒绝合并
 - 逐字节相同的前提：DSP 与评分模型各项是确定的；**吃字那一列要求各片拿到的转写相同**（识别本身不确定，同一段两次识别实测 18% 字词不同），所以带 `--qa` 时只有在转写来自同一份缓存时才逐字节相同。同一段在清单里出现几次都分到同一片（`shard::unit_plan` 的 home 下标），参考转写照单进程那样复用
 - 分步计时：每次运行在 `meta.timing` 记各步秒数（`load` 读音频 · `system` 系统处理 · 各评分项，吃字那一项含等识别的时间），stderr 也打一行；合并时相加，`meta.shard_timing` 逐片列

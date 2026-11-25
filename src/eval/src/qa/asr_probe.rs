@@ -62,8 +62,19 @@ pub fn probe(
                     }
                 }
             }
+            // 成功但费用未知时账本已标待核：同样算停发（codex 本分支第 5 轮 P1 #1）
+            if halted.is_none()
+                && let Some(rv) = c.ledger.review.clone()
+            {
+                halted = Some(format!("识别费账本待核：{rv}"));
+            }
+            if halted.is_some() {
+                break;
+            }
         }
-        let stable = errors.is_empty() && texts.iter().all(|t| same_text(t, &texts[0], lang));
+        let stable = errors.is_empty()
+            && halted.is_none()
+            && texts.iter().all(|t| same_text(t, &texts[0], lang));
         unstable += usize::from(!stable);
         rows.push(json!({"wav": name, "sha256": sha, "lang": lang, "ran": true, "texts": texts, "errors": errors, "stable": stable}));
     }

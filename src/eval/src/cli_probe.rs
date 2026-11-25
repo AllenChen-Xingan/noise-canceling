@@ -18,9 +18,12 @@ pub(crate) fn cmd_asr_probe(args: &[String]) -> Result<bool, String> {
         need("--cache")?,
         PathBuf::from(need("--out")?),
     );
-    if out.exists() {
-        return Err(format!("{} 已存在：报告只新建，不覆盖", out.display()));
-    }
+    // 报告文件在发任何请求之前就「只新建」地占住（create_new），跑完写进这个已打开的文件；同路径已有就直接拒（codex 本分支第 5 轮 P2 #2）
+    let mut report = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&out)
+        .map_err(|e| format!("{}：报告只新建，不覆盖（{e}）", out.display()))?;
     let repeats = match vdn_eval::suite::option_value(args, "--repeats")? {
         Some(r) => r
             .parse::<usize>()
@@ -80,11 +83,13 @@ pub(crate) fn cmd_asr_probe(args: &[String]) -> Result<bool, String> {
         items.len()
     );
     let r = asr_probe::probe(&mut c, &items, repeats, vdn_types::MODEL_RATE);
-    std::fs::write(
-        &out,
-        serde_json::to_string_pretty(&r).map_err(|e| e.to_string())? + "\n",
-    )
-    .map_err(|e| e.to_string())?;
+    {
+        use std::io::Write;
+        let text = serde_json::to_string_pretty(&r).map_err(|e| e.to_string())? + "\n";
+        report
+            .write_all(text.as_bytes())
+            .map_err(|e| format!("写不了报告：{e}"))?;
+    }
     println!(
         "探针：{} 条里 {} 条不一致（{:.1}%，线 {:.0}%）→ {}；报告 {}",
         r["audio"],

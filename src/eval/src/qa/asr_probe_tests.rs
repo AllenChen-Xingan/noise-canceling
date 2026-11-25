@@ -194,13 +194,25 @@ fn halted_probe_never_passes() {
 #[test]
 fn cost_unknown_success_counts_as_halted() {
     let d = tmpdir("probe-nocost");
-    let ok = |t: &str| (200, "", json!({"text": t, "usage": {"seconds": 0.1, "cost": 1e-12}}).to_string());
+    let ok = |t: &str| {
+        (
+            200,
+            "",
+            json!({"text": t, "usage": {"seconds": 0.1, "cost": 1e-12}}).to_string(),
+        )
+    };
     let mut script: Vec<(u16, &'static str, String)> = (0..59 * 3 + 2).map(|_| ok("a b")).collect();
     script.push((200, "", json!({"text": "a b"}).to_string()));
     let (url, _) = fake(script);
     let mut c = client(&url, &d);
-    let items: Vec<_> = (0..60).map(|k| (format!("w{k}"), format!("s{k}"), "en".to_string(), audio())).collect();
+    let items: Vec<_> = (0..60)
+        .map(|k| (format!("w{k}"), format!("s{k}"), "en".to_string(), audio()))
+        .collect();
     let r = probe(&mut c, &items, 3, vdn_types::MODEL_RATE);
-    assert!(r["halted"].as_str().is_some_and(|h| h.contains("待核")), "{}", r["halted"]);
+    assert!(
+        r["halted"].as_str().is_some_and(|h| h.contains("待核")),
+        "{}",
+        r["halted"]
+    );
     assert_eq!(r["pass"], false);
 }
