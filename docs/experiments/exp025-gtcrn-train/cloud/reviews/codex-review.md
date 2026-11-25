@@ -257,3 +257,13 @@ P2 #2（绑定挂载、检查前 mkdir）、#4（真 Linux 执行）：同 #173�
 - 不符：方案的结果码清单补全（REFUSED / MISSING / ERROR / DIR / OUTSIDE / BAD / LEFTOVER / UNKNOWN）；参数校验错误也带 `[REFUSED]`；注释与方案的「失败清理」说法分成替换前、替换时两种。
 
 测试：`test_every_failure_exit_is_clean` 加「退出码字段是密钥」的出口，并逐个断言结果码。共 107 条全过。
+
+## 第 6 轮（2026-11-25，模型 gpt-6-astra）
+
+结果：P0×0 P1×0 P2×3。**第 5、6 轮连续两轮无 P0/P1，put-secret 满足停止线。**
+
+- P2 #1 绑定挂载、检查前的 mkdir：同 #173（构造绕过）。
+- P2 #2 远端 stderr 泄漏用例没查本机 stderr：改用 `run_cli_fail`，异常、stdout、stderr 一起查。
+- P2 #3 坏 UTF-8 测试没走真 CLI 入口：查出 `rp_client.load_key` 读同一个文件时，解码异常也会带着原始字节（含别的密钥）往外抛，已改成固定错误；新测试 `test_cli_entry_with_bad_utf8_env_file_does_not_leak` 不注入 client、只换网络传输，查消息、异常链、帧。
+
+测试：108 条全过。
