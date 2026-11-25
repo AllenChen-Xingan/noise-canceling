@@ -25,8 +25,8 @@ python3 rp.py volume-create --yes                      # 在 US-MO-1 建 150 GB 
 python3 rp.py up --max-hours 2 --yes                   # 开机并挂盘；打印机器编号
 python3 rp.py up --cpu --max-hours 1 --yes            # 开纯 CPU 机器（cpu3c 4 核）挂同一块盘，下载数据用
 python3 rp.py sh <机器> 'nvidia-smi; nproc'            # 短命令（≤ 25 秒）
-python3 rp.py job-start <机器> train 'cd /workspace && python3 train.py'
-python3 rp.py job-wait <机器> train --timeout 7200     # 等后台命令结束，打印日志尾
+python3 rp.py job-start <机器> train 'cd /workspace && python3 train.py'   # 打印运行编号，如 train-20261125-0130-a1b2c3
+python3 rp.py job-wait <机器> <运行编号> --timeout 7200  # 按编号等后台命令结束，打印日志尾
 python3 rp.py put <机器> 本地文件 /workspace/远端路径   # 传上去，核 sha256
 python3 rp.py get <机器> /workspace/ckpt.pt ckpt.pt    # 取回来，核 sha256
 python3 rp.py down <机器>                              # 删机并记账
@@ -35,7 +35,8 @@ python3 rp.py spend                                    # 按账本汇总已花
 python3 rp.py probe --dc <机房> --no-volume --max-hours 0.25 --yes   # 试开一台测速，测完自动删
 ```
 
-- 长命令放后台：exec 接口单次最多等 25 秒；`job-start` 把输出写进 `/root/jobs/<名字>.log`，退出码写进 `.rc`。
+- 长命令放后台：exec 接口单次最多等 25 秒；`job-start` 每次生成唯一运行编号，输出写进 `/root/jobs/<编号>.log`，退出码写进 `.rc`。同名任务跑两次各有各的文件。命令按 `sh` 解析，bash 专有写法（如 `>( )`）要包进 `bash -c`，否则启动前就报语法错。
+- `put` / `get` 默认不覆盖已有文件；加 `--overwrite` 才覆盖，`put` 会把远端旧文件留作 `.bak-时间-随机`。
 - 传文件走 exec：上传每次约 1 MB，取回每块 512 KB；适合代码、检查点、结果表。大数据集直接在机器里从源站下载到网络盘。
 ## 防忘删机（实现在 `watchdog.py`）
 

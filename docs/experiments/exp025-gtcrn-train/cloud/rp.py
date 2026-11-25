@@ -216,9 +216,9 @@ def cmd_probe(cli, a):
         for name in ("probe_remote.py", "probe_urls.txt"):
             with open(os.path.join(HERE, name), "rb") as f:
                 O.put_bytes(cli, p["id"], f.read(), f"/root/probe/{name}")
-        O.start_job(cli, p["id"], f"python3 /root/probe/probe_remote.py /root/probe/probe_urls.txt {a.seconds}",
+        rid = O.start_job(cli, p["id"], f"python3 /root/probe/probe_remote.py /root/probe/probe_urls.txt {a.seconds}",
                     "probe")
-        st = O.wait_job(cli, p["id"], "probe", timeout_s=a.seconds * 12 + 120)
+        st = O.wait_job(cli, p["id"], rid, timeout_s=a.seconds * 12 + 120)
         line = st["log"].strip().splitlines()[-1] if st["log"].strip() else "{}"
         result = json.loads(line)
         result["pod"] = {k: p.get(k) for k in ("id", "dataCenterId", "cost", "gpu", "cudaVersion")}
