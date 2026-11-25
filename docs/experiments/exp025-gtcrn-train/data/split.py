@@ -183,7 +183,10 @@ def check_expect(name, rule, files):
         raise SystemExit(f"{name}：{'；'.join(bad)}（{e.get('src', '')}）。不写切分表；请把 split.py --inventory 的输出发给 traindata")
 
 
-def split_source(root, name, rule, seed, order, workers=16):
+def split_source(root, name, rule, seed, order, workers=32, cache=None):
+    """先只看路径把单位全认出来（认不出立刻停，不白算哈希），再逐文件读数（cache 是 filecache.FileCache，可复用上次的读数）。"""
+    from filecache import FileCache
+
     root = Path(root)
     files = list_files(root, rule)
     if name == "demand-train":
@@ -191,23 +194,21 @@ def split_source(root, name, rule, seed, order, workers=16):
         files = [f for f in files if Path(f).parts[-2] in envs]
     if not files:
         raise SystemExit(f"{name}：按 {rule['glob']} 一个文件也没找到（先跑 fetch.py）")
-
-    def info(rel):
-        p = root / rel
-        i = sf.info(str(p))
-        return {"path": rel, "bytes": p.stat().st_size, "sha256": sha256(p), "frames": int(i.frames), "sr": int(i.samplerate)}
-
     check_expect(name, rule, files)
-    with ThreadPoolExecutor(workers) as ex:
-        rows = list(ex.map(info, files))
     if rule["unit"] == "time":
-        for r in rows:
-            r["unit"] = r["path"]
-            r["segments"] = time_segments(r["frames"], rule["time"])
+        units = {f: f for f in files}
     else:
         rooms = room_map(root, rule) if rule["unit"] == "room" else None
+        units = {f: unit_of(f, rule, rooms) for f in files}
+    cache = cache or FileCache(None)
+    with ThreadPoolExecutor(workers) as ex:
+        rows = list(ex.map(lambda rel: cache.info(root, rel), files))
+    for r in rows:
+        r["unit"] = units[r["path"]]
+    if rule["unit"] == "time":
         for r in rows:
-            r["unit"] = unit_of(r["path"], rule, rooms)
+            r["segments"] = time_segments(r["frames"], rule["time"])
+    else:
         strata = None
         if rule.get("stratum_regex"):
             rx = re.compile(rule["stratum_regex"])
@@ -266,17 +267,24 @@ def main():
     ap.add_argument("--only", default="")
     ap.add_argument("--inventory", action="store_true", help="只列每个来源匹配到的文件数与前 20 个路径，不写切分表")
     ap.add_argument("--out", default=str(OUT))
+    ap.add_argument("--cache", default="", help="逐文件读数缓存（默认 <root>/cache/split-files.jsonl；传 none 不用）")
+    ap.add_argument("--workers", type=int, default=32)
     a = ap.parse_args()
     R = load_rules()
     names = [n for n in (a.only.split(",") if a.only else R["sources"]) if n]
+    from filecache import FileCache
+
+    cache = FileCache(None if a.cache == "none" else (a.cache or Path(a.root) / "cache" / "split-files.jsonl"))
     for n in names:
         rule = R["sources"][n]
         if a.inventory:
             fs = list_files(Path(a.root), rule)
             print(f"{n}：{len(fs)} 个文件", *fs[:20], sep="\n  ")
             continue
-        s = write(n, rule, R["seed"], split_source(a.root, n, rule, R["seed"], R["splits"]), a.out)
-        print(json.dumps(s, ensure_ascii=False))
+        s = write(n, rule, R["seed"], split_source(a.root, n, rule, R["seed"], R["splits"], a.workers, cache), a.out)
+        print(json.dumps(s, ensure_ascii=False), flush=True)
+    if not a.inventory:
+        print(f"读数缓存：复用 {cache.hits} 个，新算 {cache.misses} 个", flush=True)
 
 
 if __name__ == "__main__":
