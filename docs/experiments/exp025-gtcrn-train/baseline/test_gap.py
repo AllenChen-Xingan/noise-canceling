@@ -158,7 +158,7 @@ class Completeness(unittest.TestCase):
     """codex 第 1 轮 P1 #1 · #2：数据不全不下结论；第 TOP_K 名边界有并列时，重合数是个范围，跨线就不下结论。"""
 
     def test_min_scenes_matches_task_list(self):
-        root = Path(__file__).resolve().parents[3]
+        root = Path(__file__).resolve().parents[4]  # 本文件 → baseline → exp025 → experiments → docs → 仓库根
         suite = json.loads((root / "src/eval/suite/scenes.json").read_text())
         self.assertEqual(gap.MIN_SCENES, len({t["real"]["scene"] for t in suite["tasks"]}))
         self.assertEqual(gap.SLICES, 4)

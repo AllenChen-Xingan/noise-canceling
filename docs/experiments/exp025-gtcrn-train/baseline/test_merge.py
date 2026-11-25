@@ -55,6 +55,20 @@ class Merge(unittest.TestCase):
         self.assertEqual(rep["V-ESTOI"]["verdict_flips"], 1)
         self.assertTrue(any("判定" in e for e in merge.parity_errors(rep)))
 
+    def test_one_sided_values_fail_and_flip_share_uses_all_clips(self):
+        """codex 第 1 轮 P2 #3：一边有值一边没值算对拍不过；判定不同的占比按全部段数算，不按「两边都有值」的段数算。"""
+        loc = local()
+        loc[2]["scores"][2]["value"] = None  # 本机 V-ESTOI 这段没值，云上有
+        _, rep = merge.merge(cloud(), loc)
+        self.assertEqual((rep["V-ESTOI"]["clips"], rep["V-ESTOI"]["pairs"], rep["V-ESTOI"]["one_sided"]), (3, 2, 1))
+        self.assertTrue(any("V-ESTOI" in e and "一边" in e for e in merge.parity_errors(rep)))
+        rows_c = [row(f"cafe-c{i:02d}-mba", {"V-NAN": 0.0, "V-ESTOI": None if i >= 2 else 0.1}) for i in range(200)]
+        rows_l = [row(f"cafe-c{i:02d}-mba", {"V-NAN": 0.0, "V-EAT-ASR": 1.0, "V-ESTOI": None if i >= 2 else 0.1}) for i in range(200)]
+        rows_l[0]["scores"][2]["verdict"] = "fail"  # 200 段里 1 段判定不同 = 0.5% ≤ 1%
+        _, rep = merge.merge(rows_c, rows_l)
+        self.assertEqual(rep["V-ESTOI"]["verdict_flips"], 1)
+        self.assertEqual(merge.parity_errors(rep), [])
+
     def test_mismatched_clip_sets_or_systems_are_errors(self):
         with self.assertRaises(ValueError):
             merge.merge(cloud(3), local(2))
