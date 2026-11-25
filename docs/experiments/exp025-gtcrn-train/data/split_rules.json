@@ -37,7 +37,19 @@
    "glob": ["train-raw/openslr28/RIRS_NOISES/real_rirs_isotropic_noises/*.wav", "train-raw/openslr28/RIRS_NOISES/simulated_rirs/*/*/*.wav"],
    "room_lists": ["train-raw/openslr28/RIRS_NOISES/real_rirs_isotropic_noises/rir_list", "train-raw/openslr28/RIRS_NOISES/simulated_rirs/*/rir_list"],
    "exclude_regex": "(?i)noise[^/]*\\.wav$",
+   "room_lists_sha256": {
+    "train-raw/openslr28/RIRS_NOISES/real_rirs_isotropic_noises/rir_list": "432f49d5af4d96867f705635c3d5e1f6646bd46050c9d1e93656c183a7c0a43e",
+    "train-raw/openslr28/RIRS_NOISES/simulated_rirs/largeroom/rir_list": "6708c5942052a7a5e5a5d2d0f24547ea7b89a5756769c99b0c45957150738dc0",
+    "train-raw/openslr28/RIRS_NOISES/simulated_rirs/mediumroom/rir_list": "228b7d18425d4274db55ef66c6a7bb2e3d0c24f2f1259c08e7cba84fb7094491",
+    "train-raw/openslr28/RIRS_NOISES/simulated_rirs/smallroom/rir_list": "a4b4acc195bc74301aaad91125b2024aad6c2945d248825ea765c91cf92211e9"
+   },
+   "room_merge": [
+    {"match": "^real_rirs_isotropic_noises/air_", "unit": "real_rirs_isotropic_noises/AIR", "why": "AIR 的 107 条按位置、角度、有无假人头、手机拆成 35 个 room-id（如 aula_carolina_1_1_90 · 1_3_0；lecture_0 / lecture_1；air_phone_lecture），同一间房跨多个 id；上游 README 没给房间对照，整库归一个单位"},
+    {"match": "^real_rirs_isotropic_noises/RWCP_", "unit": "real_rirs_isotropic_noises/RWCP", "why": "RWCP 的 182 条 room-id 是阵列与设置代码（circle_ane · cirline_e2a …），type4 的 38 条 room-id 直接写成文件名（RWCP_000l.wav）；认不出房间，整库归一个单位"}
+   ],
+   "stratum_regex": "real_rirs_isotropic_noises/",
    "frac": {"train": 0.7, "dev": 0.1, "final": 0.1, "d63": 0.1},
+   "_房间": "2026-11-25 按 HTTP Range 只读上游 zip 的目录与 rir_list 核过（不下音频）：实测 RIR 325 条 = 上游 README「Overall there are 325 real RIRs」；REVERB 2014 的 9 个 room-id 是房间名（每间 4 条），照用；AIR 与 RWCP 见 room_merge。实测 RIR 共 11 个单位、模拟 600 间房，实测与模拟分层各自按比例切（stratum_regex），实测的 11 个单位约 8 训练 · 1 开发 · 1 终测 · 1 测试份",
    "_注": "房间号从包内 Kaldi 的 rir_list（--room-id）读；同目录的 isotropic noise 文件不当 RIR（exclude_regex）。pointsource_noises 取自 MUSAN，内部许可未逐个核，第一批不用"
   },
   "demand-train": {

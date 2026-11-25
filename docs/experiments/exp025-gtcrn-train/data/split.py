@@ -49,17 +49,51 @@ def demand_envs():
     return set(pools.EXP006_DEMAND)
 
 
+def parse_rir_line(line):
+    """Kaldi rir_list 一行 → (路径, room-id)。按「--键 值」成对读，剩下的那个才是路径；
+    不能找第一个 .wav：RWCP type4 的 room-id 本身就是文件名（`--room-id RWCP_000l.wav`）。"""
+    toks, opts, free, i = line.split(), {}, [], 0
+    while i < len(toks):
+        if toks[i].startswith("--") and i + 1 < len(toks):
+            opts[toks[i]], i = toks[i + 1], i + 2
+        else:
+            free.append(toks[i])
+            i += 1
+    path = [opts["--rir-rspecifier"]] if "--rir-rspecifier" in opts else free
+    if len(path) != 1 or "--room-id" not in opts:
+        raise SystemExit(f"rir_list 这一行认不出路径与房间号：{line!r}")
+    return path[0], opts["--room-id"]
+
+
 def room_map(root, rule):
-    """从 OpenSLR 28 包内的 Kaldi rir_list 读「文件名 → 房间号」；房间号前加列表所在目录，防不同房型重号。"""
-    m = {}
+    """从 OpenSLR 28 包内的 Kaldi rir_list 读「文件名 → 房间号」；房间号前加列表所在目录，防不同房型重号。
+    room_lists_sha256：规则是对着这几份上游 rir_list 定的，内容变了就停。
+    room_merge：上游 room-id 不是房间的那几个库（见 split_rules.json 里的 why），整库并成一个单位。"""
+    root, m = Path(root), {}
+    pins = rule.get("room_lists_sha256")
+    seen = set()
+    merge = [(re.compile(x["match"]), x["unit"]) for x in rule.get("room_merge", [])]
     for pat in rule.get("room_lists", []):
-        for lst in sorted(globmod.glob(str(Path(root) / pat))):
+        for lst in sorted(globmod.glob(str(root / pat))):
+            rel = str(Path(lst).relative_to(root))
+            body = Path(lst).read_bytes()
+            if pins is not None:
+                if pins.get(rel) != hashlib.sha256(body).hexdigest():
+                    raise SystemExit(f"{rel} 和规则核过的上游版本不同（sha256 对不上）：房间规则要重新核")
+                seen.add(rel)
             tag = Path(lst).parent.name
-            for line in Path(lst).read_text().splitlines():
-                rid = re.search(r"--room-id\s+(\S+)", line)
-                wav = re.search(r"(\S+\.wav)", line)
-                if rid and wav:
-                    m[Path(wav.group(1)).name] = f"{tag}/{rid.group(1)}"
+            for line in body.decode().splitlines():
+                if not line.strip():
+                    continue
+                wav, rid = parse_rir_line(line)
+                unit = f"{tag}/{rid}"
+                for rx, to in merge:
+                    if rx.search(unit):
+                        unit = to
+                        break
+                m[Path(wav).name] = unit
+    if pins is not None and seen != set(pins):
+        raise SystemExit(f"rir_list 少了：{sorted(set(pins) - seen)}")
     return m
 
 
