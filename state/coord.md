@@ -370,3 +370,9 @@
 - 2026-11-24 trainer 还名额：新判据冒烟第一次没过（过拟合下限 −10.04 被官方分母下限顶住、到不了），改下限为「目标 + 40 dB 白噪声」（−0.41）后三件过；事后改判据，大总管认可，要求补报过拟合后 SI-SNR
 - 2026-11-24 大总管验收 trainer：本机重跑 pytest 119 passed / 4 skipped（73 s，电池 24%）；文件最大 579 行；issue #159 #160 已开；PR 排在 evalcmp → cloudrun → traindata 之后
 - 2026-11-25 00:30Z cloudrun：第一批 21 包 18.15 GB + E3 3 文件下完、哈希核对过；CPU 机已删，0 台在跑；累计估 1.15 美元；网络盘 150 GB 保留（约 10.5 美元/月，现用 33 GB）。E3 第 8 次重试才成，traindata 待加长间隔。下一步 cloudrun 自审 + codex → PR #158。
+- 2026-11-25 00:45Z 大总管放行：cloudrun 开一台 CPU 机（上限 3 h / 1 美元），先跑 traindata split→shard→register，再在 evalcmp 合并后跑 exp013 新 build（480 段带早期回声参考，音频留网络盘）；builds 小文件由 evalcmp 提交。上云出 build 是大总管定的技术题。
+- 2026-11-25 00:50Z evalcmp：功能与测试已完成（scorecard 68/68、exp013 Python 77 条、clippy、tidy 全过，自报），codex 第 1 轮在跑；发 1 个重活名额给 codex 修复后的 e2e 重跑；此前自行跑的 e2e 补记现状页、已认可。
+- 2026-11-25 00:25Z cloudrun 开 CPU 机 8mnlr0uvh5pu4a（cpu3c 4 核，US-MO-1，挂 bzpbedqdsi，0.12 美元/h），最晚 03:30Z 自删；用 traindata 7b6ac21e 跑 inventory→split→shard→register→pack。
+- 2026-11-25 大总管定（人未参与）：exp013 新 build 本机出一份（约 30 s CPU，音频进 _tmp，小文件进 builds/<id>/）+ 云上从同一批素材再出一份交叉核对；cloudrun 从本机上传 exp013 素材约 3.3 GB（含 exp013 版 DEMAND，云上 16 kHz 版不同）到网络盘新目录；验收 material_index.sha256 一致、files=1994。改掉此前「只在云上出」。
+- 2026-11-25 00:42Z 人在 history 会话批准腾硬盘：主仓 _tmp/ 下 11-24 前的目录全删（含 exp002-venv、exp013 旧 build 音频、scorecard/）。处理：evalcmp 重建 venv 并冻结依赖、按仓内清单重出旧 build 核哈希；旧成绩单以仓内为准，clips.jsonl 等云上基线重生成。
+- 2026-11-25 01:15Z 本机 tmux 会话 vdn 消失，四个手下全部退出（原因未查明）。云上：traindata split 失败 rc=1（OpenSLR28 RWCP_type4_rir_000l.wav 不在任何 rir_list，查不到房间号，切分拒绝按文件切），素材上传中断在 650 MB；机器空转，大总管取回 split.log/prod.log 到 _tmp/20261125-cloudrun-shard/ 后删机 8mnlr0uvh5pu4a，账上 0 台，累计估 1.26 美元。大总管亲手重跑 evalcmp：exp013 Python 81/81、tidy、vdn-eval 单元 171 与集成测试全过（spectrum_golden 之后被中断未跑完）。
