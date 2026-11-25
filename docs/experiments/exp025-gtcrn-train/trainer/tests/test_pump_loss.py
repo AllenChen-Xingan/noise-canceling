@@ -224,3 +224,40 @@ def test_forward_loss_passes_noisy_for_clean_only(monkeypatch):
     m = train.build_model(cfgmod.from_dict({"model": {"variant": "A"}, "device": "cpu"}), torch.device("cpu"))
     _, logs = train.forward_loss(m, _crit(w_pump=1.0, pump_on="clean_only"), b, torch.device("cpu"))
     assert logs["pump_valid"] == 1
+
+
+# ---- codex pump-loss 第 1 轮 ----
+
+def test_evaluate_weights_pump_by_valid_segments(monkeypatch):  # #1
+    seq = iter([({"total": 1.0, "hybrid": 1.0, "pump": 9.0, "pump_valid": 1}),
+                ({"total": 1.0, "hybrid": 1.0, "pump": 0.0, "pump_valid": 0})])
+    monkeypatch.setattr(train, "forward_loss", lambda *a, **k: (None, next(seq)))
+    m = train.build_model(cfgmod.from_dict({"model": {"variant": "A"}, "device": "cpu"}), torch.device("cpu"))
+    out = train.evaluate(m, None, [1, 2], torch.device("cpu"), cfgmod.from_dict({}))
+    assert out["pump"] == 9.0 and out["pump_valid"] == 1
+
+
+@pytest.mark.parametrize("kind", ["zero_out", "tiny_out", "zero_clean", "w0", "w1", "w9", "w10", "clean_only_none"])
+def test_backward_finite_on_edge_inputs(kind):  # #3：float32 反传不出 NaN / inf
+    rng = np.random.default_rng(7)
+    c = torch.as_tensor(_speech(rng))[None]
+    o = (c * 0.7).clone()
+    fr = _owner()
+    if kind == "zero_out":
+        o = torch.zeros_like(c)
+    elif kind == "tiny_out":
+        o = c * 1e-12
+    elif kind == "zero_clean":
+        c = torch.zeros_like(c)
+    elif kind.startswith("w"):
+        fr = torch.zeros_like(fr)
+        fr[0, : 10 * int(kind[1:])] = True
+    o = o.requires_grad_(True)
+    if kind == "clean_only_none":
+        pv, v, _ = losses.pumpv_var(o, c, fr)
+        v = v & losses.clean_input(c + 0.1, c)
+    else:
+        pv, v, _ = losses.pumpv_var(o, c, fr)
+    l = losses.masked_mean(pv, v)
+    l.backward()
+    assert torch.isfinite(l) and torch.isfinite(o.grad).all()
