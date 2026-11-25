@@ -109,7 +109,7 @@
 | `leak.py` | 与 exp006 训练清单求交集 |
 | `tests/` | 第七条的自检 |
 
-**输出**：音频写主目录 `_tmp/exp013/<build-id>/`，每段一个子目录：`mix.wav` · `owner_dry.wav` · `owner.wav`（混响 + 设备后，评测用的干净参考）· 每个干扰一条分轨 · `floor.wav`（设备底噪）。仓里只放 `builds/<build-id>/`：`manifest.json` · `clips.jsonl` · `hashes.txt` · `exclude.json` · 参数快照。每个 build 新目录，不覆盖旧 build（CLAUDE.md 第五节 1 条）。
+**输出**：音频写主目录 `_tmp/exp013/<build-id>/`，每段一个子目录：`mix.wav` · `owner_dry.wav` · `owner.wav`（混响 + 设备后，评测用的干净参考）· `owner_early.wav`（2026-11-16 起：只留直达 + 前 `EARLY_REVERB_MS` = 100 ms 混响、过同样设备链的早期回声参考，正本 `rooms.py`；生成它不抽随机数，旧 build 的其余各轨可逐样本重现，见 `tests/test_early.py`）· 每个干扰一条分轨 · `floor.wav`（设备底噪）。仓里只放 `builds/<build-id>/`：`manifest.json` · `clips.jsonl` · `hashes.txt` · `exclude.json` · 参数快照。每个 build 新目录，不覆盖旧 build（CLAUDE.md 第五节 1 条）。
 
 **片段清单格式**：`clip-manifest.md`（v1.1，与 scorecard 导出的 schema 一致；正本是 Rust 类型）。
 
