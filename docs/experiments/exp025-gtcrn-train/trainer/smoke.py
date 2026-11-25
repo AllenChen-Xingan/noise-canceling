@@ -240,6 +240,7 @@ def write_known_dev(cfg, out: Path) -> int:
     if out.exists():
         print(f"拒绝覆盖已有文件：{out}", file=sys.stderr)
         return 2
+    out.parent.mkdir(parents=True, exist_ok=True)  # 先建目录，免得算完写不出（codex 第 1 轮 #2）
     device = train.resolve_device(cfg.device)
     source = make_source(cfg)
     got = dev_reading(cfg, source.dev_batches(), device)

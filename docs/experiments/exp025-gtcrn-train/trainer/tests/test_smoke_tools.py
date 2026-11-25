@@ -91,6 +91,12 @@ def test_write_known_dev_refuses_nonfinite(tmp_path, monkeypatch):
     assert not out.exists()
 
 
+def test_write_known_dev_creates_missing_parent_dir(tmp_path):
+    out = tmp_path / "new" / "deeper" / "known.json"
+    assert smoke.main(["--config", str(_cfg_file(tmp_path)), "--write-known-dev", str(out)]) == 0
+    assert json.loads(out.read_text())["readings"]["hybrid"] is not None
+
+
 def test_write_known_dev_refuses_overwrite(tmp_path):
     out = tmp_path / "known.json"
     out.write_text("{}")
@@ -151,6 +157,18 @@ def test_cmp_structural_mismatch_fails_even_with_huge_tol(tmp_path, mutate):
         sd, sd2 = {}, {}
     a, b = _ckpt(tmp_path / "a.pt", sd), _ckpt(tmp_path / "b.pt", sd2, step=step2)
     assert cmp_ckpt.main([a, b, "--tol", "1e9"]) != 0
+
+
+@pytest.mark.parametrize("steps", [(None, None), ("6", "6"), (True, True), (-1, -1), (6.0, 6.0)])
+def test_cmp_missing_or_bad_step_fails(tmp_path, steps):
+    pa, pb = tmp_path / "a.pt", tmp_path / "b.pt"
+    for path, st in zip((pa, pb), steps):
+        d = {"model": _sd()}
+        if st is not None:
+            d["step"] = st
+        torch.save(d, path)
+    assert cmp_ckpt.main([str(pa), str(pb)]) != 0
+    assert cmp_ckpt.main([str(pa), str(pb), "--ignore-step"]) == 0  # 明确不比步数时，只看模型
 
 
 def test_cmp_rejects_negative_or_nonfinite_tol(tmp_path):

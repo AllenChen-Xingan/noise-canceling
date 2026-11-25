@@ -15,10 +15,13 @@
 | `train.py` · `runrec.py` | 训练循环 · 运行记录 · 检查点 · 续训 · 时长与花费上限 · EMA（开关，默认关） |
 | `watchdog.py` | 信号 · 心跳 · 看门狗（单写者心跳；先判断后写盘；不碰磁盘的本段时限兜底） |
 | `smoke.py` | 开训前冒烟三件事 + 测每步耗时，一个命令 |
+| `smoke.py --write-known-dev` | 只算起点模型的开发份参照读数（带数据版本 meta），给 `--known-dev` 用 |
+| `cmp_ckpt.py` | 逐键比两个检查点的 `model`（续训核对） |
 | `export.py` | 导出 ONNX（整段版）并与 PyTorch 对拍 |
 | `parity_rs/` | 只读调用 `vdn-eval` 的小程序，给损失对拍用（不改 `src/eval`） |
 | `official.py` | 找官方源码与起点检查点（核 sha256） |
 | `smoke_reports/` | 冒烟报告（JSON） |
+| `plan-h100-smoke.md` | 云上 H100 冒烟方案 |
 
 ## 用法
 
@@ -86,7 +89,7 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 - 测速只作记录：本机每步中位 0.25 s（批量 4 × 2 s），取数 0.007 s。电池下测的，**不能和云上比**
 - 本机跑任何超过 1 分钟的命令，都要先申请名额，套 `caffeinate -dims`，并记电源状态。2026-11-16 有一次探测因为用电池、空闲睡眠，CPU 只用了 136 秒，墙钟却拖到 56 分钟
 
-云上 H100 冒烟的方案（待批，未开机）：`plan-h100-smoke.md`。
+云上 H100 冒烟的方案（大总管已批，开机前先过 codex）：`plan-h100-smoke.md`。开发份参照用 `smoke.py --write-known-dev` 在 CPU 机上算；续训核对用 `cmp_ckpt.py`。
 
 报告：`smoke_reports/20261124-cpu-synthetic-v2.json`（现行判据）；`20261124-cpu-synthetic.json` 是自审前旧判据那次。
 

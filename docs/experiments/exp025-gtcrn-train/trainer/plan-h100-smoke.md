@@ -47,29 +47,45 @@
 花费上限（大总管批）：乙段 1.5 小时、7 美元，在人定的 60 美元总上限内。甲段测试一红就停，不开 H100。
 
 下面 `R=/workspace/repo-main-<提交前 8 位>`，`T=$R/docs/experiments/exp025-gtcrn-train/trainer`，`D=$R/docs/experiments/exp025-gtcrn-train/data`，`PY=$R/.venv/bin/python`，`G=/workspace/gtcrn-502ebfab`，`O=/workspace/runs/exp025-smoke-<UTC 时间>`。
-每条后台命令都用 `rp.py job-start` 发、按运行编号 `job-wait`；任何一步退出码非 0 就停下，把日志尾发给大总管转 trainer。
+每条后台命令都用 `rp.py job-start` 发、按运行编号 `job-wait`。命令里不用管道：`job-start` 已把输出写进日志，管道会让退出码变成最后一个命令的（codex 第 1 轮 #1）。
+
+**出错时的必经收尾（codex 第 1 轮 #4）**：任何一步退出码非 0、或 `job-wait` 超时，都不再跑本段剩下的步骤，直接做本段最后两步：
+1. 能取回的报告和日志照样取回
+2. 删机
+做完再把日志尾发给大总管转 trainer。不许为了等回复开着机器。
 
 ### 甲、CPU 机（cpu3c 4 核，约 0.12 美元 / 小时）：备环境 + 算 CPU 参照
 
 `python3 rp.py up --cpu --max-hours 1.5 --yes`，然后：
 
+0. 建输出目录：`mkdir -p $O`（在网络盘上，乙段接着用）
+
 1. 拉代码与官方源码：`git clone <仓库> $R && git -C $R checkout <提交>`；`git clone https://github.com/Xiaobin-Rong/gtcrn $G && git -C $G checkout 502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73`
 2. 装环境：`cd $D && bash cloud_steps.sh setup && uv pip install --python $PY einops==0.7.0 pyyaml pytest`
-3. 单元测试：`cd $T && VDN_GTCRN_DIR=$G VDN_LOADER_SHARDS=/workspace/shards/first-batch VDN_LOADER_RECIPE=$D/recipe.json $PY -m pytest -q tests/ --ignore=tests/test_losses_parity.py 2>&1 | tail -20`
+3. 单元测试：`cd $T && VDN_GTCRN_DIR=$G VDN_LOADER_SHARDS=/workspace/shards/first-batch VDN_LOADER_RECIPE=$D/recipe.json $PY -m pytest -q tests/ --ignore=tests/test_losses_parity.py`
    - 对拍测试没编 Rust 驱动时会红（故意不跳过），云上不编 Rust，所以用 `--ignore` 排除。对拍在本机和 CI 上已过（大总管验收时 121 条通过）
    - 预期：其余全过；loader 的 3 条对接测试这次在真分片上跑（真分片 15 GB，这几条耗时未量化）
 4. CPU 参照：`cd $T && VDN_GTCRN_DIR=$G $PY smoke.py --config configs/default.yaml --set device=cpu --set data.shard_root=/workspace/shards/first-batch --set data.recipe=$D/recipe.json --write-known-dev $O/known-dev-cpu.json`
-5. 删机：`python3 rp.py down <机器> --yes`
+5. 取回 `$O/known-dev-cpu.json` 和测试日志到主仓 `_tmp/<日期>-trainer-h100-smoke/`，不覆盖
+6. 删机：`python3 rp.py down <机器> --yes`
 
 估时（推断，未量化）：装 torch 2.15.0 要下约 2–3 GB；建开发份 640 段在 CPU 上渲染。整段估 30–60 分钟，约 0.1 美元。
 
 ### 乙、H100（约 4.39 美元 / 小时）：冒烟 + 测速
 
-`python3 rp.py up --max-hours 1.5 --yes`。开出来先 `rp.py sh <机器> 'nvidia-smi; nproc'` 记显卡与核数。环境在网络盘上，不用重装。
+先定时限（codex 第 1 轮 #3）。cloud 允许目录价比 4.39 美元高到 20%，所以 1.5 小时不一定在 7 美元内：
+1. 开机前跑 `python3 rp.py offers`，读到这张卡的每小时价 p
+2. 时限 `H = min(1.5, 7 / p − 5/60)`，向下取到 0.05 小时。5/60 是本机看门狗的宽限
+   - p = 4.39 时 H = 1.5
+   - p = 5.27（高 20%）时 H = 1.20
+   - H < 1.0 就不开，报大总管
+3. `python3 rp.py up --max-hours <H> --yes`，开出来后按 `rp.py` 报的实际价再算一遍；超过 7 美元就立刻删机
+
+开出来先 `rp.py sh <机器> 'nvidia-smi; nproc'` 记显卡与核数。环境在网络盘上，不用重装。
 
 1. **冒烟**（预计 5–10 分钟）：
    `cd $T && VDN_GTCRN_DIR=$G $PY smoke.py --config configs/default.yaml --set data.shard_root=/workspace/shards/first-batch --set data.recipe=$D/recipe.json --timing-steps 100 --known-dev $O/known-dev-cpu.json --out $O/smoke-h100.json`
-   退出码 0 = 全过；1 = 有一件不过，报告照样写出，**也要取回**
+   退出码 0 = 全过；非 0 = 有一件不过（报告照样写出）。按「出错时的必经收尾」跳到第 5、6 步，报告一定取回
 2. **真训练测速**（300 步，预计 5–10 分钟）：量准备期、稳态每步、开发评估三段时间
    `cd $T && VDN_GTCRN_DIR=$G $PY train.py --config configs/default.yaml --set run.out_dir=$O --set run.name=speed-B --set schedule.max_steps=300 --set schedule.eval_every=100 --set schedule.ckpt_every=100 --set data.shard_root=/workspace/shards/first-batch --set data.recipe=$D/recipe.json`
    A 组再跑一次：把 `run.name=speed-B` 换成 `speed-A`，加 `--set model.variant=A`
@@ -81,7 +97,7 @@
 5. 打包取回：`tar czf /workspace/out/trainer-smoke-<UTC 时间>.tar.gz -C $O --exclude='*.pt' .`，取回主仓 `_tmp/<日期>-trainer-h100-smoke/`，不覆盖；检查点不取回
 6. 删机，报账上 0 台和本次花费
 
-H100 这段总计估 30–45 分钟（推断），约 2.2–3.3 美元。上限 1.5 小时，最坏约 (1.5 + 5/60) × 4.39 ≈ 6.95 美元。
+H100 这段总计估 30–45 分钟（推断），约 2.2–3.3 美元。最坏 = (H + 5/60) × p，按上面的定法不超过 7 美元。
 
 ## 五、估时估费怎么算
 

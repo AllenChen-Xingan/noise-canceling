@@ -26,8 +26,13 @@ def compare(a: dict, b: dict, tol: float, ignore_step: bool = False) -> dict:
     only_a, only_b = sorted(set(ma) - set(mb)), sorted(set(mb) - set(ma))
     if only_a or only_b:
         problems.append("键集合不同")
-    if not ignore_step and a.get("step") != b.get("step"):
-        problems.append(f"步数不同：{a.get('step')} vs {b.get('step')}")
+    if not ignore_step:
+        sa, sb = a.get("step"), b.get("step")
+        # 两边都缺 step 时 None == None 会放过（codex 第 1 轮 #5）：要求是非负整数且相同
+        if not all(isinstance(x, int) and not isinstance(x, bool) and x >= 0 for x in (sa, sb)):
+            problems.append(f"步数缺失或不是非负整数：{sa!r} vs {sb!r}")
+        elif sa != sb:
+            problems.append(f"步数不同：{sa} vs {sb}")
     max_diff, diff_keys, bad_keys = 0.0, [], []
     for k in sorted(set(ma) & set(mb)):
         x, y = ma[k], mb[k]
