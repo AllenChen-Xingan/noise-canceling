@@ -129,11 +129,10 @@ class TestPutSecret(Base):
                         "timedOut": False, "truncated": False, "durationMs": 1}
             return orig(argv, env)
         self.fake.exec = leaky
-        with self.assertRaises(SystemExit) as cm:
-            self.run_cli("--env-file", self.env_file, "put-secret", "pod_9", "OPENROUTER_API_KEY")
-        msg = str(cm.exception)
-        self.assert_no_leak(msg)
-        self.assertNotIn(self.value[:12], msg)  # 片段也不行
+        e, out, err = self.run_cli_fail("--env-file", self.env_file, "put-secret", "pod_9", "OPENROUTER_API_KEY")
+        self.assert_no_leak(str(e), out, err)  # 第 6 轮 #2：本机两路输出一起查
+        for text in (str(e), out, err):
+            self.assertNotIn(self.value[:12], text)  # 片段也不行
 
     def test_exception_chain_holds_no_secret(self):
         # 第 1 轮 #3：传输层抛的异常带着值；新异常的链和格式化后的 traceback 里都不能有
@@ -212,6 +211,29 @@ class TestPutSecret(Base):
         else:
             self.fail("应当报错")
         self.assertFalse([c for c in self.fake.calls if c[1].endswith("/exec")])
+
+    def test_cli_entry_with_bad_utf8_env_file_does_not_leak(self):
+        # 第 6 轮 #3：不注入 client，走真 CLI 入口（load_key 先读同一个文件），只替换网络传输
+        import rp
+        import rp_client
+        with open(self.env_file, "wb") as f:
+            f.write(f"RUNPOD_API_KEY={self.value}\nOPENROUTER_API_KEY={self.value}\n".encode() + b"\xff\xfe\n")
+        calls = []
+        orig = rp_client.urllib_transport
+        rp_client.urllib_transport = lambda *a: calls.append(a) or (200, {}, b"{}")
+        caught = None
+        try:
+            rp.main(["--ledger", self.ledger, "--env-file", self.env_file, "put-secret", "pod_9", "OPENROUTER_API_KEY"])
+        except SystemExit as e:
+            caught = e
+        finally:
+            rp_client.urllib_transport = orig
+        self.assertIsNotNone(caught)
+        self.assertIsNone(caught.__context__)
+        self.assert_no_frame_leak(caught)
+        import traceback
+        self.assert_no_leak(str(caught), "".join(traceback.format_exception(caught)))
+        self.assertEqual(calls, [])
 
     def test_bad_key_name_refused(self):
         with self.assertRaises(SystemExit):
