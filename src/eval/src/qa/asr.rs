@@ -162,6 +162,16 @@ impl Asr {
     /// 按环境变量组装（见文件头）。返回 `Err(原因)` 时这次成绩单的吃字整列判「不知道」。
     /// 默认后端 OpenRouter：要有密钥（`asr_or::load_key`）；路由文件里点名 `local42` 的段要本机服务在。
     pub fn from_env(cache_path: PathBuf, root: &Path) -> Result<Asr, String> {
+        Asr::from_env_with(cache_path, root, None)
+    }
+
+    /// 同 [`Asr::from_env`]，可显式给账本路径（`scorecard --asr-ledger`）；不给就按 `VDN_ASR_LEDGER` 或默认位置。
+    /// OpenRouter 后端装起来时就核账本：不存在、已封存、坏了都直接返回 `Err`（2026-11-25 起不再当空账本）。
+    pub fn from_env_with(
+        cache_path: PathBuf,
+        root: &Path,
+        ledger: Option<PathBuf>,
+    ) -> Result<Asr, String> {
         let default: &'static str = match std::env::var("VDN_ASR_BACKEND").as_deref() {
             Err(_) | Ok("openrouter") => OPENROUTER,
             Ok("local42") => LOCAL42,
@@ -184,7 +194,10 @@ impl Asr {
                 OPENROUTER => {
                     let key = super::asr_or::load_key(root)
                         .ok_or("没有 OPENROUTER_API_KEY（环境变量或仓库根 .env.local）")?;
-                    let ledger = root.join(super::asr_or::LEDGER_REL);
+                    let ledger = ledger
+                        .clone()
+                        .unwrap_or_else(|| super::asr_ledger::ledger_path(root));
+                    super::asr_ledger::read(&ledger)?;
                     backends.push(Backend::OpenRouter(super::asr_or::OpenRouter::new(
                         super::asr_or::OR_URL,
                         key,

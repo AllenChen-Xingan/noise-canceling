@@ -64,11 +64,19 @@ pub(crate) fn fnv(x: &[f32]) -> u64 {
 
 impl QaExtra {
     pub fn new(tmp: PathBuf) -> QaExtra {
-        let (asr, asr_err) =
-            match asr::Asr::from_env(tmp.join("asr_cache.json"), &crate::suite::main_root()) {
-                Ok(a) => (Some(a), None),
-                Err(e) => (None, Some(e)),
-            };
+        QaExtra::with_ledger(tmp, None)
+    }
+
+    /// 同 [`QaExtra::new`]，可显式给识别费账本路径（`scorecard --asr-ledger`）。
+    pub fn with_ledger(tmp: PathBuf, ledger: Option<PathBuf>) -> QaExtra {
+        let (asr, asr_err) = match asr::Asr::from_env_with(
+            tmp.join("asr_cache.json"),
+            &crate::suite::main_root(),
+            ledger,
+        ) {
+            Ok(a) => (Some(a), None),
+            Err(e) => (None, Some(e)),
+        };
         let (dnsmos, dnsmos_err) =
             match resolve("resources/DNS-Challenge/DNSMOS/DNSMOS/sig_bak_ovr.onnx") {
                 Some(p) => (Some(p), None),

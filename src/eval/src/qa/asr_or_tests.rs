@@ -351,7 +351,7 @@ fn real_call_three_times() {
     let key = load_key(&root).expect("没有 OPENROUTER_API_KEY");
     let wav = std::env::var("VDN_ASR_REAL_WAV").expect("用 VDN_ASR_REAL_WAV 指定一条 wav");
     let (x, sr) = crate::wav::read(Path::new(&wav)).unwrap();
-    let mut c = OpenRouter::new(OR_URL, key, root.join(LEDGER_REL));
+    let mut c = OpenRouter::new(OR_URL, key, crate::qa::asr_ledger::ledger_path(&root));
     let mut texts = Vec::new();
     for i in 1..=3 {
         let before = c.ledger.spent_usd;
