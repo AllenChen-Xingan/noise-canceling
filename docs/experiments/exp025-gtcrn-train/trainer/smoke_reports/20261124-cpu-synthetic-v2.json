@@ -1,0 +1,116 @@
+{
+  "device": "cpu",
+  "power": "battery",
+  "torch": "2.15.0",
+  "build_id": "synthetic-seed0",
+  "config": {
+    "run": {
+      "out_dir": "~/vdn-data/runs-smoke",
+      "name": "smoke-cpu",
+      "seed": 0
+    },
+    "model": {
+      "variant": "B",
+      "k_frames": 32,
+      "heads": 2,
+      "cond_dim": 8,
+      "attn": true,
+      "film": true,
+      "init": "official",
+      "bn": "frozen"
+    },
+    "data": {
+      "kind": "synthetic",
+      "shard_root": "",
+      "recipe": "",
+      "seg_s": 2.0,
+      "batch": 4,
+      "num_workers": 0,
+      "dev_n": 8,
+      "dev_seed": 12345,
+      "dev_batches": 2,
+      "calib_batches": 2,
+      "timeout_s": 600.0
+    },
+    "optim": {
+      "lr": 0.0001,
+      "warmup_steps": 5,
+      "grad_clip": 3.0,
+      "betas": [
+        0.9,
+        0.999
+      ]
+    },
+    "loss": {
+      "w_lvl": "auto",
+      "w_on": "auto",
+      "lvl_margin_db": 2.0,
+      "sp": false,
+      "w_sp": 0.0001,
+      "kd": false,
+      "w_kd": 0.1,
+      "level_norm": false,
+      "level_floor": 0.001,
+      "on_skip_leading": false
+    },
+    "ema": {
+      "enabled": false,
+      "decay": 0.999
+    },
+    "schedule": {
+      "max_steps": 20,
+      "ckpt_every": 10,
+      "eval_every": 10,
+      "log_every": 5,
+      "keep_last": 3
+    },
+    "limits": {
+      "max_hours": 0.1,
+      "max_usd": 1.0,
+      "usd_per_hour": 4.39,
+      "hang_s": 120.0
+    },
+    "device": "cpu"
+  },
+  "started_at": "2026-11-24T15:02:48-0800",
+  "init_loss": {
+    "pass": true,
+    "loss": {
+      "A": 4.38804817199707,
+      "B": 4.38804817199707,
+      "random": 37.42656326293945
+    },
+    "rel_diff_B_vs_A": 0.0,
+    "rule": "B 与 A 相对差 ≤ 1e-5，且起点损失 < 随机初始化"
+  },
+  "overfit": {
+    "pass": true,
+    "first": 4.38804817199707,
+    "last": -0.9217391014099121,
+    "floor": -0.40520763397216797,
+    "drop_frac_of_span": 1.107762132535152,
+    "attn_out_max_change": 0.06252375990152359,
+    "steps": 150,
+    "lr": 0.001,
+    "rule": "(初值 − 终值) / (初值 − 近乎完美输出（目标 + 40 dB 白噪声）的损失) ≥ 0.5；B 的注意力输出层权重要动过"
+  },
+  "reproduce": {
+    "pass": true,
+    "max_abs_diff": 3.053992986679077e-05,
+    "lsb16": 3.0517578125e-05,
+    "samples": 156160,
+    "rule": "最大差 ≤ 2 个 16 位量化步"
+  },
+  "timing": {
+    "steps": 10,
+    "batch": 4,
+    "seg_s": 2.0,
+    "data_s_median": 0.006826895987614989,
+    "step_s_median": 0.24984500001301058,
+    "wall_s": 2.66620404200512,
+    "cpu_s_main_process": 4.016201,
+    "cpu_util_main_process": 1.5063367006898745,
+    "note": "DataLoader 子进程的 CPU 不在此数内；含两项保护损失"
+  },
+  "pass": true
+}

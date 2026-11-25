@@ -1,0 +1,5 @@
+# 本目录的可重建产物（CLAUDE.md 五.2：先写忽略再第一次运行）
+parity_rs/target/
+*.onnx
+runs_local/
+.pytest_cache/
