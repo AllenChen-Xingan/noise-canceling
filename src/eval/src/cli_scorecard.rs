@@ -99,4 +99,3 @@ pub(crate) fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
     );
     Ok(true)
 }
-

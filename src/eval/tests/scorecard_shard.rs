@@ -117,3 +117,55 @@ fn shard_parse_and_asr_workers() {
     // 每片识别并发：8 ÷ n 向上取整，不低于 1（大总管 2026-11-25）
     assert_eq!([1, 2, 3, 4, 8, 16].map(asr_workers), [8, 4, 3, 2, 1, 1]);
 }
+
+/// 按目录合并：各片 meta 要是同一次运行的 0/n … n-1/n；计时相加；少一片、片数不同、提交不同都拒。
+#[test]
+fn merge_dirs_checks_meta_and_sums_timing() {
+    use vdn_eval::scorecard::shard::merge_dirs;
+    let (root, suite_text) = setup("shard-dirs");
+    let suite = parse_suite(&suite_text).unwrap();
+    let sys = [SystemKind::Ref];
+    let single = run_shard(&suite, &sys, &opts(), None, Some(&root), Rules::V2, None);
+    let write = |i: usize, n: usize, commit: &str| {
+        let r = run_shard(
+            &suite,
+            &sys,
+            &opts(),
+            None,
+            Some(&root),
+            Rules::V2,
+            Some(Shard { i, n }),
+        );
+        let d = root.join(format!("out-{commit}-{i}of{n}"));
+        std::fs::create_dir_all(&d).unwrap();
+        let meta = json!({"commit": commit, "suite": "s.json", "systems": ["ref"], "qa": false, "safety": "task",
+            "rules": "v2", "external": [], "shard": format!("{i}/{n}"), "timing": {"system": 1.5}, "asr": null});
+        let card = Card::build_with(&r.rows, r.missing.clone(), Rules::V2);
+        std::fs::write(d.join("scorecard.json"), card.to_json(meta).to_string()).unwrap();
+        std::fs::write(d.join("clips.jsonl"), to_jsonl(&r.rows).unwrap()).unwrap();
+        d
+    };
+    let dirs: Vec<_> = (0..3).map(|i| write(i, 3, "abc")).collect();
+    let (text, missing, meta) = merge_dirs(&suite, &dirs).unwrap();
+    assert_eq!(text, to_jsonl(&single.rows).unwrap());
+    assert!(missing.is_empty());
+    assert_eq!(
+        (meta["shards"].as_u64(), meta["timing"]["system"].as_f64()),
+        (Some(3), Some(4.5))
+    );
+    assert!(merge_dirs(&suite, &dirs[..2]).unwrap_err().contains("不齐"));
+    let other = write(2, 3, "zzz");
+    assert!(
+        merge_dirs(&suite, &[dirs[0].clone(), dirs[1].clone(), other])
+            .unwrap_err()
+            .contains("commit")
+    );
+    let four = write(3, 4, "abc");
+    assert!(
+        merge_dirs(
+            &suite,
+            &[dirs[0].clone(), dirs[1].clone(), dirs[2].clone(), four]
+        )
+        .is_err()
+    );
+}

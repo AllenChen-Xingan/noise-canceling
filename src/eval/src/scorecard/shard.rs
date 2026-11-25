@@ -117,3 +117,92 @@ pub fn merge(
     let text: String = lines.iter().map(|(_, _, l)| format!("{l}\n")).collect();
     Ok((text, miss.into_iter().map(|(_, _, m)| m).collect()))
 }
+
+/// 各片 meta 里必须相同的键（不同就不是同一次运行的几片）。
+const SAME_KEYS: [&str; 7] = [
+    "commit", "suite", "systems", "qa", "safety", "rules", "external",
+];
+
+/// 读几个分片输出目录（各有 `clips.jsonl` 与 `scorecard.json`），核对它们是同一次运行的 `0/n … n-1/n`，合并。
+/// 返回 (合并后的 `clips.jsonl`, 缺段记录, 合并后的 meta)。meta：共同的键照抄；`shards` = n；
+/// `timing` 各片相加、`shard_timing` 逐片列；`asr` 的 calls · checked · unstable 相加并重算不一致率（同一段音频只在一片里，不会重复计）。
+pub fn merge_dirs(
+    suite: &Suite,
+    dirs: &[std::path::PathBuf],
+) -> Result<(String, Vec<Missing>, serde_json::Value), String> {
+    use serde_json::{Value, json};
+    let mut parts = Vec::new();
+    let mut metas: Vec<Value> = Vec::new();
+    for d in dirs {
+        let rd = |f: &str| {
+            std::fs::read_to_string(d.join(f)).map_err(|e| format!("读不了分片输出 {f}：{e}"))
+        };
+        let card: Value =
+            serde_json::from_str(&rd("scorecard.json")?).map_err(|e| e.to_string())?;
+        let missing: Vec<Missing> =
+            serde_json::from_value(card["missing"].clone()).map_err(|e| e.to_string())?;
+        parts.push((rd("clips.jsonl")?, missing));
+        metas.push(card["meta"].clone());
+    }
+    let shards: Vec<Shard> = metas
+        .iter()
+        .map(|m| {
+            Shard::parse(m["shard"].as_str().unwrap_or(""))
+                .map_err(|_| "有一个输出目录不是分片跑的（meta 里没有 shard）".to_string())
+        })
+        .collect::<Result<_, _>>()?;
+    let n = shards.first().map_or(0, |s| s.n);
+    let mut got: Vec<usize> = shards.iter().map(|s| s.i).collect();
+    got.sort_unstable();
+    if shards.iter().any(|s| s.n != n) || got != (0..n).collect::<Vec<_>>() {
+        return Err(format!(
+            "分片不齐：要 0/{n} … {}/{n} 各一份，收到 {got:?}",
+            n.saturating_sub(1)
+        ));
+    }
+    for k in SAME_KEYS {
+        if metas.iter().any(|m| m[k] != metas[0][k]) {
+            return Err(format!("各片 meta 的 {k} 不同：不是同一次运行，不合并"));
+        }
+    }
+    let (text, missing) = merge(suite, &parts)?;
+    let mut meta = serde_json::Map::new();
+    for k in SAME_KEYS {
+        meta.insert(k.into(), metas[0][k].clone());
+    }
+    let mut timing: BTreeMap<String, f64> = BTreeMap::new();
+    for m in &metas {
+        for (k, v) in m["timing"].as_object().into_iter().flatten() {
+            *timing.entry(k.clone()).or_default() += v.as_f64().unwrap_or(0.0);
+        }
+    }
+    let sum = |k: &str| {
+        metas
+            .iter()
+            .map(|m| m["asr"][k].as_u64().unwrap_or(0))
+            .sum::<u64>()
+    };
+    let asr = (!metas[0]["asr"].is_null()).then(|| {
+        let mut a = metas[0]["asr"].clone();
+        let (checked, unstable) = (sum("checked"), sum("unstable"));
+        a["calls"] = json!(sum("calls"));
+        a["checked"] = json!(checked);
+        a["unstable"] = json!(unstable);
+        a["unstable_rate"] = json!((checked > 0).then(|| unstable as f64 / checked as f64));
+        a["per_shard"] = json!(metas.iter().map(|m| m["asr"].clone()).collect::<Vec<_>>());
+        a
+    });
+    meta.insert("shards".into(), json!(n));
+    meta.insert("timing".into(), json!(timing));
+    meta.insert(
+        "shard_timing".into(),
+        json!(
+            metas
+                .iter()
+                .map(|m| m["timing"].clone())
+                .collect::<Vec<_>>()
+        ),
+    );
+    meta.insert("asr".into(), json!(asr));
+    Ok((text, missing, Value::Object(meta)))
+}
