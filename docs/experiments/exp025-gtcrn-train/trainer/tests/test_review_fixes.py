@@ -506,7 +506,8 @@ def test_watchdog_fires_even_if_heartbeat_write_fails(tmp_path, kind):
     want = {"v": None}
     fired = []
     b = train._Beat(rd, lambda: (0, 1.0, 0.0), 0.02, want_stop=lambda: want["v"],
-                    last_progress=lambda: _t.monotonic() - 999, hang_s=1.0, on_hang=fired.append)
+                    last_progress=lambda: _t.monotonic() - 200, hang_s=1.0, on_hang=fired.append)
+    # 原为 − 999：超过 guards ⑤ 的 STALL_S 900 s 会在写盘前就出手；改成 200 s（> hang_s、< STALL_S）
     with b:
         assert entered.wait(2)  # 先确认写盘已进入失败 / 卡住
         want["v"] = "max_usd"  # 再满足停止条件
