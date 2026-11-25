@@ -155,3 +155,38 @@ fn detail_write_failure_flags_review() {
     );
     assert_eq!(seen.lock().unwrap().len(), 1, "标了待核就不再发");
 }
+
+/// codex 本分支第 3 轮 P1 #1：收到状态码和响应头后传输中断（这里用「声明的长度比实际多」让 curl 报不完整），
+/// 不能当完整响应：费用未知 → 预留不退、账本标待核、停发；明细记一行状态 0 和原因。
+#[test]
+fn truncated_response_is_cost_unknown() {
+    use std::io::{BufRead, BufReader, Read, Write};
+    let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}/api/v1/audio/transcriptions", l.local_addr().unwrap());
+    std::thread::spawn(move || {
+        let Ok((mut c, _)) = l.accept() else { return };
+        let mut r = BufReader::new(c.try_clone().unwrap());
+        let mut len = 0usize;
+        loop {
+            let mut line = String::new();
+            if r.read_line(&mut line).unwrap_or(0) == 0 || line == "\r\n" {
+                break;
+            }
+            if let Some(v) = line.to_ascii_lowercase().strip_prefix("content-length:") {
+                len = v.trim().parse().unwrap_or(0);
+            }
+        }
+        let mut b = vec![0u8; len];
+        let _ = r.read_exact(&mut b);
+        let _ = c.write_all(b"HTTP/1.1 503 X\r\nContent-Type: application/json\r\nContent-Length: 500\r\n\r\n{\"err");
+    });
+    let d = tmpdir("bill-trunc");
+    let mut c = client(&url, &d);
+    let e = c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap_err();
+    assert!(e.contains("费用未知"), "{e}");
+    let l = ledger::read(&d.join("ledger.json")).unwrap();
+    assert!(l.review.is_some() && l.reserved_usd > 0.0, "预留不退、标待核：{l:?}");
+    let rows = details(&d);
+    assert_eq!(rows.len(), 1, "不重试");
+    assert_eq!(rows[0]["status"], 0);
+}
