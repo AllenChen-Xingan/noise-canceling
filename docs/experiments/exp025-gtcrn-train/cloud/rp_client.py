@@ -106,7 +106,7 @@ class Client:
                 continue
             break
         if status >= 400:
-            raise ApiError(status, method, path, _detail(raw))
+            raise ApiError(status, method, path, _detail(raw).replace(self._key, "<key>"))  # 服务若回显密钥也不外漏
         if not raw:
             return None
         return json.loads(raw)

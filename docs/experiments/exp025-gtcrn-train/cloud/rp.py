@@ -114,8 +114,18 @@ def cmd_reap(cli, a):
         O.delete_pod(cli, p["id"], a.ledger, note="reap")
         print(f"已删 {p['id']} {p.get('name')}")
     for pid in L.open_pods(L.read_rows(a.ledger)):
-        if pid not in {p["id"] for p in pods}:
-            O.delete_pod(cli, pid, a.ledger, note="reap：账上未关、云上已无")
+        if pid in {p["id"] for p in pods}:
+            continue
+        try:  # 只在云上确实没有、或名字仍是 vdn- 时才删 / 补账（评审第 1 轮 #1）
+            live = cli.get(f"/v2/pods/{pid}")
+        except O.ApiError as e:
+            if e.status != 404:
+                raise
+            live = None
+        if live and not str(live.get("name", "")).startswith(C.POD_NAME_PREFIX):
+            print(f"跳过 {pid}：账上未关，但云上名字是 {live.get('name')!r}，不是 {C.POD_NAME_PREFIX} 开头，请人工核对")
+            continue
+        O.delete_pod(cli, pid, a.ledger, note="reap：账上未关、云上已无" if live is None else "reap")
     if not pods:
         print("云上没有 vdn- 开头的机器")
 

@@ -5,6 +5,7 @@ fetch.py（traindata 的正本）发现 archives/ 里已有包就跳过下载，
 本脚本只多做两件事：下完先过完整性检查（zip 用 unzip -t，tar 用 tar -t），每个文件记一行速度。
 只用标准库；sources.json 由 traindata 维护，这里只读。
 
+退出码：3 盘量会超上限 · 4 大小和清单不符 · 5 完整性检查不过 · 6 du 失败。
 用法：python3 predownload.py <sources.json> <root> A1,A2,A3,A4,A5,E2 [--max-gb 120]
 """
 
@@ -27,8 +28,13 @@ def mirrors(url: str) -> list:
 
 
 def du_gb(root: str) -> float:
-    out = subprocess.run(["du", "-sb", root], capture_output=True, text=True).stdout.split()
-    return int(out[0]) / 1e9 if out else 0.0
+    """du 失败就停，不当成 0（评审第 1 轮 #9）。"""
+    r = subprocess.run(["du", "-sb", root], capture_output=True, text=True)
+    out = r.stdout.split()
+    if r.returncode != 0 or not out:
+        print(json.dumps({"stop": f"du 失败：{r.stderr.strip()[-200:]}"}, ensure_ascii=False), flush=True)
+        sys.exit(6)
+    return int(out[0]) / 1e9
 
 
 def integrity_cmd(path: str, kind: str) -> list:
@@ -51,7 +57,8 @@ def done_marker(root: str, f: dict) -> str:
 def main(argv):
     sources, root, only = argv[1], argv[2], argv[3].split(",")
     max_gb = float(argv[argv.index("--max-gb") + 1]) if "--max-gb" in argv else 120.0
-    groups = json.load(open(sources))["groups"]
+    with open(sources, encoding="utf-8") as fh:
+        groups = json.load(fh)["groups"]
     arc_dir = os.path.join(root, "archives")
     os.makedirs(arc_dir, exist_ok=True)
     total = sum(f["bytes"] for g in only for f in groups[g]["files"])
@@ -64,8 +71,9 @@ def main(argv):
                 print(json.dumps({"group": g, "name": f["name"], "status": "已解压，跳过"}), flush=True)
                 continue
             used = du_gb(root)
-            if used > max_gb:
-                print(json.dumps({"stop": f"盘量 {used:.1f} GB 超过 {max_gb} GB"}), flush=True)
+            if used + f["bytes"] / 1e9 > max_gb:  # 把这个包也算进去，下完不会越线（评审第 1 轮 #9）
+                print(json.dumps({"stop": f"盘量 {used:.1f} GB + 本包 {f['bytes'] / 1e9:.1f} GB 超过 {max_gb} GB"},
+                                 ensure_ascii=False), flush=True)
                 sys.exit(3)
             t0 = time.time()
             if not (os.path.exists(path) and os.path.getsize(path) == f["bytes"]

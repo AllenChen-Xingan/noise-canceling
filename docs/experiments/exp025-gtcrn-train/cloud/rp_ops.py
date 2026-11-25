@@ -265,7 +265,9 @@ def job_status(cli: Client, pod_id: str, job: str, jobs_dir: str = "/root/jobs",
                    f"查 {job}")
     head, _, log = out.partition("---\n")
     head = head.strip()
-    return {"done": head != "RUNNING", "rc": int(head) if head.lstrip("-").isdigit() else None, "log": log}
+    rc = int(head) if head.lstrip("-").isdigit() else None
+    # 只有读到合法退出码才算完；.rc 空着（正在写）或乱码都当没完（评审第 1 轮 #11）
+    return {"done": rc is not None, "rc": rc, "log": log}
 
 
 def wait_job(cli: Client, pod_id: str, job: str, timeout_s: float, poll_s: float = 15,
