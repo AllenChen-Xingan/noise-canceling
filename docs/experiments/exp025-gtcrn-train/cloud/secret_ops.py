@@ -27,7 +27,7 @@ WRITE_SH = (
     'umask 077; mkdir -p "$(dirname "$P")" && '
     'printf "%s=%s\\n" "$K" "$V" > "$P.part" && chmod 600 "$P.part" && mv "$P.part" "$P" && '
     '[ "$(sha256sum "$P" | cut -d" " -f1)" = "$W" ] && [ "$(stat -c %a "$P")" = 600 ] '
-    '&& echo OK || { rm -f "$P.part"; echo BAD; }'
+    '&& echo OK || { rm -f "$P.part" "$P"; echo BAD; }'
 )
 
 
