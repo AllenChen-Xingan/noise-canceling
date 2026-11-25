@@ -265,8 +265,11 @@ impl Conn<'_> {
                     "id": id, "usage": v["usage"], "booked_usd": booked, "headers": h})
             }
         };
+        // 写不了就持久标待核（明细缺了就核不了账，之后任何进程都拒发；codex 本分支第 1 轮 P1 #1）
         if let Err(e) = ledger::append_detail(self.ledger_path, &row) {
-            *self.stop.lock().unwrap_or_else(|e| e.into_inner()) = Some(e);
+            let why = format!("识别费明细写不了（{e}）");
+            let _ = ledger::flag_review(self.ledger_path, &why);
+            *self.stop.lock().unwrap_or_else(|e| e.into_inner()) = Some(why);
         }
     }
 
@@ -327,9 +330,9 @@ impl Conn<'_> {
             let booked = sent.as_ref().ok().and_then(|(code, _, body, _)| {
                 let v: Value = serde_json::from_slice(body).ok()?;
                 let c = v["usage"]["cost"].as_f64()?;
-                let s = secs.max(v["usage"]["seconds"].as_f64().unwrap_or(0.0));
+                // 标价估算只按实际音频秒数；返回的 seconds 只进明细（codex 本分支第 1 轮 P1 #2）
                 Some(if *code == 200 && v.get("error").is_none() {
-                    booked_cost(c, s)
+                    booked_cost(c, secs)
                 } else {
                     c
                 })
