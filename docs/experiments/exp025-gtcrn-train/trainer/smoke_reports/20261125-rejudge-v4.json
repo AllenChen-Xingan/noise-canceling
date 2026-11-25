@@ -19,7 +19,8 @@
       "film.fc": 0.0
     },
     "backbone_grads_ok": true,
-    "drop_frac_of_oracle_span": 0.1961804588535042,
+    "drop_frac_of_oracle_span": 0.1964532692730524,
+    "gate3_drop_frac_of_oracle_span": 0.1961804588535042,
     "verdict": "pass"
   },
   "others": {
