@@ -16,7 +16,7 @@ FIELDS = [
     "id", "scene", "tier", "device", "mic_mode", "pair", "lang", "polarity", "dur_samples", "sr", "audio",
     "has_clean_ref", "additive", "targets", "sounds", "nominal", "measured", "owner_iv", "interf_iv", "chain", "seed", "hash",
 ]
-AUDIO_KEYS = ["mix", "owner", "owner_dry", "stems", "floor", "noise", "interf"]
+AUDIO_KEYS = ["mix", "owner", "owner_early", "owner_dry", "stems", "floor", "noise", "interf"]
 SOUND_FIELDS = ["inst", "cls", "group", "is_speech", "iv", "level_dbfs", "rel_db", "dist_m", "azimuth_deg", "src", "license"]
 SOUND_OPTIONAL = ["direction_db"]
 

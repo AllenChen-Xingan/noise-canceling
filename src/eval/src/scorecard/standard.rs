@@ -206,6 +206,22 @@ pub const CLEAN_PASS_MARK: &str = "clean_pass";
 /// 人定 D85 题 5：人声被压低 4 dB 才否决。
 pub const V2_PARAMS: [(&str, &str, f64); 1] = [("V-SPLVL", "min", -4.0)];
 
+/// 拿输出和干净参考比的项：有早期回声参考（exp013 `owner_early.wav`，D99 第 2 条）的段，这些项另算一遍
+/// 记作旁列（[`super::early::EARLY_MARK`]），判定只看主列。只列 CI 层、非物理项；清单按行为核对
+/// （`early_tests.rs`：换参考后读数变了的项必须正好是这些）。
+pub const EARLY_REF: [&str; 10] = [
+    "V-ONSET",
+    "V-WEAK",
+    "V-PUMPV",
+    "V-CLICK",
+    "V-ESTOI",
+    "V-TIMBRE",
+    "V-SPLVL",
+    "V-TSOS",
+    "V-SWALLOW",
+    "V-PSE-OVL",
+];
+
 /// 这一项是不是「只报不判」。
 pub fn is_report_only(v: &str) -> bool {
     VETO.iter()

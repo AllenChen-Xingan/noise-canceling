@@ -380,6 +380,13 @@
         "owner_dry": {
           "type": "string"
         },
+        "owner_early": {
+          "description": "只留直达声 + 前 `EARLY_REVERB_MS`（正本 exp013 `rooms.py`）混响、过同样设备链的主说话人：**早期回声参考**\n（D99 第 2 条；成绩单旁列）。早于它的 build 没有这条轨，读回为 `None`",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "stems": {
           "additionalProperties": {
             "type": "string"
