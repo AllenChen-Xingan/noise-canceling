@@ -84,6 +84,30 @@ fn probe_counts_unstable_and_judges_against_line() {
     assert_eq!(r["items"][0]["stable"], true);
 }
 
+/// codex 本分支第 2 轮 P2 #3：连调次数不是 PROBE_REPEATS 时只出数，不给过不过的结论。
+#[test]
+fn probe_with_other_repeats_gives_no_verdict() {
+    let d = tmpdir("probe-two");
+    let ok = |t: &str| {
+        (
+            200,
+            "",
+            json!({"text": t, "usage": {"seconds": 0.1, "cost": 1e-12}}).to_string(),
+        )
+    };
+    let (url, _) = fake(vec![ok("a b"), ok("a b")]);
+    let mut c = client(&url, &d);
+    let items = vec![(
+        "one.wav".to_string(),
+        "aa".to_string(),
+        "en".to_string(),
+        audio(),
+    )];
+    let r = probe(&mut c, &items, 2, vdn_types::MODEL_RATE);
+    assert_eq!(r["unstable"], 0);
+    assert!(r["pass"].is_null(), "{r}");
+}
+
 /// 语言从旧缓存的键（`sha|型号|语言|次`）按音频 sha256 查；查不到的音频不进探针，单列。
 #[test]
 fn langs_come_from_cache_keys() {

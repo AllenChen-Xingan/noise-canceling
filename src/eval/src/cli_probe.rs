@@ -91,10 +91,10 @@ pub(crate) fn cmd_asr_probe(args: &[String]) -> Result<bool, String> {
         r["unstable"],
         r["unstable_rate"].as_f64().unwrap_or(1.0) * 100.0,
         asr_probe::PROBE_MAX_UNSTABLE * 100.0,
-        if r["pass"] == true {
-            "钉住了"
-        } else {
-            "没钉住"
+        match r["pass"].as_bool() {
+            Some(true) => "钉住了",
+            Some(false) => "没钉住",
+            None => "次数不是 3，只作探索、不下结论",
         },
         Path::new(&out).display()
     );
