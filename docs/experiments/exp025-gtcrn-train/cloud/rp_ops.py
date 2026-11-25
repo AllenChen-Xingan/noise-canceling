@@ -71,6 +71,11 @@ def find_volume(cli: Client, name: str = C.VOLUME_NAME) -> Optional[dict]:
 
 def create_volume(cli: Client, data_center: str, size_gb: int = C.VOLUME_SIZE_GB,
                   name: str = C.VOLUME_NAME, ledger_path: str = L.DEFAULT_PATH) -> dict:
+    with L.budget_lock(ledger_path):
+        return _create_volume_locked(cli, data_center, size_gb, name, ledger_path)
+
+
+def _create_volume_locked(cli: Client, data_center: str, size_gb: int, name: str, ledger_path: str) -> dict:
     if find_volume(cli, name):
         raise SystemExit(f"已有同名网络盘 {name}，不重复建")
     L.check_budget(check_ledger_covers_cloud(cli, ledger_path), L.volume_hourly(size_gb), C.VOLUME_RESERVE_HOURS)
@@ -149,6 +154,12 @@ def check_ledger_covers_cloud(cli: Client, ledger_path: str) -> list:
 def create_pod(cli: Client, data_center: str, volume_id: Optional[str], max_hours: float,
                usd_per_hr_hint: float, name: Optional[str] = None,
                ledger_path: str = L.DEFAULT_PATH, cpu: bool = False) -> dict:
+    with L.budget_lock(ledger_path):
+        return _create_pod_locked(cli, data_center, volume_id, max_hours, usd_per_hr_hint, name, ledger_path, cpu)
+
+
+def _create_pod_locked(cli: Client, data_center: str, volume_id: Optional[str], max_hours: float,
+                       usd_per_hr_hint: float, name: Optional[str], ledger_path: str, cpu: bool) -> dict:
     if not name:
         # 时间 + 8 位随机：同一秒开两台也不重名；结果未知时按名字清理只会碰到这一次建的（评审第 4 轮 #1）
         name = C.POD_NAME_PREFIX + time.strftime("%Y%m%d-%H%M%S-") + secrets.token_hex(4)

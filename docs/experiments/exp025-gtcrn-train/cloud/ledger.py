@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import csv
+import fcntl
+from contextlib import contextmanager
 import datetime as dt
 import re
 import os
@@ -46,6 +48,18 @@ def read_rows(path: str = DEFAULT_PATH) -> list:
         if tuple(r.fieldnames or ()) != C.COSTS_TSV_COLUMNS:
             raise ValueError(f"{path} 表头和 config.COSTS_TSV_COLUMNS 不一致")
         return list(r)
+
+
+@contextmanager
+def budget_lock(path: str = DEFAULT_PATH):
+    """查上限 → 建资源 → 记账 这一段跨进程串行（评审第 5 轮 #1）：两个进程同时花钱，各自都过了检查、合起来超额。
+    锁文件在账本旁边（<账本>.lock，cloud/.gitignore 忽略）。不可重入。"""
+    with open(path + ".lock", "a") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
 
 
 def init(path: str) -> None:
