@@ -206,6 +206,49 @@ fn budget_reached_refuses_before_sending() {
     assert!(seen.lock().unwrap().is_empty(), "到上限不能再发");
 }
 
+/// codex 第 5 轮 P1 #2：余额只差一点时，整批都不能发（每条先预留，放不下上限就不发）。
+#[test]
+fn near_budget_batch_sends_nothing_that_would_cross_the_cap() {
+    let d = tmpdir("near");
+    std::fs::write(
+        d.join("ledger.json"),
+        json!({"spent_usd": BUDGET_USD - 0.0001, "calls": 1}).to_string(),
+    )
+    .unwrap();
+    let (url, seen) = fake(vec![ok("x", 0.00009); 6]);
+    let mut c = client(&url, &d);
+    let twelve_s: Vec<f32> = vec![0.1; 12 * vdn_types::MODEL_RATE as usize];
+    let jobs: Vec<Job> = (0..6)
+        .map(|_| (twelve_s.clone(), vdn_types::MODEL_RATE, "en".to_string()))
+        .collect();
+    let r = c.transcribe_many(&jobs, 8);
+    assert!(
+        r.iter()
+            .all(|x| x.as_ref().is_err_and(|e| e.contains("上限"))),
+        "{r:?}"
+    );
+    assert!(seen.lock().unwrap().is_empty(), "一条都不能发");
+    assert!(c.ledger.spent_usd <= BUDGET_USD);
+}
+
+/// codex 第 5 轮 P1 #1：账本坏了拒发，坏文件原样留着。
+#[test]
+fn corrupt_ledger_refuses_to_send() {
+    let d = tmpdir("corrupt");
+    std::fs::write(d.join("ledger.json"), "garbage").unwrap();
+    let (url, seen) = fake(vec![ok("x", 0.001)]);
+    let mut c = client(&url, &d);
+    let e = c
+        .transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+        .unwrap_err();
+    assert!(e.contains("坏了"), "{e}");
+    assert!(seen.lock().unwrap().is_empty());
+    assert_eq!(
+        std::fs::read_to_string(d.join("ledger.json")).unwrap(),
+        "garbage"
+    );
+}
+
 #[test]
 fn rate_limit_429_backs_off_with_retry_after_then_succeeds() {
     let d = tmpdir("429");
