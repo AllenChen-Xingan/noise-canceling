@@ -1,0 +1,64 @@
+{
+ "_说明": "切分规则正本 = 027 decision.md 第六节第 5 条的表（逐行照抄比例，出处列在每条 src）。split.py 只认这里。四份：train 训练 · dev 开发 · final 终测原料池 · d63 测试份（只测不训，也不进任何合成原料）",
+ "seed": 20261116,
+ "splits": ["train", "dev", "final", "d63"],
+ "sources": {
+  "librispeech-train-clean-100": {
+   "expect": {"files": 28539, "units": 251, "src": "openslr.org/12 README：train-clean-100 共 251 名说话人、28,539 句（读文档，待云上核）"},
+   "src": "027 第六节表第 1 行", "group": "A1", "unit": "speaker",
+   "glob": "train-raw/librispeech/LibriSpeech/train-clean-100/*/*/*.flac",
+   "frac": {"train": 0.8, "dev": 0.1, "final": 0.0, "d63": 0.1}
+  },
+  "librispeech-dev-clean-test-other": {
+   "expect": {"files": 5642, "units": 73, "src": "openslr.org/12 README：dev-clean 40 人 2,703 句 + test-other 33 人 2,939 句（读文档，待云上核）"},
+   "src": "027 第六节表第 2 行", "group": "A5", "unit": "speaker",
+   "glob": ["train-raw/librispeech/LibriSpeech/dev-clean/*/*/*.flac", "train-raw/librispeech/LibriSpeech/test-other/*/*/*.flac"],
+   "frac": {"train": 0.0, "dev": 0.0, "final": 0.5, "d63": 0.5}
+  },
+  "qut-noise": {
+   "expect": {"files": 20, "src": "QUT-NOISE 论文（Dean 2010）：5 类场景 × 2 地点 × 2 次录音 = 20 段（读文档，待云上核）"},
+   "src": "027 第六节表第 3 行（按时段：前 50% / 10% / 20% / 后 20%）", "group": "A2", "unit": "time",
+   "glob": "train-raw/qut-noise/**/*.wav",
+   "exclude_regex": "(?i)impulse|/ir/|_ir_|labels",
+   "time": [["train", 0.0, 0.5], ["dev", 0.5, 0.6], ["final", 0.6, 0.8], ["d63", 0.8, 1.0]],
+   "_未核": "压缩包内目录结构未核（本机没下）；第一次云上跑 split.py --inventory 后看清单再确认 glob 与 exclude_regex"
+  },
+  "tum-wind": {
+   "expect": {"files": 478, "src": "2026-11-25 按 HTTP Range 读上游 zip 目录（不下音频）：合成 100 个 + 手机实录 378 个；云上 inventory 同为 478"},
+   "src": "027 第六节表第 4 行（实录与合成分开切）", "group": "A3", "unit": "file",
+   "glob": "train-raw/tum-wind/**/*.wav",
+   "stratum_regex": "(?i)(synth|simulat|artifi)",
+   "unit_regex": [{"match": "mobilephone_wind_noise/[^/]+/(\\d+)_\\d+\\.wav$", "unit": "mobilephone_wind_noise/rec\\1", "why": "文件名 <前缀>_<序号>：32 个前缀里 20 个在 normal_wind 与 strong_wind 两个文件夹都有，按前缀当一次录音；上游没写前缀含义，按前缀并只会让单位更粗"}],
+   "_核": "上游 Zenodo 说明原文：Wind Noise Dataset including artificially generated and mobilephone recorded samples（许可 CC-BY-4.0）。合成在 artifitial_wind_noise/（上游拼写），实录在 mobilephone_wind_noise/。合成 100 个文件各一个单位，实录 32 次录音各一个单位，两层各自按比例切",
+   "frac": {"train": 0.7, "dev": 0.1, "final": 0.1, "d63": 0.1}
+  },
+  "openslr28-rir": {
+   "expect": {"files": 60325, "src": "OpenSLR 28 README：模拟 RIR 小中大房各 200 间 × 100 个 = 60,000；实测 RIR「Overall there are 325 real RIRs」，与 rir_list 行数相同；云上 inventory 同为 60,325"},
+   "src": "027 第六节表第 5 行（同一房间的不同收发位置只进一份）", "group": "A4", "unit": "room",
+   "glob": ["train-raw/openslr28/RIRS_NOISES/real_rirs_isotropic_noises/*.wav", "train-raw/openslr28/RIRS_NOISES/simulated_rirs/*/*/*.wav"],
+   "room_lists": ["train-raw/openslr28/RIRS_NOISES/real_rirs_isotropic_noises/rir_list", "train-raw/openslr28/RIRS_NOISES/simulated_rirs/*/rir_list"],
+   "exclude_regex": "(?i)noise[^/]*\\.wav$",
+   "room_lists_sha256": {
+    "train-raw/openslr28/RIRS_NOISES/real_rirs_isotropic_noises/rir_list": "432f49d5af4d96867f705635c3d5e1f6646bd46050c9d1e93656c183a7c0a43e",
+    "train-raw/openslr28/RIRS_NOISES/simulated_rirs/largeroom/rir_list": "6708c5942052a7a5e5a5d2d0f24547ea7b89a5756769c99b0c45957150738dc0",
+    "train-raw/openslr28/RIRS_NOISES/simulated_rirs/mediumroom/rir_list": "228b7d18425d4274db55ef66c6a7bb2e3d0c24f2f1259c08e7cba84fb7094491",
+    "train-raw/openslr28/RIRS_NOISES/simulated_rirs/smallroom/rir_list": "a4b4acc195bc74301aaad91125b2024aad6c2945d248825ea765c91cf92211e9"
+   },
+   "room_merge": [
+    {"match": "^real_rirs_isotropic_noises/air_", "unit": "real_rirs_isotropic_noises/AIR", "why": "AIR 的 107 条按位置、角度、有无假人头、手机拆成 35 个 room-id（如 aula_carolina_1_1_90 · 1_3_0；lecture_0 / lecture_1；air_phone_lecture），同一间房跨多个 id；上游 README 没给房间对照，整库归一个单位"},
+    {"match": "^real_rirs_isotropic_noises/RWCP_", "unit": "real_rirs_isotropic_noises/RWCP", "why": "RWCP 的 182 条 room-id 是阵列与设置代码（circle_ane · cirline_e2a …），type4 的 38 条 room-id 直接写成文件名（RWCP_000l.wav）；认不出房间，整库归一个单位"}
+   ],
+   "stratum_regex": "real_rirs_isotropic_noises/",
+   "frac": {"train": 0.7, "dev": 0.1, "final": 0.1, "d63": 0.1},
+   "_房间": "2026-11-25 按 HTTP Range 只读上游 zip 的目录与 rir_list 核过（不下音频）：实测 RIR 325 条 = 上游 README「Overall there are 325 real RIRs」；REVERB 2014 的 9 个 room-id 是房间名（每间 4 条），照用；AIR 与 RWCP 见 room_merge。实测 RIR 共 11 个单位、模拟 600 间房，实测与模拟分层各自按比例切（stratum_regex），实测的 11 个单位约 8 训练 · 1 开发 · 1 终测 · 1 测试份",
+   "_注": "房间号从包内 Kaldi 的 rir_list（--room-id）读；同目录的 isotropic noise 文件不当 RIR（exclude_regex）。pointsource_noises 取自 MUSAN，内部许可未逐个核，第一批不用"
+  },
+  "demand-train": {
+   "expect": {"files": 96, "src": "exp006 用的 6 个环境 × 每个 16 声道（DEMAND 说明）"},
+   "src": "027 第六节表最后一行 + 隔离规则第 2 条：只用 exp006 用过的 6 个环境前 60%，按时段再切 训练 50% / 开发 10%；不给终测", "group": "E2", "unit": "time",
+   "glob": "vdn-data/demand/*/ch*.wav",
+   "envs_from": "exp013 pools.EXP006_DEMAND（正本在 exp006 recipes.json）",
+   "time": [["train", 0.0, 0.5], ["dev", 0.5, 0.6]]
+  }
+ }
+}

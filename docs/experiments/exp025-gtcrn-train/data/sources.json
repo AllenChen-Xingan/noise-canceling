@@ -1,0 +1,85 @@
+{
+ "_说明": "exp025 数据来源正本：每个要下载的文件的地址 · 字节数 · 上游校验码 · 许可。fetch.py 只认这里。sha256 为 null 的，第一次在云上下完由 fetch.py 记进 fetched.json（进仓），之后以它为准。大小与 md5 于 2026-11-16 用 HEAD 请求和上游 md5 清单核过（本机未下载）",
+ "_字段": "dest 是相对数据根（云上网络盘）的落盘位置；extract=tar|zip|none；train_ok 按 D64：NC 只评测；role=train 是训练原料（要先切分），role=exp013 是重建评测集用的原料",
+ "groups": {
+  "A1": {
+   "name": "LibriSpeech train-clean-100", "role": "train", "train_ok": true,
+   "license": "CC-BY-4.0", "license_src": "openslr.org/12",
+   "attribution": "V. Panayotov, G. Chen, D. Povey, S. Khudanpur, LibriSpeech: an ASR corpus based on public domain audio books, ICASSP 2015",
+   "files": [
+    {"name": "train-clean-100.tar.gz", "url": "https://www.openslr.org/resources/12/train-clean-100.tar.gz", "bytes": 6387309499, "md5": "2a93770f6d5c6c964bc36631d331a522", "sha256": null, "extract": "tar", "dest": "train-raw/librispeech"}
+   ]
+  },
+  "A2": {
+   "name": "QUT-NOISE", "role": "train", "train_ok": true,
+   "license": "CC-BY-SA", "license_src": "github.com/qutsaivt/QUT-NOISE docs/README.text：\"The QUT-NOISE data is licensed CC-BY-SA\"",
+   "attribution": "D. Dean, S. Sridharan, R. Vogt, M. Mason, The QUT-NOISE-TIMIT corpus for the evaluation of voice activity detection algorithms, Interspeech 2010。BY-SA：训出的权重按相同条款共享并署名（D64）",
+   "files": [
+    {"name": "qutnoise.zip", "url": "https://data.researchdatafinder.qut.edu.au/dataset/a0eed5af-abd8-441b-b14a-8e064bc3d732/resource/8342a090-89e7-4402-961e-1851da11e1aa/download/qutnoise.zip", "bytes": 27958535, "md5": null, "sha256": null, "extract": "zip", "dest": "train-raw/qut-noise"},
+    {"name": "qutnoisecafe.zip", "url": "https://data.researchdatafinder.qut.edu.au/dataset/a0eed5af-abd8-441b-b14a-8e064bc3d732/resource/9b0f10ed-e3f5-40e7-b503-73c2943abfb1/download/qutnoisecafe.zip", "bytes": 1711572070, "md5": null, "sha256": null, "extract": "zip", "dest": "train-raw/qut-noise"},
+    {"name": "qutnoisecar.zip", "url": "https://data.researchdatafinder.qut.edu.au/dataset/a0eed5af-abd8-441b-b14a-8e064bc3d732/resource/7412452a-92e9-4612-9d9a-6b00f167dc15/download/qutnoisecar.zip", "bytes": 1823708518, "md5": null, "sha256": null, "extract": "zip", "dest": "train-raw/qut-noise"},
+    {"name": "qutnoisehome.zip", "url": "https://data.researchdatafinder.qut.edu.au/dataset/a0eed5af-abd8-441b-b14a-8e064bc3d732/resource/35cd737a-e6ad-4173-9aee-a1768e864532/download/qutnoisehome.zip", "bytes": 1466980721, "md5": null, "sha256": null, "extract": "zip", "dest": "train-raw/qut-noise"},
+    {"name": "qutnoisereverb.zip", "url": "https://data.researchdatafinder.qut.edu.au/dataset/a0eed5af-abd8-441b-b14a-8e064bc3d732/resource/164d38a5-c08e-4e20-8272-793534eb10c7/download/qutnoisereverb.zip", "bytes": 1548347269, "md5": null, "sha256": null, "extract": "zip", "dest": "train-raw/qut-noise"},
+    {"name": "qutnoisestreet.zip", "url": "https://data.researchdatafinder.qut.edu.au/dataset/a0eed5af-abd8-441b-b14a-8e064bc3d732/resource/10eeceae-9f0c-4556-b33a-dcf35c4f4db9/download/qutnoisestreet.zip", "bytes": 1700338749, "md5": null, "sha256": null, "extract": "zip", "dest": "train-raw/qut-noise"}
+   ]
+  },
+  "A3": {
+   "name": "TUM 风噪集", "role": "train", "train_ok": true,
+   "license": "CC-BY-4.0", "license_src": "Zenodo 6687982 元数据 cc-by-4.0",
+   "attribution": "Zenodo record 6687982（wind_noise_dataset）",
+   "files": [
+    {"name": "wind_noise_dataset.zip", "url": "https://zenodo.org/api/records/6687982/files/wind_noise_dataset.zip/content", "bytes": 137141772, "md5": "8b9034f8a83165d44b317635ef97a639", "sha256": null, "extract": "zip", "dest": "train-raw/tum-wind"}
+   ]
+  },
+  "A4": {
+   "name": "OpenSLR 28 RIRS_NOISES", "role": "train", "train_ok": true,
+   "license": "Apache-2.0", "license_src": "openslr.org/28（内部各来源库的许可未逐个核，027 download-list）",
+   "attribution": "T. Ko, V. Peddinti, D. Povey, M. L. Seltzer, S. Khudanpur, A study on data augmentation of reverberant speech for robust speech recognition, ICASSP 2017",
+   "files": [
+    {"name": "rirs_noises.zip", "url": "https://www.openslr.org/resources/28/rirs_noises.zip", "bytes": 1311166223, "md5": "e6f48e257286e05de56413b4779d8ffb", "sha256": null, "extract": "zip", "dest": "train-raw/openslr28"}
+   ]
+  },
+  "A5": {
+   "name": "LibriSpeech dev-clean + test-other", "role": "train", "train_ok": false,
+   "license": "CC-BY-4.0", "license_src": "openslr.org/12",
+   "attribution": "同 A1",
+   "_注": "这一组只切成「终测原料池」与「D63 测试份」，不进训练、开发（027 第六节表）",
+   "files": [
+    {"name": "dev-clean.tar.gz", "url": "https://www.openslr.org/resources/12/dev-clean.tar.gz", "bytes": 337926286, "md5": "42e2234ba48799c1f50f24a7926300a1", "sha256": null, "extract": "tar", "dest": "train-raw/librispeech"},
+    {"name": "test-other.tar.gz", "url": "https://www.openslr.org/resources/12/test-other.tar.gz", "bytes": 328757843, "md5": "fb5a50374b501bb3bac4815ee91d3135", "sha256": null, "extract": "tar", "dest": "train-raw/librispeech"}
+   ]
+  },
+  "E1": {
+   "name": "exp013 原料：LibriSpeech test-clean", "role": "exp013", "train_ok": false, "license": "CC-BY-4.0", "license_src": "openslr.org/12",
+   "files": [
+    {"name": "test-clean.tar.gz", "url": "https://www.openslr.org/resources/12/test-clean.tar.gz", "bytes": 346663984, "md5": "32fa31d27d2e1cad72775fee3f4849a9", "sha256": null, "extract": "tar", "dest": "vdn-data/librispeech"}
+   ]
+  },
+  "E2": {
+   "name": "exp013 原料：DEMAND 9 个环境", "role": "exp013", "train_ok": true, "license": "CC-BY-4.0", "license_src": "Zenodo 1227121 元数据 cc-by-4.0",
+   "_注": "训练只用 exp006 用过的 6 个环境前 60%（027 第六节第 2 条，split_rules.json）；SCAFE 只有 48 kHz 包，exp013 读时重采样",
+   "files": [
+    {"name": "DKITCHEN_16k.zip", "url": "https://zenodo.org/records/1227121/files/DKITCHEN_16k.zip?download=1", "bytes": 110501049, "md5": "7ffbf52d7f4699f96927846103dc8788", "sha256": null, "extract": "zip", "dest": "vdn-data/demand"},
+    {"name": "OOFFICE_16k.zip", "url": "https://zenodo.org/records/1227121/files/OOFFICE_16k.zip?download=1", "bytes": 88995191, "md5": "7b61cc2d182d5a654cb9c3101ddd4041", "sha256": null, "extract": "zip", "dest": "vdn-data/demand"},
+    {"name": "PCAFETER_16k.zip", "url": "https://zenodo.org/records/1227121/files/PCAFETER_16k.zip?download=1", "bytes": 107431494, "md5": "99927d148128254141a9417d051510bb", "sha256": null, "extract": "zip", "dest": "vdn-data/demand"},
+    {"name": "PRESTO_16k.zip", "url": "https://zenodo.org/records/1227121/files/PRESTO_16k.zip?download=1", "bytes": 111292815, "md5": "b98d2e6854eeebb397f29a8ad7457092", "sha256": null, "extract": "zip", "dest": "vdn-data/demand"},
+    {"name": "PSTATION_16k.zip", "url": "https://zenodo.org/records/1227121/files/PSTATION_16k.zip?download=1", "bytes": 119441094, "md5": "d7448009f6c2aeb6ba570375df1750a3", "sha256": null, "extract": "zip", "dest": "vdn-data/demand"},
+    {"name": "SCAFE_48k.zip", "url": "https://zenodo.org/records/1227121/files/SCAFE_48k.zip?download=1", "bytes": 325884186, "md5": "1a4ee387f1900f4b15ba219481c76556", "sha256": null, "extract": "zip", "dest": "vdn-data/demand"},
+    {"name": "STRAFFIC_16k.zip", "url": "https://zenodo.org/records/1227121/files/STRAFFIC_16k.zip?download=1", "bytes": 118572691, "md5": "2efa87262f272bbf9ba578088e81939c", "sha256": null, "extract": "zip", "dest": "vdn-data/demand"},
+    {"name": "TBUS_16k.zip", "url": "https://zenodo.org/records/1227121/files/TBUS_16k.zip?download=1", "bytes": 128916709, "md5": "706b11b0d8504f9f3b3f3211e91b3863", "sha256": null, "extract": "zip", "dest": "vdn-data/demand"},
+    {"name": "TCAR_16k.zip", "url": "https://zenodo.org/records/1227121/files/TCAR_16k.zip?download=1", "bytes": 130045975, "md5": "4d930012796bd298932245a26189f973", "sha256": null, "extract": "zip", "dest": "vdn-data/demand"},
+    {"name": "TMETRO_16k.zip", "url": "https://zenodo.org/records/1227121/files/TMETRO_16k.zip?download=1", "bytes": 126589090, "md5": "95daf4df678e13b120e14211e6d89571", "sha256": null, "extract": "zip", "dest": "vdn-data/demand"}
+   ]
+  },
+  "E3": {
+   "name": "exp013 原料：背景音乐与中文朗读（Wikimedia Commons）", "role": "exp013", "train_ok": false,
+   "license": "音乐公有领域；两段中文 CC-BY-SA-4.0，只评测（D26）", "license_src": "exp003 README 素材表",
+   "files": [
+    {"name": "Scott_Joplin_-_Maple_Leaf_Rag.ogg", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Scott_Joplin_-_Maple_Leaf_Rag.ogg", "bytes": 3673778, "md5": null, "sha256": "9348ee28307391f8d64dcdcc85663214e8f605c061b7974820ca8a736ced8a39", "extract": "none", "dest": "vdn-data/music/Scott_Joplin_-_Maple_Leaf_Rag.ogg"},
+    {"name": "Zh-婆婆冰.ogg", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Zh-%E5%A9%86%E5%A9%86%E5%86%B0.ogg", "bytes": 2960713, "md5": null, "sha256": "ba5d93c372955325884b00dbf26da7ff7fd89bd4adf09d600e0338a6874ac7ba", "extract": "none", "dest": "vdn-data/zh/zh_popobing_landxia.ogg"},
+    {"name": "Zh-盲文.ogg", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Zh-%E7%9B%B2%E6%96%87.ogg", "bytes": 5844365, "md5": null, "sha256": "e8e992057860907e0d1d0b35f00b3737439843cd7f86f21714cf34532c6f4f66", "extract": "none", "dest": "vdn-data/zh/zh_braille_commusic.ogg"}
+   ]
+  }
+ },
+ "_exp013_其余": "ESC-50 与三套实测 RIR 由 exp013 自己的 fetch.py 下（正本 docs/experiments/exp013-scene-suite/fetch.py 与 materials.json）；rebuild_exp013.py 会调用它"
+}

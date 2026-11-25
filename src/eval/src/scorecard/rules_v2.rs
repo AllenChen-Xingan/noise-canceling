@@ -54,7 +54,7 @@ fn extra(s: &Score, k: &str) -> Option<f64> {
 }
 
 /// v2 的过关线：[`standard::V2_PARAMS`] 换掉的用新值，其余沿用分数里记的线。
-fn thr_v2(v: &str, row_thr: Option<f64>) -> Option<f64> {
+pub(crate) fn thr_v2(v: &str, row_thr: Option<f64>) -> Option<f64> {
     standard::V2_PARAMS
         .iter()
         .find(|(id, _, _)| *id == v)

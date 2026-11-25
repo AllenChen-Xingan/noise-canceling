@@ -109,7 +109,7 @@
 | `leak.py` | 与 exp006 训练清单求交集 |
 | `tests/` | 第七条的自检 |
 
-**输出**：音频写主目录 `_tmp/exp013/<build-id>/`，每段一个子目录：`mix.wav` · `owner_dry.wav` · `owner.wav`（混响 + 设备后，评测用的干净参考）· 每个干扰一条分轨 · `floor.wav`（设备底噪）。仓里只放 `builds/<build-id>/`：`manifest.json` · `clips.jsonl` · `hashes.txt` · `exclude.json` · 参数快照。每个 build 新目录，不覆盖旧 build（CLAUDE.md 第五节 1 条）。
+**输出**：音频写主目录 `_tmp/exp013/<build-id>/`，每段一个子目录：`mix.wav` · `owner_dry.wav` · `owner.wav`（混响 + 设备后，评测用的干净参考）· `owner_early.wav`（2026-11-16 起：只留直达 + 前 `EARLY_REVERB_MS` = 100 ms 混响、过同样设备链的早期回声参考，正本 `rooms.py`；生成它不抽随机数，旧 build 的其余各轨可逐样本重现，见 `tests/test_early.py`）· 每个干扰一条分轨 · `floor.wav`（设备底噪）。仓里只放 `builds/<build-id>/`：`manifest.json` · `clips.jsonl` · `hashes.txt` · `exclude.json` · 参数快照。每个 build 新目录，不覆盖旧 build（CLAUDE.md 第五节 1 条）。
 
 **片段清单格式**：`clip-manifest.md`（v1.1，与 scorecard 导出的 schema 一致；正本是 Rust 类型）。
 
@@ -145,7 +145,7 @@
 6. **中文主说话人只有 2 人**：本机 6 段中文里只有 2 段登记过许可（exp003），只用这 2 段
 7. **T60 实测**在主说话人 RIR 去掉直达窗后量（近距离时直达声会把衰减曲线前段拉陡）。第一、二版用模拟房间时，大房间实测比名义低 5–40%（模拟尾巴的高频按 0.8 × T60 衰减）；第三版起名义值就是实测 IR 的 T60，两者一致。清单里的 T60 / DRR 是房间本身的值（设备链之前）
 8. **会议室**按大总管转达的建议：照样出、标「全留」（`polarity = preserve_all`，`owner` = 所有要留的人之和），题仍在现状页等人定
-9. **测试跑法**：系统 `python3` 没有 numpy，用项目已有的 venv：`<主目录>/_tmp/exp002-venv/bin/python -m unittest discover -s docs/experiments/exp013-scene-suite/tests`
+9. **测试跑法**：系统 `python3` 没有 numpy。环境按本目录 `requirements.lock` 重建（2026-11-24 起；旧的 `_tmp/exp002-venv` 已随清理删除）：`uv venv <主目录>/_tmp/exp013-venv --python 3.12.14 && uv pip install --python <主目录>/_tmp/exp013-venv/bin/python -r docs/experiments/exp013-scene-suite/requirements.lock`，再 `<主目录>/_tmp/exp013-venv/bin/python -m unittest discover -s docs/experiments/exp013-scene-suite/tests`
 10. **第三版起「一段 = 一个房间」**（人试听第一版后指出人声与底噪混响不一致，方案 `reverb-plan.md`，人选下载档 A）：
     - 房间改用实测 RIR（`rirs.py`），本线自写的模拟房间（`rooms.make_rir`）只留给单元测试。T60 不再抽，取所用 IR 的实测值
     - 约 37% 的段人声与底噪同房间：ACE 的 7 个房间（开放办公、联合办公、电话亭、书房、酒店、会议室、教室、候车厅的一部分）、McVAMPIRE 车内。其余用 MIT 的实测 IR 配 DEMAND，按 `scenes.json` 的 `bed_t60` 约束 T60（暂定 ×[0.8, 1.25]）
