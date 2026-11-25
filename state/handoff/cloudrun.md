@@ -44,3 +44,9 @@
 - 2026-11-25 上午（tmux 退出后 --resume）：大总管 noise-canceling-df 已删机 8mnlr0uvh5pu4a（split 失败 rc=1：OpenSLR28 的 RWCP_type4_rir_000l.wav 不在任何 rir_list；素材上传停在约 650 MB）。账本核对无误，累计 1.26 美元，平台 0 台。codex 第 2–4 轮的 P1 已修到能落代码的程度，78 条测试过；反复提的三件残余风险交大总管裁决（记录 cloud/reviews/codex-review.md）。等 traindata 修 split 后再开机：重跑 split→shard→register→pack，素材续传 4 路、分批前台跑、先核云上已有块。
 - 2026-11-25 03:20Z 前后：第二台 CPU 机 e49nwj60n7hfpg 上做完 traindata 六步（build 49349c158a4defdc）、exp013 云上 build aa9f（与本机 6323 只差浮点舍入，改用 6323 音频）、评测素材 3485 个与 6323 音频 5020 个上传并逐个核对、inputs-verify「原料全对」。已删机，账上 0 台，累计 1.52 美元。
 - codex 评审跑到第 14 轮：第 13、14 轮连续无 P0/P1，满足停止线；P2 留 #163–#167、#169、#171。95 条测试全过；与 main（971c7eec）合并无冲突。等大总管放行开 PR（Closes #158）。
+- 2026-11-25 下午到晚上（分支 exp/025-cloud-baseline）：
+  - CPU 机换镜像 `rust:1.99.1-trixie`（`config.CPU_IMAGE`，钉 digest）。原因：旧镜像 Ubuntu 22.04 的 glibc 2.35 链接不了 vdn-eval 的 ort。新镜像冒烟四样都过：python3、机器内自删、put-secret 假值、编译。
+  - H100 冒烟：甲段在 CPU 上全过（122 过、1 跳过）；乙段第 1 步 overfit 一项不过，按收尾取回后删机，交 trainer。
+  - 基线 480 段：main 27d2808a 跑完（08:11Z）。识别因一次超时被账本标「待核」后停发，只覆盖 189 段，不一致率 23.6%。结果在 `baseline/runs/20261125-053026-e5sjgks999cqbf/`（2a22515e）与主仓 `_tmp/20261125-cloudrun-baseline/run480/`。
+  - 本机睡眠约 10 小时，期间机器到 6 小时时限自删；看门狗晚记账，估价偏高约 0.27 美元。
+  - 账上 0 台，累计估 3.22 美元。待命：等 evalcmp 核结果、清 review、补跑识别，然后一起收尾；分支先不开 PR。
