@@ -136,13 +136,16 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
 
 按交代，**不为此补跑候选**。所以现在能出的只有「DFN3 对 GTCRN、只看 DSP 项」这一张；对照的 GTCRN 用同一次 exp021 扫描里的 `gtcrn-h-nomix`（同一代码版本、同一批音频）。
 
-**预览（实测数据，结论留空）**：`runs/uplift-exp021-dfn3-nomix/gap-uplift.md`。只含 DSP 判定项，前 4：cowork · car-passenger · cafe · home-family；与临时选定的四个重合 2 个（cafe · car-passenger），按线判「不一致」。基线出数后，这张表的 GTCRN 一侧不用换（候选只有 exp021 那一份，必须配同版本的 GTCRN）。
+**预览（实测数据，结论留空）**：`runs/uplift-exp021-dfn3-nomix/rerun-20261125/gap-uplift.md`（数据完整性已核：15 个场景都有，每个场景有差值的判定项 ≥ 5，没有只在一边的片段）。只含 DSP 判定项，前 4：cowork · car-passenger · cafe · home-family；与临时选定的四个重合 2 个（cafe · car-passenger），按线判「不一致」。基线出数后，这张表的 GTCRN 一侧不用换（候选只有 exp021 那一份，必须配同版本的 GTCRN）。
 
 ### 3. 两张表共用的判据（正本 `gap.py`）
 
 - 前 `TOP_K`（4）个场景与临时选定的四个重合 ≥ `MIN_OVERLAP`（3）个 → 「一致」，否则「不一致」
 - **第 4 名边界并列**：重合数算成范围，整个范围 ≥ 线才「一致」，整个 < 线才「不一致」，跨线 → 「不确定（第 4 名边界并列）」（codex 第 1 轮 P1 #2）
-- **数据不全不下结论**：场景数 < `MIN_SCENES`（15，与 `src/eval/suite/scenes.json` 的场景数由测试比对）、有场景缺切片（≠ `SLICES` = 4）、有场景因格子太少（< `MIN_CELLS` = 10）被排除、成绩单有没跑成的段 → 「数据不足」，只展示排名（codex 第 1 轮 P1 #1）。5 段冒烟出的表因此判「数据不足」
+- **数据不全不下结论**，两张表各自的条件（codex 第 1 轮 P1 #1、第 2 轮 P1 #1）：
+  - 弱项表：场景数 < `MIN_SCENES`（15，与 `src/eval/suite/scenes.json` 的场景数由测试比对）、有场景缺切片（≠ `SLICES` = 4）、有场景因格子太少（< `MIN_CELLS` = 10）被排除、成绩单有没跑成的段
+  - 提升空间表：逐场景结果 < `MIN_SCENES`、有场景的有差值判定项 < `MIN_ITEMS`（5）、有片段只在一边（compare 不带切片信息，这张表不查切片）
+  - 任一成立 → 「数据不足」，只展示排名。5 段冒烟出的表因此判「数据不足」（`runs/smoke-20261124-191531/gap-rerun-20261125/`；日志里旧版判的「一致」已作废，见同目录 `SUPERSEDED.md`）
 - 结论（加训哪几个场景）由大总管交人定；表只说「数据和临时选择对不对得上」
 
 **冒烟时注意到的一点（实测，推断原因）**：用弱项表的算法读 exp014 的**回混** GTCRN 成绩单，前 4 是 canteen · bus-metro-cabin · transit-hub · rail-air-cabin，和临时选定的四个只重合 1 个（transit-hub）。exp016 挑那四个时看的是「候选比 GTCRN 好多少」，接近提升空间表的问题，不是弱项表的问题。我没有为了对上旧选择去改算法。
@@ -157,4 +160,4 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
 | `runs/smoke-20261124-191531/` | 5 段冒烟：三次运行的成绩单与日志、对 exp021 的对拍（路径里的本机目录换成了占位符） |
 | `runs/uplift-exp021-dfn3-nomix/` | 提升空间表预览：exp021 的 DFN3 对 GTCRN，都不回混，只有 DSP 项 |
 
-测试：`python3 -m unittest discover -s docs/experiments/exp025-gtcrn-train/baseline -p "test_*.py"`（30 条）。
+测试：`python3 -m unittest discover -s docs/experiments/exp025-gtcrn-train/baseline -p "test_*.py"`（31 条）；每个测试文件也能单独直接运行。
