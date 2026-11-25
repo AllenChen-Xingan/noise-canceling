@@ -43,6 +43,18 @@ class Merge(unittest.TestCase):
         self.assertEqual(rep["V-ESTOI"]["pairs"], 3)
         self.assertNotIn("V-EAT-ASR", rep, "吃字不比（云上判不了）")
 
+    def test_parity_thresholds_and_verdict_flips(self):
+        self.assertEqual((merge.PARITY_ABS, merge.PARITY_FLIP), (1e-3, 0.01))
+        _, rep = merge.merge(cloud(), local(d=1e-6))
+        self.assertEqual(merge.parity_errors(rep), [])
+        _, rep = merge.merge(cloud(), local(d=2e-3))  # 差 2e-3 > 1e-3
+        self.assertTrue(any("V-ESTOI" in e for e in merge.parity_errors(rep)))
+        loc = local()
+        loc[0]["scores"][2]["verdict"] = "fail"  # 3 段里 1 段判定不同 = 33% > 1%
+        _, rep = merge.merge(cloud(), loc)
+        self.assertEqual(rep["V-ESTOI"]["verdict_flips"], 1)
+        self.assertTrue(any("判定" in e for e in merge.parity_errors(rep)))
+
     def test_mismatched_clip_sets_or_systems_are_errors(self):
         with self.assertRaises(ValueError):
             merge.merge(cloud(3), local(2))
