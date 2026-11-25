@@ -79,5 +79,35 @@ class ClearReview(unittest.TestCase):
             self.assertEqual(sorted(f.name for f in Path(d).iterdir()), ["ledger.json", "ledger.json.lock", "ledger.json.tmp"])
 
 
+    def test_partial_write_failure_leaves_no_remnants(self):
+        """codex 本分支第 3 轮 P2 #2：写到一半失败（磁盘满一类）、改名失败，都要删掉本次新建的残件，原账本不变。"""
+        import builtins
+        from unittest import mock
+        real_open = builtins.open
+
+        def half_then_fail(target):
+            def fake_open(f, mode="r", *a, **kw):
+                h = real_open(f, mode, *a, **kw)
+                if str(f).endswith(target) and "x" in mode:
+                    w = h.write
+                    def write(data):
+                        w(data[: len(data) // 2])
+                        raise OSError(28, "No space left on device")
+                    h.write = write
+                return h
+            return fake_open
+
+        for patch in (mock.patch("builtins.open", half_then_fail(".tmp")),
+                      mock.patch("builtins.open", half_then_fail(".json")),
+                      mock.patch.object(cr.os, "replace", side_effect=OSError("rename failed"))):
+            with tempfile.TemporaryDirectory() as d:
+                p, h = ledger(d)
+                before = p.read_bytes()
+                with patch, self.assertRaises(OSError):
+                    cr.clear(p, h, 1, 12.0, "x", now=NOW, price=0.000008)
+                self.assertEqual(p.read_bytes(), before)
+                self.assertEqual(sorted(f.name for f in Path(d).iterdir()), ["ledger.json", "ledger.json.lock"])
+
+
 if __name__ == "__main__":
     unittest.main()
