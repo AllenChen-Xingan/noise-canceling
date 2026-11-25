@@ -148,7 +148,12 @@ def uplift_table(cmp_json, card_json, exclude=()):
     judged = set()
     expect = defaultdict(int)  # 场景 → 基线成绩单里的段数（核两边共同缺段用）
     no_count = False
-    for c in card_json["scenes"]:
+    # 只数比较里基线那个系统的卡（一份成绩单可能扫了好几个系统）；比较没写系统名时，成绩单必须只有一个系统
+    base = cmp_json.get("meta", {}).get("a_system")
+    names = {c["system"] for c in card_json["scenes"]}
+    if base is None and len(names) > 1:
+        raise ValueError(f"比较没写基线系统名，基线成绩单里又有多个系统 {sorted(names)}：分不清该数哪个")
+    for c in (c for c in card_json["scenes"] if base is None or c["system"] == base):
         if "clips" in c:
             expect[c["scene"]] += int(c["clips"])
         else:
