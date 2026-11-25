@@ -82,10 +82,20 @@ pub struct Asr {
 impl Asr {
     /// 只用本机 42model（旧行为；测试与 `VDN_ASR_BACKEND=local42` 用）。
     pub fn new(cache_path: PathBuf) -> Asr {
-        Asr::with_backends(cache_path, vec![Backend::Local42], LOCAL42, Route::default())
+        Asr::with_backends(
+            cache_path,
+            vec![Backend::Local42],
+            LOCAL42,
+            Route::default(),
+        )
     }
 
-    pub fn with_backends(cache_path: PathBuf, backends: Vec<Backend>, default: &'static str, route: Route) -> Asr {
+    pub fn with_backends(
+        cache_path: PathBuf,
+        backends: Vec<Backend>,
+        default: &'static str,
+        route: Route,
+    ) -> Asr {
         let cache = std::fs::read_to_string(&cache_path)
             .ok()
             .and_then(|t| serde_json::from_str::<BTreeMap<String, String>>(&t).ok())
@@ -107,16 +117,22 @@ impl Asr {
         let default: &'static str = match std::env::var("VDN_ASR_BACKEND").as_deref() {
             Err(_) | Ok("openrouter") => OPENROUTER,
             Ok("local42") => LOCAL42,
-            Ok(x) => return Err(format!("VDN_ASR_BACKEND 只认 openrouter / local42，收到 {x}")),
+            Ok(x) => {
+                return Err(format!(
+                    "VDN_ASR_BACKEND 只认 openrouter / local42，收到 {x}"
+                ));
+            }
         };
         let route: Route = match std::env::var("VDN_ASR_ROUTE") {
             Ok(p) => {
-                let t = std::fs::read_to_string(&p).map_err(|e| format!("VDN_ASR_ROUTE {p}：{e}"))?;
+                let t =
+                    std::fs::read_to_string(&p).map_err(|e| format!("VDN_ASR_ROUTE {p}：{e}"))?;
                 serde_json::from_str(&t).map_err(|e| format!("VDN_ASR_ROUTE {p}：{e}"))?
             }
             Err(_) => Route::default(),
         };
-        let mut wanted: std::collections::BTreeSet<&str> = route.clips.values().map(String::as_str).collect();
+        let mut wanted: std::collections::BTreeSet<&str> =
+            route.clips.values().map(String::as_str).collect();
         wanted.insert(route.default.as_deref().unwrap_or(default));
         let mut backends = Vec::new();
         for w in wanted {
@@ -133,7 +149,11 @@ impl Asr {
                 }
                 LOCAL42 if Asr::alive() => backends.push(Backend::Local42),
                 LOCAL42 => return Err("要用本机 42model，但服务不在（127.0.0.1:11520）".into()),
-                x => return Err(format!("路由里的后端 {x} 不认识（只认 openrouter / local42）")),
+                x => {
+                    return Err(format!(
+                        "路由里的后端 {x} 不认识（只认 openrouter / local42）"
+                    ));
+                }
             }
         }
         Ok(Asr::with_backends(cache_path, backends, default, route))
@@ -146,7 +166,10 @@ impl Asr {
             .values()
             .map(|x| {
                 let n = self.used.get(x.name()).map_or(0, |s| s.len());
-                (x.name().to_string(), serde_json::json!({"model": x.model(), "clips": n}))
+                (
+                    x.name().to_string(),
+                    serde_json::json!({"model": x.model(), "clips": n}),
+                )
             })
             .collect();
         serde_json::json!({"default": self.default, "backends": b, "calls": self.calls})
@@ -172,8 +195,18 @@ impl Asr {
             })
     }
 
-    fn once(&mut self, path: &Path, sha: &str, lang: &str, rep: usize, backend: &'static str) -> Result<String, String> {
-        let b = self.backends.get(backend).ok_or_else(|| format!("后端 {backend} 没装好"))?;
+    fn once(
+        &mut self,
+        path: &Path,
+        sha: &str,
+        lang: &str,
+        rep: usize,
+        backend: &'static str,
+    ) -> Result<String, String> {
+        let b = self
+            .backends
+            .get(backend)
+            .ok_or_else(|| format!("后端 {backend} 没装好"))?;
         let model = b.model();
         // 本机后端沿用旧的键（不带后端名），旧缓存还能用；OpenRouter 的键带型号，和本机的分开
         let key = format!("{sha}|{model}|{lang}|{rep}");

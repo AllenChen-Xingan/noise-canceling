@@ -420,7 +420,7 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
     let card = vdn_eval::scorecard::card::Card::build_with(&rows, skipped, rules);
     let meta_v = json!({"run_id": m.run_id, "commit": m.commit, "suite": path,
         "systems": sys.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "qa": qa.is_some(),
-        "safety": if no_safety { "off" } else { "task" }, "asr": qa.as_ref().is_some_and(|q| q.asr.is_some()),
+        "safety": if no_safety { "off" } else { "task" }, "asr": qa.as_ref().map(|q| q.asr_meta()),
         "rules": rules.as_str(), "power": vdn_eval::power::source(),
         "external": sys.iter().filter_map(|s| s.provenance()).collect::<Vec<_>>()});
     let js = serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";
