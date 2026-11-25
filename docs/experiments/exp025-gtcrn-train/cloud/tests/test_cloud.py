@@ -191,6 +191,47 @@ class TestOps(Base):
         self.assertEqual(self.fake.pods, {})
         self.assertEqual(L.open_pods(L.read_rows(self.ledger)), {})
 
+    def test_price_moderately_above_tolerance_deletes(self):
+        # 评审第 1 轮 #3：实际价超过容差（旧代码要超 1.5 倍才删）也要删
+        self.fake.price = C.USD_PER_HR_EXPECTED * (C.PRICE_TOLERANCE + 0.1)
+        with self.assertRaises(SystemExit):
+            O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
+        self.assertEqual(self.fake.pods, {})
+
+    def test_actual_price_rechecks_budget(self):
+        # 实际价在容差内、但按实际价算会越过上限：删机
+        self.fake.price = C.USD_PER_HR_EXPECTED * 1.1
+        hours = C.SPEND_CAP_USD / (C.USD_PER_HR_EXPECTED * 1.1) - 0.05  # 按预估价能过、按实际价过不了
+        with self.assertRaises(SystemExit):
+            O.create_pod(self.cli, "US-KS-2", None, hours, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
+        self.assertEqual(self.fake.pods, {})
+
+    def test_create_post_is_not_retried(self):
+        # 评审第 1 轮 #4：建机回 503 + Retry-After 不重发，免得多开一台
+        orig = self.fake.__call__
+        n = {"post": 0}
+
+        def flaky(method, url, headers, body):
+            if method == "POST" and url.endswith("/v2/pods"):
+                n["post"] += 1
+                return 503, {"Retry-After": "1"}, b'{"detail":"busy"}'
+            return orig(method, url, headers, body)
+        cli = Client("k" * 50, transport=flaky, sleep=lambda s: None)
+        with self.assertRaises(ApiError):
+            O.create_pod(cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
+        self.assertEqual(n["post"], 1)
+
+    def test_failure_after_create_deletes_pod(self):
+        # 评审第 1 轮 #5：机器建好后写账本出错，也要先删机
+        real = L.append_row
+        def boom(row, path):
+            if row.get("action") == "pod_create":
+                raise OSError("disk full")
+            return real(row, path)
+        with mock.patch.object(L, "append_row", boom), self.assertRaises(OSError):
+            O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
+        self.assertEqual(self.fake.pods, {})
+
     def test_create_then_delete_uses_delete_not_stop(self):
         p = O.create_pod(self.cli, "US-KS-2", None, 1, C.USD_PER_HR_EXPECTED, ledger_path=self.ledger)
         O.delete_pod(self.cli, p["id"], self.ledger)

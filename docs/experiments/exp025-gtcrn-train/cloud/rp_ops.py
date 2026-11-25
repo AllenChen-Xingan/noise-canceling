@@ -71,7 +71,8 @@ def create_volume(cli: Client, data_center: str, size_gb: int = C.VOLUME_SIZE_GB
                   name: str = C.VOLUME_NAME, ledger_path: str = L.DEFAULT_PATH) -> dict:
     if find_volume(cli, name):
         raise SystemExit(f"已有同名网络盘 {name}，不重复建")
-    v = cli.post("/v2/network-volumes", {"name": name, "size": size_gb, "dataCenter": data_center})
+    L.check_budget(L.read_rows(ledger_path), L.volume_hourly(size_gb), C.VOLUME_RESERVE_HOURS)
+    v = cli.post("/v2/network-volumes", {"name": name, "size": size_gb, "dataCenter": data_center}, retries=0)
     now = L.iso(L.utcnow())
     L.append_row({"ts_utc": now, "action": "volume_create", "resource_id": v["id"],
                   "data_center": data_center, "usd_per_hr": f"{L.volume_hourly(size_gb):.6f}",
