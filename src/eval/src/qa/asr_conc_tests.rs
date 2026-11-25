@@ -106,6 +106,10 @@ fn jobs() -> Vec<asr_or::Job> {
 }
 
 fn client(url: &str, dir: &std::path::Path) -> OpenRouter {
+    let l = dir.join("ledger.json");
+    if !l.exists() {
+        crate::qa::asr_ledger::init(&l, crate::qa::asr_ledger::Created::test()).unwrap();
+    }
     let mut c = OpenRouter::new(
         url,
         "placeholder-test-credential-0002".into(),

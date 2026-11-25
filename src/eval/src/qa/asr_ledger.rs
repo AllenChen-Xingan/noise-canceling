@@ -358,6 +358,7 @@ mod tests {
     #[test]
     fn reserve_settle_round_trip() {
         let p = tmp("rt");
+        init(&p, Created::test()).unwrap(); // 账本要显式新建（2026-11-25 起不再当空账本）
         reserve(&p, 0.2, 1.0).unwrap();
         assert_eq!(read(&p).unwrap().reserved_usd, 0.2);
         settle(&p, 0.2, Some(0.15)).unwrap();
@@ -372,6 +373,7 @@ mod tests {
     #[test]
     fn reservation_counts_toward_budget() {
         let p = tmp("budget");
+        init(&p, Created::test()).unwrap(); // 账本要显式新建（2026-11-25 起不再当空账本）
         update(&p, |l| {
             l.spent_usd = 0.9;
             Ok(())
@@ -401,6 +403,7 @@ mod tests {
     #[test]
     fn concurrent_writers_do_not_lose_updates() {
         let p = tmp("conc");
+        init(&p, Created::test()).unwrap(); // 账本要显式新建（2026-11-25 起不再当空账本）
         std::thread::scope(|s| {
             for _ in 0..8 {
                 s.spawn(|| {
