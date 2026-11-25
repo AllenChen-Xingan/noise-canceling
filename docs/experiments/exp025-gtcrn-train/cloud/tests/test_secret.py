@@ -137,6 +137,20 @@ class TestPutSecret(Base):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn('"$V"', S.WRITE_SH)  # 只引用变量（真机上的执行留待下次开机冒烟，见 plan-eval-baseline.md）
 
+    def test_bad_utf8_env_file_does_not_leak(self):
+        # 第 2 轮 #1：坏 UTF-8 的解码异常带着原始字节，不能跟着报错出去
+        with open(self.env_file, "wb") as f:
+            f.write(f"OPENROUTER_API_KEY={self.value}\n".encode() + b"\xff\xfe bad\n")
+        try:
+            S.read_local_secret("OPENROUTER_API_KEY", self.env_file)
+        except SystemExit as e:
+            import traceback
+            self.assertIsNone(e.__context__)
+            self.assert_no_leak("".join(traceback.format_exception(e)), str(e))
+        else:
+            self.fail("应当报错")
+        self.assertFalse([c for c in self.fake.calls if c[1].endswith("/exec")])
+
     def test_bad_key_name_refused(self):
         with self.assertRaises(SystemExit):
             S.put_secret(self.cli, "pod_9", "bad name;rm", self.value)

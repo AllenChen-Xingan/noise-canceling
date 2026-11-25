@@ -33,20 +33,27 @@ WRITE_SH = (
     't=$(mktemp "$d/.secret.XXXXXX") || { echo BAD; exit 0; }; '
     'if printf "%s=%s\\n" "$K" "$V" > "$t" '
     '&& [ "$(sha256sum "$t" | cut -d" " -f1)" = "$W" ] && [ "$(stat -c %a "$t")" = 600 ] '
-    '&& mv -fT "$t" "$P"; then echo OK; else rm -f "$t"; echo BAD; fi'
+    '&& mv -fT "$t" "$P"; then echo OK; elif rm -f "$t"; then echo BAD; else echo LEFTOVER; fi'
 )
 
 RESULTS = {"DIR": "目标是个目录", "OUTSIDE": "目标目录实际不在 /root/ 下（可能链接到了网络盘）",
-           "BAD": "写入或核对没通过，旧文件没动，本次临时文件已删"}
+           "BAD": "写入或核对没通过，旧文件没动，本次临时文件已删",
+           "LEFTOVER": "写入或核对没通过，而且本次临时文件没删掉（在目标同目录、.secret. 开头），请删机或手动删"}
 
 
 def read_local_secret(name: str, env_file: Optional[str] = None) -> str:
     path = env_file or os.path.join(main_repo_root(), ".env.local")
+    # 读和解码都放进安全边界（评审第 2 轮 #1）：坏 UTF-8 的 UnicodeDecodeError 会带着原始字节；出了块再抛固定错误
+    value, failed = "", None
     try:
         with open(path, encoding="utf-8") as f:
             value = parse_env_file(f.read()).get(name, "")
     except FileNotFoundError:
         value = ""
+    except BaseException as e:
+        failed = type(e).__name__
+    if failed:
+        raise SystemExit(f"读 {path} 出错（{failed}）；细节不显示，免得带出密钥，没发任何请求")
     if not value:
         raise SystemExit(f"{path} 里没有 {name}，没发任何请求")
     return value
