@@ -274,7 +274,11 @@ mod tests {
             .collect();
         let once = to_jsonl(&rows).unwrap();
         let twice = to_jsonl(&parse_jsonl(&once).unwrap()).unwrap();
-        let bad = once.split("},{").zip(twice.split("},{")).filter(|(a, b)| a != b).count();
+        let bad = once
+            .split("},{")
+            .zip(twice.split("},{"))
+            .filter(|(a, b)| a != b)
+            .count();
         assert_eq!(bad, 0, "{bad} 项读回再写出变了");
     }
 
