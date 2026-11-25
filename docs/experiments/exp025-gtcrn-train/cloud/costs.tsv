@@ -10,3 +10,4 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-24T21:54:10Z	pod_delete	7mfuc62ykdmrm3	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-24T21:52:04Z	2026-11-24T21:54:10Z	0.0350	0.1537		机器内自删验证：约 108 秒后自己删了（本条为补记） 删时已不存在
 2026-11-24T21:57:54Z	pod_create	vggy9ggvbi3h1p	cpu3c x4	US-MO-1	0.1200	2026-11-24T21:57:54Z					max_hours=6.0
 2026-11-25T00:21:06Z	pod_delete	vggy9ggvbi3h1p	cpu3c x4	US-MO-1	0.1200	2026-11-24T21:57:54Z	2026-11-25T00:21:06Z	2.3867	0.2864		
+2026-11-25T00:25:16Z	pod_create	8mnlr0uvh5pu4a	cpu3c x4	US-MO-1	0.1200	2026-11-25T00:25:16Z					max_hours=3.0

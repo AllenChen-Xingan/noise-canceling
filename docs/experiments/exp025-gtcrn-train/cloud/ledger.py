@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import csv
 import datetime as dt
+import re
 import os
 from typing import Iterable, Optional
 
@@ -103,13 +104,33 @@ def spent_so_far(rows: list, now: Optional[dt.datetime] = None) -> float:
     return pod_spent(rows) + volume_spent(rows, now) + live_pod_cost(rows, now)
 
 
+def _max_hours(row: dict) -> Optional[float]:
+    m = re.search(r"max_hours=([0-9.]+)", row.get("note") or "")
+    return float(m.group(1)) if m else None
+
+
+def open_pods_worst(rows: Iterable[dict], now: Optional[dt.datetime] = None) -> float:
+    """开着的机器按最坏算：跑满登记的最长时限（加看门狗宽限）；已超时的按实际已跑。没记时限的按已跑 + 1 小时。"""
+    now = now or utcnow()
+    total = 0.0
+    for r in open_pods(rows).values():
+        ran = max((now - parse_iso(r["started_utc"])).total_seconds(), 0) / 3600
+        mh = _max_hours(r)
+        cap_h = mh + GRACE_H if mh is not None else ran + 1.0
+        total += _f(r["usd_per_hr"]) * max(ran, cap_h)
+    return total
+
+
 def check_budget(rows: list, usd_per_hr: float, max_hours: float,
                  cap: float = C.SPEND_CAP_USD, now: Optional[dt.datetime] = None) -> float:
-    """返回本次开机后最坏总花费；超上限抛 SystemExit。"""
-    worst = spent_so_far(rows, now) + usd_per_hr * max_hours
+    """返回本次开机后最坏总花费；超上限抛 SystemExit。
+    最坏 = 已关机器 + 网络盘到今天 + 开着的机器跑满时限 + 本台跑满时限（含宽限）。"""
+    done = pod_spent(rows) + volume_spent(rows, now)
+    worst = done + open_pods_worst(rows, now) + usd_per_hr * (max_hours + GRACE_H)
     if worst > cap:
         raise SystemExit(f"花费上限 {cap:.2f} 美元：已花约 {spent_so_far(rows, now):.2f}，"
-                         f"本次最坏 {usd_per_hr * max_hours:.2f}，合计 {worst:.2f}，不开机")
+                         f"开着的机器最坏 {open_pods_worst(rows, now):.2f}，本次最坏 {usd_per_hr * (max_hours + GRACE_H):.2f}，"
+                         f"合计 {worst:.2f}，不开机")
     return worst
 
 
