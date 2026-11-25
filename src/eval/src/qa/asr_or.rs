@@ -16,12 +16,16 @@ use std::process::{Command, Stdio};
 
 use serde_json::{Value, json};
 
+pub use super::asr_bill::booked_cost;
+
 /// 接口地址。
 pub const OR_URL: &str = "https://openrouter.ai/api/v1/audio/transcriptions";
 /// 型号（正本）：OpenRouter 模型列表上的带日期正式名（canonical_slug，2026-11-25 03:36 UTC 读公开列表）。
 pub const OR_MODEL: &str = "qwen/qwen3-asr-1.7b-20260813";
-/// 列表上的标价（美元 / 秒音频）。只在返回里没有 `usage.cost` 时用来估算，正常按实际金额记账。
-pub const PRICE_PER_SECOND: f64 = 0.000_007_5;
+/// 标价（美元 / 秒音频）：模型页 2026-11-25 读，两家提供方（Prime Intellect · DeepInfra）都是 0.000008。
+/// 入账取「返回的 usage.cost」与「秒数 × 标价」中大的（[`booked_cost`]），预留也按它估。
+pub const PRICE_PER_SECOND: f64 = 0.000_008;
+
 /// 识别费上限（美元，按调用累计）。
 pub const BUDGET_USD: f64 = 15.0;
 /// 一次转写最多发几次请求（含第一次）。
@@ -165,8 +169,8 @@ impl Conn<'_> {
         }
     }
 
-    /// 发一次 HTTP 请求：返回 (状态码, Retry-After 秒数, 响应体)。密钥经标准输入给 curl，不进命令行参数。
-    fn post(&self, body_path: &Path) -> Result<(u16, Option<u64>, Vec<u8>), String> {
+    /// 发一次 HTTP 请求：返回 (状态码, Retry-After 秒数, 响应体, 响应头)。密钥经标准输入给 curl，不进命令行参数。
+    fn post(&self, body_path: &Path) -> Result<Resp, String> {
         let (out, hdr) = (tmp_path("body"), tmp_path("hdr"));
         self.requests
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -205,14 +209,11 @@ impl Conn<'_> {
             .parse()
             .unwrap_or(0);
         let body = std::fs::read(&out).unwrap_or_default();
-        let retry = std::fs::read_to_string(&hdr).ok().and_then(|h| {
-            h.lines().find_map(|l| {
-                let (k, v) = l.split_once(':')?;
-                k.trim()
-                    .eq_ignore_ascii_case("retry-after")
-                    .then(|| v.trim().parse::<u64>().ok())?
-            })
-        });
+        let headers =
+            super::asr_bill::parse_headers(&std::fs::read_to_string(&hdr).unwrap_or_default());
+        let retry = headers
+            .get("retry-after")
+            .and_then(|v| v.as_str()?.parse::<u64>().ok());
         let _ = std::fs::remove_file(&out);
         let _ = std::fs::remove_file(&hdr);
         if code == 0 {
@@ -221,7 +222,39 @@ impl Conn<'_> {
                 String::from_utf8_lossy(&o.stderr).trim()
             )));
         }
-        Ok((code, retry, body))
+        // 有状态码但 curl 没正常退出（收到头以后超时、响应体不完整）：不当完整响应，按连不上处理 = 费用未知（codex 本分支第 3 轮 P1 #1）
+        if !o.status.success() {
+            return Err(self.scrub(&format!(
+                "连不上识别服务：HTTP {code} 之后传输中断（curl 退出码 {}，生成 id {}）：{}",
+                o.status.code().unwrap_or(-1),
+                headers
+                    .get("x-generation-id")
+                    .and_then(Value::as_str)
+                    .unwrap_or("无"),
+                String::from_utf8_lossy(&o.stderr).trim()
+            )));
+        }
+        Ok((code, retry, body, headers))
+    }
+
+    /// 记一行逐笔明细；写不了就设本批停止（明细缺了就核不了账），这次响应照常处理。
+    fn log_attempt(
+        &self,
+        attempt: usize,
+        ms: u128,
+        secs: f64,
+        r: &Result<Resp, String>,
+        booked: Option<f64>,
+    ) -> Option<String> {
+        let row = super::asr_bill::detail_row(attempt, ms, secs, r, booked, |e| self.scrub(e));
+        // 写不了就持久标待核（明细缺了就核不了账，之后任何进程都拒发；codex 本分支第 1 轮 P1 #1）
+        if let Err(e) = ledger::append_detail(self.ledger_path, &row) {
+            let why = format!("识别费明细写不了（{e}）");
+            let _ = ledger::flag_review(self.ledger_path, &why);
+            *self.stop.lock().unwrap_or_else(|e| e.into_inner()) = Some(why.clone());
+            return Some(why);
+        }
+        None
     }
 
     /// 转写一条：成功返回 (文本, 最后一次响应带的费用（没带为 `None` = 费用未知）, 前几次已记账的费用)；
@@ -242,7 +275,8 @@ impl Conn<'_> {
             .map_err(|e| free(e.to_string()))?;
         let body_path = tmp_path("json");
         std::fs::write(&body_path, &body).map_err(|e| free(e.to_string()))?;
-        let r = self.send_with_retry(&body_path, est);
+        let secs = x.len() as f64 / f64::from(sr);
+        let r = self.send_with_retry(&body_path, est, secs);
         let _ = std::fs::remove_file(&body_path);
         r
     }
@@ -251,6 +285,7 @@ impl Conn<'_> {
         &self,
         body_path: &Path,
         est: f64,
+        secs: f64,
     ) -> Result<(String, Option<f64>, f64), Failure> {
         let mut last = String::new();
         // 前几次（非 200）响应带回的费用：收到就当场记账，之后的出口不再管它（codex 第 13 轮 P1 #1 · 第 14 轮）
@@ -273,9 +308,23 @@ impl Conn<'_> {
                 return Err(fail(format!("已停发：{why}"), Cost::Free, carried));
             }
             // 连不上、超时：请求可能已送到、可能已计费，不知道 → 费用未知，停发（偏保守）
-            let (code, retry_after, body) = self
-                .post(body_path)
-                .map_err(|e| fail(format!("费用未知，停发：{e}"), Cost::Unknown, carried))?;
+            let t0 = std::time::Instant::now();
+            let sent = self.post(body_path);
+            // 入账金额：200 且带 usage.cost → 与标价估算取大（秒数取音频长与返回秒数中大的）；非 200 照返回的记
+            let booked = sent.as_ref().ok().and_then(|(code, _, body, _)| {
+                let v: Value = serde_json::from_slice(body).ok()?;
+                let c = v["usage"]["cost"].as_f64()?;
+                // 标价估算只按实际音频秒数；返回的 seconds 只进明细（codex 本分支第 1 轮 P1 #2）
+                Some(if *code == 200 && v.get("error").is_none() {
+                    booked_cost(c, secs)
+                } else {
+                    c
+                })
+            });
+            let detail_err =
+                self.log_attempt(attempt, t0.elapsed().as_millis(), secs, &sent, booked);
+            let (code, retry_after, body, _) =
+                sent.map_err(|e| fail(format!("费用未知，停发：{e}"), Cost::Unknown, carried))?;
             if code == 200 {
                 let Ok(v) = serde_json::from_slice::<Value>(&body) else {
                     return Err(fail(
@@ -284,7 +333,7 @@ impl Conn<'_> {
                         carried,
                     ));
                 };
-                let cost = v["usage"]["cost"].as_f64();
+                let cost = booked;
                 let tag = if cost.is_some() {
                     ""
                 } else {
@@ -305,6 +354,10 @@ impl Conn<'_> {
                 let Some(t) = v["text"].as_str() else {
                     return Err(fail(format!("{tag}识别返回缺 text：{v}"), c, carried));
                 };
+                // 明细写不了：这一次也报错（费用照这次的结算），账本已标待核（codex 本分支第 2 轮 P1 #1）
+                if let Some(e) = detail_err {
+                    return Err(fail(format!("{e}：账本已标待核，停发"), c, carried));
+                }
                 // 文本到手但返回里没有 usage.cost：文本照用，费用未知（调用方标「待核」、停发；codex 第 7 轮 P1 #1）
                 return Ok((
                     t.split_whitespace().collect::<Vec<_>>().join(" "),
@@ -363,6 +416,9 @@ impl Conn<'_> {
         ))
     }
 }
+
+/// 一次 HTTP 响应：(状态码, Retry-After 秒数, 响应体, 响应头)。
+pub(super) type Resp = (u16, Option<u64>, Vec<u8>, serde_json::Map<String, Value>);
 
 /// 结算最后一次响应带的已知金额（成功、失败两条路共用；codex 第 9、10、14 轮）：照记；这条转写的总花费
 /// （前几次已记的 `carried` + 这次的 `c`）超过预留就给账本标待核、设本批停止状态，之后任何进程都拒发。
@@ -525,3 +581,7 @@ mod tests;
 #[cfg(test)]
 #[path = "asr_or_cost_tests.rs"]
 mod cost_tests;
+
+#[cfg(test)]
+#[path = "asr_or_bill_tests.rs"]
+mod bill_tests;

@@ -55,6 +55,31 @@ class Merge(unittest.TestCase):
         self.assertEqual(rep["V-ESTOI"]["verdict_flips"], 1)
         self.assertTrue(any("判定" in e for e in merge.parity_errors(rep)))
 
+    def test_cross_platform_rule_is_zero_flips_and_lists_max_diff(self):
+        """大总管 2026-11-25（看过云上 480 段结果后另立）：Linux 对 Mac 的浮点差是预期内的。跨平台时只要
+        判定不同的段 = 0、没有一边有值一边没值；值差照实列出，不判。同一台机器仍用 PARITY_ABS / PARITY_FLIP，原线不改。"""
+        _, rep = merge.merge(cloud(), local(d=2e-3))  # 差 2e-3：同平台不过
+        self.assertTrue(merge.parity_errors(rep))
+        self.assertEqual(merge.parity_errors(rep, same_platform=False), [], "跨平台：值差不判")
+        loc = local(d=2e-3)
+        loc[0]["scores"][2]["verdict"] = "fail"  # 1 段判定不同
+        _, rep = merge.merge(cloud(), loc)
+        self.assertTrue(any("判定" in e for e in merge.parity_errors(rep, same_platform=False)), "跨平台：判定不同一段都不许")
+        loc = local()
+        loc[1]["scores"][2]["value"] = None
+        _, rep = merge.merge(cloud(), loc)
+        self.assertTrue(any("一边" in e for e in merge.parity_errors(rep, same_platform=False)))
+        with tempfile.TemporaryDirectory() as d:
+            for side, rows in (("c", cloud()), ("l", local(d=2e-3))):
+                (Path(d) / side).mkdir()
+                (Path(d) / side / "clips.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+                (Path(d) / side / "scorecard.json").write_text(json.dumps({"missing": []}))
+            out = Path(d) / "o"
+            merge.main(["--cloud", f"{d}/c/clips.jsonl", "--local", f"{d}/l/clips.jsonl", "--out", str(out), "--cross-platform"])
+            par = json.loads((out / "merge-report.json").read_text())["parity"]
+            self.assertEqual((par["same_platform"], par["errors"]), (False, []))
+            self.assertAlmostEqual(par["max_abs_diff"]["V-ESTOI"], 2e-3, places=12)
+
     def test_one_sided_values_fail_and_flip_share_uses_all_clips(self):
         """codex 第 1 轮 P2 #3：一边有值一边没值算对拍不过；判定不同的占比按全部段数算，不按「两边都有值」的段数算。"""
         loc = local()
