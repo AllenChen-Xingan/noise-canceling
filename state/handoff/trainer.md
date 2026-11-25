@@ -63,3 +63,4 @@
 - 11-25 大总管定过拟合判据第 3 版（事后改判据：AI 提、大总管定）：前 4 段 + oracle 下限 + 判据不可用（退出码 3）；32 段读数只作参考。`tests/test_overfit_gate.py` 7 条先红后绿，冒烟相关 49 条过。方案第五节加 H100 估时（推断），第九节加 CPU 核对命令
 - 11-25 第 3 版判据云上 CPU 核对（cloudrun，a8168c98）：只有过拟合不过：前 4 段走完 oracle 距离 19.6%（要 50%），SI-SNR +2.5 dB（要 6）；其余三件过。报告 `trainer/smoke_reports/20261125-cpu-gate3-FAILED.json`；不降门槛，已报大总管
 - 11-25 加 `overfit_probe.py` 与 `smoke.py --overfit-probe`（学习曲线到 2000 步 · 参数与梯度 · 学习率 3e-4 / 3e-3）；`tests/test_overfit_probe.py` 6 条先红后绿；方案第十节
+- 11-25 加 `data_probe.py`（对齐 · 目标检查与 wav · 逐个关配方旋钮 6 组），并进 `--overfit-probe`；`tests/test_data_probe.py` 8 条先红后绿
