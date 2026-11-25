@@ -166,11 +166,16 @@ fn stability_ignores_differences_scoring_cannot_see() {
 #[ignore = "要一份真缓存，人工跑"]
 fn count_unstable_in_cache() {
     let p = std::env::var("VDN_ASR_CACHE").expect("设 VDN_ASR_CACHE");
-    let c: BTreeMap<String, String> = serde_json::from_str(&std::fs::read_to_string(p).unwrap()).unwrap();
+    let c: BTreeMap<String, String> =
+        serde_json::from_str(&std::fs::read_to_string(p).unwrap()).unwrap();
     let (mut pairs, mut raw, mut norm) = (0, 0, 0);
     for (k, a) in &c {
-        let Some(head) = k.strip_suffix("|1") else { continue };
-        let Some(b) = c.get(&format!("{head}|2")) else { continue };
+        let Some(head) = k.strip_suffix("|1") else {
+            continue;
+        };
+        let Some(b) = c.get(&format!("{head}|2")) else {
+            continue;
+        };
         let lang = head.rsplit('|').next().unwrap();
         pairs += 1;
         raw += usize::from(a != b);
