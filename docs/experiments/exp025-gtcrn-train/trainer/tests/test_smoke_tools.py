@@ -177,6 +177,28 @@ def test_cmp_complex_imag_part_counts(tmp_path):
     assert cmp_ckpt.main([a, b]) != 0
 
 
+def test_cmp_missing_or_corrupt_file_exits_2(tmp_path):
+    a = _ckpt(tmp_path / "a.pt", _sd())
+    (tmp_path / "bad.pt").write_bytes(b"not a checkpoint")
+    assert cmp_ckpt.main([a, str(tmp_path / "nope.pt")]) == 2
+    assert cmp_ckpt.main([a, str(tmp_path / "bad.pt")]) == 2
+
+
+def test_known_dev_reference_must_be_cpu(tmp_path, monkeypatch):
+    """GPU 上写的参照拿去和 GPU 比是自比：写时拒绝，读时 meta.device 不是 cpu 就判不过。"""
+    monkeypatch.setattr(train, "resolve_device", lambda d: torch.device("meta"))
+    assert smoke.main(["--config", str(_cfg_file(tmp_path)), "--write-known-dev", str(tmp_path / "k.json")]) == 2
+    monkeypatch.undo()
+    out = tmp_path / "known.json"
+    assert smoke.main(["--config", str(_cfg_file(tmp_path)), "--write-known-dev", str(out)]) == 0
+    known = json.loads(out.read_text())
+    known["meta"]["device"] = "cuda:0"
+    cfg = cfgmod.load(str(_cfg_file(tmp_path)), {})
+    src = train.make_source(cfg)
+    r = smoke.check_known_dev(cfg, src.dev_batches(), torch.device("cpu"), known, 1e9, build_id=src.build_id)
+    assert not r["pass"] and "device" in r["meta_mismatch"]
+
+
 def test_cmp_rejects_negative_or_nonfinite_tol(tmp_path):
     a, b = _ckpt(tmp_path / "a.pt", _sd()), _ckpt(tmp_path / "b.pt", _sd())
     for t in ("-1", "nan", "inf"):

@@ -167,6 +167,8 @@ def check_known_dev(cfg, dev, device, known: dict, tol: float, build_id=None) ->
     want = known_meta(cfg, build_id, device)
     meta_mismatch = {} if meta is None else {k: (meta.get(k), want[k]) for k in KNOWN_META_KEYS
                                              if meta.get(k) != want[k]}
+    if meta is not None and meta.get("device") != "cpu":  # 参照必须是 CPU 算的，否则 GPU 自比也能过（codex 第 3 轮 #2）
+        meta_mismatch["device"] = (meta.get("device"), "cpu")
     meta_missing = meta is None and cfg.data.kind == "loader"
     got = dev_reading(cfg, dev, device)
     bad = {}
@@ -242,6 +244,9 @@ def write_known_dev(cfg, out: Path) -> int:
         return 2
     out.parent.mkdir(parents=True, exist_ok=True)  # 先建目录，免得算完写不出（codex 第 1 轮 #2）
     device = train.resolve_device(cfg.device)
+    if device.type != "cpu":
+        print(f"参照读数必须在 CPU 上算（加 --set device=cpu），现在是 {device}", file=sys.stderr)
+        return 2
     source = make_source(cfg)
     got = dev_reading(cfg, source.dev_batches(), device)
     h = None if got is None else got.get("hybrid")

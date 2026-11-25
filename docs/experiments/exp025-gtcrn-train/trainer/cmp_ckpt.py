@@ -2,6 +2,7 @@
 
     python cmp_ckpt.py <检查点 1> <检查点 2> [--tol 0] [--ignore-step]
 
+退出码：0 = 通过 · 1 = 比出来不同 · 2 = 参数非法或文件读不了。
 通过 = 键集合相同、每个张量形状与类型相同、两边全是有限数、步数相同（除非 --ignore-step）、
 且最大绝对差 ≤ tol。默认 tol = 0，即要求逐值相同；CUDA 上用一个小容差，并把最大差记进报告。
 防误判通过：缺键、多键、NaN / inf、空模型、容差非法，一律判不过。打印 JSON，退出码 0 = 通过。
@@ -69,7 +70,11 @@ def main(argv=None) -> int:
         print(json.dumps({"pass": False, "problems": [f"容差非法：{a.tol}"]}, ensure_ascii=False))
         return 2
     load = lambda p: torch.load(p, map_location="cpu", weights_only=False)  # noqa: E731
-    r = compare(load(a.ckpt1), load(a.ckpt2), a.tol, a.ignore_step)
+    try:
+        r = compare(load(a.ckpt1), load(a.ckpt2), a.tol, a.ignore_step)
+    except Exception as e:  # 文件缺、坏：退出码 2，和「比出来不同」的 1 分开（codex 第 3 轮 #1）
+        print(json.dumps({"pass": False, "error": f"{type(e).__name__}: {e}"}, ensure_ascii=False))
+        return 2
     r["files"] = [a.ckpt1, a.ckpt2]
     print(json.dumps(r, ensure_ascii=False, indent=2))
     return 0 if r["pass"] else 1
