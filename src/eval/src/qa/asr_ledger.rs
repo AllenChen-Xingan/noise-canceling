@@ -331,19 +331,13 @@ mod tests {
     #[test]
     fn init_only_when_explicitly_requested() {
         let p = tmp("req");
-        assert_eq!(init_if_requested(&p, false, None).unwrap(), false);
-        assert_eq!(
-            init_if_requested(&p, false, Some("0".into())).unwrap(),
-            false
-        );
+        assert!(!init_if_requested(&p, false, None).unwrap());
+        assert!(!init_if_requested(&p, false, Some("0".into())).unwrap());
         assert!(!p.exists(), "没要求就不建");
-        assert_eq!(
-            init_if_requested(&p, false, Some("1".into())).unwrap(),
-            true
-        );
+        assert!(init_if_requested(&p, false, Some("1".into())).unwrap());
         assert!(read(&p).unwrap().created.is_some());
         let q = tmp("req2");
-        assert_eq!(init_if_requested(&q, true, None).unwrap(), true);
+        assert!(init_if_requested(&q, true, None).unwrap());
         assert!(
             init_if_requested(&q, true, None)
                 .unwrap_err()
