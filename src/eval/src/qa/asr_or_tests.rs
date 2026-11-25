@@ -6,6 +6,7 @@ use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
 
 use super::*;
+use serde_json::json;
 
 /// 一次收到的请求：(请求头原文, 请求体)。
 type Seen = Arc<Mutex<Vec<(String, Vec<u8>)>>>;
@@ -74,7 +75,8 @@ pub(super) fn ok(text: &str, cost: f64) -> (u16, &'static str, String) {
     (
         200,
         "",
-        json!({"text": text, "usage": {"seconds": 1.0, "cost": cost}}).to_string(),
+        // 秒数与 audio() 一致（0.1 秒）：入账按「返回费用与秒数 × 标价」取大
+        json!({"text": text, "usage": {"seconds": 0.1, "cost": cost}}).to_string(),
     )
 }
 
@@ -175,7 +177,7 @@ fn request_carries_model_audio_language_and_deny() {
     );
     // 函数本身也核一遍
     assert_eq!(
-        request_body(b"x", "zh")["provider"]["data_collection"],
+        request_body(b"x", "zh", None)["provider"]["data_collection"],
         "deny"
     );
 }
@@ -188,7 +190,13 @@ fn cost_is_accumulated_into_ledger_and_survives_restart() {
     let mut c = client(&url, &d);
     c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap();
     c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap();
-    assert!((c.ledger.spent_usd - 7.5e-7).abs() < 1e-15);
+    // 入账 = 各条「返回费用与 0.1 秒 × 标价」取大（2026-11-25 起）
+    let want = booked_cost(2.5e-7, 0.1) + booked_cost(5e-7, 0.1);
+    assert!(
+        (c.ledger.spent_usd - want).abs() < 1e-15,
+        "{}",
+        c.ledger.spent_usd
+    );
     assert_eq!(c.ledger.calls, 2);
     let again = OpenRouter::new("http://127.0.0.1:9/", KEY.into(), d.join("ledger.json"));
     assert_eq!(again.ledger, c.ledger, "账本落盘，重开接着累计");

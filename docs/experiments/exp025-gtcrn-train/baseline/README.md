@@ -62,7 +62,41 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
 - 识别花费累计在**一本**账本里（大总管 2026-11-25 定：正本是云上网络盘 `/workspace/asr-ledger/asr-openrouter-ledger.json`）。云上跑时设 `VDN_ASR_LEDGER=/workspace/asr-ledger/asr-openrouter-ledger.json`（或 `--asr-ledger` 同一路径），直接读写正本，不用复制、写回；不设时用主目录 `_tmp/asr-openrouter-ledger.json`。到 15 美元就停发（软上限，第三节）
 - 账本规矩（2026-11-25 起，代码 `src/eval/src/qa/asr_ledger.rs`）：账本**不存在就拒发**，不当成空账本；只有显式 `--init-ledger`（或 `VDN_ASR_INIT_LEDGER=1`）才新建，新建时记 `created`（UTC 时间 · `local` 或 `cloud` · RunPod 机器 id · 会话名，不记主机名）；账本旁边有 `<账本>.sealed` 就拒发。本机那份在云上结果合并后封存，以后要在本机发真调用，先取回云上正本
 - 按段换后端（可选）：先把路由写成一个 JSON **文件**，例如 `route.json` 内容为 `{"default": "openrouter", "clips": {"<片段 id>": "local42"}}`，再 `export VDN_ASR_ROUTE=<route.json 的路径>`（变量里放路径，不放 JSON 本身；入口 `Route::load`，测试 `route_loads_from_file_path`）。`VDN_ASR_BACKEND=local42` 整套改回本机 42model
-- 停发：遇到永久错误（数据政策 403/404、余额 402、密钥 401、到上限、账本坏或写不了、费用未知）整套停发 OpenRouter 请求，原因写在 `meta.asr.halted`。「费用未知」= 连不上、超时、返回读不出、或返回有文本但没带 `usage.cost`：可能已经计费。这时账本里的预留不退，并写上 `review`（待核）；**只要 `review` 在，任何进程、重启以后都拒发**。处理：到 OpenRouter 后台核实际花费，改正账本的 `spent_usd` 与 `reserved_usd`，删掉 `review` 一项，再重跑（缓存里已有的转写不会重发）
+- 停发：遇到永久错误（数据政策 403/404、余额 402、密钥 401、到上限、账本坏或写不了、费用未知）整套停发 OpenRouter 请求，原因写在 `meta.asr.halted`。「费用未知」= 连不上、超时、返回读不出、或返回有文本但没带 `usage.cost`：可能已经计费。这时账本里的预留不退，并写上 `review`（待核）；**只要 `review` 在，任何进程、重启以后都拒发**。处理：用 `clear_review.py`（不手改账本）：在账本正本所在的机器上、所有 vdn-eval 进程停下后跑 `python3 clear_review.py <账本> --expect-sha256 <当前 sha256> --worst-count N --note "<说明>"`。它先核 sha256、拿账本锁、另存一份 `<账本>.before-clear-<时间>.json`，再把费用未知的 N 笔按「12 秒 × 标价」最坏估入账、预留归 0、删 `review`，在 `adjustments` 里留一条记录（测试 `test_clear_review.py`）。之后重跑（缓存里已有的转写不会重发）
+- 入账（大总管 2026-11-25 定，起因：后台用量是账本的约 10 倍，人说这把密钥别处也用过）：每次成功转写记「返回的 `usage.cost`」和「音频秒数 × 标价」中大的（`asr_or::booked_cost`）；标价按模型页 2026-11-25 的 0.000008 美元/秒（原写 0.0000075）
+- 逐笔明细：每次 HTTP 尝试（含重试、连不上、超时）在账本旁 `<账本>.calls.jsonl` 追加一行：时间、第几次、耗时、状态码、生成 id（返回体 `id` 或响应头 `x-generation-id`）、`usage` 全文（含 tokens）、入账金额、响应头（不留 set-cookie）；不含密钥、不含转写原文。和后台逐笔核账、数重试次数都用它
+
+### 分片跑（大总管 2026-11-25 定）
+
+- 每片：`vdn-eval scorecard … --shard i/n --out <第 i 片的新目录>`（`i` 从 0 起）。第 k 段（清单顺序）归第 `home(k) mod n` 片，`home(k)` = 这一段（id + 混合轨哈希）在清单里第一次出现的位置；段不重复时就是 `k mod n`；每片的识别缓存在自己的 `--out/qa/` 下，不互相覆盖。识别并发 `--asr-workers N`，不给时 = 8 ÷ n 向上取整、不低于 1。总并发 = n × 每片并发：n = 1、2、4、8 时正好 8；n = 3 时 9；n > 8 时 = n（每片至少 1）
+- 合并：`vdn-eval scorecard --merge-shards <目录0>,<目录1>,… --suite <同一份清单> --out <新目录>`。逐段分数的行原样拼回清单顺序，`clips.jsonl` 与单进程逐字节相同，成绩单正文（除 `meta`）也相同（测试 `src/eval/tests/scorecard_shard.rs`，并在本机 5 段真实音频上用命令行核过：单进程对 2 片合并，`clips.jsonl`、`scorecard.md` 逐字节相同）。各片 meta 的提交、清单、系统、规则等必须相同，片要 0…n−1 各一份，有段重复或缺都拒绝合并
+- 逐字节相同的前提：DSP 与评分模型各项是确定的；**吃字那一列要求各片拿到的转写相同**（识别本身不确定，同一段两次识别实测 18% 字词不同），所以带 `--qa` 时只有在转写来自同一份缓存时才逐字节相同。同一段在清单里出现几次都分到同一片（`shard::unit_plan` 的 home 下标），参考转写照单进程那样复用
+- 分步计时：每次运行在 `meta.timing` 记各步秒数（`load` 读音频 · `system` 系统处理 · 各评分项，吃字那一项含等识别的时间），stderr 也打一行；合并时相加，`meta.shard_timing` 逐片列
+
+### 钉温度探针（大总管 2026-11-25 定 C）
+
+`vdn-eval asr-probe --wav-dir <旧运行 qa/asr-wav> --cache <旧运行 qa/asr_cache.json> --temperature 0 --asr-ledger <账本正本> --out <报告.json>`：缓存认得的每条音频连调 3 次（`PROBE_REPEATS`），按评分用的分词比；不一致的条数占比 ≤ 2%（`PROBE_MAX_UNSTABLE`）才算钉住。冒烟 5 段 = 15 条 × 3 次 = 45 次真调用，约 45 × 12 秒 × 0.000008 ≈ 0.004 美元（账本口径）。正本 `src/eval/src/qa/asr_probe.rs`，测试 `asr_probe_tests.rs`。钉不住就改用「有分歧才调第 3 次、取多数，三次都不同判不知道」（A），那时再写它的正本常量
+
+**云上照做的步骤**（冒烟 5 段那次的产物，路径由 cloudrun 2026-11-25 给出；`vdn-eval` 要用含 `asr-probe` 的 main，即 4fb3d8cc 或更新，旧目录 `repo-27d2808a` 里的二进制没有这个子命令，只取它的音频和缓存）：
+
+```bash
+set -euo pipefail   # 任一步失败就停：别用旧二进制发付费调用
+OLD=/workspace/repo-27d2808a/docs/experiments/exp025-gtcrn-train/baseline/runs/smoke5-20261125-052356-e5sjgks999cqbf/qa
+LEDGER=/workspace/asr-ledger/asr-openrouter-ledger.json
+# 1. 核输入：应有 15 个 wav；缓存 30 条、sha256 = 057edd601ed5617c5a37b22ef09ceffcf8af6b9ab85412f186bfe6ab1c52e1ff
+ls "$OLD/asr-wav"/*.wav | wc -l
+sha256sum "$OLD/asr_cache.json"
+# 2. 核账本：没有 review、reserved_usd 为 0；记下开跑前的 sha256
+sha256sum "$LEDGER"; python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('review'), d['reserved_usd'], d['calls'], d['spent_usd'])" "$LEDGER"
+# 3. 在新 main 的仓库根（$REPO）里编译、跑探针：15 条 × 3 次 = 45 次真调用，约 0.004 美元
+cd "$REPO"                       # 单独一行：set -e 才管得到（写在 && 左边失败不会停）
+cargo build --release -p vdn-eval
+./target/release/vdn-eval asr-probe --wav-dir "$OLD/asr-wav" --cache "$OLD/asr_cache.json" \
+  --temperature 0 --asr-ledger "$LEDGER" --out /workspace/asr-probe-t0-$(date -u +%Y%m%dT%H%M%SZ).json
+# 4. 取回：报告 JSON、跑后的账本快照（附 sha256）、账本旁的明细 asr-openrouter-ledger.json.calls.jsonl
+```
+
+验收：报告里 `audio` = 15、`repeats` = 3、`halted` 为 null，看 `unstable_rate` 与 `pass`；账本 `calls` 增加 45（若有重试，明细里多出的行就是重试）、`spent_usd` 增量 ≈ 45 × 每条秒数 × 0.000008。遇到不重试的错误（4xx 等）探针当场停发、`halted` 写原因。**只有原因里明说不支持 `temperature` 这个参数**，才算「这个模型钉不住温度」、改用 A；401（密钥）、402（余额）、403/404（数据政策）等别的原因都不说明温度的事，查清后重跑。
 
 ## 二、识别与外发（D103 · D104，人定 2026-11-25）
 
@@ -108,6 +142,7 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
      - **判据**：本机跑的那份，可比项里除音色 V-TIMBRE 外差值必须全为 0（同一台机器、同一份代码路径）；V-TIMBRE 在 exp021 之后由 #119 改了量法（30 个 ERB 频带的离散程度），不比
      - 5 段冒烟实测：23 项里 19 项有配对，其中 18 项差值为 0，只有 V-TIMBRE 不同；另 4 项（吃字、两个评分模型、V-SIM-FA）没有配对，不可比（`runs/smoke-20261124-191531/compare-vs-exp021/`）
    - **云上跑**的那份（走 B 时）：和本机那份用 `merge.py` 逐段比，三条都满足才过：每项逐段值差 ≤ `PARITY_ABS`（1e-3，该项自己的单位）；没有任何段一边有值一边没值；判定不同的段占全部段数 ≤ `PARITY_FLIP`（1%）。正本在 `merge.py`，测试 `test_merge.py`。用 `compare` 判不了这件事：两边差很小但方向一致时，区间会整个落在 0 的一边，被判成「涨」或「退」
+   - **跨平台**（云上 Linux 对本机 Mac；大总管 2026-11-25 **看过云上 480 段结果后另立**，上面两条原线没改）：判定不同的段 = 0、没有一边有值一边没值才过；各项逐段最大差照实列出、不判。`merge.py --cross-platform`（测试 `test_cross_platform_rule_is_zero_flips_and_lists_max_diff`）。起因：480 段对 exp021 实测 21 项可比、判定不同 0 段，但 V-PUMPV 最大差 0.0031、V-MUSIC 0.0014，超过只为同一台机器设的 1e-3；Linux 与 Mac 的浮点差是预期内的（同 exp013 跨平台核对）
    - 对 exp014 的回混 GTCRN（`docs/experiments/exp014-scorecard-gtcrn/runs/20261105-005916-4ccf0638/`）：只报不判，用来说明回混口径和不回混口径差多少
 4. **识别**：`meta.asr` 里没有 `error`；`backends.openrouter.model` = `qwen/qwen3-asr-1.7b-20260813`，`clips` = 480；`checked` = 1440（每段 3 条，基线每条 2 次）并写出 `unstable` 与 `unstable_rate`（这个数决定以后的模型能不能改成 1 次，见第二节）；账本 `_tmp/asr-openrouter-ledger.json` 的增量与本次调用数相符、累计 ≤ 15 美元
 5. **差距表**（两种，见第五节）：`python docs/experiments/exp025-gtcrn-train/baseline/gap.py weak <run>/scorecard.json --system gtcrn --out <run>` 与 `gap.py uplift …`；算法和阈值的正本在 `gap.py` 文件头和常量，测试 `test_gap.py`

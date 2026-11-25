@@ -1,0 +1,20 @@
+{
+  "spent_usd": 0.10558800000000204,
+  "calls": 1173,
+  "reserved_usd": 0.0,
+  "adjustments": [
+    {
+      "kind": "review-cleared",
+      "at": "2026-11-25T20:02:46Z",
+      "review": "费用未知，停发：连不上识别服务：curl: (28) Operation timed out after 120002 milliseconds with 0 bytes received",
+      "worst_count": 3,
+      "audio_s": 12.0,
+      "price_per_second": 8e-06,
+      "worst_usd": 0.000288,
+      "reserved_released_usd": 0.000405,
+      "backup": "asr-openrouter-ledger.json.before-clear-20261125T200246Z.json",
+      "backup_sha256": "1454fe320909ae7c85061ba4febf689cdd56120ad63940e0755c36e7978c501b",
+      "note": "费用未知，按最坏估。超时 0 字节；大总管 2026-11-25 定"
+    }
+  ]
+}

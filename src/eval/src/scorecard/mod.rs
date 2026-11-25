@@ -12,6 +12,7 @@ pub mod early;
 pub mod load;
 pub mod rules;
 pub mod rules_v2;
+pub mod shard;
 pub mod standard;
 
 use std::path::Path;
@@ -220,12 +221,61 @@ pub fn run_with(
     suite: &Suite,
     systems: &[SystemKind],
     opts: &Opts,
-    mut extra: Option<&mut dyn Extra>,
+    extra: Option<&mut dyn Extra>,
     audio_root: Option<&Path>,
     rules: card::Rules,
 ) -> (Vec<ClipRow>, Vec<Missing>) {
+    let r = run_shard(suite, systems, opts, extra, audio_root, rules, None);
+    (r.rows, r.missing)
+}
+
+/// 一次运行的结果：逐段分数、没跑成的、分步计时（秒，键见 [`run_shard`]）。
+pub struct Run {
+    pub rows: Vec<ClipRow>,
+    pub missing: Vec<Missing>,
+    /// 每行分数 / 每条缺段记录来自清单里第几个单位（分片合并按它排，见 [`shard`]）
+    pub row_units: Vec<usize>,
+    pub missing_units: Vec<usize>,
+    pub timing: std::collections::BTreeMap<String, f64>,
+}
+
+/// 同 [`run_with`]，只跑第 `shard` 片（`None` = 全部；分法见 [`shard::Shard`]）。分步计时的键：
+/// `load`（读音频、核哈希）· `system`（系统处理，含干净人声那一路）· 各评分项名（含早期回声参考那一路）。
+pub fn run_shard(
+    suite: &Suite,
+    systems: &[SystemKind],
+    opts: &Opts,
+    mut extra: Option<&mut dyn Extra>,
+    audio_root: Option<&Path>,
+    rules: card::Rules,
+    shard: Option<shard::Shard>,
+) -> Run {
     let root = audio_root.map_or_else(main_root, Path::to_path_buf);
     let (mut rows, mut missing) = (Vec::new(), Vec::new());
+    let mut timing: std::collections::BTreeMap<String, f64> = Default::default();
+    let mut tick = |k: &str, t: std::time::Instant| {
+        *timing.entry(k.to_string()).or_default() += t.elapsed().as_secs_f64()
+    };
+    // 分片单位：清单顺序里的每一段，或一条展开不出片段的任务；第 k 个单位归第 home(k) mod n 片（home 见 shard::unit_plan：同一段出现几次都按第一次的位置）
+    let mut unit = 0usize;
+    // 分片看每个单位的 home 下标（同一段出现几次都落在同一片；见 shard::unit_plan，正本）
+    let plan = shard.map(|_| shard::unit_plan(suite)).unwrap_or_default();
+    let (mut row_units, mut missing_units, mut cur) = (Vec::new(), Vec::new(), 0usize);
+    // 一个单位开始时，把上一个单位新增的记录都标成上一个单位的；返回这个单位归不归这一片
+    macro_rules! start {
+        () => {{
+            let u = unit;
+            unit += 1;
+            if shard.is_none_or(|s| s.owns(plan.get(u).map_or(u, |x| x.home))) {
+                row_units.resize(rows.len(), cur);
+                missing_units.resize(missing.len(), cur);
+                cur = u;
+                true
+            } else {
+                false
+            }
+        }};
+    }
     for task in &suite.tasks {
         let whole = |why: String| -> Vec<Missing> {
             let Some(RealSource::Scene {
@@ -251,16 +301,23 @@ pub fn run_with(
         };
         let clips = match clips_of(task) {
             Ok(c) if c.is_empty() => {
-                missing.extend(whole("清单里没有这个 场景 × 档 × 设备 的片段".into()));
+                if start!() {
+                    missing.extend(whole("清单里没有这个 场景 × 档 × 设备 的片段".into()));
+                }
                 continue;
             }
             Ok(c) => c,
             Err(e) => {
-                missing.extend(whole(e));
+                if start!() {
+                    missing.extend(whole(e));
+                }
                 continue;
             }
         };
         for c in &clips {
+            if !start!() {
+                continue;
+            }
             let Some(_) = standard::group_of(c.scene) else {
                 continue;
             };
@@ -273,8 +330,10 @@ pub fn run_with(
                 what: c.id.clone(),
                 why,
             };
+            let t0 = std::time::Instant::now();
             let clip_early =
                 load_scene_clip(c, &root).and_then(|x| Ok((x, early::load_early(c, &root)?)));
+            tick("load", t0);
             let (clip, early_ref) = match clip_early {
                 Ok(x) => x,
                 Err(e) => {
@@ -291,7 +350,10 @@ pub fn run_with(
                         SystemKind::External(e) => e.provides(crate::system::external::Kind::Clean),
                         _ => true,
                     };
-                let p = match prepare_clip(&t, sys, clip.clone(), c.additive, clean_pass) {
+                let t0 = std::time::Instant::now();
+                let prepared = prepare_clip(&t, sys, clip.clone(), c.additive, clean_pass);
+                tick("system", t0);
+                let p = match prepared {
                     Ok(p) => p,
                     Err(e) => {
                         missing.push(miss(sys, e));
@@ -309,6 +371,7 @@ pub fn run_with(
                     .zip(&items)
                     .map(|(g, (i, veto))| {
                         let on_clean = i.clean_input && clean_pass;
+                        let t0 = std::time::Instant::now();
                         let mut s = match (&clean_view, on_clean) {
                             (Some((cp, co)), true) => {
                                 score_one(g, sys, &t, cp, co, opts, &mut extra)
@@ -325,6 +388,7 @@ pub fn run_with(
                             };
                             s = early::attach(s, &se);
                         }
+                        tick(i.v, t0);
                         (i.v, *veto, s)
                     })
                     .collect();
@@ -341,5 +405,13 @@ pub fn run_with(
             }
         }
     }
-    (rows, missing)
+    row_units.resize(rows.len(), cur);
+    missing_units.resize(missing.len(), cur);
+    Run {
+        rows,
+        missing,
+        row_units,
+        missing_units,
+        timing,
+    }
 }

@@ -90,11 +90,22 @@ def _compare(cloud_rows, local_rows, eat_rules):
     return out, report
 
 
-def parity_errors(report):
-    """对拍不过的项（空 = 过）：逐段值差 > PARITY_ABS；有段一边有值一边没值；判定不同的段占全部段数 > PARITY_FLIP。"""
+def parity_errors(report, same_platform=True):
+    """对拍不过的项（空 = 过）。
+
+    同一台机器（same_platform=True，原线）：逐段值差 > PARITY_ABS；有段一边有值一边没值；判定不同的段占全部段数 > PARITY_FLIP。
+    跨平台（same_platform=False）：有段一边有值一边没值；判定不同的段 ≥ 1。值差不判，照实列在报告里。
+    跨平台这条是大总管 2026-11-25 看过云上 480 段结果后另立的（Linux 对 Mac 的浮点差是预期内的，同 exp013 跨平台核对），原线没改。
+    """
     errs = []
     for v, r in sorted(report.items()):
         if v.startswith("_"):
+            continue
+        if not same_platform:
+            if r["one_sided"]:
+                errs.append(f"{v} 有 {r['one_sided']} 段一边有值一边没值")
+            if r["verdict_flips"]:
+                errs.append(f"{v} 判定不同 {r['verdict_flips']}/{r['clips']} 段（跨平台要求 0）")
             continue
         if r["max_abs_diff"] > PARITY_ABS:
             errs.append(f"{v} 逐段值差最大 {r['max_abs_diff']:.3g} > {PARITY_ABS:g}")
@@ -112,6 +123,7 @@ def main(argv=None):
     ap.add_argument("--local", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--parity-only", action="store_true", help="只对拍不合并：两边都有吃字值时用（识别上云以后）")
+    ap.add_argument("--cross-platform", action="store_true", help="两边不在同一种系统上跑（如云上 Linux 对本机 Mac）：判定不同 = 0 为过，值差只列不判")
     a = ap.parse_args(argv)
     read = lambda p: [json.loads(x) for x in Path(p).read_text().splitlines() if x.strip()]  # noqa: E731
     if a.parity_only:
@@ -123,14 +135,16 @@ def main(argv=None):
         miss = json.loads(Path(p).with_name("scorecard.json").read_text())["missing"]
         if miss:
             raise ValueError(f"{side}那份有 {len(miss)} 段没跑成（{miss[:2]}…），先补跑，不合并")
+    same = not a.cross_platform
+    errs = parity_errors(rep, same_platform=same)
+    par = {"same_platform": same, "PARITY_ABS": PARITY_ABS, "PARITY_FLIP": PARITY_FLIP, "errors": errs,
+           "max_abs_diff": {v: d["max_abs_diff"] for v, d in sorted(rep.items()) if not v.startswith("_")}}
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     if rows is None:
         with open(out / "merge-report.json", "x") as f:
-            f.write(json.dumps({"cloud": a.cloud, "local": a.local, "mode": "parity-only", "items": rep,
-                                "parity": {"PARITY_ABS": PARITY_ABS, "PARITY_FLIP": PARITY_FLIP, "errors": parity_errors(rep)}},
+            f.write(json.dumps({"cloud": a.cloud, "local": a.local, "mode": "parity-only", "items": rep, "parity": par},
                                ensure_ascii=False, indent=1) + "\n")
-        errs = parity_errors(rep)
         print("跨平台对拍（只对拍）：" + ("过" if not errs else "不过 —— " + "；".join(errs)))
         return
     with open(out / "clips.jsonl", "x") as f:
@@ -140,12 +154,10 @@ def main(argv=None):
         f.write(json.dumps({"doc": "merge.py 产物：只含缺段记录，供 --from-clips 读；成绩单另出到别的目录", "missing": []},
                            ensure_ascii=False) + "\n")
     with open(out / "merge-report.json", "x") as f:
-        f.write(json.dumps({"cloud": a.cloud, "local": a.local, "clips": len(rows), "items": rep,
-                            "parity": {"PARITY_ABS": PARITY_ABS, "PARITY_FLIP": PARITY_FLIP, "errors": parity_errors(rep)}},
+        f.write(json.dumps({"cloud": a.cloud, "local": a.local, "clips": len(rows), "items": rep, "parity": par},
                            ensure_ascii=False, indent=1) + "\n")
     worst = sorted(((v, d) for v, d in rep.items() if not v.startswith("_")), key=lambda kv: -kv[1]["max_abs_diff"])[:5]
     print(f"合并 {len(rows)} 段 → {out}；两边差最大的项：" + " · ".join(f"{v} {d['max_abs_diff']:.3g}" for v, d in worst))
-    errs = parity_errors(rep)
     print("跨平台对拍：" + ("过" if not errs else "不过 —— " + "；".join(errs)))
 
 

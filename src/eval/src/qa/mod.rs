@@ -1,8 +1,11 @@
 //! QA 层：要本机模型的 verifier（V-EAT-ASR · V-DNSMOS · V-NRMOS-SCOREQ · V-NRMOS-DISTILL）。只在本机跑，CI 不跑。
 
 pub mod asr;
+pub mod asr_bill;
 pub mod asr_ledger;
 pub mod asr_or;
+pub mod asr_probe;
+pub mod asr_wire;
 pub mod dnsmos;
 pub mod nrmos;
 mod nrmos_v;

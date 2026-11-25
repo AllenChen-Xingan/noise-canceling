@@ -14,14 +14,18 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use serde_json::{Value, json};
+use serde_json::Value;
+
+pub use super::asr_bill::booked_cost;
 
 /// 接口地址。
 pub const OR_URL: &str = "https://openrouter.ai/api/v1/audio/transcriptions";
 /// 型号（正本）：OpenRouter 模型列表上的带日期正式名（canonical_slug，2026-11-25 03:36 UTC 读公开列表）。
 pub const OR_MODEL: &str = "qwen/qwen3-asr-1.7b-20260813";
-/// 列表上的标价（美元 / 秒音频）。只在返回里没有 `usage.cost` 时用来估算，正常按实际金额记账。
-pub const PRICE_PER_SECOND: f64 = 0.000_007_5;
+/// 标价（美元 / 秒音频）：模型页 2026-11-25 读，两家提供方（Prime Intellect · DeepInfra）都是 0.000008。
+/// 入账取「返回的 usage.cost」与「秒数 × 标价」中大的（[`booked_cost`]），预留也按它估。
+pub const PRICE_PER_SECOND: f64 = 0.000_008;
+
 /// 识别费上限（美元，按调用累计）。
 pub const BUDGET_USD: f64 = 15.0;
 /// 一次转写最多发几次请求（含第一次）。
@@ -60,57 +64,7 @@ pub fn load_key(root: &Path) -> Option<String> {
     })
 }
 
-/// 16 位整型单声道 WAV 的完整字节（含 44 字节文件头）。超出 [-1, 1] 的样本截断。
-pub fn pcm16_wav(x: &[f32], sr: u32) -> Vec<u8> {
-    let data_len = (x.len() * 2) as u32;
-    let mut b = Vec::with_capacity(44 + x.len() * 2);
-    b.extend_from_slice(b"RIFF");
-    b.extend_from_slice(&(36 + data_len).to_le_bytes());
-    b.extend_from_slice(b"WAVEfmt ");
-    b.extend_from_slice(&16u32.to_le_bytes());
-    b.extend_from_slice(&1u16.to_le_bytes()); // PCM
-    b.extend_from_slice(&1u16.to_le_bytes()); // 单声道
-    b.extend_from_slice(&sr.to_le_bytes());
-    b.extend_from_slice(&(sr * 2).to_le_bytes());
-    b.extend_from_slice(&2u16.to_le_bytes());
-    b.extend_from_slice(&16u16.to_le_bytes());
-    b.extend_from_slice(b"data");
-    b.extend_from_slice(&data_len.to_le_bytes());
-    for v in x {
-        let s = (v.clamp(-1.0, 1.0) * 32767.0).round() as i16;
-        b.extend_from_slice(&s.to_le_bytes());
-    }
-    b
-}
-
-/// 标准 base64（RFC 4648，带补位）。
-pub fn b64(bytes: &[u8]) -> String {
-    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut s = String::with_capacity(bytes.len().div_ceil(3) * 4);
-    for c in bytes.chunks(3) {
-        let n = (u32::from(c[0]) << 16)
-            | (u32::from(*c.get(1).unwrap_or(&0)) << 8)
-            | u32::from(*c.get(2).unwrap_or(&0));
-        for (i, shift) in [18, 12, 6, 0].into_iter().enumerate() {
-            if i <= c.len() {
-                s.push(T[((n >> shift) & 63) as usize] as char);
-            } else {
-                s.push('=');
-            }
-        }
-    }
-    s
-}
-
-/// 请求体。`provider.data_collection = "deny"` 一律带上（大总管硬要求，测试核）。
-pub fn request_body(wav: &[u8], lang: &str) -> Value {
-    json!({
-        "model": OR_MODEL,
-        "input_audio": {"data": b64(wav), "format": "wav"},
-        "language": lang,
-        "provider": {"data_collection": "deny"},
-    })
-}
+pub use super::asr_wire::{b64, pcm16_wav, request_body};
 
 use super::asr_ledger as ledger;
 /// 账本（跨进程加锁、原子落盘、先预留后结算），见 [`super::asr_ledger`]。
@@ -129,6 +83,8 @@ pub struct OpenRouter {
     pub backoff_ms: u64,
     /// 本进程发出的 HTTP 请求数（含重试）
     pub requests: u64,
+    /// 采样温度（`None` = 不带这个参数，照原来的请求）；钉温度探针用
+    pub temperature: Option<f64>,
 }
 
 /// 临时文件名的进程内唯一序号：同一进程里可能有多个客户端（测试并行、按段分后端），各自从 0 数会撞名。
@@ -153,6 +109,7 @@ struct Conn<'a> {
     stop: &'a std::sync::Mutex<Option<String>>,
     /// 共用账本：每次真发请求前看一眼它的待核标记（别的进程可能刚标上；codex 第 11 轮 P1 #1）
     ledger_path: &'a Path,
+    temperature: Option<f64>,
 }
 
 impl Conn<'_> {
@@ -165,8 +122,8 @@ impl Conn<'_> {
         }
     }
 
-    /// 发一次 HTTP 请求：返回 (状态码, Retry-After 秒数, 响应体)。密钥经标准输入给 curl，不进命令行参数。
-    fn post(&self, body_path: &Path) -> Result<(u16, Option<u64>, Vec<u8>), String> {
+    /// 发一次 HTTP 请求：返回 (状态码, Retry-After 秒数, 响应体, 响应头)。密钥经标准输入给 curl，不进命令行参数。
+    fn post(&self, body_path: &Path) -> Result<Resp, String> {
         let (out, hdr) = (tmp_path("body"), tmp_path("hdr"));
         self.requests
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -205,14 +162,11 @@ impl Conn<'_> {
             .parse()
             .unwrap_or(0);
         let body = std::fs::read(&out).unwrap_or_default();
-        let retry = std::fs::read_to_string(&hdr).ok().and_then(|h| {
-            h.lines().find_map(|l| {
-                let (k, v) = l.split_once(':')?;
-                k.trim()
-                    .eq_ignore_ascii_case("retry-after")
-                    .then(|| v.trim().parse::<u64>().ok())?
-            })
-        });
+        let headers =
+            super::asr_bill::parse_headers(&std::fs::read_to_string(&hdr).unwrap_or_default());
+        let retry = headers
+            .get("retry-after")
+            .and_then(|v| v.as_str()?.parse::<u64>().ok());
         let _ = std::fs::remove_file(&out);
         let _ = std::fs::remove_file(&hdr);
         if code == 0 {
@@ -221,7 +175,39 @@ impl Conn<'_> {
                 String::from_utf8_lossy(&o.stderr).trim()
             )));
         }
-        Ok((code, retry, body))
+        // 有状态码但 curl 没正常退出（收到头以后超时、响应体不完整）：不当完整响应，按连不上处理 = 费用未知（codex 本分支第 3 轮 P1 #1）
+        if !o.status.success() {
+            return Err(self.scrub(&format!(
+                "连不上识别服务：HTTP {code} 之后传输中断（curl 退出码 {}，生成 id {}）：{}",
+                o.status.code().unwrap_or(-1),
+                headers
+                    .get("x-generation-id")
+                    .and_then(Value::as_str)
+                    .unwrap_or("无"),
+                String::from_utf8_lossy(&o.stderr).trim()
+            )));
+        }
+        Ok((code, retry, body, headers))
+    }
+
+    /// 记一行逐笔明细；写不了就设本批停止（明细缺了就核不了账），这次响应照常处理。
+    fn log_attempt(
+        &self,
+        attempt: usize,
+        ms: u128,
+        secs: f64,
+        r: &Result<Resp, String>,
+        booked: Option<f64>,
+    ) -> Option<String> {
+        let row = super::asr_bill::detail_row(attempt, ms, secs, r, booked, |e| self.scrub(e));
+        // 写不了就持久标待核（明细缺了就核不了账，之后任何进程都拒发；codex 本分支第 1 轮 P1 #1）
+        if let Err(e) = ledger::append_detail(self.ledger_path, &row) {
+            let why = format!("识别费明细写不了（{e}）");
+            let _ = ledger::flag_review(self.ledger_path, &why);
+            *self.stop.lock().unwrap_or_else(|e| e.into_inner()) = Some(why.clone());
+            return Some(why);
+        }
+        None
     }
 
     /// 转写一条：成功返回 (文本, 最后一次响应带的费用（没带为 `None` = 费用未知）, 前几次已记账的费用)；
@@ -238,11 +224,12 @@ impl Conn<'_> {
             cost: Cost::Free,
             carried: 0.0,
         };
-        let body = serde_json::to_vec(&request_body(&pcm16_wav(x, sr), lang))
+        let body = serde_json::to_vec(&request_body(&pcm16_wav(x, sr), lang, self.temperature))
             .map_err(|e| free(e.to_string()))?;
         let body_path = tmp_path("json");
         std::fs::write(&body_path, &body).map_err(|e| free(e.to_string()))?;
-        let r = self.send_with_retry(&body_path, est);
+        let secs = x.len() as f64 / f64::from(sr);
+        let r = self.send_with_retry(&body_path, est, secs);
         let _ = std::fs::remove_file(&body_path);
         r
     }
@@ -251,6 +238,7 @@ impl Conn<'_> {
         &self,
         body_path: &Path,
         est: f64,
+        secs: f64,
     ) -> Result<(String, Option<f64>, f64), Failure> {
         let mut last = String::new();
         // 前几次（非 200）响应带回的费用：收到就当场记账，之后的出口不再管它（codex 第 13 轮 P1 #1 · 第 14 轮）
@@ -273,9 +261,23 @@ impl Conn<'_> {
                 return Err(fail(format!("已停发：{why}"), Cost::Free, carried));
             }
             // 连不上、超时：请求可能已送到、可能已计费，不知道 → 费用未知，停发（偏保守）
-            let (code, retry_after, body) = self
-                .post(body_path)
-                .map_err(|e| fail(format!("费用未知，停发：{e}"), Cost::Unknown, carried))?;
+            let t0 = std::time::Instant::now();
+            let sent = self.post(body_path);
+            // 入账金额：200 且带 usage.cost → 与标价估算取大（秒数取音频长与返回秒数中大的）；非 200 照返回的记
+            let booked = sent.as_ref().ok().and_then(|(code, _, body, _)| {
+                let v: Value = serde_json::from_slice(body).ok()?;
+                let c = v["usage"]["cost"].as_f64()?;
+                // 标价估算只按实际音频秒数；返回的 seconds 只进明细（codex 本分支第 1 轮 P1 #2）
+                Some(if *code == 200 && v.get("error").is_none() {
+                    booked_cost(c, secs)
+                } else {
+                    c
+                })
+            });
+            let detail_err =
+                self.log_attempt(attempt, t0.elapsed().as_millis(), secs, &sent, booked);
+            let (code, retry_after, body, _) =
+                sent.map_err(|e| fail(format!("费用未知，停发：{e}"), Cost::Unknown, carried))?;
             if code == 200 {
                 let Ok(v) = serde_json::from_slice::<Value>(&body) else {
                     return Err(fail(
@@ -284,7 +286,7 @@ impl Conn<'_> {
                         carried,
                     ));
                 };
-                let cost = v["usage"]["cost"].as_f64();
+                let cost = booked;
                 let tag = if cost.is_some() {
                     ""
                 } else {
@@ -305,6 +307,10 @@ impl Conn<'_> {
                 let Some(t) = v["text"].as_str() else {
                     return Err(fail(format!("{tag}识别返回缺 text：{v}"), c, carried));
                 };
+                // 明细写不了：这一次也报错（费用照这次的结算），账本已标待核（codex 本分支第 2 轮 P1 #1）
+                if let Some(e) = detail_err {
+                    return Err(fail(format!("{e}：账本已标待核，停发"), c, carried));
+                }
                 // 文本到手但返回里没有 usage.cost：文本照用，费用未知（调用方标「待核」、停发；codex 第 7 轮 P1 #1）
                 return Ok((
                     t.split_whitespace().collect::<Vec<_>>().join(" "),
@@ -364,6 +370,9 @@ impl Conn<'_> {
     }
 }
 
+/// 一次 HTTP 响应：(状态码, Retry-After 秒数, 响应体, 响应头)。
+pub(super) type Resp = (u16, Option<u64>, Vec<u8>, serde_json::Map<String, Value>);
+
 /// 结算最后一次响应带的已知金额（成功、失败两条路共用；codex 第 9、10、14 轮）：照记；这条转写的总花费
 /// （前几次已记的 `carried` + 这次的 `c`）超过预留就给账本标待核、设本批停止状态，之后任何进程都拒发。
 fn settle_known(
@@ -422,6 +431,7 @@ impl OpenRouter {
             ledger,
             backoff_ms: 1000,
             requests: 0,
+            temperature: None,
         }
     }
 
@@ -445,6 +455,7 @@ impl OpenRouter {
             requests: &requests,
             stop: &stop,
             ledger_path: &self.ledger_path,
+            temperature: self.temperature,
         };
         let ledger_path = &self.ledger_path;
         let slots: Vec<Slot> = jobs.iter().map(|_| std::sync::Mutex::new(None)).collect();
@@ -520,8 +531,16 @@ impl OpenRouter {
 
 #[cfg(test)]
 #[path = "asr_or_tests.rs"]
-mod tests;
+pub(super) mod tests;
 
 #[cfg(test)]
 #[path = "asr_or_cost_tests.rs"]
 mod cost_tests;
+
+#[cfg(test)]
+#[path = "asr_or_bill_tests.rs"]
+mod bill_tests;
+
+#[cfg(test)]
+#[path = "asr_probe_tests.rs"]
+mod probe_tests;

@@ -24,6 +24,9 @@ pub struct Ledger {
     /// 这本账是怎么建的（[`init`] 写；旧账本没有）
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub created: Option<Created>,
+    /// 手动更正记录（清 review 时由 exp025 baseline/clear_review.py 追加）：程序原样保留，不解读
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub adjustments: Vec<serde_json::Value>,
     /// 待核：有请求的费用不知道（连不上、超时、返回读不出或没带金额）。设了就拒发，重启也一样，
     /// 要人核对 OpenRouter 后台的实际花费、改正 `spent_usd` 与 `reserved_usd`、再删掉这一项（codex 第 7 轮 P1 #2）
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -118,6 +121,39 @@ pub fn ledger_path_from(root: &Path, env: Option<String>) -> PathBuf {
 fn fname(p: &Path) -> String {
     p.file_name()
         .map_or_else(|| "账本".into(), |n| n.to_string_lossy().into_owned())
+}
+
+/// 逐笔明细：`<账本>.calls.jsonl`，每次 HTTP 尝试一行，只追加（大总管 2026-11-25：以后逐笔核后台用量）。
+pub fn details_path(p: &Path) -> PathBuf {
+    let mut s = p.as_os_str().to_owned();
+    s.push(".calls.jsonl");
+    PathBuf::from(s)
+}
+
+/// 在账本锁里往明细追加一行（几个进程同时写也不会串行）。
+pub fn append_detail(p: &Path, row: &serde_json::Value) -> Result<(), String> {
+    use std::io::Write;
+    let lock = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(lock_path(p))
+        .map_err(|e| format!("开不了账本锁：{e}"))?;
+    lock.lock().map_err(|e| format!("锁不上账本：{e}"))?;
+    // 写到半行就失败时退回追加前的长度，免得下一行接在残行后面（codex 本分支第 4 轮 P2 #2）
+    let r = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(details_path(p))
+        .and_then(|mut f| {
+            let before = f.metadata()?.len();
+            f.write_all(format!("{row}\n").as_bytes()).inspect_err(|_| {
+                let _ = f.set_len(before);
+            })
+        })
+        .map_err(|e| format!("写不了识别费明细 {}：{e}", fname(&details_path(p))));
+    let _ = lock.unlock();
+    r
 }
 
 /// 封存说明文件：`<账本>.sealed`。
@@ -348,6 +384,22 @@ mod tests {
                 .contains("已存在"),
             "已有账本时要求新建 = 报错，不覆盖"
         );
+    }
+
+    /// 手动更正（清 review 的脚本写的 `adjustments`）在程序之后每次写账本时都要留着，不能被丢掉。
+    #[test]
+    fn manual_adjustments_survive_updates() {
+        let p = tmp("adj");
+        init(&p, Created::test()).unwrap();
+        let mut v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+        v["adjustments"] = serde_json::json!([{"kind": "review-cleared", "worst_usd": 0.000096}]);
+        std::fs::write(&p, v.to_string()).unwrap();
+        reserve(&p, 0.01, 1.0).unwrap();
+        settle(&p, 0.01, Some(0.001)).unwrap();
+        let back: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+        assert_eq!(back["adjustments"][0]["kind"], "review-cleared", "{back}");
     }
 
     /// codex 第 1 轮（本分支）P1 #2 + 自审：错误会进 `meta.asr.error`（成绩单进公开仓库）。错误信息里只许出现账本文件名，
