@@ -333,11 +333,11 @@ def start_job(cli: Client, pod_id: str, script: str, job: str, jobs_dir: str = "
                  f"启动 {job}")
         up = sh(cli, pod_id, f"for i in 1 2 3 4 5; do [ -e {d}.log ] && exit 0; sleep 1; done; exit 1")
     except BaseException as e:
-        raise SystemExit(f"{job} 启动结果未知（{e}）；运行编号 {run_id}。先用 job-wait {run_id} 核查，"
+        raise SystemExit(f"{job} 启动结果未知（{e}）；运行编号 {run_id}。先用 rp.py job-wait {pod_id} {run_id} 核查，"
                          f"不要直接重跑，免得同一件事跑两遍") from e
     if up.get("exitCode") != 0:
         raise SystemExit(f"{job} 启动结果未知：放进后台 5 秒还没有日志；运行编号 {run_id}，"
-                         f"先用 job-wait {run_id} 核查")
+                         f"先用 rp.py job-wait {pod_id} {run_id} 核查")
     return run_id
 
 
