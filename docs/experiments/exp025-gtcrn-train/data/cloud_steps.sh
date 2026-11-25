@@ -9,9 +9,11 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$HERE/../../../.." && pwd)
 PY="$REPO/.venv/bin/python"
 SHARDS=${VDN_SHARDS:-$ROOT/shards/first-batch}
+BIN=${VDN_BIN:-$ROOT/bin}  # setup_uv.sh 把 uv 装在这里
+export PATH="$BIN:$PATH"
 case "${1:-}" in
-  setup)  # 装同版本 python 与依赖（uv 没有就先装）
-    command -v uv >/dev/null || pip install -q uv
+  setup)  # 装同版本 python 与依赖（uv 没有就按钉死版本与 sha256 装到 $BIN，见 setup_uv.sh）
+    VDN_BIN="$BIN" bash "$HERE/setup_uv.sh"
     uv venv -q --python 3.12.14 "$REPO/.venv"
     uv pip install -q --python "$PY" -r "$HERE/requirements.txt" ;;
   test)   # 单元测试 + GPU 对拍（有 CUDA 时对拍在 GPU 上跑）
