@@ -95,6 +95,7 @@
    - 一次训满：`run.name=res-full`
    - 分两次：`run.name=res-split`，先 `max_steps=3` 跑完，再用同名、`max_steps=6` 续上
    - 比：`$PY cmp_ckpt.py $O/res-full/ckpt/step-0000006.pt $O/res-split/ckpt/step-0000006.pt > $O/cmp-resume.json`（容差 0；重定向不改退出码，codex 第 2 轮 #2）。CUDA 的非确定性算子可能让它只近似相等：不过时记下 `max_abs_diff`，不改判据，带回由 trainer 分析
+   - **唯一的例外**：这条比较退出码为 1（比出来不同）时，算作已记下的结果，接着做第 4 步。退出码是 2 或别的（文件缺、容差非法、程序崩了），照「出错时的必经收尾」处理
 4. **3 个同时跑**（预计 5 分钟）：第 2 步的 B 配置，`max_steps=200`，`num_workers=6`（3 × 6 = 18 个取数进程，容器配额约 22 核），`run.name` 分别为 `par-1`…`par-3`，用 3 个 `job-start` 同时发
 5. 打包取回：先 `cp /root/jobs/*.log /root/jobs/*.rc $O/`（后台日志在容器盘上，删机就没了），再 `tar czf /workspace/out/trainer-smoke-<UTC 时间>.tar.gz -C $O --exclude='*.pt' .`，取回主仓 `_tmp/<日期>-trainer-h100-smoke/`，不覆盖；检查点不取回
 6. 删机，报账上 0 台和本次花费
