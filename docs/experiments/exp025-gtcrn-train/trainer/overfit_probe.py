@@ -125,11 +125,13 @@ def run_probe(cfg, out: Path, steps: int, sweep_steps: int) -> int:
     _write(out, rep)
     rep["lr_sweep"] = []
     for lr in SWEEP_LRS:
-        def save_sweep(r, _i=len(rep["lr_sweep"])):
-            rep["lr_sweep"][_i:] = [r]
+        i = len(rep["lr_sweep"])
+        rep["lr_sweep"].append({"lr": lr, "steps": sweep_steps, "marks": []})  # 占位：跑完前被杀也看得出跑到哪个
+
+        def save_sweep(r, _i=i):
+            rep["lr_sweep"][_i] = r
             _write(out, rep)
-        r = run_curve(cfg, batch, device, lr, sweep_steps, o["loss"], on_mark=save_sweep)
-        rep["lr_sweep"][len(rep["lr_sweep"]) - (1 if rep["lr_sweep"] and rep["lr_sweep"][-1] is r else 0):] = [r]
+        rep["lr_sweep"][i] = run_curve(cfg, batch, device, lr, sweep_steps, o["loss"], on_mark=save_sweep)
         _write(out, rep)
     rep["complete"] = True
     rep["finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
