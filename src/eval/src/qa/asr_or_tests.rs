@@ -13,7 +13,10 @@ type Seen = Arc<Mutex<Vec<(String, Vec<u8>)>>>;
 /// 起一个假服务，按顺序回 `script` 里的 (状态码, 额外响应头, 响应体)；回完就退出。返回 (地址, 收到的请求)。
 fn fake(script: Vec<(u16, &'static str, String)>) -> (String, Seen) {
     let l = TcpListener::bind("127.0.0.1:0").unwrap();
-    let url = format!("http://{}/api/v1/audio/transcriptions", l.local_addr().unwrap());
+    let url = format!(
+        "http://{}/api/v1/audio/transcriptions",
+        l.local_addr().unwrap()
+    );
     let seen: Seen = Arc::new(Mutex::new(Vec::new()));
     let s2 = seen.clone();
     std::thread::spawn(move || {
@@ -60,7 +63,11 @@ fn tmpdir(tag: &str) -> PathBuf {
 }
 
 fn ok(text: &str, cost: f64) -> (u16, &'static str, String) {
-    (200, "", json!({"text": text, "usage": {"seconds": 1.0, "cost": cost}}).to_string())
+    (
+        200,
+        "",
+        json!({"text": text, "usage": {"seconds": 1.0, "cost": cost}}).to_string(),
+    )
 }
 
 fn audio() -> Vec<f32> {
@@ -70,10 +77,17 @@ fn audio() -> Vec<f32> {
 /// 反解 base64（只给测试核对请求体用）。
 fn unb64(s: &str) -> Vec<u8> {
     const T: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let v: Vec<u32> = s.bytes().filter(|&c| c != b'=').map(|c| T.iter().position(|&t| t == c).unwrap() as u32).collect();
+    let v: Vec<u32> = s
+        .bytes()
+        .filter(|&c| c != b'=')
+        .map(|c| T.iter().position(|&t| t == c).unwrap() as u32)
+        .collect();
     let mut out = Vec::new();
     for c in v.chunks(4) {
-        let n = c.iter().enumerate().fold(0u32, |n, (i, x)| n | (x << (18 - 6 * i)));
+        let n = c
+            .iter()
+            .enumerate()
+            .fold(0u32, |n, (i, x)| n | (x << (18 - 6 * i)));
         for i in 0..c.len().saturating_sub(1) {
             out.push((n >> (16 - 8 * i)) as u8);
         }
@@ -83,7 +97,15 @@ fn unb64(s: &str) -> Vec<u8> {
 
 #[test]
 fn base64_matches_rfc4648_vectors() {
-    for (i, o) in [("", ""), ("f", "Zg=="), ("fo", "Zm8="), ("foo", "Zm9v"), ("foob", "Zm9vYg=="), ("fooba", "Zm9vYmE="), ("foobar", "Zm9vYmFy")] {
+    for (i, o) in [
+        ("", ""),
+        ("f", "Zg=="),
+        ("fo", "Zm8="),
+        ("foo", "Zm9v"),
+        ("foob", "Zm9vYg=="),
+        ("fooba", "Zm9vYmE="),
+        ("foobar", "Zm9vYmFy"),
+    ] {
         assert_eq!(b64(i.as_bytes()), o, "{i}");
         assert_eq!(unb64(o), i.as_bytes());
     }
@@ -98,7 +120,10 @@ fn pcm16_wav_header_and_samples() {
     assert_eq!(u32::from_le_bytes([w[24], w[25], w[26], w[27]]), 16_000);
     assert_eq!(u16::from_le_bytes([w[34], w[35]]), 16);
     assert_eq!(w.len(), 44 + 8);
-    let s: Vec<i16> = w[44..].chunks(2).map(|c| i16::from_le_bytes([c[0], c[1]])).collect();
+    let s: Vec<i16> = w[44..]
+        .chunks(2)
+        .map(|c| i16::from_le_bytes([c[0], c[1]]))
+        .collect();
     assert_eq!(s, vec![0, 32767, -32767, 32767], "超出 [-1, 1] 截断");
 }
 
@@ -113,16 +138,28 @@ fn request_carries_model_audio_language_and_deny() {
     assert_eq!(reqs.len(), 1);
     let (head, body) = &reqs[0];
     let v: Value = serde_json::from_slice(body).unwrap();
-    assert_eq!(v["provider"]["data_collection"], "deny", "必须带 data_collection = deny");
+    assert_eq!(
+        v["provider"]["data_collection"], "deny",
+        "必须带 data_collection = deny"
+    );
     assert_eq!(v["model"], OR_MODEL);
     assert_eq!(v["language"], "en");
     assert_eq!(v["input_audio"]["format"], "wav");
     let wav = unb64(v["input_audio"]["data"].as_str().unwrap());
     assert_eq!(wav, pcm16_wav(&audio(), 16_000), "送的是 16 位整型 WAV");
-    assert!(head.to_ascii_lowercase().contains(&format!("authorization: bearer {}", KEY.to_ascii_lowercase())));
-    assert!(head.to_ascii_lowercase().contains("content-type: application/json"));
+    assert!(head.to_ascii_lowercase().contains(&format!(
+        "authorization: bearer {}",
+        KEY.to_ascii_lowercase()
+    )));
+    assert!(
+        head.to_ascii_lowercase()
+            .contains("content-type: application/json")
+    );
     // 函数本身也核一遍
-    assert_eq!(request_body(b"x", "zh")["provider"]["data_collection"], "deny");
+    assert_eq!(
+        request_body(b"x", "zh")["provider"]["data_collection"],
+        "deny"
+    );
 }
 
 #[test]
@@ -141,7 +178,11 @@ fn cost_is_accumulated_into_ledger_and_survives_restart() {
 #[test]
 fn budget_reached_refuses_before_sending() {
     let d = tmpdir("budget");
-    std::fs::write(d.join("ledger.json"), json!({"spent_usd": BUDGET_USD, "calls": 9}).to_string()).unwrap();
+    std::fs::write(
+        d.join("ledger.json"),
+        json!({"spent_usd": BUDGET_USD, "calls": 9}).to_string(),
+    )
+    .unwrap();
     let (url, seen) = fake(vec![ok("never", 0.0)]);
     let mut c = client(&url, &d);
     let e = c.transcribe(&audio(), 16_000, "en").unwrap_err();
@@ -154,14 +195,25 @@ fn budget_reached_refuses_before_sending() {
 fn rate_limit_429_backs_off_with_retry_after_then_succeeds() {
     let d = tmpdir("429");
     let (url, seen) = fake(vec![
-        (429, "Retry-After: 1\r\n", json!({"error": {"code": 429, "message": "rate limited"}}).to_string()),
-        (503, "", json!({"error": {"code": 503, "message": "busy"}}).to_string()),
+        (
+            429,
+            "Retry-After: 1\r\n",
+            json!({"error": {"code": 429, "message": "rate limited"}}).to_string(),
+        ),
+        (
+            503,
+            "",
+            json!({"error": {"code": 503, "message": "busy"}}).to_string(),
+        ),
         ok("done", 0.001),
     ]);
     let mut c = client(&url, &d);
     let t0 = std::time::Instant::now();
     assert_eq!(c.transcribe(&audio(), 16_000, "en").unwrap(), "done");
-    assert!(t0.elapsed() >= std::time::Duration::from_millis(1000), "照 Retry-After 等了 1 秒");
+    assert!(
+        t0.elapsed() >= std::time::Duration::from_millis(1000),
+        "照 Retry-After 等了 1 秒"
+    );
     assert_eq!(seen.lock().unwrap().len(), 3);
     // 每次重试的请求体相同：不会改成允许留存
     let reqs = seen.lock().unwrap();
@@ -171,7 +223,13 @@ fn rate_limit_429_backs_off_with_retry_after_then_succeeds() {
 #[test]
 fn server_errors_give_up_after_max_attempts() {
     let d = tmpdir("5xx");
-    let e500 = || (500, "", json!({"error": {"code": 500, "message": "x"}}).to_string());
+    let e500 = || {
+        (
+            500,
+            "",
+            json!({"error": {"code": 500, "message": "x"}}).to_string(),
+        )
+    };
     let (url, seen) = fake((0..MAX_ATTEMPTS).map(|_| e500()).collect());
     let mut c = client(&url, &d);
     let e = c.transcribe(&audio(), 16_000, "en").unwrap_err();
@@ -184,11 +242,19 @@ fn server_errors_give_up_after_max_attempts() {
 fn credit_and_data_policy_failures_do_not_retry_or_fall_back() {
     for (code, msg, hint) in [
         (402, "Insufficient credits", "余额不足"),
-        (404, "No endpoints found matching your data policy", "不留存"),
+        (
+            404,
+            "No endpoints found matching your data policy",
+            "不留存",
+        ),
         (401, "Invalid key", "密钥无效"),
     ] {
         let d = tmpdir(&format!("hard{code}"));
-        let (url, seen) = fake(vec![(code, "", json!({"error": {"code": code, "message": msg}}).to_string())]);
+        let (url, seen) = fake(vec![(
+            code,
+            "",
+            json!({"error": {"code": code, "message": msg}}).to_string(),
+        )]);
         let mut c = client(&url, &d);
         let e = c.transcribe(&audio(), 16_000, "en").unwrap_err();
         assert!(e.contains(hint) && e.contains("不重试"), "{code}：{e}");
@@ -199,7 +265,11 @@ fn credit_and_data_policy_failures_do_not_retry_or_fall_back() {
 #[test]
 fn errors_never_contain_the_key() {
     let d = tmpdir("scrub");
-    let (url, _) = fake(vec![(400, "", format!("{{\"error\":{{\"code\":400,\"message\":\"bad key {KEY}\"}}}}"))]);
+    let (url, _) = fake(vec![(
+        400,
+        "",
+        format!("{{\"error\":{{\"code\":400,\"message\":\"bad key {KEY}\"}}}}"),
+    )]);
     let mut c = client(&url, &d);
     let e = c.transcribe(&audio(), 16_000, "en").unwrap_err();
     assert!(!e.contains(KEY), "出错信息里不许有密钥：{e}");
@@ -209,7 +279,11 @@ fn errors_never_contain_the_key() {
 #[test]
 fn error_inside_200_is_an_error_and_not_billed() {
     let d = tmpdir("err200");
-    let (url, _) = fake(vec![(200, "", json!({"error": {"code": 502, "message": "upstream"}}).to_string())]);
+    let (url, _) = fake(vec![(
+        200,
+        "",
+        json!({"error": {"code": 502, "message": "upstream"}}).to_string(),
+    )]);
     let mut c = client(&url, &d);
     assert!(c.transcribe(&audio(), 16_000, "en").is_err());
     assert_eq!(c.ledger.calls, 0);
@@ -218,11 +292,18 @@ fn error_inside_200_is_an_error_and_not_billed() {
 #[test]
 fn load_key_from_env_local_variants() {
     let d = tmpdir("key");
-    assert_eq!(load_key(&d).filter(|_| std::env::var(KEY_VAR).is_err()), None);
+    assert_eq!(
+        load_key(&d).filter(|_| std::env::var(KEY_VAR).is_err()),
+        None
+    );
     if std::env::var(KEY_VAR).is_ok() {
         return; // 环境里已有密钥时不测文件那一路（不动真环境）
     }
-    for line in ["OPENROUTER_API_KEY=abc", "export OPENROUTER_API_KEY=\"abc\"", "OPENROUTER_API_KEY = 'abc'"] {
+    for line in [
+        "OPENROUTER_API_KEY=abc",
+        "export OPENROUTER_API_KEY=\"abc\"",
+        "OPENROUTER_API_KEY = 'abc'",
+    ] {
         std::fs::write(d.join(".env.local"), format!("OTHER=1\n{line}\n")).unwrap();
         assert_eq!(load_key(&d).as_deref(), Some("abc"), "{line}");
     }
@@ -242,6 +323,8 @@ fn real_call_three_times() {
     let mut c = OpenRouter::new(OR_URL, key, d.join("ledger.json"));
     // 合成的哼声（自造，不涉及任何外部素材的许可）
     let x: Vec<f32> = (0..16_000).map(|i| (i as f32 * 0.02).sin() * 0.3).collect();
-    let t: Vec<String> = (0..3).map(|_| c.transcribe(&x, 16_000, "en").expect("真调用失败")).collect();
+    let t: Vec<String> = (0..3)
+        .map(|_| c.transcribe(&x, 16_000, "en").expect("真调用失败"))
+        .collect();
     println!("三次转写：{t:?}；累计 {:.6} 美元", c.ledger.spent_usd);
 }

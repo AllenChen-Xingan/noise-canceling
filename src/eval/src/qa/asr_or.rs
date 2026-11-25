@@ -38,7 +38,11 @@ pub fn load_key(root: &Path) -> Option<String> {
     let text = std::fs::read_to_string(root.join(".env.local")).ok()?;
     text.lines().find_map(|l| {
         let l = l.trim().strip_prefix("export ").unwrap_or(l.trim());
-        let v = l.strip_prefix(KEY_VAR)?.trim_start().strip_prefix('=')?.trim();
+        let v = l
+            .strip_prefix(KEY_VAR)?
+            .trim_start()
+            .strip_prefix('=')?
+            .trim();
         let v = v.trim_matches(|c| c == '"' || c == '\'');
         (!v.is_empty()).then(|| v.to_string())
     })
@@ -72,7 +76,9 @@ pub fn b64(bytes: &[u8]) -> String {
     const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut s = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for c in bytes.chunks(3) {
-        let n = (u32::from(c[0]) << 16) | (u32::from(*c.get(1).unwrap_or(&0)) << 8) | u32::from(*c.get(2).unwrap_or(&0));
+        let n = (u32::from(c[0]) << 16)
+            | (u32::from(*c.get(1).unwrap_or(&0)) << 8)
+            | u32::from(*c.get(2).unwrap_or(&0));
         for (i, shift) in [18, 12, 6, 0].into_iter().enumerate() {
             if i <= c.len() {
                 s.push(T[((n >> shift) & 63) as usize] as char);
@@ -123,12 +129,23 @@ impl OpenRouter {
             .ok()
             .and_then(|t| serde_json::from_str(&t).ok())
             .unwrap_or_default();
-        OpenRouter { url: url.into(), key, ledger_path, ledger, backoff_ms: 1000, requests: 0 }
+        OpenRouter {
+            url: url.into(),
+            key,
+            ledger_path,
+            ledger,
+            backoff_ms: 1000,
+            requests: 0,
+        }
     }
 
     /// 抹掉文字里的密钥（出错信息里万一带上）。
     fn scrub(&self, s: &str) -> String {
-        if self.key.is_empty() { s.to_string() } else { s.replace(&self.key, "<密钥>") }
+        if self.key.is_empty() {
+            s.to_string()
+        } else {
+            s.replace(&self.key, "<密钥>")
+        }
     }
 
     /// 发一次 HTTP 请求：返回 (状态码, Retry-After 秒数, 响应体)。密钥经标准输入给 curl。
@@ -138,7 +155,17 @@ impl OpenRouter {
         let hdr = std::env::temp_dir().join(format!("vdn-asr-or-{tag}.hdr"));
         self.requests += 1;
         let mut child = Command::new("curl")
-            .args(["-sS", "-m", "120", "-X", "POST", &self.url, "-H", "Content-Type: application/json", "--data-binary"])
+            .args([
+                "-sS",
+                "-m",
+                "120",
+                "-X",
+                "POST",
+                &self.url,
+                "-H",
+                "Content-Type: application/json",
+                "--data-binary",
+            ])
             .arg(format!("@{}", body_path.display()))
             .arg("-o")
             .arg(&out)
@@ -153,21 +180,30 @@ impl OpenRouter {
         {
             use std::io::Write;
             let mut stdin = child.stdin.take().ok_or("curl 没有标准输入")?;
-            writeln!(stdin, "header = \"Authorization: Bearer {}\"", self.key).map_err(|e| e.to_string())?;
+            writeln!(stdin, "header = \"Authorization: Bearer {}\"", self.key)
+                .map_err(|e| e.to_string())?;
         }
         let o = child.wait_with_output().map_err(|e| e.to_string())?;
-        let code: u16 = String::from_utf8_lossy(&o.stdout).trim().parse().unwrap_or(0);
+        let code: u16 = String::from_utf8_lossy(&o.stdout)
+            .trim()
+            .parse()
+            .unwrap_or(0);
         let body = std::fs::read(&out).unwrap_or_default();
         let retry = std::fs::read_to_string(&hdr).ok().and_then(|h| {
             h.lines().find_map(|l| {
                 let (k, v) = l.split_once(':')?;
-                k.trim().eq_ignore_ascii_case("retry-after").then(|| v.trim().parse::<u64>().ok())?
+                k.trim()
+                    .eq_ignore_ascii_case("retry-after")
+                    .then(|| v.trim().parse::<u64>().ok())?
             })
         });
         let _ = std::fs::remove_file(&out);
         let _ = std::fs::remove_file(&hdr);
         if code == 0 {
-            return Err(self.scrub(&format!("连不上识别服务：{}", String::from_utf8_lossy(&o.stderr).trim())));
+            return Err(self.scrub(&format!(
+                "连不上识别服务：{}",
+                String::from_utf8_lossy(&o.stderr).trim()
+            )));
         }
         Ok((code, retry, body))
     }
@@ -175,10 +211,18 @@ impl OpenRouter {
     /// 转写一条音频（16 kHz 浮点样本）。成功后按 `usage.cost` 记账；到上限、出错都返回 `Err`。
     pub fn transcribe(&mut self, x: &[f32], sr: u32, lang: &str) -> Result<String, String> {
         if self.ledger.spent_usd >= BUDGET_USD {
-            return Err(format!("识别费已累计 {:.4} 美元，到上限 {BUDGET_USD} 美元，停发", self.ledger.spent_usd));
+            return Err(format!(
+                "识别费已累计 {:.4} 美元，到上限 {BUDGET_USD} 美元，停发",
+                self.ledger.spent_usd
+            ));
         }
-        let body = serde_json::to_vec(&request_body(&pcm16_wav(x, sr), lang)).map_err(|e| e.to_string())?;
-        let body_path = std::env::temp_dir().join(format!("vdn-asr-or-{}-{}.json", std::process::id(), self.requests));
+        let body = serde_json::to_vec(&request_body(&pcm16_wav(x, sr), lang))
+            .map_err(|e| e.to_string())?;
+        let body_path = std::env::temp_dir().join(format!(
+            "vdn-asr-or-{}-{}.json",
+            std::process::id(),
+            self.requests
+        ));
         std::fs::write(&body_path, &body).map_err(|e| e.to_string())?;
         let r = self.send_with_retry(&body_path, x.len() as f64 / f64::from(sr));
         let _ = std::fs::remove_file(&body_path);
@@ -191,21 +235,32 @@ impl OpenRouter {
             let (code, retry_after, body) = self.post(body_path)?;
             let text = String::from_utf8_lossy(&body).to_string();
             if code == 200 {
-                let v: Value = serde_json::from_slice(&body).map_err(|e| format!("识别返回不是 JSON：{e}"))?;
+                let v: Value =
+                    serde_json::from_slice(&body).map_err(|e| format!("识别返回不是 JSON：{e}"))?;
                 if let Some(e) = v.get("error") {
                     return Err(self.scrub(&format!("识别返回 200 但带错误：{e}")));
                 }
-                let t = v["text"].as_str().ok_or_else(|| self.scrub(&format!("识别返回缺 text：{v}")))?;
-                let cost = v["usage"]["cost"].as_f64().unwrap_or(seconds * PRICE_PER_SECOND);
+                let t = v["text"]
+                    .as_str()
+                    .ok_or_else(|| self.scrub(&format!("识别返回缺 text：{v}")))?;
+                let cost = v["usage"]["cost"]
+                    .as_f64()
+                    .unwrap_or(seconds * PRICE_PER_SECOND);
                 self.ledger.spent_usd += cost;
                 self.ledger.calls += 1;
                 if let Some(d) = self.ledger_path.parent() {
                     let _ = std::fs::create_dir_all(d);
                 }
-                let _ = std::fs::write(&self.ledger_path, serde_json::to_string_pretty(&self.ledger).unwrap_or_default());
+                let _ = std::fs::write(
+                    &self.ledger_path,
+                    serde_json::to_string_pretty(&self.ledger).unwrap_or_default(),
+                );
                 return Ok(t.split_whitespace().collect::<Vec<_>>().join(" "));
             }
-            last = self.scrub(&format!("HTTP {code}：{}", text.chars().take(300).collect::<String>()));
+            last = self.scrub(&format!(
+                "HTTP {code}：{}",
+                text.chars().take(300).collect::<String>()
+            ));
             if !retryable(code) {
                 let hint = match code {
                     402 => "（余额不足）",
