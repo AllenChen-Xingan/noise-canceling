@@ -23,7 +23,12 @@ pub enum Vote {
 
 /// 按次序给出已有的几次转写（第 1 次在前），判用哪一次。
 pub fn vote(texts: &[&str], lang: &str) -> Vote {
-    let agree = |i: usize| texts.iter().filter(|t| same_text(t, texts[i], lang)).count();
+    let agree = |i: usize| {
+        texts
+            .iter()
+            .filter(|t| same_text(t, texts[i], lang))
+            .count()
+    };
     if let Some(i) = (0..texts.len()).find(|&i| agree(i) >= MAJORITY) {
         return Vote::Use(i);
     }
@@ -53,7 +58,11 @@ mod tests {
         // 中文按字比：探针里那条（多了个「五」）
         let z = |t: &[&str]| vote(t, "zh");
         assert_eq!(
-            z(&["第一二三四点，四。", "第一二三四点，四五。", "第一、二、三四点，四。"]),
+            z(&[
+                "第一二三四点，四。",
+                "第一二三四点，四五。",
+                "第一、二、三四点，四。"
+            ]),
             Vote::Use(0)
         );
     }
@@ -62,6 +71,9 @@ mod tests {
     #[test]
     fn constants() {
         assert_eq!((TIE_BREAK_REP, MAJORITY), (3, 2));
-        assert!(MAJORITY * 2 > TIE_BREAK_REP, "多数要过半，才不会两种文本各占多数");
+        assert!(
+            MAJORITY * 2 > TIE_BREAK_REP,
+            "多数要过半，才不会两种文本各占多数"
+        );
     }
 }

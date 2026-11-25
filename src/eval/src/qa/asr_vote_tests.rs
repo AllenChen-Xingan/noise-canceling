@@ -47,7 +47,11 @@ fn asr(url: &str, d: &std::path::Path) -> Asr {
 fn transcribe_breaks_tie_with_third_call() {
     let d = tmpdir("vote-serial");
     let it = items(&d, 2);
-    seed(&d.join("cache.json"), &it, &[&["a b", "a c"], &["x y", "x z"]]);
+    seed(
+        &d.join("cache.json"),
+        &it,
+        &[&["a b", "a c"], &["x y", "x z"]],
+    );
     let (url, seen) = fake(vec![ok("A c.", 1e-9), ok("x y", 1e-9)]);
     let mut a = asr(&url, &d);
     let (p, sha, lang, clip) = &it[0];
@@ -71,7 +75,10 @@ fn transcribe_breaks_tie_with_third_call() {
     // 前两次的不一致照旧计（这个率决定以后能不能改 1 次）；补调与结果另计
     assert_eq!((a.checked, a.unstable), (2, 2));
     let s = a.summary();
-    assert_eq!((s["tie_breaks"].as_u64(), s["no_majority"].as_u64()), (Some(2), Some(0)));
+    assert_eq!(
+        (s["tie_breaks"].as_u64(), s["no_majority"].as_u64()),
+        (Some(2), Some(0))
+    );
 }
 
 /// 三次都不同：判不一致（评分那边转成「不知道」）；前两次相同：一个请求都不多发。
@@ -79,7 +86,11 @@ fn transcribe_breaks_tie_with_third_call() {
 fn no_majority_is_unstable_and_agreement_sends_nothing() {
     let d = tmpdir("vote-none");
     let it = items(&d, 2);
-    seed(&d.join("cache.json"), &it, &[&["a b", "a c"], &["same", "Same."]]);
+    seed(
+        &d.join("cache.json"),
+        &it,
+        &[&["a b", "a c"], &["same", "Same."]],
+    );
     let (url, seen) = fake(vec![ok("a d", 1e-9)]);
     let mut a = asr(&url, &d);
     let (p, sha, lang, clip) = &it[0];
@@ -99,7 +110,11 @@ fn prefetch_sends_third_call_only_on_disagreement() {
     let d = tmpdir("vote-pre");
     let it = items(&d, 3);
     // 第 1 条两次不同、第 2 条两次相同、第 3 条只缓存了第 1 次
-    seed(&d.join("cache.json"), &it, &[&["a b", "a c"], &["k", "k"], &["m n"]]);
+    seed(
+        &d.join("cache.json"),
+        &it,
+        &[&["a b", "a c"], &["k", "k"], &["m n"]],
+    );
     // 预取第一批只发第 3 条的第 2 次（回「m o」，与第 1 次不同）；第二批补第 1、3 条的第 3 次
     let (url, seen) = fake(vec![ok("m o", 1e-9), ok("a b", 1e-9), ok("m o", 1e-9)]);
     let mut a = asr(&url, &d);
