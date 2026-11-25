@@ -3,7 +3,7 @@
 过线（开发份第 0 批前 4 段，150 步，lr 1e-3）：
 1. 训练损失相对下降 (初值 − 终值) / 初值 ≥ 15%；初值不是正的有限数 → 判据不可用
 2. 这 4 段 SI-SNR 提高 > 0 dB
-3. 主干（参数名以 base. 开头的各组）第 1 步梯度范数都非零、有限
+3. 主干四块（REQUIRED_BACKBONE）都在，且 base.* 各组第 1 步梯度范数都非零、有限
 4. B 的注意力输出层权重动过（A 没有这一层，不查）
 只记录、不过线：走完 oracle 距离的比例、SI-SNR +6 dB（第 3 版的两条）。
 依据（大总管原话摘要）：2000 步曲线变平在约 30%，换 3 个学习率、关 5 组配方旋钮都改不了，说明对预训练过的
@@ -16,6 +16,7 @@ import math
 
 DROP_FRAC_MIN = 0.15
 BACKBONE_PREFIX = "base."
+REQUIRED_BACKBONE = ("base.encoder", "base.dpgrnn1", "base.dpgrnn2", "base.decoder")  # GTCRN 主干四块，缺一块就不过（codex #1）
 RULE = ("事后改判据，2026-11-25（第 4 版，大总管定，人未参与）。开发份第 0 批前 4 段："
         "(初值 − 终值) / 初值 ≥ 15%；SI-SNR 提高 > 0 dB；主干各层第 1 步梯度非零、有限；B 的注意力输出层动过。"
         "初值不是正的有限数 → 判据不可用。走完 oracle 距离 ≥ 50%、SI-SNR +6 dB 降为只记录。"
@@ -23,7 +24,7 @@ RULE = ("事后改判据，2026-11-25（第 4 版，大总管定，人未参与�
 
 
 def _fin(x) -> bool:
-    return x is not None and isinstance(x, (int, float)) and math.isfinite(x)
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)  # bool 不算读数（codex #4）
 
 
 def drop_frac(first, last):
@@ -49,7 +50,8 @@ def backbone_grads_ok(grads) -> bool:
     if not grads:
         return False
     bb = [v for k, v in grads.items() if k.startswith(BACKBONE_PREFIX)]
-    return bool(bb) and all(_fin(v) and v > 0 for v in bb)
+    return (all(k in grads for k in REQUIRED_BACKBONE) and bool(bb)
+            and all(_fin(v) and v > 0 for v in bb))
 
 
 def verdict(first, last, gain_db, grads, moved) -> str:
@@ -63,15 +65,19 @@ def verdict(first, last, gain_db, grads, moved) -> str:
 
 
 def rejudge(probe: dict, gate3: dict) -> dict:
-    """按第 4 版重判 2026-11-25 那次：损失、SI-SNR、注意力变化取第 3 版报告（同一批、同步数、同 lr），
-    第 1 步梯度取诊断报告（同一起点、同一批，第 1 步梯度与第 3 版那次相同）。"""
+    """按第 4 版重判 2026-11-25 那次（同一起点、同一批、150 步、lr 1e-3）：初值与终值取诊断报告学习曲线
+    （终值是第 150 次更新之后重算的，与第 4 版 smoke 同口径，codex #5），SI-SNR 同；第 1 步梯度取诊断报告；
+    注意力输出层变化诊断没记，取第 3 版报告（同一次设置）。"""
     ov = gate3["overfit"]
-    grads = probe["curve"]["grad_norms_first_step"]
-    v = verdict(ov["first"], ov["last"], ov["si_snr_gain_db"], grads, ov["attn_out_max_change"])
+    c = probe["curve"]
+    m150 = next(m for m in c["marks"] if m["step"] == ov["steps"])
+    first, last, gain = c["loss0"], m150["loss"], m150["si_snr_gain_db"]
+    grads = c["grad_norms_first_step"]
+    v = verdict(first, last, gain, grads, ov["attn_out_max_change"])
     others = {k: bool(gate3[k]["pass"]) for k in ("init_loss", "reproduce", "known_dev")}
     return {"rule": RULE, "gate3_verdict": gate3["overfit"]["verdict"],
-            "overfit": {"first": ov["first"], "last": ov["last"], "drop_frac": drop_frac(ov["first"], ov["last"]),
-                        "si_snr_gain_db": ov["si_snr_gain_db"], "attn_out_max_change": ov["attn_out_max_change"],
+            "overfit": {"first": first, "last": last, "drop_frac": drop_frac(first, last),
+                        "si_snr_gain_db": gain, "gate3_last_traj": ov["last"], "attn_out_max_change": ov["attn_out_max_change"],
                         "grad_norms_first_step": grads, "backbone_grads_ok": backbone_grads_ok(grads),
                         "drop_frac_of_oracle_span": ov["drop_frac_of_oracle_span"], "verdict": v},
             "others": others, "verdict": v if all(others.values()) else "fail",

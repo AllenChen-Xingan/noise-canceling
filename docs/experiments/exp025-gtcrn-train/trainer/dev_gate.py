@@ -21,26 +21,36 @@ def _incomplete(reason: str, **kw) -> dict:
     return {"verdict": "incomplete", "pass": False, "reason": reason, **kw}
 
 
+def _num(x) -> bool:
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)  # bool 不算读数（codex #2）
+
+
 def check(run_dir: Path, known: dict, step: int = 300, tol: float = 1e-3) -> dict:
-    run_dir = Path(run_dir)
+    try:
+        return _check(Path(run_dir), known, step, tol)
+    except (AttributeError, KeyError, TypeError) as e:  # 结构不对一律「不完整」，不判过（codex #2）
+        return _incomplete(f"记录结构不对：{type(e).__name__}: {e}")
+
+
+def _check(run_dir: Path, known: dict, step: int, tol: float) -> dict:
     meta = known.get("meta")
     h0 = (known.get("readings") or {}).get("hybrid")
-    if not isinstance(meta, dict) or not (isinstance(h0, (int, float)) and math.isfinite(h0)):
+    if not isinstance(meta, dict) or not _num(h0):
         return _incomplete("参照文件没有 meta 或 hybrid 读数")
-    if meta.get("device") not in (None, "cpu"):
-        return _incomplete(f"参照不是 CPU 算的：{meta.get('device')}")
+    if meta.get("device") != "cpu":
+        return _incomplete(f"参照必须注明是 CPU 算的：device = {meta.get('device')!r}")
     try:
         rec = json.loads((run_dir / "run.json").read_text())
         rows = [json.loads(x) for x in (run_dir / "metrics.jsonl").read_text().splitlines() if x.strip()]
     except (OSError, ValueError) as e:
         return _incomplete(f"读不了运行记录：{e}")
-    d = rec.get("config", {}).get("data", {})
+    d = rec["config"]["data"]
     have = {**{k: d.get(k) for k in META_KEYS}, "build_id": rec.get("data_build_id")}
-    bad = [k for k in META_KEYS if have.get(k) != meta.get(k)]
+    bad = [k for k in META_KEYS if have.get(k) is None or meta.get(k) is None or have.get(k) != meta.get(k)]
     if bad:
         return _incomplete("口径对不上：" + ", ".join(f"{k} 运行 {have.get(k)!r} ≠ 参照 {meta.get(k)!r}" for k in bad))
     hits = [r["dev"].get("hybrid") for r in rows if r.get("step") == step and isinstance(r.get("dev"), dict)]
-    if not hits or not (isinstance(hits[-1], (int, float)) and math.isfinite(hits[-1])):
+    if not hits or not _num(hits[-1]):
         return _incomplete(f"没有第 {step} 步的开发份 hybrid 读数")
     h = float(hits[-1])
     ok = h < h0 - tol

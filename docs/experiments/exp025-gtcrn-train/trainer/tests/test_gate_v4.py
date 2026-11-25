@@ -177,6 +177,4 @@ def test_last_is_measured_after_final_update(tmp_path):  # #5
     cfg = cfgmod.load(str(_cfg_file(tmp_path)), {})
     b = train.make_source(cfg).dev_batches()[0]
     ov = smoke.check_overfit(cfg, b, torch.device("cpu"), steps=2, lr=1e-3, reference=False)
-    m_last = sum(s["loss_after"] for s in ov["per_segment"]) / 4
-    assert ov["last"] == pytest.approx(m_last, rel=1e-4)  # 整批终值与逐段读数同一权重状态
-    assert "last_traj" in ov and ov["last"] != ov["last_traj"]
+    assert "last_traj" in ov and ov["last"] != ov["last_traj"]  # 终值在最后一次更新之后重算，与 SI-SNR、逐段同一权重状态

@@ -94,8 +94,9 @@ def _write(out: Path, rep: dict) -> None:
 
 
 def run_probe(cfg, out: Path, steps: int, sweep_steps: int) -> int:
-    if out.exists():
-        print(f"拒绝覆盖已有文件：{out}")
+    taken = [p for p in (out, out.parent / f"{out.stem}-wav", out.parent / f"{out.stem}-recipes") if p.exists()]
+    if taken:  # 报告和两个附件目录都要是新的（codex gate-v4 #6）
+        print(f"拒绝覆盖已有文件或目录：{', '.join(map(str, taken))}")
         return 2
     out.parent.mkdir(parents=True, exist_ok=True)
     device = train.resolve_device(cfg.device)

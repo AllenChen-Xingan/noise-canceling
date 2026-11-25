@@ -167,11 +167,13 @@ def _overfit_run(cfg, batch, device, steps: int, lr: float) -> dict:
     moved = None if attn0 is None else float((m.attn.out.weight.detach() - attn0).abs().max())
     sisnr1 = batch_si_snr(m, batch, device)
     seg1 = per_segment(m, crit, batch, device)
+    with torch.no_grad():  # 终值在最后一次更新之后重算，与 SI-SNR、逐段同一权重状态（codex gate-v4 #5）
+        last_eval = train.forward_loss(m, crit, batch, device)[0].item()
     segs = [{"index": a["index"], "loss_before": a["loss"], "loss_after": b["loss"], "si_snr_db_before": a["si_snr_db"],
              "si_snr_db_after": b["si_snr_db"], "si_snr_gain_db": b["si_snr_db"] - a["si_snr_db"]}
             for a, b in zip(seg0, seg1)]
-    first, last = traj[0], traj[-1]
-    return {"n_segments": int(batch["noisy"].shape[0]), "first": first, "last": last, "steps": steps, "lr": lr,
+    first, last = traj[0], last_eval
+    return {"last_traj": traj[-1], "n_segments": int(batch["noisy"].shape[0]), "first": first, "last": last, "steps": steps, "lr": lr,
             "floor_40db": floor40, "drop_frac_of_40db_span": oracle.frac_of_span(first, last, floor40),
             "floor_40db_reachable": oracle.floor_reachable(floor40, o["loss"]),
             "oracle_loss": o["loss"], "oracle_si_snr_db": o["si_snr_db"],

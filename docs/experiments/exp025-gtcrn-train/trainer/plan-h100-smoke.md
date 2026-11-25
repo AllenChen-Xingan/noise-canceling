@@ -67,7 +67,8 @@
 1. 拉代码与官方源码：`git clone https://github.com/AllenChen-Xingan/noise-canceling $R && git -C $R checkout <提交>`（仓库已公开）；连不上 GitHub 就从本机传 `git bundle` 再 `git clone`。
    **必须带 .git，不许用 `git archive` 解包**：训练器开跑前要读提交号，拿不到就直接失败（2026-11-25 甲段第一次跑，运行记录的 commit 为空，之后改成失败）。
    官方源码：`git clone https://github.com/Xiaobin-Rong/gtcrn $G && git -C $G checkout 502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73`
-2. 装环境：`cd $D && bash cloud_steps.sh setup && uv pip install --python $PY -r $D/requirements.txt -r $T/requirements.txt`
+2. 装环境：`export PATH=/workspace/bin:$PATH && cd $D && bash cloud_steps.sh setup && uv pip install --python $PY -r $D/requirements.txt -r $T/requirements.txt`
+   - `cloud_steps.sh` 没有 uv 时装到 `/workspace/bin`，但只在它自己的子 shell 里改 PATH，所以先在外层导出（codex gate-v4 #3）。乙段不重装，不受影响
    - 两份一起装，版本冲突时 uv 直接报错。trainer 那份带导出要的 onnx、onnxruntime（第一次跑漏装，4 条导出测试红）
    - 第一次实测：装环境 235 s，单元测试 301 s（含真分片上的 loader 对接测试）
 3. 单元测试：`cd $T && VDN_GTCRN_DIR=$G VDN_LOADER_SHARDS=/workspace/shards/first-batch VDN_LOADER_RECIPE=$D/recipe.json $PY -m pytest -q tests/ --ignore=tests/test_losses_parity.py`
