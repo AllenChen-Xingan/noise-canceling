@@ -257,6 +257,10 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
         guard = G.Guard(cfg.limits.expect_s_step)
         if st is not None and st.get("guards") is not None:
             guard.load_state_dict(st["guards"])
+        if st is not None:  # 最好的一次以 run.json 为准：检查点存在评估之前时（跑满补评估、被抢占）它更新（codex guards 第 1 轮 #2）
+            b = rd.read().get("best")
+            if b is not None and (guard.best is None or b["hybrid"] < guard.best["hybrid"]):
+                guard.best, guard.bad = dict(b), 0
         init_only = st is None and rd.read().get("phase") == "init" and not any(rd.ckpt_dir.glob("step-*.pt"))
         if init_only:
             # 上次写了 run.json、还没存下第 0 步就被杀（codex 第 3 轮 #2）：配置与数据一致就重建，账从心跳接上
@@ -315,10 +319,26 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
             rd.log({"step": step, "guard": ev})
             rd.write(rec)
 
-        def crash_snapshot():  # ①：出事前的权重与优化器状态（还没被这一步更新），不进 step-* 轮换
-            name = f"crash-{step:07d}.pt"
-            rd.save_as(state(), name)
-            return name
+        def crash(**info):
+            """①：先把「训崩」写进 run.json（续训据此拒绝，不依赖现场存没存成），再有时限地尽力存现场：
+            出事前的权重与优化器状态（还没被这一步更新），不进 step-* 轮换（codex guards 第 1 轮 #3）。"""
+            rec["crash"] = {"step": step, **info, "snapshot": None}
+            rec["stop"] = {"reason": "nonfinite", "step": step, "billed_s": round(billed(), 2), "usd": round(usd(), 4),
+                           "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+            rd.write(rec)
+            name, err = f"crash-{step:07d}.pt", {}
+
+            def save():
+                try:
+                    rd.save_as(state(), name)
+                except Exception as e:  # noqa: BLE001 —— 现场存不成也要停
+                    err["e"] = f"{type(e).__name__}: {e}"
+                    raise
+            if _bounded(save, CRASH_SAVE_S):
+                rec["crash"]["snapshot"] = name
+            else:
+                rec["crash"]["snapshot_error"] = err.get("e", f"{CRASH_SAVE_S:.0f} s 内没存完")
+            rd.write(rec)
 
         def dev_eval():
             """评估一次；读数不是有限数时返回 "nonfinite"（①），否则 None。"""
@@ -334,8 +354,8 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
                 return None
             rd.log(row)
             g = guard.on_eval(step, row["dev"].get("hybrid"))
-            if g["nonfinite"]:
-                rec["crash"] = {"step": step, "dev": row["dev"], "snapshot": crash_snapshot()}
+            if g["nonfinite"] or not all_finite(row):  # 原模型与 EMA 的全部读数（codex guards 第 1 轮 #1）
+                crash(dev=row)
                 return "nonfinite"
             if g["best"]:  # ③：最好的一次另存，不参与轮换；成绩单默认用它
                 rd.save_as(state(), "best.pt")
@@ -375,14 +395,14 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
             loss, logs = forward_loss(model, crit, batch, device, sp_ref=sp_ref, teacher=teacher)
             if not math.isfinite(loss.item()):
                 reason = "nonfinite"
-                rec["crash"] = {"step": step, "logs": logs, "snapshot": crash_snapshot()}
+                crash(logs=logs)
                 break
             opt.zero_grad(set_to_none=True)
             loss.backward()
             gn = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.optim.grad_clip)
             if not torch.isfinite(gn):  # 损失有限、梯度却不是：不更新，否则 Adam 会把 NaN 写进权重（codex 第 1 轮 #2）
                 reason = "nonfinite"
-                rec["crash"] = {"step": step, "logs": logs, "grad_norm": float(gn), "snapshot": crash_snapshot()}
+                crash(logs=logs, grad_norm=float(gn))
                 break
             opt.step()
             sched.step()
@@ -435,6 +455,20 @@ def main(argv=None) -> int:
     stop = train(cfgmod.load(a.config, parse_set(a.set)))
     print(stop)
     return exit_code(stop)
+
+
+CRASH_SAVE_S = 120.0  # 存现场最多等这么久；存不成也照样停（codex guards 第 1 轮 #3）
+
+
+def all_finite(x) -> bool:
+    """字典 / 列表里所有数都是有限数（bool 与 None 不算数）。"""
+    if isinstance(x, dict):
+        return all(all_finite(v) for v in x.values())
+    if isinstance(x, (list, tuple)):
+        return all(all_finite(v) for v in x)
+    if isinstance(x, float):
+        return math.isfinite(x)
+    return True
 
 
 def exit_code(stop: dict) -> int:
