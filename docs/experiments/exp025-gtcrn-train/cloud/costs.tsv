@@ -28,3 +28,9 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-25T18:42:20Z	pod_delete	7a3n7eodf5iyqf	cpu3c x4	US-MO-1	0.1200	2026-11-25T18:40:38Z	2026-11-25T18:42:20Z	0.0283	0.0034		取回 480 段结果（不含 qa/asr-wav 1.4 GB）
 2026-11-25T18:49:29Z	pod_create	zq05j06wg96pxa	cpu3c x4	US-MO-1	0.1200	2026-11-25T18:49:29Z					max_hours=1.0
 2026-11-25T19:27:59Z	pod_delete	zq05j06wg96pxa	cpu3c x4	US-MO-1	0.1200	2026-11-25T18:49:29Z	2026-11-25T19:27:59Z	0.6417	0.0770		过拟合排查完成（1831886c），取回后删
+2026-11-25T19:36:08Z	pod_create	w0aklhwaafxskv	cpu3c x4	US-MO-1	0.1200	2026-11-25T19:36:08Z					max_hours=1.0
+2026-11-25T19:50:27Z	pod_delete	w0aklhwaafxskv	cpu3c x4	US-MO-1	0.1200	2026-11-25T19:36:08Z	2026-11-25T19:50:27Z	0.2386	0.0286		判据第 3 版核对 rc=1，取回后删
+2026-11-25T20:01:01Z	pod_create	w0k1j4il17h5g8	cpu3c x4	US-MO-1	0.1200	2026-11-25T20:01:01Z					max_hours=1.5
+2026-11-25T21:16:23Z	pod_delete	w0k1j4il17h5g8	cpu3c x4	US-MO-1	0.1200	2026-11-25T20:01:01Z	2026-11-25T21:16:23Z	1.2561	0.1507		--overfit-probe 完成（21e2e5b7）+ 清账本 review；取回 JSON/日志，wav 留网络盘
+2026-11-25T21:40:36Z	pod_create	t7wneq6dc0l3lv	cpu3c x4	US-MO-1	0.1200	2026-11-25T21:40:36Z					max_hours=0.5
+2026-11-25T21:43:37Z	pod_delete	t7wneq6dc0l3lv	cpu3c x4	US-MO-1	0.1200	2026-11-25T21:40:36Z	2026-11-25T21:43:37Z	0.0503	0.0060		乙段第 0 步：clone 7eecbbe8、复制 known-dev
