@@ -28,7 +28,7 @@ import losses
 import models
 from data import frames_mask, make_source
 from official import load_start_state
-from runrec import EMA, RunDir, check_resume, env_info, start_record
+from runrec import EMA, RunDir, check_resume, env_info, git_info, start_record
 from watchdog import HEARTBEAT_S, _Beat, _bounded, _Deadline, _hard_exit, _Signals  # noqa: F401  测试经 train 引用
 
 HERE = Path(__file__).resolve().parent
@@ -189,6 +189,7 @@ def train(cfg, *, max_wall_s: float | None = None, _signals: _Signals | None = N
     记录三处取最大值。美元按段累计：每段只按本段单价乘本段时长，改单价不追溯（codex 第 1 轮 #6）。"""
     t_proc = time.monotonic()
     cfg_dict = cfgmod.to_dict(cfg)
+    git_info()  # 拿不到提交号就在碰磁盘、花钱之前失败（大总管 2026-11-25）
     # 第一次碰磁盘之前先起「本段墙钟时限」看门狗：不读盘、不写盘，只看本进程已跑多久。建目录、加锁、读心跳
     # 卡在网络盘上时它照样出手（codex 第 8 轮 #1）。之后由 _Beat 按累计账判上限，这一道只兜底。
     deadline = _Deadline(deadline_s(cfg.limits), _on_hang)

@@ -26,12 +26,20 @@ RESUMABLE_CHANGES = {("schedule", "max_steps"), ("limits", "max_hours"), ("limit
 
 
 def git_info() -> dict:
-    """提交号与「整个 exp025 目录（含 traindata 的 data/）有没有未提交改动」。"""
+    """提交号与「整个 exp025 目录（含 traindata 的 data/）有没有未提交改动」。
+    拿不到提交号或状态（没有 .git、没装 git）就抛 RuntimeError，不写空值：空 commit 加 dirty=False 看着像干净的提交
+    （2026-11-25 云上用 git archive 解包时发生，大总管定）。代码要用 git clone 或 git bundle 带 .git 放上去。"""
     def g(*a):
-        r = subprocess.run(["git", "-C", str(HERE), *a], capture_output=True, text=True)
+        try:
+            r = subprocess.run(["git", "-C", str(HERE), *a], capture_output=True, text=True)
+        except OSError:
+            return None
         return r.stdout.strip() if r.returncode == 0 else None
-    status = g("status", "--porcelain", "--", str(HERE.parent))
-    return {"commit": g("rev-parse", "HEAD"), "dirty": bool(status), "branch": g("rev-parse", "--abbrev-ref", "HEAD")}
+    commit, status = g("rev-parse", "HEAD"), g("status", "--porcelain", "--", str(HERE.parent))
+    if not commit or status is None:
+        raise RuntimeError(f"拿不到 git 提交号或状态（{HERE} 不在 git 仓库里，或没装 git）：运行记录不许写空，"
+                           "请用 git clone / git bundle 带 .git 放代码")
+    return {"commit": commit, "dirty": bool(status), "branch": g("rev-parse", "--abbrev-ref", "HEAD")}
 
 
 def env_info() -> dict:
