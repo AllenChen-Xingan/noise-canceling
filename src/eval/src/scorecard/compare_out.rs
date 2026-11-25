@@ -242,7 +242,7 @@ mod tests {
                 crate::Score::judged("V-ESTOI", 0.5, "Δ", crate::Better::Higher, Some(0.0), &[]),
             )],
         };
-        std::fs::write(&jl, super::super::load::to_jsonl(&[row]).unwrap()).unwrap();
+        std::fs::write(&jl, super::super::load::to_jsonl(&[row.clone()]).unwrap()).unwrap();
         let p = jl.to_string_lossy().to_string();
         assert!(
             cli(

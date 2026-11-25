@@ -395,3 +395,34 @@ fn call_boundaries() {
     );
     assert_eq!(call_of(None, Better::Higher), Call::Unsure);
 }
+
+/// codex 第 3 轮 P2 #1：两边段数真的不一样（b 只删不补）。双向核配对数、只在一边的段、各项有效段数与差值。
+#[test]
+fn unequal_clip_counts_both_directions() {
+    let a = base(MeetingPlace::Cafe);
+    let mut b = a.clone();
+    let gone: Vec<String> = b.drain(0..3).map(|r| r.clip).collect();
+    assert_eq!((a.len(), b.len()), (12, 9));
+    for (x, y, only_x) in [(&a, &b, true), (&b, &a, false)] {
+        let c = &compare(x, y, None, false).unwrap()[0];
+        assert_eq!(c.pairs, 9);
+        let (mine, other) = if only_x {
+            (&c.only_a, &c.only_b)
+        } else {
+            (&c.only_b, &c.only_a)
+        };
+        assert_eq!(mine, &gone);
+        assert!(other.is_empty());
+        for i in &c.items {
+            assert_eq!((i.pairs, i.one_sided), (9, 0), "{}", i.v);
+            let d = i.diff.as_ref().unwrap();
+            assert_eq!(
+                (d.mean, d.lo, d.hi),
+                (0.0, 0.0, 0.0),
+                "{}：剩下的段两边相同",
+                i.v
+            );
+            assert_eq!(i.call, Call::Unsure);
+        }
+    }
+}
