@@ -55,7 +55,8 @@ def merge(cloud_rows, local_rows):
             if v == EAT:
                 continue
             a, b = s.get("value"), sl.get(v, {}).get("value")
-            rep = report.setdefault(v, {"pairs": 0, "max_abs_diff": 0.0, "one_sided": 0, "verdict_flips": 0})
+            rep = report.setdefault(v, {"clips": 0, "pairs": 0, "max_abs_diff": 0.0, "one_sided": 0, "verdict_flips": 0})
+            rep["clips"] += 1
             rep["verdict_flips"] += int(s.get("verdict") != sl.get(v, {}).get("verdict"))
             if a is None and b is None:
                 continue
@@ -71,12 +72,14 @@ def merge(cloud_rows, local_rows):
 
 
 def parity_errors(report):
-    """对拍不过的项（空 = 过）：逐段值差 > PARITY_ABS，或判定不同的段占比 > PARITY_FLIP。"""
+    """对拍不过的项（空 = 过）：逐段值差 > PARITY_ABS；有段一边有值一边没值；判定不同的段占全部段数 > PARITY_FLIP。"""
     errs = []
     for v, r in sorted(report.items()):
         if r["max_abs_diff"] > PARITY_ABS:
             errs.append(f"{v} 逐段值差最大 {r['max_abs_diff']:.3g} > {PARITY_ABS:g}")
-        n = r["pairs"] + r["one_sided"]
+        if r["one_sided"]:
+            errs.append(f"{v} 有 {r['one_sided']} 段一边有值一边没值")
+        n = r["clips"]
         if n and r["verdict_flips"] / n > PARITY_FLIP:
             errs.append(f"{v} 判定不同 {r['verdict_flips']}/{n} 段 > {PARITY_FLIP:.0%}")
     return errs
