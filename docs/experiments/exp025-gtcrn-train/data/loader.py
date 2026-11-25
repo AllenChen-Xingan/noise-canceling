@@ -20,7 +20,6 @@ import soundfile as sf
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import leakcheck  # noqa: E402
-import mix  # noqa: E402
 import split  # noqa: E402
 
 BUILDS = HERE / "builds"
@@ -154,6 +153,7 @@ class _Base:
         else:
             scene = scenes[int(rng.integers(len(scenes)))]
         pool = p.pools[scene]
+        import mix  # noqa: E402  用时才导入：登记 build 不需要混音代码
         picks = [pool[int(j)] for j in rng.integers(len(pool), size=mix.MAX_NOISES)]
         noises = [(p.read(m), w, f"{src}:{m['key']}") for m, w, src in picks]
         rm = p.rir[int(rng.integers(len(p.rir)))] if p.rir else None
@@ -164,6 +164,7 @@ class _Base:
 
     def example(self, i):
         """CPU 渲染一段（本机冒烟、对拍用；训练走 GPU）。"""
+        import mix  # noqa: E402  用时才导入：登记 build 不需要混音代码
         noisy, clean, meta = mix.render(self.plan(i), self.n)
         return {"noisy": noisy, "clean": clean, "meta": meta}
 

@@ -121,6 +121,23 @@ def sha256(path, buf=1 << 20):
     return h.hexdigest()
 
 
+def check_expect(name, rule, files):
+    """文件数（与说话人数）对不上上游公布的数目就停：通配符写错时不写切分表。"""
+    e = rule.get("expect", {})
+    n = len(files)
+    bad = []
+    if "files" in e and n != e["files"]:
+        bad.append(f"文件 {n} 个，应为 {e['files']}")
+    if "min_files" in e and n < e["min_files"]:
+        bad.append(f"文件 {n} 个，应至少 {e['min_files']}")
+    if "units" in e and rule["unit"] == "speaker":
+        u = len({unit_of(f, rule) for f in files})
+        if u != e["units"]:
+            bad.append(f"说话人 {u} 名，应为 {e['units']}")
+    if bad:
+        raise SystemExit(f"{name}：{'；'.join(bad)}（{e.get('src', '')}）。不写切分表；请把 split.py --inventory 的输出发给 traindata")
+
+
 def split_source(root, name, rule, seed, order, workers=16):
     root = Path(root)
     files = list_files(root, rule)
@@ -135,6 +152,7 @@ def split_source(root, name, rule, seed, order, workers=16):
         i = sf.info(str(p))
         return {"path": rel, "bytes": p.stat().st_size, "sha256": sha256(p), "frames": int(i.frames), "sr": int(i.samplerate)}
 
+    check_expect(name, rule, files)
     with ThreadPoolExecutor(workers) as ex:
         rows = list(ex.map(info, files))
     if rule["unit"] == "time":
