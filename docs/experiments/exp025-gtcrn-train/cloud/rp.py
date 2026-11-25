@@ -186,7 +186,14 @@ def cmd_get(cli, a):
     tmp = f"{a.local}.part-{os.getpid()}"
     with open(tmp, "wb") as f:
         f.write(data)
-    os.replace(tmp, a.local)
+    if a.overwrite:
+        os.replace(tmp, a.local)
+    else:
+        try:  # 硬链接是原子的「不存在才发布」：下载期间别人放了同名文件也不会被盖掉（评审第 6 轮 #1）
+            os.link(tmp, a.local)
+        except FileExistsError:
+            raise SystemExit(f"本机已有 {a.local}（下载期间出现的）；没覆盖，取回的内容在 {tmp}")
+        os.remove(tmp)
     print(f"{a.local} {len(data)} 字节")
 
 
