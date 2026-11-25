@@ -107,3 +107,36 @@ def test_probe_cli_has_data_checks_on_synthetic(tmp_path):
     assert d["alignment"]["all_zero_lag"] and len(d["targets"]["segments"]) == 4 and len(d["wavs"]) == 8
     assert "skipped" in r["ablation"]  # 合成数据没有配方
     assert np.isfinite(r["oracle_loss"])
+
+
+def test_loader_batch_maker_uses_registered_recipe_only_for_baseline(tmp_path):
+    """基线读登记过的配方（check_build=True），关旋钮的组读临时配方（check_build=False），下标是前 n 段。"""
+    calls = []
+
+    class FakeDevSet:
+        def __init__(self, shard_root, recipe_path, n, seed, seg_s, check_build=True):
+            calls.append({"recipe": recipe_path, "check_build": check_build, "n": n, "seed": seed,
+                          "knobs": json.loads(open(recipe_path).read())["knobs"]})
+            self.n = n
+
+        def __getitem__(self, j):
+            x = np.full(16000, 0.01 * (j + 1), np.float32)
+            return {"noisy": x, "clean": x, "meta": {"replay": False, "near_silent": False, "owner_ivs": [],
+                                                     "interf_ivs": [], "level_dbfs": -28.0, "j": j}}
+
+    class FakeMod:
+        DevSet = FakeDevSet
+
+    reg = tmp_path / "recipe.json"
+    base = {"knobs": {k: {"on": True, "src": "x"} for k in ("reverb", "eq", "clip", "n_noises")}}
+    reg.write_text(json.dumps(base))
+    cfg = cfgmod.from_dict({"data": {"kind": "synthetic", "shard_root": "/s", "recipe": str(reg), "dev_seed": 7}})
+    make = dp.loader_batch_maker(FakeMod, cfg, tmp_path / "work", 4)
+    rs = dp.ablation_recipes(base)
+    b = make(rs["baseline"], "baseline")
+    make(rs["eq_off"], "eq_off")
+    assert calls[0]["recipe"] == str(reg) and calls[0]["check_build"] is True
+    assert calls[1]["check_build"] is False and calls[1]["knobs"]["eq"]["on"] is False
+    assert all(c["n"] == 4 and c["seed"] == 7 for c in calls)
+    assert [m["j"] for m in b["metas"]] == [0, 1, 2, 3] and b["noisy"].shape == (4, 16000)
+    assert reg.read_text() == json.dumps(base)  # 正本配方没被改
