@@ -11,7 +11,7 @@
 
 ## 下一步
 1. 大总管：重跑测试、开 PR（Closes #156）；开 3 件 issue（见 `docs/experiments/exp025-gtcrn-train/data/reviews/156_traindata-codex.md` 页首）；评审索引 `docs/reviews/README.md` 加一行
-2. trainer 用数据前：cloudrun 在云上用现行代码重跑 `register` 与 `pack`（build_id 多算了索引与 exp013 三个模块，旧 build `49349c158a4defdc` 对不上；不用重切、不用重分片）
+2. 现行训练 build 是 `f032a75eedad80d6`（2026-11-25 云上用 main 86698924 重新登记），trainer 可以用
 
 ## 依赖
 - 早期混响 100 ms 的正本在 `docs/experiments/exp013-scene-suite/rooms.py` 的 `EARLY_REVERB_MS` 与 `early_rir`。它们在 evalcmp 的分支 `feat/eval-paired-compare` 上，还没合进 main。合并前本分支的混音测试会红；本机验证用的是那个分支的 rooms.py
@@ -57,3 +57,4 @@
 - 2026-11-25 大总管定：跨平台差约 4e-13，不再要求云上逐位同 17f5。判据改为本机 6323 同 17f5 + 云上 6323 音频按 hashes.txt 全对 + aa9f 的 exclude 与版本同 + 原料全对；官方源可复现记「未验证」。--check-dir 换成 --check-cloud（先改测试再改码）。用 aa9f 真小文件干跑通过（两份日志是仿造的）
 - 2026-11-25 cloudrun 带回两份日志：6323 音频 5020/5020 按 hashes.txt 对上；原料全对。合入 origin/main（971c7eec，aa9f 小文件已在 main）。--check-cloud 四项全过，报告 rebuild/exp013-20261124-192451.json 和两份日志进仓；官方源可复现记「未验证」。全量 128 条 127 过，1 条红（缺 cloud/config.py）
 - 2026-11-25 收尾评审：多视角自审（第一次误审了 src/，改参数重跑）+ codex gpt-6-astra 4 轮，P1×5 · P2×15 全核实属实，第 3、4 轮无 P0/P1 停。exp013 判据升到第 4 版，现行报告 rebuild/exp013-20261124-200416.json。合入 cloudrun 的 main（df145344）后 test_real_cloud_config_quota 转绿，全量 139 条全过
+- 2026-11-25 cloudrun 用 main 86698924 重跑 register + pack：新 build f032a75eedad80d6。包 sha256 53e59cdc… 核对一致；包里其余文件和仓里逐字节相同；按记录字段重算 id 相同，代码与配方哈希等于现行，交集检查 6 个来源 83,460 行 0 处。进仓于分支 chore/exp025-register2
