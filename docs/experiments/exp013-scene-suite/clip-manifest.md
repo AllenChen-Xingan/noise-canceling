@@ -1,6 +1,7 @@
 # exp013 · 片段清单格式（v1.2 · 2026-11-03 · 已与 scorecard 对齐）
 
 > v0 → v1（scorecard 回复）：正本改为 Rust 类型导出的 schema；`audio` 加 `noise` / `interf` 两条汇总轨；`hash.wav_sha256` 改为逐轨对象。
+> v1.2 → v1.3（2026-11-16 起的 build，D99 第 2 条）：`audio` · `hash.samples` · `hash.wav_sha256` 多一条**可选**轨 `owner_early`（早期回声参考，见下表 `audio` 行）。字段正本是 Rust `Tracks`，schema 已重新导出；旧 build 没有这条轨，照样能读。
 > v1.1 → v1.2（第三版 build，实测 RIR）：`targets[].src` 与 `sounds[].src` 里多了 `rir`（`{kind: "rir", dataset, room, file, ch, t60_s, drr_meas_db, direct_gain_db}`）；`chain.room`（`room_id` · `dataset` · `paired` · `room_t60_s` · `bed_cls` 等）；`chain.room_dims_m` 去掉。都在自由对象里，不改 schema。
 > v1 → v1.1：`hash` 定为 `{samples, wav_sha256}` 两个逐轨对象（同 scorecard schema）；另加 4 个字段，已请 scorecard 加进 Rust 类型：`targets[].src` · `measured.snr_all_db` · `measured.owner_level_dbfs` · `sounds[].direction_db`。
 
@@ -23,7 +24,7 @@
 | `lang` | `en` / `zh` | 主说话人语种 |
 | `polarity` | `suppress` / `preserve_all` | `suppress` = 只留主说话人；`preserve_all` = 近处几人都留（只有 `meeting-room`，待人定）|
 | `dur_samples` · `sr` | 整数 | 段长、采样率（16000）|
-| `audio` | 对象 | 各轨相对主目录的路径：`mix` · `owner`（混响 + 设备后，**评测用干净参考**）· `owner_dry`（主说话人干轨：无房间、无设备链，按直达声到达时刻后移、与 `owner` 对齐，电平与主说话人链后相同；Air 麦版本另有最小相位 FIR 的几个样本延迟未补）· `stems`（键 = 声音实例 id）· `floor`（设备底噪）· `noise`（全部非语音分轨 + `floor` 之和）· `interf`（全部旁人语音分轨之和）。`noise` / `interf` 都取削波前，`additive` 为假时也给 |
+| `audio` | 对象 | 各轨相对主目录的路径：`mix` · `owner`（混响 + 设备后，**评测用干净参考**）· `owner_early`（v1.3 起，可选：主说话人只留直达声 + 直达到达后 `rooms.EARLY_REVERB_MS` 毫秒混响，过同样的设备链、同样的电平系数；成绩单旁列用）· `owner_dry`（主说话人干轨：无房间、无设备链，按直达声到达时刻后移、与 `owner` 对齐，电平与主说话人链后相同；Air 麦版本另有最小相位 FIR 的几个样本延迟未补）· `stems`（键 = 声音实例 id）· `floor`（设备底噪）· `noise`（全部非语音分轨 + `floor` 之和）· `interf`（全部旁人语音分轨之和）。`noise` / `interf` 都取削波前，`additive` 为假时也给 |
 | `has_clean_ref` | 布尔 | 有无干净参考（本集恒为真）|
 | `additive` | 布尔 | 分轨相加是否等于 mix（削过波的段为假，此时 `stems` 是削波前的）|
 | `targets` | 数组 | 要留的说话人：`[{"spk": "<说话人 id>", "dist_m": 0.5, "azimuth_deg": 0, "level_dbfs": -27.3, "iv": [[起, 止), …]}]`。外加 `src`（素材出处，同 `sounds[].src`，防泄漏检查用）。`suppress` 段恰好 1 个；`preserve_all` 段 2–3 个，`owner` = 全部之和 |

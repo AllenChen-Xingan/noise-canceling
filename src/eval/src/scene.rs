@@ -186,6 +186,10 @@ pub struct Tracks {
     pub mix: String,
     /// 混响 + 设备链之后的主说话人：**评测用的干净参考**
     pub owner: String,
+    /// 只留直达声 + 前 `EARLY_REVERB_MS`（正本 exp013 `rooms.py`）混响、过同样设备链的主说话人：**早期回声参考**
+    /// （D99 第 2 条；成绩单旁列）。早于它的 build 没有这条轨，读回为 `None`
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_early: Option<String>,
     pub owner_dry: String,
     pub floor: String,
     /// 全部非语音分轨 + `floor` 之和（削波前）

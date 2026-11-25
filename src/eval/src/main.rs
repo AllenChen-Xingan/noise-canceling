@@ -10,6 +10,7 @@
 //! vdn-eval list
 //! vdn-eval scorecard [--suite JSON] [--system ref,gtcrn] [--qa] [--rules v1|v2] [--out DIR]   # 场景成绩单（specs/rubric/scorecard.md）
 //! vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] [--out DIR]   # 不重跑音频，按规则重新汇总
+//! vdn-eval compare --a <clips.jsonl> --b <clips.jsonl> [--by-scene] [--noise-a … --noise-b …] [--out DIR]   # 配对比较（scorecard.md 第十节）
 //! vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…   # 子进程入口：评分模型打分，每段一行 JSON
 //! ```
 //! - `ci`：CI 层（纯 DSP、无模型）。门禁不过 → 退出码 1。权重不在本机的系统自动跳过
@@ -486,6 +487,15 @@ fn main() -> ExitCode {
         "calib" => cmd_calib(&args).map(|()| true),
         "dnsmos" => cmd_dnsmos(&args),
         "scorecard" => cmd_scorecard(&args),
+        "compare" => {
+            let m = meta();
+            let dir = vdn_eval::suite::main_root()
+                .join("_tmp/compare")
+                .join(&m.run_id);
+            vdn_eval::scorecard::compare_out::cli(&args[1..], &m.run_id, dir)
+                .map(|d| println!("配对比较：{}", d.join("compare.md").display()))
+                .map(|()| true)
+        }
         "nrmos" => vdn_eval::qa::nrmos::cli(&args[1..]).map(|rows| {
             for r in rows {
                 println!("{r}");
@@ -497,7 +507,9 @@ fn main() -> ExitCode {
             Ok(true)
         }
         _ => {
-            eprintln!("用法：vdn-eval <ci | qa | calib | scorecard | list> [选项]（见源码头注释）");
+            eprintln!(
+                "用法：vdn-eval <ci | qa | calib | scorecard | compare | list> [选项]（见源码头注释）"
+            );
             return ExitCode::FAILURE;
         }
     };

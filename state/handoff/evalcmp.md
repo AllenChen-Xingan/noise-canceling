@@ -1,0 +1,86 @@
+# 现状页 · 手下 evalcmp（批次 20261116-b19，issue #155）
+
+状态：已收尾（2026-11-24，等大总管验收）
+
+## 手上
+管 3 个实体：评测器（`src/eval`）· 评测参考轨（exp013 生成器的参考输出）· 成绩单（规约 `specs/rubric/scorecard.md`）。
+1. 配对比较子命令 `vdn-eval compare`
+2. 早期回声参考轨 `owner_early.wav` + 成绩单旁列
+3. 自审 + codex，连续两轮没有 P0/P1
+
+## 做到哪
+- 全部交付完成：compare 子命令 · 早期回声参考轨（生成端 + 成绩单旁列）· 规约第十 / 十一节 · 新 build `20261124165427-6323`（本机出，已提交小文件）· `src/eval/suite/scenes.json` 指向新 build
+- codex 第 2、3 轮连续没有 P0/P1；整套重跑全绿（见流水 11-24 末几条）
+- 下一步（不归我）：大总管亲手重跑、开 PR 并合并；合并后 cloudrun 在云上再出一份，用 `compare_builds.py` 与本机这份交叉核对
+
+## 正本与交叉校验（CLAUDE.md 五.5）
+| 东西 | 正本 | 第二处表示 · 校验 |
+|---|---|---|
+| 早期混响毫秒数 100 | `docs/experiments/exp013-scene-suite/rooms.py` `EARLY_REVERB_MS` | traindata `exp025-gtcrn-train/data/mix.py` import 它与 `early_rir`；对拍测试 `test_mix_loader.py`（traindata 写） |
+| 有早期参考旁列的项 | `standard::EARLY_REF` | 按行为核对（`early_tests.rs`：换参考后读数变了的项必须正好是它）；规约第十一节表（`tests/scorecard_compare_doc.rs`） |
+| 片段清单 `owner_early` 字段 | `scene.rs` `Tracks` | `specs/schema/eval-scene-clip.schema.json` 由 vdn-schema 导出，`--check` 比对 |
+| compare 的三态名 · SC-AGG 参数 · 否决逐段判法 | `compare.rs` · `thresholds/table.rs` | 规约第十节三张表（`tests/scorecard_compare_doc.rs`） |
+
+## 流水
+- 11-16 报到；100 ms 正本与 trainer、traindata 商定放 `rooms.py`（大总管同意，要求旧 build 行为不变）
+- 11-16 `rooms.py` 加 `EARLY_REVERB_MS` 与 `early_rir`；`compose.py` 加 `point_early`（不抽随机数）与 `owner_early` 轨；`manifest.AUDIO_KEYS` 加一项
+- 11-16 实测：新代码重生成 build 17f5 的 3 段（cafe-c00-mba · meeting-room-s01-mba · street-outdoor-c00-ext），各轨样本哈希与旧清单逐个相同
+- 11-16 `tests/test_early.py` 9 条过；旧 build 仓内 40 个文件哈希钉在 `tests/old_builds.sha256`
+- 11-16 Rust：`scene.rs` 加可选 `owner_early`；`scorecard/early.rs` 旁列；`compare.rs` · `compare_out.rs` · `main.rs` 接 `compare`
+- 11-16 名额内：scorecard 单测 65/65；vdn-schema 重导 schema（+7 −0，`--check` 一致）；external_e2e 12 · scorecard_e2e 11 · scorecard_standard 5 · scorecard_compare_doc 2 全过；exp013 Python 自检 77 条全过
+- 11-16 按行为测出有早期参考旁列的项 10 个：V-ONSET V-WEAK V-PUMPV V-CLICK V-ESTOI V-TIMBRE V-SPLVL V-TSOS V-SWALLOW V-PSE-OVL
+- 11-16 加 e2e `early_reference_side_column` 与 compare 真实打分压低 6 dB 测试
+- 11-24 电脑休眠中断后接着做（人指示）。JSON 往返浮点差最后一位 → 改相对容差 1e-12，e2e 过；clippy -D warnings 过；xtask tidy 过；scorecard 单测 68/68
+- 11-24 大总管 noise-canceling-e1 已不在会话列表，名额无法申请；按人「接着做」自行跑，记在此
+- 11-24 compare 冒烟（只读分数）：a = dfn3-ll、b = dpdfnet2，旧 build 480 段全部配上；涨 10 · 退 8 · 不确定 5。延迟 V-LAT 判退（+46.25 ms）、b 新增否决 480 段。发现 Markdown 里否决段列表太长 → 最多列 10 个，全部在 compare.json
+- 11-24 exp013 冒烟 build（4 段，写在会话临时目录，不进仓）：泄漏、电平验收都过，每段有 owner_early.wav；取 1 行做 Rust 解析夹具 `src/eval/tests/fixtures/scene-clip-early-example.jsonl`
+- 11-24 traindata 已在 `exp025-gtcrn-train/data/mix.py:30` import `EARLY_REVERB_MS, early_rir`，并有测试和正本逐样本对拍（`test_mix_loader.py:64`）
+- 11-24 本窗口的选项题「新 build 在哪出」收到了「上云」的回答。大总管 noise-canceling-33 事后说明：是它在 tmux 里代按的，人当时没看这个窗口。我无法核实是谁按的，按大总管说明记：这是大总管的决定（D97），人未参与
+- 11-24 大总管 noise-canceling-33 接替 e1：认可此前自行跑的几次（下列）；批 cloudrun 同一台 CPU 机，和 traindata 合计最多 3 小时、1 美元。本分支合并后由 cloudrun 跑，小文件回到 `_tmp/20261125-cloudrun-exp013build/`，由我核 sha256 后提交到 `builds/<id>/`
+- 自行跑的几次（无名额，补记）：11-24 scorecard_e2e 早期参考单条（220 s）· clippy 两次 · xtask tidy · scorecard 单测两次 · compare 冒烟（只读分数）· exp013 冒烟 build（4 段）· exp013 Python 自检
+- 11-24 大总管发 1 个名额：codex 修完后整套 e2e 重跑用，跑完回报「名额已还」
+
+## 新 build 与云上交叉核对（大总管 noise-canceling-33 定：本机、云上各出一份交叉核对；技术题，人未参与）
+- 本机这份：`builds/20261124165427-6323`（480 段，42.3 s，泄漏检查与电平验收都过；每段有 owner_early；旧各轨样本哈希与 17f5 逐个相同 0 处不同）
+- 素材索引：`material_index.sha256 = a8de10ada8c9f8215606613c88f82b8a234a459611941183e9b3212932a71b8e`，files = 1994（与 17f5 相同）
+- 云上：本分支合并后，cloudrun 在网络盘上传本机素材（约 3.3 GB：test-clean 2707 个文件 356 MB · demand 160 个 1.7 GB · esc50 169 个 71 MB · music 1 个 · zh 6 个 · rir 442 个 1.2 GB），按 `requirements.lock` 装环境，再 `build.py --workers 4`
+- 验收：`python docs/experiments/exp013-scene-suite/compare_builds.py <云上 build 目录> docs/experiments/exp013-scene-suite/builds/20261124165427-6323` 输出「一致」。按片段 id 逐轨比两种哈希 + 其余字段 + manifest 素材 / 代码 / 参数哈希；不比 clips.jsonl / hashes.txt 文件哈希，因为里面的路径带 build id
+- 云上小文件回到主仓 `_tmp/20261125-cloudrun-exp013build/`，由 evalcmp 核对后提交（若那时本线已关，由大总管指派）
+
+## 待人拍板
+（暂无）
+
+## 转交（范围外的发现）
+- 吃字与两个评分模型（QA 层）的早期参考旁列本批没算：要换参考另跑模型，适合上云时一起做
+
+## codex 评审记录（docs/reviews/ 不在我的写范围，记在这里；合并时大总管可转进 docs/reviews/）
+### 第 1 轮（2026-11-24 · 模型 gpt-6-astra · 只读沙箱 · effort medium · 45 s）：P0×0 P1×1 P2×2 · 总评「修改」
+- 第 1 轮 #1（P1，属实，已改）：否决统计把「判不了」当「没否决」。改成三态：两边都判得了才算新增 / 消失，其余进新列「一边判不了」。测试 `undecided_vetoes_are_not_counted_as_changes`（双向，覆盖缺项 · 判定未知）；规约第十节第 4 条同步
+- 第 1 轮 #2（P2，属实，已改）：规约判断表只比名称。加 `Call::cond()` 作条件的正本，文档第二列逐字比对；另加 `call_boundaries` 按行为测端点恰为 0、两个方向、组数不够
+- 第 1 轮 #3（P2，属实，已改）：早期轨「同电平系数」没独立验证。加 `SameCoefficients`：监听未定电平输出，每个要留的人用主轨解出系数，逐样本核早期轨；覆盖单人无余量调整（cafe-c00-mba）与全留多人且触发余量调整（meeting-room-s02-mba）。变异核对：删掉早期轨的余量乘法，这条测试变红
+- 抽查「不符」1 条即 #2，已处理；「无法核实」2 条（bootstrap 内部、设备链）不在本次改动范围
+### 第 2 轮（2026-11-24 · gpt-6-astra · 只读 · medium · 45 s）：P0×0 P1×0 P2×1 · 连续第 1 轮无 P0/P1
+- 上一轮 3 条：codex 抽查都核实已改
+- 第 2 轮 #1（P2，属实，已改）：报告没记实际比的系统，同一多系统文件选两个系统时分不出谁是基线。JSON `meta` 加 `a_system` / `b_system`，Markdown 路径后写「（系统 X）」；测试同一文件选不同系统、交换后跟着换
+### 第 3 轮（2026-11-24 · gpt-6-astra · 只读 · medium · 43 s）：P0×0 P1×0 P2×1 · 连续第 2 轮无 P0/P1 → 满足停止线
+- 上一轮 1 条：codex 抽查核实已改
+- 第 3 轮 #1（P2，属实，已改，不另开 issue）：缺段测试删一段又补一段，两边段数仍相等。加 `unequal_clip_counts_both_directions`：b 只删 3 段（12 对 9），双向核配对数、只在一边的段、各项有效段数与差值
+- 停止线：第 2、3 轮连续没有 P0/P1，已满足（codex-review 规则）；三轮的 P2 都已改，不另开 issue
+
+## 整套重跑与偶发失败
+- 11-24 16:31 整套跑（大总管预发的名额）：`scorecard_e2e::early_reference_side_column` 失败 1 次，断言「没跑成的段为空」（当时第 486 行），61.6 秒就停了；原因原文被输出过滤丢掉。clippy 1 条（多余 clone，已修）
+- 单跑这一条通过（217.5 s）；并行跑 scorecard_e2e 13/13 通过（209 s）。同一时段本 worktree 没有别的测试进程（后台任务时间已核，大总管也确认）。本机另有 4 个别的仓库在跑 cargo test，耗时数字不能当测速基准
+- 补了夹具隔离（真实隐患，根因未证实）：每次 setup 独立目录；会红的测试 `setup_dirs_are_isolated` 旧代码红、新代码绿。为守 600 行，夹具抽到 `tests/common/scene_fixture.rs`，早期参考 e2e 移到 `tests/scorecard_early_e2e.rs`
+- 追踪 issue：#161（我开的，大总管要求）
+- 11-24 约 08:42（北京时间 25 日）主仓 `_tmp/` 被人在另一会话批准的腾盘清理删掉（大总管查明，不恢复），含 exp002-venv、旧 build 17f5 音频、旧成绩单
+- 11-24 按大总管指示：用 uv 重建环境 `_tmp/exp013-venv`（3.12.14 · numpy 2.5.4 · scipy 1.18.1 · soundfile 0.14.0，与 17f5 manifest 一致），冻结成 `exp013-scene-suite/requirements.lock`；README 与 build.py 的环境路径改过来
+- 11-24 整套重跑（--no-fail-fast，完整输出 `_tmp/full-rerun-20261124-164525.log`）：vdn-eval 单元 171 · 各集成测试全过（含 scorecard_e2e 11、scorecard_early_e2e 3，并行）· clippy · tidy · schema 一致；Python 那一步缺旧 venv 失败（环境问题），新环境补跑 81/81 过
+- 11-24 本机重出旧 build 17f5 音频到原路径：`hashes.txt` 4540 个 wav 全部 OK，480 段清单除路径外逐字段相同，素材索引相同——证明可重建。副作用：每段目录多一条不在旧 hashes.txt 里的 owner_early.wav
+- 11-24 出新 build `20261124165427-6323` 并提交小文件；`tasks.py` 重写 `src/eval/suite/scenes.json` 指向它（只改了 clips 路径与 origin，120 行）；Python 81/81、`repo_scene_suite_parses_and_expands` 过
+- 11-24 加 `compare_builds.py` + `tests/test_compare_builds.py`（3 条：换 id 一致 · 改一条轨哈希报出 · 素材索引与缺段报出）
+
+## PR 正文要点（大总管开 PR 时用）
+- Closes #155；新 build 由大总管 noise-canceling-33 定上云（D97），人未参与；合并后 cloudrun 在 CPU 机上出，小文件由 evalcmp 核 sha256 后提交
+- 偶发失败照实写：只出现过 1 次，并行重跑 13/13 通过，补了夹具隔离，根因未证实，见 #161
+- 新 build：`builds/20261124165427-6323`，本机与云上交叉核对用 `compare_builds.py`
+- 加的测试：compare 单元 17 条（自比全不确定、真实打分压低 6 dB 判退、段数不一致双向、否决三态、判断边界等）· compare_out 2 条 · early 4 条 · e2e 早期参考旁列 + 生成行解析 + 夹具隔离 · 规约表比对 2 条 · exp013 Python `test_early.py` 10 条 · `test_compare_builds.py` 3 条
