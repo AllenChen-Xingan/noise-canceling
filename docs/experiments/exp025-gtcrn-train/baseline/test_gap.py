@@ -104,7 +104,7 @@ def compare_json(by_scene, system_a="gtcrn", system_b="dfn3"):
 def baseline_card(report_only=("V-TSOS",)):
     """只用来读「哪些项是判定项」的基线 scorecard.json。"""
     items = [{"v": v, "report_only": v in report_only, "mean": 0.0, "better": "lower", "status": "pass"}
-             for v in ("V-NR", "V-ESTOI", "V-TSOS")]
+             for v in ("V-NR", "V-ESTOI", "V-TSOS", "V-A", "V-B", "V-C")]
     return {"scenes": [{"scene": "cafe", "tier": "common", "device": "mba-builtin", "system": "gtcrn",
                         "items": items, "listen": {"models": []}}]}
 
@@ -141,7 +141,8 @@ class Uplift(unittest.TestCase):
 
     def test_verdict_uses_same_overlap_rule(self):
         order = list(gap.PROVISIONAL) + [s for s in ALL15 if s not in gap.PROVISIONAL]
-        cj = compare_json({s: [("V-NR", "up" if k < 4 else "unsure", -(20 - k), "lower")] for k, s in enumerate(order)})
+        cj = compare_json({s: [(v, "up" if k < 4 else "unsure", -(20 - k), "lower") for v in ("V-NR", "V-A", "V-B", "V-C", "V-ESTOI")]
+                           for k, s in enumerate(order)})
         u = gap.uplift_table(cj, baseline_card())
         self.assertEqual(sorted(u["top"]), sorted(gap.PROVISIONAL))
         self.assertEqual(u["verdict"], "一致")
@@ -194,8 +195,8 @@ class Completeness(unittest.TestCase):
 
     def test_uplift_scene_without_usable_diffs_is_insufficient(self):
         """codex 第 2 轮 P1 #1：15 个场景都在，但某场景没有可用的差值（或有片段只在一边）→ 也是「数据不足」。"""
-        full = {s: [("V-NR", "up", -1.0, "lower")] * 1 for s in ALL15}
-        full = {s: [(v, "up", -1.0, "lower") for v in ("V-NR", "V-ESTOI")] for s in ALL15}
+        items = ["V-NR", "V-ESTOI", "V-A", "V-B", "V-C"]  # 至少 MIN_ITEMS 个有差值的判定项
+        full = {s: [(v, "up", -1.0, "lower") for v in items] for s in ALL15}
         cj = compare_json(full)
         self.assertIn(gap.uplift_table(cj, baseline_card())["verdict"], ("一致", "不一致"))
         cj = compare_json(full)

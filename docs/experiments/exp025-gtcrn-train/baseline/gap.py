@@ -23,7 +23,9 @@ Rust 算好的），不重算任何评分项，所以这里不是 verifier 的�
    「涨 / 退 / 不确定」由 Rust 判好），外加基线的 `scorecard.json`（只用来认哪些是判定项）。每个场景：
    **涨数** = 判定项里判「涨」的个数，**退数** 同理；**提升分** = 每项按「候选比 GTCRN 好多少」（差值均值换成越大越好的方向）
    把场景排名换成 0–1（提升最大 = 1），再对项取平均。先按涨数、再按提升分排序；前 TOP_K 与临时选择的重合用同一条线
-   `--exclude` 去掉两边量法不同的项（例如比较的两份来自不同代码版本、其中某项改过量法）
+   `--exclude` 去掉两边量法不同的项（例如比较的两份来自不同代码版本、其中某项改过量法）。
+   **数据不全不下结论**（提升空间表自己的条件）：逐场景结果 < `MIN_SCENES`；有场景的有差值判定项 < `MIN_ITEMS`；
+   有片段只在一边。任一成立 → 「数据不足」。compare 不带切片信息，所以这张表不查切片
 
 用法：
   python gap.py weak <scorecard.json> [--system gtcrn] [--out <目录>]                       → gap-weak.md / .json
@@ -41,6 +43,7 @@ MIN_OVERLAP = 3  # 前 TOP_K 与临时选择至少重合几个，算「一致」
 MIN_CELLS = 10  # 一个场景至少要有几个有值的（项, 切片）才参与排名
 MIN_SCENES = 15  # 数据完整才下判断：开会场景数（与 src/eval/suite/scenes.json 的场景数比对，见 test_gap.py）
 SLICES = 4  # 每个场景要有的 档 × 设备 切片数（常见 / 压力 × 两种设备）
+MIN_ITEMS = 5  # 提升空间表：每个场景至少要有几个有差值的判定项
 # 临时选定的四个加训场景（exp016 旧表，回混口径）：街道 · 车站 · 车内 · 咖啡馆
 PROVISIONAL = ("street-outdoor", "transit-hub", "car-passenger", "cafe")
 
@@ -176,6 +179,12 @@ def uplift_table(cmp_json, card_json, exclude=()):
     overlap = sorted(set(top) & set(PROVISIONAL))
     rng, verdict = _verdict(rows, lambda r: (r["ups"], r["gain"]))
     incomplete = [f"逐场景结果只有 {len(rows)} 个 < {MIN_SCENES}"] if len(rows) < MIN_SCENES else []
+    thin = sorted(r["scene"] for r in rows if r["items"] < MIN_ITEMS)
+    if thin:
+        incomplete.append(f"有差值的判定项少于 {MIN_ITEMS} 个的场景：{' · '.join(thin)}")
+    for sc in cmp_json["scopes"]:
+        if sc["scope"] == "all" and (sc.get("only_a") or sc.get("only_b")):
+            incomplete.append(f"有片段只在一边（只在基线 {len(sc.get('only_a', []))} 段，只在候选 {len(sc.get('only_b', []))} 段）")
     if incomplete:
         verdict = "数据不足"
     meta = cmp_json.get("meta", {})
