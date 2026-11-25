@@ -245,6 +245,43 @@ mod tests {
         assert_eq!(back, orig);
     }
 
+    /// 只按缓存重算识别项（大总管 2026-11-25）要求其余各项逐字节不变：读回再写出必须逐字节相同。
+    /// serde_json 默认的浮点解析不保证最后一位（要开 `float_roundtrip`）；用一批随机位模式核。
+    #[test]
+    fn jsonl_round_trip_is_byte_identical() {
+        let mut x: u64 = 0x9E37_79B9_7F4A_7C15;
+        let mut extra = Vec::new();
+        while extra.len() < 4000 {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            let f = f64::from_bits(x);
+            if f.is_finite() {
+                extra.push(f);
+            }
+        }
+        let names = ["a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"];
+        let mut rows = parse_jsonl(EXP014_LINE).unwrap();
+        let base = rows[0].scores[1].2.clone();
+        rows[0].scores = extra
+            .chunks(names.len())
+            .map(|c| {
+                let mut s = base.clone();
+                s.value = Some(c[0]);
+                s.extra = names.iter().copied().zip(c.iter().copied()).collect();
+                ("V-SIM-GATE", false, s)
+            })
+            .collect();
+        let once = to_jsonl(&rows).unwrap();
+        let twice = to_jsonl(&parse_jsonl(&once).unwrap()).unwrap();
+        let bad = once
+            .split("},{")
+            .zip(twice.split("},{"))
+            .filter(|(a, b)| a != b)
+            .count();
+        assert_eq!(bad, 0, "{bad} 项读回再写出变了");
+    }
+
     #[test]
     fn vacuum_column_derived_from_nr() {
         let mut rows = parse_jsonl(EXP014_LINE).unwrap();
