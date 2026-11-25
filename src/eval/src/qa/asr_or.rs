@@ -266,6 +266,8 @@ impl Conn<'_> {
 
 /// 一条待转写的音频：(16 kHz 样本, 采样率, 语言)。
 pub type Job = (Vec<f32>, u32, String);
+/// 并发时每条的结果槽：(文本, 实际花费) 或出错原因。
+type Slot = std::sync::Mutex<Option<Result<(String, f64), String>>>;
 
 impl OpenRouter {
     pub fn new(url: impl Into<String>, key: String, ledger_path: PathBuf) -> OpenRouter {
@@ -309,9 +311,8 @@ impl OpenRouter {
 
     /// 转写一条音频（16 kHz 浮点样本）。成功后按 `usage.cost` 记账；到上限、出错都返回 `Err`。
     pub fn transcribe(&mut self, x: &[f32], sr: u32, lang: &str) -> Result<String, String> {
-        Ok(self
-            .transcribe_many(&[(x.to_vec(), sr, lang.to_string())], 1)
-            .remove(0)?)
+        self.transcribe_many(&[(x.to_vec(), sr, lang.to_string())], 1)
+            .remove(0)
     }
 
     /// 并发转写一批（最多 `workers` 路同时发；429 / 5xx 各自退避）。结果按输入顺序返回，和完成先后无关。
@@ -328,8 +329,7 @@ impl OpenRouter {
             backoff_ms: self.backoff_ms,
             requests: &requests,
         };
-        let slots: Vec<std::sync::Mutex<Option<Result<(String, f64), String>>>> =
-            jobs.iter().map(|_| std::sync::Mutex::new(None)).collect();
+        let slots: Vec<Slot> = jobs.iter().map(|_| std::sync::Mutex::new(None)).collect();
         std::thread::scope(|sc| {
             for _ in 0..workers.clamp(1, jobs.len().max(1)) {
                 sc.spawn(|| {
