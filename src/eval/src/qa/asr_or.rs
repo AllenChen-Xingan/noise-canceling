@@ -525,3 +525,7 @@ mod tests;
 #[cfg(test)]
 #[path = "asr_or_cost_tests.rs"]
 mod cost_tests;
+
+#[cfg(test)]
+#[path = "asr_or_bill_tests.rs"]
+mod bill_tests;
