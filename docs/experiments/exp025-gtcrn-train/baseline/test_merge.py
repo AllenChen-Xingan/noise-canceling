@@ -65,17 +65,32 @@ class Merge(unittest.TestCase):
         with self.assertRaises(ValueError):
             merge.merge(cl, local())
 
+    def _write(self, d, missing_cloud=(), missing_local=()):
+        for side, rows, miss in (("c", cloud(), missing_cloud), ("l", local(), missing_local)):
+            (d / side).mkdir()
+            (d / side / "clips.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+            (d / side / "scorecard.json").write_text(json.dumps({"missing": list(miss)}))
+        return ["--cloud", str(d / "c/clips.jsonl"), "--local", str(d / "l/clips.jsonl")]
+
+    def test_missing_clips_on_either_side_refuse_merge(self):
+        for mc, ml in (([{"what": "x"}], []), ([], [{"what": "y"}])):
+            with tempfile.TemporaryDirectory() as d:
+                args = self._write(Path(d), mc, ml)
+                with self.assertRaises(ValueError):
+                    merge.main(args + ["--out", str(Path(d) / "m")])
+
     def test_main_writes_new_files(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
-            for name, rows in (("c.jsonl", cloud()), ("l.jsonl", local())):
-                (d / name).write_text("".join(json.dumps(r) + "\n" for r in rows))
-            merge.main(["--cloud", str(d / "c.jsonl"), "--local", str(d / "l.jsonl"), "--out", str(d / "m")])
+            args = self._write(d)
+            merge.main(args + ["--out", str(d / "m")])
+            # 给 vdn-eval --from-clips 读的缺段记录（空）
+            self.assertEqual(json.loads((d / "m/scorecard.json").read_text())["missing"], [])
             got = [json.loads(l) for l in (d / "m/clips.jsonl").read_text().splitlines()]
             self.assertEqual(len(got), 3)
             self.assertIn("V-ESTOI", json.loads((d / "m/merge-report.json").read_text())["items"])
             with self.assertRaises(FileExistsError):
-                merge.main(["--cloud", str(d / "c.jsonl"), "--local", str(d / "l.jsonl"), "--out", str(d / "m")])
+                merge.main(args + ["--out", str(d / "m")])
 
 
 if __name__ == "__main__":
