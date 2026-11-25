@@ -59,3 +59,4 @@
 - 11-25 乙段第 1 步（cloudrun）：冒烟只有过拟合不过（损失走完 14%、SI-SNR +3.5 dB，要 50% 与 +6 dB）；其余三件过。测速：每步 0.126 s、取数 0.033 s（中位，100 步）。报告 `trainer/smoke_reports/20261125-h100-overfit-FAILED.json`；已删机，等大总管定怎么重跑
 - 11-25 过拟合本机排查（名额）：合成小样 4×2 s 与 32×4 s 都过（走完 111% / 110%，SI-SNR +12.9 / +16.0 dB；占掩码族最好损失距离 73%）。第 2 组期间本机合盖睡眠，墙钟作废；caffeinate 挡不住合盖。报告 `trainer/smoke_reports/20261125-overfit-diag-local-cpu.json`
 - 11-25 大总管批云上 CPU 真数据排查：加 `oracle.py` 与 `smoke.py --overfit-diag`（`tests/test_overfit_diag.py` 先红后绿，冒烟相关 42 条过，电池下 125 s）；方案第八节
+- 11-25 云上 CPU 真数据排查（cloudrun，1831886c，1237 s）：走完 40 dB 下限距离 14.4%，与 H100 几乎逐值相同（终值 2.3814 对 2.3808）→ H100 没问题。oracle 损失 −1.312（SI-SNR 23.5 dB），40 dB 下限 −3.307 低于它 → 不可达；走完 oracle 距离 20.6%。报告 `trainer/smoke_reports/20261125-overfit-diag-cloud-cpu-real.json`；判据改法待大总管定
