@@ -58,6 +58,16 @@ class TestTransfer(Base):
         with self.assertRaises(SystemExit):
             O.start_job(self.cli, "pod_9", "true", "t")
 
+    def test_same_name_twice_waiter_gets_its_own_result(self):
+        # 大总管裁决（第 7 轮 #2，改结构）：每次运行一个唯一编号，等第一次的拿到第一次的结果
+        rid1 = O.start_job(self.cli, "pod_9", "false", "t")
+        self.fake.jobs[rid1] = (1, "first\n")
+        rid2 = O.start_job(self.cli, "pod_9", "true", "t")
+        self.fake.jobs[rid2] = (0, "second\n")
+        self.assertNotEqual(rid1, rid2)
+        st = O.wait_job(self.cli, "pod_9", rid1, 10, sleep=lambda s: None)
+        self.assertEqual((st["rc"], st["log"]), (1, "first\n"))
+
 
 if __name__ == "__main__":
     unittest.main()
