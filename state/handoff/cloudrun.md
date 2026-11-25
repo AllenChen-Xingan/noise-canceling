@@ -41,3 +41,4 @@
 - 2026-11-24 发现：网络盘 df 显示集群总量 158 TB，看不到 150 GB 配额，fetch.py 查盘无效（已报，请转 traindata）
 - 2026-11-24 大总管选 A：test 时跳过 test_gpu_mix、test_mix_loader，原因是 early_rir 未合入（evalcmp 未合进 main），下载不依赖它们；盘量用 du -sh /workspace 盯，超 120 GB 停
 - 2026-11-25 00:21Z：第一批 A1–A5 + E2 共 21 包 18.15 GB 下完（aria2c，大包 4.4–5.2 MB/s），全过 unzip/tar 检查与 fetch.py 核对、已解压；/workspace 33 GB。E3 三个文件第 8 次才过 Wikimedia 429，sha256 与 sources.json 一致。两份 fetched.json 取回到主仓 `_tmp/20261124-cloudrun-fetched/`，读数已发 traindata（它已合并第一批，提交 7bffd12e）。CPU 机 vggy9ggvbi3h1p 已删（估 $0.29），账上 0 台机器；累计约 $1.15 / 上限 $60（账单数据晚约 1 小时，待补实扣）。
+- 2026-11-25 上午（tmux 退出后 --resume）：大总管 noise-canceling-df 已删机 8mnlr0uvh5pu4a（split 失败 rc=1：OpenSLR28 的 RWCP_type4_rir_000l.wav 不在任何 rir_list；素材上传停在约 650 MB）。账本核对无误，累计 1.26 美元，平台 0 台。codex 第 2–4 轮的 P1 已修到能落代码的程度，78 条测试过；反复提的三件残余风险交大总管裁决（记录 cloud/reviews/codex-review.md）。等 traindata 修 split 后再开机：重跑 split→shard→register→pack，素材续传 4 路、分批前台跑、先核云上已有块。
