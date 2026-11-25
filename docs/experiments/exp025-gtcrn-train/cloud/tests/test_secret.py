@@ -86,6 +86,12 @@ class TestPutSecret(Base):
         self.assert_no_leak(str(cm.exception))
         self.assertIn("<secret>", str(cm.exception))
 
+    def test_write_command_is_valid_sh_and_has_no_value(self):
+        import subprocess
+        r = subprocess.run(["sh", "-n", "-c", S.WRITE_SH], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('"$V"', S.WRITE_SH)  # 只引用变量（真机上的执行留待下次开机冒烟，见 plan-eval-baseline.md）
+
     def test_bad_key_name_refused(self):
         with self.assertRaises(SystemExit):
             S.put_secret(self.cli, "pod_9", "bad name;rm", self.value)
