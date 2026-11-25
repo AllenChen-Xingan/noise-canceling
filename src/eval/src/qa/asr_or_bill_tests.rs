@@ -198,7 +198,9 @@ fn truncated_response_is_cost_unknown() {
     assert_eq!(rows.len(), 1, "不重试");
     assert_eq!(rows[0]["status"], 0);
     assert!(
-        rows[0]["error"].as_str().is_some_and(|e| e.contains("gen-cut-9")),
+        rows[0]["error"]
+            .as_str()
+            .is_some_and(|e| e.contains("gen-cut-9")),
         "中断前收到的生成 id 要留下：{}",
         rows[0]
     );
