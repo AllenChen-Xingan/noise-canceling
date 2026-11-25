@@ -92,6 +92,7 @@ class TestTransfer(Base):
                 with open(os.path.join(os.path.dirname(HERE), n), "rb") as s, \
                         open(os.path.join(self.tmp.name, n), "wb") as d:
                     d.write(s.read())
+            del self.fake.pods["pod_9"]  # 这个测试要真开机：去掉不在账上的假机器
             self.fake.next_job = (137, "")
             with self.assertRaises(SystemExit) as cm:
                 self.run_cli("probe", "--yes", "--dc", "US-KS-2", "--no-volume", "--max-hours", "0.25")
@@ -99,7 +100,7 @@ class TestTransfer(Base):
             rp.HERE = orig
         self.assertIn("137", str(cm.exception))
         self.assertFalse(os.path.exists(os.path.join(self.tmp.name, "probes")))
-        self.assertEqual([p for p in self.fake.pods if p != "pod_9"], [])
+        self.assertEqual(self.fake.pods, {})  # 失败也照删
 
 
 if __name__ == "__main__":
