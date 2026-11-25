@@ -40,10 +40,15 @@ pub fn row_json(r: &ClipRow) -> Value {
             })
         })
         .collect();
-    json!({
+    let mut v = json!({
         "clip": r.clip, "scene": r.scene, "tier": r.tier, "device": r.device,
         "system": r.system, "sounds": sounds, "scores": scores,
-    })
+    });
+    // 混合轨哈希：有才写（旧格式没有这一项，读回为 None）
+    if let Some(h) = &r.mix_sha256 {
+        v["mix_sha256"] = json!(h);
+    }
+    v
 }
 
 /// 把整批行写成 jsonl 文本。
@@ -139,6 +144,7 @@ pub fn parse_jsonl(text: &str) -> Result<Vec<ClipRow>, String> {
             system: s("system")?,
             sounds,
             scores,
+            mix_sha256: v["mix_sha256"].as_str().map(str::to_string),
         });
     }
     Ok(out)
