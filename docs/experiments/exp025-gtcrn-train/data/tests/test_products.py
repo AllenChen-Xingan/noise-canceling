@@ -1,5 +1,5 @@
 """云上产物拷回进仓后的核对：splits/ 与 builds/<id>/build.json（README 第六节「核对」）。
-仓里还没有产物时跳过（写明原因）；拷回来以后每次 CI 都核。"""
+第一批产物 2026-11-25 已进仓，从此缺了就红（codex 第 1 轮 P2 #5：以前缺了直接跳过，漏拷或误删逃得过）。"""
 import json
 import subprocess
 import sys
@@ -33,8 +33,7 @@ class RegisterNeedsNoMix(unittest.TestCase):
 
 class Splits(unittest.TestCase):
     def setUp(self):
-        if not split_names():
-            self.skipTest("仓里还没有 splits/（等云上 split 跑完拷回）")
+        self.assertTrue(split_names(), "仓里没有 splits/：产物丢了或没拷回")
         self.R = split.load_rules()
 
     def test_all_sources_present(self):
@@ -113,8 +112,7 @@ class Splits(unittest.TestCase):
 
 class Builds(unittest.TestCase):
     def setUp(self):
-        if not build_files():
-            self.skipTest("仓里还没有 builds/（等云上 register 跑完拷回）")
+        self.assertTrue(build_files(), "仓里没有 builds/<id>/build.json：产物丢了或没拷回")
 
     def test_build_valid_and_tables_in_repo(self):
         for f in build_files():
