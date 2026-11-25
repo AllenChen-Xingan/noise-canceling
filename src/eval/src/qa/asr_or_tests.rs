@@ -137,7 +137,7 @@ fn pcm16_wav_header_and_samples() {
 #[test]
 fn request_carries_model_audio_language_and_deny() {
     let d = tmpdir("req");
-    let (url, seen) = fake(vec![ok("hello world", 0.001)]);
+    let (url, seen) = fake(vec![ok("hello world", 1e-7)]);
     let mut c = client(&url, &d);
     assert_eq!(
         c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap(),
@@ -178,11 +178,12 @@ fn request_carries_model_audio_language_and_deny() {
 #[test]
 fn cost_is_accumulated_into_ledger_and_survives_restart() {
     let d = tmpdir("ledger");
-    let (url, _) = fake(vec![ok("a", 0.25), ok("b", 0.5)]);
+    // 费用要低于预留（0.1 秒音频 × 标价 × 1.5 ≈ 1.1e-6），否则会被当成「超过预留」停发
+    let (url, _) = fake(vec![ok("a", 2.5e-7), ok("b", 5e-7)]);
     let mut c = client(&url, &d);
     c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap();
     c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap();
-    assert!((c.ledger.spent_usd - 0.75).abs() < 1e-12);
+    assert!((c.ledger.spent_usd - 7.5e-7).abs() < 1e-15);
     assert_eq!(c.ledger.calls, 2);
     let again = OpenRouter::new("http://127.0.0.1:9/", KEY.into(), d.join("ledger.json"));
     assert_eq!(again.ledger, c.ledger, "账本落盘，重开接着累计");
@@ -395,7 +396,7 @@ fn rate_limit_429_backs_off_with_retry_after_then_succeeds() {
             "",
             json!({"error": {"code": 503, "message": "busy"}}).to_string(),
         ),
-        ok("done", 0.001),
+        ok("done", 1e-7),
     ]);
     let mut c = client(&url, &d);
     let t0 = std::time::Instant::now();
