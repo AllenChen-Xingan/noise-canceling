@@ -351,6 +351,14 @@ class Sources(unittest.TestCase):
                 self.assertEqual(r["md5"], f["md5"], url)
             self.assertFalse(f.get("sha256") and f["sha256"] != r["sha256"], url)
 
+    def test_first_batch_sha256_pinned(self):
+        """第一批（A1–A5 与 DEMAND）每个包都有钉死的 sha256（sources.json 或 fetched.json），再下一次对不上即报错。"""
+        rec = fetch.load_fetched()["files"]
+        groups = fetch.load_sources()
+        for gid in ("A1", "A2", "A3", "A4", "A5", "E2"):
+            for f in groups[gid]["files"]:
+                self.assertTrue(f.get("sha256") or f["url"] in rec, f["name"])
+
     def test_nc_not_trainable(self):
         for g in fetch.load_sources().values():
             if "NC" in g["license"]:
