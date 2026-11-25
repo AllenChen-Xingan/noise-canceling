@@ -16,10 +16,9 @@ fn edit_ops_counts() {
 /// 按段选后端：片段 id 去掉 `#…` 后查路由，查不到用路由的默认，再查不到用总默认。
 #[test]
 fn route_picks_per_clip_then_defaults() {
-    let r: Route = serde_json::from_str(
-        r#"{"default": "openrouter", "clips": {"cafe-c00-mba": "local42"}}"#,
-    )
-    .unwrap();
+    let r: Route =
+        serde_json::from_str(r#"{"default": "openrouter", "clips": {"cafe-c00-mba": "local42"}}"#)
+            .unwrap();
     assert_eq!(r.pick("cafe-c00-mba#1a2b3c4d", LOCAL42), LOCAL42);
     assert_eq!(r.pick("cafe-c01-mba#00", LOCAL42), OPENROUTER);
     assert_eq!(Route::default().pick("x", LOCAL42), LOCAL42);
@@ -39,8 +38,7 @@ fn missing_backend_fails_and_summary_counts_used_clips() {
         serde_json::json!({key(1): "hi there", key(2): "hi there"}).to_string(),
     )
     .unwrap();
-    let route: Route =
-        serde_json::from_str(r#"{"clips": {"b-c00-ext": "openrouter"}}"#).unwrap();
+    let route: Route = serde_json::from_str(r#"{"clips": {"b-c00-ext": "openrouter"}}"#).unwrap();
     let mut a = Asr::with_backends(cache, vec![Backend::Local42], LOCAL42, route);
     let wav = dir.join("x.wav");
     let (t, stable) = a.transcribe(&wav, "abc", "en", "a-c00-ext#ff").unwrap();
@@ -57,8 +55,7 @@ fn missing_backend_fails_and_summary_counts_used_clips() {
 /// codex 第 6 轮 P2 #4：`VDN_ASR_ROUTE` 指向一个 JSON **文件**（README 第一节同样写法）。
 #[test]
 fn route_loads_from_file_path() {
-    let p =
-        std::env::temp_dir().join(format!("vdn-asr-route-file-{}.json", std::process::id()));
+    let p = std::env::temp_dir().join(format!("vdn-asr-route-file-{}.json", std::process::id()));
     std::fs::write(
         &p,
         r#"{"default": "openrouter", "clips": {"cafe-c00-mba": "local42"}}"#,

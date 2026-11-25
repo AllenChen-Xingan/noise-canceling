@@ -28,6 +28,13 @@ pub const BUDGET_USD: f64 = 15.0;
 pub const MAX_ATTEMPTS: usize = 5;
 /// 账本文件（相对主目录）：全部真调用共用一个，上限按它累计。
 pub const LEDGER_REL: &str = "_tmp/asr-openrouter-ledger.json";
+/// 这个错误是不是永久的：再发也一样，要停下（不重试的 4xx、到上限、账本坏或写不了、费用未知）。
+pub fn is_permanent(e: &str) -> bool {
+    ["不重试", "上限", "账本", "费用未知", "已停发"]
+        .iter()
+        .any(|k| e.contains(k))
+}
+
 /// 识别调用默认几路并发（大总管 2026-11-25 定 8 路；遇到 429 各自退避）。
 pub const ASR_CONCURRENCY: usize = 8;
 /// 密钥的环境变量名。
