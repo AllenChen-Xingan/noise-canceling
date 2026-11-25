@@ -266,6 +266,21 @@ fn known_cost_on_failure_is_booked_and_unknown_cost_keeps_reservation() {
     assert!(c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").is_err());
     assert!((c.ledger.spent_usd - 0.02).abs() < 1e-12, "已知费用照记");
     assert_eq!(c.ledger.reserved_usd, 0.0);
+    // codex 第 10 轮 P1 #1：失败分支的已知费用同样要核「超过预留」：0.02 美元远超 0.1 秒音频的预留 → 待核、停发、重启也拒
+    assert!(
+        c.ledger
+            .review
+            .as_deref()
+            .is_some_and(|r| r.contains("超过预留")),
+        "{:?}",
+        c.ledger.review
+    );
+    assert!(c.transcribe(&audio(), vdn_types::MODEL_RATE, "en").is_err());
+    assert!(
+        client(&url, &d)
+            .transcribe(&audio(), vdn_types::MODEL_RATE, "en")
+            .is_err()
+    );
     let d2 = tmpdir("costunknown");
     let (url2, seen2) = fake(vec![
         (200, "", "not json at all".to_string()),

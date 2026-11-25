@@ -309,6 +309,25 @@ impl Conn<'_> {
     }
 }
 
+/// 结算一笔已知金额（成功、失败两条路共用；codex 第 9 轮 P1 #1 · 第 10 轮 P1 #1）：照记实际金额；
+/// 实际比预留高（估算不准）就给账本标待核、把本批的停止状态设上，之后任何进程都拒发。
+fn settle_known(
+    ledger_path: &Path,
+    est: f64,
+    c: f64,
+    stop: &std::sync::Mutex<Option<String>>,
+) -> Result<(), String> {
+    if c > est {
+        let why = format!("实际费用 {c:.6} 美元超过预留 {est:.6} 美元：估算不准");
+        ledger::flag_review(ledger_path, &why)?;
+        let mut st = stop.lock().unwrap_or_else(|e| e.into_inner());
+        if st.is_none() {
+            *st = Some(why);
+        }
+    }
+    ledger::settle(ledger_path, est, Some(c))
+}
+
 /// 一次请求失败时的费用情况（codex 第 6 轮 P1 #2：费用结算和转写成败分开）。
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Cost {
@@ -389,18 +408,7 @@ impl OpenRouter {
                                 .transcribe(x, *sr, lang)
                             {
                                 Ok((t, Some(c))) => {
-                                    // 实际费用比预留高（估算不准）：照记，账本标待核、停发（codex 第 9 轮 P1 #1）
-                                    if c > est {
-                                        let why = format!(
-                                            "实际费用 {c:.6} 美元超过预留 {est:.6} 美元：估算不准"
-                                        );
-                                        ledger::flag_review(ledger_path, &why)?;
-                                        let mut st = stop.lock().unwrap_or_else(|e| e.into_inner());
-                                        if st.is_none() {
-                                            *st = Some(why);
-                                        }
-                                    }
-                                    ledger::settle(ledger_path, est, Some(c)).map(|()| t)
+                                    settle_known(ledger_path, est, c, &stop).map(|()| t)
                                 }
                                 Ok((t, None)) => {
                                     // 文本照用；预留不退、账本标待核，本批与以后都停发
@@ -415,9 +423,7 @@ impl OpenRouter {
                                 Err(f) => {
                                     match f.cost {
                                         Cost::Free => ledger::settle(ledger_path, est, None)?,
-                                        Cost::Known(c) => {
-                                            ledger::settle(ledger_path, est, Some(c))?
-                                        }
+                                        Cost::Known(c) => settle_known(ledger_path, est, c, &stop)?,
                                         // 预留不退：可能已计费；账本标待核，重启也停发
                                         Cost::Unknown => ledger::flag_review(ledger_path, &f.msg)?,
                                     }
