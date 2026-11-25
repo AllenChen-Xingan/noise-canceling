@@ -1,6 +1,6 @@
 # 现状页 · 手下 evalcmp（批次 20261116-b19，issue #155）
 
-状态：进行中
+状态：已收尾（2026-11-24，等大总管验收）
 
 ## 手上
 管 3 个实体：评测器（`src/eval`）· 评测参考轨（exp013 生成器的参考输出）· 成绩单（规约 `specs/rubric/scorecard.md`）。
@@ -9,8 +9,9 @@
 3. 自审 + codex，连续两轮没有 P0/P1
 
 ## 做到哪
-- 配对比较、早期参考轨（生成端 + 成绩单旁列）、规约第十 / 十一节都写完了，单测与集成测试全过（实测，见流水）
-- 下一步：自审 + codex 评审；新 build 交给云上跑
+- 全部交付完成：compare 子命令 · 早期回声参考轨（生成端 + 成绩单旁列）· 规约第十 / 十一节 · 新 build `20261124165427-6323`（本机出，已提交小文件）· `src/eval/suite/scenes.json` 指向新 build
+- codex 第 2、3 轮连续没有 P0/P1；整套重跑全绿（见流水 11-24 末几条）
+- 下一步（不归我）：大总管亲手重跑、开 PR 并合并；合并后 cloudrun 在云上再出一份，用 `compare_builds.py` 与本机这份交叉核对
 
 ## 正本与交叉校验（CLAUDE.md 五.5）
 | 东西 | 正本 | 第二处表示 · 校验 |
@@ -39,16 +40,12 @@
 - 自行跑的几次（无名额，补记）：11-24 scorecard_e2e 早期参考单条（220 s）· clippy 两次 · xtask tidy · scorecard 单测两次 · compare 冒烟（只读分数）· exp013 冒烟 build（4 段）· exp013 Python 自检
 - 11-24 大总管发 1 个名额：codex 修完后整套 e2e 重跑用，跑完回报「名额已还」
 
-## 云上出新 build（大总管 noise-canceling-33 定上云，依据 D97 重活上云，并批了开机费；人未参与）
-在云机器的仓库根下（本分支合并后）：
-```
-PY=<云上 venv>/bin/python
-$PY docs/experiments/exp013-scene-suite/build.py --workers 8
-```
-- 不给 `--build` 时自动取「时间-4 位十六进制」的新 id；同 id 已存在会拒绝，不覆盖旧 build
-- 音频约 3.7 GB（估算：480 段 × 约 12 条轨 × 640 KB），留在云上 `_tmp/exp013/<build-id>/`
-- 跑完把 `docs/experiments/exp013-scene-suite/builds/<build-id>/` 整个目录（清单 · 哈希 · 排除表 · 参数快照，不含音频）拉回本仓提交（CLAUDE.md 五.1）；再跑 `tasks.py` 指向新 build、提交 `src/eval/suite/scenes.json`
-- 验收：`python -m unittest discover -s docs/experiments/exp013-scene-suite/tests` 全过（含旧 build 逐字节不变）；新 build 的 `clips.jsonl` 每行有 `audio.owner_early`
+## 新 build 与云上交叉核对（大总管 noise-canceling-33 定：本机、云上各出一份交叉核对；技术题，人未参与）
+- 本机这份：`builds/20261124165427-6323`（480 段，42.3 s，泄漏检查与电平验收都过；每段有 owner_early；旧各轨样本哈希与 17f5 逐个相同 0 处不同）
+- 素材索引：`material_index.sha256 = a8de10ada8c9f8215606613c88f82b8a234a459611941183e9b3212932a71b8e`，files = 1994（与 17f5 相同）
+- 云上：本分支合并后，cloudrun 在网络盘上传本机素材（约 3.3 GB：test-clean 2707 个文件 356 MB · demand 160 个 1.7 GB · esc50 169 个 71 MB · music 1 个 · zh 6 个 · rir 442 个 1.2 GB），按 `requirements.lock` 装环境，再 `build.py --workers 4`
+- 验收：`python docs/experiments/exp013-scene-suite/compare_builds.py <云上 build 目录> docs/experiments/exp013-scene-suite/builds/20261124165427-6323` 输出「一致」。按片段 id 逐轨比两种哈希 + 其余字段 + manifest 素材 / 代码 / 参数哈希；不比 clips.jsonl / hashes.txt 文件哈希，因为里面的路径带 build id
+- 云上小文件回到主仓 `_tmp/20261125-cloudrun-exp013build/`，由 evalcmp 核对后提交（若那时本线已关，由大总管指派）
 
 ## 待人拍板
 （暂无）
@@ -75,8 +72,15 @@ $PY docs/experiments/exp013-scene-suite/build.py --workers 8
 - 单跑这一条通过（217.5 s）；并行跑 scorecard_e2e 13/13 通过（209 s）。同一时段本 worktree 没有别的测试进程（后台任务时间已核，大总管也确认）。本机另有 4 个别的仓库在跑 cargo test，耗时数字不能当测速基准
 - 补了夹具隔离（真实隐患，根因未证实）：每次 setup 独立目录；会红的测试 `setup_dirs_are_isolated` 旧代码红、新代码绿。为守 600 行，夹具抽到 `tests/common/scene_fixture.rs`，早期参考 e2e 移到 `tests/scorecard_early_e2e.rs`
 - 追踪 issue：#161（我开的，大总管要求）
+- 11-24 约 08:42（北京时间 25 日）主仓 `_tmp/` 被人在另一会话批准的腾盘清理删掉（大总管查明，不恢复），含 exp002-venv、旧 build 17f5 音频、旧成绩单
+- 11-24 按大总管指示：用 uv 重建环境 `_tmp/exp013-venv`（3.12.14 · numpy 2.5.4 · scipy 1.18.1 · soundfile 0.14.0，与 17f5 manifest 一致），冻结成 `exp013-scene-suite/requirements.lock`；README 与 build.py 的环境路径改过来
+- 11-24 整套重跑（--no-fail-fast，完整输出 `_tmp/full-rerun-20261124-164525.log`）：vdn-eval 单元 171 · 各集成测试全过（含 scorecard_e2e 11、scorecard_early_e2e 3，并行）· clippy · tidy · schema 一致；Python 那一步缺旧 venv 失败（环境问题），新环境补跑 81/81 过
+- 11-24 本机重出旧 build 17f5 音频到原路径：`hashes.txt` 4540 个 wav 全部 OK，480 段清单除路径外逐字段相同，素材索引相同——证明可重建。副作用：每段目录多一条不在旧 hashes.txt 里的 owner_early.wav
+- 11-24 出新 build `20261124165427-6323` 并提交小文件；`tasks.py` 重写 `src/eval/suite/scenes.json` 指向它（只改了 clips 路径与 origin，120 行）；Python 81/81、`repo_scene_suite_parses_and_expands` 过
+- 11-24 加 `compare_builds.py` + `tests/test_compare_builds.py`（3 条：换 id 一致 · 改一条轨哈希报出 · 素材索引与缺段报出）
 
 ## PR 正文要点（大总管开 PR 时用）
 - Closes #155；新 build 由大总管 noise-canceling-33 定上云（D97），人未参与；合并后 cloudrun 在 CPU 机上出，小文件由 evalcmp 核 sha256 后提交
 - 偶发失败照实写：只出现过 1 次，并行重跑 13/13 通过，补了夹具隔离，根因未证实，见 #161
-- 加的测试：compare 单元 17 条（自比全不确定、真实打分压低 6 dB 判退、段数不一致双向、否决三态、判断边界等）· compare_out 2 条 · early 4 条 · e2e 早期参考旁列 + 生成行解析 + 夹具隔离 · 规约表比对 2 条 · exp013 Python `test_early.py` 10 条
+- 新 build：`builds/20261124165427-6323`，本机与云上交叉核对用 `compare_builds.py`
+- 加的测试：compare 单元 17 条（自比全不确定、真实打分压低 6 dB 判退、段数不一致双向、否决三态、判断边界等）· compare_out 2 条 · early 4 条 · e2e 早期参考旁列 + 生成行解析 + 夹具隔离 · 规约表比对 2 条 · exp013 Python `test_early.py` 10 条 · `test_compare_builds.py` 3 条
