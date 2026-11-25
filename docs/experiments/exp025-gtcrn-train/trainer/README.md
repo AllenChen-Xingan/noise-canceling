@@ -17,6 +17,7 @@
 | `smoke.py` | 开训前冒烟三件事 + 测每步耗时，一个命令 |
 | `smoke.py --write-known-dev` | 只算起点模型的开发份参照读数（带数据版本 meta），给 `--known-dev` 用 |
 | `cmp_ckpt.py` | 逐键比两个检查点的 `model`（续训核对） |
+| `oracle.py` · `smoke.py --overfit-diag` | 过拟合排查：掩码族能达到的损失（oracle）作对照，判 40 dB 下限是否可达；只记录，不判过不过 |
 | `export.py` | 导出 ONNX（整段版）并与 PyTorch 对拍 |
 | `parity_rs/` | 只读调用 `vdn-eval` 的小程序，给损失对拍用（不改 `src/eval`） |
 | `official.py` | 找官方源码与起点检查点（核 sha256） |

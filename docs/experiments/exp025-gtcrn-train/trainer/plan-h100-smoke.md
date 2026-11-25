@@ -149,3 +149,22 @@ H100 这段总计估 30–45 分钟（推断），约 2.2–3.3 美元。最坏 
 - 过拟合只过一条：照样带回报告，判「不过」。trainer 分析是判据的问题还是训练的问题，先报大总管，不当场改判据
 - 取数是瓶颈（`timing.data_s_median` 比 `step_s_median` 还大，或 GPU 利用率低）：照实记下，估费按实测算。加 worker、预渲染这些改法另立一条
 - 机器开不出或没货：照 cloudrun 现行做法，不在本方案内处理
+
+## 八、过拟合排查：云上 CPU 机、真数据（2026-11-25 加，大总管批）
+
+起因：乙段第 1 步只有过拟合不过：损失走完 14%，SI-SNR +3.5 dB。报告是 `smoke_reports/20261125-h100-overfit-FAILED.json`。
+本机在合成小样上复现，两种批量形状都过：4 × 2 s 走完 111%，32 × 4 s 走完 110%（`smoke_reports/20261125-overfit-diag-local-cpu.json`）。
+合成小样和真数据不同，所以本机这个结果分不开「真数据难」和「H100 上有问题」两种可能。这一步就用来分开它们。
+
+- 机器：CPU 机 cpu3c 4 核。上限 1 小时、0.2 美元（大总管批）。不开 H100
+- 代码：本分支推送后的新提交（大总管告知）。网络盘上的环境、`$O`、`$G` 接着用；代码换新目录 `/workspace/repo-<新提交前 8 位>`，装环境同甲段第 2 步
+- 命令（同一批：开发份第 0 批，同 150 步、lr 1e-3、种子；只在 CPU 上算）：
+  `cd $T && VDN_GTCRN_DIR=$G $PY smoke.py --config configs/default.yaml --set device=cpu --set data.shard_root=/workspace/shards/first-batch --set data.recipe=$D/recipe.json --overfit-diag $O/overfit-diag-cpu.json`
+- 估时（推断）：本机 4 × 2 s 的 150 步约 65 秒，32 × 4 s 的数据量是它的 16 倍，4 核 x86 估 20–40 分钟。到 50 分钟还没完，就照「出错时的必经收尾」停下、取回、删机
+- 取回：`$O/overfit-diag-cpu.json` 和后台日志，放主仓 `_tmp/<日期>-trainer-overfit-diag/`，不覆盖
+- 报告里看什么（只记录，不判过不过）：
+  - `drop_frac_of_span`：和 H100 的 0.144 比
+    - 也在 0.14 左右：H100 没问题，问题在数据和判据
+    - 明显更高：查 GPU 那条路
+  - `oracle_loss`、`floor_reachable`：40 dB 下限比 oracle 损失还低，就判下限不可达
+  - `drop_frac_of_oracle_span`：走完 oracle 距离的百分比。判据要不要改、怎么改，看完再报大总管定，写明是事后改的
