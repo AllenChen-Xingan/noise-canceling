@@ -89,9 +89,35 @@ fn write_clip(root: &Path, i: usize, with_machine: bool) -> Value {
     })
 }
 
+/// 夹具根目录：每次调用独立（进程号 + 进程内序号），同时跑的测试进程或线程互不删对方的夹具
+/// （见 `setup_dirs_are_isolated`）。顺手删掉一小时前留下的旧夹具，免得越积越多。
+fn fixture_root(tag: &str) -> PathBuf {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static N: AtomicUsize = AtomicUsize::new(0);
+    let base = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("scorecard-fx");
+    let pid = std::process::id();
+    if let Ok(rd) = std::fs::read_dir(&base) {
+        for e in rd.flatten() {
+            let old = e
+                .metadata()
+                .and_then(|m| m.modified())
+                .ok()
+                .and_then(|t| t.elapsed().ok())
+                .is_some_and(|d| d.as_secs() > 3600);
+            let mine = e
+                .file_name()
+                .to_string_lossy()
+                .starts_with(&format!("{pid}-"));
+            if old && !mine {
+                let _ = std::fs::remove_dir_all(e.path());
+            }
+        }
+    }
+    base.join(format!("{pid}-{}-{tag}", N.fetch_add(1, Ordering::SeqCst)))
+}
+
 fn setup(tag: &str) -> (PathBuf, String) {
-    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("scorecard-{tag}"));
-    let _ = std::fs::remove_dir_all(&root);
+    let root = fixture_root(tag);
     std::fs::create_dir_all(root.join("clips")).unwrap();
     // 3 段有咖啡机（0 dB，更吵）、3 段没有（15 dB）
     let lines: Vec<String> = (0..6)
@@ -576,6 +602,10 @@ fn setup_dirs_are_isolated() {
     let text = std::fs::read_to_string(r1.join("clips.jsonl")).unwrap();
     let clips = SceneClip::parse_jsonl(&text).unwrap();
     for c in &clips {
-        assert!(r1.join(&c.audio.mix).exists(), "第一份夹具被第二次 setup 删了：{}", c.audio.mix);
+        assert!(
+            r1.join(&c.audio.mix).exists(),
+            "第一份夹具被第二次 setup 删了：{}",
+            c.audio.mix
+        );
     }
 }
