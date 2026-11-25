@@ -532,8 +532,9 @@ class TestCli(Base):
             if pid == first:
                 raise OSError("offline")
             return real(cli, pid, *a, **k)
-        with mock.patch.object(O, "delete_pod", flaky), self.assertRaises(SystemExit):
+        with mock.patch.object(O, "delete_pod", flaky), self.assertRaises(SystemExit) as cm:
             self.run_cli("reap", "--yes")
+        self.assertIn("reap --yes", str(cm.exception))  # 评审第 11 轮 #2：恢复命令要能直接用
         self.assertEqual(sorted(self.fake.pods), [first])
 
     def test_reap_and_spend(self):

@@ -343,9 +343,11 @@ def start_job(cli: Client, pod_id: str, script: str, job: str, jobs_dir: str = "
 
 def job_status(cli: Client, pod_id: str, job: str, jobs_dir: str = "/root/jobs", tail: int = 20) -> dict:
     d = shlex.quote(f"{jobs_dir}/{job}")
-    # 日志还没出现（刚启动、或启动结果未知）时 tail 会失败：用 || echo NOLOG 兜住，按「没完」继续等（评审第 10 轮 #2）
+    # 只有「日志文件确实不存在」才算还没开始（刚启动、或启动结果未知），按没完继续等（评审第 10 轮 #2）；
+    # 日志在但读不出（权限、I/O）照样报错，不当成没日志（第 11 轮 #1）
     out = check_ok(sh(cli, pod_id, f"cat {d}.rc 2>/dev/null || echo RUNNING; echo ---; "
-                                   f"tail -n {int(tail)} {d}.log 2>/dev/null || echo NOLOG"), f"查 {job}")
+                                   f"if [ -e {d}.log ]; then tail -n {int(tail)} {d}.log; else echo NOLOG; fi"),
+                   f"查 {job}")
     head, _, log = out.partition("---\n")
     head = head.strip()
     rc = int(head) if head.lstrip("-").isdigit() else None

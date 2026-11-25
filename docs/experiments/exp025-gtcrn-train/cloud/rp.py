@@ -162,7 +162,7 @@ def cmd_reap(cli, a):
     if not todo:
         print("云上没有 vdn- 开头的机器，账上也没有未关的")
     if failed:
-        raise SystemExit(f"reap 有 {len(failed)} 台没删成：{', '.join(failed)}；请重跑 reap")
+        raise SystemExit(f"reap 有 {len(failed)} 台没删成：{', '.join(failed)}；请重跑 rp.py reap --yes")
 
 
 def cmd_watchdog(cli, a):

@@ -116,6 +116,14 @@ class TestTransfer(Base):
         self.assertEqual((st["rc"], st["log"]), (0, "ok\n"))
         self.assertEqual(len(polls), 1)
 
+    def test_unreadable_log_is_an_error_even_if_rc_is_zero(self):
+        # 评审第 11 轮 #1：日志在但读不出，不能当成「没日志、已完成」
+        rid = "r-20261125000000-abcdef"
+        self.fake.jobs[rid] = (0, "x\n")
+        self.fake.unreadable_logs = {rid}
+        with self.assertRaises(SystemExit):
+            O.job_status(self.cli, "pod_9", rid)
+
     def test_manual_delete_needs_yes(self):
         # 评审第 10 轮 #1：down / reap 不带 --yes 只列出要删的，不删
         with self.assertRaises(SystemExit) as cm:
