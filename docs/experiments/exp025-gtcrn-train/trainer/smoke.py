@@ -4,7 +4,9 @@
 
 1. **初始损失合理**（034 修正：微调时看「等于原检查点的损失」，不看随机初始化的理论值）：
    B 零初始化时与 A 在同一批上的损失相同（相对差 ≤ 1e-5），且低于随机初始化模型的损失
-2. **单批能过拟合**：同一批反复训 overfit_steps 步，把「初值到近乎完美输出（目标 + 40 dB 噪声）损失」的距离走完 ≥ 一半；B 的注意力层要动过
+2. **单批能过拟合**（判据第 3 版，事后改判据：AI 提、大总管定，2026-11-25）：开发份第 0 批前 4 段反复训 overfit_steps 步，
+   把「初值到这 4 段 oracle 损失（掩码族能达到的损失，见 oracle.py）」的距离走完 ≥ 一半，SI-SNR 提高 ≥ 6 dB；
+   B 的注意力层要动过。oracle 不可用时判「判据不可用」（退出码 3），不判「不过」；整批 32 段的读数只作参考
 3. **原检查点读数复现**：起点权重在官方样例 `mix.wav` 上的输出与官方 `enh.wav` 最大差 ≤ 2 个 16 位量化步（2/32768）；
    正式数据另用 `--known-dev` 比开发份已知读数；参照由 `--write-known-dev` 在 CPU 机上用同一份代码算
    （plan-h100-smoke.md 第三节，大总管定），文件带数据版本 meta，对不上就判不过
@@ -95,16 +97,44 @@ def batch_si_snr(m, batch, device) -> float:
     return float(losses.si_snr_db(out, clean).mean())
 
 
-def check_overfit(cfg, batch, device, steps: int, lr: float) -> dict:
-    """同一批反复训。B 另要求注意力输出层的权重动过（零初始化，只靠基座也能降一半，自审 P2）。
-    条件口子本次喂全零（D98），W·0 对 W 的梯度恒为 0，它不动是预期，不作要求。"""
+OVERFIT_N = 4  # 过线只用开发份第 0 批的前 4 段（判据第 3 版，大总管 2026-11-25）
+EXIT_CRITERION_UNUSABLE = 3  # 判据本身不可用：区别于「不过」的退出码 1
+OVERFIT_RULE = ("事后改判据：AI 提、大总管定，2026-11-25（第 3 版）。只看开发份第 0 批前 4 段："
+                "(初值 − 终值) / (初值 − 这 4 段的 oracle 损失) ≥ 0.5；这 4 段 SI-SNR 提高 ≥ 6 dB；"
+                "B 的注意力输出层权重要动过。oracle 不是有限数或不比初值低 → 判据不可用。"
+                "原 32 段读数只作参考。前两版：40 dB 下限（真数据上低于 oracle，到不了）、输出等于目标（−10.04，到不了）")
+
+
+def head(batch: dict, n: int) -> dict:
+    """批里前 n 段（每段的字段一起切）。不够 n 段就报错。"""
+    B = batch["noisy"].shape[0]
+    if n > B:
+        raise ValueError(f"批里只有 {B} 段，取不了前 {n} 段")
+    out = dict(batch)
+    for k in ("noisy", "clean", "replay", "near_silent", "owner_ivs", "interf_ivs"):
+        out[k] = batch[k][:n]
+    return out
+
+
+def overfit_verdict(first: float, last: float, oracle_loss: float, gain_db: float, moved) -> str:
+    """pass / fail / criterion_unusable。oracle 不可用（非有限、或不比初值低）时判据本身作废，不判「不过」。"""
+    if not (np.isfinite(first) and np.isfinite(oracle_loss)) or first - oracle_loss <= 0:
+        return "criterion_unusable"
+    ok = (overfit_pass(first, last, oracle_loss) and np.isfinite(gain_db) and gain_db >= SI_SNR_GAIN_DB
+          and (moved is None or moved > 0))
+    return "pass" if ok else "fail"
+
+
+def _overfit_run(cfg, batch, device, steps: int, lr: float) -> dict:
+    """同一批反复训，只出读数不判：初值 · 终值 · 40 dB 下限 · oracle · SI-SNR 前后 · 注意力输出层变化。"""
     m = _model(cfg, device)
     train.set_train(m, cfg)
     crit = losses.TrainLoss(losses.LossCfg()).to(device)
     with torch.no_grad():
         clean = batch["clean"].to(device)
         fr = train.frames_mask(batch, clean.shape[1]).to(device)
-        floor = near_perfect_loss(crit, clean, fr)
+        floor40 = near_perfect_loss(crit, clean, fr)
+    o = oracle.oracle_loss(crit, batch, device)
     attn0 = m.attn.out.weight.detach().clone() if getattr(m, "attn", None) is not None else None
     sisnr0 = batch_si_snr(m, batch, device)
     opt = torch.optim.Adam([p for p in m.parameters() if p.requires_grad], lr=lr)
@@ -117,15 +147,35 @@ def check_overfit(cfg, batch, device, steps: int, lr: float) -> dict:
         traj.append(logs["total"])
     moved = None if attn0 is None else float((m.attn.out.weight.detach() - attn0).abs().max())
     sisnr1 = batch_si_snr(m, batch, device)
-    gain_ok = bool(np.isfinite(sisnr1) and sisnr1 - sisnr0 >= SI_SNR_GAIN_DB)
-    ok = overfit_pass(traj[0], traj[-1], floor) and (moved is None or moved > 0) and gain_ok
-    span = traj[0] - floor
-    return {"pass": ok, "first": traj[0], "last": traj[-1], "floor": floor,
-            "drop_frac_of_span": (traj[0] - traj[-1]) / span if span > 0 else None,
+    first, last = traj[0], traj[-1]
+    return {"n_segments": int(batch["noisy"].shape[0]), "first": first, "last": last, "steps": steps, "lr": lr,
+            "floor_40db": floor40, "drop_frac_of_40db_span": oracle.frac_of_span(first, last, floor40),
+            "floor_40db_reachable": oracle.floor_reachable(floor40, o["loss"]),
+            "oracle_loss": o["loss"], "oracle_si_snr_db": o["si_snr_db"],
+            "drop_frac_of_oracle_span": oracle.frac_of_span(first, last, o["loss"]),
             "attn_out_max_change": moved, "si_snr_db_before": sisnr0, "si_snr_db_after": sisnr1,
-            "si_snr_gain_db": sisnr1 - sisnr0, "si_snr_gain_ok": gain_ok, "steps": steps, "lr": lr,
-            "rule": "(初值 − 终值) / (初值 − 近乎完美输出（目标 + 40 dB 白噪声）的损失) ≥ 0.5；"
-                    f"这一批 SI-SNR 提高 ≥ {SI_SNR_GAIN_DB:g} dB；B 的注意力输出层权重要动过"}
+            "si_snr_gain_db": sisnr1 - sisnr0}
+
+
+def check_overfit(cfg, batch, device, steps: int, lr: float, reference: bool = True) -> dict:
+    """单批过拟合（判据第 3 版，见 OVERFIT_RULE）。B 另要求注意力输出层的权重动过（零初始化，只靠基座也能降一半，自审 P2）。
+    条件口子本次喂全零（D98），W·0 对 W 的梯度恒为 0，它不动是预期，不作要求。
+    reference=True 时另在整批上跑同样步数，读数记进 reference，不影响过线。"""
+    B = int(batch["noisy"].shape[0])
+    short = B < OVERFIT_N
+    g = _overfit_run(cfg, head(batch, min(OVERFIT_N, B)), device, steps, lr)
+    verdict = "criterion_unusable" if short else overfit_verdict(
+        g["first"], g["last"], g["oracle_loss"], g["si_snr_gain_db"], g["attn_out_max_change"])
+    out = {**g, "verdict": verdict, "pass": verdict == "pass", "floor": g["oracle_loss"], "floor_kind": "oracle",
+           "floor_reachable": oracle.floor_reachable(g["oracle_loss"], g["oracle_loss"]),
+           "drop_frac_of_span": g["drop_frac_of_oracle_span"],
+           "si_snr_gain_ok": bool(np.isfinite(g["si_snr_gain_db"]) and g["si_snr_gain_db"] >= SI_SNR_GAIN_DB),
+           "rule": OVERFIT_RULE}
+    if short:
+        out["unusable_reason"] = f"批里只有 {B} 段，不够 {OVERFIT_N} 段"
+    if reference and B > OVERFIT_N:
+        out["reference"] = _overfit_run(cfg, batch, device, steps, lr)
+    return out
 
 
 def check_reproduce(device) -> dict:
@@ -215,7 +265,7 @@ def timing(cfg, source, device, steps: int) -> dict:
 
 
 def run(cfg, *, overfit_steps: int, overfit_lr: float, timing_steps: int,
-        known_dev: dict | None, known_tol: float) -> dict:
+        known_dev: dict | None, known_tol: float, overfit_ref: bool = True) -> dict:
     device = train.resolve_device(cfg.device)
     source = make_source(cfg)
     dev = source.dev_batches()
@@ -224,7 +274,7 @@ def run(cfg, *, overfit_steps: int, overfit_lr: float, timing_steps: int,
            "build_id": source.build_id, "config": cfgmod.to_dict(cfg),
            "started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
     rep["init_loss"] = check_init(cfg, batch, device)
-    rep["overfit"] = check_overfit(cfg, batch, device, overfit_steps, overfit_lr)
+    rep["overfit"] = check_overfit(cfg, batch, device, overfit_steps, overfit_lr, reference=overfit_ref)
     rep["reproduce"] = check_reproduce(device)
     if known_dev:
         rep["known_dev"] = check_known_dev(cfg, dev, device, known_dev, known_tol, build_id=source.build_id)
@@ -235,6 +285,9 @@ def run(cfg, *, overfit_steps: int, overfit_lr: float, timing_steps: int,
     rep["timing"] = timing(cfg, source, device, timing_steps)
     checks = [k for k in ("init_loss", "overfit", "reproduce", "known_dev") if k in rep]
     rep["pass"] = all(rep[k]["pass"] for k in checks)
+    others_ok = all(rep[k]["pass"] for k in checks if k != "overfit")
+    rep["verdict"] = ("pass" if rep["pass"] else
+                      "criterion_unusable" if others_ok and rep["overfit"]["verdict"] == "criterion_unusable" else "fail")
     return rep
 
 
@@ -304,6 +357,7 @@ def main(argv=None) -> int:
     ap.add_argument("--known-tol", type=float, default=1e-3)
     ap.add_argument("--out", help="报告写到这里（JSON）")
     ap.add_argument("--write-known-dev", help="只算起点模型的开发份读数写到这里（不覆盖已有文件），不跑三件事")
+    ap.add_argument("--skip-overfit-ref", action="store_true", help="不跑整批 32 段的过拟合参考（只记录用，不影响过线）")
     ap.add_argument("--overfit-diag", help="只做过拟合排查（同一批：过拟合 + oracle 对照）写到这里，不判过不过")
     a = ap.parse_args(argv)
     cfg = cfgmod.load(a.config, train.parse_set(a.set))
@@ -313,12 +367,12 @@ def main(argv=None) -> int:
         return overfit_diag(cfg, Path(a.overfit_diag), a.overfit_steps, a.overfit_lr)
     known = json.loads(Path(a.known_dev).read_text()) if a.known_dev else None
     rep = run(cfg, overfit_steps=a.overfit_steps, overfit_lr=a.overfit_lr, timing_steps=a.timing_steps,
-              known_dev=known, known_tol=a.known_tol)
+              known_dev=known, known_tol=a.known_tol, overfit_ref=not a.skip_overfit_ref)
     text = json.dumps(rep, ensure_ascii=False, indent=2, default=str)
     if a.out:
         Path(a.out).write_text(text)
     print(text)
-    return 0 if rep["pass"] else 1
+    return {"pass": 0, "criterion_unusable": EXIT_CRITERION_UNUSABLE}.get(rep["verdict"], 1)
 
 
 if __name__ == "__main__":
