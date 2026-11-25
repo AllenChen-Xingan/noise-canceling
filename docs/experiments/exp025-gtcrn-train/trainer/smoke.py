@@ -6,7 +6,8 @@
    B 零初始化时与 A 在同一批上的损失相同（相对差 ≤ 1e-5），且低于随机初始化模型的损失
 2. **单批能过拟合**：同一批反复训 overfit_steps 步，把「初值到近乎完美输出（目标 + 40 dB 噪声）损失」的距离走完 ≥ 一半；B 的注意力层要动过
 3. **原检查点读数复现**：起点权重在官方样例 `mix.wav` 上的输出与官方 `enh.wav` 最大差 ≤ 2 个 16 位量化步（2/32768）；
-   云上另可用 `--known-dev` 给出开发份已知读数比对（evalcmp 出数后接）
+   正式数据另用 `--known-dev` 比开发份已知读数；参照由 `--write-known-dev` 在 CPU 机上用同一份代码算
+   （plan-h100-smoke.md 第三节，大总管定），文件带数据版本 meta，对不上就判不过
 4. **耗时**：正式配置下每步墙钟与 CPU 时间、进程 CPU 占用（不判过线，只记；D96 要看 CPU 是不是瓶颈）
 报告带电源状态与设备；本机跑请套 `caffeinate -dims`（电池下会睡眠降频，见本目录 README）。
 """
@@ -142,18 +143,42 @@ def check_reproduce(device) -> dict:
             "rule": "最大差 ≤ 2 个 16 位量化步"}
 
 
-def check_known_dev(cfg, dev, device, known: dict, tol: float) -> dict:
-    """开发份已知读数（键 = 损失日志名，如 hybrid）与起点模型实测比对。"""
+# 参照读数文件里必须和本次一致的数据字段：开发份换了任何一项，读数就不可比
+KNOWN_META_KEYS = ("kind", "build_id", "dev_n", "dev_seed", "seg_s", "batch", "dev_batches")
+
+
+def known_meta(cfg, build_id, device) -> dict:
+    d = cfg.data
+    return {"kind": d.kind, "build_id": build_id, "dev_n": d.dev_n, "dev_seed": d.dev_seed, "seg_s": d.seg_s,
+            "batch": d.batch, "dev_batches": d.dev_batches, "device": str(device), "torch": torch.__version__}
+
+
+def dev_reading(cfg, dev, device) -> dict:
+    """起点模型（A，官方权重）在开发份上的读数；--write-known-dev 与 --known-dev 共用这一个函数。"""
     m = _model(cfg, device, variant="A").eval()
-    got = train.evaluate(m, losses.TrainLoss(losses.LossCfg()).to(device), dev, device, cfg)
+    return train.evaluate(m, losses.TrainLoss(losses.LossCfg()).to(device), dev, device, cfg)
+
+
+def check_known_dev(cfg, dev, device, known: dict, tol: float, build_id=None) -> dict:
+    """开发份已知读数（键 = 损失日志名，如 hybrid）与起点模型实测比对。
+    新格式 {"readings": {…}, "meta": {…}}：meta 的 KNOWN_META_KEYS 要和本次逐项相同。
+    旧的扁平格式 {"hybrid": x} 没法核数据版本，只在合成数据上认；正式数据（loader）用它判不过。"""
+    readings, meta = (known.get("readings") or {}, known.get("meta")) if "readings" in known else (known, None)
+    want = known_meta(cfg, build_id, device)
+    meta_mismatch = {} if meta is None else {k: (meta.get(k), want[k]) for k in KNOWN_META_KEYS
+                                             if meta.get(k) != want[k]}
+    meta_missing = meta is None and cfg.data.kind == "loader"
+    got = dev_reading(cfg, dev, device)
     bad = {}
-    for k, v in known.items():
+    for k, v in readings.items():
         g = got.get(k)
         # 实测、已知、容差都必须是有限数；NaN 时 abs(NaN − v) > tol 为假，会误判通过（codex 第 4 轮 #2）
         ok = (g is not None and all(np.isfinite(x) for x in (g, v, tol)) and abs(g - v) <= tol)
         if not ok:
             bad[k] = (g, v)
-    return {"pass": bool(known) and not bad, "got": got, "known": known, "tol": tol, "mismatch": bad}
+    ok = bool(readings) and not bad and not meta_mismatch and not meta_missing
+    return {"pass": ok, "got": got, "known": known, "tol": tol, "mismatch": bad,
+            "meta_mismatch": meta_mismatch, "meta_missing": meta_missing}
 
 
 def timing(cfg, source, device, steps: int) -> dict:
@@ -199,7 +224,7 @@ def run(cfg, *, overfit_steps: int, overfit_lr: float, timing_steps: int,
     rep["overfit"] = check_overfit(cfg, batch, device, overfit_steps, overfit_lr)
     rep["reproduce"] = check_reproduce(device)
     if known_dev:
-        rep["known_dev"] = check_known_dev(cfg, dev, device, known_dev, known_tol)
+        rep["known_dev"] = check_known_dev(cfg, dev, device, known_dev, known_tol, build_id=source.build_id)
     elif cfg.data.kind == "loader":
         # 014 第 3 步要「原检查点在开发份上读数等于已知成绩」：正式数据没给基准就不算通过（codex 第 4 轮 #3）
         rep["known_dev"] = {"pass": False, "incomplete": True,
@@ -208,6 +233,26 @@ def run(cfg, *, overfit_steps: int, overfit_lr: float, timing_steps: int,
     checks = [k for k in ("init_loss", "overfit", "reproduce", "known_dev") if k in rep]
     rep["pass"] = all(rep[k]["pass"] for k in checks)
     return rep
+
+
+def write_known_dev(cfg, out: Path) -> int:
+    """CPU 参照（plan-h100-smoke.md 第三节）：读数非有限、或文件已存在，都不写、退出码非 0。"""
+    if out.exists():
+        print(f"拒绝覆盖已有文件：{out}", file=sys.stderr)
+        return 2
+    device = train.resolve_device(cfg.device)
+    source = make_source(cfg)
+    got = dev_reading(cfg, source.dev_batches(), device)
+    h = None if got is None else got.get("hybrid")
+    if h is None or not np.isfinite(h):
+        print(f"开发份读数不是有限数，不写：{got}", file=sys.stderr)
+        return 1
+    rec = {"readings": {"hybrid": float(h)}, "meta": known_meta(cfg, source.build_id, device),
+           "written_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+    with open(out, "x") as f:  # 独占新建：与上面的存在检查之间被别人抢先写了也不覆盖
+        f.write(json.dumps(rec, ensure_ascii=False, indent=2))
+    print(json.dumps(rec, ensure_ascii=False, indent=2))
+    return 0
 
 
 def main(argv=None) -> int:
@@ -220,8 +265,11 @@ def main(argv=None) -> int:
     ap.add_argument("--known-dev", help="开发份已知读数 JSON 文件，如 {\"hybrid\": 1.23}")
     ap.add_argument("--known-tol", type=float, default=1e-3)
     ap.add_argument("--out", help="报告写到这里（JSON）")
+    ap.add_argument("--write-known-dev", help="只算起点模型的开发份读数写到这里（不覆盖已有文件），不跑三件事")
     a = ap.parse_args(argv)
     cfg = cfgmod.load(a.config, train.parse_set(a.set))
+    if a.write_known_dev:
+        return write_known_dev(cfg, Path(a.write_known_dev))
     known = json.loads(Path(a.known_dev).read_text()) if a.known_dev else None
     rep = run(cfg, overfit_steps=a.overfit_steps, overfit_lr=a.overfit_lr, timing_steps=a.timing_steps,
               known_dev=known, known_tol=a.known_tol)
