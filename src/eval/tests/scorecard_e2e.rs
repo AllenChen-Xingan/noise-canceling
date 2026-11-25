@@ -2,9 +2,9 @@
 //! → 汇总 → Markdown / JSON。不需要模型：QA 层的吃字与听感判「不知道」，所以场景结论只能是「待测」或「不过」。
 //! 夹具在 `common/scene_fixture.rs`；早期回声参考的端到端测试在 `scorecard_early_e2e.rs`。
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use serde_json::json;
+use serde_json::{Value, json};
 use vdn_eval::scene::SceneClip;
 use vdn_eval::scorecard::card::Card;
 use vdn_eval::scorecard::rules::CardStatus;
@@ -14,7 +14,7 @@ use vdn_eval::wav;
 
 #[path = "common/scene_fixture.rs"]
 mod fx;
-use fx::{SR, opts, setup};
+use fx::{opts, setup};
 
 #[test]
 fn fixture_lines_parse_as_scene_clips() {
