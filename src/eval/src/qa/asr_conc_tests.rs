@@ -106,7 +106,7 @@ fn jobs() -> Vec<asr_or::Job> {
 }
 
 fn client(url: &str, dir: &std::path::Path) -> OpenRouter {
-    let mut c = OpenRouter::new(url, "sk-test".into(), dir.join("ledger.json"));
+    let mut c = OpenRouter::new(url, "placeholder-test-credential-0002".into(), dir.join("ledger.json"));
     c.backoff_ms = 1;
     c
 }

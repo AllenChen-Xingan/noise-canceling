@@ -47,7 +47,10 @@ fn fake(script: Vec<(u16, &'static str, String)>) -> (String, Seen) {
     (url, seen)
 }
 
-const KEY: &str = "sk-or-test-not-a-real-key-123456";
+/// 假密钥：故意不像任何真密钥的样子（不以 `sk-` 开头），免得被外发前的密钥扫描当真密钥拦下，
+/// 也免得有人误以为仓里有真密钥。真调用的那一条测试从 `.env.local` 读，不在这里。
+/// 测试只核「请求头里带了它」和「出错信息里抹掉了它」。
+const KEY: &str = "placeholder-test-credential-0001";
 
 fn client(url: &str, dir: &Path) -> OpenRouter {
     let mut c = OpenRouter::new(url, KEY.into(), dir.join("ledger.json"));
