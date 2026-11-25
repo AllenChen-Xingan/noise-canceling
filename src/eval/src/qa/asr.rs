@@ -370,6 +370,47 @@ mod tests {
         assert_eq!(edit_ops(&t("Hello, World."), &t("hello world")), (0, 0, 0));
     }
 
+    /// 按段选后端：片段 id 去掉 `#…` 后查路由，查不到用路由的默认，再查不到用总默认。
+    #[test]
+    fn route_picks_per_clip_then_defaults() {
+        let r: Route = serde_json::from_str(
+            r#"{"default": "openrouter", "clips": {"cafe-c00-mba": "local42"}}"#,
+        )
+        .unwrap();
+        assert_eq!(r.pick("cafe-c00-mba#1a2b3c4d", LOCAL42), LOCAL42);
+        assert_eq!(r.pick("cafe-c01-mba#00", LOCAL42), OPENROUTER);
+        assert_eq!(Route::default().pick("x", LOCAL42), LOCAL42);
+    }
+
+    /// 没装的后端：用到它的段转写报「没装好」，不悄悄换成别的后端；用到的段与型号记进摘要。
+    #[test]
+    fn missing_backend_fails_and_summary_counts_used_clips() {
+        let dir = std::env::temp_dir().join(format!("vdn-asr-route-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let cache = dir.join("cache.json");
+        // 缓存里放好本机后端的两次转写，免得真去连服务
+        let key = |rep: usize| format!("abc|{MODEL}|en|{rep}");
+        std::fs::write(
+            &cache,
+            serde_json::json!({key(1): "hi there", key(2): "hi there"}).to_string(),
+        )
+        .unwrap();
+        let route: Route =
+            serde_json::from_str(r#"{"clips": {"b-c00-ext": "openrouter"}}"#).unwrap();
+        let mut a = Asr::with_backends(cache, vec![Backend::Local42], LOCAL42, route);
+        let wav = dir.join("x.wav");
+        let (t, stable) = a.transcribe(&wav, "abc", "en", "a-c00-ext#ff").unwrap();
+        assert_eq!((t.as_str(), stable), ("hi there", true));
+        let e = a.transcribe(&wav, "abc", "en", "b-c00-ext#ff").unwrap_err();
+        assert!(e.contains("没装好"), "{e}");
+        let s = a.summary();
+        assert_eq!(s["default"], LOCAL42);
+        assert_eq!(s["backends"][LOCAL42]["clips"], 1);
+        assert_eq!(s["backends"][LOCAL42]["model"], MODEL);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn zh_tokens_are_chars() {
         assert_eq!(tokens("你好，世界", "zh").len(), 4);
