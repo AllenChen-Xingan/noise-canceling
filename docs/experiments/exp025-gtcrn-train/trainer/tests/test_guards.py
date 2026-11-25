@@ -1,7 +1,6 @@
 """训练时的自动保护（方案第十二节，大总管定 2026-11-25）：① 不是有限数存现场 · ② 损失猛涨 · ③ 最好的检查点与警告 ·
 ④ 前 500 步太慢（每个运行各自判）· ⑤ 中途卡住。阈值正本在 guards.py。"""
 import json
-import math
 import threading
 import time
 
@@ -113,25 +112,22 @@ def test_watchdog_fires_on_stall_even_without_stop_wanted(tmp_path, monkeypatch)
 
 # ---------- 接进训练循环 ----------
 
-def _nan_at(monkeypatch, step_to_break):
-    real = losses.TrainLoss.forward
+def _patch_train_loss(monkeypatch, change):
+    """只改训练步（模型在训练模式）的损失；标定与评估（评估模式）不动。change(第几次训练步, loss, logs) → (loss, logs)。"""
+    real = train.forward_loss
     n = {"k": 0}
 
-    def fwd(self, *a, **k):
-        total, logs = real(self, *a, **k)
-        if self.training_calls_counted:
+    def wrapped(model, crit, batch, device, **k):
+        loss, logs = real(model, crit, batch, device, **k)
+        if model.training:
             n["k"] += 1
-            if n["k"] == step_to_break:
-                total = total * float("nan")
-        return total, logs
-    monkeypatch.setattr(losses.TrainLoss, "training_calls_counted", False, raising=False)
-    monkeypatch.setattr(losses.TrainLoss, "forward", fwd)
-    real_train = train.forward_loss
+            loss, logs = change(n["k"], loss, logs)
+        return loss, logs
+    monkeypatch.setattr(train, "forward_loss", wrapped)
 
-    def counted(model, crit, *a, **k):
-        crit.training_calls_counted = model.training
-        return real_train(model, crit, *a, **k)
-    monkeypatch.setattr(train, "forward_loss", counted)
+
+def _nan_at(monkeypatch, step_to_break):
+    _patch_train_loss(monkeypatch, lambda k, l, g: (l * float("nan"), g) if k == step_to_break else (l, g))
 
 
 def test_nonfinite_loss_saves_crash_snapshot(tmp_path, monkeypatch):
@@ -177,17 +173,7 @@ def test_best_ckpt_kept_outside_rotation(tmp_path, monkeypatch):
 def test_loss_spike_stops_with_checkpoint(tmp_path, monkeypatch):
     monkeypatch.setattr(G, "SPIKE_BASE_STEPS", 2)
     monkeypatch.setattr(G, "SPIKE_WINDOW", 2)
-    real = losses.TrainLoss.forward
-    n = {"k": 0}
-
-    def fwd(self, *a, **k):
-        total, logs = real(self, *a, **k)
-        n["k"] += 1
-        if n["k"] > 2 + 2:  # 标定 2 批之后：前 2 步正常，之后放大
-            total = total * 0 + 1e3
-            logs = {**logs, "total": 1e3}
-        return total, logs
-    monkeypatch.setattr(losses.TrainLoss, "forward", fwd)
+    _patch_train_loss(monkeypatch, lambda k, l, g: (l * 0 + 1e3, {**g, "total": 1e3}) if k > 2 else (l, g))
     stop = train.train(_cfg(tmp_path, **{"schedule.eval_every": 100}))
     assert stop["reason"] == "loss_spike" and stop["step"] < 6
     root, rec, _ = _read(tmp_path)
@@ -236,7 +222,6 @@ def test_expect_s_step_may_change_on_resume(tmp_path):
 
 
 def test_exit_code_nonzero_for_guard_stops():
-    assert not math.isnan(0)  # 占位导入用
     for r in ("loss_spike", "too_slow", "nonfinite"):
         assert train.exit_code({"reason": r}) == 1
     for r in ("max_steps", "max_hours", "max_usd"):
