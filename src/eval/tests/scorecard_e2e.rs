@@ -534,7 +534,7 @@ fn early_reference_side_column() {
     let (root3, t3) = setup("early-hash");
     add_early(&root3, <[f32]>::to_vec);
     let p = root3.join("clips/cafe-c00-owner_early.wav");
-    wav::write(&p, &vec![0.1f32; 16], SR).unwrap();
+    wav::write(&p, &[0.1f32; 16], SR).unwrap();
     let (rows3, miss3) = run(&root3, &t3);
     assert_eq!(rows3.len(), 5);
     assert!(

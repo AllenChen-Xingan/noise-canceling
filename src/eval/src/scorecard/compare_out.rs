@@ -27,6 +27,21 @@ fn ci_text(c: Option<&super::aggregate::Ci>) -> String {
     })
 }
 
+/// Markdown 里最多列出的片段 id 数；全部 id 在 compare.json。
+pub const MAX_IDS: usize = 10;
+
+/// 片段 id 列表：空写「—」，超过 [`MAX_IDS`] 只列前几个并写明总数。
+fn ids(v: &[String]) -> String {
+    match v.len() {
+        0 => "—".into(),
+        n if n <= MAX_IDS => v.join(" "),
+        n => format!(
+            "{} …共 {n} 段（全部见 compare.json）",
+            v[..MAX_IDS].join(" ")
+        ),
+    }
+}
+
 /// 人读的比较报告。
 pub fn to_markdown(cmp: &[Compare], a: &str, b: &str, noise: bool) -> String {
     let mut s = format!(
@@ -98,24 +113,12 @@ pub fn to_markdown(cmp: &[Compare], a: &str, b: &str, noise: bool) -> String {
                 v.rule,
                 v.a,
                 v.b,
-                if v.new_in_b.is_empty() {
-                    "—".into()
-                } else {
-                    v.new_in_b.join(" ")
-                },
-                if v.gone_in_b.is_empty() {
-                    "—".into()
-                } else {
-                    v.gone_in_b.join(" ")
-                },
+                ids(&v.new_in_b),
+                ids(&v.gone_in_b),
             );
         }
         if !c.only_a.is_empty() || !c.only_b.is_empty() {
-            s += &format!(
-                "\n只在 a：{}\n只在 b：{}\n",
-                c.only_a.join(" "),
-                c.only_b.join(" ")
-            );
+            s += &format!("\n只在 a：{}\n只在 b：{}\n", ids(&c.only_a), ids(&c.only_b));
         }
     }
     s
@@ -184,4 +187,63 @@ pub fn cli(args: &[String], run_id: &str, default_out: PathBuf) -> Result<PathBu
         super::card::write_new_file(&out.join(f), &t)?;
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn strs(n: usize) -> Vec<String> {
+        (0..n).map(|i| format!("c{i}")).collect()
+    }
+
+    #[test]
+    fn long_id_lists_are_capped() {
+        assert_eq!(ids(&[]), "—");
+        assert_eq!(ids(&strs(3)), "c0 c1 c2");
+        let t = ids(&strs(MAX_IDS + 5));
+        assert!(t.contains(&format!("共 {} 段", MAX_IDS + 5)), "{t}");
+        assert!(!t.contains(&format!("c{MAX_IDS} ")), "{t}");
+    }
+
+    #[test]
+    fn cli_errors_and_refuses_overwrite() {
+        let dir = std::env::temp_dir().join(format!("vdn-compare-cli-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let s = |x: &[&str]| x.iter().map(|v| v.to_string()).collect::<Vec<_>>();
+        // 缺 --b
+        assert!(cli(&s(&["--a", "x"]), "t", dir.clone()).is_err());
+        // --noise-a 不配 --noise-b
+        let jl = dir.join("a.jsonl");
+        let row = super::super::ClipRow {
+            clip: "cafe-c00-ext".into(),
+            scene: crate::scene::MeetingPlace::Cafe,
+            tier: crate::scene::Tier::Common,
+            device: "mba-builtin".into(),
+            system: "gtcrn".into(),
+            sounds: Vec::new(),
+            scores: vec![(
+                "V-ESTOI",
+                false,
+                crate::Score::judged("V-ESTOI", 0.5, "Δ", crate::Better::Higher, Some(0.0), &[]),
+            )],
+        };
+        std::fs::write(&jl, super::super::load::to_jsonl(&[row]).unwrap()).unwrap();
+        let p = jl.to_string_lossy().to_string();
+        assert!(
+            cli(
+                &s(&["--a", &p, "--b", &p, "--noise-a", &p]),
+                "t",
+                dir.join("o1")
+            )
+            .is_err()
+        );
+        // 正常写出；同一目录第二次拒绝覆盖
+        let out = dir.join("o2");
+        cli(&s(&["--a", &p, "--b", &p]), "t", out.clone()).unwrap();
+        assert!(out.join("compare.md").exists() && out.join("compare.json").exists());
+        assert!(cli(&s(&["--a", &p, "--b", &p]), "t", out).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
