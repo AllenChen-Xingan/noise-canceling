@@ -453,3 +453,13 @@ fn different_audio_under_same_clip_id_is_refused_and_unknown_is_flagged() {
         "一边没记哈希：照比，但 12 对都核不了"
     );
 }
+
+/// 混合音频哈希写进 clips.jsonl、读回不丢；旧格式（没有这一项）读回为 None。
+#[test]
+fn mix_hash_round_trips_through_clips_jsonl() {
+    let mut a = base(MeetingPlace::Cafe);
+    a[0].mix_sha256 = Some("ab".repeat(32));
+    let back = super::super::load::parse_jsonl(&super::super::load::to_jsonl(&a).unwrap()).unwrap();
+    assert_eq!(back[0].mix_sha256, a[0].mix_sha256);
+    assert_eq!(back[1].mix_sha256, None, "没记的照旧为空");
+}
