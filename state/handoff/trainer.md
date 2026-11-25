@@ -61,3 +61,4 @@
 - 11-25 大总管批云上 CPU 真数据排查：加 `oracle.py` 与 `smoke.py --overfit-diag`（`tests/test_overfit_diag.py` 先红后绿，冒烟相关 42 条过，电池下 125 s）；方案第八节
 - 11-25 云上 CPU 真数据排查（cloudrun，1831886c，1237 s）：走完 40 dB 下限距离 14.4%，与 H100 几乎逐值相同（终值 2.3814 对 2.3808）→ H100 没问题。oracle 损失 −1.312（SI-SNR 23.5 dB），40 dB 下限 −3.307 低于它 → 不可达；走完 oracle 距离 20.6%。报告 `trainer/smoke_reports/20261125-overfit-diag-cloud-cpu-real.json`；判据改法待大总管定
 - 11-25 大总管定过拟合判据第 3 版（事后改判据：AI 提、大总管定）：前 4 段 + oracle 下限 + 判据不可用（退出码 3）；32 段读数只作参考。`tests/test_overfit_gate.py` 7 条先红后绿，冒烟相关 49 条过。方案第五节加 H100 估时（推断），第九节加 CPU 核对命令
+- 11-25 第 3 版判据云上 CPU 核对（cloudrun，a8168c98）：只有过拟合不过：前 4 段走完 oracle 距离 19.6%（要 50%），SI-SNR +2.5 dB（要 6）；其余三件过。报告 `trainer/smoke_reports/20261125-cpu-gate3-FAILED.json`；不降门槛，已报大总管
