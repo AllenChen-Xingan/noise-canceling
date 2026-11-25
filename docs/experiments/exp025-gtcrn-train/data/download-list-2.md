@@ -41,6 +41,17 @@
 
   另有 Bus（5,821 条）可加强已有的公交 / 地铁车厢池，Cafe（5,867 条）可加强咖啡馆池；不在这次 8 个场景里，先不列。
 - 大小：分卷压缩包 `.z01`–`.z05` 每卷 10.7 GB，加 `.zip` 173 MB，共 53.9 GB；每卷有 md5（实读）。**分卷包不能只下 3 类**，要整包下完再解出 3 类
+- 每卷的 md5（抄自 Zenodo 7080122 页面，实读；cloudrun 下完交来的值与这张表核对）：
+
+| 文件 | 大小 | md5 |
+|---|---|---|
+| CochlScene.z01 | 10.7 GB | 9ee5c5329f068bc1745d4497da74716b |
+| CochlScene.z02 | 10.7 GB | c72d0c9c31d8e615b3da8489557fe41d |
+| CochlScene.z03 | 10.7 GB | 30038e305952803465c8f9f62e317a8d |
+| CochlScene.z04 | 10.7 GB | e7f7cbcda3f411f3a9c3f4ccd4adf7bc |
+| CochlScene.z05 | 10.7 GB | 9550f2b73894c83742cde422d0b2cac4 |
+| CochlScene.zip | 173.0 MB | 492b955f93aa74287caec1c86a83235f |
+
 - 和评测集同源吗：**不同源**。exp013 的素材（`materials.json` 与 `sounds.json`）只有 DEMAND、ESC-50、ACE、McVAMPIRE、MIT 冲激响应、自己合成的声音、两段 Wikimedia 朗读和音乐；仓里 exp013 与 exp006 的文件里查不到 CochlScene（实测 `grep`）
 - 怎么切分防泄漏：
   - 官方的 Train / Val / Test 三份录音人**互不重叠**：423 · 118 · 290 人，两两交集 0（`Data_info.tsv` 实数）
