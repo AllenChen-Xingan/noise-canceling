@@ -219,6 +219,10 @@ class Completeness(unittest.TestCase):
         u = gap.uplift_table(cj, baseline_card(clips=32))  # 基线每个场景 32 段，比较只配上 10 段
         self.assertEqual(u["verdict"], "数据不足")
         self.assertTrue(any("段数" in x for x in u["incomplete"]), u["incomplete"])
+        # 基线成绩单里还有别的系统（如 exp021 一份扫了 9 个系统）：只数比较里基线那个系统的段数
+        multi = baseline_card(clips=10)
+        multi["scenes"] += [{**c, "system": "other"} for c in baseline_card(clips=10)["scenes"]]
+        self.assertNotEqual(gap.uplift_table(cj, multi)["verdict"], "数据不足")
         card = baseline_card()
         for c in card["scenes"]:
             del c["clips"]
