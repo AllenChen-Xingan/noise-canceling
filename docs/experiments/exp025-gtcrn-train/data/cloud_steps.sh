@@ -33,7 +33,7 @@ case "${1:-}" in
   pack)  # 把要进仓的小文件打一个包带回本机（不含音频）；打印包的 sha256
     OUT="$ROOT/out/traindata-products-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
     mkdir -p "$ROOT/out"
-    tar -czf "$OUT" -C "$HERE" inventory.txt splits builds $(cd "$HERE" && ls fetched.json 2>/dev/null)
+    tar -czf "$OUT" -C "$HERE" inventory.txt splits builds
     cp "$SHARDS/index.json" "$ROOT/out/" 2>/dev/null || true
     ls -l "$OUT"; sha256sum "$OUT" ;;
   rebuild)   # exp013 云上重建（014 第 0 步 ③），走官方源重下原料

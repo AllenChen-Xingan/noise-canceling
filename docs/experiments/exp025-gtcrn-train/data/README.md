@@ -64,28 +64,68 @@ it.build_id                                              # 写进训练运行记
 **近静音段**默认关：只在 trainer 配了防误压损失时才开（Taherian 2023 p.4）。
 官方 SEtrain 混音代码里 `alpha = 10**(-snr*1.5/20)`，所以它的实际信噪比是名义值的 1.5 倍（读源码得知）。本配方按真实信噪比取值。
 
-## 六、云上步骤（RunPod H100，网络盘 `/workspace`）
+## 六、云上步骤（RunPod，网络盘 `/workspace`）
+
+所有步骤用法相同：`bash cloud_steps.sh <步骤>`。下载（`setup` · `head` · `fetch` · `fetch-e3`）已由 cloudrun 在 2026-11-24 跑完。
+第一批 21 个包、E3 3 个文件都已核过，读数在 `fetched.json`。`rebuild` 是 exp013 重建，另行放行。
+
+### 6.1 切分 · 分片 · 登记（2026-11-24 大总管放行，CPU 机即可）
+
+前提：
+- 机器挂的是同一块网络盘（在 US-MO-1；`/workspace/train-raw` 与 `/workspace/vdn-data` 都在）
+- 代码是本分支 `exp/025-train-data` 的最新提交（大总管先推送）；放在 `/workspace/repo` 以外的新目录，别覆盖旧 checkout
+- `register` 不依赖 evalcmp 的 `rooms.early_rir`（导入 loader 不再连带导入 mix，`test_products` 核）
+
+按顺序跑，任何一步退出码非 0 就停下，把终端输出发给 traindata：
 
 ```bash
-bash cloud_steps.sh setup      # uv 建 .venv，装 requirements.txt
-bash cloud_steps.sh test       # 全部单元测试；有 CUDA 时 GPU 对拍在 GPU 上跑
-bash cloud_steps.sh head       # 只核服务器上的文件大小，不下载
-bash cloud_steps.sh fetch      # 第一批 A1–A5 + DEMAND：下载约 18.1 GB，解压峰值约 37 GB；开下之前先查盘
-bash cloud_steps.sh fetch-e3   # 单独补下 Wikimedia 上的 3 个 exp013 原料（第一批下完再跑；遇到 429 按服务器给的 Retry-After 等，限流另算最多 30 次）
-bash cloud_steps.sh split      # 先列出目录清单（QUT 和 TUM 包内的结构还没核），再切
-bash cloud_steps.sh shard
-bash cloud_steps.sh register   # 交集检查，登记训练 build
-bash cloud_steps.sh rebuild    # 重建 exp013，逐文件核 4,540 个哈希
+cd <新 checkout>/docs/experiments/exp025-gtcrn-train/data
+bash cloud_steps.sh setup       # 建 .venv，装 requirements.txt
+bash cloud_steps.sh inventory   # 写 inventory.txt：每个来源的文件数与前 20 个路径
+bash cloud_steps.sh split       # 写 splits/<来源>.jsonl + .json，共 6 个来源 12 个文件
+bash cloud_steps.sh shard       # 写 /workspace/shards/first-batch/*.tar 与 index.json（目录已存在就拒绝）
+bash cloud_steps.sh register    # 交集检查，写 builds/<id>/build.json；检查不过退出码非 0
+bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /workspace/out/，打印 sha256
 ```
 
-`fetch` 要等大总管放行再跑。
-下面这些文件要提交进仓：`fetched.json`、`splits/`、`builds/<id>/build.json` 和 `rebuild/*.json`。
-跑完以后，把它们从云上拷回来提交。
+`test` 一步可跑可不跑。在 evalcmp 与 cloudrun 的分支合进来之前，已知会红：混音测试（缺 `rooms.early_rir`）和 `test_real_cloud_config_quota`（缺 `cloud/config.py`）。
+
+### 6.2 预期产物
+
+| 步骤 | 产物 | 预期（出处） |
+|---|---|---|
+| inventory | `inventory.txt` | 每个来源一段：文件数 + 前 20 个路径 |
+| split | `splits/` 12 个文件 | 文件数照 `split_rules.json` 的 `expect`：train-clean-100 28,539 句 251 人 → 训练 201 · 开发 25 · 测试份 25 人；dev-clean + test-other 5,642 句 73 人 → 终测 37 · 测试份 36 人；QUT 20 段；DEMAND 96 个（6 环境 × 16 声道）；OpenSLR 28 ≥ 60,000；TUM ≥ 1（上游数目是读文档得来，见各条 `src`） |
+| shard | 分片目录 | 只有训练份与开发份；估计十几 GB（推断：人声约 90 小时 × 16 kHz × 2 字节 ≈ 10 GB，另加噪声与 RIR），`/workspace` 已用 33 GB，配额 150 GB |
+| register | `builds/<id>/build.json` | `valid: true`，`leak_check.ok: true`；`dropped_rir` 是被 `rirs.Measured.valid` 剔掉的 RIR 数 |
+| pack | `/workspace/out/traindata-products-<时间>.tar.gz` | 几 MB；不含音频 |
+
+耗时未量化：split 要对约 20 GB 原始音频逐个算 sha256，shard 要逐个解码、重采样并写盘。
+
+### 6.3 出错时怎么办
+
+- `split` 报「文件 N 个，应为 M」：通配符或上游数目不对，不写表。把 `inventory.txt` 发给 traindata，由 traindata 改 `split_rules.json` 后再跑
+- `split` 报「不在任何 rir_list 里」：OpenSLR 28 的房间表没对上，同样发清单
+- `shard` 报目录已存在：不删旧目录，设 `VDN_SHARDS=/workspace/shards/first-batch-<时间>` 换个新目录再跑
+- `register` 报交集检查不过：`build.json` 仍会写出并记作废，照样 `pack` 带回
+
+### 6.4 带回后的核对（traindata 做）
+
+1. 核包的 sha256 与 cloudrun 报的一致，解到 `data/` 下（`inventory.txt` · `splits/` · `builds/`）
+2. 人工读 `inventory.txt`：QUT 与 TUM 匹配到的确实是录音本身，没有说明文件或脉冲响应
+3. 跑 `python -m unittest tests.test_products`。它核这几项：
+   - 6 个来源都在
+   - 规则哈希等于现行 `split_rules.json`，文件数符合 `expect`
+   - 按单位切的重算一遍，分配逐个相同，同一单位不跨份
+   - 按时段切的段界重算相同
+   - build 有效、交集检查通过；它记的切分表哈希与仓里相同
+   - 只有训练份与开发份进分片
+4. 测试全过后提交（hook 自动做）。发现问题时，按 6.3 改规则重切，旧表不原地覆盖（`split.write` 会拒绝）
 
 ## 七、已知局限
 
 - QUT-NOISE 和 TUM 风噪：压缩包里的目录结构还没核，`split_rules.json` 里的通配符要等云上 `--inventory` 列出清单后再确认。另外 QUT 的服务器没有声明支持断点续传；脚本遇到不支持时会从头重下
 - OpenSLR 28：包里的点声源噪声取自 MUSAN，里面各个来源的许可没有逐个核，所以第一批不用
-- 测试状态：本机共 88 条，87 条过（torch 用 CPU 后端）。云上 GPU 对拍还没跑
+- 测试状态：本机共 100 条，99 条过（其中 6 条在产物带回前跳过）（torch 用 CPU 后端）。云上 GPU 对拍还没跑
 - 网络盘查盘：RunPod 网络盘上 df 报的是整个集群的剩余（cloudrun 实测 158 TB），所以在挂载点上改用「配额 − du 已用」。配额的正本是 `../cloud/config.py`（cloudrun 的分支）。那个分支合进来之前，`test_real_cloud_config_quota` 会红，下载也会拒绝开始
 - 依赖：测试要用 evalcmp 在分支 `feat/eval-paired-compare` 上加进 exp013 `rooms.py` 的 `early_rir`。那个分支合进 main 之前，在本分支上跑会红
