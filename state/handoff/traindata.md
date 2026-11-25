@@ -1,6 +1,6 @@
 # 现状页 · traindata（issue #156，批次 20261116-b19）
 
-状态：进行中（2026-11-24 的三件活已做完，待收尾自审与 codex 评审）
+状态：进行中（第一批产物已带回、核过、进仓；待 exp013 重建与收尾评审）
 
 ## 手上
 实体：训练数据集 · 数据切分 · 混音配方。产出都在 `docs/experiments/exp025-gtcrn-train/data/`，说明见那里的 `README.md`。
@@ -10,10 +10,9 @@
 同一批 plan 两边逐样本差 ≤ 1e-4，写成了测试。本机 75 条测试全过（torch CPU 后端）。下载脚本已备好，没在云上跑。
 
 ## 下一步
-1. 重跑：大总管推送后，cloudrun 在 CPU 机上跑 README 6.1 的六步（setup → inventory → split → shard → register → pack）。2026-11-25 那次 split 在 OpenSLR 28 上失败，已修
-2. 产物带回后按 README 6.4 核对：读 inventory.txt，跑 `tests.test_products`，过了再提交
-3. exp013 重建：`bash cloud_steps.sh rebuild`（另行放行）
-4. 收尾：多视角自审 + codex 评审
+1. exp013 重建：`bash cloud_steps.sh rebuild`（另行放行）
+2. evalcmp 与 cloudrun 的分支合进来后全量重跑测试
+3. 收尾：多视角自审 + codex 评审
 
 ## 依赖
 - 早期混响 100 ms 的正本在 `docs/experiments/exp013-scene-suite/rooms.py` 的 `EARLY_REVERB_MS` 与 `early_rir`。它们在 evalcmp 的分支 `feat/eval-paired-compare` 上，还没合进 main。合并前本分支的混音测试会红；本机验证用的是那个分支的 rooms.py
@@ -53,3 +52,4 @@
   · TUM：清单显示合成的文件夹叫 artifitial_wind_noise（上游拼写），旧的分层正则没认出来，已补；手机录音按文件名前缀并成 32 次录音（20 次录音跨 normal / strong 两个文件夹）
   · 提速：先认单位再算哈希；逐文件读数缓存在网络盘上（filecache.py），重跑只算变了的；小文件只开一次
   · 加测试：test_openslr28_rooms（8 条，含云上失败那个文件名，先红后绿）· test_tum_units（4 条，先红后绿）· test_filecache（5 条）。共 117 条，110 过 6 跳过 1 红（缺 cloud/config.py）
+- 2026-11-25 云上重跑六步（cloudrun，提交 8b4194d3）全部退出码 0：split 1346 s · shard 1212 s。包 sha256 cf5c6cc9… 核对一致；inventory.txt · splits/ · builds/49349c158a4defdc/ 进仓。tests.test_products 7 条全过；本机按现行规则逐行重算单位 0 处不符；AIR 归终测原料池、RWCP 归训练，与 README 一致。全量 117 条 116 过，1 条红（缺 cloud/config.py）
