@@ -12,6 +12,7 @@ render 的步骤（每步对应 recipe.json 一个旋钮）：
 4. snr：按 exp013 dsp.gated_level_db（人声）对噪声整段功率设增益
 5. level：整体增益让混响人声电平 = N(mean, std) dBFS（夹在上下限内）；noisy 与 clean 同一增益
 6. near_silent：人声置零（clean 全零、owner_ivs 为空）
+   high_snr（plan 里最后抽）：clean_input 的段噪声增益为 0（第 3 步的 rel_gain 全零）；high_snr 的段第 4 步用高 SNR
 7. 峰值 > 0.99 时 noisy · clean · 人声一起缩
 8. clip：只削 noisy，阈值 = u × 当时的 max|noisy|
 meta.owner_ivs 用 exp013 dsp.intervals（评测真值同一正本）在第 7 步后、第 8 步前的混响人声上算。
@@ -78,6 +79,19 @@ def draw_snr(rng, k, wind):
     return float(rng.uniform(lo, k["hi_db"]))
 
 
+def draw_high_snr(rng, k, snr, silent):
+    """high_snr 旋钮：返回 (snr, 是否高信噪比, 是否干净输入)。clean_frac 的段不加噪声，frac 的段 SNR ~ U(lo_db, hi_db)。
+    抽中干净但本段 near_silent（人声为 0）时按 near_silent 算，不记干净。"""
+    if not (k and k["on"]):
+        return snr, False, False
+    u = rng.random()
+    if u < k["clean_frac"]:
+        return snr, False, not silent
+    if u < k["clean_frac"] + k["frac"]:
+        return float(rng.uniform(k["lo_db"], k["hi_db"])), True, False
+    return snr, False, False
+
+
 def draw_k(rng, k):
     if not k["on"]:
         return 1
@@ -136,8 +150,11 @@ def plan(rng, speech, noises, ir, knobs, n):
     silent = bool(K["near_silent"]["on"] and rng.random() < K["near_silent"]["frac"])
     cl = K["clip"]
     u = float(rng.uniform(cl["thr_lo"], cl["thr_hi"])) if cl["on"] and rng.random() < cl["prob"] else 0.0
-    meta.update({"near_silent": silent, "snr_db": round(snr, 2), "level_dbfs": round(want, 2), "n_noises": k, "noises": srcs,
-                 "wind": wind, "interf_ivs": []})
+    snr, high, clean = draw_high_snr(rng, K.get("high_snr"), snr, silent)  # 最后才抽：关着时不多抽随机数
+    if clean:
+        rel = np.zeros(MAX_NOISES)  # 不加噪声：render 里噪声整段为 0
+    meta.update({"near_silent": silent, "snr_db": None if clean else round(snr, 2), "level_dbfs": round(want, 2), "n_noises": k,
+                 "noises": srcs, "wind": wind, "interf_ivs": [], "high_snr": high, "clean_input": clean})
     return Plan(s, ns, k, np.asarray(full, float), np.asarray(early, float), eq_s, eq_n, rel, snr, want, silent, u, meta)
 
 

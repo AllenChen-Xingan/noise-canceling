@@ -38,6 +38,11 @@
    "on": false, "frac": 0.15,
    "src": "014 第 2 步：只在配防误压损失时开。Taherian 2023 p.4 表 1：全零目标占 15% 时删字率 2.55% → 6.17%。开了以后这些段人声为 0、meta.near_silent=True"
   },
+  "high_snr": {
+   "on": false, "frac": 0.1, "lo_db": 20.0, "hi_db": 40.0, "clean_frac": 0.05,
+   "src": "D107（2026-11-25 人同意）：教模型「没有噪声时原样放过」；成绩单 V-PUMPV 只输入干净人声时量，而 snr 旋钮最高 15 dB。clean_frac 的段不加噪声（meta.clean_input），frac 的段 SNR ~ U(lo_db, hi_db)（meta.high_snr）。数值全是暂定：20 dB 接 snr 上限之上；40 dB 时噪声比人声低 40 dB，按推断已近似听不到；10 % + 5 % 让其余 85 % 仍按原分布。与 near_silent（人声为 0）相反，同一段都抽中时按 near_silent 算",
+   "off_means": "不改 SNR 分布，每段都加噪声"
+  },
   "reverb": {
    "on": true, "prob": 1.0,
    "src": "官方 SEtrain gen_DNS3_datasets.py：每段都卷 RIR（rir_list 与 clean_list 等长，读源码 2026-11-16）；目标只留直达 + 前 EARLY_REVERB_MS（rooms.early_rir）",

@@ -43,6 +43,9 @@ def load_recipe(path):
     ts, rp = r["knobs"]["target_scene"], r["knobs"]["replay"]
     if abs(ts["frac"] + rp["frac"] - 1.0) > 0.01:  # 抽样只用 replay.frac；target_scene.frac 是它的另一种写法
         raise ValueError(f"target_scene.frac {ts['frac']} + replay.frac {rp['frac']} ≠ 1：两处要一致（抽样按 replay.frac）")
+    hs = r["knobs"].get("high_snr")
+    if hs and not (0 <= hs["frac"] and 0 <= hs["clean_frac"] and hs["frac"] + hs["clean_frac"] <= 1 and hs["lo_db"] < hs["hi_db"]):
+        raise ValueError(f"high_snr 要求 frac、clean_frac ≥ 0，两者之和 ≤ 1，lo_db < hi_db：{hs}")
     sc = ts["scene"]
     ok = sc is None or (isinstance(sc, str) and sc) or (
         isinstance(sc, list) and sc and all(isinstance(x, str) and x for x in sc) and len(set(sc)) == len(sc))
