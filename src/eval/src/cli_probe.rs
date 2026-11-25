@@ -79,12 +79,8 @@ pub(crate) fn cmd_asr_probe(args: &[String]) -> Result<bool, String> {
         "探针：{} 条 × {repeats} 次，温度 {temperature:?}",
         items.len()
     );
-    // 报告文件在所有检查之后、发第一个请求之前「只新建」地占住（create_new，原子），跑完写进这个已打开的文件；同路径已有就直接拒（codex 本分支第 5 轮 P2 #2）
-    let mut report = std::fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&out)
-        .map_err(|e| format!("{}：报告只新建，不覆盖（{e}）", out.display()))?;
+    // 报告文件在所有检查之后、发第一个请求之前占住（codex 本分支第 5 轮 P2 #2）
+    let mut report = create_report(&out)?;
     let r = asr_probe::probe(&mut c, &items, repeats, vdn_types::MODEL_RATE);
     {
         use std::io::Write;
@@ -107,4 +103,37 @@ pub(crate) fn cmd_asr_probe(args: &[String]) -> Result<bool, String> {
         Path::new(&out).display()
     );
     Ok(r["pass"] == true)
+}
+
+/// 「只新建」地原子创建报告文件（create_new）：同路径已有、或别的进程同时抢到，都返回 `Err`，已有内容不动。
+fn create_report(out: &Path) -> Result<std::fs::File, String> {
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(out)
+        .map_err(|e| format!("{}：报告只新建，不覆盖（{e}）", out.display()))
+}
+
+#[cfg(test)]
+mod tests {
+    /// codex 本分支第 6 轮 P2 #2：同一路径并发抢，只有一个成功；已有内容不被改。
+    #[test]
+    fn report_is_created_once_and_never_overwritten() {
+        let p = std::env::temp_dir().join(format!("vdn-probe-report-{}.json", std::process::id()));
+        let _ = std::fs::remove_file(&p);
+        let wins = std::thread::scope(|s| {
+            let hs: Vec<_> = (0..8)
+                .map(|_| s.spawn(|| super::create_report(&p).is_ok()))
+                .collect();
+            hs.into_iter()
+                .map(|h| h.join().unwrap())
+                .filter(|&w| w)
+                .count()
+        });
+        assert_eq!(wins, 1, "只有一个抢到");
+        std::fs::write(&p, "first").unwrap();
+        assert!(super::create_report(&p).is_err());
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), "first");
+        let _ = std::fs::remove_file(&p);
+    }
 }

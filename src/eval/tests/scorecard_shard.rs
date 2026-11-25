@@ -206,6 +206,14 @@ fn merge_dirs_checks_meta_fingerprint_and_sums_timing() {
         .map(|i| write(i, 3, "abc", "0000000000000000"))
         .collect();
     assert!(merge_dirs(&suite, &stale).unwrap_err().contains("指纹"));
+    // 各片都缺 commit：不能当 null 相等放过（codex 本分支第 6 轮 P2 #1）
+    for d in &dirs {
+        let p = d.join("scorecard.json");
+        let mut v: Value = serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+        v["meta"].as_object_mut().unwrap().remove("commit");
+        std::fs::write(&p, v.to_string()).unwrap();
+    }
+    assert!(merge_dirs(&suite, &dirs).unwrap_err().contains("必填"));
 }
 
 #[test]
