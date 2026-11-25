@@ -1,146 +1,20 @@
 //! 成绩单端到端：自造 6 段合成片段（写 wav + clips.jsonl，带声音标注）→ 场景任务清单 → `scorecard::run`（参考降噪器）
 //! → 汇总 → Markdown / JSON。不需要模型：QA 层的吃字与听感判「不知道」，所以场景结论只能是「待测」或「不过」。
+//! 夹具在 `common/scene_fixture.rs`；早期回声参考的端到端测试在 `scorecard_early_e2e.rs`。
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use serde_json::{Value, json};
-use vdn_eval::runner::{Baseline, Opts};
+use serde_json::json;
 use vdn_eval::scene::SceneClip;
 use vdn_eval::scorecard::card::Card;
 use vdn_eval::scorecard::rules::CardStatus;
-use vdn_eval::suite::{LEVELS, parse_levels, parse_suite};
-use vdn_eval::synth::{NoiseKind, SceneSpec, TalkerSpec, render};
+use vdn_eval::suite::parse_suite;
 use vdn_eval::system::SystemKind;
 use vdn_eval::wav;
 
-const SR: u32 = vdn_types::MODEL_RATE;
-
-fn tracks(v: impl Fn(&str) -> String, stems: &[&str]) -> Value {
-    let mut st = serde_json::Map::new();
-    for s in stems {
-        st.insert(s.to_string(), json!(v(&format!("stem-{s}"))));
-    }
-    json!({"mix": v("mix"), "owner": v("owner"), "owner_dry": v("owner"), "floor": v("noise"),
-           "noise": v("noise"), "interf": v("interf"), "stems": st})
-}
-
-/// 写一段：返回 clips.jsonl 的一行。`with_machine` 的段多一个「咖啡机」声音标注。
-fn write_clip(root: &Path, i: usize, with_machine: bool) -> Value {
-    let c = render(&SceneSpec {
-        dur_s: 6.0,
-        seed: 100 + i as u64,
-        owner: Some(TalkerSpec {
-            level_dbov: -26.0,
-            f0_lo: 100.0,
-            f0_hi: 140.0,
-            tonal: false,
-        }),
-        owner_start_s: 0.5,
-        pause_s: (0.4, 1.2),
-        interferers: Vec::new(),
-        noise: NoiseKind::Cafe,
-        snr_db: if with_machine { 0.0 } else { 15.0 },
-        tail_silence_s: 0.0,
-    });
-    let id = format!("cafe-c{i:02}");
-    let rel = |k: &str| format!("clips/{id}-{k}.wav");
-    let mut stems = vec!["bed0"];
-    if with_machine {
-        stems.push("cm0");
-    }
-    for (k, x) in [
-        ("mix", &c.mix),
-        ("owner", &c.clean),
-        ("noise", &c.noise),
-        ("interf", &c.interf),
-    ] {
-        wav::write(&root.join(rel(k)), x, SR).unwrap();
-    }
-    for s in &stems {
-        wav::write(&root.join(rel(&format!("stem-{s}"))), &c.noise, SR).unwrap();
-    }
-    let sha = |k: &str| wav::sha256(&root.join(rel(k))).unwrap();
-    let n = c.mix.len() as u64;
-    let owner_iv: Vec<[u64; 2]> = c
-        .truth
-        .owner
-        .iter()
-        .map(|&(a, b)| [a as u64, b as u64])
-        .collect();
-    let snd = |inst: &str, cls: &str, group: &str| {
-        json!({"inst": inst, "cls": cls, "group": group, "is_speech": false, "iv": [[0, n]],
-               "level_dbfs": -40.0, "rel_db": -10.0, "dist_m": null, "azimuth_deg": null,
-               "src": {"kind": "synth", "fn": cls}, "license": "own"})
-    };
-    let mut sounds = vec![snd("bed0", "bed-cafe", "bed")];
-    if with_machine {
-        sounds.push(snd("cm0", "coffee-machine", "pattern"));
-    }
-    json!({
-        "id": id, "scene": "cafe", "tier": "common", "device": "mba-builtin", "mic_mode": "standard",
-        "pair": format!("{id}-x"), "lang": "en", "polarity": "suppress", "dur_samples": n, "sr": SR,
-        "audio": tracks(|k| rel(k), &stems), "has_clean_ref": true, "additive": true,
-        "targets": [{"spk": "s1", "dist_m": 0.5, "azimuth_deg": 0.0, "level_dbfs": -26.0, "iv": owner_iv, "src": {"kind": "synth", "spk": "s1"}}],
-        "sounds": sounds,
-        "nominal": {"snr_db": 10.0, "sir_db": null, "t60_s": 0.3, "owner_dist_m": 0.5, "owner_level_dbfs": -26.0},
-        "measured": {"snr_db": 10.0, "snr_all_db": 9.0, "owner_level_dbfs": -26.0, "sir_db": null, "t60_s": 0.3, "drr_db": 5.0, "overlap_ratio": 0.0},
-        "owner_iv": owner_iv, "interf_iv": [], "chain": {"flat": true}, "seed": 100 + i,
-        "hash": {"samples": tracks(|_| "0".repeat(64), &stems), "wav_sha256": tracks(sha, &stems)},
-    })
-}
-
-/// 夹具根目录：每次调用独立（进程号 + 进程内序号），同时跑的测试进程或线程互不删对方的夹具
-/// （见 `setup_dirs_are_isolated`）。顺手删掉一小时前留下的旧夹具，免得越积越多。
-fn fixture_root(tag: &str) -> PathBuf {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    static N: AtomicUsize = AtomicUsize::new(0);
-    let base = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("scorecard-fx");
-    let pid = std::process::id();
-    if let Ok(rd) = std::fs::read_dir(&base) {
-        for e in rd.flatten() {
-            let old = e
-                .metadata()
-                .and_then(|m| m.modified())
-                .ok()
-                .and_then(|t| t.elapsed().ok())
-                .is_some_and(|d| d.as_secs() > 3600);
-            let mine = e
-                .file_name()
-                .to_string_lossy()
-                .starts_with(&format!("{pid}-"));
-            if old && !mine {
-                let _ = std::fs::remove_dir_all(e.path());
-            }
-        }
-    }
-    base.join(format!("{pid}-{}-{tag}", N.fetch_add(1, Ordering::SeqCst)))
-}
-
-fn setup(tag: &str) -> (PathBuf, String) {
-    let root = fixture_root(tag);
-    std::fs::create_dir_all(root.join("clips")).unwrap();
-    // 3 段有咖啡机（0 dB，更吵）、3 段没有（15 dB）
-    let lines: Vec<String> = (0..6)
-        .map(|i| write_clip(&root, i, i < 3).to_string())
-        .collect();
-    let jl = root.join("clips.jsonl");
-    std::fs::write(&jl, lines.join("\n") + "\n").unwrap();
-    let suite = json!({"name": "scenes-e2e", "tasks": [{
-        "id": "S-cafe-common-mba", "set": "capability", "polarity": "suppress",
-        "origin": "scorecard 端到端测试", "desc": "咖啡馆 · 常见档 · MacBook Air",
-        "real": {"kind": "scene", "clips": jl.to_string_lossy(), "scene": "cafe", "tier": "common", "device": "mba-builtin"},
-        "graders": []}]});
-    (root, suite.to_string())
-}
-
-fn opts() -> Opts {
-    Opts {
-        ci: true,
-        audio_dir: None,
-        baseline: Baseline::new(),
-        levels: parse_levels(LEVELS).unwrap(),
-    }
-}
+#[path = "common/scene_fixture.rs"]
+mod fx;
+use fx::{SR, opts, setup};
 
 #[test]
 fn fixture_lines_parse_as_scene_clips() {
@@ -341,25 +215,6 @@ fn committed_example_line_parses() {
     assert!(v[0].audio.owner_early.is_none(), "旧格式行没有早期参考");
 }
 
-/// exp013 生成器真实写出的一行（带 `owner_early`，冒烟 build 取的）：Rust 读得了，三处（路径 · 两种哈希）都在。
-#[test]
-fn generated_early_line_parses() {
-    let p =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/scene-clip-early-example.jsonl");
-    let v = SceneClip::parse_jsonl(&std::fs::read_to_string(p).unwrap()).unwrap();
-    assert_eq!(v.len(), 1);
-    let c = &v[0];
-    assert!(
-        c.audio
-            .owner_early
-            .as_deref()
-            .unwrap()
-            .ends_with("owner_early.wav")
-    );
-    assert_eq!(c.hash.wav_sha256.owner_early.as_ref().unwrap().len(), 64);
-    assert_eq!(c.hash.samples.owner_early.as_ref().unwrap().len(), 64);
-}
-
 /// 仓里的场景任务清单（scenesuite 的 `suite/scenes.json`）与它引用的 `clips.jsonl` 都读得了：
 /// 每条任务是场景任务、展开出至少 1 段、每段的场景 / 档 / 设备与任务一致，片段 id 全局不重复。
 /// 清单在 scenesuite 合并前不在本分支：那时只打印提示（合并后这条测试才真正生效）。
@@ -469,143 +324,4 @@ fn clean_pass_items_scored_on_clean_input_under_v2() {
         v1.iter().flat_map(|r| &r.scores).all(|(_, _, s)| !mark(s)),
         "v1 不跑干净人声那一路"
     );
-}
-
-/// 给 setup 出的每段加一条早期回声参考 `owner_early.wav`（`f` 把干净参考变成早期参考），改写 clips.jsonl。
-fn add_early(root: &Path, f: impl Fn(&[f32]) -> Vec<f32>) {
-    let jl = root.join("clips.jsonl");
-    let text = std::fs::read_to_string(&jl).unwrap();
-    let mut out = String::new();
-    for l in text.lines() {
-        let mut v: Value = serde_json::from_str(l).unwrap();
-        let owner = v["audio"]["owner"].as_str().unwrap().to_string();
-        let (x, _) = wav::read(&root.join(&owner)).unwrap();
-        let rel = owner.replace("-owner.wav", "-owner_early.wav");
-        wav::write(&root.join(&rel), &f(&x), SR).unwrap();
-        v["audio"]["owner_early"] = json!(rel);
-        v["hash"]["wav_sha256"]["owner_early"] = json!(wav::sha256(&root.join(&rel)).unwrap());
-        v["hash"]["samples"]["owner_early"] = json!("0".repeat(64));
-        out += &(v.to_string() + "\n");
-    }
-    std::fs::write(&jl, out).unwrap();
-}
-
-/// 早期回声参考旁列（D99 第 2 条）：有 owner_early 的段，EARLY_REF 项多一个 early_ref 旁证，其余项没有；
-/// 早期参考 = 主参考时旁证与主值逐位相同；clips.jsonl 写出读回保留；成绩单表格与 JSON 带旁列；判定不受影响。
-#[test]
-fn early_reference_side_column() {
-    use vdn_eval::scorecard::early::{EARLY_MARK, value_of};
-    use vdn_eval::scorecard::standard::EARLY_REF;
-    let has = |s: &vdn_eval::Score| s.extra.iter().any(|(k, _)| *k == EARLY_MARK);
-    let run = |root: &Path, text: &str| {
-        let suite = parse_suite(text).unwrap();
-        vdn_eval::scorecard::run(&suite, &[SystemKind::Ref], &opts(), None, Some(root))
-    };
-    // 旧 build（没有 owner_early）：没有旁证
-    let (root0, t0) = setup("early-none");
-    let (base, _) = run(&root0, &t0);
-    assert!(base.iter().flat_map(|r| &r.scores).all(|(_, _, s)| !has(s)));
-    // 早期参考 = 主参考：旁证与主值逐位相同
-    let (root1, t1) = setup("early-same");
-    add_early(&root1, <[f32]>::to_vec);
-    let (same, miss) = run(&root1, &t1);
-    assert!(miss.is_empty(), "{miss:?}");
-    for r in &same {
-        for (v, _, s) in &r.scores {
-            assert_eq!(has(s), EARLY_REF.contains(v), "{} · {v}", r.clip);
-            if EARLY_REF.contains(v) {
-                assert_eq!(
-                    value_of(s),
-                    s.value.filter(|x| x.is_finite()),
-                    "{} · {v}",
-                    r.clip
-                );
-            }
-        }
-    }
-    // 早期参考 ≠ 主参考（压低 6 dB）：主值、判定与没有旁列时完全相同，旁证不同
-    let (root2, t2) = setup("early-diff");
-    add_early(&root2, |x| x.iter().map(|v| v * 0.5).collect());
-    let (diff, _) = run(&root2, &t2);
-    let mut changed = 0;
-    for (a, b) in base.iter().zip(&diff) {
-        for ((v, _, sa), (_, _, sb)) in a.scores.iter().zip(&b.scores) {
-            assert_eq!(
-                sa.value.map(f64::to_bits),
-                sb.value.map(f64::to_bits),
-                "{} · {v}",
-                a.clip
-            );
-            assert_eq!(sa.verdict.as_str(), sb.verdict.as_str());
-            if value_of(sb).is_some() && value_of(sb) != sb.value {
-                changed += 1;
-            }
-        }
-    }
-    assert!(changed > 0, "压低 6 dB 的早期参考应让部分旁列读数变化");
-    // clips.jsonl 写出读回保留旁证
-    let back = vdn_eval::scorecard::load::parse_jsonl(
-        &vdn_eval::scorecard::load::to_jsonl(&diff).unwrap(),
-    )
-    .unwrap();
-    for (a, b) in diff.iter().zip(&back) {
-        for ((_, _, sa), (_, _, sb)) in a.scores.iter().zip(&b.scores) {
-            // serde_json 读浮点可能差最后一位：按相对容差比（有没有值必须一致）
-            match (value_of(sa), value_of(sb)) {
-                (Some(x), Some(y)) => assert!(
-                    (x - y).abs() <= 1e-12 * x.abs().max(y.abs()).max(1e-300),
-                    "{x} vs {y}"
-                ),
-                (x, y) => assert_eq!(x, y),
-            }
-        }
-    }
-    // 成绩单：有旁列的项带 early_mean 与「早期参考」字样；状态与没有旁列时一样
-    let card = Card::build(&diff, Vec::new());
-    let card0 = Card::build(&base, Vec::new());
-    let est = card.cards[0]
-        .items
-        .iter()
-        .find(|i| i.v == "V-ESTOI")
-        .unwrap();
-    assert!(est.early_mean.is_some());
-    assert!(card.to_markdown("t").contains("早期参考"));
-    let js = card.to_json(json!({}));
-    let items = js["scenes"][0]["items"].as_array().unwrap();
-    assert!(items.iter().any(|i| i.get("early_mean").is_some()));
-    for (x, y) in card.cards[0].items.iter().zip(&card0.cards[0].items) {
-        assert_eq!(x.status, y.status, "{}", x.v);
-    }
-    // 早期参考哈希对不上：整段记缺，不打分
-    let (root3, t3) = setup("early-hash");
-    add_early(&root3, <[f32]>::to_vec);
-    let p = root3.join("clips/cafe-c00-owner_early.wav");
-    wav::write(&p, &[0.1f32; 16], SR).unwrap();
-    let (rows3, miss3) = run(&root3, &t3);
-    assert_eq!(rows3.len(), 5);
-    assert!(
-        miss3
-            .iter()
-            .any(|m| m.what == "cafe-c00" && m.why.contains("sha256")),
-        "{miss3:?}"
-    );
-}
-
-/// 并行 / 并发隔离（2026-11-24 整套重跑时 early_reference_side_column 偶发「没跑成的段」）：
-/// 旧 setup 按标签定目录、开头先删同名目录，另一个同时跑的测试进程用同一标签就会把正在用的夹具删掉。
-/// 现在每次 setup 都得到独立目录：同一标签连调两次，第一份夹具仍完整可读。
-#[test]
-fn setup_dirs_are_isolated() {
-    let (r1, _) = setup("iso");
-    let (r2, _) = setup("iso");
-    assert_ne!(r1, r2, "同一标签两次 setup 必须是不同目录");
-    let text = std::fs::read_to_string(r1.join("clips.jsonl")).unwrap();
-    let clips = SceneClip::parse_jsonl(&text).unwrap();
-    for c in &clips {
-        assert!(
-            r1.join(&c.audio.mix).exists(),
-            "第一份夹具被第二次 setup 删了：{}",
-            c.audio.mix
-        );
-    }
 }
