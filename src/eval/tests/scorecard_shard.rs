@@ -116,7 +116,7 @@ fn incomplete_or_inconsistent_parts_are_refused() {
     let (p0, p1) = (part(&suite, &root, 0, 2), part(&suite, &root, 1, 2));
     let sys = systems();
     assert!(
-        merge(&suite, &sys, &[p0.clone()])
+        merge(&suite, &sys, std::slice::from_ref(&p0))
             .unwrap_err()
             .contains("不齐")
     );

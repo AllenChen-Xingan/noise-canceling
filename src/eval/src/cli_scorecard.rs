@@ -52,6 +52,8 @@ pub(crate) fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
     let path = arg(args, "--suite").unwrap_or_else(|| "src/eval/suite/scenes.json".into());
     let p = resolve(&path).ok_or_else(|| format!("找不到 {path}"))?;
     let mut suite = parse_suite(&std::fs::read_to_string(&p).map_err(|e| format!("{path}：{e}"))?)?;
+    // 清单指纹取读进来的原样（--no-safety 改任务之前），合并时按同一份文件重算才对得上；保护开关另由 meta.safety 核
+    let fingerprint = vdn_eval::scorecard::shard::suite_fingerprint(&suite);
     vdn_eval::scorecard::check_suite(&suite)?;
     // 「不回混」口径：全部任务关保护处理（exp021 已核与原路径逐段相同）
     let no_safety = flag(args, "--no-safety");
@@ -119,7 +121,7 @@ pub(crate) fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
         "external": sys.iter().filter_map(|s| s.provenance()).collect::<Vec<_>>(),
         "shard": shard.map(|s| format!("{}/{}", s.i, s.n)),
         "shard_units": shard.map(|_| json!({"rows": run.row_units, "missing": run.missing_units})),
-        "suite_fingerprint": vdn_eval::scorecard::shard::suite_fingerprint(&suite), "asr_workers": qa.is_some().then_some(workers),
+        "suite_fingerprint": fingerprint, "asr_workers": qa.is_some().then_some(workers),
         "timing": run.timing});
     let js = serde_json::to_string_pretty(&card.to_json(meta_v)).map_err(|e| e.to_string())? + "\n";
     vdn_eval::scorecard::card::write_new(&out, &js, &card.to_markdown("场景成绩单"))?;
