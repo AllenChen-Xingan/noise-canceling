@@ -137,6 +137,17 @@ pub struct Suite {
     pub tasks: Vec<Task>,
 }
 
+/// 取带值的命令行选项：没给 = `Ok(None)`；给了但缺值（在末尾，或下一项又是 `--` 开头）= `Err`，不当成没给。
+pub fn option_value(args: &[String], k: &str) -> Result<Option<String>, String> {
+    let Some(i) = args.iter().position(|a| a == k) else {
+        return Ok(None);
+    };
+    match args.get(i + 1) {
+        Some(v) if !v.starts_with("--") => Ok(Some(v.clone())),
+        _ => Err(format!("{k} 后面缺值")),
+    }
+}
+
 impl Suite {
     /// 全部任务关掉引擎保护处理（`safety = false`）：不做原声混回、超幅与坏值保护，打的是模型自己的输出
     /// （「不回混」口径，exp021 已核：预混 + 关保护与原路径逐段相同）。返回改了几条任务。
@@ -316,10 +327,22 @@ mod tests {
     #[test]
     fn option_value_must_be_present() {
         let a = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();
-        assert_eq!(option_value(&a(&["scorecard", "--asr-ledger", "/x.json"]), "--asr-ledger"), Ok(Some("/x.json".into())));
+        assert_eq!(
+            option_value(
+                &a(&["scorecard", "--asr-ledger", "/x.json"]),
+                "--asr-ledger"
+            ),
+            Ok(Some("/x.json".into()))
+        );
         assert_eq!(option_value(&a(&["scorecard"]), "--asr-ledger"), Ok(None));
         assert!(option_value(&a(&["scorecard", "--asr-ledger"]), "--asr-ledger").is_err());
-        assert!(option_value(&a(&["scorecard", "--asr-ledger", "--init-ledger"]), "--asr-ledger").is_err());
+        assert!(
+            option_value(
+                &a(&["scorecard", "--asr-ledger", "--init-ledger"]),
+                "--asr-ledger"
+            )
+            .is_err()
+        );
     }
     #[test]
     fn without_safety_turns_every_task_off() {

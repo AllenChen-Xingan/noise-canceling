@@ -114,6 +114,12 @@ pub fn ledger_path_from(root: &Path, env: Option<String>) -> PathBuf {
     }
 }
 
+/// 错误信息里只写账本文件名（不写目录：本机目录含用户名，而错误会进成绩单 `meta.asr`，成绩单进公开仓库）。
+fn fname(p: &Path) -> String {
+    p.file_name()
+        .map_or_else(|| "账本".into(), |n| n.to_string_lossy().into_owned())
+}
+
 /// 封存说明文件：`<账本>.sealed`。
 pub fn sealed_path(p: &Path) -> PathBuf {
     let mut s = p.as_os_str().to_owned();
@@ -122,13 +128,11 @@ pub fn sealed_path(p: &Path) -> PathBuf {
 }
 
 fn check_sealed(p: &Path) -> Result<(), String> {
-    let sp = sealed_path(p);
-    if sp.exists() {
-        let note = std::fs::read_to_string(&sp).unwrap_or_default();
+    // 不把封存说明的原文带出来（可能写了机器名、地址）；正本在哪写在说明文件里，人去看
+    if sealed_path(p).exists() {
         return Err(format!(
-            "识别费账本 {} 已封存（{}）：拒发。正本在云上，先取回再发",
-            p.display(),
-            note.trim()
+            "识别费账本 {} 已封存：拒发。正本在云上，先取回再发（见旁边的 .sealed 说明）",
+            fname(p)
         ));
     }
     Ok(())
@@ -151,9 +155,9 @@ pub fn init(p: &Path, created: Created) -> Result<(), String> {
         .open(p)
         .map_err(|e| {
             if e.kind() == std::io::ErrorKind::AlreadyExists {
-                format!("识别费账本 {} 已存在：不新建、不覆盖", p.display())
+                format!("识别费账本 {} 已存在：不新建、不覆盖", fname(p))
             } else {
-                format!("建不了识别费账本 {}：{e}", p.display())
+                format!("建不了识别费账本 {}：{e}", fname(p))
             }
         })?;
     use std::io::Write;
@@ -176,12 +180,12 @@ pub fn read(p: &Path) -> Result<Ledger, String> {
     check_sealed(p)?;
     match std::fs::read_to_string(p) {
         Ok(t) => serde_json::from_str(&t)
-            .map_err(|e| format!("识别费账本 {} 坏了（{e}）：拒跑，先人工查", p.display())),
+            .map_err(|e| format!("识别费账本 {} 坏了（{e}）：拒跑，先人工查", fname(p))),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(format!(
             "识别费账本 {} 不存在：拒发（不当成空账本）。要新建请带 --init-ledger 或 VDN_ASR_INIT_LEDGER=1",
-            p.display()
+            fname(p)
         )),
-        Err(e) => Err(format!("读不了识别费账本 {}：{e}", p.display())),
+        Err(e) => Err(format!("读不了识别费账本 {}：{e}", fname(p))),
     }
 }
 
@@ -352,18 +356,29 @@ mod tests {
     fn errors_carry_no_directory_or_seal_note() {
         let p = tmp("leak");
         let dir = p.parent().unwrap().display().to_string();
-        let msgs = vec![
-            read(&p).unwrap_err(),
-            reserve(&p, 0.01, 1.0).unwrap_err(),
-        ];
-        std::fs::write(sealed_path(&p), "迁去 secret-host-xyz.local · https://user:pw@example.com").unwrap();
-        let msgs = [msgs, vec![read(&p).unwrap_err(), init(&p, Created::test()).unwrap_err()]].concat();
+        let msgs = vec![read(&p).unwrap_err(), reserve(&p, 0.01, 1.0).unwrap_err()];
+        std::fs::write(
+            sealed_path(&p),
+            "迁去 secret-host-xyz.local · https://user:pw@example.com",
+        )
+        .unwrap();
+        let msgs = [
+            msgs,
+            vec![
+                read(&p).unwrap_err(),
+                init(&p, Created::test()).unwrap_err(),
+            ],
+        ]
+        .concat();
         std::fs::remove_file(sealed_path(&p)).unwrap();
         std::fs::write(&p, "{ bad").unwrap();
         let msgs = [msgs, vec![read(&p).unwrap_err()]].concat();
         for m in &msgs {
             assert!(!m.contains(&dir), "带了目录：{m}");
-            assert!(!m.contains("secret-host") && !m.contains("user:pw"), "带了封存说明原文：{m}");
+            assert!(
+                !m.contains("secret-host") && !m.contains("user:pw"),
+                "带了封存说明原文：{m}"
+            );
             assert!(m.contains("ledger.json"), "要说清是哪个文件：{m}");
         }
     }

@@ -415,7 +415,7 @@ fn cmd_scorecard(args: &[String]) -> Result<bool, String> {
         .unwrap_or_else(default_out);
     vdn_eval::scorecard::card::ensure_fresh(&out)?;
     // 识别费账本：--asr-ledger 指路径（同 VDN_ASR_LEDGER）；--init-ledger（或 VDN_ASR_INIT_LEDGER=1）才新建
-    let asr_ledger = arg(args, "--asr-ledger").map(PathBuf::from);
+    let asr_ledger = vdn_eval::suite::option_value(args, "--asr-ledger")?.map(PathBuf::from);
     if flag(args, "--qa") {
         let lp = asr_ledger.clone().unwrap_or_else(|| {
             vdn_eval::qa::asr_ledger::ledger_path(&vdn_eval::suite::main_root())
