@@ -26,6 +26,19 @@ else:
 ' "$1"
 }
 
+# ── 只在本项目仓库（含它的 worktree）里提交（人定 2026-11-25「改 hook」）──
+# 起因：手下在 resources/gtcrn（第三方克隆）里跑 grep，hook 在那个克隆里提交了 pyc。
+# 判法：cwd 所在仓库的公共 git 目录，必须等于本脚本所在仓库的公共 git 目录。
+common_dir() {   # $1 = 目录；打印绝对公共 git 目录，不在仓库里则打印空
+  local d; d="$(git -C "$1" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || return 0
+  [ -n "$d" ] && (cd "$d" 2>/dev/null && pwd -P)
+}
+same_project() { # $1 = cwd，$2 = 本项目任一目录；同一项目返回 0
+  local a b; a="$(common_dir "$1")"; b="$(common_dir "$2")"
+  [ -n "$a" ] && [ -n "$b" ] && [ "$a" = "$b" ]
+}
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+
 if [ "${1:-}" = "--self-test" ]; then
   fail=0
   t() { got="$(pretty_model "$1")"; [ "$got" = "$2" ] && echo "  ✓ $1 → $got" || { echo "  ✗ $1 → $got（应为 $2）"; fail=1; }; }
@@ -33,6 +46,19 @@ if [ "${1:-}" = "--self-test" ]; then
   t claude-sonnet-4-5-20250929 "Claude Sonnet 4.5"
   t "claude-fable-5-1[1m]" "Claude Fable 5.1"
   t "" "unknown"
+  # 仓库归属：本项目、本项目的 worktree 算；嵌在里面的别的克隆、仓库外目录不算
+  tmp="$(mktemp -d)"
+  git init -q "$tmp/proj" && git -C "$tmp/proj" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+  git -C "$tmp/proj" worktree add -q -b wt "$tmp/proj-wt" 2>/dev/null
+  git init -q "$tmp/proj/resources/other"
+  mkdir -p "$tmp/plain"
+  s() { if same_project "$1" "$tmp/proj"; then r=yes; else r=no; fi
+        [ "$r" = "$2" ] && echo "  ✓ 归属 $3 → $r" || { echo "  ✗ 归属 $3 → $r（应为 $2）"; fail=1; }; }
+  s "$tmp/proj" yes "本项目"
+  s "$tmp/proj-wt" yes "本项目的 worktree"
+  s "$tmp/proj/resources/other" no "嵌在里面的第三方克隆"
+  s "$tmp/plain" no "仓库外目录"
+  rm -rf "$tmp"
   exit $fail
 fi
 

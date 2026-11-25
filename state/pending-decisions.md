@@ -24,6 +24,7 @@
 | 9-1 | 花费上限 60 美元够不够：H100 每小时 4.39 美元，约 13 小时；正式训练两组 × 3 个种子的总时长未量化 | 试训跑完、量出单次时长后再定 | 不提高；超了先停下问你 | D101 · D102 |
 | 9-2 | 网络盘（150 GB，每月约 10.5 美元）训练结束后删不删：闲置约 4.5 个月会花掉整个 60 美元上限 | 正式训练和评测结束后，先把要留的小文件取回再删 | 不删；每月报一次盘费 | cloudrun `cloud/README.md` · `cloud/reviews/codex-review.md` |
 | 9-3 | 两把 RunPod 密钥（vdn-train、vdn-train-full）和 OpenRouter 密钥都曾贴进聊天：旧的 vdn-train 现在删；另两把在训练和成绩单跑完后轮换 | 照此做（你在 RunPod 网页上操作） | 不动，训练后再提醒 | 本会话 2026-11-24 |
+| 9-4 | 自动提交 hook 会在当前目录所在的任何 git 仓库里提交，包括 `resources/` 下的第三方克隆（2026-11-25 在 gtcrn 克隆里误提交两次 pyc，已退回 502ebfa，并在本机 exclude 了 __pycache__）。要不要改 hook，只在本项目仓库和它的 worktree 里提交 | 改：hook 先核 `git rev-parse --git-common-dir` 是本项目的，不是就跳过；带测试 | 不改；手下只用绝对路径读 resources，不 cd 进去 | `.claude/hooks/auto-commit.sh:44` · 铁律 14 |
 
 ## 第〇·八组 · GTCRN 改进四条路（2026-11-05 大总管 noise-canceling-74；总览 `~/Desktop/20261105-gtcrn-four-routes-zh.pdf`）
 
