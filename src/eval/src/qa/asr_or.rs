@@ -30,7 +30,7 @@ pub const MAX_ATTEMPTS: usize = 5;
 pub const LEDGER_REL: &str = "_tmp/asr-openrouter-ledger.json";
 /// 这个错误是不是永久的：再发也一样，要停下（不重试的 4xx、到上限、账本坏或写不了、费用未知）。
 pub fn is_permanent(e: &str) -> bool {
-    ["不重试", "上限", "账本", "费用未知", "已停发"]
+    ["不重试", "上限", "账本", "费用未知", "已停发", "待核"]
         .iter()
         .any(|k| e.contains(k))
 }
@@ -149,6 +149,8 @@ struct Conn<'a> {
     key: &'a str,
     backoff_ms: u64,
     requests: &'a std::sync::atomic::AtomicU64,
+    /// 本批共享的停止状态：每次真发请求前都查（含重试，codex 第 7 轮 P1 #3）
+    stop: &'a std::sync::Mutex<Option<String>>,
 }
 
 impl Conn<'_> {
@@ -222,7 +224,7 @@ impl Conn<'_> {
 
     /// 转写一条：返回 (文本, 实际花费)。重试与不重试的规矩见文件头。
     /// 转写一条：成功返回 (文本, 实际花费)；失败返回 [`Failure`]（带上这次请求的费用情况）。
-    fn transcribe(&self, x: &[f32], sr: u32, lang: &str) -> Result<(String, f64), Failure> {
+    fn transcribe(&self, x: &[f32], sr: u32, lang: &str) -> Result<(String, Option<f64>), Failure> {
         let free = |msg: String| Failure {
             msg,
             cost: Cost::Free,
@@ -231,14 +233,17 @@ impl Conn<'_> {
             .map_err(|e| free(e.to_string()))?;
         let body_path = tmp_path("json");
         std::fs::write(&body_path, &body).map_err(|e| free(e.to_string()))?;
-        let r = self.send_with_retry(&body_path, x.len() as f64 / f64::from(sr));
+        let r = self.send_with_retry(&body_path);
         let _ = std::fs::remove_file(&body_path);
         r
     }
 
-    fn send_with_retry(&self, body_path: &Path, seconds: f64) -> Result<(String, f64), Failure> {
+    fn send_with_retry(&self, body_path: &Path) -> Result<(String, Option<f64>), Failure> {
         let mut last = String::new();
         for attempt in 0..MAX_ATTEMPTS {
+            if let Some(why) = self.stop.lock().unwrap_or_else(|e| e.into_inner()).clone() {
+                return Err(Failure { msg: format!("已停发：{why}"), cost: Cost::Free });
+            }
             // 连不上、超时：请求可能已送到、可能已计费，不知道 → 费用未知，停发（偏保守）
             let (code, retry_after, body) = self.post(body_path).map_err(|e| Failure {
                 msg: format!("费用未知，停发：{e}"),
@@ -267,9 +272,8 @@ impl Conn<'_> {
                 let Some(t) = v["text"].as_str() else {
                     return Err(fail(format!("{tag}识别返回缺 text：{v}")));
                 };
-                // 文本到手但返回里没有 usage.cost：按标价估着记
-                let c = cost.unwrap_or(seconds * PRICE_PER_SECOND);
-                return Ok((t.split_whitespace().collect::<Vec<_>>().join(" "), c));
+                // 文本到手但返回里没有 usage.cost：文本照用，费用未知（调用方标「待核」、停发；codex 第 7 轮 P1 #1）
+                return Ok((t.split_whitespace().collect::<Vec<_>>().join(" "), cost));
             }
             let text = String::from_utf8_lossy(&body);
             last = self.scrub(&format!(
@@ -348,11 +352,14 @@ impl OpenRouter {
     pub fn transcribe_many(&mut self, jobs: &[Job], workers: usize) -> Vec<Result<String, String>> {
         let requests = std::sync::atomic::AtomicU64::new(0);
         let next = std::sync::atomic::AtomicUsize::new(0);
+        // 遇到永久错误后，本批里还没派出去的、正在退避的都不再发（codex 第 6 轮 P1 #1 · 第 7 轮 P1 #3）
+        let stop: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
         let conn = Conn {
             url: &self.url,
             key: &self.key,
             backoff_ms: self.backoff_ms,
             requests: &requests,
+            stop: &stop,
         };
         let ledger_path = &self.ledger_path;
         // 遇到永久错误后，本批里还没派出去的不再派（codex 第 6 轮 P1 #1）
@@ -378,14 +385,25 @@ impl OpenRouter {
                             ledger::reserve(ledger_path, est, BUDGET_USD).and_then(|()| match conn
                                 .transcribe(x, *sr, lang)
                             {
-                                Ok((t, c)) => ledger::settle(ledger_path, est, Some(c)).map(|()| t),
+                                Ok((t, Some(c))) => ledger::settle(ledger_path, est, Some(c)).map(|()| t),
+                                Ok((t, None)) => {
+                                    // 文本照用；预留不退、账本标待核，本批与以后都停发
+                                    let why = "费用未知：返回有文本但没带 usage.cost";
+                                    ledger::flag_review(ledger_path, why)?;
+                                    let mut st = stop.lock().unwrap_or_else(|e| e.into_inner());
+                                    if st.is_none() {
+                                        *st = Some(why.to_string());
+                                    }
+                                    Ok(t)
+                                }
                                 Err(f) => {
                                     match f.cost {
                                         Cost::Free => ledger::settle(ledger_path, est, None)?,
                                         Cost::Known(c) => {
                                             ledger::settle(ledger_path, est, Some(c))?
                                         }
-                                        Cost::Unknown => {} // 预留不退：可能已计费，等人核对
+                                        // 预留不退：可能已计费；账本标待核，重启也停发
+                                        Cost::Unknown => ledger::flag_review(ledger_path, &f.msg)?,
                                     }
                                     Err(f.msg)
                                 }
