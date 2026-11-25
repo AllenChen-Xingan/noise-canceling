@@ -346,6 +346,28 @@ mod tests {
         );
     }
 
+    /// codex 第 1 轮（本分支）P1 #2 + 自审：错误会进 `meta.asr.error`（成绩单进公开仓库）。错误信息里只许出现账本文件名，
+    /// 不许带目录（本机目录含用户名）、不许带封存说明的原文。
+    #[test]
+    fn errors_carry_no_directory_or_seal_note() {
+        let p = tmp("leak");
+        let dir = p.parent().unwrap().display().to_string();
+        let msgs = vec![
+            read(&p).unwrap_err(),
+            reserve(&p, 0.01, 1.0).unwrap_err(),
+        ];
+        std::fs::write(sealed_path(&p), "迁去 secret-host-xyz.local · https://user:pw@example.com").unwrap();
+        let msgs = [msgs, vec![read(&p).unwrap_err(), init(&p, Created::test()).unwrap_err()]].concat();
+        std::fs::remove_file(sealed_path(&p)).unwrap();
+        std::fs::write(&p, "{ bad").unwrap();
+        let msgs = [msgs, vec![read(&p).unwrap_err()]].concat();
+        for m in &msgs {
+            assert!(!m.contains(&dir), "带了目录：{m}");
+            assert!(!m.contains("secret-host") && !m.contains("user:pw"), "带了封存说明原文：{m}");
+            assert!(m.contains("ledger.json"), "要说清是哪个文件：{m}");
+        }
+    }
+
     /// 时间写成 UTC 的 ISO 8601（自写换算，核几个已知点）。
     #[test]
     fn utc_formatting() {
