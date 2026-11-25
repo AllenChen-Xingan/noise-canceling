@@ -119,6 +119,14 @@ pub struct OpenRouter {
     pub requests: u64,
 }
 
+/// 临时文件名的进程内唯一序号：同一进程里可能有多个客户端（测试并行、按段分后端），各自从 0 数会撞名。
+fn tmp_path(ext: &str) -> PathBuf {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static N: AtomicU64 = AtomicU64::new(0);
+    let n = N.fetch_add(1, Ordering::Relaxed);
+    std::env::temp_dir().join(format!("vdn-asr-or-{}-{n}.{ext}", std::process::id()))
+}
+
 fn retryable(code: u16) -> bool {
     matches!(code, 408 | 429 | 500 | 502 | 503 | 504)
 }
@@ -150,9 +158,7 @@ impl OpenRouter {
 
     /// 发一次 HTTP 请求：返回 (状态码, Retry-After 秒数, 响应体)。密钥经标准输入给 curl。
     fn post(&mut self, body_path: &Path) -> Result<(u16, Option<u64>, Vec<u8>), String> {
-        let tag = format!("{}-{}", std::process::id(), self.requests);
-        let out = std::env::temp_dir().join(format!("vdn-asr-or-{tag}.body"));
-        let hdr = std::env::temp_dir().join(format!("vdn-asr-or-{tag}.hdr"));
+        let (out, hdr) = (tmp_path("body"), tmp_path("hdr"));
         self.requests += 1;
         let mut child = Command::new("curl")
             .args([
@@ -218,11 +224,7 @@ impl OpenRouter {
         }
         let body = serde_json::to_vec(&request_body(&pcm16_wav(x, sr), lang))
             .map_err(|e| e.to_string())?;
-        let body_path = std::env::temp_dir().join(format!(
-            "vdn-asr-or-{}-{}.json",
-            std::process::id(),
-            self.requests
-        ));
+        let body_path = tmp_path("json");
         std::fs::write(&body_path, &body).map_err(|e| e.to_string())?;
         let r = self.send_with_retry(&body_path, x.len() as f64 / f64::from(sr));
         let _ = std::fs::remove_file(&body_path);
