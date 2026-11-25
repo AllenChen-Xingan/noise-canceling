@@ -114,8 +114,8 @@ class Client:
     def get(self, path, **q):
         return self.request("GET", path, query=q or None)
 
-    def post(self, path, body):
-        return self.request("POST", path, body=body)
+    def post(self, path, body, retries: int = 5):
+        return self.request("POST", path, body=body, retries=retries)
 
     def delete(self, path):
         return self.request("DELETE", path)

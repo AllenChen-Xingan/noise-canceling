@@ -127,7 +127,8 @@ def create_pod(cli: Client, data_center: str, volume_id: Optional[str], max_hour
     if not name.startswith(C.POD_NAME_PREFIX):
         raise SystemExit(f"机器名必须以 {C.POD_NAME_PREFIX} 开头（reap 靠它认）")
     L.check_budget(L.read_rows(ledger_path), usd_per_hr_hint, max_hours)
-    p = cli.post("/v2/pods", pod_body(name, data_center, volume_id, max_hours, cpu))
+    # 建机不自动重试：回 503 时机器可能已经建了，重试会多开一台（评审第 1 轮 #4）
+    p = cli.post("/v2/pods", pod_body(name, data_center, volume_id, max_hours, cpu), retries=0)
     if p.get("status") in QUEUE_STATES:  # 202：没货被排进队列
         if p.get("status") == "DEPLOYED" and p.get("podId"):
             p = cli.get(f"/v2/pods/{p['podId']}")
@@ -138,14 +139,22 @@ def create_pod(cli: Client, data_center: str, volume_id: Optional[str], max_hour
             except ApiError:
                 gone = f"取消队列项 {p['id']} 失败，请到控制台取消"
             raise SystemExit(f"开机没直接开成（{p.get('status')}，{p.get('failureReason')}），{gone}")
-    now = L.iso(L.utcnow())
-    rate = float(p.get("cost") or usd_per_hr_hint)
-    L.append_row({"ts_utc": now, "action": "pod_create", "resource_id": p["id"], "gpu": compute_label(cpu),
-                  "data_center": p.get("dataCenterId") or data_center, "usd_per_hr": f"{rate:.4f}",
-                  "started_utc": now, "note": f"max_hours={max_hours}"}, ledger_path)
-    if rate * max_hours > usd_per_hr_hint * max_hours * 1.5 + 0.01:
-        delete_pod(cli, p["id"], ledger_path, note="实际价远高于预估，立即删")
-        raise SystemExit(f"实际每小时 {rate} 美元，远高于预估 {usd_per_hr_hint}，已删机")
+    try:  # 机器已在计费：之后任何一步出错都先删机再报错（评审第 1 轮 #5）
+        now = L.iso(L.utcnow())
+        rate = float(p.get("cost") or usd_per_hr_hint)
+        L.append_row({"ts_utc": now, "action": "pod_create", "resource_id": p["id"], "gpu": compute_label(cpu),
+                      "data_center": p.get("dataCenterId") or data_center, "usd_per_hr": f"{rate:.4f}",
+                      "started_utc": now, "note": f"max_hours={max_hours}"}, ledger_path)
+        if rate > usd_per_hr_hint * C.PRICE_TOLERANCE:  # 和目录价检查同一个容差（评审第 1 轮 #3）
+            raise SystemExit(f"实际每小时 {rate} 美元，高于预估 {usd_per_hr_hint} 的 {C.PRICE_TOLERANCE} 倍")
+        others = [r for r in L.read_rows(ledger_path) if r.get("resource_id") != p["id"]]
+        L.check_budget(others, rate, max_hours)  # 按实际价重算一遍
+    except BaseException as e:
+        try:
+            delete_pod(cli, p["id"], ledger_path, note=f"开机后检查不过，立即删：{str(e)[:80]}")
+        except BaseException as e2:
+            raise SystemExit(f"{e}；而且删机 {p['id']} 失败（{e2}），请马上 rp.py down {p['id']} 或 reap") from e
+        raise
     return p
 
 
