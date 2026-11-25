@@ -4,10 +4,10 @@ pub mod asr;
 pub mod asr_ledger;
 pub mod asr_or;
 pub mod asr_text;
-pub mod rescore;
 pub mod dnsmos;
 pub mod nrmos;
 mod nrmos_v;
+pub mod rescore;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -136,10 +136,10 @@ impl QaExtra {
         audio: &Audio,
         lang: &str,
     ) -> Result<Vec<String>, String> {
-        let (p, sha) = audio
-            .iter()
-            .find(|(n, _)| n == name)
-            .map_or_else(|| Err(format!("内部错误：没有 {name} 的音频")), |(_, r)| r.clone())?;
+        let (p, sha) = audio.iter().find(|(n, _)| n == name).map_or_else(
+            || Err(format!("内部错误：没有 {name} 的音频")),
+            |(_, r)| r.clone(),
+        )?;
         let why = self
             .asr_err
             .clone()
@@ -159,7 +159,10 @@ impl QaExtra {
             want.push((format!("{}-clean", task.id), &clip.clean));
             want.push((format!("{}-mix", task.id), &clip.mix));
         }
-        let audio: Audio = want.iter().map(|(n, x)| (n.clone(), self.dump(n, x))).collect();
+        let audio: Audio = want
+            .iter()
+            .map(|(n, x)| (n.clone(), self.dump(n, x)))
+            .collect();
         self.eat_on(sys, task, p, &audio)
     }
 
@@ -178,12 +181,8 @@ impl QaExtra {
         }
         if !self.refs.contains_key(&task.id) {
             let r = (|| {
-                let rt = self.transcribe(
-                    &task.id,
-                    &format!("{}-clean", task.id),
-                    audio,
-                    &task.lang,
-                )?;
+                let rt =
+                    self.transcribe(&task.id, &format!("{}-clean", task.id), audio, &task.lang)?;
                 if rt.is_empty() {
                     return Err("参考转写为空".to_string());
                 }
