@@ -1,0 +1,495 @@
+{
+  "device": "cuda",
+  "power": "n/a",
+  "torch": "2.15.0+cu132",
+  "build_id": "f032a75eedad80d6",
+  "config": {
+    "run": {
+      "out_dir": "~/vdn-data/runs",
+      "name": "exp025",
+      "seed": 0
+    },
+    "model": {
+      "variant": "B",
+      "k_frames": 32,
+      "heads": 2,
+      "cond_dim": 8,
+      "attn": true,
+      "film": true,
+      "init": "official",
+      "bn": "frozen"
+    },
+    "data": {
+      "kind": "loader",
+      "shard_root": "/workspace/shards/first-batch",
+      "recipe": "/workspace/repo-7eecbbe8/docs/experiments/exp025-gtcrn-train/data/recipe.json",
+      "seg_s": 4.0,
+      "batch": 32,
+      "num_workers": 8,
+      "dev_n": 2000,
+      "dev_seed": 12345,
+      "dev_batches": 20,
+      "calib_batches": 200,
+      "timeout_s": 600.0
+    },
+    "optim": {
+      "lr": 0.0001,
+      "warmup_steps": 500,
+      "grad_clip": 3.0,
+      "betas": [
+        0.9,
+        0.999
+      ]
+    },
+    "loss": {
+      "w_lvl": "auto",
+      "w_on": "auto",
+      "lvl_margin_db": 2.0,
+      "sp": false,
+      "w_sp": 0.0001,
+      "kd": false,
+      "w_kd": 0.1,
+      "level_norm": false,
+      "level_floor": 0.001,
+      "on_skip_leading": false
+    },
+    "ema": {
+      "enabled": false,
+      "decay": 0.999
+    },
+    "schedule": {
+      "max_steps": 5000,
+      "ckpt_every": 500,
+      "eval_every": 500,
+      "log_every": 20,
+      "keep_last": 3
+    },
+    "limits": {
+      "max_hours": 6.0,
+      "max_usd": 20.0,
+      "usd_per_hour": 4.39,
+      "hang_s": 120.0
+    },
+    "device": "auto"
+  },
+  "started_at": "2026-11-25T21:55:50+0000",
+  "init_loss": {
+    "pass": true,
+    "loss": {
+      "A": 3.341064453125,
+      "B": 3.341064453125,
+      "random": 14.341630935668945
+    },
+    "rel_diff_B_vs_A": 0.0,
+    "rule": "B 与 A 相对差 ≤ 1e-5，且起点损失 < 随机初始化"
+  },
+  "overfit": {
+    "last_traj": 2.9857571125030518,
+    "n_segments": 4,
+    "first": 3.968327522277832,
+    "last": 2.9845104217529297,
+    "steps": 150,
+    "lr": 0.001,
+    "floor_40db": -3.354947566986084,
+    "drop_frac_of_40db_span": 0.1343411367909967,
+    "floor_40db_reachable": false,
+    "oracle_loss": -1.0378667116165161,
+    "oracle_si_snr_db": 24.23300992260662,
+    "drop_frac_of_oracle_span": 0.19651996198309413,
+    "attn_out_max_change": 0.07957440614700317,
+    "si_snr_db_before": 12.167515078187169,
+    "si_snr_db_after": 14.694167168677957,
+    "si_snr_gain_db": 2.5266520904907885,
+    "drop_frac": 0.24791731403263517,
+    "grad_norms_first_step": {
+      "base.encoder": 17.117053994033004,
+      "base.dpgrnn1": 4.759180849397907,
+      "base.dpgrnn2": 5.273906109545721,
+      "base.decoder": 28.906566448905753,
+      "attn.q": 0.0,
+      "attn.kv": 0.0,
+      "attn.out": 1.1508330805470641,
+      "film.fc": 0.0
+    },
+    "per_segment": [
+      {
+        "index": 0,
+        "loss_before": 3.36012601852417,
+        "loss_after": 2.363600254058838,
+        "si_snr_db_before": 13.593384911486343,
+        "si_snr_db_after": 16.543631327215763,
+        "si_snr_gain_db": 2.9502464157294206
+      },
+      {
+        "index": 1,
+        "loss_before": 3.0861377716064453,
+        "loss_after": 2.352818489074707,
+        "si_snr_db_before": 9.791788311149288,
+        "si_snr_db_after": 12.510728593315381,
+        "si_snr_gain_db": 2.718940282166093
+      },
+      {
+        "index": 2,
+        "loss_before": 9.304078102111816,
+        "loss_after": 7.920575141906738,
+        "si_snr_db_before": 9.088674164762075,
+        "si_snr_db_after": 10.433900093994268,
+        "si_snr_gain_db": 1.3452259292321926
+      },
+      {
+        "index": 3,
+        "loss_before": 0.12214231491088867,
+        "loss_after": -0.6988946199417114,
+        "si_snr_db_before": 16.20065140227148,
+        "si_snr_db_after": 19.28874590086999,
+        "si_snr_gain_db": 3.0880944985985117
+      }
+    ],
+    "verdict": "pass",
+    "verdict_v3": "fail",
+    "backbone_grads_ok": true,
+    "pass": true,
+    "floor": -1.0378667116165161,
+    "floor_kind": "oracle",
+    "floor_reachable": true,
+    "drop_frac_of_span": 0.19651996198309413,
+    "si_snr_gain_ok": false,
+    "rule": "事后改判据，2026-11-25（第 4 版，大总管定，人未参与）。开发份第 0 批前 4 段：(初值 − 终值) / 初值 ≥ 15%；SI-SNR 提高 > 0 dB；主干各层第 1 步梯度非零、有限；B 的注意力输出层动过。初值不是正的有限数 → 判据不可用。走完 oracle 距离 ≥ 50%、SI-SNR +6 dB 降为只记录。前三版：输出等于目标（到不了）· 40 dB 下限（到不了）· oracle 下限 50%（2000 步约 30%，曲线变平）",
+    "rule_v3": "事后改判据：AI 提、大总管定，2026-11-25（第 3 版）。只看开发份第 0 批前 4 段：(初值 − 终值) / (初值 − 这 4 段的 oracle 损失) ≥ 0.5；这 4 段 SI-SNR 提高 ≥ 6 dB；B 的注意力输出层权重要动过。oracle 不是有限数或不比初值低 → 判据不可用。原 32 段读数只作参考。前两版：40 dB 下限（真数据上低于 oracle，到不了）、输出等于目标（−10.04，到不了）",
+    "reference": {
+      "last_traj": 2.3785605430603027,
+      "n_segments": 32,
+      "first": 3.341064453125,
+      "last": 2.3774874210357666,
+      "steps": 150,
+      "lr": 0.001,
+      "floor_40db": -3.306539535522461,
+      "drop_frac_of_40db_span": 0.14495102802976767,
+      "floor_40db_reachable": false,
+      "oracle_loss": -1.3115808963775635,
+      "oracle_si_snr_db": 23.545159952194933,
+      "drop_frac_of_oracle_span": 0.2071030477730812,
+      "attn_out_max_change": 0.06970419734716415,
+      "si_snr_db_before": 8.659671138365791,
+      "si_snr_db_after": 12.195683141273497,
+      "si_snr_gain_db": 3.5360120029077056,
+      "drop_frac": 0.28840420339331385,
+      "grad_norms_first_step": {
+        "base.encoder": 12.762124783046078,
+        "base.dpgrnn1": 4.4298787858210895,
+        "base.dpgrnn2": 7.39971070628446,
+        "base.decoder": 40.60699962175891,
+        "attn.q": 0.0,
+        "attn.kv": 0.0,
+        "attn.out": 1.6509870096958483,
+        "film.fc": 0.0
+      },
+      "per_segment": [
+        {
+          "index": 0,
+          "loss_before": 3.36012601852417,
+          "loss_after": 2.6608941555023193,
+          "si_snr_db_before": 13.593384911486343,
+          "si_snr_db_after": 15.934364850835024,
+          "si_snr_gain_db": 2.3409799393486814
+        },
+        {
+          "index": 1,
+          "loss_before": 3.0861377716064453,
+          "loss_after": 2.6492037773132324,
+          "si_snr_db_before": 9.791788311149288,
+          "si_snr_db_after": 11.63910790629923,
+          "si_snr_gain_db": 1.8473195951499424
+        },
+        {
+          "index": 2,
+          "loss_before": 9.304078102111816,
+          "loss_after": 8.440061569213867,
+          "si_snr_db_before": 9.088674164762075,
+          "si_snr_db_after": 9.690832752134,
+          "si_snr_gain_db": 0.6021585873719246
+        },
+        {
+          "index": 3,
+          "loss_before": 0.12214231491088867,
+          "loss_after": -0.4774031639099121,
+          "si_snr_db_before": 16.20065140227148,
+          "si_snr_db_after": 18.046043033418762,
+          "si_snr_gain_db": 1.845391631147283
+        },
+        {
+          "index": 4,
+          "loss_before": -0.5376294851303101,
+          "loss_after": -1.0101583003997803,
+          "si_snr_db_before": 9.563605193390952,
+          "si_snr_db_after": 14.054732556690047,
+          "si_snr_gain_db": 4.4911273632990945
+        },
+        {
+          "index": 5,
+          "loss_before": 14.538066864013672,
+          "loss_after": 12.174819946289062,
+          "si_snr_db_before": -1.6346929369735799,
+          "si_snr_db_after": 0.47712050667633,
+          "si_snr_gain_db": 2.11181344364991
+        },
+        {
+          "index": 6,
+          "loss_before": -0.7975934743881226,
+          "loss_after": -1.5790719985961914,
+          "si_snr_db_before": 13.944307830894198,
+          "si_snr_db_after": 19.893236018976616,
+          "si_snr_gain_db": 5.948928188082418
+        },
+        {
+          "index": 7,
+          "loss_before": 2.979764223098755,
+          "loss_after": 2.4709649085998535,
+          "si_snr_db_before": 11.041663315624985,
+          "si_snr_db_after": 12.694281667774286,
+          "si_snr_gain_db": 1.6526183521493003
+        },
+        {
+          "index": 8,
+          "loss_before": 5.628567695617676,
+          "loss_after": 5.075109481811523,
+          "si_snr_db_before": 7.949216850848839,
+          "si_snr_db_after": 8.86366948790714,
+          "si_snr_gain_db": 0.914452637058301
+        },
+        {
+          "index": 9,
+          "loss_before": 2.1247830390930176,
+          "loss_after": 1.4497123956680298,
+          "si_snr_db_before": 9.519877116660385,
+          "si_snr_db_after": 10.70268159018869,
+          "si_snr_gain_db": 1.1828044735283036
+        },
+        {
+          "index": 10,
+          "loss_before": 1.1534159183502197,
+          "loss_after": 0.6188942193984985,
+          "si_snr_db_before": 7.260935256772596,
+          "si_snr_db_after": 10.605802784875456,
+          "si_snr_gain_db": 3.34486752810286
+        },
+        {
+          "index": 11,
+          "loss_before": -0.4162595868110657,
+          "loss_after": -0.6062875986099243,
+          "si_snr_db_before": 10.205993353012602,
+          "si_snr_db_after": 10.92916093297016,
+          "si_snr_gain_db": 0.7231675799575576
+        },
+        {
+          "index": 12,
+          "loss_before": -0.8451076745986938,
+          "loss_after": -1.24172842502594,
+          "si_snr_db_before": 12.816066448307424,
+          "si_snr_db_after": 15.710372401950469,
+          "si_snr_gain_db": 2.8943059536430447
+        },
+        {
+          "index": 13,
+          "loss_before": 5.244688034057617,
+          "loss_after": 4.06705379486084,
+          "si_snr_db_before": 7.667077968177817,
+          "si_snr_db_after": 10.27151793060173,
+          "si_snr_gain_db": 2.604439962423913
+        },
+        {
+          "index": 14,
+          "loss_before": 0.6401462554931641,
+          "loss_after": 0.2696676254272461,
+          "si_snr_db_before": 7.854029975664718,
+          "si_snr_db_after": 11.137524135259158,
+          "si_snr_gain_db": 3.28349415959444
+        },
+        {
+          "index": 15,
+          "loss_before": 13.257984161376953,
+          "loss_after": 3.093430519104004,
+          "si_snr_db_before": -21.731509906008377,
+          "si_snr_db_after": 12.901763072989858,
+          "si_snr_gain_db": 34.633272978998235
+        },
+        {
+          "index": 16,
+          "loss_before": 6.71254825592041,
+          "loss_after": 5.954731464385986,
+          "si_snr_db_before": 2.134367464819868,
+          "si_snr_db_after": 3.613803976862968,
+          "si_snr_gain_db": 1.4794365120431001
+        },
+        {
+          "index": 17,
+          "loss_before": 0.9808212518692017,
+          "loss_after": -0.07426655292510986,
+          "si_snr_db_before": 10.223998669006164,
+          "si_snr_db_after": 16.779242073114197,
+          "si_snr_gain_db": 6.555243404108033
+        },
+        {
+          "index": 18,
+          "loss_before": 2.441984176635742,
+          "loss_after": 1.8650312423706055,
+          "si_snr_db_before": 13.301030295592879,
+          "si_snr_db_after": 15.073844271908726,
+          "si_snr_gain_db": 1.772813976315847
+        },
+        {
+          "index": 19,
+          "loss_before": 1.415706753730774,
+          "loss_after": 1.2441256046295166,
+          "si_snr_db_before": 5.032942522782632,
+          "si_snr_db_after": 6.353154338309322,
+          "si_snr_gain_db": 1.3202118155266902
+        },
+        {
+          "index": 20,
+          "loss_before": -0.4099932909011841,
+          "loss_after": -0.6210646629333496,
+          "si_snr_db_before": 16.470108299261966,
+          "si_snr_db_after": 18.025679628956585,
+          "si_snr_gain_db": 1.5555713296946188
+        },
+        {
+          "index": 21,
+          "loss_before": 3.1461594104766846,
+          "loss_after": 2.8711400032043457,
+          "si_snr_db_before": 8.984886545554026,
+          "si_snr_db_after": 9.528862234787603,
+          "si_snr_gain_db": 0.5439756892335765
+        },
+        {
+          "index": 22,
+          "loss_before": 8.538670539855957,
+          "loss_after": 7.248576641082764,
+          "si_snr_db_before": 3.9570562949695525,
+          "si_snr_db_after": 5.288854091176333,
+          "si_snr_gain_db": 1.3317977962067804
+        },
+        {
+          "index": 23,
+          "loss_before": 2.403930187225342,
+          "loss_after": 2.010195255279541,
+          "si_snr_db_before": 12.551211108428042,
+          "si_snr_db_after": 13.94362883775251,
+          "si_snr_gain_db": 1.3924177293244675
+        },
+        {
+          "index": 24,
+          "loss_before": 2.425281524658203,
+          "loss_after": 2.1230807304382324,
+          "si_snr_db_before": 5.942399908289931,
+          "si_snr_db_after": 7.488621023011937,
+          "si_snr_gain_db": 1.5462211147220062
+        },
+        {
+          "index": 25,
+          "loss_before": 1.621061086654663,
+          "loss_after": 1.5390104055404663,
+          "si_snr_db_before": 13.496439667707843,
+          "si_snr_db_after": 14.300742923608663,
+          "si_snr_gain_db": 0.8043032559008196
+        },
+        {
+          "index": 26,
+          "loss_before": 0.10418391227722168,
+          "loss_after": -0.6099414229393005,
+          "si_snr_db_before": 8.110037826081575,
+          "si_snr_db_after": 14.172301590801855,
+          "si_snr_gain_db": 6.06226376472028
+        },
+        {
+          "index": 27,
+          "loss_before": 7.180398941040039,
+          "loss_after": 6.222932815551758,
+          "si_snr_db_before": 9.73655491197089,
+          "si_snr_db_after": 12.681045943070544,
+          "si_snr_gain_db": 2.9444910310996537
+        },
+        {
+          "index": 28,
+          "loss_before": -0.6272193193435669,
+          "loss_after": -1.2899723052978516,
+          "si_snr_db_before": 13.874736592165803,
+          "si_snr_db_after": 19.591639325002586,
+          "si_snr_gain_db": 5.7169027328367825
+        },
+        {
+          "index": 29,
+          "loss_before": 4.096787452697754,
+          "loss_after": 3.8107492923736572,
+          "si_snr_db_before": 9.537810611560603,
+          "si_snr_db_after": 10.214881914307849,
+          "si_snr_gain_db": 0.6770713027472457
+        },
+        {
+          "index": 30,
+          "loss_before": -0.3576156497001648,
+          "loss_after": -1.4342507123947144,
+          "si_snr_db_before": 12.752243221848714,
+          "si_snr_db_after": 20.49342773401525,
+          "si_snr_gain_db": 7.7411845121665355
+        },
+        {
+          "index": 31,
+          "loss_before": 8.402566909790039,
+          "loss_after": 7.165079116821289,
+          "si_snr_db_before": 7.886386548322034,
+          "si_snr_db_after": 9.166185105630266,
+          "si_snr_gain_db": 1.279798557308232
+        }
+      ]
+    }
+  },
+  "reproduce": {
+    "pass": true,
+    "max_abs_diff": 3.0543655157089233e-05,
+    "lsb16": 3.0517578125e-05,
+    "samples": 156160,
+    "rule": "最大差 ≤ 2 个 16 位量化步"
+  },
+  "known_dev": {
+    "pass": true,
+    "got": {
+      "hybrid": 3.9733854293823243,
+      "total": 3.9733854293823243
+    },
+    "known": {
+      "readings": {
+        "hybrid": 3.9733044862747193
+      },
+      "meta": {
+        "kind": "loader",
+        "build_id": "f032a75eedad80d6",
+        "dev_n": 2000,
+        "dev_seed": 12345,
+        "seg_s": 4.0,
+        "batch": 32,
+        "dev_batches": 20,
+        "device": "cpu",
+        "torch": "2.15.0+cu132"
+      },
+      "written_at": "2026-11-25T05:23:00+0000"
+    },
+    "tol": 0.001,
+    "mismatch": {},
+    "meta_mismatch": {},
+    "meta_missing": false
+  },
+  "timing": {
+    "steps": 100,
+    "batch": 32,
+    "seg_s": 4.0,
+    "data_s_median": 0.02143505751155317,
+    "step_s_median": 0.12612901208922267,
+    "wall_s": 31.73343672102783,
+    "cpu_s_main_process": 17.32962399999999,
+    "cpu_util_main_process": 0.5460998174369401,
+    "note": "DataLoader 子进程的 CPU 不在此数内；含两项保护损失"
+  },
+  "pass": true,
+  "verdict": "pass"
+}

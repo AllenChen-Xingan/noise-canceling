@@ -1,0 +1,159 @@
+{
+  "device": "cpu",
+  "power": "n/a",
+  "torch": "2.15.0+cu132",
+  "build_id": "f032a75eedad80d6",
+  "config": {
+    "run": {
+      "out_dir": "~/vdn-data/runs",
+      "name": "exp025",
+      "seed": 0
+    },
+    "model": {
+      "variant": "B",
+      "k_frames": 32,
+      "heads": 2,
+      "cond_dim": 8,
+      "attn": true,
+      "film": true,
+      "init": "official",
+      "bn": "frozen"
+    },
+    "data": {
+      "kind": "loader",
+      "shard_root": "/workspace/shards/first-batch",
+      "recipe": "/workspace/repo-a8168c98/docs/experiments/exp025-gtcrn-train/data/recipe.json",
+      "seg_s": 4.0,
+      "batch": 32,
+      "num_workers": 8,
+      "dev_n": 2000,
+      "dev_seed": 12345,
+      "dev_batches": 20,
+      "calib_batches": 200,
+      "timeout_s": 600.0
+    },
+    "optim": {
+      "lr": 0.0001,
+      "warmup_steps": 500,
+      "grad_clip": 3.0,
+      "betas": [
+        0.9,
+        0.999
+      ]
+    },
+    "loss": {
+      "w_lvl": "auto",
+      "w_on": "auto",
+      "lvl_margin_db": 2.0,
+      "sp": false,
+      "w_sp": 0.0001,
+      "kd": false,
+      "w_kd": 0.1,
+      "level_norm": false,
+      "level_floor": 0.001,
+      "on_skip_leading": false
+    },
+    "ema": {
+      "enabled": false,
+      "decay": 0.999
+    },
+    "schedule": {
+      "max_steps": 5000,
+      "ckpt_every": 500,
+      "eval_every": 500,
+      "log_every": 20,
+      "keep_last": 3
+    },
+    "limits": {
+      "max_hours": 6.0,
+      "max_usd": 20.0,
+      "usd_per_hour": 4.39,
+      "hang_s": 120.0
+    },
+    "device": "cpu"
+  },
+  "started_at": "2026-11-25T19:43:31+0000",
+  "init_loss": {
+    "pass": true,
+    "loss": {
+      "A": 3.3413453102111816,
+      "B": 3.3413453102111816,
+      "random": 14.341156959533691
+    },
+    "rel_diff_B_vs_A": 0.0,
+    "rule": "B 与 A 相对差 ≤ 1e-5，且起点损失 < 随机初始化"
+  },
+  "overfit": {
+    "n_segments": 4,
+    "first": 3.9680330753326416,
+    "last": 2.985973358154297,
+    "steps": 150,
+    "lr": 0.001,
+    "floor_40db": -3.3549461364746094,
+    "drop_frac_of_40db_span": 0.13410658268630815,
+    "floor_40db_reachable": false,
+    "oracle_loss": -1.0378667116165161,
+    "oracle_si_snr_db": 24.23300904426435,
+    "drop_frac_of_oracle_span": 0.1961804588535042,
+    "attn_out_max_change": 0.08028104901313782,
+    "si_snr_db_before": 12.168107328476736,
+    "si_snr_db_after": 14.686955433692415,
+    "si_snr_gain_db": 2.518848105215678,
+    "verdict": "fail",
+    "pass": false,
+    "floor": -1.0378667116165161,
+    "floor_kind": "oracle",
+    "floor_reachable": true,
+    "drop_frac_of_span": 0.1961804588535042,
+    "si_snr_gain_ok": false,
+    "rule": "事后改判据：AI 提、大总管定，2026-11-25（第 3 版）。只看开发份第 0 批前 4 段：(初值 − 终值) / (初值 − 这 4 段的 oracle 损失) ≥ 0.5；这 4 段 SI-SNR 提高 ≥ 6 dB；B 的注意力输出层权重要动过。oracle 不是有限数或不比初值低 → 判据不可用。原 32 段读数只作参考。前两版：40 dB 下限（真数据上低于 oracle，到不了）、输出等于目标（−10.04，到不了）"
+  },
+  "reproduce": {
+    "pass": true,
+    "max_abs_diff": 3.054179251194e-05,
+    "lsb16": 3.0517578125e-05,
+    "samples": 156160,
+    "rule": "最大差 ≤ 2 个 16 位量化步"
+  },
+  "known_dev": {
+    "pass": true,
+    "got": {
+      "hybrid": 3.9733044862747193,
+      "total": 3.9733044862747193
+    },
+    "known": {
+      "readings": {
+        "hybrid": 3.9733044862747193
+      },
+      "meta": {
+        "kind": "loader",
+        "build_id": "f032a75eedad80d6",
+        "dev_n": 2000,
+        "dev_seed": 12345,
+        "seg_s": 4.0,
+        "batch": 32,
+        "dev_batches": 20,
+        "device": "cpu",
+        "torch": "2.15.0+cu132"
+      },
+      "written_at": "2026-11-25T05:23:00+0000"
+    },
+    "tol": 0.001,
+    "mismatch": {},
+    "meta_mismatch": {},
+    "meta_missing": false
+  },
+  "timing": {
+    "steps": 1,
+    "batch": 32,
+    "seg_s": 4.0,
+    "data_s_median": 4.603292868938297,
+    "step_s_median": 10.511941605713218,
+    "wall_s": 15.115246567875147,
+    "cpu_s_main_process": 33.63671899999998,
+    "cpu_util_main_process": 2.225350334111587,
+    "note": "DataLoader 子进程的 CPU 不在此数内；含两项保护损失"
+  },
+  "pass": false,
+  "verdict": "fail"
+}

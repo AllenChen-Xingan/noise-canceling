@@ -1,0 +1,61 @@
+{
+ "what": "H100 过拟合不过的本机排查（大总管 2026-11-25 要求）：同模型 B · 150 步 · lr 1e-3 · 种子 0 · 批归一化冻结，本机 CPU，换批量形状；另算掩码族能达到的最好损失（oracle）",
+ "data_caveat": "本机只能用合成小样（D88 真数据不放本机），H100 那次是真数据开发份第 0 批。两边结果不同不能直接说明 H100 有问题",
+ "oracle_def": "理想复数掩码 clean/noisy，实虚部截到 (−0.999, 0.999)（解码器末层 tanh），65 号以上频点经 ERB 伪逆投影到 64 个子带再截断展开（官方 ERB.bs 是固定线性展开）。是掩码族里的一个可行点，所以真正能达到的最好损失 ≤ 它（推断：解码器未必能输出它）",
+ "machine": "本机 Apple M 系列 CPU，torch 2.15.0；第 2 组期间机器合盖睡眠（pmset 日志有 Sleep / DarkWake），wall_s 47124 不是计算耗时，作废",
+ "runs": {
+  "b4x2s": {
+   "pass": true,
+   "first": 4.38804817199707,
+   "last": -0.9217391014099121,
+   "floor": -0.40520763397216797,
+   "drop_frac_of_span": 1.107762132535152,
+   "attn_out_max_change": 0.06252375990152359,
+   "si_snr_db_before": 9.524365474227842,
+   "si_snr_db_after": 22.4460353680836,
+   "si_snr_gain_db": 12.921669893855757,
+   "si_snr_gain_ok": true,
+   "steps": 150,
+   "lr": 0.001,
+   "rule": "(初值 − 终值) / (初值 − 近乎完美输出（目标 + 40 dB 白噪声）的损失) ≥ 0.5；这一批 SI-SNR 提高 ≥ 6 dB；B 的注意力输出层权重要动过",
+   "batch": 4,
+   "seg_s": 2.0,
+   "wall_s": 65.3677909374237,
+   "oracle_loss": -2.909186601638794,
+   "oracle_si_snr_db": 31.17527724554874,
+   "drop_frac_of_oracle_span": 0.7276437497380077
+  },
+  "b32x4s": {
+   "pass": true,
+   "first": 4.885043621063232,
+   "last": -0.8271673917770386,
+   "floor": -0.32865238189697266,
+   "drop_frac_of_span": 1.0956164321044077,
+   "attn_out_max_change": 0.06296391785144806,
+   "si_snr_db_before": 6.847187023740684,
+   "si_snr_db_after": 22.863250347030625,
+   "si_snr_gain_db": 16.01606332328994,
+   "si_snr_gain_ok": true,
+   "steps": 150,
+   "lr": 0.001,
+   "rule": "(初值 − 终值) / (初值 − 近乎完美输出（目标 + 40 dB 白噪声）的损失) ≥ 0.5；这一批 SI-SNR 提高 ≥ 6 dB；B 的注意力输出层权重要动过",
+   "batch": 32,
+   "seg_s": 4.0,
+   "wall_s": 47123.94997882843,
+   "oracle_loss": -2.9189867973327637,
+   "oracle_si_snr_db": 31.4548428934225,
+   "drop_frac_of_oracle_span": 0.7319565284337183
+  }
+ },
+ "h100_reference": {
+  "file": "20261125-h100-overfit-FAILED.json",
+  "first": 3.341,
+  "last": 2.381,
+  "floor": -3.307,
+  "drop_frac_of_span": 0.144,
+  "si_snr_db_before": 8.66,
+  "si_snr_db_after": 12.18,
+  "oracle_loss": null,
+  "note": "真数据，oracle 没算"
+ }
+}

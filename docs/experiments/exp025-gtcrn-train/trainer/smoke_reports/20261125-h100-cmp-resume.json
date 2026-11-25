@@ -1,0 +1,19 @@
+{
+  "pass": true,
+  "max_abs_diff": 0.0,
+  "tol": 0.0,
+  "n_keys": 278,
+  "differing_keys": [],
+  "bad_keys": [],
+  "only_in_1": [],
+  "only_in_2": [],
+  "step": [
+    6,
+    6
+  ],
+  "problems": [],
+  "files": [
+    "/workspace/runs/exp025-smoke-20261125T214335Z/res-full/ckpt/step-0000006.pt",
+    "/workspace/runs/exp025-smoke-20261125T214335Z/res-split/ckpt/step-0000006.pt"
+  ]
+}
