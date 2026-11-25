@@ -29,6 +29,7 @@ import soundfile as sf
 import torch
 
 import config as cfgmod
+import gate_v4
 import losses
 import oracle
 import train
@@ -105,14 +106,29 @@ OVERFIT_RULE = ("事后改判据：AI 提、大总管定，2026-11-25（第 3 �
                 "原 32 段读数只作参考。前两版：40 dB 下限（真数据上低于 oracle，到不了）、输出等于目标（−10.04，到不了）")
 
 
+def _slice(batch: dict, a: int, b: int) -> dict:
+    out = dict(batch)
+    for k in ("noisy", "clean", "replay", "near_silent", "owner_ivs", "interf_ivs"):
+        out[k] = batch[k][a:b]
+    return out
+
+
 def head(batch: dict, n: int) -> dict:
     """批里前 n 段（每段的字段一起切）。不够 n 段就报错。"""
     B = batch["noisy"].shape[0]
     if n > B:
         raise ValueError(f"批里只有 {B} 段，取不了前 {n} 段")
-    out = dict(batch)
-    for k in ("noisy", "clean", "replay", "near_silent", "owner_ivs", "interf_ivs"):
-        out[k] = batch[k][:n]
+    return _slice(batch, 0, n)
+
+
+@torch.no_grad()
+def per_segment(m, crit, batch, device) -> list[dict]:
+    """逐段的损失与 SI-SNR（只记录；批归一化冻结，单段与整批同口径）。"""
+    out = []
+    for i in range(int(batch["noisy"].shape[0])):
+        s = _slice(batch, i, i + 1)
+        out.append({"index": i, "loss": train.forward_loss(m, crit, s, device)[0].item(),
+                    "si_snr_db": batch_si_snr(m, s, device)})
     return out
 
 
@@ -137,16 +153,23 @@ def _overfit_run(cfg, batch, device, steps: int, lr: float) -> dict:
     o = oracle.oracle_loss(crit, batch, device)
     attn0 = m.attn.out.weight.detach().clone() if getattr(m, "attn", None) is not None else None
     sisnr0 = batch_si_snr(m, batch, device)
+    seg0 = per_segment(m, crit, batch, device)
     opt = torch.optim.Adam([p for p in m.parameters() if p.requires_grad], lr=lr)
-    traj = []
+    traj, grads1 = [], None
     for _ in range(steps):
         loss, logs = train.forward_loss(m, crit, batch, device)
         opt.zero_grad(set_to_none=True)
         loss.backward()
+        if grads1 is None:
+            grads1 = gate_v4.grad_norms(m)
         opt.step()
         traj.append(logs["total"])
     moved = None if attn0 is None else float((m.attn.out.weight.detach() - attn0).abs().max())
     sisnr1 = batch_si_snr(m, batch, device)
+    seg1 = per_segment(m, crit, batch, device)
+    segs = [{"index": a["index"], "loss_before": a["loss"], "loss_after": b["loss"], "si_snr_db_before": a["si_snr_db"],
+             "si_snr_db_after": b["si_snr_db"], "si_snr_gain_db": b["si_snr_db"] - a["si_snr_db"]}
+            for a, b in zip(seg0, seg1)]
     first, last = traj[0], traj[-1]
     return {"n_segments": int(batch["noisy"].shape[0]), "first": first, "last": last, "steps": steps, "lr": lr,
             "floor_40db": floor40, "drop_frac_of_40db_span": oracle.frac_of_span(first, last, floor40),
@@ -154,23 +177,27 @@ def _overfit_run(cfg, batch, device, steps: int, lr: float) -> dict:
             "oracle_loss": o["loss"], "oracle_si_snr_db": o["si_snr_db"],
             "drop_frac_of_oracle_span": oracle.frac_of_span(first, last, o["loss"]),
             "attn_out_max_change": moved, "si_snr_db_before": sisnr0, "si_snr_db_after": sisnr1,
-            "si_snr_gain_db": sisnr1 - sisnr0}
+            "si_snr_gain_db": sisnr1 - sisnr0, "drop_frac": gate_v4.drop_frac(first, last),
+            "grad_norms_first_step": grads1, "per_segment": segs}
 
 
 def check_overfit(cfg, batch, device, steps: int, lr: float, reference: bool = True) -> dict:
-    """单批过拟合（判据第 3 版，见 OVERFIT_RULE）。B 另要求注意力输出层的权重动过（零初始化，只靠基座也能降一半，自审 P2）。
+    """单批过拟合（判据第 4 版，见 gate_v4.RULE；第 3 版的判法记在 verdict_v3，只记录）。
+    B 另要求注意力输出层的权重动过（零初始化，只靠基座也能降，自审 P2）。
     条件口子本次喂全零（D98），W·0 对 W 的梯度恒为 0，它不动是预期，不作要求。
     reference=True 时另在整批上跑同样步数，读数记进 reference，不影响过线。"""
     B = int(batch["noisy"].shape[0])
     short = B < OVERFIT_N
     g = _overfit_run(cfg, head(batch, min(OVERFIT_N, B)), device, steps, lr)
-    verdict = "criterion_unusable" if short else overfit_verdict(
+    verdict = "criterion_unusable" if short else gate_v4.verdict(
+        g["first"], g["last"], g["si_snr_gain_db"], g["grad_norms_first_step"], g["attn_out_max_change"])
+    v3 = "criterion_unusable" if short else overfit_verdict(
         g["first"], g["last"], g["oracle_loss"], g["si_snr_gain_db"], g["attn_out_max_change"])
-    out = {**g, "verdict": verdict, "pass": verdict == "pass", "floor": g["oracle_loss"], "floor_kind": "oracle",
+    out = {**g, "verdict": verdict, "verdict_v3": v3, "backbone_grads_ok": gate_v4.backbone_grads_ok(g["grad_norms_first_step"]), "pass": verdict == "pass", "floor": g["oracle_loss"], "floor_kind": "oracle",
            "floor_reachable": oracle.floor_reachable(g["oracle_loss"], g["oracle_loss"]),
            "drop_frac_of_span": g["drop_frac_of_oracle_span"],
            "si_snr_gain_ok": bool(np.isfinite(g["si_snr_gain_db"]) and g["si_snr_gain_db"] >= SI_SNR_GAIN_DB),
-           "rule": OVERFIT_RULE}
+           "rule": gate_v4.RULE, "rule_v3": OVERFIT_RULE}
     if short:
         out["unusable_reason"] = f"批里只有 {B} 段，不够 {OVERFIT_N} 段"
     if reference and B > OVERFIT_N:

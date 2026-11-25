@@ -14,7 +14,7 @@ import math
 import sys
 from pathlib import Path
 
-META_KEYS = ("kind", "build_id", "dev_n", "dev_seed", "seg_s", "batch", "dev_batches")  # 与 smoke.KNOWN_META_KEYS 同
+from smoke import KNOWN_META_KEYS as META_KEYS  # 正本在 smoke.py（与 --known-dev 同一份字段表）
 
 
 def _incomplete(reason: str, **kw) -> dict:

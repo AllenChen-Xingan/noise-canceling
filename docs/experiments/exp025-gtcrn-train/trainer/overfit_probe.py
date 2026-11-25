@@ -19,6 +19,7 @@ import torch
 
 import config as cfgmod
 import data_probe
+import gate_v4
 import losses
 import oracle
 import smoke
@@ -52,17 +53,6 @@ def param_report(model) -> dict:
             "bn_affine_trainable": all(p.requires_grad for m in bns for p in m.parameters())}
 
 
-def grad_norms(model) -> dict:
-    """各组（参数名前两段）的梯度 L2 范数；没有梯度的可训练参数按 0 计。"""
-    acc: dict[str, float] = {}
-    for n, p in model.named_parameters():
-        if not p.requires_grad:
-            continue
-        g = 0.0 if p.grad is None else float(p.grad.detach().double().pow(2).sum())
-        acc[_group(n)] = acc.get(_group(n), 0.0) + g
-    return {k: v ** 0.5 for k, v in acc.items()}
-
-
 @torch.no_grad()
 def _eval(m, crit, batch, device) -> tuple[float, float]:
     return train.forward_loss(m, crit, batch, device)[0].item(), smoke.batch_si_snr(m, batch, device)
@@ -82,9 +72,9 @@ def run_curve(cfg, batch, device, lr: float, steps: int, oracle_loss: float, on_
         opt.zero_grad(set_to_none=True)
         loss.backward()
         if k == 1:
-            rec["grad_norms_first_step"] = grad_norms(m)
+            rec["grad_norms_first_step"] = gate_v4.grad_norms(m)
         if k == steps:
-            rec["grad_norms_last_step"] = grad_norms(m)
+            rec["grad_norms_last_step"] = gate_v4.grad_norms(m)
         opt.step()
         if k % 10 == 0:
             rec["traj_every_10"].append(logs["total"])
