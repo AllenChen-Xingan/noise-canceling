@@ -164,3 +164,12 @@ codex 要的是一套持久的操作日志、按账号分开的看门狗进程�
 | 不符 | 记录写「按没完继续等」不够准 | 准确说法：日志不存在时不报错、按退出码判断是否完成；没退出码就继续等 | — |
 
 测试：93 条全过。
+
+## 第 12 轮（2026-11-25，模型 gpt-6-astra）
+
+结果：P0×0 P1×1 P2×2。P1 #1（`[ -e ]` 遇权限或 I/O 错误也回「不存在」）是第 10、11 轮同一处第三次「换写法就漏」，按 CLAUDE.md 第二节**改结构**：
+
+- 读任务状态改用机器里的 Python 读取器 `JOB_STATUS_PY`：只有 `FileNotFoundError` 才算「日志不存在」，其余错误原样报出；退出码、日志是否存在、日志正文分字段，用 JSON 输出（同时解决 P2 #2：正文恰好是 `NOLOG` 时被吞）。
+- P2 #3：exec 回 `truncated=True` 时报错，不判完成。
+
+测试：`test_status_reader_runs_in_real_python`（本机真 Python 跑三种情况：不存在 / 正常且正文为 NOLOG / 日志路径是目录读出错）· `test_truncated_status_output_is_an_error` · 原 `test_unreadable_log_is_an_error_even_if_rc_is_zero`。共 95 条全过。
