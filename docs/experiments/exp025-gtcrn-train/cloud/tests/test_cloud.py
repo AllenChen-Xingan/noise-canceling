@@ -73,6 +73,23 @@ class TestClient(Base):
         self.assertNotIn(FAKE_KEY, str(cm.exception))
         self.assertIn("<key>", str(cm.exception))
 
+    def test_redaction_happens_before_truncation(self):
+        # 评审第 2 轮 #6：密钥跨在 300 字截断处，也不留残片
+        raw = json.dumps({"detail": "x" * 280 + FAKE_KEY}).encode()
+        cli = Client(FAKE_KEY, transport=lambda *a: (400, {}, raw))
+        with self.assertRaises(ApiError) as cm:
+            cli.get("/x")
+        self.assertNotIn(FAKE_KEY[:15], str(cm.exception))
+
+    def test_exec_not_resent_on_503(self):
+        # 评审第 2 轮 #2：exec 回 503 可能已执行，不重发
+        n = []
+        cli = Client(FAKE_KEY, transport=lambda *a: n.append(1) or (503, {"Retry-After": "1"}, b"{}"),
+                     sleep=lambda s: None)
+        with self.assertRaises(ApiError):
+            O.exec_cmd(cli, "pod_x", ["true"])
+        self.assertEqual(len(n), 1)
+
     def test_retry_after_then_success(self):
         seq = [(409, {"Retry-After": "1"}, b"{}"), (200, {}, b'{"ok": 1}')]
         slept = []
@@ -173,6 +190,12 @@ class TestOps(Base):
         self.assertAlmostEqual(float(rows[0]["usd_per_hr"]) * 720, 10.5, places=3)
         with self.assertRaises(SystemExit):
             O.create_volume(self.cli, "US-KS-2", ledger_path=self.ledger)
+
+    def test_volume_ledger_failure_deletes_new_volume(self):
+        # 评审第 2 轮 #3：建盘后写账失败，删掉刚建的空盘
+        with mock.patch.object(L, "append_row", side_effect=OSError("disk full")), self.assertRaises(OSError):
+            O.create_volume(self.cli, "US-KS-2", ledger_path=self.ledger)
+        self.assertEqual(self.fake.volumes, {})
 
     def test_volume_delete_stops_accrual(self):
         v = O.create_volume(self.cli, C.DATA_CENTER, ledger_path=self.ledger)

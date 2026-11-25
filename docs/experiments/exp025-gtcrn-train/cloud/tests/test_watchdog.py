@@ -54,8 +54,8 @@ class TestLocalWatchdog(Base):
         self.assertIn(pid, self.fake.pods)
         self.assertEqual(len(self.spawned), 1)
         self.assertEqual(self.spawned[0][-1], "watchdog")
-        with open(W.PIDFILE, "w") as f:  # 模拟看门狗已在跑：不再起第二个
-            f.write(str(os.getpid()))
+        with open(W.PIDFILE, "w") as f:  # 模拟看门狗已在跑（同账号同账本）：不再起第二个
+            f.write(f"{os.getpid()}\n{W.context(self.cli.fingerprint(), self.ledger)}")
         self.run_cli("up", "--yes", "--dc", "US-MO-1", "--no-volume", "--max-hours", "0.5")
         self.assertEqual(len(self.spawned), 1)
 
@@ -80,6 +80,21 @@ class TestLocalWatchdog(Base):
             f.write("1")
         W.run_loop(lambda pid: None, sleep=lambda s: None)
         self.assertTrue(os.path.exists(W.PIDFILE))
+
+    def test_watchdog_for_other_account_refuses_before_create(self):
+        # 评审第 2 轮 #4：已在跑的看门狗管别的账号：开机前就拒，一台都不建
+        with open(W.PIDFILE, "w") as f:
+            f.write(f"{os.getpid()}\n{W.context('otherkeyfp00', self.ledger)}")
+        with self.assertRaises(SystemExit):
+            self.run_cli("up", "--yes", "--dc", "US-MO-1", "--no-volume", "--max-hours", "0.5")
+        self.assertFalse([c for c in self.fake.calls if c[0] == "POST" and c[1] == "/v2/pods"])
+
+    def test_register_failure_after_create_deletes_pod(self):
+        # 评审第 2 轮 #3：建好机器后登记看门狗出错，也先删机
+        from unittest import mock
+        with mock.patch.object(W, "register", side_effect=OSError("disk full")), self.assertRaises(OSError):
+            self.run_cli("up", "--yes", "--dc", "US-MO-1", "--no-volume", "--max-hours", "0.5")
+        self.assertEqual(self.fake.pods, {})
 
     def test_down_and_reap_unregister(self):
         self.run_cli("up", "--yes", "--dc", "US-MO-1", "--no-volume")
