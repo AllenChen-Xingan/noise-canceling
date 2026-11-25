@@ -318,12 +318,18 @@ fn committed_example_line_parses() {
 /// exp013 生成器真实写出的一行（带 `owner_early`，冒烟 build 取的）：Rust 读得了，三处（路径 · 两种哈希）都在。
 #[test]
 fn generated_early_line_parses() {
-    let p = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/fixtures/scene-clip-early-example.jsonl");
+    let p =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/scene-clip-early-example.jsonl");
     let v = SceneClip::parse_jsonl(&std::fs::read_to_string(p).unwrap()).unwrap();
     assert_eq!(v.len(), 1);
     let c = &v[0];
-    assert!(c.audio.owner_early.as_deref().unwrap().ends_with("owner_early.wav"));
+    assert!(
+        c.audio
+            .owner_early
+            .as_deref()
+            .unwrap()
+            .ends_with("owner_early.wav")
+    );
     assert_eq!(c.hash.wav_sha256.owner_early.as_ref().unwrap().len(), 64);
     assert_eq!(c.hash.samples.owner_early.as_ref().unwrap().len(), 64);
 }

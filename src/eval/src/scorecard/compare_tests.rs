@@ -308,3 +308,90 @@ fn real_scoring_output_6db_down_is_down() {
             .all(|i| i.call == Call::Unsure)
     );
 }
+
+/// codex 第 1 轮 P1 #1：判不了（缺分 · 没值 · 判定未知）不当「没否决」。a 否决、b 判不了 → 不算消失；
+/// 反过来也不算新增；都进「一边判不了」。
+#[test]
+fn undecided_vetoes_are_not_counted_as_changes() {
+    let nan = |x: f64| Score::judged("V-NAN", x, "个", Better::Lower, Some(0.0), &[]);
+    let unknown = Score::unknown("V-NAN", "个", Better::Lower, "测试：判不了");
+    let mk = |i: usize, s: Option<Score>| {
+        let mut r = row(MeetingPlace::Cafe, i, vec![("V-ESTOI", 0.5)]);
+        if let Some(s) = s {
+            r.scores.push(("V-NAN", true, s));
+        }
+        r
+    };
+    // 段 0：a 否决、b 判定未知；段 1：a 否决、b 缺这一项；段 2：a 判定未知、b 否决；
+    // 段 3：a 没否决、b 否决（真新增）；段 4：a 否决、b 没否决（真消失）
+    let a = vec![
+        mk(0, Some(nan(1.0))),
+        mk(1, Some(nan(1.0))),
+        mk(2, Some(unknown.clone())),
+        mk(3, Some(nan(0.0))),
+        mk(4, Some(nan(1.0))),
+    ];
+    let b = vec![
+        mk(0, Some(unknown)),
+        mk(1, None),
+        mk(2, Some(nan(1.0))),
+        mk(3, Some(nan(1.0))),
+        mk(4, Some(nan(0.0))),
+    ];
+    let c = &compare(&a, &b, None, false).unwrap()[0];
+    let v = c.vetoes.iter().find(|v| v.v == "V-NAN").unwrap();
+    let id = |i: usize| a[i].clip.clone();
+    assert_eq!(v.new_in_b, vec![id(3)]);
+    assert_eq!(v.gone_in_b, vec![id(4)]);
+    let mut und = v.undecided.clone();
+    und.sort();
+    let mut want = vec![id(0), id(1), id(2)];
+    want.sort();
+    assert_eq!(und, want);
+    assert_eq!((v.a, v.b), (3, 2));
+    // 反向比：增减互换，判不了的段不变
+    let r = &compare(&b, &a, None, false).unwrap()[0];
+    let w = r.vetoes.iter().find(|v| v.v == "V-NAN").unwrap();
+    assert_eq!(
+        (w.new_in_b.clone(), w.gone_in_b.clone()),
+        (vec![id(4)], vec![id(3)])
+    );
+    assert_eq!(w.undecided.len(), 3);
+}
+
+/// codex 第 1 轮 P2 #2：判断条件按行为核边界——端点恰为 0 是不确定；两个方向各自对称；组数不够是不确定。
+#[test]
+fn call_boundaries() {
+    let ci = |lo: f64, hi: f64, groups: usize| Ci {
+        mean: (lo + hi) / 2.0,
+        lo,
+        hi,
+        groups,
+        p_fail: 0.5,
+    };
+    let g = th::AGG.def("min_groups") as usize;
+    for (lo, hi, higher, lower) in [
+        (0.1, 0.2, Call::Up, Call::Down),
+        (-0.2, -0.1, Call::Down, Call::Up),
+        (0.0, 0.2, Call::Unsure, Call::Unsure),
+        (-0.2, 0.0, Call::Unsure, Call::Unsure),
+        (-0.1, 0.1, Call::Unsure, Call::Unsure),
+        (0.0, 0.0, Call::Unsure, Call::Unsure),
+    ] {
+        assert_eq!(
+            call_of(Some(&ci(lo, hi, g)), Better::Higher),
+            higher,
+            "[{lo}, {hi}] 越大越好"
+        );
+        assert_eq!(
+            call_of(Some(&ci(lo, hi, g)), Better::Lower),
+            lower,
+            "[{lo}, {hi}] 越小越好"
+        );
+    }
+    assert_eq!(
+        call_of(Some(&ci(0.1, 0.2, g - 1)), Better::Higher),
+        Call::Unsure
+    );
+    assert_eq!(call_of(None, Better::Higher), Call::Unsure);
+}
