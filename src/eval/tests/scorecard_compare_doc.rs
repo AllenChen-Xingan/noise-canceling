@@ -56,11 +56,15 @@ fn table(sec: &str, head: &str) -> Vec<Vec<String>> {
 fn compare_tables_match_code() {
     let t = doc();
     let sec = section(&t, "## 十、", "## 十一、");
-    let calls: Vec<String> = table(sec, "判断")
+    // 判断表：名称与条件两列都和代码逐行比对（codex 第 1 轮 P2 #2）；条件的行为在 compare_tests 的边界测试里核
+    let calls: Vec<(String, String)> = table(sec, "判断")
         .into_iter()
-        .map(|r| r[0].clone())
+        .map(|r| (r[0].clone(), r[1].clone()))
         .collect();
-    let want: Vec<String> = Call::ALL.iter().map(|c| c.zh().to_string()).collect();
+    let want: Vec<(String, String)> = Call::ALL
+        .iter()
+        .map(|c| (c.zh().to_string(), c.cond().trim_matches('`').to_string()))
+        .collect();
     assert_eq!(calls, want);
 
     for r in table(sec, "参数（`SC-AGG`）".trim_matches('`')) {

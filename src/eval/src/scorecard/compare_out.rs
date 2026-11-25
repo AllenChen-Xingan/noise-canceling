@@ -105,16 +105,17 @@ pub fn to_markdown(cmp: &[Compare], a: &str, b: &str, noise: bool) -> String {
             }
             s += "\n";
         }
-        s += "\n| 否决项 | 逐段判法 | a 否决段 | b 否决段 | b 新增 | b 消失 |\n|---|---|---|---|---|---|\n";
+        s += "\n| 否决项 | 逐段判法 | a 否决段 | b 否决段 | b 新增 | b 消失 | 一边判不了 |\n|---|---|---|---|---|---|---|\n";
         for v in &c.vetoes {
             s += &format!(
-                "| {} | {} | {} | {} | {} | {} |\n",
+                "| {} | {} | {} | {} | {} | {} | {} |\n",
                 v.v,
                 v.rule,
                 v.a,
                 v.b,
                 ids(&v.new_in_b),
                 ids(&v.gone_in_b),
+                ids(&v.undecided),
             );
         }
         if !c.only_a.is_empty() || !c.only_b.is_empty() {

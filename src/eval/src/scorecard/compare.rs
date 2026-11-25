@@ -41,6 +41,14 @@ impl Call {
             Call::Unsure => "不确定",
         }
     }
+    /// 判定条件（规约第十节判断表的第二列与它逐字比对）。实现在 [`call_of`]，按行为另有边界测试。
+    pub fn cond(self) -> &'static str {
+        match self {
+            Call::Up => "差值区间整个在更好一侧（越大越好的项：下端 > 0；越小越好的项：上端 < 0）",
+            Call::Down => "差值区间整个在更差一侧（越大越好的项：上端 < 0；越小越好的项：下端 > 0）",
+            Call::Unsure => "区间碰到 0（含端点恰为 0），或有值的源片段组数少于 `min_groups`",
+        }
+    }
     pub const ALL: [Call; 3] = [Call::Up, Call::Down, Call::Unsure];
 }
 
@@ -71,10 +79,12 @@ pub struct VetoDiff {
     pub rule: &'static str,
     pub a: usize,
     pub b: usize,
-    /// b 被否决、a 没有的段
+    /// a 判了「没否决」、b 判了「否决」的段（两边都判得了才算增减）
     pub new_in_b: Vec<String>,
-    /// a 被否决、b 没有的段
+    /// a 判了「否决」、b 判了「没否决」的段
     pub gone_in_b: Vec<String>,
+    /// 至少一边判不了（缺分、没值、判定未知）的段：不算增减，单列（codex 第 1 轮 P1 #1）
+    pub undecided: Vec<String>,
 }
 
 /// 一个比较范围（全部段，或 `--by-scene` 时的一个场景）。
@@ -282,17 +292,18 @@ fn one_scope(
                 b: 0,
                 new_in_b: Vec::new(),
                 gone_in_b: Vec::new(),
+                undecided: Vec::new(),
             };
             for (id, x, y) in &pairs {
-                let va = score(x, i.v).and_then(|s| vetoed(i.v, s)) == Some(true);
-                let vb = score(y, i.v).and_then(|s| vetoed(i.v, s)) == Some(true);
-                d.a += usize::from(va);
-                d.b += usize::from(vb);
-                if vb && !va {
-                    d.new_in_b.push((*id).to_string());
-                }
-                if va && !vb {
-                    d.gone_in_b.push((*id).to_string());
+                let va = score(x, i.v).and_then(|s| vetoed(i.v, s));
+                let vb = score(y, i.v).and_then(|s| vetoed(i.v, s));
+                d.a += usize::from(va == Some(true));
+                d.b += usize::from(vb == Some(true));
+                match (va, vb) {
+                    (Some(false), Some(true)) => d.new_in_b.push((*id).to_string()),
+                    (Some(true), Some(false)) => d.gone_in_b.push((*id).to_string()),
+                    (Some(_), Some(_)) => {}
+                    _ => d.undecided.push((*id).to_string()),
                 }
             }
             d
