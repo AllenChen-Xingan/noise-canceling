@@ -47,6 +47,43 @@ class TestPutSecret(Base):
                                 *((f"输出{i}", t) for i, t in enumerate(texts))):
                 self.assertNotIn(form, text, f"密钥以 {form[:6]}… 的样子出现在{where}")
 
+    def assert_no_frame_leak(self, e):
+        """异常的每一帧（不只 secret_ops）局部变量里都没有值；测试自己的帧除外。"""
+        tb = e.__traceback__
+        while tb is not None:
+            if not tb.tb_frame.f_code.co_filename.endswith("test_secret.py"):
+                self.assertNotIn(self.value, repr(tb.tb_frame.f_locals), tb.tb_frame.f_code.co_name)
+            tb = tb.tb_next
+
+    def run_cli_fail(self, *argv):
+        """跑一条会失败的 CLI，返回 (异常, stdout, stderr)；两路输出也要查（第 4 轮 #4）。"""
+        import io
+        from contextlib import redirect_stderr, redirect_stdout
+        import rp
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err), self.assertRaises(SystemExit) as cm:
+            rp.main(["--ledger", self.ledger, *argv], client=self.cli)
+        return cm.exception, out.getvalue(), err.getvalue()
+
+    def test_every_failure_exit_is_clean(self):
+        # 第 4 轮 #1：校验失败、畸形响应、各种结果码，每个出口的消息、两路输出、帧局部变量都不含值
+        orig = self.fake.exec
+        cases = [
+            ("bad-remote", None, ["--remote", "/workspace/.env.local"]),
+            ("weird-response", lambda argv, env=None: ["not", "a", "dict"] if env else orig(argv, env), []),
+            ("mvfail", lambda argv, env=None: dict(orig(argv, env), stdout="MVFAIL\n") if env else orig(argv, env), []),
+            ("echo-value", lambda argv, env=None: dict(orig(argv, env), stdout=env["V"], exitCode=1)
+             if env else orig(argv, env), []),
+        ]
+        for label, fake_exec, extra in cases:
+            with self.subTest(label):
+                self.fake.exec = fake_exec or orig
+                e, out, err = self.run_cli_fail("--env-file", self.env_file, "put-secret", "pod_9",
+                                                "OPENROUTER_API_KEY", *extra)
+                self.assert_no_leak(str(e), out, err)
+                self.assert_no_frame_leak(e)
+        self.fake.exec = orig
+
     def test_writes_file_on_container_disk_and_reports_length_only(self):
         out, err = self.run_cli("--env-file", self.env_file, "put-secret", "pod_9", "OPENROUTER_API_KEY")
         self.assertEqual(self.fake.files["/root/.env.local"], f"OPENROUTER_API_KEY={self.value}\n".encode())
@@ -68,7 +105,7 @@ class TestPutSecret(Base):
     def test_refuses_network_volume_and_odd_paths(self):
         for remote in ("/workspace/.env.local", "/root/../workspace/x", "relative/.env"):
             with self.assertRaises(SystemExit):
-                S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.value, remote=remote)
+                S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.env_file, remote=remote)
         self.assertFalse([c for c in self.fake.calls if c[1].endswith("/exec")])
 
     def test_failure_message_carries_no_remote_text(self):
@@ -96,7 +133,7 @@ class TestPutSecret(Base):
             raise OSError(f"reset while sending {body!r}")
         cli = type(self.cli)("k" * 50, transport=boom, sleep=lambda s: None)
         try:
-            S.put_secret(cli, "pod_9", "OPENROUTER_API_KEY", self.value)
+            S.put_secret(cli, "pod_9", "OPENROUTER_API_KEY", self.env_file)
         except SystemExit as e:
             chain, x = [], e
             while x is not None:
@@ -119,13 +156,13 @@ class TestPutSecret(Base):
         self.fake.files["/root/.env.local"] = b"OLD\n"
         self.fake.dirs = {"/root/.env.local"}
         with self.assertRaises(SystemExit) as cm:
-            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.value)
+            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.env_file)
         self.assertIn("目录", str(cm.exception))
         self.fake.dirs = set()
         orig = self.fake.exec
         self.fake.exec = lambda argv, env=None: orig(argv, dict(env, W="0" * 64) if env else env)
         with self.assertRaises(SystemExit):
-            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.value)
+            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.env_file)
         self.assertEqual(self.fake.files["/root/.env.local"], b"OLD\n")
 
     def test_no_completion_marker_is_unknown(self):
@@ -133,7 +170,7 @@ class TestPutSecret(Base):
         orig = self.fake.exec
         self.fake.exec = lambda argv, env=None: dict(orig(argv, env), stdout="") if env else orig(argv, env)
         with self.assertRaises(SystemExit) as cm:
-            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.value)
+            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.env_file)
         self.assertIn("[UNKNOWN]", str(cm.exception))
 
     def test_timeout_is_reported_as_unknown(self):
@@ -141,7 +178,7 @@ class TestPutSecret(Base):
         orig = self.fake.exec
         self.fake.exec = lambda argv, env=None: dict(orig(argv, env), timedOut=True) if env else orig(argv, env)
         with self.assertRaises(SystemExit) as cm:
-            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.value)
+            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.env_file)
         self.assertIn("结果未知", str(cm.exception))
 
     def test_write_command_is_valid_sh_and_has_no_value(self):
@@ -155,10 +192,12 @@ class TestPutSecret(Base):
         with open(self.env_file, "wb") as f:
             f.write(f"OPENROUTER_API_KEY={self.value}\n".encode() + b"\xff\xfe bad\n")
         try:
-            S.read_local_secret("OPENROUTER_API_KEY", self.env_file)
+            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.env_file)
         except SystemExit as e:
             import traceback
             self.assertIsNone(e.__context__)
+            self.assertIn("[ERROR]", str(e))
+            self.assert_no_frame_leak(e)
             self.assert_no_leak("".join(traceback.format_exception(e)), str(e))
         else:
             self.fail("应当报错")
@@ -166,7 +205,7 @@ class TestPutSecret(Base):
 
     def test_bad_key_name_refused(self):
         with self.assertRaises(SystemExit):
-            S.put_secret(self.cli, "pod_9", "bad name;rm", self.value)
+            S.put_secret(self.cli, "pod_9", "bad name;rm", self.env_file)
 
 
 if __name__ == "__main__":

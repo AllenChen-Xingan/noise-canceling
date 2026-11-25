@@ -199,7 +199,7 @@ def cmd_job_wait(cli, a):
 def cmd_put_secret(cli, a):
     """密钥送进机器容器盘（见 secret_ops.py）；只报位数。"""
     import secret_ops as S
-    n = S.put_secret(cli, a.pod, a.name, S.read_local_secret(a.name, a.env_file), remote=a.remote)
+    n = S.put_secret(cli, a.pod, a.name, a.env_file, remote=a.remote)
     print(f"{a.name} 已写入 {a.pod}:{a.remote}（{n} 位，权限 600，容器盘，删机即没）")
 
 

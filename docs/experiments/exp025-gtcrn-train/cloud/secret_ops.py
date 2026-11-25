@@ -32,8 +32,9 @@ WRITE_SH = (
     'case "$(readlink -f "$d")/" in /root/*) ;; *) echo OUTSIDE; exit 0;; esac; '
     't=$(mktemp "$d/.secret.XXXXXX") || { echo BAD; exit 0; }; '
     'if printf "%s=%s\\n" "$K" "$V" > "$t" '
-    '&& [ "$(sha256sum "$t" | cut -d" " -f1)" = "$W" ] && [ "$(stat -c %a "$t")" = 600 ] '
-    '&& mv -fT "$t" "$P"; then echo OK; elif rm -f "$t"; then echo BAD; else echo LEFTOVER; fi'
+    '&& [ "$(sha256sum "$t" | cut -d" " -f1)" = "$W" ] && [ "$(stat -c %a "$t")" = 600 ]; then '
+    'if mv -fT "$t" "$P"; then echo OK; else echo MVFAIL; fi; '
+    'elif rm -f "$t"; then echo BAD; else echo LEFTOVER; fi'
 )
 
 RESULTS = {"DIR": "目标是个目录", "OUTSIDE": "目标目录实际不在 /root/ 下（可能链接到了网络盘）",
@@ -41,22 +42,14 @@ RESULTS = {"DIR": "目标是个目录", "OUTSIDE": "目标目录实际不在 /ro
            "LEFTOVER": "写入或核对没通过，而且本次临时文件没删掉（在目标同目录、.secret. 开头），请删机或手动删"}
 
 
-def read_local_secret(name: str, env_file: Optional[str] = None) -> str:
+def _read(name: str, env_file: Optional[str]) -> tuple:
+    """返回 (值或 None, 路径)。解码等错误照常抛出，由调用方在安全边界里接住。"""
     path = env_file or os.path.join(main_repo_root(), ".env.local")
-    # 读和解码都放进安全边界（评审第 2 轮 #1）：坏 UTF-8 的 UnicodeDecodeError 会带着原始字节；出了块再抛固定错误
-    value, failed = "", None
     try:
         with open(path, encoding="utf-8") as f:
-            value = parse_env_file(f.read()).get(name, "")
+            return parse_env_file(f.read()).get(name) or None, path
     except FileNotFoundError:
-        value = ""
-    except BaseException as e:
-        failed = type(e).__name__
-    if failed:
-        raise SystemExit(f"读 {path} 出错（{failed}）；细节不显示，免得带出密钥，没发任何请求")
-    if not value:
-        raise SystemExit(f"{path} 里没有 {name}，没发任何请求")
-    return value
+        return None, path
 
 
 def _check_remote(remote: str) -> str:
@@ -66,32 +59,41 @@ def _check_remote(remote: str) -> str:
     return norm
 
 
-def _send(cli: Client, pod_id: str, name: str, value: str, remote: str) -> tuple:
-    """发出去并把结果消化成安全的 (结果码, 说明)：远端正文、原始异常都不出这个函数。"""
-    want = hashlib.sha256(f"{name}={value}\n".encode()).hexdigest()
+def _read_and_send(cli: Client, pod_id: str, name: str, env_file: Optional[str], remote: str) -> tuple:
+    """读密钥、发出去、消化结果，全在这一个函数里；任何异常都在这里接住换成安全的
+    (结果码, 说明, 位数)。密钥只存在于本函数的帧里，而本函数从不往外抛（评审第 1–4 轮异常带出密钥，改结构）。"""
     try:
-        r = O.exec_cmd(cli, pod_id, ["sh", "-c", WRITE_SH], env={"K": name, "V": value, "P": remote, "W": want})
-    except BaseException as e:
-        return "UNKNOWN", f"{type(e).__name__} {getattr(e, 'status', '')}".strip()
-    if r.get("timedOut"):
-        return "UNKNOWN", "超时"
-    status = (r.get("stdout") or "").strip()
-    if r.get("exitCode") == 0 and status == "OK":
-        return "OK", ""
-    if status in RESULTS:
-        return status, RESULTS[status]
-    return "UNKNOWN", f"没有完成标记，退出码 {r.get('exitCode')}"  # 可能已替换完、在回 OK 前断了（第 3 轮 #4）
+        value, path = _read(name, env_file)
+        if value is None:
+            return "MISSING", f"{path} 里没有 {name}，没发任何请求", 0
+        n = len(value)
+        want = hashlib.sha256(f"{name}={value}\n".encode()).hexdigest()
+        try:
+            r = O.exec_cmd(cli, pod_id, ["sh", "-c", WRITE_SH], env={"K": name, "V": value, "P": remote, "W": want})
+        except BaseException as e:
+            return "UNKNOWN", f"{type(e).__name__} {getattr(e, 'status', '')}".strip(), n
+        if r.get("timedOut"):
+            return "UNKNOWN", "超时", n
+        status = str(r.get("stdout") or "").strip()
+        if r.get("exitCode") == 0 and status == "OK":
+            return "OK", "", n
+        if status == "MVFAIL":
+            return "UNKNOWN", "替换那一步失败，可能已经替换了", n
+        if status in RESULTS:
+            return status, RESULTS[status], n
+        return "UNKNOWN", f"没有完成标记，退出码 {r.get('exitCode')}", n  # 可能已替换完、在回 OK 前断了
+    except BaseException as e:  # 读文件出错（如坏 UTF-8）、响应格式不对……
+        return "ERROR", type(e).__name__, 0
 
 
-def put_secret(cli: Client, pod_id: str, name: str, value: str, remote: str = DEFAULT_REMOTE) -> int:
-    """写入并核对；返回值的位数。报错只有结果码和中文说明，不带远端正文、原始异常；
-    抛错前删掉本函数里的 value，traceback 的帧里也没有它（评审第 3 轮 #1）。"""
+def put_secret(cli: Client, pod_id: str, name: str, env_file: Optional[str] = None,
+               remote: str = DEFAULT_REMOTE) -> int:
+    """把 env_file（默认主仓库 .env.local）里的 name 送进机器；返回位数。
+    先校验键名和路径（这时还没读密钥），再读和发；报错只有 [结果码] 和中文说明。"""
     if not re.fullmatch(r"[A-Z][A-Z0-9_]{1,63}", name):
         raise SystemExit(f"键名只用大写字母、数字、下划线：{name!r}")
     remote = _check_remote(remote)
-    n = len(value)
-    code, why = _send(cli, pod_id, name, value, remote)
-    del value
+    code, why, n = _read_and_send(cli, pod_id, name, env_file, remote)
     if code == "OK":
         return n
     if code == "UNKNOWN":
