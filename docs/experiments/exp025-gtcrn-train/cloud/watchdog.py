@@ -88,12 +88,19 @@ def _save(d: dict, path: Optional[str] = None) -> None:
     os.replace(tmp, path)
 
 
-def register(pod_id: str, max_hours: float, now: Optional[dt.datetime] = None, path: Optional[str] = None) -> str:
+def _entry(v) -> tuple:
+    """登记表一项：新格式 {"when", "ctx"}；旧格式只有时刻字符串（上下文未知）。"""
+    return (v.get("when"), v.get("ctx", "")) if isinstance(v, dict) else (v, "")
+
+
+def register(pod_id: str, max_hours: float, now: Optional[dt.datetime] = None, path: Optional[str] = None,
+             ctx: str = "") -> str:
+    """登记删机时刻，连同它属于哪个账号和账本（评审第 3 轮 #2）。"""
     now = now or L.utcnow()
     when = L.iso(now + dt.timedelta(seconds=int(max_hours * 3600) + GRACE_S))
     with _locked(path):
         d = _load(path)
-        d[pod_id] = when
+        d[pod_id] = {"when": when, "ctx": ctx}
         _save(d, path)
     return when
 
@@ -105,11 +112,17 @@ def unregister(pod_id: str, path: Optional[str] = None) -> None:
             _save(d, path)
 
 
-def tick(delete: Callable[[str], object], now: Optional[dt.datetime] = None, path: Optional[str] = None) -> list:
-    """删掉所有到点的机器；返回删了哪些。删失败的留着下次再试。"""
+def tick(delete: Callable[[str], object], now: Optional[dt.datetime] = None, path: Optional[str] = None,
+         ctx: str = "") -> list:
+    """删掉所有到点的机器；返回删了哪些。删失败的留着下次再试。
+    登记项带着别的账号或账本时不碰它：用错密钥删会得到 404，被当成已删而丢掉登记（评审第 3 轮 #2）。"""
     now = now or L.utcnow()
     done = []
-    for pod_id, when in sorted(_load(path).items()):
+    for pod_id, v in sorted(_load(path).items()):
+        when, theirs = _entry(v)
+        if ctx and theirs and theirs != ctx:
+            print(f"watchdog: {pod_id} 属于别的账号或账本，不处理", file=sys.stderr, flush=True)
+            continue
         if L.parse_iso(when) <= now:
             try:
                 delete(pod_id)
@@ -123,12 +136,12 @@ def tick(delete: Callable[[str], object], now: Optional[dt.datetime] = None, pat
 
 def run_loop(delete: Callable[[str], object], poll_s: float = 30, path: Optional[str] = None,
              sleep: Callable[[float], None] = time.sleep, now_fn: Callable[[], dt.datetime] = L.utcnow,
-             pidfile: Optional[str] = None) -> None:
+             pidfile: Optional[str] = None, ctx: str = "") -> None:
     """登记表空了就退出。退出前在锁里再看一眼并撤掉自己的 pid 文件：
     之后才登记的机器会看到「没有看门狗」而新起一个，不会以为这个快退出的还在管（评审第 1 轮 #7）。"""
     pidfile = pidfile or PIDFILE
     while True:
-        for pid in tick(delete, now_fn(), path):
+        for pid in tick(delete, now_fn(), path, ctx):
             print(f"watchdog: 到点已删 {pid}", flush=True)
         with _locked(path):
             if not _load(path):

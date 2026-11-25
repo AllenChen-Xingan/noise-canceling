@@ -82,7 +82,7 @@ def bring_up(cli, a):
     W.check_context(ctx)  # 开机前就拒：已有看门狗管的是别的账号或别的账本（评审第 2 轮 #4）
     p = O.create_pod(cli, dc, vol, a.max_hours, _rate_hint(cli, a.cpu), ledger_path=a.ledger, cpu=a.cpu)
     try:  # 机器已在计费：登记看门狗到能执行命令，任何一步出错都先删机（评审第 2 轮 #3）
-        when = W.register(p["id"], a.max_hours)  # 第 1 层兜底：本机看门狗到点删机
+        when = W.register(p["id"], a.max_hours, ctx=ctx)  # 第 1 层兜底：本机看门狗到点删机
         rp_args = ("--ledger", os.path.abspath(a.ledger)) + (("--env-file", os.path.abspath(a.env_file)) if a.env_file else ())
         W.ensure_running(os.path.abspath(__file__), spawn=SPAWN, rp_args=rp_args, ctx=ctx)
         print(f"看门狗登记：{p['id']} 最晚 {when} 删机", file=sys.stderr)
@@ -149,7 +149,8 @@ def cmd_reap(cli, a):
 
 def cmd_watchdog(cli, a):
     """本机看门狗进程本身（由 up 自动起，一般不用手动跑）。登记表空了就退出。"""
-    W.run_loop(lambda pid: O.delete_pod(cli, pid, a.ledger, note="watchdog 到点删机"))
+    W.run_loop(lambda pid: O.delete_pod(cli, pid, a.ledger, note="watchdog 到点删机"),
+               ctx=W.context(cli.fingerprint(), a.ledger))
 
 
 def cmd_sh(cli, a):

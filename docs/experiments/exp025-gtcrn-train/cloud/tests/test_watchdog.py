@@ -31,6 +31,14 @@ class TestLocalWatchdog(Base):
         self.assertEqual((done, deleted), (["pod_a"], ["pod_a"]))
         self.assertEqual(list(W._load()), ["pod_b"])
 
+    def test_tick_skips_entries_of_other_account(self):
+        # 评审第 3 轮 #2：换了账号的看门狗不碰旧账号的登记
+        W.register("pod_a", 0.0, now=T0, ctx="acct1|/l")
+        deleted = []
+        self.assertEqual(W.tick(deleted.append, now=T0 + dt.timedelta(hours=1), ctx="acct2|/l"), [])
+        self.assertIn("pod_a", W._load())
+        self.assertEqual(W.tick(deleted.append, now=T0 + dt.timedelta(hours=1), ctx="acct1|/l"), ["pod_a"])
+
     def test_failed_delete_is_retried_next_tick(self):
         W.register("pod_a", 0.0, now=T0)
 
