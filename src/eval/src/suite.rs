@@ -311,6 +311,16 @@ pub fn resolve(rel: &str) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// codex 本分支第 1 轮 P1 #1：带值的选项缺值（在末尾、或下一项又是 `--` 开头）要报错，不能当成没给。
+    #[test]
+    fn option_value_must_be_present() {
+        let a = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+        assert_eq!(option_value(&a(&["scorecard", "--asr-ledger", "/x.json"]), "--asr-ledger"), Ok(Some("/x.json".into())));
+        assert_eq!(option_value(&a(&["scorecard"]), "--asr-ledger"), Ok(None));
+        assert!(option_value(&a(&["scorecard", "--asr-ledger"]), "--asr-ledger").is_err());
+        assert!(option_value(&a(&["scorecard", "--asr-ledger", "--init-ledger"]), "--asr-ledger").is_err());
+    }
     #[test]
     fn without_safety_turns_every_task_off() {
         let mut s = parse_suite(CI_SUITE).unwrap();
