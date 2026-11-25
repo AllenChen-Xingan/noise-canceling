@@ -310,6 +310,7 @@ pub fn resolve(rel: &str) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
     fn without_safety_turns_every_task_off() {
         let mut s = parse_suite(CI_SUITE).unwrap();
@@ -319,8 +320,6 @@ mod tests {
         assert!(s.tasks.iter().all(|t| !t.safety));
         assert_eq!(s.without_safety(), 0, "再调一次没有可改的");
     }
-
-    use super::*;
 
     #[test]
     fn shipped_suites_parse() {
