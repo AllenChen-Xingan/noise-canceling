@@ -185,3 +185,21 @@ codex 要的是一套持久的操作日志、按账号分开的看门狗进程�
 结果：P0×0 P1×0 P2×0，总评「通过」。**第 13、14 轮连续两轮无 P0/P1，满足停止线。**
 
 留档的 P2 issue：#163 · #164 · #165（大总管接受的残余风险）· #166 · #167 · #169 · #171。
+
+
+# put-secret 的评审（范围只限 secret_ops.py 与 tests/test_secret.py，大总管定）
+
+## 第 1 轮（2026-11-25，模型 gpt-6-astra，contract，effort high）
+
+结果：P0×0 P1×3 P2×3。都属实，已修；4 条新测试先在修之前的代码上跑红，修后转绿。
+
+| 编号 | 问题 | 处理 | 测试 |
+|---|---|---|---|
+| P1 #1 | 先截断后脱敏会漏出密钥片段；整行 base64 没脱敏 | 报错里一律不回传远端正文，只报结果码、退出码 | `test_failure_message_carries_no_remote_text` |
+| P1 #2 | 失败时可能删掉旧文件；目标是目录时新密钥会落进目录里 | 机器里那段 sh 重写：目标是目录就拒；`mktemp` 独占建临时文件，在临时文件上核哈希与权限，对了才 `mv -fT` 替换；失败只删本次临时文件 | `test_directory_target_and_failed_check_keep_old_file` |
+| P1 #3 | 原始异常（可能含值）留在异常链里 | 在 except 块里换成一句话，出了块再抛；只报异常类型和状态码 | `test_exception_chain_holds_no_secret`（遍历异常链并格式化 traceback） |
+| P2 #4 | `/root/` 下的父目录可能链接到网络盘；固定的 `.part` 可能是链接 | 写前 `readlink -f` 父目录必须仍在 `/root/` 下；临时文件改用 `mktemp` | 并入上面 |
+| P2 #5 | 超时没区分「结果未知」 | `timedOut` 报「结果未知，先查再决定重送」 | `test_timeout_is_reported_as_unknown` |
+| P2 #6 | 测试跑不到 Linux 上那段 sh | 下次开机第一步用假值在真机上跑四种情况（见 plan-eval-baseline.md 第一节），通过才送真密钥 | — |
+
+测试：104 条全过。
