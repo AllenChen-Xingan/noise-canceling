@@ -379,6 +379,28 @@ fn actual_cost_above_reservation_flags_review_and_stops() {
     assert_eq!(seen.lock().unwrap().len(), 1);
 }
 
+/// codex 第 11 轮 P1 #1：A 在 429 退避时，别的进程把共用账本标了待核；A 醒来要先看账本，不再发。
+#[test]
+fn backoff_wakeup_checks_shared_ledger_review() {
+    let d = tmpdir("xproc");
+    let (url, seen) = fake(vec![
+        (429, "Retry-After: 1\r\n", json!({"error": {"code": 429, "message": "slow"}}).to_string()),
+        ok("must-not-arrive", 1e-7),
+    ]);
+    let ledger = d.join("ledger.json");
+    let l2 = ledger.clone();
+    let other = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        crate::qa::asr_ledger::flag_review(&l2, "别的进程：费用未知").unwrap();
+    });
+    let mut a = client(&url, &d);
+    let e = a.transcribe(&audio(), vdn_types::MODEL_RATE, "en").unwrap_err();
+    other.join().unwrap();
+    assert!(e.contains("待核"), "{e}");
+    assert_eq!(seen.lock().unwrap().len(), 1, "退避醒来不再发");
+    assert_eq!(crate::qa::asr_ledger::read(&ledger).unwrap().reserved_usd, 0.0, "没发出去的那次退掉预留");
+}
+
 /// codex 第 5 轮 P1 #1：账本坏了拒发，坏文件原样留着。
 #[test]
 fn corrupt_ledger_refuses_to_send() {
