@@ -229,10 +229,11 @@ fn pick_dedups_by_sha() {
         f("t1-out.wav", "cc"),
         f("x-unknown.wav", "zz"),
     ];
-    let langs: std::collections::BTreeMap<String, String> = [("aa", "en"), ("bb", "en"), ("cc", "en")]
-        .iter()
-        .map(|(a, b)| (a.to_string(), b.to_string()))
-        .collect();
+    let langs: std::collections::BTreeMap<String, String> =
+        [("aa", "en"), ("bb", "en"), ("cc", "en")]
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
     let (picked, dup) = pick(&files, &langs);
     let names: Vec<&str> = picked.iter().map(|p| p.0.as_str()).collect();
     assert_eq!(names, ["t1-clean.wav", "t1-gtcrn.wav", "t1-mix.wav"]);
