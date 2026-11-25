@@ -161,6 +161,16 @@ pub fn init(p: &Path, created: Created) -> Result<(), String> {
         .map_err(|e| format!("写不了识别费账本：{e}"))
 }
 
+/// 命令行要求新建时才建（`scorecard --init-ledger` = `flag`，或环境变量 `VDN_ASR_INIT_LEDGER` = `env` 为 `1`）。
+/// 返回是否新建了；要求了但已存在或已封存，返回 `Err`（不覆盖）。
+pub fn init_if_requested(p: &Path, flag: bool, env: Option<String>) -> Result<bool, String> {
+    if !(flag || env.as_deref() == Some("1")) {
+        return Ok(false);
+    }
+    init(p, Created::here())?;
+    Ok(true)
+}
+
 /// 读账本（不加锁）：没有文件、已封存、读不出、格式坏了，都是 `Err`。
 pub fn read(p: &Path) -> Result<Ledger, String> {
     check_sealed(p)?;
@@ -315,6 +325,31 @@ mod tests {
                 assert!(!text.contains(h), "账本里出现了主机名：{text}");
             }
         }
+    }
+
+    /// `scorecard --init-ledger` 或 `VDN_ASR_INIT_LEDGER=1` 才新建；别的值、没给都不建。
+    #[test]
+    fn init_only_when_explicitly_requested() {
+        let p = tmp("req");
+        assert_eq!(init_if_requested(&p, false, None).unwrap(), false);
+        assert_eq!(
+            init_if_requested(&p, false, Some("0".into())).unwrap(),
+            false
+        );
+        assert!(!p.exists(), "没要求就不建");
+        assert_eq!(
+            init_if_requested(&p, false, Some("1".into())).unwrap(),
+            true
+        );
+        assert!(read(&p).unwrap().created.is_some());
+        let q = tmp("req2");
+        assert_eq!(init_if_requested(&q, true, None).unwrap(), true);
+        assert!(
+            init_if_requested(&q, true, None)
+                .unwrap_err()
+                .contains("已存在"),
+            "已有账本时要求新建 = 报错，不覆盖"
+        );
     }
 
     /// 时间写成 UTC 的 ISO 8601（自写换算，核几个已知点）。
