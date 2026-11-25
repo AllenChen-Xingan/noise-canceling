@@ -78,17 +78,22 @@ def bring_up(cli, a):
     vol, dc = _volume_id(cli, a)
     if not dc:
         raise SystemExit("要指定 --dc（不挂盘时）")
+    ctx = W.context(cli.fingerprint(), a.ledger)
+    W.check_context(ctx)  # 开机前就拒：已有看门狗管的是别的账号或别的账本（评审第 2 轮 #4）
     p = O.create_pod(cli, dc, vol, a.max_hours, _rate_hint(cli, a.cpu), ledger_path=a.ledger, cpu=a.cpu)
-    when = W.register(p["id"], a.max_hours)  # 第 1 层兜底：本机看门狗到点删机
-    rp_args = ("--ledger", os.path.abspath(a.ledger)) + (("--env-file", os.path.abspath(a.env_file)) if a.env_file else ())
-    W.ensure_running(os.path.abspath(__file__), spawn=SPAWN, rp_args=rp_args)
-    print(f"看门狗登记：{p['id']} 最晚 {when} 删机", file=sys.stderr)
-    print(f"已开机 {p['id']}（{dc}，每小时 {p.get('cost')} 美元，最长 {a.max_hours} 小时）", file=sys.stderr)
-    try:
+    try:  # 机器已在计费：登记看门狗到能执行命令，任何一步出错都先删机（评审第 2 轮 #3）
+        when = W.register(p["id"], a.max_hours)  # 第 1 层兜底：本机看门狗到点删机
+        rp_args = ("--ledger", os.path.abspath(a.ledger)) + (("--env-file", os.path.abspath(a.env_file)) if a.env_file else ())
+        W.ensure_running(os.path.abspath(__file__), spawn=SPAWN, rp_args=rp_args, ctx=ctx)
+        print(f"看门狗登记：{p['id']} 最晚 {when} 删机", file=sys.stderr)
+        print(f"已开机 {p['id']}（{dc}，每小时 {p.get('cost')} 美元，最长 {a.max_hours} 小时）", file=sys.stderr)
         p = O.wait_running(cli, p["id"])
         O.wait_exec_ready(cli, p["id"])
-    except BaseException:
-        O.delete_pod(cli, p["id"], a.ledger, note="没跑起来，自动删")
+    except BaseException as e:
+        try:
+            O.delete_pod(cli, p["id"], a.ledger, note=f"开机后出错，自动删：{str(e)[:60]}")
+        except BaseException as e2:
+            raise SystemExit(f"{e}；而且删机 {p['id']} 失败（{e2}），请马上 rp.py down {p['id']} 或 reap") from e
         raise
     gpu = p.get("gpu") or {}
     if not a.cpu and gpu.get("vcpuCount") and gpu["vcpuCount"] < C.MIN_VCPU_PER_GPU:

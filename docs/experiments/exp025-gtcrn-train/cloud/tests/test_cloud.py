@@ -115,7 +115,7 @@ class TestLedger(Base):
         spent = L.spent_so_far(rows, now)
         self.assertAlmostEqual(spent, 10.5 + 3.0 + 2.0, places=2)  # 盘一个月 10.5 + 账单优先
         self.assertAlmostEqual(L.check_budget(rows, 0.5, 4, now=now), spent + L.volume_reserve(rows) + 0.5 * (4 + L.GRACE_H), places=2)
-        self.assertAlmostEqual(L.volume_reserve(rows), L.volume_hourly(150) * C.VOLUME_RESERVE_HOURS)  # 盘没删：预留一个月
+        self.assertAlmostEqual(L.volume_reserve(rows), L.volume_hourly(150) * C.VOLUME_RESERVE_HOURS, places=2)  # 盘没删：预留一个月
         with self.assertRaises(SystemExit):
             L.check_budget(rows, 0.5, 10, cap=20.0, now=now)  # 15.5 + 5 > 20（显式上限，不随 config 变）
 

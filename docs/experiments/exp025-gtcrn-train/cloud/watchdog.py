@@ -139,33 +139,58 @@ def run_loop(delete: Callable[[str], object], poll_s: float = 30, path: Optional
 
 def _drop_own_pidfile(pidfile: str) -> None:
     try:
-        with open(pidfile) as f:
-            mine = f.read().strip() == str(os.getpid())
+        mine = _read_pidfile(pidfile)[0] == os.getpid()
         if mine:
             os.remove(pidfile)
     except FileNotFoundError:
         pass
 
 
-def alive(pidfile: Optional[str] = None) -> bool:
-    pidfile = pidfile or PIDFILE
+def context(key_fingerprint: str, ledger_path: str) -> str:
+    """看门狗管的是哪个账号（密钥指纹）、记哪本账（绝对路径）。"""
+    return f"{key_fingerprint}|{os.path.abspath(ledger_path)}"
+
+
+def _read_pidfile(pidfile: str) -> tuple:
+    """pid 文件两行：进程号、上下文（旧格式只有进程号，上下文当作未知）。"""
     try:
         with open(pidfile) as f:
-            pid = int(f.read().strip())
+            lines = f.read().split("\n")
+        return int(lines[0].strip()), (lines[1].strip() if len(lines) > 1 else "")
+    except (FileNotFoundError, ValueError, IndexError):
+        return None, ""
+
+
+def alive(pidfile: Optional[str] = None) -> bool:
+    pid, _ = _read_pidfile(pidfile or PIDFILE)
+    if pid is None:
+        return False
+    try:
         os.kill(pid, 0)
         return True
-    except (FileNotFoundError, ValueError, ProcessLookupError, PermissionError):
+    except (ProcessLookupError, PermissionError):
         return False
 
 
+def check_context(ctx: str, pidfile: Optional[str] = None) -> None:
+    """已有看门狗在跑、且管的是别的账号或别的账本：拒绝，免得新机器落到不认识它的看门狗手里。"""
+    pidfile = pidfile or PIDFILE
+    if alive(pidfile):
+        _, theirs = _read_pidfile(pidfile)
+        if theirs != ctx:
+            raise SystemExit(f"本机已有看门狗在管别的账号或账本（{theirs or '旧格式，未知'}），"
+                             f"不开机；等它的机器删完、看门狗退出后再开")
+
+
 def ensure_running(rp_path: str, spawn: Callable[..., object] = subprocess.Popen,
-                   pidfile: Optional[str] = None, rp_args: tuple = ()) -> bool:
+                   pidfile: Optional[str] = None, rp_args: tuple = (), ctx: str = "") -> bool:
     """没有看门狗在跑就起一个（脱离本终端；有 caffeinate 就防空闲睡眠）。返回是否新起了一个。
     rp_args 是 rp.py 的全局参数（--ledger / --env-file），原样传给看门狗，删机记到同一本账、用同一把密钥（评审第 1 轮 #6）。
-    局限：本机同时只跑一个看门狗；它用第一次起它时的账本与密钥。只用一个账号、一本账时没问题。"""
+    本机同时只跑一个看门狗；已在跑的若管别的账号或账本，直接拒绝（评审第 2 轮 #4）。"""
     pidfile = pidfile or PIDFILE
     with _locked():
         if alive(pidfile):
+            check_context(ctx, pidfile)
             return False
         os.makedirs(os.path.dirname(pidfile), exist_ok=True)
         argv = [sys.executable, rp_path, *rp_args, "watchdog"]
@@ -174,7 +199,7 @@ def ensure_running(rp_path: str, spawn: Callable[..., object] = subprocess.Popen
         with open(os.path.join(os.path.dirname(pidfile), "watchdog.log"), "a") as log:
             p = spawn(argv, stdout=log, stderr=log, stdin=subprocess.DEVNULL, start_new_session=True)
         with open(pidfile, "w") as f:
-            f.write(str(p.pid))
+            f.write(f"{p.pid}\n{ctx}")
     return True
 
 
