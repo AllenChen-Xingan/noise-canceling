@@ -56,12 +56,13 @@ class Gap(unittest.TestCase):
         self.assertEqual(g["rows"][0]["fails"], 4)  # V-NR 不过 × 4 切片
 
     def test_verdict_consistent_when_provisional_are_weakest(self):
-        g = gap.gap_table(scorecard(list(gap.PROVISIONAL) + ["home-quiet", "open-office"]), "gtcrn")
+        g = gap.gap_table(scorecard(list(gap.PROVISIONAL) + [s for s in ALL15 if s not in gap.PROVISIONAL]), "gtcrn")
         self.assertEqual(sorted(g["top"]), sorted(gap.PROVISIONAL))
         self.assertEqual(g["verdict"], "一致")
 
     def test_verdict_inconsistent_when_overlap_below_line(self):
-        g = gap.gap_table(scorecard(["home-quiet", "open-office", "street-outdoor", "transit-hub", "car-passenger", "cafe"]), "gtcrn")
+        order = ["home-quiet", "open-office", "street-outdoor", "transit-hub", "car-passenger", "cafe"]
+        g = gap.gap_table(scorecard(order + [s for s in ALL15 if s not in order]), "gtcrn")
         self.assertEqual(len(g["overlap"]), 2)
         self.assertEqual(g["verdict"], "不一致")
 
@@ -142,8 +143,8 @@ class Uplift(unittest.TestCase):
             gap.uplift_table({"meta": {}, "scopes": [{"scope": "all", "items": []}]}, baseline_card())
 
     def test_verdict_uses_same_overlap_rule(self):
-        order = list(gap.PROVISIONAL) + ["home-quiet"]
-        cj = compare_json({s: [("V-NR", "up" if k < 4 else "unsure", -(5 - k), "lower")] for k, s in enumerate(order)})
+        order = list(gap.PROVISIONAL) + [s for s in ALL15 if s not in gap.PROVISIONAL]
+        cj = compare_json({s: [("V-NR", "up" if k < 4 else "unsure", -(20 - k), "lower")] for k, s in enumerate(order)})
         u = gap.uplift_table(cj, baseline_card())
         self.assertEqual(sorted(u["top"]), sorted(gap.PROVISIONAL))
         self.assertEqual(u["verdict"], "一致")

@@ -13,8 +13,11 @@ Rust 算好的），不重算任何评分项，所以这里不是 verifier 的�
 3. **弱点分**：每一项、每个 档 × 设备 切片，把有值的场景按均值从好到差排名，换算成 0–1（最差 = 1，最好 = 0，并列取平均）；
    场景的弱点分 = 它所有（项, 切片）得分的平均。和单位无关，不需要把 dB、比例、分数换算到一起
 4. **排序**：先按不过数从多到少，再按弱点分从高到低。有值的（项, 切片）少于 `MIN_CELLS` 的场景不参与排名，单列
-5. **核对临时选的加训场景**：取前 `TOP_K` 个场景，与 `PROVISIONAL` 求交。交集 ≥ `MIN_OVERLAP` → 「临时选择与数据一致」；
-   否则 → 「临时选择与数据不一致，建议按前 TOP_K 重选」。这只是判据，结论由大总管在出数后下
+5. **核对临时选的加训场景**：取前 `TOP_K` 个场景，与 `PROVISIONAL` 求交。交集 ≥ `MIN_OVERLAP` → 「一致」，否则「不一致」。
+   - **第 TOP_K 名边界并列**（排序键完全相同）时，按场景名截断会改变结论，所以重合数算成一个范围：范围整个 ≥ 线才「一致」，
+     整个 < 线才「不一致」，跨线就「不确定（第 4 名边界并列）」
+   - **数据不全不下结论**：场景数 < `MIN_SCENES`、有场景缺切片（≠ `SLICES`）、有场景因格子太少被排除、成绩单有没跑成的段，
+     任一成立 → 「数据不足」，只展示排名。这只是判据，结论由大总管在出数后下
 
 6. **提升空间表**：读 `vdn-eval compare --a <GTCRN> --b <候选> --by-scene` 的 `compare.json`（成对 bootstrap 的
    「涨 / 退 / 不确定」由 Rust 判好），外加基线的 `scorecard.json`（只用来认哪些是判定项）。每个场景：
@@ -36,6 +39,8 @@ from pathlib import Path
 TOP_K = 4  # 取最弱的几个场景（计划 014：先加训四个场景）
 MIN_OVERLAP = 3  # 前 TOP_K 与临时选择至少重合几个，算「一致」
 MIN_CELLS = 10  # 一个场景至少要有几个有值的（项, 切片）才参与排名
+MIN_SCENES = 15  # 数据完整才下判断：开会场景数（与 src/eval/suite/scenes.json 的场景数比对，见 test_gap.py）
+SLICES = 4  # 每个场景要有的 档 × 设备 切片数（常见 / 压力 × 两种设备）
 # 临时选定的四个加训场景（exp016 旧表，回混口径）：街道 · 车站 · 车内 · 咖啡馆
 PROVISIONAL = ("street-outdoor", "transit-hub", "car-passenger", "cafe")
 
@@ -71,6 +76,25 @@ def _ranks(vals):
     return out
 
 
+def _verdict(rows, key):
+    """rows 已按 key 从弱到强（从多到少）排好。返回 ((重合数下限, 上限), 判断)，第 TOP_K 名边界并列时重合数是范围。"""
+    if len(rows) < TOP_K:
+        return (0, 0), "不一致"
+    kth = key(rows[TOP_K - 1])
+    certain = [r for r in rows if key(r) > kth]
+    edge = [r for r in rows if key(r) == kth]
+    need = TOP_K - len(certain)
+    a = sum(r["scene"] in PROVISIONAL for r in certain)
+    b = sum(r["scene"] in PROVISIONAL for r in edge)
+    c = len(edge) - b
+    lo, hi = a + max(0, need - c), a + min(need, b)
+    if lo >= MIN_OVERLAP:
+        return (lo, hi), "一致"
+    if hi < MIN_OVERLAP:
+        return (lo, hi), "不一致"
+    return (lo, hi), f"不确定（第 {TOP_K} 名边界并列）"
+
+
 def gap_table(card_json, system):
     """返回 dict：rows（排好序的场景）· excluded（格子太少的场景）· top · overlap · verdict。"""
     cards = [c for c in card_json["scenes"] if c["system"] == system]
@@ -82,6 +106,9 @@ def gap_table(card_json, system):
         for v, m, lower, failed in _cells(c):
             by[(v, c["tier"], c["device"])][c["scene"]] = m if lower else -m
             fails[c["scene"]] += int(failed)
+    slices = defaultdict(set)
+    for c in cards:
+        slices[c["scene"]].add((c["tier"], c["device"]))
     score, n = defaultdict(float), defaultdict(int)
     for vals in by.values():
         for s, r in _ranks(vals).items():
@@ -95,10 +122,21 @@ def gap_table(card_json, system):
         r["rank"] = i
     top = [r["scene"] for r in rows[:TOP_K]]
     overlap = sorted(set(top) & set(PROVISIONAL))
-    verdict = "一致" if len(overlap) >= MIN_OVERLAP else "不一致"
+    rng, verdict = _verdict(rows, lambda r: (r["fails"], r["weakness"]))
+    incomplete = []
+    if card_json.get("missing"):
+        incomplete.append(f"成绩单有 {len(card_json['missing'])} 段没跑成")
+    if len(rows) < MIN_SCENES:
+        incomplete.append(f"参与排名的场景只有 {len(rows)} 个 < {MIN_SCENES}")
+    short = sorted(s for s in scenes if len(slices[s]) != SLICES)
+    if short:
+        incomplete.append(f"缺切片的场景：{' · '.join(short)}")
+    if incomplete:
+        verdict = "数据不足"
     return {"system": system, "rows": rows, "excluded": excluded, "top": top, "provisional": list(PROVISIONAL),
-            "overlap": overlap, "verdict": verdict,
-            "params": {"TOP_K": TOP_K, "MIN_OVERLAP": MIN_OVERLAP, "MIN_CELLS": MIN_CELLS}}
+            "overlap": overlap, "overlap_range": list(rng), "verdict": verdict, "incomplete": incomplete,
+            "params": {"TOP_K": TOP_K, "MIN_OVERLAP": MIN_OVERLAP, "MIN_CELLS": MIN_CELLS, "MIN_SCENES": MIN_SCENES,
+                       "SLICES": SLICES}}
 
 
 def uplift_table(cmp_json, card_json, exclude=()):
@@ -136,10 +174,14 @@ def uplift_table(cmp_json, card_json, exclude=()):
         r["rank"] = i
     top = [r["scene"] for r in rows[:TOP_K]]
     overlap = sorted(set(top) & set(PROVISIONAL))
+    rng, verdict = _verdict(rows, lambda r: (r["ups"], r["gain"]))
+    incomplete = [f"逐场景结果只有 {len(rows)} 个 < {MIN_SCENES}"] if len(rows) < MIN_SCENES else []
+    if incomplete:
+        verdict = "数据不足"
     meta = cmp_json.get("meta", {})
     return {"baseline": meta.get("a_system"), "candidate": meta.get("b_system"), "rows": rows, "top": top,
-            "provisional": list(PROVISIONAL), "overlap": overlap,
-            "verdict": "一致" if len(overlap) >= MIN_OVERLAP else "不一致",
+            "provisional": list(PROVISIONAL), "overlap": overlap, "overlap_range": list(rng),
+            "verdict": verdict, "incomplete": incomplete,
             "excluded_items": sorted(exclude), "params": {"TOP_K": TOP_K, "MIN_OVERLAP": MIN_OVERLAP}}
 
 
@@ -152,7 +194,8 @@ def uplift_markdown(u, source):
         s.append(f"| {r['rank']} | {r['scene']} | {r['ups']} | {r['downs']} | {r['gain']:.3f} | {r['items']} | "
                  f"{'是' if r['scene'] in u['provisional'] else ''} |")
     s += ["", f"前 {u['params']['TOP_K']}：{' · '.join(u['top'])}", f"临时选定：{' · '.join(u['provisional'])}",
-          f"重合 {len(u['overlap'])} 个（{' · '.join(u['overlap']) or '无'}），线 {u['params']['MIN_OVERLAP']} → **{u['verdict']}**",
+          f"重合 {len(u['overlap'])} 个（{' · '.join(u['overlap']) or '无'}；计入边界并列为 {u['overlap_range'][0]}–{u['overlap_range'][1]} 个），"
+          f"线 {u['params']['MIN_OVERLAP']} → **{u['verdict']}**" + ("（" + "；".join(u["incomplete"]) + "）" if u["incomplete"] else ""),
           "", "结论（加训哪几个场景）由大总管交人定。"]
     return "\n".join(s) + "\n"
 
@@ -167,7 +210,8 @@ def to_markdown(g, source):
         s += ["", "格子太少、不参与排名：" + " · ".join(f"{e['scene']}（{e['cells']} 格）" for e in g["excluded"])]
     s += ["", f"前 {g['params']['TOP_K']}：{' · '.join(g['top'])}",
           f"临时选定：{' · '.join(g['provisional'])}",
-          f"重合 {len(g['overlap'])} 个（{' · '.join(g['overlap']) or '无'}），线 {g['params']['MIN_OVERLAP']} → **{g['verdict']}**",
+          f"重合 {len(g['overlap'])} 个（{' · '.join(g['overlap']) or '无'}；计入边界并列为 {g['overlap_range'][0]}–{g['overlap_range'][1]} 个），"
+          f"线 {g['params']['MIN_OVERLAP']} → **{g['verdict']}**" + ("（" + "；".join(g["incomplete"]) + "）" if g["incomplete"] else ""),
           "", "结论（加训哪几个场景）由大总管在看过本表后下。"]
     return "\n".join(s) + "\n"
 
