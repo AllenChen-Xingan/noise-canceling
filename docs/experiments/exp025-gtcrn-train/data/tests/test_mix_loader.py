@@ -182,6 +182,8 @@ class EndToEnd(unittest.TestCase):
         root = t / "data"
         make_tree(root)
         R = split.load_rules()
+        for r in R["sources"].values():
+            r.pop("expect", None)  # 夹具只有几个文件，不按上游数目核
         cls.splits = t / "splits"
         names = ["librispeech-train-clean-100", "qut-noise", "tum-wind", "openslr28-rir", "demand-train"]
         for n in names:

@@ -96,6 +96,8 @@ class SplitTree(unittest.TestCase):
                 lines.append(f"--rir-id small-{room}-{pos} --room-id Room{room:03d} --rir-rspecifier RIRS_NOISES/simulated_rirs/smallroom/{f.parent.name}/{f.name}")
         (d / "rir_list").write_text("\n".join(lines) + "\n")
         self.R = split.load_rules()
+        for r in self.R["sources"].values():
+            r.pop("expect", None)  # 夹具只有几个文件，不按上游数目核（数目检查另有 Expect 测试）
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -138,6 +140,35 @@ class SplitTree(unittest.TestCase):
         jl.write_text(jl.read_text().replace('"train"', '"dev"', 1))
         with self.assertRaises(SystemExit):
             split.load_split("librispeech-train-clean-100", out)
+
+
+class Expect(unittest.TestCase):
+    """通配符写错时 split 不写表：文件数 / 说话人数对不上上游公布的数目就停。"""
+
+    def test_every_source_has_expect_with_src(self):
+        for n, r in split.load_rules()["sources"].items():
+            self.assertIn("expect", r, n)
+            self.assertTrue(r["expect"].get("src"), n)
+            self.assertTrue({"files", "min_files"} & set(r["expect"]), n)
+
+    def test_exact_count_mismatch_stops(self):
+        rule = {"unit": "file", "expect": {"files": 3}}
+        split.check_expect("x", rule, ["a.wav", "b.wav", "c.wav"])
+        with self.assertRaises(SystemExit):
+            split.check_expect("x", rule, ["a.wav", "b.wav"])
+
+    def test_min_count(self):
+        rule = {"unit": "file", "expect": {"min_files": 2}}
+        split.check_expect("x", rule, ["a.wav", "b.wav", "c.wav"])
+        with self.assertRaises(SystemExit):
+            split.check_expect("x", rule, ["a.wav"])
+
+    def test_speaker_count(self):
+        rule = {"unit": "speaker", "expect": {"files": 3, "units": 2}}
+        fs = ["L/19/1/a.flac", "L/19/2/b.flac", "L/26/1/c.flac"]
+        split.check_expect("x", rule, fs)
+        with self.assertRaises(SystemExit):
+            split.check_expect("x", rule, ["L/19/1/a.flac", "L/19/2/b.flac", "L/19/3/c.flac"])
 
 
 def row(path, split_=None, segments=None, unit=None, sr=16000):
