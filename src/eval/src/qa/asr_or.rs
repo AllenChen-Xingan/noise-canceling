@@ -6,7 +6,8 @@
 //!   不退回允许留存的提供方
 //! - 密钥：环境变量 `OPENROUTER_API_KEY`，没有就读仓库根 `.env.local` 里同名那一行。**绝不打印、不写日志、不进命令行参数**：
 //!   经 `curl -K -` 从标准输入传给 curl，出错信息里若含密钥也先抹掉
-//! - 费用：按每次返回的 `usage.cost` 累计进账本文件，到 [`BUDGET_USD`] 就拒绝再发（大总管 2026-11-25：上限 15 美元）
+//! - 费用：发之前在账本里预留估算、返回后按 `usage.cost` 实际金额结算；`已花 + 在途预留 + 这一条` 超过 [`BUDGET_USD`] 就不发
+//!   （大总管 2026-11-25：上限 15 美元）。账本跨进程加锁、原子落盘、坏了拒跑（[`super::asr_ledger`]）
 //! - 出错：408 · 429 · 5xx 按 `Retry-After`（没有就按指数退避）重试，最多 [`MAX_ATTEMPTS`] 次；400 · 401 · 402 · 403 · 404 不重试
 //! - 送的是 16 位整型 WAV（本机 42model 收浮点 WAV 会挂死，云上也用整型，统一）
 
@@ -104,12 +105,12 @@ pub fn request_body(wav: &[u8], lang: &str) -> Value {
     })
 }
 
-/// 账本：累计花费与调用次数（JSON 文件，按调用即时写）。
-#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct Ledger {
-    pub spent_usd: f64,
-    pub calls: u64,
-}
+use super::asr_ledger as ledger;
+/// 账本（跨进程加锁、原子落盘、先预留后结算），见 [`super::asr_ledger`]。
+pub use super::asr_ledger::Ledger;
+
+/// 发请求前按 `音频秒数 × 标价 × 它` 预留：实际金额略高于标价时也不至于越过上限。
+pub const RESERVE_FACTOR: f64 = 1.5;
 
 /// 一个 OpenRouter 客户端。`url` 可换成本机假服务（测试用）。
 pub struct OpenRouter {
@@ -270,11 +271,9 @@ pub type Job = (Vec<f32>, u32, String);
 type Slot = std::sync::Mutex<Option<Result<(String, f64), String>>>;
 
 impl OpenRouter {
+    /// 新客户端。账本快照只给人看；真正的上限判断每次都在锁里重读账本（坏账本那时就拒发）。
     pub fn new(url: impl Into<String>, key: String, ledger_path: PathBuf) -> OpenRouter {
-        let ledger = std::fs::read_to_string(&ledger_path)
-            .ok()
-            .and_then(|t| serde_json::from_str(&t).ok())
-            .unwrap_or_default();
+        let ledger = ledger::read(&ledger_path).unwrap_or_default();
         OpenRouter {
             url: url.into(),
             key,
@@ -285,30 +284,6 @@ impl OpenRouter {
         }
     }
 
-    fn check_budget(&self) -> Result<(), String> {
-        if self.ledger.spent_usd >= BUDGET_USD {
-            return Err(format!(
-                "识别费已累计 {:.4} 美元，到上限 {BUDGET_USD} 美元，停发",
-                self.ledger.spent_usd
-            ));
-        }
-        Ok(())
-    }
-
-    fn book(&mut self, costs: &[f64]) {
-        for c in costs {
-            self.ledger.spent_usd += c;
-            self.ledger.calls += 1;
-        }
-        if let Some(d) = self.ledger_path.parent() {
-            let _ = std::fs::create_dir_all(d);
-        }
-        let _ = std::fs::write(
-            &self.ledger_path,
-            serde_json::to_string_pretty(&self.ledger).unwrap_or_default(),
-        );
-    }
-
     /// 转写一条音频（16 kHz 浮点样本）。成功后按 `usage.cost` 记账；到上限、出错都返回 `Err`。
     pub fn transcribe(&mut self, x: &[f32], sr: u32, lang: &str) -> Result<String, String> {
         self.transcribe_many(&[(x.to_vec(), sr, lang.to_string())], 1)
@@ -316,11 +291,8 @@ impl OpenRouter {
     }
 
     /// 并发转写一批（最多 `workers` 路同时发；429 / 5xx 各自退避）。结果按输入顺序返回，和完成先后无关。
-    /// 上限在发这批之前查一次：一批最多超出这一批的花费（每条约 0.0001 美元）。
+    /// 每条发之前在账本里预留估算金额（放不下上限就不发、返回 `Err`），返回后按实际金额结算（codex 第 5 轮 P1 #2）。
     pub fn transcribe_many(&mut self, jobs: &[Job], workers: usize) -> Vec<Result<String, String>> {
-        if let Err(e) = self.check_budget() {
-            return jobs.iter().map(|_| Err(e.clone())).collect();
-        }
         let requests = std::sync::atomic::AtomicU64::new(0);
         let next = std::sync::atomic::AtomicUsize::new(0);
         let conn = Conn {
@@ -329,6 +301,7 @@ impl OpenRouter {
             backoff_ms: self.backoff_ms,
             requests: &requests,
         };
+        let ledger_path = &self.ledger_path;
         let slots: Vec<Slot> = jobs.iter().map(|_| std::sync::Mutex::new(None)).collect();
         std::thread::scope(|sc| {
             for _ in 0..workers.clamp(1, jobs.len().max(1)) {
@@ -338,27 +311,30 @@ impl OpenRouter {
                         let Some((x, sr, lang)) = jobs.get(i) else {
                             break;
                         };
-                        let r = conn.transcribe(x, *sr, lang);
+                        let est =
+                            x.len() as f64 / f64::from(*sr) * PRICE_PER_SECOND * RESERVE_FACTOR;
+                        let r = ledger::reserve(ledger_path, est, BUDGET_USD).and_then(|()| {
+                            let r = conn.transcribe(x, *sr, lang);
+                            // 结算失败（写不了账本）就把这一条也当失败：不能确认记上了账
+                            ledger::settle(ledger_path, est, r.as_ref().ok().map(|(_, c)| *c))?;
+                            r
+                        });
                         *slots[i].lock().unwrap_or_else(|e| e.into_inner()) = Some(r);
                     }
                 });
             }
         });
         self.requests += requests.into_inner();
-        let results: Vec<Result<(String, f64), String>> = slots
+        self.ledger = ledger::read(&self.ledger_path).unwrap_or_default();
+        slots
             .into_iter()
             .map(|m| {
                 m.into_inner()
                     .unwrap_or_else(|e| e.into_inner())
                     .unwrap_or(Err("内部错误：没跑到".into()))
+                    .map(|(t, _)| t)
             })
-            .collect();
-        let costs: Vec<f64> = results
-            .iter()
-            .filter_map(|r| r.as_ref().ok().map(|(_, c)| *c))
-            .collect();
-        self.book(&costs);
-        results.into_iter().map(|r| r.map(|(t, _)| t)).collect()
+            .collect()
     }
 }
 
