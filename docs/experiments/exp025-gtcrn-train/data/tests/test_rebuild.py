@@ -11,6 +11,13 @@ sys.path.insert(0, str(HERE))
 import exp013_inputs  # noqa: E402
 import rebuild_exp013 as rb  # noqa: E402
 
+L6323 = rb.EXP013 / "builds" / "20261124165427-6323"  # 本机用 main 现行代码出的 build
+
+
+def upload_log(build=L6323):
+    """仿 `sha256sum -c hashes.txt` 的输出：每个文件一行「路径: OK」。"""
+    return "".join(f"{l.split('  ', 1)[1]}: OK\n" for l in (build / "hashes.txt").read_text().splitlines() if l.strip())
+
 
 class Compare(unittest.TestCase):
     def write(self, d, name, rows):
@@ -40,13 +47,12 @@ class Compare(unittest.TestCase):
             self.assertTrue(rb.drift_covered(), f"代码变了 {rb.code_drift()}，rebuild/ 里没有对着现行代码的 ok 报告")
 
     def test_drift_covered_needs_ok_report_on_current_code(self):
-        """用本机的 6323（main 现行代码出的，旧 4540 个逐个同 17f5）造报告：ok 才算数，代码对不上现行的不算。"""
-        b6323 = rb.EXP013 / "builds" / "20261124165427-6323"
+        """ok 的报告才算数；报告里记的代码对不上现行的不算。"""
         from unittest import mock
 
         with tempfile.TemporaryDirectory() as d, mock.patch.object(rb, "REPORTS", Path(d)):
             self.assertFalse(rb.drift_covered())
-            r = rb.check_dir(b6323, inputs_ok=True)
+            r = rb.check_cloud(L6323, L6323, upload_log(), "原料全对\n")
             self.assertTrue(r["ok"], r)
             (Path(d) / "exp013-x.json").write_text(json.dumps(dict(r, ok=False)))
             self.assertFalse(rb.drift_covered())
@@ -62,25 +68,52 @@ class Compare(unittest.TestCase):
             p.write_text("ab  _tmp/exp013/20261124165427-6323/c1/mix.wav\ncd  _tmp/exp013/%s/c1/owner.wav\n" % rb.BUILD)
             self.assertEqual(rb.read_hashes(p), {"c1/mix.wav": "ab", "c1/owner.wav": "cd"})
 
-    def test_check_existing_build_dir(self):
-        """直接核一份已出好的 build 目录（云上 main 出的那份），不再自己重跑：哈希 · exclude · 版本 · 原料都要过。"""
+    def test_check_cloud(self):
+        """2026-11-25 大总管定的判据：跨平台做不到逐位相同（x86 对 arm64 差约 4e-13），不再要求云上重建逐位同 17f5。
+        要：本机 6323 旧 4540 个逐个同 17f5 · 云上 6323 音频按 hashes.txt 全部对上 · 云上 build 的 exclude 与版本同 17f5、代码同 6323 · 原料全对。
+        「官方源可复现」这次没验证（原料从本机上传），报告里照实写。"""
+        ok = rb.check_cloud(L6323, L6323, upload_log(), "原料全对\n")
+        self.assertTrue(ok["ok"], ok)
+        self.assertEqual(ok["local_vs_old"]["same"], 4540)
+        self.assertEqual(ok["upload"]["ok"], 5020)
+        self.assertTrue(ok["official_source"].startswith("未验证"))
+        self.assertFalse(rb.check_cloud(L6323, L6323, upload_log(), "1 处不对")["ok"])
+        lines = upload_log().splitlines()
+        self.assertFalse(rb.check_cloud(L6323, L6323, "\n".join(lines[1:]), "原料全对")["ok"])  # 少一个
+        bad = [lines[0].replace(": OK", ": FAILED")] + lines[1:]
+        r = rb.check_cloud(L6323, L6323, "\n".join(bad), "原料全对")
+        self.assertFalse(r["ok"])
+        self.assertEqual(len(r["upload"]["failed"]), 1)
         with tempfile.TemporaryDirectory() as d:
-            new = Path(d) / "20991231000000-abcd"
-            new.mkdir()
+            c = Path(d) / "20261125022300-aa9f"
+            c.mkdir()
             for f in ("manifest.json", "exclude.json"):
-                (new / f).write_bytes((rb.OLD / f).read_bytes())
-            (new / "hashes.txt").write_text((rb.OLD / "hashes.txt").read_text().replace(rb.BUILD, new.name))
-            r = rb.check_dir(new, inputs_ok=True)
-            self.assertTrue(r["ok"], r)
-            self.assertEqual(r["same"], 4540)
-            self.assertFalse(rb.check_dir(new, inputs_ok=False)["ok"])
-            m = json.loads((new / "manifest.json").read_text())
+                (c / f).write_bytes((L6323 / f).read_bytes())
+            self.assertTrue(rb.check_cloud(L6323, c, upload_log(), "原料全对")["ok"])
+            m = json.loads((c / "manifest.json").read_text())
             m["versions"]["numpy"] = "0.0"
-            (new / "manifest.json").write_text(json.dumps(m))
-            self.assertFalse(rb.check_dir(new, inputs_ok=True)["ok"])
-            (new / "manifest.json").write_bytes((rb.OLD / "manifest.json").read_bytes())
-            (new / "exclude.json").write_text("{}")
-            self.assertFalse(rb.check_dir(new, inputs_ok=True)["ok"])
+            (c / "manifest.json").write_text(json.dumps(m))
+            self.assertFalse(rb.check_cloud(L6323, c, upload_log(), "原料全对")["ok"])
+            m["versions"] = json.loads((L6323 / "manifest.json").read_text())["versions"]
+            m["code_sha256"] = dict(m["code_sha256"], **{"rooms.py": "0" * 64})
+            (c / "manifest.json").write_text(json.dumps(m))
+            self.assertFalse(rb.check_cloud(L6323, c, upload_log(), "原料全对")["ok"])
+            (c / "manifest.json").write_bytes((L6323 / "manifest.json").read_bytes())
+            (c / "exclude.json").write_text("{}")
+            self.assertFalse(rb.check_cloud(L6323, c, upload_log(), "原料全对")["ok"])
+
+    def test_local_must_match_old(self):
+        """本机那份要是改过一个旧文件，就不算。"""
+        with tempfile.TemporaryDirectory() as d:
+            loc = Path(d) / L6323.name
+            loc.mkdir()
+            for f in ("manifest.json", "exclude.json"):
+                (loc / f).write_bytes((L6323 / f).read_bytes())
+            h = (L6323 / "hashes.txt").read_text().splitlines()
+            old_key = next(iter(rb.read_hashes(rb.OLD / "hashes.txt")))
+            h = [("0" * 64 + l[64:]) if l.endswith("/" + old_key) else l for l in h]
+            (loc / "hashes.txt").write_text("\n".join(h) + "\n")
+            self.assertFalse(rb.check_cloud(loc, loc, upload_log(loc), "原料全对")["ok"])
 
 
 class Inputs(unittest.TestCase):
