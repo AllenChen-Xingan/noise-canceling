@@ -197,6 +197,12 @@ def make_source(cfg):
     return SyntheticSource(cfg) if cfg.data.kind == "synthetic" else LoaderSource(cfg)
 
 
+def owner_frames(batch: dict, n: int) -> torch.Tensor:
+    """批次的「主说话人在」10 ms 帧掩码 (B, n//160)，V-PUMPV 口径（不扣旁人）。"""
+    from losses import owner_mask
+    return torch.as_tensor(np.stack([owner_mask(o, n) for o in batch["owner_ivs"]]))
+
+
 def frames_mask(batch: dict, n: int) -> torch.Tensor:
     """批次的「主说话人单独说话」10 ms 帧掩码 (B, n//160)。"""
     from losses import owner_only_mask

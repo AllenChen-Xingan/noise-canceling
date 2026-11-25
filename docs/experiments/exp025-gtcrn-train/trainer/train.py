@@ -26,7 +26,7 @@ import yaml
 import config as cfgmod
 import losses
 import models
-from data import frames_mask, make_source
+from data import frames_mask, make_source, owner_frames
 from official import load_start_state
 from runrec import EMA, RunDir, check_resume, env_info, git_info, start_record
 from watchdog import HEARTBEAT_S, _Beat, _bounded, _Deadline, _hard_exit, _Signals  # noqa: F401  测试经 train 引用
@@ -86,14 +86,17 @@ def forward_loss(model, crit, batch, device, *, sp_ref=None, teacher=None):
     if teacher is not None and replay.any():
         with torch.no_grad():
             t_spec = teacher(spec, cond_for(teacher, noisy.shape[0], device))
-    return crit(pred, clean, fr, model=model, sp_ref=sp_ref, teacher_spec=t_spec, replay=replay)
+    kw = {}
+    if crit.cfg.w_pump > 0:  # 只在开着时多算主讲人掩码：关着时调用逐字不变
+        kw["owner_frames"] = owner_frames(batch, clean.shape[1]).to(device)
+    return crit(pred, clean, fr, model=model, sp_ref=sp_ref, teacher_spec=t_spec, replay=replay, **kw)
 
 
 def loss_cfg(cfg, w_lvl: float, w_on: float) -> losses.LossCfg:
     lc = cfg.loss
     return losses.LossCfg(w_lvl=w_lvl, w_on=w_on, lvl_margin_db=lc.lvl_margin_db, sp=lc.sp, w_sp=lc.w_sp,
                           kd=lc.kd, w_kd=lc.w_kd, level_norm=lc.level_norm, level_floor=lc.level_floor,
-                          on_skip_leading=lc.on_skip_leading)
+                          on_skip_leading=lc.on_skip_leading, w_pump=lc.w_pump)
 
 
 @torch.no_grad()

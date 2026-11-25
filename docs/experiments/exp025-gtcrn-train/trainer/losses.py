@@ -6,11 +6,13 @@
 - L_lvl 人声被压低：可微地复刻 V-SPLVL（正本 `src/eval/src/verifiers/perceptual.rs` `v_splvl`）的读数 d（dB，≤ 0），
   罚 relu(−d − 余量)，余量默认 2 dB。
 - L_on 字头：可微地复刻 V-ONSET（正本同文件 `v_onset`）的读数「字头损失 − 整段有声损失」，罚 relu(超出)。
+- L_pump 人声忽大忽小：可微地复刻 V-PUMPV（正本 `src/eval/src/verifiers/speech.rs` `v_pumpv`）的读数——有声 100 ms 窗上
+  「输出投影到干净轨的能量 ÷ 干净轨能量」（dB）的方差（dB²），直接罚它。开关 w_pump，默认 0（大总管派活，人同意 D107）。
 - L_sp（拉回原权重）· L_kd（原模型当老师，只在回放样本上）：开关，默认关（034 papers 第二节建议 7）。
 - 电平归一（Braun）：开关，默认关。
 
 **交叉校验**（CLAUDE.md 五.5）：`splvl_db` / `onset_excess_db` 就是参与反传的那份代码，
-测试 `tests/test_losses_parity.py` 用 `parity_rs`（只读调用 vdn-eval）对拍；`paint` / `truth_from_clean` 同样对拍。
+`pumpv_var` 同样，测试 `tests/test_losses_parity.py` 用 `parity_rs`（只读调用 vdn-eval）对拍；`paint` / `truth_from_clean` 同样对拍。
 **样本不足**（027 3.2 第 3 条）：与 verifier 读「待测」的条件相同时，该段该项跳过、不进分母；整批都无效时该项为 0。
 """
 from __future__ import annotations
@@ -29,6 +31,9 @@ ONSET_F = 320  # 20 ms，perceptual.rs v_onset F
 ONSET_W = 800  # 50 ms，perceptual.rs v_onset W
 SPLVL_MIN_FRAMES = 50  # perceptual.rs v_splvl：n < 50 读「待测」
 ONSET_MIN = 3  # perceptual.rs v_onset：字头 < 3 读「待测」
+PUMP_W = 1600  # 100 ms，speech.rs v_pumpv w
+PUMP_MIN_VOICED = 8  # 一窗 10 个 10 ms 帧里有声 ≥ 8 才算（voiced·160·10 ≥ w·8）
+PUMP_MIN_WINDOWS = 10  # 有声窗 < 10 读「待测」
 
 
 # ---------- STFT（与官方 HybridLoss 内部的 istft 同参数） ----------
@@ -88,6 +93,11 @@ def owner_only_mask(owner_ivs, interf_ivs, n: int) -> np.ndarray:
     return paint(owner_ivs, nf) & ~paint(interf_ivs, nf)
 
 
+def owner_mask(owner_ivs, n: int) -> np.ndarray:
+    """V-PUMPV 用的帧：masks(truth).owner（主讲人在，不扣旁人，guard = 0）。"""
+    return paint(owner_ivs, n // MASK_FRAME)
+
+
 # ---------- 可微读数 ----------
 
 def db10(x: torch.Tensor) -> torch.Tensor:
@@ -120,6 +130,32 @@ def splvl_db(out: torch.Tensor, clean: torch.Tensor, frames: torch.Tensor):
     ps = st(torch.maximum(ps, pc * 1e-4), ps)
     d = torch.clamp(db10(ps) - db10(pc), max=0.0)  # 上限 0 不直通：「没被压低」本来就不该有梯度
     return torch.where(valid, d, torch.zeros_like(d)), valid
+
+
+def pumpv_var(out: torch.Tensor, clean: torch.Tensor, owner: torch.Tensor):
+    """V-PUMPV 读数（dB²）。out/clean (B, N)，owner bool (B, N//160)。返回 (var (B,), valid (B,), 有声窗数 list)。
+
+    与正本同：不重叠 100 ms 窗、从 0 开始、只取整窗；窗里 10 个 10 ms 帧（看每帧起点所在的掩码帧）有声 ≥ 8；
+    干净轨能量 ≤ 1e-12 的窗跳过；方差是总体方差（除以窗数）；db10 下限 1e-20。"""
+    b = out.shape[0]
+    n = min(out.shape[1], clean.shape[1])
+    nw = n // PUMP_W
+    per = PUMP_W // MASK_FRAME
+    o = out[:, : nw * PUMP_W].reshape(b, nw, PUMP_W)
+    c = clean[:, : nw * PUMP_W].reshape(b, nw, PUMP_W)
+    po, pc = _proj(o, c)
+    m = torch.zeros(b, nw * per, dtype=torch.bool, device=owner.device)
+    k = min(owner.shape[1], nw * per)
+    m[:, :k] = owner[:, :k].bool()  # 掩码帧不够长时，超出部分按无声（owner_at 的 unwrap_or(false)）
+    voiced = m.reshape(b, nw, per).sum(-1) >= PUMP_MIN_VOICED
+    use = voiced.to(pc.device) & (pc > 1e-12)
+    r = db10(po) - db10(pc)
+    w = use.to(r.dtype)
+    cnt = w.sum(1)
+    mean = (r * w).sum(1) / torch.clamp(cnt, min=1)
+    var = (((r - mean[:, None]) ** 2) * w).sum(1) / torch.clamp(cnt, min=1)
+    valid = cnt >= PUMP_MIN_WINDOWS
+    return torch.where(valid, var, torch.zeros_like(var)), valid, [int(x) for x in cnt.tolist()]
 
 
 def onset_plan(clean_np: np.ndarray, n_out: int, skip_leading: bool = False):
@@ -204,6 +240,7 @@ class LossCfg:
     level_norm: bool = False
     level_floor: float = 1e-3  # 归一除数的下限（034 修正 3-③：近静音段防除以 0）
     on_skip_leading: bool = False  # 见 onset_plan；默认与 V-ONSET 正本同口径
+    w_pump: float = 0.0  # 人声忽大忽小（V-PUMPV 复刻）的权重；0 = 关，训练逐值不变
 
 
 def active_rms(clean: torch.Tensor, frames: torch.Tensor, floor: float) -> torch.Tensor:
@@ -243,8 +280,9 @@ class TrainLoss(torch.nn.Module):
         self.hybrid = official_loss_module().HybridLoss()
 
     def forward(self, pred_spec, clean, frames, *, model=None, sp_ref=None,
-                teacher_spec=None, replay=None):
-        """pred_spec (B,257,T,2)；clean (B,N) 波形；frames (B,N//160) 主说话人单独说话的帧。
+                teacher_spec=None, replay=None, owner_frames=None):
+        """pred_spec (B,257,T,2)；clean (B,N) 波形；frames (B,N//160) 主说话人单独说话的帧；
+        owner_frames (B,N//160) 主说话人在的帧（V-PUMPV 口径，w_pump > 0 时必须给）。
 
         返回 (总损失, 各项字典)。各项字典里的读数是 float，直接写日志。
         """
@@ -256,7 +294,7 @@ class TrainLoss(torch.nn.Module):
             p_h, t_h = pred_spec * g[:, None, None, None], true_spec * g[:, None, None, None]
         total = self.hybrid(p_h, t_h)
         logs = {"hybrid": total.item()}
-        need_wav = cfg.w_lvl > 0 or cfg.w_on > 0
+        need_wav = cfg.w_lvl > 0 or cfg.w_on > 0 or cfg.w_pump > 0
         if need_wav:
             out = istft(pred_spec, n)
         if cfg.w_lvl > 0:
@@ -269,6 +307,13 @@ class TrainLoss(torch.nn.Module):
             l_on = masked_mean(torch.relu(e), v)
             total = total + cfg.w_on * l_on
             logs |= {"on": l_on.item(), "on_valid": int(v.sum())}
+        if cfg.w_pump > 0:
+            if owner_frames is None:
+                raise ValueError("w_pump > 0 时要给 owner_frames（主讲人掩码，V-PUMPV 口径）")
+            pv, v, _ = pumpv_var(out, clean, owner_frames.to(out.device))
+            l_pump = masked_mean(pv, v)
+            total = total + cfg.w_pump * l_pump
+            logs |= {"pump": l_pump.item(), "pump_valid": int(v.sum())}
         if cfg.sp:
             l_sp = l2sp(model, sp_ref)
             total = total + cfg.w_sp * l_sp
