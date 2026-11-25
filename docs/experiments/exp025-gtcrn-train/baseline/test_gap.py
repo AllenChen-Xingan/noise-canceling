@@ -101,12 +101,12 @@ def compare_json(by_scene, system_a="gtcrn", system_b="dfn3"):
     return {"meta": {"a_system": system_a, "b_system": system_b}, "scopes": scopes}
 
 
-def baseline_card(report_only=("V-TSOS",)):
-    """只用来读「哪些项是判定项」的基线 scorecard.json。"""
+def baseline_card(report_only=("V-TSOS",), clips=10):
+    """基线 scorecard.json：认哪些是判定项，并给每个场景的段数（提升空间表据此核覆盖）。每个场景一张卡、`clips` 段。"""
     items = [{"v": v, "report_only": v in report_only, "mean": 0.0, "better": "lower", "status": "pass"}
              for v in ("V-NR", "V-ESTOI", "V-TSOS", "V-A", "V-B", "V-C")]
-    return {"scenes": [{"scene": "cafe", "tier": "common", "device": "mba-builtin", "system": "gtcrn",
-                        "items": items, "listen": {"models": []}}]}
+    return {"scenes": [{"scene": s, "tier": "common", "device": "mba-builtin", "system": "gtcrn", "clips": clips,
+                        "items": items, "listen": {"models": []}} for s in ALL15]}
 
 
 class Uplift(unittest.TestCase):
@@ -210,6 +210,19 @@ class Completeness(unittest.TestCase):
         cj = compare_json(full)
         cj["scopes"][0]["only_a"] = ["cafe-c00-mba"]
         self.assertEqual(gap.uplift_table(cj, baseline_card())["verdict"], "数据不足")
+
+    def test_uplift_shared_missing_clips_is_insufficient(self):
+        """codex 第 3 轮 P1 #1：两边都缺同一批段时 only_a / only_b 是空的；要拿基线成绩单里每个场景的段数核覆盖。"""
+        items = ["V-NR", "V-ESTOI", "V-A", "V-B", "V-C"]
+        cj = compare_json({s: [(v, "up", -1.0, "lower") for v in items] for s in ALL15})  # 每个场景配对 10 段
+        self.assertNotEqual(gap.uplift_table(cj, baseline_card(clips=10))["verdict"], "数据不足")
+        u = gap.uplift_table(cj, baseline_card(clips=32))  # 基线每个场景 32 段，比较只配上 10 段
+        self.assertEqual(u["verdict"], "数据不足")
+        self.assertTrue(any("段数" in x for x in u["incomplete"]), u["incomplete"])
+        card = baseline_card()
+        for c in card["scenes"]:
+            del c["clips"]
+        self.assertEqual(gap.uplift_table(cj, card)["verdict"], "数据不足", "没有覆盖信息也判数据不足")
 
 
 if __name__ == "__main__":
