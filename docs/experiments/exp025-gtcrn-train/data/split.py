@@ -4,11 +4,13 @@
   不依赖 numpy 版本、文件系统列目录的顺序
 - 按时段切的（QUT · DEMAND）：每个文件按样本号切几段，段界写进清单
 - 输出（进仓）：`splits/<来源>.jsonl`（每文件一行：路径 · 字节 · sha256 · 单位 · 份 / 段界）+ `splits/<来源>.json`（摘要：
-  规则哈希 · 种子 · 每份单位数与文件数 · jsonl 的 sha256）
+  规则哈希 · 种子 · 每份单位数与文件数 · jsonl 的 sha256）。正文超 GZIP_OVER 时存成 `<来源>.jsonl.gz`（auto-commit hook
+  不收超 10 MB 的文件）；摘要里的哈希始终是解压后正文的
 用法（云上）：python3 split.py --root /workspace [--only qut-noise] [--inventory]
 """
 import argparse
 import glob as globmod
+import gzip
 import hashlib
 import json
 import re
@@ -18,6 +20,7 @@ from pathlib import Path
 
 
 HERE = Path(__file__).resolve().parent
+GZIP_OVER = 8 << 20  # 留余量，低于 hook 的 10 MB 线
 RULES = HERE / "split_rules.json"
 OUT = HERE / "splits"
 EXP013 = HERE.parents[1] / "exp013-scene-suite"
@@ -227,6 +230,10 @@ def summary(name, rule, seed, rows, jsonl_bytes):
     return s
 
 
+def sha256_bytes(b):
+    return hashlib.sha256(b).hexdigest()
+
+
 def write(name, rule, seed, rows, out_dir=OUT):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -234,9 +241,12 @@ def write(name, rule, seed, rows, out_dir=OUT):
     jl, js = out_dir / f"{name}.jsonl", out_dir / f"{name}.json"
     if js.exists():
         old = json.loads(js.read_text())
-        if old["jsonl_sha256"] != hashlib.sha256(body).hexdigest():
+        if old["jsonl_sha256"] != sha256_bytes(body):
             raise SystemExit(f"{js.name} 已存在且内容不同：切分表进仓后不原地覆盖（CLAUDE.md 五.1）；要改切法先改规则、换种子并说明")
-    jl.write_bytes(body)
+    big = len(body) > GZIP_OVER
+    keep, drop = (jl.with_name(jl.name + ".gz"), jl) if big else (jl, jl.with_name(jl.name + ".gz"))
+    drop.unlink(missing_ok=True)  # 同内容换存法（上面已核过哈希），不会丢东西
+    keep.write_bytes(gzip.compress(body, compresslevel=9, mtime=0) if big else body)
     s = summary(name, rule, seed, rows, body)
     js.write_text(json.dumps(s, ensure_ascii=False, indent=1) + "\n")
     return s
@@ -246,8 +256,11 @@ def load_split(name, out_dir=OUT):
     """读一张切分表并核摘要里记的哈希；对不上即报错（loader 与 leakcheck 都走这里）。"""
     out_dir = Path(out_dir)
     s = json.loads((out_dir / f"{name}.json").read_text())
-    body = (out_dir / f"{name}.jsonl").read_bytes()
-    if hashlib.sha256(body).hexdigest() != s["jsonl_sha256"]:
+    jl, gz = out_dir / f"{name}.jsonl", out_dir / f"{name}.jsonl.gz"
+    if jl.exists() == gz.exists():
+        raise SystemExit(f"{name}：.jsonl 与 .jsonl.gz 要有且只有一份（现在{'两份都在' if jl.exists() else '都没有'}）")
+    body = jl.read_bytes() if jl.exists() else gzip.decompress(gz.read_bytes())
+    if sha256_bytes(body) != s["jsonl_sha256"]:
         raise SystemExit(f"{name}.jsonl 和摘要里的哈希对不上：切分表被改过")
     return s, [json.loads(x) for x in body.decode().splitlines()]
 
