@@ -173,3 +173,9 @@ codex 要的是一套持久的操作日志、按账号分开的看门狗进程�
 - P2 #3：exec 回 `truncated=True` 时报错，不判完成。
 
 测试：`test_status_reader_runs_in_real_python`（本机真 Python 跑三种情况：不存在 / 正常且正文为 NOLOG / 日志路径是目录读出错）· `test_truncated_status_output_is_an_error` · 原 `test_unreadable_log_is_an_error_even_if_rc_is_zero`。共 95 条全过。
+
+## 第 13 轮（2026-11-25，模型 gpt-6-astra）
+
+结果：P0×0 P1×0 P2×1。**连续第 1 轮无 P0/P1。**
+
+- P2 #1 读取器按字节裁过日志（单行超 256 KB）时，状态没传给调用方：分成 `log_bytes_cut`、`log_lines_cut` 两个字段传出；`job-wait` 遇字节裁剪时在 stderr 提示用 `rp.py get` 取完整日志。测试 `test_status_reader_runs_in_real_python` 加 300001 字节单行的情况。共 95 条全过。

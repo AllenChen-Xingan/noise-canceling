@@ -190,6 +190,8 @@ def cmd_job_start(cli, a):
 
 def cmd_job_wait(cli, a):
     st = O.wait_job(cli, a.pod, a.job, a.timeout)
+    if st.get("log_bytes_cut"):  # 评审第 13 轮 #1：日志尾按字节裁过，最前面一行可能不完整
+        print("（日志很长，只取了最后 256 KB 里的最后几行；完整日志用 rp.py get 取回）", file=sys.stderr)
     sys.stdout.write(st["log"])
     sys.exit(st["rc"] or 0)
 

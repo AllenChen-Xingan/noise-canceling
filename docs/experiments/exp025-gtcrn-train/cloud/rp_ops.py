@@ -365,7 +365,8 @@ try:
     if log is not None:
         lines = log.decode("utf-8", "replace").splitlines(True)
         out["log"] = "".join(lines[-n:])
-        out["log_partial"] = cut or len(lines) > n
+        out["log_bytes_cut"] = cut  # 按字节裁过：最前面那行可能不完整
+        out["log_lines_cut"] = len(lines) > n
 except Exception as e:
     out["error"] = type(e).__name__ + ": " + str(e)
 print(json.dumps(out))
@@ -384,7 +385,8 @@ def job_status(cli: Client, pod_id: str, job: str, jobs_dir: str = "/root/jobs",
     raw = st.get("rc_raw")
     rc = int(raw) if raw and raw.lstrip("-").isdigit() else None
     # 只有读到合法退出码才算完；.rc 空着（正在写）或乱码都当没完（评审第 1 轮 #11）
-    return {"done": rc is not None, "rc": rc, "log": st.get("log", ""), "log_seen": bool(st.get("log_exists"))}
+    return {"done": rc is not None, "rc": rc, "log": st.get("log", ""), "log_seen": bool(st.get("log_exists")),
+            "log_bytes_cut": bool(st.get("log_bytes_cut")), "log_lines_cut": bool(st.get("log_lines_cut"))}
 
 
 def wait_job(cli: Client, pod_id: str, job: str, timeout_s: float, poll_s: float = 15,

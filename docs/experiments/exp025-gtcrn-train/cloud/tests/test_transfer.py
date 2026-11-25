@@ -138,6 +138,10 @@ class TestTransfer(Base):
                 f.write("0\n")
             st = run()
             self.assertEqual((st["rc_raw"], st["log_exists"], st["log"]), ("0", True, "NOLOG\n"))
+            with open(d + ".log", "w") as f:
+                f.write("x" * 300001)  # 单行超过 256 KB：标出按字节裁过（第 13 轮 #1）
+            st = run()
+            self.assertTrue(st["log_bytes_cut"])
             os.remove(d + ".log")
             os.mkdir(d + ".log")  # 读出错但不是「不存在」（第 12 轮 #1）
             self.assertIn("error", run())
