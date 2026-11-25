@@ -4,7 +4,8 @@
 - DevSet：定长、按下标确定（map 风格），每次评估读同一批
 - torch_iterable：整批出 dict；第 k 批 = 样本 k·B … k·B+B−1，只由 (seed, k, B) 决定，和 num_workers 无关；
   支持 start_batch 续训。DataLoader 用 batch_size=None
-- 训练 build：分片索引里的切分表哈希 + 分片哈希 + 配方 + 混音代码的哈希 → build_id。启动时要求仓里
+- 训练 build：分片索引本身的哈希 + 切分表哈希 + 分片哈希 + 配方 + 代码（混音 · 分片 · 交集检查 · 切分）的哈希 → build_id。
+  登记时交集检查查规则里每个来源的切分表（含不进分片的终测原料池）。启动时要求仓里
   `builds/<build_id>/build.json` 存在且交集检查通过（register_build 生成），否则抛错（027 第六节第 4 条）
 """
 import hashlib

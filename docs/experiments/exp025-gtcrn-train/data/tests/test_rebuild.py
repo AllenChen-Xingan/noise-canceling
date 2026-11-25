@@ -59,6 +59,9 @@ class Compare(unittest.TestCase):
             stale = dict(r, new_code_sha256=dict(r["new_code_sha256"], **{"rooms.py": "0" * 64}))
             (Path(d) / "exp013-y.json").write_text(json.dumps(stale))
             self.assertFalse(rb.drift_covered())
+            v1 = {k: v for k, v in r.items() if k != "criterion"}  # 第 1 版判据出的报告没有 criterion（codex 第 1 轮 P1 #3）
+            (Path(d) / "exp013-v1.json").write_text(json.dumps(v1))
+            self.assertFalse(rb.drift_covered())
             (Path(d) / "exp013-z.json").write_text(json.dumps(r))
             self.assertTrue(rb.drift_covered())
 
