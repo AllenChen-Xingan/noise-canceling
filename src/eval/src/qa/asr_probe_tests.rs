@@ -216,3 +216,25 @@ fn cost_unknown_success_counts_as_halted() {
     );
     assert_eq!(r["pass"], false);
 }
+
+/// 同一段音频（sha256 相同）出现在两个文件里（冒烟的 `*-gtcrn.wav` 与 `*-out.wav`）：只探一次，重复的文件名记下来；
+/// 缓存不认得的跳过（cloudrun 2026-11-25：20 个文件去重后 15 条）。
+#[test]
+fn pick_dedups_by_sha() {
+    let f = |n: &str, s: &str| (n.to_string(), s.to_string());
+    let files = vec![
+        f("t1-clean.wav", "aa"),
+        f("t1-gtcrn.wav", "cc"),
+        f("t1-mix.wav", "bb"),
+        f("t1-out.wav", "cc"),
+        f("x-unknown.wav", "zz"),
+    ];
+    let langs: std::collections::BTreeMap<String, String> = [("aa", "en"), ("bb", "en"), ("cc", "en")]
+        .iter()
+        .map(|(a, b)| (a.to_string(), b.to_string()))
+        .collect();
+    let (picked, dup) = pick(&files, &langs);
+    let names: Vec<&str> = picked.iter().map(|p| p.0.as_str()).collect();
+    assert_eq!(names, ["t1-clean.wav", "t1-gtcrn.wav", "t1-mix.wav"]);
+    assert_eq!(dup, ["t1-out.wav"]);
+}

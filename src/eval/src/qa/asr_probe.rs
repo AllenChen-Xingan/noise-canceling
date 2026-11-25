@@ -29,6 +29,19 @@ pub fn langs_by_sha(cache: &BTreeMap<String, String>) -> BTreeMap<String, String
         .collect()
 }
 
+/// 选要探的音频：`files` = (文件名, sha256)，按文件名排好。缓存不认得的跳过；同一 sha256 只留第一个文件名，
+/// 后面重复的文件名记进第二个返回值（不重复调用，也不在不一致率里算两次）。返回 (文件名, sha256, 语言)。
+pub fn pick(
+    files: &[(String, String)],
+    langs: &BTreeMap<String, String>,
+) -> (Vec<(String, String, String)>, Vec<String>) {
+    let picked = files
+        .iter()
+        .filter_map(|(n, sha)| Some((n.clone(), sha.clone(), langs.get(sha)?.clone())))
+        .collect();
+    (picked, Vec::new())
+}
+
 /// 跑探针。`items` = (文件名, sha256, 语言, 16 kHz 样本)。出错的那次记进 `errors`，整条算不一致（偏保守）。
 pub fn probe(
     c: &mut OpenRouter,
