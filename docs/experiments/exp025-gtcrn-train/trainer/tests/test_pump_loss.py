@@ -142,3 +142,29 @@ def test_forward_loss_passes_owner_frames_only_when_on(monkeypatch):
     train.forward_loss(m, _crit(), b, torch.device("cpu"))
     _, logs = train.forward_loss(m, _crit(w_pump=1.0), b, torch.device("cpu"))
     assert seen == [False, True] and logs["pump_valid"] == 1
+
+
+def test_training_with_w_pump_zero_never_touches_the_term(tmp_path, monkeypatch):
+    """w_pump = 0：整条训练不算这一项，也不多算主讲人掩码；检查点与默认配置逐值相同。"""
+    import cmp_ckpt
+    import data
+    from test_train import _cfg
+
+    def boom(*a, **k):
+        raise AssertionError("w_pump = 0 时不该被调用")
+    monkeypatch.setattr(losses, "pumpv_var", boom)
+    monkeypatch.setattr(data, "owner_frames", boom)
+    monkeypatch.setattr(train, "owner_frames", boom)
+    train.train(_cfg(tmp_path / "a"))
+    train.train(_cfg(tmp_path / "b", **{"loss.w_pump": 0.0}))
+    r = cmp_ckpt.compare(torch.load(tmp_path / "a/t/ckpt/step-0000006.pt", weights_only=False),
+                         torch.load(tmp_path / "b/t/ckpt/step-0000006.pt", weights_only=False), tol=0.0)
+    assert r["pass"], r
+
+
+def test_training_with_w_pump_on_logs_the_term(tmp_path):
+    from test_train import _cfg
+    train.train(_cfg(tmp_path, **{"loss.w_pump": 0.1}))
+    import json
+    rows = [json.loads(x) for x in (tmp_path / "t" / "metrics.jsonl").read_text().splitlines()]
+    assert any("pump_valid" in r for r in rows if "dev" not in r)
