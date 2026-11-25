@@ -154,7 +154,7 @@ bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /
 
 cloudrun 在同一台机器上带回两份输出：
 - 在 6323 音频的上一级目录跑 `sha256sum -c hashes.txt > upload-verify.log`（每行「路径: OK」）
-- 在仓库根下跑 `python3 docs/experiments/exp025-gtcrn-train/data/exp013_inputs.py --verify --data <数据根>/vdn-data | tee inputs-verify.log`（要「原料全对」）。这个脚本在本分支上
+- 在仓库根下跑 `python3 docs/experiments/exp025-gtcrn-train/data/exp013_inputs.py --verify --data <数据根>/vdn-data | tee inputs-verify.log`（要「原料全对」）。这个脚本在本分支上。`python3` 指装了钉死依赖的环境（Python 3.12.14 · numpy 2.5.4 · scipy 1.18.1 · soundfile 0.14.0，`cloud_steps.sh setup` 装的 `.venv`，或按 main 的 `requirements.lock` 装的环境）；系统自带的 python3 没有 soundfile，会报错
 
 traindata 在本机跑：
 `python3 rebuild_exp013.py --check-cloud --local ../../exp013-scene-suite/builds/20261124165427-6323 --cloud <aa9f 目录> --upload-log upload-verify.log --inputs-log inputs-verify.log`
