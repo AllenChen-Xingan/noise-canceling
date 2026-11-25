@@ -34,3 +34,15 @@ def test_train_refuses_before_touching_run_dir(tmp_path, monkeypatch):
 def test_git_info_in_repo_has_commit():
     g = runrec.git_info()
     assert len(g["commit"]) == 40 and isinstance(g["dirty"], bool)
+
+
+def test_git_info_times_out_instead_of_hanging(monkeypatch):  # codex gate-v4 第 3 轮 #2：网络盘上 git 卡住
+    seen = {}
+
+    def slow(*a, **k):
+        seen["timeout"] = k.get("timeout")
+        raise runrec.subprocess.TimeoutExpired(a[0], k.get("timeout"))
+    monkeypatch.setattr(runrec.subprocess, "run", slow)
+    with pytest.raises(RuntimeError, match="git"):
+        runrec.git_info()
+    assert seen["timeout"] == runrec.GIT_TIMEOUT_S and 0 < runrec.GIT_TIMEOUT_S <= 120
