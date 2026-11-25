@@ -9,9 +9,12 @@
 
 | 手下 | 线 | 管的实体 | 状态 |
 |---|---|---|---|
-| traindata | 训练数据下载 · 切分 · 混音 | 训练数据集 · 数据切分 · 混音配方 | 待派 |
-| trainer | 训练器 + 两组损失 + 注意力头变体 | 训练器 · 训练损失 · 模型变体 | 待派 |
-| cloudrun | 云上训两组 | 云训练机 · 检查点 | 等人开 RunPod 账号 |
+| evalcmp | 配对比较子命令 + 早期回声参考轨 · #155 · `feat/eval-paired-compare` · `../noise_canceling-evalcmp` | 评测器 · 评测参考轨 · 成绩单 | 已报到（noise-canceling-evalcmp-aa） |
+| traindata | 训练数据下载 · 切分 · 混音配方 · #156 · `exp/025-train-data` · `../noise_canceling-traindata` | 训练数据集 · 数据切分 · 混音配方 | 已报到（noise-canceling-traindata-cc） |
+| trainer | 训练器 · 损失 · 注意力头与条件输入 · #157 · `exp/025-trainer` · `../noise_canceling-trainer` | 训练器 · 训练损失 · 模型变体 | 已报到（noise-canceling-trainer-95） |
+| cloudrun | Chrome 开 RunPod · 网络盘 · 开关机脚本 · #158 · `feat/cloud-runpod` · `../noise_canceling-cloudrun` | RunPod 账号与密钥 · 网络存储盘 · 云训练机 | 已报到（noise-canceling-cloudrun-8b）；花钱动作先报 |
+
+- 2026-11-16 定稿计划 014 + 调研 034 · 035 + D96–D99 经 PR #154 合并；四个手下从 main 6abdbcc2 开 worktree
 
 ## 上一件（b10–b18，2026-11-03 起）
 
@@ -357,3 +360,40 @@
 - 2026-11-13 natural 申请名额：批冒烟 3 段并行（限 15 min，不拿 heavy.lock）；正式跑先用 80 段子集，等 realmtg 交回名额；结果相当就选不混回，不补全量；去舒适噪声两组不做。natural 自报未申请就跑了一次 cargo test（约 1 min），已记
 - 2026-11-13 派子代理核实网络会议 / 通话真实录音数据集（DNS 盲测真实录音、AEC 近端单讲），只读网页，结果在 scratchpad
 - 2026-11-13 21:40 natural 冒烟完、名额已还：每条约 24 s（realmtg 约 62 s/条，差异待查）；80 段正式跑报约 1.5 h，排在 realmtg 之后；评分指纹一致 c91c80bdb0ae4696
+- 2026-11-16 名额 → trainer：cargo build --release parity_rs（限 15 min）；trainer 报模型变体 A/B 12 测试过，参数量 23,669 可训练 + 24,576 ERB 固定 = 48,245
+- 2026-11-16 trainer 归还名额（25 s，Cargo.lock 已提交）；名额 → evalcmp：scorecard 单测 + vdn-schema 导出 + 3 个集成测试（冷编译，限 25 min）
+- 2026-11-16 evalcmp 归还名额：scorecard 单测 65/65 · schema +7 −0 与正本一致 · 集成测试 12+11+5+2 全过（自报，验收时大总管复跑）
+- 2026-11-16 trainer 自报未申请名额跑单批过拟合探测（CPU 136 s，墙钟 56 min：电池 + 降频），已结束无残留；已记、以后先申请 + caffeinate + 记电源。读数：起点单批损失 10.19→0.95（150 步）、随机初始化 38.07→4.84；原检查点复现官方 enh.wav 最大差 1 个量化步；45 条测试过（自报）
+- 2026-11-24 大总管（重启后接 e1）名额 → trainer：CPU 小样冒烟 smoke.py --config configs/smoke-cpu.yaml（限 10 min，电池、负载约 21，只冒烟不计时）
+- 2026-11-24 trainer 归还名额：CPU 小样冒烟三项过（初始损失 4.388 · 单批过拟合 7.64→−0.08 · 原检查点最大差 3.05e-5 = 1 量化步），墙钟 209 s，无残留；报告 trainer/smoke_reports/（自报，验收时复跑）
+- 2026-11-24 名额 → trainer：新判据 CPU 小样冒烟重跑（限 10 min）；trainer codex 10 轮停（第 9 轮起故障注入类看门狗记 P2，人未参与，大总管定），待开 issue T-1 T-2
+- 2026-11-24 trainer 还名额：新判据冒烟第一次没过（过拟合下限 −10.04 被官方分母下限顶住、到不了），改下限为「目标 + 40 dB 白噪声」（−0.41）后三件过；事后改判据，大总管认可，要求补报过拟合后 SI-SNR
+- 2026-11-24 大总管验收 trainer：本机重跑 pytest 119 passed / 4 skipped（73 s，电池 24%）；文件最大 579 行；issue #159 #160 已开；PR 排在 evalcmp → cloudrun → traindata 之后
+- 2026-11-25 00:30Z cloudrun：第一批 21 包 18.15 GB + E3 3 文件下完、哈希核对过；CPU 机已删，0 台在跑；累计估 1.15 美元；网络盘 150 GB 保留（约 10.5 美元/月，现用 33 GB）。E3 第 8 次重试才成，traindata 待加长间隔。下一步 cloudrun 自审 + codex → PR #158。
+- 2026-11-25 00:45Z 大总管放行：cloudrun 开一台 CPU 机（上限 3 h / 1 美元），先跑 traindata split→shard→register，再在 evalcmp 合并后跑 exp013 新 build（480 段带早期回声参考，音频留网络盘）；builds 小文件由 evalcmp 提交。上云出 build 是大总管定的技术题。
+- 2026-11-25 00:50Z evalcmp：功能与测试已完成（scorecard 68/68、exp013 Python 77 条、clippy、tidy 全过，自报），codex 第 1 轮在跑；发 1 个重活名额给 codex 修复后的 e2e 重跑；此前自行跑的 e2e 补记现状页、已认可。
+- 2026-11-25 00:25Z cloudrun 开 CPU 机 8mnlr0uvh5pu4a（cpu3c 4 核，US-MO-1，挂 bzpbedqdsi，0.12 美元/h），最晚 03:30Z 自删；用 traindata 7b6ac21e 跑 inventory→split→shard→register→pack。
+- 2026-11-25 大总管定（人未参与）：exp013 新 build 本机出一份（约 30 s CPU，音频进 _tmp，小文件进 builds/<id>/）+ 云上从同一批素材再出一份交叉核对；cloudrun 从本机上传 exp013 素材约 3.3 GB（含 exp013 版 DEMAND，云上 16 kHz 版不同）到网络盘新目录；验收 material_index.sha256 一致、files=1994。改掉此前「只在云上出」。
+- 2026-11-25 00:42Z 人在 history 会话批准腾硬盘：主仓 _tmp/ 下 11-24 前的目录全删（含 exp002-venv、exp013 旧 build 音频、scorecard/）。处理：evalcmp 重建 venv 并冻结依赖、按仓内清单重出旧 build 核哈希；旧成绩单以仓内为准，clips.jsonl 等云上基线重生成。
+- 2026-11-25 01:15Z 本机 tmux 会话 vdn 消失，四个手下全部退出（原因未查明）。云上：traindata split 失败 rc=1（OpenSLR28 RWCP_type4_rir_000l.wav 不在任何 rir_list，查不到房间号，切分拒绝按文件切），素材上传中断在 650 MB；机器空转，大总管取回 split.log/prod.log 到 _tmp/20261125-cloudrun-shard/ 后删机 8mnlr0uvh5pu4a，账上 0 台，累计估 1.26 美元。大总管亲手重跑 evalcmp：exp013 Python 81/81、tidy、vdn-eval 单元 171 与集成测试全过（spectrum_golden 之后被中断未跑完）。
+- 2026-11-25 01:29Z cloudrun 开 CPU 机 e49nwj60n7hfpg（最晚 04:34Z 删），跑 traindata 8b4194d3 六步 + 续传 exp013 素材。cloudrun codex 第 5 轮 3 条新类 P1 已修（跨进程账本锁、put/get 先核后替换、job-start 同步准备），83 条测试过；issue #163–#167；大总管要求再跑到连续两轮无 P0/P1。PR #162（evalcmp）已开，CI 等待中。
+- 2026-11-25 02:00Z 合并 PR #168（url 2.5.9，RUSTSEC-2026-0592，大总管自改锁文件）与 PR #162（evalcmp，Closes #155，合并提交 83280aa0）；远端分支已删。evalcmp 留窗待核云上 build。
+- 2026-11-25 02:40Z traindata 六步全过（split 1346 s · shard 1212 s 15 GB · register build 49349c158a4defdc），产物已核、进仓。云上 exp013 build aa9f 与本机 6323 非逐位一致（1086 处，最大差约 4e-13，跨平台浮点）。大总管定（人未参与）：云上评测也用 6323 音频（上传约 3.7 GB 到 /workspace/exp013-builds/），aa9f 只作跨平台可复现证据；取 5 段 wav 比，逐样本最大差 ≤1e-9 判等价。
+- 2026-11-25 PR #170 合并（exp013 云上 build aa9f 跨平台交叉核对，容差第 3 版：4 × 峰值最小单位 + 差信号 ≥120 dB；10 段 97 轨过，大总管亲手重跑）。evalcmp 线可关。
+- 2026-11-25 03:40Z evalcmp 基线 README 写完（分支 exp/025-baseline-scorecard，codex 第 1 轮中）。大总管定（人未参与）：基线成绩单全在本机跑（A；识别服务 42model 只有 macOS 版，云上省不了本机时间），首个约 2.6 h、之后每个约 1.6 h，6 个合计约 10.6 h，费用 0。发现：按「GTCRN 自己多弱」排的前 4 场景与临时选的四个只重合 1 个（车站）；gap.py 出弱项表 + 提升空间表两种，等不回混基线出数后交人定加训场景。
+- 2026-11-25 03:55Z PR #172 合并（cloudrun，Closes #158）。put-secret 等新提交另开 PR。
+- 2026-11-25 04:10Z PR #177 合并（traindata，Closes #156）。残余 P2 #174–#176。
+- 2026-11-25 04:17Z cloudrun 开 CPU 机 ciuc12isly6w84（自删 1 h，最晚 05:22Z），用 main 86698924 跑 setup → register → pack。
+- 2026-11-25 04:30Z cloudrun register+pack 完成：新 build f032a75eedad80d6，交集检查过；机器 ciuc12isly6w84 已删，0 台；累计 1.55 美元。
+- 2026-11-25 04:45Z PR #178 合并（put-secret）。PR #179（trainer）、#181（基线+识别上云）、#182（register2）CI 中。
+- 2026-11-25 PR #179 合并（trainer，Closes #157）。开训前四条线全部合进 main。
+- 2026-11-25 04:45Z PR #181（基线 + 识别上云）与 #182（register2，现行 build f032a75e）合并。
+- 2026-11-25 04:42Z cloudrun 开 CPU 机 5f62454se0t6hs（自删 6 h，最晚 10:47Z），main 73631939 跑基线成绩单：put-secret 假值冒烟 → 真密钥 → 5 段冒烟 → 等放行跑 480 段。识别账本复制上云接着记，本机冻结直至取回合并。
+- 2026-11-25 trainer H100 冒烟方案 codex 3 轮过（第 2、3 轮无 P0/P1）；大总管重跑 148 过 2 跳过；推送 exp/025-h100-smoke 901a9f46。乙段 H100 上限 1.5 h / 7 美元。
+- 2026-11-25 05:10Z cloudrun 新 CPU 镜像 rust:1.99.1-trixie 冒烟：python3 3.13.5 / glibc 2.41 在、机器内自删过（试验机 f77s3d58riy6p1，0.005 美元）。主机器 e5sjgks999cqbf 开机（最晚 11:15Z 删），接 put-secret 假值 → 编译 vdn-eval → 甲段 d2477f63。
+- 2026-11-25 PR #183 合并（识别账本加闸：缺失拒发 · 显式新建 · 封存 · VDN_ASR_LEDGER）。
+- 2026-11-25 05:40Z 新镜像四样冒烟过；甲段（d2477f63）122 过 1 跳过；CPU 参照 hybrid 3.9733（build f032a75e，2000 段）。放行：基线 5 段冒烟（同机）+ H100 乙段（H≥1 h、最坏 ≤7 美元即开）。累计约 1.64 美元。
+- 2026-11-25 05:24Z H100 乙段开机 l4ch9o7sv13psu（4.39 美元/h，H=1.5 h，最坏 6.95 美元，最晚 06:59Z 删）；CPU 机基线 5 段冒烟同时跑。累计约 1.65 美元。
+- 2026-11-25 05:35Z 基线 5 段冒烟过（每段约 30 s，识别 30 次 0.0027 美元，评分模型有值；识别不一致率 4/15=27%，交 evalcmp 查）。放行 480 段整套，推算约 4 h，约 09:35Z 完。PR #184（setup_uv）已开。
+- 2026-11-25 05:30Z H100 乙段第 1 步冒烟不过：overfit 只降到离下限 14.4%（3.341→2.381，SI-SNR 8.66→12.18 dB），init/reproduce/known_dev 过。已删机 l4ch9o7sv13psu（约 0.41 美元），累计 2.07 美元。交 trainer 先本机复现、查判据，改判据须大总管定。
+- 2026-11-25 人定「改 hook」：auto-commit.sh 只在本项目仓库（含 worktree）里提交，按公共 git 目录判；自测 4 条归属用例过，gtcrn 克隆实测不提交。
