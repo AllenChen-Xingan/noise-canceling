@@ -40,6 +40,9 @@ def load_recipe(path):
     for k, v in r["knobs"].items():
         if "on" not in v or "src" not in v:
             raise ValueError(f"配方旋钮 {k} 缺 on 或 src（每个旋钮都要能单独开关、写出处）")
+    ts, rp = r["knobs"]["target_scene"], r["knobs"]["replay"]
+    if abs(ts["frac"] + rp["frac"] - 1.0) > 0.01:  # 抽样只用 replay.frac；target_scene.frac 是它的另一种写法
+        raise ValueError(f"target_scene.frac {ts['frac']} + replay.frac {rp['frac']} ≠ 1：两处要一致（抽样按 replay.frac）")
     return r
 
 

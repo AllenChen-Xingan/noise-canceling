@@ -41,21 +41,23 @@ class FileCache:
                     r = json.loads(line)
                 except json.JSONDecodeError:
                     continue  # 上次被杀时写了半行
-                self.rows[r["path"]] = r
+                if "root" in r:  # 没记数据根的旧行不认（重算一次）
+                    self.rows[(r["root"], r["path"])] = r
 
     def info(self, root, rel):
         p = Path(root) / rel
         st = p.stat()
-        old = self.rows.get(rel)
+        root_s = str(Path(root).resolve())  # 同一个缓存文件给别的数据根用时不许误命中
+        old = self.rows.get((root_s, rel))
         if old and old["bytes"] == st.st_size and old["mtime_ns"] == st.st_mtime_ns:
             with self.lock:
                 self.hits += 1
             return {k: old[k] for k in ("path", "bytes", "sha256", "frames", "sr")}
         sha, frames, sr = measure(p)
-        r = {"path": rel, "bytes": st.st_size, "mtime_ns": st.st_mtime_ns, "sha256": sha, "frames": frames, "sr": sr}
+        r = {"root": root_s, "path": rel, "bytes": st.st_size, "mtime_ns": st.st_mtime_ns, "sha256": sha, "frames": frames, "sr": sr}
         with self.lock:
             self.misses += 1
-            self.rows[rel] = r
+            self.rows[(root_s, rel)] = r
             if self.path:
                 self.path.parent.mkdir(parents=True, exist_ok=True)
                 with open(self.path, "a") as f:

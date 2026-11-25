@@ -16,6 +16,7 @@
 """
 import argparse
 import hashlib
+import http.client
 import json
 import os
 import shutil
@@ -134,7 +135,7 @@ def download(url, out, expect_bytes, retries=8, timeout=120, rate_retries=None):
                 attempt += 1
                 print(f"  第 {attempt} 次：服务器回 {e.code}，{wait:.0f} s 后再试", flush=True)
             _sleep(wait)
-        except (OSError, urllib.error.URLError) as e:
+        except (OSError, urllib.error.URLError, http.client.HTTPException) as e:  # 分块响应截断抛 IncompleteRead
             print(f"  第 {attempt + 1} 次中断：{e}；{2 ** attempt} s 后接着下", flush=True)
             _sleep(2**attempt)
             attempt += 1
