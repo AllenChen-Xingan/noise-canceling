@@ -26,3 +26,5 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-25T13:28:31Z	pod_delete	e5sjgks999cqbf	cpu3c x4	US-MO-1	0.1200	2026-11-25T05:10:05Z	2026-11-25T13:28:31Z	8.3072	0.9969		watchdog 到点删机 删时已不存在
 2026-11-25T18:40:38Z	pod_create	7a3n7eodf5iyqf	cpu3c x4	US-MO-1	0.1200	2026-11-25T18:40:38Z					max_hours=1.0
 2026-11-25T18:42:20Z	pod_delete	7a3n7eodf5iyqf	cpu3c x4	US-MO-1	0.1200	2026-11-25T18:40:38Z	2026-11-25T18:42:20Z	0.0283	0.0034		取回 480 段结果（不含 qa/asr-wav 1.4 GB）
+2026-11-25T18:49:29Z	pod_create	zq05j06wg96pxa	cpu3c x4	US-MO-1	0.1200	2026-11-25T18:49:29Z					max_hours=1.0
+2026-11-25T19:27:59Z	pod_delete	zq05j06wg96pxa	cpu3c x4	US-MO-1	0.1200	2026-11-25T18:49:29Z	2026-11-25T19:27:59Z	0.6417	0.0770		过拟合排查完成（1831886c），取回后删
