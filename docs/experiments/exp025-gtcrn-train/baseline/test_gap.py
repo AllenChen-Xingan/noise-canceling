@@ -91,9 +91,6 @@ class Gap(unittest.TestCase):
                 gap.main(["weak", str(src), "--out", str(Path(d) / "o")])
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 def compare_json(by_scene, system_a="gtcrn", system_b="dfn3"):
     """by_scene = {场景: [(项, 判断, 差值均值, better)]} → `vdn-eval compare --by-scene` 的 compare.json 形状。"""
@@ -194,3 +191,25 @@ class Completeness(unittest.TestCase):
     def test_uplift_partial_scenes_is_insufficient(self):
         cj = compare_json({"cafe": [("V-NR", "up", -1.0, "lower")]})
         self.assertEqual(gap.uplift_table(cj, baseline_card())["verdict"], "数据不足")
+
+    def test_uplift_scene_without_usable_diffs_is_insufficient(self):
+        """codex 第 2 轮 P1 #1：15 个场景都在，但某场景没有可用的差值（或有片段只在一边）→ 也是「数据不足」。"""
+        full = {s: [("V-NR", "up", -1.0, "lower")] * 1 for s in ALL15}
+        full = {s: [(v, "up", -1.0, "lower") for v in ("V-NR", "V-ESTOI")] for s in ALL15}
+        cj = compare_json(full)
+        self.assertIn(gap.uplift_table(cj, baseline_card())["verdict"], ("一致", "不一致"))
+        cj = compare_json(full)
+        for sc in cj["scopes"]:
+            if sc["scope"] == "cafe":
+                for i in sc["items"]:
+                    i["diff"] = None
+        u = gap.uplift_table(cj, baseline_card())
+        self.assertEqual(u["verdict"], "数据不足")
+        self.assertTrue(any("cafe" in x for x in u["incomplete"]))
+        cj = compare_json(full)
+        cj["scopes"][0]["only_a"] = ["cafe-c00-mba"]
+        self.assertEqual(gap.uplift_table(cj, baseline_card())["verdict"], "数据不足")
+
+
+if __name__ == "__main__":
+    unittest.main()
