@@ -97,7 +97,7 @@ class FakeRunPod:
             if m == "DELETE":
                 del self.pods[pid]
                 return 204, None
-            return 200, self.exec(d["command"])
+            return 200, self.exec(d["command"], d.get("env"))
         if p.startswith("/v2/queued-pods/") and m == "DELETE":
             return 204, None
         if p == "/v2/billing/pods":
@@ -105,7 +105,7 @@ class FakeRunPod:
         return 404, {"detail": f"fake: no route {m} {p}"}
 
     # 只认 rp_ops 发出的几种命令形状
-    def exec(self, argv):
+    def exec(self, argv, env=None):
         ok = {"stdout": "", "stderr": "", "exitCode": 0, "timedOut": False, "truncated": False, "durationMs": 1}
         assert len(argv) <= 256 and all(len(a) <= 4096 for a in argv), "超出 exec 参数上限"
         if argv[:2] == ["python3", "-c"] and "log_exists" in argv[2]:  # rp_ops.JOB_STATUS_PY
