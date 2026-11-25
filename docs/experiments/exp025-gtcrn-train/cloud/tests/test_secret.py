@@ -71,20 +71,65 @@ class TestPutSecret(Base):
                 S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.value, remote=remote)
         self.assertFalse([c for c in self.fake.calls if c[1].endswith("/exec")])
 
-    def test_failure_message_is_redacted(self):
-        # 机器里出错、而且错误信息把值回显出来：报错里也看不到值
+    def test_failure_message_carries_no_remote_text(self):
+        # secret-ops 第 1 轮 #1：机器回显值（含跨截断边界、整行 base64），报错里一律看不到
         orig = self.fake.exec
+        line_b64 = base64.b64encode(f"OPENROUTER_API_KEY={self.value}".encode()).decode()
 
         def leaky(argv, env=None):
             if env:
-                return {"stdout": "", "stderr": f"boom {env.get('V')}", "exitCode": 1, "timedOut": False,
-                        "truncated": False, "durationMs": 1}
+                return {"stdout": "x" * 290 + env["V"], "stderr": line_b64, "exitCode": 1,
+                        "timedOut": False, "truncated": False, "durationMs": 1}
             return orig(argv, env)
         self.fake.exec = leaky
         with self.assertRaises(SystemExit) as cm:
             self.run_cli("--env-file", self.env_file, "put-secret", "pod_9", "OPENROUTER_API_KEY")
-        self.assert_no_leak(str(cm.exception))
-        self.assertIn("<secret>", str(cm.exception))
+        msg = str(cm.exception)
+        self.assert_no_leak(msg)
+        self.assertNotIn(self.value[:12], msg)  # 片段也不行
+
+    def test_exception_chain_holds_no_secret(self):
+        # 第 1 轮 #3：传输层抛的异常带着值；新异常的链和格式化后的 traceback 里都不能有
+        import traceback
+
+        def boom(method, url, headers, body):
+            raise OSError(f"reset while sending {body!r}")
+        cli = type(self.cli)("k" * 50, transport=boom, sleep=lambda s: None)
+        try:
+            S.put_secret(cli, "pod_9", "OPENROUTER_API_KEY", self.value)
+        except SystemExit as e:
+            chain, x = [], e
+            while x is not None:
+                chain.append(x)
+                x = x.__cause__ or x.__context__
+            self.assertEqual(len(chain), 1)
+            text = "".join(traceback.format_exception(e))
+            self.assert_no_leak(text, str(e))
+            self.assertIn("结果未知", str(e))
+        else:
+            self.fail("应当报错")
+
+    def test_directory_target_and_failed_check_keep_old_file(self):
+        # 第 1 轮 #2：目标是目录，或核对没过，旧文件不动
+        self.fake.files["/root/.env.local"] = b"OLD\n"
+        self.fake.dirs = {"/root/.env.local"}
+        with self.assertRaises(SystemExit) as cm:
+            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.value)
+        self.assertIn("目录", str(cm.exception))
+        self.fake.dirs = set()
+        orig = self.fake.exec
+        self.fake.exec = lambda argv, env=None: orig(argv, dict(env, W="0" * 64) if env else env)
+        with self.assertRaises(SystemExit):
+            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.value)
+        self.assertEqual(self.fake.files["/root/.env.local"], b"OLD\n")
+
+    def test_timeout_is_reported_as_unknown(self):
+        # 第 1 轮 #5：超时不宣称成功或已清理
+        orig = self.fake.exec
+        self.fake.exec = lambda argv, env=None: dict(orig(argv, env), timedOut=True) if env else orig(argv, env)
+        with self.assertRaises(SystemExit) as cm:
+            S.put_secret(self.cli, "pod_9", "OPENROUTER_API_KEY", self.value)
+        self.assertIn("结果未知", str(cm.exception))
 
     def test_write_command_is_valid_sh_and_has_no_value(self):
         import subprocess
