@@ -224,64 +224,65 @@ impl Conn<'_> {
         Ok((code, retry, body))
     }
 
-    /// 转写一条：返回 (文本, 实际花费)。重试与不重试的规矩见文件头。
-    /// 转写一条：成功返回 (文本, 实际花费)；失败返回 [`Failure`]（带上这次请求的费用情况）。
-    fn transcribe(&self, x: &[f32], sr: u32, lang: &str) -> Result<(String, Option<f64>), Failure> {
+    /// 转写一条：成功返回 (文本, 最后一次响应带的费用（没带为 `None` = 费用未知）, 前几次已记账的费用)；
+    /// 失败返回 [`Failure`]。`est` = 这一条在账本里的预留，重试途中累计费用超过它就当场停（codex 第 14 轮）。
+    fn transcribe(
+        &self,
+        x: &[f32],
+        sr: u32,
+        lang: &str,
+        est: f64,
+    ) -> Result<(String, Option<f64>, f64), Failure> {
         let free = |msg: String| Failure {
             msg,
             cost: Cost::Free,
+            carried: 0.0,
         };
         let body = serde_json::to_vec(&request_body(&pcm16_wav(x, sr), lang))
             .map_err(|e| free(e.to_string()))?;
         let body_path = tmp_path("json");
         std::fs::write(&body_path, &body).map_err(|e| free(e.to_string()))?;
-        let r = self.send_with_retry(&body_path);
+        let r = self.send_with_retry(&body_path, est);
         let _ = std::fs::remove_file(&body_path);
         r
     }
 
-    fn send_with_retry(&self, body_path: &Path) -> Result<(String, Option<f64>), Failure> {
+    fn send_with_retry(
+        &self,
+        body_path: &Path,
+        est: f64,
+    ) -> Result<(String, Option<f64>, f64), Failure> {
         let mut last = String::new();
-        // 前几次（非 200）响应里带回的费用：每个出口都要算进去（codex 第 13 轮 P1 #1）
+        // 前几次（非 200）响应带回的费用：收到就当场记账，之后的出口不再管它（codex 第 13 轮 P1 #1 · 第 14 轮）
         let mut carried = 0.0f64;
-        let fold = |c: Cost, carried: f64| match c {
-            Cost::Free if carried > 0.0 => Cost::Known(carried),
-            Cost::Known(x) => Cost::Known(x + carried),
-            other => other,
+        let fail = |msg: String, cost: Cost, carried: f64| Failure {
+            msg: self.scrub(&msg),
+            cost,
+            carried,
         };
         for attempt in 0..MAX_ATTEMPTS {
             match ledger::read(self.ledger_path) {
                 Ok(l) if l.review.is_some() => {
-                    return Err(Failure {
-                        msg: format!("识别费账本待核（{}）：停发", l.review.unwrap_or_default()),
-                        cost: fold(Cost::Free, carried),
-                    });
+                    let why = format!("识别费账本待核（{}）：停发", l.review.unwrap_or_default());
+                    return Err(fail(why, Cost::Free, carried));
                 }
                 Ok(_) => {}
-                Err(e) => {
-                    return Err(Failure {
-                        msg: e,
-                        cost: fold(Cost::Free, carried),
-                    });
-                }
+                Err(e) => return Err(fail(e, Cost::Free, carried)),
             }
             if let Some(why) = self.stop.lock().unwrap_or_else(|e| e.into_inner()).clone() {
-                return Err(Failure {
-                    msg: format!("已停发：{why}"),
-                    cost: fold(Cost::Free, carried),
-                });
+                return Err(fail(format!("已停发：{why}"), Cost::Free, carried));
             }
             // 连不上、超时：请求可能已送到、可能已计费，不知道 → 费用未知，停发（偏保守）
-            let (code, retry_after, body) = self.post(body_path).map_err(|e| Failure {
-                msg: format!("费用未知，停发：{e}"),
-                cost: fold(Cost::Unknown, carried),
-            })?;
+            let (code, retry_after, body) = self
+                .post(body_path)
+                .map_err(|e| fail(format!("费用未知，停发：{e}"), Cost::Unknown, carried))?;
             if code == 200 {
                 let Ok(v) = serde_json::from_slice::<Value>(&body) else {
-                    return Err(Failure {
-                        msg: "费用未知，停发：识别返回 200 但不是 JSON".into(),
-                        cost: fold(Cost::Unknown, carried),
-                    });
+                    return Err(fail(
+                        "费用未知，停发：识别返回 200 但不是 JSON".into(),
+                        Cost::Unknown,
+                        carried,
+                    ));
                 };
                 let cost = v["usage"]["cost"].as_f64();
                 let tag = if cost.is_some() {
@@ -289,20 +290,18 @@ impl Conn<'_> {
                 } else {
                     "费用未知，停发："
                 };
-                let fail = |msg: String| Failure {
-                    msg: self.scrub(&msg),
-                    cost: fold(cost.map_or(Cost::Unknown, Cost::Known), carried),
-                };
+                let c = cost.map_or(Cost::Unknown, Cost::Known);
                 if let Some(e) = v.get("error") {
-                    return Err(fail(format!("{tag}识别返回 200 但带错误：{e}")));
+                    return Err(fail(format!("{tag}识别返回 200 但带错误：{e}"), c, carried));
                 }
                 let Some(t) = v["text"].as_str() else {
-                    return Err(fail(format!("{tag}识别返回缺 text：{v}")));
+                    return Err(fail(format!("{tag}识别返回缺 text：{v}"), c, carried));
                 };
                 // 文本到手但返回里没有 usage.cost：文本照用，费用未知（调用方标「待核」、停发；codex 第 7 轮 P1 #1）
                 return Ok((
                     t.split_whitespace().collect::<Vec<_>>().join(" "),
-                    cost.map(|c| c + carried),
+                    cost,
+                    carried,
                 ));
             }
             if let Some(c) = serde_json::from_slice::<Value>(&body)
@@ -310,10 +309,23 @@ impl Conn<'_> {
                 .and_then(|v| v["usage"]["cost"].as_f64())
             {
                 carried += c;
+                ledger::update(self.ledger_path, |l| {
+                    l.spent_usd += c;
+                    l.calls += 1;
+                    Ok(())
+                })
+                .map_err(|e| fail(e, Cost::Free, carried))?;
+                if carried > est {
+                    let why = format!(
+                        "实际费用 {carried:.6} 美元超过预留 {est:.6} 美元：估算不准（重试途中）"
+                    );
+                    ledger::flag_review(self.ledger_path, &why)
+                        .map_err(|e| fail(e, Cost::Free, carried))?;
+                    return Err(fail(format!("已停发：{why}"), Cost::Free, carried));
+                }
             }
-            let text = String::from_utf8_lossy(&body);
             // 先对完整响应抹密钥再截断：密钥跨过截断点时也不会漏出半截（codex 第 8 轮 P2 #1）
-            let clean = self.scrub(&text);
+            let clean = self.scrub(&String::from_utf8_lossy(&body));
             last = format!(
                 "HTTP {code}：{}",
                 clean.chars().take(300).collect::<String>()
@@ -325,33 +337,39 @@ impl Conn<'_> {
                     403 | 404 => "（多半是没有不留存数据的提供方肯接：按要求不退回，停下）",
                     _ => "",
                 };
-                return Err(Failure {
-                    msg: format!("识别请求失败，不重试{hint}：{last}"),
-                    cost: fold(Cost::Free, carried),
-                });
+                return Err(fail(
+                    format!("识别请求失败，不重试{hint}：{last}"),
+                    Cost::Free,
+                    carried,
+                ));
             }
             if attempt + 1 < MAX_ATTEMPTS {
                 let wait_ms = retry_after.map_or(self.backoff_ms << attempt, |s| s.min(60) * 1000);
                 std::thread::sleep(std::time::Duration::from_millis(wait_ms));
             }
         }
-        Err(Failure {
-            msg: format!("识别请求重试 {MAX_ATTEMPTS} 次仍失败：{last}"),
-            cost: fold(Cost::Free, carried),
-        })
+        Err(fail(
+            format!("识别请求重试 {MAX_ATTEMPTS} 次仍失败：{last}"),
+            Cost::Free,
+            carried,
+        ))
     }
 }
 
-/// 结算一笔已知金额（成功、失败两条路共用；codex 第 9 轮 P1 #1 · 第 10 轮 P1 #1）：照记实际金额；
-/// 实际比预留高（估算不准）就给账本标待核、把本批的停止状态设上，之后任何进程都拒发。
+/// 结算最后一次响应带的已知金额（成功、失败两条路共用；codex 第 9、10、14 轮）：照记；这条转写的总花费
+/// （前几次已记的 `carried` + 这次的 `c`）超过预留就给账本标待核、设本批停止状态，之后任何进程都拒发。
 fn settle_known(
     ledger_path: &Path,
     est: f64,
     c: f64,
+    carried: f64,
     stop: &std::sync::Mutex<Option<String>>,
 ) -> Result<(), String> {
-    if c > est {
-        let why = format!("实际费用 {c:.6} 美元超过预留 {est:.6} 美元：估算不准");
+    if c + carried > est {
+        let why = format!(
+            "实际费用 {:.6} 美元超过预留 {est:.6} 美元：估算不准",
+            c + carried
+        );
         ledger::flag_review(ledger_path, &why)?;
         let mut st = stop.lock().unwrap_or_else(|e| e.into_inner());
         if st.is_none() {
@@ -361,7 +379,7 @@ fn settle_known(
     ledger::settle(ledger_path, est, Some(c))
 }
 
-/// 一次请求失败时的费用情况（codex 第 6 轮 P1 #2：费用结算和转写成败分开）。
+/// 一次请求失败时最后那次响应的费用情况（codex 第 6 轮 P1 #2：费用结算和转写成败分开）。
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Cost {
     /// HTTP 错误码：没有计费，退预留
@@ -372,11 +390,12 @@ pub enum Cost {
     Unknown,
 }
 
-/// 一次失败：原因 + 费用情况。
+/// 一次失败：原因 + 最后那次的费用情况 + 前几次已记账的费用。
 #[derive(Clone, Debug)]
 pub struct Failure {
     pub msg: String,
     pub cost: Cost,
+    pub carried: f64,
 }
 
 /// 一条待转写的音频：(16 kHz 样本, 采样率, 语言)。
@@ -437,14 +456,12 @@ impl OpenRouter {
                         let est =
                             x.len() as f64 / f64::from(*sr) * PRICE_PER_SECOND * RESERVE_FACTOR;
                         // 结算失败（写不了账本）也当这一条失败：不能确认记上了账
-                        let r =
-                            ledger::reserve(ledger_path, est, BUDGET_USD).and_then(|()| match conn
-                                .transcribe(x, *sr, lang)
-                            {
-                                Ok((t, Some(c))) => {
-                                    settle_known(ledger_path, est, c, &stop).map(|()| t)
+                        let r = ledger::reserve(ledger_path, est, BUDGET_USD).and_then(|()| {
+                            match conn.transcribe(x, *sr, lang, est) {
+                                Ok((t, Some(c), carried)) => {
+                                    settle_known(ledger_path, est, c, carried, &stop).map(|()| t)
                                 }
-                                Ok((t, None)) => {
+                                Ok((t, None, _)) => {
                                     // 文本照用；预留不退、账本标待核，本批与以后都停发
                                     let why = "费用未知：返回有文本但没带 usage.cost";
                                     ledger::flag_review(ledger_path, why)?;
@@ -457,13 +474,16 @@ impl OpenRouter {
                                 Err(f) => {
                                     match f.cost {
                                         Cost::Free => ledger::settle(ledger_path, est, None)?,
-                                        Cost::Known(c) => settle_known(ledger_path, est, c, &stop)?,
-                                        // 预留不退：可能已计费；账本标待核，重启也停发
+                                        Cost::Known(c) => {
+                                            settle_known(ledger_path, est, c, f.carried, &stop)?
+                                        }
+                                        // 预留不退：可能已计费；账本标待核，重启也停发（前几次的费用已当场记账，不会丢）
                                         Cost::Unknown => ledger::flag_review(ledger_path, &f.msg)?,
                                     }
                                     Err(f.msg)
                                 }
-                            });
+                            }
+                        });
                         if let Err(e) = &r
                             && is_permanent(e)
                         {
