@@ -106,6 +106,16 @@ class Merge(unittest.TestCase):
         self.assertEqual(rep["_identity"]["unverified_pairs"], 3)
         self.assertEqual(merge.parity_errors(rep), [], "核不了不算对拍不过，只单列")
 
+    def test_item_present_on_only_one_side_fails_parity_both_ways(self):
+        """codex 第 12 轮 P2 #1：按两边评分项的并集比；一边整项缺失也算「一边有值一边没值」。"""
+        a, b = local(), local()
+        for r in a:
+            r["scores"] = [x for x in r["scores"] if x["v"] != "V-ESTOI"]  # a 整项没有 V-ESTOI
+        for x, y in ((a, b), (b, a)):
+            rep = merge.parity(x, y)
+            self.assertEqual(rep["V-ESTOI"]["one_sided"], 3)
+            self.assertTrue(any("V-ESTOI" in e and "一边" in e for e in merge.parity_errors(rep)))
+
     def test_mismatched_clip_sets_or_systems_are_errors(self):
         with self.assertRaises(ValueError):
             merge.merge(cloud(3), local(2))
