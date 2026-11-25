@@ -62,6 +62,19 @@ class Cache(Base):
         self.assertEqual((c.hits, c.misses), (4, 0))
         self.assertEqual(a, b)
 
+    def test_other_root_not_reused(self):
+        """codex 第 3 轮 P2 #4：同一个缓存文件拿去给另一个数据根用，同名同大小同时间的文件不许误命中。"""
+        import shutil
+
+        path = self.root / "cache/c.jsonl"
+        self.run_split(RULE, filecache.FileCache(path))
+        other = self.root.parent / (self.root.name + "-b")
+        shutil.copytree(self.root / "w", other / "w", copy_function=shutil.copy2)  # 保留修改时间
+        c = filecache.FileCache(path)
+        split.split_source(other, "t", RULE, 1, ["train", "dev"], workers=2, cache=c)
+        self.assertEqual(c.hits, 0)
+        shutil.rmtree(other)
+
     def test_changed_file_recomputed(self):
         path = self.root / "cache/c.jsonl"
         self.run_split(RULE, filecache.FileCache(path))

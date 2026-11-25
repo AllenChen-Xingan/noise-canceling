@@ -94,6 +94,47 @@ class Download(unittest.TestCase):
             s.close()
         self.assertEqual(self.out.read_bytes(), BLOB)
 
+    def test_chunked_cut_resumes(self):
+        """codex 第 3 轮 P2 #3：分块响应中途断开抛 http.client.IncompleteRead（不是 OSError），以前直接退出。"""
+        import http.client
+        from unittest import mock
+
+        s = Server()
+        real = fetch.urllib.request.urlopen
+        n = {"calls": 0}
+
+        class Cut:
+            def __init__(self, r):
+                self.r, self.sent = r, 0
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                self.r.close()
+
+            status = 200
+
+            def read(self, k):
+                if self.sent >= 300_000:
+                    raise http.client.IncompleteRead(b"")
+                b = self.r.read(min(k, 300_000 - self.sent))
+                self.sent += len(b)
+                return b
+
+        def opener(req, timeout=None):
+            n["calls"] += 1
+            r = real(req, timeout=timeout)
+            return Cut(r) if n["calls"] == 1 else r
+
+        try:
+            with mock.patch.object(fetch.urllib.request, "urlopen", opener):
+                fetch.download(s.url, self.out, len(BLOB), retries=3)
+        finally:
+            s.close()
+        self.assertEqual(self.out.read_bytes(), BLOB)
+        self.assertEqual(n["calls"], 2)
+
     def test_resume_from_part(self):
         part = self.out.with_name("x.bin.part")
         part.write_bytes(BLOB[:300_000])

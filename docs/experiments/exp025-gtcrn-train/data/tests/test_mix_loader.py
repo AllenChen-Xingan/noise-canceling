@@ -135,6 +135,18 @@ class Mix(unittest.TestCase):
         self.assertGreater(len(ivs), 3)
         self.assertTrue(all(0 <= a < b <= self.N for a, b in ivs))
 
+    def test_target_and_replay_frac_agree(self):
+        """codex 第 3 轮 P2 #4（第 5 条）：抽样只用 replay.frac；target_scene.frac 是第二处表示，两者之和必须为 1。"""
+        r = json.loads((HERE / "recipe.json").read_text())
+        K = r["knobs"]
+        self.assertAlmostEqual(K["target_scene"]["frac"] + K["replay"]["frac"], 1.0, places=2)
+        with tempfile.TemporaryDirectory() as d:
+            K["target_scene"]["frac"] = 0.9
+            p = Path(d) / "r.json"
+            p.write_text(json.dumps(r, ensure_ascii=False))
+            with self.assertRaises(ValueError):
+                loader.load_recipe(p)
+
     def test_every_knob_switchable_with_source(self):
         for k, v in RECIPE["knobs"].items():
             self.assertIn("on", v, k)
