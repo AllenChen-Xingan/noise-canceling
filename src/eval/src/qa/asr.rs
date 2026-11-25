@@ -1,8 +1,14 @@
-//! 本机 Qwen3-ASR（42model 服务，`http://127.0.0.1:11520`，D 记录：人选 Qwen3-ASR-Plus 1.7B，不用 whisper）。
+//! 语音识别（吃字 V-EAT-ASR 用）。两个后端，**默认 OpenRouter**（D103 · D104），本机 42model 留作可选：
 //!
-//! 调 `curl`（不经 shell，参数逐个传），不引 HTTP 依赖。每个文件转写 `REPEATS` 次（多次试验），
-//! 缓存键 = 文件 sha256 | 模型 | 语言 | 第几次，缓存文件在 `_tmp/exp007/asr_cache.json`（仓外）。
-//! 口径与 exp003 `score.py` 一致：temperature 0、response_format json、空白归一。
+//! - `openrouter`：云端 Qwen3-ASR 1.7B，见 [`super::asr_or`]（型号正本、`data_collection = deny`、费用上限都在那里）
+//! - `local42`：本机 42model 服务里的 Qwen3-ASR-Plus 1.7B（`http://127.0.0.1:11520`），只有 macOS 版
+//!
+//! 选法：环境变量 `VDN_ASR_BACKEND`（`openrouter` 默认 · `local42`）定默认后端；`VDN_ASR_ROUTE` 指向一个 JSON 文件
+//! `{"default": "openrouter", "clips": {"<片段 id>": "local42", …}}` 可按段单独指定（大总管 2026-11-25：人怎么定都不用返工）。
+//! 哪些段实际用了哪个后端记在 [`Asr::used`]，写进成绩单 `meta.asr`。
+//!
+//! 每个文件转写 `REPEATS` 次（多次试验），缓存键 = 文件 sha256 | 后端型号 | 语言 | 第几次（按后端分开，不同后端的转写不混）。
+//! 本机后端口径与 exp003 `score.py` 一致：temperature 0、response_format json、空白归一。
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -16,14 +22,70 @@ const DEFAULT_KEY: &str = "42model";
 pub const MODEL: &str = "qwen3-asr-plus:1.7b";
 pub const REPEATS: usize = 2;
 
+/// 后端名（`VDN_ASR_BACKEND`、路由文件、`meta.asr` 里用的写法）。
+pub const OPENROUTER: &str = "openrouter";
+pub const LOCAL42: &str = "local42";
+
+/// 一个后端：本机服务，或 OpenRouter 客户端。
+pub enum Backend {
+    Local42,
+    OpenRouter(super::asr_or::OpenRouter),
+}
+
+impl Backend {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Backend::Local42 => LOCAL42,
+            Backend::OpenRouter(_) => OPENROUTER,
+        }
+    }
+    pub fn model(&self) -> &'static str {
+        match self {
+            Backend::Local42 => MODEL,
+            Backend::OpenRouter(_) => super::asr_or::OR_MODEL,
+        }
+    }
+}
+
+/// 按段选后端：默认一个，个别片段另指定。
+#[derive(Clone, Debug, Default, PartialEq, serde::Deserialize)]
+pub struct Route {
+    #[serde(default)]
+    pub default: Option<String>,
+    #[serde(default)]
+    pub clips: BTreeMap<String, String>,
+}
+
+impl Route {
+    /// 这一段用哪个后端（片段 id 去掉 `#…` 的缓存后缀再查）。
+    pub fn pick<'a>(&'a self, clip: &str, fallback: &'a str) -> &'a str {
+        let id = clip.split('#').next().unwrap_or(clip);
+        self.clips
+            .get(id)
+            .map(String::as_str)
+            .or(self.default.as_deref())
+            .unwrap_or(fallback)
+    }
+}
+
 pub struct Asr {
     cache_path: PathBuf,
     cache: BTreeMap<String, String>,
     pub calls: usize,
+    backends: BTreeMap<&'static str, Backend>,
+    default: &'static str,
+    route: Route,
+    /// 后端名 → 实际用它转写过的片段 id（写进 `meta.asr`）
+    pub used: BTreeMap<&'static str, std::collections::BTreeSet<String>>,
 }
 
 impl Asr {
+    /// 只用本机 42model（旧行为；测试与 `VDN_ASR_BACKEND=local42` 用）。
     pub fn new(cache_path: PathBuf) -> Asr {
+        Asr::with_backends(cache_path, vec![Backend::Local42], LOCAL42, Route::default())
+    }
+
+    pub fn with_backends(cache_path: PathBuf, backends: Vec<Backend>, default: &'static str, route: Route) -> Asr {
         let cache = std::fs::read_to_string(&cache_path)
             .ok()
             .and_then(|t| serde_json::from_str::<BTreeMap<String, String>>(&t).ok())
@@ -32,7 +94,62 @@ impl Asr {
             cache_path,
             cache,
             calls: 0,
+            backends: backends.into_iter().map(|b| (b.name(), b)).collect(),
+            default,
+            route,
+            used: BTreeMap::new(),
         }
+    }
+
+    /// 按环境变量组装（见文件头）。返回 `Err(原因)` 时这次成绩单的吃字整列判「不知道」。
+    /// 默认后端 OpenRouter：要有密钥（`asr_or::load_key`）；路由文件里点名 `local42` 的段要本机服务在。
+    pub fn from_env(cache_path: PathBuf, root: &Path) -> Result<Asr, String> {
+        let default: &'static str = match std::env::var("VDN_ASR_BACKEND").as_deref() {
+            Err(_) | Ok("openrouter") => OPENROUTER,
+            Ok("local42") => LOCAL42,
+            Ok(x) => return Err(format!("VDN_ASR_BACKEND 只认 openrouter / local42，收到 {x}")),
+        };
+        let route: Route = match std::env::var("VDN_ASR_ROUTE") {
+            Ok(p) => {
+                let t = std::fs::read_to_string(&p).map_err(|e| format!("VDN_ASR_ROUTE {p}：{e}"))?;
+                serde_json::from_str(&t).map_err(|e| format!("VDN_ASR_ROUTE {p}：{e}"))?
+            }
+            Err(_) => Route::default(),
+        };
+        let mut wanted: std::collections::BTreeSet<&str> = route.clips.values().map(String::as_str).collect();
+        wanted.insert(route.default.as_deref().unwrap_or(default));
+        let mut backends = Vec::new();
+        for w in wanted {
+            match w {
+                OPENROUTER => {
+                    let key = super::asr_or::load_key(root)
+                        .ok_or("没有 OPENROUTER_API_KEY（环境变量或仓库根 .env.local）")?;
+                    let ledger = root.join("_tmp/asr-openrouter-ledger.json");
+                    backends.push(Backend::OpenRouter(super::asr_or::OpenRouter::new(
+                        super::asr_or::OR_URL,
+                        key,
+                        ledger,
+                    )));
+                }
+                LOCAL42 if Asr::alive() => backends.push(Backend::Local42),
+                LOCAL42 => return Err("要用本机 42model，但服务不在（127.0.0.1:11520）".into()),
+                x => return Err(format!("路由里的后端 {x} 不认识（只认 openrouter / local42）")),
+            }
+        }
+        Ok(Asr::with_backends(cache_path, backends, default, route))
+    }
+
+    /// 写进成绩单 `meta.asr` 的摘要：默认后端、每个后端的型号与实际用到的段数。
+    pub fn summary(&self) -> Value {
+        let b: serde_json::Map<String, Value> = self
+            .backends
+            .values()
+            .map(|x| {
+                let n = self.used.get(x.name()).map_or(0, |s| s.len());
+                (x.name().to_string(), serde_json::json!({"model": x.model(), "clips": n}))
+            })
+            .collect();
+        serde_json::json!({"default": self.default, "backends": b, "calls": self.calls})
     }
 
     /// 服务在不在（GET 根路径能连上即可）。
@@ -55,10 +172,19 @@ impl Asr {
             })
     }
 
-    fn once(&mut self, path: &Path, sha: &str, lang: &str, rep: usize) -> Result<String, String> {
-        let key = format!("{sha}|{MODEL}|{lang}|{rep}");
+    fn once(&mut self, path: &Path, sha: &str, lang: &str, rep: usize, backend: &'static str) -> Result<String, String> {
+        let b = self.backends.get(backend).ok_or_else(|| format!("后端 {backend} 没装好"))?;
+        let model = b.model();
+        // 本机后端沿用旧的键（不带后端名），旧缓存还能用；OpenRouter 的键带型号，和本机的分开
+        let key = format!("{sha}|{model}|{lang}|{rep}");
         if let Some(t) = self.cache.get(&key) {
             return Ok(t.clone());
+        }
+        if let Some(Backend::OpenRouter(c)) = self.backends.get_mut(backend) {
+            let (x, sr) = crate::wav::read(path)?;
+            let text = c.transcribe(&x, sr, lang)?;
+            self.calls += 1;
+            return Ok(self.remember(key, text));
         }
         let file_arg = format!("file=@{};type=audio/wav", path.display());
         let o = Command::new("curl")
@@ -99,28 +225,45 @@ impl Asr {
             .split_whitespace()
             .collect::<Vec<_>>()
             .join(" ");
+        Ok(self.remember(key, text))
+    }
+
+    fn remember(&mut self, key: String, text: String) -> String {
         self.cache.insert(key, text.clone());
         let _ = std::fs::create_dir_all(self.cache_path.parent().unwrap_or(Path::new(".")));
         let _ = std::fs::write(
             &self.cache_path,
             serde_json::to_string_pretty(&self.cache).unwrap_or_default(),
         );
-        Ok(text)
+        text
     }
 
-    /// 转写 `REPEATS` 次，返回 (第一次文本, 是否每次逐字相同)。
+    /// 转写 `REPEATS` 次，返回 (第一次文本, 是否每次逐字相同)。`clip` = 片段 id（按路由选后端，记进 [`Asr::used`]）。
     pub fn transcribe(
         &mut self,
         path: &Path,
         sha: &str,
         lang: &str,
+        clip: &str,
     ) -> Result<(String, bool), String> {
-        let first = self.once(path, sha, lang, 1)?;
+        let backend = self.backend_for(clip);
+        let first = self.once(path, sha, lang, 1, backend)?;
         let mut stable = true;
         for rep in 2..=REPEATS {
-            stable &= self.once(path, sha, lang, rep)? == first;
+            stable &= self.once(path, sha, lang, rep, backend)? == first;
         }
+        let id = clip.split('#').next().unwrap_or(clip).to_string();
+        self.used.entry(backend).or_default().insert(id);
         Ok((first, stable))
+    }
+
+    /// 这一段用哪个后端（路由 → 默认）。路由点名了没装的后端时也照返回，`once` 会报「没装好」。
+    pub fn backend_for(&self, clip: &str) -> &'static str {
+        match self.route.pick(clip, self.default) {
+            OPENROUTER => OPENROUTER,
+            LOCAL42 => LOCAL42,
+            _ => self.default,
+        }
     }
 }
 
