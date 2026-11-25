@@ -95,3 +95,17 @@ codex 要的是一套持久的操作日志、按账号分开的看门狗进程�
 | P1 #3 | `job-start` 把清旧退出码也放进后台，可能读到上次的退出码 | 准备步骤同步做完；同名任务还在跑（有日志没退出码）就拒绝 | `test_start_job_refuses_same_name_still_running` |
 
 测试：83 条全过。按裁决，有新类问题先报大总管，不自行开第 6 轮。
+
+## 第 6 轮（2026-11-25，模型 gpt-6-astra，只看新类问题）
+
+结果：P0×0 P1×4，另有 1 处引用不符（同 #1）。都出在第 5 轮改的代码里，算新类，已修：
+
+| 编号 | 问题 | 处理 | 测试 |
+|---|---|---|---|
+| P1 #1 | 「不覆盖」只在开始时查；并发上传共用 `.part` | 每次上传用自己的 `.part-随机`；发布用 `ln`（已存在就失败）；`get` 本机也用硬链接发布 | `test_put_does_not_clobber_file_that_appears_during_upload` · `test_each_upload_uses_its_own_temp_file` |
+| P1 #2 | 备份名到秒会撞；备份失败仍替换 | 备份名加随机尾巴，用 `ln`（不覆盖）；备份成功才 `mv` | `test_overwrite_backup_names_are_unique` |
+| P1 #3 | 同名任务检查不是原子的 | `mkdir <job>.run` 原子占位，跑完撤 | `test_job_name_claim_is_atomic` |
+| P1 #4 | 脚本拼进括号，行尾注释会吞掉右括号；语法检查查的不是实际执行的东西 | 脚本作为独立参数交给 `sh -c`；脚本和包装都 `sh -n`；放后台后等日志出现才算启动 | `test_trailing_comment_in_script_is_safe` · `test_start_job_rejects_sh_syntax_error` |
+
+另：第 6 轮之前我实测踩到「bash 专有写法在 sh 下解析失败，后台任务连日志都没有、一直像在跑」，已一并修（`sh -n` 检查）。
+在真机上冒烟：put 不覆盖 / 覆盖留备份 / 带行尾注释的任务，都按预期。测试：89 条全过。
