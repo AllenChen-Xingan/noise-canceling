@@ -94,8 +94,9 @@ def clear(path, expect_sha, worst_count, audio_s, note, now=None, price=None):
             with open(backup, "xb") as f:  # 只新建
                 made.append(backup)
                 f.write(raw)
-            tmp.write_text(text)
-            made.append(tmp)
+            with open(tmp, "x", encoding="utf-8") as f:  # 只新建：已有同名临时文件就拒，不截断别人的（codex 本分支第 2 轮 P2 #2）
+                made.append(tmp)
+                f.write(text)
             os.replace(tmp, path)
         except BaseException:
             for f in made:

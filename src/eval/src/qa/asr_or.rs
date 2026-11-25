@@ -245,7 +245,7 @@ impl Conn<'_> {
         secs: f64,
         r: &Result<Resp, String>,
         booked: Option<f64>,
-    ) {
+    ) -> Option<String> {
         let at = ledger::utc_iso(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -269,8 +269,10 @@ impl Conn<'_> {
         if let Err(e) = ledger::append_detail(self.ledger_path, &row) {
             let why = format!("识别费明细写不了（{e}）");
             let _ = ledger::flag_review(self.ledger_path, &why);
-            *self.stop.lock().unwrap_or_else(|e| e.into_inner()) = Some(why);
+            *self.stop.lock().unwrap_or_else(|e| e.into_inner()) = Some(why.clone());
+            return Some(why);
         }
+        None
     }
 
     /// 转写一条：成功返回 (文本, 最后一次响应带的费用（没带为 `None` = 费用未知）, 前几次已记账的费用)；
@@ -337,7 +339,8 @@ impl Conn<'_> {
                     c
                 })
             });
-            self.log_attempt(attempt, t0.elapsed().as_millis(), secs, &sent, booked);
+            let detail_err =
+                self.log_attempt(attempt, t0.elapsed().as_millis(), secs, &sent, booked);
             let (code, retry_after, body, _) =
                 sent.map_err(|e| fail(format!("费用未知，停发：{e}"), Cost::Unknown, carried))?;
             if code == 200 {
@@ -369,6 +372,10 @@ impl Conn<'_> {
                 let Some(t) = v["text"].as_str() else {
                     return Err(fail(format!("{tag}识别返回缺 text：{v}"), c, carried));
                 };
+                // 明细写不了：这一次也报错（费用照这次的结算），账本已标待核（codex 本分支第 2 轮 P1 #1）
+                if let Some(e) = detail_err {
+                    return Err(fail(format!("{e}：账本已标待核，停发"), c, carried));
+                }
                 // 文本到手但返回里没有 usage.cost：文本照用，费用未知（调用方标「待核」、停发；codex 第 7 轮 P1 #1）
                 return Ok((
                     t.split_whitespace().collect::<Vec<_>>().join(" "),
