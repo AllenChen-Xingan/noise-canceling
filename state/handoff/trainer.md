@@ -66,3 +66,5 @@
 - 11-25 加 `data_probe.py`（对齐 · 目标检查与 wav · 逐个关配方旋钮 6 组），并进 `--overfit-probe`；`tests/test_data_probe.py` 8 条先红后绿
 - 11-25 `--overfit-probe` 云上 CPU 跑完（cloudrun，21e2e5b7，4429 s）：2000 步走完 oracle 距离 30.7%，学习率 3e-4/3e-3 差 3 个百分点内，梯度、对齐、目标、关旋钮都没找到故障。读数与建议 `trainer/smoke_reports/20261125-overfit-probe-reading.md`；建议先用官方 DNS3 权重做独立参照，待大总管定；H100 仍不开
 - 11-25 判据第 4 版（大总管定）：`gate_v4.py` 正本、`dev_gate.py`、smoke 改用第 4 版、逐段读数；重判诊断为过（`smoke_reports/20261125-rejudge-v4.json`）。codex 3 轮（`reviews/003_gate-v4-codex.md`）满足停止线；待办 P2：诊断输出并发覆盖（不原子占用目录）
+- 11-25 H100 乙段第 1 次（cloudrun，7eecbbe8）：冒烟全过（第 4 版过、第 3 版不过只记录；下降 24.8%，SI-SNR +2.53 dB；开发份读数 3.97339 对 CPU 3.97330；每步 0.126 s，取数 0.021 s），报告 `smoke_reports/20261125-h100-smoke-v4.json`。第 2 步因镜像没装 git 拒跑，第 3、4 步没跑；方案第四节乙加装 git
+- 11-25 加人声忽大忽小损失 `loss.w_pump`（默认 0，D107），分支 feat/trainer-pump-loss 7f28e1a4：可微复刻 V-PUMPV，与正本对拍逐值一致；w_pump = 0 时与改动前 7eecbbe8 训练检查点逐值相同；238 条测试过

@@ -91,6 +91,7 @@
 3. `python3 rp.py up --max-hours <H> --yes`，开出来后按 `rp.py` 报的实际价再算一遍；超过 7 美元就立刻删机
 
 开出来先 `rp.py sh <机器> 'nvidia-smi; nproc'` 记显卡与核数。环境在网络盘上，不用重装。
+然后装 git：`command -v git || (apt-get update -qq && apt-get install -y -qq git)`。H100 的 pytorch 镜像没有 git，训练器开跑前读不到提交号会照设计拒跑（2026-11-25 乙段第 2 步因此退出码 1）；冒烟不读提交号，所以第 1 步没受影响
 
 1. **冒烟**（预计 5–10 分钟）：
    `cd $T && VDN_GTCRN_DIR=$G $PY smoke.py --config configs/default.yaml --set data.shard_root=/workspace/shards/first-batch --set data.recipe=$D/recipe.json --timing-steps 100 --known-dev $O/known-dev-cpu.json --out $O/smoke-h100.json`
