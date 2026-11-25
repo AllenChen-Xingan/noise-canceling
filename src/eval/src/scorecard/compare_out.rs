@@ -261,16 +261,27 @@ mod tests {
         let mut two = row.clone();
         two.system = "ref".into();
         let jl2 = dir.join("two.jsonl");
-        std::fs::write(&jl2, super::super::load::to_jsonl(&[row.clone(), two]).unwrap()).unwrap();
+        std::fs::write(
+            &jl2,
+            super::super::load::to_jsonl(&[row.clone(), two]).unwrap(),
+        )
+        .unwrap();
         let p2 = jl2.to_string_lossy().to_string();
         for (sa, sb, tag) in [("gtcrn", "ref", "o3"), ("ref", "gtcrn", "o4")] {
             let o = dir.join(tag);
             let args = s(&["--a", &p2, "--b", &p2, "--system-a", sa, "--system-b", sb]);
             cli(&args, "t", o.clone()).unwrap();
-            let js: Value = serde_json::from_str(&std::fs::read_to_string(o.join("compare.json")).unwrap()).unwrap();
-            assert_eq!((js["meta"]["a_system"].as_str(), js["meta"]["b_system"].as_str()), (Some(sa), Some(sb)));
+            let js: Value =
+                serde_json::from_str(&std::fs::read_to_string(o.join("compare.json")).unwrap())
+                    .unwrap();
+            assert_eq!(
+                (
+                    js["meta"]["a_system"].as_str(),
+                    js["meta"]["b_system"].as_str()
+                ),
+                (Some(sa), Some(sb))
+            );
             let md = std::fs::read_to_string(o.join("compare.md")).unwrap();
-            assert!(md.contains(&format!("（系统 {sa}）`").replace("`", "")) || md.contains(&format!("系统 {sa}")), "{md}");
             let ia = md.find(&format!("系统 {sa}")).unwrap();
             let ib = md.find(&format!("系统 {sb}")).unwrap();
             assert!(ia < ib, "基线在前");
