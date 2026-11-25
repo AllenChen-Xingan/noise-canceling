@@ -19,7 +19,9 @@
 ## 二、前提
 
 - traindata 的现行 build `f032a75eedad80d6` 已登记进 main（PR #182 合并后）。分片还在网络盘 `/workspace/shards/first-batch`，PR #182 写明分片与旧 build 逐字节相同
-- 代码：用 PR #182 合并后的 main 提交（下称 `<提交>`），放进网络盘新目录 `/workspace/repo-main-<提交前 8 位>`，不覆盖旧 checkout
+- 代码：用本分支 `exp/025-h100-smoke` 推送后的提交（下称 `<提交>`，codex 过了由大总管推送并告知）。它已合进 main `73631939`（含 PR #182 与 build `f032a75eedad80d6` 的登记），另加本方案的两处新代码；main 上还没有这两处，所以不能直接用 main
+  - 放进网络盘新目录 `/workspace/repo-<提交前 8 位>`，不覆盖旧 checkout
+  - 本分支只改 `trainer/**` 与现状页，不碰 `data/`，所以 loader 算出的 build id 与 main 相同（推断；甲段第 3 步的 loader 测试会核）
 - 官方 GTCRN 源码：上游 `github.com/Xiaobin-Rong/gtcrn` 提交 `502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73`（与 evalcmp 基线同一提交）。起点检查点由 `official.py` 核 sha256 `250fa282…f06442`，对不上就停
 - 环境：用 data 线的 `bash cloud_steps.sh setup` 建的 `.venv`（Python 3.12.14，torch 2.15.0，numpy 2.5.4 …），再补 trainer 自己的 3 个包（`einops==0.7.0`、`pyyaml`、`pytest`）。不用镜像自带的 torch 2.5.1
   - 风险：trainer 在本机是 Python 3.13 测过的，3.12 没测过（推断：没用 3.13 专有语法，应该能跑）。第四节第 3 步先跑一遍单元测试来核
@@ -46,7 +48,7 @@
 
 花费上限（大总管批）：乙段 1.5 小时、7 美元，在人定的 60 美元总上限内。甲段测试一红就停，不开 H100。
 
-下面 `R=/workspace/repo-main-<提交前 8 位>`，`T=$R/docs/experiments/exp025-gtcrn-train/trainer`，`D=$R/docs/experiments/exp025-gtcrn-train/data`，`PY=$R/.venv/bin/python`，`G=/workspace/gtcrn-502ebfab`，`O=/workspace/runs/exp025-smoke-<UTC 时间>`。
+下面 `R=/workspace/repo-<提交前 8 位>`，`T=$R/docs/experiments/exp025-gtcrn-train/trainer`，`D=$R/docs/experiments/exp025-gtcrn-train/data`，`PY=$R/.venv/bin/python`，`G=/workspace/gtcrn-502ebfab`，`O=/workspace/runs/exp025-smoke-<UTC 时间>`。
 每条后台命令都用 `rp.py job-start` 发、按运行编号 `job-wait`。命令里不用管道：`job-start` 已把输出写进日志，管道会让退出码变成最后一个命令的（codex 第 1 轮 #1）。
 
 **出错时的必经收尾（codex 第 1 轮 #4）**：任何一步退出码非 0、或 `job-wait` 超时，都不再跑本段剩下的步骤，直接做本段最后两步：
@@ -137,7 +139,7 @@ H100 这段总计估 30–45 分钟（推断），约 2.2–3.3 美元。最坏 
 
 - 单元测试在 Python 3.12 上红：停下，不开 H100。trainer 修到绿再来
 - 起点检查点哈希对不上：上游提交拉错了，重新按提交号拉
-- loader 拒绝 build（build id 对不上）：代码不是 PR #182 合并后的提交，换对的提交
+- loader 拒绝 build（build id 对不上）：代码不是上面那个提交，换对的提交；还不对就停，报大总管转 traindata
 - 过拟合只过一条：照样带回报告，判「不过」。trainer 分析是判据的问题还是训练的问题，先报大总管，不当场改判据
 - 取数是瓶颈（`timing.data_s_median` 比 `step_s_median` 还大，或 GPU 利用率低）：照实记下，估费按实测算。加 worker、预渲染这些改法另立一条
 - 机器开不出或没货：照 cloudrun 现行做法，不在本方案内处理
