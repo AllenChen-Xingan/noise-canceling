@@ -128,3 +128,25 @@ fn from_env_refuses_when_ledger_missing() {
     assert!(e.contains("封存"), "{e}");
     let _ = std::fs::remove_dir_all(&root);
 }
+
+/// 大总管 2026-11-25 冒烟：两次转写只差大小写、标点、空白时，评分用的词一样，不该判「不一致」。
+/// 原先逐字比原文，5 段里 4/15 条被判不一致，吃字整段成了「不知道」。
+#[test]
+fn stability_ignores_differences_scoring_cannot_see() {
+    assert!(same_text("Hello, world.", "hello world", "en"));
+    assert!(same_text("你好，世界。", "你好 世界", "zh"));
+    assert!(!same_text("hello world", "hello word", "en"), "真的有词不同仍判不一致");
+    assert!(!same_text("你好世界", "你好视界", "zh"));
+    // 走转写入口：缓存里两次只差标点，判稳定
+    let dir = std::env::temp_dir().join(format!("vdn-asr-norm-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let cache = dir.join("cache.json");
+    let key = |rep: usize| format!("abc|{MODEL}|en|{rep}");
+    std::fs::write(&cache, serde_json::json!({key(1): "Hi, there.", key(2): "hi there"}).to_string()).unwrap();
+    let mut a = Asr::with_backends(cache, vec![Backend::Local42], LOCAL42, Route::default());
+    let (_, stable) = a.transcribe(&dir.join("x.wav"), "abc", "en", "a-c00-ext#ff").unwrap();
+    assert!(stable);
+    assert_eq!(a.summary()["unstable"], 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
