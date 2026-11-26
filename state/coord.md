@@ -430,3 +430,8 @@
 - 2026-11-26 大总管定：单个测试文件 ≤1 分钟不算重活、不用名额；全套测试（分钟级）、构建、计时才要名额。
 - 2026-11-26 01:45Z cloudrun 验收 pi cloudrun-venvcache 并合入自己分支 exp/025-cloud-baseline（0f91ec80；pi 花 0.0162 美元）：venv_cache.sh · fetch_archives.sh；打回 P1×1（GNU mktemp 严格模板，加假 mktemp 先红后绿）P2×3；cloudrun 重跑 132 条全过（自报），≤600 行。未上云实跑，等登记那次一起。
 - 2026-11-26 技能 coordinator-dispatch 改完（技能仓 771ce0c，未推送）：三层分工正本在 references/pi-worker.md 第 1 节；pi 只写代码、不提交、不跑长任务；e2e-mock · git-policy · hook.test 全过（子代理自报）。大总管定（技术题）：pi 不提交暂靠文字约束，机器强制（git-policy 拦 pi 提交）记 backlog；pi-worker review/clean 保留不删；pi 只跑交代里点名的短测试。
+- 2026-11-26 02:00Z trainer codex 第 4 轮 P1：标定阶段不查 NaN（同类第二次：NaN 被按上限停吞掉）→ 大总管要求改结构：读数统一过一个查有限值函数 · 停止原因优先级正本（nonfinite > 猛涨 > 卡住 > 上限）+ 表驱动测试 · 查绕过处。evalcmp 名额中：fmt · clippy · tidy 已过，测试仍在跑（约 6 min）。
+- 2026-11-26 02:10Z 批 trainer 结构改动方案（require_finite 抛异常 · STOP_PRIORITY + pick_reason 表驱动测试 · 扫描防绕过）。发现 auto-commit hook 会提交 pi 未验收代码且署名错 → 待拍板 10-3；临时：手下记 pi 提交号范围，验收提交加 Code: pi。
+- 2026-11-26 02:20Z evalcmp 还名额：fix/asr-probe-dedup fmt · clippy -D warnings · tidy · cargo test --workspace（99 组）全过（自报）；下一步 codex。名额空闲，trainer 两个 pi 交完后申请。
+- 2026-11-26 02:30Z cloudrun 实测：pi 在自己分支 w/cloudrun-venvcache 提交（ec06f94e..0f91ec80，署名 Agent: pi），快进合入，hook 没碰；交接页 42078e34。→ 10-3 建议改为「pi 一律用自己的 worktree + 分支，不改 hook」；本机盘剩 48 GB，worktree 约 150 MB。
+- 2026-11-26 人定 D109：pi 可以提交、提交要细（回滚点），在自己的 worktree + 分支；PR · issue 只归 Claude Code 手下；10-3 关闭，hook 不改。
