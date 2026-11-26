@@ -421,3 +421,7 @@
 - 2026-11-26 00:20Z 大总管 noise-canceling-c4 核对 CochlScene 下载机：3 类解压完 17629/17629（与 want.txt 一致，7z Everything is Ok），用 rp.py down 删机（约 0.25 美元）；云上 0 台，累计约 7.77 美元。
 - 2026-11-26 00:25Z 重开 tmux vdn，四个手下用 claude --continue 接回：trainer-02 · evalcmp-77 · traindata-56 · cloudrun-39；交代 `_tmp/20261116-b19/msg-resume-*-20261126.txt` + 新规则 `common-pi-rule-20261126.md`（代码由手下派 pi 写，pi 单任务 ≤2 美元）。后台子代理在改 coordinator-dispatch 技能（pi 由手下派、只写代码）。
 - 2026-11-26 00:40Z 回三个手下：evalcmp 场景表第一版收下不重出、第二版含吃字；trainer 开 guards issue；traindata 压缩包不删待人定（10-2）、这次不筛人声、目标场景待人定（10-1）。
+- 2026-11-26 00:50Z cloudrun-39 报到：0 台、7.77 美元核对一致，未提交改动已提交 4a3ed933。大总管删 gwgj2a97e1a92q 前没取回容器盘日志 → z04 · z05 · .zip 的 md5 只剩间接证据；下次登记开机时顺手对 6 卷补跑 md5sum。规矩：删机前一律先取回日志。
+- 2026-11-26 01:00Z CochlScene 6 个分卷已被下载脚本解压核对后自动删除（删机前目录实测无分卷）→ 待拍板 10-2 作废；不重下，接受间接证据（7z 逐文件 CRC + 17629/17629）。cloudrun 改脚本：删分卷前写 md5 小文件、删机前取回（派 pi）。
+- 2026-11-26 01:10Z trainer 还名额：全套测试 221 过 · 2 跳过 · 0 失败（86 s，自报）；名额 → evalcmp（clippy · 全量测试 · fmt，约 4 min）。
+- 2026-11-26 01:15Z traindata 派第一个 pi：traindata-cochlscene（预算 2 美元，任务 _tmp/20261116-b19/pi-traindata-cochlscene.md）：sources · split_rules（按录音人 9:1）· split.py · recipe 加 4 个噪声池 + 测试。采样率由 shard.py 按 wav 头重采样、loader 断言 16 kHz（读源码）。
