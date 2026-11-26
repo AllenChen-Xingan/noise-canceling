@@ -16,7 +16,7 @@
 D=docs/experiments/exp025-gtcrn-train/data
 PY=.venv/bin/python
 export VDN_ROOT=/workspace VDN_SHARDS=/workspace/shards/batch3
-$PY -m pip install silero-vad panns-inference
+$PY -m pip install -r $D/requirements-screen.txt          # 版本已钉（第一次实装的结果）
 $PY -m pip freeze | grep -iE 'silero|panns|torch|librosa|torchlibrosa'
 ```
 
@@ -24,8 +24,16 @@ $PY -m pip freeze | grep -iE 'silero|panns|torch|librosa|torchlibrosa'
 
 ## 1. 测试
 
+筛查模型的契约测试（真模型跑 1 秒噪声，本机跳过）：
+
 ```bash
-cd $D && $PY -m unittest discover -s tests -t . 2>&1 | tail -3; cd -     # 应为 Ran 276 tests … OK（skipped 若干）
+cd $D && VDN_MODELS=1 $PY -m unittest tests.test_screen.RealModels -v 2>&1 | tail -4; cd -   # 2 条都要过
+```
+
+全套：
+
+```bash
+cd $D && $PY -m unittest discover -s tests -t . 2>&1 | tail -3; cd -     # 应为 Ran 288 tests … OK（skipped 若干）
 ```
 
 ## 2. 列出候选（已排除放收音机的布置）

@@ -1,0 +1,5 @@
+# screen.py 的两个模型（只在云上筛候选噪声时装；不进训练与登记的环境）。版本为 cloudrun 2026-11-26 实装（pip freeze）
+silero-vad==6.3
+panns-inference==0.1.1
+librosa==1.0.1
+torchlibrosa==0.1.0
