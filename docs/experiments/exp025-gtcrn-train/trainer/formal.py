@@ -14,6 +14,9 @@
 - 每步 0.39 s：plan-h100-smoke.md 第五节（3 个同时跑的实测）
 - 加训场景（target_scenes）人已定（D113）：名字按地点键表查，正本是 specs/schema/eval-suite.schema.json
   里 `$defs.MeetingPlace.enum`（兜底键 other 不是场景，不算）
+- 加训哪几个场景由配方定：正本是 data/recipe.json 的 `knobs.target_scene.scene`（loader.load_recipe 校验、
+  scene_table.target_scenes 读）。configs/formal-runs.yaml 的 `target_scenes` 是第二处写法，训练代码不读它；
+  这里拿它和配方比，缺的、多的各报一条（#213）
 """
 from __future__ import annotations
 
@@ -144,6 +147,54 @@ def _scene_problems(scenes) -> list[str]:
     return ps
 
 
+def _scene_table_module():
+    """traindata 的 data/scene_table.py：读 `knobs.target_scene.scene` 的唯一入口（它自己在导入时把 data/ 放进
+    sys.path）。延迟导入：它连带的模块只在真的要比对场景时才付这笔。"""
+    d = str(buildpin.loader_module().HERE)
+    if d not in sys.path:
+        sys.path.insert(0, d)
+    import scene_table  # 函数内导入：只在真的要比对场景时才付它的导入成本
+    return scene_table
+
+
+def _scene_src_problems(runs, cfg, runs_path) -> list[str]:
+    """`target_scenes` 与配方 `knobs.target_scene.scene` 必须一致（#213）。
+
+    两边都不是本文件的正本：配方是加训场景的唯一真相源（traindata 定），运行矩阵里这份是第二处写法、
+    训练代码也不读它。所以按集合比：配方有而这里没写、这里写了而配方没有，各报一条。
+    """
+    want = runs.get("target_scenes")
+    if not isinstance(want, list):
+        return []  # 不是清单 / 空着已经由 problems 里那几条报过，这里没有可比的集合
+    rp = _recipe_path(runs_path, cfg.data.recipe)
+    try:
+        recipe = buildpin.loader_module().load_recipe(rp)
+    except OSError as e:
+        return [f"target_scenes 没法比对：读不了配方 {rp}（{type(e).__name__}: {e}）"]
+    except (ValueError, KeyError, TypeError) as e:
+        return [f"target_scenes 没法比对：{rp} 不是一份合格的混音配方（{type(e).__name__}: {e}）"]
+    ts = recipe["knobs"]["target_scene"]
+    if ts.get("on") is not True:
+        return [f"配方 {rp} 的 knobs.target_scene.on 是 {ts.get('on')!r}、不是 true：开关关着就没有加训场景，"
+                f"target_scenes 不能比配方多要场景（两处要一致）"]
+    try:
+        got = _scene_table_module().target_scenes(recipe)
+    except SystemExit as e:
+        return [f"配方 {rp} 没写目标场景（{e}）——加训哪几个场景的正本是配方 knobs.target_scene.scene，"
+                f"不能空着，target_scenes 要写的正是它"]
+    only_runs = sorted({s for s in want if isinstance(s, str)} - set(got))
+    only_recipe = sorted(set(got) - {s for s in want if isinstance(s, str)})
+    ps: list[str] = []
+    if only_runs:
+        ps.append(f"运行矩阵的 target_scenes 多要了 {only_runs}：加训哪几个场景的正本是配方 "
+                  f"knobs.target_scene.scene（{rp.name}），两处必须一致——要么改配方，要么把 target_scenes "
+                  "改成配方里的那几个")
+    if only_recipe:
+        ps.append(f"配方 knobs.target_scene.scene 里的 {only_recipe} 没写进运行矩阵的 target_scenes"
+                  f"（{Path(runs_path).name}）：两处必须一致——要么补齐 target_scenes，要么改配方")
+    return ps
+
+
 def _matrix_problems(batches) -> list[str]:
     """运行矩阵的问题：每批恰好 3 个、名字唯一、合起来恰好 A/B × 种子 0/1/2。"""
     if not isinstance(batches, list) or not batches:
@@ -214,6 +265,8 @@ def problems(runs_path, builds_dir=None) -> list[str]:
             if "data.recipe" not in todo and cfg.data.recipe:
                 # 配方是什么还不知道（TODO / 空着）时上面已经报过：这时核对登记记录没有意义
                 ps.extend(_build_problems(runs, cfg, p, builds_dir))
+                # 同一份配方也是 target_scenes 的正本（#213）：一起比，免得配方里少了场景还过 check
+                ps.extend(_scene_src_problems(runs, cfg, p))
 
     if not (runs.get("target_scenes") or []):
         ps.append("target_scenes 还空着：要写明加训哪几个场景（人已定，见 D113），"
