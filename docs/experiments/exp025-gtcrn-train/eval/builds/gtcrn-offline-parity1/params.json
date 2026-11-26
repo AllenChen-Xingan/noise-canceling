@@ -1,0 +1,115 @@
+{
+  "candidate": "gtcrn-offline",
+  "limit": 0,
+  "files": 1451,
+  "shards": [
+    {
+      "shard": "0/4",
+      "files": 375,
+      "skipped_existing": 0,
+      "audio_s": 4500.0,
+      "wall_s": 194.8,
+      "rtf": 0.0433
+    },
+    {
+      "shard": "1/4",
+      "files": 358,
+      "skipped_existing": 0,
+      "audio_s": 4296.0,
+      "wall_s": 192.7,
+      "rtf": 0.0449
+    },
+    {
+      "shard": "2/4",
+      "files": 360,
+      "skipped_existing": 0,
+      "audio_s": 4320.0,
+      "wall_s": 193.1,
+      "rtf": 0.0447
+    },
+    {
+      "shard": "3/4",
+      "files": 358,
+      "skipped_existing": 0,
+      "audio_s": 4296.0,
+      "wall_s": 191.9,
+      "rtf": 0.0447
+    },
+    {
+      "clips_sha256": "80c59d94de404858dfec203893a32b460cfc13d24abdee3f6a4bc2898ac39e14",
+      "code_sha256": {
+        "docs/experiments/exp016-candidates/_ext.py": "5e375bd1ed923e67e74952aa1525e23166f4f208d6cc1dc52d7c7b04ddc75181",
+        "docs/experiments/exp025-gtcrn-train/eval/run_gtcrn_offline.py": "63aeedd1bb0635e9082707d488bb77df581525102ec41b533d6f1a2837276074"
+      },
+      "model": {
+        "mode": "整段一次前向 · 因果零填充 · 每段无状态",
+        "repo": "GTCRN（官方结构；整段版由 trainer/export.py 导出）",
+        "runner": "docs/experiments/exp025-gtcrn-train/eval/run_gtcrn_offline.py",
+        "stft": "512/256 周期 sqrt-Hann",
+        "weights": "<主目录>/_tmp/20261126-eval-parity/gtcrn-official.onnx",
+        "weights_sha256": "384e2c6818b38e5a32639f42a854e9b51273bdb3b30ee643deb7da0bd970205f"
+      },
+      "setup": {
+        "cond": "全零（模型 B 的 cond 输入，D98）",
+        "declared_latency_nominal": 256,
+        "onnx": "<主目录>/_tmp/20261126-eval-parity/gtcrn-official.onnx",
+        "onnx_sha256": "384e2c6818b38e5a32639f42a854e9b51273bdb3b30ee643deb7da0bd970205f",
+        "stft": {
+          "hop": 256,
+          "n_fft": 512,
+          "pad_head": 256,
+          "window": "sqrt-hann periodic"
+        }
+      },
+      "versions": {
+        "libonnxruntime_sha256": "fa585fabbea65b823b9a8f7e27d46aee3989d1be7e36b528203d3a1fd613aae7",
+        "libsndfile": "1.2.2",
+        "machine": "arm64",
+        "numpy": "2.5.5",
+        "onnxruntime": "1.32.0",
+        "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+        "python": "3.13.15",
+        "soundfile": "0.14.0"
+      }
+    }
+  ],
+  "cpu_count": 10,
+  "out_dir": "_tmp/exp016/gtcrn-offline/parity1",
+  "fingerprint": {
+    "clips_sha256": "80c59d94de404858dfec203893a32b460cfc13d24abdee3f6a4bc2898ac39e14",
+    "code_sha256": {
+      "docs/experiments/exp016-candidates/_ext.py": "5e375bd1ed923e67e74952aa1525e23166f4f208d6cc1dc52d7c7b04ddc75181",
+      "docs/experiments/exp025-gtcrn-train/eval/run_gtcrn_offline.py": "63aeedd1bb0635e9082707d488bb77df581525102ec41b533d6f1a2837276074"
+    },
+    "model": {
+      "mode": "整段一次前向 · 因果零填充 · 每段无状态",
+      "repo": "GTCRN（官方结构；整段版由 trainer/export.py 导出）",
+      "runner": "docs/experiments/exp025-gtcrn-train/eval/run_gtcrn_offline.py",
+      "stft": "512/256 周期 sqrt-Hann",
+      "weights": "<主目录>/_tmp/20261126-eval-parity/gtcrn-official.onnx",
+      "weights_sha256": "384e2c6818b38e5a32639f42a854e9b51273bdb3b30ee643deb7da0bd970205f"
+    },
+    "setup": {
+      "cond": "全零（模型 B 的 cond 输入，D98）",
+      "declared_latency_nominal": 256,
+      "onnx": "<主目录>/_tmp/20261126-eval-parity/gtcrn-official.onnx",
+      "onnx_sha256": "384e2c6818b38e5a32639f42a854e9b51273bdb3b30ee643deb7da0bd970205f",
+      "stft": {
+        "hop": 256,
+        "n_fft": 512,
+        "pad_head": 256,
+        "window": "sqrt-hann periodic"
+      }
+    },
+    "versions": {
+      "libonnxruntime_sha256": "fa585fabbea65b823b9a8f7e27d46aee3989d1be7e36b528203d3a1fd613aae7",
+      "libsndfile": "1.2.2",
+      "machine": "arm64",
+      "numpy": "2.5.5",
+      "onnxruntime": "1.32.0",
+      "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "python": "3.13.15",
+      "soundfile": "0.14.0"
+    }
+  }
+}
