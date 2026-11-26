@@ -147,3 +147,4 @@
 - 核对（实测）：混音 sha 480/480 同 run480；非吃字判定 0 变；每场景不过数增量 = 该场景吃字不过卡数；`gap.py` 重跑第一版输入逐字节相同；`--from-clips` 重汇总与补跑成绩单一致
 - 表：`docs/experiments/exp025-gtcrn-train/baseline/gap/v2-20261126/README.md`。前 4 rail-air-cabin · canteen · meeting-room · transit-hub，与临时选定重合 1 →「不一致」；28 段没值全当过 / 全当不过，前 4 与判定都不变
 - 没派 pi：这条线没有产品代码改动，只有数据与文档；敏感性改分脚本留在主目录 `_tmp/20261126-gap-v2/sens/sens.py`（不进仓）
+- 收口（2026-11-26）：PR #208 已合并；人按第二版表定加训场景 = 弱项表前 4（D113）。之后待命：正式训练出模型后出新成绩单与配对比较
