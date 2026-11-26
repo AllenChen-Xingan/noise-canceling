@@ -1,0 +1,139 @@
+{
+ "system": "gtcrn",
+ "rows": [
+  {
+   "scene": "rail-air-cabin",
+   "fails": 14,
+   "weakness": 0.580132275132275,
+   "cells": 60,
+   "rank": 1
+  },
+  {
+   "scene": "canteen",
+   "fails": 13,
+   "weakness": 0.6761054421768707,
+   "cells": 56,
+   "rank": 2
+  },
+  {
+   "scene": "meeting-room",
+   "fails": 11,
+   "weakness": 0.654945054945055,
+   "cells": 52,
+   "rank": 3
+  },
+  {
+   "scene": "transit-hub",
+   "fails": 11,
+   "weakness": 0.4819576719576719,
+   "cells": 60,
+   "rank": 4
+  },
+  {
+   "scene": "car-passenger",
+   "fails": 11,
+   "weakness": 0.4490542328042328,
+   "cells": 60,
+   "rank": 5
+  },
+  {
+   "scene": "bus-metro-cabin",
+   "fails": 10,
+   "weakness": 0.49173941798941806,
+   "cells": 60,
+   "rank": 6
+  },
+  {
+   "scene": "cowork",
+   "fails": 8,
+   "weakness": 0.5895408163265307,
+   "cells": 56,
+   "rank": 7
+  },
+  {
+   "scene": "cafe",
+   "fails": 8,
+   "weakness": 0.4865362811791383,
+   "cells": 56,
+   "rank": 8
+  },
+  {
+   "scene": "open-office",
+   "fails": 8,
+   "weakness": 0.48594104308390035,
+   "cells": 56,
+   "rank": 9
+  },
+  {
+   "scene": "street-outdoor",
+   "fails": 8,
+   "weakness": 0.4050462962962963,
+   "cells": 60,
+   "rank": 10
+  },
+  {
+   "scene": "phone-booth",
+   "fails": 7,
+   "weakness": 0.4896978021978021,
+   "cells": 52,
+   "rank": 11
+  },
+  {
+   "scene": "home-family",
+   "fails": 7,
+   "weakness": 0.45229591836734695,
+   "cells": 56,
+   "rank": 12
+  },
+  {
+   "scene": "library-classroom",
+   "fails": 6,
+   "weakness": 0.49072802197802196,
+   "cells": 52,
+   "rank": 13
+  },
+  {
+   "scene": "home-quiet",
+   "fails": 5,
+   "weakness": 0.38392857142857145,
+   "cells": 52,
+   "rank": 14
+  },
+  {
+   "scene": "hotel-room",
+   "fails": 5,
+   "weakness": 0.3818681318681318,
+   "cells": 52,
+   "rank": 15
+  }
+ ],
+ "excluded": [],
+ "top": [
+  "rail-air-cabin",
+  "canteen",
+  "meeting-room",
+  "transit-hub"
+ ],
+ "provisional": [
+  "street-outdoor",
+  "transit-hub",
+  "car-passenger",
+  "cafe"
+ ],
+ "overlap": [
+  "transit-hub"
+ ],
+ "overlap_range": [
+  1,
+  1
+ ],
+ "verdict": "不一致",
+ "incomplete": [],
+ "params": {
+  "TOP_K": 4,
+  "MIN_OVERLAP": 3,
+  "MIN_CELLS": 10,
+  "MIN_SCENES": 15,
+  "SLICES": 4
+ }
+}
