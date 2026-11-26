@@ -137,7 +137,8 @@ class Groups(unittest.TestCase):
         g = loader.scene_groups(self.pools())
         multi = {k: v for k, v in g.items() if len(v) > 1}
         self.assertEqual(multi, {"cowork": ["cowork", "open-office"]})
-        self.assertEqual(len(g), len(set(k for v in g.values() for k in v)), "每个场景必须恰好出现在一组里")
+        flat = [k for v in g.values() for k in v]
+        self.assertEqual(sorted(flat), sorted(self.pools()), "每个场景恰好出现在一组里")
         for rep, names in g.items():
             self.assertEqual(rep, names[0])  # 组名 = 字母序第一个
 

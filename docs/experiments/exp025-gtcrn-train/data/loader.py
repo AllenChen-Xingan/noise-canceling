@@ -5,8 +5,9 @@
 - torch_iterable：整批出 dict；第 k 批 = 样本 k·B … k·B+B−1，只由 (seed, k, B) 决定，和 num_workers 无关；
   支持 start_batch 续训。DataLoader 用 batch_size=None
 - 训练 build：分片索引本身的哈希 + 切分表哈希 + 分片哈希 + 配方 + 代码（混音 · 分片 · 交集检查 · 切分）的哈希 → build_id。
-  登记时交集检查查规则里每个来源的切分表（含不进分片的终测原料池），并把每份实际有成员的噪声场景（noise_scenes）与
-  跳过的来源（missing）记进 build.json：噪声池引用的来源整个不在分片索引里直接停（不然场景会悄悄消失）。
+  登记时交集检查查规则里每个来源的切分表（含不进分片的终测原料池），并把每份实际有成员的噪声场景（noise_scenes）·
+  成员完全相同的场景组（scene_groups）与跳过的来源（missing）记进 build.json：噪声池引用的来源整个不在分片索引里直接停
+  （不然场景会悄悄消失）。
   启动时要求仓里 `builds/<build_id>/build.json` 存在且交集检查通过（register_build 生成），否则抛错（027 第六节第 4 条）
 """
 import hashlib
@@ -55,18 +56,23 @@ def load_recipe(path):
     return r
 
 
-def pick_scene(rng, ts, rp, scenes):
+def pick_scene(rng, ts, rp, scenes, same=None):
     """抽本样本的噪声场景，返回（场景, 是否回放）。scene 为 null 或旋钮关：全部噪声池等概率。
     scene 为名字或列表：按 replay.frac 回放列表以外的场景（等概率），否则在列表里等概率抽。
-    列表只有一项时不抽目标（与单个名字的随机数用法相同，已登记 build 的样本流不变）。"""
+    列表只有一项时不抽目标（与单个名字的随机数用法相同，已登记 build 的样本流不变）。
+    same 是「场景 → 组名」（loader.scene_same）：成员相同的几个场景是一个池，抽取只算一次权重，报出组名。
+    没有重复组时 same 是每个场景映射到自己，随机数与结果和以前逐样本相同。"""
     scenes = sorted(scenes)
+    same = same or {}
+    reps = sorted({same.get(s, s) for s in scenes})
     if not (ts["on"] and ts["scene"]):
-        return scenes[int(rng.integers(len(scenes)))], False
-    targets = [ts["scene"]] if isinstance(ts["scene"], str) else list(ts["scene"])
-    miss = [t for t in targets if t not in scenes]
+        return reps[int(rng.integers(len(reps)))], False
+    named = [ts["scene"]] if isinstance(ts["scene"], str) else list(ts["scene"])
+    miss = [t for t in named if t not in scenes]
     if miss:
         raise SystemExit(f"目标场景 {miss} 没有噪声池")
-    others = [s for s in scenes if s not in targets]
+    targets = list(dict.fromkeys(same.get(t, t) for t in named))  # 同一组的几个场景算一个目标，顺序不变
+    others = [s for s in reps if s not in targets]
     replay = bool(rp["on"] and others and rng.random() < rp["frac"])
     if replay:
         return others[int(rng.integers(len(others)))], True
@@ -140,12 +146,30 @@ def pool_members(idx, recipe, split_):
     return pools, sorted(missing)
 
 
+def scene_groups(pools):
+    """把成员完全相同的噪声池并成一组：{组名: [这一组的场景名, 排序]}，组名 = 字母序第一个场景。
+    成员按排序后的 (来源, key) 元组比，不比条数：只有真正同一批录音才并（cowork 与 open-office 都用拥挤室内）。
+    分组只从实际成员算出，不手写场景名清单。"""
+    by = {}
+    for scene in sorted(pools):
+        sig = tuple(sorted((src, m["key"]) for m, _w, src in pools[scene]))
+        by.setdefault(sig, []).append(scene)
+    return {g[0]: g for g in by.values()}
+
+
+def scene_same(groups):
+    """{场景: 组名}——pick_scene 的 same 参数。组里没提到的场景映射到自己。"""
+    return {s: rep for rep, g in groups.items() for s in g}
+
+
 def noise_scene_index(idx, recipe, splits=("train", "dev")):
-    """build.json 里记的两样：每份实际有成员的噪声场景名（排序）· 缺的来源（排序）——噪声池没生效要看得见。"""
-    out = {"noise_scenes": {}, "missing": set()}
+    """build.json 里记的三样：每份实际有成员的噪声场景名（排序）· 缺的来源（排序）· 成员完全相同的场景组。
+    噪声池没生效要看得见；几个场景共用同一批录音时也要看得见（抽样只算一次权重，见 scene_groups）。"""
+    out = {"noise_scenes": {}, "missing": set(), "scene_groups": {}}
     for sp in splits:
         pools, miss = pool_members(idx, recipe, sp)
         out["noise_scenes"][sp] = sorted(pools)
+        out["scene_groups"][sp] = {rep: g for rep, g in scene_groups(pools).items() if len(g) > 1}  # 只记 2 个以上的组
         out["missing"] |= set(miss)
     out["missing"] = sorted(out["missing"])
     if not out["noise_scenes"]["train"]:
@@ -169,6 +193,7 @@ class Pools:
         self.speech = [m for s in recipe["speech"]["train"] for m in members(s)]
         self.rir = [m for s in recipe["rir"] for m in members(s)]
         self.pools, self.missing = pool_members(idx, recipe, split_)
+        self.scene_groups = scene_groups(self.pools)  # 同一批录音的多个场景：抽样只算一次权重
         if not self.speech or not self.pools:
             raise SystemExit("人声或噪声池为空：先检查分片与配方 noise_pools 的正则")
 
@@ -207,7 +232,7 @@ class _Base:
         K = self.recipe["knobs"]
         p = self.p
         sp = p.speech[int(rng.integers(len(p.speech)))]
-        scene, replay = pick_scene(rng, K["target_scene"], K["replay"], p.pools)
+        scene, replay = pick_scene(rng, K["target_scene"], K["replay"], p.pools, same=scene_same(p.scene_groups))
         pool = p.pools[scene]
         import mix  # noqa: E402  用时才导入：登记 build 不需要混音代码
         picks = [pool[int(j)] for j in rng.integers(len(pool), size=mix.MAX_NOISES)]
