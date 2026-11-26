@@ -12,7 +12,7 @@ import torch
 
 import guards as G
 import train
-from test_train import _cfg
+from test_train import _cfg, _read
 
 
 # ---------- is_finite：唯一的判断 ----------
@@ -67,3 +67,85 @@ def test_guard_still_judges_readings_after_swap():
     assert g.on_eval(1, float("nan"))["nonfinite"] is True
     assert g.on_eval(2, None)["nonfinite"] is True  # 缺读数按非有限处理，不崩
     assert g.on_eval(3, torch.tensor(3.9))["best"] is True  # 0 维张量按数处理
+
+
+# ---------- train.py：坏读数一律抛，只有一处接住 ----------
+
+def _nan_in_forward(monkeypatch):
+    """标定 / 评估的前向一律读出 hybrid = NaN（按批号只坏第一批）。"""
+    n = {"k": 0}
+
+    def fl(model, crit, batch, device, **k):
+        n["k"] += 1
+        return torch.zeros(()), {"hybrid": float("nan") if n["k"] == 1 else 1.0}
+    monkeypatch.setattr(train, "forward_loss", fl)
+    return n
+
+
+def test_calibrate_raises_and_stops_reading(tmp_path, monkeypatch):
+    """标定读到坏读数立刻抛，不再返回 {"nonfinite": True}，也不再看下一批（第 4 轮 · 改结构）。"""
+    n = _nan_in_forward(monkeypatch)
+    model = torch.nn.Linear(1, 1)
+    with pytest.raises(G.NonFinite) as ei:
+        train.calibrate(model, _cfg(tmp_path), [0, 1], torch.device("cpu"))
+    assert ei.value.where == "calibrate" and n["k"] == 1
+    assert ei.value.detail["hybrid"] != ei.value.detail["hybrid"]  # NaN
+    assert model.training  # finally 里的 set_train 照样跑过
+
+
+def test_evaluate_raises_and_does_not_ask_again(tmp_path, monkeypatch):
+    """一批读出坏读数立刻抛，不再问 should_stop（它会把 NaN 掩成「要停」）。"""
+    n = _nan_in_forward(monkeypatch)
+    asked = []
+
+    def should_stop():
+        asked.append(1)
+        return "max_usd" if len(asked) == 2 else None
+    model = torch.nn.Linear(1, 1)
+    with pytest.raises(G.NonFinite) as ei:
+        train.evaluate(model, None, [0, 1], torch.device("cpu"), _cfg(tmp_path), should_stop)
+    assert ei.value.where == "evaluate" and n["k"] == 1 and len(asked) == 1
+    assert model.training
+
+
+def test_all_finite_helper_is_gone():
+    """逐处判断的旧助手删掉了：判断只在 guards.is_finite（tests/test_finite.py 末尾的扫描钉住这一点）。"""
+    assert not hasattr(train, "all_finite")
+
+
+def test_nonfinite_loss_beats_a_stop_signal(tmp_path, monkeypatch):
+    """损失坏了的同时收到信号：报 nonfinite 并留现场，不许被「想停」这条路掩掉。"""
+    import data
+    sig = train._Signals()
+    real_batches = data.SyntheticSource.train_batches
+
+    def gen(self, start_batch=0, device=None):
+        for b in real_batches(self, start_batch, device):
+            if b["batch_index"] == 0:
+                sig.got = "SIGTERM"
+            yield b
+    monkeypatch.setattr(data.SyntheticSource, "train_batches", gen)
+
+    real_fl = train.forward_loss
+
+    def fl(model, crit, batch, device, **k):
+        loss, logs = real_fl(model, crit, batch, device, **k)
+        bad = model.training and batch.get("batch_index") == 0
+        return (loss * float("nan"), logs) if bad else (loss, logs)
+    monkeypatch.setattr(train, "forward_loss", fl)
+
+    stop = train.train(_cfg(tmp_path, **{"schedule.max_steps": 50, "schedule.eval_every": 100}), _signals=sig)
+    rec = json.loads((tmp_path / "t" / "run.json").read_text())  # 一步都没算完，还没有 metrics.jsonl
+    assert stop["reason"] == "nonfinite" and stop["step"] == 0  # 第 1 批就坏，一步都没算完
+    assert rec["crash"]["where"] == "train_loss" and rec["stop"]["reason"] == "nonfinite"
+
+
+def test_nonfinite_in_final_eval_after_max_steps(tmp_path, monkeypatch):
+    """跑满后的补评估读到坏读数：照样按训崩停，坏读数不进权重。"""
+    real = train.evaluate
+    monkeypatch.setattr(train, "evaluate", lambda *a, **k: {**real(*a, **k), "hybrid": float("nan")})
+    stop = train.train(_cfg(tmp_path, **{"schedule.max_steps": 3, "schedule.eval_every": 100}))
+    root, rec, _ = _read(tmp_path)
+    assert stop["reason"] == "nonfinite" and stop["step"] == 3
+    assert rec["crash"]["where"] == "dev_eval" and set(rec["crash"]["detail"]) == {"dev.hybrid"}
+    assert (root / "ckpt" / "step-0000003.pt").exists()  # 停下前先存过

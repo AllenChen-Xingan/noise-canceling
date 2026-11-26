@@ -358,8 +358,8 @@ def test_nonfinite_ema_dev_batch_then_stop_signal_still_crashes(tmp_path, monkey
     _assert_stopped_as_crashed(tmp_path, stop)
 
 
-def test_evaluate_returns_early_on_nonfinite(tmp_path, monkeypatch):
-    """一批读出非有限数就立刻交回去，不再问 should_stop、也不平均（codex guards 第 3 轮 #1）。"""
+def test_evaluate_raises_on_nonfinite(tmp_path, monkeypatch):
+    """一批读出非有限数就立刻抛，不再问 should_stop、也不平均（codex guards 第 3 轮 #1，第 4 轮改成唯一的异常入口）。"""
     cfg = _cfg(tmp_path)
     model = torch.nn.Linear(1, 1)
     monkeypatch.setattr(train, "forward_loss", lambda m, crit, b, dev, **k: (
@@ -369,8 +369,9 @@ def test_evaluate_returns_early_on_nonfinite(tmp_path, monkeypatch):
     def should_stop():
         asked.append(1)
         return "max_usd" if len(asked) == 2 else None
-    out = train.evaluate(model, None, [0, 1], torch.device("cpu"), cfg, should_stop)
-    assert out["nonfinite"] is True and out["batch"] == 0
+    with pytest.raises(G.NonFinite) as ei:
+        train.evaluate(model, None, [0, 1], torch.device("cpu"), cfg, should_stop)
+    assert ei.value.where == "evaluate" and ei.value.detail["hybrid"] != ei.value.detail["hybrid"]
     assert len(asked) == 1  # 第 2 批的那一问根本没发生
     assert model.training  # finally 里的 set_train 照样跑过
 
@@ -396,13 +397,14 @@ def _nan_in_calibrate(monkeypatch, sig=None):
 
 
 def _assert_setup_crash(tmp_path, stop):
-    """标定读到非有限数：按准备期停记（退出码 1），另留 setup_crash.json，不存检查点也不写 run.json（第 4 轮 #2）。"""
+    """标定读到非有限数：按准备期停记（退出码 1），另留 setup_crash.json，不存检查点也不写 run.json。
+    第 4 轮 · 改结构后现场放在 where / detail 里（原来记的是 batch 与 logs）。"""
     assert stop["reason"] == "nonfinite" and stop["phase"] == "setup" and train.exit_code(stop) == 1
     p = tmp_path / "t" / "setup_crash.json"
     assert p.exists()
     got = json.loads(p.read_text())
     assert got["reason"] == "nonfinite" and got["phase"] == "calibrate" and got["at"]
-    assert got["batch"] == 0 and got["logs"]["hybrid"] != got["logs"]["hybrid"]
+    assert got["where"] == "calibrate" and got["detail"]["hybrid"] != got["detail"]["hybrid"]  # NaN
     assert not list((tmp_path / "t" / "ckpt").glob("step-*.pt"))
     assert not (tmp_path / "t" / "run.json").exists()
 

@@ -8,7 +8,9 @@
 - 设备 auto：cuda > mps（打 exp018 的绕法，导出时用原模块）> cpu
 - 到 max_steps、计费时长 ≥ max_hours、计费时长 × 单价 ≥ max_usd、收到 SIGTERM / SIGINT、取数超时或数据用完，
   都存检查点（并补一次开发评估）停下，原因写进 run.json。计费时长含开跑准备，续训时按心跳文件补上被抢占丢的那段
-- 损失不是有限数：不存坏权重，记 `stop.reason = nonfinite` 停下；之后拒绝在同一 run.name 上续训（014 意外矩阵：训崩记进清单不删）
+- 损失不是有限数：唯一的判断是 `guards.is_finite`，读到坏读数就 `guards.require_finite` 抛 `NonFinite`，
+  本文件只有一处接住（标定在准备期、其余在训练循环外）。不存坏权重，记 `stop.reason = nonfinite` 停下；
+  之后拒绝在同一 run.name 上续训（014 意外矩阵：训崩记进清单不删）
 - 批归一化默认冻结统计量（`model.bn = frozen`），训练与推理一致
 - 自动保护（guards.py，方案第十二节）：不是有限数另存现场 crash-<步>.pt · 损失猛涨停 · 开发份最好的一次另存 best.pt ·
   前 500 步太慢停 · 中途卡住 900 s 强退。停下原因写进 run.json，退出码非 0
@@ -18,7 +20,6 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
-import math
 import sys
 import time
 from pathlib import Path
@@ -104,26 +105,25 @@ def loss_cfg(cfg, w_lvl: float, w_on: float) -> losses.LossCfg:
 def calibrate(model, cfg, batches, device, should_stop=lambda: None) -> dict | None:
     """027 3.2 权重第 1 步：起点模型在 calib_batches 个开发批上量各项大小，把 "auto" 的权重定成约占 HybridLoss 的 10%。
     每批前问一次 should_stop（上限 / 信号）；要停就返回 None（codex 第 2 轮 #1）。
-    某一批的读数不是有限数时不等下一批，立刻返回 {"nonfinite": True, "batch": 批号, "logs": logs}（codex guards 第 4 轮 #1）。"""
+    某一批的读数不是有限数时立刻抛 `guards.NonFinite`，不等下一批（codex guards 第 4 轮 · 改结构）。"""
     pc = loss_cfg(cfg, 1.0, 1.0)
     pc.sp, pc.kd = False, False  # 标定只量 HybridLoss 与两项保护
     probe = losses.TrainLoss(pc).to(device)
     model.eval()
     sums = {"hybrid": 0.0, "lvl": 0.0, "on": 0.0}
     valid = {"lvl": 0, "on": 0}
-    for i, b in enumerate(batches):
-        if should_stop():
-            set_train(model, cfg)
-            return None
-        _, logs = forward_loss(model, probe, b, device)
-        if not all_finite(logs):  # 这一批已经读到非有限数：不再问 should_stop，也不算什么权重
-            set_train(model, cfg)
-            return {"nonfinite": True, "batch": i, "logs": logs}
-        sums["hybrid"] += logs["hybrid"]
-        for k in ("lvl", "on"):
-            sums[k] += logs[k] * logs[f"{k}_valid"]
-            valid[k] += logs[f"{k}_valid"]
-    set_train(model, cfg)
+    try:
+        for b in batches:
+            if should_stop():
+                return None
+            _, logs = forward_loss(model, probe, b, device)
+            G.require_finite("calibrate", logs)  # 抛：下一批的 should_stop 再也掩不掉它
+            sums["hybrid"] += logs["hybrid"]
+            for k in ("lvl", "on"):
+                sums[k] += logs[k] * logs[f"{k}_valid"]
+                valid[k] += logs[f"{k}_valid"]
+    finally:
+        set_train(model, cfg)
     nb = len(batches)
     h = sums["hybrid"] / nb
     out = {"batches": nb, "hybrid_mean": h}
@@ -139,16 +139,15 @@ def calibrate(model, cfg, batches, device, should_stop=lambda: None) -> dict | N
 def evaluate(model, crit, dev, device, cfg, should_stop=lambda: None, **kw) -> dict | None:
     """开发份平均读数。lvl / on 按有效段数加权（整批无效的不进分母，codex 第 3 轮 #3）；kd 等按出现过的批数平均。
     每批前问一次 should_stop，要停就返回 None（codex 第 3 轮 #1）。
-    某一批的读数不是有限数时不等下一批，立刻返回 {"nonfinite": True, "batch": 批号, "logs": logs}（codex guards 第 3 轮 #1）。"""
+    某一批的读数不是有限数时立刻抛 `guards.NonFinite`，不等下一批（codex guards 第 3、4 轮 · 改结构）。"""
     model.eval()
     acc, cnt = {}, {}
     try:
-        for i, b in enumerate(dev):
+        for b in dev:
             if should_stop():
                 return None
             _, logs = forward_loss(model, crit, b, device, **kw)
-            if not all_finite(logs):  # 这一批已经读到非有限数：不再问 should_stop（它可能先要停，把 NaN 掩掉）
-                return {"nonfinite": True, "batch": i, "logs": logs}
+            G.require_finite("evaluate", logs)  # 抛：下一批的 should_stop 再也掩不掉它
             for k, v in logs.items():
                 if k.endswith("_valid"):
                     continue
@@ -183,6 +182,14 @@ def _setup_stop(reason, step, billed_s, usd) -> dict:
     """准备期就停：不新存检查点、不改 run.json，账只在心跳里；step 是已落盘的进度（新运行为 0）。"""
     return {"reason": reason or "setup_stopped", "step": step, "phase": "setup",
             "billed_s": round(billed_s, 2), "usd": round(usd, 4)}
+
+
+def _setup_nonfinite(rd, e, step, billed_s, usd) -> dict:
+    """准备期（标定）读到坏读数：不写 run.json、不存检查点，另留一份 setup_crash.json（第 4 轮 · 改结构）。"""
+    crash = {"reason": "nonfinite", "phase": "calibrate", "where": e.where, "detail": e.detail,
+             "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+    (rd.root / "setup_crash.json").write_text(json.dumps(crash, ensure_ascii=False))
+    return {**_setup_stop("nonfinite", step, billed_s, usd), "crash": crash}
 
 
 def deadline_s(lim) -> float:
@@ -301,12 +308,10 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
                                    "env": env_info(), "prev_stop": rec.pop("stop", None)})
         else:
             cal_dev = source.calib_batches(cfg.data.calib_batches, should_stop=tick_stop)
-            calib = None if cal_dev is None else calibrate(model, cfg, cal_dev, device, tick_stop)
-            if isinstance(calib, dict) and calib.get("nonfinite"):  # 标定读到非有限数：准备期就停，只留一份现场（第 4 轮 #2）
-                crash = {"reason": "nonfinite", "phase": "calibrate", "batch": calib["batch"],
-                         "logs": calib["logs"], "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
-                (rd.root / "setup_crash.json").write_text(json.dumps(crash, ensure_ascii=False))
-                return {**_setup_stop("nonfinite", acct["step"], billed(), usd()), "crash": crash}
+            try:
+                calib = None if cal_dev is None else calibrate(model, cfg, cal_dev, device, tick_stop)
+            except G.NonFinite as e:  # 标定读到坏读数：准备期就停，只留一份现场（第 4 轮 · 改结构）
+                return _setup_nonfinite(rd, e, acct["step"], billed(), usd())
             if calib is None:  # 准备期就到上限 / 收到信号：没有检查点可存，只留心跳里的账
                 return _setup_stop(stop_reason(), acct["step"], billed(), usd())
             step = 0
@@ -356,36 +361,28 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
             rd.write(rec)
 
         def dev_eval():
-            """评估一次；读数不是有限数时返回 "nonfinite"（①），否则 None。"""
+            """评估一次（启用 EMA 时并排比）。读数不是有限数就抛 `guards.NonFinite`，由循环外唯一一处接住。"""
             row = {"step": step, "dev": evaluate(model, crit, dev, device, cfg, tick_stop, **kw)}
-            # 原模型或 EMA 中途读到非有限数：evaluate 会直接交回来（codex guards 第 3 轮 #1）。
-            # 这个判断必须排在「row["dev"] is None」之前：那种情况下一批的 should_stop 会把 NaN 掩成「要停」。
-            got = row["dev"] if isinstance(row["dev"], dict) else {}
-            if ema is not None and row["dev"] is not None and not got.get("nonfinite"):  # 034 建议 7：EMA 与不用 EMA 在开发份上并排比
+            if ema is not None:  # 034 建议 7：EMA 与不用 EMA 在开发份上并排比
                 raw = {k: v.clone() for k, v in model.state_dict().items()}
                 model.load_state_dict(ema.state_dict())
                 try:
                     row["dev_ema"] = evaluate(model, crit, dev, device, cfg, tick_stop, **kw)
                 finally:
                     model.load_state_dict(raw)
-            ema_got = row.get("dev_ema") if isinstance(row.get("dev_ema"), dict) else {}
-            if got.get("nonfinite") or ema_got.get("nonfinite"):  # 原模型已经是非有限就不再跑 EMA（省时间，也不存 best.pt）
-                crash(dev=row)
-                return "nonfinite"
             if row["dev"] is None:  # 评估中途要停：这一行不记（半份读数会误导比较）
-                return None
+                return
+            G.require_finite("dev_eval", row)  # 原模型与 EMA 的全部读数（第 1 轮 #1）
             rd.log(row)
             g = guard.on_eval(step, row["dev"].get("hybrid"))
-            if g["nonfinite"] or not all_finite(row):  # 原模型与 EMA 的全部读数（codex guards 第 1 轮 #1）
-                crash(dev=row)
-                return "nonfinite"
+            if g["nonfinite"]:  # 连 hybrid 读数都没有：一样按训崩停，走同一个出口
+                raise G.NonFinite("dev_eval", {"dev.hybrid": None})
             if g["best"]:  # ③：最好的一次另存，不参与轮换；成绩单默认用它
                 rd.save_as(state(), "best.pt")
                 rec["best"] = guard.best
                 rd.write(rec)
             if g["warn"]:
                 guard_event("dev_plateau", message=g["warn"], best=guard.best)
-            return None
 
         if st is None:
             rd.save(state(), 0, sc.keep_last)
@@ -395,68 +392,64 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
         reason, last_eval = None, step
         set_train(model, cfg)
         batches = source.train_batches(start_batch=step, device=device)
-        while True:
-            reason = stop_reason() or ("max_steps" if step >= sc.max_steps else None)  # 上限 / 信号优先（第 3 轮 #1）
-            if reason is None and max_wall_s is not None and time.monotonic() - t_start >= max_wall_s:
-                reason = "interrupted"
-            if reason:
-                break
-            t_iter = time.monotonic()
-            try:
-                batch = next(batches)
-            except StopIteration:
-                reason = "data_exhausted"
-                break
-            except RuntimeError as e:  # DataLoader 的 timeout：worker 卡住时不无限等（自审 P1）
-                if "timed out" not in str(e).lower():
-                    raise
-                reason = "data_timeout"
-                break
-            if batch.get("batch_index", step) != step:  # 第 step 步必须拿第 step 批（续训对齐的交叉校验）
-                raise RuntimeError(f"数据批次错位：第 {step} 步拿到第 {batch['batch_index']} 批")
-            loss, logs = forward_loss(model, crit, batch, device, sp_ref=sp_ref, teacher=teacher)
-            if not math.isfinite(loss.item()):
-                reason = "nonfinite"
-                crash(logs=logs)
-                break
-            opt.zero_grad(set_to_none=True)
-            loss.backward()
-            gn = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.optim.grad_clip)
-            if not torch.isfinite(gn):  # 损失有限、梯度却不是：不更新，否则 Adam 会把 NaN 写进权重（codex 第 1 轮 #2）
-                reason = "nonfinite"
-                crash(logs=logs, grad_norm=float(gn))
-                break
-            opt.step()
-            sched.step()
-            if ema is not None:
-                ema.update(model)
-            step += 1
-            acct["step"] = step
-            acct["t_progress"] = time.monotonic()
-            if step % sc.log_every == 0 or step == 1:
-                rd.log({"step": step, "lr": sched.get_last_lr()[0], "billed_s": round(billed(), 2),
-                        "usd": round(usd(), 4), "grad_norm": float(gn), **logs})
-            why = guard.on_train_step(step, logs.get("total", loss.item()), time.monotonic() - t_iter)
-            if why:  # ② 损失猛涨 / ④ 太慢：只停本运行（每个运行各自判）
-                reason = why
-                guard_event(why, **(guard.spike_detail() if why == "loss_spike" else guard.slow_detail()))
-                break
-            if stop_reason():  # 本步算完时已到上限 / 收到信号：不评估，回到循环顶上存盘停下（codex 第 2 轮 #1）
-                continue
-            if step % sc.eval_every == 0:
-                last_eval = step
-                if dev_eval() == "nonfinite":
-                    reason = "nonfinite"
+        try:
+            while True:
+                reason = stop_reason() or ("max_steps" if step >= sc.max_steps else None)  # 上限 / 信号优先（第 3 轮 #1）
+                if reason is None and max_wall_s is not None and time.monotonic() - t_start >= max_wall_s:
+                    reason = "interrupted"
+                if reason:
                     break
-            if step % sc.ckpt_every == 0:
-                rd.save(state(), step, sc.keep_last)
-        if reason != "nonfinite":
+                t_iter = time.monotonic()
+                try:
+                    batch = next(batches)
+                except StopIteration:
+                    reason = "data_exhausted"
+                    break
+                except RuntimeError as e:  # DataLoader 的 timeout：worker 卡住时不无限等（自审 P1）
+                    if "timed out" not in str(e).lower():
+                        raise
+                    reason = "data_timeout"
+                    break
+                if batch.get("batch_index", step) != step:  # 第 step 步必须拿第 step 批（续训对齐的交叉校验）
+                    raise RuntimeError(f"数据批次错位：第 {step} 步拿到第 {batch['batch_index']} 批")
+                loss, logs = forward_loss(model, crit, batch, device, sp_ref=sp_ref, teacher=teacher)
+                G.require_finite("train_loss", {"loss": loss.item()})  # 抛：这一步不更新、不存坏权重
+                opt.zero_grad(set_to_none=True)
+                loss.backward()
+                gn = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.optim.grad_clip)
+                # 损失有限、梯度却不是：不更新，否则 Adam 会把 NaN 写进权重（codex 第 1 轮 #2）
+                G.require_finite("grad_norm", {"grad_norm": float(gn)})  # 抛的这一句必须在 opt.step() 之前
+                opt.step()
+                sched.step()
+                if ema is not None:
+                    ema.update(model)
+                step += 1
+                acct["step"] = step
+                acct["t_progress"] = time.monotonic()
+                if step % sc.log_every == 0 or step == 1:
+                    rd.log({"step": step, "lr": sched.get_last_lr()[0], "billed_s": round(billed(), 2),
+                            "usd": round(usd(), 4), "grad_norm": float(gn), **logs})
+                why = guard.on_train_step(step, logs.get("total", loss.item()), time.monotonic() - t_iter)
+                if why:  # ② 损失猛涨 / ④ 太慢：只停本运行（每个运行各自判）
+                    reason = why
+                    guard_event(why, **(guard.spike_detail() if why == "loss_spike" else guard.slow_detail()))
+                    break
+                if stop_reason():  # 本步算完时已到上限 / 收到信号：不评估，回到循环顶上存盘停下（codex 第 2 轮 #1）
+                    continue
+                if step % sc.eval_every == 0:
+                    last_eval = step
+                    dev_eval()
+                if step % sc.ckpt_every == 0:
+                    rd.save(state(), step, sc.keep_last)
             rd.save(state(), step, sc.keep_last)  # 先存：被抢占时可能只剩几秒（codex 第 1 轮 #3）
             if reason == "max_steps" and step > last_eval:  # 只在正常跑完时补评估；上限 / 信号时不再花时间
-                if dev_eval() == "nonfinite":
-                    reason = "nonfinite"
-                else:  # 补评估改了保护状态（最好一次、连续变差次数）：重存这一步，续训才接得上（codex guards 第 2 轮 #2）
-                    rd.save(state(), step, sc.keep_last)
+                dev_eval()  # 坏读数在这里抛，落到下面唯一的 except
+                # 补评估改了保护状态（最好一次、连续变差次数）：重存这一步，续训才接得上（codex guards 第 2 轮 #2）
+                rd.save(state(), step, sc.keep_last)
+        except G.NonFinite as e:  # 训练里唯一一处接住：损失 / 梯度 / 开发份（含 EMA）/ 补评估
+            reason = "nonfinite"
+            # 现场留两份：detail 说清是哪一项、什么值；平铺的读数同时保留原来的字段名（grad_norm 等）
+            crash(where=e.where, detail=e.detail, **{k: v for k, v in e.detail.items() if k.isidentifier()})
         rec["stop"] = {"reason": reason, "step": step, "billed_s": round(billed(), 2), "usd": round(usd(), 4),
                        "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
         rd.write(rec)
@@ -493,17 +486,6 @@ def best_in_file(path: Path, device) -> dict | None:
     except Exception:  # noqa: BLE001 —— 读坏了就不用它
         return None
     return g.get("best")
-
-
-def all_finite(x) -> bool:
-    """字典 / 列表里所有数都是有限数（bool 与 None 不算数）。"""
-    if isinstance(x, dict):
-        return all(all_finite(v) for v in x.values())
-    if isinstance(x, (list, tuple)):
-        return all(all_finite(v) for v in x)
-    if isinstance(x, float):
-        return math.isfinite(x)
-    return True
 
 
 def exit_code(stop: dict) -> int:
