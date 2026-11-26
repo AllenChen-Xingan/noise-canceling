@@ -26,6 +26,7 @@ import soundfile as sf
 HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 import fetch  # noqa: E402
+import loader  # noqa: E402
 import shard  # noqa: E402
 import split  # noqa: E402
 
@@ -345,6 +346,73 @@ class ShardSources(unittest.TestCase):
         first = shard.DEFAULT_SOURCES.split(",")[: len(self.OLD)]
         self.assertEqual(len(set(first)), len(self.OLD))
         self.assertEqual(set(first), set(self.OLD))
+
+
+SPEECH_PATH = "train-raw/librispeech/LibriSpeech/train-clean-100/19/1/19-1-0000.flac"
+RIR_PATH = "train-raw/openslr28/RIRS_NOISES/simulated_rirs/smallroom/Room001/Room001-00001.wav"
+# 配方里第一批的三个噪声来源各一条成员（路径要能匹配 recipe.json 里的正则）
+NOISE_PATHS = {
+    "qut-noise": "train-raw/qut-noise/QUT-NOISE/STREET-CITY-1.wav",
+    "tum-wind": "train-raw/tum-wind/wind/000_001.wav",
+    "demand-train": "vdn-data/demand/STRAFFIC/ch01.wav",
+}
+
+
+def member(path):
+    return {"key": path, "shard": "s-00000.tar", "offset": 0, "bytes": 1024, "src_path": path, "unit": path}
+
+
+def fake_idx(extra=None):
+    """最小分片索引（只填 members，不读音频）：人声 · RIR · 配方里三个第一批噪声来源都有 train 成员；
+    extra 是额外来源 {来源: {份: [成员路径, …]}}。"""
+    base = {"librispeech-train-clean-100": {"train": [SPEECH_PATH]}, "openslr28-rir": {"train": [RIR_PATH]},
+            **{n: {"train": [p]} for n, p in NOISE_PATHS.items()}}
+    src = {}
+    for name, by_split in {**base, **(extra or {})}.items():
+        d = {"kind": "speech" if name.startswith("librispeech") else "rir" if name.endswith("-rir") else "noise"}
+        for sp, paths in by_split.items():
+            d[sp] = {"members": [member(p) for p in paths], "shards": {}}
+        src[name] = d
+    return {"sources": src}
+
+
+class PoolSources(unittest.TestCase):
+    """噪声池引用的来源整个不在分片索引里时，只记 missing、没人看：云上分片若漏了 cochlscene，4 个新场景会悄悄消失。"""
+
+    def setUp(self):
+        self.recipe = json.loads((HERE / "recipe.json").read_text())
+
+    def pools(self, idx, split_="train"):
+        return loader.Pools(HERE, self.recipe, idx, split_)
+
+    def test_source_absent_from_index_stops(self):
+        with self.assertRaises(SystemExit) as cm:
+            self.pools(fake_idx())  # 索引里没 cochlscene
+        msg = str(cm.exception)
+        self.assertIn(SRC, msg)
+        self.assertIn("transit-hub", msg)
+
+    def test_present_source_fills_its_scenes(self):
+        idx = fake_idx({SRC: {"train": [cpath("Train", "SubwayStation", "SubwayStation_user0123_1_000.wav")]}})
+        p = self.pools(idx)
+        self.assertEqual(len(p.pools["transit-hub"]), 1)
+        self.assertEqual(p.missing, [])
+
+    def test_empty_split_still_skipped(self):
+        """来源在索引里、只是这一份为空（如 dev）：照旧跳过并记下，不报错。"""
+        idx = fake_idx({SRC: {"dev": [cpath("Train", "SubwayStation", "SubwayStation_user0123_1_000.wav")]}})
+        p = self.pools(idx)
+        self.assertNotIn("transit-hub", p.pools)
+        self.assertEqual(p.missing, [SRC])
+
+    def test_noise_scene_index_records_both(self):
+        """build.json 里要看得见：每份实际有成员的场景（排序）与缺的来源（排序）。"""
+        one = cpath("Train", "SubwayStation", "SubwayStation_user0123_1_000.wav")
+        got = loader.noise_scene_index(fake_idx({SRC: {"train": [one], "dev": [one]}}), self.recipe)
+        self.assertIn("transit-hub", got["noise_scenes"]["train"])
+        self.assertEqual(got["noise_scenes"]["dev"], ["transit-hub"])
+        self.assertEqual(got["noise_scenes"]["train"], sorted(got["noise_scenes"]["train"]))
+        self.assertEqual(got["missing"], sorted(NOISE_PATHS))  # 三个第一批来源在夹具里没有 dev 成员
 
 
 if __name__ == "__main__":

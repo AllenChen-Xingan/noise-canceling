@@ -5,8 +5,9 @@
 - torch_iterable：整批出 dict；第 k 批 = 样本 k·B … k·B+B−1，只由 (seed, k, B) 决定，和 num_workers 无关；
   支持 start_batch 续训。DataLoader 用 batch_size=None
 - 训练 build：分片索引本身的哈希 + 切分表哈希 + 分片哈希 + 配方 + 代码（混音 · 分片 · 交集检查 · 切分）的哈希 → build_id。
-  登记时交集检查查规则里每个来源的切分表（含不进分片的终测原料池）。启动时要求仓里
-  `builds/<build_id>/build.json` 存在且交集检查通过（register_build 生成），否则抛错（027 第六节第 4 条）
+  登记时交集检查查规则里每个来源的切分表（含不进分片的终测原料池），并把每份实际有成员的噪声场景（noise_scenes）与
+  跳过的来源（missing）记进 build.json：噪声池引用的来源整个不在分片索引里直接停（不然场景会悄悄消失）。
+  启动时要求仓里 `builds/<build_id>/build.json` 存在且交集检查通过（register_build 生成），否则抛错（027 第六节第 4 条）
 """
 import hashlib
 import io
@@ -109,11 +110,47 @@ def register_build(shard_root, recipe_path, splits_dir=split.OUT, builds_dir=BUI
     out.mkdir(parents=True, exist_ok=True)
     rec = {"build_id": bid, **parts, "leak_check": lk, "leak_checked_sources": sorted(tables), "valid": lk["ok"], "dropped_rir": len(idx.get("dropped", [])),
            "determinism": "第 i 个样本只由 (seed, 份, i) 决定；第 k 批 = 样本 k·B…k·B+B−1，和 num_workers 无关；换批量 B 内容会变",
-           "counts": {s: {sp: len(v["members"]) for sp, v in d.items() if sp != "kind"} for s, d in idx["sources"].items()}}
+           "counts": {s: {sp: len(v["members"]) for sp, v in d.items() if sp != "kind"} for s, d in idx["sources"].items()},
+           **noise_scene_index(idx, load_recipe(recipe_path))}
     (out / "build.json").write_text(json.dumps(rec, ensure_ascii=False, indent=1) + "\n")
     if not lk["ok"]:
         raise SystemExit(f"build {bid} 交集检查不过，作废：{lk['hits'][:5]}")
     return bid
+
+
+def pool_members(idx, recipe, split_):
+    """把配方的噪声池解成 ({场景: [(成员, 是否风噪, 来源)]}, 这一份没成员而跳过的来源)。
+    来源整个不在分片索引里就停：那时只记一句 missing、没人看，场景会悄悄消失（第二批 4 个新场景少了也看不出来）。"""
+    src, pools, missing = idx["sources"], {}, set()
+    for scene, items in recipe["noise_pools"].items():
+        if scene.startswith("_"):
+            continue
+        ms = []
+        for it in items:
+            name = it["source"]
+            if name not in src:
+                raise SystemExit(f"分片索引里完全没有来源 {name}，场景 {scene} 的噪声池要用它：分片漏了这个来源，先重跑 shard.py（--sources 默认从 recipe.json 导出）")
+            if split_ not in src[name]:
+                missing.add(name)  # 这个来源这一份没有成员（如时段太短）：跳过，记进 build.json
+                continue
+            rx = re.compile(it["regex"])
+            ms += [(m, bool(it.get("wind")), name) for m in src[name][split_]["members"] if rx.search(m["src_path"])]
+        if ms:
+            pools[scene] = ms
+    return pools, sorted(missing)
+
+
+def noise_scene_index(idx, recipe, splits=("train", "dev")):
+    """build.json 里记的两样：每份实际有成员的噪声场景名（排序）· 缺的来源（排序）——噪声池没生效要看得见。"""
+    out = {"noise_scenes": {}, "missing": set()}
+    for sp in splits:
+        pools, miss = pool_members(idx, recipe, sp)
+        out["noise_scenes"][sp] = sorted(pools)
+        out["missing"] |= set(miss)
+    out["missing"] = sorted(out["missing"])
+    if not out["noise_scenes"]["train"]:
+        raise SystemExit("训练份一个噪声池成员也没有：先检查 recipe.json 的 noise_pools 与分片")
+    return out
 
 
 class Pools:
@@ -121,33 +158,19 @@ class Pools:
 
     def __init__(self, shard_root, recipe, idx, split_):
         self.root, self.idx, self.split = Path(shard_root), idx, split_
+        self._fh = {}  # 先占上：__init__ 半路抛错时 __del__ 也能跑
         src = idx["sources"]
 
-        def members(name, required=True):
+        def members(name):  # 人声与 RIR：这一份必须有，缺了就停
             if name not in src or split_ not in src[name]:
-                if required:
-                    raise SystemExit(f"分片里没有 {name} 的 {split_} 份")
-                self.missing.append(name)  # 噪声池里某个来源这一份为空（如时段太短）：跳过，记下
-                return []
+                raise SystemExit(f"分片里没有 {name} 的 {split_} 份")
             return src[name][split_]["members"]
-
-        self.missing = []
 
         self.speech = [m for s in recipe["speech"]["train"] for m in members(s)]
         self.rir = [m for s in recipe["rir"] for m in members(s)]
-        self.pools = {}
-        for scene, items in recipe["noise_pools"].items():
-            if scene.startswith("_"):
-                continue
-            ms = []
-            for it in items:
-                rx = re.compile(it["regex"])
-                ms += [(m, bool(it.get("wind")), it["source"]) for m in members(it["source"], False) if rx.search(m["src_path"])]
-            if ms:
-                self.pools[scene] = ms
+        self.pools, self.missing = pool_members(idx, recipe, split_)
         if not self.speech or not self.pools:
             raise SystemExit("人声或噪声池为空：先检查分片与配方 noise_pools 的正则")
-        self._fh = {}
 
     def close(self):
         for f in self._fh.values():
