@@ -315,7 +315,8 @@ def _record(root: Path, name: str, hybrid, *, row_step=ablation.STEP, dev_build_
     cfg = _cfg_dict()
     cfg["run"]["name"] = name  # run.name / run.seed 每个运行本来就不同：不算对不上
     cfg["run"]["seed"] = next((s for n, s, _k, _o in ablation.WANTED_RUNS if n == name), 0)
-    cfg["data"]["recipe"] = f"recipes/{name}.json"  # 每个运行一份自己的配方：这一项允许各不同
+    cfg["data"]["recipe"] = (BASE_RECIPE if name in ablation.BASE_RUNS else f"recipes/{name}.json")
+    # ↑ 这一项允许各不同：两个基线用的就是基线配方，旋钮运行用各自的变体配方
     cfg["model"]["variant"] = ablation.WANT_VARIANT  # 设计写死：消融只跑模型 A
     cfg["schedule"]["max_steps"] = ablation.STEP  # 设计写死：每个运行 1000 步
     cfg["data"]["dev_recipe"] = BASE_RECIPE  # 7 个运行的开发份都用基线配方

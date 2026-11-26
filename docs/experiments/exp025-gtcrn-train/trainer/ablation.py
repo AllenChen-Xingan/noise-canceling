@@ -34,18 +34,26 @@ import formal  # 复用 TODO 占位 / base 解析 / 命令里的 --config 路径
 HERE = Path(__file__).resolve().parent
 DEFAULT_RUNS = HERE / "configs" / "ablation-runs.yaml"
 STEP = 1000  # 比第 1000 步的开发份 hybrid
+WANT_VARIANT = "A"  # 消融只跑模型 A：A、B 的差是另一件事，混进来就分不出旋钮的作用
 BATCH_RUNS = 3  # 一张 H100 同时跑 3 个（plan-h100-smoke.md 第五节）
+# 判结果时允许各不同的三处（**正本**）：其余 config 一律逐项比，缺键也算不同。RULE 的文字也从这里取。
+CFG_IGNORE = ("run.name", "run.seed", "data.recipe")
 
 RULE = (
-    "大总管定 2026-11-26：模型 A、每个运行 1000 步，比开发份 hybrid（越低越好）。"
-    "记两个基线（种子 0、1）在第 1000 步的读数为 b0、b1，base = (b0 + b1) / 2，floor = |b0 − b1|"
+    f"大总管定 2026-11-26：模型 {WANT_VARIANT}、每个运行 {STEP} 步，比开发份 hybrid（越低越好）。"
+    f"记两个基线（种子 0、1）在第 {STEP} 步的读数为 b0、b1，base = (b0 + b1) / 2，floor = |b0 − b1|"
     "（两个基线的差就是噪声底）。对每个旋钮运行，d = 它的 hybrid − base："
     "默认开着的旋钮被关掉时，d > floor 判「useful: keep on」（关掉变差了，说明它有用），"
     "d < −floor 判「hurts: candidate to turn off」（关掉反而更好），否则判「消融分不出: keep as is (on)」；"
     "high_snr 被打开时，d < −floor 判「useful: turn on」，d > floor 判「hurts: keep off」，"
     "否则判「消融分不出: keep as is (off)」。比较都是严格不等式。"
-    "读数缺失 · 不是有限数 · 没有第 1000 步 · 数据字段或模型/优化器/损失/EMA/步数对不上 → 该运行判 incomplete；"
-    "基线 incomplete 时每个旋钮都 incomplete。"
+    "每个运行的整份 config 也要对得上：拍平成「段.键」逐项和 abl-base-s0 比，只有 "
+    + "、".join(CFG_IGNORE) +
+    " 三项允许各不同，其余任何一项不同、或缺键，都算不同；"
+    f"而且每个运行都必须照设计跑：model.variant = {WANT_VARIANT} · schedule.max_steps = {STEP} · "
+    "data.dev_recipe 指明的开发份配方等于基线的 data.recipe（7 个运行同用一份开发集）。"
+    "读数缺失 · 不是有限数 · 没有第 1000 步 · 指标行不是 JSON 对象 · 数据字段或整份配置对不上 · 不合设计"
+    " → 该运行判 incomplete；基线 incomplete 时每个旋钮都 incomplete。"
 )
 
 # 判词正本（judge 的返回、测试、报告都用这几个字符串，别处不另写一套）
@@ -72,15 +80,6 @@ WANTED_RUNS = (
     ("abl-reverb-off", 0, "reverb", False),
     ("abl-high_snr-on", 0, "high_snr", True),
 )
-
-# judge 比的对不上就要报的 data 字段（config.data 里除 recipe 之外全部要比：开发份的配方与规模一变，读数就不可比）。
-# data_build_id 按设计本来就各不同（每个配方一份新 build），不在此列。
-DATA_IGNORE = ("recipe",)
-
-# judge 除 data 之外还要逐项比的配置：model / optim / loss / ema 整段 + schedule.max_steps。
-# 模型 · 优化器 · 损失 · EMA · 步数一变读数就不可比；只有 run.name / run.seed / data.recipe 允许各不同。
-CFG_SECTIONS = ("model", "optim", "loss", "ema")
-CFG_SCHEDULE = ("max_steps",)
 
 
 # ---------- 路径与占位 ----------
@@ -269,38 +268,44 @@ def _num(x) -> bool:
 
 
 def _flat_cfg(config: dict) -> dict:
-    """除 data 以外要比的配置：model / optim / loss / ema 整段 + schedule.max_steps，拍平成「段.键」。"""
-    out: dict = {}
-    for sec in CFG_SECTIONS:
-        v = config.get(sec)
-        if not isinstance(v, dict):
-            out[sec] = v  # 整段缺了：记成一个值，比对时能报出是哪一段
+    """整份配置拍平成「段.键」，只去掉 CFG_IGNORE 那三项（它们本来就各不同）。
+    段整个缺了就记成一个值（键名是段名）；两边键集合本来就不相同（缺键），比的时候取出来是 None。"""
+    return {k: v for k, v in formal._flat(config).items() if k not in CFG_IGNORE}
+
+
+def _rows(path: Path) -> list[dict]:
+    """metrics.jsonl 的每一行都要是 JSON 对象：合法 JSON 但不是对象（null / [] / 数字）也算读不了。"""
+    out: list[dict] = []
+    for i, line in enumerate(path.read_text().splitlines(), 1):
+        if not line.strip():
             continue
-        out.update({f"{sec}.{k}": x for k, x in v.items()})
-    sch = config.get("schedule")
-    for k in CFG_SCHEDULE:
-        out[f"schedule.{k}"] = sch.get(k) if isinstance(sch, dict) else None
+        row = json.loads(line)
+        if not isinstance(row, dict):
+            raise TypeError(f"metrics.jsonl 第 {i} 行不是 JSON 对象：{line.strip()[:40]!r}")
+        out.append(row)
     return out
 
 
 def _read_run(run_dir: Path, step: int) -> dict:
-    """一个运行的记录：第 step 步的开发份 hybrid · 数据字段 · 配置字段 · 两个 build id。读不出就填 reason。"""
-    out = {"dev_hybrid": None, "data": None, "cfg": None, "data_build_id": None, "dev_build_id": None,
-           "reason": None}
+    """一个运行的记录：第 step 步的开发份 hybrid · 配置（拍平）· 自己配的 data.recipe · 两个 build id。
+    读不出就填 reason。"""
+    out = {"dev_hybrid": None, "cfg": None, "recipe": None, "data_build_id": None,
+           "dev_build_id": None, "reason": None}
     try:
         rec = json.loads((run_dir / "run.json").read_text())
-        rows = [json.loads(x) for x in (run_dir / "metrics.jsonl").read_text().splitlines() if x.strip()]
         config = rec["config"]
         if not isinstance(config, dict):
             raise TypeError("config 不是映射")
         data = config["data"]
         if not isinstance(data, dict):
             raise TypeError("config.data 不是映射")
+        rows = _rows(run_dir / "metrics.jsonl")
     except (OSError, ValueError, KeyError, TypeError) as e:
         out["reason"] = f"读不了运行记录：{type(e).__name__}: {e}"
         return out
-    out["data"] = {k: v for k, v in data.items() if k not in DATA_IGNORE}
-    out["cfg"] = _flat_cfg(config)
+    flat = _flat_cfg(config)
+    out["cfg"] = flat
+    out["recipe"] = data.get("recipe")
     out["data_build_id"] = rec.get("data_build_id")
     out["dev_build_id"] = rec.get("dev_build_id")
     hits = [r["dev"].get("hybrid") for r in rows if r.get("step") == step and isinstance(r.get("dev"), dict)]
@@ -313,6 +318,25 @@ def _read_run(run_dir: Path, step: int) -> dict:
     return out
 
 
+def _design_reason(r: dict, ref: dict) -> str | None:
+    """设计的固定项（#212 评审）：model.variant = WANT_VARIANT · schedule.max_steps = STEP ·
+    data.dev_recipe 指明开发份配方且等于基线（ref）的 data.recipe。返回第一条不合的原因，合上了返回 None。"""
+    flat = r["cfg"]
+    v, n = flat.get("model.variant"), flat.get("schedule.max_steps")
+    if v != WANT_VARIANT:
+        return f"model.variant 是 {v!r}：消融只跑模型 {WANT_VARIANT}，A/B 混进来就分不出旋钮的作用"
+    if n != STEP:
+        return f"schedule.max_steps 是 {n!r}：消融每个运行 {STEP} 步，比的就是第 {STEP} 步的读数"
+    dev = flat.get("data.dev_recipe")
+    if not isinstance(dev, str) or not dev.strip():
+        return (f"data.dev_recipe 空着：7 个运行的开发份要用基线配方 {ref['recipe']!r} 固定住（空 = 跟随"
+                " data.recipe，各运行就会各写一份开发集），读数才可比")
+    if dev != ref["recipe"]:
+        return (f"data.dev_recipe 是 {dev!r}，和基线 {BASE_RUNS[0]} 的 data.recipe {ref['recipe']!r} 不同："
+                "7 个运行必须同用一份开发份配方")
+    return None
+
+
 def _verdict(on: bool, d: float, floor: float) -> str:
     """严格不等式；on 是「这个旋钮在变体里被打开了」——默认关着的打开了，判读方向就反过来。"""
     if on:
@@ -322,12 +346,16 @@ def _verdict(on: bool, d: float, floor: float) -> str:
 
 def judge(out_dir, step: int = STEP) -> dict:
     """判 7 个运行：返回 {rule, base, floor, runs, knobs}。任何运行不完整 → 它在 runs 里是 incomplete；
-    两条基线里任一条不完整（读数、build id、数据字段、模型/优化器/损失/EMA/步数任一项过不了）→
+    两条基线里任一条不完整（读数、build id、数据字段、整份配置、设计固定项任一项过不了）→
     base 与 floor 都不算，每个旋钮都 incomplete。"""
     root = Path(out_dir)
     recs = {name: _read_run(root / name, step) for name, _s, _k, _o in WANTED_RUNS}
     ref_name = BASE_RUNS[0]
     ref = recs[ref_name]
+    # 设计固定项各自查，不必等参照：“彼此都一样”不等于“照设计跑”（#212 评审）
+    for r in recs.values():
+        if r["reason"] is None:
+            r["reason"] = _design_reason(r, ref)
     for name, r in recs.items():
         if r["reason"] or name == ref_name:
             continue
@@ -340,15 +368,13 @@ def judge(out_dir, step: int = STEP) -> dict:
         if r["dev_build_id"] is None:
             r["reason"] = "run.json 里没有 dev_build_id：认不出开发集版本，读数没法比"
             continue
-        bad = sorted(k for k in set(r["data"]) | set(ref["data"]) if r["data"].get(k) != ref["data"].get(k))
-        if bad:
-            r["reason"] = (f"数据字段和 {ref_name} 对不上：{bad}（"
-                           + "，".join(f"{k} {r['data'].get(k)!r} ≠ {ref['data'].get(k)!r}" for k in bad) + "）")
-            continue
-        # 除 data 外的配置也要逐项相同：只有 run.name、run.seed、data.recipe 允许各不同
+        # 整份配置逐项相同（含 device · limits · schedule 全段 · run.out_dir · 数据字段等）：
+        # 只有 CFG_IGNORE 那三项允许各不同；缺键取出来是 None，也算不同
         bad = sorted(k for k in set(r["cfg"]) | set(ref["cfg"]) if r["cfg"].get(k) != ref["cfg"].get(k))
         if bad:
-            r["reason"] = (f"配置字段和 {ref_name} 对不上（只有 run.name、run.seed、data.recipe 可以各不同）："
+            # 全落在 data 里就说是数据字段（它最容易错：开发份规模一变读数就不可比）
+            what = "数据字段" if all(k.startswith("data.") for k in bad) else "配置字段"
+            r["reason"] = (f"{what}和 {ref_name} 对不上（只有 {'、'.join(CFG_IGNORE)} 可以各不同）："
                            + "，".join(f"{k} {r['cfg'].get(k)!r} ≠ {ref['cfg'].get(k)!r}" for k in bad))
     if ref["reason"] is None and ref["dev_build_id"] is None:
         ref["reason"] = "run.json 里没有 dev_build_id：认不出开发集版本，读数没法比"
