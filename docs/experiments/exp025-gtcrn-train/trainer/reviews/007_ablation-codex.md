@@ -84,3 +84,8 @@ P0×0 P1×1 P2×1。核实属实。
 由 pi `trainer-ablation-fix6` 修，提交 4c30bb29..95afdd65，花费 0.0066 美元。
 - 改动：dev_gate 用 `dev_build_id`，旧记录没有时退回 `data_build_id`，拿它比参照的 build_id。smoke.py 写参照（`--write-known-dev`）和比参照（`--known-dev`）都传开发份的 build id。
 - 红灯：trainer 在 4c30bb29 上复现，3 败 40 过。
+
+## 第 6 轮（2026-11-26）· 模型 gpt-6-astra · 总评「修改」
+
+P0×0 P1×0 P2×1。连续第 1 轮无 P0/P1。合入后 10 个测试文件共 239 过 2 跳过。
+- **P2｜不设 dev_recipe 时 run.json 仍多两个字段**（第 6 轮 #1）：同第 5 轮 #2，留在 #217，本 PR 不关它。它不影响判结果，也不影响续训和开训。
