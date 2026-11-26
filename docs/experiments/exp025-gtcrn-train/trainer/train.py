@@ -133,14 +133,17 @@ def calibrate(model, cfg, batches, device, should_stop=lambda: None) -> dict | N
 @torch.no_grad()
 def evaluate(model, crit, dev, device, cfg, should_stop=lambda: None, **kw) -> dict | None:
     """开发份平均读数。lvl / on 按有效段数加权（整批无效的不进分母，codex 第 3 轮 #3）；kd 等按出现过的批数平均。
-    每批前问一次 should_stop，要停就返回 None（codex 第 3 轮 #1）。"""
+    每批前问一次 should_stop，要停就返回 None（codex 第 3 轮 #1）。
+    某一批的读数不是有限数时不等下一批，立刻返回 {"nonfinite": True, "batch": 批号, "logs": logs}（codex guards 第 3 轮 #1）。"""
     model.eval()
     acc, cnt = {}, {}
     try:
-        for b in dev:
+        for i, b in enumerate(dev):
             if should_stop():
                 return None
             _, logs = forward_loss(model, crit, b, device, **kw)
+            if not all_finite(logs):  # 这一批已经读到非有限数：不再问 should_stop（它可能先要停，把 NaN 掩掉）
+                return {"nonfinite": True, "batch": i, "logs": logs}
             for k, v in logs.items():
                 if k.endswith("_valid"):
                     continue
@@ -345,13 +348,20 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
         def dev_eval():
             """评估一次；读数不是有限数时返回 "nonfinite"（①），否则 None。"""
             row = {"step": step, "dev": evaluate(model, crit, dev, device, cfg, tick_stop, **kw)}
-            if ema is not None and row["dev"] is not None:  # 034 建议 7：EMA 与不用 EMA 在开发份上并排比
+            # 原模型或 EMA 中途读到非有限数：evaluate 会直接交回来（codex guards 第 3 轮 #1）。
+            # 这个判断必须排在「row["dev"] is None」之前：那种情况下一批的 should_stop 会把 NaN 掩成「要停」。
+            got = row["dev"] if isinstance(row["dev"], dict) else {}
+            if ema is not None and row["dev"] is not None and not got.get("nonfinite"):  # 034 建议 7：EMA 与不用 EMA 在开发份上并排比
                 raw = {k: v.clone() for k, v in model.state_dict().items()}
                 model.load_state_dict(ema.state_dict())
                 try:
                     row["dev_ema"] = evaluate(model, crit, dev, device, cfg, tick_stop, **kw)
                 finally:
                     model.load_state_dict(raw)
+            ema_got = row.get("dev_ema") if isinstance(row.get("dev_ema"), dict) else {}
+            if got.get("nonfinite") or ema_got.get("nonfinite"):  # 原模型已经是非有限就不再跑 EMA（省时间，也不存 best.pt）
+                crash(dev=row)
+                return "nonfinite"
             if row["dev"] is None:  # 评估中途要停：这一行不记（半份读数会误导比较）
                 return None
             rd.log(row)
