@@ -41,3 +41,6 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-25T22:35:58Z	volume_resize	bzpbedqdsi		US-MO-1	0.019444	2026-11-25T22:35:58Z					150 → 200 GB ≈ 14.0 USD/月
 2026-11-25T22:40:47Z	pod_delete	htpp90buaagezi	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T22:04:59Z	2026-11-25T22:40:47Z	0.5967	2.6194		乙段第 2–4 步全过，取回后删机
 2026-11-26T00:11:30Z	pod_delete	gwgj2a97e1a92q	cpu3c x4	US-MO-1	0.1200	2026-11-25T22:06:20Z	2026-11-26T00:11:30Z	2.0861	0.2503		CochlScene 3 类解压完 17629/17629，大总管核对后删机
+2026-11-26T00:30:56Z	pod_create	g1wyqz5tsvqvia	cpu3c x4	US-MO-1	0.1200	2026-11-26T00:30:56Z					max_hours=3.0
+2026-11-26T01:20:18Z	pod_create	glx9kkda13gckv	cpu3c x4	US-MO-1	0.1200	2026-11-26T01:20:18Z					max_hours=6.0
+2026-11-26T01:51:16Z	pod_delete	g1wyqz5tsvqvia	cpu3c x4	US-MO-1	0.1200	2026-11-26T00:30:56Z	2026-11-26T01:51:16Z	1.3389	0.1607		第二批登记 6173bf9ca6a6e143 + BUT 下载解压完；日志已取回
