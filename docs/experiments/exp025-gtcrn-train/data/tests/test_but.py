@@ -147,6 +147,58 @@ class Meta(unittest.TestCase):
         self.assertEqual(len(got), len(self.files))
         self.assertEqual(d.get("excluded_meta", 0), 0)
 
+class Screen(unittest.TestCase):
+    """`screen_file`：screen.py 的 jsonl 里 verdict=drop 的不要；清单里每个文件都得有结论。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.files = fixtures_but.make_tree(self.root)
+        self.r = feat_rule(exclude_if_meta=META, screen_file=str(self.root / "screen.jsonl"))
+        self.kept = [p for p in self.files if p not in set(fixtures_but.radio_files())]
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_src(self):
+        d = {}
+        rows = split.split_source(self.root, SRC, self.r, split.load_rules()["seed"], split.load_rules()["splits"],
+                                  workers=2, excluded=d)
+        return rows, d
+
+    def test_drop_excluded_and_counted(self):
+        dropped = self.kept[:2]
+        fixtures_but.write_screen(self.root / "screen.jsonl", self.kept, drop=dropped)
+        rows, d = self.run_src()
+        self.assertEqual({r["path"] for r in rows}, set(self.kept) - set(dropped))
+        self.assertEqual(d["excluded_screen"], len(dropped))
+
+    def test_radio_files_need_no_verdict(self):
+        """顺序是先 meta 后筛查：被 meta 排掉的文件不进筛查表，也不报「少了一条」。"""
+        fixtures_but.write_screen(self.root / "screen.jsonl", self.kept)  # 不含收音机那一次布置
+        rows, d = self.run_src()
+        self.assertEqual(len(rows), len(self.kept))
+        self.assertEqual(d["excluded_meta"], len(fixtures_but.radio_files()))
+        self.assertEqual(d["excluded_screen"], 0)
+
+    def test_file_missing_from_screen_stops(self):
+        fixtures_but.write_screen(self.root / "screen.jsonl", self.kept[1:])
+        with self.assertRaises(SystemExit) as cm:
+            self.run_src()
+        self.assertIn(self.kept[0], str(cm.exception))
+
+    def test_missing_screen_file_stops(self):
+        self.r["screen_file"] = str(self.root / "screen" / "nope.jsonl")
+        with self.assertRaises(SystemExit) as cm:
+            self.run_src()
+        self.assertIn("screen.py", str(cm.exception))
+
+    def test_bad_verdict_stops(self):
+        p = fixtures_but.write_screen(self.root / "screen.jsonl", self.kept)
+        p.write_text(p.read_text().replace('"keep"', '"maybe"', 1))
+        with self.assertRaises(SystemExit):
+            self.run_src()
+
 
 if __name__ == "__main__":
     unittest.main()
