@@ -25,6 +25,36 @@ fn unusable(i: &Item) -> String {
     }
 }
 
+/// 一项在一个场景里「齐不齐」（正本：要涨与不许退都用它）：
+/// - `Ok(false)` = 不适用（成绩单标准 `standard::items` 不在这个场景看这一项）
+/// - `Err(为什么)` = 适用但不齐：这一项在 compare 里没有数，或配对段数少于清单给这个场景的段数
+///   （有段缺分 / 只有一边有值，剩下的段判不了这一项）
+/// - `Ok(true)` = 适用且齐，可以拿来判
+fn item_complete(cmp: &Cmp, scene: &str, item: &str, expected: &Expected) -> Result<bool, String> {
+    let Some(place) = MeetingPlace::ALL.into_iter().find(|p| p.as_str() == scene) else {
+        return Err(format!("{scene} 不是场景键，认不出这一项适用不适用"));
+    };
+    if !crate::scorecard::standard::items(place)
+        .iter()
+        .any(|(i, _)| i.v == item)
+    {
+        return Ok(false);
+    }
+    let want = expected.clips_in(scene);
+    match cmp.item(scene, item) {
+        None => Err(format!(
+            "{} · {scene} 没有这一项的数（清单有 {want} 段）",
+            cmp.name()
+        )),
+        Some(i) if i.pairs < want => Err(format!(
+            "{} · {scene} · {item} 只配上 {} 段，清单有 {want} 段",
+            cmp.name(),
+            i.pairs
+        )),
+        Some(_) => Ok(true),
+    }
+}
+
 /// 种子齐不齐：`--vs` 必须正好 `SC-ACCEPT.seeds` 份、`--noise` 必须正好每两两互比一份。
 ///
 /// 身份 = 成绩单内容 sha256 + 系统名（`compare.json` 的 `meta.a_sha256` / `meta.b_sha256` 与
@@ -123,26 +153,23 @@ fn gain_row(
         );
     }
     let (mut bad, mut hole, mut seen) = (Vec::new(), Vec::new(), Vec::new());
-    // 段都在、但有的段这一项是 null 时，配对段数会少于清单给的段数：那不是「涨」，是没判全
-    // （codex 第 9 轮 P1）
-    let want = expected.clips_in(scene);
     for c in vs {
-        match c.item(scene, v) {
-            None => hole.push(format!("{} 没有这个场景这一项的数", c.name())),
-            Some(i) if i.pairs < want => hole.push(format!(
-                "{} · {v} 只配上 {} 段，清单这个场景有 {want} 段",
-                c.name(),
-                i.pairs
-            )),
-            Some(i) if !usable(&i) => hole.push(format!(
-                "{} 这个场景这一项的{}，判不了",
-                c.name(),
-                unusable(&i)
-            )),
-            Some(i) => {
-                seen.push(i.call.zh().to_string());
-                if i.call != Call::Up {
-                    bad.push(format!("{} 判「{}」", c.name(), i.call.zh()));
+        match item_complete(c, scene, v, expected) {
+            Err(why) => hole.push(why),
+            Ok(false) => hole.push(format!("{} 这个场景不看 {v}", c.name())),
+            Ok(true) => {
+                let i = c.item(scene, v).expect("item_complete 已保证有数");
+                if !usable(&i) {
+                    hole.push(format!(
+                        "{} 这个场景这一项的{}，判不了",
+                        c.name(),
+                        unusable(&i)
+                    ));
+                } else {
+                    seen.push(i.call.zh().to_string());
+                    if i.call != Call::Up {
+                        bad.push(format!("{} 判「{}」", c.name(), i.call.zh()));
+                    }
                 }
             }
         }
@@ -158,22 +185,21 @@ fn gain_row(
                 }
                 let mut floor: Option<f64> = None;
                 for c in noise {
-                    match c.item(scene, v) {
-                        None => hole.push(format!("{} 没有这个场景这一项的数", c.name())),
-                        Some(i) if i.pairs < want => hole.push(format!(
-                            "{} · {v} 只配上 {} 段，清单这个场景有 {want} 段",
-                            c.name(),
-                            i.pairs
-                        )),
-                        Some(i) if !usable(&i) => hole.push(format!(
-                            "{} 这个场景这一项的{}，判不了",
-                            c.name(),
-                            unusable(&i)
-                        )),
-                        Some(i) => {
-                            if let Some(x) = i.diff {
-                                let a = x.mean.abs();
-                                floor = Some(floor.map_or(a, |m: f64| m.max(a)));
+                    match item_complete(c, scene, v, expected) {
+                        Err(why) => hole.push(why),
+                        Ok(false) => hole.push(format!("{} 这个场景不看 {v}", c.name())),
+                        Ok(true) => {
+                            let i = c.item(scene, v).expect("item_complete 已保证有数");
+                            match i.diff.filter(|_| usable(&i)) {
+                                Some(x) => {
+                                    let a = x.mean.abs();
+                                    floor = Some(floor.map_or(a, |m: f64| m.max(a)));
+                                }
+                                None => hole.push(format!(
+                                    "{} 这个场景这一项的{}",
+                                    c.name(),
+                                    unusable(&i)
+                                )),
                             }
                         }
                     }
@@ -205,39 +231,30 @@ fn gain_row(
 }
 
 /// 「不许退」的一行：报告种子在每个有这个项值的场景上，差值区间上界 ≤ 线。
-fn regress_row(v: &str, key: &str, rep: &Cmp, expected: &[String]) -> Row {
+fn regress_row(v: &str, key: &str, rep: &Cmp, expected: &Expected) -> Row {
     let line = th::ACCEPT.def(key);
     let what = format!("不许退 {v}（报告种子区间上界 ≤ SC-ACCEPT.{key} = {line:+.3} dB）");
     let (mut seen, mut bad, mut hole) = (Vec::new(), Vec::new(), Vec::new());
     // 对照成绩单有的场景，比较里必须有逐场景的数：整场景漏跑时这一项没被检查过，不能算过
-    for scene in expected {
-        if !rep.scopes.contains_key(scene) {
-            hole.push(format!("compare 里没有场景 {scene}（对照成绩单有）"));
+    for scene in expected.scenes() {
+        if !rep.scopes.contains_key(&scene) {
+            hole.push(format!("compare 里没有场景 {scene}（清单有）"));
         }
     }
     for (scene, s) in rep.scenes() {
-        // 「不适用」只按成绩单标准的适用范围算（`standard::items`）：如 V-BGSTAB 在安静类场景不打分。
-        // 适用场景没有数 = 缺证据，不能跳过（codex 第 2 轮 P1 #2）
-        let Some(place) = MeetingPlace::ALL.into_iter().find(|p| p.as_str() == scene) else {
-            hole.push(format!("{scene} 不是场景键，认不出这一项适用不适用"));
-            continue;
-        };
-        if !crate::scorecard::standard::items(place)
-            .iter()
-            .any(|(i, _)| i.v == v)
-        {
-            continue;
+        // 「不适用」与「齐不齐」都走同一个函数（codex 第 10 轮 P1）
+        match item_complete(rep, scene, v, expected) {
+            Ok(false) => continue,
+            Err(why) => {
+                hole.push(why);
+                continue;
+            }
+            Ok(true) => {}
         }
         let Some(i) = s.items.get(v) else {
             hole.push(format!("{scene} 适用这一项，但两边都没有这一项的数"));
             continue;
         };
-        if i.pairs == 0 {
-            hole.push(format!(
-                "{scene} 这一项没有一对可比（值不对称或都不是有限数）"
-            ));
-            continue;
-        }
         let Some(d) = i.diff.filter(|_| usable(i)) else {
             hole.push(format!("{scene} {}", unusable(i)));
             continue;
@@ -470,9 +487,8 @@ pub(super) fn evaluate(
             rows.push(gain_row(v, key, scene, vs, noise, expected));
         }
     }
-    let want = expected.scenes();
     for (v, key) in REGRESS {
-        rows.push(regress_row(v, key, rep, &want));
+        rows.push(regress_row(v, key, rep, expected));
     }
     for v in VETO {
         rows.push(veto_row(v, rep));

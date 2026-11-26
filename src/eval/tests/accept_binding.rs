@@ -260,6 +260,26 @@ fn null_value_shrinks_gain_pairs_is_undecided() {
     assert_eq!(js["verdict"], "undecided");
 }
 
+/// codex 第 10 轮 P1：「不许退」的项也要核齐。段都在、但候选有一段的 V-TIMBRE 是 null → 判不了。
+#[test]
+fn null_value_shrinks_regress_pairs_is_undecided() {
+    let f = Fix::new("nulltimbre");
+    let clip = ctl(MeetingPlace::Cafe, 4)[2].clip.clone();
+    let g = build(
+        &f,
+        Spec {
+            null1: &[(&clip, "V-TIMBRE")],
+            ..spec(good1(), good2(), good3())
+        },
+    );
+    let js = f.accept(&g.vs, &g.noise, &g.card_a, &g.card_b, "x");
+    assert_eq!(verdict(&js, "V-TIMBRE"), "undecided", "{js}");
+    let d = detail(&js, "V-TIMBRE");
+    assert!(d.contains("7") && d.contains("8"), "要写出段数：{d}");
+    assert_eq!(verdict(&js, "V-ONSET"), "pass", "{js}");
+    assert_eq!(js["verdict"], "undecided");
+}
+
 /// codex 第 7 轮 P1：覆盖要核每一份 compare，不止报告种子那份。
 /// 种子 2 的 compare（以及它参与的两对互比）少了一段目标场景的片段 → 要涨的线判不了。
 #[test]
