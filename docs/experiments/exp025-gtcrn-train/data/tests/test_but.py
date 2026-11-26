@@ -1,15 +1,14 @@
-"""BUT Speech@FIT Reverb Database（2019 RIR-Only 包）的底噪登记成第三批训练噪声（D111 补充，2026-11-26）。
+"""BUT Speech@FIT Reverb Database（2019 RIR-Only 包）的底噪登记成第三批训练噪声（D111 补充，2026-11-26），第四批加三间办公室。
 
 数字与字符串一律从正本读，不在测试里抄副本：
 - `sources.json` 的 `A7`：手工下载条目（字节数与首次下载记的 md5 / sha256）
 - `download-list-but.md` 第 1 节的表：字节数（sources.json 的第二处表示，交叉校验）
 - `split_rules.json` 的 `but-reverbdb-silence`：通配符 · 单位正则 · 层 · meta 排除 · 筛查表 · 期望条数 · 比例
-- `recipe.json` 的 `noise_pools`：酒店房间 → hotel-room（这一批不登记会议室，D113）
 - 上游 read_me（副本 `third_party/BUT_ReverbDB-read_me.txt`）：第 2 个扬声器放背景声
-夹具在临时目录现造（几间房 × 几次布置 × 两个麦克风的 0.5 s wav），不用真数据。
+夹具在临时目录现造（几间房 × 几次布置 × 几个麦克风的 0.5 s wav），不用真数据。
+真规则通配符 / 场景池 / 仓里那份筛查表的核对在 `tests/test_but_batch4.py`（本文件超 600 行前分出去的）。
 """
 import copy
-import fnmatch
 import json
 import re
 import subprocess
@@ -298,14 +297,15 @@ class UnitFrom(unittest.TestCase):
         self.assertNotIn("unit_from", self.summ(r, "qut-noise"))
 
 class Pools(unittest.TestCase):
-    """第三批：BUT 库的酒店房间底噪 → hotel-room（D111 · D113）。会议室池等人听过 C236 再定，这一批不登记。"""
+    """第三批 + 第四批：BUT 库的底噪分给两个场景——酒店房间 Room112 → hotel-room；三间办公室 L207 · L212 · Q301 → meeting-room。
+    食堂 = DEMAND 的 PCAFETER + PRESTO 两间餐厅。C236 不用（D114：第 1 秒后有 250 Hz 单音）。"""
 
     def setUp(self):
         self.recipe = json.loads((HERE / "recipe.json").read_text())
         self.pools = {k: v for k, v in self.recipe["noise_pools"].items() if not k.startswith("_")}
 
-    def item(self, scene):
-        items = [it for it in self.pools[scene] if it["source"] == SRC]
+    def item(self, scene, source=SRC):
+        items = [it for it in self.pools[scene] if it["source"] == source]
         self.assertEqual(len(items), 1, scene)
         return items[0]
 
@@ -314,10 +314,25 @@ class Pools(unittest.TestCase):
         self.assertIn(SRC, rules)
         self.assertIn(fixtures_but.ROOM112, self.item("hotel-room")["regex"])
 
-    def test_no_meeting_room_pool(self):
-        """D113：C236 会议室底噪筛查大多不过，人听过再定；这一批的配方里不许有会议室池。"""
-        self.assertNotIn("meeting-room", self.pools)
+    def test_meeting_room_pool_is_the_three_offices(self):
+        """第四批：会议室池只认三间办公室，不认 C236（D114）。"""
+        rx = re.compile(self.item("meeting-room")["regex"])
+        for room in fixtures_but.OFFICES:
+            path = fixtures_but.wav_rel(room, "SpkID01_20171223_S", "01")
+            self.assertTrue(rx.search(path), path)
+        for room in (fixtures_but.C236, fixtures_but.ROOM112):
+            self.assertFalse(rx.search(fixtures_but.wav_rel(room, "SpkID01_20171223_S", "01")), room)
         self.assertNotIn(fixtures_but.C236, json.dumps(self.recipe["noise_pools"], ensure_ascii=False))
+
+    def test_canteen_pool_is_pcafeter_plus_presto(self):
+        """食堂 = DEMAND 两间餐厅（第四批决定了加 PRESTO）；别的 DEMAND 环境一条也不许进。"""
+        it = self.item("canteen", "demand-train")
+        self.assertEqual(it["source"], "demand-train")
+        rx = re.compile(it["regex"])
+        for env in ("PCAFETER", "PRESTO"):
+            self.assertTrue(rx.search(f"vdn-data/demand/{env}/ch01.wav"), env)
+        for env in ("SCAFE", "STRAFFIC", "TBUS", "DKITCHEN", "OOFFICE", "OHALLWAY"):
+            self.assertFalse(rx.search(f"vdn-data/demand/{env}/ch01.wav"), env)
 
     def test_regex_picks_only_hotel_room(self):
         p = {room: fixtures_but.wav_rel(room, "SpkID01_20190503_S", "01") for room in (fixtures_but.C236, fixtures_but.ROOM112)}
@@ -325,65 +340,16 @@ class Pools(unittest.TestCase):
         for other, path in p.items():
             self.assertEqual(bool(rx.search(path)), other == fixtures_but.ROOM112, other)
 
-    def test_note_names_third_batch(self):
+    def test_note_names_the_batches(self):
         note = self.recipe["noise_pools"]["_说明"]
         self.assertIn("D111", note)
         self.assertIn("D113", note)
         self.assertIn("BUT", note)
         self.assertIn("同一间房", note)
-        self.assertIn("会议室", note)  # 说清为什么不登记：等人听过再定
-
-
-class RealRule(unittest.TestCase):
-    """这一批只登记酒店房间（D113）：真规则的通配符与期望条数都只算 Room112。"""
-
-    def test_globs_have_no_c236(self):
-        g = rule()["glob"]
-        self.assertIsInstance(g, list)
-        self.assertEqual(len(g), 1, "这一批只登记一间房：通配符只留酒店房间那条")
-        text = json.dumps(g, ensure_ascii=False)
-        self.assertNotIn(fixtures_but.C236, text)
-        self.assertIn(fixtures_but.ROOM112, text)
-
-    def test_src_names_hotel_room_and_pending_meeting_room(self):
-        r = rule()
-        self.assertIn("Room112", r["expect"]["src"])
-        self.assertIn("D113", r["expect"]["src"])
-        self.assertIn("hotel-room", r["src"])
-        self.assertIn("D113", r["src"])
-        self.assertIn("同一间房", r["_开发份"])
-
-    def test_expect_files_is_room112_count(self):
-        self.assertEqual(rule()["expect"]["files"], 248)
-
-
-class RealScreen(unittest.TestCase):
-    """仓里那份筛查表（868 行 = C236 620 + Room112 248）：每条都有结论，酒店房间的 248 条与真规则对得上。"""
-
-    def setUp(self):
-        self.p = HERE / rule()["screen_file"]
-        self.lines = [ln for ln in self.p.read_text(encoding="utf-8").splitlines() if ln.strip()]
-        self.rows = [json.loads(ln) for ln in self.lines]
-        self.globs = [fnmatch.translate(g) for g in rule()["glob"]]
-
-    def test_line_count(self):
-        self.assertEqual(len(self.lines), 868)  # 上游 C236 620 + Room112 248
-        self.assertEqual(len({r["path"] for r in self.rows}), len(self.rows), "同一文件出现两次")
-
-    def test_every_row_has_a_verdict(self):
-        for r in self.rows:
-            self.assertIn(r.get("verdict"), ("keep", "drop"), r.get("path"))
-
-    def test_hotel_room_rows_are_exactly_the_pool(self):
-        hotel = [r for r in self.rows if fixtures_but.ROOM112 in r["path"]]
-        self.assertEqual(len(hotel), rule()["expect"]["files"])
-        for r in hotel:
-            self.assertTrue(any(re.match(t, r["path"]) for t in self.globs), r["path"])
-
-    def test_rule_globs_match_no_meeting_room_row(self):
-        for r in self.rows:
-            if fixtures_but.C236 in r["path"]:
-                self.assertFalse(any(re.match(t, r["path"]) for t in self.globs), r["path"])
+        self.assertIn("第四批", note)
+        self.assertIn("办公室", note)  # 说清 meeting-room 用的是办公室底噪
+        self.assertIn("D114", note)  # 说清 C236 为什么不用
+        self.assertIn("PRESTO", note)
 
 
 class ScreenRules(unittest.TestCase):
@@ -395,18 +361,19 @@ class ScreenRules(unittest.TestCase):
         self.assertIn("Inside, small room", sc["tags_any"])
 
 class ButRule(unittest.TestCase):
-    """用仓库里的真规则跑夹具树：单位 · meta 排除 · 筛查 · 分层 一条龙（screen_file 指向夹具那份，expect 按夹具数目）。
-    真规则这一批只列酒店房间（D113），所以只核 Room112 的文件；夹具里的 C236 只是没人认领的旁路文件。"""
+    """用仓库里的真规则跑夹具树（第四批：多造三间办公室）：通配符 · 单位 · meta 排除 · 筛查 · 分层 一条龙
+    （screen_file 指向夹具那份，expect 按夹具数目）。真规则选四间房：Room112 全部麦克风，三间办公室只取 01 · 11 · 21；
+    夹具里的 C236 文件一条也不该进表。"""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        self.files = fixtures_but.make_tree(self.root)
-        self.room = [p for p in self.files if fixtures_but.ROOM112 in p]
-        self.radio = {p for p in fixtures_but.radio_files() if fixtures_but.ROOM112 in p}
-        self.kept = [p for p in self.room if p not in self.radio]
+        self.files = fixtures_but.make_tree(self.root, offices=True)
         self.r = copy.deepcopy(rule())
-        self.r["expect"]["files"] = len(self.room)  # 真规则只列酒店房间：夹具 2 次布置 × 2 个麦克风 = 4
+        self.selected = split.list_files(self.root, self.r)  # 真通配符选中的（meta 排除之前）
+        self.radio = {p for p in self.selected if p in set(fixtures_but.radio_files(offices=True))}
+        self.kept = [p for p in self.selected if p not in self.radio]
+        self.r["expect"]["files"] = len(self.selected)  # 期望条数是 meta 排除之前数的
         self.r["screen_file"] = str(fixtures_but.write_screen(self.root / "screen.jsonl", self.kept))
 
     def tearDown(self):
@@ -421,25 +388,37 @@ class ButRule(unittest.TestCase):
     def test_unit_regex_on_real_path(self):
         rel = fixtures_but.wav_rel(fixtures_but.ROOM112, "SpkID02_20171223_S", "01")
         self.assertEqual(split.unit_of(rel, rule()), "Hotel_SkalskyDvur_Room112/SpkID02_20171223_S")
+        office = fixtures_but.wav_rel(fixtures_but.L207, "SpkID01_20171223_S", "11")
+        self.assertEqual(split.unit_of(office, rule()), "VUT_FIT_L207/SpkID01_20171223_S")
         self.assertTrue(rule()["unit_regex_required"])
 
-    def test_only_hotel_room_files_selected(self):
-        """通配符只认酒店房间：夹具里的 C236 文件一条也不进表，排除数因酒店房间无收音机布置而为 0。"""
+    def test_glob_takes_the_four_rooms(self):
+        self.assertEqual({p.split("/")[2] for p in self.selected},
+                         {fixtures_but.ROOM112, *fixtures_but.OFFICES})
+        self.assertFalse(any(fixtures_but.C236 in p for p in self.selected))
+
+    def test_office_globs_take_only_mics_01_11_21(self):
+        """真规则的通配符写死 `[012]1`：夹具里写了 02 号麦克风，真规则一条也不选它。"""
+        office = [p for p in self.selected if p.split("/")[2] in fixtures_but.OFFICES]
+        self.assertEqual({p.split("/")[5] for p in office}, set(fixtures_but.OFFICE_PICKED))
+        written = [p for p in self.files if p.split("/")[2] in fixtures_but.OFFICES]
+        self.assertIn("02", {p.split("/")[5] for p in written}, "夹具里要有 02 号，否则这条不是空检查")
+
+    def test_only_rule_files_selected(self):
         rows, d = self.run_src()
-        got = {r["path"] for r in rows}
-        self.assertEqual(got, set(self.kept))
-        self.assertFalse(any(fixtures_but.C236 in p for p in got))
+        self.assertEqual({r["path"] for r in rows}, set(self.kept))
         self.assertEqual(d["excluded_meta"], len(self.radio))
 
     def test_units_are_room_and_setup(self):
         rows, _ = self.run_src()
-        self.assertEqual({r["unit"] for r in rows},
-                         {f"{fixtures_but.ROOM112}/SpkID01_20171223_S", f"{fixtures_but.ROOM112}/SpkID02_20171223_S"})
+        want = {"/".join(p.split("/")[2:3] + p.split("/")[4:5]) for p in self.kept}
+        self.assertEqual({r["unit"] for r in rows}, want)
 
-    def test_hotel_room_has_a_dev_unit(self):
+    def test_each_room_has_a_dev_unit(self):
+        """四间房 = 四个层，每层至少一个开发份单位（min_dev_per_stratum=1）。"""
         rows, _ = self.run_src()
         dev = {r["unit"].split("/")[0] for r in rows if r["split"] == "dev"}
-        self.assertEqual(dev, {fixtures_but.ROOM112})
+        self.assertEqual(dev, {fixtures_but.ROOM112, *fixtures_but.OFFICES})
 
     def test_screen_drop_excluded(self):
         self.r["screen_file"] = str(fixtures_but.write_screen(self.root / "screen2.jsonl", self.kept, drop=self.kept[:1]))
@@ -456,24 +435,35 @@ class ButRule(unittest.TestCase):
 class ListFiles(unittest.TestCase):
     """`--list-files`：云上给 screen.py 造候选清单用（只过清单与 meta 排除，不要求筛查表已在）。"""
 
+    @staticmethod
+    def expected_pool(files):
+        """真规则该选哪些（不看规则文件，从路径自己算）：Room112 全部麦克风；三间办公室只 01 · 11 · 21；C236 不要。"""
+        out = []
+        for p in files:
+            room, mic = p.split("/")[2], p.split("/")[5]
+            if room == fixtures_but.ROOM112 or (room in fixtures_but.OFFICES and mic in fixtures_but.OFFICE_PICKED):
+                out.append(p)
+        return out
+
+    def list_files(self, root):
+        return subprocess.run([sys.executable, str(HERE / "split.py"), "--root", str(root),
+                               "--list-files", "--only", SRC], capture_output=True, text=True)
+
     def test_excludes_radio_setup_and_needs_no_screen(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            files = fixtures_but.make_tree(root)
-            r = subprocess.run([sys.executable, str(HERE / "split.py"), "--root", str(root),
-                                "--list-files", "--only", SRC], capture_output=True, text=True)
+            files = fixtures_but.make_tree(root, offices=True)
+            radio = set(fixtures_but.radio_files(offices=True))
+            r = self.list_files(root)
             self.assertEqual(r.returncode, 0, r.stderr)
-            # 真规则这一批只列酒店房间（D113）；酒店房间夹具里没有收音机布置，所以一条也不排除
-            self.assertEqual(r.stdout.split(), sorted(p for p in files if fixtures_but.ROOM112 in p))
+            self.assertEqual(r.stdout.split(), sorted(p for p in self.expected_pool(files) if p not in radio))
             self.assertFalse((root / "splits").exists())  # 列表模式不写切分表
 
     def test_other_sources_not_listed(self):
         """`--only` 只列这一个来源（其余来源的通配符在夹具里可能匹配不到，不该因此报错）。"""
         with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            fixtures_but.make_tree(root)
-            r = subprocess.run([sys.executable, str(HERE / "split.py"), "--root", str(root),
-                                "--list-files", "--only", SRC], capture_output=True, text=True)
+            fixtures_but.make_tree(Path(d), offices=True)
+            r = self.list_files(Path(d))
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertTrue(all(p.startswith("train-raw/but-reverbdb/") for p in r.stdout.split()))
 

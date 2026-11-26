@@ -1,8 +1,7 @@
 """BUT Speech@FIT Reverb 库的夹具（tests/test_but.py 与 tests/test_mix_loader.py 共用）：临时目录现造极短的 16 kHz wav。
 
-布局照真库（上游 read_me：`<房间>/MicID01/<扬声器布置>/<麦克风>/silence/…`）：
-两个房间（会议室 C236 · 酒店房间 Room112）× 各几次扬声器布置 × 两个麦克风。
-C236 的第 3 次布置里第 2 个扬声器放收音机，那一次必须排除；它的 `spk_meta.txt` 写的是上游真文件
+布局照真库（上游 read_me：`<房间>/MicID01/<扬声器布置>/<麦克风>/silence/…`）：默认两个房间（会议室 C236 · 酒店房间 Room112）× 各几次扬声器布置 × 两个麦克风；`offices=True` 再加三间办公室（L207 · L212 · Q301），那三间多写 11 · 21 号麦克风，用来核真规则只取 01 · 11 · 21。
+C236 的第 3 次布置里第 2 个扬声器放收音机，那一次必须排除；L207 的 `SpkID02_20171227_S` 也是（同一次布置）；它们的 `spk_meta.txt` 写的是上游真文件
 （`tests/fixtures/but_spk_meta/VUT_FIT_L207…spk_meta.txt`，里面有 `$EnvSpk2…` 行），干净布置写的是上游真文件
 `VUT_FIT_C236…spk_meta.txt`（只有 1 个扬声器）——不是照 read_me 编的假文件。
 """
@@ -18,10 +17,23 @@ ROOT = "train-raw/but-reverbdb"
 C236 = "VUT_FIT_C236"
 ROOM112 = "Hotel_SkalskyDvur_Room112"
 MICS = ("01", "02")
+# 第四批加的三间办公室：真规则只取 01 · 11 · 21 号麦克风（大总管 87 2026-11-26）；夹具里多写一个 02 号，核它被跳过
+L207 = "VUT_FIT_L207"
+L212 = "VUT_FIT_L212"
+Q301 = "VUT_FIT_Q301"
+OFFICES = (L207, L212, Q301)
+OFFICE_MICS = ("01", "02", "11", "21")
+OFFICE_PICKED = ("01", "11", "21")  # 真规则的 `[012]1` 选中的那几个
 # 房间 → [(扬声器布置, 是否放收音机), …]
 SETUPS = {
     C236: [("SpkID01_20190503_S", False), ("SpkID02_20190503_S", False), ("SpkID03_20190503_S", True)],
     ROOM112: [("SpkID01_20171223_S", False), ("SpkID02_20171223_S", False)],
+}
+# 三间办公室：L207 的真实收音机布置排在第 3 次（上游真 spk_meta.txt 就是那一次布置的）
+OFFICE_SETUPS = {
+    L207: [("SpkID01_20171223_S", False), ("SpkID03_20171223_S", False), ("SpkID02_20171227_S", True)],
+    L212: [("SpkID01_20171223_S", False), ("SpkID02_20171223_S", False)],
+    Q301: [("SpkID01_20171223_S", False), ("SpkID02_20171223_S", False)],
 }
 # 上游真 spk_meta.txt 的副本（正本：上游 2019 RIR-Only 包里那两个文件）
 FIX = Path(__file__).resolve().parent / "fixtures" / "but_spk_meta"
@@ -33,13 +45,24 @@ def wav_rel(room, setup, mic, ver="v00"):
     return f"{ROOT}/{room}/MicID01/{setup}/{mic}/silence/silence_16kHz_60sec.{ver}.wav"
 
 
-def all_files():
-    return [wav_rel(room, setup, mic) for room, setups in SETUPS.items() for setup, _r in setups for mic in MICS]
+def setups(offices=False):
+    """房间 → [(扬声器布置, 是否放收音机), …]。offices=True 时把三间办公室并进来。"""
+    return {**SETUPS, **(OFFICE_SETUPS if offices else {})}
 
 
-def radio_files():
+def mics(room):
+    """这间房写几个麦克风：办公室多写 11 · 21（真规则取 01 · 11 · 21，跳过 02 … 31）。"""
+    return OFFICE_MICS if room in OFFICES else MICS
+
+
+def all_files(offices=False):
+    return [wav_rel(room, setup, mic) for room, su in setups(offices).items() for setup, _r in su for mic in mics(room)]
+
+
+def radio_files(offices=False):
     """放收音机的那次布置的全部 wav（必须被 `exclude_if_meta` 排除）。"""
-    return [wav_rel(room, setup, mic) for room, setups in SETUPS.items() for setup, r in setups if r for mic in MICS]
+    return [wav_rel(room, setup, mic) for room, su in setups(offices).items()
+            for setup, r in su if r for mic in mics(room)]
 
 
 def spk_meta_src(radio):
@@ -62,21 +85,22 @@ def meta_path(root, rel, file="../../spk_meta.txt"):
     return Path((Path(root) / rel).parent / file).resolve()
 
 
-def make_tree(root, radio_meta=True):
-    """造夹具树；返回全部 wav 的相对路径。radio_meta=False 时不写放收音机那次布置的 spk_meta.txt。"""
+def make_tree(root, radio_meta=True, offices=False):
+    """造夹具树；返回全部 wav 的相对路径。radio_meta=False 时不写放收音机那次布置的 spk_meta.txt。
+    offices=True 时多造三间办公室（多出 11 · 21 号麦克风，用来核真规则的麦克风位置过滤）。"""
     root = Path(root)
     rng = np.random.default_rng(0)
-    for room, setups in SETUPS.items():
-        for setup, r in setups:
+    for room, su in setups(offices).items():
+        for setup, r in su:
             if radio_meta or not r:
-                p = meta_path(root, wav_rel(room, setup, MICS[0]))
+                p = meta_path(root, wav_rel(room, setup, mics(room)[0]))
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_bytes(spk_meta_bytes(r))
-            for mic in MICS:
+            for mic in mics(room):
                 f = root / wav_rel(room, setup, mic)
                 f.parent.mkdir(parents=True, exist_ok=True)
                 sf.write(str(f), 0.01 * rng.standard_normal(int(SEC * SR)), SR)
-    return all_files()
+    return all_files(offices)
 
 
 def write_screen(path, rels, drop=()):

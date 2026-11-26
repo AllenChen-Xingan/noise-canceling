@@ -3,6 +3,7 @@
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -24,6 +25,35 @@ def build_files():
     return sorted(BUILDS.glob("*/build.json")) if BUILDS.exists() else []
 
 
+def stale_table(name, rules, out_dir=SPLITS):
+    """这张表是不是「旧规则切的」：表里记的 rule_sha256 与当前规则不同（没表就算 False）。
+    这是 `未建表` 的第二种合法状态：规则改了、音频在云上，表只能等到下次重切。"""
+    if not (Path(out_dir) / f"{name}.json").is_file():
+        return False
+    s, _ = split.load_split(name, Path(out_dir))
+    return s["rule_sha256"] != split.rule_sha(rules["sources"][name])
+
+
+def pending_problems(rules, out_dir=SPLITS):
+    """`未建表` 与切分表目录的两向核对，返回问题清单（空 = 合规）。临时规则 + 临时目录也走这里，不碰真文件。
+
+    合法状态两种：没有表；或有一份明确过期的表（rule_sha256 ≠ 当前规则）。
+    两种都要红：`未建表` 里的来源已有按当前规则切的表（表回来了却忘了删标记）；`未建表` 里没写清为什么。
+    """
+    pending = dict(rules.get("未建表", {}))
+    names = {p.stem for p in Path(out_dir).glob("*.json")}
+    bad = []
+    for n in sorted((names - set(pending)) ^ (set(rules["sources"]) - set(pending))):
+        bad.append(f"{n}：`未建表` 与切分表的清单对不上（在一边不在另一边）")
+    for n in sorted(set(pending)):
+        if not str(pending[n]).strip():
+            bad.append(f"{n}：`未建表` 里要写清为什么（旧表 / 待重切）")
+    for n in sorted(set(pending) & names):
+        if not stale_table(n, rules, out_dir):
+            bad.append(f"{n}：在 `未建表` 里，表却已经是当前规则切的——该删那一行了")
+    return bad
+
+
 class RegisterNeedsNoMix(unittest.TestCase):
     def test_loader_import_does_not_load_mix(self):
         """登记 build 只做交集检查：导入 loader 不许连带导入 mix（mix 依赖还没合进来的 rooms.early_rir）。"""
@@ -38,13 +68,19 @@ class Splits(unittest.TestCase):
         self.R = split.load_rules()
 
     def test_all_sources_present(self):
-        """每个来源一张表；唯一例外是规则顶层 `未建表` 里的（音频还在云上，本机造不出表）。
-        两向都查：表带回仓后忘了删那一行，文件名会多出一张，也会红。"""
-        pending = set(self.R.get("未建表", {}))
-        self.assertEqual(split_names(), sorted(set(self.R["sources"]) - pending))
+        """每个来源一张表；两个例外，都在规则顶层 `未建表` 里：
+        - 没有表（音频还在云上，本机造不出）
+        - 有一份明确过期的表（规则改了、表还是旧的，`未建表` 的文字写了为什么）
+        两向都查：表按当前规则重切带回仓后忘了删那一行（`rule_sha256` 就相等了），也会红。"""
+        self.assertEqual(pending_problems(self.R, SPLITS), [])
 
     def test_tables_match_rules(self):
         for n in split_names():
+            if n in self.R.get("未建表", {}):
+                # 明确过期的表（规则改了、音频在云上）：rule_sha256 就是不相等，这条归 `未建表` 那条管
+                self.assertTrue(stale_table(n, self.R, SPLITS),
+                                f"{n}：在 `未建表` 里，表却已经是当前规则切的——该删那一行了")
+                continue
             s, rows = split.load_split(n, SPLITS)  # 核 jsonl 的 sha256
             rule = self.R["sources"][n]
             self.assertEqual(s["rule_sha256"], split.rule_sha(rule), f"{n}：切分表是按旧规则切的")
@@ -175,6 +211,61 @@ class Builds(unittest.TestCase):
             for src, d in b["counts"].items():
                 self.assertLessEqual(set(d), {"train", "dev"}, f"{f}：{src}")
                 self.assertGreater(d.get("train", 0), 0, f"{f}：{src} 没有训练份")
+
+
+class PendingStates(unittest.TestCase):
+    """`未建表` 的两种合法状态各一条，两种该红的也各一条（临时规则 + 临时目录，不碰真文件）。"""
+
+    RULE = {"group": "A7", "unit": "file", "glob": ["x/*.wav"],
+            "frac": {"train": 0.9, "dev": 0.1, "final": 0.0, "d63": 0.0}}
+
+    def rules(self, pending=None):
+        return {"sources": {"old-done": dict(self.RULE), "cloud": dict(self.RULE)}, "未建表": pending or {}}
+
+    @staticmethod
+    def write_table(d, name, rule_sha):
+        """写一张最小切分表：空 jsonl + 摘要（摘要里的 jsonl 哈希是空正文的哈希）。"""
+        d.mkdir(parents=True, exist_ok=True)
+        body = b""
+        (d / f"{name}.jsonl").write_bytes(body)
+        s = {"source": name, "group": "A7", "unit": "file", "seed": 1, "rule_sha256": rule_sha,
+             "files": 0, "units": 0, "jsonl_sha256": split.sha256_bytes(body)}
+        (d / f"{name}.json").write_text(json.dumps(s, ensure_ascii=False))
+
+    def test_pending_without_a_table_is_fine(self):
+        """状态一：音频还在云上，没有表。"""
+        rules = self.rules({"cloud": "音频在云上，等重切"})
+        with tempfile.TemporaryDirectory() as t:
+            self.write_table(Path(t), "old-done", split.rule_sha(rules["sources"]["old-done"]))
+            self.assertEqual(pending_problems(rules, Path(t)), [])
+
+    def test_pending_with_a_stale_table_is_fine(self):
+        """状态二：规则改了，表还是旧规则切的（rule_sha256 ≠ 当前规则）。"""
+        rules = self.rules({"cloud": "旧表只含上一批的房，等第四批重切"})
+        stale_sha = split.rule_sha({"glob": ["x/old/*.wav"], "frac": self.RULE["frac"], "unit": "file", "group": "A7"})
+        with tempfile.TemporaryDirectory() as t:
+            self.write_table(Path(t), "old-done", split.rule_sha(rules["sources"]["old-done"]))
+            self.write_table(Path(t), "cloud", stale_sha)
+            self.assertEqual(pending_problems(rules, Path(t)), [])
+
+    def test_pending_with_a_current_table_is_red(self):
+        """两向：表按当前规则重切回来了，标记却没删——必须红。"""
+        rules = self.rules({"cloud": "等重切"})
+        with tempfile.TemporaryDirectory() as t:
+            self.write_table(Path(t), "old-done", split.rule_sha(rules["sources"]["old-done"]))
+            self.write_table(Path(t), "cloud", split.rule_sha(rules["sources"]["cloud"]))
+            bad = pending_problems(rules, Path(t))
+            self.assertTrue(bad, "表已是当前规则切的，`未建表` 里还留着——必须报出来")
+            self.assertIn("cloud", bad[0])
+            self.assertIn("删那一行", bad[0])
+
+    def test_pending_without_explanation_is_red(self):
+        """标记里不写为什么（旧表 / 待重切）也红。"""
+        rules = self.rules({"cloud": "  "})
+        with tempfile.TemporaryDirectory() as t:
+            self.write_table(Path(t), "old-done", split.rule_sha(rules["sources"]["old-done"]))
+            bad = pending_problems(rules, Path(t))
+            self.assertTrue(any("写清" in b for b in bad), bad)
 
 
 if __name__ == "__main__":
