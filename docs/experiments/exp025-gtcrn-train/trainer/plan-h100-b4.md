@@ -23,7 +23,8 @@
 
 ## 二、甲段：CPU 机（cpu3c 4 核，约 0.12 美元 / 小时）
 
-照 `plan-h100-smoke.md` 第四节甲段做，只改三处：
+照 `plan-h100-smoke.md` 第四节甲段做，只改下面几处：
+- 开机时限不用那边的 1.5 小时：`H = min(0.75, 0.1 / p − 5/60)`，p 是开机前 `rp.py offers` 读到的 CPU 机每小时价（开出来后按 `rp.py` 报的实际价再算一遍），向下取到 0.05 小时，传给 `--max-hours`。p = 0.12 时 H = 0.75 小时，最坏 (0.75 + 5/60) × 0.12 ≈ 0.10 美元，不超过大总管批的 0.1 美元。H < 0.5 就不开，报大总管（codex 第 2 轮 #1）
 - 第 3 步单元测试：`VDN_LOADER_SHARDS=$S VDN_LOADER_RECIPE=$D/recipe.json`
 - 第 4 步 CPU 参照：`--set data.shard_root=$S --set data.recipe=$D/recipe.json --write-known-dev $O/known-dev-cpu.json`
   - 必须重算：参照里记着开发份的 build id，旧参照（build f032a75e）对新 build 一律判不过
@@ -61,7 +62,7 @@
    - 每批里的运行用 `job-start` 同时发，一批全部退出后再发下一批
    - 每条命令都带 `--set data.dev_recipe=<基线配方>`：7 组在同一份开发份上比
    - 任何一条退出码非 0：不发下一批，做第 5、6 步
-5. 打包取回：`$O` 和 `/workspace/runs/exp025-ablation` 各打一个包（不含 `*.pt`），先 `cp /root/jobs/*.log /root/jobs/*.rc` 进去，取回主仓 `_tmp/<日期>-trainer-b4/`，不覆盖
+5. 打包取回：`$O` 和 `/workspace/runs/exp025-ablation` 各打一个包，用 `--exclude='step-*.pt'`：只排除轮换的检查点，`best.pt` 与 `crash-*.pt` 带回（`plan-h100-smoke.md` 第十二节 ③，codex 第 2 轮 #2），先 `cp /root/jobs/*.log /root/jobs/*.rc` 进去，取回主仓 `_tmp/<日期>-trainer-b4/`，不覆盖
 6. 删机，报账上 0 台和本次花费
 
 | 步骤 | 时长 | 依据 |
