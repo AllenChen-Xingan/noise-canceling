@@ -34,3 +34,10 @@ P0×0 P1×1。核实属实，已修（pi `trainer-guards-calibnan` 写，花费 
 - 停止原因优先级正本 `guards.STOP_PRIORITY` + `pick_reason`（两两组合表驱动测试 121 条）；训练循环与看门狗都按它挑
 - 防绕过扫描：train.py · guards.py · watchdog.py 里除 `is_finite` 外出现 isfinite / isnan / isinf 就红（只防无心之失）
 - 全套 369 过、2 跳过
+
+## 第 5 轮（2026-11-26）· 总评「修改」· 停止线：连续第 1 轮
+
+P0×0 P1×1 P2×2。逐条核实，都属实。
+- **P1 → 记 P2｜磁盘写满时连 run.json 都写不进，下次不知道该拒绝续训**（第 5 轮 #1）：属于「写盘失败等故障注入」一类，按 001 号的口径（大总管 noise-canceling-33，2026-11-24）记 P2、开待办、不进停止线；大总管 c4 同意：失败标记本身也要写盘，治不了根。另一道防线不改代码：cloudrun 开训练机前查网络盘余量 ≥ 30 GB（大总管转告 cloudrun）
+- **P2｜bn=train 时坏批前向可能已把 NaN 写进批归一化统计量，现场不是「出事前」**（第 5 轮 #2）：默认 bn=frozen，开待办
+- **P2｜表外停止原因会让看门狗线程静默结束**（第 5 轮 #3）：已修（pi `trainer-guards-watchdog`，提交 7da07932 测试先红 · f7fef94d 修复，Agent: pi，花费 0.0039 美元；trainer 读 diff 后快进合入）：判断那一步出错也按出手处理。针对性测试 215 条过
