@@ -2,7 +2,7 @@
 //!
 //! 用法：`vdn-eval asr-probe --wav-dir <旧运行的 qa/asr-wav> --cache <旧运行的 qa/asr_cache.json> --out <报告.json>
 //!        [--temperature T] [--repeats N] [--asr-ledger 账本]`
-//! - 只探旧缓存里出现过的音频（语言按 sha256 从缓存的键里查）；每条连调 N 次（默认 3），全是真调用
+//! - 只探旧缓存里出现过的音频（语言按 sha256 从缓存的键里查），按 sha256 去重、重复的文件名记进报告 `duplicates`；每条连调 N 次（默认 3），全是真调用
 //! - 账本照常：不存在、已封存、待核都拒发；报告只新建，不覆盖
 
 use std::collections::BTreeMap;
@@ -48,20 +48,23 @@ pub(crate) fn cmd_asr_probe(args: &[String]) -> Result<bool, String> {
         .filter(|p| p.extension().is_some_and(|x| x == "wav"))
         .collect();
     files.sort();
-    let mut items = Vec::new();
+    let mut named = Vec::new();
     for f in &files {
-        let sha = vdn_eval::wav::sha256(f)?;
-        let Some(lang) = langs.get(&sha) else {
-            continue;
-        };
-        let (x, sr) = vdn_eval::wav::read(f)?;
-        if sr != vdn_types::MODEL_RATE {
-            return Err(format!("{} 不是 16 kHz", f.display()));
-        }
         let name = f
             .file_name()
             .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
-        items.push((name, sha, lang.clone(), x));
+        named.push((name, vdn_eval::wav::sha256(f)?));
+    }
+    // 同一段音频只探一次（sha256 去重）：冒烟目录里 `*-gtcrn.wav` 与 `*-out.wav` 内容相同
+    let (picked, dup) = asr_probe::pick(&named, &langs);
+    let mut items = Vec::new();
+    for (name, sha, lang) in picked {
+        let f = dir.join(&name);
+        let (x, sr) = vdn_eval::wav::read(&f)?;
+        if sr != vdn_types::MODEL_RATE {
+            return Err(format!("{} 不是 16 kHz", f.display()));
+        }
+        items.push((name, sha, lang, x));
     }
     if items.is_empty() {
         return Err("目录里没有缓存认得的音频".into());
@@ -76,12 +79,14 @@ pub(crate) fn cmd_asr_probe(args: &[String]) -> Result<bool, String> {
     let mut c = asr_or::OpenRouter::new(asr_or::OR_URL, key, ledger);
     c.temperature = temperature;
     eprintln!(
-        "探针：{} 条 × {repeats} 次，温度 {temperature:?}",
-        items.len()
+        "探针：{} 条 × {repeats} 次（另有 {} 个文件与前面内容相同，不重复探），温度 {temperature:?}",
+        items.len(),
+        dup.len()
     );
     // 报告文件在所有检查之后、发第一个请求之前占住（codex 本分支第 5 轮 P2 #2）
     let mut report = create_report(&out)?;
-    let r = asr_probe::probe(&mut c, &items, repeats, vdn_types::MODEL_RATE);
+    let mut r = asr_probe::probe(&mut c, &items, repeats, vdn_types::MODEL_RATE);
+    r["duplicates"] = serde_json::json!(dup);
     {
         use std::io::Write;
         let text = serde_json::to_string_pretty(&r).map_err(|e| e.to_string())? + "\n";

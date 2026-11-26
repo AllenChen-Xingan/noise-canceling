@@ -132,3 +132,11 @@
 | D 换一个识别模型 | 看型号 | 换 whisper 就冲突；别的型号要另调研 | 未知 |
 
 我的建议：先做 C（几乎不花钱）。钉不住就用 A，A 不改判据。B 要改规则，要人定。
+
+## 探针去重 + 识别取多数（fix/asr-probe-dedup，2026-11-25）
+
+- 起因：钉温度探针（cloudrun 跑）温度 0 钉不住，15 条里 1 条三次不一致（6.7%，线 2%）；探针输入 20 个文件去重后 15 条，旧代码不去重
+- 改了什么：`asr-probe` 按 sha256 去重、报告 `duplicates`；识别前两次分词后不同就补第 3 次取多数（A），正本 `src/eval/src/qa/asr_vote.rs`（`TIE_BREAK_REP` = 3、`MAJORITY` = 2），接进 `Asr::transcribe` 与 `Asr::prefetch`（拆到 `asr_prefetch.rs`）；`meta.asr` 新增 `tie_breaks` · `tie_break_missing` · `no_majority`
+- pi：`evalcmp-votecount`（isoquant/deepseek-v4.1-flash-1017-fast），提交 `98bdfa6b..acc34d33`（3 个，Agent: pi），花费 0.0153 美元；我读 diff、在 98bdfa6b 上实测新测试 5 条红、合入后全量重跑通过，再快进合入
+- codex 评审（gpt-6-astra，只读，medium）：2 轮，P0×0 P1×0；第 1 轮 P2×2 全改，第 2 轮 P2×1 → #196；轮次原文在本 worktree `_tmp/reviews/probe-vote-codex-{1,2}.md`
+- 验证：`cargo fmt --check` · workspace clippy `-D warnings` · `xtask tidy` · `cargo test --workspace`（99 组全过）

@@ -5,6 +5,7 @@ pub mod asr_bill;
 pub mod asr_ledger;
 pub mod asr_or;
 pub mod asr_probe;
+pub mod asr_vote;
 pub mod asr_wire;
 pub mod dnsmos;
 pub mod nrmos;
@@ -136,7 +137,9 @@ impl QaExtra {
         let a = self.asr.as_mut().ok_or(why)?;
         let (text, stable) = a.transcribe(&p, &sha, lang, clip)?;
         if !stable {
-            return Err(format!("ASR 对 {name} 两次转写不一致（剔除，rubric V7）"));
+            return Err(format!(
+                "ASR 对 {name} 三次转写都不一样，没有多数（剔除，rubric V7；判法 asr_vote）"
+            ));
         }
         Ok(asr::tokens(&text, lang))
     }
