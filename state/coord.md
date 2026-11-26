@@ -487,3 +487,8 @@
 - 2026-11-26 02:47Z 识别补跑完成（cloudrun 实测）：+1953 次 · +0.1875 美元（上限 0.25），吃字有值 82→452/480，结果 _tmp/20261126-asr-rerun/rerun-20261126-013313/；机器 glx9 已删（约 0.17 美元），累计 8.22 美元。交 evalcmp 出第二版差距表。第三批 traindata 修 7badd9a1（契约 2 条 · 全套 288 过），C236 筛查 02:46Z 起。
 - 2026-11-26 02:48Z evalcmp 确认无后台进程后，大总管建 exp/025-gap-v2 并 --continue 重开，钩子改登记。第二版弱项表前 4：rail-air-cabin · canteen · meeting-room · transit-hub（与第一版同组，3、4 名对调）；28 段无值分在 9 场景。
 - 2026-11-26 人定 D113：加训场景 = 最弱前 4（rail-air-cabin · canteen · meeting-room · transit-hub）。第三批筛查：R112 keep 209/248 正常；C236 keep 32/620（不平稳 545 · 说话帧略超 355；标签多为 Music / Tuning fork / Sine wave），停在 split 前，机器已删，累计 8.31 美元，云上 0 台。
+- 2026-11-26 人定（D113 续）：C236 先查清（诊断 + 取 3 段约 1 MB 给人听），R112 先登记，阈值不放宽。
+- 2026-11-26 03:31Z PR #208 合并（第二版差距表，#207 关），删远端 exp/025-gap-v2（本地分支在 evalcmp worktree，换线时再删）。
+- 2026-11-26 大总管定（技术题）：第三批 target_scene 先写 3 个（meeting-room 待池），这批 build 只验证管线、不正式训练；正式训练用会议室池登记后那批 build（D110）。限制：rail-air-cabin 只有地铁车厢录音，canteen 只有 DEMAND PCAFETER 一个来源。
+- 2026-11-26 traindata 派 pi traindata-b3b（2 美元）：BUT 只留 R112 · target_scene 3 个 · 配方说明写限制 + diagnose.py（复用 screen.py 平稳度算法）+ 测试；筛查结果 jsonl 868 行进仓（89ab84e8）；3 段 C236 试听已选：1 条 keep · 1 条典型 drop（Tuning fork）· 1 条说话帧最高。
+- 2026-11-26 trainer 开 #209 feat/trainer-target-scenes（pi 填 4 个场景 + check 按 MeetingPlace 正本查名）；删远端 feat/trainer-formal-config。钩子登记旧分支问题第 4 次（trainer×2 · traindata · evalcmp）→ 按「同类错误第三次沉淀规则」：手下换线 = 大总管建分支 + 确认无进程 + --continue 重开；根治记 backlog（钩子从登记文件读分支）。
