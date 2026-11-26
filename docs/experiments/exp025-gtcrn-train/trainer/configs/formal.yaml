@@ -1,0 +1,19 @@
+# exp025 正式训练的配置：**只写与 configs/default.yaml 不同的字段**（默认值正本在 ../config.py，
+# 全量实例在 configs/default.yaml；tests/test_formal.py 核对这里只覆盖下面这几项）。
+#
+# 这是什么：6 个正式运行（模型 A、B × 种子 0/1/2，各 5000 步，每次 3 个同时跑一张 H100）共用的一份配置。
+# 运行矩阵在 configs/formal-runs.yaml。
+#
+# 这是**草稿**：带 TODO 的两项现在填不了，开训前必须填上——
+#   - data.shard_root：第二批分片登记之后；
+#   - data.recipe：D110 人定加训哪几个场景之后。
+# 开训前必须让 `python formal.py check` 通过（它会把这里的 TODO 和运行矩阵一起查一遍），否则不许开机。
+run:
+  out_dir: /workspace/runs/exp025-formal  # 检查点与日志放仓外（铁律 8）
+data:
+  shard_root: "TODO(第二批分片登记后填)"
+  recipe: "TODO(D110 定场景后的配方)"
+  num_workers: 6  # 3 个同时跑 × 6 = 18，容器约 22 核
+limits:
+  expect_s_step: 0.39  # 3 个同时跑的实测每步秒数（plan-h100-smoke.md 第五节）；超过 1.2 倍就判太慢
+  max_hours: 1.5  # 3 个同时跑一个运行约 0.6 小时，2.5 倍余量；硬止损归 cloudrun

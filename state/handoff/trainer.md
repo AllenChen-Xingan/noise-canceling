@@ -79,3 +79,5 @@
 - 11-26 pi trainer-guards-finite（改结构：唯一查有限值入口 · 停止原因优先级 · 防绕过扫描）：在自己的 worktree 与分支 w/trainer-guards-finite，提交 6be34442..370af014（Agent: pi），花费 0.0428 美元；trainer 验收后快进合入 feat/trainer-guards。全套 369 过
 - 11-26 pi trainer-guards-watchdog（codex guards 第 5 轮 #3）：自己的 worktree，提交 7da07932..f7fef94d（Agent: pi），花费 0.0039 美元；快进合入 feat/trainer-guards
 - 11-26 codex guards 第 6 轮：只 1 条 P2；按本项目口径第 5、6 轮连续两轮无 P0/P1，停。剩余 P2 开 issue #198。推送 feat/trainer-guards、开 PR（Closes #195），交大总管验收。pi 花费合计：devnan 0.0099 · calibnan 0.0064 · finite 0.0428 · watchdog 0.0039 = 0.063 美元
+- 11-26 早先用 --cwd 起的 pi trainer-guards-devnan · trainer-guards-calibnan 跑在 trainer 自己的 worktree 里，没有单独的 worktree 可清；trainer-guards-finite · trainer-guards-watchdog 已 pi-worker clean
+- 11-26 正式训练配置草稿（issue #200，分支 feat/trainer-formal-config 从 main ab0f4f0a）：pi trainer-formal-config 提交 4c687043..2228fc9b（Agent: pi），花费 0.0113 美元；trainer 读 diff、亲手跑 test_formal + test_train 33 条过、`formal.py check` 现退出 1（2 个 TODO + 场景空），快进合入。不开机，等第二批数据登记、第二版差距表、D110
