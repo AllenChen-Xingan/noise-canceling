@@ -191,8 +191,25 @@ def allocate(n, frac, order):
     return cnt
 
 
-def assign_units(units, frac, seed, source, order, strata=None):
-    """返回 {单位: 份}。strata 给了（单位 → 层）时每层分别按比例分。"""
+def unit_strata(units, rule):
+    """stratum_unit_regex：层从单位里取（一个捕获组，如房间），每层分别按比例切。
+    没这个字段返回 None；认不出层的单位立刻停（不许静默并进一个空层）。"""
+    rx = rule.get("stratum_unit_regex")
+    if not rx:
+        return None
+    crx = re.compile(rx)
+    out = {}
+    for u in units:
+        m = crx.search(u)
+        if not m or m.lastindex is None:
+            raise SystemExit(f"单位 {u}：没有一条 stratum_unit_regex 认得出来（这条规则要按单位分层）。不写切分表")
+        out[u] = m.group(1)
+    return out
+
+
+def assign_units(units, frac, seed, source, order, strata=None, min_dev=0):
+    """返回 {单位: 份}。strata 给了（单位 → 层）时每层分别按比例分。
+    min_dev：一层有 2 个以上单位时，开发份少于这个数就从训练份补（拿 rank_key 最大的，确定性）。"""
     if abs(sum(frac.values()) - 1.0) > 1e-9:
         raise ValueError(f"{source} 比例之和 {sum(frac.values())} ≠ 1")
     groups = {}
@@ -206,6 +223,13 @@ def assign_units(units, frac, seed, source, order, strata=None):
             for u in us[i : i + cnt[k]]:
                 out[u] = k
             i += cnt[k]
+        short = min_dev - cnt.get("dev", 0) if min_dev and len(us) >= 2 else 0
+        if short > 0:
+            move = [u for u in reversed(us) if out[u] == "train"][:short]
+            if len(move) < short:
+                raise SystemExit(f"{source}：层 {layer!r} 的开发份要 {min_dev} 个单位，训练份不够让出（{len(us)} 个单位）")
+            for u in move:
+                out[u] = "dev"
     return out
 
 
@@ -264,11 +288,12 @@ def split_source(root, name, rule, seed, order, workers=32, cache=None, excluded
         for r in rows:
             r["segments"] = time_segments(r["frames"], rule["time"])
     else:
-        strata = None
-        if rule.get("stratum_regex"):
+        strata = unit_strata({r["unit"] for r in rows}, rule)
+        if strata is None and rule.get("stratum_regex"):
             rx = re.compile(rule["stratum_regex"])
             strata = {r["unit"]: ("synth" if rx.search(r["path"]) else "real") for r in rows}
-        amap = assign_units([r["unit"] for r in rows], rule["frac"], seed, name, order, strata)
+        min_dev = int(rule.get("min_dev_per_stratum", 0) or 0)
+        amap = assign_units([r["unit"] for r in rows], rule["frac"], seed, name, order, strata, min_dev)
         for r in rows:
             r["split"] = amap[r["unit"]]
     return rows
