@@ -9,6 +9,7 @@
 - 价格：目录价约 4.39 美元 / 小时（2026-11-24）。开机前目录价高出 20% 以上就不开。
 - 为什么是 H100：2026-11-24 查 RunPod 目录，3090 在 Secure Cloud 所有机房无货，人改选 L4 · US-MO-2（D101）；L4 开机报「无可用机器」，人改 H100（D102）。60 美元上限约合 H100 13 小时。
 - 镜像：`pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime`，容器命令只做一件事：睡到开机时算好的截止时刻，再用平台注入的变量删掉自己（失败每 60 秒重试）；活都用 exec 发进去。
+- 开机检查 `rp.py preflight <机器> [--repo R --commit SHA] [--skip-git] [--min-free-gb N] [--down-on-fail]`：先看网络盘剩多少（配额读平台接口给的当下盘大小，已用量用 `du`，不用 `df`），**少于 30 GB 不开训练**（正本 `config.MIN_FREE_GB`；起因：盘满时训练状态和 run.json 都写不进去，大总管 c4 2026-11-26 定）；再装 git、核提交号。
 - ⚠️ 显卡机镜像（pytorch）里**没有 git**，trainer 的运行记录要读提交号，没有 git 就拒跑（2026-11-25 H100 乙段第 2 步实测踩到，白花约 0.6 美元）。显卡机开机后第一步先 `apt-get install -y git`，再 `git -C <仓库> rev-parse HEAD` 核一遍，失败就停，不进后面的步骤。CPU 机镜像自带 git。
 - 删机前先取回机器里的日志（容器盘 `/root/jobs/` 删机就没）；下载脚本删压缩包之前，先把每个包的 md5 / sha256 读数写进网络盘上的小文件（2026-11-26：CochlScene 后 3 卷的 md5 读数随删机丢了，只剩「全对才解压」的间接证据）。
 - CPU 机镜像：`rust:1.99.1-trixie`（钉 digest，正本 `config.py` 的 `CPU_IMAGE`）。显卡机那个镜像是 Ubuntu 22.04（glibc 2.35），vdn-eval 用的 ort 预编译库在上面链接不过（2026-11-25 实测）；Debian 13 的 glibc 是 2.41，Rust 版本与 `rust-toolchain.toml` 一致。

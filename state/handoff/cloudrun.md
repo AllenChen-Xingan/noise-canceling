@@ -53,3 +53,4 @@
 - 待办（大总管 2026-11-25 记）：每份仓库各带约 8 GB 的 .venv 是浪费；正式训练前改成一份共享 venv（整包或按 requirements 的 sha256 命名），所有副本共用。与「venv 整包解到容器盘」（装环境分步计时之后）一起做。
 - 2026-11-26：派 pi（cloudrun-venvcache，花 0.0162 美元）写了 `cloud/remote/venv_cache.sh`（共享 venv）与 `cloud/remote/fetch_archives.sh`（边下边记 md5），各带测试；验收时打回 1 条 P1（GNU mktemp 不认 `-t` 无 X 模板）和 3 条 P2，修后 132 条测试全过，已合入本分支。还没上云实跑。
   - pi 写的代码 = 提交 ec06f94e..0f91ec80（3 个：ec06f94e、881e5dda、0f91ec80），署名 `Agent: pi`、`Model: deepseek-v4.1-flash-1017-fast`；在 pi 自己的分支 w/cloudrun-venvcache 上提交，快进合入，没被 hook 改署名。以后派 pi 照此记提交号范围；我验收后的提交加一行 `Code: pi (<模型名>)`（大总管 c4 2026-11-26 定）。
+- 2026-11-26：派 pi（cloudrun-diskcheck，花 0.0083 美元）给 preflight 加网络盘余量检查：少于 30 GB 不开训练（`config.MIN_FREE_GB`，配额读平台接口）。pi 提交 56086350..1fac34b9（2 个，带 Agent: pi），快进合入；140 条测试全过。
