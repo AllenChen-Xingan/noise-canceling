@@ -455,3 +455,8 @@
 - 2026-11-26 00:40Z trainer 还名额：全套 369 过 · 2 跳过 · 0 失败（78 s，自报；新增表驱动 121 条）；下一步 codex 第 5 轮。
 - 2026-11-26 00:42Z trainer codex 第 5 轮：P1×1（写盘满 run.json 写不进）按 33 口径（故障注入类）改记 P2，大总管同意；补防线：开训练机前网络盘余量 ≥30 GB（交 cloudrun 进 preflight）。P2 #3 看门狗静默退出派 pi trainer-guards-watchdog。第 5 轮算停止线连续第 1 轮。
 - 2026-11-26 人定 D111（缺口场景补数据四题，见决策记录）。
+- 2026-11-26 cloudrun（c0c9bda3 那轮）：只读 · 共享 venv · test · split 过，shard 00:41Z 起在跑。实测：17629 wav 44.1 kHz 单声道 10 s；385 录音人，训练 347/16193 · 开发 38/1436；共享 venv 装包 52.8 s + 发布 109 s，对比上次写网络盘 889 s（单次实测）；派 pi cloudrun-diskcheck（≥30 GB 门槛进 preflight）。
+- 2026-11-26 人选：BUT 2019 版 9.3 GB 下（Apache 2.0 署名）；飞机舱先不补（不给 Freesound 密钥）。
+- 2026-11-26 01:08Z 大总管验收并合并：PR #197（识别取多数，独立副本 fmt · clippy · tidy · 全量测试退出 0，合并 a4ec1bf4）· PR #199（训练自动保护，独立副本 371 过 · 2 跳过，合并见下）。
+- 2026-11-26 PR #199 合并 ab0f4f0a（#195 关）。开训前卡点①完成。放行 cloudrun 补跑识别（约 2003 次 · 约 0.18 美元）。
+- 2026-11-26 大总管删已合并分支 feat/trainer-guards · fix/asr-probe-dedup（本地 + 远端）。trainer 开 #200 feat/trainer-formal-config（pi trainer-formal-config 写 formal.yaml · formal-runs.yaml · formal.py check/commands）。识别补跑交 cloudrun（_tmp/20261126-asr-rerun/brief-cloudrun.md，闸 0.25 美元 / 2800 次）。
