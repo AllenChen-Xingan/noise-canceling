@@ -10,10 +10,13 @@
 - 单音结论本身要自洽：`verdict.where` 只许 `none` / `first_only` / `later_too`，`present_seconds` 必须是整数列表，
   且「没有」⇔ 空列表、「只在第 1 秒」⇔ `[1]`（正本见 `diagnose.tone_verdict`，秒号从 1 起）。
   对不上就停：那说明这份 jsonl 不是 `diagnose.py --tone` 写的，后面的判定无从谈起
-- 结论还要经得起重算：`tone.per_second` 的逐秒条数要等于片段秒数（`diagnose.py` 逐秒切块只丢不足 1 秒的尾巴）、
+- 结论还要经得起重算：`tone.per_second` 的逐秒条数要等于片段秒数（`diagnose.py` 逐秒切块只丢不足 1 秒的尾巴；
+  写下的 `seconds` 只精确到毫秒，所以条数是真长度取整，可以差半个最末位——159999 采样 16 kHz 就是 9 条对 10.0 秒）、
   每秒的 `prominence_db` 都是有限数，再用 `diagnose.tone_verdict(逐秒条数, present_db)` 重算一遍，
   结果必须与存的那个结论逐字相同。重算用的 `present_db` 与 `drop_where` 一样取自 `screen_rules.json`
   的 `tone_check`，代码里不写这个阈值。对不上就停：结论与逐秒数据各说各话，不如先重跑
+- 两份证据说的是同一段：筛查行写了片段长度（`seconds`，或 `measures` 里的）就要与单音行的 `seconds`
+  差不超过一个毫秒位，否则停下。筛查行没写长度就跳过（没有第二处表示可比）
 - 只动三样：`verdict` · `reasons` · `measures`；其余字段原样带过去，输入列表本身不改写
 用法：
     python3 screen_tone.py --screen screen.jsonl --tone tone.jsonl --out screen-tone.jsonl
@@ -124,6 +127,12 @@ def tone_reason(tone):
 WHERE = ("none", "first_only", "later_too")  # 正本：`diagnose.tone_verdict` 只发这三个
 NONE, FIRST_ONLY, LATER_TOO = WHERE
 
+# 片段秒数只写到毫秒：`diagnose.py:104` 与 `screen.py:340` 都是 `round(采样数 / sr, 3)`。
+# 半个最末位（0.0005 s）就是「写下的 seconds」与「真长度」之间最多差多少。
+SECONDS_ROUND_DIGITS = 3
+SECONDS_HALF_UNIT = 0.5 * 10.0 ** -SECONDS_ROUND_DIGITS  # 0.0005 s
+SECONDS_AGREE_UNIT = 10.0 ** -SECONDS_ROUND_DIGITS  # 0.001 s：两份 jsonl 的秒数只差一个最末位就算同一段
+
 
 def _check_verdict(path, verdict):
     """核 where 与 present_seconds 是不是 `diagnose.tone_verdict` 可能发出的那一对（秒号从 1 起）。
@@ -192,15 +201,58 @@ def _check_per_second(tone_row, tone, present_db):
 
 
 def _check_per_second_count(path, seconds, n):
-    """逐秒证据的条数要等于片段整秒数：`diagnose.py` 逐秒切块只丢末尾不足 1 秒的尾巴（那一截测不出 1 Hz）。"""
-    if seconds is None:  # 早期单音行没写 seconds：只核得了条数之间的自洽，核不了片段长度
-        return
+    """逐秒证据的条数要等于片段整秒数：`diagnose.py` 逐秒切块只丢末尾不足 1 秒的尾巴（那一截测不出 1 Hz）。
+
+    条数的正本是 `采样数 // sr`，而单音行写下的 `seconds` 是它四舍五入到毫秒的结果（`diagnose.py:104`）。
+    所以真长度落在 `seconds ± 0.0005` 秒之间，条数只能是这两端取整后的两个值之一。
+    例：159999 采样、16 kHz → 真长 9.9999375 秒、条数 9，写下的 `seconds` 却是 10.0。
+    单音行没写 `seconds` 就停下：没有片段长度，核不了逐秒证据是齐的还是缺的。"""
+    if seconds is None:
+        raise SystemExit(f"{path} 的单音行里没有 seconds：核不了逐秒证据该有几条，"
+                         "先跑一遍 diagnose.py --tone（它的每一行都写 seconds）")
     if not isinstance(seconds, (int, float)) or isinstance(seconds, bool) or not math.isfinite(seconds):
         raise SystemExit(f"{path} 的 seconds = {seconds!r} 不是有限数：算不出该有几秒的单音证据")
-    want = math.floor(seconds)
-    if n != want:
+    low = math.floor(seconds - SECONDS_HALF_UNIT)
+    high = math.floor(seconds + SECONDS_HALF_UNIT)
+    if low == high:
+        want = f"{low} 秒"
+    else:
+        want = f"{low} 或 {high} 秒"
+    if not low <= n <= high:
         raise SystemExit(f"{path} 的单音逐秒证据有 {n} 秒，片段却长 {seconds} 秒："
-                         f"diagnose.py 只丢末尾不足 1 秒的尾巴，本该有 {want} 秒的证据（缺了就比不出结论）")
+                         "diagnose.py 只丢末尾不足 1 秒的尾巴（写下的秒数只精确到毫秒），"
+                         f"所以本该有 {want} 的证据；缺了就比不出结论（先重跑一次 diagnose.py --tone）")
+
+
+def _length_of(row):
+    """一行里写的片段秒数：筛查行写在顶层，早先也有写进 `measures` 的；两处都没有就返回 None。"""
+    measures = row.get("measures")
+    for holder in (row, measures if isinstance(measures, dict) else {}):
+        value = holder.get("seconds")
+        if value is not None:
+            return value
+    return None
+
+
+def _check_screen_length(path, screen_row, tone_row):
+    """筛查行与单音行写的片段秒数要一致（差不超过一个毫秒位）：两份证据得是同一次读出来的那一段。
+
+    筛查行没写长度就跳过（没有第二处表示可比）；写了却对不上就停下：拿别段的筛查结论配这段的单音结论，
+    丢不丢都成了猜的。"""
+    screen_seconds = _length_of(screen_row)
+    if screen_seconds is None:
+        return
+    if not isinstance(screen_seconds, (int, float)) or isinstance(screen_seconds, bool) \
+            or not math.isfinite(screen_seconds):
+        raise SystemExit(f"{path} 的筛查行 seconds = {screen_seconds!r} 不是有限数：合不了这一条的片段长度")
+    tone_seconds = tone_row.get("seconds")
+    if not isinstance(tone_seconds, (int, float)) or isinstance(tone_seconds, bool) \
+            or not math.isfinite(tone_seconds):
+        raise SystemExit(f"{path} 的单音行 seconds = {tone_seconds!r} 不是有限数：合不了这一条的片段长度")
+    if abs(screen_seconds - tone_seconds) > SECONDS_AGREE_UNIT:
+        raise SystemExit(f"{path} 的筛查行写 {screen_seconds} 秒、单音行写 {tone_seconds} 秒："
+                         f"差超过 {SECONDS_AGREE_UNIT:g} 秒，两份证据不是同一段，先重跑"
+                         "（diagnose.py --tone 与 screen.py 读的该是同一个文件）")
 
 
 def merge(screen_rows, tone_rows, drop_where, present_db):
@@ -221,6 +273,7 @@ def merge(screen_rows, tone_rows, drop_where, present_db):
     rows, keep, drop, tone_dropped = [], 0, 0, 0
     for row in screen_rows:
         tone = check_tone_row(tones[row["path"]], present_db)
+        _check_screen_length(row["path"], row, tones[row["path"]])
         where = tone["verdict"]["where"]
         secs = list(tone["verdict"]["present_seconds"])
         new = copy.deepcopy(row)

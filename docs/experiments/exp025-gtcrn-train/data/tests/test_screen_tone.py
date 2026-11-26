@@ -6,9 +6,13 @@
   任一边 path 重复 → 停
 - 单音结论本身要自洽：`verdict.where` 只许 `none` / `first_only` / `later_too`，`present_seconds` 是整数列表，
   且「没有」⇔ 空列表、「只在第 1 秒」⇔ `[1]`（正本：`diagnose.tone_verdict`，秒号从 1 起）；不自洽就停
-- 结论经得起重算：逐秒证据（`tone.per_second`）的条数要等于片段秒数、每秒的 `prominence_db` 是有限数，
-  再用 `diagnose.tone_verdict` 与 `screen_rules.json` 的 `tone_check.present_db` 重算一遍，必须等于存的那个结论；
-  缺秒、NaN、存的结论与重算不一样，都停（夹子里那些“写 10 秒却只带 1 秒证据”的行也一并修了）
+- 结论经得起重算：逐秒证据（`tone.per_second`）的条数要等于片段秒数（写下的 `seconds` 只精确到毫秒，
+  所以条数按真长度 `采样数 // sr` 算，可以差半个最末位；159999 采样 16 kHz 就是 9 条对 10.0 秒）、
+  每秒的 `prominence_db` 是有限数，再用 `diagnose.tone_verdict` 与 `screen_rules.json` 的 `tone_check.present_db`
+  重算一遍，必须等于存的那个结论；单音行没写 `seconds`、缺秒、NaN、存的结论与重算不一样，都停
+  （夹子里那些“写 10 秒却只带 1 秒证据”的行也一并修了）
+- 两份证据得是同一段：筛查行的片段长度（`seconds` 或 `measures` 里的）要与单音行的 `seconds` 差不超过一个毫秒位，
+  对不上就停；筛查行没写长度就跳过（没有第二处表示可比）
 - 只动三样：`verdict` · `reasons` · `measures`。其余字段逐字段相等，输入列表本身不被改写
 - 命令行：输出一行一景、打一行汇总；`--out` 指到输入上直接拒（不原地覆盖）
 """
@@ -20,8 +24,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
+import diagnose  # noqa: E402  条数的正本是「采样数 // sr」，边界用例直接拿它的函数造
 import screen_tone  # noqa: E402
 
 RULES_PATH = HERE / "screen_rules.json"
@@ -291,6 +298,12 @@ class PerSecondEvidence(unittest.TestCase):
             self.assertIn(w, msg)
         return msg
 
+    def test_missing_seconds_field_stops(self):
+        """单音行没写 seconds：没有片段长度可核，不许默默放过（早期行也不能算过）。"""
+        row = tone_row("a.wav", "none", [])
+        del row["seconds"]
+        self.stops(row, "seconds", "a.wav")
+
     def test_missing_seconds_stop(self):
         """片段写 10 秒、逐秒证据只 1 秒：diagnose 只丢不足 1 秒的尾巴，差这么多就说明不是它写的。"""
         row = tone_row("a.wav", "none", [], seconds=1)  # 证据只有 1 秒
@@ -338,6 +351,104 @@ class PerSecondEvidence(unittest.TestCase):
             merged([screen_row("a.wav")], [row], None, PRESENT_DB + 1.0)
 
 
+class SecondsRounding(unittest.TestCase):
+    """片段秒数只写到毫秒（正本 `diagnose.py:104` 的 `round(..., 3)`）：条数按真长度 `采样数 // sr` 算。
+
+    真长 9.9999375 秒（159999 采样 / 16 kHz）写下的是 10.0 秒、条数却只有 9：这是精确切块的正常结果，
+    不是缺一秒证据。判据是「条数落在 seconds 减 / 加半个毫秒再取整的那两个值之间」，不是 `floor(seconds)`。
+    """
+
+    def diagnose_row(self, n_samples, sr=16000):
+        """按 `diagnose.py --tone` 自己的函数造一行（seconds 与 per_second 都由它算，不在测试里重写）。"""
+        noise = np.random.default_rng(0).standard_normal(n_samples) * 1e-4
+        t = np.arange(n_samples) / sr
+        x = 0.5 * np.sin(2 * np.pi * 250.0 * t) + noise
+        return {"path": "a.wav", **diagnose.diagnose(x, sr, tone=diagnose.load_tone_check())}
+
+    def test_159999_samples_is_9_blocks_but_10_seconds(self):
+        row = self.diagnose_row(159999)
+        self.assertEqual(row["seconds"], 10.0)
+        self.assertEqual(len(row["tone"]["per_second"]), 9)
+        tone = screen_tone.check_tone_row(row, PRESENT_DB)
+        self.assertEqual(tone, row["tone"])
+
+    def test_exact_second_still_passes(self):
+        row = self.diagnose_row(160000)
+        self.assertEqual((row["seconds"], len(row["tone"]["per_second"])), (10.0, 10))
+        self.assertEqual(screen_tone.check_tone_row(row, PRESENT_DB), row["tone"])
+
+    def test_just_over_a_second_passes_as_10_blocks(self):
+        """160001 采样 → 真长 10.0000625 秒、写下 10.0 秒、条数 10：也在窗口里。"""
+        row = self.diagnose_row(160001)
+        self.assertEqual((row["seconds"], len(row["tone"]["per_second"])), (10.0, 10))
+        self.assertEqual(screen_tone.check_tone_row(row, PRESENT_DB), row["tone"])
+
+    def test_round_trip_through_jsonl_keeps_passing(self):
+        """走到 json 里再读回来也得过（round 写进文件后再判，数字还是同一个）。"""
+        row = self.diagnose_row(159999)
+        back = json.loads(json.dumps(row, ensure_ascii=False))
+        self.assertEqual(screen_tone.check_tone_row(back, PRESENT_DB), back["tone"])
+
+    def test_one_block_missing_still_stops(self):
+        """真少一秒（8 条证据对 10.0 秒）落在窗口外：不能因为宽了半个毫秒就放过。"""
+        row = self.diagnose_row(159999)
+        del row["tone"]["per_second"][-1]
+        with self.assertRaises(SystemExit) as cm:
+            screen_tone.check_tone_row(row, PRESENT_DB)
+        msg = str(cm.exception)
+        self.assertIn("8 秒", msg)
+        self.assertIn("9 或 10", msg)
+
+
+class ScreenLength(unittest.TestCase):
+    """筛查行与单音行写的片段秒数要对得上（差不超过一个毫秒位）：两份证据得是同一次读出来的那一段。"""
+
+    def merged_with(self, screen_seconds, tone_seconds):
+        screen = screen_row("a.wav")
+        screen["seconds"] = screen_seconds
+        tone = tone_row("a.wav", "none", [])
+        tone["seconds"] = tone_seconds
+        return merged([screen], [tone])
+
+    def test_mismatch_stops_naming_both(self):
+        with self.assertRaises(SystemExit) as cm:
+            self.merged_with(10.0, 10.5)
+        msg = str(cm.exception)
+        self.assertIn("a.wav", msg)
+        self.assertIn("10.0", msg)
+        self.assertIn("10.5", msg)
+
+    def test_one_millisecond_apart_passes(self):
+        """两边都只写到毫秒，差一个最末位还算同一段。"""
+        res = self.merged_with(10.0, 10.001)
+        self.assertEqual(res["rows"][0]["verdict"], "keep")
+
+    def test_length_under_measures_is_also_checked(self):
+        """筛查行把长度写进 `measures` 时也要核。"""
+        screen = screen_row("a.wav")
+        del screen["seconds"]
+        screen["measures"]["seconds"] = 12.0
+        with self.assertRaises(SystemExit) as cm:
+            merged([screen], [tone_row("a.wav", "none", [])])
+        self.assertIn("12.0", str(cm.exception))
+
+    def test_screen_row_without_length_is_skipped(self):
+        """筛查行没写长度：没有第二处表示可比，跳过（这条不是空检查，真正的核对交给上面几条）。"""
+        screen = screen_row("a.wav")
+        del screen["seconds"]
+        res = merged([screen], [tone_row("a.wav", "none", [])])
+        self.assertEqual(res["rows"][0]["verdict"], "keep")
+
+    def test_real_screen_rows_match_their_tone_rows(self):
+        """仓里那 402 条办公室片段：筛查行与单音行的 seconds 逐条对得上（不然逐字节重现那条路会停）。"""
+        screen = {r["path"]: r for r in screen_tone.read_jsonl(HERE / "screen" / "office-3mic-screen.jsonl")}
+        tones = screen_tone.read_jsonl(HERE / "screen" / "office-3mic-tone.jsonl")
+        self.assertEqual(len(tones), 402)
+        for row in tones:
+            self.assertIn("seconds", row, row["path"])
+            screen_tone._check_screen_length(row["path"], screen[row["path"]], row)
+
+
 class RealToneEvidence(unittest.TestCase):
     """仓里那两份真单音证据（原始输出，不改写）每一行都经得起逐秒重算。"""
 
@@ -345,6 +456,7 @@ class RealToneEvidence(unittest.TestCase):
         rows = screen_tone.read_jsonl(path)
         self.assertEqual(len(rows), expected)
         for row in rows:
+            self.assertIn("seconds", row, row["path"])  # 缺了秒数就没法核逐秒条数（那也是停下）
             tone = screen_tone.check_tone_row(row, PRESENT_DB)
             self.assertEqual(tone["verdict"], row["tone"]["verdict"], row["path"])
 
