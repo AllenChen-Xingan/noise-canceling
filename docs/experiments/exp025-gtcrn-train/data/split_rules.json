@@ -73,7 +73,7 @@
   },
   "but-reverbdb-silence": {
    "expect": {"files": 868, "src": "cloudrun 2026-11-26 解压清单：C236 silence 620 + Room112 silence 248"},
-   "src": "D111 补充（第三批）：BUT 混响库底噪；办公室与会议室之类的房间底噪补 meeting-room · hotel-room", "group": "A7", "unit": "file",
+   "src": "D111 补充（第三批）：BUT 混响库底噪；C236 会议室与 R112 酒店房间的底噪补 meeting-room · hotel-room", "group": "A7", "unit": "file",
    "glob": ["train-raw/but-reverbdb/VUT_FIT_C236/MicID*/*/*/silence/*.wav", "train-raw/but-reverbdb/Hotel_SkalskyDvur_Room112/MicID*/*/*/silence/*.wav"],
    "unit_regex": [{"match": "^train-raw/but-reverbdb/([^/]+)/MicID\\d+/([^/]+)/", "unit": "\\1/\\2", "why": "房间 + 扬声器布置：同一次布置的 31 个麦克风同时录的是同一段底噪，必须同进一份；会议室与酒店房间各只有一间，纯按房间切会让整类落进开发份（大总管 c4 2026-11-26 同意）"}],
    "unit_regex_required": true,
