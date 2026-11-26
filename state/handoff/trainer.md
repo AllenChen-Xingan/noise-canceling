@@ -76,3 +76,4 @@
   - pi trainer-guards-devnan（codex guards 第 3 轮 #1，花费 0.0099 美元）：1ba6c800..a1f00093（hook 提交 e4c58e28 · a1f00093）；验收提交 b37a8560 当时没加 `Code: pi` 行，在此补记：代码由 pi（isoquant/deepseek-v4.1-flash-1017-fast）写
   - pi trainer-guards-calibnan（codex guards 第 4 轮 #1，花费 0.0064 美元）：b37a8560..（hook 提交 13c19e5c · 1f1b7450，加本次验收提交）
   - 之后的 pi 改用 `pi-worker start --repo <主仓> --base feat/trainer-guards`，在自己的 worktree 与分支提交，验收后快进合入
+- 11-26 pi trainer-guards-finite（改结构：唯一查有限值入口 · 停止原因优先级 · 防绕过扫描）：在自己的 worktree 与分支 w/trainer-guards-finite，提交 6be34442..370af014（Agent: pi），花费 0.0428 美元；trainer 验收后快进合入 feat/trainer-guards。全套 369 过

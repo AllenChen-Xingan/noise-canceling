@@ -26,3 +26,11 @@ P0×0 P1×1。核实属实，已修（按 2026-11-26 新规则由 pi `trainer-gu
 P0×0 P1×1。核实属实，已修（pi `trainer-guards-calibnan` 写，花费 0.0064 美元；trainer 读 diff、验收）。
 - **P1｜标定阶段不查有限性**（第 4 轮 #1）：固定权重时标定读到 NaN 照样开训；NaN 之后下一批碰到上限就按预算停、退出码 0、什么都不记。改：calibrate 每批查有限性，不是有限数立刻交回；准备期停下（nonfinite，退出码 1），写 `setup_crash.json`。新测试 2 条：换回旧 train.py 亲手跑红，新版绿
 - 大总管指出这是同一类问题第二次（第 3 轮开发份、第 4 轮标定），按规矩改结构：下一步由 pi 在自己的 worktree 做「唯一查有限值入口 + 停止原因优先级正本 + 防绕过扫描」
+
+## 改结构（2026-11-26，大总管要求：同一类问题第二次出现）
+
+第 3、4 轮都是「下一批想停 → 返回 None」把已读到的 NaN 掩掉（开发份、标定）。不再逐处补，由 pi `trainer-guards-finite` 在自己的 worktree 做（提交 6be34442..370af014，署名 Agent: pi，花费 0.043 美元），trainer 读 diff 后快进合入：
+- 唯一的判断 `guards.is_finite`；读数一律 `guards.require_finite` 抛 `NonFinite`，train.py 只在准备期一处、训练循环外一处接住
+- 停止原因优先级正本 `guards.STOP_PRIORITY` + `pick_reason`（两两组合表驱动测试 121 条）；训练循环与看门狗都按它挑
+- 防绕过扫描：train.py · guards.py · watchdog.py 里除 `is_finite` 外出现 isfinite / isnan / isinf 就红（只防无心之失）
+- 全套 369 过、2 跳过
