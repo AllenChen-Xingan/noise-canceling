@@ -514,3 +514,9 @@
 - 2026-11-26 更正：办公室全量筛的决定作废（大总管理由错：31 个麦克风录同一段底噪，不同内容约 2.2 h 非 10 h）；改回 traindata 方案：3 个麦克风位置约 400 条，用现机 sm5qjwcfp8slir，不开 16 核（核过未开）。场景表时长分「不同内容」与「条数」两列。
 - 2026-11-26 traindata：办公室挑每次布置都有的 3 个位置（优先 01·11·21，核每布置 3 个，没有就停报）；pi traindata-unique 加「不同内容（小时）」列（规则 scene_notes.json same_content）；pi traindata-tonemerge 把单音结论并进筛查表（有单音的办公室片段丢掉）。trainer：5 份变体配方在 feat/data-batch3 bcbcb1da。
 - 2026-11-26 cloudrun：办公室每布置取 01·11·21 共 402 条、15 次布置齐，筛查 08:07Z 起约 08:50Z 完（机器时限 09:18Z）；单音全量 4154：无 3840 · 只第 1 秒 1 · 第 2 秒后也有 313（实测）。16 核未开。
+- 2026-11-26 evalcmp 两个 pi 交活（offline 0.062 · accept 0.076 美元，先红后绿）；大总管 --continue 重开 evalcmp，钩子改登记 exp/025-eval-plan。
+- 2026-11-26 history-a0 报本机负载 52（4 个 run_gtcrn_offline.py 各约 170%）；大总管查时已结束，负载 39。新规：本项目本机离线推理/评测并发 ≤2，跑前看 uptime >20 就等；正式 7 份成绩单放云上。
+- 2026-11-26 history-a0 将在负载 <15 时跑约 25 min 延迟基准，建 _tmp/heavy.lock；已告四个手下：锁在不跑本机重活、uptime >20 先等。evalcmp 真实对拍过（实测：官方权重流式 vs 离线 5 段冒烟集 22 项 76 对最大差 3.8e-5，容差 1e-3；延迟 · 最坏一帧离线不可测，跳过）；离线全量 1451 文件约 3.2 min。
+- 2026-11-26 evalcmp：未推送提交 47e8c89a 含本机绝对路径（eval/builds/gtcrn-offline-parity1/ params.json · run.json）。大总管定选 1：等它修 rel() 并回「可以关」后，大总管在主仓 filter-branch 只改 origin/main..exp/025-eval-plan，核对后 --continue 重开。
+- 2026-11-26 cloudrun A 段完：办公室 402 条筛留 390；结果 _tmp/20261126-cloudrun-batch4/（sha 7df39381…）交 traindata；机器 sm5qjwcfp8slir 删，约 0.12 美元，累计 8.65 美元；盘 154/200。B 段重打分片约 +23 GB → 约 177 GB，低于 30 GB 开训门槛 → 要删 batch2 或 batch3，问人。
+- 2026-11-26 人定 D116：第四批基线 build 合格后删 batch3。批 cloudrun 开 B 段机（cpu3c 4 核 · 自删 2 h · ≤0.24 美元，代码 a632a660）。
