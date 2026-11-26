@@ -387,7 +387,11 @@ class Sources(unittest.TestCase):
                 self.assertIn(k, g, gid)
             self.assertIn(g["role"], ("train", "exp013"))
             for f in g["files"]:
-                self.assertTrue(f["url"].startswith("https://"), f["name"])
+                # 上游只有 http（BUT 的下载服务器，2026-11-26 实读）：手工下载组、且 md5 与 sha256 都钉住时才许
+                manual_http = f["url"].startswith("http://") and "manual" in g
+                self.assertTrue(f["url"].startswith("https://") or manual_http, f["name"])
+                if manual_http:
+                    self.assertTrue(f.get("md5") and f.get("sha256"), f"{f['name']}：走 http 就必须钉住两种校验码")
                 if f["bytes"] is None:  # 手工下载组（A6）：fetch.py 不下，没有字节数，但要钉住上游 md5
                     self.assertIn("manual", g, f["name"])
                     self.assertTrue(f.get("md5") or f.get("sha256"), f["name"])

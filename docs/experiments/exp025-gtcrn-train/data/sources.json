@@ -63,6 +63,15 @@
     {"name": "CochlScene.zip", "url": "https://zenodo.org/records/7080122/files/CochlScene.zip?download=1", "bytes": null, "md5": "492b955f93aa74287caec1c86a83235f", "sha256": null, "extract": "none", "dest": "train-raw/cochlscene"}
    ]
   },
+  "A7": {
+   "name": "BUT Speech@FIT Reverb Database（2019 RIR-Only：冲激响应与底噪）", "role": "train", "train_ok": true,
+   "license": "Apache-2.0", "license_src": "包内 read_me.txt（副本 third_party/BUT_ReverbDB-read_me.txt）；论文写 CC BY 4.0，人定按 Apache 2.0（D111 补充）",
+   "attribution": "Copyright 2018 Brno University of Technology, Faculty of Information Technology, BUT Speech@FIT。I. Szöke et al., Building and evaluation of a real room impulse response dataset, IEEE JSTSP 13(4), 2019",
+   "manual": "上游没给校验码，2026-11-26 cloudrun 首次下载记下 md5 / sha256（mode=bytes-only）；只解 */RIR/*.wav、*/silence/*.wav 与 *.txt，不解 .py · .jpg；重放 LibriSpeech 的包不下（D57）。见 download-list-but.md",
+   "files": [
+    {"name": "BUT_ReverbDB_rel_19_06_RIR-Only.tgz", "url": "http://merlin.fit.vutbr.cz/ReverbDB/BUT_ReverbDB_rel_19_06_RIR-Only.tgz", "bytes": 9308593693, "md5": "3ad91777f6cadec81fb4c07dfbef6f19", "sha256": "d0d14cdd626b4b05401027c5a774b4f24369f4ea38f57480c6fc6e04e9f3f5b5", "extract": "none", "dest": "train-raw/but-reverbdb"}
+   ]
+  },
   "E1": {
    "name": "exp013 原料：LibriSpeech test-clean", "role": "exp013", "train_ok": false, "license": "CC-BY-4.0", "license_src": "openslr.org/12",
    "files": [
