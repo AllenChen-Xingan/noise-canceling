@@ -242,6 +242,38 @@ def test_train_reports_guard_reason_over_signal(tmp_path, monkeypatch):
     assert stop["reason"] == "loss_spike" and rec["guards"][-1]["kind"] == "loss_spike"
 
 
+# ---------- codex guards 第 5 轮 #3 ----------
+
+def _fired_by_a_watchdog_that_misjudges(tmp_path, want_stop):
+    """判断出错的现场：主线程「该停而久无进展」（200 s，大于 hang_s、小于 STALL_S），判断函数本身坏了。
+    看门狗线程应当仍然出手（on_hang），而不是静默结束、只剩总时限兜底。"""
+    rd = train.RunDir(tmp_path / "w")
+    fired = []
+    t0 = time.monotonic()
+    b = train._Beat(rd, lambda: (0, 1.0, 0.0), 0.01, want_stop=want_stop,
+                    last_progress=lambda: t0 - 200, hang_s=5.0, on_hang=fired.append)
+    with b:
+        time.sleep(0.5)  # 每 0.01 s 判一次，0.5 s 足够看出它出没出手
+    return fired
+
+
+def test_watchdog_fires_when_stop_reason_is_not_in_table(tmp_path):
+    """want_stop 返回表外原因（pick_reason 抛 ValueError）：照样强退，消息里写清出错的原因。"""
+    fired = _fired_by_a_watchdog_that_misjudges(tmp_path, lambda: "made_up_reason")
+    assert fired, "看门狗判断出错时静默结束：on_hang 没被叫，卡住保护没了"
+    assert "made_up_reason" in fired[0]
+
+
+def test_watchdog_fires_when_want_stop_itself_raises(tmp_path):
+    """判断函数自己抛异常：同样强退，消息里带上异常内容。"""
+    def boom():
+        raise RuntimeError("boom")
+
+    fired = _fired_by_a_watchdog_that_misjudges(tmp_path, boom)
+    assert fired, "want_stop 抛异常时看门狗静默结束：on_hang 没被叫"
+    assert "boom" in fired[0]
+
+
 # ---------- 反向扫描：不许绕开唯一入口 ----------
 
 TRAINER = Path(__file__).resolve().parents[1]
