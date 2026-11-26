@@ -59,3 +59,16 @@ P0×0 P1×1 P2×1。逐条核实，都属实。
 - 改动：`check_resume` 加了参数 `dev_build_id`。记录里有、这次也有、两者不同时，拒绝续训和重建。train.py 只多一个变量，两处调用都传它。
 - 红灯：trainer 在 060fe3f9 上复现（复制件是 git 仓库，带模型源码），2 败 2 过。失败的两条都是「DID NOT RAISE」：开发份变了，旧代码仍放行续训和重建。照常续训的两条本来就过。
 - 绿灯：合入后 test_ablation、test_ablation_judge、test_formal、test_data、test_train、test_review_fixes 共 157 过 2 跳过。
+
+## 第 4 轮（2026-11-26）· 模型 gpt-6-astra · 总评「修改」
+
+P0×0 P1×1。核实属实。
+- **P1｜旧运行续训被拒**（第 4 轮 #1）：前三轮的 P2（#217）这轮给了新证据，升为 P1。旧代码开的运行，run.json 里没有 `config.data.dev_recipe`；新代码把它写成空串。config_diff 把缺键当成不同，于是 check_resume 拒绝续训。原有的「老 run.json 兼容」测试只删了 dev_build_id，留着 dev_recipe，没有模拟真的旧记录。改：旧记录缺的键，如果新值等于 config.py 的默认值，就不算改了；缺键而新值不是默认值的照样拒绝。测试改用真的旧格式。交 pi `trainer-ablation-fix5`，本 PR 一并关闭 #217。
+
+### 第 4 轮的处理（2026-11-26）
+
+由 pi `trainer-ablation-fix5` 修，提交 cfdd3031..3b4b1782，花费 0.0075 美元。
+- 改动：runrec 的 `config_diff` 加可选参数 `defaults`，默认值从 config.py 取，不手抄。旧记录缺的键，新值等于默认值时跳过；缺键而新值不是默认值、或键在但值不同，仍算改了。check_resume 传入默认值。train.py 不动。
+- 测试改用真的旧格式：既没有 `config.data.dev_recipe`，也没有 `dev_build_id`。覆盖照常续训、重建、缺键而新值非默认仍拒绝这三种。
+- 红灯：trainer 在 cfdd3031 上复现，3 败 1 过。3 条都报「配置改了：data.dev_recipe」。
+- 绿灯：合入后跑 test_ablation、test_ablation_judge、test_formal、test_data、test_train、test_review_fixes、test_git_record、test_guards，共 196 过 2 跳过。
