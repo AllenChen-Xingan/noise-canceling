@@ -183,8 +183,10 @@ def start_record(cfg_dict: dict, build_id: str, num_workers: int, extra: dict) -
     }
 
 
-def check_resume(rec: dict, cfg_dict: dict, build_id: str) -> list[str]:
-    """续训前核对；返回不许续训的原因（空 = 可以）。"""
+def check_resume(rec: dict, cfg_dict: dict, build_id: str, dev_build_id: str | None = None) -> list[str]:
+    """续训前核对；返回不许续训的原因（空 = 可以）。
+    build_id 是训练数据那份；dev_build_id 是开发份那份（配了 data.dev_recipe 时另算）：开发配方原地改过，
+    接着训就换了开发集，读数不可比（#212 数据消融）。老 run.json 没有 dev_build_id 时不比。"""
     why = []
     stop = rec.get("stop") or {}
     if stop.get("reason") == "nonfinite":  # 训崩过：从同一检查点同一批再跑会确定性地再崩，先诊断（自审 P2）
@@ -196,6 +198,9 @@ def check_resume(rec: dict, cfg_dict: dict, build_id: str) -> list[str]:
             why.append("配置改了：" + ".".join(path))
     if rec.get("data_build_id") != build_id:
         why.append(f"数据 build 变了：{rec.get('data_build_id')} → {build_id}")
+    old_dev = rec.get("dev_build_id")
+    if old_dev is not None and dev_build_id is not None and old_dev != dev_build_id:
+        why.append(f"开发份 build 变了：{old_dev} → {dev_build_id}")
     return why
 
 
