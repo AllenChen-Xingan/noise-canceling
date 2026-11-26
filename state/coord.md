@@ -520,3 +520,6 @@
 - 2026-11-26 evalcmp：未推送提交 47e8c89a 含本机绝对路径（eval/builds/gtcrn-offline-parity1/ params.json · run.json）。大总管定选 1：等它修 rel() 并回「可以关」后，大总管在主仓 filter-branch 只改 origin/main..exp/025-eval-plan，核对后 --continue 重开。
 - 2026-11-26 cloudrun A 段完：办公室 402 条筛留 390；结果 _tmp/20261126-cloudrun-batch4/（sha 7df39381…）交 traindata；机器 sm5qjwcfp8slir 删，约 0.12 美元，累计 8.65 美元；盘 154/200。B 段重打分片约 +23 GB → 约 177 GB，低于 30 GB 开训门槛 → 要删 batch2 或 batch3，问人。
 - 2026-11-26 人定 D116：第四批基线 build 合格后删 batch3。批 cloudrun 开 B 段机（cpu3c 4 核 · 自删 2 h · ≤0.24 美元，代码 a632a660）。
+- 2026-11-26 大总管改写 evalcmp 未推送历史（origin/main..exp/025-eval-plan 46 提交，本机路径 → <主目录>/）：只 2 提交 2 文件变，末端树与 dbcf9c9f 一致，提交说明不变，残留 0；--continue 重开 evalcmp 推送开 PR。evalcmp codex 13 轮达停止线，vdn-eval 362 过，pi 0.70 美元。
+- 2026-11-26 大总管验收 PR #218（#212 消融）：独立副本 trainer 444 过 · 2 跳过（对拍 31 条因未编 Rust 驱动排除），最大文件 540 行，CI 过 → 合并；删 pi worktree trainer-ablation 与 w/ 分支。
+- 2026-11-26 evalcmp 交 PR #220（Closes #219）；大总管独立副本合 main 后跑 vdn-eval 测试 + tidy（后台）。history 大总管换为 history-05。
