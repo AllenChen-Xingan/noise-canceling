@@ -12,4 +12,5 @@
  "stationarity": {"max_level_std_db": 6.0, "src": "逐秒电平的标准差，暂定"},
  "tone_check": {"hz": 250.0, "half_bw_hz": 5.0, "ref_band_hz": [150.0, 350.0],
                 "ref_exclude_hz": 20.0, "present_db": 10.0,
-                "src": "D114：逐秒判 250 Hz 单音在不在；暂定"}}
+                "drop_where": ["first_only", "later_too"],
+                "src": "D114：逐秒判 250 Hz 单音在不在；暂定；drop_where：有单音就丢（去掉开头要改 split.py，不做），大总管 87 2026-11-26"}}
