@@ -4,8 +4,8 @@
 - `RealRule`：`split_rules.json` 里 `but-reverbdb-silence-b5`（第五批的 4 间房）的通配符 · 期望条数 · 文字与决策对得上；
   除 `screen_file` 与 `src` 外与 `-b4` 逐字段相同（第五批只换了筛查表）
 - `Names`：三个来源名的分工——`but-reverbdb-silence` 只含 Room112，`-b4` 是第四批的 4 间房，`-b5` 是第五批；
-  两个旧名字的规则一个字节都不能动（旧表 build 10aa3a9f · bc0e9e7b 在用）；`-b5` 的新切分表还在云上（顶层 `未建表`）；
-  配方与分片只看新名字
+  两个旧名字的规则一个字节都不能动（旧表 build 10aa3a9f · bc0e9e7b 在用）；`-b5` 的表已带回进仓
+  （build df759bb8d606a209，顶层 `未建表` 里已经没有它）；配方与分片只看新名字
 - `RealScreen`：仓里第五批那份筛查表 1270 行（C236 620 + Room112 248 + 三间办公室 402）；Room112 的 248 条由
   老表 + `screen/room112-tone.jsonl` 逐字节可复现；其余 1022 条与老表逐字节相同；Room112 keep 188 · 因单音新丢 21
 
@@ -121,7 +121,8 @@ class Names(unittest.TestCase):
 
     - `but-reverbdb-silence`：只含 Room112，规则一个字节都不能动（旧表 build 10aa3a9f 在用）
     - `-b4`：第四批的 4 间房，规则一个字节都不能动（旧表 build bc0e9e7b 在用）
-    - `-b5`：第五批的 4 间房，只换了筛查表（Room112 补了单音检查）；新切分表还在云上，顶层 `未建表` 记着
+    - `-b5`：第五批的 4 间房，只换了筛查表（Room112 补了单音检查）；云上跑完的表已带回进仓
+      （build df759bb8d606a209），顶层 `未建表` 里不该再有它
     """
 
     def setUp(self):
@@ -148,12 +149,57 @@ class Names(unittest.TestCase):
         self.assertEqual(self.rules[B4]["screen_file"], "screen/but-reverbdb-silence.jsonl")
         self.assertEqual(self.rules[SRC]["screen_file"], "screen/but-reverbdb-silence-b5.jsonl")
 
-    def test_pending_until_the_table_comes_back(self):
-        """规则改了、音频在云上：本机切不了，顶层 `未建表` 记着，表带回进仓后删那一行。"""
-        marker = split.load_rules()["未建表"][SRC]
-        for word in ("Room112", "screen/but-reverbdb-silence-b5.jsonl", "删这一行"):
-            self.assertIn(word, marker)
-        self.assertIn("-b4", marker)  # 旧表谁在用
+    def load_table(self):
+        """`-b5` 的表已进仓：顶层没有 `未建表` 标记 · 能按摘要里的哈希读回 · 按当前规则切的。
+        返回 (规则, 摘要, 行)。"""
+        R = split.load_rules()
+        self.assertNotIn(SRC, R.get("未建表", {}),
+                         "顶层 `未建表` 里还有 -b5：音频已切回、表已进仓，那一行该删（表回来了却留着标记）")
+        r = R["sources"][SRC]
+        s, rows = split.load_split(SRC, HERE / "splits")  # 顺带核 jsonl 的 sha256
+        self.assertEqual(s["rule_sha256"], split.rule_sha(r), "表是按旧规则切的")
+        self.assertEqual(s["seed"], R["seed"])
+        self.assertEqual(s["files"], len(rows))
+        return r, s, rows
+
+    def test_table_is_back(self):
+        """表回来了：563 条 · 20 个单位 · meta 排除 78 · 筛查排除 87，且与规则里的上游条数对得上。"""
+        r, s, _ = self.load_table()
+        self.assertEqual(s["files"], 563)
+        self.assertEqual(s["units"], 20)
+        self.assertEqual(s["excluded_meta"], 78)
+        self.assertEqual(s["excluded_screen"], 87)
+        # 上游条数 − 两次排除 = 表里条数：三处一起动，改一处就对不上
+        self.assertEqual(r["expect"]["files"] - s["excluded_meta"] - s["excluded_screen"], s["files"])
+
+    def test_table_only_has_train_and_dev(self):
+        """D106：只作训练噪声，不给终测（final）与测试份（d63）；两份的合计正好是整张表。"""
+        _, s, rows = self.load_table()
+        self.assertEqual(set(s["per_split"]), {"train", "dev"})
+        self.assertEqual({r["split"] for r in rows}, {"train", "dev"})
+        self.assertEqual(sum(v["files"] for v in s["per_split"].values()), s["files"])
+        self.assertEqual(sum(v["units"] for v in s["per_split"].values()), s["units"])
+
+    def test_every_room_has_a_dev_unit(self):
+        """四间房各是一个层（`min_dev_per_stratum` = 1）：少一间的开发份，9:1 会把整类挤进训练份。"""
+        _, _, rows = self.load_table()
+        dev = {room_of_unit(r["unit"]) for r in rows if r["split"] == "dev"}
+        self.assertEqual(dev, set(ROOMS), "有房间一个开发份单位都没有")
+
+    def test_screen_drops_stay_out_of_the_table(self):
+        """Room112 进表的正是新筛查表 keep 的那 188 条：新表判 drop 的一条也不许进（含因单音新丢的 21 条）。"""
+        _, _, rows = self.load_table()
+        paths = {r["path"] for r in rows}
+        new = screen_verdicts(SCREEN)
+        old = screen_verdicts(SCREEN_B4)
+        room = {p for p in new if ROOM112_RE.search(p)}
+        kept = {p for p in room if new[p] == "keep"}
+        self.assertEqual(paths & room, kept, "Room112 进表的那批和新筛查表的 keep 对不上")
+        self.assertEqual(len(paths & room), 188)
+        # 因单音新丢的 21 条：新表 drop、老表还是 keep（老表按铁律不改，谁在用谁读它）
+        newly = {p for p in room if old[p] == "keep" and new[p] == "drop"}
+        self.assertEqual(len(newly), 21)
+        self.assertEqual(newly & paths, set(), "因单音新丢的文件进了切分表")
 
     def test_tables_that_exist_are_cut_with_the_current_rule(self):
         """除 `未建表` 里的来源外，每张切分表的 rule_sha256 都要等于当前规则（旧表没被原地覆盖）。"""
@@ -189,6 +235,17 @@ class Names(unittest.TestCase):
             self.assertEqual(same[name]["regex"], same[SRC]["regex"])
             self.assertEqual(same[name]["group"], same[SRC]["group"])
         self.assertIn("-b4", same[SRC]["why"])
+
+
+def room_of_unit(unit):
+    """单位写法是「房间/扬声器布置」（规则 `unit_regex` 的正本）：斜杠前那一段就是房间。"""
+    return unit.split("/")[0]
+
+
+def screen_verdicts(path):
+    """筛查表里 路径 → 结论（keep / drop）：比对的是仓里那两份真文件，不在测试里另算一份。"""
+    rows = [json.loads(ln) for ln in Path(path).read_text(encoding="utf-8").splitlines() if ln.strip()]
+    return {r["path"]: r["verdict"] for r in rows}
 
 
 def shard_sources():
