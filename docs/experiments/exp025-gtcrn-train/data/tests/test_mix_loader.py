@@ -19,6 +19,9 @@ import mix  # noqa: E402
 import shard  # noqa: E402
 import split  # noqa: E402
 
+sys.path.insert(0, str(HERE / "tests"))
+import fixtures_but  # noqa: E402
+
 SR = 16000
 RECIPE = json.loads((HERE / "recipe.json").read_text())
 
@@ -188,6 +191,7 @@ def make_tree(root):
         lines.append(f"--rir-id r{room} --room-id Room{room:03d} RIRS_NOISES/simulated_rirs/smallroom/{f.parent.name}/{f.name}")  # 上游格式
     (d / "rir_list").write_text("\n".join(lines) + "\n")
     tone(root / "vdn-data/demand/STRAFFIC/ch01.wav", 6, seed=30)
+    fixtures_but.make_tree(root)  # BUT 混响库底噪：两个房间 × 几次扬声器布置 × 两个麦克风；其中一次布置放收音机（要被 meta 排除）
     for i, spk in enumerate(("1272", "1462", "2033", "2414")):  # 终测原料池来源：不进分片，但交集检查要查它
         tone(root / f"train-raw/librispeech/LibriSpeech/{'dev-clean' if i < 2 else 'test-other'}/{spk}/1/{spk}-1-0000.flac", 1, seed=40 + i)
 
@@ -199,10 +203,13 @@ class EndToEnd(unittest.TestCase):
         t = Path(cls.tmp.name)
         root = t / "data"
         make_tree(root)
+        screen = fixtures_but.write_screen(t / "but-screen.jsonl",
+                                           [p for p in fixtures_but.all_files() if p not in set(fixtures_but.radio_files())])
         R = split.load_rules()
         for r in R["sources"].values():
             r.pop("expect", None)  # 夹具只有几个文件，不按上游数目核
             r.pop("room_lists_sha256", None)  # 夹具的 rir_list 不是上游原文件（钉哈希另有 test_openslr28_rooms）
+        R["sources"]["but-reverbdb-silence"]["screen_file"] = str(screen)  # 筛查结果用夹具现造那份
         cls.splits = t / "splits"
         names = shard.default_sources()  # 要分片的来源 = recipe.json 里出现的全部来源（夹具必须全覆盖）
         for n in names + ["librispeech-dev-clean-test-other"]:  # 终测原料池：只写表，不进分片
