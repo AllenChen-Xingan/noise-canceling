@@ -425,3 +425,8 @@
 - 2026-11-26 01:00Z CochlScene 6 个分卷已被下载脚本解压核对后自动删除（删机前目录实测无分卷）→ 待拍板 10-2 作废；不重下，接受间接证据（7z 逐文件 CRC + 17629/17629）。cloudrun 改脚本：删分卷前写 md5 小文件、删机前取回（派 pi）。
 - 2026-11-26 01:10Z trainer 还名额：全套测试 221 过 · 2 跳过 · 0 失败（86 s，自报）；名额 → evalcmp（clippy · 全量测试 · fmt，约 4 min）。
 - 2026-11-26 01:15Z traindata 派第一个 pi：traindata-cochlscene（预算 2 美元，任务 _tmp/20261116-b19/pi-traindata-cochlscene.md）：sources · split_rules（按录音人 9:1）· split.py · recipe 加 4 个噪声池 + 测试。采样率由 shard.py 按 wav 头重采样、loader 断言 16 kHz（读源码）。
+- 2026-11-26 01:20Z cloudrun 派 pi：cloudrun-venvcache（预算 2 美元，分支 w/cloudrun-venvcache 从 exp/025-cloud-baseline 开，只本地提交；任务 _tmp/20261116-b19/pi-cloudrun-venvcache.md）：共享 venv（按 Python+uv+requirements sha256 定名，tar 放网络盘、解到容器盘，分步计时）+ 下载记账（每包 md5 追加 checksums.txt，脚本不删东西）；测试用假命令、不连网。
+- 2026-11-26 01:30Z trainer（issue #195，头 1ba6c800）codex 第 3 轮 1 条 P1 属实：开发份 NaN 碰上花费/时长上限时被「中断」吞掉 → 退出码 0、不存现场、允许续训（EMA 同）。派 pi trainer-guards-devnan（预算 2 美元），只改 train.py + test_guards.py，先红后绿。
+- 2026-11-26 大总管定：单个测试文件 ≤1 分钟不算重活、不用名额；全套测试（分钟级）、构建、计时才要名额。
+- 2026-11-26 01:45Z cloudrun 验收 pi cloudrun-venvcache 并合入自己分支 exp/025-cloud-baseline（0f91ec80；pi 花 0.0162 美元）：venv_cache.sh · fetch_archives.sh；打回 P1×1（GNU mktemp 严格模板，加假 mktemp 先红后绿）P2×3；cloudrun 重跑 132 条全过（自报），≤600 行。未上云实跑，等登记那次一起。
+- 2026-11-26 技能 coordinator-dispatch 改完（技能仓 771ce0c，未推送）：三层分工正本在 references/pi-worker.md 第 1 节；pi 只写代码、不提交、不跑长任务；e2e-mock · git-policy · hook.test 全过（子代理自报）。大总管定（技术题）：pi 不提交暂靠文字约束，机器强制（git-policy 拦 pi 提交）记 backlog；pi-worker review/clean 保留不删；pi 只跑交代里点名的短测试。

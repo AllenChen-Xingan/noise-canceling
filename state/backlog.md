@@ -109,3 +109,7 @@
 
 - [ ] `src/README.md` 仍是模板 · 模块说明里内部编号多、缺白话 · A / B / C 档没有定义 · 「档」一词有三个意思 · L0–L3 没有逐级说明 · verifier 代号没有中文 · `src/types/src/lib.rs` 表头写「三块」表里四行、帧长 10 / 16 ms 不一致 · 出处 `docs/reviews/013_frontend-once-selfreview.md`（PR #99）
 - [ ] 训练数据（exp013 原料）：从官方源重下 exp013 原料，验证「官方源可复现」（2026-11-25 b19 只证明了云上原料与本机逐个相同，原料是本机上传的）。来源：traindata 报告 rebuild/。
+
+## 协作技能（coordinator-dispatch，2026-11-26 记）
+
+- pi 不提交目前只靠文字约束（技能仓 771ce0c）；改成机器强制：`scripts/git/git-policy.ts` 对 pi 拦 `git commit` / `git push`，带测试。来源：改技能的子代理报「拿不准」第 1 条。
