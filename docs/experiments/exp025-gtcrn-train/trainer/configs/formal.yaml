@@ -4,15 +4,15 @@
 # 这是什么：6 个正式运行（模型 A、B × 种子 0/1/2，各 5000 步，每次 3 个同时跑一张 H100）共用的一份配置。
 # 运行矩阵在 configs/formal-runs.yaml。
 #
-# 这是**草稿**：带 TODO 的两项现在填不了，开训前必须填上——
-#   - data.shard_root：第二批分片登记之后；
-#   - data.recipe：D110 人定加训哪几个场景之后。
-# 开训前必须让 `python formal.py check` 通过（它会把这里的 TODO 和运行矩阵一起查一遍），否则不许开机。
+# 数据：分片是 data/builds/bc0e9e7b566421f0 登记的 baseline build，放在云盘 /workspace/shards/batch4
+# （traindata 的 data/cloud-batch4b.md：VDN_SHARDS=/workspace/shards/batch4）；配方是基线配方
+# data/recipe.json。开训前必须让 `python formal.py check` 通过，否则不许开机——它会拿这两项和那条登记
+# 记录逐项对（配方与数据代码的 sha256 必须和登记时一模一样，判法见 buildpin.py），还会查运行矩阵。
 run:
   out_dir: /workspace/runs/exp025-formal  # 检查点与日志放仓外（铁律 8）
 data:
-  shard_root: "TODO(第二批分片登记后填)"
-  recipe: "TODO(D110 定场景后的配方)"
+  shard_root: /workspace/shards/batch4  # 云盘上的 baseline 分片（build bc0e9e7b566421f0 用的那一份）
+  recipe: ../data/recipe.json  # 基线配方（相对 trainer/，train.py 就在 trainer/ 下跑）
   num_workers: 6  # 3 个同时跑 × 6 = 18，容器约 22 核
 limits:
   expect_s_step: 0.39  # 3 个同时跑的实测每步秒数（plan-h100-smoke.md 第五节）；超过 1.2 倍就判太慢

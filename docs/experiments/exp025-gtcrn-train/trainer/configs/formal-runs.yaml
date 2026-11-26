@@ -1,8 +1,13 @@
 # exp025 正式训练的**运行矩阵**：6 个运行 = 模型 A、B × 种子 0、1、2；每批 3 个同时跑一张 H100。
 # 配置正本见 configs/formal.yaml（base），命令由 `python formal.py commands` 按本文件生成。
-# 开训前 `python formal.py check` 必须通过：它查 base 里的 TODO 占位、target_scenes 的名字是否在地点键表里、矩阵是否恰好 6 个。
+# 开训前 `python formal.py check` 必须通过：它查 base 里的 TODO 占位、data_build 的登记记录、
+# target_scenes 的名字是否在地点键表里、target_scenes 是否与配方一致、矩阵是否恰好 6 个。
 base: formal.yaml
-# 人定加训场景（D113）；名字按地点键表查（specs/schema/eval-suite.schema.json）
+# 新基线 build（traindata 登记）：check 拿配方与数据代码的 sha256 对它的登记记录（data/builds/<id>/build.json）
+data_build: bc0e9e7b566421f0
+# 人定加训场景（D113）；名字按地点键表查（specs/schema/eval-suite.schema.json）。
+# 这一份不是正本：加训哪几个场景只由配方 knobs.target_scene.scene 决定（正本 data/recipe.json，
+# traindata 定），这里必须与它一致 —— 缺的、多的各报一条（#213）。
 target_scenes: [rail-air-cabin, canteen, meeting-room, transit-hub]
 batches:                   # 每批 3 个同时跑在一张卡上
   - [{name: exp025-formal-A-s0, variant: A, seed: 0}, {name: exp025-formal-A-s1, variant: A, seed: 1}, {name: exp025-formal-A-s2, variant: A, seed: 2}]

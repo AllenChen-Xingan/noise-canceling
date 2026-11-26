@@ -1,10 +1,10 @@
 """数据消融（T/ablation.py）与它的两份配置（#212 · 014 第 4 步）：7 个运行的检查 · 分批命令。
 
 两件事一起测：
-- 仓里这两份配置现在必须**报错**（data.shard_root 还是 TODO、变体配方还没被 traindata 写出来）；
+- 仓里的配置填好了：不再有占位，数据 build 与 5 份变体配方各有登记记录（仓里的实例由 test_buildpin.py 判）；
 - 变体配方与基线配方的交叉校验（traindata 的产物要对得上这里要的开关）。
 判法（第 1000 步的开发份 hybrid · 噪声底 floor）在 `test_ablation_judge.py`；两边共用的常量见
-`_ablation_helpers.py`。
+`_ablation_helpers.py`。tmp 里每一项用例都自带一份假登记记录（`_Case.builds`），不碰仓里的 data/builds。
 """
 import json
 from hashlib import sha256
@@ -16,6 +16,7 @@ import yaml
 import ablation
 import config as cfgmod
 from _ablation_helpers import BASE_RECIPE
+from test_buildpin import make_build
 
 HERE = Path(__file__).resolve().parents[1]
 CONFIGS = HERE / "configs"
@@ -75,24 +76,25 @@ def test_variant_recipe_name():
     assert ablation.variant_recipe_name("high_snr", True) == "high_snr-on.json"
 
 
-# ---------- 仓里现在该报错：shard_root 还是 TODO、变体配方还没写 ----------
+# ---------- 仓里的配置：填好了，两张表本身也对 ----------
 
-def test_shipped_files_block_start(capsys):
+def test_shipped_configs_have_no_placeholders():
+    """仓里的配置不再是草稿：占位 / 空值 / 运行集合里都不许再有拦路的话。
+    「登记记录全齐」由 test_buildpin.py 真的跑一遍 check 去核（这条分支上记录可能还没到）。"""
     ps = ablation.problems(RUNS)
-    assert any("data.shard_root" in s for s in ps), ps
-    assert not any("data.recipe" in s for s in ps), ps  # 基线配方已定，不许顺带报
-    assert not any("运行矩阵不是" in s for s in ps), ps  # 7 个本身是对的
-    for knob, on in ablation.KNOB_RUNS:  # 5 个变体配方一个都还没有
-        f = ablation.variant_recipe_name(knob, on)
-        assert any(f in s for s in ps), (f, ps)
-    assert "可以开训" not in capsys.readouterr().out
-    assert ablation.main(["check"]) == 1
-    assert "可以开训" not in capsys.readouterr().out
+    assert not any("还是占位" in s or "空着" in s for s in ps), ps
+    assert not any("运行矩阵不是" in s for s in ps), ps
 
 
-def test_commands_refuse_with_placeholders():
+def test_shipped_data_build_pinned():
+    runs = yaml.safe_load(RUNS.read_text())
+    assert runs["data_build"] == "bc0e9e7b566421f0"  # 新基线 build（正本 data/builds/<id>/build.json）
+
+
+def test_commands_refuse_with_todo_shard_root(tmp_path):
+    case = _Case(tmp_path, base_over={"data.shard_root": "TODO(新 build 登记后填)"})
     with pytest.raises(ValueError) as e:
-        ablation.commands(RUNS)
+        ablation.commands(case.runs_path, builds_dir=case.builds)
     assert "data.shard_root" in str(e.value)
 
 
@@ -135,13 +137,23 @@ class _Case:
         (self.configs / "ablation.yaml").write_text(yaml.safe_dump(d, allow_unicode=True))
         for knob, on in ablation.KNOB_RUNS:
             _write_variant(self.vdir / ablation.variant_recipe_name(knob, on), self.base.read_bytes(), knob, on)
+        # 假登记记录：基线一份，5 份变体各一份（同一个假分片：index_sha256 相同）
+        self.builds = root / "builds"
+        self.bid = make_build(self.builds, self.base)
+        self.reregister()
         self.dump(yaml.safe_load(RUNS.read_text()))
 
+    def reregister(self) -> None:
+        """按变体配方**现在的字节**登记一份（结构测试只关心结构：改了字节就让登记跟上）。"""
+        for f in sorted(self.vdir.glob("*.json")):
+            make_build(self.builds, f)
+
     def dump(self, runs: dict) -> None:
+        runs["data_build"] = self.bid
         self.runs_path.write_text(yaml.safe_dump(runs, allow_unicode=True))
 
     def problems(self) -> list:
-        return ablation.problems(self.runs_path)
+        return ablation.problems(self.runs_path, builds_dir=self.builds)
 
     def variant(self, knob: str, on: bool) -> Path:
         return self.vdir / ablation.variant_recipe_name(knob, on)
@@ -161,10 +173,10 @@ def _cmd(name, seed, recipe):
 
 def test_filled_copy_can_start(case, capsys):
     assert case.problems() == []
-    assert ablation.main(["check", str(case.runs_path)]) == 0
+    assert ablation.main(["check", str(case.runs_path), "--builds-dir", str(case.builds)]) == 0
     assert "可以开训" in capsys.readouterr().out
     v = "../data/recipes/ablation"
-    assert ablation.commands(case.runs_path) == [
+    assert ablation.commands(case.runs_path, builds_dir=case.builds) == [
         [_cmd("abl-base-s0", 0, BASE_RECIPE), _cmd("abl-base-s1", 1, BASE_RECIPE),
          _cmd("abl-eq-off", 0, f"{v}/no-eq.json")],
         [_cmd("abl-clip-off", 0, f"{v}/no-clip.json"), _cmd("abl-n_noises-off", 0, f"{v}/no-n_noises.json"),
@@ -173,7 +185,7 @@ def test_filled_copy_can_start(case, capsys):
 
 
 def test_commands_cli_prints_three_blocks(case, capsys):
-    assert ablation.main(["commands", str(case.runs_path)]) == 0
+    assert ablation.main(["commands", str(case.runs_path), "--builds-dir", str(case.builds)]) == 0
     out = capsys.readouterr().out
     assert out.count("train.py --config configs/ablation.yaml") == 7
     assert "data.recipe=../data/recipes/ablation/high_snr-on.json" in out
@@ -181,7 +193,8 @@ def test_commands_cli_prints_three_blocks(case, capsys):
 
 
 def test_commands_use_given_placeholders(case):
-    c = ablation.commands(case.runs_path, T_dir="/srv/trainer", python="python3.13", gtcrn="/srv/gtcrn")[0][0]
+    c = ablation.commands(case.runs_path, T_dir="/srv/trainer", python="python3.13", gtcrn="/srv/gtcrn",
+                          builds_dir=case.builds)[0][0]
     assert c.startswith("cd /srv/trainer && VDN_GTCRN_DIR=/srv/gtcrn python3.13 train.py ")
 
 
@@ -198,6 +211,7 @@ def _edit(case, knob, on, **changes):
             cur = cur.setdefault(h, {})
         cur[last] = v
     p.write_text(json.dumps(d, ensure_ascii=False))
+    case.reregister()  # 字节变了：让登记跟上，不然会多报一条「没有合格的登记记录」
     return p
 
 
@@ -208,6 +222,7 @@ def test_variant_dropping_empty_object_reported(case):
     assert d["noise_pools"] == {}  # 基线里有这一个空对象
     del d["noise_pools"]
     p.write_text(json.dumps(d, ensure_ascii=False))
+    case.reregister()
     ps = case.problems()
     assert len(ps) == 1, ps
     assert "noise_pools" in ps[0]
@@ -235,6 +250,7 @@ def test_variant_wrong_knob_reported(case):
     d["knobs"]["clip"]["on"] = False
     d["_ablation"]["knob"] = "clip"
     p.write_text(json.dumps(d, ensure_ascii=False))
+    case.reregister()
     ps = case.problems()
     assert len(ps) == 2, ps
     assert any("_ablation.knob" in s for s in ps)
@@ -261,6 +277,7 @@ def test_variant_missing_ablation_reported(case):
     d = json.loads(p.read_text())
     del d["_ablation"]
     p.write_text(json.dumps(d, ensure_ascii=False))
+    case.reregister()
     ps = case.problems()
     assert len(ps) == 1, ps
     assert "_ablation" in ps[0] and "缺" in ps[0]

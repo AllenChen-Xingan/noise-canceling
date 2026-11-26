@@ -16,6 +16,8 @@
   `problems()` 核对运行矩阵与这里的常量一致。
 - 变体配方由 traindata 写（`data/recipes/ablation/`）：每份只改一个旋钮的 `on`，顶层 `_ablation` 记
   `base_sha256` / `knob` / `on`；`problems()` 拿它们和基线配方逐项对，改多了、改错了都报出来。
+- 数据 build 与各份配方的登记记录：buildpin.py（与 formal.py 同一份判法：配方与数据代码的 sha256
+  必须和登记时一模一样，5 份变体也各有自己的那一份记录）。
 """
 from __future__ import annotations
 
@@ -28,6 +30,7 @@ from pathlib import Path
 
 import yaml
 
+import buildpin  # 数据 build 的登记核对（判法与 formal 同一份：配方 · 数据代码 · 变体各自的记录）
 import config as cfgmod
 import formal  # 复用 TODO 占位 / base 解析 / 命令里的 --config 路径（私有函数照用，不改它的行为）
 
@@ -92,13 +95,17 @@ def _T_dir(runs_path) -> Path:
     return Path(runs_path).resolve().parent.parent
 
 
+def _abs(T: Path, p) -> Path:
+    """配置里的路径解成真实路径：绝对路径照用，相对路径一律相对 trainer/（train.py 在那里跑）。"""
+    q = Path(p)
+    return q if q.is_absolute() else T / q
+
+
 def _resolve(T: Path, p, want_dir: bool = False) -> Path | None:
-    """把配置里的路径解成真实路径：绝对路径照用，相对路径一律相对 trainer/（train.py 在那里跑）。
-    找不到返回 None（由调用方给一句中文）。"""
+    """同 `_abs`，再看它在不在：找不到返回 None（由调用方给一句中文）。"""
     if not isinstance(p, str) or not p.strip():
         return None
-    q = Path(p)
-    c = q if q.is_absolute() else T / q
+    c = _abs(T, p)
     return c if (c.is_dir() if want_dir else c.is_file()) else None
 
 
@@ -243,8 +250,31 @@ def _variant_problems(runs: dict, cfg, T: Path) -> list[str]:
     return ps
 
 
-def problems(runs_path) -> list[str]:
-    """开训会拦下来的一切问题，每条一句中文。空列表 = 可以开训。"""
+def _build_pin_problems(runs: dict, cfg, T: Path, builds_dir) -> list[str]:
+    """数据 build 的登记核对：基线配方与 5 份变体配方都要各自有一份合格的登记（判法在 buildpin.py）。
+    缺文件 / 写错的 knob 已经由 `_variant_problems` 报过，这里只管「文件在、登记记录对不上」。"""
+    bid = runs.get("data_build")
+    ps = buildpin.build_problems(_abs(T, cfg.data.recipe), bid, builds_dir)
+    if buildpin.data_build_problem(bid) is not None or not isinstance(runs.get("variants_dir"), str):
+        return ps  # build id 本身不可用 / 没写变体目录：上面已经报过，变体无从对上
+    vp = _abs(T, runs["variants_dir"])
+    for run in runs.get("runs") or []:
+        if not isinstance(run, dict) or run.get("knob") is None:
+            continue
+        knob, on = run.get("knob"), run.get("on")
+        if not isinstance(knob, str) or not knob or not isinstance(on, bool):
+            continue
+        f = vp / variant_recipe_name(knob, on)
+        if f.is_file():
+            ps.extend(buildpin.variant_build_problems(f, bid, builds_dir))
+    return ps
+
+
+def problems(runs_path, builds_dir=None) -> list[str]:
+    """开训会拦下来的一切问题，每条一句中文。空列表 = 可以开训。
+
+    builds_dir：登记记录的目录（默认 data/loader.py 的 BUILDS）；测试把假登记记录放别处时用它。
+    """
     p = Path(runs_path)
     try:
         runs = formal.load_runs(p)
@@ -264,21 +294,26 @@ def problems(runs_path) -> list[str]:
         except ValueError as e:
             ps.append(f"base 指向的配置本身不合法：{e}")
         else:
-            for k, v in formal._todo(cfg):
+            todo = dict(formal._todo(cfg))
+            for k, v in todo.items():
                 ps.append(f"配置 {k} 还是占位 `{v}`：开训前必须填成实际路径")
             for k in formal._blank(cfg):
                 ps.append(f"配置 {k} 空着：开训前必须填成实际路径")
             ps.extend(_variant_problems(runs, cfg, _T_dir(p)))
+            if "data.recipe" not in todo and cfg.data.recipe:
+                # 配方是 TODO / 空着时上面已经报过：那时核对登记记录没有意义
+                ps.extend(_build_pin_problems(runs, cfg, _T_dir(p), builds_dir))
     ps.extend(_run_set_problems(runs.get("runs")))
     return ps
 
 
 # ---------- 开训命令 ----------
 
-def commands(runs_path, T_dir: str = "$T", python: str = "$PY", gtcrn: str = "$G") -> list[list[str]]:
+def commands(runs_path, T_dir: str = "$T", python: str = "$PY", gtcrn: str = "$G",
+             builds_dir=None) -> list[list[str]]:
     """按 3 + 3 + 1 分批：每批最多 3 条命令。有问题时抛 ValueError（内容是 problems 的全部条目）。"""
     p = Path(runs_path)
-    ps = problems(p)
+    ps = problems(p, builds_dir)
     if ps:
         raise ValueError("还不能开训：" + "；".join(ps))
     runs = formal.load_runs(p)
@@ -496,6 +531,8 @@ def main(argv=None) -> int:
     ap.add_argument("--T-dir", default="$T", help="生成命令里 trainer/ 的位置")
     ap.add_argument("--python", default="$PY", help="生成命令里的 python")
     ap.add_argument("--gtcrn", default="$G", help="生成命令里的 VDN_GTCRN_DIR（GTCRN 起点权重目录）")
+    ap.add_argument("--builds-dir", default=None,
+                    help="登记记录的目录（默认 data/loader.py 的 BUILDS，即 data/builds/）")
     a = ap.parse_args(argv)
 
     if a.action == "judge":
@@ -520,7 +557,7 @@ def main(argv=None) -> int:
         return 0 if _complete(result) else 2
 
     runs = a.path or str(DEFAULT_RUNS)
-    ps = problems(runs)
+    ps = problems(runs, a.builds_dir)
     if ps:
         for s in ps:
             print(f"- {s}")
@@ -528,7 +565,7 @@ def main(argv=None) -> int:
     if a.action == "check":
         print("可以开训")
         return 0
-    for i, block in enumerate(commands(runs, a.T_dir, a.python, a.gtcrn), 1):
+    for i, block in enumerate(commands(runs, a.T_dir, a.python, a.gtcrn, a.builds_dir), 1):
         print(f"# 第 {i} 批：{len(block)} 个同时跑")
         for c in block:
             print(c)
