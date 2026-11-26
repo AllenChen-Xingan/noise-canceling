@@ -76,16 +76,16 @@ def compare(a, b, tol=TOL):
 
 def render(rep, tol=TOL, names=("a", "b"), limit=20):
     """短表：项 · 配对段数 · 最大绝对差 · PASS/FAIL；再列跳过的项与超差的地方。"""
-    lines = [f"逐项（容差 {tol:g}；配对 = 两边都有数的段；最多列出 {limit} 条超差）",
-             f"  {'项':<16}{'配对':>6}{'最大绝对差':>16}  判定"]
+    lines = [f"逐项（容差 {tol:g}；配对 = 两边都有数的段，无值 = 有一边是 null；最多列出 {limit} 条超差）",
+             f"  {'项':<16}{'配对':>6}{'无值':>6}{'最大绝对差':>14}  判定"]
     for r in rep["rows"]:
         if r["pairs"] == 0:
-            verdict = "跳过：两边没有共同值"
+            verdict = f"跳过：{r['no_value']} 段两边都没有值" if r["no_value"] else "跳过：两边没有共同值"
         elif r["fails"]:
             verdict = f"FAIL（{len(r['fails'])} 段超差）"
         else:
             verdict = "PASS"
-        lines.append(f"  {r['item']:<16}{r['pairs']:>6}{r['max_diff']:>16.3e}  {verdict}")
+        lines.append(f"  {r['item']:<16}{r['pairs']:>6}{r['no_value']:>6}{r['max_diff']:>14.3e}  {verdict}")
     lines.append(f"共比 {len(rep['rows'])} 项 · {rep['compared']} 对；跳过 {len(SKIP)} 项（外部离线路测不了）：")
     for k, why in SKIP.items():
         lines.append(f"  {k}：{why}")
