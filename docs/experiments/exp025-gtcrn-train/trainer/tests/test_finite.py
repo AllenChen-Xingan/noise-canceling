@@ -4,8 +4,10 @@
 所以不再逐处补判断，改成：`guards.is_finite` 是唯一的判断，`require_finite` 直接抛异常，
 训练循环里只有一处接住它。本文件同时钉住停止原因的优先级表。
 """
+import ast
 import json
 import time
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -238,3 +240,27 @@ def test_train_reports_guard_reason_over_signal(tmp_path, monkeypatch):
     stop = train.train(_cfg(tmp_path, **{"schedule.eval_every": 100}), _signals=sig)
     _, rec, _ = _read(tmp_path)
     assert stop["reason"] == "loss_spike" and rec["guards"][-1]["kind"] == "loss_spike"
+
+
+# ---------- 反向扫描：不许绕开唯一入口 ----------
+
+TRAINER = Path(__file__).resolve().parents[1]
+
+
+def _is_finite_body_lines() -> tuple[int, int]:
+    """guards.is_finite 的函数体行号范围（def 那一行到函数结尾）。"""
+    tree = ast.parse((TRAINER / "guards.py").read_text())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == "is_finite":
+            return node.lineno, node.end_lineno
+    raise AssertionError("guards.py 里没有 is_finite：唯一的有限数判断被删了")
+
+
+@pytest.mark.parametrize("name", ["train.py", "guards.py", "watchdog.py"])
+def test_no_finiteness_check_outside_guards_is_finite(name):
+    """只防无心之失：再写一句 math.isfinite / torch.isnan / np.isinf 就是又开了一个入口。"""
+    lo, hi = _is_finite_body_lines()
+    outside = [(i, line.strip()) for i, line in enumerate((TRAINER / name).read_text().splitlines(), 1)
+               if any(tok in line for tok in ("isfinite", "isnan", "isinf"))
+               and not (name == "guards.py" and lo <= i <= hi)]
+    assert not outside, f"{name} 里有绕开 guards.is_finite 的判断：{outside}"
