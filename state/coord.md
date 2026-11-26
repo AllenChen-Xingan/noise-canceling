@@ -523,3 +523,6 @@
 - 2026-11-26 大总管改写 evalcmp 未推送历史（origin/main..exp/025-eval-plan 46 提交，本机路径 → <主目录>/）：只 2 提交 2 文件变，末端树与 dbcf9c9f 一致，提交说明不变，残留 0；--continue 重开 evalcmp 推送开 PR。evalcmp codex 13 轮达停止线，vdn-eval 362 过，pi 0.70 美元。
 - 2026-11-26 大总管验收 PR #218（#212 消融）：独立副本 trainer 444 过 · 2 跳过（对拍 31 条因未编 Rust 驱动排除），最大文件 540 行，CI 过 → 合并；删 pi worktree trainer-ablation 与 w/ 分支。
 - 2026-11-26 evalcmp 交 PR #220（Closes #219）；大总管独立副本合 main 后跑 vdn-eval 测试 + tidy（后台）。history 大总管换为 history-05。
+- 2026-11-26 trainer 定 losses.window() 不改（与官方一致，7.1e-7 为 float32 舍入）；大总管定比对容差 1e-6 绝对值，交 evalcmp 后续。
+- 2026-11-26 大总管独立副本（PR #220 cfb7b1f1 合 origin/main）：cargo test -p vdn-eval 输出末尾 15 组 0 失败（只留了末尾，未计总数）· xtask tidy 过。等 CI。待拍板加 11-5（车站 vs 车内并列）。
+- 2026-11-26 人定 D117：保留车站，车内不进第一批（11-5 关）。
