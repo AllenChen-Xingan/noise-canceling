@@ -159,6 +159,18 @@ class TestLedger(Base):
         late = t0 + dt.timedelta(hours=6)  # 已超时还没删：按实际已跑算
         self.assertAlmostEqual(L.open_pods_worst(rows, late), 30.0)
 
+    def test_spend_cap_is_100(self):
+        # D115（2026-11-26）：上限从 60 升到 100 美元。正本只有 config.SPEND_CAP_USD。
+        self.assertEqual(C.SPEND_CAP_USD, 100.0)
+
+    def test_budget_cap_is_100_not_60(self):
+        # 账上已花 70，再来一台最坏 25.4（5 美元 / 小时 × 5 小时 + 宽限）= 95.4 美元
+        rows = [{"action": "pod_delete", "resource_id": "p", "est_usd": "70.0",
+                 "billed_usd": "", "usd_per_hr": "5.0"}]
+        self.assertAlmostEqual(L.check_budget(rows, 5.0, 5), 70.0 + 5.0 * (5 + L.GRACE_H), places=2)  # 过 60、不到 100：放行
+        with self.assertRaises(SystemExit):
+            L.check_budget(rows, 5.0, 6)  # 最坏 30.4，合计 100.4 > 100：拒
+
 
 class TestOps(Base):
     def test_datacenters_need_stock_and_volume_support(self):
