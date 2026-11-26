@@ -109,6 +109,39 @@ def variant_recipe_name(knob, on) -> str:
     return f"{knob}-on.json" if on else f"no-{knob}.json"
 
 
+# ---------- 结构比较（唯一正本）----------
+
+_MISSING = object()  # 缺键的记号：「键不在」和「键在、值是 null」是两件事
+
+
+def _flat_strict(d: dict, prefix: str = "") -> dict:
+    """把配置 / 配方拍平成「段.键」，用于**结构比较**：
+    - 空的对象、列表也留成一个叶子（`noise_pools: {}` 和「没有这个键」不是一回事）；
+    - 缺键在比的时候取到 `_MISSING`，和「键在、值是 null」分开。
+    正本在这里：judge 比运行配置 · problems 比变体配方都用它。（`formal._flat` 是另一件事：
+    它把空对象丢掉，别处依赖它的行为，不改它，也不能拿它比结构。）"""
+    out = {}
+    for k, v in d.items():
+        key = prefix + k
+        if isinstance(v, dict) and v:
+            out.update(_flat_strict(v, key + "."))
+        else:
+            out[key] = v
+    return out
+
+
+def _flat_diff(a: dict, b: dict) -> dict:
+    """两份**已拍平**的结构不同的键：{键: (a 的值, b 的值)}，缺键记作 `_MISSING`。
+    键集合不一致也算不同（拍平后看一眼那边没有就是缺键）。"""
+    return {k: (a.get(k, _MISSING), b.get(k, _MISSING))
+            for k in sorted(set(a) | set(b)) if a.get(k, _MISSING) != b.get(k, _MISSING)}
+
+
+def _show(v) -> str:
+    """给原因行用：缺键就说「缺这个键」，不能写成 None（那会像是现值就是 null）。"""
+    return "缺这个键" if v is _MISSING else repr(v)
+
+
 # ---------- 开训前检查 ----------
 
 def _run_set_problems(items) -> list[str]:
@@ -156,7 +189,7 @@ def _variant_problems(runs: dict, cfg, T: Path) -> list[str]:
     if not isinstance(base, dict) or not isinstance(base.get("knobs"), dict):
         return [f"基线配方 {base_rel} 结构不对：要是一个带 knobs 的 JSON 对象"]
     bsha = sha256(base_bytes).hexdigest()
-    base_flat = formal._flat(base)
+    base_flat = _flat_strict(base)
 
     vdir = runs.get("variants_dir")
     if not isinstance(vdir, str) or not vdir.strip():
@@ -200,13 +233,13 @@ def _variant_problems(runs: dict, cfg, T: Path) -> list[str]:
                 ps.append(f"变体配方 {fname} 的 _ablation.on 是 {marker.get('on')!r}，"
                           f"运行 {name} 要的值是 {on!r}：两处要一致")
         want_path = f"knobs.{knob}.on"
-        vflat = formal._flat({k: v for k, v in var.items() if k != "_ablation"})
-        diff = sorted(k for k in set(vflat) | set(base_flat) if vflat.get(k) != base_flat.get(k))
-        if diff != [want_path]:
+        vflat = _flat_strict({k: v for k, v in var.items() if k != "_ablation"})
+        diff = _flat_diff(vflat, base_flat)
+        if sorted(diff) != [want_path]:
             ps.append(f"变体配方 {fname} 应该只在 {want_path} 一处与基线配方不同，"
-                      f"实际不同在 {diff or '没有一处'}：变体只能改这一个开关")
-        elif vflat[want_path] != on:
-            ps.append(f"变体配方 {fname} 的 {want_path} 是 {vflat[want_path]!r}，运行 {name} 要 {on!r}")
+                      f"实际不同在 {sorted(diff) or '没有一处'}：变体只能改这一个开关")
+        elif diff[want_path][0] != on:
+            ps.append(f"变体配方 {fname} 的 {want_path} 是 {diff[want_path][0]!r}，运行 {name} 要 {on!r}")
     return ps
 
 
@@ -271,9 +304,9 @@ def _num(x) -> bool:
 
 
 def _flat_cfg(config: dict) -> dict:
-    """整份配置拍平成「段.键」，只去掉 CFG_IGNORE 那三项（它们本来就各不同）。
-    段整个缺了就记成一个值（键名是段名）；两边键集合本来就不相同（缺键），比的时候取出来是 None。"""
-    return {k: v for k, v in formal._flat(config).items() if k not in CFG_IGNORE}
+    """整份配置按 `_flat_strict` 拍平成「段.键」，只去掉 CFG_IGNORE 那三项（它们本来就各不同）。
+    缺的键这里没有键：比的时候由 `_flat_diff` 记成 `_MISSING`，不会和「值是 null」混成一样。"""
+    return {k: v for k, v in _flat_strict(config).items() if k not in CFG_IGNORE}
 
 
 def _rows(path: Path) -> list[dict]:
@@ -408,13 +441,14 @@ def judge(out_dir, step: int = STEP) -> dict:
             r["reason"] = "run.json 里没有 dev_build_id：认不出开发集版本，读数没法比"
             continue
         # 整份配置逐项相同（含 device · limits · schedule 全段 · run.out_dir · 数据字段等）：
-        # 只有 CFG_IGNORE 那三项允许各不同；缺键取出来是 None，也算不同
-        bad = sorted(k for k in set(r["cfg"]) | set(ref["cfg"]) if r["cfg"].get(k) != ref["cfg"].get(k))
-        if bad:
+        # 只有 CFG_IGNORE 那三项允许各不同；缺键记作 _MISSING，和「键在、值是 null」不是一回事
+        diff = _flat_diff(r["cfg"], ref["cfg"])
+        if diff:
             # 全落在 data 里就说是数据字段（它最容易错：开发份规模一变读数就不可比）
-            what = "数据字段" if all(k.startswith("data.") for k in bad) else "配置字段"
+            what = "数据字段" if all(k.startswith("data.") for k in diff) else "配置字段"
             r["reason"] = (f"{what}和 {ref_name} 对不上（只有 {'、'.join(CFG_IGNORE)} 可以各不同）："
-                           + "，".join(f"{k} {r['cfg'].get(k)!r} ≠ {ref['cfg'].get(k)!r}" for k in bad))
+                           + "，".join(f"{k} {_show(mine)} ≠ {_show(theirs)}"
+                                      for k, (mine, theirs) in diff.items()))
     if ref["reason"] is None and ref["dev_build_id"] is None:
         ref["reason"] = "run.json 里没有 dev_build_id：认不出开发集版本，读数没法比"
 
