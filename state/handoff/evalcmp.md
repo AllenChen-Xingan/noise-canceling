@@ -147,3 +147,19 @@
 - 核对（实测）：混音 sha 480/480 同 run480；非吃字判定 0 变；每场景不过数增量 = 该场景吃字不过卡数；`gap.py` 重跑第一版输入逐字节相同；`--from-clips` 重汇总与补跑成绩单一致
 - 表：`docs/experiments/exp025-gtcrn-train/baseline/gap/v2-20261126/README.md`。前 4 rail-air-cabin · canteen · meeting-room · transit-hub，与临时选定重合 1 →「不一致」；28 段没值全当过 / 全当不过，前 4 与判定都不变
 - 没派 pi：这条线没有产品代码改动，只有数据与文档；敏感性改分脚本留在主目录 `_tmp/20261126-gap-v2/sens/sens.py`（不进仓）
+- 收口（2026-11-26）：PR #208 已合并；人按第二版表定加训场景 = 弱项表前 4（D113）。之后待命：正式训练出模型后出新成绩单与配对比较
+
+## 练完怎么评（开训前清单第 7 项，exp/025-eval-plan，2026-11-26）
+
+- 计划：`docs/experiments/exp025-gtcrn-train/eval-plan.md`（评测集 6323 · 原版读数 rerun-20261126-013313 · 甲路离线 / 乙路流式 · 配对比较命令 · 014 第三节逐条落到评分项 · 「人耳未测」「只在合成集上判」· 估时与识别费）
+- 新工具（pi 写，我审、合、重跑）：
+  - `docs/experiments/exp025-gtcrn-train/eval/run_gtcrn_offline.py` · `parity.py` · `test_offline.py`（28 条）：pi `evalcmp-offline`，0.10 美元
+  - `vdn-eval accept`（`src/eval/src/scorecard/accept.rs` + `accept/{inputs,judge}.rs`）与阈值正本 `SC-ACCEPT`（`thresholds/accept.rs`，014 第三节标键并有比对测试 `accept_doc.rs`）：pi `evalcmp-accept`，约 0.55 美元
+- 真实对拍（实测）：官方权重内置流式 vs 离线甲路，冒烟 5 段，22 项 76 对最大差 3.8e-5（容差 1e-3），单侧缺值 0，9 项未验证（不带 --qa）。输出 `eval/runs/parity-20261126/`
+- codex 评审（gpt-6-astra，只读，medium，按代码文件做 doc 型；diff 型被 hashes.txt 的假手机号拦）：13 轮，P1 依次 5·3·3·3·2·0·1·0·1·1·1·0·0；第 12、13 轮无 P0/P1 即停，剩余 P2 0。P1 全是「缺数时会不会误判过」，第 4、5、10 轮按「同类第三次改结构」改成：--suite 为准的应有清单、卡状态从绑定的 clips.jsonl 重新汇总、每份比较逐片段核覆盖、`item_complete` / `values_complete` 两个统一函数。处理记录在本 worktree `_tmp/reviews/evalplan-code-response-*.md`
+- 记录在案：
+  - #216：exp016 `_ext.py` 写死旧 build 17f5（这次不修）
+  - 历史里有一个未推送提交（47e8c89a）写了本机绝对路径：已在新提交里换掉，大总管改写未推送历史后才推
+  - 离线脚本 `rel()` 原先会写本机绝对路径，已修并有测试
+  - 本机负载：一次在 1 分钟负载 20.5 时批了 pi 跑整包测试（超线），之后改成负载 < 20 且无 heavy.lock 才自动批
+  - trainer 的 `losses.window()` 用 float32，和产品窗最多差 7.1e-7（不影响训练与评测，由 trainer 定改不改）

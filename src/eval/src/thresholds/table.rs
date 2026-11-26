@@ -1,6 +1,6 @@
 //! 阈值与分档边界的表（正本数据）。类型与比对逻辑在上一级 `thresholds.rs`。
 
-use super::{Cause, Lines, Param, Pend, Src};
+use super::{ACCEPT, Cause, Lines, Param, Pend, Src};
 
 const fn p(key: &'static str, default: Option<f64>, values: &'static [(f64, Src)]) -> Param {
     Param {
@@ -453,7 +453,7 @@ pub const LISTEN: Lines = Lines {
 };
 
 /// 表里全部 verifier。
-pub const ALL: [&Lines; 29] = [
+pub const ALL: [&Lines; 30] = [
     &BGSTAB,
     &ONSET,
     &SPLVL,
@@ -483,6 +483,7 @@ pub const ALL: [&Lines; 29] = [
     &LEAK,
     &PSE_OVL,
     &LISTEN,
+    &ACCEPT,
 ];
 
 /// 待定清单：已知不一致或没有出处的条目。全部是建议值，挂 012 拍板 #8 · D44。

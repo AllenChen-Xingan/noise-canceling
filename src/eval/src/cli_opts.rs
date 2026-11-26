@@ -74,6 +74,15 @@ pub(crate) const OPTIONS: &[Entry] = &[
         &["--by-scene"],
         NONE,
     ),
+    // accept：验收判定（计划 014 第三节）。--vs 与 --noise 可以给多次
+    (
+        "accept",
+        &[
+            "--suite", "--vs", "--noise", "--scenes", "--card-a", "--card-b", "--out",
+        ],
+        &[],
+        NONE,
+    ),
     // nrmos <scoreq|distill> <模型.onnx> (<音频.wav>… | --serve)：至少两个，其余由它自己核
     ("nrmos", &[], &["--serve"], (2, None)),
     ("list", &[], &[], NONE),
@@ -248,6 +257,7 @@ mod tests {
             ("scorecard", vec![include_str!("cli_scorecard.rs"), systems]),
             ("asr-probe", vec![include_str!("cli_probe.rs")]),
             ("compare", vec![include_str!("scorecard/compare_out.rs")]),
+            ("accept", vec![include_str!("scorecard/accept.rs")]),
             ("nrmos", vec![func(include_str!("qa/nrmos.rs"), "cli")]),
             ("list", vec![func(main, "cmd_list")]),
         ];

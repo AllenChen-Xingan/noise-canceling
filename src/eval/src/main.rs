@@ -13,6 +13,7 @@
 //! vdn-eval asr-probe --wav-dir DIR --cache FILE --out FILE [--temperature T] [--repeats N]   # 钉温度探针（真调用）
 //! vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] [--out DIR]   # 不重跑音频，按规则重新汇总
 //! vdn-eval compare --a <clips.jsonl> --b <clips.jsonl> [--by-scene] [--noise-a … --noise-b …] [--out DIR]   # 配对比较（scorecard.md 第十节）
+//! vdn-eval accept --suite <评测清单.json> --vs <compare.json> [--vs …] --noise <compare.json> [--noise …] --scenes s1,s2 --card-a <scorecard.json> --card-b <scorecard.json> [--out DIR]   # 按 014 第三节判过 / 不过 / 判不了（scorecard.md 第十节第 7 条）
 //! vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…   # 子进程入口：评分模型打分，每段一行 JSON
 //! ```
 //! - `ci`：CI 层（纯 DSP、无模型）。门禁不过 → 退出码 1。权重不在本机的系统自动跳过
@@ -437,6 +438,15 @@ fn main() -> ExitCode {
                 .map(|d| println!("配对比较：{}", d.join("compare.md").display()))
                 .map(|()| true)
         }
+        "accept" => {
+            let m = meta();
+            let dir = vdn_eval::suite::main_root()
+                .join("_tmp/accept")
+                .join(&m.run_id);
+            vdn_eval::scorecard::accept::cli(&args[1..], &m.run_id, dir)
+                .map(|d| println!("验收判定：{}", d.join("accept.md").display()))
+                .map(|()| true)
+        }
         "nrmos" => vdn_eval::qa::nrmos::cli(&args[1..]).map(|rows| {
             for r in rows {
                 println!("{r}");
@@ -449,7 +459,7 @@ fn main() -> ExitCode {
         }
         _ => {
             eprintln!(
-                "用法：vdn-eval <ci | qa | calib | scorecard | compare | list> [选项]（见源码头注释）"
+                "用法：vdn-eval <ci | qa | calib | scorecard | compare | accept | list> [选项]（见源码头注释）"
             );
             return ExitCode::FAILURE;
         }
