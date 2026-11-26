@@ -2,7 +2,6 @@
  "_说明": "切分规则正本 = 027 decision.md 第六节第 5 条的表（逐行照抄比例，出处列在每条 src）。split.py 只认这里。四份：train 训练 · dev 开发 · final 终测原料池 · d63 测试份（只测不训，也不进任何合成原料）。名字约定（大总管 87 2026-11-26）：`but-reverbdb-silence` 只含 Room112，规则一个字节都不动，因为旧切分表 build 10aa3a9f 还在用它；第四批的 4 间房（Room112 + 办公室 L207 · L212 · Q301）是新来源 `but-reverbdb-silence-b4`",
  "seed": 20261116,
  "splits": ["train", "dev", "final", "d63"],
- "未建表": {"but-reverbdb-silence-b4": "第四批新来源，音频在云上；B 段切分、表带回进仓后删这一行"},
  "sources": {
   "librispeech-train-clean-100": {
    "expect": {"files": 28539, "units": 251, "src": "openslr.org/12 README：train-clean-100 共 251 名说话人、28,539 句（读文档，待云上核）"},

@@ -1,7 +1,7 @@
 """真规则与仓里那份筛查表的核对（第四批：加三间办公室 · C236 不用 · 会议室池改办公室底噪）。
 
 从 `tests/test_but.py` 分出来的（那个文件超 600 行前搬出来，覆盖范围不减）：
-- `RealRule`：`split_rules.json` 里 `but-reverbdb-silence-b4`（第四批的 4 间房）的通配符 · 期望条数 · 文字与决策对得上；顶层 `未建表` 那一行
+- `RealRule`：`split_rules.json` 里 `but-reverbdb-silence-b4`（第四批的 4 间房）的通配符 · 期望条数 · 文字与决策对得上；`未建表` 里已经没有这一条（表已带回进仓）
 - `TwoNames`：两个来源名的分工——`but-reverbdb-silence` 只含 Room112，规则一个字节都不能动（旧表 build 10aa3a9f 在用）；
   新名字 `-b4` 才是 4 间房；配方与分片只看新名字；两个名字共用同一份筛查表
 - `RealScreen`：仓里那份筛查表 1270 行（C236 620 + Room112 248 + 三间办公室 402）；办公室 402 条与两份原始证据逐字节对得上
@@ -97,15 +97,15 @@ class RealRule(unittest.TestCase):
         self.assertIn("min_dev_per_stratum", note)
         self.assertIn("同一间房", note)  # 每间房只有一间：开发份只测同房不同场次
 
-    def test_marked_pending_until_the_table_comes_back(self):
-        """新来源的音频还在云上，本机切不了：顶层 `未建表` 记着，表带回进仓后删那一行。
-        旧来源不在这份名单里：它的规则已还原成仓里那张旧表的样子，表是当前规则切的。"""
-        pending = split.load_rules()["未建表"]
-        self.assertEqual(set(pending), {SRC})
-        marker = pending[SRC]
-        self.assertIn("第四批", marker)
-        self.assertIn("云上", marker)
-        self.assertIn("删这一行", marker)
+    def test_table_is_back_and_cut_with_the_current_rule(self):
+        """第四批的表已从云上带回进仓：顶层 `未建表` 里不再有这一条，每张表都按当前规则切的。
+        `未建表` 这个容忍本身仍在临时规则 + 临时目录上撞（`tests/test_products.py` 的 `PendingStates`），覆盖不减。"""
+        pending = split.load_rules().get("未建表", {})
+        self.assertNotIn(SRC, pending, "表已进仓，`未建表` 里还留着这一行")
+        rules = split.load_rules()["sources"]
+        for name in sorted(rules):
+            s, _ = split.load_split(name, HERE / "splits")  # 顺带核 jsonl 的哈希
+            self.assertEqual(s["rule_sha256"], split.rule_sha(rules[name]), f"{name}：切分表不是按当前规则切的")
 
 
 class TwoNames(unittest.TestCase):
