@@ -62,3 +62,4 @@
 - 识别补跑：480 段已合并，calls +1953，spent +0.1875 美元，吃字有值的段数 82 → 452。取回到主仓 _tmp/20261126-asr-rerun/rerun-20261126-013313/。机器 glx9kkda13gckv 已删，约 0.17 美元。
 - 第三批（代码 7badd9a1）：筛查结果 C236 keep 32/620，不到一半，按规则停了，等 traindata 定。机器 jm4m7pg5zmif3n 还开着。first-batch 没删（D112 的条件是第三批成功）。
 - 小错：第一次开识别补跑时，提交号是手敲的，敲错了；脚本在 checkout 那一步就停了，没花识别费。以后提交号一律用 git rev-parse 取。
+- 03:40–04:27Z 第三批续跑（代码 b81a9645，机器 byvkixm3sfzju6，约 0.09 美元，已删）：只登记 R112，得 build 10aa3a9fb8cef48f（valid，12 个场景）；包 sha256 e8c5c3d0…。C236 诊断 10 条：电平起伏中位数 7.46 dB，频谱峰多在 250 Hz。3 段 C236 按 D113 取回主仓 _tmp/20261126-c236-listen/，不进仓。盘 168 / 200 GB；first-batch 等 traindata 通知后按 D112 删。

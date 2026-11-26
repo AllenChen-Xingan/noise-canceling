@@ -47,3 +47,5 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-26T02:13:45Z	pod_create	jm4m7pg5zmif3n	cpu3c x4	US-MO-1	0.1200	2026-11-26T02:13:45Z					max_hours=3.0
 2026-11-26T02:46:35Z	pod_delete	glx9kkda13gckv	cpu3c x4	US-MO-1	0.1200	2026-11-26T01:20:18Z	2026-11-26T02:46:35Z	1.4381	0.1726		识别补跑完：1953 次、+0.1875 美元，480 段已合并取回
 2026-11-26T03:27:20Z	pod_delete	jm4m7pg5zmif3n	cpu3c x4	US-MO-1	0.1200	2026-11-26T02:13:45Z	2026-11-26T03:27:20Z	1.2264	0.1472		第三批筛查后停：C236 keep 32/620，等定；日志已取回
+2026-11-26T03:39:30Z	pod_create	byvkixm3sfzju6	cpu3c x4	US-MO-1	0.1200	2026-11-26T03:39:30Z					max_hours=3.0
+2026-11-26T04:26:47Z	pod_delete	byvkixm3sfzju6	cpu3c x4	US-MO-1	0.1200	2026-11-26T03:39:30Z	2026-11-26T04:26:47Z	0.7881	0.0946		第三批续跑：R112 登记 build 10aa3a9fb8cef48f，C236 诊断与 3 段取回；日志已取回
