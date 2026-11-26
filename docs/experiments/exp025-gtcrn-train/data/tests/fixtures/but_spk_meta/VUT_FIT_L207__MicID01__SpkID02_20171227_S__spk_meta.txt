@@ -1,0 +1,66 @@
+$EnvID	7
+$EnvName	VUT_FIT_L207
+$EnvTemp	18.0
+$EnvDescription	Not Defined
+$EnvDepth	4.585
+$EnvWidth	6.903
+$EnvHeight	3.144
+$Env2Depth	Not Defined
+$Env2Width	Not Defined
+$Env2Height	Not Defined
+$EnvVolume	99.50840172
+$EnvType	Office
+$EnvSubType	Middle
+$EnvBCKNoiseLevel	34.5
+$EnvMatWall	Concrete, Glass, Plasterboard
+$EnvMatFloor	Linoleum
+$EnvMatCeiling	Concrete
+$EnvFurniture	50.0
+$EnvRPDepth	3.654
+$EnvRPWidth	1.266
+$EnvRPHeight	1.461
+$EnvRPAzimuth	-90.0
+$EnvRPElevation	0.0
+
+$EnvSpkSetupID	2
+$EnvSpkSetupDescription	Not Defined
+$EnvSpk1Depth	0.951
+$EnvSpk1Width	2.594
+$EnvSpk1Height	2.04
+$EnvSpk1RelAzimuth	0.0
+$EnvSpk1RelElevation	0.0
+$EnvSpk1RelDistance	0.0
+$EnvSpk1DirAzimuth	-45.0
+$EnvSpk1DirElevation	0.0
+$EnvSpk1RelDirAzimuth	0.0
+$EnvSpk1RelDirElevation	0.0
+$EnvSpk1Type	Adam Audio
+$EnvSpk1SndGain	4.0
+$EnvSpk1SpkGain	2.5
+$EnvSpk1RelDepth	0.0
+$EnvSpk1RelWidth	0.0
+$EnvSpk1RelHeight	0.0
+$EnvSpk1Distance	3.43436122153742
+$EnvSpk1Azimuth	-69.86629263566027
+$EnvSpk1Elevation	36.44115804292174
+
+$EnvSpk2Depth	4.46
+$EnvSpk2Width	6.63
+$EnvSpk2Height	1.03
+$EnvSpk2RelAzimuth	-3.9954824762032217
+$EnvSpk2RelElevation	-10.694439211008593
+$EnvSpk2RelDistance	5.4426534888783795
+$EnvSpk2DirAzimuth	135.0
+$EnvSpk2DirElevation	0.0
+$EnvSpk2RelDirAzimuth	180.0
+$EnvSpk2RelDirElevation	0.0
+$EnvSpk2Type	Tecsun
+$EnvSpk2SndGain	Not Defined
+$EnvSpk2SpkGain	50.0
+$EnvSpk2RelDepth	3.509
+$EnvSpk2RelWidth	4.036
+$EnvSpk2RelHeight	-1.01
+$EnvSpk2Distance	8.056637015529494
+$EnvSpk2Azimuth	-56.071284303910375
+$EnvSpk2Elevation	7.345075352419019
+
