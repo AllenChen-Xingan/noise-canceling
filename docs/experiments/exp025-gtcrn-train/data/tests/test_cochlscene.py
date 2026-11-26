@@ -26,6 +26,7 @@ import soundfile as sf
 HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 import fetch  # noqa: E402
+import shard  # noqa: E402
 import split  # noqa: E402
 
 MD = HERE / "download-list-2.md"
@@ -315,6 +316,35 @@ class Recipe(unittest.TestCase):
         note = self.r["noise_pools"]["_说明"]
         self.assertIn("D106", note)
         self.assertIn("CochlScene", note)
+
+
+class ShardSources(unittest.TestCase):
+    """shard.py 的 `--sources` 默认值曾经是手掘的 5 个来源，第二批加了 CochlScene 就漏了（第二处表示）。
+    现在从 recipe.json 导出；这里不借导出函数，另算一遍对账。"""
+
+    OLD = ("librispeech-train-clean-100", "qut-noise", "tum-wind", "openslr28-rir", "demand-train")  # 改动前手掘的那 5 个
+
+    def expected(self):
+        """按「人声 → RIR → 噪声池（跳过 `_` 开头的键）」的规矩从 recipe.json 再算一遍。"""
+        r = json.loads((HERE / "recipe.json").read_text())
+        pools = (it["source"] for k, items in r["noise_pools"].items() if not k.startswith("_") for it in items)
+        return list(dict.fromkeys([*r["speech"]["train"], *r["rir"], *pools]))
+
+    def test_derived_from_recipe(self):
+        self.assertEqual(shard.default_sources(), self.expected())
+
+    def test_cli_default_is_that_list(self):
+        """命令行不给 --sources 时用的就是导出这份（不是另手掘一份）。"""
+        self.assertEqual(shard.DEFAULT_SOURCES.split(","), self.expected())
+
+    def test_covers_cochlscene(self):
+        self.assertIn(SRC, shard.DEFAULT_SOURCES.split(","))
+
+    def test_old_five_still_first(self):
+        """第一批那 5 个来源仍是最前面 5 个（顺序以导出为准，这里不钉次序）：已登记的 build 不受影响。"""
+        first = shard.DEFAULT_SOURCES.split(",")[: len(self.OLD)]
+        self.assertEqual(len(set(first)), len(self.OLD))
+        self.assertEqual(set(first), set(self.OLD))
 
 
 if __name__ == "__main__":

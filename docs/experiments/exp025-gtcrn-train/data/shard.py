@@ -31,6 +31,18 @@ from dsp import SR, resample  # noqa: E402
 SHARD_MB = 256
 CHUNK_S = 30.0
 KEEP = ("train", "dev")
+RECIPE = HERE / "recipe.json"
+
+
+def default_sources(recipe_path=RECIPE):
+    """默认要分片的来源 = recipe.json 里出现过的全部来源（人声 · RIR · 噪声池），按首次出现去重。
+    正本是 recipe.json：这里以前手掘 5 个来源，第二批加了 CochlScene 就漏了（第二处表示，2026-11-25）。"""
+    r = json.loads(Path(recipe_path).read_text())
+    pools = [it["source"] for k, items in r["noise_pools"].items() if not k.startswith("_") for it in items]
+    return list(dict.fromkeys(list(r["speech"]["train"]) + list(r["rir"]) + pools))
+
+
+DEFAULT_SOURCES = ",".join(default_sources())  # 命令行的 --sources 默认值（测试核对它就是上面这份）
 
 
 def kind_of(source):
@@ -154,7 +166,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--sources", default="librispeech-train-clean-100,qut-noise,tum-wind,openslr28-rir,demand-train")
+    ap.add_argument("--sources", default=DEFAULT_SOURCES, help="要分片的来源，默认 = recipe.json 里出现的全部来源")
     a = ap.parse_args()
     t0 = time.time()
     idx = build(a.root, a.out, [s for s in a.sources.split(",") if s])
