@@ -447,3 +447,8 @@
 - 2026-11-26 00:30Z traindata 推送 feat/data-batch2（c0c9bda3，外发检查无命中）；拥挤室内权重偏差这批记进 recipe.json noise_pools._说明（进 build 身份）与交接页，按来源去重抽样下一批派 pi 修。
 - 2026-11-26 00:31Z（cloudrun 报）开 CPU 机 g1wyqz5tsvqvia（cpu3c 4 核，0.12 美元/h，自删 3 h），代码 c0c9bda3 → /workspace/repo-c0c9bda3；共享 venv 只按 data/requirements.txt；开机前累计 7.78 美元。
 - 2026-11-26 技能 coordinator-dispatch 第二次改完（技能仓 c3546a9，未推送）：pi 档 git 规则机器强制（提交须带 Agent: pi + Model:，push · gh pr/issue create 拦下）；大总管亲手复跑 bash -n · e2e-mock PASS · git-policy PASS。通知四个手下可以新起 pi，验收提交加 Code: pi 取消。合并方式仍为 merge commit（铁律 15），pi 标注能留在 main。
+- 2026-11-26 00:36Z traindata 派 pi traindata-dedup（w/traindata-dedup，基于 feat/data-batch2，2 美元）：按成员完全相同的噪声池去重（只有 cowork = open-office），build.json 记 scene_groups。大总管定：云上 c0c9bda3 那次不打断；新提交若只影响 register/pack，只重跑这两步，分片不重打。
+- 2026-11-26 00:36Z evalcmp 还名额：pi 提交 98bdfa6b 上新测试 5 条红（在 pi 的 worktree 里看），acc34d33 上 fmt · clippy · tidy · 全量 99 组全过（自报）；下一步 codex 第 2 轮。名额空闲。
+- 2026-11-26 00:38Z trainer 验收 pi trainer-guards-finite（6be34442..370af014，4 个提交带 Agent: pi，0.043 美元，已快进合入）；train.py 515→494 行。名额 → trainer 全套测试约 2 min。
+- 2026-11-26 00:39Z traindata 去重抽样验收（209 过 · 1 跳过，pi 0137540a..2eaf21b9 带 Agent: pi，0.0125 美元），推送 5d12fc2e；c0c9bda3 build 作废。cloudrun 在同目录 ff 到 5d12fc2e 只重跑 test → register → pack；预期红 1 条用 --deselect 排除并记日志；取回切分表回仓。
+- 2026-11-26 人定 D110：场景按第二版差距表定；缺数据先补；开训前全部就绪再开正式训练。派 traindata 调研 3 个缺口场景的补法（不写码、不下载）。
