@@ -1,8 +1,8 @@
 # 评审 205 · exp025 第四批训练数据（单音检查 · 场景表 · 消融配方 · 开训证据）（codex · gpt-6-astra · read-only）
 
 > 对象：`docs/experiments/exp025-gtcrn-train/data/` 下 diagnose.py · screen_tone.py · scene_table.py · ablation_recipes.py · build_evidence.py · split_rules.json · recipe.json · scene_notes.json · screen_rules.json，以及 test_screen_tone / test_build_evidence / test_scene_table / test_but_real（feat/data-batch3，PR Closes #205）。
-> **最新一轮：第 2 轮（2026-11-26）· 总评「修改」· 待第 3 轮**。
-> 累计处理：P1×4、P2×5 逐条回源码与数据核实：属实 6（其中 1 条交大总管定、第 2 轮重提）、驳回 1、延期开 issue 2（#221 · #222）。
+> **最新一轮：第 3 轮（2026-11-26）· 总评「修改」· 停：剩下的 P1 是同一条第三次重提，已由裁决人（大总管 noise-canceling-meta）定**。
+> 累计处理：P1×5、P2×8 逐条回源码与数据核实：属实 9（其中 Room112 那 1 条提了 3 次，交大总管定）、驳回 1、延期开 issue 2（#221 · #222，#222 被重提 3 次）。
 
 ## 第 1 轮（2026-11-26）· 总评「修改」
 
@@ -46,3 +46,19 @@
   - 处理：逐秒证据的条数要等于片段的整秒数，`prominence_db` 必须是有限数；再用 `diagnose.tone_verdict` 加 json 里的 `present_db` 重算，结论必须和存的一致。夹具改成真的 10 秒。实测仓里 1022 条单音结果（C236 620 条、办公室 402 条）全部通过新的核对；办公室 402 行仍逐字节复现。
 - **P2｜screen_tone.py:161 旧诊断关联仍在**（第 2 轮 #4，即第 1 轮 #3）
   - 处理：延期，开 issue #222（单音检查结果记音频与判据的哈希）。
+
+## 第 3 轮（2026-11-26）· 总评「修改」
+
+原文：主仓 `_tmp/reviews-traindata-b4/data-batch4-codex-3.md`（不入库）。effort medium，耗时 57 秒。
+本轮 P0/P1：1 条，是同一条的第三次重提 · 停止线：脚本判未满足；按评审规则「同一条第二次被驳回就停下交人裁决」停，裁决已有 · 留作 issue：#221 · #222
+
+- **P1｜split_rules.json:99 单音必经检查**（第 3 轮 #1，同第 1 轮 #2、第 2 轮 #1）
+  - 处理：交裁决，已定（大总管 noise-canceling-meta 选 A：先训后测，判法定在 `cloud-room112-tone.md`，issue #221）。不再改。
+- **P2｜screen_tone.py:196 缺 seconds 静默放行，两表时长不比**（第 3 轮 #2）
+  - 核实：属实。
+  - 处理：pi traindata-codexfix3 改成缺 `seconds` 就停；筛查行也有时长时，两边相差超过 0.001 秒就停。仓里 1022 条真单音行都有 `seconds`，全部通过（实测）。
+- **P2｜screen_tone.py:223 旧诊断关联**（第 3 轮 #3，第三次提）
+  - 处理：仍延期，见 issue #222。
+- **P2｜screen_tone.py:200 条数核对会误报整秒边界**（第 3 轮 #4）
+  - 核实：属实（上一轮的修改引入的）。diagnose 把 `seconds` 四舍五入到毫秒，逐秒块数却按采样数向下取整。
+  - 处理：容许半毫秒的舍入窗口，常量指向 diagnose.py 的 `round(..., 3)`。加了 159999 个采样的边界往返测试。
