@@ -47,6 +47,18 @@ def make_recipe(path: Path, text: str = '{"knobs": {}}') -> Path:
     return path
 
 
+def recipe_text(scenes=None, *, on: bool = True) -> str:
+    """一份 `loader.load_recipe` 认的配方，只留它校验的两个旋钮；`target_scene.scene` 给 scenes。
+
+    加训哪几个场景的正本在配方里（traindata 的 data/recipe.json），formal 的 `target_scenes` 要和它比
+    （#213）：所以用例的配方必须写这一段，不能是空的 `{"knobs": {}}`。
+    """
+    return json.dumps({"knobs": {
+        "target_scene": {"on": on, "scene": scenes, "frac": 0.667, "src": "用例给的场景清单"},
+        "replay": {"on": True, "frac": 0.333, "src": "用例：回放占剩下的 1/3"}}},
+        ensure_ascii=False)
+
+
 def make_build(builds_dir: Path, recipe: Path, *, index: str = "a" * 64, code: dict | None = None,
                valid: bool = True, stamp: bool = True) -> str:
     """在 builds_dir 下摆一份登记记录，返回它的 build_id。
@@ -255,11 +267,12 @@ def _formal_case(tmp: Path) -> tuple[Path, Path]:
     """tmp 里摆一份填好的正式配置与假登记记录；布局同仓里（trainer/configs 与 data 平级）。"""
     T, configs = tmp / "trainer", tmp / "trainer" / "configs"
     configs.mkdir(parents=True)
-    recipe = make_recipe(tmp / "data" / "recipe.json")
+    runs = yaml.safe_load((CONFIGS / "formal-runs.yaml").read_text())
+    # 配方要写运行矩阵里的那几个场景（#213：配方是正本，target_scenes 必须和它一致）
+    recipe = make_recipe(tmp / "data" / "recipe.json", recipe_text(runs["target_scenes"]))
     bdir = tmp / "builds"
     bid = make_build(bdir, recipe)
     (configs / "formal.yaml").write_text((CONFIGS / "formal.yaml").read_text())
-    runs = yaml.safe_load((CONFIGS / "formal-runs.yaml").read_text())
     runs["data_build"] = bid
     p = configs / "formal-runs.yaml"
     p.write_text(yaml.safe_dump(runs, allow_unicode=True))

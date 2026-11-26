@@ -12,7 +12,7 @@ import yaml
 
 import config as cfgmod
 import formal
-from test_buildpin import make_build, make_recipe
+from test_buildpin import make_build, make_recipe, recipe_text
 
 HERE = Path(__file__).resolve().parents[1]
 CONFIGS = HERE / "configs"
@@ -65,11 +65,13 @@ def _runs() -> dict:
     return yaml.safe_load(RUNS.read_text())
 
 
-def _filled(tmp_path, base_over=None, runs_over=None, mutate=None):
+def _filled(tmp_path, base_over=None, runs_over=None, mutate=None, recipe_src=None):
     """在 tmp_path/configs/ 下摆一份「分片已登记、配方已定」的用例（与仓里布局相同），
     并给它造一份假登记记录。返回（运行矩阵路径, 假登记记录目录）。
 
     mutate：改运行矩阵的 batches（测矩阵本身写错）。
+    recipe_src：配方文本（默认 `knobs.target_scene.scene` = 默认的 target_scenes：配方是加训场景
+    的正本，两处必须一致才通过，#213）。
     """
     d = yaml.safe_load((CONFIGS / "formal.yaml").read_text())
     d["data"]["shard_root"] = "/data/shards/batch2"
@@ -77,7 +79,8 @@ def _filled(tmp_path, base_over=None, runs_over=None, mutate=None):
     for dotted, v in (base_over or {}).items():
         head, last = dotted.split(".")
         d[head][last] = v
-    recipe = make_recipe(tmp_path / "recipes" / "formal-batch2.json")
+    recipe = make_recipe(tmp_path / "recipes" / "formal-batch2.json",
+                         recipe_text(["cafe", "canteen"]) if recipe_src is None else recipe_src)
     builds = tmp_path / "builds"
     runs = _runs()
     runs["data_build"] = make_build(builds, recipe)
@@ -228,9 +231,12 @@ def _schema_place_keys() -> list:
 
 
 def _scene_problems(tmp_path, scenes) -> list:
-    """改了 target_scenes 的那份运行矩阵报出来的、提到 target_scenes 的问题。"""
+    """改了 target_scenes 的那份运行矩阵报出来的、说 target_scenes 名字本身的问题。
+
+    不含「和配方不一致」那一条（#213）：那一条另有一组用例，这里测的是名字本身写错没用。
+    """
     p, bd = _filled(tmp_path, runs_over={"target_scenes": scenes})
-    return [s for s in formal.problems(p, builds_dir=bd) if "target_scenes" in s]
+    return [s for s in formal.problems(p, builds_dir=bd) if "target_scenes" in s and "配方" not in s]
 
 
 def test_unknown_scene_reported(tmp_path):
@@ -285,3 +291,78 @@ def test_missing_base_reported(tmp_path):
     runs = _runs()
     (p / "formal-runs.yaml").write_text(yaml.safe_dump(runs, allow_unicode=True))
     assert any("base" in s for s in formal.problems(p / "formal-runs.yaml"))
+
+
+# ---------- 配方场景与 target_scenes 比对（#213）----------
+
+def _src_problems(tmp_path, recipe_scenes=None, target=None, *, on=True, recipe_src=None) -> list:
+    """改了配方的那份用例报出来的「和配方比对」问题（按「配方」认这几条）。
+
+    recipe_scenes：配方 knobs.target_scene.scene；target：运行矩阵的 target_scenes（默认 = 配方的）。
+    """
+    target = ["cafe", "canteen"] if target is None else target
+    src = recipe_src if recipe_src is not None else recipe_text(recipe_scenes, on=on)
+    p, bd = _filled(tmp_path, runs_over={"target_scenes": target}, recipe_src=src)
+    return [s for s in formal.problems(p, builds_dir=bd) if "配方" in s]
+
+
+def test_recipe_scenes_same_set_any_order_passes(tmp_path):
+    assert _src_problems(tmp_path, ["canteen", "cafe"]) == []
+
+
+def test_recipe_extra_scene_reported(tmp_path):
+    ps = _src_problems(tmp_path, ["cafe", "canteen", "cowork"])
+    assert len(ps) == 1, ps
+    assert "cowork" in ps[0]  # 要指名是哪个场景
+    assert "target_scenes" in ps[0] and "必须一致" in ps[0]
+
+
+def test_recipe_missing_scene_reported(tmp_path):
+    ps = _src_problems(tmp_path, ["cafe"])
+    assert len(ps) == 1, ps
+    assert "canteen" in ps[0]
+    assert "target_scenes" in ps[0] and "必须一致" in ps[0]
+
+
+def test_recipe_scene_null_reported(tmp_path):
+    ps = _src_problems(tmp_path, None)
+    assert len(ps) == 1, ps
+    assert "target_scene.scene" in ps[0]
+
+
+def test_recipe_target_scene_off_reported(tmp_path):
+    ps = _src_problems(tmp_path, ["cafe", "canteen"], on=False)
+    assert len(ps) == 1, ps
+    assert "on" in ps[0]
+
+
+def test_recipe_single_scene_name_passes(tmp_path):
+    """配方写成单个名字（不是清单）时，和只有一项的 target_scenes 等价。"""
+    assert _src_problems(tmp_path, "cafe", ["cafe"]) == []
+
+
+def test_recipe_not_json_one_problem(tmp_path):
+    """配方读不成 JSON：一条问题，不崩（配方字节没变，登记记录还对得上）。"""
+    ps = _src_problems(tmp_path, None, recipe_src="{ 不是 JSON")
+    assert len(ps) == 1, ps
+    assert "配方" in ps[0]
+
+
+def test_recipe_missing_file_reported_no_crash(tmp_path):
+    """配方文件被删：照实报，不抛异常。"""
+    p, bd = _filled(tmp_path)
+    (tmp_path / "recipes" / "formal-batch2.json").unlink()
+    ps = formal.problems(p, builds_dir=bd)
+    assert ps and all("配方" in s for s in ps), ps
+
+
+def test_recipe_without_target_scene_knob_reported(tmp_path):
+    """配方里整段 knobs.target_scene 都没有：一条问题，不崩。"""
+    ps = _src_problems(tmp_path, None, recipe_src='{"knobs": {}}')
+    assert len(ps) == 1, ps
+    assert "target_scene" in ps[0]
+
+
+def test_shipped_recipe_matches_target_scenes():
+    """仓里的配方写着 4 个 D113 场景，target_scenes 也是那 4 个：check 退出码 0。"""
+    assert formal.main(["check"]) == 0
