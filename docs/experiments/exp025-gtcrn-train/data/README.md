@@ -121,9 +121,9 @@ cd <新 checkout>/docs/experiments/exp025-gtcrn-train/data
 bash cloud_steps.sh setup       # 建 .venv，装 requirements.txt；机器上没有 uv 就由 setup_uv.sh 装钉死版本到 /workspace/bin（核官方 sha256，不用 pip）
 bash cloud_steps.sh inventory   # 写 inventory.txt：每个来源的文件数与前 20 个路径
 bash cloud_steps.sh split       # 写 splits/<来源>.jsonl + .json，共 6 个来源 12 个文件
-bash cloud_steps.sh shard       # 写 /workspace/shards/first-batch/*.tar 与 index.json（目录已存在就拒绝）
-bash cloud_steps.sh register    # 交集检查，写 builds/<id>/build.json；检查不过退出码非 0
-bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /workspace/out/，打印 sha256
+VDN_SHARDS=/workspace/shards/<名字> bash cloud_steps.sh shard       # 写 $VDN_SHARDS/*.tar 与 index.json（目录已存在就拒绝）
+VDN_SHARDS=/workspace/shards/<名字> bash cloud_steps.sh register    # 交集检查，写 builds/<id>/build.json；检查不过退出码非 0
+VDN_SHARDS=/workspace/shards/<名字> bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /workspace/out/，打印 sha256
 ```
 
 `test` 一步可跑可不跑。cloudrun 的分支合进来之前，已知只有 `test_real_cloud_config_quota` 会红（缺 `cloud/config.py`）。
@@ -145,7 +145,7 @@ bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /
 - `split` 报「文件 N 个，应为 M」：通配符或上游数目不对，不写表。把 `inventory.txt` 发给 traindata，由 traindata 改 `split_rules.json` 后再跑
 - `split` 报「不在任何 rir_list 里」「和规则核过的上游版本不同」「认不出路径与房间号」：OpenSLR 28 的房间表没对上，同样发清单
 - `split` 中途被杀：直接重跑，已算的读数从缓存里取
-- `shard` 报目录已存在：不删旧目录，设 `VDN_SHARDS=/workspace/shards/first-batch-<时间>` 换个新目录再跑
+- `shard` 报目录已存在：不删旧目录，设 `VDN_SHARDS=/workspace/shards/<这一批的名字>-<时间>` 换个新目录再跑（**每一批用一个新名字**；没有默认目录，`shard` · `register` · `pack` 不设 `VDN_SHARDS` 就退出码 2）
 - `register` 报交集检查不过：`build.json` 仍会写出并记作废，照样 `pack` 带回
 - 改了规则要重切：`split.write` 拒绝覆盖已有的表，而 `split` · `shard` · `register` 三步都用同一个 `splits/` 目录，现在没有换目录的参数。这条路还没打通（待开 issue），遇到时先找大总管
 
