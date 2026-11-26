@@ -86,3 +86,11 @@
   - 结果在主仓 _tmp/20261126-trainer-b4/（O 包 e6925628…，ablation 包 8aa73703…）。trainer-da 跑了 judge，退出 0。
 - 19:22Z 开第五批的 CPU 机 r5i6id8wqrx7tv（批 ≤0.3 美元，2 小时后自删），代码 0466bd88。第 6 步只取回 batch4 的校验值，删不删要等人定。
 - 累计花费 13.40 / 100 美元。trainer 现名 noise-canceling-trainer-da。
+- 2026-11-26 19:22–20:23Z 第五批（代码 0466bd88，机器 r5i6id8wqrx7tv，0.13 美元，批 ≤0.3，已删）：
+  - 测试 483 条通过、跳过 6 条；单音合并核对逐字节一致，keep 188。切分 563 / 78 / 87，4 间房在 dev 里各 1 个。
+  - 6 个 build 都是 valid、交集都是 0：基线 df759bb8d606a209，另外 5 个是 4bff0eef、84b1b7ed、94b873a1、cd7a4d17、d09858dd。
+  - 打包 sha256 92e922be…。结果在主仓 _tmp/20261126-cloudrun-batch5/。
+- 按 D118 删 batch4（trainer-c6 确认没有依赖）：删前取回 index.json（311134757bf6…，和 bc0e9e7b 的记录一致）、94 个分片的 sha256、du 22289901880 字节，打包 sha256 aa74b90d…。盘 181 → 160 / 200 GB，剩 40 GB。网络盘上只剩 batch2、batch5。
+- ⚠️ trainer 的 formal.yaml、ablation.yaml 还指着 batch4，formal-runs.yaml 还钉着 bc0e9e7b。trainer 改指第五批之前，不用这几份配置开机。
+- 累计花费 13.55 / 100 美元，云上 0 台机器。现名：traindata-75、trainer-c6、大总管 meta。
+- 待办：等 plan-h100-formal.md。开 H100 前做开训清单第 8 项的花费重估，报 meta 批，并要人点头。
