@@ -5,7 +5,7 @@
 - 按时段切的（QUT · DEMAND）：每个文件按样本号切几段，段界写进清单
 - 按房间切的（OpenSLR 28）：房间号从上游 Kaldi rir_list 读（room_map），rir_list 的 sha256 钉在规则里；
   room-id 看不出房间的库按 room_merge 整库并成一个单位
-- 先只看路径认出每个文件的单位（认不出立刻停），再读逐文件读数（filecache.py 缓存，重跑只算变了的）
+- 先只看路径认出每个文件的单位（认不出立刻停；`unit_regex_required` 的来源不许退回按文件切），再读逐文件读数（filecache.py 缓存，重跑只算变了的）
 - 输出（进仓）：`splits/<来源>.jsonl`（每文件一行：路径 · 字节 · sha256 · 单位 · 份 / 段界）+ `splits/<来源>.json`（摘要：
   规则哈希 · 种子 · 每份单位数与文件数 · jsonl 的 sha256）。正文超 GZIP_OVER 时存成 `<来源>.jsonl.gz`（auto-commit hook
   不收超 10 MB 的文件）；摘要里的哈希始终是解压后正文的
@@ -123,6 +123,9 @@ def unit_of(rel, rule, rooms=None):
             m = re.search(x["match"], rel)
             if m:
                 return m.expand(x["unit"])
+        if rule.get("unit_regex_required"):
+            # 按录音人切的来源（CochlScene）：认不出就停，退回按文件切会让同一个录音人跨份
+            raise SystemExit(f"{rel}：没有一条 unit_regex 认得出来（这条规则要求按录音切单位）。不写切分表；请把路径格式发给 traindata")
         return rel
     raise ValueError(u)
 

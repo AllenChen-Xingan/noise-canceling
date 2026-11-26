@@ -53,6 +53,22 @@
    "_房间": "2026-11-25 按 HTTP Range 只读上游 zip 的目录与 rir_list 核过（不下音频）：实测 RIR 325 条 = 上游 README「Overall there are 325 real RIRs」；REVERB 2014 的 9 个 room-id 是房间名（每间 4 条），照用；AIR 与 RWCP 见 room_merge。实测 RIR 共 11 个单位、模拟 600 间房，实测与模拟分层各自按比例切（stratum_regex），实测的 11 个单位约 8 训练 · 1 开发 · 1 终测 · 1 测试份",
    "_注": "房间号从包内 Kaldi 的 rir_list（--room-id）读；同目录的 isotropic noise 文件不当 RIR（exclude_regex）。pointsource_noises 取自 MUSAN，内部许可未逐个核，第一批不用"
   },
+  "cochlscene": {
+   "expect": {"files": 17629, "src": "Data_info.tsv 实数：SubwayStation 5897 + Subway 5897 + CrowdedIndoor 5835；云上解压后 17629/17629（cloudrun 2026-11-25）"},
+   "src": "download-list-2.md 2.1（第二批只下这一条，D106）；官方三份录音人互不重叠，但我们照旧用自己的切分器、按录音人切",
+   "group": "A6", "unit": "file",
+   "glob": [
+    "train-raw/cochlscene/CochlScene/*/CrowdedIndoor/*.wav",
+    "train-raw/cochlscene/CochlScene/*/Subway/*.wav",
+    "train-raw/cochlscene/CochlScene/*/SubwayStation/*.wav"
+   ],
+   "unit_regex": [{"match": "/[^/]+_(user\\d+)_[^/]*\\.wav$", "unit": "\\1", "why": "按录音人切：同一个录音人的所有片段进同一份（download-list-2.md 2.1；官方三份录音人互不重叠，我们不用官方份）；第 1 组已经是 `userNNNN`，所以单位直接用它"}],
+   "unit_regex_required": true,
+   "frac": {"train": 0.9, "dev": 0.1, "final": 0.0, "d63": 0.0},
+   "_frac": "D106：只作训练噪声；终测只用 exp013，不给终测与 d63",
+   "_未筛人声": "CochlScene 是众包手机录音，片段里可能有人说话；这次未筛，方法待定（大总管 c4 2026-11-25）",
+   "_未建表": "音频在云上（train-raw/cochlscene），本机没有；切分表 splits/cochlscene.* 等云上跑完 split.py 再带回进仓"
+  },
   "demand-train": {
    "expect": {"files": 96, "src": "exp006 用的 6 个环境 × 每个 16 声道（DEMAND 说明）"},
    "src": "027 第六节表最后一行 + 隔离规则第 2 条：只用 exp006 用过的 6 个环境前 60%，按时段再切 训练 50% / 开发 10%；不给终测", "group": "E2", "unit": "time",

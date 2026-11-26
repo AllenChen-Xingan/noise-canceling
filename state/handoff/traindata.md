@@ -61,3 +61,7 @@
 - 2026-11-25 大总管交代：CPU 镜像 rust:1.99.1-trixie 没有 pip，setup 的 pip install uv 失败。新增 setup_uv.sh：有 uv 直接用；没有就下 uv 0.13.7 官方二进制包，按钉死的官方 sha256 核对，解压到 /workspace/bin。测试 tests/test_setup_uv.py 10 条（哈希不对拒绝、路径、联网核官方 sha256 要设 VDN_NET=1）。分支 fix/cloud-setup-uv；全量 149 条全过（1 条联网的跳过，另手动跑过也过）
 - 2026-11-25 大总管派活（D106 · D107），分支 feat/data-batch2：① 第二批调研清单 download-list-2.md（CochlScene 3 类 · DEMAND OHALLWAY/DLIVING · FSD50K 按标签；飞机舱 · 会议室 · 电话亭写「没有」；大总管定按上传者排除 ESC-50 同源）。② loader target_scene.scene 支持列表（pick_scene，单名抽法不变），测试 test_target_scenes 9 条先红后绿。③ 配方 high_snr 旋钮（默认关；10 % SNR U(20,40) dB · 5 % 不加噪声，暂定），测试 test_high_snr 9 条先红后绿。loader · mix · recipe 改了，build 身份会变，下载完一起重跑 register。全量 167 条全过（跳过 1 条联网）
 - 2026-11-25 人定（大总管转达）：第二批只下 CochlScene 3 类；DEMAND 走廊 / 客厅与 FSD50K 人未选、暂不下；盘可扩到 200 GB；高信噪比旋钮认可。等 cloudrun 下完交校验值给我核对
+
+- 2026-11-25 大总管改名 noise-canceling-c4（uds:/tmp/cc-socks/79882.sock），报到、进度、名额都发它。新规则：代码派 pi 写。已报：压缩包建议核完 md5 再删（待人定）；下一步派 pi 登记 CochlScene 3 类。
+- 2026-11-25 CochlScene：6 个分卷包已被 cloudrun 的下载脚本自动删掉（大总管 c4 删机前看过），所以「删不删压缩包」这题作废，md5 也没补核。完整性证据是间接的：7z 逐文件 CRC 通过，17629/17629 个文件和 want.txt 一致。
+- 2026-11-25 CochlScene：人声没筛，方法待定（大总管 c4 定：这次先登记、不筛）。目标场景（D105）待人定，这次只加噪声池、不改 target_scene。

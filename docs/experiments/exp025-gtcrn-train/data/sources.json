@@ -1,6 +1,6 @@
 {
  "_说明": "exp025 数据来源正本：每个要下载的文件的地址 · 字节数 · 上游校验码 · 许可。fetch.py 只认这里。sha256 为 null 的，第一次在云上下完由 fetch.py 记进 fetched.json（进仓），之后以它为准。大小与 md5 于 2026-11-16 用 HEAD 请求和上游 md5 清单核过（本机未下载）",
- "_字段": "dest 是相对数据根（云上网络盘）的落盘位置；extract=tar|zip|none；train_ok 按 D64：NC 只评测；role=train 是训练原料（要先切分），role=exp013 是重建评测集用的原料",
+ "_字段": "dest 是相对数据根（云上网络盘）的落盘位置；extract=tar|zip|none；train_ok 按 D64：NC 只评测；role=train 是训练原料（要先切分），role=exp013 是重建评测集用的原料；带 manual 的组一律手工下载、不走 fetch.py（bytes 与 sha256 可空）",
  "groups": {
   "A1": {
    "name": "LibriSpeech train-clean-100", "role": "train", "train_ok": true,
@@ -47,6 +47,20 @@
    "files": [
     {"name": "dev-clean.tar.gz", "url": "https://www.openslr.org/resources/12/dev-clean.tar.gz", "bytes": 337926286, "md5": "42e2234ba48799c1f50f24a7926300a1", "sha256": null, "extract": "tar", "dest": "train-raw/librispeech"},
     {"name": "test-other.tar.gz", "url": "https://www.openslr.org/resources/12/test-other.tar.gz", "bytes": 328757843, "md5": "fb5a50374b501bb3bac4815ee91d3135", "sha256": null, "extract": "tar", "dest": "train-raw/librispeech"}
+   ]
+  },
+  "A6": {
+   "name": "CochlScene（3 类：CrowdedIndoor · Subway · SubwayStation）", "role": "train", "train_ok": true,
+   "license": "CC-BY-SA-3.0", "license_src": "Zenodo 7080122 元数据",
+   "attribution": "I.-Y. Jeong, J. Park, CochlScene: Acquisition of acoustic scene data using crowdsourcing, APSIPA ASC 2022（Zenodo 7080122）。BY-SA：训出的权重按相同条款共享并署名（D64）",
+   "manual": "分卷 zip 不能只下 3 类，2026-11-25 由 cloudrun 手工下载并用 7z 从分卷直接解出 3 类（7z 逐文件 CRC 通过，17629/17629 与 want.txt 一致）；解完分卷已删。见 download-list-2.md 2.1",
+   "files": [
+    {"name": "CochlScene.z01", "url": "https://zenodo.org/records/7080122/files/CochlScene.z01?download=1", "bytes": null, "md5": "9ee5c5329f068bc1745d4497da74716b", "sha256": null, "extract": "none", "dest": "train-raw/cochlscene"},
+    {"name": "CochlScene.z02", "url": "https://zenodo.org/records/7080122/files/CochlScene.z02?download=1", "bytes": null, "md5": "c72d0c9c31d8e615b3da8489557fe41d", "sha256": null, "extract": "none", "dest": "train-raw/cochlscene"},
+    {"name": "CochlScene.z03", "url": "https://zenodo.org/records/7080122/files/CochlScene.z03?download=1", "bytes": null, "md5": "30038e305952803465c8f9f62e317a8d", "sha256": null, "extract": "none", "dest": "train-raw/cochlscene"},
+    {"name": "CochlScene.z04", "url": "https://zenodo.org/records/7080122/files/CochlScene.z04?download=1", "bytes": null, "md5": "e7f7cbcda3f411f3a9c3f4ccd4adf7bc", "sha256": null, "extract": "none", "dest": "train-raw/cochlscene"},
+    {"name": "CochlScene.z05", "url": "https://zenodo.org/records/7080122/files/CochlScene.z05?download=1", "bytes": null, "md5": "9550f2b73894c83742cde422d0b2cac4", "sha256": null, "extract": "none", "dest": "train-raw/cochlscene"},
+    {"name": "CochlScene.zip", "url": "https://zenodo.org/records/7080122/files/CochlScene.zip?download=1", "bytes": null, "md5": "492b955f93aa74287caec1c86a83235f", "sha256": null, "extract": "none", "dest": "train-raw/cochlscene"}
    ]
   },
   "E1": {
