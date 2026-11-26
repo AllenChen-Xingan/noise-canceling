@@ -36,7 +36,7 @@ RECIPE = HERE / "recipe.json"
 
 def default_sources(recipe_path=RECIPE):
     """默认要分片的来源 = recipe.json 里出现过的全部来源（人声 · RIR · 噪声池），按首次出现去重。
-    正本是 recipe.json：这里以前手掘 5 个来源，第二批加了 CochlScene 就漏了（第二处表示，2026-11-25）。"""
+    正本是 recipe.json：这里以前手抄 5 个来源，第二批加了 CochlScene 就漏了（第二处表示，2026-11-25）。"""
     r = json.loads(Path(recipe_path).read_text())
     pools = [it["source"] for k, items in r["noise_pools"].items() if not k.startswith("_") for it in items]
     return list(dict.fromkeys(list(r["speech"]["train"]) + list(r["rir"]) + pools))

@@ -319,10 +319,10 @@ class Recipe(unittest.TestCase):
 
 
 class ShardSources(unittest.TestCase):
-    """shard.py 的 `--sources` 默认值曾经是手掘的 5 个来源，第二批加了 CochlScene 就漏了（第二处表示）。
+    """shard.py 的 `--sources` 默认值曾经是手抄的 5 个来源，第二批加了 CochlScene 就漏了（第二处表示）。
     现在从 recipe.json 导出；这里不借导出函数，另算一遍对账。"""
 
-    OLD = ("librispeech-train-clean-100", "qut-noise", "tum-wind", "openslr28-rir", "demand-train")  # 改动前手掘的那 5 个
+    OLD = ("librispeech-train-clean-100", "qut-noise", "tum-wind", "openslr28-rir", "demand-train")  # 改动前手抄的那 5 个
 
     def expected(self):
         """按「人声 → RIR → 噪声池（跳过 `_` 开头的键）」的规矩从 recipe.json 再算一遍。"""
@@ -334,7 +334,7 @@ class ShardSources(unittest.TestCase):
         self.assertEqual(shard.default_sources(), self.expected())
 
     def test_cli_default_is_that_list(self):
-        """命令行不给 --sources 时用的就是导出这份（不是另手掘一份）。"""
+        """命令行不给 --sources 时用的就是导出这份（不是另手抄一份）。"""
         self.assertEqual(shard.DEFAULT_SOURCES.split(","), self.expected())
 
     def test_covers_cochlscene(self):
