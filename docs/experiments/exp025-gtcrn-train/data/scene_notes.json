@@ -16,11 +16,16 @@
    "regex": "^train-raw/but-reverbdb/([^/]+)/MicID\\d+/([^/]+)/[^/]+/silence/([^/]+)$",
    "group": "\\1/\\2/\\3",
    "why": "同一次布置、同一个文件名的各麦克风同时录的是同一段底噪（第四批的 4 间房用这个来源名；`but-reverbdb-silence` 只含 Room112，旧表 build 10aa3a9f 在用）"
+  },
+  "but-reverbdb-silence-b5": {
+   "regex": "^train-raw/but-reverbdb/([^/]+)/MicID\\d+/([^/]+)/[^/]+/silence/([^/]+)$",
+   "group": "\\1/\\2/\\3",
+   "why": "同一次布置、同一个文件名的各麦克风同时录的是同一段底噪（第五批的 4 间房用这个来源名：Room112 补了 250 Hz 单音检查，筛查表换成 screen/but-reverbdb-silence-b5.jsonl；-b4 的表 build bc0e9e7b 在用）"
   }
  },
  "rail-air-cabin": "只有地铁车厢录音（CochlScene Subway），飞机舱没补（D111 补充）",
  "canteen": "DEMAND PCAFETER + PRESTO 两间餐厅；exp013 食堂评测也用这两段录音的 180 秒以后（训练只用 0–150 秒，交集为 0），评测分数偏乐观",
  "transit-hub": "只有 CochlScene SubwayStation 一个来源",
  "meeting-room": "用 BUT 三间办公室 L207 · L212 · Q301 的底噪（只取 01 · 11 · 21 号麦克风），是办公室，不是会议室；没有会议突发声；C236 因 250 Hz 单音不用（D114）",
- "hotel-room": "只有一间房 R112，开发份与训练份同房不同布置；未做 250 Hz 单音检查（keep 209 条在训练里），补测并进 trainer 甲段，判法见 cloud-room112-tone.md（大总管 noise-canceling-meta 2026-11-26）"
+ "hotel-room": "只有一间房 R112，开发份与训练份同房不同布置；250 Hz 单音检查已做（cloud-room112-tone.md）：248 条里 later_too 38 条，keep 209 条中 21 条有单音（10.0%），第五批去掉，keep 188 条（#221）"
 }
