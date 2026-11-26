@@ -75,7 +75,31 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
 
 ### 钉温度探针（大总管 2026-11-25 定 C）
 
-`vdn-eval asr-probe --wav-dir <旧运行 qa/asr-wav> --cache <旧运行 qa/asr_cache.json> --temperature 0 --asr-ledger <账本正本> --out <报告.json>`：缓存认得的每条音频连调 3 次（`PROBE_REPEATS`），按评分用的分词比；不一致的条数占比 ≤ 2%（`PROBE_MAX_UNSTABLE`）才算钉住。冒烟 5 段 = 15 条 × 3 次 = 45 次真调用，约 45 × 12 秒 × 0.000008 ≈ 0.004 美元（账本口径）。正本 `src/eval/src/qa/asr_probe.rs`，测试 `asr_probe_tests.rs`。钉不住就改用「有分歧才调第 3 次、取多数，三次都不同判不知道」（A），那时再写它的正本常量
+`vdn-eval asr-probe --wav-dir <旧运行 qa/asr-wav> --cache <旧运行 qa/asr_cache.json> --temperature 0 --asr-ledger <账本正本> --out <报告.json>`：缓存认得的每条音频连调 3 次（`PROBE_REPEATS`），按评分用的分词比；不一致的条数占比 ≤ 2%（`PROBE_MAX_UNSTABLE`）才算钉住。冒烟 5 段 = 15 条 × 3 次 = 45 次真调用，约 45 × 12 秒 × 0.000008 ≈ 0.004 美元（账本口径）。正本 `src/eval/src/qa/asr_probe.rs`，测试 `asr_probe_tests.rs`。钉不住就改用「有分歧才调第 3 次、取多数，三次都不同判不知道」（A）。**2026-11-25 实测：温度 0 钉不住**（15 条里 1 条三次不一致，6.7%，线 2%；cloudrun 跑，报告在主目录 `_tmp/20261125-asr-probe/`），A 已落地：正本 `src/eval/src/qa/asr_vote.rs`（`TIE_BREAK_REP` = 3、`MAJORITY` = 2），测试 `asr_vote_tests.rs`；缓存键不变，旧缓存全能用
+
+**云上照做的步骤**（冒烟 5 段那次的产物，路径由 cloudrun 2026-11-25 给出；`vdn-eval` 要用含 `asr-probe` 的 main，即 4fb3d8cc 或更新，旧目录 `repo-27d2808a` 里的二进制没有这个子命令，只取它的音频和缓存）：
+
+```bash
+set -euo pipefail   # 任一步失败就停：别用旧二进制发付费调用
+OLD=/workspace/repo-27d2808a/docs/experiments/exp025-gtcrn-train/baseline/runs/smoke5-20261125-052356-e5sjgks999cqbf/qa
+LEDGER=/workspace/asr-ledger/asr-openrouter-ledger.json
+# 1. 核输入：20 个 wav（5 段 × clean · mix · out · gtcrn；out 与 gtcrn 内容相同），按 sha256 去重后应是 15 条；
+#    缓存 30 条、sha256 = 057edd601ed5617c5a37b22ef09ceffcf8af6b9ab85412f186bfe6ab1c52e1ff
+#    asr-probe 自己也按 sha256 去重，重复的文件名写进报告 `duplicates`（cloudrun 2026-11-25 核出）
+ls "$OLD/asr-wav"/*.wav | wc -l
+sha256sum "$OLD/asr-wav"/*.wav | cut -d' ' -f1 | sort -u | wc -l
+sha256sum "$OLD/asr_cache.json"
+# 2. 核账本：没有 review、reserved_usd 为 0；记下开跑前的 sha256
+sha256sum "$LEDGER"; python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('review'), d['reserved_usd'], d['calls'], d['spent_usd'])" "$LEDGER"
+# 3. 在新 main 的仓库根（$REPO）里编译、跑探针：15 条 × 3 次 = 45 次真调用，约 0.004 美元
+cd "$REPO"                       # 单独一行：set -e 才管得到（写在 && 左边失败不会停）
+cargo build --release -p vdn-eval
+./target/release/vdn-eval asr-probe --wav-dir "$OLD/asr-wav" --cache "$OLD/asr_cache.json" \
+  --temperature 0 --asr-ledger "$LEDGER" --out /workspace/asr-probe-t0-$(date -u +%Y%m%dT%H%M%SZ).json
+# 4. 取回：报告 JSON、跑后的账本快照（附 sha256）、账本旁的明细 asr-openrouter-ledger.json.calls.jsonl
+```
+
+验收：报告里 `audio` = 15（`duplicates` 列出 5 个重复文件名）、`repeats` = 3、`halted` 为 null，看 `unstable_rate` 与 `pass`；账本 `calls` 增加 45（若有重试，明细里多出的行就是重试）、`spent_usd` 增量 ≈ 45 × 每条秒数 × 0.000008。遇到不重试的错误（4xx 等）探针当场停发、`halted` 写原因。**只有原因里明说不支持 `temperature` 这个参数**，才算「这个模型钉不住温度」、改用 A；401（密钥）、402（余额）、403/404（数据政策）等别的原因都不说明温度的事，查清后重跑。
 
 ## 二、识别与外发（D103 · D104，人定 2026-11-25）
 
@@ -89,7 +113,7 @@ caffeinate -i target/release/vdn-eval scorecard --system gtcrn --no-safety --qa 
 
 ### 「每条 2 次」是干什么的、怎么定（大总管 2026-11-25 定）
 
-- **用途**（读源码 `asr.rs` · `qa/mod.rs`）：第 2 次是稳定性复核。两次转写不一致，这条音频剔除，该段吃字判「不知道」（rubric V7）
+- **用途**（读源码 `asr.rs` · `qa/mod.rs`）：第 2 次是稳定性复核。两次转写分词后不同，就补调第 3 次取多数（A，2026-11-25 起）；三次都不同，这条音频剔除，该段吃字判「不知道」（rubric V7）。`meta.asr` 的 `unstable` 仍只看前两次（决定以后能不能改成 1 次），要补调的条数、其中第 3 次没到手的条数、没有多数的条数另记在 `tie_breaks` · `tie_break_missing` · `no_majority`（第 3 次报错、重试用尽或已停发时报 `tie_break_missing`，不再少计）
 - **实测**（2026-11-25，`_tmp/exp025-asr-real-20261124-194229.log`）：同一条音频（car-passenger-c00-ext 的干净人声，LibriSpeech 英文 12 秒）连调 3 次，**逐字相同**；每次 0.00009 美元（`usage.cost`，等于每秒 0.0000075 美元 × 12 秒）；耗时 1.44 / 20.69 / 0.66 秒。只有 1 条音频，不能说明转写总是确定的
 - **定了**：基线保留每条 2 次（`REPEATS` = 2），同时量出 1440 条音频的不一致率，记进 `meta.asr.unstable_rate`。不一致率 ≤ `MAX_UNSTABLE_RATE`（0）时，以后的模型改成只转 1 次（`VDN_ASR_REPEATS=1`），按音频 sha256 固定抽 `SPOT_FRACTION`（10%）照旧转 2 次复核。三个常量的正本在 `asr.rs`，测试 `spot_check_sampling_is_deterministic_and_about_ten_percent`
 

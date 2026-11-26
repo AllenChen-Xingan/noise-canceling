@@ -1,6 +1,6 @@
 # 现状页 · trainer（批次 20261116-b19）
 
-- **状态**：已收尾，大总管验收通过（2026-11-24）；待命，PR 由大总管开
+- **状态**：H100 冒烟方案大总管已批；两处新代码写完、codex 3 轮达停止线；等大总管推送分支、cloudrun 开机（分支 `exp/025-h100-smoke`）
 - **手上**：训练器 · 训练损失 · 模型变体（issue #157，分支 `exp/025-trainer`）
 - **交代**：`_tmp/20261116-b19/trainer.md`；大总管 2026-11-24 起是 `noise-canceling-33`（接替 e1）
 - **做到哪**（2026-11-24）：交代 1–7 条全部完成。测试 119 条通过，4 条等 traindata / cloud 合入后自动跑。本机冒烟三件事过（合成小样，新判据）。自审 3 个视角 + codex 10 轮，按大总管口径已达停止线；待办 #159、#160
@@ -52,3 +52,30 @@
 - 11-24 开 issue #159 · #160（仓库公开经大总管确认是人 2026-11-11 要求的）
 - 11-24 已收尾，报大总管
 - 11-24 大总管验收通过（本机重跑 119 passed · 4 skipped · 73 s；最大文件 579 行）；PR 排在 evalcmp → cloudrun → traindata 之后，由大总管开；trainer 待命
+- 11-24 #157 合进 main（PR #179，2362d715）；大总管派新活：写 H100 冒烟方案。从 origin/main 开 `exp/025-h100-smoke`，方案 `trainer/plan-h100-smoke.md`，待批
+- 11-24 大总管批方案（参照读数用 CPU 机同代码算，大总管定，人未参与；乙段 1.5 小时 / 7 美元）。写了 `smoke.py --write-known-dev` 与 `cmp_ckpt.py`，测试先红后绿。名额：全套测试 66 s，139 过 2 跳过，已还。合进 main 73631939。codex 3 轮（P1×4 全修；第 2、3 轮无 P0/P1，达停止线），记录 `trainer/reviews/002_h100-smoke-codex.md`
+- 11-25 甲段第一次跑（cloudrun）：113 过 · 1 跳过 · 5 红，都是环境问题（漏装 onnx；git archive 没有 .git，运行记录 commit 为空）。改：方案第 2 步两份 requirements 一起装、代码必须 git clone / bundle 带 .git；`runrec.git_info` 拿不到提交号就在开跑前失败（`tests/test_git_record.py` 先红后绿）
+- 11-25 甲段第二次跑（cloudrun，d2477f63）全过：单元测试 122 过 · 1 跳过（MPS），321 s；CPU 参照 hybrid 3.97330（build f032a75eedad80d6），存进 `trainer/smoke_reports/20261125-known-dev-cpu.json`；等乙段
+- 11-25 乙段第 1 步（cloudrun）：冒烟只有过拟合不过（损失走完 14%、SI-SNR +3.5 dB，要 50% 与 +6 dB）；其余三件过。测速：每步 0.126 s、取数 0.033 s（中位，100 步）。报告 `trainer/smoke_reports/20261125-h100-overfit-FAILED.json`；已删机，等大总管定怎么重跑
+- 11-25 过拟合本机排查（名额）：合成小样 4×2 s 与 32×4 s 都过（走完 111% / 110%，SI-SNR +12.9 / +16.0 dB；占掩码族最好损失距离 73%）。第 2 组期间本机合盖睡眠，墙钟作废；caffeinate 挡不住合盖。报告 `trainer/smoke_reports/20261125-overfit-diag-local-cpu.json`
+- 11-25 大总管批云上 CPU 真数据排查：加 `oracle.py` 与 `smoke.py --overfit-diag`（`tests/test_overfit_diag.py` 先红后绿，冒烟相关 42 条过，电池下 125 s）；方案第八节
+- 11-25 云上 CPU 真数据排查（cloudrun，1831886c，1237 s）：走完 40 dB 下限距离 14.4%，与 H100 几乎逐值相同（终值 2.3814 对 2.3808）→ H100 没问题。oracle 损失 −1.312（SI-SNR 23.5 dB），40 dB 下限 −3.307 低于它 → 不可达；走完 oracle 距离 20.6%。报告 `trainer/smoke_reports/20261125-overfit-diag-cloud-cpu-real.json`；判据改法待大总管定
+- 11-25 大总管定过拟合判据第 3 版（事后改判据：AI 提、大总管定）：前 4 段 + oracle 下限 + 判据不可用（退出码 3）；32 段读数只作参考。`tests/test_overfit_gate.py` 7 条先红后绿，冒烟相关 49 条过。方案第五节加 H100 估时（推断），第九节加 CPU 核对命令
+- 11-25 第 3 版判据云上 CPU 核对（cloudrun，a8168c98）：只有过拟合不过：前 4 段走完 oracle 距离 19.6%（要 50%），SI-SNR +2.5 dB（要 6）；其余三件过。报告 `trainer/smoke_reports/20261125-cpu-gate3-FAILED.json`；不降门槛，已报大总管
+- 11-25 加 `overfit_probe.py` 与 `smoke.py --overfit-probe`（学习曲线到 2000 步 · 参数与梯度 · 学习率 3e-4 / 3e-3）；`tests/test_overfit_probe.py` 6 条先红后绿；方案第十节
+- 11-25 加 `data_probe.py`（对齐 · 目标检查与 wav · 逐个关配方旋钮 6 组），并进 `--overfit-probe`；`tests/test_data_probe.py` 8 条先红后绿
+- 11-25 `--overfit-probe` 云上 CPU 跑完（cloudrun，21e2e5b7，4429 s）：2000 步走完 oracle 距离 30.7%，学习率 3e-4/3e-3 差 3 个百分点内，梯度、对齐、目标、关旋钮都没找到故障。读数与建议 `trainer/smoke_reports/20261125-overfit-probe-reading.md`；建议先用官方 DNS3 权重做独立参照，待大总管定；H100 仍不开
+- 11-25 判据第 4 版（大总管定）：`gate_v4.py` 正本、`dev_gate.py`、smoke 改用第 4 版、逐段读数；重判诊断为过（`smoke_reports/20261125-rejudge-v4.json`）。codex 3 轮（`reviews/003_gate-v4-codex.md`）满足停止线；待办 P2：诊断输出并发覆盖（不原子占用目录）
+- 11-25 H100 乙段第 1 次（cloudrun，7eecbbe8）：冒烟全过（第 4 版过、第 3 版不过只记录；下降 24.8%，SI-SNR +2.53 dB；开发份读数 3.97339 对 CPU 3.97330；每步 0.126 s，取数 0.021 s），报告 `smoke_reports/20261125-h100-smoke-v4.json`。第 2 步因镜像没装 git 拒跑，第 3、4 步没跑；方案第四节乙加装 git
+- 11-25 加人声忽大忽小损失 `loss.w_pump`（默认 0，D107），分支 feat/trainer-pump-loss 7f28e1a4：可微复刻 V-PUMPV，与正本对拍逐值一致；w_pump = 0 时与改动前 7eecbbe8 训练检查点逐值相同；238 条测试过
+- 11-25 H100 乙段重跑（cloudrun，7eecbbe8，跳过第 1 步）全过：dev_gate A 3.90371、B 3.90497（第 0 步 3.97330）；续训逐值相同；3 个同时跑正常。报告进 `smoke_reports/20261125-h100-*.json`；方案第五节写正式训练估时估费（串着跑 1.8–1.9 h / 7.8–8.3 美元，同时跑 1.24 h / 5.4 美元），方案定稿
+- 11-25 大总管定：正式训练每次 3 个同时跑；前 500 步慢于 0.39 s 的 1.2 倍由训练器自动判（guards ④）；D88 的 8 个 wav 留云上。#194 已合进 main（1c251d42），本地 exp/025-h100-smoke 已删；feat/trainer-pump-loss 合了一次 main（7bc8d573，278 条过）
+- 11-25 开 feat/trainer-guards（从 origin/main 1c251d42）：训练时自动保护 ①–⑤，见方案第十二节
+- 11-26 会话中断后接回（trainer-02）。feat/trainer-guards：codex 第 1、2 轮的 P1/P2 都已修，全套 221 过；train.py 中断前未提交的 2 行（续训时把最好成绩写回 run.json）是新规则前亲手写的，照样提交。开 issue #195。之后要改代码按新规则派 pi
+- 11-26 pi 提交范围（在 trainer worktree 里，auto-commit hook 把 pi 半截代码以 Claude 署名提交了，大总管要求记下）：
+  - pi trainer-guards-devnan（codex guards 第 3 轮 #1，花费 0.0099 美元）：1ba6c800..a1f00093（hook 提交 e4c58e28 · a1f00093）；验收提交 b37a8560 当时没加 `Code: pi` 行，在此补记：代码由 pi（isoquant/deepseek-v4.1-flash-1017-fast）写
+  - pi trainer-guards-calibnan（codex guards 第 4 轮 #1，花费 0.0064 美元）：b37a8560..（hook 提交 13c19e5c · 1f1b7450，加本次验收提交）
+  - 之后的 pi 改用 `pi-worker start --repo <主仓> --base feat/trainer-guards`，在自己的 worktree 与分支提交，验收后快进合入
+- 11-26 pi trainer-guards-finite（改结构：唯一查有限值入口 · 停止原因优先级 · 防绕过扫描）：在自己的 worktree 与分支 w/trainer-guards-finite，提交 6be34442..370af014（Agent: pi），花费 0.0428 美元；trainer 验收后快进合入 feat/trainer-guards。全套 369 过
+- 11-26 pi trainer-guards-watchdog（codex guards 第 5 轮 #3）：自己的 worktree，提交 7da07932..f7fef94d（Agent: pi），花费 0.0039 美元；快进合入 feat/trainer-guards
+- 11-26 codex guards 第 6 轮：只 1 条 P2；按本项目口径第 5、6 轮连续两轮无 P0/P1，停。剩余 P2 开 issue #198。推送 feat/trainer-guards、开 PR（Closes #195），交大总管验收。pi 花费合计：devnan 0.0099 · calibnan 0.0064 · finite 0.0428 · watchdog 0.0039 = 0.063 美元

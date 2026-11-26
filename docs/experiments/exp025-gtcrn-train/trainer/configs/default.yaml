@@ -54,4 +54,5 @@ limits:
   max_usd: 20.0
   usd_per_hour: 4.39
   hang_s: 120.0
+  expect_s_step: null  # 期望每步秒数；设了才判「前 500 步太慢」（guards ④）。正式训练 3 个同时跑设 0.39
 device: auto

@@ -1,0 +1,94 @@
+{
+  "first": 3.3413453102111816,
+  "last": 2.3814148902893066,
+  "floor": -3.3065385818481445,
+  "drop_frac_of_span": 0.14439638770894894,
+  "attn_out_max_change": 0.07080689072608948,
+  "si_snr_db_before": 8.65968982384053,
+  "si_snr_db_after": 12.185687617521898,
+  "si_snr_gain_db": 3.525997793681368,
+  "si_snr_gain_ok": false,
+  "steps": 150,
+  "lr": 0.001,
+  "oracle_loss": -1.3115808963775635,
+  "oracle_si_snr_db": 23.545161416959466,
+  "drop_frac_of_oracle_span": 0.2063068222665066,
+  "floor_reachable": false,
+  "batch_index": 0,
+  "batch": 32,
+  "seg_s": 4.0,
+  "build_id": "f032a75eedad80d6",
+  "device": "cpu",
+  "torch": "2.15.0+cu132",
+  "config": {
+    "run": {
+      "out_dir": "~/vdn-data/runs",
+      "name": "exp025",
+      "seed": 0
+    },
+    "model": {
+      "variant": "B",
+      "k_frames": 32,
+      "heads": 2,
+      "cond_dim": 8,
+      "attn": true,
+      "film": true,
+      "init": "official",
+      "bn": "frozen"
+    },
+    "data": {
+      "kind": "loader",
+      "shard_root": "/workspace/shards/first-batch",
+      "recipe": "/workspace/repo-1831886c/docs/experiments/exp025-gtcrn-train/data/recipe.json",
+      "seg_s": 4.0,
+      "batch": 32,
+      "num_workers": 8,
+      "dev_n": 2000,
+      "dev_seed": 12345,
+      "dev_batches": 20,
+      "calib_batches": 200,
+      "timeout_s": 600.0
+    },
+    "optim": {
+      "lr": 0.0001,
+      "warmup_steps": 500,
+      "grad_clip": 3.0,
+      "betas": [
+        0.9,
+        0.999
+      ]
+    },
+    "loss": {
+      "w_lvl": "auto",
+      "w_on": "auto",
+      "lvl_margin_db": 2.0,
+      "sp": false,
+      "w_sp": 0.0001,
+      "kd": false,
+      "w_kd": 0.1,
+      "level_norm": false,
+      "level_floor": 0.001,
+      "on_skip_leading": false
+    },
+    "ema": {
+      "enabled": false,
+      "decay": 0.999
+    },
+    "schedule": {
+      "max_steps": 5000,
+      "ckpt_every": 500,
+      "eval_every": 500,
+      "log_every": 20,
+      "keep_last": 3
+    },
+    "limits": {
+      "max_hours": 6.0,
+      "max_usd": 20.0,
+      "usd_per_hour": 4.39,
+      "hang_s": 120.0
+    },
+    "device": "cpu"
+  },
+  "note": "排查用，不判过不过；oracle 是掩码族里的一个可行点（见 oracle.py），真正的最好损失 ≤ 它",
+  "written_at": "2026-11-25T19:27:31+0000"
+}

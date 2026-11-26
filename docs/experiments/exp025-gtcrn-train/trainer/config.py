@@ -93,6 +93,7 @@ class LimitsCfg:
     max_usd: float = 20.0
     usd_per_hour: float = 4.39  # 正本：../cloud/config.py USD_PER_HR_EXPECTED（H100，D102）；tests/test_train.py 比对
     hang_s: float = 120.0  # 已该停而主线程这么久没有进展时，看门狗强退（train._Beat）
+    expect_s_step: float | None = None  # 期望每步秒数；设了才判「前 500 步太慢」（guards ④）。正式训练 3 个同时跑设 0.39
 
 
 @dataclass
@@ -167,6 +168,10 @@ def validate(cfg: Config) -> None:
             raise ValueError(f"limits.{k} 必须是有限正数（不许不设上限，也不许 .inf / .nan）")
     if not (isinstance(L.usd_per_hour, (int, float)) and math.isfinite(L.usd_per_hour) and L.usd_per_hour >= 0):
         raise ValueError("limits.usd_per_hour 必须是有限非负数（负单价会让累计花费下降）")
+    es = L.expect_s_step
+    if es is not None and not (isinstance(es, (int, float)) and not isinstance(es, bool) and math.isfinite(es)
+                               and es > 0):
+        raise ValueError("limits.expect_s_step 必须是有限正数，或不设（null）")
     if not (isinstance(L.hang_s, (int, float)) and math.isfinite(L.hang_s) and L.hang_s > 0):
         raise ValueError("limits.hang_s 必须是有限正数")
     if cfg.schedule.ckpt_every <= 0:

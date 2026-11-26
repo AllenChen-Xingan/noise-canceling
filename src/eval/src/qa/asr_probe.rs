@@ -1,6 +1,6 @@
 //! 钉温度探针（大总管 2026-11-25 定 C）：同一批音频每条连调 [`PROBE_REPEATS`] 次，按评分用的分词
 //! （[`super::asr::same_text`]）看几次是否一致；不一致率 ≤ [`PROBE_MAX_UNSTABLE`] 才算钉住。
-//! 钉不住就改用「有分歧才调第 3 次、取多数」（大总管定的 A），那时再写它的正本常量。
+//! 钉不住就改用「有分歧才调第 3 次、取多数」（大总管定的 A）。2026-11-25 实测钉不住（15 条里 1 条，6.7%），A 已落地，正本 [`super::asr_vote`]。
 //!
 //! 每次调用照常走 [`super::asr_or::OpenRouter`]：预留、按「返回费用与标价估算取大」入账、逐笔明细、`data_collection=deny`。
 
@@ -27,6 +27,27 @@ pub fn langs_by_sha(cache: &BTreeMap<String, String>) -> BTreeMap<String, String
             Some((sha.to_string(), it.next()?.to_string()))
         })
         .collect()
+}
+
+/// 选要探的音频：`files` = (文件名, sha256)，按文件名排好。缓存不认得的跳过；同一 sha256 只留第一个文件名，
+/// 后面重复的文件名记进第二个返回值（不重复调用，也不在不一致率里算两次）。返回 (文件名, sha256, 语言)。
+pub fn pick(
+    files: &[(String, String)],
+    langs: &BTreeMap<String, String>,
+) -> (Vec<(String, String, String)>, Vec<String>) {
+    let mut seen = std::collections::BTreeSet::new();
+    let (mut picked, mut dup) = (Vec::new(), Vec::new());
+    for (n, sha) in files {
+        let Some(lang) = langs.get(sha) else {
+            continue;
+        };
+        if seen.insert(sha.clone()) {
+            picked.push((n.clone(), sha.clone(), lang.clone()));
+        } else {
+            dup.push(n.clone());
+        }
+    }
+    (picked, dup)
 }
 
 /// 跑探针。`items` = (文件名, sha256, 语言, 16 kHz 样本)。出错的那次记进 `errors`，整条算不一致（偏保守）。
