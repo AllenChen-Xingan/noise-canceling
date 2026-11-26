@@ -338,6 +338,22 @@ def test_missing_config_key_counts_as_different(tmp_path):
     assert out["knobs"]["eq"]["verdict"] == ablation.V_INCOMPLETE
 
 
+def test_missing_key_differs_from_null_key(tmp_path):
+    """缺键 ≠ 键在、值是 null：旋钮运行的 run.json 少了 limits.expect_s_step（基线那里写的是 null）。
+    「两边取出来都是 None 所以一样」是假的——记录已经不完整了。"""
+    _all(tmp_path, _hyb(eq=4.76))
+    p = tmp_path / "abl-eq-off" / "run.json"
+    rec = json.loads(p.read_text())
+    assert rec["config"]["limits"]["expect_s_step"] is None  # 基线这边是「键在、值是 null」
+    del rec["config"]["limits"]["expect_s_step"]
+    p.write_text(json.dumps(rec))
+    out = ablation.judge(tmp_path)
+    assert out["runs"]["abl-eq-off"]["verdict"] == ablation.V_INCOMPLETE
+    assert "limits.expect_s_step" in out["runs"]["abl-eq-off"]["reason"]
+    assert out["knobs"]["eq"]["verdict"] == ablation.V_INCOMPLETE
+    assert out["knobs"]["clip"]["verdict"] != ablation.V_INCOMPLETE  # 别的运行不受牵连
+
+
 def test_recipe_and_build_id_may_differ(tmp_path):
     """每个运行的 data.recipe 与 data_build_id、run.name / run.seed 本来就不同：不算对不上。"""
     _all(tmp_path)

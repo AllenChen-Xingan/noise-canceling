@@ -201,6 +201,18 @@ def _edit(case, knob, on, **changes):
     return p
 
 
+def test_variant_dropping_empty_object_reported(case):
+    """变体把基线里的空对象删掉了（`noise_pools: {}`）：空对象也是一处结构，删掉就是改多了。"""
+    p = case.variant("eq", False)
+    d = json.loads(p.read_text())
+    assert d["noise_pools"] == {}  # 基线里有这一个空对象
+    del d["noise_pools"]
+    p.write_text(json.dumps(d, ensure_ascii=False))
+    ps = case.problems()
+    assert len(ps) == 1, ps
+    assert "noise_pools" in ps[0]
+
+
 def test_variant_changing_two_places_reported(case):
     _edit(case, "eq", False, knobs__clip={"on": False, "src": "测试用"})
     ps = case.problems()
