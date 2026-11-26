@@ -51,3 +51,4 @@
   - 本机睡眠约 10 小时，期间机器到 6 小时时限自删；看门狗晚记账，估价偏高约 0.27 美元。
   - 账上 0 台，累计估 3.22 美元。待命：等 evalcmp 核结果、清 review、补跑识别，然后一起收尾；分支先不开 PR。
 - 待办（大总管 2026-11-25 记）：每份仓库各带约 8 GB 的 .venv 是浪费；正式训练前改成一份共享 venv（整包或按 requirements 的 sha256 命名），所有副本共用。与「venv 整包解到容器盘」（装环境分步计时之后）一起做。
+- 2026-11-26：派 pi（cloudrun-venvcache，花 0.0162 美元）写了 `cloud/remote/venv_cache.sh`（共享 venv）与 `cloud/remote/fetch_archives.sh`（边下边记 md5），各带测试；验收时打回 1 条 P1（GNU mktemp 不认 `-t` 无 X 模板）和 3 条 P2，修后 132 条测试全过，已合入本分支。还没上云实跑。
