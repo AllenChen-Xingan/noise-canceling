@@ -11,7 +11,7 @@ REPO=$(cd "$HERE/../../../.." && pwd)
 PY="$REPO/.venv/bin/python"
 BIN=${VDN_BIN:-$ROOT/bin}  # setup_uv.sh 把 uv 装在这里
 export PATH="$BIN:$PATH"
-# 分片目录：只给 shard · register · pack 用；没设就停，不落到任何默认目录（2026-11-27 大总管定）
+# 分片目录：只给 shard · register · pack 用；没设就停，不落到任何默认目录（2026-11-26 大总管定）
 need_shards() {
   SHARDS=${VDN_SHARDS:-}
   [ -n "$SHARDS" ] || {
