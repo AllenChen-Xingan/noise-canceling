@@ -37,3 +37,12 @@ P0×0 P1×1 P2×2。逐条核实，3 条都属实。
 - **P2｜缺键与 null 不分，空对象被拍平丢掉**（第 2 轮 #2）：改动小，一起交 pi。
 - **P2｜不设 dev_recipe 时 run.json 多两个字段**（第 2 轮 #3）：同第 1 轮 #3，仍留在 #217。不进停止线，因为它不影响判结果，也不影响开训。
 - 先拆测试文件：test_ablation.py 已 585 行，再加就超 600 行。
+
+### 第 2 轮的处理（2026-11-26）
+
+由 pi `trainer-ablation-fix3` 修，提交 d7c87bd5..51e42e1c，花费 0.0282 美元。
+- 先拆测试：judge 的测试移到 test_ablation_judge.py，共用的部分放 _ablation_helpers.py。拆后仍是 59 过。
+- 运行身份：run.seed 必须等于运行矩阵给这个名字的种子；data.recipe 必须是名字对应的那份（基线 = 基线配方，旋钮 = `variant_recipe_name`）。基线不合格时每个旋钮都判 incomplete。
+- 结构比较：ablation.py 自带一份拍平器，空对象算叶子，缺键与 null 分开；judge 和 problems 都用它。formal._flat 不动。
+- 红灯：trainer 在 f91acf8d 上复现 3 败，在 4e8d2538 上复现 2 败。
+- 绿灯：合入后 test_ablation + test_ablation_judge + test_formal + test_data + test_train 共 114 过 2 跳过。行数：ablation.py 540，test_ablation_judge.py 372，test_ablation.py 301。
