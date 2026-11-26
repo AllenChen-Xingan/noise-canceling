@@ -78,3 +78,9 @@ P0×0 P1×1。核实属实。
 P0×0 P1×1 P2×1。核实属实。
 - **P1｜「训练有没有用」检查（dev_gate）与冒烟参照仍用训练 build 当开发份身份**（第 5 轮 #1）：dev_gate.py 拿 data_build_id 认开发份，smoke.py 写、比参照读数时也传训练 build。设了 dev_recipe 后，用 X 训、在 Y 上评的运行，能和在 X 上算的参照对上。pi 在第一次交活时提过 smoke 这一处。改：开发份身份一律用 dev_build_id，旧记录没有时退回 data_build_id。交 pi `trainer-ablation-fix6`。
 - **P2｜不设 dev_recipe 时 run.json 仍多两个字段**（第 5 轮 #2）：续训已兼容（第 4 轮），#217 写的两种做法里选了「兼容」那种。结构本身仍会变，所以本 PR 只写 `Refs #217`，不关它。
+
+### 第 5 轮的处理（2026-11-26）
+
+由 pi `trainer-ablation-fix6` 修，提交 4c30bb29..95afdd65，花费 0.0066 美元。
+- 改动：dev_gate 用 `dev_build_id`，旧记录没有时退回 `data_build_id`，拿它比参照的 build_id。smoke.py 写参照（`--write-known-dev`）和比参照（`--known-dev`）都传开发份的 build id。
+- 红灯：trainer 在 4c30bb29 上复现，3 败 40 过。
