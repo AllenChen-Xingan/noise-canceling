@@ -2,11 +2,14 @@
 
 真产物部分：提交进仓的 `evidence-bc0e9e7b566421f0.md` 必须由 `build_evidence.py --check` 认下来（逐字节），
 且真仓里每份配方的每一列都是「是」。夹具部分：一份最小数据目录（1 张切分表 · 1 个来源 · 1 个目标场景 ·
-基准 + 5 份消融配方各 1 个 build）里，把三种该红的情况各撞一次：
-一个检查不过 → 「全部通过」变「否」且退 1；一份配方对上 2 个 build → 停；变体改了两个旋钮 → 那一列「否」。
+基准 + 5 份消融配方各 1 个 build）里，把四种该红的情况各撞一次：
+一个检查不过 → 「全部通过」变「否」且退 1；一份配方对上 2 个 build → 停；变体改了两个旋钮 → 那一列「否」；
+build 记录说交集 ok、切分表里却有一行踩到排外表 → 「交集重算一致」变「否」、「全部通过」变「否」（结论不读记录，重算）。
+另核两件事：重算按「来源列表 + 切分表哈希」缓存（6 个 build 共用一份只算一遍），且排除表一列带的是本机 exclude.json 的哈希。
 配方文件一律用 `ablation_recipes` 的正本函数生成，不手写 5 份。
 """
 import contextlib
+import copy
 import hashlib
 import io
 import json
@@ -20,6 +23,7 @@ HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 import ablation_recipes  # noqa: E402
 import build_evidence  # noqa: E402
+import leakcheck  # noqa: E402
 import loader  # noqa: E402
 
 EVIDENCE = HERE / "evidence-bc0e9e7b566421f0.md"  # 提交进仓的那份（= `build_evidence.py` 的标准输出）
@@ -55,6 +59,7 @@ class Fixture(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.root = Path(self._tmp.name)
+        self._leak = {}  # 切分表哈希 → 它算出来的 leak_check（一张表只算一遍）
         self.table = self.write_table()
         self.write_recipes()
 
@@ -80,11 +85,24 @@ class Fixture(unittest.TestCase):
         for fn, data in ablation_recipes.render_all(body).items():
             (d / fn).write_bytes(data)
 
-    def write_build(self, recipe_bytes, **over):
+    def leak_record(self):
+        """按当前切分表的真行算一遍 `leakcheck.check`，拿它当 build 记录里该记的那份（正本同真仓）。"""
+        rec = self._leak.get(self.table)
+        if rec is None:
+            body = (self.root / "splits" / "noise-a.jsonl").read_text(encoding="utf-8")
+            rows = [json.loads(ln) for ln in body.splitlines() if ln.strip()]
+            res = leakcheck.check({"noise-a": rows})
+            rec = {"against": res["against"], "ok": res["ok"], "n_hits": res["n_hits"],
+                   "per_key": res["per_key"]}
+            self._leak[self.table] = rec
+        return copy.deepcopy(rec)
+
+    def write_build(self, recipe_bytes, leak=None, **over):
         """按一份配方字节写一条 build 记录（身份字段算 build_id），`over` 改某几个字段。
 
         改身份字段（`index_sha256` · `split_tables` · `shards` · `code_sha256`）会重新算 build_id——
         所以改 `index_sha256` 就能给同一份配方造出第二个 build（两边分片相同）。
+        `leak` 不给就按当前切分表算一份；给一份旧记录可以造出「记录说 ok，但切分表已经命中排外表」。
         """
         parts = {"index_sha256": sha(recipe_bytes + b"idx"), "split_tables": {"noise-a": self.table},
                  "shards": {"noise-a": {"train": {"noise-a-train-00000.tar": "f" * 64}}},
@@ -93,8 +111,7 @@ class Fixture(unittest.TestCase):
             if k in loader.ID_KEYS:
                 parts[k] = over.pop(k)
         rec = {"build_id": loader.build_id_of(parts), **parts,
-               "leak_check": {"against": "exp013 build 测试 exclude.json", "ok": True, "n_hits": 0,
-                              "per_key": {"demand_segments": 0}},
+               "leak_check": self.leak_record() if leak is None else leak,
                "leak_checked_sources": ["noise-a"], "valid": True, "missing": [],
                "noise_scenes": {"train": ["canteen"], "dev": ["canteen"]}}
         rec.update(over)
@@ -103,11 +120,12 @@ class Fixture(unittest.TestCase):
         (d / "build.json").write_text(json.dumps(rec, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
         return rec
 
-    def write_all(self, **over):
-        """按盘上的 6 份配方各写一条 build 记录（`over` 只加在基准那一份上）。"""
+    def write_all(self, leak=None, **over):
+        """按盘上的 6 份配方各写一条 build 记录（`leak` / `over` 只加在基准那一份上）。"""
         recs = {}
         for name, path in build_evidence.recipe_files(self.root):
-            recs[name] = self.write_build(path.read_bytes(), **over if name == "recipe.json" else {})
+            recs[name] = self.write_build(path.read_bytes(), leak=leak,
+                                          **over if name == "recipe.json" else {})
         return recs
 
     def report(self):
@@ -126,6 +144,10 @@ class FixturePasses(Fixture):
         self.assertNotIn("**否**", text)
         self.assertIn("基准 build", text.splitlines()[0])
         self.assertIn("不手抄", text)  # 一句话说明它是生成的，不是抄的
+        # 目标场景一列注明读的是 build 记录；排外表一列带上这次重算实际用的 exclude.json 哈希
+        self.assertIn("目标场景（build 记录）", text)
+        self.assertIn("noise_scenes", text)
+        self.assertIn(sha(leakcheck.EXCLUDE.read_bytes())[:12], text)
 
     def test_variant_column_names_its_knob(self):
         """每一行的「只差一个旋钮」要写出翻的是哪个旋钮、翻到哪个值（原因也是给人看的）。"""
@@ -138,6 +160,51 @@ class FixturePasses(Fixture):
 
 
 class FixtureStops(Fixture):
+    def test_recorded_ok_but_rows_hit_exclude_is_false(self):
+        """记录说 ok、per_key 全 0，但切分表里有一行踩到排外表：重算那一列「否」，「全部通过」变「否」、退 1。"""
+        stale = self.leak_record()  # 干净表上算的：ok True · 命中 0
+        self.assertIs(stale["ok"], True)
+        self.table = self.write_table(
+            rows=[{"path": "raw/esc50/x.wav", "split": "train", "unit": "u1"}])
+        self.write_all(leak=stale)
+        text, rows = self.report()
+        self.assertEqual([r["checks"]["leak_recheck"][0] for r in rows], [False] * len(rows))
+        self.assertIn("全部通过：否", text)
+        self.assertIn("交集重算一致", text)
+        self.assertIn("rooms_reserved", rows[0]["checks"]["leak_recheck"][1])  # 原因写清了哪个键对不上
+        rc, out, _err = run_main(["--data-dir", str(self.root)])
+        self.assertEqual(rc, 1)
+        self.assertIn("交集重算一致", out)
+
+    def test_recompute_uses_the_splits_on_disk_not_the_record(self):
+        """记录里的 ok / per_key 都是「是」，但切分表换了（之前那一行命中）：重算仍能看出来，不被记录骗过。"""
+        stale = self.leak_record()
+        self.table = self.write_table(rows=[{"path": "raw/esc50/x.wav", "split": "train", "unit": "u1"}])
+        rec = self.write_all(leak=stale)["recipe.json"]
+        self.assertIs(rec["leak_check"]["ok"], True)
+        got = build_evidence.leak_recheck(rec, self.root / "splits")
+        self.assertIs(got["ok"], False)
+        self.assertGreater(got["n_hits"], 0)
+
+    def test_recompute_is_cached_per_split_tables(self):
+        """6 个 build 共用一份切分表：重算只该做一遍（真仓里那 16 MB 切分表不解析六次）。"""
+        self.write_all()
+        calls = []
+        real = build_evidence.leakcheck.check
+
+        def spy(splits, ex=None):
+            calls.append(tuple(sorted(splits)))
+            return real(splits, ex)
+
+        build_evidence.leakcheck.check = spy
+        try:
+            text, rows = self.report()
+        finally:
+            build_evidence.leakcheck.check = real
+        self.assertIn("全部通过：是", text)
+        self.assertEqual(len(rows), 1 + len(ablation_recipes.VARIANTS))
+        self.assertEqual(len(calls), 1, calls)
+
     def test_one_failing_check_flips_to_no_and_exit_1(self):
         """missing 不空：那一列变「否」，表尾「全部通过：否」，退 1（不静默放过）。"""
         self.write_all(missing=["noise-b"])

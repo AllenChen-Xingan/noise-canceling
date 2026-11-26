@@ -4,6 +4,8 @@
 - `recipe.json` 与 `recipes/ablation/*.json`：配方；消融清单的唯一出处是 `ablation_recipes.VARIANTS`
 - `builds/<id>/build.json`：build 记录（build_id · 配方哈希 · 分片 · 切分表哈希 · 代码哈希 · 交集检查）
 - `splits/<来源>.jsonl`：切分表正文，哈希只认 `split.load_split`
+- 交集检查：只认 `leakcheck.check` 重算的那一遍（按 build 记录里列出的来源重跑），不读记录里的结论
+- `leakcheck.EXCLUDE`：排外表的正本；报告里报它的 sha256 前 12 位，说明重算用的是哪份表
 - 本地代码文件：`loader.CODE` 与 `loader.EXP013_CODE`（形状同 `loader.build_info` 记的 `code_sha256`）
 - `recipe.json` 的目标场景：只认 `scene_table.target_scenes`
 
@@ -12,8 +14,10 @@
 任何一份配方 0 个或多于 1 个候选都停，并把是哪个配方、哪几个 build 写进报错。
 
 然后对那份 build 逐项核，每项一个布尔列：
-build_id 可重算 · valid · 交集检查通过 · 命中 0 · DEMAND 命中 0 · missing 空 ·
+build_id 可重算 · valid · 交集检查通过 · 命中 0 · DEMAND 命中 0 · 交集重算一致 · missing 空 ·
 切分表哈希与仓里一致 · 代码哈希与本地一致 · 目标场景都有训练噪声 · 变体只差一个旋钮（`knobs.<knob>.on` + `_ablation`）。
+「交集重算一致」不是读记录：按记录里列的来源重跑 `leakcheck.check`，重算的 `ok` 为真、`n_hits` 为 0、
+且重算的 `per_key` 与记录逐键相同，这一列才是「是」。重算按「来源列表 + 切分表哈希」缓存（6 个 build 共用一份，只跑一遍）。
 
 为什么生成而不手写：这是训练前清单上要用的一张证据表；手抄一遍就多一份会过期、又没法机器核的副本。
 
@@ -31,6 +35,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import ablation_recipes  # noqa: E402  消融清单（名字 · 旋钮 · 目标值）的唯一出处
+import leakcheck  # noqa: E402  交集检查的重算只走它（结论不读记录）
 import loader  # noqa: E402  build_id 重算与 code_sha256 的形状只认它
 import scene_table  # noqa: E402  目标场景只认它
 import split  # noqa: E402  切分表读取与哈希核对只走它
@@ -43,10 +48,11 @@ COLUMNS = (  # 每项检查一列：键 → 表头（中文，短）
     ("leak_ok", "交集通过"),
     ("leak_hits", "命中 0"),
     ("leak_demand", "DEMAND 0"),
+    ("leak_recheck", "交集重算一致"),
     ("missing", "missing 空"),
     ("split_tables", "切分表哈希"),
     ("code", "代码哈希"),
-    ("scenes", "目标场景"),
+    ("scenes", "目标场景（build 记录）"),
     ("one_knob", "只差一个旋钮"),
 )
 
@@ -161,7 +167,22 @@ def one_knob(recipe, base, base_sha, knob=None):
     return True, f"只翻 knobs.{knob}.on → {ab['on']}"
 
 
-def build_checks(build, recipe, base_recipe, base_sha, code, splits_dir, knob=None):
+def leak_recheck(build, splits_dir, cache=None):
+    """按 build 记录里列的来源重跑一遍 `leakcheck.check`（切分表只认 `splits_dir`）。
+
+    结果按「来源列表 + 切分表哈希」缓存：同一批消融的 6 个 build 共用一份切分表，只该解析一遍。"""
+    sources = list(build.get("leak_checked_sources") or [])
+    key = (tuple(sources), tuple(sorted((build.get("split_tables") or {}).items())))
+    cache = {} if cache is None else cache
+    if key not in cache:
+        try:
+            cache[key] = leakcheck.check({s: split.load_split(s, splits_dir)[1] for s in sources})
+        except FileNotFoundError as e:
+            raise SystemExit(f"读不了排外表 {leakcheck.EXCLUDE}（{e}）：交集重算不了，不能当成通过")
+    return cache[key]
+
+
+def build_checks(build, recipe, base_recipe, base_sha, code, splits_dir, knob=None, leak_cache=None):
     """{列键: (bool, 原因)}——每一列都是一句能读懂的判断，原因在通过时也写（报告里只列不通过的）。"""
     bid = build.get("build_id")
     lk = build.get("leak_check") or {}
@@ -178,6 +199,16 @@ def build_checks(build, recipe, base_recipe, base_sha, code, splits_dir, knob=No
     out["leak_ok"] = (lk.get("ok") is True, "交集检查没通过" if lk.get("ok") is not True else f"对照 {lk.get('against', '（没记）')}")
     out["leak_hits"] = (lk.get("n_hits") == 0, f"交集检查命中 {lk.get('n_hits')} 条")
     out["leak_demand"] = (per.get("demand_segments") == 0, f"DEMAND 评测段命中 {per.get('demand_segments')} 条")
+
+    rec = leak_recheck(build, splits_dir, leak_cache)
+    rec_per = rec.get("per_key") or {}
+    diff = sorted(k for k in set(rec_per) | set(per) if rec_per.get(k) != per.get(k))
+    same = rec.get("ok") is True and rec.get("n_hits") == 0 and not diff
+    out["leak_recheck"] = (same, "重算得 ok=True · 命中 0 · per_key 与记录逐键相同" if same else
+                           f"重算得 ok={rec.get('ok')} · 命中 {rec.get('n_hits')} 条"
+                           + (f"；per_key 与记录不同：{[(k, per.get(k), rec_per.get(k)) for k in diff[:5]]}"
+                              if diff else ""))
+
     miss = build.get("missing")
     out["missing"] = (miss == [], f"missing = {miss!r}（这一份没有成员的来源，本不该有）")
 
@@ -224,26 +255,33 @@ def report(data_dir=HERE):
     knobs = {f"{ABLATION}/{name}.json": knob for name, knob, _on in ablation_recipes.VARIANTS}
 
     rows = []
+    leak_cache = {}  # 同一批消融共用一份切分表：交集检查只重算一遍
     for name, path in recipes:
         recipe = load_json(path)
-        checks = build_checks(matched[name], recipe, base_recipe, base_sha, code, data_dir / "splits", knobs.get(name))
+        checks = build_checks(matched[name], recipe, base_recipe, base_sha, code, data_dir / "splits",
+                              knobs.get(name), leak_cache)
         rows.append({"recipe": name, "build": matched[name], "checks": checks})
     text, _ok = render(rows)
     return text, rows
 
 
 def render(rows):
-    """(markdown, 是否全部通过)：一行一个 build，10 个布尔列全「是」才算过；不通过的项在表后逐条写原因。"""
+    """(markdown, 是否全部通过)：一行一个 build，11 个布尔列全「是」才算过；不通过的项在表后逐条写原因。"""
     head = ["build", "配方", "配方哈希（前 12 位）", "交集检查的来源数", "排除表"] + [h for _k, h in COLUMNS]
+    ex_sha = sha_file(leakcheck.EXCLUDE)[:12]  # 这次重算实际用的那份 exclude.json
     lines = [f"# 训练前清单第 3 条的证据 · 基准 build {rows[0]['build'].get('build_id')}", "",
              "本文件由 `build_evidence.py` 从 `builds/<id>/build.json` · 配方文件 · 切分表算出（重算即得，不手抄）："
              "`python3 build_evidence.py` 打标准输出，`--check <本文件>` 逐字节核对。"
-             "「排除表」一列是 build 记录里 `leak_check.against` 的名字；build 记录不存它的哈希，这里也不编一个。",
+             "「排除表」一列先是 build 记录里 `leak_check.against` 的名字，后面是本机 `leakcheck.EXCLUDE` 这份 "
+             f"exclude.json 的 sha256 前 12 位（`{ex_sha}`）；build 记录不存哈希，所以它只说明这次重算用的是哪份表。"
+             "「交集重算一致」一列按记录里列出的来源重跑一遍 `leakcheck.check`，再与记录的那份逐键比。"
+             "「目标场景（build 记录）」一列读的是 build 记录里的 `noise_scenes`：分片索引在云上，本机只能核记录。",
              "", "| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     for r in rows:
         b = r["build"]
+        against = (b.get("leak_check") or {}).get("against") or "（没记）"
         cells = [b.get("build_id", "?"), r["recipe"], (b.get("recipe_sha256") or "")[:12],
-                 str(len(b.get("leak_checked_sources") or [])), (b.get("leak_check") or {}).get("against") or "（没记）"]
+                 str(len(b.get("leak_checked_sources") or [])), f"{against}（本机这份 sha256 {ex_sha}）"]
         cells += ["是" if r["checks"][k][0] else "**否**" for k, _h in COLUMNS]
         lines.append("| " + " | ".join(cells) + " |")
     ok = all(all(v[0] for v in r["checks"].values()) for r in rows)
