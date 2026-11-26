@@ -194,9 +194,48 @@ impl Expected {
         out
     }
 
-    /// 覆盖：清单要的**每个片段**都要在两边的逐段文件里、而且真的配上了（不是只在一边）；
-    /// 每个预期场景要有逐场景的 compare。返回问题清单（空 = 齐）。
-    pub fn coverage(&self, a: &CardIn, b: &CardIn, rep: &Cmp) -> Vec<String> {
+    /// 一份 compare 的覆盖：清单要的每个场景都要有逐场景的数、每个场景配上的段数不能少于清单要的段数、
+    /// 预期片段不能在「只在一边」的名单里（那些段没配上）。
+    pub fn coverage_of(&self, cmp: &Cmp) -> Vec<String> {
+        let mut hole = Vec::new();
+        let scenes = self.scenes();
+        for scene in &scenes {
+            let want = self.clips_in(scene);
+            let Some(s) = cmp.scopes.get(scene) else {
+                hole.push(format!("compare 里没有场景 {scene}（清单有 {want} 段）"));
+                continue;
+            };
+            if s.pairs < want {
+                hole.push(format!(
+                    "{} · {scene} 只配上 {} 段，清单要 {want} 段",
+                    cmp.name(),
+                    s.pairs
+                ));
+            }
+            for id in s.only_a.iter().chain(&s.only_b) {
+                if self.keys.iter().any(|k| k.id == *id) {
+                    hole.push(format!(
+                        "{} · {id} 在 compare 里只有一边有值，没配上",
+                        cmp.name()
+                    ));
+                }
+            }
+        }
+        hole
+    }
+
+    /// 所有 compare（每个种子的 `--vs` 与每一对 `--noise`）的覆盖问题——不止报告种子那份
+    /// （codex 第 7 轮 P1）。任何一份缺预期片段，要涨的线就判不了。
+    pub fn coverage_compares(&self, vs: &[Cmp], noise: &[Cmp]) -> Vec<String> {
+        let mut hole = Vec::new();
+        for c in vs.iter().chain(noise) {
+            hole.extend(self.coverage_of(c));
+        }
+        cap(hole)
+    }
+
+    /// 报告种子那两份逐段文件里，清单要的每个片段都要在（连场景 × 档 × 设备一起核）。
+    pub fn coverage_cards(&self, a: &CardIn, b: &CardIn) -> Vec<String> {
         let mut hole = Vec::new();
         for k in &self.keys {
             let kk = format!("{} · {} · {}", k.scene, k.tier, k.device);
@@ -208,18 +247,19 @@ impl Expected {
                     hole.push(format!("{side}的逐段文件里没有 {}（{kk}）", k.id));
                 }
             }
-            if let Some(s) = rep.scopes.get(&k.scene)
-                && (s.only_a.contains(&k.id) || s.only_b.contains(&k.id))
-            {
-                hole.push(format!("{} 在 compare 里只有一边有值，没配上", k.id));
-            }
         }
-        for scene in self.scenes() {
-            if !rep.scopes.contains_key(&scene) {
-                hole.push(format!("compare 里没有场景 {scene}（清单有）"));
-            }
-        }
+        hole
+    }
+
+    /// 整份判定的覆盖问题：所有 compare + 报告种子那两份逐段文件。
+    pub fn coverage(&self, a: &CardIn, b: &CardIn, vs: &[Cmp], noise: &[Cmp]) -> Vec<String> {
+        let mut hole = self.coverage_cards(a, b);
+        hole.extend(self.coverage_compares(vs, noise));
         cap(hole)
+    }
+
+    fn clips_in(&self, scene: &str) -> usize {
+        self.keys.iter().filter(|k| k.scene == scene).count()
     }
 }
 
