@@ -8,7 +8,10 @@
   一份文件里两个系统（`--system gtcrn,external:…` 一次跑出来的）：同一个文件传两次，点名两个系统
   python3 …/parity.py --a <run>/clips.jsonl --b <run>/clips.jsonl --system-a gtcrn --system-b gtcrn-offline
 
-退出码：0 = 全部在容差内；1 = 有超差 · 有只在一边的片段 · 一项都没比成。
+只跳过外部离线路测不了的两项（见 SKIP），其余一律逐段逐项比：
+只有一边有值（另一边 null 或那一项没写）= 不可比 → FAIL；两边都是 null = 「未验证」，不算 PASS 证据。
+
+退出码：0 = 全部在容差内（总结里写明几项未验证）；1 = 有超差 · 有一边没值 · 有只在一边的片段 · 一项都没比成。
 """
 import argparse
 import json
@@ -48,44 +51,80 @@ def load(path, system=None):
     return out, system
 
 
+# 这份成绩单里根本没有这一项（键不在）。和「键在、值是 null（不知道 / 没测）」分开：
+# 前者 + 另一边有值 = 不可比（FAIL）；两边键都不在 = 这一项对这段不适用（不适用，不算证据）
+MISSING = object()
+
+
+def _side(v):
+    return "没有值" if v is None or v is MISSING else repr(v)
+
+
 def compare(a, b, tol=TOL):
-    """a / b 都是 `load` 的字典。返回要打印的一切（不打印、不抛，方便测试）。"""
+    """a / b 都是 `load` 的字典。返回要打印的一切（不打印、不抛，方便测试）。
+
+    逐段逐项三种情况（codex 评审第 1 轮 P1 #5）：
+    - 两边都有数 → 比差，超 `tol` 算 FAIL
+    - 只有一边有数（另一边 null，或那一边根本没有这一项）→ **FAIL**：不可比，不能当「跳过」
+    - 两边都是 null → 「未验证」：不算 PASS 证据，总结里单独报数
+    两项都不在 → 这一项对这段不适用，什么都不算。
+    """
     only_a, only_b = sorted(set(a) - set(b)), sorted(set(b) - set(a))
     common = sorted(set(a) & set(b))
     items = sorted(({v for c in common for v in a[c]} | {v for c in common for v in b[c]}) - set(SKIP))
     rows, fails = [], []
     for it in items:
-        pairs, max_diff, no_value = 0, 0.0, 0
+        pairs, max_diff, unverified = 0, 0.0, 0
         item_fails = []
         for c in common:
-            va, vb = a[c].get(it), b[c].get(it)
-            if va is None or vb is None:  # 不知道 / 没测：只计数，不算差
-                no_value += 1
+            va, vb = a[c].get(it, MISSING), b[c].get(it, MISSING)
+            if va is MISSING and vb is MISSING:
+                continue
+            if va is None and vb is None:
+                unverified += 1
+                continue
+            if va is None or vb is None or va is MISSING or vb is MISSING:
+                item_fails.append({"clip": c, "a": va, "b": vb, "diff": None})
                 continue
             d = abs(float(va) - float(vb))
             pairs += 1
             max_diff = max(max_diff, d)
             if d > tol:
                 item_fails.append({"clip": c, "a": float(va), "b": float(vb), "diff": d})
-        rows.append({"item": it, "pairs": pairs, "max_diff": max_diff, "no_value": no_value,
+        rows.append({"item": it, "pairs": pairs, "unverified": unverified, "max_diff": max_diff,
                      "fails": item_fails})
         fails.extend(dict(f, item=it) for f in item_fails)
     return {"rows": rows, "fails": fails, "only_a": only_a, "only_b": only_b,
-            "compared": sum(r["pairs"] for r in rows)}
+            "compared": sum(r["pairs"] for r in rows),
+            "unverified_items": sum(1 for r in rows if r["unverified"])}
+
+
+def verdict(rep):
+    """总结句：过 / 不过 + 比了多少对 + **几项没验证**（两边都是 null 的项，不算 PASS 证据）。"""
+    tail = f"{rep['unverified_items']} 项未验证"
+    bad = [f"{len(rep['fails'])} 处不可比或超差"] if rep["fails"] else []
+    n_only = len(rep["only_a"]) + len(rep["only_b"])
+    if n_only:
+        bad.append(f"{n_only} 段只在一边")
+    if not rep["compared"]:
+        bad.append("一项都没比成")
+    if bad:
+        return "FAIL（" + " · ".join(bad) + f"；{tail}）"
+    return f"PASS（{rep['compared']} 对在容差内；{tail}）"
 
 
 def render(rep, tol=TOL, names=("a", "b"), limit=20):
-    """短表：项 · 配对段数 · 最大绝对差 · PASS/FAIL；再列跳过的项与超差的地方。"""
-    lines = [f"逐项（容差 {tol:g}；配对 = 两边都有数的段，无值 = 有一边是 null；最多列出 {limit} 条超差）",
-             f"  {'项':<16}{'配对':>6}{'无值':>6}{'最大绝对差':>14}  判定"]
+    """短表：项 · 配对段数 · 未验证段数 · 最大绝对差 · PASS/FAIL；再列跳过的项与出问题的地方。"""
+    lines = [f"逐项（容差 {tol:g}；配对 = 两边都有数的段，未验证 = 两边都是 null；最多列出 {limit} 条）",
+             f"  {'项':<16}{'配对':>6}{'未验证':>8}{'最大绝对差':>14}  判定"]
     for r in rep["rows"]:
-        if r["pairs"] == 0:
-            verdict = f"跳过：{r['no_value']} 段两边都没有值" if r["no_value"] else "跳过：两边没有共同值"
-        elif r["fails"]:
-            verdict = f"FAIL（{len(r['fails'])} 段超差）"
+        if r["fails"]:
+            verdict_ = f"FAIL（{len(r['fails'])} 段）"
+        elif r["pairs"] == 0:
+            verdict_ = "未验证（两边都没有值）" if r["unverified"] else "不适用（两边都没有这一项）"
         else:
-            verdict = "PASS"
-        lines.append(f"  {r['item']:<16}{r['pairs']:>6}{r['no_value']:>6}{r['max_diff']:>14.3e}  {verdict}")
+            verdict_ = "PASS" + (f"（另有 {r['unverified']} 段未验证）" if r["unverified"] else "")
+        lines.append(f"  {r['item']:<16}{r['pairs']:>6}{r['unverified']:>8}{r['max_diff']:>14.3e}  {verdict_}")
     lines.append(f"共比 {len(rep['rows'])} 项 · {rep['compared']} 对；跳过 {len(SKIP)} 项（外部离线路测不了）：")
     for k, why in SKIP.items():
         lines.append(f"  {k}：{why}")
@@ -94,11 +133,13 @@ def render(rep, tol=TOL, names=("a", "b"), limit=20):
             lines.append(f"只在 {tag}（{other}）里出现的片段（{len(rep[key])} 段，配对不成立）：")
             lines.extend(f"  {c}" for c in rep[key][:limit])
     if rep["fails"]:
-        lines.append(f"超差的 {len(rep['fails'])} 处（{names[0]} → {names[1]}）：")
+        lines.append(f"出问题的 {len(rep['fails'])} 处（{names[0]} → {names[1]}）：")
         for f in rep["fails"][:limit]:
-            lines.append(f"  {f['clip']} {f['item']}：{f['a']!r} → {f['b']!r}（差 {f['diff']:.3e}）")
-    lines.append("判定：" + ("PASS（全部在容差内）" if not rep["fails"] and not rep["only_a"] and not rep["only_b"]
-                            and rep["compared"] else "FAIL"))
+            if f["diff"] is None:
+                lines.append(f"  {f['clip']} {f['item']}：{_side(f['a'])} → {_side(f['b'])}（一边没有值，不可比）")
+            else:
+                lines.append(f"  {f['clip']} {f['item']}：{f['a']!r} → {f['b']!r}（差 {f['diff']:.3e}）")
+    lines.append("判定：" + verdict(rep))
     return "\n".join(lines)
 
 
@@ -114,8 +155,7 @@ def main(argv=None):
     b, sb = load(args.b, args.system_b)
     rep = compare(a, b, args.tol)
     print(render(rep, args.tol, (sa, sb)))
-    bad = rep["fails"] or rep["only_a"] or rep["only_b"] or not rep["compared"]
-    return 1 if bad else 0
+    return 0 if verdict(rep).startswith("PASS") else 1
 
 
 if __name__ == "__main__":

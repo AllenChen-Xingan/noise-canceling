@@ -244,6 +244,33 @@ class Parity(unittest.TestCase):
         self.assertIn("跳过", out)
         self.assertNotIn("V-LAT      999", out)
 
+    def test_one_sided_missing_value_fails(self):
+        # 一边是 null、另一边有数 → 不可比，必须 FAIL（codex 评审第 1 轮 P1 #5：不能当「跳过」）
+        a = self.write("a.jsonl", [row("c0", {"V-NAN": 0.0, "V-ESTOI": 0.06})])
+        b = self.write("b.jsonl", [row("c0", {"V-NAN": 0.0, "V-ESTOI": None}, system="off")])
+        code, out = self.run_parity("--a", a, "--b", b)
+        self.assertNotEqual(code, 0, out)
+        self.assertIn("FAIL", out)
+        self.assertIn("V-ESTOI", out)
+
+    def test_item_missing_in_one_file_fails(self):
+        # 项在一份文件里根本没有（另一份有数）→ 同样 FAIL
+        a = self.write("a.jsonl", [row("c0", {"V-NAN": 0.0, "V-ESTOI": 0.06})])
+        b = self.write("b.jsonl", [row("c0", {"V-NAN": 0.0}, system="off")])
+        code, out = self.run_parity("--a", a, "--b", b)
+        self.assertNotEqual(code, 0, out)
+        self.assertIn("V-ESTOI", out)
+
+    def test_both_null_is_unverified_not_pass_evidence(self):
+        # 两边都是 null：列成「未验证」，不算 PASS 证据，且总结里要说清几项未验证
+        a = self.write("a.jsonl", [row("c0", {"V-NAN": 0.0, "V-EAT-ASR": None})])
+        b = self.write("b.jsonl", [row("c0", {"V-NAN": 0.0, "V-EAT-ASR": None}, system="off")])
+        code, out = self.run_parity("--a", a, "--b", b)
+        self.assertEqual(code, 0, out)
+        self.assertIn("未验证", out)
+        self.assertIn("1 项未验证", out)
+        self.assertRegex(out, r"V-EAT-ASR\s+0\s+1\s+[\d.e+-]+\s+未验证（两边都没有值）")
+
     def test_clip_in_only_one_file_fails(self):
         a = self.write("a.jsonl", [row("c0", {"V-NAN": 0.0}), row("c1", {"V-NAN": 0.0})])
         b = self.write("b.jsonl", [row("c0", {"V-NAN": 0.0}, system="off")])
