@@ -55,6 +55,18 @@ def fake_vad(prob):
     return vad
 
 
+def mixed_vad(frac, high=0.9):
+    """前 frac 比例的帧说成有人声、其余没有（占比可调，好测阈值移动）。"""
+
+    def vad(x16k):
+        n = max(2, len(x16k) // 480)
+        p = np.zeros(n, dtype=np.float64)
+        p[:int(round(frac * n))] = high
+        return p
+
+    return vad
+
+
 def fake_tagger(probs):
     return lambda x32k: dict(probs)
 
@@ -207,12 +219,12 @@ class Rules(unittest.TestCase):
 
     def test_threshold_in_temp_copy_moves_verdict(self):
         x = noise(2.5)
-        vad = fake_vad(0.2)
+        vad = mixed_vad(0.2)
         tagger = fake_tagger(scene_probs())
         base = screen.screen_clip(x, SR, SCENE, RULES, vad=vad, tagger=tagger)
         self.assertEqual(base["verdict"], "drop")
         loose = copy.deepcopy(RULES)
-        loose["speech"]["max_frac"] = 0.9
+        loose["speech"]["max_frac"] = 0.3
         self.assertEqual(screen.screen_clip(x, SR, SCENE, loose, vad=vad, tagger=tagger)["verdict"], "keep")
         # 平稳度那条阈值同样只在 json 里
         stepped = np.concatenate([noise(2.0, amp=0.1), noise(2.0, amp=0.01, seed=5)])
