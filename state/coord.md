@@ -435,3 +435,9 @@
 - 2026-11-26 02:20Z evalcmp 还名额：fix/asr-probe-dedup fmt · clippy -D warnings · tidy · cargo test --workspace（99 组）全过（自报）；下一步 codex。名额空闲，trainer 两个 pi 交完后申请。
 - 2026-11-26 02:30Z cloudrun 实测：pi 在自己分支 w/cloudrun-venvcache 提交（ec06f94e..0f91ec80，署名 Agent: pi），快进合入，hook 没碰；交接页 42078e34。→ 10-3 建议改为「pi 一律用自己的 worktree + 分支，不改 hook」；本机盘剩 48 GB，worktree 约 150 MB。
 - 2026-11-26 人定 D109：pi 可以提交、提交要细（回滚点），在自己的 worktree + 分支；PR · issue 只归 Claude Code 手下；10-3 关闭，hook 不改。
+- 2026-11-26 02:45Z evalcmp codex 第 1 轮 P0×0 P1×0 P2×2（第 3 次失败不记账 · 并发预取缺多路与失败测试），派 pi evalcmp-votecount（--repo + --base fix/asr-probe-dedup，自己分支 w/evalcmp-votecount，预算 2 美元）。
+- 2026-11-26 00:25Z 名额 → evalcmp（替 pi evalcmp-votecount：qa::asr_vote 测试 + clippy，连用最长 20 min）。
+- 2026-11-26 traindata 验收 pi traindata-cochlscene 前 7 项（195 过 · 1 跳过网络，0.05 美元，自报）；发现老漏洞：噪声池引用的来源不在分片里时 loader 静默跳过 → 打回 pi 第 8 项：改成报错停 + build.json 记实际场景。
+- 2026-11-26 trainer 验收 pi calibnan（test_guards 31 绿，0.0064 美元）；pi 提交范围 devnan 1ba6c800..a1f00093 · calibnan b37a8560..7c793840；结构改动 pi trainer-guards-finite 已起（自己分支 w/trainer-guards-finite，2 美元）；防绕过扫描只收 train · guards · watchdog（大总管同意）。
+- 2026-11-26 名额规则细化：针对性测试合计约 1 分钟以内且不计时，不用名额（不限文件数）；全套测试 · 构建 · 计时才要。
+- 2026-11-26 00:26Z evalcmp 还名额（pi evalcmp-votecount 5 次小测试 + clippy 全过，自报）；名额空闲，trainer 结构改动交完后申请。
