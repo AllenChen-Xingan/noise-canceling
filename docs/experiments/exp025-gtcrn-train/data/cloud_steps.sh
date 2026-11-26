@@ -2,15 +2,23 @@
 # exp025 数据线 · 云上步骤（RunPod H100，网络盘挂在 /workspace；D96 · D102）。只在云上跑，本机不下数据（D88）。
 # 用法：bash cloud_steps.sh <步骤>，步骤按顺序：setup · test · head · fetch · fetch-e3 · inventory · split · shard · register · pack · rebuild
 # split → shard → register 用 CPU 机即可（不用 GPU）；确切命令、预期产物与核对见 README 第六节
+# 分片目录不设默认值：shard · register · pack 必须自己设 VDN_SHARDS=/workspace/shards/<这一批的名字>
 # fetch 之前要大总管放行（2026-11-24 交代：先不跑，等 cloudrun 试开完）。
 set -euo pipefail
 ROOT=${VDN_ROOT:-/workspace}
 HERE=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$HERE/../../../.." && pwd)
 PY="$REPO/.venv/bin/python"
-SHARDS=${VDN_SHARDS:-$ROOT/shards/first-batch}
 BIN=${VDN_BIN:-$ROOT/bin}  # setup_uv.sh 把 uv 装在这里
 export PATH="$BIN:$PATH"
+# 分片目录：只给 shard · register · pack 用；没设就停，不落到任何默认目录（2026-11-26 大总管定）
+need_shards() {
+  SHARDS=${VDN_SHARDS:-}
+  [ -n "$SHARDS" ] || {
+    echo "请显式设 VDN_SHARDS=/workspace/shards/<这一批的名字>（每批一个新名字，不再有默认目录）" >&2
+    exit 2
+  }
+}
 case "${1:-}" in
   setup)  # 装同版本 python 与依赖（uv 没有就按钉死版本与 sha256 装到 $BIN，见 setup_uv.sh）
     VDN_BIN="$BIN" bash "$HERE/setup_uv.sh"
@@ -29,10 +37,13 @@ case "${1:-}" in
   split)  # 切分表写进仓里 splits/；文件数对不上上游数目（split_rules.json 的 expect）就停、不写表
     "$PY" "$HERE/split.py" --root "$ROOT" ;;
   shard)
+    need_shards
     "$PY" "$HERE/shard.py" --root "$ROOT" --out "$SHARDS" ;;
   register)  # 交集检查 + 登记训练 build（builds/<id>/build.json 进仓）
+    need_shards
     "$PY" "$HERE/loader.py" --register --shards "$SHARDS" ;;
   pack)  # 把要进仓的小文件打一个包带回本机（不含音频）；打印包的 sha256
+    need_shards
     OUT="$ROOT/out/traindata-products-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
     mkdir -p "$ROOT/out"
     tar -czf "$OUT" -C "$HERE" inventory.txt splits builds

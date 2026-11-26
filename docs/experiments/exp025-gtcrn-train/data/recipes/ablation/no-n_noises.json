@@ -1,0 +1,196 @@
+{
+ "_说明": "混音配方正本（014 第 2 步）。每个旋钮有 on 开关；数据消融（014 第 4 步）每次只改一个旋钮。默认值都写出处；没有出处的标「暂定」。早期混响长度不在这里：正本是 exp013 rooms.py 的 EARLY_REVERB_MS，mix.py 调 rooms.early_rir",
+ "version": 1,
+ "sr": 16000,
+ "knobs": {
+  "target_scene": {
+   "on": true,
+   "scene": [
+    "rail-air-cabin",
+    "canteen",
+    "meeting-room",
+    "transit-hub"
+   ],
+   "frac": 0.667,
+   "src": "027 第五节：目标场景噪声占每批 2/3；scene 由第 1 步缺口表定（null = 全部噪声池等概率，此时 replay 不生效）。D113（人定 2026-11-26）：加训 4 个目标场景 = 最弱前 4：rail-air-cabin · canteen · meeting-room · transit-hub（顺序照 D113）。meeting-room 的噪声是 BUT 三间办公室 L207 · L212 · Q301 的底噪，是办公室，不是会议室，没有会议突发声（第四批），C236 不用（D114：第 1 秒后有 250 Hz 单音）；canteen = DEMAND 的 PCAFETER + PRESTO 两间餐厅。这一批 build 只用来提前验证数据管线，不正式训练（D110：全部就绪再开训）。限制：rail-air-cabin 只有地铁车厢录音（飞机舱用它代替）"
+  },
+  "replay": {
+   "on": true,
+   "frac": 0.333,
+   "src": "014 第 2 步「1/3 其他场景回放」· 027 第五节；逐样本标 meta.replay（trainer 的 L_kd 只在回放样本上算）"
+  },
+  "snr": {
+   "on": true,
+   "dist": "uniform",
+   "lo_db": -5.0,
+   "hi_db": 15.0,
+   "wind_lo_db": -10.0,
+   "src": "027 第 3.1 节：官方 SEtrain gen_DNS3_datasets.py snr_range=[-5,15]；风噪下限 −10 dB 是 027 的推断。注意官方代码 alpha = 10**(-snr*1.5/20)，实际 SNR 是名义的 1.5 倍（−7.5～22.5 dB，读源码 2026-11-16）；本配方按真实 SNR 取。备选：Braun 2020 p.5 N(5, 10) dB（dist=normal, mean_db, std_db）",
+   "off_means": "固定 5 dB"
+  },
+  "level": {
+   "on": true,
+   "mean_dbfs": -28.0,
+   "std_db": 10.0,
+   "lo_dbfs": -60.0,
+   "hi_dbfs": -10.0,
+   "src": "Braun 2020 p.5 电平 N(−28 dBFS, 10 dB)；014 第 2 步定为标准差 10 dB；上下限 −60 / −10 dBFS 暂定（防极端值）",
+   "off_means": "人声电平固定 −28 dBFS"
+  },
+  "eq": {
+   "on": true,
+   "prob": 1.0,
+   "r_max": 0.375,
+   "src": "Braun 2020 p.5 二阶滤波系数 r∈[−3/8, 3/8]；人声与噪声各用一个随机滤波器（DFN1 p.3 · Wang 2023 p.3）；人声的滤波同时作用在目标上（模拟麦克风频响，不要求模型去掉）。prob=1.0 照原文每段都加"
+  },
+  "clip": {
+   "on": true,
+   "prob": 0.75,
+   "thr_lo": 0.85,
+   "thr_hi": 1.0,
+   "src": "Lemercier 2023 p.3 表 1：概率 0.75，阈值 U(0.85, 1.0) × 最大幅度；只加在输入上（DFN2 p.3），目标不削"
+  },
+  "n_noises": {
+   "on": false,
+   "p": {
+    "2": 0.5,
+    "3": 0.5
+   },
+   "rel_lo_db": -6.0,
+   "src": "014 第 2 步「每段 2–3 段噪声」；2 与 3 各一半是暂定。备选：Li 2025 p.3「80% 叠 1 段、20% 叠 2 段」；DFN1 p.3 最多 5 段。第 2 段起相对第 1 段 U(rel_lo_db, 0) dB（暂定）",
+   "off_means": "每段 1 段噪声"
+  },
+  "near_silent": {
+   "on": false,
+   "frac": 0.15,
+   "src": "014 第 2 步：只在配防误压损失时开。Taherian 2023 p.4 表 1：全零目标占 15% 时删字率 2.55% → 6.17%。开了以后这些段人声为 0、meta.near_silent=True"
+  },
+  "high_snr": {
+   "on": false,
+   "frac": 0.1,
+   "lo_db": 20.0,
+   "hi_db": 40.0,
+   "clean_frac": 0.05,
+   "src": "D107（2026-11-25 人同意）：教模型「没有噪声时原样放过」；成绩单 V-PUMPV 只输入干净人声时量，而 snr 旋钮最高 15 dB。clean_frac 的段不加噪声（meta.clean_input），frac 的段 SNR ~ U(lo_db, hi_db)（meta.high_snr）。数值全是暂定：20 dB 接 snr 上限之上；40 dB 时噪声比人声低 40 dB，按推断已近似听不到；10 % + 5 % 让其余 85 % 仍按原分布。与 near_silent（人声为 0）相反，同一段都抽中时按 near_silent 算",
+   "off_means": "不改 SNR 分布，每段都加噪声"
+  },
+  "reverb": {
+   "on": true,
+   "prob": 1.0,
+   "src": "官方 SEtrain gen_DNS3_datasets.py：每段都卷 RIR（rir_list 与 clean_list 等长，读源码 2026-11-16）；目标只留直达 + 前 EARLY_REVERB_MS（rooms.early_rir）",
+   "off_means": "不加混响，目标 = 干声"
+  }
+ },
+ "speech": {
+  "train": [
+   "librispeech-train-clean-100"
+  ],
+  "_注": "开发份用同一来源的 dev 份；终测原料池与 d63 不经 loader"
+ },
+ "rir": [
+  "openslr28-rir"
+ ],
+ "noise_pools": {
+  "_说明": "键 = exp013 scenes.json 的场景名（正本，测试核对）；值 = 来源 + 路径正则。只列第一批能覆盖的场景（027 第五节表）。第二批（D106）加 CochlScene 3 类：地铁站→transit-hub · 地铁车厢→rail-air-cabin（只像火车车厢）· 拥挤室内→cowork 与 open-office。同一批录音的几个场景（如 cowork 与 open-office 都用拥挤室内）抽样时只算一次权重，报出的场景名取字母序第一个（loader.scene_groups，2026-11-25 修）。rail-air-cabin 的飞机部分没有训练噪声：人不给 Freesound 密钥，飞机舱暂由地铁车厢录音（cochlscene Subway）代替（D111 补充，2026-11-25）。第三批（D111 · D113）：BUT 混响库底噪，Room112 → hotel-room（开发份与训练份是同一间房）。第四批：三间办公室 L207 · L212 · Q301 的底噪 → meeting-room（是办公室，不是会议室；只取 01 · 11 · 21 号麦克风）；C236 不用（D114：第 1 秒后有 250 Hz 单音）。BUT 这两池的来源都是 `but-reverbdb-silence-b4`（4 间房的新来源）：`but-reverbdb-silence` 只含 Room112，旧切分表 build 10aa3a9f 还在用，不原地覆盖（大总管 87 2026-11-26）。canteen 加 DEMAND PRESTO（只取前 60%，与 exp013 食堂评测的 180 秒以后不重叠，见 scene_notes.json）",
+  "street-outdoor": [
+   {
+    "source": "qut-noise",
+    "regex": "(?i)street"
+   },
+   {
+    "source": "tum-wind",
+    "regex": ".",
+    "wind": true
+   },
+   {
+    "source": "demand-train",
+    "regex": "STRAFFIC"
+   }
+  ],
+  "cafe": [
+   {
+    "source": "qut-noise",
+    "regex": "(?i)cafe"
+   },
+   {
+    "source": "demand-train",
+    "regex": "SCAFE|PRESTO"
+   }
+  ],
+  "canteen": [
+   {
+    "source": "demand-train",
+    "regex": "PCAFETER|PRESTO"
+   }
+  ],
+  "home-family": [
+   {
+    "source": "qut-noise",
+    "regex": "(?i)home"
+   },
+   {
+    "source": "demand-train",
+    "regex": "DKITCHEN"
+   }
+  ],
+  "car-passenger": [
+   {
+    "source": "qut-noise",
+    "regex": "(?i)car"
+   }
+  ],
+  "bus-metro-cabin": [
+   {
+    "source": "demand-train",
+    "regex": "TBUS"
+   }
+  ],
+  "library-classroom": [
+   {
+    "source": "qut-noise",
+    "regex": "(?i)reverb"
+   }
+  ],
+  "transit-hub": [
+   {
+    "source": "cochlscene",
+    "regex": "/SubwayStation/"
+   }
+  ],
+  "rail-air-cabin": [
+   {
+    "source": "cochlscene",
+    "regex": "/Subway/"
+   }
+  ],
+  "cowork": [
+   {
+    "source": "cochlscene",
+    "regex": "/CrowdedIndoor/"
+   }
+  ],
+  "open-office": [
+   {
+    "source": "cochlscene",
+    "regex": "/CrowdedIndoor/"
+   }
+  ],
+  "hotel-room": [
+   {
+    "source": "but-reverbdb-silence-b4",
+    "regex": "/Hotel_SkalskyDvur_Room112/"
+   }
+  ],
+  "meeting-room": [
+   {
+    "source": "but-reverbdb-silence-b4",
+    "regex": "/VUT_FIT_(L207|L212|Q301)/"
+   }
+  ]
+ },
+ "_ablation": {
+  "base_sha256": "e1fe1bbce4256fbd771e84a7f25a99d1a7d2069cd5b5d38161116c0e4eb76ff5",
+  "knob": "n_noises",
+  "on": false
+ }
+}

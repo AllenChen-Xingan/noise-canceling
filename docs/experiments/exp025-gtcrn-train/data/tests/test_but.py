@@ -1,0 +1,541 @@
+"""BUT Speech@FIT Reverb Database（2019 RIR-Only 包）的底噪登记成第三批训练噪声（D111 补充，2026-11-26），第四批加三间办公室。
+
+数字与字符串一律从正本读，不在测试里抄副本：
+- `sources.json` 的 `A7`：手工下载条目（字节数与首次下载记的 md5 / sha256）
+- `download-list-but.md` 第 1 节的表：字节数（sources.json 的第二处表示，交叉校验）
+- `split_rules.json` 的 `but-reverbdb-silence-b4`（第四批的 4 间房）：通配符 · 单位正则 · 层 · meta 排除 · 筛查表 · 期望条数 · 比例。
+  `but-reverbdb-silence` 只剩 Room112，规则与仓里旧表（build 10aa3a9f 在用）对得上，本文件不跑它
+- 上游 read_me（副本 `third_party/BUT_ReverbDB-read_me.txt`）：第 2 个扬声器放背景声
+夹具在临时目录现造（几间房 × 几次布置 × 几个麦克风的 0.5 s wav），不用真数据。
+真规则通配符 / 场景池 / 仓里那份筛查表的核对在 `tests/test_but_batch4.py`（本文件超 600 行前分出去的）。
+"""
+import copy
+import json
+import re
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE / "tests"))
+import fetch  # noqa: E402
+import fixtures_but  # noqa: E402
+import split  # noqa: E402
+
+MD = HERE / "download-list-but.md"
+SRC = "but-reverbdb-silence-b4"
+OLD = "but-reverbdb-silence"
+GRP = "A7"
+META = {"file": "../../spk_meta.txt", "regex": "^\\$EnvSpk2", "why": "read_me：第 2 个扬声器放的是背景声（如收音机）"}
+
+
+def feat_rule(**over):
+    """带真规则里那几条通用字段的最小规则：只看一条特性时用它，不依赖 split_rules.json 已改到哪一步。"""
+    r = {"group": GRP, "unit": "file", "glob": [fixtures_but.ROOT + "/**/silence/*.wav"],
+         "frac": {"train": 0.9, "dev": 0.1, "final": 0.0, "d63": 0.0}}
+    r.update(over)
+    return r
+
+
+def group():
+    return fetch.load_sources()[GRP]
+
+
+def rule():
+    return split.load_rules()["sources"][SRC]
+
+
+def md_bytes():
+    """download-list-but.md 第 1 节表：文件名 → 字节数（去掉千位分隔符）。"""
+    sec = MD.read_text().split("## 1.")[1].split("## 2.")[0]
+    return {n: int(b.replace(",", "")) for n, b in re.findall(r"^\| (\S+\.tgz) \| \S+ \| ([\d,]+) \|", sec, re.M)}
+
+
+class Sources(unittest.TestCase):
+    """A7 是手工下载条目（上游没给校验码，首次下载由 cloudrun 记 md5 / sha256）。"""
+
+    def setUp(self):
+        self.g = group()
+        self.f = self.g["files"][0]
+
+    def test_one_archive_only(self):
+        self.assertEqual(len(self.g["files"]), 1)
+        self.assertEqual(self.f["name"], "BUT_ReverbDB_rel_19_06_RIR-Only.tgz")
+        self.assertEqual(self.f["url"], "http://merlin.fit.vutbr.cz/ReverbDB/BUT_ReverbDB_rel_19_06_RIR-Only.tgz")
+
+    def test_bytes_match_download_list(self):
+        got = md_bytes()
+        self.assertEqual(set(got), {self.f["name"]})
+        self.assertEqual(self.f["bytes"], got[self.f["name"]])
+
+    def test_hashes_are_hex_of_right_length(self):
+        self.assertRegex(self.f["md5"], r"^[0-9a-f]{32}$")
+        self.assertRegex(self.f["sha256"], r"^[0-9a-f]{64}$")
+
+    def test_role_license_attribution(self):
+        self.assertEqual(self.g["role"], "train")
+        self.assertTrue(self.g["train_ok"])
+        self.assertEqual(self.g["license"], "Apache-2.0")
+        self.assertIn("D111", self.g["license_src"])
+        self.assertIn("third_party/BUT_ReverbDB-read_me.txt", self.g["license_src"])
+        self.assertIn("Copyright 2018 Brno University of Technology", self.g["attribution"])
+        self.assertIn("IEEE JSTSP", self.g["attribution"])
+
+    def test_manual_says_bytes_only_and_what_not_to_unpack(self):
+        m = self.g["manual"]
+        self.assertIn("md5", m)
+        self.assertIn("sha256", m)
+        self.assertIn("D57", m)  # 重放 LibriSpeech 的包不下
+        self.assertIn("download-list-but.md", m)
+
+
+class Meta(unittest.TestCase):
+    """`exclude_if_meta`：上游 read_me 说第 2 个扬声器放背景声，那种布置的底噪不许当训练噪声。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.files = fixtures_but.make_tree(self.root)
+        self.r = feat_rule(exclude_if_meta=META)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_src(self):
+        d = {}
+        rows = split.split_source(self.root, SRC, self.r, split.load_rules()["seed"], split.load_rules()["splits"],
+                                  workers=2, excluded=d)
+        return rows, d
+
+    def test_radio_setup_excluded_and_counted(self):
+        rows, d = self.run_src()
+        radio = set(fixtures_but.radio_files())
+        self.assertTrue(radio, "夹具里要有一次放收音机的布置")
+        self.assertEqual({r["path"] for r in rows}, set(self.files) - radio)
+        self.assertEqual(d["excluded_meta"], len(radio))
+
+    def test_clean_setups_kept(self):
+        """`$EnvSpk1` 不算命中：只有第 2 个及以后的扬声器才是背景声源。"""
+        rows, _ = self.run_src()
+        keep = {r["path"] for r in rows}
+        for p in self.files:
+            if p not in set(fixtures_but.radio_files()):
+                self.assertIn(p, keep, p)
+
+    def test_missing_meta_stops(self):
+        """没有 spk_meta.txt 就不能判：静默留着会把收音机当噪声（绝不悄悄放过）。"""
+        rel = fixtures_but.radio_files()[0]
+        fixtures_but.meta_path(self.root, rel).unlink()
+        with self.assertRaises(SystemExit) as cm:
+            self.run_src()
+        self.assertIn("spk_meta.txt", str(cm.exception))
+
+    def test_write_records_excluded_meta(self):
+        """摘要（进仓的那份）里要看得见排除了多少个文件。"""
+        rows, d = self.run_src()
+        out = self.root / "splits"
+        s = split.write(SRC, self.r, split.load_rules()["seed"], rows, out, d)
+        self.assertEqual(s["excluded_meta"], len(fixtures_but.radio_files()))
+        self.assertEqual(json.loads((out / f"{SRC}.json").read_text())["excluded_meta"], s["excluded_meta"])
+
+    def test_no_field_no_change(self):
+        """没有这个字段的规则行为不变（老来源不受影响）。"""
+        plain, d = feat_rule(), {}
+        got = split.split_source(self.root, SRC, plain, split.load_rules()["seed"], split.load_rules()["splits"],
+                                 workers=2, excluded=d)
+        self.assertEqual(len(got), len(self.files))
+        self.assertEqual(d.get("excluded_meta", 0), 0)
+
+class Screen(unittest.TestCase):
+    """`screen_file`：screen.py 的 jsonl 里 verdict=drop 的不要；清单里每个文件都得有结论。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.files = fixtures_but.make_tree(self.root)
+        self.r = feat_rule(exclude_if_meta=META, screen_file=str(self.root / "screen.jsonl"))
+        self.kept = [p for p in self.files if p not in set(fixtures_but.radio_files())]
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_src(self):
+        d = {}
+        rows = split.split_source(self.root, SRC, self.r, split.load_rules()["seed"], split.load_rules()["splits"],
+                                  workers=2, excluded=d)
+        return rows, d
+
+    def test_drop_excluded_and_counted(self):
+        dropped = self.kept[:2]
+        fixtures_but.write_screen(self.root / "screen.jsonl", self.kept, drop=dropped)
+        rows, d = self.run_src()
+        self.assertEqual({r["path"] for r in rows}, set(self.kept) - set(dropped))
+        self.assertEqual(d["excluded_screen"], len(dropped))
+
+    def test_radio_files_need_no_verdict(self):
+        """顺序是先 meta 后筛查：被 meta 排掉的文件不进筛查表，也不报「少了一条」。"""
+        fixtures_but.write_screen(self.root / "screen.jsonl", self.kept)  # 不含收音机那一次布置
+        rows, d = self.run_src()
+        self.assertEqual(len(rows), len(self.kept))
+        self.assertEqual(d["excluded_meta"], len(fixtures_but.radio_files()))
+        self.assertEqual(d["excluded_screen"], 0)
+
+    def test_file_missing_from_screen_stops(self):
+        fixtures_but.write_screen(self.root / "screen.jsonl", self.kept[1:])
+        with self.assertRaises(SystemExit) as cm:
+            self.run_src()
+        self.assertIn(self.kept[0], str(cm.exception))
+
+    def test_missing_screen_file_stops(self):
+        self.r["screen_file"] = str(self.root / "screen" / "nope.jsonl")
+        with self.assertRaises(SystemExit) as cm:
+            self.run_src()
+        self.assertIn("screen.py", str(cm.exception))
+
+    def test_bad_verdict_stops(self):
+        p = fixtures_but.write_screen(self.root / "screen.jsonl", self.kept)
+        p.write_text(p.read_text().replace('"keep"', '"maybe"', 1))
+        with self.assertRaises(SystemExit):
+            self.run_src()
+
+class Strata(unittest.TestCase):
+    """`stratum_unit_regex` + `min_dev_per_stratum`：按房间分层切，每层开发份至少一个单位。"""
+
+    UNIT_REGEX = [{"match": "^train-raw/but-reverbdb/([^/]+)/MicID\\d+/([^/]+)/", "unit": "\\1/\\2",
+                   "why": "房间 + 扬声器布置：同一次布置的 31 个麦克风同时录的是同一段底噪，必须同进一份"}]
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.files = fixtures_but.make_tree(self.root)
+        self.r = feat_rule(unit_regex=self.UNIT_REGEX, unit_regex_required=True, exclude_if_meta=META,
+                           stratum_unit_regex="^([^/]+)/", min_dev_per_stratum=1)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_src(self, rule=None):
+        return split.split_source(self.root, SRC, rule or self.r, split.load_rules()["seed"],
+                                  split.load_rules()["splits"], workers=2)
+
+    def units(self):
+        radio = set(fixtures_but.radio_files())
+        return sorted({"/".join(p.split("/")[2:3] + p.split("/")[4:5]) for p in self.files if p not in radio})
+
+    def test_unit_and_stratum_from_path(self):
+        rows = self.run_src()
+        units = {r["unit"] for r in rows}
+        self.assertEqual(units, set(self.units()))
+        st = split.unit_strata(units, self.r)
+        self.assertEqual(set(st.values()), {fixtures_but.C236, fixtures_but.ROOM112})
+        self.assertEqual(st[f"{fixtures_but.C236}/SpkID01_20190503_S"], fixtures_but.C236)
+
+    def test_each_room_stratum_has_a_dev_unit(self):
+        rows = self.run_src()
+        dev = {r["unit"].split("/")[0] for r in rows if r["split"] == "dev"}
+        self.assertEqual(dev, {fixtures_but.C236, fixtures_but.ROOM112})
+
+    def test_without_min_dev_the_room_has_no_dev(self):
+        """不是空检查：每个房间只有 2 个单位时，9:1 最大余数法会把开发份都挤掉。"""
+        r = copy.deepcopy(self.r)
+        r.pop("min_dev_per_stratum")
+        rows = self.run_src(r)
+        self.assertEqual({r0["split"] for r0 in rows}, {"train"})
+
+    def test_min_dev_takes_highest_rank_from_train(self):
+        """确定性：从训练份拿 rank_key 最大的补进开发份。"""
+        rows = self.run_src()
+        got = {r["unit"] for r in rows if r["split"] == "dev"}
+        want = set()
+        for room in (fixtures_but.C236, fixtures_but.ROOM112):
+            us = [u for u in self.units() if u.startswith(room + "/")]
+            want.add(max(us, key=lambda u: split.rank_key(split.load_rules()["seed"], SRC, u)))
+        self.assertEqual(got, want)
+
+    def test_no_unit_in_two_splits(self):
+        by = {}
+        for r in self.run_src():
+            by.setdefault(r["unit"], set()).add(r["split"])
+        self.assertTrue(all(len(v) == 1 for v in by.values()), by)
+
+    def test_deterministic(self):
+        a = [(r["path"], r["split"]) for r in self.run_src()]
+        b = [(r["path"], r["split"]) for r in self.run_src()]
+        self.assertEqual(a, b)
+
+    def test_unrecognised_unit_stops(self):
+        r = copy.deepcopy(self.r)
+        r["stratum_unit_regex"] = "^(nomatch)/([^/]+)/"
+        with self.assertRaises(SystemExit):
+            self.run_src(r)
+
+class UnitFrom(unittest.TestCase):
+    """#204：摘要里记下单位模板，读表的人不用再翻规则去猜单位长什么样。"""
+
+    def summ(self, rule, name=SRC):
+        return split.summary(name, rule, 1, [], b"")
+
+    def test_present_for_regex_rules(self):
+        s = self.summ(feat_rule(unit_regex=Strata.UNIT_REGEX))
+        self.assertEqual(s["unit_from"], Strata.UNIT_REGEX[0]["unit"])
+
+    def test_present_for_cochlscene(self):
+        r = split.load_rules()["sources"]["cochlscene"]
+        self.assertEqual(self.summ(r, "cochlscene")["unit_from"], r["unit_regex"][0]["unit"])
+
+    def test_present_for_but(self):
+        r = rule()
+        self.assertEqual(self.summ(r)["unit_from"], r["unit_regex"][0]["unit"])
+
+    def test_absent_for_speaker_rule(self):
+        r = split.load_rules()["sources"]["librispeech-train-clean-100"]
+        self.assertNotIn("unit_from", self.summ(r, "librispeech-train-clean-100"))
+
+    def test_absent_for_time_rule(self):
+        r = split.load_rules()["sources"]["qut-noise"]
+        self.assertNotIn("unit_from", self.summ(r, "qut-noise"))
+
+class Pools(unittest.TestCase):
+    """第三批 + 第四批：BUT 库的底噪分给两个场景——酒店房间 Room112 → hotel-room；三间办公室 L207 · L212 · Q301 → meeting-room。
+    食堂 = DEMAND 的 PCAFETER + PRESTO 两间餐厅。C236 不用（D114：第 1 秒后有 250 Hz 单音）。"""
+
+    def setUp(self):
+        self.recipe = json.loads((HERE / "recipe.json").read_text())
+        self.pools = {k: v for k, v in self.recipe["noise_pools"].items() if not k.startswith("_")}
+
+    def item(self, scene, source=SRC):
+        items = [it for it in self.pools[scene] if it["source"] == source]
+        self.assertEqual(len(items), 1, scene)
+        return items[0]
+
+    def test_hotel_pool_uses_this_source(self):
+        rules = split.load_rules()["sources"]
+        self.assertIn(SRC, rules)
+        self.assertIn(fixtures_but.ROOM112, self.item("hotel-room")["regex"])
+
+    def test_meeting_room_pool_is_the_three_offices(self):
+        """第四批：会议室池只认三间办公室，不认 C236（D114）。"""
+        rx = re.compile(self.item("meeting-room")["regex"])
+        for room in fixtures_but.OFFICES:
+            path = fixtures_but.wav_rel(room, "SpkID01_20171223_S", "01")
+            self.assertTrue(rx.search(path), path)
+        for room in (fixtures_but.C236, fixtures_but.ROOM112):
+            self.assertFalse(rx.search(fixtures_but.wav_rel(room, "SpkID01_20171223_S", "01")), room)
+        self.assertNotIn(fixtures_but.C236, json.dumps(self.recipe["noise_pools"], ensure_ascii=False))
+
+    def test_canteen_pool_is_pcafeter_plus_presto(self):
+        """食堂 = DEMAND 两间餐厅（第四批决定了加 PRESTO）；别的 DEMAND 环境一条也不许进。"""
+        it = self.item("canteen", "demand-train")
+        self.assertEqual(it["source"], "demand-train")
+        rx = re.compile(it["regex"])
+        for env in ("PCAFETER", "PRESTO"):
+            self.assertTrue(rx.search(f"vdn-data/demand/{env}/ch01.wav"), env)
+        for env in ("SCAFE", "STRAFFIC", "TBUS", "DKITCHEN", "OOFFICE", "OHALLWAY"):
+            self.assertFalse(rx.search(f"vdn-data/demand/{env}/ch01.wav"), env)
+
+    def test_regex_picks_only_hotel_room(self):
+        p = {room: fixtures_but.wav_rel(room, "SpkID01_20190503_S", "01") for room in (fixtures_but.C236, fixtures_but.ROOM112)}
+        rx = re.compile(self.item("hotel-room")["regex"])
+        for other, path in p.items():
+            self.assertEqual(bool(rx.search(path)), other == fixtures_but.ROOM112, other)
+
+    def test_note_names_the_batches(self):
+        note = self.recipe["noise_pools"]["_说明"]
+        self.assertIn("D111", note)
+        self.assertIn("D113", note)
+        self.assertIn("BUT", note)
+        self.assertIn("同一间房", note)
+        self.assertIn("第四批", note)
+        self.assertIn("办公室", note)  # 说清 meeting-room 用的是办公室底噪
+        self.assertIn("D114", note)  # 说清 C236 为什么不用
+        self.assertIn("PRESTO", note)
+
+
+class ScreenRules(unittest.TestCase):
+    def test_hotel_room_scene(self):
+        rules = json.loads((HERE / "screen_rules.json").read_text())
+        sc = rules["scenes"]["hotel-room"]
+        self.assertEqual(sc["top_k"], 5)
+        self.assertTrue(sc["src"])
+        self.assertIn("Inside, small room", sc["tags_any"])
+
+class ButRule(unittest.TestCase):
+    """用仓库里的真规则跑夹具树（第四批：多造三间办公室）：通配符 · 单位 · meta 排除 · 筛查 · 分层 一条龙
+    （screen_file 指向夹具那份，expect 按夹具数目）。真规则选四间房：Room112 全部麦克风，三间办公室只取 01 · 11 · 21；
+    夹具里的 C236 文件一条也不该进表。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.files = fixtures_but.make_tree(self.root, offices=True)
+        self.r = copy.deepcopy(rule())
+        self.selected = split.list_files(self.root, self.r)  # 真通配符选中的（meta 排除之前）
+        self.radio = {p for p in self.selected if p in set(fixtures_but.radio_files(offices=True))}
+        self.kept = [p for p in self.selected if p not in self.radio]
+        self.r["expect"]["files"] = len(self.selected)  # 期望条数是 meta 排除之前数的
+        self.r["screen_file"] = str(fixtures_but.write_screen(self.root / "screen.jsonl", self.kept))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_src(self, rule=None):
+        d = {}
+        rows = split.split_source(self.root, SRC, rule or self.r, split.load_rules()["seed"],
+                                  split.load_rules()["splits"], workers=2, excluded=d)
+        return rows, d
+
+    def test_unit_regex_on_real_path(self):
+        rel = fixtures_but.wav_rel(fixtures_but.ROOM112, "SpkID02_20171223_S", "01")
+        self.assertEqual(split.unit_of(rel, rule()), "Hotel_SkalskyDvur_Room112/SpkID02_20171223_S")
+        office = fixtures_but.wav_rel(fixtures_but.L207, "SpkID01_20171223_S", "11")
+        self.assertEqual(split.unit_of(office, rule()), "VUT_FIT_L207/SpkID01_20171223_S")
+        self.assertTrue(rule()["unit_regex_required"])
+
+    def test_glob_takes_the_four_rooms(self):
+        self.assertEqual({p.split("/")[2] for p in self.selected},
+                         {fixtures_but.ROOM112, *fixtures_but.OFFICES})
+        self.assertFalse(any(fixtures_but.C236 in p for p in self.selected))
+
+    def test_office_globs_take_only_mics_01_11_21(self):
+        """真规则的通配符写死 `[012]1`：夹具里写了 02 号麦克风，真规则一条也不选它。"""
+        office = [p for p in self.selected if p.split("/")[2] in fixtures_but.OFFICES]
+        self.assertEqual({p.split("/")[5] for p in office}, set(fixtures_but.OFFICE_PICKED))
+        written = [p for p in self.files if p.split("/")[2] in fixtures_but.OFFICES]
+        self.assertIn("02", {p.split("/")[5] for p in written}, "夹具里要有 02 号，否则这条不是空检查")
+
+    def test_only_rule_files_selected(self):
+        rows, d = self.run_src()
+        self.assertEqual({r["path"] for r in rows}, set(self.kept))
+        self.assertEqual(d["excluded_meta"], len(self.radio))
+
+    def test_units_are_room_and_setup(self):
+        rows, _ = self.run_src()
+        want = {"/".join(p.split("/")[2:3] + p.split("/")[4:5]) for p in self.kept}
+        self.assertEqual({r["unit"] for r in rows}, want)
+
+    def test_each_room_has_a_dev_unit(self):
+        """四间房 = 四个层，每层至少一个开发份单位（min_dev_per_stratum=1）。"""
+        rows, _ = self.run_src()
+        dev = {r["unit"].split("/")[0] for r in rows if r["split"] == "dev"}
+        self.assertEqual(dev, {fixtures_but.ROOM112, *fixtures_but.OFFICES})
+
+    def test_screen_drop_excluded(self):
+        self.r["screen_file"] = str(fixtures_but.write_screen(self.root / "screen2.jsonl", self.kept, drop=self.kept[:1]))
+        rows, d = self.run_src()
+        self.assertNotIn(self.kept[0], {r["path"] for r in rows})
+        self.assertEqual(d["excluded_screen"], 1)
+
+    def test_missing_meta_stops(self):
+        fixtures_but.meta_path(self.root, self.kept[0]).unlink()
+        with self.assertRaises(SystemExit):
+            self.run_src()
+
+
+class ListFiles(unittest.TestCase):
+    """`--list-files`：云上给 screen.py 造候选清单用（只过清单与 meta 排除，不要求筛查表已在）。"""
+
+    @staticmethod
+    def expected_pool(files):
+        """真规则该选哪些（不看规则文件，从路径自己算）：Room112 全部麦克风；三间办公室只 01 · 11 · 21；C236 不要。"""
+        out = []
+        for p in files:
+            room, mic = p.split("/")[2], p.split("/")[5]
+            if room == fixtures_but.ROOM112 or (room in fixtures_but.OFFICES and mic in fixtures_but.OFFICE_PICKED):
+                out.append(p)
+        return out
+
+    def list_files(self, root):
+        return subprocess.run([sys.executable, str(HERE / "split.py"), "--root", str(root),
+                               "--list-files", "--only", SRC], capture_output=True, text=True)
+
+    def test_excludes_radio_setup_and_needs_no_screen(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            files = fixtures_but.make_tree(root, offices=True)
+            radio = set(fixtures_but.radio_files(offices=True))
+            r = self.list_files(root)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(r.stdout.split(), sorted(p for p in self.expected_pool(files) if p not in radio))
+            self.assertFalse((root / "splits").exists())  # 列表模式不写切分表
+
+    def test_other_sources_not_listed(self):
+        """`--only` 只列这一个来源（其余来源的通配符在夹具里可能匹配不到，不该因此报错）。"""
+        with tempfile.TemporaryDirectory() as d:
+            fixtures_but.make_tree(Path(d), offices=True)
+            r = self.list_files(Path(d))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertTrue(all(p.startswith("train-raw/but-reverbdb/") for p in r.stdout.split()))
+
+
+class RealSpkMeta(unittest.TestCase):
+    """夹具用的 spk_meta.txt 是上游真文件（`tests/fixtures/but_spk_meta/`），不是照 read_me 编的假文件。
+
+    正本：上游真文件两个（L207 那次布置第 2 个扬声器是收音机 Tecsun；C236 只有 1 个扬声器）。
+    判据正本仍是 `split_rules.json` 的 `exclude_if_meta.regex`，这里只用真文件验证它。
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.c236 = fixtures_but.spk_meta_src(False)
+        self.l207 = fixtures_but.spk_meta_src(True)
+        self.l207_rel = (f"{fixtures_but.ROOT}/VUT_FIT_L207/MicID01/SpkID02_20171227_S/01"
+                         "/silence/silence_16kHz_60sec.v00.wav")
+        self.c236_rel = fixtures_but.wav_rel(fixtures_but.C236, "SpkID01_20190503_S", "01")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_regex_reads_real_files(self):
+        """真文件一个命中、一个不命中：命中 L207（有 `$EnvSpk2…`），不命中 C236。"""
+        spec = rule()["exclude_if_meta"]
+        rx = re.compile(spec["regex"], re.M)
+        self.assertTrue(rx.search(self.l207.read_text(encoding="utf-8")), self.l207.name)
+        self.assertFalse(rx.search(self.c236.read_text(encoding="utf-8")), self.c236.name)
+
+    def test_real_file_non_ascii_kept(self):
+        """C236 的真文件里有非 ASCII 字符（如 «¼»）：按 utf-8 读得回来，换成 latin-1 之类的重编码会坏掉。"""
+        txt = self.c236.read_text(encoding="utf-8")
+        self.assertTrue(any(ord(c) > 127 for c in txt), "C236 的真文件里应有非 ASCII 字符")
+        self.assertIn("¼", txt)
+
+    def test_real_files_are_tab_separated_dollar_lines(self):
+        """真格式：每行以 `$` 开头，键与值之间是 TAB（注：C236 文件中间有一个空行）。"""
+        for p in (self.c236, self.l207):
+            for line in p.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    self.assertTrue(line.startswith("$"), f"{p.name}: {line!r}")
+                    self.assertEqual(line.count("\t"), 1, f"{p.name}: {line!r}")
+
+    def meta_excluded(self, rel):
+        """把真文件当成那次布置的 spk_meta.txt，只判这一段：返回 (留下, 排除)。"""
+        src = self.l207 if rel == self.l207_rel else self.c236
+        p = fixtures_but.meta_path(self.root, rel)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(src.read_bytes())
+        return split.meta_excluded(self.root, [rel], feat_rule(exclude_if_meta=rule()["exclude_if_meta"]))
+
+    def test_l207_setup_excluded_c236_kept(self):
+        """真文件跑 `split.meta_excluded`：L207 那次布置的 wav 被排除，C236 的留着。"""
+        keep, drop = self.meta_excluded(self.l207_rel)
+        self.assertEqual((keep, drop), ([], [self.l207_rel]))
+        keep2, drop2 = self.meta_excluded(self.c236_rel)
+        self.assertEqual((keep2, drop2), ([self.c236_rel], []))
+
+    def test_fixture_writes_real_bytes(self):
+        """夹具写出去的就是这两个真文件（逐字节相同，不是重编码的副本）。"""
+        files = fixtures_but.make_tree(self.root)
+        self.assertTrue(files)
+        radio = fixtures_but.meta_path(self.root, fixtures_but.radio_files()[0])
+        clean = fixtures_but.meta_path(self.root, fixtures_but.wav_rel(fixtures_but.C236, "SpkID01_20190503_S", "01"))
+        self.assertEqual(radio.read_bytes(), self.l207.read_bytes())
+        self.assertEqual(clean.read_bytes(), self.c236.read_bytes())
+        self.assertEqual(fixtures_but.spk_meta(True).encode("utf-8"), self.l207.read_bytes())
+        self.assertEqual(fixtures_but.spk_meta(False).encode("utf-8"), self.c236.read_bytes())
+
+
+if __name__ == "__main__":
+    unittest.main()

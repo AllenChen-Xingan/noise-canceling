@@ -1,0 +1,49 @@
+$EnvID	9
+$EnvName	VUT_FIT_C236
+$EnvTemp	23.0
+$EnvDescription	middle size meeting room
+$EnvDate	03/05/19
+$EnvDepth	6.963
+$EnvWidth	4.115
+$EnvHeight	3.564
+$Env2Depth	Not Defined
+$Env2Width	Not Defined
+$Env2Height	Not Defined
+$EnvVolume	102.11838318000001
+$EnvType	Meeting room
+$EnvSubType	Middle
+$EnvBCKNoiseLevel	38.0
+$EnvMatWall	Bricks, ¼ glass
+$EnvMatFloor	Tiles
+$EnvMatCeiling	Bricks
+$EnvFurniture	Not Defined
+$EnvRPDepth	5.78
+$EnvRPWidth	1.88
+$EnvRPHeight	1.32
+$EnvRPAzimuth	180.0
+$EnvRPElevation	0.0
+
+$EnvSpkSetupID	1
+$EnvSpkSetupDescription	Not Defined
+$EnvSpkSetupDate	03/05/19
+$EnvSpk1RelDepth	0.0
+$EnvSpk1RelWidth	0.0
+$EnvSpk1RelHeight	0.0
+$EnvSpk1RelAzimuth	0.0
+$EnvSpk1RelElevation	0.0
+$EnvSpk1RelDistance	0.0
+$EnvSpk1DirAzimuth	180.0
+$EnvSpk1DirElevation	0.0
+$EnvSpk1RelDirAzimuth	0.0
+$EnvSpk1RelDirElevation	0.0
+$EnvSpk1Type	Adam Audio
+$EnvSpk1Description	speech source
+$EnvSpk1SndGain	6.0
+$EnvSpk1SpkGain	2.8
+$EnvSpk1Depth	5.78
+$EnvSpk1Width	1.88
+$EnvSpk1Height	1.32
+$EnvSpk1Distance	6.219742759953984
+$EnvSpk1Azimuth	-18.017609214690026
+$EnvSpk1Elevation	12.252917155239038
+

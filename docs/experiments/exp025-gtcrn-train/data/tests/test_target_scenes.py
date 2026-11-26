@@ -89,6 +89,36 @@ class PickScene(unittest.TestCase):
             loader.pick_scene(np.random.default_rng(0), ts(["cafe", "rail-air-cabin"]), RP, SCENES)
 
 
+class RealRecipe(unittest.TestCase):
+    """D113（人定 2026-11-26）：加训 4 个目标场景；第四批起 meeting-room 用 BUT 三间办公室的底噪。"""
+
+    WANT = ["rail-air-cabin", "canteen", "meeting-room", "transit-hub"]  # 顺序照 D113
+
+    def setUp(self):
+        self.r = json.loads((HERE / "recipe.json").read_text())
+
+    def test_target_scene_is_this_batch(self):
+        self.assertEqual(self.r["knobs"]["target_scene"]["scene"], self.WANT)
+
+    def test_target_scene_src_explains_meeting_room_and_canteen(self):
+        """两个场景的来历写在 src 里：meeting-room 是办公室底噪、不是会议室；canteen 两间餐厅。"""
+        src = self.r["knobs"]["target_scene"]["src"]
+        self.assertIn("D113", src)
+        self.assertIn("meeting-room", src)
+        self.assertIn("办公室", src)
+        self.assertIn("不是会议室", src)  # 说清这个池的局限
+        self.assertIn("D114", src)  # C236 为什么不用
+        self.assertIn("PCAFETER", src)
+        self.assertIn("PRESTO", src)  # 第四批加的第二间餐厅
+        self.assertIn("地铁车厢", src)
+
+    def test_every_target_scene_has_a_pool(self):
+        """通用检查：目标场景名必须都能在 noise_pools 里找到，否则训练时 loader 会停。"""
+        pools = {k for k in self.r["noise_pools"] if not k.startswith("_")}
+        for s in self.r["knobs"]["target_scene"]["scene"]:
+            self.assertIn(s, pools)
+
+
 class RecipeShape(unittest.TestCase):
     def bad(self, scene):
         r = json.loads((HERE / "recipe.json").read_text())

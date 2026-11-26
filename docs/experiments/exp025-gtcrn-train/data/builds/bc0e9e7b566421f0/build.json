@@ -1,0 +1,271 @@
+{
+ "build_id": "bc0e9e7b566421f0",
+ "index_sha256": "311134757bf6ac58d918be118b02417ff5a41c2616c1f041625c9bd2f269f72a",
+ "split_tables": {
+  "librispeech-train-clean-100": "22172bc506ddc27200a14af44608c9687926c270328ef28e65912396778ca43c",
+  "openslr28-rir": "98c32d738ac07a9ca74a5d723263957f3611b6d1f6cd9feb3a22e65619fb1939",
+  "qut-noise": "70c13191a8dab67c692a3b1a703bea509bb4c3750900a902c13003515a0d13d7",
+  "tum-wind": "60b0a72df1495acd4c82b5cfb268f9ba61f123bd220aee96ba24800d868d6e09",
+  "demand-train": "87fd8bb8e7698b2905d2ce493e28166025bbe9ac0cde1f830b4ac78e0fbfa02b",
+  "cochlscene": "e4415e3841d0767f89c340d6d27b4f82f54f6958a5f59f004e291f5b5911f919",
+  "but-reverbdb-silence-b4": "bd992bdaadb214683c81251dc03593c96eb32ef93cd5bc35afbe19180b14d8b6"
+ },
+ "shards": {
+  "librispeech-train-clean-100": {
+   "train": {
+    "speech-librispeech-train-clean-100-train-00000.tar": "3372c50249813776a9204aef256b2df331d8421460df740b6c0380b0af38f8df",
+    "speech-librispeech-train-clean-100-train-00001.tar": "6508863c6511e4c33b15b8aefacf90194b3432ad8e169fae3b2a883a23c8be4e",
+    "speech-librispeech-train-clean-100-train-00002.tar": "02405cd0f45e8b7b5a5c02bdbe43dac6759e7d70f61ef4d71d052c5169b2b1e3",
+    "speech-librispeech-train-clean-100-train-00003.tar": "b6cb537ea66ded97915e504b6521db04fb2eb0c39442b8e7c7acf49e3fbd7c27",
+    "speech-librispeech-train-clean-100-train-00004.tar": "2a0bc7553231bd31c452f2dd7c9ec73c69dbade4e1589d0fc5aa45bc60652568",
+    "speech-librispeech-train-clean-100-train-00005.tar": "5af435ad669303583feed0ccf32ab3d0f0e822148a224f8a5b6307393bd2dbb8",
+    "speech-librispeech-train-clean-100-train-00006.tar": "4147218b2172b8c83244078b695a1553c1750d803c333bf6fc130fce4eebb6c5",
+    "speech-librispeech-train-clean-100-train-00007.tar": "4f46c6a8be365998874ebb8ede8741247cce7e598dcd5ad5947c4f1c9d4b7d78",
+    "speech-librispeech-train-clean-100-train-00008.tar": "529f1b4d06f0b39a9494fec20673c430d9c7d6574694686fe884e27a13e41c97",
+    "speech-librispeech-train-clean-100-train-00009.tar": "2282bd0f5acdb028bbdb37d27dbf9e56f3b85fcc86dcb997b2f566be4d0dcdd0",
+    "speech-librispeech-train-clean-100-train-00010.tar": "9fdea347d93db1e32835cecfaa997b6df1e4d10c71ee7717808139124172d2d5",
+    "speech-librispeech-train-clean-100-train-00011.tar": "b7923245b73da7d395f8b08d9c0e6d7c0714080e5dd871d1cc819229003f56b7",
+    "speech-librispeech-train-clean-100-train-00012.tar": "e461ad9d6e178a0398397f71d23ca5e5d67521f26bab54caaaa49df7c05cc2e8",
+    "speech-librispeech-train-clean-100-train-00013.tar": "9cb7a282ef044d1c191c24408dccc761216e7dd74013e3bf72d1580270732b6b",
+    "speech-librispeech-train-clean-100-train-00014.tar": "0ef59ea200a9f50bf76e139caee7be971875feaf2deb029bde9c4f49799f105c",
+    "speech-librispeech-train-clean-100-train-00015.tar": "bf66fda02dd7f838db85cb4df5c496fb5f53b4df676eb36e0380deaf9281f60c",
+    "speech-librispeech-train-clean-100-train-00016.tar": "114e0a15bda72a44f325aed4b5273acc0de64a18855ab3e8d7c0e4847a6b4718",
+    "speech-librispeech-train-clean-100-train-00017.tar": "82dcbab0748d473d34f5b3b08d5e0eb7bd71bae6501ef0e6ca1952573592cc8a",
+    "speech-librispeech-train-clean-100-train-00018.tar": "35f05e9167ca96a2c6b98918d8102654940802b0363b3ee05b2185bbb60176fb",
+    "speech-librispeech-train-clean-100-train-00019.tar": "9d47c42c7a5fc4ae759f60005ad99026b9ee7994179a654786fbc919845f2db6",
+    "speech-librispeech-train-clean-100-train-00020.tar": "40e4b86d794015e68d92adee766f1aceaaa8f85671431491c815d2a044e41f9e",
+    "speech-librispeech-train-clean-100-train-00021.tar": "ffd539890c0cb0ecb63f1957ac22c2c745f2840eea7da28557d74997bbff0a52",
+    "speech-librispeech-train-clean-100-train-00022.tar": "c3223301bfc5f94941ed771f1327f460bae61b8142e19e39c78c13487dc58d01",
+    "speech-librispeech-train-clean-100-train-00023.tar": "accaf0f5bb16ead45491aeed4fe1aa10fe0d6b228abbc582ca2f63fccf75c350",
+    "speech-librispeech-train-clean-100-train-00024.tar": "08032507ed4fcde20a913f8ba6d3c8fbc1cbffaa2e5b79a2de78f0de0bb4fa33",
+    "speech-librispeech-train-clean-100-train-00025.tar": "1e110aadfc79fd712c49488e4cd52531ae3d6d8bfae83a4652242366975a9b04",
+    "speech-librispeech-train-clean-100-train-00026.tar": "8d86d59076c2766e61fd747fd8fc9050e4db61588a403390773678c9867280be",
+    "speech-librispeech-train-clean-100-train-00027.tar": "7b45b235aafdb064396a616a5da1e39ec74eab7e4b7b33ec6bf1005ccddf509c",
+    "speech-librispeech-train-clean-100-train-00028.tar": "df4f3fd76eb37172a43802d34826496710c2a57e73496cd84eeabaabbfcb79cd",
+    "speech-librispeech-train-clean-100-train-00029.tar": "46d0826505759b99739dd8d87a2ce8165bb7238198e98a3cc53eb51506e08a0f",
+    "speech-librispeech-train-clean-100-train-00030.tar": "aa0371468f2092b25d56f921ebaff84504907c6f8b37d85ee2431546abe8281a",
+    "speech-librispeech-train-clean-100-train-00031.tar": "8acca115b1f5cc27d49409a3f06bac0db6e13216400da4124664f85c04cd1aa9",
+    "speech-librispeech-train-clean-100-train-00032.tar": "d7e068a37a69255277f15974593700f9f080dd1d2a5201829c4e4b25e2917493",
+    "speech-librispeech-train-clean-100-train-00033.tar": "4e2912ed005008f8d540a56acb8acd9f6e1e3a078e709494bc1e00b2a62dd2bf",
+    "speech-librispeech-train-clean-100-train-00034.tar": "379e53b07359e2629ad28c914b2e048b777de32f74e8f8cfa2d7e9d81e5b3f7a",
+    "speech-librispeech-train-clean-100-train-00035.tar": "39021eccee53c9e92a97d351418e0175cac532b800eaffa0a8eb03e5b647aeab",
+    "speech-librispeech-train-clean-100-train-00036.tar": "337bcb9420efc3f1b6d859da1169bf3e872e38100f1d6f0e3a47b9b04267dfd4"
+   },
+   "dev": {
+    "speech-librispeech-train-clean-100-dev-00000.tar": "42f2ad45e9ce4bac632afd70399fa60d3171cdad32ec7e7a84f209ed66ce1e77",
+    "speech-librispeech-train-clean-100-dev-00001.tar": "50037b26808e280fc55f7c39c652e19c0aad12e024e13a7870b9ead98f9b26cf",
+    "speech-librispeech-train-clean-100-dev-00002.tar": "5e2fa8ed72ea9be80e3d483f58c37d44c692f7e147f6446de7a2440f26e23e26",
+    "speech-librispeech-train-clean-100-dev-00003.tar": "0b1055e6dcac49aa7a766ff48c12ec819731e6f3156f06493c522da14413c187",
+    "speech-librispeech-train-clean-100-dev-00004.tar": "13a159ca444b9e193066ee5aed1208346a2044d62d72a527b7cf8d937eecbe3d"
+   }
+  },
+  "openslr28-rir": {
+   "train": {
+    "rir-openslr28-rir-train-00000.tar": "fa6b3fd6770a6c2909f2b556c69d168ea246e87409c7865e98c1d62ea19b8686",
+    "rir-openslr28-rir-train-00001.tar": "436c4b073225755e4134026126e2d6175079a90c2ad77d6ddafb4493a8cad4af",
+    "rir-openslr28-rir-train-00002.tar": "4ea30265882158634e277025e633fd93062901f52337df92cc9384bfafbbc42c",
+    "rir-openslr28-rir-train-00003.tar": "5b861c3839bf86b77ed23a8248f5a5b131b69ca59b84c4d6c236c67611ac0f0e",
+    "rir-openslr28-rir-train-00004.tar": "8985e0c29a653b3be19c8126273362ec06b85e960204513673c5d5d3afae40a8",
+    "rir-openslr28-rir-train-00005.tar": "3e34f2e6fe7892feb946f923a79c06d5b414b04a3a21d2a8b8bd31f02abbdd64",
+    "rir-openslr28-rir-train-00006.tar": "2f5da251607ad680611787021d1ffeb32f4fbf3e147ccffc8aaf98aee0be0284",
+    "rir-openslr28-rir-train-00007.tar": "87ead3fc3d3b8190639662c631724f2520aa0e92e085255465da5c25defcf458",
+    "rir-openslr28-rir-train-00008.tar": "50780397aa903843c66799443b62fb3028d61c7401e9efc2d0461b12c618b4bc",
+    "rir-openslr28-rir-train-00009.tar": "4d13b31786b6f8d2be43218453c01a2351a7139a2572a7391154abce8f48b721",
+    "rir-openslr28-rir-train-00010.tar": "915467c2e5e484de227bf2b7c797d8aaa757f14c76159270857f3098a12dd549",
+    "rir-openslr28-rir-train-00011.tar": "74d3c70f0aa3b5f5d2ee39d058daa3f1e3e85814e3236cccc6eb7d90d5915576"
+   },
+   "dev": {
+    "rir-openslr28-rir-dev-00000.tar": "a6bbc862d8a5d74064ad92c2c48a446651c90be3dc3da91b21ba9326db48e91d",
+    "rir-openslr28-rir-dev-00001.tar": "0931571b375645563a3fcf27675d66cf7c0afe08c04fa7a91581db5cfac560fb"
+   }
+  },
+  "qut-noise": {
+   "dev": {
+    "noise-qut-noise-dev-00000.tar": "8870069e5efa2e60789e602927af5ed310eaadab3bb48334471b6a326c6cb05c"
+   },
+   "train": {
+    "noise-qut-noise-train-00000.tar": "d1bed065cc54d97f4515c638aed28c093741930ce28aa0f0b2444e25de3a5f61",
+    "noise-qut-noise-train-00001.tar": "2538d70b2ac96c1187f91bf127ddfbae2ce9537ad2e232c6042f105d0aa0a1f0",
+    "noise-qut-noise-train-00002.tar": "f94c1b6c161115d128d6afef52d340d3fb5136b530db0366f2481d582283751e",
+    "noise-qut-noise-train-00003.tar": "03e513286dd772379c8fabef62ad617ceaee33ae27fff2c57c14ccf371485e01"
+   }
+  },
+  "tum-wind": {
+   "train": {
+    "noise-tum-wind-train-00000.tar": "71a1df7dda8c5279d7f476f555e03df5c764660a6abe2f777478f1783900370d"
+   },
+   "dev": {
+    "noise-tum-wind-dev-00000.tar": "71894b46774a7d5b00ee4160edb233259a5208e7b65095cb96e7311967a68ea1"
+   }
+  },
+  "demand-train": {
+   "dev": {
+    "noise-demand-train-dev-00000.tar": "247775a6c25e5600e79182df1a225e0e353921012d6c11488e8bf73468e77d3b"
+   },
+   "train": {
+    "noise-demand-train-train-00000.tar": "5ece7ad3a42de5506c709f2914cf6d197a0deb062eebb83b1b87564c43052084",
+    "noise-demand-train-train-00001.tar": "4ae72925106b77b6a36cd3ba474849a80b4ad517dfea916d2bd9af96acf95d8b"
+   }
+  },
+  "cochlscene": {
+   "dev": {
+    "noise-cochlscene-dev-00000.tar": "8ed44dfc1b0f112bd3bbc8383ba8237b379b9dd330599a6c06c15ac830706771",
+    "noise-cochlscene-dev-00001.tar": "76655a17c9bca646fe43ff736d7a6e33110a909920db7984f6ed78573ab74ea3"
+   },
+   "train": {
+    "noise-cochlscene-train-00000.tar": "72d06e43aeefdc7b4d246711ca6aabfd5262bf46a86dd431716d1723d186a5dd",
+    "noise-cochlscene-train-00001.tar": "6791cc47044acf3c0ac4f752d62fc78e1810442c22f1a1e034f504e7a9262b94",
+    "noise-cochlscene-train-00002.tar": "d815977066c0ca4cde51348c4fcbc282c074abc6b5d301bf865018889025f331",
+    "noise-cochlscene-train-00003.tar": "a788075000fac93b2a792ed0439513285a81078a1c99edd2f3d80f5959a26176",
+    "noise-cochlscene-train-00004.tar": "7650b59f34c6008e6cfc7baef0b4963c0b3e27f950ebe43bc6ad2613a8262a31",
+    "noise-cochlscene-train-00005.tar": "50711ee4e589cefb8a977d69ef72b220fbe3f0d26bc2088acad6577159120668",
+    "noise-cochlscene-train-00006.tar": "c0f3093ddc0983e0ce2e17b7a40eb139d24f2c781bdc1c6d4bacd4c57778c8ef",
+    "noise-cochlscene-train-00007.tar": "defdf2108059ad14fd14f54cedc80b4e12c3ec8dd787a0796f3973cd252138f0",
+    "noise-cochlscene-train-00008.tar": "5a8ac493dca9c3f7a5261230f0b7ee562bf6c91964231f0ba093f52d84bef925",
+    "noise-cochlscene-train-00009.tar": "cb778619d2fec081f1998604af1fc1ff5773786ebb143c2231025d105a662321",
+    "noise-cochlscene-train-00010.tar": "659f198226fdbd21a7bdb3163e3c9db1b60f9a5d41da81a2dd276255bbad4b82",
+    "noise-cochlscene-train-00011.tar": "b0b6d996c3967a1a2c02938b451f6c8ac2ccfd0e0b57c6a36b26a0818144b4f0",
+    "noise-cochlscene-train-00012.tar": "bc7b9338241dcf75c616089bee3318cffb2c9cdad03b9bb07fc532c54f2bdec0",
+    "noise-cochlscene-train-00013.tar": "21989cc65141a408f62170724ac8e4e8dc097fef23e83201476ac348a42b3360",
+    "noise-cochlscene-train-00014.tar": "ef550b986a1efbe79765b3c3c8aae03de110d2c81f94911b859526e549882d28",
+    "noise-cochlscene-train-00015.tar": "d161b55e11e7b91144fc5299bb369e53f010bf8c3b4cf2f4df48f733250d83cf",
+    "noise-cochlscene-train-00016.tar": "4a3fa039bb0ad7d76332792aea4015a38bacb799ab4afee66e4c28b73d9c2a8f",
+    "noise-cochlscene-train-00017.tar": "1867c6c15b18c732a0b60ff6297434d60b0a90caddcac678ff4c5324888c5a68",
+    "noise-cochlscene-train-00018.tar": "3f97a678838928ff4ac84e883fdcb328e85049d8eb477919cdea800e83a7b22e",
+    "noise-cochlscene-train-00019.tar": "f1d339d7d9aa58739709acf3339296f39f8961fa416e5ac8b2f0390e84426f20",
+    "noise-cochlscene-train-00020.tar": "8f01ead08beecd04328a2a1e89c3cc1dc31082f894ae87f90202392b28c2df76"
+   }
+  },
+  "but-reverbdb-silence-b4": {
+   "train": {
+    "noise-but-reverbdb-silence-b4-train-00000.tar": "97e953f0e3f3fb013f8a6819e14044bc182174f0a230c91fbc21dfa0f21015b4",
+    "noise-but-reverbdb-silence-b4-train-00001.tar": "e379093ab909d18eb6affd29e0f67ef3f821358e2cbe3f60f11acf797db3eea0",
+    "noise-but-reverbdb-silence-b4-train-00002.tar": "f04cd97d7cab66e7858178f6ec612133c506feb15a9acaad614a02c4234789ad",
+    "noise-but-reverbdb-silence-b4-train-00003.tar": "0684d17a57e61d2d2379bbaca04d865b112812aedaad14de7f8ae35d784c2323"
+   },
+   "dev": {
+    "noise-but-reverbdb-silence-b4-dev-00000.tar": "47fc00f5762b01e5f65ac74a0b34ec4f91dcbcf46544b4c5418ed4c5cee4bd12"
+   }
+  }
+ },
+ "recipe_sha256": "e1fe1bbce4256fbd771e84a7f25a99d1a7d2069cd5b5d38161116c0e4eb76ff5",
+ "code_sha256": {
+  "mix.py": "8e8ceee503ba9e339b765579b6f52bc3f48a4da8eaf6a384b8d999c1f71fcdd1",
+  "gpu_mix.py": "2b51a7baee3b1909cde3729f8a7a7f7a1c8a0b57329c7d56360f73d2eaecef6a",
+  "loader.py": "bdd210273ce86b867b570a45592b43a8e9bf5f4f91697cd9c3ce7c3fef7557e0",
+  "shard.py": "714acfd880a409612cfab42e2c76181e3bf4d10e0a6ffdaddfdbbe461e2389a9",
+  "leakcheck.py": "28ba0bf9e6df918fb0d23a595e305c12a65664eab9d7aedebc8c1f9414582ab2",
+  "split.py": "56380967a9b1e5481aec91138676dd40ccf82c4753876d6f1ac52d592aef2986",
+  "exp013/dsp.py": "20ee13f7d251b7a842983b4f0d9167f33871a51deaea36ffa0d16c14756f4e61",
+  "exp013/rooms.py": "9722a86e947380a9beb4edf06c2aec6fe2ffcb0ef805f1f5e18d77049fd7785e",
+  "exp013/rirs.py": "15d597675cef129970ead0e54db7f35b715dffcf964a6e2d2f6d1cf1e818524d"
+ },
+ "leak_check": {
+  "against": "exp013 build 20261103230756-17f5 exclude.json",
+  "ok": true,
+  "hits": [],
+  "n_hits": 0,
+  "per_key": {
+   "librispeech_speakers": 0,
+   "demand_segments": 0,
+   "esc50_files": 0,
+   "synth_fns": 0,
+   "rir_files": 0,
+   "rooms_reserved": 0,
+   "room_noise_segments": 0,
+   "other_segments": 0
+  },
+  "rows": 101882
+ },
+ "leak_checked_sources": [
+  "but-reverbdb-silence",
+  "but-reverbdb-silence-b4",
+  "cochlscene",
+  "demand-train",
+  "librispeech-dev-clean-test-other",
+  "librispeech-train-clean-100",
+  "openslr28-rir",
+  "qut-noise",
+  "tum-wind"
+ ],
+ "valid": true,
+ "dropped_rir": 3307,
+ "determinism": "第 i 个样本只由 (seed, 份, i) 决定；第 k 批 = 样本 k·B…k·B+B−1，和 num_workers 无关；换批量 B 内容会变",
+ "counts": {
+  "librispeech-train-clean-100": {
+   "train": 22952,
+   "dev": 2775
+  },
+  "openslr28-rir": {
+   "train": 39354,
+   "dev": 5553
+  },
+  "qut-noise": {
+   "dev": 173,
+   "train": 830
+  },
+  "tum-wind": {
+   "train": 367,
+   "dev": 29
+  },
+  "demand-train": {
+   "dev": 96,
+   "train": 480
+  },
+  "cochlscene": {
+   "dev": 1436,
+   "train": 16193
+  },
+  "but-reverbdb-silence-b4": {
+   "train": 480,
+   "dev": 104
+  }
+ },
+ "noise_scenes": {
+  "train": [
+   "bus-metro-cabin",
+   "cafe",
+   "canteen",
+   "car-passenger",
+   "cowork",
+   "home-family",
+   "hotel-room",
+   "library-classroom",
+   "meeting-room",
+   "open-office",
+   "rail-air-cabin",
+   "street-outdoor",
+   "transit-hub"
+  ],
+  "dev": [
+   "bus-metro-cabin",
+   "cafe",
+   "canteen",
+   "car-passenger",
+   "cowork",
+   "home-family",
+   "hotel-room",
+   "library-classroom",
+   "meeting-room",
+   "open-office",
+   "rail-air-cabin",
+   "street-outdoor",
+   "transit-hub"
+  ]
+ },
+ "missing": [],
+ "scene_groups": {
+  "train": {
+   "cowork": [
+    "cowork",
+    "open-office"
+   ]
+  },
+  "dev": {
+   "cowork": [
+    "cowork",
+    "open-office"
+   ]
+  }
+ }
+}

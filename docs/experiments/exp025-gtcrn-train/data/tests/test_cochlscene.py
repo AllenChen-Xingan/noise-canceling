@@ -39,7 +39,7 @@ FOLDERS = ("Train", "Val", "Test")
 OLD_POOLS = {
     "street-outdoor": [{"source": "qut-noise", "regex": "(?i)street"}, {"source": "tum-wind", "regex": ".", "wind": True}, {"source": "demand-train", "regex": "STRAFFIC"}],
     "cafe": [{"source": "qut-noise", "regex": "(?i)cafe"}, {"source": "demand-train", "regex": "SCAFE|PRESTO"}],
-    "canteen": [{"source": "demand-train", "regex": "PCAFETER"}],
+    "canteen": [{"source": "demand-train", "regex": "PCAFETER|PRESTO"}],  # 第四批加 PRESTO（两间餐厅）
     "home-family": [{"source": "qut-noise", "regex": "(?i)home"}, {"source": "demand-train", "regex": "DKITCHEN"}],
     "car-passenger": [{"source": "qut-noise", "regex": "(?i)car"}],
     "bus-metro-cabin": [{"source": "demand-train", "regex": "TBUS"}],
@@ -209,14 +209,14 @@ class SplitTree(unittest.TestCase):
 
 class Table(unittest.TestCase):
     """云上跑完 split.py 的产物已带回进仓（cloud-batch2.md 第 4 步）：规则 · 摘要 · 正文三处要自洽。
-    反过来也查：顶层 `未建表` 里还留着这一行，说明音频还在云上、本机没切，表和标记不许同时在。"""
+    反过来也查：顶层 `未建表` 里还留着这一条，说明音频还在云上、本机没切，表和标记不许同时在。"""
 
     def check(self, rules_path=None):
-        """规则里没有 `未建表` · 表能按摘要里的哈希读回 · 条数与单位对得上 · 只有 train / dev。
+        """cochlscene 不在 `未建表` 里 · 表能按摘要里的哈希读回 · 条数与单位对得上 · 只有 train / dev。
         rules_path 只给回归测试用（临时副本里放回标记，看这条检查会不会红）。返回 (摘要, 行)。"""
         R = split.load_rules(rules_path) if rules_path else split.load_rules()
-        self.assertEqual([k for k in R if k == "未建表"], [],
-                         "规则顶层还有 `未建表`：这一行表示音频还在云上、本机没切，拿回表后要删掉")
+        self.assertNotIn(SRC, R.get("未建表", {}),
+                         "顶层 `未建表` 里还有 cochlscene：这一条表示音频还在云上、本机没切，拿回表后要删掉（别科的来源可以留着）")
         r = R["sources"][SRC]
         s, rows = split.load_split(SRC)  # 核 jsonl 的 sha256
         self.assertEqual(s["files"], r["expect"]["files"], "摘要条数与规则期望不同")
@@ -254,7 +254,7 @@ class Table(unittest.TestCase):
         self.assertLessEqual({r["split"] for r in rows}, {"train", "dev"})
 
     def test_marker_still_means_pending(self):
-        """上面那条「没有 `未建表`」不是空检查：临时副本里放回这一行，check 必须红（仓库里的文件不动）。"""
+        """上面那条「cochlscene 不在 `未建表`」不是空检查：临时副本里放回这一条，check 必须红（仓库里的文件不动）。"""
         R = json.loads(split.RULES.read_text())
         R["未建表"] = {SRC: "音频还在云上"}
         with tempfile.TemporaryDirectory() as d:
@@ -404,6 +404,8 @@ NOISE_PATHS = {
     "tum-wind": "train-raw/tum-wind/wind/000_001.wav",
     "demand-train": "vdn-data/demand/STRAFFIC/ch01.wav",
 }
+# 第三批 + 第四批的 BUT 底噪（第四批起来源名带 -b4）：路径落不进 meeting-room / hotel-room 的正则（这里只要求来源在索引里，场景另有测试）
+BUT_PATH = "train-raw/but-reverbdb/OtherRoom/MicID01/SpkID01_20190503_S/01/silence/silence_16kHz_60sec.v00.wav"
 
 
 def member(path):
@@ -412,9 +414,10 @@ def member(path):
 
 def fake_idx(extra=None):
     """最小分片索引（只填 members，不读音频）：人声 · RIR · 配方里三个第一批噪声来源都有 train 成员；
-    extra 是额外来源 {来源: {份: [成员路径, …]}}。"""
+    第三批的 BUT 底噪 train / dev 各一条（路径不落进它的两个场景正则）；extra 是额外来源 {来源: {份: [成员路径, …]}}。"""
     base = {"librispeech-train-clean-100": {"train": [SPEECH_PATH]}, "openslr28-rir": {"train": [RIR_PATH]},
-            **{n: {"train": [p]} for n, p in NOISE_PATHS.items()}}
+            **{n: {"train": [p]} for n, p in NOISE_PATHS.items()},
+            "but-reverbdb-silence-b4": {"train": [BUT_PATH], "dev": [BUT_PATH]}}
     src = {}
     for name, by_split in {**base, **(extra or {})}.items():
         d = {"kind": "speech" if name.startswith("librispeech") else "rir" if name.endswith("-rir") else "noise"}

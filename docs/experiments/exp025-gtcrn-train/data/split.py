@@ -6,16 +6,20 @@
 - 按房间切的（OpenSLR 28）：房间号从上游 Kaldi rir_list 读（room_map），rir_list 的 sha256 钉在规则里；
   room-id 看不出房间的库按 room_merge 整库并成一个单位
 - 先只看路径认出每个文件的单位（认不出立刻停；`unit_regex_required` 的来源不许退回按文件切），再读逐文件读数（filecache.py 缓存，重跑只算变了的）
+- 排除顺序：清单 → 期望条数（排除之前，防通配符写错）→ `exclude_if_meta`（meta 文件里有第 2 个扬声器 → 那次布置整次排除）
+  → `screen_file`（screen.py 的 jsonl 里 verdict=drop）→ 认单位；meta 文件或筛查表不在、或某个文件没有结论，都停
 - 输出（进仓）：`splits/<来源>.jsonl`（每文件一行：路径 · 字节 · sha256 · 单位 · 份 / 段界）+ `splits/<来源>.json`（摘要：
   规则哈希 · 种子 · 每份单位数与文件数 · jsonl 的 sha256）。正文超 GZIP_OVER 时存成 `<来源>.jsonl.gz`（auto-commit hook
   不收超 10 MB 的文件）；摘要里的哈希始终是解压后正文的
-用法（云上）：python3 split.py --root /workspace [--only qut-noise] [--inventory] [--cache <路径>|none] [--workers 32]
+用法（云上）：python3 split.py --root /workspace [--only qut-noise] [--inventory] [--list-files] [--cache <路径>|none] [--workers 32]
+--list-files 只列过清单与 meta 排除后剩下的路径（给 screen.py 造输入，不查筛查表）。
 """
 import argparse
 import glob as globmod
 import gzip
 import hashlib
 import json
+import os
 import re
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -45,6 +49,52 @@ def list_files(root, rule):
     rx = re.compile(rule["exclude_regex"]) if rule.get("exclude_regex") else None
     rel = sorted(str(f.relative_to(root)) for f in out if f.is_file())
     return [r for r in rel if not (rx and rx.search(r))]
+
+
+def meta_excluded(root, files, rule):
+    """按 spk_meta.txt 之类的小文件整次排除（read_me：第 2 个扬声器放的是背景声，如收音机）。
+    meta 路径相对 wav 所在目录解析；meta 文件不在就停：没有它就不能判，静默留着会把收音机当噪声。
+    返回 (留下的文件, 排除的文件)。"""
+    spec = rule.get("exclude_if_meta")
+    if not spec:
+        return files, []
+    rx = re.compile(spec["regex"], re.M)
+    cache, keep, drop = {}, [], []
+    for rel in files:
+        meta = Path(os.path.normpath(str(Path(root) / Path(rel).parent / spec["file"])))
+        if not meta.is_file():
+            raise SystemExit(f"{rel}：找不到 meta 文件 {meta}（规则 exclude_if_meta 的 {spec['file']}）。"
+                             "没有它不能判断这段底噪里有没有背景声，不写切分表")
+        if meta not in cache:
+            cache[meta] = bool(rx.search(meta.read_text(encoding="utf-8", errors="replace")))
+        (drop if cache[meta] else keep).append(rel)
+    return keep, drop
+
+
+def screen_excluded(root, files, rule):
+    """按 screen.py 的 jsonl 排除 verdict=drop 的片段（判据正本 screen_rules.json）。
+    清单里每个文件都要有结论：少一条就停（否则漏筛的文件会悄悄当噪声）；筛查表本身不在也停。"""
+    spec = rule.get("screen_file")
+    if not spec:
+        return files, []
+    p = Path(spec)
+    p = p if p.is_absolute() else HERE / p
+    if not p.is_file():
+        raise SystemExit(f"筛查表 {p} 不存在：先在云上跑 screen.py（python3 screen.py --root <数据根> --list <候选清单> "
+                         f"--scene <场景> --out {spec}），把结果带回进仓再切分")
+    verdicts = {}
+    for line in p.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        rec = json.loads(line)
+        if rec.get("verdict") not in ("keep", "drop"):
+            raise SystemExit(f"筛查表 {p} 里 {rec.get('path')} 的结论认不出：{rec.get('verdict')!r}（只认 keep / drop）")
+        verdicts[rec["path"]] = rec["verdict"]
+    missing = [f for f in files if f not in verdicts]
+    if missing:
+        raise SystemExit(f"筛查表 {p} 少了 {len(missing)} 个文件（如 {missing[0]}）：每个文件都要有结论，先在云上补跑 screen.py")
+    keep = [f for f in files if verdicts[f] == "keep"]
+    return keep, [f for f in files if verdicts[f] == "drop"]
 
 
 def demand_envs():
@@ -144,21 +194,45 @@ def allocate(n, frac, order):
     return cnt
 
 
-def assign_units(units, frac, seed, source, order, strata=None):
-    """返回 {单位: 份}。strata 给了（单位 → 层）时每层分别按比例分。"""
+def unit_strata(units, rule):
+    """stratum_unit_regex：层从单位里取（一个捕获组，如房间），每层分别按比例切。
+    没这个字段返回 None；认不出层的单位立刻停（不许静默并进一个空层）。"""
+    rx = rule.get("stratum_unit_regex")
+    if not rx:
+        return None
+    crx = re.compile(rx)
+    out = {}
+    for u in units:
+        m = crx.search(u)
+        if not m or m.lastindex is None:
+            raise SystemExit(f"单位 {u}：没有一条 stratum_unit_regex 认得出来（这条规则要按单位分层）。不写切分表")
+        out[u] = m.group(1)
+    return out
+
+
+def assign_units(units, frac, seed, source, order, strata=None, min_dev=0):
+    """返回 {单位: 份}。strata 给了（单位 → 层）时每层分别按比例分。
+    min_dev：一层有 2 个以上单位时，开发份少于这个数就从训练份补（拿 rank_key 最大的，确定性）。"""
     if abs(sum(frac.values()) - 1.0) > 1e-9:
         raise ValueError(f"{source} 比例之和 {sum(frac.values())} ≠ 1")
     groups = {}
     for u in sorted(set(units)):
         groups.setdefault((strata or {}).get(u, ""), []).append(u)
     out = {}
-    for _, us in sorted(groups.items()):
+    for layer, us in sorted(groups.items()):
         us = sorted(us, key=lambda u: rank_key(seed, source, u))
         cnt, i = allocate(len(us), frac, order), 0
         for k in order:
             for u in us[i : i + cnt[k]]:
                 out[u] = k
             i += cnt[k]
+        short = min_dev - cnt.get("dev", 0) if min_dev and len(us) >= 2 else 0
+        if short > 0:
+            move = [u for u in reversed(us) if out[u] == "train"][:short]
+            if len(move) < short:
+                raise SystemExit(f"{source}：层 {layer!r} 的开发份要 {min_dev} 个单位，训练份不够让出（{len(us)} 个单位）")
+            for u in move:
+                out[u] = "dev"
     return out
 
 
@@ -183,8 +257,10 @@ def check_expect(name, rule, files):
         raise SystemExit(f"{name}：{'；'.join(bad)}（{e.get('src', '')}）。不写切分表；请把 split.py --inventory 的输出发给 traindata")
 
 
-def split_source(root, name, rule, seed, order, workers=32, cache=None):
-    """先只看路径把单位全认出来（认不出立刻停，不白算哈希），再逐文件读数（cache 是 filecache.FileCache，可复用上次的读数）。"""
+def split_source(root, name, rule, seed, order, workers=32, cache=None, excluded=None):
+    """先只看路径把单位全认出来（认不出立刻停，不白算哈希），再逐文件读数（cache 是 filecache.FileCache，可复用上次的读数）。
+    排除顺序：清单 → 期望条数（排除之前，防通配符写错）→ meta 排除 → 筛查排除 → 认单位。
+    excluded 若给了一个 dict，就填上 "excluded_meta" / "excluded_screen" 两个计数（摘要用；不进切分表）。"""
     from filecache import FileCache
 
     root = Path(root)
@@ -195,6 +271,12 @@ def split_source(root, name, rule, seed, order, workers=32, cache=None):
     if not files:
         raise SystemExit(f"{name}：按 {rule['glob']} 一个文件也没找到（先跑 fetch.py）")
     check_expect(name, rule, files)
+    files, meta_drop = meta_excluded(root, files, rule)
+    if excluded is not None:
+        excluded["excluded_meta"] = len(meta_drop)
+    files, screen_drop = screen_excluded(root, files, rule)
+    if excluded is not None:
+        excluded["excluded_screen"] = len(screen_drop)
     if rule["unit"] == "time":
         units = {f: f for f in files}
     else:
@@ -209,19 +291,24 @@ def split_source(root, name, rule, seed, order, workers=32, cache=None):
         for r in rows:
             r["segments"] = time_segments(r["frames"], rule["time"])
     else:
-        strata = None
-        if rule.get("stratum_regex"):
+        strata = unit_strata({r["unit"] for r in rows}, rule)
+        if strata is None and rule.get("stratum_regex"):
             rx = re.compile(rule["stratum_regex"])
             strata = {r["unit"]: ("synth" if rx.search(r["path"]) else "real") for r in rows}
-        amap = assign_units([r["unit"] for r in rows], rule["frac"], seed, name, order, strata)
+        min_dev = int(rule.get("min_dev_per_stratum", 0) or 0)
+        amap = assign_units([r["unit"] for r in rows], rule["frac"], seed, name, order, strata, min_dev)
         for r in rows:
             r["split"] = amap[r["unit"]]
     return rows
 
 
-def summary(name, rule, seed, rows, jsonl_bytes):
+def summary(name, rule, seed, rows, jsonl_bytes, excluded=None):
+    """摘要（进仓）。excluded 是排除计数（meta 文件 / 筛查），有就记，没给就不写（旧表不强迫重写）。"""
     s = {"source": name, "group": rule["group"], "unit": rule["unit"], "seed": seed, "rule_sha256": rule_sha(rule),
-         "files": len(rows), "units": len({r["unit"] for r in rows}), "jsonl_sha256": hashlib.sha256(jsonl_bytes).hexdigest()}
+         "files": len(rows), "units": len({r["unit"] for r in rows}), "jsonl_sha256": hashlib.sha256(jsonl_bytes).hexdigest(),
+         **{k: v for k, v in (excluded or {}).items() if v}}
+    if rule.get("unit_regex"):
+        s["unit_from"] = rule["unit_regex"][0]["unit"]  # #204：读表不用翻规则猜单位长什么样
     if rule["unit"] == "time":
         s["time"] = rule["time"]
         s["seconds"] = round(sum(r["frames"] / r["sr"] for r in rows), 1)
@@ -240,7 +327,7 @@ def sha256_bytes(b):
     return hashlib.sha256(b).hexdigest()
 
 
-def write(name, rule, seed, rows, out_dir=OUT):
+def write(name, rule, seed, rows, out_dir=OUT, excluded=None):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     body = "".join(json.dumps(r, ensure_ascii=False, sort_keys=True) + "\n" for r in sorted(rows, key=lambda r: r["path"])).encode()
@@ -253,7 +340,7 @@ def write(name, rule, seed, rows, out_dir=OUT):
     keep, drop = (jl.with_name(jl.name + ".gz"), jl) if big else (jl, jl.with_name(jl.name + ".gz"))
     drop.unlink(missing_ok=True)  # 同内容换存法（上面已核过哈希），不会丢东西
     keep.write_bytes(gzip.compress(body, compresslevel=9, mtime=0) if big else body)
-    s = summary(name, rule, seed, rows, body)
+    s = summary(name, rule, seed, rows, body, excluded)
     js.write_text(json.dumps(s, ensure_ascii=False, indent=1) + "\n")
     return s
 
@@ -276,6 +363,8 @@ def main():
     ap.add_argument("--root", required=True)
     ap.add_argument("--only", default="")
     ap.add_argument("--inventory", action="store_true", help="只列每个来源匹配到的文件数与前 20 个路径，不写切分表")
+    ap.add_argument("--list-files", action="store_true",
+                    help="只列每个来源过清单与 meta 排除后剩下的相对路径（一行一个），给 screen.py 造候选清单用；不查筛查表")
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--cache", default="", help="逐文件读数缓存（默认 <root>/cache/split-files.jsonl；传 none 不用）")
     ap.add_argument("--workers", type=int, default=32)
@@ -291,9 +380,15 @@ def main():
             fs = list_files(Path(a.root), rule)
             print(f"{n}：{len(fs)} 个文件", *fs[:20], sep="\n  ")
             continue
-        s = write(n, rule, R["seed"], split_source(a.root, n, rule, R["seed"], R["splits"], a.workers, cache), a.out)
+        if a.list_files:  # 给 screen.py 造输入：只过清单与 meta 排除（筛查表还没生成）
+            fs, _ = meta_excluded(Path(a.root), list_files(Path(a.root), rule), rule)
+            print("\n".join(fs), flush=True)
+            continue
+        excluded = {}
+        rows = split_source(a.root, n, rule, R["seed"], R["splits"], a.workers, cache, excluded)
+        s = write(n, rule, R["seed"], rows, a.out, excluded)
         print(json.dumps(s, ensure_ascii=False), flush=True)
-    if not a.inventory:
+    if not (a.inventory or a.list_files):
         print(f"读数缓存：复用 {cache.hits} 个，新算 {cache.misses} 个", flush=True)
 
 

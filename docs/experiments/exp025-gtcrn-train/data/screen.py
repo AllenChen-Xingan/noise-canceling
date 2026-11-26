@@ -29,6 +29,7 @@ SR_TAG = 2 * SR_VAD  # 标签模型吃 32 kHz
 SEG = 4096  # 长期平均频谱的窗口
 FIT_HZ = (100.0, 4000.0)  # 长期平均频谱斜率只在 100 Hz … 4 kHz 上拟合
 TAIL_MS = 20  # 冲激响应最后这段的 EDC 由个别样本决定，不算衰减（见 rt60_schroeder）
+DBFS_FLOOR = 1e-7  # 整秒静音会给出 -inf；压到 -140 dBFS（低于 16 位本底）。逐秒电平的正本，diagnose.py 也用它
 
 
 def _x(x):
@@ -107,7 +108,7 @@ def level_std_db(x, sr, sec=1.0):
     if blocks < 2:
         raise ValueError("片段不足 2 秒，算不出逐秒电平")
     rms = np.sqrt(np.mean(x[: blocks * n].reshape(blocks, n) ** 2, axis=1))
-    rms = np.maximum(rms, 1e-7)  # 整秒静音会给出 -inf；压到 -140 dBFS（低于 16 位本底）
+    rms = np.maximum(rms, DBFS_FLOOR)
     return float(np.std(20.0 * np.log10(rms)))
 
 
@@ -279,10 +280,16 @@ def default_tagger(checkpoint=None, device="cpu"):
     except ImportError as e:
         raise SystemExit(f"没装 PANNs（{e}）：云上请 pip install panns-inference 后再跑，或用 --no-models 空跑")
     net = AudioTagging(checkpoint_path=checkpoint, device=device)
+    # labels 的两种导出形式：0.1.1 直接是名字的 list，旧版是带 .labels 的对象
+    names = labels.labels if hasattr(labels, "labels") else labels
 
     def tagger(x32k):
         clip, _ = net.inference(_x(x32k).astype(np.float32)[None, :])
-        return dict(zip(labels.labels, [float(p) for p in clip[0]]))
+        if len(names) != clip.shape[-1]:
+            raise ValueError(
+                f"PANNs 标签数对不上：模型输出 {clip.shape[-1]} 个，标签列表 {len(names)} 个"
+                "（装错版本的 panns-inference？）")
+        return dict(zip(names, [float(p) for p in clip[0]]))
 
     return tagger
 

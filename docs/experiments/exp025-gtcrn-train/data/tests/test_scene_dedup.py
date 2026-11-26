@@ -118,6 +118,8 @@ def fake_idx():
         "tum-wind": ["train-raw/tum-wind/wind/mobilephone_wind_noise/rec0/000_001.wav"],
         "demand-train": ["vdn-data/demand/OHALLWAY/ch01.wav"],  # 配方里没有正则匹配它
         "cochlscene": [cpath("Subway"), cpath("SubwayStation"), cpath("CrowdedIndoor", k=0), cpath("CrowdedIndoor", k=1)],
+        # 第三批 + 第四批的 BUT 底噪（第四批起来源名带 `-b4`）：路径落不进 meeting-room / hotel-room 的正则（本文件只关心分组）
+        "but-reverbdb-silence-b4": ["train-raw/but-reverbdb/OtherRoom/MicID01/SpkID01_20190503_S/01/silence/silence_16kHz_60sec.v00.wav"],
     }
     src = {}
     for name, paths in by_src.items():

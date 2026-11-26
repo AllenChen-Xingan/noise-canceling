@@ -121,9 +121,9 @@ cd <新 checkout>/docs/experiments/exp025-gtcrn-train/data
 bash cloud_steps.sh setup       # 建 .venv，装 requirements.txt；机器上没有 uv 就由 setup_uv.sh 装钉死版本到 /workspace/bin（核官方 sha256，不用 pip）
 bash cloud_steps.sh inventory   # 写 inventory.txt：每个来源的文件数与前 20 个路径
 bash cloud_steps.sh split       # 写 splits/<来源>.jsonl + .json，共 6 个来源 12 个文件
-bash cloud_steps.sh shard       # 写 /workspace/shards/first-batch/*.tar 与 index.json（目录已存在就拒绝）
-bash cloud_steps.sh register    # 交集检查，写 builds/<id>/build.json；检查不过退出码非 0
-bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /workspace/out/，打印 sha256
+VDN_SHARDS=/workspace/shards/<名字> bash cloud_steps.sh shard       # 写 $VDN_SHARDS/*.tar 与 index.json（目录已存在就拒绝）
+VDN_SHARDS=/workspace/shards/<名字> bash cloud_steps.sh register    # 交集检查，写 builds/<id>/build.json；检查不过退出码非 0
+VDN_SHARDS=/workspace/shards/<名字> bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /workspace/out/，打印 sha256
 ```
 
 `test` 一步可跑可不跑。cloudrun 的分支合进来之前，已知只有 `test_real_cloud_config_quota` 会红（缺 `cloud/config.py`）。
@@ -145,7 +145,7 @@ bash cloud_steps.sh pack        # 打包 inventory.txt + splits/ + builds/ 到 /
 - `split` 报「文件 N 个，应为 M」：通配符或上游数目不对，不写表。把 `inventory.txt` 发给 traindata，由 traindata 改 `split_rules.json` 后再跑
 - `split` 报「不在任何 rir_list 里」「和规则核过的上游版本不同」「认不出路径与房间号」：OpenSLR 28 的房间表没对上，同样发清单
 - `split` 中途被杀：直接重跑，已算的读数从缓存里取
-- `shard` 报目录已存在：不删旧目录，设 `VDN_SHARDS=/workspace/shards/first-batch-<时间>` 换个新目录再跑
+- `shard` 报目录已存在：不删旧目录，设 `VDN_SHARDS=/workspace/shards/<这一批的名字>-<时间>` 换个新目录再跑（**每一批用一个新名字**；没有默认目录，`shard` · `register` · `pack` 不设 `VDN_SHARDS` 就退出码 2）
 - `register` 报交集检查不过：`build.json` 仍会写出并记作废，照样 `pack` 带回
 - 改了规则要重切：`split.write` 拒绝覆盖已有的表，而 `split` · `shard` · `register` 三步都用同一个 `splits/` 目录，现在没有换目录的参数。这条路还没打通（待开 issue），遇到时先找大总管
 
@@ -200,6 +200,7 @@ cloudrun 在同一台云机器上做两件事（`python3` 指装了钉死依赖�
 - 测试状态（2026-11-25 产物带回后）：本机共 128 条，127 条过，1 条红：缺 cloud/config.py。exp013 核对报告见 `rebuild/exp013-20261124-200416.json`（6.5 四项全过，官方源可复现未验证）。evalcmp 已合进 main，混音测试用 main 上的 rooms.py（torch 用 CPU 后端）。云上 GPU 对拍还没跑
 - 2026-11-25 codex 评审后，build_id 多算了分片索引本身和 gpu_mix · leakcheck · split 三个文件，登记时交集检查也改成查规则里全部 6 个来源（以前漏了不进分片的终测人声来源；本机补查结果仍是 0 处交集）。codex 第 2 轮后 build_id 又加了 mix.py 直接调的 exp013 `dsp.py` · `rooms.py` · `rirs.py`。所以下面这个 build 和现行代码算出的 id 对不上。2026-11-25 cloudrun 用 main 86698924 重跑了 `register` 与 `pack`（没重切、没重分片，register 89 s）：**现行 build 是 `f032a75eedad80d6`**，交集检查查了 6 个来源 83,460 行，0 处交集；分片、切分表、各份条数都和旧 build 相同。旧 build `49349c158a4defdc` 的记录留着，loader 不再认它
 - 第一批产物（build `49349c158a4defdc`，云上提交 8b4194d3）：分片 15 GB 与 `index.json` 30 MB 只在网络盘 `/workspace/shards/first-batch`，没取回本机。分片时按 `rirs.Measured.valid` 丢掉 3307 条 RIR（训练加开发份共 48214 条，约 6.9%），逐条名单在那份 `index.json` 的 `dropped` 里
+- **旧分片只能用当时的提交复现**（读源码，2026-11-26）：loader 启动时按现行代码与配方重算 build id，对不上就拒绝。所以 `first-batch`（build `49349c158a4defdc` · `f032a75eedad80d6`）只能在当时的提交上读；第三批合进 main、配方一变，`batch2`（build `6173bf9ca6a6e143`）也一样。要重跑旧的冒烟或评测，先切到记录里的提交。旧分片的去留（人定 D112，2026-11-26）：`first-batch` 在第三批 build 核为 valid、产物取回核对后由 cloudrun 删，删前先取回它的 build 小文件；`batch2` 留到第一个正式运行过了开发份检查
 - 第二批（D106，2026-11-26）：加 CochlScene 3 类（地铁站 · 地铁车厢 · 拥挤室内），按录音人切，385 人 → 训练 347 人 / 16,193 个文件、开发 38 人 / 1,436 个文件。**现行 build 是 `6173bf9ca6a6e143`**（云上 fac82500，分片 `/workspace/shards/batch2`，6 个来源，噪声场景 11 个；cowork 与 open-office 成员相同，抽样并成一组）。第一轮 build `889a389708c8a1e9`（c0c9bda3，没有去重抽样）作废，不进仓，记录在主仓 `_tmp/20261126-cloudrun-batch2/`。CochlScene 未筛人声，方法待定；飞机舱暂由地铁车厢代替
 - `splits/openslr28-rir.jsonl` 原文 16.4 MB，auto-commit hook 不收超 10 MB 的文件，所以仓里存的是 `openslr28-rir.jsonl.gz`（2.6 MB）。`split.write` 遇到正文超 8 MB 会自动这样存；`split.load_split` 两种都能读，核的始终是解压后正文的 sha256，所以云上出的摘要不用改
 - 网络盘查盘：RunPod 网络盘上 df 报的是整个集群的剩余（cloudrun 实测 158 TB），所以在挂载点上改用「配额 − du 已用」。配额的正本是 `../cloud/config.py`（cloudrun 的分支）。那个分支合进来之前，`test_real_cloud_config_quota` 会红，下载也会拒绝开始
