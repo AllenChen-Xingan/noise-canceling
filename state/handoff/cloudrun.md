@@ -94,3 +94,9 @@
 - ⚠️ trainer 的 formal.yaml、ablation.yaml 还指着 batch4，formal-runs.yaml 还钉着 bc0e9e7b。trainer 改指第五批之前，不用这几份配置开机。
 - 累计花费 13.55 / 100 美元，云上 0 台机器。现名：traindata-75、trainer-c6、大总管 meta。
 - 待办：等 plan-h100-formal.md。开 H100 前做开训清单第 8 项的花费重估，报 meta 批，并要人点头。
+
+## 2026-11-26 正式训练甲段（CPU 机）超时 · 教训
+
+- 第一台 CPU 机 w3hx88oodste3e（时限 0.5 小时，0.061 美元）：formal check 过、输出目录不存在、盘剩 40 GB；单元测试实测 1015 s（执行单估 301 s，慢 3 倍多），CPU 参照没算完，机器到时限自删。
+- 补跑 2drq1wolg6m8or（大总管批 0.4 小时，最坏约 0.06 美元）：只跑 formal check · CPU 参照 · 量盘，用网络盘上已装好的代码和环境（脚本 scratchpad/formal/fa2.sh）。
+- **教训（大总管定）：机器时限按实测最慢的那次加 50% 余量来定，不按执行单的估时。** CPU 机的速度每台不一样；单元测试那一步已见过 301 s 和 1015 s 两个数。
