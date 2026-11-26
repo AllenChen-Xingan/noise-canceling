@@ -1,8 +1,9 @@
-"""正式训练开训前的检查（T/formal.py）：配置里还剩占位 · 场景名不对 · 运行矩阵不是 6 个，就不许开训。
+"""正式训练开训前的检查（T/formal.py）：配置里还有占位 · 场景名不对 · 运行矩阵不是 6 个 · 数据 build
+的登记记录对不上，就不许开训。
 
-正式训练 6 个运行 = 模型 A、B × 种子 0、1、2，每批 3 个同时跑一张卡。第二批分片还没定，
-所以仓里这两份配置现在必须**报错**，这是本文件的主要断言。加训场景人已定（D113），名字按
-地点键表查（specs/schema/eval-suite.schema.json）。
+正式训练 6 个运行 = 模型 A、B × 种子 0、1、2，每批 3 个同时跑一张卡。加训场景人已定（D113），名字按
+地点键表查（specs/schema/eval-suite.schema.json）。仓里的分片与配方已填好（build bc0e9e7b566421f0，
+正本 buildpin.py），所以 tmp 里每一项用例都自带一份假登记记录（`builds_dir` 参数指过去）。
 """
 from pathlib import Path
 
@@ -11,6 +12,7 @@ import yaml
 
 import config as cfgmod
 import formal
+from test_buildpin import make_build, make_recipe
 
 HERE = Path(__file__).resolve().parents[1]
 CONFIGS = HERE / "configs"
@@ -52,8 +54,9 @@ def test_formal_yaml_values():
     # 其余全用默认：5000 步 · 每 500 步评估与存盘 · 4.39 美元每小时
     assert cfg.schedule.max_steps == 5000 and cfg.schedule.eval_every == 500
     assert cfg.schedule.ckpt_every == 500 and cfg.limits.usd_per_hour == pytest.approx(4.39)
-    # 占位必须一眼看出是占位（problems 按 TODO 前缀找）
-    assert cfg.data.shard_root.startswith("TODO") and cfg.data.recipe.startswith("TODO")
+    # 分片与配方已填好（build bc0e9e7b566421f0 的 baseline 分片与基线配方）
+    assert cfg.data.shard_root == "/workspace/shards/batch4"
+    assert cfg.data.recipe == "../data/recipe.json"
 
 
 # ---------- 运行矩阵与命令 ----------
@@ -62,16 +65,25 @@ def _runs() -> dict:
     return yaml.safe_load(RUNS.read_text())
 
 
-def _filled(tmp_path, base_over=None, runs_over=None):
-    """在 tmp_path/configs/ 下摆一份「第二批已登记、D110 已定」的用例（与仓里布局相同）。"""
+def _filled(tmp_path, base_over=None, runs_over=None, mutate=None):
+    """在 tmp_path/configs/ 下摆一份「分片已登记、配方已定」的用例（与仓里布局相同），
+    并给它造一份假登记记录。返回（运行矩阵路径, 假登记记录目录）。
+
+    mutate：改运行矩阵的 batches（测矩阵本身写错）。
+    """
     d = yaml.safe_load((CONFIGS / "formal.yaml").read_text())
     d["data"]["shard_root"] = "/data/shards/batch2"
     d["data"]["recipe"] = "recipes/formal-batch2.json"
     for dotted, v in (base_over or {}).items():
         head, last = dotted.split(".")
         d[head][last] = v
+    recipe = make_recipe(tmp_path / "recipes" / "formal-batch2.json")
+    builds = tmp_path / "builds"
     runs = _runs()
+    runs["data_build"] = make_build(builds, recipe)
     runs["target_scenes"] = ["cafe", "canteen"]
+    if mutate is not None:
+        mutate(runs["batches"])
     for dotted, v in (runs_over or {}).items():
         if "." in dotted:
             head, last = dotted.split(".")
@@ -83,7 +95,7 @@ def _filled(tmp_path, base_over=None, runs_over=None):
     (out / "formal.yaml").write_text(yaml.safe_dump(d, allow_unicode=True))
     p = out / "formal-runs.yaml"
     p.write_text(yaml.safe_dump(runs, allow_unicode=True))
-    return p
+    return p, builds
 
 
 def _cmd(name, variant, seed):
@@ -99,32 +111,29 @@ def test_load_runs_reads_matrix():
         ("A", 0), ("A", 1), ("A", 2), ("B", 0), ("B", 1), ("B", 2)]
 
 
-def test_shipped_placeholders_block_start(capsys):
-    """仓里现在就该报错：只剩两处 TODO 占位（场景已由 D113 定下，不许再报 target_scenes）。"""
+def test_shipped_configs_have_no_other_problems():
+    """仓里的配置填好了：除了「登记记录还没到这条分支」（traindata 的分支未合）那一类，不许再报别的。
+    占位 / 分片 / 配方 / data_build 的 shipped 断言在 test_buildpin.py。"""
     ps = formal.problems(RUNS)
-    assert len(ps) == 2, ps  # 只报这两处，多一条都算误报
-    assert any("data.shard_root" in s for s in ps)
-    assert any("data.recipe" in s for s in ps)
-    assert not any("target_scenes" in s for s in ps)  # 场景已定，名字也对
-    assert not any("矩阵" in s for s in ps)  # 矩阵本身是对的，不许顺带报
-    assert formal.main(["check"]) == 1
-    assert "可以开训" not in capsys.readouterr().out
+    leftovers = [s for s in ps if "bc0e9e7b566421f0" not in s]
+    assert leftovers == [], leftovers
 
 
-def test_commands_refuses_with_placeholders():
+def test_commands_refuse_with_todo_recipe(tmp_path):
+    p, bd = _filled(tmp_path, base_over={"data.recipe": "TODO(待定)"})
     with pytest.raises(ValueError) as e:
-        formal.commands(RUNS)
+        formal.commands(p, builds_dir=bd)
     msg = str(e.value)
-    assert "data.shard_root" in msg and "data.recipe" in msg
+    assert "data.recipe" in msg
     assert "target_scenes" not in msg
 
 
 def test_filled_copy_can_start(tmp_path, capsys):
-    p = _filled(tmp_path)
-    assert formal.problems(p) == []
-    assert formal.main(["check", str(p)]) == 0
+    p, bd = _filled(tmp_path)
+    assert formal.problems(p, builds_dir=bd) == []
+    assert formal.main(["check", str(p), "--builds-dir", str(bd)]) == 0
     assert "可以开训" in capsys.readouterr().out
-    cmds = formal.commands(p)
+    cmds = formal.commands(p, builds_dir=bd)
     assert cmds == [
         [_cmd("exp025-formal-A-s0", "A", 0), _cmd("exp025-formal-A-s1", "A", 1),
          _cmd("exp025-formal-A-s2", "A", 2)],
@@ -133,16 +142,17 @@ def test_filled_copy_can_start(tmp_path, capsys):
 
 
 def test_commands_cli_prints_two_blocks(tmp_path, capsys):
-    p = _filled(tmp_path)
-    assert formal.main(["commands", str(p)]) == 0
+    p, bd = _filled(tmp_path)
+    assert formal.main(["commands", str(p), "--builds-dir", str(bd)]) == 0
     out = capsys.readouterr().out
     assert out.count("train.py --config configs/formal.yaml") == 6
     assert "--set run.name=exp025-formal-B-s2 --set model.variant=B --set run.seed=2" in out
 
 
 def test_commands_use_given_placeholders(tmp_path):
-    p = _filled(tmp_path)
-    c = formal.commands(p, T_dir="/srv/trainer", python="python3.13", gtcrn="/srv/gtcrn")[0][0]
+    p, bd = _filled(tmp_path)
+    c = formal.commands(p, T_dir="/srv/trainer", python="python3.13", gtcrn="/srv/gtcrn",
+                        builds_dir=bd)[0][0]
     assert c.startswith("cd /srv/trainer && VDN_GTCRN_DIR=/srv/gtcrn python3.13 train.py ")
 
 
@@ -150,21 +160,21 @@ def test_commands_use_given_placeholders(tmp_path):
     ({"limits.expect_s_step": None}, "limits.expect_s_step"),
 ])
 def test_filled_but_expect_s_step_unset_reported(tmp_path, over, needle):
-    p = _filled(tmp_path, base_over=over)
-    ps = formal.problems(p)
+    p, bd = _filled(tmp_path, base_over=over)
+    ps = formal.problems(p, builds_dir=bd)
     assert any(needle in s for s in ps), ps
 
 
 @pytest.mark.parametrize("base_over", [{"data.recipe": ""}, {"data.shard_root": "TODO(待填)"}])
 def test_filled_but_todo_left_reported(tmp_path, base_over):
-    p = _filled(tmp_path, base_over=base_over)
-    ps = formal.problems(p)
+    p, bd = _filled(tmp_path, base_over=base_over)
+    ps = formal.problems(p, builds_dir=bd)
     assert any("data.recipe" in s or "data.shard_root" in s for s in ps), ps
 
 
 def test_empty_target_scenes_reported(tmp_path):
-    p = _filled(tmp_path, runs_over={"target_scenes": []})
-    assert any("target_scenes" in s for s in formal.problems(p))
+    p, bd = _filled(tmp_path, runs_over={"target_scenes": []})
+    assert any("target_scenes" in s for s in formal.problems(p, builds_dir=bd))
 
 
 def _drop_seed(batches):
@@ -195,16 +205,8 @@ def _one_batch(batches):
     (_one_batch, "矩阵"),
 ], ids=[f.__name__ for f in (_drop_seed, _dup_name, _short_batch, _wrong_pair, _one_batch)])
 def test_broken_matrix_reported(tmp_path, mutate, needle):
-    runs = _runs()
-    mutate(runs["batches"])
-    p = tmp_path / "configs"
-    p.mkdir()
-    d = yaml.safe_load((CONFIGS / "formal.yaml").read_text())
-    d["data"]["shard_root"], d["data"]["recipe"] = "/data/shards/batch2", "recipes/x.json"
-    (p / "formal.yaml").write_text(yaml.safe_dump(d, allow_unicode=True))
-    runs["target_scenes"] = ["cafe"]
-    (p / "formal-runs.yaml").write_text(yaml.safe_dump(runs, allow_unicode=True))
-    ps = formal.problems(p / "formal-runs.yaml")
+    p, bd = _filled(tmp_path, mutate=mutate)
+    ps = formal.problems(p, builds_dir=bd)
     assert any(needle in s for s in ps), ps
 
 
@@ -227,8 +229,8 @@ def _schema_place_keys() -> list:
 
 def _scene_problems(tmp_path, scenes) -> list:
     """改了 target_scenes 的那份运行矩阵报出来的、提到 target_scenes 的问题。"""
-    p = _filled(tmp_path, runs_over={"target_scenes": scenes})
-    return [s for s in formal.problems(p) if "target_scenes" in s]
+    p, bd = _filled(tmp_path, runs_over={"target_scenes": scenes})
+    return [s for s in formal.problems(p, builds_dir=bd) if "target_scenes" in s]
 
 
 def test_unknown_scene_reported(tmp_path):

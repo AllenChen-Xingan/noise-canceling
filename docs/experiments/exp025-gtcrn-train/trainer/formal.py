@@ -24,6 +24,7 @@ from pathlib import Path
 
 import yaml
 
+import buildpin  # 数据 build 的登记核对（配方与数据代码的 sha256，正本在 data/loader.py）
 import config as cfgmod
 
 HERE = Path(__file__).resolve().parent
@@ -74,6 +75,18 @@ def _blank(cfg) -> list[str]:
     """有效配置里开训前必须有值、现在还是空串的字段。正本在这里（其他地方只引用）。"""
     flat = _flat(cfgmod.to_dict(cfg))
     return [k for k in MUST_SET if flat.get(k) == ""]
+
+
+def _recipe_path(runs_path, recipe) -> Path:
+    """配置里的 data.recipe 解成真实路径：绝对路径照用，相对路径相对 trainer/（train.py 在那里跑，
+    与 ablation.py 同一约定）。"""
+    q = Path(recipe)
+    return q if q.is_absolute() else (Path(runs_path).resolve().parent.parent / q)
+
+
+def _build_problems(runs: dict, cfg, runs_path, builds_dir) -> list[str]:
+    """运行矩阵钉的 data_build 与它的登记记录：配方与数据代码都要和登记时一模一样（判法在 buildpin.py）。"""
+    return buildpin.build_problems(_recipe_path(runs_path, cfg.data.recipe), runs.get("data_build"), builds_dir)
 
 
 def _repo_root() -> Path:
@@ -167,8 +180,11 @@ def _matrix_problems(batches) -> list[str]:
     return ps
 
 
-def problems(runs_path) -> list[str]:
-    """开训会拦下来的一切问题，每条一句中文。空列表 = 可以开训。"""
+def problems(runs_path, builds_dir=None) -> list[str]:
+    """开训会拦下来的一切问题，每条一句中文。空列表 = 可以开训。
+
+    builds_dir：登记记录的目录（默认 data/loader.py 的 BUILDS）；测试把假登记记录放别处时用它。
+    """
     p = Path(runs_path)
     ps: list[str] = []
     try:
@@ -190,10 +206,14 @@ def problems(runs_path) -> list[str]:
         except ValueError as e:
             ps.append(f"base 指向的配置本身不合法：{e}")
         else:
-            for k, v in _todo(cfg):
-                ps.append(f"配置 {k} 还是占位 `{v}`：开训前必须填成实际路径（第二批分片 / D110 定下的配方）")
+            todo = dict(_todo(cfg))
+            for k, v in todo.items():
+                ps.append(f"配置 {k} 还是占位 `{v}`：开训前必须填成实际路径")
             for k in _blank(cfg):
-                ps.append(f"配置 {k} 空着：开训前必须填成实际路径（第二批分片 / D110 定下的配方）")
+                ps.append(f"配置 {k} 空着：开训前必须填成实际路径")
+            if "data.recipe" not in todo and cfg.data.recipe:
+                # 配方是什么还不知道（TODO / 空着）时上面已经报过：这时核对登记记录没有意义
+                ps.extend(_build_problems(runs, cfg, p, builds_dir))
 
     if not (runs.get("target_scenes") or []):
         ps.append("target_scenes 还空着：要写明加训哪几个场景（人已定，见 D113），"
@@ -219,10 +239,11 @@ def _cfg_arg(runs_path, base: Path) -> str:
         return str(base)
 
 
-def commands(runs_path, T_dir: str = "$T", python: str = "$PY", gtcrn: str = "$G") -> list[list[str]]:
+def commands(runs_path, T_dir: str = "$T", python: str = "$PY", gtcrn: str = "$G",
+             builds_dir=None) -> list[list[str]]:
     """每批 3 条命令。有问题时抛 ValueError（内容是 problems 的全部条目）。"""
     p = Path(runs_path)
-    ps = problems(p)
+    ps = problems(p, builds_dir)
     if ps:
         raise ValueError("还不能开训：" + "；".join(ps))
     runs = load_runs(p)
@@ -239,9 +260,11 @@ def main(argv=None) -> int:
     ap.add_argument("--T-dir", default="$T", help="生成命令里 trainer/ 的位置")
     ap.add_argument("--python", default="$PY", help="生成命令里的 python")
     ap.add_argument("--gtcrn", default="$G", help="生成命令里的 VDN_GTCRN_DIR（GTCRN 起点权重目录）")
+    ap.add_argument("--builds-dir", default=None,
+                    help="登记记录的目录（默认 data/loader.py 的 BUILDS，即 data/builds/）")
     a = ap.parse_args(argv)
 
-    ps = problems(a.runs)
+    ps = problems(a.runs, a.builds_dir)
     if a.action == "check":
         if ps:
             for s in ps:
@@ -253,7 +276,7 @@ def main(argv=None) -> int:
         for s in ps:
             print(f"- {s}")
         return 1
-    for i, block in enumerate(commands(a.runs, a.T_dir, a.python, a.gtcrn), 1):
+    for i, block in enumerate(commands(a.runs, a.T_dir, a.python, a.gtcrn, a.builds_dir), 1):
         print(f"# 第 {i} 批：{len(block)} 个同时跑")
         for c in block:
             print(c)
