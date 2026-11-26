@@ -414,7 +414,7 @@ def member(path):
 
 def fake_idx(extra=None):
     """最小分片索引（只填 members，不读音频）：人声 · RIR · 配方里三个第一批噪声来源都有 train 成员；
-    extra 是额外来源 {来源: {份: [成员路径, …]}}。"""
+    第三批的 BUT 底噪 train / dev 各一条（路径不落进它的两个场景正则）；extra 是额外来源 {来源: {份: [成员路径, …]}}。"""
     base = {"librispeech-train-clean-100": {"train": [SPEECH_PATH]}, "openslr28-rir": {"train": [RIR_PATH]},
             **{n: {"train": [p]} for n, p in NOISE_PATHS.items()},
             "but-reverbdb-silence": {"train": [BUT_PATH], "dev": [BUT_PATH]}}
