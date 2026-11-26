@@ -67,3 +67,6 @@
   - trainer 回（2026-11-26）：没有任何运行、脚本、配置在读 first-batch。提到它的只有历史冒烟命令和 smoke_reports/。正式训练的分片路径还是占位，不会指向它。删除前的依赖检查已完成，只差开机。
 - 2026-11-26 07:5xZ：派 pi（cloudrun-cap100，花 0.0076 美元）按 D115 把 `config.SPEND_CAP_USD` 从 60 改 100，带测试。pi 提交 4eb3dd62..8121f8c0（3 个，带 Agent: pi），快进合入；README 和 plan-eval-baseline 里的 60 美元由我改；147 条测试全过。
 - 2026-11-26 07:38–07:45Z：按 D112 删 first-batch（机器 3h08g5wq4xr6fp，约 0.014 美元）。删前取回 index.json（sha256 dbfa14f1…）和 66 个 tar 的清单与 sha256，放在主仓 _tmp/20261126-first-batch-small/。盘 168 → 153 / 200 GB。
+- 2026-11-26 07:48–08:48Z 第四批 A 段（代码 249875ca，机器 sm5qjwcfp8slir，约 0.12 美元，已删）：C236 单音全量 first_only 331 · later_too 289，按 D114 不用；办公室 4154 条 none 3840 · later_too 313；按 traindata 定，每次布置取 01、11、21 三个麦克风位置，共 402 条，筛查 keep 390。结果放在主仓 _tmp/20261126-cloudrun-batch4/（sha256 7df39381…）。另回 traindata：CochlScene 的 Restaurant、Cafe 没解压，压缩包已删，重下约 54 GB。
+- 待办：B 段（traindata 给提交号后）重打全部分片约 +23 GB，跑完约 177 GB，会低于 30 GB 开训门槛。开训前先由大总管或人定删 batch2 还是 batch3（D112：batch2 留到第一个正式运行过开发份检查）。
+- 开训清单第 8 项（花费重估，按 PR #194 实测，对上限 100 美元）：新 build 出来后做。
