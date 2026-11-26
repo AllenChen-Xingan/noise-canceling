@@ -14,10 +14,13 @@
 任何一份配方 0 个或多于 1 个候选都停，并把是哪个配方、哪几个 build 写进报错。
 
 然后对那份 build 逐项核，每项一个布尔列：
-build_id 可重算 · valid · 交集检查通过 · 命中 0 · DEMAND 命中 0 · 交集重算一致 · missing 空 ·
+build_id 可重算 · valid · 交集检查通过 · 命中 0 · DEMAND 命中 0 · 交集重算一致 · 交集来源齐全 · missing 空 ·
 切分表哈希与仓里一致 · 代码哈希与本地一致 · 目标场景都有训练噪声 · 变体只差一个旋钮（`knobs.<knob>.on` + `_ablation`）。
 「交集重算一致」不是读记录：按记录里列的来源重跑 `leakcheck.check`，重算的 `ok` 为真、`n_hits` 为 0、
 且重算的 `per_key` 与记录逐键相同，这一列才是「是」。重算按「来源列表 + 切分表哈希」缓存（6 个 build 共用一份，只跑一遍）。
+「交集来源齐全」也不读记录的结论：记录里列出的来源必须**正好**是 `split_rules.json` 的全部来源
+（`loader.register_build` 就是按规则里每个来源查的，见 `loader.py`），且 build 用到的每张切分表都在其中；
+记录里来源列表空着、少一个、多一个，这一列都是「否」——只按记录的来源重算，来源漏了也照样「一致」。
 
 为什么生成而不手写：这是训练前清单上要用的一张证据表；手抄一遍就多一份会过期、又没法机器核的副本。
 
@@ -49,6 +52,7 @@ COLUMNS = (  # 每项检查一列：键 → 表头（中文，短）
     ("leak_hits", "命中 0"),
     ("leak_demand", "DEMAND 0"),
     ("leak_recheck", "交集重算一致"),
+    ("leak_sources", "交集来源齐全"),
     ("missing", "missing 空"),
     ("split_tables", "切分表哈希"),
     ("code", "代码哈希"),
@@ -182,7 +186,39 @@ def leak_recheck(build, splits_dir, cache=None):
     return cache[key]
 
 
-def build_checks(build, recipe, base_recipe, base_sha, code, splits_dir, knob=None, leak_cache=None):
+def leak_sources(build, want):
+    """交集检查查过哪些来源：必须与 `split_rules.json` 的全部来源逐名相同，且 build 用到的切分表都在其中。
+
+    `loader.register_build` 对规则里每个来源都查一遍（缺表即停），所以一份齐全的记录里这两组名字必须相同。
+    空列表 / 少一个 / 多一个都算不齐全：来源漏了，按它重算的交集检查再「一致」也证明不了什么。"""
+    got = build.get("leak_checked_sources")
+    if not isinstance(got, list) or not got:
+        return False, f"记录里列的交集来源是 {got!r}：空着就不知道交集检查查过哪些来源（规则里有 {len(want)} 个）"
+    have = set(got)
+    lack, extra = sorted(set(want) - have), sorted(have - set(want))
+    unchecked = sorted(set(build.get("split_tables") or {}) - have)
+    if not lack and not extra and not unchecked:
+        return True, f"{len(have)} 个来源与 split_rules.json 逐名相同，用到的切分表都在其中"
+    why = []
+    if lack:
+        why.append(f"规则里的来源 {lack} 没查")
+    if extra:
+        why.append(f"规则里没有的来源 {extra}")
+    if unchecked:
+        why.append(f"切分表用了 {unchecked}，交集检查却没查")
+    return False, "；".join(why)
+
+
+def rule_sources(data_dir=HERE):
+    """交集检查该查哪些来源：正本 `split_rules.json`（与 `loader.register_build` 读的是同一份）。
+
+    临时数据目录可以自带一份，跟着 `--data-dir` 一起换（测试的夹具就这么用）。"""
+    path = Path(data_dir) / "split_rules.json"
+    return set(split.load_rules(path if path.is_file() else split.RULES)["sources"])
+
+
+def build_checks(build, recipe, base_recipe, base_sha, code, splits_dir, knob=None, leak_cache=None,
+                 want_sources=None):
     """{列键: (bool, 原因)}——每一列都是一句能读懂的判断，原因在通过时也写（报告里只列不通过的）。"""
     bid = build.get("build_id")
     lk = build.get("leak_check") or {}
@@ -208,6 +244,8 @@ def build_checks(build, recipe, base_recipe, base_sha, code, splits_dir, knob=No
                            f"重算得 ok={rec.get('ok')} · 命中 {rec.get('n_hits')} 条"
                            + (f"；per_key 与记录不同：{[(k, per.get(k), rec_per.get(k)) for k in diff[:5]]}"
                               if diff else ""))
+
+    out["leak_sources"] = leak_sources(build, rule_sources() if want_sources is None else want_sources)
 
     miss = build.get("missing")
     out["missing"] = (miss == [], f"missing = {miss!r}（这一份没有成员的来源，本不该有）")
@@ -242,7 +280,8 @@ def build_checks(build, recipe, base_recipe, base_sha, code, splits_dir, knob=No
 
 
 def report(data_dir=HERE):
-    """(markdown, 每一行的 build 与检查)。data_dir 下有 recipe.json · recipes/ · builds/ · splits/（测试用临时目录也走这里）。"""
+    """(markdown, 每一行的 build 与检查)。data_dir 下有 recipe.json · recipes/ · builds/ · splits/（临时目录也可以自带
+    split_rules.json 与 --data-dir 一起换；测试用临时目录也走这里）。"""
     data_dir = Path(data_dir)
     recipes = recipe_files(data_dir)
     builds = all_builds(data_dir / "builds")
@@ -252,6 +291,7 @@ def report(data_dir=HERE):
     base_recipe = load_json(recipes[0][1])
     base_sha = sha_file(recipes[0][1])
     code = code_hashes()
+    sources = rule_sources(data_dir)  # 交集检查该查哪些来源：与 build 记录里列的比
     knobs = {f"{ABLATION}/{name}.json": knob for name, knob, _on in ablation_recipes.VARIANTS}
 
     rows = []
@@ -259,7 +299,7 @@ def report(data_dir=HERE):
     for name, path in recipes:
         recipe = load_json(path)
         checks = build_checks(matched[name], recipe, base_recipe, base_sha, code, data_dir / "splits",
-                              knobs.get(name), leak_cache)
+                              knobs.get(name), leak_cache, sources)
         rows.append({"recipe": name, "build": matched[name], "checks": checks})
     text, _ok = render(rows)
     return text, rows
@@ -274,7 +314,8 @@ def render(rows):
              "`python3 build_evidence.py` 打标准输出，`--check <本文件>` 逐字节核对。"
              "「排除表」一列先是 build 记录里 `leak_check.against` 的名字，后面是本机 `leakcheck.EXCLUDE` 这份 "
              f"exclude.json 的 sha256 前 12 位（`{ex_sha}`）；build 记录不存哈希，所以它只说明这次重算用的是哪份表。"
-             "「交集重算一致」一列按记录里列出的来源重跑一遍 `leakcheck.check`，再与记录的那份逐键比。"
+             "「交集重算一致」一列按记录里列出的来源重跑一遍 `leakcheck.check`，再与记录的那份逐键比；"
+             "「交集来源齐全」一列核记录里列的来源正好是 `split_rules.json` 的全部来源、用到的切分表都在其中。"
              "「目标场景（build 记录）」一列读的是 build 记录里的 `noise_scenes`：分片索引在云上，本机只能核记录。",
              "", "| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     for r in rows:

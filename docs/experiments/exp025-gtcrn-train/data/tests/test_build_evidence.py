@@ -61,7 +61,14 @@ class Fixture(unittest.TestCase):
         self.root = Path(self._tmp.name)
         self._leak = {}  # 切分表哈希 → 它算出来的 leak_check（一张表只算一遍）
         self.table = self.write_table()
+        self.write_rules()
         self.write_recipes()
+
+    def write_rules(self, *names):
+        """临时数据目录自带一份切分规则：`sources` 的键就是交集检查该查的全部来源（正本同真仓的 split_rules.json）。"""
+        (self.root / "split_rules.json").write_text(
+            json.dumps({"sources": {n: {"src": "夹具"} for n in (names or ("noise-a",))}},
+                       ensure_ascii=False), encoding="utf-8")
 
     def tearDown(self):
         self._tmp.cleanup()
@@ -142,6 +149,7 @@ class FixturePasses(Fixture):
             self.assertEqual(bad, {}, f"{r['recipe']}：{bad}")
         self.assertIn("全部通过：是", text)
         self.assertNotIn("**否**", text)
+        self.assertIn("交集来源齐全", text)  # 来源列表齐全这一列在表头里
         self.assertIn("基准 build", text.splitlines()[0])
         self.assertIn("不手抄", text)  # 一句话说明它是生成的，不是抄的
         # 目标场景一列注明读的是 build 记录；排外表一列带上这次重算实际用的 exclude.json 哈希
@@ -204,6 +212,29 @@ class FixtureStops(Fixture):
         self.assertIn("全部通过：是", text)
         self.assertEqual(len(rows), 1 + len(ablation_recipes.VARIANTS))
         self.assertEqual(len(calls), 1, calls)
+
+    def test_record_missing_one_source_is_false(self):
+        """规则里有 2 个来源、记录只列了 1 个：按记录重算的交集检查看着“一致”，另一个来源却根本没查 → 「否」。"""
+        self.write_rules("noise-a", "noise-b")
+        self.write_all()
+        text, rows = self.report()
+        self.assertEqual([r["checks"]["leak_sources"][0] for r in rows], [False] * len(rows))
+        self.assertIn("noise-b", rows[0]["checks"]["leak_sources"][1])  # 原因写清了是哪个来源没查
+        self.assertTrue(all(ok for k, (ok, _w) in rows[0]["checks"].items() if k != "leak_sources"))
+        self.assertTrue(rows[0]["checks"]["leak_recheck"][0], "只按记录的来源重算，是看不出漏了来源的")
+        self.assertIn("全部通过：否", text)
+        rc, out, _err = run_main(["--data-dir", str(self.root)])
+        self.assertEqual(rc, 1)
+        self.assertIn("交集来源齐全", out)
+
+    def test_empty_source_list_is_false(self):
+        """记录的来源列表空着：交集检查到底查过什么无从得知 → 「否」，而且不因为空就崩掉整张表。"""
+        self.write_all(leak_checked_sources=[])
+        text, rows = self.report()
+        self.assertFalse(rows[0]["checks"]["leak_sources"][0])
+        self.assertIn("空", rows[0]["checks"]["leak_sources"][1])
+        self.assertIn("全部通过：否", text)
+        self.assertEqual(len(rows), 1 + len(ablation_recipes.VARIANTS))  # 其余行照旧能算出来
 
     def test_one_failing_check_flips_to_no_and_exit_1(self):
         """missing 不空：那一列变「否」，表尾「全部通过：否」，退 1（不静默放过）。"""
