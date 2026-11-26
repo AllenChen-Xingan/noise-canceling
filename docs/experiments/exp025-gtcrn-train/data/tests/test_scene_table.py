@@ -2,10 +2,13 @@
 
 小夹具在临时目录里搭（假 build.json / recipe.json / split_rules.json / sources.json / splits / scene_notes.json），
 核条数 · 时长 · 单位数 · 正则过滤；再把每道「表不在这个 build 上」的检查都撞一次。
-另有一条真产物测试：拿仓里的 builds/10aa3a9fb8cef48f 与真配方跑一遍。
+另有一条真产物测试：拿仓里的切分表配上当前配方跑一遍（第四批配方改过，旧 build 记的配方哈希因此对不上，
+真产物测试把当前配方配上那份 build 的切分表，配方与 build 绑定的规矩另有专门的测试撞）。
 """
 import hashlib
 import json
+import re
+import shutil
 import sys
 import tempfile
 import unittest
@@ -315,16 +318,48 @@ class SameContent(Fixture):
 
 
 class Product(unittest.TestCase):
-    """真产物：build 10aa3a9fb8cef48f 的三个人定目标场景（D113）。"""
+    """真产物：仓里的切分表 + 当前配方（第四批的四个目标场景，D113）。
+
+    配方第四批改过，`builds/10aa3a9fb8cef48f` 记的是旧配方的哈希，新 build 还没登记（云上重跑后才有）。
+    所以这里把当前 `recipe.json` 配上那份 build 的切分表，在临时数据目录里核场景表；「配方改了 build 必须重登记」
+    的规矩由 `test_recipe_hash_mismatch` 单独撞过。切分表还是只含 Room112 的旧表，meeting-room 现在一条也没有。
+    """
+
+    HAVE = ("canteen", "rail-air-cabin", "transit-hub")  # 这份 build 的切分表里有数据的三个场景
 
     def setUp(self):
-        self.t = scene_table.build_tables(BUILD)
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        for n in ("recipe.json", "split_rules.json", "sources.json", "scene_notes.json"):
+            shutil.copy(HERE / n, self.root / n)
+        (self.root / "splits").mkdir()
+        for p in (HERE / "splits").iterdir():
+            (self.root / "splits" / p.name).symlink_to(p)
+        build = json.loads((BUILD / "build.json").read_text(encoding="utf-8"))
+        build["recipe_sha256"] = hashlib.sha256((self.root / "recipe.json").read_bytes()).hexdigest()
+        self.build_dir = self.root / "builds" / build["build_id"]
+        dump(self.build_dir / "build.json", build)
+        self.t = scene_table.build_tables(self.build_dir, data_dir=self.root, scenes=self.HAVE)
 
-    def test_three_target_scenes_have_train_noise(self):
-        self.assertEqual(sorted(self.t["scenes"]), ["canteen", "rail-air-cabin", "transit-hub"])
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_scenes_with_data_have_train_noise(self):
+        self.assertEqual(sorted(self.t["scenes"]), sorted(self.HAVE))
         for name, s in self.t["scenes"].items():
             self.assertGreater(s["splits"]["train"]["totals"]["files"], 0, name)
             self.assertGreater(s["splits"]["train"]["totals"]["seconds"], 0, name)
+
+    def test_meeting_room_has_no_rows_until_the_table_is_recut(self):
+        """切分表仍是只含 Room112 的旧表（规则顶层 `未建表`）：meeting-room 在这个 build 里一条训练噪声也没有。
+        拿配方里那四个场景直接报（不传 scenes）必须停，并指出是哪个场景——不静默报一张空表。"""
+        pools = scene_table.scene_pools(json.loads((HERE / "recipe.json").read_text()))
+        rx = [compiled for _name, compiled in pools["meeting-room"]][0]
+        _, rows = split.load_split("but-reverbdb-silence", out_dir=HERE / "splits")
+        self.assertEqual(sum(1 for r in rows if rx.search(r["path"])), 0)
+        with self.assertRaises(SystemExit) as e:
+            scene_table.build_tables(self.build_dir, data_dir=self.root)
+        self.assertIn("meeting-room", str(e.exception))
 
     def test_canteen_only_demand(self):
         src = self.t["scenes"]["canteen"]["splits"]["train"]["sources"]

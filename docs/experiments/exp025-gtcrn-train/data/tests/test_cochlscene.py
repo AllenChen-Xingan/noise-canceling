@@ -39,7 +39,7 @@ FOLDERS = ("Train", "Val", "Test")
 OLD_POOLS = {
     "street-outdoor": [{"source": "qut-noise", "regex": "(?i)street"}, {"source": "tum-wind", "regex": ".", "wind": True}, {"source": "demand-train", "regex": "STRAFFIC"}],
     "cafe": [{"source": "qut-noise", "regex": "(?i)cafe"}, {"source": "demand-train", "regex": "SCAFE|PRESTO"}],
-    "canteen": [{"source": "demand-train", "regex": "PCAFETER"}],
+    "canteen": [{"source": "demand-train", "regex": "PCAFETER|PRESTO"}],  # 第四批加 PRESTO（两间餐厅）
     "home-family": [{"source": "qut-noise", "regex": "(?i)home"}, {"source": "demand-train", "regex": "DKITCHEN"}],
     "car-passenger": [{"source": "qut-noise", "regex": "(?i)car"}],
     "bus-metro-cabin": [{"source": "demand-train", "regex": "TBUS"}],
