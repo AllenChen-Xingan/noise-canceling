@@ -119,7 +119,7 @@ class TestFetchArchives(_Case):
         r = self.run_script()
         self.assertEqual(r.returncode, 0, r.stderr)
         rec = self.record()
-        self.assertEqual([(x[0], x[3]) for x in rec], [("a.bin", "ok"), ("b.bin", "ok")])
+        self.assertEqual([(x[0], x[4]) for x in rec], [("a.bin", "ok"), ("b.bin", "ok")])
         for name in ("a.bin", "b.bin"):
             row = [x for x in rec if x[0] == name][0]
             data = payload(name)
