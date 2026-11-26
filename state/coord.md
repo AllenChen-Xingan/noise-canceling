@@ -486,3 +486,4 @@
 - 2026-11-26 02:39Z traindata 实测收音机：54 份 spk_meta 只有 L207 两份带 EnvSpk2，C236 · R112 没有，868 条正确，非 bug。真 spk_meta 两份进测试夹具（9291ec39，Apache 2.0），pi traindata-spkmeta（1 美元）改夹具。cloudrun：两房间 keep 各 ≥ 一半就继续 split → shard → register → pack。
 - 2026-11-26 02:47Z 识别补跑完成（cloudrun 实测）：+1953 次 · +0.1875 美元（上限 0.25），吃字有值 82→452/480，结果 _tmp/20261126-asr-rerun/rerun-20261126-013313/；机器 glx9 已删（约 0.17 美元），累计 8.22 美元。交 evalcmp 出第二版差距表。第三批 traindata 修 7badd9a1（契约 2 条 · 全套 288 过），C236 筛查 02:46Z 起。
 - 2026-11-26 02:48Z evalcmp 确认无后台进程后，大总管建 exp/025-gap-v2 并 --continue 重开，钩子改登记。第二版弱项表前 4：rail-air-cabin · canteen · meeting-room · transit-hub（与第一版同组，3、4 名对调）；28 段无值分在 9 场景。
+- 2026-11-26 人定 D113：加训场景 = 最弱前 4（rail-air-cabin · canteen · meeting-room · transit-hub）。第三批筛查：R112 keep 209/248 正常；C236 keep 32/620（不平稳 545 · 说话帧略超 355；标签多为 Music / Tuning fork / Sine wave），停在 split 前，机器已删，累计 8.31 美元，云上 0 台。
