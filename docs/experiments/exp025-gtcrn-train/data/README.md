@@ -32,6 +32,12 @@
 | `cloud_steps.sh` · `requirements.txt` | 云上的操作步骤与钉死的版本 | 版本与 exp013 旧 build 一致（`test_rebuild`） |
 | （读）`../cloud/config.py` | 网络盘配额 `VOLUME_SIZE_GB` 与挂载点 `VOLUME_MOUNT` | 正本归 cloudrun；`fetch.py` 按路径加载，不抄数字 |
 
+给三个缺口场景（飞机舱 · 会议室 · 电话亭）找候选噪声时，`screen.py` 把每条片段过一遍机器筛查，判 `keep` / `drop` 并写下理由（有人声 · 不像目标场景 · 混响时间不符 · 不平稳），没查的项记「未查：…」。
+判据只有一份正本 `screen_rules.json`：阈值全在里面，代码里不写数字；改判据只改这份 json。
+片段要对上 exp013 `scenes.json` 的场景名，所以 `screen_rules.json` 的键也用它（`tests/test_screen.py` 核对）。
+两个神经模型（Silero VAD · PANNs CNN14）不在导入时加载、也没进 `requirements.txt`：云上 `pip install silero-vad panns-inference` 后才有，本机测试用假函数替；`--no-models` 空跑只算声学量。
+新增的文件就是这三个：`screen_rules.json` · `screen.py` · `tests/test_screen.py`。
+
 ## 三、切分与隔离
 
 切分规则照 027 第六节，分四份：
@@ -194,6 +200,7 @@ cloudrun 在同一台云机器上做两件事（`python3` 指装了钉死依赖�
 - 测试状态（2026-11-25 产物带回后）：本机共 128 条，127 条过，1 条红：缺 cloud/config.py。exp013 核对报告见 `rebuild/exp013-20261124-200416.json`（6.5 四项全过，官方源可复现未验证）。evalcmp 已合进 main，混音测试用 main 上的 rooms.py（torch 用 CPU 后端）。云上 GPU 对拍还没跑
 - 2026-11-25 codex 评审后，build_id 多算了分片索引本身和 gpu_mix · leakcheck · split 三个文件，登记时交集检查也改成查规则里全部 6 个来源（以前漏了不进分片的终测人声来源；本机补查结果仍是 0 处交集）。codex 第 2 轮后 build_id 又加了 mix.py 直接调的 exp013 `dsp.py` · `rooms.py` · `rirs.py`。所以下面这个 build 和现行代码算出的 id 对不上。2026-11-25 cloudrun 用 main 86698924 重跑了 `register` 与 `pack`（没重切、没重分片，register 89 s）：**现行 build 是 `f032a75eedad80d6`**，交集检查查了 6 个来源 83,460 行，0 处交集；分片、切分表、各份条数都和旧 build 相同。旧 build `49349c158a4defdc` 的记录留着，loader 不再认它
 - 第一批产物（build `49349c158a4defdc`，云上提交 8b4194d3）：分片 15 GB 与 `index.json` 30 MB 只在网络盘 `/workspace/shards/first-batch`，没取回本机。分片时按 `rirs.Measured.valid` 丢掉 3307 条 RIR（训练加开发份共 48214 条，约 6.9%），逐条名单在那份 `index.json` 的 `dropped` 里
+- 第二批（D106，2026-11-26）：加 CochlScene 3 类（地铁站 · 地铁车厢 · 拥挤室内），按录音人切，385 人 → 训练 347 人 / 16,193 个文件、开发 38 人 / 1,436 个文件。**现行 build 是 `6173bf9ca6a6e143`**（云上 fac82500，分片 `/workspace/shards/batch2`，6 个来源，噪声场景 11 个；cowork 与 open-office 成员相同，抽样并成一组）。第一轮 build `889a389708c8a1e9`（c0c9bda3，没有去重抽样）作废，不进仓，记录在主仓 `_tmp/20261126-cloudrun-batch2/`。CochlScene 未筛人声，方法待定；飞机舱暂由地铁车厢代替
 - `splits/openslr28-rir.jsonl` 原文 16.4 MB，auto-commit hook 不收超 10 MB 的文件，所以仓里存的是 `openslr28-rir.jsonl.gz`（2.6 MB）。`split.write` 遇到正文超 8 MB 会自动这样存；`split.load_split` 两种都能读，核的始终是解压后正文的 sha256，所以云上出的摘要不用改
 - 网络盘查盘：RunPod 网络盘上 df 报的是整个集群的剩余（cloudrun 实测 158 TB），所以在挂载点上改用「配额 − du 已用」。配额的正本是 `../cloud/config.py`（cloudrun 的分支）。那个分支合进来之前，`test_real_cloud_config_quota` 会红，下载也会拒绝开始
 - `split_rules.json` 里有几条说明已过时：QUT 的 `_未核`、LibriSpeech 两条 `expect.src` 里的「待云上核」。云上已核过（见上面第一条与 6.2）。没改是因为说明字段也算进规则哈希，改一个字 6 张切分表就要重切；待把说明移出哈希（另开 issue）

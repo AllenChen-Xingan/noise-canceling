@@ -177,6 +177,8 @@ def make_tree(root):
     tone(root / "train-raw/qut-noise/QUT-NOISE/CAFE-CAFE-1.wav", 8, sr=48000, ch=2, seed=12)
     for j in range(10):
         tone(root / f"train-raw/tum-wind/wind/rec{j}.wav", 1, seed=20 + j)
+    for k, (user, cls) in enumerate((u, c) for u in ("user0001", "user0002", "user0003") for c in ("Subway", "SubwayStation", "CrowdedIndoor")):
+        tone(root / f"train-raw/cochlscene/CochlScene/Train/{cls}/{cls}_{user}_14983413_{k:03d}.wav", 1, seed=50 + k)
     d = root / "train-raw/openslr28/RIRS_NOISES/simulated_rirs/smallroom"
     lines = []
     for room in range(1, 11):
@@ -202,8 +204,8 @@ class EndToEnd(unittest.TestCase):
             r.pop("expect", None)  # 夹具只有几个文件，不按上游数目核
             r.pop("room_lists_sha256", None)  # 夹具的 rir_list 不是上游原文件（钉哈希另有 test_openslr28_rooms）
         cls.splits = t / "splits"
-        names = ["librispeech-train-clean-100", "qut-noise", "tum-wind", "openslr28-rir", "demand-train"]
-        for n in names + ["librispeech-dev-clean-test-other"]:
+        names = shard.default_sources()  # 要分片的来源 = recipe.json 里出现的全部来源（夹具必须全覆盖）
+        for n in names + ["librispeech-dev-clean-test-other"]:  # 终测原料池：只写表，不进分片
             rows = split.split_source(root, n, R["sources"][n], R["seed"], R["splits"], workers=2)
             split.write(n, R["sources"][n], R["seed"], rows, cls.splits)
         cls.shards = t / "shards"
@@ -229,6 +231,21 @@ class EndToEnd(unittest.TestCase):
         p = loader.Pools(self.shards, json.loads(self.recipe.read_text()), self.idx, "train")
         x = p.read(self.idx["sources"]["qut-noise"]["train"]["members"][0])
         self.assertEqual(len(x), 4 * SR)  # 8 s 的前 50% = 4 s，48 kHz 立体声 → 16 kHz 单声道
+
+    def test_build_json_records_noise_scenes(self):
+        """噪声池漏了来源要看得见：build.json 记下每份实际有成员的场景名（排序）与跳过的来源（排序）。"""
+        bj = json.loads((self.builds / self.bid / "build.json").read_text())
+        self.assertEqual(sorted(bj["noise_scenes"]), ["dev", "train"])
+        self.assertIn("transit-hub", bj["noise_scenes"]["train"])
+        self.assertIn("cochlscene", bj["missing"])  # 夹具里 cochlscene 的片段全落在训练份
+        self.assertEqual(bj["missing"], sorted(bj["missing"]))
+
+    def test_build_json_records_scene_groups(self):
+        """cowork 与 open-office 用同一批拥挤室内录音：build.json 只记 2 个以上场景的组（组名取字母序第一个）。"""
+        bj = json.loads((self.builds / self.bid / "build.json").read_text())
+        self.assertEqual(sorted(bj["scene_groups"]), ["dev", "train"])
+        self.assertEqual(bj["scene_groups"]["train"], {"cowork": ["cowork", "open-office"]})
+        self.assertEqual(bj["scene_groups"]["dev"], {})  # 夹具里 cochlscene 全在训练份
 
     def test_build_json_valid(self):
         bj = json.loads((self.builds / self.bid / "build.json").read_text())

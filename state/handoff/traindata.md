@@ -59,3 +59,18 @@
 - 2026-11-25 收尾评审：多视角自审（第一次误审了 src/，改参数重跑）+ codex gpt-6-astra 4 轮，P1×5 · P2×15 全核实属实，第 3、4 轮无 P0/P1 停。exp013 判据升到第 4 版，现行报告 rebuild/exp013-20261124-200416.json。合入 cloudrun 的 main（df145344）后 test_real_cloud_config_quota 转绿，全量 139 条全过
 - 2026-11-25 cloudrun 用 main 86698924 重跑 register + pack：新 build f032a75eedad80d6。包 sha256 53e59cdc… 核对一致；包里其余文件和仓里逐字节相同；按记录字段重算 id 相同，代码与配方哈希等于现行，交集检查 6 个来源 83,460 行 0 处。进仓于分支 chore/exp025-register2
 - 2026-11-25 大总管交代：CPU 镜像 rust:1.99.1-trixie 没有 pip，setup 的 pip install uv 失败。新增 setup_uv.sh：有 uv 直接用；没有就下 uv 0.13.7 官方二进制包，按钉死的官方 sha256 核对，解压到 /workspace/bin。测试 tests/test_setup_uv.py 10 条（哈希不对拒绝、路径、联网核官方 sha256 要设 VDN_NET=1）。分支 fix/cloud-setup-uv；全量 149 条全过（1 条联网的跳过，另手动跑过也过）
+- 2026-11-25 大总管派活（D106 · D107），分支 feat/data-batch2：① 第二批调研清单 download-list-2.md（CochlScene 3 类 · DEMAND OHALLWAY/DLIVING · FSD50K 按标签；飞机舱 · 会议室 · 电话亭写「没有」；大总管定按上传者排除 ESC-50 同源）。② loader target_scene.scene 支持列表（pick_scene，单名抽法不变），测试 test_target_scenes 9 条先红后绿。③ 配方 high_snr 旋钮（默认关；10 % SNR U(20,40) dB · 5 % 不加噪声，暂定），测试 test_high_snr 9 条先红后绿。loader · mix · recipe 改了，build 身份会变，下载完一起重跑 register。全量 167 条全过（跳过 1 条联网）
+- 2026-11-25 人定（大总管转达）：第二批只下 CochlScene 3 类；DEMAND 走廊 / 客厅与 FSD50K 人未选、暂不下；盘可扩到 200 GB；高信噪比旋钮认可。等 cloudrun 下完交校验值给我核对
+
+- 2026-11-25 大总管改名 noise-canceling-c4（uds:/tmp/cc-socks/79882.sock），报到、进度、名额都发它。新规则：代码派 pi 写。已报：压缩包建议核完 md5 再删（待人定）；下一步派 pi 登记 CochlScene 3 类。
+- 2026-11-25 CochlScene：6 个分卷包已被 cloudrun 的下载脚本自动删掉（大总管 c4 删机前看过），所以「删不删压缩包」这题作废，md5 也没补核。完整性证据是间接的：7z 逐文件 CRC 通过，17629/17629 个文件和 want.txt 一致。
+- 2026-11-25 CochlScene：人声没筛，方法待定（大总管 c4 定：这次先登记、不筛）。目标场景（D105）待人定，这次只加噪声池、不改 target_scene。
+- 2026-11-25 pi traindata-cochlscene（isoquant/deepseek-v4.1-flash-1017-fast）开工时 HEAD = e56fee16；之后的自动提交（从 c5394187 起）含 pi 未验收的代码，验收通过的那次提交另记。
+- 2026-11-25 pi traindata-cochlscene 验收通过。代码提交范围 c5394187…8420eef2（自动提交，署名 Claude，实为 pi 写），花费 $0.072 / $2。我亲手重跑 200 条测试，全过（跳过 1 条网络测试）。共 8 项：A6 来源（标手工、fetch 拒下）· cochlscene 按录音人 9:1 切（认不出录音人就停）· 4 个噪声池 · shard 来源从 recipe 导出 · 噪声池来源缺失即停、build.json 记 noise_scenes · test_cochlscene.py。上云命令见 data/cloud-batch2.md。
+- 2026-11-25 D109：以后派 pi 用 --repo/--base，pi 在自己的分支上每一小步提交一次，我验收后快进合入。
+- 2026-11-25 已知偏差：这批数据里拥挤室内权重偏高。cowork 与 open-office 共用同一批录音，target_scene 为 null 时被抽两倍（推断）。c4 定修法：按来源去重抽样，派 pi 写，带一条会红的测试。现在 pi-worker 正在改，暂不能起 pi，所以这批先在 recipe.json 的 noise_pools._说明 里记明（配方哈希进 build 身份）。
+- 2026-11-25 pi traindata-dedup 验收通过，快进合入。pi 提交 0137540a…2eaf21b9（各带 Agent: pi），花费 $0.0125 / $2。我亲手重跑 209 条测试，全过（跳过 1 条网络测试）。成员完全相同的噪声池（cowork 与 open-office）抽样只算一次权重，报出 cowork；build.json 记 scene_groups。没有重复组时随机数与以前逐样本相同（旧测试不改照过）。只影响 register 和训练时的抽样，split 与 shard 不变。
+- 2026-11-25 D111 补充：飞机舱先不补，人不给 Freesound 密钥；飞机舱暂由地铁车厢录音代替，已记进 recipe.json 的说明。Freesound 抓取已停，只抓到日志，放在主仓 _tmp/20261116-b19/freesound-cabin-partial/，不进仓。BUT 下载清单在 data/download-list-but.md：只下 2019 版 RIR-Only 包（9,308,593,693 字节）。上游没有校验码，首次下载时记 md5 与 sha256；按 Apache 2.0 处理，read_me 副本在 data/third_party/。
+- 2026-11-25 pi traindata-screen 验收通过：rebase 到 fbee43b4 后快进合入，pi 提交 8af06c05…f98ea491（各带 Agent: pi），花费 $0.0178。我亲手重跑 231 条测试，全过（跳过 1 条网络测试）。screen.py 筛人声（Silero VAD、PANNs 的 Speech 标签）、像不像目标场景（PANNs 标签、混响时间）和平稳度；阈值只在 screen_rules.json，全部暂定。两个模型云上才装（silero-vad、panns-inference），版本没钉，下次装时钉。命令行只筛噪声片段，不传冲激响应，所以会议室和电话亭的混响时间那一项记「未查」。
+- 2026-11-26 第二批产物进仓：splits/cochlscene.*、builds/6173bf9ca6a6e143/（云上 fac82500）。我核过：包 sha256 bfdc87dd… 对得上；包内其余文件和仓里逐字节相同；3 类条数 5835 / 5897 / 5897；没有录音人跨份；build id 能重算对上。删了「未建表」标记。pi traindata-products（5be0fda4，$0.0083）把两处手抄的来源清单改成从正本导出；我重跑 231 条测试，全过。第一轮 build 889a389708c8a1e9 作废。
+- 2026-11-26 开 issue #202、PR #203（feat/data-batch2 → main）。强推被拦，所以没 rebase，改为合并 origin/main（e4d014c9）。合并后重跑 231 条测试，全过。本机留了一个分支 rebased-backup-20261126：那次 rebase 的结果，没推送。删分支要大总管做（钩子拦了）。

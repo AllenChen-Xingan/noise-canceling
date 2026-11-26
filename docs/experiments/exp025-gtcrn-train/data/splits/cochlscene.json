@@ -1,0 +1,22 @@
+{
+ "source": "cochlscene",
+ "group": "A6",
+ "unit": "file",
+ "seed": 20261116,
+ "rule_sha256": "4396cd4995aa96037ddcf5cead4a4703abac432d74e9e54bfb3536f063d9aa0b",
+ "files": 17629,
+ "units": 385,
+ "jsonl_sha256": "e4415e3841d0767f89c340d6d27b4f82f54f6958a5f59f004e291f5b5911f919",
+ "per_split": {
+  "dev": {
+   "units": 38,
+   "files": 1436,
+   "seconds": 14360.0
+  },
+  "train": {
+   "units": 347,
+   "files": 16193,
+   "seconds": 161930.0
+  }
+ }
+}

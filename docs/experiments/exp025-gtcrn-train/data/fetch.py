@@ -5,6 +5,8 @@
 - 下完核：字节数 = sources.json；有 md5 核 md5；有 sha256 核 sha256；都没有的，第一次下完把 sha256 记进
   `fetched.json`（进仓），以后以它为准（再下一次对不上即报错）
 - 限流：429 / 503 按 Retry-After 等，单独计 RATE_RETRIES 次，不占断线重试的次数；Wikimedia 每次请求前先停 POLITE_GAP_S 秒
+- 手工下载的组（sources.json 里有 `manual` 字段，如 A6 分卷包不能只下要的类）：fetch.py 一律不碰，
+  `--only A6` 与 `--head` 直接报「手工」并给出 manual 原文；字节数可以为 null（下载不是这里做的）
 - 解压：拒绝绝对路径和「..」成员（压缩包是外来数据）；解压完写 `<dest>/.done-<文件名>` 标记，下次跳过
 用法（云上，仓库根下）：
   python3 docs/experiments/exp025-gtcrn-train/data/fetch.py --root /workspace --only A1,A2,A3,A4,A5
@@ -13,6 +15,7 @@
   python3 .../fetch.py --head --only A1,A2,A3,A4,A5         # 只核服务器报的大小，不下载
   开下载前会查盘：还要的空间（含解压峰值 ≈ 包 × 2）大于还能用的就停。网络盘上「还能用」= cloud/config.py 的配额 − du 已用
   （df 在 RunPod 网络盘上报的是整个集群的剩余，不能用）
+  A6（CochlScene）不跑 fetch.py：分卷包只能整包下，手工下完用 7z 解出 3 类（见 sources.json 的 manual）
 """
 import argparse
 import hashlib
@@ -212,14 +215,21 @@ def fetch_file(f, root, fetched, keep_archive=False):
 PEAK_FACTOR = 2.05  # 压缩包与解压目录同时在盘上的峰值 ≈ 包大小 × 2（音频几乎压不动）+ 余量；解压完删包
 
 
+def refuse_manual(groups, only):
+    """带 manual 的组不走 fetch.py：分卷包只能整包下，手工下完直接解出要的类（正本在 sources.json 的 manual）。"""
+    bad = [gid for gid in only if groups[gid].get("manual")]
+    if bad:
+        raise SystemExit("\n".join(f"{gid} {groups[gid]['name']}：手工下载，不走 fetch.py。{groups[gid]['manual']}" for gid in bad))
+
+
 def need_bytes(groups, only, root):
-    """还要多少盘：没解压完的文件按 包 × PEAK_FACTOR 算（已有 .done 标记的不算）。"""
+    """还要多少盘：没解压完的文件按 包 × PEAK_FACTOR 算（已有 .done 标记的不算）。手工组的字节数是 null，不计。"""
     n = 0
     for gid in only:
         for f in groups[gid]["files"]:
             done = Path(root) / f["dest"] / f".done-{f['name']}" if f["extract"] != "none" else Path(root) / f["dest"]
             if not done.exists():
-                n += f["bytes"] * (PEAK_FACTOR if f["extract"] != "none" else 1.0)
+                n += (f["bytes"] or 0) * (PEAK_FACTOR if f["extract"] != "none" else 1.0)
     return int(n)
 
 
@@ -276,6 +286,7 @@ def _is_volume(root):
 
 def head(groups, only):
     """只发 HEAD 请求，核 sources.json 里的字节数和服务器报的一致（不下载）。返回不一致的条目。"""
+    refuse_manual(groups, only)
     bad = []
     for gid in only:
         for f in groups[gid]["files"]:
@@ -295,9 +306,10 @@ def plan(groups, only):
     total = 0
     for gid in only:
         g = groups[gid]
-        n = sum(f["bytes"] for f in g["files"])
+        n = sum(f["bytes"] or 0 for f in g["files"])
         total += n
-        print(f"{gid} {g['name']}：{len(g['files'])} 个文件 {n / 1e9:.2f} GB · {g['license']} · 能训练={g['train_ok']}")
+        manual = f" · 手工下载（字节未计：{g['manual']}）" if g.get("manual") else ""
+        print(f"{gid} {g['name']}：{len(g['files'])} 个文件 {n / 1e9:.2f} GB · {g['license']} · 能训练={g['train_ok']}{manual}")
     print(f"合计 {total / 1e9:.2f} GB")
     return total
 
@@ -318,6 +330,7 @@ def main():
     if a.plan:
         plan(groups, only)
         return
+    refuse_manual(groups, only)  # 分卷包不能只下要的类：手工下完再解（A6）
     if a.head:
         bad = head(groups, only)
         sys.exit(1 if bad else 0)
