@@ -115,13 +115,20 @@ class _Beat:
     def _run(self):
         import guards  # 运行时读：测试可改 guards.STALL_S 与优先级表
         while not self.stop.wait(self.every):
-            why = self.want_stop()
-            idle = None if self.last_progress is None else time.monotonic() - self.last_progress()
-            stall = guards.STALL_S if self.stall_s is None else self.stall_s
-            stopped = why if why and idle is not None and idle > self.hang_s else None
-            hung = idle is not None and idle > stall
-            # 两个条件同时成立时按 guards.STOP_PRIORITY 挑一个，消息里写它（codex guards 第 4 轮 · 改结构）
-            top = guards.pick_reason(stopped, "stall" if hung else None)
+            # 判断这一步本身出错（want_stop 抛异常、表外原因让 pick_reason 报错）也要出手：
+            # 否则线程静默结束，on_hang 永不叫、心跳也停，卡住保护没了、只剩总时限兜底
+            # （codex guards 第 5 轮 #3）。只包判断，不包 on_hang 自己的异常。
+            try:
+                why = self.want_stop()
+                idle = None if self.last_progress is None else time.monotonic() - self.last_progress()
+                stall = guards.STALL_S if self.stall_s is None else self.stall_s
+                stopped = why if why and idle is not None and idle > self.hang_s else None
+                hung = idle is not None and idle > stall
+                # 两个条件同时成立时按 guards.STOP_PRIORITY 挑一个，消息里写它（codex guards 第 4 轮 · 改结构）
+                top = guards.pick_reason(stopped, "stall" if hung else None)
+            except Exception as e:  # noqa: BLE001 —— 判断失灵就按「出手」处理，不能静默丢掉看门狗
+                self.on_hang(f"看门狗判断出错：{type(e).__name__}: {e}")
+                return
             if top is not None:  # guards ⑤：不管该不该停，久无进展就强退（GPU 卡死、评估卡住）
                 self.on_hang(_hung_message(top, stall, self.hang_s))
                 return
