@@ -53,3 +53,5 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-26T07:44:36Z	pod_delete	3h08g5wq4xr6fp	cpu3c x4	US-MO-1	0.1200	2026-11-26T07:37:32Z	2026-11-26T07:44:36Z	0.1178	0.0141		D112：first-batch 小文件取回后删，盘 168→153 GB
 2026-11-26T07:47:55Z	pod_create	sm5qjwcfp8slir	cpu3c x4	US-MO-1	0.1200	2026-11-26T07:47:55Z					max_hours=1.5
 2026-11-26T08:49:39Z	pod_delete	sm5qjwcfp8slir	cpu3c x4	US-MO-1	0.1200	2026-11-26T07:47:55Z	2026-11-26T08:49:39Z	1.0289	0.1235		第四批 A 段：C236 与办公室单音全量、办公室 3 位置 402 条筛查；日志已取回
+2026-11-26T14:42:57Z	pod_create	p8wburmyl2jz6o	cpu3c x4	US-MO-1	0.1200	2026-11-26T14:42:57Z					max_hours=2.0
+2026-11-26T16:11:08Z	pod_delete	p8wburmyl2jz6o	cpu3c x4	US-MO-1	0.1200	2026-11-26T14:42:57Z	2026-11-26T16:11:08Z	1.4697	0.1764		batch4b 重跑完成 + 按 D116 删 batch3

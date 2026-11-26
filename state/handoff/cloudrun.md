@@ -70,3 +70,11 @@
 - 2026-11-26 07:48–08:48Z 第四批 A 段（代码 249875ca，机器 sm5qjwcfp8slir，约 0.12 美元，已删）：C236 单音全量 first_only 331 · later_too 289，按 D114 不用；办公室 4154 条 none 3840 · later_too 313；按 traindata 定，每次布置取 01、11、21 三个麦克风位置，共 402 条，筛查 keep 390。结果放在主仓 _tmp/20261126-cloudrun-batch4/（sha256 7df39381…）。另回 traindata：CochlScene 的 Restaurant、Cafe 没解压，压缩包已删，重下约 54 GB。
 - 待办：B 段（traindata 给提交号后）重打全部分片约 +23 GB，跑完约 177 GB，会低于 30 GB 开训门槛。开训前先由大总管或人定删 batch2 还是 batch3（D112：batch2 留到第一个正式运行过开发份检查）。
 - 开训清单第 8 项（花费重估，按 PR #194 实测，对上限 100 美元）：新 build 出来后做。
+- 2026-11-26 14:44–16:08Z 第四批 B 段（机器 p8wburmyl2jz6o，约 0.18 美元，批 ≤0.24，已删）。第一次用代码 a632a660，停在切分：仓里已有的 but-reverbdb-silence 切分表不许覆盖。输出留在网络盘 /workspace/out/batch4b-try1-a632a660。traindata 改用新来源名 but-reverbdb-silence-b4（254ebece），我在同一台机器上重跑：
+  - 测试全过；切分 584 / 78 / 66，dev 4 个单元 104 个文件，4 间房各 1 个；分片 2458 秒。
+  - 6 个 build 都是 valid，交集都是 0：基线 bc0e9e7b566421f0，另外 5 个是 10ebb73b、36ea9561、574ef5c7、748aee58、966a229d。
+  - 打包 sha256 a2b67102…，取回到主仓 _tmp/20261126-cloudrun-batch4b/，校验一致。
+- 同一台机器上按 D116 删 batch3（build 10aa3a9f 的分片）。trainer-0e 确认没有依赖。删前取回 93 个文件的名字、字节数和 sha256，共 21.6 GB；index.json 的 sha256 是 b56737da…，放在主仓 _tmp/20261126-batch3-small/（tar sha256 c5e07426…）。盘 176 → 156 / 200 GB，剩 44 GB，过开训门槛。batch2 不动。
+- 大总管固定名改为 noise-canceling-meta（人定），以后只报这个名字。trainer 现名 noise-canceling-trainer-0e。
+- 累计花费 8.97 / 100 美元，云上 0 台机器。
+- 待办：等 trainer 的正式训练命令。开 H100 前做开训清单第 8 项（花费重估），报 meta 批，并要人点头。
