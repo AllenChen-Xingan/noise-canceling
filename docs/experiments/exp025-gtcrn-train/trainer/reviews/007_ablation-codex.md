@@ -29,3 +29,11 @@ P0×0 P1×2 P2×2。逐条核实，4 条都属实。
 - 改动：judge 比整份配置，例外只有 run.name、run.seed、data.recipe（常量 `CFG_IGNORE`），缺键也算不同。每个运行先查设计固定项：模型 A、1000 步、`data.dev_recipe` 等于基线配方；基线不合格时每个旋钮都判 incomplete。metrics 有非对象行时，判该运行 incomplete，不再崩溃。
 - 红灯：trainer 把新测试放到旧代码 1a07d666 上跑（测试里的新常量换成字面值，免得只因缺常量而红），13 败 46 过，都是新加的用例。
 - 绿灯：合入后 trainer 亲手跑 test_ablation + test_formal + test_data + test_train，108 过 2 跳过；ablation.py 467 行，测试 585 行。
+
+## 第 2 轮（2026-11-26）· 模型 gpt-6-astra · 总评「修改」
+
+P0×0 P1×1 P2×2。逐条核实，3 条都属实。
+- **P1｜judge 不核对运行的实际种子**（第 2 轮 #1）：两条基线都误用种子 0 时，噪声底失去意义，旋钮仍照判。trainer 补一条同类检查：每个运行的 data.recipe 必须是名字对应的那份变体。交 pi `trainer-ablation-fix3`。
+- **P2｜缺键与 null 不分，空对象被拍平丢掉**（第 2 轮 #2）：改动小，一起交 pi。
+- **P2｜不设 dev_recipe 时 run.json 多两个字段**（第 2 轮 #3）：同第 1 轮 #3，仍留在 #217。不进停止线，因为它不影响判结果，也不影响开训。
+- 先拆测试文件：test_ablation.py 已 585 行，再加就超 600 行。
