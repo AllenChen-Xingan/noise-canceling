@@ -2,6 +2,9 @@
  "_说明": "切分规则正本 = 027 decision.md 第六节第 5 条的表（逐行照抄比例，出处列在每条 src）。split.py 只认这里。四份：train 训练 · dev 开发 · final 终测原料池 · d63 测试份（只测不训，也不进任何合成原料）",
  "seed": 20261116,
  "splits": ["train", "dev", "final", "d63"],
+ "未建表": {
+  "but-reverbdb-silence": "音频在云上；先跑 screen.py 再 split.py，表带回进仓后删这一行"
+ },
  "sources": {
   "librispeech-train-clean-100": {
    "expect": {"files": 28539, "units": 251, "src": "openslr.org/12 README：train-clean-100 共 251 名说话人、28,539 句（读文档，待云上核）"},
@@ -67,6 +70,20 @@
    "frac": {"train": 0.9, "dev": 0.1, "final": 0.0, "d63": 0.0},
    "_frac": "D106：只作训练噪声；终测只用 exp013，不给终测与 d63；9:1 暂定",
    "_未筛人声": "CochlScene 是众包手机录音，片段里可能有人说话；这次未筛，方法待定（大总管 c4 2026-11-25）"
+  },
+  "but-reverbdb-silence": {
+   "expect": {"files": 868, "src": "cloudrun 2026-11-26 解压清单：C236 silence 620 + Room112 silence 248"},
+   "src": "D111 补充（第三批）：BUT 混响库底噪；办公室与会议室之类的房间底噪补 meeting-room · hotel-room", "group": "A7", "unit": "file",
+   "glob": ["train-raw/but-reverbdb/VUT_FIT_C236/MicID*/*/*/silence/*.wav", "train-raw/but-reverbdb/Hotel_SkalskyDvur_Room112/MicID*/*/*/silence/*.wav"],
+   "unit_regex": [{"match": "^train-raw/but-reverbdb/([^/]+)/MicID\\d+/([^/]+)/", "unit": "\\1/\\2", "why": "房间 + 扬声器布置：同一次布置的 31 个麦克风同时录的是同一段底噪，必须同进一份；会议室与酒店房间各只有一间，纯按房间切会让整类落进开发份（大总管 c4 2026-11-26 同意）"}],
+   "unit_regex_required": true,
+   "stratum_unit_regex": "^([^/]+)/",
+   "min_dev_per_stratum": 1,
+   "exclude_if_meta": {"file": "../../spk_meta.txt", "regex": "^\\$EnvSpk2", "why": "read_me：第 2 个扬声器放的是背景声（如收音机）"},
+   "screen_file": "screen/but-reverbdb-silence.jsonl",
+   "frac": {"train": 0.9, "dev": 0.1, "final": 0.0, "d63": 0.0},
+   "_frac": "只作训练噪声；终测只用 exp013；9:1 暂定",
+   "_开发份": "会议室、酒店房间各只有一间房：开发份与训练份是同一间房，开发份对这两类只测同房不同场次，不测换房间（大总管 c4 2026-11-26）"
   },
   "demand-train": {
    "expect": {"files": 96, "src": "exp006 用的 6 个环境 × 每个 16 声道（DEMAND 说明）"},
