@@ -73,7 +73,7 @@ while IFS= read -r line || [ -n "$line" ]; do
       exit 3
     fi
     aria2c -x8 -s8 -k8M --file-allocation=none --max-tries=10 --retry-wait=10 \
-      -d "$DEST" -o "$name" "$url"
+      -d "$DEST" -o "$name" "$url" < /dev/null
   fi
   seconds=$(( $(now_s) - t0 ))
 

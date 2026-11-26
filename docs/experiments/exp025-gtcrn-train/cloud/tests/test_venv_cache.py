@@ -17,6 +17,7 @@ echo "uv $*" >> LOGPATH
 if [ "$1" = "--version" ]; then echo "uv 0.5.0 (fake)"; exit 0; fi
 if [ "$1" = "venv" ]; then
   for a in "$@"; do d="$a"; done
+  if [ -d "$d" ]; then echo "uv venv: 目标已存在 $d" >&2; exit 1; fi
   mkdir -p "$d/bin"
   printf '#!/bin/sh\n' > "$d/bin/python"
   chmod +x "$d/bin/python"
@@ -45,6 +46,18 @@ esac
 """
 
 
+# 假 mktemp：学 GNU 的严格行为，模板里没有 XXXXXX 就报错退出 1
+FAKE_MKTEMP = r"""#!/bin/sh
+case "$1" in
+  *XXXXXX*) : ;;
+  *) echo "mktemp: too few X's in template '$1'" >&2; exit 1 ;;
+esac
+p=$(printf '%s\n' "$1" | sed "s/XXXXXX/$$/")
+: > "$p"
+printf '%s\n' "$p"
+"""
+
+
 def _exe(path: str, body: str, log: str = "") -> None:
     if log:
         body = body.replace("LOGPATH", log)
@@ -62,6 +75,7 @@ class _Case(unittest.TestCase):
         self.log = os.path.join(self.t, "uv.log")
         _exe(os.path.join(self.bin, "uv"), FAKE_UV, self.log)
         _exe(os.path.join(self.bin, "tar"), FAKE_TAR)
+        _exe(os.path.join(self.bin, "mktemp"), FAKE_MKTEMP)
         self.store = os.path.join(self.t, "store")
         self.root = os.path.join(self.t, "root")
         self.reqs = []
@@ -178,6 +192,17 @@ class TestVenvCache(_Case):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(self.built_with(), "只有 .part 就重新装")
         self.assertTrue(os.path.exists(os.path.join(store2, key + ".tar")), "这次要发布成品")
+
+    def test_half_built_dir_is_cleared_before_uv_venv(self):
+        self.assertEqual(self.run_script().returncode, 0)
+        key = self.key_of()
+        root2 = os.path.join(self.t, "root_dirty")
+        os.makedirs(os.path.join(root2, key, "lib"))  # 上次失败留下的半截目录，没有 bin/python
+        open(self.log, "w").close()
+        r = self.run_script(store=os.path.join(self.t, "store_dirty"), root=root2)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue(self.built_with(), "半截目录要能清掉重建")
+        self.assertTrue(os.path.exists(os.path.join(root2, key, "bin", "python")))
 
     def test_existing_tar_is_never_overwritten(self):
         race = os.path.join(self.t, "store_race")

@@ -40,7 +40,7 @@ STORE=$(cd "$STORE" && pwd)
 ROOT=$(cd "$ROOT" && pwd)
 
 # key = 前 16 位：py 版本 + uv 版本 + 每份 requirements 全文（按给定顺序）
-KEYSRC=$(mktemp -t vdnkey)
+KEYSRC=$(mktemp "${TMPDIR:-/tmp}/vdnkey.XXXXXX")
 trap 'rm -f "$KEYSRC"' EXIT
 {
   echo "py=$PYV"
@@ -65,6 +65,7 @@ if [ -f "$TAR" ]; then
   fi
   echo "=== restore seconds=$(( $(now) - t0 ))"
 else
+  rm -rf "$ROOT/$KEY"  # 上次失败可能留了半截目录，uv venv 不给建
   t0=$(now)
   uv venv --relocatable --python "$PYV" "$ROOT/$KEY"
   echo "=== venv seconds=$(( $(now) - t0 ))"
@@ -85,14 +86,21 @@ else
   tar -cf "$PART" -C "$ROOT" "$KEY"
   SUM="$STORE/$KEY.tar.sha256.part-$$"
   echo "$(sha_full "$PART")  $KEY.tar" > "$SUM"
-  if [ -e "$TAR" ]; then
-    # 另一台机器抢先发布了同一份：留它的，删自己的
-    echo "--- 发布：已有 $KEY.tar，保留网络盘上那份"
-    rm -f "$PART" "$SUM"
-  else
-    mv "$PART" "$TAR"
-    mv "$SUM" "$STORE/$KEY.tar.sha256"
+  if ln "$PART" "$TAR" 2>/dev/null; then
+    # 硬链接成功才算我们发布；随后删掉临时名
+    rm -f "$PART"
+    ln "$SUM" "$STORE/$KEY.tar.sha256" 2>/dev/null || true
+    rm -f "$SUM"
     echo "--- 发布：$TAR"
+  else
+    # 目标已存在（另一台机器抢先发布）：留它的，删自己的
+    rm -f "$PART" "$SUM"
+    if [ -e "$TAR" ]; then
+      echo "--- 发布：已有 $KEY.tar，保留网络盘上那份"
+    else
+      echo "发布不了：$TAR 链接失败且目标不存在" >&2
+      exit 6
+    fi
   fi
   echo "=== pack seconds=$(( $(now) - t0 ))"
 fi

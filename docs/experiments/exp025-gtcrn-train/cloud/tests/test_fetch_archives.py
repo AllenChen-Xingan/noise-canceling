@@ -25,6 +25,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 printf 'payload-%s\n' "$o" > "$d/$o"
+cat > /dev/null   # 真 aria2c 会读标准输入；脚本没接 /dev/null 的话会吞掉清单剩下的行
 """
 
 # 假 du：用量由环境变量 FAKE_DU_GB 决定
