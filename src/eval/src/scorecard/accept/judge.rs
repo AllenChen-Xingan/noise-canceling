@@ -100,11 +100,27 @@ fn seed_shortage(vs: &[Cmp], noise: &[Cmp]) -> Option<String> {
 }
 
 /// 「要涨」的一行：每个种子都判「涨」、报告种子的差值均值过线、且大于种子噪声底。
-fn gain_row(v: &str, key: &str, scene: &str, vs: &[Cmp], noise: &[Cmp]) -> Row {
+fn gain_row(
+    v: &str,
+    key: &str,
+    scene: &str,
+    vs: &[Cmp],
+    noise: &[Cmp],
+    expected: &Expected,
+) -> Row {
     let line = th::ACCEPT.def(key);
     let what = format!("要涨 {v}（场景 {scene}；线 SC-ACCEPT.{key} = {line:+.3}）");
     if let Some(why) = seed_shortage(vs, noise) {
         return Row::new(what, Verdict::Undecided, format!("种子不齐，判不了：{why}"));
+    }
+    // 三个种子与三对互比里任何一份缺预期片段 → 这一项的涨跌没覆盖全，判不了（codex 第 7 轮 P1）
+    let cov = expected.coverage_compares(vs, noise);
+    if !cov.is_empty() {
+        return Row::new(
+            what,
+            Verdict::Undecided,
+            format!("覆盖不齐，判不了：{}", cov.join("；")),
+        );
     }
     let (mut bad, mut hole, mut seen) = (Vec::new(), Vec::new(), Vec::new());
     for c in vs {
@@ -285,9 +301,9 @@ fn veto_row(v: &str, rep: &Cmp) -> Row {
 /// 「覆盖」的一行：清单要的场景 / 切片 / 片段都要在两份逐段文件、两份成绩单与 compare 里
 /// （`Expected::coverage`）。双方误用同一份子集（都漏跑一个场景）时涨退两项都恰好没检查它；
 /// 这一行把它暴露出来（codex 第 2 · 3 · 4 轮）。
-fn coverage_row(expected: &Expected, a: &CardIn, b: &CardIn, rep: &Cmp) -> Row {
-    let what = "覆盖：清单要的场景与片段都在比较里".to_string();
-    let hole = expected.coverage(a, b, rep);
+fn coverage_row(expected: &Expected, a: &CardIn, b: &CardIn, vs: &[Cmp], noise: &[Cmp]) -> Row {
+    let what = "覆盖：清单要的场景与片段都在每一份比较里".to_string();
+    let hole = expected.coverage(a, b, vs, noise);
     let verdict = if hole.is_empty() {
         Verdict::Pass
     } else {
@@ -438,7 +454,7 @@ pub(super) fn evaluate(
     let mut rows = Vec::new();
     for scene in scenes {
         for (v, key) in GAINS {
-            rows.push(gain_row(v, key, scene, vs, noise));
+            rows.push(gain_row(v, key, scene, vs, noise, expected));
         }
     }
     let want = expected.scenes();
@@ -448,7 +464,7 @@ pub(super) fn evaluate(
     for v in VETO {
         rows.push(veto_row(v, rep));
     }
-    rows.push(coverage_row(expected, card_a, card_b, rep));
+    rows.push(coverage_row(expected, card_a, card_b, vs, noise));
     rows.push(cards_row(card_a, card_b, scenes));
     rows.push(lat_row(card_a, card_b, expected));
     let verdict = if rows.iter().any(|r| r.verdict == Verdict::Fail) {

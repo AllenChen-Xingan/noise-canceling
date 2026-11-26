@@ -234,6 +234,29 @@ fn clip_missing_on_candidate_side_is_undecided() {
     assert_eq!(js["verdict"], "undecided");
 }
 
+/// codex 第 7 轮 P1：覆盖要核每一份 compare，不止报告种子那份。
+/// 种子 2 的 compare（以及它参与的两对互比）少了一段目标场景的片段 → 要涨的线判不了。
+#[test]
+fn other_seed_clip_missing_is_undecided() {
+    let f = Fix::new("seed2clip");
+    let gone = ctl(MeetingPlace::Cafe, 4)[1].clip.clone();
+    let g = build(
+        &f,
+        Spec {
+            omit_clip2: &[gone.as_str()],
+            ..spec(good1(), good2(), good3())
+        },
+    );
+    let js = f.accept(&g.vs, &g.noise, &g.card_a, &g.card_b, "x");
+    assert_eq!(verdict(&js, "V-ESTOI（场景 cafe"), "undecided", "{js}");
+    assert!(
+        detail(&js, "V-ESTOI（场景 cafe").contains(&gone),
+        "要说清哪一份 compare 少了哪一段：{js}"
+    );
+    assert_eq!(verdict(&js, "覆盖"), "undecided", "{js}");
+    assert_eq!(js["verdict"], "undecided");
+}
+
 /// codex 第 5 轮 P1 #2：卡片状态从绑定的逐段文件重新汇总。旧 scorecard.json 写成「过」也不能改结论。
 #[test]
 fn old_scorecard_status_is_ignored() {

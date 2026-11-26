@@ -420,6 +420,8 @@ pub struct Spec<'a> {
     pub omit1: &'a [MeetingPlace],
     /// 种子 1 里这些片段 id 整段不放进逐段文件（候选漏跑一段）
     pub omit_clip1: &'a [&'a str],
+    /// 种子 2 里这些片段 id 整段不放进逐段文件（另一个种子漏跑一段）
+    pub omit_clip2: &'a [&'a str],
     /// 对照里这些场景塞一段否决项不过的分（卡状态由逐段文件重新汇总，靠这个把它弄成不过）
     pub poison_ctl: &'a [(MeetingPlace, &'static str)],
     /// 种子 1 里这些场景塞一段否决项不过的分
@@ -440,6 +442,7 @@ pub fn spec(d1: D, d2: D, d3: D) -> Spec<'static> {
         lat1: &[],
         omit1: &[],
         omit_clip1: &[],
+        omit_clip2: &[],
         poison_ctl: &[],
         poison1: &[],
     }
@@ -518,7 +521,9 @@ pub fn build(f: &Fix, s: Spec<'_>) -> Good {
     }
     seed1.retain(|r| !s.omit1.contains(&r.scene) && !s.omit_clip1.contains(&r.clip.as_str()));
     let cand1 = f.jsonl("c1", &seed1);
-    let c2 = f.jsonl("c2", &cand(&a, s.d2, &[], "cand"));
+    let mut seed2 = cand(&a, s.d2, &[], "cand");
+    seed2.retain(|r| !s.omit_clip2.contains(&r.clip.as_str()));
+    let c2 = f.jsonl("c2", &seed2);
     let c3 = f.jsonl("c3", &cand(&a, s.d3, &[], "cand"));
 
     // 评测清单：每个场景一条任务，指向「全部 4 个源片段 × 2 设备」的片段清单（预期集合）
