@@ -13,6 +13,8 @@ A 段结果和由来见 `cloud-batch4.md`；场景缺口与限制见 `scene-gaps
 
 ## 0. 准备
 
+⚠️ 代码提交号以我消息里发的为准（改名之后的那个，不是 a632a660）。
+
 ```bash
 # 代码：feat/data-batch3 的提交 33990076（或更新；我发你），新 clone 到 /workspace/repo-<提交前 8 位>
 D=docs/experiments/exp025-gtcrn-train/data
@@ -26,9 +28,11 @@ $PY $D/ablation_recipes.py --check           # 应打印「5 份消融配方与 
 ## 1. 重切 BUT 底噪
 
 ```bash
-$PY $D/split.py --root /workspace --only but-reverbdb-silence --inventory   # 应为 728 个文件
-$PY $D/split.py --root /workspace --only but-reverbdb-silence
+$PY $D/split.py --root /workspace --only but-reverbdb-silence-b4 --inventory   # 应为 728 个文件
+$PY $D/split.py --root /workspace --only but-reverbdb-silence-b4
 ```
+
+新来源名 `but-reverbdb-silence-b4`：旧表 `splits/but-reverbdb-silence.json` 是 build 10aa3a9f 在用的，不原地覆盖（2026-11-26 第一次跑在这里被 split.py 拒绝，大总管 87 定用新名字）。旧规则已还原，旧表一个字节不动。
 
 预期摘要：`files` = 375 + 209 = 584（推算：办公室 keep 375 + 酒店房间 keep 209），`excluded_meta` = 78，`excluded_screen` = 27 + 39 = 66。
 `per_split` 只有 train 与 dev；4 间房（R112 · L207 · L212 · Q301）在开发份里各至少一个布置。数对不上就停，把摘要发我。
