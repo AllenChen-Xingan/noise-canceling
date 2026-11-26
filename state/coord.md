@@ -480,3 +480,9 @@
 - 2026-11-26 更正：给 cloudrun 的「删 first-batch」指令被自动模式权限拦下（判为破坏性），未发出 → 删不删 first-batch 改为待人定（10-4）。
 - 2026-11-26 traindata：增量分片 #206（下一件）；README 加「旧分片只能用当时提交复现 · 删不删由人定」（cb817ab1）；派 pi traindata-shards-env（1 美元，--heavy-re 收窄）：shard/register/pack 必须显式 VDN_SHARDS 否则退出 2；cloud_steps.sh 不进 build id，云上第三批不受影响（读源码）。
 - 2026-11-26 人定 D112：第三批 valid 后删 first-batch。
+- 2026-11-26 02:13Z 批第三批另开 cpu3c 4 核 · 自删 3 h · ≤0.36 美元（实测识别补跑机 load 19–36 / 4 核，识别不是在等网络，大总管原判断错）。识别补跑 02:12Z +857 次 +0.083 美元。
+- 2026-11-26 traindata：cloud_steps.sh 改完推 8c6e05c3（282 过，pi 0.0068 美元）；告知 D112，README 改引用。
+- 2026-11-26 02:28Z 第三批机 jm4m7pg5zmif3n（02:14Z 开）：准备 · 测试 276 过 · 候选 868 条后，筛查停在 screen.py:285（假模型接口与真 PANNs 不符），疑收音机排除未生效；无分片写出，盘 145 GB。cloudrun 等 30 min 否则删机。识别补跑 02:27Z +1380 次 +0.132 美元。
+- 2026-11-26 02:39Z traindata 实测收音机：54 份 spk_meta 只有 L207 两份带 EnvSpk2，C236 · R112 没有，868 条正确，非 bug。真 spk_meta 两份进测试夹具（9291ec39，Apache 2.0），pi traindata-spkmeta（1 美元）改夹具。cloudrun：两房间 keep 各 ≥ 一半就继续 split → shard → register → pack。
+- 2026-11-26 02:47Z 识别补跑完成（cloudrun 实测）：+1953 次 · +0.1875 美元（上限 0.25），吃字有值 82→452/480，结果 _tmp/20261126-asr-rerun/rerun-20261126-013313/；机器 glx9 已删（约 0.17 美元），累计 8.22 美元。交 evalcmp 出第二版差距表。第三批 traindata 修 7badd9a1（契约 2 条 · 全套 288 过），C236 筛查 02:46Z 起。
+- 2026-11-26 02:48Z evalcmp 确认无后台进程后，大总管建 exp/025-gap-v2 并 --continue 重开，钩子改登记。第二版弱项表前 4：rail-air-cabin · canteen · meeting-room · transit-hub（与第一版同组，3、4 名对调）；28 段无值分在 9 场景。
