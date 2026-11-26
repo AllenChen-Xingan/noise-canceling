@@ -22,7 +22,7 @@ HERE = Path(__file__).resolve().parent
 # 续训时允许改的配置（其余一改就拒绝续训：批量、种子、数据、损失等变了，接着训就不是同一个实验）
 RESUMABLE_CHANGES = {("schedule", "max_steps"), ("limits", "max_hours"), ("limits", "max_usd"),
                      ("limits", "usd_per_hour"), ("data", "num_workers"), ("schedule", "log_every"),
-                     ("device",)}
+                     ("device",), ("limits", "expect_s_step")}
 
 
 GIT_TIMEOUT_S = 60
@@ -149,6 +149,13 @@ class RunDir:
                 with open(self.ckpt_dir / "bad_ckpt.txt", "a") as log:
                     log.write(f"{f.name}\t{type(e).__name__}: {e}\n")
         return None, None
+
+    def save_as(self, state: dict, name: str) -> Path:
+        """存一份不参与轮换的检查点（best.pt、crash-<步>.pt）；名字不许以 step- 开头，免得被续训当成最新。"""
+        if name.startswith("step-") or "/" in name:
+            raise ValueError(f"save_as 的名字不对：{name}")
+        _atomic_write(self.ckpt_dir / name, lambda f: torch.save(state, f))
+        return self.ckpt_dir / name
 
     def save(self, state: dict, step: int, keep_last: int) -> Path:
         name = f"step-{step:07d}.pt"

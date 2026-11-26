@@ -17,6 +17,7 @@
 | `smoke.py` | 开训前冒烟三件事 + 测每步耗时，一个命令 |
 | `smoke.py --write-known-dev` | 只算起点模型的开发份参照读数（带数据版本 meta），给 `--known-dev` 用 |
 | `cmp_ckpt.py` | 逐键比两个检查点的 `model`（续训核对） |
+| `guards.py` | 训练时的自动保护：阈值正本（损失猛涨 · 最好的检查点 best.pt · 前 500 步太慢 · 卡住 900 s）；见 `plan-h100-smoke.md` 第十二节 |
 | `gate_v4.py` | 单批过拟合判据第 4 版的正本（查「流程能学」）；也能按第 4 版重判旧报告 |
 | `dev_gate.py` | 训练有没有用：300 步后开发份读数要低于第 0 步（CPU 参照） |
 | `overfit_probe.py` · `data_probe.py` · `smoke.py --overfit-probe` | 过拟合慢的诊断：学习曲线 · 梯度 · 学习率 · 对齐 · 目标 · 关配方旋钮；只记录 |

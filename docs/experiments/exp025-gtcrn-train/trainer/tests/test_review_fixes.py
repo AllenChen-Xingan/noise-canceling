@@ -434,7 +434,8 @@ def test_watchdog_fires_only_when_stop_wanted_and_stalled(tmp_path):
     rd = train.RunDir(tmp_path / "w")
     fired = []
     t0 = __import__("time").monotonic()
-    for want, last, expect in (("signal:SIGTERM", t0 - 999, True), (None, t0 - 999, False),
+    # 第二条原为 t0 − 999：guards ⑤ 加了「久无进展 900 s 就强退」后改成 200 s（> hang_s、< STALL_S）
+    for want, last, expect in (("signal:SIGTERM", t0 - 999, True), (None, t0 - 200, False),
                                ("max_usd", lambda: __import__("time").monotonic(), False)):
         fired.clear()
         lp = last if callable(last) else (lambda v=last: v)
@@ -505,7 +506,8 @@ def test_watchdog_fires_even_if_heartbeat_write_fails(tmp_path, kind):
     want = {"v": None}
     fired = []
     b = train._Beat(rd, lambda: (0, 1.0, 0.0), 0.02, want_stop=lambda: want["v"],
-                    last_progress=lambda: _t.monotonic() - 999, hang_s=1.0, on_hang=fired.append)
+                    last_progress=lambda: _t.monotonic() - 200, hang_s=1.0, on_hang=fired.append)
+    # 原为 − 999：超过 guards ⑤ 的 STALL_S 900 s 会在写盘前就出手；改成 200 s（> hang_s、< STALL_S）
     with b:
         assert entered.wait(2)  # 先确认写盘已进入失败 / 卡住
         want["v"] = "max_usd"  # 再满足停止条件
