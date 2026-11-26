@@ -1,10 +1,10 @@
 # 现状页 · trainer（批次 20261116-b19）
 
-- **状态**：H100 冒烟方案大总管已批；两处新代码写完、codex 3 轮达停止线；等大总管推送分支、cloudrun 开机（分支 `exp/025-h100-smoke`）
-- **手上**：训练器 · 训练损失 · 模型变体（issue #157，分支 `exp/025-trainer`）
-- **交代**：`_tmp/20261116-b19/trainer.md`；大总管 2026-11-24 起是 `noise-canceling-33`（接替 e1）
-- **做到哪**（2026-11-24）：交代 1–7 条全部完成。测试 119 条通过，4 条等 traindata / cloud 合入后自动跑。本机冒烟三件事过（合成小样，新判据）。自审 3 个视角 + codex 10 轮，按大总管口径已达停止线；待办 #159、#160
-- **下一步**：等验收；云上正式冒烟见「转交」
+- **状态**：正式训练加训场景（issue #209，分支 `feat/trainer-target-scenes`）已验收 pi 的 3 个提交、快进合入，codex 评审中；之后推送开 PR。不开机：分片与配方路径等第三批登记（会议室底噪筛查没过，人选先查清）
+- **手上**：训练器 · 训练损失 · 模型变体（issue #157）
+- **交代**：`_tmp/20261116-b19/trainer.md`；新规则 `_tmp/20261116-b19/common-pi-rule-20261126.md`（代码派 pi 写）；大总管 2026-11-26 起是 `noise-canceling-43`（接替 c4）
+- **做到哪**（2026-11-26）：守卫（#199）、正式训练配置草稿（#201）已合入 main。加训场景 4 个（D113：rail-air-cabin · canteen · meeting-room · transit-hub）填进 `configs/formal-runs.yaml`，`formal.py check` 按地点键表（`specs/schema/eval-suite.schema.json` 的 `MeetingPlace`）查场景名；现只报两处路径占位、退出 1。待办 #198（守卫 P2）；pump-loss 分支等第一批正式训练出数后再排
+- **下一步**：#209 开 PR 交大总管合并；第三批登记后填 `data.shard_root` / `data.recipe`（顺带把占位文字里的「第二批 / D110」改成第三批），`formal.py check` 过了再交 cloudrun 开训
 
 ## 改了哪些文件
 全部在 `docs/experiments/exp025-gtcrn-train/trainer/`，说明见该目录 `README.md`：
@@ -81,3 +81,5 @@
 - 11-26 codex guards 第 6 轮：只 1 条 P2；按本项目口径第 5、6 轮连续两轮无 P0/P1，停。剩余 P2 开 issue #198。推送 feat/trainer-guards、开 PR（Closes #195），交大总管验收。pi 花费合计：devnan 0.0099 · calibnan 0.0064 · finite 0.0428 · watchdog 0.0039 = 0.063 美元
 - 11-26 早先用 --cwd 起的 pi trainer-guards-devnan · trainer-guards-calibnan 跑在 trainer 自己的 worktree 里，没有单独的 worktree 可清；trainer-guards-finite · trainer-guards-watchdog 已 pi-worker clean
 - 11-26 正式训练配置草稿（issue #200，分支 feat/trainer-formal-config 从 main ab0f4f0a）：pi trainer-formal-config 提交 4c687043..2228fc9b（Agent: pi），花费 0.0113 美元；trainer 读 diff、亲手跑 test_formal + test_train 33 条过、`formal.py check` 现退出 1（2 个 TODO + 场景空），快进合入。不开机，等第二批数据登记、第二版差距表、D110
+
+- 11-26 加训场景（issue #209，分支 feat/trainer-target-scenes 从 main da9008e1）：pi trainer-target-scenes 提交 d9c5f527..3afe9e9c（Agent: pi），花费 0.0027 + 0.0050 = 0.0077 美元。pi-worker 中途 runner / tail 进程死了，pi 收不到「准许」卡约 50 分钟，stop 杀不掉；trainer kill 后用 `--cwd --session` 接回原会话。trainer 复现第 1 个提交的红（8 败 17 过），读 diff、亲手跑 test_formal + test_train 41 条过、`formal.py check` 只报两处路径占位、退出 1，文件 ≤ 600 行，快进合入。pi 是 `--cwd` 接回的，`pi-worker clean` 不认，worktree `noise_canceling.worktrees/trainer-target-scenes` 与分支 `w/trainer-target-scenes` 请大总管删
