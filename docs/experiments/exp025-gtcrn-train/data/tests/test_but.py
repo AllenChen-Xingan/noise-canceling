@@ -270,6 +270,28 @@ class Strata(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.run_src(r)
 
+class UnitFrom(unittest.TestCase):
+    """#204：摘要里记下单位模板，读表的人不用再翻规则去猜单位长什么样。"""
+
+    def summ(self, rule, name=SRC):
+        return split.summary(name, rule, 1, [], b"")
+
+    def test_present_for_regex_rules(self):
+        s = self.summ(feat_rule(unit_regex=Strata.UNIT_REGEX))
+        self.assertEqual(s["unit_from"], Strata.UNIT_REGEX[0]["unit"])
+
+    def test_present_for_cochlscene(self):
+        r = split.load_rules()["sources"]["cochlscene"]
+        self.assertEqual(self.summ(r, "cochlscene")["unit_from"], r["unit_regex"][0]["unit"])
+
+    def test_absent_for_speaker_rule(self):
+        r = split.load_rules()["sources"]["librispeech-train-clean-100"]
+        self.assertNotIn("unit_from", self.summ(r, "librispeech-train-clean-100"))
+
+    def test_absent_for_time_rule(self):
+        r = split.load_rules()["sources"]["qut-noise"]
+        self.assertNotIn("unit_from", self.summ(r, "qut-noise"))
+
 
 if __name__ == "__main__":
     unittest.main()
