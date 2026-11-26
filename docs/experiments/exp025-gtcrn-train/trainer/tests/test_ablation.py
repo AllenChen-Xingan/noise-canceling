@@ -554,6 +554,19 @@ def test_metrics_line_that_is_not_an_object_is_incomplete(tmp_path, line):
     assert ablation.main(["judge", str(tmp_path), "--out", str(tmp_path / "out.json")]) == 2
 
 
+def test_missing_config_key_counts_as_different(tmp_path):
+    """缺键也算不同：旋钮运行的 run.json 里整段 limits 没了（写坏 / 旧版记录）。"""
+    _all(tmp_path)
+    p = tmp_path / "abl-eq-off" / "run.json"
+    rec = json.loads(p.read_text())
+    del rec["config"]["limits"]
+    p.write_text(json.dumps(rec))
+    out = ablation.judge(tmp_path)
+    assert out["runs"]["abl-eq-off"]["verdict"] == ablation.V_INCOMPLETE
+    assert "limits" in out["runs"]["abl-eq-off"]["reason"]
+    assert out["knobs"]["eq"]["verdict"] == ablation.V_INCOMPLETE
+
+
 def test_recipe_and_build_id_may_differ(tmp_path):
     """每个运行的 data.recipe 与 data_build_id、run.name / run.seed 本来就不同：不算对不上。"""
     _all(tmp_path)
