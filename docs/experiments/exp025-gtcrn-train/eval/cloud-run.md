@@ -90,7 +90,7 @@ python3 rp.py preflight <机器> --repo <仓库> --commit <EVAL_COMMIT>
    ```sh
    RUN=$(date -u +%Y%m%d-%H%M%S)-$NAME
    R=docs/experiments/exp025-gtcrn-train/eval/runs
-   OLD=<补跑那 4 片的目录，20261126-013313-rerun-s0..s3>
+   OLD=<补跑那份仓库副本>/docs/experiments/exp025-gtcrn-train/baseline/runs/20261126-013313-rerun   # 后面接 -s0..-s3
    for i in 0 1 2 3; do mkdir -p "$R/$RUN-s$i/qa" && cp "$OLD-s$i/qa/asr_cache.json" "$R/$RUN-s$i/qa/"; done
    set -a; . /root/.env.local; set +a
    for i in 0 1 2 3; do
