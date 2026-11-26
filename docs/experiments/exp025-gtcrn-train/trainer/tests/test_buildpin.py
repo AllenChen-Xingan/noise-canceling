@@ -60,13 +60,16 @@ def recipe_text(scenes=None, *, on: bool = True) -> str:
 
 
 def make_build(builds_dir: Path, recipe: Path, *, index: str = "a" * 64, code: dict | None = None,
+               split_tables: dict | None = None, shards: dict | None = None,
                valid: bool = True, stamp: bool = True) -> str:
     """在 builds_dir 下摆一份登记记录，返回它的 build_id。
 
     id 按 loader.build_id_of 从记录内容算（与 register_build 同一公式）。code 给别的表 = 登记时代码不同；
-    stamp = False 让记录里的 build_id 与目录名对不上（测「记录自己对不上」）。
+    split_tables / shards 给别的表 = 登记时用的切分表 / 分片不同；stamp = False 让记录里的 build_id 与
+    目录名对不上（测「记录自己对不上」）。
     """
-    parts = {"index_sha256": index, "split_tables": {}, "shards": {},
+    parts = {"index_sha256": index, "split_tables": dict(split_tables or {}),
+             "shards": dict(shards or {}),
              "recipe_sha256": sha256(recipe.read_bytes()).hexdigest(),
              "code_sha256": dict(current_code() if code is None else code)}
     bid = _loader().build_id_of(parts)
@@ -205,12 +208,33 @@ def test_bad_build_id_reported_by_build_problems(tmp_path):
 
 # ---------- buildpin：变体配方自己的登记记录 ----------
 
+def variant_id(builds_dir: Path, base: str, recipe: Path) -> str:
+    """变体该登记成哪个 id：基线的身份字段，配方换成这份变体的 sha256（loader 的公式，测试里自己算一遍）。
+
+    这本来就是 loader 开训时算出来的 id；`variant_build_problems` 必须预测到同一个，不能只找「配方和
+    index 都一样」的记录——数据代码改过后，那种记录算出来是别的 id，loader 会拒绝。
+    """
+    m = _loader()
+    rec = json.loads((builds_dir / base / "build.json").read_text())
+    parts = {k: rec[k] for k in m.ID_KEYS if k in rec}
+    parts["recipe_sha256"] = m.sha_bytes(recipe.read_bytes())
+    return m.build_id_of(parts)
+
+
+def old_code() -> dict:
+    """登记当时的数据代码：自己一致，但不是现在这份（数据代码在登记之后改过）。"""
+    old = dict(current_code())
+    old["loader.py"] = "0" * 64
+    return old
+
+
 def test_registered_variant_passes(tmp_path):
     bdir = tmp_path / "builds"
     recipe = make_recipe(tmp_path / "recipe.json")
     base = make_build(bdir, recipe)
     var = make_recipe(tmp_path / "no-eq.json", '{"knobs": {"eq": {"on": false}}}')
-    make_build(bdir, var)  # 同一份假分片：index 默认值相同
+    want = make_build(bdir, var)  # 同一份假分片：index 默认值相同
+    assert want == variant_id(bdir, base, var)
     assert buildpin.variant_build_problems(var, base, bdir) == []
 
 
@@ -219,9 +243,27 @@ def test_unregistered_variant_reported(tmp_path):
     recipe = make_recipe(tmp_path / "recipe.json")
     base = make_build(bdir, recipe)
     var = make_recipe(tmp_path / "no-eq.json", '{"knobs": {"eq": {"on": false}}}')
+    want = variant_id(bdir, base, var)
     ps = buildpin.variant_build_problems(var, base, bdir)
     assert len(ps) == 1, ps
-    assert "no-eq.json" in ps[0] and base in ps[0] and "没有合格的登记记录" in ps[0]
+    assert "no-eq.json" in ps[0] and want in ps[0] and "没登记" in ps[0]
+
+
+def test_variant_registered_on_old_data_code_reported(tmp_path):
+    """#212：变体记录有同样的 index、同样的变体配方 sha256、自己一致、valid——但数据代码改过了。
+
+    loader 现在算出来的是另一个 id（`variant_id`），那份没登记，开训时直接拒绝：所以这条记录不算数。
+    """
+    bdir = tmp_path / "builds"
+    recipe = make_recipe(tmp_path / "recipe.json")
+    base = make_build(bdir, recipe)
+    var = make_recipe(tmp_path / "no-eq.json", '{"knobs": {"eq": {"on": false}}}')
+    old_id = make_build(bdir, var, code=old_code())  # 旧代码下登记的变体，记录自己一致
+    want = variant_id(bdir, base, var)
+    assert old_id != want  # 两条记录不一样：旧的那份现在算不出来了
+    ps = buildpin.variant_build_problems(var, base, bdir)
+    assert len(ps) == 1, ps
+    assert "no-eq.json" in ps[0] and want in ps[0]
 
 
 def test_variant_registered_on_other_shards_reported(tmp_path):
@@ -231,9 +273,27 @@ def test_variant_registered_on_other_shards_reported(tmp_path):
     base = make_build(bdir, recipe)
     var = make_recipe(tmp_path / "no-eq.json", '{"knobs": {"eq": {"on": false}}}')
     make_build(bdir, var, index="b" * 64)
+    want = variant_id(bdir, base, var)
     ps = buildpin.variant_build_problems(var, base, bdir)
     assert len(ps) == 1, ps
-    assert "no-eq.json" in ps[0]
+    assert "no-eq.json" in ps[0] and want in ps[0]
+
+
+@pytest.mark.parametrize("field, other", [
+    ("split_tables", {"train": "1" * 64}),
+    ("shards", {"noise": {"train": 3}}),
+])
+def test_variant_registered_on_other_parts_reported(tmp_path, field, other):
+    """切分表 / 分片和基线不同：那份记录的 id 不是变体该有的 id。"""
+    bdir = tmp_path / "builds"
+    recipe = make_recipe(tmp_path / "recipe.json")
+    base = make_build(bdir, recipe)
+    var = make_recipe(tmp_path / "no-eq.json", '{"knobs": {"eq": {"on": false}}}')
+    make_build(bdir, var, **{field: other})
+    want = variant_id(bdir, base, var)
+    ps = buildpin.variant_build_problems(var, base, bdir)
+    assert len(ps) == 1, ps
+    assert "no-eq.json" in ps[0] and want in ps[0]
 
 
 def test_variant_registered_but_invalid_reported(tmp_path):
@@ -241,8 +301,38 @@ def test_variant_registered_but_invalid_reported(tmp_path):
     recipe = make_recipe(tmp_path / "recipe.json")
     base = make_build(bdir, recipe)
     var = make_recipe(tmp_path / "no-eq.json", '{"knobs": {"eq": {"on": false}}}')
-    make_build(bdir, var, valid=False)
-    assert len(buildpin.variant_build_problems(var, base, bdir)) == 1
+    want = make_build(bdir, var, valid=False)
+    assert want == variant_id(bdir, base, var)
+    ps = buildpin.variant_build_problems(var, base, bdir)
+    assert len(ps) == 1, ps
+    assert want in ps[0] and "valid" in ps[0]
+
+
+def test_variant_record_build_id_field_mismatch_reported(tmp_path):
+    """变体该有的 id 上确实有记录，但记录里的 build_id 字段和目录名对不上（记录被手改过）。"""
+    bdir = tmp_path / "builds"
+    recipe = make_recipe(tmp_path / "recipe.json")
+    base = make_build(bdir, recipe)
+    var = make_recipe(tmp_path / "no-eq.json", '{"knobs": {"eq": {"on": false}}}')
+    want = make_build(bdir, var, stamp=False)
+    assert want == variant_id(bdir, base, var)
+    ps = buildpin.variant_build_problems(var, base, bdir)
+    assert len(ps) == 1, ps
+    assert want in ps[0] and "自己对不上" in ps[0]
+
+
+def test_variant_record_content_changed_after_stamping_reported(tmp_path):
+    """变体该有的 id 上有记录、build_id 字段也光鲜，但记录内容已经算不出那个 id。"""
+    bdir = tmp_path / "builds"
+    recipe = make_recipe(tmp_path / "recipe.json")
+    base = make_build(bdir, recipe)
+    var = make_recipe(tmp_path / "no-eq.json", '{"knobs": {"eq": {"on": false}}}')
+    want = make_build(bdir, var)
+    _tamper(bdir, want, code_sha256=old_code())
+    assert want == variant_id(bdir, base, var)
+    ps = buildpin.variant_build_problems(var, base, bdir)
+    assert len(ps) == 1, ps
+    assert want in ps[0] and "自己对不上" in ps[0]
 
 
 def test_variant_without_base_record_silent(tmp_path):
