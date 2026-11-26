@@ -65,3 +65,5 @@
 - 03:40–04:27Z 第三批续跑（代码 b81a9645，机器 byvkixm3sfzju6，约 0.09 美元，已删）：只登记 R112，得 build 10aa3a9fb8cef48f（valid，12 个场景）；包 sha256 e8c5c3d0…。C236 诊断 10 条：电平起伏中位数 7.46 dB，频谱峰多在 250 Hz。3 段 C236 按 D113 取回主仓 _tmp/20261126-c236-listen/，不进仓。盘 168 / 200 GB；first-batch 等 traindata 通知后按 D112 删。
 - 待办（D112 条件已满足，traindata 核过 build 10aa3a9f）：下一台批下来的机器开机后先做：取回 /workspace/shards/first-batch 的 build 小文件（不含音频）到主仓 _tmp → 删 first-batch → 报盘余量。batch2 不动。删前已问 trainer 有没有在用。下一台训练机开机前必须先删（盘 168/200，剩 32 GB，门槛 30）。c4 会话已不在，开机要新大总管批。
   - trainer 回（2026-11-26）：没有任何运行、脚本、配置在读 first-batch。提到它的只有历史冒烟命令和 smoke_reports/。正式训练的分片路径还是占位，不会指向它。删除前的依赖检查已完成，只差开机。
+- 2026-11-26 07:5xZ：派 pi（cloudrun-cap100，花 0.0076 美元）按 D115 把 `config.SPEND_CAP_USD` 从 60 改 100，带测试。pi 提交 4eb3dd62..8121f8c0（3 个，带 Agent: pi），快进合入；README 和 plan-eval-baseline 里的 60 美元由我改；147 条测试全过。
+- 2026-11-26 07:38–07:45Z：按 D112 删 first-batch（机器 3h08g5wq4xr6fp，约 0.014 美元）。删前取回 index.json（sha256 dbfa14f1…）和 66 个 tar 的清单与 sha256，放在主仓 _tmp/20261126-first-batch-small/。盘 168 → 153 / 200 GB。
