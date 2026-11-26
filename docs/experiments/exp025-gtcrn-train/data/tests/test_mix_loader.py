@@ -240,6 +240,13 @@ class EndToEnd(unittest.TestCase):
         self.assertIn("cochlscene", bj["missing"])  # 夹具里 cochlscene 的片段全落在训练份
         self.assertEqual(bj["missing"], sorted(bj["missing"]))
 
+    def test_build_json_records_scene_groups(self):
+        """cowork 与 open-office 用同一批拥挤室内录音：build.json 只记 2 个以上场景的组（组名取字母序第一个）。"""
+        bj = json.loads((self.builds / self.bid / "build.json").read_text())
+        self.assertEqual(sorted(bj["scene_groups"]), ["dev", "train"])
+        self.assertEqual(bj["scene_groups"]["train"], {"cowork": ["cowork", "open-office"]})
+        self.assertEqual(bj["scene_groups"]["dev"], {})  # 夹具里 cochlscene 全在训练份
+
     def test_build_json_valid(self):
         bj = json.loads((self.builds / self.bid / "build.json").read_text())
         self.assertTrue(bj["valid"])
