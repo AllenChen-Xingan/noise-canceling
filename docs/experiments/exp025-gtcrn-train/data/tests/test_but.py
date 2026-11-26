@@ -292,6 +292,49 @@ class UnitFrom(unittest.TestCase):
         r = split.load_rules()["sources"]["qut-noise"]
         self.assertNotIn("unit_from", self.summ(r, "qut-noise"))
 
+class Pools(unittest.TestCase):
+    """第三批：BUT 库的会议室底噪 → meeting-room，酒店房间 → hotel-room（D111）。"""
+
+    def setUp(self):
+        self.recipe = json.loads((HERE / "recipe.json").read_text())
+        self.pools = {k: v for k, v in self.recipe["noise_pools"].items() if not k.startswith("_")}
+
+    def item(self, scene):
+        items = [it for it in self.pools[scene] if it["source"] == SRC]
+        self.assertEqual(len(items), 1, scene)
+        return items[0]
+
+    def test_two_pools_use_this_source(self):
+        rules = split.load_rules()["sources"]
+        self.assertIn(SRC, rules)
+        self.assertIn(fixtures_but.C236, self.item("meeting-room")["regex"])
+        self.assertIn(fixtures_but.ROOM112, self.item("hotel-room")["regex"])
+
+    def test_regex_picks_only_its_room(self):
+        p = {room: fixtures_but.wav_rel(room, "SpkID01_20190503_S", "01") for room in (fixtures_but.C236, fixtures_but.ROOM112)}
+        for scene, room in (("meeting-room", fixtures_but.C236), ("hotel-room", fixtures_but.ROOM112)):
+            rx = re.compile(self.item(scene)["regex"])
+            for other, path in p.items():
+                self.assertEqual(bool(rx.search(path)), other == room, f"{scene} 对 {other}")
+
+    def test_note_names_third_batch(self):
+        note = self.recipe["noise_pools"]["_说明"]
+        self.assertIn("D111", note)
+        self.assertIn("BUT", note)
+        self.assertIn("同一间房", note)
+
+    def test_target_scene_untouched(self):
+        self.assertIsNone(self.recipe["knobs"]["target_scene"]["scene"])
+
+
+class ScreenRules(unittest.TestCase):
+    def test_hotel_room_scene(self):
+        rules = json.loads((HERE / "screen_rules.json").read_text())
+        sc = rules["scenes"]["hotel-room"]
+        self.assertEqual(sc["top_k"], 5)
+        self.assertTrue(sc["src"])
+        self.assertIn("Inside, small room", sc["tags_any"])
+
 
 if __name__ == "__main__":
     unittest.main()
