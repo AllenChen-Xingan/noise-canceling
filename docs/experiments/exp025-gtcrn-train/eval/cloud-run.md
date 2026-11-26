@@ -61,10 +61,15 @@ python3 rp.py preflight <机器> --repo <仓库> --commit <EVAL_COMMIT>
 1. **代码**：网络盘新目录 `/workspace/repo-<EVAL_COMMIT 前 8 位>`，内容为 main 的 `EVAL_COMMIT`。开机时报大总管提交号，7 份都用这一个；机 2 用同一个目录，不换提交。`cargo build --release -p vdn-eval`
 2. **密钥、评分模型、音频**：照 `cloud/plan-eval-baseline.md` 第一节（`put-secret`，先用假值冒烟）和第三节（两个评分模型核 sha256；仓库根下 `_tmp/exp013/20261124165427-6323` 建链接）
 3. **Python 环境与导出**（命令由 trainer 给，2026-11-26）：
-   - 环境：`data/cloud_steps.sh setup` 建的 Python，再装 `trainer/requirements.txt`（里面有 torch、onnx、onnxruntime、soundfile）
+   - 环境（trainer 核过，2026-11-26）：`R` = 第 1 步的仓库目录（带 `.git`，不用 `git archive` 解包），`D=$R/docs/experiments/exp025-gtcrn-train/data`，`T=$R/docs/experiments/exp025-gtcrn-train/trainer`，`PY=$R/.venv/bin/python`。两份 requirements 都要装：只装 trainer 那份会缺 data 的依赖
+   ```sh
+   export PATH=/workspace/bin:$PATH     # 外层先导出：cloud_steps.sh 只在自己的子 shell 里改 PATH
+   cd $D && bash cloud_steps.sh setup && uv pip install --python $PY -r $D/requirements.txt -r $T/requirements.txt
+   ```
+   - 官方 GTCRN 源码目录 `G=/workspace/gtcrn-502ebfab`（训练和消融用的同一份）。导出也要它：模型类直接从官方 `gtcrn.py` 建。先核 `test -f $G/gtcrn.py`；不在就照钉死的提交取：`git clone https://github.com/Xiaobin-Rong/gtcrn $G && git -C $G checkout 502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73`
    - 机 1 导出全部 6 个，存到网络盘 `$OUT=/workspace/eval-formal/onnx/`：
    ```sh
-   cd trainer
+   cd $T
    for r in exp025-formal-A-s0 exp025-formal-A-s1 exp025-formal-A-s2 exp025-formal-B-s0 exp025-formal-B-s1 exp025-formal-B-s2; do
      VDN_GTCRN_DIR=$G $PY export.py --ckpt /workspace/runs/exp025-formal/$r/ckpt/best.pt --out $OUT/$r.onnx \
        || { echo "导出或对拍不过：$r"; exit 1; }
