@@ -1,0 +1,28 @@
+逐项（容差 0.001；配对 = 两边都有数的段，无值 = 有一边是 null；最多列出 20 条超差）
+  项                   配对    无值         最大绝对差  判定
+  V-BGSTAB             5     0     3.803e-05  PASS
+  V-CLICK              5     0     0.000e+00  PASS
+  V-EAT-ASR            0     5     0.000e+00  跳过：5 段两边都没有值
+  V-ESTOI              5     0     4.898e-08  PASS
+  V-INTF               2     3     2.441e-06  PASS
+  V-LEAK               1     4     0.000e+00  PASS
+  V-MUSIC              2     3     8.968e-06  PASS
+  V-NAN                5     0     0.000e+00  PASS
+  V-NR                 5     0     9.010e-06  PASS
+  V-NRMOS-DISTILL      0     5     0.000e+00  跳过：5 段两边都没有值
+  V-NRMOS-SCOREQ       0     5     0.000e+00  跳过：5 段两边都没有值
+  V-ONSET              4     1     8.577e-06  PASS
+  V-PSE-OVL            3     2     6.977e-06  PASS
+  V-PUMPV              5     0     3.405e-05  PASS
+  V-SIM-FA             0     5     0.000e+00  跳过：5 段两边都没有值
+  V-SIM-GATE           5     0     0.000e+00  PASS
+  V-SPLVL              5     0     2.514e-06  PASS
+  V-SWALLOW            4     1     0.000e+00  PASS
+  V-TIMBRE             5     0     3.451e-06  PASS
+  V-TSOS               5     0     0.000e+00  PASS
+  V-VACUUM             5     0     9.010e-06  PASS
+  V-WEAK               5     0     5.911e-06  PASS
+共比 22 项 · 76 对；跳过 2 项（外部离线路测不了）：
+  V-LAT：延迟只是声明值，没有实测（external.rs:9 · provenance `latency_declared_only`）
+  V-FRAME：回放不耗时，`engine_times` 为空，最坏一帧判「不知道」（external.rs:10 · physical.rs:53）
+判定：PASS（全部在容差内）

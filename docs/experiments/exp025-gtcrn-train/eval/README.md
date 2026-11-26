@@ -91,4 +91,11 @@ $PY docs/experiments/exp025-gtcrn-train/eval/parity.py \
   STFT 分帧会看到比 256 更多一点的未来（窗长 − 帧移 = 256 是输出延迟，对齐后逐样本最远看 511），
   所以 `run.json` 里的数一般略大于 256，这是截半自检（查「偷看未来」）要求的下限
 - `parity.py` 只判「两条路读数一不一样」，不判好坏；好坏看 `compare`（规约第十节）
-- 本机没有 `onnxruntime` / `torch` / `vdn-eval`，所以上面这套**一条都没在本机真跑过**（只有 `test_offline.py` 在跑）
+## 实测（2026-11-26，evalcmp 在本机跑）
+
+- 环境：trainer 的 `.venv`（torch · onnxruntime，只读调用）；`vdn-eval` release 版，提交见本 PR
+- 官方权重整段版 ONNX（`export.py --official`，导出对拍过，ONNX 离 float64 真值 ≤ 4.9e-7）
+- 离线推理全量 480 段 · 1451 个文件，4 片并发约 3.2 分钟（0.045 倍实时）。探针：前视 165 样本，对齐后滞后 0，声明延迟 256
+- 冒烟集 5 段（transit-hub · meeting-room · rail-air-cabin · canteen · cowork 各 1 段，都是 c00-ext），不带 `--qa`
+- 对拍：**PASS**，22 项 76 对，最大绝对差 3.8e-5（V-BGSTAB），容差 1e-3。原样输出与哈希：`runs/parity-20261126/`
+- ⚠️ 本机负载：4 片并发每片约 170% CPU。之后本机最多同时 2 片，开跑前看 `uptime`
