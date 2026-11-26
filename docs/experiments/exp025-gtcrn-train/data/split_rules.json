@@ -2,6 +2,7 @@
  "_说明": "切分规则正本 = 027 decision.md 第六节第 5 条的表（逐行照抄比例，出处列在每条 src）。split.py 只认这里。四份：train 训练 · dev 开发 · final 终测原料池 · d63 测试份（只测不训，也不进任何合成原料）",
  "seed": 20261116,
  "splits": ["train", "dev", "final", "d63"],
+ "未建表": {"but-reverbdb-silence": "规则改了（加 3 间办公室），音频在云上，本机切不了。仓里的旧表按只含 Room112 的规则（248 条）切，rule_sha256 与当前规则不同；第四批 B 段重切、表带回进仓后删这一行并覆盖旧表"},
  "sources": {
   "librispeech-train-clean-100": {
    "expect": {"files": 28539, "units": 251, "src": "openslr.org/12 README：train-clean-100 共 251 名说话人、28,539 句（读文档，待云上核）"},
@@ -69,10 +70,15 @@
    "_未筛人声": "CochlScene 是众包手机录音，片段里可能有人说话；这次未筛，方法待定（大总管 c4 2026-11-25）"
   },
   "but-reverbdb-silence": {
-   "expect": {"files": 248, "src": "cloudrun 2026-11-26 解压清单：Room112 silence 248（C236 等人听过再定，D113）"},
-   "src": "D111 补充（第三批）：BUT 混响库底噪；Room112 酒店房间底噪补 hotel-room（这一批只登记酒店房间，C236 会议室等人听过再定，D113）", "group": "A7", "unit": "file",
-   "glob": ["train-raw/but-reverbdb/Hotel_SkalskyDvur_Room112/MicID*/*/*/silence/*.wav"],
-   "unit_regex": [{"match": "^train-raw/but-reverbdb/([^/]+)/MicID\\d+/([^/]+)/", "unit": "\\1/\\2", "why": "房间 + 扬声器布置：同一次布置的 31 个麦克风同时录的是同一段底噪，必须同进一份；会议室与酒店房间各只有一间，纯按房间切会让整类落进开发份（大总管 c4 2026-11-26 同意）"}],
+   "expect": {"files": 728, "src": "cloudrun 2026-11-26 解压清单：Room112 silence 248 + 三间办公室 VUT_FIT_L207 · L212 · Q301 只取 01 · 11 · 21 号麦克风的 480 个（每号麦克风 84 + 48 + 28 = 160，三个麦克风位置共 480）；480 是 meta 排除之前数的，其中 L207 的 78 个收音机布置还没减（见 exclude_if_meta）"},
+   "src": "D111 补充（第三批）+ 第四批：BUT 混响库底噪；Room112 酒店房间底噪补 hotel-room；三间办公室 L207 · L212 · Q301 补 meeting-room（是办公室，不是会议室）。C236 不用（D114：第 1 秒后有 250 Hz 单音）；办公室只取 01 · 11 · 21 号麦克风（同一段声音录了 31 路，取 3 路就够，大总管 87 2026-11-26）", "group": "A7", "unit": "file",
+   "glob": [
+    "train-raw/but-reverbdb/Hotel_SkalskyDvur_Room112/MicID*/*/*/silence/*.wav",
+    "train-raw/but-reverbdb/VUT_FIT_L207/MicID*/*/[012]1/silence/*.wav",
+    "train-raw/but-reverbdb/VUT_FIT_L212/MicID*/*/[012]1/silence/*.wav",
+    "train-raw/but-reverbdb/VUT_FIT_Q301/MicID*/*/[012]1/silence/*.wav"
+   ],
+   "unit_regex": [{"match": "^train-raw/but-reverbdb/([^/]+)/MicID\\d+/([^/]+)/", "unit": "\\1/\\2", "why": "房间 + 扬声器布置：同一次布置的 31 个麦克风同时录的是同一段底噪，必须同进一份；四间房各只有一间，纯按房间切会让整类落进开发份（大总管 c4 2026-11-26 同意）"}],
    "unit_regex_required": true,
    "stratum_unit_regex": "^([^/]+)/",
    "min_dev_per_stratum": 1,
@@ -80,7 +86,7 @@
    "screen_file": "screen/but-reverbdb-silence.jsonl",
    "frac": {"train": 0.9, "dev": 0.1, "final": 0.0, "d63": 0.0},
    "_frac": "只作训练噪声；终测只用 exp013；9:1 暂定",
-   "_开发份": "酒店房间只有一间房：开发份与训练份是同一间房，开发份只测同房不同场次，不测换房间（大总管 c4 2026-11-26；D113 起这一批只登记酒店房间）"
+   "_开发份": "四间房 = 四个层（stratum_unit_regex 按房间名分层），每层开发份至少一个扬声器布置（min_dev_per_stratum=1），否则 9:1 最大余数法会把某一间房的开发份全挤掉。每间房只有一间：开发份与训练份是同一间房，开发份只测同房不同场次，不测换房间（大总管 c4 2026-11-26；第四批起 4 间房：酒店房间 Room112 + 三间办公室 L207 · L212 · Q301）"
   },
   "demand-train": {
    "expect": {"files": 96, "src": "exp006 用的 6 个环境 × 每个 16 声道（DEMAND 说明）"},

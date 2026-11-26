@@ -14,8 +14,8 @@
   }
  },
  "rail-air-cabin": "只有地铁车厢录音（CochlScene Subway），飞机舱没补（D111 补充）",
- "canteen": "只有 DEMAND PCAFETER 一个来源",
+ "canteen": "DEMAND PCAFETER + PRESTO 两间餐厅；exp013 食堂评测也用这两段录音的 180 秒以后（训练只用 0–150 秒，交集为 0），评测分数偏乐观",
  "transit-hub": "只有 CochlScene SubwayStation 一个来源",
- "meeting-room": "待定（D114）",
+ "meeting-room": "用 BUT 三间办公室 L207 · L212 · Q301 的底噪（只取 01 · 11 · 21 号麦克风），是办公室，不是会议室；没有会议突发声；C236 因 250 Hz 单音不用（D114）",
  "hotel-room": "只有一间房 R112，开发份与训练份同房不同布置"
 }
