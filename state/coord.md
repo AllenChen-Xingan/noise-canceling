@@ -545,3 +545,8 @@
 - 2026-11-26 trainer 交 PR #224（Closes #213，HEAD 21405d8b）。大总管独立副本：formal.py check · ablation.py check 退出 0；pytest 499 过 · 2 跳过（对拍 31 排除）。删 w/trainer-scene-src · w/trainer-b4-fix1 及 worktree（核内容已在分支、无未提交）。等 CI。
 - 2026-11-26 PR #224 CI 过（14m29s）→ 合并（#213 关）。开机前提齐：两分支进 main、两个 check 退 0。
 - 2026-11-26 cloudrun 开机前核对：前提 1、3、5 已核；2、4 在甲段开机第一步核。重估：甲最坏 0.10 · 乙 H=1.2 h 最坏 5.63 美元（4.39/h，US-MO-1 货 LOW），合计最坏 5.73，累计最坏 14.70/100。大总管回「开」。
+- 2026-11-26 Room112 补测按 #221 判（traindata 实测）：keep 209 中 21 条有单音（10.0% >5%，全是 01 号麦克风）→ 正式训练前出新 build（暂名来源 but-reverbdb-silence-b5）；冒烟与消融照旧有效。大总管回「做」，待 traindata「可以关」后建 feat/data-batch5。新分片后盘约剩 22 GB <30 → 删 batch4 需随清单问人。
+- 2026-11-26 traindata 换线：建 feat/data-batch5（98f1cf32 + cherry-pick ed34ff23 · b4cdddda → d27d6c79 · 6c9dd432，交接页与 data 目录核与 batch3 一致），删本地 feat/data-batch3，--continue 重开 traindata。
+- 2026-11-26 traindata 交第五批云上命令（feat/data-batch5 0466bd88，data/cloud-batch5.md）：新来源 but-reverbdb-silence-b5（Room112 keep 188 · drop 60），recipe 7de5c4b5…，483 过 · 4 跳过，pi 0.110 美元。大总管批 cloudrun：cpu3c 4 核 · 自删 2 h · ≤0.3 美元，等 H100 删机后再开；第 6 步只取回不删 batch4（11-7 待人）。
+- 2026-11-26 18:56Z 大总管读 H100 o1hkngnpduv1jb 日志（只读）：冒烟过（197 s）；speed-B 299 s · speed-A 216 s；dev_gate A 3.9488→3.9174（降 0.031）· B →3.9145（降 0.034），都过（线：降 >0.001）；续训核对 rc 0 · cmp_ckpt 0。消融 18:50Z 起跑第 1 批。
+- 2026-11-26 19:16Z 大总管读日志：7 组消融全部 rc 0（批 1 535 s · 批 2 536 s · 批 3 352 s，19:15Z 完）；cloudrun 收尾取回中。
