@@ -150,7 +150,7 @@ mkdir -p "$OUT"
    cd $REPO
    E=docs/experiments/exp025-gtcrn-train/eval/run_gtcrn_offline.py
    $PY $E --onnx $ONNX --name $NAME --probe                       # 先量前视、对齐、一段耗时
-   pids=(); trap 'kill "${pids[@]}" 2>/dev/null || true' EXIT INT TERM    # 本块中途退出（失败或被中断）就收掉各片
+   pids=(); trap 'kill "${pids[@]}" 2>/dev/null || true' EXIT; trap 'exit 143' INT TERM   # 本块中途退出（失败或被中断）就收掉各片
    for i in 0 1 2 3; do $PY $E --onnx $ONNX --name $NAME --run-id formal1 --shard $i/4 & pids+=($!); done
    for p in "${pids[@]}"; do wait $p; done                        # 任何一片非 0 退出，set -e 就停，trap 收掉其余
    trap - EXIT INT TERM
@@ -183,7 +183,7 @@ once = "--once" in sys.argv[5:]
 def stop(msg, code):
     print(msg, flush=True)
     if not once:
-        subprocess.run(["pkill", "-f", pattern])
+        subprocess.run(["pkill", "-f", "--", pattern])
     sys.exit(code)
 def used(d):
     return d["spent_usd"] + d["reserved_usd"]          # 已花 + 在途预留
@@ -213,7 +213,7 @@ _rc_cleanup() {   # run_card 中途退出（失败、被中断、shell 被终止
 }
 run_card() {   # $1 = --system 的值，$2 = 系统名，$3 = 缓存来源（默认 $OLD，续跑时给中断那份的 $RUNS/<RUN>）
   local sys=$1 name=$2 cache=${3:-$OLD} i rc=0 left=4
-  RC_PIDS=(); RC_GATE=""; trap _rc_cleanup EXIT INT TERM
+  RC_PIDS=(); RC_GATE=""; trap _rc_cleanup EXIT; trap '_rc_cleanup; exit 143' INT TERM
   RUN=$(date -u +%Y%m%d-%H%M%S)-$name
   for i in 0 1 2 3; do
     test -f "$cache-s$i/qa/asr_cache.json"
@@ -222,8 +222,8 @@ run_card() {   # $1 = --system 的值，$2 = 系统名，$3 = 缓存来源（默
     cmp "$cache-s$i/qa/asr_cache.json" "$RUNS/$RUN-s$i/qa/asr_cache.json"
   done
   local G0="$RUNS/${RUN}-gate.start.json" GLOG="$RUNS/${RUN}-gate.log" gate
-  $PY $W/gate.py "$LEDGER" $W/batch-start.json "$G0" "--out $RUNS/$RUN-s" > "$GLOG" 2>&1 & gate=$!; RC_GATE=$gate
-  sleep 5; kill -0 $gate; test -f "$G0"                  # 闸门没起来、没写下本份起点，就不开跑
+  $PY $W/gate.py "$LEDGER" $W/batch-start.json "$G0" "vdn-eval scorecard .*--out $RUNS/$RUN-s" > "$GLOG" 2>&1 & gate=$!; RC_GATE=$gate
+  { sleep 5 & wait $!; }; kill -0 $gate; test -f "$G0"                  # 闸门没起来、没写下本份起点，就不开跑
   local pids=()
   for i in 0 1 2 3; do
     target/release/vdn-eval scorecard --system "$sys" --no-safety --qa --rules v2 --shard $i/4 \
@@ -237,7 +237,7 @@ run_card() {   # $1 = --system 的值，$2 = 系统名，$3 = 缓存来源（默
       pids[i]=""; left=$((left - 1))
     done
     if ! kill -0 $gate 2>/dev/null; then echo "闸门停了：${RUN}"; rc=1; fi
-    [ $left -gt 0 ] && [ $rc = 0 ] && sleep 10
+    [ $left -gt 0 ] && [ $rc = 0 ] && { sleep 10 & wait $! || true; }   # 后台 sleep + wait：收到信号立刻进 trap
   done
   for i in 0 1 2 3; do                                   # 出错时收掉还在跑的分片
     [ -n "${pids[i]}" ] && { kill ${pids[i]} 2>/dev/null || true; wait ${pids[i]} 2>/dev/null || true; }
