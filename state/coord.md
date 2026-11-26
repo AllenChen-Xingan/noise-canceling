@@ -557,3 +557,9 @@
 - 2026-11-26 trainer 交 PR #225（读数 + README 消融节 + 正式执行单草稿 plan-h100-formal.md：第五批冒烟闸门 → 6 运行，H100 约 1.5–1.65 h · 6.6–7.4 美元，建议时限 1.9 h 最坏约 8.7 美元）。大总管独立副本：无代码改动，pytest 499 过 · 2 跳过，无本机路径。等 CI。
 - 2026-11-26 PR #225 CI 过 → 合并。
 - 2026-11-26 人定 D118：第五批合格后删 batch4；evalcmp 两个 pi 分支删（11-6）；已合并本机残留核后删；batch2 按 D112 第一个正式运行过开发份检查后删。
+- 2026-11-26 D118 本机清理：删大总管验收副本 7 个（scratchpad acc*）、w/trainer-formal-config 及 worktree（已在 main、无未提交）、已进 main 的本地分支 chore/coord-20261113-b18 · exp/025-trainer · feat/trainer-formal-config。natural · realmtg（b18 暂停线，有未合并内容）不动。
+- 2026-11-26 D118 清理完：本机另删 w/trainer-formal-config（worktree 第一轮已删）· chore/coord-20261113-b18 · feat/trainer-formal-config（均为 origin/main 祖先）；evalcmp 删两个 pi 分支与 worktree。剩 worktree：主仓 · cloudrun · evalcmp · natural · realmtg · traindata · trainer。
+- 2026-11-26 cloudrun：第五批合格，新基线 build df759bb8d606a209（6 个 valid、交集 0）；D118 删 batch4（index sha 3111347…与 bc0e9e7b 一致，94 分片校验值已取回），盘 160/200 GB；机器 0.13 美元，累计 13.55 美元，云上 0 台。
+- 2026-11-26 traindata 第五批核完（6 build 可重算 · valid · 交集 0，包 92e922be… 一致），场景页 scenes-df759bb8d606a209.md · 证据页 evidence-df759bb8d606a209.md（--check 0），486 过 · 3 跳过；会议室训练份 5.37→4.22 h（不同内容 1.87→1.48 h，开发份抽中布置变大）。batch4 index.json（37.6 MB）只留主仓 _tmp，不另存（大总管定，可按旧提交重建、仓里有 sha256）。codex 中，之后开 PR。
+- 2026-11-26 traindata 交 PR #227（Closes #221，718e79f8）：新基线 df759bb8d606a209 + 5 变体（no-eq 4bff0eef · no-clip 94b873a1 · no-n_noises cd7a4d17 · no-reverb d09858dd · high_snr-on 84b1b7ed）。大总管独立副本（合 origin/main）：unittest OK（3 跳过）· 证据页 --check 0 · 无本机路径 · 最大 py 544 行。等 CI。
+- 2026-11-26 PR #227 CI 过 → 合并 2a1c5e16（#221 关）。trainer 换线 feat/trainer-formal-b5（origin/main），--continue 重开：正式配置改指 df759bb8 · 两个 check · 执行单填 id 重估花费 · codex · PR。
