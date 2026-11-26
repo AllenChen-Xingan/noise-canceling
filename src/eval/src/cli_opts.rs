@@ -78,7 +78,7 @@ pub(crate) const OPTIONS: &[Entry] = &[
     (
         "accept",
         &[
-            "--vs", "--noise", "--scenes", "--card-a", "--card-b", "--out",
+            "--suite", "--vs", "--noise", "--scenes", "--card-a", "--card-b", "--out",
         ],
         &[],
         NONE,

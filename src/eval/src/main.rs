@@ -13,7 +13,7 @@
 //! vdn-eval asr-probe --wav-dir DIR --cache FILE --out FILE [--temperature T] [--repeats N]   # 钉温度探针（真调用）
 //! vdn-eval scorecard --from-clips <clips.jsonl> [--rules v1|v2] [--out DIR]   # 不重跑音频，按规则重新汇总
 //! vdn-eval compare --a <clips.jsonl> --b <clips.jsonl> [--by-scene] [--noise-a … --noise-b …] [--out DIR]   # 配对比较（scorecard.md 第十节）
-//! vdn-eval accept --vs <compare.json> [--vs …] --noise <compare.json> [--noise …] --scenes s1,s2 --card-a <scorecard.json> --card-b <scorecard.json> [--out DIR]   # 按 014 第三节判过 / 不过 / 判不了（scorecard.md 第十节末）
+//! vdn-eval accept --suite <评测清单.json> --vs <compare.json> [--vs …] --noise <compare.json> [--noise …] --scenes s1,s2 --card-a <scorecard.json> --card-b <scorecard.json> [--out DIR]   # 按 014 第三节判过 / 不过 / 判不了（scorecard.md 第十节第 7 条）
 //! vdn-eval nrmos <scoreq|distill> <模型.onnx> <音频.wav>…   # 子进程入口：评分模型打分，每段一行 JSON
 //! ```
 //! - `ci`：CI 层（纯 DSP、无模型）。门禁不过 → 退出码 1。权重不在本机的系统自动跳过

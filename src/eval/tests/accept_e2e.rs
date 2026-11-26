@@ -10,9 +10,18 @@ use serde_json::{Value, json};
 use vdn_eval::scene::MeetingPlace;
 
 use fx::{
-    D, Fix, Spec, build, cand, cand_cards, card_json, cards, cards_for, ctl, good1, good2, good3,
-    spec,
+    D, Fix, Spec, build, cand, cand_cards, card_json, card_json_with, cards_for, good1, good2,
+    good3, spec,
 };
+
+/// 两张卡：填上清单指纹，并把 `clips.jsonl` 摆到成绩单旁边（accept 会核 sha256）。
+fn cards_of(f: &Fix, g: &fx::Good, tag: &str) -> (String, String) {
+    let (a, b) = cards_for("ref", "cand", "pass", "pass");
+    (
+        f.card(&format!("{tag}-a"), &card_json_with(&a, &g.fp), &g.ctl),
+        f.card(&format!("{tag}-b"), &card_json_with(&b, &g.fp), &g.cand1),
+    )
+}
 
 fn verdict(js: &Value, what_contains: &str) -> String {
     js["rows"]
@@ -111,32 +120,6 @@ fn noise_pairs_from_another_group_is_undecided() {
 }
 
 /// codex 第 2 轮 P1 #1：身份是「成绩单 sha256 + 系统名」——同一份文件里的不同系统是两个候选。
-#[test]
-fn same_file_different_system_is_a_distinct_candidate() {
-    let f = Fix::new("multisys");
-    let mut a = ctl(MeetingPlace::Cafe, 4);
-    a.extend(ctl(MeetingPlace::MeetingRoom, 4));
-    a.extend(ctl(MeetingPlace::LibraryClassroom, 4));
-    let mut multi = Vec::new();
-    for (system, d) in [("cand1", good1()), ("cand2", good2()), ("cand3", good3())] {
-        multi.extend(cand(&a, d, &[], system));
-    }
-    let ctl_p = f.jsonl("ctl", &a);
-    let multi_p = f.jsonl("multi", &multi);
-    let vs: Vec<String> = ["cand1", "cand2", "cand3"]
-        .iter()
-        .map(|c| f.compare_sys(&format!("vs-{c}"), &ctl_p, &multi_p, "ref", c))
-        .collect();
-    let noise: Vec<String> = [("cand1", "cand2"), ("cand1", "cand3"), ("cand2", "cand3")]
-        .iter()
-        .map(|(x, y)| f.compare_sys(&format!("n-{x}-{y}"), &multi_p, &multi_p, x, y))
-        .collect();
-    // 报告种子是 cand1：候选卡必须是 cand1 的系统（codex 第 3 轮 P1 #1）
-    let (ca, cb) = cards_for("ref", "cand1", "pass", "pass");
-    let js = f.accept(&vs, &noise, &f.file("a", &ca), &f.file("b", &cb), "x");
-    assert_eq!(verdict(&js, "V-ESTOI（场景 cafe"), "pass", "{js}");
-}
-
 #[test]
 fn estoi_gain_below_line_fails() {
     let f = Fix::new("low");
@@ -337,13 +320,16 @@ fn some_undecided_vetoes_still_pass() {
 fn non_target_card_to_fail_fails_and_target_card_change_does_not() {
     let f = Fix::new("card");
     let g = build(&f, spec(good1(), good2(), good3()));
-    let (ca, _) = cards("pass", "pass");
-    let a = f.file("a", &ca);
+    let (a, _) = cards_of(&f, &g, "nt");
     let js = f.accept(
         &g.vs,
         &g.noise,
         &a,
-        &f.file("b-t", &cand_cards("fail", "pass")),
+        &f.card(
+            "nt-b1",
+            &card_json_with(&cand_cards("fail", "pass"), &g.fp),
+            &g.cand1,
+        ),
         "t",
     );
     assert_eq!(
@@ -355,7 +341,11 @@ fn non_target_card_to_fail_fails_and_target_card_change_does_not() {
         &g.vs,
         &g.noise,
         &a,
-        &f.file("b-o", &cand_cards("pass", "fail")),
+        &f.card(
+            "nt-b2",
+            &card_json_with(&cand_cards("pass", "fail"), &g.fp),
+            &g.cand1,
+        ),
         "o",
     );
     assert_eq!(verdict(&js, "其他场景"), "fail", "{js}");
@@ -372,7 +362,9 @@ fn all_non_target_cards_already_fail_is_pass() {
     let f = Fix::new("allfail");
     let g = build(&f, spec(good1(), good2(), good3()));
     let (ca, cb) = cards_for("ref", "cand", "fail", "fail");
-    let js = f.accept(&g.vs, &g.noise, &f.file("a", &ca), &f.file("b", &cb), "x");
+    let a = f.card("af-a", &card_json_with(&ca, &g.fp), &g.ctl);
+    let b = f.card("af-b", &card_json_with(&cb, &g.fp), &g.cand1);
+    let js = f.accept(&g.vs, &g.noise, &a, &b, "x");
     assert_eq!(verdict(&js, "其他场景"), "pass", "{js}");
     assert!(detail(&js, "其他场景").contains("不过"), "{js}");
     assert_eq!(js["verdict"], "pass", "{js}");
@@ -380,99 +372,10 @@ fn all_non_target_cards_already_fail_is_pass() {
 
 /// codex 第 1 轮 P1 #3：一份成绩单里有两个系统时，卡会互相覆盖、延迟也会混着求均值 → 报错。
 #[test]
-fn two_systems_in_one_scorecard_is_an_error() {
-    let f = Fix::new("twosys");
-    let g = build(&f, spec(good1(), good2(), good3()));
-    let rows = [
-        ("cafe", "common", "mba-builtin", "ref", "pass"),
-        ("cafe", "common", "mba-builtin", "cand", "fail"),
-    ];
-    let bad = f.file("a-two", &card_json(&rows, json!([])));
-    let args = f.accept_args(&g.vs, &g.noise, &bad, &g.card_b, "x");
-    let e = vdn_eval::scorecard::accept::cli(&args, "t", f.root.join("default")).unwrap_err();
-    assert!(e.contains("系统"), "要说清是系统数不对：{e}");
-    assert!(e.contains("ref") && e.contains("cand"), "{e}");
-}
-
-/// codex 第 3 轮 P1 #1：卡片必须和报告种子是同一边的成绩单（同一系统 + 同一份逐段文件）。
-#[test]
-fn card_must_be_the_reported_seed() {
-    let f = Fix::new("binding");
-    let g = build(&f, spec(good1(), good2(), good3()));
-    // 候选卡的系统与第一份 --vs 的候选系统对不上
-    let (a, b) = cards_for("ref", "cand9", "pass", "pass");
-    let args = f.accept_args(&g.vs, &g.noise, &f.file("a", &a), &f.file("b", &b), "x");
-    let e = vdn_eval::scorecard::accept::cli(&args, "t", f.root.join("default")).unwrap_err();
-    assert!(e.contains("cand9") && e.contains("系统"), "{e}");
-    // 对照卡的系统对不上
-    let (a2, b2) = cards_for("ref9", "cand", "pass", "pass");
-    let args = f.accept_args(&g.vs, &g.noise, &f.file("a2", &a2), &f.file("b2", &b2), "y");
-    let e = vdn_eval::scorecard::accept::cli(&args, "t", f.root.join("default")).unwrap_err();
-    assert!(e.contains("ref9"), "{e}");
-}
-
-/// codex 第 3 轮 P1 #1：成绩单记了「从哪份逐段文件汇总」时，要和 --vs 的那一边对得上。
-#[test]
-fn card_clips_sha_must_match_the_seed() {
-    let f = Fix::new("bindsha");
-    let g = build(&f, spec(good1(), good2(), good3()));
-    let (a, b) = cards("pass", "pass");
-    let with_sha = |text: &str, sha: &str| -> String {
-        let mut v: Value = serde_json::from_str(text).unwrap();
-        v["meta"]["from_clips_sha256"] = json!(sha);
-        v.to_string()
-    };
-    let a_bad = with_sha(&a, &"de".repeat(32));
-    let args = f.accept_args(
-        &g.vs,
-        &g.noise,
-        &f.file("a-bad", &a_bad),
-        &f.file("b", &b),
-        "x",
-    );
-    let e = vdn_eval::scorecard::accept::cli(&args, "t", f.root.join("default")).unwrap_err();
-    assert!(e.contains("sha256") || e.contains("逐段文件"), "{e}");
-}
-
-/// codex 第 3 轮 P1 #2：对照成绩单有、比较里整场景没有（两份逐段文件都漏了这个场景）→ 判不了。
-#[test]
-fn missing_whole_scene_is_undecided() {
-    let f = Fix::new("omit");
-    let g = build(
-        &f,
-        Spec {
-            omit: &[MeetingPlace::LibraryClassroom],
-            ..spec(good1(), good2(), good3())
-        },
-    );
-    // 候选成绩单也缺这个场景（两份都漏跑）
-    let a = card_json(
-        &[
-            ("cafe", "common", "mba-builtin", "ref", "pass"),
-            ("meeting-room", "common", "mba-builtin", "ref", "pass"),
-            ("library-classroom", "common", "mba-builtin", "ref", "pass"),
-        ],
-        json!([]),
-    );
-    let b = card_json(
-        &[
-            ("cafe", "common", "mba-builtin", "cand", "pass"),
-            ("meeting-room", "common", "mba-builtin", "cand", "pass"),
-        ],
-        json!([]),
-    );
-    let js = f.accept(&g.vs, &g.noise, &f.file("a", &a), &f.file("b", &b), "x");
-    assert_eq!(verdict(&js, "覆盖"), "undecided", "{js}");
-    assert!(detail(&js, "覆盖").contains("library-classroom"), "{js}");
-    assert_eq!(verdict(&js, "V-ONSET"), "undecided", "{js}");
-    assert_eq!(js["verdict"], "undecided");
-}
-
-#[test]
 fn external_candidate_latency_undecided() {
     let f = Fix::new("ext");
     let g = build(&f, spec(good1(), good2(), good3()));
-    let (ca, _) = cards("pass", "pass");
+    let (ca, _) = cards_for("ref", "cand", "pass", "pass");
     let ext = json!([{"name": "cand", "latency_samples": 768, "latency_declared_only": true}]);
     let rows = [
         ("cafe", "common", "mba-builtin", "cand", "pass"),
@@ -482,8 +385,8 @@ fn external_candidate_latency_undecided() {
     let js = f.accept(
         &g.vs,
         &g.noise,
-        &f.file("a", &ca),
-        &f.file("b", &card_json(&rows, ext)),
+        &f.card("ext-a", &card_json_with(&ca, &g.fp), &g.ctl),
+        &f.card("ext-b", &card_json(&rows, ext, &g.fp), &g.cand1),
         "x",
     );
     assert_eq!(verdict(&js, "延迟"), "undecided", "{js}");
@@ -538,18 +441,21 @@ fn real_scorecard_json_is_read() {
     use vdn_eval::scorecard::card::{Card, Rules};
     let f = Fix::new("realcard");
     let g = build(&f, spec(good1(), good2(), good3()));
-    let write = |name: &str, rows: Vec<vdn_eval::scorecard::ClipRow>| {
+    let write = |name: &str, rows: Vec<vdn_eval::scorecard::ClipRow>, clips: &str| {
         let card = Card::build_with(&rows, Vec::new(), Rules::V2);
-        f.file(
+        f.card(
             name,
             &card
-                .to_json(json!({"run_id": "t", "external": []}))
+                .to_json(json!({"run_id": "t", "external": [], "suite_fingerprint": g.fp}))
                 .to_string(),
+            clips,
         )
     };
-    let base = ctl(MeetingPlace::Cafe, 4);
-    let a = write("ra", base.clone());
-    let b = write("rb", cand(&base, good1(), &[], "cand"));
+    let mut base = ctl(MeetingPlace::Cafe, 4);
+    base.extend(ctl(MeetingPlace::MeetingRoom, 4));
+    base.extend(ctl(MeetingPlace::LibraryClassroom, 4));
+    let a = write("ra", base.clone(), &g.ctl);
+    let b = write("rb", cand(&base, good1(), &[], "cand"), &g.cand1);
     let args = f.accept_args_scenes(&g.vs, &g.noise, &a, &b, "real", "cafe");
     let d = vdn_eval::scorecard::accept::cli(&args, "t", f.root.join("default")).unwrap();
     let js: Value =

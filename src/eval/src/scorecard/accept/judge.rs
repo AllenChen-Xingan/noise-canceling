@@ -175,17 +175,6 @@ fn gain_row(v: &str, key: &str, scene: &str, vs: &[Cmp], noise: &[Cmp]) -> Row {
     Row::new(what, verdict, detail)
 }
 
-/// 预期要评的场景：对照成绩单里出现的全部场景（成绩单就是评测清单跑出来的全集）。
-fn expected_scenes(a: &CardIn) -> Vec<String> {
-    let mut out: Vec<String> = Vec::new();
-    for r in &a.rows {
-        if !out.contains(&r.scene) {
-            out.push(r.scene.clone());
-        }
-    }
-    out
-}
-
 /// 「不许退」的一行：报告种子在每个有这个项值的场景上，差值区间上界 ≤ 线。
 fn regress_row(v: &str, key: &str, rep: &Cmp, expected: &[String]) -> Row {
     let line = th::ACCEPT.def(key);
@@ -293,35 +282,12 @@ fn veto_row(v: &str, rep: &Cmp) -> Row {
     )
 }
 
-/// 「覆盖」的一行：对照成绩单的场景与片段都要在比较里、候选成绩单也不能整场景缺。
-///
-/// 双方误用同一份子集（都漏跑一个场景）时，涨退两项都恰好没检查它；这一行把它暴露出来
-/// （codex 第 3 轮 P1 #2）。
-fn coverage_row(a: &CardIn, b: &CardIn, rep: &Cmp) -> Row {
-    let what = "覆盖：对照成绩单的场景与片段都在比较里".to_string();
-    let mut hole = Vec::new();
-    for scene in expected_scenes(a) {
-        match rep.scopes.get(&scene) {
-            None => hole.push(format!("compare 里没有场景 {scene}（对照成绩单有）")),
-            Some(s) => {
-                let want: usize = a
-                    .rows
-                    .iter()
-                    .filter(|r| r.scene == scene)
-                    .map(|r| r.clips)
-                    .sum();
-                if want > 0 && s.pairs < want {
-                    hole.push(format!(
-                        "{scene} 只配上 {} 段，对照成绩单有 {want} 段",
-                        s.pairs
-                    ));
-                }
-            }
-        }
-        if !b.rows.iter().any(|r| r.scene == scene) {
-            hole.push(format!("候选成绩单里没有场景 {scene}（对照有）"));
-        }
-    }
+/// 「覆盖」的一行：清单要的场景 / 切片 / 片段都要在两份逐段文件、两份成绩单与 compare 里
+/// （`Expected::coverage`）。双方误用同一份子集（都漏跑一个场景）时涨退两项都恰好没检查它；
+/// 这一行把它暴露出来（codex 第 2 · 3 · 4 轮）。
+fn coverage_row(expected: &Expected, a: &CardIn, b: &CardIn, rep: &Cmp) -> Row {
+    let what = "覆盖：清单要的场景与片段都在比较里".to_string();
+    let hole = expected.coverage(a, b, rep);
     let verdict = if hole.is_empty() {
         Verdict::Pass
     } else {
@@ -330,8 +296,8 @@ fn coverage_row(a: &CardIn, b: &CardIn, rep: &Cmp) -> Row {
     let detail = if hole.is_empty() {
         format!(
             "{} 个场景、{} 段都在比较里",
-            expected_scenes(a).len(),
-            rep.pairs()
+            expected.scenes().len(),
+            expected.keys.len()
         )
     } else {
         format!("证据不足，判不了：{}", hole.join("；"))
@@ -398,8 +364,11 @@ fn cards_row(a: &CardIn, b: &CardIn, scenes: &[String]) -> Row {
     Row::new(what, verdict, detail)
 }
 
-/// 「延迟仍等于基线」的一行：线 = 基线成绩单量出来的 V-LAT；候选是外部系统（只有声明值）→ 判不了。
-fn lat_row(a: &CardIn, b: &CardIn) -> Row {
+/// 「延迟仍等于基线」的一行：**逐卡**比（场景 × 档 × 设备），不取均值。
+///
+/// 每张清单要的卡两边都得有 V-LAT 读数，差过 `LAT_SAME_MS` 即不过；缺一张读数就判不了
+/// （codex 第 4 轮 C）。候选是外部系统（只有声明值）时整项判不了。
+fn lat_row(a: &CardIn, b: &CardIn, expected: &Expected) -> Row {
     let what = "延迟仍等于基线 V-LAT".to_string();
     if b.external {
         return Row::new(
@@ -411,23 +380,47 @@ fn lat_row(a: &CardIn, b: &CardIn) -> Row {
             ),
         );
     }
-    match (a.lat_ms, b.lat_ms) {
-        (Some(x), Some(y)) if (y - x).abs() <= LAT_SAME_MS => Row::new(
-            what,
-            Verdict::Pass,
-            format!("候选 {y:.2} ms = 基线 {x:.2} ms"),
-        ),
-        (Some(x), Some(y)) => Row::new(
-            what,
-            Verdict::Fail,
-            format!("候选 {y:.2} ms ≠ 基线 {x:.2} ms（线：与基线相等）"),
-        ),
-        _ => Row::new(
-            what,
-            Verdict::Undecided,
-            "对照或候选成绩单里没有 V-LAT 的读数".to_string(),
-        ),
+    let find = |c: &CardIn, scene: &str, tier: &str, device: &str| {
+        c.rows
+            .iter()
+            .find(|r| r.scene == scene && r.tier == tier && r.device == device)
+            .cloned()
+    };
+    let (mut seen, mut bad, mut hole) = (Vec::new(), Vec::new(), Vec::new());
+    for (scene, tier, device) in expected.slices() {
+        let k = format!("{scene} · {tier} · {device}");
+        let (x, y) = (
+            find(a, &scene, &tier, &device),
+            find(b, &scene, &tier, &device),
+        );
+        match (
+            x.as_ref().and_then(|r| r.lat_ms),
+            y.as_ref().and_then(|r| r.lat_ms),
+        ) {
+            (Some(x), Some(y)) => {
+                seen.push(format!("{k} {y:.2} ms"));
+                if (y - x).abs() > LAT_SAME_MS {
+                    bad.push(format!("{k} 候选 {y:.2} ms ≠ 基线 {x:.2} ms"));
+                }
+            }
+            _ => hole.push(format!("{k} 缺 V-LAT 读数")),
+        }
     }
+    let verdict = if !bad.is_empty() {
+        Verdict::Fail
+    } else if !hole.is_empty() || seen.is_empty() {
+        Verdict::Undecided
+    } else {
+        Verdict::Pass
+    };
+    let mut detail = format!("{} 张卡：{}", seen.len(), seen.join(" · "));
+    if !bad.is_empty() {
+        detail = format!("不过：{}", bad.join("；"));
+    }
+    if !hole.is_empty() {
+        detail.push_str(&format!("；判不了：{}", hole.join("；")));
+    }
+    Row::new(what, verdict, detail)
 }
 
 /// 逐条判。`vs` 非空，第一份是报告种子。
@@ -435,6 +428,7 @@ pub(super) fn evaluate(
     vs: &[Cmp],
     noise: &[Cmp],
     scenes: &[String],
+    expected: &Expected,
     card_a: &CardIn,
     card_b: &CardIn,
 ) -> Result<Report, String> {
@@ -447,16 +441,16 @@ pub(super) fn evaluate(
             rows.push(gain_row(v, key, scene, vs, noise));
         }
     }
-    let expected = expected_scenes(card_a);
+    let want = expected.scenes();
     for (v, key) in REGRESS {
-        rows.push(regress_row(v, key, rep, &expected));
+        rows.push(regress_row(v, key, rep, &want));
     }
     for v in VETO {
         rows.push(veto_row(v, rep));
     }
-    rows.push(coverage_row(card_a, card_b, rep));
+    rows.push(coverage_row(expected, card_a, card_b, rep));
     rows.push(cards_row(card_a, card_b, scenes));
-    rows.push(lat_row(card_a, card_b));
+    rows.push(lat_row(card_a, card_b, expected));
     let verdict = if rows.iter().any(|r| r.verdict == Verdict::Fail) {
         Verdict::Fail
     } else if rows.iter().any(|r| r.verdict == Verdict::Undecided) {
