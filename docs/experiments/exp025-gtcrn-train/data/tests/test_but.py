@@ -8,20 +8,34 @@
 - 上游 read_me（副本 `third_party/BUT_ReverbDB-read_me.txt`）：第 2 个扬声器放背景声
 夹具在临时目录现造（几间房 × 几次布置 × 两个麦克风的 0.5 s wav），不用真数据。
 """
+import copy
 import json
 import re
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE / "tests"))
 import fetch  # noqa: E402
+import fixtures_but  # noqa: E402
 import split  # noqa: E402
 
 MD = HERE / "download-list-but.md"
 SRC = "but-reverbdb-silence"
 GRP = "A7"
+META = {"file": "../../spk_meta.txt", "regex": "^\\$EnvSpk2", "why": "read_me：第 2 个扬声器放的是背景声（如收音机）"}
+
+
+def feat_rule(**over):
+    """带真规则里那几条通用字段的最小规则：只看一条特性时用它，不依赖 split_rules.json 已改到哪一步。"""
+    r = {"group": GRP, "unit": "file", "glob": [fixtures_but.ROOT + "/**/silence/*.wav"],
+         "frac": {"train": 0.9, "dev": 0.1, "final": 0.0, "d63": 0.0}}
+    r.update(over)
+    return r
 
 
 def group():
@@ -74,6 +88,64 @@ class Sources(unittest.TestCase):
         self.assertIn("sha256", m)
         self.assertIn("D57", m)  # 重放 LibriSpeech 的包不下
         self.assertIn("download-list-but.md", m)
+
+
+class Meta(unittest.TestCase):
+    """`exclude_if_meta`：上游 read_me 说第 2 个扬声器放背景声，那种布置的底噪不许当训练噪声。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.files = fixtures_but.make_tree(self.root)
+        self.r = feat_rule(exclude_if_meta=META)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_src(self):
+        d = {}
+        rows = split.split_source(self.root, SRC, self.r, split.load_rules()["seed"], split.load_rules()["splits"],
+                                  workers=2, excluded=d)
+        return rows, d
+
+    def test_radio_setup_excluded_and_counted(self):
+        rows, d = self.run_src()
+        radio = set(fixtures_but.radio_files())
+        self.assertTrue(radio, "夹具里要有一次放收音机的布置")
+        self.assertEqual({r["path"] for r in rows}, set(self.files) - radio)
+        self.assertEqual(d["excluded_meta"], len(radio))
+
+    def test_clean_setups_kept(self):
+        """`$EnvSpk1` 不算命中：只有第 2 个及以后的扬声器才是背景声源。"""
+        rows, _ = self.run_src()
+        keep = {r["path"] for r in rows}
+        for p in self.files:
+            if p not in set(fixtures_but.radio_files()):
+                self.assertIn(p, keep, p)
+
+    def test_missing_meta_stops(self):
+        """没有 spk_meta.txt 就不能判：静默留着会把收音机当噪声（绝不悄悄放过）。"""
+        rel = fixtures_but.radio_files()[0]
+        fixtures_but.meta_path(self.root, rel).unlink()
+        with self.assertRaises(SystemExit) as cm:
+            self.run_src()
+        self.assertIn("spk_meta.txt", str(cm.exception))
+
+    def test_write_records_excluded_meta(self):
+        """摘要（进仓的那份）里要看得见排除了多少个文件。"""
+        rows, d = self.run_src()
+        out = self.root / "splits"
+        s = split.write(SRC, self.r, split.load_rules()["seed"], rows, out, d)
+        self.assertEqual(s["excluded_meta"], len(fixtures_but.radio_files()))
+        self.assertEqual(json.loads((out / f"{SRC}.json").read_text())["excluded_meta"], s["excluded_meta"])
+
+    def test_no_field_no_change(self):
+        """没有这个字段的规则行为不变（老来源不受影响）。"""
+        plain, d = feat_rule(), {}
+        got = split.split_source(self.root, SRC, plain, split.load_rules()["seed"], split.load_rules()["splits"],
+                                 workers=2, excluded=d)
+        self.assertEqual(len(got), len(self.files))
+        self.assertEqual(d.get("excluded_meta", 0), 0)
 
 
 if __name__ == "__main__":
