@@ -8,7 +8,9 @@
 - ④ 期望每步秒数在配置 limits.expect_s_step（默认不设 = 关）；第 SPEED_FROM 到 SPEED_TO 步单步墙钟中位数
   > SLOW_FACTOR × 期望，就在第 SPEED_TO 步停（too_slow）。单步墙钟含取数，不含评估与存盘
 - ⑤ 中途卡住：主线程 STALL_S 秒没进展，看门狗不管该不该停都强退（watchdog._Beat）
-- ①（不是有限数）的判断在 train.py：损失、梯度范数、开发份读数；本模块只给开发份读数标 nonfinite
+- ①（不是有限数）：唯一的判断是本模块的 `is_finite`，读到坏读数就 `require_finite` 抛 `NonFinite`，
+  由 train.py 一处接住（codex guards 第 4 轮 · 改结构：同一个坑连着两轮都是「下一批想停」把 NaN 掩掉了，
+  所以不再逐处补判断）
 """
 from __future__ import annotations
 
@@ -26,8 +28,60 @@ SPEED_TO = 500
 STALL_S = 900.0
 
 
-def _fin(x) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+class NonFinite(Exception):
+    """读到了不是有限数的读数。where 说清在哪读到的，detail 是现场（读数路径 → 那个值，已转成 float）。"""
+
+    def __init__(self, where: str, detail: dict):
+        self.where, self.detail = where, detail
+        super().__init__(f"{where} 读到不是有限数：{detail}")
+
+
+def _num(x) -> float | None:
+    """把一个读数变成 Python 浮点数；不是读数（bool / None / 字符串 / 多元素张量）返回 None。
+    0 维 torch 张量与 numpy 标量都算读数：`.item()` 之后就能 JSON 化，现场记录才写得进文件。"""
+    if isinstance(x, bool) or x is None or isinstance(x, str):
+        return None
+    if isinstance(x, (int, float)):
+        return float(x)
+    try:
+        return float(x) if getattr(x, "ndim", None) == 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def is_finite(x) -> bool:
+    """唯一的「是不是有限数」判断（codex guards 第 4 轮 · 改结构）。递归字典 / 列表 / 元组；
+    bool / None / 字符串不是读数，当作没问题。别的模块不许自己写 isnan / isinf 之类的判断，
+    tests/test_finite.py 会扫（防无心之失）。"""
+    if isinstance(x, dict):
+        return all(is_finite(v) for v in x.values())
+    if isinstance(x, (list, tuple)):
+        return all(is_finite(v) for v in x)
+    v = _num(x)
+    return v is None or math.isfinite(v)
+
+
+def _bad(x, path: str = "") -> dict:
+    """收集不是有限数的读数（路径 → 值），写进 NonFinite.detail；空字典表示全是有限数。"""
+    if isinstance(x, dict):
+        out = {}
+        for k, v in x.items():
+            out |= _bad(v, f"{path}.{k}" if path else str(k))
+        return out
+    if isinstance(x, (list, tuple)):
+        out = {}
+        for i, v in enumerate(x):
+            out |= _bad(v, f"{path}[{i}]")
+        return out
+    v = _num(x)
+    return {} if v is None or is_finite(v) else {path or "value": v}
+
+
+def require_finite(where: str, values) -> None:
+    """读数里只要有一个不是有限数就抛 `NonFinite`（where 说清在哪），不给「下一批想停就返回 None」
+    之类的路留余地（codex guards 第 4 轮 · 改结构）。"""
+    if not is_finite(values):
+        raise NonFinite(where, _bad(values))
 
 
 class Guard:
@@ -48,14 +102,15 @@ class Guard:
         return why or self._slow(step, dt_s)
 
     def _spike(self, total: float) -> str | None:
-        if not _fin(total):
+        v = _num(total)
+        if v is None or not is_finite(v):  # 不是有限数交给 ① 处理，这里不判
             return None
         if self.base is None:
-            self.base_vals.append(float(total))
+            self.base_vals.append(v)
             if len(self.base_vals) >= SPIKE_BASE_STEPS:
                 self.base = statistics.median(self.base_vals)
             return None
-        self.window.append(float(total))
+        self.window.append(v)
         del self.window[:-SPIKE_WINDOW]
         if len(self.window) < SPIKE_WINDOW:
             return None
@@ -65,8 +120,9 @@ class Guard:
     def _slow(self, step: int, dt_s: float) -> str | None:
         if self.expect is None or self.speed_judged:
             return None
-        if SPEED_FROM <= step <= SPEED_TO and _fin(dt_s):
-            self.speed.append(float(dt_s))
+        dt = _num(dt_s)
+        if SPEED_FROM <= step <= SPEED_TO and dt is not None and is_finite(dt):
+            self.speed.append(dt)
         if step < SPEED_TO:
             return None
         self.speed_judged = True
@@ -85,9 +141,9 @@ class Guard:
     # ---- 每次开发评估 ----
     def on_eval(self, step: int, hybrid) -> dict:
         """返回 {"nonfinite", "best", "warn"}；best 为真时调用方另存 best.pt。"""
-        if not _fin(hybrid):
+        h = _num(hybrid)
+        if h is None or not is_finite(h):  # 缺读数与坏读数一样按非有限处理
             return {"nonfinite": True, "best": False, "warn": None}
-        h = float(hybrid)
         if self.best is None or h < self.best["hybrid"]:
             self.best, self.bad = {"step": step, "hybrid": h}, 0
             return {"nonfinite": False, "best": True, "warn": None}
