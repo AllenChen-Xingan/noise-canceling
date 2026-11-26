@@ -420,3 +420,4 @@
 - 2026-11-26 人更正：pi 由 Claude Code 手下派遣，大总管不直接派 pi；三层是 大总管 → Claude Code 手下 → pi（只写代码）。
 - 2026-11-26 00:20Z 大总管 noise-canceling-c4 核对 CochlScene 下载机：3 类解压完 17629/17629（与 want.txt 一致，7z Everything is Ok），用 rp.py down 删机（约 0.25 美元）；云上 0 台，累计约 7.77 美元。
 - 2026-11-26 00:25Z 重开 tmux vdn，四个手下用 claude --continue 接回：trainer-02 · evalcmp-77 · traindata-56 · cloudrun-39；交代 `_tmp/20261116-b19/msg-resume-*-20261126.txt` + 新规则 `common-pi-rule-20261126.md`（代码由手下派 pi 写，pi 单任务 ≤2 美元）。后台子代理在改 coordinator-dispatch 技能（pi 由手下派、只写代码）。
+- 2026-11-26 00:40Z 回三个手下：evalcmp 场景表第一版收下不重出、第二版含吃字；trainer 开 guards issue；traindata 压缩包不删待人定（10-2）、这次不筛人声、目标场景待人定（10-1）。
