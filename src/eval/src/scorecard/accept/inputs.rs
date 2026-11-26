@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use serde_json::Value;
 
 use crate::files::serde_name;
+use crate::scorecard::card::Rules;
 use crate::suite::{Suite, parse_suite, resolve};
 
 /// compare.json 里「全部段」的范围名；逐场景的范围名是场景键。
@@ -70,9 +71,9 @@ pub struct Veto {
 pub struct Scope {
     /// 这个范围里配上的段数（否决项「两边都判得了」的分母是它减一边判不了）
     pub pairs: usize,
-    /// 只在对照 / 只在候选的段数（核片段覆盖：配上的 + 只在一边的 = compare 见到的段）
-    pub only_a: usize,
-    pub only_b: usize,
+    /// 只在对照 / 只在候选的段 id（这些段没配上，不算覆盖到）
+    pub only_a: std::collections::BTreeSet<String>,
+    pub only_b: std::collections::BTreeSet<String>,
     pub items: BTreeMap<String, Item>,
     pub vetoes: BTreeMap<String, Veto>,
 }
@@ -88,6 +89,16 @@ pub struct Cmp {
     /// compare 时两边成绩单的身份（sha256 + 系统）；用来核「三个不同种子」与「噪声底恰好是两两互比」
     pub a_id: Option<Ident>,
     pub b_id: Option<Ident>,
+}
+
+/// compare.json 里一组片段 id（`only_a` / `only_b`）。
+fn ids_of(v: &Value) -> std::collections::BTreeSet<String> {
+    v.as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|x| x.as_str())
+        .map(str::to_string)
+        .collect()
 }
 
 impl Cmp {
@@ -183,52 +194,44 @@ impl Expected {
         out
     }
 
-    fn clips_in(&self, scene: &str) -> usize {
-        self.keys.iter().filter(|k| k.scene == scene).count()
-    }
-
-    /// 覆盖：清单要的每个场景 / 切片 / 片段，两份逐段文件与 compare 里都得在。返回问题清单（空 = 齐）。
+    /// 覆盖：清单要的**每个片段**都要在两边的逐段文件里、而且真的配上了（不是只在一边）；
+    /// 每个预期场景要有逐场景的 compare。返回问题清单（空 = 齐）。
     pub fn coverage(&self, a: &CardIn, b: &CardIn, rep: &Cmp) -> Vec<String> {
         let mut hole = Vec::new();
-        let has = |c: &CardIn, scene: &str, tier: &str, device: &str| {
-            c.keys
-                .iter()
-                .any(|k| k.scene == scene && k.tier == tier && k.device == device)
-        };
-        for (scene, tier, device) in self.slices() {
+        for k in &self.keys {
+            let kk = format!("{} · {} · {}", k.scene, k.tier, k.device);
             for (side, c) in [("对照", a), ("候选", b)] {
-                if !has(c, &scene, &tier, &device) {
-                    hole.push(format!(
-                        "{side}的逐段文件里没有 {scene} · {tier} · {device}"
-                    ));
+                let has = c.keys.iter().any(|x| {
+                    x.id == k.id && x.scene == k.scene && x.tier == k.tier && x.device == k.device
+                });
+                if !has {
+                    hole.push(format!("{side}的逐段文件里没有 {}（{kk}）", k.id));
                 }
             }
-            for (side, c) in [("对照", a), ("候选", b)] {
-                if !c
-                    .rows
-                    .iter()
-                    .any(|r| r.scene == scene && r.tier == tier && r.device == device)
-                {
-                    hole.push(format!(
-                        "{side}成绩单里没有 {scene} · {tier} · {device} 这张卡"
-                    ));
-                }
+            if let Some(s) = rep.scopes.get(&k.scene)
+                && (s.only_a.contains(&k.id) || s.only_b.contains(&k.id))
+            {
+                hole.push(format!("{} 在 compare 里只有一边有值，没配上", k.id));
             }
         }
         for scene in self.scenes() {
-            let want = self.clips_in(&scene);
-            match rep.scopes.get(&scene) {
-                None => hole.push(format!("compare 里没有场景 {scene}（清单有 {want} 段）")),
-                Some(s) => {
-                    let got = s.pairs + s.only_a + s.only_b;
-                    if got < want {
-                        hole.push(format!("{scene} 只见到 {got} 段，清单有 {want} 段"));
-                    }
-                }
+            if !rep.scopes.contains_key(&scene) {
+                hole.push(format!("compare 里没有场景 {scene}（清单有）"));
             }
         }
-        hole
+        cap(hole)
     }
+}
+
+/// 问题清单太长时截断（前 8 条 + 总数），报告才读得下去。
+fn cap(mut hole: Vec<String>) -> Vec<String> {
+    const N: usize = 8;
+    if hole.len() > N {
+        let rest = hole.len() - N;
+        hole.truncate(N);
+        hole.push(format!("…另有 {rest} 处"));
+    }
+    hole
 }
 
 #[derive(Clone, Debug)]
@@ -244,11 +247,11 @@ pub struct CardRow {
     pub lat_ms: Option<f64>,
 }
 
-/// 一份 `scorecard.json`。
+/// 一边的成绩单：元数据来自 `scorecard.json`，卡片状态从旁边的 `clips.jsonl` 重新汇总（[`load_card`]）。
 #[derive(Debug)]
 pub struct CardIn {
     pub path: String,
-    /// 这份成绩单唯一的系统（[`parse_card`] 保证只有一个）
+    /// 这一边在比较里被选中的系统
     pub system: String,
     /// 外部系统（延迟只是声明值）
     pub external: bool,
@@ -261,8 +264,6 @@ pub struct CardIn {
     /// 旁边 `clips.jsonl` 里的片段（[`load_card`] 填）
     pub keys: Vec<ClipKey>,
     pub rows: Vec<CardRow>,
-    /// 各卡 V-LAT 均值的平均；没有读数时为 `None`
-    pub lat_ms: Option<f64>,
 }
 
 pub fn num(v: &Value, k: &str) -> Option<f64> {
@@ -338,8 +339,8 @@ pub fn parse_compare(text: &str, path: &str) -> Result<Cmp, String> {
             name,
             Scope {
                 pairs: num(s, "pairs").unwrap_or(0.0).max(0.0) as usize,
-                only_a: s["only_a"].as_array().map_or(0, Vec::len),
-                only_b: s["only_b"].as_array().map_or(0, Vec::len),
+                only_a: ids_of(&s["only_a"]),
+                only_b: ids_of(&s["only_b"]),
                 items,
                 vetoes,
             },
@@ -362,24 +363,29 @@ pub fn parse_compare(text: &str, path: &str) -> Result<Cmp, String> {
 }
 
 /// 读一份 `scorecard.json`。
-/// 读一份成绩单：`scorecard.json` + 旁边的 `clips.jsonl`（它的 sha256 是这张卡的「出身」）。
-/// 缺 `clips.jsonl`、缺清单指纹 → 报错（没有这两样就核不了它是不是这次比较的那一边）。
-pub fn load_card(path: &str) -> Result<CardIn, String> {
+/// 读一边的成绩单：`scorecard.json` 只用来找目录、取元数据（外部系统标记、清单指纹、汇总来源），
+/// **卡片状态一律从旁边那份 `clips.jsonl` 重新汇总**（`scorecard::load::resummarize`，规则 v2）——
+/// 不再信任 scorecard.json 里的 `scenes`（codex 第 5 轮 P1 #2：旧成绩单配新逐段文件会让结论跑偏）。
+///
+/// `system` = 这份成绩单在比较里被选中的那个系统（来自第一份 `--vs` 的 `meta.a_system` / `b_system`）。
+pub fn load_card(path: &str, system: &str) -> Result<CardIn, String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("{path}：{e}"))?;
-    let mut card = parse_card(&text, path)?;
+    let v: Value =
+        serde_json::from_str(&text).map_err(|e| format!("{path}：不是合法 JSON（{e}）"))?;
     let clips = std::path::Path::new(path).with_file_name("clips.jsonl");
     if !clips.exists() {
         return Err(format!(
-            "{} 旁边没有 clips.jsonl：accept 要用它核这份成绩单是哪一份逐段文件跑出来的",
-            card.path
+            "{path} 旁边没有 clips.jsonl：accept 要用它核这份成绩单是哪一份逐段文件跑出来的"
         ));
     }
-    card.clips_actual_sha = crate::wav::sha256(&clips)?;
-    let text = std::fs::read_to_string(&clips).map_err(|e| format!("{}：{e}", clips.display()))?;
-    let rows = crate::scorecard::load::parse_jsonl(&text)
-        .map_err(|e| format!("{}：{e}", clips.display()))?;
-    card.keys = rows
+    let clips_actual_sha = crate::wav::sha256(&clips)?;
+    let rows = crate::scorecard::load::parse_jsonl(
+        &std::fs::read_to_string(&clips).map_err(|e| format!("{}：{e}", clips.display()))?,
+    )
+    .map_err(|e| format!("{}：{e}", clips.display()))?;
+    let keys: Vec<ClipKey> = rows
         .iter()
+        .filter(|r| r.system == system)
         .map(|r| ClipKey {
             id: r.clip.clone(),
             scene: r.scene.as_str(),
@@ -387,18 +393,64 @@ pub fn load_card(path: &str) -> Result<CardIn, String> {
             device: r.device.clone(),
         })
         .collect();
-    if card.fingerprint.is_none() {
+    if keys.is_empty() {
         return Err(format!(
-            "{} 没记评测清单指纹（meta.suite_fingerprint）：用 `vdn-eval scorecard --suite …` 重跑一份，\
-             或用 `--merge-shards` 合并过的成绩单",
-            card.path
+            "{} 里没有系统 {system} 的段：这张成绩单不是这一边的（第一份 --vs 选的是 {system}）",
+            clips.display()
         ));
     }
-    Ok(card)
+    // 卡片状态：从绑定的逐段文件重新汇总（与 `vdn-eval scorecard --from-clips` 同一个函数）
+    let (mut card, _sha) = crate::scorecard::load::resummarize(&clips, Rules::V2)?;
+    card.cards.retain(|c| c.system == system);
+    card.missing.retain(|m| m.system == system);
+    if card.cards.is_empty() {
+        return Err(format!(
+            "{} 里没有系统 {system} 的场景卡：重新汇总出来是空的",
+            clips.display()
+        ));
+    }
+    card.worst = crate::scorecard::rules::worst(&card.cards);
+    card.clips = keys.len();
+    let out_rows: Vec<CardRow> = card
+        .cards
+        .iter()
+        .map(|c| CardRow {
+            scene: c.scene.as_str(),
+            tier: serde_name(&c.tier),
+            device: c.device.clone(),
+            system: c.system.clone(),
+            status: match c.status {
+                crate::scorecard::rules::CardStatus::Pass => "pass",
+                crate::scorecard::rules::CardStatus::Fail => "fail",
+                crate::scorecard::rules::CardStatus::Unknown => "unknown",
+            }
+            .to_string(),
+            clips: c.clips,
+            lat_ms: c.items.iter().find(|i| i.v == "V-LAT").and_then(|i| i.mean),
+        })
+        .collect();
+    let ext = v["meta"]["external"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    Ok(CardIn {
+        path: path.to_string(),
+        system: system.to_string(),
+        external: !ext.is_empty(),
+        clips_sha: v["meta"]["from_clips_sha256"]
+            .as_str()
+            .filter(|x| !x.is_empty())
+            .map(str::to_string),
+        fingerprint: v["meta"]["suite_fingerprint"]
+            .as_str()
+            .filter(|x| !x.is_empty())
+            .map(str::to_string),
+        clips_actual_sha,
+        keys,
+        rows: out_rows,
+    })
 }
 
-/// 两张卡必须就是报告种子那一边的成绩单：旁边的 `clips.jsonl` sha256、系统名、清单指纹都要对上
-/// （codex 第 3 · 4 轮 P1：误传旧候选 / 原版卡会掩盖新增「不过」，外部候选的声明延迟也会被当成实测）。
 pub fn check_binding(rep: &Cmp, a: &CardIn, b: &CardIn, fp: &str) -> Result<(), String> {
     let (Some(aid), Some(bid)) = (rep.a_id.as_ref(), rep.b_id.as_ref()) else {
         return Err(format!(
@@ -428,8 +480,9 @@ pub fn check_binding(rep: &Cmp, a: &CardIn, b: &CardIn, fp: &str) -> Result<(), 
             ));
         }
         if card.system != id.1 {
+            // load_card 已按 id.1 过滤；对不上说明调用方传错了系统
             return Err(format!(
-                "{flag} 的系统是 {}，第一份 --vs 的{side}系统是 {}：不是同一边的成绩单，不判",
+                "{flag} 按系统 {} 读的，第一份 --vs 的{side}系统是 {}：不是同一边，不判",
                 card.system, id.1
             ));
         }
@@ -448,79 +501,4 @@ pub fn check_binding(rep: &Cmp, a: &CardIn, b: &CardIn, fp: &str) -> Result<(), 
         }
     }
     Ok(())
-}
-
-pub fn parse_card(text: &str, path: &str) -> Result<CardIn, String> {
-    let v: Value =
-        serde_json::from_str(text).map_err(|e| format!("{path}：不是合法 JSON（{e}）"))?;
-    let mut rows = Vec::new();
-    let mut lats = Vec::new();
-    for c in v["scenes"].as_array().into_iter().flatten() {
-        let status = c["status"].as_str().unwrap_or_default().to_string();
-        if status.is_empty() {
-            return Err(format!("{path} 里有一张卡没有 status：不是成绩单"));
-        }
-        if let Some(x) = c["items"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .find(|x| x["v"] == "V-LAT")
-            && let Some(m) = num(x, "mean")
-        {
-            lats.push(m);
-        }
-        rows.push(CardRow {
-            scene: c["scene"].as_str().unwrap_or_default().to_string(),
-            tier: c["tier"].as_str().unwrap_or_default().to_string(),
-            device: c["device"].as_str().unwrap_or_default().to_string(),
-            system: c["system"].as_str().unwrap_or_default().to_string(),
-            status,
-            clips: num(c, "clips").unwrap_or(0.0).max(0.0) as usize,
-            lat_ms: c["items"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .find(|x| x["v"] == "V-LAT")
-                .and_then(|x| num(x, "mean")),
-        });
-    }
-    if rows.is_empty() {
-        return Err(format!("{path} 里没有场景卡：不是成绩单"));
-    }
-    // 一份成绩单只能一个系统：多个系统时同一 场景 × 档 × 设备 的卡会互相覆盖（退步被遮住），
-    // 延迟也会把几个系统混在一起求均值（codex 第 1 轮 P1 #3）
-    let systems: std::collections::BTreeSet<&str> =
-        rows.iter().map(|r| r.system.as_str()).collect();
-    if systems.contains("") {
-        return Err(format!("{path} 里有一张卡没有 system：不是成绩单"));
-    }
-    if systems.len() > 1 {
-        return Err(format!(
-            "{path} 里有 {} 个系统（{}）：accept 一次只比一个系统。用 `vdn-eval scorecard --system <一个系统>` \
-             分别出成绩单，或按系统把这几个系统拆成几份成绩单",
-            systems.len(),
-            systems.iter().copied().collect::<Vec<_>>().join(" · ")
-        ));
-    }
-    let ext = v["meta"]["external"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
-    Ok(CardIn {
-        path: path.to_string(),
-        system: systems.iter().next().copied().unwrap_or("").to_string(),
-        external: !ext.is_empty(),
-        clips_sha: v["meta"]["from_clips_sha256"]
-            .as_str()
-            .filter(|x| !x.is_empty())
-            .map(str::to_string),
-        fingerprint: v["meta"]["suite_fingerprint"]
-            .as_str()
-            .filter(|x| !x.is_empty())
-            .map(str::to_string),
-        clips_actual_sha: String::new(),
-        keys: Vec::new(),
-        rows,
-        lat_ms: mean(&lats),
-    })
 }

@@ -10,18 +10,8 @@ use serde_json::{Value, json};
 use vdn_eval::scene::MeetingPlace;
 
 use fx::{
-    D, Fix, Spec, build, cand, cand_cards, card_json, card_json_with, cards_for, good1, good2,
-    good3, spec,
+    D, Fix, Spec, build, cand, card_json, card_json_with, cards_for, good1, good2, good3, spec,
 };
-
-/// 两张卡：填上清单指纹，并把 `clips.jsonl` 摆到成绩单旁边（accept 会核 sha256）。
-fn cards_of(f: &Fix, g: &fx::Good, tag: &str) -> (String, String) {
-    let (a, b) = cards_for("ref", "cand", "pass", "pass");
-    (
-        f.card(&format!("{tag}-a"), &card_json_with(&a, &g.fp), &g.ctl),
-        f.card(&format!("{tag}-b"), &card_json_with(&b, &g.fp), &g.cand1),
-    )
-}
 
 fn verdict(js: &Value, what_contains: &str) -> String {
     js["rows"]
@@ -316,38 +306,34 @@ fn some_undecided_vetoes_still_pass() {
     assert!(!d.contains("一边判不了 0 段"), "判不了的段数要写出来：{d}");
 }
 
+/// 其他场景不新增「不过」：卡状态由逐段文件重新汇总（不信任 scorecard.json）。
 #[test]
 fn non_target_card_to_fail_fails_and_target_card_change_does_not() {
     let f = Fix::new("card");
-    let g = build(&f, spec(good1(), good2(), good3()));
-    let (a, _) = cards_of(&f, &g, "nt");
-    let js = f.accept(
-        &g.vs,
-        &g.noise,
-        &a,
-        &f.card(
-            "nt-b1",
-            &card_json_with(&cand_cards("fail", "pass"), &g.fp),
-            &g.cand1,
-        ),
-        "t",
+    // 目标场景的卡变不过：这一行不管
+    let g = build(
+        &f,
+        Spec {
+            poison1: &[(MeetingPlace::Cafe, "V-NAN")],
+            ..spec(good1(), good2(), good3())
+        },
     );
+    let js = f.accept(&g.vs, &g.noise, &g.card_a, &g.card_b, "t");
     assert_eq!(
         verdict(&js, "其他场景"),
         "pass",
         "目标场景的卡变了不算这一行：{js}"
     );
-    let js = f.accept(
-        &g.vs,
-        &g.noise,
-        &a,
-        &f.card(
-            "nt-b2",
-            &card_json_with(&cand_cards("pass", "fail"), &g.fp),
-            &g.cand1,
-        ),
-        "o",
+    // 非目标场景的卡变不过：这一行不过
+    let f2 = Fix::new("card2");
+    let g2 = build(
+        &f2,
+        Spec {
+            poison1: &[(MeetingPlace::LibraryClassroom, "V-NAN")],
+            ..spec(good1(), good2(), good3())
+        },
     );
+    let js = f2.accept(&g2.vs, &g2.noise, &g2.card_a, &g2.card_b, "o");
     assert_eq!(verdict(&js, "其他场景"), "fail", "{js}");
     assert!(
         detail(&js, "其他场景").contains("library-classroom"),
@@ -356,21 +342,23 @@ fn non_target_card_to_fail_fails_and_target_card_change_does_not() {
     assert_eq!(js["verdict"], "fail");
 }
 
-/// codex 第 1 轮 P1 #4：非目标卡在对照里本来就全是「不过」时，没有可新增的 → 这一行是过，不是判不了。
+/// codex 第 1 轮 P1 #4：非目标卡在对照里本来就全是「不过」时，没有可新增的 → 这一行是过。
 #[test]
 fn all_non_target_cards_already_fail_is_pass() {
     let f = Fix::new("allfail");
-    let g = build(&f, spec(good1(), good2(), good3()));
-    let (ca, cb) = cards_for("ref", "cand", "fail", "fail");
-    let a = f.card("af-a", &card_json_with(&ca, &g.fp), &g.ctl);
-    let b = f.card("af-b", &card_json_with(&cb, &g.fp), &g.cand1);
-    let js = f.accept(&g.vs, &g.noise, &a, &b, "x");
+    let g = build(
+        &f,
+        Spec {
+            poison_ctl: &[(MeetingPlace::LibraryClassroom, "V-NAN")],
+            poison1: &[(MeetingPlace::LibraryClassroom, "V-NAN")],
+            ..spec(good1(), good2(), good3())
+        },
+    );
+    let js = f.accept(&g.vs, &g.noise, &g.card_a, &g.card_b, "x");
     assert_eq!(verdict(&js, "其他场景"), "pass", "{js}");
     assert!(detail(&js, "其他场景").contains("不过"), "{js}");
-    assert_eq!(js["verdict"], "pass", "{js}");
 }
 
-/// codex 第 1 轮 P1 #3：一份成绩单里有两个系统时，卡会互相覆盖、延迟也会混着求均值 → 报错。
 #[test]
 fn external_candidate_latency_undecided() {
     let f = Fix::new("ext");

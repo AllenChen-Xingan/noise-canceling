@@ -9,7 +9,7 @@ use vdn_eval::scene::MeetingPlace;
 
 use fx::{
     Fix, Spec, build, cand, cand_cards, card_json, card_json_with, cards_for, ctl, good1, good2,
-    good3, set_lat, spec,
+    good3, spec,
 };
 
 fn verdict(js: &Value, what_contains: &str) -> String {
@@ -72,38 +72,21 @@ fn same_file_different_system_is_a_distinct_candidate() {
 
 /// codex 第 1 轮：一份成绩单里有两个系统时，卡会互相覆盖 → 报错。
 #[test]
-fn two_systems_in_one_scorecard_is_an_error() {
-    let f = Fix::new("twosys");
-    let g = build(&f, spec(good1(), good2(), good3()));
-    let rows = [
-        ("cafe", "common", "mba-builtin", "ref", "pass"),
-        ("cafe", "common", "mba-builtin", "cand", "fail"),
-    ];
-    let bad = f.card(
-        "twosys-a",
-        &card_json(&rows, serde_json::json!([]), &g.fp),
-        &g.ctl,
-    );
-    let e = cli(&f, &f.accept_args(&g.vs, &g.noise, &bad, &g.card_b, "x")).unwrap_err();
-    assert!(e.contains("系统"), "要说清是系统数不对：{e}");
-    assert!(e.contains("ref") && e.contains("cand"), "{e}");
-}
-
-/// codex 第 3 轮 P1 #1：卡片的系统必须等于第一份 --vs 那一边的系统。
-#[test]
 fn card_must_be_the_reported_seed() {
     let f = Fix::new("binding");
     let g = build(&f, spec(good1(), good2(), good3()));
-    let (a, b) = cards_for("ref", "cand9", "pass", "pass");
+    // 候选卡旁边放的是对照的逐段文件（系统 ref）：第一份 --vs 的候选是 cand，读不出这个系统 → 拒绝
+    let (a, b) = cards_for("ref", "cand", "pass", "pass");
     let a_p = f.card("bnd-a", &card_json_with(&a, &g.fp), &g.ctl);
-    let b_p = f.card("bnd-b", &card_json_with(&b, &g.fp), &g.cand1);
+    let b_p = f.card("bnd-b", &card_json_with(&b, &g.fp), &g.ctl);
     let e = cli(&f, &f.accept_args(&g.vs, &g.noise, &a_p, &b_p, "x")).unwrap_err();
-    assert!(e.contains("cand9") && e.contains("系统"), "{e}");
-    let (a2, b2) = cards_for("ref9", "cand", "pass", "pass");
-    let a2 = f.card("bnd-a2", &card_json_with(&a2, &g.fp), &g.ctl);
+    assert!(e.contains("没有系统") && e.contains("cand"), "{e}");
+    // 对照卡旁边放的是候选的逐段文件（系统 cand）：第一份 --vs 的对照是 ref → 拒绝
+    let (a2, b2) = cards_for("ref", "cand", "pass", "pass");
+    let a2 = f.card("bnd-a2", &card_json_with(&a2, &g.fp), &g.cand1);
     let b2 = f.card("bnd-b2", &card_json_with(&b2, &g.fp), &g.cand1);
     let e = cli(&f, &f.accept_args(&g.vs, &g.noise, &a2, &b2, "y")).unwrap_err();
-    assert!(e.contains("ref9"), "{e}");
+    assert!(e.contains("没有系统") && e.contains("ref"), "{e}");
 }
 
 /// codex 第 4 轮 B：成绩单旁边必须有逐段文件，而且它的 sha256 就是 --vs 记的那一边。
@@ -120,9 +103,13 @@ fn card_clips_jsonl_must_be_the_compared_file() {
     )
     .unwrap_err();
     assert!(e.contains("clips.jsonl"), "{e}");
-    // 拿另一份逐段文件冒充（种子 2 的）→ 拒绝
+    // 拿另一份逐段文件冒充（同一个系统、内容改了一处）→ sha256 对不上，拒绝
     let (ca2, _) = cards_for("ref", "cand", "pass", "pass");
-    let other = f.root.join("c2.jsonl").to_string_lossy().to_string();
+    let mut alt = ctl(MeetingPlace::Cafe, 4);
+    alt.extend(ctl(MeetingPlace::MeetingRoom, 4));
+    alt.extend(ctl(MeetingPlace::LibraryClassroom, 4));
+    alt[0].scores[0].2.value = Some(0.9);
+    let other = f.jsonl("ctl-alt", &alt);
     let wrong = f.card("wrongclips-a", &card_json_with(&ca2, &g.fp), &other);
     let e = cli(&f, &f.accept_args(&g.vs, &g.noise, &wrong, &g.card_b, "y")).unwrap_err();
     assert!(e.contains("sha256") || e.contains("逐段文件"), "{e}");
@@ -192,42 +179,18 @@ fn missing_whole_scene_is_undecided() {
 
 /// codex 第 4 轮 A：预期场景取自 --suite（独立于成绩单）。清单里有、对照成绩单里没有 → 判不了。
 #[test]
-fn suite_scene_missing_from_cards_is_undecided() {
-    let f = Fix::new("suiteonly");
-    let g = build(&f, spec(good1(), good2(), good3()));
-    // 两份成绩单都没有 library-classroom 这张卡，但清单里有这个场景
-    let a = card_json(
-        &[
-            ("cafe", "common", "mba-builtin", "ref", "pass"),
-            ("meeting-room", "common", "mba-builtin", "ref", "pass"),
-        ],
-        serde_json::json!([]),
-        &g.fp,
-    );
-    let b = card_json(
-        &[
-            ("cafe", "common", "mba-builtin", "cand", "pass"),
-            ("meeting-room", "common", "mba-builtin", "cand", "pass"),
-        ],
-        serde_json::json!([]),
-        &g.fp,
-    );
-    let a_p = f.card("so-a", &a, &g.ctl);
-    let b_p = f.card("so-b", &b, &g.cand1);
-    let js = f.accept(&g.vs, &g.noise, &a_p, &b_p, "x");
-    assert_eq!(verdict(&js, "覆盖"), "undecided", "{js}");
-    assert!(detail(&js, "覆盖").contains("library-classroom"), "{js}");
-}
-
-/// codex 第 4 轮 C：延迟按卡比（场景 × 档 × 设备），不取均值；一张卡差过容差就是不过。
-#[test]
 fn per_card_latency_mismatch_fails() {
     let f = Fix::new("lat");
-    let g = build(&f, spec(good1(), good2(), good3()));
+    let g = build(
+        &f,
+        Spec {
+            lat1: &[(MeetingPlace::MeetingRoom, 1.0)],
+            ..spec(good1(), good2(), good3())
+        },
+    );
     let (ca, cb) = cards_for("ref", "cand", "pass", "pass");
     let a_p = f.card("lat-a", &card_json_with(&ca, &g.fp), &g.ctl);
-    let b = set_lat(&card_json_with(&cb, &g.fp), "meeting-room", 44.7);
-    let b_p = f.card("lat-b", &b, &g.cand1);
+    let b_p = f.card("lat-b", &card_json_with(&cb, &g.fp), &g.cand1);
     let js = f.accept(&g.vs, &g.noise, &a_p, &b_p, "x");
     assert_eq!(verdict(&js, "延迟"), "fail", "{js}");
     assert!(detail(&js, "延迟").contains("meeting-room"), "{js}");
@@ -238,21 +201,65 @@ fn per_card_latency_mismatch_fails() {
 #[test]
 fn per_card_latency_missing_is_undecided() {
     let f = Fix::new("latmiss");
-    let g = build(&f, spec(good1(), good2(), good3()));
-    let (ca, _) = cards_for("ref", "cand", "pass", "pass");
-    let b = card_json(
-        &[
-            ("cafe", "common", "mba-builtin", "cand", "pass"),
-            ("library-classroom", "common", "mba-builtin", "cand", "pass"),
-        ],
-        serde_json::json!([]),
-        &g.fp,
+    let g = build(
+        &f,
+        Spec {
+            omit1: &[MeetingPlace::MeetingRoom],
+            ..spec(good1(), good2(), good3())
+        },
     );
-    let a_p = f.card("latmiss-a", &card_json_with(&ca, &g.fp), &g.ctl);
-    let b_p = f.card("latmiss-b", &b, &g.cand1);
+    let a_p = g.card_a.clone();
+    let b_p = g.card_b.clone();
     let js = f.accept(&g.vs, &g.noise, &a_p, &b_p, "x");
     assert_eq!(verdict(&js, "延迟"), "undecided", "{js}");
     assert!(detail(&js, "延迟").contains("meeting-room"), "{js}");
+}
+
+/// codex 第 5 轮 P1 #1：覆盖按**片段 id** 核。候选漏掉某一切片里的一段 → 判不了。
+#[test]
+fn clip_missing_on_candidate_side_is_undecided() {
+    let f = Fix::new("onclip");
+    let gone = ctl(MeetingPlace::MeetingRoom, 4)[2].clip.clone();
+    let g = build(
+        &f,
+        Spec {
+            omit_clip1: &[gone.as_str()],
+            ..spec(good1(), good2(), good3())
+        },
+    );
+    let js = f.accept(&g.vs, &g.noise, &g.card_a, &g.card_b, "x");
+    assert_eq!(verdict(&js, "覆盖"), "undecided", "{js}");
+    let d = detail(&js, "覆盖");
+    assert!(d.contains(&gone), "要说清是哪一段：{d}");
+    assert_eq!(js["verdict"], "undecided");
+}
+
+/// codex 第 5 轮 P1 #2：卡片状态从绑定的逐段文件重新汇总。旧 scorecard.json 写成「过」也不能改结论。
+#[test]
+fn old_scorecard_status_is_ignored() {
+    let f = Fix::new("oldjson");
+    // 候选那边 library-classroom 有一段否决项不过 → 重新汇总出来这张卡是「不过」
+    let g = build(
+        &f,
+        Spec {
+            poison1: &[(MeetingPlace::LibraryClassroom, "V-NAN")],
+            ..spec(good1(), good2(), good3())
+        },
+    );
+    // scorecard.json 里把它写成「过」（旧的 / 手工改过的），旁边是新的逐段文件
+    let (ca, cb) = cards_for("ref", "cand", "pass", "pass");
+    let js = f.accept(
+        &g.vs,
+        &g.noise,
+        &f.card("oldjson-a", &card_json_with(&ca, &g.fp), &g.ctl),
+        &f.card("oldjson-b", &card_json_with(&cb, &g.fp), &g.cand1),
+        "x",
+    );
+    assert_eq!(verdict(&js, "其他场景"), "fail", "{js}");
+    assert!(
+        detail(&js, "其他场景").contains("library-classroom"),
+        "{js}"
+    );
 }
 
 /// codex 第 4 轮 D：结论里固定写「评分模型之一只抓得到 0.20 的坏段」（014 第三节第 5 条 · 调研 031）。

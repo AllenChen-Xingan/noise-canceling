@@ -227,11 +227,18 @@ pub fn cli(args: &[String], run_id: &str, default_out: PathBuf) -> Result<PathBu
     for p in &noise {
         nois.push(parse_compare(&read(p)?, p)?);
     }
-    let card_a = load_card(&pa)?;
-    let card_b = load_card(&pb)?;
-    if let Some(rep) = cmps.first() {
-        check_binding(rep, &card_a, &card_b, &fp)?;
-    }
+    let rep = cmps
+        .first()
+        .ok_or("没有 --vs：没有候选对对照的比较，判不了")?;
+    let (Some(aid), Some(bid)) = (rep.a_id.clone(), rep.b_id.clone()) else {
+        return Err(format!(
+            "{} 没记两边成绩单的 sha256 与系统名：核不了两张卡是哪一边的，不判",
+            rep.name()
+        ));
+    };
+    let card_a = load_card(&pa, &aid.1)?;
+    let card_b = load_card(&pb, &bid.1)?;
+    check_binding(rep, &card_a, &card_b, &fp)?;
     let report = evaluate(&cmps, &nois, &scenes, &expected, &card_a, &card_b)?;
     let out = arg(args, "--out").map(PathBuf::from).unwrap_or(default_out);
     for f in FILES {

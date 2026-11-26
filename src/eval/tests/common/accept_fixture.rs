@@ -6,6 +6,9 @@
 
 #![allow(dead_code)]
 
+#[path = "accept_manifest.rs"]
+mod manifest;
+
 use std::cell::RefCell;
 use std::path::PathBuf;
 
@@ -71,11 +74,16 @@ pub fn good3() -> D {
     }
 }
 
+/// 一项的分数：过线取正本（`thresholds` 表），否则重新汇总出来的卡片状态会跟真跑的不一样。
 fn sc(v: &'static str, x: f64) -> (&'static str, bool, Score) {
     let b = info(v).map_or(vdn_eval::Better::Lower, |i| i.better);
     let thr = match v {
-        "V-LAT" => Some(vdn_eval::system::BUDGET_MS),
+        "V-ESTOI" => Some(th::ESTOI.def("min")),
+        "V-ONSET" => Some(th::ONSET.def("max")),
+        "V-TIMBRE" => Some(th::TIMBRE.def("max")),
+        "V-BGSTAB" => Some(th::BGSTAB.def("max")),
         "V-SPLVL" => Some(th::SPLVL.def("min")),
+        "V-LAT" => Some(vdn_eval::system::BUDGET_MS),
         _ => Some(0.0),
     };
     (v, false, Score::judged(v, x, "x", b, thr, &[]))
@@ -310,41 +318,6 @@ impl Fix {
     }
 }
 
-/// 一条片段清单记录（够 `SceneClip::parse_jsonl` 读得过）。
-fn clip_line(id: &str, scene: &str, tier: &str, device: &str) -> Value {
-    let h = json!({"mix": "aa", "owner": "bb", "owner_dry": "cc", "stems": {"bed-x": "dd"},
-                   "floor": "ee", "noise": "ff", "interf": "gg"});
-    let dur = u64::from(vdn_types::MODEL_RATE);
-    json!({
-        "id": id, "scene": scene, "tier": tier, "device": device, "mic_mode": "unknown",
-        "pair": id, "lang": "en", "polarity": "suppress", "dur_samples": dur,
-        "sr": vdn_types::MODEL_RATE,
-        "audio": {"mix": "m.wav", "owner": "o.wav", "owner_dry": "od.wav", "floor": "f.wav",
-                  "noise": "n.wav", "interf": "i.wav", "stems": {"bed-x": "s.wav"}},
-        "has_clean_ref": true, "additive": true,
-        "targets": [{"spk": "1", "dist_m": 0.5, "azimuth_deg": 0.0, "level_dbfs": -30.0,
-                     "iv": [[0, 8000]],
-                     "src": {"kind": "librispeech", "spk": "1", "utts": ["u"]}}],
-        "sounds": [{"inst": "bed-x", "cls": "bed-other", "group": "bed", "is_speech": false,
-                    "iv": [[0, dur]], "level_dbfs": -40.0, "rel_db": -10.0,
-                    "dist_m": null, "azimuth_deg": null,
-                    "src": {"kind": "synth", "fn": "noise", "at": 0}, "license": "own"}],
-        "nominal": {"snr_db": 5.0, "sir_db": null, "t60_s": 0.2, "owner_dist_m": 0.5,
-                    "owner_level_dbfs": -30.0},
-        "measured": {"snr_db": 5.0, "snr_all_db": 5.0, "owner_level_dbfs": -30.0,
-                     "sir_db": null, "t60_s": 0.2, "drr_db": 2.0, "overlap_ratio": 0.0},
-        "owner_iv": [[0, 8000]], "interf_iv": [], "chain": {}, "seed": 1,
-        "hash": {"samples": h.clone(), "wav_sha256": h}
-    })
-}
-
-/// 成绩单的任务清单：每个场景一条任务，指向同一份片段清单（=`cafe`…`library-classroom` 全部片段）。
-const SUITE_SCENES: [(&str, &str); 3] = [
-    ("cafe", "S-cafe-common"),
-    ("meeting-room", "S-meeting-room-common"),
-    ("library-classroom", "S-library-classroom-common"),
-];
-
 /// 一份手写的成绩单（只带 accept 要读的字段；格式照 `scorecard::card::Card::to_json`）。
 /// `fp` = 评测清单指纹（accept 会核）；`ext` = `meta.external`。
 pub fn card_json(rows: &[(&str, &str, &str, &str, &str)], ext: Value, fp: &str) -> String {
@@ -441,6 +414,16 @@ pub struct Spec<'a> {
     pub omit: &'a [MeetingPlace],
     /// 两边都整段不出现这一项（模拟「不适用」）
     pub absent: &'a [(MeetingPlace, &'a str)],
+    /// 种子 1 里这些场景的 V-LAT 平移（造逐卡延迟不一致）
+    pub lat1: &'a [(MeetingPlace, f64)],
+    /// 种子 1 里这些场景整段不放进逐段文件（候选漏跑一个场景）
+    pub omit1: &'a [MeetingPlace],
+    /// 种子 1 里这些片段 id 整段不放进逐段文件（候选漏跑一段）
+    pub omit_clip1: &'a [&'a str],
+    /// 对照里这些场景塞一段否决项不过的分（卡状态由逐段文件重新汇总，靠这个把它弄成不过）
+    pub poison_ctl: &'a [(MeetingPlace, &'static str)],
+    /// 种子 1 里这些场景塞一段否决项不过的分
+    pub poison1: &'a [(MeetingPlace, &'static str)],
 }
 
 /// 三个种子都更好、不额外丢项。
@@ -454,6 +437,24 @@ pub fn spec(d1: D, d2: D, d3: D) -> Spec<'static> {
         thin: &[],
         omit: &[],
         absent: &[],
+        lat1: &[],
+        omit1: &[],
+        omit_clip1: &[],
+        poison_ctl: &[],
+        poison1: &[],
+    }
+}
+
+/// 把某个场景里某些项改成「已判不过」的分数（卡片状态由逐段文件重新汇总，靠这个造不过的卡）。
+pub fn poison(rows: &mut [ClipRow], scene: MeetingPlace, item: &'static str) {
+    for r in rows.iter_mut().filter(|r| r.scene == scene) {
+        let veto = vdn_eval::scorecard::standard::VETO
+            .iter()
+            .any(|i| i.v == item);
+        let mut s = Score::judged(item, 1.0, "x", vdn_eval::Better::Lower, Some(0.0), &[]);
+        s.verdict = vdn_eval::Verdict::Fail;
+        r.scores.retain(|(v, _, _)| *v != item);
+        r.scores.push((item, veto, s));
     }
 }
 
@@ -492,6 +493,9 @@ pub fn build(f: &Fix, s: Spec<'_>) -> Good {
         }
         a.extend(rows);
     }
+    for (sc, item) in s.poison_ctl {
+        poison(&mut a, *sc, item);
+    }
     let ctl_p = f.jsonl("ctl", &a);
     let mut seed1 = cand(&a, s.d1, s.drop1, "cand");
     for (sc, items) in s.drop1_in {
@@ -499,44 +503,32 @@ pub fn build(f: &Fix, s: Spec<'_>) -> Good {
             r.scores.retain(|(v, _, _)| !items.contains(v));
         }
     }
+    for (sc, item) in s.poison1 {
+        poison(&mut seed1, *sc, item);
+    }
+    for (sc, ms) in s.lat1 {
+        for r in seed1.iter_mut().filter(|r| r.scene == *sc) {
+            for (v, _, x) in r.scores.iter_mut().filter(|(v, _, _)| *v == "V-LAT") {
+                if let Some(x0) = x.value {
+                    x.value = Some(x0 + ms);
+                    let _ = v;
+                }
+            }
+        }
+    }
+    seed1.retain(|r| !s.omit1.contains(&r.scene) && !s.omit_clip1.contains(&r.clip.as_str()));
     let cand1 = f.jsonl("c1", &seed1);
     let c2 = f.jsonl("c2", &cand(&a, s.d2, &[], "cand"));
     let c3 = f.jsonl("c3", &cand(&a, s.d3, &[], "cand"));
 
     // 评测清单：每个场景一条任务，指向「全部 4 个源片段 × 2 设备」的片段清单（预期集合）
-    let manifest = f.root.join("clips.jsonl");
-    let mut lines = String::new();
-    for (scene, _) in SUITE_SCENES {
-        let place = MeetingPlace::ALL
-            .into_iter()
-            .find(|p| p.as_str() == scene)
-            .unwrap();
-        for row in ctl(place, 4) {
-            lines.push_str(&clip_line(&row.clip, scene, "common", "mba-builtin").to_string());
-            lines.push('\n');
-        }
-    }
-    std::fs::write(&manifest, lines).unwrap();
-    let mp = manifest.to_string_lossy().to_string();
-    let tasks: Vec<Value> = SUITE_SCENES
+    let listed: Vec<(MeetingPlace, Vec<String>)> = scenes
         .iter()
-        .map(|(scene, id)| {
-            json!({"id": id, "set": "capability", "polarity": "suppress", "origin": "t",
-                   "desc": "t", "graders": [],
-                   "real": {"kind": "scene", "clips": mp, "scene": scene, "tier": "common",
-                            "device": "mba-builtin"}})
-        })
+        .map(|p| (*p, ctl(*p, 4).into_iter().map(|r| r.clip).collect()))
         .collect();
-    let suite_text = json!({"name": "accept-test", "seed": 1, "defaults": {"trials": 1},
-        "tasks": tasks})
-    .to_string();
-    let suite_path = f.root.join("suite.json");
-    std::fs::write(&suite_path, &suite_text).unwrap();
-    let suite = suite_path.to_string_lossy().to_string();
+    let (suite_path, fp) = manifest::write(&f.root, &listed);
+    let suite = suite_path;
     f.set_suite(&suite);
-    let fp = vdn_eval::scorecard::shard::suite_fingerprint(
-        &vdn_eval::suite::parse_suite(&suite_text).unwrap(),
-    );
 
     let (ca, cb) = cards_for("ref", "cand", "pass", "pass");
     let ca = card_json_with(&ca, &fp);
