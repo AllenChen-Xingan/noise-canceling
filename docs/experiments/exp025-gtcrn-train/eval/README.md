@@ -13,7 +13,7 @@
 - `vdn-eval` 与两端同一提交、同一个 build（云上也照 `baseline/README.md` 第一节）
 - 内置流式权重：`resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx`（或设 `VDN_GTCRN_ONNX`）
 
-下面 5 步都在**项目根**下执行，`PY` = 上面那个 python。
+下面 5 步都在**项目根**下执行，`PY` = 上面那个 python，`MAIN` = 主目录（git 公共目录的父目录；`run_gtcrn_offline.py` 只接受工作副本或主目录里的路径）。
 
 ## 1. 冒烟测试集（≤ 5 段，只缩小成绩单范围）
 
@@ -26,14 +26,14 @@ rows = [json.loads(l) for l in open(p)]
 print(",".join(r["id"] for r in rows[:5]))
 EOF
 )
-python3 docs/experiments/exp025-gtcrn-train/baseline/subset.py --clips "$IDS" --out /tmp/exp025-smoke/suite
+python3 docs/experiments/exp025-gtcrn-train/baseline/subset.py --clips "$IDS" --out "$MAIN/_tmp/exp025-smoke"/suite
 ```
 
 ## 2. 导出整段版 ONNX（原版（甲）= 官方起点权重）
 
 ```sh
 (cd docs/experiments/exp025-gtcrn-train/trainer && \
-  $PY export.py --official --out /tmp/exp025-smoke/gtcrn-official.onnx)
+  $PY export.py --official --out "$MAIN/_tmp/exp025-smoke"/gtcrn-official.onnx)
 ```
 
 导出脚本会另写同名 `.json`（含与 PyTorch 的对拍与输入名）；对拍不过就停，别往下走。
@@ -42,7 +42,7 @@ python3 docs/experiments/exp025-gtcrn-train/baseline/subset.py --clips "$IDS" --
 
 ```sh
 $PY docs/experiments/exp025-gtcrn-train/eval/run_gtcrn_offline.py \
-  --onnx /tmp/exp025-smoke/gtcrn-official.onnx --name gtcrn-offline --probe   # 先量前视 / 对齐 / 一段耗时
+  --onnx "$MAIN/_tmp/exp025-smoke"/gtcrn-official.onnx --name gtcrn-offline --probe   # 先量前视 / 对齐 / 一段耗时
 $PY .../run_gtcrn_offline.py --onnx … --name gtcrn-offline --run-id r1 --shard 0/1   # 多进程：每片一个 --shard
 $PY .../run_gtcrn_offline.py --onnx … --name gtcrn-offline --run-id r1 --finalize    # 全部跑完再收尾一次
 ```
@@ -58,9 +58,9 @@ $PY .../run_gtcrn_offline.py --onnx … --name gtcrn-offline --run-id r1 --final
 
 ```sh
 VDN_GTCRN_ONNX=resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx \
-  target/release/vdn-eval scorecard --suite /tmp/exp025-smoke/suite/suite.json \
+  target/release/vdn-eval scorecard --suite "$MAIN/_tmp/exp025-smoke"/suite/suite.json \
   --system gtcrn,external:_tmp/exp016/gtcrn-offline/r1 \
-  --no-safety --rules v2 --out /tmp/exp025-smoke/score
+  --no-safety --rules v2 --out "$MAIN/_tmp/exp025-smoke"/score
 ```
 
 ⚠️ **不要加 `--qa`**（要买识别服务）。没有 `--qa` 时吃字、两个听感项写 `null`，对拍会自动把它们算作
@@ -70,7 +70,7 @@ VDN_GTCRN_ONNX=resources/gtcrn/stream/onnx_models/gtcrn_simple.onnx \
 
 ```sh
 $PY docs/experiments/exp025-gtcrn-train/eval/parity.py \
-  --a /tmp/exp025-smoke/score/clips.jsonl --b /tmp/exp025-smoke/score/clips.jsonl \
+  --a "$MAIN/_tmp/exp025-smoke"/score/clips.jsonl --b "$MAIN/_tmp/exp025-smoke"/score/clips.jsonl \
   --system-a gtcrn --system-b gtcrn-offline
 ```
 
@@ -82,7 +82,7 @@ $PY docs/experiments/exp025-gtcrn-train/eval/parity.py \
   出处 `src/eval/src/system/external.rs:9-10`
 - 只在一边出现的片段、或一项都没比成 → 也算 FAIL
 
-判读：全项 PASS → 两条路同口径，甲路读数可以拿来对原版；任一项 FAIL → 先查 STFT 边界 / 对齐，**别**拿甲路读数下结论。
+判读：PASS 只说明**实际比上的那些段和项**两条路同口径（「未验证」的项不算；不带 `--qa` 时吃字与两个听感项都未验证，要带 `--qa` 另核），甲路这些项的读数可以拿来对原版；任一项 FAIL → 先查 STFT 边界 / 对齐，**别**拿甲路读数下结论。
 
 ## 已知限制
 

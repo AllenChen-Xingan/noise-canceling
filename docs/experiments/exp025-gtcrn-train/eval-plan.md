@@ -56,7 +56,7 @@ vdn-eval scorecard --system external:<候选输出目录> --no-safety --qa --rul
 | A 对原版 | `vdn-eval compare --a O/clips.jsonl --b A1/clips.jsonl --by-scene --noise-a A1/clips.jsonl --noise-b A2/clips.jsonl --out cmp-A1-vs-O` | A1 对 A2 |
 | B 对 A | `vdn-eval compare --a A1/clips.jsonl --b B1/clips.jsonl --by-scene --noise-a B1/clips.jsonl --noise-b B2/clips.jsonl --out cmp-B1-vs-A1` | B1 对 B2 |
 | 噪声底补全 | 同一组三个种子两两比：A1–A2 · A1–A3 · A2–A3，B 组同理 | — |
-| 其余种子 | A2、A3 各对原版；B2 对 A2、B3 对 A3 | 同上 |
+| 其余种子 | A2、A3 各对原版；B2、B3 也都对 **A1**（报告种子）：`accept` 要求三份 `--vs` 的对照是同一份成绩单 | 同上 |
 
 - **报哪个种子，开评前定**：建议固定报种子 1，另外两个当复核，待人定。不许看完结果再挑最好的那个
 - 噪声底怎么用（建议，待人定）：一项的「涨」，要差值均值大于该组三对种子差值均值绝对值的最大者，且三个种子各自对原版都判「涨」。规约第十节第 5 条只说噪声底作参照、不改判断，所以这条要人定了才算数
@@ -89,7 +89,9 @@ vdn-eval scorecard --system external:<候选输出目录> --no-safety --qa --rul
 ### 判读命令的缺数规则（`vdn-eval accept`，codex 两轮后定）
 
 - 种子：`--vs` 正好 `SC-ACCEPT.seeds` 份、候选身份（成绩单 sha256 + 系统名）各不相同且对照相同；`--noise` 正好是这几个候选两两组合。不齐 → 要涨各行判不了
-- 「不适用」只指两边都没有这一项的值；有一边有值但配对 0 段、或源片段组数 < `SC-AGG.min_groups` → 证据不足，判不了
+- 「不适用」只指两边都没有这一项的值（如 V-BGSTAB 不在该场景类）；有一边有值但配对 0 段、或源片段组数 < `SC-AGG.min_groups` → 证据不足，判不了
+- 覆盖：对照成绩单里有的场景，报告种子的比较和候选成绩单里都必须有；整场景缺 → 判不了
+- 卡要对得上报告种子：`--card-a` / `--card-b` 的系统（和来源哈希，有记时）必须等于第一份 `--vs` 的对照 / 候选，不符拒绝判
 - 否决两项：两边都判得了的段一段都没有 → 判不了（「一边判不了」不能证明不新增）
 - 每份成绩单只许一个系统
 
