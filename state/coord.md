@@ -563,3 +563,5 @@
 - 2026-11-26 traindata 第五批核完（6 build 可重算 · valid · 交集 0，包 92e922be… 一致），场景页 scenes-df759bb8d606a209.md · 证据页 evidence-df759bb8d606a209.md（--check 0），486 过 · 3 跳过；会议室训练份 5.37→4.22 h（不同内容 1.87→1.48 h，开发份抽中布置变大）。batch4 index.json（37.6 MB）只留主仓 _tmp，不另存（大总管定，可按旧提交重建、仓里有 sha256）。codex 中，之后开 PR。
 - 2026-11-26 traindata 交 PR #227（Closes #221，718e79f8）：新基线 df759bb8d606a209 + 5 变体（no-eq 4bff0eef · no-clip 94b873a1 · no-n_noises cd7a4d17 · no-reverb d09858dd · high_snr-on 84b1b7ed）。大总管独立副本（合 origin/main）：unittest OK（3 跳过）· 证据页 --check 0 · 无本机路径 · 最大 py 544 行。等 CI。
 - 2026-11-26 PR #227 CI 过 → 合并 2a1c5e16（#221 关）。trainer 换线 feat/trainer-formal-b5（origin/main），--continue 重开：正式配置改指 df759bb8 · 两个 check · 执行单填 id 重估花费 · codex · PR。
+- 2026-11-26 trainer 交 PR #228（feat/trainer-formal-b5，69ebfec8）：4 份配置钉 df759bb8 · /workspace/shards/batch5；执行单填 id。大总管独立副本：formal/ablation check 都 0「可以开训」；pytest 500 过 · 2 跳过（对拍 31 排除）；无本机路径；最大 py 525 行。等 CI。
+- 2026-11-26 人定 D119 开正式训练、练完接着评（清单第 9 项）· D120 评判三条按默认 · D121 食堂不补。等 PR #228 合并后批 cloudrun 跑 plan-h100-formal.md。
