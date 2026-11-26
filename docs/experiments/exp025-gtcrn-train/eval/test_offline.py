@@ -8,6 +8,7 @@ import contextlib
 import io
 import json
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -92,6 +93,132 @@ class ClipList(unittest.TestCase):
         self.assertTrue((off.ROOT / off.CLIPS).is_file(), off.CLIPS)
         # 换掉框架常量后，`_ext.main` 自己那道「scenes.json 与常量一致」的自检才过得去
         self.assertEqual(off._ext.scenes_clips_path(), off.CLIPS)
+
+
+# ---- 窗口：第二处表示，与两份正本交叉校验（CLAUDE.md 五.5） ----
+# 与正本比窗的容差。1e-7 用在「同一精度路径」上：Rust `coef` 与 torch 的 float64 窗都先算 f64 再转 f32。
+WINDOW_TOL = 1e-7
+# torch 实际的 f32 窗是另一回事：hann 在 f32 里算 `0.5 − 0.5·cos`，小值处两个 0.5 相减丢精度，
+# i=1 处相对误差被放大到 1.2e-4（实测最大绝对差 7.13e-07，2026-11-27）。这是 torch 的算术，不是我们换了公式，
+# 所以对照它另给一条 1e-6 的线，并在 torch 的 float64 窗上再核一次 1e-7。
+WINDOW_TOL_F32 = 1e-6
+GOLDEN = HERE / "fixtures" / "window-sqrt-hann-512.json"
+
+
+def rust_window_formula():
+    """从正本 `src/dsp/src/window.rs` 取 `SqrtHannPeriodic` 的系数表达式（金标文件就是照它生成的）。"""
+    src = (off.ROOT / "src/dsp/src/window.rs").read_text()
+    m = re.search(r"Window::SqrtHannPeriodic => (\(.*?\.sqrt\(\))", src, re.S)
+    if not m:
+        raise AssertionError("window.rs 里找不到 SqrtHannPeriodic 的表达式；正本改了，金标要重新生成")
+    return m.group(1).strip()
+
+
+def golden_window():
+    """Rust 算出来的 512 个 f32 系数（金标，见 `bless_window`）。"""
+    g = json.loads(GOLDEN.read_text())
+    bits = np.array([int(x, 16) for x in g["bits_f32_hex"]], dtype=np.uint32)
+    return g, bits.view(np.float32)
+
+
+def window_max_diff(win, want):
+    """逐系数最大绝对差；长度不同直接报错（长度也是口径的一部分）。"""
+    a, b = np.asarray(win, np.float64), np.asarray(want, np.float64)
+    if a.shape != b.shape:
+        raise ValueError(f"窗长不一致：{a.shape} vs {b.shape}")
+    return float(np.max(np.abs(a - b)))
+
+
+def window_ok(win, want, tol=WINDOW_TOL):
+    """窗是不是与参照同一（正例与负例都走这一条）。"""
+    try:
+        return window_max_diff(win, want) <= tol
+    except ValueError:
+        return False
+
+
+def trainer_losses():
+    """`trainer/losses.py`（torch 的窗口正本）。导入会连带 torch 与官方 GTCRN 源码。"""
+    t = HERE.parent / "trainer"
+    if str(t) not in sys.path:
+        sys.path.insert(0, str(t))
+    import losses  # noqa: PLC0415 —— 没有 torch 时整条测试跳过，不在导入期炸
+    return losses
+
+
+def torch_window_f64():
+    """`losses.window()` 的同一个调用（`hann_window(n).pow(0.5)`），只是 dtype 换成 float64：
+    用来把「公式不同」和「torch 的 f32 算术精度」分开（下面的 WINDOW_TOL / WINDOW_TOL_F32）。"""
+    import torch
+    return torch.hann_window(off.N_FFT, dtype=torch.float64).pow(0.5).numpy()
+
+
+def bless_window():
+    """重新生成金标：把 `window.rs` 的表达式抠出来，用 `rustc` 编一个 10 行程序算 512 个 f32 系数。
+    不需要 cargo、不碰工作区的 `target/`（产物都在临时目录）。只在正本改了之后手工跑一次。"""
+    expr, n = rust_window_formula(), off.N_FFT
+    rs = (f"const PI: f64 = std::f64::consts::PI;\n"
+          f"fn coef(i: usize, n: usize) -> f64 {{ {expr} }}\n"
+          f"fn main() {{ for i in 0..{n}usize {{ println!(\"{{:08x}}\", (coef(i, {n}) as f32).to_bits()); }} }}\n")
+    with tempfile.TemporaryDirectory() as t:
+        src, exe = Path(t) / "w.rs", Path(t) / "w"
+        src.write_text(rs)
+        subprocess.run(["rustc", "-O", str(src), "-o", str(exe)], check=True)
+        bits = subprocess.run([str(exe)], check=True, capture_output=True, text=True).stdout.split()
+    if len(bits) != n:
+        raise SystemExit(f"金标算出 {len(bits)} 个系数，应为 {n}")
+    GOLDEN.parent.mkdir(parents=True, exist_ok=True)
+    GOLDEN.write_text(json.dumps({"n_fft": n, "rust_expr": expr,
+                                  "note": "Rust `src/dsp/src/window.rs::coef(Window::SqrtHannPeriodic)`：先 f64 算、再转 f32。"
+                                          "下面是 f32 的位模式（十六进制），比的是位不是字面值",
+                                  "command": "<python> test_offline.py --bless-window（要 rustc，不需要 cargo）",
+                                  "bits_f32_hex": bits}, ensure_ascii=False, indent=1) + "\n")
+    print(f"已重写金标：{GOLDEN}（{n} 个系数）")
+
+
+class WindowSingleSource(unittest.TestCase):
+    """离线窗口不许只跟自己比：与 Rust 正本金标、trainer 的 torch 实现各比一遍，另带一条负例。"""
+
+    def test_formula_text_is_what_the_golden_was_made_from(self):
+        g, _ = golden_window()
+        self.assertEqual(g["n_fft"], off.N_FFT)
+        self.assertEqual(rust_window_formula(), g["rust_expr"],
+                         "window.rs 的公式变了：重新生成金标（--bless-window）后再看差在哪")
+
+    def test_window_matches_rust_golden(self):
+        _, want = golden_window()
+        self.assertTrue(window_ok(off.WIN, want), f"与 Rust 金标的最大差 {window_max_diff(off.WIN, want):.3e}")
+        # 同一精度路径（f64 算完再转 f32）应当逐位相同
+        np.testing.assert_array_equal(off.WIN.view(np.uint32), want.view(np.uint32))
+
+    def test_window_matches_trainer_torch(self):
+        try:
+            f32 = trainer_losses().window().detach().cpu().numpy()
+            f64 = torch_window_f64()
+        except ImportError as e:  # 没装 torch（本机 trainer venv 有）
+            self.skipTest(f"没有 torch / 导不进 trainer/losses.py：{e}")
+        # 1) 公式同一：同一精度路径（float64 算完再转 f32）≤ 1e-7
+        self.assertLessEqual(window_max_diff(off.WIN, f64), WINDOW_TOL, "与 torch（float64）的算法不同")
+        # 2) trainer 实际用的是 f32 窗：只能到 1e-6（理由见 WINDOW_TOL_F32）
+        self.assertLessEqual(window_max_diff(off.WIN, f32), WINDOW_TOL_F32,
+                             "与 torch（float32，trainer 实际用的）差得比 f32 精度还多")
+        # 3) f32 与 f64 的窗差别就落在 1e-7..1e-6 之间：说明第 2 条不是随手放大的
+        self.assertGreater(window_max_diff(f32, f64), WINDOW_TOL)
+
+    def test_perturbed_window_is_caught(self):
+        # 负例：改一个系数 1e-6（> WINDOW_TOL）→ 与金标 / torch float64 的比对照样要红
+        _, want = golden_window()
+        bad = off.WIN.astype(np.float64).copy()
+        bad[7] += 1e-6
+        bad = bad.astype(np.float32)
+        self.assertFalse(window_ok(bad, want))
+        self.assertTrue(window_ok(off.WIN, want))
+        try:
+            f64 = torch_window_f64()
+        except ImportError:
+            return
+        self.assertFalse(window_ok(bad, f64))
+        self.assertTrue(window_ok(off.WIN, f64))
 
 
 class RoundTrip(unittest.TestCase):
@@ -296,4 +423,7 @@ class Parity(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    if "--bless-window" in sys.argv:  # 手工重生成窗口金标（要 rustc）
+        sys.argv.remove("--bless-window")
+        bless_window()
     unittest.main()
