@@ -7,6 +7,15 @@ use std::path::PathBuf;
 
 use vdn_eval::thresholds::ACCEPT;
 
+/// 014 第三节写了的那几个键。`seeds` 不在这里：种子数来自 D99 第 1 条，014 没写这个数。
+const DOC_KEYS: [&str; 5] = [
+    "estoi_gain",
+    "nrmos_gain",
+    "onset_regress",
+    "bgstab_regress",
+    "timbre_regress",
+];
+
 fn repo(rel: &str) -> String {
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
@@ -70,7 +79,7 @@ fn check(sec: &str) -> Vec<String> {
             errs.push(format!("SC-ACCEPT.{key}：文档 {v} ↔ 表 {d}"));
         }
     }
-    for p in ACCEPT.params {
+    for p in ACCEPT.params.iter().filter(|p| DOC_KEYS.contains(&p.key)) {
         if !found.iter().any(|(k, _)| k == p.key) {
             errs.push(format!("第三节没写 SC-ACCEPT.{}", p.key));
         }
@@ -92,9 +101,13 @@ fn section_three_numbers_match_the_table() {
         .into_iter()
         .map(|(k, _)| k)
         .collect();
-    assert_eq!(keys.len(), ACCEPT.params.len(), "{keys:?}");
-    for p in ACCEPT.params {
-        assert!(keys.contains(&p.key.to_string()), "缺 {}", p.key);
+    assert_eq!(keys.len(), DOC_KEYS.len(), "{keys:?}");
+    for k in DOC_KEYS {
+        assert!(keys.contains(&k.to_string()), "缺 {k}");
+    }
+    // 名单里的键必须在正本表里（拼错了这里先红）
+    for k in DOC_KEYS {
+        assert!(ACCEPT.params.iter().any(|p| p.key == k), "表里没有 {k}");
     }
 }
 

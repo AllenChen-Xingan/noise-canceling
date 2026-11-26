@@ -1,19 +1,90 @@
 //! `vdn-eval accept` 的逐条判定（从 `accept.rs` 拆出，R-SIZE）：一条验收线一个函数，
 //! 结论只有过 / 不过 / 判不了；阈值一律从 `thresholds::ACCEPT` 取，这里不写数。
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::*;
 use crate::thresholds as th;
+
+/// 区间能不能用来判：有差值、且源片段组数够（`SC-AGG.min_groups`）。
+/// 组数不够时 compare 只给「不确定」——那是证据不足，不是「不适用」。
+fn usable(i: &Item) -> bool {
+    i.diff
+        .is_some_and(|d| d.groups as f64 >= th::AGG.def("min_groups"))
+}
+
+/// 为什么这个区间判不了（写进报告）。
+fn unusable(i: &Item) -> String {
+    match i.diff {
+        None => "差值区间算不出来".to_string(),
+        Some(d) => format!(
+            "只有 {} 个源片段组（要 ≥ {:.0} 组）",
+            d.groups,
+            th::AGG.def("min_groups")
+        ),
+    }
+}
+
+/// 种子齐不齐：`--vs` 必须正好 `SC-ACCEPT.seeds` 份、`--noise` 必须正好每两两互比一份，
+/// 而且每份是两个不同的种子。不齐 → `Some(为什么)`，要涨的线一律判不了（codex 第 1 轮 P1 #1）。
+fn seed_shortage(vs: &[Cmp], noise: &[Cmp]) -> Option<String> {
+    let want = th::ACCEPT.def("seeds") as usize;
+    if vs.len() != want {
+        return Some(format!(
+            "--vs 给了 {} 份，规则要 {want} 个种子（SC-ACCEPT.seeds · D99 第 1 条）",
+            vs.len()
+        ));
+    }
+    let pairs_want = want * (want - 1) / 2;
+    if noise.len() != pairs_want {
+        return Some(format!(
+            "--noise 给了 {} 份，{want} 个种子要每两两互比 {pairs_want} 份（D99 第 1 条）",
+            noise.len()
+        ));
+    }
+    // 三份 --vs 要是三个不同种子：都记了候选成绩单 sha256 时按它核
+    if vs.iter().all(|c| c.b_sha.is_some()) {
+        let seen: BTreeSet<&str> = vs.iter().filter_map(|c| c.b_sha.as_deref()).collect();
+        if seen.len() != want {
+            return Some(format!(
+                "--vs 里只有 {} 个不同种子的成绩单（候选成绩单 sha256 有重复）",
+                seen.len()
+            ));
+        }
+    }
+    // 互比也不能重复：同一对种子给两遍，噪声底就少一对
+    if noise.iter().all(|c| c.a_sha.is_some() && c.b_sha.is_some()) {
+        let seen: BTreeSet<(String, String)> = noise
+            .iter()
+            .filter_map(|c| Some((c.a_sha.clone()?, c.b_sha.clone()?)))
+            .map(|(x, y)| if x <= y { (x, y) } else { (y, x) })
+            .collect();
+        if seen.len() != pairs_want {
+            return Some(format!(
+                "--noise 里只有 {} 对不同的种子互比（有重复），{want} 个种子要 {pairs_want} 对",
+                seen.len()
+            ));
+        }
+    }
+    None
+}
 
 /// 「要涨」的一行：每个种子都判「涨」、报告种子的差值均值过线、且大于种子噪声底。
 fn gain_row(v: &str, key: &str, scene: &str, vs: &[Cmp], noise: &[Cmp]) -> Row {
     let line = th::ACCEPT.def(key);
     let what = format!("要涨 {v}（场景 {scene}；线 SC-ACCEPT.{key} = {line:+.3}）");
+    if let Some(why) = seed_shortage(vs, noise) {
+        return Row::new(what, Verdict::Undecided, format!("种子不齐，判不了：{why}"));
+    }
     let (mut bad, mut hole, mut seen) = (Vec::new(), Vec::new(), Vec::new());
     for c in vs {
         match c.item(scene, v) {
             None => hole.push(format!("{} 没有这个场景这一项的数", c.name())),
+            Some(i) if !usable(&i) => hole.push(format!(
+                "{} 这个场景这一项的{}，判不了",
+                c.name(),
+                unusable(&i)
+            )),
             Some(i) => {
                 seen.push(i.call.zh().to_string());
                 if i.call != Call::Up {
@@ -23,24 +94,28 @@ fn gain_row(v: &str, key: &str, scene: &str, vs: &[Cmp], noise: &[Cmp]) -> Row {
         }
     }
     let rep = vs.first().expect("呼叫方保证 --vs 非空");
-    if let Some(i) = rep.item(scene, v) {
+    if let Some(i) = rep.item(scene, v).filter(usable) {
         match i.diff {
-            None => hole.push(format!("{} 这个场景这一项差值区间算不出来", rep.name())),
+            None => hole.push(format!("{} 这个场景这一项{}", rep.name(), unusable(&i))),
             Some(d) => {
                 seen.push(format!("报告种子差值均值 {:+.3}", d.mean));
                 if d.mean < line {
                     bad.push(format!("均值 {:+.3} < 线 {line:+.3}", d.mean));
                 }
-                if noise.is_empty() {
-                    hole.push("没给 --noise，量不出种子噪声底".into());
-                }
                 let mut floor: Option<f64> = None;
                 for c in noise {
-                    match c.item(scene, v).and_then(|i| i.diff) {
+                    match c.item(scene, v) {
                         None => hole.push(format!("{} 没有这个场景这一项的数", c.name())),
-                        Some(x) => {
-                            let a = x.mean.abs();
-                            floor = Some(floor.map_or(a, |m: f64| m.max(a)));
+                        Some(i) if !usable(&i) => hole.push(format!(
+                            "{} 这个场景这一项的{}，判不了",
+                            c.name(),
+                            unusable(&i)
+                        )),
+                        Some(i) => {
+                            if let Some(x) = i.diff {
+                                let a = x.mean.abs();
+                                floor = Some(floor.map_or(a, |m: f64| m.max(a)));
+                            }
                         }
                     }
                 }
@@ -74,34 +149,39 @@ fn gain_row(v: &str, key: &str, scene: &str, vs: &[Cmp], noise: &[Cmp]) -> Row {
 fn regress_row(v: &str, key: &str, rep: &Cmp) -> Row {
     let line = th::ACCEPT.def(key);
     let what = format!("不许退 {v}（报告种子区间上界 ≤ SC-ACCEPT.{key} = {line:+.3} dB）");
-    let (mut seen, mut bad) = (Vec::new(), Vec::new());
+    let (mut seen, mut bad, mut hole) = (Vec::new(), Vec::new(), Vec::new());
     for (scene, s) in rep.scenes() {
         let Some(i) = s.items.get(v).filter(|i| i.pairs > 0) else {
-            continue; // 这个场景没有这一项（如 V-BGSTAB）：不算失败
+            continue; // 这个场景没有这一项（如 V-BGSTAB）：不适用，不算失败也不缺证据
         };
-        let Some(d) = i.diff else { continue };
+        let Some(d) = i.diff.filter(|_| usable(i)) else {
+            // 有配对但源片段组数不够（SC-AGG.min_groups）：证据不足，不能当「不适用」跳过
+            hole.push(format!("{scene} {}", unusable(i)));
+            continue;
+        };
         seen.push(format!("{scene} 上界 {:+.3}", d.hi));
         if d.hi > line {
             bad.push(format!("{scene} 上界 {:+.3} > {line:+.3}", d.hi));
         }
     }
-    if seen.is_empty() {
-        return Row::new(
-            what,
-            Verdict::Undecided,
-            format!("{} 没有任何场景有这个项的值", rep.name()),
-        );
-    }
-    let verdict = if bad.is_empty() {
-        Verdict::Pass
-    } else {
+    let verdict = if !bad.is_empty() {
         Verdict::Fail
-    };
-    let detail = if bad.is_empty() {
-        format!("{} 个场景：{} dB", seen.len(), seen.join(" · "))
+    } else if !hole.is_empty() || seen.is_empty() {
+        Verdict::Undecided
     } else {
-        format!("不过：{}", bad.join("；"))
+        Verdict::Pass
     };
+    let mut detail = if seen.is_empty() {
+        format!("{} 没有任何场景有这个项的值", rep.name())
+    } else {
+        format!("{} 个场景：{} dB", seen.len(), seen.join(" · "))
+    };
+    if !bad.is_empty() {
+        detail = format!("不过：{}", bad.join("；"));
+    }
+    if !hole.is_empty() {
+        detail.push_str(&format!("；证据不足，判不了：{}", hole.join("；")));
+    }
     Row::new(what, verdict, detail)
 }
 
@@ -145,15 +225,16 @@ fn cards_row(a: &CardIn, b: &CardIn, scenes: &[String]) -> Row {
     let what = "其他场景不新增「不过」（目标场景以外）".to_string();
     let key = |r: &CardRow| (r.scene.clone(), r.tier.clone(), r.device.clone());
     let idx: BTreeMap<_, &CardRow> = b.rows.iter().map(|r| (key(r), r)).collect();
-    let (mut n, mut bad, mut hole) = (0, Vec::new(), Vec::new());
+    let (mut total, mut checkable, mut bad, mut hole) = (0, 0, Vec::new(), Vec::new());
     for r in &a.rows {
         if scenes.contains(&r.scene) {
             continue; // 目标场景的卡归上面的「要涨 / 不许退」管
         }
+        total += 1;
         if r.status == "fail" {
             continue; // 对照本来就不不过：不是「新增」
         }
-        n += 1;
+        checkable += 1;
         match idx.get(&key(r)) {
             None => hole.push(format!(
                 "{} · {} · {}（{}）候选成绩单里没有这张卡",
@@ -166,11 +247,18 @@ fn cards_row(a: &CardIn, b: &CardIn, scenes: &[String]) -> Row {
             Some(_) => {}
         }
     }
-    if n == 0 {
+    if total == 0 {
         return Row::new(
             what,
             Verdict::Undecided,
             format!("{} 没有目标场景以外的卡，这一行没东西比", a.path),
+        );
+    }
+    if checkable == 0 {
+        return Row::new(
+            what,
+            Verdict::Pass,
+            format!("{total} 张非目标场景的卡在对照里全是不过，没有可新增的"),
         );
     }
     let verdict = if !bad.is_empty() {
@@ -180,7 +268,7 @@ fn cards_row(a: &CardIn, b: &CardIn, scenes: &[String]) -> Row {
     } else {
         Verdict::Pass
     };
-    let mut detail = format!("{n} 张非目标场景的卡，过 / 待测都没变");
+    let mut detail = format!("{checkable} 张可比（共 {total} 张）非目标场景的卡，过 / 待测都没变");
     if !bad.is_empty() {
         detail = format!("不过：{}", bad.join("；"));
     }
