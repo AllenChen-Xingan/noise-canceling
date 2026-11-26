@@ -99,7 +99,7 @@ class ClipList(unittest.TestCase):
 # 与正本比窗的容差。1e-7 用在「同一精度路径」上：Rust `coef` 与 torch 的 float64 窗都先算 f64 再转 f32。
 WINDOW_TOL = 1e-7
 # torch 实际的 f32 窗是另一回事：hann 在 f32 里算 `0.5 − 0.5·cos`，小值处两个 0.5 相减丢精度，
-# i=1 处相对误差被放大到 1.2e-4（实测最大绝对差 7.13e-07，2026-11-27）。这是 torch 的算术，不是我们换了公式，
+# i=1 处相对误差被放大到 1.2e-4（实测最大绝对差 7.13e-07，2026-11-26）。这是 torch 的算术，不是我们换了公式，
 # 所以对照它另给一条 1e-6 的线，并在 torch 的 float64 窗上再核一次 1e-7。
 WINDOW_TOL_F32 = 1e-6
 GOLDEN = HERE / "fixtures" / "window-sqrt-hann-512.json"
