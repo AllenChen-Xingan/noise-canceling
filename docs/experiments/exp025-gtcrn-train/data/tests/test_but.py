@@ -335,6 +335,29 @@ class ScreenRules(unittest.TestCase):
         self.assertTrue(sc["src"])
         self.assertIn("Inside, small room", sc["tags_any"])
 
+class ListFiles(unittest.TestCase):
+    """`--list-files`：云上给 screen.py 造候选清单用（只过清单与 meta 排除，不要求筛查表已在）。"""
+
+    def test_excludes_radio_setup_and_needs_no_screen(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            files = fixtures_but.make_tree(root)
+            r = subprocess.run([sys.executable, str(HERE / "split.py"), "--root", str(root),
+                                "--list-files", "--only", SRC], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(r.stdout.split(), sorted(set(files) - set(fixtures_but.radio_files())))
+            self.assertFalse((root / "splits").exists())  # 列表模式不写切分表
+
+    def test_other_sources_not_listed(self):
+        """`--only` 只列这一个来源（其余来源的通配符在夹具里可能匹配不到，不该因此报错）。"""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            fixtures_but.make_tree(root)
+            r = subprocess.run([sys.executable, str(HERE / "split.py"), "--root", str(root),
+                                "--list-files", "--only", SRC], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertTrue(all(p.startswith("train-raw/but-reverbdb/") for p in r.stdout.split()))
+
 
 if __name__ == "__main__":
     unittest.main()
