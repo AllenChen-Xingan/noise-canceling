@@ -21,6 +21,9 @@ const fn p(key: &'static str, default: Option<f64>, values: &'static [(f64, Src)
 const NO_EDGES: Src = Src::Design("不分档：这一族是验收线，不是成绩单分档");
 
 /// 014 第三节的验收线。每个数的出处都是 014 原文，`Src::Design` 的说明里抄了那句话。
+///
+/// `seeds` 不是 014 里的数：种子数来自 D99 第 1 条（每组 3 个种子），014 第三节没写这个数，
+/// 所以 014 第三节不标它的键（`src/eval/tests/accept_doc.rs` 只比对 014 写了的那几个键）。
 pub const ACCEPT: Lines = Lines {
     id: "SC-ACCEPT",
     edges: &[],
@@ -67,6 +70,11 @@ pub const ACCEPT: Lines = Lines {
                 1.0,
                 Src::Design("014 第三节第 4 条：音色退步区间上界 ≤ 1 dB"),
             )],
+        ),
+        p(
+            "seeds",
+            Some(3.0),
+            &[(3.0, Src::Design("人定 D99 第 1 条：每组 3 个种子"))],
         ),
     ],
 };

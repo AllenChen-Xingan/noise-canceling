@@ -141,6 +141,8 @@ impl Call {
 struct Ci {
     mean: f64,
     hi: f64,
+    /// 参与抽样的源片段组数（不足 `SC-AGG.min_groups` 时这个区间判不了）
+    groups: usize,
 }
 
 /// 一项在一个比较范围里的读数。
@@ -172,6 +174,9 @@ struct Scope {
 struct Cmp {
     path: String,
     scopes: BTreeMap<String, Scope>,
+    /// compare 时两边成绩单（clips.jsonl）的 sha256：用来核「三个不同种子」和「互比不重复」
+    a_sha: Option<String>,
+    b_sha: Option<String>,
 }
 
 impl Cmp {
@@ -241,6 +246,7 @@ fn ci_of(v: &Value) -> Option<Ci> {
     Some(Ci {
         mean: num(v, "mean")?,
         hi: num(v, "hi")?,
+        groups: num(v, "groups").unwrap_or(0.0).max(0.0) as usize,
     })
 }
 
@@ -290,9 +296,12 @@ fn parse_compare(text: &str, path: &str) -> Result<Cmp, String> {
     if scopes.is_empty() {
         return Err(format!("{path} 里没有 scopes：不是 compare 的输出"));
     }
+    let sha = |k: &str| v["meta"][k].as_str().map(str::to_string);
     Ok(Cmp {
         path: path.to_string(),
         scopes,
+        a_sha: sha("a_sha256"),
+        b_sha: sha("b_sha256"),
     })
 }
 
@@ -326,6 +335,21 @@ fn parse_card(text: &str, path: &str) -> Result<CardIn, String> {
     }
     if rows.is_empty() {
         return Err(format!("{path} 里没有场景卡：不是成绩单"));
+    }
+    // 一份成绩单只能一个系统：多个系统时同一 场景 × 档 × 设备 的卡会互相覆盖（退步被遮住），
+    // 延迟也会把几个系统混在一起求均值（codex 第 1 轮 P1 #3）
+    let systems: std::collections::BTreeSet<&str> =
+        rows.iter().map(|r| r.system.as_str()).collect();
+    if systems.contains("") {
+        return Err(format!("{path} 里有一张卡没有 system：不是成绩单"));
+    }
+    if systems.len() > 1 {
+        return Err(format!(
+            "{path} 里有 {} 个系统（{}）：accept 一次只比一个系统。用 `vdn-eval scorecard --system <一个系统>` \
+             分别出成绩单，或按系统把这几个系统拆成几份成绩单",
+            systems.len(),
+            systems.iter().copied().collect::<Vec<_>>().join(" · ")
+        ));
     }
     let ext = v["meta"]["external"]
         .as_array()
