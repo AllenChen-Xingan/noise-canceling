@@ -209,10 +209,11 @@ class EndToEnd(unittest.TestCase):
         for r in R["sources"].values():
             r.pop("expect", None)  # 夹具只有几个文件，不按上游数目核
             r.pop("room_lists_sha256", None)  # 夹具的 rir_list 不是上游原文件（钉哈希另有 test_openslr28_rooms）
-        R["sources"]["but-reverbdb-silence"]["screen_file"] = str(screen)  # 筛查结果用夹具现造那份
+        for n in ("but-reverbdb-silence", "but-reverbdb-silence-b4"):  # 两个来源名共用同一份筛查表：夹具现造那份（第四批起 BUT 底噪的来源名带 -b4）
+            R["sources"][n]["screen_file"] = str(screen)
         cls.splits = t / "splits"
         names = shard.default_sources()  # 要分片的来源 = recipe.json 里出现的全部来源（夹具必须全覆盖）
-        for n in names + ["librispeech-dev-clean-test-other"]:  # 终测原料池：只写表，不进分片
+        for n in sorted(set(names) | set(R["sources"])):  # 规则里的每个来源都要有表（终测原料池那样不进分片的也要写，交集检查会查）
             rows = split.split_source(root, n, R["sources"][n], R["seed"], R["splits"], workers=2)
             split.write(n, R["sources"][n], R["seed"], rows, cls.splits)
         cls.shards = t / "shards"

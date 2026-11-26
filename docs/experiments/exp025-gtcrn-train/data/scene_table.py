@@ -61,11 +61,13 @@ def load_recipe(build, data_dir):
 
 
 def load_table(name, build, data_dir):
-    """读一张切分表，核摘要哈希（split.load_split）再核 build 记的哈希；对不上即停。"""
-    summary, rows = split.load_split(name, out_dir=Path(data_dir) / "splits")
+    """读一张切分表，核摘要哈希（split.load_split）再核 build 记的哈希；对不上即停。
+    先查 build 有没有登记这个来源，再读文件：表根本没造出来（音频还在云上）时要报「这个 build 没登记过它」，
+    不是一句 FileNotFoundError。"""
     want = (build.get("split_tables") or {}).get(name)
     if want is None:
-        raise SystemExit(f"build {build.get('build_id')} 的 split_tables 里没有来源 {name}：这个 build 没登记过它，不能用它报数")
+        raise SystemExit(f"build {build.get('build_id')} 的 split_tables 里没登记来源 {name}：这个 build 没切过它，不能用它报数")
+    summary, rows = split.load_split(name, out_dir=Path(data_dir) / "splits")
     if summary["jsonl_sha256"] != want:
         raise SystemExit(f"切分表 splits/{name}.jsonl 的哈希 {summary['jsonl_sha256']} 和 build "
                          f"{build.get('build_id')} 记的 {want} 对不上：这张表不属于这个 build")
@@ -211,7 +213,10 @@ def build_tables(build_dir, data_dir=HERE, scenes=None):
             raise SystemExit(f"场景 {scene} 在 recipe.json 的 noise_pools 里没有噪声池：先给它配来源与路径正则")
         items = pools[scene]
         for name, _ in items:  # 先把元数据取齐：train_ok 为假时一行也不报
-            rows_by_source(name)
+            try:
+                rows_by_source(name)
+            except SystemExit as e:  # 报错要说清是哪个场景用的来源：不然不知道哪张表缺
+                raise SystemExit(f"场景 {scene}：{e}") from None
             if not metas[name]["train_ok"]:
                 raise SystemExit(f"来源 {name}（组 {metas[name]['group']}）在 sources.json 里 train_ok 为假"
                                  f"（只评测、不进训练）：场景 {scene} 的噪声池不能训练")

@@ -3,7 +3,8 @@
 数字与字符串一律从正本读，不在测试里抄副本：
 - `sources.json` 的 `A7`：手工下载条目（字节数与首次下载记的 md5 / sha256）
 - `download-list-but.md` 第 1 节的表：字节数（sources.json 的第二处表示，交叉校验）
-- `split_rules.json` 的 `but-reverbdb-silence`：通配符 · 单位正则 · 层 · meta 排除 · 筛查表 · 期望条数 · 比例
+- `split_rules.json` 的 `but-reverbdb-silence-b4`（第四批的 4 间房）：通配符 · 单位正则 · 层 · meta 排除 · 筛查表 · 期望条数 · 比例。
+  `but-reverbdb-silence` 只剩 Room112，规则与仓里旧表（build 10aa3a9f 在用）对得上，本文件不跑它
 - 上游 read_me（副本 `third_party/BUT_ReverbDB-read_me.txt`）：第 2 个扬声器放背景声
 夹具在临时目录现造（几间房 × 几次布置 × 几个麦克风的 0.5 s wav），不用真数据。
 真规则通配符 / 场景池 / 仓里那份筛查表的核对在 `tests/test_but_batch4.py`（本文件超 600 行前分出去的）。
@@ -25,7 +26,8 @@ import fixtures_but  # noqa: E402
 import split  # noqa: E402
 
 MD = HERE / "download-list-but.md"
-SRC = "but-reverbdb-silence"
+SRC = "but-reverbdb-silence-b4"
+OLD = "but-reverbdb-silence"
 GRP = "A7"
 META = {"file": "../../spk_meta.txt", "regex": "^\\$EnvSpk2", "why": "read_me：第 2 个扬声器放的是背景声（如收音机）"}
 

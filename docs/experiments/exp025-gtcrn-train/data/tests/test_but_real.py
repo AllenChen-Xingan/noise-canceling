@@ -1,7 +1,9 @@
 """真规则与仓里那份筛查表的核对（第四批：加三间办公室 · C236 不用 · 会议室池改办公室底噪）。
 
 从 `tests/test_but.py` 分出来的（那个文件超 600 行前搬出来，覆盖范围不减）：
-- `RealRule`：`split_rules.json` 里 `but-reverbdb-silence` 的通配符 · 期望条数 · 文字与决策对得上；顶层 `未建表` 那一行
+- `RealRule`：`split_rules.json` 里 `but-reverbdb-silence-b4`（第四批的 4 间房）的通配符 · 期望条数 · 文字与决策对得上；顶层 `未建表` 那一行
+- `TwoNames`：两个来源名的分工——`but-reverbdb-silence` 只含 Room112，规则一个字节都不能动（旧表 build 10aa3a9f 在用）；
+  新名字 `-b4` 才是 4 间房；配方与分片只看新名字；两个名字共用同一份筛查表
 - `RealScreen`：仓里那份筛查表 1270 行（C236 620 + Room112 248 + 三间办公室 402）；办公室 402 条与两份原始证据逐字节对得上
 
 数字与字符串一律从正本读（规则 json · 筛查表 · 原始证据），不在测试里抄第二份；只有「上游数出来多少条」这类
@@ -19,10 +21,13 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "tests"))
 import fixtures_but  # noqa: E402
 import screen_tone  # noqa: E402
+import shard  # noqa: E402
 import split  # noqa: E402
 
-SRC = "but-reverbdb-silence"
-SCREEN = HERE / "screen" / "but-reverbdb-silence.jsonl"
+SRC = "but-reverbdb-silence-b4"  # 第四批的 4 间房（Room112 + 三间办公室）
+OLD = "but-reverbdb-silence"  # 只含 Room112 的旧来源（旧表 build 10aa3a9f 在用）
+OLD_TABLE = HERE / "splits" / f"{OLD}.json"  # 仓里那份旧表，它的 rule_sha256 是旧规则的钉子
+SCREEN = HERE / "screen" / "but-reverbdb-silence.jsonl"  # 两个来源名共用这一份（screen_file 相同）
 SCREEN_RAW = HERE / "screen" / "office-3mic-screen.jsonl"  # screen.py 的原始输出（证据，不改写）
 TONE_RAW = HERE / "screen" / "office-3mic-tone.jsonl"  # diagnose.py --tone 的原始输出（证据，不改写）
 ROOMS = (fixtures_but.ROOM112, *fixtures_but.OFFICES)
@@ -93,12 +98,64 @@ class RealRule(unittest.TestCase):
         self.assertIn("同一间房", note)  # 每间房只有一间：开发份只测同房不同场次
 
     def test_marked_pending_until_the_table_comes_back(self):
-        """规则改了，音频在云上：本机切不了，顶层 `未建表` 记着，表带回进仓后删那一行。"""
-        marker = split.load_rules()["未建表"][SRC]
-        self.assertIn("旧表", marker)
-        self.assertIn("Room112", marker)
+        """新来源的音频还在云上，本机切不了：顶层 `未建表` 记着，表带回进仓后删那一行。
+        旧来源不在这份名单里：它的规则已还原成仓里那张旧表的样子，表是当前规则切的。"""
+        pending = split.load_rules()["未建表"]
+        self.assertEqual(set(pending), {SRC})
+        marker = pending[SRC]
         self.assertIn("第四批", marker)
+        self.assertIn("云上", marker)
         self.assertIn("删这一行", marker)
+
+
+class TwoNames(unittest.TestCase):
+    """两个来源名的分工（大总管 87 2026-11-26）：旧名字的规则一个字节都不能动，新名字才是 4 间房。
+
+    旧名字 `but-reverbdb-silence` 的规则必须与仓里那张旧切分表（build 10aa3a9f 在用）对得上；动它一个字节，
+    那份 build 的 `rule_sha256` 就对不上，登记检查会红。新名字靠另起名解决「不原地覆盖」。"""
+
+    def setUp(self):
+        self.rules = split.load_rules()["sources"]
+
+    def test_old_rule_is_the_one_the_old_table_was_cut_with(self):
+        s, _ = split.load_split(OLD, HERE / "splits")
+        self.assertEqual(s["source"], OLD)
+        self.assertEqual(split.rule_sha(self.rules[OLD]), s["rule_sha256"],
+                         "旧来源的规则被改过：仓里旧表（build 10aa3a9f 在用）的 rule_sha256 对不上了")
+
+    def test_old_rule_is_only_the_hotel_room(self):
+        """旧名字只认 Room112：三间办公室一条也不许进它的通配符。"""
+        text = json.dumps(self.rules[OLD], ensure_ascii=False)
+        for room in fixtures_but.OFFICES:
+            self.assertNotIn(room, text)
+        self.assertEqual(len(self.rules[OLD]["glob"]), 1)
+
+    def test_two_names_share_one_screen_table(self):
+        """同一批录音只筛一次：两个名字的 screen_file 是同一份（仓里那份 1270 行别拆开）。"""
+        self.assertEqual(self.rules[OLD]["screen_file"], self.rules[SRC]["screen_file"])
+        self.assertEqual(self.rules[SRC]["screen_file"], "screen/but-reverbdb-silence.jsonl")
+
+    def test_recipe_pools_point_at_the_new_name_only(self):
+        """BUT 的两个噪声池只认新名字：指向旧名字就说明配方改漏了（旧名字只剩 Room112，会议室池会空）。"""
+        recipe = json.loads((HERE / "recipe.json").read_text())
+        but = [(scene, it["source"]) for scene, items in recipe["noise_pools"].items()
+               if not scene.startswith("_") for it in items
+               if "but-reverbdb" in it["source"]]
+        self.assertEqual({scene for scene, _ in but}, {"hotel-room", "meeting-room"})
+        self.assertEqual({src for _, src in but}, {SRC}, "配方里还有指向旧名字 but-reverbdb-silence 的噪声池")
+        self.assertIn(SRC, recipe["noise_pools"]["_说明"])
+
+    def test_default_sources_use_the_new_name(self):
+        """分片默认来源从 recipe.json 导出：只该出现新名字（旧名字没有 4 间房，切了也用不上）。"""
+        names = shard.default_sources()
+        self.assertIn(SRC, names)
+        self.assertNotIn(OLD, names)
+
+    def test_scene_notes_registers_the_new_name(self):
+        """同一段声音的识别规则两个名字都要有：少一个，新名字的「不同内容」时长会按麦克风条数虚高。"""
+        same = json.loads((HERE / "scene_notes.json").read_text())["same_content"]
+        self.assertEqual(same[SRC]["regex"], same[OLD]["regex"])
+        self.assertEqual(same[SRC]["group"], same[OLD]["group"])
 
 
 class RealScreen(unittest.TestCase):
