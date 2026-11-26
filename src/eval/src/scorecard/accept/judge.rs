@@ -123,9 +123,17 @@ fn gain_row(
         );
     }
     let (mut bad, mut hole, mut seen) = (Vec::new(), Vec::new(), Vec::new());
+    // 段都在、但有的段这一项是 null 时，配对段数会少于清单给的段数：那不是「涨」，是没判全
+    // （codex 第 9 轮 P1）
+    let want = expected.clips_in(scene);
     for c in vs {
         match c.item(scene, v) {
             None => hole.push(format!("{} 没有这个场景这一项的数", c.name())),
+            Some(i) if i.pairs < want => hole.push(format!(
+                "{} · {v} 只配上 {} 段，清单这个场景有 {want} 段",
+                c.name(),
+                i.pairs
+            )),
             Some(i) if !usable(&i) => hole.push(format!(
                 "{} 这个场景这一项的{}，判不了",
                 c.name(),
@@ -152,6 +160,11 @@ fn gain_row(
                 for c in noise {
                     match c.item(scene, v) {
                         None => hole.push(format!("{} 没有这个场景这一项的数", c.name())),
+                        Some(i) if i.pairs < want => hole.push(format!(
+                            "{} · {v} 只配上 {} 段，清单这个场景有 {want} 段",
+                            c.name(),
+                            i.pairs
+                        )),
                         Some(i) if !usable(&i) => hole.push(format!(
                             "{} 这个场景这一项的{}，判不了",
                             c.name(),

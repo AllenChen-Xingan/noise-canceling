@@ -258,7 +258,8 @@ impl Expected {
         cap(hole)
     }
 
-    fn clips_in(&self, scene: &str) -> usize {
+    /// 清单给这个场景定了几段（要涨的各项配对段数不能少于此）。
+    pub fn clips_in(&self, scene: &str) -> usize {
         self.keys.iter().filter(|k| k.scene == scene).count()
     }
 }

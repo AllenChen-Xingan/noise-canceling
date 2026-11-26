@@ -422,6 +422,8 @@ pub struct Spec<'a> {
     pub omit_clip1: &'a [&'a str],
     /// 种子 2 里这些片段 id 整段不放进逐段文件（另一个种子漏跑一段）
     pub omit_clip2: &'a [&'a str],
+    /// 种子 1 里这些 (片段 id, 项) 的分数置空（段在、值没有）
+    pub null1: &'a [(&'a str, &'static str)],
     /// 对照里这些场景塞一段否决项不过的分（卡状态由逐段文件重新汇总，靠这个把它弄成不过）
     pub poison_ctl: &'a [(MeetingPlace, &'static str)],
     /// 种子 1 里这些场景塞一段否决项不过的分
@@ -443,6 +445,7 @@ pub fn spec(d1: D, d2: D, d3: D) -> Spec<'static> {
         omit1: &[],
         omit_clip1: &[],
         omit_clip2: &[],
+        null1: &[],
         poison_ctl: &[],
         poison1: &[],
     }
@@ -520,6 +523,14 @@ pub fn build(f: &Fix, s: Spec<'_>) -> Good {
         }
     }
     seed1.retain(|r| !s.omit1.contains(&r.scene) && !s.omit_clip1.contains(&r.clip.as_str()));
+    // 段都在、但这一项没有值（模拟 null）：配对段数会因此变少
+    for (clip, item) in s.null1 {
+        for r in seed1.iter_mut().filter(|r| r.clip == *clip) {
+            for (_, _, x) in r.scores.iter_mut().filter(|(v, _, _)| v == item) {
+                x.value = None;
+            }
+        }
+    }
     let cand1 = f.jsonl("c1", &seed1);
     let mut seed2 = cand(&a, s.d2, &[], "cand");
     seed2.retain(|r| !s.omit_clip2.contains(&r.clip.as_str()));

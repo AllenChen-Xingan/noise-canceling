@@ -234,6 +234,32 @@ fn clip_missing_on_candidate_side_is_undecided() {
     assert_eq!(js["verdict"], "undecided");
 }
 
+/// codex 第 9 轮 P1：段都在、但某个目标场景片段的 V-NRMOS-SCOREQ 在候选那边是 null
+/// → 这一项配对段数少于清单的段数 → 要涨的线判不了（不能拿剩下的段判过）。
+#[test]
+fn null_value_shrinks_gain_pairs_is_undecided() {
+    let f = Fix::new("nullscoreq");
+    let clip = ctl(MeetingPlace::Cafe, 4)[3].clip.clone();
+    let g = build(
+        &f,
+        Spec {
+            null1: &[(&clip, "V-NRMOS-SCOREQ")],
+            ..spec(good1(), good2(), good3())
+        },
+    );
+    let js = f.accept(&g.vs, &g.noise, &g.card_a, &g.card_b, "x");
+    assert_eq!(
+        verdict(&js, "V-NRMOS-SCOREQ（场景 cafe"),
+        "undecided",
+        "{js}"
+    );
+    let d = detail(&js, "V-NRMOS-SCOREQ（场景 cafe");
+    assert!(d.contains("7") && d.contains("8"), "要写出段数：{d}");
+    // 别的项、别的场景不受影响
+    assert_eq!(verdict(&js, "V-ESTOI（场景 cafe"), "pass", "{js}");
+    assert_eq!(js["verdict"], "undecided");
+}
+
 /// codex 第 7 轮 P1：覆盖要核每一份 compare，不止报告种子那份。
 /// 种子 2 的 compare（以及它参与的两对互比）少了一段目标场景的片段 → 要涨的线判不了。
 #[test]
