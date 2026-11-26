@@ -2,7 +2,9 @@
 
 布局照真库（上游 read_me：`<房间>/MicID01/<扬声器布置>/<麦克风>/silence/…`）：
 两个房间（会议室 C236 · 酒店房间 Room112）× 各几次扬声器布置 × 两个麦克风。
-C236 的第 3 次布置里第 2 个扬声器放收音机（`spk_meta.txt` 里有 `$EnvSpk2…` 行），那一次必须排除。
+C236 的第 3 次布置里第 2 个扬声器放收音机，那一次必须排除；它的 `spk_meta.txt` 写的是上游真文件
+（`tests/fixtures/but_spk_meta/VUT_FIT_L207…spk_meta.txt`，里面有 `$EnvSpk2…` 行），干净布置写的是上游真文件
+`VUT_FIT_C236…spk_meta.txt`（只有 1 个扬声器）——不是照 read_me 编的假文件。
 """
 import json
 from pathlib import Path
@@ -21,6 +23,10 @@ SETUPS = {
     C236: [("SpkID01_20190503_S", False), ("SpkID02_20190503_S", False), ("SpkID03_20190503_S", True)],
     ROOM112: [("SpkID01_20171223_S", False), ("SpkID02_20171223_S", False)],
 }
+# 上游真 spk_meta.txt 的副本（正本：上游 2019 RIR-Only 包里那两个文件）
+FIX = Path(__file__).resolve().parent / "fixtures" / "but_spk_meta"
+C236_META = "VUT_FIT_C236__MicID01__SpkID01_20190503_S__spk_meta.txt"
+L207_META = "VUT_FIT_L207__MicID01__SpkID02_20171227_S__spk_meta.txt"
 
 
 def wav_rel(room, setup, mic, ver="v00"):
@@ -36,11 +42,19 @@ def radio_files():
     return [wav_rel(room, setup, mic) for room, setups in SETUPS.items() for setup, r in setups if r for mic in MICS]
 
 
+def spk_meta_src(radio):
+    """这次布置用的上游真 spk_meta.txt（在仓里的副本；内容不在这里手写）。"""
+    return FIX / (L207_META if radio else C236_META)
+
+
 def spk_meta(radio):
-    lines = ["$EnvSpkSetupID 1", "$EnvSpkSetupName sitting speaker", "$EnvSpk1Type Adam Audio"]
-    if radio:
-        lines += ["$EnvSpk2Type radio", "$EnvSpk2RelAzimuth 90.0"]
-    return "\n".join(lines) + "\n"
+    """真文件的内容，按 utf-8 读回文本（文件里是非 ASCII 字符，如 «¼»）。"""
+    return spk_meta_src(bool(radio)).read_text(encoding="utf-8")
+
+
+def spk_meta_bytes(radio):
+    """真文件的原始字节：写出去逐字节相同，不经过解码再编码。"""
+    return spk_meta_src(bool(radio)).read_bytes()
 
 
 def meta_path(root, rel, file="../../spk_meta.txt"):
@@ -57,7 +71,7 @@ def make_tree(root, radio_meta=True):
             if radio_meta or not r:
                 p = meta_path(root, wav_rel(room, setup, MICS[0]))
                 p.parent.mkdir(parents=True, exist_ok=True)
-                p.write_text(spk_meta(r))
+                p.write_bytes(spk_meta_bytes(r))
             for mic in MICS:
                 f = root / wav_rel(room, setup, mic)
                 f.parent.mkdir(parents=True, exist_ok=True)
