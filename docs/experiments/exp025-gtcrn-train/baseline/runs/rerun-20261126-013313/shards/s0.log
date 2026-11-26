@@ -1,0 +1,2 @@
+分步计时（秒，共 4061.4）：V-BGSTAB 0.1 · V-CLICK 12.3 · V-EAT-ASR 2056.1 · V-ESTOI 101.1 · V-INTF 0.0 · V-LAT 33.3 · V-LEAK 0.0 · V-MUSIC 0.6 · V-NAN 0.0 · V-NR 0.2 · V-NRMOS-DISTILL 713.4 · V-NRMOS-SCOREQ 767.1 · V-ONSET 0.1 · V-PSE-OVL 0.1 · V-PUMPV 0.1 · V-SIM-FA 0.0 · V-SIM-GATE 0.0 · V-SPLVL 0.0 · V-SWALLOW 2.2 · V-TIMBRE 3.3 · V-TSOS 2.2 · V-VACUUM 0.0 · V-WEAK 0.8 · load 50.5 · system 317.8
+成绩单：docs/experiments/exp025-gtcrn-train/baseline/runs/20261126-013313-rerun-s0/scorecard.md（120 段）
