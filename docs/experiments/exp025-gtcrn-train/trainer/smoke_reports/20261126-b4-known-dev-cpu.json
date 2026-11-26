@@ -1,0 +1,17 @@
+{
+  "readings": {
+    "hybrid": 3.9488068222999573
+  },
+  "meta": {
+    "kind": "loader",
+    "build_id": "bc0e9e7b566421f0",
+    "dev_n": 2000,
+    "dev_seed": 12345,
+    "seg_s": 4.0,
+    "batch": 32,
+    "dev_batches": 20,
+    "device": "cpu",
+    "torch": "2.15.0+cu132"
+  },
+  "written_at": "2026-11-26T18:21:05+0000"
+}
