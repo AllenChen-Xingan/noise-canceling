@@ -1,0 +1,11 @@
+{"_说明": "候选噪声的机器筛查判据（gap-fill-options.md 第 1 节）。数值全部暂定，下载后在开发份上定；改这里不改代码",
+ "frame_ms": 30,
+ "speech": {"vad_prob": 0.5, "max_frac": 0.01, "tag": "Speech", "tag_max": 0.1,
+            "src": "gap-fill-options.md 第 1 节，暂定"},
+ "scenes": {
+  "rail-air-cabin": {"tags_any": ["Aircraft", "Inside, small room"], "top_k": 5, "src": "暂定"},
+  "meeting-room": {"tags_any": ["Inside, large room or hall", "Air conditioning", "Inside, small room"],
+                   "top_k": 5, "rt60_s": [0.3, 1.0], "src": "暂定"},
+  "phone-booth": {"tags_any": ["Inside, small room"], "top_k": 5, "rt60_s": [0.1, 0.3], "src": "暂定"}
+ },
+ "stationarity": {"max_level_std_db": 6.0, "src": "逐秒电平的标准差，暂定"}}
