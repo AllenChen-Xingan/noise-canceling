@@ -79,3 +79,4 @@
 - 2026-11-26 第三批开工：分支 feat/data-batch3（大总管建，从 37c75609），issue #205。派 pi traindata-but，任务文件在主仓 _tmp/20261116-b19/pi-traindata-but.md。BUT 底噪先只收 C236（会议室）和 Room112（酒店房间）；单位是「房间 + 扬声器布置」，每个房间分开按比例切，开发份至少一个布置。⚠️ 已知局限（大总管 c4 定的写法）：会议室、酒店房间各只有一间房，开发份和训练份是同一间房，开发份对这两类只测同房不同场次，不测换房间。放收音机的布置（spk_meta 里有第 2 个扬声器）切分时排除；其余底噪先过 screen.py。
 - 2026-11-26 pi traindata-but 验收通过，快进合入：pi 提交 2f52f14c…949a0bdf，共 22 个，各带 Agent: pi；花费 $0.086；已 clean。我读了 diff，亲手重跑 276 条测试，全过（跳过 1 条网络测试）。期间 pi 两次用 python3 内联脚本改测试文本，被误判成重活申请名额，我直接放了（大总管同意：约 1 分钟内、不计时、不构建的不用名额）。上云命令写在 data/cloud-batch3.md。
 - 2026-11-26 pi traindata-shards-env 验收通过，快进合入：pi 提交 2e709452…364720a9（4 个，各带 Agent: pi），花费 $0.0068，已 clean。cloud_steps.sh 去掉 first-batch 默认值，shard、register、pack 三步不设 VDN_SHARDS 就退出码 2，其余步骤照旧。我重跑 282 条测试，全过（跳过 1 条网络测试）。另开 issue #206（增量分片，下一件）；README 写明旧分片只能用当时的提交复现。旧分片删不删要问人，人回之前不删。
+- 2026-11-26 人定 D112：first-batch 在第三批 valid、取回核对后由 cloudrun 删，删前先取回 build 小文件；batch2 留到第一个正式运行过了开发份检查。README 已改成引用 D112。
