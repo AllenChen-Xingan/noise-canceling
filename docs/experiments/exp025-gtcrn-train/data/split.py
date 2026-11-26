@@ -16,6 +16,7 @@ import glob as globmod
 import gzip
 import hashlib
 import json
+import os
 import re
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -45,6 +46,26 @@ def list_files(root, rule):
     rx = re.compile(rule["exclude_regex"]) if rule.get("exclude_regex") else None
     rel = sorted(str(f.relative_to(root)) for f in out if f.is_file())
     return [r for r in rel if not (rx and rx.search(r))]
+
+
+def meta_excluded(root, files, rule):
+    """按 spk_meta.txt 之类的小文件整次排除（read_me：第 2 个扬声器放的是背景声，如收音机）。
+    meta 路径相对 wav 所在目录解析；meta 文件不在就停：没有它就不能判，静默留着会把收音机当噪声。
+    返回 (留下的文件, 排除的文件)。"""
+    spec = rule.get("exclude_if_meta")
+    if not spec:
+        return files, []
+    rx = re.compile(spec["regex"], re.M)
+    cache, keep, drop = {}, [], []
+    for rel in files:
+        meta = Path(os.path.normpath(str(Path(root) / Path(rel).parent / spec["file"])))
+        if not meta.is_file():
+            raise SystemExit(f"{rel}：找不到 meta 文件 {meta}（规则 exclude_if_meta 的 {spec['file']}）。"
+                             "没有它不能判断这段底噪里有没有背景声，不写切分表")
+        if meta not in cache:
+            cache[meta] = bool(rx.search(meta.read_text(encoding="utf-8", errors="replace")))
+        (drop if cache[meta] else keep).append(rel)
+    return keep, drop
 
 
 def demand_envs():
@@ -183,8 +204,10 @@ def check_expect(name, rule, files):
         raise SystemExit(f"{name}：{'；'.join(bad)}（{e.get('src', '')}）。不写切分表；请把 split.py --inventory 的输出发给 traindata")
 
 
-def split_source(root, name, rule, seed, order, workers=32, cache=None):
-    """先只看路径把单位全认出来（认不出立刻停，不白算哈希），再逐文件读数（cache 是 filecache.FileCache，可复用上次的读数）。"""
+def split_source(root, name, rule, seed, order, workers=32, cache=None, excluded=None):
+    """先只看路径把单位全认出来（认不出立刻停，不白算哈希），再逐文件读数（cache 是 filecache.FileCache，可复用上次的读数）。
+    排除顺序：清单 → 期望条数（排除之前，防通配符写错）→ meta 排除 → 筛查排除 → 认单位。
+    excluded 若给了一个 dict，就填上 "excluded_meta" / "excluded_screen" 两个计数（摘要用；不进切分表）。"""
     from filecache import FileCache
 
     root = Path(root)
@@ -195,6 +218,9 @@ def split_source(root, name, rule, seed, order, workers=32, cache=None):
     if not files:
         raise SystemExit(f"{name}：按 {rule['glob']} 一个文件也没找到（先跑 fetch.py）")
     check_expect(name, rule, files)
+    files, meta_drop = meta_excluded(root, files, rule)
+    if excluded is not None:
+        excluded["excluded_meta"] = len(meta_drop)
     if rule["unit"] == "time":
         units = {f: f for f in files}
     else:
@@ -219,9 +245,11 @@ def split_source(root, name, rule, seed, order, workers=32, cache=None):
     return rows
 
 
-def summary(name, rule, seed, rows, jsonl_bytes):
+def summary(name, rule, seed, rows, jsonl_bytes, excluded=None):
+    """摘要（进仓）。excluded 是排除计数（meta 文件 / 筛查），有就记，没给就不写（旧表不强迫重写）。"""
     s = {"source": name, "group": rule["group"], "unit": rule["unit"], "seed": seed, "rule_sha256": rule_sha(rule),
-         "files": len(rows), "units": len({r["unit"] for r in rows}), "jsonl_sha256": hashlib.sha256(jsonl_bytes).hexdigest()}
+         "files": len(rows), "units": len({r["unit"] for r in rows}), "jsonl_sha256": hashlib.sha256(jsonl_bytes).hexdigest(),
+         **{k: v for k, v in (excluded or {}).items() if v}}
     if rule["unit"] == "time":
         s["time"] = rule["time"]
         s["seconds"] = round(sum(r["frames"] / r["sr"] for r in rows), 1)
@@ -240,7 +268,7 @@ def sha256_bytes(b):
     return hashlib.sha256(b).hexdigest()
 
 
-def write(name, rule, seed, rows, out_dir=OUT):
+def write(name, rule, seed, rows, out_dir=OUT, excluded=None):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     body = "".join(json.dumps(r, ensure_ascii=False, sort_keys=True) + "\n" for r in sorted(rows, key=lambda r: r["path"])).encode()
@@ -253,7 +281,7 @@ def write(name, rule, seed, rows, out_dir=OUT):
     keep, drop = (jl.with_name(jl.name + ".gz"), jl) if big else (jl, jl.with_name(jl.name + ".gz"))
     drop.unlink(missing_ok=True)  # 同内容换存法（上面已核过哈希），不会丢东西
     keep.write_bytes(gzip.compress(body, compresslevel=9, mtime=0) if big else body)
-    s = summary(name, rule, seed, rows, body)
+    s = summary(name, rule, seed, rows, body, excluded)
     js.write_text(json.dumps(s, ensure_ascii=False, indent=1) + "\n")
     return s
 
@@ -291,7 +319,9 @@ def main():
             fs = list_files(Path(a.root), rule)
             print(f"{n}：{len(fs)} 个文件", *fs[:20], sep="\n  ")
             continue
-        s = write(n, rule, R["seed"], split_source(a.root, n, rule, R["seed"], R["splits"], a.workers, cache), a.out)
+        excluded = {}
+        rows = split_source(a.root, n, rule, R["seed"], R["splits"], a.workers, cache, excluded)
+        s = write(n, rule, R["seed"], rows, a.out, excluded)
         print(json.dumps(s, ensure_ascii=False), flush=True)
     if not a.inventory:
         print(f"读数缓存：复用 {cache.hits} 个，新算 {cache.misses} 个", flush=True)
