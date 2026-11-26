@@ -1,7 +1,8 @@
-"""正式训练开训前的检查（T/formal.py）：配置里还剩占位 · 场景没定 · 运行矩阵不是 6 个，就不许开训。
+"""正式训练开训前的检查（T/formal.py）：配置里还剩占位 · 场景名不对 · 运行矩阵不是 6 个，就不许开训。
 
-正式训练 6 个运行 = 模型 A、B × 种子 0、1、2，每批 3 个同时跑一张卡。场景（D110）与第二批分片
-还没定，所以仓里这两份配置现在必须**报错**，这是本文件的主要断言。
+正式训练 6 个运行 = 模型 A、B × 种子 0、1、2，每批 3 个同时跑一张卡。第二批分片还没定，
+所以仓里这两份配置现在必须**报错**，这是本文件的主要断言。加训场景人已定（D113），名字按
+地点键表查（specs/schema/eval-suite.schema.json）。
 """
 from pathlib import Path
 
@@ -70,7 +71,7 @@ def _filled(tmp_path, base_over=None, runs_over=None):
         head, last = dotted.split(".")
         d[head][last] = v
     runs = _runs()
-    runs["target_scenes"] = ["cafe", "car"]
+    runs["target_scenes"] = ["cafe", "canteen"]
     for dotted, v in (runs_over or {}).items():
         if "." in dotted:
             head, last = dotted.split(".")
@@ -99,11 +100,12 @@ def test_load_runs_reads_matrix():
 
 
 def test_shipped_placeholders_block_start(capsys):
-    """仓里现在就该报错：两处 TODO 占位 + target_scenes 空着。"""
+    """仓里现在就该报错：只剩两处 TODO 占位（场景已由 D113 定下，不许再报 target_scenes）。"""
     ps = formal.problems(RUNS)
+    assert len(ps) == 2, ps  # 只报这两处，多一条都算误报
     assert any("data.shard_root" in s for s in ps)
     assert any("data.recipe" in s for s in ps)
-    assert any("target_scenes" in s for s in ps)
+    assert not any("target_scenes" in s for s in ps)  # 场景已定，名字也对
     assert not any("矩阵" in s for s in ps)  # 矩阵本身是对的，不许顺带报
     assert formal.main(["check"]) == 1
     assert "可以开训" not in capsys.readouterr().out
@@ -113,7 +115,8 @@ def test_commands_refuses_with_placeholders():
     with pytest.raises(ValueError) as e:
         formal.commands(RUNS)
     msg = str(e.value)
-    assert "data.recipe" in msg and "target_scenes" in msg
+    assert "data.shard_root" in msg and "data.recipe" in msg
+    assert "target_scenes" not in msg
 
 
 def test_filled_copy_can_start(tmp_path, capsys):
@@ -203,6 +206,75 @@ def test_broken_matrix_reported(tmp_path, mutate, needle):
     (p / "formal-runs.yaml").write_text(yaml.safe_dump(runs, allow_unicode=True))
     ps = formal.problems(p / "formal-runs.yaml")
     assert any(needle in s for s in ps), ps
+
+
+# ---------- 加训场景按地点键表查（#209）----------
+
+D113_SCENES = ["rail-air-cabin", "canteen", "meeting-room", "transit-hub"]
+SCHEMA = "specs/schema/eval-suite.schema.json"
+
+
+def _schema_place_keys() -> list:
+    """正本：eval-suite.schema.json 里 MeetingPlace 的 enum（含兜底键 other）。"""
+    import json
+
+    for root in (HERE, *HERE.parents):
+        f = root / SCHEMA
+        if f.exists():
+            return list(json.loads(f.read_text())["$defs"]["MeetingPlace"]["enum"])
+    raise AssertionError(f"找不到 {SCHEMA}")
+
+
+def _scene_problems(tmp_path, scenes) -> list:
+    """改了 target_scenes 的那份运行矩阵报出来的、提到 target_scenes 的问题。"""
+    p = _filled(tmp_path, runs_over={"target_scenes": scenes})
+    return [s for s in formal.problems(p) if "target_scenes" in s]
+
+
+def test_unknown_scene_reported(tmp_path):
+    ps = _scene_problems(tmp_path, ["cafe", "car"])
+    assert len(ps) == 1, ps
+    assert "car" in ps[0]  # 要指名是哪个不在表里
+    assert SCHEMA in ps[0]  # 并指回地点键表的正本
+
+
+def test_fallback_other_reported(tmp_path):
+    ps = _scene_problems(tmp_path, ["other"])
+    assert len(ps) == 1, ps
+    assert "other" in ps[0]
+
+
+def test_duplicate_scene_reported(tmp_path):
+    ps = _scene_problems(tmp_path, ["cafe", "cafe"])
+    assert len(ps) == 1, ps
+    assert "cafe" in ps[0] and "重复" in ps[0]
+
+
+def test_non_string_scene_reported(tmp_path):
+    ps = _scene_problems(tmp_path, [3])
+    assert len(ps) == 1, ps
+    assert "3" in ps[0]
+
+
+def test_non_list_target_scenes_reported(tmp_path):
+    ps = _scene_problems(tmp_path, "cafe")  # 写成单个字符串，不是清单
+    assert len(ps) == 1, ps
+    assert "target_scenes" in ps[0]
+
+
+def test_d113_scenes_pass_scene_check(tmp_path):
+    assert _scene_problems(tmp_path, D113_SCENES) == []
+
+
+def test_place_keys_match_schema_minus_other():
+    keys = formal.place_keys()
+    assert isinstance(keys, frozenset)
+    assert keys == frozenset(_schema_place_keys()) - {"other"}
+    assert set(D113_SCENES) <= keys
+
+
+def test_shipped_runs_target_scenes_are_d113():
+    assert _runs()["target_scenes"] == D113_SCENES
 
 
 def test_missing_base_reported(tmp_path):
