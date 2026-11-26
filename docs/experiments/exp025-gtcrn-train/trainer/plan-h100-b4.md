@@ -29,7 +29,7 @@
   - 必须重算：参照里记着开发份的 build id，旧参照（build f032a75e）对新 build 一律判不过
 - 第 3 步多跑一条：`cd $T && $PY formal.py check && $PY ablation.py check`，两条都要退出 0
 - 第 4 步之后加一步：**补测酒店房间 Room112 底噪的 250 Hz 单音**（大总管定；traindata 的 issue #221）
-  - 命令和判法只在 `data/cloud-room112-tone.md`（traindata 写，提交 850ed0e8），这里不抄。在 `$R` 下照它跑，只读，不改仓里文件
+  - 命令和判法只在 `data/cloud-room112-tone.md`（traindata 写，PR #223 起在 main，a6bb1ced），这里不抄。在 `$R` 下照它跑，只读，不改仓里文件
   - 清单不是 248 条就停这一步，把数字发 traindata；这一步不过不挡乙段（它只决定正式训练前要不要出新 build，冒烟和消融结果照样有效）
   - `room112-tone.jsonl`、它的 sha256 和 diagnose 的摘要行随第 5 步一起取回，发 traindata，抄送大总管
 
