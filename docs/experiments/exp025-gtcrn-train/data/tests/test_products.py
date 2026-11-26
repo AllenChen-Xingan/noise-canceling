@@ -9,11 +9,11 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE))
 import loader  # noqa: E402
+import shard  # noqa: E402
 import split  # noqa: E402
 
 SPLITS = HERE / "splits"
 BUILDS = HERE / "builds"
-SHARDED = ("librispeech-train-clean-100", "qut-noise", "tum-wind", "openslr28-rir", "demand-train")
 
 
 def split_names():
@@ -122,6 +122,7 @@ class Splits(unittest.TestCase):
 class Builds(unittest.TestCase):
     def setUp(self):
         self.assertTrue(build_files(), "仓里没有 builds/<id>/build.json：产物丢了或没拷回")
+        self.R = split.load_rules()
 
     def test_build_valid_and_tables_in_repo(self):
         for f in build_files():
@@ -131,10 +132,21 @@ class Builds(unittest.TestCase):
             self.assertEqual(loader.build_id_of(ident), b["build_id"], f"{f}：身份字段被改过")
             self.assertTrue(b["valid"], f"{f}：交集检查不过")
             self.assertTrue(b["leak_check"]["ok"], str(f))
-            self.assertEqual(sorted(b["split_tables"]), sorted(SHARDED), str(f))
+            # 不再手抄一份来源清单（第二处表示）：build 自己切了哪几张表，就记了哪几个来源的条数，两向相同
+            self.assertEqual(sorted(b["split_tables"]), sorted(b["counts"]), str(f))
+            for src in b["split_tables"]:
+                self.assertIn(src, self.R["sources"], f"{f}：{src} 不是 split_rules.json 里的来源")
             for src, want in b["split_tables"].items():
                 s, _ = split.load_split(src, SPLITS)
                 self.assertEqual(s["jsonl_sha256"], want, f"{f}：{src} 切分表和仓里的不同")
+
+    def test_some_build_shards_current_sources(self):
+        """至少要有一份 build 把当前配方（recipe.json）的全部来源都切了：加了一批来源却忘了云上重跑，这里就红。
+        只比来源集合，不比 recipe 的字节哈希（配方小幅改动也会变哈希，那会让这条测试无辜地红）。"""
+        want = set(shard.default_sources())
+        got = {f.parent.name: set(json.loads(f.read_text())["split_tables"]) for f in build_files()}
+        self.assertTrue(any(v == want for v in got.values()),
+                        f"没有一份 build 切了全部来源：要 {sorted(want)}；现有 {[(k, sorted(v)) for k, v in got.items()]}")
 
     def test_only_train_dev_sharded(self):
         """终测原料池与测试份不进训练分片（D63）。"""

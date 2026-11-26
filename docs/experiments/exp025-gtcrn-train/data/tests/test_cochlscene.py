@@ -207,14 +207,62 @@ class SplitTree(unittest.TestCase):
         self.assertEqual(a, b)
 
 
-class Pending(unittest.TestCase):
-    """切分表还没建（音频在云上，本机造不出表）：登记在这里，test_products 两向查。
-    云上跑完 split.py 后把 splits/cochlscene.* 带回进仓，并删掉顶层 `未建表` 里的这一行。"""
+class Table(unittest.TestCase):
+    """云上跑完 split.py 的产物已带回进仓（cloud-batch2.md 第 4 步）：规则 · 摘要 · 正文三处要自洽。
+    反过来也查：顶层 `未建表` 里还留着这一行，说明音频还在云上、本机没切，表和标记不许同时在。"""
 
-    def test_table_pending(self):
-        R = split.load_rules()
-        self.assertIn(SRC, R["未建表"])
+    def check(self, rules_path=None):
+        """规则里没有 `未建表` · 表能按摘要里的哈希读回 · 条数与单位对得上 · 只有 train / dev。
+        rules_path 只给回归测试用（临时副本里放回标记，看这条检查会不会红）。返回 (摘要, 行)。"""
+        R = split.load_rules(rules_path) if rules_path else split.load_rules()
+        self.assertEqual([k for k in R if k == "未建表"], [],
+                         "规则顶层还有 `未建表`：这一行表示音频还在云上、本机没切，拿回表后要删掉")
+        r = R["sources"][SRC]
+        s, rows = split.load_split(SRC)  # 核 jsonl 的 sha256
+        self.assertEqual(s["files"], r["expect"]["files"], "摘要条数与规则期望不同")
+        self.assertEqual(s["files"], len(rows))
+        self.assertEqual(s["rule_sha256"], split.rule_sha(r), "表是按旧规则切的")
+        self.assertEqual(s["seed"], R["seed"])
+        return s, rows
+
+    def test_table_present_and_no_pending_marker(self):
+        s, _ = self.check()
         self.assertEqual(rule()["group"], GRP)
+        self.assertEqual(s["group"], GRP)
+
+    def test_units_are_the_recorder_in_the_path(self):
+        """单位就是路径里的 `userNNNN`（按录音人切的正本），和切分器的取法逐个相同。"""
+        _, rows = self.check()
+        self.assertTrue(rows)
+        for r in rows:
+            self.assertRegex(r["unit"], r"^user\d+$", r["path"])
+            self.assertIn(r["unit"], Path(r["path"]).name, r["path"])
+            self.assertEqual(r["unit"], split.unit_of(r["path"], rule()), r["path"])
+
+    def test_no_recorder_in_two_splits(self):
+        _, rows = self.check()
+        by = {}
+        for r in rows:
+            by.setdefault(r["unit"], set()).add(r["split"])
+        two = {u: sorted(v) for u, v in by.items() if len(v) > 1}
+        self.assertEqual(two, {}, f"同一录音人跨了份：{sorted(two)[:5]}")
+
+    def test_only_train_and_dev(self):
+        """D106：只作训练噪声，不给终测（final）与测试份（d63）。"""
+        _, rows = self.check()
+        self.assertEqual({k for k, v in rule()["frac"].items() if v > 0}, {"train", "dev"})
+        self.assertLessEqual({r["split"] for r in rows}, {"train", "dev"})
+
+    def test_marker_still_means_pending(self):
+        """上面那条「没有 `未建表`」不是空检查：临时副本里放回这一行，check 必须红（仓库里的文件不动）。"""
+        R = json.loads(split.RULES.read_text())
+        R["未建表"] = {SRC: "音频还在云上"}
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "split_rules.json"
+            p.write_text(json.dumps(R, ensure_ascii=False))
+            with self.assertRaises(AssertionError) as cm:
+                self.check(p)
+        self.assertIn("未建表", str(cm.exception))
 
 
 class Fetch(unittest.TestCase):
