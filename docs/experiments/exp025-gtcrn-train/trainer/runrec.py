@@ -17,6 +17,8 @@ from pathlib import Path
 
 import torch
 
+import config as cfgmod
+
 HERE = Path(__file__).resolve().parent
 
 # 续训时允许改的配置（其余一改就拒绝续训：批量、种子、数据、损失等变了，接着训就不是同一个实验）
@@ -75,12 +77,35 @@ def _atomic_write(path: Path, write, commit_ok=lambda: True) -> None:
             tmp.unlink()
 
 
-def config_diff(a: dict, b: dict, prefix=()) -> list[tuple]:
+_MISSING = object()  # 「这个键在记录里根本没有」（区别于「写了 null」）
+
+
+def config_defaults() -> dict:
+    """配置默认值的正本在 `config.py` 的 dataclass（CLAUDE.md 五.5 唯一真相源）：这里只取，不手抄。"""
+    return cfgmod.to_dict(cfgmod.Config())
+
+
+def _is_default(defaults: dict, path: tuple, val) -> bool:
+    cur = defaults
+    for k in path:
+        if not isinstance(cur, dict) or k not in cur:
+            return False
+        cur = cur[k]
+    return cur == val
+
+
+def config_diff(a: dict, b: dict, prefix=(), defaults: dict | None = None) -> list[tuple]:
+    """两处配置的差异（键路径）。传了 defaults 时：旧记录**缺的键**在新值等于默认值这算没变
+    ——老 run.json 是加字段之前写的，没有这个键，但那次运行用的就是默认值（codex 第 4 轮 #1）。
+    缺键而新值不是默认值、或键在但值不同，照样算改了。"""
     out = []
-    for k in sorted(set(a) | set(b)):
-        va, vb = a.get(k), b.get(k)
+    for k in sorted(set(a) | set(b), key=str):
+        va, vb = a.get(k, _MISSING), b.get(k, _MISSING)
+        if defaults is not None and va is _MISSING and vb is not _MISSING \
+                and _is_default(defaults, prefix + (k,), vb):
+            continue
         if isinstance(va, dict) and isinstance(vb, dict):
-            out += config_diff(va, vb, prefix + (k,))
+            out += config_diff(va, vb, prefix + (k,), defaults)
         elif va != vb:
             out.append(prefix + (k,))
     return out
@@ -193,7 +218,7 @@ def check_resume(rec: dict, cfg_dict: dict, build_id: str, dev_build_id: str | N
         why.append(f"上次在第 {stop.get('step')} 步训崩（损失不是有限数），先诊断；要重跑请换 run.name")
     if not build_id or build_id == "unknown":
         why.append("数据 build id 为空，无法核对数据版本")
-    for path in config_diff(rec.get("config", {}), cfg_dict):
+    for path in config_diff(rec.get("config", {}), cfg_dict, defaults=config_defaults()):
         if path not in RESUMABLE_CHANGES:
             why.append("配置改了：" + ".".join(path))
     if rec.get("data_build_id") != build_id:
