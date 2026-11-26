@@ -535,3 +535,7 @@
 - 2026-11-26 人定（经 allenchen-52 转达）：大总管固定名 noise-canceling-meta，轮换不变；本会话（原 87）已 /rename。
 - 2026-11-26 history 项目大总管固定名 history-meta（同机协调找它）。
 - 2026-11-26 cloudrun 第四批 B 段完：新基线 build bc0e9e7b，6 个 build valid、交集 0，4 间房开发份各 1 布置；D116 删 batch3（取回 93 文件清单 21.6 GB 于 _tmp/20261126-batch3-small/），盘剩 44 GB；机器 0.18 美元，累计 8.97 美元，云上 0 台。
+- 2026-11-26 trainer 换线：建 feat/trainer-b4-run（e099e37c），--continue 重开（填新 build · 两个 check 退 0 · H100 执行单：冒烟 → 7 组消融 · #213 待 traindata PR）。
+- 2026-11-26 traindata 亲手核完 6 个 build（基线 bc0e9e7b566421f0；变体 no-eq 574ef5c7 · no-clip 748aee58 · no-n_noises 36ea9561 · no-reverb 966a229d · high_snr-on 10ebb73b），进仓 59f7b776。4 场景不同内容：rail-air-cabin 15.29 h · canteen 0.08 h（约 300 s）· meeting-room 1.87 h · transit-hub 14.87 h。11-4 题面改为不同内容口径。
+- 2026-11-26 trainer 交 H100 执行单 trainer/plan-h100-b4.md（甲段 CPU 约 0.05 美元；乙段 H100 约 47–57 min · 3.4–4.2 美元，高 20% 价 4.1–5.0；消融约 1.6–1.8）。大总管原则批：甲 ≤0.1 · 乙时限 1.2 h ≤7 美元，按其闸门，开机前提齐后再给 cloudrun「开」。卡点：traindata 分支进 main。
+- 2026-11-26 traindata：codex 查出 Room112（hotel-room，248 条，209 keep 进训练）从未做 250 Hz 单音检查。大总管定：A 照现状开 PR + 限制栏写明；补测并进 trainer 执行单甲段（只读约 10 min）；判法：keep 中单音 ≤5% 第一批照用 bc0e9e7b，>5% 正式训练前出新 build。
