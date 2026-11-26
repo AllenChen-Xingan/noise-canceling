@@ -20,6 +20,7 @@
 3. 开训前清单已经给人看过，人点了头。清单要逐项写清：场景、噪声、评测、配置、花费（人定）
 4. 网络盘上还没有 `/workspace/runs/exp025-formal`。已存在就停下报大总管：同名运行会被当成续训
 5. 大总管批了花费上限（第四节是建议值）
+6. 网络盘 `/workspace` 剩余空间不少于 30 GB（开机后第一步 `df -h /workspace` 实测）。第五批分片落盘后约剩 22 GB，低于正式训练要的 30 GB，所以要先删 `/workspace/shards/batch4`（`data/cloud-batch5.md` 第六节，人定 D118）。删不删、怎么删照那一节由 cloudrun 做，本单不删任何东西；不足 30 GB 就停，报大总管（codex 第 1 轮 #1）
 
 `R`、`T`、`D`、`PY`、`G`、`O` 的含义同 `plan-h100-b4.md`。下面 `S5=/workspace/shards/batch5`，配方 = `$D/recipe.json`（第五批基线配方）。
 
