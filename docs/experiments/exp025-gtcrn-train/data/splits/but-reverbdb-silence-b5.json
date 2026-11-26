@@ -1,0 +1,25 @@
+{
+ "source": "but-reverbdb-silence-b5",
+ "group": "A7",
+ "unit": "file",
+ "seed": 20261116,
+ "rule_sha256": "1bd514b8f7271f8558f09f896a00f23b6b36520824b83464f7fcecdff5ebb094",
+ "files": 563,
+ "units": 20,
+ "jsonl_sha256": "19e8e3a7ca769560d1877c8892d47b7eabe4eb3f560fa8caa85720b940aa47c9",
+ "excluded_meta": 78,
+ "excluded_screen": 87,
+ "unit_from": "\\1/\\2",
+ "per_split": {
+  "dev": {
+   "units": 4,
+   "files": 151,
+   "seconds": 9060.3
+  },
+  "train": {
+   "units": 16,
+   "files": 412,
+   "seconds": 24720.9
+  }
+ }
+}
