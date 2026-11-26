@@ -22,3 +22,10 @@ P0×0 P1×2 P2×2。逐条核实，4 条都属实。
 - **P2｜不设 dev_recipe 时 run.json 多两个字段**（第 1 轮 #3）：不进停止线，开 #217。
 - **P2｜metrics.jsonl 有非对象行时 judge 崩溃**（第 1 轮 #4）：改动小，与 P1 一起交 pi。
 - 抽查引用中「不符」1 条：`test_dev_recipe_unset_keeps_todays_behaviour` 没证明 run.json 原样。与 #3 同源，记入 #217。
+
+### 第 1 轮的处理（2026-11-26）
+
+由 pi `trainer-ablation-fix2` 修，提交 45aae59b..025e1dbe，花费 0.0216 美元。
+- 改动：judge 比整份配置，例外只有 run.name、run.seed、data.recipe（常量 `CFG_IGNORE`），缺键也算不同。每个运行先查设计固定项：模型 A、1000 步、`data.dev_recipe` 等于基线配方；基线不合格时每个旋钮都判 incomplete。metrics 有非对象行时，判该运行 incomplete，不再崩溃。
+- 红灯：trainer 把新测试放到旧代码 1a07d666 上跑（测试里的新常量换成字面值，免得只因缺常量而红），13 败 46 过，都是新加的用例。
+- 绿灯：合入后 trainer 亲手跑 test_ablation + test_formal + test_data + test_train，108 过 2 跳过；ablation.py 467 行，测试 585 行。
