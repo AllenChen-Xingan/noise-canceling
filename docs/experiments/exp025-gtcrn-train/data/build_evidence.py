@@ -147,10 +147,15 @@ def one_knob(recipe, base, base_sha, knob=None):
         return False, f"`_ablation` 缺字段或多了字段：{ab!r}"
     if ab["knob"] != knob:
         return False, f"`_ablation.knob` = {ab['knob']}，清单里这一份是 {knob}"
-    if delta != {f"knobs.{knob}.on"}:
-        return False, f"除了 knobs.{knob}.on 还差：{sorted(delta - {f'knobs.{knob}.on'}) or '（一处也没差，和基准一样）'}"
-    if recipe["knobs"][knob]["on"] != ab["on"] or base["knobs"][knob]["on"] == ab["on"]:
-        return False, f"旋钮 {knob} 的开关与 `_ablation.on` = {ab['on']} 对不上"
+    want = {f"knobs.{knob}.on"}
+    if delta != want:
+        extra = sorted(delta - want)
+        return False, (f"除了 {', '.join(want)} 又改了：{extra}" if extra
+                       else f"和基准一模一样：{knob} 没翻，`_ablation` 却说翻了")
+    cur_on = ((recipe.get("knobs") or {}).get(knob) or {}).get("on")
+    base_on = ((base.get("knobs") or {}).get(knob) or {}).get("on")
+    if cur_on != ab["on"] or base_on == ab["on"]:
+        return False, f"旋钮 {knob} 的开关（{cur_on}）与 `_ablation.on` = {ab['on']} 对不上"
     if ab["base_sha256"] != base_sha:
         return False, "`_ablation.base_sha256` 不是仓里 recipe.json 的哈希"
     return True, f"只翻 knobs.{knob}.on → {ab['on']}"
