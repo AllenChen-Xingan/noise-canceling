@@ -1,7 +1,10 @@
 """训练前清单第 3 条的证据表（build_evidence.py）：真产物逐字节复现 · 真仓里 6 个 build 全部通过 · 三条夹具。
 
-真产物部分：提交进仓的 `evidence-bc0e9e7b566421f0.md` 必须由 `build_evidence.py --check` 认下来（逐字节），
-且真仓里每份配方的每一列都是「是」。夹具部分：一份最小数据目录（1 张切分表 · 1 个来源 · 1 个目标场景 ·
+真产物部分：`evidence-*.md` 按「与当前配方的关系统」两种——build 的 `recipe_sha256` 等于当前 `recipe.json` 的 sha256
+的，跑 `--check` 逐字节重算；上一批的（第五批换了配方，第四批的 `evidence-bc0e9e7b566421f0.md`）冻结、
+只核不改（钉住 sha256 · build 目录还在 · 配方确实换了）。两者都没有时，除非 `split_rules.json` 的 `未建表`
+表着这一批还在云上，否则红（新页该生成了）。规则见 `tests/fixtures_pages.py`。
+夹具部分：一份最小数据目录（1 张切分表 · 1 个来源 · 1 个目标场景 ·
 基准 + 5 份消融配方各 1 个 build）里，把四种该红的情况各撞一次：
 一个检查不过 → 「全部通过」变「否」且退 1；一份配方对上 2 个 build → 停；变体改了两个旋钮 → 那一列「否」；
 build 记录说交集 ok、切分表里却有一行踩到排外表 → 「交集重算一致」变「否」、「全部通过」变「否」（结论不读记录，重算）。
@@ -21,12 +24,14 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE / "tests"))
 import ablation_recipes  # noqa: E402
 import build_evidence  # noqa: E402
+import fixtures_pages  # noqa: E402  冻结页 / 当前页的共用规则（第五批换配方后，旧页只核不改）
 import leakcheck  # noqa: E402
 import loader  # noqa: E402
 
-EVIDENCE = HERE / "evidence-bc0e9e7b566421f0.md"  # 提交进仓的那份（= `build_evidence.py` 的标准输出）
+EVIDENCE = HERE / "evidence-bc0e9e7b566421f0.md"  # 第四批冻结的页（第五批换配方后只核不改，sha256 钉在 fixtures_pages.PINNED）
 BASE = {
     "knobs": {
         "target_scene": {"on": True, "scene": ["canteen"], "frac": 0.667, "src": "夹具"},
@@ -317,33 +322,50 @@ class CheckFile(Fixture):
 
 
 class Product(unittest.TestCase):
-    """真仓里那 6 个 build：每一列都是「是」，且提交进仓的 md 就是它算出来的那一份。"""
+    """真仓里的证据页：对得上当前配方的逐字节重算；上一批的页冻结（钉住 sha256，只核不改）。
 
-    @classmethod
-    def setUpClass(cls):
-        cls.text, cls.rows = build_evidence.report()
+    第五批（2026-11-26）把 `recipe.json` 换到 `but-reverbdb-silence-b5`：`evidence-bc0e9e7b566421f0.md` 是
+    第四批的产物，按新配方算不出来，也不能改（CLAUDE.md 第五节第 1 条）。规则见 `tests/fixtures_pages.py`。
+    """
 
-    def test_every_column_is_true(self):
-        self.assertEqual(len(self.rows), 1 + len(ablation_recipes.VARIANTS))
-        for r in self.rows:
+    def test_each_page_is_current_or_frozen(self):
+        current = fixtures_pages.recipe_sha()
+        pages = fixtures_pages.pages("evidence")
+        self.assertTrue(pages, "仓里一个证据页也没有：先跑 build_evidence.py 生成")
+        fresh = []
+        for page in pages:
+            build = fixtures_pages.build_of(page)
+            if build.get("recipe_sha256") == current:
+                fresh.append(page)
+                r = subprocess.run([sys.executable, str(HERE / "build_evidence.py"), "--check", str(page)],
+                                   capture_output=True, text=True)
+                self.assertEqual(r.returncode, 0, f"{page.name}：{r.stderr or r.stdout}")
+                self.assertIn("逐字节一致", r.stdout)
+                continue
+            self.assertNotEqual(build.get("recipe_sha256"), current)
+            self.assertIn(page.name, fixtures_pages.PINNED,
+                          f"{page.name} 是上一批的页（build 的配方哈希 ≠ 当前 recipe.json），冻结页要钉住 sha256")
+            self.assertEqual(fixtures_pages.sha256_of(page), fixtures_pages.PINNED[page.name],
+                             f"{page.name} 被改过：上一批的页冻结、只核不改")
+        self.assertTrue(fresh or fixtures_pages.pending(),
+                        "当前配方没有任何 build 对上，也不在 `未建表`：这一批的 build 该登记、证据页该生成了")
+
+    def test_current_batch_reports_its_six_rows(self):
+        """当前配方对上了 build 时（云上第五批登记之后），证据表就是「基准 + 5 份消融」那 6 行且全过。"""
+        if not any(fixtures_pages.build_of(p).get("recipe_sha256") == fixtures_pages.recipe_sha()
+                   for p in fixtures_pages.pages("evidence")):
+            self.skipTest("当前配方还没有 build（第五批在云上跑之前）：由上面那条测试的 `未建表` 盯着")
+        text, rows = build_evidence.report()
+        self.assertEqual([r["recipe"] for r in rows], [n for n, _p in build_evidence.recipe_files(HERE)])
+        for r in rows:
             bad = {k: why for k, (ok, why) in r["checks"].items() if not ok}
             self.assertEqual(bad, {}, f"{r['recipe']}（build {r['build'].get('build_id')}）：{bad}")
-        self.assertIn("全部通过：是", self.text)
-
-    def test_recipes_are_the_baseline_and_the_five_variants(self):
-        self.assertEqual([r["recipe"] for r in self.rows], [n for n, _p in build_evidence.recipe_files(HERE)])
-
-    def test_committed_file_is_the_generated_one(self):
-        """提交进仓的 md 与 `--check` 逐字节比：手改一个字节就红（第二处表示必须机器核）。"""
-        r = subprocess.run([sys.executable, str(HERE / "build_evidence.py"), "--check", str(EVIDENCE)],
-                           capture_output=True, text=True)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("逐字节一致", r.stdout)
+        self.assertIn("全部通过：是", text)
 
 
 class Size(unittest.TestCase):
     def test_new_py_under_600(self):
-        for name in ("build_evidence.py", "tests/test_build_evidence.py"):
+        for name in ("build_evidence.py", "tests/test_build_evidence.py", "tests/fixtures_pages.py"):
             n = len((HERE / name).read_text(encoding="utf-8").splitlines())
             self.assertLessEqual(n, 600, f"{name} 有 {n} 行")
 

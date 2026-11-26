@@ -404,7 +404,7 @@ NOISE_PATHS = {
     "tum-wind": "train-raw/tum-wind/wind/000_001.wav",
     "demand-train": "vdn-data/demand/STRAFFIC/ch01.wav",
 }
-# 第三批 + 第四批的 BUT 底噪（第四批起来源名带 -b4）：路径落不进 meeting-room / hotel-room 的正则（这里只要求来源在索引里，场景另有测试）
+# 第三批起的 BUT 底噪（第五批的配方指向 -b5）：路径落不进 meeting-room / hotel-room 的正则（这里只要求来源在索引里，场景另有测试）
 BUT_PATH = "train-raw/but-reverbdb/OtherRoom/MicID01/SpkID01_20190503_S/01/silence/silence_16kHz_60sec.v00.wav"
 
 
@@ -417,7 +417,7 @@ def fake_idx(extra=None):
     第三批的 BUT 底噪 train / dev 各一条（路径不落进它的两个场景正则）；extra 是额外来源 {来源: {份: [成员路径, …]}}。"""
     base = {"librispeech-train-clean-100": {"train": [SPEECH_PATH]}, "openslr28-rir": {"train": [RIR_PATH]},
             **{n: {"train": [p]} for n, p in NOISE_PATHS.items()},
-            "but-reverbdb-silence-b4": {"train": [BUT_PATH], "dev": [BUT_PATH]}}
+            "but-reverbdb-silence-b5": {"train": [BUT_PATH], "dev": [BUT_PATH]}}
     src = {}
     for name, by_split in {**base, **(extra or {})}.items():
         d = {"kind": "speech" if name.startswith("librispeech") else "rir" if name.endswith("-rir") else "noise"}
