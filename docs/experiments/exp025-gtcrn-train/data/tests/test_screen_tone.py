@@ -4,6 +4,8 @@
   `tone_check.drop_where`。改 json 判定要跟着翻，代码里出现那份名单即失败
 - 对不上就停：筛查里有一条、单音里查不到 → 停（悄悄跳过一条就把单音带进了训练）；
   任一边 path 重复 → 停
+- 单音结论本身要自洽：`where` 只许 `none` / `first_only` / `later_too`，`present_seconds` 是整数列表，
+  且「没有」⇔ 空列表、「只在第 1 秒」⇔ `[1]`（正本：`diagnose.tone_verdict`，秒号从 1 起）；不自洽就停
 - 只动三样：`verdict` · `reasons` · `measures`。其余字段逐字段相等，输入列表本身不被改写
 - 命令行：输出一行一景、打一行汇总；`--out` 指到输入上直接拒（不原地覆盖）
 """
@@ -39,6 +41,13 @@ def tone_row(path, where, secs, hz=250.0):
                      "verdict": {"present_seconds": list(secs), "where": where}}}
 
 
+def raw_tone_row(path, where, secs):
+    """一条「present_seconds 原样放进去」的单音行：造不自洽的用例用（不复制、不强转）。"""
+    row = tone_row(path, "none", [])
+    row["tone"]["verdict"] = {"present_seconds": secs, "where": where}
+    return row
+
+
 def untouched(row):
     """除 verdict / reasons / measures 之外的字段，序列化成一行方便逐字比较。"""
     return json.dumps({k: v for k, v in row.items()
@@ -68,13 +77,22 @@ class DropWhere(unittest.TestCase):
                 screen_tone.load_drop_where(path)
 
     def test_list_comes_from_json_not_code(self):
-        """代码里不许出现那份名单的字面量：两份输入换成临时 json，判定跟着翻。"""
+        """判定名单（哪些位置该丢）只在 json 里：三个值只许出现在 `WHERE` 值域那一行（判自洽用的，不是判定名单）。"""
         code = (HERE / "screen_tone.py").read_text(encoding="utf-8")
-        for word in EXPECT_DROP:
-            self.assertNotIn(f'"{word}"', code, f"{word} 写死在 screen_tone.py 里了")
-            self.assertNotIn(f"'{word}'", code, f"{word} 写死在 screen_tone.py 里了")
         self.assertIsNone(re.search(r"drop_where\s*=\s*\[", code),
                           "drop_where 不许在代码里写成字面量列表")
+        domain = [ln for ln in code.splitlines() if ln.startswith("WHERE = ")]
+        self.assertEqual(len(domain), 1, domain)
+        self.assertEqual(set(screen_tone.WHERE), {"none", *EXPECT_DROP})
+        for word in ("none", *EXPECT_DROP):
+            self.assertIn(f'"{word}"', domain[0], f"{word} 不在 WHERE 值域那一行")
+            n = code.count(f'"{word}"')
+            self.assertEqual(n, 1, f"{word} 在代码里出现了 {n} 次：只许在 WHERE 那一行")
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "rules.json"
+            path.write_text(json.dumps({"tone_check": {"drop_where": ["later_too"]}}),
+                            encoding="utf-8")
+            self.assertEqual(screen_tone.load_drop_where(path), ["later_too"])
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "rules.json"
             path.write_text(json.dumps({"tone_check": {"drop_where": ["later_too"]}}),
@@ -162,6 +180,61 @@ class Merge(unittest.TestCase):
         res = screen_tone.merge(old, tones, EXPECT_DROP)
         self.assertEqual({k: res[k] for k in ("total", "keep", "drop", "tone_dropped")},
                          {"total": 3, "keep": 1, "drop": 2, "tone_dropped": 1})
+
+
+class ToneState(unittest.TestCase):
+    """单音结论要自洽（正本：`diagnose.tone_verdict`）：where 只许三值；秒号从 1 起、整数；空列表 ⇔ none；[1] ⇔ first_only。"""
+
+    def merge_one(self, where, secs):
+        return screen_tone.merge([screen_row("a.wav")], [raw_tone_row("a.wav", where, secs)],
+                                 EXPECT_DROP)
+
+    def assert_stops(self, where, secs, *wanted):
+        """必须停，且报错里写清是哪条、哪个值。"""
+        with self.assertRaises(SystemExit) as cm:
+            self.merge_one(where, secs)
+        msg = str(cm.exception)
+        self.assertIn("a.wav", msg)
+        for w in wanted:
+            self.assertIn(w, msg)
+        return msg
+
+    def test_consistent_states_pass(self):
+        """三个合法组合都得能过：none · first_only [1] · later_too [2]（以及 first_only 之外的第一个非 1 秒）。"""
+        for where, secs in (("none", []), ("first_only", [1]), ("later_too", [2]), ("later_too", [1, 3])):
+            rows = self.merge_one(where, secs)["rows"]
+            self.assertEqual(rows[0]["measures"]["tone_where"], where)
+            self.assertEqual(rows[0]["measures"]["tone_present_seconds"], secs)
+
+    def test_unknown_where_stops_naming_path_and_value(self):
+        self.assert_stops("sometimes", [2], "sometimes")
+
+    def test_where_is_not_a_string_stops(self):
+        self.assert_stops(None, [], "verdict.where")
+
+    def test_none_must_have_empty_seconds(self):
+        self.assert_stops("none", [1], "none")
+
+    def test_non_none_must_have_seconds(self):
+        for where in ("first_only", "later_too"):
+            self.assert_stops(where, [], where)
+
+    def test_first_only_must_be_exactly_the_first_second(self):
+        for secs in ([1, 2], [2]):
+            self.assert_stops("first_only", secs, "first_only")
+
+    def test_later_too_must_not_be_only_the_first_second(self):
+        self.assert_stops("later_too", [1], "later_too")
+
+    def test_seconds_must_be_a_list_of_ints(self):
+        for secs in (None, 2, "2", {"2": 1}, [1.0], ["2"], [True]):
+            self.assert_stops("later_too", secs, repr(secs))
+
+    def test_drop_list_is_not_what_crashes_first(self):
+        """不在丢的名单里也得先过自洽这一关：不自洽的单音行不能因为「不丢」就被放过。"""
+        with self.assertRaises(SystemExit) as cm:
+            screen_tone.merge([screen_row("a.wav")], [raw_tone_row("a.wav", "later_too", [])], ["none"])
+        self.assertIn("later_too", str(cm.exception))
 
 
 class Stops(unittest.TestCase):

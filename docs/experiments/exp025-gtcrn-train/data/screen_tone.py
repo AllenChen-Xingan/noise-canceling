@@ -7,6 +7,9 @@
 - 「单音在哪就该丢」只有一个正本：`screen_rules.json` 的 `tone_check.drop_where`。代码里不写那份名单，
   改判据只改 json；名单外的位置（例如只在开头）保持原判定，那一项要改 `split.py`，不在这里做
 - 对不上就停：筛查里有一条、单音里查不到 → 停并报出是哪条。悄悄跳过一条，就等于把单音带进训练
+- 单音结论本身要自洽：`verdict.where` 只许 `none` / `first_only` / `later_too`，`present_seconds` 必须是整数列表，
+  且「没有」⇔ 空列表、「只在第 1 秒」⇔ `[1]`（正本见 `diagnose.tone_verdict`，秒号从 1 起）。
+  对不上就停：那说明这份 jsonl 不是 `diagnose.py --tone` 写的，后面的判定无从谈起
 - 只动三样：`verdict` · `reasons` · `measures`；其余字段原样带过去，输入列表本身不改写
 用法：
     python3 screen_tone.py --screen screen.jsonl --tone tone.jsonl --out screen-tone.jsonl
@@ -99,8 +102,32 @@ def tone_reason(tone):
     return f"有单音：{hz:g} Hz 在第 {_seconds_text(secs)} 秒（diagnose.py --tone）"
 
 
+WHERE = ("none", "first_only", "later_too")  # 正本：`diagnose.tone_verdict` 只发这三个
+NONE, FIRST_ONLY, LATER_TOO = WHERE
+
+
+def _check_verdict(path, verdict):
+    """核 where 与 present_seconds 是不是 `diagnose.tone_verdict` 可能发出的那一对（秒号从 1 起）。
+
+    where 只许那三个值；秒列表必须是整数列表；「没有单音」⇔ 空列表；「只在第 1 秒」⇔ [1]。
+    任何一项对不上都停：不自洽的单音行会让判定与理由各说各话，不如先停下重跑。"""
+    where, secs = verdict["where"], verdict.get("present_seconds")
+    if where not in WHERE:
+        raise SystemExit(f"{path} 的单音结论 where = {where!r}，不是 {' / '.join(WHERE)} 之一："
+                         "这份单音 jsonl 不是 diagnose.py --tone 写的，先重跑")
+    if not isinstance(secs, list) or not all(isinstance(s, int) and not isinstance(s, bool) for s in secs):
+        raise SystemExit(f"{path} 的单音结论 where = {where!r}，present_seconds = {secs!r}"
+                         " 不是整数列表（秒号从 1 起）：这份单音 jsonl 不是 diagnose.py --tone 写的")
+    if (where == NONE) != (not secs):
+        raise SystemExit(f"{path} 的单音结论 where = {where!r} 与 present_seconds = {secs!r} 对不上："
+                         "where 是 none 时秒列表必须为空，否则必须非空")
+    if (where == FIRST_ONLY) != (secs == [1]):
+        raise SystemExit(f"{path} 的单音结论 where = {where!r} 与 present_seconds = {secs!r} 对不上："
+                         "first_only 必须正好是 [1]")
+
+
 def _verdict_of(tone_row):
-    """取这一条的单音结论；没有 `tone` 键说明 diagnose.py 没加 --tone 就跑过，不能当成「没有单音」。"""
+    """取这一条的单音结论并核它自洽；没有 `tone` 键说明 diagnose.py 没加 --tone 就跑过，不能当成「没有单音」。"""
     tone = tone_row.get("tone")
     if not isinstance(tone, dict):
         raise SystemExit(
@@ -111,6 +138,7 @@ def _verdict_of(tone_row):
         raise SystemExit(
             f"{tone_row.get('path')} 的单音行里没有 verdict.where："
             f"tone = {json.dumps(tone, ensure_ascii=False)[:200]}")
+    _check_verdict(tone_row.get("path"), verdict)
     return tone
 
 
@@ -132,7 +160,7 @@ def merge(screen_rows, tone_rows, drop_where):
     for row in screen_rows:
         tone = _verdict_of(tones[row["path"]])
         where = tone["verdict"]["where"]
-        secs = list(tone["verdict"].get("present_seconds") or [])
+        secs = list(tone["verdict"]["present_seconds"])
         new = copy.deepcopy(row)
         measures = new.setdefault("measures", {})
         measures["tone_where"] = where
