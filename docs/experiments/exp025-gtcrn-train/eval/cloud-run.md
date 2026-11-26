@@ -16,7 +16,7 @@
 - **检查点**：用每个运行的 `ckpt/best.pt`，也就是开发份上 hybrid 损失最低的那一次（trainer 提议，我同意）。开发份和评测集来源不同，不算拿评测集挑模型；这一点是 trainer 的推断，没逐段比过。最后一步的 `step-0005000.pt` 不评；要评就是 12 份，时间翻倍
 - **报告种子 = s1**（大总管定，2026-11-26）：人看到的题面写的是「种子 1」（D120），trainer 的种子编号是 0、1、2，按字面就是 `a-s1`、`b-s1`。开评前已定，不许看完结果再挑
 - **都走甲路**（离线整段，`eval-plan.md` 第二节第 2 步），同一个评测代码提交 `EVAL_COMMIT`（开机时的 main），同样 `--no-safety --qa --rules v2`
-- ⚠️ **这 7 份判不出「过」**：甲路只有声明延迟，`accept` 的延迟一行固定是「判不了」，所以总判定最多到「判不了」（大总管定）。其余各行的过 / 不过照常有效。要判延迟，得另跑乙路：A 转流式后再跑 3 份，转流式的工具还没有，另开 issue 交 trainer，不挡本次。B 没有乙路（大总管已把这条记成 trainer 的风险）
+- ⚠️ **这 7 份判不出「过」**：甲路只有声明延迟，`accept` 的延迟一行固定是「判不了」，所以总判定最多到「判不了」（大总管定）。其余各行的过 / 不过照常有效。要判延迟，得另跑乙路：A 转流式后再跑 3 份，转流式的工具还没有，另开 #232 交 trainer，不挡本次。B 没有乙路（大总管已把这条记成 trainer 的风险）
 - 本单不跑：内置原版在 `EVAL_COMMIT` 上的重跑（`eval-plan.md` 第二节第 1 步）。7 份都在同一个提交上跑，判读只用这 7 份，不用旧读数；所以这一步只在要和旧差距表对照时才需要
 
 ## 二、机器、时长、花费
@@ -82,6 +82,7 @@ python3 rp.py preflight <机器> --repo <仓库> --commit <EVAL_COMMIT>
    - 原版：上传本机那份 `gtcrn-official.onnx`，核 sha256 = `384e2c68…`。`official-recheck.onnx` 的 sha256 和它不一样时只记下、不停：甲路对拍用的是上传那份
 4. **离线推理**（每个模型；`NAME` 是第一节的系统名，`ONNX` 是对应文件）：
    ```sh
+   cd $R      # 第 4、6 步都在仓库根下跑
    E=docs/experiments/exp025-gtcrn-train/eval/run_gtcrn_offline.py
    $PY $E --onnx $ONNX --name $NAME --probe                       # 先量前视、对齐、一段耗时
    for i in 0 1 2 3; do $PY $E --onnx $ONNX --name $NAME --run-id formal1 --shard $i/4 & done; wait
