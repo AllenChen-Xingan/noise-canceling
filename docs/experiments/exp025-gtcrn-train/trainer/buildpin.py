@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import re
-from hashlib import sha256
 from pathlib import Path
 
 ID_RE = re.compile(r"^[0-9a-f]{16}$")  # build_id = loader.build_id_of 取 sha256 的前 16 位（十六进制）
@@ -49,19 +48,42 @@ def code_sha256(mod=None) -> dict:
 
 
 def _read_record(builds_dir: Path, build_id: str) -> tuple[dict | None, str | None]:
-    """读 `builds_dir/<build_id>/build.json`。返回 (记录, None)，读不出来返回 (None, 一句中文原因)。"""
+    """读 `builds_dir/<build_id>/build.json`。返回 (记录, None)，读不出来返回 (None, 一句原因)。
+
+    原因不带主语（是谁的登记由 `_record_fault` 拼上）：同一个读法要给基线 build、变体的期望 id 两处用。
+    """
     rec_path = builds_dir / build_id / "build.json"
     try:
         rec = json.loads(rec_path.read_text())
     except FileNotFoundError:
-        return None, (f"数据 build {build_id} 没登记：{rec_path} 不存在——先按 data/loader.py 的 register_build "
+        return None, (f"没登记：{rec_path} 不存在——先按 data/loader.py 的 register_build "
                       "把这份分片与配方登记进仓（记录是开训的前提）")
     except (OSError, ValueError) as e:
-        return None, (f"数据 build {build_id} 的登记记录 {rec_path} 读不了（{type(e).__name__}: {e}）——"
+        return None, (f"的登记记录 {rec_path} 读不了（{type(e).__name__}: {e}）——"
                       "用 register_build 重新登记一份")
     if not isinstance(rec, dict):
-        return None, (f"数据 build {build_id} 的登记记录 {rec_path} 不是 JSON 对象："
-                      "用 register_build 重新登记一份")
+        return None, (f"的登记记录 {rec_path} 不是 JSON 对象：用 register_build 重新登记一份")
+    return rec, None
+
+
+def _record_fault(builds_dir: Path, build_id: str, who: str) -> tuple[dict | None, str | None]:
+    """`who` 在 builds_dir/<build_id> 的那份登记可不可信：在 · valid 是 true · 记录自己对得上。
+
+    返回 (记录, None) 或 (None, 一句中文原因)。`who` 是一句话的主语，由调用方给（「数据 build X」
+    「变体配方 Y（应登记成 build Z）」）：同一个判法要给基线和变体两处用，不许各写一份。
+    """
+    rec, why = _read_record(builds_dir, build_id)
+    if why is not None:
+        return None, f"{who} {why}"
+    rec_path = builds_dir / build_id / "build.json"
+    if rec.get("valid") is not True:
+        return None, (f"{who} 的登记记录 {rec_path} 写着 valid = {rec.get('valid')!r}："
+                      "交集检查没过（作废的 build），这批分片不能用来训练")
+    said, calc = rec.get("build_id"), loader_module().build_id_of(rec)
+    if said != build_id or calc != build_id:
+        return None, (f"{who} 的登记记录 {rec_path} 自己对不上：记录里的 build_id 是 {said!r}，"
+                      f"按记录内容算出来是 {calc!r}，目录名是 {build_id}——三个必须相同"
+                      "（记录被手改过，或者放错了目录）")
     return rec, None
 
 
@@ -76,22 +98,14 @@ def build_problems(recipe_path, build_id, builds_dir=None) -> list[str]:
     if bad is not None:
         return [bad]
     bdir = Path(builds_dir) if builds_dir is not None else default_builds_dir()
-    rec, why = _read_record(bdir, build_id)
+    rec, why = _record_fault(bdir, build_id, f"数据 build {build_id}")
     if why is not None:
         return [why]
     rec_path = bdir / build_id / "build.json"
-    if rec.get("valid") is not True:
-        return [f"数据 build {build_id} 的登记记录 {rec_path} 写着 valid = {rec.get('valid')!r}："
-                "交集检查没过（作废的 build），这批分片不能用来训练"]
-    said, calc = rec.get("build_id"), loader_module().build_id_of(rec)
-    if said != build_id or calc != build_id:
-        return [f"数据 build {build_id} 的登记记录 {rec_path} 自己对不上：记录里的 build_id 是 {said!r}，"
-                f"按记录内容算出来是 {calc!r}，目录名是 {build_id}——三个必须相同"
-                "（记录被手改过，或者放错了目录）"]
     ps: list[str] = []
     rp = Path(recipe_path)
     try:
-        rsha = sha256(rp.read_bytes()).hexdigest()
+        rsha = loader_module().sha_bytes(rp.read_bytes())
     except OSError as e:
         ps.append(f"读不了配方 {rp}（{type(e).__name__}: {e}）：要读到配方文件的字节才算 sha256，"
                   f"才能和登记记录 {rec_path} 对（配置里的相对路径按 trainer/ 解）")
@@ -109,10 +123,15 @@ def build_problems(recipe_path, build_id, builds_dir=None) -> list[str]:
 
 
 def variant_build_problems(variant_path, base_build_id, builds_dir=None) -> list[str]:
-    """变体配方要**自己**有一份合格的登记：同一个分片（index_sha256 与基线 build 相同）、配方 sha256 是
-    这份变体的；否则 loader 拿变体配方算出来的 id 没登记，开训时直接拒绝。
+    """变体配方要**自己**有一份合格的登记：**loader 现在会算出来的那个 id** 上得有一份 valid、自己一致的记录。
 
-    基线 build 自己的记录读不出来时不报（build_problems 已经报过那一条，这里没有 index 可比）。
+    预测 id 的办法只有一种：拿基线的身份字段（分片索引、切分表、分片、数据代码），把配方换成这份变体的
+    sha256，再用 loader.build_id_of 算一遍——这就是 loader 开训时算出来的那个。只比「配方与 index 相同」
+    不够：数据代码改过、只重登记了基线 build 时，旧变体记录照样配方与 index 都对，但算出来是另一个 id，
+    loader 会拒绝，所以这里必须精确预测 id，不能扫目录找「看起来对」的记录。
+
+    基线的数据代码是否还是现在这份，由 build_problems（基线 build 自己的记录）已判过；这里只管变体那一份。
+    基线记录读不出来时不报（build_problems 已经报过那一条，这里没有身份字段可取）。
     """
     bdir = Path(builds_dir) if builds_dir is not None else default_builds_dir()
     base, _why = _read_record(bdir, str(base_build_id))
@@ -120,16 +139,13 @@ def variant_build_problems(variant_path, base_build_id, builds_dir=None) -> list
         return []
     vp = Path(variant_path)
     try:
-        vsha = sha256(vp.read_bytes()).hexdigest()
+        vsha = loader_module().sha_bytes(vp.read_bytes())
     except OSError as e:
         return [f"读不了变体配方 {vp}（{type(e).__name__}: {e}）：要读到文件的字节才算 sha256"]
-    want_index = base.get("index_sha256")
-    for d in sorted(p for p in bdir.iterdir() if p.is_dir()) if bdir.is_dir() else []:
-        rec, _ = _read_record(bdir, d.name)
-        if rec is None or rec.get("valid") is not True:
-            continue
-        if rec.get("recipe_sha256") == vsha and rec.get("index_sha256") == want_index:
-            return []
-    return [f"变体配方 {vp.name} 没有合格的登记记录：{bdir} 里没有一份「valid、配方 sha256 = {vsha[:12]}…、"
-            f"index_sha256 与基线 build {base_build_id} 相同」的 build——先按 data/loader.py 的 register_build "
-            "把这份变体登记进仓，否则 loader 会拒绝它"]
+    m = loader_module()
+    parts = {k: base[k] for k in m.ID_KEYS if k in base}
+    parts["recipe_sha256"] = vsha
+    want = m.build_id_of(parts)
+    who = f"变体配方 {vp.name}（按基线 build {base_build_id} 的分片与现在的数据代码算出来应登记成 build {want}）"
+    _rec, why = _record_fault(bdir, want, who)
+    return [] if why is None else [why]
