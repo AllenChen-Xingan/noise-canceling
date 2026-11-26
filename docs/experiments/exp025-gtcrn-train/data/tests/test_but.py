@@ -199,6 +199,77 @@ class Screen(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.run_src()
 
+class Strata(unittest.TestCase):
+    """`stratum_unit_regex` + `min_dev_per_stratum`：按房间分层切，每层开发份至少一个单位。"""
+
+    UNIT_REGEX = [{"match": "^train-raw/but-reverbdb/([^/]+)/MicID\\d+/([^/]+)/", "unit": "\\1/\\2",
+                   "why": "房间 + 扬声器布置：同一次布置的 31 个麦克风同时录的是同一段底噪，必须同进一份"}]
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.files = fixtures_but.make_tree(self.root)
+        self.r = feat_rule(unit_regex=self.UNIT_REGEX, unit_regex_required=True, exclude_if_meta=META,
+                           stratum_unit_regex="^([^/]+)/", min_dev_per_stratum=1)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_src(self, rule=None):
+        return split.split_source(self.root, SRC, rule or self.r, split.load_rules()["seed"],
+                                  split.load_rules()["splits"], workers=2)
+
+    def units(self):
+        radio = set(fixtures_but.radio_files())
+        return sorted({"/".join(p.split("/")[2:3] + p.split("/")[4:5]) for p in self.files if p not in radio})
+
+    def test_unit_and_stratum_from_path(self):
+        rows = self.run_src()
+        units = {r["unit"] for r in rows}
+        self.assertEqual(units, set(self.units()))
+        st = split.unit_strata(units, self.r)
+        self.assertEqual(set(st.values()), {fixtures_but.C236, fixtures_but.ROOM112})
+        self.assertEqual(st[f"{fixtures_but.C236}/SpkID01_20190503_S"], fixtures_but.C236)
+
+    def test_each_room_stratum_has_a_dev_unit(self):
+        rows = self.run_src()
+        dev = {r["unit"].split("/")[0] for r in rows if r["split"] == "dev"}
+        self.assertEqual(dev, {fixtures_but.C236, fixtures_but.ROOM112})
+
+    def test_without_min_dev_the_room_has_no_dev(self):
+        """不是空检查：每个房间只有 2 个单位时，9:1 最大余数法会把开发份都挤掉。"""
+        r = copy.deepcopy(self.r)
+        r.pop("min_dev_per_stratum")
+        rows = self.run_src(r)
+        self.assertEqual({r0["split"] for r0 in rows}, {"train"})
+
+    def test_min_dev_takes_highest_rank_from_train(self):
+        """确定性：从训练份拿 rank_key 最大的补进开发份。"""
+        rows = self.run_src()
+        got = {r["unit"] for r in rows if r["split"] == "dev"}
+        want = set()
+        for room in (fixtures_but.C236, fixtures_but.ROOM112):
+            us = [u for u in self.units() if u.startswith(room + "/")]
+            want.add(max(us, key=lambda u: split.rank_key(split.load_rules()["seed"], SRC, u)))
+        self.assertEqual(got, want)
+
+    def test_no_unit_in_two_splits(self):
+        by = {}
+        for r in self.run_src():
+            by.setdefault(r["unit"], set()).add(r["split"])
+        self.assertTrue(all(len(v) == 1 for v in by.values()), by)
+
+    def test_deterministic(self):
+        a = [(r["path"], r["split"]) for r in self.run_src()]
+        b = [(r["path"], r["split"]) for r in self.run_src()]
+        self.assertEqual(a, b)
+
+    def test_unrecognised_unit_stops(self):
+        r = copy.deepcopy(self.r)
+        r["stratum_unit_regex"] = "^(nomatch)/([^/]+)/"
+        with self.assertRaises(SystemExit):
+            self.run_src(r)
+
 
 if __name__ == "__main__":
     unittest.main()
