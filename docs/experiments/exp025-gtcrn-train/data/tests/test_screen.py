@@ -7,11 +7,14 @@
 """
 import copy
 import json
+import os
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import soundfile as sf
@@ -160,6 +163,100 @@ class Tagger(unittest.TestCase):
         not_checked = [r for r in res["reasons"] if r.startswith("未查")]
         self.assertGreaterEqual(len(not_checked), 2)  # 人声与标签，还应有混响时间
         self.assertTrue(any("混响" in r for r in not_checked), not_checked)
+
+
+class DefaultTagger(unittest.TestCase):
+    """panns_inference 各版本导出 labels 的方式不同：0.1.1 直接是 527 个名字的 list，旧版是带 .labels 的对象。
+    模型不装，用塞进 sys.modules 的假模块喂；假模型的形状照真 PANNs 0.1.1 写。
+    """
+
+    N_LABELS = 527
+    EMBED = 2048
+
+    @staticmethod
+    def names(n=N_LABELS):
+        ns = [f"L{i}" for i in range(n)]
+        for i, real in enumerate(("Speech", "Inside, small room", "Music")):
+            ns[i] = real
+        return ns
+
+    @staticmethod
+    def clipwise(n=N_LABELS):
+        clip = np.zeros(n, dtype=np.float32)
+        clip[:3] = (0.1, 0.8, 0.05)
+        return clip
+
+    def _run(self, labels, width=None):
+        width = self.N_LABELS if width is None else width
+        seen = []
+
+        class FakeTagging:
+            def __init__(self, checkpoint_path=None, device="cpu"):
+                self.checkpoint_path = checkpoint_path
+                self.device = device
+
+            def inference(self, x):
+                # 真 PANNs：收 (1, N) float32，回 (clipwise (1, 527), embedding (1, 2048))
+                assert isinstance(x, np.ndarray) and x.dtype == np.float32 and x.ndim == 2
+                assert x.shape[0] == 1, x.shape
+                seen.append(x.shape)
+                return (self_clip[None, :], np.zeros((1, DefaultTagger.EMBED), np.float32))
+
+        self_clip = self.clipwise(width)
+        mod = types.ModuleType("panns_inference")
+        mod.labels = labels
+        mod.AudioTagging = FakeTagging
+        with patch.dict(sys.modules, {"panns_inference": mod}):
+            out = screen.default_tagger()(noise(1.0, sr=32000))
+        self.assertTrue(seen, "假模型的 inference 没被调到")
+        return out
+
+    def test_labels_as_plain_list_of_names(self):
+        tags = self._run(self.names())
+        self.assertEqual(len(tags), self.N_LABELS)
+        self.assertTrue(all(isinstance(k, str) for k in tags))
+        self._check_three(tags)
+
+    def test_labels_as_object_with_labels_attribute(self):
+        tags = self._run(types.SimpleNamespace(labels=self.names()))
+        self.assertEqual(len(tags), self.N_LABELS)
+        self._check_three(tags)
+
+    def _check_three(self, tags):
+        # 真 PANNs 的 clipwise 是 float32，比到 1e-6 就行
+        for name, want in (("Speech", 0.1), ("Inside, small room", 0.8), ("Music", 0.05)):
+            self.assertAlmostEqual(tags[name], want, places=6, msg=name)
+
+    def test_label_count_mismatch_raises(self):
+        with self.assertRaises(ValueError) as cm:
+            self._run(["Speech", "Music"])
+        self.assertIn("标签", str(cm.exception))
+
+    def test_no_models_still_runs_without_the_package(self):
+        with patch.dict(sys.modules, {"panns_inference": None}):
+            with self.assertRaises(SystemExit):
+                screen.default_tagger()
+
+
+@unittest.skipUnless(os.environ.get("VDN_MODELS") == "1",
+                     "要装 silero-vad 与 panns-inference 并下 PANNs 模型（约 300 MB），"
+                     "云上人工跑：VDN_MODELS=1 python -m unittest tests.test_screen.RealModels")
+class RealModels(unittest.TestCase):
+    """真模型的契约：装好 silero-vad 与 panns-inference 后，两者对 1 秒白噪声的输出形状与取值范围。"""
+
+    def test_default_vad_on_one_second_of_noise(self):
+        probs = screen.default_vad()(noise(1.0))
+        self.assertEqual(probs.ndim, 1)
+        self.assertEqual(probs.shape[0], 16000 // 512)
+        self.assertTrue(np.all((probs >= 0.0) & (probs <= 1.0)), probs)
+
+    def test_default_tagger_on_one_second_of_noise(self):
+        tags = screen.default_tagger()(noise(1.0, sr=32000))
+        self.assertEqual(len(tags), 527)
+        self.assertTrue(all(isinstance(k, str) for k in tags))
+        self.assertIn("Speech", tags)
+        self.assertIn("Inside, small room", tags)
+        self.assertTrue(all(0.0 <= v <= 1.0 for v in tags.values()))
 
 
 class Rir(unittest.TestCase):
