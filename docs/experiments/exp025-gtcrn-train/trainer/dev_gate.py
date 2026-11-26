@@ -45,7 +45,9 @@ def _check(run_dir: Path, known: dict, step: int, tol: float) -> dict:
     except (OSError, ValueError) as e:
         return _incomplete(f"读不了运行记录：{e}")
     d = rec["config"]["data"]
-    have = {**{k: d.get(k) for k in META_KEYS}, "build_id": rec.get("data_build_id")}
+    # 参照读数是开发份上的：比开发份的 build id。老 run.json 没记 dev_build_id 时退回训练那份（#212）
+    dev_build = rec.get("dev_build_id") or rec.get("data_build_id")
+    have = {**{k: d.get(k) for k in META_KEYS}, "build_id": dev_build}
     bad = [k for k in META_KEYS if have.get(k) is None or meta.get(k) is None or have.get(k) != meta.get(k)]
     if bad:
         return _incomplete("口径对不上：" + ", ".join(f"{k} 运行 {have.get(k)!r} ≠ 参照 {meta.get(k)!r}" for k in bad))

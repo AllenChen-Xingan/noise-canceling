@@ -225,11 +225,12 @@ def check_reproduce(device) -> dict:
             "rule": "最大差 ≤ 2 个 16 位量化步"}
 
 
-# 参照读数文件里必须和本次一致的数据字段：开发份换了任何一项，读数就不可比
+# 参照读数文件里必须和本次一致的数据字段：开发份换了任何一项，读数就不可比；build_id 是**开发份**的（#212）
 KNOWN_META_KEYS = ("kind", "build_id", "dev_n", "dev_seed", "seg_s", "batch", "dev_batches")
 
 
 def known_meta(cfg, build_id, device) -> dict:
+    """参照读数的 meta：build_id 传开发份的（data.dev_recipe 时与训练份不同），这张表描述的是开发集。"""
     d = cfg.data
     return {"kind": d.kind, "build_id": build_id, "dev_n": d.dev_n, "dev_seed": d.dev_seed, "seg_s": d.seg_s,
             "batch": d.batch, "dev_batches": d.dev_batches, "device": str(device), "torch": torch.__version__}
@@ -308,7 +309,8 @@ def run(cfg, *, overfit_steps: int, overfit_lr: float, timing_steps: int,
     rep["overfit"] = check_overfit(cfg, batch, device, overfit_steps, overfit_lr, reference=overfit_ref)
     rep["reproduce"] = check_reproduce(device)
     if known_dev:
-        rep["known_dev"] = check_known_dev(cfg, dev, device, known_dev, known_tol, build_id=source.build_id)
+        rep["known_dev"] = check_known_dev(cfg, dev, device, known_dev, known_tol,
+                                           build_id=getattr(source, "dev_build_id", source.build_id))
     elif cfg.data.kind == "loader":
         # 014 第 3 步要「原检查点在开发份上读数等于已知成绩」：正式数据没给基准就不算通过（codex 第 4 轮 #3）
         rep["known_dev"] = {"pass": False, "incomplete": True,
@@ -338,7 +340,8 @@ def write_known_dev(cfg, out: Path) -> int:
     if h is None or not np.isfinite(h):
         print(f"开发份读数不是有限数，不写：{got}", file=sys.stderr)
         return 1
-    rec = {"readings": {"hybrid": float(h)}, "meta": known_meta(cfg, source.build_id, device),
+    rec = {"readings": {"hybrid": float(h)},
+           "meta": known_meta(cfg, getattr(source, "dev_build_id", source.build_id), device),
            "written_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
     with open(out, "x") as f:  # 独占新建：与上面的存在检查之间被别人抢先写了也不覆盖
         f.write(json.dumps(rec, ensure_ascii=False, indent=2))
