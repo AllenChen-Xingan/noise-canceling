@@ -6,3 +6,4 @@
 - `du.txt`：删前总字节数 22289901880
 - `index.sha256`：`index.json` 的 sha256，等于 build bc0e9e7b 记录的 `index_sha256`（traindata 本机核过）
 - `index.json` 本体 37.6 MB，超过 10 MB 不进仓（CLAUDE.md 铁律 8）；在主仓 `_tmp/20261126-cloudrun-batch5/batch4-final/index.json`，打包件 `batch4-final.tar.gz` sha256 aa74b90d817a9f3003958724144923380dbd4c5aac225eec0e338e59b09d707e
+- 不另存 NAS 或云盘（大总管 noise-canceling-meta 2026-11-26 定；人已定第四批「没用就删」）。要重建：按旧提交（build bc0e9e7b 的代码，main a6bb1ced）重跑切分与分片，生成的 `index.json` 用 `index.sha256` 核对、分片用 `shards.sha256` 核对。主仓 `_tmp` 那份留着，丢了也不要紧
