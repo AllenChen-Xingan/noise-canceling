@@ -441,3 +441,9 @@
 - 2026-11-26 trainer 验收 pi calibnan（test_guards 31 绿，0.0064 美元）；pi 提交范围 devnan 1ba6c800..a1f00093 · calibnan b37a8560..7c793840；结构改动 pi trainer-guards-finite 已起（自己分支 w/trainer-guards-finite，2 美元）；防绕过扫描只收 train · guards · watchdog（大总管同意）。
 - 2026-11-26 名额规则细化：针对性测试合计约 1 分钟以内且不计时，不用名额（不限文件数）；全套测试 · 构建 · 计时才要。
 - 2026-11-26 00:26Z evalcmp 还名额（pi evalcmp-votecount 5 次小测试 + clippy 全过，自报）；名额空闲，trainer 结构改动交完后申请。
+- 2026-11-26 00:27Z 名额 → evalcmp：验收 pi evalcmp-votecount（98bdfa6b..acc34d33 已快进合入 fix/asr-probe-dedup，0.0153 美元）：旧提交上看新测试红 + 全工作区 clippy · 全量测试，约 6 min。
+- 2026-11-26 00:28Z traindata 登记代码验收（200 过 · 1 跳过，pi 0.072 美元；pi 代码 c5394187..8420eef2 被 hook 署名 Claude，验收提交 e3fdac7d 带 Code: pi）；命令 data/cloud-batch2.md 交 cloudrun，新分片 /workspace/shards/batch2 约 21 GB（推算）。大总管定：traindata 自己推送（D109）；cowork/open-office 共用拥挤室内录音致权重翻倍 → 按来源去重抽样（派 pi）；pi-worker 报语法错 = 子代理改技能中途，宣布改完前停新起 pi。
+- 2026-11-26 00:29Z 批 cloudrun 第二批登记开机：cpu3c 4 核 · 自删 3 h · ≤0.36 美元；等 traindata 推送 feat/data-batch2 后开；新 clone /workspace/repo-<前 8 位> + venv_cache.sh 共享 venv（首次实跑，取分步计时）；跑完盘约 139/200 GB（推算）；删机前取回 /root/jobs 日志。
+- 2026-11-26 00:30Z traindata 推送 feat/data-batch2（c0c9bda3，外发检查无命中）；拥挤室内权重偏差这批记进 recipe.json noise_pools._说明（进 build 身份）与交接页，按来源去重抽样下一批派 pi 修。
+- 2026-11-26 00:31Z（cloudrun 报）开 CPU 机 g1wyqz5tsvqvia（cpu3c 4 核，0.12 美元/h，自删 3 h），代码 c0c9bda3 → /workspace/repo-c0c9bda3；共享 venv 只按 data/requirements.txt；开机前累计 7.78 美元。
+- 2026-11-26 技能 coordinator-dispatch 第二次改完（技能仓 c3546a9，未推送）：pi 档 git 规则机器强制（提交须带 Agent: pi + Model:，push · gh pr/issue create 拦下）；大总管亲手复跑 bash -n · e2e-mock PASS · git-policy PASS。通知四个手下可以新起 pi，验收提交加 Code: pi 取消。合并方式仍为 merge commit（铁律 15），pi 标注能留在 main。
