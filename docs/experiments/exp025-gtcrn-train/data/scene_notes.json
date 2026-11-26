@@ -1,0 +1,8 @@
+{
+ "_说明": "这里只写每个目标场景的已知限制（人写的文字），不进任何 build id：build 记录只看 recipe.json · split_rules.json · 切分表 · sources.json。scene_table.py 把这里的文字贴到每个场景的表下面；目标场景缺一条就停（表里不许空着「已知限制」）。改这里的文字不会改变任何 build，也不用重跑切分",
+ "rail-air-cabin": "只有地铁车厢录音（CochlScene Subway），飞机舱没补（D111 补充）",
+ "canteen": "只有 DEMAND PCAFETER 一个来源",
+ "transit-hub": "只有 CochlScene SubwayStation 一个来源",
+ "meeting-room": "待定（D114）",
+ "hotel-room": "只有一间房 R112，开发份与训练份同房不同布置"
+}
