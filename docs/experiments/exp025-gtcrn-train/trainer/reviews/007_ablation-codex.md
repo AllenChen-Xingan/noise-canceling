@@ -52,3 +52,10 @@ P0×0 P1×1 P2×2。逐条核实，3 条都属实。
 P0×0 P1×1 P2×1。逐条核实，都属实。
 - **P1｜续训不核对开发份 build**（第 3 轮 #1）：开发配方原地改了而训练配方没变时，续训照常，run.json 仍留旧的 dev_build_id，judge 会把新开发份的读数当旧的比。改：check_resume 在记录里有 dev_build_id 时比对当前值，不同就拒绝续训；旧记录没有这个字段的照常续训。交 pi `trainer-ablation-fix4`。
 - **P2｜不设 dev_recipe 时 run.json 多两个字段**（第 3 轮 #2）：第三次提出，仍留在 #217。理由同第 2 轮：不影响判结果，也不影响开训。
+
+### 第 3 轮的处理（2026-11-26）
+
+由 pi `trainer-ablation-fix4` 修，提交 060fe3f9..b4d67554，花费 0.0084 美元。
+- 改动：`check_resume` 加了参数 `dev_build_id`。记录里有、这次也有、两者不同时，拒绝续训和重建。train.py 只多一个变量，两处调用都传它。
+- 红灯：trainer 在 060fe3f9 上复现（复制件是 git 仓库，带模型源码），2 败 2 过。失败的两条都是「DID NOT RAISE」：开发份变了，旧代码仍放行续训和重建。照常续训的两条本来就过。
+- 绿灯：合入后 test_ablation、test_ablation_judge、test_formal、test_data、test_train、test_review_fixes 共 157 过 2 跳过。
