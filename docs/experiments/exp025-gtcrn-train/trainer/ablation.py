@@ -49,7 +49,7 @@ RULE = (
     "否则判「消融分不出: keep as is (off)」。比较都是严格不等式。"
     "每个运行的整份 config 也要对得上：拍平成「段.键」逐项和 abl-base-s0 比，只有 "
     + "、".join(CFG_IGNORE) +
-    " 三项允许各不同，其余任何一项不同、或缺键，都算不同；"
+    " 三项允许各不同，其余任何一项不同、或缺键，都算不同（缺键 · 键值是 null · 空对象，各算各的）；"
     f"而且每个运行都必须照设计跑：model.variant = {WANT_VARIANT} · schedule.max_steps = {STEP} · "
     "data.dev_recipe 指明的开发份配方等于基线的 data.recipe（7 个运行同用一份开发集）· "
     "run.seed 是运行矩阵给这个名字的种子（差一个种子就量不出 floor）· data.recipe 是这个名字说的那一份"
