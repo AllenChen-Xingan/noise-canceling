@@ -2,8 +2,8 @@
 的登记记录对不上，就不许开训。
 
 正式训练 6 个运行 = 模型 A、B × 种子 0、1、2，每批 3 个同时跑一张卡。加训场景人已定（D113），名字按
-地点键表查（specs/schema/eval-suite.schema.json）。仓里的分片与配方已填好（build bc0e9e7b566421f0，
-正本 buildpin.py），所以 tmp 里每一项用例都自带一份假登记记录（`builds_dir` 参数指过去）。
+地点键表查（specs/schema/eval-suite.schema.json）。仓里的分片与配方已填好（第五批基线 build，指路见
+`tests/_shipped.py`），所以 tmp 里每一项用例都自带一份假登记记录（`builds_dir` 参数指过去）。
 """
 from pathlib import Path
 
@@ -12,6 +12,7 @@ import yaml
 
 import config as cfgmod
 import formal
+from _shipped import SHIPPED_BUILD, SHIPPED_SHARDS
 from test_buildpin import make_build, make_recipe, recipe_text
 
 HERE = Path(__file__).resolve().parents[1]
@@ -54,8 +55,8 @@ def test_formal_yaml_values():
     # 其余全用默认：5000 步 · 每 500 步评估与存盘 · 4.39 美元每小时
     assert cfg.schedule.max_steps == 5000 and cfg.schedule.eval_every == 500
     assert cfg.schedule.ckpt_every == 500 and cfg.limits.usd_per_hour == pytest.approx(4.39)
-    # 分片与配方已填好（build bc0e9e7b566421f0 的 baseline 分片与基线配方）
-    assert cfg.data.shard_root == "/workspace/shards/batch4"
+    # 分片与配方已填好（第五批基线 build 的 baseline 分片与基线配方）
+    assert cfg.data.shard_root == SHIPPED_SHARDS
     assert cfg.data.recipe == "../data/recipe.json"
 
 
@@ -118,7 +119,7 @@ def test_shipped_configs_have_no_other_problems():
     """仓里的配置填好了：除了「登记记录还没到这条分支」（traindata 的分支未合）那一类，不许再报别的。
     占位 / 分片 / 配方 / data_build 的 shipped 断言在 test_buildpin.py。"""
     ps = formal.problems(RUNS)
-    leftovers = [s for s in ps if "bc0e9e7b566421f0" not in s]
+    leftovers = [s for s in ps if SHIPPED_BUILD not in s]
     assert leftovers == [], leftovers
 
 

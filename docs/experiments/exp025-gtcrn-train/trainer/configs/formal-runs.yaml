@@ -3,8 +3,8 @@
 # 开训前 `python formal.py check` 必须通过：它查 base 里的 TODO 占位、data_build 的登记记录、
 # target_scenes 的名字是否在地点键表里、target_scenes 是否与配方一致、矩阵是否恰好 6 个。
 base: formal.yaml
-# 新基线 build（traindata 登记）：check 拿配方与数据代码的 sha256 对它的登记记录（data/builds/<id>/build.json）
-data_build: bc0e9e7b566421f0
+# 第五批基线 build（traindata 登记）：check 拿配方与数据代码的 sha256 对它的登记记录（data/builds/<id>/build.json）
+data_build: df759bb8d606a209
 # 人定加训场景（D113）；名字按地点键表查（specs/schema/eval-suite.schema.json）。
 # 这一份不是正本：加训哪几个场景只由配方 knobs.target_scene.scene 决定（正本 data/recipe.json，
 # traindata 定），这里必须与它一致 —— 缺的、多的各报一条（#213）。

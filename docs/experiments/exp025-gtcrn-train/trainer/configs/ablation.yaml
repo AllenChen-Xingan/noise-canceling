@@ -5,8 +5,8 @@
 # hybrid 变好 / 变差。7 个运行（2 个基线 + 5 个单旋钮变体）写在 configs/ablation-runs.yaml，
 # 命令与判法由 `python ablation.py commands|judge` 出。
 #
-# 数据：分片是 data/builds/bc0e9e7b566421f0 登记的 baseline build，放在云盘 /workspace/shards/batch4
-# （traindata 的 data/cloud-batch4b.md）；配方是基线配方 ../data/recipe.json，5 份变体配方在
+# 数据：分片是 data/builds/df759bb8d606a209 登记的第五批基线 build，放在云盘 /workspace/shards/batch5
+# （traindata 的 data/cloud-batch5.md 第 24 行）；配方是基线配方 ../data/recipe.json，5 份变体配方在
 # ../data/recipes/ablation/。开训前必须让 `python ablation.py check` 通过，否则不许开机——它会逐份核对
 # 登记记录（配方与数据代码的 sha256 必须和登记时一模一样，判法见 buildpin.py），还会查变体只改一个旋钮。
 run:
@@ -16,7 +16,7 @@ model:
 schedule:
   max_steps: 1000  # 每个运行 1000 步（每 500 步评估 · 存盘用的是默认值，不用在这里再写一遍）
 data:
-  shard_root: /workspace/shards/batch4  # 云盘上的 baseline 分片（build bc0e9e7b566421f0 用的那一份）
+  shard_root: /workspace/shards/batch5  # 云盘上的 baseline 分片（build df759bb8d606a209 用的那一份）
   recipe: ../data/recipe.json  # 基线配方（相对 trainer/，train.py 就在 trainer/ 下跑）
   num_workers: 6  # 3 个同时跑 × 6 = 18，容器约 22 核
 limits:
