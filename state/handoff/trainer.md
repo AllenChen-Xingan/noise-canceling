@@ -1,10 +1,10 @@
 # 现状页 · trainer（批次 20261116-b19）
 
-- **状态**：数据消融 7 组（#212，分支 `feat/trainer-ablation-scenes`）已验收，codex 7 轮达停止线，已推送，开 PR 交大总管合并。场景比对（#213）等 traindata 的 `scene_table` 进 main（随关闭 #205 的 PR）再派 pi。不开机：分片路径等新 build 登记
+- **状态**：新基线 build bc0e9e7b 上的 H100 一单（#224 的执行单）已跑完并判完：闸门全过，消融 2 个旋钮有用（混响、均衡）、3 个分不出，配方不用改。读数写进 trainer/README.md 和 smoke_reports/（分支 `feat/trainer-b4-results`），开 PR 交大总管验收。正式训练执行单草稿 `trainer/plan-h100-formal.md`（等第五批 build 登记、人点头）
 - **手上**：训练器 · 训练损失 · 模型变体（issue #157）
 - **交代**：`_tmp/20261116-b19/trainer.md`；新规则 `_tmp/20261116-b19/common-pi-rule-20261126.md`（代码派 pi 写）；大总管固定名 `noise-canceling-meta`（人定 2026-11-26，轮换后不变；旧名 noise-canceling-87 停用）
-- **做到哪**（2026-11-26）：数据消融（#218）已合入 main。分支 feat/trainer-b4-run（从 main a6bb1ced，含 traindata #223）：formal 与 ablation 配置填成新基线 build bc0e9e7b566421f0（分片 /workspace/shards/batch4、配方 ../data/recipe.json），两份运行矩阵钉 `data_build`；新 `buildpin.py` 让两个 check 核对登记记录（配方与数据代码的 sha256、变体按 loader 会算的 id 找记录）；`formal.py check` 比对配方 `knobs.target_scene.scene` 与 `target_scenes`（#213）。两个 check 实测都退出 0。H100 执行单 `trainer/plan-h100-b4.md`（大总管原则上批：甲段 ≤0.1 美元，乙段 1.2 小时、7 美元；冒烟 + 两个 dev_gate 过了才跑 7 组消融）。下一步：PR 合入后把执行单与提交号交 cloudrun、抄送大总管，等大总管说「开」。待办 #198 · #210 · #217
-- **下一步**：大总管合并 #212 的 PR → 新 build 登记后填 `data.shard_root`，`ablation.py check` 过了报大总管批，cloudrun 在 H100 上跑（估约 1.8 美元）→ `ablation.py judge` 出结论。#213 等 scene_table 进 main
+- **做到哪**（2026-11-26）：#224（新基线开跑准备 + #213）已合入 main 98f1cf32；cloudrun 照 plan-h100-b4.md 跑完，H100 花 4.32 美元。分支 feat/trainer-b4-results（从 main 98f1cf32）：7 份读数进 smoke_reports/20261126-*，README 加一节（含两点限制：噪声底只来自 2 个种子；均衡只有 2.8 倍噪声底、证据不强），新增 plan-h100-formal.md（开训前先在第五批 build 上冒烟，时长与花费见第三、四节）。待办 #198 · #210 · #217
+- **下一步**：大总管合并本 PR → 第五批 build 登记后，派 pi 把 formal.yaml / formal-runs.yaml 改指第五批（带测试，`formal.py check` 退出 0）→ 执行单过 codex、开训前清单给人看 → 人点头后交 cloudrun。pump 损失分支等第一批正式训练结果
 
 ## 改了哪些文件
 全部在 `docs/experiments/exp025-gtcrn-train/trainer/`，说明见该目录 `README.md`：
@@ -86,3 +86,5 @@
 
 - 11-26 数据消融（issue #212，分支 feat/trainer-ablation-scenes 从 main f1efacbc）：pi 共起 7 次（trainer-ablation 0.0419 · fix1 0.0135 · fix2 0.0216 · fix3 0.0282 · fix4 0.0084 · fix5 0.0075 · fix6 0.0066，合计 0.1277 美元），提交 ad5980f6..95afdd65（Agent: pi），fix1 起用 `--cwd` 接同一个 worktree，trainer 用 merge 合入。trainer 自查发现 2 处（基线不完整仍算 base · 只比数据字段），codex 7 轮：P1 共 6 条全修（整份配置比对 · 设计固定项 · 运行身份 · 续训核对开发份 build · 旧记录续训兼容 · dev_gate 与冒烟参照用开发份 build），每条都由 trainer 在修复前的提交上复现红。P2：metrics 畸形行、缺键与 null 已修；run.json 结构变化留 #217。合入后 10 个测试文件 239 过 2 跳过。pi 两次 `pi-worker stop` 停不掉，trainer 用 kill；pi 一次用了 git stash（共享栈，已当场归还，已叮嘱不再用）
 - 11-26 新基线开跑准备 + #213（分支 feat/trainer-b4-run）：pi 起 3 次（trainer-b4-pin 约 0.039 · trainer-scene-src 约 0.018 · trainer-b4-fix1 约 0.012，合计约 0.069 美元，按各自最后一次花费通知），提交 31037607..0584092e（rebase 后）、a9cd0d80..0cd4e275、bddb7ed9..43eb949f（Agent: pi），trainer 用 merge 合入。#213 与 fix1 的红由 trainer 在修复前的复制件上复现（6 败 · 8 败）。codex 4 轮（记录 reviews/008_b4-run-codex.md）：P1 共 3 条全修（旧变体记录被放行 · 乙段时限超批准 · 甲段时限超 0.1 美元），P2 2 条已修；第 3、4 轮无问题，达停止线。合入后 11 个测试文件 294 过 2 跳过
+
+- 11-26 新基线一单的读数（分支 feat/trainer-b4-results）：cloudrun 取回主仓 _tmp/20261126-trainer-b4/，两个包 sha256 本机重算一致（O e6925628…、ablation 8aa73703…）。trainer 本机跑 `ablation.py judge` 退出 0：base 3.84142、噪声底 0.00779；混响 +0.091 有用、均衡 +0.022 有用（证据不强）、削波 −0.005 / 多噪声 +0.005 / 高信噪比 +0.001 分不出。3 个 A 同时跑每步实测 0.342–0.349 s（之前推断 0.347 s）。没用 pi，没花模型费。
