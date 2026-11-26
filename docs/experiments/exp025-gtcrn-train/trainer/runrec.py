@@ -17,6 +17,8 @@ from pathlib import Path
 
 import torch
 
+import config as cfgmod
+
 HERE = Path(__file__).resolve().parent
 
 # 续训时允许改的配置（其余一改就拒绝续训：批量、种子、数据、损失等变了，接着训就不是同一个实验）
@@ -75,12 +77,35 @@ def _atomic_write(path: Path, write, commit_ok=lambda: True) -> None:
             tmp.unlink()
 
 
-def config_diff(a: dict, b: dict, prefix=()) -> list[tuple]:
+_MISSING = object()  # 「这个键在记录里根本没有」（区别于「写了 null」）
+
+
+def config_defaults() -> dict:
+    """配置默认值的正本在 `config.py` 的 dataclass（CLAUDE.md 五.5 唯一真相源）：这里只取，不手抄。"""
+    return cfgmod.to_dict(cfgmod.Config())
+
+
+def _is_default(defaults: dict, path: tuple, val) -> bool:
+    cur = defaults
+    for k in path:
+        if not isinstance(cur, dict) or k not in cur:
+            return False
+        cur = cur[k]
+    return cur == val
+
+
+def config_diff(a: dict, b: dict, prefix=(), defaults: dict | None = None) -> list[tuple]:
+    """两处配置的差异（键路径）。传了 defaults 时：旧记录**缺的键**在新值等于默认值这算没变
+    ——老 run.json 是加字段之前写的，没有这个键，但那次运行用的就是默认值（codex 第 4 轮 #1）。
+    缺键而新值不是默认值、或键在但值不同，照样算改了。"""
     out = []
-    for k in sorted(set(a) | set(b)):
-        va, vb = a.get(k), b.get(k)
+    for k in sorted(set(a) | set(b), key=str):
+        va, vb = a.get(k, _MISSING), b.get(k, _MISSING)
+        if defaults is not None and va is _MISSING and vb is not _MISSING \
+                and _is_default(defaults, prefix + (k,), vb):
+            continue
         if isinstance(va, dict) and isinstance(vb, dict):
-            out += config_diff(va, vb, prefix + (k,))
+            out += config_diff(va, vb, prefix + (k,), defaults)
         elif va != vb:
             out.append(prefix + (k,))
     return out
@@ -183,19 +208,24 @@ def start_record(cfg_dict: dict, build_id: str, num_workers: int, extra: dict) -
     }
 
 
-def check_resume(rec: dict, cfg_dict: dict, build_id: str) -> list[str]:
-    """续训前核对；返回不许续训的原因（空 = 可以）。"""
+def check_resume(rec: dict, cfg_dict: dict, build_id: str, dev_build_id: str | None = None) -> list[str]:
+    """续训前核对；返回不许续训的原因（空 = 可以）。
+    build_id 是训练数据那份；dev_build_id 是开发份那份（配了 data.dev_recipe 时另算）：开发配方原地改过，
+    接着训就换了开发集，读数不可比（#212 数据消融）。老 run.json 没有 dev_build_id 时不比。"""
     why = []
     stop = rec.get("stop") or {}
     if stop.get("reason") == "nonfinite":  # 训崩过：从同一检查点同一批再跑会确定性地再崩，先诊断（自审 P2）
         why.append(f"上次在第 {stop.get('step')} 步训崩（损失不是有限数），先诊断；要重跑请换 run.name")
     if not build_id or build_id == "unknown":
         why.append("数据 build id 为空，无法核对数据版本")
-    for path in config_diff(rec.get("config", {}), cfg_dict):
+    for path in config_diff(rec.get("config", {}), cfg_dict, defaults=config_defaults()):
         if path not in RESUMABLE_CHANGES:
             why.append("配置改了：" + ".".join(path))
     if rec.get("data_build_id") != build_id:
         why.append(f"数据 build 变了：{rec.get('data_build_id')} → {build_id}")
+    old_dev = rec.get("dev_build_id")
+    if old_dev is not None and dev_build_id is not None and old_dev != dev_build_id:
+        why.append(f"开发份 build 变了：{old_dev} → {dev_build_id}")
     return why
 
 

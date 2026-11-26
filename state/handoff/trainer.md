@@ -1,10 +1,10 @@
 # 现状页 · trainer（批次 20261116-b19）
 
-- **状态**：正式训练加训场景（issue #209，分支 `feat/trainer-target-scenes`）已验收 pi 的 3 个提交、快进合入，codex 评审中；之后推送开 PR。不开机：分片与配方路径等第三批登记（会议室底噪筛查没过，人选先查清）
+- **状态**：数据消融 7 组（#212，分支 `feat/trainer-ablation-scenes`）已验收，codex 7 轮达停止线，已推送，开 PR 交大总管合并。场景比对（#213）等 traindata 的 `scene_table` 进 main（随关闭 #205 的 PR）再派 pi。不开机：分片路径等新 build 登记
 - **手上**：训练器 · 训练损失 · 模型变体（issue #157）
-- **交代**：`_tmp/20261116-b19/trainer.md`；新规则 `_tmp/20261116-b19/common-pi-rule-20261126.md`（代码派 pi 写）；大总管 2026-11-26 起是 `noise-canceling-43`（接替 c4）
-- **做到哪**（2026-11-26）：守卫（#199）、正式训练配置草稿（#201）已合入 main。加训场景 4 个（D113：rail-air-cabin · canteen · meeting-room · transit-hub）填进 `configs/formal-runs.yaml`，`formal.py check` 按地点键表（`specs/schema/eval-suite.schema.json` 的 `MeetingPlace`）查场景名；现只报两处路径占位、退出 1。待办 #198（守卫 P2）；pump-loss 分支等第一批正式训练出数后再排
-- **下一步**：#209 开 PR 交大总管合并；第三批登记后填 `data.shard_root` / `data.recipe`（顺带把占位文字里的「第二批 / D110」改成第三批），`formal.py check` 过了再交 cloudrun 开训
+- **交代**：`_tmp/20261116-b19/trainer.md`；新规则 `_tmp/20261116-b19/common-pi-rule-20261126.md`（代码派 pi 写）；大总管 2026-11-26 起是 `noise-canceling-87`
+- **做到哪**（2026-11-26）：加训场景（#211）已合入 main。数据消融：`configs/ablation.yaml` 与 `configs/ablation-runs.yaml` 是 7 个运行（基线 ×2 种子 · eq / clip / n_noises / reverb 各关一个 · high_snr 开），只训 A、每组 1000 步。`ablation.py` 有三个子命令：`check`（核 traindata 的 5 个变体配方：各自只改一个开关的 on，base_sha256 对得上）、`commands`（分 3+3+1 批）、`judge`（判法 RULE，大总管定）。新配置字段 `data.dev_recipe`：7 组的开发份与标定批都用基线配方；续训会核对开发份 build。用 traindata 的真变体（feat/data-batch3 e8728ffe）核过：只差 shard_root 一条。待办 #198 · #210 · #217
+- **下一步**：大总管合并 #212 的 PR → 新 build 登记后填 `data.shard_root`，`ablation.py check` 过了报大总管批，cloudrun 在 H100 上跑（估约 1.8 美元）→ `ablation.py judge` 出结论。#213 等 scene_table 进 main
 
 ## 改了哪些文件
 全部在 `docs/experiments/exp025-gtcrn-train/trainer/`，说明见该目录 `README.md`：
@@ -83,3 +83,5 @@
 - 11-26 正式训练配置草稿（issue #200，分支 feat/trainer-formal-config 从 main ab0f4f0a）：pi trainer-formal-config 提交 4c687043..2228fc9b（Agent: pi），花费 0.0113 美元；trainer 读 diff、亲手跑 test_formal + test_train 33 条过、`formal.py check` 现退出 1（2 个 TODO + 场景空），快进合入。不开机，等第二批数据登记、第二版差距表、D110
 
 - 11-26 加训场景（issue #209，分支 feat/trainer-target-scenes 从 main da9008e1）：pi trainer-target-scenes 提交 d9c5f527..3afe9e9c（Agent: pi），花费 0.0027 + 0.0050 = 0.0077 美元。pi-worker 中途 runner / tail 进程死了，pi 收不到「准许」卡约 50 分钟，stop 杀不掉；trainer kill 后用 `--cwd --session` 接回原会话。trainer 复现第 1 个提交的红（8 败 17 过），读 diff、亲手跑 test_formal + test_train 41 条过、`formal.py check` 只报两处路径占位、退出 1，文件 ≤ 600 行，快进合入。pi 是 `--cwd` 接回的，`pi-worker clean` 不认，worktree `noise_canceling.worktrees/trainer-target-scenes` 与分支 `w/trainer-target-scenes` 请大总管删
+
+- 11-26 数据消融（issue #212，分支 feat/trainer-ablation-scenes 从 main f1efacbc）：pi 共起 7 次（trainer-ablation 0.0419 · fix1 0.0135 · fix2 0.0216 · fix3 0.0282 · fix4 0.0084 · fix5 0.0075 · fix6 0.0066，合计 0.1277 美元），提交 ad5980f6..95afdd65（Agent: pi），fix1 起用 `--cwd` 接同一个 worktree，trainer 用 merge 合入。trainer 自查发现 2 处（基线不完整仍算 base · 只比数据字段），codex 7 轮：P1 共 6 条全修（整份配置比对 · 设计固定项 · 运行身份 · 续训核对开发份 build · 旧记录续训兼容 · dev_gate 与冒烟参照用开发份 build），每条都由 trainer 在修复前的提交上复现红。P2：metrics 畸形行、缺键与 null 已修；run.json 结构变化留 #217。合入后 10 个测试文件 239 过 2 跳过。pi 两次 `pi-worker stop` 停不掉，trainer 用 kill；pi 一次用了 git stash（共享栈，已当场归还，已叮嘱不再用）

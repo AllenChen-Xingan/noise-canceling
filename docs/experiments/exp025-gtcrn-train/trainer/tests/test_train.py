@@ -11,6 +11,7 @@ import torch
 import yaml
 
 import config as cfgmod
+import data
 import losses
 import train
 
@@ -110,6 +111,106 @@ def test_resume_refused_when_batch_changes(tmp_path):
     train.train(_cfg(tmp_path, **{"schedule.max_steps": 2}))
     with pytest.raises(RuntimeError, match="data.batch"):
         train.train(_cfg(tmp_path, **{"data.batch": 3}))
+
+
+def _dev_cfg(tmp_path, **over):
+    """配了 data.dev_recipe 的运行：开发份另用一份配方（#212 数据消融）。"""
+    cfg = _cfg(tmp_path, **over)
+    return dataclasses.replace(cfg, data=dataclasses.replace(cfg.data, dev_recipe="dev.json"))
+
+
+def _source_with_dev_id(dev_id: str):
+    """假数据源：用合成源，只把开发份 build id 换成给定值（模拟同一份 dev_recipe 路径上的内容变了）。"""
+    def make(cfg):
+        src = data.SyntheticSource(cfg)
+        src.dev_build_id = dev_id
+        return src
+    return make
+
+
+def test_resume_refused_when_dev_build_changes(tmp_path, monkeypatch):
+    """开发配方原地改过（dev build id 变了）：接着训就换了开发集，消融读数不可比，拒绝续训。"""
+    monkeypatch.setattr(train, "make_source", _source_with_dev_id("dev-a"))
+    train.train(_dev_cfg(tmp_path, **{"schedule.max_steps": 2}))
+    monkeypatch.setattr(train, "make_source", _source_with_dev_id("dev-b"))
+    with pytest.raises(RuntimeError, match="拒绝续训.*开发份"):
+        train.train(_dev_cfg(tmp_path))
+
+
+def test_resume_allowed_when_dev_build_same(tmp_path, monkeypatch):
+    monkeypatch.setattr(train, "make_source", _source_with_dev_id("dev-a"))
+    train.train(_dev_cfg(tmp_path, **{"schedule.max_steps": 2}))
+    assert train.train(_dev_cfg(tmp_path))["step"] == 6
+
+
+def _as_old_format(rec: dict) -> dict:
+    """把 run.json 改回老格式（加 data.dev_recipe 与顶层 dev_build_id 之前的运行）：这两个键当时根本不存在。"""
+    rec["config"]["data"].pop("dev_recipe", None)
+    rec.pop("dev_build_id", None)
+    return rec
+
+
+def test_resume_allowed_when_old_run_json_has_no_dev_build_id(tmp_path, monkeypatch):
+    """老 run.json 是老格式（既没有 data.dev_recipe、也没有顶层 dev_build_id）仍然可以续：向后兼容。"""
+    monkeypatch.setattr(train, "make_source", _source_with_dev_id("dev-a"))
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 2}))
+    root, rec, _ = _read(tmp_path)
+    (root / "run.json").write_text(json.dumps(_as_old_format(rec)))
+    monkeypatch.setattr(train, "make_source", _source_with_dev_id("dev-b"))
+    assert train.train(_cfg(tmp_path))["step"] == 6
+
+
+def test_resume_allowed_when_old_run_json_lacks_dev_recipe(tmp_path):
+    """codex 第 4 轮 #1：老 run.json 的 config.data 里没有 dev_recipe 键，新代码写的是默认空串。
+    缺键 + 新值是默认值 ≠ 配置改了：同配置续训必须放行。"""
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 2}))
+    root, rec, _ = _read(tmp_path)
+    old = json.dumps(_as_old_format(rec))
+    (root / "run.json").write_text(old)
+    assert "dev_recipe" not in json.loads(old)["config"]["data"]  # 确实是老格式
+    assert "dev_build_id" not in json.loads(old)
+    assert train.train(_cfg(tmp_path))["step"] == 6
+
+
+def test_rebuild_allowed_when_old_run_json_lacks_dev_recipe(tmp_path, monkeypatch):
+    """同一处判据的另一条路径（写了 run.json、第 0 步没存下就被杀）：老格式记录底下重建要放行。"""
+    def die(self, state, step, keep):
+        raise KeyboardInterrupt("模拟被杀")
+
+    monkeypatch.setattr(train.RunDir, "save", die)
+    with pytest.raises(KeyboardInterrupt):
+        train.train(_cfg(tmp_path))
+    root = tmp_path / "t"
+    rec = json.loads((root / "run.json").read_text())
+    assert rec["phase"] == "init"
+    (root / "run.json").write_text(json.dumps(_as_old_format(rec)))
+    monkeypatch.undo()
+    assert train.train(_cfg(tmp_path))["step"] == 6
+
+
+def test_resume_refused_when_old_run_json_lacks_dev_recipe_but_new_sets_one(tmp_path):
+    """老记录没有 dev_recipe，新配置却指定了另一份开发配方：开发集换了，仍然拒绝续训（不是一律放行缺键）。"""
+    train.train(_cfg(tmp_path, **{"schedule.max_steps": 2}))
+    root, rec, _ = _read(tmp_path)
+    (root / "run.json").write_text(json.dumps(_as_old_format(rec)))
+    with pytest.raises(RuntimeError, match="data.dev_recipe"):
+        train.train(_dev_cfg(tmp_path))
+
+
+def test_rebuild_after_crash_refused_when_dev_build_changes(tmp_path, monkeypatch):
+    """另一处调用：写了 run.json、第 0 步没存下就被杀，重启时开发份 build 变了也不许重建。"""
+    def die(self, state, step, keep):
+        raise KeyboardInterrupt("模拟被杀")
+
+    monkeypatch.setattr(train, "make_source", _source_with_dev_id("dev-a"))
+    monkeypatch.setattr(train.RunDir, "save", die)
+    with pytest.raises(KeyboardInterrupt):
+        train.train(_dev_cfg(tmp_path))
+    assert json.loads((tmp_path / "t" / "run.json").read_text())["phase"] == "init"
+    monkeypatch.undo()
+    monkeypatch.setattr(train, "make_source", _source_with_dev_id("dev-b"))
+    with pytest.raises(RuntimeError, match="拒绝重建.*开发份"):
+        train.train(_dev_cfg(tmp_path))
 
 
 @pytest.mark.parametrize("over,reason", [({"limits.max_hours": 1e-9}, "max_hours"),
