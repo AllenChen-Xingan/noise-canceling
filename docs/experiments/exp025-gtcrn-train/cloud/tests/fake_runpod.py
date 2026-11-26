@@ -24,6 +24,7 @@ class FakeRunPod:
         self.files = {}          # 机器里的文件：{path: bytes}
         self.modes = {}          # 机器里文件的权限：{path: int}
         self.jobs = {}           # {job: (rc, log)}，start_job 后立即「跑完」
+        self.job_logs = {}       # {任务名前缀: (rc, log)}，按任务名给不同结果；查不到再用 next_job
         self.price, self.vcpu, self.queue = price, vcpu, queue
         self.n = 0
         self.cpu_price = C.CPU_USD_PER_VCPU_HR_EXPECTED
@@ -65,6 +66,14 @@ class FakeRunPod:
             v = {"id": f"vol_{self.n}", "name": d["name"], "size": d["size"], "dataCenter": d["dataCenter"]}
             self.volumes[v["id"]] = v
             return 201, v
+        if p.startswith("/v2/network-volumes/") and m == "PATCH":
+            vid = p.rsplit("/", 1)[1]
+            if vid not in self.volumes:
+                return 404, {"detail": "not found"}
+            if d.get("size", 0) < self.volumes[vid]["size"]:
+                return 400, {"detail": "network volume storage cannot be reduced"}
+            self.volumes[vid].update(d)
+            return 200, self.volumes[vid]
         if p.startswith("/v2/network-volumes/") and m == "DELETE":
             vid = p.rsplit("/", 1)[1]
             if vid not in self.volumes:
@@ -104,6 +113,13 @@ class FakeRunPod:
         if p == "/v2/billing/pods":
             return 200, {"records": [], "metadata": {"totals": {"totalAmount": 0.01}}}
         return 404, {"detail": f"fake: no route {m} {p}"}
+
+    def job_result(self, job: str):
+        """这次后台任务「跑完」的结果：按任务名前缀查 job_logs，再退到 next_job，最后是默认的测速输出。"""
+        for prefix, res in self.job_logs.items():
+            if job.startswith(prefix):
+                return res
+        return getattr(self, "next_job", None) or (0, '{"nproc": 16}\n')
 
     # 只认 rp_ops 发出的几种命令形状
     def exec(self, argv, env=None):
@@ -178,7 +194,7 @@ class FakeRunPod:
             return dict(ok, stdout=base64.b64encode(chunk).decode())
         if "nohup sh -c" in script:
             job = re.search(r"/([\w.-]+)\.rc", script).group(1)
-            self.jobs[job] = self.jobs.get(job, getattr(self, "next_job", None) or (0, '{"nproc": 16}\n'))
+            self.jobs[job] = self.jobs.get(job, self.job_result(job))
             return ok
         if script.startswith("cat ") and ".rc" in script:
             job = re.search(r"/([\w.-]+)\.rc", script).group(1)

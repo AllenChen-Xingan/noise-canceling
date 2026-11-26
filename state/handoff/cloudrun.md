@@ -44,3 +44,26 @@
 - 2026-11-25 上午（tmux 退出后 --resume）：大总管 noise-canceling-df 已删机 8mnlr0uvh5pu4a（split 失败 rc=1：OpenSLR28 的 RWCP_type4_rir_000l.wav 不在任何 rir_list；素材上传停在约 650 MB）。账本核对无误，累计 1.26 美元，平台 0 台。codex 第 2–4 轮的 P1 已修到能落代码的程度，78 条测试过；反复提的三件残余风险交大总管裁决（记录 cloud/reviews/codex-review.md）。等 traindata 修 split 后再开机：重跑 split→shard→register→pack，素材续传 4 路、分批前台跑、先核云上已有块。
 - 2026-11-25 03:20Z 前后：第二台 CPU 机 e49nwj60n7hfpg 上做完 traindata 六步（build 49349c158a4defdc）、exp013 云上 build aa9f（与本机 6323 只差浮点舍入，改用 6323 音频）、评测素材 3485 个与 6323 音频 5020 个上传并逐个核对、inputs-verify「原料全对」。已删机，账上 0 台，累计 1.52 美元。
 - codex 评审跑到第 14 轮：第 13、14 轮连续无 P0/P1，满足停止线；P2 留 #163–#167、#169、#171。95 条测试全过；与 main（971c7eec）合并无冲突。等大总管放行开 PR（Closes #158）。
+- 2026-11-25 下午到晚上（分支 exp/025-cloud-baseline）：
+  - CPU 机换镜像 `rust:1.99.1-trixie`（`config.CPU_IMAGE`，钉 digest）。原因：旧镜像 Ubuntu 22.04 的 glibc 2.35 链接不了 vdn-eval 的 ort。新镜像冒烟四样都过：python3、机器内自删、put-secret 假值、编译。
+  - H100 冒烟：甲段在 CPU 上全过（122 过、1 跳过）；乙段第 1 步 overfit 一项不过，按收尾取回后删机，交 trainer。
+  - 基线 480 段：main 27d2808a 跑完（08:11Z）。识别因一次超时被账本标「待核」后停发，只覆盖 189 段，不一致率 23.6%。结果在 `baseline/runs/20261125-053026-e5sjgks999cqbf/`（2a22515e）与主仓 `_tmp/20261125-cloudrun-baseline/run480/`。
+  - 本机睡眠约 10 小时，期间机器到 6 小时时限自删；看门狗晚记账，估价偏高约 0.27 美元。
+  - 账上 0 台，累计估 3.22 美元。待命：等 evalcmp 核结果、清 review、补跑识别，然后一起收尾；分支先不开 PR。
+- 待办（大总管 2026-11-25 记）：每份仓库各带约 8 GB 的 .venv 是浪费；正式训练前改成一份共享 venv（整包或按 requirements 的 sha256 命名），所有副本共用。与「venv 整包解到容器盘」（装环境分步计时之后）一起做。
+- 2026-11-26：派 pi（cloudrun-venvcache，花 0.0162 美元）写了 `cloud/remote/venv_cache.sh`（共享 venv）与 `cloud/remote/fetch_archives.sh`（边下边记 md5），各带测试；验收时打回 1 条 P1（GNU mktemp 不认 `-t` 无 X 模板）和 3 条 P2，修后 132 条测试全过，已合入本分支。还没上云实跑。
+  - pi 写的代码 = 提交 ec06f94e..0f91ec80（3 个：ec06f94e、881e5dda、0f91ec80），署名 `Agent: pi`、`Model: deepseek-v4.1-flash-1017-fast`；在 pi 自己的分支 w/cloudrun-venvcache 上提交，快进合入，没被 hook 改署名。以后派 pi 照此记提交号范围；我验收后的提交加一行 `Code: pi (<模型名>)`（大总管 c4 2026-11-26 定）。
+- 2026-11-26：派 pi（cloudrun-diskcheck，花 0.0083 美元）给 preflight 加网络盘余量检查：少于 30 GB 不开训练（`config.MIN_FREE_GB`，配额读平台接口）。pi 提交 56086350..1fac34b9（2 个，带 Agent: pi），快进合入；140 条测试全过。
+- 2026-11-26：派 pi（cloudrun-fetchnomd5，花 0.0057 美元）给 fetch_archives.sh 加「md5 未知」写法：md5 栏写 `-` 时必须给字节数，只按字节数判，md5 与 sha256 都记进 checksums.txt（mode=bytes-only）。供 BUT ReverbDB（上游没发校验值）用。pi 提交 c8b8a839..46b504ff（2 个），快进合入；145 条测试全过。
+
+## 2026-11-26 01:20–03:30Z（cloudrun）
+- 第二批登记：build 6173bf9ca6a6e143，traindata 核过、已进仓。机器 g1wyqz5tsvqvia 已删，约 0.16 美元。
+- BUT ReverbDB：字节数 9308593693 · md5 3ad91777… · sha256 d0d14cdd…（网络盘 archives/checksums.txt）。解出 wav 12307 个、txt 1748 个，占 23 GB。压缩包按 c4 的决定删了。
+- 识别补跑：480 段已合并，calls +1953，spent +0.1875 美元，吃字有值的段数 82 → 452。取回到主仓 _tmp/20261126-asr-rerun/rerun-20261126-013313/。机器 glx9kkda13gckv 已删，约 0.17 美元。
+- 第三批（代码 7badd9a1）：筛查结果 C236 keep 32/620，不到一半，按规则停了，等 traindata 定。机器 jm4m7pg5zmif3n 还开着。first-batch 没删（D112 的条件是第三批成功）。
+- 小错：第一次开识别补跑时，提交号是手敲的，敲错了；脚本在 checkout 那一步就停了，没花识别费。以后提交号一律用 git rev-parse 取。
+- 03:40–04:27Z 第三批续跑（代码 b81a9645，机器 byvkixm3sfzju6，约 0.09 美元，已删）：只登记 R112，得 build 10aa3a9fb8cef48f（valid，12 个场景）；包 sha256 e8c5c3d0…。C236 诊断 10 条：电平起伏中位数 7.46 dB，频谱峰多在 250 Hz。3 段 C236 按 D113 取回主仓 _tmp/20261126-c236-listen/，不进仓。盘 168 / 200 GB；first-batch 等 traindata 通知后按 D112 删。
+- 待办（D112 条件已满足，traindata 核过 build 10aa3a9f）：下一台批下来的机器开机后先做：取回 /workspace/shards/first-batch 的 build 小文件（不含音频）到主仓 _tmp → 删 first-batch → 报盘余量。batch2 不动。删前已问 trainer 有没有在用。下一台训练机开机前必须先删（盘 168/200，剩 32 GB，门槛 30）。c4 会话已不在，开机要新大总管批。
+  - trainer 回（2026-11-26）：没有任何运行、脚本、配置在读 first-batch。提到它的只有历史冒烟命令和 smoke_reports/。正式训练的分片路径还是占位，不会指向它。删除前的依赖检查已完成，只差开机。
+- 2026-11-26 07:5xZ：派 pi（cloudrun-cap100，花 0.0076 美元）按 D115 把 `config.SPEND_CAP_USD` 从 60 改 100，带测试。pi 提交 4eb3dd62..8121f8c0（3 个，带 Agent: pi），快进合入；README 和 plan-eval-baseline 里的 60 美元由我改；147 条测试全过。
+- 2026-11-26 07:38–07:45Z：按 D112 删 first-batch（机器 3h08g5wq4xr6fp，约 0.014 美元）。删前取回 index.json（sha256 dbfa14f1…）和 66 个 tar 的清单与 sha256，放在主仓 _tmp/20261126-first-batch-small/。盘 168 → 153 / 200 GB。

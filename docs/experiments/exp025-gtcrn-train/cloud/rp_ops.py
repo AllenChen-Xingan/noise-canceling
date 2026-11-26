@@ -97,6 +97,26 @@ def _create_volume_locked(cli: Client, data_center: str, size_gb: int, name: str
     return v
 
 
+def resize_volume(cli: Client, new_gb: int, name: str = C.VOLUME_NAME, ledger_path: str = L.DEFAULT_PATH) -> dict:
+    """扩网络盘（只能变大，平台规定）。花钱：和建盘一样过账本锁、账本核对、花费上限（多出的 GB 预留一个月）。"""
+    with L.budget_lock(ledger_path):
+        rows = check_ledger_covers_cloud(cli, ledger_path)
+        v = find_volume(cli, name)
+        if not v:
+            raise SystemExit(f"没有网络盘 {name}")
+        cur = int(v.get("size") or 0)
+        if not (cur < new_gb <= C.VOLUME_MAX_GB):
+            raise SystemExit(f"[REFUSED] 新大小要大于现在的 {cur} GB、且不超过 {C.VOLUME_MAX_GB} GB：{new_gb}")
+        L.check_budget(rows, L.volume_hourly(new_gb - cur), C.VOLUME_RESERVE_HOURS)
+        out = cli.patch(f"/v2/network-volumes/{v['id']}", {"size": int(new_gb)})
+        now = L.iso(L.utcnow())
+        L.append_row({"ts_utc": now, "action": "volume_resize", "resource_id": v["id"],
+                      "data_center": v.get("dataCenter", ""), "usd_per_hr": f"{L.volume_hourly(new_gb):.6f}",
+                      "started_utc": now, "note": f"{cur} → {new_gb} GB ≈ {C.volume_usd_per_month(new_gb)} USD/月"},
+                     ledger_path)
+        return out or {}
+
+
 def delete_volume(cli: Client, volume_id: str, ledger_path: str = L.DEFAULT_PATH, note: str = "") -> None:
     """删网络盘并记账（盘里的数据会一起没，调用前确认）。"""
     cli.delete(f"/v2/network-volumes/{volume_id}")
@@ -125,7 +145,7 @@ def pod_body(name: str, data_center: str, volume_id: Optional[str], max_hours: f
         "cloud": C.CLOUD,
         **compute_spec(cpu),
         "dataCenterIds": [data_center],
-        "image": C.IMAGE,
+        "image": C.CPU_IMAGE if cpu else C.IMAGE,
         "disk": C.CONTAINER_DISK_GB,
         "cmd": W.pod_cmd(max_hours),
         "env": W.pod_env(),

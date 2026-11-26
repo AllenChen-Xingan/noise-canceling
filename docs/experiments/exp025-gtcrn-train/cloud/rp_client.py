@@ -130,6 +130,9 @@ class Client:
     def delete(self, path):
         return self.request("DELETE", path)
 
+    def patch(self, path, body, retries: int = 0):
+        return self.request("PATCH", path, body=body, retries=retries)
+
 
 def _retry_after(headers: dict) -> Optional[float]:
     for k, v in headers.items():

@@ -14,3 +14,40 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-25T01:12:11Z	pod_delete	8mnlr0uvh5pu4a	cpu3c x4	US-MO-1	0.1200	2026-11-25T00:25:16Z	2026-11-25T01:12:11Z	0.7819	0.0938		空转：split 失败 rc=1、上传随 tmux 退出中断；大总管删机止损
 2026-11-25T01:29:16Z	pod_create	e49nwj60n7hfpg	cpu3c x4	US-MO-1	0.1200	2026-11-25T01:29:16Z					max_hours=3.0
 2026-11-25T03:24:31Z	pod_delete	e49nwj60n7hfpg	cpu3c x4	US-MO-1	0.1200	2026-11-25T01:29:16Z	2026-11-25T03:24:31Z	1.9208	0.2305		任务都完成：traindata 六步、exp013 build aa9f、素材与 6323 上传核对
+2026-11-25T04:17:15Z	pod_create	ciuc12isly6w84	cpu3c x4	US-MO-1	0.1200	2026-11-25T04:17:15Z					max_hours=1.0
+2026-11-25T04:27:09Z	pod_delete	ciuc12isly6w84	cpu3c x4	US-MO-1	0.1200	2026-11-25T04:17:15Z	2026-11-25T04:27:09Z	0.1650	0.0198		register+pack 完成（main 86698924）
+2026-11-25T04:42:37Z	pod_create	5f62454se0t6hs	cpu3c x4	US-MO-1	0.1200	2026-11-25T04:42:37Z					max_hours=6.0
+2026-11-25T05:06:23Z	pod_delete	5f62454se0t6hs	cpu3c x4	US-MO-1	0.1200	2026-11-25T04:42:37Z	2026-11-25T05:06:23Z	0.3961	0.0475		甲段 5 条测试红（缺 onnx 包、无 .git），按收尾删机；vdn-eval 在 22.04 链接不过
+2026-11-25T05:07:12Z	pod_create	f77s3d58riy6p1	cpu3c x4	US-MO-1	0.1200	2026-11-25T05:07:12Z					max_hours=0.04
+2026-11-25T05:09:51Z	pod_delete	f77s3d58riy6p1	cpu3c x4	US-MO-1	0.1200	2026-11-25T05:07:12Z	2026-11-25T05:09:51Z	0.0442	0.0053		新镜像机器内自删验证：约 3 分钟后自己删了 删时已不存在
+2026-11-25T05:10:05Z	pod_create	e5sjgks999cqbf	cpu3c x4	US-MO-1	0.1200	2026-11-25T05:10:05Z					max_hours=6.0
+2026-11-25T05:24:23Z	pod_create	l4ch9o7sv13psu	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T05:24:23Z					max_hours=1.5
+2026-11-25T05:29:56Z	pod_delete	l4ch9o7sv13psu	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T05:24:23Z	2026-11-25T05:29:56Z	0.0925	0.4061		乙段第 1 步冒烟 overfit 不过（rc=1），按收尾取回后删机
+2026-11-25T13:28:31Z	pod_delete	e5sjgks999cqbf	cpu3c x4	US-MO-1	0.1200	2026-11-25T05:10:05Z	2026-11-25T13:28:31Z	8.3072	0.9969		watchdog 到点删机 删时已不存在
+2026-11-25T18:40:38Z	pod_create	7a3n7eodf5iyqf	cpu3c x4	US-MO-1	0.1200	2026-11-25T18:40:38Z					max_hours=1.0
+2026-11-25T18:42:20Z	pod_delete	7a3n7eodf5iyqf	cpu3c x4	US-MO-1	0.1200	2026-11-25T18:40:38Z	2026-11-25T18:42:20Z	0.0283	0.0034		取回 480 段结果（不含 qa/asr-wav 1.4 GB）
+2026-11-25T18:49:29Z	pod_create	zq05j06wg96pxa	cpu3c x4	US-MO-1	0.1200	2026-11-25T18:49:29Z					max_hours=1.0
+2026-11-25T19:27:59Z	pod_delete	zq05j06wg96pxa	cpu3c x4	US-MO-1	0.1200	2026-11-25T18:49:29Z	2026-11-25T19:27:59Z	0.6417	0.0770		过拟合排查完成（1831886c），取回后删
+2026-11-25T19:36:08Z	pod_create	w0aklhwaafxskv	cpu3c x4	US-MO-1	0.1200	2026-11-25T19:36:08Z					max_hours=1.0
+2026-11-25T19:50:27Z	pod_delete	w0aklhwaafxskv	cpu3c x4	US-MO-1	0.1200	2026-11-25T19:36:08Z	2026-11-25T19:50:27Z	0.2386	0.0286		判据第 3 版核对 rc=1，取回后删
+2026-11-25T20:01:01Z	pod_create	w0k1j4il17h5g8	cpu3c x4	US-MO-1	0.1200	2026-11-25T20:01:01Z					max_hours=1.5
+2026-11-25T21:16:23Z	pod_delete	w0k1j4il17h5g8	cpu3c x4	US-MO-1	0.1200	2026-11-25T20:01:01Z	2026-11-25T21:16:23Z	1.2561	0.1507		--overfit-probe 完成（21e2e5b7）+ 清账本 review；取回 JSON/日志，wav 留网络盘
+2026-11-25T21:40:36Z	pod_create	t7wneq6dc0l3lv	cpu3c x4	US-MO-1	0.1200	2026-11-25T21:40:36Z					max_hours=0.5
+2026-11-25T21:43:37Z	pod_delete	t7wneq6dc0l3lv	cpu3c x4	US-MO-1	0.1200	2026-11-25T21:40:36Z	2026-11-25T21:43:37Z	0.0503	0.0060		乙段第 0 步：clone 7eecbbe8、复制 known-dev
+2026-11-25T21:44:09Z	pod_create	ijfkm5fvi6xfp7	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T21:44:09Z					max_hours=1.5
+2026-11-25T22:02:20Z	pod_delete	ijfkm5fvi6xfp7	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T21:44:09Z	2026-11-25T22:02:20Z	0.3031	1.3304		乙段第 2 步：镜像没有 git，train.py 拒跑；按收尾取回后删机
+2026-11-25T22:04:59Z	pod_create	htpp90buaagezi	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T22:04:59Z					max_hours=1.5
+2026-11-25T22:06:20Z	pod_create	gwgj2a97e1a92q	cpu3c x4	US-MO-1	0.1200	2026-11-25T22:06:20Z					max_hours=6.0
+2026-11-25T22:35:58Z	volume_resize	bzpbedqdsi		US-MO-1	0.019444	2026-11-25T22:35:58Z					150 → 200 GB ≈ 14.0 USD/月
+2026-11-25T22:40:47Z	pod_delete	htpp90buaagezi	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T22:04:59Z	2026-11-25T22:40:47Z	0.5967	2.6194		乙段第 2–4 步全过，取回后删机
+2026-11-26T00:11:30Z	pod_delete	gwgj2a97e1a92q	cpu3c x4	US-MO-1	0.1200	2026-11-25T22:06:20Z	2026-11-26T00:11:30Z	2.0861	0.2503		CochlScene 3 类解压完 17629/17629，大总管核对后删机
+2026-11-26T00:30:56Z	pod_create	g1wyqz5tsvqvia	cpu3c x4	US-MO-1	0.1200	2026-11-26T00:30:56Z					max_hours=3.0
+2026-11-26T01:20:18Z	pod_create	glx9kkda13gckv	cpu3c x4	US-MO-1	0.1200	2026-11-26T01:20:18Z					max_hours=6.0
+2026-11-26T01:51:16Z	pod_delete	g1wyqz5tsvqvia	cpu3c x4	US-MO-1	0.1200	2026-11-26T00:30:56Z	2026-11-26T01:51:16Z	1.3389	0.1607		第二批登记 6173bf9ca6a6e143 + BUT 下载解压完；日志已取回
+2026-11-26T02:13:45Z	pod_create	jm4m7pg5zmif3n	cpu3c x4	US-MO-1	0.1200	2026-11-26T02:13:45Z					max_hours=3.0
+2026-11-26T02:46:35Z	pod_delete	glx9kkda13gckv	cpu3c x4	US-MO-1	0.1200	2026-11-26T01:20:18Z	2026-11-26T02:46:35Z	1.4381	0.1726		识别补跑完：1953 次、+0.1875 美元，480 段已合并取回
+2026-11-26T03:27:20Z	pod_delete	jm4m7pg5zmif3n	cpu3c x4	US-MO-1	0.1200	2026-11-26T02:13:45Z	2026-11-26T03:27:20Z	1.2264	0.1472		第三批筛查后停：C236 keep 32/620，等定；日志已取回
+2026-11-26T03:39:30Z	pod_create	byvkixm3sfzju6	cpu3c x4	US-MO-1	0.1200	2026-11-26T03:39:30Z					max_hours=3.0
+2026-11-26T04:26:47Z	pod_delete	byvkixm3sfzju6	cpu3c x4	US-MO-1	0.1200	2026-11-26T03:39:30Z	2026-11-26T04:26:47Z	0.7881	0.0946		第三批续跑：R112 登记 build 10aa3a9fb8cef48f，C236 诊断与 3 段取回；日志已取回
+2026-11-26T07:37:32Z	pod_create	3h08g5wq4xr6fp	cpu3c x4	US-MO-1	0.1200	2026-11-26T07:37:32Z					max_hours=1.0
+2026-11-26T07:44:36Z	pod_delete	3h08g5wq4xr6fp	cpu3c x4	US-MO-1	0.1200	2026-11-26T07:37:32Z	2026-11-26T07:44:36Z	0.1178	0.0141		D112：first-batch 小文件取回后删，盘 168→153 GB
