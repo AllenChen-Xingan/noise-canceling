@@ -82,7 +82,7 @@ mkdir -p "$OUT"
 ```
 
 1. **代码**：`$REPO` 是 main 的 `EVAL_COMMIT`（带 `.git`，不用 `git archive` 解包）。开机时报大总管提交号，回归检查和 7 份都用这一个；机 2 用同一个目录，不换提交。`cd $REPO && cargo build --release -p vdn-eval`
-2. **密钥、评分模型、音频**：照 `cloud/plan-eval-baseline.md` 第一节（`put-secret`，先用假值冒烟）和第三节（两个评分模型核 sha256；`$REPO/_tmp/exp013/20261124165427-6323` 建链接）
+2. **密钥、评分模型、音频**：照 `cloud/plan-eval-baseline.md` 第一节（`put-secret`，先用假值冒烟）和第三节（两个评分模型核 sha256；`$REPO/_tmp/exp013/20261124165427-6323` 建链接）。DNSMOS 模型不用备：规则 v2 不打 `V-DNSMOS`，补跑那份 480 段里一条都没有【实测】
 3. **Python 环境与导出**（命令由 trainer 给并核过，2026-11-26）：
    ```sh
    export PATH=/workspace/bin:$PATH     # 外层先导出：cloud_steps.sh 只在自己的子 shell 里改 PATH
@@ -122,8 +122,13 @@ mkdir -p "$OUT"
    ```sh
    cd $REPO; set -a; . /root/.env.local; set +a
    VDN_GTCRN_ONNX=<官方流式权重，plan-eval-baseline.md 第三节> run_card gtcrn regress-gtcrn
-   $PY docs/experiments/exp025-gtcrn-train/eval/parity.py --a "$RUNS/$RUN/clips.jsonl" --b "$OLD-merged/clips.jsonl" \
-     --system-a gtcrn --system-b gtcrn                              # 数值：逐段逐项，容差 1e-3
+   for x in new:"$RUNS/$RUN/clips.jsonl" old:"$OLD-merged/clips.jsonl"; do   # 吃字只报不判：先拿掉再对拍数值
+     $PY -c 'import json,sys
+   for l in open(sys.argv[1]):
+       r = json.loads(l); r["scores"] = [s for s in r["scores"] if s["v"] != "V-EAT-ASR"]; print(json.dumps(r, ensure_ascii=False))' "${x#*:}" > "$W/regress-${x%%:*}.jsonl"
+   done
+   $PY docs/experiments/exp025-gtcrn-train/eval/parity.py --a "$W/regress-new.jsonl" --b "$W/regress-old.jsonl" \
+     --system-a gtcrn --system-b gtcrn                              # 数值：逐段逐项（吃字除外），容差 1e-3
    $PY - "$RUNS/$RUN/clips.jsonl" "$OLD-merged/clips.jsonl" <<'EOF'   # 判定与阈值：逐段逐项要完全相同
    import json, sys
    def load(p):
@@ -143,7 +148,7 @@ mkdir -p "$OUT"
    EOF
    ```
    - 补跑合并那份 `clips.jsonl` 的 sha256 应是 `c00ed213a209a19a4aee965589aa06376271e203b08ba0fb359045be7a2e1ddf`，先核
-   - 两个检查都过才往下。`parity.py` 只比数值，跳过延迟和最坏一帧（`parity.py` 文件头）；判定、阈值和否决标记由第二段逐段逐项比，除吃字外一处都不许变（最坏一帧也算在内：它按墙钟计时，换机器可能变；只有它变了也停，报 evalcmp，由大总管定）。场景卡状态由这些判定按同一规则汇总，所以判定全同、卡也同
+   - 两个检查都过才往下。`parity.py` 只比数值，跳过延迟和最坏一帧（`parity.py` 文件头），吃字先从两边拿掉；判定、阈值和否决标记由第二段逐段逐项比，除吃字外一处都不许变（最坏一帧也算在内：它按墙钟计时，换机器可能变；只有它变了也停，报 evalcmp，由大总管定）。场景卡状态由这些判定按同一规则汇总，所以判定全同、卡也同
    - 不过：停，报 evalcmp 和大总管，不跑后面的模型
 6. **离线推理**（每个模型；`NAME` 是第一节的系统名，`ONNX` 是第 3 步对应的文件）：
    ```sh
@@ -274,7 +279,7 @@ run_card() {   # $1 = --system 的值，$2 = 系统名，$3 = 缓存来源（默
 
 ## 六、取回后：配对比较与判读（evalcmp 在本机跑，不花钱，几分钟）
 
-先照本机负载规则看 `uptime`（1 分钟负载 > 20 就等），再查有没有 `_tmp/heavy.lock`。下面 `C` 是取回目录，`X/` 是系统 X 的合并成绩单目录。用 `bash` 跑（本机默认是 zsh）。
+先照本机负载规则看 `uptime`（1 分钟负载 > 20 就等），再查有没有 `_tmp/heavy.lock`。用的 `vdn-eval` 要和云上同一个 `EVAL_COMMIT`：在仓库旁边开一个干净副本 `git worktree add ../noise_canceling-evalrun $EVAL_COMMIT`，在里面 `cargo build --release -p vdn-eval`（编译算重活，照负载规则），下面的命令都在这个副本的根目录下跑；`git -C ../noise_canceling-evalrun rev-parse HEAD` 记进报告。下面 `C` 是取回目录，`X/` 是系统 X 的合并成绩单目录。用 `bash` 跑（本机默认是 zsh）。
 
 ```sh
 set -euo pipefail
@@ -305,6 +310,7 @@ $V accept --suite $S --scenes $T \
 - 离线推理 `--finalize` 报缺段 → 不跑成绩单，查这一片的日志，用同一个 run-id 续跑（已写的文件会跳过）
 - 原版那份识别次数超过 1600 → 停（第三节第 6 步）
 - 任何一台跑到 5.25 小时还没跑完 → 停掉正在跑的那份（中断 `run_card`，trap 会收掉分片和闸门），已经合并好的成绩单先取回，报大总管。没跑完的那份到下一台重跑，缓存用中断那份的：`run_card <系统> <系统名> $RUNS/<中断那份的 RUN>`。它的各片缓存里已有补跑的转写和这次已付费的转写，重跑只补没识别过的
+- 中断之后、开下一台之前先核账本：所有 vdn-eval 进程都停了，再看 `reserved_usd` 和 `review`。被中断时在途的请求可能没结算，预留会留在账本里（`asr_ledger.rs` 头部「先预留、后结算」），第三节第 4 步会拒跑。有残留就照 `baseline/README.md` 用 `clear_review.py` 核销（最坏估入账），先报 evalcmp 和大总管，核销完才开下一台
 - 开下一台之前先核机费：已删机器的实际花费 + 下一台最坏（每小时价 × (时限 + 5 分钟)）≤ 1.5 美元才开。要开第三台、或要超过 1.5 美元，先报大总管批
 - 回归检查不过 → 停，不跑 7 份（第三节第 5 步）
 - 任何一份不是 480 行 → 不进判读，先查
