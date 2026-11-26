@@ -55,3 +55,10 @@
   - pi 写的代码 = 提交 ec06f94e..0f91ec80（3 个：ec06f94e、881e5dda、0f91ec80），署名 `Agent: pi`、`Model: deepseek-v4.1-flash-1017-fast`；在 pi 自己的分支 w/cloudrun-venvcache 上提交，快进合入，没被 hook 改署名。以后派 pi 照此记提交号范围；我验收后的提交加一行 `Code: pi (<模型名>)`（大总管 c4 2026-11-26 定）。
 - 2026-11-26：派 pi（cloudrun-diskcheck，花 0.0083 美元）给 preflight 加网络盘余量检查：少于 30 GB 不开训练（`config.MIN_FREE_GB`，配额读平台接口）。pi 提交 56086350..1fac34b9（2 个，带 Agent: pi），快进合入；140 条测试全过。
 - 2026-11-26：派 pi（cloudrun-fetchnomd5，花 0.0057 美元）给 fetch_archives.sh 加「md5 未知」写法：md5 栏写 `-` 时必须给字节数，只按字节数判，md5 与 sha256 都记进 checksums.txt（mode=bytes-only）。供 BUT ReverbDB（上游没发校验值）用。pi 提交 c8b8a839..46b504ff（2 个），快进合入；145 条测试全过。
+
+## 2026-11-26 01:20–03:30Z（cloudrun）
+- 第二批登记：build 6173bf9ca6a6e143，traindata 核过、已进仓。机器 g1wyqz5tsvqvia 已删，约 0.16 美元。
+- BUT ReverbDB：字节数 9308593693 · md5 3ad91777… · sha256 d0d14cdd…（网络盘 archives/checksums.txt）。解出 wav 12307 个、txt 1748 个，占 23 GB。压缩包按 c4 的决定删了。
+- 识别补跑：480 段已合并，calls +1953，spent +0.1875 美元，吃字有值的段数 82 → 452。取回到主仓 _tmp/20261126-asr-rerun/rerun-20261126-013313/。机器 glx9kkda13gckv 已删，约 0.17 美元。
+- 第三批（代码 7badd9a1）：筛查结果 C236 keep 32/620，不到一半，按规则停了，等 traindata 定。机器 jm4m7pg5zmif3n 还开着。first-batch 没删（D112 的条件是第三批成功）。
+- 小错：第一次开识别补跑时，提交号是手敲的，敲错了；脚本在 checkout 那一步就停了，没花识别费。以后提交号一律用 git rev-parse 取。
