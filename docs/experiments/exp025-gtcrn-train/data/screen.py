@@ -279,10 +279,16 @@ def default_tagger(checkpoint=None, device="cpu"):
     except ImportError as e:
         raise SystemExit(f"没装 PANNs（{e}）：云上请 pip install panns-inference 后再跑，或用 --no-models 空跑")
     net = AudioTagging(checkpoint_path=checkpoint, device=device)
+    # labels 的两种导出形式：0.1.1 直接是名字的 list，旧版是带 .labels 的对象
+    names = labels.labels if hasattr(labels, "labels") else labels
 
     def tagger(x32k):
         clip, _ = net.inference(_x(x32k).astype(np.float32)[None, :])
-        return dict(zip(labels.labels, [float(p) for p in clip[0]]))
+        if len(names) != clip.shape[-1]:
+            raise ValueError(
+                f"PANNs 标签数对不上：模型输出 {clip.shape[-1]} 个，标签列表 {len(names)} 个"
+                "（装错版本的 panns-inference？）")
+        return dict(zip(names, [float(p) for p in clip[0]]))
 
     return tagger
 
