@@ -1,11 +1,12 @@
 //! `vdn-eval accept` 端到端测试共用的夹具：合成逐段分数 → 真的 `vdn-eval compare --by-scene` 的
-//! compare.json → 手写 scorecard.json。被 `accept_e2e.rs` 用 `#[path]` 引入。
+//! compare.json → 评测清单（`--suite`）与两份带 `clips.jsonl` 的成绩单。被 `accept_e2e.rs` 用 `#[path]` 引入。
 //!
 //! 候选的每一项都是对照加一个常数偏移，配对差因此在每段上都一样、bootstrap 区间退化成一个点：
 //! 判断只由差值符号与线决定，测试不受抽样影响。
 
 #![allow(dead_code)]
 
+use std::cell::RefCell;
 use std::path::PathBuf;
 
 use serde_json::{Value, json};
@@ -175,9 +176,10 @@ pub fn cand(rows: &[ClipRow], d: D, drop: &[&str], system: &str) -> Vec<ClipRow>
         .collect()
 }
 
-/// 临时目录 + 造输入文件的小工具。
+/// 临时目录 + 造输入文件的小工具。`suite` 由 [`build`] 填，`accept_args` 自动带上 `--suite`。
 pub struct Fix {
     pub root: PathBuf,
+    suite: RefCell<Option<String>>,
 }
 
 impl Fix {
@@ -185,7 +187,14 @@ impl Fix {
         let root = std::env::temp_dir().join(format!("vdn-accept-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(&root).unwrap();
-        Fix { root }
+        Fix {
+            root,
+            suite: RefCell::new(None),
+        }
+    }
+
+    pub fn set_suite(&self, p: &str) {
+        *self.suite.borrow_mut() = Some(p.to_string());
     }
 
     pub fn jsonl(&self, name: &str, rows: &[ClipRow]) -> String {
@@ -232,6 +241,19 @@ impl Fix {
         p.to_string_lossy().to_string()
     }
 
+    /// 写一份成绩单目录：`scorecard.json` + 旁边的 `clips.jsonl`（accept 会核它的 sha256）。
+    /// `clips_from` 填哪份逐段文件的路径（空 = 不写 clips.jsonl，造「缺文件」）。
+    pub fn card(&self, name: &str, text: &str, clips_from: &str) -> String {
+        let d = self.root.join(name);
+        std::fs::create_dir_all(&d).unwrap();
+        if !clips_from.is_empty() {
+            std::fs::copy(clips_from, d.join("clips.jsonl")).unwrap();
+        }
+        let p = d.join("scorecard.json");
+        std::fs::write(&p, text).unwrap();
+        p.to_string_lossy().to_string()
+    }
+
     pub fn accept_args(
         &self,
         vs: &[String],
@@ -262,7 +284,13 @@ impl Fix {
             args.push(n.clone());
         }
         let out = self.root.join(format!("acc-{tag}"));
+        let suite = self
+            .suite
+            .borrow()
+            .clone()
+            .unwrap_or_else(|| self.root.join("suite.json").to_string_lossy().to_string());
         for (k, v) in [
+            ("--suite", suite),
             ("--scenes", scenes.to_string()),
             ("--card-a", a.to_string()),
             ("--card-b", b.to_string()),
@@ -282,8 +310,44 @@ impl Fix {
     }
 }
 
+/// 一条片段清单记录（够 `SceneClip::parse_jsonl` 读得过）。
+fn clip_line(id: &str, scene: &str, tier: &str, device: &str) -> Value {
+    let h = json!({"mix": "aa", "owner": "bb", "owner_dry": "cc", "stems": {"bed-x": "dd"},
+                   "floor": "ee", "noise": "ff", "interf": "gg"});
+    let dur = u64::from(vdn_types::MODEL_RATE);
+    json!({
+        "id": id, "scene": scene, "tier": tier, "device": device, "mic_mode": "unknown",
+        "pair": id, "lang": "en", "polarity": "suppress", "dur_samples": dur,
+        "sr": vdn_types::MODEL_RATE,
+        "audio": {"mix": "m.wav", "owner": "o.wav", "owner_dry": "od.wav", "floor": "f.wav",
+                  "noise": "n.wav", "interf": "i.wav", "stems": {"bed-x": "s.wav"}},
+        "has_clean_ref": true, "additive": true,
+        "targets": [{"spk": "1", "dist_m": 0.5, "azimuth_deg": 0.0, "level_dbfs": -30.0,
+                     "iv": [[0, 8000]],
+                     "src": {"kind": "librispeech", "spk": "1", "utts": ["u"]}}],
+        "sounds": [{"inst": "bed-x", "cls": "bed-other", "group": "bed", "is_speech": false,
+                    "iv": [[0, dur]], "level_dbfs": -40.0, "rel_db": -10.0,
+                    "dist_m": null, "azimuth_deg": null,
+                    "src": {"kind": "synth", "fn": "noise", "at": 0}, "license": "own"}],
+        "nominal": {"snr_db": 5.0, "sir_db": null, "t60_s": 0.2, "owner_dist_m": 0.5,
+                    "owner_level_dbfs": -30.0},
+        "measured": {"snr_db": 5.0, "snr_all_db": 5.0, "owner_level_dbfs": -30.0,
+                     "sir_db": null, "t60_s": 0.2, "drr_db": 2.0, "overlap_ratio": 0.0},
+        "owner_iv": [[0, 8000]], "interf_iv": [], "chain": {}, "seed": 1,
+        "hash": {"samples": h.clone(), "wav_sha256": h}
+    })
+}
+
+/// 成绩单的任务清单：每个场景一条任务，指向同一份片段清单（=`cafe`…`library-classroom` 全部片段）。
+const SUITE_SCENES: [(&str, &str); 3] = [
+    ("cafe", "S-cafe-common"),
+    ("meeting-room", "S-meeting-room-common"),
+    ("library-classroom", "S-library-classroom-common"),
+];
+
 /// 一份手写的成绩单（只带 accept 要读的字段；格式照 `scorecard::card::Card::to_json`）。
-pub fn card_json(rows: &[(&str, &str, &str, &str, &str)], ext: Value) -> String {
+/// `fp` = 评测清单指纹（accept 会核）；`ext` = `meta.external`。
+pub fn card_json(rows: &[(&str, &str, &str, &str, &str)], ext: Value, fp: &str) -> String {
     let scenes: Vec<Value> = rows
         .iter()
         .map(|(scene, tier, device, system, status)| {
@@ -300,10 +364,27 @@ pub fn card_json(rows: &[(&str, &str, &str, &str, &str)], ext: Value) -> String 
             })
         })
         .collect();
-    json!({"doc": "测试用成绩单", "meta": {"run_id": "t", "systems": ["cand"], "external": ext},
+    json!({"doc": "测试用成绩单",
+        "meta": {"run_id": "t", "systems": ["cand"], "external": ext,
+                 "suite_fingerprint": fp},
         "rules": "v2", "clips_scored": 8 * scenes.len(), "scenes": scenes, "worst": [],
         "missing": [], "no_clean_pass": []})
     .to_string()
+}
+
+/// 把某张卡的 V-LAT 均值改成 `ms`（造延迟不一致）。
+pub fn set_lat(text: &str, scene: &str, ms: f64) -> String {
+    let mut v: Value = serde_json::from_str(text).unwrap();
+    for c in v["scenes"].as_array_mut().into_iter().flatten() {
+        if c["scene"] == scene {
+            for i in c["items"].as_array_mut().into_iter().flatten() {
+                if i["v"] == "V-LAT" {
+                    i["mean"] = json!(ms);
+                }
+            }
+        }
+    }
+    v.to_string()
 }
 
 /// 三张卡：两张目标场景 + 一张非目标场景（library-classroom）；系统名可指定
@@ -331,12 +412,7 @@ pub fn cards_for(a_sys: &str, b_sys: &str, a_status: &str, b_status: &str) -> (S
             b_status,
         ),
     ];
-    (card_json(&a, json!([])), card_json(&b, json!([])))
-}
-
-/// 对照组 `ref`、候选组 `cand`（夹具的缺省系统名）。
-pub fn cards(a_status: &str, b_status: &str) -> (String, String) {
-    cards_for("ref", "cand", a_status, b_status)
+    (card_json(&a, json!([]), ""), card_json(&b, json!([]), ""))
 }
 
 /// 候选三张卡：两张目标场景同状态，非目标场景（library-classroom）单独给状态。
@@ -346,7 +422,7 @@ pub fn cand_cards(target: &str, other: &str) -> String {
         ("meeting-room", "common", "mba-builtin", "cand", target),
         ("library-classroom", "common", "mba-builtin", "cand", other),
     ];
-    card_json(&rows, json!([]))
+    card_json(&rows, json!([]), "")
 }
 
 /// 一份输入的构成。
@@ -381,12 +457,19 @@ pub fn spec(d1: D, d2: D, d3: D) -> Spec<'static> {
     }
 }
 
-/// 一份完整输入：两个目标场景 + 一个非目标场景，三个种子 + 三对种子互比。
+/// 一份完整输入：两个目标场景 + 一个非目标场景，三个种子 + 三对种子互比，
+/// 加一份覆盖全部片段的评测清单（`--suite`）与两张带 `clips.jsonl` 的成绩单。
 pub struct Good {
     pub vs: Vec<String>,
     pub noise: Vec<String>,
     pub card_a: String,
     pub card_b: String,
+    pub suite: String,
+    /// 对照 / 报告种子的逐段文件（写别的卡时用）
+    pub ctl: String,
+    pub cand1: String,
+    /// 评测清单指纹（写别的卡时用）
+    pub fp: String,
 }
 
 pub fn build(f: &Fix, s: Spec<'_>) -> Good {
@@ -409,29 +492,78 @@ pub fn build(f: &Fix, s: Spec<'_>) -> Good {
         }
         a.extend(rows);
     }
-    let ctl = f.jsonl("ctl", &a);
+    let ctl_p = f.jsonl("ctl", &a);
     let mut seed1 = cand(&a, s.d1, s.drop1, "cand");
     for (sc, items) in s.drop1_in {
         for r in seed1.iter_mut().filter(|r| r.scene == *sc) {
             r.scores.retain(|(v, _, _)| !items.contains(v));
         }
     }
-    let b1 = f.jsonl("c1", &seed1);
-    let b2 = f.jsonl("c2", &cand(&a, s.d2, &[], "cand"));
-    let b3 = f.jsonl("c3", &cand(&a, s.d3, &[], "cand"));
-    let (ca, cb) = cards("pass", "pass");
+    let cand1 = f.jsonl("c1", &seed1);
+    let c2 = f.jsonl("c2", &cand(&a, s.d2, &[], "cand"));
+    let c3 = f.jsonl("c3", &cand(&a, s.d3, &[], "cand"));
+
+    // 评测清单：每个场景一条任务，指向「全部 4 个源片段 × 2 设备」的片段清单（预期集合）
+    let manifest = f.root.join("clips.jsonl");
+    let mut lines = String::new();
+    for (scene, _) in SUITE_SCENES {
+        let place = MeetingPlace::ALL
+            .into_iter()
+            .find(|p| p.as_str() == scene)
+            .unwrap();
+        for row in ctl(place, 4) {
+            lines.push_str(&clip_line(&row.clip, scene, "common", "mba-builtin").to_string());
+            lines.push('\n');
+        }
+    }
+    std::fs::write(&manifest, lines).unwrap();
+    let mp = manifest.to_string_lossy().to_string();
+    let tasks: Vec<Value> = SUITE_SCENES
+        .iter()
+        .map(|(scene, id)| {
+            json!({"id": id, "set": "capability", "polarity": "suppress", "origin": "t",
+                   "desc": "t", "graders": [],
+                   "real": {"kind": "scene", "clips": mp, "scene": scene, "tier": "common",
+                            "device": "mba-builtin"}})
+        })
+        .collect();
+    let suite_text = json!({"name": "accept-test", "seed": 1, "defaults": {"trials": 1},
+        "tasks": tasks})
+    .to_string();
+    let suite_path = f.root.join("suite.json");
+    std::fs::write(&suite_path, &suite_text).unwrap();
+    let suite = suite_path.to_string_lossy().to_string();
+    f.set_suite(&suite);
+    let fp = vdn_eval::scorecard::shard::suite_fingerprint(
+        &vdn_eval::suite::parse_suite(&suite_text).unwrap(),
+    );
+
+    let (ca, cb) = cards_for("ref", "cand", "pass", "pass");
+    let ca = card_json_with(&ca, &fp);
+    let cb = card_json_with(&cb, &fp);
     Good {
         vs: vec![
-            f.compare("vs1", &ctl, &b1),
-            f.compare("vs2", &ctl, &b2),
-            f.compare("vs3", &ctl, &b3),
+            f.compare("vs1", &ctl_p, &cand1),
+            f.compare("vs2", &ctl_p, &c2),
+            f.compare("vs3", &ctl_p, &c3),
         ],
         noise: vec![
-            f.compare("n12", &b1, &b2),
-            f.compare("n13", &b1, &b3),
-            f.compare("n23", &b2, &b3),
+            f.compare("n12", &cand1, &c2),
+            f.compare("n13", &cand1, &c3),
+            f.compare("n23", &c2, &c3),
         ],
-        card_a: f.file("a", &ca),
-        card_b: f.file("b", &cb),
+        card_a: f.card("a", &ca, &ctl_p),
+        card_b: f.card("b", &cb, &cand1),
+        suite,
+        ctl: ctl_p,
+        cand1,
+        fp,
     }
+}
+
+/// 给成绩单填上清单指纹。
+pub fn card_json_with(text: &str, fp: &str) -> String {
+    let mut v: Value = serde_json::from_str(text).unwrap();
+    v["meta"]["suite_fingerprint"] = json!(fp);
+    v.to_string()
 }
