@@ -140,3 +140,10 @@
 - pi：`evalcmp-votecount`（isoquant/deepseek-v4.1-flash-1017-fast），提交 `98bdfa6b..acc34d33`（3 个，Agent: pi），花费 0.0153 美元；我读 diff、在 98bdfa6b 上实测新测试 5 条红、合入后全量重跑通过，再快进合入
 - codex 评审（gpt-6-astra，只读，medium）：2 轮，P0×0 P1×0；第 1 轮 P2×2 全改，第 2 轮 P2×1 → #196；轮次原文在本 worktree `_tmp/reviews/probe-vote-codex-{1,2}.md`
 - 验证：`cargo fmt --check` · workspace clippy `-D warnings` · `xtask tidy` · `cargo test --workspace`（99 组全过）
+
+## 场景差距表第二版（exp/025-gap-v2，2026-11-26）
+
+- 输入：cloudrun-39 识别补跑（云上 4 片，main ab0f4f0a，+1953 次 · +0.187488 美元），结果进仓 `docs/experiments/exp025-gtcrn-train/baseline/runs/rerun-20261126-013313/`
+- 核对（实测）：混音 sha 480/480 同 run480；非吃字判定 0 变；每场景不过数增量 = 该场景吃字不过卡数；`gap.py` 重跑第一版输入逐字节相同；`--from-clips` 重汇总与补跑成绩单一致
+- 表：`docs/experiments/exp025-gtcrn-train/baseline/gap/v2-20261126/README.md`。前 4 rail-air-cabin · canteen · meeting-room · transit-hub，与临时选定重合 1 →「不一致」；28 段没值全当过 / 全当不过，前 4 与判定都不变
+- 没派 pi：这条线没有产品代码改动，只有数据与文档；敏感性改分脚本留在主目录 `_tmp/20261126-gap-v2/sens/sens.py`（不进仓）

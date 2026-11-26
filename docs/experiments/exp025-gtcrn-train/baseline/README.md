@@ -200,5 +200,7 @@ cargo build --release -p vdn-eval
 | `subset.py` · `test_subset.py` | 裁 ≤ 5 段的冒烟测试集 |
 | `runs/smoke-20261124-191531/` | 5 段冒烟：三次运行的成绩单与日志、对 exp021 的对拍（路径里的本机目录换成了占位符） |
 | `runs/uplift-exp021-dfn3-nomix/` | 提升空间表预览：exp021 的 DFN3 对 GTCRN，都不回混，只有 DSP 项 |
+| `runs/rerun-20261126-013313/` | 识别补跑（云上 4 片、取多数判法）后的 480 段成绩单与逐段分数，吃字有值 452 段 |
+| `gap/v1-20261125/` · `gap/v2-20261126/` | 场景差距表第一版（不含吃字）· 第二版（弱项表含吃字，附 28 段没值的敏感性），结论留空交人定 |
 
 测试：`python3 -m unittest discover -s docs/experiments/exp025-gtcrn-train/baseline -p "test_*.py"`（31 条）；每个测试文件也能单独直接运行。
