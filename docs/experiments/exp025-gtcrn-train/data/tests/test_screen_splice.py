@@ -21,6 +21,7 @@ HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "tests"))
 import screen_tone  # noqa: E402
+import split  # noqa: E402
 from test_screen_tone import PRESENT_DB, screen_row, tone_row  # noqa: E402  行形状只从那里取一份
 
 BASE = HERE / "screen" / "but-reverbdb-silence.jsonl"
@@ -95,6 +96,13 @@ class Splice(unittest.TestCase):
 
 class RealFile(unittest.TestCase):
     """真产物：老表 + Room112 单音 jsonl → `screen/but-reverbdb-silence-b5.jsonl`，逐字节可复现。"""
+
+    def test_selector_is_the_rule_room112_glob(self):
+        """这里只并 Room112：那个路径选择器要与规则里 Room112 的通配符对得上（第二处表示要交叉校验）。"""
+        globs = split.load_rules()["sources"]["but-reverbdb-silence-b5"]["glob"]
+        room = [g for g in globs if "Room112" in g]
+        self.assertEqual(len(room), 1, globs)
+        self.assertIn(REGEX, room[0])
 
     def setUp(self):
         self.base = screen_tone.read_jsonl(BASE)
