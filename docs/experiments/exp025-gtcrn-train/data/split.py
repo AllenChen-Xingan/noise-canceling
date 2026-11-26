@@ -6,10 +6,13 @@
 - 按房间切的（OpenSLR 28）：房间号从上游 Kaldi rir_list 读（room_map），rir_list 的 sha256 钉在规则里；
   room-id 看不出房间的库按 room_merge 整库并成一个单位
 - 先只看路径认出每个文件的单位（认不出立刻停；`unit_regex_required` 的来源不许退回按文件切），再读逐文件读数（filecache.py 缓存，重跑只算变了的）
+- 排除顺序：清单 → 期望条数（排除之前，防通配符写错）→ `exclude_if_meta`（meta 文件里有第 2 个扬声器 → 那次布置整次排除）
+  → `screen_file`（screen.py 的 jsonl 里 verdict=drop）→ 认单位；meta 文件或筛查表不在、或某个文件没有结论，都停
 - 输出（进仓）：`splits/<来源>.jsonl`（每文件一行：路径 · 字节 · sha256 · 单位 · 份 / 段界）+ `splits/<来源>.json`（摘要：
   规则哈希 · 种子 · 每份单位数与文件数 · jsonl 的 sha256）。正文超 GZIP_OVER 时存成 `<来源>.jsonl.gz`（auto-commit hook
   不收超 10 MB 的文件）；摘要里的哈希始终是解压后正文的
-用法（云上）：python3 split.py --root /workspace [--only qut-noise] [--inventory] [--cache <路径>|none] [--workers 32]
+用法（云上）：python3 split.py --root /workspace [--only qut-noise] [--inventory] [--list-files] [--cache <路径>|none] [--workers 32]
+--list-files 只列过清单与 meta 排除后剩下的路径（给 screen.py 造输入，不查筛查表）。
 """
 import argparse
 import glob as globmod
@@ -360,6 +363,8 @@ def main():
     ap.add_argument("--root", required=True)
     ap.add_argument("--only", default="")
     ap.add_argument("--inventory", action="store_true", help="只列每个来源匹配到的文件数与前 20 个路径，不写切分表")
+    ap.add_argument("--list-files", action="store_true",
+                    help="只列每个来源过清单与 meta 排除后剩下的相对路径（一行一个），给 screen.py 造候选清单用；不查筛查表")
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--cache", default="", help="逐文件读数缓存（默认 <root>/cache/split-files.jsonl；传 none 不用）")
     ap.add_argument("--workers", type=int, default=32)
@@ -375,11 +380,15 @@ def main():
             fs = list_files(Path(a.root), rule)
             print(f"{n}：{len(fs)} 个文件", *fs[:20], sep="\n  ")
             continue
+        if a.list_files:  # 给 screen.py 造输入：只过清单与 meta 排除（筛查表还没生成）
+            fs, _ = meta_excluded(Path(a.root), list_files(Path(a.root), rule), rule)
+            print("\n".join(fs), flush=True)
+            continue
         excluded = {}
         rows = split_source(a.root, n, rule, R["seed"], R["splits"], a.workers, cache, excluded)
         s = write(n, rule, R["seed"], rows, a.out, excluded)
         print(json.dumps(s, ensure_ascii=False), flush=True)
-    if not a.inventory:
+    if not (a.inventory or a.list_files):
         print(f"读数缓存：复用 {cache.hits} 个，新算 {cache.misses} 个", flush=True)
 
 
