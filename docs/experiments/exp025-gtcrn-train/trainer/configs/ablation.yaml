@@ -1,0 +1,22 @@
+# exp025 数据消融的配置（#212 · 014 第 4 步）：**只写与 configs/default.yaml 不同的字段**（默认值正本在
+# ../config.py，全量实例在 configs/default.yaml；tests/test_ablation.py 核对这里只覆盖下面这几项）。
+#
+# 这是什么：数据消融——只跑模型 A、每个运行 1000 步，看拿掉（或打开）数据配方里的哪一个旋钮会让开发份的
+# hybrid 变好 / 变差。7 个运行（2 个基线 + 5 个单旋钮变体）写在 configs/ablation-runs.yaml，
+# 命令与判法由 `python ablation.py commands|judge` 出。
+#
+# 这是**草稿**：带 TODO 的 data.shard_root 现在填不了——新配方 = 新 build id，要等 traindata 登记后才填。
+# 开训前必须让 `python ablation.py check` 通过，否则不许开机。
+run:
+  out_dir: /workspace/runs/exp025-ablation  # 检查点与日志放仓外（铁律 8）
+model:
+  variant: A  # 消融只跑模型 A：A、B 的差是另一件事，混进来就分不出旋钮的作用
+schedule:
+  max_steps: 1000  # 每个运行 1000 步（每 500 步评估 · 存盘用的是默认值，不用在这里再写一遍）
+data:
+  shard_root: "TODO(新 build 登记后填)"
+  recipe: ../data/recipe.json  # 基线配方（相对 trainer/，train.py 就在 trainer/ 下跑）
+  num_workers: 6  # 3 个同时跑 × 6 = 18，容器约 22 核
+limits:
+  expect_s_step: 0.39  # 3 个同时跑的实测每步秒数（plan-h100-smoke.md 第五节）
+  max_hours: 0.5  # 1000 步 × 0.39 s ≈ 0.11 小时，留 4 倍余量；硬止损归 cloudrun
