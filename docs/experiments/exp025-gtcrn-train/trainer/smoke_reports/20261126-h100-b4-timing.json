@@ -1,0 +1,69 @@
+{
+ "source": "主仓 _tmp/20261126-trainer-b4/（cloudrun 取回）；ablation 包 sha256 8aa737036c4a1287d99ce6df544f8da221e470e5efb1a3c552809f3889a32ae5，O 包 e6925628bd9e384528407373499f162f19a8c8ea80afecdcdd51c32784af8635",
+ "method": "准备期 = 第 1 步的 billed_s；稳态每步 = 相邻两行相差 20 步时 billed_s 差 / 20 的中位数（同 20261125-h100-stageB-timing.json）",
+ "code": "98f1cf32",
+ "build": "bc0e9e7b566421f0",
+ "gpu": "H100",
+ "wall_s_reported_by_cloudrun": {
+  "smoke": 197,
+  "speed-B_300": 299,
+  "speed-A_300": 216,
+  "ablation_batch1_3xA": 535,
+  "ablation_batch2_3xA": 536,
+  "ablation_batch3_1xA": 352
+ },
+ "batches": {
+  "1": [
+   "abl-base-s0",
+   "abl-base-s1",
+   "abl-eq-off"
+  ],
+  "2": [
+   "abl-clip-off",
+   "abl-n_noises-off",
+   "abl-reverb-off"
+  ],
+  "3": [
+   "abl-high_snr-on"
+  ]
+ },
+ "runs_1000_steps_model_A": {
+  "abl-base-s0": {
+   "setup_s": 156.43,
+   "step_s_median": 0.344,
+   "billed_s_step1000": 496.7
+  },
+  "abl-base-s1": {
+   "setup_s": 159.08,
+   "step_s_median": 0.3445,
+   "billed_s_step1000": 498.84
+  },
+  "abl-clip-off": {
+   "setup_s": 152.36,
+   "step_s_median": 0.345,
+   "billed_s_step1000": 492.87
+  },
+  "abl-eq-off": {
+   "setup_s": 152.43,
+   "step_s_median": 0.3445,
+   "billed_s_step1000": 491.52
+  },
+  "abl-high_snr-on": {
+   "setup_s": 175.18,
+   "step_s_median": 0.1415,
+   "billed_s_step1000": 317.19
+  },
+  "abl-n_noises-off": {
+   "setup_s": 157.99,
+   "step_s_median": 0.3415,
+   "billed_s_step1000": 498.23
+  },
+  "abl-reverb-off": {
+   "setup_s": 153.9,
+   "step_s_median": 0.349,
+   "billed_s_step1000": 499.23
+  }
+ },
+ "h100_usd": 4.32,
+ "deviation": "每批 3 个运行在同一个 job 里用后台进程同时跑，没分 3 个 job-start（cloudrun 报）"
+}

@@ -1,0 +1,93 @@
+{
+ "rule": "大总管定 2026-11-26：模型 A、每个运行 1000 步，比开发份 hybrid（越低越好）。记两个基线（种子 0、1）在第 1000 步的读数为 b0、b1，base = (b0 + b1) / 2，floor = |b0 − b1|（两个基线的差就是噪声底）。对每个旋钮运行，d = 它的 hybrid − base：默认开着的旋钮被关掉时，d > floor 判「useful: keep on」（关掉变差了，说明它有用），d < −floor 判「hurts: candidate to turn off」（关掉反而更好），否则判「消融分不出: keep as is (on)」；high_snr 被打开时，d < −floor 判「useful: turn on」，d > floor 判「hurts: keep off」，否则判「消融分不出: keep as is (off)」。比较都是严格不等式。每个运行的整份 config 也要对得上：拍平成「段.键」逐项和 abl-base-s0 比，只有 run.name、run.seed、data.recipe 三项允许各不同，其余任何一项不同、或缺键，都算不同（缺键 · 键值是 null · 空对象，各算各的）；而且每个运行都必须照设计跑：model.variant = A · schedule.max_steps = 1000 · data.dev_recipe 指明的开发份配方等于基线的 data.recipe（7 个运行同用一份开发集）· run.seed 是运行矩阵给这个名字的种子（差一个种子就量不出 floor）· data.recipe 是这个名字说的那一份配方（基线用基线配方 = abl-base-s0 的 data.dev_recipe；旋钮运行的文件名是 no-<旋钮>.json 或 <旋钮>-on.json）。读数缺失 · 不是有限数 · 没有第 1000 步 · 指标行不是 JSON 对象 · 数据字段或整份配置对不上 · 不合设计 → 该运行判 incomplete；基线 incomplete 时每个旋钮都 incomplete。",
+ "base": 3.8414202511310576,
+ "floor": 0.007793557643890114,
+ "runs": {
+  "abl-base-s0": {
+   "dev_hybrid": 3.8375234723091127,
+   "data_build_id": "bc0e9e7b566421f0",
+   "dev_build_id": "bc0e9e7b566421f0",
+   "verdict": "ok",
+   "reason": null
+  },
+  "abl-base-s1": {
+   "dev_hybrid": 3.845317029953003,
+   "data_build_id": "bc0e9e7b566421f0",
+   "dev_build_id": "bc0e9e7b566421f0",
+   "verdict": "ok",
+   "reason": null
+  },
+  "abl-eq-off": {
+   "dev_hybrid": 3.8629761338233948,
+   "data_build_id": "574ef5c7353859d2",
+   "dev_build_id": "bc0e9e7b566421f0",
+   "verdict": "ok",
+   "reason": null
+  },
+  "abl-clip-off": {
+   "dev_hybrid": 3.8365223526954653,
+   "data_build_id": "748aee58bdd68266",
+   "dev_build_id": "bc0e9e7b566421f0",
+   "verdict": "ok",
+   "reason": null
+  },
+  "abl-n_noises-off": {
+   "dev_hybrid": 3.8465346455574037,
+   "data_build_id": "36ea9561adbb7d7f",
+   "dev_build_id": "bc0e9e7b566421f0",
+   "verdict": "ok",
+   "reason": null
+  },
+  "abl-reverb-off": {
+   "dev_hybrid": 3.9324029684066772,
+   "data_build_id": "966a229da3abed21",
+   "dev_build_id": "bc0e9e7b566421f0",
+   "verdict": "ok",
+   "reason": null
+  },
+  "abl-high_snr-on": {
+   "dev_hybrid": 3.842461109161377,
+   "data_build_id": "10ebb73bf735f7ab",
+   "dev_build_id": "bc0e9e7b566421f0",
+   "verdict": "ok",
+   "reason": null
+  }
+ },
+ "knobs": {
+  "eq": {
+   "run": "abl-eq-off",
+   "on": false,
+   "d": 0.021555882692337214,
+   "verdict": "useful: keep on",
+   "reason": null
+  },
+  "clip": {
+   "run": "abl-clip-off",
+   "on": false,
+   "d": -0.004897898435592296,
+   "verdict": "消融分不出: keep as is (on)",
+   "reason": null
+  },
+  "n_noises": {
+   "run": "abl-n_noises-off",
+   "on": false,
+   "d": 0.005114394426346092,
+   "verdict": "消融分不出: keep as is (on)",
+   "reason": null
+  },
+  "reverb": {
+   "run": "abl-reverb-off",
+   "on": false,
+   "d": 0.09098271727561968,
+   "verdict": "useful: keep on",
+   "reason": null
+  },
+  "high_snr": {
+   "run": "abl-high_snr-on",
+   "on": true,
+   "d": 0.0010408580303193915,
+   "verdict": "消融分不出: keep as is (off)",
+   "reason": null
+  }
+ }
+}
