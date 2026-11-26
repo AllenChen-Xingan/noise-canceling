@@ -2,7 +2,7 @@
 
 - **状态**：数据消融 7 组（#212，分支 `feat/trainer-ablation-scenes`）已验收，codex 7 轮达停止线，已推送，开 PR 交大总管合并。场景比对（#213）等 traindata 的 `scene_table` 进 main（随关闭 #205 的 PR）再派 pi。不开机：分片路径等新 build 登记
 - **手上**：训练器 · 训练损失 · 模型变体（issue #157）
-- **交代**：`_tmp/20261116-b19/trainer.md`；新规则 `_tmp/20261116-b19/common-pi-rule-20261126.md`（代码派 pi 写）；大总管 2026-11-26 起是 `noise-canceling-87`
+- **交代**：`_tmp/20261116-b19/trainer.md`；新规则 `_tmp/20261116-b19/common-pi-rule-20261126.md`（代码派 pi 写）；大总管固定名 `noise-canceling-meta`（人定 2026-11-26，轮换后不变；旧名 noise-canceling-87 停用）
 - **做到哪**（2026-11-26）：加训场景（#211）已合入 main。数据消融：`configs/ablation.yaml` 与 `configs/ablation-runs.yaml` 是 7 个运行（基线 ×2 种子 · eq / clip / n_noises / reverb 各关一个 · high_snr 开），只训 A、每组 1000 步。`ablation.py` 有三个子命令：`check`（核 traindata 的 5 个变体配方：各自只改一个开关的 on，base_sha256 对得上）、`commands`（分 3+3+1 批）、`judge`（判法 RULE，大总管定）。新配置字段 `data.dev_recipe`：7 组的开发份与标定批都用基线配方；续训会核对开发份 build。用 traindata 的真变体（feat/data-batch3 e8728ffe）核过：只差 shard_root 一条。待办 #198 · #210 · #217
 - **下一步**：大总管合并 #212 的 PR → 新 build 登记后填 `data.shard_root`，`ablation.py check` 过了报大总管批，cloudrun 在 H100 上跑（估约 1.8 美元）→ `ablation.py judge` 出结论。#213 等 scene_table 进 main
 
