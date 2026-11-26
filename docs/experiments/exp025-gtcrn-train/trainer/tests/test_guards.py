@@ -373,3 +373,50 @@ def test_evaluate_returns_early_on_nonfinite(tmp_path, monkeypatch):
     assert out["nonfinite"] is True and out["batch"] == 0
     assert len(asked) == 1  # 第 2 批的那一问根本没发生
     assert model.training  # finally 里的 set_train 照样跑过
+
+
+# ---------- codex guards 第 4 轮 ----------
+
+def _nan_in_calibrate(monkeypatch, sig=None):
+    """只在标定的第一个评估模式调用里注入 NaN（标定跑在任何 evaluate 之前，codex guards 第 4 轮 #1）。
+    给了 sig 就在注入的那一刻留下停止请求，用来验证 NaN 不被下一批的 should_stop 掩成「正常停」。"""
+    real = train.forward_loss
+    n = {"k": 0}
+
+    def fl(model, crit, batch, device, **k):
+        loss, logs = real(model, crit, batch, device, **k)
+        if not model.training:
+            n["k"] += 1
+            if n["k"] == 1:
+                if sig is not None:
+                    sig.got = "SIGTERM"
+                logs = {**logs, "hybrid": float("nan")}
+        return loss, logs
+    monkeypatch.setattr(train, "forward_loss", fl)
+
+
+def _assert_setup_crash(tmp_path, stop):
+    """标定读到非有限数：按准备期停记（退出码 1），另留 setup_crash.json，不存检查点也不写 run.json（第 4 轮 #2）。"""
+    assert stop["reason"] == "nonfinite" and stop["phase"] == "setup" and train.exit_code(stop) == 1
+    p = tmp_path / "t" / "setup_crash.json"
+    assert p.exists()
+    got = json.loads(p.read_text())
+    assert got["reason"] == "nonfinite" and got["phase"] == "calibrate" and got["at"]
+    assert got["batch"] == 0 and got["logs"]["hybrid"] != got["logs"]["hybrid"]
+    assert not list((tmp_path / "t" / "ckpt").glob("step-*.pt"))
+    assert not (tmp_path / "t" / "run.json").exists()
+
+
+def test_nonfinite_calibration_stops_setup(tmp_path, monkeypatch):
+    """权重写死（不是 "auto"）时标定照样要查非有限数：以前 NaN 被静默接受，训下去（#1）。"""
+    _nan_in_calibrate(monkeypatch)
+    stop = train.train(_cfg(tmp_path, **{"loss.w_lvl": 1.0, "loss.w_on": 1.0}))
+    _assert_setup_crash(tmp_path, stop)
+
+
+def test_nonfinite_calibration_then_stop_signal_still_crashes(tmp_path, monkeypatch):
+    """NaN 之后下一批想停：必须报 nonfinite，不能被 should_stop 掩成信号停（#1）。"""
+    sig = train._Signals()
+    _nan_in_calibrate(monkeypatch, sig)
+    stop = train.train(_cfg(tmp_path, **{"loss.w_lvl": 1.0, "loss.w_on": 1.0}), _signals=sig)
+    _assert_setup_crash(tmp_path, stop)
