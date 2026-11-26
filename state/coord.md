@@ -539,3 +539,9 @@
 - 2026-11-26 traindata 亲手核完 6 个 build（基线 bc0e9e7b566421f0；变体 no-eq 574ef5c7 · no-clip 748aee58 · no-n_noises 36ea9561 · no-reverb 966a229d · high_snr-on 10ebb73b），进仓 59f7b776。4 场景不同内容：rail-air-cabin 15.29 h · canteen 0.08 h（约 300 s）· meeting-room 1.87 h · transit-hub 14.87 h。11-4 题面改为不同内容口径。
 - 2026-11-26 trainer 交 H100 执行单 trainer/plan-h100-b4.md（甲段 CPU 约 0.05 美元；乙段 H100 约 47–57 min · 3.4–4.2 美元，高 20% 价 4.1–5.0；消融约 1.6–1.8）。大总管原则批：甲 ≤0.1 · 乙时限 1.2 h ≤7 美元，按其闸门，开机前提齐后再给 cloudrun「开」。卡点：traindata 分支进 main。
 - 2026-11-26 traindata：codex 查出 Room112（hotel-room，248 条，209 keep 进训练）从未做 250 Hz 单音检查。大总管定：A 照现状开 PR + 限制栏写明；补测并进 trainer 执行单甲段（只读约 10 min）；判法：keep 中单音 ≤5% 第一批照用 bc0e9e7b，>5% 正式训练前出新 build。
+- 2026-11-26 traindata 交 PR #223（Closes #205）：清单第 2 项 data/scenes-bc0e9e7b566421f0.md、第 3 项 data/evidence-bc0e9e7b566421f0.md；codex 3 轮；新 issue #221（Room112 补测）#222。大总管独立副本（合 origin/main）：用 traindata .venv 跑 unittest 464 过 · 3 跳过（先误用 trainer .venv 缺 scipy 报 13 错），build_evidence --check 退出 0，最大 py 569 行。等 CI。
+- 2026-11-26 PR #223 CI 过（16m24s）→ 合并（#205 关）：bc0e9e7b 与 5 变体、场景表、证据页进 main。
+- 2026-11-26 trainer：rebase 到 a6bb1ced；formal.py check · ablation.py check 都退出 0（实测「可以开训」）；buildpin.py 核 build 记录；279 过 · 2 跳过；#213 派 pi trainer-scene-src。大总管核 w/trainer-b4-pin 所改 11 文件与 feat/trainer-b4-run 无差异后删其 worktree 与分支。
+- 2026-11-26 trainer 交 PR #224（Closes #213，HEAD 21405d8b）。大总管独立副本：formal.py check · ablation.py check 退出 0；pytest 499 过 · 2 跳过（对拍 31 排除）。删 w/trainer-scene-src · w/trainer-b4-fix1 及 worktree（核内容已在分支、无未提交）。等 CI。
+- 2026-11-26 PR #224 CI 过（14m29s）→ 合并（#213 关）。开机前提齐：两分支进 main、两个 check 退 0。
+- 2026-11-26 cloudrun 开机前核对：前提 1、3、5 已核；2、4 在甲段开机第一步核。重估：甲最坏 0.10 · 乙 H=1.2 h 最坏 5.63 美元（4.39/h，US-MO-1 货 LOW），合计最坏 5.73，累计最坏 14.70/100。大总管回「开」。
