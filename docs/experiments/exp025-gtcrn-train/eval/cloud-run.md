@@ -136,14 +136,14 @@ mkdir -p "$OUT"
    a, b = load(sys.argv[1]), load(sys.argv[2])
    if a.keys() != b.keys():
        sys.exit(f"段或项对不上：{len(a.keys() ^ b.keys())} 处")
-   soft = {"V-EAT-ASR", "V-FRAME"}   # 只报不判：识别（缓存应全命中）· 最坏一帧（墙钟计时）
+   soft = {"V-EAT-ASR"}               # 只报不判：吃字（eval-plan.md 第二节第 1 步唯一的例外）
    hard = [k for k in a if a[k] != b[k] and k[-1] not in soft]
-   print("判定或阈值变了：", len(hard), "· 只报的两项变了：", sum(a[k] != b[k] for k in a if k[-1] in soft))
+   print("判定、阈值或否决变了：", len(hard), "· 吃字变了（只报）：", sum(a[k] != b[k] for k in a if k[-1] in soft))
    sys.exit(1 if hard else 0)
    EOF
    ```
    - 补跑合并那份 `clips.jsonl` 的 sha256 应是 `c00ed213a209a19a4aee965589aa06376271e203b08ba0fb359045be7a2e1ddf`，先核
-   - 两个检查都过才往下。`parity.py` 只比数值，跳过延迟和最坏一帧（`parity.py` 文件头）；判定、阈值和否决标记由第二段逐段逐项比，除吃字和最坏一帧外一处都不许变。场景卡状态由这些判定按同一规则汇总，所以判定全同、卡也同
+   - 两个检查都过才往下。`parity.py` 只比数值，跳过延迟和最坏一帧（`parity.py` 文件头）；判定、阈值和否决标记由第二段逐段逐项比，除吃字外一处都不许变（最坏一帧也算在内：它按墙钟计时，换机器可能变；只有它变了也停，报 evalcmp，由大总管定）。场景卡状态由这些判定按同一规则汇总，所以判定全同、卡也同
    - 不过：停，报 evalcmp 和大总管，不跑后面的模型
 6. **离线推理**（每个模型；`NAME` 是第一节的系统名，`ONNX` 是第 3 步对应的文件）：
    ```sh
@@ -172,14 +172,20 @@ mkdir -p "$OUT"
 
 ```sh
 cat > $W/gate.py <<'EOF'
-import json, sys, time
-ledger, start = sys.argv[1], json.load(open(sys.argv[2]))
+# 用法：gate.py <账本> <批次起点> <本份起点文件> [--once]
+# 本份起点文件不存在就按当前账本写一份（开跑前）；--once 只核一次，用于合并前的最后复核。
+import json, os, sys, time
+ledger, start, run0f = sys.argv[1], json.load(open(sys.argv[2])), sys.argv[3]
+once = "--once" in sys.argv[4:]
+def used(d):
+    return d["spent_usd"] + d["reserved_usd"]          # 已花 + 在途预留
 try:
-    d = json.load(open(ledger)); run0 = (d["calls"], d["spent_usd"] + d["reserved_usd"])
+    if not os.path.exists(run0f):
+        d = json.load(open(ledger)); json.dump({"calls": d["calls"], "used": used(d)}, open(run0f, "x"))
+    run0 = json.load(open(run0f))
     while True:
         d = json.load(open(ledger))
-        used = d["spent_usd"] + d["reserved_usd"]          # 已花 + 在途预留
-        run_calls, run_usd, batch_usd = d["calls"] - run0[0], used - run0[1], used - start["spent_usd"]
+        run_calls, run_usd, batch_usd = d["calls"] - run0["calls"], used(d) - run0["used"], used(d) - start["spent_usd"]
         why = ("账本有待核" if d.get("review") else
                "本份 calls > 1600" if run_calls > 1600 else
                "本份 > 0.16 美元" if run_usd > 0.16 else
@@ -187,13 +193,15 @@ try:
         print(time.strftime("%H:%M:%SZ", time.gmtime()), run_calls, round(run_usd, 6), round(batch_usd, 6), why, flush=True)
         if why:
             print("停：", why, flush=True); sys.exit(2)
+        if once:
+            sys.exit(0)
         time.sleep(30)
 except Exception as e:                                   # 读不了账本也按越线处理
     print("闸门出错，停：", repr(e), flush=True); sys.exit(3)
 EOF
 
-run_card() {   # $1 = --system 的值，$2 = 系统名；跑完 RUN 指向合并目录
-  local sys=$1 name=$2 i p rc=0 gate pids=()
+run_card() {   # $1 = --system 的值，$2 = 系统名；跑完 RUN 指向合并目录 $RUNS/$RUN
+  local sys=$1 name=$2 i rc=0 gate left=4 pids=()
   RUN=$(date -u +%Y%m%d-%H%M%S)-$name
   for i in 0 1 2 3; do
     test -f "$OLD-s$i/qa/asr_cache.json"
@@ -201,27 +209,39 @@ run_card() {   # $1 = --system 的值，$2 = 系统名；跑完 RUN 指向合并
     cp "$OLD-s$i/qa/asr_cache.json" "$RUNS/$RUN-s$i/qa/"
     cmp "$OLD-s$i/qa/asr_cache.json" "$RUNS/$RUN-s$i/qa/asr_cache.json"
   done
-  $PY $W/gate.py "$LEDGER" $W/batch-start.json > "$RUNS/$RUN-gate.log" 2>&1 & gate=$!
-  sleep 5; kill -0 $gate                                 # 闸门没起来就不开跑
+  local G0="$RUNS/${RUN}-gate.start.json" GLOG="$RUNS/${RUN}-gate.log"
+  $PY $W/gate.py "$LEDGER" $W/batch-start.json "$G0" > "$GLOG" 2>&1 & gate=$!
+  sleep 5; kill -0 $gate; test -f "$G0"                  # 闸门没起来、没写下本份起点，就不开跑
   for i in 0 1 2 3; do
     target/release/vdn-eval scorecard --system "$sys" --no-safety --qa --rules v2 --shard $i/4 \
-      --asr-ledger "$LEDGER" --out "$RUNS/$RUN-s$i" > "$RUNS/$RUN-s$i.log" 2>&1 & pids+=($!)
+      --asr-ledger "$LEDGER" --out "$RUNS/$RUN-s$i" > "$RUNS/$RUN-s$i.log" 2>&1 & pids[i]=$!
   done
-  while :; do
-    local alive=0; for p in "${pids[@]}"; do kill -0 $p 2>/dev/null && alive=1; done
-    [ $alive = 0 ] && break
-    if ! kill -0 $gate 2>/dev/null; then echo "闸门停了：$RUN"; kill "${pids[@]}" 2>/dev/null || true; rc=1; break; fi
-    sleep 10
+  while [ $left -gt 0 ] && [ $rc = 0 ]; do               # 每 10 秒：收已结束分片的退出码、看闸门
+    for i in 0 1 2 3; do
+      [ -n "${pids[i]}" ] || continue
+      kill -0 ${pids[i]} 2>/dev/null && continue
+      if wait ${pids[i]}; then :; else echo "第 $i 片失败：${RUN}"; rc=1; fi
+      pids[i]=""; left=$((left - 1))
+    done
+    if ! kill -0 $gate 2>/dev/null; then echo "闸门停了：${RUN}"; rc=1; fi
+    [ $left -gt 0 ] && [ $rc = 0 ] && sleep 10
   done
-  for p in "${pids[@]}"; do wait $p || rc=1; done       # 任何一片非 0 退出也算失败
+  for i in 0 1 2 3; do                                   # 出错时收掉还在跑的分片
+    [ -n "${pids[i]}" ] && { kill ${pids[i]} 2>/dev/null || true; wait ${pids[i]} 2>/dev/null || true; }
+  done
   kill $gate 2>/dev/null || true; wait $gate 2>/dev/null || true
-  [ $rc = 0 ] || { echo "有分片失败或被闸门停下：${RUN}，看 $RUN-gate.log 和各片日志"; return 1; }
+  if [ $rc = 0 ]; then                                   # 合并前按最终账本再核一次
+    $PY $W/gate.py "$LEDGER" $W/batch-start.json "$G0" --once >> "$GLOG" 2>&1 || { echo "最后复核越线：${RUN}"; rc=1; }
+  fi
+  [ $rc = 0 ] || { echo "有分片失败或越线：${RUN}，看 ${GLOG} 和各片日志"; return 1; }
   target/release/vdn-eval scorecard --merge-shards "$RUNS/$RUN-s0,$RUNS/$RUN-s1,$RUNS/$RUN-s2,$RUNS/$RUN-s3" \
     --suite src/eval/suite/scenes.json --out "$RUNS/$RUN"
 }
 ```
 
-- 每份成绩单各起一个闸门：起点在它开跑前读，两份之间不会串账。一份里任何一片失败、或闸门停下，这一份的 4 片和闸门都收掉，`run_card` 返回非 0，`set -e` 让整个流程停
+- 每份成绩单各起一个闸门：本份起点在开跑前写进 `${RUN}-gate.start.json`，两份之间不会串账
+- 每 10 秒收一次已结束分片的退出码：任何一片非 0、或闸门退出（越线、读不了账本），立刻收掉其余分片和闸门，`run_card` 返回非 0，`set -e` 让整个流程停
+- 4 片都正常结束后，按最终账本再核一次（`gate.py --once`），过了才合并：最后一次轮询之后的越线也拦得住
 - 停下以后报 evalcmp 和大总管，附 `$RUN-gate.log`。正常一份约 1030 次、0.10 美元
 - **越线多少没有保证**：闸门每 30 秒看一次，已在途的请求（4 片 × 每片 2 路 = 8 路）停不回来。按补跑的速度，30 秒约发 10 次、约 0.001 美元，但这只是估计。硬兜底是程序的 15 美元软上限和 OpenRouter 侧这把密钥的 100 美元额度（D103）
 - 任何一片的日志或 `meta.asr.halted` 出现停发：别自己清「待核」，照 `baseline/README.md` 用 `clear_review.py`，先报
