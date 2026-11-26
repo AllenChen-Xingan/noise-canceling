@@ -114,3 +114,4 @@
 
 - ~~pi 不提交目前只靠文字约束~~ ✅ 2026-11-26 技能仓 c3546a9 由 D109 取代：pi 在自己分支提交须带 Agent: pi，推送 / 开 PR / 开 issue 由扩展拦下（git-policy pi 档 9 放行 · 14 拦截）。原文：pi 不提交目前只靠文字约束（技能仓 771ce0c）；改成机器强制：`scripts/git/git-policy.ts` 对 pi 拦 `git commit` / `git push`，带测试。来源：改技能的子代理报「拿不准」第 1 条。
 - 手下换线（换分支）时 git 钩子仍登记旧分支，只能关窗重开（CD_WORKER_BRANCH 启动时定）。改法：钩子从手下交接页或一个登记文件读当前分支，大总管一条命令改登记，带测试。来源：2026-11-26 trainer 从 feat/trainer-guards 换到 feat/trainer-formal-config 被拦。
+- pi-worker 默认重活规则过宽：含 python3 的内联改文本脚本也报 QUOTA（2026-11-26 traindata-but）。改法：默认规则只认测试套件 · 构建 · 计时命令，带测试。

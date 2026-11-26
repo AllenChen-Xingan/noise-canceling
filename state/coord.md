@@ -471,3 +471,8 @@
 - 2026-11-26 traindata 核「unit 写 file」：数据正确（逐行核单位 = userNNNN，385 人无跨份），只是摘要标签易误读 → issue #204（P2，下一批派 pi 加字段，unit 不动）。
 - 2026-11-26 01:51Z cloudrun 删 g1wyqz5tsvqvia（约 0.16 美元，累计 8.02 美元），日志已取回。BUT 实测：字节数 · gzip · tar 过，librispeech 0；解出 wav 12307（RIR 2325 + silence 9982）占 23 GB；盘 153/200 GB。大总管定：BUT 压缩包 9.3 GB 删（依据：人批过删可重建项 + 下完删包规则；md5/sha256 已记），在识别补跑机上顺手删。识别补跑 01:33Z 起，01:50Z +101 次 +0.0097 美元。
 - 2026-11-26 01:52Z PR #203 合并 37c75609（#202 关，第二批数据进 main）；删远端 feat/data-batch2（本地分支在 traindata worktree 里，换分支后再删）。traindata 开第三批里不依赖定场景的部分（BUT 钉校验 · 按房间切 · 底噪筛查 · 会议室/酒店池 · #204）。
+- 2026-11-26 01:53Z 替 traindata 建 feat/data-batch3（37c75609 + cherry-pick 4862e227 · d1d2e920），删本地 feat/data-batch2；确认无后台进程后关窗并 --continue 重开，钩子改登记 feat/data-batch3。同意按「房间 + 扬声器布置」切 BUT 底噪，开发份对会议室 / 酒店只测同房不同场次（要写明）。
+- 2026-11-26 traindata 重开后会话名 noise-canceling-traindata-f0（旧 traindata-56），在 feat/data-batch3 HEAD d1d2e920，开 issue 派 pi。
+- 2026-11-26 名额规则：pi 的轻活误报（改文本 · 读文件 · 单个短测试）手下可直接放、事后告诉大总管；起 pi 时用 --heavy-re 收窄重活规则。pi-worker 默认重活规则把含 python3 的命令都判成重活 → 记 backlog。
+- 2026-11-26 cloudrun 删 BUT 压缩包（删前核 checksums.txt 与文件 md5），盘 145/200 GB。识别补跑 02:00Z +431 次 +0.041 美元，4 片在跑；按此速度约 2003 次需约 2 h（推算，约 03:35Z 完）。
+- 2026-11-26 02:09Z traindata 第三批（#205，feat/data-batch3 354f39fe）代码验收：276 过 · 1 跳过，pi 22 个提交 0.086 美元。批上云：优先在识别补跑机 glx9 上顺手跑；预计盘约 168/200 GB，超 170 先停报。旧分片删不删待 traindata 查清在用引用。
