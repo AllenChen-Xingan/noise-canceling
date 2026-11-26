@@ -20,6 +20,7 @@
 - 只动三样：`verdict` · `reasons` · `measures`；其余字段原样带过去，输入列表本身不改写
 - 补测老来源时只并一段：`--only-regex` + `--base` 只把匹配的行换成合并结果，其余行**原样带过**（第五批 Room112 补单音检查
   就是这种：`screen/but-reverbdb-silence.jsonl` 的 248 条 Room112 换成并了单音结论的，其余 1022 条一个字节不动）。
+  「原样」是逐字节：不匹配的行按 base 文件里那一行的原文写回，不重新序列化（空格 · 键序 · `\uXXXX` 转义都不动）。
   路径对不上就停：悄悄跳过一行，等于那份筛查结论没并进去
 - `--check FILE` 用同一份写法重算一遍再与 FILE 逐字节比（不先写盘）；不一样就退非零
 用法：
@@ -73,26 +74,44 @@ def load_present_db(path=RULES):
 
 # ---------------------------------------------------------------- 读写
 
-def read_jsonl(path):
-    """一行一条；空行跳过，读不了的行报出是第几行。"""
-    rows = []
+def read_jsonl_lines(path):
+    """一行一条，连同每行原文（不含行尾换行）：`--only-regex` 的「其余行原样带过」要用原文。
+
+    重新序列化一遍会改掉 JSON 空格、键序、`\\uXXXX` 转义（第五批 codex 第 1 轮 #1），所以原文单独留着。
+    空行跳过：它本来就不是一条结论。"""
+    out = []
     for lineno, line in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), 1):
-        line = line.strip()
-        if not line:
+        text = line.strip()
+        if not text:
             continue
         try:
-            row = json.loads(line)
+            row = json.loads(text)
         except json.JSONDecodeError as e:
             raise SystemExit(f"{path} 第 {lineno} 行不是 json（{e}）")
         if not isinstance(row, dict):
             raise SystemExit(f"{path} 第 {lineno} 行不是对象（是 {type(row).__name__}）")
-        rows.append(row)
-    return rows
+        out.append((row, line))
+    return out
+
+
+def read_jsonl(path):
+    """一行一条；空行跳过，读不了的行报出是第几行（原文不要时用这一条）。"""
+    return [row for row, _raw in read_jsonl_lines(path)]
 
 
 def jsonl_text(rows):
-    """行列表 → jsonl 正文。写盘与 `--check` 共用这一份写法（否则核对的是另一种序列化）。"""
-    return "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
+    """行列表 → jsonl 正文。写盘与 `--check` 共用这一份写法（否则核对的是另一种序列化）。
+
+    项是 `(row, 原文)`（`splice` 里不匹配 `--only-regex` 的那些）时按原文写回，不再序列化：JSON 空格、键序、
+    `\\uXXXX` 转义都不许被改掉；其余项照本文件唯一的写法序列化。"""
+    out = []
+    for item in rows:
+        if isinstance(item, tuple):
+            _row, raw = item
+            out.append(raw + "\n")
+        else:
+            out.append(json.dumps(item, ensure_ascii=False) + "\n")
+    return "".join(out)
 
 
 def write_jsonl(rows, path):
@@ -309,6 +328,9 @@ def merge(screen_rows, tone_rows, drop_where, present_db):
 def splice(base_rows, screen_rows, tone_rows, drop_where, present_db, only_regex):
     """只把匹配 `only_regex` 的行换成 merge 的结果，其余行按 `base_rows` 原样带过。
 
+    `base_rows` 的每一项可以是 `read_jsonl_lines` 的 `(row, 原文)`，也可以是单个 row（手上只有解析结果时）；
+    给了原文的，不匹配的行就照原文那一行写回（空格 · 键序 · 转义都不动），不再序列化一遍。
+
     `base_rows` 定顺序与「不并入」的那几条的内容；`screen_rows` 里匹配的那几条必须与 `base_rows` 里匹配的
     逐条同 path、同序（对不上就停：拿另一份清单来并，等于悄悄挪走几条结论）。`tone_rows` 只许是匹配的行
     （否则说明拿错了单音文件，并进去的结论与这段声音无关）。返回值同 `merge`，`rows` 是拼好的整份。"""
@@ -323,7 +345,8 @@ def splice(base_rows, screen_rows, tone_rows, drop_where, present_db, only_regex
             raise SystemExit(f"--base / --screen 里有行没有 path：{json.dumps(row, ensure_ascii=False)[:200]}")
         return rx.search(path) is not None
 
-    base_hits = [row["path"] for row in base_rows if hit(row)]
+    base = [item if isinstance(item, tuple) else (item, None) for item in base_rows]
+    base_hits = [row["path"] for row, _raw in base if hit(row)]
     sub_screen = [row for row in screen_rows if hit(row)]
     got_hits = [row["path"] for row in sub_screen]
     if got_hits != base_hits:
@@ -337,7 +360,8 @@ def splice(base_rows, screen_rows, tone_rows, drop_where, present_db, only_regex
         raise SystemExit(f"--tone 里有 {len(stray)} 条不匹配 {only_regex!r}：{stray[:5]}（拿错单音文件了？）")
     merged = merge(sub_screen, tone_rows, drop_where, present_db)
     by_path = {row["path"]: row for row in merged["rows"]}
-    rows = [by_path[row["path"]] if hit(row) else row for row in base_rows]
+    rows = [by_path[row["path"]] if hit(row) else (row if raw is None else (row, raw))
+            for row, raw in base]
     return {**merged, "rows": rows}
 
 
@@ -381,7 +405,8 @@ def run(args):
     screen_rows = read_jsonl(args.screen)
     tone_rows = read_jsonl(args.tone)
     if args.only_regex:
-        res = splice(read_jsonl(args.base), screen_rows, tone_rows, drop_where, present_db, args.only_regex)
+        res = splice(read_jsonl_lines(args.base), screen_rows, tone_rows, drop_where, present_db,
+                     args.only_regex)
     else:
         res = merge(screen_rows, tone_rows, drop_where, present_db)
     text = jsonl_text(res["rows"])

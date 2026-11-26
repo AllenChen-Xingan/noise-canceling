@@ -94,6 +94,52 @@ class Splice(unittest.TestCase):
         self.assertIn("正则", str(cm.exception))
 
 
+class PassthroughBytes(unittest.TestCase):
+    """不匹配 `--only-regex` 的行按**原文**写回：空格 · 键序 · `\\u4e2d` 转义都不许被重新序列化改掉。
+
+    第五批 codex 第 1 轮 #1：以前 `splice` 把不匹配的行也交给 `json.dumps` 重写一遍，字节会变——
+    真表那一批恰好是同一种写法，所以没露出来。这里故意用另一种写法做 base 的第一行。
+    """
+
+    # 不匹配的那一行：逗号后不加空格、键序倒过来、`中` 写成 `\u4e2d` 转义
+    KEEP_LINE = '{"path": "keep/a.wav","verdict": "keep","reasons": [],"measures": {},"note": "\\u4e2d"}'
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self._tmp.name)
+        self.room = screen_row("room/1.wav")
+        self.tone = [tone_row("room/1.wav", "none", [])]
+        self.base = self.dir / "base.jsonl"
+        self.base.write_text(self.KEEP_LINE + "\n" + json.dumps(self.room, ensure_ascii=False) + "\n",
+                             encoding="utf-8")
+        self.screen = self.dir / "screen.jsonl"  # --screen 里只放匹配的那一条
+        self.screen.write_text(json.dumps(self.room, ensure_ascii=False) + "\n", encoding="utf-8")
+        self.tone_path = self.dir / "tone.jsonl"
+        self.tone_path.write_text(json.dumps(self.tone[0], ensure_ascii=False) + "\n", encoding="utf-8")
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_non_matching_line_keeps_its_bytes(self):
+        res = screen_tone.splice(screen_tone.read_jsonl_lines(self.base), [self.room], self.tone,
+                                 screen_tone.load_drop_where(), PRESENT_DB, FIXTURE_REGEX)
+        lines = screen_tone.jsonl_text(res["rows"]).splitlines()
+        self.assertEqual(lines[0], self.KEEP_LINE)  # 不匹配：一个字节不动
+        self.assertIn("tone_where", json.loads(lines[1])["measures"])  # 匹配的照常并进来
+        self.assertEqual(json.loads(lines[1])["path"], "room/1.wav")
+
+    def test_cli_out_keeps_the_same_bytes(self):
+        out = self.dir / "out.jsonl"
+        r = subprocess.run([sys.executable, str(HERE / "screen_tone.py"),
+                            "--base", str(self.base), "--screen", str(self.screen),
+                            "--tone", str(self.tone_path), "--only-regex", FIXTURE_REGEX,
+                            "--out", str(out)], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = out.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(lines[0], self.KEEP_LINE)
+        self.assertIn("tone_where", json.loads(lines[1])["measures"])
+
+
 class RealFile(unittest.TestCase):
     """真产物：老表 + Room112 单音 jsonl → `screen/but-reverbdb-silence-b5.jsonl`，逐字节可复现。"""
 
