@@ -306,31 +306,37 @@ pub fn card_json(rows: &[(&str, &str, &str, &str, &str)], ext: Value) -> String 
     .to_string()
 }
 
-/// 三张卡：两张目标场景 + 一张非目标场景（library-classroom）。
-pub fn cards(a_status: &str, b_status: &str) -> (String, String) {
+/// 三张卡：两张目标场景 + 一张非目标场景（library-classroom）；系统名可指定
+/// （`--card-a` 必须是对照的系统、`--card-b` 必须是候选的系统）。
+pub fn cards_for(a_sys: &str, b_sys: &str, a_status: &str, b_status: &str) -> (String, String) {
     let a = [
-        ("cafe", "common", "mba-builtin", "ref", a_status),
-        ("meeting-room", "common", "mba-builtin", "ref", a_status),
+        ("cafe", "common", "mba-builtin", a_sys, a_status),
+        ("meeting-room", "common", "mba-builtin", a_sys, a_status),
         (
             "library-classroom",
             "common",
             "mba-builtin",
-            "ref",
+            a_sys,
             a_status,
         ),
     ];
     let b = [
-        ("cafe", "common", "mba-builtin", "cand", a_status),
-        ("meeting-room", "common", "mba-builtin", "cand", a_status),
+        ("cafe", "common", "mba-builtin", b_sys, a_status),
+        ("meeting-room", "common", "mba-builtin", b_sys, a_status),
         (
             "library-classroom",
             "common",
             "mba-builtin",
-            "cand",
+            b_sys,
             b_status,
         ),
     ];
     (card_json(&a, json!([])), card_json(&b, json!([])))
+}
+
+/// 对照组 `ref`、候选组 `cand`（夹具的缺省系统名）。
+pub fn cards(a_status: &str, b_status: &str) -> (String, String) {
+    cards_for("ref", "cand", a_status, b_status)
 }
 
 /// 候选三张卡：两张目标场景同状态，非目标场景（library-classroom）单独给状态。
@@ -355,6 +361,8 @@ pub struct Spec<'a> {
     pub drop1_in: &'a [(MeetingPlace, &'a [&'a str])],
     /// 这些场景只放 1 个源片段（2 段）：区间算不出来（证据不足）
     pub thin: &'a [MeetingPlace],
+    /// 这些场景整段不放进比较用的逐段文件（模拟整场景漏跑）
+    pub omit: &'a [MeetingPlace],
     /// 两边都整段不出现这一项（模拟「不适用」）
     pub absent: &'a [(MeetingPlace, &'a str)],
 }
@@ -368,6 +376,7 @@ pub fn spec(d1: D, d2: D, d3: D) -> Spec<'static> {
         drop1: &[],
         drop1_in: &[],
         thin: &[],
+        omit: &[],
         absent: &[],
     }
 }
@@ -388,6 +397,9 @@ pub fn build(f: &Fix, s: Spec<'_>) -> Good {
     ];
     let mut a = Vec::new();
     for sc in scenes {
+        if s.omit.contains(&sc) {
+            continue;
+        }
         let n = if s.thin.contains(&sc) { 1 } else { 4 };
         let mut rows = ctl(sc, n);
         for r in rows.iter_mut() {

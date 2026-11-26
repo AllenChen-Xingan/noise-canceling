@@ -175,11 +175,28 @@ fn gain_row(v: &str, key: &str, scene: &str, vs: &[Cmp], noise: &[Cmp]) -> Row {
     Row::new(what, verdict, detail)
 }
 
+/// 预期要评的场景：对照成绩单里出现的全部场景（成绩单就是评测清单跑出来的全集）。
+fn expected_scenes(a: &CardIn) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for r in &a.rows {
+        if !out.contains(&r.scene) {
+            out.push(r.scene.clone());
+        }
+    }
+    out
+}
+
 /// 「不许退」的一行：报告种子在每个有这个项值的场景上，差值区间上界 ≤ 线。
-fn regress_row(v: &str, key: &str, rep: &Cmp) -> Row {
+fn regress_row(v: &str, key: &str, rep: &Cmp, expected: &[String]) -> Row {
     let line = th::ACCEPT.def(key);
     let what = format!("不许退 {v}（报告种子区间上界 ≤ SC-ACCEPT.{key} = {line:+.3} dB）");
     let (mut seen, mut bad, mut hole) = (Vec::new(), Vec::new(), Vec::new());
+    // 对照成绩单有的场景，比较里必须有逐场景的数：整场景漏跑时这一项没被检查过，不能算过
+    for scene in expected {
+        if !rep.scopes.contains_key(scene) {
+            hole.push(format!("compare 里没有场景 {scene}（对照成绩单有）"));
+        }
+    }
     for (scene, s) in rep.scenes() {
         // 「不适用」只按成绩单标准的适用范围算（`standard::items`）：如 V-BGSTAB 在安静类场景不打分。
         // 适用场景没有数 = 缺证据，不能跳过（codex 第 2 轮 P1 #2）
@@ -274,6 +291,52 @@ fn veto_row(v: &str, rep: &Cmp) -> Row {
             "对照否决 {a} 段 → 候选否决 {b} 段 · b 新增 {new} 段 · 一边判不了 {und} 段（不算增减）"
         ),
     )
+}
+
+/// 「覆盖」的一行：对照成绩单的场景与片段都要在比较里、候选成绩单也不能整场景缺。
+///
+/// 双方误用同一份子集（都漏跑一个场景）时，涨退两项都恰好没检查它；这一行把它暴露出来
+/// （codex 第 3 轮 P1 #2）。
+fn coverage_row(a: &CardIn, b: &CardIn, rep: &Cmp) -> Row {
+    let what = "覆盖：对照成绩单的场景与片段都在比较里".to_string();
+    let mut hole = Vec::new();
+    for scene in expected_scenes(a) {
+        match rep.scopes.get(&scene) {
+            None => hole.push(format!("compare 里没有场景 {scene}（对照成绩单有）")),
+            Some(s) => {
+                let want: usize = a
+                    .rows
+                    .iter()
+                    .filter(|r| r.scene == scene)
+                    .map(|r| r.clips)
+                    .sum();
+                if want > 0 && s.pairs < want {
+                    hole.push(format!(
+                        "{scene} 只配上 {} 段，对照成绩单有 {want} 段",
+                        s.pairs
+                    ));
+                }
+            }
+        }
+        if !b.rows.iter().any(|r| r.scene == scene) {
+            hole.push(format!("候选成绩单里没有场景 {scene}（对照有）"));
+        }
+    }
+    let verdict = if hole.is_empty() {
+        Verdict::Pass
+    } else {
+        Verdict::Undecided
+    };
+    let detail = if hole.is_empty() {
+        format!(
+            "{} 个场景、{} 段都在比较里",
+            expected_scenes(a).len(),
+            rep.pairs()
+        )
+    } else {
+        format!("证据不足，判不了：{}", hole.join("；"))
+    };
+    Row::new(what, verdict, detail)
 }
 
 /// 「其他场景不新增不过」的一行：按 场景 × 档 × 设备 对卡（两边的系统各自），目标场景以外
@@ -384,12 +447,14 @@ pub(super) fn evaluate(
             rows.push(gain_row(v, key, scene, vs, noise));
         }
     }
+    let expected = expected_scenes(card_a);
     for (v, key) in REGRESS {
-        rows.push(regress_row(v, key, rep));
+        rows.push(regress_row(v, key, rep, &expected));
     }
     for v in VETO {
         rows.push(veto_row(v, rep));
     }
+    rows.push(coverage_row(card_a, card_b, rep));
     rows.push(cards_row(card_a, card_b, scenes));
     rows.push(lat_row(card_a, card_b));
     let verdict = if rows.iter().any(|r| r.verdict == Verdict::Fail) {

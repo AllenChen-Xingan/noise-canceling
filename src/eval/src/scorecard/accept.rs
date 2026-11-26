@@ -13,11 +13,14 @@
 //!
 //! 每条线一行，结论只有三态；整份结论：每行都过 = 过，有一行不过 = 不过，其余 = 判不了。
 //!
-//! 判定前先核两件事，缺了只判「判不了」，绝不当「过」：
+//! 判定前先核三件事，缺了只判「判不了」（身份不符直接报错），绝不当「过」：
 //! - **种子齐**：`--vs` 必须是 `SC-ACCEPT.seeds`（3）个不同种子，候选身份 = 成绩单 sha256 + 系统名，
 //!   三份的对照必须是同一份；`--noise` 必须恰好是这三个候选的全部两两互比（`judge::seed_shortage`）
 //! - **有证据**：「不适用」只按成绩单标准的适用范围算（`standard::items`）；适用场景没有数、区间组数不够、
 //!   否决项一段都没判过，都是证据不足 → 判不了（未知不能证明「不新增否决段」）
+//! - **卡片对得上**：`--card-a` / `--card-b` 必须是第一份 `--vs` 那两边的成绩单（系统名相同；成绩单自己记了
+//!   从哪份逐段文件汇总时，sha256 也要相同），不符直接报错不判（`check_binding`）；覆盖按对照成绩单的
+//!   场景与片段核，整场景漏跑或片段少配 → 判不了（`judge::coverage_row`）
 //!
 //! 阈值全部从 [`crate::thresholds::ACCEPT`] 取（正本 `SC-ACCEPT`），本文件不写数字；
 //! 延迟的线是基线成绩单量出来的 V-LAT 本身（014 第三节第 4 条），不是另一个阈值。
@@ -208,6 +211,12 @@ impl Cmp {
             .filter(|(k, _)| k.as_str() != ALL_SCOPE)
             .map(|(k, s)| (k.as_str(), s))
     }
+    /// 全部配上的段数（「全部段」那个范围的数；没有该范围时按逐场景求和）。
+    fn pairs(&self) -> usize {
+        self.scopes
+            .get(ALL_SCOPE)
+            .map_or_else(|| self.scenes().map(|(_, s)| s.pairs).sum(), |s| s.pairs)
+    }
     fn name(&self) -> String {
         short(&self.path)
     }
@@ -221,14 +230,20 @@ struct CardRow {
     device: String,
     system: String,
     status: String,
+    /// 这张卡上打分了几个片段（核「比较里的片段覆盖」用）
+    clips: usize,
 }
 
 /// 一份 `scorecard.json`。
 #[derive(Debug)]
 struct CardIn {
     path: String,
+    /// 这份成绩单唯一的系统（[`parse_card`] 保证只有一个）
+    system: String,
     /// 外部系统（延迟只是声明值）
     external: bool,
+    /// 成绩单自己记的「从哪份逐段文件汇总」（`meta.from_clips_sha256`；现跑的成绩单没有，为 `None`）
+    clips_sha: Option<String>,
     rows: Vec<CardRow>,
     /// 各卡 V-LAT 均值的平均；没有读数时为 `None`
     lat_ms: Option<f64>,
@@ -354,6 +369,7 @@ fn parse_card(text: &str, path: &str) -> Result<CardIn, String> {
             device: c["device"].as_str().unwrap_or_default().to_string(),
             system: c["system"].as_str().unwrap_or_default().to_string(),
             status,
+            clips: num(c, "clips").unwrap_or(0.0).max(0.0) as usize,
         });
     }
     if rows.is_empty() {
@@ -380,10 +396,49 @@ fn parse_card(text: &str, path: &str) -> Result<CardIn, String> {
         .unwrap_or_default();
     Ok(CardIn {
         path: path.to_string(),
+        system: systems.iter().next().copied().unwrap_or("").to_string(),
         external: !ext.is_empty(),
+        clips_sha: v["meta"]["from_clips_sha256"]
+            .as_str()
+            .filter(|x| !x.is_empty())
+            .map(str::to_string),
         rows,
         lat_ms: mean(&lats),
     })
+}
+
+/// 两张卡必须就是报告种子那一边的成绩单：系统名相同；成绩单自己记了逐段文件 sha256 时也要相同。
+///
+/// 不核这一条，误传旧候选或原版的卡就能掩盖新增「不过」，外部候选的声明延迟也会被当成实测
+/// （codex 第 3 轮 P1 #1）。
+fn check_binding(rep: &Cmp, a: &CardIn, b: &CardIn) -> Result<(), String> {
+    let (Some(aid), Some(bid)) = (rep.a_id.as_ref(), rep.b_id.as_ref()) else {
+        return Err(format!(
+            "{} 没记两边成绩单的 sha256 与系统名（meta.a_sha256 · a_system · b_sha256 · b_system）：             核不了两张卡是哪一边的，不判",
+            rep.name()
+        ));
+    };
+    for (flag, card, id, side) in [
+        ("--card-a", a, aid, "对照"),
+        ("--card-b", b, bid, "候选（报告种子）"),
+    ] {
+        if card.system != id.1 {
+            return Err(format!(
+                "{flag} 的系统是 {}，第一份 --vs 的{side}系统是 {}：不是同一边的成绩单，不判",
+                card.system, id.1
+            ));
+        }
+        if let Some(sha) = &card.clips_sha
+            && sha != &id.0
+        {
+            return Err(format!(
+                "{flag} 是从 {} 的逐段文件汇总的，第一份 --vs 的{side}是 {}：不是同一份逐段文件，不判",
+                &sha[..sha.len().min(12)],
+                &id.0[..id.0.len().min(12)]
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn to_markdown(r: &Report, vs: &[String], noise: &[String], scenes: &[String]) -> String {
@@ -490,6 +545,9 @@ pub fn cli(args: &[String], run_id: &str, default_out: PathBuf) -> Result<PathBu
     }
     let card_a = parse_card(&read(&pa)?, &pa)?;
     let card_b = parse_card(&read(&pb)?, &pb)?;
+    if let Some(rep) = cmps.first() {
+        check_binding(rep, &card_a, &card_b)?;
+    }
     let report = evaluate(&cmps, &nois, &scenes, &card_a, &card_b)?;
     let out = arg(args, "--out").map(PathBuf::from).unwrap_or(default_out);
     for f in FILES {
