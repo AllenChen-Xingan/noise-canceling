@@ -1,7 +1,7 @@
 # 大总管看板
 
 > 只有大总管跟人说话。手下做完、卡住、要名额，只报给大总管。
-> 大总管会话名：`noise-canceling-e3`（2026-11-02 换班；旧名 c4 · 69）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
+> 大总管会话名：`noise-canceling-meta`（固定名，轮换不变；2026-11-26 起，人定。之前用过 e3 · c4 · 87 等）。tmux 工作区：`vdn`（`tmux attach -t vdn` 可以看）。
 
 ## 当前大事（2026-11-16 起，b19）
 
@@ -531,3 +531,7 @@
 - 2026-11-26 PR #220 CI 过（14m18s）→ 合并（#219 关）；删 evalcmp 改写备份 refs/original。清单第 7 项评测计划与判读工具进 main。
 - 2026-11-26 evalcmp：pi-worker clean 因改写历史判「not merged」，--force 被它会话权限拦 → 记待拍板 11-6，大总管不代删（不绕权限）。
 - 2026-11-26 traindata 交 254ebece（新来源 but-reverbdb-silence-b4，728 条；旧规则逐字节还原；冻结文件与 splits/builds/screen 对 e8728ffe diff 空；414 过 · 3 跳过；pi 0.028 美元）→ cloudrun 原机重跑 B 段。
+- 2026-11-26 history 项目大总管换为 history-ba（同机协调找它）。
+- 2026-11-26 人定（经 allenchen-52 转达）：大总管固定名 noise-canceling-meta，轮换不变；本会话（原 87）已 /rename。
+- 2026-11-26 history 项目大总管固定名 history-meta（同机协调找它）。
+- 2026-11-26 cloudrun 第四批 B 段完：新基线 build bc0e9e7b，6 个 build valid、交集 0，4 间房开发份各 1 布置；D116 删 batch3（取回 93 文件清单 21.6 GB 于 _tmp/20261126-batch3-small/），盘剩 44 GB；机器 0.18 美元，累计 8.97 美元，云上 0 台。
