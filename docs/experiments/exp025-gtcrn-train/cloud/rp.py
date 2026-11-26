@@ -203,16 +203,23 @@ def cmd_job_wait(cli, a):
 
 
 def cmd_preflight(cli, a):
-    """显卡机开机检查：装 git、核提交号（见 preflight.py）。--down-on-fail 时不过就删机。"""
+    """显卡机开机检查：先看网络盘剩多少（少于下限不开训练），再装 git 核提交号。
+    任一不过就抛 SystemExit；带 --down-on-fail 时删机。见 preflight.py。"""
     import preflight as F
+    if not a.skip_git and not (a.repo and a.commit):
+        raise SystemExit("要核提交号就同时给 --repo 和 --commit；只查磁盘加 --skip-git")
     try:
-        got = F.check_commit(cli, a.pod, a.repo, a.commit)
+        used, quota, free = F.check_free_space(cli, a.pod, min_free_gb=a.min_free_gb)
+        got = None if a.skip_git else F.check_commit(cli, a.pod, a.repo, a.commit)
     except SystemExit as e:
         if a.down_on_fail:
             O.delete_pod(cli, a.pod, a.ledger, note=f"开机检查不过，删机：{str(e)[:60]}")
             raise SystemExit(f"{e}；已删机 {a.pod}") from None
         raise
-    print(f"开机检查过：{a.pod} 有 git，{a.repo} 在 {got}")
+    line = f"开机检查过：{a.pod} 网络盘已用 {used} GB，配额 {quota} GB，剩 {free} GB"
+    if got:
+        line += f"；有 git，{a.repo} 在 {got}"
+    print(line)
 
 
 def cmd_put_secret(cli, a):
@@ -342,10 +349,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("pod")
     p.add_argument("job", metavar="run_id", help="job-start 打印的运行编号")
     p.add_argument("--timeout", type=float, default=3600)
-    p = add("preflight", cmd_preflight, "显卡机开机检查：没有 git 就装，再核仓库提交号")
+    p = add("preflight", cmd_preflight, "显卡机开机检查：网络盘空间够、没有 git 就装，再核仓库提交号")
     p.add_argument("pod")
-    p.add_argument("--repo", required=True)
-    p.add_argument("--commit", required=True, help="完整 40 位提交号")
+    p.add_argument("--repo", default=None, help="仓库路径（核提交号时要）")
+    p.add_argument("--commit", default=None, help="完整 40 位提交号（核提交号时要）")
+    p.add_argument("--skip-git", action="store_true", help="只查网络盘空间，不核提交号")
+    p.add_argument("--min-free-gb", type=int, default=C.MIN_FREE_GB,
+                   help=f"网络盘至少要剩多少 GB 才开训练（默认 {C.MIN_FREE_GB}）")
     p.add_argument("--down-on-fail", action="store_true", help="检查不过就删机")
     p = add("put-secret", cmd_put_secret, "把 .env.local 里的一个密钥送进机器容器盘（不经命令行，只报位数）")
     p.add_argument("pod")
