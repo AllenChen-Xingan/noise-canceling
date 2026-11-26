@@ -18,7 +18,7 @@ A 段结果和由来见 `cloud-batch4.md`；场景缺口与限制见 `scene-gaps
 D=docs/experiments/exp025-gtcrn-train/data
 PY=.venv/bin/python
 export VDN_ROOT=/workspace VDN_SHARDS=/workspace/shards/batch4      # 新目录；已存在会拒绝
-du -sh /workspace; df -h /workspace          # 重打分片约再占 23 GB（第三批推算）；剩余不到 30 GB 先停，问大总管
+du -sh /workspace; df -h /workspace          # 重打分片约再占 23 GB（第三批推算）；开跑前剩余不到 30 GB 先停，问大总管；中途只在剩余不到 10 GB 时停
 cd $D && $PY -m unittest discover -s tests -t . 2>&1 | tail -3; cd -  # 全过（skipped 若干）
 $PY $D/ablation_recipes.py --check           # 应打印「5 份消融配方与 … 一致」
 ```
@@ -76,4 +76,4 @@ bash $D/cloud_steps.sh pack
 - 第 1 步摘要、第 3 步 register.log 和核对输出、`scenes.md`
 - pack 的包路径与 sha256（含 splits/ 与 builds/）
 - `du -sh /workspace`
-- D112：基线 build valid 并取回核对以后，first-batch 可以删；删前问 trainer
+- first-batch 已于 2026-11-26 07:42Z 按 D112 删除（cloudrun），不用再做
