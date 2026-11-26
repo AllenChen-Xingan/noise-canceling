@@ -38,3 +38,6 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-25T22:02:20Z	pod_delete	ijfkm5fvi6xfp7	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T21:44:09Z	2026-11-25T22:02:20Z	0.3031	1.3304		乙段第 2 步：镜像没有 git，train.py 拒跑；按收尾取回后删机
 2026-11-25T22:04:59Z	pod_create	htpp90buaagezi	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T22:04:59Z					max_hours=1.5
 2026-11-25T22:06:20Z	pod_create	gwgj2a97e1a92q	cpu3c x4	US-MO-1	0.1200	2026-11-25T22:06:20Z					max_hours=6.0
+2026-11-25T22:35:58Z	volume_resize	bzpbedqdsi		US-MO-1	0.019444	2026-11-25T22:35:58Z					150 → 200 GB ≈ 14.0 USD/月
+2026-11-25T22:40:47Z	pod_delete	htpp90buaagezi	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-25T22:04:59Z	2026-11-25T22:40:47Z	0.5967	2.6194		乙段第 2–4 步全过，取回后删机
+2026-11-26T00:11:30Z	pod_delete	gwgj2a97e1a92q	cpu3c x4	US-MO-1	0.1200	2026-11-25T22:06:20Z	2026-11-26T00:11:30Z	2.0861	0.2503		CochlScene 3 类解压完 17629/17629，大总管核对后删机
