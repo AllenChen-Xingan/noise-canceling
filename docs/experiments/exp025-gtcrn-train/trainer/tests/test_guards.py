@@ -307,3 +307,69 @@ def test_final_eval_guard_state_persisted(tmp_path, monkeypatch):  # #2
     train.train(_cfg(tmp_path, **{"schedule.max_steps": 6, "schedule.eval_every": 2}))
     _, rec, _ = _read(tmp_path)
     assert any(g["kind"] == "dev_plateau" for g in rec.get("guards", []))
+
+
+# ---------- codex guards 第 3 轮 ----------
+
+def _nan_in_dev_eval(monkeypatch, sig, at):
+    """只在开发份评估的某一批注入 NaN，并在那一刻留下停止请求（codex guards 第 3 轮 #1）。
+    at = (第几次评估, 这次评估里的第几批)；标定时的评估模式调用不算（那时还没进过 evaluate）。"""
+    real_ev, real_fl = train.evaluate, train.forward_loss
+    pos = {"ev": 0, "b": 0}
+
+    def ev(*a, **k):  # 数到第几次 evaluate，每进一次就把批号清零
+        pos["ev"] += 1
+        pos["b"] = 0
+        return real_ev(*a, **k)
+
+    def fl(model, crit, batch, device, **k):
+        loss, logs = real_fl(model, crit, batch, device, **k)
+        if not model.training and pos["ev"]:  # 评估模式且已进过 evaluate：标定阶段不算
+            pos["b"] += 1
+            if at == (pos["ev"], pos["b"]):
+                sig.got = "SIGTERM"  # 下一批的 should_stop 会想停
+                logs = {**logs, "hybrid": float("nan")}
+        return loss, logs
+    monkeypatch.setattr(train, "evaluate", ev)
+    monkeypatch.setattr(train, "forward_loss", fl)
+
+
+def _assert_stopped_as_crashed(tmp_path, stop):
+    assert stop["reason"] == "nonfinite" and train.exit_code(stop) == 1
+    root, rec, _ = _read(tmp_path)
+    assert rec["crash"]["step"] == stop["step"] and rec["stop"]["reason"] == "nonfinite"
+    assert not (root / "ckpt" / "best.pt").exists()
+    with pytest.raises(RuntimeError, match="训崩"):
+        train.train(_cfg(tmp_path))  # 续训照样拒绝
+
+
+def test_nonfinite_dev_batch_then_stop_signal_still_crashes(tmp_path, monkeypatch):  # #1 原模型
+    sig = train._Signals()
+    _nan_in_dev_eval(monkeypatch, sig, at=(1, 1))  # 第一次评估的第一批
+    stop = train.train(_cfg(tmp_path, **{"schedule.eval_every": 2, "data.dev_batches": 2}), _signals=sig)
+    _assert_stopped_as_crashed(tmp_path, stop)
+
+
+def test_nonfinite_ema_dev_batch_then_stop_signal_still_crashes(tmp_path, monkeypatch):  # #1 EMA
+    sig = train._Signals()
+    _nan_in_dev_eval(monkeypatch, sig, at=(2, 1))  # 第一次评估里第 2 次 evaluate（EMA）的第一批
+    stop = train.train(_cfg(tmp_path, **{"schedule.eval_every": 2, "data.dev_batches": 2, "ema.enabled": True}),
+                       _signals=sig)
+    _assert_stopped_as_crashed(tmp_path, stop)
+
+
+def test_evaluate_returns_early_on_nonfinite(tmp_path, monkeypatch):
+    """一批读出非有限数就立刻交回去，不再问 should_stop、也不平均（codex guards 第 3 轮 #1）。"""
+    cfg = _cfg(tmp_path)
+    model = torch.nn.Linear(1, 1)
+    monkeypatch.setattr(train, "forward_loss", lambda m, crit, b, dev, **k: (
+        torch.zeros(()), {"hybrid": float("nan") if b == 0 else 1.0}))
+    asked = []
+
+    def should_stop():
+        asked.append(1)
+        return "max_usd" if len(asked) == 2 else None
+    out = train.evaluate(model, None, [0, 1], torch.device("cpu"), cfg, should_stop)
+    assert out["nonfinite"] is True and out["batch"] == 0
+    assert len(asked) == 1  # 第 2 批的那一问根本没发生
+    assert model.training  # finally 里的 set_train 照样跑过
