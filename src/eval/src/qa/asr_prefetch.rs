@@ -46,11 +46,14 @@ impl Asr {
             };
             let id = format!("{sha}|{model}");
             self.count_check(id.clone(), same_text(&t[1], &t[0], lang));
-            if let Some(t3) =
-                texts(self, sha, lang, TIE_BREAK_REP).filter(|_| !same_text(&t[1], &t[0], lang))
-            {
-                let ok = matches!(vote_on(&t3, lang), Vote::Use(_));
-                self.votes.insert(id, ok);
+            if !same_text(&t[1], &t[0], lang) {
+                // 前两次不同：先记「要补调」；第 3 次到手才改成 Some(_)，没到手（报错、停发）留 None
+                let ok = texts(self, sha, lang, TIE_BREAK_REP)
+                    .map(|t3| matches!(vote_on(&t3, lang), Vote::Use(_)));
+                let slot = self.votes.entry(id).or_insert(None);
+                if let Some(ok) = ok {
+                    *slot = Some(ok);
+                }
             }
         }
     }

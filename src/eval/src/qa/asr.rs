@@ -119,8 +119,10 @@ pub struct Asr {
     pub halted: Option<String>,
     /// 已计入 checked / unstable 的音频（sha256 | 型号），同一条只计一次
     counted: std::collections::BTreeSet<String>,
-    /// 前两次不同、补调过第 3 次的音频（sha256 | 型号）→ 有没有多数（A，`asr_vote`）
-    votes: BTreeMap<String, bool>,
+    /// 前两次分词后不同、要补调第 3 次的音频（sha256 | 型号）→ 第 3 次的结果：`None` = 第 3 次还没到手
+    /// （报错、重试用尽、停发），`Some(true)` = 取到多数，`Some(false)` = 三次都不同。一旦记上 `Some(_)` 不再改回
+    /// `None`（A，`asr_vote`）
+    votes: BTreeMap<String, Option<bool>>,
 }
 
 pub use super::asr_or::is_permanent;
@@ -245,7 +247,9 @@ impl Asr {
         serde_json::json!({"default": effective, "env_default": self.default, "backends": b, "calls": self.calls,
             "repeats": if self.single { "1 + 抽查" } else { "2" }, "spot_fraction": SPOT_FRACTION,
             "tie_break_rep": super::asr_vote::TIE_BREAK_REP, "majority": super::asr_vote::MAJORITY,
-            "tie_breaks": self.votes.len(), "no_majority": self.votes.values().filter(|ok| !**ok).count(),
+            "tie_breaks": self.votes.len(),
+            "tie_break_missing": self.votes.values().filter(|v| v.is_none()).count(),
+            "no_majority": self.votes.values().filter(|v| **v == Some(false)).count(),
             "checked": self.checked, "unstable": self.unstable, "unstable_rate": rate,
             "halted": self.halted})
     }
@@ -375,12 +379,17 @@ impl Asr {
         let id = format!("{sha}|{model}");
         let mut texts = vec![self.once(path, sha, lang, 1, backend)?];
         let mut v = Vote::Use(0);
+        // 前两次分词后不同（要补调第 3 次）
+        let mut differ = false;
         if repeats_for(sha, self.single) >= 2 {
             texts.push(self.once(path, sha, lang, 2, backend)?);
             // 前两次的一致率照旧计（决定以后能不能改成 1 次）
             self.count_check(id.clone(), same_text(&texts[1], &texts[0], lang));
             v = vote_on(&texts, lang);
-            if v == Vote::NeedTieBreak {
+            differ = v == Vote::NeedTieBreak;
+            if differ {
+                // 先记「要补调、第 3 次还没到手」：下面 `?` 报错时这条留作 `tie_break_missing`，不能因为提前返回就不计
+                self.votes.entry(id.clone()).or_insert(None);
                 texts.push(self.once(path, sha, lang, TIE_BREAK_REP, backend)?);
                 v = vote_on(&texts, lang);
             }
@@ -389,8 +398,8 @@ impl Asr {
             Vote::Use(i) => (texts[i].clone(), true),
             _ => (texts[0].clone(), false),
         };
-        if texts.len() >= TIE_BREAK_REP {
-            self.votes.insert(id, ok);
+        if differ {
+            self.votes.insert(id, Some(ok));
         }
         let cid = clip.split('#').next().unwrap_or(clip).to_string();
         self.used.entry(backend).or_default().insert(cid);
