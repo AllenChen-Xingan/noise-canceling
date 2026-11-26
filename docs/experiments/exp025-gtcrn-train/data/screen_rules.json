@@ -6,6 +6,7 @@
   "rail-air-cabin": {"tags_any": ["Aircraft", "Inside, small room"], "top_k": 5, "src": "暂定"},
   "meeting-room": {"tags_any": ["Inside, large room or hall", "Air conditioning", "Inside, small room"],
                    "top_k": 5, "rt60_s": [0.3, 1.0], "src": "暂定"},
-  "phone-booth": {"tags_any": ["Inside, small room"], "top_k": 5, "rt60_s": [0.1, 0.3], "src": "暂定"}
+  "phone-booth": {"tags_any": ["Inside, small room"], "top_k": 5, "rt60_s": [0.1, 0.3], "src": "暂定"},
+  "hotel-room": {"tags_any": ["Inside, small room", "Air conditioning", "Mechanical fan"], "top_k": 5, "src": "暂定"}
  },
  "stationarity": {"max_level_std_db": 6.0, "src": "逐秒电平的标准差，暂定"}}
