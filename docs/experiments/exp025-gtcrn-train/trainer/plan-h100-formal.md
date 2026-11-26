@@ -1,25 +1,28 @@
 # 执行单（草稿）：正式训练 6 个运行，开训前先在第五批 build 上冒烟（H100，给 cloudrun）
 
-这份执行单回答一件事：正式训练用第五批数据 build。开训前先在这个 build 上冒烟，确认训练管线照常，再训 6 个运行（模型 A、B × 种子 0、1、2，各 5000 步）。
+第五批基线 build：`df759bb8d606a209`（traindata 登记，PR #227，main 2a1c5e16）；分片在网络盘 `/workspace/shards/batch5`（`data/cloud-batch5.md` 第 24 行）。
+
+这份执行单回答一件事：正式训练用第五批数据 build `df759bb8d606a209`。开训前先在这个 build 上冒烟，确认训练管线照常，再训 6 个运行（模型 A、B × 种子 0、1、2，各 5000 步）。
 它沿用 `plan-h100-b4.md` 的跑法（甲段 CPU 机算参照、乙段 H100、闸门、打包取回），这里只写不同的地方。
-**现在还不能跑**：第五批 build 还没登记，开训前清单也还没给人看（见第一节）。
+**现在还不能跑**：开训前清单还没给人看，人还没点头（见第一节第 3 条）。
 
 下文「实测」= 2026-11-25 乙段（`smoke_reports/20261125-h100-stageB-timing.json`）或 2026-11-26 新基线一单（`smoke_reports/20261126-h100-b4-timing.json`）的读数，「推断」= 由实测推算或没测过。
 
 ## 一、开跑前提（缺一条就不开机）
 
-1. traindata 已把第五批 build 登记进 main：
-   - build 记录 `data/builds/<第五批 id>/build.json`，valid，交集为 0
-   - 它的配方，和分片在网络盘上的目录
-2. trainer 已把正式训练的配置改成指向第五批 build，合进 main（另开分支，交 pi 改，带测试）：
+1. traindata 已把第五批 build 登记进 main（PR #227，2a1c5e16，已成立）：
+   - build 记录 `data/builds/df759bb8d606a209/build.json`，valid
+   - 配方 `data/recipe.json`（sha256 7de5c4b5…），分片在 `/workspace/shards/batch5`
+2. trainer 已把正式训练的配置改成指向第五批 build，合进 main（分支 `feat/trainer-formal-b5`，pi 改，带测试）：
    - `configs/formal.yaml` 的 `data.shard_root`、`data.recipe`
    - `configs/formal-runs.yaml` 的 `data_build`
    - 在那个 main 上，本机 `python formal.py check` 退出 0（它核对配方、数据代码的 sha256 和登记记录，并比对加训场景）
 3. 开训前清单已经给人看过，人点了头。清单要逐项写清：场景、噪声、评测、配置、花费（人定）
 4. 网络盘上还没有 `/workspace/runs/exp025-formal`。已存在就停下报大总管：同名运行会被当成续训
 5. 大总管批了花费上限（第四节是建议值）
+6. 网络盘 `/workspace` 剩余空间不少于 30 GB（开机后第一步 `df -h /workspace` 实测）。第五批分片落盘后约剩 22 GB，低于正式训练要的 30 GB，所以要先删 `/workspace/shards/batch4`（`data/cloud-batch5.md` 第六节，人定 D118）。删不删、怎么删照那一节由 cloudrun 做，本单不删任何东西；不足 30 GB 就停，报大总管（codex 第 1 轮 #1）
 
-`R`、`T`、`D`、`PY`、`G`、`O` 的含义同 `plan-h100-b4.md`。下面 `S5` = 第五批分片目录，`D/<配方>` = 第五批配方。
+`R`、`T`、`D`、`PY`、`G`、`O` 的含义同 `plan-h100-b4.md`。下面 `S5=/workspace/shards/batch5`，配方 = `$D/recipe.json`（第五批基线配方）。
 
 ## 二、甲段：CPU 机（约 0.12 美元 / 小时）
 
@@ -78,7 +81,11 @@
 - 闸门不过时：乙段约 1.6–1.8 美元（按 4.39）
 - 建议上限（待大总管定，正式训练还要人点头）：甲段 ≤ 0.1 美元；乙段机器时限 `H = min(1.9, 10 / p − 5/60)`，向下取到 0.05 小时，H < 1.7 就不开。按 4.39 美元 / 小时，H = 1.9 小时，最坏 (1.9 + 5/60) × 4.39 ≈ 8.7 美元
 - 训练器里每个运行的花费保险仍是 20 美元，`limits.max_hours` 1.5 小时（`configs/formal.yaml`）；硬止损归 cloudrun 的机器时限
-- 已花：cloudrun 记 8.97 美元，加 2026-11-26 新基线一单 H100 4.32 美元，约 13.3 美元。甲段的花费以 cloudrun 的账为准。总上限 100 美元
+- 已花：cloudrun 记 8.97 美元，加 2026-11-26 新基线一单 H100 4.32 美元，约 13.3 美元；之后的 CPU 机（新基线一单的甲段、第五批）以 cloudrun 的账为准。总上限 100 美元
+- 耗时的来源分两批，换到第五批都是推断（未测）：
+  - 冒烟、A、B 各 300 步，以及 3 个 A 同时跑：第四批 build bc0e9e7b 上的实测（2026-11-26）。第五批只去掉酒店房间 Room112 的 21 条带单音的录音、重打分片，其余旋钮和场景相同（`data/cloud-batch5.md` 开头），应当相近
+  - 3 个 B 同时跑（每步 0.39 s、准备期 158 s、评估 2.2 s）：2026-11-25 在更早的 build f032a75e（first-batch）上测的，第四批、第五批都没测过，跨了数据批次（codex 第 2 轮 #1）
+- 第一批前 500 步的每步耗时由训练器自己判，见第三节第 3 步
 
 ## 五、带回后谁判
 

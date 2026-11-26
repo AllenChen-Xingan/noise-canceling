@@ -16,6 +16,7 @@ import yaml
 import ablation
 import config as cfgmod
 from _ablation_helpers import BASE_RECIPE
+from _shipped import SHIPPED_BUILD
 from test_buildpin import make_build
 
 HERE = Path(__file__).resolve().parents[1]
@@ -88,7 +89,7 @@ def test_shipped_configs_have_no_placeholders():
 
 def test_shipped_data_build_pinned():
     runs = yaml.safe_load(RUNS.read_text())
-    assert runs["data_build"] == "bc0e9e7b566421f0"  # 新基线 build（正本 data/builds/<id>/build.json）
+    assert runs["data_build"] == SHIPPED_BUILD  # 仓里在用的基线 build（正本 data/builds/<id>/build.json）
 
 
 def test_commands_refuse_with_todo_shard_root(tmp_path):

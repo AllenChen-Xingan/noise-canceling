@@ -4,14 +4,14 @@
 # 这是什么：6 个正式运行（模型 A、B × 种子 0/1/2，各 5000 步，每次 3 个同时跑一张 H100）共用的一份配置。
 # 运行矩阵在 configs/formal-runs.yaml。
 #
-# 数据：分片是 data/builds/bc0e9e7b566421f0 登记的 baseline build，放在云盘 /workspace/shards/batch4
-# （traindata 的 data/cloud-batch4b.md：VDN_SHARDS=/workspace/shards/batch4）；配方是基线配方
+# 数据：分片是 data/builds/df759bb8d606a209 登记的第五批基线 build，放在云盘 /workspace/shards/batch5
+# （traindata 的 data/cloud-batch5.md 第 24 行：VDN_SHARDS=/workspace/shards/batch5）；配方是基线配方
 # data/recipe.json。开训前必须让 `python formal.py check` 通过，否则不许开机——它会拿这两项和那条登记
 # 记录逐项对（配方与数据代码的 sha256 必须和登记时一模一样，判法见 buildpin.py），还会查运行矩阵。
 run:
   out_dir: /workspace/runs/exp025-formal  # 检查点与日志放仓外（铁律 8）
 data:
-  shard_root: /workspace/shards/batch4  # 云盘上的 baseline 分片（build bc0e9e7b566421f0 用的那一份）
+  shard_root: /workspace/shards/batch5  # 云盘上的基线分片（build df759bb8d606a209 用的那一份）
   recipe: ../data/recipe.json  # 基线配方（相对 trainer/，train.py 就在 trainer/ 下跑）
   num_workers: 6  # 3 个同时跑 × 6 = 18，容器约 22 核
 limits:
