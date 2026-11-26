@@ -150,8 +150,10 @@ mkdir -p "$OUT"
    cd $REPO
    E=docs/experiments/exp025-gtcrn-train/eval/run_gtcrn_offline.py
    $PY $E --onnx $ONNX --name $NAME --probe                       # 先量前视、对齐、一段耗时
-   pids=(); for i in 0 1 2 3; do $PY $E --onnx $ONNX --name $NAME --run-id formal1 --shard $i/4 & pids+=($!); done
-   for p in "${pids[@]}"; do wait $p; done                        # 任何一片非 0 退出，set -e 就停
+   pids=(); trap 'kill "${pids[@]}" 2>/dev/null || true' EXIT INT TERM    # 本块中途退出（失败或被中断）就收掉各片
+   for i in 0 1 2 3; do $PY $E --onnx $ONNX --name $NAME --run-id formal1 --shard $i/4 & pids+=($!); done
+   for p in "${pids[@]}"; do wait $p; done                        # 任何一片非 0 退出，set -e 就停，trap 收掉其余
+   trap - EXIT INT TERM
    $PY $E --onnx $ONNX --name $NAME --run-id formal1 --finalize
    ```
    - ONNX 必须在 `$REPO` 里（`$W/onnx/`）：离线脚本把路径写进仓前只认工作副本或主目录里的文件（`run_gtcrn_offline.py` 的 `rel()`），仓外的路径直接拒绝，软链接也不行
@@ -172,11 +174,17 @@ mkdir -p "$OUT"
 
 ```sh
 cat > $W/gate.py <<'EOF'
-# 用法：gate.py <账本> <批次起点> <本份起点文件> [--once]
-# 本份起点文件不存在就按当前账本写一份（开跑前）；--once 只核一次，用于合并前的最后复核。
-import json, os, sys, time
-ledger, start, run0f = sys.argv[1], json.load(open(sys.argv[2])), sys.argv[3]
-once = "--once" in sys.argv[4:]
+# 用法：gate.py <账本> <批次起点> <本份起点文件> <本份分片命令行特征> [--once]
+# 本份起点文件不存在就按当前账本写一份（开跑前）；越线或出错时先按特征杀掉本份分片再退出，
+# 所以就算调它的 shell 已经没了，分片也停得下来。--once 只核一次，用于合并前的最后复核。
+import json, os, subprocess, sys, time
+ledger, start, run0f, pattern = sys.argv[1], json.load(open(sys.argv[2])), sys.argv[3], sys.argv[4]
+once = "--once" in sys.argv[5:]
+def stop(msg, code):
+    print(msg, flush=True)
+    if not once:
+        subprocess.run(["pkill", "-f", pattern])
+    sys.exit(code)
 def used(d):
     return d["spent_usd"] + d["reserved_usd"]          # 已花 + 在途预留
 try:
@@ -192,29 +200,34 @@ try:
                "本批 > 1.2 美元" if batch_usd > 1.2 else None)
         print(time.strftime("%H:%M:%SZ", time.gmtime()), run_calls, round(run_usd, 6), round(batch_usd, 6), why, flush=True)
         if why:
-            print("停：", why, flush=True); sys.exit(2)
+            stop(f"停：{why}", 2)
         if once:
             sys.exit(0)
         time.sleep(30)
 except Exception as e:                                   # 读不了账本也按越线处理
-    print("闸门出错，停：", repr(e), flush=True); sys.exit(3)
+    stop(f"闸门出错，停：{e!r}", 3)
 EOF
 
-run_card() {   # $1 = --system 的值，$2 = 系统名；跑完 RUN 指向合并目录 $RUNS/$RUN
-  local sys=$1 name=$2 i rc=0 gate left=4 pids=()
+_rc_cleanup() {   # run_card 中途退出（失败、被中断、shell 被终止）时收掉本份的分片和闸门
+  local p; for p in ${RC_PIDS[@]+"${RC_PIDS[@]}"} ${RC_GATE:-}; do kill $p 2>/dev/null || true; done
+}
+run_card() {   # $1 = --system 的值，$2 = 系统名，$3 = 缓存来源（默认 $OLD，续跑时给中断那份的 $RUNS/<RUN>）
+  local sys=$1 name=$2 cache=${3:-$OLD} i rc=0 left=4
+  RC_PIDS=(); RC_GATE=""; trap _rc_cleanup EXIT INT TERM
   RUN=$(date -u +%Y%m%d-%H%M%S)-$name
   for i in 0 1 2 3; do
-    test -f "$OLD-s$i/qa/asr_cache.json"
+    test -f "$cache-s$i/qa/asr_cache.json"
     mkdir -p "$RUNS/$RUN-s$i/qa"
-    cp "$OLD-s$i/qa/asr_cache.json" "$RUNS/$RUN-s$i/qa/"
-    cmp "$OLD-s$i/qa/asr_cache.json" "$RUNS/$RUN-s$i/qa/asr_cache.json"
+    cp "$cache-s$i/qa/asr_cache.json" "$RUNS/$RUN-s$i/qa/"
+    cmp "$cache-s$i/qa/asr_cache.json" "$RUNS/$RUN-s$i/qa/asr_cache.json"
   done
-  local G0="$RUNS/${RUN}-gate.start.json" GLOG="$RUNS/${RUN}-gate.log"
-  $PY $W/gate.py "$LEDGER" $W/batch-start.json "$G0" > "$GLOG" 2>&1 & gate=$!
+  local G0="$RUNS/${RUN}-gate.start.json" GLOG="$RUNS/${RUN}-gate.log" gate
+  $PY $W/gate.py "$LEDGER" $W/batch-start.json "$G0" "--out $RUNS/$RUN-s" > "$GLOG" 2>&1 & gate=$!; RC_GATE=$gate
   sleep 5; kill -0 $gate; test -f "$G0"                  # 闸门没起来、没写下本份起点，就不开跑
+  local pids=()
   for i in 0 1 2 3; do
     target/release/vdn-eval scorecard --system "$sys" --no-safety --qa --rules v2 --shard $i/4 \
-      --asr-ledger "$LEDGER" --out "$RUNS/$RUN-s$i" > "$RUNS/$RUN-s$i.log" 2>&1 & pids[i]=$!
+      --asr-ledger "$LEDGER" --out "$RUNS/$RUN-s$i" > "$RUNS/$RUN-s$i.log" 2>&1 & pids[i]=$!; RC_PIDS+=($!)
   done
   while [ $left -gt 0 ] && [ $rc = 0 ]; do               # 每 10 秒：收已结束分片的退出码、看闸门
     for i in 0 1 2 3; do
@@ -231,8 +244,9 @@ run_card() {   # $1 = --system 的值，$2 = 系统名；跑完 RUN 指向合并
   done
   kill $gate 2>/dev/null || true; wait $gate 2>/dev/null || true
   if [ $rc = 0 ]; then                                   # 合并前按最终账本再核一次
-    $PY $W/gate.py "$LEDGER" $W/batch-start.json "$G0" --once >> "$GLOG" 2>&1 || { echo "最后复核越线：${RUN}"; rc=1; }
+    $PY $W/gate.py "$LEDGER" $W/batch-start.json "$G0" - --once >> "$GLOG" 2>&1 || { echo "最后复核越线：${RUN}"; rc=1; }
   fi
+  trap - EXIT INT TERM; RC_PIDS=(); RC_GATE=""
   [ $rc = 0 ] || { echo "有分片失败或越线：${RUN}，看 ${GLOG} 和各片日志"; return 1; }
   target/release/vdn-eval scorecard --merge-shards "$RUNS/$RUN-s0,$RUNS/$RUN-s1,$RUNS/$RUN-s2,$RUNS/$RUN-s3" \
     --suite src/eval/suite/scenes.json --out "$RUNS/$RUN"
@@ -289,6 +303,7 @@ $V accept --suite $S --scenes $T \
 - 导出对拍不过 → 那个模型不评，报 trainer；其余照跑。少了一个种子，`accept` 要涨那几行会判不了（种子数要正好 3）
 - 离线推理 `--finalize` 报缺段 → 不跑成绩单，查这一片的日志，用同一个 run-id 续跑（已写的文件会跳过）
 - 原版那份识别次数超过 1600 → 停（第三节第 6 步）
-- 任何一台跑到 5.25 小时还没跑完 → 已经合并好的成绩单先取回，没跑完的那份留到下一台接着跑，报大总管
+- 任何一台跑到 5.25 小时还没跑完 → 停掉正在跑的那份（中断 `run_card`，trap 会收掉分片和闸门），已经合并好的成绩单先取回，报大总管。没跑完的那份到下一台重跑，缓存用中断那份的：`run_card <系统> <系统名> $RUNS/<中断那份的 RUN>`。它的各片缓存里已有补跑的转写和这次已付费的转写，重跑只补没识别过的
+- 开下一台之前先核机费：已删机器的实际花费 + 下一台最坏（每小时价 × (时限 + 5 分钟)）≤ 1.5 美元才开。要开第三台、或要超过 1.5 美元，先报大总管批
 - 回归检查不过 → 停，不跑 7 份（第三节第 5 步）
 - 任何一份不是 480 行 → 不进判读，先查
