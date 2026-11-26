@@ -49,9 +49,12 @@ RULE = (
     "否则判「消融分不出: keep as is (off)」。比较都是严格不等式。"
     "每个运行的整份 config 也要对得上：拍平成「段.键」逐项和 abl-base-s0 比，只有 "
     + "、".join(CFG_IGNORE) +
-    " 三项允许各不同，其余任何一项不同、或缺键，都算不同；"
+    " 三项允许各不同，其余任何一项不同、或缺键，都算不同（缺键 · 键值是 null · 空对象，各算各的）；"
     f"而且每个运行都必须照设计跑：model.variant = {WANT_VARIANT} · schedule.max_steps = {STEP} · "
-    "data.dev_recipe 指明的开发份配方等于基线的 data.recipe（7 个运行同用一份开发集）。"
+    "data.dev_recipe 指明的开发份配方等于基线的 data.recipe（7 个运行同用一份开发集）· "
+    "run.seed 是运行矩阵给这个名字的种子（差一个种子就量不出 floor）· data.recipe 是这个名字说的那一份"
+    "配方（基线用基线配方 = abl-base-s0 的 data.dev_recipe；旋钮运行的文件名是 no-<旋钮>.json 或 "
+    "<旋钮>-on.json）。"
     "读数缺失 · 不是有限数 · 没有第 1000 步 · 指标行不是 JSON 对象 · 数据字段或整份配置对不上 · 不合设计"
     " → 该运行判 incomplete；基线 incomplete 时每个旋钮都 incomplete。"
 )
@@ -106,6 +109,39 @@ def variant_recipe_name(knob, on) -> str:
     return f"{knob}-on.json" if on else f"no-{knob}.json"
 
 
+# ---------- 结构比较（唯一正本）----------
+
+_MISSING = object()  # 缺键的记号：「键不在」和「键在、值是 null」是两件事
+
+
+def _flat_strict(d: dict, prefix: str = "") -> dict:
+    """把配置 / 配方拍平成「段.键」，用于**结构比较**：
+    - 空的对象、列表也留成一个叶子（`noise_pools: {}` 和「没有这个键」不是一回事）；
+    - 缺键在比的时候取到 `_MISSING`，和「键在、值是 null」分开。
+    正本在这里：judge 比运行配置 · problems 比变体配方都用它。（`formal._flat` 是另一件事：
+    它把空对象丢掉，别处依赖它的行为，不改它，也不能拿它比结构。）"""
+    out = {}
+    for k, v in d.items():
+        key = prefix + k
+        if isinstance(v, dict) and v:
+            out.update(_flat_strict(v, key + "."))
+        else:
+            out[key] = v
+    return out
+
+
+def _flat_diff(a: dict, b: dict) -> dict:
+    """两份**已拍平**的结构不同的键：{键: (a 的值, b 的值)}，缺键记作 `_MISSING`。
+    键集合不一致也算不同（拍平后看一眼那边没有就是缺键）。"""
+    return {k: (a.get(k, _MISSING), b.get(k, _MISSING))
+            for k in sorted(set(a) | set(b)) if a.get(k, _MISSING) != b.get(k, _MISSING)}
+
+
+def _show(v) -> str:
+    """给原因行用：缺键就说「缺这个键」，不能写成 None（那会像是现值就是 null）。"""
+    return "缺这个键" if v is _MISSING else repr(v)
+
+
 # ---------- 开训前检查 ----------
 
 def _run_set_problems(items) -> list[str]:
@@ -153,7 +189,7 @@ def _variant_problems(runs: dict, cfg, T: Path) -> list[str]:
     if not isinstance(base, dict) or not isinstance(base.get("knobs"), dict):
         return [f"基线配方 {base_rel} 结构不对：要是一个带 knobs 的 JSON 对象"]
     bsha = sha256(base_bytes).hexdigest()
-    base_flat = formal._flat(base)
+    base_flat = _flat_strict(base)
 
     vdir = runs.get("variants_dir")
     if not isinstance(vdir, str) or not vdir.strip():
@@ -197,13 +233,13 @@ def _variant_problems(runs: dict, cfg, T: Path) -> list[str]:
                 ps.append(f"变体配方 {fname} 的 _ablation.on 是 {marker.get('on')!r}，"
                           f"运行 {name} 要的值是 {on!r}：两处要一致")
         want_path = f"knobs.{knob}.on"
-        vflat = formal._flat({k: v for k, v in var.items() if k != "_ablation"})
-        diff = sorted(k for k in set(vflat) | set(base_flat) if vflat.get(k) != base_flat.get(k))
-        if diff != [want_path]:
+        vflat = _flat_strict({k: v for k, v in var.items() if k != "_ablation"})
+        diff = _flat_diff(vflat, base_flat)
+        if sorted(diff) != [want_path]:
             ps.append(f"变体配方 {fname} 应该只在 {want_path} 一处与基线配方不同，"
-                      f"实际不同在 {diff or '没有一处'}：变体只能改这一个开关")
-        elif vflat[want_path] != on:
-            ps.append(f"变体配方 {fname} 的 {want_path} 是 {vflat[want_path]!r}，运行 {name} 要 {on!r}")
+                      f"实际不同在 {sorted(diff) or '没有一处'}：变体只能改这一个开关")
+        elif diff[want_path][0] != on:
+            ps.append(f"变体配方 {fname} 的 {want_path} 是 {diff[want_path][0]!r}，运行 {name} 要 {on!r}")
     return ps
 
 
@@ -268,9 +304,9 @@ def _num(x) -> bool:
 
 
 def _flat_cfg(config: dict) -> dict:
-    """整份配置拍平成「段.键」，只去掉 CFG_IGNORE 那三项（它们本来就各不同）。
-    段整个缺了就记成一个值（键名是段名）；两边键集合本来就不相同（缺键），比的时候取出来是 None。"""
-    return {k: v for k, v in formal._flat(config).items() if k not in CFG_IGNORE}
+    """整份配置按 `_flat_strict` 拍平成「段.键」，只去掉 CFG_IGNORE 那三项（它们本来就各不同）。
+    缺的键这里没有键：比的时候由 `_flat_diff` 记成 `_MISSING`，不会和「值是 null」混成一样。"""
+    return {k: v for k, v in _flat_strict(config).items() if k not in CFG_IGNORE}
 
 
 def _rows(path: Path) -> list[dict]:
@@ -287,9 +323,10 @@ def _rows(path: Path) -> list[dict]:
 
 
 def _read_run(run_dir: Path, step: int) -> dict:
-    """一个运行的记录：第 step 步的开发份 hybrid · 配置（拍平）· 自己配的 data.recipe · 两个 build id。
+    """一个运行的记录：第 step 步的开发份 hybrid · 配置（拍平，去了 CFG_IGNORE 那三项）· 自己配的
+    data.recipe · run.seed（单独留一份：它就在 CFG_IGNORE 里，拍平时被滤掉了）· 两个 build id。
     读不出就填 reason。"""
-    out = {"dev_hybrid": None, "cfg": None, "recipe": None, "data_build_id": None,
+    out = {"dev_hybrid": None, "cfg": None, "recipe": None, "seed": None, "data_build_id": None,
            "dev_build_id": None, "reason": None}
     try:
         rec = json.loads((run_dir / "run.json").read_text())
@@ -299,6 +336,7 @@ def _read_run(run_dir: Path, step: int) -> dict:
         data = config["data"]
         if not isinstance(data, dict):
             raise TypeError("config.data 不是映射")
+        run_seg = config.get("run")
         rows = _rows(run_dir / "metrics.jsonl")
     except (OSError, ValueError, KeyError, TypeError) as e:
         out["reason"] = f"读不了运行记录：{type(e).__name__}: {e}"
@@ -306,6 +344,7 @@ def _read_run(run_dir: Path, step: int) -> dict:
     flat = _flat_cfg(config)
     out["cfg"] = flat
     out["recipe"] = data.get("recipe")
+    out["seed"] = run_seg.get("seed") if isinstance(run_seg, dict) else None
     out["data_build_id"] = rec.get("data_build_id")
     out["dev_build_id"] = rec.get("dev_build_id")
     hits = [r["dev"].get("hybrid") for r in rows if r.get("step") == step and isinstance(r.get("dev"), dict)]
@@ -318,9 +357,10 @@ def _read_run(run_dir: Path, step: int) -> dict:
     return out
 
 
-def _design_reason(r: dict, ref: dict) -> str | None:
+def _design_reason(name: str, r: dict, ref: dict) -> str | None:
     """设计的固定项（#212 评审）：model.variant = WANT_VARIANT · schedule.max_steps = STEP ·
-    data.dev_recipe 指明开发份配方且等于基线（ref）的 data.recipe。返回第一条不合的原因，合上了返回 None。"""
+    data.dev_recipe 指明开发份配方且等于基线（ref）的 data.recipe · run.seed 是运行矩阵里给这个名字的
+    种子 · data.recipe 是这个名字说的那一份配方。返回第一条不合的原因，合上了返回 None。"""
     flat = r["cfg"]
     v, n = flat.get("model.variant"), flat.get("schedule.max_steps")
     if v != WANT_VARIANT:
@@ -334,6 +374,38 @@ def _design_reason(r: dict, ref: dict) -> str | None:
     if dev != ref["recipe"]:
         return (f"data.dev_recipe 是 {dev!r}，和基线 {BASE_RUNS[0]} 的 data.recipe {ref['recipe']!r} 不同："
                 "7 个运行必须同用一份开发份配方")
+    return _seed_reason(name, r) or _recipe_reason(name, r, ref)
+
+
+def _seed_reason(name: str, r: dict) -> str | None:
+    """run.seed 必须是运行矩阵给这个名字的种子：名字说种子 1、实际跑种子 0，两个基线的差就量不出
+    噪声底（floor 会变成 0，所有旋钮都被判「分不出」）。"""
+    want = next(s for n, s, _k, _o in WANTED_RUNS if n == name)
+    got = r["seed"]
+    if isinstance(got, bool) or not isinstance(got, int) or got != want:
+        return (f"run.seed 是 {got!r}：{name} 这个运行要跑种子 {want}（种子写在名字里；两条基线跑不同的"
+                "种子，差才是噪声底 floor）")
+    return None
+
+
+def _recipe_reason(name: str, r: dict, ref: dict) -> str | None:
+    """data.recipe 必须是这个名字说的那一份配方：基线用基线配方（= abl-base-s0 的 data.dev_recipe），
+    旋钮运行用自己那一个变体配方（文件名 no-<旋钮>.json / <旋钮>-on.json）。"""
+    got = r["recipe"]
+    _seed, knob, on = next((s, k, o) for n, s, k, o in WANTED_RUNS if n == name)
+    if knob is None:
+        want = (ref["cfg"] or {}).get("data.dev_recipe")
+        if want is None:
+            return None  # 基线自己读不出，连基线配方叫什么都不知道：它的 reason 已经记下了
+        if got != want:
+            return (f"data.recipe 是 {got!r}：基线运行的训练配方要等于 {BASE_RUNS[0]} 的 data.dev_recipe "
+                    f"{want!r}（7 个运行比的是同一份配方上的差别）")
+        return None
+    want_name = variant_recipe_name(knob, on)
+    got_name = Path(got).name if isinstance(got, str) else None
+    if got_name != want_name:
+        return (f"data.recipe 是 {got!r}（文件名 {got_name!r}），{name} 要的是 {want_name}："
+                f"「关掉 {knob}」/「打开 {knob}」这个运行必须用自己那一个变体配方")
     return None
 
 
@@ -353,9 +425,9 @@ def judge(out_dir, step: int = STEP) -> dict:
     ref_name = BASE_RUNS[0]
     ref = recs[ref_name]
     # 设计固定项各自查，不必等参照：“彼此都一样”不等于“照设计跑”（#212 评审）
-    for r in recs.values():
+    for name, r in recs.items():
         if r["reason"] is None:
-            r["reason"] = _design_reason(r, ref)
+            r["reason"] = _design_reason(name, r, ref)
     for name, r in recs.items():
         if r["reason"] or name == ref_name:
             continue
@@ -369,13 +441,14 @@ def judge(out_dir, step: int = STEP) -> dict:
             r["reason"] = "run.json 里没有 dev_build_id：认不出开发集版本，读数没法比"
             continue
         # 整份配置逐项相同（含 device · limits · schedule 全段 · run.out_dir · 数据字段等）：
-        # 只有 CFG_IGNORE 那三项允许各不同；缺键取出来是 None，也算不同
-        bad = sorted(k for k in set(r["cfg"]) | set(ref["cfg"]) if r["cfg"].get(k) != ref["cfg"].get(k))
-        if bad:
+        # 只有 CFG_IGNORE 那三项允许各不同；缺键记作 _MISSING，和「键在、值是 null」不是一回事
+        diff = _flat_diff(r["cfg"], ref["cfg"])
+        if diff:
             # 全落在 data 里就说是数据字段（它最容易错：开发份规模一变读数就不可比）
-            what = "数据字段" if all(k.startswith("data.") for k in bad) else "配置字段"
+            what = "数据字段" if all(k.startswith("data.") for k in diff) else "配置字段"
             r["reason"] = (f"{what}和 {ref_name} 对不上（只有 {'、'.join(CFG_IGNORE)} 可以各不同）："
-                           + "，".join(f"{k} {r['cfg'].get(k)!r} ≠ {ref['cfg'].get(k)!r}" for k in bad))
+                           + "，".join(f"{k} {_show(mine)} ≠ {_show(theirs)}"
+                                      for k, (mine, theirs) in diff.items()))
     if ref["reason"] is None and ref["dev_build_id"] is None:
         ref["reason"] = "run.json 里没有 dev_build_id：认不出开发集版本，读数没法比"
 
