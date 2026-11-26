@@ -284,6 +284,10 @@ class UnitFrom(unittest.TestCase):
         r = split.load_rules()["sources"]["cochlscene"]
         self.assertEqual(self.summ(r, "cochlscene")["unit_from"], r["unit_regex"][0]["unit"])
 
+    def test_present_for_but(self):
+        r = rule()
+        self.assertEqual(self.summ(r)["unit_from"], r["unit_regex"][0]["unit"])
+
     def test_absent_for_speaker_rule(self):
         r = split.load_rules()["sources"]["librispeech-train-clean-100"]
         self.assertNotIn("unit_from", self.summ(r, "librispeech-train-clean-100"))
@@ -334,6 +338,61 @@ class ScreenRules(unittest.TestCase):
         self.assertEqual(sc["top_k"], 5)
         self.assertTrue(sc["src"])
         self.assertIn("Inside, small room", sc["tags_any"])
+
+class ButRule(unittest.TestCase):
+    """用仓库里的真规则跑夹具树：单位 · meta 排除 · 筛查 · 分层 一条龙（screen_file 指向夹具那份，expect 按夹具数目）。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.files = fixtures_but.make_tree(self.root)
+        self.radio = set(fixtures_but.radio_files())
+        self.kept = [p for p in self.files if p not in self.radio]
+        self.r = copy.deepcopy(rule())
+        self.r["expect"]["files"] = len(self.files)
+        self.r["screen_file"] = str(fixtures_but.write_screen(self.root / "screen.jsonl", self.kept))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_src(self, rule=None):
+        d = {}
+        rows = split.split_source(self.root, SRC, rule or self.r, split.load_rules()["seed"],
+                                  split.load_rules()["splits"], workers=2, excluded=d)
+        return rows, d
+
+    def test_unit_regex_on_real_path(self):
+        rel = fixtures_but.wav_rel(fixtures_but.C236, "SpkID03_20190503_S", "01")
+        self.assertEqual(split.unit_of(rel, rule()), "VUT_FIT_C236/SpkID03_20190503_S")
+        self.assertTrue(rule()["unit_regex_required"])
+
+    def test_radio_setup_excluded_and_counted(self):
+        rows, d = self.run_src()
+        self.assertFalse(self.radio & {r["path"] for r in rows})
+        self.assertEqual(d["excluded_meta"], len(self.radio))
+
+    def test_units_are_room_and_setup(self):
+        rows, _ = self.run_src()
+        self.assertEqual({r["unit"] for r in rows},
+                         {f"{fixtures_but.C236}/SpkID01_20190503_S", f"{fixtures_but.C236}/SpkID02_20190503_S",
+                          f"{fixtures_but.ROOM112}/SpkID01_20171223_S", f"{fixtures_but.ROOM112}/SpkID02_20171223_S"})
+
+    def test_each_room_has_a_dev_unit(self):
+        rows, _ = self.run_src()
+        dev = {r["unit"].split("/")[0] for r in rows if r["split"] == "dev"}
+        self.assertEqual(dev, {fixtures_but.C236, fixtures_but.ROOM112})
+
+    def test_screen_drop_excluded(self):
+        self.r["screen_file"] = str(fixtures_but.write_screen(self.root / "screen2.jsonl", self.kept, drop=self.kept[:1]))
+        rows, d = self.run_src()
+        self.assertNotIn(self.kept[0], {r["path"] for r in rows})
+        self.assertEqual(d["excluded_screen"], 1)
+
+    def test_missing_meta_stops(self):
+        fixtures_but.meta_path(self.root, sorted(self.radio)[0]).unlink()
+        with self.assertRaises(SystemExit):
+            self.run_src()
+
 
 class ListFiles(unittest.TestCase):
     """`--list-files`：云上给 screen.py 造候选清单用（只过清单与 meta 排除，不要求筛查表已在）。"""
