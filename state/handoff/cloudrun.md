@@ -54,3 +54,4 @@
 - 2026-11-26：派 pi（cloudrun-venvcache，花 0.0162 美元）写了 `cloud/remote/venv_cache.sh`（共享 venv）与 `cloud/remote/fetch_archives.sh`（边下边记 md5），各带测试；验收时打回 1 条 P1（GNU mktemp 不认 `-t` 无 X 模板）和 3 条 P2，修后 132 条测试全过，已合入本分支。还没上云实跑。
   - pi 写的代码 = 提交 ec06f94e..0f91ec80（3 个：ec06f94e、881e5dda、0f91ec80），署名 `Agent: pi`、`Model: deepseek-v4.1-flash-1017-fast`；在 pi 自己的分支 w/cloudrun-venvcache 上提交，快进合入，没被 hook 改署名。以后派 pi 照此记提交号范围；我验收后的提交加一行 `Code: pi (<模型名>)`（大总管 c4 2026-11-26 定）。
 - 2026-11-26：派 pi（cloudrun-diskcheck，花 0.0083 美元）给 preflight 加网络盘余量检查：少于 30 GB 不开训练（`config.MIN_FREE_GB`，配额读平台接口）。pi 提交 56086350..1fac34b9（2 个，带 Agent: pi），快进合入；140 条测试全过。
+- 2026-11-26：派 pi（cloudrun-fetchnomd5，花 0.0057 美元）给 fetch_archives.sh 加「md5 未知」写法：md5 栏写 `-` 时必须给字节数，只按字节数判，md5 与 sha256 都记进 checksums.txt（mode=bytes-only）。供 BUT ReverbDB（上游没发校验值）用。pi 提交 c8b8a839..46b504ff（2 个），快进合入；145 条测试全过。
