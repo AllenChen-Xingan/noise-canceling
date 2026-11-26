@@ -104,3 +104,4 @@
   1. 新分支 feat/data-batch5（大总管建，重开我）；派 pi：tone jsonl 进 screen/、合并出 Room112 新筛查表、新来源名（暂定 but-reverbdb-silence-b5）的规则、recipe 指过去、复现测试；旧表 / 旧规则 / 冻结 6 文件不动。
   2. 写云上命令（切分 → 分片 → 登记基线 + 5 变体），含「删 batch4 前取回小文件与校验值」一步（盘 44 GB，新分片 +22 GB 后低于 30 GB 门槛；删不删由大总管问人）。交大总管批开机。
   3. 新 build 合格后重出 scenes-*.md / evidence-*.md。
+- 2026-11-26 第五批第 1–2 步完成：Room112 单音结果进仓（9ca0c162）；pi traindata-b5（$0.110）：新筛查表 screen/but-reverbdb-silence-b5.jsonl（只 Room112 行并单音，其余逐字节同旧表，screen_tone --only-regex/--base/--check）、新来源 -b5（与 -b4 只差 screen_file 与 src）、配方两池换 -b5（recipe sha256 7de5c4b5…）、`未建表` 记 -b5、旧证据页 / 场景页冻结钉 sha256（tests/fixtures_pages.py）。build_evidence 交集来源严格核对不改。本机全量 483 OK（skipped 4，新增 1 条是「当前配方还没 build」）。云上命令 data/cloud-batch5.md（含删 batch4 前取回小文件与校验值）。推送 ae5c0c45，交大总管批开机。云上回来后：删 `未建表`、生成第五批 scenes / evidence 页。
