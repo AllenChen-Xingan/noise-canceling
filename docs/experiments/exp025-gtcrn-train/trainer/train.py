@@ -111,7 +111,7 @@ def calibrate(model, cfg, batches, device, should_stop=lambda: None) -> dict | N
     model.eval()
     sums = {"hybrid": 0.0, "lvl": 0.0, "on": 0.0}
     valid = {"lvl": 0, "on": 0}
-    for b in batches:
+    for i, b in enumerate(batches):
         if should_stop():
             set_train(model, cfg)
             return None

@@ -72,3 +72,7 @@
 - 11-25 大总管定：正式训练每次 3 个同时跑；前 500 步慢于 0.39 s 的 1.2 倍由训练器自动判（guards ④）；D88 的 8 个 wav 留云上。#194 已合进 main（1c251d42），本地 exp/025-h100-smoke 已删；feat/trainer-pump-loss 合了一次 main（7bc8d573，278 条过）
 - 11-25 开 feat/trainer-guards（从 origin/main 1c251d42）：训练时自动保护 ①–⑤，见方案第十二节
 - 11-26 会话中断后接回（trainer-02）。feat/trainer-guards：codex 第 1、2 轮的 P1/P2 都已修，全套 221 过；train.py 中断前未提交的 2 行（续训时把最好成绩写回 run.json）是新规则前亲手写的，照样提交。开 issue #195。之后要改代码按新规则派 pi
+- 11-26 pi 提交范围（在 trainer worktree 里，auto-commit hook 把 pi 半截代码以 Claude 署名提交了，大总管要求记下）：
+  - pi trainer-guards-devnan（codex guards 第 3 轮 #1，花费 0.0099 美元）：1ba6c800..a1f00093（hook 提交 e4c58e28 · a1f00093）；验收提交 b37a8560 当时没加 `Code: pi` 行，在此补记：代码由 pi（isoquant/deepseek-v4.1-flash-1017-fast）写
+  - pi trainer-guards-calibnan（codex guards 第 4 轮 #1，花费 0.0064 美元）：b37a8560..（hook 提交 13c19e5c · 1f1b7450，加本次验收提交）
+  - 之后的 pi 改用 `pi-worker start --repo <主仓> --base feat/trainer-guards`，在自己的 worktree 与分支提交，验收后快进合入
