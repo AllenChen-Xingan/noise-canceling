@@ -17,46 +17,49 @@
 - **报告种子 = s1**（大总管定，2026-11-26）：人看到的题面写的是「种子 1」（D120），trainer 的种子编号是 0、1、2，按字面就是 `a-s1`、`b-s1`。开评前已定，不许看完结果再挑
 - **都走甲路**（离线整段，`eval-plan.md` 第二节第 2 步），同一个评测代码提交 `EVAL_COMMIT`（开机时的 main），同样 `--no-safety --qa --rules v2`
 - ⚠️ **这 7 份判不出「过」**：甲路只有声明延迟，`accept` 的延迟一行固定是「判不了」，所以总判定最多到「判不了」（大总管定）。其余各行的过 / 不过照常有效。要判延迟，得另跑乙路：A 转流式后再跑 3 份，转流式的工具还没有，见 #231（trainer），不挡本次。B 没有乙路（大总管已把这条记成 trainer 的风险）
-- **评测代码回归检查**（`eval-plan.md` 第二节第 1 步，第三节第 1.5 步）：`EVAL_COMMIT` 和原版读数的提交 ab0f4f0a 之间，评分相关的代码一改动，就先在机 1 上用内置原版重跑一份、和旧读数逐段对拍，过了才往下。截至 main 2a1c5e16，`src/` 下只改了 `accept` 那 14 个文件（PR #220），按规则可跳过
+- **评测代码回归检查**（`eval-plan.md` 第二节第 1 步；本单第三节第 5 步）：`EVAL_COMMIT` 和原版读数的提交 ab0f4f0a 不同，所以先在机 1 上用**内置**原版在 `EVAL_COMMIT` 上重跑一份，和补跑那份逐段逐项比判定、阈值和数值。过了才跑 7 份；不过就停。不设豁免
 
 ## 二、机器、时长、花费
 
 **机器**：cpu3c 4 核 · US-MO-1 · 挂网络盘 bzpbedqdsi · 每小时 0.12 美元（`rp.py up --cpu`，正本 `cloud/config.py`）。
 
 **分两台，先后开，不同时开**（大总管定）：
-- 机 1 跑原版 + A 三个种子（4 份），机 2 跑 B 三个种子（3 份）
-- 一台跑 7 份约 6.6 小时，超过 CPU 机单次 6 小时的上限
-- 两台同时开能省约 3.5 小时，但两台会同时写网络盘上同一个识别账本。账本的锁是文件锁（`src/eval/src/qa/asr_ledger.rs`），跨机器在网络盘上灵不灵没验证过。所以先后开；评测在训练之后，多约 3.5 小时不要紧
+- 机 1：回归检查 + 原版 + `a-s0` + `a-s1`；机 2：`a-s2` + B 三个种子
+- 一台跑完全部约 8.8 小时，超过 CPU 机单次 6 小时的上限
+- 两台同时开会同时写网络盘上同一个识别账本。账本的锁是文件锁（`src/eval/src/qa/asr_ledger.rs`），跨机器在网络盘上灵不灵没验证过。评测在训练之后，多几个小时不要紧
 
-**每份成绩单约 48–51 分钟（推断）**：
-- 依据：识别补跑那次，4 片同时跑，每片 4061–4227 秒。其中识别 2056–2166 秒（每片约 488 次），两个评分模型合计约 1500 秒，内置 GTCRN 推理约 320 秒
-- 新模型每片只识别约 258 次，按比例约 1100 秒。甲路不在成绩单里推理（输出已经算好），省掉约 320 秒
-- 合计每片约 2900–3050 秒
+**一份成绩单 46–49 分钟，按 55 分钟排（推断）**：
+- 依据：识别补跑那次，4 片同时跑，每片总计 4061–4227 秒。其中识别 2056–2166 秒（每片约 488 次），内置 GTCRN 推理 318–327 秒
+- 扣掉这两项，其余（两个评分模型等）每片 1687–1734 秒
+- 新模型每片只识别约 258 次，按比例约 1087–1145 秒；甲路读现成输出，按 ≤ 60 秒算
+- 合计每片 2774–2939 秒，即 46–49 分钟；排时间按 55 分钟（约 12% 余量）
+- **回归检查那份**：识别全部命中缓存，约 1687–1734 + 320 秒，约 34–35 分钟，按 45 分钟排
 
-**离线推理每个模型约 7–10 分钟（推断）**：本机 4 片同时跑全量 480 段实测 3.2 分钟；云上这档 x86 CPU 没量过，按慢 2–3 倍估。机 1 第一个模型实测后再改估计。
+**离线推理一个模型按 10 分钟排（推断）**：本机 4 片同时跑全量 480 段实测 3.2 分钟；云上这档 x86 CPU 没量过，按慢 3 倍估。机 1 第一个模型实测后再改估计。
 
-| 机器 | 内容 | 估计时长 | 自删时限 `--max-hours` | 机费（估计 / 最坏） |
+| 机器 | 内容（分钟） | 估计时长 | 自删时限 `--max-hours` | 机费（估计 / 最坏） |
 |---|---|---|---|---|
-| 机 1 | 开机 · 编译 · 装 Python · 导出 7 个 ONNX · 离线推理 4 个模型 · 4 份成绩单 · 取回（要回归重跑时再加约 45 分钟，约 5.4 小时） | 约 4.6 小时 | 6.0 | 0.55 / 0.73 美元 |
-| 机 2 | 开机 · 装 Python · 离线推理 3 个模型 · 3 份成绩单 · 取回 | 约 3.6 小时 | 5.0 | 0.43 / 0.61 美元 |
-| **合计** | | 约 8.2 小时（先后跑） | | **约 1.0 / 最坏 1.34 美元**（D119 定 CPU 机 ≤ 1.5 美元） |
+| 机 1 | 开机、编译、装环境 30 · 导出 7 个 ONNX 10 · 回归检查 45 · 3 个模型 ×（离线 10 + 成绩单 55）· 取回 10 | 约 4.8 小时 | 5.75 | 0.58 / 0.70 美元 |
+| 机 2 | 开机、装环境 30 · 4 个模型 ×（离线 10 + 成绩单 55）· 取回 10 | 约 5.0 小时 | 5.75 | 0.60 / 0.70 美元 |
+| **合计** | | 约 9.8 小时（先后跑） | | **约 1.18 / 最坏 1.40 美元**（D119 定 CPU 机 ≤ 1.5 美元） |
 
 最坏按「每小时价 × (时限 + 看门狗宽限 5 分钟)」算。
 
 **识别**：
 - 每份成绩单约 1030 次：480 条输出 × 2 次 = 960 次；前两次不一致时补第 3 次，按补跑实测的 14.6% 算约 70 次
-- 干净人声和原声与模型无关，从补跑的缓存预置，0 次（第三节第 6 步）。缓存键是送识别那条音频的 sha256（`src/eval/src/qa/mod.rs:113`）；干净人声和原声取自评测清单的 `clip.clean` / `clip.mix`（`qa/mod.rs:153–154`），与系统是内置还是外部无关【读源码】
+- 干净人声和原声与模型无关，从补跑的缓存预置，0 次。缓存键是送识别那条音频的 sha256（`src/eval/src/qa/mod.rs:113`）；干净人声和原声取自评测清单的 `clip.clean` / `clip.mix`（`qa/mod.rs:153–154`），与系统是内置还是外部无关【读源码】
+- 回归检查那份输出不变，预期 0 次
 - 单价：补跑实测 0.1875 美元 / 1953 次，约每次 0.000096 美元
 - 7 份约 7200 次，约 **0.69 美元**
 - 本批识别上限 **1.2 美元**（约 1.7 倍余量；大总管已批）
 
-## 三、步骤（每台机器都照做；机 2 跳过第 1.5 步和第 3 步的导出）
+## 三、步骤
 
-**下面的命令块都用 `bash` 跑**（机器里的 shell；本机是 zsh，分词规则不同）。每个块开头先 `set -euo pipefail`，任何一步失败就停。
+**命令块都用 `bash` 跑**（机器里的 shell；本机是 zsh，分词规则不同），开头 `set -euo pipefail`，任何一步失败就停。顺序：先备齐环境、账本起点和闸门（第 1–4 步），再做回归检查（第 5 步，只在机 1），最后逐个模型离线推理加成绩单（第 6–7 步）。
 
 ```sh
-# 0. 开机 + 开机检查（自删时限见上表）
-python3 rp.py up --cpu --max-hours 6.0 --yes          # 机 2 用 5.0
+# 0. 开机 + 开机检查
+python3 rp.py up --cpu --max-hours 5.75 --yes
 python3 rp.py preflight <机器> --repo <仓库> --commit <EVAL_COMMIT>
 ```
 
@@ -74,20 +77,11 @@ D=$REPO/docs/experiments/exp025-gtcrn-train/data
 T=$REPO/docs/experiments/exp025-gtcrn-train/trainer
 PY=$REPO/.venv/bin/python
 G=/workspace/gtcrn-502ebfab
-OLD=<补跑那份仓库副本>/docs/experiments/exp025-gtcrn-train/baseline/runs/20261126-013313-rerun   # 后面接 -s0..-s3
+OLD=<补跑那份仓库副本>/docs/experiments/exp025-gtcrn-train/baseline/runs/20261126-013313-rerun   # 后面接 -s0..-s3、-merged
 mkdir -p "$OUT"
 ```
 
-1. **代码**：`$REPO` 是 main 的 `EVAL_COMMIT`（带 `.git`，不用 `git archive` 解包）。开机时报大总管提交号，7 份都用这一个；机 2 用同一个目录，不换提交。`cd $REPO && cargo build --release -p vdn-eval`
-1.5. **评测代码回归检查（只在机 1）**：
-   ```sh
-   git -C $REPO diff --name-only ab0f4f0a $EVAL_COMMIT -- src/ resources/ Cargo.lock rust-toolchain.toml > $W/src-diff.txt
-   grep -v -E '^src/eval/(src/scorecard/accept(\.rs|/)|src/thresholds/accept\.rs|tests/)' $W/src-diff.txt \
-     | grep -v -x -E 'src/eval/src/(cli_opts|main|thresholds)\.rs|src/eval/src/scorecard/mod\.rs|src/eval/src/thresholds/table\.rs' \
-     > $W/src-diff-other.txt || true
-   ```
-   - `src-diff-other.txt` 为空 → 只动了 `accept`（不碰评分），跳过，报大总管时附上 `src-diff.txt`
-   - 不为空 → 先用内置原版在 `EVAL_COMMIT` 上重跑一份：命令照第 6 步，但 `--system gtcrn`、`VDN_GTCRN_ONNX` 指官方流式权重（`plan-eval-baseline.md` 第三节），缓存照样预置（预期 0 次识别）。然后 `$PY docs/experiments/exp025-gtcrn-train/eval/parity.py --a <新跑的 clips.jsonl> --b <补跑合并的 clips.jsonl> --system-a gtcrn --system-b gtcrn`，PASS 才往下；不过就停，报 evalcmp
+1. **代码**：`$REPO` 是 main 的 `EVAL_COMMIT`（带 `.git`，不用 `git archive` 解包）。开机时报大总管提交号，回归检查和 7 份都用这一个；机 2 用同一个目录，不换提交。`cd $REPO && cargo build --release -p vdn-eval`
 2. **密钥、评分模型、音频**：照 `cloud/plan-eval-baseline.md` 第一节（`put-secret`，先用假值冒烟）和第三节（两个评分模型核 sha256；`$REPO/_tmp/exp013/20261124165427-6323` 建链接）
 3. **Python 环境与导出**（命令由 trainer 给并核过，2026-11-26）：
    ```sh
@@ -97,7 +91,7 @@ mkdir -p "$OUT"
    test -f $G/gtcrn.py
    ```
    - 两份 requirements 都要装：只装 trainer 那份会缺 data 的依赖。`$G` 是训练和消融用的同一份官方 GTCRN 源码，导出也要它（模型类直接从官方 `gtcrn.py` 建）
-   - 机 1 导出全部 6 个：
+   - 机 1 导出全部 6 个（机 2 不再导）：
    ```sh
    cd $T
    for r in exp025-formal-A-s0 exp025-formal-A-s1 exp025-formal-A-s2 exp025-formal-B-s0 exp025-formal-B-s1 exp025-formal-B-s2; do
@@ -111,7 +105,47 @@ mkdir -p "$OUT"
    - 原版：本机那份 `gtcrn-official.onnx` 用 `rp.py put` 传到 `$OUT/exp025-orig.onnx`（`put` 自己核 sha256），再核一遍 = `384e2c6818b38e5a32639f42a854e9b51273bdb3b30ee643deb7da0bd970205f`。`official-recheck.onnx` 的 sha256 和它不一样时只记下、不停：甲路对拍用的是上传那份
    - 最后 `sha256sum $OUT/*.onnx > $OUT/SHA256SUMS`
    - 系统名与 ONNX 的对应：`exp025-orig` ↔ `exp025-orig.onnx`；`exp025-a-sK` ↔ `exp025-formal-A-sK.onnx`；`exp025-b-sK` ↔ `exp025-formal-B-sK.onnx`
-4. **离线推理**（每个模型；`NAME` 是第一节的系统名，`ONNX` 是上面对应的文件）：
+4. **账本、批次起点、闸门脚本和跑一份成绩单的函数**：
+   ```sh
+   $PY - "$LEDGER" <<'EOF'
+   import json, sys
+   d = json.load(open(sys.argv[1]))
+   assert not d.get("review") and d["reserved_usd"] == 0, ("账本有待核或在途预留，先报", d.get("review"), d["reserved_usd"])
+   print(d["calls"], d["spent_usd"])
+   EOF
+   sha256sum "$LEDGER"
+   # 本批起点只在机 1 第一次写；机 2 沿用同一个文件（在网络盘上），不重写
+   test -f $W/batch-start.json || $PY -c 'import json,sys; d=json.load(open(sys.argv[1])); json.dump({"calls": d["calls"], "spent_usd": d["spent_usd"]}, open(sys.argv[2], "x"))' "$LEDGER" $W/batch-start.json
+   ```
+   闸门脚本 `$W/gate.py` 和函数 `run_card` 见第四节：机 1 先写好，机 2 直接用（都在网络盘上）。`run_card` 每次跑一份成绩单：预置并核对缓存 → 启动闸门、确认它活着 → 启动 4 片 → 一直看着，闸门停了（越线或出错）就杀掉 4 片 → 全部正常退出才合并。
+5. **回归检查（只在机 1，第一份）**：
+   ```sh
+   cd $REPO; set -a; . /root/.env.local; set +a
+   VDN_GTCRN_ONNX=<官方流式权重，plan-eval-baseline.md 第三节> run_card gtcrn regress-gtcrn
+   $PY docs/experiments/exp025-gtcrn-train/eval/parity.py --a "$RUNS/$RUN/clips.jsonl" --b "$OLD-merged/clips.jsonl" \
+     --system-a gtcrn --system-b gtcrn                              # 数值：逐段逐项，容差 1e-3
+   $PY - "$RUNS/$RUN/clips.jsonl" "$OLD-merged/clips.jsonl" <<'EOF'   # 判定与阈值：逐段逐项要完全相同
+   import json, sys
+   def load(p):
+       out = {}
+       for line in open(p):
+           r = json.loads(line); k = (r["clip"], r["scene"], r["tier"], r["device"], r["mix_sha256"])
+           for s in r["scores"]:
+               out[k + (s["v"],)] = (s["verdict"], s.get("threshold"), s.get("veto"))
+       return out
+   a, b = load(sys.argv[1]), load(sys.argv[2])
+   if a.keys() != b.keys():
+       sys.exit(f"段或项对不上：{len(a.keys() ^ b.keys())} 处")
+   soft = {"V-EAT-ASR", "V-FRAME"}   # 只报不判：识别（缓存应全命中）· 最坏一帧（墙钟计时）
+   hard = [k for k in a if a[k] != b[k] and k[-1] not in soft]
+   print("判定或阈值变了：", len(hard), "· 只报的两项变了：", sum(a[k] != b[k] for k in a if k[-1] in soft))
+   sys.exit(1 if hard else 0)
+   EOF
+   ```
+   - 补跑合并那份 `clips.jsonl` 的 sha256 应是 `c00ed213a209a19a4aee965589aa06376271e203b08ba0fb359045be7a2e1ddf`，先核
+   - 两个检查都过才往下。`parity.py` 只比数值，跳过延迟和最坏一帧（`parity.py` 文件头）；判定、阈值和否决标记由第二段逐段逐项比，除吃字和最坏一帧外一处都不许变。场景卡状态由这些判定按同一规则汇总，所以判定全同、卡也同
+   - 不过：停，报 evalcmp 和大总管，不跑后面的模型
+6. **离线推理**（每个模型；`NAME` 是第一节的系统名，`ONNX` 是第 3 步对应的文件）：
    ```sh
    cd $REPO
    E=docs/experiments/exp025-gtcrn-train/eval/run_gtcrn_offline.py
@@ -124,72 +158,73 @@ mkdir -p "$OUT"
    - 输出写到 `$REPO/_tmp/exp016/$NAME/formal1/`，清单写到 `eval/builds/$NAME-formal1/`（这个要取回、进仓）
    - 探针的「声明延迟」应是 256。不是 256 就停下报 evalcmp
    - 离线推理跟成绩单不同时跑：两样都吃满 4 核
-5. **账本与批次起点**：
+7. **成绩单**（每个模型，机 1 先跑 `exp025-orig`）：
    ```sh
-   $PY - "$LEDGER" <<'EOF'
-   import json, sys
-   d = json.load(open(sys.argv[1]))
-   assert not d.get("review") and d["reserved_usd"] == 0, ("账本有待核或在途预留，先报", d.get("review"), d["reserved_usd"])
-   print(d["calls"], d["spent_usd"])
-   EOF
-   sha256sum "$LEDGER"
-   # 本批起点只在机 1 第一次写；机 2 沿用同一个文件（在网络盘上），不重写
-   test -f $W/batch-start.json || $PY -c 'import json,sys; d=json.load(open(sys.argv[1])); json.dump({"calls": d["calls"], "spent_usd": d["spent_usd"]}, open(sys.argv[2], "x"))' "$LEDGER" $W/batch-start.json
+   cd $REPO; set -a; . /root/.env.local; set +a
+   run_card external:_tmp/exp016/$NAME/formal1 $NAME
    ```
-6. **成绩单**（每个模型；先跑 `exp025-orig`）：
-   ```sh
-   cd $REPO
-   RUN=$(date -u +%Y%m%d-%H%M%S)-$NAME
-   for i in 0 1 2 3; do
-     test -f "$OLD-s$i/qa/asr_cache.json"
-     mkdir -p "$RUNS/$RUN-s$i/qa"
-     cp "$OLD-s$i/qa/asr_cache.json" "$RUNS/$RUN-s$i/qa/"
-     cmp "$OLD-s$i/qa/asr_cache.json" "$RUNS/$RUN-s$i/qa/asr_cache.json"
-   done
-   set -a; . /root/.env.local; set +a
-   pids=(); for i in 0 1 2 3; do
-     nohup target/release/vdn-eval scorecard --system external:_tmp/exp016/$NAME/formal1 \
-       --no-safety --qa --rules v2 --shard $i/4 --asr-ledger "$LEDGER" --out "$RUNS/$RUN-s$i" > "$RUNS/$RUN-s$i.log" 2>&1 &
-     pids+=($!)
-   done
-   nohup $PY $W/gate.py "$LEDGER" $W/batch-start.json > "$RUNS/$RUN-gate.log" 2>&1 &   # 花费闸，见第四节
-   for p in "${pids[@]}"; do wait $p; done
-   target/release/vdn-eval scorecard --merge-shards "$RUNS/$RUN-s0,$RUNS/$RUN-s1,$RUNS/$RUN-s2,$RUNS/$RUN-s3" \
-     --suite src/eval/suite/scenes.json --out "$RUNS/$RUN"
-   ```
-   - 四片缓存缺一份、复制失败或内容对不上，`set -e` 在启动付费任务之前就停
-   - 预置缓存时片号要对得上（第 i 片用补跑第 i 片的缓存）：分片规则是确定的，同一段永远分到同一片（`baseline/README.md` 分片一节）
    - **第一份（原版）跑完先核缓存命中**：识别次数应约 1030；超过 1600 说明干净人声或原声的缓存没命中，停下报 evalcmp，别跑后面几份
-7. **取回、删机**：见第五节。机 1 取回、核对、删机后，再开机 2
+8. **取回、删机**：见第五节。机 1 取回、核对、删机后，再开机 2
 
-## 四、花费闸（必做）
+## 四、花费闸与 `run_card`（必做）
 
-程序本身只有一道闸：发每条识别前在账本里预留，`已花 + 在途 + 这一条` 超过 15 美元就不发（`src/eval/src/qa/asr_or.rs` 的 `BUDGET_USD`，D103 定为软上限）。本批 1.2 美元的上限靠下面这个闸门脚本：每 30 秒读一次账本，越线就停掉全部 vdn-eval 进程。第 6 步每份成绩单启动时一起启动它，所有 vdn-eval 进程退出后它自己退出。
+程序本身只有一道闸：发每条识别前在账本里预留，`已花 + 在途 + 这一条` 超过 15 美元就不发（`src/eval/src/qa/asr_or.rs` 的 `BUDGET_USD`，D103 定为软上限）。本批 1.2 美元和每份的上限靠闸门脚本：每 30 秒读一次账本，越线或读不了就退出；`run_card` 一看到闸门退出，就杀掉这一份的 4 片。
 
 ```sh
 cat > $W/gate.py <<'EOF'
-import json, subprocess, sys, time
+import json, sys, time
 ledger, start = sys.argv[1], json.load(open(sys.argv[2]))
-d = json.load(open(ledger)); run0 = (d["calls"], d["spent_usd"])
-def alive():
-    return subprocess.run(["pgrep", "-f", "vdn-eval scorecard"], capture_output=True).returncode == 0
-while alive():
-    d = json.load(open(ledger))
-    run_calls, run_usd = d["calls"] - run0[0], d["spent_usd"] - run0[1]
-    batch_usd = d["spent_usd"] - start["spent_usd"]
-    why = ("review" if d.get("review") else
-           "本份 calls > 1600" if run_calls > 1600 else
-           "本份 > 0.16 美元" if run_usd > 0.16 else
-           "本批 > 1.2 美元" if batch_usd > 1.2 else None)
-    print(time.strftime("%H:%M:%SZ", time.gmtime()), run_calls, round(run_usd, 6), round(batch_usd, 6), why, flush=True)
-    if why:
-        subprocess.run(["pkill", "-f", "vdn-eval scorecard"]); print("停：", why, flush=True); sys.exit(2)
-    time.sleep(30)
+try:
+    d = json.load(open(ledger)); run0 = (d["calls"], d["spent_usd"] + d["reserved_usd"])
+    while True:
+        d = json.load(open(ledger))
+        used = d["spent_usd"] + d["reserved_usd"]          # 已花 + 在途预留
+        run_calls, run_usd, batch_usd = d["calls"] - run0[0], used - run0[1], used - start["spent_usd"]
+        why = ("账本有待核" if d.get("review") else
+               "本份 calls > 1600" if run_calls > 1600 else
+               "本份 > 0.16 美元" if run_usd > 0.16 else
+               "本批 > 1.2 美元" if batch_usd > 1.2 else None)
+        print(time.strftime("%H:%M:%SZ", time.gmtime()), run_calls, round(run_usd, 6), round(batch_usd, 6), why, flush=True)
+        if why:
+            print("停：", why, flush=True); sys.exit(2)
+        time.sleep(30)
+except Exception as e:                                   # 读不了账本也按越线处理
+    print("闸门出错，停：", repr(e), flush=True); sys.exit(3)
 EOF
+
+run_card() {   # $1 = --system 的值，$2 = 系统名；跑完 RUN 指向合并目录
+  local sys=$1 name=$2 i p rc=0 gate pids=()
+  RUN=$(date -u +%Y%m%d-%H%M%S)-$name
+  for i in 0 1 2 3; do
+    test -f "$OLD-s$i/qa/asr_cache.json"
+    mkdir -p "$RUNS/$RUN-s$i/qa"
+    cp "$OLD-s$i/qa/asr_cache.json" "$RUNS/$RUN-s$i/qa/"
+    cmp "$OLD-s$i/qa/asr_cache.json" "$RUNS/$RUN-s$i/qa/asr_cache.json"
+  done
+  $PY $W/gate.py "$LEDGER" $W/batch-start.json > "$RUNS/$RUN-gate.log" 2>&1 & gate=$!
+  sleep 5; kill -0 $gate                                 # 闸门没起来就不开跑
+  for i in 0 1 2 3; do
+    target/release/vdn-eval scorecard --system "$sys" --no-safety --qa --rules v2 --shard $i/4 \
+      --asr-ledger "$LEDGER" --out "$RUNS/$RUN-s$i" > "$RUNS/$RUN-s$i.log" 2>&1 & pids+=($!)
+  done
+  while :; do
+    local alive=0; for p in "${pids[@]}"; do kill -0 $p 2>/dev/null && alive=1; done
+    [ $alive = 0 ] && break
+    if ! kill -0 $gate 2>/dev/null; then echo "闸门停了：$RUN"; kill "${pids[@]}" 2>/dev/null || true; rc=1; break; fi
+    sleep 10
+  done
+  for p in "${pids[@]}"; do wait $p || rc=1; done       # 任何一片非 0 退出也算失败
+  kill $gate 2>/dev/null || true; wait $gate 2>/dev/null || true
+  [ $rc = 0 ] || { echo "有分片失败或被闸门停下：$RUN，看 $RUN-gate.log 和各片日志"; return 1; }
+  target/release/vdn-eval scorecard --merge-shards "$RUNS/$RUN-s0,$RUNS/$RUN-s1,$RUNS/$RUN-s2,$RUNS/$RUN-s3" \
+    --suite src/eval/suite/scenes.json --out "$RUNS/$RUN"
+  RUN=$RUN                                               # 合并目录 = $RUNS/$RUN
+}
 ```
 
+- 每份成绩单各起一个闸门：起点在它开跑前读，两份之间不会串账。一份里任何一片失败、或闸门停下，这一份的 4 片和闸门都收掉，`run_card` 返回非 0，`set -e` 让整个流程停
 - 停下以后报 evalcmp 和大总管，附 `$RUN-gate.log`。正常一份约 1030 次、0.10 美元
-- 能越线多少：两次读账本之间最多 30 秒。按每份约 1030 次、约 50 分钟算，30 秒约 11 次、约 0.001 美元，另加停的那一刻在途的最多 8 条。所以超出 1.2 美元的部分在 0.01 美元以内（推断）
+- **越线多少没有保证**：闸门每 30 秒看一次，已在途的请求（4 片 × 每片 2 路 = 8 路）停不回来。按补跑的速度，30 秒约发 10 次、约 0.001 美元，但这只是估计。硬兜底是程序的 15 美元软上限和 OpenRouter 侧这把密钥的 100 美元额度（D103）
 - 任何一片的日志或 `meta.asr.halted` 出现停发：别自己清「待核」，照 `baseline/README.md` 用 `clear_review.py`，先报
 
 ## 五、取回（放主目录 `_tmp/<日期>-cloudrun-eval-formal/`，不覆盖）
@@ -235,5 +270,6 @@ $V accept --suite $S --scenes $T \
 - 导出对拍不过 → 那个模型不评，报 trainer；其余照跑。少了一个种子，`accept` 要涨那几行会判不了（种子数要正好 3）
 - 离线推理 `--finalize` 报缺段 → 不跑成绩单，查这一片的日志，用同一个 run-id 续跑（已写的文件会跳过）
 - 原版那份识别次数超过 1600 → 停（第三节第 6 步）
-- 机 1 跑到 5.5 小时还没跑完 → 已经合并好的成绩单先取回，没跑完的那份留到机 2 接着跑，报大总管
+- 任何一台跑到 5.25 小时还没跑完 → 已经合并好的成绩单先取回，没跑完的那份留到下一台接着跑，报大总管
+- 回归检查不过 → 停，不跑 7 份（第三节第 5 步）
 - 任何一份不是 480 行 → 不进判读，先查
