@@ -302,6 +302,8 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
                                {"device": str(device), "params": pcnt["trainable"], "params_fixed": pcnt["fixed"],
                                 "calib": calib, "env": env_info(), "billed_s_before": round(acct["billed0"], 2),
                                 "phase": "init"})
+        if guard.best is not None:
+            rec["best"] = guard.best  # 续训时把三处对齐后的最好成绩写回 run.json
         acct["step"] = step
         rd.write(rec)
         crit = losses.TrainLoss(loss_cfg(cfg, calib["lvl"]["weight"], calib["on"]["weight"])).to(device)

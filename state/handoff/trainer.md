@@ -71,3 +71,4 @@
 - 11-25 H100 乙段重跑（cloudrun，7eecbbe8，跳过第 1 步）全过：dev_gate A 3.90371、B 3.90497（第 0 步 3.97330）；续训逐值相同；3 个同时跑正常。报告进 `smoke_reports/20261125-h100-*.json`；方案第五节写正式训练估时估费（串着跑 1.8–1.9 h / 7.8–8.3 美元，同时跑 1.24 h / 5.4 美元），方案定稿
 - 11-25 大总管定：正式训练每次 3 个同时跑；前 500 步慢于 0.39 s 的 1.2 倍由训练器自动判（guards ④）；D88 的 8 个 wav 留云上。#194 已合进 main（1c251d42），本地 exp/025-h100-smoke 已删；feat/trainer-pump-loss 合了一次 main（7bc8d573，278 条过）
 - 11-25 开 feat/trainer-guards（从 origin/main 1c251d42）：训练时自动保护 ①–⑤，见方案第十二节
+- 11-26 会话中断后接回（trainer-02）。feat/trainer-guards：codex 第 1、2 轮的 P1/P2 都已修，全套 221 过；train.py 中断前未提交的 2 行（续训时把最好成绩写回 run.json）是新规则前亲手写的，照样提交。开 issue #195。之后要改代码按新规则派 pi
