@@ -1,8 +1,10 @@
 # exp025 数据消融的**运行矩阵**（#212 · 014 第 4 步）：2 个基线 + 4 个关旋钮 + 1 个开 high_snr，共 7 个运行。
 # 配置正本见 configs/ablation.yaml（base）；每批 3 个同时跑一张 H100（7 个 = 3 + 3 + 1，分批在 ablation.py 里算）。
-# 开训前 `python ablation.py check` 必须通过：它查 base 里的 TODO 占位、运行集合是不是这 7 个、
-# 以及每个变体配方是不是从基线配方只改了一个开关。
+# 开训前 `python ablation.py check` 必须通过：它查 base 里的 TODO 占位、data_build 与 5 份变体配方的
+# 登记记录、运行集合是不是这 7 个、以及每个变体配方是不是从基线配方只改了一个开关。
 base: ablation.yaml
+# 新基线 build（traindata 登记）：check 拿配方与数据代码的 sha256 对它的登记记录（data/builds/<id>/build.json）
+data_build: bc0e9e7b566421f0
 # 变体配方目录（traindata 写）：相对 trainer/。每个变体只改 一个旋钮的 on，并带顶层 _ablation 记明出处。
 variants_dir: ../data/recipes/ablation
 # name · seed · knob（基线写 null）· "on"（这个旋钮在变体里应该是什么值）
