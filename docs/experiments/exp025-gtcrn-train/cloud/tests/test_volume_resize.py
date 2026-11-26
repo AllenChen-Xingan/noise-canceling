@@ -41,8 +41,9 @@ class TestVolumeResize(Base):
         self.assertFalse([c for c in self.fake.calls if c[0] == "PATCH"])
 
     def test_over_budget_never_patches(self):
-        # 账上已花 55 美元：盘费预留（150 GB 一个月 10.5 + 多出 50 GB 一个月 3.5）一加就过 60 美元上限
-        L.append_row({"action": "pod_delete", "resource_id": "old", "est_usd": "55.0", "usd_per_hr": "1"}, self.ledger)
+        # 账上已花到上限减 5 美元：盘费预留（150 GB 一个月 10.5 + 多出 50 GB 一个月 3.5）一加就过上限
+        L.append_row({"action": "pod_delete", "resource_id": "old", "est_usd": str(C.SPEND_CAP_USD - 5.0),
+                      "usd_per_hr": "1"}, self.ledger)
         with self.assertRaises(SystemExit):
             self.run_cli("volume-resize", "--size", "200", "--yes")
         self.assertFalse([c for c in self.fake.calls if c[0] == "PATCH"])
