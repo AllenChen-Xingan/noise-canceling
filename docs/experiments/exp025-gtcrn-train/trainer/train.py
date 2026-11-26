@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import math
 import sys
 import time
@@ -102,7 +103,8 @@ def loss_cfg(cfg, w_lvl: float, w_on: float) -> losses.LossCfg:
 @torch.no_grad()
 def calibrate(model, cfg, batches, device, should_stop=lambda: None) -> dict | None:
     """027 3.2 权重第 1 步：起点模型在 calib_batches 个开发批上量各项大小，把 "auto" 的权重定成约占 HybridLoss 的 10%。
-    每批前问一次 should_stop（上限 / 信号）；要停就返回 None（codex 第 2 轮 #1）。"""
+    每批前问一次 should_stop（上限 / 信号）；要停就返回 None（codex 第 2 轮 #1）。
+    某一批的读数不是有限数时不等下一批，立刻返回 {"nonfinite": True, "batch": 批号, "logs": logs}（codex guards 第 4 轮 #1）。"""
     pc = loss_cfg(cfg, 1.0, 1.0)
     pc.sp, pc.kd = False, False  # 标定只量 HybridLoss 与两项保护
     probe = losses.TrainLoss(pc).to(device)
@@ -114,6 +116,9 @@ def calibrate(model, cfg, batches, device, should_stop=lambda: None) -> dict | N
             set_train(model, cfg)
             return None
         _, logs = forward_loss(model, probe, b, device)
+        if not all_finite(logs):  # 这一批已经读到非有限数：不再问 should_stop，也不算什么权重
+            set_train(model, cfg)
+            return {"nonfinite": True, "batch": i, "logs": logs}
         sums["hybrid"] += logs["hybrid"]
         for k in ("lvl", "on"):
             sums[k] += logs[k] * logs[f"{k}_valid"]
@@ -297,6 +302,11 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
         else:
             cal_dev = source.calib_batches(cfg.data.calib_batches, should_stop=tick_stop)
             calib = None if cal_dev is None else calibrate(model, cfg, cal_dev, device, tick_stop)
+            if isinstance(calib, dict) and calib.get("nonfinite"):  # 标定读到非有限数：准备期就停，只留一份现场（第 4 轮 #2）
+                crash = {"reason": "nonfinite", "phase": "calibrate", "batch": calib["batch"],
+                         "logs": calib["logs"], "at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+                (rd.root / "setup_crash.json").write_text(json.dumps(crash, ensure_ascii=False))
+                return {**_setup_stop("nonfinite", acct["step"], billed(), usd()), "crash": crash}
             if calib is None:  # 准备期就到上限 / 收到信号：没有检查点可存，只留心跳里的账
                 return _setup_stop(stop_reason(), acct["step"], billed(), usd())
             step = 0
