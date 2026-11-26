@@ -508,3 +508,9 @@
 - 2026-11-26 方案 D：CochlScene Restaurant 盘上没有（只解了 3 类，分卷已删），重下约 54 GB → 记待拍板 11-4，随清单问。
 - 2026-11-26 evalcmp 被 git 钩子拦（会话里自己切到 exp/025-eval-plan，钩子仍登记 exp/025-gap-v2）。大总管交代错（让它自己开分支，违反 memory「手下换线要重开」）→ 等 pi evalcmp-accept 交活后 --continue 重开。offline pi 交活（17 条先红后绿，0.062 美元）。发现 exp016 _ext.py 写死旧 build 17f5 → 开 issue。
 - 2026-11-26 PR #211 CI 过（16m37s），大总管合并 f1efacbc（#209 关）；删 pi worktree trainer-target-scenes 与 w/ 分支、本地 feat/trainer-target-scenes（远端已自动删）；建 feat/trainer-ablation-scenes（f1efacbc），--continue 重开 trainer（#212 消融 · #213 场景比对）。
+- 2026-11-26 trainer（新会话名 trainer-0e）：pi trainer-ablation 写 #212。大总管定：5 个消融变体配方由 traindata 写、B 段同批分片一起登记并过交集检查；加 data.dev_recipe（开发份与标定批固定用基线配方）。
+- 2026-11-26 PR #215 CI 过（14m41s），大总管合并（#214 关）；cloudrun 分支后续提交另开 PR。
+- 2026-11-26 cloudrun A 段（sm5qjwcfp8slir 07:48Z）：C236 620 条全测，331 只在第 1 秒 · 289 第 2 秒后也有 → 不用（D114）。办公室 4154 条（已排 L207 收音机 806），样本 40 条留 36。大总管定全量筛（不抽样）：另开 cpu3c 16 核 · 自删 3 h · ≤1.5 美元。
+- 2026-11-26 更正：办公室全量筛的决定作废（大总管理由错：31 个麦克风录同一段底噪，不同内容约 2.2 h 非 10 h）；改回 traindata 方案：3 个麦克风位置约 400 条，用现机 sm5qjwcfp8slir，不开 16 核（核过未开）。场景表时长分「不同内容」与「条数」两列。
+- 2026-11-26 traindata：办公室挑每次布置都有的 3 个位置（优先 01·11·21，核每布置 3 个，没有就停报）；pi traindata-unique 加「不同内容（小时）」列（规则 scene_notes.json same_content）；pi traindata-tonemerge 把单音结论并进筛查表（有单音的办公室片段丢掉）。trainer：5 份变体配方在 feat/data-batch3 bcbcb1da。
+- 2026-11-26 cloudrun：办公室每布置取 01·11·21 共 402 条、15 次布置齐，筛查 08:07Z 起约 08:50Z 完（机器时限 09:18Z）；单音全量 4154：无 3840 · 只第 1 秒 1 · 第 2 秒后也有 313（实测）。16 核未开。
