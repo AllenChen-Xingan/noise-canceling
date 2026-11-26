@@ -1,6 +1,6 @@
 """云训练机的常量：唯一正本。其他文件（README、脚本、测试）只从这里引用，不手抄。
 
-出处：D96（Secure Cloud · vCPU ≥ 16 · 150 GB 网络盘）· D101（上限 60 美元）· D102（L4 开不出 → H100 · US-MO-1）。
+出处：D96（Secure Cloud · vCPU ≥ 16 · 150 GB 网络盘）· D101 定 60 美元、D115 改 100 美元（2026-11-26）· D102（L4 开不出 → H100 · US-MO-1）。
 接口：RunPod API v2（https://api.runpod.io/v2/openapi.json，2026-11-16 取，sha256 前 16 位见 SPEC_SHA256_16）。
 """
 
@@ -35,8 +35,8 @@ VOLUME_SIZE_GB = 150
 VOLUME_USD_PER_GB_MONTH = 0.07  # 034 compute.md 1.4：150 GB → 每月 10.5 美元
 VOLUME_MOUNT = "/workspace"
 
-# 花费（D101：上限 60 美元，到线即停）
-SPEND_CAP_USD = 60.0
+# 花费（D101 定 60 美元、D115 改 100 美元：到线即停）
+SPEND_CAP_USD = 100.0
 # 单次开机最长小时数的默认值；开机前按「已花 + 盘费 + 本次最坏」检查不超上限
 DEFAULT_MAX_HOURS = 1.0
 VOLUME_MAX_GB = 200  # 扩盘上限（人定 2026-11-25：放不下可从 150 扩到 200 GB）
