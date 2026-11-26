@@ -153,9 +153,16 @@ def load_onnx(path):
 
 
 def rel(path):
-    """仓内给相对路径，仓外给绝对路径（写进仓里的清单只留可追到的指针）。"""
+    """写进仓的路径（仓是公开的，绝不写带家目录的绝对路径）：
+    在本工作副本里 → 相对它；在主目录里（`_tmp/` 实物通常在那里）→ `<主目录>/…`；两处都不在 → 拒绝。"""
     p = Path(path).resolve()
-    return str(p.relative_to(ROOT)) if p.is_relative_to(ROOT) else str(p)
+    if p.is_relative_to(ROOT):
+        return str(p.relative_to(ROOT))
+    main = _ext.main_root()
+    if p.is_relative_to(main):
+        return "<主目录>/" + str(p.relative_to(main))
+    raise SystemExit(f"{p} 既不在本工作副本 {ROOT}，也不在主目录 {main} 里；不把绝对路径写进仓（仓是公开的）。"
+                     "把实物放到主目录的 `_tmp/` 下再跑")
 
 
 def setup(onnx, sha):
