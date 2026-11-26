@@ -32,6 +32,12 @@
 | `cloud_steps.sh` · `requirements.txt` | 云上的操作步骤与钉死的版本 | 版本与 exp013 旧 build 一致（`test_rebuild`） |
 | （读）`../cloud/config.py` | 网络盘配额 `VOLUME_SIZE_GB` 与挂载点 `VOLUME_MOUNT` | 正本归 cloudrun；`fetch.py` 按路径加载，不抄数字 |
 
+给三个缺口场景（飞机舱 · 会议室 · 电话亭）找候选噪声时，`screen.py` 把每条片段过一遍机器筛查，判 `keep` / `drop` 并写下理由（有人声 · 不像目标场景 · 混响时间不符 · 不平稳），没查的项记「未查：…」。
+判据只有一份正本 `screen_rules.json`：阈值全在里面，代码里不写数字；改判据只改这份 json。
+片段要对上 exp013 `scenes.json` 的场景名，所以 `screen_rules.json` 的键也用它（`tests/test_screen.py` 核对）。
+两个神经模型（Silero VAD · PANNs CNN14）不在导入时加载、也没进 `requirements.txt`：云上 `pip install silero-vad panns-inference` 后才有，本机测试用假函数替；`--no-models` 空跑只算声学量。
+新增的文件就是这三个：`screen_rules.json` · `screen.py` · `tests/test_screen.py`。
+
 ## 三、切分与隔离
 
 切分规则照 027 第六节，分四份：
