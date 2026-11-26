@@ -526,3 +526,8 @@
 - 2026-11-26 trainer 定 losses.window() 不改（与官方一致，7.1e-7 为 float32 舍入）；大总管定比对容差 1e-6 绝对值，交 evalcmp 后续。
 - 2026-11-26 大总管独立副本（PR #220 cfb7b1f1 合 origin/main）：cargo test -p vdn-eval 输出末尾 15 组 0 失败（只留了末尾，未计总数）· xtask tidy 过。等 CI。待拍板加 11-5（车站 vs 车内并列）。
 - 2026-11-26 人定 D117：保留车站，车内不进第一批（11-5 关）。
+- 2026-11-26 cloudrun B 段（p8wburmyl2jz6o 14:43Z，16:47Z 自删，约 0.05 美元）：测试 408 过；切分拒绝覆盖仓里 but-reverbdb-silence 表（新旧不同）→ 等 traindata；15:50Z 前无新提交就删机。大总管建议新表新文件名、旧表不动。
+- 2026-11-26 traindata：切分表不同是有意的（batch3 只 R112 248 条 → 第四批加 3 间办公室 728 条；旧规则哈希 8d8b3750… 与旧表摘要一致）。新来源 but-reverbdb-silence-b4，旧表不动；pi traindata-b4name 14:57Z 起，目标 15:40Z 前交 cloudrun 新提交号。
+- 2026-11-26 PR #220 CI 过（14m18s）→ 合并（#219 关）；删 evalcmp 改写备份 refs/original。清单第 7 项评测计划与判读工具进 main。
+- 2026-11-26 evalcmp：pi-worker clean 因改写历史判「not merged」，--force 被它会话权限拦 → 记待拍板 11-6，大总管不代删（不绕权限）。
+- 2026-11-26 traindata 交 254ebece（新来源 but-reverbdb-silence-b4，728 条；旧规则逐字节还原；冻结文件与 splits/builds/screen 对 e8728ffe diff 空；414 过 · 3 跳过；pi 0.028 美元）→ cloudrun 原机重跑 B 段。
