@@ -95,8 +95,9 @@ $PY $D/screen.py --root /workspace --list /workspace/out/batch4/office.txt --sce
 traindata 在 A 段之后要做的事（本机，不跑重活）：
 1. `split_rules.json`：`but-reverbdb-silence` 的 glob 加 3 间办公室；`expect.files` 改成 A1 的总数；筛查表并入办公室的结论
 2. `recipe.json`：`noise_pools` 加 `meeting-room`（来源 but-reverbdb-silence，正则只认 3 间办公室）；`target_scene.scene` 加 `meeting-room`，共 4 个
-3. `scene_notes.json` 写会议室的已知限制；补测试
-4. 分支情况：
+3. `recipe.json`：`canteen` 池加 DEMAND PRESTO（大总管 87 定 C，`scene-gaps.md` 2.5 节；按段核 exclude.json 交集为 0，训练份 0.67 小时一秒没少）
+4. `scene_notes.json` 写会议室与食堂的已知限制；补测试
+5. 分支情况：
    - 办公室没有开头单音（A2 全是 none）→ 照上面做，不动冻结的 6 个代码文件
    - 办公室也是「只在第 1 秒」→ 要去掉开头 1 秒。这得改 `split.py`（冻结文件之一），改完旧 build 10aa3a9f 在新代码下读不了。先报大总管再做
    - 办公室第 2 秒以后也有单音，或筛查留下太少（不到一半）→ 会议室没有合规来源，报大总管，由人定（例如这次先练 3 个场景）
