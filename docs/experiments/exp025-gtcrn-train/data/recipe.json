@@ -52,7 +52,7 @@
  "speech": {"train": ["librispeech-train-clean-100"], "_注": "开发份用同一来源的 dev 份；终测原料池与 d63 不经 loader"},
  "rir": ["openslr28-rir"],
  "noise_pools": {
-  "_说明": "键 = exp013 scenes.json 的场景名（正本，测试核对）；值 = 来源 + 路径正则。只列第一批能覆盖的场景（027 第五节表）。第二批（D106）加 CochlScene 3 类：地铁站→transit-hub · 地铁车厢→rail-air-cabin（只像火车车厢）· 拥挤室内→cowork 与 open-office",
+  "_说明": "键 = exp013 scenes.json 的场景名（正本，测试核对）；值 = 来源 + 路径正则。只列第一批能覆盖的场景（027 第五节表）。第二批（D106）加 CochlScene 3 类：地铁站→transit-hub · 地铁车厢→rail-air-cabin（只像火车车厢）· 拥挤室内→cowork 与 open-office。已知偏差（2026-11-25，待下一批修）：cowork 与 open-office 共用同一批拥挤室内录音，target_scene 为 null 时按场景等概率抽，这批录音的权重是其他来源的两倍（推断）；修法定为按来源去重抽样",
   "street-outdoor": [{"source": "qut-noise", "regex": "(?i)street"}, {"source": "tum-wind", "regex": ".", "wind": true}, {"source": "demand-train", "regex": "STRAFFIC"}],
   "cafe": [{"source": "qut-noise", "regex": "(?i)cafe"}, {"source": "demand-train", "regex": "SCAFE|PRESTO"}],
   "canteen": [{"source": "demand-train", "regex": "PCAFETER"}],
