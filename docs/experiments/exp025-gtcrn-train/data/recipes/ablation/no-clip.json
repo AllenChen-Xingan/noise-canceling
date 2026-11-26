@@ -91,7 +91,7 @@
   "openslr28-rir"
  ],
  "noise_pools": {
-  "_说明": "键 = exp013 scenes.json 的场景名（正本，测试核对）；值 = 来源 + 路径正则。只列第一批能覆盖的场景（027 第五节表）。第二批（D106）加 CochlScene 3 类：地铁站→transit-hub · 地铁车厢→rail-air-cabin（只像火车车厢）· 拥挤室内→cowork 与 open-office。同一批录音的几个场景（如 cowork 与 open-office 都用拥挤室内）抽样时只算一次权重，报出的场景名取字母序第一个（loader.scene_groups，2026-11-25 修）。rail-air-cabin 的飞机部分没有训练噪声：人不给 Freesound 密钥，飞机舱暂由地铁车厢录音（cochlscene Subway）代替（D111 补充，2026-11-25）。第三批（D111 · D113）：BUT 混响库底噪，Room112 → hotel-room（开发份与训练份是同一间房）。第四批：三间办公室 L207 · L212 · Q301 的底噪 → meeting-room（是办公室，不是会议室；只取 01 · 11 · 21 号麦克风）；C236 不用（D114：第 1 秒后有 250 Hz 单音）。canteen 加 DEMAND PRESTO（只取前 60%，与 exp013 食堂评测的 180 秒以后不重叠，见 scene_notes.json）",
+  "_说明": "键 = exp013 scenes.json 的场景名（正本，测试核对）；值 = 来源 + 路径正则。只列第一批能覆盖的场景（027 第五节表）。第二批（D106）加 CochlScene 3 类：地铁站→transit-hub · 地铁车厢→rail-air-cabin（只像火车车厢）· 拥挤室内→cowork 与 open-office。同一批录音的几个场景（如 cowork 与 open-office 都用拥挤室内）抽样时只算一次权重，报出的场景名取字母序第一个（loader.scene_groups，2026-11-25 修）。rail-air-cabin 的飞机部分没有训练噪声：人不给 Freesound 密钥，飞机舱暂由地铁车厢录音（cochlscene Subway）代替（D111 补充，2026-11-25）。第三批（D111 · D113）：BUT 混响库底噪，Room112 → hotel-room（开发份与训练份是同一间房）。第四批：三间办公室 L207 · L212 · Q301 的底噪 → meeting-room（是办公室，不是会议室；只取 01 · 11 · 21 号麦克风）；C236 不用（D114：第 1 秒后有 250 Hz 单音）。BUT 这两池的来源都是 `but-reverbdb-silence-b4`（4 间房的新来源）：`but-reverbdb-silence` 只含 Room112，旧切分表 build 10aa3a9f 还在用，不原地覆盖（大总管 87 2026-11-26）。canteen 加 DEMAND PRESTO（只取前 60%，与 exp013 食堂评测的 180 秒以后不重叠，见 scene_notes.json）",
   "street-outdoor": [
    {
     "source": "qut-noise",
@@ -177,19 +177,19 @@
   ],
   "hotel-room": [
    {
-    "source": "but-reverbdb-silence",
+    "source": "but-reverbdb-silence-b4",
     "regex": "/Hotel_SkalskyDvur_Room112/"
    }
   ],
   "meeting-room": [
    {
-    "source": "but-reverbdb-silence",
+    "source": "but-reverbdb-silence-b4",
     "regex": "/VUT_FIT_(L207|L212|Q301)/"
    }
   ]
  },
  "_ablation": {
-  "base_sha256": "d07618e4bd2cd73f150e5ce2c245fdb227fd0be7318c2b21049cffc1b1d16a52",
+  "base_sha256": "e1fe1bbce4256fbd771e84a7f25a99d1a7d2069cd5b5d38161116c0e4eb76ff5",
   "knob": "clip",
   "on": false
  }

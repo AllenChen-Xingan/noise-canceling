@@ -11,6 +11,11 @@
    "regex": "^train-raw/but-reverbdb/([^/]+)/MicID\\d+/([^/]+)/[^/]+/silence/([^/]+)$",
    "group": "\\1/\\2/\\3",
    "why": "同一次布置、同一个文件名的各麦克风同时录的是同一段底噪"
+  },
+  "but-reverbdb-silence-b4": {
+   "regex": "^train-raw/but-reverbdb/([^/]+)/MicID\\d+/([^/]+)/[^/]+/silence/([^/]+)$",
+   "group": "\\1/\\2/\\3",
+   "why": "同一次布置、同一个文件名的各麦克风同时录的是同一段底噪（第四批的 4 间房用这个来源名；`but-reverbdb-silence` 只含 Room112，旧表 build 10aa3a9f 在用）"
   }
  },
  "rail-air-cabin": "只有地铁车厢录音（CochlScene Subway），飞机舱没补（D111 补充）",
