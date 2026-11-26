@@ -304,6 +304,8 @@ def summary(name, rule, seed, rows, jsonl_bytes, excluded=None):
     s = {"source": name, "group": rule["group"], "unit": rule["unit"], "seed": seed, "rule_sha256": rule_sha(rule),
          "files": len(rows), "units": len({r["unit"] for r in rows}), "jsonl_sha256": hashlib.sha256(jsonl_bytes).hexdigest(),
          **{k: v for k, v in (excluded or {}).items() if v}}
+    if rule.get("unit_regex"):
+        s["unit_from"] = rule["unit_regex"][0]["unit"]  # #204：读表不用翻规则猜单位长什么样
     if rule["unit"] == "time":
         s["time"] = rule["time"]
         s["seconds"] = round(sum(r["frames"] / r["sr"] for r in rows), 1)
