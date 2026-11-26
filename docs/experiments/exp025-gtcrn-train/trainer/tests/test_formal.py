@@ -256,6 +256,12 @@ def test_non_string_scene_reported(tmp_path):
     assert "3" in ps[0]
 
 
+def test_non_list_target_scenes_reported(tmp_path):
+    ps = _scene_problems(tmp_path, "cafe")  # 写成单个字符串，不是清单
+    assert len(ps) == 1, ps
+    assert "target_scenes" in ps[0]
+
+
 def test_d113_scenes_pass_scene_check(tmp_path):
     assert _scene_problems(tmp_path, D113_SCENES) == []
 
