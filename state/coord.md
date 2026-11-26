@@ -503,3 +503,8 @@
 - 2026-11-26 cloudrun 报：按 D112 删 first-batch（机器 3h08g5wq4xr6fp 约 7 min · 0.014 美元，云上 0 台）；删前取回 index.json.gz（sha 一致）+ 66 个 tar 名/字节数/sha + 日志到 _tmp/20261126-first-batch-small/；盘 153/200 GB，剩 47 GB。累计 8.51 美元。pi cloudrun-cap100 在跑。
 - 2026-11-26 traindata 报 D114 判定：会议室不用 C236；备选 BUT 办公室 3 间。批 cloudrun 跑第四批 A 段（只读，cpu3c，≤0.2 美元）。清单第 2 项初表（build 10aa3a9f）：rail-air-cabin 15.29 h · canteen 0.67 h（⚠️ 少）· transit-hub 14.87 h。
 - 2026-11-26 cloudrun 交 PR #215（39 提交，Closes #214；上限 100 已改）。大总管独立副本：cloud 147 条 unittest OK；最大 .py 573 行。等 CI。
+- 2026-11-26 traindata 报食堂缺口（data/scene-gaps.md，e0851010）：0.67 h 实为同一次录音 16 声道，约 150 s 不同内容（推断）。大总管批 C（加 DEMAND PRESTO，改 recipe.json；条件：按段核 exclude.json 交集为空，附页写「同录音不同段，分数偏乐观」）；D（CochlScene Restaurant 类，超 D106）等 cloudrun 查盘再问人。
+- 2026-11-26 traindata：PRESTO 按段核 exclude.json 交集 0（训练 0–150 s、开发 150–180 s，exp013 用 180.8–294.1 s），食堂训练噪声 1.33 h / 2 间餐厅；B 段步骤 67eec972。等 A 段。
+- 2026-11-26 方案 D：CochlScene Restaurant 盘上没有（只解了 3 类，分卷已删），重下约 54 GB → 记待拍板 11-4，随清单问。
+- 2026-11-26 evalcmp 被 git 钩子拦（会话里自己切到 exp/025-eval-plan，钩子仍登记 exp/025-gap-v2）。大总管交代错（让它自己开分支，违反 memory「手下换线要重开」）→ 等 pi evalcmp-accept 交活后 --continue 重开。offline pi 交活（17 条先红后绿，0.062 美元）。发现 exp016 _ext.py 写死旧 build 17f5 → 开 issue。
+- 2026-11-26 PR #211 CI 过（16m37s），大总管合并 f1efacbc（#209 关）；删 pi worktree trainer-target-scenes 与 w/ 分支、本地 feat/trainer-target-scenes（远端已自动删）；建 feat/trainer-ablation-scenes（f1efacbc），--continue 重开 trainer（#212 消融 · #213 场景比对）。
