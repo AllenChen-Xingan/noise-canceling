@@ -46,3 +46,9 @@ P0×0 P1×1 P2×2。逐条核实，3 条都属实。
 - 结构比较：ablation.py 自带一份拍平器，空对象算叶子，缺键与 null 分开；judge 和 problems 都用它。formal._flat 不动。
 - 红灯：trainer 在 f91acf8d 上复现 3 败，在 4e8d2538 上复现 2 败。
 - 绿灯：合入后 test_ablation + test_ablation_judge + test_formal + test_data + test_train 共 114 过 2 跳过。行数：ablation.py 540，test_ablation_judge.py 372，test_ablation.py 301。
+
+## 第 3 轮（2026-11-26）· 模型 gpt-6-astra · 总评「修改」
+
+P0×0 P1×1 P2×1。逐条核实，都属实。
+- **P1｜续训不核对开发份 build**（第 3 轮 #1）：开发配方原地改了而训练配方没变时，续训照常，run.json 仍留旧的 dev_build_id，judge 会把新开发份的读数当旧的比。改：check_resume 在记录里有 dev_build_id 时比对当前值，不同就拒绝续训；旧记录没有这个字段的照常续训。交 pi `trainer-ablation-fix4`。
+- **P2｜不设 dev_recipe 时 run.json 多两个字段**（第 3 轮 #2）：第三次提出，仍留在 #217。理由同第 2 轮：不影响判结果，也不影响开训。
