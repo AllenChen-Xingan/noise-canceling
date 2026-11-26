@@ -58,7 +58,9 @@ impl Lines {
     }
 }
 
+mod accept;
 mod table;
+pub use accept::*;
 pub use table::*;
 
 /// 不一致的原因（codex 第 3 轮 P1 #1：待定项要连原因一起对上，免得数值差异掩盖新的出处错误）。
