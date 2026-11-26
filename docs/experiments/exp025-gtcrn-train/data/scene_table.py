@@ -6,7 +6,10 @@
 - `split_rules.json`：来源 → 组（`sources.<来源>.group`）
 - `sources.json`：组的许可 · 署名 · 能不能训练（`groups.<组>.license / attribution / train_ok`）
 - `splits/<来源>.jsonl`：逐文件的份 / 段界 / 单位（摘要里的哈希由 split.load_split 核）
-唯一手写输入是 `scene_notes.json`（每个场景的已知限制）：它不进任何 build id。
+
+为什么还要报「不同内容」时长：同一段声音被多个麦克风 / 声道同时录下时，按条数相加会夸大（DEMAND 是 16 声道阵列，BUT 一次布置最多 31 个麦克风）。哪些文件是同一段声音记在 `scene_notes.json` 的 `same_content`（也不进任何 build id）；没登记的来源，每个文件都算不同内容。
+
+唯一手写输入是 `scene_notes.json`（每个场景的已知限制 + 哪些文件是同一段声音）：它不进任何 build id。
 
 为什么先核哈希：切分表被改过、配方改过，这张表就不再描述那个 build，把数字报出去会误导人（CLAUDE.md 五.1 那一类坑）。
 
@@ -26,7 +29,10 @@ sys.path.insert(0, str(HERE))
 import split  # noqa: E402  切分表读取与哈希核对只走它，不另写一份
 
 SPLITS = ("train", "dev")  # 这张表只报这两份；final / d63 不进训练
-MD_HEAD = "| 来源 | 份 | 条数 | 时长（小时，2 位小数） | 单位数 | 许可 |"
+MD_HEAD = "| 来源 | 份 | 条数 | 时长（小时，按条数） | 不同内容（小时） | 单位数 | 许可 |"
+MD_NOTE = ("两段时长：「时长（小时，按条数）」把每一份文件都加起来；「不同内容（小时）」把同一次录音的多个麦克风 / 声道"
+           "算成一段（取组里最长的那一个）。哪些文件算同一段声音记在 `scene_notes.json` 的 `same_content`，"
+           "没登记的来源两者相等。")
 
 
 def load_json(path):
@@ -79,6 +85,45 @@ def source_meta(name, rules, sources):
             "attribution": g.get("attribution", ""), "train_ok": bool(g.get("train_ok"))}
 
 
+def scene_notes(data_dir):
+    """读 scene_notes.json，分两堆：场景 → 已知限制（表里贴的那行）· 来源 → 同一段声音的识别规则。
+    `same_content` 那一节不是场景，不能被当成场景的已知限制（少一行限制就查不到）。"""
+    raw = load_json(Path(data_dir) / "scene_notes.json")
+    notes = {k: v for k, v in raw.items() if not k.startswith("_") and k != "same_content"}
+    return notes, same_content_rules(raw.get("same_content") or {})
+
+
+def same_content_rules(raw):
+    """来源 → {rx, group}：同一段声音的组键按 regex 匹配路径、再用 group 展开（写法同 split_rules 的 unit_regex）。
+    没列出的来源不在返回值里 = 每个文件都是不同内容；`_` 开头的键是说明。"""
+    out = {}
+    for name, r in raw.items():
+        if name.startswith("_"):
+            continue
+        if not r.get("regex") or not r.get("group"):
+            raise SystemExit(f"scene_notes.json 的 same_content.{name} 缺 regex 或 group（两样都要）："
+                             "认不出哪些文件是同一次录音，就报不了「不同内容」时长")
+        out[name] = {"rx": re.compile(r["regex"]), "group": r["group"]}
+    return out
+
+
+def content_key(name, path, same_rules):
+    """这个文件的「同一段声音」组键：组键相同 = 同一次录音。没登记的来源按路径各算一段。"""
+    rule = same_rules.get(name)
+    if rule is None:
+        return path
+    m = rule["rx"].search(path)
+    if m is None:
+        raise SystemExit(f"来源 {name} 在 scene_notes.json 的 same_content 里登记了正则 {rule['rx'].pattern}，"
+                         f"但它匹配不上这个路径：{path}。认不出哪些文件是同一次录音，就不报「不同内容」"
+                         "（不静默退回按文件算：那样会把夸大后的时长当成真的）")
+    try:
+        return m.expand(rule["group"])
+    except (re.error, IndexError) as e:
+        raise SystemExit(f"scene_notes.json 的 same_content.{name} 的 group {rule['group']!r} 展开失败（{e}）："
+                         f"它要引用正则 {rule['rx'].pattern} 里的分组，检查一下分组个数")
+
+
 def row_seconds(row, sp):
     """这一行在这一份的秒数；这一行不在这一份就返回 None。
     按时段切的来源（QUT · DEMAND）没有 split 字段，段界在 segments 里：时长按那一段算；
@@ -102,13 +147,16 @@ def scene_pools(recipe):
     return pools
 
 
-def split_table(rows_by_source, items, sp):
-    """一个场景一份的每个来源：条数 · 秒数 · 单位数（正则用 re.search 匹配切分表里的 path，和 loader 一致）。"""
+def split_table(rows_by_source, items, sp, same_rules=None):
+    """一个场景一份的每个来源：条数 · 秒数 · 不同内容的秒数 · 单位数。
+    正则用 re.search 匹配切分表里的 path，和 loader 一致；不同内容按「同一次录音」分组后取每组最长的那一个
+    （同一次录音同一段应该一样长，取最大是安全的选择）。"""
+    same_rules = same_rules or {}
     per = {}
     for name, rx in items:
         d = per.get(name)
         if d is None:
-            d = per[name] = {"files": 0, "seconds": 0.0, "units": set()}
+            d = per[name] = {"files": 0, "seconds": 0.0, "units": set(), "groups": {}}
         for row in rows_by_source(name):
             if not rx.search(row["path"]):
                 continue
@@ -118,6 +166,9 @@ def split_table(rows_by_source, items, sp):
             d["files"] += 1
             d["seconds"] += sec
             d["units"].add(row["unit"])
+            key = content_key(name, row["path"], same_rules)
+            if key not in d["groups"] or sec > d["groups"][key]:
+                d["groups"][key] = sec
     return per
 
 
@@ -126,8 +177,10 @@ def as_split(per, metas):
     out = []
     for name in sorted(per):
         d = per[name]
-        out.append({**metas[name], "files": d["files"], "seconds": round(d["seconds"], 2), "units": len(d["units"])})
+        out.append({**metas[name], "files": d["files"], "seconds": round(d["seconds"], 2),
+                    "unique_seconds": round(sum(d["groups"].values()), 2), "units": len(d["units"])})
     totals = {"files": sum(x["files"] for x in out), "seconds": round(sum(x["seconds"] for x in out), 2),
+              "unique_seconds": round(sum(x["unique_seconds"] for x in out), 2),
               "units": sum(x["units"] for x in out)}
     return {"sources": out, "totals": totals}
 
@@ -139,7 +192,7 @@ def build_tables(build_dir, data_dir=HERE, scenes=None):
     recipe = load_recipe(build, data_dir)
     rules = split.load_rules(Path(data_dir) / "split_rules.json")
     sources = load_json(data_dir / "sources.json")
-    notes = {k: v for k, v in load_json(data_dir / "scene_notes.json").items() if not k.startswith("_")}
+    notes, same_rules = scene_notes(data_dir)
     pools = scene_pools(recipe)
     want = list(scenes) if scenes else target_scenes(recipe)
     cache, metas = {}, {}
@@ -166,7 +219,7 @@ def build_tables(build_dir, data_dir=HERE, scenes=None):
             raise SystemExit(f"target 场景 {scene} 在 scene_notes.json 里没有已知限制：表里不许空着这一行，请写上")
         splits = {}
         for sp in SPLITS:
-            splits[sp] = as_split(split_table(rows_by_source, items, sp), metas)
+            splits[sp] = as_split(split_table(rows_by_source, items, sp, same_rules), metas)
         n_train = splits["train"]["totals"]["files"]
         if n_train == 0:
             raise SystemExit(f"场景 {scene} 在这个 build 里没有训练噪声（切分表的训练份一条也匹配不上）："
@@ -182,14 +235,16 @@ def render_md(tables):
     """中文 markdown：每个场景一张表，表后一行已知限制。"""
     lines = [f"# 目标场景噪声表 · build {tables['build_id']}", "",
              f"配方 sha256（前 12 位）：{tables['recipe_sha256'][:12]}。"
-             "数字由 `scene_table.py` 从 build 记录与切分表算出，不手抄；时长按这一份实际用的那一段算。", ""]
+             "数字由 `scene_table.py` 从 build 记录与切分表算出，不手抄；时长按这一份实际用的那一段算。", MD_NOTE, ""]
     for scene, s in tables["scenes"].items():
-        lines += [f"## {scene}", "", MD_HEAD, "|---|---|---|---|---|---|"]
+        lines += [f"## {scene}", "", MD_HEAD, "|---|---|---|---|---|---|---|"]
         for sp in SPLITS:
             for r in s["splits"][sp]["sources"]:
-                lines.append(f"| {r['source']} | {sp} | {r['files']} | {r['seconds'] / 3600:.2f} | {r['units']} | {r['license']} |")
+                lines.append(f"| {r['source']} | {sp} | {r['files']} | {r['seconds'] / 3600:.2f} | "
+                             f"{r['unique_seconds'] / 3600:.2f} | {r['units']} | {r['license']} |")
             tt = s["splits"][sp]["totals"]
-            lines.append(f"| 合计 | {sp} | {tt['files']} | {tt['seconds'] / 3600:.2f} | {tt['units']} | |")
+            lines.append(f"| 合计 | {sp} | {tt['files']} | {tt['seconds'] / 3600:.2f} | "
+                         f"{tt['unique_seconds'] / 3600:.2f} | {tt['units']} | |")
         lines += ["", f"已知限制：{s['notes']}", ""]
     return "\n".join(lines)
 

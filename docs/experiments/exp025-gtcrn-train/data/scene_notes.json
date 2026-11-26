@@ -1,5 +1,18 @@
 {
- "_说明": "这里只写每个目标场景的已知限制（人写的文字），不进任何 build id：build 记录只看 recipe.json · split_rules.json · 切分表 · sources.json。scene_table.py 把这里的文字贴到每个场景的表下面；目标场景缺一条就停（表里不许空着「已知限制」）。改这里的文字不会改变任何 build，也不用重跑切分",
+ "_说明": "这里只写每个目标场景的已知限制（人写的文字），不进任何 build id：build 记录只看 recipe.json · split_rules.json · 切分表 · sources.json。scene_table.py 把这里的文字贴到每个场景的表下面；目标场景缺一条就停（表里不许空着「已知限制」）。改这里的文字不会改变任何 build，也不用重跑切分。另有一节 same_content 记「同一段声音被多个麦克风 / 声道录了几遍」，同样不进任何 build id，下划线开头的键一律跳过",
+ "same_content": {
+  "_说明": "来源 → {regex, group, why}：按 regex 匹配文件路径，用 group 取出「同一段声音」的组键（写法与 split_rules.json 的 unit_regex 相同）；组键相同的文件是同一次录音、算一段内容。没列在这里的来源，每个文件都算不同内容。这一节只影响 scene_table.py 报的「不同内容（小时）」，不改切分、不改 build",
+  "demand-train": {
+   "regex": "demand/(\\w+)/ch\\d+\\.wav$",
+   "group": "\\1",
+   "why": "DEMAND 是 16 声道阵列，同一环境的 16 个声道是同一次录音"
+  },
+  "but-reverbdb-silence": {
+   "regex": "^train-raw/but-reverbdb/([^/]+)/MicID\\d+/([^/]+)/[^/]+/silence/([^/]+)$",
+   "group": "\\1/\\2/\\3",
+   "why": "同一次布置、同一个文件名的各麦克风同时录的是同一段底噪"
+  }
+ },
  "rail-air-cabin": "只有地铁车厢录音（CochlScene Subway），飞机舱没补（D111 补充）",
  "canteen": "只有 DEMAND PCAFETER 一个来源",
  "transit-hub": "只有 CochlScene SubwayStation 一个来源",

@@ -49,6 +49,26 @@ CAFE = [  # 按时段切的来源（如 DEMAND）：段界写在 segments 里，
 ]
 
 
+DEMAND_ROWS = [  # 同一环境 3 个声道 = 同一次录音；另一环境 1 个声道
+    {"path": "vdn-data/demand/AKITCHEN/ch01.wav", "segments": {"train": [0, 32000]},
+     "unit": "vdn-data/demand/AKITCHEN/ch01.wav", "frames": 48000, "sr": 16000},
+    {"path": "vdn-data/demand/AKITCHEN/ch02.wav", "segments": {"train": [0, 32000]},
+     "unit": "vdn-data/demand/AKITCHEN/ch02.wav", "frames": 48000, "sr": 16000},
+    {"path": "vdn-data/demand/AKITCHEN/ch03.wav", "segments": {"train": [0, 32000]},
+     "unit": "vdn-data/demand/AKITCHEN/ch03.wav", "frames": 48000, "sr": 16000},
+    {"path": "vdn-data/demand/BKITCHEN/ch01.wav", "segments": {"train": [0, 16000]},
+     "unit": "vdn-data/demand/BKITCHEN/ch01.wav", "frames": 48000, "sr": 16000},
+]
+BUT_ROWS = [  # 同一场次两个麦克风（同时录同一段底噪）+ 另一个录音文件各麦克风又各录一遍
+    {"path": "train-raw/but-reverbdb/RoomA/MicID01/Spk1_S/01/silence/silence_16kHz_60sec.v00.wav",
+     "split": "train", "unit": "RoomA/Spk1_S", "frames": 16000, "sr": 16000},
+    {"path": "train-raw/but-reverbdb/RoomA/MicID02/Spk1_S/01/silence/silence_16kHz_60sec.v00.wav",
+     "split": "train", "unit": "RoomA/Spk1_S", "frames": 16000, "sr": 16000},
+    {"path": "train-raw/but-reverbdb/RoomA/MicID01/Spk1_S/01/silence/silence_16kHz_60sec.v01.wav",
+     "split": "train", "unit": "RoomA/Spk1_S", "frames": 16000, "sr": 16000},
+]
+
+
 class Fixture(unittest.TestCase):
     """临时目录里的一套最小数据：两个场景、两个来源。"""
 
@@ -104,7 +124,9 @@ class Tables(Fixture):
         self.assertEqual(st["train"]["sources"][0]["units"], 2)  # s1 · s2
         self.assertEqual(st["dev"]["sources"][0]["files"], 1)
         self.assertAlmostEqual(st["dev"]["totals"]["seconds"], 1.0)
-        self.assertEqual(st["train"]["totals"], {"files": 3, "seconds": 2.5, "units": 2})
+        # 没在 scene_notes.json 的 same_content 里登记的来源：每个文件都是不同内容
+        self.assertAlmostEqual(st["train"]["sources"][0]["unique_seconds"], 2.5)
+        self.assertEqual(st["train"]["totals"], {"files": 3, "seconds": 2.5, "unique_seconds": 2.5, "units": 2})
 
     def test_segment_rows_use_segment_length(self):
         ca = self.tables()["scenes"]["cafe"]["splits"]
@@ -121,7 +143,8 @@ class Tables(Fixture):
         md = scene_table.render_md(t)
         self.assertIn("test-build-0123", md)
         self.assertIn(t["recipe_sha256"][:12], md)
-        self.assertIn("| 来源 | 份 | 条数 | 时长（小时，2 位小数） | 单位数 | 许可 |", md)
+        self.assertIn("| 来源 | 份 | 条数 | 时长（小时，按条数） | 不同内容（小时） | 单位数 | 许可 |", md)
+        self.assertIn("same_content", md)
         self.assertIn("| noise-street | train | 3 |", md)
         self.assertIn("已知限制：只有一段路", md)
         self.assertIn("## cafe", md)
@@ -130,7 +153,7 @@ class Tables(Fixture):
         t = self.tables()
         md = scene_table.render_md(t)
         # street 训练 2.5 秒 = 0.000694… 小时 → 0.00
-        self.assertIn("| 合计 | train | 3 | 0.00 | 2 | |", md)
+        self.assertIn("| 合计 | train | 3 | 0.00 | 0.00 | 2 | |", md)
 
     def test_scenes_arg_limits_output(self):
         t = self.tables()
@@ -203,6 +226,94 @@ class Stops(Fixture):
         self.assertIn("meeting-room", str(e.exception))
 
 
+class SameContent(Fixture):
+    """同一段声音被多个麦克风 / 声道录了多次时，条数与时长会夸大：另报「不同内容」时长。
+
+    夹具：DEMAND 同一环境 3 个声道 + 另一个环境 1 个声道；BUT 同一场次 2 个麦克风 + 另一场次 1 个麦克风。
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.h_demand = write_table(self.root, "demand-train", DEMAND_ROWS)
+        self.h_but = write_table(self.root, "but-reverbdb-silence", BUT_ROWS)
+        self.build = {
+            "build_id": "test-same-0123",
+            "split_tables": {"demand-train": self.h_demand, "but-reverbdb-silence": self.h_but},
+            "noise_scenes": {"train": ["canteen", "hotel-room"], "dev": []},
+            "counts": {},
+        }
+        self.recipe = {
+            "knobs": {"target_scene": {"on": True, "scene": ["canteen", "hotel-room"], "frac": 0.667}},
+            "noise_pools": {"canteen": [{"source": "demand-train", "regex": "AKITCHEN|BKITCHEN"}],
+                            "hotel-room": [{"source": "but-reverbdb-silence", "regex": "/RoomA/"}]},
+        }
+        self.rules = {"sources": {"demand-train": {"group": "E2", "unit": "time"},
+                                  "but-reverbdb-silence": {"group": "A7", "unit": "file"}}}
+        self.sources = {"groups": {
+            "E2": {"license": "CC-BY-4.0", "attribution": "DEMAND", "train_ok": True},
+            "A7": {"license": "CC-BY-4.0", "attribution": "BUT ReverbDB", "train_ok": True}}}
+        self.same = {
+            "_说明": "下划线开头的键是说明，不是来源",
+            "demand-train": {"regex": r"demand/(\w+)/ch\d+\.wav$", "group": r"\1",
+                             "why": "DEMAND 是 16 声道阵列，同一环境的 16 个声道是同一次录音"},
+            "but-reverbdb-silence": {
+                "regex": r"^train-raw/but-reverbdb/([^/]+)/MicID\d+/([^/]+)/[^/]+/silence/([^/]+)$",
+                "group": r"\1/\2/\3", "why": "同一次布置、同一个文件名的各麦克风同时录的是同一段底噪"},
+        }
+        self.notes = {"_说明": "只是人写的已知限制，不进 build id", "canteen": "只有 DEMAND PCAFETER",
+                      "hotel-room": "只有一间房", "same_content": self.same}
+
+    def demand(self, **kw):
+        return self.tables(**kw)["scenes"]["canteen"]["splits"]["train"]
+
+    def but(self, **kw):
+        return self.tables(**kw)["scenes"]["hotel-room"]["splits"]["train"]
+
+    def test_channels_of_one_recording_count_once(self):
+        d = self.demand()
+        src = d["sources"][0]
+        self.assertEqual(src["files"], 4)
+        self.assertAlmostEqual(src["seconds"], 7.0)  # 2 + 2 + 2 + 1 秒（按条数）
+        self.assertAlmostEqual(src["unique_seconds"], 3.0)  # A 环境一次 2 秒 + B 环境一次 1 秒
+        self.assertAlmostEqual(d["totals"]["unique_seconds"], 3.0)
+
+    def test_group_takes_the_longest_file(self):
+        # 同一次录音的几个声道长度不会完全相等（夹具里故意差一点）：取最大而不是相加
+        rows = [dict(r) for r in DEMAND_ROWS]
+        rows[1] = dict(rows[1], segments={"train": [0, 40000]})  # 2.5 秒
+        h = write_table(self.root, "demand-train", rows)
+        build = dict(self.build, split_tables={"demand-train": h, "but-reverbdb-silence": self.h_but})
+        src = self.demand(build=build)["sources"][0]
+        self.assertAlmostEqual(src["seconds"], 7.5)
+        self.assertAlmostEqual(src["unique_seconds"], 3.5)  # 2.5（最大）+ 1
+
+    def test_mics_of_one_take_count_once_other_takes_separate(self):
+        src = self.but()["sources"][0]
+        self.assertEqual(src["files"], 3)
+        self.assertAlmostEqual(src["seconds"], 3.0)
+        self.assertAlmostEqual(src["unique_seconds"], 2.0)  # MicID01/02 同一个文件名算一次，v01 另算一次
+
+    def test_same_content_key_is_not_a_scene(self):
+        t = self.tables()
+        self.assertEqual(sorted(t["scenes"]), ["canteen", "hotel-room"])
+        self.assertNotIn("same_content", t["scenes"])
+
+    def test_listed_source_path_must_match(self):
+        same = dict(self.same, **{"demand-train": {"regex": r"demand/(\w+)/ch\d+\.mp3$",
+                                                    "group": r"\1", "why": "写错的正则"}})
+        notes = dict(self.notes, same_content=same)
+        with self.assertRaises(SystemExit) as e:
+            self.tables(notes=notes)
+        self.assertIn("ch01.wav", str(e.exception))
+        self.assertIn("demand-train", str(e.exception))
+
+    def test_no_same_content_entry_means_every_file_distinct(self):
+        notes = {k: v for k, v in self.notes.items() if k != "same_content"}
+        d = self.demand(notes=notes)
+        self.assertAlmostEqual(d["sources"][0]["unique_seconds"], 7.0)
+
+
 class Product(unittest.TestCase):
     """真产物：build 10aa3a9fb8cef48f 的三个人定目标场景（D113）。"""
 
@@ -226,6 +337,23 @@ class Product(unittest.TestCase):
         # 切分表摘要里 SubwayStation 的 train 条数（split_tables 核过哈希，数字可交叉核）
         s, rows = split.load_split("cochlscene", out_dir=HERE / "splits")
         self.assertEqual(src["files"], sum(1 for r in rows if r["split"] == "train" and "/SubwayStation/" in r["path"]))
+
+    def test_markdown_has_two_durations(self):
+        md = scene_table.render_md(self.t)
+        self.assertIn("| 来源 | 份 | 条数 | 时长（小时，按条数） | 不同内容（小时） | 单位数 | 许可 |", md)
+        self.assertIn("same_content", md)
+        self.assertIn("scene_notes.json", md)
+
+    def test_canteen_unique_seconds_is_one_sixteenth(self):
+        # DEMAND 是 16 声道阵列：同一环境的 16 个声道是同一次录音，不同内容 ≈ 总时长 / 16
+        tt = self.t["scenes"]["canteen"]["splits"]["train"]["totals"]
+        self.assertAlmostEqual(tt["unique_seconds"], tt["seconds"] / 16, delta=1.0)
+
+    def test_rail_air_cabin_unique_equals_seconds(self):
+        # CochlScene 不在 same_content 里：每个文件都是不同内容
+        for sp in ("train", "dev"):
+            tt = self.t["scenes"]["rail-air-cabin"]["splits"][sp]["totals"]
+            self.assertAlmostEqual(tt["unique_seconds"], tt["seconds"], delta=0.01)
 
     def test_markdown_has_each_scene(self):
         md = scene_table.render_md(self.t)
