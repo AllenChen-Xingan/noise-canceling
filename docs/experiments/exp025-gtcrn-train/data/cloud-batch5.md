@@ -60,8 +60,8 @@ bash $D/cloud_steps.sh shard        # 来源从 recipe.json 导出（BUT 只取 
 mkdir -p /workspace/out/batch5
 for r in $D/recipe.json $D/recipes/ablation/no-eq.json $D/recipes/ablation/no-clip.json \
          $D/recipes/ablation/no-n_noises.json $D/recipes/ablation/no-reverb.json $D/recipes/ablation/high_snr-on.json; do
-  echo "== $r"; $PY $D/loader.py --register --shards "$VDN_SHARDS" --recipe "$r" || { echo "登记失败：$r"; break; }
-done 2>&1 | tee /workspace/out/batch5/register.log
+  echo "== $r"; $PY $D/loader.py --register --shards "$VDN_SHARDS" --recipe "$r" || { echo "登记失败：$r"; exit 1; }
+done 2>&1 | tee /workspace/out/batch5/register.log || { echo "登记没全过，停：不要往下核对与打包"; exit 1; }  # 靠上面的 pipefail（codex 第 2 轮 #3）
 ls $D/builds/                                         # 应多出 6 个新目录
 ```
 
