@@ -565,3 +565,9 @@
 - 2026-11-26 PR #227 CI 过 → 合并 2a1c5e16（#221 关）。trainer 换线 feat/trainer-formal-b5（origin/main），--continue 重开：正式配置改指 df759bb8 · 两个 check · 执行单填 id 重估花费 · codex · PR。
 - 2026-11-26 trainer 交 PR #228（feat/trainer-formal-b5，69ebfec8）：4 份配置钉 df759bb8 · /workspace/shards/batch5；执行单填 id。大总管独立副本：formal/ablation check 都 0「可以开训」；pytest 500 过 · 2 跳过（对拍 31 排除）；无本机路径；最大 py 525 行。等 CI。
 - 2026-11-26 人定 D119 开正式训练、练完接着评（清单第 9 项）· D120 评判三条按默认 · D121 食堂不补。等 PR #228 合并后批 cloudrun 跑 plan-h100-formal.md。
+- 2026-11-26 evalcmp 换线 exp/025-eval-cloud（origin/main），删已合并本地 exp/025-eval-plan，--continue 重开（写评测上云执行单）。
+- 2026-11-26 21:38Z cloudrun 开机前核对完：前提无挡路；今日价 H100 4.39/h，时限 1.9 h 最坏 8.71 · CPU 0.5 h 最坏 0.07；累计最坏 22.35/100；US-MO-1 H100 货 LOW。大总管补：最终/最好检查点留盘不删，列路径与 sha256。等 #228 CI（21:28Z 起）。
+- 2026-11-26 evalcmp 交评测上云执行单（eval/cloud-run.md，PR #230 Closes #229）：7 份成绩单 · best.pt 在评测机导出 · cpu3c 两台先后（4.6 h + 3.6 h）· 机费约 1.0 最坏 1.34 · 识别约 0.69 美元。大总管定：报告种子 s1（字面）· 识别上限 1.2 · 两台先后 · 延迟行「判不了」总判定最多到「判不了」，A 流式导出交 trainer 开 issue · codex 1–2 轮。
+- 2026-11-26 PR #228 CI 过（14m19s）→ 合并 7b52d395（正式配置钉第五批）。删 w/trainer-b5-pin（main 祖先）。#231 A 组流式导出已开。
+- 2026-11-26 21:43Z 大总管给 cloudrun「开」：正式训练（plan-h100-formal.md，main 7b52d395，D119）。
+- 2026-11-26 关 #232（与 #231 重复）。
