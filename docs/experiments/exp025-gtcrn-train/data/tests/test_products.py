@@ -77,14 +77,20 @@ class Splits(unittest.TestCase):
 
     def test_unit_tables_reproduce(self):
         """按单位切的：用仓里的单位清单重算一遍分配，结果逐个相同（确定性）。
-        分层与最少开发份照 split_source 的算法算：调 split.strata_for（正本，含 stratum_unit_regex 与 stratum_regex 两支）
-        与规则里的 min_dev_per_stratum，不在这里另抄一份。"""
+        分层的算法与 split_source 里那几行保持一致（stratum_unit_regex 先在，没有再按 stratum_regex 从路径认，如 TUM 风噪 /
+        RIR 模拟与实测），但**故意不抽成 split.py 的函数**：split.py 在 loader.CODE 里，改它一个字节，build_id 就变，
+        刚登记的 build 在新代码下读不了。这是重算测试，表能不能逐个复现本身就是交叉校验；要改 split.py 先开新 build。"""
+        import re
+
         for n in split_names():
             rule = self.R["sources"][n]
             if rule["unit"] == "time":
                 continue
             _, rows = split.load_split(n, SPLITS)
-            strata = split.strata_for(rows, rule)
+            strata = split.unit_strata({r["unit"] for r in rows}, rule)
+            if strata is None and rule.get("stratum_regex"):
+                rx = re.compile(rule["stratum_regex"])
+                strata = {r["unit"]: ("synth" if rx.search(r["path"]) else "real") for r in rows}
             min_dev = int(rule.get("min_dev_per_stratum", 0) or 0)
             amap = split.assign_units([r["unit"] for r in rows], rule["frac"], self.R["seed"], n, self.R["splits"], strata, min_dev)
             by_unit = {}
