@@ -52,9 +52,23 @@ class Splits(unittest.TestCase):
             self.assertEqual(s["files"], len(rows), n)
             e = rule.get("expect", {})  # 真规则一定有（Expect 测试核）
             if "files" in e:
-                self.assertEqual(len(rows), e["files"], n)
+                # 期望条数是排除之前数的（清单 → 期望 → meta → 筛查）：摘要里有排除计数（零不记）就加回来
+                got = len(rows) + s.get("excluded_meta", 0) + s.get("excluded_screen", 0)
+                self.assertEqual(got, e["files"], f"{n}：{len(rows)} 行 + 排除 {got - len(rows)} ≠ 期望 {e['files']}")
             self.assertGreaterEqual(len(rows), e.get("min_files", 0), n)
             self.assertEqual(len({r["path"] for r in rows}), len(rows), f"{n}：同一文件出现两次")
+            spec = rule.get("screen_file")
+            if spec:
+                # 留下的每一行在筛查表里都得是 keep（第二处表示：切分表 ⊆ 筛查表判 keep 的）
+                p = Path(spec)
+                p = p if p.is_absolute() else HERE / spec
+                verdict = {}
+                for line in p.read_text(encoding="utf-8").splitlines():
+                    if line.strip():
+                        rec = json.loads(line)
+                        verdict[rec["path"]] = rec.get("verdict")
+                for r in rows:
+                    self.assertEqual(verdict.get(r["path"]), "keep", f"{n}：{r['path']} 在筛查表 {spec} 里不是 keep")
             body = (SPLITS / f"{n}.jsonl").read_bytes() if (SPLITS / f"{n}.jsonl").exists() else None
             again = split.summary(n, rule, s["seed"], rows, body or b"")  # codex 第 4 轮 P2 #4：摘要统计由正文重算
             for k in ("files", "units", "per_split", "time", "seconds"):
@@ -62,19 +76,17 @@ class Splits(unittest.TestCase):
                     self.assertEqual(again.get(k), s[k], f"{n}：摘要的 {k} 和正文对不上")
 
     def test_unit_tables_reproduce(self):
-        """按单位切的：用仓里的单位清单重算一遍分配，结果逐个相同（确定性）。"""
+        """按单位切的：用仓里的单位清单重算一遍分配，结果逐个相同（确定性）。
+        分层与最少开发份照 split_source 的算法算：调 split.strata_for（正本，含 stratum_unit_regex 与 stratum_regex 两支）
+        与规则里的 min_dev_per_stratum，不在这里另抄一份。"""
         for n in split_names():
             rule = self.R["sources"][n]
             if rule["unit"] == "time":
                 continue
             _, rows = split.load_split(n, SPLITS)
-            strata = None
-            if rule.get("stratum_regex"):
-                import re
-
-                rx = re.compile(rule["stratum_regex"])
-                strata = {r["unit"]: ("synth" if rx.search(r["path"]) else "real") for r in rows}
-            amap = split.assign_units([r["unit"] for r in rows], rule["frac"], self.R["seed"], n, self.R["splits"], strata)
+            strata = split.strata_for(rows, rule)
+            min_dev = int(rule.get("min_dev_per_stratum", 0) or 0)
+            amap = split.assign_units([r["unit"] for r in rows], rule["frac"], self.R["seed"], n, self.R["splits"], strata, min_dev)
             by_unit = {}
             for r in rows:
                 self.assertEqual(r["split"], amap[r["unit"]], f"{n} {r['path']}")

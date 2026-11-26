@@ -210,6 +210,17 @@ def unit_strata(units, rule):
     return out
 
 
+def strata_for(rows, rule):
+    """分层的单位表（单位 → 层）；不分层的来源返回 None。rows 要有 path 与 unit 两列。
+    先看 stratum_unit_regex（层从单位里取，如 BUT 的房间），没有再退回 stratum_regex（层从路径里取，如 TUM 风噪 / RIR 模拟与实测）。
+    正本在这里：split_source 与 tests/test_products.py 的重算都调它，不各抄一份。"""
+    strata = unit_strata({r["unit"] for r in rows}, rule)
+    if strata is None and rule.get("stratum_regex"):
+        rx = re.compile(rule["stratum_regex"])
+        strata = {r["unit"]: ("synth" if rx.search(r["path"]) else "real") for r in rows}
+    return strata
+
+
 def assign_units(units, frac, seed, source, order, strata=None, min_dev=0):
     """返回 {单位: 份}。strata 给了（单位 → 层）时每层分别按比例分。
     min_dev：一层有 2 个以上单位时，开发份少于这个数就从训练份补（拿 rank_key 最大的，确定性）。"""
@@ -291,10 +302,7 @@ def split_source(root, name, rule, seed, order, workers=32, cache=None, excluded
         for r in rows:
             r["segments"] = time_segments(r["frames"], rule["time"])
     else:
-        strata = unit_strata({r["unit"] for r in rows}, rule)
-        if strata is None and rule.get("stratum_regex"):
-            rx = re.compile(rule["stratum_regex"])
-            strata = {r["unit"]: ("synth" if rx.search(r["path"]) else "real") for r in rows}
+        strata = strata_for(rows, rule)
         min_dev = int(rule.get("min_dev_per_stratum", 0) or 0)
         amap = assign_units([r["unit"] for r in rows], rule["frac"], seed, name, order, strata, min_dev)
         for r in rows:
