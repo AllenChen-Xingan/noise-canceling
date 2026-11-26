@@ -218,9 +218,11 @@ class RealScreen(unittest.TestCase):
         self.assertEqual(sum(1 for r in self.office if r["verdict"] == "keep"), 375)
 
     def test_merge_reproduces_office_rows_byte_exactly(self):
-        """两份原始证据重跑 screen_tone.merge，结果与仓里这 402 条逐字节相同（揭盲表之坑：原始证据不改写）。"""
+        """两份原始证据重跑 screen_tone.merge，结果与仓里这 402 条逐字节相同（揭盲表之坑：原始证据不改写）。
+
+        逐秒证据的新核对（条数 · 有限数 · 重算结论）也在这条路上跑一遍：两份原始证据都经得起。"""
         res = screen_tone.merge(screen_tone.read_jsonl(SCREEN_RAW), screen_tone.read_jsonl(TONE_RAW),
-                                screen_tone.load_drop_where())
+                                screen_tone.load_drop_where(), screen_tone.load_present_db())
         got = [json.dumps(r, ensure_ascii=False) for r in res["rows"]]
         want = [ln for ln in self.lines if is_office(json.loads(ln)["path"])]
         self.assertEqual(len(got), 402)

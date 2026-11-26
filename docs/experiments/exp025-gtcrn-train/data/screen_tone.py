@@ -10,6 +10,10 @@
 - 单音结论本身要自洽：`verdict.where` 只许 `none` / `first_only` / `later_too`，`present_seconds` 必须是整数列表，
   且「没有」⇔ 空列表、「只在第 1 秒」⇔ `[1]`（正本见 `diagnose.tone_verdict`，秒号从 1 起）。
   对不上就停：那说明这份 jsonl 不是 `diagnose.py --tone` 写的，后面的判定无从谈起
+- 结论还要经得起重算：`tone.per_second` 的逐秒条数要等于片段秒数（`diagnose.py` 逐秒切块只丢不足 1 秒的尾巴）、
+  每秒的 `prominence_db` 都是有限数，再用 `diagnose.tone_verdict(逐秒条数, present_db)` 重算一遍，
+  结果必须与存的那个结论逐字相同。重算用的 `present_db` 与 `drop_where` 一样取自 `screen_rules.json`
+  的 `tone_check`，代码里不写这个阈值。对不上就停：结论与逐秒数据各说各话，不如先重跑
 - 只动三样：`verdict` · `reasons` · `measures`；其余字段原样带过去，输入列表本身不改写
 用法：
     python3 screen_tone.py --screen screen.jsonl --tone tone.jsonl --out screen-tone.jsonl
@@ -17,11 +21,14 @@
 import argparse
 import copy
 import json
+import math
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 RULES = HERE / "screen_rules.json"
+sys.path.insert(0, str(HERE))
+import diagnose  # noqa: E402  逐秒单音的结论只认它：tone_verdict 是「哪几秒算有」的唯一正本
 
 
 # ---------------------------------------------------------------- 判据
@@ -39,6 +46,18 @@ def load_drop_where(path=RULES):
         if not isinstance(v, str):
             raise SystemExit(f"{path} 的 tone_check.drop_where 里有非字符串的项：{v!r}")
     return list(values)
+
+
+def load_present_db(path=RULES):
+    """从判据 json 读「单音比参考带高出多少 dB 才算在」。没有这一项、或不是有限数，都停下。"""
+    rules = json.loads(Path(path).read_text(encoding="utf-8"))
+    try:
+        value = rules["tone_check"]["present_db"]
+    except (KeyError, TypeError):
+        raise SystemExit(f"{path} 的 tone_check 里没有 present_db：不知道多强才算有单音，先补判据")
+    if not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value):
+        raise SystemExit(f"{path} 的 tone_check.present_db 不是有限数（现在是 {value!r}）")
+    return value
 
 
 # ---------------------------------------------------------------- 读写
@@ -126,8 +145,10 @@ def _check_verdict(path, verdict):
                          "first_only 必须正好是 [1]")
 
 
-def _verdict_of(tone_row):
-    """取这一条的单音结论并核它自洽；没有 `tone` 键说明 diagnose.py 没加 --tone 就跑过，不能当成「没有单音」。"""
+def check_tone_row(tone_row, present_db):
+    """取这一条的单音结论并核它自洽；没有 `tone` 键说明 diagnose.py 没加 --tone 就跑过，不能当成「没有单音」。
+
+    `present_db` 是 `screen_rules.json` 里那个阈值，只用来按逐秒证据重算一遍结论（不在代码里写死）。"""
     tone = tone_row.get("tone")
     if not isinstance(tone, dict):
         raise SystemExit(
@@ -139,13 +160,54 @@ def _verdict_of(tone_row):
             f"{tone_row.get('path')} 的单音行里没有 verdict.where："
             f"tone = {json.dumps(tone, ensure_ascii=False)[:200]}")
     _check_verdict(tone_row.get("path"), verdict)
+    _check_per_second(tone_row, tone, present_db)
     return tone
 
 
-def merge(screen_rows, tone_rows, drop_where):
+def _check_per_second(tone_row, tone, present_db):
+    """按逐秒证据重算结论，必须与存的那个逐字相同；条数也要对得上片段秒数。
+
+    逐秒证据是 `tone.per_second`（正本：`diagnose.tone_per_second`），每秒一项、带 `prominence_db`；
+    重算只走 `diagnose.tone_verdict`。任一项对不上就停：结论与数据各说各话时，判定（丢不丢）与理由都无从信。"""
+    path = tone_row.get("path")
+    per = tone.get("per_second")
+    if not isinstance(per, list) or not per:
+        raise SystemExit(f"{path} 的单音行里没有逐秒证据 tone.per_second（现在是 {per!r}）："
+                         "核不了结论是算出来的还是拍进去的，重跑一次 diagnose.py --tone")
+    for i, row in enumerate(per, 1):
+        if not isinstance(row, dict):
+            raise SystemExit(f"{path} 第 {i} 秒的逐秒证据不是对象（是 {type(row).__name__}）")
+        db = row.get("prominence_db")
+        if not isinstance(db, (int, float)) or isinstance(db, bool) or not math.isfinite(db):
+            raise SystemExit(f"{path} 第 {i} 秒的 prominence_db = {db!r} 不是有限数："
+                             "这份单音 jsonl 不是 diagnose.py --tone 写的，或写出来被改过")
+    _check_per_second_count(path, tone_row.get("seconds"), len(per))
+    got = diagnose.tone_verdict(per, present_db)
+    if got != tone["verdict"]:
+        raise SystemExit(
+            f"{path} 的单音结论与逐秒证据重算的不一样：存的是 "
+            f"{json.dumps(tone['verdict'], ensure_ascii=False, sort_keys=True)}，按 {len(per)} 秒的 per_second "
+            f"与 present_db = {present_db:g} 重算得 {json.dumps(got, ensure_ascii=False, sort_keys=True)}："
+            "先重跑一次 diagnose.py --tone，别拿对不上的结论去判丢不丢")
+
+
+def _check_per_second_count(path, seconds, n):
+    """逐秒证据的条数要等于片段整秒数：`diagnose.py` 逐秒切块只丢末尾不足 1 秒的尾巴（那一截测不出 1 Hz）。"""
+    if seconds is None:  # 早期单音行没写 seconds：只核得了条数之间的自洽，核不了片段长度
+        return
+    if not isinstance(seconds, (int, float)) or isinstance(seconds, bool) or not math.isfinite(seconds):
+        raise SystemExit(f"{path} 的 seconds = {seconds!r} 不是有限数：算不出该有几秒的单音证据")
+    want = math.floor(seconds)
+    if n != want:
+        raise SystemExit(f"{path} 的单音逐秒证据有 {n} 秒，片段却长 {seconds} 秒："
+                         f"diagnose.py 只丢末尾不足 1 秒的尾巴，本该有 {want} 秒的证据（缺了就比不出结论）")
+
+
+def merge(screen_rows, tone_rows, drop_where, present_db):
     """合成一份筛查 jsonl。返回 {"rows": 新的行列表, "total"/"keep"/"drop"/"tone_dropped": 计数}。
 
     顺序跟 `screen_rows` 走；`screen_rows` 本身不改写（返回的是副本）。
+    `drop_where` 与 `present_db` 都来自 `screen_rules.json` 的 `tone_check`（命令行读 json，代码里不写这两个数）。
     """
     index_by_path(screen_rows, "筛查 jsonl（screen.py）")  # 只为了查重复
     tones = index_by_path(tone_rows, "单音 jsonl（diagnose.py --tone）")
@@ -158,7 +220,7 @@ def merge(screen_rows, tone_rows, drop_where):
     drop_set = set(drop_where)
     rows, keep, drop, tone_dropped = [], 0, 0, 0
     for row in screen_rows:
-        tone = _verdict_of(tones[row["path"]])
+        tone = check_tone_row(tones[row["path"]], present_db)
         where = tone["verdict"]["where"]
         secs = list(tone["verdict"]["present_seconds"])
         new = copy.deepcopy(row)
@@ -192,7 +254,8 @@ def run(args):
         if out.resolve() == Path(getattr(args, name)).resolve():
             raise SystemExit(f"--out 指到了 --{name} 上（{out}）：不原地覆盖，换一个文件名")
     drop_where = load_drop_where(args.rules)
-    res = merge(read_jsonl(args.screen), read_jsonl(args.tone), drop_where)
+    present_db = load_present_db(args.rules)
+    res = merge(read_jsonl(args.screen), read_jsonl(args.tone), drop_where, present_db)
     write_jsonl(res["rows"], out)
     print(summary(res))
 
