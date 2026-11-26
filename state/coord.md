@@ -460,3 +460,8 @@
 - 2026-11-26 01:08Z 大总管验收并合并：PR #197（识别取多数，独立副本 fmt · clippy · tidy · 全量测试退出 0，合并 a4ec1bf4）· PR #199（训练自动保护，独立副本 371 过 · 2 跳过，合并见下）。
 - 2026-11-26 PR #199 合并 ab0f4f0a（#195 关）。开训前卡点①完成。放行 cloudrun 补跑识别（约 2003 次 · 约 0.18 美元）。
 - 2026-11-26 大总管删已合并分支 feat/trainer-guards · fix/asr-probe-dedup（本地 + 远端）。trainer 开 #200 feat/trainer-formal-config（pi trainer-formal-config 写 formal.yaml · formal-runs.yaml · formal.py check/commands）。识别补跑交 cloudrun（_tmp/20261126-asr-rerun/brief-cloudrun.md，闸 0.25 美元 / 2800 次）。
+- 2026-11-26 trainer 更正：pi worktree clean 第一次被 git 钩子拦（命令里夹删分支），补跑后 trainer-guards-finite · -watchdog 的 worktree 与 w/ 分支已删。
+- 2026-11-26 traindata 清掉 pi traindata-dedup · traindata-screen 的 worktree 与 w/ 分支（先核已在 feat/data-batch2、无未提交改动）。
+- 2026-11-26 trainer git 钩子仍登记 feat/trainer-guards（分支在启动时由 CD_WORKER_BRANCH 定）→ 大总管关窗、用 --continue 重开 trainer，钩子改登记 feat/trainer-formal-config（#200）。pi trainer-formal-config 交 2 个提交 4c687043 · 2228fc9b（0.011 美元）。
+- 2026-11-26 trainer 重开后会话名 noise-canceling-trainer-f0（旧 trainer-02）。教训：我关窗时它正在跑测试，被杀（退出码 137）——关手下窗口前先问它有没有进程在跑。
+- 2026-11-26 01:16Z 验收 PR #201（独立副本全套 389 过 · 2 跳过；formal.py check 3 条退出 1 符合预期），等 CI。w_pump 第一批正式训练不开（D107 默认关）。traindata：第一轮 build 889a389708c8a1e9（分片 1819 s，valid）作废；第二轮多红 1 条（test_products 手写 SHARDED 漏 cochlscene，读到 builds/ 里未进仓的旧 build）→ 挪出旧 build 重跑，在 fac82500 上 register + pack；回来后派 pi 把 SHARDED 改成从 recipe 导出（唯一真相源）。
