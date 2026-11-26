@@ -1,5 +1,5 @@
 {
- "_说明": "切分规则正本 = 027 decision.md 第六节第 5 条的表（逐行照抄比例，出处列在每条 src）。split.py 只认这里。四份：train 训练 · dev 开发 · final 终测原料池 · d63 测试份（只测不训，也不进任何合成原料）。名字约定（大总管 87 2026-11-26）：`but-reverbdb-silence` 只含 Room112，规则一个字节都不动，因为旧切分表 build 10aa3a9f 还在用它；第四批的 4 间房（Room112 + 办公室 L207 · L212 · Q301）是新来源 `but-reverbdb-silence-b4`",
+ "_说明": "切分规则正本 = 027 decision.md 第六节第 5 条的表（逐行照抄比例，出处列在每条 src）。split.py 只认这里。四份：train 训练 · dev 开发 · final 终测原料池 · d63 测试份（只测不训，也不进任何合成原料）。名字约定（大总管 87 2026-11-26）：`but-reverbdb-silence` 只含 Room112，规则一个字节都不动，因为旧切分表 build 10aa3a9f 还在用它；第四批的 4 间房（Room112 + 办公室 L207 · L212 · Q301）是新来源 `but-reverbdb-silence-b4`。第五批 Room112 补了 250 Hz 单音检查（#221：keep 209 条里 21 条有单音，超过 5%），筛查表换了，所以再换新名字 `but-reverbdb-silence-b5`；-b4 的表 build bc0e9e7b 在用，也不原地覆盖",
  "seed": 20261116,
  "splits": ["train", "dev", "final", "d63"],
  "sources": {
@@ -97,6 +97,25 @@
    "min_dev_per_stratum": 1,
    "exclude_if_meta": {"file": "../../spk_meta.txt", "regex": "^\\$EnvSpk2", "why": "read_me：第 2 个扬声器放的是背景声（如收音机）"},
    "screen_file": "screen/but-reverbdb-silence.jsonl",
+   "frac": {"train": 0.9, "dev": 0.1, "final": 0.0, "d63": 0.0},
+   "_frac": "只作训练噪声；终测只用 exp013；9:1 暂定",
+   "_开发份": "四间房 = 四个层（stratum_unit_regex 按房间名分层），每层开发份至少一个扬声器布置（min_dev_per_stratum=1），否则 9:1 最大余数法会把某一间房的开发份全挤掉。每间房只有一间：开发份与训练份是同一间房，开发份只测同房不同场次，不测换房间（大总管 c4 2026-11-26；第四批起 4 间房：酒店房间 Room112 + 三间办公室 L207 · L212 · Q301）"
+  },
+  "but-reverbdb-silence-b5": {
+   "expect": {"files": 728, "src": "cloudrun 2026-11-26 解压清单：Room112 silence 248 + 三间办公室 VUT_FIT_L207 · L212 · Q301 只取 01 · 11 · 21 号麦克风的 480 个（每号麦克风 84 + 48 + 28 = 160，三个麦克风位置共 480）；480 是 meta 排除之前数的，其中 L207 的 78 个收音机布置还没减（见 exclude_if_meta）"},
+   "src": "第五批：同 -b4 的 4 间房，Room112 补了单音检查（#221，keep 209 条里 21 条有单音，超过 5%），所以换新名字；-b4 表 build bc0e9e7b 在用，不原地覆盖", "group": "A7", "unit": "file",
+   "glob": [
+    "train-raw/but-reverbdb/Hotel_SkalskyDvur_Room112/MicID*/*/*/silence/*.wav",
+    "train-raw/but-reverbdb/VUT_FIT_L207/MicID*/*/[012]1/silence/*.wav",
+    "train-raw/but-reverbdb/VUT_FIT_L212/MicID*/*/[012]1/silence/*.wav",
+    "train-raw/but-reverbdb/VUT_FIT_Q301/MicID*/*/[012]1/silence/*.wav"
+   ],
+   "unit_regex": [{"match": "^train-raw/but-reverbdb/([^/]+)/MicID\\d+/([^/]+)/", "unit": "\\1/\\2", "why": "房间 + 扬声器布置：同一次布置的 31 个麦克风同时录的是同一段底噪，必须同进一份；四间房各只有一间，纯按房间切会让整类落进开发份（大总管 c4 2026-11-26 同意）"}],
+   "unit_regex_required": true,
+   "stratum_unit_regex": "^([^/]+)/",
+   "min_dev_per_stratum": 1,
+   "exclude_if_meta": {"file": "../../spk_meta.txt", "regex": "^\\$EnvSpk2", "why": "read_me：第 2 个扬声器放的是背景声（如收音机）"},
+   "screen_file": "screen/but-reverbdb-silence-b5.jsonl",
    "frac": {"train": 0.9, "dev": 0.1, "final": 0.0, "d63": 0.0},
    "_frac": "只作训练噪声；终测只用 exp013；9:1 暂定",
    "_开发份": "四间房 = 四个层（stratum_unit_regex 按房间名分层），每层开发份至少一个扬声器布置（min_dev_per_stratum=1），否则 9:1 最大余数法会把某一间房的开发份全挤掉。每间房只有一间：开发份与训练份是同一间房，开发份只测同房不同场次，不测换房间（大总管 c4 2026-11-26；第四批起 4 间房：酒店房间 Room112 + 三间办公室 L207 · L212 · Q301）"

@@ -1,13 +1,13 @@
-"""BUT Speech@FIT Reverb Database（2019 RIR-Only 包）的底噪登记成第三批训练噪声（D111 补充，2026-11-26），第四批加三间办公室。
+"""BUT Speech@FIT Reverb Database（2019 RIR-Only 包）的底噪登记成第三批训练噪声（D111 补充，2026-11-26），第四批加三间办公室；第五批 Room112 补了 250 Hz 单音检查（#221），换新来源名 `-b5`。
 
 数字与字符串一律从正本读，不在测试里抄副本：
 - `sources.json` 的 `A7`：手工下载条目（字节数与首次下载记的 md5 / sha256）
 - `download-list-but.md` 第 1 节的表：字节数（sources.json 的第二处表示，交叉校验）
-- `split_rules.json` 的 `but-reverbdb-silence-b4`（第四批的 4 间房）：通配符 · 单位正则 · 层 · meta 排除 · 筛查表 · 期望条数 · 比例。
-  `but-reverbdb-silence` 只剩 Room112，规则与仓里旧表（build 10aa3a9f 在用）对得上，本文件不跑它
+- `split_rules.json` 的 `but-reverbdb-silence-b5`（第五批的 4 间房，只换了筛查表）：通配符 · 单位正则 · 层 · meta 排除 · 筛查表 · 期望条数 · 比例。
+  `but-reverbdb-silence` 只剩 Room112、`-b4` 是第四批的 4 间房，两个旧名字的规则与仓里旧表（build 10aa3a9f · bc0e9e7b 在用）对得上，本文件不跑它们
 - 上游 read_me（副本 `third_party/BUT_ReverbDB-read_me.txt`）：第 2 个扬声器放背景声
 夹具在临时目录现造（几间房 × 几次布置 × 几个麦克风的 0.5 s wav），不用真数据。
-真规则通配符 / 场景池 / 仓里那份筛查表的核对在 `tests/test_but_batch4.py`（本文件超 600 行前分出去的）。
+真规则通配符 / 场景池 / 仓里那份筛查表的核对在 `tests/test_but_real.py`（本文件超 600 行前分出去的）。
 """
 import copy
 import json
@@ -26,8 +26,8 @@ import fixtures_but  # noqa: E402
 import split  # noqa: E402
 
 MD = HERE / "download-list-but.md"
-SRC = "but-reverbdb-silence-b4"
-OLD = "but-reverbdb-silence"
+SRC = "but-reverbdb-silence-b5"  # 第五批的 4 间房（只换了筛查表；-b4 的表 build bc0e9e7b 在用）
+OLD = "but-reverbdb-silence"  # 只含 Room112 的最早来源（旧表 build 10aa3a9f 在用）
 GRP = "A7"
 META = {"file": "../../spk_meta.txt", "regex": "^\\$EnvSpk2", "why": "read_me：第 2 个扬声器放的是背景声（如收音机）"}
 
@@ -299,8 +299,9 @@ class UnitFrom(unittest.TestCase):
         self.assertNotIn("unit_from", self.summ(r, "qut-noise"))
 
 class Pools(unittest.TestCase):
-    """第三批 + 第四批：BUT 库的底噪分给两个场景——酒店房间 Room112 → hotel-room；三间办公室 L207 · L212 · Q301 → meeting-room。
-    食堂 = DEMAND 的 PCAFETER + PRESTO 两间餐厅。C236 不用（D114：第 1 秒后有 250 Hz 单音）。"""
+    """第三批 + 第四批 + 第五批：BUT 库的底噪分给两个场景——酒店房间 Room112 → hotel-room；三间办公室 L207 · L212 · Q301 → meeting-room。
+    食堂 = DEMAND 的 PCAFETER + PRESTO 两间餐厅。C236 不用（D114：第 1 秒后有 250 Hz 单音）；
+    第五批起来源名是 `-b5`（Room112 补了单音检查，换筛查表）。"""
 
     def setUp(self):
         self.recipe = json.loads((HERE / "recipe.json").read_text())
@@ -352,6 +353,8 @@ class Pools(unittest.TestCase):
         self.assertIn("办公室", note)  # 说清 meeting-room 用的是办公室底噪
         self.assertIn("D114", note)  # 说清 C236 为什么不用
         self.assertIn("PRESTO", note)
+        self.assertIn("第五批", note)  # 说清这两池为什么换到 -b5
+        self.assertIn("b5", note)
 
 
 class ScreenRules(unittest.TestCase):

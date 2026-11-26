@@ -203,14 +203,17 @@ class EndToEnd(unittest.TestCase):
         t = Path(cls.tmp.name)
         root = t / "data"
         make_tree(root)
-        screen = fixtures_but.write_screen(t / "but-screen.jsonl",
-                                           [p for p in fixtures_but.all_files() if p not in set(fixtures_but.radio_files())])
+        kept = [p for p in fixtures_but.all_files() if p not in set(fixtures_but.radio_files())]
+        # 筛查表按批次：OLD / -b4 共用老表，-b5 自己一份（第五批 Room112 补了单音检查）
+        screen = fixtures_but.write_screen(t / "but-screen.jsonl", kept)
+        screen_b5 = fixtures_but.write_screen(t / "but-screen-b5.jsonl", kept)
         R = split.load_rules()
         for r in R["sources"].values():
             r.pop("expect", None)  # 夹具只有几个文件，不按上游数目核
             r.pop("room_lists_sha256", None)  # 夹具的 rir_list 不是上游原文件（钉哈希另有 test_openslr28_rooms）
-        for n in ("but-reverbdb-silence", "but-reverbdb-silence-b4"):  # 两个来源名共用同一份筛查表：夹具现造那份（第四批起 BUT 底噪的来源名带 -b4）
+        for n in ("but-reverbdb-silence", "but-reverbdb-silence-b4"):  # 两个旧来源名共用老表
             R["sources"][n]["screen_file"] = str(screen)
+        R["sources"]["but-reverbdb-silence-b5"]["screen_file"] = str(screen_b5)
         cls.splits = t / "splits"
         names = shard.default_sources()  # 要分片的来源 = recipe.json 里出现的全部来源（夹具必须全覆盖）
         for n in sorted(set(names) | set(R["sources"])):  # 规则里的每个来源都要有表（终测原料池那样不进分片的也要写，交集检查会查）

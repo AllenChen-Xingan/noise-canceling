@@ -2,8 +2,8 @@
 
 小夹具在临时目录里搭（假 build.json / recipe.json / split_rules.json / sources.json / splits / scene_notes.json），
 核条数 · 时长 · 单位数 · 正则过滤；再把每道「表不在这个 build 上」的检查都撞一次。
-另有一类真产物测试：仓里第四批的 build `bc0e9e7b566421f0` 记的配方哈希就是仓里 `recipe.json` 的哈希、切分表也已进仓，
-所以直接在仓里的文件上跑（不再绕临时目录），并核提交进仓的 `scenes-bc0e9e7b566421f0.md` 与重算结果逐字节相同。
+另有一类真产物测试：仓里的 `scenes-*.md`。对得上当前配方（build 记录的 `recipe_sha256` == `recipe.json` 的 sha256）的
+逐字节重算；第四批那页（build `bc0e9e7b566421f0`）在第五批换了配方后冻结、只核不改（钉住 sha256 + 数字对切分表）。
 """
 import hashlib
 import json
@@ -16,11 +16,12 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE / "tests"))
+import fixtures_pages  # noqa: E402  冻结页 / 当前页的共用规则（第五批换配方后，旧页只核不改）
 import scene_table  # noqa: E402
 import split  # noqa: E402
 
-BUILD = HERE / "builds" / "bc0e9e7b566421f0"  # 第四批的基准 build（配方 = 仓里 recipe.json，四个目标场景都有噪声）
-SCENES_MD = HERE / f"scenes-{BUILD.name}.md"  # `python3 scene_table.py --build builds/<id>` 的标准输出，重算即核
+BUILD = HERE / "builds" / "bc0e9e7b566421f0"  # 第四批的基准 build（冻结页的 build：配方哈希已不等于当前 recipe.json）
 
 
 def dump(p, obj):
@@ -319,83 +320,88 @@ class SameContent(Fixture):
 
 
 class Product(unittest.TestCase):
-    """真产物：仓里第四批的 build `bc0e9e7b566421f0` + 仓里 `recipe.json`（四个目标场景，D113）。
+    """真产物：仓里的 `scenes-*.md`。对得上当前配方的逐字节重算；上一批的页冻结（钉住 sha256，只核不改）。
 
-    这个 build 记的 `recipe_sha256` 就是仓里 `recipe.json` 的哈希，四个场景的切分表也已进仓；
-    于是 `build_tables` 直接在仓里的文件上跑——不需要任何临时目录（旧的绕法只因为那时候 recipes 改过、还没重登记）。
+    第五批（2026-11-26）把 `recipe.json` 换到 `but-reverbdb-silence-b5`：`scenes-bc0e9e7b566421f0.md` 是
+    第四批的产物，按新配方算不出来（`scene_table.load_recipe` 会因哈希对不上而停），也不能改
+    （CLAUDE.md 第五节第 1 条）。规则见 `tests/fixtures_pages.py`。
     """
 
     HAVE = ("canteen", "meeting-room", "rail-air-cabin", "transit-hub")  # 配方里那四个目标场景（D113）
 
-    def setUp(self):
-        self.t = scene_table.build_tables(BUILD, data_dir=HERE)  # 不传 scenes：就用配方里那四个
+    def test_each_page_is_current_or_frozen(self):
+        current = fixtures_pages.recipe_sha()
+        pages = fixtures_pages.pages("scenes")
+        self.assertTrue(pages, "仓里一个场景页也没有：先跑 scene_table.py 生成")
+        fresh = []
+        for page in pages:
+            build = fixtures_pages.build_of(page)
+            if build.get("recipe_sha256") == current:
+                fresh.append(page)
+                out = subprocess.run([sys.executable, str(HERE / "scene_table.py"),
+                                      "--build", f"builds/{build['build_id']}"],
+                                     capture_output=True, text=True)
+                self.assertEqual(out.returncode, 0, f"{page.name}：{out.stderr}")
+                self.assertEqual(page.read_bytes(), out.stdout.encode("utf-8"),
+                                 f"{page.name} 与 `scene_table.py --build builds/{build['build_id']}` 的输出不同"
+                                 "：重跑那条命令、把输出重定向到同一个文件再提交")
+                continue
+            self.assertNotEqual(build.get("recipe_sha256"), current)
+            self.assertIn(page.name, fixtures_pages.PINNED,
+                          f"{page.name} 是上一批的页（build 的配方哈希 ≠ 当前 recipe.json），冻结页要钉住 sha256")
+            self.assertEqual(fixtures_pages.sha256_of(page), fixtures_pages.PINNED[page.name],
+                             f"{page.name} 被改过：上一批的页冻结、只核不改")
+        self.assertTrue(fresh or fixtures_pages.pending(),
+                        "当前配方没有任何 build 对上，也不在 `未建表`：这一批的 build 该登记、场景页该生成了")
 
-    def test_scenes_are_the_four_targets_and_all_have_train_noise(self):
-        self.assertEqual(sorted(self.t["scenes"]), sorted(self.HAVE))
-        for name, s in self.t["scenes"].items():
-            self.assertGreater(s["splits"]["train"]["totals"]["files"], 0, name)
-            self.assertGreater(s["splits"]["train"]["totals"]["seconds"], 0, name)
+    def frozen_md(self):
+        """第四批冻结的场景页正文（按文件读：这一页的内容已由 `PINNED` 钉住）。"""
+        p = HERE / f"scenes-{BUILD.name}.md"
+        self.assertTrue(p.is_file(), f"没有 {p.name}：第四批的场景页冻结在仓里，不许换位置")
+        return p.read_text(encoding="utf-8")
 
-    def test_meeting_room_is_the_but_offices(self):
-        """会议室噪声 = BUT 三间办公室的底噪（第四批）：来源是新名字 `-b4`，文件只落在 L207 · L212 · Q301。"""
-        src = self.t["scenes"]["meeting-room"]["splits"]["train"]["sources"]
-        self.assertEqual([x["source"] for x in src], ["but-reverbdb-silence-b4"])
+    @staticmethod
+    def row(md, scene, source, sp="train"):
+        """从冻结页某个场景的表格里取一行（| 来源 | 份 | 条数 | … |）：只在那一节里找，不跨场景。"""
+        head, sep, rest = md.partition(f"## {scene}")
+        if not sep:
+            raise AssertionError(f"冻结页里没有场景 {scene}")
+        for line in rest.split("\n## ", 1)[0].splitlines():
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if len(cells) == 7 and cells[0] == source and cells[1] == sp:
+                return cells
+        raise AssertionError(f"冻结页的 {scene} 一节里没有 {source} / {sp} 这一行")
+
+    def test_frozen_page_has_the_four_target_scenes(self):
+        md = self.frozen_md()
+        for name in self.HAVE:
+            self.assertIn(f"## {name}", md)
+        self.assertIn("已知限制：", md)
+        self.assertIn(BUILD.name, md)
+
+    def test_frozen_meeting_room_counts_the_offices(self):
+        """第四批的场景页读 `-b4` 的表：会议室条数 = 切分表里三间办公室的训练份行数（冻结页也不许乱写数）。"""
+        row = self.row(self.frozen_md(), "meeting-room", "but-reverbdb-silence-b4")
         _, rows = split.load_split("but-reverbdb-silence-b4", out_dir=HERE / "splits")
         offices = [r for r in rows if r["split"] == "train" and re.search(r"/VUT_FIT_(L207|L212|Q301)/", r["path"])]
-        self.assertEqual(src[0]["files"], len(offices))
+        self.assertEqual(int(row[2]), len(offices))
         self.assertEqual({r["path"].split("/")[2] for r in offices}, {"VUT_FIT_L207", "VUT_FIT_L212", "VUT_FIT_Q301"})
 
-    def test_canteen_only_demand(self):
-        src = self.t["scenes"]["canteen"]["splits"]["train"]["sources"]
-        self.assertEqual([x["source"] for x in src], ["demand-train"])
-        self.assertEqual(src[0]["license"], "CC-BY-4.0")
+    def test_frozen_transit_hub_matches_the_split_table(self):
+        row = self.row(self.frozen_md(), "transit-hub", "cochlscene")
+        _, rows = split.load_split("cochlscene", out_dir=HERE / "splits")
+        self.assertEqual(int(row[2]), sum(1 for r in rows if r["split"] == "train" and "/SubwayStation/" in r["path"]))
 
-    def test_transit_hub_matches_cochlscene_subway_station(self):
-        src = self.t["scenes"]["transit-hub"]["splits"]["train"]["sources"][0]
-        self.assertEqual(src["source"], "cochlscene")
-        # 切分表摘要里 SubwayStation 的 train 条数（split_tables 核过哈希，数字可交叉核）
-        s, rows = split.load_split("cochlscene", out_dir=HERE / "splits")
-        self.assertEqual(src["files"], sum(1 for r in rows if r["split"] == "train" and "/SubwayStation/" in r["path"]))
-
-    def test_markdown_has_two_durations(self):
-        md = scene_table.render_md(self.t)
-        self.assertIn("| 来源 | 份 | 条数 | 时长（小时，按条数） | 不同内容（小时） | 单位数 | 许可 |", md)
-        self.assertIn("same_content", md)
-        self.assertIn("scene_notes.json", md)
-
-    def test_canteen_unique_seconds_is_one_sixteenth(self):
-        # DEMAND 是 16 声道阵列：同一环境的 16 个声道是同一次录音，不同内容 ≈ 总时长 / 16
-        tt = self.t["scenes"]["canteen"]["splits"]["train"]["totals"]
-        self.assertAlmostEqual(tt["unique_seconds"], tt["seconds"] / 16, delta=1.0)
-
-    def test_rail_air_cabin_unique_equals_seconds(self):
-        # CochlScene 不在 same_content 里：每个文件都是不同内容
-        for sp in ("train", "dev"):
-            tt = self.t["scenes"]["rail-air-cabin"]["splits"][sp]["totals"]
-            self.assertAlmostEqual(tt["unique_seconds"], tt["seconds"], delta=0.01)
-
-    def test_markdown_has_each_scene(self):
-        md = scene_table.render_md(self.t)
-        for name in self.HAVE:
-            self.assertIn(name, md)
-        self.assertIn(BUILD.name, md)
-        self.assertIn("已知限制：", md)
-
-    def test_committed_markdown_is_the_cli_output(self):
-        """同一张表的第二种表示（提交进仓的 markdown）必须由 `scene_table.py` 的标准输出逐字节复现：
-        否则那份文件是手写的，或者切分表 / 配方变了而文件没重生成。这里直接跑那条命令，比的是 stdout 本身。"""
-        self.assertTrue(SCENES_MD.is_file(),
-                        f"没有 {SCENES_MD.name}：跑 python3 scene_table.py --build builds/{BUILD.name} > {SCENES_MD.name}")
-        out = subprocess.run([sys.executable, str(HERE / "scene_table.py"), "--build", f"builds/{BUILD.name}"],
-                             capture_output=True, check=True).stdout
-        self.assertEqual(SCENES_MD.read_bytes(), out,
-                         f"{SCENES_MD.name} 与 `python3 scene_table.py --build builds/{BUILD.name}` 的输出不同"
-                         "：重跑那条命令、把输出重定向到同一个文件再提交")
+    def test_frozen_canteen_is_only_demand(self):
+        row = self.row(self.frozen_md(), "canteen", "demand-train")
+        self.assertEqual(row[6], "CC-BY-4.0")
+        md = self.frozen_md()
+        self.assertNotIn("but-reverbdb", md.split("## canteen")[1].split("##")[0])
 
 
 class Size(unittest.TestCase):
     def test_new_py_under_600(self):
-        for name in ("scene_table.py", "tests/test_scene_table.py"):
+        for name in ("scene_table.py", "tests/test_scene_table.py", "tests/fixtures_pages.py"):
             n = len((HERE / name).read_text(encoding="utf-8").splitlines())
             self.assertLessEqual(n, 600, f"{name} 有 {n} 行")
 

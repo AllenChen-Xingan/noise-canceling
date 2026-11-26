@@ -197,12 +197,19 @@ class Builds(unittest.TestCase):
     def test_some_build_shards_current_sources(self):
         """至少要有一份 build 把当前配方（recipe.json）的全部来源都切了：加了一批来源却忘了云上重跑，这里就红。
         只比来源集合，不比 recipe 的字节哈希（配方小幅改动也会变哈希，那会让这条测试无辜地红）。
-        规则顶层 `未建表` 里的来源（音频还在云上）不进比，其余照旧严格。"""
+        规则顶层 `未建表` 里的来源（音频还在云上）不进比，其余照旧严格。
+
+        第五批（-b5）在云上跑之前：当前来源里有 -b5，上一批的 build 切的是 -b4。所以 `未建表` 非空时只要
+        有一份 build 覆盖了「当前来源减掉未建表的那几个」，多出来的旧来源名（-b4）不算错；
+        `未建表` 空了（表回来了）就恢复「逐名相等」。"""
         pending = set(self.R.get("未建表", {}))
-        want = set(shard.default_sources()) - pending
+        want = set(shard.default_sources())
+        need = want - pending
         got = {f.parent.name: set(json.loads(f.read_text())["split_tables"]) for f in build_files()}
-        self.assertTrue(any(v == want for v in got.values()),
-                        f"没有一份 build 切了全部来源：要 {sorted(want)}；现有 {[(k, sorted(v)) for k, v in got.items()]}")
+        hit = [k for k, v in got.items() if need <= v and (pending or v == want)]
+        self.assertTrue(hit,
+                        f"没有一份 build 切了{'全部' if not pending else '本批（未建表除外）'}来源："
+                        f"要 {sorted(need)}；现有 {[(k, sorted(v)) for k, v in got.items()]}")
 
     def test_only_train_dev_sharded(self):
         """终测原料池与测试份不进训练分片（D63）。"""

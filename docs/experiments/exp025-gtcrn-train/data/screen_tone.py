@@ -18,13 +18,22 @@
 - 两份证据说的是同一段：筛查行写了片段长度（`seconds`，或 `measures` 里的）就要与单音行的 `seconds`
   差不超过一个毫秒位，否则停下。筛查行没写长度就跳过（没有第二处表示可比）
 - 只动三样：`verdict` · `reasons` · `measures`；其余字段原样带过去，输入列表本身不改写
+- 补测老来源时只并一段：`--only-regex` + `--base` 只把匹配的行换成合并结果，其余行**原样带过**（第五批 Room112 补单音检查
+  就是这种：`screen/but-reverbdb-silence.jsonl` 的 248 条 Room112 换成并了单音结论的，其余 1022 条一个字节不动）。
+  「原样」是逐字节：不匹配的行按 base 文件里那一行的原文写回，不重新序列化（空格 · 键序 · `\\uXXXX` 转义都不动）。
+  路径对不上就停：悄悄跳过一行，等于那份筛查结论没并进去
+- `--check FILE` 用同一份写法重算一遍再与 FILE 逐字节比（不先写盘）；不一样就退非零
 用法：
     python3 screen_tone.py --screen screen.jsonl --tone tone.jsonl --out screen-tone.jsonl
+    python3 screen_tone.py --base old.jsonl --screen old.jsonl --tone tone.jsonl \
+        --only-regex '/Hotel_SkalskyDvur_Room112/' --out new.jsonl
+    python3 screen_tone.py ... --only-regex ... --check new.jsonl   # 只核对，不写盘
 """
 import argparse
 import copy
 import json
 import math
+import re
 import sys
 from pathlib import Path
 
@@ -65,27 +74,49 @@ def load_present_db(path=RULES):
 
 # ---------------------------------------------------------------- 读写
 
-def read_jsonl(path):
-    """一行一条；空行跳过，读不了的行报出是第几行。"""
-    rows = []
+def read_jsonl_lines(path):
+    """一行一条，连同每行原文（不含行尾换行）：`--only-regex` 的「其余行原样带过」要用原文。
+
+    重新序列化一遍会改掉 JSON 空格、键序、`\\uXXXX` 转义（第五批 codex 第 1 轮 #1），所以原文单独留着。
+    空行跳过：它本来就不是一条结论。"""
+    out = []
     for lineno, line in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), 1):
-        line = line.strip()
-        if not line:
+        text = line.strip()
+        if not text:
             continue
         try:
-            row = json.loads(line)
+            row = json.loads(text)
         except json.JSONDecodeError as e:
             raise SystemExit(f"{path} 第 {lineno} 行不是 json（{e}）")
         if not isinstance(row, dict):
             raise SystemExit(f"{path} 第 {lineno} 行不是对象（是 {type(row).__name__}）")
-        rows.append(row)
-    return rows
+        out.append((row, line))
+    return out
+
+
+def read_jsonl(path):
+    """一行一条；空行跳过，读不了的行报出是第几行（原文不要时用这一条）。"""
+    return [row for row, _raw in read_jsonl_lines(path)]
+
+
+def jsonl_text(rows):
+    """行列表 → jsonl 正文。写盘与 `--check` 共用这一份写法（否则核对的是另一种序列化）。
+
+    项是 `(row, 原文)`（`splice` 里不匹配 `--only-regex` 的那些）时按原文写回，不再序列化：JSON 空格、键序、
+    `\\uXXXX` 转义都不许被改掉；其余项照本文件唯一的写法序列化。"""
+    out = []
+    for item in rows:
+        if isinstance(item, tuple):
+            _row, raw = item
+            out.append(raw + "\n")
+        else:
+            out.append(json.dumps(item, ensure_ascii=False) + "\n")
+    return "".join(out)
 
 
 def write_jsonl(rows, path):
     with open(path, "w", encoding="utf-8") as out:
-        for row in rows:
-            out.write(json.dumps(row, ensure_ascii=False) + "\n")
+        out.write(jsonl_text(rows))
 
 
 def index_by_path(rows, what):
@@ -294,6 +325,61 @@ def merge(screen_rows, tone_rows, drop_where, present_db):
             "tone_dropped": tone_dropped}
 
 
+def splice(base_rows, screen_rows, tone_rows, drop_where, present_db, only_regex):
+    """只把匹配 `only_regex` 的行换成 merge 的结果，其余行按 `base_rows` 原样带过。
+
+    `base_rows` 的每一项可以是 `read_jsonl_lines` 的 `(row, 原文)`，也可以是单个 row（手上只有解析结果时）；
+    给了原文的，不匹配的行就照原文那一行写回（空格 · 键序 · 转义都不动），不再序列化一遍。
+
+    `base_rows` 定顺序与「不并入」的那几条的内容；`screen_rows` 里匹配的那几条必须与 `base_rows` 里匹配的
+    逐条同 path、同序（对不上就停：拿另一份清单来并，等于悄悄挪走几条结论）。`tone_rows` 只许是匹配的行
+    （否则说明拿错了单音文件，并进去的结论与这段声音无关）。返回值同 `merge`，`rows` 是拼好的整份。"""
+    try:
+        rx = re.compile(only_regex)
+    except re.error as e:
+        raise SystemExit(f"--only-regex {only_regex!r} 不是合法正则（{e}）：改成一个能匹配 path 的正则")
+
+    def hit(row):
+        path = row.get("path")
+        if not isinstance(path, str) or not path:
+            raise SystemExit(f"--base / --screen 里有行没有 path：{json.dumps(row, ensure_ascii=False)[:200]}")
+        return rx.search(path) is not None
+
+    base = [item if isinstance(item, tuple) else (item, None) for item in base_rows]
+    base_hits = [row["path"] for row, _raw in base if hit(row)]
+    sub_screen = [row for row in screen_rows if hit(row)]
+    got_hits = [row["path"] for row in sub_screen]
+    if got_hits != base_hits:
+        lack = [p for p in base_hits if p not in set(got_hits)][:5]
+        extra = [p for p in got_hits if p not in set(base_hits)][:5]
+        raise SystemExit(
+            f"--screen 里匹配 {only_regex!r} 的行与 --base 对不上（{len(got_hits)} vs {len(base_hits)} 条）："
+            f"base 有、screen 没有 {lack}；screen 有、base 没有 {extra}。两份清单必须是同一批片段")
+    stray = [row.get("path") for row in tone_rows if not hit(row)]
+    if stray:
+        raise SystemExit(f"--tone 里有 {len(stray)} 条不匹配 {only_regex!r}：{stray[:5]}（拿错单音文件了？）")
+    merged = merge(sub_screen, tone_rows, drop_where, present_db)
+    by_path = {row["path"]: row for row in merged["rows"]}
+    rows = [by_path[row["path"]] if hit(row) else (row if raw is None else (row, raw))
+            for row, raw in base]
+    return {**merged, "rows": rows}
+
+
+def check_file(path, text):
+    """重算出来的正文与 `path` 逐字节比；不同就报第一处不同并停下（不写盘，交给人看）。"""
+    want = Path(path).read_bytes()
+    got = text.encode("utf-8")
+    if want == got:
+        print(f"{path} 与重新生成的结果逐字节一致")
+        return
+    want_lines, got_lines = want.decode("utf-8").splitlines(), text.splitlines()
+    for i, (x, y) in enumerate(zip(want_lines, got_lines), 1):
+        if x != y:
+            raise SystemExit(f"{path} 第 {i} 行与重新生成的不同：\n  文件里：{x}\n  重算得：{y}")
+    raise SystemExit(f"{path} 与重新生成的不同（行数 {len(want_lines)} vs {len(got_lines)}）："
+                     "先重跑一次生成命令，再看是哪几行多了 / 少了")
+
+
 # ---------------------------------------------------------------- 命令行
 
 def summary(res):
@@ -302,14 +388,32 @@ def summary(res):
 
 
 def run(args):
-    out = Path(args.out)
-    for name in ("screen", "tone"):
-        if out.resolve() == Path(getattr(args, name)).resolve():
-            raise SystemExit(f"--out 指到了 --{name} 上（{out}）：不原地覆盖，换一个文件名")
+    if args.only_regex and not args.base:
+        raise SystemExit("--only-regex 要和 --base 一起用：--base 是「其余行原样带过」的那份")
+    if args.base and not args.only_regex:
+        raise SystemExit("--base 只在 --only-regex 模式下有意义：只并匹配的那一段，其余行原样带过")
+    if not (args.out or args.check):
+        raise SystemExit("要 --out（写盘）或 --check（只核对）中的至少一个")
+    if args.out:
+        out = Path(args.out)
+        for name in ("screen", "tone", "base"):
+            ref = getattr(args, name)
+            if ref and out.resolve() == Path(ref).resolve():
+                raise SystemExit(f"--out 指到了 --{name} 上（{out}）：不原地覆盖，换一个文件名")
     drop_where = load_drop_where(args.rules)
     present_db = load_present_db(args.rules)
-    res = merge(read_jsonl(args.screen), read_jsonl(args.tone), drop_where, present_db)
-    write_jsonl(res["rows"], out)
+    screen_rows = read_jsonl(args.screen)
+    tone_rows = read_jsonl(args.tone)
+    if args.only_regex:
+        res = splice(read_jsonl_lines(args.base), screen_rows, tone_rows, drop_where, present_db,
+                     args.only_regex)
+    else:
+        res = merge(screen_rows, tone_rows, drop_where, present_db)
+    text = jsonl_text(res["rows"])
+    if args.out:
+        Path(args.out).write_text(text, encoding="utf-8")
+    if args.check:
+        check_file(args.check, text)
     print(summary(res))
 
 
@@ -318,7 +422,10 @@ def main(argv=None):
         description="把单音结论并进筛查结果（丢哪些取 screen_rules.json 的 tone_check.drop_where）")
     ap.add_argument("--screen", required=True, help="screen.py 输出的 jsonl")
     ap.add_argument("--tone", required=True, help="diagnose.py --tone 输出的 jsonl")
-    ap.add_argument("--out", required=True, help="合成后的 jsonl（不许等于 --screen / --tone）")
+    ap.add_argument("--out", default=None, help="合成后的 jsonl（不许等于 --screen / --tone / --base；--check 时可省）")
+    ap.add_argument("--base", default=None, help="只并一段时的那份整表：不匹配 --only-regex 的行原样带过")
+    ap.add_argument("--only-regex", default=None, help="只并 path 匹配这条正则的行（不匹配的行按 --base 原样带过）")
+    ap.add_argument("--check", type=Path, default=None, help="与这份文件逐字节比；不同就退非零（不写盘）")
     ap.add_argument("--rules", default=str(RULES), help="判据 json（默认同目录的 screen_rules.json）")
     run(ap.parse_args(argv))
 

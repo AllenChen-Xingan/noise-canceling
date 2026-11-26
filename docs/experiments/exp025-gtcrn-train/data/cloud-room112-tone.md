@@ -38,3 +38,12 @@ shasum -a 256 /workspace/out/room112-tone/room112-tone.jsonl
 
 - `room112-tone.jsonl`（约 1.5 MB，按办公室 402 条推算）和它的 sha256、diagnose 的摘要行
 - 发给 traindata，抄送大总管 noise-canceling-meta
+
+## 结果（2026-11-26）
+
+- 补测已回仓：`screen/room112-tone.jsonl`，248 行，sha256 `8efa7d6812ed61ecb707648aa0fbb84949ff03114ab4b7cdf7ce344d2396eb73`（提交 9ca0c162）
+- diagnose 摘要（云上原样带回）：共 248 条；逐秒电平标准差中位数 1.74 dB；最常见的频谱峰 49 Hz（147 次）；单音逐秒判定 none 210 条 · first_only 0 条 · later_too 38 条
+- 合并摘要（本机 `screen_tone.merge`，判据取 `screen_rules.json` 的 `tone_check`）：共 248 条：keep 188 · drop 60（其中因单音新丢 21 条）
+- 判定：后来几秒有单音的 38 条里，老表 keep 的 209 条中命中 21 条（10.0%），≥ 11 条 → 超过 5% → 按判法出新 build（第五批）。
+  处置：新来源名 `but-reverbdb-silence-b5` + 新筛查表 `screen/but-reverbdb-silence-b5.jsonl`（只有 Room112 那 248 行换成并了单音结论的，其余 1022 行与老表逐字节相同）；
+  老表 `screen/but-reverbdb-silence.jsonl` 与 build bc0e9e7b 一个字节不动。
