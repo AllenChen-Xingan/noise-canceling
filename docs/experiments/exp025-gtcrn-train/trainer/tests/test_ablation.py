@@ -297,17 +297,34 @@ def _cfg_dict() -> dict:
     return d
 
 
-def _record(root: Path, name: str, hybrid, *, row_step=1000, dev_build_id="dev-build-1", data_over=None,
+def _set(d: dict, path: str, v) -> None:
+    """按点号路径写进配置（测试用）：`limits.max_hours` 之类。"""
+    cur = d
+    *head, last = path.split(".")
+    for h in head:
+        cur = cur.setdefault(h, {})
+    cur[last] = v
+
+
+def _record(root: Path, name: str, hybrid, *, row_step=ablation.STEP, dev_build_id="dev-build-1", data_over=None,
             cfg_over=None):
+    """一个运行的 run.json 与 metrics.jsonl。默认写成**合上设计**的消融运行：模型 A、第 1000 步、
+    开发份配方 = 基线配方；要造不合设计的运行就改 data_over / cfg_over。"""
     d = root / name
     d.mkdir(parents=True, exist_ok=True)
     cfg = _cfg_dict()
     cfg["run"]["name"] = name  # run.name / run.seed 每个运行本来就不同：不算对不上
     cfg["run"]["seed"] = next((s for n, s, _k, _o in ablation.WANTED_RUNS if n == name), 0)
     cfg["data"]["recipe"] = f"recipes/{name}.json"  # 每个运行一份自己的配方：这一项允许各不同
+    cfg["model"]["variant"] = ablation.WANT_VARIANT  # 设计写死：消融只跑模型 A
+    cfg["schedule"]["max_steps"] = ablation.STEP  # 设计写死：每个运行 1000 步
+    cfg["data"]["dev_recipe"] = BASE_RECIPE  # 7 个运行的开发份都用基线配方
     cfg["data"].update(data_over or {})
-    for sec, keys in (cfg_over or {}).items():
-        cfg[sec].update(keys)
+    for k, v in (cfg_over or {}).items():
+        if isinstance(v, dict):
+            cfg[k].update(v)  # 按段改：{"loss": {"w_lvl": 3.0}}
+        else:
+            _set(cfg, k, v)  # 按顶层键改：{"device": "cpu"}
     (d / "run.json").write_text(json.dumps({"config": cfg, "data_build_id": f"build-{name}",
                                             "dev_build_id": dev_build_id}))
     rows = [{"step": 500, "dev": {"hybrid": 1.0}}, {"step": row_step, "dev": {"hybrid": hybrid}}]
@@ -442,13 +459,15 @@ def test_incomplete_baseline_makes_base_and_every_knob_incomplete(tmp_path, over
 
 
 @pytest.mark.parametrize("run,knob,cfg_over,needle", [
-    ("abl-eq-off", "eq", {"model": {"variant": "A"}}, "model.variant"),  # 默认是 B，消融要 A
-    ("abl-clip-off", "clip", {"loss": {"w_lvl": 3.0}}, "loss.w_lvl"),
-    ("abl-n_noises-off", "n_noises", {"schedule": {"max_steps": 2000}}, "schedule.max_steps"),
+    ("abl-eq-off", "eq", {"device": "cpu"}, "device"),  # 跑在不同设备上：读数不可比
+    ("abl-clip-off", "clip", {"limits": {"max_hours": 2.0}}, "limits.max_hours"),
+    ("abl-n_noises-off", "n_noises", {"schedule": {"eval_every": 100}}, "schedule.eval_every"),
+    ("abl-reverb-off", "reverb", {"run": {"out_dir": "/workspace/runs/别处"}}, "run.out_dir"),
+    ("abl-high_snr-on", "high_snr", {"loss": {"w_lvl": 3.0}}, "loss.w_lvl"),
 ])
 def test_run_with_different_config_is_incomplete(tmp_path, run, knob, cfg_over, needle):
-    """模型 · 优化器 · 损失 · EMA · 步数必须和 abl-base-s0 一样（只有 run.name / run.seed / data.recipe
-    可以各不同）：改了一处就是这个运行不完整，那个旋钮判 incomplete，别的运行不受牵连。"""
+    """**整份 config** 必须和 abl-base-s0 逐项一样（只有 run.name / run.seed / data.recipe 可以各不同）：
+    改了一处就是这个运行不完整，那个旋钮判 incomplete，别的运行不受牵连。"""
     _all(tmp_path, over={run: {"cfg_over": cfg_over}})
     out = ablation.judge(tmp_path)
     assert out["runs"][run]["verdict"] == ablation.V_INCOMPLETE
@@ -468,6 +487,70 @@ def test_baseline_with_different_optim_lr_makes_every_knob_incomplete(tmp_path):
     for knob, v in out["knobs"].items():
         assert v["verdict"] == ablation.V_INCOMPLETE, (knob, v)
         assert BASE1 in v["reason"], (knob, v)  # 指名不完整的基线
+
+
+def test_run_with_wrong_model_variant_is_incomplete(tmp_path):
+    """消融只跑模型 A：一个旋钮运行用了 B，它的读数不许拿来判（B 的架构不同）。"""
+    _all(tmp_path, _hyb(eq=4.76), over={"abl-eq-off": {"cfg_over": {"model": {"variant": "B"}}}})
+    out = ablation.judge(tmp_path)
+    assert out["runs"]["abl-eq-off"]["verdict"] == ablation.V_INCOMPLETE
+    assert "model.variant" in out["runs"]["abl-eq-off"]["reason"]
+    assert out["knobs"]["eq"]["verdict"] == ablation.V_INCOMPLETE
+    assert all(v["verdict"] != ablation.V_INCOMPLETE for k, v in out["knobs"].items() if k != "eq")
+    assert out["base"] == pytest.approx(4.25)  # 两条基线都还合设计
+
+
+def test_run_with_other_dev_recipe_is_incomplete(tmp_path):
+    """旋钮运行的开发份换成别的配方：读的不再是同一份开发集，读数不可比。"""
+    _all(tmp_path, _hyb(eq=4.76), over={"abl-eq-off": {"data_over": {"dev_recipe": "../data/other.json"}}})
+    out = ablation.judge(tmp_path)
+    assert out["runs"]["abl-eq-off"]["verdict"] == ablation.V_INCOMPLETE
+    assert "data.dev_recipe" in out["runs"]["abl-eq-off"]["reason"]
+    assert out["knobs"]["eq"]["verdict"] == ablation.V_INCOMPLETE
+
+
+def test_baseline_with_wrong_model_variant_makes_every_knob_incomplete(tmp_path):
+    """基线不合设计（种子 1 用了模型 B）：base 与 floor 都不许算，每个旋钮都 incomplete。"""
+    _all(tmp_path, over={BASE1: {"cfg_over": {"model": {"variant": "B"}}}})
+    out = ablation.judge(tmp_path)
+    assert out["runs"][BASE1]["verdict"] == ablation.V_INCOMPLETE
+    assert "model.variant" in out["runs"][BASE1]["reason"]
+    assert out["base"] is None and out["floor"] is None
+    for knob, v in out["knobs"].items():
+        assert v["verdict"] == ablation.V_INCOMPLETE, (knob, v)
+        assert BASE1 in v["reason"], (knob, v)  # 指名不合设计的基线
+
+
+@pytest.mark.parametrize("cfg_over,needle", [
+    ({"model": {"variant": "B"}}, "model.variant"),            # 设计写死模型 A
+    ({"schedule": {"max_steps": 5000}}, "schedule.max_steps"),  # 设计写死 1000 步
+    ({"data": {"dev_recipe": ""}}, "data.dev_recipe"),         # 开发份必须指明且是基线配方
+])
+def test_all_runs_off_design_makes_every_knob_incomplete(tmp_path, cfg_over, needle):
+    """7 个运行一起不按设计跑（都换 B / 都跑 5000 步 / 开发份都空着）：
+    “彼此都一样”不等于“照设计跑”，基线不算，每个旋钮都 incomplete。"""
+    _all(tmp_path, over={n: {"cfg_over": cfg_over} for n, _s, _k, _o in ablation.WANTED_RUNS})
+    out = ablation.judge(tmp_path)
+    assert out["base"] is None and out["floor"] is None
+    for name, r in out["runs"].items():
+        assert r["verdict"] == ablation.V_INCOMPLETE, (name, r)
+        assert needle in r["reason"], (name, r)
+    for knob, v in out["knobs"].items():
+        assert v["verdict"] == ablation.V_INCOMPLETE, (knob, v)
+    assert ablation.main(["judge", str(tmp_path), "--out", str(tmp_path / "out.json")]) == 2
+
+
+@pytest.mark.parametrize("line", ["null", "[]", "3", '"[1, 2]"'])
+def test_metrics_line_that_is_not_an_object_is_incomplete(tmp_path, line):
+    """metrics.jsonl 里一行是合法 JSON 但不是对象：不许崩，那个运行判 incomplete。"""
+    _all(tmp_path, _hyb(eq=4.76))
+    p = tmp_path / "abl-eq-off" / "metrics.jsonl"
+    p.write_text(p.read_text() + line + "\n")
+    out = ablation.judge(tmp_path)
+    assert out["runs"]["abl-eq-off"]["verdict"] == ablation.V_INCOMPLETE
+    assert "metrics.jsonl" in out["runs"]["abl-eq-off"]["reason"]
+    assert out["knobs"]["eq"]["verdict"] == ablation.V_INCOMPLETE
+    assert ablation.main(["judge", str(tmp_path), "--out", str(tmp_path / "out.json")]) == 2
 
 
 def test_recipe_and_build_id_may_differ(tmp_path):
