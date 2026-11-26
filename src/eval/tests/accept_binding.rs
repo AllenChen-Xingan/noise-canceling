@@ -260,6 +260,28 @@ fn null_value_shrinks_gain_pairs_is_undecided() {
     assert_eq!(js["verdict"], "undecided");
 }
 
+/// codex 第 11 轮 P1：延迟逐卡比还不够——清单要的每一段的 V-LAT 都得有值。
+/// 候选有一段 V-LAT 是 null、两张卡的均值又恰好相同 → 仍判不了。
+#[test]
+fn null_lat_value_on_one_clip_is_undecided() {
+    let f = Fix::new("nulllat");
+    let clip = ctl(MeetingPlace::Cafe, 4)[1].clip.clone();
+    let g = build(
+        &f,
+        Spec {
+            null1: &[(&clip, "V-LAT")],
+            ..spec(good1(), good2(), good3())
+        },
+    );
+    let js = f.accept(&g.vs, &g.noise, &g.card_a, &g.card_b, "x");
+    assert_eq!(verdict(&js, "延迟"), "undecided", "{js}");
+    assert!(
+        detail(&js, "延迟").contains(&clip),
+        "要说清是哪一段没有值：{js}"
+    );
+    assert_eq!(js["verdict"], "undecided");
+}
+
 /// codex 第 10 轮 P1：「不许退」的项也要核齐。段都在、但候选有一段的 V-TIMBRE 是 null → 判不了。
 #[test]
 fn null_value_shrinks_regress_pairs_is_undecided() {

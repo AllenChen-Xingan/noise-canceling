@@ -234,6 +234,36 @@ impl Expected {
         cap(hole)
     }
 
+    /// 清单要的每个片段，在这一项上都要有有限值（缺一段 = 这一项判不了，不能拿剩下的段代表它）。
+    /// `rows` = 绑定的那份 `clips.jsonl` 里被选中的系统的行。
+    pub fn values_complete(
+        &self,
+        rows: &[crate::scorecard::ClipRow],
+        item: &str,
+    ) -> Result<(), String> {
+        let mut missing = Vec::new();
+        for k in &self.keys {
+            let ok = rows.iter().any(|r| {
+                r.clip == k.id
+                    && r.scores
+                        .iter()
+                        .any(|(v, _, s)| *v == item && s.value.is_some_and(f64::is_finite))
+            });
+            if !ok {
+                missing.push(k.id.clone());
+            }
+        }
+        if missing.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "{item} 缺 {} 段的读数值：{}",
+                missing.len(),
+                cap(missing).join(" ")
+            ))
+        }
+    }
+
     /// 报告种子那两份逐段文件里，清单要的每个片段都要在（连场景 × 档 × 设备一起核）。
     pub fn coverage_cards(&self, a: &CardIn, b: &CardIn) -> Vec<String> {
         let mut hole = Vec::new();
@@ -304,6 +334,8 @@ pub struct CardIn {
     pub clips_actual_sha: String,
     /// 旁边 `clips.jsonl` 里的片段（[`load_card`] 填）
     pub keys: Vec<ClipKey>,
+    /// 旁边 `clips.jsonl` 里这个系统的逐段分数（核「每一段都有这一项的值」用）
+    pub clips: Vec<crate::scorecard::ClipRow>,
     pub rows: Vec<CardRow>,
 }
 
@@ -424,9 +456,13 @@ pub fn load_card(path: &str, system: &str) -> Result<CardIn, String> {
         &std::fs::read_to_string(&clips).map_err(|e| format!("{}：{e}", clips.display()))?,
     )
     .map_err(|e| format!("{}：{e}", clips.display()))?;
-    let keys: Vec<ClipKey> = rows
+    let picked: Vec<crate::scorecard::ClipRow> = rows
         .iter()
         .filter(|r| r.system == system)
+        .cloned()
+        .collect();
+    let keys: Vec<ClipKey> = picked
+        .iter()
         .map(|r| ClipKey {
             id: r.clip.clone(),
             scene: r.scene.as_str(),
@@ -488,6 +524,7 @@ pub fn load_card(path: &str, system: &str) -> Result<CardIn, String> {
             .map(str::to_string),
         clips_actual_sha,
         keys,
+        clips: picked,
         rows: out_rows,
     })
 }

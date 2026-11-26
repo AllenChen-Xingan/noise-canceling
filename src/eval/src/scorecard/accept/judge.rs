@@ -426,13 +426,19 @@ fn lat_row(a: &CardIn, b: &CardIn, expected: &Expected) -> Row {
             ),
         );
     }
+    let (mut seen, mut bad, mut hole) = (Vec::new(), Vec::new(), Vec::new());
+    // 逐卡均值相同还不够：清单要的每一段的 V-LAT 都必须有值（codex 第 11 轮 P1）
+    for (side, c) in [("对照", a), ("候选", b)] {
+        if let Err(why) = expected.values_complete(&c.clips, "V-LAT") {
+            hole.push(format!("{side}：{why}"));
+        }
+    }
     let find = |c: &CardIn, scene: &str, tier: &str, device: &str| {
         c.rows
             .iter()
             .find(|r| r.scene == scene && r.tier == tier && r.device == device)
             .cloned()
     };
-    let (mut seen, mut bad, mut hole) = (Vec::new(), Vec::new(), Vec::new());
     for (scene, tier, device) in expected.slices() {
         let k = format!("{scene} · {tier} · {device}");
         let (x, y) = (
