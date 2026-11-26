@@ -1,8 +1,8 @@
 # 评审 205 · exp025 第四批训练数据（单音检查 · 场景表 · 消融配方 · 开训证据）（codex · gpt-6-astra · read-only）
 
 > 对象：`docs/experiments/exp025-gtcrn-train/data/` 下 diagnose.py · screen_tone.py · scene_table.py · ablation_recipes.py · build_evidence.py · split_rules.json · recipe.json · scene_notes.json · screen_rules.json，以及 test_screen_tone / test_build_evidence / test_scene_table / test_but_real（feat/data-batch3，PR Closes #205）。
-> **最新一轮：第 1 轮（2026-11-26）· 总评「修改」· 待第 2 轮**。
-> 累计处理：P1×3、P2×2 逐条回源码与数据核实：属实 3（其中 1 条交大总管定）、驳回 1、降级为 P2 后开 issue 1。
+> **最新一轮：第 2 轮（2026-11-26）· 总评「修改」· 待第 3 轮**。
+> 累计处理：P1×4、P2×5 逐条回源码与数据核实：属实 6（其中 1 条交大总管定、第 2 轮重提）、驳回 1、延期开 issue 2（#221 · #222）。
 
 ## 第 1 轮（2026-11-26）· 总评「修改」
 
@@ -29,3 +29,20 @@
 
 - codex 列的「不符」：无。「无法核实」2 条（旧规则逐字节、10aa3a9f 可读），由 `tests/test_but_real.py` 的旧规则哈希测试覆盖。
 - codex 列的「核实属实」：6 条。
+
+## 第 2 轮（2026-11-26）· 总评「修改」
+
+原文：主仓 `_tmp/reviews-traindata-b4/data-batch4-codex-2.md`（不入库）。effort medium，耗时 56 秒。
+本轮 P0/P1：1 条 · 停止线：未满足 · 留作 issue：#222
+
+- **P1｜split_rules.json:99 单音必经检查仍未落实**（第 2 轮 #1，即第 1 轮 #2 重提）
+  - 核实：事实属实，已由大总管定：先训后测，≤ 5% 照用 bc0e9e7b（#221）。
+  - 处理：同一条第二次提出，按评审规则交裁决人。裁决人是大总管 noise-canceling-meta，已定 A，不再改。这一条的风险写在开训前清单第 2 项的限制里（`scene-gaps.md` 第 3 节）。
+- **P2｜build_evidence.py:174 交集来源没核齐**（第 2 轮 #2）
+  - 核实：属实（来源列表只取自记录）。
+  - 处理：pi traindata-codexfix2 加了「交集来源齐全」列：记录里的来源必须正好等于 `split_rules.json` 的全部来源，不许为空，build 用到的切分表来源都要在里面。加了少一个来源、空列表两条测试。实测基线的 9 个来源和规则的 9 个相等。
+- **P2｜screen_tone.py:141 没核逐秒证据**（第 2 轮 #3）
+  - 核实：属实。
+  - 处理：逐秒证据的条数要等于片段的整秒数，`prominence_db` 必须是有限数；再用 `diagnose.tone_verdict` 加 json 里的 `present_db` 重算，结论必须和存的一致。夹具改成真的 10 秒。实测仓里 1022 条单音结果（C236 620 条、办公室 402 条）全部通过新的核对；办公室 402 行仍逐字节复现。
+- **P2｜screen_tone.py:161 旧诊断关联仍在**（第 2 轮 #4，即第 1 轮 #3）
+  - 处理：延期，开 issue #222（单音检查结果记音频与判据的哈希）。
