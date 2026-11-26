@@ -55,3 +55,8 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-26T08:49:39Z	pod_delete	sm5qjwcfp8slir	cpu3c x4	US-MO-1	0.1200	2026-11-26T07:47:55Z	2026-11-26T08:49:39Z	1.0289	0.1235		第四批 A 段：C236 与办公室单音全量、办公室 3 位置 402 条筛查；日志已取回
 2026-11-26T14:42:57Z	pod_create	p8wburmyl2jz6o	cpu3c x4	US-MO-1	0.1200	2026-11-26T14:42:57Z					max_hours=2.0
 2026-11-26T16:11:08Z	pod_delete	p8wburmyl2jz6o	cpu3c x4	US-MO-1	0.1200	2026-11-26T14:42:57Z	2026-11-26T16:11:08Z	1.4697	0.1764		batch4b 重跑完成 + 按 D116 删 batch3
+2026-11-26T17:57:53Z	pod_create	60b5a4pkpzjzlq	cpu3c x4	US-MO-1	0.1200	2026-11-26T17:57:53Z					max_hours=0.75
+2026-11-26T18:22:12Z	pod_delete	60b5a4pkpzjzlq	cpu3c x4	US-MO-1	0.1200	2026-11-26T17:57:53Z	2026-11-26T18:22:12Z	0.4053	0.0486		plan-h100-b4 甲段完成
+2026-11-26T18:22:25Z	pod_create	o1hkngnpduv1jb	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-26T18:22:25Z					max_hours=1.2
+2026-11-26T19:21:25Z	pod_delete	o1hkngnpduv1jb	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-26T18:22:25Z	2026-11-26T19:21:25Z	0.9833	4.3168		plan-h100-b4 乙段完成（闸门过、消融 7 组全 0）
+2026-11-26T19:21:40Z	pod_create	r5i6id8wqrx7tv	cpu3c x4	US-MO-1	0.1200	2026-11-26T19:21:40Z					max_hours=2.0

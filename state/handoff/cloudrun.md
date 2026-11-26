@@ -78,3 +78,11 @@
 - 大总管固定名改为 noise-canceling-meta（人定），以后只报这个名字。trainer 现名 noise-canceling-trainer-0e。
 - 累计花费 8.97 / 100 美元，云上 0 台机器。
 - 待办：等 trainer 的正式训练命令。开 H100 前做开训清单第 8 项（花费重估），报 meta 批，并要人点头。
+- 2026-11-26 18:00–19:21Z 跑 plan-h100-b4（main 98f1cf32，meta 批：甲段 ≤0.1 美元，乙段 1.2 小时、≤7 美元）：
+  - 甲段：CPU 机 60b5a4pkpzjzlq，0.05 美元。前提 2、3、4 都核过。测试 500 条通过、跳过 1 条；known-dev-cpu.json 的 sha256 是 d480a196…。
+  - Room112 单音补测：248 条，none 210 · later_too 38；jsonl 的 sha256 是 8efa7d68…，已发 traindata。traindata 据此出了第五批。
+  - 乙段：H100 o1hkngnpduv1jb，4.32 美元。冒烟 pass（197 秒）；speed-B 299 秒，speed-A 216 秒，两个 dev_gate 都是 0；续训核对 max_abs_diff 是 0。
+  - 消融 7 组都是退出 0：每批耗时 535 / 536 / 352 秒。每批 3 个运行在同一个 job 里用后台进程同时跑。
+  - 结果在主仓 _tmp/20261126-trainer-b4/（O 包 e6925628…，ablation 包 8aa73703…）。trainer-da 跑了 judge，退出 0。
+- 19:22Z 开第五批的 CPU 机 r5i6id8wqrx7tv（批 ≤0.3 美元，2 小时后自删），代码 0466bd88。第 6 步只取回 batch4 的校验值，删不删要等人定。
+- 累计花费 13.40 / 100 美元。trainer 现名 noise-canceling-trainer-da。
