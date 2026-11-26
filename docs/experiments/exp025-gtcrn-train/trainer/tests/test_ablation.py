@@ -410,6 +410,32 @@ def test_mismatched_data_field_is_incomplete(tmp_path):
     assert "数据字段" in out["runs"]["abl-eq-off"]["reason"] and "dev_n" in out["runs"]["abl-eq-off"]["reason"]
 
 
+@pytest.mark.parametrize("over,name,hybrid,needle", [
+    # 种子 1 的开发份 build id 与种子 0 不同：它的读数还在，但与种子 0 不可比
+    ({"abl-base-s1": {"dev_build_id": "别的开发份"}}, BASE1, 4.5, "开发份"),
+    # 种子 1 的数据字段（seg_s）与种子 0 不同：同上
+    ({"abl-base-s1": {"data_over": {"seg_s": 2.0}}}, BASE1, 4.5, "数据字段"),
+    # 种子 0 自己没有 dev_build_id：连参照都没有
+    ({"abl-base-s0": {"dev_build_id": None}}, BASE0, 4.0, "dev_build_id"),
+])
+def test_incomplete_baseline_makes_base_and_every_knob_incomplete(tmp_path, over, name, hybrid, needle):
+    """基线读数在、但基线不完整（build id / 数据字段对不上 · 没有 dev_build_id）：
+    base 与 floor 都不许算，7 个运行里每个旋钮都判 incomplete，reason 要指名哪条基线不完整。"""
+    _all(tmp_path, _hyb(eq=4.76, clip=3.70), over=over)
+    out = ablation.judge(tmp_path)
+    assert out["runs"][name]["dev_hybrid"] == pytest.approx(hybrid)  # 读数本身是有限数，坏的是可比性
+    assert out["runs"][name]["verdict"] == ablation.V_INCOMPLETE
+    assert needle in out["runs"][name]["reason"]
+    assert out["base"] is None and out["floor"] is None
+    bad = [b for b in ablation.BASE_RUNS if out["runs"][b]["verdict"] == ablation.V_INCOMPLETE]
+    assert name in bad
+    for knob, v in out["knobs"].items():
+        assert v["verdict"] == ablation.V_INCOMPLETE, (knob, v)
+        assert v["d"] is None
+        assert any(b in v["reason"] for b in bad), (knob, v)  # 指名不完整的基线
+    assert ablation.main(["judge", str(tmp_path), "--out", str(tmp_path / "out.json")]) == 2
+
+
 def test_recipe_and_build_id_may_differ(tmp_path):
     """每个运行的 data.recipe 与 data_build_id 本来就不同（变体各是一份新 build），不算对不上。"""
     _all(tmp_path)

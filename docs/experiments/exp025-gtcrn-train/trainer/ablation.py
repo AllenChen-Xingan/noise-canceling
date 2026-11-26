@@ -296,7 +296,9 @@ def _verdict(on: bool, d: float, floor: float) -> str:
 
 
 def judge(out_dir, step: int = STEP) -> dict:
-    """判 7 个运行：返回 {rule, base, floor, runs, knobs}。任何运行不完整 → 它在 runs 里是 incomplete。"""
+    """判 7 个运行：返回 {rule, base, floor, runs, knobs}。任何运行不完整 → 它在 runs 里是 incomplete；
+    两条基线里任一条不完整（读数、build id、数据字段任一项过不了）→ base 与 floor 都不算，
+    每个旋钮都 incomplete。"""
     root = Path(out_dir)
     recs = {name: _read_run(root / name, step) for name, _s, _k, _o in WANTED_RUNS}
     ref_name = BASE_RUNS[0]
@@ -320,9 +322,12 @@ def judge(out_dir, step: int = STEP) -> dict:
     if ref["reason"] is None and ref["dev_build_id"] is None:
         ref["reason"] = "run.json 里没有 dev_build_id：认不出开发集版本，读数没法比"
 
+    # base / floor 只用两条基线算；任一条基线不完整就不许算——否则旋钮会被拿去跟一条不可信的
+    # 基线比（#212 评审发现：种子 1 的 build id / 数据字段对不上时它 dev_hybrid 还在，旧代码照算）
+    bad_base = [n for n in BASE_RUNS if recs[n]["reason"]]
     b0, b1 = recs[BASE_RUNS[0]]["dev_hybrid"], recs[BASE_RUNS[1]]["dev_hybrid"]
     base = floor = None
-    if _num(b0) and _num(b1):
+    if not bad_base and _num(b0) and _num(b1):
         base, floor = (b0 + b1) / 2, abs(b0 - b1)
 
     knobs: dict = {}
@@ -332,7 +337,8 @@ def judge(out_dir, step: int = STEP) -> dict:
         r = recs[name]
         why = r["reason"]
         if why is None and base is None:
-            why = "基线不完整：base 与 floor 都没有，判不了"
+            why = "基线不完整：base 与 floor 都没有，判不了——" + "；".join(
+                f"{n}：{recs[n]['reason']}" for n in bad_base)
         if why is not None:
             knobs[knob] = {"run": name, "on": on, "d": None, "verdict": V_INCOMPLETE, "reason": why}
             continue
