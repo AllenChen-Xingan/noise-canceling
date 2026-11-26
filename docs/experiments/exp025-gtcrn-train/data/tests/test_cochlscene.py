@@ -209,14 +209,14 @@ class SplitTree(unittest.TestCase):
 
 class Table(unittest.TestCase):
     """云上跑完 split.py 的产物已带回进仓（cloud-batch2.md 第 4 步）：规则 · 摘要 · 正文三处要自洽。
-    反过来也查：顶层 `未建表` 里还留着这一行，说明音频还在云上、本机没切，表和标记不许同时在。"""
+    反过来也查：顶层 `未建表` 里还留着这一条，说明音频还在云上、本机没切，表和标记不许同时在。"""
 
     def check(self, rules_path=None):
-        """规则里没有 `未建表` · 表能按摘要里的哈希读回 · 条数与单位对得上 · 只有 train / dev。
+        """cochlscene 不在 `未建表` 里 · 表能按摘要里的哈希读回 · 条数与单位对得上 · 只有 train / dev。
         rules_path 只给回归测试用（临时副本里放回标记，看这条检查会不会红）。返回 (摘要, 行)。"""
         R = split.load_rules(rules_path) if rules_path else split.load_rules()
-        self.assertEqual([k for k in R if k == "未建表"], [],
-                         "规则顶层还有 `未建表`：这一行表示音频还在云上、本机没切，拿回表后要删掉")
+        self.assertNotIn(SRC, R.get("未建表", {}),
+                         "顶层 `未建表` 里还有 cochlscene：这一条表示音频还在云上、本机没切，拿回表后要删掉（别科的来源可以留着）")
         r = R["sources"][SRC]
         s, rows = split.load_split(SRC)  # 核 jsonl 的 sha256
         self.assertEqual(s["files"], r["expect"]["files"], "摘要条数与规则期望不同")
@@ -254,7 +254,7 @@ class Table(unittest.TestCase):
         self.assertLessEqual({r["split"] for r in rows}, {"train", "dev"})
 
     def test_marker_still_means_pending(self):
-        """上面那条「没有 `未建表`」不是空检查：临时副本里放回这一行，check 必须红（仓库里的文件不动）。"""
+        """上面那条「cochlscene 不在 `未建表`」不是空检查：临时副本里放回这一条，check 必须红（仓库里的文件不动）。"""
         R = json.loads(split.RULES.read_text())
         R["未建表"] = {SRC: "音频还在云上"}
         with tempfile.TemporaryDirectory() as d:

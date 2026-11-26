@@ -142,8 +142,10 @@ class Builds(unittest.TestCase):
 
     def test_some_build_shards_current_sources(self):
         """至少要有一份 build 把当前配方（recipe.json）的全部来源都切了：加了一批来源却忘了云上重跑，这里就红。
-        只比来源集合，不比 recipe 的字节哈希（配方小幅改动也会变哈希，那会让这条测试无辜地红）。"""
-        want = set(shard.default_sources())
+        只比来源集合，不比 recipe 的字节哈希（配方小幅改动也会变哈希，那会让这条测试无辜地红）。
+        规则顶层 `未建表` 里的来源（音频还在云上）不进比，其余照旧严格。"""
+        pending = set(self.R.get("未建表", {}))
+        want = set(shard.default_sources()) - pending
         got = {f.parent.name: set(json.loads(f.read_text())["split_tables"]) for f in build_files()}
         self.assertTrue(any(v == want for v in got.values()),
                         f"没有一份 build 切了全部来源：要 {sorted(want)}；现有 {[(k, sorted(v)) for k, v in got.items()]}")
