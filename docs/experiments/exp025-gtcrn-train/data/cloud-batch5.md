@@ -17,14 +17,16 @@
 ⚠️ 现在冒烟和消融正在 `/workspace/shards/batch4` 上跑。这一批只**新建** `/workspace/shards/batch5`，不碰 batch4。
 
 ```bash
-# 代码：feat/data-batch5 的提交（traindata 发提交号），新 clone 到 /workspace/repo-<提交前 8 位>
+# 代码：feat/data-batch5 的提交（traindata 发提交号；recipe.json sha256 应为 7de5c4b5…），新 clone 到 /workspace/repo-<提交前 8 位>
 D=docs/experiments/exp025-gtcrn-train/data
 PY=.venv/bin/python
 export VDN_ROOT=/workspace VDN_SHARDS=/workspace/shards/batch5      # 新目录；已存在会拒绝
 du -sh /workspace; df -h /workspace          # 新分片约占 22 GB（第四批实测）；开跑前剩余不到 25 GB 先停，问大总管；中途只在剩余不到 10 GB 时停
 cd $D && $PY -m unittest discover -s tests -t . 2>&1 | tail -3; cd -  # 全过（skipped 若干）
 $PY $D/ablation_recipes.py --check           # 应打印「5 份消融配方与 … 一致」
-$PY $D/screen_tone.py --help >/dev/null      # 只确认能导入
+$PY $D/screen_tone.py --screen $D/screen/but-reverbdb-silence.jsonl --tone $D/screen/room112-tone.jsonl \
+    --base $D/screen/but-reverbdb-silence.jsonl --only-regex '/Hotel_SkalskyDvur_Room112/' \
+    --check $D/screen/but-reverbdb-silence-b5.jsonl   # 应打印「逐字节一致」和「keep 188 · drop 60（其中因单音新丢 21 条）」
 ```
 
 ## 1. 切 BUT 底噪（新来源名）
