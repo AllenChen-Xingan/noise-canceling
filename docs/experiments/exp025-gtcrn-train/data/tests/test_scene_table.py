@@ -2,13 +2,13 @@
 
 小夹具在临时目录里搭（假 build.json / recipe.json / split_rules.json / sources.json / splits / scene_notes.json），
 核条数 · 时长 · 单位数 · 正则过滤；再把每道「表不在这个 build 上」的检查都撞一次。
-另有一条真产物测试：拿仓里的切分表配上当前配方跑一遍（第四批配方改过，旧 build 记的配方哈希因此对不上，
-真产物测试把当前配方配上那份 build 的切分表，配方与 build 绑定的规矩另有专门的测试撞）。
+另有一类真产物测试：仓里第四批的 build `bc0e9e7b566421f0` 记的配方哈希就是仓里 `recipe.json` 的哈希、切分表也已进仓，
+所以直接在仓里的文件上跑（不再绕临时目录），并核提交进仓的 `scenes-bc0e9e7b566421f0.md` 与重算结果逐字节相同。
 """
 import hashlib
 import json
 import re
-import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -19,7 +19,8 @@ sys.path.insert(0, str(HERE))
 import scene_table  # noqa: E402
 import split  # noqa: E402
 
-BUILD = HERE / "builds" / "10aa3a9fb8cef48f"
+BUILD = HERE / "builds" / "bc0e9e7b566421f0"  # 第四批的基准 build（配方 = 仓里 recipe.json，四个目标场景都有噪声）
+SCENES_MD = HERE / f"scenes-{BUILD.name}.md"  # `python3 scene_table.py --build builds/<id>` 的标准输出，重算即核
 
 
 def dump(p, obj):
@@ -318,48 +319,31 @@ class SameContent(Fixture):
 
 
 class Product(unittest.TestCase):
-    """真产物：仓里的切分表 + 当前配方（第四批的四个目标场景，D113）。
+    """真产物：仓里第四批的 build `bc0e9e7b566421f0` + 仓里 `recipe.json`（四个目标场景，D113）。
 
-    配方第四批改过，`builds/10aa3a9fb8cef48f` 记的是旧配方的哈希，新 build 还没登记（云上重跑后才有）。
-    所以这里把当前 `recipe.json` 配上那份 build 的切分表，在临时数据目录里核场景表；「配方改了 build 必须重登记」
-    的规矩由 `test_recipe_hash_mismatch` 单独撞过。切分表还是只含 Room112 的旧表，meeting-room 现在一条也没有。
+    这个 build 记的 `recipe_sha256` 就是仓里 `recipe.json` 的哈希，四个场景的切分表也已进仓；
+    于是 `build_tables` 直接在仓里的文件上跑——不需要任何临时目录（旧的绕法只因为那时候 recipes 改过、还没重登记）。
     """
 
-    HAVE = ("canteen", "rail-air-cabin", "transit-hub")  # 这份 build 的切分表里有数据的三个场景
+    HAVE = ("canteen", "meeting-room", "rail-air-cabin", "transit-hub")  # 配方里那四个目标场景（D113）
 
     def setUp(self):
-        self._tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self._tmp.name)
-        for n in ("recipe.json", "split_rules.json", "sources.json", "scene_notes.json"):
-            shutil.copy(HERE / n, self.root / n)
-        (self.root / "splits").mkdir()
-        for p in (HERE / "splits").iterdir():
-            (self.root / "splits" / p.name).symlink_to(p)
-        build = json.loads((BUILD / "build.json").read_text(encoding="utf-8"))
-        build["recipe_sha256"] = hashlib.sha256((self.root / "recipe.json").read_bytes()).hexdigest()
-        self.build_dir = self.root / "builds" / build["build_id"]
-        dump(self.build_dir / "build.json", build)
-        self.t = scene_table.build_tables(self.build_dir, data_dir=self.root, scenes=self.HAVE)
+        self.t = scene_table.build_tables(BUILD, data_dir=HERE)  # 不传 scenes：就用配方里那四个
 
-    def tearDown(self):
-        self._tmp.cleanup()
-
-    def test_scenes_with_data_have_train_noise(self):
+    def test_scenes_are_the_four_targets_and_all_have_train_noise(self):
         self.assertEqual(sorted(self.t["scenes"]), sorted(self.HAVE))
         for name, s in self.t["scenes"].items():
             self.assertGreater(s["splits"]["train"]["totals"]["files"], 0, name)
             self.assertGreater(s["splits"]["train"]["totals"]["seconds"], 0, name)
 
-    def test_meeting_room_has_no_rows_until_the_table_is_recut(self):
-        """切分表仍是只含 Room112 的旧表（规则顶层 `未建表`）：meeting-room 在这个 build 里一条训练噪声也没有。
-        拿配方里那四个场景直接报（不传 scenes）必须停，并指出是哪个场景——不静默报一张空表。"""
-        pools = scene_table.scene_pools(json.loads((HERE / "recipe.json").read_text()))
-        rx = [compiled for _name, compiled in pools["meeting-room"]][0]
-        _, rows = split.load_split("but-reverbdb-silence", out_dir=HERE / "splits")
-        self.assertEqual(sum(1 for r in rows if rx.search(r["path"])), 0)
-        with self.assertRaises(SystemExit) as e:
-            scene_table.build_tables(self.build_dir, data_dir=self.root)
-        self.assertIn("meeting-room", str(e.exception))
+    def test_meeting_room_is_the_but_offices(self):
+        """会议室噪声 = BUT 三间办公室的底噪（第四批）：来源是新名字 `-b4`，文件只落在 L207 · L212 · Q301。"""
+        src = self.t["scenes"]["meeting-room"]["splits"]["train"]["sources"]
+        self.assertEqual([x["source"] for x in src], ["but-reverbdb-silence-b4"])
+        _, rows = split.load_split("but-reverbdb-silence-b4", out_dir=HERE / "splits")
+        offices = [r for r in rows if r["split"] == "train" and re.search(r"/VUT_FIT_(L207|L212|Q301)/", r["path"])]
+        self.assertEqual(src[0]["files"], len(offices))
+        self.assertEqual({r["path"].split("/")[2] for r in offices}, {"VUT_FIT_L207", "VUT_FIT_L212", "VUT_FIT_Q301"})
 
     def test_canteen_only_demand(self):
         src = self.t["scenes"]["canteen"]["splits"]["train"]["sources"]
@@ -392,10 +376,21 @@ class Product(unittest.TestCase):
 
     def test_markdown_has_each_scene(self):
         md = scene_table.render_md(self.t)
-        for name in ("rail-air-cabin", "canteen", "transit-hub"):
+        for name in self.HAVE:
             self.assertIn(name, md)
-        self.assertIn("10aa3a9fb8cef48f", md)
+        self.assertIn(BUILD.name, md)
         self.assertIn("已知限制：", md)
+
+    def test_committed_markdown_is_the_cli_output(self):
+        """同一张表的第二种表示（提交进仓的 markdown）必须由 `scene_table.py` 的标准输出逐字节复现：
+        否则那份文件是手写的，或者切分表 / 配方变了而文件没重生成。这里直接跑那条命令，比的是 stdout 本身。"""
+        self.assertTrue(SCENES_MD.is_file(),
+                        f"没有 {SCENES_MD.name}：跑 python3 scene_table.py --build builds/{BUILD.name} > {SCENES_MD.name}")
+        out = subprocess.run([sys.executable, str(HERE / "scene_table.py"), "--build", f"builds/{BUILD.name}"],
+                             capture_output=True, check=True).stdout
+        self.assertEqual(SCENES_MD.read_bytes(), out,
+                         f"{SCENES_MD.name} 与 `python3 scene_table.py --build builds/{BUILD.name}` 的输出不同"
+                         "：重跑那条命令、把输出重定向到同一个文件再提交")
 
 
 class Size(unittest.TestCase):
