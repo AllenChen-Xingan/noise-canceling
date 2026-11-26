@@ -4,11 +4,12 @@
 - `sources.json` 的 `A7`：手工下载条目（字节数与首次下载记的 md5 / sha256）
 - `download-list-but.md` 第 1 节的表：字节数（sources.json 的第二处表示，交叉校验）
 - `split_rules.json` 的 `but-reverbdb-silence`：通配符 · 单位正则 · 层 · meta 排除 · 筛查表 · 期望条数 · 比例
-- `recipe.json` 的 `noise_pools`：会议室 → meeting-room，酒店房间 → hotel-room
+- `recipe.json` 的 `noise_pools`：酒店房间 → hotel-room（这一批不登记会议室，D113）
 - 上游 read_me（副本 `third_party/BUT_ReverbDB-read_me.txt`）：第 2 个扬声器放背景声
 夹具在临时目录现造（几间房 × 几次布置 × 两个麦克风的 0.5 s wav），不用真数据。
 """
 import copy
+import fnmatch
 import json
 import re
 import subprocess
@@ -297,7 +298,7 @@ class UnitFrom(unittest.TestCase):
         self.assertNotIn("unit_from", self.summ(r, "qut-noise"))
 
 class Pools(unittest.TestCase):
-    """第三批：BUT 库的会议室底噪 → meeting-room，酒店房间 → hotel-room（D111）。"""
+    """第三批：BUT 库的酒店房间底噪 → hotel-room（D111 · D113）。会议室池等人听过 C236 再定，这一批不登记。"""
 
     def setUp(self):
         self.recipe = json.loads((HERE / "recipe.json").read_text())
@@ -308,27 +309,81 @@ class Pools(unittest.TestCase):
         self.assertEqual(len(items), 1, scene)
         return items[0]
 
-    def test_two_pools_use_this_source(self):
+    def test_hotel_pool_uses_this_source(self):
         rules = split.load_rules()["sources"]
         self.assertIn(SRC, rules)
-        self.assertIn(fixtures_but.C236, self.item("meeting-room")["regex"])
         self.assertIn(fixtures_but.ROOM112, self.item("hotel-room")["regex"])
 
-    def test_regex_picks_only_its_room(self):
+    def test_no_meeting_room_pool(self):
+        """D113：C236 会议室底噪筛查大多不过，人听过再定；这一批的配方里不许有会议室池。"""
+        self.assertNotIn("meeting-room", self.pools)
+        self.assertNotIn(fixtures_but.C236, json.dumps(self.recipe["noise_pools"], ensure_ascii=False))
+
+    def test_regex_picks_only_hotel_room(self):
         p = {room: fixtures_but.wav_rel(room, "SpkID01_20190503_S", "01") for room in (fixtures_but.C236, fixtures_but.ROOM112)}
-        for scene, room in (("meeting-room", fixtures_but.C236), ("hotel-room", fixtures_but.ROOM112)):
-            rx = re.compile(self.item(scene)["regex"])
-            for other, path in p.items():
-                self.assertEqual(bool(rx.search(path)), other == room, f"{scene} 对 {other}")
+        rx = re.compile(self.item("hotel-room")["regex"])
+        for other, path in p.items():
+            self.assertEqual(bool(rx.search(path)), other == fixtures_but.ROOM112, other)
 
     def test_note_names_third_batch(self):
         note = self.recipe["noise_pools"]["_说明"]
         self.assertIn("D111", note)
+        self.assertIn("D113", note)
         self.assertIn("BUT", note)
         self.assertIn("同一间房", note)
+        self.assertIn("会议室", note)  # 说清为什么不登记：等人听过再定
 
-    def test_target_scene_untouched(self):
-        self.assertIsNone(self.recipe["knobs"]["target_scene"]["scene"])
+
+class RealRule(unittest.TestCase):
+    """这一批只登记酒店房间（D113）：真规则的通配符与期望条数都只算 Room112。"""
+
+    def test_globs_have_no_c236(self):
+        g = rule()["glob"]
+        self.assertIsInstance(g, list)
+        self.assertEqual(len(g), 1, "这一批只登记一间房：通配符只留酒店房间那条")
+        text = json.dumps(g, ensure_ascii=False)
+        self.assertNotIn(fixtures_but.C236, text)
+        self.assertIn(fixtures_but.ROOM112, text)
+
+    def test_src_names_hotel_room_and_pending_meeting_room(self):
+        r = rule()
+        self.assertIn("Room112", r["expect"]["src"])
+        self.assertIn("D113", r["expect"]["src"])
+        self.assertIn("hotel-room", r["src"])
+        self.assertIn("D113", r["src"])
+        self.assertIn("同一间房", r["_开发份"])
+
+    def test_expect_files_is_room112_count(self):
+        self.assertEqual(rule()["expect"]["files"], 248)
+
+
+class RealScreen(unittest.TestCase):
+    """仓里那份筛查表（868 行 = C236 620 + Room112 248）：每条都有结论，酒店房间的 248 条与真规则对得上。"""
+
+    def setUp(self):
+        self.p = HERE / rule()["screen_file"]
+        self.lines = [ln for ln in self.p.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        self.rows = [json.loads(ln) for ln in self.lines]
+        self.globs = [fnmatch.translate(g) for g in rule()["glob"]]
+
+    def test_line_count(self):
+        self.assertEqual(len(self.lines), 868)  # 上游 C236 620 + Room112 248
+        self.assertEqual(len({r["path"] for r in self.rows}), len(self.rows), "同一文件出现两次")
+
+    def test_every_row_has_a_verdict(self):
+        for r in self.rows:
+            self.assertIn(r.get("verdict"), ("keep", "drop"), r.get("path"))
+
+    def test_hotel_room_rows_are_exactly_the_pool(self):
+        hotel = [r for r in self.rows if fixtures_but.ROOM112 in r["path"]]
+        self.assertEqual(len(hotel), rule()["expect"]["files"])
+        for r in hotel:
+            self.assertTrue(any(re.match(t, r["path"]) for t in self.globs), r["path"])
+
+    def test_rule_globs_match_no_meeting_room_row(self):
+        for r in self.rows:
+            if fixtures_but.C236 in r["path"]:
+                self.assertFalse(any(re.match(t, r["path"]) for t in self.globs), r["path"])
 
 
 class ScreenRules(unittest.TestCase):

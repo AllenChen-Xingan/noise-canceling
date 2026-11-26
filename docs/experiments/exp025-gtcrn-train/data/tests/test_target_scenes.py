@@ -89,6 +89,32 @@ class PickScene(unittest.TestCase):
             loader.pick_scene(np.random.default_rng(0), ts(["cafe", "rail-air-cabin"]), RP, SCENES)
 
 
+class RealRecipe(unittest.TestCase):
+    """D113（人定 2026-11-26）：这一批加训 3 个目标场景；会议室等人听过 C236 再定，暂不进配方。"""
+
+    WANT = ["rail-air-cabin", "canteen", "transit-hub"]
+
+    def setUp(self):
+        self.r = json.loads((HERE / "recipe.json").read_text())
+
+    def test_target_scene_is_this_batch(self):
+        self.assertEqual(self.r["knobs"]["target_scene"]["scene"], self.WANT)
+
+    def test_target_scene_src_names_d113(self):
+        """来自 4 个最弱场景（会议室待池），这一批只写 3 个；两条限制也写在 src 里。"""
+        src = self.r["knobs"]["target_scene"]["src"]
+        self.assertIn("D113", src)
+        self.assertIn("meeting-room", src)
+        self.assertIn("地铁车厢", src)
+        self.assertIn("PCAFETER", src)
+
+    def test_every_target_scene_has_a_pool(self):
+        """通用检查：目标场景名必须都能在 noise_pools 里找到，否则训练时 loader 会停。"""
+        pools = {k for k in self.r["noise_pools"] if not k.startswith("_")}
+        for s in self.r["knobs"]["target_scene"]["scene"]:
+            self.assertIn(s, pools)
+
+
 class RecipeShape(unittest.TestCase):
     def bad(self, scene):
         r = json.loads((HERE / "recipe.json").read_text())
