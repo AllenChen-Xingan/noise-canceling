@@ -216,7 +216,7 @@ def assign_units(units, frac, seed, source, order, strata=None, min_dev=0):
     for u in sorted(set(units)):
         groups.setdefault((strata or {}).get(u, ""), []).append(u)
     out = {}
-    for _, us in sorted(groups.items()):
+    for layer, us in sorted(groups.items()):
         us = sorted(us, key=lambda u: rank_key(seed, source, u))
         cnt, i = allocate(len(us), frac, order), 0
         for k in order:
