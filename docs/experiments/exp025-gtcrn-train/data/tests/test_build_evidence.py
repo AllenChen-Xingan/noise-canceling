@@ -1,9 +1,11 @@
 """训练前清单第 3 条的证据表（build_evidence.py）：真产物逐字节复现 · 真仓里 6 个 build 全部通过 · 三条夹具。
 
-真产物部分：`evidence-*.md` 按「与当前配方的关系统」两种——build 的 `recipe_sha256` 等于当前 `recipe.json` 的 sha256
-的，跑 `--check` 逐字节重算；上一批的（第五批换了配方，第四批的 `evidence-bc0e9e7b566421f0.md`）冻结、
-只核不改（钉住 sha256 · build 目录还在 · 配方确实换了）。两者都没有时，除非 `split_rules.json` 的 `未建表`
-表着这一批还在云上，否则红（新页该生成了）。规则见 `tests/fixtures_pages.py`。
+真产物部分：`evidence-*.md` / `scenes-*.md` 按「与当前配方的关系统」两种——`builds/` 里有 build 的 `recipe_sha256`
+等于当前 `recipe.json` 的 sha256 时，它的证据页与场景页都必须已在仓里、逐字节等于重算结果（不接受任何免票）；
+一个这样的 build 都没有时，才轮到 `split_rules.json` 的 `未建表` 免票，且里头至少有一条是当前配方真用到的来源
+（人声 · RIR · 噪声池，名单正本 `shard.default_sources()`）。上一批的页（第五批换了配方，第四批的
+`evidence-bc0e9e7b566421f0.md`）冻结、只核不改（钉住 sha256 · build 目录还在 · 配方确实换了）。规则见
+`tests/fixtures_pages.py`。
 夹具部分：一份最小数据目录（1 张切分表 · 1 个来源 · 1 个目标场景 ·
 基准 + 5 份消融配方各 1 个 build）里，把四种该红的情况各撞一次：
 一个检查不过 → 「全部通过」变「否」且退 1；一份配方对上 2 个 build → 停；变体改了两个旋钮 → 那一列「否」；
@@ -16,7 +18,6 @@ import copy
 import hashlib
 import io
 import json
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -322,33 +323,48 @@ class CheckFile(Fixture):
 
 
 class Product(unittest.TestCase):
-    """真仓里的证据页：对得上当前配方的逐字节重算；上一批的页冻结（钉住 sha256，只核不改）。
+    """真仓里的两页（证据页 · 场景页）：对得上当前配方的 build 一页都不许少、且逐字节重算；
+    上一批的页冻结（钉住 sha256，只核不改）；一个这样的 build 都没有时才轮到 `未建表`。
 
-    第五批（2026-11-26）把 `recipe.json` 换到 `but-reverbdb-silence-b5`：`evidence-bc0e9e7b566421f0.md` 是
-    第四批的产物，按新配方算不出来，也不能改（CLAUDE.md 第五节第 1 条）。规则见 `tests/fixtures_pages.py`。
+    第五批（2026-11-26）把 `recipe.json` 换到 `but-reverbdb-silence-b5`：`evidence-bc0e9e7b566421f0.md` 与
+    `scenes-bc0e9e7b566421f0.md` 是第四批的产物，按新配方算不出来，也不能改（CLAUDE.md 第五节第 1 条）。
+    规则见 `tests/fixtures_pages.py`。
     """
 
-    def test_each_page_is_current_or_frozen(self):
+    def test_pages_are_current_or_frozen(self):
+        """每一页：对得上当前配方就交给下面那条重算；对不上就必须是冻结的（钉住 sha256，只核不改）。"""
         current = fixtures_pages.recipe_sha()
         pages = fixtures_pages.pages("evidence")
         self.assertTrue(pages, "仓里一个证据页也没有：先跑 build_evidence.py 生成")
-        fresh = []
         for page in pages:
             build = fixtures_pages.build_of(page)
             if build.get("recipe_sha256") == current:
-                fresh.append(page)
-                r = subprocess.run([sys.executable, str(HERE / "build_evidence.py"), "--check", str(page)],
-                                   capture_output=True, text=True)
-                self.assertEqual(r.returncode, 0, f"{page.name}：{r.stderr or r.stdout}")
-                self.assertIn("逐字节一致", r.stdout)
-                continue
+                continue  # 本批的页与场景页一起，由下面那条逐字节重算
             self.assertNotEqual(build.get("recipe_sha256"), current)
             self.assertIn(page.name, fixtures_pages.PINNED,
                           f"{page.name} 是上一批的页（build 的配方哈希 ≠ 当前 recipe.json），冻结页要钉住 sha256")
             self.assertEqual(fixtures_pages.sha256_of(page), fixtures_pages.PINNED[page.name],
                              f"{page.name} 被改过：上一批的页冻结、只核不改")
-        self.assertTrue(fresh or fixtures_pages.pending(),
-                        "当前配方没有任何 build 对上，也不在 `未建表`：这一批的 build 该登记、证据页该生成了")
+
+    def test_current_builds_have_both_pages_byte_exact(self):
+        """当前配方的 build：`evidence-<id>.md` 与 `scenes-<id>.md` 都要在、且逐字节等于重算结果。
+
+        这种 build 存在时 `未建表` 免不了票；一个也没有时才轮到 `未建表`（且里头要有配方真用到的来源）。"""
+        builds = fixtures_pages.current_builds()
+        if not builds:
+            ok, why = fixtures_pages.pending_exemption()
+            self.assertTrue(ok, why)
+            return
+        for prefix in ("evidence", "scenes"):
+            missing = fixtures_pages.missing_pages(prefix)
+            self.assertEqual(missing, [],
+                             f"build {missing} 对得上当前配方，却没有 {prefix}-<id>.md：先跑生成器；"
+                             "`未建表` 免不了这张票")
+        for bid in sorted(builds):
+            for prefix in ("evidence", "scenes"):
+                page = HERE / f"{prefix}-{bid}.md"
+                self.assertEqual(fixtures_pages.regen(prefix, bid), page.read_bytes(),
+                                 f"{page.name} 与重算结果不同：重跑生成器、把输出写到同一个文件再提交")
 
     def test_current_batch_reports_its_six_rows(self):
         """当前配方对上了 build 时（云上第五批登记之后），证据表就是「基准 + 5 份消融」那 6 行且全过。"""
@@ -361,6 +377,74 @@ class Product(unittest.TestCase):
             bad = {k: why for k, (ok, why) in r["checks"].items() if not ok}
             self.assertEqual(bad, {}, f"{r['recipe']}（build {r['build'].get('build_id')}）：{bad}")
         self.assertIn("全部通过：是", text)
+
+
+class PageRule(unittest.TestCase):
+    """`未建表` 免票的规则（临时夹具）：挂一个与这批无关的来源不免票；当前配方的 build 缺页要报出来。
+
+    第五批 codex 第 1 轮 #2：以前只看 `未建表` 非不非空，`未建表` 里只要还有别科的来源，这一批的页就没人催。
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        recipe = {"knobs": {}, "speech": {"train": ["speech-a"]}, "rir": ["rir-a"],
+                  "noise_pools": {"canteen": [{"source": "noise-a", "regex": "/a/"}]}}
+        (self.root / "recipe.json").write_text(json.dumps(recipe, ensure_ascii=False), encoding="utf-8")
+        self.write_rules({})
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def write_rules(self, pending):
+        (self.root / "split_rules.json").write_text(
+            json.dumps({"sources": {"noise-a": {"src": "夹具"}}, "未建表": pending}, ensure_ascii=False),
+            encoding="utf-8")
+
+    def write_build(self, recipe_sha256=None):
+        bid = "abcdef0123456789"
+        rec = {"build_id": bid, "recipe_sha256": recipe_sha256 or fixtures_pages.recipe_sha(self.root)}
+        d = self.root / "builds" / bid
+        d.mkdir(parents=True)
+        (d / "build.json").write_text(json.dumps(rec, ensure_ascii=False), encoding="utf-8")
+        return bid
+
+    def test_sources_come_from_the_recipe(self):
+        """配方真用到的来源按 `shard.default_sources()` 走（不手抄）：这一条钉住那条正本。"""
+        self.assertEqual(fixtures_pages.recipe_sources(self.root), ["speech-a", "rir-a", "noise-a"])
+
+    def test_unrelated_pending_does_not_exempt(self):
+        """`未建表` 里只有别科的来源：不免票（以前非空就免票，这一批的页就没人催了）。"""
+        self.write_rules({"cochlscene": "别科的音频还在云上"})
+        ok, why = fixtures_pages.pending_exemption(self.root)
+        self.assertFalse(ok, why)
+        self.assertIn("noise-a", why)  # 原因写清了配方用到哪些来源
+
+    def test_relevant_pending_exempts_before_the_build_is_registered(self):
+        """合格的免票：还没有当前配方的 build，`未建表` 里有它用到的来源。"""
+        self.write_rules({"noise-a": "音频还在云上，本机还没切"})
+        ok, why = fixtures_pages.pending_exemption(self.root)
+        self.assertTrue(ok, why)
+
+    def test_current_build_without_pages_is_reported(self):
+        """当前配方的 build 缺页：证据页、场景页各报一次，而且 `未建表` 免不了票。"""
+        bid = self.write_build()
+        self.assertEqual(sorted(fixtures_pages.current_builds(self.root)), [bid])
+        self.assertEqual(fixtures_pages.missing_pages("evidence", self.root), [bid])
+        self.assertEqual(fixtures_pages.missing_pages("scenes", self.root), [bid])
+        (self.root / f"evidence-{bid}.md").write_text("x", encoding="utf-8")
+        self.assertEqual(fixtures_pages.missing_pages("evidence", self.root), [])
+        self.assertEqual(fixtures_pages.missing_pages("scenes", self.root), [bid])
+        self.write_rules({"noise-a": "音频还在云上"})
+        ok, why = fixtures_pages.pending_exemption(self.root)
+        self.assertFalse(ok, why)
+
+    def test_other_recipe_build_does_not_count(self):
+        """上一批配方的 build（哈希对不上）：不算当前批，也不该把 `未建表` 的免票堵掉。"""
+        self.write_build(recipe_sha256="0" * 64)
+        self.assertEqual(fixtures_pages.current_builds(self.root), {})
+        self.write_rules({"noise-a": "音频还在云上"})
+        self.assertTrue(fixtures_pages.pending_exemption(self.root)[0])
 
 
 class Size(unittest.TestCase):
