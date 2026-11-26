@@ -418,5 +418,72 @@ class ListFiles(unittest.TestCase):
             self.assertTrue(all(p.startswith("train-raw/but-reverbdb/") for p in r.stdout.split()))
 
 
+class RealSpkMeta(unittest.TestCase):
+    """夹具用的 spk_meta.txt 是上游真文件（`tests/fixtures/but_spk_meta/`），不是照 read_me 编的假文件。
+
+    正本：上游真文件两个（L207 那次布置第 2 个扬声器是收音机 Tecsun；C236 只有 1 个扬声器）。
+    判据正本仍是 `split_rules.json` 的 `exclude_if_meta.regex`，这里只用真文件验证它。
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.c236 = fixtures_but.spk_meta_src(False)
+        self.l207 = fixtures_but.spk_meta_src(True)
+        self.l207_rel = (f"{fixtures_but.ROOT}/VUT_FIT_L207/MicID01/SpkID02_20171227_S/01"
+                         "/silence/silence_16kHz_60sec.v00.wav")
+        self.c236_rel = fixtures_but.wav_rel(fixtures_but.C236, "SpkID01_20190503_S", "01")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_regex_reads_real_files(self):
+        """真文件一个命中、一个不命中：命中 L207（有 `$EnvSpk2…`），不命中 C236。"""
+        spec = rule()["exclude_if_meta"]
+        rx = re.compile(spec["regex"], re.M)
+        self.assertTrue(rx.search(self.l207.read_text(encoding="utf-8")), self.l207.name)
+        self.assertFalse(rx.search(self.c236.read_text(encoding="utf-8")), self.c236.name)
+
+    def test_real_file_non_ascii_kept(self):
+        """C236 的真文件里有非 ASCII 字符（如 «¼»）：按 utf-8 读得回来，换成 latin-1 之类的重编码会坏掉。"""
+        txt = self.c236.read_text(encoding="utf-8")
+        self.assertTrue(any(ord(c) > 127 for c in txt), "C236 的真文件里应有非 ASCII 字符")
+        self.assertIn("¼", txt)
+
+    def test_real_files_are_tab_separated_dollar_lines(self):
+        """真格式：每行以 `$` 开头，键与值之间是 TAB（注：C236 文件中间有一个空行）。"""
+        for p in (self.c236, self.l207):
+            for line in p.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    self.assertTrue(line.startswith("$"), f"{p.name}: {line!r}")
+                    self.assertEqual(line.count("\t"), 1, f"{p.name}: {line!r}")
+
+    def meta_excluded(self, rel):
+        """把真文件当成那次布置的 spk_meta.txt，只判这一段：返回 (留下, 排除)。"""
+        src = self.l207 if rel == self.l207_rel else self.c236
+        p = fixtures_but.meta_path(self.root, rel)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(src.read_bytes())
+        return split.meta_excluded(self.root, [rel], feat_rule(exclude_if_meta=rule()["exclude_if_meta"]))
+
+    def test_l207_setup_excluded_c236_kept(self):
+        """真文件跑 `split.meta_excluded`：L207 那次布置的 wav 被排除，C236 的留着。"""
+        keep, drop = self.meta_excluded(self.l207_rel)
+        self.assertEqual((keep, drop), ([], [self.l207_rel]))
+        keep2, drop2 = self.meta_excluded(self.c236_rel)
+        self.assertEqual((keep2, drop2), ([self.c236_rel], []))
+
+    def test_fixture_writes_real_bytes(self):
+        """夹具写出去的就是这两个真文件（逐字节相同，不是重编码的副本）。"""
+        files = fixtures_but.make_tree(self.root)
+        self.assertTrue(files)
+        radio = fixtures_but.meta_path(self.root, fixtures_but.radio_files()[0])
+        clean = fixtures_but.meta_path(self.root, fixtures_but.wav_rel(fixtures_but.C236, "SpkID01_20190503_S", "01"))
+        self.assertEqual(radio.read_bytes(), self.l207.read_bytes())
+        self.assertEqual(clean.read_bytes(), self.c236.read_bytes())
+        self.assertEqual(fixtures_but.spk_meta(True).encode("utf-8"), self.l207.read_bytes())
+        self.assertEqual(fixtures_but.spk_meta(False).encode("utf-8"), self.c236.read_bytes())
+
+
 if __name__ == "__main__":
     unittest.main()
