@@ -97,3 +97,4 @@
 
 - 2026-11-26 15:05Z 第四批 B 段第一次跑（a632a660）在切分被 split.py 拒绝：仓里 splits/but-reverbdb-silence.json 是 10aa3a9f 在用的旧表，不原地覆盖。大总管 87 定用新名字。pi traindata-b4name（$0.028）：新来源 `but-reverbdb-silence-b4`（4 间房 728 条），配方 hotel-room / meeting-room 指向它；旧规则逐字节还原（rule_sha 8d8b3750… = 旧表）；未建表只剩 -b4。本机全量 414 OK（skipped 3）。推 254ebece，发 cloudrun 重跑。
 - 2026-11-26 大总管固定名改为 `noise-canceling-meta`（人定，轮换后不变），以后一律报这个名字；旧名 noise-canceling-87 不再用。
+- 2026-11-26 ~16:10Z B 段结果（cloudrun，代码 254ebece）：包 traindata-products-20261126T155724Z.tar.gz sha256 a2b67102… 本机核一致（主仓 _tmp/20261126-cloudrun-batch4b/）。6 个 build 进仓（59f7b776）+ splits/but-reverbdb-silence-b4.{json,jsonl}。我亲手核：id 重算、valid、leak 0、demand_segments 0、missing []、切分表 / 代码哈希一致、分片同、变体只差一个旋钮。基线 bc0e9e7b566421f0；no-eq 574ef5c7 · no-clip 748aee58 · no-n_noises 36ea9561 · no-reverb 966a229d · high_snr-on 10ebb73b。batch3 已按 D116 删（cloudrun）。pi traindata-evidence 在做：删未建表 · 场景表测试改 bc0e9e7b · build_evidence.py 生成第 3 项证据。
