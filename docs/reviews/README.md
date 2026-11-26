@@ -43,6 +43,7 @@
 | 221 | 2026-11-26 | [exp025 第五批训练数据（traindata）](../experiments/exp025-gtcrn-train/data/reviews/221_batch5-codex.md)（PR Closes #221，codex gpt-6-astra，2 轮；连续两轮无 P0/P1 停） | 采纳 4 / 提出 6（P2×6；延期 → #226） |
 | 156 | 2026-11-25 | [exp025 训练数据管线（traindata）](../experiments/exp025-gtcrn-train/data/reviews/156_traindata-codex.md)（PR #177，codex gpt-6-astra，4 轮，第 3、4 轮无 P0/P1 即停；另多视角自审 1 轮） | 采纳 20 / 提出 20（P1×5 P2×15；残余 P2 → #174–#176） |
 | 158 | 2026-11-25 | [exp025 云训练机命令行（cloudrun）](../experiments/exp025-gtcrn-train/cloud/reviews/codex-review.md)（PR #172，codex gpt-6-astra，14 轮，第 13、14 轮无 P0/P1 即停；同主题逐轮加层按 P2 记） | 残余 P2 → #163–#167 #169 #171 |
+| 230 | 2026-11-26 | [evalcmp 评测上云执行单](../experiments/exp025-gtcrn-train/eval/reviews/cloud-run-codex.md)（PR #230，codex gpt-6-astra，6 轮，第 5、6 轮无 P0/P1 即停） | P1×10 P2×9：P1 全改，P2 改 8 驳 1；剩余 0 |
 | 216 | 2026-11-26 | evalcmp 练完怎么评：`vdn-eval accept` + 甲路离线脚本 + 对拍（exp/025-eval-plan，codex gpt-6-astra，13 轮，第 12、13 轮无 P0/P1 即停；记录在 `state/handoff/evalcmp.md`） | P1×20 P2×11 全部已改；剩余 0 |
 | 196 | 2026-11-25 | evalcmp 探针按内容去重 + 识别有分歧取多数（fix/asr-probe-dedup，codex gpt-6-astra，2 轮，两轮都无 P0/P1 即停；记录在 `state/handoff/evalcmp.md`） | 采纳 3 / 提出 3（P2×3；第 2 轮 1 条 → #196） |
 | 155 | 2026-11-24 | evalcmp 配对比较 + 早期回声参考轨（PR #162，codex gpt-6-astra，3 轮，第 2、3 轮无 P0/P1 即停；记录在 `state/handoff/evalcmp.md`） | P1×1 P2×4，全部已改 |

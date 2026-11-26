@@ -100,7 +100,7 @@ mkdir -p "$OUT"
    done
    VDN_GTCRN_DIR=$G $PY export.py --official --out $OUT/official-recheck.onnx      # 只用来核 sha256
    ```
-   - 退出码非 0 = ONNX 和 PyTorch 对不上：停下，报 trainer 和大总管，这个模型不评
+   - 退出码非 0 = ONNX 和 PyTorch 对不上：整批停下，报 trainer 和大总管（第七节）
    - 每个模型另有对拍报告 `$OUT/<运行名>.json`，记着来源步数。取回时带上
    - 原版：本机那份 `gtcrn-official.onnx` 用 `rp.py put` 传到 `$OUT/exp025-orig.onnx`（`put` 自己核 sha256），再核一遍 = `384e2c6818b38e5a32639f42a854e9b51273bdb3b30ee643deb7da0bd970205f`。`official-recheck.onnx` 的 sha256 和它不一样时只记下、不停：甲路对拍用的是上传那份
    - 最后 `sha256sum $OUT/*.onnx > $OUT/SHA256SUMS`
@@ -306,7 +306,7 @@ $V accept --suite $S --scenes $T \
 
 ## 七、如果出意外
 
-- 导出对拍不过 → 那个模型不评，报 trainer；其余照跑。少了一个种子，`accept` 要涨那几行会判不了（种子数要正好 3）
+- 导出对拍不过 → 整批停：导出循环在第一个失败处退出，不跑任何成绩单，报 trainer 和大总管。不做「少一个种子照评」：第六节的比较与判读固定要三个种子，`accept` 也要求种子数正好 3
 - 离线推理 `--finalize` 报缺段 → 不跑成绩单，查这一片的日志，用同一个 run-id 续跑（已写的文件会跳过）
 - 原版那份识别次数超过 1600 → 停（第三节第 6 步）
 - 任何一台跑到 5.25 小时还没跑完 → 停掉正在跑的那份（中断 `run_card`，trap 会收掉分片和闸门），已经合并好的成绩单先取回，报大总管。没跑完的那份到下一台重跑，缓存用中断那份的：`run_card <系统> <系统名> $RUNS/<中断那份的 RUN>`。它的各片缓存里已有补跑的转写和这次已付费的转写，重跑只补没识别过的
