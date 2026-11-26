@@ -38,7 +38,10 @@ class Splits(unittest.TestCase):
         self.R = split.load_rules()
 
     def test_all_sources_present(self):
-        self.assertEqual(split_names(), sorted(self.R["sources"]))
+        """每个来源一张表；唯一例外是规则顶层 `未建表` 里的（音频还在云上，本机造不出表）。
+        两向都查：表带回仓后忘了删那一行，文件名会多出一张，也会红。"""
+        pending = set(self.R.get("未建表", {}))
+        self.assertEqual(split_names(), sorted(set(self.R["sources"]) - pending))
 
     def test_tables_match_rules(self):
         for n in split_names():

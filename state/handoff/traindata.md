@@ -65,3 +65,4 @@
 - 2026-11-25 大总管改名 noise-canceling-c4（uds:/tmp/cc-socks/79882.sock），报到、进度、名额都发它。新规则：代码派 pi 写。已报：压缩包建议核完 md5 再删（待人定）；下一步派 pi 登记 CochlScene 3 类。
 - 2026-11-25 CochlScene：6 个分卷包已被 cloudrun 的下载脚本自动删掉（大总管 c4 删机前看过），所以「删不删压缩包」这题作废，md5 也没补核。完整性证据是间接的：7z 逐文件 CRC 通过，17629/17629 个文件和 want.txt 一致。
 - 2026-11-25 CochlScene：人声没筛，方法待定（大总管 c4 定：这次先登记、不筛）。目标场景（D105）待人定，这次只加噪声池、不改 target_scene。
+- 2026-11-25 pi traindata-cochlscene（isoquant/deepseek-v4.1-flash-1017-fast）开工时 HEAD = e56fee16；之后的自动提交（从 c5394187 起）含 pi 未验收的代码，验收通过的那次提交另记。

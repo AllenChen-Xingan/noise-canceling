@@ -85,11 +85,6 @@ def tone(path, n=1600, sr=16000):
     sf.write(str(path), np.sin(np.arange(n) * 0.05).astype("float32") * 0.1, sr)
 
 
-def checker():
-    """规则里的单位正则：装成一条（测试只关心「这条文件归谁」）。"""
-    return rule()["unit_regex"][0]
-
-
 class Units(unittest.TestCase):
     def test_same_recorder_one_unit(self):
         """同一个录音人在 Train / Val / Test 三个官方份里的片段 → 我们的同一个单位（不用官方的份）。"""
@@ -120,10 +115,11 @@ class Units(unittest.TestCase):
         self.assertEqual(split.unit_of(f, r), f)
 
     def test_rule_regex_is_the_one_we_describe(self):
-        """单位正则与 2.1 的说法对齐：拿掉 `user` 前缀就无法认出（正则不是空匹配）。"""
-        rx = re.compile(checker()["match"])
-        self.assertIsNotNone(rx.search("Subway_user0123_14983413_000.wav"))
-        self.assertIsNone(rx.search("Subway_0123_14983413_000.wav"))
+        """单位正则不是空匹配：带 `/` 的完整路径才认得，而且非要有 `user` 前缀。"""
+        rx = re.compile(rule()["unit_regex"][0]["match"])
+        self.assertIsNotNone(rx.search(cpath("Train", "Subway", "Subway_user0123_14983413_000.wav")))
+        self.assertIsNone(rx.search(cpath("Train", "Subway", "Subway_0123_14983413_000.wav")))
+        self.assertIsNone(rx.search("Subway_user0123_14983413_000.wav"))
 
 
 class Glob(unittest.TestCase):
@@ -207,6 +203,16 @@ class SplitTree(unittest.TestCase):
         a = [(r["path"], r["split"]) for r in self.run_src()]
         b = [(r["path"], r["split"]) for r in self.run_src()]
         self.assertEqual(a, b)
+
+
+class Pending(unittest.TestCase):
+    """切分表还没建（音频在云上，本机造不出表）：登记在这里，test_products 两向查。
+    云上跑完 split.py 后把 splits/cochlscene.* 带回进仓，并删掉顶层 `未建表` 里的这一行。"""
+
+    def test_table_pending(self):
+        R = split.load_rules()
+        self.assertIn(SRC, R["未建表"])
+        self.assertEqual(rule()["group"], GRP)
 
 
 class Fetch(unittest.TestCase):

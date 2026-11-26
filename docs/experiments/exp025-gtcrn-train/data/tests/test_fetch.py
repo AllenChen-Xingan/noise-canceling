@@ -390,6 +390,7 @@ class Sources(unittest.TestCase):
                 self.assertTrue(f["url"].startswith("https://"), f["name"])
                 if f["bytes"] is None:  # 手工下载组（A6）：fetch.py 不下，没有字节数，但要钉住上游 md5
                     self.assertIn("manual", g, f["name"])
+                    self.assertTrue(f.get("md5") or f.get("sha256"), f["name"])
                 else:
                     self.assertGreater(f["bytes"], 0)
                 self.assertIn(f["extract"], ("tar", "zip", "none"))

@@ -13,9 +13,9 @@
   python3 .../fetch.py --root /workspace --only E1,E2,E3   # exp013 原料（ESC-50 与 RIR 走 exp013 fetch.py）
   python3 .../fetch.py --plan                               # 只列要下什么、多大，不联网
   python3 .../fetch.py --head --only A1,A2,A3,A4,A5         # 只核服务器报的大小，不下载
-  A6（CochlScene）不跑 fetch.py：分卷包只能整包下，手工下完用 7z 解出 3 类（见 sources.json 的 manual）
   开下载前会查盘：还要的空间（含解压峰值 ≈ 包 × 2）大于还能用的就停。网络盘上「还能用」= cloud/config.py 的配额 − du 已用
   （df 在 RunPod 网络盘上报的是整个集群的剩余，不能用）
+  A6（CochlScene）不跑 fetch.py：分卷包只能整包下，手工下完用 7z 解出 3 类（见 sources.json 的 manual）
 """
 import argparse
 import hashlib

@@ -177,6 +177,8 @@ def make_tree(root):
     tone(root / "train-raw/qut-noise/QUT-NOISE/CAFE-CAFE-1.wav", 8, sr=48000, ch=2, seed=12)
     for j in range(10):
         tone(root / f"train-raw/tum-wind/wind/rec{j}.wav", 1, seed=20 + j)
+    for k, (user, cls) in enumerate((u, c) for u in ("user0001", "user0002", "user0003") for c in ("Subway", "SubwayStation", "CrowdedIndoor")):
+        tone(root / f"train-raw/cochlscene/CochlScene/Train/{cls}/{cls}_{user}_14983413_{k:03d}.wav", 1, seed=50 + k)
     d = root / "train-raw/openslr28/RIRS_NOISES/simulated_rirs/smallroom"
     lines = []
     for room in range(1, 11):
@@ -203,7 +205,7 @@ class EndToEnd(unittest.TestCase):
             r.pop("room_lists_sha256", None)  # 夹具的 rir_list 不是上游原文件（钉哈希另有 test_openslr28_rooms）
         cls.splits = t / "splits"
         names = ["librispeech-train-clean-100", "qut-noise", "tum-wind", "openslr28-rir", "demand-train"]
-        for n in names + ["librispeech-dev-clean-test-other"]:
+        for n in names + ["librispeech-dev-clean-test-other", "cochlscene"]:  # cochlscene 只写夹具表，不进分片
             rows = split.split_source(root, n, R["sources"][n], R["seed"], R["splits"], workers=2)
             split.write(n, R["sources"][n], R["seed"], rows, cls.splits)
         cls.shards = t / "shards"

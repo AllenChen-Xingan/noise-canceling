@@ -2,6 +2,8 @@
  "_说明": "切分规则正本 = 027 decision.md 第六节第 5 条的表（逐行照抄比例，出处列在每条 src）。split.py 只认这里。四份：train 训练 · dev 开发 · final 终测原料池 · d63 测试份（只测不训，也不进任何合成原料）",
  "seed": 20261116,
  "splits": ["train", "dev", "final", "d63"],
+ "未建表": {"cochlscene": "音频在云上（train-raw/cochlscene），本机没有；切分表 splits/cochlscene.* 等云上跑完 split.py 再带回进仓，表一回仓就删掉这一行"},
+ "_未建表说明": "还没建切分表的来源（数据不在本机）。test_products 两向查：在这张表里的来源不许有切分表（表带回忘了删就红）；不在这张表里的必须有切分表。不写进每个来源的规则里：规则哈希是按整条规则算的，标记进出会让已入仓的切分表核不过",
  "sources": {
   "librispeech-train-clean-100": {
    "expect": {"files": 28539, "units": 251, "src": "openslr.org/12 README：train-clean-100 共 251 名说话人、28,539 句（读文档，待云上核）"},
@@ -66,8 +68,7 @@
    "unit_regex_required": true,
    "frac": {"train": 0.9, "dev": 0.1, "final": 0.0, "d63": 0.0},
    "_frac": "D106：只作训练噪声；终测只用 exp013，不给终测与 d63",
-   "_未筛人声": "CochlScene 是众包手机录音，片段里可能有人说话；这次未筛，方法待定（大总管 c4 2026-11-25）",
-   "_未建表": "音频在云上（train-raw/cochlscene），本机没有；切分表 splits/cochlscene.* 等云上跑完 split.py 再带回进仓"
+   "_未筛人声": "CochlScene 是众包手机录音，片段里可能有人说话；这次未筛，方法待定（大总管 c4 2026-11-25）"
   },
   "demand-train": {
    "expect": {"files": 96, "src": "exp006 用的 6 个环境 × 每个 16 声道（DEMAND 说明）"},
