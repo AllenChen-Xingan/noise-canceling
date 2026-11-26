@@ -118,11 +118,28 @@ fn changed_number_or_missing_key_is_red() {
     let sec = section_three(&doc).to_string();
     assert!(check(&sec).is_empty(), "{:?}", check(&sec));
 
-    let estoi = format!("{}（SC-ACCEPT.estoi_gain）", ACCEPT.def("estoi_gain"));
-    assert!(sec.contains(&estoi), "文档里找不到 {estoi}");
-    let bad = sec.replace(&estoi, "+0.02（SC-ACCEPT.estoi_gain）");
+    // 把整个带符号的数换掉（不是只换小数部分）：错值由表里的默认值加偏移算出来，
+    // 换完必须仍然是「读得出的数」，这样红的原因只能是「文档 ≠ 表」（codex 第 8 轮 P2）
+    let d = ACCEPT.def("estoi_gain");
+    let right = format!("{d:+}（SC-ACCEPT.estoi_gain）");
+    let wrong = format!("{:+.2}（SC-ACCEPT.estoi_gain）", d + 0.01);
+    assert!(sec.contains(&right), "文档里找不到 {right}");
+    assert_ne!(right, wrong);
+    let bad = sec.replace(&right, &wrong);
+    // 换完照样能解析出这个数（否则下面的红只是「读不出数」）
+    let parsed = pairs(&bad)
+        .into_iter()
+        .find(|(k, _)| k == "estoi_gain")
+        .map(|(_, v)| v)
+        .unwrap_or_else(|| panic!("换掉之后读不出 estoi_gain：{bad}"));
+    assert!(parsed.is_finite(), "换掉之后读不出数：{parsed}");
+    assert!((parsed - (d + 0.01)).abs() < 1e-12, "换的是 {parsed}");
     let errs = check(&bad);
-    assert!(errs.iter().any(|e| e.contains("estoi_gain")), "{errs:?}");
+    assert!(
+        errs.iter()
+            .any(|e| e.contains("estoi_gain") && e.contains("文档") && e.contains('↔')),
+        "要是「文档值 ≠ 表」那条错：{errs:?}"
+    );
 
     let dropped = sec.replace("（SC-ACCEPT.timbre_regress）", "");
     let errs = check(&dropped);
