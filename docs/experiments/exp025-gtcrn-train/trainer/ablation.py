@@ -51,7 +51,10 @@ RULE = (
     + "、".join(CFG_IGNORE) +
     " 三项允许各不同，其余任何一项不同、或缺键，都算不同；"
     f"而且每个运行都必须照设计跑：model.variant = {WANT_VARIANT} · schedule.max_steps = {STEP} · "
-    "data.dev_recipe 指明的开发份配方等于基线的 data.recipe（7 个运行同用一份开发集）。"
+    "data.dev_recipe 指明的开发份配方等于基线的 data.recipe（7 个运行同用一份开发集）· "
+    "run.seed 是运行矩阵给这个名字的种子（差一个种子就量不出 floor）· data.recipe 是这个名字说的那一份"
+    "配方（基线用基线配方 = abl-base-s0 的 data.dev_recipe；旋钮运行的文件名是 no-<旋钮>.json 或 "
+    "<旋钮>-on.json）。"
     "读数缺失 · 不是有限数 · 没有第 1000 步 · 指标行不是 JSON 对象 · 数据字段或整份配置对不上 · 不合设计"
     " → 该运行判 incomplete；基线 incomplete 时每个旋钮都 incomplete。"
 )
@@ -287,9 +290,10 @@ def _rows(path: Path) -> list[dict]:
 
 
 def _read_run(run_dir: Path, step: int) -> dict:
-    """一个运行的记录：第 step 步的开发份 hybrid · 配置（拍平）· 自己配的 data.recipe · 两个 build id。
+    """一个运行的记录：第 step 步的开发份 hybrid · 配置（拍平，去了 CFG_IGNORE 那三项）· 自己配的
+    data.recipe · run.seed（单独留一份：它就在 CFG_IGNORE 里，拍平时被滤掉了）· 两个 build id。
     读不出就填 reason。"""
-    out = {"dev_hybrid": None, "cfg": None, "recipe": None, "data_build_id": None,
+    out = {"dev_hybrid": None, "cfg": None, "recipe": None, "seed": None, "data_build_id": None,
            "dev_build_id": None, "reason": None}
     try:
         rec = json.loads((run_dir / "run.json").read_text())
@@ -299,6 +303,7 @@ def _read_run(run_dir: Path, step: int) -> dict:
         data = config["data"]
         if not isinstance(data, dict):
             raise TypeError("config.data 不是映射")
+        run_seg = config.get("run")
         rows = _rows(run_dir / "metrics.jsonl")
     except (OSError, ValueError, KeyError, TypeError) as e:
         out["reason"] = f"读不了运行记录：{type(e).__name__}: {e}"
@@ -306,6 +311,7 @@ def _read_run(run_dir: Path, step: int) -> dict:
     flat = _flat_cfg(config)
     out["cfg"] = flat
     out["recipe"] = data.get("recipe")
+    out["seed"] = run_seg.get("seed") if isinstance(run_seg, dict) else None
     out["data_build_id"] = rec.get("data_build_id")
     out["dev_build_id"] = rec.get("dev_build_id")
     hits = [r["dev"].get("hybrid") for r in rows if r.get("step") == step and isinstance(r.get("dev"), dict)]
@@ -318,9 +324,10 @@ def _read_run(run_dir: Path, step: int) -> dict:
     return out
 
 
-def _design_reason(r: dict, ref: dict) -> str | None:
+def _design_reason(name: str, r: dict, ref: dict) -> str | None:
     """设计的固定项（#212 评审）：model.variant = WANT_VARIANT · schedule.max_steps = STEP ·
-    data.dev_recipe 指明开发份配方且等于基线（ref）的 data.recipe。返回第一条不合的原因，合上了返回 None。"""
+    data.dev_recipe 指明开发份配方且等于基线（ref）的 data.recipe · run.seed 是运行矩阵里给这个名字的
+    种子 · data.recipe 是这个名字说的那一份配方。返回第一条不合的原因，合上了返回 None。"""
     flat = r["cfg"]
     v, n = flat.get("model.variant"), flat.get("schedule.max_steps")
     if v != WANT_VARIANT:
@@ -334,6 +341,38 @@ def _design_reason(r: dict, ref: dict) -> str | None:
     if dev != ref["recipe"]:
         return (f"data.dev_recipe 是 {dev!r}，和基线 {BASE_RUNS[0]} 的 data.recipe {ref['recipe']!r} 不同："
                 "7 个运行必须同用一份开发份配方")
+    return _seed_reason(name, r) or _recipe_reason(name, r, ref)
+
+
+def _seed_reason(name: str, r: dict) -> str | None:
+    """run.seed 必须是运行矩阵给这个名字的种子：名字说种子 1、实际跑种子 0，两个基线的差就量不出
+    噪声底（floor 会变成 0，所有旋钮都被判「分不出」）。"""
+    want = next(s for n, s, _k, _o in WANTED_RUNS if n == name)
+    got = r["seed"]
+    if isinstance(got, bool) or not isinstance(got, int) or got != want:
+        return (f"run.seed 是 {got!r}：{name} 这个运行要跑种子 {want}（种子写在名字里；两条基线跑不同的"
+                "种子，差才是噪声底 floor）")
+    return None
+
+
+def _recipe_reason(name: str, r: dict, ref: dict) -> str | None:
+    """data.recipe 必须是这个名字说的那一份配方：基线用基线配方（= abl-base-s0 的 data.dev_recipe），
+    旋钮运行用自己那一个变体配方（文件名 no-<旋钮>.json / <旋钮>-on.json）。"""
+    got = r["recipe"]
+    _seed, knob, on = next((s, k, o) for n, s, k, o in WANTED_RUNS if n == name)
+    if knob is None:
+        want = (ref["cfg"] or {}).get("data.dev_recipe")
+        if want is None:
+            return None  # 基线自己读不出，连基线配方叫什么都不知道：它的 reason 已经记下了
+        if got != want:
+            return (f"data.recipe 是 {got!r}：基线运行的训练配方要等于 {BASE_RUNS[0]} 的 data.dev_recipe "
+                    f"{want!r}（7 个运行比的是同一份配方上的差别）")
+        return None
+    want_name = variant_recipe_name(knob, on)
+    got_name = Path(got).name if isinstance(got, str) else None
+    if got_name != want_name:
+        return (f"data.recipe 是 {got!r}（文件名 {got_name!r}），{name} 要的是 {want_name}："
+                f"「关掉 {knob}」/「打开 {knob}」这个运行必须用自己那一个变体配方")
     return None
 
 
@@ -353,9 +392,9 @@ def judge(out_dir, step: int = STEP) -> dict:
     ref_name = BASE_RUNS[0]
     ref = recs[ref_name]
     # 设计固定项各自查，不必等参照：“彼此都一样”不等于“照设计跑”（#212 评审）
-    for r in recs.values():
+    for name, r in recs.items():
         if r["reason"] is None:
-            r["reason"] = _design_reason(r, ref)
+            r["reason"] = _design_reason(name, r, ref)
     for name, r in recs.items():
         if r["reason"] or name == ref_name:
             continue
