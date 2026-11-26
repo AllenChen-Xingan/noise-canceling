@@ -66,3 +66,5 @@
 - 2026-11-25 CochlScene：6 个分卷包已被 cloudrun 的下载脚本自动删掉（大总管 c4 删机前看过），所以「删不删压缩包」这题作废，md5 也没补核。完整性证据是间接的：7z 逐文件 CRC 通过，17629/17629 个文件和 want.txt 一致。
 - 2026-11-25 CochlScene：人声没筛，方法待定（大总管 c4 定：这次先登记、不筛）。目标场景（D105）待人定，这次只加噪声池、不改 target_scene。
 - 2026-11-25 pi traindata-cochlscene（isoquant/deepseek-v4.1-flash-1017-fast）开工时 HEAD = e56fee16；之后的自动提交（从 c5394187 起）含 pi 未验收的代码，验收通过的那次提交另记。
+- 2026-11-25 pi traindata-cochlscene 验收通过。代码提交范围 c5394187…8420eef2（自动提交，署名 Claude，实为 pi 写），花费 $0.072 / $2。我亲手重跑 200 条测试，全过（跳过 1 条网络测试）。共 8 项：A6 来源（标手工、fetch 拒下）· cochlscene 按录音人 9:1 切（认不出录音人就停）· 4 个噪声池 · shard 来源从 recipe 导出 · 噪声池来源缺失即停、build.json 记 noise_scenes · test_cochlscene.py。上云命令见 data/cloud-batch2.md。
+- 2026-11-25 D109：以后派 pi 用 --repo/--base，pi 在自己的分支上每一小步提交一次，我验收后快进合入。
