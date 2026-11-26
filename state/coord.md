@@ -414,3 +414,9 @@
 - 2026-11-25 22:40Z 云盘清理 128→80 GB（13/13 小文件核过才删）；rp.py volume-resize 扩到 200 GB（每月约 14 美元）；CochlScene 22:36Z 开下（gwgj2a97e1a92q）。H100 第 2、3 步过：speed-B 460 s、speed-A 282 s，dev-gate A/B 都过，续训逐值相同；第 4 步在跑。
 - 2026-11-25 22:45Z H100 乙段全过：dev-gate B 3.9733→3.9050、A →3.9037；续训逐值相同；3 并发各 200 步约 234 s。机器 htpp90buaagezi 已删（约 2.62 美元），累计约 7.56 美元。正式训练按 D105/D106 待数据与场景。
 - 2026-11-25 23:00Z trainer 自动保护核对：NaN 停（部分）、卡住超时（部分）有；猛涨停、最好检查点、太慢停没有 → 大总管批 feat/trainer-guards（阈值见 trainer 方案），正式训练前合入。
+- 2026-11-25 PR #194 合并（trainer H100 冒烟 · 判据第 4 版 · 开训前检查）。
+- 2026-11-25 钉温度探针：温度 0 钉不住（1/15 = 6.7% > 2%，45 次 0.0043 美元）→ 走 A（有分歧调第 3 次取多数）。CochlScene z01–z03 md5 对，盘 110 GB。
+- 2026-11-26 00:10Z 新大总管接班（本窗口）：tmux 会话 vdn 已不在，四个手下全部退出；无未合并 PR。各 worktree 留有少量未提交改动：cloudrun（costs.tsv +2、交接页 +1）· evalcmp（fix/asr-probe-dedup，asr_vote.rs）· trainer（feat/trainer-guards，train.py）。云上仍有 1 台：CochlScene 下载机 gwgj2a97e1a92q（cpu3c，0.12 美元/h，机器内自删 04:11Z；本机看门狗进程已不在）。人定：之后写代码一律派 pi 手下，其他活照常。
+- 2026-11-26 人更正：pi 由 Claude Code 手下派遣，大总管不直接派 pi；三层是 大总管 → Claude Code 手下 → pi（只写代码）。
+- 2026-11-26 00:20Z 大总管 noise-canceling-c4 核对 CochlScene 下载机：3 类解压完 17629/17629（与 want.txt 一致，7z Everything is Ok），用 rp.py down 删机（约 0.25 美元）；云上 0 台，累计约 7.77 美元。
+- 2026-11-26 00:25Z 重开 tmux vdn，四个手下用 claude --continue 接回：trainer-02 · evalcmp-77 · traindata-56 · cloudrun-39；交代 `_tmp/20261116-b19/msg-resume-*-20261126.txt` + 新规则 `common-pi-rule-20261126.md`（代码由手下派 pi 写，pi 单任务 ≤2 美元）。后台子代理在改 coordinator-dispatch 技能（pi 由手下派、只写代码）。
