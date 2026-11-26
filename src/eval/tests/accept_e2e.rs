@@ -9,7 +9,7 @@ mod fx;
 use serde_json::{Value, json};
 use vdn_eval::scene::MeetingPlace;
 
-use fx::{D, Fix, Spec, build, cand_cards, card_json, cards, good1, good2, good3, spec};
+use fx::{D, Fix, Spec, build, cand, cand_cards, card_json, cards, ctl, good1, good2, good3, spec};
 
 fn verdict(js: &Value, what_contains: &str) -> String {
     js["rows"]
@@ -45,7 +45,11 @@ fn all_good_is_pass() {
     assert_eq!(verdict(&js, "V-ESTOI（场景 meeting-room"), "pass");
     assert_eq!(verdict(&js, "V-NRMOS-SCOREQ（场景 cafe"), "pass");
     assert_eq!(verdict(&js, "V-NRMOS-DISTILL（场景 meeting-room"), "pass");
-    assert_eq!(verdict(&js, "V-BGSTAB"), "pass", "cafe 没有这一项不算失败");
+    // V-BGSTAB 在 cafe（talkers）与 meeting-room 都适用；library-classroom 是安静类，不适用
+    assert_eq!(verdict(&js, "V-BGSTAB"), "pass");
+    let bg = detail(&js, "V-BGSTAB");
+    assert!(bg.contains("meeting-room"), "{bg}");
+    assert!(!bg.contains("library-classroom"), "不适用却被算进来：{bg}");
     assert_eq!(verdict(&js, "V-ONSET"), "pass");
     assert_eq!(verdict(&js, "V-TIMBRE"), "pass");
     assert_eq!(verdict(&js, "V-EAT-ASR"), "pass");
@@ -78,6 +82,55 @@ fn missing_seeds_or_noise_pairs_is_undecided() {
     let same = vec![g.vs[0].clone(), g.vs[0].clone(), g.vs[0].clone()];
     let js = f.accept(&same, &g.noise, &g.card_a, &g.card_b, "same");
     assert_eq!(verdict(&js, "V-ESTOI（场景 cafe"), "undecided", "{js}");
+}
+
+/// codex 第 2 轮 P1 #1：噪声底必须恰好是这三个候选的两两互比；拿另一组的三对来抵挡，判不了。
+#[test]
+fn noise_pairs_from_another_group_is_undecided() {
+    let f = Fix::new("othergroup");
+    let other = Fix::new("othergroup-b");
+    let g = build(&f, spec(good1(), good2(), good3()));
+    // 另一组的候选成绩单内容不同（偏移不同 → sha256 不同），它的三对互比对不上这一组的三个候选
+    let h = build(
+        &other,
+        spec(
+            D {
+                estoi: 0.2,
+                ..good1()
+            },
+            good2(),
+            good3(),
+        ),
+    );
+    let js = f.accept(&g.vs, &h.noise, &g.card_a, &g.card_b, "x");
+    assert_eq!(verdict(&js, "V-ESTOI（场景 cafe"), "undecided", "{js}");
+    assert_eq!(js["verdict"], "undecided");
+}
+
+/// codex 第 2 轮 P1 #1：身份是「成绩单 sha256 + 系统名」——同一份文件里的不同系统是两个候选。
+#[test]
+fn same_file_different_system_is_a_distinct_candidate() {
+    let f = Fix::new("multisys");
+    let mut a = ctl(MeetingPlace::Cafe, 4);
+    a.extend(ctl(MeetingPlace::MeetingRoom, 4));
+    a.extend(ctl(MeetingPlace::LibraryClassroom, 4));
+    let mut multi = Vec::new();
+    for (system, d) in [("cand1", good1()), ("cand2", good2()), ("cand3", good3())] {
+        multi.extend(cand(&a, d, &[], system));
+    }
+    let ctl_p = f.jsonl("ctl", &a);
+    let multi_p = f.jsonl("multi", &multi);
+    let vs: Vec<String> = ["cand1", "cand2", "cand3"]
+        .iter()
+        .map(|c| f.compare_sys(&format!("vs-{c}"), &ctl_p, &multi_p, "ref", c))
+        .collect();
+    let noise: Vec<String> = [("cand1", "cand2"), ("cand1", "cand3"), ("cand2", "cand3")]
+        .iter()
+        .map(|(x, y)| f.compare_sys(&format!("n-{x}-{y}"), &multi_p, &multi_p, x, y))
+        .collect();
+    let (ca, cb) = cards("pass", "pass");
+    let js = f.accept(&vs, &noise, &f.file("a", &ca), &f.file("b", &cb), "x");
+    assert_eq!(verdict(&js, "V-ESTOI（场景 cafe"), "pass", "{js}");
 }
 
 #[test]
@@ -190,28 +243,35 @@ fn regress_evidence_shortage_is_undecided() {
         detail(&js, "V-ONSET").contains("meeting-room"),
         "要说清哪个场景缺区间：{js}"
     );
-    // cafe 根本没有背景跳变这一项（不适用），不会被算成证据不足；缺证据的是 meeting-room
+    // 同一项在别的场景（cafe）正常判了；判不了的是 meeting-room（组数不够）
     let bg = detail(&js, "V-BGSTAB");
     assert!(bg.contains("meeting-room"), "{bg}");
-    assert!(!bg.contains("cafe"), "cafe 不适用却被当成缺证据：{bg}");
+    assert!(bg.contains("cafe"), "{bg}");
 }
 
-/// 一项在某个场景整段不存在（不适用）时不算证据不足：ONSET 在 meeting-room 缺席，cafe 有数 → 过。
+/// codex 第 2 轮 P1 #2：ONSET 在 meeting-room 适用却没有数（两边都没打这一项）→ 缺证据，整项判不了。
 #[test]
-fn regress_item_absent_in_a_scene_is_not_a_shortage() {
+fn regress_item_missing_in_an_applicable_scene_is_undecided() {
     let f = Fix::new("absent");
     let g = build(
         &f,
         Spec {
-            absent: &[
-                (MeetingPlace::Cafe, "V-BGSTAB"),
-                (MeetingPlace::MeetingRoom, "V-ONSET"),
-            ],
+            absent: &[(MeetingPlace::MeetingRoom, "V-ONSET")],
             ..spec(good1(), good2(), good3())
         },
     );
     let js = f.accept(&g.vs, &g.noise, &g.card_a, &g.card_b, "x");
-    assert_eq!(verdict(&js, "V-ONSET"), "pass", "{js}");
+    assert_eq!(verdict(&js, "V-ONSET"), "undecided", "{js}");
+    assert!(detail(&js, "V-ONSET").contains("meeting-room"), "{js}");
+}
+
+/// 反过来：一项在某个场景本来就不适用（V-BGSTAB 在安静类场景），那一场景没有数不算缺证据。
+#[test]
+fn regress_item_not_applicable_in_a_scene_is_skipped() {
+    let f = Fix::new("notapp");
+    let g = build(&f, spec(good1(), good2(), good3()));
+    let js = f.accept(&g.vs, &g.noise, &g.card_a, &g.card_b, "x");
+    assert_eq!(verdict(&js, "V-BGSTAB"), "pass", "{js}");
 }
 
 #[test]
@@ -234,9 +294,9 @@ fn one_new_eat_veto_clip_fails() {
     assert_eq!(js["verdict"], "fail");
 }
 
+/// codex 第 2 轮 P1 #3：候选整份成绩单没有吃字与压人声两项 → 一段都没判过，不能证明「不新增」→ 判不了。
 #[test]
-fn only_undecided_vetoes_still_pass() {
-    // 候选整份成绩单没有吃字与压人声两项：一边判不了，不算新增否决段，不挡过
+fn veto_without_any_judged_segment_is_undecided() {
     let f = Fix::new("und");
     let g = build(
         &f,
@@ -246,10 +306,27 @@ fn only_undecided_vetoes_still_pass() {
         },
     );
     let js = f.accept(&g.vs, &g.noise, &g.card_a, &g.card_b, "x");
+    assert_eq!(verdict(&js, "V-EAT-ASR"), "undecided", "{js}");
+    assert_eq!(verdict(&js, "V-SPLVL"), "undecided", "{js}");
+    assert_eq!(js["verdict"], "undecided");
+}
+
+/// 一部分段判不了、另一部分判过 → 仍是「过」，并把「一边判不了」的段数写出来。
+#[test]
+fn some_undecided_vetoes_still_pass() {
+    let f = Fix::new("partund");
+    let g = build(
+        &f,
+        Spec {
+            drop1_in: &[(MeetingPlace::MeetingRoom, &["V-EAT-ASR"])],
+            ..spec(good1(), good2(), good3())
+        },
+    );
+    let js = f.accept(&g.vs, &g.noise, &g.card_a, &g.card_b, "x");
     assert_eq!(verdict(&js, "V-EAT-ASR"), "pass", "{js}");
-    assert!(detail(&js, "V-EAT-ASR").contains("一边判不了"), "{js}");
-    assert_eq!(verdict(&js, "V-SPLVL"), "pass", "{js}");
-    assert_eq!(js["verdict"], "pass", "{js}");
+    let d = detail(&js, "V-EAT-ASR");
+    assert!(d.contains("一边判不了"), "{d}");
+    assert!(!d.contains("一边判不了 0 段"), "判不了的段数要写出来：{d}");
 }
 
 #[test]
