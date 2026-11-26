@@ -78,3 +78,4 @@
   - 之后的 pi 改用 `pi-worker start --repo <主仓> --base feat/trainer-guards`，在自己的 worktree 与分支提交，验收后快进合入
 - 11-26 pi trainer-guards-finite（改结构：唯一查有限值入口 · 停止原因优先级 · 防绕过扫描）：在自己的 worktree 与分支 w/trainer-guards-finite，提交 6be34442..370af014（Agent: pi），花费 0.0428 美元；trainer 验收后快进合入 feat/trainer-guards。全套 369 过
 - 11-26 pi trainer-guards-watchdog（codex guards 第 5 轮 #3）：自己的 worktree，提交 7da07932..f7fef94d（Agent: pi），花费 0.0039 美元；快进合入 feat/trainer-guards
+- 11-26 codex guards 第 6 轮：只 1 条 P2；按本项目口径第 5、6 轮连续两轮无 P0/P1，停。剩余 P2 开 issue #198。推送 feat/trainer-guards、开 PR（Closes #195），交大总管验收。pi 花费合计：devnan 0.0099 · calibnan 0.0064 · finite 0.0428 · watchdog 0.0039 = 0.063 美元
