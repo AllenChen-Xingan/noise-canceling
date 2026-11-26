@@ -1,17 +1,19 @@
 # 执行单（草稿）：正式训练 6 个运行，开训前先在第五批 build 上冒烟（H100，给 cloudrun）
 
-这份执行单回答一件事：正式训练用第五批数据 build。开训前先在这个 build 上冒烟，确认训练管线照常，再训 6 个运行（模型 A、B × 种子 0、1、2，各 5000 步）。
+第五批基线 build：`df759bb8d606a209`（traindata 登记，PR #227，main 2a1c5e16）；分片在网络盘 `/workspace/shards/batch5`（`data/cloud-batch5.md` 第 24 行）。
+
+这份执行单回答一件事：正式训练用第五批数据 build `df759bb8d606a209`。开训前先在这个 build 上冒烟，确认训练管线照常，再训 6 个运行（模型 A、B × 种子 0、1、2，各 5000 步）。
 它沿用 `plan-h100-b4.md` 的跑法（甲段 CPU 机算参照、乙段 H100、闸门、打包取回），这里只写不同的地方。
-**现在还不能跑**：第五批 build 还没登记，开训前清单也还没给人看（见第一节）。
+**现在还不能跑**：开训前清单还没给人看，人还没点头（见第一节第 3 条）。
 
 下文「实测」= 2026-11-25 乙段（`smoke_reports/20261125-h100-stageB-timing.json`）或 2026-11-26 新基线一单（`smoke_reports/20261126-h100-b4-timing.json`）的读数，「推断」= 由实测推算或没测过。
 
 ## 一、开跑前提（缺一条就不开机）
 
-1. traindata 已把第五批 build 登记进 main：
-   - build 记录 `data/builds/<第五批 id>/build.json`，valid，交集为 0
-   - 它的配方，和分片在网络盘上的目录
-2. trainer 已把正式训练的配置改成指向第五批 build，合进 main（另开分支，交 pi 改，带测试）：
+1. traindata 已把第五批 build 登记进 main（PR #227，2a1c5e16，已成立）：
+   - build 记录 `data/builds/df759bb8d606a209/build.json`，valid
+   - 配方 `data/recipe.json`（sha256 7de5c4b5…），分片在 `/workspace/shards/batch5`
+2. trainer 已把正式训练的配置改成指向第五批 build，合进 main（分支 `feat/trainer-formal-b5`，pi 改，带测试）：
    - `configs/formal.yaml` 的 `data.shard_root`、`data.recipe`
    - `configs/formal-runs.yaml` 的 `data_build`
    - 在那个 main 上，本机 `python formal.py check` 退出 0（它核对配方、数据代码的 sha256 和登记记录，并比对加训场景）
@@ -19,7 +21,7 @@
 4. 网络盘上还没有 `/workspace/runs/exp025-formal`。已存在就停下报大总管：同名运行会被当成续训
 5. 大总管批了花费上限（第四节是建议值）
 
-`R`、`T`、`D`、`PY`、`G`、`O` 的含义同 `plan-h100-b4.md`。下面 `S5` = 第五批分片目录，`D/<配方>` = 第五批配方。
+`R`、`T`、`D`、`PY`、`G`、`O` 的含义同 `plan-h100-b4.md`。下面 `S5=/workspace/shards/batch5`，配方 = `$D/recipe.json`（第五批基线配方）。
 
 ## 二、甲段：CPU 机（约 0.12 美元 / 小时）
 
