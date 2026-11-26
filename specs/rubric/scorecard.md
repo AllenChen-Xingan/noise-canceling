@@ -211,6 +211,7 @@ rubric 的「压噪只在 G1 算」在新成绩单里不再需要：场景测试
 
 5. **种子噪声底**：给 `--noise-a` / `--noise-b`（同一配置两个训练种子的成绩单）时，每项多一列「种子噪声底」= 这两份之间的差值区间，照同样算法算。只作参照，不改判断。b 相对 a 的差值不比种子噪声底大时，「涨 / 退」可能只是换种子的波动
 6. **局限**：每项一个独立 95% 区间，没做多重比较校正：项多时会有偶然的「涨 / 退」，参照种子噪声底看。片段 id 只在一个 build 内唯一，`clips.jsonl` 里不带 build id，「同一个 build」靠使用者保证（场景 / 档 / 设备核对只能挡住一部分错配）
+7. **验收判定**：`vdn-eval accept --vs <compare.json> [--vs …] --noise <compare.json> [--noise …] --scenes s1,s2 --card-a <scorecard.json> --card-b <scorecard.json> [--out DIR]` 把计划 014 第三节的验收线（阈值正本 `SC-ACCEPT`，`src/eval/src/thresholds/accept.rs`）落到上面这些输出上，逐条判过 / 不过 / 判不了，写 `accept.md` + `accept.json`（只新建，不覆盖）。代码：`src/eval/src/scorecard/accept.rs`；说明：`docs/plan/014_training-kickoff.md` 第三节
 
 ## 十一、早期回声参考旁列
 
