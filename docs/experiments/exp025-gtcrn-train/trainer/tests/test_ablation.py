@@ -297,12 +297,17 @@ def _cfg_dict() -> dict:
     return d
 
 
-def _record(root: Path, name: str, hybrid, *, row_step=1000, dev_build_id="dev-build-1", data_over=None):
+def _record(root: Path, name: str, hybrid, *, row_step=1000, dev_build_id="dev-build-1", data_over=None,
+            cfg_over=None):
     d = root / name
     d.mkdir(parents=True, exist_ok=True)
     cfg = _cfg_dict()
+    cfg["run"]["name"] = name  # run.name / run.seed 每个运行本来就不同：不算对不上
+    cfg["run"]["seed"] = next((s for n, s, _k, _o in ablation.WANTED_RUNS if n == name), 0)
     cfg["data"]["recipe"] = f"recipes/{name}.json"  # 每个运行一份自己的配方：这一项允许各不同
     cfg["data"].update(data_over or {})
+    for sec, keys in (cfg_over or {}).items():
+        cfg[sec].update(keys)
     (d / "run.json").write_text(json.dumps({"config": cfg, "data_build_id": f"build-{name}",
                                             "dev_build_id": dev_build_id}))
     rows = [{"step": 500, "dev": {"hybrid": 1.0}}, {"step": row_step, "dev": {"hybrid": hybrid}}]
@@ -436,8 +441,37 @@ def test_incomplete_baseline_makes_base_and_every_knob_incomplete(tmp_path, over
     assert ablation.main(["judge", str(tmp_path), "--out", str(tmp_path / "out.json")]) == 2
 
 
+@pytest.mark.parametrize("run,knob,cfg_over,needle", [
+    ("abl-eq-off", "eq", {"model": {"variant": "A"}}, "model.variant"),  # 默认是 B，消融要 A
+    ("abl-clip-off", "clip", {"loss": {"w_lvl": 3.0}}, "loss.w_lvl"),
+    ("abl-n_noises-off", "n_noises", {"schedule": {"max_steps": 2000}}, "schedule.max_steps"),
+])
+def test_run_with_different_config_is_incomplete(tmp_path, run, knob, cfg_over, needle):
+    """模型 · 优化器 · 损失 · EMA · 步数必须和 abl-base-s0 一样（只有 run.name / run.seed / data.recipe
+    可以各不同）：改了一处就是这个运行不完整，那个旋钮判 incomplete，别的运行不受牵连。"""
+    _all(tmp_path, over={run: {"cfg_over": cfg_over}})
+    out = ablation.judge(tmp_path)
+    assert out["runs"][run]["verdict"] == ablation.V_INCOMPLETE
+    assert needle in out["runs"][run]["reason"] and "对不上" in out["runs"][run]["reason"]
+    assert out["knobs"][knob]["verdict"] == ablation.V_INCOMPLETE
+    assert all(v["verdict"] != ablation.V_INCOMPLETE for k, v in out["knobs"].items() if k != knob)
+    assert out["base"] == pytest.approx(4.25)  # 两条基线都还有效
+
+
+def test_baseline_with_different_optim_lr_makes_every_knob_incomplete(tmp_path):
+    """种子 1 把学习率改了：它的读数还在，但 base / floor 不许算，每个旋钮都 incomplete。"""
+    _all(tmp_path, over={BASE1: {"cfg_over": {"optim": {"lr": 3e-4}}}})
+    out = ablation.judge(tmp_path)
+    assert out["runs"][BASE1]["verdict"] == ablation.V_INCOMPLETE
+    assert "optim.lr" in out["runs"][BASE1]["reason"]
+    assert out["base"] is None and out["floor"] is None
+    for knob, v in out["knobs"].items():
+        assert v["verdict"] == ablation.V_INCOMPLETE, (knob, v)
+        assert BASE1 in v["reason"], (knob, v)  # 指名不完整的基线
+
+
 def test_recipe_and_build_id_may_differ(tmp_path):
-    """每个运行的 data.recipe 与 data_build_id 本来就不同（变体各是一份新 build），不算对不上。"""
+    """每个运行的 data.recipe 与 data_build_id、run.name / run.seed 本来就不同：不算对不上。"""
     _all(tmp_path)
     out = ablation.judge(tmp_path)
     assert all(r["verdict"] == "ok" for r in out["runs"].values()), out["runs"]

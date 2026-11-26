@@ -44,7 +44,7 @@ RULE = (
     "d < −floor 判「hurts: candidate to turn off」（关掉反而更好），否则判「消融分不出: keep as is (on)」；"
     "high_snr 被打开时，d < −floor 判「useful: turn on」，d > floor 判「hurts: keep off」，"
     "否则判「消融分不出: keep as is (off)」。比较都是严格不等式。"
-    "读数缺失 · 不是有限数 · 没有第 1000 步 · 数据字段对不上 → 该运行判 incomplete；"
+    "读数缺失 · 不是有限数 · 没有第 1000 步 · 数据字段或模型/优化器/损失/EMA/步数对不上 → 该运行判 incomplete；"
     "基线 incomplete 时每个旋钮都 incomplete。"
 )
 
@@ -76,6 +76,11 @@ WANTED_RUNS = (
 # judge 比的对不上就要报的 data 字段（config.data 里除 recipe 之外全部要比：开发份的配方与规模一变，读数就不可比）。
 # data_build_id 按设计本来就各不同（每个配方一份新 build），不在此列。
 DATA_IGNORE = ("recipe",)
+
+# judge 除 data 之外还要逐项比的配置：model / optim / loss / ema 整段 + schedule.max_steps。
+# 模型 · 优化器 · 损失 · EMA · 步数一变读数就不可比；只有 run.name / run.seed / data.recipe 允许各不同。
+CFG_SECTIONS = ("model", "optim", "loss", "ema")
+CFG_SCHEDULE = ("max_steps",)
 
 
 # ---------- 路径与占位 ----------
@@ -263,19 +268,39 @@ def _num(x) -> bool:
     return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
 
 
+def _flat_cfg(config: dict) -> dict:
+    """除 data 以外要比的配置：model / optim / loss / ema 整段 + schedule.max_steps，拍平成「段.键」。"""
+    out: dict = {}
+    for sec in CFG_SECTIONS:
+        v = config.get(sec)
+        if not isinstance(v, dict):
+            out[sec] = v  # 整段缺了：记成一个值，比对时能报出是哪一段
+            continue
+        out.update({f"{sec}.{k}": x for k, x in v.items()})
+    sch = config.get("schedule")
+    for k in CFG_SCHEDULE:
+        out[f"schedule.{k}"] = sch.get(k) if isinstance(sch, dict) else None
+    return out
+
+
 def _read_run(run_dir: Path, step: int) -> dict:
-    """一个运行的记录：第 step 步的开发份 hybrid · 数据字段 · 两个 build id。读不出就填 reason。"""
-    out = {"dev_hybrid": None, "data": None, "data_build_id": None, "dev_build_id": None, "reason": None}
+    """一个运行的记录：第 step 步的开发份 hybrid · 数据字段 · 配置字段 · 两个 build id。读不出就填 reason。"""
+    out = {"dev_hybrid": None, "data": None, "cfg": None, "data_build_id": None, "dev_build_id": None,
+           "reason": None}
     try:
         rec = json.loads((run_dir / "run.json").read_text())
         rows = [json.loads(x) for x in (run_dir / "metrics.jsonl").read_text().splitlines() if x.strip()]
-        data = rec["config"]["data"]
+        config = rec["config"]
+        if not isinstance(config, dict):
+            raise TypeError("config 不是映射")
+        data = config["data"]
         if not isinstance(data, dict):
             raise TypeError("config.data 不是映射")
     except (OSError, ValueError, KeyError, TypeError) as e:
         out["reason"] = f"读不了运行记录：{type(e).__name__}: {e}"
         return out
     out["data"] = {k: v for k, v in data.items() if k not in DATA_IGNORE}
+    out["cfg"] = _flat_cfg(config)
     out["data_build_id"] = rec.get("data_build_id")
     out["dev_build_id"] = rec.get("dev_build_id")
     hits = [r["dev"].get("hybrid") for r in rows if r.get("step") == step and isinstance(r.get("dev"), dict)]
@@ -297,8 +322,8 @@ def _verdict(on: bool, d: float, floor: float) -> str:
 
 def judge(out_dir, step: int = STEP) -> dict:
     """判 7 个运行：返回 {rule, base, floor, runs, knobs}。任何运行不完整 → 它在 runs 里是 incomplete；
-    两条基线里任一条不完整（读数、build id、数据字段任一项过不了）→ base 与 floor 都不算，
-    每个旋钮都 incomplete。"""
+    两条基线里任一条不完整（读数、build id、数据字段、模型/优化器/损失/EMA/步数任一项过不了）→
+    base 与 floor 都不算，每个旋钮都 incomplete。"""
     root = Path(out_dir)
     recs = {name: _read_run(root / name, step) for name, _s, _k, _o in WANTED_RUNS}
     ref_name = BASE_RUNS[0]
@@ -319,6 +344,12 @@ def judge(out_dir, step: int = STEP) -> dict:
         if bad:
             r["reason"] = (f"数据字段和 {ref_name} 对不上：{bad}（"
                            + "，".join(f"{k} {r['data'].get(k)!r} ≠ {ref['data'].get(k)!r}" for k in bad) + "）")
+            continue
+        # 除 data 外的配置也要逐项相同：只有 run.name、run.seed、data.recipe 允许各不同
+        bad = sorted(k for k in set(r["cfg"]) | set(ref["cfg"]) if r["cfg"].get(k) != ref["cfg"].get(k))
+        if bad:
+            r["reason"] = (f"配置字段和 {ref_name} 对不上（只有 run.name、run.seed、data.recipe 可以各不同）："
+                           + "，".join(f"{k} {r['cfg'].get(k)!r} ≠ {ref['cfg'].get(k)!r}" for k in bad))
     if ref["reason"] is None and ref["dev_build_id"] is None:
         ref["reason"] = "run.json 里没有 dev_build_id：认不出开发集版本，读数没法比"
 
