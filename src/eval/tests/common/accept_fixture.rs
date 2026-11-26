@@ -81,7 +81,13 @@ fn sc(v: &'static str, x: f64) -> (&'static str, bool, Score) {
 }
 
 /// 对照的一个场景：`sources` 个源片段 × 2 个设备。`sources = 1` 时区间算不出来（组数不足）。
+/// 打哪些项按成绩单标准的适用范围（`standard::items`）：V-BGSTAB 在安静类场景不适用。
 pub fn ctl(scene: MeetingPlace, sources: usize) -> Vec<ClipRow> {
+    let applicable = |v: &str| {
+        vdn_eval::scorecard::standard::items(scene)
+            .iter()
+            .any(|(i, _)| i.v == v)
+    };
     (0..sources * 2)
         .map(|i| {
             let w = 0.01 * i as f64;
@@ -91,6 +97,7 @@ pub fn ctl(scene: MeetingPlace, sources: usize) -> Vec<ClipRow> {
                 sc("V-NRMOS-DISTILL", 3.2 + w),
                 sc("V-ONSET", 0.5 + w),
                 sc("V-TIMBRE", 1.2 + w),
+                sc("V-BGSTAB", 4.0 + w),
                 sc("V-LAT", 43.666_666),
                 sc("V-SPLVL", -1.0),
                 (
@@ -107,9 +114,7 @@ pub fn ctl(scene: MeetingPlace, sources: usize) -> Vec<ClipRow> {
                     .with_extra("ref_len", 20.0),
                 ),
             ];
-            if scene != MeetingPlace::Cafe {
-                scores.push(sc("V-BGSTAB", 4.0 + w));
-            }
+            scores.retain(|(v, _, _)| applicable(v));
             ClipRow {
                 clip: format!(
                     "{}-c{:02}-{}",
@@ -130,11 +135,11 @@ pub fn ctl(scene: MeetingPlace, sources: usize) -> Vec<ClipRow> {
 }
 
 /// 候选：在对照的每个分数上加偏移；`drop` 里的项整段不出现（模拟「一边判不了」）。
-pub fn cand(rows: &[ClipRow], d: D, drop: &[&str]) -> Vec<ClipRow> {
+pub fn cand(rows: &[ClipRow], d: D, drop: &[&str], system: &str) -> Vec<ClipRow> {
     rows.iter()
         .map(|r| {
             let mut n = r.clone();
-            n.system = "cand".into();
+            n.system = system.into();
             n.scores = r
                 .scores
                 .iter()
@@ -196,6 +201,27 @@ impl Fix {
             .iter()
             .map(|s| s.to_string())
             .collect();
+        vdn_eval::scorecard::compare_out::cli(&args, "t", out.clone()).unwrap();
+        out.join("compare.json").to_string_lossy().to_string()
+    }
+
+    /// 指定两边系统各跑一次（同一份文件含多个系统时用它）。
+    pub fn compare_sys(&self, tag: &str, a: &str, b: &str, sa: &str, sb: &str) -> String {
+        let out = self.root.join(format!("cmp-{tag}"));
+        let args: Vec<String> = [
+            "--a",
+            a,
+            "--b",
+            b,
+            "--by-scene",
+            "--system-a",
+            sa,
+            "--system-b",
+            sb,
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
         vdn_eval::scorecard::compare_out::cli(&args, "t", out.clone()).unwrap();
         out.join("compare.json").to_string_lossy().to_string()
     }
@@ -317,9 +343,6 @@ pub fn cand_cards(target: &str, other: &str) -> String {
     card_json(&rows, json!([]))
 }
 
-/// 默认：目标场景 cafe 没有背景跳变这一项（只有部分场景适用）。
-pub const CAFE_NO_BGSTAB: &[(MeetingPlace, &str)] = &[(MeetingPlace::Cafe, "V-BGSTAB")];
-
 /// 一份输入的构成。
 #[derive(Clone, Copy)]
 pub struct Spec<'a> {
@@ -328,21 +351,24 @@ pub struct Spec<'a> {
     pub d3: D,
     /// 种子 1 里整段不出现的项
     pub drop1: &'a [&'a str],
+    /// 种子 1 里这些场景整段不出现的项（别的场景还有 → 一边判不了，但也有判得了的段）
+    pub drop1_in: &'a [(MeetingPlace, &'a [&'a str])],
     /// 这些场景只放 1 个源片段（2 段）：区间算不出来（证据不足）
     pub thin: &'a [MeetingPlace],
-    /// 对照里这些场景整段不出现这一项（不适用）
+    /// 两边都整段不出现这一项（模拟「不适用」）
     pub absent: &'a [(MeetingPlace, &'a str)],
 }
 
-/// 三个种子都更好、只在 cafe 少一项背景跳变。
+/// 三个种子都更好、不额外丢项。
 pub fn spec(d1: D, d2: D, d3: D) -> Spec<'static> {
     Spec {
         d1,
         d2,
         d3,
         drop1: &[],
+        drop1_in: &[],
         thin: &[],
-        absent: CAFE_NO_BGSTAB,
+        absent: &[],
     }
 }
 
@@ -372,9 +398,15 @@ pub fn build(f: &Fix, s: Spec<'_>) -> Good {
         a.extend(rows);
     }
     let ctl = f.jsonl("ctl", &a);
-    let b1 = f.jsonl("c1", &cand(&a, s.d1, s.drop1));
-    let b2 = f.jsonl("c2", &cand(&a, s.d2, &[]));
-    let b3 = f.jsonl("c3", &cand(&a, s.d3, &[]));
+    let mut seed1 = cand(&a, s.d1, s.drop1, "cand");
+    for (sc, items) in s.drop1_in {
+        for r in seed1.iter_mut().filter(|r| r.scene == *sc) {
+            r.scores.retain(|(v, _, _)| !items.contains(v));
+        }
+    }
+    let b1 = f.jsonl("c1", &seed1);
+    let b2 = f.jsonl("c2", &cand(&a, s.d2, &[], "cand"));
+    let b3 = f.jsonl("c3", &cand(&a, s.d3, &[], "cand"));
     let (ca, cb) = cards("pass", "pass");
     Good {
         vs: vec![

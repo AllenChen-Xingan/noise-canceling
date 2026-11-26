@@ -25,8 +25,12 @@ fn unusable(i: &Item) -> String {
     }
 }
 
-/// 种子齐不齐：`--vs` 必须正好 `SC-ACCEPT.seeds` 份、`--noise` 必须正好每两两互比一份，
-/// 而且每份是两个不同的种子。不齐 → `Some(为什么)`，要涨的线一律判不了（codex 第 1 轮 P1 #1）。
+/// 种子齐不齐：`--vs` 必须正好 `SC-ACCEPT.seeds` 份、`--noise` 必须正好每两两互比一份。
+///
+/// 身份 = 成绩单内容 sha256 + 系统名（`compare.json` 的 `meta.a_sha256` / `meta.b_sha256` 与
+/// `meta.a_system` / `meta.b_system`）。同一份文件里的两个系统是两个不同候选；换了系统不算重复。
+/// 要求：三份 `--vs` 的对照是同一份、候选是三个不同身份、`--noise` 的集合恰好是这三个候选的全部两两组合。
+/// 缺身份、端点不是这三个候选、缺一对 → `Some(为什么)`，要涨的线一律判不了（codex 第 1 · 2 轮 P1）。
 fn seed_shortage(vs: &[Cmp], noise: &[Cmp]) -> Option<String> {
     let want = th::ACCEPT.def("seeds") as usize;
     if vs.len() != want {
@@ -42,29 +46,55 @@ fn seed_shortage(vs: &[Cmp], noise: &[Cmp]) -> Option<String> {
             noise.len()
         ));
     }
-    // 三份 --vs 要是三个不同种子：都记了候选成绩单 sha256 时按它核
-    if vs.iter().all(|c| c.b_sha.is_some()) {
-        let seen: BTreeSet<&str> = vs.iter().filter_map(|c| c.b_sha.as_deref()).collect();
-        if seen.len() != want {
-            return Some(format!(
-                "--vs 里只有 {} 个不同种子的成绩单（候选成绩单 sha256 有重复）",
-                seen.len()
-            ));
-        }
+    let Some(cands) = vs
+        .iter()
+        .map(|c| c.b_id.clone())
+        .collect::<Option<Vec<Ident>>>()
+    else {
+        return Some(
+            "有 --vs 没记候选成绩单的 sha256 或系统名（meta.b_sha256 / meta.b_system），核不了是哪个种子"
+                .into(),
+        );
+    };
+    let Some(controls) = vs
+        .iter()
+        .map(|c| c.a_id.clone())
+        .collect::<Option<Vec<Ident>>>()
+    else {
+        return Some(
+            "有 --vs 没记对照成绩单的 sha256 或系统名（meta.a_sha256 / meta.a_system）".into(),
+        );
+    };
+    if controls.windows(2).any(|w| w[0] != w[1]) {
+        return Some("这几份 --vs 的对照不是同一份成绩单（sha256 或系统不同）".into());
     }
-    // 互比也不能重复：同一对种子给两遍，噪声底就少一对
-    if noise.iter().all(|c| c.a_sha.is_some() && c.b_sha.is_some()) {
-        let seen: BTreeSet<(String, String)> = noise
-            .iter()
-            .filter_map(|c| Some((c.a_sha.clone()?, c.b_sha.clone()?)))
-            .map(|(x, y)| if x <= y { (x, y) } else { (y, x) })
-            .collect();
-        if seen.len() != pairs_want {
+    let set: BTreeSet<Ident> = cands.iter().cloned().collect();
+    if set.len() != want {
+        return Some(format!(
+            "--vs 里只有 {} 个不同候选（成绩单 sha256 + 系统名有重复）",
+            set.len()
+        ));
+    }
+    let mut got: BTreeSet<(Ident, Ident)> = BTreeSet::new();
+    for c in noise {
+        let (Some(x), Some(y)) = (c.a_id.clone(), c.b_id.clone()) else {
+            return Some(
+                "有 --noise 没记两边成绩单的 sha256 或系统名，核不了是哪两个候选的互比".into(),
+            );
+        };
+        if !set.contains(&x) || !set.contains(&y) || x == y {
             return Some(format!(
-                "--noise 里只有 {} 对不同的种子互比（有重复），{want} 个种子要 {pairs_want} 对",
-                seen.len()
+                "--noise 里有一对不是这次三个候选之间的互比（{} 对 {}）",
+                x.1, y.1
             ));
         }
+        got.insert(if x <= y { (x, y) } else { (y, x) });
+    }
+    if got.len() != pairs_want {
+        return Some(format!(
+            "--noise 只有 {} 对不同的候选互比，要 {pairs_want} 对",
+            got.len()
+        ));
     }
     None
 }
@@ -151,11 +181,29 @@ fn regress_row(v: &str, key: &str, rep: &Cmp) -> Row {
     let what = format!("不许退 {v}（报告种子区间上界 ≤ SC-ACCEPT.{key} = {line:+.3} dB）");
     let (mut seen, mut bad, mut hole) = (Vec::new(), Vec::new(), Vec::new());
     for (scene, s) in rep.scenes() {
-        let Some(i) = s.items.get(v).filter(|i| i.pairs > 0) else {
-            continue; // 这个场景没有这一项（如 V-BGSTAB）：不适用，不算失败也不缺证据
+        // 「不适用」只按成绩单标准的适用范围算（`standard::items`）：如 V-BGSTAB 在安静类场景不打分。
+        // 适用场景没有数 = 缺证据，不能跳过（codex 第 2 轮 P1 #2）
+        let Some(place) = MeetingPlace::ALL.into_iter().find(|p| p.as_str() == scene) else {
+            hole.push(format!("{scene} 不是场景键，认不出这一项适用不适用"));
+            continue;
         };
+        if !crate::scorecard::standard::items(place)
+            .iter()
+            .any(|(i, _)| i.v == v)
+        {
+            continue;
+        }
+        let Some(i) = s.items.get(v) else {
+            hole.push(format!("{scene} 适用这一项，但两边都没有这一项的数"));
+            continue;
+        };
+        if i.pairs == 0 {
+            hole.push(format!(
+                "{scene} 这一项没有一对可比（值不对称或都不是有限数）"
+            ));
+            continue;
+        }
         let Some(d) = i.diff.filter(|_| usable(i)) else {
-            // 有配对但源片段组数不够（SC-AGG.min_groups）：证据不足，不能当「不适用」跳过
             hole.push(format!("{scene} {}", unusable(i)));
             continue;
         };
@@ -188,7 +236,7 @@ fn regress_row(v: &str, key: &str, rep: &Cmp) -> Row {
 /// 「不新增否决段」的一行：报告种子的 b 新增否决段 = 0；「一边判不了」只列数。
 fn veto_row(v: &str, rep: &Cmp) -> Row {
     let what = format!("不新增否决段 {v}（报告种子）");
-    let (mut a, mut b, mut new, mut und, mut found) = (0, 0, 0, 0, false);
+    let (mut a, mut b, mut new, mut und, mut judged, mut found) = (0, 0, 0, 0, 0, false);
     for (_, s) in rep.scenes() {
         if let Some(x) = s.vetoes.get(v) {
             found = true;
@@ -196,6 +244,7 @@ fn veto_row(v: &str, rep: &Cmp) -> Row {
             b += x.b;
             new += x.new_in_b;
             und += x.undecided;
+            judged += s.pairs.saturating_sub(x.undecided);
         }
     }
     if !found {
@@ -203,6 +252,14 @@ fn veto_row(v: &str, rep: &Cmp) -> Row {
             what,
             Verdict::Undecided,
             format!("{} 里没有这个否决项", rep.name()),
+        );
+    }
+    if judged == 0 {
+        // 「一边判不了」不算增减：一段都没判过时，没有任何证据说明「不新增否决段」（codex 第 2 轮 P1 #3）
+        return Row::new(
+            what,
+            Verdict::Undecided,
+            format!("两边都判得了的段 0 段（一边判不了 {und} 段）：证明不了「不新增」"),
         );
     }
     let verdict = if new > 0 {

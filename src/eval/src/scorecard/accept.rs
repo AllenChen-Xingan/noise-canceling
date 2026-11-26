@@ -12,6 +12,13 @@
 //! `--card-*` 来自 `vdn-eval scorecard`。本命令只读它们，不跑音频、不调模型。
 //!
 //! 每条线一行，结论只有三态；整份结论：每行都过 = 过，有一行不过 = 不过，其余 = 判不了。
+//!
+//! 判定前先核两件事，缺了只判「判不了」，绝不当「过」：
+//! - **种子齐**：`--vs` 必须是 `SC-ACCEPT.seeds`（3）个不同种子，候选身份 = 成绩单 sha256 + 系统名，
+//!   三份的对照必须是同一份；`--noise` 必须恰好是这三个候选的全部两两互比（`judge::seed_shortage`）
+//! - **有证据**：「不适用」只按成绩单标准的适用范围算（`standard::items`）；适用场景没有数、区间组数不够、
+//!   否决项一段都没判过，都是证据不足 → 判不了（未知不能证明「不新增否决段」）
+//!
 //! 阈值全部从 [`crate::thresholds::ACCEPT`] 取（正本 `SC-ACCEPT`），本文件不写数字；
 //! 延迟的线是基线成绩单量出来的 V-LAT 本身（014 第三节第 4 条），不是另一个阈值。
 
@@ -165,18 +172,23 @@ struct Veto {
 /// 一个比较范围（全部段，或 `--by-scene` 的一个场景）。
 #[derive(Debug)]
 struct Scope {
+    /// 这个范围里配上的段数（否决项「两边都判得了」的分母是它减一边判不了）
+    pairs: usize,
     items: BTreeMap<String, Item>,
     vetoes: BTreeMap<String, Veto>,
 }
 
 /// 一份 `compare.json`。
+/// 一份成绩单的身份：内容 sha256 + 系统名（同一份文件里的两个系统是两个不同候选）。
+type Ident = (String, String);
+
 #[derive(Debug)]
 struct Cmp {
     path: String,
     scopes: BTreeMap<String, Scope>,
-    /// compare 时两边成绩单（clips.jsonl）的 sha256：用来核「三个不同种子」和「互比不重复」
-    a_sha: Option<String>,
-    b_sha: Option<String>,
+    /// compare 时两边成绩单的身份（sha256 + 系统）；用来核「三个不同种子」与「噪声底恰好是两两互比」
+    a_id: Option<Ident>,
+    b_id: Option<Ident>,
 }
 
 impl Cmp {
@@ -291,17 +303,28 @@ fn parse_compare(text: &str, path: &str) -> Result<Cmp, String> {
                 },
             );
         }
-        scopes.insert(name, Scope { items, vetoes });
+        scopes.insert(
+            name,
+            Scope {
+                pairs: num(s, "pairs").unwrap_or(0.0).max(0.0) as usize,
+                items,
+                vetoes,
+            },
+        );
     }
     if scopes.is_empty() {
         return Err(format!("{path} 里没有 scopes：不是 compare 的输出"));
     }
-    let sha = |k: &str| v["meta"][k].as_str().map(str::to_string);
+    let ident = |sha: &str, system: &str| -> Option<Ident> {
+        let s = v["meta"][sha].as_str().filter(|x| !x.is_empty())?;
+        let y = v["meta"][system].as_str().filter(|x| !x.is_empty())?;
+        Some((s.to_string(), y.to_string()))
+    };
     Ok(Cmp {
         path: path.to_string(),
         scopes,
-        a_sha: sha("a_sha256"),
-        b_sha: sha("b_sha256"),
+        a_id: ident("a_sha256", "a_system"),
+        b_id: ident("b_sha256", "b_system"),
     })
 }
 
