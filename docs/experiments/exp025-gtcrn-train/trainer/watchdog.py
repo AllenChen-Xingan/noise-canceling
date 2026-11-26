@@ -64,6 +64,13 @@ def _hard_exit(rd, why: str, _exit=os._exit) -> None:
     _exit(75)
 
 
+def _hung_message(reason: str, stall: float, hang_s: float) -> str:
+    """强退前记下的一句：挑出来的原因 + 主线程多久没进展（codex guards 第 4 轮 · 改结构）。"""
+    if str(reason).split(":", 1)[0] == "stall":
+        return f"卡住：主线程 {stall:.0f} s 无进展"
+    return f"{reason}；主线程 {hang_s:.0f} s 无进展"
+
+
 class _Beat:
     """后台线程每 HEARTBEAT_S 秒写一次心跳（步数 · 计费秒 · 累计美元），取数卡住、算标定时也照写。
     被抢占时最多漏记一个间隔（≤ 30 s）；机器的真实账单归 cloudrun（codex 第 1 轮 #4）。心跳只由这个线程写。
@@ -106,18 +113,17 @@ class _Beat:
             self.write_failures += 1
 
     def _run(self):
+        import guards  # 运行时读：测试可改 guards.STALL_S 与优先级表
         while not self.stop.wait(self.every):
             why = self.want_stop()
             idle = None if self.last_progress is None else time.monotonic() - self.last_progress()
-            if why and idle is not None and idle > self.hang_s:
-                self.on_hang(f"{why}；主线程 {self.hang_s:.0f} s 无进展")
-                return
-            stall = self.stall_s
-            if stall is None:
-                import guards
-                stall = guards.STALL_S
-            if idle is not None and idle > stall:  # guards ⑤：不管该不该停，久无进展就强退（GPU 卡死、评估卡住）
-                self.on_hang(f"卡住：主线程 {stall:.0f} s 无进展")
+            stall = guards.STALL_S if self.stall_s is None else self.stall_s
+            stopped = why if why and idle is not None and idle > self.hang_s else None
+            hung = idle is not None and idle > stall
+            # 两个条件同时成立时按 guards.STOP_PRIORITY 挑一个，消息里写它（codex guards 第 4 轮 · 改结构）
+            top = guards.pick_reason(stopped, "stall" if hung else None)
+            if top is not None:  # guards ⑤：不管该不该停，久无进展就强退（GPU 卡死、评估卡住）
+                self.on_hang(_hung_message(top, stall, self.hang_s))
                 return
             self._beat()
 

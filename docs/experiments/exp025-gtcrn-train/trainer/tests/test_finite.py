@@ -5,6 +5,7 @@
 训练循环里只有一处接住它。本文件同时钉住停止原因的优先级表。
 """
 import json
+import time
 
 import numpy as np
 import pytest
@@ -149,3 +150,91 @@ def test_nonfinite_in_final_eval_after_max_steps(tmp_path, monkeypatch):
     assert stop["reason"] == "nonfinite" and stop["step"] == 3
     assert rec["crash"]["where"] == "dev_eval" and set(rec["crash"]["detail"]) == {"dev.hybrid"}
     assert (root / "ckpt" / "step-0000003.pt").exists()  # 停下前先存过
+
+
+# ---------- 停止原因的优先级：表在 guards.py ----------
+
+def test_stop_priority_table_order():
+    """最高的排最前；新原因必须先进这张表（否则 pick_reason 报错）。"""
+    assert G.STOP_PRIORITY == ("nonfinite", "loss_spike", "stall", "too_slow", "data_timeout", "max_usd",
+                               "max_hours", "signal", "data_exhausted", "interrupted", "max_steps")
+
+
+@pytest.mark.parametrize("a", G.STOP_PRIORITY)
+@pytest.mark.parametrize("b", G.STOP_PRIORITY)
+def test_pick_reason_every_pair_is_order_independent(a, b):
+    want = min((a, b), key=G.STOP_PRIORITY.index)
+    assert G.pick_reason(a, b) == want and G.pick_reason(b, a) == want
+
+
+def test_pick_reason_none_and_signal_name():
+    assert G.pick_reason() is None and G.pick_reason(None, None) is None
+    assert G.pick_reason(None, "max_steps", None) == "max_steps"
+    assert G.pick_reason("signal:SIGTERM") == "signal:SIGTERM"  # 原样返回，不改写成 signal
+    assert G.pick_reason("signal:SIGTERM", "max_hours") == "max_hours"  # 只按 signal 排名
+    assert G.pick_reason("signal:SIGTERM", "stall") == "stall"
+
+
+def test_pick_reason_rejects_unknown_reason():
+    with pytest.raises(ValueError, match="unknown_thing"):
+        G.pick_reason("max_steps", "unknown_thing")
+
+
+def test_watchdog_names_the_higher_priority_reason(tmp_path):
+    """「该停 + 久无进展」与「久无进展超过 STALL_S」同时成立：消息写优先级更高的那个（stall 压过 max_usd）。"""
+    rd = train.RunDir(tmp_path / "w")
+    fired = []
+    t0 = time.monotonic()
+    b = train._Beat(rd, lambda: (0, 1.0, 0.0), 0.01, want_stop=lambda: "max_usd",
+                    last_progress=lambda: t0 - (G.STALL_S + 60), hang_s=5.0, on_hang=fired.append)
+    with b:
+        time.sleep(0.1)
+    assert fired and "卡住" in fired[0] and "max_usd" not in fired[0]
+
+
+def test_watchdog_names_signal_when_not_past_stall(tmp_path):
+    rd = train.RunDir(tmp_path / "w")
+    fired = []
+    t0 = time.monotonic()
+    b = train._Beat(rd, lambda: (0, 1.0, 0.0), 0.01, want_stop=lambda: "signal:SIGTERM",
+                    last_progress=lambda: t0 - 200, hang_s=5.0, on_hang=fired.append)
+    with b:
+        time.sleep(0.1)
+    assert fired and "SIGTERM" in fired[0]
+
+
+def test_train_reports_max_usd_over_signal(tmp_path):
+    """上限与信号同时成立：准备期就按表报 max_usd（不是 signal）。"""
+    sig = train._Signals()
+    sig.got = "SIGTERM"
+    stop = train.train(_cfg(tmp_path, **{"limits.max_usd": 1e-9, "limits.usd_per_hour": 1.0}), _signals=sig)
+    assert stop["reason"] == "max_usd" and stop["phase"] == "setup"
+
+
+def test_train_reports_guard_reason_over_signal(tmp_path, monkeypatch):
+    """一步算完时「损失猛涨」与「收到信号」同时成立：按表报 loss_spike，guard 记录照留。"""
+    import data
+    sig = train._Signals()
+    real_b = data.SyntheticSource.train_batches
+
+    def gen(self, start_batch=0, device=None):
+        for b in real_b(self, start_batch, device):
+            if b["batch_index"] == 3:
+                sig.got = "SIGTERM"
+            yield b
+    monkeypatch.setattr(data.SyntheticSource, "train_batches", gen)
+    monkeypatch.setattr(G, "SPIKE_BASE_STEPS", 2)
+    monkeypatch.setattr(G, "SPIKE_WINDOW", 2)
+
+    real_fl = train.forward_loss
+
+    def fl(model, crit, batch, device, **k):
+        loss, logs = real_fl(model, crit, batch, device, **k)
+        if model.training and batch.get("batch_index", 0) >= 2:
+            return loss * 0 + 1e3, {**logs, "total": 1e3}
+        return loss, logs
+    monkeypatch.setattr(train, "forward_loss", fl)
+
+    stop = train.train(_cfg(tmp_path, **{"schedule.eval_every": 100}), _signals=sig)
+    _, rec, _ = _read(tmp_path)
+    assert stop["reason"] == "loss_spike" and rec["guards"][-1]["kind"] == "loss_spike"

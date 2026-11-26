@@ -27,6 +27,27 @@ SPEED_FROM = 50
 SPEED_TO = 500
 STALL_S = 900.0
 
+# 几个停止原因同时成立时挑最优先的那个（最高的排最前，大总管定）。新原因必须先进这张表，
+# 否则 pick_reason 当场报错（不静默地当成最低优先）。正本只在这里。
+STOP_PRIORITY = ("nonfinite", "loss_spike", "stall", "too_slow", "data_timeout", "max_usd",
+                 "max_hours", "signal", "data_exhausted", "interrupted", "max_steps")
+_RANK = {r: i for i, r in enumerate(STOP_PRIORITY)}
+
+
+def pick_reason(*reasons) -> str | None:
+    """几个停止原因同时成立时挑最高优先的那个（codex guards 第 4 轮 · 改结构）。
+    None 不算原因；"signal:SIGTERM" 这种按 "signal" 排名、但原样返回；表里没有的当场 ValueError。"""
+    got = [r for r in reasons if r is not None]
+    if not got:
+        return None
+
+    def rank(r: str) -> int:
+        base = str(r).split(":", 1)[0]
+        if base not in _RANK:
+            raise ValueError(f"未知的停止原因：{r}（新原因先加进 guards.STOP_PRIORITY）")
+        return _RANK[base]
+    return min(got, key=rank)
+
 
 class NonFinite(Exception):
     """读到了不是有限数的读数。where 说清在哪读到的，detail 是现场（读数路径 → 那个值，已转成 float）。"""

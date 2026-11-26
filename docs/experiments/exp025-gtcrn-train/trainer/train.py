@@ -240,13 +240,10 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
         return stop_reason()
 
     def stop_reason():
-        if billed() / 3600 >= lim.max_hours:
-            return "max_hours"
-        if usd() >= lim.max_usd:
-            return "max_usd"
-        if sigs.got:
-            return f"signal:{sigs.got}"
-        return None
+        """账上的上限与信号；同时成立时按 guards.STOP_PRIORITY 挑一个（codex guards 第 4 轮 · 改结构）。"""
+        return G.pick_reason("max_hours" if billed() / 3600 >= lim.max_hours else None,
+                             "max_usd" if usd() >= lim.max_usd else None,
+                             f"signal:{sigs.got}" if sigs.got else None)
 
     beat = _Beat(rd, lambda: (acct["step"], billed(), usd()), _beat_s, want_stop=stop_reason,
                  last_progress=lambda: acct["t_progress"], hang_s=lim.hang_s, on_hang=_on_hang)
@@ -394,7 +391,7 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
         batches = source.train_batches(start_batch=step, device=device)
         try:
             while True:
-                reason = stop_reason() or ("max_steps" if step >= sc.max_steps else None)  # 上限 / 信号优先（第 3 轮 #1）
+                reason = G.pick_reason(stop_reason(), "max_steps" if step >= sc.max_steps else None)  # 上限 / 信号优先（第 3 轮 #1）
                 if reason is None and max_wall_s is not None and time.monotonic() - t_start >= max_wall_s:
                     reason = "interrupted"
                 if reason:
@@ -431,7 +428,7 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
                             "usd": round(usd(), 4), "grad_norm": float(gn), **logs})
                 why = guard.on_train_step(step, logs.get("total", loss.item()), time.monotonic() - t_iter)
                 if why:  # ② 损失猛涨 / ④ 太慢：只停本运行（每个运行各自判）
-                    reason = why
+                    reason = G.pick_reason(why, stop_reason())  # 同时成立时按优先级表挑
                     guard_event(why, **(guard.spike_detail() if why == "loss_spike" else guard.slow_detail()))
                     break
                 if stop_reason():  # 本步算完时已到上限 / 收到信号：不评估，回到循环顶上存盘停下（codex 第 2 轮 #1）
