@@ -16,6 +16,7 @@ data:
   kind: loader
   shard_root: ""
   recipe: ""
+  dev_recipe: ""  # 开发份 / 标定批的配方；空 = 与 data.recipe 相同（数据消融要固定开发份）
   seg_s: 4.0
   batch: 32
   num_workers: 8

@@ -1,5 +1,7 @@
 """数据适配：合成源可复现 · 与 traindata loader 的接口契约（假模块）· 批次错位即停 · 真 loader 对接（合入后跑）。"""
+import json
 import types
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -136,3 +138,74 @@ def test_real_loader_resume_from_batch_k_equals_continuous(tmp_path, workers):
     assert [b["batch_index"] for b in seq] == [0, 1, 2] and again["batch_index"] == 2
     assert torch.equal(seq[2]["noisy"], again["noisy"]) and torch.equal(seq[2]["clean"], again["clean"])
     assert seq[2]["owner_ivs"] == again["owner_ivs"]
+
+
+# ---------- 固定开发份：data.dev_recipe（#212 数据消融）----------
+
+def _build_info(shard_root, recipe_path):
+    return (f"build-{Path(recipe_path).stem}", {}, {})
+
+
+class _RecipeDev:
+    """假 DevSet：记下用的是哪份配方；build_id 由配方算（与真 loader 一样，配方进 build id）。"""
+
+    def __init__(self, shard_root, recipe_path, n=4, seed=12345, seg_s=4.0, **k):
+        self.build_id = _build_info(shard_root, recipe_path)[0]
+        self.size, self.len = n, 8000
+
+    def __len__(self):
+        return self.size
+
+    def __getitem__(self, i):
+        return _example(10_000 + i, self.len)
+
+
+def _recipe_loader(seen):
+    """假 loader：每次建 DevSet / 取训练批都把用的配方记进 seen。"""
+    def torch_iterable(shard_root, recipe_path, split="train", seed=0, seg_s=4.0, batch_size=32,
+                       start_batch=0, render="gpu", **kw):
+        seen.append(("train", recipe_path))
+        return _FakeIt(batch_size, start_batch, render)
+
+    def DevSet(shard_root, recipe_path, **k):
+        seen.append(("dev", recipe_path))
+        return _RecipeDev(shard_root, recipe_path, **k)
+
+    return types.SimpleNamespace(DevSet=DevSet, torch_iterable=torch_iterable, build_info=_build_info,
+                                 render_on_gpu=lambda b, d: pytest.fail("CPU 上不该调 render_on_gpu"))
+
+
+def _loader_cfg(tmp_path, **over):
+    return _cfg(tmp_path, kind="loader", shard_root="s", recipe="train.json", num_workers=1, **over)
+
+
+def test_dev_recipe_unset_keeps_todays_behaviour(tmp_path):
+    """不写 dev_recipe：开发份 · 标定 · 训练都用 data.recipe，两个 build id 相同（与加这个字段之前一致）。"""
+    seen = []
+    src = data.LoaderSource(_loader_cfg(tmp_path), mod=_recipe_loader(seen))
+    assert src.build_id == "build-train" and src.dev_build_id == "build-train"
+    src.dev_batches()
+    src.calib_batches(1)
+    next(src.train_batches(0, device=torch.device("cpu")))
+    assert seen == [("dev", "train.json"), ("dev", "train.json"), ("train", "train.json")]
+
+
+def test_dev_recipe_fixes_dev_set_and_keeps_training_recipe(tmp_path):
+    """写了 dev_recipe：开发份与标定批用 dev_recipe，训练批仍用 recipe；build_id 是训练那份，dev_build_id 是开发份那份。"""
+    seen = []
+    cfg = _loader_cfg(tmp_path, dev_recipe="dev.json")
+    src = data.LoaderSource(cfg, mod=_recipe_loader(seen))
+    assert src.build_id == "build-train"  # 续训核对 / run.json 的 data_build_id 认训练数据
+    assert src.dev_build_id == "build-dev"  # 消融要固定开发份：7 个运行必须同一个开发 build
+    src.dev_batches()
+    src.calib_batches(1)
+    next(src.train_batches(0, device=torch.device("cpu")))
+    assert seen == [("dev", "dev.json"), ("dev", "dev.json"), ("train", "train.json")]
+
+
+def test_dev_build_id_recorded_in_run_json(tmp_path):
+    """开始训练的 run.json 里记下 dev_build_id：判消融结果时核对 7 个运行用的是不是同一份开发集。"""
+    out = train.train(_cfg(tmp_path))
+    rec = json.loads((tmp_path / "d" / "run.json").read_text())
+    assert rec["dev_build_id"] == rec["data_build_id"] == "synthetic-seed1"
+    assert out["reason"] == "max_steps"

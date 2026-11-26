@@ -40,6 +40,7 @@ class DataCfg:
     kind: str = "loader"  # loader = traindata 的 data/loader.py；synthetic = 仓内合成小样（测试 · 冒烟）
     shard_root: str = ""
     recipe: str = ""
+    dev_recipe: str = ""  # 开发份与标定批用这份配方（空 = 同 data.recipe）；数据消融要固定开发份（#212）
     seg_s: float = 4.0  # 027：4 s 片段
     batch: int = 32
     num_workers: int = 8

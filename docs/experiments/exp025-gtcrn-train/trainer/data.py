@@ -93,6 +93,7 @@ class SyntheticSource:
         self.cfg = cfg
         self.n = int(cfg.data.seg_s * SR)
         self.build_id = f"synthetic-seed{cfg.run.seed}"
+        self.dev_build_id = self.build_id  # 合成源没有训练 / 开发之分：两个 id 相同
         self.num_workers = 0
 
     def train_batches(self, start_batch: int = 0, device=None):
@@ -146,13 +147,20 @@ class LoaderSource:
         if not d.shard_root or not d.recipe:
             raise ValueError("data.kind = loader 时必须给 data.shard_root 与 data.recipe")
         self.num_workers = d.num_workers
+        self.dev_recipe = d.dev_recipe or d.recipe  # 开发份 / 标定批的配方（空 = 同训练配方）
         if d.num_workers < 1:
             # worker = 0 时 DataLoader 不支持超时，取数卡住就无法停下（codex 第 6 轮 #1）
             raise ValueError("data.kind = loader 时 data.num_workers 必须 ≥ 1（取数超时只在子进程模式下生效）")
-        self.dev = self.mod.DevSet(d.shard_root, d.recipe, n=d.dev_n, seed=d.dev_seed, seg_s=d.seg_s)
-        self.build_id = getattr(self.dev, "build_id", None)
-        if not self.build_id:
+        self.dev = self.mod.DevSet(d.shard_root, self.dev_recipe, n=d.dev_n, seed=d.dev_seed, seg_s=d.seg_s)
+        self.dev_build_id = getattr(self.dev, "build_id", None)
+        if not self.dev_build_id:
             raise ValueError("loader 没给 build_id：无法核对数据版本，不开跑")
+        # build_id 是**训练**数据的版本（续训核对与 run.json 的 data_build_id 认它）。开发份另用一份配方时，
+        # 手上这份 DevSet 的 id 是开发份的，训练那份要单独问 loader 算（data.dev_recipe，数据消融用，#212）。
+        if d.dev_recipe and d.dev_recipe != d.recipe:
+            self.build_id = self.mod.build_info(d.shard_root, d.recipe)[0]
+        else:
+            self.build_id = self.dev_build_id
 
     def train_batches(self, start_batch: int = 0, device=None):
         """traindata 约定：第 k 批只由 (seed, k, batch_size) 决定，与 num_workers 无关；torch_iterable 自己出整批，
@@ -173,7 +181,7 @@ class LoaderSource:
         """标定用：另建一份恰好 n_batches × batch 段的开发集（同种子，前 dev_n 段与开发份相同），
         不被 dev_n 截短——默认 dev_n = 2000、批量 32 时开发份只有 63 批（codex 第 6 轮 #3）。"""
         d = self.cfg.data
-        ds = self.mod.DevSet(d.shard_root, d.recipe, n=n_batches * d.batch, seed=d.dev_seed, seg_s=d.seg_s)
+        ds = self.mod.DevSet(d.shard_root, self.dev_recipe, n=n_batches * d.batch, seed=d.dev_seed, seg_s=d.seg_s)
         out = []
         for i in range(n_batches):
             if should_stop and should_stop():

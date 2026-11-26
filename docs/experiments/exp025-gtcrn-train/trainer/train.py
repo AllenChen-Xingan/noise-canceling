@@ -316,6 +316,7 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
             rec = start_record(cfg_dict, source.build_id, source.num_workers,
                                {"device": str(device), "params": pcnt["trainable"], "params_fixed": pcnt["fixed"],
                                 "calib": calib, "env": env_info(), "billed_s_before": round(acct["billed0"], 2),
+                                "dev_build_id": getattr(source, "dev_build_id", source.build_id),
                                 "phase": "init"})
         if guard.best is not None:
             rec["best"] = guard.best  # 续训时把三处对齐后的最好成绩写回 run.json
