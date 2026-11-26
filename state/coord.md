@@ -476,3 +476,7 @@
 - 2026-11-26 名额规则：pi 的轻活误报（改文本 · 读文件 · 单个短测试）手下可直接放、事后告诉大总管；起 pi 时用 --heavy-re 收窄重活规则。pi-worker 默认重活规则把含 python3 的命令都判成重活 → 记 backlog。
 - 2026-11-26 cloudrun 删 BUT 压缩包（删前核 checksums.txt 与文件 md5），盘 145/200 GB。识别补跑 02:00Z +431 次 +0.041 美元，4 片在跑；按此速度约 2003 次需约 2 h（推算，约 03:35Z 完）。
 - 2026-11-26 02:09Z traindata 第三批（#205，feat/data-batch3 354f39fe）代码验收：276 过 · 1 跳过，pi 22 个提交 0.086 美元。批上云：优先在识别补跑机 glx9 上顺手跑；预计盘约 168/200 GB，超 170 先停报。旧分片删不删待 traindata 查清在用引用。
+- 2026-11-26 大总管定旧分片：第三批 valid 并取回核对后删 first-batch（现行代码读不了，可用旧提交约 30 min 重建，先取回 build 小文件）；batch2 留到第一个正式运行过开发份检查。cloud_steps.sh 默认 VDN_SHARDS 改成必须显式给（traindata 派 pi）；增量分片模式开 issue 下一件。
+- 2026-11-26 更正：给 cloudrun 的「删 first-batch」指令被自动模式权限拦下（判为破坏性），未发出 → 删不删 first-batch 改为待人定（10-4）。
+- 2026-11-26 traindata：增量分片 #206（下一件）；README 加「旧分片只能用当时提交复现 · 删不删由人定」（cb817ab1）；派 pi traindata-shards-env（1 美元，--heavy-re 收窄）：shard/register/pack 必须显式 VDN_SHARDS 否则退出 2；cloud_steps.sh 不进 build id，云上第三批不受影响（读源码）。
+- 2026-11-26 人定 D112：第三批 valid 后删 first-batch。
