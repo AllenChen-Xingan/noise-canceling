@@ -55,7 +55,7 @@
 
 ## 三、步骤
 
-**命令块都用 `bash` 跑**（机器里的 shell；本机是 zsh，分词规则不同），开头 `set -euo pipefail`，任何一步失败就停。顺序：先备齐环境、账本起点和闸门（第 1–4 步），再做回归检查（第 5 步，只在机 1），最后逐个模型离线推理加成绩单（第 6–7 步）。
+**命令块都用 `bash` 跑**（机器里的 shell；本机是 zsh，分词规则不同），开头 `set -euo pipefail`，任何一步失败就停。列表里的命令块前面那 3 格缩进只是排版，复制时去掉：缩进的 `EOF` 收不了 heredoc。顺序：先备齐环境、账本起点和闸门（第 1–4 步），再做回归检查（第 5 步，只在机 1），最后逐个模型离线推理加成绩单（第 6–7 步）。
 
 ```sh
 # 0. 开机 + 开机检查
@@ -215,10 +215,9 @@ run_card() {   # $1 = --system 的值，$2 = 系统名；跑完 RUN 指向合并
   done
   for p in "${pids[@]}"; do wait $p || rc=1; done       # 任何一片非 0 退出也算失败
   kill $gate 2>/dev/null || true; wait $gate 2>/dev/null || true
-  [ $rc = 0 ] || { echo "有分片失败或被闸门停下：$RUN，看 $RUN-gate.log 和各片日志"; return 1; }
+  [ $rc = 0 ] || { echo "有分片失败或被闸门停下：${RUN}，看 $RUN-gate.log 和各片日志"; return 1; }
   target/release/vdn-eval scorecard --merge-shards "$RUNS/$RUN-s0,$RUNS/$RUN-s1,$RUNS/$RUN-s2,$RUNS/$RUN-s3" \
     --suite src/eval/suite/scenes.json --out "$RUNS/$RUN"
-  RUN=$RUN                                               # 合并目录 = $RUNS/$RUN
 }
 ```
 
