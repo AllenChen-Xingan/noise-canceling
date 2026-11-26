@@ -14,7 +14,7 @@ A 段结果和由来见 `cloud-batch4.md`；场景缺口与限制见 `scene-gaps
 ## 0. 准备
 
 ```bash
-# 代码：feat/data-batch3 的提交 <提交号>（我发你），新 clone 到 /workspace/repo-<提交前 8 位>
+# 代码：feat/data-batch3 的提交 33990076（或更新；我发你），新 clone 到 /workspace/repo-<提交前 8 位>
 D=docs/experiments/exp025-gtcrn-train/data
 PY=.venv/bin/python
 export VDN_ROOT=/workspace VDN_SHARDS=/workspace/shards/batch4      # 新目录；已存在会拒绝
