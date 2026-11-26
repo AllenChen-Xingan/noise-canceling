@@ -465,3 +465,9 @@
 - 2026-11-26 trainer git 钩子仍登记 feat/trainer-guards（分支在启动时由 CD_WORKER_BRANCH 定）→ 大总管关窗、用 --continue 重开 trainer，钩子改登记 feat/trainer-formal-config（#200）。pi trainer-formal-config 交 2 个提交 4c687043 · 2228fc9b（0.011 美元）。
 - 2026-11-26 trainer 重开后会话名 noise-canceling-trainer-f0（旧 trainer-02）。教训：我关窗时它正在跑测试，被杀（退出码 137）——关手下窗口前先问它有没有进程在跑。
 - 2026-11-26 01:16Z 验收 PR #201（独立副本全套 389 过 · 2 跳过；formal.py check 3 条退出 1 符合预期），等 CI。w_pump 第一批正式训练不开（D107 默认关）。traindata：第一轮 build 889a389708c8a1e9（分片 1819 s，valid）作废；第二轮多红 1 条（test_products 手写 SHARDED 漏 cochlscene，读到 builds/ 里未进仓的旧 build）→ 挪出旧 build 重跑，在 fac82500 上 register + pack；回来后派 pi 把 SHARDED 改成从 recipe 导出（唯一真相源）。
+- 2026-11-26 01:19Z 第二批登记完成（实测，cloudrun 报）：build 6173bf9ca6a6e143（fac82500，valid，11 场景，scene_groups cowork↔open-office，missing []），盘 121/200 GB。开训前卡点②完成。BUT 在 g1wyqz5tsvqvia 下载中（md5 未知模式，按字节数判 + 记 md5/sha256）。批识别补跑另开 cpu3c 4 核 · 自删 6 h · 机器 ≤0.72 美元 · 识别 ≤0.25 美元。
+- 2026-11-26 01:21Z cloudrun 开识别补跑机 glx9kkda13gckv（cpu3c 4 核，自删 6 h），preflight 过（剩 79 GB），main ab0f4f0a；手敲提交号出错被 checkout 挡下（退出 11，无调用），改为从 git 取完整号。云上 2 台在跑。
+- 2026-11-26 01:29Z PR #201 合并 d9ab0807（#200 关）。删 traindata 本地 rebased-backup-20261126（与 feat/data-batch2 数据目录无差异，未推送）。验收 PR #203（第二批数据）：独立副本 unittest 236 条 OK · 1 跳过，等 CI。
+- 2026-11-26 traindata 核「unit 写 file」：数据正确（逐行核单位 = userNNNN，385 人无跨份），只是摘要标签易误读 → issue #204（P2，下一批派 pi 加字段，unit 不动）。
+- 2026-11-26 01:51Z cloudrun 删 g1wyqz5tsvqvia（约 0.16 美元，累计 8.02 美元），日志已取回。BUT 实测：字节数 · gzip · tar 过，librispeech 0；解出 wav 12307（RIR 2325 + silence 9982）占 23 GB；盘 153/200 GB。大总管定：BUT 压缩包 9.3 GB 删（依据：人批过删可重建项 + 下完删包规则；md5/sha256 已记），在识别补跑机上顺手删。识别补跑 01:33Z 起，01:50Z +101 次 +0.0097 美元。
+- 2026-11-26 01:52Z PR #203 合并 37c75609（#202 关，第二批数据进 main）；删远端 feat/data-batch2（本地分支在 traindata worktree 里，换分支后再删）。traindata 开第三批里不依赖定场景的部分（BUT 钉校验 · 按房间切 · 底噪筛查 · 会议室/酒店池 · #204）。
