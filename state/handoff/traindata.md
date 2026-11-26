@@ -69,3 +69,4 @@
 - 2026-11-25 pi traindata-cochlscene 验收通过。代码提交范围 c5394187…8420eef2（自动提交，署名 Claude，实为 pi 写），花费 $0.072 / $2。我亲手重跑 200 条测试，全过（跳过 1 条网络测试）。共 8 项：A6 来源（标手工、fetch 拒下）· cochlscene 按录音人 9:1 切（认不出录音人就停）· 4 个噪声池 · shard 来源从 recipe 导出 · 噪声池来源缺失即停、build.json 记 noise_scenes · test_cochlscene.py。上云命令见 data/cloud-batch2.md。
 - 2026-11-25 D109：以后派 pi 用 --repo/--base，pi 在自己的分支上每一小步提交一次，我验收后快进合入。
 - 2026-11-25 已知偏差：这批数据里拥挤室内权重偏高。cowork 与 open-office 共用同一批录音，target_scene 为 null 时被抽两倍（推断）。c4 定修法：按来源去重抽样，派 pi 写，带一条会红的测试。现在 pi-worker 正在改，暂不能起 pi，所以这批先在 recipe.json 的 noise_pools._说明 里记明（配方哈希进 build 身份）。
+- 2026-11-25 pi traindata-dedup 验收通过，快进合入。pi 提交 0137540a…2eaf21b9（各带 Agent: pi），花费 $0.0125 / $2。我亲手重跑 209 条测试，全过（跳过 1 条网络测试）。成员完全相同的噪声池（cowork 与 open-office）抽样只算一次权重，报出 cowork；build.json 记 scene_groups。没有重复组时随机数与以前逐样本相同（旧测试不改照过）。只影响 register 和训练时的抽样，split 与 shard 不变。
