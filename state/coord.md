@@ -452,3 +452,6 @@
 - 2026-11-26 00:38Z trainer 验收 pi trainer-guards-finite（6be34442..370af014，4 个提交带 Agent: pi，0.043 美元，已快进合入）；train.py 515→494 行。名额 → trainer 全套测试约 2 min。
 - 2026-11-26 00:39Z traindata 去重抽样验收（209 过 · 1 跳过，pi 0137540a..2eaf21b9 带 Agent: pi，0.0125 美元），推送 5d12fc2e；c0c9bda3 build 作废。cloudrun 在同目录 ff 到 5d12fc2e 只重跑 test → register → pack；预期红 1 条用 --deselect 排除并记日志；取回切分表回仓。
 - 2026-11-26 人定 D110：场景按第二版差距表定；缺数据先补；开训前全部就绪再开正式训练。派 traindata 调研 3 个缺口场景的补法（不写码、不下载）。
+- 2026-11-26 00:40Z trainer 还名额：全套 369 过 · 2 跳过 · 0 失败（78 s，自报；新增表驱动 121 条）；下一步 codex 第 5 轮。
+- 2026-11-26 00:42Z trainer codex 第 5 轮：P1×1（写盘满 run.json 写不进）按 33 口径（故障注入类）改记 P2，大总管同意；补防线：开训练机前网络盘余量 ≥30 GB（交 cloudrun 进 preflight）。P2 #3 看门狗静默退出派 pi trainer-guards-watchdog。第 5 轮算停止线连续第 1 轮。
+- 2026-11-26 人定 D111（缺口场景补数据四题，见决策记录）。
