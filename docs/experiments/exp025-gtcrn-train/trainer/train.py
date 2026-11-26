@@ -250,6 +250,7 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
     with sigs, beat:
         device = resolve_device(cfg.device)
         source = make_source(cfg)
+        dev_build_id = getattr(source, "dev_build_id", source.build_id)
         dev = source.dev_batches(should_stop=tick_stop)
         if dev is None:
             return _setup_stop(stop_reason(), acct["step"], billed(), usd())
@@ -276,7 +277,7 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
         init_only = st is None and rd.read().get("phase") == "init" and not any(rd.ckpt_dir.glob("step-*.pt"))
         if init_only:
             # 上次写了 run.json、还没存下第 0 步就被杀（codex 第 3 轮 #2）：配置与数据一致就重建，账从心跳接上
-            why = check_resume(rd.read(), cfg_dict, source.build_id)
+            why = check_resume(rd.read(), cfg_dict, source.build_id, dev_build_id)
             if why:
                 raise RuntimeError("拒绝重建：" + "；".join(why))
         elif st is None and (rd.run_json.exists() or any(rd.ckpt_dir.glob("step-*.pt"))):
@@ -284,7 +285,7 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
             raise RuntimeError(f"{rd.root} 已有运行记录，但没有可读的检查点（见 ckpt/bad_ckpt.txt）；请人工处理或换 run.name")
         if st is not None:
             rec = rd.read()
-            why = check_resume(rec, cfg_dict, source.build_id)
+            why = check_resume(rec, cfg_dict, source.build_id, dev_build_id)
             if why:
                 raise RuntimeError("拒绝续训：" + "；".join(why))
             model.load_state_dict(st["model"])
@@ -316,7 +317,7 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
             rec = start_record(cfg_dict, source.build_id, source.num_workers,
                                {"device": str(device), "params": pcnt["trainable"], "params_fixed": pcnt["fixed"],
                                 "calib": calib, "env": env_info(), "billed_s_before": round(acct["billed0"], 2),
-                                "dev_build_id": getattr(source, "dev_build_id", source.build_id),
+                                "dev_build_id": dev_build_id,
                                 "phase": "init"})
         if guard.best is not None:
             rec["best"] = guard.best  # 续训时把三处对齐后的最好成绩写回 run.json
