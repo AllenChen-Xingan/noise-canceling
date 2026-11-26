@@ -56,6 +56,34 @@ class Frontend(unittest.TestCase):
         self.assertEqual(off.PAD, off.DECLARED_LATENCY)
 
 
+class RepoPaths(unittest.TestCase):
+    """写进仓的路径不许带家目录：仓是公开的（`model_info` / `setup` 都过 `rel`）。"""
+
+    def test_inside_worktree_is_relative_to_root(self):
+        p = off.ROOT / "docs/experiments/exp025-gtcrn-train/eval/parity.py"
+        self.assertEqual(off.rel(p), "docs/experiments/exp025-gtcrn-train/eval/parity.py")
+
+    def test_inside_main_root_is_prefixed_with_placeholder(self):
+        # 实物（ONNX · 音频）在主目录的 _tmp 下，不在本工作副本里：写 `<主目录>/…`，不写绝对路径
+        main = off._ext.main_root()
+        self.assertEqual(off.rel(main / "_tmp" / "exp025-x" / "gtcrn-official.onnx"),
+                         "<主目录>/_tmp/exp025-x/gtcrn-official.onnx")
+
+    def test_outside_both_is_refused(self):
+        with tempfile.TemporaryDirectory() as t:
+            p = Path(t).resolve() / "gtcrn-official.onnx"
+            with self.assertRaises(SystemExit) as e:
+                off.rel(p)
+            self.assertIn(str(p), str(e.exception))
+
+    def test_run_metadata_has_no_absolute_path(self):
+        main = off._ext.main_root()
+        onnx = main / "_tmp" / "exp025-x" / "gtcrn-official.onnx"
+        for block in (off.model_info(onnx, "0" * 64), off.setup(onnx, "0" * 64)):
+            self.assertNotIn(str(main), json.dumps(block, ensure_ascii=False))
+            self.assertNotIn(str(Path.home()), json.dumps(block, ensure_ascii=False))
+
+
 class ClipList(unittest.TestCase):
     """片段清单跟评测集正本（scenes.json）走，而不是共用框架里写死的旧 build。"""
 
