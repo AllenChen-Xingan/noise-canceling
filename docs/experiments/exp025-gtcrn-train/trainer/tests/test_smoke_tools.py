@@ -104,6 +104,48 @@ def test_write_known_dev_refuses_overwrite(tmp_path):
     assert out.read_text() == "{}"
 
 
+# ---------- 开发份 vs 训练份的 build id（#212）----------
+
+class _FakeSource:
+    """训练数据和开发数据各是一份（data.dev_recipe）：两个 build id 不同。"""
+
+    def __init__(self, train_id, dev_id):
+        self.build_id = train_id
+        self.dev_build_id = dev_id
+
+    def dev_batches(self, *_a, **_k):
+        return [object()]
+
+
+def test_write_known_dev_meta_uses_dev_build_id(tmp_path, monkeypatch):
+    """参照读数是开发份的：meta.build_id 要写开发份的 id，不是训练那份。"""
+    monkeypatch.setattr(smoke, "make_source", lambda cfg: _FakeSource("train-X", "dev-Y"))
+    monkeypatch.setattr(smoke, "dev_reading", lambda *a, **k: {"hybrid": 1.0})
+    out = tmp_path / "known.json"
+    assert smoke.main(["--config", str(_cfg_file(tmp_path)), "--write-known-dev", str(out)]) == 0
+    assert json.loads(out.read_text())["meta"]["build_id"] == "dev-Y"
+
+
+def test_smoke_run_compares_known_dev_against_dev_build_id(tmp_path, monkeypatch):
+    """--known-dev 传的 id 也要是开发份的，否则可能拿训练份的参照去对。"""
+    monkeypatch.setattr(smoke, "make_source", lambda cfg: _FakeSource("train-X", "dev-Y"))
+    seen = {}
+
+    def fake_check_known_dev(cfg, dev, device, known, tol, build_id=None):
+        seen["build_id"] = build_id
+        return {"pass": True}
+
+    monkeypatch.setattr(smoke, "check_known_dev", fake_check_known_dev)
+    monkeypatch.setattr(smoke, "check_init", lambda *a, **k: {"pass": True})
+    monkeypatch.setattr(smoke, "check_overfit", lambda *a, **k: {"pass": True, "verdict": "pass"})
+    monkeypatch.setattr(smoke, "check_reproduce", lambda *a, **k: {"pass": True})
+    monkeypatch.setattr(smoke, "timing", lambda *a, **k: {"pass": True})
+    cfg = cfgmod.load(str(_cfg_file(tmp_path)), {})
+    rep = smoke.run(cfg, overfit_steps=1, overfit_lr=1e-3, timing_steps=1,
+                     known_dev={"readings": {"hybrid": 1.0}}, known_tol=1e-3)
+    assert seen["build_id"] == "dev-Y" and rep["pass"]
+
+
 # ---------- cmp_ckpt.py ----------
 
 def _ckpt(path, model, step=6, **extra):

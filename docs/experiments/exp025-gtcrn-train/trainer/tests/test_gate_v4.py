@@ -102,11 +102,14 @@ def test_rejudge_this_diagnosis_passes_v4():
     assert o["drop_frac_of_oracle_span"] == pytest.approx(oracle.frac_of_span(o["first"], o["last"], probe["oracle_loss"]))
 
 
-def _run_dir(tmp_path, rows, build="b1", **data):
+def _run_dir(tmp_path, rows, build="b1", dev_build=None, **data):
     d = tmp_path / "run"
     d.mkdir()
     dd = {"kind": "loader", "dev_n": 2000, "dev_seed": 7, "seg_s": 4.0, "batch": 32, "dev_batches": 20, **data}
-    (d / "run.json").write_text(json.dumps({"config": {"data": dd}, "data_build_id": build}))
+    rec = {"config": {"data": dd}, "data_build_id": build}
+    if dev_build is not None:
+        rec["dev_build_id"] = dev_build
+    (d / "run.json").write_text(json.dumps(rec))
     (d / "metrics.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     return d
 
@@ -132,6 +135,22 @@ def test_dev_gate_incomplete_and_meta_mismatch(tmp_path):
                        KNOWN, step=300, tol=1e-3)
     assert r["verdict"] == "incomplete" and "dev_batches" in r["reason"]
     assert dev_gate.check(tmp_path / "r1", {"readings": {"hybrid": 3.9}}, step=300, tol=1e-3)["verdict"] == "incomplete"
+
+
+def test_dev_gate_uses_dev_build_id_for_reference(tmp_path):
+    """参照读数是「开发份」的，要比开发份的 build id；拿训练那份比会让换了开发集的读数混过去（#212）。"""
+    rows = [{"step": 300, "dev": {"hybrid": 3.90}}]
+    train_ref = {**KNOWN, "meta": {**KNOWN["meta"], "build_id": "X"}}   # 参照用训练那份 id 算的：不能认
+    dev_ref = {**KNOWN, "meta": {**KNOWN["meta"], "build_id": "Y"}}
+    wrong = dev_gate.check(_run_dir(tmp_path, rows, build="X", dev_build="Y"), train_ref, step=300, tol=1e-3)
+    assert wrong["verdict"] == "incomplete" and "build_id" in wrong["reason"]
+    (tmp_path / "run").rename(tmp_path / "r1")
+    right = dev_gate.check(_run_dir(tmp_path, rows, build="X", dev_build="Y"), dev_ref, step=300, tol=1e-3)
+    assert right["verdict"] == "pass" and right["dev_hybrid"] == 3.90
+    # 老 run.json 没有 dev_build_id：退回训练那份的 id（与今天行为一致）
+    (tmp_path / "run").rename(tmp_path / "r2")
+    old = dev_gate.check(_run_dir(tmp_path, rows, build="X"), train_ref, step=300, tol=1e-3)
+    assert old["verdict"] == "pass"
 
 
 def test_dev_gate_cli_exit_codes(tmp_path):
