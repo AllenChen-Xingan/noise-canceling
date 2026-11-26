@@ -68,6 +68,32 @@ def meta_excluded(root, files, rule):
     return keep, drop
 
 
+def screen_excluded(root, files, rule):
+    """按 screen.py 的 jsonl 排除 verdict=drop 的片段（判据正本 screen_rules.json）。
+    清单里每个文件都要有结论：少一条就停（否则漏筛的文件会悄悄当噪声）；筛查表本身不在也停。"""
+    spec = rule.get("screen_file")
+    if not spec:
+        return files, []
+    p = Path(spec)
+    p = p if p.is_absolute() else HERE / p
+    if not p.is_file():
+        raise SystemExit(f"筛查表 {p} 不存在：先在云上跑 screen.py（python3 screen.py --root <数据根> --list <候选清单> "
+                         f"--scene <场景> --out {spec}），把结果带回进仓再切分")
+    verdicts = {}
+    for line in p.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        rec = json.loads(line)
+        if rec.get("verdict") not in ("keep", "drop"):
+            raise SystemExit(f"筛查表 {p} 里 {rec.get('path')} 的结论认不出：{rec.get('verdict')!r}（只认 keep / drop）")
+        verdicts[rec["path"]] = rec["verdict"]
+    missing = [f for f in files if f not in verdicts]
+    if missing:
+        raise SystemExit(f"筛查表 {p} 少了 {len(missing)} 个文件（如 {missing[0]}）：每个文件都要有结论，先在云上补跑 screen.py")
+    keep = [f for f in files if verdicts[f] == "keep"]
+    return keep, [f for f in files if verdicts[f] == "drop"]
+
+
 def demand_envs():
     sys.path.insert(0, str(EXP013))
     import pools  # noqa: E402  正本：exp006 recipes.json 经 pools._exp006_rules
@@ -221,6 +247,9 @@ def split_source(root, name, rule, seed, order, workers=32, cache=None, excluded
     files, meta_drop = meta_excluded(root, files, rule)
     if excluded is not None:
         excluded["excluded_meta"] = len(meta_drop)
+    files, screen_drop = screen_excluded(root, files, rule)
+    if excluded is not None:
+        excluded["excluded_screen"] = len(screen_drop)
     if rule["unit"] == "time":
         units = {f: f for f in files}
     else:
