@@ -36,14 +36,17 @@ def _set(d: dict, path: str, v) -> None:
 def _record(root: Path, name: str, hybrid, *, row_step=ablation.STEP, dev_build_id="dev-build-1", data_over=None,
             cfg_over=None):
     """一个运行的 run.json 与 metrics.jsonl。默认写成**合上设计**的消融运行：模型 A、第 1000 步、
-    开发份配方 = 基线配方；要造不合设计的运行就改 data_over / cfg_over。"""
+    种子照运行矩阵、开发份配方 = 基线配方、旋钮运行用自己的变体配方；要造不合设计的运行就改
+    data_over / cfg_over。"""
     d = root / name
     d.mkdir(parents=True, exist_ok=True)
     cfg = _cfg_dict()
+    knob, on = next((k, o) for n, _s, k, o in ablation.WANTED_RUNS if n == name)
     cfg["run"]["name"] = name  # run.name / run.seed 每个运行本来就不同：不算对不上
-    cfg["run"]["seed"] = next((s for n, s, _k, _o in ablation.WANTED_RUNS if n == name), 0)
-    cfg["data"]["recipe"] = (BASE_RECIPE if name in ablation.BASE_RUNS else f"recipes/{name}.json")
-    # ↑ 这一项允许各不同：两个基线用的就是基线配方，旋钮运行用各自的变体配方
+    cfg["run"]["seed"] = next(s for n, s, _k, _o in ablation.WANTED_RUNS if n == name)
+    # 配方按运行矩阵：基线用基线配方，旋钮运行用自己名字里那一份变体配方
+    cfg["data"]["recipe"] = (BASE_RECIPE if knob is None
+                              else f"../data/recipes/ablation/{ablation.variant_recipe_name(knob, on)}")
     cfg["model"]["variant"] = ablation.WANT_VARIANT  # 设计写死：消融只跑模型 A
     cfg["schedule"]["max_steps"] = ablation.STEP  # 设计写死：每个运行 1000 步
     cfg["data"]["dev_recipe"] = BASE_RECIPE  # 7 个运行的开发份都用基线配方
@@ -266,6 +269,47 @@ def test_all_runs_off_design_makes_every_knob_incomplete(tmp_path, cfg_over, nee
     for knob, v in out["knobs"].items():
         assert v["verdict"] == ablation.V_INCOMPLETE, (knob, v)
     assert ablation.main(["judge", str(tmp_path), "--out", str(tmp_path / "out.json")]) == 2
+
+
+# ---------- 每个运行必须是名字说的那个运行（#212 评审第二轮）----------
+
+def test_both_baselines_with_seed_0_make_every_knob_incomplete(tmp_path):
+    """两条基线都跑种子 0：两个种子一样了，噪声底 floor 就量不出来（种子 1 的读数不算）。"""
+    _all(tmp_path, _hyb(eq=4.76), over={BASE1: {"cfg_over": {"run": {"seed": 0}}}})
+    out = ablation.judge(tmp_path)
+    assert out["runs"][BASE1]["verdict"] == ablation.V_INCOMPLETE
+    assert "run.seed" in out["runs"][BASE1]["reason"]
+    assert out["runs"][BASE0]["verdict"] == "ok"  # 种子 0 的那条自己合设计
+    assert out["base"] is None and out["floor"] is None
+    for knob, v in out["knobs"].items():
+        assert v["verdict"] == ablation.V_INCOMPLETE, (knob, v)
+        assert BASE1 in v["reason"], (knob, v)  # 指名不完整的基线
+
+
+def test_run_with_other_variant_recipe_is_incomplete(tmp_path):
+    """abl-eq-off 用了 no-clip.json（别的旋钮的变体配方）：读数不是「关掉 eq」的读数。"""
+    _all(tmp_path, _hyb(eq=4.76, clip=3.70),
+         over={"abl-eq-off": {"data_over": {"recipe": "../data/recipes/ablation/no-clip.json"}}})
+    out = ablation.judge(tmp_path)
+    assert out["runs"]["abl-eq-off"]["verdict"] == ablation.V_INCOMPLETE
+    why = out["runs"]["abl-eq-off"]["reason"]
+    assert "data.recipe" in why and "no-eq.json" in why, why
+    assert out["knobs"]["eq"]["verdict"] == ablation.V_INCOMPLETE
+    assert out["knobs"]["clip"]["verdict"] == ablation.V_CAND_OFF  # 别的旋钮不受牵连
+
+
+@pytest.mark.parametrize("name", [BASE0, BASE1])
+def test_baseline_with_variant_recipe_makes_every_knob_incomplete(tmp_path, name):
+    """基线用了变体配方（no-eq.json）：它不再跑基线配方，base 与 floor 都不许算。"""
+    _all(tmp_path, _hyb(eq=4.76),
+         over={name: {"data_over": {"recipe": "../data/recipes/ablation/no-eq.json"}}})
+    out = ablation.judge(tmp_path)
+    assert out["runs"][name]["verdict"] == ablation.V_INCOMPLETE
+    assert "data.recipe" in out["runs"][name]["reason"]
+    assert out["base"] is None and out["floor"] is None
+    for knob, v in out["knobs"].items():
+        assert v["verdict"] == ablation.V_INCOMPLETE, (knob, v)
+        assert name in v["reason"], (knob, v)
 
 
 @pytest.mark.parametrize("line", ["null", "[]", "3", '"[1, 2]"'])
