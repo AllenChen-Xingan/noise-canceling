@@ -97,5 +97,5 @@ $PY docs/experiments/exp025-gtcrn-train/eval/parity.py \
 - 官方权重整段版 ONNX（`export.py --official`，导出对拍过，ONNX 离 float64 真值 ≤ 4.9e-7）
 - 离线推理全量 480 段 · 1451 个文件，4 片并发约 3.2 分钟（0.045 倍实时）。探针：前视 165 样本，对齐后滞后 0，声明延迟 256
 - 冒烟集 5 段（transit-hub · meeting-room · rail-air-cabin · canteen · cowork 各 1 段，都是 c00-ext），不带 `--qa`
-- 对拍：**PASS**，22 项 76 对，最大绝对差 3.8e-5（V-BGSTAB），容差 1e-3。原样输出与哈希：`runs/parity-20261126/`
+- 对拍：**PASS**，22 项 76 对，最大绝对差 3.8e-5（V-BGSTAB），容差 1e-3；单侧缺值 0 处；9 项两边都没有值、未验证（不带 `--qa` 时吃字与两个听感项为空，其余是该段不适用）。原样输出与哈希：`runs/parity-20261126/`
 - ⚠️ 本机负载：4 片并发每片约 170% CPU。之后本机最多同时 2 片，开跑前看 `uptime`
