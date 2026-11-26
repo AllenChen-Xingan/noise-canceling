@@ -17,12 +17,13 @@ import ablation
 import buildpin
 import config as cfgmod
 import formal
+from _shipped import SHIPPED_BUILD, SHIPPED_SHARDS
 
 HERE = Path(__file__).resolve().parents[1]  # trainer/
 CONFIGS = HERE / "configs"
 EXP = HERE.parent  # exp025-gtcrn-train/
 D = EXP / "data"  # 数据线目录（只读）
-BUILD = "bc0e9e7b566421f0"  # 新基线 build（traindata 登记）
+BUILD = SHIPPED_BUILD  # 仓里在用的基线 build（正本 data/builds/<id>/build.json，指路见 tests/_shipped.py）
 RECORD = D / "builds" / BUILD / "build.json"
 
 
@@ -486,7 +487,18 @@ def test_shipped_data_build_is_pinned():
 def test_shipped_shard_root():
     for name in CONFIG_FILES:
         cfg = yaml.safe_load((CONFIGS / name).read_text())
-        assert cfg["data"]["shard_root"] == "/workspace/shards/batch4", f"{name} 的分片目录"
+        assert cfg["data"]["shard_root"] == SHIPPED_SHARDS, f"{name} 的分片目录"
+
+
+def test_shipped_build_and_shards_agree_across_configs():
+    """两份运行矩阵钉同一个 build，两份 base 配置指同一个分片目录，且都等于 tests/_shipped.py 的值。
+
+    四个文件说的是同一件事（用哪一批数据）；两处写岔了，「check 通过」就成了各自为证。
+    """
+    builds = {n: yaml.safe_load((CONFIGS / n).read_text())["data_build"] for n in RUNS_FILES}
+    assert set(builds.values()) == {SHIPPED_BUILD}, builds
+    roots = {n: cfgmod.load(CONFIGS / n).data.shard_root for n in CONFIG_FILES}
+    assert set(roots.values()) == {SHIPPED_SHARDS}, roots
 
 
 def test_shipped_formal_check():
