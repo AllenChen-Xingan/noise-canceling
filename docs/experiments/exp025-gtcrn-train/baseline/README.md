@@ -113,7 +113,7 @@ cargo build --release -p vdn-eval
 
 ### 「每条 2 次」是干什么的、怎么定（大总管 2026-11-25 定）
 
-- **用途**（读源码 `asr.rs` · `qa/mod.rs`）：第 2 次是稳定性复核。两次转写分词后不同，就补调第 3 次取多数（A，2026-11-25 起）；三次都不同，这条音频剔除，该段吃字判「不知道」（rubric V7）。`meta.asr` 的 `unstable` 仍只看前两次（决定以后能不能改成 1 次），补调条数与没有多数的条数另记在 `tie_breaks` · `no_majority`
+- **用途**（读源码 `asr.rs` · `qa/mod.rs`）：第 2 次是稳定性复核。两次转写分词后不同，就补调第 3 次取多数（A，2026-11-25 起）；三次都不同，这条音频剔除，该段吃字判「不知道」（rubric V7）。`meta.asr` 的 `unstable` 仍只看前两次（决定以后能不能改成 1 次），要补调的条数、其中第 3 次没到手的条数、没有多数的条数另记在 `tie_breaks` · `tie_break_missing` · `no_majority`（第 3 次报错、重试用尽或已停发时报 `tie_break_missing`，不再少计）
 - **实测**（2026-11-25，`_tmp/exp025-asr-real-20261124-194229.log`）：同一条音频（car-passenger-c00-ext 的干净人声，LibriSpeech 英文 12 秒）连调 3 次，**逐字相同**；每次 0.00009 美元（`usage.cost`，等于每秒 0.0000075 美元 × 12 秒）；耗时 1.44 / 20.69 / 0.66 秒。只有 1 条音频，不能说明转写总是确定的
 - **定了**：基线保留每条 2 次（`REPEATS` = 2），同时量出 1440 条音频的不一致率，记进 `meta.asr.unstable_rate`。不一致率 ≤ `MAX_UNSTABLE_RATE`（0）时，以后的模型改成只转 1 次（`VDN_ASR_REPEATS=1`），按音频 sha256 固定抽 `SPOT_FRACTION`（10%）照旧转 2 次复核。三个常量的正本在 `asr.rs`，测试 `spot_check_sampling_is_deterministic_and_about_ten_percent`
 

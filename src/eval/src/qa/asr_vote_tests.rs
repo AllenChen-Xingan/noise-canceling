@@ -376,7 +376,10 @@ fn concurrent_matches_serial_with_content_dependent_replies() {
     assert_eq!(serial, conc, "串行与并发逐条相同");
     assert_eq!(sn, cn, "统计相同");
     assert_eq!(sn, (6, 6, 6, 0), "6 条都前两次不同、取到多数");
-    assert!(serial.iter().all(|(t, ok)| *ok && t.starts_with("a k")), "{serial:?}");
+    assert!(
+        serial.iter().all(|(t, ok)| *ok && t.starts_with("a k")),
+        "{serial:?}"
+    );
     assert_eq!((sreq, creq), (18, 18), "每条 3 个请求");
 }
 
@@ -399,10 +402,7 @@ fn single_mode_one_call_and_no_vote() {
     assert_eq!(seen.lock().unwrap().len(), 1, "只转 1 次");
     let s = a.summary();
     assert_eq!(
-        (
-            s["tie_breaks"].as_u64(),
-            s["tie_break_missing"].as_u64()
-        ),
+        (s["tie_breaks"].as_u64(), s["tie_break_missing"].as_u64()),
         (Some(0), Some(0))
     );
     assert_eq!((a.checked, a.unstable), (0, 0));
