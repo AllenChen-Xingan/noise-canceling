@@ -9,6 +9,8 @@ use super::asr::same_text;
 pub const TIE_BREAK_REP: usize = 3;
 /// 几次转写里至少这么多次分词后相同，才算数。
 pub const MAJORITY: usize = 2;
+// 多数要过半，才不会两种文本各占多数（编译期核）
+const _: () = assert!(MAJORITY * 2 > TIE_BREAK_REP);
 
 /// 判的结果。
 #[derive(Debug, PartialEq, Eq)]
@@ -76,9 +78,5 @@ mod tests {
     #[test]
     fn constants() {
         assert_eq!((TIE_BREAK_REP, MAJORITY), (3, 2));
-        assert!(
-            MAJORITY * 2 > TIE_BREAK_REP,
-            "多数要过半，才不会两种文本各占多数"
-        );
     }
 }
