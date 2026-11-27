@@ -1,0 +1,45 @@
+{
+ "wav": "mix.wav",
+ "frames": 611,
+ "rows": [
+  {
+   "seed": 0,
+   "film_fc_max_abs": 0.0,
+   "attn_out_w_norm": 0.22918446362018585,
+   "attn_out_b_norm": 0.021773042157292366,
+   "attn.q.weight_rel_change": 0.18704492049332638,
+   "attn.kv.weight_rel_change": 0.183466689689975,
+   "A_base_rel_change": 0.03221293147969561,
+   "B_base_rel_change": 0.03198151675649287,
+   "A_vs_B_base_rel_dist": 0.003036290009664998,
+   "attn_branch_rel_to_input": 0.05827387422323227,
+   "output_rel_change_without_attn": 0.029761621728539467
+  },
+  {
+   "seed": 1,
+   "film_fc_max_abs": 0.0,
+   "attn_out_w_norm": 0.2833872437477112,
+   "attn_out_b_norm": 0.022155312821269035,
+   "attn.q.weight_rel_change": 0.16689735409933587,
+   "attn.kv.weight_rel_change": 0.16100851389486026,
+   "A_base_rel_change": 0.03721899948744466,
+   "B_base_rel_change": 0.036786601434873896,
+   "A_vs_B_base_rel_dist": 0.003439918120341899,
+   "attn_branch_rel_to_input": 0.05224569886922836,
+   "output_rel_change_without_attn": 0.025124605745077133
+  },
+  {
+   "seed": 2,
+   "film_fc_max_abs": 0.0,
+   "attn_out_w_norm": 0.21834036707878113,
+   "attn_out_b_norm": 0.018300220370292664,
+   "attn.q.weight_rel_change": 0.2277367016502845,
+   "attn.kv.weight_rel_change": 0.17738889136481847,
+   "A_base_rel_change": 0.035205436654025875,
+   "B_base_rel_change": 0.032424845545770756,
+   "A_vs_B_base_rel_dist": 0.005090534346013584,
+   "attn_branch_rel_to_input": 0.05940376594662666,
+   "output_rel_change_without_attn": 0.023977462202310562
+  }
+ ]
+}

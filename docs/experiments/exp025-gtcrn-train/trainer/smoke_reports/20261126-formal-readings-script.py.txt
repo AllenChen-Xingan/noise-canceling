@@ -1,0 +1,28 @@
+"""从取回的运行记录生成正式训练读数汇总（只读）。用法：python readings.py <解包的 exp025-formal> <O 目录> <输出 json>"""
+import json, statistics as st, sys
+from pathlib import Path
+runs, O, out = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
+step0 = json.load(open(O / "known-dev-cpu.json"))["readings"]["hybrid"]
+res = {"step0_hybrid_cpu_ref": step0, "runs": {}, "by_variant": {}}
+for v in "AB":
+    curves = {}
+    for s in (0, 1, 2):
+        name = f"exp025-formal-{v}-s{s}"
+        rows = [json.loads(l) for l in open(runs / name / "metrics.jsonl")]
+        rj = json.load(open(runs / name / "run.json"))
+        tr = [r for r in rows if "dev" not in r]
+        win = [(b["billed_s"] - a["billed_s"]) / 20 for a, b in zip(tr, tr[1:]) if b["step"] - a["step"] == 20]
+        curves[s] = {r["step"]: r["dev"]["hybrid"] for r in rows if "dev" in r}
+        res["runs"][name] = {
+            "host": rj["env"]["host"], "git": rj["git"]["commit"][:8], "build": rj["data_build_id"],
+            "stop": rj["stop"]["reason"], "billed_s": rj["stop"]["billed_s"], "usd_as_recorded": rj["stop"]["usd"],
+            "setup_s": tr[0]["billed_s"], "step_s_median": round(st.median(win), 4),
+            "step_s_median_first500": round(st.median(win[:25]), 4), "grad_norm_max": round(max(r["grad_norm"] for r in tr), 1),
+            "best": rj["best"], "dev_hybrid": curves[s]}
+    steps = sorted(curves[0])
+    res["by_variant"][v] = {str(k): {"mean": round(st.mean(curves[s][k] for s in curves), 4),
+                                     "range": round(max(curves[s][k] for s in curves) - min(curves[s][k] for s in curves), 4)}
+                            for k in steps}
+res["B_minus_A_mean"] = {k: round(res["by_variant"]["B"][k]["mean"] - res["by_variant"]["A"][k]["mean"], 4)
+                         for k in res["by_variant"]["A"]}
+json.dump(res, open(out, "w"), ensure_ascii=False, indent=1)

@@ -1,0 +1,61 @@
+"""只读量：正式训练后 B 多出的部件（时间注意力 attn、条件调制 film）离初值多远；A、B 主干各走了多远。
+用法（在 trainer/ 目录）：python ab_drift.py <解包后的 exp025-formal 目录> <一段 16 kHz wav> <输出 json>
+初值照 train.build_model 的同一条路造：torch.manual_seed(seed) → models.build → load_base(起点)。"""
+import json, sys
+from pathlib import Path
+import torch, soundfile as sf
+sys.path.insert(0, ".")
+import models, train, losses
+
+runs, wav, out = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+start = train.load_start_state()
+KW = dict(k_frames=32, heads=2, cond_dim=8, attn=True, film=True)
+
+def init_B(seed):
+    torch.manual_seed(seed)
+    m = models.build("B", **KW)
+    m.load_base(start)
+    return m.state_dict()
+
+def best(v, s):
+    return torch.load(runs / f"exp025-formal-{v}-s{s}/ckpt/best.pt", map_location="cpu", weights_only=False)["model"]
+
+def rel(a, b, keys):
+    d = sum(float(((a[k] - b[k]).double() ** 2).sum()) for k in keys) ** 0.5
+    n = sum(float((b[k].double() ** 2).sum()) for k in keys) ** 0.5
+    return d, n
+
+x, sr = sf.read(wav, dtype="float32")
+assert sr == 16000, sr
+x = torch.from_numpy(x if x.ndim == 1 else x[:, 0])[None]
+spec = losses.stft(x)
+rows = []
+for s in (0, 1, 2):
+    a, b, b0 = best("A", s), best("B", s), init_B(s)
+    # 只比可训练的参数：BN 的 running_* 与 num_batches_tracked 是缓冲区（本次 BN 冻结），计数 24 万会压住范数
+    base = [k for k in b if k.startswith("base.") and "running_" not in k and "num_batches_tracked" not in k]
+    assert set(k for k in b if k.startswith("base.")) == set(a), "A、B 主干键不同"
+    r = {"seed": s}
+    r["film_fc_max_abs"] = float(b["film.fc.weight"].abs().max())
+    r["attn_out_w_norm"] = float(b["attn.out.weight"].norm()); r["attn_out_b_norm"] = float(b["attn.out.bias"].norm())
+    for k in ("attn.q.weight", "attn.kv.weight"):
+        d, n = rel(b, b0, [k]); r[k + "_rel_change"] = d / n
+    ref = {k: start[k[5:]] for k in base}  # 起点权重，键加 base. 前缀
+    for v, sd in (("A", a), ("B", b)):
+        d, n = rel(sd, ref, base); r[f"{v}_base_rel_change"] = d / n
+    d, n = rel(b, a, base); r["A_vs_B_base_rel_dist"] = d / n  # 以 A 的主干范数为基准
+    m = models.build("B", **KW); m.load_state_dict(b); m.eval()
+    cap = {}
+    def hook(mod, inp, outp):
+        cap["in"], cap["out"] = inp[0].detach(), outp.detach()
+    h = m.attn.register_forward_hook(hook)
+    with torch.no_grad():
+        yb = m(spec, train.cond_for(m, 1, "cpu"))
+        h.remove()
+        m.attn = None  # 去掉注意力，其余不变
+        yn = m(spec, train.cond_for(m, 1, "cpu"))
+    r["attn_branch_rel_to_input"] = float((cap["out"] - cap["in"]).norm() / cap["in"].norm())
+    r["output_rel_change_without_attn"] = float((yb - yn).norm() / yb.norm())
+    rows.append(r)
+json.dump({"wav": Path(wav).name, "frames": spec.shape[2], "rows": rows}, open(out, "w"), indent=1)
+print(json.dumps(rows, indent=1))
