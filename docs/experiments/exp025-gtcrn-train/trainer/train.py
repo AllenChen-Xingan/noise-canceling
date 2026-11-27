@@ -376,9 +376,6 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
                 return
             G.require_finite("dev_eval", row)  # 原模型与 EMA 的全部读数（第 1 轮 #1）
             rd.log(row)
-            err = trainlog.save_dev_audio(model, dev, device, rd.root, step)  # 固定几段存档给人听（#236）
-            if err:  # 写盘失败只记一行，不停训练：这几条 wav 不参与任何判据
-                rd.log({"step": step, "dev_audio_error": err})
             g = guard.on_eval(step, row["dev"].get("hybrid"))
             if g["nonfinite"]:  # 连 hybrid 读数都没有：一样按训崩停，走同一个出口
                 raise G.NonFinite("dev_eval", {"dev.hybrid": None})
@@ -388,6 +385,10 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
                 rd.write(rec)
             if g["warn"]:
                 guard_event("dev_plateau", message=g["warn"], best=guard.best)
+            # 固定几段存档给人听（#236）排在最后：权重与记录都已落盘，写 wav 再慢也不拖住该停的运行
+            err = trainlog.save_dev_audio(model, dev, device, rd.root, step, should_stop=tick_stop)
+            if err:  # 写盘失败只记一行，不停训练：这几条 wav 不参与任何判据
+                rd.log({"step": step, "dev_audio_error": err})
 
         if st is None:
             rd.save(state(), 0, sc.keep_last)
@@ -448,6 +449,10 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
                     dev_eval()
                 if step % sc.ckpt_every == 0:
                     rd.save(state(), step, sc.keep_last)
+            # 停下时窗口里可能还剩几步（不满一个 log_every）：单独记一行带 clip_tail，每一步都算得到
+            tail = clip.flush()
+            if tail:
+                rd.log({"step": step, "clip_tail": True, **tail})
             rd.save(state(), step, sc.keep_last)  # 先存：被抢占时可能只剩几秒（codex 第 1 轮 #3）
             if reason == "max_steps" and step > last_eval:  # 只在正常跑完时补评估；上限 / 信号时不再花时间
                 dev_eval()  # 坏读数在这里抛，落到下面唯一的 except
