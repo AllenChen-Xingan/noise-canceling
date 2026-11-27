@@ -1,4 +1,37 @@
-# 现状页 · 手下 evalcmp（批次 20261116-b19，issue #155）
+# 现状页 · 手下 evalcmp（批次 20261116-b19）
+
+## 当前：exp025 正式评测上云（2026-11-27 收工，人要求今晚停）
+
+状态：暂停在原版成绩单这一步，明天续。我向大总管 `noise-canceling-meta` 报告；云上的机器由 `cloudrun` 开、停、取回。
+
+**做到哪**
+- 执行单正本：`docs/experiments/exp025-gtcrn-train/eval/cloud-run.md`（main 2a07e8ed 版本，加上 PR #235 的三处补记：改成 3 台（D123），`$OLD` 路径，B 对 A 的读法）。交给 cloudrun 的交代文件在主目录 `_tmp/20261126-evalcmp-to-cloudrun/brief.md`
+- `EVAL_COMMIT` 钉在 `2a07e8ed2d77d30a700933f77727d48fc7229379`（main 之后多出的 #234 只改 trainer 文档，没动 `src/` 和 `eval/`）
+- 机 1 `begw6apbx1rtl4` 上已经过的关口：
+  - 6 个 best.pt 的 sha256 和清单一致
+  - 6 个导出都过了对拍；原版 ONNX 的 sha256 是 384e2c68…
+  - 账本起点：calls 3171，spent_usd 0.297396，写在 `batch-start.json`
+  - 回归检查：两项都过，0 处变化；识别 0 次；用时 47 分钟；RUN=`20261127-015114-regress-gtcrn`
+- 原版 `exp025-orig` 02:38Z 开跑。今晚是跑完取回还是中途停，看 cloudrun 的收工报告（它负责取回、删 pod、报账本读数）
+- 判读副本 `../noise_canceling-evalrun`：分离头，HEAD 是 2a07e8ed，工作区干净；`target/release/vdn-eval` 已编译
+
+**明天怎么续（新会话只看这里就够）**
+1. 先读 cloudrun 的收工报告：原版跑完没有，取回目录在哪，账本读数是多少，云上是不是 0 台
+2. 剩下的成绩单：如果原版跑完了，还剩 6 份（a-s0、a-s1、a-s2、b-s0、b-s1、b-s2）；如果没跑完，还剩 7 份。原版没跑完的那份按执行单第七节续跑，缓存用中断那份：`run_card external:_tmp/exp016/exp025-orig/formal1 exp025-orig $RUNS/<中断的 RUN>`
+3. 开新机器前要做的三件事：
+   - 核账本：`reserved_usd` 是 0，`review` 是空的；不是就照第七节核销
+   - 沿用网络盘上的 `batch-start.json`，不要重写
+   - 核花费：已花机器费加上下一台的最坏值不超过 1.92 美元（D123），识别批次累计不超过 1.2 美元
+4. 新机器上 6 个 ONNX 不用再导出，已经在网络盘 `$OUT` 里（`SHA256SUMS`）。`REPO` 要用同一个 `/workspace/repo-2a07e8ed`
+5. 原版那份出来后先核：识别次数约 1030 次，超过 1600 就停。然后按实测用时重估机器费，超过 1.92 美元报大总管
+6. 7 份都回来以后，在 `../noise_canceling-evalrun` 里照执行单第六节跑：12 份 compare 和 2 份 accept。先看负载（1 分钟负载 > 20 就等）和 `_tmp/heavy.lock`
+7. 判读时 B 对 A 按「A + 时间注意力」读：B 的条件调制层是恒等，见执行单第六节
+
+**开着的 PR / issue**：#235（执行单补记，只改文档，等大总管合并）· #231（A 转流式，归 trainer）· #229（执行单）
+
+---
+
+## 旧：compare 子命令那一批（2026-11-24，issue #155）
 
 状态：已收尾（2026-11-24，等大总管验收）
 
