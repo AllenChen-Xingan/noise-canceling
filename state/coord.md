@@ -597,3 +597,5 @@
 - 2026-11-27 evalcmp 可以关了：exp/025-eval-cloud de988bf7 已推（#235 已合并，这个提交只改交接页，比 main 多 1 个、未进 main）；无 pi、无后台；evalrun 停在 2a07e8ed。
 - 2026-11-27 traindata 可以关了：feat/data-batch5 a78a3cdc 已推（交接页改成现状；比 main 多 2 个只改交接页的提交，未进 main，下次一起合）；pi 全退。
 - 2026-11-27 trainer 可以关了：feat/trainer-train-logs fd14a9e8 已推，未开 PR；#236 修 codex 第 1 轮（2 严重 2 次要）做到一半，WIP a3b22d05；test_trainlog 18 过，全套未跑；pi 全退（含 trainer-b5-pin），pi 花 0.0324 美元。
+- 2026-11-27 cloudrun 可以关了：exp/025-cloud-baseline 855ccda9 已推；评测机 1 已停已删，大总管亲跑 rp.py spend：open_pods 空，合计 23.35/100 美元（评测机 1 花 0.21）；识别 calls 3171 · 0.297 不变。原版离线推理 43 min 未完（估 10，慢 4–5 倍），部分结果取回 eval-formal-m1-partial.tar.gz（14cdf91b…）。机 2、3 没开。登记待定 12-1（重算机数，可能 4 台）· 12-2（#233）。
+- 2026-11-27 收工：4 个手下都「可以关了」，全部已推、pi 全退、云上 0 台；大总管交接页已写。窗口由人关。
