@@ -590,3 +590,9 @@
 - 2026-11-27 02:21Z 大总管轮换（人点头）：旧会话 439efe9c 上下文约 488k，写交接页 state/handoff/coordinator.md，--retire 改名 noise-canceling-meta-old，开 vdn:coord2 新大总管（固定名 noise-canceling-meta）。
 - 2026-11-27 02:23Z 新大总管（vdn:coord2，noise-canceling-meta）接班：核对 4 条线与交接页一致；关旧窗口 vdn:coord。评测机 1 在跑回归检查。
 - 2026-11-27 02:38Z cloudrun：评测回归检查过（8259 对数值都在容差内，判定 · 阈值 · 否决 0 处变化；识别 0 次 0 美元；47 min，估 45）。原版成绩单 02:38Z 开跑。
+- 2026-11-27 大总管收训练对照评审（docs/reviews/train-vs-skills-20261126/，人已回「好」）：评测照跑不改；派 trainer 换线 feat/trainer-train-logs 加裁剪占比 · 裁剪前梯度范数 · 开发评估存 wav（交代 _tmp/20261116-b19/trainer-train-logs.md，等它回「可以关」）；学习率 1e-3 · 放宽裁剪 · 衰减短跑（约 6 运行 × 1000 步，花 H100）等 7 份成绩单后再议，先过开训前清单、人点头。
+- 2026-11-27 trainer 回「可以关」→ 换线 feat/trainer-train-logs（origin/main），删已合并 feat/trainer-formal-results，--continue 重开（加裁剪记录 · 开发评估存 wav）。
+- 2026-11-27 trainer（会话名改为 noise-canceling-trainer-cf）报到：issue #236；新小模块放裁剪统计（clip_frac · clip_n · gn_pre_median · gn_pre_max，按记录点区间）与开发份前 4 段 wav（16 位 16 kHz，dev_audio/step-XXXXXXX/，首次另存带噪 · 干净参照）；train.py 只接几行，不改配置结构、不碰 loader.CODE 与评测；交 pi，先红后绿，codex 1–2 轮。
+- 2026-11-27 人要求今晚全部收工（allenchen-1b 转达）：大总管发收工单 _tmp/20261116-b19/wrapup-20261127.md 给 4 个手下（停 pi · 提交推送 · cloudrun 原版成绩单 30 min 内跑完就取回、跑不完就取回已出部分后停 job 删 pod，确认云上 0 台 · 交接页 · 回「可以关了」）。窗口由人关。
+- 2026-11-27 evalcmp 可以关了：exp/025-eval-cloud de988bf7 已推（#235 已合并，这个提交只改交接页，比 main 多 1 个、未进 main）；无 pi、无后台；evalrun 停在 2a07e8ed。
+- 2026-11-27 traindata 可以关了：feat/data-batch5 a78a3cdc 已推（交接页改成现状；比 main 多 2 个只改交接页的提交，未进 main，下次一起合）；pi 全退。
