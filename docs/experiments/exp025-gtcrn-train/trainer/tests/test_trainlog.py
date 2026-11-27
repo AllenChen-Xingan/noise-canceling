@@ -99,6 +99,29 @@ def test_save_dev_audio_keeps_module_modes_and_rng(tmp_path):
     assert (tmp_path / "dev_audio" / "step-0000007").is_dir()
 
 
+def test_save_dev_audio_completes_partial_ref_and_keeps_existing(tmp_path):
+    """参照写到一半失败（缺一份）：下一次评估把缺的补上，已经在的那几份不重写。
+
+    判据按「缺文件」而不是「目录在不在」：一次 OSError 之后参照集不能永远残缺。
+    """
+    cfg = _cfg(tmp_path)
+    device = torch.device("cpu")
+    model = train.build_model(cfg, device)
+    dev = train.make_source(cfg).dev_batches()
+    assert trainlog.save_dev_audio(model, dev, device, tmp_path, 1) is None
+    ref = tmp_path / "dev_audio" / "ref"
+    gone = ref / "clean-1.wav"
+    assert gone.exists()
+    gone.unlink()
+    keep = sorted(p for p in ref.glob("*.wav"))
+    assert len(keep) == 2 * trainlog.DEV_AUDIO_N - 1
+    before = {p.name: p.stat().st_mtime_ns for p in keep}
+    assert trainlog.save_dev_audio(model, dev, device, tmp_path, 2) is None
+    assert gone.exists()  # 缺的补齐
+    assert {p.name: p.stat().st_mtime_ns for p in keep} == before  # 已有的一律不重写
+    assert len(list(ref.glob("*.wav"))) == 2 * trainlog.DEV_AUDIO_N
+
+
 def test_save_dev_audio_reports_oserror_without_raising(tmp_path, monkeypatch):
     """磁盘满 / 目录不可写时只回一个错误字符串，训练不崩。"""
     def boom(*a, **k):
