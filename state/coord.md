@@ -587,3 +587,6 @@
 - 2026-11-27 01:42Z 评测机 1 begw6apbx1rtl4 开机（时限 5.5 h，D123）。
 - 2026-11-27 评测关口 2 过：6 个 best.pt sha256 对、6 个导出对拍过、原版 sha 对；账本起点 calls 3171 · spent 0.297；EVAL_COMMIT 2a07e8ed；准备 8 min（估 40）；回归检查开始。
 - 2026-11-27 PR #234 · #235 CI 过后合并。
+- 2026-11-27 02:21Z 大总管轮换（人点头）：旧会话 439efe9c 上下文约 488k，写交接页 state/handoff/coordinator.md，--retire 改名 noise-canceling-meta-old，开 vdn:coord2 新大总管（固定名 noise-canceling-meta）。
+- 2026-11-27 02:23Z 新大总管（vdn:coord2，noise-canceling-meta）接班：核对 4 条线与交接页一致；关旧窗口 vdn:coord。评测机 1 在跑回归检查。
+- 2026-11-27 02:38Z cloudrun：评测回归检查过（8259 对数值都在容差内，判定 · 阈值 · 否决 0 处变化；识别 0 次 0 美元；47 min，估 45）。原版成绩单 02:38Z 开跑。
