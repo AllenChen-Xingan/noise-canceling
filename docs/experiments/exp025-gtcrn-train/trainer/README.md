@@ -62,7 +62,7 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 python train.py --config configs/smoke-cpu.yaml --set run.out_dir=/tmp/vdn-accept --set run.name=accept
 ```
 
-  预期：`dev_audio/` 下有 `step-0000010/`、`step-0000020/` 各 4 个 wav，`ref/` 有 8 个，都是 16000 Hz `PCM_16`；`metrics.jsonl` 的 5 条训练行都有那 4 项，`clip_n` 之和是 20。2026-11-26 本机实测如此；合成数据上每步都被裁（`clip_frac` 都是 1.0，范数 94–628），这只说明管线通，不代表真数据
+  预期：`dev_audio/` 下有 `step-0000010/`、`step-0000020/` 各 4 个 wav，`ref/` 有 8 个，都是 16000 Hz `PCM_16`；`metrics.jsonl` 的 5 条训练行都有那 4 项，`clip_n` 之和是 20。2026-11-26 本机实测如此；合成数据上每步都被裁（`clip_frac` 都是 1.0；各窗口裁剪前范数的中位数 94–380、最大 628），这只说明管线通，不代表真数据
 
 ## 核清的事
 

@@ -1,10 +1,10 @@
 # 现状页 · trainer（批次 20261116-b19）
 
-- **状态**：正式训练 6 个运行已练完、已判（6 个都算训好；B 与 A 在开发份上分不出，只是训练读数）。分支 `feat/trainer-formal-results`：两批读数、A/B 部件漂移写进 trainer/README.md 和 smoke_reports/，执行单前提 6 改为 batch4 已删，开了 #233（训练慢在哪）。开 PR 交大总管验收
+- **状态**：训练器加两样记录（#236）。分支 `feat/trainer-train-logs`：pi trainer-train-logs 写了 `trainlog.py`（梯度裁剪统计 · 开发评估存 wav），接进 train.py；trainer 复现红绿，本机 CPU 小训练核过文件数、采样率、位深和 4 个裁剪字段。codex 后开 PR 交大总管验收
 - **手上**：训练器 · 训练损失 · 模型变体（issue #157）
 - **交代**：`_tmp/20261116-b19/trainer.md`；新规则 `_tmp/20261116-b19/common-pi-rule-20261126.md`（代码派 pi 写）；大总管固定名 `noise-canceling-meta`（人定 2026-11-26，轮换后不变；旧名 noise-canceling-87 停用）
 - **做到哪**（2026-11-26）：#228（正式训练改钉第五批）已合入。cloudrun 跑完正式训练（代码 7b52d395，两台 H100）；trainer 本机读取回包：6 个 best.pt sha256 与清单一致。B 的条件调制层练完仍全为 0（喂全零的直接后果），注意力输出层范数 0.22–0.28，拿掉注意力输出谱变 2.4–3.0%（一段示例录音）。待办 #198 · #210 · #217 · #231 · #233
-- **下一步**：大总管合并本 PR → evalcmp 在评测机上按 cloud-run.md 导出 ONNX、出成绩单 → 成绩单回来后再下 A/B 结论；#231 流式导出在那之后。网络盘 /workspace/runs/exp025-formal 评测完以前不删
+- **下一步**：codex 评审 → PR（Closes #236）→ 大总管在独立副本跑 CPU 小训练验收。学习率 / 裁剪 / 衰减的短跑对比等 7 份成绩单、开训前清单和人点头后另派
 
 ## 改了哪些文件
 全部在 `docs/experiments/exp025-gtcrn-train/trainer/`，说明见该目录 `README.md`：
@@ -89,3 +89,4 @@
 - 11-26 新基线一单的读数（分支 feat/trainer-b4-results）：cloudrun 取回主仓 _tmp/20261126-trainer-b4/，两个包 sha256 本机重算一致（O e6925628…、ablation 8aa73703…）。trainer 本机跑 `ablation.py judge` 退出 0：base 3.84142、噪声底 0.00779；混响 +0.091 有用、均衡 +0.022 有用（证据不强）、削波 −0.005 / 多噪声 +0.005 / 高信噪比 +0.001 分不出。3 个 A 同时跑每步实测 0.342–0.349 s（之前推断 0.347 s）。没用 pi，没花模型费。
 - 11-26 正式训练改用第五批（分支 feat/trainer-formal-b5）：pi trainer-b5-pin 提交 dd5ed3e4..2b0cd25a（Agent: pi，0.0106 美元），trainer 用 merge 合入。红灯由 trainer 在 dd5ed3e4 的复制件上复现（9 败 95 过）；合入后 trainer 全部测试 531 过 2 跳过；formal / ablation 两个 check 退出 0。codex 2 轮（P2 各 1 条，都当场改了），达停止线，记录 trainer/reviews/009_formal-b5-codex.md。
 - 11-26 正式训练读数（分支 feat/trainer-formal-results）：cloudrun 取回主仓 _tmp/20261126-trainer-formal/（运行包 a0b7b3c7… / 6c7e2c09…）。trainer 本机只读：6 个运行训满 5000 步、退出码 0、自动保护都没触发；开发份 hybrid 3.8132 → A 3.6532 / B 3.6518（3 种子均值），种子极差 0.008–0.025，B − A 在 ±0.002 以内。另量了 B 多出部件离初值多远（smoke_reports/20261126-formal-ab-drift.json）。两台新 H100 墙钟慢 1.4–2.1 倍，但每步耗时不变，慢在准备期，开 #233。没用 pi，没花模型费。
+- 11-26 训练记录两样（issue #236，分支 feat/trainer-train-logs）：pi trainer-train-logs 提交 b6e51eea..4394afd0（Agent: pi，0.0158 美元），trainer 用 merge 合入（bd8e7b7c）。红灯由 trainer 在 b6e51eea（测试导入即报缺模块）和 13966a72（参照缺一份不补，1 败）的复制件上复现；HEAD 上 test_trainlog + test_train 28 过。本机 CPU 合成数据 20 步：dev_audio 2 个评估目录各 4 个 wav、ref 8 个，都是 16 kHz PCM_16；5 条训练行都有 4 个裁剪字段，clip_n 之和 20。
