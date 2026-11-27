@@ -31,6 +31,7 @@ import config as cfgmod
 import guards as G
 import losses
 import models
+import trainlog
 from data import frames_mask, make_source
 from official import load_start_state
 from runrec import EMA, RunDir, check_resume, env_info, git_info, start_record
@@ -270,6 +271,8 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
         guard = G.Guard(cfg.limits.expect_s_step)
         if st is not None and st.get("guards") is not None:
             guard.load_state_dict(st["guards"])
+        # 裁剪统计只在内存里、**不进检查点**：续训后窗口从空开始，第一行读数只覆盖续训之后的那些步
+        clip = trainlog.ClipStats(cfg.optim.grad_clip)
         if st is not None:  # 最好的一次取三处里最好的：检查点 · run.json · best.pt 自带的（与权重一起原子存，codex guards 第 1、2 轮）
             for b in (rd.read().get("best"), best_in_file(rd.ckpt_dir / "best.pt", device)):
                 if b is not None and (guard.best is None or b["hybrid"] < guard.best["hybrid"]):
@@ -373,6 +376,9 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
                 return
             G.require_finite("dev_eval", row)  # 原模型与 EMA 的全部读数（第 1 轮 #1）
             rd.log(row)
+            err = trainlog.save_dev_audio(model, dev, device, rd.root, step)  # 固定几段存档给人听（#236）
+            if err:  # 写盘失败只记一行，不停训练：这几条 wav 不参与任何判据
+                rd.log({"step": step, "dev_audio_error": err})
             g = guard.on_eval(step, row["dev"].get("hybrid"))
             if g["nonfinite"]:  # 连 hybrid 读数都没有：一样按训崩停，走同一个出口
                 raise G.NonFinite("dev_eval", {"dev.hybrid": None})
@@ -416,8 +422,10 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
                 opt.zero_grad(set_to_none=True)
                 loss.backward()
                 gn = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.optim.grad_clip)
+                gn_pre = float(gn)  # 裁剪前的总范数（clip_grad_norm_ 的返回值就是它）
                 # 损失有限、梯度却不是：不更新，否则 Adam 会把 NaN 写进权重（codex 第 1 轮 #2）
-                G.require_finite("grad_norm", {"grad_norm": float(gn)})  # 抛的这一句必须在 opt.step() 之前
+                G.require_finite("grad_norm", {"grad_norm": gn_pre})  # 抛的这一句必须在 opt.step() 之前
+                clip.add(gn_pre)  # 进本段窗口（坏读数在上面已经抛了，不进统计）
                 opt.step()
                 sched.step()
                 if ema is not None:
@@ -427,7 +435,7 @@ def _train_locked(cfg, rd, t_proc, cfg_dict, max_wall_s, _signals, _beat_s, _on_
                 acct["t_progress"] = time.monotonic()
                 if step % sc.log_every == 0 or step == 1:
                     rd.log({"step": step, "lr": sched.get_last_lr()[0], "billed_s": round(billed(), 2),
-                            "usd": round(usd(), 4), "grad_norm": float(gn), **logs})
+                            "usd": round(usd(), 4), "grad_norm": gn_pre, **clip.flush(), **logs})
                 why = guard.on_train_step(step, logs.get("total", loss.item()), time.monotonic() - t_iter)
                 if why:  # ② 损失猛涨 / ④ 太慢：只停本运行（每个运行各自判）
                     reason = G.pick_reason(why, stop_reason())  # 同时成立时按优先级表挑
