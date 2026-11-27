@@ -113,3 +113,9 @@
   - 要读：本页最后 3 条 · data/cloud-batch5.md · data/scene-gaps.md · data/evidence-df759bb8d606a209.md · data/scenes-df759bb8d606a209.md · data/shard-records/batch4/README.md · data/reviews/221_batch5-codex.md。
   - 留后处理：#222（第四批评审延期项）· #226（screen_tone 换行符与 --out == --check）。食堂补救 D（CochlScene Restaurant，要重下约 54 GB）待人定，见 scene-gaps.md §2.4。
   - 本线没有评测要续；评测由 evalcmp / trainer 管。
+- 2026-11-27 **现状（更正上一条「下一步」，大总管 noise-canceling-meta 告知，我没逐项核）**：上一条的 3 件事都已做完。
+  1. PR #227 已合并（main 2a1c5e16），#221 已关。
+  2. trainer 已改用基线 build df759bb8d606a209，6 个正式运行都已练完。
+  3. 云上 batch4 已按 D118 删掉。删前取回了 94 个分片的校验值（留底见 data/shard-records/batch4/）。
+  - 食堂补救：人定不补（D121）。scene-gaps.md §2.4 的选项 D 不再待定。
+  - **下一步只剩 3 件**：① #222（第四批评审延期项）；② #226（screen_tone 换行符问题与 --out == --check）；③ batch2 按 D118 删除前，要取回小文件和校验值，照 data/cloud-batch5.md 第 6 步的写法列清单，交 cloudrun。改代码的派 pi。
