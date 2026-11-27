@@ -73,14 +73,16 @@ def save_dev_audio(model, dev, device, root: Path, step: int) -> str | None:
     root = Path(root)
     out_dir = root / "dev_audio" / f"step-{step:07d}"
     ref_dir = root / "dev_audio" / "ref"
-    need_ref = not ref_dir.exists()  # 参照只写一次：目录已在就当作写过了
+    # 参照只补缺、不重写：上一次写到一半失败（OSError）时，这次评估把缺的几份补齐；已在的一律不动。
+    # 判据是「文件在不在」，不是「目录在不在」——目录建好之后写文件才失败的话，按目录判就永远缺那几份。
+    ref_files = {f"{tag}-{j}.wav" for j in range(DEV_AUDIO_N) for tag in ("noisy", "clean")}
+    ref_missing = {n for n in ref_files if not (ref_dir / n).exists()}
     modes = [(m, m.training) for m in model.modules()]
     try:
         model.eval()
         with torch.no_grad():
             out_dir.mkdir(parents=True, exist_ok=True)
-            if need_ref:
-                ref_dir.mkdir(parents=True, exist_ok=True)
+            ref_dir.mkdir(parents=True, exist_ok=True)
             done = 0
             for b in dev:
                 if done >= DEV_AUDIO_N:
@@ -93,8 +95,9 @@ def save_dev_audio(model, dev, device, root: Path, step: int) -> str | None:
                 for i in range(take):
                     j = done + i
                     _write_wav(out_dir / f"enh-{j}.wav", enh[i])
-                    if need_ref:
+                    if f"noisy-{j}.wav" in ref_missing:
                         _write_wav(ref_dir / f"noisy-{j}.wav", noisy[i])
+                    if f"clean-{j}.wav" in ref_missing:
                         _write_wav(ref_dir / f"clean-{j}.wav", clean[i])
                 done += take
     except OSError as e:
