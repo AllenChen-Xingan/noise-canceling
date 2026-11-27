@@ -64,3 +64,8 @@ ts_utc	action	resource_id	gpu	data_center	usd_per_hr	started_utc	ended_utc	hours
 2026-11-26T21:44:00Z	pod_create	w3hx88oodste3e	cpu3c x4	US-MO-1	0.1200	2026-11-26T21:44:00Z					max_hours=0.5
 2026-11-26T22:14:34Z	pod_delete	w3hx88oodste3e	cpu3c x4	US-MO-1	0.1200	2026-11-26T21:44:00Z	2026-11-26T22:14:34Z	0.5094	0.0611		正式训练甲段：到 0.5 小时时限机器自删，CPU 参照没跑完（单元测试 1015 s，远超估计 301 s） 删时已不存在
 2026-11-26T22:15:19Z	pod_create	2drq1wolg6m8or	cpu3c x4	US-MO-1	0.1200	2026-11-26T22:15:19Z					max_hours=0.4
+2026-11-26T22:24:51Z	pod_delete	2drq1wolg6m8or	cpu3c x4	US-MO-1	0.1200	2026-11-26T22:15:19Z	2026-11-26T22:24:51Z	0.1589	0.0191		正式训练甲段补跑：CPU 参照写出（f1e3b394，build df759bb8），盘剩 37 GB
+2026-11-26T22:25:07Z	pod_create	frjhmmbgot6ry1	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-26T22:25:07Z					max_hours=1.9
+2026-11-26T23:42:31Z	pod_delete	frjhmmbgot6ry1	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-26T22:25:07Z	2026-11-26T23:42:31Z	1.2900	5.6631		正式训练机 1：闸门过，第 1 批 3 个 A 全 0（36.1 分钟）；剩余时间不够第 2 批（D122），已打包取回
+2026-11-26T23:42:46Z	pod_create	rj7o1e6mblb9hj	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-26T23:42:46Z					max_hours=1.5
+2026-11-27T00:33:30Z	pod_delete	rj7o1e6mblb9hj	NVIDIA H100 80GB HBM3	US-MO-1	4.3900	2026-11-26T23:42:46Z	2026-11-27T00:33:30Z	0.8456	3.7120		正式训练机 2：第 2 批 3 个 B 全 0（38.7 分钟），6 个运行全部练完，已打包取回

@@ -100,3 +100,13 @@
 - 第一台 CPU 机 w3hx88oodste3e（时限 0.5 小时，0.061 美元）：formal check 过、输出目录不存在、盘剩 40 GB；单元测试实测 1015 s（执行单估 301 s，慢 3 倍多），CPU 参照没算完，机器到时限自删。
 - 补跑 2drq1wolg6m8or（大总管批 0.4 小时，最坏约 0.06 美元）：只跑 formal check · CPU 参照 · 量盘，用网络盘上已装好的代码和环境（脚本 scratchpad/formal/fa2.sh）。
 - **教训（大总管定）：机器时限按实测最慢的那次加 50% 余量来定，不按执行单的估时。** CPU 机的速度每台不一样；单元测试那一步已见过 301 s 和 1015 s 两个数。
+
+## 2026-11-27 正式训练 6 个运行练完（D119 · D122）
+
+- 代码 main 7b52d395，build df759bb8（/workspace/shards/batch5），CPU 参照 known-dev-cpu.json sha256 f1e3b394…
+- H100 机 1 frjhmmbgot6ry1（1.9 小时时限，5.66 美元）：冒烟 pass（412 s），A、B 的 dev_gate 都 pass；第 1 批 3 个 A 全 0，36.1 分钟。剩余约 48 分钟 < 51.5 分钟，照 D122 不发第 2 批。
+- H100 机 2 rj7o1e6mblb9hj（1.5 小时时限，3.71 美元）：第 2 批 3 个 B 全 0，38.7 分钟。
+- 这一单合计 9.45 美元（CPU 0.08 + H100 9.37）；累计 23.08 美元 / 100。云上 0 台，盘用 163 GB、剩 37 GB。
+- 检查点全留在 /workspace/runs/exp025-formal/<运行>/ckpt/（step-0005000.pt、best.pt），sha256 清单：主仓 _tmp/20261126-trainer-formal/batch2/trainer-formal-ckpt-manifest-20261127T002828Z.txt；包在 batch1/、batch2/，校验和一致。没有 ONNX。
+- 这台 H100 比 2026-11-26 那台慢 1.4–2 倍（冒烟 412 vs 197 s）；fbrun.sh 会自动发第 2 批，这次先杀了它的总控进程、改用 fbwait.sh 逐批发。下回脚本自带「剩余时间不够就不发」的判断。
+- batch2 仍保留，等第一个正式运行的开发份检查过（D112）再删。
