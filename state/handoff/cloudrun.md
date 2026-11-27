@@ -110,3 +110,22 @@
 - 检查点全留在 /workspace/runs/exp025-formal/<运行>/ckpt/（step-0005000.pt、best.pt），sha256 清单：主仓 _tmp/20261126-trainer-formal/batch2/trainer-formal-ckpt-manifest-20261127T002828Z.txt；包在 batch1/、batch2/，校验和一致。没有 ONNX。
 - 这台 H100 比 2026-11-26 那台慢 1.4–2 倍（冒烟 412 vs 197 s）；fbrun.sh 会自动发第 2 批，这次先杀了它的总控进程、改用 fbwait.sh 逐批发。下回脚本自带「剩余时间不够就不发」的判断。
 - batch2 仍保留，等第一个正式运行的开发份检查过（D112）再删。
+
+## 2026-11-27 03:30Z 收工：评测（D123，三台）做到哪 · 新会话从这里接
+
+**现状**：云上 0 台（`rp.py spend` open_pods 为空，`reap` 显示云上没有）。累计 23.35 美元 / 100（机器 22.42 + 网络盘 0.93）。识别账本 calls 3171、spent_usd 0.297396、reserved 0、无待核（和本批起点相同，本批还没花识别费）。
+
+**评测机 1 begw6apbx1rtl4（已删，0.21 美元）做完的**：
+- 准备 8 分钟：$OLD-merged/clips.jsonl = c00ed213… 对上；6 个 best.pt sha256 全对；6 个导出对拍全过；原版 384e2c68… 对上；official-recheck 8bf8f721…（与原版不同，只记）。批次起点 batch-start.json = calls 3171 / spent 0.297396。
+- 回归检查过：parity 8259 对在容差内；判定 · 阈值 · 否决 0 处变；识别 0 次；47 分钟。RUN=20261127-015114-regress-gtcrn。
+- 原版 exp025-orig：探针声明延迟 256；离线推理跑到每片约 160 段时按收工停（4 片约 1.3 倍实时，远慢于执行单估的 10 分钟；机器 load average 约 330）。成绩单没开始，没花识别费。
+- 部分结果已取回：主仓 `_tmp/20261127-cloudrun-eval-formal/eval-formal-m1-partial.tar.gz`（sha256 14cdf91b…），含回归成绩单、6 份对拍报告、SHA256SUMS、账本快照、pod 日志。
+
+**网络盘上留着（别删）**：`/workspace/repo-2a07e8ed`（代码 · .venv · `_tmp/eval-formal/onnx/` 7 个 ONNX + batch-start.json · 回归 runs）、`/workspace/runs/exp025-formal`（trainer 要求评测完前不删）、`_tmp/exp016/exp025-orig/formal1/` 原版离线输出的一部分、batch2（D112）。盘约剩 36 GB。
+
+**下一步（要大总管重新批开机；D123 的机 2、机 3 先不开）**：
+1. 读：`docs/experiments/exp025-gtcrn-train/eval/cloud-run.md`（main 2a07e8ed）· 主仓 `_tmp/20261126-evalcmp-to-cloudrun/brief.md` · 本节。
+2. 脚本存档在主仓 `_tmp/20261127-cloudrun-eval-formal/scripts/eval/`（vars.sh · lib-card.sh 由执行单第四节原样抽出 · e1prep.sh · e1regress.sh · emodel.sh · epack1.sh）；scratchpad 那份可能被清。
+3. 续跑机 1 剩的：开 CPU 机后先 `put` 上述脚本到 `/workspace/out/eval/`、`put-secret` 送 OPENROUTER_API_KEY，然后 `bash emodel.sh exp025-orig exp025-orig.onnx`（离线同一 run-id formal1，已写的段会跳过），再 `bash emodel.sh exp025-a-s0 exp025-formal-A-s0.onnx`。不用重跑 e1prep 和回归（都在盘上）；但新机器要先 `apt-get install libssl-dev`，vdn-eval 已在 /workspace/cargo-target。
+4. **重估时限**：离线推理实测约 1.3 倍实时、每片 120 段约 40–50 分钟（不是 10 分钟），每个模型再加成绩单约 55 分钟（推断）。三台分法要按这个重算，可能要 4 台，先报大总管。
+5. 原版成绩单跑完先核识别次数（约 1030，超 1600 停）。
