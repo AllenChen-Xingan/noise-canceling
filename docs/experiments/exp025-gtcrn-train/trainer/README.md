@@ -13,6 +13,7 @@
 | `config.py` · `configs/` | 配置正本（dataclass）与实例：`default.yaml` 正式默认 · `smoke-cpu.yaml` 本机小冒烟 |
 | `data.py` | 数据适配：traindata 的 loader（显卡上 GPU 混音）· 仓内合成小样（只给测试与冒烟） |
 | `train.py` · `runrec.py` | 训练循环 · 运行记录 · 检查点 · 续训 · 时长与花费上限 · EMA（开关，默认关） |
+| `trainlog.py` | 两样训练记录（#236）：梯度裁剪统计（每个记录点写 `clip_n` · `clip_frac` · `gn_pre_median` · `gn_pre_max`）· 每次开发评估把开发份前 `DEV_AUDIO_N` 段的增强结果存成 wav |
 | `watchdog.py` | 信号 · 心跳 · 看门狗（单写者心跳；先判断后写盘；不碰磁盘的本段时限兜底） |
 | `smoke.py` | 开训前冒烟三件事 + 测每步耗时，一个命令 |
 | `smoke.py --write-known-dev` | 只算起点模型的开发份参照读数（带数据版本 meta），给 `--known-dev` 用 |
@@ -42,6 +43,26 @@ python export.py --ckpt ~/vdn-data/runs/exp025-B-s0/ckpt/step-0005000.pt --out b
 ```
 
 用同一个 `run.name` 再跑一次 `train.py`，就从最新检查点续训。续训时只许改步数、时长、花费上限、worker 数、日志间隔和设备；改了别的配置或数据 build，就拒绝续训。
+
+### 训练记录：梯度裁剪与开发音频（#236）
+
+- **裁剪**：`metrics.jsonl` 的每条训练行（第 1 步和每 `log_every` 步）多 4 项，统计的是从上一个记录点到这一步的每一步：
+  - `clip_n`：这段窗口有几步
+  - `clip_frac`：其中被梯度裁剪的步占比。裁剪前范数**严格大于** `optim.grad_clip` 才算被裁
+  - `gn_pre_median` · `gn_pre_max`：裁剪前梯度范数的中位数和最大值
+  - 原来的 `grad_norm`（只是记录点那一步的范数）照留。窗口不进检查点，续训后从空开始
+- **开发音频**：每次开发评估后，把开发份前 `DEV_AUDIO_N` 段（正本 `trainlog.py`，现为 4）的增强结果写进运行目录：
+  - 增强结果：`dev_audio/step-NNNNNNN/enh-i.wav`
+  - 参照：`dev_audio/ref/noisy-i.wav`、`clean-i.wav`，只写缺的那几份
+  - 格式：16 kHz、16 位 PCM。写盘失败只记一行 `dev_audio_error`，训练照跑。这几条 wav 只给人听，不进任何判据
+  - 开发份的顺序由 `data.dev_seed` 定，所以同一份开发份每次存的是同几段
+- 本机自查（CPU，合成数据，约 10 s）：
+
+```sh
+python train.py --config configs/smoke-cpu.yaml --set run.out_dir=/tmp/vdn-accept --set run.name=accept
+```
+
+  预期：`dev_audio/` 下有 `step-0000010/`、`step-0000020/` 各 4 个 wav，`ref/` 有 8 个，都是 16000 Hz `PCM_16`；`metrics.jsonl` 的 5 条训练行都有那 4 项，`clip_n` 之和是 20。2026-11-26 本机实测如此；合成数据上每步都被裁（`clip_frac` 都是 1.0，范数 94–628），这只说明管线通，不代表真数据
 
 ## 核清的事
 
