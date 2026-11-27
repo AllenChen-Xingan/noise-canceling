@@ -1,5 +1,6 @@
 {
  "wav": "mix.wav",
+ "trainable_base_params": 203,
  "frames": 611,
  "rows": [
   {
@@ -9,9 +10,9 @@
    "attn_out_b_norm": 0.021773042157292366,
    "attn.q.weight_rel_change": 0.18704492049332638,
    "attn.kv.weight_rel_change": 0.183466689689975,
-   "A_base_rel_change": 0.03221293147969561,
-   "B_base_rel_change": 0.03198151675649287,
-   "A_vs_B_base_rel_dist": 0.003036290009664998,
+   "A_base_rel_change": 0.03270090734614909,
+   "B_base_rel_change": 0.03246598704941182,
+   "A_vs_B_base_rel_dist": 0.0030822708285048366,
    "attn_branch_rel_to_input": 0.05827387422323227,
    "output_rel_change_without_attn": 0.029761621728539467
   },
@@ -22,9 +23,9 @@
    "attn_out_b_norm": 0.022155312821269035,
    "attn.q.weight_rel_change": 0.16689735409933587,
    "attn.kv.weight_rel_change": 0.16100851389486026,
-   "A_base_rel_change": 0.03721899948744466,
-   "B_base_rel_change": 0.036786601434873896,
-   "A_vs_B_base_rel_dist": 0.003439918120341899,
+   "A_base_rel_change": 0.0377828095068732,
+   "B_base_rel_change": 0.03734386129557227,
+   "A_vs_B_base_rel_dist": 0.0034920128576465767,
    "attn_branch_rel_to_input": 0.05224569886922836,
    "output_rel_change_without_attn": 0.025124605745077133
   },
@@ -35,9 +36,9 @@
    "attn_out_b_norm": 0.018300220370292664,
    "attn.q.weight_rel_change": 0.2277367016502845,
    "attn.kv.weight_rel_change": 0.17738889136481847,
-   "A_base_rel_change": 0.035205436654025875,
-   "B_base_rel_change": 0.032424845545770756,
-   "A_vs_B_base_rel_dist": 0.005090534346013584,
+   "A_base_rel_change": 0.03573874432476518,
+   "B_base_rel_change": 0.03291603158109917,
+   "A_vs_B_base_rel_dist": 0.005167634070354921,
    "attn_branch_rel_to_input": 0.05940376594662666,
    "output_rel_change_without_attn": 0.023977462202310562
   }

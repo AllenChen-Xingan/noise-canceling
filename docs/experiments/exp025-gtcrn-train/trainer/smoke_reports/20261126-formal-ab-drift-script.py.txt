@@ -29,11 +29,16 @@ x, sr = sf.read(wav, dtype="float32")
 assert sr == 16000, sr
 x = torch.from_numpy(x if x.ndim == 1 else x[:, 0])[None]
 spec = losses.stft(x)
+_m = models.build("B", **KW)
+TRAINABLE_BASE = [n for n, p in _m.named_parameters() if n.startswith("base.") and p.requires_grad]
 rows = []
 for s in (0, 1, 2):
     a, b, b0 = best("A", s), best("B", s), init_B(s)
-    # 只比可训练的参数：BN 的 running_* 与 num_batches_tracked 是缓冲区（本次 BN 冻结），计数 24 万会压住范数
-    base = [k for k in b if k.startswith("base.") and "running_" not in k and "num_batches_tracked" not in k]
+    cfgm = torch.load(runs / f"exp025-formal-B-s{s}/ckpt/best.pt", map_location="cpu", weights_only=False)["config"]["model"]
+    assert all(cfgm[k] == v for k, v in KW.items()), ("B 的模型配置与 KW 不同", cfgm)
+    # 只比可训练的参数（requires_grad 为真，codex 第 1 轮 #1）：不算 BN 缓冲区（计数 24 万会压住范数），
+    # 也不算官方固定的 ERB 滤波器矩阵
+    base = TRAINABLE_BASE
     assert set(k for k in b if k.startswith("base.")) == set(a), "A、B 主干键不同"
     r = {"seed": s}
     r["film_fc_max_abs"] = float(b["film.fc.weight"].abs().max())
@@ -57,5 +62,5 @@ for s in (0, 1, 2):
     r["attn_branch_rel_to_input"] = float((cap["out"] - cap["in"]).norm() / cap["in"].norm())
     r["output_rel_change_without_attn"] = float((yb - yn).norm() / yb.norm())
     rows.append(r)
-json.dump({"wav": Path(wav).name, "frames": spec.shape[2], "rows": rows}, open(out, "w"), indent=1)
+json.dump({"wav": Path(wav).name, "trainable_base_params": len(TRAINABLE_BASE), "frames": spec.shape[2], "rows": rows}, open(out, "w"), indent=1)
 print(json.dumps(rows, indent=1))

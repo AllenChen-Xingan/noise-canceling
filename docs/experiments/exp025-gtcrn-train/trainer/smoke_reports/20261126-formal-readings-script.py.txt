@@ -4,6 +4,8 @@ from pathlib import Path
 runs, O, out = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
 step0 = json.load(open(O / "known-dev-cpu.json"))["readings"]["hybrid"]
 res = {"step0_hybrid_cpu_ref": step0, "runs": {}, "by_variant": {}}
+raw = {}
+res["note"] = "grad_norm_max_logged = 裁剪前梯度范数在已记录步骤（第 1 步与每 log_every=20 步）上的最大值，不是全部 5000 步的峰值"
 for v in "AB":
     curves = {}
     for s in (0, 1, 2):
@@ -17,12 +19,13 @@ for v in "AB":
             "host": rj["env"]["host"], "git": rj["git"]["commit"][:8], "build": rj["data_build_id"],
             "stop": rj["stop"]["reason"], "billed_s": rj["stop"]["billed_s"], "usd_as_recorded": rj["stop"]["usd"],
             "setup_s": tr[0]["billed_s"], "step_s_median": round(st.median(win), 4),
-            "step_s_median_first500": round(st.median(win[:25]), 4), "grad_norm_max": round(max(r["grad_norm"] for r in tr), 1),
+            "step_s_median_first500": round(st.median(win[:25]), 4), "grad_norm_max_logged": round(max(r["grad_norm"] for r in tr), 1),
             "best": rj["best"], "dev_hybrid": curves[s]}
     steps = sorted(curves[0])
-    res["by_variant"][v] = {str(k): {"mean": round(st.mean(curves[s][k] for s in curves), 4),
+    raw[v] = {k: st.mean(curves[s][k] for s in curves) for k in steps}
+    res["by_variant"][v] = {str(k): {"mean": round(raw[v][k], 4),
                                      "range": round(max(curves[s][k] for s in curves) - min(curves[s][k] for s in curves), 4)}
                             for k in steps}
-res["B_minus_A_mean"] = {k: round(res["by_variant"]["B"][k]["mean"] - res["by_variant"]["A"][k]["mean"], 4)
-                         for k in res["by_variant"]["A"]}
+# 差值用未舍入的均值算，最后才舍入（codex 第 1 轮 #2）
+res["B_minus_A_mean"] = {str(k): round(raw["B"][k] - raw["A"][k], 4) for k in raw["A"]}
 json.dump(res, open(out, "w"), ensure_ascii=False, indent=1)

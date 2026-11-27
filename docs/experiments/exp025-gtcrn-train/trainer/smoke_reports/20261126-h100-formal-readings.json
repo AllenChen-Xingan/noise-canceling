@@ -11,7 +11,7 @@
    "setup_s": 360.11,
    "step_s_median": 0.346,
    "step_s_median_first500": 0.346,
-   "grad_norm_max": 66.3,
+   "grad_norm_max_logged": 66.3,
    "best": {
     "step": 4000,
     "hybrid": 3.6422112345695496
@@ -39,7 +39,7 @@
    "setup_s": 361.52,
    "step_s_median": 0.346,
    "step_s_median_first500": 0.3475,
-   "grad_norm_max": 105.3,
+   "grad_norm_max_logged": 105.3,
    "best": {
     "step": 5000,
     "hybrid": 3.6486173391342165
@@ -67,7 +67,7 @@
    "setup_s": 363.89,
    "step_s_median": 0.346,
    "step_s_median_first500": 0.346,
-   "grad_norm_max": 73.5,
+   "grad_norm_max_logged": 73.5,
    "best": {
     "step": 4500,
     "hybrid": 3.6494702100753784
@@ -95,7 +95,7 @@
    "setup_s": 256.35,
    "step_s_median": 0.3985,
    "step_s_median_first500": 0.399,
-   "grad_norm_max": 66.4,
+   "grad_norm_max_logged": 66.4,
    "best": {
     "step": 4000,
     "hybrid": 3.641829216480255
@@ -123,7 +123,7 @@
    "setup_s": 256.67,
    "step_s_median": 0.3985,
    "step_s_median_first500": 0.3985,
-   "grad_norm_max": 160.7,
+   "grad_norm_max_logged": 160.7,
    "best": {
     "step": 5000,
     "hybrid": 3.6438889265060426
@@ -151,7 +151,7 @@
    "setup_s": 256.67,
    "step_s_median": 0.3985,
    "step_s_median_first500": 0.399,
-   "grad_norm_max": 81.6,
+   "grad_norm_max_logged": 81.6,
    "best": {
     "step": 4000,
     "hybrid": 3.6526721000671385
@@ -256,6 +256,7 @@
    }
   }
  },
+ "note": "grad_norm_max_logged = 裁剪前梯度范数在已记录步骤（第 1 步与每 log_every=20 步）上的最大值，不是全部 5000 步的峰值",
  "B_minus_A_mean": {
   "500": 0.0012,
   "1000": -0.0018,
@@ -263,9 +264,9 @@
   "2000": -0.0005,
   "2500": -0.001,
   "3000": -0.0018,
-  "3500": 0.0001,
-  "4000": -0.0004,
-  "4500": 0.0014,
+  "3500": 0.0002,
+  "4000": -0.0003,
+  "4500": 0.0015,
   "5000": -0.0014
  }
 }
