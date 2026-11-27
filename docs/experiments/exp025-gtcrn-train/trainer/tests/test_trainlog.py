@@ -5,6 +5,7 @@
 import json
 from pathlib import Path
 
+import pytest
 import soundfile as sf
 import torch
 
@@ -41,10 +42,34 @@ def test_clip_stats_window_counts_median_max_and_reset():
         cs.add(g)
     out = cs.flush()
     assert out["clip_n"] == 4  # 窗口里的步数
-    assert out["clip_frac"] == 0.5  # 3.0 不算被裁：判据是严格大于阈值
+    assert out["clip_frac"] == 0.75  # 3.0 也算被裁：分母多 1e-6，torch 的缩放系数略小于 1（见下面的对照测试）
     assert out["gn_pre_median"] == 4.0
     assert out["gn_pre_max"] == 100.0
     assert cs.flush() == {}  # 清过之后没有读数：什么都不多写
+
+
+def _clip_probe(target: float, max_norm: float = 3.0) -> tuple[float, bool]:
+    """造一个总范数 ≈ target 的梯度，照 torch 的做法裁一次：回（裁前范数, 梯度变没变）。"""
+    w = torch.nn.Parameter(torch.zeros(4))
+    w.grad = torch.full((4,), target / 2.0)  # 4 个分量各 target/2 → 总范数 = target
+    before = w.grad.clone()
+    gn = float(torch.nn.utils.clip_grad_norm_([w], max_norm))
+    return gn, not torch.equal(before, w.grad)
+
+
+@pytest.mark.parametrize("target,clipped", [(3.0 - 1e-5, False), (3.0 - 1e-6, False), (3.0, True), (3.0 + 1e-6, True)])
+def test_clip_stats_clipped_is_what_torch_actually_does(target, clipped):
+    """「被裁」= torch 真的改了梯度：判据是 `max_norm / (gn + 1e-6) < 1`，float32 算（与 clip_grad_norm_ 同一个数）。
+
+    3.0 这一步也算被裁（分母多 1e-6）。3.0 − 1e-6 那一步 torch 的系数在 float32 里恰好等于 1，用 float64 算会
+    误判成被裁——这一条把两种写法区分开。
+    """
+    gn, changed = _clip_probe(target)
+    cs = trainlog.ClipStats(3.0)
+    cs.add(gn)
+    out = cs.flush()
+    assert changed is clipped  # 先钉住 torch 的实际行为，再比统计
+    assert (out["clip_frac"] == 1.0) is clipped
 
 
 # ---------- 接进训练循环 ----------
@@ -133,3 +158,109 @@ def test_save_dev_audio_reports_oserror_without_raising(tmp_path, monkeypatch):
     dev = train.make_source(cfg).dev_batches()
     err = trainlog.save_dev_audio(model, dev, device, tmp_path, 1)
     assert isinstance(err, str) and "磁盘满" in err
+
+
+# 写 wav 真的会抛的两种错：libsndfile 自己的错不是 OSError（`SoundFileError` → `RuntimeError`）
+@pytest.mark.parametrize("make_exc", [lambda: sf.LibsndfileError(0, "磁盘满"),
+                                      lambda: sf.SoundFileRuntimeError("磁盘满")],
+                         ids=["LibsndfileError", "SoundFileRuntimeError"])
+def test_save_dev_audio_reports_soundfile_error_without_raising(tmp_path, monkeypatch, make_exc):
+    """soundfile 报错（`LibsndfileError` 是 RuntimeError 的子类、不是 OSError）一样只回错误字符串，不抛。"""
+    def boom(*a, **k):
+        raise make_exc()
+    monkeypatch.setattr(sf, "write", boom)
+    cfg = _cfg(tmp_path)
+    device = torch.device("cpu")
+    model = train.build_model(cfg, device)
+    dev = train.make_source(cfg).dev_batches()
+    err = trainlog.save_dev_audio(model, dev, device, tmp_path, 1)
+    assert isinstance(err, str) and "磁盘满" in err
+
+
+def test_save_dev_audio_survives_soundfile_error_with_broken_message(tmp_path, monkeypatch):
+    """最坏情况：连 `str(错)` 自己都抛（`LibsndfileError` 的 __str__ 要回头问 libsndfile）。错误路径不许再抛一次。"""
+    def boom(*a, **k):
+        raise sf.LibsndfileError("不是整数", "")  # code 不是整数 → __str__ 抛 TypeError
+    monkeypatch.setattr(sf, "write", boom)
+    cfg = _cfg(tmp_path)
+    device = torch.device("cpu")
+    model = train.build_model(cfg, device)
+    dev = train.make_source(cfg).dev_batches()
+    err = trainlog.save_dev_audio(model, dev, device, tmp_path, 1)
+    assert isinstance(err, str) and "LibsndfileError" in err
+
+
+def test_training_survives_audio_write_errors(tmp_path, monkeypatch):
+    """写 wav 一律失败，训练照跑满 max_steps，只在记录里留 dev_audio_error 行（codex P1）。"""
+    def boom(*a, **k):
+        raise sf.LibsndfileError(0, "磁盘满")
+    monkeypatch.setattr(sf, "write", boom)
+    stop = train.train(_cfg(tmp_path))
+    assert stop["reason"] == "max_steps" and stop["step"] == 6
+    rows = _rows(tmp_path / "t")
+    assert any("dev_audio_error" in r for r in rows)
+    assert sum("dev" in r for r in rows) == 2  # 两次开发评估都照常记了读数
+
+
+# ---------- 存档音频要认停下的信号 ----------
+
+def test_save_dev_audio_stops_at_once_when_asked(tmp_path):
+    """一开始就要求停：一份 wav 都不写，也不当错误（返回 None、不记 dev_audio_error）。"""
+    cfg = _cfg(tmp_path)
+    device = torch.device("cpu")
+    model = train.build_model(cfg, device)
+    dev = train.make_source(cfg).dev_batches()
+    assert trainlog.save_dev_audio(model, dev, device, tmp_path, 3, should_stop=lambda: True) is None
+    assert not list(tmp_path.rglob("enh-*.wav"))
+
+
+def test_save_dev_audio_stops_between_files(tmp_path, monkeypatch):
+    """停下的信号写到一半才到：写下一份之前先问，已经写完的留着、其余的都不写（每份之前问一次）。"""
+    written = []
+    real = trainlog._write_wav
+
+    def spy(path, wav):
+        real(path, wav)
+        written.append(path.name)
+
+    monkeypatch.setattr(trainlog, "_write_wav", spy)
+    cfg = _cfg(tmp_path)
+    device = torch.device("cpu")
+    model = train.build_model(cfg, device)
+    dev = train.make_source(cfg).dev_batches()
+    err = trainlog.save_dev_audio(model, dev, device, tmp_path, 1,
+                                  should_stop=lambda: any(n.startswith("enh-") for n in written))
+    assert err is None  # 不是错误，就是停下了
+    assert sum(n.startswith("enh-") for n in written) == 1  # 只写完第一份就停（按「每批之前」判会写成两份）
+    assert not (tmp_path / "dev_audio" / "step-0000001" / "enh-1.wav").exists()
+
+
+def test_best_pt_is_saved_before_dev_audio(tmp_path, monkeypatch):
+    """存档音频排在这一步的最后：写 wav 慢（网络盘 / 磁盘满）时不拖住最好的那份权重。"""
+    seen = []
+    real = trainlog.save_dev_audio
+
+    def spy(model, dev, device, root, step, should_stop=None):
+        seen.append({"step": step, "best_exists": (Path(root) / "ckpt" / "best.pt").exists(),
+                     "has_stop": should_stop is not None})
+        return real(model, dev, device, root, step, should_stop=should_stop)
+
+    monkeypatch.setattr(trainlog, "save_dev_audio", spy)
+    stop = train.train(_cfg(tmp_path))
+    assert stop["reason"] == "max_steps"
+    assert [s["step"] for s in seen] == [3, 6]  # eval_every = 3
+    assert all(s["best_exists"] for s in seen)  # 第一次评估就已经把 best.pt 存下来了
+    assert all(s["has_stop"] for s in seen)  # 存档也认停下的信号
+
+
+# ---------- 停下时把剩下的裁剪窗口写掉 ----------
+
+def test_clip_window_flushed_at_stop_with_tail_row(tmp_path):
+    """最后几步不满一个记录窗口：照样记一行（clip_tail），每一步的范数都进过某个窗口。"""
+    stop = train.train(_cfg(tmp_path, **{"schedule.log_every": 4, "schedule.max_steps": 6}))
+    assert stop["step"] == 6
+    rows = _rows(tmp_path / "t")
+    with_clip = [r for r in rows if "clip_n" in r]
+    assert sum(r["clip_n"] for r in with_clip) == stop["step"]  # 6 步一个不落
+    assert with_clip[-1]["clip_tail"] is True
+    assert not any(r.get("clip_tail") for r in with_clip[:-1])  # 只有收尾那一行带标记
