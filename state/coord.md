@@ -596,3 +596,4 @@
 - 2026-11-27 人要求今晚全部收工（allenchen-1b 转达）：大总管发收工单 _tmp/20261116-b19/wrapup-20261127.md 给 4 个手下（停 pi · 提交推送 · cloudrun 原版成绩单 30 min 内跑完就取回、跑不完就取回已出部分后停 job 删 pod，确认云上 0 台 · 交接页 · 回「可以关了」）。窗口由人关。
 - 2026-11-27 evalcmp 可以关了：exp/025-eval-cloud de988bf7 已推（#235 已合并，这个提交只改交接页，比 main 多 1 个、未进 main）；无 pi、无后台；evalrun 停在 2a07e8ed。
 - 2026-11-27 traindata 可以关了：feat/data-batch5 a78a3cdc 已推（交接页改成现状；比 main 多 2 个只改交接页的提交，未进 main，下次一起合）；pi 全退。
+- 2026-11-27 trainer 可以关了：feat/trainer-train-logs fd14a9e8 已推，未开 PR；#236 修 codex 第 1 轮（2 严重 2 次要）做到一半，WIP a3b22d05；test_trainlog 18 过，全套未跑；pi 全退（含 trainer-b5-pin），pi 花 0.0324 美元。
